@@ -409,6 +409,7 @@ describe("資料範圍(GraphQL 端點 + 真 MongoDB)", () => {
       managedOrgIds: "all",
       memberOrgIds: [],
       roleIds: [],
+      memberTenants: [],
     };
     const condition = await api.app
       .get(DataScopeService)

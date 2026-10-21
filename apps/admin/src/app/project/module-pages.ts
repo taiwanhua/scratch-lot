@@ -1,3 +1,35 @@
+import { AccountsPage } from "@/pages/project/lottery/accounts/AccountsPage/AccountsPage";
+import { BankAccountViewPage } from "@/pages/project/lottery/accounts/BankAccountViewPage/BankAccountViewPage";
+import { ACCOUNTS_MODULE_KEYS } from "@/pages/project/lottery/accounts/accounts-config";
+import { ContactFormPage } from "@/pages/project/lottery/dealers/ContactFormPage/ContactFormPage";
+import { ContactViewPage } from "@/pages/project/lottery/dealers/ContactViewPage/ContactViewPage";
+import { DealerFormPage } from "@/pages/project/lottery/dealers/DealerFormPage/DealerFormPage";
+import { DealerViewPage } from "@/pages/project/lottery/dealers/DealerViewPage/DealerViewPage";
+import { DealersPage } from "@/pages/project/lottery/dealers/DealersPage/DealersPage";
+import { DEALERS_MODULE_KEYS } from "@/pages/project/lottery/dealers/dealers-keys";
+import { BookPage } from "@/pages/project/lottery/inventory/BookPage/BookPage";
+import { InventoryPage } from "@/pages/project/lottery/inventory/InventoryPage/InventoryPage";
+import { INVENTORY_MODULE_KEYS } from "@/pages/project/lottery/inventory/inventory-config";
+import { GameFormPage } from "@/pages/project/lottery/master-data/GameFormPage/GameFormPage";
+import { GameViewPage } from "@/pages/project/lottery/master-data/GameViewPage/GameViewPage";
+import { MasterDataPage } from "@/pages/project/lottery/master-data/MasterDataPage/MasterDataPage";
+import { MASTER_DATA_MODULE_KEYS } from "@/pages/project/lottery/master-data/master-data-config";
+import { RequisitionCreatePage } from "@/pages/project/lottery/purchasing/RequisitionCreatePage/RequisitionCreatePage";
+import { RequisitionPage } from "@/pages/project/lottery/purchasing/RequisitionPage/RequisitionPage";
+import { PurchaseCreatePage } from "@/pages/project/lottery/purchasing/purchase/PurchaseCreatePage/PurchaseCreatePage";
+import { PurchasePage } from "@/pages/project/lottery/purchasing/purchase/PurchasePage/PurchasePage";
+import { PurchaseViewPage } from "@/pages/project/lottery/purchasing/purchase/PurchaseViewPage/PurchaseViewPage";
+import { TransferCreatePage } from "@/pages/project/lottery/purchasing/transfer/TransferCreatePage/TransferCreatePage";
+import { TransferPage } from "@/pages/project/lottery/purchasing/transfer/TransferPage/TransferPage";
+import { TransferViewPage } from "@/pages/project/lottery/purchasing/transfer/TransferViewPage/TransferViewPage";
+import { ReportsPage } from "@/pages/project/lottery/reports/ReportsPage/ReportsPage";
+import { MakeupPunchFormPage } from "@/pages/project/schedule/attendance/MakeupPunchFormPage/MakeupPunchFormPage";
+import { MakeupPunchViewPage } from "@/pages/project/schedule/attendance/MakeupPunchViewPage/MakeupPunchViewPage";
+import { ScheduleAttendancePage } from "@/pages/project/schedule/attendance/ScheduleAttendancePage";
+import { ScheduleManagePage } from "@/pages/project/schedule/manage/ScheduleManagePage";
+import { ScheduleMyPage } from "@/pages/project/schedule/my/ScheduleMyPage";
+import { ScheduleSettingsPage } from "@/pages/project/schedule/settings/ScheduleSettingsPage";
+
 import type { ModulePageSource } from "../module-page-registry";
 
 /**
@@ -8,6 +40,81 @@ import type { ModulePageSource } from "../module-page-registry";
  * - 登記不等於授權:進不進得去仍看 `me.modules`
  */
 export const projectModulePages: ModulePageSource = {
-  pages: [],
-  forms: [],
+  pages: [
+    // 檔案管理(遊戲 | 收銀點);遊戲的新增 / 編輯共版型
+    { key: MASTER_DATA_MODULE_KEYS.list, Page: MasterDataPage },
+    { key: MASTER_DATA_MODULE_KEYS.gameViewPage, Page: GameViewPage },
+    { key: MASTER_DATA_MODULE_KEYS.gameCreatePage, Page: GameFormPage },
+    { key: MASTER_DATA_MODULE_KEYS.gameEditPage, Page: GameFormPage },
+    // 經銷商管理(專案規格 5.2–5.4;新增與編輯同一個版型,情境由 module.key 判斷)
+    { key: DEALERS_MODULE_KEYS.list, Page: DealersPage },
+    { key: DEALERS_MODULE_KEYS.viewPage, Page: DealerViewPage },
+    { key: DEALERS_MODULE_KEYS.createPage, Page: DealerFormPage },
+    { key: DEALERS_MODULE_KEYS.editPage, Page: DealerFormPage },
+    { key: DEALERS_MODULE_KEYS.contactViewPage, Page: ContactViewPage },
+    { key: DEALERS_MODULE_KEYS.contactCreatePage, Page: ContactFormPage },
+    { key: DEALERS_MODULE_KEYS.contactEditPage, Page: ContactFormPage },
+    // 輸出報表(規格第 11 章、18.4)
+    { key: "reports", Page: ReportsPage },
+    // 班表管理(規格 3.1):我的班表、排班設定是固定頁(頁內分頁)
+    { key: "schedule.my", Page: ScheduleMyPage },
+    { key: "schedule.settings", Page: ScheduleSettingsPage },
+    // 帳戶管理(規格第 9 章、10.1–10.3):分頁頁 + 銀行帳戶詳情
+    { key: ACCOUNTS_MODULE_KEYS.list, Page: AccountsPage },
+    {
+      key: ACCOUNTS_MODULE_KEYS.bankAccountViewPage,
+      Page: BankAccountViewPage,
+    },
+    // 庫存管理(規格 7.3、7.4、7.6):分頁頁 + 本的詳情
+    { key: INVENTORY_MODULE_KEYS.list, Page: InventoryPage },
+    { key: INVENTORY_MODULE_KEYS.bookPage, Page: BookPage },
+  ],
+  forms: [
+    // 排班作業(綁定 支援需求單)、出勤紀錄(綁定 補打卡申請):列表頁換成分頁頁殼,其餘三頁沿用表單引擎
+    {
+      moduleKey: "schedule.manage",
+      // 內容區最小寬度用 `md`:平板 1024 寬收合側欄時,排班表的工具列與檢核面板都放得下、不必左右捲
+      pageOverrides: { list: { Page: ScheduleManagePage, minWidth: "md" } },
+    },
+    // 出勤紀錄(綁定 補打卡申請;規格 14.7、14.8):列表頁換成分頁頁殼(依人員(月)| 依分店(日));
+    // 新增 / 編輯頁換成有「對應排班」下拉的補打卡頁、檢視頁換成摘要 + 審核(排班被刪除時警告、不能核准)
+    {
+      moduleKey: "schedule.attendance",
+      pageOverrides: {
+        list: { Page: ScheduleAttendancePage },
+        createPage: { Page: MakeupPunchFormPage },
+        editPage: { Page: MakeupPunchFormPage },
+        viewPage: { Page: MakeupPunchViewPage },
+      },
+    },
+    // 叫貨、採購單(綁定 叫貨單;規格 8.1):列表頁換成分頁頁殼(叫貨單 | 採購清單)、新增頁換成
+    // 列出所有販售中遊戲的叫貨頁;詳情 / 編輯(草稿)沿用表單引擎
+    {
+      moduleKey: "purchasing.requisition",
+      pageOverrides: {
+        list: { Page: RequisitionPage },
+        createPage: { Page: RequisitionCreatePage },
+      },
+    },
+    // 進貨單(綁定 進貨單;規格 8.2):列表加點收進度與結算、新增頁換成刷條碼頁、檢視頁換成
+    // 引擎零件 + 點收區塊 + 結算 + 審核;編輯(草稿、被退回)沿用表單引擎
+    {
+      moduleKey: "purchasing.purchase",
+      pageOverrides: {
+        list: { Page: PurchasePage },
+        createPage: { Page: PurchaseCreatePage },
+        viewPage: { Page: PurchaseViewPage },
+      },
+    },
+    // 調貨單(綁定 調貨單;規格 8.4):列表加本數 / 張數、點收進度、結算與「在途」、新增頁換成選本 + 張數格子、
+    // 檢視頁換成出貨確認清單 / 點收區塊 + 結算 + 審核;編輯(草稿、被退回)沿用表單引擎
+    {
+      moduleKey: "purchasing.transfer",
+      pageOverrides: {
+        list: { Page: TransferPage },
+        createPage: { Page: TransferCreatePage },
+        viewPage: { Page: TransferViewPage },
+      },
+    },
+  ],
 };

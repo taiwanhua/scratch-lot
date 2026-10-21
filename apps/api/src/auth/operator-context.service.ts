@@ -13,6 +13,7 @@ import type {
   OperatorOrgScope,
 } from "../database/operator-context";
 import { RelationService } from "../database/relation.service";
+import { tenantIdOfOrg } from "../database/tenant-id";
 import { SUPER_ADMIN_ROLE_KEY } from "../permission/permission-resolver";
 
 /** 租戶頂層 `orgs.settings.visibility` 的值(ADR-0005;未設視為 "own")。 */
@@ -31,10 +32,51 @@ function systemOperator(actorId: Types.ObjectId | null): OperatorContext {
     // 這份上下文就是在「算出 memberOrgIds / roleIds」的過程中用的,當下還沒有值
     memberOrgIds: [],
     roleIds: [],
+    memberTenants: [],
   };
 }
 
 type RoleRecord = Persisted<RoleDocument>;
+
+/**
+ * 資料共用(ADR-0014)的比對來源:所屬組織依**租戶**分組,每組帶所屬組織與其上層鏈
+ * (`ancestors` 去掉根組織,不含自己)。根組織成員不屬於任何租戶,不列。
+ */
+function sharingAudienceOf(
+  memberOrgs: readonly Pick<OrgDocument, "_id" | "ancestors">[],
+): Pick<OperatorContext, "memberTenants"> {
+  const byTenant = new Map<
+    string,
+    {
+      tenantId: Types.ObjectId;
+      members: Map<string, Types.ObjectId>;
+      ancestors: Map<string, Types.ObjectId>;
+    }
+  >();
+  for (const org of memberOrgs) {
+    const tenantId = tenantIdOfOrg(org);
+    if (tenantId === null) {
+      continue;
+    }
+    const group = byTenant.get(String(tenantId)) ?? {
+      tenantId,
+      members: new Map<string, Types.ObjectId>(),
+      ancestors: new Map<string, Types.ObjectId>(),
+    };
+    group.members.set(String(org._id), org._id);
+    for (const ancestor of org.ancestors.slice(1)) {
+      group.ancestors.set(String(ancestor), ancestor);
+    }
+    byTenant.set(String(tenantId), group);
+  }
+  return {
+    memberTenants: [...byTenant.values()].map((group) => ({
+      tenantId: group.tenantId,
+      memberOrgIds: [...group.members.values()],
+      ancestorOrgIds: [...group.ancestors.values()],
+    })),
+  };
+}
 
 export interface MemberOrg {
   id: Types.ObjectId;
@@ -114,6 +156,8 @@ export class OperatorContextService {
         // 資料範圍規則的比對來源(ADR-0008):所屬組織是 org_user 的直接關聯,不含開關展開的下層
         memberOrgIds: memberOrgs.map((org) => org.id),
         roleIds: enabledRoles.map((role) => role._id),
+        // 資料共用的比對來源(ADR-0014):所屬組織的上層鏈與租戶頂層,同樣不隨當前組織切換
+        ...sharingAudienceOf(memberOrgDocuments),
       },
       memberOrgs,
     };
@@ -135,6 +179,7 @@ export class OperatorContextService {
       managedOrgIds: [],
       memberOrgIds: [orgId],
       roleIds: [],
+      ...sharingAudienceOf(org === null ? [] : [org]),
     };
   }
 

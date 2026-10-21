@@ -34,16 +34,17 @@ describe("SideNav(模組陣列以 parentId 組樹;ADR-0011「前端判斷 / 側�
     const labels = within(nav)
       .getAllByRole("link")
       .map((link) => link.textContent);
+    // 頂層依 order:總覽 0、示範群組 2、系統管理 95(與 seed 一致)
     expect(labels).toEqual([
       "總覽",
+      "示範模組1",
+      "示範模組2",
       "組織管理",
       "使用者管理",
       "角色管理",
       "模組與權限",
       "欄位管理",
       "資料範圍",
-      "示範模組1",
-      "示範模組2",
     ]);
     expect(
       within(nav).getByRole("button", { name: "系統管理" }),

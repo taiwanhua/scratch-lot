@@ -26,7 +26,7 @@ import { SetOrgTimezoneInput } from "./dto/set-org-timezone.input";
 import { SetOrgVisibilityInput } from "./dto/set-org-visibility.input";
 import { UpdateOrgInput } from "./dto/update-org.input";
 import { DeletePayload, OrgPayload } from "./models/org-payloads.model";
-import { Org, OrgNode } from "./models/org.model";
+import { Org, OrgNode, TenantOrgNode } from "./models/org.model";
 import { UserSummary } from "./models/user-summary.model";
 import { OrgManagersService } from "./org-managers.service";
 import { OrgsService } from "./orgs.service";
@@ -81,6 +81,17 @@ export class OrgsResolver {
   ): Promise<OrgNode[]> {
     await this.requireReadPermission(operator);
     return this.orgs.tree(operator);
+  }
+
+  /**
+   * **整棵租戶樹**(組織選擇器的 `visible` / `tenant` 模式):每個節點帶可見 / 可管理旗標;
+   * 只要登入,不要求治理權限;範圍與釘租戶的規則見 `OrgsService.tenantTree`。
+   */
+  @Query(() => [TenantOrgNode])
+  tenantOrgTree(
+    @CurrentOperator() operator: OperatorContext,
+  ): Promise<TenantOrgNode[]> {
+    return this.orgs.tenantTree(operator);
   }
 
   @Query(() => Org)

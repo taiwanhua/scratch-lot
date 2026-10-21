@@ -25,7 +25,7 @@ import {
 } from "@/lib/base/form-engine/form-errors";
 import type { ModulePageProps } from "@/lib/base/module-tree";
 
-import { ReasonDialog } from "../../workflow/ApprovalSection/ReasonDialog";
+import { VoidDialog } from "../../workflow/ApprovalSection/VoidDialog";
 import { useSubmissionActions } from "../../workflow/useSubmissionActions";
 import { FormPicker } from "../FormPicker";
 import {
@@ -220,9 +220,8 @@ export const FormListPage = ({ module }: ModulePageProps) => {
         />
       )}
       {voidTarget !== null && (
-        <ReasonDialog
-          namespace="admin.approval.void"
-          requiresReason
+        <VoidDialog
+          formKey={voidTarget.formKey}
           isSubmitting={submissionActions.isPending}
           errorMessage={submissionActions.errorMessage}
           onCancel={() => {

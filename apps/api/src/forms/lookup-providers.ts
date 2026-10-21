@@ -29,8 +29,10 @@ import {
   UsersRepository,
 } from "../database/database.module";
 import type { OperatorContext } from "../database/operator-context";
+import { sharedToOrgCondition } from "../database/plugins/tenant-scope.plugin";
 import { PROJECT_LOOKUP_SOURCES } from "../database/project-lookup-sources";
 import { RelationService } from "../database/relation.service";
+import { tenantIdOfOrg } from "../database/tenant-id";
 import { fieldGateOf, requiredShowKeys } from "./field-permission-gate";
 import {
   FormAccessService,
@@ -587,8 +589,10 @@ export class LookupProvidersService implements OnModuleInit {
 
   // ---- 專案來源:一律經 BaseRepository(租戶隔離、可見範圍、資料範圍由 plugin 套)----
 
-  private projectProvider(source: ResolvedLookupSource): LookupProviderRuntime {
-    const { declaration, repository } = source;
+  private projectProvider(
+    resolved: ResolvedLookupSource,
+  ): LookupProviderRuntime {
+    const { declaration, repository } = resolved;
     const canReadSource = (facts: FormOperatorFacts): boolean =>
       declaration.permission === null ||
       this.access.has(facts, declaration.permission);
@@ -623,7 +627,11 @@ export class LookupProvidersService implements OnModuleInit {
         if (!canReadSource(facts)) {
           return { items: [], totalCount: 0 };
         }
-        const fixed = allowedFilterOf(declaration, source.filter);
+        const fixed = await this.projectFilterOf(
+          facts,
+          resolved,
+          source.filter,
+        );
         const keyword = query.keyword?.trim();
         // 關鍵字只比對讀得到的欄位(不能拿受保護欄位試出值)
         const keywordFields = (
@@ -672,7 +680,11 @@ export class LookupProvidersService implements OnModuleInit {
         ) {
           return [];
         }
-        const fixed = allowedFilterOf(declaration, source.filter);
+        const fixed = await this.projectFilterOf(
+          facts,
+          resolved,
+          source.filter,
+        );
         const condition =
           field === "id"
             ? { ...fixed, _id: { $in: objectIdsOf(values) } }
@@ -682,6 +694,47 @@ export class LookupProvidersService implements OnModuleInit {
           toRecord(facts, document, options.publicOnly === true),
         );
       },
+    };
+  }
+
+  /**
+   * 專案來源的固定條件:`filterFields` 的等值條件,加上共用篩選(`sharedToFilter`)換成的
+   * 「給那個組織看得到」條件(`sharedToOrgCondition`)。組織以**可見範圍**讀(同 org 來源);
+   * 值不合法或讀不到 → 條件命中不到任何資料(fail-closed)。
+   */
+  private async projectFilterOf(
+    facts: FormOperatorFacts,
+    resolved: ResolvedLookupSource,
+    filter: Record<string, unknown> | undefined,
+  ): Promise<Record<string, unknown>> {
+    const { declaration, repository } = resolved;
+    const sharedTo = declaration.sharedToFilter;
+    const fixed = allowedFilterOf(declaration, filter);
+    if (sharedTo === undefined || !Object.hasOwn(fixed, sharedTo)) {
+      return fixed;
+    }
+    const rest = Object.fromEntries(
+      Object.entries(fixed).filter(([key]) => key !== sharedTo),
+    );
+    const raw = filter?.[sharedTo];
+    const orgId = typeof raw === "string" ? raw : null;
+    const scope = repository.tenantScope;
+    const org =
+      orgId === null || !Types.ObjectId.isValid(orgId) || scope === undefined
+        ? null
+        : await this.orgs.findById(visibleOrgReader(facts.operator), orgId);
+    if (org === null || scope === undefined) {
+      return { ...rest, _id: { $in: [] } };
+    }
+    return {
+      $and: [
+        rest,
+        sharedToOrgCondition(scope, {
+          orgId: org._id,
+          ancestorOrgIds: org.ancestors.slice(1),
+          tenantId: tenantIdOfOrg(org),
+        }),
+      ],
     };
   }
 

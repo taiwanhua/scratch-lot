@@ -27,6 +27,8 @@ export interface TaskActionsProps {
   allowReturn: boolean;
   /** 決定被接受(false)或此關已結束(true):重載實例、任務與提交 */
   onDecided: (isStepClosed: boolean) => void;
+  /** 停用「核准」(駁回 / 退回照常;`ApprovalSection` 的 `approveDisabled`) */
+  approveDisabled?: boolean;
 }
 
 const DECISIONS = [
@@ -44,6 +46,7 @@ export const TaskActions = ({
   task,
   allowReturn,
   onDecided,
+  approveDisabled = false,
 }: TaskActionsProps) => {
   const t = useTranslations("admin.approval.decide");
   const errorText = useAdminErrorText("admin.workflows.errors");
@@ -94,7 +97,10 @@ export const TaskActions = ({
               item === WorkflowDecision.Approve ? "contained" : "outlined"
             }
             color={item === WorkflowDecision.Reject ? "error" : "primary"}
-            disabled={decide.isPending}
+            disabled={
+              decide.isPending ||
+              (approveDisabled && item === WorkflowDecision.Approve)
+            }
             onClick={() => {
               setErrorMessage(null);
               setDecision(item);

@@ -409,6 +409,12 @@ function managedMetadataOf(seed: DefinitionSeedSet): PlainRecord {
         tabLabelTemplate: seed.tabLabelTemplate,
         // 允許存草稿:只有關掉才進 hash(缺席 = 開,開著的宣告與這個欄位出現之前的 hash 相同)
         ...(seed.allowDraft === false ? { allowDraft: false } : {}),
+        // 單號格式:有宣告才進 hash(缺席 = 不給號,與這個欄位出現之前的 hash 相同)
+        ...(seed.serial === undefined ? {} : { serial: seed.serial }),
+        // 作廢原因類別:有宣告才進 hash(缺席 = 自由填寫,與這個欄位出現之前的 hash 相同)
+        ...(seed.voidReasonCategoryKey === undefined
+          ? {}
+          : { voidReasonCategoryKey: seed.voidReasonCategoryKey }),
       }
     : { name: seed.name, checkFormKey: seed.checkFormKey };
 }

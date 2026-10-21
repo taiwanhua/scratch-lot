@@ -1,6 +1,9 @@
 import { type GraphQLResponseBody, HttpResponse } from "msw";
 
-import { FormSubmissionStatus } from "@repo/graphql";
+import {
+  FormSubmissionStatus,
+  type VoidSubmissionMutationVariables,
+} from "@repo/graphql";
 
 import { type AuthErrorCode, graphqlError } from "./auth-handlers";
 import { type MockSubmission, submissionFragment } from "./form-fixtures";
@@ -20,15 +23,13 @@ export interface SubmissionActionContext {
   ) => HttpResponse<GraphQLResponseBody<Record<string, never>>>;
   inputs: {
     withdrawSubmission: { id: string; expectedEditVersion: number }[];
-    voidSubmission: {
-      id: string;
-      expectedEditVersion: number;
-      reason: string;
-    }[];
+    voidSubmission: VoidSubmissionMutationVariables["input"][];
     copySubmissionToDraft: { id: string; clientRequestId: string }[];
   };
   /** `copySubmissionToDraft` 回報被清空的欄位(引用來源失效) */
   copyClearedFields: string[];
+  /** 表單 key + 選項值 → 作廢原因的選項名稱(沒有 = null) */
+  voidReasonLabelOf: (formKey: string, reasonKey: string) => string | null;
 }
 
 const notFound = () => graphqlError("NOT_FOUND" as AuthErrorCode);
@@ -56,9 +57,7 @@ export const submissionActionHandlers = (ctx: SubmissionActionContext) => [
     return ctx.payload("withdrawSubmission", target);
   }),
   api.mutation("VoidSubmission", ({ variables }) => {
-    const { input } = variables as {
-      input: { id: string; expectedEditVersion: number; reason: string };
-    };
+    const { input } = variables as VoidSubmissionMutationVariables;
     ctx.inputs.voidSubmission.push(input);
     const target = ctx.byId(input.id);
     const failure = ctx.fail("VoidSubmission");
@@ -67,7 +66,12 @@ export const submissionActionHandlers = (ctx: SubmissionActionContext) => [
     }
     Object.assign(target, {
       status: FormSubmissionStatus.Voided,
-      voidReason: input.reason,
+      voidReason: input.reasonNote === "" ? null : input.reasonNote,
+      voidReasonKey: input.reasonKey ?? null,
+      voidReasonLabel:
+        input.reasonKey === null || input.reasonKey === undefined
+          ? null
+          : ctx.voidReasonLabelOf(target.formKey, input.reasonKey),
       voidedAt: target.updatedAt,
       editVersion: target.editVersion + 1,
       abilities: {
@@ -97,6 +101,8 @@ export const submissionActionHandlers = (ctx: SubmissionActionContext) => [
       revisions: [],
       currentInstanceId: null,
       voidReason: null,
+      voidReasonKey: null,
+      voidReasonLabel: null,
       voidedAt: null,
       copiedFrom: source.id,
       editVersion: 1,

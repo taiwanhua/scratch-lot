@@ -289,6 +289,16 @@
         "default": "./dist/cjs/dialog.js"
       }
     },
+    "./drawer": {
+      "import": {
+        "types": "./dist/es/drawer.d.mts",
+        "default": "./dist/es/drawer.mjs"
+      },
+      "require": {
+        "types": "./dist/cjs/drawer.d.ts",
+        "default": "./dist/cjs/drawer.js"
+      }
+    },
     "./form-control-label": {
       "import": {
         "types": "./dist/es/form-control-label.d.mts",

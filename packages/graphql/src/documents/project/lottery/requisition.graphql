@@ -1,0 +1,58 @@
+# 叫貨、採購單(模組 purchasing.requisition,正本 docs/modules/project/purchasing.md)。
+# 叫貨單本身的新增 / 存草稿 / 送出 / 作廢走表單引擎的文件;這裡只有新增頁的遊戲清單、採購清單與衍生狀態。
+
+fragment LotteryRequisitionCandidateFields on LotteryRequisitionCandidate {
+  gameId
+  gameCode
+  name
+  unitPrice
+  bookPrice
+  defaultRate
+  launchedAt
+  isNew
+  stockTickets
+  inTransitBooks
+  sold7
+  sold30
+  plannedBooks
+  givenBooks
+}
+
+query LotteryRequisitionCandidates($orgId: ID!) {
+  lotteryRequisitionCandidates(orgId: $orgId) {
+    ...LotteryRequisitionCandidateFields
+  }
+}
+
+query LotteryPurchaseList {
+  lotteryPurchaseList {
+    orgIds
+    rows {
+      gameId
+      gameCode
+      name
+      unitPrice
+      branches {
+        orgId
+        books
+      }
+      totalBooks
+      estimatedAmount
+    }
+    requisitions {
+      requisitionId
+      serialNo
+      orgId
+      books
+      estimatedAmount
+      completedAt
+    }
+  }
+}
+
+query LotteryRequisitionStates($requisitionIds: [ID!]!) {
+  lotteryRequisitionStates(requisitionIds: $requisitionIds) {
+    requisitionId
+    state
+  }
+}

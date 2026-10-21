@@ -1,0 +1,146 @@
+# 出勤紀錄(schedule.attendance;規格 14.7、14.8)
+
+fragment ScheduleAttendancePunchFields on ScheduleAttendancePunch {
+  id
+  userId
+  userName
+  orgId
+  orgName
+  type
+  at
+  entryId
+  source
+  duplicate
+}
+
+fragment ScheduleAttendanceRowFields on ScheduleAttendanceRow {
+  entryId
+  userId
+  userName
+  orgId
+  orgName
+  date
+  startAt
+  endAt
+  breakMinutes
+  shortName
+  clockIn
+  clockOut
+  status
+  lateMinutes
+  earlyLeaveMinutes
+  workedMinutes
+  scheduledMinutes
+  missing
+  specialDayName
+  specialDayCategory
+  hasMakeup
+  punches {
+    ...ScheduleAttendancePunchFields
+  }
+}
+
+fragment ScheduleAttendanceAbilitiesFields on ScheduleAttendanceAbilities {
+  canViewAll
+  canReassign
+  canExport
+  canCreate
+}
+
+fragment ScheduleAttendanceEntryOptionFields on ScheduleAttendanceEntryOption {
+  id
+  orgId
+  orgName
+  date
+  startAt
+  endAt
+  shortName
+}
+
+# 依人員(月):沒給 userId = 自己;看別人要 view-all(否則 FORBIDDEN + reason MISSING_PERMISSION)
+query ScheduleAttendanceByPerson($input: ScheduleAttendanceByPersonInput!) {
+  scheduleAttendanceByPerson(input: $input) {
+    month
+    orgId
+    userId
+    people {
+      userId
+      name
+    }
+    rows {
+      ...ScheduleAttendanceRowFields
+    }
+    unmatched {
+      ...ScheduleAttendancePunchFields
+    }
+    abilities {
+      ...ScheduleAttendanceAbilitiesFields
+    }
+  }
+}
+
+# 依分店(日):沒有 view-all 只列自己的班與卡
+query ScheduleAttendanceByStore($input: ScheduleAttendanceByStoreInput!) {
+  scheduleAttendanceByStore(input: $input) {
+    orgId
+    orgName
+    date
+    rows {
+      ...ScheduleAttendanceRowFields
+    }
+    unmatched {
+      ...ScheduleAttendancePunchFields
+    }
+    scheduledCount
+    arrivedCount
+    absentCount
+    abilities {
+      ...ScheduleAttendanceAbilitiesFields
+    }
+  }
+}
+
+# Excel 的資料(export):一家分店一個工作表
+query ScheduleAttendanceExport($input: ScheduleAttendanceExportInput!) {
+  scheduleAttendanceExport(input: $input) {
+    month
+    sheets {
+      orgId
+      orgName
+      rows {
+        ...ScheduleAttendanceRowFields
+      }
+    }
+  }
+}
+
+# [改對應排班] 可以選的排班(這個人打卡那天前後各一天)
+query ScheduleAttendancePunchEntryOptions($punchId: ID!) {
+  scheduleAttendancePunchEntryOptions(punchId: $punchId) {
+    ...ScheduleAttendanceEntryOptionFields
+  }
+}
+
+# 改對應排班(reassign-punches):原因必填(VALIDATION_FAILED reasonKey / reasonNote);記 audit_log
+mutation ReassignSchedulePunch($input: ReassignSchedulePunchInput!) {
+  reassignSchedulePunch(input: $input) {
+    ...ScheduleAttendancePunchFields
+  }
+}
+
+# 補打卡新增頁「對應排班」:本人那天在那家店的已發布排班
+query MakeupPunchEntryOptions($input: MakeupPunchEntryOptionsInput!) {
+  makeupPunchEntryOptions(input: $input) {
+    ...ScheduleAttendanceEntryOptionFields
+  }
+}
+
+# 我送出、還在審核中的補打卡申請對應的排班(我的班表「補卡審核中」)
+query MyPendingMakeupPunchEntryIds {
+  myPendingMakeupPunchEntryIds
+}
+
+# 補打卡申請選的排班還在不在(審核頁的警告)
+query MakeupPunchEntryExists($submissionId: ID!) {
+  makeupPunchEntryExists(submissionId: $submissionId)
+}

@@ -1,1 +1,2459 @@
-{}
+{
+  "tagPalettes": {
+    "names": {
+      "blue": "藍",
+      "cyan": "青",
+      "green": "綠",
+      "lime": "萊姆",
+      "yellow": "黃",
+      "orange": "橘",
+      "red": "紅",
+      "pink": "粉",
+      "purple": "紫",
+      "grey": "灰"
+    },
+    "select": {
+      "label": "顏色",
+      "none": "不設定",
+      "title": "選擇顏色"
+    }
+  },
+  "fieldOptionColors": {
+    "column": "顏色",
+    "selectAria": "「{name}」的顏色",
+    "feedback": {
+      "success": "已更新顏色"
+    }
+  },
+  "lotteryMasterData": {
+    "tabs": {
+      "aria": "檔案管理分頁",
+      "games": "遊戲",
+      "cashPoints": "收銀點"
+    },
+    "status": {
+      "on_sale": "販售中",
+      "discontinued": "停售"
+    },
+    "games": {
+      "new": "+ 新增遊戲",
+      "columns": {
+        "gameCode": "代號",
+        "name": "名稱",
+        "color": "顏色",
+        "unitPrice": "面額",
+        "ticketsPerBook": "張數",
+        "bookPrice": "整本金額",
+        "defaultRate": "預設批購金額率",
+        "status": "狀態",
+        "launchedAt": "上市日"
+      },
+      "filters": {
+        "status": "狀態",
+        "unitPrice": "面額",
+        "keyword": "關鍵字",
+        "all": "全部"
+      },
+      "empty": "沒有符合條件的遊戲",
+      "total": "共 {total} 筆",
+      "rate": "{rate}%",
+      "listAria": "遊戲列表"
+    },
+    "gameForm": {
+      "createTitle": "新增遊戲",
+      "editTitle": "編輯遊戲",
+      "sections": {
+        "info": "遊戲資訊",
+        "color": "顏色",
+        "note": "備註"
+      },
+      "fields": {
+        "gameCode": "遊戲代號",
+        "name": "遊戲名稱",
+        "status": "狀態",
+        "unitPrice": "單張金額",
+        "ticketsPerBook": "整本張數",
+        "bookPrice": "整本金額",
+        "defaultRate": "預設批購金額率(%)",
+        "launchedAt": "上市日",
+        "discontinuedAt": "停售日",
+        "claimDeadline": "兌獎截止日",
+        "note": "備註"
+      },
+      "colorHint": "顏色(看板卡片使用,只能從色票選)",
+      "gameCodeHint": "4 碼數字",
+      "nonStandard": "非標準組合:面額 {unitPrice} 的標準張數是 {standard} 張",
+      "nonStandardPrice": "非預設面額,請確認張數",
+      "locked": "已有庫存:代號、單張金額、整本張數已鎖定。",
+      "cancel": "取消",
+      "delete": "刪除",
+      "save": "儲存",
+      "loading": "載入中",
+      "deleteDialog": {
+        "title": "刪除遊戲?",
+        "body": "刪除「{name}」後就不會出現在任何清單裡,這個動作不能復原。",
+        "confirm": "刪除",
+        "cancel": "取消"
+      }
+    },
+    "gameView": {
+      "edit": "編輯",
+      "summary": "{unitPrice} 元 × {tickets} 張 · 整本 {bookPrice} · 預設批購金額率 {rate}%",
+      "tabs": {
+        "aria": "遊戲詳情分頁",
+        "basic": "基本資料",
+        "stock": "庫存概況",
+        "allocations": "預計要給本數"
+      },
+      "empty": "—"
+    },
+    "cashPoints": {
+      "new": "+ 新增收銀點",
+      "columns": {
+        "org": "分店",
+        "name": "名稱",
+        "position": "對應崗位",
+        "order": "排序",
+        "printer": "印表機",
+        "enabled": "狀態",
+        "actions": "操作"
+      },
+      "edit": "編輯",
+      "printerDefault": "(用分店預設)",
+      "enabled": {
+        "true": "啟用",
+        "false": "停用"
+      },
+      "empty": "還沒有收銀點",
+      "total": "共 {total} 筆",
+      "listAria": "收銀點列表"
+    },
+    "cashPointForm": {
+      "createTitle": "新增收銀點",
+      "editTitle": "編輯收銀點",
+      "fields": {
+        "orgId": "分店",
+        "positionKey": "對應崗位(必填)",
+        "name": "名稱",
+        "order": "排序",
+        "printerId": "印表機",
+        "enabled": "啟用",
+        "note": "備註"
+      },
+      "printerDefault": "用分店預設",
+      "positionMissing": "找不到?到欄位管理新增",
+      "orgFixed": "建立後不能換分店",
+      "cancel": "取消",
+      "save": "儲存"
+    },
+    "feedback": {
+      "createSuccess": "已新增",
+      "saveSuccess": "已儲存",
+      "deleteSuccess": "已刪除"
+    },
+    "errors": {
+      "FORBIDDEN": "你沒有這個操作的權限",
+      "NOT_FOUND": "找不到這筆資料",
+      "VALIDATION_FAILED": "有欄位不正確,請檢查標示的欄位",
+      "GAME_CODE_DUPLICATE": "遊戲代號已被使用",
+      "GAME_IN_USE": "這個遊戲已有庫存:代號、單張金額、整本張數不能改,也不能刪除(可以改成停售)",
+      "POSITION_DUPLICATE": "這家分店已有這個崗位的收銀點",
+      "NAME_DUPLICATE": "這家分店已有同名的收銀點",
+      "CASH_POINT_IN_USE": "這個收銀點有開著的班或檯面上還有張數,不能停用",
+      "UNEXPECTED": "發生錯誤,請稍後再試"
+    }
+  },
+  "lotteryDealers": {
+    "badgeDescription": "證照快到期、批購逾期的經銷商人數",
+    "tabs": {
+      "label": "經銷商管理分頁",
+      "classA": "甲類",
+      "classB": "乙類",
+      "contacts": "關係人"
+    },
+    "actions": {
+      "newDealer": "+ 新增經銷商",
+      "newContact": "+ 新增關係人",
+      "edit": "編輯",
+      "save": "儲存",
+      "cancel": "取消",
+      "clear": "清除",
+      "registerSignin": "登記見簽",
+      "register": "登記",
+      "releaseAndRemove": "一併解除並移除",
+      "releaseAndSave": "一併解除並儲存"
+    },
+    "types": {
+      "a": "甲類",
+      "b": "乙類"
+    },
+    "statuses": {
+      "active": "營業中",
+      "suspended": "暫停",
+      "terminated": "解約"
+    },
+    "roles": {
+      "trustee": "受託人",
+      "agent": "代理人",
+      "introducer": "介紹人"
+    },
+    "contactStatuses": {
+      "active": "啟用",
+      "disabled": "停用"
+    },
+    "rentCycles": {
+      "month": "月",
+      "quarter": "季",
+      "year": "年"
+    },
+    "common": {
+      "all": "全部",
+      "none": "—",
+      "noRecord": "無紀錄",
+      "days": "{days} 天",
+      "loading": "載入中",
+      "empty": "沒有資料",
+      "total": "共 {total} 筆"
+    },
+    "list": {
+      "quick": {
+        "over150": "逾 150 天",
+        "over180": "逾 180 天",
+        "unsignedThisQuarter": "本季未見簽"
+      },
+      "filters": {
+        "signin": "見簽狀態",
+        "signed": "本季已見簽",
+        "unsigned": "本季未見簽",
+        "purchase": "距上次批購",
+        "license": "證照",
+        "licenseExpiring": "30 天內到期",
+        "licenseExpired": "已過期",
+        "status": "狀態",
+        "role": "身分",
+        "contactKeyword": "關鍵字(姓名、手機、身分證)"
+      },
+      "columns": {
+        "licenseNo": "證號",
+        "name": "姓名",
+        "coSalesStore": "共同銷售處所",
+        "daysSincePurchase": "距批購",
+        "daysSinceSelfPurchase": "距本人批購",
+        "signedThisQuarter": "本季見簽",
+        "status": "狀態",
+        "storeName": "店名",
+        "storeOrg": "對應分店",
+        "coSellers": "共同銷售人",
+        "roles": "身分",
+        "mobile": "手機",
+        "dealerCount": "關聯經銷商"
+      },
+      "signed": "已見簽",
+      "unsigned": "未見簽",
+      "storeOrgMissing": "未選分店",
+      "coSellerCount": "{count} / 6",
+      "tableAria": {
+        "classA": "甲類清單",
+        "classB": "乙類清單",
+        "contacts": "關係人清單"
+      }
+    },
+    "fields": {
+      "shareOrgs": "共用給",
+      "type": "類型(建立後不能改)",
+      "licenseNo": "證號",
+      "name": "姓名",
+      "status": "狀態",
+      "licenseApprovedAt": "證照核准日",
+      "licenseExpiresAt": "證照到期日",
+      "coSalesDealerId": "共同銷售處所",
+      "agentIds": "代理人",
+      "trusteeIds": "受託人",
+      "introducerIds": "介紹人",
+      "lastPurchaseBaseDate": "最近一次批購基準日",
+      "lastSelfPurchaseBaseDate": "最近一次本人批購基準日",
+      "storeOrgId": "對應分店",
+      "storeName": "店名",
+      "businessAddress": "營業地址",
+      "storePhone": "店面電話",
+      "terminalNo": "終端機編號",
+      "rentFee": "費用(元)",
+      "rentCycle": "週期",
+      "rentStartMonth": "起算月份",
+      "rentDueDay": "繳費日(每期第一個月的第幾日)",
+      "nationalId": "身分證字號",
+      "birthday": "生日",
+      "phone": "電話",
+      "mobile": "手機",
+      "email": "Email",
+      "mailingAddress": "通訊地址",
+      "residentialAddress": "戶籍地址",
+      "residentialSameAsMailing": "戶籍地址同通訊地址",
+      "note": "備註",
+      "roles": "身分(至少一個)",
+      "month": "{month} 月"
+    },
+    "sections": {
+      "dealer": "經銷商資訊",
+      "store": "店面",
+      "rent": "牌租",
+      "basic": "基本資訊",
+      "system": "系統資訊",
+      "contactBasic": "基本資料",
+      "contactInfo": "聯絡資訊",
+      "note": "備註"
+    },
+    "summary": {
+      "rent": "{fee} 元 / {cycle}",
+      "rentDue": "{fee} 元 / {cycle} · 每期第 {day} 日",
+      "rentNone": "未設定",
+      "contacts": "代理人 {agents}、受託人 {trustees} · 證照到期 {expiresOn}",
+      "system": "建立 {date} {name}",
+      "classAHeader": "共同銷售處所:{store} · 最近一次批購 {lastPurchase} · 最近一次本人批購 {lastSelfPurchase}",
+      "classBHeader": "{name} · 對應分店:{store}",
+      "notSelected": "未選"
+    },
+    "form": {
+      "storeOrgHint": "還沒有選對應分店:可以先儲存,但請盡快選擇。",
+      "occupied": "已由 {name} 對應",
+      "pickContacts": "只列出有這個身分且啟用中的關係人",
+      "coSalesHint": "甲類要先有共同銷售處所才能設代理人",
+      "readOnlyField": "沒有修改權限"
+    },
+    "detail": {
+      "tabsLabel": "經銷商詳情分頁",
+      "coSellerWarning": "共同銷售人 {count} 位,超過 6 位(只警告)。",
+      "linkedDealers": "關聯的經銷商",
+      "dealer": "經銷商",
+      "dealerType": "類型",
+      "role": "身分"
+    },
+    "coSellers": {
+      "tab": "共同銷售人",
+      "licenseNo": "甲類證號",
+      "name": "姓名",
+      "registeredAt": "登記日",
+      "status": "狀態"
+    },
+    "signins": {
+      "tab": "見簽紀錄",
+      "title": "見簽紀錄",
+      "year": "{year} 年",
+      "quarter": "季別",
+      "signedAt": "見簽日",
+      "note": "備註",
+      "state": "狀態",
+      "states": {
+        "signed": "已見簽",
+        "missing": "未登記",
+        "open": "本季未登記",
+        "notStarted": "未到"
+      },
+      "dialogTitle": "登記見簽",
+      "yearField": "年度",
+      "quarterField": "季別",
+      "quarterOption": "Q{quarter}",
+      "prevYear": "上一年",
+      "nextYear": "下一年"
+    },
+    "conflict": {
+      "hiddenCount": "另有 {count} 筆你看不到的關聯也會一起解除。",
+      "coSalesTitle": "移除共同銷售處所",
+      "coSalesBody": "{name}還有 {count} 位代理人。甲類要先有共同銷售處所才能設代理人。",
+      "roleTitle": "取消身分",
+      "roleBody": "要取消的身分還有關聯,一併解除後才能儲存。",
+      "relation": "關聯",
+      "dealer": "經銷商",
+      "contact": "姓名"
+    },
+    "feedback": {
+      "createSuccess": "已新增經銷商",
+      "updateSuccess": "已儲存",
+      "contactCreateSuccess": "已新增關係人",
+      "signinSuccess": "已登記見簽"
+    },
+    "errors": {
+      "FORBIDDEN": "沒有權限執行這個操作",
+      "NOT_FOUND": "找不到這筆資料,可能已不在你的可見範圍內",
+      "VALIDATION_FAILED": "資料未通過驗證,請檢查標示的欄位",
+      "CONFLICT": "還有關聯,請確認後再試",
+      "UNEXPECTED": "發生非預期的錯誤,請稍後再試",
+      "reasons": {
+        "FIELD_FORBIDDEN": "沒有修改這個欄位的權限",
+        "LICENSE_NO_DUPLICATE": "這個證號已經有經銷商使用",
+        "NATIONAL_ID_DUPLICATE": "這個身分證字號已經登記過",
+        "NOT_FOR_TYPE": "這個欄位不屬於這個類型",
+        "RENT_START_MONTH_REQUIRED": "週期是季或年時,起算月份必填",
+        "ROLE_LIMIT": "人數超過上限(甲類:代理人 2、受託人 2、介紹人 1;乙類:代理人 2、介紹人 1)",
+        "TRUSTEE_NOT_ALLOWED": "乙類不能有受託人",
+        "CONTACT_ROLE_MISMATCH": "選的關係人沒有這個身分",
+        "CONTACT_DISABLED": "選的關係人已停用,不能再被選取",
+        "SELF_RELATION": "經銷商本人不能登記成自己的關係人",
+        "AGENT_REQUIRES_CO_SALES": "甲類要先有共同銷售處所才能設代理人",
+        "CO_SALES_NOT_CLASS_B": "共同銷售處所只能選乙類",
+        "DEALER_TERMINATED": "選的經銷商已解約,不能再被選取",
+        "STORE_OCCUPIED": "這家分店已對應其他乙類",
+        "STORE_NOT_BRANCH": "對應分店要選最上層組織底下的分店",
+        "REFERENCE_NOT_FOUND": "選的資料不存在或看不到",
+        "SIGNIN_DUPLICATE": "這一季已經登記過見簽",
+        "SIGNIN_QUARTER_NOT_STARTED": "這一季還沒到,不能登記",
+        "AGENTS_REQUIRE_CO_SALES": "還有代理人,不能移除共同銷售處所",
+        "ROLE_IN_USE": "要取消的身分還有關聯"
+      }
+    },
+    "allocations": {
+      "tab": "預計要給本數"
+    },
+    "stock": {
+      "tab": "在店庫存"
+    },
+    "purchases": {
+      "tab": "批購紀錄"
+    }
+  },
+  "lotteryInventory": {
+    "ticketGrid": {
+      "states": {
+        "unsold": "未售",
+        "selected": "已選",
+        "sold": "已售",
+        "soldThisShift": "本班售出",
+        "otherCashPoint": "在別的收銀點",
+        "assigned": "已分配",
+        "skipped": "跳號",
+        "scrapped": "報廢",
+        "lost": "待查·遺失"
+      },
+      "quickSelect": {
+        "label": "連號快選",
+        "from": "從",
+        "to": "到",
+        "fromAria": "連號快選的起號",
+        "toAria": "連號快選的迄號",
+        "add": "加入"
+      },
+      "selectedSummary": "已選 {ranges}({count} 張)",
+      "summarySeparator": " · ",
+      "shiftHint": "Shift 可連選",
+      "legendAria": "格子圖例",
+      "gridAria": "張數格子"
+    },
+    "tabs": {
+      "aria": "庫存管理分頁",
+      "stock": "庫存",
+      "investigations": "待查·遺失",
+      "allocations": "預計要給本數"
+    },
+    "common": {
+      "cancel": "取消",
+      "save": "儲存",
+      "unitPrice": "{price} 元",
+      "tickets": "{count} 張",
+      "amount": "{amount} 元"
+    },
+    "reason": {
+      "note": "說明",
+      "noteRequired": "說明(必填)"
+    },
+    "errors": {
+      "FORBIDDEN": "你沒有這個操作的權限",
+      "NOT_FOUND": "找不到這本,或你看不到它",
+      "VALIDATION_FAILED": "有欄位沒填好,請檢查標紅的欄位",
+      "CONFLICT": "這幾張已被處理,請重新整理後再試",
+      "TICKET_ALREADY_PROCESSED": "這幾張已被處理,請重新整理後再試",
+      "CROSS_STORE_NOT_ALLOWED": "只能把張移進你看得到的分店",
+      "NO_SKIPPED_TICKETS": "這本沒有跳號,不需要更正",
+      "SKIP_COUNT_MISMATCH": "改完的跳號張數要等於待標註張數",
+      "SKIP_UNCHANGED": "跳號沒有更動",
+      "TICKET_STATUS_NOT_ALLOWED": "選到的張的狀態不能做這件事",
+      "UNEXPECTED": "發生錯誤,請稍後再試",
+      "RECOVER_TARGET_NOT_STORE": "尋回要回到一家店,請選擇回到哪家店"
+    },
+    "ticketStatuses": {
+      "unsold": "未售",
+      "sold": "已售",
+      "skipped": "跳號",
+      "scrapped": "報廢",
+      "investigating": "待查",
+      "lost": "遺失"
+    },
+    "bookStates": {
+      "unopened": "未拆",
+      "on_counter": "檯面中",
+      "sold_out": "售完",
+      "pending_skip": "有待標註"
+    },
+    "locations": {
+      "stock": "庫存",
+      "counter": "檯面",
+      "in_transit": "在途"
+    },
+    "eventTypes": {
+      "purchase": "進貨",
+      "purchase_void": "進貨作廢",
+      "open": "拆本",
+      "recall": "收回",
+      "move": "移櫃",
+      "sale": "售出",
+      "sale_stocktake": "售出(盤點補登)",
+      "sale_undo": "撤銷",
+      "skip": "跳號",
+      "unskip": "取消跳號",
+      "scrap": "報廢",
+      "transfer_out": "調出",
+      "in_transit": "在途",
+      "transfer_in": "調入",
+      "investigate": "待查",
+      "lose": "遺失",
+      "recover": "尋回"
+    },
+    "sources": {
+      "purchase": "進貨單",
+      "transfer_in": "調貨單"
+    },
+    "stock": {
+      "columns": {
+        "bookNo": "本編號",
+        "game": "遊戲",
+        "unitPrice": "面額",
+        "holdings": "所在分店",
+        "remaining": "剩餘 / 總張數",
+        "pendingSkip": "待標註",
+        "purchasedAt": "批購日",
+        "dealer": "進貨甲類"
+      },
+      "remaining": "{remaining} / {total}",
+      "none": "—",
+      "filters": {
+        "all": "全部",
+        "org": "分店",
+        "game": "遊戲",
+        "state": "狀態",
+        "purchasedFrom": "批購日起",
+        "purchasedTo": "批購日迄",
+        "bookNo": "本號"
+      },
+      "listAria": "庫存(以本為單位)",
+      "pickOrg": "請先選分店",
+      "empty": "沒有符合條件的本",
+      "total": "共 {count} 本"
+    },
+    "lookup": {
+      "open": "查刮刮樂",
+      "title": "查刮刮樂",
+      "submit": "查詢",
+      "input": "刷條碼或輸入背面編號",
+      "hint": "也可以輸入正面編號或正面條碼。",
+      "invalid": "編號格式不對",
+      "notFound": "找不到這張刮刮樂,或你看不到它",
+      "bookNo": "本號 {bookNo}",
+      "ticketNo": "張號 {ticketNo}",
+      "responsible": "責任分店 {store}"
+    },
+    "investigations": {
+      "columns": {
+        "book": "本",
+        "game": "遊戲",
+        "status": "狀態",
+        "responsible": "責任分店",
+        "source": "來源",
+        "at": "日期",
+        "cost": "批購成本"
+      },
+      "source": "{serial}({count} 張)",
+      "recover": "尋回",
+      "listAria": "待查·遺失",
+      "empty": "目前沒有待查或遺失的刮刮樂"
+    },
+    "book": {
+      "tabLabel": "本 {key}",
+      "loading": "載入本的詳情",
+      "title": "{game} · 本號 {bookNo}",
+      "subtitle": "{price} 元 · 張號 {first}–{last}",
+      "correctSkips": "更正跳號",
+      "recoverAll": "整本尋回",
+      "investigation": "這本{status}中:{date} {serial},責任分店 = {store}",
+      "sources": "來源",
+      "sourceValue": "{serial}({date})",
+      "dealer": "批購甲類",
+      "locations": "所在",
+      "cost": "成本",
+      "rate": "批購金額率",
+      "rateValue": "{rate}%",
+      "costValueLabel": "成本 / 單張成本",
+      "grid": "張數格子",
+      "selected": "已選 {count} 張 {ranges}",
+      "scrap": "報廢",
+      "recover": "尋回",
+      "clearSelection": "取消選取",
+      "timeline": "事件時間軸"
+    },
+    "timeline": {
+      "columns": {
+        "at": "時間",
+        "type": "事件",
+        "tickets": "張",
+        "route": "位置",
+        "by": "人 / 單據"
+      },
+      "wholeBook": "整本",
+      "aria": "事件時間軸",
+      "empty": "還沒有事件"
+    },
+    "correctSkips": {
+      "title": "更正跳號",
+      "required": "待標註",
+      "current": "目前跳號",
+      "changed": "改成",
+      "changedTo": "{ranges}({count} / {required})",
+      "reason": "更正原因",
+      "hint": "格子預選目前的跳號;改完的張數要等於待標註張數。",
+      "submit": "更正",
+      "success": "已更正跳號"
+    },
+    "scrap": {
+      "title": "報廢 {count} 張",
+      "reason": "報廢原因",
+      "loss": "損失(批購成本)",
+      "submit": "報廢",
+      "success": "已報廢 {count} 張"
+    },
+    "recover": {
+      "title": "尋回 {count} 張",
+      "ticketLine": "本號 {bookNo} · 張號 {ranges} · {statuses}",
+      "reason": "尋回原因",
+      "backTo": "回到",
+      "backToStore": "{store} 庫存",
+      "submit": "尋回",
+      "success": "已尋回 {count} 張",
+      "pickStore": "回到哪家店"
+    },
+    "allocations": {
+      "aria": "預計要給本數",
+      "store": "分店",
+      "game": "遊戲",
+      "caption": "每格「已給 / 預計」。",
+      "captionEditable": "每格「已給 / 預計」;點格子修改預計。",
+      "cardTitle": "{name}(已給 / 預計)",
+      "extraTickets": "+{count} 張",
+      "none": "—",
+      "empty": "沒有分店或遊戲",
+      "editAria": "修改 {store} {game} 的預計要給本數",
+      "editTitle": "預計要給本數",
+      "editTarget": "{store} · {game}(已給 {given})",
+      "planned": "預計要給本數",
+      "plannedInvalid": "請填 0 以上的整數",
+      "note": "備註",
+      "saveSuccess": "已更新預計要給本數"
+    },
+    "stockOverview": {
+      "aria": "庫存概況",
+      "store": "分店",
+      "game": "遊戲",
+      "unopened": "未拆(本)",
+      "counter": "檯面(張)",
+      "sold": "已售(張)",
+      "empty": "沒有庫存"
+    },
+    "detailTabs": {
+      "noStore": "這位乙類還沒有對應分店。"
+    }
+  },
+  "lotteryReports": {
+    "reports": {
+      "operations": "營運報表",
+      "shift-checkouts": "班次結帳歷史報表"
+    },
+    "reportList": {
+      "title": "報表",
+      "option": "{name}(分店最多 {max} 家)",
+      "empty": "你目前沒有可以輸出的報表。需要的話,請洽系統管理員開放報表權限。"
+    },
+    "conditions": {
+      "title": "{name} · 條件",
+      "orgs": "分店",
+      "orgsRequired": "請至少選一家分店",
+      "preview": "預覽",
+      "export": "匯出 Excel",
+      "exporting": "匯出中…"
+    },
+    "periodPicker": {
+      "kindsAria": "期間類型",
+      "kinds": {
+        "day": "日",
+        "week": "週",
+        "month": "月"
+      },
+      "date": "日期",
+      "today": "今天",
+      "yesterday": "昨天",
+      "thisWeek": "本週",
+      "lastWeek": "上週",
+      "thisMonth": "本月",
+      "lastMonth": "上月",
+      "weekCalendarAria": "選擇週",
+      "weekHint": "點任一天選整週(星期日起算)。",
+      "weekRange": "{from}({fromWeekday})~ {to}({toWeekday})",
+      "weekdays": {
+        "0": "日",
+        "1": "一",
+        "2": "二",
+        "3": "三",
+        "4": "四",
+        "5": "五",
+        "6": "六"
+      },
+      "monthTitle": "{year} 年 {month} 月",
+      "prevMonth": "上一個月",
+      "nextMonth": "下一個月",
+      "yearTitle": "{year} 年",
+      "prevYear": "上一年",
+      "nextYear": "下一年",
+      "monthGridAria": "選擇月份",
+      "monthLabel": "{month} 月"
+    },
+    "period": {
+      "day": "{date}",
+      "week": "{from} ~ {to}",
+      "month": "{year} 年 {month} 月"
+    },
+    "preview": {
+      "title": "{name} · {period}",
+      "back": "返回條件",
+      "loading": "報表產生中…"
+    },
+    "sheetPreview": {
+      "tabsAria": "工作表",
+      "empty": "這個工作表沒有資料"
+    },
+    "totalSheet": "全部分店合計",
+    "fileName": "{name}_{period}",
+    "errors": {
+      "RANGE_TOO_LARGE": "期間或分店數超過這張報表的上限,請縮小範圍後再試一次。",
+      "VALIDATION_FAILED": "條件不完整,請檢查期間與分店。",
+      "FORBIDDEN": "你沒有這張報表的權限。",
+      "UNEXPECTED": "報表產生失敗,請稍後再試。"
+    }
+  },
+  "schedule": {
+    "pages": {
+      "my": "我的班表",
+      "manage": "排班作業",
+      "settings": "排班設定",
+      "attendance": "出勤紀錄"
+    },
+    "tabs": {
+      "roster": "排班表",
+      "staff": "排班人員",
+      "templates": "人力需求範本",
+      "weekTemplates": "人力需求週範本",
+      "rules": "規則",
+      "calendar": "行事曆",
+      "dayOffs": "我的畫休",
+      "dayOffOverview": "畫休總覽",
+      "supportRequests": "支援需求單",
+      "mySchedule": "班表",
+      "attendanceByPerson": "依人員(月)",
+      "attendanceByStore": "依分店(日)"
+    },
+    "shell": {
+      "empty": "這一頁目前沒有可用的分頁。"
+    },
+    "common": {
+      "cancel": "取消",
+      "save": "儲存",
+      "close": "關閉",
+      "remove": "移除"
+    },
+    "errors": {
+      "FORBIDDEN": "你沒有這個操作的權限",
+      "NOT_FOUND": "找不到這筆資料,可能已被刪除或你看不到它",
+      "VALIDATION_FAILED": "有欄位不正確,請檢查標示的欄位",
+      "NOT_OWNER": "這是上層組織建立的,只有建立的那一層能改",
+      "MISSING_PERMISSION": "你沒有修改這個組織規則的權限",
+      "UNEXPECTED": "發生錯誤,請稍後再試",
+      "OUTSIDE_DAY_OFF_WINDOW": "現在不在畫休登記期間,不能自己修改。要調整請聯絡店長或排班負責人。",
+      "AUTO_RUN_IN_PROGRESS": "自動排班執行中,這個月暫時不能修改,請稍後再試"
+    },
+    "employment": {
+      "full-time": "正職",
+      "part-time": "兼職"
+    },
+    "staff": {
+      "keyword": "關鍵字",
+      "joinedFilter": "排班",
+      "joinedAll": "全部(已加入 / 未加入)",
+      "joinedYes": "已加入",
+      "joinedNo": "未加入",
+      "sharedFromOtherOrg": "其他店的排班人員(只能看)",
+      "joinedElsewhere": "已在其他組織加入",
+      "add": "加入排班({count})",
+      "columns": {
+        "name": "姓名",
+        "employmentType": "僱用類型",
+        "primary": "主要分店",
+        "orgs": "可以排的分店",
+        "status": "狀態"
+      },
+      "canLeadSuffix": "{name}(可負責)",
+      "selectAria": "選取「{name}」",
+      "notFound": "找不到人?先到使用者管理新增帳號",
+      "primaryElsewhere": "其他分店",
+      "dialog": {
+        "title": "排班人員設定 · {name}",
+        "employmentType": "僱用類型",
+        "orgs": "可以排的分店",
+        "canLead": "可擔任負責人",
+        "isPrimary": "主要分店",
+        "addOrg": "+ 加分店",
+        "noOrgs": "還沒有可以排的分店",
+        "primaryRequired": "要選一家主要分店",
+        "primaryElsewhere": "主要分店在你看不到的分店;這裡不能再設主要分店",
+        "alreadyAdded": "已加入"
+      },
+      "feedback": {
+        "addSuccess": "已加入排班",
+        "updateSuccess": "已更新排班人員"
+      }
+    },
+    "templates": {
+      "create": "+ 新增人力需求範本",
+      "hint": "上層組織建立的範本,底下各分店都能用,但只有建立它的那一層能改。",
+      "columns": {
+        "name": "名稱",
+        "shortName": "簡稱",
+        "time": "時間",
+        "position": "崗位",
+        "tasks": "負責 / 協同",
+        "color": "顏色",
+        "owner": "建立於"
+      },
+      "taskCount": "{leader} / {helper}",
+      "timeRange": "{start}–{end}",
+      "cardMeta": "{time} · {position} · 負責/協同 {tasks}",
+      "dialog": {
+        "createTitle": "新增人力需求範本",
+        "editTitle": "人力需求範本 · {name}",
+        "name": "名稱",
+        "shortName": "簡稱",
+        "shortNameHint": "1–2 字",
+        "startTime": "開始",
+        "endTime": "結束",
+        "timeHint": "結束比開始早 = 跨午夜",
+        "position": "崗位",
+        "leaders": "負責人(0–1 筆)",
+        "helpers": "協同(0–10 筆)",
+        "noLeader": "沒有負責人",
+        "noHelper": "沒有協同",
+        "task": "執行任務",
+        "addLeader": "+ 負責人",
+        "addHelper": "+ 協同",
+        "color": "顏色",
+        "colorAria": "範本的顏色",
+        "delete": "刪除人力需求範本",
+        "deleteConfirm": "刪除「{name}」?已用這個範本產生的人力需求不受影響。",
+        "readOnly": "這是「{org}」建立的範本,只有建立的那一層能改。"
+      },
+      "feedback": {
+        "saveSuccess": "已儲存人力需求範本",
+        "deleteSuccess": "已刪除人力需求範本"
+      }
+    },
+    "weekTemplates": {
+      "create": "+ 新增人力需求週範本",
+      "columns": {
+        "name": "名稱",
+        "enabled": "啟用",
+        "owner": "建立於"
+      },
+      "weekdays": {
+        "0": "日",
+        "1": "一",
+        "2": "二",
+        "3": "三",
+        "4": "四",
+        "5": "五",
+        "6": "六"
+      },
+      "weekdayLong": {
+        "0": "星期日",
+        "1": "星期一",
+        "2": "星期二",
+        "3": "星期三",
+        "4": "星期四",
+        "5": "星期五",
+        "6": "星期六"
+      },
+      "none": "—",
+      "enabledAria": "啟用「{name}」",
+      "noTemplates": "還沒有人力需求範本,請先到「人力需求範本」建立。",
+      "dialog": {
+        "createTitle": "新增人力需求週範本",
+        "editTitle": "人力需求週範本 · {name}",
+        "name": "名稱",
+        "pick": "{day} 用「{template}」",
+        "delete": "刪除人力需求週範本",
+        "deleteConfirm": "刪除「{name}」?",
+        "readOnly": "這是「{org}」建立的週範本,只有建立的那一層能改。"
+      },
+      "feedback": {
+        "saveSuccess": "已儲存人力需求週範本",
+        "deleteSuccess": "已刪除人力需求週範本",
+        "enableSuccess": "已啟用",
+        "disableSuccess": "已停用"
+      },
+      "dayCell": "{day} {templates}"
+    },
+    "rules": {
+      "org": "分店",
+      "customize": "自訂",
+      "restore": "還原",
+      "autoRunTitle": "自動排班條件(整組)",
+      "autoRunUnchecked": "(未勾)",
+      "autoRunItem": "{index}. {label}{unchecked}",
+      "autoRunSeparator": " · ",
+      "levels": {
+        "limit": "限制",
+        "reminder": "提醒"
+      },
+      "labels": {
+        "maxMonthlyDayOffs": "每月最多畫休",
+        "minMonthlyDayOffs": "每月最少畫休",
+        "maxConsecutiveWorkDays": "最多連續上班",
+        "maxConsecutiveDaysOff": "最多連續休假",
+        "minRestBetweenShifts": "兩班之間最少休息",
+        "maxDailyWorkHours": "每天最多上班時數",
+        "dayOffWindow": "畫休開放期間",
+        "maxDailyDayOffStaff": "同日最多畫休人數",
+        "understaffed": "人力不足",
+        "multiPositionOverlap": "同一時段兼多個崗位",
+        "entryMatchToleranceMinutes": "對應排班容許時間",
+        "autoDemandWeekTemplateId": "預設人力需求週範本",
+        "graceMinutes": "遲到 / 早退寬限",
+        "defaultBreaks": "預設休息",
+        "defaultTasks": "負責人 / 協同預設任務",
+        "continuePreviousEntry": "延續同一人的排班",
+        "leaderCountFirst": "負責人次數多者優先",
+        "monthlyShiftBalance": "本月班數平均",
+        "allowOverlappingDemands": "允許同一人同時段填進多筆人力需求"
+      },
+      "units": {
+        "day": "{n} 天",
+        "person": "{n} 人",
+        "hour": "{n} 小時",
+        "minute": "{n} 分鐘",
+        "none": "{n}"
+      },
+      "value": {
+        "dayRange": "每月 {start}–{end} 日",
+        "grace": "{late} 分鐘 / {early} 分鐘",
+        "breakTier": "滿 {hours} 小時{minutes, plural, =0 {} other { # 分}} {breakMinutes} 分",
+        "separator": "、",
+        "defaultTasks": "{leader} / {helper}",
+        "notSet": "不設定",
+        "unknownWeekTemplate": "(已刪除的週範本)",
+        "byDemand": "依人力需求",
+        "on": "開啟",
+        "off": "關閉"
+      },
+      "source": {
+        "own": "本店自訂",
+        "ownTop": "本層自訂",
+        "inherited": "沿用:{org}",
+        "inheritedHidden": "沿用上層設定",
+        "default": "系統預設"
+      },
+      "summary": "{source} {value}",
+      "summaryOwn": "{source}:{value}",
+      "parent": "上層:{value}",
+      "dialog": {
+        "title": "規則 · {label}",
+        "amount": "值",
+        "startDay": "每月開始日",
+        "endDay": "每月結束日",
+        "weekTemplate": "預設人力需求週範本",
+        "lateGraceMinutes": "遲到寬限(分鐘)",
+        "earlyLeaveGraceMinutes": "早退寬限(分鐘)",
+        "tierMinHours": "排班滿(小時)",
+        "tierBreak": "休息(分鐘)",
+        "addTier": "+ 加一級",
+        "leaderTask": "負責人預設任務",
+        "helperTask": "協同預設任務",
+        "enabled": "開啟這條規則",
+        "level": "違反時",
+        "levelLimit": "限制(不能存、不能發布)",
+        "levelReminder": "提醒(可以照樣存與發布)",
+        "order": "檢核清單排序",
+        "current": "目前:{summary}",
+        "restore": "還原成沿用",
+        "range": "{min}–{max}",
+        "amountWithUnit": "值({unit})"
+      },
+      "autoRunDialog": {
+        "title": "自動排班條件(整組)",
+        "hint": "勾選的條件依順序比較候選人,前一個平手才比下一個;都平手時隨機。",
+        "moveUp": "上移「{label}」",
+        "moveDown": "下移「{label}」"
+      },
+      "feedback": {
+        "saveSuccess": "已自訂規則",
+        "restoreSuccess": "已還原成沿用"
+      },
+      "unitNames": {
+        "day": "天",
+        "person": "人",
+        "hour": "小時",
+        "minute": "分鐘"
+      }
+    },
+    "calendar": {
+      "org": "分店",
+      "add": "新增",
+      "prevMonth": "上個月",
+      "nextMonth": "下個月",
+      "monthTitle": "{year} 年 {month} 月",
+      "closed": "店休",
+      "special": "特殊日",
+      "dayLabel": "{type} · {name}",
+      "legendClosed": "店休(不能排班)",
+      "legendSpecial": "特殊日(照常可以排,顏色可以選)",
+      "legendInherit": "↓ 上層組織設的會往下沿用",
+      "dialog": {
+        "createTitle": "新增店休 / 特殊日",
+        "editTitle": "店休 / 特殊日 · {date}",
+        "date": "日期",
+        "category": "類別",
+        "name": "名稱",
+        "note": "說明",
+        "color": "顏色",
+        "colorAria": "特殊日的顏色",
+        "delete": "刪除",
+        "inherited": "這天沿用「{org}」的設定,只有「{org}」能改。",
+        "add": "新增",
+        "deleteConfirm": "刪除 {date} 的設定?"
+      },
+      "feedback": {
+        "saveSuccess": "已儲存行事曆",
+        "deleteSuccess": "已刪除"
+      },
+      "weekdays": {
+        "0": "日",
+        "1": "一",
+        "2": "二",
+        "3": "三",
+        "4": "四",
+        "5": "五",
+        "6": "六"
+      }
+    },
+    "dayOffs": {
+      "monthTitle": "{year} 年 {month} 月",
+      "dateTitle": "{month}/{day}({weekday})",
+      "fullDay": "整天畫休",
+      "timeRange": "時段不可排",
+      "cellFullDay": "畫休",
+      "cellTimeRange": "{start}–{end} 不可排",
+      "count": "{count}/{limit}",
+      "infoAria": "看 {date} 誰畫休",
+      "legend": {
+        "fullDay": "整天畫休",
+        "timeRange": "時段不可排",
+        "count": "同日畫休人數(超過變紅)",
+        "countOverview": "同日畫休人數(只算以這家店為主要分店的人,時段不可排也算 1 人;超過變紅)",
+        "limitBand": "違反限制",
+        "reminderBand": "提醒",
+        "info": "看當天誰畫休",
+        "mine": "我的畫休(斜線)"
+      },
+      "violations": {
+        "maxMonthlyDayOffs": "本月畫休 {actual} 天,上限 {limit} 天",
+        "minMonthlyDayOffs": "本月畫休 {actual} 天,下限 {limit} 天",
+        "maxConsecutiveDaysOff": "{from}–{to} 最多連續休假 {limit} 天:這段連續休 {actual} 天",
+        "maxDailyDayOffStaff": "{date} 同日最多畫休 {limit} 人:已有 {actual} 人"
+      },
+      "my": {
+        "summaryOpen": "登記 {month} 月的畫休 · 開放中 {start}–{end}(剩 {days} 天)",
+        "summaryClosed": "{month} 月的畫休 · 登記期間 {start}–{end} 已結束",
+        "summaryBefore": "{month} 月的畫休 · 登記期間 {start}–{end} 還沒開始",
+        "stats": "已畫 {count} 天",
+        "statsMax": "上限 {limit}",
+        "statsMin": "下限 {limit}",
+        "register": "登記畫休",
+        "closedNotice": "畫休登記期間({start}–{end})已結束,不能自己修改。要調整請聯絡店長或排班負責人。",
+        "beforeNotice": "畫休登記期間({start}–{end})還沒開始,不能自己修改。要調整請聯絡店長或排班負責人。",
+        "overrideLink": "到畫休總覽代改",
+        "notJoined": "你還沒有加入排班,不能登記畫休。請聯絡店長或排班負責人。",
+        "violationsTitle": "違反規則({count})",
+        "noViolations": "沒有違反規則",
+        "view": "查看"
+      },
+      "dialog": {
+        "title": "登記畫休 · {date}",
+        "titleNoDate": "登記畫休",
+        "date": "日期",
+        "start": "開始",
+        "end": "結束",
+        "addSlot": "+ 再加一段",
+        "removeSlot": "拿掉這一段",
+        "registeredFullDay": "已登記 整天畫休",
+        "registeredTimeRange": "已登記 {start}–{end}",
+        "delete": "刪除",
+        "blocked": "違反限制,不能儲存:",
+        "saveSuccess": "已登記畫休",
+        "deleteSuccess": "已刪除畫休",
+        "savedWithReminders": "已登記畫休(有提醒)"
+      },
+      "detail": {
+        "fullDayTitle": "畫休",
+        "countSuffix": "({count}/{limit})",
+        "countFull": "({count}/{limit} 已滿)",
+        "countOver": "({count}/{limit} 超過)",
+        "timeRangeTitle": "時段不可排",
+        "timeRangeItem": "{name} {start}–{end}",
+        "rulesTitle": "涉及的規則",
+        "ruleItem": "{label} {limit}",
+        "none": "沒有"
+      },
+      "overview": {
+        "org": "分店",
+        "prevMonth": "上一個月",
+        "nextMonth": "下一個月",
+        "override": "代改",
+        "windowOpen": "開放中:{start}–{end},剩 {days} 天",
+        "windowClosed": "登記期間 {start}–{end} 已結束",
+        "windowBefore": "登記期間 {start}–{end} 還沒開始",
+        "notRegistered": "尚未畫休 {count} 人:{names}",
+        "allRegistered": "所有人都已登記畫休",
+        "filterAria": "篩選",
+        "filterAll": "全部",
+        "filterNotRegistered": "尚未畫休 {count}",
+        "cellFullDay": "畫休 {names}",
+        "cellTimeRange": "不可排 {name} {start}–{end}",
+        "nameSeparator": "、"
+      },
+      "override": {
+        "title": "代改畫休",
+        "person": "人員",
+        "kind": "種類",
+        "reason": "原因",
+        "reasonNote": "說明",
+        "reasonHint": "畫休截止後代改要選原因;選「其他」要填說明。",
+        "saveSuccess": "已代改畫休",
+        "deleteSuccess": "已刪除畫休"
+      },
+      "entryConflict": {
+        "message": "這天已經有排班({list}),請通知店長調整班表",
+        "item": "{date} {start}–{end} {org}",
+        "otherStore": "其他分店"
+      }
+    },
+    "supportRequests": {
+      "loading": "載入中",
+      "empty": "目前沒有支援需求單",
+      "listAria": "支援需求單列表",
+      "panelAria": "支援需求單檢視與審核",
+      "create": "+ 新增",
+      "total": "共 {total} 筆",
+      "selectHint": "點一筆支援需求單,在這裡檢視與審核",
+      "panelTitle": "支援需求單 · {branch}",
+      "panelTitleLoading": "支援需求單",
+      "openPage": "開啟完整頁面",
+      "filters": {
+        "status": "狀態",
+        "all": "全部"
+      },
+      "panelTitleWithSerial": "{serial} · {branch}"
+    },
+    "legend": {
+      "title": "圖例",
+      "sampleName": "王小明",
+      "tempMark": "臨",
+      "breakSample": "☕ 30",
+      "countSample": "負1/1",
+      "items": {
+        "leader": "負責人(名字或範本簡稱套綠底)",
+        "entry": "已排的班",
+        "temp": "沒有套用範本的人力需求",
+        "auto": "自動排入(手動改過就消失)",
+        "breakMinutes": "休息(分鐘)",
+        "unavailable": "店休 / 已排在其他分店 / 時段不可排",
+        "dayOff": "畫休(斜線)",
+        "missingLeader": "缺負責",
+        "missingHelper": "缺協同",
+        "full": "人力需求已滿",
+        "multi": "同一筆排班顧多台",
+        "closed": "店休",
+        "special": "特殊日(行事曆設定的顏色)",
+        "unmatchedPunch": "未對應排班的打卡(張數)",
+        "extension": "超出人力需求的時間(長條延伸的虛線段)",
+        "vacancyLeader": "缺負責(虛線空位)",
+        "vacancyHelper": "缺協同(虛線空位)",
+        "moreNeutral": "+N 收起的人力需求(點了看清單)",
+        "moreWarning": "+N 裡有缺協同(橘框)",
+        "moreError": "+N 裡有缺負責(紅框)",
+        "dotFull": "人力需求已滿",
+        "dotMissingHelper": "缺協同",
+        "dotMissingLeader": "缺負責",
+        "punchTimes": "上班 / 下班打卡",
+        "changedDot": "有異動",
+        "missingDot": "缺卡"
+      },
+      "punchSample": "⏲ 2",
+      "moreSample": "+N",
+      "punchTimesSample": "08:24"
+    },
+    "roster": {
+      "org": "分店",
+      "loading": "載入中",
+      "loadError": "排班表載入失敗,請稍後再試",
+      "dateTitle": "{date}({weekday})",
+      "dateHeader": "{date} {weekday}",
+      "dayMenu": "{date} 的更多動作",
+      "canLead": "可負責",
+      "gridLabel": "排班表",
+      "statsGroup": "統計",
+      "cellAria": "{name} {date}",
+      "addDemandAria": "新增 {date} 的人力需求",
+      "demandArea": "人力需求",
+      "tempRow": "臨",
+      "addDemandHint": "+ 人力需求",
+      "demandAria": "{position} 人力需求 {count}",
+      "summaryPrimary": "需 {need} · 已排 {filled}",
+      "summarySecondary": "缺 {missing} · 可排 {available}",
+      "dayOffDetail": "整天畫休 {fullDay} 天 · 時段不可排 {timeRange} 天",
+      "dayOffDays": "{count} 天",
+      "streakDays": "{count} 天",
+      "count": {
+        "leader": "負",
+        "helper": "協"
+      },
+      "columns": {
+        "person": "人員",
+        "shiftCount": "班數",
+        "leadShiftCount": "負責班數",
+        "workMinutes": "總工時",
+        "dayOffDays": "畫休",
+        "longestStreak": "最長連續上班"
+      },
+      "views": {
+        "roster": "班表",
+        "month": "月",
+        "week": "週",
+        "day": "日"
+      },
+      "status": {
+        "unpublished": "未發布",
+        "published": "已發布 · {date} {by}",
+        "unpublishedHint": "未發布:員工還看不到這個月的班表。每次儲存都會保存,按 [發布] 後才公開並通知被排到的人",
+        "publishedHint": "已發布:員工看得到。修改會直接生效,要填異動原因並通知當事人"
+      },
+      "toolbar": {
+        "addDemand": "+ 人力需求",
+        "addEntry": "+ 新增排班",
+        "addMenu": "+ 新增 ▾",
+        "more": "更多",
+        "views": "檢視",
+        "addSheet": "新增",
+        "moreSheet": "更多",
+        "closeSheet": "關閉",
+        "sheetDemand": "人力需求",
+        "sheetEntry": "排班"
+      },
+      "empty": {
+        "title": "{month} 月還沒有人力需求",
+        "description": "先套用人力需求範本或人力需求週範本建立這個月的人力需求,再排人或使用自動排班。"
+      },
+      "columnPicker": {
+        "button": "顯示欄位",
+        "title": "顯示欄位",
+        "hint": "跟著帳號記住,換一台裝置登入也一樣",
+        "options": {
+          "shiftCount": "班數",
+          "leadShiftCount": "負責班數",
+          "workMinutes": "總工時",
+          "dayOffDays": "畫休天數(和上下限比較)",
+          "longestStreak": "最長連續上班"
+        }
+      },
+      "cell": {
+        "closed": "店休",
+        "dayOff": "畫休",
+        "temp": "臨",
+        "multi": "{name} ×{count}",
+        "taskLine": "{role} · {task}",
+        "roles": {
+          "leader": "負責",
+          "helper": "協同"
+        },
+        "entryAria": "{name} {start}–{end}",
+        "break": "☕ {minutes}",
+        "range": "{start}–{end}",
+        "otherStore": "已排於{org}",
+        "otherStoreUnknown": "已排於其他分店",
+        "unavailable": "不可排"
+      },
+      "check": {
+        "title": "檢核",
+        "close": "關閉檢核",
+        "button": "限制 {limit} · 提醒 {reminder}",
+        "buttonClear": "檢核:沒有問題",
+        "loading": "檢查中",
+        "loadError": "檢核載入失敗,請稍後再試",
+        "empty": "全部符合規則。",
+        "emptyFiltered": "這一類沒有項目。",
+        "expand": "拉高檢核面板",
+        "collapse": "收合檢核面板",
+        "filters": {
+          "all": "全部 {count}",
+          "limit": "限制 {count}",
+          "reminder": "提醒 {count}"
+        },
+        "view": "查看",
+        "viewAria": "查看:{text}",
+        "blockedTitle": "違反限制的規則,不能儲存:",
+        "items": {
+          "maxMonthlyDayOffs": "{name} 本月畫休 {actual} 天,超過上限 {limit} 天",
+          "minMonthlyDayOffs": "{name} 本月畫休 {actual} 天,少於下限 {limit} 天",
+          "maxConsecutiveDaysOff": "{name} {from}–{to} 連續休假 {actual} 天(最多 {limit} 天)",
+          "maxDailyDayOffStaff": "同日最多畫休人數:{date} 畫休 {actual} 人(最多 {limit} 人)",
+          "maxConsecutiveWorkDays": "{name} {from}–{to} 連續上班 {actual} 天(最多 {limit} 天)",
+          "minRestBetweenShifts": "{name} {from} {end} 下班到 {to} {start} 上班只休息 {actual} 小時(最少 {limit} 小時)",
+          "maxDailyWorkHours": "每天最多上班時數:{name} {date} 排 {actual} 小時(最多 {limit} 小時)",
+          "multiPositionOverlap": "同一時段兼多個崗位:{name} {date} {start}–{end} 同時填進 {actual} 筆人力需求",
+          "understaffed": "人力不足:{date} {demand} {start}–{end} 缺 {missing} 人({role})",
+          "understaffedAvailable": "(可排 {count} 人)",
+          "understaffedNone": ":沒有可排的人({reasons})",
+          "dayOffEntryConflict": "畫休日有排班:{name} {date} {start}–{end}",
+          "dayOffEntryConflictOther": "畫休日有排班:{name} {date} {start}–{end}(排於{org})",
+          "dayOffEntryConflictUnknown": "畫休日有排班:{name} {date} {start}–{end}(排於其他分店)",
+          "unmatchedPunches": "{name} {date} · {count} 張未對應排班的打卡"
+        },
+        "reasons": {
+          "dayOff": "{count} 人畫休",
+          "timeRange": "{count} 人時段不可排",
+          "occupied": "{count} 人已排其他班",
+          "cannotLead": "{count} 人不能擔任負責人"
+        }
+      },
+      "publish": {
+        "button": "發布",
+        "checking": "檢查中",
+        "title": "發布 {month} 月排班?",
+        "blockedTitle": "不能發布",
+        "allClear": "全部符合規則。發布後會通知 {count} 位被排到的人;之後修改要填異動原因。",
+        "reminders": "有 {count} 項提醒,可以照樣發布。",
+        "blocked": "有 {count} 項違反限制,改好才能發布。",
+        "footnote": "用發布當下最新的規則設定檢查。",
+        "cancel": "取消",
+        "close": "關閉",
+        "confirm": "發布",
+        "confirmAnyway": "仍要發布",
+        "feedback": "已發布 {month} 月排班,通知 {count} 位被排到的人",
+        "errors": {
+          "HAS_LIMIT_VIOLATIONS": "有違反限制的排班,不能發布;請重新檢核",
+          "ALREADY_PUBLISHED": "這個月已經發布過了",
+          "CHANGED_DURING_PUBLISH": "發布時排班剛好有人修改,請再按一次 [發布]",
+          "AUTO_RUN_IN_PROGRESS": "自動排班執行中,請稍後再發布"
+        }
+      },
+      "changeReason": {
+        "label": "異動原因",
+        "note": "原因說明",
+        "hint": "這個月已發布:修改會直接生效,並通知當事人。"
+      },
+      "removeDay": {
+        "menu": "移除這天所有排班",
+        "title": "移除 {date} 所有排班",
+        "intro": "會刪除這些排班(填進的執行任務一起解除):",
+        "empty": "這天沒有可以移除的排班。",
+        "columns": {
+          "person": "人員",
+          "time": "時間"
+        },
+        "skipped": "略過 {count} 筆:{list}(已經有開班紀錄)",
+        "specialDayHint": "照常上班、雙倍薪水的日子不用移除,到行事曆標成特殊日。",
+        "confirm": "移除",
+        "feedback": "已移除 {count} 筆排班"
+      },
+      "demandDialog": {
+        "createTitle": "新增人力需求",
+        "editTitle": "人力需求 · {date}{name}",
+        "create": "新增",
+        "delete": "刪除人力需求",
+        "date": "日期",
+        "position": "崗位",
+        "startTime": "開始",
+        "endTime": "結束",
+        "task": "執行任務",
+        "roles": {
+          "leader": "負責人",
+          "helper": "協同"
+        },
+        "limits": {
+          "leader": "0–1 筆",
+          "helper": "0–10 筆"
+        },
+        "empty": {
+          "leader": "沒有負責人",
+          "helper": "沒有協同"
+        },
+        "add": {
+          "leader": "+ 負責人",
+          "helper": "+ 協同"
+        },
+        "unfilled": "還沒有人填",
+        "filledBy": "{name} 填進",
+        "saveAsTemplate": "同時存成人力需求範本",
+        "templateName": "範本名稱",
+        "templateShortName": "簡稱(1–2 字)",
+        "templateApplied": "已帶入「{name}」範本的時間、崗位與執行任務",
+        "blocked": "有排班已經有開班紀錄,不能刪除;要先改那筆排班。",
+        "deleteConfirmTitle": "刪除 {date}{name}?",
+        "removeConfirmTitle": "移除有人填的執行任務?",
+        "feedback": {
+          "created": "已新增人力需求",
+          "saved": "已儲存人力需求",
+          "deleted": "已刪除人力需求"
+        }
+      },
+      "impact": {
+        "releasedTitle": "會解除下面的人:",
+        "releasedLine": "{name} · {role} · {task}",
+        "roles": {
+          "leader": "負責",
+          "helper": "協同"
+        },
+        "deletedLine": "{name} {date} 的排班只填了這一筆,會一起刪除(每筆排班至少要填進一筆人力需求)。",
+        "blockedTitle": "這些排班已經有開班紀錄,不能刪除;要先改那筆排班:",
+        "blockedLine": "{name} {date}",
+        "delete": "刪除人力需求",
+        "deleteWithEntries": "刪除人力需求並刪除這 {count} 筆排班",
+        "remove": "移除",
+        "removeWithEntries": "移除並刪除這 {count} 筆排班",
+        "deleteEmpty": "目前沒有人填這筆人力需求。"
+      },
+      "entryDialog": {
+        "createTitle": "新增排班 · {date}",
+        "editTitle": "排班 · {name} {date}",
+        "person": "人員",
+        "date": "日期",
+        "startTime": "上班",
+        "endTime": "下班",
+        "breakMinutes": "休息(分)",
+        "demandsTitle": "加入這天的人力需求",
+        "addNewDemand": "新增一筆人力需求",
+        "noDemand": "這天沒有合適的人力需求",
+        "demand": "人力需求",
+        "task": "職責 · 執行任務",
+        "demandOption": "{name} {start}–{end} · {position}",
+        "taskOption": "{role} · {task}",
+        "taskOptionFilled": "{role} · {task}({name})",
+        "coverage": "上下班時間沒有涵蓋{name} {start}–{end}",
+        "extendEnd": "往後延長到 {time}",
+        "extendStart": "往前延長到 {time}",
+        "addRow": "+ 加入人力需求",
+        "atLeastOne": "至少要填進一筆人力需求;不要這筆排班請按 [刪除這筆排班]",
+        "delete": "刪除這筆排班",
+        "deleteConfirm": "刪除 {name} {date} 的排班?填進的執行任務一起解除。",
+        "errors": {
+          "time": "上下班時間和這個人其他的排班重疊(含其他分店),或這天店休",
+          "assignments": "選的執行任務已經有人填了、不在這一天,或這個人不能擔任負責人",
+          "locked": "這筆排班已經有開班紀錄,不能刪除;要調整請改時間"
+        },
+        "feedback": {
+          "created": "已新增排班",
+          "saved": "已儲存排班",
+          "deleted": "已刪除排班"
+        },
+        "punches": {
+          "region": "未對應排班的打卡",
+          "title": "{heading} 有 {count} 張未對應排班的打卡",
+          "label": "{time} {type}",
+          "duplicateLabel": "{time} {type} · 重複打卡",
+          "in": "上班",
+          "out": "下班",
+          "usePunchTime": "上下班時間改用打卡時間"
+        }
+      },
+      "timeline": {
+        "monthAria": "月檢視",
+        "weekAria": "週檢視",
+        "dayAria": "日檢視",
+        "monthDayAria": "{date}(點了切到那天的日檢視)",
+        "barTooltip": "{name} · {start}–{end} · ☕ {minutes} 分",
+        "break": "☕ {minutes} 分",
+        "missingLeader": "缺負責 1",
+        "missingHelper": "缺協同 1",
+        "addEntryHint": "+ 排班",
+        "vacancyAria": "{name} {label}",
+        "auto": "自動排入",
+        "multi": "×{count}",
+        "moreLabel": "+{count}",
+        "prevDay": "前日 →",
+        "nextDay": "→ 次日",
+        "moreTitle": "{date}收起的人力需求",
+        "moreShowDay": "看整天(日檢視) ›",
+        "showDayAria": "{date} {summary},看這天的日檢視",
+        "noDemand": "這天沒有人力需求",
+        "cardMissing": "{count} 缺 {missing}",
+        "earlierStart": "比需求早 {minutes} 分",
+        "laterStart": "比需求晚 {minutes} 分",
+        "earlierEnd": "下班比需求早 {minutes} 分",
+        "laterEnd": "下班比需求晚 {minutes} 分",
+        "prevWeek": "上一週",
+        "nextWeek": "下一週",
+        "weekTitle": "{from}–{to}",
+        "prevDate": "前一天",
+        "nextDate": "後一天",
+        "dateButton": "{date} ▾",
+        "pickDateAria": "{date},選日期",
+        "pickDate": "選日期",
+        "today": "今天",
+        "punch": "⏲ {count}",
+        "punchAria": "{count} 張未對應排班的打卡",
+        "nobody": "還沒有人填",
+        "missingLeaderDot": "缺負責",
+        "missingHelperDot": "只缺協同"
+      },
+      "applyTemplates": {
+        "button": "套用範本",
+        "title": "套用範本",
+        "kind": "種類",
+        "kindTemplate": "人力需求範本",
+        "kindWeek": "人力需求週範本",
+        "templatesTitle": "人力需求範本(可多選)",
+        "weekTitle": "人力需求週範本(選一份)",
+        "templateLine": "{name} {start}–{end} · {position} {count}",
+        "weekLine": "{name} · {summary}",
+        "applyTo": "套用到 {year} 年 {month} 月",
+        "presets": {
+          "all": "全選",
+          "none": "全不選",
+          "weekdays": "平日",
+          "weekends": "週末"
+        },
+        "weekCheck": "勾選第 {week} 週",
+        "existing": "已有",
+        "hintTemplate": "會加入到選取的日子,即使那天已經有其他人力需求;同一天崗位和時間完全相同的會略過。",
+        "hintWeek": "只會補上完全沒有人力需求的日子;已經有任何人力需求的日子不會變動。要在已有的日子加上人力需求,請使用人力需求範本。",
+        "preview": "將產生 {created} 個時段,略過 {skipped} 個已存在的相同時段",
+        "previewWeek": "將補上 {filled} 天的人力需求(略過已經有人力需求的 {skipped} 天)",
+        "previewLoading": "計算中",
+        "noTemplates": "還沒有人力需求範本,請先到排班設定建立。",
+        "noWeekTemplates": "還沒有啟用中的人力需求週範本,請先到排班設定建立。",
+        "noDates": "請至少選一天",
+        "cancel": "取消",
+        "apply": "套用",
+        "close": "關閉",
+        "feedback": "已套用範本,產生 {count} 個時段"
+      },
+      "autoRun": {
+        "button": "自動排班",
+        "running": "自動排班執行中",
+        "runningHint": "其他人正在執行自動排班,這個月暫時不能修改;最久 10 分鐘後自動解除。",
+        "title": "自動排班",
+        "from": "從",
+        "to": "到",
+        "mode": "方式",
+        "modes": {
+          "fill-empty": "只填空位",
+          "redo-auto": "重排自動排入的人",
+          "redo-all": "全部重排(連手動排的一起清掉)"
+        },
+        "conditionsTitle": "條件(拖拉調整順序,依序比較)",
+        "dragHandle": "調整「{label}」的順序(拖拉,或按上下鍵)",
+        "fillWeek": "先以「{name}」補上人力需求",
+        "empty": "{month} 月還沒有任何人力需求,請先套用人力需求範本或人力需求週範本",
+        "cancel": "取消",
+        "run": "執行",
+        "confirmTitle": "全部重排?",
+        "confirmBody": "將清除 {count} 個手動排入的人次,再重新自動排班。確定嗎?",
+        "confirm": "全部重排",
+        "feedback": "已自動排班,填入 {filled} 人次",
+        "dateFormat": "M/D(dd)",
+        "errors": {
+          "AUTO_RUN_IN_PROGRESS": "自動排班執行中,請稍後再試",
+          "ALREADY_PUBLISHED": "這個月已經發布,不能自動排班或清除自動排入的人"
+        },
+        "summary": "{date} {time} 填入 {filled} 人次",
+        "summaryDemands": " · 補上 {days} 天的人力需求",
+        "clear": "清除自動排入的人",
+        "clearTitle": "清除自動排入的人",
+        "clearBody": "只移除自動排入的人({count} 人次);手動排的、或自動排入後手動改過的,不會清除。",
+        "clearConfirm": "清除",
+        "clearFeedback": "已清除 {count} 人次自動排入的人"
+      }
+    },
+    "mySchedule": {
+      "loading": "載入中",
+      "changes": {
+        "banner": "你的班表有 {count} 項異動",
+        "expand": "展開",
+        "collapse": "收合",
+        "new": "新",
+        "created": "新增 {after}",
+        "deleted": "取消 {before}",
+        "edited": "{before} → {after}",
+        "reason": "原因:{reason}",
+        "reasonWithNote": "原因:{reason} · {note}"
+      },
+      "incomplete": {
+        "title": "最近 7 天有 {count} 班打卡不完整",
+        "row": "{date} {org} {time}",
+        "apply": "申請補卡",
+        "pending": "補卡審核中"
+      },
+      "missing": {
+        "missingIn": "缺上班卡",
+        "missingOut": "缺下班卡",
+        "missingBoth": "缺上下班卡"
+      },
+      "punch": {
+        "regionAria": "打卡",
+        "todayTitle": "今天 {date}· {time}",
+        "yesterdayTitle": "昨天 {date}未打下班卡",
+        "clockIn": "打上班卡",
+        "clockOut": "打下班卡",
+        "clockedIn": "上班 {time} 已打卡",
+        "clockedOut": "下班 {time} 已打卡",
+        "clockInSuccess": "已打上班卡",
+        "clockOutSuccess": "已打下班卡",
+        "breakAria": "休息 {minutes} 分鐘"
+      },
+      "noSchedule": {
+        "title": "沒有排班",
+        "hint": "沒有排到班但臨時來上班?",
+        "org": "分店:{name}",
+        "openClockIn": "你在 {time} 打了上班卡,還沒打下班卡",
+        "toggleAria": "展開或收合「沒有排班」"
+      },
+      "role": {
+        "leader": "負責人",
+        "helper": "協同"
+      },
+      "roleShort": {
+        "leader": "負責",
+        "helper": "協同"
+      },
+      "calendar": {
+        "title": "{year} 年 {month} 月",
+        "prevMonth": "上個月",
+        "nextMonth": "下個月",
+        "viewAria": "月曆或條列",
+        "viewCalendar": "月曆",
+        "viewList": "條列",
+        "temp": "臨",
+        "dayOff": "畫休",
+        "closed": "店休",
+        "changedDot": "有異動",
+        "missingDot": "缺卡",
+        "punchTimes": "{in} / {out}",
+        "noPunch": "—"
+      },
+      "list": {
+        "todaySuffix": "今天",
+        "empty": "這個月沒有班",
+        "changed": "有異動",
+        "punches": "上班 {in} · 下班 {out}"
+      },
+      "detail": {
+        "title": "{date}當天詳情",
+        "punch": "打卡",
+        "time": "時間",
+        "in": "上班",
+        "out": "下班",
+        "missingNote": "{cards}沒有打。可以申請補卡,由店長審核。",
+        "apply": "申請補卡",
+        "close": "關閉",
+        "none": "這天沒有班",
+        "dayOff": "這天整天畫休",
+        "breakMinutes": "休息 {minutes} 分鐘"
+      }
+    },
+    "attendance": {
+      "temporary": "臨",
+      "types": {
+        "in": "上班",
+        "out": "下班"
+      },
+      "org": "分店",
+      "person": "人員",
+      "prevDate": "前一天",
+      "nextDate": "後一天",
+      "prevMonth": "上個月",
+      "nextMonth": "下個月",
+      "monthTitle": "{year} 年 {month} 月",
+      "unmatchedOnly": "只看未對應排班的打卡",
+      "summary": "排班 {scheduled} 人 · 已到 {arrived} · 未到 {absent} · 未對應排班的打卡 {unmatched} 張",
+      "rowsAria": "出勤紀錄",
+      "emptyRows": "這天沒有排班",
+      "emptyMonth": "這個月沒有排班",
+      "unmatchedTitle": "未對應排班",
+      "unmatchedEmpty": "沒有未對應排班的打卡",
+      "none": "—",
+      "missing": "缺卡",
+      "minutes": "{minutes} 分",
+      "lateShort": "遲到 {minutes} 分",
+      "earlyShort": "早退 {minutes} 分",
+      "cardLine": "{entry} · 上 {clockIn} · 下 {clockOut}",
+      "personCardLine": "上班 {clockIn} · 下班 {clockOut} · 實際工時 {worked}",
+      "makeupApply": "補打卡申請",
+      "makeupRow": "補打卡",
+      "reassignButton": "改對應排班",
+      "columns": {
+        "person": "人員",
+        "date": "日期",
+        "entry": "排班",
+        "clockIn": "上班",
+        "clockOut": "下班",
+        "status": "狀態",
+        "worked": "實際工時",
+        "late": "遲到",
+        "early": "早退",
+        "special": "特殊日",
+        "actions": "操作"
+      },
+      "status": {
+        "arrived": "已到",
+        "absent": "未到",
+        "upcoming": "未開始",
+        "late": "遲到 {minutes} 分",
+        "earlyLeave": "早退 {minutes} 分"
+      },
+      "export": {
+        "button": "匯出 Excel",
+        "note": "{year} 年 {month} 月出勤紀錄",
+        "fileName": "出勤紀錄-{month}",
+        "empty": "這個範圍沒有排班,沒有可以匯出的資料",
+        "temporary": "臨",
+        "makeup": "補卡",
+        "columns": {
+          "date": "日期",
+          "person": "人員",
+          "entry": "排班",
+          "clockIn": "上班",
+          "clockOut": "下班",
+          "onDutyHours": "在班時數",
+          "breakMinutes": "休息",
+          "workedHours": "實際工時",
+          "scheduledHours": "排班工時",
+          "lateMinutes": "遲到",
+          "earlyLeaveMinutes": "早退",
+          "specialDayCategory": "特殊日類別",
+          "makeupNote": "補卡註記"
+        }
+      },
+      "reassign": {
+        "title": "修改這張打卡對應的排班",
+        "punch": "打卡",
+        "summary": "{name} · {punch}",
+        "fixedHint": "時間和類型不能改,只能改對應的排班",
+        "entry": "對應排班",
+        "noEntry": "沒有排班(未對應排班)",
+        "reason": "原因",
+        "note": "說明",
+        "saved": "已修改對應的排班"
+      },
+      "makeup": {
+        "title": "補打卡申請",
+        "titleWithNo": "{serialNo} · 補打卡申請",
+        "loading": "載入中",
+        "unavailable": "這筆補打卡申請不能修改",
+        "applicant": "申請人",
+        "date": "日期",
+        "branch": "分店",
+        "entry": "對應排班",
+        "entryHint": "選了日期與分店後列出你當天在那家店的排班",
+        "entryRequired": "請選擇對應排班",
+        "noEntry": "沒有排班(臨時代班)",
+        "type": "類型",
+        "time": "時間",
+        "reason": "原因",
+        "note": "說明",
+        "cancel": "取消",
+        "submit": "送出",
+        "submitted": "已送出補打卡申請",
+        "returnedHint": "這張申請被退回了,請確認對應排班後再送出",
+        "entryDeleted": "對應的排班已被刪除,不能核准;請退回讓申請人重選"
+      }
+    }
+  },
+  "lotteryAccounts": {
+    "badgeDescription": "待結清款項的筆數(有待付、待退、待收的單據)",
+    "tabs": {
+      "aria": "帳戶管理分頁",
+      "bankAccounts": "銀行帳戶",
+      "cash": "即時現金帳",
+      "outstanding": "待結清款項"
+    },
+    "status": {
+      "active": "使用中",
+      "inactive": "停用"
+    },
+    "direction": {
+      "in": "收",
+      "out": "支"
+    },
+    "transactionTypes": {
+      "deposit": "存入",
+      "redemption_income": "兌獎入帳",
+      "purchase_income": "批貨收入",
+      "transfer_income": "調貨收入",
+      "withdrawal": "提領",
+      "license_rent": "牌租",
+      "purchase_expense": "批貨支出",
+      "transfer_expense": "調貨支出",
+      "adjustment": "調整",
+      "other": "其他"
+    },
+    "movementTypes": {
+      "withdraw": "出庫",
+      "deposit": "投庫",
+      "bank_deposit": "存銀行",
+      "transfer_out": "調貨支出",
+      "transfer_in": "調貨收入",
+      "refund": "退貨退款",
+      "correction_increase": "現金更正(增加)",
+      "correction_decrease": "現金更正(減少)"
+    },
+    "places": {
+      "drawer": "抽屜",
+      "vault": "小金庫",
+      "bank": "銀行",
+      "external": "外部"
+    },
+    "withdrawReasons": {
+      "opening_float": "開班零用金",
+      "change": "補零錢",
+      "other": "其他"
+    },
+    "bankAccounts": {
+      "new": "+ 新增帳戶",
+      "columns": {
+        "accountName": "戶名",
+        "bank": "銀行 / 分行",
+        "accountNo": "帳號",
+        "usageOrgs": "使用組織",
+        "balance": "餘額",
+        "status": "狀態"
+      },
+      "accountNoTail": "末 {tail}",
+      "includeDescendants": "{name}(含下層)",
+      "empty": "還沒有銀行帳戶",
+      "listAria": "銀行帳戶列表",
+      "negative": "餘額為負數"
+    },
+    "accountForm": {
+      "createTitle": "新增帳戶",
+      "fields": {
+        "bankCode": "銀行代碼",
+        "branchName": "分行",
+        "accountNo": "帳號",
+        "accountName": "戶名",
+        "openingBalance": "期初餘額",
+        "openingDate": "期初日期",
+        "shareOrgs": "組織"
+      },
+      "usageTitle": "使用組織(可以多個)",
+      "lockHint": "有交易後期初餘額、期初日期鎖定。",
+      "bankCodeHint": "3 碼數字",
+      "cancel": "取消",
+      "create": "新增"
+    },
+    "accountView": {
+      "usage": "使用組織:{names}",
+      "usageNone": "使用組織:(未設定)",
+      "setUsage": "設定使用組織",
+      "record": "登記交易",
+      "balance": "目前餘額",
+      "periodIn": "期間收",
+      "periodOut": "期間支",
+      "filters": {
+        "from": "期間起",
+        "to": "期間迄",
+        "type": "類型",
+        "all": "全部"
+      },
+      "columns": {
+        "occurredAt": "時間",
+        "type": "類型",
+        "summary": "摘要",
+        "branch": "歸屬分店",
+        "in": "收",
+        "out": "支",
+        "balanceAfter": "餘額"
+      },
+      "reverse": "沖正",
+      "reversed": "已沖正",
+      "reversal": "沖正",
+      "empty": "這段期間沒有交易",
+      "listAria": "交易清單",
+      "settings": "帳戶設定",
+      "delete": "刪除帳戶",
+      "deleteHint": "有交易的帳戶不能刪除,只能停用",
+      "deactivate": "停用帳戶",
+      "activate": "重新啟用",
+      "save": "儲存",
+      "loading": "載入中",
+      "deleteDialog": {
+        "title": "刪除帳戶?",
+        "body": "刪除「{label}」後就不會出現在任何清單裡,這個動作不能復原。",
+        "confirm": "刪除",
+        "cancel": "取消"
+      },
+      "usageDialog": {
+        "title": "設定使用組織",
+        "hint": "選最上層組織並勾「含下層」= 全部分店",
+        "cancel": "取消",
+        "save": "儲存"
+      }
+    },
+    "recordForm": {
+      "title": "登記交易",
+      "fields": {
+        "type": "類型",
+        "direction": "方向",
+        "documentRequired": "單據(必填,只列有待退或待收的)",
+        "amount": "金額",
+        "occurredAt": "時間",
+        "branchOrgId": "歸屬分店",
+        "summary": "摘要"
+      },
+      "documentOption": "{docNo} {label} · {due}",
+      "noDocument": "沒有待退或待收的單據",
+      "hint": "調整、其他要選方向,說明必填。",
+      "cancel": "取消",
+      "submit": "登記"
+    },
+    "reverseForm": {
+      "title": "沖正",
+      "original": "原交易",
+      "originalValue": "{date} {type} {amount}",
+      "reason": "原因(必填)",
+      "hint": "會寫一筆相反方向、同金額的交易,原交易保留。",
+      "cancel": "取消",
+      "submit": "沖正"
+    },
+    "cash": {
+      "org": "分店",
+      "vault": "小金庫",
+      "vaultBaseline": "起算:{date} 日結清點",
+      "vaultFromZero": "起算:還沒有日結,從 0 起算",
+      "filters": {
+        "type": "類型",
+        "cashPoint": "收銀點",
+        "date": "日期",
+        "all": "全部"
+      },
+      "columns": {
+        "occurredAt": "時間",
+        "type": "類型",
+        "route": "從 → 到",
+        "cashPoint": "收銀點",
+        "amount": "金額",
+        "document": "單據"
+      },
+      "route": "{from} → {to}",
+      "routeWithPayee": "{from} → {to}({payee})",
+      "reversal": "(沖正)",
+      "empty": "這一天沒有流水",
+      "listAria": "現金流水",
+      "pickOrg": "請先選分店"
+    },
+    "outstanding": {
+      "columns": {
+        "document": "單據",
+        "branch": "分店",
+        "counterparty": "對象",
+        "payable": "應付",
+        "net": "已付",
+        "diff": "差額",
+        "days": "已過天數",
+        "actions": "操作"
+      },
+      "documentLabel": "{docNo} {label}",
+      "kinds": {
+        "to_pay": "待付 {amount}",
+        "to_refund": "待退 {amount}",
+        "to_receive": "待收 {amount}"
+      },
+      "empty": "沒有待結清的款項",
+      "listAria": "待結清款項"
+    },
+    "settlement": {
+      "title": "結算",
+      "payable": "應付",
+      "transferAmount": "調貨金額",
+      "paid": "已付淨額",
+      "received": "已收淨額",
+      "diff": "差額",
+      "settled": "已結清",
+      "pendingPayee": "{amount} 待出貨店入帳",
+      "history": "收付歷程",
+      "historyColumns": {
+        "occurredAt": "時間",
+        "side": "哪一店",
+        "type": "類型",
+        "method": "方式",
+        "amount": "金額",
+        "handler": "經手 / 收款人",
+        "createdBy": "登記人"
+      },
+      "notRecorded": "尚未登記",
+      "methods": {
+        "bank": "銀行",
+        "cash": "現金"
+      },
+      "buttons": {
+        "payer": {
+          "out": "付款",
+          "in": "收到退款"
+        },
+        "payee": {
+          "in": "收款",
+          "out": "退款"
+        }
+      },
+      "reverse": "沖正",
+      "reversed": "已沖正",
+      "historyAria": "收付歷程"
+    },
+    "settleForm": {
+      "documentValue": "{docNo} {label}",
+      "payable": "應付",
+      "transferAmount": "調貨金額",
+      "net": "已付 / 已收淨額",
+      "fields": {
+        "method": "付款方式",
+        "accountId": "帳戶",
+        "cashSource": "來源",
+        "amount": "金額",
+        "handler": "經手人 / 收款人",
+        "handlerRequired": "經手人 / 收款人(現金必填)",
+        "note": "備註"
+      },
+      "sources": {
+        "vault": "小金庫",
+        "drawer": "收銀點抽屜(開著的班)"
+      },
+      "noAccount": "沒有這家分店可用的帳戶",
+      "cancel": "取消",
+      "confirm": "確認"
+    },
+    "feedback": {
+      "createSuccess": "已新增",
+      "saveSuccess": "已儲存",
+      "deleteSuccess": "已刪除",
+      "recordSuccess": "已登記",
+      "reverseSuccess": "已沖正"
+    },
+    "errors": {
+      "FORBIDDEN": "你沒有這個操作的權限",
+      "NOT_FOUND": "找不到這筆資料",
+      "VALIDATION_FAILED": "有欄位不正確,請檢查標示的欄位",
+      "BANK_ACCOUNT_DUPLICATE": "同一個銀行代碼與帳號已經有帳戶",
+      "BANK_ACCOUNT_HAS_TRANSACTIONS": "這個帳戶已有交易:期初餘額、期初日期不能改,也不能刪除(可以停用)",
+      "BANK_ACCOUNT_INACTIVE": "帳戶已停用,不能登記交易",
+      "ALREADY_REVERSED": "這筆已經沖正過了",
+      "SETTLEMENT_UNKNOWN": "這張單據沒有收付",
+      "SETTLEMENT_NOTHING_DUE": "這張單據目前沒有要結清的金額,請重新整理",
+      "BANK_ACCOUNT_NOT_USABLE": "這個帳戶的使用組織不含這家分店",
+      "NO_OPEN_SHIFT": "這個收銀點沒有開著的班",
+      "UNEXPECTED": "發生錯誤,請稍後再試"
+    }
+  },
+  "lotteryPurchasing": {
+    "tabs": {
+      "aria": "叫貨、採購單分頁",
+      "requisitions": "叫貨單",
+      "purchaseList": "採購清單"
+    },
+    "requisitions": {
+      "create": "+ 新增叫貨單",
+      "listAria": "叫貨單列表",
+      "empty": "沒有符合條件的叫貨單",
+      "loading": "載入中",
+      "total": "共 {total} 筆",
+      "filters": {
+        "status": "狀態",
+        "all": "全部"
+      }
+    },
+    "states": {
+      "pending": "待購買",
+      "purchased": "已進貨",
+      "transferred": "已調貨"
+    },
+    "create": {
+      "tabLabel": "新增",
+      "title": "新增叫貨單",
+      "loading": "載入中",
+      "unavailable": "現在不能新增叫貨單(表單沒有開放或沒有新增權限)",
+      "pickBranch": "先選叫貨分店",
+      "fields": {
+        "branch": "叫貨分店",
+        "expectedDate": "期望到貨日(選填)"
+      },
+      "filters": {
+        "keyword": "搜尋遊戲名稱或代號",
+        "unitPrice": "面額",
+        "all": "全部",
+        "onlyOrdered": "只看要叫的"
+      },
+      "unitPrice": "{price} 元",
+      "columns": {
+        "game": "遊戲",
+        "stock": "目前庫存(張)",
+        "inTransit": "在途(本)",
+        "sold7": "近 7 天",
+        "sold30": "近 30 天",
+        "books": "叫幾本"
+      },
+      "newGame": "新",
+      "gameLabel": "{code} {name} · {price} 元",
+      "overAllocation": "超過預計要給本數({excess})",
+      "listAria": "販售中的遊戲",
+      "empty": "沒有符合條件的遊戲",
+      "cardFacts": "庫存 {stock} 張 · 在途 {inTransit} 本 · 近 7 天 {sold7} · 近 30 天 {sold30}",
+      "totals": "共叫 {books} 本,預估批購 {amount} 元",
+      "totalsShort": "共叫 {books} 本 · 預估 {amount}",
+      "saveDraft": "存草稿",
+      "submit": "送出",
+      "draftSaved": "已存草稿",
+      "submitted": "叫貨單已送出"
+    },
+    "purchaseList": {
+      "export": "匯出 Excel",
+      "exportFailed": "匯出失敗,請再試一次",
+      "hint": "只列待購買的叫貨單(未作廢、未被進貨單或調貨單引用),依遊戲 × 分店加總。",
+      "listAria": "採購清單",
+      "empty": "目前沒有待購買的叫貨單",
+      "gameLabel": "{code} {name} {price}",
+      "columns": {
+        "game": "遊戲",
+        "totalBooks": "合計本數",
+        "estimatedAmount": "預估批購金額",
+        "serialNo": "單號",
+        "branch": "叫貨分店",
+        "books": "本數",
+        "estimatedShort": "預估批購"
+      },
+      "pendingTitle": "待購買的叫貨單",
+      "pendingAria": "待購買的叫貨單",
+      "pendingEmpty": "目前沒有待購買的叫貨單",
+      "fileName": "採購清單",
+      "sheetName": "採購清單"
+    },
+    "purchase": {
+      "badgeDescription": "點收關卡在我手上、還沒點收完成的進貨單數",
+      "createFromRequisition": "建立進貨單",
+      "list": {
+        "title": "進貨單",
+        "create": "+ 新增",
+        "progress": "點收進度",
+        "settlement": "結算",
+        "cleared": "已結清",
+        "kinds": {
+          "to_pay": "待付 {amount}",
+          "to_refund": "待退 {amount}"
+        },
+        "listAria": "進貨單列表",
+        "empty": "沒有符合條件的進貨單",
+        "loading": "載入中",
+        "total": "共 {total} 筆",
+        "filters": {
+          "status": "狀態",
+          "all": "全部"
+        }
+      },
+      "create": {
+        "tabLabel": "新增",
+        "title": "新增進貨單",
+        "loading": "載入中",
+        "unavailable": "現在不能新增進貨單(表單沒有開放或沒有新增權限)",
+        "fromRequisition": "從叫貨單 {serialNo} 帶入:叫貨 {requested},已刷 {scanned}",
+        "fields": {
+          "branch": "進貨分店",
+          "requisition": "叫貨單(選填)",
+          "noRequisition": "不帶入",
+          "dealer": "批購甲類",
+          "pick": "請選擇",
+          "selfPurchase": "本人批購",
+          "yes": "是",
+          "no": "否",
+          "trustee": "批購受託人",
+          "trusteeNotNeeded": "—(本人批購不用填)",
+          "purchaseDate": "批購日期",
+          "account": "扣款帳戶",
+          "note": "備註"
+        },
+        "lines": "明細",
+        "fallbackGame": "正面條碼的遊戲",
+        "fallbackGameNone": "刷背面編號",
+        "scan": "刷條碼加入",
+        "scanErrors": {
+          "invalid": "看不懂這個碼,請刷這本最後一張的背面編號或正面條碼",
+          "no_game": "正面條碼沒有遊戲代號,請先選「正面條碼的遊戲」",
+          "unknown_game": "遊戲代號 {gameCode} 不是販售中的遊戲",
+          "duplicate": "本號 {bookNo} 已經在這張單上"
+        },
+        "pickBranch": "請先選進貨分店",
+        "empty": "還沒刷任何一本:刷這本最後一張的條碼加入",
+        "columns": {
+          "bookNo": "本號",
+          "lastTicketNo": "最後張號",
+          "tickets": "張數",
+          "bookPrice": "整本金額",
+          "rate": "批購金額率",
+          "amount": "批購金額"
+        },
+        "rateOf": "本號 {bookNo} 的批購金額率",
+        "groupTitle": "{code} {name} · {price} 元({books} 本)小計 {subtotal}",
+        "requested": "叫貨 {requested},已刷 {scanned}",
+        "groupRate": "整組批購金額率",
+        "groupRateOf": "{code} 整組的批購金額率",
+        "cardFacts": "最後張號 {lastTicketNo} · 批購 {amount}",
+        "remove": "移除",
+        "purchaseTotal": "批購合計",
+        "deductedAmount": "扣款金額",
+        "cancel": "取消",
+        "saveDraft": "存草稿",
+        "submit": "送出",
+        "draftSaved": "已存草稿",
+        "submitted": "進貨單已送出"
+      },
+      "view": {
+        "title": "進貨單",
+        "titleWithNo": "進貨單 {serialNo}",
+        "receiveHint": "還有 {remaining} 本沒點收;核准前要全部點收。刷到的最後張號和單上不同時會擋下,請退回更正。"
+      },
+      "dealerTab": {
+        "serialNo": "單號",
+        "purchaseDate": "批購日",
+        "branch": "進貨分店",
+        "who": "批購人",
+        "self": "本人",
+        "trustee": "受託人 {name}",
+        "books": "本數",
+        "purchaseTotal": "批購合計",
+        "status": "狀態",
+        "aria": "批購紀錄",
+        "empty": "還沒有批購紀錄"
+      }
+    },
+    "receive": {
+      "title": "點收",
+      "scan": "刷條碼點收",
+      "complete": "完成這次點收({count} 本)",
+      "completed": "這次點收了 {count} 本",
+      "groupTitle": "{code} {name} · {price} 元",
+      "groupWithRequested": "{title} · 叫貨 {requested},已刷 {scanned}",
+      "received": "已點收",
+      "notReceived": "未點收",
+      "cardFacts": "{ticketLabel} {lastTicketNo} · {rate}% · 批購 {amount}",
+      "columns": {
+        "bookNo": "本號",
+        "lastTicketNo": "最後張號",
+        "tickets": "張數",
+        "bookPrice": "整本金額",
+        "rate": "批購金額率",
+        "amount": "批購金額",
+        "received": "點收"
+      },
+      "errors": {
+        "PURCHASE_NOT_RECEIVABLE": "這張進貨單現在不在你的點收關卡",
+        "PURCHASE_SCAN_INVALID": "看不懂這個碼,請刷這本最後一張",
+        "PURCHASE_ALREADY_RECEIVED": "這本已經點收過了",
+        "PURCHASE_LAST_TICKET_MISMATCH": "刷到的最後張號和單上不同,請退回更正",
+        "PURCHASE_WRONG_STORE": "這本不是送到這家店的",
+        "PURCHASE_BOOK_NOT_ON_PURCHASE": "這本不在這張進貨單上",
+        "BOOK_KEY_DUPLICATE": "這本已經在庫存裡,請退回更正",
+        "UNEXPECTED": "點收失敗,請再試一次",
+        "TRANSFER_NOT_RECEIVABLE": "這張調貨單現在不在你的點收關卡",
+        "TRANSFER_SCAN_INVALID": "看不懂這個碼,請刷這一列的任何一張",
+        "TRANSFER_ALREADY_RECEIVED": "這一列已經點收過了",
+        "TRANSFER_NOT_SHIPPED": "這一列還沒出貨,出貨確認後才能點收",
+        "TRANSFER_WRONG_STORE": "這本不是送到這家店",
+        "TRANSFER_BOOK_NOT_ON_TRANSFER": "這本(或這張)不在這張調貨單上"
+      },
+      "wrongStore": {
+        "title": "這本不是送到這家店",
+        "notify": "通知總部更正",
+        "ok": "知道了",
+        "unitPrice": "{price} 元",
+        "facts": "本號 {bookNo} · 進貨單 {serialNo} · {branch}",
+        "message": "這本屬於「{branch}」的進貨單 #{serialNo},請交給送貨人帶到{branch},本店不用點收。",
+        "notified": "已通知這張進貨單的建立者更正"
+      }
+    },
+    "transfer": {
+      "badgeDescription": "點收關卡(第二關)在你手上的調貨單",
+      "createFromRequisition": "從其他分店調貨",
+      "list": {
+        "title": "調貨單",
+        "subtitle": "收貨店不發起調貨單,缺貨請開叫貨單",
+        "create": "+ 新增",
+        "count": "本數 / 張數",
+        "books": "{count} 本",
+        "tickets": "{count} 張",
+        "progress": "點收進度",
+        "settlement": "結算",
+        "cleared": "已結清",
+        "inTransit": "在途",
+        "kinds": {
+          "to_pay": "待付 {amount}",
+          "to_refund": "待退 {amount}",
+          "to_receive": "待收 {amount}"
+        },
+        "listAria": "調貨單列表",
+        "empty": "沒有符合條件的調貨單",
+        "loading": "載入中",
+        "total": "共 {total} 筆",
+        "filters": {
+          "status": "狀態",
+          "all": "全部"
+        }
+      },
+      "create": {
+        "tabLabel": "調貨單・新增",
+        "title": "新增調貨單",
+        "loading": "載入中",
+        "unavailable": "目前沒有可以新增的調貨單",
+        "fields": {
+          "fromBranch": "出貨分店",
+          "toBranch": "收貨分店",
+          "requisition": "叫貨單(選填)",
+          "noRequisition": "不引用叫貨單",
+          "requisitionOption": "{serialNo}({books} 本)",
+          "note": "備註"
+        },
+        "sameBranch": "收貨分店不能和出貨分店相同",
+        "lines": "調貨明細",
+        "scan": "刷條碼加入選取",
+        "scanNotFound": "這本不在出貨分店可以調的本裡",
+        "partialForbidden": "這本拆過了,只能選張;你沒有零碎張數的權限",
+        "noLines": "還沒有加入任何一本",
+        "linesAria": "調貨明細",
+        "modes": {
+          "whole": "整本",
+          "partial": "選張"
+        },
+        "opened": "拆過",
+        "cardFacts": "{mode} · {tickets} · {count} 張 · 金額 {amount} · 批購金額 {purchase}",
+        "columns": {
+          "book": "遊戲 / 本",
+          "mode": "方式",
+          "ticketNos": "張號",
+          "tickets": "張數",
+          "amount": "金額",
+          "rate": "批購金額率",
+          "purchaseAmount": "批購金額"
+        },
+        "rateOf": "{book} 的批購金額率",
+        "remove": "移除",
+        "removeOf": "移除 {book}",
+        "transferTotal": "調貨金額(批購金額合計)",
+        "pickBook": "選本",
+        "pickBookNone": "選一本",
+        "pickFromBranch": "先選出貨分店",
+        "pickBookHint": "選一本,或刷條碼加入選取",
+        "bookOption": "{game} · {book}({kind},可調 {count} 張)",
+        "bookTitle": "{game} · 本號 {bookNo}",
+        "bookFacts": "出貨分店可調 {count} 張",
+        "addWhole": "整本加入",
+        "addPartial": "加入選取({count} 張)",
+        "cellUnavailable": "已售 / 不能選",
+        "cellInLines": "已在明細",
+        "addErrors": {
+          "duplicate": "這本已經在明細裡",
+          "empty": "還沒選任何一張"
+        },
+        "cancel": "取消",
+        "saveDraft": "存草稿",
+        "submit": "送出",
+        "draftSaved": "已存草稿",
+        "submitted": "已送出調貨單",
+        "toBranchHint": "看不到收貨分店時:調貨由總部開單,或請管理員把你加入收貨分店",
+        "toBranchUnavailable": "你選不到這家收貨分店:調貨由總部開單,或請管理員把你加入收貨分店"
+      },
+      "view": {
+        "title": "調貨單",
+        "titleWithNo": "調貨單 {serialNo}",
+        "stageShip": "第一關 出貨確認",
+        "stageReceive": "第二關 點收",
+        "requisition": "叫貨單 {serialNo}",
+        "transferAmount": "調貨金額 {amount}",
+        "createdBy": "建立 {name}",
+        "shipList": "出貨確認清單",
+        "modes": {
+          "whole": "整本",
+          "partial": "選張"
+        },
+        "columns": {
+          "game": "遊戲",
+          "book": "本",
+          "mode": "方式",
+          "ticketNos": "張號",
+          "tickets": "張數",
+          "amount": "金額",
+          "rate": "批購金額率",
+          "purchaseAmount": "批購金額"
+        },
+        "cardFacts": "{mode} · {tickets} · {count} 張 · {rate}% · 批購金額 {amount}",
+        "receiveRow": "{game} · {bookNo} · {mode} {tickets}",
+        "problems": {
+          "receiver_underpaid": "收貨店還沒記付款 {amount};收貨店已付 = 出貨店已收 = 調貨金額才能核准",
+          "shipper_unreceived": "出貨店還沒記收款 {amount};收貨店已付 = 出貨店已收 = 調貨金額才能核准",
+          "shipper_overreceived": "出貨店多收 {amount},請先記退款",
+          "receiver_overpaid": "收貨店多付 {amount},請記收到退款"
+        },
+        "wrongStoreNotified": "已通知這張調貨單的建立者更正"
+      },
+      "wrongStore": {
+        "facts": "本號 {bookNo} · 調貨單 {serialNo} · 送往 {branch}",
+        "message": "這本屬於送往「{branch}」的調貨單 #{serialNo},請交給送貨人帶到{branch},本店不用點收。"
+      }
+    },
+    "allocation": {
+      "title": "超過預計要給本數(只提醒,照樣可以送出):",
+      "item": "{game}:多 {excess} 本"
+    }
+  },
+  "lifecycle": {
+    "REQUISITION_GAME_DISCONTINUED": "明細有已停售的遊戲,請拿掉後再送出",
+    "REQUISITION_NO_LINES": "至少要叫一本才能送出",
+    "REQUISITION_REFERENCED": "這張叫貨單已經被進貨單或調貨單引用,請先作廢那張單",
+    "PURCHASE_NO_LINES": "至少要有一本才能送出",
+    "PURCHASE_LINE_INVALID": "明細的本號、最後張號或金額和遊戲不符,請檢查後再送出",
+    "PURCHASE_GAME_DISCONTINUED": "明細有已停售的遊戲,請拿掉後再送出",
+    "PURCHASE_BOOK_DUPLICATE": "有本號和其他進貨單或既有的本重複",
+    "PURCHASE_RECEIVED_ROW_CHANGED": "已點收的本不能修改或刪除",
+    "PURCHASE_REQUISITION_INVALID": "叫貨單要是同一家分店、待購買的叫貨單",
+    "PURCHASE_DEALER_INVALID": "批購甲類要是營業中的甲類",
+    "PURCHASE_TRUSTEE_INVALID": "本人批購為否時,要選這位甲類啟用中的受託人",
+    "PURCHASE_ACCOUNT_INVALID": "扣款帳戶要使用中,而且使用組織包含進貨分店",
+    "PURCHASE_UNRECEIVED_ROWS": "還有沒點收的本,全部點收後才能核准",
+    "PURCHASE_HAS_RECEIPTS": "已經點收過的進貨單不能駁回或刪除",
+    "PURCHASE_BOOKS_IN_USE": "有刮刮樂已售出、調出或拆本,不能作廢",
+    "SETTLEMENT_NOT_CLEARED": "結算還沒歸零(已付淨額不是 0),請先沖正或收到退款",
+    "TRANSFER_NO_LINES": "至少要有一列才能送出",
+    "TRANSFER_BRANCH_INVALID": "出貨分店、收貨分店都要選、不能相同,出貨分店要在你的範圍內",
+    "TRANSFER_LINE_INVALID": "明細的本、方式、張數或金額不合(整本要沒拆過、選張要拆過),請檢查後再送出",
+    "TRANSFER_PARTIAL_FORBIDDEN": "沒有零碎張數的權限,不能選張",
+    "TRANSFER_TICKETS_UNAVAILABLE": "有本或張不在出貨分店、已售、被鎖定,或在其他還沒結束的調貨單上",
+    "TRANSFER_RECEIVED_ROW_CHANGED": "已點收的列不能修改或刪除",
+    "TRANSFER_REQUISITION_INVALID": "叫貨單要是收貨分店、待購買的叫貨單",
+    "TRANSFER_UNRECEIVED_ROWS": "還有沒點收的列,全部點收後才能核准",
+    "TRANSFER_RECEIVER_UNDERPAID": "收貨店還沒記付款;收貨店已付 = 出貨店已收 = 調貨金額才能核准",
+    "TRANSFER_SHIPPER_UNRECEIVED": "出貨店還沒記收款;收貨店已付 = 出貨店已收 = 調貨金額才能核准",
+    "TRANSFER_SHIPPER_OVERRECEIVED": "出貨店多收,請先記退款",
+    "TRANSFER_RECEIVER_OVERPAID": "收貨店多付,請記收到退款",
+    "TRANSFER_HAS_RECEIPTS": "已經點收過的調貨單不能駁回或刪除",
+    "TRANSFER_BOOKS_IN_USE": "調入的刮刮樂已售、再調出或拆本,不能作廢",
+    "MAKEUP_PUNCH_ENTRY_REQUIRED": "請選擇對應排班",
+    "MAKEUP_PUNCH_ENTRY_MISMATCH": "對應排班要是你當天在那家店的排班,請重選",
+    "MAKEUP_PUNCH_ENTRY_DELETED": "對應的排班已被刪除,不能核准;請退回讓申請人重選",
+    "MAKEUP_PUNCH_INVALID_VALUES": "日期、分店、類型或時間沒填好",
+    "MAKEUP_PUNCH_NOTE_REQUIRED": "原因選「其他」時要填說明"
+  }
+}

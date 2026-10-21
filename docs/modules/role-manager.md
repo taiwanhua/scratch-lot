@@ -29,7 +29,7 @@
 | `system.role-manager.edit-matrix`    | 權限矩陣「儲存」+ API(role_module / role_permission 整份覆蓋;subset-only 防越權;預設角色有天花板,非 root 只能縮不能擴)                                                                                                                                                           |
 | `system.role-manager.assign-users`   | 分配使用者頁籤的「加入使用者」「移除」+ API(user_role;候選 = 管理範圍內尚未持有者,資格 = 所屬組織在角色擁有組織子樹內)                                                                                                                                                           |
 | `system.role-manager.toggle-enabled` | 停用 / 啟用角色 + API(停用後持有者的該角色立即不生效,PermissionResolver 已排除 enabled=false)。**有這個權限不代表每個角色都切得動** —— 還要過角色種類規則:種子不可切、預設角色只有 root、不可停用操作者自己正持有的角色(見規則;列上顯示與否讀 `Role.abilities.canToggleEnabled`) |
-| `system.role-manager.delete`         | 刪除角色 + API(前置:無授予、非種子角色、非租戶副本;軟刪除)                                                                                                                                                                                                                       |
+| `system.role-manager.delete`         | 刪除角色 + API(前置:無授予、非種子角色、非租戶副本、沒被人員條件引用;軟刪除)                                                                                                                                                                                                     |
 
 正本:`apps/db-migrator/seeds/base/modules/system.ts`、`apps/admin/src/pages/base/system/RoleManagerPage/role-manager-permissions.ts`
 
@@ -99,7 +99,7 @@ GQL-06 / GQL-07:可選輸入欄位的「缺席 / null」語意與回傳欄位語
 | `createRole(input: CreateRoleInput!): RolePayload!`                     | `create`         | 擁有組織限管理範圍內(範圍外 `FORBIDDEN`);新角色不綁任何模組 / 權限                                                                                                                                                        |
 | `updateRole(input: UpdateRoleInput!): RolePayload!`                     | `edit`           | 只有名稱與描述;**擁有組織建立後不可改**(ADR-0003);種子角色 → `FORBIDDEN`(reason `SYSTEM_ROLE`)                                                                                                                            |
 | `setRoleEnabled(input: …): RolePayload!`                                | `toggle-enabled` | 依角色種類擋:種子角色一律不可切 → `FORBIDDEN`(`SYSTEM_ROLE`);預設角色(租戶副本)只有根組織的操作者可切 → `FORBIDDEN`(`TEMPLATE_COPY_ROOT_ONLY`);**不可停用操作者自己正持有的角色** → `FORBIDDEN`(`SELF_LOCK`,啟用不受此限) |
-| `deleteRole(input: DeleteRoleInput!): DeletePayload!`                   | `delete`         | 前置三項不過 → `ROLE_NOT_DELETABLE` + `extensions.reasons`;軟刪除,關聯不動                                                                                                                                                |
+| `deleteRole(input: DeleteRoleInput!): DeletePayload!`                   | `delete`         | 前置四項不過 → `ROLE_NOT_DELETABLE` + `extensions.reasons`(被人員條件引用時另帶 `extensions.references`);軟刪除,關聯不動                                                                                                  |
 | `roleMatrix(roleId: ID!): RoleMatrixPayload!`                           | `view`           | 見下方「矩陣的兩棵樹」                                                                                                                                                                                                    |
 | `saveRoleMatrix(input: …): RoleMatrixPayload!`                          | `edit-matrix`    | 整份覆蓋(限矩陣回的那棵樹);`ROLE_OUT_OF_REACH`(預設角色超過模板天花板時附 `reason TEMPLATE_CEILING`);種子角色的矩陣唯讀 → `FORBIDDEN`(`SYSTEM_ROLE`)                                                                      |
 | `roleUsers(roleId: ID!, input: …): RoleUsersPayload!`                   | `view`           | 被授予這個角色的**所有人**(含管理範圍外的「組織外」持有者 — 列不出來就移不掉)                                                                                                                                             |
@@ -161,7 +161,7 @@ GQL-06 / GQL-07:可選輸入欄位的「缺席 / null」語意與回傳欄位語
 
 **頁內頁籤**:用 `@repo/ui/tabs`(`RoleDetailPanel/DetailTabs.tsx`),不用 `PageTabs`:切頁籤要先被「未存的矩陣變更」攔下(REACT-14 的例外)。目前頁籤仍記在網址 `?tab=`(`useUrlState`);左清單的搜尋、擁有組織、頁碼在 `?list=`,選中的角色在 `?detail=<id>`,持有人清單的頁碼在 `?users=`(連同角色 id 一起存,換角色就回第一頁)。
 
-**清單列的動作**(編輯 / 停用 / 刪除)= **權限 × `Role.abilities`**(`rowAbilityOf`,`role-manager-types.ts`):權限決定「這個人能不能做這件事」、`abilities` 決定「這個角色讓不讓做」,兩者相乘才顯示按鈕。刪除送出後收到 `ROLE_NOT_DELETABLE` 才攤開 `extensions.reasons` 三項,並提示改用停用。
+**清單列的動作**(編輯 / 停用 / 刪除)= **權限 × `Role.abilities`**(`rowAbilityOf`,`role-manager-types.ts`):權限決定「這個人能不能做這件事」、`abilities` 決定「這個角色讓不讓做」,兩者相乘才顯示按鈕。刪除送出後收到 `ROLE_NOT_DELETABLE` 才攤開 `extensions.reasons` 四項,`REFERENCED_BY_AUDIENCE` 底下再逐項列出 `extensions.references` 的引用處與處置(`RoleReferenceLine.tsx`,見「錯誤碼」節的「提示怎麼說」;種類認不得的不列),並提示改用停用。列上的刪除鍵不預判引用(`abilities.canDelete` 只看授予與角色種類),被引用要送出後才知道。
 
 **「組織外」標示**:分配使用者列表、使用者管理列表角色欄、指派角色彈窗三處,對失去子樹支撐的授予標 Warning Tag「組織外」+ hover 完整說明(ADR-0003)。
 
@@ -190,19 +190,47 @@ GQL-06 / GQL-07:可選輸入欄位的「缺席 / null」語意與回傳欄位語
 
 ## 錯誤碼
 
-| 情境                                     | 回應                                                                                        |
-| ---------------------------------------- | ------------------------------------------------------------------------------------------- |
-| 動到種子角色(改名 / 矩陣 / 停用)         | `FORBIDDEN`,reason `SYSTEM_ROLE`                                                            |
-| 非 root 停用預設角色                     | `FORBIDDEN`,reason `TEMPLATE_COPY_ROOT_ONLY`                                                |
-| 停用操作者自己正持有的角色               | `FORBIDDEN`,reason `SELF_LOCK`                                                              |
-| 擁有組織在管理範圍外(新增)               | `FORBIDDEN`                                                                                 |
-| 刪除前置未過(仍有授予 / 種子 / 預設角色) | `ROLE_NOT_DELETABLE` + `extensions.reasons`(`HAS_GRANTS` / `SYSTEM_ROLE` / `TEMPLATE_COPY`) |
-| 矩陣勾到操作者自己沒有的項目             | `ROLE_OUT_OF_REACH`                                                                         |
-| 預設角色勾到模板沒有的項目(root 也擋)    | `ROLE_OUT_OF_REACH`,reason `TEMPLATE_CEILING`                                               |
-| 加入的使用者資格不符                     | `USER_NOT_ELIGIBLE` + `roleId` / `ownerOrgName`                                             |
-| 移除擁有者的租戶管理員授予               | `OWNER_PROTECTED`                                                                           |
-| 角色在管理範圍外                         | `NOT_FOUND`                                                                                 |
-| 名稱空白、id 不合法                      | `VALIDATION_FAILED` + `extensions.fields`                                                   |
+| 情境                                                      | 回應                                                                                                                                                                              |
+| --------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 動到種子角色(改名 / 矩陣 / 停用)                          | `FORBIDDEN`,reason `SYSTEM_ROLE`                                                                                                                                                  |
+| 非 root 停用預設角色                                      | `FORBIDDEN`,reason `TEMPLATE_COPY_ROOT_ONLY`                                                                                                                                      |
+| 停用操作者自己正持有的角色                                | `FORBIDDEN`,reason `SELF_LOCK`                                                                                                                                                    |
+| 擁有組織在管理範圍外(新增)                                | `FORBIDDEN`                                                                                                                                                                       |
+| 刪除前置未過(仍有授予 / 種子 / 預設角色 / 被人員條件引用) | `ROLE_NOT_DELETABLE` + `extensions.reasons`(`HAS_GRANTS` / `SYSTEM_ROLE` / `TEMPLATE_COPY` / `REFERENCED_BY_AUDIENCE`);有 `REFERENCED_BY_AUDIENCE` 時另帶 `extensions.references` |
+| 矩陣勾到操作者自己沒有的項目                              | `ROLE_OUT_OF_REACH`                                                                                                                                                               |
+| 預設角色勾到模板沒有的項目(root 也擋)                     | `ROLE_OUT_OF_REACH`,reason `TEMPLATE_CEILING`                                                                                                                                     |
+| 加入的使用者資格不符                                      | `USER_NOT_ELIGIBLE` + `roleId` / `ownerOrgName`                                                                                                                                   |
+| 移除擁有者的租戶管理員授予                                | `OWNER_PROTECTED`                                                                                                                                                                 |
+| 角色在管理範圍外                                          | `NOT_FOUND`                                                                                                                                                                       |
+| 名稱空白、id 不合法                                       | `VALIDATION_FAILED` + `extensions.fields`                                                                                                                                         |
+
+**被人員條件引用(`REFERENCED_BY_AUDIENCE`)**:角色 id 出現在任何人員條件的「角色」條件列(含巢狀群組)就不能刪 —— 刪掉後那些條件指向不存在的角色,通知沒人收、關卡沒人能審,畫面看不出來。停用不受此限(停用的角色在人員條件解析時本來就不算,隨時可恢復)。掃描範圍與 `extensions.references[].kind`:
+
+| `kind`                 | 存在哪                                                           | 範圍                                                                           | 帶的名稱                         |
+| ---------------------- | ---------------------------------------------------------------- | ------------------------------------------------------------------------------ | -------------------------------- |
+| `notification-setting` | `notification_settings.audience`(收件人)                         | 角色所屬租戶;只算目前有登記的通知類型                                          | `name` = 通知類型名稱            |
+| `workflow-approver`    | `workflow_versions.steps[].assignee`(審核者)                     | 角色所屬租戶的流程;草稿、目前版本、還有進行中單據(`running` / `blocked`)的版本 | `name` = 流程、`stepName` = 關卡 |
+| `workflow-step-cc`     | `workflow_versions.steps[].cc`(關卡的知會對象)                   | 同上                                                                           | 同上                             |
+| `workflow-overdue`     | `workflow_versions.steps[].overdue.audience`(逾時提醒的通知對象) | 同上                                                                           | 同上                             |
+| `workflow-cc`          | `workflow_versions.cc`(整個流程的知會對象)                       | 同上                                                                           | `name` = 流程                    |
+| `data-scope`           | `data_scope_rules.rules[].audience`(套用對象)                    | 全部規則(根組織設定、跨租戶)                                                   | `name` = 資料範圍目標            |
+| `sidebar-badge`        | `sidebar_badge_settings.audience`(誰看得到側欄數字)              | 角色所屬租戶;只算目前有登記側欄數字的模組                                      | `name` = 模組名稱                |
+
+角色所屬租戶 = 擁有組織所屬的租戶(根組織的角色只看共用流程與資料範圍;找不到擁有組織是資料損毀,直接丟錯)。退役且沒有進行中單據的版本不再派出審核,不算引用。
+
+流程的四種另帶 `source`(出處)—— `draft` 草稿、`current` 目前版本、`in-use` 進行中單據(`running` / `blocked`)用的版本,`in-use` 再帶 `inUseCount`(張數)。合併重複的鍵 = `kind` + 名稱 + 關卡 + `source`:同一關出現在多個進行中版本合成一筆、張數相加;草稿與目前版本各留一筆;目前版本有進行中單據時,`current` 與 `in-use` 各一筆(發布新版後那些單據仍用舊版)。
+
+**提示怎麼說**(admin `RoleReferenceLine.tsx`;每一項都是「為什麼 + 怎麼做」):
+
+| 引用處                       | 處置                                                               |
+| ---------------------------- | ------------------------------------------------------------------ |
+| 通知設定                     | 到「通知設定」把收件人改成其他角色(有通知設定的編輯權限才做成連結) |
+| 流程的草稿 / 目前版本        | 到「流程管理」修改這一關並發布(有流程管理的編輯權限才做成連結)     |
+| 進行中單據用的版本(`in-use`) | 等這些單據完成,或撤回 / 作廢後再刪除(帶張數)                       |
+| 資料範圍                     | 由系統管理員設定,請聯絡系統管理員修改                              |
+| 側欄數字                     | 到「通知設定」的「側欄數字」把條件改成其他角色(連結同通知設定)     |
+
+正本:`apps/api/src/audience/audience-references.service.ts`(`AudienceReferencesService`;條件樹走訪沿用 `@repo/domain/workflow` 的 `audienceStaticIdsOf`)
 
 錯誤碼總表在 GQL-04。前端解讀集中在 `role-manager-error.ts`。
 

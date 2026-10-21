@@ -584,7 +584,8 @@
       "slots": {
         "title": "標題",
         "date": "日期",
-        "amount": "金額"
+        "amount": "金額",
+        "serialNo": "單號"
       },
       "field": "表單欄位",
       "missingField": "{key}(目前版本已沒有這個欄位)",
@@ -760,7 +761,29 @@
       "reasons": {
         "HAS_GRANTS": "還有使用者持有這個角色,請先把他們移除。",
         "SYSTEM_ROLE": "這是系統內建角色。",
-        "TEMPLATE_COPY": "這是系統在開通時幫你準備好的角色。"
+        "TEMPLATE_COPY": "這是系統在開通時幫你準備好的角色。",
+        "REFERENCED_BY_AUDIENCE": "下列設定的人員條件還用到這個角色,依各項說明處理後才能刪除:"
+      },
+      "references": {
+        "notification-setting": "通知設定「{name}」的收件人用了這個角色 → 到<link>通知設定</link>把收件人改成其他角色。",
+        "workflow-approver": {
+          "edit": "「{name}」流程{source, select, draft {的草稿} other {目前版本}}裡,「{step}」關卡的審核者用了這個角色 → 到<link>流程管理</link>修改這一關並發布。",
+          "inUse": "「{name}」流程有 {count} 張進行中的單據使用的版本裡,「{step}」關卡的審核者用了這個角色 → 等這些單據完成,或撤回 / 作廢後再刪除。"
+        },
+        "workflow-step-cc": {
+          "edit": "「{name}」流程{source, select, draft {的草稿} other {目前版本}}裡,「{step}」關卡的知會對象用了這個角色 → 到<link>流程管理</link>修改這一關並發布。",
+          "inUse": "「{name}」流程有 {count} 張進行中的單據使用的版本裡,「{step}」關卡的知會對象用了這個角色 → 等這些單據完成,或撤回 / 作廢後再刪除。"
+        },
+        "workflow-overdue": {
+          "edit": "「{name}」流程{source, select, draft {的草稿} other {目前版本}}裡,「{step}」關卡逾時提醒的通知對象用了這個角色 → 到<link>流程管理</link>修改這一關並發布。",
+          "inUse": "「{name}」流程有 {count} 張進行中的單據使用的版本裡,「{step}」關卡逾時提醒的通知對象用了這個角色 → 等這些單據完成,或撤回 / 作廢後再刪除。"
+        },
+        "workflow-cc": {
+          "edit": "「{name}」流程{source, select, draft {的草稿} other {目前版本}}裡,整個流程的知會對象用了這個角色 → 到<link>流程管理</link>修改並發布。",
+          "inUse": "「{name}」流程有 {count} 張進行中的單據使用的版本裡,整個流程的知會對象用了這個角色 → 等這些單據完成,或撤回 / 作廢後再刪除。"
+        },
+        "data-scope": "資料範圍「{name}」由系統管理員設定,它的套用對象用了這個角色 → 請聯絡系統管理員修改。",
+        "sidebar-badge": "「{name}」的側欄數字設定用了這個角色 → 到<link>通知設定</link>的「側欄數字」把條件改成其他角色。"
       },
       "useDisableInstead": "不能刪除時可以改用「停用」:持有者的這個角色立即失效,之後隨時可以再啟用。",
       "confirm": "刪除",
@@ -1087,6 +1110,7 @@
     }
   },
   "demoSampleTwo": {
+    "sharedIn": "共用進來的,只能看",
     "emptyValue": "—",
     "emptyList": "目前沒有示範項目",
     "loading": "載入中",
@@ -1106,7 +1130,8 @@
       "name": "名稱",
       "note": "備註",
       "enabled": "啟用",
-      "createdBy": "建立者"
+      "createdBy": "建立者",
+      "shareOrgs": "共用給"
     },
     "toolbar": {
       "search": "搜尋",
@@ -1227,7 +1252,8 @@
       "slots": {
         "title": "標題",
         "date": "日期",
-        "amount": "金額"
+        "amount": "金額",
+        "serialNo": "單號"
       }
     },
     "detail": {
@@ -1288,7 +1314,8 @@
         "edit": "編輯",
         "create": "新增"
       },
-      "tabLabelWithAction": "{action}・{label}"
+      "tabLabelWithAction": "{action}・{label}",
+      "serialNo": "單號:{serialNo}"
     },
     "fill": {
       "loading": "載入中",
@@ -1395,10 +1422,38 @@
       "allowDraftHint": "關掉後,新增 / 編輯頁不顯示 [存草稿],只能直接送出。",
       "allowDraftOn": "已允許存草稿。",
       "allowDraftOff": "已關閉存草稿,之後只能直接送出。",
+      "voidReasonCategory": "作廢原因",
+      "voidReasonCategoryHint": "選欄位管理的類別後,作廢時要從該類別的選項挑原因(選「其他」要填說明);不設定 = 自由填寫理由。",
+      "voidReasonCategoryUnset": "不設定(自由填寫)",
+      "voidReasonCategorySaved": "已更新作廢原因設定。",
       "assignedTo": "已分派:{tenants}",
       "tabs": "表單設定頁籤",
       "tabDesign": "表單設計",
-      "tabVersions": "表單版本"
+      "tabVersions": "表單版本",
+      "serial": "單號",
+      "serialEnabled": "第一次送出時給單號",
+      "serialHint": "存草稿不給號;給了不收回(退回、撤回、作廢都保留原號)。流水號依最上層組織分開計數,依期間重新起算。",
+      "serialPrefix": "前綴",
+      "serialPrefixHint": "英數 0–10 字,可空",
+      "serialPeriod": "流水號重新起算",
+      "serialPeriods": {
+        "none": "不重新起算",
+        "year": "每年",
+        "month": "每月"
+      },
+      "serialDigits": "位數",
+      "serialSeparator": "分隔符",
+      "serialSeparators": {
+        "dash": "-",
+        "underscore": "_",
+        "slash": "/",
+        "dot": ".",
+        "none": "不分隔"
+      },
+      "serialPreview": "例:{example}",
+      "serialSave": "儲存單號格式",
+      "serialSaved": "已儲存單號格式。",
+      "serialCleared": "已停止給單號,已給的號碼保留。"
     },
     "create": {
       "title": "建立表單",
@@ -2211,6 +2266,8 @@
       "void": "作廢",
       "copy": "複製為新單",
       "voidedReason": "作廢理由:{reason}",
+      "voidedReasonOption": "作廢原因:{option}",
+      "voidedReasonOptionNote": "作廢原因:{option}({note})",
       "clearedFields": "新單已建立;以下欄位的來源已失效,已清空:{fields}"
     },
     "dialog": {
@@ -2225,6 +2282,11 @@
       "title": "作廢這張單",
       "body": "作廢後這張單不再生效、內容不能再改;需要的話可以「複製為新單」重新送出。",
       "reason": "作廢理由",
+      "reasonOption": "作廢原因",
+      "note": "說明",
+      "noteRequired": "選「其他」時請填寫說明",
+      "noOptions": "沒有可選的作廢原因,請洽管理員到欄位管理新增選項",
+      "optionsUnavailable": "作廢原因載入失敗,請稍後再試",
       "confirm": "作廢"
     },
     "retry": {
@@ -2750,6 +2812,14 @@
     "loadFailed": "人員清單載入失敗,請稍後再試",
     "disabled": "已停用"
   },
+  "filterDrawer": {
+    "button": "篩選",
+    "buttonCount": "篩選 ({count})",
+    "title": "篩選",
+    "clear": "清除",
+    "apply": "套用",
+    "close": "關閉"
+  },
   "orgTreeSelect": {
     "search": "搜尋組織",
     "empty": "沒有可選的組織",
@@ -2757,9 +2827,19 @@
     "limitCount": "已選 {count} / 上限 {max}",
     "limitReached": "最多選 {max} 個",
     "outOfScope": "不在你的管理範圍內",
+    "outOfVisibleScope": "不在你的可見範圍內",
     "disabledOrg": "已停用",
     "loadFailed": "組織清單載入失敗,請稍後再試。",
     "confirm": "確定"
+  },
+  "shareOrgsField": {
+    "rootNotSharable": "根組織不能被共用",
+    "rootDisabled": "根組織的資料不能共用",
+    "helper": "共用給的組織看得到這筆資料,但不能修改;可以選整個組織樹裡的組織。",
+    "includeDescendants": "{name} 含下層組織",
+    "withDescendants": "{name}(含下層)",
+    "none": "不共用",
+    "unknownOrg": "(已不在組織樹上的組織)"
   },
   "seedExport": {
     "action": "匯出專案設定",
@@ -2939,8 +3019,8 @@
     }
   },
   "notificationSettings": {
-    "intro": "這些提醒的收件人可以依使用者、角色與權限調整。待你審核、申請結果這類通知會直接送給當事人,不在這裡設定。",
-    "rootReadOnly": "目前所在的組織不屬於任何最上層組織:這裡只顯示預設收件人,不能調整;請先切換到要設定的組織。",
+    "intro": "這些通知的收件人可以依使用者、角色與權限調整;有提醒時間的,可以調整提前幾天、幾點寄。待你審核、申請結果這類通知會直接送給當事人,不在這裡設定。",
+    "rootReadOnly": "目前所在的組織不屬於任何最上層組織:這裡只顯示預設值,不能調整;請先切換到要設定的組織。",
     "search": "搜尋通知類型",
     "searchPlaceholder": "名稱",
     "tableLabel": "通知類型清單",
@@ -2951,38 +3031,127 @@
       "type": "通知類型",
       "orgScope": "組織範圍",
       "audience": "收件人",
+      "schedule": "提醒時間",
       "actions": "操作"
     },
     "orgScope": "{origin, select, tenant {最上層組織} other {觸發事件的組織}}{range, select, descendants {含下層} ancestors {含上層} other {}}",
+    "orgScopeByEvent": "—",
+    "partyRecipients": "由事件決定",
+    "partyRecipientsWithNote": "由事件決定({note})",
     "defaultTag": "預設",
+    "scheduleSummary": {
+      "onEvent": "—(發生時)",
+      "daysBefore": "{label}前 {days} 天 {time}",
+      "daysBeforeAndToday": "{label}前 {days} 天及當天 {time}",
+      "today": "{label}當天 {time}",
+      "dailyOverdue": "隔天起每天 {time}",
+      "monthly": "每月 {day} 號 {time}",
+      "defaultDateLabel": "日期",
+      "separator": "、"
+    },
+    "scheduleEditor": {
+      "daysBeforeHint": "提前天數:0 = 當天;0–365,最多 5 個,不能重複。日期本身照各筆資料。",
+      "daysBefore": "提前天數 {index}",
+      "removeDay": "移除第 {index} 個提前天數",
+      "addDay": "+ 加一個",
+      "dailyOverdueHint": "逾期的隔天起,每天在這個時間寄,直到不再逾期。",
+      "dayOfMonth": "每月第幾天",
+      "dayOfMonthHint": "1–31;那個月沒有這一天就在月底寄",
+      "time": "寄送時間",
+      "timeHint": "以最上層組織的時區計;時間到了之後通常 15 分鐘內寄出",
+      "issues": {
+        "daysRange": "請填 0–365 的整數",
+        "daysDuplicate": "天數不能重複",
+        "daysEmpty": "至少要有一個提前天數",
+        "dayOfMonthRange": "請填 1–31 的整數",
+        "invalid": "超出可以填的範圍"
+      }
+    },
     "actions": {
       "edit": "編輯",
       "reset": "還原預設"
     },
     "edit": {
-      "title": "編輯收件人:{name}",
+      "title": "{part, select, schedule {編輯提醒時間} both {編輯通知設定} other {編輯收件人}}:{name}",
       "scopeHint": "組織範圍:{scope}(由通知類型決定,不能修改)。收件人 = 組織範圍內、而且符合下列條件的人。",
       "audienceTitle": "收件人",
+      "scheduleTitle": "提醒時間",
+      "resetPart": "還原預設",
       "cancel": "取消",
       "save": "儲存"
     },
     "reset": {
       "title": "還原預設:{name}",
-      "body": "收件人會改回預設:{audience}。目前的調整會被移除。",
+      "audienceLine": "收件人會改回預設:{audience}。",
+      "scheduleLine": "提醒時間會改回預設:{schedule}。",
+      "body": "目前的調整會被移除。",
       "cancel": "取消",
       "confirm": "還原預設"
     },
     "feedback": {
-      "saveSuccess": "已更新收件人",
-      "resetSuccess": "已還原預設收件人"
+      "saveSuccess": "已更新通知設定",
+      "resetSuccess": "已還原預設"
     },
     "errors": {
       "AUDIENCE_INVALID": "這個條件不能使用,請檢查後再儲存",
       "OUT_OF_TENANT": "這個對象不在你的組織內",
       "UNKNOWN_TYPE": "找不到這個通知類型,請重新整理再試一次",
-      "TENANT_ONLY": "這裡不能調整收件人,請先切換到要設定的組織",
+      "AUDIENCE_NOT_ADJUSTABLE": "這種通知的收件人由事件決定,不能調整",
+      "SCHEDULE_NOT_ADJUSTABLE": "這種通知在事件發生時就寄,沒有提醒時間可調整",
+      "SCHEDULE_INVALID": "提醒時間超出可以填的範圍,請檢查後再儲存",
+      "NOTHING_TO_UPDATE": "沒有要儲存的調整",
+      "TENANT_ONLY": "這裡不能調整通知設定,請先切換到要設定的組織",
       "FORBIDDEN": "你沒有調整通知設定的權限",
       "UNEXPECTED": "發生錯誤,請稍後再試"
+    }
+  },
+  "sidebarBadgeSettings": {
+    "title": "側欄數字",
+    "intro": "側欄模組名稱旁的數字(例:待你處理的件數)。要先能進入那個模組才看得到;調整過的,還要符合這裡的條件。要數什麼由系統決定,不能新增。",
+    "tableLabel": "側欄數字清單",
+    "empty": "目前沒有可以設定的側欄數字",
+    "loadFailed": "側欄數字設定載入失敗,請重新整理再試一次",
+    "columns": {
+      "module": "模組",
+      "description": "數什麼",
+      "audience": "誰看得到",
+      "actions": "操作"
+    },
+    "noDescription": "—",
+    "defaultAudience": "可進入這個模組的人",
+    "conditionAudience": "可進入這個模組、且符合「{condition}」的人",
+    "actions": {
+      "edit": "修改",
+      "reset": "還原預設"
+    },
+    "edit": {
+      "title": "修改誰看得到:{name}",
+      "hint": "要先能進入「{name}」才看得到數字;符合下列條件的人才看得到。",
+      "audienceTitle": "誰看得到",
+      "cancel": "取消",
+      "save": "儲存"
+    },
+    "reset": {
+      "title": "還原預設:{name}",
+      "line": "誰看得到會改回預設:{audience}。",
+      "body": "目前的調整會被移除。",
+      "cancel": "取消",
+      "confirm": "還原預設"
+    },
+    "feedback": {
+      "saveSuccess": "已更新側欄數字設定",
+      "resetSuccess": "已還原預設"
+    },
+    "errors": {
+      "AUDIENCE_INVALID": "這個條件不能使用,請檢查後再儲存",
+      "OUT_OF_TENANT": "這個對象不在你的組織內",
+      "UNKNOWN_BADGE": "找不到這個側欄數字,請重新整理再試一次",
+      "TENANT_ONLY": "這裡不能調整側欄數字,請先切換到要設定的組織",
+      "FORBIDDEN": "你沒有調整側欄數字的權限",
+      "UNEXPECTED": "發生錯誤,請稍後再試"
+    },
+    "descriptions": {
+      "apply-center": "待你處理的審核件數"
     }
   },
   "printers": {

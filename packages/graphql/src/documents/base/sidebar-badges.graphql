@@ -6,3 +6,44 @@ query SidebarBadges {
     count
   }
 }
+
+# 側欄數字「誰看得到」的租戶設定(通知設定頁「側欄數字」區塊;system.notification-settings.view / edit)
+fragment SidebarBadgeSettingItem on SidebarBadgeSetting {
+  moduleKey
+  moduleName
+  descriptionKey
+  requires
+  audience
+  isDefault
+  updatedAt
+  updatedBy
+}
+
+# 程式有登記、這個租戶有開通的側欄數字(依登記順序,不分頁)
+query SidebarBadgeSettings {
+  sidebarBadgeSettings {
+    items {
+      ...SidebarBadgeSettingItem
+    }
+    totalCount
+  }
+}
+
+# UpdateSidebarBadgeSettingInput: { moduleKey, audience }(audience 不能「所有人」、只有使用者 / 角色 / 權限;
+# 使用者 / 角色須屬本租戶,否則 VALIDATION_FAILED reason OUT_OF_TENANT;站在根組織 → FORBIDDEN reason TENANT_ONLY)
+mutation UpdateSidebarBadgeSetting($input: UpdateSidebarBadgeSettingInput!) {
+  updateSidebarBadgeSetting(input: $input) {
+    setting {
+      ...SidebarBadgeSettingItem
+    }
+  }
+}
+
+# ResetSidebarBadgeSettingInput: { moduleKey }(還原成程式登記的預設)
+mutation ResetSidebarBadgeSetting($input: ResetSidebarBadgeSettingInput!) {
+  resetSidebarBadgeSetting(input: $input) {
+    setting {
+      ...SidebarBadgeSettingItem
+    }
+  }
+}

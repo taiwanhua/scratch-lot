@@ -21,7 +21,9 @@
         "fieldEncryptionKey": "field-encryption-key-dev",
         "rootAdminPassword": "root-admin-password-dev",
         "jwtSecret": "jwt-secret-dev",
-        "resendApiKey": "resend-api-key-dev"
+        "resendApiKey": "resend-api-key-dev",
+        "demoPassword": "demo-password-dev",
+        "demoEmailBase": "demo-email-base-dev"
       },
       "realtime": {
         "worker": "scratch-lot-realtime-dev",
@@ -45,7 +47,9 @@
         "fieldEncryptionKey": "field-encryption-key-staging",
         "rootAdminPassword": "root-admin-password-staging",
         "jwtSecret": "jwt-secret-staging",
-        "resendApiKey": "resend-api-key-staging"
+        "resendApiKey": "resend-api-key-staging",
+        "demoPassword": "demo-password-staging",
+        "demoEmailBase": "demo-email-base-staging"
       },
       "realtime": {
         "worker": "scratch-lot-realtime-staging",
@@ -69,7 +73,9 @@
         "fieldEncryptionKey": "field-encryption-key",
         "rootAdminPassword": "root-admin-password",
         "jwtSecret": "jwt-secret",
-        "resendApiKey": "resend-api-key"
+        "resendApiKey": "resend-api-key",
+        "demoPassword": "demo-password",
+        "demoEmailBase": "demo-email-base"
       },
       "realtime": {
         "worker": "scratch-lot-realtime",

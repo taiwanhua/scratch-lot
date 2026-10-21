@@ -18,6 +18,8 @@ type WorkflowFieldKey =
   | "voidedAt"
   | "voidedBy"
   | "voidReason"
+  | "voidReasonKey"
+  | "voidReasonLabel"
   | "replacedById"
   | "copiedFrom";
 
@@ -34,6 +36,8 @@ function withDefaults(stored: StoredSubmission): SubmissionSnapshotRecord {
     voidedAt: stored.voidedAt ?? null,
     voidedBy: stored.voidedBy ?? null,
     voidReason: stored.voidReason ?? null,
+    voidReasonKey: stored.voidReasonKey ?? null,
+    voidReasonLabel: stored.voidReasonLabel ?? null,
     replacedById: stored.replacedById ?? null,
     copiedFrom: stored.copiedFrom ?? null,
   };

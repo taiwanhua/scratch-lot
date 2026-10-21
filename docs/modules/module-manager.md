@@ -42,6 +42,8 @@
 - **隱藏的 `api` 模組**掛純 API 權限(沒有畫面)。
 - `isRootOnly` 只存在於 seed 宣告層、**不落庫**(`module-declaration.ts`),執行期無從得知,故不在任何回傳欄位內。
 
+**側欄順序**:同層依 `order` → `key` 排(前端自行排序)。`order` 不是初始 seed 值欄位,每次部署同步回 seed 宣告值,所以改宣告就會更新既有環境,不需要 migration。底座頂層的宣告值:總覽 `0`、申請中心 `90`、系統管理 `95`、隱藏的 `api` 模組 `99`;中間 10–80 留給專案的業務模組(專案自己的編號寫在 `docs/modules/project/`),示範家族的 `demo` 群組 `2`、示範表單 `3`。
+
 **側欄圖示**:`modules.icon` 是側欄圖示的 key,**正本是白名單** `@repo/domain/module-icon` 的 `MODULE_ICON_KEYS`(30 個 key)。前後端共用同一份:api 用它擋輸入,`@repo/ui` 的圖示登錄表以它為型別來源 —— 少一個 key 就 `check-types` 紅,不會出現「api 存得進去、側欄畫不出來」。`null` = 沒指定,側欄用預設圖示;前端認不得的 key 也一律退回預設圖示。
 
 seed 只給初值:專案在 `apps/db-migrator/seeds/project/settings.ts` 的 `moduleInitialValues` 依模組 key 指定 `enabled`、`icon`、`settings`;未指定的圖示沿用模組宣告。以下是底座 `seeds/base/modules/*.ts` 的圖示預設,建立後由根組織在這一頁換:

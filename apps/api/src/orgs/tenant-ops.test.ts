@@ -65,6 +65,7 @@ const PROVISION_TENANT = /* GraphQL */ `
         visibility
         logoUrl
         slug
+        isDemo
       }
       ownerUserId
       roleId
@@ -177,6 +178,7 @@ interface ProvisionTenantData {
       visibility: string | null;
       logoUrl: string | null;
       slug: string | null;
+      isDemo: boolean;
     };
     ownerUserId: string;
     roleId: string;
@@ -226,6 +228,7 @@ interface OrgRow {
   isSystem: boolean;
   logoPath?: string;
   ownerUserId?: Types.ObjectId;
+  isDemo?: boolean;
   settings: Record<string, unknown>;
 }
 
@@ -439,6 +442,8 @@ describe("租戶作業(GraphQL 端點 + 真 MongoDB)", () => {
       adminEmail: string;
       logoPath: string | null;
       moduleKeys: string[];
+      demo: boolean;
+      adminInitialPassword: string;
     }> = {},
     accessToken = rootOpsToken,
   ) {
@@ -447,6 +452,10 @@ describe("租戶作業(GraphQL 端點 + 真 MongoDB)", () => {
       PROVISION_TENANT,
       {
         input: {
+          ...(overrides.demo === undefined ? {} : { demo: overrides.demo }),
+          ...(overrides.adminInitialPassword === undefined
+            ? {}
+            : { adminInitialPassword: overrides.adminInitialPassword }),
           name: overrides.name ?? `租戶 ${account}`,
           slug: overrides.slug ?? nextSlug(),
           adminAccount: account,
@@ -1039,6 +1048,116 @@ describe("租戶作業(GraphQL 端點 + 真 MongoDB)", () => {
         ownerUserId: new Types.ObjectId(payload?.ownerUserId),
       });
       spy.mockRestore();
+    });
+  });
+
+  describe("provisionTarget:開通的寫入目標(demo 指令比對確認字串用)", () => {
+    const PROVISION_TARGET = /* GraphQL */ `
+      query ProvisionTarget {
+        provisionTarget {
+          databaseName
+        }
+      }
+    `;
+
+    it("根組織:回這個 api 連到的資料庫名(只有資料庫名)", async () => {
+      const result = await api.graphql<{
+        provisionTarget: { databaseName: string };
+      }>(PROVISION_TARGET, {}, { accessToken: rootOpsToken });
+
+      expect(result.errors).toBeUndefined();
+      expect(result.data?.provisionTarget).toEqual({
+        databaseName: api.connection.name,
+      });
+    });
+
+    it("非根組織即使持有權限也拒(FORBIDDEN);沒有 provision 權限也拒", async () => {
+      for (const accessToken of [tenantOpsToken, rootViewToken]) {
+        const result = await api.graphql(PROVISION_TARGET, {}, { accessToken });
+        expect(result.errors?.[0]?.extensions?.code).toBe("FORBIDDEN");
+      }
+    });
+  });
+
+  describe("provisionTenant:示範機構(demo + adminInitialPassword)", () => {
+    const DEMO_PASSWORD = ["demo", "only", "pass", "9"].join("-");
+
+    it("示範機構:組織標 isDemo、首任管理員用給的密碼直接登入(不強改、不寄啟用信),稽核只記標記不記密碼", async () => {
+      const account = nextAccount("demo-admin");
+      const before = mail.sent.length;
+      const result = await provision({
+        adminAccount: account,
+        demo: true,
+        adminInitialPassword: DEMO_PASSWORD,
+      });
+
+      expect(result.errors).toBeUndefined();
+      const payload = result.data?.provisionTenant;
+      if (!payload) {
+        throw new Error("provisionTenant 沒有回 payload");
+      }
+      expect(payload.org.isDemo).toBe(true);
+      expect(payload.activationMailSent).toBe(false);
+      expect(mail.sent.slice(before)).toHaveLength(0);
+      const org = await orgRow(payload.org.id);
+      expect(org?.isDemo).toBe(true);
+
+      const user = await userRow(payload.ownerUserId);
+      expect(user?.settings.mustChangePassword).toBe(false);
+      expect(user?.passwordHash).not.toContain(DEMO_PASSWORD);
+      const token = await login(account, DEMO_PASSWORD);
+      const me = await api.graphql<{ me: { mustChangePassword: boolean } }>(
+        /* GraphQL */ `
+          query Me {
+            me {
+              mustChangePassword
+            }
+          }
+        `,
+        {},
+        { accessToken: token },
+      );
+      expect(me.errors).toBeUndefined();
+      expect(me.data?.me.mustChangePassword).toBe(false);
+
+      const audit = await latestAudit("org.provision", payload.org.id);
+      expect(audit?.after).toMatchObject({ isDemo: true });
+      expect(JSON.stringify(audit)).not.toContain(DEMO_PASSWORD);
+    });
+
+    it("一般開通:isDemo 為 false,資料庫不寫標記", async () => {
+      const { payload } = await provisionOne("not-demo");
+
+      expect(payload.org.isDemo).toBe(false);
+      const org = await orgRow(payload.org.id);
+      expect(org?.isDemo).toBeUndefined();
+    });
+
+    it("只給密碼不標示範、標示範卻沒給密碼、密碼不合規則:VALIDATION_FAILED 並標 adminInitialPassword,什麼都沒建", async () => {
+      const cases = [
+        { adminInitialPassword: DEMO_PASSWORD },
+        { demo: false, adminInitialPassword: DEMO_PASSWORD },
+        { demo: true },
+        { demo: true, adminInitialPassword: "" },
+      ];
+      for (const overrides of cases) {
+        const account = nextAccount("demo-invalid");
+        const result = await provision({ adminAccount: account, ...overrides });
+        expect(result.errors?.[0]?.extensions).toMatchObject({
+          code: "VALIDATION_FAILED",
+          fields: ["adminInitialPassword"],
+        });
+        expect(await userRowByAccount(account)).toBeNull();
+      }
+
+      const weak = nextAccount("demo-weak");
+      const result = await provision({
+        adminAccount: weak,
+        demo: true,
+        adminInitialPassword: "x",
+      });
+      expect(result.errors?.[0]?.extensions?.code).toBe("VALIDATION_FAILED");
+      expect(await userRowByAccount(weak)).toBeNull();
     });
   });
 

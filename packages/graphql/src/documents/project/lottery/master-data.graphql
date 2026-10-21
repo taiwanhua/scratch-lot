@@ -1,0 +1,135 @@
+# 檔案管理(master-data,專案規格 5.1、5.5;欄位語意正本 docs/modules/project/master-data.md「api 介面」)。
+# 讀取要綁對應分頁的模組(master-data.games / master-data.cash-points),沒有 view 權限。
+
+fragment LotteryGameFields on LotteryGame {
+  id
+  gameCode
+  name
+  unitPrice
+  ticketsPerBook
+  bookPrice
+  defaultRate
+  color
+  status
+  launchedAt
+  discontinuedAt
+  claimDeadline
+  note
+  inUse
+  createdAt
+  updatedAt
+  abilities {
+    canEdit
+    canDelete
+  }
+}
+
+# LotteryGamesInput: { page?, pageSize?, keyword?, status?, unitPrice? }
+query LotteryGames($input: LotteryGamesInput!) {
+  lotteryGames(input: $input) {
+    items {
+      ...LotteryGameFields
+    }
+    totalCount
+    page
+    pageSize
+  }
+}
+
+query LotteryGame($id: ID!) {
+  lotteryGame(id: $id) {
+    item {
+      ...LotteryGameFields
+    }
+  }
+}
+
+# CreateLotteryGameInput: { gameCode, name, unitPrice, ticketsPerBook, defaultRate, color?, status?, launchedAt?, discontinuedAt?, claimDeadline?, note? }
+mutation CreateLotteryGame($input: CreateLotteryGameInput!) {
+  createLotteryGame(input: $input) {
+    item {
+      ...LotteryGameFields
+    }
+  }
+}
+
+# UpdateLotteryGameInput: { id, ...CreateLotteryGameInput 各欄選填 }(缺席 = 不動)
+mutation UpdateLotteryGame($input: UpdateLotteryGameInput!) {
+  updateLotteryGame(input: $input) {
+    item {
+      ...LotteryGameFields
+    }
+  }
+}
+
+# DeleteLotteryGameInput: { id }
+mutation DeleteLotteryGame($input: DeleteLotteryGameInput!) {
+  deleteLotteryGame(input: $input) {
+    success
+    deletedId
+  }
+}
+
+fragment LotteryCashPointFields on LotteryCashPoint {
+  id
+  org {
+    id
+    name
+  }
+  positionKey
+  positionLabel
+  name
+  order
+  enabled
+  printer {
+    id
+    name
+  }
+  note
+  createdAt
+  updatedAt
+  abilities {
+    canEdit
+  }
+}
+
+# LotteryCashPointsInput: { page?, pageSize?, orgId?, enabled?, keyword? }
+query LotteryCashPoints($input: LotteryCashPointsInput!) {
+  lotteryCashPoints(input: $input) {
+    items {
+      ...LotteryCashPointFields
+    }
+    totalCount
+    page
+    pageSize
+  }
+}
+
+# 崗位選單:這家分店看得到的啟用崗位(欄位管理「崗位」)
+query LotteryPositionOptions($orgId: ID!) {
+  lotteryPositionOptions(orgId: $orgId) {
+    items {
+      value
+      label
+    }
+    totalCount
+  }
+}
+
+# CreateLotteryCashPointInput: { orgId, positionKey, name, order?, printerId?, note? }
+mutation CreateLotteryCashPoint($input: CreateLotteryCashPointInput!) {
+  createLotteryCashPoint(input: $input) {
+    item {
+      ...LotteryCashPointFields
+    }
+  }
+}
+
+# UpdateLotteryCashPointInput: { id, positionKey?, name?, order?, enabled?, printerId?, note? }(缺席 = 不動;printerId / note 送 null = 清空)
+mutation UpdateLotteryCashPoint($input: UpdateLotteryCashPointInput!) {
+  updateLotteryCashPoint(input: $input) {
+    item {
+      ...LotteryCashPointFields
+    }
+  }
+}

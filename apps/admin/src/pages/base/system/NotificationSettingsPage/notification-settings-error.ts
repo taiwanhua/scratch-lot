@@ -2,13 +2,17 @@ import { type AdminError, parseAdminError } from "@/lib/base/errors";
 
 /**
  * 通知設定會收到的業務錯誤(GQL-04;api 正本 `apps/api/src/notifications/notifications-error.ts`)。
- * `VALIDATION_FAILED` 依 `extensions.reason` 細分成三個碼、`FORBIDDEN` + `TENANT_ONLY` 細分成 `TENANT_ONLY`;
+ * `VALIDATION_FAILED` 依 `extensions.reason` 細分、`FORBIDDEN` + `TENANT_ONLY` 細分成 `TENANT_ONLY`;
  * 認不出來的一律 `UNEXPECTED`。文案在 `admin.notificationSettings.errors.*`。
  */
 export const NOTIFICATION_SETTINGS_ERROR_CODES = [
   "AUDIENCE_INVALID",
   "OUT_OF_TENANT",
   "UNKNOWN_TYPE",
+  "AUDIENCE_NOT_ADJUSTABLE",
+  "SCHEDULE_NOT_ADJUSTABLE",
+  "SCHEDULE_INVALID",
+  "NOTHING_TO_UPDATE",
   "TENANT_ONLY",
   "FORBIDDEN",
 ] as const;
@@ -20,9 +24,16 @@ const VALIDATION_REASONS = new Set([
   "AUDIENCE_INVALID",
   "OUT_OF_TENANT",
   "UNKNOWN_TYPE",
+  "AUDIENCE_NOT_ADJUSTABLE",
+  "SCHEDULE_NOT_ADJUSTABLE",
+  "SCHEDULE_INVALID",
+  "NOTHING_TO_UPDATE",
 ]);
 
-/** `path`(人員條件裡出錯的位置)只在 `AUDIENCE_INVALID` / `OUT_OF_TENANT` 才有。 */
+/**
+ * `path` 只在 `AUDIENCE_INVALID` / `OUT_OF_TENANT`(人員條件裡出錯的位置)與
+ * `SCHEDULE_INVALID`(提醒時間出錯的欄位,例 `daysBefore[2]`)才有。
+ */
 export type NotificationSettingsError =
   AdminError<NotificationSettingsErrorCode>;
 

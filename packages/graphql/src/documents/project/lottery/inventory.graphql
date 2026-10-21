@@ -1,0 +1,302 @@
+# 庫存管理(inventory;正本 docs/modules/project/inventory.md「api 介面」)
+
+fragment LotteryInventoryRefFields on LotteryInventoryRef {
+  id
+  name
+}
+
+fragment LotteryInventoryBookFields on LotteryInventoryBook {
+  id
+  bookKey
+  bookNo
+  gameId
+  gameCode
+  gameName
+  unitPrice
+  standardTickets
+  firstTicketNo
+  lastTicketNo
+  org {
+    ...LotteryInventoryRefFields
+  }
+  holdings {
+    org {
+      ...LotteryInventoryRefFields
+    }
+    count
+  }
+  remainingCount
+  totalCount
+  pendingSkipCount
+  requiredSkipCount
+  skippedTicketNos
+  state
+  status
+  purchasedAt
+  purchaseDealer {
+    ...LotteryInventoryRefFields
+  }
+}
+
+fragment LotteryInventoryTicketFields on LotteryInventoryTicket {
+  id
+  ticketNo
+  status
+  locationKind
+  cashPoint {
+    ...LotteryInventoryRefFields
+  }
+  org {
+    ...LotteryInventoryRefFields
+  }
+  responsibleOrg {
+    ...LotteryInventoryRefFields
+  }
+  locked
+  version
+}
+
+fragment LotteryInventoryPlaceFields on LotteryInventoryPlace {
+  org {
+    ...LotteryInventoryRefFields
+  }
+  locationKind
+  cashPoint {
+    ...LotteryInventoryRefFields
+  }
+}
+
+fragment LotteryInventoryBookDetailFields on LotteryInventoryBookDetail {
+  book {
+    ...LotteryInventoryBookFields
+  }
+  tickets {
+    ...LotteryInventoryTicketFields
+  }
+  locations {
+    place {
+      ...LotteryInventoryPlaceFields
+    }
+    ticketNos
+  }
+  events {
+    at
+    type
+    ticketNos
+    wholeBook
+    from {
+      ...LotteryInventoryPlaceFields
+    }
+    to {
+      ...LotteryInventoryPlaceFields
+    }
+    by {
+      ...LotteryInventoryRefFields
+    }
+    refType
+    refId
+    refSerialNo
+    reasonKey
+    reasonNote
+  }
+  sources {
+    type
+    refId
+    refSerialNo
+    at
+    ticketNos
+  }
+  cost {
+    rate
+    cost
+    unitCost
+  }
+  investigation {
+    status
+    at
+    refType
+    refSerialNo
+    responsibleOrg {
+      ...LotteryInventoryRefFields
+    }
+  }
+  abilities {
+    canCorrectSkips
+    canRecover
+    canScrap
+    canShowCost
+  }
+}
+
+fragment LotteryInvestigationRowFields on LotteryInvestigationRow {
+  bookId
+  bookNo
+  gameCode
+  gameName
+  unitPrice
+  status
+  responsibleOrg {
+    ...LotteryInventoryRefFields
+  }
+  refType
+  refSerialNo
+  at
+  cost
+  tickets {
+    ...LotteryInventoryTicketFields
+  }
+}
+
+fragment LotteryAllocationCellFields on LotteryAllocationCell {
+  orgId
+  gameId
+  plannedBooks
+  note
+  givenBooks
+  givenExtraTickets
+}
+
+fragment LotteryTicketLookupItemFields on LotteryTicketLookupItem {
+  bookId
+  bookNo
+  gameCode
+  gameName
+  unitPrice
+  ticketId
+  ticketNo
+  status
+  version
+  org {
+    ...LotteryInventoryRefFields
+  }
+  responsibleOrg {
+    ...LotteryInventoryRefFields
+  }
+}
+
+# LotteryInventoryBooksInput: { orgId?, gameId?, state?, purchasedFrom?, purchasedTo?, bookNo? }
+query LotteryInventoryBooks($input: LotteryInventoryBooksInput!) {
+  lotteryInventoryBooks(input: $input) {
+    items {
+      ...LotteryInventoryBookFields
+    }
+    totalCount
+  }
+}
+
+query LotteryInventoryBook($id: ID!) {
+  lotteryInventoryBook(id: $id) {
+    item {
+      ...LotteryInventoryBookDetailFields
+    }
+  }
+}
+
+# LotteryTicketLookupInput: { gameCode?, bookNo, ticketNo }
+query LotteryTicketLookup($input: LotteryTicketLookupInput!) {
+  lotteryTicketLookup(input: $input) {
+    items {
+      ...LotteryTicketLookupItemFields
+    }
+  }
+}
+
+query LotteryInvestigations {
+  lotteryInvestigations {
+    items {
+      ...LotteryInvestigationRowFields
+    }
+    canRecover
+  }
+}
+
+# LotteryAllocationsInput: { orgId?, gameId? }
+query LotteryAllocations($input: LotteryAllocationsInput!) {
+  lotteryAllocations(input: $input) {
+    stores {
+      ...LotteryInventoryRefFields
+    }
+    games {
+      id
+      gameCode
+      name
+    }
+    cells {
+      ...LotteryAllocationCellFields
+    }
+    canEdit
+  }
+}
+
+# LotteryStockOverviewInput: { orgId?, gameId? }
+query LotteryStockOverview($input: LotteryStockOverviewInput!) {
+  lotteryStockOverview(input: $input) {
+    items {
+      org {
+        ...LotteryInventoryRefFields
+      }
+      game {
+        id
+        gameCode
+        name
+      }
+      unopenedBooks
+      counterTickets
+      soldTickets
+    }
+  }
+}
+
+query LotteryFieldOptions($categoryKey: String!) {
+  lotteryFieldOptions(categoryKey: $categoryKey) {
+    items {
+      value
+      label
+    }
+    totalCount
+  }
+}
+
+# SetLotteryAllocationInput: { orgId, gameId, plannedBooks, note? }
+mutation SetLotteryAllocation($input: SetLotteryAllocationInput!) {
+  setLotteryAllocation(input: $input) {
+    item {
+      ...LotteryAllocationCellFields
+    }
+  }
+}
+
+# CorrectLotterySkippedTicketsInput: { bookId, ticketNos, reasonKey, reasonNote? }
+mutation CorrectLotterySkippedTickets(
+  $input: CorrectLotterySkippedTicketsInput!
+) {
+  correctLotterySkippedTickets(input: $input) {
+    count
+    lossCost
+  }
+}
+
+# RecoverLotteryTicketsInput: { tickets: [{ ticketId, version }], orgId, reasonKey, reasonNote? }
+mutation RecoverLotteryTickets($input: RecoverLotteryTicketsInput!) {
+  recoverLotteryTickets(input: $input) {
+    count
+    lossCost
+  }
+}
+
+# ScrapLotteryTicketsInput: { tickets: [{ ticketId, version }], reasonKey, reasonNote? }
+mutation ScrapLotteryTickets($input: ScrapLotteryTicketsInput!) {
+  scrapLotteryTickets(input: $input) {
+    count
+    lossCost
+  }
+}
+
+# 看得到的店(尋回「回到哪家店」)
+query LotteryInventoryStores {
+  lotteryInventoryStores {
+    items {
+      ...LotteryInventoryRefFields
+    }
+  }
+}

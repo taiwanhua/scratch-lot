@@ -19,13 +19,15 @@ import { useSession } from "@/hooks/base/useSession";
 import { useUrlEdit, useUrlEditGuard } from "@/hooks/base/useUrlEdit";
 import { useNotificationTypeName } from "@/lib/base/notification-type-name";
 
-import { EditRecipientsDialog } from "./EditRecipientsDialog";
+import { EditNotificationSettingDialog } from "./EditNotificationSettingDialog";
 import { NotificationSettingsTable } from "./NotificationSettingsTable";
 import { ResetDefaultDialog } from "./ResetDefaultDialog";
+import { SidebarBadgeSettingsSection } from "./SidebarBadgeSettingsSection";
 import {
   NOTIFICATION_AUDIENCE_FIELDS,
   NOTIFICATION_AUDIENCE_ORG_SOURCES,
 } from "./notification-audience";
+import { useScheduleSummary } from "./notification-schedule";
 import {
   type NotificationSettingsErrorCode,
   notificationSettingsErrorOf,
@@ -40,9 +42,11 @@ import {
  * 通知設定(模組 key `system.notification-settings`,正本 `docs/modules/notification-settings.md`
  * 「admin 頁面」)。
  *
- * 版面沿用示範模組列表(說明 + 搜尋 + 表格卡片 + 頁碼):列出所有**負責人提醒**類型的組織範圍(唯讀)
- * 與目前的收件人;[編輯] 開「編輯收件人」(網址 `?edit=<類型 key>`)、[還原預設] 先確認再送出。
+ * 版面沿用示範模組列表(說明 + 搜尋 + 表格卡片 + 頁碼):列出所有**負責人提醒**與宣告了可調時間的
+ * **當事人通知**,組織範圍(唯讀)、目前的收件人與提醒時間;[編輯] 開編輯框(網址 `?edit=<類型 key>`,
+ * 收件人 / 提醒時間有幾塊顯示幾塊)、[還原預設] 先確認再把可調的部分全部還原。
  * 沒有 `edit` 權限、或站在根組織 = 唯讀。
+ * 下方「側欄數字」區塊(`SidebarBadgeSettingsSection`)調整誰看得到各模組的側欄數字,權限與唯讀判斷同一份。
  */
 export const NotificationSettingsPage = () => {
   const t = useTranslations("admin.notificationSettings");
@@ -53,6 +57,7 @@ export const NotificationSettingsPage = () => {
     NOTIFICATION_AUDIENCE_FIELDS,
     NOTIFICATION_AUDIENCE_ORG_SOURCES,
   );
+  const scheduleOf = useScheduleSummary();
 
   /** 編輯彈窗記在網址 `?edit=<類型 key>`(REACT-14);沒有編輯權限、或那一種類型不存在就清掉參數。 */
   const edit = useUrlEdit();
@@ -168,8 +173,10 @@ export const NotificationSettingsPage = () => {
         </Typography>
       )}
 
+      <SidebarBadgeSettingsSection canEdit={data.canEdit} />
+
       {editing !== null && (
-        <EditRecipientsDialog
+        <EditNotificationSettingDialog
           key={editing.type}
           setting={editing}
           onClose={edit.close}
@@ -177,13 +184,30 @@ export const NotificationSettingsPage = () => {
             void data.invalidate();
             edit.close();
           }}
+          onPartReset={() => {
+            void data.invalidate();
+          }}
         />
       )}
 
       {resetTarget !== null && (
         <ResetDefaultDialog
           typeName={typeName(resetTarget.type, resetTarget.name)}
-          defaultSummary={summaryOf(resetTarget.defaultAudience)}
+          defaultAudienceSummary={
+            resetTarget.category === "responsible" &&
+            resetTarget.defaultAudience
+              ? summaryOf(resetTarget.defaultAudience)
+              : null
+          }
+          defaultScheduleSummary={
+            resetTarget.defaultSchedule
+              ? scheduleOf(
+                  resetTarget.type,
+                  resetTarget.defaultSchedule,
+                  resetTarget.scheduleDateLabel,
+                )
+              : null
+          }
           isSubmitting={reset.isPending}
           errorCode={resetError}
           onCancel={() => {

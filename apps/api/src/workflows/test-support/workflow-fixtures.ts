@@ -62,6 +62,7 @@ const SYSTEM: OperatorContext = {
   managedOrgIds: "all",
   memberOrgIds: [],
   roleIds: [],
+  memberTenants: [],
 };
 
 // ---- GraphQL 文件 ----
@@ -558,6 +559,8 @@ const SUBMISSION_FIELDS = /* GraphQL */ `
     currentInstanceId
     blocked
     voidReason
+    voidReasonKey
+    voidReasonLabel
     replacedById
     copiedFrom
     clearedFields
@@ -731,6 +734,8 @@ export interface WfSubmissionRow {
   currentInstanceId: string | null;
   blocked: boolean;
   voidReason: string | null;
+  voidReasonKey: string | null;
+  voidReasonLabel: string | null;
   replacedById: string | null;
   copiedFrom: string | null;
   clearedFields: string[];

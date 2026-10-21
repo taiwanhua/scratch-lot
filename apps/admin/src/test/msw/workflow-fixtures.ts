@@ -42,12 +42,12 @@ export const DEMO_GROUP_FORM_ROUTES = {
   editPage: "/demo/form/edit-page",
 } as const;
 
-/** seed 的圖示 key(`@repo/ui` 圖示登錄表裡都有);隱藏頁沒有圖示。 */
-const ICON_BY_KEY: Partial<Record<string, string>> = {
-  system: "settings",
-  "system.workflows": "account-tree",
-  "apply-center": "mail",
-  [DEMO_GROUP_FORM_KEY]: "description",
+/** seed 的圖示 key(`@repo/ui` 圖示登錄表裡都有)與頂層 order(沒寫 = 4);隱藏頁沒有圖示。 */
+const SEED_BY_KEY: Partial<Record<string, { icon: string; order?: number }>> = {
+  system: { icon: "settings", order: 95 },
+  "system.workflows": { icon: "account-tree" },
+  "apply-center": { icon: "mail", order: 90 },
+  [DEMO_GROUP_FORM_KEY]: { icon: "description" },
 };
 
 const moduleOf = (
@@ -65,9 +65,9 @@ const moduleOf = (
   parentId,
   sidebarType,
   engine: key === DEMO_GROUP_FORM_KEY ? ModuleEngine.Form : ModuleEngine.Fixed,
-  order: 4,
+  order: SEED_BY_KEY[key]?.order ?? 4,
   route,
-  icon: ICON_BY_KEY[key] ?? null,
+  icon: SEED_BY_KEY[key]?.icon ?? null,
   permissions: [...permissions],
 });
 

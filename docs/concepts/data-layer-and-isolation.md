@@ -32,11 +32,13 @@ repository token 不能與 model token、組裝器內部 token 或 Nest 全域 g
 
 每張一般新增專案 model 都須登記歸屬欄為 `orgId` 的業務資料存在檢查。reader 建立時再核對 repository 確為 BaseRepository,且其只讀 modelName / collection 識別與登記相符;錯綁另一張表會使啟動失敗。`DatabaseModule` 也保留 DataScopeRuleProvider 的啟動檢查,缺少規則提供者不能正常啟動。
 
+每張登記的 collection 另要宣告「清空租戶時怎麼刪」(示範機構清空 / 重建用,見 [deployment](../deployment.md#示範機構清空--重建)):底座的在 `database/base/tenant-purge.ts`,專案的在 `project/database/tenant-purge.ts`,由 `database.module.ts` 組裝。刪法四種:帶 `tenantId` 欄的表一律 `tenantId`;依組織或使用者歸屬的用 `match`(值是租戶的組織、會被刪的使用者,或另一張表這次刪掉的文件);`dedicated` 只給組織、使用者、角色、核心關聯;不是租戶資料的 `keep` 並寫理由。少登記一張、或帶 `tenantId` 卻用別的刪法,`resolveTenantPurgePlan` 拋錯,完整性測試 `database/tenant-purge.test.ts` 擋在合併前;執行時也在刪任何東西之前停下。登記不在載入時驗,替換專案登記的測試夾具不必跟著登記刪法。清空以原生 collection 硬刪,出口只有 `TenantPurgeStore`(資料層),判斷能不能刪、交易與審計在呼叫端。
+
 底座預設沒有專案業務資料,專案登記沒有 unsafe 或略過檢查開關。新增資料種類須先擴充並審查契約,不能用裸 Model 查詢繞過租戶隔離。
 
 這是受審查程式的組裝契約。來源限制、裸 Model 查詢 lint 與 review 共同守住邊界;登記驗證不代替 RBAC,也不宣稱能稽核任意 Nest module 內部的私自註冊。
 
-正本:`apps/api/src/app.module.ts`、`apps/api/src/base/api-feature-registration.ts`、`apps/api/src/database/database.module.ts`、`apps/api/src/database/registration.ts`、`apps/api/src/database/org-business-data.reader.ts`;新增步驟見[模組 scaffold](../agents/module-scaffold.md)。
+正本:`apps/api/src/app.module.ts`、`apps/api/src/base/api-feature-registration.ts`、`apps/api/src/database/database.module.ts`、`apps/api/src/database/registration.ts`、`apps/api/src/database/org-business-data.reader.ts`、`apps/api/src/database/tenant-purge.ts`;新增步驟見[模組 scaffold](../agents/module-scaffold.md)。
 
 ### 組織業務資料檢查
 
@@ -87,21 +89,29 @@ service 呼叫 BaseRepository.xxx(operator, …)
   → scopeQuery 把操作者上下文掛到 Query
   → tenantScopePlugin 中介層:
        沒有上下文 → 拋錯(fail-closed)
-       $and { orgId ∈ 範圍 }          ← 租戶保底
+       $and { orgId ∈ 範圍 }          ← 租戶保底(寫入只有這一條)
+             讀取:$or [ orgId ∈ 範圍, 共用分支… ]   ← 資料共用宣告(每個分支釘 tenantId)
        $and { 資料範圍規則的條件 }    ← 只對模組資料表,依 moduleKey 拼 $or
 ```
 
-- 讀、寫、刪的查詢中介層都套(`find`、`updateOne`、`deleteMany`…)。
+- 讀、寫、刪的查詢中介層都套(`find`、`updateOne`、`deleteMany`…);`aggregate` 只經 `BaseRepository.aggregate`,同一套讀取條件放在 pipeline 最前面的 `$match`,會讀別張表或寫出的階段(`$lookup`、`$unionWith`、`$graphLookup`、`$out`、`$merge`)拒收,含 `$facet` 與任何巢狀管線裡的。讀進來的租戶文件不能 `save()`(plugin 的 save 中介層只放行新建)。
 - 條件以 `$and` 追加,呼叫端自己的條件只能再收窄。
 - 範圍是 `"all"`(根組織)時不加租戶條件。
-- `create` 自動寫入當前組織;寫到範圍外 → 拋錯。
+- `create` 自動寫入當前組織;寫到範圍外 → 拋錯。`createMany(operator, docs, { session })` 一次寫多筆:每筆照 `create` 同一條檢查(`withTenantOrg` → `withModuleTenant` → `withShareOrgs`;同一個組織的租戶推導、同一份共用清單只查一次),一筆不過整批不寫,底層 ordered `insertMany`,**必須在交易內**;`insertMany` 不跑 save 中介層,schema 自訂了 `pre("save")` 的表不要用。
+- 一般更新不准改 `orgId`;改歸屬組織只有搬家 `reassignOrg`(見下方例外出口)。
 - api 內裸 `Model.find` 由 ESLint 規則 `@repo/no-raw-model-query` 擋下。
 - 已知限制:`populate()` 的子查詢不帶上下文,關聯資料分兩次查。
-- **四個登記在案的例外出口**(登記表在 ADR-0005「例外出口」):
+- **登記在案的例外出口**(登記表在 ADR-0005「例外出口」):
   - `BaseRepository.findOwnById` / `findOwnOne` / `findOwnAndUpdate`:只給表單提交用 —— 建立者讀自己的單、寫自己的草稿。可見範圍照套、條件加 `createdBy = 操作者`,**不套資料範圍規則**(否則規則把草稿擋掉時,建立者連自己的草稿都送不出去)。列表不放寬。
   - `BaseRepository.existsAny`:只給前置檢查回答「有沒有」(刪組織、撤銷開通的「無業務資料引用」)。**不套資料範圍規則** —— 規則會收窄操作者看得到的,數到 0 就把還有資料的組織誤判成可刪,前置檢查必須 fail-closed。做法是方法內部在查詢上設 `existenceCheck`,中介層讀到就跳過資料範圍規則(租戶過濾仍依操作者上下文套上)。簽名是 `existsAny(operator, ownerField, orgId)`:條件只能是歸屬欄(`orgId` / `ownerOrgId`)等於某個組織,只回有無。唯一受控 caller 是 `database/org-business-data.reader.ts`,登記在 `EXISTS_ANY_CALLERS` 並由測試掃 src 鎖定;專案只能提供檢查登記,不能自行呼叫。旗標本身也只准出現在資料層三個檔。
-  - `apps/api/src/database/form-submission-usage.ts`:退役欄位級權限清理的三層檢查要**跨全部租戶**計數提交(少算一筆草稿就會把還在用的權限刪掉),不經 BaseRepository;只回筆數與版本號,不回內容。
+  - `apps/api/src/database/form-submission-usage.ts`:退役欄位級權限清理的三層檢查要**跨全部租戶**計數提交(少算一筆草稿就會把還在用的權限刪掉),不經 BaseRepository;只回筆數與版本號,不回內容。它以原生驅動 `model.collection.aggregate` 計數(原生 aggregate 只准出現在這個檔,測試鎖定);其他 aggregate 一律經 `BaseRepository.aggregate`,沒帶上下文就拋錯。原生 `.collection(` 存取只准出現在 `database/`。
   - `apps/api/src/database/workflow-submission-store.ts`:審核流程(引擎、讀取授權、申請中心)讀寫提交,不套可見範圍與資料範圍規則,以 `tenantId` 為邊界;允許呼叫它的檔案登記在該檔 `WORKFLOW_SUBMISSION_STORE_CALLERS`,由測試鎖定。
+  - `BaseRepository.existsInTenant(operator, tenantId, equals)`:租戶內唯一 / 占用檢查。`tenantId` 必填且要是操作者所屬的租戶(根組織除外,否則拋 `TenantScopeError`),條件只能是欄位等於值的組合;由中介層以 `tenantBoundary` 旗標換成 `tenantId = 該值`、不套可見範圍 / 共用 / 資料範圍規則;只回有無,只給有 `tenantId` 欄的表。呼叫端登記在 `TENANT_BOUNDARY_CALLERS`(底座)/ `project/database/tenant-boundary-callers.ts` 的 `PROJECT_TENANT_BOUNDARY_CALLERS`(專案;與 `findRefsInTenant` 共用),由測試掃 src 鎖定。
+  - `BaseRepository.findRefsInTenant(operator, tenantId, ids)`:引用名稱。邊界同上,明列 id,只回 schema 的 `refFields` 與 `_id`。
+  - `BaseRepository.reassignOrg(operator, filter, newOrgId, { session, update })`:搬家。被搬的資料要在可見範圍內;新組織要存在、同租戶、不是根組織(不合法 → `VALIDATION_FAILED`,`fields: ["orgId"]`),可以是操作者看不到的;有 `tenantId` 欄的表照新組織重新推導;`filter` 可帶版本等條件、`update` 同一次寫入改其他欄位(欄位保護照舊);**必須在交易內**,同一個交易寫稽核 `data.reassign-org`;已經在新組織時冪等(不寫入、不記稽核,回原文件)。呼叫端登記在 `ORG_REASSIGN_CALLERS`(底座)/ `project/database/org-reassign-callers.ts`(專案),由測試以呼叫語法掃 src 鎖定。
+  - `BaseRepository.reassignOrgMany(operator, ids | filter, newOrgId, { session, expected, update })`:批次搬家。規則同 `reassignOrg`;目標組織查一次、來源組織的租戶一次查完;`expected` = 各筆自己的條件(id → 條件,例:各自的版本)。全有或全無:先在交易內核對,id 清單裡看不到 / 不存在的或不符 `expected` 的任何一筆 → 不寫入、回 `mismatched`(哪幾筆不符);都符合才以一次條件更新寫入(每筆帶自己的條件),寫入筆數與核對不同 → `TenantScopeError`(交易回復)。已在新組織的列在 `skipped`(冪等)。整批只寫**一筆**稽核 `data.reassign-org`(`before.orgIds`、`after` = 新組織 + id 清單 + 筆數)。呼叫端與 `reassignOrg` 同一份登記,掃描同時抓兩種呼叫語法。
+  - `tenantBoundaryContext(orgs, operator | null, tenantId)`(`database/tenant-boundary-context.ts`,底層 `systemTenantReader`):租戶邊界上下文,可見範圍 = 該租戶整棵組織樹。有操作者時租戶要是他所屬的、保留 `actorId`;用途限反查、以人為準的資料、排程與登記過的例外寫入,呼叫端與用途登記在 `TENANT_BOUNDARY_CONTEXT_CALLERS`(底座)/ `project/database/tenant-boundary-callers.ts` 的 `PROJECT_TENANT_BOUNDARY_CONTEXT_CALLERS`(專案;掃描測試鎖定);前提是那些表不是資料範圍目標。
+- **提升上下文要登記**:把可見範圍或管理範圍寫成 `"all"` 的上下文只准出現在 `database/elevated-contexts.ts`(底座)與 `project/database/elevated-contexts.ts`(專案)列出的檔案,`elevated-contexts.test.ts` 掃 src 斷言。
 - 對全員生效(套用對象「所有人」)的資料範圍規則連系統上下文也會收窄,所以「必須看到全部」的系統讀取只能走上面登記過的出口(ADR-0008)。
 
 正本:`apps/api/src/database/base.repository.ts`、`apps/api/src/database/operator-context.ts`、`apps/api/src/database/plugins/tenant-scope.plugin.ts`
@@ -128,16 +138,17 @@ service 呼叫 TransactionService.withTransaction(async (session) => …)
 
 寫法見 `docs/standards/api/transactions.md`(TX)。正本:`apps/api/src/database/transaction.ts`、`apps/api/src/database/base.repository.ts`
 
-## 操作者上下文的四個集合
+## 操作者上下文的集合
 
-BaseRepository 資料操作方法的第一個參數。四個集合各有用途,不可互相代用:
+BaseRepository 資料操作方法的第一個參數。每個集合各有用途,不可互相代用:
 
-| 集合            | 內容                                   | 誰用                                              |
-| --------------- | -------------------------------------- | ------------------------------------------------- |
-| `managedOrgIds` | 啟用中角色的擁有組織子樹聯集(管理範圍) | 治理類過濾(`orgs`)、角色 / 使用者候選             |
-| `visibleOrgIds` | 所屬組織,開關 ON 時各含下層(可見範圍)  | 業務類的租戶保底                                  |
-| `memberOrgIds`  | `org_user` 直接關聯,不含下層           | 資料範圍:套用對象的所屬組織、【操作者的所屬組織】 |
-| `roleIds`       | 啟用中角色                             | 資料範圍:套用對象的角色                           |
+| 集合            | 內容                                       | 誰用                                                  |
+| --------------- | ------------------------------------------ | ----------------------------------------------------- |
+| `managedOrgIds` | 啟用中角色的擁有組織子樹聯集(管理範圍)     | 治理類過濾(`orgs`)、角色 / 使用者候選                 |
+| `visibleOrgIds` | 所屬組織,開關 ON 時各含下層(可見範圍)      | 業務類的租戶保底                                      |
+| `memberOrgIds`  | `org_user` 直接關聯,不含下層               | 資料範圍:套用對象的所屬組織、【操作者的所屬組織】     |
+| `roleIds`       | 啟用中角色                                 | 資料範圍:套用對象的角色                               |
+| `memberTenants` | 依租戶分組的所屬組織與其上層鏈(不含根組織) | 資料共用:每個租戶各一組共用分支,釘該租戶的 `tenantId` |
 
 - 另有 `actorId`(操作者)與 `currentOrgId`(當前組織)。
 - 根組織成員的可見範圍 = `"all"`;持超級管理員或擁有組織為根的角色,管理範圍 = `"all"`。
@@ -158,6 +169,26 @@ BaseRepository 資料操作方法的第一個參數。四個集合各有用途,�
 - 要給不同管理範圍就建不同擁有組織的角色。
 
 正本:`apps/api/src/auth/operator-context.service.ts`、`docs/testing/permission-scenarios.md` 劇本 12 / 14
+
+## 資料共用
+
+看不看得到 = 可見範圍 → 加上**共用** → 再被資料範圍規則縮小;能做什麼 = 模組與權限。**共用只放寬讀**:修改 / 刪除只對歸屬組織在自己可見範圍內的資料做,共用進來的只能看(ADR-0014)。
+
+每張表在 schema 的 `tenantScopePlugin({ sharing })` 選一種宣告:
+
+| 宣告          | 讀取條件(`$or` 的分支,每個所屬租戶各一組、各釘該租戶的 `tenantId`)                                                       |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `private`     | `orgId ∈ 可見範圍`(預設)                                                                                                 |
+| `shareable`   | 再加 `shareOrgs` 命中所屬組織、或命中其上層鏈且勾含下層;`sharedByFields` 任一欄位 ∈ 所屬組織(欄位宣告含下層時另含上層鏈) |
+| `inheritDown` | 再加 `orgId ∈ 所屬組織的上層鏈`                                                                                          |
+
+- `shareable` 由 plugin 加 `shareOrgs: [{ orgId, includeDescendants }]` 與索引 `{ tenantId, "shareOrgs.orgId" }`;`defaultShareOrgs`(`none` / `wholeTenant` = 全部分店)是新增時的預設,`editable: false` 時清單固定(受保護欄位)。只給模組資料表。
+- `sharedByFields` 的欄位與 `{ tenantId, <欄位> }` 索引由表自己建,掛 plugin 時驗證。
+- 判斷看全部所屬組織(依租戶分組:同時屬於兩個租戶的人,乙租戶的組織命中不了甲租戶的資料),不隨當前組織切換;不受可見性開關展開。可見範圍是 `"all"`(根組織、提升上下文)時不加任何條件。
+- `shareOrgs` 的寫入由 `BaseRepository` 檢查:每個組織都要存在且與資料同租戶(可以是分享者看不到的組織),否則 `VALIDATION_FAILED`;只能整份替換。
+- lookup 的專案來源走同一套讀取;`sharedToFilter` 宣告依表單欄位換值的共用篩選(`docs/modules/forms.md` 的 lookup 登錄表)。
+
+正本:`apps/api/src/database/plugins/tenant-scope.plugin.ts`、`apps/api/src/database/base.repository.ts`、`apps/api/src/database/share-orgs.ts`、`apps/api/src/database/data-sharing.test.ts`
 
 ## 資料範圍規則
 

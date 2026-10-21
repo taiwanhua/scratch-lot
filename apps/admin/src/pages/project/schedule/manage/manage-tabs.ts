@@ -1,0 +1,36 @@
+import type { ScheduleTabEntry } from "@/components/project/schedule/ScheduleTabsPage/ScheduleTabsPage";
+
+import { SCHEDULE_PERMISSIONS } from "../schedule-permissions";
+import { CalendarTab } from "./CalendarTab/CalendarTab";
+import { DayOffOverviewTab } from "./DayOffsTab/DayOffOverviewTab";
+import { SupportRequestsTab } from "./SupportRequestsTab/SupportRequestsTab";
+import { RosterPage } from "./roster/RosterPage";
+
+/**
+ * 排班作業(`schedule.manage`,表單模組:綁定 支援需求單)的分頁
+ * (規格 14.5:排班表 | 畫休總覽 | 行事曆 | 支援需求單,依權限顯示)。各功能只追加自己那一列,
+ * 依規格的順序插入。
+ */
+export const MANAGE_TABS: readonly ScheduleTabEntry[] = [
+  // 排班表(規格 14.5):`schedule.manage.view` 同時是排班表的檢視(api `scheduleRoster` 也守它)
+  {
+    value: "roster",
+    labelKey: "roster",
+    permission: SCHEDULE_PERMISSIONS.manageView,
+    Content: RosterPage,
+  },
+  {
+    value: "day-offs",
+    labelKey: "dayOffOverview",
+    permission: SCHEDULE_PERMISSIONS.viewDayOffs,
+    Content: DayOffOverviewTab,
+  },
+  { value: "calendar", labelKey: "calendar", Content: CalendarTab },
+  // 支援需求單(規格 14.10):有 schedule.manage.view 才看得到(列表 + 右側檢視 / 審核)
+  {
+    value: "support-requests",
+    labelKey: "supportRequests",
+    permission: SCHEDULE_PERMISSIONS.manageView,
+    Content: SupportRequestsTab,
+  },
+];

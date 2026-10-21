@@ -26,7 +26,8 @@
 | `user_preferences`                  | 業務                                                     | 個人偏好(每個使用者一筆 `{ userId, settings: { <key>: 值 } }`,跟著帳號);key 須登記                       | 帳號           | `user-preference.schema.ts`       |
 | `user_delegations`                  | 業務                                                     | 代理人(`{ userId, delegateUserId, startAt, endAt, note }`;代理期間進關的任務改派給代理人)                | 流程           | `user-delegation.schema.ts`       |
 | `notifications`                     | 業務                                                     | 通知(一位收件人一筆;`(recipientId, dedupeKey)` 唯一;`createdAt` 90 天 TTL)                               | 流程           | `notification.schema.ts`          |
-| `notification_settings`             | 業務                                                     | 通知設定(租戶對負責人提醒類型的收件人調整;`(tenantId, type)` 唯一)                                       | 流程           | `notification-setting.schema.ts`  |
+| `notification_settings`             | 業務                                                     | 通知設定(租戶對負責人提醒的收件人、對宣告了可調時間的類型的提醒時間調整;`(tenantId, type)` 唯一)         | 流程           | `notification-setting.schema.ts`  |
+| `sidebar_badge_settings`            | 業務                                                     | 側欄數字設定(租戶對「誰看得到某模組的側欄數字」的人員條件調整;`(tenantId, moduleKey)` 唯一)              | 授權           | `sidebar-badge-setting.schema.ts` |
 | `demo_items_one` / `demo_items_two` | 種子(宣告的幾筆)+ 業務                                   | 示範模組資料(模組資料表)                                                                                 | 各自的模組文件 | `demo-item-*.schema.ts`           |
 | `forms`                             | 設定(受管 seed 或各環境自建)                             | 表單(一種填報的身分;共用 `ownerOrgId = null`、客製 = 租戶頂層)                                           | 表單           | `form.schema.ts`                  |
 | `form_versions`                     | 設定(受管 seed 或各環境自建)                             | 表單版本(草稿 / 發布中 / 已發布 / 已退役;欄位、版面、摘要槽、帶入規則)                                   | 表單           | `form-version.schema.ts`          |
@@ -60,6 +61,14 @@
 
 執行紀錄是系統紀錄:沒有操作者與組織歸屬,不掛基礎欄位與租戶 plugin,只經專用 store 讀寫。先插入 `running` 才執行 handler,插入撞到唯一索引就表示這個時點已有人跑過或正在跑;失敗的時點不重跑;中途當掉的紀錄停在 `running`,`startedAt` 超過 15 分鐘後以條件式原子更新重新取得。紀錄不自動清除。排程機制見 `docs/deployment.md`「Cloud Scheduler」。
 
+### 單號計數器
+
+| collection        | 用途                                                                                                                                                                                      | 存取正本                                                                                                               |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `serial_counters` | 單號的計數器(ADR-0015):`tenantId`(根組織自己的資料為 null)、`key`(表單 = `form:<formKey>`)、`period`(`none` / `2026` / `202610`)、`seq`(已給出的最後一號)。唯一 `(tenantId, key, period)` | `serial-counter.schema.ts`、`apps/api/src/database/serial-counters.store.ts`、`apps/api/src/serials/serial.service.ts` |
+
+計數器不是業務資料:沒有組織歸屬與操作者,不掛基礎欄位與租戶 plugin,只經專用 store 讀寫、每個方法明給 `tenantId`。取號以 `$inc` + upsert 原子完成,可在交易內(交易回復,號碼一起回復)。
+
 ### 列印
 
 `print_agents`、`printers`、`print_jobs` 是印表機管理模組(`system.printers`)的模組資料表(`moduleData`,`moduleKey` 固定 `system.printers`),都掛在**分店**(`orgId`)上;印表機的分店 = 它的代理程式的分店,工作的分店 = 印表機的分店。
@@ -82,7 +91,7 @@
 
 ### 通知
 
-`notifications` 是收件人自己的資料(依 `recipientId` 讀寫、與目前組織無關,不掛 tenantScope),由 `notify()` 在觸發它的動作的同一個交易裡寫入;`(recipientId, dedupeKey)` 唯一防重複通知,`createdAt` 90 天後由 TTL 刪除。`channels` 記這則送出的管道,通知清單與未讀數只算含 `in-app` 的。`notification_settings` 是以 `tenantId` 為邊界的租戶設定:沒有資料或 `audience = null` 就用通知類型宣告的預設人員條件。兩張都不擋刪組織。細節見 `docs/modules/notification-settings.md`。
+`notifications` 是收件人自己的資料(依 `recipientId` 讀寫、與目前組織無關,不掛 tenantScope),由 `notify()` 在觸發它的動作的同一個交易裡寫入;`(recipientId, dedupeKey)` 唯一防重複通知,`createdAt` 90 天後由 TTL 刪除。`channels` 記這則送出的管道,通知清單與未讀數只算含 `in-app` 的。`notification_settings` 是以 `tenantId` 為邊界的租戶設定:沒有資料或 `audience = null` 就用通知類型宣告的預設人員條件,`schedule = null` 就用類型宣告的預設提醒時間(`scheduleUpdatedAt` 記提醒時間的最後修改時間,排程補寄用)。兩張都不擋刪組織。`sidebar_badge_settings` 同樣是以 `tenantId` 為邊界的租戶設定:沒有資料或 `audience = null` 就用側欄計數登記的預設(綁了模組就算,登記了 `requires` 再要那條權限),不擋刪組織。細節見 `docs/modules/notification-settings.md`。
 
 ## 專案資料
 
@@ -93,6 +102,7 @@
 - **基礎欄位**:`createdAt` `updatedAt` `createdBy` `updatedBy` `deletedAt`(軟刪除)。五個欄位都由 `baseFieldsPlugin` 掛上與自動填:`createdBy` / `updatedBy` / `deletedAt` 由 plugin 加;timestamps 沿用 schema 自己宣告的 `timestamps: true`,沒宣告時由 plugin 補上。
 - **租戶過濾**:租戶資料(有 `orgId`、掛 `tenantScopePlugin`)的查詢一律經 BaseRepository 自動過濾,禁裸 `Model.find`。哪些表屬租戶資料 / 全域資料 / 關聯歸屬資料,見 `docs/concepts/data-layer-and-isolation.md`「三類資料」。
 - **模組資料表**(schema 明確開 `tenantScopePlugin({ moduleData: true })`:`demo_items_one`、`demo_items_two`、`form_submissions`、`workflow_instances`、`print_agents`、`printers`、`print_jobs`)另有兩欄,由 plugin 一併宣告並建索引 `(tenantId, moduleKey, createdAt)`、`(moduleKey, orgId)`:`moduleKey`(必填,這筆屬於哪個模組;固定欄位模組寫死自己的 key)與 `tenantId`(租戶頂層 `orgs` id,`BaseRepository.create` 依 `orgId` 的祖先推導,根組織的資料為 null,呼叫端給的值一律覆蓋;兩欄建立後不可經一般更新改動)。`tenantId` 只用於租戶邊界、索引與日後分片,**不決定可見範圍**(仍看 `orgId`)。這個選項不綁 `kind: "business"`:`fields`、`audit_logs`、`customers` 也是租戶資料,但不是模組資料,沒有這兩欄。
+- **可共用的模組資料表**(`tenantScopePlugin({ sharing: { mode: "shareable" } })`,目前底座只有 `demo_items_two`)另有 `shareOrgs: [{ orgId, includeDescendants }]`(共用給;預設 `[]`)與索引 `(tenantId, shareOrgs.orgId)`,由 plugin 宣告;每個組織都要與資料同租戶,只能整份替換。三種共用宣告與讀取條件見 ADR-0014。
 - **以 `tenantId` 為邊界、不掛 `tenantScopePlugin` 的表**:`business_relationships`、`workflows`、`workflow_tasks`。這些表沒有 `orgId`,而讀者不一定在資料所屬組織的可見範圍內(部門使用者的可見範圍不含租戶頂層;審核者不一定看得到申請人的組織);存取只經各自的 repository(`BusinessRelationshipsRepository` / `WorkflowsRepository` / `WorkflowTasksRepository`),每個方法強制帶 `tenantId`,沒給就拋錯。
 - **種子 vs 業務**:種子由 seed 以 key 冪等 upsert(`apps/db-migrator/seeds/`);業務資料不做跨環境搬移。
 - **索引**:各 schema 檔以 `.index(...)` 就地宣告(唯一鍵、orgId 複合、ancestors、TTL 等)。
@@ -126,7 +136,8 @@
 - **`form_versions`**:兩條部分唯一索引 —— `(formKey, version)` 只在 `version` 是數字時唯一(草稿的 `null` 不算,正式版號在發布時配);`(formKey, status)` 限 `draft` 與 `publishing` 各一筆。定義四塊(`fields` / `layout` / `summaryMap` / `prefills`)存自由 JSON,形狀正本是 `@repo/domain/form` 的 `types.ts`。草稿刪除是**硬刪**(ADR-0007 的例外:軟刪的草稿會佔住部分唯一索引,讓這張表單永遠開不了新草稿;刪掉的定義留在稽核)。
 - **`form_submissions` 的值**:`values` 依欄位型別存,受保護欄位原值照存、讀取時投影為 `"[redacted]"`;`date` / `datetime` 與 `summary.date` 存 Mongo `Date`(兩者都是時點,`date` = 選的那天在租戶時區 00:00),GraphQL 回 ISO 字串。明細列(`array`)欄存列的陣列 `[{ rowId, <子欄 key>: 值 }]`:`rowId` 是前端建列時產生的 UUID(同一明細內唯一、修訂之間不變),陣列順序就是列的順序。
 - **`form_submissions` 的修訂**:`revisions[]` 每筆 `{ revision, version, values, ctx: { at, timezone, userId, orgId, orgIds, tenantId }, kind?, upgradedBy?, upgradedAt? }` 是**完整值快照**。`ctx.orgId` = 操作者當時的目前組織、`orgIds` = 當時的所屬組織(全部)、`tenantId` = 當時的租戶頂層(根組織 = null;舊修訂沒有這兩欄,讀成空陣列 / null)。`version` = 這一筆修訂綁的表單版本(讀取一律 `revisions[r].version ?? version`);提交本身的 `version` 只有舊版資料升級會改綁。`kind: "upgrade"` = 舊版資料升級產生的修訂,`ctx` 沿用上一筆,誰與何時升級記在 `upgradedBy` / `upgradedAt`。`editVersion` 是每次寫入的樂觀鎖;`(createdBy, clientRequestId)` 唯一(含已軟刪除的);`touched[]` 是使用者碰過的欄位 key(只對草稿有意義)。容量上限見 `docs/modules/forms.md`「提交的寫入規則」。
-- **`form_submissions` 的流程欄位**:`status` 七值(正本 `@repo/domain/workflow` 的 `SUBMISSION_STATUSES`);`currentInstanceId` 為 null = 沒走過流程(`completed` 後可修改),有值 = 走過(`completed` 後鎖定、只能作廢);`blocked` = 實例被阻擋;`voidedAt` / `voidedBy` / `voidReason` / `replacedById` 是作廢資訊;`copiedFrom` = 「複製為新單」的來源。
+- **表單的單號**:`forms.serial`(`{ prefix, period, digits, separator? }`,null / 缺席 = 不給號)是表單設定;`form_submissions.serialNo` 在第一次送出時給(`SerialService`),之後不變(退回、撤回、作廢都保留),草稿與複製為新單的草稿為 null。
+- **`form_submissions` 的流程欄位**:`status` 七值(正本 `@repo/domain/workflow` 的 `SUBMISSION_STATUSES`);`currentInstanceId` 為 null = 沒走過流程(`completed` 後可修改),有值 = 走過(`completed` 後鎖定、只能作廢);`blocked` = 實例被阻擋;`voidedAt` / `voidedBy` / `voidReason`(說明)/ `voidReasonKey` / `voidReasonLabel`(作廢原因的選項值與作廢當下的名稱,表單設了 `forms.voidReasonCategoryKey` 時才有)/ `replacedById` 是作廢資訊;`copiedFrom` = 「複製為新單」的來源。
 
 ### 流程
 

@@ -16,6 +16,7 @@ import { DemoItemsOneRepository } from "../database/database.module";
 import type { OperatorContext } from "../database/operator-context";
 import { HOOK_TIMEOUT_MS } from "../database/test-support/mongo-connection";
 import {
+  CREATE_DEMO_ITEM_TWO,
   DELETE_DEMO_ITEM_TWO,
   DEMO_ITEM_TWO,
   type DeleteDemoItemTwoData,
@@ -53,6 +54,20 @@ const SAVE_DATA_SCOPE_RULE = /* GraphQL */ `
     }
   }
 `;
+
+/** 送一個 mutation(共用給的測試用;錯誤留給呼叫端斷言)。 */
+function mutate(
+  api: AuthTestApp,
+  query: string,
+  input: Record<string, unknown>,
+  token: string,
+) {
+  return api.graphql<MutateDemoItemTwoData>(
+    query,
+    { input },
+    { accessToken: token },
+  );
+}
 
 /** 【操作者本人】的條件列(ADR-0008「僅本人」;形狀正本 data-scope.test.ts)。 */
 const ONLY_MINE = {
@@ -531,6 +546,157 @@ describe("示範模組2(GraphQL 端點 + 真 MongoDB)", () => {
       expect(afterTwo.totalCount).toBe(beforeTwo.totalCount);
       // 別人建的那一筆還在 —— 規則若誤套,它會是第一個消失的
       expect(sortedNames(afterTwo.items)).toContain("示範2:同事的");
+    });
+  });
+
+  /**
+   * 資料共用(ADR-0014;示範模組2 是「可共用、預設不共用、可編輯」的示範表):
+   * 租戶甲 ─┬─ 部門一(既有)
+   *         └─ 部門二 ── 部門二之一
+   */
+  describe("共用給(shareOrgs)", () => {
+    let deptTwo: Types.ObjectId;
+    let deptTwoChild: Types.ObjectId;
+    let deptTwoEditor: DemoTwoOperator;
+    let deptTwoChildViewer: DemoTwoOperator;
+    let creatorOnly: DemoTwoOperator;
+
+    beforeAll(async () => {
+      deptTwo = await createOrg(connection, {
+        name: "部門二",
+        parentId: tenantA,
+      });
+      deptTwoChild = await createOrg(connection, {
+        name: "部門二之一",
+        parentId: deptTwo,
+      });
+      deptTwoEditor = await createDemoTwoOperator(api, connection, deptTwo);
+      deptTwoChildViewer = await createDemoTwoOperator(
+        api,
+        connection,
+        deptTwoChild,
+        ["demo.sample-two.view"],
+      );
+      creatorOnly = await createDemoTwoOperator(api, connection, deptOne, [
+        "demo.sample-two.view",
+        "demo.sample-two.create",
+      ]);
+    }, HOOK_TIMEOUT_MS);
+
+    it("新增時給共用清單;被共用的部門看得到、標示為共用進來、不能改刪", async () => {
+      const created = await createItem(api, editor.token, {
+        name: "共用:給部門二",
+        shareOrgs: [{ orgId: String(deptTwo) }],
+      });
+      expect(created.shareOrgs).toEqual([
+        { orgId: String(deptTwo), includeDescendants: false },
+      ]);
+      expect(created.isShared).toBe(false);
+
+      const seen = await listItems(api, deptTwoEditor.token, { pageSize: 100 });
+      const row = seen.items.find((item) => item.id === created.id);
+      expect(row).toMatchObject({
+        isShared: true,
+        abilities: { canEdit: false, canDelete: false },
+      });
+      // 不含下層:部門二之一看不到
+      const seenByChild = await listItems(api, deptTwoChildViewer.token, {
+        pageSize: 100,
+      });
+      expect(seenByChild.items.map((item) => item.id)).not.toContain(
+        created.id,
+      );
+
+      // 修改 / 刪除不放大:共用進來的 → NOT_FOUND
+      const updated = await mutate(
+        api,
+        UPDATE_DEMO_ITEM_TWO,
+        { id: created.id, name: "改名" },
+        deptTwoEditor.token,
+      );
+      expect(updated.errors?.[0]?.extensions?.code).toBe("NOT_FOUND");
+      const removed = await api.graphql<DeleteDemoItemTwoData>(
+        DELETE_DEMO_ITEM_TWO,
+        { input: { id: created.id } },
+        { accessToken: deptTwoEditor.token },
+      );
+      expect(removed.errors?.[0]?.extensions?.code).toBe("NOT_FOUND");
+    });
+
+    it("編輯時改成「含下層」:下層跟著看得到;改回空清單就都看不到", async () => {
+      const created = await createItem(api, editor.token, {
+        name: "共用:改清單",
+      });
+      const shared = await mutate(
+        api,
+        UPDATE_DEMO_ITEM_TWO,
+        {
+          id: created.id,
+          shareOrgs: [{ orgId: String(deptTwo), includeDescendants: true }],
+        },
+        editor.token,
+      );
+      expect(shared.errors).toBeUndefined();
+      const child = await api.graphql<DemoItemTwoData>(
+        DEMO_ITEM_TWO,
+        { id: created.id },
+        { accessToken: deptTwoChildViewer.token },
+      );
+      expect(child.data?.demoItemTwo.item.isShared).toBe(true);
+
+      await mutate(
+        api,
+        UPDATE_DEMO_ITEM_TWO,
+        { id: created.id, shareOrgs: [] },
+        editor.token,
+      );
+      const after = await api.graphql<DemoItemTwoData>(
+        DEMO_ITEM_TWO,
+        { id: created.id },
+        { accessToken: deptTwoChildViewer.token },
+      );
+      expect(after.errors?.[0]?.extensions?.code).toBe("NOT_FOUND");
+    });
+
+    it("共用給別租戶的組織 → VALIDATION_FAILED(fields: shareOrgs);別租戶的人看不到", async () => {
+      const created = await mutate(
+        api,
+        CREATE_DEMO_ITEM_TWO,
+        { name: "共用:給別租戶", shareOrgs: [{ orgId: String(tenantB) }] },
+        editor.token,
+      );
+      expect(created.errors?.[0]?.extensions).toMatchObject({
+        code: "VALIDATION_FAILED",
+        fields: ["shareOrgs"],
+      });
+      const own = await createItem(api, editor.token, {
+        name: "共用:編輯給別租戶",
+      });
+      const updated = await mutate(
+        api,
+        UPDATE_DEMO_ITEM_TWO,
+        { id: own.id, shareOrgs: [{ orgId: String(tenantB) }] },
+        editor.token,
+      );
+      expect(updated.errors?.[0]?.extensions?.code).toBe("VALIDATION_FAILED");
+      const seenByOther = await listItems(api, otherTenant.token, {
+        pageSize: 100,
+      });
+      expect(seenByOther.items.map((item) => item.id)).not.toContain(own.id);
+    });
+
+    it("沒有編輯權限的人新增時不能給共用清單(FORBIDDEN);不給就照常新增", async () => {
+      const denied = await mutate(
+        api,
+        CREATE_DEMO_ITEM_TWO,
+        { name: "共用:沒有編輯權限", shareOrgs: [{ orgId: String(deptTwo) }] },
+        creatorOnly.token,
+      );
+      expect(denied.errors?.[0]?.extensions?.code).toBe("FORBIDDEN");
+      const plain = await createItem(api, creatorOnly.token, {
+        name: "共用:沒有編輯權限但不共用",
+      });
+      expect(plain.shareOrgs).toEqual([]);
     });
   });
 });

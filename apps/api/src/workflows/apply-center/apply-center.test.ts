@@ -244,7 +244,7 @@ describe("申請中心與讀取授權", () => {
       input: {
         id: submitted.id,
         expectedEditVersion: approved.editVersion,
-        reason: "重開",
+        reasonNote: "重開",
       },
     });
     if (nextColumns !== null) {
@@ -646,7 +646,7 @@ describe("申請中心與讀取授權", () => {
         input: {
           id: submitted.id,
           expectedEditVersion: approved.editVersion,
-          reason: "不是我的",
+          reasonNote: "不是我的",
         },
       });
       expect(denied.errors).toBeDefined();
@@ -656,7 +656,7 @@ describe("申請中心與讀取授權", () => {
         input: {
           id: submitted.id,
           expectedEditVersion: approved.editVersion,
-          reason: "日期填錯",
+          reasonNote: "日期填錯",
         },
       });
       expect(voided.voidSubmission.submission).toMatchObject({
@@ -881,7 +881,7 @@ describe("申請中心與讀取授權", () => {
         input: {
           id: submitted.id,
           expectedEditVersion: approved.editVersion,
-          reason: "重來",
+          reasonNote: "重來",
         },
       });
       const storage = api.app.get(StorageService);

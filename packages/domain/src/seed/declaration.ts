@@ -5,6 +5,7 @@
  * 種子資料以穩定 kebab-case `key` 在各環境冪等 upsert;id 各環境各自生成。
  * 宣告只描述「要同步的欄位」— `key`、`isSystem`、時間戳由 runner 補上。
  */
+import type { SerialFormat } from "../form/serial";
 import type { FormDefinition } from "../form/types";
 import type { WorkflowDefinition } from "../workflow/types";
 
@@ -143,6 +144,17 @@ export interface FormDefinitionSeedSet extends DefinitionSeedBase {
    * (開著的宣告不寫這個鍵,`contentHash` 也不含它,既有宣告的 hash 不變)。
    */
   allowDraft?: boolean;
+  /**
+   * 單號格式(第一次送出時給號,`SerialFormat`);缺席 = 不給號。只有要給號時才寫這個鍵
+   * (沒寫的宣告 `contentHash` 也不含它,既有宣告的 hash 不變)。
+   */
+  serial?: SerialFormat;
+  /**
+   * 作廢原因的欄位管理類別 key(`FIELD_CATEGORY_KEY_PATTERN`);缺席 = 作廢原因自由填寫。有設定時作廢原因
+   * 從該類別的選項下拉挑(選項值 `other` = 「其他」,說明必填)。只有要設定時才寫這個鍵
+   * (沒寫的宣告 `contentHash` 也不含它,既有宣告的 hash 不變)。
+   */
+  voidReasonCategoryKey?: string;
   definition: FormDefinition;
 }
 

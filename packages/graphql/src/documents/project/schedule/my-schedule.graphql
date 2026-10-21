@@ -1,0 +1,84 @@
+# 我的班表 → 班表分頁(SC-01;規格 14.6):跨分店合併、只有已發布的班
+fragment MyScheduleEntryFields on MyScheduleEntry {
+  id
+  orgId
+  orgName
+  date
+  startAt
+  endAt
+  breakMinutes
+  shortName
+  isLead
+  positionKey
+  tasks {
+    role
+    taskKey
+    positionKey
+  }
+  clockIn
+  clockOut
+  missing
+}
+
+fragment MySchedulePunchFields on MySchedulePunch {
+  id
+  type
+  at
+  entryId
+  orgId
+  duplicate
+}
+
+query MySchedule($input: MyScheduleInput) {
+  mySchedule(input: $input) {
+    month
+    today
+    canPunch
+    currentOrg {
+      id
+      name
+    }
+    entries {
+      ...MyScheduleEntryFields
+    }
+    punchCards {
+      day
+      entry {
+        ...MyScheduleEntryFields
+      }
+    }
+    hasEntryToday
+    openUnmatchedClockIn {
+      ...MySchedulePunchFields
+    }
+    incomplete {
+      ...MyScheduleEntryFields
+    }
+    changes {
+      id
+      date
+      action
+      orgName
+      beforeStartAt
+      beforeEndAt
+      afterStartAt
+      afterEndAt
+      reason
+      reasonNote
+      createdAt
+    }
+    calendarDays {
+      date
+      type
+      name
+      paletteKey
+    }
+    dayOffDates
+  }
+}
+
+mutation PunchMySchedule($input: PunchMyScheduleInput!) {
+  punchMySchedule(input: $input) {
+    ...MySchedulePunchFields
+  }
+}

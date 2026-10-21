@@ -43,6 +43,7 @@ import {
 import {
   PROJECT_FIXTURE_CODE_LOOKUP_KEY,
   PROJECT_FIXTURE_LOOKUP_KEY,
+  PROJECT_FIXTURE_SHARED_LOOKUP_KEY,
 } from "./project-fixture-lookup";
 
 /**
@@ -76,18 +77,13 @@ jest.mock("../../project/database/registrations", () => {
     ],
   };
 });
+// lookup 來源只放測試專案的(不併入引用專案自己登記的來源):來源清單的斷言要與專案無關
 jest.mock("../../project/lookup-providers", () => {
-  const actual = jest.requireActual<
-    typeof import("../../project/lookup-providers")
-  >("../../project/lookup-providers");
   const fixture = jest.requireActual<typeof import("./project-fixture-lookup")>(
     "./project-fixture-lookup",
   );
   return {
-    PROJECT_LOOKUP_PROVIDERS: [
-      ...actual.PROJECT_LOOKUP_PROVIDERS,
-      ...fixture.PROJECT_FIXTURE_LOOKUP_PROVIDERS,
-    ],
+    PROJECT_LOOKUP_PROVIDERS: fixture.PROJECT_FIXTURE_LOOKUP_PROVIDERS,
   };
 });
 
@@ -330,8 +326,9 @@ describe("專案登記的 lookup 來源:設計器清單、檢查器、租戶隔�
       ["form_submission", true],
       [PROJECT_FIXTURE_CODE_LOOKUP_KEY, false],
       [PROVIDER, false],
+      [PROJECT_FIXTURE_SHARED_LOOKUP_KEY, false],
     ]);
-    expect(totalCount).toBe(5);
+    expect(totalCount).toBe(6);
     expect(items.find((item) => item.key === PROVIDER)).toEqual({
       key: PROVIDER,
       name: "測試專案項目",

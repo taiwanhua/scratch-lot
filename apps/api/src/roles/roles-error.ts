@@ -1,5 +1,7 @@
 import { GraphQLError } from "graphql";
 
+import type { AudienceReference } from "../audience/audience-references.service";
+
 /**
  * 角色管理的業務錯誤碼(GQL-04:`extensions.code` 列舉值;清單正本 docs/standards/api/graphql-schema.md)。
  * message 給開發者看(英文);使用者文案由前端依 code 對應。
@@ -23,7 +25,7 @@ export const ROLE_ERROR_CODES = [
 export type RoleErrorCode = (typeof ROLE_ERROR_CODES)[number];
 
 /**
- * 刪除被擋的原因(docs/modules/role-manager.md 權限表「刪除」的前置三項)。
+ * 刪除被擋的原因(docs/modules/role-manager.md 權限表「刪除」的前置四項)。
  * 前端逐項對應中文提示,並引導改用停用。
  */
 export const ROLE_NOT_DELETABLE_REASONS = [
@@ -33,6 +35,11 @@ export const ROLE_NOT_DELETABLE_REASONS = [
   "SYSTEM_ROLE",
   /** 開通租戶時複製出來的租戶管理員副本(`settings.templateKey`,ADR-0009):租戶的根本角色,不可刪 */
   "TEMPLATE_COPY",
+  /**
+   * 還被人員條件引用(通知設定的收件人、流程的審核者 / 知會 / 逾時提醒的通知對象、資料範圍的套用對象);
+   * 引用處逐項放在 `extensions.references`,先從那些設定移除
+   */
+  "REFERENCED_BY_AUDIENCE",
 ] as const;
 
 export type RoleNotDeletableReason =
@@ -81,12 +88,20 @@ export function roleError(
   });
 }
 
-/** 刪除前置未過:`ROLE_NOT_DELETABLE` + `extensions.reasons`(逐項列出,前端一次顯示全部)。 */
+/**
+ * 刪除前置未過:`ROLE_NOT_DELETABLE` + `extensions.reasons`(逐項列出,前端一次顯示全部);
+ * 有 `REFERENCED_BY_AUDIENCE` 時另帶 `extensions.references`(引用處清單)。
+ */
 export function roleNotDeletableError(
   reasons: readonly RoleNotDeletableReason[],
+  references: readonly AudienceReference[] = [],
 ): GraphQLError {
   return new GraphQLError(`Role is not deletable: ${reasons.join(", ")}`, {
-    extensions: { code: "ROLE_NOT_DELETABLE", reasons },
+    extensions: {
+      code: "ROLE_NOT_DELETABLE",
+      reasons,
+      ...(references.length === 0 ? {} : { references }),
+    },
   });
 }
 

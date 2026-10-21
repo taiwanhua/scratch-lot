@@ -1,0 +1,260 @@
+# 排班設定與行事曆(規格 14.2–14.4、14.5「行事曆」;正本 docs/modules/project/schedule.md「api 介面」)。
+
+# ---- 下拉選項 ----
+
+# 排班的欄位管理類別選項(崗位、執行任務、特殊日類別…;只列啟用的)。只要登入即可讀。
+query ScheduleFieldOptions($categoryKey: String!) {
+  scheduleFieldOptions(categoryKey: $categoryKey) {
+    items {
+      value
+      label
+    }
+    totalCount
+  }
+}
+
+# ---- 規則 ----
+
+fragment ScheduleRuleSettingFields on ScheduleRuleSetting {
+  enabled
+  value
+  level
+  order
+  source
+  sourceOrgName
+}
+
+fragment ScheduleRulesFields on ScheduleRulesPayload {
+  orgId
+  orgName
+  isTenantTop
+  canEdit
+  items {
+    key
+    group
+    valueType
+    unit
+    hasLevel
+    effective {
+      ...ScheduleRuleSettingFields
+    }
+    parent {
+      ...ScheduleRuleSettingFields
+    }
+  }
+}
+
+# 某個組織(缺席 = 當前組織)的整份規則,依定義清單順序。
+query ScheduleRules($input: ScheduleRulesInput) {
+  scheduleRules(input: $input) {
+    ...ScheduleRulesFields
+  }
+}
+
+# [自訂] 一條規則(自動排班條件:整組變本層自訂)。
+mutation CustomizeScheduleRule($input: CustomizeScheduleRuleInput!) {
+  customizeScheduleRule(input: $input) {
+    rules {
+      ...ScheduleRulesFields
+    }
+  }
+}
+
+# 自訂整組自動排班條件(勾選與順序)。
+mutation CustomizeScheduleAutoRun($input: CustomizeScheduleAutoRunInput!) {
+  customizeScheduleAutoRun(input: $input) {
+    rules {
+      ...ScheduleRulesFields
+    }
+  }
+}
+
+# [還原] 回到沿用(自動排班條件:整組)。
+mutation RestoreScheduleRule($input: RestoreScheduleRuleInput!) {
+  restoreScheduleRule(input: $input) {
+    rules {
+      ...ScheduleRulesFields
+    }
+  }
+}
+
+# ---- 排班人員 ----
+
+fragment ScheduleStaffRowFields on ScheduleStaffRow {
+  userId
+  name
+  account
+  joinedElsewhere
+  staff {
+    id
+    employmentType
+    enabled
+    note
+    primaryElsewhere
+    # 別店建的檔案、因為可以排的分店才看得到(資料共用,ADR-0014):只能看
+    isShared
+    orgs {
+      orgId
+      orgName
+      canLead
+      isPrimary
+      sortOrder
+    }
+  }
+}
+
+query ScheduleStaff($input: ScheduleStaffListInput) {
+  scheduleStaff(input: $input) {
+    items {
+      ...ScheduleStaffRowFields
+    }
+    totalCount
+    canEdit
+  }
+}
+
+mutation AddScheduleStaff($input: AddScheduleStaffInput!) {
+  addScheduleStaff(input: $input) {
+    items {
+      ...ScheduleStaffRowFields
+    }
+  }
+}
+
+mutation UpdateScheduleStaff($input: UpdateScheduleStaffInput!) {
+  updateScheduleStaff(input: $input) {
+    item {
+      ...ScheduleStaffRowFields
+    }
+  }
+}
+
+# ---- 人力需求範本 / 週範本 ----
+
+fragment ScheduleDemandTemplateFields on ScheduleDemandTemplate {
+  id
+  name
+  shortName
+  startTime
+  endTime
+  positionKey
+  tasks {
+    taskId
+    role
+    taskKey
+  }
+  paletteKey
+  ownerOrg {
+    id
+    name
+  }
+  canEdit
+}
+
+query ScheduleDemandTemplates {
+  scheduleDemandTemplates {
+    items {
+      ...ScheduleDemandTemplateFields
+    }
+    totalCount
+    canCreate
+  }
+}
+
+mutation SaveScheduleDemandTemplate($input: SaveScheduleDemandTemplateInput!) {
+  saveScheduleDemandTemplate(input: $input) {
+    item {
+      ...ScheduleDemandTemplateFields
+    }
+  }
+}
+
+mutation DeleteScheduleDemandTemplate($input: DeleteScheduleTemplateInput!) {
+  deleteScheduleDemandTemplate(input: $input) {
+    id
+  }
+}
+
+fragment ScheduleDemandWeekTemplateFields on ScheduleDemandWeekTemplate {
+  id
+  name
+  days
+  enabled
+  ownerOrg {
+    id
+    name
+  }
+  canEdit
+}
+
+# 某家店(input.orgId 缺席 = 當前組織)看得到的週範本;canEdit 只看當前組織這一層建立的
+query ScheduleDemandWeekTemplates($input: ScheduleDemandWeekTemplatesInput) {
+  scheduleDemandWeekTemplates(input: $input) {
+    items {
+      ...ScheduleDemandWeekTemplateFields
+    }
+    totalCount
+    canCreate
+  }
+}
+
+mutation SaveScheduleDemandWeekTemplate(
+  $input: SaveScheduleDemandWeekTemplateInput!
+) {
+  saveScheduleDemandWeekTemplate(input: $input) {
+    item {
+      ...ScheduleDemandWeekTemplateFields
+    }
+  }
+}
+
+mutation DeleteScheduleDemandWeekTemplate(
+  $input: DeleteScheduleTemplateInput!
+) {
+  deleteScheduleDemandWeekTemplate(input: $input) {
+    id
+  }
+}
+
+# ---- 行事曆 ----
+
+fragment ScheduleCalendarDayFields on ScheduleCalendarDay {
+  id
+  date
+  type
+  category
+  name
+  note
+  paletteKey
+  ownerOrg {
+    id
+    name
+  }
+  canEdit
+}
+
+query ScheduleCalendar($input: ScheduleCalendarInput!) {
+  scheduleCalendar(input: $input) {
+    orgId
+    orgName
+    month
+    canEdit
+    days {
+      ...ScheduleCalendarDayFields
+    }
+  }
+}
+
+mutation SaveScheduleCalendarDay($input: SaveScheduleCalendarDayInput!) {
+  saveScheduleCalendarDay(input: $input) {
+    item {
+      ...ScheduleCalendarDayFields
+    }
+  }
+}
+
+mutation DeleteScheduleCalendarDay($input: DeleteScheduleCalendarDayInput!) {
+  deleteScheduleCalendarDay(input: $input) {
+    id
+  }
+}

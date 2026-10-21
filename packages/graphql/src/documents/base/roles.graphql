@@ -82,8 +82,9 @@ mutation SetRoleEnabled($input: SetRoleEnabledInput!) {
   }
 }
 
-# 前置三項(無授予 / 非種子角色 / 非租戶副本)任一不過 →
-# ROLE_NOT_DELETABLE,extensions.reasons 逐項列出(HAS_GRANTS / SYSTEM_ROLE / TEMPLATE_COPY)
+# 前置四項(無授予 / 非種子角色 / 非租戶副本 / 沒被人員條件引用)任一不過 →
+# ROLE_NOT_DELETABLE,extensions.reasons 逐項列出(HAS_GRANTS / SYSTEM_ROLE / TEMPLATE_COPY /
+# REFERENCED_BY_AUDIENCE);被引用時另帶 extensions.references(引用處)
 mutation DeleteRole($input: DeleteRoleInput!) {
   deleteRole(input: $input) {
     success

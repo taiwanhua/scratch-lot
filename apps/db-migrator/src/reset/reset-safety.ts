@@ -22,7 +22,7 @@ export type ResetMode = (typeof RESET_MODES)[number];
 export const RESET_ALLOW_ENV_NAME = "RESET_ALLOW_ENV";
 
 const CONFIRM_PREFIX = "reset";
-const CONFIRM_FORMAT = "reset:<environment>:<資料庫名>:<mode>";
+const CONFIRM_FORMAT = `${CONFIRM_PREFIX}:<environment>:<資料庫名>:<mode>`;
 
 /** 連線字串的協定;其餘一律不當成連線字串解析。 */
 const MONGODB_PROTOCOLS = new Set(["mongodb:", "mongodb+srv:"]);
@@ -93,12 +93,17 @@ export interface ResetSafetyInput {
 
 /**
  * 確認字串哪幾段與目標不同。資料庫名可能含 `:`,所以環境取第一段、模式取最後一段、其餘是資料庫名。
+ * `demo` 指令的確認字串同一個形狀(只有開頭不同),共用這支(`src/demo/demo-safety.ts`)。
  */
-function mismatchedSegments(confirm: string, target: ResetTarget): string[] {
+export function mismatchedSegments(
+  confirm: string,
+  target: ResetTarget,
+  confirmPrefix: string = CONFIRM_PREFIX,
+): string[] {
   const segments = confirm.split(":");
   const [prefix, environment] = segments;
-  if (segments.length < 4 || prefix !== CONFIRM_PREFIX) {
-    return [`格式不是 ${CONFIRM_FORMAT}`];
+  if (segments.length < 4 || prefix !== confirmPrefix) {
+    return [`格式不是 ${confirmPrefix}:<environment>:<資料庫名>:<mode>`];
   }
   const mismatched: string[] = [];
   if (environment !== target.environment) {

@@ -1,0 +1,83 @@
+# 排班作業 → 排班表的套用範本與自動排班(規格 14.4「套用範本」、14.5「自動排班」;
+# 正本 docs/modules/project/schedule.md「套用範本與自動排班」)。
+# 狀態要 schedule.manage.view;套用範本要 edit;自動排班、預覽、清除自動排入的人要 auto-run。
+
+fragment ScheduleAutoRunSummaryFields on ScheduleAutoRunSummary {
+  id
+  at
+  byName
+  from
+  to
+  filledCount
+  unfilledCount
+  addedDemandCount
+  addedDemandDays
+}
+
+fragment ScheduleApplyTemplatesFields on ApplyScheduleTemplatesPayload {
+  createdCount
+  skippedSlots
+  filledDays
+  skippedDays
+}
+
+# 能不能自動排班、別人的自動排班是否執行中、最近一次的摘要、套用範本的週範本選項
+query ScheduleAutoRunStatus($input: ScheduleRosterInput!) {
+  scheduleAutoRunStatus(input: $input) {
+    canAutoRun
+    running
+    latest {
+      ...ScheduleAutoRunSummaryFields
+    }
+    weekTemplates {
+      id
+      name
+      days
+    }
+    conditions {
+      key
+      enabled
+    }
+  }
+}
+
+# 套用範本的預覽(「將產生 N 個時段,略過 M 個」;和套用同一個規劃)
+query ScheduleTemplateApplyPreview($input: ApplyScheduleTemplatesInput!) {
+  scheduleTemplateApplyPreview(input: $input) {
+    ...ScheduleApplyTemplatesFields
+  }
+}
+
+mutation ApplyScheduleTemplates($input: ApplyScheduleTemplatesInput!) {
+  applyScheduleTemplates(input: $input) {
+    ...ScheduleApplyTemplatesFields
+  }
+}
+
+# [自動排班] 對話框:範圍內的人力需求、可以補上的週範本、手動 / 自動排入的人次
+query ScheduleAutoRunPreview($input: ScheduleAutoRunRangeInput!) {
+  scheduleAutoRunPreview(input: $input) {
+    demandCount
+    fillableDays
+    manualCount
+    autoCount
+    weekTemplate {
+      id
+      name
+    }
+  }
+}
+
+mutation RunScheduleAutoRun($input: RunScheduleAutoRunInput!) {
+  runScheduleAutoRun(input: $input) {
+    ...ScheduleAutoRunSummaryFields
+  }
+}
+
+# 清除自動排入的人:只移除來源 = 自動的填進紀錄,零筆的排班一起刪除
+mutation ClearScheduleAutoAssignments($input: ScheduleAutoRunRangeInput!) {
+  clearScheduleAutoAssignments(input: $input) {
+    removedCount
+    deletedEntryIds
+  }
+}

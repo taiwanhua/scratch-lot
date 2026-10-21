@@ -221,6 +221,69 @@ describe("MonthCalendar 註記、角標與自訂內容", () => {
     expect(within(badgeCell).getByText("09:00–17:00")).toBeInTheDocument();
   });
 
+  it("底色語意:特殊日 / 休息日標在格子上;前後補的日子不套", () => {
+    renderCalendar({
+      days: {
+        "2026-10-11": { tone: "special", note: "店慶" },
+        "2026-10-12": { tone: "closed" },
+        "2026-09-30": { tone: "special" },
+        "2026-10-13": { tone: "special", disabled: true },
+      },
+    });
+
+    expect(day("2026-10-11")).toHaveAttribute("data-tone", "special");
+    expect(day("2026-10-12")).toHaveAttribute("data-tone", "closed");
+    expect(day("2026-09-30")).not.toHaveAttribute("data-tone");
+    expect(day("2026-10-14")).not.toHaveAttribute("data-tone");
+    // 停用優先:仍標語意,但底色是停用色
+    expect(day("2026-10-13")).toHaveAttribute("aria-disabled", "true");
+  });
+
+  it("資料帶來的底色:主題 alpha 淡化,優先於 tone;前後補的日子與停用的日子不套", () => {
+    renderCalendar({
+      days: {
+        "2026-10-11": { background: "#006064", tone: "special" },
+        "2026-09-30": { background: "#006064" },
+        "2026-10-13": { background: "#006064", disabled: true },
+      },
+    });
+
+    const cell = day("2026-10-11");
+    expect(cell).toHaveAttribute("data-background", "#006064");
+    // 預設主題 selectedOpacity 0.08:#006064 → rgba(0, 96, 100, 0.08)
+    expect(cell).toHaveStyle({ backgroundColor: "rgba(0, 96, 100, 0.08)" });
+    expect(day("2026-09-30")).not.toHaveAttribute("data-background");
+    expect(day("2026-10-13")).not.toHaveStyle({
+      backgroundColor: "rgba(0, 96, 100, 0.08)",
+    });
+  });
+
+  it("多個角標依順序並排;給了 corners 就取代單一 corner", () => {
+    renderCalendar({
+      days: {
+        "2026-10-05": {
+          corner: { variant: "badge", content: "舊的" },
+          corners: [
+            { variant: "dot", color: "error", label: "缺卡" },
+            { variant: "dot", color: "warning", label: "有異動" },
+          ],
+        },
+      },
+    });
+
+    const cell = day("2026-10-05");
+    const marks = within(cell).getAllByRole("img");
+    expect(marks.map((mark) => mark.getAttribute("aria-label"))).toEqual([
+      "缺卡",
+      "有異動",
+    ]);
+    expect(within(cell).queryByText("舊的")).toBeNull();
+    expect(cell.querySelector("[data-corners]")).toHaveAttribute(
+      "data-corners",
+      "2",
+    );
+  });
+
   it("前後補的日子不畫註記與角標", () => {
     renderCalendar({
       days: {

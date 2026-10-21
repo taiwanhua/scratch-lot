@@ -229,7 +229,7 @@ api 的落地細節(寫入順序、推進執行器、決定的原子寫入、錯
 | `beforeReject`        | 駁回                                                  | 關卡 key          |
 | `beforeReturn`        | 退回                                                  | 關卡 key          |
 | `beforeWithdraw`      | 申請人撤回                                            | —                 |
-| `beforeVoid`          | 作廢                                                  | —                 |
+| `beforeVoid`          | 作廢(context 另帶 `voidReason`)                       | —                 |
 | `beforeDelete`        | 刪除(草稿 / 被退回 / 撤回、沒走流程的已完成、已駁回)  | —                 |
 | `beforeEditCompleted` | 修改沒走流程的已完成單                                | 新的值            |
 
@@ -243,7 +243,9 @@ api 的落地細節(寫入順序、推進執行器、決定的原子寫入、錯
 | `withdrawn`  | 推進把提交同步成已撤回                                                                       |
 | `completed`  | 推進把提交同步成已完成;或沒走流程的送出                                                      |
 | `rejected`   | 推進把提交同步成已駁回(關卡 = 做決定的那一關)                                                |
-| `voided`     | 作廢寫入之後                                                                                 |
+| `voided`     | 作廢寫入之後(context 另帶 `voidReason`)                                                      |
+
+作廢的守門與事後動作另帶 `voidReason: { reasonKey, reasonLabel, reasonNote }`(表單沒設作廢原因類別時 `reasonKey` / `reasonLabel` 為 null、`reasonNote` 是自由文字理由;見 `docs/modules/forms.md`「作廢原因」)。
 
 推進裡的事件只在條件更新真的命中時觸發;推進可由別的動作帶動(重試推進、審核者失效),事後動作就跟著那個動作的交易;失效 hook 觸發的事後動作失敗時,停用照樣生效(hook 在停用寫入之後、各實例自己的交易),該實例要再停用一次才會補做。
 

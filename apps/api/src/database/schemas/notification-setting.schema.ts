@@ -2,15 +2,17 @@ import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
 import { Schema as MongooseSchema, Types } from "mongoose";
 
 import type { Audience } from "@repo/domain/audience";
+import type { NotificationSchedule } from "@repo/domain/notification-schedule";
 
 import { baseFieldsPlugin } from "../plugins/base-fields.plugin";
 
 export const NOTIFICATION_SETTINGS_COLLECTION = "notification_settings";
 
 /**
- * 通知設定:租戶對**負責人提醒**類型的收件人調整,
- * 每個租戶、每種類型至多一筆。沒有這筆、或 `audience` 為 null = 用類型宣告的預設人員條件
- * (「還原預設」把 `audience` 寫回 null)。`updatedBy` / `updatedAt` 由基礎欄位提供。
+ * 通知設定:租戶對通知類型的調整 —— **負責人提醒**的收件人(`audience`)與
+ * **宣告了可調時間的類型**(負責人提醒或當事人通知)的提醒時間(`schedule`),
+ * 每個租戶、每種類型至多一筆。沒有這筆、或欄位為 null = 用類型宣告的預設
+ * (兩個欄位的「還原預設」各自把它寫回 null)。`updatedBy` / `updatedAt` 由基礎欄位提供。
  *
  * 以 `tenantId` 為邊界的租戶設定(沒有 `orgId`),不掛 tenantScope;讀寫一律帶操作者所在租戶的 `tenantId`。
  */
@@ -20,7 +22,7 @@ export class NotificationSetting {
   @Prop({ type: Types.ObjectId, required: true })
   tenantId!: Types.ObjectId;
 
-  /** 通知類型 key(只會是負責人提醒類型)。 */
+  /** 通知類型 key(負責人提醒,或宣告了可調時間的當事人通知)。 */
   @Prop({ type: String, required: true })
   type!: string;
 
@@ -30,6 +32,20 @@ export class NotificationSetting {
    */
   @Prop({ type: MongooseSchema.Types.Mixed, default: null })
   audience!: Audience | null;
+
+  /**
+   * 提醒時間(`notifications/notification-schedule.ts`;寫法必須是類型宣告的那一種)。
+   * null = 用類型宣告的預設;當事人通知只會有這一欄。
+   */
+  @Prop({ type: MongooseSchema.Types.Mixed, default: null })
+  schedule!: NotificationSchedule | null;
+
+  /**
+   * 提醒時間最後一次調整 / 還原的時間(只有 `schedule` 變動才寫;`updatedAt` 也會因收件人變動而動,
+   * 不能拿來判斷)。排程補寄時,早於它的應寄時點不補。從沒動過 = null。
+   */
+  @Prop({ type: Date, default: null })
+  scheduleUpdatedAt!: Date | null;
 }
 
 // 由 class 產生 Mongoose Schema(供 MongooseModule 註冊為 model,並掛下方索引)

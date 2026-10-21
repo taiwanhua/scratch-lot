@@ -257,7 +257,7 @@ mutation WithdrawSubmission($input: WithdrawSubmissionInput!) {
   }
 }
 
-# VoidSubmissionInput: { id, expectedEditVersion, reason }
+# VoidSubmissionInput: { id, expectedEditVersion, reasonKey?, reasonNote };表單設了作廢原因類別時 reasonKey 必填、選 other 時 reasonNote 必填;沒設時 reasonNote = 理由(必填)
 mutation VoidSubmission($input: VoidSubmissionInput!) {
   voidSubmission(input: $input) {
     submission {

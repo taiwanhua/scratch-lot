@@ -29,7 +29,9 @@ import { VersionViewer } from "./FormDesigner/VersionViewer";
 import { AssignFormDialog } from "./FormDialogs/AssignFormDialog";
 import { EditFormDialog } from "./FormDialogs/EditFormDialog";
 import { ForkFormDialog } from "./FormDialogs/ForkFormDialog";
+import { SerialFormatField } from "./SerialFormatField";
 import { VersionPanel } from "./VersionPanel/VersionPanel";
+import { VoidReasonCategoryField } from "./VoidReasonCategoryField";
 import { WorkflowBindingField } from "./WorkflowBinding/WorkflowBindingField";
 import { FORMS_PERMISSIONS } from "./forms-permissions";
 
@@ -183,6 +185,8 @@ export const FormDetailPanel = ({
             />
           )}
         <AllowDraftField form={form} onChanged={onChanged} />
+        <SerialFormatField form={form} onChanged={onChanged} />
+        <VoidReasonCategoryField form={form} onChanged={onChanged} />
         {canBindWorkflow && hasPermission(FORMS_PERMISSIONS.edit) && (
           <WorkflowBindingField form={form} onChanged={onChanged} />
         )}

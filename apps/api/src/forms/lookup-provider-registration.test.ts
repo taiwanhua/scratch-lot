@@ -1,5 +1,6 @@
 import { describe, expect, it } from "@jest/globals";
 import { Test } from "@nestjs/testing";
+import { Schema } from "mongoose";
 
 import { BaseRepository } from "../database/base.repository";
 import { BASE_DATABASE_REGISTRATIONS } from "../database/base/registrations";
@@ -9,6 +10,7 @@ import {
   OrgsRepository,
   UsersRepository,
 } from "../database/database.module";
+import { tenantScopePlugin } from "../database/plugins/tenant-scope.plugin";
 import {
   PROJECT_LOOKUP_SOURCES,
   assertLookupRepositories,
@@ -29,20 +31,39 @@ import { LookupProvidersService } from "./lookup-providers";
 const BASE_KEYS = ["user", "org", "form_submission"];
 
 /** 通過 `instanceof BaseRepository`、綁某張表的假 repository(不連資料庫;這裡只驗登記)。 */
-function fakeRepository(collectionName: string): unknown {
+function fakeRepository(collectionName: string, schema?: Schema): unknown {
   const repository = Object.create(BaseRepository.prototype) as object;
   Object.defineProperty(repository, "model", {
-    value: { collection: { collectionName }, modelName: collectionName },
+    value: {
+      collection: { collectionName },
+      modelName: collectionName,
+      schema,
+    },
   });
   return repository;
 }
 
+/** 宣告了資料共用的表(共用篩選要求)。 */
+function shareableSchema(): Schema {
+  const schema = new Schema(
+    { orgId: Schema.Types.ObjectId, name: String },
+    { collection: "demo_accounts" },
+  );
+  schema.plugin(tenantScopePlugin, {
+    moduleData: true,
+    sharing: { mode: "shareable", defaultShareOrgs: "none", editable: true },
+  });
+  return schema;
+}
+
 class ItemsRepository {}
 class ShopsRepository {}
+class AccountsRepository {}
 
 const REPOSITORIES = new Map<typeof ItemsRepository, unknown>([
   [ItemsRepository, fakeRepository("demo_items")],
   [ShopsRepository, fakeRepository("demo_shops")],
+  [AccountsRepository, fakeRepository("demo_accounts", shareableSchema())],
 ]);
 
 const registration = (
@@ -146,6 +167,44 @@ describe("resolveLookupRegistrations:專案 lookup 來源的登記驗證", () =>
     expect(
       resolve([registration("demo_item", { valueField: "code" })]).size,
     ).toBe(1);
+  });
+
+  it("共用篩選(sharedToFilter):要列在 filterFields、不能是可回欄位、資料表要宣告資料共用", () => {
+    const shared = {
+      fields: { name: { type: "text" as const } },
+      filterFields: ["sharedTo"],
+      sharedToFilter: "sharedTo",
+    };
+    expect([
+      ...resolve([
+        registration("demo_account", shared, AccountsRepository),
+      ]).keys(),
+    ]).toEqual(["demo_account"]);
+    expect(() =>
+      resolve([
+        registration(
+          "demo_account",
+          { ...shared, filterFields: [] },
+          AccountsRepository,
+        ),
+      ]),
+    ).toThrow(/filterFields/);
+    expect(() =>
+      resolve([
+        registration(
+          "demo_account",
+          {
+            ...shared,
+            fields: { name: { type: "text" }, sharedTo: { type: "text" } },
+          },
+          AccountsRepository,
+        ),
+      ]),
+    ).toThrow(/不能同時是可回的欄位/);
+    // 沒宣告資料共用的表(demo_items)不能設共用篩選
+    expect(() => resolve([registration("demo_item", shared)])).toThrow(
+      /沒有宣告資料共用/,
+    );
   });
 
   it("欄位名不能是查詢運算子或巢狀路徑(`$where`、`a.b`)也不能叫 id", () => {

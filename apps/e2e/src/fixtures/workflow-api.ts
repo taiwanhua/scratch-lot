@@ -520,16 +520,27 @@ export async function reassignTask(
   await graphqlOk(REASSIGN_TASK, { input: { taskId, toUserId } }, accessToken);
 }
 
-/** 申請人作廢自己已完成的單(理由必填)。 */
+/**
+ * 申請人作廢自己已完成的單:`reasonNote` = 說明(表單沒設作廢原因類別時就是理由,必填);
+ * 表單設了作廢原因類別時另給 `reasonKey`(該類別的選項值)。
+ */
 export async function voidSubmission(
   accessToken: string,
   id: string,
-  reason: string,
+  reasonNote: string,
+  reasonKey?: string,
 ): Promise<void> {
   const current = await formSubmission(accessToken, id);
   await graphqlOk(
     VOID_SUBMISSION,
-    { input: { id, expectedEditVersion: current.editVersion, reason } },
+    {
+      input: {
+        id,
+        expectedEditVersion: current.editVersion,
+        reasonNote,
+        ...(reasonKey === undefined ? {} : { reasonKey }),
+      },
+    },
     accessToken,
   );
 }

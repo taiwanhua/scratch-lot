@@ -22,7 +22,11 @@ import type {
 } from "../../seeds/base/seed-source";
 import { projectSeedSource } from "../../seeds/project/registry";
 import { projectSeedSettings } from "../../seeds/project/settings";
-import { assembleSeedRegistry, seedRegistry } from "../../seeds/registry";
+import {
+  assembleSeedRegistry,
+  seedLookupProviders,
+  seedRegistry,
+} from "../../seeds/registry";
 import {
   baseOnlyProjectSettings,
   baseOnlyProjectSource,
@@ -137,7 +141,7 @@ function moduleNode(
 }
 
 describe("固定組裝入口:底座 + 空的專案來源(隔離夾具)", () => {
-  it("普通種子的內容與搬檔前相同:8 類種子、41 個模組、124 筆權限、4 個資料範圍目標、74 筆模板綁定、root 初始帳號一份", () => {
+  it("普通種子的內容與搬檔前相同:8 類種子、41 個模組、125 筆權限、4 個資料範圍目標、74 筆模板綁定、root 初始帳號一份", () => {
     expect(
       baseRegistry.map((set) =>
         set.kind === "documents" ? set.collection : set.kind,
@@ -157,7 +161,7 @@ describe("固定組裝入口:底座 + 空的專案來源(隔離夾具)", () => {
       "relations",
     ]);
     expect(entryKeys(baseRegistry, "modules")).toHaveLength(41);
-    expect(entryKeys(baseRegistry, "permissions")).toHaveLength(124);
+    expect(entryKeys(baseRegistry, "permissions")).toHaveLength(125);
     expect(entryKeys(baseRegistry, "data_scope_targets")).toHaveLength(4);
     expect(
       relationsOf(baseRegistry, "role_module", "tenant-admin"),
@@ -232,8 +236,18 @@ describe("固定組裝入口:正式 registry(專案來源由引用專案登記,�
     ]);
   });
 
-  it("重新驗一次已組裝的 registry 不改變順序(執行前的再檢查是冪等的)", () => {
-    expect(plan(...seedRegistry)).toEqual(seedRegistry);
+  it("重新驗一次已組裝的 registry 不改變順序(執行前的再檢查是冪等的;明確帶專案宣告的可攜 lookup 來源)", () => {
+    expect(
+      planSeedRegistry([{ origin: "test", seeds: seedRegistry }], {
+        lookupProviders: seedLookupProviders,
+      }),
+    ).toEqual(seedRegistry);
+  });
+
+  it("預檢沒帶專案宣告的可攜 lookup 來源:引用專案來源的受管表單判為不可攜(沒有隱含的全域狀態)", () => {
+    expect(problemsOf(() => plan(...seedRegistry)).join(" ")).toMatch(
+      /lookup 來源 lottery_game 不在可攜範圍.*LOOKUP_PROVIDER_UNSUPPORTED/,
+    );
   });
 });
 
@@ -309,8 +323,8 @@ describe("固定組裝入口:底座 + 非空的專案來源", () => {
         `${PROJECT_FORM_KEY}.create`,
       ]),
     );
-    // 底座 124 + 專案 8 個模組的 wildcard + 個別權限 2 + 1 + 4
-    expect(permissionKeys).toHaveLength(124 + 8 + 7);
+    // 底座 125 + 專案 8 個模組的 wildcard + 個別權限 2 + 1 + 4
+    expect(permissionKeys).toHaveLength(125 + 8 + 7);
     expect(entryKeys(projectRegistry, "data_scope_targets")).toEqual(
       expect.arrayContaining([PROJECT_REPORT_KEY, PROJECT_FORM_KEY]),
     );

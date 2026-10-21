@@ -24,6 +24,7 @@ import {
   type SaveFormDraftMutationVariables,
   type SubmitFormSubmissionMutationVariables,
   type UpdateFormSubmissionMutationVariables,
+  type VoidSubmissionMutationVariables,
 } from "@repo/graphql";
 
 import { rawOf } from "@/lib/base/form-engine/definition";
@@ -78,6 +79,11 @@ export interface FormRuntimeWorldOptions {
   submitAs?: { status: FormSubmissionStatus; instanceId?: string };
   /** `copySubmissionToDraft` 回報被清空的欄位(引用來源失效) */
   copyClearedFields?: string[];
+  /** 表單 key → 作廢原因的類別與選項(`formVoidReasonOptions`;沒給 = 沒設類別、自由填寫) */
+  voidReasonOptions?: Record<
+    string,
+    { categoryKey: string; items: { value: string; label: string }[] }
+  >;
 }
 
 export interface FormRuntimeWorld {
@@ -89,11 +95,7 @@ export interface FormRuntimeWorld {
     submitFormSubmission: SubmitFormSubmissionMutationVariables["input"][];
     updateFormSubmission: UpdateFormSubmissionMutationVariables["input"][];
     withdrawSubmission: { id: string; expectedEditVersion: number }[];
-    voidSubmission: {
-      id: string;
-      expectedEditVersion: number;
-      reason: string;
-    }[];
+    voidSubmission: VoidSubmissionMutationVariables["input"][];
     copySubmissionToDraft: { id: string; clientRequestId: string }[];
     formSubmissions: FormSubmissionsQueryVariables["input"][];
     formLookup: FormLookupQueryVariables["input"][];
@@ -395,6 +397,22 @@ export const formRuntimeWorld = (
       payload,
       inputs,
       copyClearedFields: options.copyClearedFields ?? [],
+      voidReasonLabelOf: (formKey, reasonKey) =>
+        options.voidReasonOptions?.[formKey]?.items.find(
+          (item) => item.value === reasonKey,
+        )?.label ?? null,
+    }),
+    api.query("FormVoidReasonOptions", ({ variables }) => {
+      const { formKey } = variables as { formKey: string };
+      const configured = options.voidReasonOptions?.[formKey];
+      return HttpResponse.json({
+        data: {
+          formVoidReasonOptions: configured ?? {
+            categoryKey: null,
+            items: [],
+          },
+        },
+      });
     }),
     api.mutation("DeleteFormSubmission", ({ variables }) => {
       const { input } = variables as { input: { id: string } };

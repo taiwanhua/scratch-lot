@@ -17,6 +17,7 @@ import {
   type FormGuardName,
   type FormLifecycleRegistration,
   type FormLifecycles,
+  type FormVoidReason,
   type LifecycleResolver,
   type LifecycleSubmission,
   resolveLifecycleInjections,
@@ -32,6 +33,8 @@ export interface GuardInput {
   /** 這一版的值;不給 = 提交目前的值。 */
   values?: StoredValues;
   stepKey?: string | null;
+  /** 作廢原因(`beforeVoid` 才給)。 */
+  voidReason?: FormVoidReason;
 }
 
 /** `runApproveGuard` 的輸入:核准(某人按核准、批次核准的每一筆、自動通過)都經它。 */
@@ -158,6 +161,9 @@ export class FormLifecycleService implements OnModuleInit {
       submission,
       values: input.values ?? submission.values,
       stepKey: input.stepKey ?? null,
+      ...(input.voidReason === undefined
+        ? {}
+        : { voidReason: input.voidReason }),
       session: sessionOf(`守門 ${name}`),
       get: this.resolverOf(registration),
     });
@@ -188,7 +194,12 @@ export class FormLifecycleService implements OnModuleInit {
   async emit(
     event: FormEffectName,
     subject: EffectSubject,
-    detail: { stepKey?: string | null; skipped?: boolean } = {},
+    detail: {
+      stepKey?: string | null;
+      skipped?: boolean;
+      /** 作廢原因(`voided` 才給)。 */
+      voidReason?: FormVoidReason;
+    } = {},
   ): Promise<void> {
     const registration = this.lifecycles.lookup(
       subject.moduleKey,
@@ -209,6 +220,9 @@ export class FormLifecycleService implements OnModuleInit {
       revision: subject.revision,
       stepKey: detail.stepKey ?? null,
       skipped: detail.skipped ?? false,
+      ...(detail.voidReason === undefined
+        ? {}
+        : { voidReason: detail.voidReason }),
       operator: await this.operators.systemOperatorOfOrg(subject.orgId),
       session,
       get: this.resolverOf(registration),

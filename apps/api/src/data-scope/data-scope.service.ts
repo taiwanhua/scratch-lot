@@ -71,6 +71,7 @@ const RULE_READER: OperatorContext = {
   managedOrgIds: "all",
   memberOrgIds: [],
   roleIds: [],
+  memberTenants: [],
 };
 
 /** 快取中的一份規則(某個模組的):沒有規則的模組不進快取。 */

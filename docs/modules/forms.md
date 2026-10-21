@@ -99,6 +99,46 @@
 - **受管表單**:seed 宣告寫 `allowDraft: false` 才關,沒寫 = 開。它和名稱、頁籤模板一樣是受管 metadata:只有關掉時才進 `contentHash`(開著的既有宣告 hash 不變)、寫進表單的方式同其他受管 metadata:首次安裝先以名稱建立身分,同一次安裝接著以條件更新寫入頁籤模板與允許存草稿(值和現場不同才帶);改版同樣以條件更新寫入;採納不寫入(現場已是宣告的值才採納);現場切過 → `METADATA_DRIFT`;「匯出專案設定」在關著時輸出 `allowDraft: false`(`packages/domain/src/seed/canonical.ts`、`apps/api/src/seed/form-definition.adapter.ts`)。
 - 正本測試:`apps/api/src/forms/form-runtime/form-allow-draft.test.ts`(情境表每列一個)。
 
+### 單號
+
+`forms.serial`(`FormModel.serial`):`{ prefix, period, digits, separator }`,null = 不給號(預設)。機制見 ADR-0015;形狀與檢查正本 `@repo/domain/form` 的 `SerialFormat` / `serialFormatIssues`(前綴英數 0–10 字、期間 `none` / `year` / `month`、位數 1–10、分隔符 `-` `_` `/` `.` 或空字串,缺席 = `-`)。畫面是表單管理右側「允許存草稿」下方的「單號」區塊(`pages/base/system/FormsPage/SerialFormatField.tsx`):開關、四個欄位與即時預覽,[儲存單號格式] 才寫入;關掉開關立刻存 null。
+
+| 情境                                 | 結果                                                                                                                                                                                                                                     |
+| ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 存草稿                               | 不給號(`serialNo = null`)                                                                                                                                                                                                                |
+| 第一次送出(草稿送出、直接送出、送審) | 同一個交易內、驗證與送出的寫入之後才給號(`SerialService`,key `form:<formKey>`,依提交歸屬組織的租戶計數、送出時點以租戶時區切期間;不走流程的與完成同一次寫入,走流程的與送審那一次寫入一起寫;都在 `submitted` 事後動作之前,事後動作讀得到) |
+| 被退回 / 撤回後再送出                | 不換號                                                                                                                                                                                                                                   |
+| 作廢                                 | 保留原號                                                                                                                                                                                                                                 |
+| 複製為新單                           | 新草稿沒有號,送出時另給                                                                                                                                                                                                                  |
+| 清掉格式(`serial: null`)             | 之後送出不給號;已給的號保留                                                                                                                                                                                                              |
+| 格式不合法                           | `VALIDATION_FAILED`,`fields` 指到 `serial.<鍵>`                                                                                                                                                                                          |
+
+- 列表欄位配置的「摘要槽」欄可選「單號」(`serialNo`);沒有號的那一格顯示「—」。詳情頁標題下顯示「單號:…」。
+- **受管表單**:seed 宣告可選填 `serial`(形狀同上),沒寫 = 不給號。它是受管 metadata:有宣告才進 `contentHash`(沒寫的既有宣告 hash 不變),寫入、改版、採納與 `METADATA_DRIFT` 的規則同允許存草稿;「匯出專案設定」在有設時輸出 `serial`。
+- 稽核:`form.update` 記前後值(`serial`)。
+
+### 作廢原因
+
+`forms.voidReasonCategoryKey`(`FormModel.voidReasonCategoryKey`):作廢原因用哪個欄位管理類別;null = 不設定(預設),作廢理由自由填寫。畫面是表單管理右側「單號」下方的「作廢原因」下拉(`pages/base/system/FormsPage/VoidReasonCategoryField.tsx`):列啟用的類別(同選項欄的類別下拉),選了立刻以 `updateForm` 存;改不動的人(`abilities.canEdit` false)看得到目前的設定但不能改。底座不知道專案的類別名,由專案在表單設定或受管宣告指定。
+
+| 情境                                        | 結果                                                                                                                                       |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| 沒設類別                                    | 作廢對話框只有「作廢理由」(自由文字,必填);`voidSubmission` 帶 `reasonNote`,帶了 `reasonKey` → `VALIDATION_FAILED`(`fields: ["reasonKey"]`) |
+| 設了類別:作廢對話框                         | 「作廢原因」下拉(該類別啟用中的選項,範圍同欄位管理:全域 + 上層 + 自己 + 看得到的下層)+「說明」                                             |
+| 設了類別:沒選原因 / 選了不在類別內的值      | `VALIDATION_FAILED`(`fields: ["reasonKey"]`)                                                                                               |
+| 設了類別:選「其他」(選項值 `other`)沒填說明 | `VALIDATION_FAILED`(`fields: ["reasonNote"]`);對話框的 [作廢] 也按不下去                                                                   |
+| 設了類別:選一般選項                         | 說明可空                                                                                                                                   |
+| 設的類別不存在 / 格式不合                   | `updateForm` 回 `VALIDATION_FAILED`(`fields: ["voidReasonCategoryKey"]`)                                                                   |
+| 類別後來被刪 / 沒有選項                     | 作廢原因一律不合法(fail-closed);對話框提示請管理員到欄位管理新增選項                                                                       |
+
+- **作廢原因的選項依作廢者的範圍**:下拉列的與送出時驗的,都是按 [作廢] 那個人在欄位管理合併範圍內看得到的選項(全域 + 他的上層 + 他自己 + 他看得到的下層),不是單據所屬組織的範圍;有 `edit` 的人替別店的單作廢時,用的是他自己看得到的選項。
+- 「其他」固定是選項值 `other`(`@repo/domain/form` 的 `VOID_REASON_OTHER` = `REASON_OPTION_OTHER`);要有「其他」就在類別裡建一個值為 `other` 的選項。
+- 檢查用底座的 `FieldOptionsService.assertReason`(白名單 = 這張表單設的那一個類別;見 [field-manager](./field-manager.md)「給業務功能用的選項」),選項清單 `formVoidReasonOptions(formKey)` 用同一支的 `optionsOf`,列得出來的就送得進去。
+- 存在提交上:`voidReasonKey`(選項值)、`voidReasonLabel`(作廢當下的選項名稱)、`voidReason`(說明;沒設類別時就是理由)。詳情頁審核區塊顯示「作廢原因:選項名稱(說明)」,沒設類別的單照舊「作廢理由:…」;沒有其他可做的動作時也顯示。
+- 掛接點 `beforeVoid` 守門與 `voided` 事後動作的 context 帶 `voidReason: { reasonKey, reasonLabel, reasonNote }`;稽核 `submission.void` 的 `after` 記 `reason`(說明)與 `reasonKey`。
+- **受管表單**:seed 宣告可選填 `voidReasonCategoryKey`(欄位管理類別 key 格式),沒寫 = 自由填寫。受管 metadata 的規則同單號(有宣告才進 `contentHash`、寫入 / 改版 / 採納 / `METADATA_DRIFT`);「匯出專案設定」在有設時輸出。
+- 正本測試:`apps/api/src/forms/form-runtime/form-void-reason.test.ts`、`apps/admin/src/components/base/form-engine/FormModulePages/FormWorkflow.test.tsx`、`apps/admin/src/pages/base/system/FormsPage/FormsPageVoidReason.test.tsx`。
+
 ## 表單版本
 
 ### 狀態
@@ -295,14 +335,14 @@
 
 專案在固定入口 `apps/api/src/project/lookup-providers.ts` 列 `{ declaration, repositoryToken }`(與 `project/database/registrations.ts` 同一種靜態清單;契約在 `apps/api/src/forms/lookup-provider-registration.ts`)。清單只由 `database/database.module.ts` 組裝並以 `PROJECT_LOOKUP_SOURCES` 提供,api 與受管定義 CLI(`seed/seed-runtime.module.ts`)拿到同一份;`LookupProvidersService` 啟動時以 `ModuleRef` 取 repository 實例並驗證。檢查器的登錄表(`LookupProviderRegistry`)、設計器來源清單、`formLookup` / 引用重驗 / 現名解析都含專案來源。
 
-| 項目              | 規則                                                                                                                                                                                                                                                                                                 |
-| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| key               | 底座來源不加前綴;專案來源一律 `<前綴>_<名稱>`(小寫英數與底線),前綴 = repository 所綁資料表名的第一段(`demo_item` ↔ `demo_items`)。與底座撞名、專案之間重複、格式或前綴不合 → 啟動丟 `LookupProviderRegistrationError`,app 起不來                                                                     |
-| `declaration`     | `name`、`permission`(必填:讀這個來源要的權限,例該模組 `view`,沒有 → 查無;`null` = 在可見範圍內公開)、`fields`(型別、讀該欄要的權限、設計器顯示的欄位名)、`filterFields`、`labelField`(預設顯示欄)、`valueField`(預設值欄,省略 = `id`)、`keywordFields`(省略 = 只比 `labelField`)。欄位名即文件欄位名 |
-| `repositoryToken` | 必須是專案資料登記裡的 repository(`project/database/registrations.ts`);拿底座的(如 `UsersRepository`)→ 組裝時丟 `DatabaseRegistrationError`,app 起不來。實例另以 `instanceof BaseRepository` 驗                                                                                                      |
-| 範圍              | 搜尋與依值取回由底座固定呼叫 `BaseRepository` 的 `findMany` / `count`:租戶隔離、可見範圍、軟刪除由 plugin 套,資料範圍規則只對 `moduleData: true` 的表生效;專案沒有自訂查詢的接縫,放寬不了                                                                                                            |
-| 欄位權限          | 同 `user`:讀不到的欄位省略、不拿它比關鍵字(關鍵字欄位全讀不到時打關鍵字 → 查無);以它當值欄反查也要讀得到;寫進提交的快照用 `publicOnly`(帶權限的欄位一律省略)                                                                                                                                         |
-| 值欄              | 非 `id` 時只能是文字欄位(依值取回以字串等值比對):宣告的預設值欄在啟動時驗,定義裡的 `valueField` 由檢查器擋(`LOOKUP_UNKNOWN_FIELD`),設計器的值欄下拉也只列文字欄位                                                                                                                                    |
+| 項目              | 規則                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| key               | 底座來源不加前綴;專案來源一律 `<前綴>_<名稱>`(小寫英數與底線),前綴 = repository 所綁資料表名的第一段(`demo_item` ↔ `demo_items`)。與底座撞名、專案之間重複、格式或前綴不合 → 啟動丟 `LookupProviderRegistrationError`,app 起不來                                                                                                                                                                                                                                                                 |
+| `declaration`     | `name`、`permission`(必填:讀這個來源要的權限,例該模組 `view`,沒有 → 查無;`null` = 在可見範圍內公開)、`fields`(型別、讀該欄要的權限、設計器顯示的欄位名)、`filterFields`、`labelField`(預設顯示欄)、`valueField`(預設值欄,省略 = `id`)、`keywordFields`(省略 = 只比 `labelField`)、`sharedToFilter`(選填:依表單欄位換值的共用篩選 —— `filter` 裡這個鍵的值是組織 id,只列給那個組織看得到的資料;鍵要列在 `filterFields`、不能是 `fields` 的欄位,資料表要宣告資料共用,ADR-0014)。欄位名即文件欄位名 |
+| `repositoryToken` | 必須是專案資料登記裡的 repository(`project/database/registrations.ts`);拿底座的(如 `UsersRepository`)→ 組裝時丟 `DatabaseRegistrationError`,app 起不來。實例另以 `instanceof BaseRepository` 驗                                                                                                                                                                                                                                                                                                  |
+| 範圍              | 搜尋與依值取回由底座固定呼叫 `BaseRepository` 的 `findMany` / `count`:租戶隔離、可見範圍、軟刪除由 plugin 套,資料範圍規則只對 `moduleData: true` 的表生效;專案沒有自訂查詢的接縫,放寬不了                                                                                                                                                                                                                                                                                                        |
+| 欄位權限          | 同 `user`:讀不到的欄位省略、不拿它比關鍵字(關鍵字欄位全讀不到時打關鍵字 → 查無);以它當值欄反查也要讀得到;寫進提交的快照用 `publicOnly`(帶權限的欄位一律省略)                                                                                                                                                                                                                                                                                                                                     |
+| 值欄              | 非 `id` 時只能是文字欄位(依值取回以字串等值比對):宣告的預設值欄在啟動時驗,定義裡的 `valueField` 由檢查器擋(`LOOKUP_UNKNOWN_FIELD`),設計器的值欄下拉也只列文字欄位                                                                                                                                                                                                                                                                                                                                |
 
 驗收夾具:`apps/api/src/test-support/project-fixture/project-fixture-lookup.ts`(`project_fixture_item`、`project_fixture_code`,只存在於測試,測試以它頂替 `project/lookup-providers.ts`)。
 
@@ -343,7 +383,7 @@
 
 `modules.settings.list = { columns: [ { kind: "slot" | "field", key, formKey?, width, order } ], builtin: { form, status, createdBy } }`,root 整份覆蓋(`setModuleListColumns`,`form-design/module-list-columns.service.ts`)。
 
-- 寫入時驗:摘要槽 key 只能是 `title` / `date` / `amount`;表單欄位要存在於該模組**共用表單**目前版本,且在那些版本裡都**不是受保護欄位**(`formKey` 給了就只看那一張,沒給就看模組內全部);欄寬 40–2000;同一欄不能重複;`builtin` 三個鍵都要是 boolean。空陣列 = 清掉配置、回前端預設欄。
+- 寫入時驗:摘要槽 key 只能是 `title` / `date` / `amount` / `serialNo`(單號,讀 `form_submissions.serialNo`);表單欄位要存在於該模組**共用表單**目前版本,且在那些版本裡都**不是受保護欄位**(`formKey` 給了就只看那一張,沒給就看模組內全部);欄寬 40–2000;同一欄不能重複;`builtin` 三個鍵都要是 boolean。空陣列 = 清掉配置、回前端預設欄。
 - 定義檢查器讀它出 `LIST_COLUMN_MISSING` 警告;表單改版後引用到不存在的欄位不自動清,前端顯示「—」。
 - `builtin`:內建欄「表單 / 狀態 / 建立者」各自顯不顯示;沒存過(或某個鍵不是 boolean)= 顯示(`listBuiltinColumnsOf`)。
 - 表單欄位欄的表頭讀該表單**目前版本**的定義(`moduleForms` 的 `currentVersion`;沒有資料列也顯示欄位名,欄位沒限定表單時取第一張有該欄位的),找不到再看這一頁資料列綁的版本,最後才顯示 key。
@@ -452,14 +492,14 @@ GraphQL 文件:`packages/graphql/src/documents/base/forms.graphql`(設計、升�
 
 **設計端**(`@RequirePermission` 守端點,「是不是自己的表單 / 站在哪裡」在 service):`forms`、`form`、`formVersion(formKey, version?)`(省略 = 草稿)、`formVersions`、`validateFormVersion`、`previewFormVersion`(兩者是 query,不落庫)、`createForm`、`updateForm`、`forkForm`、`createFormVersionDraft`、`saveFormVersionDraft`、`deleteFormVersionDraft`、`publishFormVersion`、`retireCurrentVersion`、`assignFormToTenants`、`revokeFormFromTenant`、`setTenantFormEnabled`、`retiredFormPermissions`、`deleteRetiredPermission`、`setModuleListColumns`(`system.forms.edit` + 站在根組織)。`moduleListColumns(moduleKey)` 給該模組的使用者讀(有 view / create / edit 任一)。
 
-**執行端**(模組是執行期的,service 依該模組的 `view` / `create` / `edit` / `delete` 判,錯誤與 `@RequirePermission` 同一種):`moduleForms(moduleKey)`、`formRuntimeVersion(formKey, version)`、`formSubmissions`、`formSubmission(id, revision?)`、`formSubmissionAttachmentUrl(id, fieldKey, revision?)`、`createFormDraft`、`createAndSubmitFormSubmission`、`saveFormDraft`、`submitFormSubmission`、`updateFormSubmission`、`deleteFormSubmission`、`formLookup`、`formLookupRecord`、`formFieldOptions`、`formUpgradePlan(formKey, targetVersion)` / `upgradeFormSubmissions`(模組 `edit`)。`FormSubmissionModel.revisions` 是 field resolver(只有修訂紀錄跳窗查)。綁了審核流程的表單另有 `withdrawSubmission`、`voidSubmission`、`copySubmissionToDraft`(規則見 [workflows](./workflows.md))。
+**執行端**(模組是執行期的,service 依該模組的 `view` / `create` / `edit` / `delete` 判,錯誤與 `@RequirePermission` 同一種):`moduleForms(moduleKey)`、`formRuntimeVersion(formKey, version)`、`formSubmissions`、`formSubmission(id, revision?)`、`formSubmissionAttachmentUrl(id, fieldKey, revision?)`、`createFormDraft`、`createAndSubmitFormSubmission`、`saveFormDraft`、`submitFormSubmission`、`updateFormSubmission`、`deleteFormSubmission`、`formLookup`、`formLookupRecord`、`formFieldOptions`、`formVoidReasonOptions(formKey)`(作廢原因的選項,守門同 `formFieldOptions` 的已發布版;見[作廢原因](#作廢原因))、`formUpgradePlan(formKey, targetVersion)` / `upgradeFormSubmissions`(模組 `edit`)。`FormSubmissionModel.revisions` 是 field resolver(只有修訂紀錄跳窗查)。綁了審核流程的表單另有 `withdrawSubmission`、`voidSubmission`、`copySubmissionToDraft`(規則見 [workflows](./workflows.md))。
 
 **匯出專案設定**:`exportFormSeed(input: { formKey, version, revision, changelog })`(query)回 `ExportFormSeedPayload { fileName, source }` —— 把共用表單的指名版本輸出成可直接登記進專案種子的 TypeScript(`@repo/domain/seed` 的 `serializeSeedSet`;檔名 `<formKey>.<revision>.seed.ts`)。唯讀:不寫資料庫、不留稽核、不建安裝紀錄。
 
 - 守門:端點擋 `system.forms.view`,其餘在 `form-design/form-seed-export.service.ts` —— `view` + `edit`(缺任一 → `FORBIDDEN`)、站在根組織(否則 `FORBIDDEN` + `ROOT_ONLY`)、共用表單(租戶的客製表單在根組織視角一律 `NOT_FOUND`)。
 - `version`:必填,必須是**已發布**的那一版,不以目前版本代替。不存在(草稿沒有版號,指不到)→ `NOT_FOUND`;已退役 → `VALIDATION_FAILED` + `fields: ["version"]`。
 - `revision`、`changelog`:都必填,沒有缺席 / `null` 的語意。`revision` 的格式是 `@repo/domain/seed` 的 `DEFINITION_REVISION_PATTERN`;`changelog` 去掉空白後不可為空(內容原樣輸出,不修剪)。不符 → `VALIDATION_FAILED` + `fields`(`revision` / `changelog`)。
-- 內容是設計端的完整版本,不是 `formRuntimeVersion` 依欄位級權限遮過的投影:`key`、`moduleKey`、身分上目前的 `name`、`tabLabelTemplate` 與 `allowDraft`(只在關著時輸出 `false`)、該版的 `fields` / `layout` / `summaryMap` / `prefills`,`desiredStatus` 固定 `published`。不含資料庫 id、版號、時間、發布者、擁有組織、分派與綁定。
+- 內容是設計端的完整版本,不是 `formRuntimeVersion` 依欄位級權限遮過的投影:`key`、`moduleKey`、身分上目前的 `name`、`tabLabelTemplate` 與 `allowDraft`(只在關著時輸出 `false`)、`serial` / `voidReasonCategoryKey`(有設才輸出)、該版的 `fields` / `layout` / `summaryMap` / `prefills`,`desiredStatus` 固定 `published`。不含資料庫 id、版號、時間、發布者、擁有組織、分派與綁定。
 - 可攜性由 `validatePortableDefinition` 檢查(規則正本 `packages/domain/src/seed/portable-definition.ts`),依賴目錄取自這個環境(`form-design/seed-export-catalog.service.ts`):`engine = form` 的模組、seed 宣告的欄位類別與它的全域種子選項、有目前版本的共用表單(內容取目前版本)。有任何一筆不過就整份不輸出 → `VALIDATION_FAILED` + `fields: ["definition"]` + `issues`(`PortableIssue[]`:`{ code, message, path }`;`path` 是宣告內的位置,如 `definition.fields.3.default.value`,`message` 是給設計者看的繁中修正說明)。
 - 前端的顯示條件(守門仍以 api 為準):`FormModel.isShared && abilities.canEdit`,且只在目前發布的那一版顯示 —— 共用表單只有站在根組織的人 `canEdit`,所以不另開一個 ability。
 
@@ -475,7 +515,8 @@ GraphQL 文件:`packages/graphql/src/documents/base/forms.graphql`(設計、升�
 input 欄位的缺席 / `null`:
 
 - `SetModuleListColumnsInput.builtin`:缺席 / `null` = 保留目前存的(沒存過 = 全開);有給就三個開關一起送(`form` / `status` / `createdBy`)。`ModuleListColumnsPayload.builtin` 一定有值(沒存過 = 全 `true`)。
-- `UpdateFormInput.name`:缺席或 `null` = 不動。`tabLabelTemplate`:缺席 = 不動、`null` 或空字串 = 清空(改回模組層模板)。`allowDraft`:缺席或 `null` = 不動。
+- `UpdateFormInput.name`:缺席或 `null` = 不動。`tabLabelTemplate`:缺席 = 不動、`null` 或空字串 = 清空(改回模組層模板)。`allowDraft`:缺席或 `null` = 不動。`serial`:缺席 = 不動、`null` = 不給號(已給的號不收回)。`voidReasonCategoryKey`:缺席 = 不動、`null` 或空白 = 清空(作廢理由自由填寫)。
+- `VoidSubmissionInput`:`reasonKey` 缺席 / `null` = 沒選(表單設了作廢原因類別時必填);`reasonNote` 必填(可為空字串:設了類別且選一般選項時),規則見[作廢原因](#作廢原因)。
 - `SubmitFormSubmissionInput.values`:缺席 / `null` = 以存的值送出;有值 = 畫面上的整張表單狀態(語意同 `SaveFormDraftInput.values`),與送出同一個交易寫入。
 - `CreateFormVersionDraftInput.baseVersion`:缺席 / `null` = 空白草稿。
 - `RetireCurrentVersionInput.expectedVersion`:必填,呼叫端當時看到的目前版本號。

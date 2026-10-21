@@ -248,6 +248,7 @@ deploy / reset 的雲端目標與看板識別不寫在 workflow 裡,正本是兩
 | workflow                                           | 觸發                                             | 做什麼                                                                                                                                                              |
 | -------------------------------------------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Reset DB**(`reset-db.yml`)                       | 只能手動;三環境皆須明確確認                      | 資料庫還原(`data` / `full`);操作見三、「資料庫還原」,規則正本是 ADR-0002「還原(reset)」                                                                             |
+| **Demo**(`demo.yml`)                               | 只能手動;三環境皆須明確確認                      | 建立 / 補齊示範機構(`create`;`purge` / `rebuild` 尚未提供);操作見三、「示範資料(demo)」                                                                             |
 | **E2E**(`e2e.yml`)                                 | 只能手動,不在 ci.yml 內                          | 權限劇本 E2E(`gh workflow run e2e.yml --ref <分支>`,可加 `-f grep="劇本 7"`);資料庫由 harness 自起單一成員 replica set(拋棄式),不碰任何環境與 Secret;時機見 TEST-05 |
 | **Docs**(`docs.yml`)                               | PR 與三分支 push,只在改到 `docs/**` 或任何 md 時 | `pnpm run format:check`                                                                                                                                             |
 | **Project Status**(`project-status.yml`)           | issue / PR 事件                                  | 自動移看板卡,規則見 `docs/agents/issue-tracker.md`「看板」                                                                                                          |
@@ -416,8 +417,82 @@ RESET_ALLOW_ENV=dev MONGODB_URI="mongodb://127.0.0.1:27017/project-dev?directCon
 - 只處理資料庫,不部署 Cloud Run、不清除 GCS 物件。流程引擎每次依資料庫讀取版本,重建同 key/版號後不會沿用程序中的舊定義。
 - `data` 保留根初始帳號與密碼;`full` 重建帳號,密碼使用該環境 Secret 的當前值。
 - job 掛在所選 GitHub environment 下,沿用該環境的審核設定。
+- **重建後灌示範資料**(勾選項 `seed_demo`,預設不勾):勾了就在 reset 成功後接著跑 `demo --mode=create`(見下一節)。確認字串不另外輸入:由這次 reset 的確認字串換頭尾得出 `demo:<environment>:<資料庫名>:create`(reset 已核對過資料庫名,workflow 仍不解析 URI),指令端再以 api 回報的資料庫名比對一次。不勾時和以前一樣,只有底座基本資料(最上層組織、租戶管理員、欄位類別)。CLI:再加 `-f seed_demo=true`。`data` 模式保留 root 的現有密碼:與該環境 `root-admin-password*` 的值不同時,灌示範資料會停在 root 登入那一步(reset 本身已完成);先把 root 密碼與 Secret 對齊,再跑 Demo workflow 補上示範資料。
 
 正本:`.github/workflows/reset-db.yml`、`deploy/project/cloud.json`、`apps/db-migrator/src/reset/`、ADR-0002「還原(reset)」。
+
+### 示範資料(demo)
+
+demo 指令在指定環境建立一個標「示範」的機構(租戶頂層)與整套示範資料,給測試與展示用。示範資料是業務資料,不進一般 seed(ADR-0002);內容由專案登記(專案來源 `seeds/project/registry.ts` 匯出 `projectDemoSource`,經固定入口 `seeds/registry.ts` 交給指令;沒有登記的專案執行時直接停下)。dev、staging、production 都可執行,安全規則同 reset。
+
+| mode      | 結果                                                                           |
+| --------- | ------------------------------------------------------------------------------ |
+| `create`  | 建立 / 補齊示範機構;冪等,重跑只補缺的帳號與資料,不會把已改過的密碼或資料改回去 |
+| `purge`   | 清空示範機構(見下方「示範機構清空 / 重建」)                                    |
+| `rebuild` | `purge` + `create`                                                             |
+
+**全程走 api**:指令不連資料庫,只呼叫 `--api-url` 那個 api 的 GraphQL,權限照常檢查、操作紀錄照常寫:
+
+1. 以平台管理員(`ROOT_ADMIN_ACCOUNT`,密碼見下)登入,讀 api **自己回報**的資料庫名(`provisionTarget`,根組織專屬、只回資料庫名)並比對確認字串。到這裡還沒有任何寫入
+2. 以 `provisionTenant`(`demo: true`)建立示範機構與首任租戶管理員 `<基底信箱>+<別名>@…`(密碼 = 示範密碼,只存雜湊;不寄啟用信、首登不強改)。以**租戶短碼 + 「示範」標記**找回:同短碼且標「示範」的機構就沿用;同短碼卻沒有「示範」標記 → 拒絕,一筆都不寫
+3. 以那位首任租戶管理員登入,交給專案的 `populate` 建出其餘內容(內容與步驟見專案的開通文件)
+
+`purge` 只做第 1 步與清空;`rebuild` 在第 1 步之後先讀齊示範密碼與基底信箱(缺值就停在一筆都沒刪的時候),再清空、再做第 2、3 步。
+
+「示範」標記(`orgs.isDemo`)只在開通時設定,之後沒有端點改得了它,真實租戶不會被當成示範機構。
+
+在 Actions → **Demo** 選擇執行版本、`environment`、`mode`,並手動填入 `confirmation`:
+
+```text
+demo:<environment>:<實際資料庫名>:<create|purge|rebuild>
+```
+
+CLI 範例:
+
+```bash
+gh workflow run Demo --ref dev -f environment=dev -f mode=create -f confirmation="demo:dev:project-dev:create"
+```
+
+- **確認字串綁實際寫入的資料庫**:環境與模式兩段先比對(還沒呼叫 api);資料庫名段比對的是 api 回報的名稱,所以確認字串正確、`--api-url` 卻指到別的環境時,資料庫名段不符,不執行。打錯一個字就不執行。`DEMO_ALLOW_ENV` 必須包含所選環境,未設即拒絕(workflow 只放這次選的環境)。示範機構名稱固定,不放進確認字串。不需要 `MONGODB_URI`
+- **機密**:示範密碼與基底信箱在 Secret Manager `demo-password*`、`demo-email-base*`(與 `root-admin-password*` 同一處,三環境各一把),名稱登記在 `deploy/project/cloud.json` 各環境的 `secrets.demoPassword` / `secrets.demoEmailBase`(可省略;省略的環境跑 Demo 會在認證前停下,Reset DB 勾選灌示範資料時也是)。Secret 由使用者照[新增一個 Secret Manager 機密的標準步驟](#新增一個-secret-manager-機密的標準步驟)在自己的終端機建立,授權讀取者是部署 SA(`gcp.deployServiceAccount`)。workflow 讀出後 `::add-mask::`,經標準輸入以管線交給指令,不放進環境變數
+- **root 密碼**:`ROOT_ADMIN_PASSWORD` 有設就用(workflow 由 Secret 帶入);沒設就從標準輸入讀(本機在終端機輸入,不回顯)
+- **信箱**:示範帳號的信箱一律由基底信箱加 `+` 別名產生,帳號同信箱;repo 不寫任何真實信箱或密碼。輸出不印信箱(只印別名)
+- `--api-url` 必填:該環境的 api origin(workflow 帶 `cloud.json` 的 `apiUrl`)
+
+本機執行:機密都在終端機輸入(依序:平台管理員密碼、示範帳號密碼、基底信箱;不回顯),不放進指令列或環境變數:
+
+```bash
+DEMO_ALLOW_ENV=dev ROOT_ADMIN_ACCOUNT=<root 帳號> \
+  pnpm --filter @repo/db-migrator demo --environment=dev --mode=create --confirm=demo:dev:project-dev:create --api-url=https://api-dev.example.com
+```
+
+- 一般部署與 `update` 不跑示範資料。
+- 示範機構的首任租戶管理員密碼若已被改過,`create` 在以他登入那一步停下;由平台管理員重設成示範密碼後重跑。
+- 新建的示範帳號照一般使用者規則:首登要改密碼。改過的密碼重跑不會改回去。
+
+#### 示範機構清空 / 重建
+
+`--mode=purge` 以平台管理員呼叫 api 的 `purgeDemoTenant`(根組織專屬,權限 `system.org-manager.tenant-ops.purge-demo`),把示範機構整個抹掉,讓 `rebuild` 從頭建一份乾淨的:
+
+- **只接受標「示範」的機構**:以專案示範資料固定的租戶短碼找根組織底下的租戶頂層。找不到 → 什麼都不做;找到卻沒有「示範」標記 → `FORBIDDEN`,一筆都不刪。確認字串與 `create` 同一套規則(`demo:<environment>:<資料庫名>:purge`,資料庫名段比對 api 回報的名稱)
+- **刪除範圍**:所有帶這個租戶 id 的資料,**包括只能新增的帳本**(稽核紀錄、流水、事件;清空 = 當作沒發生過);依組織或使用者歸屬的資料(欄位、客製表單與它的版本、會員、token、個人偏好);租戶頂層與它所有下層組織;它擁有的角色;**只屬於這個機構的使用者**硬刪(同一組帳號之後能重新建立),**也屬於其他組織的使用者只移除**在這個機構的所屬與角色;資料裡引用的檔案(商標、附件等本 API 簽出的物件路徑)在交易提交後刪掉,個別失敗只記 log
+- **一個交易**:刪除與稽核 `org.purge-demo`(記在根組織,不在刪除範圍)同一個交易,中途失敗全部回復
+- 不刪全平台共用的定義與紀錄(模組、權限、欄位類別、資料範圍設定、受管定義的安裝紀錄、排程紀錄);根組織做的開通紀錄也留著
+
+**刪除範圍用登記制**:資料層登記的每一張 collection 都要宣告刪法 —— 底座的在 `apps/api/src/database/base/tenant-purge.ts`,專案的在 `apps/api/src/project/database/tenant-purge.ts`,規則與驗證在 `apps/api/src/database/tenant-purge.ts`:
+
+| 刪法        | 用在                                                                                        |
+| ----------- | ------------------------------------------------------------------------------------------- |
+| `tenantId`  | 帶 `tenantId` 欄的表(**一律用這種**,不能改用別的)                                           |
+| `match`     | 依欄位歸屬:值是這個租戶的組織、會被刪的使用者,或另一張表這次刪掉的文件(例:表單版本跟著表單) |
+| `dedicated` | 只給組織、使用者、角色、核心關聯,由清空服務自己算範圍                                       |
+| `keep`      | 不是租戶資料,不刪;要寫理由                                                                  |
+
+會存上傳物件路徑的欄位(寫入端用 `UploadPurpose` / `isOwnedUploadPath` 驗的欄位,例:表單提交的 `values` / `revisions`)在登記加 `files`:刪除前只讀這些欄位(與後面步驟要對的值)找檔案,沒宣告的表不讀;組織的商標由清空服務自己處理。
+
+新增資料表時同 PR 加一筆登記;沒登記、或帶 `tenantId` 卻不是依 `tenantId` 刪,`apps/api/src/database/tenant-purge.test.ts` 的完整性測試就失敗,執行時也會在刪任何東西之前停下。
+
+正本:`.github/workflows/demo.yml`、`.github/workflows/reset-db.yml`(勾選項)、`apps/db-migrator/src/demo/`、`apps/api/src/orgs/demo-tenant-purge.service.ts`、`apps/api/src/database/tenant-purge.ts`;示範資料放專案的 `apps/db-migrator/seeds/project/demo/`(STRUCT-12)。
 
 ### 觀測與維運
 

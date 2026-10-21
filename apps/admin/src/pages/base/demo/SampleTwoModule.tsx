@@ -13,6 +13,10 @@ import {
 import { Tag } from "@repo/ui/tag";
 import { Typography } from "@repo/ui/typography";
 
+import {
+  ShareOrgsField,
+  ShareOrgsText,
+} from "@/components/base/ShareOrgsField/ShareOrgsField";
 import type {
   DemoListFilters,
   DemoModuleConfig,
@@ -86,6 +90,15 @@ const SAMPLE_TWO_LIST_KEY_PREFIX = useDemoItemsTwoQuery
   .getKey({ input: { page: 1, pageSize: SAMPLE_TWO_PAGE_SIZE } })
   .slice(0, 1);
 
+/** 「共用給」看不看得到:新增問權限集、編輯讀 api 算好的 abilities(共用進來的一律 false)。 */
+const canShare = (
+  access: { has: (key: string) => boolean },
+  item: DemoItemTwoDetail | null,
+): boolean =>
+  item === null
+    ? access.has(SAMPLE_TWO_PERMISSIONS.edit)
+    : item.abilities.canEdit;
+
 /** 空字串 → `null`(api 的「沒填」是 null,不是空字串)。 */
 const orNull = (value: string): string | null =>
   value.trim() === "" ? null : value.trim();
@@ -130,7 +143,11 @@ const useSampleTwoSave = ({
 
   return {
     save: (values) => {
-      const fields = { name: values.name.trim(), note: orNull(values.note) };
+      const fields = {
+        name: values.name.trim(),
+        note: orNull(values.note),
+        shareOrgs: values.shareOrgs,
+      };
       if (item === null) {
         create.mutate({ input: fields });
       } else {
@@ -189,6 +206,16 @@ export const sampleTwoModule: DemoModuleConfig<
         key: "createdBy",
         render: (item, t) => item.createdBy?.name ?? t("emptyValue"),
       },
+      // 共用給(資料共用,ADR-0014);共用進來的另標「共用進來的,只能看」
+      {
+        key: "shareOrgs",
+        render: (item, t) => (
+          <>
+            <ShareOrgsText value={item.shareOrgs} />
+            {item.isShared && <Tag tone="primary" label={t("sharedIn")} />}
+          </>
+        ),
+      },
     ],
   },
 
@@ -196,11 +223,34 @@ export const sampleTwoModule: DemoModuleConfig<
     fields: [
       { key: "name", kind: "text", required: true, width: 360 },
       { key: "note", kind: "multiline", width: 480, minRows: 2 },
+      {
+        // 共用給:有修改權限的人才看得到這一欄(新增問權限集、編輯讀 api 算好的 abilities)
+        key: "shareOrgs",
+        kind: "custom",
+        mode: ({ access, item }) =>
+          canShare(access, item) ? "editable" : "hidden",
+        render: ({ values, setValue, tFields, hasError, helperText }) => (
+          <ShareOrgsField
+            label={tFields("shareOrgs")}
+            value={values.shareOrgs}
+            width={480}
+            error={hasError("shareOrgs")}
+            helperText={helperText("shareOrgs")}
+            onChange={(next) => {
+              setValue("shareOrgs", next);
+            }}
+          />
+        ),
+      },
     ],
     uploads: [],
     toValues: (item) => ({
       name: item?.name ?? "",
       note: item?.note ?? "",
+      shareOrgs: (item?.shareOrgs ?? []).map((entry) => ({
+        orgId: entry.orgId,
+        includeDescendants: entry.includeDescendants,
+      })),
     }),
     useSave: useSampleTwoSave,
     // 沒有 slots —— 對照組沒有頁面自有權限,也就沒有提示與歷程區塊

@@ -256,6 +256,7 @@ export const RoleManagerPage = () => {
           isSubmitting={removeRole.isPending}
           errorCode={actionError?.code ?? null}
           reasons={actionError?.reasons ?? []}
+          references={actionError?.references ?? []}
           onCancel={() => {
             setActionError(null);
             setDeleteRole(null);

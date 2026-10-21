@@ -37,4 +37,20 @@ export class ProvisionTenantInput {
    */
   @Field(() => [String])
   moduleKeys!: string[];
+
+  /**
+   * 開通成**示範機構**(`orgs.isDemo = true`;只有示範指令會送,`docs/deployment.md`「示範資料(demo)」)。
+   * 標記只在開通時設定,之後沒有端點改得了它。預設 false = 一般租戶。
+   */
+  @Field(() => Boolean, { nullable: true, defaultValue: false })
+  demo?: boolean | null;
+
+  /**
+   * 示範機構首任管理員的密碼(示範指令從終端機或 Secret 取得後送來,只存雜湊、不進稽核)。
+   * **只有 `demo: true` 可以給,而且必填**:一般租戶的首任管理員仍由啟用信自行設定,根組織不經手租戶密碼;
+   * 示範機構不寄啟用信、首登不強改(開通腳本接著就要以這位管理員登入)。違反 → `VALIDATION_FAILED`
+   * (`extensions.fields = ["adminInitialPassword"]`);密碼不合規則同 `createUser`。
+   */
+  @Field(() => String, { nullable: true })
+  adminInitialPassword?: string | null;
 }

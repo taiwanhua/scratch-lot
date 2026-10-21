@@ -31,7 +31,6 @@ import {
   submissionFragment,
   versionFragment,
 } from "@/test/msw/form-fixtures";
-import { formRuntimeWorld } from "@/test/msw/form-runtime-handlers";
 import { formUpgradeWorld } from "@/test/msw/form-upgrade-handlers";
 import { moduleAdminTree } from "@/test/msw/module-admin-fixtures";
 import { moduleAdminWorld } from "@/test/msw/module-manager-handlers";
@@ -78,7 +77,6 @@ import {
   autoApproveBlockedEvent,
   historyEvent,
 } from "@/test/msw/workflow-history-fixtures";
-import { workflowRuntimeWorld } from "@/test/msw/workflow-runtime-handlers";
 
 import {
   mockRoles,
@@ -86,9 +84,12 @@ import {
   modulesForView,
   orgsForView,
 } from "./mock-fixtures";
+import { MOCK_FORM_RUNTIME_SETTINGS } from "./mock-form-runtime-settings";
+import { MOCK_SHOPPING_SERIAL } from "./mock-form-serial";
 import { mockNotificationSettings } from "./mock-notification-settings";
 import { mockWorkflowDesign } from "./mock-workflow-design";
 import type { MockHandler, MockWorldOptions } from "./mock-world-source";
+import { projectForms, projectWorkflows } from "./project-form-worlds";
 import { projectMockWorld } from "./project/mock-world";
 
 /**
@@ -221,7 +222,7 @@ export const mockHandlers = ({
     // 設計器「類別」下拉的 `FieldCategories` 讓給欄位管理(共用端點,正本只留一份)
     ...withoutOperations(
       formDesignWorld({
-        forms: [formFragment()],
+        forms: [formFragment({ serial: MOCK_SHOPPING_SERIAL })],
         versions: {
           [SHOPPING_FORM_KEY]: [
             versionFragment(shoppingDefinition(), { baseVersion: 1 }),
@@ -256,7 +257,7 @@ export const mockHandlers = ({
         ] as unknown as Record<string, unknown>[],
       },
     }).handlers,
-    ...formRuntimeWorld({
+    ...projectForms(projectMockWorld, {
       moduleForms: [
         {
           key: SHOPPING_FORM_KEY,
@@ -281,10 +282,12 @@ export const mockHandlers = ({
         [`${SHOPPING_FORM_KEY}@1`]: shoppingDefinition(),
         [`${LEAVE_FORM_KEY}@1`]: leaveDefinition(),
       },
+      ...MOCK_FORM_RUNTIME_SETTINGS,
       submissions: [
-        submissionFragment(),
+        submissionFragment({ serialNo: "PU-202610-0001" }),
         submissionFragment({
           id: "sub-2",
+          serialNo: "PU-202610-0002",
           summary: { title: "牛奶", date: null, amount: "120" },
           values: { item: "牛奶", qty: "3", unit_price: "40", total: "120" },
         }),
@@ -293,7 +296,7 @@ export const mockHandlers = ({
     }).handlers,
     // 審核流程:流程管理(假資料在 `mock-workflow-design.ts`)、申請中心與詳情、阻擋清單
     ...workflowDesignWorld(mockWorkflowDesign()).handlers,
-    ...workflowRuntimeWorld(mockWorkflowRuntime()).handlers,
+    ...projectWorkflows(projectMockWorld, mockWorkflowRuntime()).handlers,
     // 印表機管理:兩台代理程式 / 印表機、三筆列印紀錄;測試列印一律印成功。
     // 組織樹由 orgWorld 提供(printingWorld 本來就不含 `OrgTree`)
     ...printingWorld().handlers,

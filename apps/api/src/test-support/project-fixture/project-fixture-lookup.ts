@@ -5,6 +5,7 @@ import { PROJECT_FIXTURE_PERMISSIONS } from "./fixtures";
 /** 測試專案登記的 lookup 來源 key(前綴 = 資料表 `project_fixture_items` 的第一段)。 */
 export const PROJECT_FIXTURE_LOOKUP_KEY = "project_fixture_item";
 export const PROJECT_FIXTURE_CODE_LOOKUP_KEY = "project_fixture_code";
+export const PROJECT_FIXTURE_SHARED_LOOKUP_KEY = "project_fixture_shared";
 
 /**
  * 測試專案的 lookup 來源(只存在於測試;測試以它頂替 `project/lookup-providers.ts` 的內容):
@@ -49,6 +50,19 @@ export const PROJECT_FIXTURE_LOOKUP_PROVIDERS: readonly LookupProviderRegistrati
         filterFields: [],
         labelField: "name",
         keywordFields: ["code"],
+      },
+      repositoryToken: ProjectFixtureItemsRepository,
+    },
+    {
+      // 依表單欄位換值的共用篩選:`sharedTo` 換成表單上的組織,只列給那個組織看得到的
+      declaration: {
+        key: PROJECT_FIXTURE_SHARED_LOOKUP_KEY,
+        name: "測試專案項目(依組織共用)",
+        permission: PROJECT_FIXTURE_PERMISSIONS.view,
+        fields: { name: { type: "text" } },
+        filterFields: ["sharedTo"],
+        sharedToFilter: "sharedTo",
+        labelField: "name",
       },
       repositoryToken: ProjectFixtureItemsRepository,
     },

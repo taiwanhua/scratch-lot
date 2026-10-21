@@ -5,6 +5,8 @@
  * modules / permissions / dataScopeTargets / 租戶管理員模板,其餘普通種子照宣告交付。
  * `base/` 不 import `project/`;專案的初值由組裝入口讀進來、驗過再傳給底座工廠。
  */
+import type { PortableLookupProvider } from "@repo/domain/seed";
+
 import { SeedCompositionError } from "../../src/seed/seed-composition";
 import type { SeedRegistry } from "../../src/seed/seed-declaration";
 import type {
@@ -20,6 +22,12 @@ export interface SeedSource {
    * (modules、permissions、data_scope_targets、租戶管理員模板的綁定)。
    */
   seeds: SeedRegistry;
+  /**
+   * 這個來源登記、可以跟著共用定義交付的 lookup 來源(選填):來源 key → 可用的固定條件與值
+   * (`@repo/domain/seed` 的 `PortableLookupProvider`)。宣告了,受管表單才能引用它;沒宣告的照舊不可攜。
+   * 來源本身由 api 的 lookup 登記提供(專案:`apps/api/src/project/lookup-providers.ts`),key 要一致。
+   */
+  portableLookupProviders?: Readonly<Record<string, PortableLookupProvider>>;
 }
 
 /** 根組織的專案初值:結構、key 與初始值欄位政策由底座定義,專案只給這三個值。 */

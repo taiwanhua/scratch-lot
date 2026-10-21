@@ -1,0 +1,116 @@
+# 進貨單(模組 purchasing.purchase,正本 docs/modules/project/purchasing.md「進貨單」)。
+# 進貨單本身的新增 / 存草稿 / 送出 / 審核 / 作廢走表單引擎;收付走 accounts.graphql 的收付端點。
+
+fragment LotteryPurchaseReceivingFields on LotteryPurchaseReceiving {
+  submissionId
+  canReceive
+  receivedCount
+  totalCount
+  groups {
+    gameId
+    gameCode
+    gameName
+    unitPrice
+    requestedBooks
+    receivedBooks
+    subtotal
+    rows {
+      rowId
+      bookNo
+      lastTicketNo
+      tickets
+      bookPrice
+      rate
+      amount
+      received
+      receivedAt
+    }
+  }
+}
+
+query LotteryPurchaseOptions($orgId: ID!) {
+  lotteryPurchaseOptions(orgId: $orgId) {
+    dealers {
+      id
+      label
+    }
+    trustees {
+      dealerId
+      id
+      label
+    }
+    accounts {
+      id
+      label
+    }
+    requisitions {
+      id
+      serialNo
+      lines {
+        gameId
+        books
+      }
+    }
+    games {
+      id
+      gameCode
+      name
+      unitPrice
+      ticketsPerBook
+      bookPrice
+      defaultRate
+    }
+    allocations {
+      gameId
+      plannedBooks
+      givenBooks
+      inTransitBooks
+    }
+  }
+}
+
+query LotteryPurchaseReceiving($submissionId: ID!) {
+  lotteryPurchaseReceiving(submissionId: $submissionId) {
+    ...LotteryPurchaseReceivingFields
+  }
+}
+
+query LotteryPurchaseProgress($purchaseIds: [ID!]!) {
+  lotteryPurchaseProgress(purchaseIds: $purchaseIds) {
+    purchaseId
+    receivedCount
+    totalCount
+    settlementKind
+    settlementAmount
+    inSettlement
+  }
+}
+
+query LotteryDealerPurchases($dealerId: ID!) {
+  lotteryDealerPurchases(dealerId: $dealerId) {
+    purchaseId
+    serialNo
+    branchName
+    purchaseDate
+    selfPurchase
+    trusteeName
+    books
+    purchaseTotal
+    status
+  }
+}
+
+mutation ReceiveLotteryPurchaseBook($input: ReceiveLotteryPurchaseBookInput!) {
+  receiveLotteryPurchaseBook(input: $input) {
+    rowId
+    receiving {
+      ...LotteryPurchaseReceivingFields
+    }
+  }
+}
+
+mutation NotifyLotteryPurchaseWrongStore(
+  $input: ReceiveLotteryPurchaseBookInput!
+) {
+  notifyLotteryPurchaseWrongStore(input: $input)
+}

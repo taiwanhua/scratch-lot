@@ -29,6 +29,13 @@ export type Scalars = {
   JSONObject: { input: Record<string, unknown>; output: Record<string, unknown>; }
 };
 
+export type AddMyScheduleDayOffsInput = {
+  date: Scalars['String']['input'];
+  kind: Scalars['String']['input'];
+  note?: InputMaybe<Scalars['String']['input']>;
+  slots?: InputMaybe<Array<ScheduleDayOffSlotInput>>;
+};
+
 export type AddOrgMembersInput = {
   orgId: Scalars['ID']['input'];
   userIds: Array<Scalars['ID']['input']>;
@@ -38,6 +45,25 @@ export type AddOrgMembersPayload = {
   __typename?: 'AddOrgMembersPayload';
   addedUserIds: Array<Scalars['ID']['output']>;
   skippedUserIds: Array<Scalars['ID']['output']>;
+};
+
+export type AddScheduleDayOffsOnBehalfInput = {
+  date: Scalars['String']['input'];
+  kind: Scalars['String']['input'];
+  orgId?: InputMaybe<Scalars['ID']['input']>;
+  reason?: InputMaybe<Scalars['String']['input']>;
+  reasonNote?: InputMaybe<Scalars['String']['input']>;
+  slots?: InputMaybe<Array<ScheduleDayOffSlotInput>>;
+  userId: Scalars['ID']['input'];
+};
+
+export type AddScheduleStaffInput = {
+  userIds: Array<Scalars['ID']['input']>;
+};
+
+export type AddScheduleStaffPayload = {
+  __typename?: 'AddScheduleStaffPayload';
+  items: Array<ScheduleStaffRow>;
 };
 
 export type AddStepAssigneeInput = {
@@ -80,6 +106,24 @@ export type ApplyCenterCounts = {
   __typename?: 'ApplyCenterCounts';
   myApplications: Scalars['Int']['output'];
   myTasks: Scalars['Int']['output'];
+};
+
+export type ApplyScheduleTemplatesInput = {
+  changeReason?: InputMaybe<ScheduleChangeReasonInput>;
+  dates: Array<Scalars['String']['input']>;
+  kind: Scalars['String']['input'];
+  month: Scalars['String']['input'];
+  orgId?: InputMaybe<Scalars['ID']['input']>;
+  templateIds?: InputMaybe<Array<Scalars['ID']['input']>>;
+  weekTemplateId?: InputMaybe<Scalars['ID']['input']>;
+};
+
+export type ApplyScheduleTemplatesPayload = {
+  __typename?: 'ApplyScheduleTemplatesPayload';
+  createdCount: Scalars['Int']['output'];
+  filledDays: Scalars['Int']['output'];
+  skippedDays: Scalars['Int']['output'];
+  skippedSlots: Scalars['Int']['output'];
 };
 
 export type AssignFormToTenantsInput = {
@@ -139,6 +183,12 @@ export type ChangePasswordInput = {
 export type ChangePasswordPayload = {
   __typename?: 'ChangePasswordPayload';
   success: Scalars['Boolean']['output'];
+};
+
+export type ClearScheduleAutoAssignmentsPayload = {
+  __typename?: 'ClearScheduleAutoAssignmentsPayload';
+  deletedEntryIds: Array<Scalars['ID']['output']>;
+  removedCount: Scalars['Int']['output'];
 };
 
 export type CopySubmissionToDraftInput = {
@@ -206,6 +256,13 @@ export type CopyUserOrgRolesRoleDiff = {
   removed: Array<CopyUserOrgRolesRole>;
 };
 
+export type CorrectLotterySkippedTicketsInput = {
+  bookId: Scalars['ID']['input'];
+  reasonKey: Scalars['String']['input'];
+  reasonNote?: InputMaybe<Scalars['String']['input']>;
+  ticketNos: Array<Scalars['String']['input']>;
+};
+
 export type CreateAndSubmitFormSubmissionInput = {
   clientRequestId: Scalars['String']['input'];
   formKey: Scalars['ID']['input'];
@@ -232,6 +289,7 @@ export type CreateDemoItemOneInput = {
 export type CreateDemoItemTwoInput = {
   name: Scalars['String']['input'];
   note?: InputMaybe<Scalars['String']['input']>;
+  shareOrgs?: InputMaybe<Array<ShareOrgInput>>;
 };
 
 export type CreateFieldCategoryInput = {
@@ -264,6 +322,89 @@ export type CreateFormInput = {
 export type CreateFormVersionDraftInput = {
   baseVersion?: InputMaybe<Scalars['Int']['input']>;
   formKey: Scalars['ID']['input'];
+};
+
+export type CreateLotteryBankAccountInput = {
+  accountName: Scalars['String']['input'];
+  accountNo: Scalars['String']['input'];
+  bankCode: Scalars['String']['input'];
+  branchName?: InputMaybe<Scalars['String']['input']>;
+  note?: InputMaybe<Scalars['String']['input']>;
+  openingBalance: Scalars['Int']['input'];
+  openingDate: Scalars['DateTime']['input'];
+  shareOrgs?: InputMaybe<Array<ShareOrgInput>>;
+};
+
+export type CreateLotteryCashPointInput = {
+  name: Scalars['String']['input'];
+  note?: InputMaybe<Scalars['String']['input']>;
+  order?: InputMaybe<Scalars['Int']['input']>;
+  orgId: Scalars['ID']['input'];
+  positionKey: Scalars['String']['input'];
+  printerId?: InputMaybe<Scalars['ID']['input']>;
+};
+
+export type CreateLotteryDealerContactInput = {
+  birthday?: InputMaybe<Scalars['DateTime']['input']>;
+  email?: InputMaybe<Scalars['String']['input']>;
+  mailingAddress?: InputMaybe<Scalars['String']['input']>;
+  mobile?: InputMaybe<Scalars['String']['input']>;
+  name?: InputMaybe<Scalars['String']['input']>;
+  nationalId?: InputMaybe<Scalars['String']['input']>;
+  note?: InputMaybe<Scalars['String']['input']>;
+  phone?: InputMaybe<Scalars['String']['input']>;
+  residentialAddress?: InputMaybe<Scalars['String']['input']>;
+  residentialSameAsMailing?: InputMaybe<Scalars['Boolean']['input']>;
+  roles?: InputMaybe<Array<LotteryContactRole>>;
+  status?: InputMaybe<LotteryContactStatus>;
+};
+
+export type CreateLotteryDealerInput = {
+  agentIds?: InputMaybe<Array<Scalars['ID']['input']>>;
+  birthday?: InputMaybe<Scalars['DateTime']['input']>;
+  businessAddress?: InputMaybe<Scalars['String']['input']>;
+  coSalesDealerId?: InputMaybe<Scalars['ID']['input']>;
+  email?: InputMaybe<Scalars['String']['input']>;
+  introducerIds?: InputMaybe<Array<Scalars['ID']['input']>>;
+  lastPurchaseBaseDate?: InputMaybe<Scalars['DateTime']['input']>;
+  lastSelfPurchaseBaseDate?: InputMaybe<Scalars['DateTime']['input']>;
+  licenseApprovedAt?: InputMaybe<Scalars['DateTime']['input']>;
+  licenseExpiresAt?: InputMaybe<Scalars['DateTime']['input']>;
+  licenseNo?: InputMaybe<Scalars['String']['input']>;
+  mailingAddress?: InputMaybe<Scalars['String']['input']>;
+  mobile?: InputMaybe<Scalars['String']['input']>;
+  name?: InputMaybe<Scalars['String']['input']>;
+  nationalId?: InputMaybe<Scalars['String']['input']>;
+  note?: InputMaybe<Scalars['String']['input']>;
+  phone?: InputMaybe<Scalars['String']['input']>;
+  rentCycle?: InputMaybe<LotteryRentCycle>;
+  rentDueDay?: InputMaybe<Scalars['Int']['input']>;
+  rentFee?: InputMaybe<Scalars['Int']['input']>;
+  rentStartMonth?: InputMaybe<Scalars['Int']['input']>;
+  residentialAddress?: InputMaybe<Scalars['String']['input']>;
+  residentialSameAsMailing?: InputMaybe<Scalars['Boolean']['input']>;
+  shareOrgs?: InputMaybe<Array<ShareOrgInput>>;
+  status?: InputMaybe<LotteryDealerStatus>;
+  storeName?: InputMaybe<Scalars['String']['input']>;
+  storeOrgId?: InputMaybe<Scalars['ID']['input']>;
+  storePhone?: InputMaybe<Scalars['String']['input']>;
+  terminalNo?: InputMaybe<Scalars['String']['input']>;
+  trusteeIds?: InputMaybe<Array<Scalars['ID']['input']>>;
+  type: LotteryDealerType;
+};
+
+export type CreateLotteryGameInput = {
+  claimDeadline?: InputMaybe<Scalars['DateTime']['input']>;
+  color?: InputMaybe<Scalars['String']['input']>;
+  defaultRate: Scalars['Int']['input'];
+  discontinuedAt?: InputMaybe<Scalars['DateTime']['input']>;
+  gameCode: Scalars['String']['input'];
+  launchedAt?: InputMaybe<Scalars['DateTime']['input']>;
+  name: Scalars['String']['input'];
+  note?: InputMaybe<Scalars['String']['input']>;
+  status?: InputMaybe<Scalars['String']['input']>;
+  ticketsPerBook: Scalars['Int']['input'];
+  unitPrice: Scalars['Int']['input'];
 };
 
 export type CreateMyDelegationInput = {
@@ -335,6 +476,20 @@ export type CreateWorkflowInput = {
 export type CreateWorkflowVersionDraftInput = {
   baseVersion?: InputMaybe<Scalars['Int']['input']>;
   workflowKey: Scalars['ID']['input'];
+};
+
+export type CustomizeScheduleAutoRunInput = {
+  conditions: Array<ScheduleAutoRunConditionInput>;
+  orgId?: InputMaybe<Scalars['ID']['input']>;
+};
+
+export type CustomizeScheduleRuleInput = {
+  enabled?: InputMaybe<Scalars['Boolean']['input']>;
+  key: Scalars['String']['input'];
+  level?: InputMaybe<Scalars['String']['input']>;
+  order?: InputMaybe<Scalars['Int']['input']>;
+  orgId?: InputMaybe<Scalars['ID']['input']>;
+  value?: InputMaybe<Scalars['JSONObject']['input']>;
 };
 
 /** 多條規則命中同一操作者時的頂層合成:OR = 聯集(命中越多看得越多)、AND = 交集 */
@@ -451,6 +606,21 @@ export type DeleteFormVersionDraftInput = {
   formKey: Scalars['ID']['input'];
 };
 
+export type DeleteLotteryBankAccountPayload = {
+  __typename?: 'DeleteLotteryBankAccountPayload';
+  id: Scalars['ID']['output'];
+};
+
+export type DeleteLotteryGameInput = {
+  id: Scalars['ID']['input'];
+};
+
+export type DeleteLotteryGamePayload = {
+  __typename?: 'DeleteLotteryGamePayload';
+  deletedId: Scalars['ID']['output'];
+  success: Scalars['Boolean']['output'];
+};
+
 export type DeleteMyDelegationInput = {
   id: Scalars['ID']['input'];
 };
@@ -458,6 +628,10 @@ export type DeleteMyDelegationInput = {
 export type DeleteMyDelegationPayload = {
   __typename?: 'DeleteMyDelegationPayload';
   id: Scalars['ID']['output'];
+};
+
+export type DeleteMyScheduleDayOffInput = {
+  id: Scalars['ID']['input'];
 };
 
 export type DeleteOrgInput = {
@@ -484,6 +658,60 @@ export type DeleteRetiredPermissionPayload = {
 
 export type DeleteRoleInput = {
   id: Scalars['ID']['input'];
+};
+
+export type DeleteScheduleCalendarDayInput = {
+  id: Scalars['ID']['input'];
+  orgId?: InputMaybe<Scalars['ID']['input']>;
+};
+
+export type DeleteScheduleCalendarDayPayload = {
+  __typename?: 'DeleteScheduleCalendarDayPayload';
+  id: Scalars['ID']['output'];
+};
+
+export type DeleteScheduleDayOffOnBehalfInput = {
+  id: Scalars['ID']['input'];
+  orgId?: InputMaybe<Scalars['ID']['input']>;
+  reason?: InputMaybe<Scalars['String']['input']>;
+  reasonNote?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type DeleteScheduleDayOffPayload = {
+  __typename?: 'DeleteScheduleDayOffPayload';
+  id: Scalars['ID']['output'];
+};
+
+export type DeleteScheduleDemandInput = {
+  changeReason?: InputMaybe<ScheduleChangeReasonInput>;
+  id: Scalars['ID']['input'];
+  orgId?: InputMaybe<Scalars['ID']['input']>;
+};
+
+export type DeleteScheduleDemandPayload = {
+  __typename?: 'DeleteScheduleDemandPayload';
+  deletedEntryIds: Array<Scalars['ID']['output']>;
+  id: Scalars['ID']['output'];
+};
+
+export type DeleteScheduleEntryInput = {
+  changeReason?: InputMaybe<ScheduleChangeReasonInput>;
+  id: Scalars['ID']['input'];
+  orgId?: InputMaybe<Scalars['ID']['input']>;
+};
+
+export type DeleteScheduleEntryPayload = {
+  __typename?: 'DeleteScheduleEntryPayload';
+  id: Scalars['ID']['output'];
+};
+
+export type DeleteScheduleTemplateInput = {
+  id: Scalars['ID']['input'];
+};
+
+export type DeleteScheduleTemplatePayload = {
+  __typename?: 'DeleteScheduleTemplatePayload';
+  id: Scalars['ID']['output'];
 };
 
 export type DeleteWorkflowVersionDraftInput = {
@@ -578,8 +806,10 @@ export type DemoItemTwo = {
   createdBy?: Maybe<DemoItemTwoUser>;
   enabled: Scalars['Boolean']['output'];
   id: Scalars['ID']['output'];
+  isShared: Scalars['Boolean']['output'];
   name: Scalars['String']['output'];
   note?: Maybe<Scalars['String']['output']>;
+  shareOrgs: Array<ShareOrg>;
   updatedAt: Scalars['DateTime']['output'];
 };
 
@@ -707,6 +937,24 @@ export type FieldCategory = {
 export type FieldCategoryPayload = {
   __typename?: 'FieldCategoryPayload';
   category: FieldCategory;
+};
+
+export type FieldOptionColor = {
+  __typename?: 'FieldOptionColor';
+  fieldId: Scalars['ID']['output'];
+  paletteKey?: Maybe<Scalars['String']['output']>;
+  value: Scalars['String']['output'];
+};
+
+export type FieldOptionColorPayload = {
+  __typename?: 'FieldOptionColorPayload';
+  color: FieldOptionColor;
+};
+
+export type FieldOptionColorsPayload = {
+  __typename?: 'FieldOptionColorsPayload';
+  items: Array<FieldOptionColor>;
+  totalCount: Scalars['Int']['output'];
 };
 
 export type FieldOwnerOrg = {
@@ -910,9 +1158,11 @@ export type FormModel = {
   name: Scalars['String']['output'];
   ownerOrgId?: Maybe<Scalars['ID']['output']>;
   ownerOrgName?: Maybe<Scalars['String']['output']>;
+  serial?: Maybe<FormSerialFormat>;
   tabLabelTemplate?: Maybe<Scalars['String']['output']>;
   tenantEnabled?: Maybe<Scalars['Boolean']['output']>;
   updatedAt: Scalars['DateTime']['output'];
+  voidReasonCategoryKey?: Maybe<Scalars['String']['output']>;
   workflowBinding?: Maybe<FormWorkflowBinding>;
 };
 
@@ -927,6 +1177,21 @@ export type FormPreviewPayload = {
   fieldStates: Array<FormFieldState>;
   summary: FormSubmissionSummary;
   values: Scalars['JSONObject']['output'];
+};
+
+export type FormSerialFormat = {
+  __typename?: 'FormSerialFormat';
+  digits: Scalars['Int']['output'];
+  period: Scalars['String']['output'];
+  prefix: Scalars['String']['output'];
+  separator?: Maybe<Scalars['String']['output']>;
+};
+
+export type FormSerialFormatInput = {
+  digits: Scalars['Int']['input'];
+  period: Scalars['String']['input'];
+  prefix: Scalars['String']['input'];
+  separator?: InputMaybe<Scalars['String']['input']>;
 };
 
 export type FormSubmissionAbilities = {
@@ -976,6 +1241,7 @@ export type FormSubmissionModel = {
   replacedById?: Maybe<Scalars['ID']['output']>;
   revision: Scalars['Int']['output'];
   revisions: Array<FormSubmissionRevisionMeta>;
+  serialNo?: Maybe<Scalars['String']['output']>;
   status: FormSubmissionStatus;
   submittedAt?: Maybe<Scalars['DateTime']['output']>;
   summary?: Maybe<FormSubmissionSummary>;
@@ -986,6 +1252,8 @@ export type FormSubmissionModel = {
   viewedRevision: Scalars['Int']['output'];
   viewedVersion: Scalars['Int']['output'];
   voidReason?: Maybe<Scalars['String']['output']>;
+  voidReasonKey?: Maybe<Scalars['String']['output']>;
+  voidReasonLabel?: Maybe<Scalars['String']['output']>;
   voidedAt?: Maybe<Scalars['DateTime']['output']>;
 };
 
@@ -1136,6 +1404,12 @@ export type FormVersionsPayload = {
   totalCount: Scalars['Int']['output'];
 };
 
+export type FormVoidReasonOptionsPayload = {
+  __typename?: 'FormVoidReasonOptionsPayload';
+  categoryKey?: Maybe<Scalars['String']['output']>;
+  items: Array<FormFieldOption>;
+};
+
 export type FormWorkflowBinding = {
   __typename?: 'FormWorkflowBinding';
   isValid: Scalars['Boolean']['output'];
@@ -1197,6 +1471,1151 @@ export type LogoutAllDevicesPayload = {
 export type LogoutPayload = {
   __typename?: 'LogoutPayload';
   success: Scalars['Boolean']['output'];
+};
+
+export type LotteryAccountsRef = {
+  __typename?: 'LotteryAccountsRef';
+  id: Scalars['ID']['output'];
+  name: Scalars['String']['output'];
+};
+
+export type LotteryAllocationCell = {
+  __typename?: 'LotteryAllocationCell';
+  gameId: Scalars['ID']['output'];
+  givenBooks: Scalars['Int']['output'];
+  givenExtraTickets: Scalars['Int']['output'];
+  note?: Maybe<Scalars['String']['output']>;
+  orgId: Scalars['ID']['output'];
+  plannedBooks?: Maybe<Scalars['Int']['output']>;
+};
+
+export type LotteryAllocationPayload = {
+  __typename?: 'LotteryAllocationPayload';
+  item: LotteryAllocationCell;
+};
+
+export type LotteryAllocationsInput = {
+  gameId?: InputMaybe<Scalars['ID']['input']>;
+  orgId?: InputMaybe<Scalars['ID']['input']>;
+};
+
+export type LotteryAllocationsPayload = {
+  __typename?: 'LotteryAllocationsPayload';
+  canEdit: Scalars['Boolean']['output'];
+  cells: Array<LotteryAllocationCell>;
+  games: Array<LotteryInventoryGame>;
+  stores: Array<LotteryInventoryRef>;
+};
+
+export type LotteryBankAccount = {
+  __typename?: 'LotteryBankAccount';
+  abilities: LotteryBankAccountAbilities;
+  accountName: Scalars['String']['output'];
+  accountNo: Scalars['String']['output'];
+  balance: Scalars['Int']['output'];
+  bankCode: Scalars['String']['output'];
+  branchName?: Maybe<Scalars['String']['output']>;
+  createdAt: Scalars['DateTime']['output'];
+  hasTransactions: Scalars['Boolean']['output'];
+  id: Scalars['ID']['output'];
+  label: Scalars['String']['output'];
+  note?: Maybe<Scalars['String']['output']>;
+  openingBalance: Scalars['Int']['output'];
+  openingDate: Scalars['DateTime']['output'];
+  shareOrgs: Array<ShareOrg>;
+  status: Scalars['String']['output'];
+  updatedAt: Scalars['DateTime']['output'];
+  usageOrgs: Array<LotteryAccountsRef>;
+};
+
+export type LotteryBankAccountAbilities = {
+  __typename?: 'LotteryBankAccountAbilities';
+  canDelete: Scalars['Boolean']['output'];
+  canEdit: Scalars['Boolean']['output'];
+  canRecordTransaction: Scalars['Boolean']['output'];
+  canReverse: Scalars['Boolean']['output'];
+};
+
+export type LotteryBankAccountPayload = {
+  __typename?: 'LotteryBankAccountPayload';
+  item: LotteryBankAccount;
+};
+
+export type LotteryBankAccountsInput = {
+  page?: InputMaybe<Scalars['Int']['input']>;
+  pageSize?: InputMaybe<Scalars['Int']['input']>;
+  status?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type LotteryBankAccountsPayload = {
+  __typename?: 'LotteryBankAccountsPayload';
+  items: Array<LotteryBankAccount>;
+  page: Scalars['Int']['output'];
+  pageSize: Scalars['Int']['output'];
+  totalCount: Scalars['Int']['output'];
+};
+
+export type LotteryBankTransaction = {
+  __typename?: 'LotteryBankTransaction';
+  abilities: LotteryBankTransactionAbilities;
+  accountId: Scalars['ID']['output'];
+  amount: Scalars['Int']['output'];
+  balanceAfter: Scalars['Int']['output'];
+  branch?: Maybe<LotteryAccountsRef>;
+  createdAt: Scalars['DateTime']['output'];
+  createdBy?: Maybe<LotteryAccountsRef>;
+  direction: Scalars['String']['output'];
+  handler?: Maybe<Scalars['String']['output']>;
+  id: Scalars['ID']['output'];
+  note?: Maybe<Scalars['String']['output']>;
+  occurredAt: Scalars['DateTime']['output'];
+  refId?: Maybe<Scalars['ID']['output']>;
+  refType?: Maybe<Scalars['String']['output']>;
+  reversalOf?: Maybe<Scalars['ID']['output']>;
+  reversedById?: Maybe<Scalars['ID']['output']>;
+  settlementSide?: Maybe<Scalars['String']['output']>;
+  summary?: Maybe<Scalars['String']['output']>;
+  type: Scalars['String']['output'];
+};
+
+export type LotteryBankTransactionAbilities = {
+  __typename?: 'LotteryBankTransactionAbilities';
+  canReverse: Scalars['Boolean']['output'];
+};
+
+export type LotteryBankTransactionPayload = {
+  __typename?: 'LotteryBankTransactionPayload';
+  item: LotteryBankTransaction;
+};
+
+export type LotteryBankTransactionsInput = {
+  accountId: Scalars['ID']['input'];
+  from?: InputMaybe<Scalars['DateTime']['input']>;
+  to?: InputMaybe<Scalars['DateTime']['input']>;
+  type?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type LotteryBankTransactionsPayload = {
+  __typename?: 'LotteryBankTransactionsPayload';
+  items: Array<LotteryBankTransaction>;
+  totalCount: Scalars['Int']['output'];
+  totalIn: Scalars['Int']['output'];
+  totalOut: Scalars['Int']['output'];
+};
+
+export type LotteryCashLedgerInput = {
+  cashPointId?: InputMaybe<Scalars['ID']['input']>;
+  from?: InputMaybe<Scalars['DateTime']['input']>;
+  orgId: Scalars['ID']['input'];
+  to?: InputMaybe<Scalars['DateTime']['input']>;
+  type?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type LotteryCashLedgerPayload = {
+  __typename?: 'LotteryCashLedgerPayload';
+  items: Array<LotteryCashMovement>;
+  totalCount: Scalars['Int']['output'];
+  vault: LotteryVaultExpected;
+};
+
+export type LotteryCashMovement = {
+  __typename?: 'LotteryCashMovement';
+  amount: Scalars['Int']['output'];
+  cashPoint?: Maybe<LotteryAccountsRef>;
+  createdBy?: Maybe<LotteryAccountsRef>;
+  from: Scalars['String']['output'];
+  id: Scalars['ID']['output'];
+  note?: Maybe<Scalars['String']['output']>;
+  occurredAt: Scalars['DateTime']['output'];
+  org: LotteryAccountsRef;
+  payee?: Maybe<Scalars['String']['output']>;
+  reason?: Maybe<Scalars['String']['output']>;
+  refId?: Maybe<Scalars['ID']['output']>;
+  refType?: Maybe<Scalars['String']['output']>;
+  reversalOf?: Maybe<Scalars['ID']['output']>;
+  reversedById?: Maybe<Scalars['ID']['output']>;
+  to: Scalars['String']['output'];
+  type: Scalars['String']['output'];
+};
+
+export type LotteryCashMovementPayload = {
+  __typename?: 'LotteryCashMovementPayload';
+  item: LotteryCashMovement;
+};
+
+export type LotteryCashPoint = {
+  __typename?: 'LotteryCashPoint';
+  abilities: LotteryCashPointAbilities;
+  createdAt: Scalars['DateTime']['output'];
+  enabled: Scalars['Boolean']['output'];
+  id: Scalars['ID']['output'];
+  name: Scalars['String']['output'];
+  note?: Maybe<Scalars['String']['output']>;
+  order: Scalars['Int']['output'];
+  org: LotteryCashPointRef;
+  positionKey: Scalars['String']['output'];
+  positionLabel?: Maybe<Scalars['String']['output']>;
+  printer?: Maybe<LotteryCashPointRef>;
+  updatedAt: Scalars['DateTime']['output'];
+};
+
+export type LotteryCashPointAbilities = {
+  __typename?: 'LotteryCashPointAbilities';
+  canEdit: Scalars['Boolean']['output'];
+};
+
+export type LotteryCashPointPayload = {
+  __typename?: 'LotteryCashPointPayload';
+  item: LotteryCashPoint;
+};
+
+export type LotteryCashPointRef = {
+  __typename?: 'LotteryCashPointRef';
+  id: Scalars['ID']['output'];
+  name: Scalars['String']['output'];
+};
+
+export type LotteryCashPointsInput = {
+  enabled?: InputMaybe<Scalars['Boolean']['input']>;
+  keyword?: InputMaybe<Scalars['String']['input']>;
+  orgId?: InputMaybe<Scalars['ID']['input']>;
+  page?: InputMaybe<Scalars['Int']['input']>;
+  pageSize?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type LotteryCashPointsPayload = {
+  __typename?: 'LotteryCashPointsPayload';
+  items: Array<LotteryCashPoint>;
+  page: Scalars['Int']['output'];
+  pageSize: Scalars['Int']['output'];
+  totalCount: Scalars['Int']['output'];
+};
+
+/** 關係人的身分:受託人 / 代理人 / 介紹人 */
+export enum LotteryContactRole {
+  Agent = 'AGENT',
+  Introducer = 'INTRODUCER',
+  Trustee = 'TRUSTEE'
+}
+
+/** 關係人狀態:啟用 / 停用 */
+export enum LotteryContactStatus {
+  Active = 'ACTIVE',
+  Disabled = 'DISABLED'
+}
+
+export type LotteryDealer = {
+  __typename?: 'LotteryDealer';
+  abilities: LotteryDealerAbilities;
+  agents: Array<LotteryDealerContactRef>;
+  birthday?: Maybe<Scalars['DateTime']['output']>;
+  businessAddress?: Maybe<Scalars['String']['output']>;
+  coSalesDealer?: Maybe<LotteryDealerRef>;
+  coSellerCount?: Maybe<Scalars['Int']['output']>;
+  createdAt: Scalars['DateTime']['output'];
+  createdBy?: Maybe<LotteryDealerUserRef>;
+  currentQuarterSigned?: Maybe<Scalars['Boolean']['output']>;
+  daysSinceLastPurchase?: Maybe<Scalars['Int']['output']>;
+  daysSinceLastSelfPurchase?: Maybe<Scalars['Int']['output']>;
+  email?: Maybe<Scalars['String']['output']>;
+  id: Scalars['ID']['output'];
+  introducers: Array<LotteryDealerContactRef>;
+  isShared: Scalars['Boolean']['output'];
+  lastPurchaseBaseDate?: Maybe<Scalars['DateTime']['output']>;
+  lastPurchaseDate?: Maybe<Scalars['DateTime']['output']>;
+  lastSelfPurchaseBaseDate?: Maybe<Scalars['DateTime']['output']>;
+  lastSelfPurchaseDate?: Maybe<Scalars['DateTime']['output']>;
+  licenseApprovedAt: Scalars['DateTime']['output'];
+  licenseExpiresAt: Scalars['DateTime']['output'];
+  licenseNo: Scalars['String']['output'];
+  licenseState: LotteryLicenseState;
+  mailingAddress?: Maybe<Scalars['String']['output']>;
+  mobile?: Maybe<Scalars['String']['output']>;
+  name: Scalars['String']['output'];
+  nationalId: Scalars['String']['output'];
+  nextRentDueAt?: Maybe<Scalars['DateTime']['output']>;
+  note?: Maybe<Scalars['String']['output']>;
+  phone?: Maybe<Scalars['String']['output']>;
+  rentCycle?: Maybe<LotteryRentCycle>;
+  rentDueDay?: Maybe<Scalars['Int']['output']>;
+  rentFee?: Maybe<Scalars['Int']['output']>;
+  rentStartMonth?: Maybe<Scalars['Int']['output']>;
+  residentialAddress?: Maybe<Scalars['String']['output']>;
+  residentialSameAsMailing: Scalars['Boolean']['output'];
+  shareOrgs: Array<ShareOrg>;
+  status: LotteryDealerStatus;
+  storeName?: Maybe<Scalars['String']['output']>;
+  storeOrg?: Maybe<LotteryDealerOrgRef>;
+  storePhone?: Maybe<Scalars['String']['output']>;
+  terminalNo?: Maybe<Scalars['String']['output']>;
+  trustees: Array<LotteryDealerContactRef>;
+  type: LotteryDealerType;
+  updatedAt: Scalars['DateTime']['output'];
+};
+
+export type LotteryDealerAbilities = {
+  __typename?: 'LotteryDealerAbilities';
+  canEdit: Scalars['Boolean']['output'];
+  canEditLastPurchaseBaseDate: Scalars['Boolean']['output'];
+  canEditLastSelfPurchaseBaseDate: Scalars['Boolean']['output'];
+};
+
+export type LotteryDealerCoSellerModel = {
+  __typename?: 'LotteryDealerCoSellerModel';
+  dealer: LotteryDealerRef;
+  registeredAt: Scalars['DateTime']['output'];
+};
+
+export type LotteryDealerCoSellersPayload = {
+  __typename?: 'LotteryDealerCoSellersPayload';
+  items: Array<LotteryDealerCoSellerModel>;
+  totalCount: Scalars['Int']['output'];
+};
+
+export type LotteryDealerContact = {
+  __typename?: 'LotteryDealerContact';
+  abilities: LotteryDealerContactAbilities;
+  birthday?: Maybe<Scalars['DateTime']['output']>;
+  createdAt: Scalars['DateTime']['output'];
+  createdBy?: Maybe<LotteryDealerUserRef>;
+  dealerCount: Scalars['Int']['output'];
+  email?: Maybe<Scalars['String']['output']>;
+  id: Scalars['ID']['output'];
+  links: Array<LotteryDealerContactLink>;
+  mailingAddress?: Maybe<Scalars['String']['output']>;
+  mobile?: Maybe<Scalars['String']['output']>;
+  name: Scalars['String']['output'];
+  nationalId: Scalars['String']['output'];
+  note?: Maybe<Scalars['String']['output']>;
+  phone?: Maybe<Scalars['String']['output']>;
+  residentialAddress?: Maybe<Scalars['String']['output']>;
+  residentialSameAsMailing: Scalars['Boolean']['output'];
+  roles: Array<LotteryContactRole>;
+  status: LotteryContactStatus;
+  updatedAt: Scalars['DateTime']['output'];
+};
+
+export type LotteryDealerContactAbilities = {
+  __typename?: 'LotteryDealerContactAbilities';
+  canEdit: Scalars['Boolean']['output'];
+};
+
+export type LotteryDealerContactLink = {
+  __typename?: 'LotteryDealerContactLink';
+  dealer: LotteryDealerRef;
+  role: LotteryContactRole;
+};
+
+export type LotteryDealerContactPayload = {
+  __typename?: 'LotteryDealerContactPayload';
+  item: LotteryDealerContact;
+};
+
+export type LotteryDealerContactRef = {
+  __typename?: 'LotteryDealerContactRef';
+  id: Scalars['ID']['output'];
+  name: Scalars['String']['output'];
+  status: LotteryContactStatus;
+};
+
+export type LotteryDealerContactsInput = {
+  keyword?: InputMaybe<Scalars['String']['input']>;
+  page?: InputMaybe<Scalars['Int']['input']>;
+  /** 每頁筆數,上限 100 */
+  pageSize?: InputMaybe<Scalars['Int']['input']>;
+  role?: InputMaybe<LotteryContactRole>;
+  status?: InputMaybe<LotteryContactStatus>;
+};
+
+export type LotteryDealerContactsPayload = {
+  __typename?: 'LotteryDealerContactsPayload';
+  items: Array<LotteryDealerContact>;
+  page: Scalars['Int']['output'];
+  pageSize: Scalars['Int']['output'];
+  totalCount: Scalars['Int']['output'];
+};
+
+export type LotteryDealerOrgRef = {
+  __typename?: 'LotteryDealerOrgRef';
+  id: Scalars['ID']['output'];
+  name: Scalars['String']['output'];
+};
+
+export type LotteryDealerPayload = {
+  __typename?: 'LotteryDealerPayload';
+  item: LotteryDealer;
+};
+
+export type LotteryDealerPurchase = {
+  __typename?: 'LotteryDealerPurchase';
+  books: Scalars['Int']['output'];
+  branchName: Scalars['String']['output'];
+  purchaseDate?: Maybe<Scalars['DateTime']['output']>;
+  purchaseId: Scalars['ID']['output'];
+  purchaseTotal: Scalars['Int']['output'];
+  selfPurchase: Scalars['Boolean']['output'];
+  serialNo?: Maybe<Scalars['String']['output']>;
+  status: Scalars['String']['output'];
+  trusteeName?: Maybe<Scalars['String']['output']>;
+};
+
+export type LotteryDealerRef = {
+  __typename?: 'LotteryDealerRef';
+  id: Scalars['ID']['output'];
+  licenseNo: Scalars['String']['output'];
+  name: Scalars['String']['output'];
+  status: LotteryDealerStatus;
+  storeName?: Maybe<Scalars['String']['output']>;
+  type: LotteryDealerType;
+};
+
+export type LotteryDealerSigninModel = {
+  __typename?: 'LotteryDealerSigninModel';
+  id?: Maybe<Scalars['ID']['output']>;
+  note?: Maybe<Scalars['String']['output']>;
+  quarter: Scalars['Int']['output'];
+  signedAt?: Maybe<Scalars['DateTime']['output']>;
+  state: LotterySigninState;
+  year: Scalars['Int']['output'];
+};
+
+export type LotteryDealerSigninPayload = {
+  __typename?: 'LotteryDealerSigninPayload';
+  item: LotteryDealerSigninModel;
+};
+
+export type LotteryDealerSigninsPayload = {
+  __typename?: 'LotteryDealerSigninsPayload';
+  items: Array<LotteryDealerSigninModel>;
+  totalCount: Scalars['Int']['output'];
+};
+
+/** 經銷商狀態:營業中 / 暫停 / 解約 */
+export enum LotteryDealerStatus {
+  Active = 'ACTIVE',
+  Suspended = 'SUSPENDED',
+  Terminated = 'TERMINATED'
+}
+
+/** 經銷商類型:甲類 A / 乙類 B(建立後唯讀) */
+export enum LotteryDealerType {
+  A = 'A',
+  B = 'B'
+}
+
+export type LotteryDealerUserRef = {
+  __typename?: 'LotteryDealerUserRef';
+  id: Scalars['ID']['output'];
+  name: Scalars['String']['output'];
+};
+
+export type LotteryDealersInput = {
+  currentQuarterSigned?: InputMaybe<Scalars['Boolean']['input']>;
+  keyword?: InputMaybe<Scalars['String']['input']>;
+  licenseState?: InputMaybe<LotteryLicenseState>;
+  page?: InputMaybe<Scalars['Int']['input']>;
+  /** 每頁筆數,上限 100 */
+  pageSize?: InputMaybe<Scalars['Int']['input']>;
+  purchaseOverDays?: InputMaybe<Scalars['Int']['input']>;
+  selectable?: InputMaybe<Scalars['Boolean']['input']>;
+  status?: InputMaybe<LotteryDealerStatus>;
+  type: LotteryDealerType;
+};
+
+export type LotteryDealersPayload = {
+  __typename?: 'LotteryDealersPayload';
+  items: Array<LotteryDealer>;
+  page: Scalars['Int']['output'];
+  pageSize: Scalars['Int']['output'];
+  totalCount: Scalars['Int']['output'];
+};
+
+export type LotteryFieldOption = {
+  __typename?: 'LotteryFieldOption';
+  label: Scalars['String']['output'];
+  value: Scalars['String']['output'];
+};
+
+export type LotteryFieldOptionsPayload = {
+  __typename?: 'LotteryFieldOptionsPayload';
+  items: Array<LotteryFieldOption>;
+  totalCount: Scalars['Int']['output'];
+};
+
+export type LotteryGame = {
+  __typename?: 'LotteryGame';
+  abilities: LotteryGameAbilities;
+  bookPrice: Scalars['Int']['output'];
+  claimDeadline?: Maybe<Scalars['DateTime']['output']>;
+  color?: Maybe<Scalars['String']['output']>;
+  createdAt: Scalars['DateTime']['output'];
+  defaultRate: Scalars['Int']['output'];
+  discontinuedAt?: Maybe<Scalars['DateTime']['output']>;
+  gameCode: Scalars['String']['output'];
+  id: Scalars['ID']['output'];
+  inUse: Scalars['Boolean']['output'];
+  launchedAt?: Maybe<Scalars['DateTime']['output']>;
+  name: Scalars['String']['output'];
+  note?: Maybe<Scalars['String']['output']>;
+  status: Scalars['String']['output'];
+  ticketsPerBook: Scalars['Int']['output'];
+  unitPrice: Scalars['Int']['output'];
+  updatedAt: Scalars['DateTime']['output'];
+};
+
+export type LotteryGameAbilities = {
+  __typename?: 'LotteryGameAbilities';
+  canDelete: Scalars['Boolean']['output'];
+  canEdit: Scalars['Boolean']['output'];
+};
+
+export type LotteryGamePayload = {
+  __typename?: 'LotteryGamePayload';
+  item: LotteryGame;
+};
+
+export type LotteryGamesInput = {
+  keyword?: InputMaybe<Scalars['String']['input']>;
+  page?: InputMaybe<Scalars['Int']['input']>;
+  pageSize?: InputMaybe<Scalars['Int']['input']>;
+  status?: InputMaybe<Scalars['String']['input']>;
+  unitPrice?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type LotteryGamesPayload = {
+  __typename?: 'LotteryGamesPayload';
+  items: Array<LotteryGame>;
+  page: Scalars['Int']['output'];
+  pageSize: Scalars['Int']['output'];
+  totalCount: Scalars['Int']['output'];
+};
+
+export type LotteryInventoryActionPayload = {
+  __typename?: 'LotteryInventoryActionPayload';
+  count: Scalars['Int']['output'];
+  lossCost?: Maybe<Scalars['Int']['output']>;
+};
+
+export type LotteryInventoryBook = {
+  __typename?: 'LotteryInventoryBook';
+  bookKey: Scalars['String']['output'];
+  bookNo: Scalars['String']['output'];
+  firstTicketNo: Scalars['String']['output'];
+  gameCode: Scalars['String']['output'];
+  gameId: Scalars['ID']['output'];
+  gameName: Scalars['String']['output'];
+  holdings: Array<LotteryInventoryHolding>;
+  id: Scalars['ID']['output'];
+  lastTicketNo: Scalars['String']['output'];
+  org: LotteryInventoryRef;
+  pendingSkipCount: Scalars['Int']['output'];
+  purchaseDealer?: Maybe<LotteryInventoryRef>;
+  purchasedAt?: Maybe<Scalars['DateTime']['output']>;
+  remainingCount: Scalars['Int']['output'];
+  requiredSkipCount: Scalars['Int']['output'];
+  skippedTicketNos: Array<Scalars['String']['output']>;
+  standardTickets: Scalars['Int']['output'];
+  state: Scalars['String']['output'];
+  status: Scalars['String']['output'];
+  totalCount: Scalars['Int']['output'];
+  unitPrice: Scalars['Int']['output'];
+};
+
+export type LotteryInventoryBookAbilities = {
+  __typename?: 'LotteryInventoryBookAbilities';
+  canCorrectSkips: Scalars['Boolean']['output'];
+  canRecover: Scalars['Boolean']['output'];
+  canScrap: Scalars['Boolean']['output'];
+  canShowCost: Scalars['Boolean']['output'];
+};
+
+export type LotteryInventoryBookDetail = {
+  __typename?: 'LotteryInventoryBookDetail';
+  abilities: LotteryInventoryBookAbilities;
+  book: LotteryInventoryBook;
+  cost?: Maybe<LotteryInventoryCost>;
+  events: Array<LotteryInventoryEvent>;
+  investigation?: Maybe<LotteryInventoryInvestigation>;
+  locations: Array<LotteryInventoryLocation>;
+  sources: Array<LotteryInventorySource>;
+  tickets: Array<LotteryInventoryTicket>;
+};
+
+export type LotteryInventoryBookPayload = {
+  __typename?: 'LotteryInventoryBookPayload';
+  item: LotteryInventoryBookDetail;
+};
+
+export type LotteryInventoryBooksInput = {
+  bookNo?: InputMaybe<Scalars['String']['input']>;
+  gameId?: InputMaybe<Scalars['ID']['input']>;
+  orgId?: InputMaybe<Scalars['ID']['input']>;
+  purchasedFrom?: InputMaybe<Scalars['DateTime']['input']>;
+  purchasedTo?: InputMaybe<Scalars['DateTime']['input']>;
+  state?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type LotteryInventoryBooksPayload = {
+  __typename?: 'LotteryInventoryBooksPayload';
+  items: Array<LotteryInventoryBook>;
+  totalCount: Scalars['Int']['output'];
+};
+
+export type LotteryInventoryCost = {
+  __typename?: 'LotteryInventoryCost';
+  cost: Scalars['Int']['output'];
+  rate: Scalars['Int']['output'];
+  unitCost: Scalars['Float']['output'];
+};
+
+export type LotteryInventoryEvent = {
+  __typename?: 'LotteryInventoryEvent';
+  at: Scalars['DateTime']['output'];
+  by?: Maybe<LotteryInventoryRef>;
+  from?: Maybe<LotteryInventoryPlace>;
+  reasonKey?: Maybe<Scalars['String']['output']>;
+  reasonNote?: Maybe<Scalars['String']['output']>;
+  refId?: Maybe<Scalars['ID']['output']>;
+  refSerialNo?: Maybe<Scalars['String']['output']>;
+  refType?: Maybe<Scalars['String']['output']>;
+  ticketNos: Array<Scalars['String']['output']>;
+  to: LotteryInventoryPlace;
+  type: Scalars['String']['output'];
+  wholeBook: Scalars['Boolean']['output'];
+};
+
+export type LotteryInventoryGame = {
+  __typename?: 'LotteryInventoryGame';
+  gameCode: Scalars['String']['output'];
+  id: Scalars['ID']['output'];
+  name: Scalars['String']['output'];
+};
+
+export type LotteryInventoryHolding = {
+  __typename?: 'LotteryInventoryHolding';
+  count: Scalars['Int']['output'];
+  org: LotteryInventoryRef;
+};
+
+export type LotteryInventoryInvestigation = {
+  __typename?: 'LotteryInventoryInvestigation';
+  at?: Maybe<Scalars['DateTime']['output']>;
+  refSerialNo?: Maybe<Scalars['String']['output']>;
+  refType?: Maybe<Scalars['String']['output']>;
+  responsibleOrg?: Maybe<LotteryInventoryRef>;
+  status: Scalars['String']['output'];
+};
+
+export type LotteryInventoryLocation = {
+  __typename?: 'LotteryInventoryLocation';
+  place: LotteryInventoryPlace;
+  ticketNos: Array<Scalars['String']['output']>;
+};
+
+export type LotteryInventoryPlace = {
+  __typename?: 'LotteryInventoryPlace';
+  cashPoint?: Maybe<LotteryInventoryRef>;
+  locationKind: Scalars['String']['output'];
+  org: LotteryInventoryRef;
+};
+
+export type LotteryInventoryRef = {
+  __typename?: 'LotteryInventoryRef';
+  id: Scalars['ID']['output'];
+  name: Scalars['String']['output'];
+};
+
+export type LotteryInventorySource = {
+  __typename?: 'LotteryInventorySource';
+  at: Scalars['DateTime']['output'];
+  refId?: Maybe<Scalars['ID']['output']>;
+  refSerialNo?: Maybe<Scalars['String']['output']>;
+  ticketNos: Array<Scalars['String']['output']>;
+  type: Scalars['String']['output'];
+};
+
+export type LotteryInventoryStoresPayload = {
+  __typename?: 'LotteryInventoryStoresPayload';
+  items: Array<LotteryInventoryRef>;
+};
+
+export type LotteryInventoryTicket = {
+  __typename?: 'LotteryInventoryTicket';
+  cashPoint?: Maybe<LotteryInventoryRef>;
+  id: Scalars['ID']['output'];
+  locationKind: Scalars['String']['output'];
+  locked: Scalars['Boolean']['output'];
+  org: LotteryInventoryRef;
+  responsibleOrg?: Maybe<LotteryInventoryRef>;
+  status: Scalars['String']['output'];
+  ticketNo: Scalars['String']['output'];
+  version: Scalars['Int']['output'];
+};
+
+export type LotteryInvestigationRow = {
+  __typename?: 'LotteryInvestigationRow';
+  at?: Maybe<Scalars['DateTime']['output']>;
+  bookId: Scalars['ID']['output'];
+  bookNo: Scalars['String']['output'];
+  cost?: Maybe<Scalars['Int']['output']>;
+  gameCode: Scalars['String']['output'];
+  gameName: Scalars['String']['output'];
+  refSerialNo?: Maybe<Scalars['String']['output']>;
+  refType?: Maybe<Scalars['String']['output']>;
+  responsibleOrg?: Maybe<LotteryInventoryRef>;
+  status: Scalars['String']['output'];
+  tickets: Array<LotteryInventoryTicket>;
+  unitPrice: Scalars['Int']['output'];
+};
+
+export type LotteryInvestigationsPayload = {
+  __typename?: 'LotteryInvestigationsPayload';
+  canRecover: Scalars['Boolean']['output'];
+  items: Array<LotteryInvestigationRow>;
+};
+
+/** 證照狀態(租戶時區的今天):正常 / 30 天內到期(含當天)/ 已過期 */
+export enum LotteryLicenseState {
+  Expired = 'EXPIRED',
+  Expiring = 'EXPIRING',
+  Ok = 'OK'
+}
+
+export type LotteryOccupiedStoreModel = {
+  __typename?: 'LotteryOccupiedStoreModel';
+  dealer: LotteryDealerRef;
+  orgId: Scalars['ID']['output'];
+};
+
+export type LotteryOccupiedStoresPayload = {
+  __typename?: 'LotteryOccupiedStoresPayload';
+  items: Array<LotteryOccupiedStoreModel>;
+  totalCount: Scalars['Int']['output'];
+};
+
+export type LotteryOutstandingSettlement = {
+  __typename?: 'LotteryOutstandingSettlement';
+  amount: Scalars['Int']['output'];
+  branch: LotteryAccountsRef;
+  button: Scalars['String']['output'];
+  canSettle: Scalars['Boolean']['output'];
+  counterparty: Scalars['String']['output'];
+  daysOutstanding: Scalars['Int']['output'];
+  docNo: Scalars['String']['output'];
+  kind: Scalars['String']['output'];
+  label: Scalars['String']['output'];
+  moduleKey: Scalars['String']['output'];
+  net: Scalars['Int']['output'];
+  payable: Scalars['Int']['output'];
+  refId: Scalars['ID']['output'];
+  side: Scalars['String']['output'];
+  sideLabel: Scalars['String']['output'];
+};
+
+export type LotteryOutstandingSettlementsPayload = {
+  __typename?: 'LotteryOutstandingSettlementsPayload';
+  items: Array<LotteryOutstandingSettlement>;
+  totalCount: Scalars['Int']['output'];
+};
+
+export type LotteryPendingRequisition = {
+  __typename?: 'LotteryPendingRequisition';
+  books: Scalars['Int']['output'];
+  completedAt: Scalars['DateTime']['output'];
+  estimatedAmount: Scalars['Int']['output'];
+  orgId: Scalars['ID']['output'];
+  requisitionId: Scalars['ID']['output'];
+  serialNo?: Maybe<Scalars['String']['output']>;
+};
+
+export type LotteryPositionOption = {
+  __typename?: 'LotteryPositionOption';
+  label: Scalars['String']['output'];
+  value: Scalars['String']['output'];
+};
+
+export type LotteryPositionOptionsPayload = {
+  __typename?: 'LotteryPositionOptionsPayload';
+  items: Array<LotteryPositionOption>;
+  totalCount: Scalars['Int']['output'];
+};
+
+export type LotteryPurchaseAllocation = {
+  __typename?: 'LotteryPurchaseAllocation';
+  gameId: Scalars['ID']['output'];
+  givenBooks: Scalars['Int']['output'];
+  inTransitBooks: Scalars['Int']['output'];
+  plannedBooks?: Maybe<Scalars['Int']['output']>;
+};
+
+export type LotteryPurchaseGame = {
+  __typename?: 'LotteryPurchaseGame';
+  bookPrice: Scalars['Int']['output'];
+  defaultRate: Scalars['Int']['output'];
+  gameCode: Scalars['String']['output'];
+  id: Scalars['ID']['output'];
+  name: Scalars['String']['output'];
+  ticketsPerBook: Scalars['Int']['output'];
+  unitPrice: Scalars['Int']['output'];
+};
+
+export type LotteryPurchaseList = {
+  __typename?: 'LotteryPurchaseList';
+  orgIds: Array<Scalars['ID']['output']>;
+  requisitions: Array<LotteryPendingRequisition>;
+  rows: Array<LotteryPurchaseListRow>;
+};
+
+export type LotteryPurchaseListBranch = {
+  __typename?: 'LotteryPurchaseListBranch';
+  books: Scalars['Int']['output'];
+  orgId: Scalars['ID']['output'];
+};
+
+export type LotteryPurchaseListRow = {
+  __typename?: 'LotteryPurchaseListRow';
+  branches: Array<LotteryPurchaseListBranch>;
+  estimatedAmount: Scalars['Int']['output'];
+  gameCode: Scalars['String']['output'];
+  gameId: Scalars['ID']['output'];
+  name: Scalars['String']['output'];
+  totalBooks: Scalars['Int']['output'];
+  unitPrice: Scalars['Int']['output'];
+};
+
+export type LotteryPurchaseOption = {
+  __typename?: 'LotteryPurchaseOption';
+  id: Scalars['ID']['output'];
+  label: Scalars['String']['output'];
+};
+
+export type LotteryPurchaseOptions = {
+  __typename?: 'LotteryPurchaseOptions';
+  accounts: Array<LotteryPurchaseOption>;
+  allocations: Array<LotteryPurchaseAllocation>;
+  dealers: Array<LotteryPurchaseOption>;
+  games: Array<LotteryPurchaseGame>;
+  requisitions: Array<LotteryPurchaseRequisition>;
+  trustees: Array<LotteryPurchaseTrustee>;
+};
+
+export type LotteryPurchaseProgress = {
+  __typename?: 'LotteryPurchaseProgress';
+  inSettlement: Scalars['Boolean']['output'];
+  purchaseId: Scalars['ID']['output'];
+  receivedCount: Scalars['Int']['output'];
+  settlementAmount: Scalars['Int']['output'];
+  settlementKind?: Maybe<Scalars['String']['output']>;
+  totalCount: Scalars['Int']['output'];
+};
+
+export type LotteryPurchaseReceiving = {
+  __typename?: 'LotteryPurchaseReceiving';
+  canReceive: Scalars['Boolean']['output'];
+  groups: Array<LotteryPurchaseReceivingGroup>;
+  receivedCount: Scalars['Int']['output'];
+  submissionId: Scalars['ID']['output'];
+  totalCount: Scalars['Int']['output'];
+};
+
+export type LotteryPurchaseReceivingGroup = {
+  __typename?: 'LotteryPurchaseReceivingGroup';
+  gameCode: Scalars['String']['output'];
+  gameId: Scalars['ID']['output'];
+  gameName: Scalars['String']['output'];
+  receivedBooks: Scalars['Int']['output'];
+  requestedBooks?: Maybe<Scalars['Int']['output']>;
+  rows: Array<LotteryPurchaseReceivingRow>;
+  subtotal: Scalars['Int']['output'];
+  unitPrice: Scalars['Int']['output'];
+};
+
+export type LotteryPurchaseReceivingRow = {
+  __typename?: 'LotteryPurchaseReceivingRow';
+  amount: Scalars['Int']['output'];
+  bookNo: Scalars['String']['output'];
+  bookPrice: Scalars['Int']['output'];
+  lastTicketNo: Scalars['Int']['output'];
+  rate: Scalars['Int']['output'];
+  received: Scalars['Boolean']['output'];
+  receivedAt?: Maybe<Scalars['DateTime']['output']>;
+  rowId: Scalars['String']['output'];
+  tickets: Scalars['Int']['output'];
+};
+
+export type LotteryPurchaseRequisition = {
+  __typename?: 'LotteryPurchaseRequisition';
+  id: Scalars['ID']['output'];
+  lines: Array<LotteryPurchaseRequisitionLine>;
+  serialNo?: Maybe<Scalars['String']['output']>;
+};
+
+export type LotteryPurchaseRequisitionLine = {
+  __typename?: 'LotteryPurchaseRequisitionLine';
+  books: Scalars['Int']['output'];
+  gameId: Scalars['ID']['output'];
+};
+
+export type LotteryPurchaseTrustee = {
+  __typename?: 'LotteryPurchaseTrustee';
+  dealerId: Scalars['ID']['output'];
+  id: Scalars['ID']['output'];
+  label: Scalars['String']['output'];
+};
+
+/** 牌租週期:月 / 季 / 年 */
+export enum LotteryRentCycle {
+  Month = 'MONTH',
+  Quarter = 'QUARTER',
+  Year = 'YEAR'
+}
+
+export type LotteryRequisitionCandidate = {
+  __typename?: 'LotteryRequisitionCandidate';
+  bookPrice: Scalars['Int']['output'];
+  defaultRate: Scalars['Int']['output'];
+  gameCode: Scalars['String']['output'];
+  gameId: Scalars['ID']['output'];
+  givenBooks: Scalars['Int']['output'];
+  inTransitBooks: Scalars['Int']['output'];
+  isNew: Scalars['Boolean']['output'];
+  launchedAt?: Maybe<Scalars['DateTime']['output']>;
+  name: Scalars['String']['output'];
+  plannedBooks?: Maybe<Scalars['Int']['output']>;
+  sold7?: Maybe<Scalars['Int']['output']>;
+  sold30?: Maybe<Scalars['Int']['output']>;
+  stockTickets: Scalars['Int']['output'];
+  unitPrice: Scalars['Int']['output'];
+};
+
+export type LotteryRequisitionStateItem = {
+  __typename?: 'LotteryRequisitionStateItem';
+  requisitionId: Scalars['ID']['output'];
+  state: Scalars['String']['output'];
+};
+
+export type LotterySettlement = {
+  __typename?: 'LotterySettlement';
+  counterparty: Scalars['String']['output'];
+  docNo: Scalars['String']['output'];
+  kind: Scalars['String']['output'];
+  label: Scalars['String']['output'];
+  moduleKey: Scalars['String']['output'];
+  payable: Scalars['Int']['output'];
+  pendingPayee: Scalars['Int']['output'];
+  records: Array<LotterySettlementRecord>;
+  refId: Scalars['ID']['output'];
+  sides: Array<LotterySettlementSide>;
+};
+
+export type LotterySettlementAccountsPayload = {
+  __typename?: 'LotterySettlementAccountsPayload';
+  items: Array<LotteryAccountsRef>;
+  totalCount: Scalars['Int']['output'];
+};
+
+export type LotterySettlementButton = {
+  __typename?: 'LotterySettlementButton';
+  button: Scalars['String']['output'];
+  canUse: Scalars['Boolean']['output'];
+  defaultAmount: Scalars['Int']['output'];
+};
+
+export type LotterySettlementCandidatesInput = {
+  branchOrgId?: InputMaybe<Scalars['ID']['input']>;
+  type: Scalars['String']['input'];
+};
+
+export type LotterySettlementPayload = {
+  __typename?: 'LotterySettlementPayload';
+  item: LotterySettlement;
+};
+
+export type LotterySettlementRecord = {
+  __typename?: 'LotterySettlementRecord';
+  accountLabel?: Maybe<Scalars['String']['output']>;
+  amount: Scalars['Int']['output'];
+  canReverse: Scalars['Boolean']['output'];
+  createdBy?: Maybe<LotteryAccountsRef>;
+  direction: Scalars['String']['output'];
+  handler?: Maybe<Scalars['String']['output']>;
+  id: Scalars['ID']['output'];
+  method: Scalars['String']['output'];
+  note?: Maybe<Scalars['String']['output']>;
+  occurredAt: Scalars['DateTime']['output'];
+  reversalOf?: Maybe<Scalars['ID']['output']>;
+  reversedById?: Maybe<Scalars['ID']['output']>;
+  side: Scalars['String']['output'];
+  type: Scalars['String']['output'];
+};
+
+export type LotterySettlementSide = {
+  __typename?: 'LotterySettlementSide';
+  branch: LotteryAccountsRef;
+  buttons: Array<LotterySettlementButton>;
+  canSettle: Scalars['Boolean']['output'];
+  label: Scalars['String']['output'];
+  methods: Array<Scalars['String']['output']>;
+  net: Scalars['Int']['output'];
+  role: Scalars['String']['output'];
+  side: Scalars['String']['output'];
+  totalIn: Scalars['Int']['output'];
+  totalOut: Scalars['Int']['output'];
+};
+
+/** 見簽季別的狀態:已見簽 / 已過沒登記(警告)/ 本季還沒登記 / 未到(停用) */
+export enum LotterySigninState {
+  Missing = 'MISSING',
+  NotStarted = 'NOT_STARTED',
+  Open = 'OPEN',
+  Signed = 'SIGNED'
+}
+
+export type LotteryStockOverviewInput = {
+  gameId?: InputMaybe<Scalars['ID']['input']>;
+  orgId?: InputMaybe<Scalars['ID']['input']>;
+};
+
+export type LotteryStockOverviewPayload = {
+  __typename?: 'LotteryStockOverviewPayload';
+  items: Array<LotteryStockOverviewRow>;
+};
+
+export type LotteryStockOverviewRow = {
+  __typename?: 'LotteryStockOverviewRow';
+  counterTickets: Scalars['Int']['output'];
+  game: LotteryInventoryGame;
+  org: LotteryInventoryRef;
+  soldTickets: Scalars['Int']['output'];
+  unopenedBooks: Scalars['Int']['output'];
+};
+
+export type LotteryTicketLookupInput = {
+  bookNo: Scalars['String']['input'];
+  gameCode?: InputMaybe<Scalars['String']['input']>;
+  ticketNo: Scalars['String']['input'];
+};
+
+export type LotteryTicketLookupItem = {
+  __typename?: 'LotteryTicketLookupItem';
+  bookId: Scalars['ID']['output'];
+  bookNo: Scalars['String']['output'];
+  gameCode: Scalars['String']['output'];
+  gameName: Scalars['String']['output'];
+  org: LotteryInventoryRef;
+  responsibleOrg?: Maybe<LotteryInventoryRef>;
+  status: Scalars['String']['output'];
+  ticketId: Scalars['ID']['output'];
+  ticketNo: Scalars['String']['output'];
+  unitPrice: Scalars['Int']['output'];
+  version: Scalars['Int']['output'];
+};
+
+export type LotteryTicketLookupPayload = {
+  __typename?: 'LotteryTicketLookupPayload';
+  items: Array<LotteryTicketLookupItem>;
+};
+
+export type LotteryTicketVersionInput = {
+  ticketId: Scalars['ID']['input'];
+  version: Scalars['Int']['input'];
+};
+
+export type LotteryTransferAllocation = {
+  __typename?: 'LotteryTransferAllocation';
+  gameId: Scalars['ID']['output'];
+  givenBooks: Scalars['Int']['output'];
+  inTransitBooks: Scalars['Int']['output'];
+  plannedBooks?: Maybe<Scalars['Int']['output']>;
+};
+
+export type LotteryTransferBook = {
+  __typename?: 'LotteryTransferBook';
+  availableCount: Scalars['Int']['output'];
+  bookId: Scalars['ID']['output'];
+  bookNo: Scalars['String']['output'];
+  bookPrice: Scalars['Int']['output'];
+  gameCode: Scalars['String']['output'];
+  gameId: Scalars['ID']['output'];
+  gameName: Scalars['String']['output'];
+  isWhole: Scalars['Boolean']['output'];
+  rate: Scalars['Int']['output'];
+  unitPrice: Scalars['Int']['output'];
+};
+
+export type LotteryTransferOptions = {
+  __typename?: 'LotteryTransferOptions';
+  allocations: Array<LotteryTransferAllocation>;
+  books: Array<LotteryTransferBook>;
+  requisitions: Array<LotteryTransferRequisition>;
+};
+
+export type LotteryTransferProgress = {
+  __typename?: 'LotteryTransferProgress';
+  inSettlement: Scalars['Boolean']['output'];
+  inTransit: Scalars['Boolean']['output'];
+  partialTickets: Scalars['Int']['output'];
+  receivedCount: Scalars['Int']['output'];
+  settlementAmount: Scalars['Int']['output'];
+  settlementKind?: Maybe<Scalars['String']['output']>;
+  totalCount: Scalars['Int']['output'];
+  transferId: Scalars['ID']['output'];
+  wholeBooks: Scalars['Int']['output'];
+};
+
+export type LotteryTransferReceiving = {
+  __typename?: 'LotteryTransferReceiving';
+  canReceive: Scalars['Boolean']['output'];
+  fromBranchName: Scalars['String']['output'];
+  receivedCount: Scalars['Int']['output'];
+  rows: Array<LotteryTransferRow>;
+  submissionId: Scalars['ID']['output'];
+  toBranchName: Scalars['String']['output'];
+  totalCount: Scalars['Int']['output'];
+  transferAmount: Scalars['Int']['output'];
+};
+
+export type LotteryTransferRequisition = {
+  __typename?: 'LotteryTransferRequisition';
+  books: Scalars['Int']['output'];
+  id: Scalars['ID']['output'];
+  serialNo?: Maybe<Scalars['String']['output']>;
+};
+
+export type LotteryTransferRow = {
+  __typename?: 'LotteryTransferRow';
+  amount: Scalars['Int']['output'];
+  bookId: Scalars['ID']['output'];
+  bookNo: Scalars['String']['output'];
+  gameCode: Scalars['String']['output'];
+  gameName: Scalars['String']['output'];
+  mode: Scalars['String']['output'];
+  purchaseAmount: Scalars['Int']['output'];
+  rate: Scalars['Int']['output'];
+  received: Scalars['Boolean']['output'];
+  receivedAt?: Maybe<Scalars['DateTime']['output']>;
+  rowId: Scalars['String']['output'];
+  shipped: Scalars['Boolean']['output'];
+  ticketNos: Array<Scalars['String']['output']>;
+  tickets: Scalars['Int']['output'];
+};
+
+export type LotteryTransferTicketCell = {
+  __typename?: 'LotteryTransferTicketCell';
+  state: Scalars['String']['output'];
+  ticketNo: Scalars['String']['output'];
+};
+
+export type LotteryVaultExpected = {
+  __typename?: 'LotteryVaultExpected';
+  amount: Scalars['Int']['output'];
+  baselineAmount: Scalars['Int']['output'];
+  baselineAt?: Maybe<Scalars['DateTime']['output']>;
+};
+
+export type MakeupPunchEntryOptionsInput = {
+  date: Scalars['String']['input'];
+  orgId: Scalars['ID']['input'];
 };
 
 export type MarkNotificationsReadInput = {
@@ -1343,16 +2762,22 @@ export type MoveOrgInput = {
 
 export type Mutation = {
   __typename?: 'Mutation';
+  addMyScheduleDayOffs: SaveScheduleDayOffsPayload;
   addOrgMembers: AddOrgMembersPayload;
+  addScheduleDayOffsOnBehalf: SaveScheduleDayOffsPayload;
+  addScheduleStaff: AddScheduleStaffPayload;
   addStepAssignee: WorkflowTaskPayload;
+  applyScheduleTemplates: ApplyScheduleTemplatesPayload;
   assignFormToTenants: FormPayload;
   assignUserRoles: UserPayload;
   assignWorkflowToTenants: WorkflowPayload;
   batchApproveTasks: BatchApproveTasksPayload;
   bindFormWorkflow: FormPayload;
   changePassword: ChangePasswordPayload;
+  clearScheduleAutoAssignments: ClearScheduleAutoAssignmentsPayload;
   copySubmissionToDraft: FormSubmissionPayload;
   copyUserOrgRoles: CopyUserOrgRolesPayload;
+  correctLotterySkippedTickets: LotteryInventoryActionPayload;
   createAndSubmitFormSubmission: FormSubmissionPayload;
   createChildOrg: OrgPayload;
   createDemoItemOne: DemoItemOnePayload;
@@ -1362,6 +2787,11 @@ export type Mutation = {
   createForm: FormPayload;
   createFormDraft: FormSubmissionPayload;
   createFormVersionDraft: FormVersionPayload;
+  createLotteryBankAccount: LotteryBankAccountPayload;
+  createLotteryCashPoint: LotteryCashPointPayload;
+  createLotteryDealer: LotteryDealerPayload;
+  createLotteryDealerContact: LotteryDealerContactPayload;
+  createLotteryGame: LotteryGamePayload;
   createMyDelegation: MyDelegationPayload;
   createPrintAgent: PrintAgentPairingPayload;
   createPrintJob: PrintJobPayload;
@@ -1371,15 +2801,26 @@ export type Mutation = {
   createUser: UserPayload;
   createWorkflow: WorkflowPayload;
   createWorkflowVersionDraft: WorkflowVersionPayload;
+  customizeScheduleAutoRun: ScheduleRuleMutationPayload;
+  customizeScheduleRule: ScheduleRuleMutationPayload;
   decideTask: WorkflowTaskPayload;
   deleteDemoItemOne: DeleteDemoItemOnePayload;
   deleteDemoItemTwo: DeleteDemoItemTwoPayload;
   deleteFormSubmission: DeleteFormSubmissionPayload;
   deleteFormVersionDraft: FormPayload;
+  deleteLotteryBankAccount: DeleteLotteryBankAccountPayload;
+  deleteLotteryGame: DeleteLotteryGamePayload;
   deleteMyDelegation: DeleteMyDelegationPayload;
+  deleteMyScheduleDayOff: DeleteScheduleDayOffPayload;
   deleteOrg: DeletePayload;
   deleteRetiredPermission: DeleteRetiredPermissionPayload;
   deleteRole: DeletePayload;
+  deleteScheduleCalendarDay: DeleteScheduleCalendarDayPayload;
+  deleteScheduleDayOffOnBehalf: DeleteScheduleDayOffPayload;
+  deleteScheduleDemand: DeleteScheduleDemandPayload;
+  deleteScheduleDemandTemplate: DeleteScheduleTemplatePayload;
+  deleteScheduleDemandWeekTemplate: DeleteScheduleTemplatePayload;
+  deleteScheduleEntry: DeleteScheduleEntryPayload;
   deleteWorkflowVersionDraft: WorkflowPayload;
   disablePrintAgent: PrintAgentPayload;
   forkForm: FormPayload;
@@ -1391,31 +2832,57 @@ export type Mutation = {
   markAllNotificationsRead: MarkNotificationsReadPayload;
   markNotificationsRead: MarkNotificationsReadPayload;
   moveOrg: OrgPayload;
+  notifyLotteryPurchaseWrongStore: Scalars['Boolean']['output'];
+  notifyLotteryTransferWrongStore: Scalars['Boolean']['output'];
   printPrinterTestPage: PrintJobPayload;
   provisionTenant: ProvisionTenantPayload;
   publishFormVersion: FormVersionPayload;
+  publishSchedule: PublishSchedulePayload;
   publishWorkflowVersion: WorkflowVersionPayload;
+  punchMySchedule: MySchedulePunch;
+  purgeDemoTenant: PurgeDemoTenantPayload;
+  reassignSchedulePunch: ScheduleAttendancePunch;
   reassignTask: WorkflowTaskPayload;
+  receiveLotteryPurchaseBook: ReceiveLotteryPurchaseBookPayload;
+  receiveLotteryTransferBook: ReceiveLotteryTransferBookPayload;
+  recordLotteryBankTransaction: LotteryBankTransactionPayload;
+  recordLotterySettlement: RecordLotterySettlementPayload;
+  recoverLotteryTickets: LotteryInventoryActionPayload;
   refresh: RefreshPayload;
+  registerLotteryDealerSignin: LotteryDealerSigninPayload;
+  removeScheduleDayEntries: RemoveScheduleDayEntriesPayload;
   requestPasswordReset: RequestPasswordResetPayload;
   resetNotificationSetting: NotificationSettingPayload;
   resetPrintAgentPairing: PrintAgentPairingPayload;
+  resetSidebarBadgeSetting: SidebarBadgeSettingPayload;
+  restoreScheduleRule: ScheduleRuleMutationPayload;
   retireCurrentVersion: FormPayload;
   retireCurrentWorkflowVersion: WorkflowPayload;
   retryAdvanceInstance: WorkflowInstancePayload;
+  reverseLotteryBankTransaction: LotteryBankTransactionPayload;
+  reverseLotterySettlement: RecordLotterySettlementPayload;
   revokeFormFromTenant: FormPayload;
   revokeRoleUsers: RoleUsersPayload;
   revokeTenantProvision: RevokeTenantProvisionPayload;
   revokeWorkflowFromTenant: WorkflowPayload;
+  runScheduleAutoRun: ScheduleAutoRunSummary;
   saveDataScopeRule: SaveDataScopeRulePayload;
   saveFormDraft: FormSubmissionPayload;
   saveFormVersionDraft: FormVersionPayload;
   saveRoleMatrix: RoleMatrixPayload;
+  saveScheduleCalendarDay: ScheduleCalendarDayPayload;
+  saveScheduleDemand: SaveScheduleDemandPayload;
+  saveScheduleDemandTemplate: ScheduleDemandTemplatePayload;
+  saveScheduleDemandWeekTemplate: ScheduleDemandWeekTemplatePayload;
+  saveScheduleEntry: SaveScheduleEntryPayload;
   saveWorkflowVersionDraft: WorkflowVersionPayload;
+  scrapLotteryTickets: LotteryInventoryActionPayload;
   setDemoItemOneEnabled: DemoItemOnePayload;
   setDemoItemTwoEnabled: DemoItemTwoPayload;
   setFieldCategoryEnabled: FieldCategoryPayload;
   setFieldEnabled: FieldPayload;
+  setFieldOptionColor: FieldOptionColorPayload;
+  setLotteryAllocation: LotteryAllocationPayload;
   setModuleEnabled: ModuleAdminPayload;
   setModuleIcon: ModuleAdminPayload;
   setModuleListColumns: ModuleListColumnsPayload;
@@ -1440,11 +2907,19 @@ export type Mutation = {
   updateFieldCategory: FieldCategoryPayload;
   updateForm: FormPayload;
   updateFormSubmission: FormSubmissionPayload;
+  updateLotteryBankAccount: LotteryBankAccountPayload;
+  updateLotteryCashPoint: LotteryCashPointPayload;
+  updateLotteryDealer: LotteryDealerPayload;
+  updateLotteryDealerContact: LotteryDealerContactPayload;
+  updateLotteryDealerSignin: LotteryDealerSigninPayload;
+  updateLotteryGame: LotteryGamePayload;
   updateMyPreferences: UpdateMyPreferencesPayload;
   updateNotificationSetting: NotificationSettingPayload;
   updateOrg: OrgPayload;
   updatePrinter: PrinterPayload;
   updateRole: RolePayload;
+  updateScheduleStaff: ScheduleStaffPayload;
+  updateSidebarBadgeSetting: SidebarBadgeSettingPayload;
   updateUser: UserPayload;
   updateWorkflow: WorkflowPayload;
   upgradeFormSubmissions: FormUpgradePayload;
@@ -1453,13 +2928,33 @@ export type Mutation = {
 };
 
 
+export type MutationAddMyScheduleDayOffsArgs = {
+  input: AddMyScheduleDayOffsInput;
+};
+
+
 export type MutationAddOrgMembersArgs = {
   input: AddOrgMembersInput;
 };
 
 
+export type MutationAddScheduleDayOffsOnBehalfArgs = {
+  input: AddScheduleDayOffsOnBehalfInput;
+};
+
+
+export type MutationAddScheduleStaffArgs = {
+  input: AddScheduleStaffInput;
+};
+
+
 export type MutationAddStepAssigneeArgs = {
   input: AddStepAssigneeInput;
+};
+
+
+export type MutationApplyScheduleTemplatesArgs = {
+  input: ApplyScheduleTemplatesInput;
 };
 
 
@@ -1493,6 +2988,11 @@ export type MutationChangePasswordArgs = {
 };
 
 
+export type MutationClearScheduleAutoAssignmentsArgs = {
+  input: ScheduleAutoRunRangeInput;
+};
+
+
 export type MutationCopySubmissionToDraftArgs = {
   input: CopySubmissionToDraftInput;
 };
@@ -1500,6 +3000,11 @@ export type MutationCopySubmissionToDraftArgs = {
 
 export type MutationCopyUserOrgRolesArgs = {
   input: CopyUserOrgRolesInput;
+};
+
+
+export type MutationCorrectLotterySkippedTicketsArgs = {
+  input: CorrectLotterySkippedTicketsInput;
 };
 
 
@@ -1548,6 +3053,31 @@ export type MutationCreateFormVersionDraftArgs = {
 };
 
 
+export type MutationCreateLotteryBankAccountArgs = {
+  input: CreateLotteryBankAccountInput;
+};
+
+
+export type MutationCreateLotteryCashPointArgs = {
+  input: CreateLotteryCashPointInput;
+};
+
+
+export type MutationCreateLotteryDealerArgs = {
+  input: CreateLotteryDealerInput;
+};
+
+
+export type MutationCreateLotteryDealerContactArgs = {
+  input: CreateLotteryDealerContactInput;
+};
+
+
+export type MutationCreateLotteryGameArgs = {
+  input: CreateLotteryGameInput;
+};
+
+
 export type MutationCreateMyDelegationArgs = {
   input: CreateMyDelegationInput;
 };
@@ -1593,6 +3123,16 @@ export type MutationCreateWorkflowVersionDraftArgs = {
 };
 
 
+export type MutationCustomizeScheduleAutoRunArgs = {
+  input: CustomizeScheduleAutoRunInput;
+};
+
+
+export type MutationCustomizeScheduleRuleArgs = {
+  input: CustomizeScheduleRuleInput;
+};
+
+
 export type MutationDecideTaskArgs = {
   input: DecideTaskInput;
 };
@@ -1618,8 +3158,23 @@ export type MutationDeleteFormVersionDraftArgs = {
 };
 
 
+export type MutationDeleteLotteryBankAccountArgs = {
+  id: Scalars['ID']['input'];
+};
+
+
+export type MutationDeleteLotteryGameArgs = {
+  input: DeleteLotteryGameInput;
+};
+
+
 export type MutationDeleteMyDelegationArgs = {
   input: DeleteMyDelegationInput;
+};
+
+
+export type MutationDeleteMyScheduleDayOffArgs = {
+  input: DeleteMyScheduleDayOffInput;
 };
 
 
@@ -1635,6 +3190,36 @@ export type MutationDeleteRetiredPermissionArgs = {
 
 export type MutationDeleteRoleArgs = {
   input: DeleteRoleInput;
+};
+
+
+export type MutationDeleteScheduleCalendarDayArgs = {
+  input: DeleteScheduleCalendarDayInput;
+};
+
+
+export type MutationDeleteScheduleDayOffOnBehalfArgs = {
+  input: DeleteScheduleDayOffOnBehalfInput;
+};
+
+
+export type MutationDeleteScheduleDemandArgs = {
+  input: DeleteScheduleDemandInput;
+};
+
+
+export type MutationDeleteScheduleDemandTemplateArgs = {
+  input: DeleteScheduleTemplateInput;
+};
+
+
+export type MutationDeleteScheduleDemandWeekTemplateArgs = {
+  input: DeleteScheduleTemplateInput;
+};
+
+
+export type MutationDeleteScheduleEntryArgs = {
+  input: DeleteScheduleEntryInput;
 };
 
 
@@ -1678,6 +3263,16 @@ export type MutationMoveOrgArgs = {
 };
 
 
+export type MutationNotifyLotteryPurchaseWrongStoreArgs = {
+  input: ReceiveLotteryPurchaseBookInput;
+};
+
+
+export type MutationNotifyLotteryTransferWrongStoreArgs = {
+  input: ReceiveLotteryTransferBookInput;
+};
+
+
 export type MutationPrintPrinterTestPageArgs = {
   input: PrintPrinterTestPageInput;
 };
@@ -1693,13 +3288,68 @@ export type MutationPublishFormVersionArgs = {
 };
 
 
+export type MutationPublishScheduleArgs = {
+  input: PublishScheduleInput;
+};
+
+
 export type MutationPublishWorkflowVersionArgs = {
   input: PublishWorkflowVersionInput;
 };
 
 
+export type MutationPunchMyScheduleArgs = {
+  input: PunchMyScheduleInput;
+};
+
+
+export type MutationPurgeDemoTenantArgs = {
+  input: PurgeDemoTenantInput;
+};
+
+
+export type MutationReassignSchedulePunchArgs = {
+  input: ReassignSchedulePunchInput;
+};
+
+
 export type MutationReassignTaskArgs = {
   input: ReassignTaskInput;
+};
+
+
+export type MutationReceiveLotteryPurchaseBookArgs = {
+  input: ReceiveLotteryPurchaseBookInput;
+};
+
+
+export type MutationReceiveLotteryTransferBookArgs = {
+  input: ReceiveLotteryTransferBookInput;
+};
+
+
+export type MutationRecordLotteryBankTransactionArgs = {
+  input: RecordLotteryBankTransactionInput;
+};
+
+
+export type MutationRecordLotterySettlementArgs = {
+  input: RecordLotterySettlementInput;
+};
+
+
+export type MutationRecoverLotteryTicketsArgs = {
+  input: RecoverLotteryTicketsInput;
+};
+
+
+export type MutationRegisterLotteryDealerSigninArgs = {
+  input: RegisterLotteryDealerSigninInput;
+};
+
+
+export type MutationRemoveScheduleDayEntriesArgs = {
+  input: RemoveScheduleDayEntriesInput;
 };
 
 
@@ -1718,6 +3368,16 @@ export type MutationResetPrintAgentPairingArgs = {
 };
 
 
+export type MutationResetSidebarBadgeSettingArgs = {
+  input: ResetSidebarBadgeSettingInput;
+};
+
+
+export type MutationRestoreScheduleRuleArgs = {
+  input: RestoreScheduleRuleInput;
+};
+
+
 export type MutationRetireCurrentVersionArgs = {
   input: RetireCurrentVersionInput;
 };
@@ -1730,6 +3390,16 @@ export type MutationRetireCurrentWorkflowVersionArgs = {
 
 export type MutationRetryAdvanceInstanceArgs = {
   input: RetryAdvanceInstanceInput;
+};
+
+
+export type MutationReverseLotteryBankTransactionArgs = {
+  input: ReverseLotteryBankTransactionInput;
+};
+
+
+export type MutationReverseLotterySettlementArgs = {
+  input: ReverseLotterySettlementInput;
 };
 
 
@@ -1753,6 +3423,11 @@ export type MutationRevokeWorkflowFromTenantArgs = {
 };
 
 
+export type MutationRunScheduleAutoRunArgs = {
+  input: RunScheduleAutoRunInput;
+};
+
+
 export type MutationSaveDataScopeRuleArgs = {
   input: SaveDataScopeRuleInput;
 };
@@ -1773,8 +3448,38 @@ export type MutationSaveRoleMatrixArgs = {
 };
 
 
+export type MutationSaveScheduleCalendarDayArgs = {
+  input: SaveScheduleCalendarDayInput;
+};
+
+
+export type MutationSaveScheduleDemandArgs = {
+  input: SaveScheduleDemandInput;
+};
+
+
+export type MutationSaveScheduleDemandTemplateArgs = {
+  input: SaveScheduleDemandTemplateInput;
+};
+
+
+export type MutationSaveScheduleDemandWeekTemplateArgs = {
+  input: SaveScheduleDemandWeekTemplateInput;
+};
+
+
+export type MutationSaveScheduleEntryArgs = {
+  input: SaveScheduleEntryInput;
+};
+
+
 export type MutationSaveWorkflowVersionDraftArgs = {
   input: SaveWorkflowVersionDraftInput;
+};
+
+
+export type MutationScrapLotteryTicketsArgs = {
+  input: ScrapLotteryTicketsInput;
 };
 
 
@@ -1795,6 +3500,16 @@ export type MutationSetFieldCategoryEnabledArgs = {
 
 export type MutationSetFieldEnabledArgs = {
   input: SetFieldEnabledInput;
+};
+
+
+export type MutationSetFieldOptionColorArgs = {
+  input: SetFieldOptionColorInput;
+};
+
+
+export type MutationSetLotteryAllocationArgs = {
+  input: SetLotteryAllocationInput;
 };
 
 
@@ -1918,6 +3633,36 @@ export type MutationUpdateFormSubmissionArgs = {
 };
 
 
+export type MutationUpdateLotteryBankAccountArgs = {
+  input: UpdateLotteryBankAccountInput;
+};
+
+
+export type MutationUpdateLotteryCashPointArgs = {
+  input: UpdateLotteryCashPointInput;
+};
+
+
+export type MutationUpdateLotteryDealerArgs = {
+  input: UpdateLotteryDealerInput;
+};
+
+
+export type MutationUpdateLotteryDealerContactArgs = {
+  input: UpdateLotteryDealerContactInput;
+};
+
+
+export type MutationUpdateLotteryDealerSigninArgs = {
+  input: UpdateLotteryDealerSigninInput;
+};
+
+
+export type MutationUpdateLotteryGameArgs = {
+  input: UpdateLotteryGameInput;
+};
+
+
 export type MutationUpdateMyPreferencesArgs = {
   input: UpdateMyPreferencesInput;
 };
@@ -1940,6 +3685,16 @@ export type MutationUpdatePrinterArgs = {
 
 export type MutationUpdateRoleArgs = {
   input: UpdateRoleInput;
+};
+
+
+export type MutationUpdateScheduleStaffArgs = {
+  input: UpdateScheduleStaffInput;
+};
+
+
+export type MutationUpdateSidebarBadgeSettingArgs = {
+  input: UpdateSidebarBadgeSettingInput;
 };
 
 
@@ -2049,6 +3804,106 @@ export type MyPreferencesPayload = {
   settings: Scalars['JSONObject']['output'];
 };
 
+export type MyScheduleChange = {
+  __typename?: 'MyScheduleChange';
+  action: Scalars['String']['output'];
+  afterEndAt?: Maybe<Scalars['DateTime']['output']>;
+  afterStartAt?: Maybe<Scalars['DateTime']['output']>;
+  beforeEndAt?: Maybe<Scalars['DateTime']['output']>;
+  beforeStartAt?: Maybe<Scalars['DateTime']['output']>;
+  createdAt: Scalars['DateTime']['output'];
+  date: Scalars['String']['output'];
+  id: Scalars['ID']['output'];
+  orgName: Scalars['String']['output'];
+  reason: Scalars['String']['output'];
+  reasonNote?: Maybe<Scalars['String']['output']>;
+};
+
+export type MyScheduleDayOffsInput = {
+  month?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type MyScheduleDayOffsPayload = {
+  __typename?: 'MyScheduleDayOffsPayload';
+  canEdit: Scalars['Boolean']['output'];
+  canOverride: Scalars['Boolean']['output'];
+  dayOffCount: Scalars['Int']['output'];
+  days: Array<ScheduleDayOffDay>;
+  limits: ScheduleDayOffLimits;
+  month: Scalars['String']['output'];
+  myDayOffs: Array<ScheduleDayOff>;
+  primaryOrg?: Maybe<ScheduleDayOffOrg>;
+  violations: Array<ScheduleDayOffViolation>;
+  window?: Maybe<ScheduleDayOffWindow>;
+};
+
+export type MyScheduleEntry = {
+  __typename?: 'MyScheduleEntry';
+  breakMinutes: Scalars['Int']['output'];
+  clockIn?: Maybe<Scalars['DateTime']['output']>;
+  clockOut?: Maybe<Scalars['DateTime']['output']>;
+  date: Scalars['String']['output'];
+  endAt: Scalars['DateTime']['output'];
+  id: Scalars['ID']['output'];
+  isLead: Scalars['Boolean']['output'];
+  missing: Array<Scalars['String']['output']>;
+  orgId: Scalars['ID']['output'];
+  orgName: Scalars['String']['output'];
+  positionKey?: Maybe<Scalars['String']['output']>;
+  shortName?: Maybe<Scalars['String']['output']>;
+  startAt: Scalars['DateTime']['output'];
+  tasks: Array<MyScheduleTask>;
+};
+
+export type MyScheduleInput = {
+  month?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type MyScheduleOrg = {
+  __typename?: 'MyScheduleOrg';
+  id: Scalars['ID']['output'];
+  name: Scalars['String']['output'];
+};
+
+export type MySchedulePayload = {
+  __typename?: 'MySchedulePayload';
+  calendarDays: Array<ScheduleRosterCalendarDay>;
+  canPunch: Scalars['Boolean']['output'];
+  changes: Array<MyScheduleChange>;
+  currentOrg: MyScheduleOrg;
+  dayOffDates: Array<Scalars['String']['output']>;
+  entries: Array<MyScheduleEntry>;
+  hasEntryToday: Scalars['Boolean']['output'];
+  incomplete: Array<MyScheduleEntry>;
+  month: Scalars['String']['output'];
+  openUnmatchedClockIn?: Maybe<MySchedulePunch>;
+  punchCards: Array<MySchedulePunchCard>;
+  today: Scalars['String']['output'];
+};
+
+export type MySchedulePunch = {
+  __typename?: 'MySchedulePunch';
+  at: Scalars['DateTime']['output'];
+  duplicate: Scalars['Boolean']['output'];
+  entryId?: Maybe<Scalars['ID']['output']>;
+  id: Scalars['ID']['output'];
+  orgId: Scalars['ID']['output'];
+  type: Scalars['String']['output'];
+};
+
+export type MySchedulePunchCard = {
+  __typename?: 'MySchedulePunchCard';
+  day: Scalars['String']['output'];
+  entry: MyScheduleEntry;
+};
+
+export type MyScheduleTask = {
+  __typename?: 'MyScheduleTask';
+  positionKey: Scalars['String']['output'];
+  role: Scalars['String']['output'];
+  taskKey: Scalars['String']['output'];
+};
+
 export type MyTasksInput = {
   done?: InputMaybe<Scalars['Boolean']['input']>;
   formKey?: InputMaybe<Scalars['ID']['input']>;
@@ -2085,17 +3940,51 @@ export type NotificationOrgScope = {
   ref: Scalars['String']['output'];
 };
 
+export type NotificationSchedule = {
+  __typename?: 'NotificationSchedule';
+  dayOfMonth?: Maybe<Scalars['Int']['output']>;
+  daysBefore?: Maybe<Array<Scalars['Int']['output']>>;
+  kind: NotificationScheduleKind;
+  time: Scalars['String']['output'];
+};
+
+export type NotificationScheduleInput = {
+  dayOfMonth?: InputMaybe<Scalars['Int']['input']>;
+  daysBefore?: InputMaybe<Array<Scalars['Int']['input']>>;
+  kind: NotificationScheduleKind;
+  time: Scalars['String']['input'];
+};
+
+/** 提醒時間的寫法:某日期前 N 天(可多個)/ 逾期後每天 / 每月第 N 天;由類型宣告,租戶不能換 */
+export enum NotificationScheduleKind {
+  DailyOverdue = 'DAILY_OVERDUE',
+  DaysBefore = 'DAYS_BEFORE',
+  Monthly = 'MONTHLY'
+}
+
 export type NotificationSetting = {
   __typename?: 'NotificationSetting';
-  audience: Scalars['JSONObject']['output'];
-  defaultAudience: Scalars['JSONObject']['output'];
+  audience?: Maybe<Scalars['JSONObject']['output']>;
+  category: Scalars['String']['output'];
+  defaultAudience?: Maybe<Scalars['JSONObject']['output']>;
+  defaultSchedule?: Maybe<NotificationSchedule>;
   isDefault: Scalars['Boolean']['output'];
+  isScheduleDefault: Scalars['Boolean']['output'];
   name: Scalars['String']['output'];
-  orgScope: NotificationOrgScope;
+  orgScope?: Maybe<NotificationOrgScope>;
+  recipientNote?: Maybe<Scalars['String']['output']>;
+  schedule?: Maybe<NotificationSchedule>;
+  scheduleDateLabel?: Maybe<Scalars['String']['output']>;
   type: Scalars['String']['output'];
   updatedAt?: Maybe<Scalars['DateTime']['output']>;
   updatedBy?: Maybe<Scalars['ID']['output']>;
 };
+
+/** 還原預設的範圍:收件人 / 提醒時間 */
+export enum NotificationSettingPart {
+  Audience = 'AUDIENCE',
+  Schedule = 'SCHEDULE'
+}
 
 export type NotificationSettingPayload = {
   __typename?: 'NotificationSettingPayload';
@@ -2129,6 +4018,7 @@ export type Org = {
   description?: Maybe<Scalars['String']['output']>;
   enabled: Scalars['Boolean']['output'];
   id: Scalars['ID']['output'];
+  isDemo: Scalars['Boolean']['output'];
   isSystem: Scalars['Boolean']['output'];
   logoUrl?: Maybe<Scalars['String']['output']>;
   managers: Array<UserSummary>;
@@ -2421,9 +4311,16 @@ export type PrintersPayload = {
   totalCount: Scalars['Int']['output'];
 };
 
+export type ProvisionTarget = {
+  __typename?: 'ProvisionTarget';
+  databaseName: Scalars['String']['output'];
+};
+
 export type ProvisionTenantInput = {
   adminAccount: Scalars['String']['input'];
   adminEmail: Scalars['String']['input'];
+  adminInitialPassword?: InputMaybe<Scalars['String']['input']>;
+  demo?: InputMaybe<Scalars['Boolean']['input']>;
   logoPath?: InputMaybe<Scalars['String']['input']>;
   moduleKeys: Array<Scalars['String']['input']>;
   name: Scalars['String']['input'];
@@ -2445,10 +4342,47 @@ export type PublishFormVersionInput = {
   formKey: Scalars['ID']['input'];
 };
 
+export type PublishScheduleInput = {
+  month: Scalars['String']['input'];
+  orgId?: InputMaybe<Scalars['ID']['input']>;
+};
+
+export type PublishSchedulePayload = {
+  __typename?: 'PublishSchedulePayload';
+  notifiedCount: Scalars['Int']['output'];
+  period: SchedulePeriod;
+};
+
 export type PublishWorkflowVersionInput = {
   changelog: Scalars['String']['input'];
   expectedDraftRevision: Scalars['Int']['input'];
   workflowKey: Scalars['ID']['input'];
+};
+
+export type PunchMyScheduleInput = {
+  entryId?: InputMaybe<Scalars['ID']['input']>;
+  type: Scalars['String']['input'];
+};
+
+export type PurgeDemoTenantInput = {
+  slug: Scalars['String']['input'];
+};
+
+export type PurgeDemoTenantPayload = {
+  __typename?: 'PurgeDemoTenantPayload';
+  collections: Array<PurgedCollection>;
+  deletedDocuments: Scalars['Int']['output'];
+  deletedFiles: Scalars['Int']['output'];
+  deletedUsers: Scalars['Int']['output'];
+  detachedUsers: Scalars['Int']['output'];
+  orgId?: Maybe<Scalars['ID']['output']>;
+  purged: Scalars['Boolean']['output'];
+};
+
+export type PurgedCollection = {
+  __typename?: 'PurgedCollection';
+  collection: Scalars['String']['output'];
+  deleted: Scalars['Int']['output'];
 };
 
 export type Query = {
@@ -2469,6 +4403,7 @@ export type Query = {
   exportFormSeed: ExportFormSeedPayload;
   exportWorkflowSeed: ExportWorkflowSeedPayload;
   fieldCategories: FieldCategoriesPayload;
+  fieldOptionColors: FieldOptionColorsPayload;
   fields: FieldsPayload;
   form: FormPayload;
   formFieldOptions: FormFieldOptionsPayload;
@@ -2482,8 +4417,50 @@ export type Query = {
   formUpgradePlan: FormUpgradePlan;
   formVersion: FormVersionPayload;
   formVersions: FormVersionsPayload;
+  formVoidReasonOptions: FormVoidReasonOptionsPayload;
   formWorkflowOptions: FormWorkflowOptionsPayload;
   forms: FormsPayload;
+  lotteryAllocations: LotteryAllocationsPayload;
+  lotteryBankAccount: LotteryBankAccountPayload;
+  lotteryBankAccounts: LotteryBankAccountsPayload;
+  lotteryBankTransactions: LotteryBankTransactionsPayload;
+  lotteryCashLedger: LotteryCashLedgerPayload;
+  lotteryCashMovement: LotteryCashMovementPayload;
+  lotteryCashPoints: LotteryCashPointsPayload;
+  lotteryDealer: LotteryDealerPayload;
+  lotteryDealerCoSellers: LotteryDealerCoSellersPayload;
+  lotteryDealerContact: LotteryDealerContactPayload;
+  lotteryDealerContacts: LotteryDealerContactsPayload;
+  lotteryDealerPurchases: Array<LotteryDealerPurchase>;
+  lotteryDealerSignins: LotteryDealerSigninsPayload;
+  lotteryDealers: LotteryDealersPayload;
+  lotteryFieldOptions: LotteryFieldOptionsPayload;
+  lotteryGame: LotteryGamePayload;
+  lotteryGames: LotteryGamesPayload;
+  lotteryInventoryBook: LotteryInventoryBookPayload;
+  lotteryInventoryBooks: LotteryInventoryBooksPayload;
+  lotteryInventoryStores: LotteryInventoryStoresPayload;
+  lotteryInvestigations: LotteryInvestigationsPayload;
+  lotteryOccupiedStores: LotteryOccupiedStoresPayload;
+  lotteryOutstandingSettlements: LotteryOutstandingSettlementsPayload;
+  lotteryPositionOptions: LotteryPositionOptionsPayload;
+  lotteryPurchaseList: LotteryPurchaseList;
+  lotteryPurchaseOptions: LotteryPurchaseOptions;
+  lotteryPurchaseProgress: Array<LotteryPurchaseProgress>;
+  lotteryPurchaseReceiving: LotteryPurchaseReceiving;
+  lotteryRequisitionCandidates: Array<LotteryRequisitionCandidate>;
+  lotteryRequisitionStates: Array<LotteryRequisitionStateItem>;
+  lotterySettlement: LotterySettlementPayload;
+  lotterySettlementAccounts: LotterySettlementAccountsPayload;
+  lotterySettlementCandidates: LotteryOutstandingSettlementsPayload;
+  lotteryStockOverview: LotteryStockOverviewPayload;
+  lotteryTicketLookup: LotteryTicketLookupPayload;
+  lotteryTransferBookTickets: Array<LotteryTransferTicketCell>;
+  lotteryTransferOptions: LotteryTransferOptions;
+  lotteryTransferProgress: Array<LotteryTransferProgress>;
+  lotteryTransferReceiving: LotteryTransferReceiving;
+  makeupPunchEntryExists: Scalars['Boolean']['output'];
+  makeupPunchEntryOptions: Array<ScheduleAttendanceEntryOption>;
   me: Me;
   moduleForms: Array<FormSummary>;
   moduleListColumns: ModuleListColumnsPayload;
@@ -2494,7 +4471,10 @@ export type Query = {
   myNotificationPreferences: MyNotificationPreferencesPayload;
   myNotificationUnreadCount: MyNotificationUnreadCountPayload;
   myNotifications: MyNotificationsPayload;
+  myPendingMakeupPunchEntryIds: Array<Scalars['ID']['output']>;
   myPreferences: MyPreferencesPayload;
+  mySchedule: MySchedulePayload;
+  myScheduleDayOffs: MyScheduleDayOffsPayload;
   myTasks: WorkflowTasksPayload;
   notificationSettings: NotificationSettingsPayload;
   org: Org;
@@ -2510,6 +4490,7 @@ export type Query = {
   printJobs: PrintJobsPayload;
   printablePrinters: PrintablePrintersPayload;
   printers: PrintersPayload;
+  provisionTarget: ProvisionTarget;
   realtimeTicket?: Maybe<RealtimeTicketPayload>;
   reprintReasons: ReprintReasonsPayload;
   retiredFormPermissions: RetiredFormPermissionsPayload;
@@ -2518,8 +4499,26 @@ export type Query = {
   roleUserCandidates: RoleUserCandidatesPayload;
   roleUsers: RoleUsersPayload;
   roles: RolesPayload;
+  scheduleAttendanceByPerson: ScheduleAttendanceByPersonPayload;
+  scheduleAttendanceByStore: ScheduleAttendanceByStorePayload;
+  scheduleAttendanceExport: ScheduleAttendanceExportPayload;
+  scheduleAttendancePunchEntryOptions: Array<ScheduleAttendanceEntryOption>;
+  scheduleAutoRunPreview: ScheduleAutoRunPreviewPayload;
+  scheduleAutoRunStatus: ScheduleAutoRunStatusPayload;
+  scheduleCalendar: ScheduleCalendarPayload;
+  scheduleCheck: ScheduleCheckPayload;
+  scheduleDayOffOverview: ScheduleDayOffOverviewPayload;
+  scheduleDemandTemplates: ScheduleDemandTemplatesPayload;
+  scheduleDemandWeekTemplates: ScheduleDemandWeekTemplatesPayload;
+  scheduleFieldOptions: ScheduleFieldOptionsPayload;
+  scheduleRoster: ScheduleRosterPayload;
+  scheduleRules: ScheduleRulesPayload;
+  scheduleStaff: ScheduleStaffListPayload;
+  scheduleTemplateApplyPreview: ApplyScheduleTemplatesPayload;
+  sidebarBadgeSettings: SidebarBadgeSettingsPayload;
   sidebarBadges: Array<SidebarBadge>;
   tenantModuleOptions: Array<ModuleOption>;
+  tenantOrgTree: Array<TenantOrgNode>;
   user: User;
   users: UsersPayload;
   validateFormVersion: FormValidationReport;
@@ -2592,6 +4591,11 @@ export type QueryFieldCategoriesArgs = {
 };
 
 
+export type QueryFieldOptionColorsArgs = {
+  categoryKey: Scalars['String']['input'];
+};
+
+
 export type QueryFieldsArgs = {
   categoryId: Scalars['ID']['input'];
 };
@@ -2658,6 +4662,11 @@ export type QueryFormVersionsArgs = {
 };
 
 
+export type QueryFormVoidReasonOptionsArgs = {
+  formKey: Scalars['ID']['input'];
+};
+
+
 export type QueryFormWorkflowOptionsArgs = {
   formKey: Scalars['ID']['input'];
 };
@@ -2665,6 +4674,192 @@ export type QueryFormWorkflowOptionsArgs = {
 
 export type QueryFormsArgs = {
   input: FormsInput;
+};
+
+
+export type QueryLotteryAllocationsArgs = {
+  input: LotteryAllocationsInput;
+};
+
+
+export type QueryLotteryBankAccountArgs = {
+  id: Scalars['ID']['input'];
+};
+
+
+export type QueryLotteryBankAccountsArgs = {
+  input: LotteryBankAccountsInput;
+};
+
+
+export type QueryLotteryBankTransactionsArgs = {
+  input: LotteryBankTransactionsInput;
+};
+
+
+export type QueryLotteryCashLedgerArgs = {
+  input: LotteryCashLedgerInput;
+};
+
+
+export type QueryLotteryCashMovementArgs = {
+  id: Scalars['ID']['input'];
+};
+
+
+export type QueryLotteryCashPointsArgs = {
+  input: LotteryCashPointsInput;
+};
+
+
+export type QueryLotteryDealerArgs = {
+  id: Scalars['ID']['input'];
+};
+
+
+export type QueryLotteryDealerCoSellersArgs = {
+  dealerId: Scalars['ID']['input'];
+};
+
+
+export type QueryLotteryDealerContactArgs = {
+  id: Scalars['ID']['input'];
+};
+
+
+export type QueryLotteryDealerContactsArgs = {
+  input: LotteryDealerContactsInput;
+};
+
+
+export type QueryLotteryDealerPurchasesArgs = {
+  dealerId: Scalars['ID']['input'];
+};
+
+
+export type QueryLotteryDealerSigninsArgs = {
+  dealerId: Scalars['ID']['input'];
+  year: Scalars['Int']['input'];
+};
+
+
+export type QueryLotteryDealersArgs = {
+  input: LotteryDealersInput;
+};
+
+
+export type QueryLotteryFieldOptionsArgs = {
+  categoryKey: Scalars['String']['input'];
+};
+
+
+export type QueryLotteryGameArgs = {
+  id: Scalars['ID']['input'];
+};
+
+
+export type QueryLotteryGamesArgs = {
+  input: LotteryGamesInput;
+};
+
+
+export type QueryLotteryInventoryBookArgs = {
+  id: Scalars['ID']['input'];
+};
+
+
+export type QueryLotteryInventoryBooksArgs = {
+  input: LotteryInventoryBooksInput;
+};
+
+
+export type QueryLotteryPositionOptionsArgs = {
+  orgId: Scalars['ID']['input'];
+};
+
+
+export type QueryLotteryPurchaseOptionsArgs = {
+  orgId: Scalars['ID']['input'];
+};
+
+
+export type QueryLotteryPurchaseProgressArgs = {
+  purchaseIds: Array<Scalars['ID']['input']>;
+};
+
+
+export type QueryLotteryPurchaseReceivingArgs = {
+  submissionId: Scalars['ID']['input'];
+};
+
+
+export type QueryLotteryRequisitionCandidatesArgs = {
+  orgId: Scalars['ID']['input'];
+};
+
+
+export type QueryLotteryRequisitionStatesArgs = {
+  requisitionIds: Array<Scalars['ID']['input']>;
+};
+
+
+export type QueryLotterySettlementArgs = {
+  moduleKey: Scalars['String']['input'];
+  refId: Scalars['ID']['input'];
+};
+
+
+export type QueryLotterySettlementAccountsArgs = {
+  moduleKey: Scalars['String']['input'];
+  refId: Scalars['ID']['input'];
+  side: Scalars['String']['input'];
+};
+
+
+export type QueryLotterySettlementCandidatesArgs = {
+  input: LotterySettlementCandidatesInput;
+};
+
+
+export type QueryLotteryStockOverviewArgs = {
+  input: LotteryStockOverviewInput;
+};
+
+
+export type QueryLotteryTicketLookupArgs = {
+  input: LotteryTicketLookupInput;
+};
+
+
+export type QueryLotteryTransferBookTicketsArgs = {
+  bookId: Scalars['ID']['input'];
+  fromOrgId: Scalars['ID']['input'];
+};
+
+
+export type QueryLotteryTransferOptionsArgs = {
+  fromOrgId: Scalars['ID']['input'];
+  toOrgId?: InputMaybe<Scalars['ID']['input']>;
+};
+
+
+export type QueryLotteryTransferProgressArgs = {
+  transferIds: Array<Scalars['ID']['input']>;
+};
+
+
+export type QueryLotteryTransferReceivingArgs = {
+  submissionId: Scalars['ID']['input'];
+};
+
+
+export type QueryMakeupPunchEntryExistsArgs = {
+  submissionId: Scalars['ID']['input'];
+};
+
+
+export type QueryMakeupPunchEntryOptionsArgs = {
+  input: MakeupPunchEntryOptionsInput;
 };
 
 
@@ -2695,6 +4890,16 @@ export type QueryMyDelegationsArgs = {
 
 export type QueryMyNotificationsArgs = {
   input: MyNotificationsInput;
+};
+
+
+export type QueryMyScheduleArgs = {
+  input?: InputMaybe<MyScheduleInput>;
+};
+
+
+export type QueryMyScheduleDayOffsArgs = {
+  input?: InputMaybe<MyScheduleDayOffsInput>;
 };
 
 
@@ -2798,6 +5003,81 @@ export type QueryRolesArgs = {
 };
 
 
+export type QueryScheduleAttendanceByPersonArgs = {
+  input: ScheduleAttendanceByPersonInput;
+};
+
+
+export type QueryScheduleAttendanceByStoreArgs = {
+  input: ScheduleAttendanceByStoreInput;
+};
+
+
+export type QueryScheduleAttendanceExportArgs = {
+  input: ScheduleAttendanceExportInput;
+};
+
+
+export type QueryScheduleAttendancePunchEntryOptionsArgs = {
+  punchId: Scalars['ID']['input'];
+};
+
+
+export type QueryScheduleAutoRunPreviewArgs = {
+  input: ScheduleAutoRunRangeInput;
+};
+
+
+export type QueryScheduleAutoRunStatusArgs = {
+  input: ScheduleRosterInput;
+};
+
+
+export type QueryScheduleCalendarArgs = {
+  input: ScheduleCalendarInput;
+};
+
+
+export type QueryScheduleCheckArgs = {
+  input: ScheduleRosterInput;
+};
+
+
+export type QueryScheduleDayOffOverviewArgs = {
+  input?: InputMaybe<ScheduleDayOffOverviewInput>;
+};
+
+
+export type QueryScheduleDemandWeekTemplatesArgs = {
+  input?: InputMaybe<ScheduleDemandWeekTemplatesInput>;
+};
+
+
+export type QueryScheduleFieldOptionsArgs = {
+  categoryKey: Scalars['String']['input'];
+};
+
+
+export type QueryScheduleRosterArgs = {
+  input: ScheduleRosterInput;
+};
+
+
+export type QueryScheduleRulesArgs = {
+  input?: InputMaybe<ScheduleRulesInput>;
+};
+
+
+export type QueryScheduleStaffArgs = {
+  input?: InputMaybe<ScheduleStaffListInput>;
+};
+
+
+export type QueryScheduleTemplateApplyPreviewArgs = {
+  input: ApplyScheduleTemplatesInput;
+};
+
+
 export type QueryUserArgs = {
   id: Scalars['ID']['input'];
 };
@@ -2862,14 +5142,103 @@ export type RealtimeTicketPayload = {
   topics: Array<Scalars['String']['output']>;
 };
 
+export type ReassignSchedulePunchInput = {
+  entryId?: InputMaybe<Scalars['ID']['input']>;
+  punchId: Scalars['ID']['input'];
+  reasonKey: Scalars['String']['input'];
+  reasonNote?: InputMaybe<Scalars['String']['input']>;
+};
+
 export type ReassignTaskInput = {
   taskId: Scalars['ID']['input'];
   toUserId: Scalars['ID']['input'];
 };
 
+export type ReceiveLotteryPurchaseBookInput = {
+  code: Scalars['String']['input'];
+  submissionId: Scalars['ID']['input'];
+};
+
+export type ReceiveLotteryPurchaseBookPayload = {
+  __typename?: 'ReceiveLotteryPurchaseBookPayload';
+  receiving: LotteryPurchaseReceiving;
+  rowId: Scalars['String']['output'];
+};
+
+export type ReceiveLotteryTransferBookInput = {
+  code: Scalars['String']['input'];
+  submissionId: Scalars['ID']['input'];
+};
+
+export type ReceiveLotteryTransferBookPayload = {
+  __typename?: 'ReceiveLotteryTransferBookPayload';
+  receiving: LotteryTransferReceiving;
+  rowId: Scalars['String']['output'];
+};
+
+export type RecordLotteryBankTransactionInput = {
+  accountId: Scalars['ID']['input'];
+  amount: Scalars['Int']['input'];
+  branchOrgId?: InputMaybe<Scalars['ID']['input']>;
+  direction?: InputMaybe<Scalars['String']['input']>;
+  note?: InputMaybe<Scalars['String']['input']>;
+  occurredAt: Scalars['DateTime']['input'];
+  refId?: InputMaybe<Scalars['ID']['input']>;
+  refType?: InputMaybe<Scalars['String']['input']>;
+  summary?: InputMaybe<Scalars['String']['input']>;
+  type: Scalars['String']['input'];
+};
+
+export type RecordLotterySettlementInput = {
+  accountId?: InputMaybe<Scalars['ID']['input']>;
+  amount: Scalars['Int']['input'];
+  button: Scalars['String']['input'];
+  cashPointId?: InputMaybe<Scalars['ID']['input']>;
+  cashSource?: InputMaybe<Scalars['String']['input']>;
+  handler?: InputMaybe<Scalars['String']['input']>;
+  method: Scalars['String']['input'];
+  moduleKey: Scalars['String']['input'];
+  note?: InputMaybe<Scalars['String']['input']>;
+  refId: Scalars['ID']['input'];
+  side: Scalars['String']['input'];
+};
+
+export type RecordLotterySettlementPayload = {
+  __typename?: 'RecordLotterySettlementPayload';
+  item: LotterySettlement;
+  recordId: Scalars['ID']['output'];
+};
+
+export type RecoverLotteryTicketsInput = {
+  orgId: Scalars['ID']['input'];
+  reasonKey: Scalars['String']['input'];
+  reasonNote?: InputMaybe<Scalars['String']['input']>;
+  tickets: Array<LotteryTicketVersionInput>;
+};
+
 export type RefreshPayload = {
   __typename?: 'RefreshPayload';
   accessToken: Scalars['String']['output'];
+};
+
+export type RegisterLotteryDealerSigninInput = {
+  dealerId: Scalars['ID']['input'];
+  note?: InputMaybe<Scalars['String']['input']>;
+  quarter: Scalars['Int']['input'];
+  signedAt: Scalars['DateTime']['input'];
+  year: Scalars['Int']['input'];
+};
+
+export type RemoveScheduleDayEntriesInput = {
+  changeReason?: InputMaybe<ScheduleChangeReasonInput>;
+  date: Scalars['String']['input'];
+  orgId?: InputMaybe<Scalars['ID']['input']>;
+};
+
+export type RemoveScheduleDayEntriesPayload = {
+  __typename?: 'RemoveScheduleDayEntriesPayload';
+  deletedIds: Array<Scalars['ID']['output']>;
+  skippedIds: Array<Scalars['ID']['output']>;
 };
 
 export type ReprintReason = {
@@ -2893,7 +5262,17 @@ export type RequestPasswordResetPayload = {
 };
 
 export type ResetNotificationSettingInput = {
+  part?: InputMaybe<NotificationSettingPart>;
   type: Scalars['String']['input'];
+};
+
+export type ResetSidebarBadgeSettingInput = {
+  moduleKey: Scalars['String']['input'];
+};
+
+export type RestoreScheduleRuleInput = {
+  key: Scalars['String']['input'];
+  orgId?: InputMaybe<Scalars['ID']['input']>;
 };
 
 export type RetireCurrentVersionInput = {
@@ -2930,6 +5309,17 @@ export type RetiredPermissionUsage = {
 
 export type RetryAdvanceInstanceInput = {
   instanceId: Scalars['ID']['input'];
+};
+
+export type ReverseLotteryBankTransactionInput = {
+  id: Scalars['ID']['input'];
+  reason: Scalars['String']['input'];
+};
+
+export type ReverseLotterySettlementInput = {
+  id: Scalars['ID']['input'];
+  method: Scalars['String']['input'];
+  reason: Scalars['String']['input'];
 };
 
 export type RevokeFormFromTenantInput = {
@@ -3124,6 +5514,16 @@ export type RolesPayload = {
   totalCount: Scalars['Int']['output'];
 };
 
+export type RunScheduleAutoRunInput = {
+  conditions: Array<ScheduleAutoRunConditionInput>;
+  fillWeekTemplate?: InputMaybe<Scalars['Boolean']['input']>;
+  from: Scalars['String']['input'];
+  mode: Scalars['String']['input'];
+  month: Scalars['String']['input'];
+  orgId?: InputMaybe<Scalars['ID']['input']>;
+  to: Scalars['String']['input'];
+};
+
 export type SaveDataScopeRuleInput = {
   combineOp?: DataScopeCombineOp;
   rules: Array<DataScopeRuleEntryInput>;
@@ -3157,10 +5557,810 @@ export type SaveRoleMatrixInput = {
   roleId: Scalars['ID']['input'];
 };
 
+export type SaveScheduleCalendarDayInput = {
+  category?: InputMaybe<Scalars['String']['input']>;
+  date: Scalars['String']['input'];
+  id?: InputMaybe<Scalars['ID']['input']>;
+  name?: InputMaybe<Scalars['String']['input']>;
+  note?: InputMaybe<Scalars['String']['input']>;
+  orgId?: InputMaybe<Scalars['ID']['input']>;
+  paletteKey?: InputMaybe<Scalars['String']['input']>;
+  type: Scalars['String']['input'];
+};
+
+export type SaveScheduleDayOffsPayload = {
+  __typename?: 'SaveScheduleDayOffsPayload';
+  entryConflicts: Array<ScheduleDayOffEntryConflict>;
+  items: Array<ScheduleDayOff>;
+  violations: Array<ScheduleDayOffViolation>;
+};
+
+export type SaveScheduleDemandInput = {
+  changeReason?: InputMaybe<ScheduleChangeReasonInput>;
+  endAt: Scalars['DateTime']['input'];
+  id?: InputMaybe<Scalars['ID']['input']>;
+  orgId?: InputMaybe<Scalars['ID']['input']>;
+  positionKey: Scalars['String']['input'];
+  saveAsTemplate?: InputMaybe<ScheduleDemandTemplateCopyInput>;
+  startAt: Scalars['DateTime']['input'];
+  tasks: Array<ScheduleDemandTaskInput>;
+  templateId?: InputMaybe<Scalars['ID']['input']>;
+};
+
+export type SaveScheduleDemandPayload = {
+  __typename?: 'SaveScheduleDemandPayload';
+  deletedEntryIds: Array<Scalars['ID']['output']>;
+  item: ScheduleDemand;
+};
+
+export type SaveScheduleDemandTemplateInput = {
+  endTime: Scalars['String']['input'];
+  id?: InputMaybe<Scalars['ID']['input']>;
+  name: Scalars['String']['input'];
+  paletteKey?: InputMaybe<Scalars['String']['input']>;
+  positionKey: Scalars['String']['input'];
+  shortName: Scalars['String']['input'];
+  startTime: Scalars['String']['input'];
+  tasks: Array<ScheduleTemplateTaskInput>;
+};
+
+export type SaveScheduleDemandWeekTemplateInput = {
+  days: Array<Array<Scalars['ID']['input']>>;
+  enabled?: InputMaybe<Scalars['Boolean']['input']>;
+  id?: InputMaybe<Scalars['ID']['input']>;
+  name: Scalars['String']['input'];
+};
+
+export type SaveScheduleEntryInput = {
+  assignments: Array<ScheduleEntryAssignmentInput>;
+  breakMinutes: Scalars['Int']['input'];
+  changeReason?: InputMaybe<ScheduleChangeReasonInput>;
+  endAt: Scalars['DateTime']['input'];
+  id?: InputMaybe<Scalars['ID']['input']>;
+  orgId?: InputMaybe<Scalars['ID']['input']>;
+  punchIds?: InputMaybe<Array<Scalars['ID']['input']>>;
+  startAt: Scalars['DateTime']['input'];
+  usePunchTime?: InputMaybe<Scalars['Boolean']['input']>;
+  userId?: InputMaybe<Scalars['ID']['input']>;
+};
+
+export type SaveScheduleEntryPayload = {
+  __typename?: 'SaveScheduleEntryPayload';
+  item: ScheduleEntry;
+};
+
 export type SaveWorkflowVersionDraftInput = {
   definition: WorkflowDefinitionInput;
   expectedDraftRevision: Scalars['Int']['input'];
   workflowKey: Scalars['ID']['input'];
+};
+
+export type ScheduleApplyWeekTemplate = {
+  __typename?: 'ScheduleApplyWeekTemplate';
+  days: Array<Array<Scalars['ID']['output']>>;
+  id: Scalars['ID']['output'];
+  name: Scalars['String']['output'];
+};
+
+export type ScheduleAttendanceAbilities = {
+  __typename?: 'ScheduleAttendanceAbilities';
+  canCreate: Scalars['Boolean']['output'];
+  canExport: Scalars['Boolean']['output'];
+  canReassign: Scalars['Boolean']['output'];
+  canViewAll: Scalars['Boolean']['output'];
+};
+
+export type ScheduleAttendanceByPersonInput = {
+  month: Scalars['String']['input'];
+  orgId?: InputMaybe<Scalars['ID']['input']>;
+  userId?: InputMaybe<Scalars['ID']['input']>;
+};
+
+export type ScheduleAttendanceByPersonPayload = {
+  __typename?: 'ScheduleAttendanceByPersonPayload';
+  abilities: ScheduleAttendanceAbilities;
+  month: Scalars['String']['output'];
+  orgId: Scalars['ID']['output'];
+  people: Array<ScheduleAttendancePerson>;
+  rows: Array<ScheduleAttendanceRow>;
+  unmatched: Array<ScheduleAttendancePunch>;
+  userId: Scalars['ID']['output'];
+};
+
+export type ScheduleAttendanceByStoreInput = {
+  date: Scalars['String']['input'];
+  orgId?: InputMaybe<Scalars['ID']['input']>;
+  unmatchedOnly?: InputMaybe<Scalars['Boolean']['input']>;
+};
+
+export type ScheduleAttendanceByStorePayload = {
+  __typename?: 'ScheduleAttendanceByStorePayload';
+  abilities: ScheduleAttendanceAbilities;
+  absentCount: Scalars['Int']['output'];
+  arrivedCount: Scalars['Int']['output'];
+  date: Scalars['String']['output'];
+  orgId: Scalars['ID']['output'];
+  orgName: Scalars['String']['output'];
+  rows: Array<ScheduleAttendanceRow>;
+  scheduledCount: Scalars['Int']['output'];
+  unmatched: Array<ScheduleAttendancePunch>;
+};
+
+export type ScheduleAttendanceEntryOption = {
+  __typename?: 'ScheduleAttendanceEntryOption';
+  date: Scalars['String']['output'];
+  endAt: Scalars['DateTime']['output'];
+  id: Scalars['ID']['output'];
+  orgId: Scalars['ID']['output'];
+  orgName: Scalars['String']['output'];
+  shortName?: Maybe<Scalars['String']['output']>;
+  startAt: Scalars['DateTime']['output'];
+};
+
+export type ScheduleAttendanceExportInput = {
+  month: Scalars['String']['input'];
+  orgId?: InputMaybe<Scalars['ID']['input']>;
+  userId?: InputMaybe<Scalars['ID']['input']>;
+};
+
+export type ScheduleAttendanceExportPayload = {
+  __typename?: 'ScheduleAttendanceExportPayload';
+  month: Scalars['String']['output'];
+  sheets: Array<ScheduleAttendanceExportSheet>;
+};
+
+export type ScheduleAttendanceExportSheet = {
+  __typename?: 'ScheduleAttendanceExportSheet';
+  orgId: Scalars['ID']['output'];
+  orgName: Scalars['String']['output'];
+  rows: Array<ScheduleAttendanceRow>;
+};
+
+export type ScheduleAttendancePerson = {
+  __typename?: 'ScheduleAttendancePerson';
+  name: Scalars['String']['output'];
+  userId: Scalars['ID']['output'];
+};
+
+export type ScheduleAttendancePunch = {
+  __typename?: 'ScheduleAttendancePunch';
+  at: Scalars['DateTime']['output'];
+  duplicate: Scalars['Boolean']['output'];
+  entryId?: Maybe<Scalars['ID']['output']>;
+  id: Scalars['ID']['output'];
+  orgId: Scalars['ID']['output'];
+  orgName: Scalars['String']['output'];
+  source: Scalars['String']['output'];
+  type: Scalars['String']['output'];
+  userId: Scalars['ID']['output'];
+  userName: Scalars['String']['output'];
+};
+
+export type ScheduleAttendanceRow = {
+  __typename?: 'ScheduleAttendanceRow';
+  breakMinutes: Scalars['Int']['output'];
+  clockIn?: Maybe<Scalars['DateTime']['output']>;
+  clockOut?: Maybe<Scalars['DateTime']['output']>;
+  date: Scalars['String']['output'];
+  earlyLeaveMinutes: Scalars['Int']['output'];
+  endAt: Scalars['DateTime']['output'];
+  entryId: Scalars['ID']['output'];
+  hasMakeup: Scalars['Boolean']['output'];
+  lateMinutes: Scalars['Int']['output'];
+  missing: Array<Scalars['String']['output']>;
+  orgId: Scalars['ID']['output'];
+  orgName: Scalars['String']['output'];
+  punches: Array<ScheduleAttendancePunch>;
+  scheduledMinutes: Scalars['Int']['output'];
+  shortName?: Maybe<Scalars['String']['output']>;
+  specialDayCategory?: Maybe<Scalars['String']['output']>;
+  specialDayName?: Maybe<Scalars['String']['output']>;
+  startAt: Scalars['DateTime']['output'];
+  status: Scalars['String']['output'];
+  userId: Scalars['ID']['output'];
+  userName: Scalars['String']['output'];
+  workedMinutes?: Maybe<Scalars['Int']['output']>;
+};
+
+export type ScheduleAutoRunConditionInput = {
+  enabled: Scalars['Boolean']['input'];
+  key: Scalars['String']['input'];
+};
+
+export type ScheduleAutoRunConditionSetting = {
+  __typename?: 'ScheduleAutoRunConditionSetting';
+  enabled: Scalars['Boolean']['output'];
+  key: Scalars['String']['output'];
+};
+
+export type ScheduleAutoRunPreviewPayload = {
+  __typename?: 'ScheduleAutoRunPreviewPayload';
+  autoCount: Scalars['Int']['output'];
+  demandCount: Scalars['Int']['output'];
+  fillableDays: Scalars['Int']['output'];
+  manualCount: Scalars['Int']['output'];
+  weekTemplate?: Maybe<ScheduleApplyWeekTemplate>;
+};
+
+export type ScheduleAutoRunRangeInput = {
+  from: Scalars['String']['input'];
+  month: Scalars['String']['input'];
+  orgId?: InputMaybe<Scalars['ID']['input']>;
+  to: Scalars['String']['input'];
+};
+
+export type ScheduleAutoRunStatusPayload = {
+  __typename?: 'ScheduleAutoRunStatusPayload';
+  canAutoRun: Scalars['Boolean']['output'];
+  conditions: Array<ScheduleAutoRunConditionSetting>;
+  latest?: Maybe<ScheduleAutoRunSummary>;
+  running: Scalars['Boolean']['output'];
+  weekTemplates: Array<ScheduleApplyWeekTemplate>;
+};
+
+export type ScheduleAutoRunSummary = {
+  __typename?: 'ScheduleAutoRunSummary';
+  addedDemandCount: Scalars['Int']['output'];
+  addedDemandDays: Scalars['Int']['output'];
+  at: Scalars['DateTime']['output'];
+  byName?: Maybe<Scalars['String']['output']>;
+  filledCount: Scalars['Int']['output'];
+  from: Scalars['String']['output'];
+  id: Scalars['ID']['output'];
+  to: Scalars['String']['output'];
+  unfilledCount: Scalars['Int']['output'];
+};
+
+export type ScheduleCalendarDay = {
+  __typename?: 'ScheduleCalendarDay';
+  canEdit: Scalars['Boolean']['output'];
+  category?: Maybe<Scalars['String']['output']>;
+  date: Scalars['String']['output'];
+  id: Scalars['ID']['output'];
+  name?: Maybe<Scalars['String']['output']>;
+  note?: Maybe<Scalars['String']['output']>;
+  ownerOrg: ScheduleOwnerOrg;
+  paletteKey?: Maybe<Scalars['String']['output']>;
+  type: Scalars['String']['output'];
+};
+
+export type ScheduleCalendarDayPayload = {
+  __typename?: 'ScheduleCalendarDayPayload';
+  item: ScheduleCalendarDay;
+};
+
+export type ScheduleCalendarInput = {
+  month: Scalars['String']['input'];
+  orgId?: InputMaybe<Scalars['ID']['input']>;
+};
+
+export type ScheduleCalendarPayload = {
+  __typename?: 'ScheduleCalendarPayload';
+  canEdit: Scalars['Boolean']['output'];
+  days: Array<ScheduleCalendarDay>;
+  month: Scalars['String']['output'];
+  orgId: Scalars['ID']['output'];
+  orgName: Scalars['String']['output'];
+};
+
+export type ScheduleChangeReasonInput = {
+  reasonKey: Scalars['String']['input'];
+  reasonNote?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type ScheduleCheckItem = {
+  __typename?: 'ScheduleCheckItem';
+  actual?: Maybe<Scalars['Float']['output']>;
+  date: Scalars['String']['output'];
+  endAt?: Maybe<Scalars['DateTime']['output']>;
+  entryIds: Array<Scalars['ID']['output']>;
+  from?: Maybe<Scalars['String']['output']>;
+  isOtherStore: Scalars['Boolean']['output'];
+  key: Scalars['String']['output'];
+  level: Scalars['String']['output'];
+  limit?: Maybe<Scalars['Float']['output']>;
+  message: Scalars['String']['output'];
+  orgName?: Maybe<Scalars['String']['output']>;
+  startAt?: Maybe<Scalars['DateTime']['output']>;
+  to?: Maybe<Scalars['String']['output']>;
+  understaffed?: Maybe<ScheduleCheckUnderstaffed>;
+  userId?: Maybe<Scalars['ID']['output']>;
+  userName?: Maybe<Scalars['String']['output']>;
+};
+
+export type ScheduleCheckPayload = {
+  __typename?: 'ScheduleCheckPayload';
+  items: Array<ScheduleCheckItem>;
+  limitCount: Scalars['Int']['output'];
+  month: Scalars['String']['output'];
+  orgId: Scalars['ID']['output'];
+  reminderCount: Scalars['Int']['output'];
+};
+
+export type ScheduleCheckUnderstaffed = {
+  __typename?: 'ScheduleCheckUnderstaffed';
+  available: Scalars['Int']['output'];
+  cannotLead: Scalars['Int']['output'];
+  dayOff: Scalars['Int']['output'];
+  demandId: Scalars['ID']['output'];
+  missing: Scalars['Int']['output'];
+  occupied: Scalars['Int']['output'];
+  role: Scalars['String']['output'];
+  timeRange: Scalars['Int']['output'];
+};
+
+export type ScheduleDayOff = {
+  __typename?: 'ScheduleDayOff';
+  byName?: Maybe<Scalars['String']['output']>;
+  date: Scalars['String']['output'];
+  endTime?: Maybe<Scalars['String']['output']>;
+  id: Scalars['ID']['output'];
+  isPrimary: Scalars['Boolean']['output'];
+  kind: Scalars['String']['output'];
+  name: Scalars['String']['output'];
+  note?: Maybe<Scalars['String']['output']>;
+  reason?: Maybe<Scalars['String']['output']>;
+  reasonNote?: Maybe<Scalars['String']['output']>;
+  startTime?: Maybe<Scalars['String']['output']>;
+  userId: Scalars['ID']['output'];
+};
+
+export type ScheduleDayOffDay = {
+  __typename?: 'ScheduleDayOffDay';
+  date: Scalars['String']['output'];
+  dayOffs: Array<ScheduleDayOff>;
+  staffCount: Scalars['Int']['output'];
+};
+
+export type ScheduleDayOffEntryConflict = {
+  __typename?: 'ScheduleDayOffEntryConflict';
+  date: Scalars['String']['output'];
+  endAt: Scalars['DateTime']['output'];
+  orgName?: Maybe<Scalars['String']['output']>;
+  startAt: Scalars['DateTime']['output'];
+};
+
+export type ScheduleDayOffLimits = {
+  __typename?: 'ScheduleDayOffLimits';
+  maxDailyStaff?: Maybe<Scalars['Int']['output']>;
+  maxMonthly?: Maybe<Scalars['Int']['output']>;
+  minMonthly?: Maybe<Scalars['Int']['output']>;
+};
+
+export type ScheduleDayOffOrg = {
+  __typename?: 'ScheduleDayOffOrg';
+  id: Scalars['ID']['output'];
+  name: Scalars['String']['output'];
+};
+
+export type ScheduleDayOffOverviewInput = {
+  month?: InputMaybe<Scalars['String']['input']>;
+  orgId?: InputMaybe<Scalars['ID']['input']>;
+};
+
+export type ScheduleDayOffOverviewPayload = {
+  __typename?: 'ScheduleDayOffOverviewPayload';
+  canEdit: Scalars['Boolean']['output'];
+  days: Array<ScheduleDayOffDay>;
+  limits: ScheduleDayOffLimits;
+  month: Scalars['String']['output'];
+  orgId: Scalars['ID']['output'];
+  orgName: Scalars['String']['output'];
+  staff: Array<ScheduleDayOffStaff>;
+  window: ScheduleDayOffWindow;
+};
+
+export type ScheduleDayOffSlotInput = {
+  endTime: Scalars['String']['input'];
+  startTime: Scalars['String']['input'];
+};
+
+export type ScheduleDayOffStaff = {
+  __typename?: 'ScheduleDayOffStaff';
+  dayOffCount: Scalars['Int']['output'];
+  isPrimary: Scalars['Boolean']['output'];
+  name: Scalars['String']['output'];
+  userId: Scalars['ID']['output'];
+};
+
+export type ScheduleDayOffViolation = {
+  __typename?: 'ScheduleDayOffViolation';
+  actual?: Maybe<Scalars['Int']['output']>;
+  dates: Array<Scalars['String']['output']>;
+  from?: Maybe<Scalars['String']['output']>;
+  key: Scalars['String']['output'];
+  level: Scalars['String']['output'];
+  limit?: Maybe<Scalars['Int']['output']>;
+  message: Scalars['String']['output'];
+  to?: Maybe<Scalars['String']['output']>;
+};
+
+export type ScheduleDayOffWindow = {
+  __typename?: 'ScheduleDayOffWindow';
+  daysLeft: Scalars['Int']['output'];
+  endDate: Scalars['String']['output'];
+  month: Scalars['String']['output'];
+  startDate: Scalars['String']['output'];
+  state: Scalars['String']['output'];
+};
+
+export type ScheduleDemand = {
+  __typename?: 'ScheduleDemand';
+  createdAt: Scalars['DateTime']['output'];
+  date: Scalars['String']['output'];
+  endAt: Scalars['DateTime']['output'];
+  id: Scalars['ID']['output'];
+  positionKey: Scalars['String']['output'];
+  positionNote?: Maybe<Scalars['String']['output']>;
+  source: Scalars['String']['output'];
+  startAt: Scalars['DateTime']['output'];
+  tasks: Array<ScheduleDemandTask>;
+  templateId?: Maybe<Scalars['ID']['output']>;
+};
+
+export type ScheduleDemandTask = {
+  __typename?: 'ScheduleDemandTask';
+  entryId?: Maybe<Scalars['ID']['output']>;
+  role: Scalars['String']['output'];
+  taskId: Scalars['String']['output'];
+  taskKey: Scalars['String']['output'];
+  userId?: Maybe<Scalars['ID']['output']>;
+  userName?: Maybe<Scalars['String']['output']>;
+};
+
+export type ScheduleDemandTaskInput = {
+  role: Scalars['String']['input'];
+  taskId?: InputMaybe<Scalars['String']['input']>;
+  taskKey: Scalars['String']['input'];
+};
+
+export type ScheduleDemandTemplate = {
+  __typename?: 'ScheduleDemandTemplate';
+  canEdit: Scalars['Boolean']['output'];
+  endTime: Scalars['String']['output'];
+  id: Scalars['ID']['output'];
+  name: Scalars['String']['output'];
+  ownerOrg: ScheduleOwnerOrg;
+  paletteKey?: Maybe<Scalars['String']['output']>;
+  positionKey: Scalars['String']['output'];
+  shortName: Scalars['String']['output'];
+  startTime: Scalars['String']['output'];
+  tasks: Array<ScheduleTemplateTask>;
+};
+
+export type ScheduleDemandTemplateCopyInput = {
+  name: Scalars['String']['input'];
+  shortName: Scalars['String']['input'];
+};
+
+export type ScheduleDemandTemplatePayload = {
+  __typename?: 'ScheduleDemandTemplatePayload';
+  item: ScheduleDemandTemplate;
+};
+
+export type ScheduleDemandTemplatesPayload = {
+  __typename?: 'ScheduleDemandTemplatesPayload';
+  canCreate: Scalars['Boolean']['output'];
+  items: Array<ScheduleDemandTemplate>;
+  totalCount: Scalars['Int']['output'];
+};
+
+export type ScheduleDemandWeekTemplate = {
+  __typename?: 'ScheduleDemandWeekTemplate';
+  canEdit: Scalars['Boolean']['output'];
+  days: Array<Array<Scalars['ID']['output']>>;
+  enabled: Scalars['Boolean']['output'];
+  id: Scalars['ID']['output'];
+  name: Scalars['String']['output'];
+  ownerOrg: ScheduleOwnerOrg;
+};
+
+export type ScheduleDemandWeekTemplatePayload = {
+  __typename?: 'ScheduleDemandWeekTemplatePayload';
+  item: ScheduleDemandWeekTemplate;
+};
+
+export type ScheduleDemandWeekTemplatesInput = {
+  orgId?: InputMaybe<Scalars['ID']['input']>;
+};
+
+export type ScheduleDemandWeekTemplatesPayload = {
+  __typename?: 'ScheduleDemandWeekTemplatesPayload';
+  canCreate: Scalars['Boolean']['output'];
+  items: Array<ScheduleDemandWeekTemplate>;
+  totalCount: Scalars['Int']['output'];
+};
+
+export type ScheduleEntry = {
+  __typename?: 'ScheduleEntry';
+  assignments: Array<ScheduleEntryAssignment>;
+  breakMinutes: Scalars['Int']['output'];
+  date: Scalars['String']['output'];
+  deletable: Scalars['Boolean']['output'];
+  endAt: Scalars['DateTime']['output'];
+  id: Scalars['ID']['output'];
+  startAt: Scalars['DateTime']['output'];
+  userId: Scalars['ID']['output'];
+};
+
+export type ScheduleEntryAssignment = {
+  __typename?: 'ScheduleEntryAssignment';
+  demandId: Scalars['ID']['output'];
+  reason?: Maybe<Scalars['String']['output']>;
+  role: Scalars['String']['output'];
+  source: Scalars['String']['output'];
+  taskId: Scalars['String']['output'];
+  taskKey: Scalars['String']['output'];
+};
+
+export type ScheduleEntryAssignmentInput = {
+  demandId: Scalars['ID']['input'];
+  taskId: Scalars['String']['input'];
+};
+
+export type ScheduleFieldOption = {
+  __typename?: 'ScheduleFieldOption';
+  label: Scalars['String']['output'];
+  value: Scalars['String']['output'];
+};
+
+export type ScheduleFieldOptionsPayload = {
+  __typename?: 'ScheduleFieldOptionsPayload';
+  items: Array<ScheduleFieldOption>;
+  totalCount: Scalars['Int']['output'];
+};
+
+export type ScheduleOtherStoreEntry = {
+  __typename?: 'ScheduleOtherStoreEntry';
+  date: Scalars['String']['output'];
+  endAt: Scalars['DateTime']['output'];
+  orgName?: Maybe<Scalars['String']['output']>;
+  startAt: Scalars['DateTime']['output'];
+  userId: Scalars['ID']['output'];
+};
+
+export type ScheduleOwnerOrg = {
+  __typename?: 'ScheduleOwnerOrg';
+  id: Scalars['ID']['output'];
+  name: Scalars['String']['output'];
+};
+
+export type SchedulePeriod = {
+  __typename?: 'SchedulePeriod';
+  publishedAt?: Maybe<Scalars['DateTime']['output']>;
+  publishedByName?: Maybe<Scalars['String']['output']>;
+  status: Scalars['String']['output'];
+};
+
+export type ScheduleRosterBreakTier = {
+  __typename?: 'ScheduleRosterBreakTier';
+  breakMinutes: Scalars['Int']['output'];
+  minMinutes: Scalars['Int']['output'];
+};
+
+export type ScheduleRosterCalendarDay = {
+  __typename?: 'ScheduleRosterCalendarDay';
+  date: Scalars['String']['output'];
+  name?: Maybe<Scalars['String']['output']>;
+  paletteKey?: Maybe<Scalars['String']['output']>;
+  type: Scalars['String']['output'];
+};
+
+export type ScheduleRosterInput = {
+  from?: InputMaybe<Scalars['String']['input']>;
+  month: Scalars['String']['input'];
+  orgId?: InputMaybe<Scalars['ID']['input']>;
+  to?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type ScheduleRosterPayload = {
+  __typename?: 'ScheduleRosterPayload';
+  calendarDays: Array<ScheduleRosterCalendarDay>;
+  canEdit: Scalars['Boolean']['output'];
+  canSaveTemplate: Scalars['Boolean']['output'];
+  canUsePunchTime: Scalars['Boolean']['output'];
+  demands: Array<ScheduleDemand>;
+  entries: Array<ScheduleEntry>;
+  month: Scalars['String']['output'];
+  orgId: Scalars['ID']['output'];
+  orgName: Scalars['String']['output'];
+  otherStoreEntries: Array<ScheduleOtherStoreEntry>;
+  people: Array<ScheduleRosterPerson>;
+  period: SchedulePeriod;
+  settings: ScheduleRosterSettings;
+  templates: Array<ScheduleRosterTemplate>;
+  unavailability: Array<ScheduleRosterUnavailability>;
+  unmatchedPunches: Array<ScheduleRosterPunch>;
+};
+
+export type ScheduleRosterPerson = {
+  __typename?: 'ScheduleRosterPerson';
+  canLead: Scalars['Boolean']['output'];
+  employmentType?: Maybe<Scalars['String']['output']>;
+  isCandidate: Scalars['Boolean']['output'];
+  isPrimary: Scalars['Boolean']['output'];
+  name: Scalars['String']['output'];
+  stats: ScheduleRosterStats;
+  userId: Scalars['ID']['output'];
+};
+
+export type ScheduleRosterPunch = {
+  __typename?: 'ScheduleRosterPunch';
+  at: Scalars['DateTime']['output'];
+  date: Scalars['String']['output'];
+  id: Scalars['ID']['output'];
+  type: Scalars['String']['output'];
+  userId: Scalars['ID']['output'];
+};
+
+export type ScheduleRosterSettings = {
+  __typename?: 'ScheduleRosterSettings';
+  breakTiers: Array<ScheduleRosterBreakTier>;
+  defaultHelperTaskKey: Scalars['String']['output'];
+  defaultLeaderTaskKey: Scalars['String']['output'];
+  entryMatchToleranceMinutes: Scalars['Int']['output'];
+  maxMonthlyDayOffs?: Maybe<Scalars['Int']['output']>;
+  minMonthlyDayOffs?: Maybe<Scalars['Int']['output']>;
+};
+
+export type ScheduleRosterSlot = {
+  __typename?: 'ScheduleRosterSlot';
+  endTime: Scalars['String']['output'];
+  startTime: Scalars['String']['output'];
+};
+
+export type ScheduleRosterStats = {
+  __typename?: 'ScheduleRosterStats';
+  dayOffDays: Scalars['Int']['output'];
+  fullDayOffDays: Scalars['Int']['output'];
+  leadShiftCount: Scalars['Int']['output'];
+  longestStreak: Scalars['Int']['output'];
+  shiftCount: Scalars['Int']['output'];
+  timeRangeDays: Array<ScheduleRosterTimeRangeDay>;
+  workMinutes: Scalars['Int']['output'];
+};
+
+export type ScheduleRosterTemplate = {
+  __typename?: 'ScheduleRosterTemplate';
+  endTime: Scalars['String']['output'];
+  id: Scalars['ID']['output'];
+  name: Scalars['String']['output'];
+  paletteKey?: Maybe<Scalars['String']['output']>;
+  positionKey: Scalars['String']['output'];
+  shortName: Scalars['String']['output'];
+  startTime: Scalars['String']['output'];
+  tasks: Array<ScheduleTemplateTask>;
+};
+
+export type ScheduleRosterTimeRangeDay = {
+  __typename?: 'ScheduleRosterTimeRangeDay';
+  date: Scalars['String']['output'];
+  slots: Array<ScheduleRosterSlot>;
+};
+
+export type ScheduleRosterUnavailability = {
+  __typename?: 'ScheduleRosterUnavailability';
+  date: Scalars['String']['output'];
+  fullDay: Scalars['Boolean']['output'];
+  slots: Array<ScheduleRosterSlot>;
+  userId: Scalars['ID']['output'];
+};
+
+export type ScheduleRule = {
+  __typename?: 'ScheduleRule';
+  effective: ScheduleRuleSetting;
+  group: Scalars['String']['output'];
+  hasLevel: Scalars['Boolean']['output'];
+  key: Scalars['ID']['output'];
+  parent?: Maybe<ScheduleRuleSetting>;
+  unit?: Maybe<Scalars['String']['output']>;
+  valueType: Scalars['String']['output'];
+};
+
+export type ScheduleRuleMutationPayload = {
+  __typename?: 'ScheduleRuleMutationPayload';
+  rules: ScheduleRulesPayload;
+};
+
+export type ScheduleRuleSetting = {
+  __typename?: 'ScheduleRuleSetting';
+  enabled: Scalars['Boolean']['output'];
+  level?: Maybe<Scalars['String']['output']>;
+  order: Scalars['Int']['output'];
+  source: ScheduleRuleSource;
+  sourceOrgName?: Maybe<Scalars['String']['output']>;
+  value: Scalars['JSONObject']['output'];
+};
+
+/** 規則生效值的來源:本層自訂 / 沿用上層 / 程式預設 */
+export enum ScheduleRuleSource {
+  Default = 'DEFAULT',
+  Inherited = 'INHERITED',
+  Own = 'OWN'
+}
+
+export type ScheduleRulesInput = {
+  orgId?: InputMaybe<Scalars['ID']['input']>;
+};
+
+export type ScheduleRulesPayload = {
+  __typename?: 'ScheduleRulesPayload';
+  canEdit: Scalars['Boolean']['output'];
+  isTenantTop: Scalars['Boolean']['output'];
+  items: Array<ScheduleRule>;
+  orgId: Scalars['ID']['output'];
+  orgName: Scalars['String']['output'];
+};
+
+export type ScheduleStaffListInput = {
+  joined?: InputMaybe<Scalars['Boolean']['input']>;
+  keyword?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type ScheduleStaffListPayload = {
+  __typename?: 'ScheduleStaffListPayload';
+  canEdit: Scalars['Boolean']['output'];
+  items: Array<ScheduleStaffRow>;
+  totalCount: Scalars['Int']['output'];
+};
+
+export type ScheduleStaffOrg = {
+  __typename?: 'ScheduleStaffOrg';
+  canLead: Scalars['Boolean']['output'];
+  isPrimary: Scalars['Boolean']['output'];
+  orgId: Scalars['ID']['output'];
+  orgName: Scalars['String']['output'];
+  sortOrder: Scalars['Int']['output'];
+};
+
+export type ScheduleStaffOrgInput = {
+  canLead: Scalars['Boolean']['input'];
+  isPrimary: Scalars['Boolean']['input'];
+  orgId: Scalars['ID']['input'];
+};
+
+export type ScheduleStaffPayload = {
+  __typename?: 'ScheduleStaffPayload';
+  item: ScheduleStaffRow;
+};
+
+export type ScheduleStaffProfile = {
+  __typename?: 'ScheduleStaffProfile';
+  employmentType: Scalars['String']['output'];
+  enabled: Scalars['Boolean']['output'];
+  id: Scalars['ID']['output'];
+  isShared: Scalars['Boolean']['output'];
+  note?: Maybe<Scalars['String']['output']>;
+  orgs: Array<ScheduleStaffOrg>;
+  primaryElsewhere: Scalars['Boolean']['output'];
+};
+
+export type ScheduleStaffRow = {
+  __typename?: 'ScheduleStaffRow';
+  account: Scalars['String']['output'];
+  joinedElsewhere: Scalars['Boolean']['output'];
+  name: Scalars['String']['output'];
+  staff?: Maybe<ScheduleStaffProfile>;
+  userId: Scalars['ID']['output'];
+};
+
+export type ScheduleTemplateTask = {
+  __typename?: 'ScheduleTemplateTask';
+  role: Scalars['String']['output'];
+  taskId: Scalars['ID']['output'];
+  taskKey: Scalars['String']['output'];
+};
+
+export type ScheduleTemplateTaskInput = {
+  role: Scalars['String']['input'];
+  taskId?: InputMaybe<Scalars['ID']['input']>;
+  taskKey: Scalars['String']['input'];
+};
+
+export type ScrapLotteryTicketsInput = {
+  reasonKey: Scalars['String']['input'];
+  reasonNote?: InputMaybe<Scalars['String']['input']>;
+  tickets: Array<LotteryTicketVersionInput>;
 };
 
 export type SetDemoItemOneEnabledInput = {
@@ -3181,6 +6381,18 @@ export type SetFieldCategoryEnabledInput = {
 export type SetFieldEnabledInput = {
   enabled: Scalars['Boolean']['input'];
   id: Scalars['ID']['input'];
+};
+
+export type SetFieldOptionColorInput = {
+  fieldId: Scalars['ID']['input'];
+  paletteKey?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type SetLotteryAllocationInput = {
+  gameId: Scalars['ID']['input'];
+  note?: InputMaybe<Scalars['String']['input']>;
+  orgId: Scalars['ID']['input'];
+  plannedBooks: Scalars['Int']['input'];
 };
 
 export type SetModuleEnabledInput = {
@@ -3269,12 +6481,53 @@ export type SetUserOrgsPayload = {
   user: User;
 };
 
+export type ShareOrg = {
+  __typename?: 'ShareOrg';
+  includeDescendants: Scalars['Boolean']['output'];
+  orgId: Scalars['ID']['output'];
+};
+
+export type ShareOrgInput = {
+  includeDescendants?: InputMaybe<Scalars['Boolean']['input']>;
+  orgId: Scalars['ID']['input'];
+};
+
 export type SidebarBadge = {
   __typename?: 'SidebarBadge';
   /** 數字;0 也回傳,前端只在大於 0 時顯示 */
   count: Scalars['Int']['output'];
   /** 模組 key(側欄以它對上模組節點) */
   moduleKey: Scalars['String']['output'];
+};
+
+export type SidebarBadgeSetting = {
+  __typename?: 'SidebarBadgeSetting';
+  /** 租戶調整過的人員條件(綁了模組之後再看它);沒調整 = null,用程式預設 */
+  audience?: Maybe<Scalars['JSONObject']['output']>;
+  /** 「數什麼」的說明文字在 admin 訊息檔的 key(登記時給);沒有 = null */
+  descriptionKey?: Maybe<Scalars['String']['output']>;
+  /** true = 沒有調整,用程式預設 */
+  isDefault: Scalars['Boolean']['output'];
+  /** 模組 key */
+  moduleKey: Scalars['String']['output'];
+  /** 模組名稱;模組不存在時退回模組 key */
+  moduleName: Scalars['String']['output'];
+  /** 程式預設要求的權限 key(登記的 requires);沒有 = null */
+  requires?: Maybe<Scalars['String']['output']>;
+  /** 最後一次調整 / 還原的時間;從沒動過 = null */
+  updatedAt?: Maybe<Scalars['DateTime']['output']>;
+  updatedBy?: Maybe<Scalars['ID']['output']>;
+};
+
+export type SidebarBadgeSettingPayload = {
+  __typename?: 'SidebarBadgeSettingPayload';
+  setting: SidebarBadgeSetting;
+};
+
+export type SidebarBadgeSettingsPayload = {
+  __typename?: 'SidebarBadgeSettingsPayload';
+  items: Array<SidebarBadgeSetting>;
+  totalCount: Scalars['Int']['output'];
 };
 
 export type SubmitFormSubmissionInput = {
@@ -3290,6 +6543,17 @@ export type SwitchOrgInput = {
 export type SwitchOrgPayload = {
   __typename?: 'SwitchOrgPayload';
   accessToken: Scalars['String']['output'];
+};
+
+export type TenantOrgNode = {
+  __typename?: 'TenantOrgNode';
+  children: Array<TenantOrgNode>;
+  enabled: Scalars['Boolean']['output'];
+  id: Scalars['ID']['output'];
+  isManaged: Scalars['Boolean']['output'];
+  isVisible: Scalars['Boolean']['output'];
+  name: Scalars['String']['output'];
+  parentId?: Maybe<Scalars['ID']['output']>;
 };
 
 export type TransferOrgOwnerInput = {
@@ -3326,6 +6590,7 @@ export type UpdateDemoItemTwoInput = {
   id: Scalars['ID']['input'];
   name?: InputMaybe<Scalars['String']['input']>;
   note?: InputMaybe<Scalars['String']['input']>;
+  shareOrgs?: InputMaybe<Array<ShareOrgInput>>;
 };
 
 export type UpdateFieldCategoryInput = {
@@ -3345,7 +6610,9 @@ export type UpdateFormInput = {
   allowDraft?: InputMaybe<Scalars['Boolean']['input']>;
   key: Scalars['ID']['input'];
   name?: InputMaybe<Scalars['String']['input']>;
+  serial?: InputMaybe<FormSerialFormatInput>;
   tabLabelTemplate?: InputMaybe<Scalars['String']['input']>;
+  voidReasonCategoryKey?: InputMaybe<Scalars['String']['input']>;
 };
 
 export type UpdateFormSubmissionInput = {
@@ -3353,6 +6620,102 @@ export type UpdateFormSubmissionInput = {
   expectedRevision: Scalars['Int']['input'];
   id: Scalars['ID']['input'];
   values: Scalars['JSONObject']['input'];
+};
+
+export type UpdateLotteryBankAccountInput = {
+  accountName?: InputMaybe<Scalars['String']['input']>;
+  accountNo?: InputMaybe<Scalars['String']['input']>;
+  bankCode?: InputMaybe<Scalars['String']['input']>;
+  branchName?: InputMaybe<Scalars['String']['input']>;
+  id: Scalars['ID']['input'];
+  note?: InputMaybe<Scalars['String']['input']>;
+  openingBalance?: InputMaybe<Scalars['Int']['input']>;
+  openingDate?: InputMaybe<Scalars['DateTime']['input']>;
+  shareOrgs?: InputMaybe<Array<ShareOrgInput>>;
+  status?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type UpdateLotteryCashPointInput = {
+  enabled?: InputMaybe<Scalars['Boolean']['input']>;
+  id: Scalars['ID']['input'];
+  name?: InputMaybe<Scalars['String']['input']>;
+  note?: InputMaybe<Scalars['String']['input']>;
+  order?: InputMaybe<Scalars['Int']['input']>;
+  positionKey?: InputMaybe<Scalars['String']['input']>;
+  printerId?: InputMaybe<Scalars['ID']['input']>;
+};
+
+export type UpdateLotteryDealerContactInput = {
+  birthday?: InputMaybe<Scalars['DateTime']['input']>;
+  email?: InputMaybe<Scalars['String']['input']>;
+  id: Scalars['ID']['input'];
+  mailingAddress?: InputMaybe<Scalars['String']['input']>;
+  mobile?: InputMaybe<Scalars['String']['input']>;
+  name?: InputMaybe<Scalars['String']['input']>;
+  nationalId?: InputMaybe<Scalars['String']['input']>;
+  note?: InputMaybe<Scalars['String']['input']>;
+  phone?: InputMaybe<Scalars['String']['input']>;
+  releaseRelationships?: InputMaybe<Scalars['Boolean']['input']>;
+  residentialAddress?: InputMaybe<Scalars['String']['input']>;
+  residentialSameAsMailing?: InputMaybe<Scalars['Boolean']['input']>;
+  roles?: InputMaybe<Array<LotteryContactRole>>;
+  status?: InputMaybe<LotteryContactStatus>;
+};
+
+export type UpdateLotteryDealerInput = {
+  agentIds?: InputMaybe<Array<Scalars['ID']['input']>>;
+  birthday?: InputMaybe<Scalars['DateTime']['input']>;
+  businessAddress?: InputMaybe<Scalars['String']['input']>;
+  coSalesDealerId?: InputMaybe<Scalars['ID']['input']>;
+  email?: InputMaybe<Scalars['String']['input']>;
+  id: Scalars['ID']['input'];
+  introducerIds?: InputMaybe<Array<Scalars['ID']['input']>>;
+  lastPurchaseBaseDate?: InputMaybe<Scalars['DateTime']['input']>;
+  lastSelfPurchaseBaseDate?: InputMaybe<Scalars['DateTime']['input']>;
+  licenseApprovedAt?: InputMaybe<Scalars['DateTime']['input']>;
+  licenseExpiresAt?: InputMaybe<Scalars['DateTime']['input']>;
+  licenseNo?: InputMaybe<Scalars['String']['input']>;
+  mailingAddress?: InputMaybe<Scalars['String']['input']>;
+  mobile?: InputMaybe<Scalars['String']['input']>;
+  name?: InputMaybe<Scalars['String']['input']>;
+  nationalId?: InputMaybe<Scalars['String']['input']>;
+  note?: InputMaybe<Scalars['String']['input']>;
+  phone?: InputMaybe<Scalars['String']['input']>;
+  releaseAgents?: InputMaybe<Scalars['Boolean']['input']>;
+  rentCycle?: InputMaybe<LotteryRentCycle>;
+  rentDueDay?: InputMaybe<Scalars['Int']['input']>;
+  rentFee?: InputMaybe<Scalars['Int']['input']>;
+  rentStartMonth?: InputMaybe<Scalars['Int']['input']>;
+  residentialAddress?: InputMaybe<Scalars['String']['input']>;
+  residentialSameAsMailing?: InputMaybe<Scalars['Boolean']['input']>;
+  shareOrgs?: InputMaybe<Array<ShareOrgInput>>;
+  status?: InputMaybe<LotteryDealerStatus>;
+  storeName?: InputMaybe<Scalars['String']['input']>;
+  storeOrgId?: InputMaybe<Scalars['ID']['input']>;
+  storePhone?: InputMaybe<Scalars['String']['input']>;
+  terminalNo?: InputMaybe<Scalars['String']['input']>;
+  trusteeIds?: InputMaybe<Array<Scalars['ID']['input']>>;
+};
+
+export type UpdateLotteryDealerSigninInput = {
+  id: Scalars['ID']['input'];
+  note?: InputMaybe<Scalars['String']['input']>;
+  signedAt?: InputMaybe<Scalars['DateTime']['input']>;
+};
+
+export type UpdateLotteryGameInput = {
+  claimDeadline?: InputMaybe<Scalars['DateTime']['input']>;
+  color?: InputMaybe<Scalars['String']['input']>;
+  defaultRate?: InputMaybe<Scalars['Int']['input']>;
+  discontinuedAt?: InputMaybe<Scalars['DateTime']['input']>;
+  gameCode?: InputMaybe<Scalars['String']['input']>;
+  id: Scalars['ID']['input'];
+  launchedAt?: InputMaybe<Scalars['DateTime']['input']>;
+  name?: InputMaybe<Scalars['String']['input']>;
+  note?: InputMaybe<Scalars['String']['input']>;
+  status?: InputMaybe<Scalars['String']['input']>;
+  ticketsPerBook?: InputMaybe<Scalars['Int']['input']>;
+  unitPrice?: InputMaybe<Scalars['Int']['input']>;
 };
 
 export type UpdateMyPreferencesInput = {
@@ -3365,7 +6728,8 @@ export type UpdateMyPreferencesPayload = {
 };
 
 export type UpdateNotificationSettingInput = {
-  audience: Scalars['JSONObject']['input'];
+  audience?: InputMaybe<Scalars['JSONObject']['input']>;
+  schedule?: InputMaybe<NotificationScheduleInput>;
   type: Scalars['String']['input'];
 };
 
@@ -3390,6 +6754,19 @@ export type UpdateRoleInput = {
   description?: InputMaybe<Scalars['String']['input']>;
   id: Scalars['ID']['input'];
   name?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type UpdateScheduleStaffInput = {
+  employmentType?: InputMaybe<Scalars['String']['input']>;
+  enabled?: InputMaybe<Scalars['Boolean']['input']>;
+  note?: InputMaybe<Scalars['String']['input']>;
+  orgs?: InputMaybe<Array<ScheduleStaffOrgInput>>;
+  staffId: Scalars['ID']['input'];
+};
+
+export type UpdateSidebarBadgeSettingInput = {
+  audience: Scalars['JSONObject']['input'];
+  moduleKey: Scalars['String']['input'];
 };
 
 export type UpdateUserInput = {
@@ -3552,7 +6929,8 @@ export type ValidateWorkflowVersionInput = {
 export type VoidSubmissionInput = {
   expectedEditVersion: Scalars['Int']['input'];
   id: Scalars['ID']['input'];
-  reason: Scalars['String']['input'];
+  reasonKey?: InputMaybe<Scalars['String']['input']>;
+  reasonNote: Scalars['String']['input'];
 };
 
 export type WithdrawSubmissionInput = {
@@ -3962,21 +7340,21 @@ export type WithdrawSubmissionMutationVariables = Exact<{
 }>;
 
 
-export type WithdrawSubmissionMutation = { __typename?: 'Mutation', withdrawSubmission: { __typename?: 'FormSubmissionPayload', submission: { __typename?: 'FormSubmissionModel', id: string, moduleKey: string, formKey: string, formName?: string | null, version: number, status: FormSubmissionStatus, revision: number, viewedRevision: number, values: Record<string, unknown>, viewedVersion: number, editVersion: number, orgId: string, submittedAt?: string | null, createdAt: string, updatedAt: string, currentInstanceId?: string | null, blocked: boolean, voidedAt?: string | null, voidReason?: string | null, replacedById?: string | null, copiedFrom?: string | null, touched: Array<string>, fieldStates: Array<{ __typename?: 'FormFieldState', key: string, visible: boolean, readonly: boolean, redacted: boolean }>, displayValues: Array<{ __typename?: 'FormDisplayValue', fieldKey: string, items: Array<{ __typename?: 'FormDisplayItem', value: string, label?: string | null, available: boolean }> }>, summary?: { __typename?: 'FormSubmissionSummary', title?: string | null, date?: string | null, amount?: string | null } | null, ctx?: { __typename?: 'FormSubmissionContext', at: string, timezone: string, userId?: string | null, orgId?: string | null, orgIds: Array<string>, tenantId?: string | null } | null, createdBy?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null, abilities: { __typename?: 'FormSubmissionAbilities', canEdit: boolean, canSaveDraft: boolean, canDelete: boolean, canEditField: Array<string>, canWithdraw: boolean, canVoid: boolean, canCopy: boolean } } } };
+export type WithdrawSubmissionMutation = { __typename?: 'Mutation', withdrawSubmission: { __typename?: 'FormSubmissionPayload', submission: { __typename?: 'FormSubmissionModel', id: string, moduleKey: string, formKey: string, formName?: string | null, version: number, status: FormSubmissionStatus, revision: number, viewedRevision: number, values: Record<string, unknown>, viewedVersion: number, editVersion: number, orgId: string, serialNo?: string | null, submittedAt?: string | null, createdAt: string, updatedAt: string, currentInstanceId?: string | null, blocked: boolean, voidedAt?: string | null, voidReason?: string | null, voidReasonKey?: string | null, voidReasonLabel?: string | null, replacedById?: string | null, copiedFrom?: string | null, touched: Array<string>, fieldStates: Array<{ __typename?: 'FormFieldState', key: string, visible: boolean, readonly: boolean, redacted: boolean }>, displayValues: Array<{ __typename?: 'FormDisplayValue', fieldKey: string, items: Array<{ __typename?: 'FormDisplayItem', value: string, label?: string | null, available: boolean }> }>, summary?: { __typename?: 'FormSubmissionSummary', title?: string | null, date?: string | null, amount?: string | null } | null, ctx?: { __typename?: 'FormSubmissionContext', at: string, timezone: string, userId?: string | null, orgId?: string | null, orgIds: Array<string>, tenantId?: string | null } | null, createdBy?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null, abilities: { __typename?: 'FormSubmissionAbilities', canEdit: boolean, canSaveDraft: boolean, canDelete: boolean, canEditField: Array<string>, canWithdraw: boolean, canVoid: boolean, canCopy: boolean } } } };
 
 export type VoidSubmissionMutationVariables = Exact<{
   input: VoidSubmissionInput;
 }>;
 
 
-export type VoidSubmissionMutation = { __typename?: 'Mutation', voidSubmission: { __typename?: 'FormSubmissionPayload', submission: { __typename?: 'FormSubmissionModel', id: string, moduleKey: string, formKey: string, formName?: string | null, version: number, status: FormSubmissionStatus, revision: number, viewedRevision: number, values: Record<string, unknown>, viewedVersion: number, editVersion: number, orgId: string, submittedAt?: string | null, createdAt: string, updatedAt: string, currentInstanceId?: string | null, blocked: boolean, voidedAt?: string | null, voidReason?: string | null, replacedById?: string | null, copiedFrom?: string | null, touched: Array<string>, fieldStates: Array<{ __typename?: 'FormFieldState', key: string, visible: boolean, readonly: boolean, redacted: boolean }>, displayValues: Array<{ __typename?: 'FormDisplayValue', fieldKey: string, items: Array<{ __typename?: 'FormDisplayItem', value: string, label?: string | null, available: boolean }> }>, summary?: { __typename?: 'FormSubmissionSummary', title?: string | null, date?: string | null, amount?: string | null } | null, ctx?: { __typename?: 'FormSubmissionContext', at: string, timezone: string, userId?: string | null, orgId?: string | null, orgIds: Array<string>, tenantId?: string | null } | null, createdBy?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null, abilities: { __typename?: 'FormSubmissionAbilities', canEdit: boolean, canSaveDraft: boolean, canDelete: boolean, canEditField: Array<string>, canWithdraw: boolean, canVoid: boolean, canCopy: boolean } } } };
+export type VoidSubmissionMutation = { __typename?: 'Mutation', voidSubmission: { __typename?: 'FormSubmissionPayload', submission: { __typename?: 'FormSubmissionModel', id: string, moduleKey: string, formKey: string, formName?: string | null, version: number, status: FormSubmissionStatus, revision: number, viewedRevision: number, values: Record<string, unknown>, viewedVersion: number, editVersion: number, orgId: string, serialNo?: string | null, submittedAt?: string | null, createdAt: string, updatedAt: string, currentInstanceId?: string | null, blocked: boolean, voidedAt?: string | null, voidReason?: string | null, voidReasonKey?: string | null, voidReasonLabel?: string | null, replacedById?: string | null, copiedFrom?: string | null, touched: Array<string>, fieldStates: Array<{ __typename?: 'FormFieldState', key: string, visible: boolean, readonly: boolean, redacted: boolean }>, displayValues: Array<{ __typename?: 'FormDisplayValue', fieldKey: string, items: Array<{ __typename?: 'FormDisplayItem', value: string, label?: string | null, available: boolean }> }>, summary?: { __typename?: 'FormSubmissionSummary', title?: string | null, date?: string | null, amount?: string | null } | null, ctx?: { __typename?: 'FormSubmissionContext', at: string, timezone: string, userId?: string | null, orgId?: string | null, orgIds: Array<string>, tenantId?: string | null } | null, createdBy?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null, abilities: { __typename?: 'FormSubmissionAbilities', canEdit: boolean, canSaveDraft: boolean, canDelete: boolean, canEditField: Array<string>, canWithdraw: boolean, canVoid: boolean, canCopy: boolean } } } };
 
 export type CopySubmissionToDraftMutationVariables = Exact<{
   input: CopySubmissionToDraftInput;
 }>;
 
 
-export type CopySubmissionToDraftMutation = { __typename?: 'Mutation', copySubmissionToDraft: { __typename?: 'FormSubmissionPayload', submission: { __typename?: 'FormSubmissionModel', clearedFields: Array<string>, id: string, moduleKey: string, formKey: string, formName?: string | null, version: number, status: FormSubmissionStatus, revision: number, viewedRevision: number, values: Record<string, unknown>, viewedVersion: number, editVersion: number, orgId: string, submittedAt?: string | null, createdAt: string, updatedAt: string, currentInstanceId?: string | null, blocked: boolean, voidedAt?: string | null, voidReason?: string | null, replacedById?: string | null, copiedFrom?: string | null, touched: Array<string>, fieldStates: Array<{ __typename?: 'FormFieldState', key: string, visible: boolean, readonly: boolean, redacted: boolean }>, displayValues: Array<{ __typename?: 'FormDisplayValue', fieldKey: string, items: Array<{ __typename?: 'FormDisplayItem', value: string, label?: string | null, available: boolean }> }>, summary?: { __typename?: 'FormSubmissionSummary', title?: string | null, date?: string | null, amount?: string | null } | null, ctx?: { __typename?: 'FormSubmissionContext', at: string, timezone: string, userId?: string | null, orgId?: string | null, orgIds: Array<string>, tenantId?: string | null } | null, createdBy?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null, abilities: { __typename?: 'FormSubmissionAbilities', canEdit: boolean, canSaveDraft: boolean, canDelete: boolean, canEditField: Array<string>, canWithdraw: boolean, canVoid: boolean, canCopy: boolean } } } };
+export type CopySubmissionToDraftMutation = { __typename?: 'Mutation', copySubmissionToDraft: { __typename?: 'FormSubmissionPayload', submission: { __typename?: 'FormSubmissionModel', clearedFields: Array<string>, id: string, moduleKey: string, formKey: string, formName?: string | null, version: number, status: FormSubmissionStatus, revision: number, viewedRevision: number, values: Record<string, unknown>, viewedVersion: number, editVersion: number, orgId: string, serialNo?: string | null, submittedAt?: string | null, createdAt: string, updatedAt: string, currentInstanceId?: string | null, blocked: boolean, voidedAt?: string | null, voidReason?: string | null, voidReasonKey?: string | null, voidReasonLabel?: string | null, replacedById?: string | null, copiedFrom?: string | null, touched: Array<string>, fieldStates: Array<{ __typename?: 'FormFieldState', key: string, visible: boolean, readonly: boolean, redacted: boolean }>, displayValues: Array<{ __typename?: 'FormDisplayValue', fieldKey: string, items: Array<{ __typename?: 'FormDisplayItem', value: string, label?: string | null, available: boolean }> }>, summary?: { __typename?: 'FormSubmissionSummary', title?: string | null, date?: string | null, amount?: string | null } | null, ctx?: { __typename?: 'FormSubmissionContext', at: string, timezone: string, userId?: string | null, orgId?: string | null, orgIds: Array<string>, tenantId?: string | null } | null, createdBy?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null, abilities: { __typename?: 'FormSubmissionAbilities', canEdit: boolean, canSaveDraft: boolean, canDelete: boolean, canEditField: Array<string>, canWithdraw: boolean, canVoid: boolean, canCopy: boolean } } } };
 
 export type AudiencePermissionOptionsQueryVariables = Exact<{ [key: string]: never; }>;
 
@@ -4115,35 +7493,35 @@ export type SetDemoItemOneEnabledMutationVariables = Exact<{
 
 export type SetDemoItemOneEnabledMutation = { __typename?: 'Mutation', setDemoItemOneEnabled: { __typename?: 'DemoItemOnePayload', item: { __typename?: 'DemoItemOne', id: string, name: string, category?: string | null, categoryLabel?: string | null, note?: string | null, internalNote?: string | null, coverPath?: string | null, coverUrl?: string | null, status: DemoItemOneStatus, enabled: boolean, createdAt: string, updatedAt: string, attachment?: { __typename?: 'DemoItemOneAttachment', path: string, name?: string | null, size?: number | null, contentType?: string | null } | null, createdBy?: { __typename?: 'DemoItemOneUserRef', id: string, name: string } | null, abilities: { __typename?: 'DemoItemOneAbilities', canEdit: boolean, canDelete: boolean, canEditInternalNote: boolean } } } };
 
-export type DemoItemTwoFieldsFragment = { __typename?: 'DemoItemTwo', id: string, name: string, note?: string | null, enabled: boolean, createdAt: string, updatedAt: string, createdBy?: { __typename?: 'DemoItemTwoUser', id: string, name: string } | null, abilities: { __typename?: 'DemoItemTwoAbilities', canEdit: boolean, canDelete: boolean } };
+export type DemoItemTwoFieldsFragment = { __typename?: 'DemoItemTwo', id: string, name: string, note?: string | null, enabled: boolean, createdAt: string, updatedAt: string, isShared: boolean, createdBy?: { __typename?: 'DemoItemTwoUser', id: string, name: string } | null, abilities: { __typename?: 'DemoItemTwoAbilities', canEdit: boolean, canDelete: boolean }, shareOrgs: Array<{ __typename?: 'ShareOrg', orgId: string, includeDescendants: boolean }> };
 
 export type DemoItemsTwoQueryVariables = Exact<{
   input: DemoItemsTwoInput;
 }>;
 
 
-export type DemoItemsTwoQuery = { __typename?: 'Query', demoItemsTwo: { __typename?: 'DemoItemsTwoPayload', totalCount: number, page: number, pageSize: number, items: Array<{ __typename?: 'DemoItemTwo', id: string, name: string, note?: string | null, enabled: boolean, createdAt: string, updatedAt: string, createdBy?: { __typename?: 'DemoItemTwoUser', id: string, name: string } | null, abilities: { __typename?: 'DemoItemTwoAbilities', canEdit: boolean, canDelete: boolean } }> } };
+export type DemoItemsTwoQuery = { __typename?: 'Query', demoItemsTwo: { __typename?: 'DemoItemsTwoPayload', totalCount: number, page: number, pageSize: number, items: Array<{ __typename?: 'DemoItemTwo', id: string, name: string, note?: string | null, enabled: boolean, createdAt: string, updatedAt: string, isShared: boolean, createdBy?: { __typename?: 'DemoItemTwoUser', id: string, name: string } | null, abilities: { __typename?: 'DemoItemTwoAbilities', canEdit: boolean, canDelete: boolean }, shareOrgs: Array<{ __typename?: 'ShareOrg', orgId: string, includeDescendants: boolean }> }> } };
 
 export type DemoItemTwoQueryVariables = Exact<{
   id: Scalars['ID']['input'];
 }>;
 
 
-export type DemoItemTwoQuery = { __typename?: 'Query', demoItemTwo: { __typename?: 'DemoItemTwoPayload', item: { __typename?: 'DemoItemTwo', id: string, name: string, note?: string | null, enabled: boolean, createdAt: string, updatedAt: string, createdBy?: { __typename?: 'DemoItemTwoUser', id: string, name: string } | null, abilities: { __typename?: 'DemoItemTwoAbilities', canEdit: boolean, canDelete: boolean } } } };
+export type DemoItemTwoQuery = { __typename?: 'Query', demoItemTwo: { __typename?: 'DemoItemTwoPayload', item: { __typename?: 'DemoItemTwo', id: string, name: string, note?: string | null, enabled: boolean, createdAt: string, updatedAt: string, isShared: boolean, createdBy?: { __typename?: 'DemoItemTwoUser', id: string, name: string } | null, abilities: { __typename?: 'DemoItemTwoAbilities', canEdit: boolean, canDelete: boolean }, shareOrgs: Array<{ __typename?: 'ShareOrg', orgId: string, includeDescendants: boolean }> } } };
 
 export type CreateDemoItemTwoMutationVariables = Exact<{
   input: CreateDemoItemTwoInput;
 }>;
 
 
-export type CreateDemoItemTwoMutation = { __typename?: 'Mutation', createDemoItemTwo: { __typename?: 'DemoItemTwoPayload', item: { __typename?: 'DemoItemTwo', id: string, name: string, note?: string | null, enabled: boolean, createdAt: string, updatedAt: string, createdBy?: { __typename?: 'DemoItemTwoUser', id: string, name: string } | null, abilities: { __typename?: 'DemoItemTwoAbilities', canEdit: boolean, canDelete: boolean } } } };
+export type CreateDemoItemTwoMutation = { __typename?: 'Mutation', createDemoItemTwo: { __typename?: 'DemoItemTwoPayload', item: { __typename?: 'DemoItemTwo', id: string, name: string, note?: string | null, enabled: boolean, createdAt: string, updatedAt: string, isShared: boolean, createdBy?: { __typename?: 'DemoItemTwoUser', id: string, name: string } | null, abilities: { __typename?: 'DemoItemTwoAbilities', canEdit: boolean, canDelete: boolean }, shareOrgs: Array<{ __typename?: 'ShareOrg', orgId: string, includeDescendants: boolean }> } } };
 
 export type UpdateDemoItemTwoMutationVariables = Exact<{
   input: UpdateDemoItemTwoInput;
 }>;
 
 
-export type UpdateDemoItemTwoMutation = { __typename?: 'Mutation', updateDemoItemTwo: { __typename?: 'DemoItemTwoPayload', item: { __typename?: 'DemoItemTwo', id: string, name: string, note?: string | null, enabled: boolean, createdAt: string, updatedAt: string, createdBy?: { __typename?: 'DemoItemTwoUser', id: string, name: string } | null, abilities: { __typename?: 'DemoItemTwoAbilities', canEdit: boolean, canDelete: boolean } } } };
+export type UpdateDemoItemTwoMutation = { __typename?: 'Mutation', updateDemoItemTwo: { __typename?: 'DemoItemTwoPayload', item: { __typename?: 'DemoItemTwo', id: string, name: string, note?: string | null, enabled: boolean, createdAt: string, updatedAt: string, isShared: boolean, createdBy?: { __typename?: 'DemoItemTwoUser', id: string, name: string } | null, abilities: { __typename?: 'DemoItemTwoAbilities', canEdit: boolean, canDelete: boolean }, shareOrgs: Array<{ __typename?: 'ShareOrg', orgId: string, includeDescendants: boolean }> } } };
 
 export type DeleteDemoItemTwoMutationVariables = Exact<{
   input: DeleteDemoItemTwoInput;
@@ -4157,7 +7535,7 @@ export type SetDemoItemTwoEnabledMutationVariables = Exact<{
 }>;
 
 
-export type SetDemoItemTwoEnabledMutation = { __typename?: 'Mutation', setDemoItemTwoEnabled: { __typename?: 'DemoItemTwoPayload', item: { __typename?: 'DemoItemTwo', id: string, name: string, note?: string | null, enabled: boolean, createdAt: string, updatedAt: string, createdBy?: { __typename?: 'DemoItemTwoUser', id: string, name: string } | null, abilities: { __typename?: 'DemoItemTwoAbilities', canEdit: boolean, canDelete: boolean } } } };
+export type SetDemoItemTwoEnabledMutation = { __typename?: 'Mutation', setDemoItemTwoEnabled: { __typename?: 'DemoItemTwoPayload', item: { __typename?: 'DemoItemTwo', id: string, name: string, note?: string | null, enabled: boolean, createdAt: string, updatedAt: string, isShared: boolean, createdBy?: { __typename?: 'DemoItemTwoUser', id: string, name: string } | null, abilities: { __typename?: 'DemoItemTwoAbilities', canEdit: boolean, canDelete: boolean }, shareOrgs: Array<{ __typename?: 'ShareOrg', orgId: string, includeDescendants: boolean }> } } };
 
 export type FieldFieldsFragment = { __typename?: 'Field', id: string, categoryId: string, label: string, value: string, order: number, enabled: boolean, description?: string | null, isOwn: boolean, canEdit: boolean, canToggleEnabled: boolean, ownerOrg?: { __typename?: 'FieldOwnerOrg', id: string, name: string } | null };
 
@@ -4219,7 +7597,7 @@ export type SetFieldEnabledMutationVariables = Exact<{
 
 export type SetFieldEnabledMutation = { __typename?: 'Mutation', setFieldEnabled: { __typename?: 'FieldPayload', field: { __typename?: 'Field', id: string, categoryId: string, label: string, value: string, order: number, enabled: boolean, description?: string | null, isOwn: boolean, canEdit: boolean, canToggleEnabled: boolean, ownerOrg?: { __typename?: 'FieldOwnerOrg', id: string, name: string } | null } } };
 
-export type FormSubmissionFieldsFragment = { __typename?: 'FormSubmissionModel', id: string, moduleKey: string, formKey: string, formName?: string | null, version: number, status: FormSubmissionStatus, revision: number, viewedRevision: number, values: Record<string, unknown>, viewedVersion: number, editVersion: number, orgId: string, submittedAt?: string | null, createdAt: string, updatedAt: string, currentInstanceId?: string | null, blocked: boolean, voidedAt?: string | null, voidReason?: string | null, replacedById?: string | null, copiedFrom?: string | null, touched: Array<string>, fieldStates: Array<{ __typename?: 'FormFieldState', key: string, visible: boolean, readonly: boolean, redacted: boolean }>, displayValues: Array<{ __typename?: 'FormDisplayValue', fieldKey: string, items: Array<{ __typename?: 'FormDisplayItem', value: string, label?: string | null, available: boolean }> }>, summary?: { __typename?: 'FormSubmissionSummary', title?: string | null, date?: string | null, amount?: string | null } | null, ctx?: { __typename?: 'FormSubmissionContext', at: string, timezone: string, userId?: string | null, orgId?: string | null, orgIds: Array<string>, tenantId?: string | null } | null, createdBy?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null, abilities: { __typename?: 'FormSubmissionAbilities', canEdit: boolean, canSaveDraft: boolean, canDelete: boolean, canEditField: Array<string>, canWithdraw: boolean, canVoid: boolean, canCopy: boolean } };
+export type FormSubmissionFieldsFragment = { __typename?: 'FormSubmissionModel', id: string, moduleKey: string, formKey: string, formName?: string | null, version: number, status: FormSubmissionStatus, revision: number, viewedRevision: number, values: Record<string, unknown>, viewedVersion: number, editVersion: number, orgId: string, serialNo?: string | null, submittedAt?: string | null, createdAt: string, updatedAt: string, currentInstanceId?: string | null, blocked: boolean, voidedAt?: string | null, voidReason?: string | null, voidReasonKey?: string | null, voidReasonLabel?: string | null, replacedById?: string | null, copiedFrom?: string | null, touched: Array<string>, fieldStates: Array<{ __typename?: 'FormFieldState', key: string, visible: boolean, readonly: boolean, redacted: boolean }>, displayValues: Array<{ __typename?: 'FormDisplayValue', fieldKey: string, items: Array<{ __typename?: 'FormDisplayItem', value: string, label?: string | null, available: boolean }> }>, summary?: { __typename?: 'FormSubmissionSummary', title?: string | null, date?: string | null, amount?: string | null } | null, ctx?: { __typename?: 'FormSubmissionContext', at: string, timezone: string, userId?: string | null, orgId?: string | null, orgIds: Array<string>, tenantId?: string | null } | null, createdBy?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null, abilities: { __typename?: 'FormSubmissionAbilities', canEdit: boolean, canSaveDraft: boolean, canDelete: boolean, canEditField: Array<string>, canWithdraw: boolean, canVoid: boolean, canCopy: boolean } };
 
 export type FormLookupRecordFieldsFragment = { __typename?: 'FormLookupRecord', id: string, value?: string | null, label?: string | null, values: Record<string, unknown> };
 
@@ -4243,7 +7621,7 @@ export type FormSubmissionsQueryVariables = Exact<{
 }>;
 
 
-export type FormSubmissionsQuery = { __typename?: 'Query', formSubmissions: { __typename?: 'FormSubmissionsPayload', totalCount: number, page: number, pageSize: number, items: Array<{ __typename?: 'FormSubmissionModel', id: string, moduleKey: string, formKey: string, formName?: string | null, version: number, status: FormSubmissionStatus, revision: number, viewedRevision: number, values: Record<string, unknown>, viewedVersion: number, editVersion: number, orgId: string, submittedAt?: string | null, createdAt: string, updatedAt: string, currentInstanceId?: string | null, blocked: boolean, voidedAt?: string | null, voidReason?: string | null, replacedById?: string | null, copiedFrom?: string | null, touched: Array<string>, fieldStates: Array<{ __typename?: 'FormFieldState', key: string, visible: boolean, readonly: boolean, redacted: boolean }>, displayValues: Array<{ __typename?: 'FormDisplayValue', fieldKey: string, items: Array<{ __typename?: 'FormDisplayItem', value: string, label?: string | null, available: boolean }> }>, summary?: { __typename?: 'FormSubmissionSummary', title?: string | null, date?: string | null, amount?: string | null } | null, ctx?: { __typename?: 'FormSubmissionContext', at: string, timezone: string, userId?: string | null, orgId?: string | null, orgIds: Array<string>, tenantId?: string | null } | null, createdBy?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null, abilities: { __typename?: 'FormSubmissionAbilities', canEdit: boolean, canSaveDraft: boolean, canDelete: boolean, canEditField: Array<string>, canWithdraw: boolean, canVoid: boolean, canCopy: boolean } }> } };
+export type FormSubmissionsQuery = { __typename?: 'Query', formSubmissions: { __typename?: 'FormSubmissionsPayload', totalCount: number, page: number, pageSize: number, items: Array<{ __typename?: 'FormSubmissionModel', id: string, moduleKey: string, formKey: string, formName?: string | null, version: number, status: FormSubmissionStatus, revision: number, viewedRevision: number, values: Record<string, unknown>, viewedVersion: number, editVersion: number, orgId: string, serialNo?: string | null, submittedAt?: string | null, createdAt: string, updatedAt: string, currentInstanceId?: string | null, blocked: boolean, voidedAt?: string | null, voidReason?: string | null, voidReasonKey?: string | null, voidReasonLabel?: string | null, replacedById?: string | null, copiedFrom?: string | null, touched: Array<string>, fieldStates: Array<{ __typename?: 'FormFieldState', key: string, visible: boolean, readonly: boolean, redacted: boolean }>, displayValues: Array<{ __typename?: 'FormDisplayValue', fieldKey: string, items: Array<{ __typename?: 'FormDisplayItem', value: string, label?: string | null, available: boolean }> }>, summary?: { __typename?: 'FormSubmissionSummary', title?: string | null, date?: string | null, amount?: string | null } | null, ctx?: { __typename?: 'FormSubmissionContext', at: string, timezone: string, userId?: string | null, orgId?: string | null, orgIds: Array<string>, tenantId?: string | null } | null, createdBy?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null, abilities: { __typename?: 'FormSubmissionAbilities', canEdit: boolean, canSaveDraft: boolean, canDelete: boolean, canEditField: Array<string>, canWithdraw: boolean, canVoid: boolean, canCopy: boolean } }> } };
 
 export type FormSubmissionQueryVariables = Exact<{
   id: Scalars['ID']['input'];
@@ -4251,7 +7629,7 @@ export type FormSubmissionQueryVariables = Exact<{
 }>;
 
 
-export type FormSubmissionQuery = { __typename?: 'Query', formSubmission: { __typename?: 'FormSubmissionPayload', submission: { __typename?: 'FormSubmissionModel', id: string, moduleKey: string, formKey: string, formName?: string | null, version: number, status: FormSubmissionStatus, revision: number, viewedRevision: number, values: Record<string, unknown>, viewedVersion: number, editVersion: number, orgId: string, submittedAt?: string | null, createdAt: string, updatedAt: string, currentInstanceId?: string | null, blocked: boolean, voidedAt?: string | null, voidReason?: string | null, replacedById?: string | null, copiedFrom?: string | null, touched: Array<string>, fieldStates: Array<{ __typename?: 'FormFieldState', key: string, visible: boolean, readonly: boolean, redacted: boolean }>, displayValues: Array<{ __typename?: 'FormDisplayValue', fieldKey: string, items: Array<{ __typename?: 'FormDisplayItem', value: string, label?: string | null, available: boolean }> }>, summary?: { __typename?: 'FormSubmissionSummary', title?: string | null, date?: string | null, amount?: string | null } | null, ctx?: { __typename?: 'FormSubmissionContext', at: string, timezone: string, userId?: string | null, orgId?: string | null, orgIds: Array<string>, tenantId?: string | null } | null, createdBy?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null, abilities: { __typename?: 'FormSubmissionAbilities', canEdit: boolean, canSaveDraft: boolean, canDelete: boolean, canEditField: Array<string>, canWithdraw: boolean, canVoid: boolean, canCopy: boolean } } } };
+export type FormSubmissionQuery = { __typename?: 'Query', formSubmission: { __typename?: 'FormSubmissionPayload', submission: { __typename?: 'FormSubmissionModel', id: string, moduleKey: string, formKey: string, formName?: string | null, version: number, status: FormSubmissionStatus, revision: number, viewedRevision: number, values: Record<string, unknown>, viewedVersion: number, editVersion: number, orgId: string, serialNo?: string | null, submittedAt?: string | null, createdAt: string, updatedAt: string, currentInstanceId?: string | null, blocked: boolean, voidedAt?: string | null, voidReason?: string | null, voidReasonKey?: string | null, voidReasonLabel?: string | null, replacedById?: string | null, copiedFrom?: string | null, touched: Array<string>, fieldStates: Array<{ __typename?: 'FormFieldState', key: string, visible: boolean, readonly: boolean, redacted: boolean }>, displayValues: Array<{ __typename?: 'FormDisplayValue', fieldKey: string, items: Array<{ __typename?: 'FormDisplayItem', value: string, label?: string | null, available: boolean }> }>, summary?: { __typename?: 'FormSubmissionSummary', title?: string | null, date?: string | null, amount?: string | null } | null, ctx?: { __typename?: 'FormSubmissionContext', at: string, timezone: string, userId?: string | null, orgId?: string | null, orgIds: Array<string>, tenantId?: string | null } | null, createdBy?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null, abilities: { __typename?: 'FormSubmissionAbilities', canEdit: boolean, canSaveDraft: boolean, canDelete: boolean, canEditField: Array<string>, canWithdraw: boolean, canVoid: boolean, canCopy: boolean } } } };
 
 export type FormSubmissionRevisionsQueryVariables = Exact<{
   id: Scalars['ID']['input'];
@@ -4274,35 +7652,35 @@ export type CreateAndSubmitFormSubmissionMutationVariables = Exact<{
 }>;
 
 
-export type CreateAndSubmitFormSubmissionMutation = { __typename?: 'Mutation', createAndSubmitFormSubmission: { __typename?: 'FormSubmissionPayload', submission: { __typename?: 'FormSubmissionModel', id: string, moduleKey: string, formKey: string, formName?: string | null, version: number, status: FormSubmissionStatus, revision: number, viewedRevision: number, values: Record<string, unknown>, viewedVersion: number, editVersion: number, orgId: string, submittedAt?: string | null, createdAt: string, updatedAt: string, currentInstanceId?: string | null, blocked: boolean, voidedAt?: string | null, voidReason?: string | null, replacedById?: string | null, copiedFrom?: string | null, touched: Array<string>, fieldStates: Array<{ __typename?: 'FormFieldState', key: string, visible: boolean, readonly: boolean, redacted: boolean }>, displayValues: Array<{ __typename?: 'FormDisplayValue', fieldKey: string, items: Array<{ __typename?: 'FormDisplayItem', value: string, label?: string | null, available: boolean }> }>, summary?: { __typename?: 'FormSubmissionSummary', title?: string | null, date?: string | null, amount?: string | null } | null, ctx?: { __typename?: 'FormSubmissionContext', at: string, timezone: string, userId?: string | null, orgId?: string | null, orgIds: Array<string>, tenantId?: string | null } | null, createdBy?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null, abilities: { __typename?: 'FormSubmissionAbilities', canEdit: boolean, canSaveDraft: boolean, canDelete: boolean, canEditField: Array<string>, canWithdraw: boolean, canVoid: boolean, canCopy: boolean } } } };
+export type CreateAndSubmitFormSubmissionMutation = { __typename?: 'Mutation', createAndSubmitFormSubmission: { __typename?: 'FormSubmissionPayload', submission: { __typename?: 'FormSubmissionModel', id: string, moduleKey: string, formKey: string, formName?: string | null, version: number, status: FormSubmissionStatus, revision: number, viewedRevision: number, values: Record<string, unknown>, viewedVersion: number, editVersion: number, orgId: string, serialNo?: string | null, submittedAt?: string | null, createdAt: string, updatedAt: string, currentInstanceId?: string | null, blocked: boolean, voidedAt?: string | null, voidReason?: string | null, voidReasonKey?: string | null, voidReasonLabel?: string | null, replacedById?: string | null, copiedFrom?: string | null, touched: Array<string>, fieldStates: Array<{ __typename?: 'FormFieldState', key: string, visible: boolean, readonly: boolean, redacted: boolean }>, displayValues: Array<{ __typename?: 'FormDisplayValue', fieldKey: string, items: Array<{ __typename?: 'FormDisplayItem', value: string, label?: string | null, available: boolean }> }>, summary?: { __typename?: 'FormSubmissionSummary', title?: string | null, date?: string | null, amount?: string | null } | null, ctx?: { __typename?: 'FormSubmissionContext', at: string, timezone: string, userId?: string | null, orgId?: string | null, orgIds: Array<string>, tenantId?: string | null } | null, createdBy?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null, abilities: { __typename?: 'FormSubmissionAbilities', canEdit: boolean, canSaveDraft: boolean, canDelete: boolean, canEditField: Array<string>, canWithdraw: boolean, canVoid: boolean, canCopy: boolean } } } };
 
 export type CreateFormDraftMutationVariables = Exact<{
   input: CreateFormDraftInput;
 }>;
 
 
-export type CreateFormDraftMutation = { __typename?: 'Mutation', createFormDraft: { __typename?: 'FormSubmissionPayload', submission: { __typename?: 'FormSubmissionModel', id: string, moduleKey: string, formKey: string, formName?: string | null, version: number, status: FormSubmissionStatus, revision: number, viewedRevision: number, values: Record<string, unknown>, viewedVersion: number, editVersion: number, orgId: string, submittedAt?: string | null, createdAt: string, updatedAt: string, currentInstanceId?: string | null, blocked: boolean, voidedAt?: string | null, voidReason?: string | null, replacedById?: string | null, copiedFrom?: string | null, touched: Array<string>, fieldStates: Array<{ __typename?: 'FormFieldState', key: string, visible: boolean, readonly: boolean, redacted: boolean }>, displayValues: Array<{ __typename?: 'FormDisplayValue', fieldKey: string, items: Array<{ __typename?: 'FormDisplayItem', value: string, label?: string | null, available: boolean }> }>, summary?: { __typename?: 'FormSubmissionSummary', title?: string | null, date?: string | null, amount?: string | null } | null, ctx?: { __typename?: 'FormSubmissionContext', at: string, timezone: string, userId?: string | null, orgId?: string | null, orgIds: Array<string>, tenantId?: string | null } | null, createdBy?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null, abilities: { __typename?: 'FormSubmissionAbilities', canEdit: boolean, canSaveDraft: boolean, canDelete: boolean, canEditField: Array<string>, canWithdraw: boolean, canVoid: boolean, canCopy: boolean } } } };
+export type CreateFormDraftMutation = { __typename?: 'Mutation', createFormDraft: { __typename?: 'FormSubmissionPayload', submission: { __typename?: 'FormSubmissionModel', id: string, moduleKey: string, formKey: string, formName?: string | null, version: number, status: FormSubmissionStatus, revision: number, viewedRevision: number, values: Record<string, unknown>, viewedVersion: number, editVersion: number, orgId: string, serialNo?: string | null, submittedAt?: string | null, createdAt: string, updatedAt: string, currentInstanceId?: string | null, blocked: boolean, voidedAt?: string | null, voidReason?: string | null, voidReasonKey?: string | null, voidReasonLabel?: string | null, replacedById?: string | null, copiedFrom?: string | null, touched: Array<string>, fieldStates: Array<{ __typename?: 'FormFieldState', key: string, visible: boolean, readonly: boolean, redacted: boolean }>, displayValues: Array<{ __typename?: 'FormDisplayValue', fieldKey: string, items: Array<{ __typename?: 'FormDisplayItem', value: string, label?: string | null, available: boolean }> }>, summary?: { __typename?: 'FormSubmissionSummary', title?: string | null, date?: string | null, amount?: string | null } | null, ctx?: { __typename?: 'FormSubmissionContext', at: string, timezone: string, userId?: string | null, orgId?: string | null, orgIds: Array<string>, tenantId?: string | null } | null, createdBy?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null, abilities: { __typename?: 'FormSubmissionAbilities', canEdit: boolean, canSaveDraft: boolean, canDelete: boolean, canEditField: Array<string>, canWithdraw: boolean, canVoid: boolean, canCopy: boolean } } } };
 
 export type SaveFormDraftMutationVariables = Exact<{
   input: SaveFormDraftInput;
 }>;
 
 
-export type SaveFormDraftMutation = { __typename?: 'Mutation', saveFormDraft: { __typename?: 'FormSubmissionPayload', submission: { __typename?: 'FormSubmissionModel', id: string, moduleKey: string, formKey: string, formName?: string | null, version: number, status: FormSubmissionStatus, revision: number, viewedRevision: number, values: Record<string, unknown>, viewedVersion: number, editVersion: number, orgId: string, submittedAt?: string | null, createdAt: string, updatedAt: string, currentInstanceId?: string | null, blocked: boolean, voidedAt?: string | null, voidReason?: string | null, replacedById?: string | null, copiedFrom?: string | null, touched: Array<string>, fieldStates: Array<{ __typename?: 'FormFieldState', key: string, visible: boolean, readonly: boolean, redacted: boolean }>, displayValues: Array<{ __typename?: 'FormDisplayValue', fieldKey: string, items: Array<{ __typename?: 'FormDisplayItem', value: string, label?: string | null, available: boolean }> }>, summary?: { __typename?: 'FormSubmissionSummary', title?: string | null, date?: string | null, amount?: string | null } | null, ctx?: { __typename?: 'FormSubmissionContext', at: string, timezone: string, userId?: string | null, orgId?: string | null, orgIds: Array<string>, tenantId?: string | null } | null, createdBy?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null, abilities: { __typename?: 'FormSubmissionAbilities', canEdit: boolean, canSaveDraft: boolean, canDelete: boolean, canEditField: Array<string>, canWithdraw: boolean, canVoid: boolean, canCopy: boolean } } } };
+export type SaveFormDraftMutation = { __typename?: 'Mutation', saveFormDraft: { __typename?: 'FormSubmissionPayload', submission: { __typename?: 'FormSubmissionModel', id: string, moduleKey: string, formKey: string, formName?: string | null, version: number, status: FormSubmissionStatus, revision: number, viewedRevision: number, values: Record<string, unknown>, viewedVersion: number, editVersion: number, orgId: string, serialNo?: string | null, submittedAt?: string | null, createdAt: string, updatedAt: string, currentInstanceId?: string | null, blocked: boolean, voidedAt?: string | null, voidReason?: string | null, voidReasonKey?: string | null, voidReasonLabel?: string | null, replacedById?: string | null, copiedFrom?: string | null, touched: Array<string>, fieldStates: Array<{ __typename?: 'FormFieldState', key: string, visible: boolean, readonly: boolean, redacted: boolean }>, displayValues: Array<{ __typename?: 'FormDisplayValue', fieldKey: string, items: Array<{ __typename?: 'FormDisplayItem', value: string, label?: string | null, available: boolean }> }>, summary?: { __typename?: 'FormSubmissionSummary', title?: string | null, date?: string | null, amount?: string | null } | null, ctx?: { __typename?: 'FormSubmissionContext', at: string, timezone: string, userId?: string | null, orgId?: string | null, orgIds: Array<string>, tenantId?: string | null } | null, createdBy?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null, abilities: { __typename?: 'FormSubmissionAbilities', canEdit: boolean, canSaveDraft: boolean, canDelete: boolean, canEditField: Array<string>, canWithdraw: boolean, canVoid: boolean, canCopy: boolean } } } };
 
 export type SubmitFormSubmissionMutationVariables = Exact<{
   input: SubmitFormSubmissionInput;
 }>;
 
 
-export type SubmitFormSubmissionMutation = { __typename?: 'Mutation', submitFormSubmission: { __typename?: 'FormSubmissionPayload', submission: { __typename?: 'FormSubmissionModel', id: string, moduleKey: string, formKey: string, formName?: string | null, version: number, status: FormSubmissionStatus, revision: number, viewedRevision: number, values: Record<string, unknown>, viewedVersion: number, editVersion: number, orgId: string, submittedAt?: string | null, createdAt: string, updatedAt: string, currentInstanceId?: string | null, blocked: boolean, voidedAt?: string | null, voidReason?: string | null, replacedById?: string | null, copiedFrom?: string | null, touched: Array<string>, fieldStates: Array<{ __typename?: 'FormFieldState', key: string, visible: boolean, readonly: boolean, redacted: boolean }>, displayValues: Array<{ __typename?: 'FormDisplayValue', fieldKey: string, items: Array<{ __typename?: 'FormDisplayItem', value: string, label?: string | null, available: boolean }> }>, summary?: { __typename?: 'FormSubmissionSummary', title?: string | null, date?: string | null, amount?: string | null } | null, ctx?: { __typename?: 'FormSubmissionContext', at: string, timezone: string, userId?: string | null, orgId?: string | null, orgIds: Array<string>, tenantId?: string | null } | null, createdBy?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null, abilities: { __typename?: 'FormSubmissionAbilities', canEdit: boolean, canSaveDraft: boolean, canDelete: boolean, canEditField: Array<string>, canWithdraw: boolean, canVoid: boolean, canCopy: boolean } } } };
+export type SubmitFormSubmissionMutation = { __typename?: 'Mutation', submitFormSubmission: { __typename?: 'FormSubmissionPayload', submission: { __typename?: 'FormSubmissionModel', id: string, moduleKey: string, formKey: string, formName?: string | null, version: number, status: FormSubmissionStatus, revision: number, viewedRevision: number, values: Record<string, unknown>, viewedVersion: number, editVersion: number, orgId: string, serialNo?: string | null, submittedAt?: string | null, createdAt: string, updatedAt: string, currentInstanceId?: string | null, blocked: boolean, voidedAt?: string | null, voidReason?: string | null, voidReasonKey?: string | null, voidReasonLabel?: string | null, replacedById?: string | null, copiedFrom?: string | null, touched: Array<string>, fieldStates: Array<{ __typename?: 'FormFieldState', key: string, visible: boolean, readonly: boolean, redacted: boolean }>, displayValues: Array<{ __typename?: 'FormDisplayValue', fieldKey: string, items: Array<{ __typename?: 'FormDisplayItem', value: string, label?: string | null, available: boolean }> }>, summary?: { __typename?: 'FormSubmissionSummary', title?: string | null, date?: string | null, amount?: string | null } | null, ctx?: { __typename?: 'FormSubmissionContext', at: string, timezone: string, userId?: string | null, orgId?: string | null, orgIds: Array<string>, tenantId?: string | null } | null, createdBy?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null, abilities: { __typename?: 'FormSubmissionAbilities', canEdit: boolean, canSaveDraft: boolean, canDelete: boolean, canEditField: Array<string>, canWithdraw: boolean, canVoid: boolean, canCopy: boolean } } } };
 
 export type UpdateFormSubmissionMutationVariables = Exact<{
   input: UpdateFormSubmissionInput;
 }>;
 
 
-export type UpdateFormSubmissionMutation = { __typename?: 'Mutation', updateFormSubmission: { __typename?: 'FormSubmissionPayload', submission: { __typename?: 'FormSubmissionModel', id: string, moduleKey: string, formKey: string, formName?: string | null, version: number, status: FormSubmissionStatus, revision: number, viewedRevision: number, values: Record<string, unknown>, viewedVersion: number, editVersion: number, orgId: string, submittedAt?: string | null, createdAt: string, updatedAt: string, currentInstanceId?: string | null, blocked: boolean, voidedAt?: string | null, voidReason?: string | null, replacedById?: string | null, copiedFrom?: string | null, touched: Array<string>, fieldStates: Array<{ __typename?: 'FormFieldState', key: string, visible: boolean, readonly: boolean, redacted: boolean }>, displayValues: Array<{ __typename?: 'FormDisplayValue', fieldKey: string, items: Array<{ __typename?: 'FormDisplayItem', value: string, label?: string | null, available: boolean }> }>, summary?: { __typename?: 'FormSubmissionSummary', title?: string | null, date?: string | null, amount?: string | null } | null, ctx?: { __typename?: 'FormSubmissionContext', at: string, timezone: string, userId?: string | null, orgId?: string | null, orgIds: Array<string>, tenantId?: string | null } | null, createdBy?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null, abilities: { __typename?: 'FormSubmissionAbilities', canEdit: boolean, canSaveDraft: boolean, canDelete: boolean, canEditField: Array<string>, canWithdraw: boolean, canVoid: boolean, canCopy: boolean } } } };
+export type UpdateFormSubmissionMutation = { __typename?: 'Mutation', updateFormSubmission: { __typename?: 'FormSubmissionPayload', submission: { __typename?: 'FormSubmissionModel', id: string, moduleKey: string, formKey: string, formName?: string | null, version: number, status: FormSubmissionStatus, revision: number, viewedRevision: number, values: Record<string, unknown>, viewedVersion: number, editVersion: number, orgId: string, serialNo?: string | null, submittedAt?: string | null, createdAt: string, updatedAt: string, currentInstanceId?: string | null, blocked: boolean, voidedAt?: string | null, voidReason?: string | null, voidReasonKey?: string | null, voidReasonLabel?: string | null, replacedById?: string | null, copiedFrom?: string | null, touched: Array<string>, fieldStates: Array<{ __typename?: 'FormFieldState', key: string, visible: boolean, readonly: boolean, redacted: boolean }>, displayValues: Array<{ __typename?: 'FormDisplayValue', fieldKey: string, items: Array<{ __typename?: 'FormDisplayItem', value: string, label?: string | null, available: boolean }> }>, summary?: { __typename?: 'FormSubmissionSummary', title?: string | null, date?: string | null, amount?: string | null } | null, ctx?: { __typename?: 'FormSubmissionContext', at: string, timezone: string, userId?: string | null, orgId?: string | null, orgIds: Array<string>, tenantId?: string | null } | null, createdBy?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null, abilities: { __typename?: 'FormSubmissionAbilities', canEdit: boolean, canSaveDraft: boolean, canDelete: boolean, canEditField: Array<string>, canWithdraw: boolean, canVoid: boolean, canCopy: boolean } } } };
 
 export type DeleteFormSubmissionMutationVariables = Exact<{
   input: DeleteFormSubmissionInput;
@@ -4325,6 +7703,13 @@ export type FormFieldOptionsQueryVariables = Exact<{
 
 export type FormFieldOptionsQuery = { __typename?: 'Query', formFieldOptions: { __typename?: 'FormFieldOptionsPayload', totalCount: number, page: number, pageSize: number, items: Array<{ __typename?: 'FormFieldOption', value: string, label: string }> } };
 
+export type FormVoidReasonOptionsQueryVariables = Exact<{
+  formKey: Scalars['ID']['input'];
+}>;
+
+
+export type FormVoidReasonOptionsQuery = { __typename?: 'Query', formVoidReasonOptions: { __typename?: 'FormVoidReasonOptionsPayload', categoryKey?: string | null, items: Array<{ __typename?: 'FormFieldOption', value: string, label: string }> } };
+
 export type FormLookupRecordQueryVariables = Exact<{
   input: FormLookupRecordInput;
 }>;
@@ -4332,7 +7717,7 @@ export type FormLookupRecordQueryVariables = Exact<{
 
 export type FormLookupRecordQuery = { __typename?: 'Query', formLookupRecord: { __typename?: 'FormLookupRecordPayload', record?: { __typename?: 'FormLookupRecord', id: string, value?: string | null, label?: string | null, values: Record<string, unknown> } | null } };
 
-export type FormFieldsFragment = { __typename?: 'FormModel', id: string, key: string, moduleKey: string, moduleName?: string | null, name: string, isShared: boolean, ownerOrgId?: string | null, ownerOrgName?: string | null, currentVersion?: number | null, tabLabelTemplate?: string | null, allowDraft: boolean, hasDraft: boolean, tenantEnabled?: boolean | null, createdAt: string, updatedAt: string, forkedFrom?: { __typename?: 'FormForkSourceModel', formKey: string, version: number } | null, assignments: Array<{ __typename?: 'FormAssignment', tenantOrgId: string, tenantName?: string | null, enabled: boolean }>, abilities: { __typename?: 'FormAbilities', canEdit: boolean, canAssign: boolean, canSetEnabled: boolean, canFork: boolean }, workflowBinding?: { __typename?: 'FormWorkflowBinding', workflowKey: string, workflowName?: string | null, isValid: boolean } | null };
+export type FormFieldsFragment = { __typename?: 'FormModel', id: string, key: string, moduleKey: string, moduleName?: string | null, name: string, isShared: boolean, ownerOrgId?: string | null, ownerOrgName?: string | null, currentVersion?: number | null, tabLabelTemplate?: string | null, allowDraft: boolean, voidReasonCategoryKey?: string | null, hasDraft: boolean, tenantEnabled?: boolean | null, createdAt: string, updatedAt: string, forkedFrom?: { __typename?: 'FormForkSourceModel', formKey: string, version: number } | null, serial?: { __typename?: 'FormSerialFormat', prefix: string, period: string, digits: number, separator?: string | null } | null, assignments: Array<{ __typename?: 'FormAssignment', tenantOrgId: string, tenantName?: string | null, enabled: boolean }>, abilities: { __typename?: 'FormAbilities', canEdit: boolean, canAssign: boolean, canSetEnabled: boolean, canFork: boolean }, workflowBinding?: { __typename?: 'FormWorkflowBinding', workflowKey: string, workflowName?: string | null, isValid: boolean } | null };
 
 export type FormVersionFieldsFragment = { __typename?: 'FormVersionModel', id: string, formKey: string, version?: number | null, status: FormVersionStatus, draftRevision: number, baseVersion?: number | null, fields: Array<Record<string, unknown>>, layout: Record<string, unknown>, summaryMap: Record<string, unknown>, prefills: Array<Record<string, unknown>>, changelog?: string | null, publishedAt?: string | null, createdAt: string, updatedAt: string, publishedBy?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null };
 
@@ -4343,35 +7728,35 @@ export type FormsQueryVariables = Exact<{
 }>;
 
 
-export type FormsQuery = { __typename?: 'Query', forms: { __typename?: 'FormsPayload', totalCount: number, page: number, pageSize: number, items: Array<{ __typename?: 'FormModel', id: string, key: string, moduleKey: string, moduleName?: string | null, name: string, isShared: boolean, ownerOrgId?: string | null, ownerOrgName?: string | null, currentVersion?: number | null, tabLabelTemplate?: string | null, allowDraft: boolean, hasDraft: boolean, tenantEnabled?: boolean | null, createdAt: string, updatedAt: string, forkedFrom?: { __typename?: 'FormForkSourceModel', formKey: string, version: number } | null, assignments: Array<{ __typename?: 'FormAssignment', tenantOrgId: string, tenantName?: string | null, enabled: boolean }>, abilities: { __typename?: 'FormAbilities', canEdit: boolean, canAssign: boolean, canSetEnabled: boolean, canFork: boolean }, workflowBinding?: { __typename?: 'FormWorkflowBinding', workflowKey: string, workflowName?: string | null, isValid: boolean } | null }> } };
+export type FormsQuery = { __typename?: 'Query', forms: { __typename?: 'FormsPayload', totalCount: number, page: number, pageSize: number, items: Array<{ __typename?: 'FormModel', id: string, key: string, moduleKey: string, moduleName?: string | null, name: string, isShared: boolean, ownerOrgId?: string | null, ownerOrgName?: string | null, currentVersion?: number | null, tabLabelTemplate?: string | null, allowDraft: boolean, voidReasonCategoryKey?: string | null, hasDraft: boolean, tenantEnabled?: boolean | null, createdAt: string, updatedAt: string, forkedFrom?: { __typename?: 'FormForkSourceModel', formKey: string, version: number } | null, serial?: { __typename?: 'FormSerialFormat', prefix: string, period: string, digits: number, separator?: string | null } | null, assignments: Array<{ __typename?: 'FormAssignment', tenantOrgId: string, tenantName?: string | null, enabled: boolean }>, abilities: { __typename?: 'FormAbilities', canEdit: boolean, canAssign: boolean, canSetEnabled: boolean, canFork: boolean }, workflowBinding?: { __typename?: 'FormWorkflowBinding', workflowKey: string, workflowName?: string | null, isValid: boolean } | null }> } };
 
 export type FormQueryVariables = Exact<{
   key: Scalars['ID']['input'];
 }>;
 
 
-export type FormQuery = { __typename?: 'Query', form: { __typename?: 'FormPayload', form: { __typename?: 'FormModel', id: string, key: string, moduleKey: string, moduleName?: string | null, name: string, isShared: boolean, ownerOrgId?: string | null, ownerOrgName?: string | null, currentVersion?: number | null, tabLabelTemplate?: string | null, allowDraft: boolean, hasDraft: boolean, tenantEnabled?: boolean | null, createdAt: string, updatedAt: string, forkedFrom?: { __typename?: 'FormForkSourceModel', formKey: string, version: number } | null, assignments: Array<{ __typename?: 'FormAssignment', tenantOrgId: string, tenantName?: string | null, enabled: boolean }>, abilities: { __typename?: 'FormAbilities', canEdit: boolean, canAssign: boolean, canSetEnabled: boolean, canFork: boolean }, workflowBinding?: { __typename?: 'FormWorkflowBinding', workflowKey: string, workflowName?: string | null, isValid: boolean } | null } } };
+export type FormQuery = { __typename?: 'Query', form: { __typename?: 'FormPayload', form: { __typename?: 'FormModel', id: string, key: string, moduleKey: string, moduleName?: string | null, name: string, isShared: boolean, ownerOrgId?: string | null, ownerOrgName?: string | null, currentVersion?: number | null, tabLabelTemplate?: string | null, allowDraft: boolean, voidReasonCategoryKey?: string | null, hasDraft: boolean, tenantEnabled?: boolean | null, createdAt: string, updatedAt: string, forkedFrom?: { __typename?: 'FormForkSourceModel', formKey: string, version: number } | null, serial?: { __typename?: 'FormSerialFormat', prefix: string, period: string, digits: number, separator?: string | null } | null, assignments: Array<{ __typename?: 'FormAssignment', tenantOrgId: string, tenantName?: string | null, enabled: boolean }>, abilities: { __typename?: 'FormAbilities', canEdit: boolean, canAssign: boolean, canSetEnabled: boolean, canFork: boolean }, workflowBinding?: { __typename?: 'FormWorkflowBinding', workflowKey: string, workflowName?: string | null, isValid: boolean } | null } } };
 
 export type CreateFormMutationVariables = Exact<{
   input: CreateFormInput;
 }>;
 
 
-export type CreateFormMutation = { __typename?: 'Mutation', createForm: { __typename?: 'FormPayload', form: { __typename?: 'FormModel', id: string, key: string, moduleKey: string, moduleName?: string | null, name: string, isShared: boolean, ownerOrgId?: string | null, ownerOrgName?: string | null, currentVersion?: number | null, tabLabelTemplate?: string | null, allowDraft: boolean, hasDraft: boolean, tenantEnabled?: boolean | null, createdAt: string, updatedAt: string, forkedFrom?: { __typename?: 'FormForkSourceModel', formKey: string, version: number } | null, assignments: Array<{ __typename?: 'FormAssignment', tenantOrgId: string, tenantName?: string | null, enabled: boolean }>, abilities: { __typename?: 'FormAbilities', canEdit: boolean, canAssign: boolean, canSetEnabled: boolean, canFork: boolean }, workflowBinding?: { __typename?: 'FormWorkflowBinding', workflowKey: string, workflowName?: string | null, isValid: boolean } | null } } };
+export type CreateFormMutation = { __typename?: 'Mutation', createForm: { __typename?: 'FormPayload', form: { __typename?: 'FormModel', id: string, key: string, moduleKey: string, moduleName?: string | null, name: string, isShared: boolean, ownerOrgId?: string | null, ownerOrgName?: string | null, currentVersion?: number | null, tabLabelTemplate?: string | null, allowDraft: boolean, voidReasonCategoryKey?: string | null, hasDraft: boolean, tenantEnabled?: boolean | null, createdAt: string, updatedAt: string, forkedFrom?: { __typename?: 'FormForkSourceModel', formKey: string, version: number } | null, serial?: { __typename?: 'FormSerialFormat', prefix: string, period: string, digits: number, separator?: string | null } | null, assignments: Array<{ __typename?: 'FormAssignment', tenantOrgId: string, tenantName?: string | null, enabled: boolean }>, abilities: { __typename?: 'FormAbilities', canEdit: boolean, canAssign: boolean, canSetEnabled: boolean, canFork: boolean }, workflowBinding?: { __typename?: 'FormWorkflowBinding', workflowKey: string, workflowName?: string | null, isValid: boolean } | null } } };
 
 export type UpdateFormMutationVariables = Exact<{
   input: UpdateFormInput;
 }>;
 
 
-export type UpdateFormMutation = { __typename?: 'Mutation', updateForm: { __typename?: 'FormPayload', form: { __typename?: 'FormModel', id: string, key: string, moduleKey: string, moduleName?: string | null, name: string, isShared: boolean, ownerOrgId?: string | null, ownerOrgName?: string | null, currentVersion?: number | null, tabLabelTemplate?: string | null, allowDraft: boolean, hasDraft: boolean, tenantEnabled?: boolean | null, createdAt: string, updatedAt: string, forkedFrom?: { __typename?: 'FormForkSourceModel', formKey: string, version: number } | null, assignments: Array<{ __typename?: 'FormAssignment', tenantOrgId: string, tenantName?: string | null, enabled: boolean }>, abilities: { __typename?: 'FormAbilities', canEdit: boolean, canAssign: boolean, canSetEnabled: boolean, canFork: boolean }, workflowBinding?: { __typename?: 'FormWorkflowBinding', workflowKey: string, workflowName?: string | null, isValid: boolean } | null } } };
+export type UpdateFormMutation = { __typename?: 'Mutation', updateForm: { __typename?: 'FormPayload', form: { __typename?: 'FormModel', id: string, key: string, moduleKey: string, moduleName?: string | null, name: string, isShared: boolean, ownerOrgId?: string | null, ownerOrgName?: string | null, currentVersion?: number | null, tabLabelTemplate?: string | null, allowDraft: boolean, voidReasonCategoryKey?: string | null, hasDraft: boolean, tenantEnabled?: boolean | null, createdAt: string, updatedAt: string, forkedFrom?: { __typename?: 'FormForkSourceModel', formKey: string, version: number } | null, serial?: { __typename?: 'FormSerialFormat', prefix: string, period: string, digits: number, separator?: string | null } | null, assignments: Array<{ __typename?: 'FormAssignment', tenantOrgId: string, tenantName?: string | null, enabled: boolean }>, abilities: { __typename?: 'FormAbilities', canEdit: boolean, canAssign: boolean, canSetEnabled: boolean, canFork: boolean }, workflowBinding?: { __typename?: 'FormWorkflowBinding', workflowKey: string, workflowName?: string | null, isValid: boolean } | null } } };
 
 export type ForkFormMutationVariables = Exact<{
   input: ForkFormInput;
 }>;
 
 
-export type ForkFormMutation = { __typename?: 'Mutation', forkForm: { __typename?: 'FormPayload', form: { __typename?: 'FormModel', id: string, key: string, moduleKey: string, moduleName?: string | null, name: string, isShared: boolean, ownerOrgId?: string | null, ownerOrgName?: string | null, currentVersion?: number | null, tabLabelTemplate?: string | null, allowDraft: boolean, hasDraft: boolean, tenantEnabled?: boolean | null, createdAt: string, updatedAt: string, forkedFrom?: { __typename?: 'FormForkSourceModel', formKey: string, version: number } | null, assignments: Array<{ __typename?: 'FormAssignment', tenantOrgId: string, tenantName?: string | null, enabled: boolean }>, abilities: { __typename?: 'FormAbilities', canEdit: boolean, canAssign: boolean, canSetEnabled: boolean, canFork: boolean }, workflowBinding?: { __typename?: 'FormWorkflowBinding', workflowKey: string, workflowName?: string | null, isValid: boolean } | null } } };
+export type ForkFormMutation = { __typename?: 'Mutation', forkForm: { __typename?: 'FormPayload', form: { __typename?: 'FormModel', id: string, key: string, moduleKey: string, moduleName?: string | null, name: string, isShared: boolean, ownerOrgId?: string | null, ownerOrgName?: string | null, currentVersion?: number | null, tabLabelTemplate?: string | null, allowDraft: boolean, voidReasonCategoryKey?: string | null, hasDraft: boolean, tenantEnabled?: boolean | null, createdAt: string, updatedAt: string, forkedFrom?: { __typename?: 'FormForkSourceModel', formKey: string, version: number } | null, serial?: { __typename?: 'FormSerialFormat', prefix: string, period: string, digits: number, separator?: string | null } | null, assignments: Array<{ __typename?: 'FormAssignment', tenantOrgId: string, tenantName?: string | null, enabled: boolean }>, abilities: { __typename?: 'FormAbilities', canEdit: boolean, canAssign: boolean, canSetEnabled: boolean, canFork: boolean }, workflowBinding?: { __typename?: 'FormWorkflowBinding', workflowKey: string, workflowName?: string | null, isValid: boolean } | null } } };
 
 export type FormLookupProvidersQueryVariables = Exact<{ [key: string]: never; }>;
 
@@ -4419,7 +7804,7 @@ export type RetireCurrentVersionMutationVariables = Exact<{
 }>;
 
 
-export type RetireCurrentVersionMutation = { __typename?: 'Mutation', retireCurrentVersion: { __typename?: 'FormPayload', form: { __typename?: 'FormModel', id: string, key: string, moduleKey: string, moduleName?: string | null, name: string, isShared: boolean, ownerOrgId?: string | null, ownerOrgName?: string | null, currentVersion?: number | null, tabLabelTemplate?: string | null, allowDraft: boolean, hasDraft: boolean, tenantEnabled?: boolean | null, createdAt: string, updatedAt: string, forkedFrom?: { __typename?: 'FormForkSourceModel', formKey: string, version: number } | null, assignments: Array<{ __typename?: 'FormAssignment', tenantOrgId: string, tenantName?: string | null, enabled: boolean }>, abilities: { __typename?: 'FormAbilities', canEdit: boolean, canAssign: boolean, canSetEnabled: boolean, canFork: boolean }, workflowBinding?: { __typename?: 'FormWorkflowBinding', workflowKey: string, workflowName?: string | null, isValid: boolean } | null } } };
+export type RetireCurrentVersionMutation = { __typename?: 'Mutation', retireCurrentVersion: { __typename?: 'FormPayload', form: { __typename?: 'FormModel', id: string, key: string, moduleKey: string, moduleName?: string | null, name: string, isShared: boolean, ownerOrgId?: string | null, ownerOrgName?: string | null, currentVersion?: number | null, tabLabelTemplate?: string | null, allowDraft: boolean, voidReasonCategoryKey?: string | null, hasDraft: boolean, tenantEnabled?: boolean | null, createdAt: string, updatedAt: string, forkedFrom?: { __typename?: 'FormForkSourceModel', formKey: string, version: number } | null, serial?: { __typename?: 'FormSerialFormat', prefix: string, period: string, digits: number, separator?: string | null } | null, assignments: Array<{ __typename?: 'FormAssignment', tenantOrgId: string, tenantName?: string | null, enabled: boolean }>, abilities: { __typename?: 'FormAbilities', canEdit: boolean, canAssign: boolean, canSetEnabled: boolean, canFork: boolean }, workflowBinding?: { __typename?: 'FormWorkflowBinding', workflowKey: string, workflowName?: string | null, isValid: boolean } | null } } };
 
 export type ExportFormSeedQueryVariables = Exact<{
   input: ExportFormSeedInput;
@@ -4448,7 +7833,7 @@ export type DeleteFormVersionDraftMutationVariables = Exact<{
 }>;
 
 
-export type DeleteFormVersionDraftMutation = { __typename?: 'Mutation', deleteFormVersionDraft: { __typename?: 'FormPayload', form: { __typename?: 'FormModel', id: string, key: string, moduleKey: string, moduleName?: string | null, name: string, isShared: boolean, ownerOrgId?: string | null, ownerOrgName?: string | null, currentVersion?: number | null, tabLabelTemplate?: string | null, allowDraft: boolean, hasDraft: boolean, tenantEnabled?: boolean | null, createdAt: string, updatedAt: string, forkedFrom?: { __typename?: 'FormForkSourceModel', formKey: string, version: number } | null, assignments: Array<{ __typename?: 'FormAssignment', tenantOrgId: string, tenantName?: string | null, enabled: boolean }>, abilities: { __typename?: 'FormAbilities', canEdit: boolean, canAssign: boolean, canSetEnabled: boolean, canFork: boolean }, workflowBinding?: { __typename?: 'FormWorkflowBinding', workflowKey: string, workflowName?: string | null, isValid: boolean } | null } } };
+export type DeleteFormVersionDraftMutation = { __typename?: 'Mutation', deleteFormVersionDraft: { __typename?: 'FormPayload', form: { __typename?: 'FormModel', id: string, key: string, moduleKey: string, moduleName?: string | null, name: string, isShared: boolean, ownerOrgId?: string | null, ownerOrgName?: string | null, currentVersion?: number | null, tabLabelTemplate?: string | null, allowDraft: boolean, voidReasonCategoryKey?: string | null, hasDraft: boolean, tenantEnabled?: boolean | null, createdAt: string, updatedAt: string, forkedFrom?: { __typename?: 'FormForkSourceModel', formKey: string, version: number } | null, serial?: { __typename?: 'FormSerialFormat', prefix: string, period: string, digits: number, separator?: string | null } | null, assignments: Array<{ __typename?: 'FormAssignment', tenantOrgId: string, tenantName?: string | null, enabled: boolean }>, abilities: { __typename?: 'FormAbilities', canEdit: boolean, canAssign: boolean, canSetEnabled: boolean, canFork: boolean }, workflowBinding?: { __typename?: 'FormWorkflowBinding', workflowKey: string, workflowName?: string | null, isValid: boolean } | null } } };
 
 export type ValidateFormVersionQueryVariables = Exact<{
   input: ValidateFormVersionInput;
@@ -4469,21 +7854,21 @@ export type AssignFormToTenantsMutationVariables = Exact<{
 }>;
 
 
-export type AssignFormToTenantsMutation = { __typename?: 'Mutation', assignFormToTenants: { __typename?: 'FormPayload', form: { __typename?: 'FormModel', id: string, key: string, moduleKey: string, moduleName?: string | null, name: string, isShared: boolean, ownerOrgId?: string | null, ownerOrgName?: string | null, currentVersion?: number | null, tabLabelTemplate?: string | null, allowDraft: boolean, hasDraft: boolean, tenantEnabled?: boolean | null, createdAt: string, updatedAt: string, forkedFrom?: { __typename?: 'FormForkSourceModel', formKey: string, version: number } | null, assignments: Array<{ __typename?: 'FormAssignment', tenantOrgId: string, tenantName?: string | null, enabled: boolean }>, abilities: { __typename?: 'FormAbilities', canEdit: boolean, canAssign: boolean, canSetEnabled: boolean, canFork: boolean }, workflowBinding?: { __typename?: 'FormWorkflowBinding', workflowKey: string, workflowName?: string | null, isValid: boolean } | null } } };
+export type AssignFormToTenantsMutation = { __typename?: 'Mutation', assignFormToTenants: { __typename?: 'FormPayload', form: { __typename?: 'FormModel', id: string, key: string, moduleKey: string, moduleName?: string | null, name: string, isShared: boolean, ownerOrgId?: string | null, ownerOrgName?: string | null, currentVersion?: number | null, tabLabelTemplate?: string | null, allowDraft: boolean, voidReasonCategoryKey?: string | null, hasDraft: boolean, tenantEnabled?: boolean | null, createdAt: string, updatedAt: string, forkedFrom?: { __typename?: 'FormForkSourceModel', formKey: string, version: number } | null, serial?: { __typename?: 'FormSerialFormat', prefix: string, period: string, digits: number, separator?: string | null } | null, assignments: Array<{ __typename?: 'FormAssignment', tenantOrgId: string, tenantName?: string | null, enabled: boolean }>, abilities: { __typename?: 'FormAbilities', canEdit: boolean, canAssign: boolean, canSetEnabled: boolean, canFork: boolean }, workflowBinding?: { __typename?: 'FormWorkflowBinding', workflowKey: string, workflowName?: string | null, isValid: boolean } | null } } };
 
 export type RevokeFormFromTenantMutationVariables = Exact<{
   input: RevokeFormFromTenantInput;
 }>;
 
 
-export type RevokeFormFromTenantMutation = { __typename?: 'Mutation', revokeFormFromTenant: { __typename?: 'FormPayload', form: { __typename?: 'FormModel', id: string, key: string, moduleKey: string, moduleName?: string | null, name: string, isShared: boolean, ownerOrgId?: string | null, ownerOrgName?: string | null, currentVersion?: number | null, tabLabelTemplate?: string | null, allowDraft: boolean, hasDraft: boolean, tenantEnabled?: boolean | null, createdAt: string, updatedAt: string, forkedFrom?: { __typename?: 'FormForkSourceModel', formKey: string, version: number } | null, assignments: Array<{ __typename?: 'FormAssignment', tenantOrgId: string, tenantName?: string | null, enabled: boolean }>, abilities: { __typename?: 'FormAbilities', canEdit: boolean, canAssign: boolean, canSetEnabled: boolean, canFork: boolean }, workflowBinding?: { __typename?: 'FormWorkflowBinding', workflowKey: string, workflowName?: string | null, isValid: boolean } | null } } };
+export type RevokeFormFromTenantMutation = { __typename?: 'Mutation', revokeFormFromTenant: { __typename?: 'FormPayload', form: { __typename?: 'FormModel', id: string, key: string, moduleKey: string, moduleName?: string | null, name: string, isShared: boolean, ownerOrgId?: string | null, ownerOrgName?: string | null, currentVersion?: number | null, tabLabelTemplate?: string | null, allowDraft: boolean, voidReasonCategoryKey?: string | null, hasDraft: boolean, tenantEnabled?: boolean | null, createdAt: string, updatedAt: string, forkedFrom?: { __typename?: 'FormForkSourceModel', formKey: string, version: number } | null, serial?: { __typename?: 'FormSerialFormat', prefix: string, period: string, digits: number, separator?: string | null } | null, assignments: Array<{ __typename?: 'FormAssignment', tenantOrgId: string, tenantName?: string | null, enabled: boolean }>, abilities: { __typename?: 'FormAbilities', canEdit: boolean, canAssign: boolean, canSetEnabled: boolean, canFork: boolean }, workflowBinding?: { __typename?: 'FormWorkflowBinding', workflowKey: string, workflowName?: string | null, isValid: boolean } | null } } };
 
 export type SetTenantFormEnabledMutationVariables = Exact<{
   input: SetTenantFormEnabledInput;
 }>;
 
 
-export type SetTenantFormEnabledMutation = { __typename?: 'Mutation', setTenantFormEnabled: { __typename?: 'FormPayload', form: { __typename?: 'FormModel', id: string, key: string, moduleKey: string, moduleName?: string | null, name: string, isShared: boolean, ownerOrgId?: string | null, ownerOrgName?: string | null, currentVersion?: number | null, tabLabelTemplate?: string | null, allowDraft: boolean, hasDraft: boolean, tenantEnabled?: boolean | null, createdAt: string, updatedAt: string, forkedFrom?: { __typename?: 'FormForkSourceModel', formKey: string, version: number } | null, assignments: Array<{ __typename?: 'FormAssignment', tenantOrgId: string, tenantName?: string | null, enabled: boolean }>, abilities: { __typename?: 'FormAbilities', canEdit: boolean, canAssign: boolean, canSetEnabled: boolean, canFork: boolean }, workflowBinding?: { __typename?: 'FormWorkflowBinding', workflowKey: string, workflowName?: string | null, isValid: boolean } | null } } };
+export type SetTenantFormEnabledMutation = { __typename?: 'Mutation', setTenantFormEnabled: { __typename?: 'FormPayload', form: { __typename?: 'FormModel', id: string, key: string, moduleKey: string, moduleName?: string | null, name: string, isShared: boolean, ownerOrgId?: string | null, ownerOrgName?: string | null, currentVersion?: number | null, tabLabelTemplate?: string | null, allowDraft: boolean, voidReasonCategoryKey?: string | null, hasDraft: boolean, tenantEnabled?: boolean | null, createdAt: string, updatedAt: string, forkedFrom?: { __typename?: 'FormForkSourceModel', formKey: string, version: number } | null, serial?: { __typename?: 'FormSerialFormat', prefix: string, period: string, digits: number, separator?: string | null } | null, assignments: Array<{ __typename?: 'FormAssignment', tenantOrgId: string, tenantName?: string | null, enabled: boolean }>, abilities: { __typename?: 'FormAbilities', canEdit: boolean, canAssign: boolean, canSetEnabled: boolean, canFork: boolean }, workflowBinding?: { __typename?: 'FormWorkflowBinding', workflowKey: string, workflowName?: string | null, isValid: boolean } | null } } };
 
 export type RetiredFormPermissionsQueryVariables = Exact<{ [key: string]: never; }>;
 
@@ -4575,28 +7960,30 @@ export type MyNotificationPreferencesQueryVariables = Exact<{ [key: string]: nev
 
 export type MyNotificationPreferencesQuery = { __typename?: 'Query', myNotificationPreferences: { __typename?: 'MyNotificationPreferencesPayload', items: Array<{ __typename?: 'NotificationTypePreference', type: string, name: string, channels: Array<{ __typename?: 'NotificationChannelPreference', channel: string, preferenceKey: string, enabled: boolean, canDisable: boolean }> }> } };
 
-export type NotificationSettingItemFragment = { __typename?: 'NotificationSetting', type: string, name: string, audience: Record<string, unknown>, isDefault: boolean, defaultAudience: Record<string, unknown>, updatedAt?: string | null, updatedBy?: string | null, orgScope: { __typename?: 'NotificationOrgScope', ref: string, range: string } };
+export type NotificationScheduleFieldsFragment = { __typename?: 'NotificationSchedule', kind: NotificationScheduleKind, daysBefore?: Array<number> | null, dayOfMonth?: number | null, time: string };
+
+export type NotificationSettingItemFragment = { __typename?: 'NotificationSetting', type: string, name: string, category: string, audience?: Record<string, unknown> | null, isDefault: boolean, defaultAudience?: Record<string, unknown> | null, recipientNote?: string | null, isScheduleDefault: boolean, scheduleDateLabel?: string | null, updatedAt?: string | null, updatedBy?: string | null, orgScope?: { __typename?: 'NotificationOrgScope', ref: string, range: string } | null, schedule?: { __typename?: 'NotificationSchedule', kind: NotificationScheduleKind, daysBefore?: Array<number> | null, dayOfMonth?: number | null, time: string } | null, defaultSchedule?: { __typename?: 'NotificationSchedule', kind: NotificationScheduleKind, daysBefore?: Array<number> | null, dayOfMonth?: number | null, time: string } | null };
 
 export type NotificationSettingsQueryVariables = Exact<{
   input: NotificationSettingsInput;
 }>;
 
 
-export type NotificationSettingsQuery = { __typename?: 'Query', notificationSettings: { __typename?: 'NotificationSettingsPayload', page: number, pageSize: number, totalCount: number, items: Array<{ __typename?: 'NotificationSetting', type: string, name: string, audience: Record<string, unknown>, isDefault: boolean, defaultAudience: Record<string, unknown>, updatedAt?: string | null, updatedBy?: string | null, orgScope: { __typename?: 'NotificationOrgScope', ref: string, range: string } }> } };
+export type NotificationSettingsQuery = { __typename?: 'Query', notificationSettings: { __typename?: 'NotificationSettingsPayload', page: number, pageSize: number, totalCount: number, items: Array<{ __typename?: 'NotificationSetting', type: string, name: string, category: string, audience?: Record<string, unknown> | null, isDefault: boolean, defaultAudience?: Record<string, unknown> | null, recipientNote?: string | null, isScheduleDefault: boolean, scheduleDateLabel?: string | null, updatedAt?: string | null, updatedBy?: string | null, orgScope?: { __typename?: 'NotificationOrgScope', ref: string, range: string } | null, schedule?: { __typename?: 'NotificationSchedule', kind: NotificationScheduleKind, daysBefore?: Array<number> | null, dayOfMonth?: number | null, time: string } | null, defaultSchedule?: { __typename?: 'NotificationSchedule', kind: NotificationScheduleKind, daysBefore?: Array<number> | null, dayOfMonth?: number | null, time: string } | null }> } };
 
 export type UpdateNotificationSettingMutationVariables = Exact<{
   input: UpdateNotificationSettingInput;
 }>;
 
 
-export type UpdateNotificationSettingMutation = { __typename?: 'Mutation', updateNotificationSetting: { __typename?: 'NotificationSettingPayload', setting: { __typename?: 'NotificationSetting', type: string, name: string, audience: Record<string, unknown>, isDefault: boolean, defaultAudience: Record<string, unknown>, updatedAt?: string | null, updatedBy?: string | null, orgScope: { __typename?: 'NotificationOrgScope', ref: string, range: string } } } };
+export type UpdateNotificationSettingMutation = { __typename?: 'Mutation', updateNotificationSetting: { __typename?: 'NotificationSettingPayload', setting: { __typename?: 'NotificationSetting', type: string, name: string, category: string, audience?: Record<string, unknown> | null, isDefault: boolean, defaultAudience?: Record<string, unknown> | null, recipientNote?: string | null, isScheduleDefault: boolean, scheduleDateLabel?: string | null, updatedAt?: string | null, updatedBy?: string | null, orgScope?: { __typename?: 'NotificationOrgScope', ref: string, range: string } | null, schedule?: { __typename?: 'NotificationSchedule', kind: NotificationScheduleKind, daysBefore?: Array<number> | null, dayOfMonth?: number | null, time: string } | null, defaultSchedule?: { __typename?: 'NotificationSchedule', kind: NotificationScheduleKind, daysBefore?: Array<number> | null, dayOfMonth?: number | null, time: string } | null } } };
 
 export type ResetNotificationSettingMutationVariables = Exact<{
   input: ResetNotificationSettingInput;
 }>;
 
 
-export type ResetNotificationSettingMutation = { __typename?: 'Mutation', resetNotificationSetting: { __typename?: 'NotificationSettingPayload', setting: { __typename?: 'NotificationSetting', type: string, name: string, audience: Record<string, unknown>, isDefault: boolean, defaultAudience: Record<string, unknown>, updatedAt?: string | null, updatedBy?: string | null, orgScope: { __typename?: 'NotificationOrgScope', ref: string, range: string } } } };
+export type ResetNotificationSettingMutation = { __typename?: 'Mutation', resetNotificationSetting: { __typename?: 'NotificationSettingPayload', setting: { __typename?: 'NotificationSetting', type: string, name: string, category: string, audience?: Record<string, unknown> | null, isDefault: boolean, defaultAudience?: Record<string, unknown> | null, recipientNote?: string | null, isScheduleDefault: boolean, scheduleDateLabel?: string | null, updatedAt?: string | null, updatedBy?: string | null, orgScope?: { __typename?: 'NotificationOrgScope', ref: string, range: string } | null, schedule?: { __typename?: 'NotificationSchedule', kind: NotificationScheduleKind, daysBefore?: Array<number> | null, dayOfMonth?: number | null, time: string } | null, defaultSchedule?: { __typename?: 'NotificationSchedule', kind: NotificationScheduleKind, daysBefore?: Array<number> | null, dayOfMonth?: number | null, time: string } | null } } };
 
 export type OrgNodeFieldsFragment = { __typename?: 'OrgNode', id: string, name: string, parentId?: string | null, enabled: boolean, outOfScope: boolean, ownerUserId?: string | null };
 
@@ -4604,6 +7991,13 @@ export type OrgTreeQueryVariables = Exact<{ [key: string]: never; }>;
 
 
 export type OrgTreeQuery = { __typename?: 'Query', orgTree: Array<{ __typename?: 'OrgNode', id: string, name: string, parentId?: string | null, enabled: boolean, outOfScope: boolean, ownerUserId?: string | null, children: Array<{ __typename?: 'OrgNode', id: string, name: string, parentId?: string | null, enabled: boolean, outOfScope: boolean, ownerUserId?: string | null, children: Array<{ __typename?: 'OrgNode', id: string, name: string, parentId?: string | null, enabled: boolean, outOfScope: boolean, ownerUserId?: string | null, children: Array<{ __typename?: 'OrgNode', id: string, name: string, parentId?: string | null, enabled: boolean, outOfScope: boolean, ownerUserId?: string | null, children: Array<{ __typename?: 'OrgNode', id: string, name: string, parentId?: string | null, enabled: boolean, outOfScope: boolean, ownerUserId?: string | null }> }> }> }> }> };
+
+export type TenantOrgNodeFieldsFragment = { __typename?: 'TenantOrgNode', id: string, name: string, parentId?: string | null, enabled: boolean, isVisible: boolean, isManaged: boolean };
+
+export type TenantOrgTreeQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type TenantOrgTreeQuery = { __typename?: 'Query', tenantOrgTree: Array<{ __typename?: 'TenantOrgNode', id: string, name: string, parentId?: string | null, enabled: boolean, isVisible: boolean, isManaged: boolean, children: Array<{ __typename?: 'TenantOrgNode', id: string, name: string, parentId?: string | null, enabled: boolean, isVisible: boolean, isManaged: boolean, children: Array<{ __typename?: 'TenantOrgNode', id: string, name: string, parentId?: string | null, enabled: boolean, isVisible: boolean, isManaged: boolean, children: Array<{ __typename?: 'TenantOrgNode', id: string, name: string, parentId?: string | null, enabled: boolean, isVisible: boolean, isManaged: boolean, children: Array<{ __typename?: 'TenantOrgNode', id: string, name: string, parentId?: string | null, enabled: boolean, isVisible: boolean, isManaged: boolean }> }> }> }> }> };
 
 export type OrgQueryVariables = Exact<{
   id: Scalars['ID']['input'];
@@ -4963,6 +8357,27 @@ export type SidebarBadgesQueryVariables = Exact<{ [key: string]: never; }>;
 
 export type SidebarBadgesQuery = { __typename?: 'Query', sidebarBadges: Array<{ __typename?: 'SidebarBadge', moduleKey: string, count: number }> };
 
+export type SidebarBadgeSettingItemFragment = { __typename?: 'SidebarBadgeSetting', moduleKey: string, moduleName: string, descriptionKey?: string | null, requires?: string | null, audience?: Record<string, unknown> | null, isDefault: boolean, updatedAt?: string | null, updatedBy?: string | null };
+
+export type SidebarBadgeSettingsQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type SidebarBadgeSettingsQuery = { __typename?: 'Query', sidebarBadgeSettings: { __typename?: 'SidebarBadgeSettingsPayload', totalCount: number, items: Array<{ __typename?: 'SidebarBadgeSetting', moduleKey: string, moduleName: string, descriptionKey?: string | null, requires?: string | null, audience?: Record<string, unknown> | null, isDefault: boolean, updatedAt?: string | null, updatedBy?: string | null }> } };
+
+export type UpdateSidebarBadgeSettingMutationVariables = Exact<{
+  input: UpdateSidebarBadgeSettingInput;
+}>;
+
+
+export type UpdateSidebarBadgeSettingMutation = { __typename?: 'Mutation', updateSidebarBadgeSetting: { __typename?: 'SidebarBadgeSettingPayload', setting: { __typename?: 'SidebarBadgeSetting', moduleKey: string, moduleName: string, descriptionKey?: string | null, requires?: string | null, audience?: Record<string, unknown> | null, isDefault: boolean, updatedAt?: string | null, updatedBy?: string | null } } };
+
+export type ResetSidebarBadgeSettingMutationVariables = Exact<{
+  input: ResetSidebarBadgeSettingInput;
+}>;
+
+
+export type ResetSidebarBadgeSettingMutation = { __typename?: 'Mutation', resetSidebarBadgeSetting: { __typename?: 'SidebarBadgeSettingPayload', setting: { __typename?: 'SidebarBadgeSetting', moduleKey: string, moduleName: string, descriptionKey?: string | null, requires?: string | null, audience?: Record<string, unknown> | null, isDefault: boolean, updatedAt?: string | null, updatedBy?: string | null } } };
+
 export type CreateUploadUrlMutationVariables = Exact<{
   input: CreateUploadUrlInput;
 }>;
@@ -5192,14 +8607,14 @@ export type BindFormWorkflowMutationVariables = Exact<{
 }>;
 
 
-export type BindFormWorkflowMutation = { __typename?: 'Mutation', bindFormWorkflow: { __typename?: 'FormPayload', form: { __typename?: 'FormModel', id: string, key: string, moduleKey: string, moduleName?: string | null, name: string, isShared: boolean, ownerOrgId?: string | null, ownerOrgName?: string | null, currentVersion?: number | null, tabLabelTemplate?: string | null, allowDraft: boolean, hasDraft: boolean, tenantEnabled?: boolean | null, createdAt: string, updatedAt: string, forkedFrom?: { __typename?: 'FormForkSourceModel', formKey: string, version: number } | null, assignments: Array<{ __typename?: 'FormAssignment', tenantOrgId: string, tenantName?: string | null, enabled: boolean }>, abilities: { __typename?: 'FormAbilities', canEdit: boolean, canAssign: boolean, canSetEnabled: boolean, canFork: boolean }, workflowBinding?: { __typename?: 'FormWorkflowBinding', workflowKey: string, workflowName?: string | null, isValid: boolean } | null } } };
+export type BindFormWorkflowMutation = { __typename?: 'Mutation', bindFormWorkflow: { __typename?: 'FormPayload', form: { __typename?: 'FormModel', id: string, key: string, moduleKey: string, moduleName?: string | null, name: string, isShared: boolean, ownerOrgId?: string | null, ownerOrgName?: string | null, currentVersion?: number | null, tabLabelTemplate?: string | null, allowDraft: boolean, voidReasonCategoryKey?: string | null, hasDraft: boolean, tenantEnabled?: boolean | null, createdAt: string, updatedAt: string, forkedFrom?: { __typename?: 'FormForkSourceModel', formKey: string, version: number } | null, serial?: { __typename?: 'FormSerialFormat', prefix: string, period: string, digits: number, separator?: string | null } | null, assignments: Array<{ __typename?: 'FormAssignment', tenantOrgId: string, tenantName?: string | null, enabled: boolean }>, abilities: { __typename?: 'FormAbilities', canEdit: boolean, canAssign: boolean, canSetEnabled: boolean, canFork: boolean }, workflowBinding?: { __typename?: 'FormWorkflowBinding', workflowKey: string, workflowName?: string | null, isValid: boolean } | null } } };
 
 export type UnbindFormWorkflowMutationVariables = Exact<{
   input: UnbindFormWorkflowInput;
 }>;
 
 
-export type UnbindFormWorkflowMutation = { __typename?: 'Mutation', unbindFormWorkflow: { __typename?: 'FormPayload', form: { __typename?: 'FormModel', id: string, key: string, moduleKey: string, moduleName?: string | null, name: string, isShared: boolean, ownerOrgId?: string | null, ownerOrgName?: string | null, currentVersion?: number | null, tabLabelTemplate?: string | null, allowDraft: boolean, hasDraft: boolean, tenantEnabled?: boolean | null, createdAt: string, updatedAt: string, forkedFrom?: { __typename?: 'FormForkSourceModel', formKey: string, version: number } | null, assignments: Array<{ __typename?: 'FormAssignment', tenantOrgId: string, tenantName?: string | null, enabled: boolean }>, abilities: { __typename?: 'FormAbilities', canEdit: boolean, canAssign: boolean, canSetEnabled: boolean, canFork: boolean }, workflowBinding?: { __typename?: 'FormWorkflowBinding', workflowKey: string, workflowName?: string | null, isValid: boolean } | null } } };
+export type UnbindFormWorkflowMutation = { __typename?: 'Mutation', unbindFormWorkflow: { __typename?: 'FormPayload', form: { __typename?: 'FormModel', id: string, key: string, moduleKey: string, moduleName?: string | null, name: string, isShared: boolean, ownerOrgId?: string | null, ownerOrgName?: string | null, currentVersion?: number | null, tabLabelTemplate?: string | null, allowDraft: boolean, voidReasonCategoryKey?: string | null, hasDraft: boolean, tenantEnabled?: boolean | null, createdAt: string, updatedAt: string, forkedFrom?: { __typename?: 'FormForkSourceModel', formKey: string, version: number } | null, serial?: { __typename?: 'FormSerialFormat', prefix: string, period: string, digits: number, separator?: string | null } | null, assignments: Array<{ __typename?: 'FormAssignment', tenantOrgId: string, tenantName?: string | null, enabled: boolean }>, abilities: { __typename?: 'FormAbilities', canEdit: boolean, canAssign: boolean, canSetEnabled: boolean, canFork: boolean }, workflowBinding?: { __typename?: 'FormWorkflowBinding', workflowKey: string, workflowName?: string | null, isValid: boolean } | null } } };
 
 export type FormWorkflowOptionsQueryVariables = Exact<{
   formKey: Scalars['ID']['input'];
@@ -5235,6 +8650,894 @@ export type RetryAdvanceInstanceMutationVariables = Exact<{
 
 
 export type RetryAdvanceInstanceMutation = { __typename?: 'Mutation', retryAdvanceInstance: { __typename?: 'WorkflowInstancePayload', instance: { __typename?: 'WorkflowInstanceModel', id: string, submissionId: string, revision: number, moduleKey: string, moduleName?: string | null, formKey: string, formName?: string | null, formVersion: number, workflowKey: string, workflowName?: string | null, workflowVersion: number, status: WorkflowInstanceStatus, activeStepKeys: Array<string>, editVersion: number, createdAt: string, updatedAt: string, finishedAt?: string | null, summary?: { __typename?: 'FormSubmissionSummary', title?: string | null, date?: string | null, amount?: string | null } | null, applicant?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null, steps: Array<{ __typename?: 'WorkflowInstanceStepModel', stepKey: string, name: string, kind: string, mode?: string | null, allowReturn: boolean, status: WorkflowStepStatus, blocked: boolean, plan: Array<{ __typename?: 'WorkflowPlanItemModel', taskKey: string, assigneeState: string, taskId?: string | null, assignee: { __typename?: 'FormUserRef', id: string, name?: string | null }, previousAssignees: Array<{ __typename?: 'FormUserRef', id: string, name?: string | null }>, delegators: Array<{ __typename?: 'FormUserRef', id: string, name?: string | null }> }>, decisions: Array<{ __typename?: 'WorkflowDecisionModel', taskKey: string, decision: string, comment?: string | null, at: string, user: { __typename?: 'FormUserRef', id: string, name?: string | null } }> }>, history: Array<{ __typename?: 'WorkflowHistoryEventModel', at: string, kind: string, stepKey?: string | null, taskKey?: string | null, comment?: string | null, result?: string | null, reason?: string | null, code?: string | null, user?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null, toUser?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null, delegators: Array<{ __typename?: 'FormUserRef', id: string, name?: string | null }> }>, outcome?: { __typename?: 'WorkflowOutcomeModel', kind: string, stepKey: string, taskKey: string } | null, myTasks: Array<{ __typename?: 'WorkflowTaskModel', id: string, instanceId: string, submissionId: string, revision: number, moduleKey: string, moduleName?: string | null, formKey: string, formName?: string | null, stepKey: string, stepName: string, taskKey: string, status: WorkflowTaskStatus, instanceStatus: WorkflowInstanceStatus, decidedAt?: string | null, comment?: string | null, editVersion: number, createdAt: string, assignee: { __typename?: 'FormUserRef', id: string, name?: string | null }, applicant?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null, summary?: { __typename?: 'FormSubmissionSummary', title?: string | null, date?: string | null, amount?: string | null } | null }>, abilities: { __typename?: 'WorkflowInstanceAbilities', canWithdraw: boolean, canManage: boolean } } } };
+
+export type FieldOptionColorFieldsFragment = { __typename?: 'FieldOptionColor', fieldId: string, value: string, paletteKey?: string | null };
+
+export type FieldOptionColorsQueryVariables = Exact<{
+  categoryKey: Scalars['String']['input'];
+}>;
+
+
+export type FieldOptionColorsQuery = { __typename?: 'Query', fieldOptionColors: { __typename?: 'FieldOptionColorsPayload', totalCount: number, items: Array<{ __typename?: 'FieldOptionColor', fieldId: string, value: string, paletteKey?: string | null }> } };
+
+export type SetFieldOptionColorMutationVariables = Exact<{
+  input: SetFieldOptionColorInput;
+}>;
+
+
+export type SetFieldOptionColorMutation = { __typename?: 'Mutation', setFieldOptionColor: { __typename?: 'FieldOptionColorPayload', color: { __typename?: 'FieldOptionColor', fieldId: string, value: string, paletteKey?: string | null } } };
+
+export type LotteryAccountsRefFieldsFragment = { __typename?: 'LotteryAccountsRef', id: string, name: string };
+
+export type LotteryBankAccountFieldsFragment = { __typename?: 'LotteryBankAccount', id: string, bankCode: string, branchName?: string | null, accountNo: string, accountName: string, label: string, openingBalance: number, openingDate: string, status: string, note?: string | null, balance: number, hasTransactions: boolean, createdAt: string, updatedAt: string, shareOrgs: Array<{ __typename?: 'ShareOrg', orgId: string, includeDescendants: boolean }>, usageOrgs: Array<{ __typename?: 'LotteryAccountsRef', id: string, name: string }>, abilities: { __typename?: 'LotteryBankAccountAbilities', canEdit: boolean, canDelete: boolean, canRecordTransaction: boolean, canReverse: boolean } };
+
+export type LotteryBankTransactionFieldsFragment = { __typename?: 'LotteryBankTransaction', id: string, accountId: string, occurredAt: string, type: string, direction: string, amount: number, balanceAfter: number, refType?: string | null, refId?: string | null, settlementSide?: string | null, summary?: string | null, handler?: string | null, note?: string | null, reversalOf?: string | null, reversedById?: string | null, createdAt: string, branch?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null, createdBy?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null, abilities: { __typename?: 'LotteryBankTransactionAbilities', canReverse: boolean } };
+
+export type LotteryCashMovementFieldsFragment = { __typename?: 'LotteryCashMovement', id: string, occurredAt: string, type: string, from: string, to: string, reason?: string | null, amount: number, payee?: string | null, note?: string | null, refType?: string | null, refId?: string | null, reversalOf?: string | null, reversedById?: string | null, org: { __typename?: 'LotteryAccountsRef', id: string, name: string }, cashPoint?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null, createdBy?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null };
+
+export type LotterySettlementFieldsFragment = { __typename?: 'LotterySettlement', moduleKey: string, label: string, kind: string, refId: string, docNo: string, counterparty: string, payable: number, pendingPayee: number, sides: Array<{ __typename?: 'LotterySettlementSide', side: string, label: string, role: string, methods: Array<string>, totalOut: number, totalIn: number, net: number, canSettle: boolean, branch: { __typename?: 'LotteryAccountsRef', id: string, name: string }, buttons: Array<{ __typename?: 'LotterySettlementButton', button: string, defaultAmount: number, canUse: boolean }> }>, records: Array<{ __typename?: 'LotterySettlementRecord', id: string, method: string, side: string, type: string, direction: string, amount: number, accountLabel?: string | null, handler?: string | null, note?: string | null, occurredAt: string, reversalOf?: string | null, reversedById?: string | null, canReverse: boolean, createdBy?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null }> };
+
+export type LotteryOutstandingSettlementFieldsFragment = { __typename?: 'LotteryOutstandingSettlement', moduleKey: string, label: string, refId: string, docNo: string, side: string, sideLabel: string, counterparty: string, payable: number, net: number, kind: string, amount: number, button: string, daysOutstanding: number, canSettle: boolean, branch: { __typename?: 'LotteryAccountsRef', id: string, name: string } };
+
+export type LotteryBankAccountsQueryVariables = Exact<{
+  input: LotteryBankAccountsInput;
+}>;
+
+
+export type LotteryBankAccountsQuery = { __typename?: 'Query', lotteryBankAccounts: { __typename?: 'LotteryBankAccountsPayload', totalCount: number, page: number, pageSize: number, items: Array<{ __typename?: 'LotteryBankAccount', id: string, bankCode: string, branchName?: string | null, accountNo: string, accountName: string, label: string, openingBalance: number, openingDate: string, status: string, note?: string | null, balance: number, hasTransactions: boolean, createdAt: string, updatedAt: string, shareOrgs: Array<{ __typename?: 'ShareOrg', orgId: string, includeDescendants: boolean }>, usageOrgs: Array<{ __typename?: 'LotteryAccountsRef', id: string, name: string }>, abilities: { __typename?: 'LotteryBankAccountAbilities', canEdit: boolean, canDelete: boolean, canRecordTransaction: boolean, canReverse: boolean } }> } };
+
+export type LotteryBankAccountQueryVariables = Exact<{
+  id: Scalars['ID']['input'];
+}>;
+
+
+export type LotteryBankAccountQuery = { __typename?: 'Query', lotteryBankAccount: { __typename?: 'LotteryBankAccountPayload', item: { __typename?: 'LotteryBankAccount', id: string, bankCode: string, branchName?: string | null, accountNo: string, accountName: string, label: string, openingBalance: number, openingDate: string, status: string, note?: string | null, balance: number, hasTransactions: boolean, createdAt: string, updatedAt: string, shareOrgs: Array<{ __typename?: 'ShareOrg', orgId: string, includeDescendants: boolean }>, usageOrgs: Array<{ __typename?: 'LotteryAccountsRef', id: string, name: string }>, abilities: { __typename?: 'LotteryBankAccountAbilities', canEdit: boolean, canDelete: boolean, canRecordTransaction: boolean, canReverse: boolean } } } };
+
+export type LotteryBankTransactionsQueryVariables = Exact<{
+  input: LotteryBankTransactionsInput;
+}>;
+
+
+export type LotteryBankTransactionsQuery = { __typename?: 'Query', lotteryBankTransactions: { __typename?: 'LotteryBankTransactionsPayload', totalCount: number, totalIn: number, totalOut: number, items: Array<{ __typename?: 'LotteryBankTransaction', id: string, accountId: string, occurredAt: string, type: string, direction: string, amount: number, balanceAfter: number, refType?: string | null, refId?: string | null, settlementSide?: string | null, summary?: string | null, handler?: string | null, note?: string | null, reversalOf?: string | null, reversedById?: string | null, createdAt: string, branch?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null, createdBy?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null, abilities: { __typename?: 'LotteryBankTransactionAbilities', canReverse: boolean } }> } };
+
+export type CreateLotteryBankAccountMutationVariables = Exact<{
+  input: CreateLotteryBankAccountInput;
+}>;
+
+
+export type CreateLotteryBankAccountMutation = { __typename?: 'Mutation', createLotteryBankAccount: { __typename?: 'LotteryBankAccountPayload', item: { __typename?: 'LotteryBankAccount', id: string, bankCode: string, branchName?: string | null, accountNo: string, accountName: string, label: string, openingBalance: number, openingDate: string, status: string, note?: string | null, balance: number, hasTransactions: boolean, createdAt: string, updatedAt: string, shareOrgs: Array<{ __typename?: 'ShareOrg', orgId: string, includeDescendants: boolean }>, usageOrgs: Array<{ __typename?: 'LotteryAccountsRef', id: string, name: string }>, abilities: { __typename?: 'LotteryBankAccountAbilities', canEdit: boolean, canDelete: boolean, canRecordTransaction: boolean, canReverse: boolean } } } };
+
+export type UpdateLotteryBankAccountMutationVariables = Exact<{
+  input: UpdateLotteryBankAccountInput;
+}>;
+
+
+export type UpdateLotteryBankAccountMutation = { __typename?: 'Mutation', updateLotteryBankAccount: { __typename?: 'LotteryBankAccountPayload', item: { __typename?: 'LotteryBankAccount', id: string, bankCode: string, branchName?: string | null, accountNo: string, accountName: string, label: string, openingBalance: number, openingDate: string, status: string, note?: string | null, balance: number, hasTransactions: boolean, createdAt: string, updatedAt: string, shareOrgs: Array<{ __typename?: 'ShareOrg', orgId: string, includeDescendants: boolean }>, usageOrgs: Array<{ __typename?: 'LotteryAccountsRef', id: string, name: string }>, abilities: { __typename?: 'LotteryBankAccountAbilities', canEdit: boolean, canDelete: boolean, canRecordTransaction: boolean, canReverse: boolean } } } };
+
+export type DeleteLotteryBankAccountMutationVariables = Exact<{
+  id: Scalars['ID']['input'];
+}>;
+
+
+export type DeleteLotteryBankAccountMutation = { __typename?: 'Mutation', deleteLotteryBankAccount: { __typename?: 'DeleteLotteryBankAccountPayload', id: string } };
+
+export type RecordLotteryBankTransactionMutationVariables = Exact<{
+  input: RecordLotteryBankTransactionInput;
+}>;
+
+
+export type RecordLotteryBankTransactionMutation = { __typename?: 'Mutation', recordLotteryBankTransaction: { __typename?: 'LotteryBankTransactionPayload', item: { __typename?: 'LotteryBankTransaction', id: string, accountId: string, occurredAt: string, type: string, direction: string, amount: number, balanceAfter: number, refType?: string | null, refId?: string | null, settlementSide?: string | null, summary?: string | null, handler?: string | null, note?: string | null, reversalOf?: string | null, reversedById?: string | null, createdAt: string, branch?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null, createdBy?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null, abilities: { __typename?: 'LotteryBankTransactionAbilities', canReverse: boolean } } } };
+
+export type ReverseLotteryBankTransactionMutationVariables = Exact<{
+  input: ReverseLotteryBankTransactionInput;
+}>;
+
+
+export type ReverseLotteryBankTransactionMutation = { __typename?: 'Mutation', reverseLotteryBankTransaction: { __typename?: 'LotteryBankTransactionPayload', item: { __typename?: 'LotteryBankTransaction', id: string, accountId: string, occurredAt: string, type: string, direction: string, amount: number, balanceAfter: number, refType?: string | null, refId?: string | null, settlementSide?: string | null, summary?: string | null, handler?: string | null, note?: string | null, reversalOf?: string | null, reversedById?: string | null, createdAt: string, branch?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null, createdBy?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null, abilities: { __typename?: 'LotteryBankTransactionAbilities', canReverse: boolean } } } };
+
+export type LotteryCashLedgerQueryVariables = Exact<{
+  input: LotteryCashLedgerInput;
+}>;
+
+
+export type LotteryCashLedgerQuery = { __typename?: 'Query', lotteryCashLedger: { __typename?: 'LotteryCashLedgerPayload', totalCount: number, vault: { __typename?: 'LotteryVaultExpected', amount: number, baselineAmount: number, baselineAt?: string | null }, items: Array<{ __typename?: 'LotteryCashMovement', id: string, occurredAt: string, type: string, from: string, to: string, reason?: string | null, amount: number, payee?: string | null, note?: string | null, refType?: string | null, refId?: string | null, reversalOf?: string | null, reversedById?: string | null, org: { __typename?: 'LotteryAccountsRef', id: string, name: string }, cashPoint?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null, createdBy?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null }> } };
+
+export type LotteryCashMovementQueryVariables = Exact<{
+  id: Scalars['ID']['input'];
+}>;
+
+
+export type LotteryCashMovementQuery = { __typename?: 'Query', lotteryCashMovement: { __typename?: 'LotteryCashMovementPayload', item: { __typename?: 'LotteryCashMovement', id: string, occurredAt: string, type: string, from: string, to: string, reason?: string | null, amount: number, payee?: string | null, note?: string | null, refType?: string | null, refId?: string | null, reversalOf?: string | null, reversedById?: string | null, org: { __typename?: 'LotteryAccountsRef', id: string, name: string }, cashPoint?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null, createdBy?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null } } };
+
+export type LotterySettlementQueryVariables = Exact<{
+  moduleKey: Scalars['String']['input'];
+  refId: Scalars['ID']['input'];
+}>;
+
+
+export type LotterySettlementQuery = { __typename?: 'Query', lotterySettlement: { __typename?: 'LotterySettlementPayload', item: { __typename?: 'LotterySettlement', moduleKey: string, label: string, kind: string, refId: string, docNo: string, counterparty: string, payable: number, pendingPayee: number, sides: Array<{ __typename?: 'LotterySettlementSide', side: string, label: string, role: string, methods: Array<string>, totalOut: number, totalIn: number, net: number, canSettle: boolean, branch: { __typename?: 'LotteryAccountsRef', id: string, name: string }, buttons: Array<{ __typename?: 'LotterySettlementButton', button: string, defaultAmount: number, canUse: boolean }> }>, records: Array<{ __typename?: 'LotterySettlementRecord', id: string, method: string, side: string, type: string, direction: string, amount: number, accountLabel?: string | null, handler?: string | null, note?: string | null, occurredAt: string, reversalOf?: string | null, reversedById?: string | null, canReverse: boolean, createdBy?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null }> } } };
+
+export type LotteryOutstandingSettlementsQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type LotteryOutstandingSettlementsQuery = { __typename?: 'Query', lotteryOutstandingSettlements: { __typename?: 'LotteryOutstandingSettlementsPayload', totalCount: number, items: Array<{ __typename?: 'LotteryOutstandingSettlement', moduleKey: string, label: string, refId: string, docNo: string, side: string, sideLabel: string, counterparty: string, payable: number, net: number, kind: string, amount: number, button: string, daysOutstanding: number, canSettle: boolean, branch: { __typename?: 'LotteryAccountsRef', id: string, name: string } }> } };
+
+export type LotterySettlementCandidatesQueryVariables = Exact<{
+  input: LotterySettlementCandidatesInput;
+}>;
+
+
+export type LotterySettlementCandidatesQuery = { __typename?: 'Query', lotterySettlementCandidates: { __typename?: 'LotteryOutstandingSettlementsPayload', totalCount: number, items: Array<{ __typename?: 'LotteryOutstandingSettlement', moduleKey: string, label: string, refId: string, docNo: string, side: string, sideLabel: string, counterparty: string, payable: number, net: number, kind: string, amount: number, button: string, daysOutstanding: number, canSettle: boolean, branch: { __typename?: 'LotteryAccountsRef', id: string, name: string } }> } };
+
+export type RecordLotterySettlementMutationVariables = Exact<{
+  input: RecordLotterySettlementInput;
+}>;
+
+
+export type RecordLotterySettlementMutation = { __typename?: 'Mutation', recordLotterySettlement: { __typename?: 'RecordLotterySettlementPayload', recordId: string, item: { __typename?: 'LotterySettlement', moduleKey: string, label: string, kind: string, refId: string, docNo: string, counterparty: string, payable: number, pendingPayee: number, sides: Array<{ __typename?: 'LotterySettlementSide', side: string, label: string, role: string, methods: Array<string>, totalOut: number, totalIn: number, net: number, canSettle: boolean, branch: { __typename?: 'LotteryAccountsRef', id: string, name: string }, buttons: Array<{ __typename?: 'LotterySettlementButton', button: string, defaultAmount: number, canUse: boolean }> }>, records: Array<{ __typename?: 'LotterySettlementRecord', id: string, method: string, side: string, type: string, direction: string, amount: number, accountLabel?: string | null, handler?: string | null, note?: string | null, occurredAt: string, reversalOf?: string | null, reversedById?: string | null, canReverse: boolean, createdBy?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null }> } } };
+
+export type ReverseLotterySettlementMutationVariables = Exact<{
+  input: ReverseLotterySettlementInput;
+}>;
+
+
+export type ReverseLotterySettlementMutation = { __typename?: 'Mutation', reverseLotterySettlement: { __typename?: 'RecordLotterySettlementPayload', recordId: string, item: { __typename?: 'LotterySettlement', moduleKey: string, label: string, kind: string, refId: string, docNo: string, counterparty: string, payable: number, pendingPayee: number, sides: Array<{ __typename?: 'LotterySettlementSide', side: string, label: string, role: string, methods: Array<string>, totalOut: number, totalIn: number, net: number, canSettle: boolean, branch: { __typename?: 'LotteryAccountsRef', id: string, name: string }, buttons: Array<{ __typename?: 'LotterySettlementButton', button: string, defaultAmount: number, canUse: boolean }> }>, records: Array<{ __typename?: 'LotterySettlementRecord', id: string, method: string, side: string, type: string, direction: string, amount: number, accountLabel?: string | null, handler?: string | null, note?: string | null, occurredAt: string, reversalOf?: string | null, reversedById?: string | null, canReverse: boolean, createdBy?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null }> } } };
+
+export type LotterySettlementAccountsQueryVariables = Exact<{
+  moduleKey: Scalars['String']['input'];
+  refId: Scalars['ID']['input'];
+  side: Scalars['String']['input'];
+}>;
+
+
+export type LotterySettlementAccountsQuery = { __typename?: 'Query', lotterySettlementAccounts: { __typename?: 'LotterySettlementAccountsPayload', totalCount: number, items: Array<{ __typename?: 'LotteryAccountsRef', id: string, name: string }> } };
+
+export type LotteryDealerRefFieldsFragment = { __typename?: 'LotteryDealerRef', id: string, type: LotteryDealerType, licenseNo: string, name: string, storeName?: string | null, status: LotteryDealerStatus };
+
+export type LotteryDealerContactRefFieldsFragment = { __typename?: 'LotteryDealerContactRef', id: string, name: string, status: LotteryContactStatus };
+
+export type LotteryDealerFieldsFragment = { __typename?: 'LotteryDealer', id: string, type: LotteryDealerType, licenseNo: string, name: string, status: LotteryDealerStatus, licenseApprovedAt: string, licenseExpiresAt: string, licenseState: LotteryLicenseState, lastPurchaseBaseDate?: string | null, lastSelfPurchaseBaseDate?: string | null, lastPurchaseDate?: string | null, lastSelfPurchaseDate?: string | null, daysSinceLastPurchase?: number | null, daysSinceLastSelfPurchase?: number | null, currentQuarterSigned?: boolean | null, storeName?: string | null, businessAddress?: string | null, storePhone?: string | null, terminalNo?: string | null, coSellerCount?: number | null, rentFee?: number | null, rentCycle?: LotteryRentCycle | null, rentStartMonth?: number | null, rentDueDay?: number | null, nextRentDueAt?: string | null, nationalId: string, birthday?: string | null, phone?: string | null, mobile?: string | null, email?: string | null, mailingAddress?: string | null, residentialAddress?: string | null, residentialSameAsMailing: boolean, note?: string | null, createdAt: string, updatedAt: string, isShared: boolean, coSalesDealer?: { __typename?: 'LotteryDealerRef', id: string, type: LotteryDealerType, licenseNo: string, name: string, storeName?: string | null, status: LotteryDealerStatus } | null, agents: Array<{ __typename?: 'LotteryDealerContactRef', id: string, name: string, status: LotteryContactStatus }>, trustees: Array<{ __typename?: 'LotteryDealerContactRef', id: string, name: string, status: LotteryContactStatus }>, introducers: Array<{ __typename?: 'LotteryDealerContactRef', id: string, name: string, status: LotteryContactStatus }>, storeOrg?: { __typename?: 'LotteryDealerOrgRef', id: string, name: string } | null, createdBy?: { __typename?: 'LotteryDealerUserRef', id: string, name: string } | null, abilities: { __typename?: 'LotteryDealerAbilities', canEdit: boolean, canEditLastPurchaseBaseDate: boolean, canEditLastSelfPurchaseBaseDate: boolean }, shareOrgs: Array<{ __typename?: 'ShareOrg', orgId: string, includeDescendants: boolean }> };
+
+export type LotteryDealerContactFieldsFragment = { __typename?: 'LotteryDealerContact', id: string, name: string, roles: Array<LotteryContactRole>, nationalId: string, birthday?: string | null, phone?: string | null, mobile?: string | null, email?: string | null, mailingAddress?: string | null, residentialAddress?: string | null, residentialSameAsMailing: boolean, status: LotteryContactStatus, note?: string | null, dealerCount: number, createdAt: string, updatedAt: string, links: Array<{ __typename?: 'LotteryDealerContactLink', role: LotteryContactRole, dealer: { __typename?: 'LotteryDealerRef', id: string, type: LotteryDealerType, licenseNo: string, name: string, storeName?: string | null, status: LotteryDealerStatus } }>, createdBy?: { __typename?: 'LotteryDealerUserRef', id: string, name: string } | null, abilities: { __typename?: 'LotteryDealerContactAbilities', canEdit: boolean } };
+
+export type LotteryDealersQueryVariables = Exact<{
+  input: LotteryDealersInput;
+}>;
+
+
+export type LotteryDealersQuery = { __typename?: 'Query', lotteryDealers: { __typename?: 'LotteryDealersPayload', totalCount: number, page: number, pageSize: number, items: Array<{ __typename?: 'LotteryDealer', id: string, type: LotteryDealerType, licenseNo: string, name: string, status: LotteryDealerStatus, licenseApprovedAt: string, licenseExpiresAt: string, licenseState: LotteryLicenseState, lastPurchaseBaseDate?: string | null, lastSelfPurchaseBaseDate?: string | null, lastPurchaseDate?: string | null, lastSelfPurchaseDate?: string | null, daysSinceLastPurchase?: number | null, daysSinceLastSelfPurchase?: number | null, currentQuarterSigned?: boolean | null, storeName?: string | null, businessAddress?: string | null, storePhone?: string | null, terminalNo?: string | null, coSellerCount?: number | null, rentFee?: number | null, rentCycle?: LotteryRentCycle | null, rentStartMonth?: number | null, rentDueDay?: number | null, nextRentDueAt?: string | null, nationalId: string, birthday?: string | null, phone?: string | null, mobile?: string | null, email?: string | null, mailingAddress?: string | null, residentialAddress?: string | null, residentialSameAsMailing: boolean, note?: string | null, createdAt: string, updatedAt: string, isShared: boolean, coSalesDealer?: { __typename?: 'LotteryDealerRef', id: string, type: LotteryDealerType, licenseNo: string, name: string, storeName?: string | null, status: LotteryDealerStatus } | null, agents: Array<{ __typename?: 'LotteryDealerContactRef', id: string, name: string, status: LotteryContactStatus }>, trustees: Array<{ __typename?: 'LotteryDealerContactRef', id: string, name: string, status: LotteryContactStatus }>, introducers: Array<{ __typename?: 'LotteryDealerContactRef', id: string, name: string, status: LotteryContactStatus }>, storeOrg?: { __typename?: 'LotteryDealerOrgRef', id: string, name: string } | null, createdBy?: { __typename?: 'LotteryDealerUserRef', id: string, name: string } | null, abilities: { __typename?: 'LotteryDealerAbilities', canEdit: boolean, canEditLastPurchaseBaseDate: boolean, canEditLastSelfPurchaseBaseDate: boolean }, shareOrgs: Array<{ __typename?: 'ShareOrg', orgId: string, includeDescendants: boolean }> }> } };
+
+export type LotteryDealerQueryVariables = Exact<{
+  id: Scalars['ID']['input'];
+}>;
+
+
+export type LotteryDealerQuery = { __typename?: 'Query', lotteryDealer: { __typename?: 'LotteryDealerPayload', item: { __typename?: 'LotteryDealer', id: string, type: LotteryDealerType, licenseNo: string, name: string, status: LotteryDealerStatus, licenseApprovedAt: string, licenseExpiresAt: string, licenseState: LotteryLicenseState, lastPurchaseBaseDate?: string | null, lastSelfPurchaseBaseDate?: string | null, lastPurchaseDate?: string | null, lastSelfPurchaseDate?: string | null, daysSinceLastPurchase?: number | null, daysSinceLastSelfPurchase?: number | null, currentQuarterSigned?: boolean | null, storeName?: string | null, businessAddress?: string | null, storePhone?: string | null, terminalNo?: string | null, coSellerCount?: number | null, rentFee?: number | null, rentCycle?: LotteryRentCycle | null, rentStartMonth?: number | null, rentDueDay?: number | null, nextRentDueAt?: string | null, nationalId: string, birthday?: string | null, phone?: string | null, mobile?: string | null, email?: string | null, mailingAddress?: string | null, residentialAddress?: string | null, residentialSameAsMailing: boolean, note?: string | null, createdAt: string, updatedAt: string, isShared: boolean, coSalesDealer?: { __typename?: 'LotteryDealerRef', id: string, type: LotteryDealerType, licenseNo: string, name: string, storeName?: string | null, status: LotteryDealerStatus } | null, agents: Array<{ __typename?: 'LotteryDealerContactRef', id: string, name: string, status: LotteryContactStatus }>, trustees: Array<{ __typename?: 'LotteryDealerContactRef', id: string, name: string, status: LotteryContactStatus }>, introducers: Array<{ __typename?: 'LotteryDealerContactRef', id: string, name: string, status: LotteryContactStatus }>, storeOrg?: { __typename?: 'LotteryDealerOrgRef', id: string, name: string } | null, createdBy?: { __typename?: 'LotteryDealerUserRef', id: string, name: string } | null, abilities: { __typename?: 'LotteryDealerAbilities', canEdit: boolean, canEditLastPurchaseBaseDate: boolean, canEditLastSelfPurchaseBaseDate: boolean }, shareOrgs: Array<{ __typename?: 'ShareOrg', orgId: string, includeDescendants: boolean }> } } };
+
+export type LotteryDealerSigninsQueryVariables = Exact<{
+  dealerId: Scalars['ID']['input'];
+  year: Scalars['Int']['input'];
+}>;
+
+
+export type LotteryDealerSigninsQuery = { __typename?: 'Query', lotteryDealerSignins: { __typename?: 'LotteryDealerSigninsPayload', totalCount: number, items: Array<{ __typename?: 'LotteryDealerSigninModel', id?: string | null, year: number, quarter: number, signedAt?: string | null, note?: string | null, state: LotterySigninState }> } };
+
+export type LotteryDealerCoSellersQueryVariables = Exact<{
+  dealerId: Scalars['ID']['input'];
+}>;
+
+
+export type LotteryDealerCoSellersQuery = { __typename?: 'Query', lotteryDealerCoSellers: { __typename?: 'LotteryDealerCoSellersPayload', totalCount: number, items: Array<{ __typename?: 'LotteryDealerCoSellerModel', registeredAt: string, dealer: { __typename?: 'LotteryDealerRef', id: string, type: LotteryDealerType, licenseNo: string, name: string, storeName?: string | null, status: LotteryDealerStatus } }> } };
+
+export type LotteryOccupiedStoresQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type LotteryOccupiedStoresQuery = { __typename?: 'Query', lotteryOccupiedStores: { __typename?: 'LotteryOccupiedStoresPayload', totalCount: number, items: Array<{ __typename?: 'LotteryOccupiedStoreModel', orgId: string, dealer: { __typename?: 'LotteryDealerRef', id: string, type: LotteryDealerType, licenseNo: string, name: string, storeName?: string | null, status: LotteryDealerStatus } }> } };
+
+export type CreateLotteryDealerMutationVariables = Exact<{
+  input: CreateLotteryDealerInput;
+}>;
+
+
+export type CreateLotteryDealerMutation = { __typename?: 'Mutation', createLotteryDealer: { __typename?: 'LotteryDealerPayload', item: { __typename?: 'LotteryDealer', id: string, type: LotteryDealerType, licenseNo: string, name: string, status: LotteryDealerStatus, licenseApprovedAt: string, licenseExpiresAt: string, licenseState: LotteryLicenseState, lastPurchaseBaseDate?: string | null, lastSelfPurchaseBaseDate?: string | null, lastPurchaseDate?: string | null, lastSelfPurchaseDate?: string | null, daysSinceLastPurchase?: number | null, daysSinceLastSelfPurchase?: number | null, currentQuarterSigned?: boolean | null, storeName?: string | null, businessAddress?: string | null, storePhone?: string | null, terminalNo?: string | null, coSellerCount?: number | null, rentFee?: number | null, rentCycle?: LotteryRentCycle | null, rentStartMonth?: number | null, rentDueDay?: number | null, nextRentDueAt?: string | null, nationalId: string, birthday?: string | null, phone?: string | null, mobile?: string | null, email?: string | null, mailingAddress?: string | null, residentialAddress?: string | null, residentialSameAsMailing: boolean, note?: string | null, createdAt: string, updatedAt: string, isShared: boolean, coSalesDealer?: { __typename?: 'LotteryDealerRef', id: string, type: LotteryDealerType, licenseNo: string, name: string, storeName?: string | null, status: LotteryDealerStatus } | null, agents: Array<{ __typename?: 'LotteryDealerContactRef', id: string, name: string, status: LotteryContactStatus }>, trustees: Array<{ __typename?: 'LotteryDealerContactRef', id: string, name: string, status: LotteryContactStatus }>, introducers: Array<{ __typename?: 'LotteryDealerContactRef', id: string, name: string, status: LotteryContactStatus }>, storeOrg?: { __typename?: 'LotteryDealerOrgRef', id: string, name: string } | null, createdBy?: { __typename?: 'LotteryDealerUserRef', id: string, name: string } | null, abilities: { __typename?: 'LotteryDealerAbilities', canEdit: boolean, canEditLastPurchaseBaseDate: boolean, canEditLastSelfPurchaseBaseDate: boolean }, shareOrgs: Array<{ __typename?: 'ShareOrg', orgId: string, includeDescendants: boolean }> } } };
+
+export type UpdateLotteryDealerMutationVariables = Exact<{
+  input: UpdateLotteryDealerInput;
+}>;
+
+
+export type UpdateLotteryDealerMutation = { __typename?: 'Mutation', updateLotteryDealer: { __typename?: 'LotteryDealerPayload', item: { __typename?: 'LotteryDealer', id: string, type: LotteryDealerType, licenseNo: string, name: string, status: LotteryDealerStatus, licenseApprovedAt: string, licenseExpiresAt: string, licenseState: LotteryLicenseState, lastPurchaseBaseDate?: string | null, lastSelfPurchaseBaseDate?: string | null, lastPurchaseDate?: string | null, lastSelfPurchaseDate?: string | null, daysSinceLastPurchase?: number | null, daysSinceLastSelfPurchase?: number | null, currentQuarterSigned?: boolean | null, storeName?: string | null, businessAddress?: string | null, storePhone?: string | null, terminalNo?: string | null, coSellerCount?: number | null, rentFee?: number | null, rentCycle?: LotteryRentCycle | null, rentStartMonth?: number | null, rentDueDay?: number | null, nextRentDueAt?: string | null, nationalId: string, birthday?: string | null, phone?: string | null, mobile?: string | null, email?: string | null, mailingAddress?: string | null, residentialAddress?: string | null, residentialSameAsMailing: boolean, note?: string | null, createdAt: string, updatedAt: string, isShared: boolean, coSalesDealer?: { __typename?: 'LotteryDealerRef', id: string, type: LotteryDealerType, licenseNo: string, name: string, storeName?: string | null, status: LotteryDealerStatus } | null, agents: Array<{ __typename?: 'LotteryDealerContactRef', id: string, name: string, status: LotteryContactStatus }>, trustees: Array<{ __typename?: 'LotteryDealerContactRef', id: string, name: string, status: LotteryContactStatus }>, introducers: Array<{ __typename?: 'LotteryDealerContactRef', id: string, name: string, status: LotteryContactStatus }>, storeOrg?: { __typename?: 'LotteryDealerOrgRef', id: string, name: string } | null, createdBy?: { __typename?: 'LotteryDealerUserRef', id: string, name: string } | null, abilities: { __typename?: 'LotteryDealerAbilities', canEdit: boolean, canEditLastPurchaseBaseDate: boolean, canEditLastSelfPurchaseBaseDate: boolean }, shareOrgs: Array<{ __typename?: 'ShareOrg', orgId: string, includeDescendants: boolean }> } } };
+
+export type RegisterLotteryDealerSigninMutationVariables = Exact<{
+  input: RegisterLotteryDealerSigninInput;
+}>;
+
+
+export type RegisterLotteryDealerSigninMutation = { __typename?: 'Mutation', registerLotteryDealerSignin: { __typename?: 'LotteryDealerSigninPayload', item: { __typename?: 'LotteryDealerSigninModel', id?: string | null, year: number, quarter: number, signedAt?: string | null, note?: string | null, state: LotterySigninState } } };
+
+export type UpdateLotteryDealerSigninMutationVariables = Exact<{
+  input: UpdateLotteryDealerSigninInput;
+}>;
+
+
+export type UpdateLotteryDealerSigninMutation = { __typename?: 'Mutation', updateLotteryDealerSignin: { __typename?: 'LotteryDealerSigninPayload', item: { __typename?: 'LotteryDealerSigninModel', id?: string | null, year: number, quarter: number, signedAt?: string | null, note?: string | null, state: LotterySigninState } } };
+
+export type LotteryDealerContactsQueryVariables = Exact<{
+  input: LotteryDealerContactsInput;
+}>;
+
+
+export type LotteryDealerContactsQuery = { __typename?: 'Query', lotteryDealerContacts: { __typename?: 'LotteryDealerContactsPayload', totalCount: number, page: number, pageSize: number, items: Array<{ __typename?: 'LotteryDealerContact', id: string, name: string, roles: Array<LotteryContactRole>, nationalId: string, birthday?: string | null, phone?: string | null, mobile?: string | null, email?: string | null, mailingAddress?: string | null, residentialAddress?: string | null, residentialSameAsMailing: boolean, status: LotteryContactStatus, note?: string | null, dealerCount: number, createdAt: string, updatedAt: string, links: Array<{ __typename?: 'LotteryDealerContactLink', role: LotteryContactRole, dealer: { __typename?: 'LotteryDealerRef', id: string, type: LotteryDealerType, licenseNo: string, name: string, storeName?: string | null, status: LotteryDealerStatus } }>, createdBy?: { __typename?: 'LotteryDealerUserRef', id: string, name: string } | null, abilities: { __typename?: 'LotteryDealerContactAbilities', canEdit: boolean } }> } };
+
+export type LotteryDealerContactQueryVariables = Exact<{
+  id: Scalars['ID']['input'];
+}>;
+
+
+export type LotteryDealerContactQuery = { __typename?: 'Query', lotteryDealerContact: { __typename?: 'LotteryDealerContactPayload', item: { __typename?: 'LotteryDealerContact', id: string, name: string, roles: Array<LotteryContactRole>, nationalId: string, birthday?: string | null, phone?: string | null, mobile?: string | null, email?: string | null, mailingAddress?: string | null, residentialAddress?: string | null, residentialSameAsMailing: boolean, status: LotteryContactStatus, note?: string | null, dealerCount: number, createdAt: string, updatedAt: string, links: Array<{ __typename?: 'LotteryDealerContactLink', role: LotteryContactRole, dealer: { __typename?: 'LotteryDealerRef', id: string, type: LotteryDealerType, licenseNo: string, name: string, storeName?: string | null, status: LotteryDealerStatus } }>, createdBy?: { __typename?: 'LotteryDealerUserRef', id: string, name: string } | null, abilities: { __typename?: 'LotteryDealerContactAbilities', canEdit: boolean } } } };
+
+export type CreateLotteryDealerContactMutationVariables = Exact<{
+  input: CreateLotteryDealerContactInput;
+}>;
+
+
+export type CreateLotteryDealerContactMutation = { __typename?: 'Mutation', createLotteryDealerContact: { __typename?: 'LotteryDealerContactPayload', item: { __typename?: 'LotteryDealerContact', id: string, name: string, roles: Array<LotteryContactRole>, nationalId: string, birthday?: string | null, phone?: string | null, mobile?: string | null, email?: string | null, mailingAddress?: string | null, residentialAddress?: string | null, residentialSameAsMailing: boolean, status: LotteryContactStatus, note?: string | null, dealerCount: number, createdAt: string, updatedAt: string, links: Array<{ __typename?: 'LotteryDealerContactLink', role: LotteryContactRole, dealer: { __typename?: 'LotteryDealerRef', id: string, type: LotteryDealerType, licenseNo: string, name: string, storeName?: string | null, status: LotteryDealerStatus } }>, createdBy?: { __typename?: 'LotteryDealerUserRef', id: string, name: string } | null, abilities: { __typename?: 'LotteryDealerContactAbilities', canEdit: boolean } } } };
+
+export type UpdateLotteryDealerContactMutationVariables = Exact<{
+  input: UpdateLotteryDealerContactInput;
+}>;
+
+
+export type UpdateLotteryDealerContactMutation = { __typename?: 'Mutation', updateLotteryDealerContact: { __typename?: 'LotteryDealerContactPayload', item: { __typename?: 'LotteryDealerContact', id: string, name: string, roles: Array<LotteryContactRole>, nationalId: string, birthday?: string | null, phone?: string | null, mobile?: string | null, email?: string | null, mailingAddress?: string | null, residentialAddress?: string | null, residentialSameAsMailing: boolean, status: LotteryContactStatus, note?: string | null, dealerCount: number, createdAt: string, updatedAt: string, links: Array<{ __typename?: 'LotteryDealerContactLink', role: LotteryContactRole, dealer: { __typename?: 'LotteryDealerRef', id: string, type: LotteryDealerType, licenseNo: string, name: string, storeName?: string | null, status: LotteryDealerStatus } }>, createdBy?: { __typename?: 'LotteryDealerUserRef', id: string, name: string } | null, abilities: { __typename?: 'LotteryDealerContactAbilities', canEdit: boolean } } } };
+
+export type LotteryInventoryRefFieldsFragment = { __typename?: 'LotteryInventoryRef', id: string, name: string };
+
+export type LotteryInventoryBookFieldsFragment = { __typename?: 'LotteryInventoryBook', id: string, bookKey: string, bookNo: string, gameId: string, gameCode: string, gameName: string, unitPrice: number, standardTickets: number, firstTicketNo: string, lastTicketNo: string, remainingCount: number, totalCount: number, pendingSkipCount: number, requiredSkipCount: number, skippedTicketNos: Array<string>, state: string, status: string, purchasedAt?: string | null, org: { __typename?: 'LotteryInventoryRef', id: string, name: string }, holdings: Array<{ __typename?: 'LotteryInventoryHolding', count: number, org: { __typename?: 'LotteryInventoryRef', id: string, name: string } }>, purchaseDealer?: { __typename?: 'LotteryInventoryRef', id: string, name: string } | null };
+
+export type LotteryInventoryTicketFieldsFragment = { __typename?: 'LotteryInventoryTicket', id: string, ticketNo: string, status: string, locationKind: string, locked: boolean, version: number, cashPoint?: { __typename?: 'LotteryInventoryRef', id: string, name: string } | null, org: { __typename?: 'LotteryInventoryRef', id: string, name: string }, responsibleOrg?: { __typename?: 'LotteryInventoryRef', id: string, name: string } | null };
+
+export type LotteryInventoryPlaceFieldsFragment = { __typename?: 'LotteryInventoryPlace', locationKind: string, org: { __typename?: 'LotteryInventoryRef', id: string, name: string }, cashPoint?: { __typename?: 'LotteryInventoryRef', id: string, name: string } | null };
+
+export type LotteryInventoryBookDetailFieldsFragment = { __typename?: 'LotteryInventoryBookDetail', book: { __typename?: 'LotteryInventoryBook', id: string, bookKey: string, bookNo: string, gameId: string, gameCode: string, gameName: string, unitPrice: number, standardTickets: number, firstTicketNo: string, lastTicketNo: string, remainingCount: number, totalCount: number, pendingSkipCount: number, requiredSkipCount: number, skippedTicketNos: Array<string>, state: string, status: string, purchasedAt?: string | null, org: { __typename?: 'LotteryInventoryRef', id: string, name: string }, holdings: Array<{ __typename?: 'LotteryInventoryHolding', count: number, org: { __typename?: 'LotteryInventoryRef', id: string, name: string } }>, purchaseDealer?: { __typename?: 'LotteryInventoryRef', id: string, name: string } | null }, tickets: Array<{ __typename?: 'LotteryInventoryTicket', id: string, ticketNo: string, status: string, locationKind: string, locked: boolean, version: number, cashPoint?: { __typename?: 'LotteryInventoryRef', id: string, name: string } | null, org: { __typename?: 'LotteryInventoryRef', id: string, name: string }, responsibleOrg?: { __typename?: 'LotteryInventoryRef', id: string, name: string } | null }>, locations: Array<{ __typename?: 'LotteryInventoryLocation', ticketNos: Array<string>, place: { __typename?: 'LotteryInventoryPlace', locationKind: string, org: { __typename?: 'LotteryInventoryRef', id: string, name: string }, cashPoint?: { __typename?: 'LotteryInventoryRef', id: string, name: string } | null } }>, events: Array<{ __typename?: 'LotteryInventoryEvent', at: string, type: string, ticketNos: Array<string>, wholeBook: boolean, refType?: string | null, refId?: string | null, refSerialNo?: string | null, reasonKey?: string | null, reasonNote?: string | null, from?: { __typename?: 'LotteryInventoryPlace', locationKind: string, org: { __typename?: 'LotteryInventoryRef', id: string, name: string }, cashPoint?: { __typename?: 'LotteryInventoryRef', id: string, name: string } | null } | null, to: { __typename?: 'LotteryInventoryPlace', locationKind: string, org: { __typename?: 'LotteryInventoryRef', id: string, name: string }, cashPoint?: { __typename?: 'LotteryInventoryRef', id: string, name: string } | null }, by?: { __typename?: 'LotteryInventoryRef', id: string, name: string } | null }>, sources: Array<{ __typename?: 'LotteryInventorySource', type: string, refId?: string | null, refSerialNo?: string | null, at: string, ticketNos: Array<string> }>, cost?: { __typename?: 'LotteryInventoryCost', rate: number, cost: number, unitCost: number } | null, investigation?: { __typename?: 'LotteryInventoryInvestigation', status: string, at?: string | null, refType?: string | null, refSerialNo?: string | null, responsibleOrg?: { __typename?: 'LotteryInventoryRef', id: string, name: string } | null } | null, abilities: { __typename?: 'LotteryInventoryBookAbilities', canCorrectSkips: boolean, canRecover: boolean, canScrap: boolean, canShowCost: boolean } };
+
+export type LotteryInvestigationRowFieldsFragment = { __typename?: 'LotteryInvestigationRow', bookId: string, bookNo: string, gameCode: string, gameName: string, unitPrice: number, status: string, refType?: string | null, refSerialNo?: string | null, at?: string | null, cost?: number | null, responsibleOrg?: { __typename?: 'LotteryInventoryRef', id: string, name: string } | null, tickets: Array<{ __typename?: 'LotteryInventoryTicket', id: string, ticketNo: string, status: string, locationKind: string, locked: boolean, version: number, cashPoint?: { __typename?: 'LotteryInventoryRef', id: string, name: string } | null, org: { __typename?: 'LotteryInventoryRef', id: string, name: string }, responsibleOrg?: { __typename?: 'LotteryInventoryRef', id: string, name: string } | null }> };
+
+export type LotteryAllocationCellFieldsFragment = { __typename?: 'LotteryAllocationCell', orgId: string, gameId: string, plannedBooks?: number | null, note?: string | null, givenBooks: number, givenExtraTickets: number };
+
+export type LotteryTicketLookupItemFieldsFragment = { __typename?: 'LotteryTicketLookupItem', bookId: string, bookNo: string, gameCode: string, gameName: string, unitPrice: number, ticketId: string, ticketNo: string, status: string, version: number, org: { __typename?: 'LotteryInventoryRef', id: string, name: string }, responsibleOrg?: { __typename?: 'LotteryInventoryRef', id: string, name: string } | null };
+
+export type LotteryInventoryBooksQueryVariables = Exact<{
+  input: LotteryInventoryBooksInput;
+}>;
+
+
+export type LotteryInventoryBooksQuery = { __typename?: 'Query', lotteryInventoryBooks: { __typename?: 'LotteryInventoryBooksPayload', totalCount: number, items: Array<{ __typename?: 'LotteryInventoryBook', id: string, bookKey: string, bookNo: string, gameId: string, gameCode: string, gameName: string, unitPrice: number, standardTickets: number, firstTicketNo: string, lastTicketNo: string, remainingCount: number, totalCount: number, pendingSkipCount: number, requiredSkipCount: number, skippedTicketNos: Array<string>, state: string, status: string, purchasedAt?: string | null, org: { __typename?: 'LotteryInventoryRef', id: string, name: string }, holdings: Array<{ __typename?: 'LotteryInventoryHolding', count: number, org: { __typename?: 'LotteryInventoryRef', id: string, name: string } }>, purchaseDealer?: { __typename?: 'LotteryInventoryRef', id: string, name: string } | null }> } };
+
+export type LotteryInventoryBookQueryVariables = Exact<{
+  id: Scalars['ID']['input'];
+}>;
+
+
+export type LotteryInventoryBookQuery = { __typename?: 'Query', lotteryInventoryBook: { __typename?: 'LotteryInventoryBookPayload', item: { __typename?: 'LotteryInventoryBookDetail', book: { __typename?: 'LotteryInventoryBook', id: string, bookKey: string, bookNo: string, gameId: string, gameCode: string, gameName: string, unitPrice: number, standardTickets: number, firstTicketNo: string, lastTicketNo: string, remainingCount: number, totalCount: number, pendingSkipCount: number, requiredSkipCount: number, skippedTicketNos: Array<string>, state: string, status: string, purchasedAt?: string | null, org: { __typename?: 'LotteryInventoryRef', id: string, name: string }, holdings: Array<{ __typename?: 'LotteryInventoryHolding', count: number, org: { __typename?: 'LotteryInventoryRef', id: string, name: string } }>, purchaseDealer?: { __typename?: 'LotteryInventoryRef', id: string, name: string } | null }, tickets: Array<{ __typename?: 'LotteryInventoryTicket', id: string, ticketNo: string, status: string, locationKind: string, locked: boolean, version: number, cashPoint?: { __typename?: 'LotteryInventoryRef', id: string, name: string } | null, org: { __typename?: 'LotteryInventoryRef', id: string, name: string }, responsibleOrg?: { __typename?: 'LotteryInventoryRef', id: string, name: string } | null }>, locations: Array<{ __typename?: 'LotteryInventoryLocation', ticketNos: Array<string>, place: { __typename?: 'LotteryInventoryPlace', locationKind: string, org: { __typename?: 'LotteryInventoryRef', id: string, name: string }, cashPoint?: { __typename?: 'LotteryInventoryRef', id: string, name: string } | null } }>, events: Array<{ __typename?: 'LotteryInventoryEvent', at: string, type: string, ticketNos: Array<string>, wholeBook: boolean, refType?: string | null, refId?: string | null, refSerialNo?: string | null, reasonKey?: string | null, reasonNote?: string | null, from?: { __typename?: 'LotteryInventoryPlace', locationKind: string, org: { __typename?: 'LotteryInventoryRef', id: string, name: string }, cashPoint?: { __typename?: 'LotteryInventoryRef', id: string, name: string } | null } | null, to: { __typename?: 'LotteryInventoryPlace', locationKind: string, org: { __typename?: 'LotteryInventoryRef', id: string, name: string }, cashPoint?: { __typename?: 'LotteryInventoryRef', id: string, name: string } | null }, by?: { __typename?: 'LotteryInventoryRef', id: string, name: string } | null }>, sources: Array<{ __typename?: 'LotteryInventorySource', type: string, refId?: string | null, refSerialNo?: string | null, at: string, ticketNos: Array<string> }>, cost?: { __typename?: 'LotteryInventoryCost', rate: number, cost: number, unitCost: number } | null, investigation?: { __typename?: 'LotteryInventoryInvestigation', status: string, at?: string | null, refType?: string | null, refSerialNo?: string | null, responsibleOrg?: { __typename?: 'LotteryInventoryRef', id: string, name: string } | null } | null, abilities: { __typename?: 'LotteryInventoryBookAbilities', canCorrectSkips: boolean, canRecover: boolean, canScrap: boolean, canShowCost: boolean } } } };
+
+export type LotteryTicketLookupQueryVariables = Exact<{
+  input: LotteryTicketLookupInput;
+}>;
+
+
+export type LotteryTicketLookupQuery = { __typename?: 'Query', lotteryTicketLookup: { __typename?: 'LotteryTicketLookupPayload', items: Array<{ __typename?: 'LotteryTicketLookupItem', bookId: string, bookNo: string, gameCode: string, gameName: string, unitPrice: number, ticketId: string, ticketNo: string, status: string, version: number, org: { __typename?: 'LotteryInventoryRef', id: string, name: string }, responsibleOrg?: { __typename?: 'LotteryInventoryRef', id: string, name: string } | null }> } };
+
+export type LotteryInvestigationsQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type LotteryInvestigationsQuery = { __typename?: 'Query', lotteryInvestigations: { __typename?: 'LotteryInvestigationsPayload', canRecover: boolean, items: Array<{ __typename?: 'LotteryInvestigationRow', bookId: string, bookNo: string, gameCode: string, gameName: string, unitPrice: number, status: string, refType?: string | null, refSerialNo?: string | null, at?: string | null, cost?: number | null, responsibleOrg?: { __typename?: 'LotteryInventoryRef', id: string, name: string } | null, tickets: Array<{ __typename?: 'LotteryInventoryTicket', id: string, ticketNo: string, status: string, locationKind: string, locked: boolean, version: number, cashPoint?: { __typename?: 'LotteryInventoryRef', id: string, name: string } | null, org: { __typename?: 'LotteryInventoryRef', id: string, name: string }, responsibleOrg?: { __typename?: 'LotteryInventoryRef', id: string, name: string } | null }> }> } };
+
+export type LotteryAllocationsQueryVariables = Exact<{
+  input: LotteryAllocationsInput;
+}>;
+
+
+export type LotteryAllocationsQuery = { __typename?: 'Query', lotteryAllocations: { __typename?: 'LotteryAllocationsPayload', canEdit: boolean, stores: Array<{ __typename?: 'LotteryInventoryRef', id: string, name: string }>, games: Array<{ __typename?: 'LotteryInventoryGame', id: string, gameCode: string, name: string }>, cells: Array<{ __typename?: 'LotteryAllocationCell', orgId: string, gameId: string, plannedBooks?: number | null, note?: string | null, givenBooks: number, givenExtraTickets: number }> } };
+
+export type LotteryStockOverviewQueryVariables = Exact<{
+  input: LotteryStockOverviewInput;
+}>;
+
+
+export type LotteryStockOverviewQuery = { __typename?: 'Query', lotteryStockOverview: { __typename?: 'LotteryStockOverviewPayload', items: Array<{ __typename?: 'LotteryStockOverviewRow', unopenedBooks: number, counterTickets: number, soldTickets: number, org: { __typename?: 'LotteryInventoryRef', id: string, name: string }, game: { __typename?: 'LotteryInventoryGame', id: string, gameCode: string, name: string } }> } };
+
+export type LotteryFieldOptionsQueryVariables = Exact<{
+  categoryKey: Scalars['String']['input'];
+}>;
+
+
+export type LotteryFieldOptionsQuery = { __typename?: 'Query', lotteryFieldOptions: { __typename?: 'LotteryFieldOptionsPayload', totalCount: number, items: Array<{ __typename?: 'LotteryFieldOption', value: string, label: string }> } };
+
+export type SetLotteryAllocationMutationVariables = Exact<{
+  input: SetLotteryAllocationInput;
+}>;
+
+
+export type SetLotteryAllocationMutation = { __typename?: 'Mutation', setLotteryAllocation: { __typename?: 'LotteryAllocationPayload', item: { __typename?: 'LotteryAllocationCell', orgId: string, gameId: string, plannedBooks?: number | null, note?: string | null, givenBooks: number, givenExtraTickets: number } } };
+
+export type CorrectLotterySkippedTicketsMutationVariables = Exact<{
+  input: CorrectLotterySkippedTicketsInput;
+}>;
+
+
+export type CorrectLotterySkippedTicketsMutation = { __typename?: 'Mutation', correctLotterySkippedTickets: { __typename?: 'LotteryInventoryActionPayload', count: number, lossCost?: number | null } };
+
+export type RecoverLotteryTicketsMutationVariables = Exact<{
+  input: RecoverLotteryTicketsInput;
+}>;
+
+
+export type RecoverLotteryTicketsMutation = { __typename?: 'Mutation', recoverLotteryTickets: { __typename?: 'LotteryInventoryActionPayload', count: number, lossCost?: number | null } };
+
+export type ScrapLotteryTicketsMutationVariables = Exact<{
+  input: ScrapLotteryTicketsInput;
+}>;
+
+
+export type ScrapLotteryTicketsMutation = { __typename?: 'Mutation', scrapLotteryTickets: { __typename?: 'LotteryInventoryActionPayload', count: number, lossCost?: number | null } };
+
+export type LotteryInventoryStoresQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type LotteryInventoryStoresQuery = { __typename?: 'Query', lotteryInventoryStores: { __typename?: 'LotteryInventoryStoresPayload', items: Array<{ __typename?: 'LotteryInventoryRef', id: string, name: string }> } };
+
+export type LotteryGameFieldsFragment = { __typename?: 'LotteryGame', id: string, gameCode: string, name: string, unitPrice: number, ticketsPerBook: number, bookPrice: number, defaultRate: number, color?: string | null, status: string, launchedAt?: string | null, discontinuedAt?: string | null, claimDeadline?: string | null, note?: string | null, inUse: boolean, createdAt: string, updatedAt: string, abilities: { __typename?: 'LotteryGameAbilities', canEdit: boolean, canDelete: boolean } };
+
+export type LotteryGamesQueryVariables = Exact<{
+  input: LotteryGamesInput;
+}>;
+
+
+export type LotteryGamesQuery = { __typename?: 'Query', lotteryGames: { __typename?: 'LotteryGamesPayload', totalCount: number, page: number, pageSize: number, items: Array<{ __typename?: 'LotteryGame', id: string, gameCode: string, name: string, unitPrice: number, ticketsPerBook: number, bookPrice: number, defaultRate: number, color?: string | null, status: string, launchedAt?: string | null, discontinuedAt?: string | null, claimDeadline?: string | null, note?: string | null, inUse: boolean, createdAt: string, updatedAt: string, abilities: { __typename?: 'LotteryGameAbilities', canEdit: boolean, canDelete: boolean } }> } };
+
+export type LotteryGameQueryVariables = Exact<{
+  id: Scalars['ID']['input'];
+}>;
+
+
+export type LotteryGameQuery = { __typename?: 'Query', lotteryGame: { __typename?: 'LotteryGamePayload', item: { __typename?: 'LotteryGame', id: string, gameCode: string, name: string, unitPrice: number, ticketsPerBook: number, bookPrice: number, defaultRate: number, color?: string | null, status: string, launchedAt?: string | null, discontinuedAt?: string | null, claimDeadline?: string | null, note?: string | null, inUse: boolean, createdAt: string, updatedAt: string, abilities: { __typename?: 'LotteryGameAbilities', canEdit: boolean, canDelete: boolean } } } };
+
+export type CreateLotteryGameMutationVariables = Exact<{
+  input: CreateLotteryGameInput;
+}>;
+
+
+export type CreateLotteryGameMutation = { __typename?: 'Mutation', createLotteryGame: { __typename?: 'LotteryGamePayload', item: { __typename?: 'LotteryGame', id: string, gameCode: string, name: string, unitPrice: number, ticketsPerBook: number, bookPrice: number, defaultRate: number, color?: string | null, status: string, launchedAt?: string | null, discontinuedAt?: string | null, claimDeadline?: string | null, note?: string | null, inUse: boolean, createdAt: string, updatedAt: string, abilities: { __typename?: 'LotteryGameAbilities', canEdit: boolean, canDelete: boolean } } } };
+
+export type UpdateLotteryGameMutationVariables = Exact<{
+  input: UpdateLotteryGameInput;
+}>;
+
+
+export type UpdateLotteryGameMutation = { __typename?: 'Mutation', updateLotteryGame: { __typename?: 'LotteryGamePayload', item: { __typename?: 'LotteryGame', id: string, gameCode: string, name: string, unitPrice: number, ticketsPerBook: number, bookPrice: number, defaultRate: number, color?: string | null, status: string, launchedAt?: string | null, discontinuedAt?: string | null, claimDeadline?: string | null, note?: string | null, inUse: boolean, createdAt: string, updatedAt: string, abilities: { __typename?: 'LotteryGameAbilities', canEdit: boolean, canDelete: boolean } } } };
+
+export type DeleteLotteryGameMutationVariables = Exact<{
+  input: DeleteLotteryGameInput;
+}>;
+
+
+export type DeleteLotteryGameMutation = { __typename?: 'Mutation', deleteLotteryGame: { __typename?: 'DeleteLotteryGamePayload', success: boolean, deletedId: string } };
+
+export type LotteryCashPointFieldsFragment = { __typename?: 'LotteryCashPoint', id: string, positionKey: string, positionLabel?: string | null, name: string, order: number, enabled: boolean, note?: string | null, createdAt: string, updatedAt: string, org: { __typename?: 'LotteryCashPointRef', id: string, name: string }, printer?: { __typename?: 'LotteryCashPointRef', id: string, name: string } | null, abilities: { __typename?: 'LotteryCashPointAbilities', canEdit: boolean } };
+
+export type LotteryCashPointsQueryVariables = Exact<{
+  input: LotteryCashPointsInput;
+}>;
+
+
+export type LotteryCashPointsQuery = { __typename?: 'Query', lotteryCashPoints: { __typename?: 'LotteryCashPointsPayload', totalCount: number, page: number, pageSize: number, items: Array<{ __typename?: 'LotteryCashPoint', id: string, positionKey: string, positionLabel?: string | null, name: string, order: number, enabled: boolean, note?: string | null, createdAt: string, updatedAt: string, org: { __typename?: 'LotteryCashPointRef', id: string, name: string }, printer?: { __typename?: 'LotteryCashPointRef', id: string, name: string } | null, abilities: { __typename?: 'LotteryCashPointAbilities', canEdit: boolean } }> } };
+
+export type LotteryPositionOptionsQueryVariables = Exact<{
+  orgId: Scalars['ID']['input'];
+}>;
+
+
+export type LotteryPositionOptionsQuery = { __typename?: 'Query', lotteryPositionOptions: { __typename?: 'LotteryPositionOptionsPayload', totalCount: number, items: Array<{ __typename?: 'LotteryPositionOption', value: string, label: string }> } };
+
+export type CreateLotteryCashPointMutationVariables = Exact<{
+  input: CreateLotteryCashPointInput;
+}>;
+
+
+export type CreateLotteryCashPointMutation = { __typename?: 'Mutation', createLotteryCashPoint: { __typename?: 'LotteryCashPointPayload', item: { __typename?: 'LotteryCashPoint', id: string, positionKey: string, positionLabel?: string | null, name: string, order: number, enabled: boolean, note?: string | null, createdAt: string, updatedAt: string, org: { __typename?: 'LotteryCashPointRef', id: string, name: string }, printer?: { __typename?: 'LotteryCashPointRef', id: string, name: string } | null, abilities: { __typename?: 'LotteryCashPointAbilities', canEdit: boolean } } } };
+
+export type UpdateLotteryCashPointMutationVariables = Exact<{
+  input: UpdateLotteryCashPointInput;
+}>;
+
+
+export type UpdateLotteryCashPointMutation = { __typename?: 'Mutation', updateLotteryCashPoint: { __typename?: 'LotteryCashPointPayload', item: { __typename?: 'LotteryCashPoint', id: string, positionKey: string, positionLabel?: string | null, name: string, order: number, enabled: boolean, note?: string | null, createdAt: string, updatedAt: string, org: { __typename?: 'LotteryCashPointRef', id: string, name: string }, printer?: { __typename?: 'LotteryCashPointRef', id: string, name: string } | null, abilities: { __typename?: 'LotteryCashPointAbilities', canEdit: boolean } } } };
+
+export type LotteryPurchaseReceivingFieldsFragment = { __typename?: 'LotteryPurchaseReceiving', submissionId: string, canReceive: boolean, receivedCount: number, totalCount: number, groups: Array<{ __typename?: 'LotteryPurchaseReceivingGroup', gameId: string, gameCode: string, gameName: string, unitPrice: number, requestedBooks?: number | null, receivedBooks: number, subtotal: number, rows: Array<{ __typename?: 'LotteryPurchaseReceivingRow', rowId: string, bookNo: string, lastTicketNo: number, tickets: number, bookPrice: number, rate: number, amount: number, received: boolean, receivedAt?: string | null }> }> };
+
+export type LotteryPurchaseOptionsQueryVariables = Exact<{
+  orgId: Scalars['ID']['input'];
+}>;
+
+
+export type LotteryPurchaseOptionsQuery = { __typename?: 'Query', lotteryPurchaseOptions: { __typename?: 'LotteryPurchaseOptions', dealers: Array<{ __typename?: 'LotteryPurchaseOption', id: string, label: string }>, trustees: Array<{ __typename?: 'LotteryPurchaseTrustee', dealerId: string, id: string, label: string }>, accounts: Array<{ __typename?: 'LotteryPurchaseOption', id: string, label: string }>, requisitions: Array<{ __typename?: 'LotteryPurchaseRequisition', id: string, serialNo?: string | null, lines: Array<{ __typename?: 'LotteryPurchaseRequisitionLine', gameId: string, books: number }> }>, games: Array<{ __typename?: 'LotteryPurchaseGame', id: string, gameCode: string, name: string, unitPrice: number, ticketsPerBook: number, bookPrice: number, defaultRate: number }>, allocations: Array<{ __typename?: 'LotteryPurchaseAllocation', gameId: string, plannedBooks?: number | null, givenBooks: number, inTransitBooks: number }> } };
+
+export type LotteryPurchaseReceivingQueryVariables = Exact<{
+  submissionId: Scalars['ID']['input'];
+}>;
+
+
+export type LotteryPurchaseReceivingQuery = { __typename?: 'Query', lotteryPurchaseReceiving: { __typename?: 'LotteryPurchaseReceiving', submissionId: string, canReceive: boolean, receivedCount: number, totalCount: number, groups: Array<{ __typename?: 'LotteryPurchaseReceivingGroup', gameId: string, gameCode: string, gameName: string, unitPrice: number, requestedBooks?: number | null, receivedBooks: number, subtotal: number, rows: Array<{ __typename?: 'LotteryPurchaseReceivingRow', rowId: string, bookNo: string, lastTicketNo: number, tickets: number, bookPrice: number, rate: number, amount: number, received: boolean, receivedAt?: string | null }> }> } };
+
+export type LotteryPurchaseProgressQueryVariables = Exact<{
+  purchaseIds: Array<Scalars['ID']['input']> | Scalars['ID']['input'];
+}>;
+
+
+export type LotteryPurchaseProgressQuery = { __typename?: 'Query', lotteryPurchaseProgress: Array<{ __typename?: 'LotteryPurchaseProgress', purchaseId: string, receivedCount: number, totalCount: number, settlementKind?: string | null, settlementAmount: number, inSettlement: boolean }> };
+
+export type LotteryDealerPurchasesQueryVariables = Exact<{
+  dealerId: Scalars['ID']['input'];
+}>;
+
+
+export type LotteryDealerPurchasesQuery = { __typename?: 'Query', lotteryDealerPurchases: Array<{ __typename?: 'LotteryDealerPurchase', purchaseId: string, serialNo?: string | null, branchName: string, purchaseDate?: string | null, selfPurchase: boolean, trusteeName?: string | null, books: number, purchaseTotal: number, status: string }> };
+
+export type ReceiveLotteryPurchaseBookMutationVariables = Exact<{
+  input: ReceiveLotteryPurchaseBookInput;
+}>;
+
+
+export type ReceiveLotteryPurchaseBookMutation = { __typename?: 'Mutation', receiveLotteryPurchaseBook: { __typename?: 'ReceiveLotteryPurchaseBookPayload', rowId: string, receiving: { __typename?: 'LotteryPurchaseReceiving', submissionId: string, canReceive: boolean, receivedCount: number, totalCount: number, groups: Array<{ __typename?: 'LotteryPurchaseReceivingGroup', gameId: string, gameCode: string, gameName: string, unitPrice: number, requestedBooks?: number | null, receivedBooks: number, subtotal: number, rows: Array<{ __typename?: 'LotteryPurchaseReceivingRow', rowId: string, bookNo: string, lastTicketNo: number, tickets: number, bookPrice: number, rate: number, amount: number, received: boolean, receivedAt?: string | null }> }> } } };
+
+export type NotifyLotteryPurchaseWrongStoreMutationVariables = Exact<{
+  input: ReceiveLotteryPurchaseBookInput;
+}>;
+
+
+export type NotifyLotteryPurchaseWrongStoreMutation = { __typename?: 'Mutation', notifyLotteryPurchaseWrongStore: boolean };
+
+export type LotteryRequisitionCandidateFieldsFragment = { __typename?: 'LotteryRequisitionCandidate', gameId: string, gameCode: string, name: string, unitPrice: number, bookPrice: number, defaultRate: number, launchedAt?: string | null, isNew: boolean, stockTickets: number, inTransitBooks: number, sold7?: number | null, sold30?: number | null, plannedBooks?: number | null, givenBooks: number };
+
+export type LotteryRequisitionCandidatesQueryVariables = Exact<{
+  orgId: Scalars['ID']['input'];
+}>;
+
+
+export type LotteryRequisitionCandidatesQuery = { __typename?: 'Query', lotteryRequisitionCandidates: Array<{ __typename?: 'LotteryRequisitionCandidate', gameId: string, gameCode: string, name: string, unitPrice: number, bookPrice: number, defaultRate: number, launchedAt?: string | null, isNew: boolean, stockTickets: number, inTransitBooks: number, sold7?: number | null, sold30?: number | null, plannedBooks?: number | null, givenBooks: number }> };
+
+export type LotteryPurchaseListQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type LotteryPurchaseListQuery = { __typename?: 'Query', lotteryPurchaseList: { __typename?: 'LotteryPurchaseList', orgIds: Array<string>, rows: Array<{ __typename?: 'LotteryPurchaseListRow', gameId: string, gameCode: string, name: string, unitPrice: number, totalBooks: number, estimatedAmount: number, branches: Array<{ __typename?: 'LotteryPurchaseListBranch', orgId: string, books: number }> }>, requisitions: Array<{ __typename?: 'LotteryPendingRequisition', requisitionId: string, serialNo?: string | null, orgId: string, books: number, estimatedAmount: number, completedAt: string }> } };
+
+export type LotteryRequisitionStatesQueryVariables = Exact<{
+  requisitionIds: Array<Scalars['ID']['input']> | Scalars['ID']['input'];
+}>;
+
+
+export type LotteryRequisitionStatesQuery = { __typename?: 'Query', lotteryRequisitionStates: Array<{ __typename?: 'LotteryRequisitionStateItem', requisitionId: string, state: string }> };
+
+export type LotteryTransferReceivingFieldsFragment = { __typename?: 'LotteryTransferReceiving', submissionId: string, fromBranchName: string, toBranchName: string, transferAmount: number, canReceive: boolean, receivedCount: number, totalCount: number, rows: Array<{ __typename?: 'LotteryTransferRow', rowId: string, bookId: string, gameCode: string, gameName: string, bookNo: string, mode: string, ticketNos: Array<string>, tickets: number, amount: number, rate: number, purchaseAmount: number, shipped: boolean, received: boolean, receivedAt?: string | null }> };
+
+export type LotteryTransferOptionsQueryVariables = Exact<{
+  fromOrgId: Scalars['ID']['input'];
+  toOrgId?: InputMaybe<Scalars['ID']['input']>;
+}>;
+
+
+export type LotteryTransferOptionsQuery = { __typename?: 'Query', lotteryTransferOptions: { __typename?: 'LotteryTransferOptions', books: Array<{ __typename?: 'LotteryTransferBook', bookId: string, gameId: string, gameCode: string, gameName: string, bookNo: string, unitPrice: number, bookPrice: number, rate: number, isWhole: boolean, availableCount: number }>, requisitions: Array<{ __typename?: 'LotteryTransferRequisition', id: string, serialNo?: string | null, books: number }>, allocations: Array<{ __typename?: 'LotteryTransferAllocation', gameId: string, plannedBooks?: number | null, givenBooks: number, inTransitBooks: number }> } };
+
+export type LotteryTransferBookTicketsQueryVariables = Exact<{
+  fromOrgId: Scalars['ID']['input'];
+  bookId: Scalars['ID']['input'];
+}>;
+
+
+export type LotteryTransferBookTicketsQuery = { __typename?: 'Query', lotteryTransferBookTickets: Array<{ __typename?: 'LotteryTransferTicketCell', ticketNo: string, state: string }> };
+
+export type LotteryTransferProgressQueryVariables = Exact<{
+  transferIds: Array<Scalars['ID']['input']> | Scalars['ID']['input'];
+}>;
+
+
+export type LotteryTransferProgressQuery = { __typename?: 'Query', lotteryTransferProgress: Array<{ __typename?: 'LotteryTransferProgress', transferId: string, wholeBooks: number, partialTickets: number, receivedCount: number, totalCount: number, inTransit: boolean, settlementKind?: string | null, settlementAmount: number, inSettlement: boolean }> };
+
+export type LotteryTransferReceivingQueryVariables = Exact<{
+  submissionId: Scalars['ID']['input'];
+}>;
+
+
+export type LotteryTransferReceivingQuery = { __typename?: 'Query', lotteryTransferReceiving: { __typename?: 'LotteryTransferReceiving', submissionId: string, fromBranchName: string, toBranchName: string, transferAmount: number, canReceive: boolean, receivedCount: number, totalCount: number, rows: Array<{ __typename?: 'LotteryTransferRow', rowId: string, bookId: string, gameCode: string, gameName: string, bookNo: string, mode: string, ticketNos: Array<string>, tickets: number, amount: number, rate: number, purchaseAmount: number, shipped: boolean, received: boolean, receivedAt?: string | null }> } };
+
+export type ReceiveLotteryTransferBookMutationVariables = Exact<{
+  input: ReceiveLotteryTransferBookInput;
+}>;
+
+
+export type ReceiveLotteryTransferBookMutation = { __typename?: 'Mutation', receiveLotteryTransferBook: { __typename?: 'ReceiveLotteryTransferBookPayload', rowId: string, receiving: { __typename?: 'LotteryTransferReceiving', submissionId: string, fromBranchName: string, toBranchName: string, transferAmount: number, canReceive: boolean, receivedCount: number, totalCount: number, rows: Array<{ __typename?: 'LotteryTransferRow', rowId: string, bookId: string, gameCode: string, gameName: string, bookNo: string, mode: string, ticketNos: Array<string>, tickets: number, amount: number, rate: number, purchaseAmount: number, shipped: boolean, received: boolean, receivedAt?: string | null }> } } };
+
+export type NotifyLotteryTransferWrongStoreMutationVariables = Exact<{
+  input: ReceiveLotteryTransferBookInput;
+}>;
+
+
+export type NotifyLotteryTransferWrongStoreMutation = { __typename?: 'Mutation', notifyLotteryTransferWrongStore: boolean };
+
+export type MyScheduleEntryFieldsFragment = { __typename?: 'MyScheduleEntry', id: string, orgId: string, orgName: string, date: string, startAt: string, endAt: string, breakMinutes: number, shortName?: string | null, isLead: boolean, positionKey?: string | null, clockIn?: string | null, clockOut?: string | null, missing: Array<string>, tasks: Array<{ __typename?: 'MyScheduleTask', role: string, taskKey: string, positionKey: string }> };
+
+export type MySchedulePunchFieldsFragment = { __typename?: 'MySchedulePunch', id: string, type: string, at: string, entryId?: string | null, orgId: string, duplicate: boolean };
+
+export type MyScheduleQueryVariables = Exact<{
+  input?: InputMaybe<MyScheduleInput>;
+}>;
+
+
+export type MyScheduleQuery = { __typename?: 'Query', mySchedule: { __typename?: 'MySchedulePayload', month: string, today: string, canPunch: boolean, hasEntryToday: boolean, dayOffDates: Array<string>, currentOrg: { __typename?: 'MyScheduleOrg', id: string, name: string }, entries: Array<{ __typename?: 'MyScheduleEntry', id: string, orgId: string, orgName: string, date: string, startAt: string, endAt: string, breakMinutes: number, shortName?: string | null, isLead: boolean, positionKey?: string | null, clockIn?: string | null, clockOut?: string | null, missing: Array<string>, tasks: Array<{ __typename?: 'MyScheduleTask', role: string, taskKey: string, positionKey: string }> }>, punchCards: Array<{ __typename?: 'MySchedulePunchCard', day: string, entry: { __typename?: 'MyScheduleEntry', id: string, orgId: string, orgName: string, date: string, startAt: string, endAt: string, breakMinutes: number, shortName?: string | null, isLead: boolean, positionKey?: string | null, clockIn?: string | null, clockOut?: string | null, missing: Array<string>, tasks: Array<{ __typename?: 'MyScheduleTask', role: string, taskKey: string, positionKey: string }> } }>, openUnmatchedClockIn?: { __typename?: 'MySchedulePunch', id: string, type: string, at: string, entryId?: string | null, orgId: string, duplicate: boolean } | null, incomplete: Array<{ __typename?: 'MyScheduleEntry', id: string, orgId: string, orgName: string, date: string, startAt: string, endAt: string, breakMinutes: number, shortName?: string | null, isLead: boolean, positionKey?: string | null, clockIn?: string | null, clockOut?: string | null, missing: Array<string>, tasks: Array<{ __typename?: 'MyScheduleTask', role: string, taskKey: string, positionKey: string }> }>, changes: Array<{ __typename?: 'MyScheduleChange', id: string, date: string, action: string, orgName: string, beforeStartAt?: string | null, beforeEndAt?: string | null, afterStartAt?: string | null, afterEndAt?: string | null, reason: string, reasonNote?: string | null, createdAt: string }>, calendarDays: Array<{ __typename?: 'ScheduleRosterCalendarDay', date: string, type: string, name?: string | null, paletteKey?: string | null }> } };
+
+export type PunchMyScheduleMutationVariables = Exact<{
+  input: PunchMyScheduleInput;
+}>;
+
+
+export type PunchMyScheduleMutation = { __typename?: 'Mutation', punchMySchedule: { __typename?: 'MySchedulePunch', id: string, type: string, at: string, entryId?: string | null, orgId: string, duplicate: boolean } };
+
+export type ScheduleAttendancePunchFieldsFragment = { __typename?: 'ScheduleAttendancePunch', id: string, userId: string, userName: string, orgId: string, orgName: string, type: string, at: string, entryId?: string | null, source: string, duplicate: boolean };
+
+export type ScheduleAttendanceRowFieldsFragment = { __typename?: 'ScheduleAttendanceRow', entryId: string, userId: string, userName: string, orgId: string, orgName: string, date: string, startAt: string, endAt: string, breakMinutes: number, shortName?: string | null, clockIn?: string | null, clockOut?: string | null, status: string, lateMinutes: number, earlyLeaveMinutes: number, workedMinutes?: number | null, scheduledMinutes: number, missing: Array<string>, specialDayName?: string | null, specialDayCategory?: string | null, hasMakeup: boolean, punches: Array<{ __typename?: 'ScheduleAttendancePunch', id: string, userId: string, userName: string, orgId: string, orgName: string, type: string, at: string, entryId?: string | null, source: string, duplicate: boolean }> };
+
+export type ScheduleAttendanceAbilitiesFieldsFragment = { __typename?: 'ScheduleAttendanceAbilities', canViewAll: boolean, canReassign: boolean, canExport: boolean, canCreate: boolean };
+
+export type ScheduleAttendanceEntryOptionFieldsFragment = { __typename?: 'ScheduleAttendanceEntryOption', id: string, orgId: string, orgName: string, date: string, startAt: string, endAt: string, shortName?: string | null };
+
+export type ScheduleAttendanceByPersonQueryVariables = Exact<{
+  input: ScheduleAttendanceByPersonInput;
+}>;
+
+
+export type ScheduleAttendanceByPersonQuery = { __typename?: 'Query', scheduleAttendanceByPerson: { __typename?: 'ScheduleAttendanceByPersonPayload', month: string, orgId: string, userId: string, people: Array<{ __typename?: 'ScheduleAttendancePerson', userId: string, name: string }>, rows: Array<{ __typename?: 'ScheduleAttendanceRow', entryId: string, userId: string, userName: string, orgId: string, orgName: string, date: string, startAt: string, endAt: string, breakMinutes: number, shortName?: string | null, clockIn?: string | null, clockOut?: string | null, status: string, lateMinutes: number, earlyLeaveMinutes: number, workedMinutes?: number | null, scheduledMinutes: number, missing: Array<string>, specialDayName?: string | null, specialDayCategory?: string | null, hasMakeup: boolean, punches: Array<{ __typename?: 'ScheduleAttendancePunch', id: string, userId: string, userName: string, orgId: string, orgName: string, type: string, at: string, entryId?: string | null, source: string, duplicate: boolean }> }>, unmatched: Array<{ __typename?: 'ScheduleAttendancePunch', id: string, userId: string, userName: string, orgId: string, orgName: string, type: string, at: string, entryId?: string | null, source: string, duplicate: boolean }>, abilities: { __typename?: 'ScheduleAttendanceAbilities', canViewAll: boolean, canReassign: boolean, canExport: boolean, canCreate: boolean } } };
+
+export type ScheduleAttendanceByStoreQueryVariables = Exact<{
+  input: ScheduleAttendanceByStoreInput;
+}>;
+
+
+export type ScheduleAttendanceByStoreQuery = { __typename?: 'Query', scheduleAttendanceByStore: { __typename?: 'ScheduleAttendanceByStorePayload', orgId: string, orgName: string, date: string, scheduledCount: number, arrivedCount: number, absentCount: number, rows: Array<{ __typename?: 'ScheduleAttendanceRow', entryId: string, userId: string, userName: string, orgId: string, orgName: string, date: string, startAt: string, endAt: string, breakMinutes: number, shortName?: string | null, clockIn?: string | null, clockOut?: string | null, status: string, lateMinutes: number, earlyLeaveMinutes: number, workedMinutes?: number | null, scheduledMinutes: number, missing: Array<string>, specialDayName?: string | null, specialDayCategory?: string | null, hasMakeup: boolean, punches: Array<{ __typename?: 'ScheduleAttendancePunch', id: string, userId: string, userName: string, orgId: string, orgName: string, type: string, at: string, entryId?: string | null, source: string, duplicate: boolean }> }>, unmatched: Array<{ __typename?: 'ScheduleAttendancePunch', id: string, userId: string, userName: string, orgId: string, orgName: string, type: string, at: string, entryId?: string | null, source: string, duplicate: boolean }>, abilities: { __typename?: 'ScheduleAttendanceAbilities', canViewAll: boolean, canReassign: boolean, canExport: boolean, canCreate: boolean } } };
+
+export type ScheduleAttendanceExportQueryVariables = Exact<{
+  input: ScheduleAttendanceExportInput;
+}>;
+
+
+export type ScheduleAttendanceExportQuery = { __typename?: 'Query', scheduleAttendanceExport: { __typename?: 'ScheduleAttendanceExportPayload', month: string, sheets: Array<{ __typename?: 'ScheduleAttendanceExportSheet', orgId: string, orgName: string, rows: Array<{ __typename?: 'ScheduleAttendanceRow', entryId: string, userId: string, userName: string, orgId: string, orgName: string, date: string, startAt: string, endAt: string, breakMinutes: number, shortName?: string | null, clockIn?: string | null, clockOut?: string | null, status: string, lateMinutes: number, earlyLeaveMinutes: number, workedMinutes?: number | null, scheduledMinutes: number, missing: Array<string>, specialDayName?: string | null, specialDayCategory?: string | null, hasMakeup: boolean, punches: Array<{ __typename?: 'ScheduleAttendancePunch', id: string, userId: string, userName: string, orgId: string, orgName: string, type: string, at: string, entryId?: string | null, source: string, duplicate: boolean }> }> }> } };
+
+export type ScheduleAttendancePunchEntryOptionsQueryVariables = Exact<{
+  punchId: Scalars['ID']['input'];
+}>;
+
+
+export type ScheduleAttendancePunchEntryOptionsQuery = { __typename?: 'Query', scheduleAttendancePunchEntryOptions: Array<{ __typename?: 'ScheduleAttendanceEntryOption', id: string, orgId: string, orgName: string, date: string, startAt: string, endAt: string, shortName?: string | null }> };
+
+export type ReassignSchedulePunchMutationVariables = Exact<{
+  input: ReassignSchedulePunchInput;
+}>;
+
+
+export type ReassignSchedulePunchMutation = { __typename?: 'Mutation', reassignSchedulePunch: { __typename?: 'ScheduleAttendancePunch', id: string, userId: string, userName: string, orgId: string, orgName: string, type: string, at: string, entryId?: string | null, source: string, duplicate: boolean } };
+
+export type MakeupPunchEntryOptionsQueryVariables = Exact<{
+  input: MakeupPunchEntryOptionsInput;
+}>;
+
+
+export type MakeupPunchEntryOptionsQuery = { __typename?: 'Query', makeupPunchEntryOptions: Array<{ __typename?: 'ScheduleAttendanceEntryOption', id: string, orgId: string, orgName: string, date: string, startAt: string, endAt: string, shortName?: string | null }> };
+
+export type MyPendingMakeupPunchEntryIdsQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type MyPendingMakeupPunchEntryIdsQuery = { __typename?: 'Query', myPendingMakeupPunchEntryIds: Array<string> };
+
+export type MakeupPunchEntryExistsQueryVariables = Exact<{
+  submissionId: Scalars['ID']['input'];
+}>;
+
+
+export type MakeupPunchEntryExistsQuery = { __typename?: 'Query', makeupPunchEntryExists: boolean };
+
+export type ScheduleAutoRunSummaryFieldsFragment = { __typename?: 'ScheduleAutoRunSummary', id: string, at: string, byName?: string | null, from: string, to: string, filledCount: number, unfilledCount: number, addedDemandCount: number, addedDemandDays: number };
+
+export type ScheduleApplyTemplatesFieldsFragment = { __typename?: 'ApplyScheduleTemplatesPayload', createdCount: number, skippedSlots: number, filledDays: number, skippedDays: number };
+
+export type ScheduleAutoRunStatusQueryVariables = Exact<{
+  input: ScheduleRosterInput;
+}>;
+
+
+export type ScheduleAutoRunStatusQuery = { __typename?: 'Query', scheduleAutoRunStatus: { __typename?: 'ScheduleAutoRunStatusPayload', canAutoRun: boolean, running: boolean, latest?: { __typename?: 'ScheduleAutoRunSummary', id: string, at: string, byName?: string | null, from: string, to: string, filledCount: number, unfilledCount: number, addedDemandCount: number, addedDemandDays: number } | null, weekTemplates: Array<{ __typename?: 'ScheduleApplyWeekTemplate', id: string, name: string, days: Array<Array<string>> }>, conditions: Array<{ __typename?: 'ScheduleAutoRunConditionSetting', key: string, enabled: boolean }> } };
+
+export type ScheduleTemplateApplyPreviewQueryVariables = Exact<{
+  input: ApplyScheduleTemplatesInput;
+}>;
+
+
+export type ScheduleTemplateApplyPreviewQuery = { __typename?: 'Query', scheduleTemplateApplyPreview: { __typename?: 'ApplyScheduleTemplatesPayload', createdCount: number, skippedSlots: number, filledDays: number, skippedDays: number } };
+
+export type ApplyScheduleTemplatesMutationVariables = Exact<{
+  input: ApplyScheduleTemplatesInput;
+}>;
+
+
+export type ApplyScheduleTemplatesMutation = { __typename?: 'Mutation', applyScheduleTemplates: { __typename?: 'ApplyScheduleTemplatesPayload', createdCount: number, skippedSlots: number, filledDays: number, skippedDays: number } };
+
+export type ScheduleAutoRunPreviewQueryVariables = Exact<{
+  input: ScheduleAutoRunRangeInput;
+}>;
+
+
+export type ScheduleAutoRunPreviewQuery = { __typename?: 'Query', scheduleAutoRunPreview: { __typename?: 'ScheduleAutoRunPreviewPayload', demandCount: number, fillableDays: number, manualCount: number, autoCount: number, weekTemplate?: { __typename?: 'ScheduleApplyWeekTemplate', id: string, name: string } | null } };
+
+export type RunScheduleAutoRunMutationVariables = Exact<{
+  input: RunScheduleAutoRunInput;
+}>;
+
+
+export type RunScheduleAutoRunMutation = { __typename?: 'Mutation', runScheduleAutoRun: { __typename?: 'ScheduleAutoRunSummary', id: string, at: string, byName?: string | null, from: string, to: string, filledCount: number, unfilledCount: number, addedDemandCount: number, addedDemandDays: number } };
+
+export type ClearScheduleAutoAssignmentsMutationVariables = Exact<{
+  input: ScheduleAutoRunRangeInput;
+}>;
+
+
+export type ClearScheduleAutoAssignmentsMutation = { __typename?: 'Mutation', clearScheduleAutoAssignments: { __typename?: 'ClearScheduleAutoAssignmentsPayload', removedCount: number, deletedEntryIds: Array<string> } };
+
+export type ScheduleCheckItemFieldsFragment = { __typename?: 'ScheduleCheckItem', key: string, level: string, message: string, userId?: string | null, userName?: string | null, date: string, entryIds: Array<string>, actual?: number | null, limit?: number | null, from?: string | null, to?: string | null, startAt?: string | null, endAt?: string | null, isOtherStore: boolean, orgName?: string | null, understaffed?: { __typename?: 'ScheduleCheckUnderstaffed', demandId: string, role: string, missing: number, available: number, dayOff: number, timeRange: number, occupied: number, cannotLead: number } | null };
+
+export type ScheduleCheckQueryVariables = Exact<{
+  input: ScheduleRosterInput;
+}>;
+
+
+export type ScheduleCheckQuery = { __typename?: 'Query', scheduleCheck: { __typename?: 'ScheduleCheckPayload', orgId: string, month: string, limitCount: number, reminderCount: number, items: Array<{ __typename?: 'ScheduleCheckItem', key: string, level: string, message: string, userId?: string | null, userName?: string | null, date: string, entryIds: Array<string>, actual?: number | null, limit?: number | null, from?: string | null, to?: string | null, startAt?: string | null, endAt?: string | null, isOtherStore: boolean, orgName?: string | null, understaffed?: { __typename?: 'ScheduleCheckUnderstaffed', demandId: string, role: string, missing: number, available: number, dayOff: number, timeRange: number, occupied: number, cannotLead: number } | null }> } };
+
+export type PublishScheduleMutationVariables = Exact<{
+  input: PublishScheduleInput;
+}>;
+
+
+export type PublishScheduleMutation = { __typename?: 'Mutation', publishSchedule: { __typename?: 'PublishSchedulePayload', notifiedCount: number, period: { __typename?: 'SchedulePeriod', status: string, publishedAt?: string | null, publishedByName?: string | null } } };
+
+export type ScheduleDayOffFieldsFragment = { __typename?: 'ScheduleDayOff', id: string, userId: string, name: string, date: string, kind: string, startTime?: string | null, endTime?: string | null, note?: string | null, isPrimary: boolean, byName?: string | null, reason?: string | null, reasonNote?: string | null };
+
+export type ScheduleDayOffWindowFieldsFragment = { __typename?: 'ScheduleDayOffWindow', month: string, startDate: string, endDate: string, state: string, daysLeft: number };
+
+export type ScheduleDayOffViolationFieldsFragment = { __typename?: 'ScheduleDayOffViolation', key: string, level: string, message: string, dates: Array<string>, actual?: number | null, limit?: number | null, from?: string | null, to?: string | null };
+
+export type ScheduleDayOffEntryConflictFieldsFragment = { __typename?: 'ScheduleDayOffEntryConflict', date: string, startAt: string, endAt: string, orgName?: string | null };
+
+export type ScheduleDayOffDayFieldsFragment = { __typename?: 'ScheduleDayOffDay', date: string, staffCount: number, dayOffs: Array<{ __typename?: 'ScheduleDayOff', id: string, userId: string, name: string, date: string, kind: string, startTime?: string | null, endTime?: string | null, note?: string | null, isPrimary: boolean, byName?: string | null, reason?: string | null, reasonNote?: string | null }> };
+
+export type ScheduleDayOffLimitsFieldsFragment = { __typename?: 'ScheduleDayOffLimits', maxMonthly?: number | null, minMonthly?: number | null, maxDailyStaff?: number | null };
+
+export type MyScheduleDayOffsQueryVariables = Exact<{
+  input?: InputMaybe<MyScheduleDayOffsInput>;
+}>;
+
+
+export type MyScheduleDayOffsQuery = { __typename?: 'Query', myScheduleDayOffs: { __typename?: 'MyScheduleDayOffsPayload', month: string, canEdit: boolean, canOverride: boolean, dayOffCount: number, primaryOrg?: { __typename?: 'ScheduleDayOffOrg', id: string, name: string } | null, window?: { __typename?: 'ScheduleDayOffWindow', month: string, startDate: string, endDate: string, state: string, daysLeft: number } | null, limits: { __typename?: 'ScheduleDayOffLimits', maxMonthly?: number | null, minMonthly?: number | null, maxDailyStaff?: number | null }, myDayOffs: Array<{ __typename?: 'ScheduleDayOff', id: string, userId: string, name: string, date: string, kind: string, startTime?: string | null, endTime?: string | null, note?: string | null, isPrimary: boolean, byName?: string | null, reason?: string | null, reasonNote?: string | null }>, days: Array<{ __typename?: 'ScheduleDayOffDay', date: string, staffCount: number, dayOffs: Array<{ __typename?: 'ScheduleDayOff', id: string, userId: string, name: string, date: string, kind: string, startTime?: string | null, endTime?: string | null, note?: string | null, isPrimary: boolean, byName?: string | null, reason?: string | null, reasonNote?: string | null }> }>, violations: Array<{ __typename?: 'ScheduleDayOffViolation', key: string, level: string, message: string, dates: Array<string>, actual?: number | null, limit?: number | null, from?: string | null, to?: string | null }> } };
+
+export type AddMyScheduleDayOffsMutationVariables = Exact<{
+  input: AddMyScheduleDayOffsInput;
+}>;
+
+
+export type AddMyScheduleDayOffsMutation = { __typename?: 'Mutation', addMyScheduleDayOffs: { __typename?: 'SaveScheduleDayOffsPayload', items: Array<{ __typename?: 'ScheduleDayOff', id: string, userId: string, name: string, date: string, kind: string, startTime?: string | null, endTime?: string | null, note?: string | null, isPrimary: boolean, byName?: string | null, reason?: string | null, reasonNote?: string | null }>, violations: Array<{ __typename?: 'ScheduleDayOffViolation', key: string, level: string, message: string, dates: Array<string>, actual?: number | null, limit?: number | null, from?: string | null, to?: string | null }>, entryConflicts: Array<{ __typename?: 'ScheduleDayOffEntryConflict', date: string, startAt: string, endAt: string, orgName?: string | null }> } };
+
+export type DeleteMyScheduleDayOffMutationVariables = Exact<{
+  input: DeleteMyScheduleDayOffInput;
+}>;
+
+
+export type DeleteMyScheduleDayOffMutation = { __typename?: 'Mutation', deleteMyScheduleDayOff: { __typename?: 'DeleteScheduleDayOffPayload', id: string } };
+
+export type ScheduleDayOffOverviewQueryVariables = Exact<{
+  input?: InputMaybe<ScheduleDayOffOverviewInput>;
+}>;
+
+
+export type ScheduleDayOffOverviewQuery = { __typename?: 'Query', scheduleDayOffOverview: { __typename?: 'ScheduleDayOffOverviewPayload', orgId: string, orgName: string, month: string, canEdit: boolean, window: { __typename?: 'ScheduleDayOffWindow', month: string, startDate: string, endDate: string, state: string, daysLeft: number }, limits: { __typename?: 'ScheduleDayOffLimits', maxMonthly?: number | null, minMonthly?: number | null, maxDailyStaff?: number | null }, staff: Array<{ __typename?: 'ScheduleDayOffStaff', userId: string, name: string, isPrimary: boolean, dayOffCount: number }>, days: Array<{ __typename?: 'ScheduleDayOffDay', date: string, staffCount: number, dayOffs: Array<{ __typename?: 'ScheduleDayOff', id: string, userId: string, name: string, date: string, kind: string, startTime?: string | null, endTime?: string | null, note?: string | null, isPrimary: boolean, byName?: string | null, reason?: string | null, reasonNote?: string | null }> }> } };
+
+export type AddScheduleDayOffsOnBehalfMutationVariables = Exact<{
+  input: AddScheduleDayOffsOnBehalfInput;
+}>;
+
+
+export type AddScheduleDayOffsOnBehalfMutation = { __typename?: 'Mutation', addScheduleDayOffsOnBehalf: { __typename?: 'SaveScheduleDayOffsPayload', items: Array<{ __typename?: 'ScheduleDayOff', id: string, userId: string, name: string, date: string, kind: string, startTime?: string | null, endTime?: string | null, note?: string | null, isPrimary: boolean, byName?: string | null, reason?: string | null, reasonNote?: string | null }>, violations: Array<{ __typename?: 'ScheduleDayOffViolation', key: string, level: string, message: string, dates: Array<string>, actual?: number | null, limit?: number | null, from?: string | null, to?: string | null }>, entryConflicts: Array<{ __typename?: 'ScheduleDayOffEntryConflict', date: string, startAt: string, endAt: string, orgName?: string | null }> } };
+
+export type DeleteScheduleDayOffOnBehalfMutationVariables = Exact<{
+  input: DeleteScheduleDayOffOnBehalfInput;
+}>;
+
+
+export type DeleteScheduleDayOffOnBehalfMutation = { __typename?: 'Mutation', deleteScheduleDayOffOnBehalf: { __typename?: 'DeleteScheduleDayOffPayload', id: string } };
+
+export type ScheduleDemandFieldsFragment = { __typename?: 'ScheduleDemand', id: string, date: string, startAt: string, endAt: string, positionKey: string, positionNote?: string | null, templateId?: string | null, source: string, createdAt: string, tasks: Array<{ __typename?: 'ScheduleDemandTask', taskId: string, role: string, taskKey: string, entryId?: string | null, userId?: string | null, userName?: string | null }> };
+
+export type ScheduleEntryFieldsFragment = { __typename?: 'ScheduleEntry', id: string, userId: string, date: string, startAt: string, endAt: string, breakMinutes: number, deletable: boolean, assignments: Array<{ __typename?: 'ScheduleEntryAssignment', demandId: string, taskId: string, role: string, taskKey: string, source: string, reason?: string | null }> };
+
+export type ScheduleRosterPersonFieldsFragment = { __typename?: 'ScheduleRosterPerson', userId: string, name: string, employmentType?: string | null, canLead: boolean, isPrimary: boolean, isCandidate: boolean, stats: { __typename?: 'ScheduleRosterStats', shiftCount: number, leadShiftCount: number, workMinutes: number, dayOffDays: number, fullDayOffDays: number, longestStreak: number, timeRangeDays: Array<{ __typename?: 'ScheduleRosterTimeRangeDay', date: string, slots: Array<{ __typename?: 'ScheduleRosterSlot', startTime: string, endTime: string }> }> } };
+
+export type ScheduleRosterTemplateFieldsFragment = { __typename?: 'ScheduleRosterTemplate', id: string, name: string, shortName: string, startTime: string, endTime: string, positionKey: string, paletteKey?: string | null, tasks: Array<{ __typename?: 'ScheduleTemplateTask', taskId: string, role: string, taskKey: string }> };
+
+export type ScheduleRosterQueryVariables = Exact<{
+  input: ScheduleRosterInput;
+}>;
+
+
+export type ScheduleRosterQuery = { __typename?: 'Query', scheduleRoster: { __typename?: 'ScheduleRosterPayload', orgId: string, orgName: string, month: string, canEdit: boolean, canSaveTemplate: boolean, canUsePunchTime: boolean, period: { __typename?: 'SchedulePeriod', status: string, publishedAt?: string | null, publishedByName?: string | null }, settings: { __typename?: 'ScheduleRosterSettings', defaultLeaderTaskKey: string, defaultHelperTaskKey: string, maxMonthlyDayOffs?: number | null, minMonthlyDayOffs?: number | null, entryMatchToleranceMinutes: number, breakTiers: Array<{ __typename?: 'ScheduleRosterBreakTier', minMinutes: number, breakMinutes: number }> }, people: Array<{ __typename?: 'ScheduleRosterPerson', userId: string, name: string, employmentType?: string | null, canLead: boolean, isPrimary: boolean, isCandidate: boolean, stats: { __typename?: 'ScheduleRosterStats', shiftCount: number, leadShiftCount: number, workMinutes: number, dayOffDays: number, fullDayOffDays: number, longestStreak: number, timeRangeDays: Array<{ __typename?: 'ScheduleRosterTimeRangeDay', date: string, slots: Array<{ __typename?: 'ScheduleRosterSlot', startTime: string, endTime: string }> }> } }>, demands: Array<{ __typename?: 'ScheduleDemand', id: string, date: string, startAt: string, endAt: string, positionKey: string, positionNote?: string | null, templateId?: string | null, source: string, createdAt: string, tasks: Array<{ __typename?: 'ScheduleDemandTask', taskId: string, role: string, taskKey: string, entryId?: string | null, userId?: string | null, userName?: string | null }> }>, entries: Array<{ __typename?: 'ScheduleEntry', id: string, userId: string, date: string, startAt: string, endAt: string, breakMinutes: number, deletable: boolean, assignments: Array<{ __typename?: 'ScheduleEntryAssignment', demandId: string, taskId: string, role: string, taskKey: string, source: string, reason?: string | null }> }>, otherStoreEntries: Array<{ __typename?: 'ScheduleOtherStoreEntry', userId: string, date: string, startAt: string, endAt: string, orgName?: string | null }>, unavailability: Array<{ __typename?: 'ScheduleRosterUnavailability', userId: string, date: string, fullDay: boolean, slots: Array<{ __typename?: 'ScheduleRosterSlot', startTime: string, endTime: string }> }>, calendarDays: Array<{ __typename?: 'ScheduleRosterCalendarDay', date: string, type: string, name?: string | null, paletteKey?: string | null }>, templates: Array<{ __typename?: 'ScheduleRosterTemplate', id: string, name: string, shortName: string, startTime: string, endTime: string, positionKey: string, paletteKey?: string | null, tasks: Array<{ __typename?: 'ScheduleTemplateTask', taskId: string, role: string, taskKey: string }> }>, unmatchedPunches: Array<{ __typename?: 'ScheduleRosterPunch', id: string, userId: string, date: string, type: string, at: string }> } };
+
+export type SaveScheduleDemandMutationVariables = Exact<{
+  input: SaveScheduleDemandInput;
+}>;
+
+
+export type SaveScheduleDemandMutation = { __typename?: 'Mutation', saveScheduleDemand: { __typename?: 'SaveScheduleDemandPayload', deletedEntryIds: Array<string>, item: { __typename?: 'ScheduleDemand', id: string, date: string, startAt: string, endAt: string, positionKey: string, positionNote?: string | null, templateId?: string | null, source: string, createdAt: string, tasks: Array<{ __typename?: 'ScheduleDemandTask', taskId: string, role: string, taskKey: string, entryId?: string | null, userId?: string | null, userName?: string | null }> } } };
+
+export type DeleteScheduleDemandMutationVariables = Exact<{
+  input: DeleteScheduleDemandInput;
+}>;
+
+
+export type DeleteScheduleDemandMutation = { __typename?: 'Mutation', deleteScheduleDemand: { __typename?: 'DeleteScheduleDemandPayload', id: string, deletedEntryIds: Array<string> } };
+
+export type SaveScheduleEntryMutationVariables = Exact<{
+  input: SaveScheduleEntryInput;
+}>;
+
+
+export type SaveScheduleEntryMutation = { __typename?: 'Mutation', saveScheduleEntry: { __typename?: 'SaveScheduleEntryPayload', item: { __typename?: 'ScheduleEntry', id: string, userId: string, date: string, startAt: string, endAt: string, breakMinutes: number, deletable: boolean, assignments: Array<{ __typename?: 'ScheduleEntryAssignment', demandId: string, taskId: string, role: string, taskKey: string, source: string, reason?: string | null }> } } };
+
+export type DeleteScheduleEntryMutationVariables = Exact<{
+  input: DeleteScheduleEntryInput;
+}>;
+
+
+export type DeleteScheduleEntryMutation = { __typename?: 'Mutation', deleteScheduleEntry: { __typename?: 'DeleteScheduleEntryPayload', id: string } };
+
+export type RemoveScheduleDayEntriesMutationVariables = Exact<{
+  input: RemoveScheduleDayEntriesInput;
+}>;
+
+
+export type RemoveScheduleDayEntriesMutation = { __typename?: 'Mutation', removeScheduleDayEntries: { __typename?: 'RemoveScheduleDayEntriesPayload', deletedIds: Array<string>, skippedIds: Array<string> } };
+
+export type ScheduleFieldOptionsQueryVariables = Exact<{
+  categoryKey: Scalars['String']['input'];
+}>;
+
+
+export type ScheduleFieldOptionsQuery = { __typename?: 'Query', scheduleFieldOptions: { __typename?: 'ScheduleFieldOptionsPayload', totalCount: number, items: Array<{ __typename?: 'ScheduleFieldOption', value: string, label: string }> } };
+
+export type ScheduleRuleSettingFieldsFragment = { __typename?: 'ScheduleRuleSetting', enabled: boolean, value: Record<string, unknown>, level?: string | null, order: number, source: ScheduleRuleSource, sourceOrgName?: string | null };
+
+export type ScheduleRulesFieldsFragment = { __typename?: 'ScheduleRulesPayload', orgId: string, orgName: string, isTenantTop: boolean, canEdit: boolean, items: Array<{ __typename?: 'ScheduleRule', key: string, group: string, valueType: string, unit?: string | null, hasLevel: boolean, effective: { __typename?: 'ScheduleRuleSetting', enabled: boolean, value: Record<string, unknown>, level?: string | null, order: number, source: ScheduleRuleSource, sourceOrgName?: string | null }, parent?: { __typename?: 'ScheduleRuleSetting', enabled: boolean, value: Record<string, unknown>, level?: string | null, order: number, source: ScheduleRuleSource, sourceOrgName?: string | null } | null }> };
+
+export type ScheduleRulesQueryVariables = Exact<{
+  input?: InputMaybe<ScheduleRulesInput>;
+}>;
+
+
+export type ScheduleRulesQuery = { __typename?: 'Query', scheduleRules: { __typename?: 'ScheduleRulesPayload', orgId: string, orgName: string, isTenantTop: boolean, canEdit: boolean, items: Array<{ __typename?: 'ScheduleRule', key: string, group: string, valueType: string, unit?: string | null, hasLevel: boolean, effective: { __typename?: 'ScheduleRuleSetting', enabled: boolean, value: Record<string, unknown>, level?: string | null, order: number, source: ScheduleRuleSource, sourceOrgName?: string | null }, parent?: { __typename?: 'ScheduleRuleSetting', enabled: boolean, value: Record<string, unknown>, level?: string | null, order: number, source: ScheduleRuleSource, sourceOrgName?: string | null } | null }> } };
+
+export type CustomizeScheduleRuleMutationVariables = Exact<{
+  input: CustomizeScheduleRuleInput;
+}>;
+
+
+export type CustomizeScheduleRuleMutation = { __typename?: 'Mutation', customizeScheduleRule: { __typename?: 'ScheduleRuleMutationPayload', rules: { __typename?: 'ScheduleRulesPayload', orgId: string, orgName: string, isTenantTop: boolean, canEdit: boolean, items: Array<{ __typename?: 'ScheduleRule', key: string, group: string, valueType: string, unit?: string | null, hasLevel: boolean, effective: { __typename?: 'ScheduleRuleSetting', enabled: boolean, value: Record<string, unknown>, level?: string | null, order: number, source: ScheduleRuleSource, sourceOrgName?: string | null }, parent?: { __typename?: 'ScheduleRuleSetting', enabled: boolean, value: Record<string, unknown>, level?: string | null, order: number, source: ScheduleRuleSource, sourceOrgName?: string | null } | null }> } } };
+
+export type CustomizeScheduleAutoRunMutationVariables = Exact<{
+  input: CustomizeScheduleAutoRunInput;
+}>;
+
+
+export type CustomizeScheduleAutoRunMutation = { __typename?: 'Mutation', customizeScheduleAutoRun: { __typename?: 'ScheduleRuleMutationPayload', rules: { __typename?: 'ScheduleRulesPayload', orgId: string, orgName: string, isTenantTop: boolean, canEdit: boolean, items: Array<{ __typename?: 'ScheduleRule', key: string, group: string, valueType: string, unit?: string | null, hasLevel: boolean, effective: { __typename?: 'ScheduleRuleSetting', enabled: boolean, value: Record<string, unknown>, level?: string | null, order: number, source: ScheduleRuleSource, sourceOrgName?: string | null }, parent?: { __typename?: 'ScheduleRuleSetting', enabled: boolean, value: Record<string, unknown>, level?: string | null, order: number, source: ScheduleRuleSource, sourceOrgName?: string | null } | null }> } } };
+
+export type RestoreScheduleRuleMutationVariables = Exact<{
+  input: RestoreScheduleRuleInput;
+}>;
+
+
+export type RestoreScheduleRuleMutation = { __typename?: 'Mutation', restoreScheduleRule: { __typename?: 'ScheduleRuleMutationPayload', rules: { __typename?: 'ScheduleRulesPayload', orgId: string, orgName: string, isTenantTop: boolean, canEdit: boolean, items: Array<{ __typename?: 'ScheduleRule', key: string, group: string, valueType: string, unit?: string | null, hasLevel: boolean, effective: { __typename?: 'ScheduleRuleSetting', enabled: boolean, value: Record<string, unknown>, level?: string | null, order: number, source: ScheduleRuleSource, sourceOrgName?: string | null }, parent?: { __typename?: 'ScheduleRuleSetting', enabled: boolean, value: Record<string, unknown>, level?: string | null, order: number, source: ScheduleRuleSource, sourceOrgName?: string | null } | null }> } } };
+
+export type ScheduleStaffRowFieldsFragment = { __typename?: 'ScheduleStaffRow', userId: string, name: string, account: string, joinedElsewhere: boolean, staff?: { __typename?: 'ScheduleStaffProfile', id: string, employmentType: string, enabled: boolean, note?: string | null, primaryElsewhere: boolean, isShared: boolean, orgs: Array<{ __typename?: 'ScheduleStaffOrg', orgId: string, orgName: string, canLead: boolean, isPrimary: boolean, sortOrder: number }> } | null };
+
+export type ScheduleStaffQueryVariables = Exact<{
+  input?: InputMaybe<ScheduleStaffListInput>;
+}>;
+
+
+export type ScheduleStaffQuery = { __typename?: 'Query', scheduleStaff: { __typename?: 'ScheduleStaffListPayload', totalCount: number, canEdit: boolean, items: Array<{ __typename?: 'ScheduleStaffRow', userId: string, name: string, account: string, joinedElsewhere: boolean, staff?: { __typename?: 'ScheduleStaffProfile', id: string, employmentType: string, enabled: boolean, note?: string | null, primaryElsewhere: boolean, isShared: boolean, orgs: Array<{ __typename?: 'ScheduleStaffOrg', orgId: string, orgName: string, canLead: boolean, isPrimary: boolean, sortOrder: number }> } | null }> } };
+
+export type AddScheduleStaffMutationVariables = Exact<{
+  input: AddScheduleStaffInput;
+}>;
+
+
+export type AddScheduleStaffMutation = { __typename?: 'Mutation', addScheduleStaff: { __typename?: 'AddScheduleStaffPayload', items: Array<{ __typename?: 'ScheduleStaffRow', userId: string, name: string, account: string, joinedElsewhere: boolean, staff?: { __typename?: 'ScheduleStaffProfile', id: string, employmentType: string, enabled: boolean, note?: string | null, primaryElsewhere: boolean, isShared: boolean, orgs: Array<{ __typename?: 'ScheduleStaffOrg', orgId: string, orgName: string, canLead: boolean, isPrimary: boolean, sortOrder: number }> } | null }> } };
+
+export type UpdateScheduleStaffMutationVariables = Exact<{
+  input: UpdateScheduleStaffInput;
+}>;
+
+
+export type UpdateScheduleStaffMutation = { __typename?: 'Mutation', updateScheduleStaff: { __typename?: 'ScheduleStaffPayload', item: { __typename?: 'ScheduleStaffRow', userId: string, name: string, account: string, joinedElsewhere: boolean, staff?: { __typename?: 'ScheduleStaffProfile', id: string, employmentType: string, enabled: boolean, note?: string | null, primaryElsewhere: boolean, isShared: boolean, orgs: Array<{ __typename?: 'ScheduleStaffOrg', orgId: string, orgName: string, canLead: boolean, isPrimary: boolean, sortOrder: number }> } | null } } };
+
+export type ScheduleDemandTemplateFieldsFragment = { __typename?: 'ScheduleDemandTemplate', id: string, name: string, shortName: string, startTime: string, endTime: string, positionKey: string, paletteKey?: string | null, canEdit: boolean, tasks: Array<{ __typename?: 'ScheduleTemplateTask', taskId: string, role: string, taskKey: string }>, ownerOrg: { __typename?: 'ScheduleOwnerOrg', id: string, name: string } };
+
+export type ScheduleDemandTemplatesQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type ScheduleDemandTemplatesQuery = { __typename?: 'Query', scheduleDemandTemplates: { __typename?: 'ScheduleDemandTemplatesPayload', totalCount: number, canCreate: boolean, items: Array<{ __typename?: 'ScheduleDemandTemplate', id: string, name: string, shortName: string, startTime: string, endTime: string, positionKey: string, paletteKey?: string | null, canEdit: boolean, tasks: Array<{ __typename?: 'ScheduleTemplateTask', taskId: string, role: string, taskKey: string }>, ownerOrg: { __typename?: 'ScheduleOwnerOrg', id: string, name: string } }> } };
+
+export type SaveScheduleDemandTemplateMutationVariables = Exact<{
+  input: SaveScheduleDemandTemplateInput;
+}>;
+
+
+export type SaveScheduleDemandTemplateMutation = { __typename?: 'Mutation', saveScheduleDemandTemplate: { __typename?: 'ScheduleDemandTemplatePayload', item: { __typename?: 'ScheduleDemandTemplate', id: string, name: string, shortName: string, startTime: string, endTime: string, positionKey: string, paletteKey?: string | null, canEdit: boolean, tasks: Array<{ __typename?: 'ScheduleTemplateTask', taskId: string, role: string, taskKey: string }>, ownerOrg: { __typename?: 'ScheduleOwnerOrg', id: string, name: string } } } };
+
+export type DeleteScheduleDemandTemplateMutationVariables = Exact<{
+  input: DeleteScheduleTemplateInput;
+}>;
+
+
+export type DeleteScheduleDemandTemplateMutation = { __typename?: 'Mutation', deleteScheduleDemandTemplate: { __typename?: 'DeleteScheduleTemplatePayload', id: string } };
+
+export type ScheduleDemandWeekTemplateFieldsFragment = { __typename?: 'ScheduleDemandWeekTemplate', id: string, name: string, days: Array<Array<string>>, enabled: boolean, canEdit: boolean, ownerOrg: { __typename?: 'ScheduleOwnerOrg', id: string, name: string } };
+
+export type ScheduleDemandWeekTemplatesQueryVariables = Exact<{
+  input?: InputMaybe<ScheduleDemandWeekTemplatesInput>;
+}>;
+
+
+export type ScheduleDemandWeekTemplatesQuery = { __typename?: 'Query', scheduleDemandWeekTemplates: { __typename?: 'ScheduleDemandWeekTemplatesPayload', totalCount: number, canCreate: boolean, items: Array<{ __typename?: 'ScheduleDemandWeekTemplate', id: string, name: string, days: Array<Array<string>>, enabled: boolean, canEdit: boolean, ownerOrg: { __typename?: 'ScheduleOwnerOrg', id: string, name: string } }> } };
+
+export type SaveScheduleDemandWeekTemplateMutationVariables = Exact<{
+  input: SaveScheduleDemandWeekTemplateInput;
+}>;
+
+
+export type SaveScheduleDemandWeekTemplateMutation = { __typename?: 'Mutation', saveScheduleDemandWeekTemplate: { __typename?: 'ScheduleDemandWeekTemplatePayload', item: { __typename?: 'ScheduleDemandWeekTemplate', id: string, name: string, days: Array<Array<string>>, enabled: boolean, canEdit: boolean, ownerOrg: { __typename?: 'ScheduleOwnerOrg', id: string, name: string } } } };
+
+export type DeleteScheduleDemandWeekTemplateMutationVariables = Exact<{
+  input: DeleteScheduleTemplateInput;
+}>;
+
+
+export type DeleteScheduleDemandWeekTemplateMutation = { __typename?: 'Mutation', deleteScheduleDemandWeekTemplate: { __typename?: 'DeleteScheduleTemplatePayload', id: string } };
+
+export type ScheduleCalendarDayFieldsFragment = { __typename?: 'ScheduleCalendarDay', id: string, date: string, type: string, category?: string | null, name?: string | null, note?: string | null, paletteKey?: string | null, canEdit: boolean, ownerOrg: { __typename?: 'ScheduleOwnerOrg', id: string, name: string } };
+
+export type ScheduleCalendarQueryVariables = Exact<{
+  input: ScheduleCalendarInput;
+}>;
+
+
+export type ScheduleCalendarQuery = { __typename?: 'Query', scheduleCalendar: { __typename?: 'ScheduleCalendarPayload', orgId: string, orgName: string, month: string, canEdit: boolean, days: Array<{ __typename?: 'ScheduleCalendarDay', id: string, date: string, type: string, category?: string | null, name?: string | null, note?: string | null, paletteKey?: string | null, canEdit: boolean, ownerOrg: { __typename?: 'ScheduleOwnerOrg', id: string, name: string } }> } };
+
+export type SaveScheduleCalendarDayMutationVariables = Exact<{
+  input: SaveScheduleCalendarDayInput;
+}>;
+
+
+export type SaveScheduleCalendarDayMutation = { __typename?: 'Mutation', saveScheduleCalendarDay: { __typename?: 'ScheduleCalendarDayPayload', item: { __typename?: 'ScheduleCalendarDay', id: string, date: string, type: string, category?: string | null, name?: string | null, note?: string | null, paletteKey?: string | null, canEdit: boolean, ownerOrg: { __typename?: 'ScheduleOwnerOrg', id: string, name: string } } } };
+
+export type DeleteScheduleCalendarDayMutationVariables = Exact<{
+  input: DeleteScheduleCalendarDayInput;
+}>;
+
+
+export type DeleteScheduleCalendarDayMutation = { __typename?: 'Mutation', deleteScheduleCalendarDay: { __typename?: 'DeleteScheduleCalendarDayPayload', id: string } };
 
 
 export const WorkflowTaskFieldsFragmentDoc = `
@@ -5418,6 +9721,11 @@ export const DemoItemTwoFieldsFragmentDoc = `
     canEdit
     canDelete
   }
+  shareOrgs {
+    orgId
+    includeDescendants
+  }
+  isShared
 }
     `;
 export const FieldFieldsFragmentDoc = `
@@ -5493,6 +9801,7 @@ export const FormSubmissionFieldsFragmentDoc = `
     id
     name
   }
+  serialNo
   submittedAt
   createdAt
   updatedAt
@@ -5500,6 +9809,8 @@ export const FormSubmissionFieldsFragmentDoc = `
   blocked
   voidedAt
   voidReason
+  voidReasonKey
+  voidReasonLabel
   replacedById
   copiedFrom
   touched
@@ -5539,6 +9850,13 @@ export const FormFieldsFragmentDoc = `
   currentVersion
   tabLabelTemplate
   allowDraft
+  serial {
+    prefix
+    period
+    digits
+    separator
+  }
+  voidReasonCategoryKey
   hasDraft
   tenantEnabled
   assignments {
@@ -5632,10 +9950,19 @@ export const NotificationItemFragmentDoc = `
   createdAt
 }
     `;
+export const NotificationScheduleFieldsFragmentDoc = `
+    fragment NotificationScheduleFields on NotificationSchedule {
+  kind
+  daysBefore
+  dayOfMonth
+  time
+}
+    `;
 export const NotificationSettingItemFragmentDoc = `
     fragment NotificationSettingItem on NotificationSetting {
   type
   name
+  category
   orgScope {
     ref
     range
@@ -5643,10 +9970,19 @@ export const NotificationSettingItemFragmentDoc = `
   audience
   isDefault
   defaultAudience
+  recipientNote
+  schedule {
+    ...NotificationScheduleFields
+  }
+  defaultSchedule {
+    ...NotificationScheduleFields
+  }
+  isScheduleDefault
+  scheduleDateLabel
   updatedAt
   updatedBy
 }
-    `;
+    ${NotificationScheduleFieldsFragmentDoc}`;
 export const OrgNodeFieldsFragmentDoc = `
     fragment OrgNodeFields on OrgNode {
   id
@@ -5655,6 +9991,16 @@ export const OrgNodeFieldsFragmentDoc = `
   enabled
   outOfScope
   ownerUserId
+}
+    `;
+export const TenantOrgNodeFieldsFragmentDoc = `
+    fragment TenantOrgNodeFields on TenantOrgNode {
+  id
+  name
+  parentId
+  enabled
+  isVisible
+  isManaged
 }
     `;
 export const OrgMemberFieldsFragmentDoc = `
@@ -5829,6 +10175,18 @@ export const RoleUsersFieldsFragmentDoc = `
   }
 }
     ${RoleFieldsFragmentDoc}`;
+export const SidebarBadgeSettingItemFragmentDoc = `
+    fragment SidebarBadgeSettingItem on SidebarBadgeSetting {
+  moduleKey
+  moduleName
+  descriptionKey
+  requires
+  audience
+  isDefault
+  updatedAt
+  updatedBy
+}
+    `;
 export const UserDelegationFieldsFragmentDoc = `
     fragment UserDelegationFields on UserDelegationModel {
   id
@@ -5919,6 +10277,991 @@ export const WorkflowValidationFieldsFragmentDoc = `
     property
     exprPath
   }
+}
+    `;
+export const FieldOptionColorFieldsFragmentDoc = `
+    fragment FieldOptionColorFields on FieldOptionColor {
+  fieldId
+  value
+  paletteKey
+}
+    `;
+export const LotteryAccountsRefFieldsFragmentDoc = `
+    fragment LotteryAccountsRefFields on LotteryAccountsRef {
+  id
+  name
+}
+    `;
+export const LotteryBankAccountFieldsFragmentDoc = `
+    fragment LotteryBankAccountFields on LotteryBankAccount {
+  id
+  bankCode
+  branchName
+  accountNo
+  accountName
+  label
+  openingBalance
+  openingDate
+  status
+  note
+  balance
+  hasTransactions
+  shareOrgs {
+    orgId
+    includeDescendants
+  }
+  usageOrgs {
+    ...LotteryAccountsRefFields
+  }
+  createdAt
+  updatedAt
+  abilities {
+    canEdit
+    canDelete
+    canRecordTransaction
+    canReverse
+  }
+}
+    ${LotteryAccountsRefFieldsFragmentDoc}`;
+export const LotteryBankTransactionFieldsFragmentDoc = `
+    fragment LotteryBankTransactionFields on LotteryBankTransaction {
+  id
+  accountId
+  occurredAt
+  type
+  direction
+  amount
+  balanceAfter
+  branch {
+    ...LotteryAccountsRefFields
+  }
+  refType
+  refId
+  settlementSide
+  summary
+  handler
+  note
+  reversalOf
+  reversedById
+  createdBy {
+    ...LotteryAccountsRefFields
+  }
+  createdAt
+  abilities {
+    canReverse
+  }
+}
+    ${LotteryAccountsRefFieldsFragmentDoc}`;
+export const LotteryCashMovementFieldsFragmentDoc = `
+    fragment LotteryCashMovementFields on LotteryCashMovement {
+  id
+  org {
+    ...LotteryAccountsRefFields
+  }
+  occurredAt
+  type
+  from
+  to
+  reason
+  cashPoint {
+    ...LotteryAccountsRefFields
+  }
+  amount
+  payee
+  note
+  refType
+  refId
+  reversalOf
+  reversedById
+  createdBy {
+    ...LotteryAccountsRefFields
+  }
+}
+    ${LotteryAccountsRefFieldsFragmentDoc}`;
+export const LotterySettlementFieldsFragmentDoc = `
+    fragment LotterySettlementFields on LotterySettlement {
+  moduleKey
+  label
+  kind
+  refId
+  docNo
+  counterparty
+  payable
+  pendingPayee
+  sides {
+    side
+    label
+    role
+    methods
+    branch {
+      ...LotteryAccountsRefFields
+    }
+    totalOut
+    totalIn
+    net
+    canSettle
+    buttons {
+      button
+      defaultAmount
+      canUse
+    }
+  }
+  records {
+    id
+    method
+    side
+    type
+    direction
+    amount
+    accountLabel
+    handler
+    note
+    occurredAt
+    createdBy {
+      ...LotteryAccountsRefFields
+    }
+    reversalOf
+    reversedById
+    canReverse
+  }
+}
+    ${LotteryAccountsRefFieldsFragmentDoc}`;
+export const LotteryOutstandingSettlementFieldsFragmentDoc = `
+    fragment LotteryOutstandingSettlementFields on LotteryOutstandingSettlement {
+  moduleKey
+  label
+  refId
+  docNo
+  side
+  sideLabel
+  branch {
+    ...LotteryAccountsRefFields
+  }
+  counterparty
+  payable
+  net
+  kind
+  amount
+  button
+  daysOutstanding
+  canSettle
+}
+    ${LotteryAccountsRefFieldsFragmentDoc}`;
+export const LotteryDealerRefFieldsFragmentDoc = `
+    fragment LotteryDealerRefFields on LotteryDealerRef {
+  id
+  type
+  licenseNo
+  name
+  storeName
+  status
+}
+    `;
+export const LotteryDealerContactRefFieldsFragmentDoc = `
+    fragment LotteryDealerContactRefFields on LotteryDealerContactRef {
+  id
+  name
+  status
+}
+    `;
+export const LotteryDealerFieldsFragmentDoc = `
+    fragment LotteryDealerFields on LotteryDealer {
+  id
+  type
+  licenseNo
+  name
+  status
+  licenseApprovedAt
+  licenseExpiresAt
+  licenseState
+  coSalesDealer {
+    ...LotteryDealerRefFields
+  }
+  agents {
+    ...LotteryDealerContactRefFields
+  }
+  trustees {
+    ...LotteryDealerContactRefFields
+  }
+  introducers {
+    ...LotteryDealerContactRefFields
+  }
+  lastPurchaseBaseDate
+  lastSelfPurchaseBaseDate
+  lastPurchaseDate
+  lastSelfPurchaseDate
+  daysSinceLastPurchase
+  daysSinceLastSelfPurchase
+  currentQuarterSigned
+  storeOrg {
+    id
+    name
+  }
+  storeName
+  businessAddress
+  storePhone
+  terminalNo
+  coSellerCount
+  rentFee
+  rentCycle
+  rentStartMonth
+  rentDueDay
+  nextRentDueAt
+  nationalId
+  birthday
+  phone
+  mobile
+  email
+  mailingAddress
+  residentialAddress
+  residentialSameAsMailing
+  note
+  createdBy {
+    id
+    name
+  }
+  createdAt
+  updatedAt
+  abilities {
+    canEdit
+    canEditLastPurchaseBaseDate
+    canEditLastSelfPurchaseBaseDate
+  }
+  shareOrgs {
+    orgId
+    includeDescendants
+  }
+  isShared
+}
+    ${LotteryDealerRefFieldsFragmentDoc}
+${LotteryDealerContactRefFieldsFragmentDoc}`;
+export const LotteryDealerContactFieldsFragmentDoc = `
+    fragment LotteryDealerContactFields on LotteryDealerContact {
+  id
+  name
+  roles
+  nationalId
+  birthday
+  phone
+  mobile
+  email
+  mailingAddress
+  residentialAddress
+  residentialSameAsMailing
+  status
+  note
+  dealerCount
+  links {
+    role
+    dealer {
+      ...LotteryDealerRefFields
+    }
+  }
+  createdBy {
+    id
+    name
+  }
+  createdAt
+  updatedAt
+  abilities {
+    canEdit
+  }
+}
+    ${LotteryDealerRefFieldsFragmentDoc}`;
+export const LotteryInventoryRefFieldsFragmentDoc = `
+    fragment LotteryInventoryRefFields on LotteryInventoryRef {
+  id
+  name
+}
+    `;
+export const LotteryInventoryBookFieldsFragmentDoc = `
+    fragment LotteryInventoryBookFields on LotteryInventoryBook {
+  id
+  bookKey
+  bookNo
+  gameId
+  gameCode
+  gameName
+  unitPrice
+  standardTickets
+  firstTicketNo
+  lastTicketNo
+  org {
+    ...LotteryInventoryRefFields
+  }
+  holdings {
+    org {
+      ...LotteryInventoryRefFields
+    }
+    count
+  }
+  remainingCount
+  totalCount
+  pendingSkipCount
+  requiredSkipCount
+  skippedTicketNos
+  state
+  status
+  purchasedAt
+  purchaseDealer {
+    ...LotteryInventoryRefFields
+  }
+}
+    ${LotteryInventoryRefFieldsFragmentDoc}`;
+export const LotteryInventoryTicketFieldsFragmentDoc = `
+    fragment LotteryInventoryTicketFields on LotteryInventoryTicket {
+  id
+  ticketNo
+  status
+  locationKind
+  cashPoint {
+    ...LotteryInventoryRefFields
+  }
+  org {
+    ...LotteryInventoryRefFields
+  }
+  responsibleOrg {
+    ...LotteryInventoryRefFields
+  }
+  locked
+  version
+}
+    ${LotteryInventoryRefFieldsFragmentDoc}`;
+export const LotteryInventoryPlaceFieldsFragmentDoc = `
+    fragment LotteryInventoryPlaceFields on LotteryInventoryPlace {
+  org {
+    ...LotteryInventoryRefFields
+  }
+  locationKind
+  cashPoint {
+    ...LotteryInventoryRefFields
+  }
+}
+    ${LotteryInventoryRefFieldsFragmentDoc}`;
+export const LotteryInventoryBookDetailFieldsFragmentDoc = `
+    fragment LotteryInventoryBookDetailFields on LotteryInventoryBookDetail {
+  book {
+    ...LotteryInventoryBookFields
+  }
+  tickets {
+    ...LotteryInventoryTicketFields
+  }
+  locations {
+    place {
+      ...LotteryInventoryPlaceFields
+    }
+    ticketNos
+  }
+  events {
+    at
+    type
+    ticketNos
+    wholeBook
+    from {
+      ...LotteryInventoryPlaceFields
+    }
+    to {
+      ...LotteryInventoryPlaceFields
+    }
+    by {
+      ...LotteryInventoryRefFields
+    }
+    refType
+    refId
+    refSerialNo
+    reasonKey
+    reasonNote
+  }
+  sources {
+    type
+    refId
+    refSerialNo
+    at
+    ticketNos
+  }
+  cost {
+    rate
+    cost
+    unitCost
+  }
+  investigation {
+    status
+    at
+    refType
+    refSerialNo
+    responsibleOrg {
+      ...LotteryInventoryRefFields
+    }
+  }
+  abilities {
+    canCorrectSkips
+    canRecover
+    canScrap
+    canShowCost
+  }
+}
+    ${LotteryInventoryBookFieldsFragmentDoc}
+${LotteryInventoryTicketFieldsFragmentDoc}
+${LotteryInventoryPlaceFieldsFragmentDoc}
+${LotteryInventoryRefFieldsFragmentDoc}`;
+export const LotteryInvestigationRowFieldsFragmentDoc = `
+    fragment LotteryInvestigationRowFields on LotteryInvestigationRow {
+  bookId
+  bookNo
+  gameCode
+  gameName
+  unitPrice
+  status
+  responsibleOrg {
+    ...LotteryInventoryRefFields
+  }
+  refType
+  refSerialNo
+  at
+  cost
+  tickets {
+    ...LotteryInventoryTicketFields
+  }
+}
+    ${LotteryInventoryRefFieldsFragmentDoc}
+${LotteryInventoryTicketFieldsFragmentDoc}`;
+export const LotteryAllocationCellFieldsFragmentDoc = `
+    fragment LotteryAllocationCellFields on LotteryAllocationCell {
+  orgId
+  gameId
+  plannedBooks
+  note
+  givenBooks
+  givenExtraTickets
+}
+    `;
+export const LotteryTicketLookupItemFieldsFragmentDoc = `
+    fragment LotteryTicketLookupItemFields on LotteryTicketLookupItem {
+  bookId
+  bookNo
+  gameCode
+  gameName
+  unitPrice
+  ticketId
+  ticketNo
+  status
+  version
+  org {
+    ...LotteryInventoryRefFields
+  }
+  responsibleOrg {
+    ...LotteryInventoryRefFields
+  }
+}
+    ${LotteryInventoryRefFieldsFragmentDoc}`;
+export const LotteryGameFieldsFragmentDoc = `
+    fragment LotteryGameFields on LotteryGame {
+  id
+  gameCode
+  name
+  unitPrice
+  ticketsPerBook
+  bookPrice
+  defaultRate
+  color
+  status
+  launchedAt
+  discontinuedAt
+  claimDeadline
+  note
+  inUse
+  createdAt
+  updatedAt
+  abilities {
+    canEdit
+    canDelete
+  }
+}
+    `;
+export const LotteryCashPointFieldsFragmentDoc = `
+    fragment LotteryCashPointFields on LotteryCashPoint {
+  id
+  org {
+    id
+    name
+  }
+  positionKey
+  positionLabel
+  name
+  order
+  enabled
+  printer {
+    id
+    name
+  }
+  note
+  createdAt
+  updatedAt
+  abilities {
+    canEdit
+  }
+}
+    `;
+export const LotteryPurchaseReceivingFieldsFragmentDoc = `
+    fragment LotteryPurchaseReceivingFields on LotteryPurchaseReceiving {
+  submissionId
+  canReceive
+  receivedCount
+  totalCount
+  groups {
+    gameId
+    gameCode
+    gameName
+    unitPrice
+    requestedBooks
+    receivedBooks
+    subtotal
+    rows {
+      rowId
+      bookNo
+      lastTicketNo
+      tickets
+      bookPrice
+      rate
+      amount
+      received
+      receivedAt
+    }
+  }
+}
+    `;
+export const LotteryRequisitionCandidateFieldsFragmentDoc = `
+    fragment LotteryRequisitionCandidateFields on LotteryRequisitionCandidate {
+  gameId
+  gameCode
+  name
+  unitPrice
+  bookPrice
+  defaultRate
+  launchedAt
+  isNew
+  stockTickets
+  inTransitBooks
+  sold7
+  sold30
+  plannedBooks
+  givenBooks
+}
+    `;
+export const LotteryTransferReceivingFieldsFragmentDoc = `
+    fragment LotteryTransferReceivingFields on LotteryTransferReceiving {
+  submissionId
+  fromBranchName
+  toBranchName
+  transferAmount
+  canReceive
+  receivedCount
+  totalCount
+  rows {
+    rowId
+    bookId
+    gameCode
+    gameName
+    bookNo
+    mode
+    ticketNos
+    tickets
+    amount
+    rate
+    purchaseAmount
+    shipped
+    received
+    receivedAt
+  }
+}
+    `;
+export const MyScheduleEntryFieldsFragmentDoc = `
+    fragment MyScheduleEntryFields on MyScheduleEntry {
+  id
+  orgId
+  orgName
+  date
+  startAt
+  endAt
+  breakMinutes
+  shortName
+  isLead
+  positionKey
+  tasks {
+    role
+    taskKey
+    positionKey
+  }
+  clockIn
+  clockOut
+  missing
+}
+    `;
+export const MySchedulePunchFieldsFragmentDoc = `
+    fragment MySchedulePunchFields on MySchedulePunch {
+  id
+  type
+  at
+  entryId
+  orgId
+  duplicate
+}
+    `;
+export const ScheduleAttendancePunchFieldsFragmentDoc = `
+    fragment ScheduleAttendancePunchFields on ScheduleAttendancePunch {
+  id
+  userId
+  userName
+  orgId
+  orgName
+  type
+  at
+  entryId
+  source
+  duplicate
+}
+    `;
+export const ScheduleAttendanceRowFieldsFragmentDoc = `
+    fragment ScheduleAttendanceRowFields on ScheduleAttendanceRow {
+  entryId
+  userId
+  userName
+  orgId
+  orgName
+  date
+  startAt
+  endAt
+  breakMinutes
+  shortName
+  clockIn
+  clockOut
+  status
+  lateMinutes
+  earlyLeaveMinutes
+  workedMinutes
+  scheduledMinutes
+  missing
+  specialDayName
+  specialDayCategory
+  hasMakeup
+  punches {
+    ...ScheduleAttendancePunchFields
+  }
+}
+    ${ScheduleAttendancePunchFieldsFragmentDoc}`;
+export const ScheduleAttendanceAbilitiesFieldsFragmentDoc = `
+    fragment ScheduleAttendanceAbilitiesFields on ScheduleAttendanceAbilities {
+  canViewAll
+  canReassign
+  canExport
+  canCreate
+}
+    `;
+export const ScheduleAttendanceEntryOptionFieldsFragmentDoc = `
+    fragment ScheduleAttendanceEntryOptionFields on ScheduleAttendanceEntryOption {
+  id
+  orgId
+  orgName
+  date
+  startAt
+  endAt
+  shortName
+}
+    `;
+export const ScheduleAutoRunSummaryFieldsFragmentDoc = `
+    fragment ScheduleAutoRunSummaryFields on ScheduleAutoRunSummary {
+  id
+  at
+  byName
+  from
+  to
+  filledCount
+  unfilledCount
+  addedDemandCount
+  addedDemandDays
+}
+    `;
+export const ScheduleApplyTemplatesFieldsFragmentDoc = `
+    fragment ScheduleApplyTemplatesFields on ApplyScheduleTemplatesPayload {
+  createdCount
+  skippedSlots
+  filledDays
+  skippedDays
+}
+    `;
+export const ScheduleCheckItemFieldsFragmentDoc = `
+    fragment ScheduleCheckItemFields on ScheduleCheckItem {
+  key
+  level
+  message
+  userId
+  userName
+  date
+  entryIds
+  actual
+  limit
+  from
+  to
+  startAt
+  endAt
+  isOtherStore
+  orgName
+  understaffed {
+    demandId
+    role
+    missing
+    available
+    dayOff
+    timeRange
+    occupied
+    cannotLead
+  }
+}
+    `;
+export const ScheduleDayOffWindowFieldsFragmentDoc = `
+    fragment ScheduleDayOffWindowFields on ScheduleDayOffWindow {
+  month
+  startDate
+  endDate
+  state
+  daysLeft
+}
+    `;
+export const ScheduleDayOffViolationFieldsFragmentDoc = `
+    fragment ScheduleDayOffViolationFields on ScheduleDayOffViolation {
+  key
+  level
+  message
+  dates
+  actual
+  limit
+  from
+  to
+}
+    `;
+export const ScheduleDayOffEntryConflictFieldsFragmentDoc = `
+    fragment ScheduleDayOffEntryConflictFields on ScheduleDayOffEntryConflict {
+  date
+  startAt
+  endAt
+  orgName
+}
+    `;
+export const ScheduleDayOffFieldsFragmentDoc = `
+    fragment ScheduleDayOffFields on ScheduleDayOff {
+  id
+  userId
+  name
+  date
+  kind
+  startTime
+  endTime
+  note
+  isPrimary
+  byName
+  reason
+  reasonNote
+}
+    `;
+export const ScheduleDayOffDayFieldsFragmentDoc = `
+    fragment ScheduleDayOffDayFields on ScheduleDayOffDay {
+  date
+  staffCount
+  dayOffs {
+    ...ScheduleDayOffFields
+  }
+}
+    ${ScheduleDayOffFieldsFragmentDoc}`;
+export const ScheduleDayOffLimitsFieldsFragmentDoc = `
+    fragment ScheduleDayOffLimitsFields on ScheduleDayOffLimits {
+  maxMonthly
+  minMonthly
+  maxDailyStaff
+}
+    `;
+export const ScheduleDemandFieldsFragmentDoc = `
+    fragment ScheduleDemandFields on ScheduleDemand {
+  id
+  date
+  startAt
+  endAt
+  positionKey
+  positionNote
+  templateId
+  source
+  createdAt
+  tasks {
+    taskId
+    role
+    taskKey
+    entryId
+    userId
+    userName
+  }
+}
+    `;
+export const ScheduleEntryFieldsFragmentDoc = `
+    fragment ScheduleEntryFields on ScheduleEntry {
+  id
+  userId
+  date
+  startAt
+  endAt
+  breakMinutes
+  deletable
+  assignments {
+    demandId
+    taskId
+    role
+    taskKey
+    source
+    reason
+  }
+}
+    `;
+export const ScheduleRosterPersonFieldsFragmentDoc = `
+    fragment ScheduleRosterPersonFields on ScheduleRosterPerson {
+  userId
+  name
+  employmentType
+  canLead
+  isPrimary
+  isCandidate
+  stats {
+    shiftCount
+    leadShiftCount
+    workMinutes
+    dayOffDays
+    fullDayOffDays
+    timeRangeDays {
+      date
+      slots {
+        startTime
+        endTime
+      }
+    }
+    longestStreak
+  }
+}
+    `;
+export const ScheduleRosterTemplateFieldsFragmentDoc = `
+    fragment ScheduleRosterTemplateFields on ScheduleRosterTemplate {
+  id
+  name
+  shortName
+  startTime
+  endTime
+  positionKey
+  paletteKey
+  tasks {
+    taskId
+    role
+    taskKey
+  }
+}
+    `;
+export const ScheduleRuleSettingFieldsFragmentDoc = `
+    fragment ScheduleRuleSettingFields on ScheduleRuleSetting {
+  enabled
+  value
+  level
+  order
+  source
+  sourceOrgName
+}
+    `;
+export const ScheduleRulesFieldsFragmentDoc = `
+    fragment ScheduleRulesFields on ScheduleRulesPayload {
+  orgId
+  orgName
+  isTenantTop
+  canEdit
+  items {
+    key
+    group
+    valueType
+    unit
+    hasLevel
+    effective {
+      ...ScheduleRuleSettingFields
+    }
+    parent {
+      ...ScheduleRuleSettingFields
+    }
+  }
+}
+    ${ScheduleRuleSettingFieldsFragmentDoc}`;
+export const ScheduleStaffRowFieldsFragmentDoc = `
+    fragment ScheduleStaffRowFields on ScheduleStaffRow {
+  userId
+  name
+  account
+  joinedElsewhere
+  staff {
+    id
+    employmentType
+    enabled
+    note
+    primaryElsewhere
+    isShared
+    orgs {
+      orgId
+      orgName
+      canLead
+      isPrimary
+      sortOrder
+    }
+  }
+}
+    `;
+export const ScheduleDemandTemplateFieldsFragmentDoc = `
+    fragment ScheduleDemandTemplateFields on ScheduleDemandTemplate {
+  id
+  name
+  shortName
+  startTime
+  endTime
+  positionKey
+  tasks {
+    taskId
+    role
+    taskKey
+  }
+  paletteKey
+  ownerOrg {
+    id
+    name
+  }
+  canEdit
+}
+    `;
+export const ScheduleDemandWeekTemplateFieldsFragmentDoc = `
+    fragment ScheduleDemandWeekTemplateFields on ScheduleDemandWeekTemplate {
+  id
+  name
+  days
+  enabled
+  ownerOrg {
+    id
+    name
+  }
+  canEdit
+}
+    `;
+export const ScheduleCalendarDayFieldsFragmentDoc = `
+    fragment ScheduleCalendarDayFields on ScheduleCalendarDay {
+  id
+  date
+  type
+  category
+  name
+  note
+  paletteKey
+  ownerOrg {
+    id
+    name
+  }
+  canEdit
 }
     `;
 export const MyApplicationsDocument = `
@@ -7900,6 +13243,41 @@ useFormFieldOptionsQuery.getKey = (variables: FormFieldOptionsQueryVariables) =>
 
 useFormFieldOptionsQuery.fetcher = (client: GraphQLClient, variables: FormFieldOptionsQueryVariables, headers?: RequestInit['headers']) => fetcher<FormFieldOptionsQuery, FormFieldOptionsQueryVariables>(client, FormFieldOptionsDocument, variables, headers);
 
+export const FormVoidReasonOptionsDocument = `
+    query FormVoidReasonOptions($formKey: ID!) {
+  formVoidReasonOptions(formKey: $formKey) {
+    categoryKey
+    items {
+      value
+      label
+    }
+  }
+}
+    `;
+
+export const useFormVoidReasonOptionsQuery = <
+      TData = FormVoidReasonOptionsQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: FormVoidReasonOptionsQueryVariables,
+      options?: Omit<UseQueryOptions<FormVoidReasonOptionsQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<FormVoidReasonOptionsQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<FormVoidReasonOptionsQuery, TError, TData>(
+      {
+    queryKey: ['FormVoidReasonOptions', variables],
+    queryFn: fetcher<FormVoidReasonOptionsQuery, FormVoidReasonOptionsQueryVariables>(client, FormVoidReasonOptionsDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useFormVoidReasonOptionsQuery.getKey = (variables: FormVoidReasonOptionsQueryVariables) => ['FormVoidReasonOptions', variables];
+
+
+useFormVoidReasonOptionsQuery.fetcher = (client: GraphQLClient, variables: FormVoidReasonOptionsQueryVariables, headers?: RequestInit['headers']) => fetcher<FormVoidReasonOptionsQuery, FormVoidReasonOptionsQueryVariables>(client, FormVoidReasonOptionsDocument, variables, headers);
+
 export const FormLookupRecordDocument = `
     query FormLookupRecord($input: FormLookupRecordInput!) {
   formLookupRecord(input: $input) {
@@ -9297,6 +14675,49 @@ useOrgTreeQuery.getKey = (variables?: OrgTreeQueryVariables) => variables === un
 
 
 useOrgTreeQuery.fetcher = (client: GraphQLClient, variables?: OrgTreeQueryVariables, headers?: RequestInit['headers']) => fetcher<OrgTreeQuery, OrgTreeQueryVariables>(client, OrgTreeDocument, variables, headers);
+
+export const TenantOrgTreeDocument = `
+    query TenantOrgTree {
+  tenantOrgTree {
+    ...TenantOrgNodeFields
+    children {
+      ...TenantOrgNodeFields
+      children {
+        ...TenantOrgNodeFields
+        children {
+          ...TenantOrgNodeFields
+          children {
+            ...TenantOrgNodeFields
+          }
+        }
+      }
+    }
+  }
+}
+    ${TenantOrgNodeFieldsFragmentDoc}`;
+
+export const useTenantOrgTreeQuery = <
+      TData = TenantOrgTreeQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables?: TenantOrgTreeQueryVariables,
+      options?: Omit<UseQueryOptions<TenantOrgTreeQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<TenantOrgTreeQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<TenantOrgTreeQuery, TError, TData>(
+      {
+    queryKey: variables === undefined ? ['TenantOrgTree'] : ['TenantOrgTree', variables],
+    queryFn: fetcher<TenantOrgTreeQuery, TenantOrgTreeQueryVariables>(client, TenantOrgTreeDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useTenantOrgTreeQuery.getKey = (variables?: TenantOrgTreeQueryVariables) => variables === undefined ? ['TenantOrgTree'] : ['TenantOrgTree', variables];
+
+
+useTenantOrgTreeQuery.fetcher = (client: GraphQLClient, variables?: TenantOrgTreeQueryVariables, headers?: RequestInit['headers']) => fetcher<TenantOrgTreeQuery, TenantOrgTreeQueryVariables>(client, TenantOrgTreeDocument, variables, headers);
 
 export const OrgDocument = `
     query Org($id: ID!) {
@@ -10903,6 +16324,100 @@ useSidebarBadgesQuery.getKey = (variables?: SidebarBadgesQueryVariables) => vari
 
 useSidebarBadgesQuery.fetcher = (client: GraphQLClient, variables?: SidebarBadgesQueryVariables, headers?: RequestInit['headers']) => fetcher<SidebarBadgesQuery, SidebarBadgesQueryVariables>(client, SidebarBadgesDocument, variables, headers);
 
+export const SidebarBadgeSettingsDocument = `
+    query SidebarBadgeSettings {
+  sidebarBadgeSettings {
+    items {
+      ...SidebarBadgeSettingItem
+    }
+    totalCount
+  }
+}
+    ${SidebarBadgeSettingItemFragmentDoc}`;
+
+export const useSidebarBadgeSettingsQuery = <
+      TData = SidebarBadgeSettingsQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables?: SidebarBadgeSettingsQueryVariables,
+      options?: Omit<UseQueryOptions<SidebarBadgeSettingsQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<SidebarBadgeSettingsQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<SidebarBadgeSettingsQuery, TError, TData>(
+      {
+    queryKey: variables === undefined ? ['SidebarBadgeSettings'] : ['SidebarBadgeSettings', variables],
+    queryFn: fetcher<SidebarBadgeSettingsQuery, SidebarBadgeSettingsQueryVariables>(client, SidebarBadgeSettingsDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useSidebarBadgeSettingsQuery.getKey = (variables?: SidebarBadgeSettingsQueryVariables) => variables === undefined ? ['SidebarBadgeSettings'] : ['SidebarBadgeSettings', variables];
+
+
+useSidebarBadgeSettingsQuery.fetcher = (client: GraphQLClient, variables?: SidebarBadgeSettingsQueryVariables, headers?: RequestInit['headers']) => fetcher<SidebarBadgeSettingsQuery, SidebarBadgeSettingsQueryVariables>(client, SidebarBadgeSettingsDocument, variables, headers);
+
+export const UpdateSidebarBadgeSettingDocument = `
+    mutation UpdateSidebarBadgeSetting($input: UpdateSidebarBadgeSettingInput!) {
+  updateSidebarBadgeSetting(input: $input) {
+    setting {
+      ...SidebarBadgeSettingItem
+    }
+  }
+}
+    ${SidebarBadgeSettingItemFragmentDoc}`;
+
+export const useUpdateSidebarBadgeSettingMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<UpdateSidebarBadgeSettingMutation, TError, UpdateSidebarBadgeSettingMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<UpdateSidebarBadgeSettingMutation, TError, UpdateSidebarBadgeSettingMutationVariables, TContext>(
+      {
+    mutationKey: ['UpdateSidebarBadgeSetting'],
+    mutationFn: (variables?: UpdateSidebarBadgeSettingMutationVariables) => fetcher<UpdateSidebarBadgeSettingMutation, UpdateSidebarBadgeSettingMutationVariables>(client, UpdateSidebarBadgeSettingDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useUpdateSidebarBadgeSettingMutation.fetcher = (client: GraphQLClient, variables: UpdateSidebarBadgeSettingMutationVariables, headers?: RequestInit['headers']) => fetcher<UpdateSidebarBadgeSettingMutation, UpdateSidebarBadgeSettingMutationVariables>(client, UpdateSidebarBadgeSettingDocument, variables, headers);
+
+export const ResetSidebarBadgeSettingDocument = `
+    mutation ResetSidebarBadgeSetting($input: ResetSidebarBadgeSettingInput!) {
+  resetSidebarBadgeSetting(input: $input) {
+    setting {
+      ...SidebarBadgeSettingItem
+    }
+  }
+}
+    ${SidebarBadgeSettingItemFragmentDoc}`;
+
+export const useResetSidebarBadgeSettingMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<ResetSidebarBadgeSettingMutation, TError, ResetSidebarBadgeSettingMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<ResetSidebarBadgeSettingMutation, TError, ResetSidebarBadgeSettingMutationVariables, TContext>(
+      {
+    mutationKey: ['ResetSidebarBadgeSetting'],
+    mutationFn: (variables?: ResetSidebarBadgeSettingMutationVariables) => fetcher<ResetSidebarBadgeSettingMutation, ResetSidebarBadgeSettingMutationVariables>(client, ResetSidebarBadgeSettingDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useResetSidebarBadgeSettingMutation.fetcher = (client: GraphQLClient, variables: ResetSidebarBadgeSettingMutationVariables, headers?: RequestInit['headers']) => fetcher<ResetSidebarBadgeSettingMutation, ResetSidebarBadgeSettingMutationVariables>(client, ResetSidebarBadgeSettingDocument, variables, headers);
+
 export const CreateUploadUrlDocument = `
     mutation CreateUploadUrl($input: CreateUploadUrlInput!) {
   createUploadUrl(input: $input) {
@@ -12227,3 +17742,3945 @@ export const useRetryAdvanceInstanceMutation = <
 
 
 useRetryAdvanceInstanceMutation.fetcher = (client: GraphQLClient, variables: RetryAdvanceInstanceMutationVariables, headers?: RequestInit['headers']) => fetcher<RetryAdvanceInstanceMutation, RetryAdvanceInstanceMutationVariables>(client, RetryAdvanceInstanceDocument, variables, headers);
+
+export const FieldOptionColorsDocument = `
+    query FieldOptionColors($categoryKey: String!) {
+  fieldOptionColors(categoryKey: $categoryKey) {
+    items {
+      ...FieldOptionColorFields
+    }
+    totalCount
+  }
+}
+    ${FieldOptionColorFieldsFragmentDoc}`;
+
+export const useFieldOptionColorsQuery = <
+      TData = FieldOptionColorsQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: FieldOptionColorsQueryVariables,
+      options?: Omit<UseQueryOptions<FieldOptionColorsQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<FieldOptionColorsQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<FieldOptionColorsQuery, TError, TData>(
+      {
+    queryKey: ['FieldOptionColors', variables],
+    queryFn: fetcher<FieldOptionColorsQuery, FieldOptionColorsQueryVariables>(client, FieldOptionColorsDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useFieldOptionColorsQuery.getKey = (variables: FieldOptionColorsQueryVariables) => ['FieldOptionColors', variables];
+
+
+useFieldOptionColorsQuery.fetcher = (client: GraphQLClient, variables: FieldOptionColorsQueryVariables, headers?: RequestInit['headers']) => fetcher<FieldOptionColorsQuery, FieldOptionColorsQueryVariables>(client, FieldOptionColorsDocument, variables, headers);
+
+export const SetFieldOptionColorDocument = `
+    mutation SetFieldOptionColor($input: SetFieldOptionColorInput!) {
+  setFieldOptionColor(input: $input) {
+    color {
+      ...FieldOptionColorFields
+    }
+  }
+}
+    ${FieldOptionColorFieldsFragmentDoc}`;
+
+export const useSetFieldOptionColorMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<SetFieldOptionColorMutation, TError, SetFieldOptionColorMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<SetFieldOptionColorMutation, TError, SetFieldOptionColorMutationVariables, TContext>(
+      {
+    mutationKey: ['SetFieldOptionColor'],
+    mutationFn: (variables?: SetFieldOptionColorMutationVariables) => fetcher<SetFieldOptionColorMutation, SetFieldOptionColorMutationVariables>(client, SetFieldOptionColorDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useSetFieldOptionColorMutation.fetcher = (client: GraphQLClient, variables: SetFieldOptionColorMutationVariables, headers?: RequestInit['headers']) => fetcher<SetFieldOptionColorMutation, SetFieldOptionColorMutationVariables>(client, SetFieldOptionColorDocument, variables, headers);
+
+export const LotteryBankAccountsDocument = `
+    query LotteryBankAccounts($input: LotteryBankAccountsInput!) {
+  lotteryBankAccounts(input: $input) {
+    items {
+      ...LotteryBankAccountFields
+    }
+    totalCount
+    page
+    pageSize
+  }
+}
+    ${LotteryBankAccountFieldsFragmentDoc}`;
+
+export const useLotteryBankAccountsQuery = <
+      TData = LotteryBankAccountsQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: LotteryBankAccountsQueryVariables,
+      options?: Omit<UseQueryOptions<LotteryBankAccountsQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotteryBankAccountsQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<LotteryBankAccountsQuery, TError, TData>(
+      {
+    queryKey: ['LotteryBankAccounts', variables],
+    queryFn: fetcher<LotteryBankAccountsQuery, LotteryBankAccountsQueryVariables>(client, LotteryBankAccountsDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useLotteryBankAccountsQuery.getKey = (variables: LotteryBankAccountsQueryVariables) => ['LotteryBankAccounts', variables];
+
+
+useLotteryBankAccountsQuery.fetcher = (client: GraphQLClient, variables: LotteryBankAccountsQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryBankAccountsQuery, LotteryBankAccountsQueryVariables>(client, LotteryBankAccountsDocument, variables, headers);
+
+export const LotteryBankAccountDocument = `
+    query LotteryBankAccount($id: ID!) {
+  lotteryBankAccount(id: $id) {
+    item {
+      ...LotteryBankAccountFields
+    }
+  }
+}
+    ${LotteryBankAccountFieldsFragmentDoc}`;
+
+export const useLotteryBankAccountQuery = <
+      TData = LotteryBankAccountQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: LotteryBankAccountQueryVariables,
+      options?: Omit<UseQueryOptions<LotteryBankAccountQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotteryBankAccountQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<LotteryBankAccountQuery, TError, TData>(
+      {
+    queryKey: ['LotteryBankAccount', variables],
+    queryFn: fetcher<LotteryBankAccountQuery, LotteryBankAccountQueryVariables>(client, LotteryBankAccountDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useLotteryBankAccountQuery.getKey = (variables: LotteryBankAccountQueryVariables) => ['LotteryBankAccount', variables];
+
+
+useLotteryBankAccountQuery.fetcher = (client: GraphQLClient, variables: LotteryBankAccountQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryBankAccountQuery, LotteryBankAccountQueryVariables>(client, LotteryBankAccountDocument, variables, headers);
+
+export const LotteryBankTransactionsDocument = `
+    query LotteryBankTransactions($input: LotteryBankTransactionsInput!) {
+  lotteryBankTransactions(input: $input) {
+    items {
+      ...LotteryBankTransactionFields
+    }
+    totalCount
+    totalIn
+    totalOut
+  }
+}
+    ${LotteryBankTransactionFieldsFragmentDoc}`;
+
+export const useLotteryBankTransactionsQuery = <
+      TData = LotteryBankTransactionsQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: LotteryBankTransactionsQueryVariables,
+      options?: Omit<UseQueryOptions<LotteryBankTransactionsQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotteryBankTransactionsQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<LotteryBankTransactionsQuery, TError, TData>(
+      {
+    queryKey: ['LotteryBankTransactions', variables],
+    queryFn: fetcher<LotteryBankTransactionsQuery, LotteryBankTransactionsQueryVariables>(client, LotteryBankTransactionsDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useLotteryBankTransactionsQuery.getKey = (variables: LotteryBankTransactionsQueryVariables) => ['LotteryBankTransactions', variables];
+
+
+useLotteryBankTransactionsQuery.fetcher = (client: GraphQLClient, variables: LotteryBankTransactionsQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryBankTransactionsQuery, LotteryBankTransactionsQueryVariables>(client, LotteryBankTransactionsDocument, variables, headers);
+
+export const CreateLotteryBankAccountDocument = `
+    mutation CreateLotteryBankAccount($input: CreateLotteryBankAccountInput!) {
+  createLotteryBankAccount(input: $input) {
+    item {
+      ...LotteryBankAccountFields
+    }
+  }
+}
+    ${LotteryBankAccountFieldsFragmentDoc}`;
+
+export const useCreateLotteryBankAccountMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<CreateLotteryBankAccountMutation, TError, CreateLotteryBankAccountMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<CreateLotteryBankAccountMutation, TError, CreateLotteryBankAccountMutationVariables, TContext>(
+      {
+    mutationKey: ['CreateLotteryBankAccount'],
+    mutationFn: (variables?: CreateLotteryBankAccountMutationVariables) => fetcher<CreateLotteryBankAccountMutation, CreateLotteryBankAccountMutationVariables>(client, CreateLotteryBankAccountDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useCreateLotteryBankAccountMutation.fetcher = (client: GraphQLClient, variables: CreateLotteryBankAccountMutationVariables, headers?: RequestInit['headers']) => fetcher<CreateLotteryBankAccountMutation, CreateLotteryBankAccountMutationVariables>(client, CreateLotteryBankAccountDocument, variables, headers);
+
+export const UpdateLotteryBankAccountDocument = `
+    mutation UpdateLotteryBankAccount($input: UpdateLotteryBankAccountInput!) {
+  updateLotteryBankAccount(input: $input) {
+    item {
+      ...LotteryBankAccountFields
+    }
+  }
+}
+    ${LotteryBankAccountFieldsFragmentDoc}`;
+
+export const useUpdateLotteryBankAccountMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<UpdateLotteryBankAccountMutation, TError, UpdateLotteryBankAccountMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<UpdateLotteryBankAccountMutation, TError, UpdateLotteryBankAccountMutationVariables, TContext>(
+      {
+    mutationKey: ['UpdateLotteryBankAccount'],
+    mutationFn: (variables?: UpdateLotteryBankAccountMutationVariables) => fetcher<UpdateLotteryBankAccountMutation, UpdateLotteryBankAccountMutationVariables>(client, UpdateLotteryBankAccountDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useUpdateLotteryBankAccountMutation.fetcher = (client: GraphQLClient, variables: UpdateLotteryBankAccountMutationVariables, headers?: RequestInit['headers']) => fetcher<UpdateLotteryBankAccountMutation, UpdateLotteryBankAccountMutationVariables>(client, UpdateLotteryBankAccountDocument, variables, headers);
+
+export const DeleteLotteryBankAccountDocument = `
+    mutation DeleteLotteryBankAccount($id: ID!) {
+  deleteLotteryBankAccount(id: $id) {
+    id
+  }
+}
+    `;
+
+export const useDeleteLotteryBankAccountMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<DeleteLotteryBankAccountMutation, TError, DeleteLotteryBankAccountMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<DeleteLotteryBankAccountMutation, TError, DeleteLotteryBankAccountMutationVariables, TContext>(
+      {
+    mutationKey: ['DeleteLotteryBankAccount'],
+    mutationFn: (variables?: DeleteLotteryBankAccountMutationVariables) => fetcher<DeleteLotteryBankAccountMutation, DeleteLotteryBankAccountMutationVariables>(client, DeleteLotteryBankAccountDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useDeleteLotteryBankAccountMutation.fetcher = (client: GraphQLClient, variables: DeleteLotteryBankAccountMutationVariables, headers?: RequestInit['headers']) => fetcher<DeleteLotteryBankAccountMutation, DeleteLotteryBankAccountMutationVariables>(client, DeleteLotteryBankAccountDocument, variables, headers);
+
+export const RecordLotteryBankTransactionDocument = `
+    mutation RecordLotteryBankTransaction($input: RecordLotteryBankTransactionInput!) {
+  recordLotteryBankTransaction(input: $input) {
+    item {
+      ...LotteryBankTransactionFields
+    }
+  }
+}
+    ${LotteryBankTransactionFieldsFragmentDoc}`;
+
+export const useRecordLotteryBankTransactionMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<RecordLotteryBankTransactionMutation, TError, RecordLotteryBankTransactionMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<RecordLotteryBankTransactionMutation, TError, RecordLotteryBankTransactionMutationVariables, TContext>(
+      {
+    mutationKey: ['RecordLotteryBankTransaction'],
+    mutationFn: (variables?: RecordLotteryBankTransactionMutationVariables) => fetcher<RecordLotteryBankTransactionMutation, RecordLotteryBankTransactionMutationVariables>(client, RecordLotteryBankTransactionDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useRecordLotteryBankTransactionMutation.fetcher = (client: GraphQLClient, variables: RecordLotteryBankTransactionMutationVariables, headers?: RequestInit['headers']) => fetcher<RecordLotteryBankTransactionMutation, RecordLotteryBankTransactionMutationVariables>(client, RecordLotteryBankTransactionDocument, variables, headers);
+
+export const ReverseLotteryBankTransactionDocument = `
+    mutation ReverseLotteryBankTransaction($input: ReverseLotteryBankTransactionInput!) {
+  reverseLotteryBankTransaction(input: $input) {
+    item {
+      ...LotteryBankTransactionFields
+    }
+  }
+}
+    ${LotteryBankTransactionFieldsFragmentDoc}`;
+
+export const useReverseLotteryBankTransactionMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<ReverseLotteryBankTransactionMutation, TError, ReverseLotteryBankTransactionMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<ReverseLotteryBankTransactionMutation, TError, ReverseLotteryBankTransactionMutationVariables, TContext>(
+      {
+    mutationKey: ['ReverseLotteryBankTransaction'],
+    mutationFn: (variables?: ReverseLotteryBankTransactionMutationVariables) => fetcher<ReverseLotteryBankTransactionMutation, ReverseLotteryBankTransactionMutationVariables>(client, ReverseLotteryBankTransactionDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useReverseLotteryBankTransactionMutation.fetcher = (client: GraphQLClient, variables: ReverseLotteryBankTransactionMutationVariables, headers?: RequestInit['headers']) => fetcher<ReverseLotteryBankTransactionMutation, ReverseLotteryBankTransactionMutationVariables>(client, ReverseLotteryBankTransactionDocument, variables, headers);
+
+export const LotteryCashLedgerDocument = `
+    query LotteryCashLedger($input: LotteryCashLedgerInput!) {
+  lotteryCashLedger(input: $input) {
+    vault {
+      amount
+      baselineAmount
+      baselineAt
+    }
+    items {
+      ...LotteryCashMovementFields
+    }
+    totalCount
+  }
+}
+    ${LotteryCashMovementFieldsFragmentDoc}`;
+
+export const useLotteryCashLedgerQuery = <
+      TData = LotteryCashLedgerQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: LotteryCashLedgerQueryVariables,
+      options?: Omit<UseQueryOptions<LotteryCashLedgerQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotteryCashLedgerQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<LotteryCashLedgerQuery, TError, TData>(
+      {
+    queryKey: ['LotteryCashLedger', variables],
+    queryFn: fetcher<LotteryCashLedgerQuery, LotteryCashLedgerQueryVariables>(client, LotteryCashLedgerDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useLotteryCashLedgerQuery.getKey = (variables: LotteryCashLedgerQueryVariables) => ['LotteryCashLedger', variables];
+
+
+useLotteryCashLedgerQuery.fetcher = (client: GraphQLClient, variables: LotteryCashLedgerQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryCashLedgerQuery, LotteryCashLedgerQueryVariables>(client, LotteryCashLedgerDocument, variables, headers);
+
+export const LotteryCashMovementDocument = `
+    query LotteryCashMovement($id: ID!) {
+  lotteryCashMovement(id: $id) {
+    item {
+      ...LotteryCashMovementFields
+    }
+  }
+}
+    ${LotteryCashMovementFieldsFragmentDoc}`;
+
+export const useLotteryCashMovementQuery = <
+      TData = LotteryCashMovementQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: LotteryCashMovementQueryVariables,
+      options?: Omit<UseQueryOptions<LotteryCashMovementQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotteryCashMovementQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<LotteryCashMovementQuery, TError, TData>(
+      {
+    queryKey: ['LotteryCashMovement', variables],
+    queryFn: fetcher<LotteryCashMovementQuery, LotteryCashMovementQueryVariables>(client, LotteryCashMovementDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useLotteryCashMovementQuery.getKey = (variables: LotteryCashMovementQueryVariables) => ['LotteryCashMovement', variables];
+
+
+useLotteryCashMovementQuery.fetcher = (client: GraphQLClient, variables: LotteryCashMovementQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryCashMovementQuery, LotteryCashMovementQueryVariables>(client, LotteryCashMovementDocument, variables, headers);
+
+export const LotterySettlementDocument = `
+    query LotterySettlement($moduleKey: String!, $refId: ID!) {
+  lotterySettlement(moduleKey: $moduleKey, refId: $refId) {
+    item {
+      ...LotterySettlementFields
+    }
+  }
+}
+    ${LotterySettlementFieldsFragmentDoc}`;
+
+export const useLotterySettlementQuery = <
+      TData = LotterySettlementQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: LotterySettlementQueryVariables,
+      options?: Omit<UseQueryOptions<LotterySettlementQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotterySettlementQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<LotterySettlementQuery, TError, TData>(
+      {
+    queryKey: ['LotterySettlement', variables],
+    queryFn: fetcher<LotterySettlementQuery, LotterySettlementQueryVariables>(client, LotterySettlementDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useLotterySettlementQuery.getKey = (variables: LotterySettlementQueryVariables) => ['LotterySettlement', variables];
+
+
+useLotterySettlementQuery.fetcher = (client: GraphQLClient, variables: LotterySettlementQueryVariables, headers?: RequestInit['headers']) => fetcher<LotterySettlementQuery, LotterySettlementQueryVariables>(client, LotterySettlementDocument, variables, headers);
+
+export const LotteryOutstandingSettlementsDocument = `
+    query LotteryOutstandingSettlements {
+  lotteryOutstandingSettlements {
+    items {
+      ...LotteryOutstandingSettlementFields
+    }
+    totalCount
+  }
+}
+    ${LotteryOutstandingSettlementFieldsFragmentDoc}`;
+
+export const useLotteryOutstandingSettlementsQuery = <
+      TData = LotteryOutstandingSettlementsQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables?: LotteryOutstandingSettlementsQueryVariables,
+      options?: Omit<UseQueryOptions<LotteryOutstandingSettlementsQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotteryOutstandingSettlementsQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<LotteryOutstandingSettlementsQuery, TError, TData>(
+      {
+    queryKey: variables === undefined ? ['LotteryOutstandingSettlements'] : ['LotteryOutstandingSettlements', variables],
+    queryFn: fetcher<LotteryOutstandingSettlementsQuery, LotteryOutstandingSettlementsQueryVariables>(client, LotteryOutstandingSettlementsDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useLotteryOutstandingSettlementsQuery.getKey = (variables?: LotteryOutstandingSettlementsQueryVariables) => variables === undefined ? ['LotteryOutstandingSettlements'] : ['LotteryOutstandingSettlements', variables];
+
+
+useLotteryOutstandingSettlementsQuery.fetcher = (client: GraphQLClient, variables?: LotteryOutstandingSettlementsQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryOutstandingSettlementsQuery, LotteryOutstandingSettlementsQueryVariables>(client, LotteryOutstandingSettlementsDocument, variables, headers);
+
+export const LotterySettlementCandidatesDocument = `
+    query LotterySettlementCandidates($input: LotterySettlementCandidatesInput!) {
+  lotterySettlementCandidates(input: $input) {
+    items {
+      ...LotteryOutstandingSettlementFields
+    }
+    totalCount
+  }
+}
+    ${LotteryOutstandingSettlementFieldsFragmentDoc}`;
+
+export const useLotterySettlementCandidatesQuery = <
+      TData = LotterySettlementCandidatesQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: LotterySettlementCandidatesQueryVariables,
+      options?: Omit<UseQueryOptions<LotterySettlementCandidatesQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotterySettlementCandidatesQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<LotterySettlementCandidatesQuery, TError, TData>(
+      {
+    queryKey: ['LotterySettlementCandidates', variables],
+    queryFn: fetcher<LotterySettlementCandidatesQuery, LotterySettlementCandidatesQueryVariables>(client, LotterySettlementCandidatesDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useLotterySettlementCandidatesQuery.getKey = (variables: LotterySettlementCandidatesQueryVariables) => ['LotterySettlementCandidates', variables];
+
+
+useLotterySettlementCandidatesQuery.fetcher = (client: GraphQLClient, variables: LotterySettlementCandidatesQueryVariables, headers?: RequestInit['headers']) => fetcher<LotterySettlementCandidatesQuery, LotterySettlementCandidatesQueryVariables>(client, LotterySettlementCandidatesDocument, variables, headers);
+
+export const RecordLotterySettlementDocument = `
+    mutation RecordLotterySettlement($input: RecordLotterySettlementInput!) {
+  recordLotterySettlement(input: $input) {
+    recordId
+    item {
+      ...LotterySettlementFields
+    }
+  }
+}
+    ${LotterySettlementFieldsFragmentDoc}`;
+
+export const useRecordLotterySettlementMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<RecordLotterySettlementMutation, TError, RecordLotterySettlementMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<RecordLotterySettlementMutation, TError, RecordLotterySettlementMutationVariables, TContext>(
+      {
+    mutationKey: ['RecordLotterySettlement'],
+    mutationFn: (variables?: RecordLotterySettlementMutationVariables) => fetcher<RecordLotterySettlementMutation, RecordLotterySettlementMutationVariables>(client, RecordLotterySettlementDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useRecordLotterySettlementMutation.fetcher = (client: GraphQLClient, variables: RecordLotterySettlementMutationVariables, headers?: RequestInit['headers']) => fetcher<RecordLotterySettlementMutation, RecordLotterySettlementMutationVariables>(client, RecordLotterySettlementDocument, variables, headers);
+
+export const ReverseLotterySettlementDocument = `
+    mutation ReverseLotterySettlement($input: ReverseLotterySettlementInput!) {
+  reverseLotterySettlement(input: $input) {
+    recordId
+    item {
+      ...LotterySettlementFields
+    }
+  }
+}
+    ${LotterySettlementFieldsFragmentDoc}`;
+
+export const useReverseLotterySettlementMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<ReverseLotterySettlementMutation, TError, ReverseLotterySettlementMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<ReverseLotterySettlementMutation, TError, ReverseLotterySettlementMutationVariables, TContext>(
+      {
+    mutationKey: ['ReverseLotterySettlement'],
+    mutationFn: (variables?: ReverseLotterySettlementMutationVariables) => fetcher<ReverseLotterySettlementMutation, ReverseLotterySettlementMutationVariables>(client, ReverseLotterySettlementDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useReverseLotterySettlementMutation.fetcher = (client: GraphQLClient, variables: ReverseLotterySettlementMutationVariables, headers?: RequestInit['headers']) => fetcher<ReverseLotterySettlementMutation, ReverseLotterySettlementMutationVariables>(client, ReverseLotterySettlementDocument, variables, headers);
+
+export const LotterySettlementAccountsDocument = `
+    query LotterySettlementAccounts($moduleKey: String!, $refId: ID!, $side: String!) {
+  lotterySettlementAccounts(moduleKey: $moduleKey, refId: $refId, side: $side) {
+    items {
+      ...LotteryAccountsRefFields
+    }
+    totalCount
+  }
+}
+    ${LotteryAccountsRefFieldsFragmentDoc}`;
+
+export const useLotterySettlementAccountsQuery = <
+      TData = LotterySettlementAccountsQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: LotterySettlementAccountsQueryVariables,
+      options?: Omit<UseQueryOptions<LotterySettlementAccountsQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotterySettlementAccountsQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<LotterySettlementAccountsQuery, TError, TData>(
+      {
+    queryKey: ['LotterySettlementAccounts', variables],
+    queryFn: fetcher<LotterySettlementAccountsQuery, LotterySettlementAccountsQueryVariables>(client, LotterySettlementAccountsDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useLotterySettlementAccountsQuery.getKey = (variables: LotterySettlementAccountsQueryVariables) => ['LotterySettlementAccounts', variables];
+
+
+useLotterySettlementAccountsQuery.fetcher = (client: GraphQLClient, variables: LotterySettlementAccountsQueryVariables, headers?: RequestInit['headers']) => fetcher<LotterySettlementAccountsQuery, LotterySettlementAccountsQueryVariables>(client, LotterySettlementAccountsDocument, variables, headers);
+
+export const LotteryDealersDocument = `
+    query LotteryDealers($input: LotteryDealersInput!) {
+  lotteryDealers(input: $input) {
+    items {
+      ...LotteryDealerFields
+    }
+    totalCount
+    page
+    pageSize
+  }
+}
+    ${LotteryDealerFieldsFragmentDoc}`;
+
+export const useLotteryDealersQuery = <
+      TData = LotteryDealersQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: LotteryDealersQueryVariables,
+      options?: Omit<UseQueryOptions<LotteryDealersQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotteryDealersQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<LotteryDealersQuery, TError, TData>(
+      {
+    queryKey: ['LotteryDealers', variables],
+    queryFn: fetcher<LotteryDealersQuery, LotteryDealersQueryVariables>(client, LotteryDealersDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useLotteryDealersQuery.getKey = (variables: LotteryDealersQueryVariables) => ['LotteryDealers', variables];
+
+
+useLotteryDealersQuery.fetcher = (client: GraphQLClient, variables: LotteryDealersQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryDealersQuery, LotteryDealersQueryVariables>(client, LotteryDealersDocument, variables, headers);
+
+export const LotteryDealerDocument = `
+    query LotteryDealer($id: ID!) {
+  lotteryDealer(id: $id) {
+    item {
+      ...LotteryDealerFields
+    }
+  }
+}
+    ${LotteryDealerFieldsFragmentDoc}`;
+
+export const useLotteryDealerQuery = <
+      TData = LotteryDealerQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: LotteryDealerQueryVariables,
+      options?: Omit<UseQueryOptions<LotteryDealerQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotteryDealerQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<LotteryDealerQuery, TError, TData>(
+      {
+    queryKey: ['LotteryDealer', variables],
+    queryFn: fetcher<LotteryDealerQuery, LotteryDealerQueryVariables>(client, LotteryDealerDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useLotteryDealerQuery.getKey = (variables: LotteryDealerQueryVariables) => ['LotteryDealer', variables];
+
+
+useLotteryDealerQuery.fetcher = (client: GraphQLClient, variables: LotteryDealerQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryDealerQuery, LotteryDealerQueryVariables>(client, LotteryDealerDocument, variables, headers);
+
+export const LotteryDealerSigninsDocument = `
+    query LotteryDealerSignins($dealerId: ID!, $year: Int!) {
+  lotteryDealerSignins(dealerId: $dealerId, year: $year) {
+    items {
+      id
+      year
+      quarter
+      signedAt
+      note
+      state
+    }
+    totalCount
+  }
+}
+    `;
+
+export const useLotteryDealerSigninsQuery = <
+      TData = LotteryDealerSigninsQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: LotteryDealerSigninsQueryVariables,
+      options?: Omit<UseQueryOptions<LotteryDealerSigninsQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotteryDealerSigninsQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<LotteryDealerSigninsQuery, TError, TData>(
+      {
+    queryKey: ['LotteryDealerSignins', variables],
+    queryFn: fetcher<LotteryDealerSigninsQuery, LotteryDealerSigninsQueryVariables>(client, LotteryDealerSigninsDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useLotteryDealerSigninsQuery.getKey = (variables: LotteryDealerSigninsQueryVariables) => ['LotteryDealerSignins', variables];
+
+
+useLotteryDealerSigninsQuery.fetcher = (client: GraphQLClient, variables: LotteryDealerSigninsQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryDealerSigninsQuery, LotteryDealerSigninsQueryVariables>(client, LotteryDealerSigninsDocument, variables, headers);
+
+export const LotteryDealerCoSellersDocument = `
+    query LotteryDealerCoSellers($dealerId: ID!) {
+  lotteryDealerCoSellers(dealerId: $dealerId) {
+    items {
+      dealer {
+        ...LotteryDealerRefFields
+      }
+      registeredAt
+    }
+    totalCount
+  }
+}
+    ${LotteryDealerRefFieldsFragmentDoc}`;
+
+export const useLotteryDealerCoSellersQuery = <
+      TData = LotteryDealerCoSellersQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: LotteryDealerCoSellersQueryVariables,
+      options?: Omit<UseQueryOptions<LotteryDealerCoSellersQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotteryDealerCoSellersQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<LotteryDealerCoSellersQuery, TError, TData>(
+      {
+    queryKey: ['LotteryDealerCoSellers', variables],
+    queryFn: fetcher<LotteryDealerCoSellersQuery, LotteryDealerCoSellersQueryVariables>(client, LotteryDealerCoSellersDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useLotteryDealerCoSellersQuery.getKey = (variables: LotteryDealerCoSellersQueryVariables) => ['LotteryDealerCoSellers', variables];
+
+
+useLotteryDealerCoSellersQuery.fetcher = (client: GraphQLClient, variables: LotteryDealerCoSellersQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryDealerCoSellersQuery, LotteryDealerCoSellersQueryVariables>(client, LotteryDealerCoSellersDocument, variables, headers);
+
+export const LotteryOccupiedStoresDocument = `
+    query LotteryOccupiedStores {
+  lotteryOccupiedStores {
+    items {
+      orgId
+      dealer {
+        ...LotteryDealerRefFields
+      }
+    }
+    totalCount
+  }
+}
+    ${LotteryDealerRefFieldsFragmentDoc}`;
+
+export const useLotteryOccupiedStoresQuery = <
+      TData = LotteryOccupiedStoresQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables?: LotteryOccupiedStoresQueryVariables,
+      options?: Omit<UseQueryOptions<LotteryOccupiedStoresQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotteryOccupiedStoresQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<LotteryOccupiedStoresQuery, TError, TData>(
+      {
+    queryKey: variables === undefined ? ['LotteryOccupiedStores'] : ['LotteryOccupiedStores', variables],
+    queryFn: fetcher<LotteryOccupiedStoresQuery, LotteryOccupiedStoresQueryVariables>(client, LotteryOccupiedStoresDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useLotteryOccupiedStoresQuery.getKey = (variables?: LotteryOccupiedStoresQueryVariables) => variables === undefined ? ['LotteryOccupiedStores'] : ['LotteryOccupiedStores', variables];
+
+
+useLotteryOccupiedStoresQuery.fetcher = (client: GraphQLClient, variables?: LotteryOccupiedStoresQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryOccupiedStoresQuery, LotteryOccupiedStoresQueryVariables>(client, LotteryOccupiedStoresDocument, variables, headers);
+
+export const CreateLotteryDealerDocument = `
+    mutation CreateLotteryDealer($input: CreateLotteryDealerInput!) {
+  createLotteryDealer(input: $input) {
+    item {
+      ...LotteryDealerFields
+    }
+  }
+}
+    ${LotteryDealerFieldsFragmentDoc}`;
+
+export const useCreateLotteryDealerMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<CreateLotteryDealerMutation, TError, CreateLotteryDealerMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<CreateLotteryDealerMutation, TError, CreateLotteryDealerMutationVariables, TContext>(
+      {
+    mutationKey: ['CreateLotteryDealer'],
+    mutationFn: (variables?: CreateLotteryDealerMutationVariables) => fetcher<CreateLotteryDealerMutation, CreateLotteryDealerMutationVariables>(client, CreateLotteryDealerDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useCreateLotteryDealerMutation.fetcher = (client: GraphQLClient, variables: CreateLotteryDealerMutationVariables, headers?: RequestInit['headers']) => fetcher<CreateLotteryDealerMutation, CreateLotteryDealerMutationVariables>(client, CreateLotteryDealerDocument, variables, headers);
+
+export const UpdateLotteryDealerDocument = `
+    mutation UpdateLotteryDealer($input: UpdateLotteryDealerInput!) {
+  updateLotteryDealer(input: $input) {
+    item {
+      ...LotteryDealerFields
+    }
+  }
+}
+    ${LotteryDealerFieldsFragmentDoc}`;
+
+export const useUpdateLotteryDealerMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<UpdateLotteryDealerMutation, TError, UpdateLotteryDealerMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<UpdateLotteryDealerMutation, TError, UpdateLotteryDealerMutationVariables, TContext>(
+      {
+    mutationKey: ['UpdateLotteryDealer'],
+    mutationFn: (variables?: UpdateLotteryDealerMutationVariables) => fetcher<UpdateLotteryDealerMutation, UpdateLotteryDealerMutationVariables>(client, UpdateLotteryDealerDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useUpdateLotteryDealerMutation.fetcher = (client: GraphQLClient, variables: UpdateLotteryDealerMutationVariables, headers?: RequestInit['headers']) => fetcher<UpdateLotteryDealerMutation, UpdateLotteryDealerMutationVariables>(client, UpdateLotteryDealerDocument, variables, headers);
+
+export const RegisterLotteryDealerSigninDocument = `
+    mutation RegisterLotteryDealerSignin($input: RegisterLotteryDealerSigninInput!) {
+  registerLotteryDealerSignin(input: $input) {
+    item {
+      id
+      year
+      quarter
+      signedAt
+      note
+      state
+    }
+  }
+}
+    `;
+
+export const useRegisterLotteryDealerSigninMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<RegisterLotteryDealerSigninMutation, TError, RegisterLotteryDealerSigninMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<RegisterLotteryDealerSigninMutation, TError, RegisterLotteryDealerSigninMutationVariables, TContext>(
+      {
+    mutationKey: ['RegisterLotteryDealerSignin'],
+    mutationFn: (variables?: RegisterLotteryDealerSigninMutationVariables) => fetcher<RegisterLotteryDealerSigninMutation, RegisterLotteryDealerSigninMutationVariables>(client, RegisterLotteryDealerSigninDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useRegisterLotteryDealerSigninMutation.fetcher = (client: GraphQLClient, variables: RegisterLotteryDealerSigninMutationVariables, headers?: RequestInit['headers']) => fetcher<RegisterLotteryDealerSigninMutation, RegisterLotteryDealerSigninMutationVariables>(client, RegisterLotteryDealerSigninDocument, variables, headers);
+
+export const UpdateLotteryDealerSigninDocument = `
+    mutation UpdateLotteryDealerSignin($input: UpdateLotteryDealerSigninInput!) {
+  updateLotteryDealerSignin(input: $input) {
+    item {
+      id
+      year
+      quarter
+      signedAt
+      note
+      state
+    }
+  }
+}
+    `;
+
+export const useUpdateLotteryDealerSigninMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<UpdateLotteryDealerSigninMutation, TError, UpdateLotteryDealerSigninMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<UpdateLotteryDealerSigninMutation, TError, UpdateLotteryDealerSigninMutationVariables, TContext>(
+      {
+    mutationKey: ['UpdateLotteryDealerSignin'],
+    mutationFn: (variables?: UpdateLotteryDealerSigninMutationVariables) => fetcher<UpdateLotteryDealerSigninMutation, UpdateLotteryDealerSigninMutationVariables>(client, UpdateLotteryDealerSigninDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useUpdateLotteryDealerSigninMutation.fetcher = (client: GraphQLClient, variables: UpdateLotteryDealerSigninMutationVariables, headers?: RequestInit['headers']) => fetcher<UpdateLotteryDealerSigninMutation, UpdateLotteryDealerSigninMutationVariables>(client, UpdateLotteryDealerSigninDocument, variables, headers);
+
+export const LotteryDealerContactsDocument = `
+    query LotteryDealerContacts($input: LotteryDealerContactsInput!) {
+  lotteryDealerContacts(input: $input) {
+    items {
+      ...LotteryDealerContactFields
+    }
+    totalCount
+    page
+    pageSize
+  }
+}
+    ${LotteryDealerContactFieldsFragmentDoc}`;
+
+export const useLotteryDealerContactsQuery = <
+      TData = LotteryDealerContactsQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: LotteryDealerContactsQueryVariables,
+      options?: Omit<UseQueryOptions<LotteryDealerContactsQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotteryDealerContactsQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<LotteryDealerContactsQuery, TError, TData>(
+      {
+    queryKey: ['LotteryDealerContacts', variables],
+    queryFn: fetcher<LotteryDealerContactsQuery, LotteryDealerContactsQueryVariables>(client, LotteryDealerContactsDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useLotteryDealerContactsQuery.getKey = (variables: LotteryDealerContactsQueryVariables) => ['LotteryDealerContacts', variables];
+
+
+useLotteryDealerContactsQuery.fetcher = (client: GraphQLClient, variables: LotteryDealerContactsQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryDealerContactsQuery, LotteryDealerContactsQueryVariables>(client, LotteryDealerContactsDocument, variables, headers);
+
+export const LotteryDealerContactDocument = `
+    query LotteryDealerContact($id: ID!) {
+  lotteryDealerContact(id: $id) {
+    item {
+      ...LotteryDealerContactFields
+    }
+  }
+}
+    ${LotteryDealerContactFieldsFragmentDoc}`;
+
+export const useLotteryDealerContactQuery = <
+      TData = LotteryDealerContactQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: LotteryDealerContactQueryVariables,
+      options?: Omit<UseQueryOptions<LotteryDealerContactQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotteryDealerContactQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<LotteryDealerContactQuery, TError, TData>(
+      {
+    queryKey: ['LotteryDealerContact', variables],
+    queryFn: fetcher<LotteryDealerContactQuery, LotteryDealerContactQueryVariables>(client, LotteryDealerContactDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useLotteryDealerContactQuery.getKey = (variables: LotteryDealerContactQueryVariables) => ['LotteryDealerContact', variables];
+
+
+useLotteryDealerContactQuery.fetcher = (client: GraphQLClient, variables: LotteryDealerContactQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryDealerContactQuery, LotteryDealerContactQueryVariables>(client, LotteryDealerContactDocument, variables, headers);
+
+export const CreateLotteryDealerContactDocument = `
+    mutation CreateLotteryDealerContact($input: CreateLotteryDealerContactInput!) {
+  createLotteryDealerContact(input: $input) {
+    item {
+      ...LotteryDealerContactFields
+    }
+  }
+}
+    ${LotteryDealerContactFieldsFragmentDoc}`;
+
+export const useCreateLotteryDealerContactMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<CreateLotteryDealerContactMutation, TError, CreateLotteryDealerContactMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<CreateLotteryDealerContactMutation, TError, CreateLotteryDealerContactMutationVariables, TContext>(
+      {
+    mutationKey: ['CreateLotteryDealerContact'],
+    mutationFn: (variables?: CreateLotteryDealerContactMutationVariables) => fetcher<CreateLotteryDealerContactMutation, CreateLotteryDealerContactMutationVariables>(client, CreateLotteryDealerContactDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useCreateLotteryDealerContactMutation.fetcher = (client: GraphQLClient, variables: CreateLotteryDealerContactMutationVariables, headers?: RequestInit['headers']) => fetcher<CreateLotteryDealerContactMutation, CreateLotteryDealerContactMutationVariables>(client, CreateLotteryDealerContactDocument, variables, headers);
+
+export const UpdateLotteryDealerContactDocument = `
+    mutation UpdateLotteryDealerContact($input: UpdateLotteryDealerContactInput!) {
+  updateLotteryDealerContact(input: $input) {
+    item {
+      ...LotteryDealerContactFields
+    }
+  }
+}
+    ${LotteryDealerContactFieldsFragmentDoc}`;
+
+export const useUpdateLotteryDealerContactMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<UpdateLotteryDealerContactMutation, TError, UpdateLotteryDealerContactMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<UpdateLotteryDealerContactMutation, TError, UpdateLotteryDealerContactMutationVariables, TContext>(
+      {
+    mutationKey: ['UpdateLotteryDealerContact'],
+    mutationFn: (variables?: UpdateLotteryDealerContactMutationVariables) => fetcher<UpdateLotteryDealerContactMutation, UpdateLotteryDealerContactMutationVariables>(client, UpdateLotteryDealerContactDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useUpdateLotteryDealerContactMutation.fetcher = (client: GraphQLClient, variables: UpdateLotteryDealerContactMutationVariables, headers?: RequestInit['headers']) => fetcher<UpdateLotteryDealerContactMutation, UpdateLotteryDealerContactMutationVariables>(client, UpdateLotteryDealerContactDocument, variables, headers);
+
+export const LotteryInventoryBooksDocument = `
+    query LotteryInventoryBooks($input: LotteryInventoryBooksInput!) {
+  lotteryInventoryBooks(input: $input) {
+    items {
+      ...LotteryInventoryBookFields
+    }
+    totalCount
+  }
+}
+    ${LotteryInventoryBookFieldsFragmentDoc}`;
+
+export const useLotteryInventoryBooksQuery = <
+      TData = LotteryInventoryBooksQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: LotteryInventoryBooksQueryVariables,
+      options?: Omit<UseQueryOptions<LotteryInventoryBooksQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotteryInventoryBooksQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<LotteryInventoryBooksQuery, TError, TData>(
+      {
+    queryKey: ['LotteryInventoryBooks', variables],
+    queryFn: fetcher<LotteryInventoryBooksQuery, LotteryInventoryBooksQueryVariables>(client, LotteryInventoryBooksDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useLotteryInventoryBooksQuery.getKey = (variables: LotteryInventoryBooksQueryVariables) => ['LotteryInventoryBooks', variables];
+
+
+useLotteryInventoryBooksQuery.fetcher = (client: GraphQLClient, variables: LotteryInventoryBooksQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryInventoryBooksQuery, LotteryInventoryBooksQueryVariables>(client, LotteryInventoryBooksDocument, variables, headers);
+
+export const LotteryInventoryBookDocument = `
+    query LotteryInventoryBook($id: ID!) {
+  lotteryInventoryBook(id: $id) {
+    item {
+      ...LotteryInventoryBookDetailFields
+    }
+  }
+}
+    ${LotteryInventoryBookDetailFieldsFragmentDoc}`;
+
+export const useLotteryInventoryBookQuery = <
+      TData = LotteryInventoryBookQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: LotteryInventoryBookQueryVariables,
+      options?: Omit<UseQueryOptions<LotteryInventoryBookQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotteryInventoryBookQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<LotteryInventoryBookQuery, TError, TData>(
+      {
+    queryKey: ['LotteryInventoryBook', variables],
+    queryFn: fetcher<LotteryInventoryBookQuery, LotteryInventoryBookQueryVariables>(client, LotteryInventoryBookDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useLotteryInventoryBookQuery.getKey = (variables: LotteryInventoryBookQueryVariables) => ['LotteryInventoryBook', variables];
+
+
+useLotteryInventoryBookQuery.fetcher = (client: GraphQLClient, variables: LotteryInventoryBookQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryInventoryBookQuery, LotteryInventoryBookQueryVariables>(client, LotteryInventoryBookDocument, variables, headers);
+
+export const LotteryTicketLookupDocument = `
+    query LotteryTicketLookup($input: LotteryTicketLookupInput!) {
+  lotteryTicketLookup(input: $input) {
+    items {
+      ...LotteryTicketLookupItemFields
+    }
+  }
+}
+    ${LotteryTicketLookupItemFieldsFragmentDoc}`;
+
+export const useLotteryTicketLookupQuery = <
+      TData = LotteryTicketLookupQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: LotteryTicketLookupQueryVariables,
+      options?: Omit<UseQueryOptions<LotteryTicketLookupQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotteryTicketLookupQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<LotteryTicketLookupQuery, TError, TData>(
+      {
+    queryKey: ['LotteryTicketLookup', variables],
+    queryFn: fetcher<LotteryTicketLookupQuery, LotteryTicketLookupQueryVariables>(client, LotteryTicketLookupDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useLotteryTicketLookupQuery.getKey = (variables: LotteryTicketLookupQueryVariables) => ['LotteryTicketLookup', variables];
+
+
+useLotteryTicketLookupQuery.fetcher = (client: GraphQLClient, variables: LotteryTicketLookupQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryTicketLookupQuery, LotteryTicketLookupQueryVariables>(client, LotteryTicketLookupDocument, variables, headers);
+
+export const LotteryInvestigationsDocument = `
+    query LotteryInvestigations {
+  lotteryInvestigations {
+    items {
+      ...LotteryInvestigationRowFields
+    }
+    canRecover
+  }
+}
+    ${LotteryInvestigationRowFieldsFragmentDoc}`;
+
+export const useLotteryInvestigationsQuery = <
+      TData = LotteryInvestigationsQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables?: LotteryInvestigationsQueryVariables,
+      options?: Omit<UseQueryOptions<LotteryInvestigationsQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotteryInvestigationsQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<LotteryInvestigationsQuery, TError, TData>(
+      {
+    queryKey: variables === undefined ? ['LotteryInvestigations'] : ['LotteryInvestigations', variables],
+    queryFn: fetcher<LotteryInvestigationsQuery, LotteryInvestigationsQueryVariables>(client, LotteryInvestigationsDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useLotteryInvestigationsQuery.getKey = (variables?: LotteryInvestigationsQueryVariables) => variables === undefined ? ['LotteryInvestigations'] : ['LotteryInvestigations', variables];
+
+
+useLotteryInvestigationsQuery.fetcher = (client: GraphQLClient, variables?: LotteryInvestigationsQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryInvestigationsQuery, LotteryInvestigationsQueryVariables>(client, LotteryInvestigationsDocument, variables, headers);
+
+export const LotteryAllocationsDocument = `
+    query LotteryAllocations($input: LotteryAllocationsInput!) {
+  lotteryAllocations(input: $input) {
+    stores {
+      ...LotteryInventoryRefFields
+    }
+    games {
+      id
+      gameCode
+      name
+    }
+    cells {
+      ...LotteryAllocationCellFields
+    }
+    canEdit
+  }
+}
+    ${LotteryInventoryRefFieldsFragmentDoc}
+${LotteryAllocationCellFieldsFragmentDoc}`;
+
+export const useLotteryAllocationsQuery = <
+      TData = LotteryAllocationsQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: LotteryAllocationsQueryVariables,
+      options?: Omit<UseQueryOptions<LotteryAllocationsQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotteryAllocationsQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<LotteryAllocationsQuery, TError, TData>(
+      {
+    queryKey: ['LotteryAllocations', variables],
+    queryFn: fetcher<LotteryAllocationsQuery, LotteryAllocationsQueryVariables>(client, LotteryAllocationsDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useLotteryAllocationsQuery.getKey = (variables: LotteryAllocationsQueryVariables) => ['LotteryAllocations', variables];
+
+
+useLotteryAllocationsQuery.fetcher = (client: GraphQLClient, variables: LotteryAllocationsQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryAllocationsQuery, LotteryAllocationsQueryVariables>(client, LotteryAllocationsDocument, variables, headers);
+
+export const LotteryStockOverviewDocument = `
+    query LotteryStockOverview($input: LotteryStockOverviewInput!) {
+  lotteryStockOverview(input: $input) {
+    items {
+      org {
+        ...LotteryInventoryRefFields
+      }
+      game {
+        id
+        gameCode
+        name
+      }
+      unopenedBooks
+      counterTickets
+      soldTickets
+    }
+  }
+}
+    ${LotteryInventoryRefFieldsFragmentDoc}`;
+
+export const useLotteryStockOverviewQuery = <
+      TData = LotteryStockOverviewQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: LotteryStockOverviewQueryVariables,
+      options?: Omit<UseQueryOptions<LotteryStockOverviewQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotteryStockOverviewQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<LotteryStockOverviewQuery, TError, TData>(
+      {
+    queryKey: ['LotteryStockOverview', variables],
+    queryFn: fetcher<LotteryStockOverviewQuery, LotteryStockOverviewQueryVariables>(client, LotteryStockOverviewDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useLotteryStockOverviewQuery.getKey = (variables: LotteryStockOverviewQueryVariables) => ['LotteryStockOverview', variables];
+
+
+useLotteryStockOverviewQuery.fetcher = (client: GraphQLClient, variables: LotteryStockOverviewQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryStockOverviewQuery, LotteryStockOverviewQueryVariables>(client, LotteryStockOverviewDocument, variables, headers);
+
+export const LotteryFieldOptionsDocument = `
+    query LotteryFieldOptions($categoryKey: String!) {
+  lotteryFieldOptions(categoryKey: $categoryKey) {
+    items {
+      value
+      label
+    }
+    totalCount
+  }
+}
+    `;
+
+export const useLotteryFieldOptionsQuery = <
+      TData = LotteryFieldOptionsQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: LotteryFieldOptionsQueryVariables,
+      options?: Omit<UseQueryOptions<LotteryFieldOptionsQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotteryFieldOptionsQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<LotteryFieldOptionsQuery, TError, TData>(
+      {
+    queryKey: ['LotteryFieldOptions', variables],
+    queryFn: fetcher<LotteryFieldOptionsQuery, LotteryFieldOptionsQueryVariables>(client, LotteryFieldOptionsDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useLotteryFieldOptionsQuery.getKey = (variables: LotteryFieldOptionsQueryVariables) => ['LotteryFieldOptions', variables];
+
+
+useLotteryFieldOptionsQuery.fetcher = (client: GraphQLClient, variables: LotteryFieldOptionsQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryFieldOptionsQuery, LotteryFieldOptionsQueryVariables>(client, LotteryFieldOptionsDocument, variables, headers);
+
+export const SetLotteryAllocationDocument = `
+    mutation SetLotteryAllocation($input: SetLotteryAllocationInput!) {
+  setLotteryAllocation(input: $input) {
+    item {
+      ...LotteryAllocationCellFields
+    }
+  }
+}
+    ${LotteryAllocationCellFieldsFragmentDoc}`;
+
+export const useSetLotteryAllocationMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<SetLotteryAllocationMutation, TError, SetLotteryAllocationMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<SetLotteryAllocationMutation, TError, SetLotteryAllocationMutationVariables, TContext>(
+      {
+    mutationKey: ['SetLotteryAllocation'],
+    mutationFn: (variables?: SetLotteryAllocationMutationVariables) => fetcher<SetLotteryAllocationMutation, SetLotteryAllocationMutationVariables>(client, SetLotteryAllocationDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useSetLotteryAllocationMutation.fetcher = (client: GraphQLClient, variables: SetLotteryAllocationMutationVariables, headers?: RequestInit['headers']) => fetcher<SetLotteryAllocationMutation, SetLotteryAllocationMutationVariables>(client, SetLotteryAllocationDocument, variables, headers);
+
+export const CorrectLotterySkippedTicketsDocument = `
+    mutation CorrectLotterySkippedTickets($input: CorrectLotterySkippedTicketsInput!) {
+  correctLotterySkippedTickets(input: $input) {
+    count
+    lossCost
+  }
+}
+    `;
+
+export const useCorrectLotterySkippedTicketsMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<CorrectLotterySkippedTicketsMutation, TError, CorrectLotterySkippedTicketsMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<CorrectLotterySkippedTicketsMutation, TError, CorrectLotterySkippedTicketsMutationVariables, TContext>(
+      {
+    mutationKey: ['CorrectLotterySkippedTickets'],
+    mutationFn: (variables?: CorrectLotterySkippedTicketsMutationVariables) => fetcher<CorrectLotterySkippedTicketsMutation, CorrectLotterySkippedTicketsMutationVariables>(client, CorrectLotterySkippedTicketsDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useCorrectLotterySkippedTicketsMutation.fetcher = (client: GraphQLClient, variables: CorrectLotterySkippedTicketsMutationVariables, headers?: RequestInit['headers']) => fetcher<CorrectLotterySkippedTicketsMutation, CorrectLotterySkippedTicketsMutationVariables>(client, CorrectLotterySkippedTicketsDocument, variables, headers);
+
+export const RecoverLotteryTicketsDocument = `
+    mutation RecoverLotteryTickets($input: RecoverLotteryTicketsInput!) {
+  recoverLotteryTickets(input: $input) {
+    count
+    lossCost
+  }
+}
+    `;
+
+export const useRecoverLotteryTicketsMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<RecoverLotteryTicketsMutation, TError, RecoverLotteryTicketsMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<RecoverLotteryTicketsMutation, TError, RecoverLotteryTicketsMutationVariables, TContext>(
+      {
+    mutationKey: ['RecoverLotteryTickets'],
+    mutationFn: (variables?: RecoverLotteryTicketsMutationVariables) => fetcher<RecoverLotteryTicketsMutation, RecoverLotteryTicketsMutationVariables>(client, RecoverLotteryTicketsDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useRecoverLotteryTicketsMutation.fetcher = (client: GraphQLClient, variables: RecoverLotteryTicketsMutationVariables, headers?: RequestInit['headers']) => fetcher<RecoverLotteryTicketsMutation, RecoverLotteryTicketsMutationVariables>(client, RecoverLotteryTicketsDocument, variables, headers);
+
+export const ScrapLotteryTicketsDocument = `
+    mutation ScrapLotteryTickets($input: ScrapLotteryTicketsInput!) {
+  scrapLotteryTickets(input: $input) {
+    count
+    lossCost
+  }
+}
+    `;
+
+export const useScrapLotteryTicketsMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<ScrapLotteryTicketsMutation, TError, ScrapLotteryTicketsMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<ScrapLotteryTicketsMutation, TError, ScrapLotteryTicketsMutationVariables, TContext>(
+      {
+    mutationKey: ['ScrapLotteryTickets'],
+    mutationFn: (variables?: ScrapLotteryTicketsMutationVariables) => fetcher<ScrapLotteryTicketsMutation, ScrapLotteryTicketsMutationVariables>(client, ScrapLotteryTicketsDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useScrapLotteryTicketsMutation.fetcher = (client: GraphQLClient, variables: ScrapLotteryTicketsMutationVariables, headers?: RequestInit['headers']) => fetcher<ScrapLotteryTicketsMutation, ScrapLotteryTicketsMutationVariables>(client, ScrapLotteryTicketsDocument, variables, headers);
+
+export const LotteryInventoryStoresDocument = `
+    query LotteryInventoryStores {
+  lotteryInventoryStores {
+    items {
+      ...LotteryInventoryRefFields
+    }
+  }
+}
+    ${LotteryInventoryRefFieldsFragmentDoc}`;
+
+export const useLotteryInventoryStoresQuery = <
+      TData = LotteryInventoryStoresQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables?: LotteryInventoryStoresQueryVariables,
+      options?: Omit<UseQueryOptions<LotteryInventoryStoresQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotteryInventoryStoresQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<LotteryInventoryStoresQuery, TError, TData>(
+      {
+    queryKey: variables === undefined ? ['LotteryInventoryStores'] : ['LotteryInventoryStores', variables],
+    queryFn: fetcher<LotteryInventoryStoresQuery, LotteryInventoryStoresQueryVariables>(client, LotteryInventoryStoresDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useLotteryInventoryStoresQuery.getKey = (variables?: LotteryInventoryStoresQueryVariables) => variables === undefined ? ['LotteryInventoryStores'] : ['LotteryInventoryStores', variables];
+
+
+useLotteryInventoryStoresQuery.fetcher = (client: GraphQLClient, variables?: LotteryInventoryStoresQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryInventoryStoresQuery, LotteryInventoryStoresQueryVariables>(client, LotteryInventoryStoresDocument, variables, headers);
+
+export const LotteryGamesDocument = `
+    query LotteryGames($input: LotteryGamesInput!) {
+  lotteryGames(input: $input) {
+    items {
+      ...LotteryGameFields
+    }
+    totalCount
+    page
+    pageSize
+  }
+}
+    ${LotteryGameFieldsFragmentDoc}`;
+
+export const useLotteryGamesQuery = <
+      TData = LotteryGamesQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: LotteryGamesQueryVariables,
+      options?: Omit<UseQueryOptions<LotteryGamesQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotteryGamesQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<LotteryGamesQuery, TError, TData>(
+      {
+    queryKey: ['LotteryGames', variables],
+    queryFn: fetcher<LotteryGamesQuery, LotteryGamesQueryVariables>(client, LotteryGamesDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useLotteryGamesQuery.getKey = (variables: LotteryGamesQueryVariables) => ['LotteryGames', variables];
+
+
+useLotteryGamesQuery.fetcher = (client: GraphQLClient, variables: LotteryGamesQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryGamesQuery, LotteryGamesQueryVariables>(client, LotteryGamesDocument, variables, headers);
+
+export const LotteryGameDocument = `
+    query LotteryGame($id: ID!) {
+  lotteryGame(id: $id) {
+    item {
+      ...LotteryGameFields
+    }
+  }
+}
+    ${LotteryGameFieldsFragmentDoc}`;
+
+export const useLotteryGameQuery = <
+      TData = LotteryGameQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: LotteryGameQueryVariables,
+      options?: Omit<UseQueryOptions<LotteryGameQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotteryGameQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<LotteryGameQuery, TError, TData>(
+      {
+    queryKey: ['LotteryGame', variables],
+    queryFn: fetcher<LotteryGameQuery, LotteryGameQueryVariables>(client, LotteryGameDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useLotteryGameQuery.getKey = (variables: LotteryGameQueryVariables) => ['LotteryGame', variables];
+
+
+useLotteryGameQuery.fetcher = (client: GraphQLClient, variables: LotteryGameQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryGameQuery, LotteryGameQueryVariables>(client, LotteryGameDocument, variables, headers);
+
+export const CreateLotteryGameDocument = `
+    mutation CreateLotteryGame($input: CreateLotteryGameInput!) {
+  createLotteryGame(input: $input) {
+    item {
+      ...LotteryGameFields
+    }
+  }
+}
+    ${LotteryGameFieldsFragmentDoc}`;
+
+export const useCreateLotteryGameMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<CreateLotteryGameMutation, TError, CreateLotteryGameMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<CreateLotteryGameMutation, TError, CreateLotteryGameMutationVariables, TContext>(
+      {
+    mutationKey: ['CreateLotteryGame'],
+    mutationFn: (variables?: CreateLotteryGameMutationVariables) => fetcher<CreateLotteryGameMutation, CreateLotteryGameMutationVariables>(client, CreateLotteryGameDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useCreateLotteryGameMutation.fetcher = (client: GraphQLClient, variables: CreateLotteryGameMutationVariables, headers?: RequestInit['headers']) => fetcher<CreateLotteryGameMutation, CreateLotteryGameMutationVariables>(client, CreateLotteryGameDocument, variables, headers);
+
+export const UpdateLotteryGameDocument = `
+    mutation UpdateLotteryGame($input: UpdateLotteryGameInput!) {
+  updateLotteryGame(input: $input) {
+    item {
+      ...LotteryGameFields
+    }
+  }
+}
+    ${LotteryGameFieldsFragmentDoc}`;
+
+export const useUpdateLotteryGameMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<UpdateLotteryGameMutation, TError, UpdateLotteryGameMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<UpdateLotteryGameMutation, TError, UpdateLotteryGameMutationVariables, TContext>(
+      {
+    mutationKey: ['UpdateLotteryGame'],
+    mutationFn: (variables?: UpdateLotteryGameMutationVariables) => fetcher<UpdateLotteryGameMutation, UpdateLotteryGameMutationVariables>(client, UpdateLotteryGameDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useUpdateLotteryGameMutation.fetcher = (client: GraphQLClient, variables: UpdateLotteryGameMutationVariables, headers?: RequestInit['headers']) => fetcher<UpdateLotteryGameMutation, UpdateLotteryGameMutationVariables>(client, UpdateLotteryGameDocument, variables, headers);
+
+export const DeleteLotteryGameDocument = `
+    mutation DeleteLotteryGame($input: DeleteLotteryGameInput!) {
+  deleteLotteryGame(input: $input) {
+    success
+    deletedId
+  }
+}
+    `;
+
+export const useDeleteLotteryGameMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<DeleteLotteryGameMutation, TError, DeleteLotteryGameMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<DeleteLotteryGameMutation, TError, DeleteLotteryGameMutationVariables, TContext>(
+      {
+    mutationKey: ['DeleteLotteryGame'],
+    mutationFn: (variables?: DeleteLotteryGameMutationVariables) => fetcher<DeleteLotteryGameMutation, DeleteLotteryGameMutationVariables>(client, DeleteLotteryGameDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useDeleteLotteryGameMutation.fetcher = (client: GraphQLClient, variables: DeleteLotteryGameMutationVariables, headers?: RequestInit['headers']) => fetcher<DeleteLotteryGameMutation, DeleteLotteryGameMutationVariables>(client, DeleteLotteryGameDocument, variables, headers);
+
+export const LotteryCashPointsDocument = `
+    query LotteryCashPoints($input: LotteryCashPointsInput!) {
+  lotteryCashPoints(input: $input) {
+    items {
+      ...LotteryCashPointFields
+    }
+    totalCount
+    page
+    pageSize
+  }
+}
+    ${LotteryCashPointFieldsFragmentDoc}`;
+
+export const useLotteryCashPointsQuery = <
+      TData = LotteryCashPointsQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: LotteryCashPointsQueryVariables,
+      options?: Omit<UseQueryOptions<LotteryCashPointsQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotteryCashPointsQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<LotteryCashPointsQuery, TError, TData>(
+      {
+    queryKey: ['LotteryCashPoints', variables],
+    queryFn: fetcher<LotteryCashPointsQuery, LotteryCashPointsQueryVariables>(client, LotteryCashPointsDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useLotteryCashPointsQuery.getKey = (variables: LotteryCashPointsQueryVariables) => ['LotteryCashPoints', variables];
+
+
+useLotteryCashPointsQuery.fetcher = (client: GraphQLClient, variables: LotteryCashPointsQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryCashPointsQuery, LotteryCashPointsQueryVariables>(client, LotteryCashPointsDocument, variables, headers);
+
+export const LotteryPositionOptionsDocument = `
+    query LotteryPositionOptions($orgId: ID!) {
+  lotteryPositionOptions(orgId: $orgId) {
+    items {
+      value
+      label
+    }
+    totalCount
+  }
+}
+    `;
+
+export const useLotteryPositionOptionsQuery = <
+      TData = LotteryPositionOptionsQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: LotteryPositionOptionsQueryVariables,
+      options?: Omit<UseQueryOptions<LotteryPositionOptionsQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotteryPositionOptionsQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<LotteryPositionOptionsQuery, TError, TData>(
+      {
+    queryKey: ['LotteryPositionOptions', variables],
+    queryFn: fetcher<LotteryPositionOptionsQuery, LotteryPositionOptionsQueryVariables>(client, LotteryPositionOptionsDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useLotteryPositionOptionsQuery.getKey = (variables: LotteryPositionOptionsQueryVariables) => ['LotteryPositionOptions', variables];
+
+
+useLotteryPositionOptionsQuery.fetcher = (client: GraphQLClient, variables: LotteryPositionOptionsQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryPositionOptionsQuery, LotteryPositionOptionsQueryVariables>(client, LotteryPositionOptionsDocument, variables, headers);
+
+export const CreateLotteryCashPointDocument = `
+    mutation CreateLotteryCashPoint($input: CreateLotteryCashPointInput!) {
+  createLotteryCashPoint(input: $input) {
+    item {
+      ...LotteryCashPointFields
+    }
+  }
+}
+    ${LotteryCashPointFieldsFragmentDoc}`;
+
+export const useCreateLotteryCashPointMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<CreateLotteryCashPointMutation, TError, CreateLotteryCashPointMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<CreateLotteryCashPointMutation, TError, CreateLotteryCashPointMutationVariables, TContext>(
+      {
+    mutationKey: ['CreateLotteryCashPoint'],
+    mutationFn: (variables?: CreateLotteryCashPointMutationVariables) => fetcher<CreateLotteryCashPointMutation, CreateLotteryCashPointMutationVariables>(client, CreateLotteryCashPointDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useCreateLotteryCashPointMutation.fetcher = (client: GraphQLClient, variables: CreateLotteryCashPointMutationVariables, headers?: RequestInit['headers']) => fetcher<CreateLotteryCashPointMutation, CreateLotteryCashPointMutationVariables>(client, CreateLotteryCashPointDocument, variables, headers);
+
+export const UpdateLotteryCashPointDocument = `
+    mutation UpdateLotteryCashPoint($input: UpdateLotteryCashPointInput!) {
+  updateLotteryCashPoint(input: $input) {
+    item {
+      ...LotteryCashPointFields
+    }
+  }
+}
+    ${LotteryCashPointFieldsFragmentDoc}`;
+
+export const useUpdateLotteryCashPointMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<UpdateLotteryCashPointMutation, TError, UpdateLotteryCashPointMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<UpdateLotteryCashPointMutation, TError, UpdateLotteryCashPointMutationVariables, TContext>(
+      {
+    mutationKey: ['UpdateLotteryCashPoint'],
+    mutationFn: (variables?: UpdateLotteryCashPointMutationVariables) => fetcher<UpdateLotteryCashPointMutation, UpdateLotteryCashPointMutationVariables>(client, UpdateLotteryCashPointDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useUpdateLotteryCashPointMutation.fetcher = (client: GraphQLClient, variables: UpdateLotteryCashPointMutationVariables, headers?: RequestInit['headers']) => fetcher<UpdateLotteryCashPointMutation, UpdateLotteryCashPointMutationVariables>(client, UpdateLotteryCashPointDocument, variables, headers);
+
+export const LotteryPurchaseOptionsDocument = `
+    query LotteryPurchaseOptions($orgId: ID!) {
+  lotteryPurchaseOptions(orgId: $orgId) {
+    dealers {
+      id
+      label
+    }
+    trustees {
+      dealerId
+      id
+      label
+    }
+    accounts {
+      id
+      label
+    }
+    requisitions {
+      id
+      serialNo
+      lines {
+        gameId
+        books
+      }
+    }
+    games {
+      id
+      gameCode
+      name
+      unitPrice
+      ticketsPerBook
+      bookPrice
+      defaultRate
+    }
+    allocations {
+      gameId
+      plannedBooks
+      givenBooks
+      inTransitBooks
+    }
+  }
+}
+    `;
+
+export const useLotteryPurchaseOptionsQuery = <
+      TData = LotteryPurchaseOptionsQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: LotteryPurchaseOptionsQueryVariables,
+      options?: Omit<UseQueryOptions<LotteryPurchaseOptionsQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotteryPurchaseOptionsQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<LotteryPurchaseOptionsQuery, TError, TData>(
+      {
+    queryKey: ['LotteryPurchaseOptions', variables],
+    queryFn: fetcher<LotteryPurchaseOptionsQuery, LotteryPurchaseOptionsQueryVariables>(client, LotteryPurchaseOptionsDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useLotteryPurchaseOptionsQuery.getKey = (variables: LotteryPurchaseOptionsQueryVariables) => ['LotteryPurchaseOptions', variables];
+
+
+useLotteryPurchaseOptionsQuery.fetcher = (client: GraphQLClient, variables: LotteryPurchaseOptionsQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryPurchaseOptionsQuery, LotteryPurchaseOptionsQueryVariables>(client, LotteryPurchaseOptionsDocument, variables, headers);
+
+export const LotteryPurchaseReceivingDocument = `
+    query LotteryPurchaseReceiving($submissionId: ID!) {
+  lotteryPurchaseReceiving(submissionId: $submissionId) {
+    ...LotteryPurchaseReceivingFields
+  }
+}
+    ${LotteryPurchaseReceivingFieldsFragmentDoc}`;
+
+export const useLotteryPurchaseReceivingQuery = <
+      TData = LotteryPurchaseReceivingQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: LotteryPurchaseReceivingQueryVariables,
+      options?: Omit<UseQueryOptions<LotteryPurchaseReceivingQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotteryPurchaseReceivingQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<LotteryPurchaseReceivingQuery, TError, TData>(
+      {
+    queryKey: ['LotteryPurchaseReceiving', variables],
+    queryFn: fetcher<LotteryPurchaseReceivingQuery, LotteryPurchaseReceivingQueryVariables>(client, LotteryPurchaseReceivingDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useLotteryPurchaseReceivingQuery.getKey = (variables: LotteryPurchaseReceivingQueryVariables) => ['LotteryPurchaseReceiving', variables];
+
+
+useLotteryPurchaseReceivingQuery.fetcher = (client: GraphQLClient, variables: LotteryPurchaseReceivingQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryPurchaseReceivingQuery, LotteryPurchaseReceivingQueryVariables>(client, LotteryPurchaseReceivingDocument, variables, headers);
+
+export const LotteryPurchaseProgressDocument = `
+    query LotteryPurchaseProgress($purchaseIds: [ID!]!) {
+  lotteryPurchaseProgress(purchaseIds: $purchaseIds) {
+    purchaseId
+    receivedCount
+    totalCount
+    settlementKind
+    settlementAmount
+    inSettlement
+  }
+}
+    `;
+
+export const useLotteryPurchaseProgressQuery = <
+      TData = LotteryPurchaseProgressQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: LotteryPurchaseProgressQueryVariables,
+      options?: Omit<UseQueryOptions<LotteryPurchaseProgressQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotteryPurchaseProgressQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<LotteryPurchaseProgressQuery, TError, TData>(
+      {
+    queryKey: ['LotteryPurchaseProgress', variables],
+    queryFn: fetcher<LotteryPurchaseProgressQuery, LotteryPurchaseProgressQueryVariables>(client, LotteryPurchaseProgressDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useLotteryPurchaseProgressQuery.getKey = (variables: LotteryPurchaseProgressQueryVariables) => ['LotteryPurchaseProgress', variables];
+
+
+useLotteryPurchaseProgressQuery.fetcher = (client: GraphQLClient, variables: LotteryPurchaseProgressQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryPurchaseProgressQuery, LotteryPurchaseProgressQueryVariables>(client, LotteryPurchaseProgressDocument, variables, headers);
+
+export const LotteryDealerPurchasesDocument = `
+    query LotteryDealerPurchases($dealerId: ID!) {
+  lotteryDealerPurchases(dealerId: $dealerId) {
+    purchaseId
+    serialNo
+    branchName
+    purchaseDate
+    selfPurchase
+    trusteeName
+    books
+    purchaseTotal
+    status
+  }
+}
+    `;
+
+export const useLotteryDealerPurchasesQuery = <
+      TData = LotteryDealerPurchasesQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: LotteryDealerPurchasesQueryVariables,
+      options?: Omit<UseQueryOptions<LotteryDealerPurchasesQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotteryDealerPurchasesQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<LotteryDealerPurchasesQuery, TError, TData>(
+      {
+    queryKey: ['LotteryDealerPurchases', variables],
+    queryFn: fetcher<LotteryDealerPurchasesQuery, LotteryDealerPurchasesQueryVariables>(client, LotteryDealerPurchasesDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useLotteryDealerPurchasesQuery.getKey = (variables: LotteryDealerPurchasesQueryVariables) => ['LotteryDealerPurchases', variables];
+
+
+useLotteryDealerPurchasesQuery.fetcher = (client: GraphQLClient, variables: LotteryDealerPurchasesQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryDealerPurchasesQuery, LotteryDealerPurchasesQueryVariables>(client, LotteryDealerPurchasesDocument, variables, headers);
+
+export const ReceiveLotteryPurchaseBookDocument = `
+    mutation ReceiveLotteryPurchaseBook($input: ReceiveLotteryPurchaseBookInput!) {
+  receiveLotteryPurchaseBook(input: $input) {
+    rowId
+    receiving {
+      ...LotteryPurchaseReceivingFields
+    }
+  }
+}
+    ${LotteryPurchaseReceivingFieldsFragmentDoc}`;
+
+export const useReceiveLotteryPurchaseBookMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<ReceiveLotteryPurchaseBookMutation, TError, ReceiveLotteryPurchaseBookMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<ReceiveLotteryPurchaseBookMutation, TError, ReceiveLotteryPurchaseBookMutationVariables, TContext>(
+      {
+    mutationKey: ['ReceiveLotteryPurchaseBook'],
+    mutationFn: (variables?: ReceiveLotteryPurchaseBookMutationVariables) => fetcher<ReceiveLotteryPurchaseBookMutation, ReceiveLotteryPurchaseBookMutationVariables>(client, ReceiveLotteryPurchaseBookDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useReceiveLotteryPurchaseBookMutation.fetcher = (client: GraphQLClient, variables: ReceiveLotteryPurchaseBookMutationVariables, headers?: RequestInit['headers']) => fetcher<ReceiveLotteryPurchaseBookMutation, ReceiveLotteryPurchaseBookMutationVariables>(client, ReceiveLotteryPurchaseBookDocument, variables, headers);
+
+export const NotifyLotteryPurchaseWrongStoreDocument = `
+    mutation NotifyLotteryPurchaseWrongStore($input: ReceiveLotteryPurchaseBookInput!) {
+  notifyLotteryPurchaseWrongStore(input: $input)
+}
+    `;
+
+export const useNotifyLotteryPurchaseWrongStoreMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<NotifyLotteryPurchaseWrongStoreMutation, TError, NotifyLotteryPurchaseWrongStoreMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<NotifyLotteryPurchaseWrongStoreMutation, TError, NotifyLotteryPurchaseWrongStoreMutationVariables, TContext>(
+      {
+    mutationKey: ['NotifyLotteryPurchaseWrongStore'],
+    mutationFn: (variables?: NotifyLotteryPurchaseWrongStoreMutationVariables) => fetcher<NotifyLotteryPurchaseWrongStoreMutation, NotifyLotteryPurchaseWrongStoreMutationVariables>(client, NotifyLotteryPurchaseWrongStoreDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useNotifyLotteryPurchaseWrongStoreMutation.fetcher = (client: GraphQLClient, variables: NotifyLotteryPurchaseWrongStoreMutationVariables, headers?: RequestInit['headers']) => fetcher<NotifyLotteryPurchaseWrongStoreMutation, NotifyLotteryPurchaseWrongStoreMutationVariables>(client, NotifyLotteryPurchaseWrongStoreDocument, variables, headers);
+
+export const LotteryRequisitionCandidatesDocument = `
+    query LotteryRequisitionCandidates($orgId: ID!) {
+  lotteryRequisitionCandidates(orgId: $orgId) {
+    ...LotteryRequisitionCandidateFields
+  }
+}
+    ${LotteryRequisitionCandidateFieldsFragmentDoc}`;
+
+export const useLotteryRequisitionCandidatesQuery = <
+      TData = LotteryRequisitionCandidatesQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: LotteryRequisitionCandidatesQueryVariables,
+      options?: Omit<UseQueryOptions<LotteryRequisitionCandidatesQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotteryRequisitionCandidatesQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<LotteryRequisitionCandidatesQuery, TError, TData>(
+      {
+    queryKey: ['LotteryRequisitionCandidates', variables],
+    queryFn: fetcher<LotteryRequisitionCandidatesQuery, LotteryRequisitionCandidatesQueryVariables>(client, LotteryRequisitionCandidatesDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useLotteryRequisitionCandidatesQuery.getKey = (variables: LotteryRequisitionCandidatesQueryVariables) => ['LotteryRequisitionCandidates', variables];
+
+
+useLotteryRequisitionCandidatesQuery.fetcher = (client: GraphQLClient, variables: LotteryRequisitionCandidatesQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryRequisitionCandidatesQuery, LotteryRequisitionCandidatesQueryVariables>(client, LotteryRequisitionCandidatesDocument, variables, headers);
+
+export const LotteryPurchaseListDocument = `
+    query LotteryPurchaseList {
+  lotteryPurchaseList {
+    orgIds
+    rows {
+      gameId
+      gameCode
+      name
+      unitPrice
+      branches {
+        orgId
+        books
+      }
+      totalBooks
+      estimatedAmount
+    }
+    requisitions {
+      requisitionId
+      serialNo
+      orgId
+      books
+      estimatedAmount
+      completedAt
+    }
+  }
+}
+    `;
+
+export const useLotteryPurchaseListQuery = <
+      TData = LotteryPurchaseListQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables?: LotteryPurchaseListQueryVariables,
+      options?: Omit<UseQueryOptions<LotteryPurchaseListQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotteryPurchaseListQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<LotteryPurchaseListQuery, TError, TData>(
+      {
+    queryKey: variables === undefined ? ['LotteryPurchaseList'] : ['LotteryPurchaseList', variables],
+    queryFn: fetcher<LotteryPurchaseListQuery, LotteryPurchaseListQueryVariables>(client, LotteryPurchaseListDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useLotteryPurchaseListQuery.getKey = (variables?: LotteryPurchaseListQueryVariables) => variables === undefined ? ['LotteryPurchaseList'] : ['LotteryPurchaseList', variables];
+
+
+useLotteryPurchaseListQuery.fetcher = (client: GraphQLClient, variables?: LotteryPurchaseListQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryPurchaseListQuery, LotteryPurchaseListQueryVariables>(client, LotteryPurchaseListDocument, variables, headers);
+
+export const LotteryRequisitionStatesDocument = `
+    query LotteryRequisitionStates($requisitionIds: [ID!]!) {
+  lotteryRequisitionStates(requisitionIds: $requisitionIds) {
+    requisitionId
+    state
+  }
+}
+    `;
+
+export const useLotteryRequisitionStatesQuery = <
+      TData = LotteryRequisitionStatesQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: LotteryRequisitionStatesQueryVariables,
+      options?: Omit<UseQueryOptions<LotteryRequisitionStatesQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotteryRequisitionStatesQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<LotteryRequisitionStatesQuery, TError, TData>(
+      {
+    queryKey: ['LotteryRequisitionStates', variables],
+    queryFn: fetcher<LotteryRequisitionStatesQuery, LotteryRequisitionStatesQueryVariables>(client, LotteryRequisitionStatesDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useLotteryRequisitionStatesQuery.getKey = (variables: LotteryRequisitionStatesQueryVariables) => ['LotteryRequisitionStates', variables];
+
+
+useLotteryRequisitionStatesQuery.fetcher = (client: GraphQLClient, variables: LotteryRequisitionStatesQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryRequisitionStatesQuery, LotteryRequisitionStatesQueryVariables>(client, LotteryRequisitionStatesDocument, variables, headers);
+
+export const LotteryTransferOptionsDocument = `
+    query LotteryTransferOptions($fromOrgId: ID!, $toOrgId: ID) {
+  lotteryTransferOptions(fromOrgId: $fromOrgId, toOrgId: $toOrgId) {
+    books {
+      bookId
+      gameId
+      gameCode
+      gameName
+      bookNo
+      unitPrice
+      bookPrice
+      rate
+      isWhole
+      availableCount
+    }
+    requisitions {
+      id
+      serialNo
+      books
+    }
+    allocations {
+      gameId
+      plannedBooks
+      givenBooks
+      inTransitBooks
+    }
+  }
+}
+    `;
+
+export const useLotteryTransferOptionsQuery = <
+      TData = LotteryTransferOptionsQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: LotteryTransferOptionsQueryVariables,
+      options?: Omit<UseQueryOptions<LotteryTransferOptionsQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotteryTransferOptionsQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<LotteryTransferOptionsQuery, TError, TData>(
+      {
+    queryKey: ['LotteryTransferOptions', variables],
+    queryFn: fetcher<LotteryTransferOptionsQuery, LotteryTransferOptionsQueryVariables>(client, LotteryTransferOptionsDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useLotteryTransferOptionsQuery.getKey = (variables: LotteryTransferOptionsQueryVariables) => ['LotteryTransferOptions', variables];
+
+
+useLotteryTransferOptionsQuery.fetcher = (client: GraphQLClient, variables: LotteryTransferOptionsQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryTransferOptionsQuery, LotteryTransferOptionsQueryVariables>(client, LotteryTransferOptionsDocument, variables, headers);
+
+export const LotteryTransferBookTicketsDocument = `
+    query LotteryTransferBookTickets($fromOrgId: ID!, $bookId: ID!) {
+  lotteryTransferBookTickets(fromOrgId: $fromOrgId, bookId: $bookId) {
+    ticketNo
+    state
+  }
+}
+    `;
+
+export const useLotteryTransferBookTicketsQuery = <
+      TData = LotteryTransferBookTicketsQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: LotteryTransferBookTicketsQueryVariables,
+      options?: Omit<UseQueryOptions<LotteryTransferBookTicketsQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotteryTransferBookTicketsQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<LotteryTransferBookTicketsQuery, TError, TData>(
+      {
+    queryKey: ['LotteryTransferBookTickets', variables],
+    queryFn: fetcher<LotteryTransferBookTicketsQuery, LotteryTransferBookTicketsQueryVariables>(client, LotteryTransferBookTicketsDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useLotteryTransferBookTicketsQuery.getKey = (variables: LotteryTransferBookTicketsQueryVariables) => ['LotteryTransferBookTickets', variables];
+
+
+useLotteryTransferBookTicketsQuery.fetcher = (client: GraphQLClient, variables: LotteryTransferBookTicketsQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryTransferBookTicketsQuery, LotteryTransferBookTicketsQueryVariables>(client, LotteryTransferBookTicketsDocument, variables, headers);
+
+export const LotteryTransferProgressDocument = `
+    query LotteryTransferProgress($transferIds: [ID!]!) {
+  lotteryTransferProgress(transferIds: $transferIds) {
+    transferId
+    wholeBooks
+    partialTickets
+    receivedCount
+    totalCount
+    inTransit
+    settlementKind
+    settlementAmount
+    inSettlement
+  }
+}
+    `;
+
+export const useLotteryTransferProgressQuery = <
+      TData = LotteryTransferProgressQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: LotteryTransferProgressQueryVariables,
+      options?: Omit<UseQueryOptions<LotteryTransferProgressQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotteryTransferProgressQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<LotteryTransferProgressQuery, TError, TData>(
+      {
+    queryKey: ['LotteryTransferProgress', variables],
+    queryFn: fetcher<LotteryTransferProgressQuery, LotteryTransferProgressQueryVariables>(client, LotteryTransferProgressDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useLotteryTransferProgressQuery.getKey = (variables: LotteryTransferProgressQueryVariables) => ['LotteryTransferProgress', variables];
+
+
+useLotteryTransferProgressQuery.fetcher = (client: GraphQLClient, variables: LotteryTransferProgressQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryTransferProgressQuery, LotteryTransferProgressQueryVariables>(client, LotteryTransferProgressDocument, variables, headers);
+
+export const LotteryTransferReceivingDocument = `
+    query LotteryTransferReceiving($submissionId: ID!) {
+  lotteryTransferReceiving(submissionId: $submissionId) {
+    ...LotteryTransferReceivingFields
+  }
+}
+    ${LotteryTransferReceivingFieldsFragmentDoc}`;
+
+export const useLotteryTransferReceivingQuery = <
+      TData = LotteryTransferReceivingQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: LotteryTransferReceivingQueryVariables,
+      options?: Omit<UseQueryOptions<LotteryTransferReceivingQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotteryTransferReceivingQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<LotteryTransferReceivingQuery, TError, TData>(
+      {
+    queryKey: ['LotteryTransferReceiving', variables],
+    queryFn: fetcher<LotteryTransferReceivingQuery, LotteryTransferReceivingQueryVariables>(client, LotteryTransferReceivingDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useLotteryTransferReceivingQuery.getKey = (variables: LotteryTransferReceivingQueryVariables) => ['LotteryTransferReceiving', variables];
+
+
+useLotteryTransferReceivingQuery.fetcher = (client: GraphQLClient, variables: LotteryTransferReceivingQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryTransferReceivingQuery, LotteryTransferReceivingQueryVariables>(client, LotteryTransferReceivingDocument, variables, headers);
+
+export const ReceiveLotteryTransferBookDocument = `
+    mutation ReceiveLotteryTransferBook($input: ReceiveLotteryTransferBookInput!) {
+  receiveLotteryTransferBook(input: $input) {
+    rowId
+    receiving {
+      ...LotteryTransferReceivingFields
+    }
+  }
+}
+    ${LotteryTransferReceivingFieldsFragmentDoc}`;
+
+export const useReceiveLotteryTransferBookMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<ReceiveLotteryTransferBookMutation, TError, ReceiveLotteryTransferBookMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<ReceiveLotteryTransferBookMutation, TError, ReceiveLotteryTransferBookMutationVariables, TContext>(
+      {
+    mutationKey: ['ReceiveLotteryTransferBook'],
+    mutationFn: (variables?: ReceiveLotteryTransferBookMutationVariables) => fetcher<ReceiveLotteryTransferBookMutation, ReceiveLotteryTransferBookMutationVariables>(client, ReceiveLotteryTransferBookDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useReceiveLotteryTransferBookMutation.fetcher = (client: GraphQLClient, variables: ReceiveLotteryTransferBookMutationVariables, headers?: RequestInit['headers']) => fetcher<ReceiveLotteryTransferBookMutation, ReceiveLotteryTransferBookMutationVariables>(client, ReceiveLotteryTransferBookDocument, variables, headers);
+
+export const NotifyLotteryTransferWrongStoreDocument = `
+    mutation NotifyLotteryTransferWrongStore($input: ReceiveLotteryTransferBookInput!) {
+  notifyLotteryTransferWrongStore(input: $input)
+}
+    `;
+
+export const useNotifyLotteryTransferWrongStoreMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<NotifyLotteryTransferWrongStoreMutation, TError, NotifyLotteryTransferWrongStoreMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<NotifyLotteryTransferWrongStoreMutation, TError, NotifyLotteryTransferWrongStoreMutationVariables, TContext>(
+      {
+    mutationKey: ['NotifyLotteryTransferWrongStore'],
+    mutationFn: (variables?: NotifyLotteryTransferWrongStoreMutationVariables) => fetcher<NotifyLotteryTransferWrongStoreMutation, NotifyLotteryTransferWrongStoreMutationVariables>(client, NotifyLotteryTransferWrongStoreDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useNotifyLotteryTransferWrongStoreMutation.fetcher = (client: GraphQLClient, variables: NotifyLotteryTransferWrongStoreMutationVariables, headers?: RequestInit['headers']) => fetcher<NotifyLotteryTransferWrongStoreMutation, NotifyLotteryTransferWrongStoreMutationVariables>(client, NotifyLotteryTransferWrongStoreDocument, variables, headers);
+
+export const MyScheduleDocument = `
+    query MySchedule($input: MyScheduleInput) {
+  mySchedule(input: $input) {
+    month
+    today
+    canPunch
+    currentOrg {
+      id
+      name
+    }
+    entries {
+      ...MyScheduleEntryFields
+    }
+    punchCards {
+      day
+      entry {
+        ...MyScheduleEntryFields
+      }
+    }
+    hasEntryToday
+    openUnmatchedClockIn {
+      ...MySchedulePunchFields
+    }
+    incomplete {
+      ...MyScheduleEntryFields
+    }
+    changes {
+      id
+      date
+      action
+      orgName
+      beforeStartAt
+      beforeEndAt
+      afterStartAt
+      afterEndAt
+      reason
+      reasonNote
+      createdAt
+    }
+    calendarDays {
+      date
+      type
+      name
+      paletteKey
+    }
+    dayOffDates
+  }
+}
+    ${MyScheduleEntryFieldsFragmentDoc}
+${MySchedulePunchFieldsFragmentDoc}`;
+
+export const useMyScheduleQuery = <
+      TData = MyScheduleQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables?: MyScheduleQueryVariables,
+      options?: Omit<UseQueryOptions<MyScheduleQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<MyScheduleQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<MyScheduleQuery, TError, TData>(
+      {
+    queryKey: variables === undefined ? ['MySchedule'] : ['MySchedule', variables],
+    queryFn: fetcher<MyScheduleQuery, MyScheduleQueryVariables>(client, MyScheduleDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useMyScheduleQuery.getKey = (variables?: MyScheduleQueryVariables) => variables === undefined ? ['MySchedule'] : ['MySchedule', variables];
+
+
+useMyScheduleQuery.fetcher = (client: GraphQLClient, variables?: MyScheduleQueryVariables, headers?: RequestInit['headers']) => fetcher<MyScheduleQuery, MyScheduleQueryVariables>(client, MyScheduleDocument, variables, headers);
+
+export const PunchMyScheduleDocument = `
+    mutation PunchMySchedule($input: PunchMyScheduleInput!) {
+  punchMySchedule(input: $input) {
+    ...MySchedulePunchFields
+  }
+}
+    ${MySchedulePunchFieldsFragmentDoc}`;
+
+export const usePunchMyScheduleMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<PunchMyScheduleMutation, TError, PunchMyScheduleMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<PunchMyScheduleMutation, TError, PunchMyScheduleMutationVariables, TContext>(
+      {
+    mutationKey: ['PunchMySchedule'],
+    mutationFn: (variables?: PunchMyScheduleMutationVariables) => fetcher<PunchMyScheduleMutation, PunchMyScheduleMutationVariables>(client, PunchMyScheduleDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+usePunchMyScheduleMutation.fetcher = (client: GraphQLClient, variables: PunchMyScheduleMutationVariables, headers?: RequestInit['headers']) => fetcher<PunchMyScheduleMutation, PunchMyScheduleMutationVariables>(client, PunchMyScheduleDocument, variables, headers);
+
+export const ScheduleAttendanceByPersonDocument = `
+    query ScheduleAttendanceByPerson($input: ScheduleAttendanceByPersonInput!) {
+  scheduleAttendanceByPerson(input: $input) {
+    month
+    orgId
+    userId
+    people {
+      userId
+      name
+    }
+    rows {
+      ...ScheduleAttendanceRowFields
+    }
+    unmatched {
+      ...ScheduleAttendancePunchFields
+    }
+    abilities {
+      ...ScheduleAttendanceAbilitiesFields
+    }
+  }
+}
+    ${ScheduleAttendanceRowFieldsFragmentDoc}
+${ScheduleAttendancePunchFieldsFragmentDoc}
+${ScheduleAttendanceAbilitiesFieldsFragmentDoc}`;
+
+export const useScheduleAttendanceByPersonQuery = <
+      TData = ScheduleAttendanceByPersonQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: ScheduleAttendanceByPersonQueryVariables,
+      options?: Omit<UseQueryOptions<ScheduleAttendanceByPersonQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<ScheduleAttendanceByPersonQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<ScheduleAttendanceByPersonQuery, TError, TData>(
+      {
+    queryKey: ['ScheduleAttendanceByPerson', variables],
+    queryFn: fetcher<ScheduleAttendanceByPersonQuery, ScheduleAttendanceByPersonQueryVariables>(client, ScheduleAttendanceByPersonDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useScheduleAttendanceByPersonQuery.getKey = (variables: ScheduleAttendanceByPersonQueryVariables) => ['ScheduleAttendanceByPerson', variables];
+
+
+useScheduleAttendanceByPersonQuery.fetcher = (client: GraphQLClient, variables: ScheduleAttendanceByPersonQueryVariables, headers?: RequestInit['headers']) => fetcher<ScheduleAttendanceByPersonQuery, ScheduleAttendanceByPersonQueryVariables>(client, ScheduleAttendanceByPersonDocument, variables, headers);
+
+export const ScheduleAttendanceByStoreDocument = `
+    query ScheduleAttendanceByStore($input: ScheduleAttendanceByStoreInput!) {
+  scheduleAttendanceByStore(input: $input) {
+    orgId
+    orgName
+    date
+    rows {
+      ...ScheduleAttendanceRowFields
+    }
+    unmatched {
+      ...ScheduleAttendancePunchFields
+    }
+    scheduledCount
+    arrivedCount
+    absentCount
+    abilities {
+      ...ScheduleAttendanceAbilitiesFields
+    }
+  }
+}
+    ${ScheduleAttendanceRowFieldsFragmentDoc}
+${ScheduleAttendancePunchFieldsFragmentDoc}
+${ScheduleAttendanceAbilitiesFieldsFragmentDoc}`;
+
+export const useScheduleAttendanceByStoreQuery = <
+      TData = ScheduleAttendanceByStoreQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: ScheduleAttendanceByStoreQueryVariables,
+      options?: Omit<UseQueryOptions<ScheduleAttendanceByStoreQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<ScheduleAttendanceByStoreQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<ScheduleAttendanceByStoreQuery, TError, TData>(
+      {
+    queryKey: ['ScheduleAttendanceByStore', variables],
+    queryFn: fetcher<ScheduleAttendanceByStoreQuery, ScheduleAttendanceByStoreQueryVariables>(client, ScheduleAttendanceByStoreDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useScheduleAttendanceByStoreQuery.getKey = (variables: ScheduleAttendanceByStoreQueryVariables) => ['ScheduleAttendanceByStore', variables];
+
+
+useScheduleAttendanceByStoreQuery.fetcher = (client: GraphQLClient, variables: ScheduleAttendanceByStoreQueryVariables, headers?: RequestInit['headers']) => fetcher<ScheduleAttendanceByStoreQuery, ScheduleAttendanceByStoreQueryVariables>(client, ScheduleAttendanceByStoreDocument, variables, headers);
+
+export const ScheduleAttendanceExportDocument = `
+    query ScheduleAttendanceExport($input: ScheduleAttendanceExportInput!) {
+  scheduleAttendanceExport(input: $input) {
+    month
+    sheets {
+      orgId
+      orgName
+      rows {
+        ...ScheduleAttendanceRowFields
+      }
+    }
+  }
+}
+    ${ScheduleAttendanceRowFieldsFragmentDoc}`;
+
+export const useScheduleAttendanceExportQuery = <
+      TData = ScheduleAttendanceExportQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: ScheduleAttendanceExportQueryVariables,
+      options?: Omit<UseQueryOptions<ScheduleAttendanceExportQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<ScheduleAttendanceExportQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<ScheduleAttendanceExportQuery, TError, TData>(
+      {
+    queryKey: ['ScheduleAttendanceExport', variables],
+    queryFn: fetcher<ScheduleAttendanceExportQuery, ScheduleAttendanceExportQueryVariables>(client, ScheduleAttendanceExportDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useScheduleAttendanceExportQuery.getKey = (variables: ScheduleAttendanceExportQueryVariables) => ['ScheduleAttendanceExport', variables];
+
+
+useScheduleAttendanceExportQuery.fetcher = (client: GraphQLClient, variables: ScheduleAttendanceExportQueryVariables, headers?: RequestInit['headers']) => fetcher<ScheduleAttendanceExportQuery, ScheduleAttendanceExportQueryVariables>(client, ScheduleAttendanceExportDocument, variables, headers);
+
+export const ScheduleAttendancePunchEntryOptionsDocument = `
+    query ScheduleAttendancePunchEntryOptions($punchId: ID!) {
+  scheduleAttendancePunchEntryOptions(punchId: $punchId) {
+    ...ScheduleAttendanceEntryOptionFields
+  }
+}
+    ${ScheduleAttendanceEntryOptionFieldsFragmentDoc}`;
+
+export const useScheduleAttendancePunchEntryOptionsQuery = <
+      TData = ScheduleAttendancePunchEntryOptionsQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: ScheduleAttendancePunchEntryOptionsQueryVariables,
+      options?: Omit<UseQueryOptions<ScheduleAttendancePunchEntryOptionsQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<ScheduleAttendancePunchEntryOptionsQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<ScheduleAttendancePunchEntryOptionsQuery, TError, TData>(
+      {
+    queryKey: ['ScheduleAttendancePunchEntryOptions', variables],
+    queryFn: fetcher<ScheduleAttendancePunchEntryOptionsQuery, ScheduleAttendancePunchEntryOptionsQueryVariables>(client, ScheduleAttendancePunchEntryOptionsDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useScheduleAttendancePunchEntryOptionsQuery.getKey = (variables: ScheduleAttendancePunchEntryOptionsQueryVariables) => ['ScheduleAttendancePunchEntryOptions', variables];
+
+
+useScheduleAttendancePunchEntryOptionsQuery.fetcher = (client: GraphQLClient, variables: ScheduleAttendancePunchEntryOptionsQueryVariables, headers?: RequestInit['headers']) => fetcher<ScheduleAttendancePunchEntryOptionsQuery, ScheduleAttendancePunchEntryOptionsQueryVariables>(client, ScheduleAttendancePunchEntryOptionsDocument, variables, headers);
+
+export const ReassignSchedulePunchDocument = `
+    mutation ReassignSchedulePunch($input: ReassignSchedulePunchInput!) {
+  reassignSchedulePunch(input: $input) {
+    ...ScheduleAttendancePunchFields
+  }
+}
+    ${ScheduleAttendancePunchFieldsFragmentDoc}`;
+
+export const useReassignSchedulePunchMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<ReassignSchedulePunchMutation, TError, ReassignSchedulePunchMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<ReassignSchedulePunchMutation, TError, ReassignSchedulePunchMutationVariables, TContext>(
+      {
+    mutationKey: ['ReassignSchedulePunch'],
+    mutationFn: (variables?: ReassignSchedulePunchMutationVariables) => fetcher<ReassignSchedulePunchMutation, ReassignSchedulePunchMutationVariables>(client, ReassignSchedulePunchDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useReassignSchedulePunchMutation.fetcher = (client: GraphQLClient, variables: ReassignSchedulePunchMutationVariables, headers?: RequestInit['headers']) => fetcher<ReassignSchedulePunchMutation, ReassignSchedulePunchMutationVariables>(client, ReassignSchedulePunchDocument, variables, headers);
+
+export const MakeupPunchEntryOptionsDocument = `
+    query MakeupPunchEntryOptions($input: MakeupPunchEntryOptionsInput!) {
+  makeupPunchEntryOptions(input: $input) {
+    ...ScheduleAttendanceEntryOptionFields
+  }
+}
+    ${ScheduleAttendanceEntryOptionFieldsFragmentDoc}`;
+
+export const useMakeupPunchEntryOptionsQuery = <
+      TData = MakeupPunchEntryOptionsQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: MakeupPunchEntryOptionsQueryVariables,
+      options?: Omit<UseQueryOptions<MakeupPunchEntryOptionsQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<MakeupPunchEntryOptionsQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<MakeupPunchEntryOptionsQuery, TError, TData>(
+      {
+    queryKey: ['MakeupPunchEntryOptions', variables],
+    queryFn: fetcher<MakeupPunchEntryOptionsQuery, MakeupPunchEntryOptionsQueryVariables>(client, MakeupPunchEntryOptionsDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useMakeupPunchEntryOptionsQuery.getKey = (variables: MakeupPunchEntryOptionsQueryVariables) => ['MakeupPunchEntryOptions', variables];
+
+
+useMakeupPunchEntryOptionsQuery.fetcher = (client: GraphQLClient, variables: MakeupPunchEntryOptionsQueryVariables, headers?: RequestInit['headers']) => fetcher<MakeupPunchEntryOptionsQuery, MakeupPunchEntryOptionsQueryVariables>(client, MakeupPunchEntryOptionsDocument, variables, headers);
+
+export const MyPendingMakeupPunchEntryIdsDocument = `
+    query MyPendingMakeupPunchEntryIds {
+  myPendingMakeupPunchEntryIds
+}
+    `;
+
+export const useMyPendingMakeupPunchEntryIdsQuery = <
+      TData = MyPendingMakeupPunchEntryIdsQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables?: MyPendingMakeupPunchEntryIdsQueryVariables,
+      options?: Omit<UseQueryOptions<MyPendingMakeupPunchEntryIdsQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<MyPendingMakeupPunchEntryIdsQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<MyPendingMakeupPunchEntryIdsQuery, TError, TData>(
+      {
+    queryKey: variables === undefined ? ['MyPendingMakeupPunchEntryIds'] : ['MyPendingMakeupPunchEntryIds', variables],
+    queryFn: fetcher<MyPendingMakeupPunchEntryIdsQuery, MyPendingMakeupPunchEntryIdsQueryVariables>(client, MyPendingMakeupPunchEntryIdsDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useMyPendingMakeupPunchEntryIdsQuery.getKey = (variables?: MyPendingMakeupPunchEntryIdsQueryVariables) => variables === undefined ? ['MyPendingMakeupPunchEntryIds'] : ['MyPendingMakeupPunchEntryIds', variables];
+
+
+useMyPendingMakeupPunchEntryIdsQuery.fetcher = (client: GraphQLClient, variables?: MyPendingMakeupPunchEntryIdsQueryVariables, headers?: RequestInit['headers']) => fetcher<MyPendingMakeupPunchEntryIdsQuery, MyPendingMakeupPunchEntryIdsQueryVariables>(client, MyPendingMakeupPunchEntryIdsDocument, variables, headers);
+
+export const MakeupPunchEntryExistsDocument = `
+    query MakeupPunchEntryExists($submissionId: ID!) {
+  makeupPunchEntryExists(submissionId: $submissionId)
+}
+    `;
+
+export const useMakeupPunchEntryExistsQuery = <
+      TData = MakeupPunchEntryExistsQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: MakeupPunchEntryExistsQueryVariables,
+      options?: Omit<UseQueryOptions<MakeupPunchEntryExistsQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<MakeupPunchEntryExistsQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<MakeupPunchEntryExistsQuery, TError, TData>(
+      {
+    queryKey: ['MakeupPunchEntryExists', variables],
+    queryFn: fetcher<MakeupPunchEntryExistsQuery, MakeupPunchEntryExistsQueryVariables>(client, MakeupPunchEntryExistsDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useMakeupPunchEntryExistsQuery.getKey = (variables: MakeupPunchEntryExistsQueryVariables) => ['MakeupPunchEntryExists', variables];
+
+
+useMakeupPunchEntryExistsQuery.fetcher = (client: GraphQLClient, variables: MakeupPunchEntryExistsQueryVariables, headers?: RequestInit['headers']) => fetcher<MakeupPunchEntryExistsQuery, MakeupPunchEntryExistsQueryVariables>(client, MakeupPunchEntryExistsDocument, variables, headers);
+
+export const ScheduleAutoRunStatusDocument = `
+    query ScheduleAutoRunStatus($input: ScheduleRosterInput!) {
+  scheduleAutoRunStatus(input: $input) {
+    canAutoRun
+    running
+    latest {
+      ...ScheduleAutoRunSummaryFields
+    }
+    weekTemplates {
+      id
+      name
+      days
+    }
+    conditions {
+      key
+      enabled
+    }
+  }
+}
+    ${ScheduleAutoRunSummaryFieldsFragmentDoc}`;
+
+export const useScheduleAutoRunStatusQuery = <
+      TData = ScheduleAutoRunStatusQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: ScheduleAutoRunStatusQueryVariables,
+      options?: Omit<UseQueryOptions<ScheduleAutoRunStatusQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<ScheduleAutoRunStatusQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<ScheduleAutoRunStatusQuery, TError, TData>(
+      {
+    queryKey: ['ScheduleAutoRunStatus', variables],
+    queryFn: fetcher<ScheduleAutoRunStatusQuery, ScheduleAutoRunStatusQueryVariables>(client, ScheduleAutoRunStatusDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useScheduleAutoRunStatusQuery.getKey = (variables: ScheduleAutoRunStatusQueryVariables) => ['ScheduleAutoRunStatus', variables];
+
+
+useScheduleAutoRunStatusQuery.fetcher = (client: GraphQLClient, variables: ScheduleAutoRunStatusQueryVariables, headers?: RequestInit['headers']) => fetcher<ScheduleAutoRunStatusQuery, ScheduleAutoRunStatusQueryVariables>(client, ScheduleAutoRunStatusDocument, variables, headers);
+
+export const ScheduleTemplateApplyPreviewDocument = `
+    query ScheduleTemplateApplyPreview($input: ApplyScheduleTemplatesInput!) {
+  scheduleTemplateApplyPreview(input: $input) {
+    ...ScheduleApplyTemplatesFields
+  }
+}
+    ${ScheduleApplyTemplatesFieldsFragmentDoc}`;
+
+export const useScheduleTemplateApplyPreviewQuery = <
+      TData = ScheduleTemplateApplyPreviewQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: ScheduleTemplateApplyPreviewQueryVariables,
+      options?: Omit<UseQueryOptions<ScheduleTemplateApplyPreviewQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<ScheduleTemplateApplyPreviewQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<ScheduleTemplateApplyPreviewQuery, TError, TData>(
+      {
+    queryKey: ['ScheduleTemplateApplyPreview', variables],
+    queryFn: fetcher<ScheduleTemplateApplyPreviewQuery, ScheduleTemplateApplyPreviewQueryVariables>(client, ScheduleTemplateApplyPreviewDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useScheduleTemplateApplyPreviewQuery.getKey = (variables: ScheduleTemplateApplyPreviewQueryVariables) => ['ScheduleTemplateApplyPreview', variables];
+
+
+useScheduleTemplateApplyPreviewQuery.fetcher = (client: GraphQLClient, variables: ScheduleTemplateApplyPreviewQueryVariables, headers?: RequestInit['headers']) => fetcher<ScheduleTemplateApplyPreviewQuery, ScheduleTemplateApplyPreviewQueryVariables>(client, ScheduleTemplateApplyPreviewDocument, variables, headers);
+
+export const ApplyScheduleTemplatesDocument = `
+    mutation ApplyScheduleTemplates($input: ApplyScheduleTemplatesInput!) {
+  applyScheduleTemplates(input: $input) {
+    ...ScheduleApplyTemplatesFields
+  }
+}
+    ${ScheduleApplyTemplatesFieldsFragmentDoc}`;
+
+export const useApplyScheduleTemplatesMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<ApplyScheduleTemplatesMutation, TError, ApplyScheduleTemplatesMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<ApplyScheduleTemplatesMutation, TError, ApplyScheduleTemplatesMutationVariables, TContext>(
+      {
+    mutationKey: ['ApplyScheduleTemplates'],
+    mutationFn: (variables?: ApplyScheduleTemplatesMutationVariables) => fetcher<ApplyScheduleTemplatesMutation, ApplyScheduleTemplatesMutationVariables>(client, ApplyScheduleTemplatesDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useApplyScheduleTemplatesMutation.fetcher = (client: GraphQLClient, variables: ApplyScheduleTemplatesMutationVariables, headers?: RequestInit['headers']) => fetcher<ApplyScheduleTemplatesMutation, ApplyScheduleTemplatesMutationVariables>(client, ApplyScheduleTemplatesDocument, variables, headers);
+
+export const ScheduleAutoRunPreviewDocument = `
+    query ScheduleAutoRunPreview($input: ScheduleAutoRunRangeInput!) {
+  scheduleAutoRunPreview(input: $input) {
+    demandCount
+    fillableDays
+    manualCount
+    autoCount
+    weekTemplate {
+      id
+      name
+    }
+  }
+}
+    `;
+
+export const useScheduleAutoRunPreviewQuery = <
+      TData = ScheduleAutoRunPreviewQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: ScheduleAutoRunPreviewQueryVariables,
+      options?: Omit<UseQueryOptions<ScheduleAutoRunPreviewQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<ScheduleAutoRunPreviewQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<ScheduleAutoRunPreviewQuery, TError, TData>(
+      {
+    queryKey: ['ScheduleAutoRunPreview', variables],
+    queryFn: fetcher<ScheduleAutoRunPreviewQuery, ScheduleAutoRunPreviewQueryVariables>(client, ScheduleAutoRunPreviewDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useScheduleAutoRunPreviewQuery.getKey = (variables: ScheduleAutoRunPreviewQueryVariables) => ['ScheduleAutoRunPreview', variables];
+
+
+useScheduleAutoRunPreviewQuery.fetcher = (client: GraphQLClient, variables: ScheduleAutoRunPreviewQueryVariables, headers?: RequestInit['headers']) => fetcher<ScheduleAutoRunPreviewQuery, ScheduleAutoRunPreviewQueryVariables>(client, ScheduleAutoRunPreviewDocument, variables, headers);
+
+export const RunScheduleAutoRunDocument = `
+    mutation RunScheduleAutoRun($input: RunScheduleAutoRunInput!) {
+  runScheduleAutoRun(input: $input) {
+    ...ScheduleAutoRunSummaryFields
+  }
+}
+    ${ScheduleAutoRunSummaryFieldsFragmentDoc}`;
+
+export const useRunScheduleAutoRunMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<RunScheduleAutoRunMutation, TError, RunScheduleAutoRunMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<RunScheduleAutoRunMutation, TError, RunScheduleAutoRunMutationVariables, TContext>(
+      {
+    mutationKey: ['RunScheduleAutoRun'],
+    mutationFn: (variables?: RunScheduleAutoRunMutationVariables) => fetcher<RunScheduleAutoRunMutation, RunScheduleAutoRunMutationVariables>(client, RunScheduleAutoRunDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useRunScheduleAutoRunMutation.fetcher = (client: GraphQLClient, variables: RunScheduleAutoRunMutationVariables, headers?: RequestInit['headers']) => fetcher<RunScheduleAutoRunMutation, RunScheduleAutoRunMutationVariables>(client, RunScheduleAutoRunDocument, variables, headers);
+
+export const ClearScheduleAutoAssignmentsDocument = `
+    mutation ClearScheduleAutoAssignments($input: ScheduleAutoRunRangeInput!) {
+  clearScheduleAutoAssignments(input: $input) {
+    removedCount
+    deletedEntryIds
+  }
+}
+    `;
+
+export const useClearScheduleAutoAssignmentsMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<ClearScheduleAutoAssignmentsMutation, TError, ClearScheduleAutoAssignmentsMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<ClearScheduleAutoAssignmentsMutation, TError, ClearScheduleAutoAssignmentsMutationVariables, TContext>(
+      {
+    mutationKey: ['ClearScheduleAutoAssignments'],
+    mutationFn: (variables?: ClearScheduleAutoAssignmentsMutationVariables) => fetcher<ClearScheduleAutoAssignmentsMutation, ClearScheduleAutoAssignmentsMutationVariables>(client, ClearScheduleAutoAssignmentsDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useClearScheduleAutoAssignmentsMutation.fetcher = (client: GraphQLClient, variables: ClearScheduleAutoAssignmentsMutationVariables, headers?: RequestInit['headers']) => fetcher<ClearScheduleAutoAssignmentsMutation, ClearScheduleAutoAssignmentsMutationVariables>(client, ClearScheduleAutoAssignmentsDocument, variables, headers);
+
+export const ScheduleCheckDocument = `
+    query ScheduleCheck($input: ScheduleRosterInput!) {
+  scheduleCheck(input: $input) {
+    orgId
+    month
+    limitCount
+    reminderCount
+    items {
+      ...ScheduleCheckItemFields
+    }
+  }
+}
+    ${ScheduleCheckItemFieldsFragmentDoc}`;
+
+export const useScheduleCheckQuery = <
+      TData = ScheduleCheckQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: ScheduleCheckQueryVariables,
+      options?: Omit<UseQueryOptions<ScheduleCheckQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<ScheduleCheckQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<ScheduleCheckQuery, TError, TData>(
+      {
+    queryKey: ['ScheduleCheck', variables],
+    queryFn: fetcher<ScheduleCheckQuery, ScheduleCheckQueryVariables>(client, ScheduleCheckDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useScheduleCheckQuery.getKey = (variables: ScheduleCheckQueryVariables) => ['ScheduleCheck', variables];
+
+
+useScheduleCheckQuery.fetcher = (client: GraphQLClient, variables: ScheduleCheckQueryVariables, headers?: RequestInit['headers']) => fetcher<ScheduleCheckQuery, ScheduleCheckQueryVariables>(client, ScheduleCheckDocument, variables, headers);
+
+export const PublishScheduleDocument = `
+    mutation PublishSchedule($input: PublishScheduleInput!) {
+  publishSchedule(input: $input) {
+    period {
+      status
+      publishedAt
+      publishedByName
+    }
+    notifiedCount
+  }
+}
+    `;
+
+export const usePublishScheduleMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<PublishScheduleMutation, TError, PublishScheduleMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<PublishScheduleMutation, TError, PublishScheduleMutationVariables, TContext>(
+      {
+    mutationKey: ['PublishSchedule'],
+    mutationFn: (variables?: PublishScheduleMutationVariables) => fetcher<PublishScheduleMutation, PublishScheduleMutationVariables>(client, PublishScheduleDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+usePublishScheduleMutation.fetcher = (client: GraphQLClient, variables: PublishScheduleMutationVariables, headers?: RequestInit['headers']) => fetcher<PublishScheduleMutation, PublishScheduleMutationVariables>(client, PublishScheduleDocument, variables, headers);
+
+export const MyScheduleDayOffsDocument = `
+    query MyScheduleDayOffs($input: MyScheduleDayOffsInput) {
+  myScheduleDayOffs(input: $input) {
+    month
+    primaryOrg {
+      id
+      name
+    }
+    window {
+      ...ScheduleDayOffWindowFields
+    }
+    canEdit
+    canOverride
+    limits {
+      ...ScheduleDayOffLimitsFields
+    }
+    dayOffCount
+    myDayOffs {
+      ...ScheduleDayOffFields
+    }
+    days {
+      ...ScheduleDayOffDayFields
+    }
+    violations {
+      ...ScheduleDayOffViolationFields
+    }
+  }
+}
+    ${ScheduleDayOffWindowFieldsFragmentDoc}
+${ScheduleDayOffLimitsFieldsFragmentDoc}
+${ScheduleDayOffFieldsFragmentDoc}
+${ScheduleDayOffDayFieldsFragmentDoc}
+${ScheduleDayOffViolationFieldsFragmentDoc}`;
+
+export const useMyScheduleDayOffsQuery = <
+      TData = MyScheduleDayOffsQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables?: MyScheduleDayOffsQueryVariables,
+      options?: Omit<UseQueryOptions<MyScheduleDayOffsQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<MyScheduleDayOffsQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<MyScheduleDayOffsQuery, TError, TData>(
+      {
+    queryKey: variables === undefined ? ['MyScheduleDayOffs'] : ['MyScheduleDayOffs', variables],
+    queryFn: fetcher<MyScheduleDayOffsQuery, MyScheduleDayOffsQueryVariables>(client, MyScheduleDayOffsDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useMyScheduleDayOffsQuery.getKey = (variables?: MyScheduleDayOffsQueryVariables) => variables === undefined ? ['MyScheduleDayOffs'] : ['MyScheduleDayOffs', variables];
+
+
+useMyScheduleDayOffsQuery.fetcher = (client: GraphQLClient, variables?: MyScheduleDayOffsQueryVariables, headers?: RequestInit['headers']) => fetcher<MyScheduleDayOffsQuery, MyScheduleDayOffsQueryVariables>(client, MyScheduleDayOffsDocument, variables, headers);
+
+export const AddMyScheduleDayOffsDocument = `
+    mutation AddMyScheduleDayOffs($input: AddMyScheduleDayOffsInput!) {
+  addMyScheduleDayOffs(input: $input) {
+    items {
+      ...ScheduleDayOffFields
+    }
+    violations {
+      ...ScheduleDayOffViolationFields
+    }
+    entryConflicts {
+      ...ScheduleDayOffEntryConflictFields
+    }
+  }
+}
+    ${ScheduleDayOffFieldsFragmentDoc}
+${ScheduleDayOffViolationFieldsFragmentDoc}
+${ScheduleDayOffEntryConflictFieldsFragmentDoc}`;
+
+export const useAddMyScheduleDayOffsMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<AddMyScheduleDayOffsMutation, TError, AddMyScheduleDayOffsMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<AddMyScheduleDayOffsMutation, TError, AddMyScheduleDayOffsMutationVariables, TContext>(
+      {
+    mutationKey: ['AddMyScheduleDayOffs'],
+    mutationFn: (variables?: AddMyScheduleDayOffsMutationVariables) => fetcher<AddMyScheduleDayOffsMutation, AddMyScheduleDayOffsMutationVariables>(client, AddMyScheduleDayOffsDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useAddMyScheduleDayOffsMutation.fetcher = (client: GraphQLClient, variables: AddMyScheduleDayOffsMutationVariables, headers?: RequestInit['headers']) => fetcher<AddMyScheduleDayOffsMutation, AddMyScheduleDayOffsMutationVariables>(client, AddMyScheduleDayOffsDocument, variables, headers);
+
+export const DeleteMyScheduleDayOffDocument = `
+    mutation DeleteMyScheduleDayOff($input: DeleteMyScheduleDayOffInput!) {
+  deleteMyScheduleDayOff(input: $input) {
+    id
+  }
+}
+    `;
+
+export const useDeleteMyScheduleDayOffMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<DeleteMyScheduleDayOffMutation, TError, DeleteMyScheduleDayOffMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<DeleteMyScheduleDayOffMutation, TError, DeleteMyScheduleDayOffMutationVariables, TContext>(
+      {
+    mutationKey: ['DeleteMyScheduleDayOff'],
+    mutationFn: (variables?: DeleteMyScheduleDayOffMutationVariables) => fetcher<DeleteMyScheduleDayOffMutation, DeleteMyScheduleDayOffMutationVariables>(client, DeleteMyScheduleDayOffDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useDeleteMyScheduleDayOffMutation.fetcher = (client: GraphQLClient, variables: DeleteMyScheduleDayOffMutationVariables, headers?: RequestInit['headers']) => fetcher<DeleteMyScheduleDayOffMutation, DeleteMyScheduleDayOffMutationVariables>(client, DeleteMyScheduleDayOffDocument, variables, headers);
+
+export const ScheduleDayOffOverviewDocument = `
+    query ScheduleDayOffOverview($input: ScheduleDayOffOverviewInput) {
+  scheduleDayOffOverview(input: $input) {
+    orgId
+    orgName
+    month
+    window {
+      ...ScheduleDayOffWindowFields
+    }
+    canEdit
+    limits {
+      ...ScheduleDayOffLimitsFields
+    }
+    staff {
+      userId
+      name
+      isPrimary
+      dayOffCount
+    }
+    days {
+      ...ScheduleDayOffDayFields
+    }
+  }
+}
+    ${ScheduleDayOffWindowFieldsFragmentDoc}
+${ScheduleDayOffLimitsFieldsFragmentDoc}
+${ScheduleDayOffDayFieldsFragmentDoc}`;
+
+export const useScheduleDayOffOverviewQuery = <
+      TData = ScheduleDayOffOverviewQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables?: ScheduleDayOffOverviewQueryVariables,
+      options?: Omit<UseQueryOptions<ScheduleDayOffOverviewQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<ScheduleDayOffOverviewQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<ScheduleDayOffOverviewQuery, TError, TData>(
+      {
+    queryKey: variables === undefined ? ['ScheduleDayOffOverview'] : ['ScheduleDayOffOverview', variables],
+    queryFn: fetcher<ScheduleDayOffOverviewQuery, ScheduleDayOffOverviewQueryVariables>(client, ScheduleDayOffOverviewDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useScheduleDayOffOverviewQuery.getKey = (variables?: ScheduleDayOffOverviewQueryVariables) => variables === undefined ? ['ScheduleDayOffOverview'] : ['ScheduleDayOffOverview', variables];
+
+
+useScheduleDayOffOverviewQuery.fetcher = (client: GraphQLClient, variables?: ScheduleDayOffOverviewQueryVariables, headers?: RequestInit['headers']) => fetcher<ScheduleDayOffOverviewQuery, ScheduleDayOffOverviewQueryVariables>(client, ScheduleDayOffOverviewDocument, variables, headers);
+
+export const AddScheduleDayOffsOnBehalfDocument = `
+    mutation AddScheduleDayOffsOnBehalf($input: AddScheduleDayOffsOnBehalfInput!) {
+  addScheduleDayOffsOnBehalf(input: $input) {
+    items {
+      ...ScheduleDayOffFields
+    }
+    violations {
+      ...ScheduleDayOffViolationFields
+    }
+    entryConflicts {
+      ...ScheduleDayOffEntryConflictFields
+    }
+  }
+}
+    ${ScheduleDayOffFieldsFragmentDoc}
+${ScheduleDayOffViolationFieldsFragmentDoc}
+${ScheduleDayOffEntryConflictFieldsFragmentDoc}`;
+
+export const useAddScheduleDayOffsOnBehalfMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<AddScheduleDayOffsOnBehalfMutation, TError, AddScheduleDayOffsOnBehalfMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<AddScheduleDayOffsOnBehalfMutation, TError, AddScheduleDayOffsOnBehalfMutationVariables, TContext>(
+      {
+    mutationKey: ['AddScheduleDayOffsOnBehalf'],
+    mutationFn: (variables?: AddScheduleDayOffsOnBehalfMutationVariables) => fetcher<AddScheduleDayOffsOnBehalfMutation, AddScheduleDayOffsOnBehalfMutationVariables>(client, AddScheduleDayOffsOnBehalfDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useAddScheduleDayOffsOnBehalfMutation.fetcher = (client: GraphQLClient, variables: AddScheduleDayOffsOnBehalfMutationVariables, headers?: RequestInit['headers']) => fetcher<AddScheduleDayOffsOnBehalfMutation, AddScheduleDayOffsOnBehalfMutationVariables>(client, AddScheduleDayOffsOnBehalfDocument, variables, headers);
+
+export const DeleteScheduleDayOffOnBehalfDocument = `
+    mutation DeleteScheduleDayOffOnBehalf($input: DeleteScheduleDayOffOnBehalfInput!) {
+  deleteScheduleDayOffOnBehalf(input: $input) {
+    id
+  }
+}
+    `;
+
+export const useDeleteScheduleDayOffOnBehalfMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<DeleteScheduleDayOffOnBehalfMutation, TError, DeleteScheduleDayOffOnBehalfMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<DeleteScheduleDayOffOnBehalfMutation, TError, DeleteScheduleDayOffOnBehalfMutationVariables, TContext>(
+      {
+    mutationKey: ['DeleteScheduleDayOffOnBehalf'],
+    mutationFn: (variables?: DeleteScheduleDayOffOnBehalfMutationVariables) => fetcher<DeleteScheduleDayOffOnBehalfMutation, DeleteScheduleDayOffOnBehalfMutationVariables>(client, DeleteScheduleDayOffOnBehalfDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useDeleteScheduleDayOffOnBehalfMutation.fetcher = (client: GraphQLClient, variables: DeleteScheduleDayOffOnBehalfMutationVariables, headers?: RequestInit['headers']) => fetcher<DeleteScheduleDayOffOnBehalfMutation, DeleteScheduleDayOffOnBehalfMutationVariables>(client, DeleteScheduleDayOffOnBehalfDocument, variables, headers);
+
+export const ScheduleRosterDocument = `
+    query ScheduleRoster($input: ScheduleRosterInput!) {
+  scheduleRoster(input: $input) {
+    orgId
+    orgName
+    month
+    period {
+      status
+      publishedAt
+      publishedByName
+    }
+    canEdit
+    canSaveTemplate
+    canUsePunchTime
+    settings {
+      breakTiers {
+        minMinutes
+        breakMinutes
+      }
+      defaultLeaderTaskKey
+      defaultHelperTaskKey
+      maxMonthlyDayOffs
+      minMonthlyDayOffs
+      entryMatchToleranceMinutes
+    }
+    people {
+      ...ScheduleRosterPersonFields
+    }
+    demands {
+      ...ScheduleDemandFields
+    }
+    entries {
+      ...ScheduleEntryFields
+    }
+    otherStoreEntries {
+      userId
+      date
+      startAt
+      endAt
+      orgName
+    }
+    unavailability {
+      userId
+      date
+      fullDay
+      slots {
+        startTime
+        endTime
+      }
+    }
+    calendarDays {
+      date
+      type
+      name
+      paletteKey
+    }
+    templates {
+      ...ScheduleRosterTemplateFields
+    }
+    unmatchedPunches {
+      id
+      userId
+      date
+      type
+      at
+    }
+  }
+}
+    ${ScheduleRosterPersonFieldsFragmentDoc}
+${ScheduleDemandFieldsFragmentDoc}
+${ScheduleEntryFieldsFragmentDoc}
+${ScheduleRosterTemplateFieldsFragmentDoc}`;
+
+export const useScheduleRosterQuery = <
+      TData = ScheduleRosterQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: ScheduleRosterQueryVariables,
+      options?: Omit<UseQueryOptions<ScheduleRosterQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<ScheduleRosterQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<ScheduleRosterQuery, TError, TData>(
+      {
+    queryKey: ['ScheduleRoster', variables],
+    queryFn: fetcher<ScheduleRosterQuery, ScheduleRosterQueryVariables>(client, ScheduleRosterDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useScheduleRosterQuery.getKey = (variables: ScheduleRosterQueryVariables) => ['ScheduleRoster', variables];
+
+
+useScheduleRosterQuery.fetcher = (client: GraphQLClient, variables: ScheduleRosterQueryVariables, headers?: RequestInit['headers']) => fetcher<ScheduleRosterQuery, ScheduleRosterQueryVariables>(client, ScheduleRosterDocument, variables, headers);
+
+export const SaveScheduleDemandDocument = `
+    mutation SaveScheduleDemand($input: SaveScheduleDemandInput!) {
+  saveScheduleDemand(input: $input) {
+    item {
+      ...ScheduleDemandFields
+    }
+    deletedEntryIds
+  }
+}
+    ${ScheduleDemandFieldsFragmentDoc}`;
+
+export const useSaveScheduleDemandMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<SaveScheduleDemandMutation, TError, SaveScheduleDemandMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<SaveScheduleDemandMutation, TError, SaveScheduleDemandMutationVariables, TContext>(
+      {
+    mutationKey: ['SaveScheduleDemand'],
+    mutationFn: (variables?: SaveScheduleDemandMutationVariables) => fetcher<SaveScheduleDemandMutation, SaveScheduleDemandMutationVariables>(client, SaveScheduleDemandDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useSaveScheduleDemandMutation.fetcher = (client: GraphQLClient, variables: SaveScheduleDemandMutationVariables, headers?: RequestInit['headers']) => fetcher<SaveScheduleDemandMutation, SaveScheduleDemandMutationVariables>(client, SaveScheduleDemandDocument, variables, headers);
+
+export const DeleteScheduleDemandDocument = `
+    mutation DeleteScheduleDemand($input: DeleteScheduleDemandInput!) {
+  deleteScheduleDemand(input: $input) {
+    id
+    deletedEntryIds
+  }
+}
+    `;
+
+export const useDeleteScheduleDemandMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<DeleteScheduleDemandMutation, TError, DeleteScheduleDemandMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<DeleteScheduleDemandMutation, TError, DeleteScheduleDemandMutationVariables, TContext>(
+      {
+    mutationKey: ['DeleteScheduleDemand'],
+    mutationFn: (variables?: DeleteScheduleDemandMutationVariables) => fetcher<DeleteScheduleDemandMutation, DeleteScheduleDemandMutationVariables>(client, DeleteScheduleDemandDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useDeleteScheduleDemandMutation.fetcher = (client: GraphQLClient, variables: DeleteScheduleDemandMutationVariables, headers?: RequestInit['headers']) => fetcher<DeleteScheduleDemandMutation, DeleteScheduleDemandMutationVariables>(client, DeleteScheduleDemandDocument, variables, headers);
+
+export const SaveScheduleEntryDocument = `
+    mutation SaveScheduleEntry($input: SaveScheduleEntryInput!) {
+  saveScheduleEntry(input: $input) {
+    item {
+      ...ScheduleEntryFields
+    }
+  }
+}
+    ${ScheduleEntryFieldsFragmentDoc}`;
+
+export const useSaveScheduleEntryMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<SaveScheduleEntryMutation, TError, SaveScheduleEntryMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<SaveScheduleEntryMutation, TError, SaveScheduleEntryMutationVariables, TContext>(
+      {
+    mutationKey: ['SaveScheduleEntry'],
+    mutationFn: (variables?: SaveScheduleEntryMutationVariables) => fetcher<SaveScheduleEntryMutation, SaveScheduleEntryMutationVariables>(client, SaveScheduleEntryDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useSaveScheduleEntryMutation.fetcher = (client: GraphQLClient, variables: SaveScheduleEntryMutationVariables, headers?: RequestInit['headers']) => fetcher<SaveScheduleEntryMutation, SaveScheduleEntryMutationVariables>(client, SaveScheduleEntryDocument, variables, headers);
+
+export const DeleteScheduleEntryDocument = `
+    mutation DeleteScheduleEntry($input: DeleteScheduleEntryInput!) {
+  deleteScheduleEntry(input: $input) {
+    id
+  }
+}
+    `;
+
+export const useDeleteScheduleEntryMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<DeleteScheduleEntryMutation, TError, DeleteScheduleEntryMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<DeleteScheduleEntryMutation, TError, DeleteScheduleEntryMutationVariables, TContext>(
+      {
+    mutationKey: ['DeleteScheduleEntry'],
+    mutationFn: (variables?: DeleteScheduleEntryMutationVariables) => fetcher<DeleteScheduleEntryMutation, DeleteScheduleEntryMutationVariables>(client, DeleteScheduleEntryDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useDeleteScheduleEntryMutation.fetcher = (client: GraphQLClient, variables: DeleteScheduleEntryMutationVariables, headers?: RequestInit['headers']) => fetcher<DeleteScheduleEntryMutation, DeleteScheduleEntryMutationVariables>(client, DeleteScheduleEntryDocument, variables, headers);
+
+export const RemoveScheduleDayEntriesDocument = `
+    mutation RemoveScheduleDayEntries($input: RemoveScheduleDayEntriesInput!) {
+  removeScheduleDayEntries(input: $input) {
+    deletedIds
+    skippedIds
+  }
+}
+    `;
+
+export const useRemoveScheduleDayEntriesMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<RemoveScheduleDayEntriesMutation, TError, RemoveScheduleDayEntriesMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<RemoveScheduleDayEntriesMutation, TError, RemoveScheduleDayEntriesMutationVariables, TContext>(
+      {
+    mutationKey: ['RemoveScheduleDayEntries'],
+    mutationFn: (variables?: RemoveScheduleDayEntriesMutationVariables) => fetcher<RemoveScheduleDayEntriesMutation, RemoveScheduleDayEntriesMutationVariables>(client, RemoveScheduleDayEntriesDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useRemoveScheduleDayEntriesMutation.fetcher = (client: GraphQLClient, variables: RemoveScheduleDayEntriesMutationVariables, headers?: RequestInit['headers']) => fetcher<RemoveScheduleDayEntriesMutation, RemoveScheduleDayEntriesMutationVariables>(client, RemoveScheduleDayEntriesDocument, variables, headers);
+
+export const ScheduleFieldOptionsDocument = `
+    query ScheduleFieldOptions($categoryKey: String!) {
+  scheduleFieldOptions(categoryKey: $categoryKey) {
+    items {
+      value
+      label
+    }
+    totalCount
+  }
+}
+    `;
+
+export const useScheduleFieldOptionsQuery = <
+      TData = ScheduleFieldOptionsQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: ScheduleFieldOptionsQueryVariables,
+      options?: Omit<UseQueryOptions<ScheduleFieldOptionsQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<ScheduleFieldOptionsQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<ScheduleFieldOptionsQuery, TError, TData>(
+      {
+    queryKey: ['ScheduleFieldOptions', variables],
+    queryFn: fetcher<ScheduleFieldOptionsQuery, ScheduleFieldOptionsQueryVariables>(client, ScheduleFieldOptionsDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useScheduleFieldOptionsQuery.getKey = (variables: ScheduleFieldOptionsQueryVariables) => ['ScheduleFieldOptions', variables];
+
+
+useScheduleFieldOptionsQuery.fetcher = (client: GraphQLClient, variables: ScheduleFieldOptionsQueryVariables, headers?: RequestInit['headers']) => fetcher<ScheduleFieldOptionsQuery, ScheduleFieldOptionsQueryVariables>(client, ScheduleFieldOptionsDocument, variables, headers);
+
+export const ScheduleRulesDocument = `
+    query ScheduleRules($input: ScheduleRulesInput) {
+  scheduleRules(input: $input) {
+    ...ScheduleRulesFields
+  }
+}
+    ${ScheduleRulesFieldsFragmentDoc}`;
+
+export const useScheduleRulesQuery = <
+      TData = ScheduleRulesQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables?: ScheduleRulesQueryVariables,
+      options?: Omit<UseQueryOptions<ScheduleRulesQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<ScheduleRulesQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<ScheduleRulesQuery, TError, TData>(
+      {
+    queryKey: variables === undefined ? ['ScheduleRules'] : ['ScheduleRules', variables],
+    queryFn: fetcher<ScheduleRulesQuery, ScheduleRulesQueryVariables>(client, ScheduleRulesDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useScheduleRulesQuery.getKey = (variables?: ScheduleRulesQueryVariables) => variables === undefined ? ['ScheduleRules'] : ['ScheduleRules', variables];
+
+
+useScheduleRulesQuery.fetcher = (client: GraphQLClient, variables?: ScheduleRulesQueryVariables, headers?: RequestInit['headers']) => fetcher<ScheduleRulesQuery, ScheduleRulesQueryVariables>(client, ScheduleRulesDocument, variables, headers);
+
+export const CustomizeScheduleRuleDocument = `
+    mutation CustomizeScheduleRule($input: CustomizeScheduleRuleInput!) {
+  customizeScheduleRule(input: $input) {
+    rules {
+      ...ScheduleRulesFields
+    }
+  }
+}
+    ${ScheduleRulesFieldsFragmentDoc}`;
+
+export const useCustomizeScheduleRuleMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<CustomizeScheduleRuleMutation, TError, CustomizeScheduleRuleMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<CustomizeScheduleRuleMutation, TError, CustomizeScheduleRuleMutationVariables, TContext>(
+      {
+    mutationKey: ['CustomizeScheduleRule'],
+    mutationFn: (variables?: CustomizeScheduleRuleMutationVariables) => fetcher<CustomizeScheduleRuleMutation, CustomizeScheduleRuleMutationVariables>(client, CustomizeScheduleRuleDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useCustomizeScheduleRuleMutation.fetcher = (client: GraphQLClient, variables: CustomizeScheduleRuleMutationVariables, headers?: RequestInit['headers']) => fetcher<CustomizeScheduleRuleMutation, CustomizeScheduleRuleMutationVariables>(client, CustomizeScheduleRuleDocument, variables, headers);
+
+export const CustomizeScheduleAutoRunDocument = `
+    mutation CustomizeScheduleAutoRun($input: CustomizeScheduleAutoRunInput!) {
+  customizeScheduleAutoRun(input: $input) {
+    rules {
+      ...ScheduleRulesFields
+    }
+  }
+}
+    ${ScheduleRulesFieldsFragmentDoc}`;
+
+export const useCustomizeScheduleAutoRunMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<CustomizeScheduleAutoRunMutation, TError, CustomizeScheduleAutoRunMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<CustomizeScheduleAutoRunMutation, TError, CustomizeScheduleAutoRunMutationVariables, TContext>(
+      {
+    mutationKey: ['CustomizeScheduleAutoRun'],
+    mutationFn: (variables?: CustomizeScheduleAutoRunMutationVariables) => fetcher<CustomizeScheduleAutoRunMutation, CustomizeScheduleAutoRunMutationVariables>(client, CustomizeScheduleAutoRunDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useCustomizeScheduleAutoRunMutation.fetcher = (client: GraphQLClient, variables: CustomizeScheduleAutoRunMutationVariables, headers?: RequestInit['headers']) => fetcher<CustomizeScheduleAutoRunMutation, CustomizeScheduleAutoRunMutationVariables>(client, CustomizeScheduleAutoRunDocument, variables, headers);
+
+export const RestoreScheduleRuleDocument = `
+    mutation RestoreScheduleRule($input: RestoreScheduleRuleInput!) {
+  restoreScheduleRule(input: $input) {
+    rules {
+      ...ScheduleRulesFields
+    }
+  }
+}
+    ${ScheduleRulesFieldsFragmentDoc}`;
+
+export const useRestoreScheduleRuleMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<RestoreScheduleRuleMutation, TError, RestoreScheduleRuleMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<RestoreScheduleRuleMutation, TError, RestoreScheduleRuleMutationVariables, TContext>(
+      {
+    mutationKey: ['RestoreScheduleRule'],
+    mutationFn: (variables?: RestoreScheduleRuleMutationVariables) => fetcher<RestoreScheduleRuleMutation, RestoreScheduleRuleMutationVariables>(client, RestoreScheduleRuleDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useRestoreScheduleRuleMutation.fetcher = (client: GraphQLClient, variables: RestoreScheduleRuleMutationVariables, headers?: RequestInit['headers']) => fetcher<RestoreScheduleRuleMutation, RestoreScheduleRuleMutationVariables>(client, RestoreScheduleRuleDocument, variables, headers);
+
+export const ScheduleStaffDocument = `
+    query ScheduleStaff($input: ScheduleStaffListInput) {
+  scheduleStaff(input: $input) {
+    items {
+      ...ScheduleStaffRowFields
+    }
+    totalCount
+    canEdit
+  }
+}
+    ${ScheduleStaffRowFieldsFragmentDoc}`;
+
+export const useScheduleStaffQuery = <
+      TData = ScheduleStaffQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables?: ScheduleStaffQueryVariables,
+      options?: Omit<UseQueryOptions<ScheduleStaffQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<ScheduleStaffQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<ScheduleStaffQuery, TError, TData>(
+      {
+    queryKey: variables === undefined ? ['ScheduleStaff'] : ['ScheduleStaff', variables],
+    queryFn: fetcher<ScheduleStaffQuery, ScheduleStaffQueryVariables>(client, ScheduleStaffDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useScheduleStaffQuery.getKey = (variables?: ScheduleStaffQueryVariables) => variables === undefined ? ['ScheduleStaff'] : ['ScheduleStaff', variables];
+
+
+useScheduleStaffQuery.fetcher = (client: GraphQLClient, variables?: ScheduleStaffQueryVariables, headers?: RequestInit['headers']) => fetcher<ScheduleStaffQuery, ScheduleStaffQueryVariables>(client, ScheduleStaffDocument, variables, headers);
+
+export const AddScheduleStaffDocument = `
+    mutation AddScheduleStaff($input: AddScheduleStaffInput!) {
+  addScheduleStaff(input: $input) {
+    items {
+      ...ScheduleStaffRowFields
+    }
+  }
+}
+    ${ScheduleStaffRowFieldsFragmentDoc}`;
+
+export const useAddScheduleStaffMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<AddScheduleStaffMutation, TError, AddScheduleStaffMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<AddScheduleStaffMutation, TError, AddScheduleStaffMutationVariables, TContext>(
+      {
+    mutationKey: ['AddScheduleStaff'],
+    mutationFn: (variables?: AddScheduleStaffMutationVariables) => fetcher<AddScheduleStaffMutation, AddScheduleStaffMutationVariables>(client, AddScheduleStaffDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useAddScheduleStaffMutation.fetcher = (client: GraphQLClient, variables: AddScheduleStaffMutationVariables, headers?: RequestInit['headers']) => fetcher<AddScheduleStaffMutation, AddScheduleStaffMutationVariables>(client, AddScheduleStaffDocument, variables, headers);
+
+export const UpdateScheduleStaffDocument = `
+    mutation UpdateScheduleStaff($input: UpdateScheduleStaffInput!) {
+  updateScheduleStaff(input: $input) {
+    item {
+      ...ScheduleStaffRowFields
+    }
+  }
+}
+    ${ScheduleStaffRowFieldsFragmentDoc}`;
+
+export const useUpdateScheduleStaffMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<UpdateScheduleStaffMutation, TError, UpdateScheduleStaffMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<UpdateScheduleStaffMutation, TError, UpdateScheduleStaffMutationVariables, TContext>(
+      {
+    mutationKey: ['UpdateScheduleStaff'],
+    mutationFn: (variables?: UpdateScheduleStaffMutationVariables) => fetcher<UpdateScheduleStaffMutation, UpdateScheduleStaffMutationVariables>(client, UpdateScheduleStaffDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useUpdateScheduleStaffMutation.fetcher = (client: GraphQLClient, variables: UpdateScheduleStaffMutationVariables, headers?: RequestInit['headers']) => fetcher<UpdateScheduleStaffMutation, UpdateScheduleStaffMutationVariables>(client, UpdateScheduleStaffDocument, variables, headers);
+
+export const ScheduleDemandTemplatesDocument = `
+    query ScheduleDemandTemplates {
+  scheduleDemandTemplates {
+    items {
+      ...ScheduleDemandTemplateFields
+    }
+    totalCount
+    canCreate
+  }
+}
+    ${ScheduleDemandTemplateFieldsFragmentDoc}`;
+
+export const useScheduleDemandTemplatesQuery = <
+      TData = ScheduleDemandTemplatesQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables?: ScheduleDemandTemplatesQueryVariables,
+      options?: Omit<UseQueryOptions<ScheduleDemandTemplatesQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<ScheduleDemandTemplatesQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<ScheduleDemandTemplatesQuery, TError, TData>(
+      {
+    queryKey: variables === undefined ? ['ScheduleDemandTemplates'] : ['ScheduleDemandTemplates', variables],
+    queryFn: fetcher<ScheduleDemandTemplatesQuery, ScheduleDemandTemplatesQueryVariables>(client, ScheduleDemandTemplatesDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useScheduleDemandTemplatesQuery.getKey = (variables?: ScheduleDemandTemplatesQueryVariables) => variables === undefined ? ['ScheduleDemandTemplates'] : ['ScheduleDemandTemplates', variables];
+
+
+useScheduleDemandTemplatesQuery.fetcher = (client: GraphQLClient, variables?: ScheduleDemandTemplatesQueryVariables, headers?: RequestInit['headers']) => fetcher<ScheduleDemandTemplatesQuery, ScheduleDemandTemplatesQueryVariables>(client, ScheduleDemandTemplatesDocument, variables, headers);
+
+export const SaveScheduleDemandTemplateDocument = `
+    mutation SaveScheduleDemandTemplate($input: SaveScheduleDemandTemplateInput!) {
+  saveScheduleDemandTemplate(input: $input) {
+    item {
+      ...ScheduleDemandTemplateFields
+    }
+  }
+}
+    ${ScheduleDemandTemplateFieldsFragmentDoc}`;
+
+export const useSaveScheduleDemandTemplateMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<SaveScheduleDemandTemplateMutation, TError, SaveScheduleDemandTemplateMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<SaveScheduleDemandTemplateMutation, TError, SaveScheduleDemandTemplateMutationVariables, TContext>(
+      {
+    mutationKey: ['SaveScheduleDemandTemplate'],
+    mutationFn: (variables?: SaveScheduleDemandTemplateMutationVariables) => fetcher<SaveScheduleDemandTemplateMutation, SaveScheduleDemandTemplateMutationVariables>(client, SaveScheduleDemandTemplateDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useSaveScheduleDemandTemplateMutation.fetcher = (client: GraphQLClient, variables: SaveScheduleDemandTemplateMutationVariables, headers?: RequestInit['headers']) => fetcher<SaveScheduleDemandTemplateMutation, SaveScheduleDemandTemplateMutationVariables>(client, SaveScheduleDemandTemplateDocument, variables, headers);
+
+export const DeleteScheduleDemandTemplateDocument = `
+    mutation DeleteScheduleDemandTemplate($input: DeleteScheduleTemplateInput!) {
+  deleteScheduleDemandTemplate(input: $input) {
+    id
+  }
+}
+    `;
+
+export const useDeleteScheduleDemandTemplateMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<DeleteScheduleDemandTemplateMutation, TError, DeleteScheduleDemandTemplateMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<DeleteScheduleDemandTemplateMutation, TError, DeleteScheduleDemandTemplateMutationVariables, TContext>(
+      {
+    mutationKey: ['DeleteScheduleDemandTemplate'],
+    mutationFn: (variables?: DeleteScheduleDemandTemplateMutationVariables) => fetcher<DeleteScheduleDemandTemplateMutation, DeleteScheduleDemandTemplateMutationVariables>(client, DeleteScheduleDemandTemplateDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useDeleteScheduleDemandTemplateMutation.fetcher = (client: GraphQLClient, variables: DeleteScheduleDemandTemplateMutationVariables, headers?: RequestInit['headers']) => fetcher<DeleteScheduleDemandTemplateMutation, DeleteScheduleDemandTemplateMutationVariables>(client, DeleteScheduleDemandTemplateDocument, variables, headers);
+
+export const ScheduleDemandWeekTemplatesDocument = `
+    query ScheduleDemandWeekTemplates($input: ScheduleDemandWeekTemplatesInput) {
+  scheduleDemandWeekTemplates(input: $input) {
+    items {
+      ...ScheduleDemandWeekTemplateFields
+    }
+    totalCount
+    canCreate
+  }
+}
+    ${ScheduleDemandWeekTemplateFieldsFragmentDoc}`;
+
+export const useScheduleDemandWeekTemplatesQuery = <
+      TData = ScheduleDemandWeekTemplatesQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables?: ScheduleDemandWeekTemplatesQueryVariables,
+      options?: Omit<UseQueryOptions<ScheduleDemandWeekTemplatesQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<ScheduleDemandWeekTemplatesQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<ScheduleDemandWeekTemplatesQuery, TError, TData>(
+      {
+    queryKey: variables === undefined ? ['ScheduleDemandWeekTemplates'] : ['ScheduleDemandWeekTemplates', variables],
+    queryFn: fetcher<ScheduleDemandWeekTemplatesQuery, ScheduleDemandWeekTemplatesQueryVariables>(client, ScheduleDemandWeekTemplatesDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useScheduleDemandWeekTemplatesQuery.getKey = (variables?: ScheduleDemandWeekTemplatesQueryVariables) => variables === undefined ? ['ScheduleDemandWeekTemplates'] : ['ScheduleDemandWeekTemplates', variables];
+
+
+useScheduleDemandWeekTemplatesQuery.fetcher = (client: GraphQLClient, variables?: ScheduleDemandWeekTemplatesQueryVariables, headers?: RequestInit['headers']) => fetcher<ScheduleDemandWeekTemplatesQuery, ScheduleDemandWeekTemplatesQueryVariables>(client, ScheduleDemandWeekTemplatesDocument, variables, headers);
+
+export const SaveScheduleDemandWeekTemplateDocument = `
+    mutation SaveScheduleDemandWeekTemplate($input: SaveScheduleDemandWeekTemplateInput!) {
+  saveScheduleDemandWeekTemplate(input: $input) {
+    item {
+      ...ScheduleDemandWeekTemplateFields
+    }
+  }
+}
+    ${ScheduleDemandWeekTemplateFieldsFragmentDoc}`;
+
+export const useSaveScheduleDemandWeekTemplateMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<SaveScheduleDemandWeekTemplateMutation, TError, SaveScheduleDemandWeekTemplateMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<SaveScheduleDemandWeekTemplateMutation, TError, SaveScheduleDemandWeekTemplateMutationVariables, TContext>(
+      {
+    mutationKey: ['SaveScheduleDemandWeekTemplate'],
+    mutationFn: (variables?: SaveScheduleDemandWeekTemplateMutationVariables) => fetcher<SaveScheduleDemandWeekTemplateMutation, SaveScheduleDemandWeekTemplateMutationVariables>(client, SaveScheduleDemandWeekTemplateDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useSaveScheduleDemandWeekTemplateMutation.fetcher = (client: GraphQLClient, variables: SaveScheduleDemandWeekTemplateMutationVariables, headers?: RequestInit['headers']) => fetcher<SaveScheduleDemandWeekTemplateMutation, SaveScheduleDemandWeekTemplateMutationVariables>(client, SaveScheduleDemandWeekTemplateDocument, variables, headers);
+
+export const DeleteScheduleDemandWeekTemplateDocument = `
+    mutation DeleteScheduleDemandWeekTemplate($input: DeleteScheduleTemplateInput!) {
+  deleteScheduleDemandWeekTemplate(input: $input) {
+    id
+  }
+}
+    `;
+
+export const useDeleteScheduleDemandWeekTemplateMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<DeleteScheduleDemandWeekTemplateMutation, TError, DeleteScheduleDemandWeekTemplateMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<DeleteScheduleDemandWeekTemplateMutation, TError, DeleteScheduleDemandWeekTemplateMutationVariables, TContext>(
+      {
+    mutationKey: ['DeleteScheduleDemandWeekTemplate'],
+    mutationFn: (variables?: DeleteScheduleDemandWeekTemplateMutationVariables) => fetcher<DeleteScheduleDemandWeekTemplateMutation, DeleteScheduleDemandWeekTemplateMutationVariables>(client, DeleteScheduleDemandWeekTemplateDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useDeleteScheduleDemandWeekTemplateMutation.fetcher = (client: GraphQLClient, variables: DeleteScheduleDemandWeekTemplateMutationVariables, headers?: RequestInit['headers']) => fetcher<DeleteScheduleDemandWeekTemplateMutation, DeleteScheduleDemandWeekTemplateMutationVariables>(client, DeleteScheduleDemandWeekTemplateDocument, variables, headers);
+
+export const ScheduleCalendarDocument = `
+    query ScheduleCalendar($input: ScheduleCalendarInput!) {
+  scheduleCalendar(input: $input) {
+    orgId
+    orgName
+    month
+    canEdit
+    days {
+      ...ScheduleCalendarDayFields
+    }
+  }
+}
+    ${ScheduleCalendarDayFieldsFragmentDoc}`;
+
+export const useScheduleCalendarQuery = <
+      TData = ScheduleCalendarQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: ScheduleCalendarQueryVariables,
+      options?: Omit<UseQueryOptions<ScheduleCalendarQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<ScheduleCalendarQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<ScheduleCalendarQuery, TError, TData>(
+      {
+    queryKey: ['ScheduleCalendar', variables],
+    queryFn: fetcher<ScheduleCalendarQuery, ScheduleCalendarQueryVariables>(client, ScheduleCalendarDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useScheduleCalendarQuery.getKey = (variables: ScheduleCalendarQueryVariables) => ['ScheduleCalendar', variables];
+
+
+useScheduleCalendarQuery.fetcher = (client: GraphQLClient, variables: ScheduleCalendarQueryVariables, headers?: RequestInit['headers']) => fetcher<ScheduleCalendarQuery, ScheduleCalendarQueryVariables>(client, ScheduleCalendarDocument, variables, headers);
+
+export const SaveScheduleCalendarDayDocument = `
+    mutation SaveScheduleCalendarDay($input: SaveScheduleCalendarDayInput!) {
+  saveScheduleCalendarDay(input: $input) {
+    item {
+      ...ScheduleCalendarDayFields
+    }
+  }
+}
+    ${ScheduleCalendarDayFieldsFragmentDoc}`;
+
+export const useSaveScheduleCalendarDayMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<SaveScheduleCalendarDayMutation, TError, SaveScheduleCalendarDayMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<SaveScheduleCalendarDayMutation, TError, SaveScheduleCalendarDayMutationVariables, TContext>(
+      {
+    mutationKey: ['SaveScheduleCalendarDay'],
+    mutationFn: (variables?: SaveScheduleCalendarDayMutationVariables) => fetcher<SaveScheduleCalendarDayMutation, SaveScheduleCalendarDayMutationVariables>(client, SaveScheduleCalendarDayDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useSaveScheduleCalendarDayMutation.fetcher = (client: GraphQLClient, variables: SaveScheduleCalendarDayMutationVariables, headers?: RequestInit['headers']) => fetcher<SaveScheduleCalendarDayMutation, SaveScheduleCalendarDayMutationVariables>(client, SaveScheduleCalendarDayDocument, variables, headers);
+
+export const DeleteScheduleCalendarDayDocument = `
+    mutation DeleteScheduleCalendarDay($input: DeleteScheduleCalendarDayInput!) {
+  deleteScheduleCalendarDay(input: $input) {
+    id
+  }
+}
+    `;
+
+export const useDeleteScheduleCalendarDayMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<DeleteScheduleCalendarDayMutation, TError, DeleteScheduleCalendarDayMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<DeleteScheduleCalendarDayMutation, TError, DeleteScheduleCalendarDayMutationVariables, TContext>(
+      {
+    mutationKey: ['DeleteScheduleCalendarDay'],
+    mutationFn: (variables?: DeleteScheduleCalendarDayMutationVariables) => fetcher<DeleteScheduleCalendarDayMutation, DeleteScheduleCalendarDayMutationVariables>(client, DeleteScheduleCalendarDayDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useDeleteScheduleCalendarDayMutation.fetcher = (client: GraphQLClient, variables: DeleteScheduleCalendarDayMutationVariables, headers?: RequestInit['headers']) => fetcher<DeleteScheduleCalendarDayMutation, DeleteScheduleCalendarDayMutationVariables>(client, DeleteScheduleCalendarDayDocument, variables, headers);

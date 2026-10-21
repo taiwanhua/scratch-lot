@@ -1,7 +1,12 @@
+import { NotificationScheduleKind } from "@repo/graphql";
+
 import {
   type NotificationSettingsWorldOptions,
+  monthlyType,
   notificationPermissionModules,
   notificationTypes,
+  partyScheduledType,
+  sidebarBadges,
   systemModule,
 } from "@/test/msw/notification-settings-handlers";
 import { matrixModules } from "@/test/msw/role-fixtures";
@@ -24,13 +29,48 @@ const workflowsModule = {
 };
 
 /**
- * mock 模式的通知設定:印表機離線調整過收件人(角色「人資」且持有印表機管理 · 編輯)、
- * 到期提醒用預設。權限候選樹 = 示範家族 + 印表機管理 / 通知設定 / 流程管理(含阻擋清單),預設收件人的權限名稱才解得出來。
+ * mock 模式的通知設定:印表機離線調整過收件人(角色「人資」且持有印表機管理 · 編輯、沒有提醒時間)、
+ * 到期提醒的提醒時間調整成 60 / 7 / 0 天、月報提醒(每月第 N 天)用預設、截止提醒是宣告了提醒時間的當事人通知;
+ * 側欄數字兩列(申請中心用預設、示範模組調整成「人資」)。權限候選樹 = 示範家族 + 印表機管理 / 通知設定 / 流程管理(含阻擋清單),預設收件人的權限名稱才解得出來。
  */
 export const mockNotificationSettings =
   (): NotificationSettingsWorldOptions => ({
-    types: notificationTypes({
-      "printing.agent-offline": {
+    types: [
+      ...notificationTypes({
+        "demo.expiry-reminder": {
+          schedule: {
+            kind: NotificationScheduleKind.DaysBefore,
+            daysBefore: [60, 7, 0],
+            time: "09:00",
+          },
+        },
+        "printing.agent-offline": {
+          audience: {
+            mode: "match",
+            filter: {
+              op: "AND",
+              children: [
+                {
+                  field: "role",
+                  cond: "in",
+                  value: { kind: "static", values: [HR_ROLE_ID] },
+                },
+                {
+                  field: "permission",
+                  cond: "in",
+                  value: { kind: "static", values: ["system.printers.edit"] },
+                },
+              ],
+            },
+          },
+        },
+      }),
+      monthlyType(),
+      partyScheduledType(),
+    ],
+    // 側欄數字:申請中心用程式預設(要求申請中心 · 檢視),示範模組調整成角色「人資」
+    badges: sidebarBadges({
+      "demo.orders": {
         audience: {
           mode: "match",
           filter: {
@@ -40,11 +80,6 @@ export const mockNotificationSettings =
                 field: "role",
                 cond: "in",
                 value: { kind: "static", values: [HR_ROLE_ID] },
-              },
-              {
-                field: "permission",
-                cond: "in",
-                value: { kind: "static", values: ["system.printers.edit"] },
               },
             ],
           },

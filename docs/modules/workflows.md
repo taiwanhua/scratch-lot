@@ -295,7 +295,7 @@
 ## 再送出、作廢、複製為新單
 
 - **再送出**(`returned` / `withdrawn`):申請人以 `saveFormDraft` 改內容(狀態不變),再 `submitFormSubmission` → 修訂 +1、新實例從起點開始、前一個實例 `superseded`。
-- **作廢**(`voidSubmission`;走過流程(`currentInstanceId` 有值)且 `completed`,否則 `CONFLICT` `STATUS_MISMATCH`;申請人本人或有該模組 `edit`;理由必填;不需審核)→ `voided`、稽核(一個交易)。看的是提交有沒有走過流程,不是表單現在有沒有綁。
+- **作廢**(`voidSubmission`;走過流程(`currentInstanceId` 有值)且 `completed`,否則 `CONFLICT` `STATUS_MISMATCH`;申請人本人或有該模組 `edit`;原因必填(表單設了作廢原因類別 → `reasonKey` 從該類別選、選「其他」說明必填;沒設 → `reasonNote` 自由文字;見 [forms](./forms.md)「作廢原因」);不需審核)→ `voided`、稽核(一個交易)。看的是提交有沒有走過流程,不是表單現在有沒有綁。
 - **複製為新單**(`copySubmissionToDraft`;來源 = 已作廢、讀者讀得到全部內容(只能讀某個修訂的審核者 → `FORBIDDEN`);讀者要有目標模組的 `create`;目標 = 同表單目前可新增的版本,沒有 → `FORBIDDEN` `FORM_NOT_AVAILABLE`):
   - 只複製讀者對來源有 `show`、目標版本有同 key 同型別的使用者填欄位、讀者對目標有 `edit` 的欄位;`computed` / `constant` 由目標版本重算。
   - 引用重驗來源可讀(`LookupProvidersService`),失效 → 清空;附件以 `StorageService.copyPrivateObject` 複製一份歸新單,複製失敗也清空。清空的欄位列在回傳的 `clearedFields`。
@@ -437,7 +437,7 @@ admin 端(`hooks/base/useApplyCenterCounts.ts`):
 - **審核區塊**(`components/base/workflow/ApprovalSection/`):表單模組的預設詳情頁(`FormViewPage`)在提交走過流程(`currentInstanceId` 有值)時掛在提交內容下方,申請中心詳情頁也用它。內容:
   - 實例狀態與流程版本、目前關卡、阻擋提示(流程管理者多一顆「重試推進」)。
   - 我的任務:核准 / 駁回 / 退回修改 —— 關卡不允許退回(`allowReturn = false`)時沒有「退回修改」;理由在跳窗裡填,駁回 / 退回必填;`STEP_CLOSED` 提示「此關已結束」並重載。
-  - 申請人的撤回 / 作廢(理由必填)/ 複製為新單(成功後進新草稿的編輯頁,來源失效被清空的欄位就地提示)。只審過某個修訂的審核者讀不到提交現況,這三顆不出現。
+  - 申請人的撤回 / 作廢(原因必填;作廢對話框 `ApprovalSection/VoidDialog.tsx` 依表單設定是自由填寫或「作廢原因」下拉,已作廢的單顯示作廢原因)/ 複製為新單(成功後進新草稿的編輯頁,來源失效被清空的欄位就地提示)。只審過某個修訂的審核者讀不到提交現況,這三顆不出現。
   - 關卡 / 分支進度(每個節點一列:派任的人與他的決定、失效標示、匯合等待中 / 已匯合 / 全案終局時已結束)、時間軸(`history`,不列寄信標記)。
 - **表單模組列表**:狀態 chip 七值(`components/base/workflow/SubmissionStatusTag.tsx`,列表、詳情、申請中心共用),狀態篩選也是七值;綁流程的「已完成」api 回 `canEdit = false`,列上不出現「編輯」、改出現「作廢」(`canVoid`)。
 - **退回 / 撤回的單**以草稿方式改(`saveFormDraft`)再送出,編輯頁提示「改好再送出會重新審核」;送出時被擋下會顯示「流程已移除 / 尚未發布 / 設定有誤」。
@@ -521,4 +521,4 @@ input 欄位的缺席 / `null`:
 | `form.bind-workflow` / `form.unbind-workflow`                                              | `form`              | 綁定前後的流程                                                                             |
 | `task.decide` / `task.reassign`                                                            | `workflow_task`     | 決定種類 / 改派前後的承辦人                                                                |
 | `task.add-assignee` / `instance.retry-advance`                                             | `workflow_instance` | 關卡、taskKey、新增的人                                                                    |
-| `submission.submit` / `.withdraw` / `.void` / `.copy`                                      | `form_submission`   | 修訂號、流程版本、作廢理由、複製來源(**不記值**)                                           |
+| `submission.submit` / `.withdraw` / `.void` / `.copy`                                      | `form_submission`   | 修訂號、流程版本、作廢理由(說明 + 選項值 `reasonKey`)、複製來源(**不記值**)                |

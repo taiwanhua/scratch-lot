@@ -431,7 +431,7 @@ describe("表單 / 流程的掛接點", () => {
         input: {
           id: submitted.id,
           expectedEditVersion: approved.editVersion,
-          reason: "重來",
+          reasonNote: "重來",
         },
       });
       expect(lifecycleProbe.guards.map((one) => one.guard)).toEqual([
@@ -539,7 +539,7 @@ describe("表單 / 流程的掛接點", () => {
         input: {
           id: approved.id,
           expectedEditVersion: approved.editVersion,
-          reason: "作廢",
+          reasonNote: "作廢",
         },
       });
       expectBlocked(result);

@@ -55,7 +55,8 @@ const fixtureProjects = [
 }));
 
 /**
- * - `admin`:正式的 `@repo/project-config/public`(目前的專案值)與正式的 `app/project/` 登記(空的),跑所有一般測試。
+ * - `admin`:正式的 `@repo/project-config/public`(目前的專案值)與正式的 `app/project/` 登記(專案新增的頁與替換的底座頁都生效;
+ *   底座頁被替換時,底座測試經路由看到的是專案版,專案頁要的假 api 由 `src/test/msw/project/default-handlers.ts` 預設提供),跑所有一般測試。
  *   一般測試不寫任何專案的字面值 —— 換專案只改專案值檔,這些測試不必跟著改
  * - 其餘 project 見 `fixtureProjects`
  *

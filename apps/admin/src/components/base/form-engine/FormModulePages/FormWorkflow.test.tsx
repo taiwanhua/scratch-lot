@@ -170,9 +170,124 @@ describe("表單模組 × 審核流程", () => {
 
     await waitFor(() => {
       expect(forms.inputs.voidSubmission).toEqual([
-        { id: "sub-done", expectedEditVersion: 2, reason: "日期填錯" },
+        { id: "sub-done", expectedEditVersion: 2, reasonNote: "日期填錯" },
       ]);
     });
+  });
+
+  it("表單設了作廢原因類別:作廢對話框是「作廢原因」下拉,選「其他」說明必填;作廢後詳情顯示選項名稱與說明", async () => {
+    const { user, forms } = renderLeave(
+      `${DEMO_GROUP_FORM_ROUTES.viewPage}/sub-leave-1`,
+      {
+        submissions: [
+          leave({
+            status: FormSubmissionStatus.Completed,
+            abilities: {
+              canEdit: false,
+              canSaveDraft: false,
+              canDelete: false,
+              canEditField: [],
+              canWithdraw: false,
+              canVoid: true,
+              canCopy: false,
+            },
+          }),
+        ],
+        voidReasonOptions: {
+          [LEAVE_FORM_KEY]: {
+            categoryKey: "void-reason",
+            items: [
+              { value: "wrong-date", label: "日期填錯" },
+              { value: "other", label: "其他" },
+            ],
+          },
+        },
+      },
+      {
+        instances: [
+          instanceFragment({ status: WorkflowInstanceStatus.Approved }),
+        ],
+      },
+    );
+
+    const section = await screen.findByRole("region", { name: "審核" });
+    await user.click(within(section).getByRole("button", { name: "作廢" }));
+    const dialog = await screen.findByRole("dialog", { name: "作廢這張單" });
+    const confirm = within(dialog).getByRole("button", { name: "作廢" });
+    expect(confirm).toBeDisabled();
+    // 沒有自由填寫的「作廢理由」,改成下拉 + 說明
+    expect(
+      within(dialog).queryByRole("textbox", { name: "作廢理由" }),
+    ).not.toBeInTheDocument();
+    await user.click(
+      within(dialog).getByRole("combobox", { name: /作廢原因/ }),
+    );
+    const listbox = await screen.findByRole("listbox");
+    expect(
+      within(listbox)
+        .getAllByRole("option")
+        .map((option) => option.textContent),
+    ).toEqual(["日期填錯", "其他"]);
+    await user.click(within(listbox).getByRole("option", { name: "其他" }));
+    expect(confirm).toBeDisabled();
+    expect(
+      within(dialog).getByText("選「其他」時請填寫說明"),
+    ).toBeInTheDocument();
+    await user.type(
+      within(dialog).getByRole("textbox", { name: /說明/ }),
+      "改期了",
+    );
+    expect(confirm).toBeEnabled();
+    await user.click(confirm);
+
+    await waitFor(() => {
+      expect(forms.inputs.voidSubmission).toEqual([
+        {
+          id: "sub-leave-1",
+          expectedEditVersion: 2,
+          reasonKey: "other",
+          reasonNote: "改期了",
+        },
+      ]);
+    });
+    expect(
+      await within(section).findByText("作廢原因:其他(改期了)"),
+    ).toBeInTheDocument();
+  });
+
+  it("已作廢、沒有其他可做的動作時,詳情仍顯示作廢原因(只有選項時不帶說明)", async () => {
+    renderLeave(
+      `${DEMO_GROUP_FORM_ROUTES.viewPage}/sub-leave-1`,
+      {
+        submissions: [
+          leave({
+            status: FormSubmissionStatus.Voided,
+            voidReason: null,
+            voidReasonKey: "wrong-date",
+            voidReasonLabel: "日期填錯",
+            abilities: {
+              canEdit: false,
+              canSaveDraft: false,
+              canDelete: false,
+              canEditField: [],
+              canWithdraw: false,
+              canVoid: false,
+              canCopy: false,
+            },
+          }),
+        ],
+      },
+      {
+        instances: [
+          instanceFragment({ status: WorkflowInstanceStatus.Approved }),
+        ],
+      },
+    );
+
+    const section = await screen.findByRole("region", { name: "審核" });
+    expect(
+      await within(section).findByText("作廢原因:日期填錯"),
+    ).toBeInTheDocument();
   });
 
   it("詳情頁掛審核區塊;申請人在還沒人審前可撤回", async () => {

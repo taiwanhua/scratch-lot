@@ -28,6 +28,8 @@ export const SAMPLE_TWO_MODULE_KEYS = {
 export const SAMPLE_TWO_PERMISSIONS = {
   view: `${SAMPLE_TWO_MODULE_KEY}.view`,
   create: `${SAMPLE_TWO_MODULE_KEY}.create`,
+  /** 「共用給」欄位:新增時要有它才出現(編輯時讀 `item.abilities.canEdit`) */
+  edit: `${SAMPLE_TWO_MODULE_KEY}.edit`,
 } as const;
 
 /** i18n 的第二層 key(I18N-02);三頁共用同一個 namespace。 */

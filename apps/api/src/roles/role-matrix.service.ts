@@ -57,6 +57,7 @@ function globalReader(operator: OperatorContext): OperatorContext {
     managedOrgIds: "all",
     memberOrgIds: operator.memberOrgIds,
     roleIds: operator.roleIds,
+    memberTenants: operator.memberTenants,
   };
 }
 

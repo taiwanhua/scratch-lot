@@ -61,6 +61,7 @@ function operatorAt(orgId: Types.ObjectId): OperatorContext {
     managedOrgIds: "all",
     memberOrgIds: [orgId],
     roleIds: [],
+    memberTenants: [],
   };
 }
 

@@ -246,3 +246,19 @@ interface CellRenderContext<Row> {
 
 - **key 慣例**:列表一包 `list`;主從版面選中的那一筆 `detail`(`hooks/base/useUrlSelectedId`);頁內分頁 `tab`;唯讀的檢視彈窗 `dialog`(值是彈窗名);編輯彈窗 `edit`(值是那一筆的 id)。不用 `view`:mock 開發模式以 `?view=tenant` 切視角。
 - **新頁面要登記進入口清單**:底座頁登記在 `apps/admin/src/app/base/url-state-inventory.ts`、專案頁在 `app/project/url-state-inventory.ts`,寫明這一頁放進網址的 key(`app/url-state-inventory.test.ts` 比對)。`useUrlState` 以外直接 import `useSearchParams` 或 nuqs 由 ESLint(`no-restricted-imports`)擋下。各頁的盤點見 `docs/concepts/frontend-architecture.md`「既有頁面改用的盤點」。
+
+## REACT-15 選組織一律照「組織選擇器」用法表
+
+選組織的地方(切換、治理樹、治理設定、業務欄位、頁面篩選、共用)一律照 `docs/concepts/frontend-architecture.md`「組織選擇器」的用法表挑元件與 `scope`,不自己查組織樹、不另做清單。
+
+```tsx
+✅ <OrgTreeSelect scope="visible" label="分店" value={…} onChange={…} />   // 業務欄位 / 頁面篩選
+✅ <OrgTreeSelect label="所屬組織" value={…} onChange={…} />              // 治理設定(managed)
+❌ const tree = useOrgTreeQuery(…); <Select options={flatten(tree)} />      // 業務頁自己查管理範圍
+```
+
+- 業務頁一律明寫 `scope="visible"`:候選是可見範圍,不是管理範圍(店長通常沒有組織管理的權限)。
+- 不能選的反灰並寫原因(選擇器內建「不在你的可見範圍內」;業務規則的原因用 `disabledReasons` 疊加),不要把節點藏起來讓樹斷掉。
+- 表上沒有的用途先補用法表(同一份 PR),再實作。
+
+正本:`docs/concepts/frontend-architecture.md`「組織選擇器」、`apps/admin/src/components/base/OrgTreeSelect/OrgTreeSelect.tsx`

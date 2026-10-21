@@ -67,7 +67,7 @@ export const systemModules: TestModule[] = [
     "/system/user-manager",
     "people",
   ),
-  group("m-system", "system", "系統管理", null, 1, "/system", "settings"),
+  group("m-system", "system", "系統管理", null, 95, "/system", "settings"),
   link(
     "m-data-scope",
     "system.data-scope",

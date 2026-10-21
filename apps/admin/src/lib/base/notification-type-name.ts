@@ -25,3 +25,22 @@ export const useNotificationTypeName = (): ((
     [t],
   );
 };
+
+/**
+ * 當事人通知的收件人說明(通知設定頁「由事件決定(<說明>)」):依類型 key 從訊息檔
+ * `admin.notifications.recipientNotes.<key>` 取;沒有就退回 api 的 `recipientNote`(類型登記的繁中說明),
+ * 再沒有 = null。日期稱呼 `scheduleDateLabels.<key>` 是同一種覆寫方式。
+ */
+export const useNotificationRecipientNote = (): ((
+  type: string,
+  fallbackNote: string | null | undefined,
+) => string | null) => {
+  const t = useTranslations(NOTIFICATION_NAMESPACE);
+  return useCallback(
+    (type: string, fallbackNote: string | null | undefined) => {
+      const key = `recipientNotes.${type}`;
+      return t.has(key) ? t(key) : (fallbackNote ?? null);
+    },
+    [t],
+  );
+};

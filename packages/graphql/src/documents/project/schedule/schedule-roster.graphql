@@ -1,0 +1,191 @@
+# 排班作業 → 排班表(規格 14.5;正本 docs/modules/project/schedule.md「排班表」)。
+# orgId 缺席或 null = 當前組織;讀要 schedule.manage.view、寫要 schedule.manage.edit。
+
+fragment ScheduleDemandFields on ScheduleDemand {
+  id
+  date
+  startAt
+  endAt
+  positionKey
+  positionNote
+  templateId
+  source
+  createdAt
+  tasks {
+    taskId
+    role
+    taskKey
+    entryId
+    userId
+    userName
+  }
+}
+
+fragment ScheduleEntryFields on ScheduleEntry {
+  id
+  userId
+  date
+  startAt
+  endAt
+  breakMinutes
+  deletable
+  assignments {
+    demandId
+    taskId
+    role
+    taskKey
+    source
+    reason
+  }
+}
+
+fragment ScheduleRosterPersonFields on ScheduleRosterPerson {
+  userId
+  name
+  employmentType
+  canLead
+  isPrimary
+  isCandidate
+  stats {
+    shiftCount
+    leadShiftCount
+    workMinutes
+    dayOffDays
+    fullDayOffDays
+    timeRangeDays {
+      date
+      slots {
+        startTime
+        endTime
+      }
+    }
+    longestStreak
+  }
+}
+
+fragment ScheduleRosterTemplateFields on ScheduleRosterTemplate {
+  id
+  name
+  shortName
+  startTime
+  endTime
+  positionKey
+  paletteKey
+  tasks {
+    taskId
+    role
+    taskKey
+  }
+}
+
+# month = YYYY-MM;一次回這家店這個月排班表要的全部。週檢視跨月時另給 from / to(YYYY-MM-DD,
+# 這個月前後 6 天內):人力需求、排班、別家店的班、畫休、行事曆多讀那幾天,統計仍只算這個月
+query ScheduleRoster($input: ScheduleRosterInput!) {
+  scheduleRoster(input: $input) {
+    orgId
+    orgName
+    month
+    period {
+      status
+      publishedAt
+      publishedByName
+    }
+    canEdit
+    canSaveTemplate
+    canUsePunchTime
+    settings {
+      breakTiers {
+        minMinutes
+        breakMinutes
+      }
+      defaultLeaderTaskKey
+      defaultHelperTaskKey
+      maxMonthlyDayOffs
+      minMonthlyDayOffs
+      entryMatchToleranceMinutes
+    }
+    people {
+      ...ScheduleRosterPersonFields
+    }
+    demands {
+      ...ScheduleDemandFields
+    }
+    entries {
+      ...ScheduleEntryFields
+    }
+    otherStoreEntries {
+      userId
+      date
+      startAt
+      endAt
+      orgName
+    }
+    unavailability {
+      userId
+      date
+      fullDay
+      slots {
+        startTime
+        endTime
+      }
+    }
+    calendarDays {
+      date
+      type
+      name
+      paletteKey
+    }
+    templates {
+      ...ScheduleRosterTemplateFields
+    }
+    unmatchedPunches {
+      id
+      userId
+      date
+      type
+      at
+    }
+  }
+}
+
+# 整份送;修改時帶 id。拿掉有人填的任務 → 解除,解除後零筆的排班一起刪(deletedEntryIds);
+# 被收銀班次綁定的 → VALIDATION_FAILED + extensions.blockedEntryIds
+mutation SaveScheduleDemand($input: SaveScheduleDemandInput!) {
+  saveScheduleDemand(input: $input) {
+    item {
+      ...ScheduleDemandFields
+    }
+    deletedEntryIds
+  }
+}
+
+mutation DeleteScheduleDemand($input: DeleteScheduleDemandInput!) {
+  deleteScheduleDemand(input: $input) {
+    id
+    deletedEntryIds
+  }
+}
+
+# assignments 至少一筆(否則 VALIDATION_FAILED,欄位 assignments);同一人跨店時間重疊 → 欄位 startAt。
+# punchIds = 一起對應到這筆排班的未對應排班的卡;usePunchTime 要 use-punch-time(沒有 → FORBIDDEN)
+mutation SaveScheduleEntry($input: SaveScheduleEntryInput!) {
+  saveScheduleEntry(input: $input) {
+    item {
+      ...ScheduleEntryFields
+    }
+  }
+}
+
+mutation DeleteScheduleEntry($input: DeleteScheduleEntryInput!) {
+  deleteScheduleEntry(input: $input) {
+    id
+  }
+}
+
+# 移除這天所有排班:已被開班綁定的略過(skippedIds)
+mutation RemoveScheduleDayEntries($input: RemoveScheduleDayEntriesInput!) {
+  removeScheduleDayEntries(input: $input) {
+    deletedIds
+    skippedIds
+  }
+}
