@@ -83,7 +83,15 @@ export const StocktakeCreatePage = () => {
     return null;
   }
   return (
-    <Card sx={{ flex: 1, minHeight: 0, overflow: "auto", px: 3, py: 2.5 }}>
+    <Card
+      sx={{
+        flex: 1,
+        minHeight: 0,
+        overflow: "auto",
+        px: { xs: 1.5, sm: 3 },
+        py: 2.5,
+      }}
+    >
       <StocktakeWorkspace
         orgId={orgId}
         scopeCashPointId={scope === "" ? null : scope}
@@ -135,7 +143,15 @@ export const StocktakeEditPage = ({ routeParam }: ModulePageProps) => {
   }
   const parsed = parseStocktakeDraft(stocktake.draft);
   return (
-    <Card sx={{ flex: 1, minHeight: 0, overflow: "auto", px: 3, py: 2.5 }}>
+    <Card
+      sx={{
+        flex: 1,
+        minHeight: 0,
+        overflow: "auto",
+        px: { xs: 1.5, sm: 3 },
+        py: 2.5,
+      }}
+    >
       <StocktakeWorkspace
         orgId={stocktake.orgId}
         scopeCashPointId={stocktake.scopeCashPoint?.id ?? null}

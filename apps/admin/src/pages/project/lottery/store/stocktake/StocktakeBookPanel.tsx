@@ -75,7 +75,7 @@ export const StocktakeBookPanel = ({
   };
 
   return (
-    <Card sx={{ px: { xs: 2, sm: 3 }, py: 2.5 }}>
+    <Card sx={{ px: { xs: 1.5, sm: 3 }, py: 2.5 }}>
       <Stack spacing={2}>
         <Stack
           direction={{ xs: "column", sm: "row" }}
@@ -85,7 +85,12 @@ export const StocktakeBookPanel = ({
           <Stack
             direction="row"
             spacing={1}
-            sx={{ flex: 1, alignItems: "baseline", flexWrap: "wrap" }}
+            sx={{
+              flex: 1,
+              minWidth: 0,
+              alignItems: "baseline",
+              flexWrap: "wrap",
+            }}
           >
             <Typography variant="subtitle1" component="h2">
               {t("title", {
@@ -110,6 +115,7 @@ export const StocktakeBookPanel = ({
             onChange={(next) => {
               onChange({ method: next, present });
             }}
+            sx={{ flexShrink: 0, width: { xs: "100%", sm: 180 } }}
           />
         </Stack>
         <Typography variant="body2" color="text.secondary">

@@ -166,7 +166,7 @@ export const StocktakeViewPage = ({ routeParam }: ModulePageProps) => {
 
   return (
     <Stack spacing={2} sx={{ flex: 1, minHeight: 0, overflow: "auto" }}>
-      <Card sx={{ px: 3, py: 2.5 }}>
+      <Card sx={{ px: { xs: 2, sm: 3 }, py: 2.5, flexShrink: 0 }}>
         <Stack spacing={1}>
           <Stack
             direction="row"
@@ -220,7 +220,7 @@ export const StocktakeViewPage = ({ routeParam }: ModulePageProps) => {
       </Card>
       {detail === null ? null : (
         <>
-          <Card sx={{ px: { xs: 2, sm: 3 }, py: 2 }}>
+          <Card sx={{ px: { xs: 2, sm: 3 }, py: 2, flexShrink: 0 }}>
             <Table
               columns={columns}
               rows={detail.lines}
@@ -232,7 +232,7 @@ export const StocktakeViewPage = ({ routeParam }: ModulePageProps) => {
             />
           </Card>
           {detail.unopened.length > 0 || detail.lostReview.length > 0 ? (
-            <Card sx={{ px: { xs: 2, sm: 3 }, py: 2 }}>
+            <Card sx={{ px: { xs: 2, sm: 3 }, py: 2, flexShrink: 0 }}>
               <Stack spacing={1}>
                 {detail.unopened.map((book) => (
                   <Typography key={book.bookNo} variant="body2">
@@ -251,7 +251,7 @@ export const StocktakeViewPage = ({ routeParam }: ModulePageProps) => {
               </Stack>
             </Card>
           ) : null}
-          <Card sx={{ px: { xs: 2, sm: 3 }, py: 2 }}>
+          <Card sx={{ px: { xs: 2, sm: 3 }, py: 2, flexShrink: 0 }}>
             <Box
               component="dl"
               sx={{
@@ -285,7 +285,7 @@ export const StocktakeViewPage = ({ routeParam }: ModulePageProps) => {
         </>
       )}
       {submission?.currentInstanceId == null ? null : (
-        <Card sx={{ px: 3, py: 2.5 }}>
+        <Card sx={{ px: { xs: 2, sm: 3 }, py: 2.5, flexShrink: 0 }}>
           <ApprovalSection
             instanceId={submission.currentInstanceId}
             submission={submission}
