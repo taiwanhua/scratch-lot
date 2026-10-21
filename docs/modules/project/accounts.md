@@ -135,24 +135,24 @@
 
 ### GraphQL
 
-| 端點                                                | 守門                       | 說明                                                                                                                             |
-| --------------------------------------------------- | -------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| `lotteryBankAccounts(input)`                        | `view-bank-accounts`       | `status` 缺席 = 全部                                                                                                             |
-| `lotteryBankAccount(id)`                            | `view-bank-accounts`       | 看不到 → `NOT_FOUND`                                                                                                             |
-| `lotteryBankTransactions(input)`                    | `view-bank-accounts`       | `from` / `to`(時點,`to` 不含)缺席 = 不限;`type` 缺席 = 全部;新的在前;`balanceAfter` 依時間累加;`totalIn` / `totalOut` = 期間合計 |
-| `createLotteryBankAccount(input)`                   | `create-bank-account`      | `branchName` / `note` 缺席或 null = 不填;`shareOrgs` 缺席 = 不共用                                                               |
-| `updateLotteryBankAccount(input)`                   | `edit-bank-account`        | 缺席 = 不動;`branchName` / `note` 送 null = 清空;其他送 null 視同缺席;`shareOrgs` 整份替換                                       |
-| `deleteLotteryBankAccount(id)`                      | `edit-bank-account`        | 有交易 → `BANK_ACCOUNT_HAS_TRANSACTIONS`                                                                                         |
-| `recordLotteryBankTransaction(input)`               | `record-bank-transaction`  | `direction` 只有調整 / 其他看;`refType` + `refId` 見「交易」                                                                     |
-| `reverseLotteryBankTransaction(input)`              | `reverse-bank-transaction` | `reason` 必填                                                                                                                    |
-| `lotteryCashLedger(input)`                          | `view-cash`                | `orgId` 必填(可見範圍內);最多 500 筆;`vault` = 小金庫應有與起算點                                                                |
-| `lotteryCashMovement(id)`                           | `view-cash`                | 58mm 流水類單據 QR(`?movementId=`)用                                                                                             |
-| `lotterySettlement(moduleKey, refId)`               | 看得到單據                 | `SettlementPanel` 的資料:金額、各邊合計與按鈕先填、收付歷程;現金紀錄帶 `cashPlace`(`vault` / `drawer`)                           |
-| `lotterySettlementAccounts(moduleKey, refId, side)` | 看得到單據 + 那一邊的權限  | 付款視窗的帳戶選項(使用中、使用組織包含這一邊的分店)                                                                             |
-| `lotteryOutstandingSettlements`                     | `view-outstanding`         | 待結清款項;`canSettle` = 有那一邊的權限                                                                                          |
-| `lotterySettlementCandidates(input)`                | `record-bank-transaction`  | `type` = `purchase_income` / `transfer_income`:有待退或待收的單據                                                                |
-| `recordLotterySettlement(input)`                    | 那一邊的 `permission`      | 見「收付機制」                                                                                                                   |
-| `reverseLotterySettlement(input)`                   | 那一邊的 `permission`      | `method` = 那一筆是 `bank` 或 `cash`;`reason` 必填                                                                               |
+| 端點                                                | 守門                       | 說明                                                                                                                                      |
+| --------------------------------------------------- | -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `lotteryBankAccounts(input)`                        | `view-bank-accounts`       | `status` 缺席 = 全部                                                                                                                      |
+| `lotteryBankAccount(id)`                            | `view-bank-accounts`       | 看不到 → `NOT_FOUND`                                                                                                                      |
+| `lotteryBankTransactions(input)`                    | `view-bank-accounts`       | `from` / `to`(時點,`to` 不含)缺席 = 不限;`type` 缺席 = 全部;新的在前;`balanceAfter` 依時間累加;`totalIn` / `totalOut` = 期間合計          |
+| `createLotteryBankAccount(input)`                   | `create-bank-account`      | `branchName` / `note` 缺席或 null = 不填;`shareOrgs` 缺席 = 不共用                                                                        |
+| `updateLotteryBankAccount(input)`                   | `edit-bank-account`        | 缺席 = 不動;`branchName` / `note` 送 null = 清空;其他送 null 視同缺席;`shareOrgs` 整份替換                                                |
+| `deleteLotteryBankAccount(id)`                      | `edit-bank-account`        | 有交易 → `BANK_ACCOUNT_HAS_TRANSACTIONS`                                                                                                  |
+| `recordLotteryBankTransaction(input)`               | `record-bank-transaction`  | `direction` 只有調整 / 其他看;`refType` + `refId` 見「交易」                                                                              |
+| `reverseLotteryBankTransaction(input)`              | `reverse-bank-transaction` | `reason` 必填                                                                                                                             |
+| `lotteryCashLedger(input)`                          | `view-cash`                | `orgId` 必填(可見範圍內);最多 500 筆;`vault` = 小金庫應有與起算點                                                                         |
+| `lotteryCashMovement(id)`                           | `view-cash`                | 58mm 流水類單據 QR(`?movementId=`)用                                                                                                      |
+| `lotterySettlement(moduleKey, refId)`               | 看得到單據                 | `SettlementPanel` 的資料:金額、各邊合計與按鈕先填、收付歷程;現金紀錄帶 `cashPlace` 與抽屜的收銀點(`cashPointName` / `cashPointPrinterId`) |
+| `lotterySettlementAccounts(moduleKey, refId, side)` | 看得到單據 + 那一邊的權限  | 付款視窗的帳戶選項(使用中、使用組織包含這一邊的分店)                                                                                      |
+| `lotteryOutstandingSettlements`                     | `view-outstanding`         | 待結清款項;`canSettle` = 有那一邊的權限                                                                                                   |
+| `lotterySettlementCandidates(input)`                | `record-bank-transaction`  | `type` = `purchase_income` / `transfer_income`:有待退或待收的單據                                                                         |
+| `recordLotterySettlement(input)`                    | 那一邊的 `permission`      | 見「收付機制」                                                                                                                            |
+| `reverseLotterySettlement(input)`                   | 那一邊的 `permission`      | `method` = 那一筆是 `bank` 或 `cash`;`reason` 必填                                                                                        |
 
 ### lookup 來源 `lottery_bank_account`
 

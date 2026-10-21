@@ -106,6 +106,9 @@ export const transferPaymentInputOf = (
     branchId: side.branch.id,
     branchName: side.branch.name,
     source: record.cashPlace === "drawer" ? "drawer" : "vault",
+    cashPointName: record.cashPointName ?? null,
+    // 抽屜付的:收銀點的印表機當預設(沒設定 → 分店預設)
+    defaultPrinterId: record.cashPointPrinterId ?? null,
     payee: record.handler ?? "",
     amount: record.amount,
     occurredAt: record.occurredAt,

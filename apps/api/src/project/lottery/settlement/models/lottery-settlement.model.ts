@@ -97,6 +97,14 @@ export class LotterySettlementRecordModel {
   @Field(() => String, { nullable: true })
   cashPlace!: string | null;
 
+  /** 現金從收銀點抽屜出 / 進時:收銀點名稱(付款收據印「分店 · 收銀點」);其他 = null。 */
+  @Field(() => String, { nullable: true })
+  cashPointName!: string | null;
+
+  /** 那個收銀點設定的印表機(付款收據的預設印表機;沒設定用分店預設);其他 = null。 */
+  @Field(() => ID, { nullable: true })
+  cashPointPrinterId!: string | null;
+
   /** 經手人 / 收款人。 */
   @Field(() => String, { nullable: true })
   handler!: string | null;

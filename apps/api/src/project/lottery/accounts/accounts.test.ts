@@ -236,6 +236,20 @@ const SETTLEMENT = /* GraphQL */ `
   }
 `;
 
+const CASH_POINT_RECORDS = /* GraphQL */ `
+  query TestCashPointRecords($moduleKey: String!, $refId: ID!) {
+    lotterySettlement(moduleKey: $moduleKey, refId: $refId) {
+      item {
+        records {
+          cashPlace
+          cashPointName
+          cashPointPrinterId
+        }
+      }
+    }
+  }
+`;
+
 const RECORD_SETTLEMENT = /* GraphQL */ `
   mutation TestRecordSettlement($input: RecordLotterySettlementInput!) {
     recordLotterySettlement(input: $input) {
@@ -1168,6 +1182,97 @@ describe("帳戶管理(GraphQL 端點 + 真 MongoDB)", () => {
       expect(await errorOf(api, nobody, OUTSTANDING, {})).toMatchObject({
         code: "FORBIDDEN",
       });
+    });
+
+    it("調貨型:收貨店從收銀點抽屜付現 → 收付紀錄帶抽屜來源、收銀點名稱與它的印表機(付款收據用)", async () => {
+      const doc = await insertTestSubmission(api.connection, {
+        orgId: storeA,
+        tenantId: tenantA,
+        moduleKey: TEST_TRANSFER,
+        values: {
+          payable: 8000,
+          store: String(storeA),
+          shipper: String(storeB),
+          docNo: "T-0009",
+        },
+      });
+      const now = new Date();
+      const point = new Types.ObjectId();
+      const printerId = new Types.ObjectId();
+      await api.connection.collection("lottery_cash_points").insertOne({
+        _id: point,
+        orgId: storeA,
+        tenantId: tenantA,
+        positionKey: "counter-a",
+        name: "店內櫃台抽屜",
+        order: 1,
+        enabled: true,
+        printerId,
+        note: null,
+        moduleKey: "master-data.cash-points",
+        createdAt: now,
+        updatedAt: now,
+        createdBy: null,
+        updatedBy: null,
+        deletedAt: null,
+      });
+      await api.connection.collection(LOTTERY_SHIFTS_COLLECTION).insertOne({
+        orgId: storeA,
+        tenantId: tenantA,
+        cashPointId: point,
+        openedBy: new Types.ObjectId(),
+        openedAt: now,
+        openingFloat: 5000,
+        openingFloatSource: "vault",
+        previousShiftId: null,
+        openingMovementId: null,
+        scheduleEntryId: null,
+        scheduleTaskSnapshot: null,
+        positionMismatch: null,
+        closedAt: null,
+        checkoutId: null,
+        drawerVersion: 0,
+        moduleKey: "store",
+        createdAt: now,
+        updatedAt: now,
+        createdBy: null,
+        updatedBy: null,
+        deletedAt: null,
+      });
+      await ok(api, hq, RECORD_SETTLEMENT, {
+        input: {
+          moduleKey: TEST_TRANSFER,
+          refId: String(doc),
+          side: "receiver",
+          button: "out",
+          method: "cash",
+          cashSource: "drawer",
+          cashPointId: String(point),
+          handler: "王小明(送貨人)",
+          amount: 1000,
+        },
+      });
+      const data = await ok<{
+        lotterySettlement: {
+          item: {
+            records: {
+              cashPlace: string | null;
+              cashPointName: string | null;
+              cashPointPrinterId: string | null;
+            }[];
+          };
+        };
+      }>(api, hq, CASH_POINT_RECORDS, {
+        moduleKey: TEST_TRANSFER,
+        refId: String(doc),
+      });
+      expect(data.lotterySettlement.item.records).toEqual([
+        {
+          cashPlace: "drawer",
+          cashPointName: "店內櫃台抽屜",
+          cashPointPrinterId: String(printerId),
+        },
+      ]);
     });
 
     it("調貨型:收貨店付現(小金庫)→「N 待出貨店入帳」→ 出貨店收款後結清", async () => {

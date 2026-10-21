@@ -30,6 +30,7 @@ import {
   LotteryBankTransactionsRepository,
   LotteryCashMovementsRepository,
 } from "../../database/lottery-accounts/lottery-accounts.repositories";
+import { LotteryCashPointsRepository } from "../../database/lottery-cash-points/lottery-cash-points.repository";
 import { AccountNames } from "../accounts/account-names";
 import { AccountsAccess } from "../accounts/accounts-access";
 import { ACCOUNTS_AUDIT } from "../accounts/accounts-audit";
@@ -113,6 +114,7 @@ export class SettlementService {
     private readonly accounts: LotteryBankAccountsRepository,
     private readonly bank: LotteryBankTransactionsRepository,
     private readonly cash: LotteryCashMovementsRepository,
+    private readonly cashPoints: LotteryCashPointsRepository,
     private readonly orgs: OrgsRepository,
     private readonly names: AccountNames,
     private readonly access: AccountsAccess,
@@ -729,6 +731,19 @@ export class SettlementService {
     const accountLabel = new Map(
       accountRows.map((row) => [String(row._id), row.label]),
     );
+    // 抽屜付 / 收的現金:收銀點名稱與它的印表機(付款收據用;以同一個租戶邊界讀)
+    const pointIds = cashRows.flatMap((row) =>
+      row.cashPointId == null ? [] : [row.cashPointId],
+    );
+    const pointRows =
+      pointIds.length === 0
+        ? []
+        : await this.cashPoints.findMany(
+            reader,
+            { _id: { $in: pointIds } },
+            { select: "name printerId" },
+          );
+    const pointOf = new Map(pointRows.map((row) => [String(row._id), row]));
     const sideBranches = registration.sides.map(
       (side) => side.branchOf?.(submission, payable) ?? payable.branchOrgId,
     );
@@ -778,6 +793,8 @@ export class SettlementService {
         amount: row.amount,
         accountLabel: accountLabel.get(String(row.accountId)) ?? null,
         cashPlace: null,
+        cashPointName: null,
+        cashPointPrinterId: null,
         handler: row.handler,
         note: row.note,
         occurredAt: row.occurredAt,
@@ -798,6 +815,15 @@ export class SettlementService {
         amount: row.amount,
         accountLabel: null,
         cashPlace: row.to === "external" ? row.from : row.to,
+        cashPointName:
+          row.cashPointId == null
+            ? null
+            : (pointOf.get(String(row.cashPointId))?.name ?? null),
+        cashPointPrinterId:
+          row.cashPointId == null
+            ? null
+            : (pointOf.get(String(row.cashPointId))?.printerId?.toString() ??
+              null),
         handler: row.payee,
         note: row.note,
         occurredAt: row.occurredAt,

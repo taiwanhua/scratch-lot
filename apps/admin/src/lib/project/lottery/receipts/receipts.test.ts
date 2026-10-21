@@ -113,6 +113,7 @@ const settlement = (
       totalIn: 0,
       net: 1840,
       canSettle: true,
+      cashDrawers: [],
       buttons: [],
     },
   ],
@@ -125,6 +126,8 @@ const settlement = (
     amount: 1840,
     accountLabel: null,
     cashPlace: "drawer",
+    cashPointName: null,
+    cashPointPrinterId: null,
     handler: "王小明(送貨人)",
     note: null,
     occurredAt: "2026-10-16T11:05:00.000Z",
@@ -264,6 +267,30 @@ describe("58mm 單據的版面(規格第 12 章;Figma RC-06、RC-07、RC-08)", (
       documentName: "調貨付款收據 T-0008",
       defaultPrinterId: null,
     });
+  });
+
+  it("從收銀點抽屜付:付款店印收銀點名稱,收銀點的印表機當預設印表機", () => {
+    const input = transferPaymentInputOf(
+      settlement([
+        {
+          cashPointName: "店內櫃台抽屜",
+          cashPointPrinterId: "printer-counter",
+        },
+      ]),
+      "rec-1",
+      URL,
+    );
+    if (input === null) throw new Error("應該要印付款收據");
+
+    expect(
+      receiptLinesOf(
+        RECEIPT_KINDS["transfer-payment"].layoutOf(input, t, NOW),
+        HEADER,
+      ),
+    ).toContain("付款店 | 新竹店 · 店內櫃台抽屜");
+    expect(
+      receiptPrintRefOf("transfer-payment", input, t).defaultPrinterId,
+    ).toBe("printer-counter");
   });
 
   it("付款收據只印收貨店付的現金:銀行、收到退款、沖正、被沖正的 → 不印;[列印] 用最近一筆", () => {

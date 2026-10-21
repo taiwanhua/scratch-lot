@@ -2265,6 +2265,8 @@ type LotterySettlementRecord {
   amount: Int!
   canReverse: Boolean!
   cashPlace: String
+  cashPointName: String
+  cashPointPrinterId: ID
   createdBy: LotteryAccountsRef
   direction: String!
   handler: String
