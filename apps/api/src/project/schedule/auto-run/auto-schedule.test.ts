@@ -288,23 +288,31 @@ describe("排序條件(規格 14.5 情境表,每列一個測試)", () => {
   });
 });
 
-describe("一定遵守(規格 14.5)", () => {
-  const morning = () => demand("d", "2026-11-20", "08:30", "14:30");
-  const only = (overrides: Partial<AutoScheduleInput>) => {
-    const input = inputOf({ demands: [morning()], ...overrides });
-    return fillsOf(input, autoSchedule(input))["d-t0"];
-  };
-  const dayOff = (
-    userId: string,
-    start: string,
-    end: string,
-    endDate = "2026-11-20",
-  ): AutoBusy => ({
-    userId,
-    startAt: at("2026-11-20", start),
-    endAt: at(endDate, end),
-  });
+const morning = () => demand("d", "2026-11-20", "08:30", "14:30");
 
+const only = (overrides: Partial<AutoScheduleInput>) => {
+  const input = inputOf({ demands: [morning()], ...overrides });
+  return fillsOf(input, autoSchedule(input))["d-t0"];
+};
+
+const dayOff = (
+  userId: string,
+  start: string,
+  end: string,
+  endDate = "2026-11-20",
+): AutoBusy => ({
+  userId,
+  startAt: at("2026-11-20", start),
+  endAt: at(endDate, end),
+});
+
+const limited = (level: ScheduleRuleLevel) => (userId: string) =>
+  userId === "a"
+    ? new Map([["maxDailyWorkHours", setting("maxDailyWorkHours", 8, level)]])
+    : new Map<string, EffectiveRuleSetting>();
+const alone = [{ userId: "a", canLead: true }];
+
+describe("一定遵守(規格 14.5)", () => {
   it("整天畫休不排", () => {
     expect(only({ busy: [dayOff("a", "00:00", "00:00", "2026-11-21")] })).toBe(
       "b",
@@ -341,13 +349,6 @@ describe("一定遵守(規格 14.5)", () => {
 
   it("限制等級的規則:每天最多上班時數(限制)超過就不排;改成提醒照排", () => {
     const entries = [entry("ea", "a", "2026-11-20", "15:00", "21:00")];
-    const limited = (level: ScheduleRuleLevel) => (userId: string) =>
-      userId === "a"
-        ? new Map([
-            ["maxDailyWorkHours", setting("maxDailyWorkHours", 8, level)],
-          ])
-        : new Map<string, EffectiveRuleSetting>();
-    const alone = [{ userId: "a", canLead: true }];
     expect(
       only({ entries, candidates: alone, settingsOf: limited("limit") }),
     ).toBeUndefined();
@@ -418,19 +419,19 @@ describe("一定遵守(規格 14.5)", () => {
   });
 });
 
-describe("兼多個崗位(規格 14.5:允許同一人同時段填進多筆人力需求)", () => {
-  const twoCounters = (allowOverlap: boolean) => {
-    const input = inputOf({
-      demands: [
-        demand("x", "2026-11-20", "14:30", "22:00"),
-        demand("y", "2026-11-20", "14:30", "22:00"),
-      ],
-      candidates: [{ userId: "a", canLead: true }],
-      allowOverlap,
-    });
-    return { input, result: autoSchedule(input) };
-  };
+const twoCounters = (allowOverlap: boolean) => {
+  const input = inputOf({
+    demands: [
+      demand("x", "2026-11-20", "14:30", "22:00"),
+      demand("y", "2026-11-20", "14:30", "22:00"),
+    ],
+    candidates: [{ userId: "a", canLead: true }],
+    allowOverlap,
+  });
+  return { input, result: autoSchedule(input) };
+};
 
+describe("兼多個崗位(規格 14.5:允許同一人同時段填進多筆人力需求)", () => {
   it("沒勾 → 不會讓同一人填進時間重疊的兩筆", () => {
     const { input, result } = twoCounters(false);
     expect(fillsOf(input, result)).toEqual({ "x-t0": "a" });
@@ -445,71 +446,71 @@ describe("兼多個崗位(規格 14.5:允許同一人同時段填進多筆人力
   });
 });
 
+/** 2026 年 11 月:每天早班(負責 + 協同)與晚班(負責 + 協同);11/3 店休;六個人,前三位可擔任負責人。 */
+const monthInput = (seed: number): AutoScheduleInput => {
+  const days = Array.from(
+    { length: 30 },
+    (_, index) => `2026-11-${String(index + 1).padStart(2, "0")}`,
+  ).filter((day) => day !== "2026-11-03");
+  return inputOf({
+    seed,
+    demands: days.flatMap((day) => [
+      demand(`${day}-am`, day, "08:30", "14:30", ["leader", "helper"]),
+      demand(`${day}-pm`, day, "14:30", "22:00", ["leader", "helper"]),
+    ]),
+    candidates: ["p1", "p2", "p3", "p4", "p5", "p6"].map((userId, index) => ({
+      userId,
+      canLead: index < 3,
+    })),
+    sortConditions: [
+      "continuePreviousEntry",
+      "leaderCountFirst",
+      "monthlyShiftBalance",
+    ],
+    leaderCounts: new Map([
+      ["p1", 5],
+      ["p2", 5],
+      ["p3", 1],
+    ]),
+    busy: [
+      {
+        userId: "p1",
+        startAt: at("2026-11-10", "00:00"),
+        endAt: at("2026-11-11", "00:00"),
+      },
+      {
+        userId: "p4",
+        startAt: at("2026-11-15", "09:00"),
+        endAt: at("2026-11-15", "13:00"),
+      },
+    ],
+    settingsOf: () =>
+      new Map([
+        ["maxDailyWorkHours", setting("maxDailyWorkHours", 8)],
+        ["maxConsecutiveWorkDays", setting("maxConsecutiveWorkDays", 6)],
+      ]),
+  });
+};
+
+/** 每天「早負責/早協同/晚負責/晚協同」 */
+const scheduleOf = (input: AutoScheduleInput, result: AutoScheduleResult) => {
+  const fills = fillsOf(input, result);
+  return Object.fromEntries(
+    input.demands
+      .filter((item) => item.id.endsWith("-am"))
+      .map((item) => {
+        const day = item.date;
+        return [
+          day.slice(5),
+          [`${day}-am-t0`, `${day}-am-t1`, `${day}-pm-t0`, `${day}-pm-t1`]
+            .map((taskId) => fills[taskId] ?? "-")
+            .join("/"),
+        ];
+      }),
+  );
+};
+
 describe("固定種子的整月排班(輸入夾具 → 預期填進結果)", () => {
-  /** 2026 年 11 月:每天早班(負責 + 協同)與晚班(負責 + 協同);11/3 店休;六個人,前三位可擔任負責人。 */
-  const monthInput = (seed: number): AutoScheduleInput => {
-    const days = Array.from(
-      { length: 30 },
-      (_, index) => `2026-11-${String(index + 1).padStart(2, "0")}`,
-    ).filter((day) => day !== "2026-11-03");
-    return inputOf({
-      seed,
-      demands: days.flatMap((day) => [
-        demand(`${day}-am`, day, "08:30", "14:30", ["leader", "helper"]),
-        demand(`${day}-pm`, day, "14:30", "22:00", ["leader", "helper"]),
-      ]),
-      candidates: ["p1", "p2", "p3", "p4", "p5", "p6"].map((userId, index) => ({
-        userId,
-        canLead: index < 3,
-      })),
-      sortConditions: [
-        "continuePreviousEntry",
-        "leaderCountFirst",
-        "monthlyShiftBalance",
-      ],
-      leaderCounts: new Map([
-        ["p1", 5],
-        ["p2", 5],
-        ["p3", 1],
-      ]),
-      busy: [
-        {
-          userId: "p1",
-          startAt: at("2026-11-10", "00:00"),
-          endAt: at("2026-11-11", "00:00"),
-        },
-        {
-          userId: "p4",
-          startAt: at("2026-11-15", "09:00"),
-          endAt: at("2026-11-15", "13:00"),
-        },
-      ],
-      settingsOf: () =>
-        new Map([
-          ["maxDailyWorkHours", setting("maxDailyWorkHours", 8)],
-          ["maxConsecutiveWorkDays", setting("maxConsecutiveWorkDays", 6)],
-        ]),
-    });
-  };
-
-  /** 每天「早負責/早協同/晚負責/晚協同」 */
-  const scheduleOf = (input: AutoScheduleInput, result: AutoScheduleResult) => {
-    const fills = fillsOf(input, result);
-    return Object.fromEntries(
-      input.demands
-        .filter((item) => item.id.endsWith("-am"))
-        .map((item) => {
-          const day = item.date;
-          return [
-            day.slice(5),
-            [`${day}-am-t0`, `${day}-am-t1`, `${day}-pm-t0`, `${day}-pm-t1`]
-              .map((taskId) => fills[taskId] ?? "-")
-              .join("/"),
-          ];
-        }),
-    );
-  };
-
   it("同一個種子兩次結果相同", () => {
     const first = autoSchedule(monthInput(20_261_101));
     const second = autoSchedule(monthInput(20_261_101));

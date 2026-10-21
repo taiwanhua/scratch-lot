@@ -251,13 +251,56 @@ function errorOf(result: GraphqlResult): Record<string, unknown> | undefined {
   return result.errors?.[0]?.extensions;
 }
 
-function dataOf<T>(result: GraphqlResult, key: string): T {
+interface PreviewRow {
+  demandCount: number;
+  fillableDays: number;
+  manualCount: number;
+  autoCount: number;
+  weekTemplate: { id: string; name: string } | null;
+}
+
+interface SummaryRow {
+  filledCount: number;
+  unfilledCount: number;
+  addedDemandCount: number;
+  addedDemandDays: number;
+}
+
+interface Payloads {
+  scheduleTemplateApplyPreview: ApplyRow;
+  applyScheduleTemplates: ApplyRow;
+  scheduleAutoRunPreview: PreviewRow;
+  runScheduleAutoRun: SummaryRow;
+  scheduleAutoRunStatus: {
+    canAutoRun: boolean;
+    running: boolean;
+    latest: (SummaryRow & { byName: string | null }) | null;
+  };
+  clearScheduleAutoAssignments: {
+    removedCount: number;
+    deletedEntryIds: string[];
+  };
+  scheduleRoster: { demands: RosterDemand[]; entries: RosterEntry[] };
+  saveScheduleDemand: {
+    item: { id: string; tasks: { taskId: string; role: string }[] };
+  };
+  addScheduleStaff: { items: { staff: { id: string } }[] };
+  saveScheduleDemandTemplate: {
+    item: { id: string; tasks: { taskId: string }[] };
+  };
+  saveScheduleDemandWeekTemplate: { item: { id: string } };
+}
+
+function dataOf<Key extends keyof Payloads>(
+  result: GraphqlResult,
+  key: Key,
+): Payloads[Key] {
   expect(result.errors).toBeUndefined();
   const value = result.data?.[key];
   if (value === undefined || value === null) {
     throw new Error(`${key} 沒有回資料`);
   }
-  return value as T;
+  return value as Payloads[Key];
 }
 
 const taipei = (date: string, time: string) =>
@@ -320,12 +363,6 @@ describe("套用範本與自動排班(GraphQL 端點 + 真 MongoDB)", () => {
     );
   }
 
-  const monthDays = (month: string, last: number) =>
-    Array.from(
-      { length: last },
-      (_, index) => `${month}-${String(index + 1).padStart(2, "0")}`,
-    );
-
   function applyInput(
     month: string,
     extra: Record<string, unknown>,
@@ -358,9 +395,7 @@ describe("套用範本與自動排班(GraphQL 端點 + 真 MongoDB)", () => {
     end: string,
     roles: ("leader" | "helper")[],
   ): Promise<{ id: string; tasks: { taskId: string; role: string }[] }> {
-    return dataOf<{
-      item: { id: string; tasks: { taskId: string; role: string }[] };
-    }>(
+    return dataOf(
       await gql(hq, SAVE_DEMAND, {
         input: {
           orgId: String(daan),
@@ -381,7 +416,7 @@ describe("套用範本與自動排班(GraphQL 端點 + 真 MongoDB)", () => {
     user: ScheduleTestUser,
     orgs: { orgId: Types.ObjectId; isPrimary: boolean; canLead: boolean }[],
   ): Promise<void> {
-    const added = dataOf<{ items: { staff: { id: string } }[] }>(
+    const added = dataOf(
       await gql(hq, ADD_STAFF, { input: { userIds: [String(user.userId)] } }),
       "addScheduleStaff",
     );
@@ -455,7 +490,7 @@ describe("套用範本與自動排班(GraphQL 端點 + 真 MongoDB)", () => {
     });
     expect(customized.errors).toBeUndefined();
 
-    morning = dataOf<{ item: typeof morning }>(
+    morning = dataOf(
       await gql(hq, SAVE_TEMPLATE, {
         input: {
           name: "早班",
@@ -471,7 +506,7 @@ describe("套用範本與自動排班(GraphQL 端點 + 真 MongoDB)", () => {
       }),
       "saveScheduleDemandTemplate",
     ).item;
-    evening = dataOf<{ item: typeof evening }>(
+    evening = dataOf(
       await gql(hq, SAVE_TEMPLATE, {
         input: {
           name: "晚班",
@@ -485,7 +520,7 @@ describe("套用範本與自動排班(GraphQL 端點 + 真 MongoDB)", () => {
       "saveScheduleDemandTemplate",
     ).item;
     // 一般週:平日早晚班、週末只有早班
-    weekTemplateId = dataOf<{ item: { id: string } }>(
+    weekTemplateId = dataOf(
       await gql(hq, SAVE_WEEK_TEMPLATE, {
         input: {
           name: "一般週",
@@ -518,7 +553,7 @@ describe("套用範本與自動排班(GraphQL 端點 + 真 MongoDB)", () => {
         templateIds: [morning.id, evening.id],
         dates: ["2027-01-05", "2027-01-06"],
       });
-      const preview = dataOf<ApplyRow>(
+      const preview = dataOf(
         await gql(editor, APPLY_PREVIEW, input),
         "scheduleTemplateApplyPreview",
       );
@@ -529,17 +564,11 @@ describe("套用範本與自動排班(GraphQL 端點 + 真 MongoDB)", () => {
         skippedDays: 0,
       });
       expect(
-        dataOf<ApplyRow>(
-          await gql(editor, APPLY, input),
-          "applyScheduleTemplates",
-        ),
+        dataOf(await gql(editor, APPLY, input), "applyScheduleTemplates"),
       ).toEqual(preview);
       // 再套一次:全部略過
       expect(
-        dataOf<ApplyRow>(
-          await gql(editor, APPLY, input),
-          "applyScheduleTemplates",
-        ),
+        dataOf(await gql(editor, APPLY, input), "applyScheduleTemplates"),
       ).toMatchObject({ createdCount: 0, skippedSlots: 4 });
 
       const { demands } = await roster("2027-01");
@@ -555,7 +584,7 @@ describe("套用範本與自動排班(GraphQL 端點 + 真 MongoDB)", () => {
 
     it("人力需求週範本:只補完全沒有人力需求的日子", async () => {
       await demandOn("2027-02-02", "18:00", "20:00", ["helper"]);
-      const result = dataOf<ApplyRow>(
+      const result = dataOf(
         await gql(
           editor,
           APPLY,
@@ -632,11 +661,7 @@ describe("套用範本與自動排班(GraphQL 端點 + 真 MongoDB)", () => {
 
   describe("自動排班(規格 14.5)", () => {
     it("範圍內沒有人力需求也沒有週範本 → 預覽 demandCount 0、週範本 null(畫面停用 [執行])", async () => {
-      const preview = dataOf<{
-        demandCount: number;
-        weekTemplate: unknown;
-        fillableDays: number;
-      }>(
+      const preview = dataOf(
         await gql(runner, RUN_PREVIEW, {
           input: {
             orgId: String(zhonghe),
@@ -655,7 +680,7 @@ describe("套用範本與自動排班(GraphQL 端點 + 真 MongoDB)", () => {
     });
 
     it("沒有 auto-run 看不到 / 不能按(canAutoRun false、執行 FORBIDDEN)", async () => {
-      const status = dataOf<{ canAutoRun: boolean }>(
+      const status = dataOf(
         await gql(editor, STATUS, {
           input: { orgId: String(daan), month: "2027-04" },
         }),
@@ -676,10 +701,7 @@ describe("套用範本與自動排班(GraphQL 端點 + 真 MongoDB)", () => {
         },
       });
       expect(customized.errors).toBeUndefined();
-      const preview = dataOf<{
-        fillableDays: number;
-        weekTemplate: { id: string } | null;
-      }>(
+      const preview = dataOf(
         await gql(runner, RUN_PREVIEW, {
           input: {
             orgId: String(daan),
@@ -695,12 +717,7 @@ describe("套用範本與自動排班(GraphQL 端點 + 真 MongoDB)", () => {
         weekTemplate: { id: weekTemplateId },
       });
 
-      const summary = dataOf<{
-        filledCount: number;
-        unfilledCount: number;
-        addedDemandCount: number;
-        addedDemandDays: number;
-      }>(
+      const summary = dataOf(
         await gql(
           runner,
           RUN,
@@ -744,14 +761,7 @@ describe("套用範本與自動排班(GraphQL 端點 + 真 MongoDB)", () => {
         expect(entry.breakMinutes).toBe(hours >= 8 ? 60 : 30);
       }
 
-      const status = dataOf<{
-        running: boolean;
-        latest: {
-          filledCount: number;
-          addedDemandDays: number;
-          byName: string;
-        };
-      }>(
+      const status = dataOf(
         await gql(hq, STATUS, {
           input: { orgId: String(daan), month: "2027-05" },
         }),
@@ -775,8 +785,8 @@ describe("套用範本與自動排班(GraphQL 端點 + 真 MongoDB)", () => {
       expect(typeof run?.seed).toBe("number");
       // 鎖已解除
       expect(
-        (await periods().findOne({ orgId: daan, month: "2027-05" }))?.lockedAt,
-      ).toBeNull();
+        await periods().findOne({ orgId: daan, month: "2027-05" }),
+      ).toMatchObject({ lockedAt: null });
     });
 
     it("沒勾「允許同一人同時段填進多筆」→ 不會讓同一人填進時間重疊的兩筆", async () => {
@@ -784,7 +794,7 @@ describe("套用範本與自動排班(GraphQL 端點 + 真 MongoDB)", () => {
       await demandOn("2027-06-07", "09:00", "13:00", ["leader"]);
       await demandOn("2027-06-07", "09:00", "13:00", ["leader"]);
       await demandOn("2027-06-07", "09:00", "13:00", ["leader"]);
-      const summary = dataOf<{ filledCount: number; unfilledCount: number }>(
+      const summary = dataOf(
         await gql(hq, RUN, runInput("2027-06")),
         "runScheduleAutoRun",
       );
@@ -819,7 +829,7 @@ describe("套用範本與自動排班(GraphQL 端點 + 真 MongoDB)", () => {
       await demandOn("2027-07-05", "09:00", "13:00", ["helper"]);
       await demandOn("2027-07-05", "09:00", "13:00", ["helper"]);
       await demandOn("2027-07-05", "09:00", "13:00", ["helper"]);
-      const summary = dataOf<{ filledCount: number; unfilledCount: number }>(
+      const summary = dataOf(
         await gql(hq, RUN, runInput("2027-07")),
         "runScheduleAutoRun",
       );
@@ -849,7 +859,7 @@ describe("套用範本與自動排班(GraphQL 端點 + 真 MongoDB)", () => {
       expect(manual.errors).toBeUndefined();
       await gql(hq, RUN, runInput("2027-08"));
       const counts = async () =>
-        dataOf<{ manualCount: number; autoCount: number }>(
+        dataOf(
           await gql(hq, RUN_PREVIEW, {
             input: {
               orgId: String(daan),
@@ -899,10 +909,7 @@ describe("套用範本與自動排班(GraphQL 端點 + 真 MongoDB)", () => {
         reason: null,
       });
 
-      const cleared = dataOf<{
-        removedCount: number;
-        deletedEntryIds: string[];
-      }>(
+      const cleared = dataOf(
         await gql(hq, CLEAR, {
           input: {
             orgId: String(daan),
@@ -937,7 +944,7 @@ describe("套用範本與自動排班(GraphQL 端點 + 真 MongoDB)", () => {
             },
           },
         );
-        const status = dataOf<{ running: boolean }>(
+        const status = dataOf(
           await gql(runner, STATUS, {
             input: { orgId: String(daan), month: "2027-10" },
           }),
@@ -969,9 +976,8 @@ describe("套用範本與自動排班(GraphQL 端點 + 真 MongoDB)", () => {
         const run = await gql(runner, RUN, runInput("2027-10"));
         expect(run.errors).toBeUndefined();
         expect(
-          (await periods().findOne({ orgId: daan, month: "2027-10" }))
-            ?.lockedAt,
-        ).toBeNull();
+          await periods().findOne({ orgId: daan, month: "2027-10" }),
+        ).toMatchObject({ lockedAt: null });
       } finally {
         spy.mockRestore();
       }

@@ -44,6 +44,9 @@ import { autoRunBlockedReasonOf, useAutoRunStatus } from "./auto-run-status";
 
 type ApplyKind = "template" | "week-template";
 
+/** 套用範本抽屜寬(px;Figma SC-17a 電腦 / 平板)。 */
+const DRAWER_WIDTH = 460;
+
 const PRESETS: readonly DatePreset[] = ["all", "none", "weekdays", "weekends"];
 
 export interface ApplyTemplatesDialogProps {
@@ -272,7 +275,7 @@ export const ApplyTemplatesDialog = ({
         useFlexGap
         sx={{ alignItems: "center", flexWrap: "wrap" }}
       >
-        <Typography variant="subtitle2" sx={{ flex: 1, minWidth: 160 }}>
+        <Typography variant="subtitle2" sx={{ flex: 1 }}>
           {t("applyTo", { year, month: Number(monthNumber) })}
         </Typography>
         {PRESETS.map((preset) => (
@@ -342,6 +345,8 @@ export const ApplyTemplatesDialog = ({
       closeLabel={t("close")}
       actions={actions}
       onClose={onClose}
+      // 底座抽屜寬 360;月曆要放得下(Figma SC-17a 抽屜寬 460)
+      sx={{ "& .MuiDrawer-paper": { width: DRAWER_WIDTH } }}
     >
       {body}
     </Drawer>
