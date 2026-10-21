@@ -108,7 +108,7 @@
 - **流水一律在交易內寫**(比照 `BaseRepository.createMany`):`recordCashMovement` / `reverseCashMovement` 收 `withTransaction` 給的 session,缺席(`undefined`)= 用進行中的交易(不收 `null`,同 `createMany`);不在交易內 → `CashLedgerOutsideTransactionError`。流水與同一個動作的稽核、單據寫入一起成功、一起回復(稽核寫入失敗 → 流水回復,有測試)。
 - 小金庫應有 = `vaultBaseline(orgId)` 的清點金額 + 之後流水對小金庫的加總;**只由流水算**,沒有可被改寫的數字欄位(帳本 repository 的修改 / 刪除方法一律拋 `AppendOnlyLedgerError`)。
 - 起算點由日結功能以 `registerVaultBaselineProvider` 登記;登記前一律從 0 起算。
-- 抽屜應有由店面(收銀班次)計算:本模組提供 `sumShiftMovements(operator, shiftId)`(流入抽屜 − 流出抽屜);畫面上的抽屜卡片待店面併回後加上。
+- 抽屜應有由店面(收銀班次)計算:本模組提供 `sumShiftMovements(operator, shiftId)`(流入抽屜 − 流出抽屜);即時現金帳的抽屜卡片讀店面登記的 `openDrawersOf`(`cash/open-shift.ts`;正本 `docs/modules/project/store.md`「抽屜應有」)。
 
 ### 收付機制
 
@@ -120,7 +120,7 @@
 - 淨額只算 `settlementSide` 有值的交易 / 流水。**兌獎入帳**(`redemption_income`)可以掛單據(`refType` / `refId` / `refRevision`),但 `settlementSide` 一律是 null:不算進任何一邊的淨額、不出現在收付歷程;`bankTypeOf` 只會回批貨 / 調貨的支出與收入,不會回兌獎入帳(有測試)。
 - **沖正收付**(`reverseSettlement`):要看得到單據、有那一邊的權限,且**這一邊的記帳分店在操作者的可見範圍內**(現金 = 流水的分店;銀行 = 歸屬分店,沒有時看登記的組織),銀行另要求看得到那個帳戶;不符合一律 `NOT_FOUND`。現金沖正以操作者自己的上下文寫。同一筆同時沖正只有一個成功(唯一索引,有併發測試)。
 - **自動記帳**(`SettlementService.recordAutomatic(session, { operator, moduleKey, submission, side, button, accountId, amount })`):給單據在交易內記帳用(例:進貨單送出時記第一筆「批貨支出」)。不檢查按鈕權限、不看先填的金額;**金額 0 照記**(進貨單應付 0 也留一筆,淨額不受影響;人工登記仍要正數),負數或不是整數不記(回 null);沿用呼叫端的交易,不在交易內拋 `CashLedgerOutsideTransactionError`;帳戶仍要使用中、使用組織包含這一邊的分店(帳戶以單據的租戶為邊界讀)。
-- 銀行:帳戶要使用中、使用組織包含這一邊的分店(`BANK_ACCOUNT_NOT_USABLE`)。現金(只有調貨):經手人 / 收款人必填;來源小金庫,或收銀點抽屜(要有開著的班,`NO_OPEN_SHIFT`;店面以 `registerOpenShiftResolver` 登記)。
+- 銀行:帳戶要使用中、使用組織包含這一邊的分店(`BANK_ACCOUNT_NOT_USABLE`)。現金(只有調貨):經手人 / 收款人必填;來源小金庫,或收銀點抽屜(要有開著的班,`NO_OPEN_SHIFT`;店面以 `registerOpenShiftResolver` 登記;付款視窗的抽屜選項 = 這一邊的 `cashDrawers`,店面以 `registerOpenDrawersLister` 登記)。
 - 作廢 / 駁回前每一邊淨額都要是 0:單據在自己的 `registerFormLifecycle` 掛 `settlementClearedGuard`(`beforeVoid` / `beforeReject`,`inject: [SettlementLedger]`),擋下時 `FORBIDDEN` + `reason = SETTLEMENT_NOT_CLEARED`。
 - 參與收付的提交狀態:`reviewing` / `returned` / `withdrawn` / `completed`(草稿、作廢、駁回不算)。
 
@@ -160,15 +160,16 @@
 
 ### 給其他模組的介面
 
-| 介面                                                                                            | 給誰                                                   |
-| ----------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
-| `CashLedgerService.recordCashMovement(session, input)` / `reverseCashMovement(session, id, by)` | 店面、調貨、退貨退款、現金更正(現金流水寫入的唯一入口) |
-| `CashLedgerService.vaultExpected` / `vaultBaseline` / `sumShiftMovements`                       | 店面、日結                                             |
-| `registerVaultBaselineProvider(provider)`                                                       | 日結(小金庫起算點)                                     |
-| `registerOpenShiftResolver(resolver)`                                                           | 店面(收銀點開著的班)                                   |
-| `registerSettlementDocument(registration)`                                                      | 進貨單、調貨單                                         |
-| `SettlementService.recordAutomatic(session, input)`                                             | 進貨單送出時的第一筆(交易內)                           |
-| `settlementClearedGuard`                                                                        | 進貨單、調貨單的 lifecycle                             |
+| 介面                                                                                            | 給誰                                                                  |
+| ----------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| `CashLedgerService.recordCashMovement(session, input)` / `reverseCashMovement(session, id, by)` | 店面、調貨、退貨退款、現金更正(現金流水寫入的唯一入口)                |
+| `CashLedgerService.vaultExpected` / `vaultBaseline` / `sumShiftMovements`                       | 店面、日結                                                            |
+| `registerVaultBaselineProvider(provider)`                                                       | 日結(小金庫起算點)                                                    |
+| `registerOpenShiftResolver(resolver)`                                                           | 店面(收銀點開著的班)                                                  |
+| `registerOpenDrawersLister(lister)`                                                             | 店面(分店開著班的抽屜與應有:即時現金帳的抽屜卡片、付款視窗的抽屜選項) |
+| `registerSettlementDocument(registration)`                                                      | 進貨單、調貨單                                                        |
+| `SettlementService.recordAutomatic(session, input)`                                             | 進貨單送出時的第一筆(交易內)                                          |
+| `settlementClearedGuard`                                                                        | 進貨單、調貨單的 lifecycle                                            |
 
 `LotteryAccountsModule` 匯出 `CashLedgerService`、`SettlementLedger`、`SettlementService`、`BankTransactionsService`。
 

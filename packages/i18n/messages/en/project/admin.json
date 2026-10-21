@@ -1958,7 +1958,9 @@
       "reversal": " (reversal)",
       "empty": "No cash movements on this day",
       "listAria": "Cash movements",
-      "pickOrg": "Pick a branch first"
+      "pickOrg": "Pick a branch first",
+      "drawer": "{name} drawer",
+      "drawerOwner": "Owner {name}"
     },
     "outstanding": {
       "columns": {
@@ -2034,7 +2036,7 @@
       },
       "sources": {
         "vault": "Vault",
-        "drawer": "Cash point drawer (open shift)"
+        "drawerOf": "{name} drawer (open shift)"
       },
       "noAccount": "No account available for this branch",
       "cancel": "Cancel",
@@ -2455,5 +2457,145 @@
     "MAKEUP_PUNCH_ENTRY_DELETED": "The chosen shift was deleted, so it cannot be approved. Return it so the applicant can choose again",
     "MAKEUP_PUNCH_INVALID_VALUES": "Date, store, type or time is missing",
     "MAKEUP_PUNCH_NOTE_REQUIRED": "A note is required when the reason is Other"
+  },
+  "lotteryStore": {
+    "tabs": {
+      "aria": "Store",
+      "board": "Board",
+      "otherForms": "Other requests"
+    },
+    "top": {
+      "org": "Branch",
+      "localCashPoint": "This device's cash point",
+      "notSet": "Not set",
+      "myShifts": "Your open shifts: {names}",
+      "live": "Live",
+      "reconnecting": "Reconnecting"
+    },
+    "board": {
+      "noLocal": "This device has no cash point yet: scanned tickets only show their info and cannot be sold or redeemed.",
+      "setLocal": "Set this device's cash point",
+      "localNotOpen": "This device's cash point \"{name}\" has no open shift: view only.",
+      "noCashPoint": "This branch has no active cash points.",
+      "pickOrg": "Pick a branch first",
+      "loadFailed": "Could not load the board. Please try again later."
+    },
+    "header": {
+      "local": "This device",
+      "open": "Open",
+      "closed": "Closed",
+      "owner": "Owner {name} · opened {time}",
+      "ownerUnmatched": "Owner {name} · opened {time} · no schedule entry",
+      "ownerAction": "Shift info",
+      "sold": "Sold this shift",
+      "soldValue": "{count} tickets / {amount}",
+      "expected": "Expected cash",
+      "openShift": "Open shift",
+      "deposit": "Deposit",
+      "withdraw": "Withdraw",
+      "switchTo": "Switch to this cash point"
+    },
+    "card": {
+      "title": "{code} {name}",
+      "price": "{price}",
+      "meta": "Book {bookNo} · sold today {count}",
+      "remaining": "{remaining} / {total} left",
+      "lowStock": "Running low"
+    },
+    "localDialog": {
+      "title": "Set this device's cash point",
+      "description": "Which cash point this device collects money at. Saved in this browser, not with your account.",
+      "cancel": "Cancel",
+      "save": "Save"
+    },
+    "switchDialog": {
+      "title": "Switch this device's cash point?",
+      "message": "You still have an open shift on this device ({from}). After switching, redemptions, deposits and withdrawals go to \"{to}\".",
+      "cancel": "Cancel",
+      "confirm": "Switch to {to}"
+    },
+    "openShift": {
+      "title": "Open shift · {name}",
+      "float": "Opening float",
+      "floatFromVault": "Take float from the vault",
+      "floatFromVaultHint": "Optional; records a withdrawal (opening float) when you open the shift",
+      "floatFirstNoWithdraw": "First shift: no withdraw permission, opening float 0.",
+      "handoverSource": "From the previous shift's \"left for next shift\" ({name}, checked out {time}).",
+      "notPunched": "You have not clocked in yet",
+      "punch": "Clock in",
+      "entry": "Schedule entry",
+      "entryHint": "The entry found by time is preselected; you can pick another entry of the day, or \"No schedule entry (temporary cover)\".",
+      "noEntryToday": "You have no schedule entry at this branch today; pick \"No schedule entry (temporary cover)\".",
+      "temporary": "No schedule entry (temporary cover)",
+      "mismatch": "Your schedule today is \"{positions}\". Open a shift at {cashPoint}? (Reminder only, it is recorded)",
+      "noTask": "No staffing need filled",
+      "cancel": "Cancel",
+      "submit": "Open shift",
+      "submitAnyway": "Open anyway",
+      "success": "Shift opened",
+      "punchSuccess": "Clocked in"
+    },
+    "entry": {
+      "label": "{shortName} {start}–{end} · {task}",
+      "noTemplate": "Temp",
+      "task": "{position} · {role} · {taskName}",
+      "roles": {
+        "leader": "Lead",
+        "helper": "Helper"
+      }
+    },
+    "shiftInfo": {
+      "title": "Shift info · {name}",
+      "owner": "Owner",
+      "ownerValue": "{name} · opened {time}",
+      "float": "Opening float",
+      "entry": "Schedule entry",
+      "unmatched": "No schedule entry (temporary cover)",
+      "snapshot": "Task snapshot",
+      "mismatch": "Position mismatch at opening (recorded)",
+      "empty": "—",
+      "closedHint": "The shift checkout was submitted; the schedule entry can no longer change.",
+      "close": "Close",
+      "reassign": "Change schedule entry"
+    },
+    "reassign": {
+      "title": "Change schedule entry",
+      "reason": "Reason (required)",
+      "hint": "Only the owner's entries at this branch on that day are listed. Not allowed after checkout; the task snapshot is rewritten from the new entry.",
+      "cancel": "Cancel",
+      "save": "Save",
+      "success": "Schedule entry changed"
+    },
+    "cash": {
+      "depositTitle": "Deposit · drawer → vault",
+      "withdrawTitle": "Withdraw · vault → drawer",
+      "drawerExpected": "{name} expected cash",
+      "vaultExpected": "Vault expected",
+      "amount": "Amount",
+      "reason": "Reason (required)",
+      "note": "Note",
+      "cancel": "Cancel",
+      "deposit": "Deposit",
+      "withdraw": "Withdraw",
+      "depositSuccess": "Deposited",
+      "withdrawSuccess": "Withdrawn"
+    },
+    "reasonNote": {
+      "note": "Details",
+      "noteRequired": "Details (required)"
+    },
+    "errors": {
+      "FORBIDDEN": "You do not have permission to do this",
+      "NOT_FOUND": "Not found; it may have been changed by someone else",
+      "VALIDATION_FAILED": "Some fields are invalid; check the highlighted fields",
+      "SHIFT_ALREADY_OPEN": "Someone already opened a shift at this cash point",
+      "SHIFT_IN_OTHER_STORE": "You still have an open shift at another branch; one person can only open shifts at one branch at a time",
+      "SHIFT_CLOSED": "This shift's checkout was already submitted",
+      "CASH_POINT_DISABLED": "This cash point is disabled",
+      "ENTRY_NOT_AVAILABLE": "The entry is not this person's entry at this branch on that day",
+      "OPENING_FLOAT_NOT_ALLOWED": "Only the first shift, with withdraw permission, can take a float from the vault",
+      "AMOUNT_EXCEEDS_DRAWER": "The deposit cannot exceed the drawer's expected cash",
+      "UNEXPECTED": "Something went wrong. Please try again later."
+    }
   }
 }

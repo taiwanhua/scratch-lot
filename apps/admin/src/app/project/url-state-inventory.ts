@@ -64,5 +64,7 @@ export const projectUrlStateInventory: UrlStateInventory = {
   // 庫存管理:頁內分頁 `tab`、庫存分頁的篩選 `stock`(分店、遊戲、狀態、批購日、本號);
   // 本的詳情:查刮刮樂帶來的張號 `ticket`(打開時標亮)
   inventory: ["tab", "stock"],
+  // 店面管理:頁內分頁 `tab`、看板的分店 `org`、其他申請(表單引擎的預設列表)的篩選 `list`
+  store: ["tab", "org", "list"],
   "inventory.book-page": ["ticket"],
 };

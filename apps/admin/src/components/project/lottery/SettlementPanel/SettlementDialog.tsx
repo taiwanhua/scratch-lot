@@ -38,6 +38,15 @@ export interface SettlementDialogProps {
 
 type Field = "method" | "accountId" | "cashSource" | "amount" | "handler";
 
+/** 現金來源「小金庫」的選項值(其他選項是收銀點 id)。 */
+const VAULT = "vault";
+
+/** 現金來源 → api 的輸入:小金庫,或有開著班的收銀點抽屜(收銀點 id)。 */
+const cashSourceInput = (value: string) =>
+  value === VAULT
+    ? { cashSource: VAULT }
+    : { cashSource: "drawer", cashPointId: value };
+
 /**
  * 付款 / 收款視窗(規格 9,[付款] [收到退款] [收款] [退款] 共用):單據資訊(唯讀)、付款方式、
  * 帳戶 / 來源、金額(先填這一邊按下去剛好結清的金額,可以改)、經手人 / 收款人(現金必填)、備註。
@@ -60,7 +69,8 @@ export const SettlementDialog = ({
   const methods = sideInfo?.methods ?? ["bank"];
   const [method, setMethod] = useState(methods[0] ?? "bank");
   const [accountId, setAccountId] = useState("");
-  const [cashSource, setCashSource] = useState<"vault" | "drawer">("vault");
+  /** 現金來源:`vault` 小金庫,或開著班的收銀點抽屜(值 = 收銀點 id)。 */
+  const [cashSource, setCashSource] = useState(VAULT);
   const [amount, setAmount] = useState(String(defaultAmount));
   const [handler, setHandler] = useState("");
   const [note, setNote] = useState("");
@@ -121,7 +131,7 @@ export const SettlementDialog = ({
         button,
         method,
         amount: amountValue,
-        ...(method === "bank" ? { accountId } : { cashSource }),
+        ...(method === "bank" ? { accountId } : cashSourceInput(cashSource)),
         handler: handler.trim() === "" ? null : handler.trim(),
         note: note.trim() === "" ? null : note.trim(),
       },
@@ -197,16 +207,14 @@ export const SettlementDialog = ({
             label={t("settleForm.fields.cashSource")}
             value={cashSource}
             options={[
-              { value: "vault" as const, label: t("settleForm.sources.vault") },
-              {
-                value: "drawer" as const,
-                label: t("settleForm.sources.drawer"),
-              },
+              { value: VAULT, label: t("settleForm.sources.vault") },
+              ...(sideInfo?.cashDrawers ?? []).map((drawer) => ({
+                value: drawer.id,
+                label: t("settleForm.sources.drawerOf", { name: drawer.name }),
+              })),
             ]}
             error={invalid.includes("cashSource")}
-            onChange={(value) => {
-              setCashSource(value === "drawer" ? "drawer" : "vault");
-            }}
+            onChange={setCashSource}
           />
         )}
         <TextField

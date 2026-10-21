@@ -1958,7 +1958,9 @@
       "reversal": "(沖正)",
       "empty": "這一天沒有流水",
       "listAria": "現金流水",
-      "pickOrg": "請先選分店"
+      "pickOrg": "請先選分店",
+      "drawer": "{name} 抽屜",
+      "drawerOwner": "負責人 {name}"
     },
     "outstanding": {
       "columns": {
@@ -2034,7 +2036,7 @@
       },
       "sources": {
         "vault": "小金庫",
-        "drawer": "收銀點抽屜(開著的班)"
+        "drawerOf": "{name} 抽屜(開著的班)"
       },
       "noAccount": "沒有這家分店可用的帳戶",
       "cancel": "取消",
@@ -2455,5 +2457,145 @@
     "MAKEUP_PUNCH_ENTRY_DELETED": "對應的排班已被刪除,不能核准;請退回讓申請人重選",
     "MAKEUP_PUNCH_INVALID_VALUES": "日期、分店、類型或時間沒填好",
     "MAKEUP_PUNCH_NOTE_REQUIRED": "原因選「其他」時要填說明"
+  },
+  "lotteryStore": {
+    "tabs": {
+      "aria": "店面管理",
+      "board": "看板",
+      "otherForms": "其他申請"
+    },
+    "top": {
+      "org": "分店",
+      "localCashPoint": "本機收銀點",
+      "notSet": "未設定",
+      "myShifts": "你開著的班:{names}",
+      "live": "即時",
+      "reconnecting": "重新連線中"
+    },
+    "board": {
+      "noLocal": "這台裝置還沒設定本機收銀點:刷到刮刮樂只顯示刮刮樂的資訊,不能銷售、兌獎。",
+      "setLocal": "設定本機收銀點",
+      "localNotOpen": "本機收銀點「{name}」還沒開班:只能查看。",
+      "noCashPoint": "這家店還沒有啟用中的收銀點。",
+      "pickOrg": "請先選分店",
+      "loadFailed": "看板載入失敗,請稍後再試"
+    },
+    "header": {
+      "local": "本機",
+      "open": "開班中",
+      "closed": "未開班",
+      "owner": "負責人 {name} · {time} 開班",
+      "ownerUnmatched": "負責人 {name} · {time} 開班 · 未對應排班",
+      "ownerAction": "班次資訊",
+      "sold": "本班已售",
+      "soldValue": "{count} 張 / {amount}",
+      "expected": "應有現金",
+      "openShift": "開班",
+      "deposit": "投庫",
+      "withdraw": "出庫",
+      "switchTo": "切換到這個收銀點"
+    },
+    "card": {
+      "title": "{code} {name}",
+      "price": "{price} 元",
+      "meta": "本號 {bookNo} · 今日售出 {count}",
+      "remaining": "剩 {remaining} / {total}",
+      "lowStock": "剩很少"
+    },
+    "localDialog": {
+      "title": "設定本機收銀點",
+      "description": "這台裝置在哪個收銀點收錢。存在這台瀏覽器,不跟帳號走。",
+      "cancel": "取消",
+      "save": "儲存"
+    },
+    "switchDialog": {
+      "title": "切換本機收銀點?",
+      "message": "這台裝置還有你開著的班({from})。切換後,之後的兌獎、投庫、出庫都算到「{to}」。",
+      "cancel": "取消",
+      "confirm": "切換到{to}"
+    },
+    "openShift": {
+      "title": "開班 · {name}",
+      "float": "期初零用金",
+      "floatFromVault": "從小金庫領零用金",
+      "floatFromVaultHint": "選填;按 [開班] 時同時記一筆出庫(開班零用金)",
+      "floatFirstNoWithdraw": "第一班:沒有出庫權限,期初 0。",
+      "handoverSource": "來源:上一班「留給下一班」({name} {time} 交班)。",
+      "notPunched": "你還沒打上班卡",
+      "punch": "打卡",
+      "entry": "對應排班",
+      "entryHint": "系統依時間找到的排班,可以改選這天的其他排班;都不是請選「沒有排班(臨時代班)」。",
+      "noEntryToday": "你今天在這家店沒有排班,請選「沒有排班(臨時代班)」。",
+      "temporary": "沒有排班(臨時代班)",
+      "mismatch": "你今天排的是「{positions}」,確定要在{cashPoint}開班嗎?(只提醒,會記錄)",
+      "noTask": "沒有填進任何人力需求",
+      "cancel": "取消",
+      "submit": "開班",
+      "submitAnyway": "仍要開班",
+      "success": "已開班",
+      "punchSuccess": "已打上班卡"
+    },
+    "entry": {
+      "label": "{shortName} {start}–{end} · {task}",
+      "noTemplate": "臨",
+      "task": "{position} · {role} · {taskName}",
+      "roles": {
+        "leader": "負責",
+        "helper": "協同"
+      }
+    },
+    "shiftInfo": {
+      "title": "班次資訊 · {name}",
+      "owner": "負責人",
+      "ownerValue": "{name} · {time} 開班",
+      "float": "期初零用金",
+      "entry": "對應排班",
+      "unmatched": "未對應排班(臨時代班)",
+      "snapshot": "任務快照",
+      "mismatch": "開班時崗位不一致(已記錄)",
+      "empty": "—",
+      "closedHint": "交班結帳已送出,對應排班不能再改。",
+      "close": "關閉",
+      "reassign": "改對應排班"
+    },
+    "reassign": {
+      "title": "改對應排班",
+      "reason": "原因(必填)",
+      "hint": "只列出負責人這天在這家店的排班。交班結帳送出後就不能改;改的時候任務快照會依新的排班重寫。",
+      "cancel": "取消",
+      "save": "儲存",
+      "success": "已改對應排班"
+    },
+    "cash": {
+      "depositTitle": "投庫 · 抽屜 → 小金庫",
+      "withdrawTitle": "出庫 · 小金庫 → 抽屜",
+      "drawerExpected": "{name} 應有現金",
+      "vaultExpected": "小金庫 應有",
+      "amount": "金額",
+      "reason": "原因(必填)",
+      "note": "備註",
+      "cancel": "取消",
+      "deposit": "投庫",
+      "withdraw": "出庫",
+      "depositSuccess": "已投庫",
+      "withdrawSuccess": "已出庫"
+    },
+    "reasonNote": {
+      "note": "說明",
+      "noteRequired": "說明(必填)"
+    },
+    "errors": {
+      "FORBIDDEN": "沒有權限做這件事",
+      "NOT_FOUND": "找不到這筆資料,可能已被別人變更",
+      "VALIDATION_FAILED": "有欄位不正確,請檢查標紅的欄位",
+      "SHIFT_ALREADY_OPEN": "這個收銀點已經有人開班了",
+      "SHIFT_IN_OTHER_STORE": "你在別家店還有開著的班;一個人只能同時開同一家店的班",
+      "SHIFT_CLOSED": "這一班已送出交班結帳",
+      "CASH_POINT_DISABLED": "這個收銀點已停用",
+      "ENTRY_NOT_AVAILABLE": "選的排班不是這個人這天在這家店的排班",
+      "OPENING_FLOAT_NOT_ALLOWED": "只有第一班、而且有出庫權限才能從小金庫領零用金",
+      "AMOUNT_EXCEEDS_DRAWER": "投庫金額不能超過抽屜目前的應有現金",
+      "UNEXPECTED": "操作失敗,請稍後再試"
+    }
   }
 }

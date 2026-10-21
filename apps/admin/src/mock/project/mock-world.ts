@@ -22,6 +22,8 @@ import {
   requisitionFormWorld,
 } from "@/test/msw/project/lottery/purchasing-fixtures";
 import { purchasingWorld } from "@/test/msw/project/lottery/purchasing-handlers";
+import { storeModules } from "@/test/msw/project/lottery/store-fixtures";
+import { storeWorld } from "@/test/msw/project/lottery/store-handlers";
 import {
   transferFormWorld,
   transferModules,
@@ -149,6 +151,8 @@ export const projectMockWorld: ProjectMockWorld = {
     ...purchaseModules(),
     ...transferModules(),
     ...inventoryModules(),
+    // 店面管理(表單模組,權限給滿)
+    ...storeModules(),
   ],
   handlers: () => [
     ...fieldOptionColors(),
@@ -174,6 +178,8 @@ export const projectMockWorld: ProjectMockWorld = {
     }).handlers,
     ...inventoryWorld().handlers,
     ...purchaseWorld().handlers,
+    // 店面管理的看板:中山店三個收銀點(Figma ST-01;不管看哪家店都回這份)
+    ...storeWorld().handlers,
   ],
   // 排班作業 → 支援需求單:表單、三筆提交與審核中那一筆的流程(併進底座的表單執行端 / 審核流程 world);
   // 叫貨、採購單 → 叫貨單:表單與五筆提交(草稿、審核中、待購買、已進貨、已調貨);

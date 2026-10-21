@@ -740,6 +740,11 @@ const DYNAMIC_KEYS: readonly { key: string; reason: string }[] = [
       "點收的 `t(`errors.${reason}`)`,reason 由 `PurchaseViewPage/receive-error.ts`(`RECEIVE_REASONS`)、`TransferViewPage/transfer-receive-error.ts`(`TRANSFER_RECEIVE_REASONS`)從 api 的 `extensions.reason` 換算",
   },
   {
+    key: "admin.lotteryStore.errors.",
+    reason:
+      "店面管理的 `t(`errors.${code}`)`,code 由 `lib/project/lottery/store-error.ts`(`storeErrorKey`)從 api 錯誤碼與 reason 換算",
+  },
+  {
     key: "admin.lotteryInventory.errors.",
     reason:
       "庫存管理的 `t(`errors.${code}`)`,code 由 `lib/project/lottery/inventory-error.ts` 從 api 錯誤碼與 reason 換算",

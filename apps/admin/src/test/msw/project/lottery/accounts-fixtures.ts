@@ -321,6 +321,7 @@ export const settlementOf = (
       totalIn: 0,
       net: row.net,
       canSettle: row.canSettle,
+      cashDrawers: [],
       buttons: (["out", "in"] as const).map((button) => ({
         __typename: "LotterySettlementButton" as const,
         button,

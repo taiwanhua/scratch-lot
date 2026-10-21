@@ -99,6 +99,12 @@ export const sampleReasonOptions: Record<
     { value: "damp", label: "受潮" },
     { value: "other", label: "其他" },
   ],
+  // 店面管理的出庫(規格 6.7)
+  [LOTTERY_FIELD_CATEGORY_KEYS.withdrawReason]: [
+    { value: "opening-float", label: "開班零用金" },
+    { value: "change-refill", label: "補零錢" },
+    { value: "other", label: "其他" },
+  ],
 };
 
 /** Figma IN-05 的三列。 */

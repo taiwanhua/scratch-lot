@@ -297,6 +297,28 @@ export const accountsWorld = ({
               baselineAmount: 0,
               baselineAt: null,
             },
+            // 店面開著班的收銀點抽屜(店面的夾具;店 A 的店內櫃台)
+            drawers:
+              input.orgId === masterDataOrgs.storeA.id
+                ? [
+                    {
+                      __typename: "LotteryDrawerExpected",
+                      cashPoint: {
+                        __typename: "LotteryAccountsRef",
+                        id: "cp-counter",
+                        name: "店內櫃台",
+                      },
+                      shiftId: "shift-a-counter",
+                      openedBy: {
+                        __typename: "LotteryAccountsRef",
+                        id: "user-wang",
+                        name: "王小明",
+                      },
+                      openedAt: "2026-10-14T00:02:00.000Z",
+                      amount: 12_350,
+                    },
+                  ]
+                : [],
             items,
             totalCount: items.length,
           },

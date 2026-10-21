@@ -365,6 +365,7 @@ GraphQL 文件 `packages/graphql/src/documents/project/schedule/schedule-setting
 | `listEntriesOfDay(operator, { tenantId, userId, orgId, date })` | 這個人某天在這家店的班(依上班時點):開班手動改選、補打卡的「對應排班」下拉                                                                                                                                                                                                                                |
 | `taskSnapshotFor(operator, { tenantId, entryId, positionKey })` | 任務快照:這筆排班填進的執行任務裡,人力需求崗位 = 收銀點崗位的那一筆(同崗位多筆:先負責、再開始較早的);回 `{ demandId, taskId, role, taskKey, positionKey }`;排班不存在 / 未發布 / 對不到 → null                                                                                                           |
 | `punchStart(operator, { userId, entryId }, { ip, userAgent })`  | 開班彈窗「你還沒打上班卡 [打卡]」:打這一班的上班卡(只能替自己打,`userId` ≠ 操作者 → `VALIDATION_FAILED`;方法內再查一次 `schedule.my.punch`,沒有 → `FORBIDDEN`(`reason: MISSING_PERMISSION`);規則同 `punchMySchedule`)。`ip` / `userAgent` 可用 `my/my-schedule.resolver.ts` 的 `punchMetaOf(context)` 取 |
+| `hasStartPunch(operator, { tenantId, entryId })`                | 開班彈窗要不要顯示「你還沒打上班卡」:這一班有沒有(未標重複的)上班卡;排班看不到 → false                                                                                                                                                                                                                   |
 
 ## admin 頁面
 

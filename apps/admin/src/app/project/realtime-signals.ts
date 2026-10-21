@@ -1,4 +1,7 @@
+import { STORE_BOARD_SIGNAL } from "@repo/domain/project/lottery";
+
 import type { RealtimeSignalRegistration } from "@/lib/base/realtime/signal-registry";
+import { STORE_BOARD_QUERY_KEY } from "@/pages/project/lottery/store/BoardTab/board-query";
 
 /**
  * 專案的信號類型登記(組裝在 `app/module-pages.tsx`;類型不可與底座重複)。
@@ -9,4 +12,7 @@ import type { RealtimeSignalRegistration } from "@/lib/base/realtime/signal-regi
  * { type: "badge:dealers", queryKeys: [useDealerOverdueListQuery.getKey()] }
  * ```
  */
-export const projectRealtimeSignals: readonly RealtimeSignalRegistration[] = [];
+export const projectRealtimeSignals: readonly RealtimeSignalRegistration[] = [
+  // 店面管理的看板(`board:<分店>` 頻道,規格 6.1):重抓看板
+  { type: STORE_BOARD_SIGNAL, queryKeys: [STORE_BOARD_QUERY_KEY] },
+];

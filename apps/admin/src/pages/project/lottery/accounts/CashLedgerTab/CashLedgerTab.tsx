@@ -49,7 +49,7 @@ const ALL = "";
 
 /**
  * 即時現金帳分頁(只能查看;Figma AC-04 93:834,規格 10.2):
- * 分店選擇器(可見範圍)→ 上方小金庫目前的應有金額(只從流水算;各收銀點抽屜的應有由店面併回後加上)→
+ * 分店選擇器(可見範圍)→ 上方小金庫與各收銀點抽屜(開著的班)目前的應有金額(只從流水與班次算)→
  * 流水清單(類型、收銀點、日期篩選)。網址 `?movementId=`(58mm 流水類單據的 QR)帶到那一筆的分店與日期並標亮。
  */
 export const CashLedgerTab = () => {
@@ -242,6 +242,17 @@ export const CashLedgerTab = () => {
                 })}
           </Typography>
         </Card>
+        {(ledger?.drawers ?? []).map((drawer) => (
+          <Card key={drawer.shiftId} variant="outlined" sx={{ p: 2 }}>
+            <Typography variant="caption" color="text.secondary">
+              {t("cash.drawer", { name: drawer.cashPoint.name })}
+            </Typography>
+            <Typography variant="h6">{moneyText(drawer.amount)}</Typography>
+            <Typography variant="caption" color="text.secondary">
+              {t("cash.drawerOwner", { name: drawer.openedBy.name })}
+            </Typography>
+          </Card>
+        ))}
       </Box>
       <Stack
         direction={{ xs: "column", sm: "row" }}

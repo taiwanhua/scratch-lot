@@ -52,10 +52,13 @@ describe("帳戶管理:分頁與按鈕", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("即時現金帳:小金庫應有、流水(類型、從 → 到、收銀點)", async () => {
+  it("即時現金帳:小金庫與抽屜應有、流水(類型、從 → 到、收銀點)", async () => {
     const { user } = renderAccounts();
     await user.click(await screen.findByRole("tab", { name: "即時現金帳" }));
     expect(await screen.findByText("48,200")).toBeInTheDocument();
+    // 開班中收銀點的抽屜應有(店面登記)
+    expect(screen.getByText("店內櫃台 抽屜")).toBeInTheDocument();
+    expect(screen.getByText("12,350")).toBeInTheDocument();
     expect(screen.getByText("投庫")).toBeInTheDocument();
     expect(screen.getByText("出庫(開班零用金)")).toBeInTheDocument();
     expect(screen.getByText("抽屜 → 外部(王小明)")).toBeInTheDocument();
