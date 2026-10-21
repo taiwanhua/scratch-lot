@@ -2,6 +2,7 @@ import { describe, expect, it } from "@jest/globals";
 import { screen, waitFor, within } from "@testing-library/react";
 import { HttpResponse } from "msw";
 
+import { expectButtonOrder } from "@/test/button-order";
 import { dealerFixtures } from "@/test/msw/project/dealers-fixtures";
 import { api, server } from "@/test/msw/server";
 import { toTenantTree } from "@/test/msw/tenant-org-tree";
@@ -50,6 +51,7 @@ describe("經銷商新增 / 編輯頁", () => {
 
     await user.clear(name);
     await user.type(name, "陳志明二");
+    expectButtonOrder(["取消", "儲存"]);
     await user.click(screen.getByRole("button", { name: "儲存" }));
 
     await waitFor(() => {

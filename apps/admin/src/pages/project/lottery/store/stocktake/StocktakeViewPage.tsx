@@ -171,6 +171,33 @@ export const StocktakeViewPage = ({ routeParam }: ModulePageProps) => {
 
   return (
     <Stack spacing={2} sx={{ flex: 1, minHeight: 0, overflow: "auto" }}>
+      {/* 檢視頁的頂部列(REACT-16):左 [← 返回列表],右 [修改後再送出] */}
+      <Stack
+        direction="row"
+        sx={{ alignItems: "center", gap: 1.5, flexShrink: 0 }}
+      >
+        <Button
+          variant="text"
+          size="small"
+          onClick={() => {
+            if (access.listRoute !== null) {
+              void navigate(tabHref(access.listRoute));
+            }
+          }}
+        >
+          {t("backToList")}
+        </Button>
+        <Box sx={{ flex: 1 }} />
+        {access.editRoute !== null && submission?.abilities.canEdit === true ? (
+          <Button
+            onClick={() => {
+              void navigate(`${access.editRoute ?? ""}/${id}`);
+            }}
+          >
+            {t("edit")}
+          </Button>
+        ) : null}
+      </Stack>
       <Card sx={{ px: { xs: 2, sm: 3 }, py: 2.5, flexShrink: 0 }}>
         <Stack spacing={1}>
           <Stack
@@ -187,29 +214,6 @@ export const StocktakeViewPage = ({ routeParam }: ModulePageProps) => {
                 blocked={submission.blocked}
               />
             )}
-            <Box sx={{ flex: 1 }} />
-            <Button
-              variant="text"
-              size="small"
-              onClick={() => {
-                if (access.listRoute !== null) {
-                  void navigate(tabHref(access.listRoute));
-                }
-              }}
-            >
-              {t("backToList")}
-            </Button>
-            {access.editRoute !== null &&
-            submission?.abilities.canEdit === true ? (
-              <Button
-                variant="outlined"
-                onClick={() => {
-                  void navigate(`${access.editRoute ?? ""}/${id}`);
-                }}
-              >
-                {t("edit")}
-              </Button>
-            ) : null}
           </Stack>
           {detail === null ? null : (
             <Typography variant="body2" color="text.secondary">

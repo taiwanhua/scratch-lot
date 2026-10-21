@@ -29,7 +29,9 @@ describe("排班作業:行事曆", () => {
 
   it("[新增] 店休:送出這家店那一層", async () => {
     const { user, calendarFake } = renderSchedulePage({ path: CALENDAR });
-    await user.click(await screen.findByRole("button", { name: "新增" }));
+    await user.click(
+      await screen.findByRole("button", { name: "+ 新增店休 / 特殊日" }),
+    );
     const dialog = await screen.findByRole("dialog", {
       name: "新增店休 / 特殊日",
     });
@@ -56,7 +58,7 @@ describe("排班作業:行事曆", () => {
     });
     expect(await screen.findByText("店休 · 盤點日")).toBeInTheDocument();
     expect(
-      screen.queryByRole("button", { name: "新增" }),
+      screen.queryByRole("button", { name: "+ 新增店休 / 特殊日" }),
     ).not.toBeInTheDocument();
   });
 });

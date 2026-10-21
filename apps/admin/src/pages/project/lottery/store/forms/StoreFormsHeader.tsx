@@ -14,6 +14,8 @@ import { STORE_KEY, storeFormCreateHref } from "./store-forms-keys";
 
 export interface StoreFormsHeaderProps {
   title: string;
+  /** 列表右上的新增鈕文字(「+ 新增<名詞>」,REACT-16) */
+  createLabel: string;
   /** 這個分頁的表單(`+ 新增` 開它的新增頁)。 */
   formKey: string;
   orgId: string;
@@ -26,6 +28,7 @@ export interface StoreFormsHeaderProps {
  */
 export const StoreFormsHeader = ({
   title,
+  createLabel,
   formKey,
   orgId,
   onOrgChange,
@@ -66,7 +69,7 @@ export const StoreFormsHeader = ({
               );
             }}
           >
-            {t("create")}
+            {createLabel}
           </Button>
         ) : null}
       </Stack>

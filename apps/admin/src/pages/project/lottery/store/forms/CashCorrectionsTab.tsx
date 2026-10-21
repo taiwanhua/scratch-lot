@@ -88,6 +88,7 @@ export const CashCorrectionsTab = () => {
     <Stack spacing={2} sx={{ pt: 2 }}>
       <StoreFormsHeader
         title={t("cashCorrections.title")}
+        createLabel={t("cashCorrections.create")}
         formKey={CASH_CORRECTION_FORM_KEY}
         orgId={orgId}
         onOrgChange={setOrgId}

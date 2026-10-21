@@ -2,6 +2,8 @@ import { describe, expect, it } from "@jest/globals";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
+import { expectButtonOrder } from "@/test/button-order";
+
 import { renderTransferPage } from "../transfer-test-support";
 
 const CREATE = "/purchasing/transfer/create-page/transfer";
@@ -35,6 +37,8 @@ describe("調貨單新增頁", () => {
     // 同一本再刷 → 已經在明細裡
     await user.type(scan, "5201-1-001233-050-0-6{Enter}");
     expect(await screen.findByText("這本已經在明細裡")).toBeInTheDocument();
+    // 動作列(REACT-16):[取消] 在右側、送出前
+    expectButtonOrder(["取消", "送出"]);
     await user.click(screen.getByRole("button", { name: "送出" }));
     await waitFor(() => {
       expect(formsFake.inputs.createAndSubmitFormSubmission).toHaveLength(1);

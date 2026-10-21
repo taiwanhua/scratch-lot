@@ -124,6 +124,28 @@ const DealerView = ({ dealer }: { dealer: LotteryDealerFieldsFragment }) => {
   return (
     <Box sx={{ flex: 1, minHeight: 0, overflow: "auto" }}>
       <Stack spacing={2} sx={{ pb: 2 }}>
+        {/* 檢視頁的頂部列(REACT-16):左 [← 返回列表],右 [編輯] */}
+        <Stack direction="row" sx={{ alignItems: "center", gap: 1.5 }}>
+          <Button
+            variant="text"
+            size="small"
+            onClick={() => {
+              access.goTo(access.routes.list);
+            }}
+          >
+            {t("actions.backToList")}
+          </Button>
+          <Box sx={{ flex: 1 }} />
+          {dealer.abilities.canEdit && access.routes.edit !== null && (
+            <Button
+              onClick={() => {
+                access.goTo(access.routes.edit, dealer.id);
+              }}
+            >
+              {t("actions.edit")}
+            </Button>
+          )}
+        </Stack>
         <Card sx={{ px: 3, py: 2 }}>
           <Stack direction="row" sx={{ alignItems: "flex-start", gap: 2 }}>
             <Stack spacing={1} sx={{ flex: 1, minWidth: 0 }}>
@@ -143,16 +165,6 @@ const DealerView = ({ dealer }: { dealer: LotteryDealerFieldsFragment }) => {
                 {header}
               </Typography>
             </Stack>
-            {dealer.abilities.canEdit && access.routes.edit !== null && (
-              <Button
-                variant="outlined"
-                onClick={() => {
-                  access.goTo(access.routes.edit, dealer.id);
-                }}
-              >
-                {t("actions.edit")}
-              </Button>
-            )}
           </Stack>
         </Card>
 

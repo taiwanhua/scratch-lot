@@ -3,12 +3,12 @@ import { useTranslations } from "use-intl";
 
 import type { LotteryGameFieldsFragment } from "@repo/graphql";
 import { Alert } from "@repo/ui/alert";
-import { Box } from "@repo/ui/box";
 import { Button } from "@repo/ui/button";
 import { Stack } from "@repo/ui/stack";
 import { TextField } from "@repo/ui/text-field";
 import { Typography } from "@repo/ui/typography";
 
+import { FormActions } from "@/components/base/FormActions/FormActions";
 import { Section } from "@/components/base/Section/Section";
 import { TagPaletteSelect } from "@/components/project/TagPaletteSelect/TagPaletteSelect";
 import { useRouteTabHref } from "@/hooks/base/useRouteTabHref";
@@ -29,7 +29,7 @@ export interface GameFormProps {
 
 /**
  * 遊戲新增 / 編輯(Figma MD-02 97:456、手機 97:1054):三個可收合區塊(遊戲資訊 / 顏色 / 備註),
- * 儲存列固定在底部([取消] [刪除] ……… [儲存])。有庫存時上方提示、代號 / 單張金額 / 整本張數唯讀;
+ * 儲存列固定在底部([刪除] ……… [取消] [儲存],REACT-16)。有庫存時上方提示、代號 / 單張金額 / 整本張數唯讀;
  * [刪除] 只在 `abilities.canDelete`(有 `games.delete` 且從未被引用)時出現。
  */
 export const GameForm = ({ game, access }: GameFormProps) => {
@@ -126,31 +126,22 @@ export const GameForm = ({ game, access }: GameFormProps) => {
         </Section>
       </Stack>
 
-      {/* 儲存列固定在底部(RW-02):內容自己捲,這一列不跟著捲 */}
-      <Stack
-        direction="row"
-        spacing={1}
-        sx={{
-          alignItems: "center",
-          pt: 1.5,
-          borderTop: 1,
-          borderColor: "divider",
-          bgcolor: "background.paper",
+      {/* 儲存列固定在底部(RW-02):內容自己捲,這一列不跟著捲;[刪除] 不屬於送出流程,放左側 */}
+      <FormActions
+        {...(game?.abilities.canDelete === true && {
+          start: (
+            <Button variant="text" color="error" onClick={deletion.ask}>
+              {t("gameForm.delete")}
+            </Button>
+          ),
+        })}
+        cancel={{ label: t("gameForm.cancel"), onClick: leave }}
+        submit={{
+          label: t("gameForm.save"),
+          disabled: form.isSubmitting,
+          onClick: form.submit,
         }}
-      >
-        <Button variant="text" onClick={leave}>
-          {t("gameForm.cancel")}
-        </Button>
-        {game?.abilities.canDelete === true && (
-          <Button variant="text" color="error" onClick={deletion.ask}>
-            {t("gameForm.delete")}
-          </Button>
-        )}
-        <Box sx={{ flex: 1 }} />
-        <Button onClick={form.submit} disabled={form.isSubmitting}>
-          {t("gameForm.save")}
-        </Button>
-      </Stack>
+      />
 
       {game !== null && deletion.isConfirming && (
         <GameDeleteDialog

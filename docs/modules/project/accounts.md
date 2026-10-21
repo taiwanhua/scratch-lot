@@ -179,7 +179,7 @@
 
 - `AccountsPage`:三個分頁 + 銀行帳戶分頁右上的 [+ 新增帳戶](`BankAccountDialog`)。網址狀態:`tab`、`cash`(即時現金帳的分店、日期、類型、收銀點)、`movementId`。
 - `BankAccountsTab`:點列進詳情(綁了詳情頁才點得進去);使用組織含下層的加註「(含下層)」。
-- `BankAccountViewPage`:標題卡([設定使用組織] 看 `canEdit`、[登記交易] 看 `canRecordTransaction`)、餘額 / 期間收 / 期間支、篩選(網址 `transactions`:期間預設本月 1 日到今天)、交易清單([沖正] 看 `abilities.canReverse`)、帳戶設定(`canEdit`;有交易時期初兩欄唯讀、[刪除帳戶] 停用)。
+- `BankAccountViewPage`:頂部列(REACT-16:[← 返回列表] …… [設定使用組織] / [停用帳戶](或 [重新啟用])/ [刪除帳戶] 看 `canEdit`,有交易時 [刪除帳戶] 停用並提示;[登記交易] 看 `canRecordTransaction`,在最右)、標題卡(戶名、狀態、使用組織)、餘額 / 期間收 / 期間支、篩選(網址 `transactions`:期間預設本月 1 日到今天)、交易清單([沖正] 看 `abilities.canReverse`)、帳戶設定(`canEdit`;有交易時期初兩欄唯讀,只有 [儲存])。
 - `CashLedgerTab`:分店選擇器 `OrgTreeSelect scope="visible"`、小金庫卡片、流水清單;`?movementId=` 帶到那一筆的分店與日期並標亮。
 - `OutstandingTab`:每列按鈕(`canSettle`)開 `SettlementDialog`。
 - 三尺寸:平板 / 手機照規則(Figma 標「規則」);彈窗在手機全螢幕,表格以最小寬度橫向捲動,`SettlementPanel` 的收付歷程在手機改成清單。

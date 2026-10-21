@@ -2,6 +2,7 @@ import { describe, expect, it } from "@jest/globals";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
+import { expectButtonOrder } from "@/test/button-order";
 import { requisitionFormWorld } from "@/test/msw/project/lottery/purchasing-fixtures";
 import { restoreViewportAfterEach, setMobileViewport } from "@/test/viewport";
 
@@ -97,6 +98,8 @@ describe("叫貨單新增頁", () => {
     });
     await user.clear(first);
     await user.type(first, "1");
+    // 動作列(REACT-16):補上 [取消],順序 [取消] → [存草稿] → [送出]
+    expectButtonOrder(["取消", "存草稿", "送出"]);
     await user.click(screen.getByRole("button", { name: "存草稿" }));
     await waitFor(() => {
       expect(formsFake.inputs.createFormDraft).toHaveLength(1);

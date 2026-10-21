@@ -4,19 +4,16 @@ import { useTranslations } from "use-intl";
 import { DEFAULT_TENANT_TIMEZONE } from "@repo/domain/form";
 import {
   type LotteryBankAccountFieldsFragment,
-  useDeleteLotteryBankAccountMutation,
   useUpdateLotteryBankAccountMutation,
 } from "@repo/graphql";
 import { Box } from "@repo/ui/box";
 import { Button } from "@repo/ui/button";
 import { Card } from "@repo/ui/card";
 import { DatePicker } from "@repo/ui/date-picker";
-import { Dialog } from "@repo/ui/dialog";
 import { Stack } from "@repo/ui/stack";
 import { TextField } from "@repo/ui/text-field";
 import { Typography } from "@repo/ui/typography";
 
-import { useCloseItemTabs } from "@/hooks/base/useCloseItemTabs";
 import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
 import { useSession } from "@/hooks/base/useSession";
 import { useTenantTimezone } from "@/hooks/base/useTenantTimezone";
@@ -30,10 +27,6 @@ import { useInvalidateAccounts } from "../useInvalidateAccounts";
 
 export interface AccountSettingsCardProps {
   account: LotteryBankAccountFieldsFragment;
-  /** 列表頁的路由(刪除後回去) */
-  listRoute: string | null;
-  /** 詳情頁的路由(刪除後關掉這一筆的頁籤) */
-  viewRoute: string | null;
 }
 
 type Field =
@@ -56,16 +49,12 @@ const GRID_SX = {
 
 /**
  * 帳戶設定(Figma AC-02 下方;要 `abilities.canEdit`):銀行代碼、帳號、戶名、分行隨時可改;
- * 有交易之後期初餘額、期初日期鎖定(唯讀)。[刪除帳戶] 只有沒有交易時能按;有交易只能 [停用帳戶]。
+ * 有交易之後期初餘額、期初日期鎖定(唯讀)。卡片只有 [儲存];[停用帳戶] / [刪除帳戶] 在頁面頂部列
+ * (`AccountStatusActions`,REACT-16)。
  */
-export const AccountSettingsCard = ({
-  account,
-  listRoute,
-  viewRoute,
-}: AccountSettingsCardProps) => {
+export const AccountSettingsCard = ({ account }: AccountSettingsCardProps) => {
   const t = useTranslations("admin.lotteryAccounts");
   const { session } = useSession();
-  const closeItemTabs = useCloseItemTabs();
   const timezone = useTenantTimezone() ?? DEFAULT_TENANT_TIMEZONE;
   const invalidate = useInvalidateAccounts();
   const [values, setValues] = useState(() => ({
@@ -77,7 +66,6 @@ export const AccountSettingsCard = ({
     openingDate: localDayTextOf(account.openingDate, timezone),
   }));
   const [invalid, setInvalid] = useState<Field[]>([]);
-  const [isConfirmingDelete, setConfirmingDelete] = useState(false);
   const locked = account.hasTransactions;
 
   const onError = (error: unknown) => {
@@ -94,18 +82,6 @@ export const AccountSettingsCard = ({
       onError,
     }),
   );
-  const remove = useDeleteLotteryBankAccountMutation(
-    session.client,
-    useMutationFeedback({
-      success: t("feedback.deleteSuccess"),
-      error: feedbackError,
-      onSuccess: () => {
-        invalidate();
-        closeItemTabs({ pageRoutes: [viewRoute], id: account.id, listRoute });
-      },
-    }),
-  );
-
   const change = (key: keyof typeof values, value: string | null) => {
     setValues((current) => ({ ...current, [key]: value }));
     setInvalid((current) => current.filter((field) => field !== key));
@@ -143,23 +119,7 @@ export const AccountSettingsCard = ({
   return (
     <Card sx={{ px: { xs: 2, sm: 3 }, py: 2 }}>
       <Stack spacing={2}>
-        <Stack direction="row" sx={{ alignItems: "center" }}>
-          <Typography variant="h6" sx={{ flex: 1 }}>
-            {t("accountView.settings")}
-          </Typography>
-          <Button
-            variant="outlined"
-            color="error"
-            size="small"
-            disabled={!account.abilities.canDelete}
-            title={locked ? t("accountView.deleteHint") : undefined}
-            onClick={() => {
-              setConfirmingDelete(true);
-            }}
-          >
-            {t("accountView.delete")}
-          </Button>
-        </Stack>
+        <Typography variant="h6">{t("accountView.settings")}</Typography>
         <Box sx={GRID_SX}>
           {text("bankCode")}
           {text("accountNo")}
@@ -182,66 +142,12 @@ export const AccountSettingsCard = ({
             {t("accountForm.lockHint")}
           </Typography>
         )}
-        <Stack direction="row" sx={{ alignItems: "center" }}>
-          <Button
-            variant="text"
-            color={account.status === "active" ? "error" : "primary"}
-            sx={{ mr: "auto" }}
-            disabled={update.isPending}
-            onClick={() => {
-              update.mutate({
-                input: {
-                  id: account.id,
-                  status: account.status === "active" ? "inactive" : "active",
-                },
-              });
-            }}
-          >
-            {account.status === "active"
-              ? t("accountView.deactivate")
-              : t("accountView.activate")}
-          </Button>
+        <Stack direction="row" sx={{ justifyContent: "flex-end" }}>
           <Button onClick={save} disabled={update.isPending}>
             {t("accountView.save")}
           </Button>
         </Stack>
       </Stack>
-      {isConfirmingDelete && (
-        <Dialog
-          open
-          onClose={() => {
-            setConfirmingDelete(false);
-          }}
-          maxWidth="xs"
-          title={t("accountView.deleteDialog.title")}
-          actions={
-            <>
-              <Button
-                variant="text"
-                onClick={() => {
-                  setConfirmingDelete(false);
-                }}
-              >
-                {t("accountView.deleteDialog.cancel")}
-              </Button>
-              <Button
-                color="error"
-                disabled={remove.isPending}
-                onClick={() => {
-                  setConfirmingDelete(false);
-                  remove.mutate({ id: account.id });
-                }}
-              >
-                {t("accountView.deleteDialog.confirm")}
-              </Button>
-            </>
-          }
-        >
-          <Typography variant="body2">
-            {t("accountView.deleteDialog.body", { label: account.label })}
-          </Typography>
-        </Dialog>
-      )}
     </Card>
   );
 };

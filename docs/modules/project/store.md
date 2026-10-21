@@ -36,8 +36,8 @@
 | `store.create`                   | `store`       | 表單引擎的新增(開啟 B9b 後,有表單時改看 `store.create-<formKey>`)                                                                |
 | `store.edit`                     | `store`       | 表單引擎的編輯;**也代表「店長」**(見下方)                                                                                        |
 | `store.delete`                   | `store`       | 表單引擎的刪除                                                                                                                   |
-| `store.create-sale_reversal`     | `store`       | 撤銷售出申請的新增(B9b,表單發布時建立):撤銷售出分頁的 [+ 新增]、撤銷確認視窗的 [送撤銷售出申請]                                  |
-| `store.create-cash_correction`   | `store`       | 現金更正單的新增(B9b):現金更正分頁的 [+ 新增]                                                                                    |
+| `store.create-sale_reversal`     | `store`       | 撤銷售出申請的新增(B9b,表單發布時建立):撤銷售出分頁的 [+ 新增撤銷售出申請]、撤銷確認視窗的 [送撤銷售出申請]                      |
+| `store.create-cash_correction`   | `store`       | 現金更正單的新增(B9b):現金更正分頁的 [+ 新增現金更正單]                                                                          |
 | `store.create-stocktake_confirm` | `store`       | 盤點確認申請的新增(B9b):臨時盤點的 [送出盤點確認申請](盤點頁另要 `store.stocktake`)                                              |
 | `store.create-checkout_confirm`  | `store`       | 結帳確認申請的新增(B9b):交班精靈的 [送出](精靈另要 `store.checkout`)                                                             |
 | `store.sell`                     | `store`       | 銷售:`sellLotteryTickets`(刷條碼 / 相機 / 快速銷售 / 移櫃並售出 / 展開卡片的 [標記售出])                                         |
@@ -113,7 +113,7 @@
 
 **建議流程設定**(開通腳本建的那一份,規格 2.1):兩張都是一關「店長審核」,人員條件「角色 店長 且 所屬組織屬於表單欄位『分店』(本身)」,**B5 申請人是審核者時自動通過**(`autoApprove.applicant`;店長自己送的單直接完成)。租戶要改審核者,自己改流程。
 
-- **撤銷售出分頁**(ST-31a):`lotteryStoreSaleReversals(orgId)`,列 單號、張數(每本一段「5164 #031–032」+ 張數)、原因、退款(退款 = 否顯示「—」)、退款班次、狀態;點列開表單引擎的詳情。分頁頂部分店 `OrgTreeSelect scope="visible"`;[+ 新增] 只在 `moduleForms` 的這張表單 `canCreate`(= 持有 `store.create-sale_reversal`)時顯示。電腦 / 平板表格、手機卡片。
+- **撤銷售出分頁**(ST-31a):`lotteryStoreSaleReversals(orgId)`,列 單號、張數(每本一段「5164 #031–032」+ 張數)、原因、退款(退款 = 否顯示「—」)、退款班次、狀態;點列開表單引擎的詳情。分頁頂部分店 `OrgTreeSelect scope="visible"`;[+ 新增撤銷售出申請] 只在 `moduleForms` 的這張表單 `canCreate`(= 持有 `store.create-sale_reversal`)時顯示。電腦 / 平板表格、手機卡片。
 - **撤銷售出申請新增頁**(ST-31b,`SaleReversalCreatePage`):分店、原因;刷條碼(宣告掃描用途 `store-sale-reversal`,不會跳快速銷售)或輸入編號 → `lotteryStoreScan` 找到張,本店已售的加進那一本的一組格子(格子資料 `lotteryStoreBookCard`;本店已售且沒被鎖定的張可選,其他「不能選」);選原因時依預設代碼帶入退款(`REFUND_DEFAULT_REASON_KEYS`:客人退貨 = 是,其他含租戶新增的 = 否),可改;退款班次 `lotteryStoreShiftOptions(orgId)`(本店開著的 + 最近 14 天開過的班,預設操作者自己開著的班 `mine`);退款金額 = 面額合計(唯讀)。送出走表單引擎 `createAndSubmitFormSubmission`(`useFormDraft`)。從看板撤銷確認視窗進來帶 `?ticket=<張 id>&org=<分店>`:讀那次售出的顯示鍵換成正面編號去刷、以張 id 對到那一張。按鈕目前是 [送出];「退貨退款收據」與 [送出並列印收據] 由列印的功能加上。
 - **現金更正分頁**(ST-32a):`lotteryStoreCashCorrections(orgId)`,列 單號、方向、金額、位置(小金庫 / 那一班)、歸屬班次、原因、狀態。新增用表單引擎的預設新增頁(ST-32b;位置選抽屜時才出現「班次」)。
 

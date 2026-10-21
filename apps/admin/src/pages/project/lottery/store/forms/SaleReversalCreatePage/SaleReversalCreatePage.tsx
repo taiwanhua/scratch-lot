@@ -14,7 +14,6 @@ import {
   useLotteryStoreShiftOptionsQuery,
 } from "@repo/graphql";
 import { Alert } from "@repo/ui/alert";
-import { Button } from "@repo/ui/button";
 import { Card } from "@repo/ui/card";
 import { CircularProgress } from "@repo/ui/circular-progress";
 import { FormControlLabel } from "@repo/ui/form-control-label";
@@ -24,6 +23,7 @@ import { Stack } from "@repo/ui/stack";
 import { TextField } from "@repo/ui/text-field";
 import { Typography } from "@repo/ui/typography";
 
+import { FormActions } from "@/components/base/FormActions/FormActions";
 import { OrgTreeSelect } from "@/components/base/OrgTreeSelect/OrgTreeSelect";
 import { useFormModuleAccess } from "@/components/base/form-engine/FormModulePages/useFormModuleAccess";
 import { useAdminErrorText } from "@/hooks/base/useAdminErrorText";
@@ -385,18 +385,14 @@ export const SaleReversalCreatePage = () => {
           )}
         </Stack>
       </Card>
-      <Stack
-        direction="row"
-        spacing={1.5}
-        sx={{ justifyContent: "space-between" }}
-      >
-        <Button variant="text" onClick={leave}>
-          {t("cancel")}
-        </Button>
-        <Button disabled={draft.isPending} onClick={submit}>
-          {t("submit")}
-        </Button>
-      </Stack>
+      <FormActions
+        cancel={{ label: t("cancel"), onClick: leave }}
+        submit={{
+          label: t("submit"),
+          disabled: draft.isPending,
+          onClick: submit,
+        }}
+      />
     </Stack>
   );
 };

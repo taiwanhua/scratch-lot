@@ -34,7 +34,9 @@ describe("店面管理:撤銷售出申請、現金更正單", () => {
     expect(within(table).getByText("審核中")).toBeInTheDocument();
     expect(within(table).getByText("已完成")).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "新增" }));
+    await user.click(
+      screen.getByRole("button", { name: "+ 新增撤銷售出申請" }),
+    );
     expect(
       await screen.findByRole("heading", { name: "撤銷售出申請" }),
     ).toBeInTheDocument();
@@ -48,10 +50,14 @@ describe("店面管理:撤銷售出申請、現金更正單", () => {
       forms: { canCreateSaleReversal: false },
     });
     await screen.findByRole("table", { name: "撤銷售出申請列表" });
-    expect(screen.queryByRole("button", { name: "新增" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "+ 新增撤銷售出申請" }),
+    ).toBeNull();
     await user.click(screen.getByRole("tab", { name: "現金更正" }));
     await screen.findByRole("table", { name: "現金更正單列表" });
-    expect(screen.getByRole("button", { name: "新增" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "+ 新增現金更正單" }),
+    ).toBeInTheDocument();
   });
 
   it("現金更正分頁:Figma ST-32a 的列;[+ 新增] 開表單引擎的新增頁(不替換頁面)、沒有 [存草稿]", async () => {
@@ -67,7 +73,7 @@ describe("店面管理:撤銷售出申請、現金更正單", () => {
     ).toBeInTheDocument();
     expect(within(table).getByText("假鈔")).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "新增" }));
+    await user.click(screen.getByRole("button", { name: "+ 新增現金更正單" }));
     expect(await screen.findByText("位置")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "送出" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "存草稿" })).toBeNull();

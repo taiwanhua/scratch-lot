@@ -98,6 +98,7 @@
     },
     "gameView": {
       "edit": "編輯",
+      "backToList": "← 返回列表",
       "summary": "{unitPrice} 元 × {tickets} 張 · 整本 {bookPrice} · 預設批購金額率 {rate}%",
       "tabs": {
         "aria": "遊戲詳情分頁",
@@ -175,6 +176,7 @@
       "newDealer": "+ 新增經銷商",
       "newContact": "+ 新增關係人",
       "edit": "編輯",
+      "backToList": "← 返回列表",
       "save": "儲存",
       "cancel": "取消",
       "clear": "清除",
@@ -1009,7 +1011,7 @@
     },
     "calendar": {
       "org": "分店",
-      "add": "新增",
+      "add": "+ 新增店休 / 特殊日",
       "prevMonth": "上個月",
       "nextMonth": "下個月",
       "monthTitle": "{year} 年 {month} 月",
@@ -1154,7 +1156,7 @@
       "empty": "目前沒有支援需求單",
       "listAria": "支援需求單列表",
       "panelAria": "支援需求單檢視與審核",
-      "create": "+ 新增",
+      "create": "+ 新增支援需求單",
       "total": "共 {total} 筆",
       "selectHint": "點一筆支援需求單,在這裡檢視與審核",
       "panelTitle": "支援需求單 · {branch}",
@@ -1863,6 +1865,7 @@
       "create": "新增"
     },
     "accountView": {
+      "backToList": "← 返回列表",
       "usage": "使用組織:{names}",
       "usageNone": "使用組織:(未設定)",
       "setUsage": "設定使用組織",
@@ -2124,6 +2127,7 @@
       "totals": "共叫 {books} 本,預估批購 {amount} 元",
       "totalsShort": "共叫 {books} 本 · 預估 {amount}",
       "saveDraft": "存草稿",
+      "cancel": "取消",
       "submit": "送出",
       "draftSaved": "已存草稿",
       "submitted": "叫貨單已送出"
@@ -2155,7 +2159,7 @@
       "createFromRequisition": "建立進貨單",
       "list": {
         "title": "進貨單",
-        "create": "+ 新增",
+        "create": "+ 新增進貨單",
         "progress": "點收進度",
         "settlement": "結算",
         "cleared": "已結清",
@@ -2320,7 +2324,7 @@
       "list": {
         "title": "調貨單",
         "subtitle": "收貨店不發起調貨單,缺貨請開叫貨單",
-        "create": "+ 新增",
+        "create": "+ 新增調貨單",
         "count": "本數 / 張數",
         "books": "{count} 本",
         "tickets": "{count} 張",
@@ -3029,11 +3033,11 @@
     },
     "storeForms": {
       "branch": "分店",
-      "create": "新增",
       "empty": "目前沒有單據",
       "none": "—",
       "saleReversals": {
         "title": "撤銷售出申請",
+        "create": "+ 新增撤銷售出申請",
         "listAria": "撤銷售出申請列表",
         "columns": {
           "serialNo": "單號",
@@ -3047,6 +3051,7 @@
       },
       "cashCorrections": {
         "title": "現金更正單",
+        "create": "+ 新增現金更正單",
         "listAria": "現金更正單列表",
         "columns": {
           "serialNo": "單號",
@@ -3307,7 +3312,7 @@
         "title": "盤點確認申請",
         "titleWithNo": "盤點確認申請 {serialNo}",
         "meta": "申請人 {name} · 送出 {time} · {type} · {scope}",
-        "backToList": "回列表",
+        "backToList": "← 返回列表",
         "edit": "修改後再送出",
         "columns": {
           "book": "本",
@@ -3490,7 +3495,7 @@
         "title": "結帳確認申請",
         "titleWithNo": "結帳確認申請 · {type} {serialNo}",
         "meta": "申請人 {name} · 送出 {time}",
-        "backToList": "回列表",
+        "backToList": "← 返回列表",
         "edit": "修改後再送出",
         "sheetTitle": "結帳單",
         "type": "類型",

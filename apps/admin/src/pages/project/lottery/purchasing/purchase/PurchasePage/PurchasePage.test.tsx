@@ -16,7 +16,9 @@ describe("進貨單列表", () => {
     expect(within(row("P-0031")).getByText("待退 2,000")).toBeInTheDocument();
     expect(within(row("P-0030")).getByText("已結清")).toBeInTheDocument();
     expect(within(row("P-0034")).getAllByText("—").length).toBeGreaterThan(0);
-    expect(screen.getByRole("button", { name: "+ 新增" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "+ 新增進貨單" }),
+    ).toBeInTheDocument();
   });
 
   it("沒有新增權限看不到 [+ 新增]", async () => {
@@ -25,6 +27,6 @@ describe("進貨單列表", () => {
       omit: ["purchasing.purchase.create"],
     });
     await screen.findByRole("table", { name: "進貨單列表" });
-    expect(screen.queryByRole("button", { name: "+ 新增" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "+ 新增進貨單" })).toBeNull();
   });
 });

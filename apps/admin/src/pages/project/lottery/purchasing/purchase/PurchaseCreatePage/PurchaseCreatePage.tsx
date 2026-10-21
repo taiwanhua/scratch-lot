@@ -8,7 +8,6 @@ import { purchaseRedemptionTotalsOf } from "@repo/domain/project/lottery";
 import { useLotteryPurchaseOptionsQuery } from "@repo/graphql";
 import { Alert } from "@repo/ui/alert";
 import { Box } from "@repo/ui/box";
-import { Button } from "@repo/ui/button";
 import { Card } from "@repo/ui/card";
 import { CircularProgress } from "@repo/ui/circular-progress";
 import { useBreakpointDown } from "@repo/ui/media-query";
@@ -17,6 +16,7 @@ import { Stack } from "@repo/ui/stack";
 import { TextField } from "@repo/ui/text-field";
 import { Typography } from "@repo/ui/typography";
 
+import { FormActions } from "@/components/base/FormActions/FormActions";
 import { useFormModuleAccess } from "@/components/base/form-engine/FormModulePages/useFormModuleAccess";
 import { AllocationWarnings } from "@/components/project/lottery/AllocationWarnings/AllocationWarnings";
 import type { AllocationWarningItem } from "@/components/project/lottery/AllocationWarnings/allocation-warnings";
@@ -361,38 +361,25 @@ export const PurchaseCreatePage = () => {
           )}
         </Stack>
       </Box>
-      <Stack
-        direction="row"
-        spacing={1.5}
-        sx={{
-          alignItems: "center",
-          borderTop: { xs: 1, lg: 0 },
-          borderColor: "divider",
-          pt: { xs: 1.5, lg: 0 },
-        }}
-      >
-        <Button variant="text" onClick={backToList}>
-          {t("cancel")}
-        </Button>
-        <Box sx={{ flex: 1 }} />
-        {form.allowDraft && (
-          <Button
-            variant="outlined"
-            disabled={draft.isPending || branchId === ""}
-            onClick={() => {
+      <FormActions
+        cancel={{ label: t("cancel"), onClick: backToList }}
+        {...(form.allowDraft && {
+          draft: {
+            label: t("saveDraft"),
+            disabled: draft.isPending || branchId === "",
+            onClick: () => {
               void draft.saveDraft(valuesOf(), []).then((saved) => {
                 if (saved !== null) {
                   showSnackbar("success", t("draftSaved"));
                 }
               });
-            }}
-          >
-            {t("saveDraft")}
-          </Button>
-        )}
-        <Button
-          disabled={draft.isPending || branchId === "" || books.length === 0}
-          onClick={() => {
+            },
+          },
+        })}
+        submit={{
+          label: t("submit"),
+          disabled: draft.isPending || branchId === "" || books.length === 0,
+          onClick: () => {
             void draft.submit(valuesOf(), []).then((submitted) => {
               if (submitted === null) {
                 return;
@@ -404,11 +391,9 @@ export const PurchaseCreatePage = () => {
                 void navigate(`${access.viewRoute}/${submitted.id}`);
               }
             });
-          }}
-        >
-          {t("submit")}
-        </Button>
-      </Stack>
+          },
+        }}
+      />
     </Stack>
   );
 };

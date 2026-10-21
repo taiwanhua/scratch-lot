@@ -10,7 +10,6 @@ import {
   useMakeupPunchEntryOptionsQuery,
 } from "@repo/graphql";
 import { Alert } from "@repo/ui/alert";
-import { Button } from "@repo/ui/button";
 import { Card } from "@repo/ui/card";
 import { CircularProgress } from "@repo/ui/circular-progress";
 import { DatePicker } from "@repo/ui/date-picker";
@@ -21,6 +20,7 @@ import { Stack } from "@repo/ui/stack";
 import { TextField } from "@repo/ui/text-field";
 import { Typography } from "@repo/ui/typography";
 
+import { FormActions } from "@/components/base/FormActions/FormActions";
 import { OrgTreeSelect } from "@/components/base/OrgTreeSelect/OrgTreeSelect";
 import { useFormModuleAccess } from "@/components/base/form-engine/FormModulePages/useFormModuleAccess";
 import { useAdminErrorText } from "@/hooks/base/useAdminErrorText";
@@ -252,18 +252,10 @@ const MakeupPunchFormBody = ({
           }}
         />
         {errorText !== null && <Alert severity="error">{errorText}</Alert>}
-        <Stack
-          direction="row"
-          spacing={1.5}
-          sx={{ justifyContent: "flex-end" }}
-        >
-          <Button variant="text" onClick={onCancel}>
-            {t("cancel")}
-          </Button>
-          <Button disabled={isPending} onClick={submit}>
-            {t("submit")}
-          </Button>
-        </Stack>
+        <FormActions
+          cancel={{ label: t("cancel"), onClick: onCancel }}
+          submit={{ label: t("submit"), disabled: isPending, onClick: submit }}
+        />
       </Stack>
     </Card>
   );

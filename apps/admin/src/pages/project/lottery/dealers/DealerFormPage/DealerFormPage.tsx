@@ -7,7 +7,6 @@ import {
 } from "@repo/graphql";
 import { Alert } from "@repo/ui/alert";
 import { Box } from "@repo/ui/box";
-import { Button } from "@repo/ui/button";
 import { Card } from "@repo/ui/card";
 import { CircularProgress } from "@repo/ui/circular-progress";
 import { FormControlLabel } from "@repo/ui/form-control-label";
@@ -15,6 +14,7 @@ import { Radio, RadioGroup } from "@repo/ui/radio";
 import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
 
+import { FormActions } from "@/components/base/FormActions/FormActions";
 import { useRouteTabItemLabel } from "@/hooks/base/useRouteTabItemLabel";
 import { useSession } from "@/hooks/base/useSession";
 import type { ModulePageProps } from "@/lib/base/module-tree";
@@ -135,29 +135,16 @@ const DealerFormBody = ({ dealer, access }: DealerFormBodyProps) => {
 
         {form.error !== null && <Alert severity="error">{form.error}</Alert>}
 
-        <Stack
-          direction="row"
-          sx={{
-            position: "sticky",
-            bottom: 0,
-            py: 1.5,
-            bgcolor: "background.default",
-            alignItems: "center",
-          }}
-        >
-          <Button variant="text" onClick={leave}>
-            {t("actions.cancel")}
-          </Button>
-          <Box sx={{ flex: 1 }} />
-          <Button
-            disabled={form.isSubmitting}
-            onClick={() => {
+        <FormActions
+          cancel={{ label: t("actions.cancel"), onClick: leave }}
+          submit={{
+            label: t("actions.save"),
+            disabled: form.isSubmitting,
+            onClick: () => {
               void form.submit();
-            }}
-          >
-            {t("actions.save")}
-          </Button>
-        </Stack>
+            },
+          }}
+        />
       </Stack>
 
       {form.conflict !== null && dealer !== null && (

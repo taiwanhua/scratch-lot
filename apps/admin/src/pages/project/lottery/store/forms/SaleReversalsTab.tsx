@@ -78,6 +78,7 @@ export const SaleReversalsTab = () => {
     <Stack spacing={2} sx={{ pt: 2 }}>
       <StoreFormsHeader
         title={t("saleReversals.title")}
+        createLabel={t("saleReversals.create")}
         formKey={SALE_REVERSAL_FORM_KEY}
         orgId={orgId}
         onOrgChange={setOrgId}

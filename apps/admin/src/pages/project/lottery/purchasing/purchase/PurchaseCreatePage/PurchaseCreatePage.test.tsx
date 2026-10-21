@@ -2,6 +2,8 @@ import { describe, expect, it } from "@jest/globals";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
+import { expectButtonOrder } from "@/test/button-order";
+
 import { renderPurchasePage } from "../purchase-test-support";
 
 const CREATE = "/purchasing/purchase/create-page/purchase";
@@ -30,6 +32,8 @@ describe("進貨單新增頁", () => {
     // 5164 預計 30、已給 26、在途 4 → 這張進 1 本就超過,只警告、照樣可以送出(規格 7.6)
     expect(screen.getByText("5164 發大財:多 1 本")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "送出" })).toBeEnabled();
+    // 動作列(REACT-16):[取消] → [存草稿] → [送出] 靠右
+    expectButtonOrder(["取消", "存草稿", "送出"]);
   });
 
   it("正面條碼沒有遊戲代號:沒先選遊戲 → 提示;同一本刷兩次 → 提示已經在單上", async () => {

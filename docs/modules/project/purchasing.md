@@ -33,25 +33,25 @@
 
 ## 權限表
 
-| 權限 key                               | 它是哪一頁的什麼                                                                                                       |
-| -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `purchasing.requisition.view`          | 看叫貨單列表、詳情;列表的衍生狀態(`lotteryRequisitionStates`)                                                          |
-| `purchasing.requisition.create`        | [+ 新增叫貨單]、新增頁的遊戲清單(`lotteryRequisitionCandidates`)                                                       |
-| `purchasing.requisition.edit`          | 改草稿 / 被退回的單;作廢(申請人本人或有 `edit`)                                                                        |
-| `purchasing.requisition.delete`        | 刪草稿                                                                                                                 |
-| `purchasing.requisition.purchase-list` | 「採購清單」分頁、[匯出 Excel](`lotteryPurchaseList`)                                                                  |
-| `purchasing.purchase.view`             | 看進貨單列表、詳情;列表的點收進度 / 結算(`lotteryPurchaseProgress`)、甲類詳情的批購紀錄(`lotteryDealerPurchases`)      |
-| `purchasing.purchase.create`           | [+ 新增]、新增頁的選項(`lotteryPurchaseOptions`)、採購清單的 [建立進貨單]                                              |
-| `purchasing.purchase.edit`             | 改草稿 / 被退回的單;作廢(申請人本人或有 `edit`)                                                                        |
-| `purchasing.purchase.delete`           | 刪除                                                                                                                   |
-| `purchasing.purchase.settle`           | 結算區塊的 [付款] [收到退款] [沖正](收付機制登記的「總部」那一邊)                                                      |
-| `purchasing.transfer.view`             | 看調貨單列表、詳情;列表的本數 / 張數、點收進度、在途、結算(`lotteryTransferProgress`)                                  |
-| `purchasing.transfer.create`           | [+ 新增]、新增頁的選本與張數格子(`lotteryTransferOptions` / `lotteryTransferBookTickets`)、採購清單的 [從其他分店調貨] |
-| `purchasing.transfer.edit`             | 改草稿 / 被退回的單;作廢(申請人本人或有 `edit`)                                                                        |
-| `purchasing.transfer.delete`           | 刪除                                                                                                                   |
-| `purchasing.transfer.partial-tickets`  | 選張(零碎張數);沒有時新增頁不出現張數格子,送出也擋(`TRANSFER_PARTIAL_FORBIDDEN`)                                       |
-| `purchasing.transfer.pay`              | 結算區塊收貨店的 [付款] [收到退款] [沖正](還要收貨分店在自己的可見範圍內)                                              |
-| `purchasing.transfer.receive`          | 結算區塊出貨店的 [收款] [退款] [沖正](還要出貨分店在自己的可見範圍內)                                                  |
+| 權限 key                               | 它是哪一頁的什麼                                                                                                             |
+| -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `purchasing.requisition.view`          | 看叫貨單列表、詳情;列表的衍生狀態(`lotteryRequisitionStates`)                                                                |
+| `purchasing.requisition.create`        | [+ 新增叫貨單]、新增頁的遊戲清單(`lotteryRequisitionCandidates`)                                                             |
+| `purchasing.requisition.edit`          | 改草稿 / 被退回的單;作廢(申請人本人或有 `edit`)                                                                              |
+| `purchasing.requisition.delete`        | 刪草稿                                                                                                                       |
+| `purchasing.requisition.purchase-list` | 「採購清單」分頁、[匯出 Excel](`lotteryPurchaseList`)                                                                        |
+| `purchasing.purchase.view`             | 看進貨單列表、詳情;列表的點收進度 / 結算(`lotteryPurchaseProgress`)、甲類詳情的批購紀錄(`lotteryDealerPurchases`)            |
+| `purchasing.purchase.create`           | [+ 新增進貨單]、新增頁的選項(`lotteryPurchaseOptions`)、採購清單的 [建立進貨單]                                              |
+| `purchasing.purchase.edit`             | 改草稿 / 被退回的單;作廢(申請人本人或有 `edit`)                                                                              |
+| `purchasing.purchase.delete`           | 刪除                                                                                                                         |
+| `purchasing.purchase.settle`           | 結算區塊的 [付款] [收到退款] [沖正](收付機制登記的「總部」那一邊)                                                            |
+| `purchasing.transfer.view`             | 看調貨單列表、詳情;列表的本數 / 張數、點收進度、在途、結算(`lotteryTransferProgress`)                                        |
+| `purchasing.transfer.create`           | [+ 新增調貨單]、新增頁的選本與張數格子(`lotteryTransferOptions` / `lotteryTransferBookTickets`)、採購清單的 [從其他分店調貨] |
+| `purchasing.transfer.edit`             | 改草稿 / 被退回的單;作廢(申請人本人或有 `edit`)                                                                              |
+| `purchasing.transfer.delete`           | 刪除                                                                                                                         |
+| `purchasing.transfer.partial-tickets`  | 選張(零碎張數);沒有時新增頁不出現張數格子,送出也擋(`TRANSFER_PARTIAL_FORBIDDEN`)                                             |
+| `purchasing.transfer.pay`              | 結算區塊收貨店的 [付款] [收到退款] [沖正](還要收貨分店在自己的可見範圍內)                                                    |
+| `purchasing.transfer.receive`          | 結算區塊出貨店的 [收款] [退款] [沖正](還要出貨分店在自己的可見範圍內)                                                        |
 
 點收不另要權限:點收關卡的任務在自己手上(店長從申請中心進來)才能刷(`lotteryPurchaseReceiving` / `receiveLotteryPurchaseBook` 只看讀不讀得到單據與任務)。
 

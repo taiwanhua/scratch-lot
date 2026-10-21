@@ -98,6 +98,7 @@
     },
     "gameView": {
       "edit": "Edit",
+      "backToList": "← Back to list",
       "summary": "{unitPrice} × {tickets} tickets · book {bookPrice} · default rate {rate}%",
       "tabs": {
         "aria": "Game detail tabs",
@@ -175,6 +176,7 @@
       "newDealer": "+ New dealer",
       "newContact": "+ New contact",
       "edit": "Edit",
+      "backToList": "← Back to list",
       "save": "Save",
       "cancel": "Cancel",
       "clear": "Clear",
@@ -1009,7 +1011,7 @@
     },
     "calendar": {
       "org": "Branch",
-      "add": "Add",
+      "add": "+ New closed day / special day",
       "prevMonth": "Previous month",
       "nextMonth": "Next month",
       "monthTitle": "{month}/{year}",
@@ -1154,7 +1156,7 @@
       "empty": "No support requests yet",
       "listAria": "Support requests",
       "panelAria": "Support request review",
-      "create": "+ New",
+      "create": "+ New support request",
       "total": "{total} in total",
       "selectHint": "Select a support request to view and review it here",
       "panelTitle": "Support request · {branch}",
@@ -1863,6 +1865,7 @@
       "create": "Create"
     },
     "accountView": {
+      "backToList": "← Back to list",
       "usage": "Used by: {names}",
       "usageNone": "Used by: (not set)",
       "setUsage": "Set organizations",
@@ -2124,6 +2127,7 @@
       "totals": "{books} books, estimated purchase {amount}",
       "totalsShort": "{books} books · est. {amount}",
       "saveDraft": "Save draft",
+      "cancel": "Cancel",
       "submit": "Submit",
       "draftSaved": "Draft saved",
       "submitted": "Requisition submitted"
@@ -2155,7 +2159,7 @@
       "createFromRequisition": "Create purchase",
       "list": {
         "title": "Purchases",
-        "create": "+ New",
+        "create": "+ New purchase",
         "progress": "Received",
         "settlement": "Settlement",
         "cleared": "Settled",
@@ -2320,7 +2324,7 @@
       "list": {
         "title": "Transfers",
         "subtitle": "Receiving stores do not start transfers; place a requisition when short",
-        "create": "+ New",
+        "create": "+ New transfer",
         "count": "Books / tickets",
         "books": "{count} books",
         "tickets": "{count} tickets",
@@ -3029,11 +3033,11 @@
     },
     "storeForms": {
       "branch": "Store",
-      "create": "New",
       "empty": "No documents yet",
       "none": "—",
       "saleReversals": {
         "title": "Sale reversal requests",
+        "create": "+ New sale reversal request",
         "listAria": "Sale reversal requests",
         "columns": {
           "serialNo": "No.",
@@ -3047,6 +3051,7 @@
       },
       "cashCorrections": {
         "title": "Cash corrections",
+        "create": "+ New cash correction",
         "listAria": "Cash corrections",
         "columns": {
           "serialNo": "No.",
@@ -3307,7 +3312,7 @@
         "title": "Stocktake confirmation",
         "titleWithNo": "Stocktake confirmation {serialNo}",
         "meta": "Applicant {name} · submitted {time} · {type} · {scope}",
-        "backToList": "Back to list",
+        "backToList": "← Back to list",
         "edit": "Edit and resubmit",
         "columns": {
           "book": "Book",
@@ -3490,7 +3495,7 @@
         "title": "Checkout confirmation",
         "titleWithNo": "Checkout confirmation · {type} {serialNo}",
         "meta": "Applicant {name} · submitted {time}",
-        "backToList": "Back to list",
+        "backToList": "← Back to list",
         "edit": "Edit and resubmit",
         "sheetTitle": "Checkout sheet",
         "type": "Type",

@@ -6,7 +6,6 @@ import { DEFAULT_TENANT_TIMEZONE } from "@repo/domain/form";
 import { useLotteryRequisitionCandidatesQuery } from "@repo/graphql";
 import { Alert } from "@repo/ui/alert";
 import { Box } from "@repo/ui/box";
-import { Button } from "@repo/ui/button";
 import { Card } from "@repo/ui/card";
 import { Checkbox } from "@repo/ui/checkbox";
 import { CircularProgress } from "@repo/ui/circular-progress";
@@ -18,6 +17,7 @@ import { Stack } from "@repo/ui/stack";
 import { TextField } from "@repo/ui/text-field";
 import { Typography } from "@repo/ui/typography";
 
+import { FormActions } from "@/components/base/FormActions/FormActions";
 import { OrgTreeSelect } from "@/components/base/OrgTreeSelect/OrgTreeSelect";
 import { useFormModuleAccess } from "@/components/base/form-engine/FormModulePages/useFormModuleAccess";
 import { useAdminErrorText } from "@/hooks/base/useAdminErrorText";
@@ -272,50 +272,42 @@ export const RequisitionCreatePage = () => {
           )}
         </Stack>
       </Box>
-      <Stack
-        direction="row"
-        spacing={1.5}
-        sx={{
-          alignItems: "center",
-          justifyContent: "flex-end",
-          borderTop: { xs: 1, lg: 0 },
-          borderColor: "divider",
-          pt: { xs: 1.5, lg: 0 },
-        }}
-      >
-        <Typography
-          variant="subtitle1"
-          component="p"
-          sx={{ flex: { xs: 1, lg: "none" }, fontWeight: 700 }}
-        >
-          {isNarrow
-            ? t("totalsShort", {
-                books: totals.books,
-                amount: formatCount(totals.amount),
-              })
-            : t("totals", {
-                books: totals.books,
-                amount: formatCount(totals.amount),
-              })}
-        </Typography>
-        {form.allowDraft && (
-          <Button
-            variant="outlined"
-            disabled={draft.isPending || branchId === ""}
-            onClick={() => {
+      <FormActions
+        start={
+          <Typography
+            variant="subtitle1"
+            component="p"
+            sx={{ fontWeight: 700 }}
+          >
+            {isNarrow
+              ? t("totalsShort", {
+                  books: totals.books,
+                  amount: formatCount(totals.amount),
+                })
+              : t("totals", {
+                  books: totals.books,
+                  amount: formatCount(totals.amount),
+                })}
+          </Typography>
+        }
+        cancel={{ label: t("cancel"), onClick: backToList }}
+        {...(form.allowDraft && {
+          draft: {
+            label: t("saveDraft"),
+            disabled: draft.isPending || branchId === "",
+            onClick: () => {
               void draft.saveDraft(valuesOf(), []).then((saved) => {
                 if (saved !== null) {
                   showSnackbar("success", t("draftSaved"));
                 }
               });
-            }}
-          >
-            {t("saveDraft")}
-          </Button>
-        )}
-        <Button
-          disabled={draft.isPending || branchId === "" || totals.books === 0}
-          onClick={() => {
+            },
+          },
+        })}
+        submit={{
+          label: t("submit"),
+          disabled: draft.isPending || branchId === "" || totals.books === 0,
+          onClick: () => {
             void draft.submit(valuesOf(), []).then((submitted) => {
               if (submitted === null) {
                 return;
@@ -327,11 +319,9 @@ export const RequisitionCreatePage = () => {
                 void navigate(`${access.viewRoute}/${submitted.id}`);
               }
             });
-          }}
-        >
-          {t("submit")}
-        </Button>
-      </Stack>
+          },
+        }}
+      />
     </Stack>
   );
 };

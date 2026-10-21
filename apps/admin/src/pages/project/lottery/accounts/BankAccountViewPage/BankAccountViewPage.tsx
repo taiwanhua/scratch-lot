@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router";
 import { useTranslations } from "use-intl";
 import { z } from "zod";
 
@@ -21,6 +22,7 @@ import { Table, type TableColumn } from "@repo/ui/table";
 import { Tag } from "@repo/ui/tag";
 import { Typography } from "@repo/ui/typography";
 
+import { useRouteTabHref } from "@/hooks/base/useRouteTabHref";
 import { useRouteTabItemLabel } from "@/hooks/base/useRouteTabItemLabel";
 import { useSession } from "@/hooks/base/useSession";
 import { useTenantTimezone } from "@/hooks/base/useTenantTimezone";
@@ -37,6 +39,7 @@ import { nextDayText } from "../CashLedgerTab/next-day";
 import { TRANSACTIONS_TABLE_MIN_WIDTH, moneyText } from "../accounts-config";
 import { useAccountsAccess } from "../useAccountsAccess";
 import { AccountSettingsCard } from "./AccountSettingsCard";
+import { AccountStatusActions } from "./AccountStatusActions";
 import { RecordTransactionDialog } from "./RecordTransactionDialog";
 import { ReverseTransactionDialog } from "./ReverseTransactionDialog";
 import { UsageOrgsDialog } from "./UsageOrgsDialog";
@@ -80,13 +83,16 @@ const StatCard = ({
 
 /**
  * 銀行帳戶詳情(隱藏頁 `accounts.view-page`;Figma AC-02 93:400):
- * 標題卡(戶名 · 銀行 分行 末 5 碼 + 狀態、使用組織、[設定使用組織] [登記交易])→ 餘額 / 期間收 / 期間支 →
- * 期間與類型篩選 → 交易清單(每列餘額依時間累加;[沖正] / 已沖正)→ 帳戶設定(要 `abilities.canEdit`)。
+ * 頂部列([← 返回列表] ……… [設定使用組織] [停用帳戶] [刪除帳戶] [登記交易],REACT-16)→
+ * 標題卡(戶名 · 銀行 分行 末 5 碼 + 狀態、使用組織)→ 餘額 / 期間收 / 期間支 →
+ * 期間與類型篩選 → 交易清單(每列餘額依時間累加;[沖正] / 已沖正)→ 帳戶設定(要 `abilities.canEdit`,只有 [儲存])。
  */
 export const BankAccountViewPage = ({ routeParam }: ModulePageProps) => {
   const t = useTranslations("admin.lotteryAccounts");
   const { session } = useSession();
   const access = useAccountsAccess();
+  const navigate = useNavigate();
+  const tabHref = useRouteTabHref();
   const timezone = useTenantTimezone() ?? DEFAULT_TENANT_TIMEZONE;
   const id = routeParam ?? "";
   const today = localDayTextOf(new Date(), timezone);
@@ -234,13 +240,53 @@ export const BankAccountViewPage = ({ routeParam }: ModulePageProps) => {
         "& > *": { flexShrink: 0 },
       }}
     >
-      <Card sx={{ px: { xs: 2, sm: 3 }, py: 2 }}>
-        <Stack
-          direction={{ xs: "column", sm: "row" }}
-          spacing={2}
-          sx={{ alignItems: { sm: "flex-start" } }}
+      {/* 檢視頁的頂部列(REACT-16):左 [← 返回列表],右 次要 → 停用 / 刪除(error)→ 主要 [登記交易] */}
+      <Stack
+        direction="row"
+        sx={{ alignItems: "center", gap: 1, flexWrap: "wrap" }}
+      >
+        <Button
+          variant="text"
+          size="small"
+          onClick={() => {
+            if (access.listRoute !== null) {
+              void navigate(tabHref(access.listRoute));
+            }
+          }}
         >
-          <Stack spacing={1} sx={{ flex: 1, minWidth: 0 }}>
+          {t("accountView.backToList")}
+        </Button>
+        <Box sx={{ flex: 1 }} />
+        {account.abilities.canEdit && (
+          <Button
+            variant="outlined"
+            onClick={() => {
+              setDialog("usage");
+            }}
+          >
+            {t("accountView.setUsage")}
+          </Button>
+        )}
+        {account.abilities.canEdit && (
+          <AccountStatusActions
+            account={account}
+            listRoute={access.listRoute}
+            viewRoute={access.viewRoute}
+          />
+        )}
+        {account.abilities.canRecordTransaction && (
+          <Button
+            onClick={() => {
+              setDialog("record");
+            }}
+          >
+            {t("accountView.record")}
+          </Button>
+        )}
+      </Stack>
+      <Card sx={{ px: { xs: 2, sm: 3 }, py: 2 }}>
+        <Stack spacing={2}>
+          <Stack spacing={1} sx={{ minWidth: 0 }}>
             <Stack
               direction="row"
               spacing={1}
@@ -269,27 +315,6 @@ export const BankAccountViewPage = ({ routeParam }: ModulePageProps) => {
                 ? t("accountView.usageNone")
                 : t("accountView.usage", { names: usage })}
             </Typography>
-          </Stack>
-          <Stack direction="row" spacing={1}>
-            {account.abilities.canEdit && (
-              <Button
-                variant="outlined"
-                onClick={() => {
-                  setDialog("usage");
-                }}
-              >
-                {t("accountView.setUsage")}
-              </Button>
-            )}
-            {account.abilities.canRecordTransaction && (
-              <Button
-                onClick={() => {
-                  setDialog("record");
-                }}
-              >
-                {t("accountView.record")}
-              </Button>
-            )}
           </Stack>
         </Stack>
       </Card>
@@ -355,12 +380,7 @@ export const BankAccountViewPage = ({ routeParam }: ModulePageProps) => {
         </Stack>
       </Card>
       {account.abilities.canEdit && (
-        <AccountSettingsCard
-          key={account.updatedAt}
-          account={account}
-          listRoute={access.listRoute}
-          viewRoute={access.viewRoute}
-        />
+        <AccountSettingsCard key={account.updatedAt} account={account} />
       )}
       {dialog === "record" && (
         <RecordTransactionDialog

@@ -22,7 +22,9 @@ describe("調貨單列表", () => {
     expect(
       screen.getByText("收貨店不發起調貨單,缺貨請開叫貨單"),
     ).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "+ 新增" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "+ 新增調貨單" }),
+    ).toBeInTheDocument();
   });
 
   it("沒有新增權限看不到 [+ 新增]", async () => {
@@ -31,6 +33,6 @@ describe("調貨單列表", () => {
       omit: ["purchasing.transfer.create"],
     });
     await screen.findByRole("table", { name: "調貨單列表" });
-    expect(screen.queryByRole("button", { name: "+ 新增" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "+ 新增調貨單" })).toBeNull();
   });
 });

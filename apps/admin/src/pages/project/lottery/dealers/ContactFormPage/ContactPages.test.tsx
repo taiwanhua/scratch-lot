@@ -1,6 +1,7 @@
 import { describe, expect, it } from "@jest/globals";
 import { screen, waitFor, within } from "@testing-library/react";
 
+import { expectButtonOrder } from "@/test/button-order";
 import { contactFixtures } from "@/test/msw/project/dealers-fixtures";
 import { setupFakeViewport } from "@/test/viewport";
 
@@ -24,6 +25,10 @@ describe("關係人詳情 / 編輯頁", () => {
       2,
     );
     expect(screen.getByRole("button", { name: "編輯" })).toBeInTheDocument();
+    // 檢視頁頂部列(REACT-16):左 [← 返回列表],右 [編輯](contained)
+    expect(expectButtonOrder(["← 返回列表", "編輯"])[1]).toHaveClass(
+      "MuiButton-contained",
+    );
   });
 
   it("沒有 dealers.contacts.edit(abilities.canEdit = false):看不到 [編輯]", async () => {
@@ -48,6 +53,7 @@ describe("關係人詳情 / 編輯頁", () => {
     const trustee = await screen.findByRole("checkbox", { name: "受託人" });
 
     await user.click(trustee);
+    expectButtonOrder(["取消", "儲存"]);
     await user.click(screen.getByRole("button", { name: "儲存" }));
 
     const dialog = await screen.findByRole("dialog", { name: "取消身分" });

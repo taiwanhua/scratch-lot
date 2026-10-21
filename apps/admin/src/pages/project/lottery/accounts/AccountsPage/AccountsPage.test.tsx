@@ -4,6 +4,7 @@ import { HttpResponse } from "msw";
 
 import { ACCOUNTS_PERMISSIONS as P } from "@repo/domain/project/lottery-accounts";
 
+import { expectButtonOrder } from "@/test/button-order";
 import { api, server } from "@/test/msw/server";
 
 import { renderAccounts } from "../accounts-test-support";
@@ -149,6 +150,14 @@ describe("銀行帳戶詳情", () => {
     expect(screen.getByText("已沖正")).toBeInTheDocument();
     expect(screen.getByRole("textbox", { name: "期初餘額" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "刪除帳戶" })).toBeDisabled();
+    // 頂部列(REACT-16):停用 / 刪除移到這裡,主要的 [登記交易] 最右;帳戶設定卡只留 [儲存]
+    expectButtonOrder([
+      "← 返回列表",
+      "設定使用組織",
+      "停用帳戶",
+      "刪除帳戶",
+      "登記交易",
+    ]);
   });
 
   it("沒有 record / reverse / edit 權限:看不到 [登記交易]、[沖正]、帳戶設定", async () => {
