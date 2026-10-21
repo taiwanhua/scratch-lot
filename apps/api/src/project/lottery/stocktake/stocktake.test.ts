@@ -1296,6 +1296,64 @@ describe("盤點(GraphQL 端點 + 真 MongoDB)", () => {
     );
   });
 
+  it("舊盤點單沒有 uncountedBooks / summary.uncountedCount → 列表與檢視頁照常(0 本、空清單)", async () => {
+    now("22:45");
+    const legacySubmissionId = new Types.ObjectId();
+    // 加「未盤的本」之前建立的盤點單:直接寫進 collection,兩個欄位都沒有
+    await connection.collection(LOTTERY_STOCKTAKES_COLLECTION).insertOne({
+      orgId: xinyi,
+      tenantId: tenant,
+      moduleKey: "store",
+      type: "adhoc",
+      status: "confirmed",
+      scopeCashPointId: null,
+      startedAt: taipei("20:00"),
+      submittedBy: clerkA.userId,
+      submittedAt: taipei("20:10"),
+      confirmedAt: taipei("20:20"),
+      confirmedBy: manager.userId,
+      submissionId: legacySubmissionId,
+      lines: [],
+      unopenedLines: [],
+      lostReviewLines: [],
+      summary: {
+        books: 2,
+        backfillCount: 0,
+        backfillAmount: 0,
+        newInvestigate: 0,
+        flagged: 0,
+        confirmLost: 0,
+        confirmLostCost: 0,
+      },
+      version: 2,
+      ...base(),
+    });
+    const list = await ok<{
+      lotteryStocktakes: {
+        items: { submissionId: string; summary: { uncountedCount: number } }[];
+      };
+    }>(clerkA, LIST, {
+      input: { orgId: String(xinyi), status: "confirmed" },
+    });
+    expect(
+      list.lotteryStocktakes.items.find(
+        (item) => item.submissionId === String(legacySubmissionId),
+      )?.summary.uncountedCount,
+    ).toBe(0);
+    const detail = await ok<{
+      lotteryStocktake: {
+        status: string;
+        uncountedBooks: unknown[];
+        summary: { uncountedCount: number };
+      };
+    }>(clerkA, DETAIL, { submissionId: String(legacySubmissionId) });
+    expect(detail.lotteryStocktake).toMatchObject({
+      status: "confirmed",
+      uncountedBooks: [],
+      summary: { uncountedCount: 0 },
+    });
+  });
+
   it("駁回 → 已駁回、補登的售出不退;退回 → 已退回", async () => {
     await resetCounterCash();
     now("22:10");

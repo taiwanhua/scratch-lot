@@ -64,6 +64,17 @@ const LIST_LIMIT_MAX = 100;
 const byName = (a: { name: string }, b: { name: string }) =>
   a.name.localeCompare(b.name, "zh-Hant");
 
+/** 舊資料防禦:加「未盤的本」之前建立的盤點單沒有 `summary.uncountedCount` → 0。 */
+const uncountedCountOf = (summary: StocktakeSummary): number =>
+  (summary as Partial<StocktakeSummary>).uncountedCount ?? 0;
+
+/** 舊資料防禦:加「未盤的本」之前建立的盤點單沒有 `uncountedBooks` → 空。 */
+const uncountedBooksOf = (
+  record: Pick<LotteryStocktake, "uncountedBooks">,
+): LotteryStocktake["uncountedBooks"] =>
+  (record as Partial<Pick<LotteryStocktake, "uncountedBooks">>)
+    .uncountedBooks ?? [];
+
 /** 盤點單 → 畫面的彙總(沒有 `inventory.show-cost` 不給成本)。 */
 export function summaryModelOf(
   summary: StocktakeSummary,
@@ -77,7 +88,7 @@ export function summaryModelOf(
     flagged: summary.flagged,
     confirmLost: summary.confirmLost,
     confirmLostCost: showCost ? summary.confirmLostCost : null,
-    uncountedCount: summary.uncountedCount,
+    uncountedCount: uncountedCountOf(summary),
   };
 }
 
@@ -601,7 +612,7 @@ export class StocktakeQueryService {
         reasonLabel: line.reasonLabel,
         reasonNote: line.reasonNote,
       })),
-      uncountedBooks: record.uncountedBooks.map((book) => ({
+      uncountedBooks: uncountedBooksOf(record).map((book) => ({
         bookId: String(book.bookId),
         cashPointId: String(book.cashPointId),
         cashPointName: pointName(book.cashPointId),
