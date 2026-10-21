@@ -191,6 +191,17 @@ export type ClearScheduleAutoAssignmentsPayload = {
   removedCount: Scalars['Int']['output'];
 };
 
+export type CompleteLotteryPurchaseReceivingInput = {
+  rowIds: Array<Scalars['String']['input']>;
+  submissionId: Scalars['ID']['input'];
+};
+
+export type CompleteLotteryPurchaseReceivingPayload = {
+  __typename?: 'CompleteLotteryPurchaseReceivingPayload';
+  batch?: Maybe<LotteryPurchaseReceivingBatch>;
+  receiving: LotteryPurchaseReceiving;
+};
+
 export type CopySubmissionToDraftInput = {
   clientRequestId: Scalars['String']['input'];
   id: Scalars['ID']['input'];
@@ -2327,11 +2338,20 @@ export type LotteryPurchaseProgress = {
 
 export type LotteryPurchaseReceiving = {
   __typename?: 'LotteryPurchaseReceiving';
+  batches: Array<LotteryPurchaseReceivingBatch>;
   canReceive: Scalars['Boolean']['output'];
   groups: Array<LotteryPurchaseReceivingGroup>;
   receivedCount: Scalars['Int']['output'];
   submissionId: Scalars['ID']['output'];
   totalCount: Scalars['Int']['output'];
+};
+
+export type LotteryPurchaseReceivingBatch = {
+  __typename?: 'LotteryPurchaseReceivingBatch';
+  batchId: Scalars['ID']['output'];
+  completedAt: Scalars['DateTime']['output'];
+  no: Scalars['Int']['output'];
+  rowIds: Array<Scalars['String']['output']>;
 };
 
 export type LotteryPurchaseReceivingGroup = {
@@ -2349,6 +2369,7 @@ export type LotteryPurchaseReceivingGroup = {
 export type LotteryPurchaseReceivingRow = {
   __typename?: 'LotteryPurchaseReceivingRow';
   amount: Scalars['Int']['output'];
+  batchId?: Maybe<Scalars['ID']['output']>;
   bookNo: Scalars['String']['output'];
   bookPrice: Scalars['Int']['output'];
   lastTicketNo: Scalars['Int']['output'];
@@ -2911,6 +2932,7 @@ export type Mutation = {
   bindFormWorkflow: FormPayload;
   changePassword: ChangePasswordPayload;
   clearScheduleAutoAssignments: ClearScheduleAutoAssignmentsPayload;
+  completeLotteryPurchaseReceiving: CompleteLotteryPurchaseReceivingPayload;
   copySubmissionToDraft: FormSubmissionPayload;
   copyUserOrgRoles: CopyUserOrgRolesPayload;
   correctLotterySkippedTickets: LotteryInventoryActionPayload;
@@ -3131,6 +3153,11 @@ export type MutationChangePasswordArgs = {
 
 export type MutationClearScheduleAutoAssignmentsArgs = {
   input: ScheduleAutoRunRangeInput;
+};
+
+
+export type MutationCompleteLotteryPurchaseReceivingArgs = {
+  input: CompleteLotteryPurchaseReceivingInput;
 };
 
 
@@ -9260,7 +9287,7 @@ export type UpdateLotteryCashPointMutationVariables = Exact<{
 
 export type UpdateLotteryCashPointMutation = { __typename?: 'Mutation', updateLotteryCashPoint: { __typename?: 'LotteryCashPointPayload', item: { __typename?: 'LotteryCashPoint', id: string, positionKey: string, positionLabel?: string | null, name: string, order: number, enabled: boolean, note?: string | null, createdAt: string, updatedAt: string, org: { __typename?: 'LotteryCashPointRef', id: string, name: string }, printer?: { __typename?: 'LotteryCashPointRef', id: string, name: string } | null, abilities: { __typename?: 'LotteryCashPointAbilities', canEdit: boolean } } } };
 
-export type LotteryPurchaseReceivingFieldsFragment = { __typename?: 'LotteryPurchaseReceiving', submissionId: string, canReceive: boolean, receivedCount: number, totalCount: number, groups: Array<{ __typename?: 'LotteryPurchaseReceivingGroup', gameId: string, gameCode: string, gameName: string, unitPrice: number, requestedBooks?: number | null, receivedBooks: number, subtotal: number, rows: Array<{ __typename?: 'LotteryPurchaseReceivingRow', rowId: string, bookNo: string, lastTicketNo: number, tickets: number, bookPrice: number, rate: number, amount: number, received: boolean, receivedAt?: string | null }> }> };
+export type LotteryPurchaseReceivingFieldsFragment = { __typename?: 'LotteryPurchaseReceiving', submissionId: string, canReceive: boolean, receivedCount: number, totalCount: number, groups: Array<{ __typename?: 'LotteryPurchaseReceivingGroup', gameId: string, gameCode: string, gameName: string, unitPrice: number, requestedBooks?: number | null, receivedBooks: number, subtotal: number, rows: Array<{ __typename?: 'LotteryPurchaseReceivingRow', rowId: string, bookNo: string, lastTicketNo: number, tickets: number, bookPrice: number, rate: number, amount: number, received: boolean, receivedAt?: string | null, batchId?: string | null }> }>, batches: Array<{ __typename?: 'LotteryPurchaseReceivingBatch', batchId: string, no: number, completedAt: string, rowIds: Array<string> }> };
 
 export type LotteryPurchaseOptionsQueryVariables = Exact<{
   orgId: Scalars['ID']['input'];
@@ -9274,7 +9301,7 @@ export type LotteryPurchaseReceivingQueryVariables = Exact<{
 }>;
 
 
-export type LotteryPurchaseReceivingQuery = { __typename?: 'Query', lotteryPurchaseReceiving: { __typename?: 'LotteryPurchaseReceiving', submissionId: string, canReceive: boolean, receivedCount: number, totalCount: number, groups: Array<{ __typename?: 'LotteryPurchaseReceivingGroup', gameId: string, gameCode: string, gameName: string, unitPrice: number, requestedBooks?: number | null, receivedBooks: number, subtotal: number, rows: Array<{ __typename?: 'LotteryPurchaseReceivingRow', rowId: string, bookNo: string, lastTicketNo: number, tickets: number, bookPrice: number, rate: number, amount: number, received: boolean, receivedAt?: string | null }> }> } };
+export type LotteryPurchaseReceivingQuery = { __typename?: 'Query', lotteryPurchaseReceiving: { __typename?: 'LotteryPurchaseReceiving', submissionId: string, canReceive: boolean, receivedCount: number, totalCount: number, groups: Array<{ __typename?: 'LotteryPurchaseReceivingGroup', gameId: string, gameCode: string, gameName: string, unitPrice: number, requestedBooks?: number | null, receivedBooks: number, subtotal: number, rows: Array<{ __typename?: 'LotteryPurchaseReceivingRow', rowId: string, bookNo: string, lastTicketNo: number, tickets: number, bookPrice: number, rate: number, amount: number, received: boolean, receivedAt?: string | null, batchId?: string | null }> }>, batches: Array<{ __typename?: 'LotteryPurchaseReceivingBatch', batchId: string, no: number, completedAt: string, rowIds: Array<string> }> } };
 
 export type LotteryPurchaseProgressQueryVariables = Exact<{
   purchaseIds: Array<Scalars['ID']['input']> | Scalars['ID']['input'];
@@ -9295,7 +9322,14 @@ export type ReceiveLotteryPurchaseBookMutationVariables = Exact<{
 }>;
 
 
-export type ReceiveLotteryPurchaseBookMutation = { __typename?: 'Mutation', receiveLotteryPurchaseBook: { __typename?: 'ReceiveLotteryPurchaseBookPayload', rowId: string, receiving: { __typename?: 'LotteryPurchaseReceiving', submissionId: string, canReceive: boolean, receivedCount: number, totalCount: number, groups: Array<{ __typename?: 'LotteryPurchaseReceivingGroup', gameId: string, gameCode: string, gameName: string, unitPrice: number, requestedBooks?: number | null, receivedBooks: number, subtotal: number, rows: Array<{ __typename?: 'LotteryPurchaseReceivingRow', rowId: string, bookNo: string, lastTicketNo: number, tickets: number, bookPrice: number, rate: number, amount: number, received: boolean, receivedAt?: string | null }> }> } } };
+export type ReceiveLotteryPurchaseBookMutation = { __typename?: 'Mutation', receiveLotteryPurchaseBook: { __typename?: 'ReceiveLotteryPurchaseBookPayload', rowId: string, receiving: { __typename?: 'LotteryPurchaseReceiving', submissionId: string, canReceive: boolean, receivedCount: number, totalCount: number, groups: Array<{ __typename?: 'LotteryPurchaseReceivingGroup', gameId: string, gameCode: string, gameName: string, unitPrice: number, requestedBooks?: number | null, receivedBooks: number, subtotal: number, rows: Array<{ __typename?: 'LotteryPurchaseReceivingRow', rowId: string, bookNo: string, lastTicketNo: number, tickets: number, bookPrice: number, rate: number, amount: number, received: boolean, receivedAt?: string | null, batchId?: string | null }> }>, batches: Array<{ __typename?: 'LotteryPurchaseReceivingBatch', batchId: string, no: number, completedAt: string, rowIds: Array<string> }> } } };
+
+export type CompleteLotteryPurchaseReceivingMutationVariables = Exact<{
+  input: CompleteLotteryPurchaseReceivingInput;
+}>;
+
+
+export type CompleteLotteryPurchaseReceivingMutation = { __typename?: 'Mutation', completeLotteryPurchaseReceiving: { __typename?: 'CompleteLotteryPurchaseReceivingPayload', batch?: { __typename?: 'LotteryPurchaseReceivingBatch', batchId: string, no: number, completedAt: string, rowIds: Array<string> } | null, receiving: { __typename?: 'LotteryPurchaseReceiving', submissionId: string, canReceive: boolean, receivedCount: number, totalCount: number, groups: Array<{ __typename?: 'LotteryPurchaseReceivingGroup', gameId: string, gameCode: string, gameName: string, unitPrice: number, requestedBooks?: number | null, receivedBooks: number, subtotal: number, rows: Array<{ __typename?: 'LotteryPurchaseReceivingRow', rowId: string, bookNo: string, lastTicketNo: number, tickets: number, bookPrice: number, rate: number, amount: number, received: boolean, receivedAt?: string | null, batchId?: string | null }> }>, batches: Array<{ __typename?: 'LotteryPurchaseReceivingBatch', batchId: string, no: number, completedAt: string, rowIds: Array<string> }> } } };
 
 export type NotifyLotteryPurchaseWrongStoreMutationVariables = Exact<{
   input: ReceiveLotteryPurchaseBookInput;
@@ -11101,7 +11135,14 @@ export const LotteryPurchaseReceivingFieldsFragmentDoc = `
       amount
       received
       receivedAt
+      batchId
     }
+  }
+  batches {
+    batchId
+    no
+    completedAt
+    rowIds
   }
 }
     `;
@@ -20033,6 +20074,42 @@ export const useReceiveLotteryPurchaseBookMutation = <
 
 
 useReceiveLotteryPurchaseBookMutation.fetcher = (client: GraphQLClient, variables: ReceiveLotteryPurchaseBookMutationVariables, headers?: RequestInit['headers']) => fetcher<ReceiveLotteryPurchaseBookMutation, ReceiveLotteryPurchaseBookMutationVariables>(client, ReceiveLotteryPurchaseBookDocument, variables, headers);
+
+export const CompleteLotteryPurchaseReceivingDocument = `
+    mutation CompleteLotteryPurchaseReceiving($input: CompleteLotteryPurchaseReceivingInput!) {
+  completeLotteryPurchaseReceiving(input: $input) {
+    batch {
+      batchId
+      no
+      completedAt
+      rowIds
+    }
+    receiving {
+      ...LotteryPurchaseReceivingFields
+    }
+  }
+}
+    ${LotteryPurchaseReceivingFieldsFragmentDoc}`;
+
+export const useCompleteLotteryPurchaseReceivingMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<CompleteLotteryPurchaseReceivingMutation, TError, CompleteLotteryPurchaseReceivingMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<CompleteLotteryPurchaseReceivingMutation, TError, CompleteLotteryPurchaseReceivingMutationVariables, TContext>(
+      {
+    mutationKey: ['CompleteLotteryPurchaseReceiving'],
+    mutationFn: (variables?: CompleteLotteryPurchaseReceivingMutationVariables) => fetcher<CompleteLotteryPurchaseReceivingMutation, CompleteLotteryPurchaseReceivingMutationVariables>(client, CompleteLotteryPurchaseReceivingDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useCompleteLotteryPurchaseReceivingMutation.fetcher = (client: GraphQLClient, variables: CompleteLotteryPurchaseReceivingMutationVariables, headers?: RequestInit['headers']) => fetcher<CompleteLotteryPurchaseReceivingMutation, CompleteLotteryPurchaseReceivingMutationVariables>(client, CompleteLotteryPurchaseReceivingDocument, variables, headers);
 
 export const NotifyLotteryPurchaseWrongStoreDocument = `
     mutation NotifyLotteryPurchaseWrongStore($input: ReceiveLotteryPurchaseBookInput!) {

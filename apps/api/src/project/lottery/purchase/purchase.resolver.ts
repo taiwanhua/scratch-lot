@@ -7,6 +7,8 @@ import { CurrentOperator } from "../../../auth/decorators";
 import type { OperatorContext } from "../../../database/operator-context";
 import { RequirePermission } from "../../../permission/require-permission.decorator";
 import {
+  CompleteLotteryPurchaseReceivingInput,
+  CompleteLotteryPurchaseReceivingPayload,
   LotteryDealerPurchaseModel,
   LotteryPurchaseOptionsModel,
   LotteryPurchaseProgressModel,
@@ -81,6 +83,14 @@ export class PurchaseResolver {
     @CurrentOperator() operator: OperatorContext,
   ): Promise<ReceiveLotteryPurchaseBookPayload> {
     return this.receiving.receive(operator, input.submissionId, input.code);
+  }
+
+  @Mutation(() => CompleteLotteryPurchaseReceivingPayload)
+  completeLotteryPurchaseReceiving(
+    @Args("input") input: CompleteLotteryPurchaseReceivingInput,
+    @CurrentOperator() operator: OperatorContext,
+  ): Promise<CompleteLotteryPurchaseReceivingPayload> {
+    return this.receiving.complete(operator, input.submissionId, input.rowIds);
   }
 
   @Mutation(() => Boolean)

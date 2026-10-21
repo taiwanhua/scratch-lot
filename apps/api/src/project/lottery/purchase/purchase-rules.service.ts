@@ -170,7 +170,10 @@ export class PurchaseRules {
     return this.receipts.findMany(
       reader,
       { submissionId },
-      { select: "rowId bookId receivedAt receivedBy", session },
+      {
+        select: "rowId bookId receivedAt receivedBy batchId batchedAt",
+        session,
+      },
     );
   }
 

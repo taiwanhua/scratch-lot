@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import type { ClientSession } from "mongoose";
+import { type ClientSession, Types } from "mongoose";
 
 import {
   PURCHASE_FIELD_KEYS,
@@ -33,6 +33,8 @@ import {
 import { tenantOfOperator } from "../master-data-tenant";
 import { LotteryBooksService } from "../tickets/books.service";
 import type {
+  CompleteLotteryPurchaseReceivingPayload,
+  LotteryPurchaseReceivingBatchModel,
   LotteryPurchaseReceivingGroupModel,
   LotteryPurchaseReceivingModel,
   ReceiveLotteryPurchaseBookPayload,
@@ -72,6 +74,34 @@ function labelOf(value: unknown): string {
     : "";
 }
 
+/** 點收紀錄 → 每一次點收(依完成時間由舊到新,編號從 1 起)。 */
+function batchesOf(
+  receipts: readonly {
+    rowId: string;
+    batchId?: Types.ObjectId | null;
+    batchedAt?: Date | null;
+  }[],
+): LotteryPurchaseReceivingBatchModel[] {
+  const batches = new Map<string, { completedAt: Date; rowIds: string[] }>();
+  for (const receipt of receipts) {
+    if (receipt.batchId == null) {
+      continue;
+    }
+    const key = String(receipt.batchId);
+    const batch = batches.get(key) ?? {
+      completedAt: receipt.batchedAt ?? new Date(0),
+      rowIds: [],
+    };
+    batch.rowIds.push(receipt.rowId);
+    batches.set(key, batch);
+  }
+  return [...batches.entries()]
+    .toSorted(
+      ([, a], [, b]) => a.completedAt.getTime() - b.completedAt.getTime(),
+    )
+    .map(([batchId, batch], index) => ({ batchId, no: index + 1, ...batch }));
+}
+
 /** 刷到別家店的進貨單上的本(送錯分店)。 */
 interface WrongStoreHit {
   owner: SubmissionDoc;
@@ -88,7 +118,8 @@ interface WrongStoreHit {
  *   進貨單(送錯分店:擋下、不入庫,錯誤帶那張單的分店與單號)
  * - `notifyWrongStore`:[通知總部更正] → 通知那張進貨單的建立者(`lottery.purchase-wrong-store`)
  *
- * [完成這次點收] 不寫資料(「這一次」由畫面記;列印由 58mm 的功能接在畫面的完成動作後)。
+ * - `complete`:[完成這次點收] → 「這一次」點收的列標上同一個點收批次(`batchId`);
+ *   「這一次」由畫面記(上次完成或打開頁面之後點收的列),已在別的批次的列不重收。進貨點收單照批次印
  */
 @Injectable()
 export class PurchaseReceivingService {
@@ -194,6 +225,49 @@ export class PurchaseReceivingService {
       }
       throw error;
     }
+  }
+
+  /**
+   * [完成這次點收]:這一次點收的列(`rowIds` 裡已點收、還沒有批次的)標上新的點收批次。
+   * 要點收任務在自己手上(跟刷條碼同一個資格);沒有可收進批次的列 → `batch` 為 null。
+   */
+  async complete(
+    operator: OperatorContext,
+    submissionIdText: string,
+    rowIds: readonly string[],
+  ): Promise<CompleteLotteryPurchaseReceivingPayload> {
+    const submission = await this.readable(operator, submissionIdText);
+    if (!(await this.canReceive(operator, submission))) {
+      throw forbiddenError(
+        "Purchase is not waiting for your receiving",
+        PURCHASE_REASONS.notReceivable,
+      );
+    }
+    const batchId = new Types.ObjectId();
+    const reader = await tenantBoundaryContext(
+      this.orgs,
+      null,
+      submission.tenantId,
+    );
+    const updated = await this.receipts.updateMany(
+      reader,
+      {
+        submissionId: submission._id,
+        rowId: { $in: [...rowIds] },
+        batchId: null,
+      },
+      { $set: { batchId, batchedAt: new Date() } },
+    );
+    const receiving = await this.toModel(operator, submission);
+    return {
+      batch:
+        updated === 0
+          ? null
+          : (receiving.batches.find(
+              (batch) => batch.batchId === String(batchId),
+            ) ?? null),
+      receiving,
+    };
   }
 
   /** [通知總部更正]:這本若是別家店進貨單上的,通知那張單的建立者;不是 → `NOT_FOUND`。 */
@@ -426,6 +500,13 @@ export class PurchaseReceivingService {
     const receivedAt = new Map(
       receipts.map((receipt) => [receipt.rowId, receipt.receivedAt]),
     );
+    const batchOf = new Map(
+      receipts.flatMap((receipt) =>
+        receipt.batchId == null
+          ? []
+          : [[receipt.rowId, String(receipt.batchId)] as const],
+      ),
+    );
     const requested = await this.requestedBooksOf(reader, submission);
     const groups = groupPurchaseLines(lines).map(
       (group): LotteryPurchaseReceivingGroupModel => {
@@ -449,6 +530,7 @@ export class PurchaseReceivingService {
             amount: row.amount,
             received: receivedAt.has(row.rowId),
             receivedAt: receivedAt.get(row.rowId) ?? null,
+            batchId: batchOf.get(row.rowId) ?? null,
           })),
         };
       },
@@ -459,6 +541,7 @@ export class PurchaseReceivingService {
       receivedCount: lines.filter((line) => receivedAt.has(line.rowId)).length,
       totalCount: lines.length,
       groups,
+      batches: batchesOf(receipts),
     };
   }
 

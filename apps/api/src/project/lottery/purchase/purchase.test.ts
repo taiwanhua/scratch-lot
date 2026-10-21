@@ -96,6 +96,39 @@ const RECEIVING = /* GraphQL */ `
   }
 `;
 
+const COMPLETE = /* GraphQL */ `
+  mutation TestComplete($input: CompleteLotteryPurchaseReceivingInput!) {
+    completeLotteryPurchaseReceiving(input: $input) {
+      batch {
+        batchId
+        no
+        rowIds
+      }
+      receiving {
+        batches {
+          batchId
+          no
+          rowIds
+        }
+        groups {
+          rows {
+            rowId
+            batchId
+          }
+        }
+      }
+    }
+  }
+`;
+
+interface CompletePayload {
+  batch: { batchId: string; no: number; rowIds: string[] } | null;
+  receiving: {
+    batches: { batchId: string; no: number; rowIds: string[] }[];
+    groups: { rows: { rowId: string; batchId: string | null }[] }[];
+  };
+}
+
 const NOTIFY_WRONG_STORE = /* GraphQL */ `
   mutation TestWrongStore($input: ReceiveLotteryPurchaseBookInput!) {
     notifyLotteryPurchaseWrongStore(input: $input)
@@ -961,6 +994,68 @@ describe("進貨單(規格 8.2、8.3)", () => {
           .collection("lottery_ticket_events")
           .countDocuments({ bookId: receipt?.bookId, type: "purchase" }),
       ).toBe(100);
+    });
+
+    it("[完成這次點收]:這一次的列標上點收批次(第 1 次、第 2 次);已在批次的列不重收;不是點收任務的人不能完成", async () => {
+      const lines = [book(gameHot), book(gameHot), book(gameHot)];
+      const purchase = await submit(lines);
+      const [first, second, third] = [
+        nth(lines, 0),
+        nth(lines, 1),
+        nth(lines, 2),
+      ];
+      const complete = async (who: Person, rowIds: string[]) =>
+        call(api, who.token, COMPLETE, {
+          input: { submissionId: purchase.id, rowIds },
+        });
+      await receiveAll(purchase.id, [first, second]);
+      const one = await ok<{
+        completeLotteryPurchaseReceiving: CompletePayload;
+      }>(api, managerA.token, COMPLETE, {
+        input: {
+          submissionId: purchase.id,
+          rowIds: [first.rowId, second.rowId],
+        },
+      });
+      expect(one.completeLotteryPurchaseReceiving.batch).toMatchObject({
+        no: 1,
+        rowIds: [first.rowId, second.rowId],
+      });
+      // 第二次:另一本;帶上已在第 1 次的列也不會搬過來
+      await receiveAll(purchase.id, [third]);
+      const two = await ok<{
+        completeLotteryPurchaseReceiving: CompletePayload;
+      }>(api, managerA.token, COMPLETE, {
+        input: {
+          submissionId: purchase.id,
+          rowIds: [first.rowId, third.rowId],
+        },
+      });
+      const { batch, receiving } = two.completeLotteryPurchaseReceiving;
+      expect(batch).toMatchObject({ no: 2, rowIds: [third.rowId] });
+      expect(receiving.batches.map((item) => [item.no, item.rowIds])).toEqual([
+        [1, [first.rowId, second.rowId]],
+        [2, [third.rowId]],
+      ]);
+      expect(
+        receiving.groups
+          .flatMap((group) => group.rows)
+          .map((row) => row.batchId),
+      ).toEqual([
+        receiving.batches[0]?.batchId,
+        receiving.batches[0]?.batchId,
+        batch?.batchId,
+      ]);
+      // 都已在批次裡:沒有新批次(不印)
+      const again = await ok<{
+        completeLotteryPurchaseReceiving: CompletePayload;
+      }>(api, managerA.token, COMPLETE, {
+        input: { submissionId: purchase.id, rowIds: [third.rowId] },
+      });
+      expect(again.completeLotteryPurchaseReceiving.batch).toBeNull();
+      expect(extensionsOf(await complete(hq, [third.rowId]))).toMatchObject({
+        reason: "PURCHASE_NOT_RECEIVABLE",
+      });
     });
 
     it("刷到的最後張號和單上不同 → 擋下「請退回更正」,不入庫", async () => {

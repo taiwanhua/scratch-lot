@@ -155,6 +155,16 @@ type ClearScheduleAutoAssignmentsPayload {
   removedCount: Int!
 }
 
+input CompleteLotteryPurchaseReceivingInput {
+  rowIds: [String!]!
+  submissionId: ID!
+}
+
+type CompleteLotteryPurchaseReceivingPayload {
+  batch: LotteryPurchaseReceivingBatch
+  receiving: LotteryPurchaseReceiving!
+}
+
 input CopySubmissionToDraftInput {
   clientRequestId: String!
   id: ID!
@@ -2132,11 +2142,19 @@ type LotteryPurchaseProgress {
 }
 
 type LotteryPurchaseReceiving {
+  batches: [LotteryPurchaseReceivingBatch!]!
   canReceive: Boolean!
   groups: [LotteryPurchaseReceivingGroup!]!
   receivedCount: Int!
   submissionId: ID!
   totalCount: Int!
+}
+
+type LotteryPurchaseReceivingBatch {
+  batchId: ID!
+  completedAt: DateTime!
+  no: Int!
+  rowIds: [String!]!
 }
 
 type LotteryPurchaseReceivingGroup {
@@ -2152,6 +2170,7 @@ type LotteryPurchaseReceivingGroup {
 
 type LotteryPurchaseReceivingRow {
   amount: Int!
+  batchId: ID
   bookNo: String!
   bookPrice: Int!
   lastTicketNo: Int!
@@ -2666,6 +2685,7 @@ type Mutation {
   bindFormWorkflow(input: BindFormWorkflowInput!): FormPayload!
   changePassword(input: ChangePasswordInput!): ChangePasswordPayload!
   clearScheduleAutoAssignments(input: ScheduleAutoRunRangeInput!): ClearScheduleAutoAssignmentsPayload!
+  completeLotteryPurchaseReceiving(input: CompleteLotteryPurchaseReceivingInput!): CompleteLotteryPurchaseReceivingPayload!
   copySubmissionToDraft(input: CopySubmissionToDraftInput!): FormSubmissionPayload!
   copyUserOrgRoles(input: CopyUserOrgRolesInput!): CopyUserOrgRolesPayload!
   correctLotterySkippedTickets(input: CorrectLotterySkippedTicketsInput!): LotteryInventoryActionPayload!
