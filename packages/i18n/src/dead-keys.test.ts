@@ -730,6 +730,11 @@ const DYNAMIC_KEYS: readonly { key: string; reason: string }[] = [
       "調貨單檢視頁核准前的提示 `t(`problems.${kind}`)`,kind 取自 `@repo/domain/project/lottery` 的 `transferSettlementProblemOf`",
   },
   {
+    key: "admin.lotteryPurchasing.receive.columns.",
+    reason:
+      "點收區塊的欄名 `t(`columns.${column}`)`(`ReceiveBooksPanel` 的 `ReceiveBookColumn`;使用處可用 `columnLabels` 覆寫)",
+  },
+  {
     key: "admin.lotteryPurchasing.receive.errors.",
     reason:
       "點收的 `t(`errors.${reason}`)`,reason 由 `PurchaseViewPage/receive-error.ts`(`RECEIVE_REASONS`)、`TransferViewPage/transfer-receive-error.ts`(`TRANSFER_RECEIVE_REASONS`)從 api 的 `extensions.reason` 換算",
