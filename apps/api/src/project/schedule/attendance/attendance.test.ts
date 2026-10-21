@@ -179,6 +179,15 @@ describe("出勤紀錄(GraphQL 端點 + 真 MongoDB)", () => {
   const punches = () =>
     connection.collection(SCHEDULE_ATTENDANCE_PUNCHES_COLLECTION);
 
+  async function entryIdOf(
+    id: Types.ObjectId,
+  ): Promise<Types.ObjectId | null | undefined> {
+    const found = await punches().findOne<{ entryId: Types.ObjectId | null }>({
+      _id: id,
+    });
+    return found?.entryId;
+  }
+
   async function entry(
     user: ScheduleTestUser,
     orgId: Types.ObjectId,
@@ -474,21 +483,28 @@ describe("出勤紀錄(GraphQL 端點 + 真 MongoDB)", () => {
             ...input,
           },
         });
+      const errorOf = async (
+        user: ScheduleTestUser,
+        input: Record<string, unknown>,
+      ) => {
+        const result = await send(user, input);
+        return result.errors?.[0]?.extensions;
+      };
+      expect(await errorOf(manager, { reasonKey: "" })).toMatchObject({
+        code: "VALIDATION_FAILED",
+        fields: ["reasonKey"],
+      });
       expect(
-        (await send(manager, { reasonKey: "" })).errors?.[0]?.extensions,
+        await errorOf(manager, { reasonKey: "retired-reassign" }),
       ).toMatchObject({ code: "VALIDATION_FAILED", fields: ["reasonKey"] });
-      expect(
-        (await send(manager, { reasonKey: "retired-reassign" })).errors?.[0]
-          ?.extensions,
-      ).toMatchObject({ code: "VALIDATION_FAILED", fields: ["reasonKey"] });
-      expect(
-        (await send(manager, { reasonKey: "other" })).errors?.[0]?.extensions,
-      ).toMatchObject({ code: "VALIDATION_FAILED", fields: ["reasonNote"] });
-      expect(
-        (await send(wang, { reasonKey: "shift-swap" })).errors?.[0]?.extensions
-          ?.code,
-      ).toBe("FORBIDDEN");
-      expect((await punches().findOne({ _id: unmatched }))?.entryId).toBeNull();
+      expect(await errorOf(manager, { reasonKey: "other" })).toMatchObject({
+        code: "VALIDATION_FAILED",
+        fields: ["reasonNote"],
+      });
+      expect(await errorOf(wang, { reasonKey: "shift-swap" })).toMatchObject({
+        code: "FORBIDDEN",
+      });
+      expect(await entryIdOf(unmatched)).toBeNull();
     });
 
     it("改了:卡對應到那一筆(時間與類型不變),寫 audit_log;再改回未對應排班", async () => {
@@ -504,8 +520,13 @@ describe("出勤紀錄(GraphQL 端點 + 真 MongoDB)", () => {
         entryId: String(linNov4),
         type: "in",
       });
-      const stored = await punches().findOne({ _id: unmatched });
-      expect(stored?.entryId?.toString()).toBe(String(linNov4));
+      const stored = await punches().findOne<{
+        entryId: Types.ObjectId | null;
+        at: Date;
+      }>({
+        _id: unmatched,
+      });
+      expect(String(stored?.entryId)).toBe(String(linNov4));
       expect(stored?.at).toEqual(taipei("2026-11-04", "09:02:00"));
       const audit = await connection.collection("audit_logs").findOne({
         action: PUNCH_REASSIGN_ACTION,
@@ -530,7 +551,7 @@ describe("出勤紀錄(GraphQL 端點 + 真 MongoDB)", () => {
         },
       });
       expect(back.errors).toBeUndefined();
-      expect((await punches().findOne({ _id: unmatched }))?.entryId).toBeNull();
+      expect(await entryIdOf(unmatched)).toBeNull();
     });
 
     it("別人的排班 → VALIDATION_FAILED(entryId)", async () => {

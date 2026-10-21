@@ -114,9 +114,7 @@ type AudiencePermissionOptionsPayload {
 input BatchApproveTasksInput {
   comment: String
 
-  """
-  要核准的任務,1 到 50 筆(重複的只算一次)
-  """
+  """要核准的任務,1 到 50 筆(重複的只算一次)"""
   taskIds: [ID!]!
 }
 
@@ -129,9 +127,7 @@ input BindFormWorkflowInput {
   workflowKey: ID!
 }
 
-"""
-阻擋清單篩選:阻擋 / 需要推進
-"""
+"""阻擋清單篩選:阻擋 / 需要推進"""
 enum BlockedInstancesFilter {
   BLOCKED
   NEEDS_ADVANCE
@@ -141,9 +137,7 @@ input BlockedInstancesInput {
   filter: BlockedInstancesFilter!
   page: Int = 1
 
-  """
-  每頁筆數,上限 100
-  """
+  """每頁筆數,上限 100"""
   pageSize: Int = 20
 }
 
@@ -172,9 +166,7 @@ type CopyUserOrgRolesBlocker {
   roleId: ID
 }
 
-"""
-複製使用者的組織與角色被擋下的原因
-"""
+"""複製使用者的組織與角色被擋下的原因"""
 enum CopyUserOrgRolesBlockerCode {
   LAST_ORG
   OWNER_PROTECTED
@@ -189,9 +181,7 @@ input CopyUserOrgRolesInput {
   targetUserId: ID!
 }
 
-"""
-複製使用者的組織與角色:合併 / 取代
-"""
+"""複製使用者的組織與角色:合併 / 取代"""
 enum CopyUserOrgRolesMode {
   MERGE
   REPLACE
@@ -466,9 +456,7 @@ input CustomizeScheduleRuleInput {
   value: JSONObject
 }
 
-"""
-多條規則命中同一操作者時的頂層合成:OR = 聯集(命中越多看得越多)、AND = 交集
-"""
+"""多條規則命中同一操作者時的頂層合成:OR = 聯集(命中越多看得越多)、AND = 交集"""
 enum DataScopeCombineOp {
   AND
   OR
@@ -479,9 +467,7 @@ type DataScopeFieldOption {
   value: String!
 }
 
-"""
-可篩欄位的型別;決定 UI 出哪些運算子與值來源(ADR-0008 的表,翻譯器不認識個別欄位)
-"""
+"""可篩欄位的型別;決定 UI 出哪些運算子與值來源(ADR-0008 的表,翻譯器不認識個別欄位)"""
 enum DataScopeFieldType {
   DATE
   ENUM
@@ -742,9 +728,7 @@ type DemoItemOnePayload {
   item: DemoItemOne!
 }
 
-"""
-示範項目狀態(草稿 / 已發布 / 已封存);資料範圍規則的 enum 欄位,選項正本在模組 seed
-"""
+"""示範項目狀態(草稿 / 已發布 / 已封存);資料範圍規則的 enum 欄位,選項正本在模組 seed"""
 enum DemoItemOneStatus {
   ARCHIVED
   DRAFT
@@ -789,9 +773,7 @@ input DemoItemsOneInput {
   keyword: String
   page: Int = 1
 
-  """
-  每頁筆數,上限 100
-  """
+  """每頁筆數,上限 100"""
   pageSize: Int = 20
 }
 
@@ -807,9 +789,7 @@ input DemoItemsTwoInput {
   keyword: String
   page: Int = 1
 
-  """
-  每頁筆數,上限 100
-  """
+  """每頁筆數,上限 100"""
   pageSize: Int = 20
 }
 
@@ -1190,18 +1170,14 @@ type FormSubmissionRevisionMeta {
   version: Int!
 }
 
-"""
-提交列表的排序(預設送出時間新到舊;草稿沒有送出時間,排在最後)
-"""
+"""提交列表的排序(預設送出時間新到舊;草稿沒有送出時間,排在最後)"""
 enum FormSubmissionSort {
   SUBMITTED_AT_ASC
   SUBMITTED_AT_DESC
   UPDATED_AT_DESC
 }
 
-"""
-提交狀態:草稿 / 審核中 / 已退回 / 已撤回 / 已完成 / 已駁回 / 已作廢(不綁流程的表單送出即完成)
-"""
+"""提交狀態:草稿 / 審核中 / 已退回 / 已撤回 / 已完成 / 已駁回 / 已作廢(不綁流程的表單送出即完成)"""
 enum FormSubmissionStatus {
   COMPLETED
   DRAFT
@@ -1224,9 +1200,7 @@ input FormSubmissionsInput {
   moduleKey: String!
   page: Int = 1
 
-  """
-  每頁筆數,上限 100
-  """
+  """每頁筆數,上限 100"""
   pageSize: Int = 20
   sort: FormSubmissionSort = SUBMITTED_AT_DESC
   status: FormSubmissionStatus
@@ -1303,9 +1277,7 @@ type FormVersionPayload {
   validation: FormValidationReport
 }
 
-"""
-表單版本狀態:草稿 / 發布中(中斷可重試)/ 已發布(供新增)/ 已退役
-"""
+"""表單版本狀態:草稿 / 發布中(中斷可重試)/ 已發布(供新增)/ 已退役"""
 enum FormVersionStatus {
   DRAFT
   PUBLISHED
@@ -1347,9 +1319,7 @@ input FormsInput {
   moduleKey: String
   page: Int = 1
 
-  """
-  每頁筆數,上限 100
-  """
+  """每頁筆數,上限 100"""
   pageSize: Int = 20
 }
 
@@ -1585,18 +1555,14 @@ type LotteryCashPointsPayload {
   totalCount: Int!
 }
 
-"""
-關係人的身分:受託人 / 代理人 / 介紹人
-"""
+"""關係人的身分:受託人 / 代理人 / 介紹人"""
 enum LotteryContactRole {
   AGENT
   INTRODUCER
   TRUSTEE
 }
 
-"""
-關係人狀態:啟用 / 停用
-"""
+"""關係人狀態:啟用 / 停用"""
 enum LotteryContactStatus {
   ACTIVE
   DISABLED
@@ -1711,9 +1677,7 @@ input LotteryDealerContactsInput {
   keyword: String
   page: Int = 1
 
-  """
-  每頁筆數,上限 100
-  """
+  """每頁筆數,上限 100"""
   pageSize: Int = 20
   role: LotteryContactRole
   status: LotteryContactStatus
@@ -1774,18 +1738,14 @@ type LotteryDealerSigninsPayload {
   totalCount: Int!
 }
 
-"""
-經銷商狀態:營業中 / 暫停 / 解約
-"""
+"""經銷商狀態:營業中 / 暫停 / 解約"""
 enum LotteryDealerStatus {
   ACTIVE
   SUSPENDED
   TERMINATED
 }
 
-"""
-經銷商類型:甲類 A / 乙類 B(建立後唯讀)
-"""
+"""經銷商類型:甲類 A / 乙類 B(建立後唯讀)"""
 enum LotteryDealerType {
   A
   B
@@ -1802,9 +1762,7 @@ input LotteryDealersInput {
   licenseState: LotteryLicenseState
   page: Int = 1
 
-  """
-  每頁筆數,上限 100
-  """
+  """每頁筆數,上限 100"""
   pageSize: Int = 20
   purchaseOverDays: Int
   selectable: Boolean
@@ -2038,9 +1996,7 @@ type LotteryInvestigationsPayload {
   items: [LotteryInvestigationRow!]!
 }
 
-"""
-證照狀態(租戶時區的今天):正常 / 30 天內到期(含當天)/ 已過期
-"""
+"""證照狀態(租戶時區的今天):正常 / 30 天內到期(含當天)/ 已過期"""
 enum LotteryLicenseState {
   EXPIRED
   EXPIRING
@@ -2208,9 +2164,7 @@ type LotteryPurchaseTrustee {
   label: String!
 }
 
-"""
-牌租週期:月 / 季 / 年
-"""
+"""牌租週期:月 / 季 / 年"""
 enum LotteryRentCycle {
   MONTH
   QUARTER
@@ -2302,9 +2256,7 @@ type LotterySettlementSide {
   totalOut: Int!
 }
 
-"""
-見簽季別的狀態:已見簽 / 已過沒登記(警告)/ 本季還沒登記 / 未到(停用)
-"""
+"""見簽季別的狀態:已見簽 / 已過沒登記(警告)/ 本季還沒登記 / 未到(停用)"""
 enum LotterySigninState {
   MISSING
   NOT_STARTED
@@ -2511,9 +2463,7 @@ type ModuleAdminPayload {
   module: ModuleAdminNode!
 }
 
-"""
-模組頁面怎麼組裝:FIXED=固定欄位模組(手寫頁面)、FORM=表單模組(頁面由表單引擎組裝)
-"""
+"""模組頁面怎麼組裝:FIXED=固定欄位模組(手寫頁面)、FORM=表單模組(頁面由表單引擎組裝)"""
 enum ModuleEngine {
   FIXED
   FORM
@@ -2547,9 +2497,7 @@ input ModuleListColumnInput {
   width: Int!
 }
 
-"""
-列表欄位的種類:摘要槽 / 表單欄位
-"""
+"""列表欄位的種類:摘要槽 / 表單欄位"""
 enum ModuleListColumnKind {
   FIELD
   SLOT
@@ -2570,9 +2518,7 @@ type ModuleOption {
   sidebarType: ModuleSidebarType!
 }
 
-"""
-側欄呈現型別:GROUP=可展開群組(非連結)、LINK=模組連結、HIDDEN=隱藏頁(有路由但不出現在側欄)
-"""
+"""側欄呈現型別:GROUP=可展開群組(非連結)、LINK=模組連結、HIDDEN=隱藏頁(有路由但不出現在側欄)"""
 enum ModuleSidebarType {
   GROUP
   HIDDEN
@@ -2585,39 +2531,23 @@ input MoveOrgInput {
 }
 
 type Mutation {
-  addMyScheduleDayOffs(
-    input: AddMyScheduleDayOffsInput!
-  ): SaveScheduleDayOffsPayload!
+  addMyScheduleDayOffs(input: AddMyScheduleDayOffsInput!): SaveScheduleDayOffsPayload!
   addOrgMembers(input: AddOrgMembersInput!): AddOrgMembersPayload!
-  addScheduleDayOffsOnBehalf(
-    input: AddScheduleDayOffsOnBehalfInput!
-  ): SaveScheduleDayOffsPayload!
+  addScheduleDayOffsOnBehalf(input: AddScheduleDayOffsOnBehalfInput!): SaveScheduleDayOffsPayload!
   addScheduleStaff(input: AddScheduleStaffInput!): AddScheduleStaffPayload!
   addStepAssignee(input: AddStepAssigneeInput!): WorkflowTaskPayload!
-  applyScheduleTemplates(
-    input: ApplyScheduleTemplatesInput!
-  ): ApplyScheduleTemplatesPayload!
+  applyScheduleTemplates(input: ApplyScheduleTemplatesInput!): ApplyScheduleTemplatesPayload!
   assignFormToTenants(input: AssignFormToTenantsInput!): FormPayload!
   assignUserRoles(input: AssignUserRolesInput!): UserPayload!
-  assignWorkflowToTenants(
-    input: AssignWorkflowToTenantsInput!
-  ): WorkflowPayload!
+  assignWorkflowToTenants(input: AssignWorkflowToTenantsInput!): WorkflowPayload!
   batchApproveTasks(input: BatchApproveTasksInput!): BatchApproveTasksPayload!
   bindFormWorkflow(input: BindFormWorkflowInput!): FormPayload!
   changePassword(input: ChangePasswordInput!): ChangePasswordPayload!
-  clearScheduleAutoAssignments(
-    input: ScheduleAutoRunRangeInput!
-  ): ClearScheduleAutoAssignmentsPayload!
-  copySubmissionToDraft(
-    input: CopySubmissionToDraftInput!
-  ): FormSubmissionPayload!
+  clearScheduleAutoAssignments(input: ScheduleAutoRunRangeInput!): ClearScheduleAutoAssignmentsPayload!
+  copySubmissionToDraft(input: CopySubmissionToDraftInput!): FormSubmissionPayload!
   copyUserOrgRoles(input: CopyUserOrgRolesInput!): CopyUserOrgRolesPayload!
-  correctLotterySkippedTickets(
-    input: CorrectLotterySkippedTicketsInput!
-  ): LotteryInventoryActionPayload!
-  createAndSubmitFormSubmission(
-    input: CreateAndSubmitFormSubmissionInput!
-  ): FormSubmissionPayload!
+  correctLotterySkippedTickets(input: CorrectLotterySkippedTicketsInput!): LotteryInventoryActionPayload!
+  createAndSubmitFormSubmission(input: CreateAndSubmitFormSubmissionInput!): FormSubmissionPayload!
   createChildOrg(input: CreateChildOrgInput!): OrgPayload!
   createDemoItemOne(input: CreateDemoItemOneInput!): DemoItemOnePayload!
   createDemoItemTwo(input: CreateDemoItemTwoInput!): DemoItemTwoPayload!
@@ -2625,19 +2555,11 @@ type Mutation {
   createFieldCategory(input: CreateFieldCategoryInput!): FieldCategoryPayload!
   createForm(input: CreateFormInput!): FormPayload!
   createFormDraft(input: CreateFormDraftInput!): FormSubmissionPayload!
-  createFormVersionDraft(
-    input: CreateFormVersionDraftInput!
-  ): FormVersionPayload!
-  createLotteryBankAccount(
-    input: CreateLotteryBankAccountInput!
-  ): LotteryBankAccountPayload!
-  createLotteryCashPoint(
-    input: CreateLotteryCashPointInput!
-  ): LotteryCashPointPayload!
+  createFormVersionDraft(input: CreateFormVersionDraftInput!): FormVersionPayload!
+  createLotteryBankAccount(input: CreateLotteryBankAccountInput!): LotteryBankAccountPayload!
+  createLotteryCashPoint(input: CreateLotteryCashPointInput!): LotteryCashPointPayload!
   createLotteryDealer(input: CreateLotteryDealerInput!): LotteryDealerPayload!
-  createLotteryDealerContact(
-    input: CreateLotteryDealerContactInput!
-  ): LotteryDealerContactPayload!
+  createLotteryDealerContact(input: CreateLotteryDealerContactInput!): LotteryDealerContactPayload!
   createLotteryGame(input: CreateLotteryGameInput!): LotteryGamePayload!
   createMyDelegation(input: CreateMyDelegationInput!): MyDelegationPayload!
   createPrintAgent(input: CreatePrintAgentInput!): PrintAgentPairingPayload!
@@ -2647,56 +2569,28 @@ type Mutation {
   createUploadUrl(input: CreateUploadUrlInput!): UploadUrlPayload!
   createUser(input: CreateUserInput!): UserPayload!
   createWorkflow(input: CreateWorkflowInput!): WorkflowPayload!
-  createWorkflowVersionDraft(
-    input: CreateWorkflowVersionDraftInput!
-  ): WorkflowVersionPayload!
-  customizeScheduleAutoRun(
-    input: CustomizeScheduleAutoRunInput!
-  ): ScheduleRuleMutationPayload!
-  customizeScheduleRule(
-    input: CustomizeScheduleRuleInput!
-  ): ScheduleRuleMutationPayload!
+  createWorkflowVersionDraft(input: CreateWorkflowVersionDraftInput!): WorkflowVersionPayload!
+  customizeScheduleAutoRun(input: CustomizeScheduleAutoRunInput!): ScheduleRuleMutationPayload!
+  customizeScheduleRule(input: CustomizeScheduleRuleInput!): ScheduleRuleMutationPayload!
   decideTask(input: DecideTaskInput!): WorkflowTaskPayload!
   deleteDemoItemOne(input: DeleteDemoItemOneInput!): DeleteDemoItemOnePayload!
   deleteDemoItemTwo(input: DeleteDemoItemTwoInput!): DeleteDemoItemTwoPayload!
-  deleteFormSubmission(
-    input: DeleteFormSubmissionInput!
-  ): DeleteFormSubmissionPayload!
+  deleteFormSubmission(input: DeleteFormSubmissionInput!): DeleteFormSubmissionPayload!
   deleteFormVersionDraft(input: DeleteFormVersionDraftInput!): FormPayload!
   deleteLotteryBankAccount(id: ID!): DeleteLotteryBankAccountPayload!
   deleteLotteryGame(input: DeleteLotteryGameInput!): DeleteLotteryGamePayload!
-  deleteMyDelegation(
-    input: DeleteMyDelegationInput!
-  ): DeleteMyDelegationPayload!
-  deleteMyScheduleDayOff(
-    input: DeleteMyScheduleDayOffInput!
-  ): DeleteScheduleDayOffPayload!
+  deleteMyDelegation(input: DeleteMyDelegationInput!): DeleteMyDelegationPayload!
+  deleteMyScheduleDayOff(input: DeleteMyScheduleDayOffInput!): DeleteScheduleDayOffPayload!
   deleteOrg(input: DeleteOrgInput!): DeletePayload!
-  deleteRetiredPermission(
-    input: DeleteRetiredPermissionInput!
-  ): DeleteRetiredPermissionPayload!
+  deleteRetiredPermission(input: DeleteRetiredPermissionInput!): DeleteRetiredPermissionPayload!
   deleteRole(input: DeleteRoleInput!): DeletePayload!
-  deleteScheduleCalendarDay(
-    input: DeleteScheduleCalendarDayInput!
-  ): DeleteScheduleCalendarDayPayload!
-  deleteScheduleDayOffOnBehalf(
-    input: DeleteScheduleDayOffOnBehalfInput!
-  ): DeleteScheduleDayOffPayload!
-  deleteScheduleDemand(
-    input: DeleteScheduleDemandInput!
-  ): DeleteScheduleDemandPayload!
-  deleteScheduleDemandTemplate(
-    input: DeleteScheduleTemplateInput!
-  ): DeleteScheduleTemplatePayload!
-  deleteScheduleDemandWeekTemplate(
-    input: DeleteScheduleTemplateInput!
-  ): DeleteScheduleTemplatePayload!
-  deleteScheduleEntry(
-    input: DeleteScheduleEntryInput!
-  ): DeleteScheduleEntryPayload!
-  deleteWorkflowVersionDraft(
-    input: DeleteWorkflowVersionDraftInput!
-  ): WorkflowPayload!
+  deleteScheduleCalendarDay(input: DeleteScheduleCalendarDayInput!): DeleteScheduleCalendarDayPayload!
+  deleteScheduleDayOffOnBehalf(input: DeleteScheduleDayOffOnBehalfInput!): DeleteScheduleDayOffPayload!
+  deleteScheduleDemand(input: DeleteScheduleDemandInput!): DeleteScheduleDemandPayload!
+  deleteScheduleDemandTemplate(input: DeleteScheduleTemplateInput!): DeleteScheduleTemplatePayload!
+  deleteScheduleDemandWeekTemplate(input: DeleteScheduleTemplateInput!): DeleteScheduleTemplatePayload!
+  deleteScheduleEntry(input: DeleteScheduleEntryInput!): DeleteScheduleEntryPayload!
+  deleteWorkflowVersionDraft(input: DeleteWorkflowVersionDraftInput!): WorkflowPayload!
   disablePrintAgent(input: PrintAgentIdInput!): PrintAgentPayload!
   forkForm(input: ForkFormInput!): FormPayload!
   forkWorkflow(input: ForkWorkflowInput!): WorkflowPayload!
@@ -2705,140 +2599,74 @@ type Mutation {
   logout: LogoutPayload!
   logoutAllDevices: LogoutAllDevicesPayload!
   markAllNotificationsRead: MarkNotificationsReadPayload!
-  markNotificationsRead(
-    input: MarkNotificationsReadInput!
-  ): MarkNotificationsReadPayload!
+  markNotificationsRead(input: MarkNotificationsReadInput!): MarkNotificationsReadPayload!
   moveOrg(input: MoveOrgInput!): OrgPayload!
-  notifyLotteryPurchaseWrongStore(
-    input: ReceiveLotteryPurchaseBookInput!
-  ): Boolean!
-  notifyLotteryTransferWrongStore(
-    input: ReceiveLotteryTransferBookInput!
-  ): Boolean!
+  notifyLotteryPurchaseWrongStore(input: ReceiveLotteryPurchaseBookInput!): Boolean!
+  notifyLotteryTransferWrongStore(input: ReceiveLotteryTransferBookInput!): Boolean!
   printPrinterTestPage(input: PrintPrinterTestPageInput!): PrintJobPayload!
   provisionTenant(input: ProvisionTenantInput!): ProvisionTenantPayload!
   publishFormVersion(input: PublishFormVersionInput!): FormVersionPayload!
   publishSchedule(input: PublishScheduleInput!): PublishSchedulePayload!
-  publishWorkflowVersion(
-    input: PublishWorkflowVersionInput!
-  ): WorkflowVersionPayload!
+  publishWorkflowVersion(input: PublishWorkflowVersionInput!): WorkflowVersionPayload!
   punchMySchedule(input: PunchMyScheduleInput!): MySchedulePunch!
   purgeDemoTenant(input: PurgeDemoTenantInput!): PurgeDemoTenantPayload!
-  reassignSchedulePunch(
-    input: ReassignSchedulePunchInput!
-  ): ScheduleAttendancePunch!
+  reassignSchedulePunch(input: ReassignSchedulePunchInput!): ScheduleAttendancePunch!
   reassignTask(input: ReassignTaskInput!): WorkflowTaskPayload!
-  receiveLotteryPurchaseBook(
-    input: ReceiveLotteryPurchaseBookInput!
-  ): ReceiveLotteryPurchaseBookPayload!
-  receiveLotteryTransferBook(
-    input: ReceiveLotteryTransferBookInput!
-  ): ReceiveLotteryTransferBookPayload!
-  recordLotteryBankTransaction(
-    input: RecordLotteryBankTransactionInput!
-  ): LotteryBankTransactionPayload!
-  recordLotterySettlement(
-    input: RecordLotterySettlementInput!
-  ): RecordLotterySettlementPayload!
-  recoverLotteryTickets(
-    input: RecoverLotteryTicketsInput!
-  ): LotteryInventoryActionPayload!
+  receiveLotteryPurchaseBook(input: ReceiveLotteryPurchaseBookInput!): ReceiveLotteryPurchaseBookPayload!
+  receiveLotteryTransferBook(input: ReceiveLotteryTransferBookInput!): ReceiveLotteryTransferBookPayload!
+  recordLotteryBankTransaction(input: RecordLotteryBankTransactionInput!): LotteryBankTransactionPayload!
+  recordLotterySettlement(input: RecordLotterySettlementInput!): RecordLotterySettlementPayload!
+  recoverLotteryTickets(input: RecoverLotteryTicketsInput!): LotteryInventoryActionPayload!
   refresh: RefreshPayload!
-  registerLotteryDealerSignin(
-    input: RegisterLotteryDealerSigninInput!
-  ): LotteryDealerSigninPayload!
-  removeScheduleDayEntries(
-    input: RemoveScheduleDayEntriesInput!
-  ): RemoveScheduleDayEntriesPayload!
-  requestPasswordReset(
-    input: RequestPasswordResetInput!
-  ): RequestPasswordResetPayload!
-  resetNotificationSetting(
-    input: ResetNotificationSettingInput!
-  ): NotificationSettingPayload!
+  registerLotteryDealerSignin(input: RegisterLotteryDealerSigninInput!): LotteryDealerSigninPayload!
+  removeScheduleDayEntries(input: RemoveScheduleDayEntriesInput!): RemoveScheduleDayEntriesPayload!
+  requestPasswordReset(input: RequestPasswordResetInput!): RequestPasswordResetPayload!
+  resetNotificationSetting(input: ResetNotificationSettingInput!): NotificationSettingPayload!
   resetPrintAgentPairing(input: PrintAgentIdInput!): PrintAgentPairingPayload!
-  resetSidebarBadgeSetting(
-    input: ResetSidebarBadgeSettingInput!
-  ): SidebarBadgeSettingPayload!
-  restoreScheduleRule(
-    input: RestoreScheduleRuleInput!
-  ): ScheduleRuleMutationPayload!
+  resetSidebarBadgeSetting(input: ResetSidebarBadgeSettingInput!): SidebarBadgeSettingPayload!
+  restoreScheduleRule(input: RestoreScheduleRuleInput!): ScheduleRuleMutationPayload!
   retireCurrentVersion(input: RetireCurrentVersionInput!): FormPayload!
   retireCurrentWorkflowVersion(input: WorkflowKeyInput!): WorkflowPayload!
-  retryAdvanceInstance(
-    input: RetryAdvanceInstanceInput!
-  ): WorkflowInstancePayload!
-  reverseLotteryBankTransaction(
-    input: ReverseLotteryBankTransactionInput!
-  ): LotteryBankTransactionPayload!
-  reverseLotterySettlement(
-    input: ReverseLotterySettlementInput!
-  ): RecordLotterySettlementPayload!
+  retryAdvanceInstance(input: RetryAdvanceInstanceInput!): WorkflowInstancePayload!
+  reverseLotteryBankTransaction(input: ReverseLotteryBankTransactionInput!): LotteryBankTransactionPayload!
+  reverseLotterySettlement(input: ReverseLotterySettlementInput!): RecordLotterySettlementPayload!
   revokeFormFromTenant(input: RevokeFormFromTenantInput!): FormPayload!
   revokeRoleUsers(input: RevokeRoleUsersInput!): RoleUsersPayload!
-  revokeTenantProvision(
-    input: RevokeTenantProvisionInput!
-  ): RevokeTenantProvisionPayload!
-  revokeWorkflowFromTenant(
-    input: RevokeWorkflowFromTenantInput!
-  ): WorkflowPayload!
+  revokeTenantProvision(input: RevokeTenantProvisionInput!): RevokeTenantProvisionPayload!
+  revokeWorkflowFromTenant(input: RevokeWorkflowFromTenantInput!): WorkflowPayload!
   runScheduleAutoRun(input: RunScheduleAutoRunInput!): ScheduleAutoRunSummary!
   saveDataScopeRule(input: SaveDataScopeRuleInput!): SaveDataScopeRulePayload!
   saveFormDraft(input: SaveFormDraftInput!): FormSubmissionPayload!
   saveFormVersionDraft(input: SaveFormVersionDraftInput!): FormVersionPayload!
   saveRoleMatrix(input: SaveRoleMatrixInput!): RoleMatrixPayload!
-  saveScheduleCalendarDay(
-    input: SaveScheduleCalendarDayInput!
-  ): ScheduleCalendarDayPayload!
-  saveScheduleDemand(
-    input: SaveScheduleDemandInput!
-  ): SaveScheduleDemandPayload!
-  saveScheduleDemandTemplate(
-    input: SaveScheduleDemandTemplateInput!
-  ): ScheduleDemandTemplatePayload!
-  saveScheduleDemandWeekTemplate(
-    input: SaveScheduleDemandWeekTemplateInput!
-  ): ScheduleDemandWeekTemplatePayload!
+  saveScheduleCalendarDay(input: SaveScheduleCalendarDayInput!): ScheduleCalendarDayPayload!
+  saveScheduleDemand(input: SaveScheduleDemandInput!): SaveScheduleDemandPayload!
+  saveScheduleDemandTemplate(input: SaveScheduleDemandTemplateInput!): ScheduleDemandTemplatePayload!
+  saveScheduleDemandWeekTemplate(input: SaveScheduleDemandWeekTemplateInput!): ScheduleDemandWeekTemplatePayload!
   saveScheduleEntry(input: SaveScheduleEntryInput!): SaveScheduleEntryPayload!
-  saveWorkflowVersionDraft(
-    input: SaveWorkflowVersionDraftInput!
-  ): WorkflowVersionPayload!
-  scrapLotteryTickets(
-    input: ScrapLotteryTicketsInput!
-  ): LotteryInventoryActionPayload!
+  saveWorkflowVersionDraft(input: SaveWorkflowVersionDraftInput!): WorkflowVersionPayload!
+  scrapLotteryTickets(input: ScrapLotteryTicketsInput!): LotteryInventoryActionPayload!
   setDemoItemOneEnabled(input: SetDemoItemOneEnabledInput!): DemoItemOnePayload!
   setDemoItemTwoEnabled(input: SetDemoItemTwoEnabledInput!): DemoItemTwoPayload!
-  setFieldCategoryEnabled(
-    input: SetFieldCategoryEnabledInput!
-  ): FieldCategoryPayload!
+  setFieldCategoryEnabled(input: SetFieldCategoryEnabledInput!): FieldCategoryPayload!
   setFieldEnabled(input: SetFieldEnabledInput!): FieldPayload!
-  setFieldOptionColor(
-    input: SetFieldOptionColorInput!
-  ): FieldOptionColorPayload!
-  setLotteryAllocation(
-    input: SetLotteryAllocationInput!
-  ): LotteryAllocationPayload!
+  setFieldOptionColor(input: SetFieldOptionColorInput!): FieldOptionColorPayload!
+  setLotteryAllocation(input: SetLotteryAllocationInput!): LotteryAllocationPayload!
   setModuleEnabled(input: SetModuleEnabledInput!): ModuleAdminPayload!
   setModuleIcon(input: SetModuleIconInput!): ModuleAdminPayload!
-  setModuleListColumns(
-    input: SetModuleListColumnsInput!
-  ): ModuleListColumnsPayload!
+  setModuleListColumns(input: SetModuleListColumnsInput!): ModuleListColumnsPayload!
   setOrgEnabled(input: SetOrgEnabledInput!): OrgPayload!
   setOrgManagers(input: SetOrgManagersInput!): OrgPayload!
   setOrgTimezone(input: SetOrgTimezoneInput!): OrgPayload!
   setOrgVisibility(input: SetOrgVisibilityInput!): OrgPayload!
   setPassword(input: SetPasswordInput!): SetPasswordPayload!
-  setPermissionEnabled(
-    input: SetPermissionEnabledInput!
-  ): PermissionAdminPayload!
+  setPermissionEnabled(input: SetPermissionEnabledInput!): PermissionAdminPayload!
   setPrinterEnabled(input: SetPrinterEnabledInput!): PrinterPayload!
   setRoleEnabled(input: SetRoleEnabledInput!): RolePayload!
   setTenantFormEnabled(input: SetTenantFormEnabledInput!): FormPayload!
   setUserEnabled(input: SetUserEnabledInput!): UserPayload!
   setUserOrgs(input: SetUserOrgsInput!): SetUserOrgsPayload!
-  submitFormSubmission(
-    input: SubmitFormSubmissionInput!
-  ): FormSubmissionPayload!
+  submitFormSubmission(input: SubmitFormSubmissionInput!): FormSubmissionPayload!
   switchOrg(input: SwitchOrgInput!): SwitchOrgPayload!
   transferOrgOwner(input: TransferOrgOwnerInput!): OrgPayload!
   unbindFormWorkflow(input: UnbindFormWorkflowInput!): FormPayload!
@@ -2847,41 +2675,23 @@ type Mutation {
   updateField(input: UpdateFieldInput!): FieldPayload!
   updateFieldCategory(input: UpdateFieldCategoryInput!): FieldCategoryPayload!
   updateForm(input: UpdateFormInput!): FormPayload!
-  updateFormSubmission(
-    input: UpdateFormSubmissionInput!
-  ): FormSubmissionPayload!
-  updateLotteryBankAccount(
-    input: UpdateLotteryBankAccountInput!
-  ): LotteryBankAccountPayload!
-  updateLotteryCashPoint(
-    input: UpdateLotteryCashPointInput!
-  ): LotteryCashPointPayload!
+  updateFormSubmission(input: UpdateFormSubmissionInput!): FormSubmissionPayload!
+  updateLotteryBankAccount(input: UpdateLotteryBankAccountInput!): LotteryBankAccountPayload!
+  updateLotteryCashPoint(input: UpdateLotteryCashPointInput!): LotteryCashPointPayload!
   updateLotteryDealer(input: UpdateLotteryDealerInput!): LotteryDealerPayload!
-  updateLotteryDealerContact(
-    input: UpdateLotteryDealerContactInput!
-  ): LotteryDealerContactPayload!
-  updateLotteryDealerSignin(
-    input: UpdateLotteryDealerSigninInput!
-  ): LotteryDealerSigninPayload!
+  updateLotteryDealerContact(input: UpdateLotteryDealerContactInput!): LotteryDealerContactPayload!
+  updateLotteryDealerSignin(input: UpdateLotteryDealerSigninInput!): LotteryDealerSigninPayload!
   updateLotteryGame(input: UpdateLotteryGameInput!): LotteryGamePayload!
-  updateMyPreferences(
-    input: UpdateMyPreferencesInput!
-  ): UpdateMyPreferencesPayload!
-  updateNotificationSetting(
-    input: UpdateNotificationSettingInput!
-  ): NotificationSettingPayload!
+  updateMyPreferences(input: UpdateMyPreferencesInput!): UpdateMyPreferencesPayload!
+  updateNotificationSetting(input: UpdateNotificationSettingInput!): NotificationSettingPayload!
   updateOrg(input: UpdateOrgInput!): OrgPayload!
   updatePrinter(input: UpdatePrinterInput!): PrinterPayload!
   updateRole(input: UpdateRoleInput!): RolePayload!
   updateScheduleStaff(input: UpdateScheduleStaffInput!): ScheduleStaffPayload!
-  updateSidebarBadgeSetting(
-    input: UpdateSidebarBadgeSettingInput!
-  ): SidebarBadgeSettingPayload!
+  updateSidebarBadgeSetting(input: UpdateSidebarBadgeSettingInput!): SidebarBadgeSettingPayload!
   updateUser(input: UpdateUserInput!): UserPayload!
   updateWorkflow(input: UpdateWorkflowInput!): WorkflowPayload!
-  upgradeFormSubmissions(
-    input: UpgradeFormSubmissionsInput!
-  ): FormUpgradePayload!
+  upgradeFormSubmissions(input: UpgradeFormSubmissionsInput!): FormUpgradePayload!
   voidSubmission(input: VoidSubmissionInput!): FormSubmissionPayload!
   withdrawSubmission(input: WithdrawSubmissionInput!): FormSubmissionPayload!
 }
@@ -2891,9 +2701,7 @@ input MyApplicationsInput {
   moduleKey: String
   page: Int = 1
 
-  """
-  每頁筆數,上限 100
-  """
+  """每頁筆數,上限 100"""
   pageSize: Int = 20
   status: FormSubmissionStatus
 }
@@ -2909,9 +2717,7 @@ input MyDelegateCandidatesInput {
   keyword: String
   page: Int = 1
 
-  """
-  每頁筆數,上限 100
-  """
+  """每頁筆數,上限 100"""
   pageSize: Int = 20
 }
 
@@ -2929,9 +2735,7 @@ type MyDelegationPayload {
 input MyDelegationsInput {
   page: Int = 1
 
-  """
-  每頁筆數,上限 100
-  """
+  """每頁筆數,上限 100"""
   pageSize: Int = 20
 }
 
@@ -2953,9 +2757,7 @@ type MyNotificationUnreadCountPayload {
 input MyNotificationsInput {
   page: Int = 1
 
-  """
-  每頁筆數,上限 100
-  """
+  """每頁筆數,上限 100"""
   pageSize: Int = 20
   unreadOnly: Boolean
 }
@@ -3070,9 +2872,7 @@ input MyTasksInput {
   moduleKey: String
   page: Int = 1
 
-  """
-  每頁筆數,上限 100
-  """
+  """每頁筆數,上限 100"""
   pageSize: Int = 20
 }
 
@@ -3114,9 +2914,7 @@ input NotificationScheduleInput {
   time: String!
 }
 
-"""
-提醒時間的寫法:某日期前 N 天(可多個)/ 逾期後每天 / 每月第 N 天;由類型宣告,租戶不能換
-"""
+"""提醒時間的寫法:某日期前 N 天(可多個)/ 逾期後每天 / 每月第 N 天;由類型宣告,租戶不能換"""
 enum NotificationScheduleKind {
   DAILY_OVERDUE
   DAYS_BEFORE
@@ -3140,9 +2938,7 @@ type NotificationSetting {
   updatedBy: ID
 }
 
-"""
-還原預設的範圍:收件人 / 提醒時間
-"""
+"""還原預設的範圍:收件人 / 提醒時間"""
 enum NotificationSettingPart {
   AUDIENCE
   SCHEDULE
@@ -3156,9 +2952,7 @@ input NotificationSettingsInput {
   keyword: String
   page: Int = 1
 
-  """
-  每頁筆數,上限 100
-  """
+  """每頁筆數,上限 100"""
   pageSize: Int = 20
 }
 
@@ -3208,9 +3002,7 @@ input OrgMembersInput {
   keyword: String
   page: Int = 1
 
-  """
-  每頁筆數,上限 100
-  """
+  """每頁筆數,上限 100"""
   pageSize: Int = 20
 }
 
@@ -3235,9 +3027,7 @@ type OrgPayload {
   org: Org!
 }
 
-"""
-租戶頂層的使用者可見範圍開關(ADR-0005;未設視為 OWN)
-"""
+"""租戶頂層的使用者可見範圍開關(ADR-0005;未設視為 OWN)"""
 enum OrgVisibility {
   OWN
   SUBTREE
@@ -3300,9 +3090,7 @@ type PrintAgentPayload {
   agent: PrintAgent!
 }
 
-"""
-代理程式安裝檔的平台
-"""
+"""代理程式安裝檔的平台"""
 enum PrintAgentPlatform {
   LINUX_ARM64
   LINUX_X64
@@ -3327,9 +3115,7 @@ input PrintAgentsInput {
   orgId: ID
   page: Int = 1
 
-  """
-  每頁筆數,上限 100
-  """
+  """每頁筆數,上限 100"""
   pageSize: Int = 20
 }
 
@@ -3381,9 +3167,7 @@ type PrintJobRequester {
   name: String!
 }
 
-"""
-列印工作狀態:等待中 → 已送出(代理程式認領)→ 已印 / 失敗
-"""
+"""列印工作狀態:等待中 → 已送出(代理程式認領)→ 已印 / 失敗"""
 enum PrintJobStatus {
   FAILED
   PENDING
@@ -3395,9 +3179,7 @@ input PrintJobsInput {
   orgId: ID
   page: Int = 1
 
-  """
-  每頁筆數,上限 100
-  """
+  """每頁筆數,上限 100"""
   pageSize: Int = 20
   printerId: ID
   refId: String
@@ -3443,9 +3225,7 @@ type PrinterPayload {
   printer: Printer!
 }
 
-"""
-代理程式回報的印表機狀態:正常 / 缺紙 / 離線
-"""
+"""代理程式回報的印表機狀態:正常 / 缺紙 / 離線"""
 enum PrinterStatus {
   OFFLINE
   OK
@@ -3459,9 +3239,7 @@ input PrintersInput {
   orgId: ID
   page: Int = 1
 
-  """
-  每頁筆數,上限 100
-  """
+  """每頁筆數,上限 100"""
   pageSize: Int = 20
 }
 
@@ -3554,13 +3332,9 @@ type Query {
   demoItemTwo(id: ID!): DemoItemTwoPayload!
   demoItemsOne(input: DemoItemsOneInput!): DemoItemsOnePayload!
   demoItemsTwo(input: DemoItemsTwoInput!): DemoItemsTwoPayload!
-  documentPrintCount(
-    input: DocumentPrintCountInput!
-  ): DocumentPrintCountPayload!
+  documentPrintCount(input: DocumentPrintCountInput!): DocumentPrintCountPayload!
   exportFormSeed(input: ExportFormSeedInput!): ExportFormSeedPayload!
-  exportWorkflowSeed(
-    input: ExportWorkflowSeedInput!
-  ): ExportWorkflowSeedPayload!
+  exportWorkflowSeed(input: ExportWorkflowSeedInput!): ExportWorkflowSeedPayload!
   fieldCategories(input: FieldCategoriesInput): FieldCategoriesPayload!
   fieldOptionColors(categoryKey: String!): FieldOptionColorsPayload!
   fields(categoryId: ID!): FieldsPayload!
@@ -3571,11 +3345,7 @@ type Query {
   formLookupRecord(input: FormLookupRecordInput!): FormLookupRecordPayload!
   formRuntimeVersion(formKey: ID!, version: Int!): FormVersionPayload!
   formSubmission(id: ID!, revision: Int): FormSubmissionPayload!
-  formSubmissionAttachmentUrl(
-    fieldKey: String!
-    id: ID!
-    revision: Int
-  ): FormSubmissionAttachmentUrlPayload!
+  formSubmissionAttachmentUrl(fieldKey: String!, id: ID!, revision: Int): FormSubmissionAttachmentUrlPayload!
   formSubmissions(input: FormSubmissionsInput!): FormSubmissionsPayload!
   formUpgradePlan(formKey: ID!, targetVersion: Int!): FormUpgradePlan!
   formVersion(formKey: ID!, version: Int): FormVersionPayload!
@@ -3583,25 +3353,17 @@ type Query {
   formVoidReasonOptions(formKey: ID!): FormVoidReasonOptionsPayload!
   formWorkflowOptions(formKey: ID!): FormWorkflowOptionsPayload!
   forms(input: FormsInput!): FormsPayload!
-  lotteryAllocations(
-    input: LotteryAllocationsInput!
-  ): LotteryAllocationsPayload!
+  lotteryAllocations(input: LotteryAllocationsInput!): LotteryAllocationsPayload!
   lotteryBankAccount(id: ID!): LotteryBankAccountPayload!
-  lotteryBankAccounts(
-    input: LotteryBankAccountsInput!
-  ): LotteryBankAccountsPayload!
-  lotteryBankTransactions(
-    input: LotteryBankTransactionsInput!
-  ): LotteryBankTransactionsPayload!
+  lotteryBankAccounts(input: LotteryBankAccountsInput!): LotteryBankAccountsPayload!
+  lotteryBankTransactions(input: LotteryBankTransactionsInput!): LotteryBankTransactionsPayload!
   lotteryCashLedger(input: LotteryCashLedgerInput!): LotteryCashLedgerPayload!
   lotteryCashMovement(id: ID!): LotteryCashMovementPayload!
   lotteryCashPoints(input: LotteryCashPointsInput!): LotteryCashPointsPayload!
   lotteryDealer(id: ID!): LotteryDealerPayload!
   lotteryDealerCoSellers(dealerId: ID!): LotteryDealerCoSellersPayload!
   lotteryDealerContact(id: ID!): LotteryDealerContactPayload!
-  lotteryDealerContacts(
-    input: LotteryDealerContactsInput!
-  ): LotteryDealerContactsPayload!
+  lotteryDealerContacts(input: LotteryDealerContactsInput!): LotteryDealerContactsPayload!
   lotteryDealerPurchases(dealerId: ID!): [LotteryDealerPurchase!]!
   lotteryDealerSignins(dealerId: ID!, year: Int!): LotteryDealerSigninsPayload!
   lotteryDealers(input: LotteryDealersInput!): LotteryDealersPayload!
@@ -3609,9 +3371,7 @@ type Query {
   lotteryGame(id: ID!): LotteryGamePayload!
   lotteryGames(input: LotteryGamesInput!): LotteryGamesPayload!
   lotteryInventoryBook(id: ID!): LotteryInventoryBookPayload!
-  lotteryInventoryBooks(
-    input: LotteryInventoryBooksInput!
-  ): LotteryInventoryBooksPayload!
+  lotteryInventoryBooks(input: LotteryInventoryBooksInput!): LotteryInventoryBooksPayload!
   lotteryInventoryStores: LotteryInventoryStoresPayload!
   lotteryInvestigations: LotteryInvestigationsPayload!
   lotteryOccupiedStores: LotteryOccupiedStoresPayload!
@@ -3622,43 +3382,24 @@ type Query {
   lotteryPurchaseProgress(purchaseIds: [ID!]!): [LotteryPurchaseProgress!]!
   lotteryPurchaseReceiving(submissionId: ID!): LotteryPurchaseReceiving!
   lotteryRequisitionCandidates(orgId: ID!): [LotteryRequisitionCandidate!]!
-  lotteryRequisitionStates(
-    requisitionIds: [ID!]!
-  ): [LotteryRequisitionStateItem!]!
+  lotteryRequisitionStates(requisitionIds: [ID!]!): [LotteryRequisitionStateItem!]!
   lotterySettlement(moduleKey: String!, refId: ID!): LotterySettlementPayload!
-  lotterySettlementAccounts(
-    moduleKey: String!
-    refId: ID!
-    side: String!
-  ): LotterySettlementAccountsPayload!
-  lotterySettlementCandidates(
-    input: LotterySettlementCandidatesInput!
-  ): LotteryOutstandingSettlementsPayload!
-  lotteryStockOverview(
-    input: LotteryStockOverviewInput!
-  ): LotteryStockOverviewPayload!
-  lotteryTicketLookup(
-    input: LotteryTicketLookupInput!
-  ): LotteryTicketLookupPayload!
-  lotteryTransferBookTickets(
-    bookId: ID!
-    fromOrgId: ID!
-  ): [LotteryTransferTicketCell!]!
+  lotterySettlementAccounts(moduleKey: String!, refId: ID!, side: String!): LotterySettlementAccountsPayload!
+  lotterySettlementCandidates(input: LotterySettlementCandidatesInput!): LotteryOutstandingSettlementsPayload!
+  lotteryStockOverview(input: LotteryStockOverviewInput!): LotteryStockOverviewPayload!
+  lotteryTicketLookup(input: LotteryTicketLookupInput!): LotteryTicketLookupPayload!
+  lotteryTransferBookTickets(bookId: ID!, fromOrgId: ID!): [LotteryTransferTicketCell!]!
   lotteryTransferOptions(fromOrgId: ID!, toOrgId: ID): LotteryTransferOptions!
   lotteryTransferProgress(transferIds: [ID!]!): [LotteryTransferProgress!]!
   lotteryTransferReceiving(submissionId: ID!): LotteryTransferReceiving!
   makeupPunchEntryExists(submissionId: ID!): Boolean!
-  makeupPunchEntryOptions(
-    input: MakeupPunchEntryOptionsInput!
-  ): [ScheduleAttendanceEntryOption!]!
+  makeupPunchEntryOptions(input: MakeupPunchEntryOptionsInput!): [ScheduleAttendanceEntryOption!]!
   me: Me!
   moduleForms(moduleKey: ID!): [FormSummary!]!
   moduleListColumns(moduleKey: String!): ModuleListColumnsPayload!
   moduleTree: [ModuleAdminNode!]!
   myApplications(input: MyApplicationsInput!): MyApplicationsPayload!
-  myDelegateCandidates(
-    input: MyDelegateCandidatesInput!
-  ): MyDelegateCandidatesPayload!
+  myDelegateCandidates(input: MyDelegateCandidatesInput!): MyDelegateCandidatesPayload!
   myDelegations(input: MyDelegationsInput!): MyDelegationsPayload!
   myNotificationPreferences: MyNotificationPreferencesPayload!
   myNotificationUnreadCount: MyNotificationUnreadCountPayload!
@@ -3668,18 +3409,14 @@ type Query {
   mySchedule(input: MyScheduleInput): MySchedulePayload!
   myScheduleDayOffs(input: MyScheduleDayOffsInput): MyScheduleDayOffsPayload!
   myTasks(input: MyTasksInput!): WorkflowTasksPayload!
-  notificationSettings(
-    input: NotificationSettingsInput!
-  ): NotificationSettingsPayload!
+  notificationSettings(input: NotificationSettingsInput!): NotificationSettingsPayload!
   org(id: ID!): Org!
   orgManagerCandidates(keyword: String, orgId: ID!): [UserSummary!]!
   orgMemberCandidates(input: OrgMembersInput!, orgId: ID!): OrgMembersPayload!
   orgMembers(input: OrgMembersInput!, orgId: ID!): OrgMembersPayload!
   orgTree: [OrgNode!]!
   previewFormVersion(input: PreviewFormVersionInput!): FormPreviewPayload!
-  printAgentDownloadUrl(
-    input: PrintAgentDownloadUrlInput!
-  ): PrintAgentDownloadUrlPayload!
+  printAgentDownloadUrl(input: PrintAgentDownloadUrlInput!): PrintAgentDownloadUrlPayload!
   printAgentRelease: PrintAgentReleasePayload!
   printAgents(input: PrintAgentsInput!): PrintAgentsPayload!
   printJob(id: ID!): PrintJobPayload!
@@ -3692,46 +3429,25 @@ type Query {
   retiredFormPermissions: RetiredFormPermissionsPayload!
   role(id: ID!): RolePayload!
   roleMatrix(roleId: ID!): RoleMatrixPayload!
-  roleUserCandidates(
-    input: RoleUserCandidatesInput!
-    roleId: ID!
-  ): RoleUserCandidatesPayload!
+  roleUserCandidates(input: RoleUserCandidatesInput!, roleId: ID!): RoleUserCandidatesPayload!
   roleUsers(input: RoleUsersInput!, roleId: ID!): RoleUsersPayload!
   roles(input: RolesInput!): RolesPayload!
-  scheduleAttendanceByPerson(
-    input: ScheduleAttendanceByPersonInput!
-  ): ScheduleAttendanceByPersonPayload!
-  scheduleAttendanceByStore(
-    input: ScheduleAttendanceByStoreInput!
-  ): ScheduleAttendanceByStorePayload!
-  scheduleAttendanceExport(
-    input: ScheduleAttendanceExportInput!
-  ): ScheduleAttendanceExportPayload!
-  scheduleAttendancePunchEntryOptions(
-    punchId: ID!
-  ): [ScheduleAttendanceEntryOption!]!
-  scheduleAutoRunPreview(
-    input: ScheduleAutoRunRangeInput!
-  ): ScheduleAutoRunPreviewPayload!
-  scheduleAutoRunStatus(
-    input: ScheduleRosterInput!
-  ): ScheduleAutoRunStatusPayload!
+  scheduleAttendanceByPerson(input: ScheduleAttendanceByPersonInput!): ScheduleAttendanceByPersonPayload!
+  scheduleAttendanceByStore(input: ScheduleAttendanceByStoreInput!): ScheduleAttendanceByStorePayload!
+  scheduleAttendanceExport(input: ScheduleAttendanceExportInput!): ScheduleAttendanceExportPayload!
+  scheduleAttendancePunchEntryOptions(punchId: ID!): [ScheduleAttendanceEntryOption!]!
+  scheduleAutoRunPreview(input: ScheduleAutoRunRangeInput!): ScheduleAutoRunPreviewPayload!
+  scheduleAutoRunStatus(input: ScheduleRosterInput!): ScheduleAutoRunStatusPayload!
   scheduleCalendar(input: ScheduleCalendarInput!): ScheduleCalendarPayload!
   scheduleCheck(input: ScheduleRosterInput!): ScheduleCheckPayload!
-  scheduleDayOffOverview(
-    input: ScheduleDayOffOverviewInput
-  ): ScheduleDayOffOverviewPayload!
+  scheduleDayOffOverview(input: ScheduleDayOffOverviewInput): ScheduleDayOffOverviewPayload!
   scheduleDemandTemplates: ScheduleDemandTemplatesPayload!
-  scheduleDemandWeekTemplates(
-    input: ScheduleDemandWeekTemplatesInput
-  ): ScheduleDemandWeekTemplatesPayload!
+  scheduleDemandWeekTemplates(input: ScheduleDemandWeekTemplatesInput): ScheduleDemandWeekTemplatesPayload!
   scheduleFieldOptions(categoryKey: String!): ScheduleFieldOptionsPayload!
   scheduleRoster(input: ScheduleRosterInput!): ScheduleRosterPayload!
   scheduleRules(input: ScheduleRulesInput): ScheduleRulesPayload!
   scheduleStaff(input: ScheduleStaffListInput): ScheduleStaffListPayload!
-  scheduleTemplateApplyPreview(
-    input: ApplyScheduleTemplatesInput!
-  ): ApplyScheduleTemplatesPayload!
+  scheduleTemplateApplyPreview(input: ApplyScheduleTemplatesInput!): ApplyScheduleTemplatesPayload!
   sidebarBadgeSettings: SidebarBadgeSettingsPayload!
   sidebarBadges: [SidebarBadge!]!
   tenantModuleOptions: [ModuleOption!]!
@@ -3739,9 +3455,7 @@ type Query {
   user(id: ID!): User!
   users(input: UsersInput!): UsersPayload!
   validateFormVersion(input: ValidateFormVersionInput!): FormValidationReport!
-  validateWorkflowVersion(
-    input: ValidateWorkflowVersionInput!
-  ): WorkflowValidationReport!
+  validateWorkflowVersion(input: ValidateWorkflowVersionInput!): WorkflowValidationReport!
   workflow(key: ID!): WorkflowPayload!
   workflowInstance(id: ID!): WorkflowInstancePayload!
   workflowVersion(version: Int, workflowKey: ID!): WorkflowVersionPayload!
@@ -3750,36 +3464,24 @@ type Query {
 }
 
 input RealtimeBoardInput {
-  """
-  看板 key(專案登記)
-  """
+  """看板 key(專案登記)"""
   key: String!
 
-  """
-  看板開著的那家店(組織 id)
-  """
+  """看板開著的那家店(組織 id)"""
   orgId: ID!
 }
 
 type RealtimeTicketPayload {
-  """
-  連線網址 `wss://…/connect`,前端加上 `?ticket=`
-  """
+  """連線網址 `wss://…/connect`,前端加上 `?ticket=`"""
   connectUrl: String!
 
-  """
-  到期時間(Unix 秒)
-  """
+  """到期時間(Unix 秒)"""
   expiresAt: Int!
 
-  """
-  訂閱憑證(10 分鐘);連線或在原連線上換發時送出
-  """
+  """訂閱憑證(10 分鐘);連線或在原連線上換發時送出"""
   ticket: String!
 
-  """
-  憑證內的頻道:平常只有 `user:<自己>`,看板頁符合條件時多一個 `board:<店>`
-  """
+  """憑證內的頻道:平常只有 `user:<自己>`,看板頁符合條件時多一個 `board:<店>`"""
   topics: [String!]!
 }
 
@@ -4003,9 +3705,7 @@ type RoleGrant {
   permissionKeys: [String!]!
 }
 
-"""
-角色種類(種子 / 預設角色 / 自建);規則表見 docs/modules/role-manager.md
-"""
+"""角色種類(種子 / 預設角色 / 自建);規則表見 docs/modules/role-manager.md"""
 enum RoleKind {
   CUSTOM
   SYSTEM
@@ -4055,9 +3755,7 @@ type RolePayload {
   role: Role!
 }
 
-"""
-所屬組織移除後角色失去資格的原因(ADR-0003)
-"""
+"""所屬組織移除後角色失去資格的原因(ADR-0003)"""
 enum RoleUnqualifiedReason {
   NO_REMAINING_SUBTREE_SUPPORT
   OWNED_BY_REMOVED_ORG
@@ -4088,9 +3786,7 @@ input RoleUserCandidatesInput {
   keyword: String
   page: Int = 1
 
-  """
-  每頁筆數,上限 100
-  """
+  """每頁筆數,上限 100"""
   pageSize: Int = 20
 }
 
@@ -4109,9 +3805,7 @@ type RoleUserOrg {
 input RoleUsersInput {
   page: Int = 1
 
-  """
-  每頁筆數,上限 100
-  """
+  """每頁筆數,上限 100"""
   pageSize: Int = 20
 }
 
@@ -4128,9 +3822,7 @@ input RolesInput {
   ownerOrgId: ID
   page: Int = 1
 
-  """
-  每頁筆數,上限 100
-  """
+  """每頁筆數,上限 100"""
   pageSize: Int = 20
 }
 
@@ -4837,9 +4529,7 @@ type ScheduleRuleSetting {
   value: JSONObject!
 }
 
-"""
-規則生效值的來源:本層自訂 / 沿用上層 / 程式預設
-"""
+"""規則生效值的來源:本層自訂 / 沿用上層 / 程式預設"""
 enum ScheduleRuleSource {
   DEFAULT
   INHERITED
@@ -5050,51 +4740,33 @@ input ShareOrgInput {
 }
 
 type SidebarBadge {
-  """
-  數字;0 也回傳,前端只在大於 0 時顯示
-  """
+  """數字;0 也回傳,前端只在大於 0 時顯示"""
   count: Int!
 
-  """
-  模組 key(側欄以它對上模組節點)
-  """
+  """模組 key(側欄以它對上模組節點)"""
   moduleKey: String!
 }
 
 type SidebarBadgeSetting {
-  """
-  租戶調整過的人員條件(綁了模組之後再看它);沒調整 = null,用程式預設
-  """
+  """租戶調整過的人員條件(綁了模組之後再看它);沒調整 = null,用程式預設"""
   audience: JSONObject
 
-  """
-  「數什麼」的說明文字在 admin 訊息檔的 key(登記時給);沒有 = null
-  """
+  """「數什麼」的說明文字在 admin 訊息檔的 key(登記時給);沒有 = null"""
   descriptionKey: String
 
-  """
-  true = 沒有調整,用程式預設
-  """
+  """true = 沒有調整,用程式預設"""
   isDefault: Boolean!
 
-  """
-  模組 key
-  """
+  """模組 key"""
   moduleKey: String!
 
-  """
-  模組名稱;模組不存在時退回模組 key
-  """
+  """模組名稱;模組不存在時退回模組 key"""
   moduleName: String!
 
-  """
-  程式預設要求的權限 key(登記的 requires);沒有 = null
-  """
+  """程式預設要求的權限 key(登記的 requires);沒有 = null"""
   requires: String
 
-  """
-  最後一次調整 / 還原的時間;從沒動過 = null
-  """
+  """最後一次調整 / 還原的時間;從沒動過 = null"""
   updatedAt: DateTime
   updatedBy: ID
 }
@@ -5367,9 +5039,7 @@ input UpgradeFormSubmissionsInput {
   targetVersion: Int!
 }
 
-"""
-上傳用途:決定物件路徑前綴與所需權限(ADR-0010)
-"""
+"""上傳用途:決定物件路徑前綴與所需權限(ADR-0010)"""
 enum UploadPurpose {
   DEMO_ATTACHMENT
   DEMO_COVER
@@ -5404,9 +5074,7 @@ input UserActivationInput {
   mode: UserActivationMode! = EMAIL
 }
 
-"""
-新增使用者的啟用方式(ADR-0009:啟用信 / 初始密碼)
-"""
+"""新增使用者的啟用方式(ADR-0009:啟用信 / 初始密碼)"""
 enum UserActivationMode {
   EMAIL
   PASSWORD
@@ -5428,9 +5096,7 @@ type UserDelegationModel {
   status: UserDelegationStatus!
 }
 
-"""
-代理狀態:未開始 / 代理中 / 已結束(已結束的唯讀)
-"""
+"""代理狀態:未開始 / 代理中 / 已結束(已結束的唯讀)"""
 enum UserDelegationStatus {
   ACTIVE
   ENDED
@@ -5442,9 +5108,7 @@ type UserOrg {
   name: String!
 }
 
-"""
-移除所屬組織時角色授予的處理方式(ADR-0003,radio 三檔)
-"""
+"""移除所屬組織時角色授予的處理方式(ADR-0003,radio 三檔)"""
 enum UserOrgRemovalPolicy {
   KEEP_ALL
   REVOKE_ALL_UNQUALIFIED
@@ -5475,9 +5139,7 @@ input UsersInput {
   orgId: ID
   page: Int = 1
 
-  """
-  每頁筆數,上限 100
-  """
+  """每頁筆數,上限 100"""
   pageSize: Int = 20
 }
 
@@ -5526,9 +5188,7 @@ type WorkflowAssignment {
   tenantOrgId: ID!
 }
 
-"""
-批次核准一筆失敗的原因:已不在你手上 / 被守門擋下 / 其他失敗
-"""
+"""批次核准一筆失敗的原因:已不在你手上 / 被守門擋下 / 其他失敗"""
 enum WorkflowBatchApproveFailure {
   BLOCKED
   FAILED
@@ -5555,17 +5215,13 @@ type WorkflowBoundForm {
   moduleKey: String
 }
 
-"""
-決定被接受 / 此關已結束或任務已變更(前端提示並重載)
-"""
+"""決定被接受 / 此關已結束或任務已變更(前端提示並重載)"""
 enum WorkflowDecideResult {
   ACCEPTED
   STEP_CLOSED
 }
 
-"""
-核准 / 駁回(理由必填)/ 退回修改(理由必填,該關要允許退回)
-"""
+"""核准 / 駁回(理由必填)/ 退回修改(理由必填,該關要允許退回)"""
 enum WorkflowDecision {
   APPROVE
   REJECT
@@ -5652,9 +5308,7 @@ type WorkflowInstancePayload {
   instance: WorkflowInstanceModel!
 }
 
-"""
-流程實例狀態:審核中 / 阻擋 / 核准 / 駁回 / 退回 / 撤回 / 被取代
-"""
+"""流程實例狀態:審核中 / 阻擋 / 核准 / 駁回 / 退回 / 撤回 / 被取代"""
 enum WorkflowInstanceStatus {
   APPROVED
   BLOCKED
@@ -5735,9 +5389,7 @@ type WorkflowPlanItemModel {
   taskKey: String!
 }
 
-"""
-關卡狀態:還沒進 / 跳過 / 進行中 / 完成 / 被終止
-"""
+"""關卡狀態:還沒進 / 跳過 / 進行中 / 完成 / 被終止"""
 enum WorkflowStepStatus {
   ACTIVE
   COMPLETED
@@ -5774,9 +5426,7 @@ type WorkflowTaskPayload {
   task: WorkflowTaskModel!
 }
 
-"""
-任務狀態:待處理 / 核准 / 駁回 / 退回 / 晚到(不影響結果)/ 取消 / 承辦人失效
-"""
+"""任務狀態:待處理 / 核准 / 駁回 / 退回 / 晚到(不影響結果)/ 取消 / 承辦人失效"""
 enum WorkflowTaskStatus {
   APPROVED
   BLOCKED
@@ -5820,9 +5470,7 @@ type WorkflowVersionPayload {
   workflowVersion: WorkflowVersionModel!
 }
 
-"""
-流程版本狀態:草稿 / 發布中 / 已發布 / 已退役
-"""
+"""流程版本狀態:草稿 / 發布中 / 已發布 / 已退役"""
 enum WorkflowVersionStatus {
   DRAFT
   PUBLISHED
@@ -5839,9 +5487,7 @@ input WorkflowsInput {
   keyword: String
   page: Int = 1
 
-  """
-  每頁筆數,上限 100
-  """
+  """每頁筆數,上限 100"""
   pageSize: Int = 20
 }
 

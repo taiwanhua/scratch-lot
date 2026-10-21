@@ -124,9 +124,7 @@ export class MakeupPunchService {
     return [
       ...new Set(
         rows.flatMap((row) => {
-          const { entryId } = makeupPunchValuesOf(
-            row.values as Record<string, unknown>,
-          );
+          const { entryId } = makeupPunchValuesOf(row.values);
           return typeof entryId === "string" ? [entryId] : [];
         }),
       ),
@@ -221,7 +219,7 @@ export class MakeupPunchService {
     const result = await this.checkApprove(
       operator,
       submission.tenantId,
-      submission.values as Record<string, unknown>,
+      submission.values,
     );
     return result === null;
   }
@@ -250,9 +248,7 @@ export class MakeupPunchService {
     if (!submission?.createdBy) {
       throw new Error(`補打卡申請 ${String(submissionId)} 讀不到申請人`);
     }
-    const parsed = makeupPunchValuesOf(
-      submission.values as Record<string, unknown>,
-    );
+    const parsed = makeupPunchValuesOf(submission.values);
     const branchId = toObjectId(parsed.branchId);
     if (
       branchId === null ||

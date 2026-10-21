@@ -45,7 +45,6 @@ import {
   validationError,
 } from "../shared/schedule-error";
 import {
-  type ScheduleOrg,
   loadOrgNames,
   parseObjectId,
   resolveScheduleOrg,
@@ -598,7 +597,9 @@ export class ScheduleAttendanceService {
     const orgIds = [
       ...new Map(entries.map((e) => [String(e.orgId), e.orgId])).values(),
     ];
-    const dates = entries.map((entry) => entry.date).toSorted();
+    const dates = entries
+      .map((entry) => entry.date)
+      .toSorted((left, right) => left.localeCompare(right));
     const [details, orgNames, names, categories] = await Promise.all([
       this.published.detailsOf(scope.reader, scope.tenantId, entries),
       loadOrgNames(scope.reader, this.orgs, orgIds),

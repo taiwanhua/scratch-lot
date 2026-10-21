@@ -603,7 +603,7 @@ export class ScheduleRosterWritesService {
     userId: Types.ObjectId,
     punchIds: readonly string[] | null | undefined,
   ): Promise<PunchRecord[]> {
-    const ids = [...new Set(punchIds ?? [])];
+    const ids = [...new Set(punchIds)];
     if (ids.length === 0) {
       return [];
     }

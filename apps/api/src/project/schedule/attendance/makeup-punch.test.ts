@@ -144,6 +144,31 @@ describe("補打卡申請(規格 14.8)", () => {
     api.connection.collection(SCHEDULE_ATTENDANCE_PUNCHES_COLLECTION);
   const entries = () => api.connection.collection(SCHEDULE_ENTRIES_COLLECTION);
 
+  async function pendingIds(): Promise<string[]> {
+    const data = await ok<{ myPendingMakeupPunchEntryIds: string[] }>(
+      api,
+      wang.token,
+      PENDING,
+    );
+    return data.myPendingMakeupPunchEntryIds;
+  }
+
+  async function entryExists(submissionId: string): Promise<boolean> {
+    const data = await ok<{ makeupPunchEntryExists: boolean }>(
+      api,
+      manager.token,
+      EXISTS,
+      { submissionId },
+    );
+    return data.makeupPunchEntryExists;
+  }
+
+  async function makeupPunchOf(submissionId: string) {
+    return punches().findOne<{ entryId: Types.ObjectId | null }>({
+      makeupRequestId: new Types.ObjectId(submissionId),
+    });
+  }
+
   async function entry(
     who: Person,
     date: string,
@@ -337,12 +362,7 @@ describe("補打卡申請(規格 14.8)", () => {
       wang,
       values("2026-11-02", String(wangNov2)),
     );
-    const pending = await ok<{ myPendingMakeupPunchEntryIds: string[] }>(
-      api,
-      wang.token,
-      PENDING,
-    );
-    expect(pending.myPendingMakeupPunchEntryIds).toEqual([String(wangNov2)]);
+    expect(await pendingIds()).toEqual([String(wangNov2)]);
     expect(
       await punches().countDocuments({
         makeupRequestId: new Types.ObjectId(submitted.id),
@@ -363,15 +383,7 @@ describe("補打卡申請(規格 14.8)", () => {
       at: taipei("2026-11-02", "14:35"),
       ip: null,
     });
-    expect(
-      (
-        await ok<{ myPendingMakeupPunchEntryIds: string[] }>(
-          api,
-          wang.token,
-          PENDING,
-        )
-      ).myPendingMakeupPunchEntryIds,
-    ).toEqual([]);
+    expect(await pendingIds()).toEqual([]);
   });
 
   it("選「沒有排班(臨時代班)」→ 核准後是未對應排班的卡(分店 = 申請的分店)", async () => {
@@ -406,13 +418,8 @@ describe("補打卡申請(規格 14.8)", () => {
       },
     );
     await decideOn(world, manager, submitted.id, "APPROVE");
-    expect(
-      (
-        await punches().findOne({
-          makeupRequestId: new Types.ObjectId(submitted.id),
-        })
-      )?.entryId,
-    ).toEqual(wangNov3);
+    const written = await makeupPunchOf(submitted.id);
+    expect(written?.entryId).toEqual(wangNov3);
   });
 
   it("審核中那筆排班被刪除 → 審核頁警告、核准被擋(MAKEUP_PUNCH_ENTRY_DELETED),只能退回", async () => {
@@ -421,34 +428,12 @@ describe("補打卡申請(規格 14.8)", () => {
       wang,
       values("2026-11-05", String(doomed)),
     );
-    expect(
-      (
-        await ok<{ makeupPunchEntryExists: boolean }>(
-          api,
-          manager.token,
-          EXISTS,
-          {
-            submissionId: submitted.id,
-          },
-        )
-      ).makeupPunchEntryExists,
-    ).toBe(true);
+    expect(await entryExists(submitted.id)).toBe(true);
     await entries().updateOne(
       { _id: doomed },
       { $set: { deletedAt: new Date() } },
     );
-    expect(
-      (
-        await ok<{ makeupPunchEntryExists: boolean }>(
-          api,
-          manager.token,
-          EXISTS,
-          {
-            submissionId: submitted.id,
-          },
-        )
-      ).makeupPunchEntryExists,
-    ).toBe(false);
+    expect(await entryExists(submitted.id)).toBe(false);
 
     const task = await pendingTaskOf(world, manager, submitted.id);
     const approve = await call(api, manager.token, DECIDE, {

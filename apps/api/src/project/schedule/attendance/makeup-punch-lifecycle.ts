@@ -23,13 +23,13 @@ export const makeupPunchLifecycle = registerFormLifecycle({
       get<MakeupPunchService>(MAKEUP_PUNCH_SERVICE).checkSubmit(
         operator,
         submission.tenantId,
-        values as Record<string, unknown>,
+        values,
       ),
     beforeApprove: ({ operator, submission, values, get }) =>
       get<MakeupPunchService>(MAKEUP_PUNCH_SERVICE).checkApprove(
         operator,
         submission.tenantId,
-        values as Record<string, unknown>,
+        values,
       ),
   },
   effects: {

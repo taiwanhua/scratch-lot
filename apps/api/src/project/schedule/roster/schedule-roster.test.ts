@@ -583,6 +583,46 @@ describe("排班表(GraphQL 端點 + 真 MongoDB)", () => {
     clearEntryDeletionGuardsForTest();
   });
 
+  const punches = () =>
+    connection.collection(SCHEDULE_ATTENDANCE_PUNCHES_COLLECTION);
+
+  /** 李小華在中山店打的一張未對應排班的卡。 */
+  async function unmatchedPunch(
+    date: string,
+    time: string,
+    type: "in" | "out",
+    orgId = zhongshan,
+  ): Promise<Types.ObjectId> {
+    const now = new Date();
+    const { insertedId } = await punches().insertOne({
+      orgId,
+      tenantId: tenantA,
+      userId: li.userId,
+      at: new Date(taipei(date, time)),
+      type,
+      entryId: null,
+      ip: null,
+      userAgent: null,
+      source: "button",
+      makeupRequestId: null,
+      duplicate: false,
+      moduleKey: "schedule.attendance",
+      createdAt: now,
+      updatedAt: now,
+      createdBy: null,
+      updatedBy: null,
+      deletedAt: null,
+    });
+    return insertedId;
+  }
+
+  async function punchDoc(id: Types.ObjectId) {
+    return punches().findOne<{
+      entryId: Types.ObjectId | null;
+      duplicate: boolean;
+    }>({ _id: id });
+  }
+
   afterAll(async () => {
     await api.close();
   }, HOOK_TIMEOUT_MS);
@@ -1079,39 +1119,6 @@ describe("排班表(GraphQL 端點 + 真 MongoDB)", () => {
   });
 
   describe("未對應排班的打卡(規格 14.5)", () => {
-    const punches = () =>
-      connection.collection(SCHEDULE_ATTENDANCE_PUNCHES_COLLECTION);
-
-    /** 李小華在中山店打的一張未對應排班的卡。 */
-    async function unmatchedPunch(
-      date: string,
-      time: string,
-      type: "in" | "out",
-      orgId = zhongshan,
-    ): Promise<Types.ObjectId> {
-      const now = new Date();
-      const { insertedId } = await punches().insertOne({
-        orgId,
-        tenantId: tenantA,
-        userId: li.userId,
-        at: new Date(taipei(date, time)),
-        type,
-        entryId: null,
-        ip: null,
-        userAgent: null,
-        source: "button",
-        makeupRequestId: null,
-        duplicate: false,
-        moduleKey: "schedule.attendance",
-        createdAt: now,
-        updatedAt: now,
-        createdBy: null,
-        updatedBy: null,
-        deletedAt: null,
-      });
-      return insertedId;
-    }
-
     it("排班表回這家店未對應排班的卡(別家店的不列)、容許時間預設 60、use-punch-time 權限", async () => {
       const own = await unmatchedPunch("2026-11-20", "09:02", "in");
       await unmatchedPunch("2026-11-20", "09:05", "in", hsinchu);
@@ -1129,7 +1136,8 @@ describe("排班表(GraphQL 端點 + 真 MongoDB)", () => {
       ).toHaveLength(1);
       expect(data.settings.entryMatchToleranceMinutes).toBe(60);
       expect(data.canUsePunchTime).toBe(true);
-      expect((await roster(manager)).canUsePunchTime).toBe(false);
+      const managerView = await roster(manager);
+      expect(managerView.canUsePunchTime).toBe(false);
     });
 
     it("排班對話框:勾選的卡儲存後對應到這筆排班;不勾的不對應", async () => {
@@ -1148,13 +1156,14 @@ describe("排班表(GraphQL 端點 + 真 MongoDB)", () => {
         }),
         "saveScheduleEntry",
       ).item;
-      expect(
-        (await punches().findOne({ _id: checked }))?.entryId?.toString(),
-      ).toBe(saved.id);
-      expect((await punches().findOne({ _id: unchecked }))?.entryId).toBeNull();
-      expect(
-        (await roster(hq)).unmatchedPunches.map((item) => item.id),
-      ).not.toContain(String(checked));
+      const matched = await punchDoc(checked);
+      expect(String(matched?.entryId)).toBe(saved.id);
+      const left = await punchDoc(unchecked);
+      expect(left?.entryId).toBeNull();
+      const after = await roster(hq);
+      expect(after.unmatchedPunches.map((item) => item.id)).not.toContain(
+        String(checked),
+      );
     });
 
     it("上下班時間改用打卡時間:沒有 use-punch-time → FORBIDDEN;有 → 最早的上班卡、最晚的下班卡", async () => {
@@ -1188,7 +1197,8 @@ describe("排班表(GraphQL 端點 + 真 MongoDB)", () => {
         taipei("2026-11-22", "15:12"),
       );
       // 同一班多張上班卡:取最早,其餘標重複打卡
-      expect((await punches().findOne({ _id: late }))?.duplicate).toBe(true);
+      const duplicate = await punchDoc(late);
+      expect(duplicate?.duplicate).toBe(true);
     });
 
     it("勾的卡不是這個人在這家店的未對應卡 → VALIDATION_FAILED(punchIds)", async () => {
