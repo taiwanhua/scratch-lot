@@ -296,6 +296,29 @@ describe("店面管理:兌獎", () => {
     expect(screen.getByText("共 1 筆")).toBeInTheDocument();
   });
 
+  it("單號搜尋不限期間:期間是 9 月(沒有紀錄)時輸入 RD-0218 仍找得到;提示「輸入單號時不限期間」", async () => {
+    const filters = encodeURIComponent(
+      JSON.stringify({
+        from: "2026-09-01",
+        to: "2026-09-30",
+        cashPointId: "all",
+        status: "all",
+        redeemedBy: "all",
+        serialNo: "",
+        page: 1,
+      }),
+    );
+    const { user } = renderStore({
+      path: `/store?tab=redemptions&redemptions=${filters}`,
+    });
+    const table = await screen.findByRole("table", { name: "兌獎紀錄" });
+    expect(await screen.findByText("共 0 筆")).toBeInTheDocument();
+    expect(screen.getByText("輸入單號時不限期間")).toBeInTheDocument();
+    await user.type(screen.getByRole("textbox", { name: "單號" }), "RD-0218");
+    expect(await within(table).findByText("RD-0218")).toBeInTheDocument();
+    expect(screen.getByText("共 1 筆")).toBeInTheDocument();
+  });
+
   it("兌獎視窗開著時刷條碼(條碼槍 / 相機)→ 交給兌獎(填進編號並預覽),不會被看板的銷售吃掉", async () => {
     const { user, salesFake } = renderStore();
     const counter = await headerOf("店內櫃台");

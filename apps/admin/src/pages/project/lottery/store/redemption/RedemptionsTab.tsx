@@ -117,8 +117,8 @@ const rangeOf = (
 };
 
 /**
- * 兌獎紀錄分頁(專案規格 6.5;Figma ST-40):篩選 收銀點、狀態、登記人、期間、單號(使用者 10/22 定案;和其他條件
- * 同時成立);欄位 單號、時間、收銀點、班次、刮刮樂、金額、狀態、登記人、進貨單;點一列開兌獎紀錄詳情(可從那裡撤銷)。
+ * 兌獎紀錄分頁(專案規格 6.5;Figma ST-40):篩選 收銀點、狀態、登記人、期間、單號(使用者 10/22 定案;輸入單號時
+ * 不限期間,其他條件仍同時成立);欄位 單號、時間、收銀點、班次、刮刮樂、金額、狀態、登記人、進貨單;點一列開兌獎紀錄詳情(可從那裡撤銷)。
  * 平板 / 手機改卡片(Figma ST-40;標題列 `單號 · 刮刮樂 · 金額`)、篩選收進抽屜(期間與單號留在外面)。
  * 分店沿用看板的 `?org=`;篩選與頁碼在 `?redemptions=`(url-state-inventory)。登記人的選項取同一段期間出現過的人。
  */
@@ -161,9 +161,11 @@ export const RedemptionsTab = () => {
     { enabled: orgId !== "", retry: false },
   );
   const cashPoints = board.data?.lotteryStoreBoard.item.cashPoints ?? [];
+  const hasSerial = filters.serialNo.trim() !== "";
   const baseInput = {
     orgId,
-    ...rangeOf(filters, timezone),
+    // 輸入單號時不限期間(api 端也不看期間)
+    ...(hasSerial ? {} : rangeOf(filters, timezone)),
     cashPointId: filters.cashPointId === ALL ? null : filters.cashPointId,
     status: filters.status === ALL ? null : filters.status,
   };
@@ -173,7 +175,7 @@ export const RedemptionsTab = () => {
       input: {
         ...baseInput,
         redeemedBy: filters.redeemedBy === ALL ? null : filters.redeemedBy,
-        serialNo: filters.serialNo.trim() === "" ? null : filters.serialNo,
+        serialNo: hasSerial ? filters.serialNo : null,
         offset: (stored.page - 1) * REDEMPTIONS_PAGE_SIZE,
         limit: REDEMPTIONS_PAGE_SIZE,
       },
@@ -333,6 +335,7 @@ export const RedemptionsTab = () => {
             <TextField
               label={t("tab.serialNo")}
               placeholder={t("tab.serialNoHint")}
+              helperText={t("tab.serialNoScope")}
               value={filters.serialNo}
               size="small"
               sx={{ width: { xs: "100%", sm: 180 } }}

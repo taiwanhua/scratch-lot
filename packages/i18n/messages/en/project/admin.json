@@ -2993,6 +2993,7 @@
         "redeemedBy": "Registered by",
         "serialNo": "No.",
         "serialNoHint": "RD-0218 or 218",
+        "serialNoScope": "Any period when searching by No.",
         "from": "From",
         "to": "To",
         "all": "All",

@@ -768,6 +768,29 @@ describe("兌獎(GraphQL 端點 + 真 MongoDB)", () => {
     expect(digitsOnly.items.map((row) => row.id)).toEqual([second.id]);
     const unknown = await search("P-0034");
     expect(unknown.total).toBe(0);
+    // 有單號時不看期間(客人拿上個月的單子回來查);收銀點等其他條件仍成立
+    await connection
+      .collection("lottery_redemptions")
+      .updateOne(
+        { _id: new Types.ObjectId(first.id) },
+        { $set: { redeemedAt: new Date("2026-01-15T04:00:00.000Z") } },
+      );
+    const thisPeriod = {
+      orgId: String(xinyi),
+      from: "2026-10-01T00:00:00.000Z",
+      to: "2099-01-01T00:00:00.000Z",
+    };
+    const listOf = async (input: Record<string, unknown>) => {
+      const data = await ok<{
+        lotteryRedemptions: { total: number; items: Row[] };
+      }>(clerk, LIST, { input: { ...thisPeriod, ...input } });
+      return data.lotteryRedemptions.items.map((row) => row.id);
+    };
+    expect(await listOf({})).not.toContain(first.id);
+    expect(await listOf({ serialNo: first.serialNo })).toEqual([first.id]);
+    expect(
+      await listOf({ serialNo: first.serialNo, cashPointId: String(stall) }),
+    ).toEqual([]);
     await ok(clerk, REVOKE, { input: { id: first.id } });
     // 撤銷不收回:下一筆接著編,同一張再登記也是新號
     const third = await redeem(clerk, shiftId, back("033"), 200);

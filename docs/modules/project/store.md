@@ -209,7 +209,7 @@
   - `self`:自己登記、那一班還開著、有 `store.redeem` → 確認視窗(ST-41),不限時間、不用原因(原因代碼固定 `immediate`「當下撤銷」)。交易內鎖班時那一班剛好已送出交班結帳 → 擋下(`SHIFT_CLOSED`),不讓交班那一刻變成事後更正,改由 `store.undo-redeem` 撤銷。
   - `manager`:那一班已結帳、或不是自己登記的,有 `store.undo-redeem` → 撤銷原因(必填,欄位管理「撤銷兌獎原因」`lottery-redemption-revoke-reason`)+ 說明(ST-39b);班開著 → 應有增加,已結帳 → 記成那一班的事後更正。另有 [撤銷並重新登記]:原因填好後開兌獎視窗(標題「重新登記 · 收銀點」),撤銷與新增在同一個請求(`replaceLotteryRedemption`),新的那筆算原班、`replacesId` 指向原紀錄。
   - 已送兌:[撤銷兌獎] 停用並提示「已送兌,不能撤銷;要先撤回或退回進貨單 P-xxxx」(ST-39c),api 也拒絕(`REDEMPTION_SENT`)。
-- **兌獎紀錄分頁**(`RedemptionsTab`,ST-40):分店沿用看板的 `?org=`;篩選與頁碼存網址 `?redemptions=`(REACT-14):期間(空 = 這個月 1 日到今天,租戶時區)、收銀點、狀態、登記人(選項取同一段期間出現過的人)、單號(使用者 10/22 定案:`RD-0218` 或 `218` 都可,`@repo/domain/project/lottery` 的 `redemptionSerialQueryOf` 正規化後完全比對,索引 `(tenantId, serialNo)`;和其他篩選同時成立)、頁碼(一頁 20 筆);欄位 單號、時間、收銀點、班次、刮刮樂、金額、狀態、登記人、進貨單;平板 / 手機改卡片(標題列 單號 · 刮刮樂 · 金額)、篩選收進抽屜;點一列開兌獎紀錄詳情。
+- **兌獎紀錄分頁**(`RedemptionsTab`,ST-40):分店沿用看板的 `?org=`;篩選與頁碼存網址 `?redemptions=`(REACT-14):期間(空 = 這個月 1 日到今天,租戶時區)、收銀點、狀態、登記人(選項取同一段期間出現過的人)、單號(使用者 10/22 定案:`RD-0218` 或 `218` 都可,`@repo/domain/project/lottery` 的 `redemptionSerialQueryOf` 正規化後完全比對,索引 `(tenantId, serialNo)`;有單號時不看期間 —— 畫面不送 `from` / `to`、api 也忽略,畫面提示「輸入單號時不限期間」;收銀點 / 狀態 / 登記人仍同時成立)、頁碼(一頁 20 筆);欄位 單號、時間、收銀點、班次、刮刮樂、金額、狀態、登記人、進貨單;平板 / 手機改卡片(標題列 單號 · 刮刮樂 · 金額)、篩選收進抽屜;點一列開兌獎紀錄詳情。
 - **兌獎紀錄詳情**(`RedemptionDetailDialog`,ST-39a):標題列右側是單號(`RD-0218`;舊資料「—」),刮刮樂、獎金、收銀點 / 班(已交班)、登記、狀態(已送兌帶進貨單單號;事後更正另標);已撤銷另列撤銷人與原因。入口:兌獎紀錄分頁、[最近兌獎]、進貨單的新增頁兌獎區與檢視頁(讀取依據是讀得到那張進貨單,`lotteryPurchaseRedemptionRecords`;這兩個入口不能撤銷)。視窗串接在 `redemption/useRedemptionFlow.tsx`(看板與分頁共用)。
 
 ### 投庫 / 出庫(ST-12a / b)

@@ -35,7 +35,8 @@ export class RedemptionQueryService {
     private readonly views: RedemptionViews,
   ) {}
 
-  /** 兌獎紀錄分頁:篩選 期間、收銀點、狀態、登記人、單號(與其他條件同時成立);登記時間新到舊。 */
+  /** 兌獎紀錄分頁:篩選 期間、收銀點、狀態、登記人、單號;有單號時**不看期間**(客人拿單子回來查,可能是上個月的),
+   * 收銀點 / 狀態 / 登記人仍同時成立;登記時間新到舊。 */
   async list(
     operator: OperatorContext,
     input: LotteryRedemptionsInput,
@@ -45,13 +46,16 @@ export class RedemptionQueryService {
     if (orgId === null) {
       throw notFoundError(`org not found: ${input.orgId}`);
     }
-    const redeemedAt = {
-      ...(input.from == null ? {} : { $gte: input.from }),
-      ...(input.to == null ? {} : { $lt: input.to }),
-    };
+    const serialNo = redemptionSerialQueryOf(input.serialNo);
+    const redeemedAt =
+      serialNo === null
+        ? {
+            ...(input.from == null ? {} : { $gte: input.from }),
+            ...(input.to == null ? {} : { $lt: input.to }),
+          }
+        : {};
     const cashPointId = parseId(input.cashPointId);
     const redeemedBy = parseId(input.redeemedBy);
-    const serialNo = redemptionSerialQueryOf(input.serialNo);
     const filter = {
       orgId,
       ...(serialNo === null ? {} : { serialNo }),

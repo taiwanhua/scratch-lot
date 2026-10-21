@@ -89,7 +89,7 @@ export class LotteryRedemptionsInput {
   @Field(() => ID, { nullable: true })
   redeemedBy?: string | null;
 
-  /** 單號(`RD-0218` 或 `218` 都可;`redemptionSerialQueryOf` 正規化後完全比對);空白 = 不篩。 */
+  /** 單號(`RD-0218` 或 `218` 都可;`redemptionSerialQueryOf` 正規化後完全比對);空白 = 不篩;有值時不看 `from` / `to`。 */
   @Field(() => String, { nullable: true })
   serialNo?: string | null;
 

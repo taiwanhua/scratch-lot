@@ -236,6 +236,8 @@ export const redemptionWorld = (
       const matched = state.filter(
         (row) =>
           (serialNo === null || row.serialNo === serialNo) &&
+          (input.from == null || row.redeemedAt >= input.from) &&
+          (input.to == null || row.redeemedAt < input.to) &&
           (input.status == null || row.status === input.status) &&
           (input.cashPointId == null ||
             row.cashPoint.id === input.cashPointId) &&
