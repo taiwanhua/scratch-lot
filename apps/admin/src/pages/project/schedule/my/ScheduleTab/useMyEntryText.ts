@@ -55,8 +55,21 @@ export const useMyEntryText = (): MyEntryText => {
       `${task.role === "leader" ? t("roleShort.leader") : t("roleShort.helper")} · ${tasks.labelOf(task.taskKey)}`,
     punchTime: (value) => punchTimeOf(value, timezone),
     missing: (entry) => {
-      const key = missingKeyOf(entry.missing);
-      return key === null ? null : t(`missing.${key}`);
+      // 三個鍵都寫成字面值(i18n 死鍵掃描要看得到)
+      switch (missingKeyOf(entry.missing)) {
+        case "missingIn": {
+          return t("missing.missingIn");
+        }
+        case "missingOut": {
+          return t("missing.missingOut");
+        }
+        case "missingBoth": {
+          return t("missing.missingBoth");
+        }
+        case null: {
+          return null;
+        }
+      }
     },
   };
 };
