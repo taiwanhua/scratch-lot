@@ -81,6 +81,7 @@ export const RedemptionDetailDialog = ({
       fullScreen={isMobile}
       title={
         <Stack
+          component="span"
           direction="row"
           spacing={2}
           sx={{ justifyContent: "space-between", alignItems: "baseline" }}

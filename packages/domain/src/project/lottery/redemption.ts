@@ -1,3 +1,5 @@
+import type { SerialFormat } from "../../form/serial";
+
 /**
  * 兌獎(專案規格 6.5、6.12、8.2「兌獎」;正本 `docs/modules/project/store.md`「兌獎」):api 的登記 / 撤銷 /
  * 抽屜應有與 admin 的兌獎視窗、撤銷按鈕、進貨單的兌獎區共用的常數與純函式。
@@ -30,7 +32,7 @@ export const REDEMPTION_SERIAL_FORMAT = {
   prefix: "RD",
   period: "none",
   digits: 4,
-} as const;
+} as const satisfies SerialFormat;
 
 /** 兌獎視窗的常見金額選項(Figma ST-11a;另可自由輸入)。 */
 export const REDEMPTION_PRIZE_PRESETS: readonly number[] = [
