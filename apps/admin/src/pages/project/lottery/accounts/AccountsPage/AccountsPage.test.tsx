@@ -30,6 +30,20 @@ describe("帳戶管理:分頁與按鈕", () => {
     ).toBeInTheDocument();
   });
 
+  it("[+ 新增帳戶] 對話框:期初餘額與期初日期各自一行(不並排)", async () => {
+    const { user } = renderAccounts();
+    await user.click(await screen.findByRole("button", { name: "+ 新增帳戶" }));
+    const dialog = await screen.findByRole("dialog", { name: "新增帳戶" });
+    const rowOf = (label: RegExp) =>
+      within(dialog)
+        .getAllByLabelText(label)[0]
+        ?.closest(".MuiFormControl-root")?.parentElement ?? null;
+    const balanceRow = rowOf(/期初餘額/);
+    // 兩欄都直接排在對話框的直欄裡(同一層、直向),不是包在一列並排
+    expect(balanceRow).toBe(rowOf(/期初日期/));
+    expect(balanceRow).toBe(rowOf(/戶名/));
+  });
+
   it("沒有 view-bank-accounts / view-cash → 看不到那兩個分頁;只剩待結清款項時不顯示分頁籤", async () => {
     renderAccounts({ permissions: [P.viewOutstanding] });
     expect(await screen.findByText("P-0031 進貨")).toBeInTheDocument();
