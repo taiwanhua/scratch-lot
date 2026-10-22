@@ -2,6 +2,7 @@ import { describe, expect, it } from "@jest/globals";
 import { screen, waitFor, within } from "@testing-library/react";
 
 import { formFragment } from "@/test/msw/form-fixtures";
+import { urlParam } from "@/test/url-reload";
 import {
   resizeViewport,
   restoreViewportAfterEach,
@@ -30,6 +31,33 @@ const formList = () => screen.queryByRole("list", { name: "表單清單" });
 const properties = () => screen.queryByRole("region", { name: "屬性" });
 const expandButton = () =>
   screen.queryByRole("button", { name: "展開表單清單" });
+
+/** 第一張是「出差單」;平板寬展開清單改選第二張「購物單」並加一個欄位(有未存變更) */
+const secondIsDirty = async () => {
+  const rendered = renderFormsPage({
+    ...smallDesignOptions(),
+    forms: [
+      formFragment({
+        id: "form-trip",
+        key: "trip",
+        name: "出差單",
+        hasDraft: false,
+      }),
+      formFragment(),
+    ],
+  });
+  const { user } = rendered;
+  await screen.findByRole("heading", { name: "出差單" });
+  await user.click(screen.getByRole("button", { name: "展開表單清單" }));
+  const list = await screen.findByRole("list", { name: "表單清單" });
+  await user.click(within(list).getByText("購物單"));
+  const palette = await findDesigner();
+  await user.click(
+    within(palette).getByRole("button", { name: "新增數字欄位" }),
+  );
+  expect(await screen.findByText(/有未儲存的變更/)).toBeInTheDocument();
+  return rendered;
+};
 
 describe("表單管理:平板寬(sm–lg)畫布優先", () => {
   restoreViewportAfterEach();
@@ -164,5 +192,80 @@ describe("表單管理:平板寬(sm–lg)畫布優先", () => {
         name: "選取欄位「數字」(field_1)",
       }),
     ).toBeInTheDocument();
+  });
+
+  describe("未存變更時離開(第一張是「出差單」,改的是第二張「購物單」)", () => {
+    it("縮到手機寬按 [← 返回] 先問;留在設計 → 拉回平板寬,草稿與未存標示都在", async () => {
+      setViewportWidth(1024);
+      const { user } = await secondIsDirty();
+
+      resizeViewport(390);
+      await screen.findByRole("region", { name: "表單摘要" });
+      await user.click(screen.getByRole("button", { name: "← 返回" }));
+      const dialog = await screen.findByRole("dialog", {
+        name: "有未存的變更",
+      });
+      await user.click(
+        within(dialog).getByRole("button", { name: "留在設計" }),
+      );
+      expect(urlParam("detail")).toBe("shopping_list");
+
+      resizeViewport(1024);
+      await findDesigner();
+      expect(
+        screen.getByText(/草稿修訂 1 · 有未儲存的變更/),
+      ).toBeInTheDocument();
+      expect(
+        within(canvas()).getByRole("button", {
+          name: "選取欄位「數字」(field_1)",
+        }),
+      ).toBeInTheDocument();
+    });
+
+    it("縮到手機寬按 [← 返回] → 放棄變更:回到清單,拉回平板寬時草稿確實丟掉", async () => {
+      setViewportWidth(1024);
+      const { user } = await secondIsDirty();
+
+      resizeViewport(390);
+      await screen.findByRole("region", { name: "表單摘要" });
+      await user.click(screen.getByRole("button", { name: "← 返回" }));
+      const dialog = await screen.findByRole("dialog", {
+        name: "有未存的變更",
+      });
+      await user.click(
+        within(dialog).getByRole("button", { name: "放棄變更" }),
+      );
+      await waitFor(() => {
+        expect(formList()).not.toBeNull();
+      });
+      expect(urlParam("detail")).toBeNull();
+
+      resizeViewport(1024);
+      expect(
+        await screen.findByRole("heading", { name: "出差單" }),
+      ).toBeInTheDocument();
+      expect(screen.queryByText(/有未儲存的變更/)).toBeNull();
+    });
+
+    it("平板寬在清單點別張被未存攔下 → 留在設計:清單不收起、焦點不動", async () => {
+      setViewportWidth(1024);
+      const { user } = await secondIsDirty();
+
+      await user.click(screen.getByRole("button", { name: "展開表單清單" }));
+      const list = await screen.findByRole("list", { name: "表單清單" });
+      await user.click(within(list).getByText("出差單"));
+      const dialog = await screen.findByRole("dialog", {
+        name: "有未存的變更",
+      });
+      await user.click(
+        within(dialog).getByRole("button", { name: "留在設計" }),
+      );
+      await waitFor(() => {
+        expect(screen.queryByRole("dialog")).toBeNull();
+      });
+      expect(formList()).not.toBeNull();
+      expect(expandButton()).toBeNull();
+      expect(urlParam("detail")).toBe("shopping_list");
+    });
   });
 });

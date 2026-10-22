@@ -3,6 +3,7 @@ import { screen, waitFor, within } from "@testing-library/react";
 
 import { workflowFragment } from "@/test/msw/workflow-fixtures";
 import { setupReactFlowEnvironment } from "@/test/react-flow";
+import { urlParam } from "@/test/url-reload";
 import {
   resizeViewport,
   restoreViewportAfterEach,
@@ -161,5 +162,89 @@ describe("流程管理:平板寬(sm–lg)畫布優先", () => {
       within(back).getByRole("group", { name: "人資審核" }),
     ).toBeInTheDocument();
     expect(screen.getByText("有未存的變更")).toBeInTheDocument();
+  });
+
+  it("非第一個流程改到一半縮成手機寬按 [← 返回]:先問;留在設計 → 拉回平板寬,草稿還在", async () => {
+    setViewportWidth(1024);
+    const { user } = renderWorkflows({
+      world: {
+        ...defaultDesignOptions(),
+        workflows: [
+          workflowFragment({
+            id: "wf-trip_review",
+            key: "trip_review",
+            name: "出差審核",
+            hasDraft: false,
+          }),
+          workflowFragment(),
+        ],
+      },
+    });
+    await user.click(
+      await screen.findByRole("button", { name: "展開流程清單" }),
+    );
+    const list = await screen.findByRole("list", { name: "流程清單" });
+    await user.click(within(list).getByText("病假審核"));
+    const canvas = await findCanvas();
+    clickNode(canvas, "人資");
+    await user.type(
+      within(await screen.findByRole("region", { name: "屬性" })).getByRole(
+        "textbox",
+        { name: "名稱" },
+      ),
+      "審核",
+    );
+    expect(screen.getByText("有未存的變更")).toBeInTheDocument();
+
+    resizeViewport(390);
+    await screen.findByRole("region", { name: "流程摘要" });
+    await user.click(screen.getByRole("button", { name: "← 返回" }));
+    const dialog = await screen.findByRole("dialog", {
+      name: "還有沒存的變更",
+    });
+    await user.click(within(dialog).getByRole("button", { name: "留在設計" }));
+    expect(urlParam("detail")).toBe("leave_review");
+
+    resizeViewport(1024);
+    const back = await findCanvas();
+    expect(
+      within(back).getByRole("group", { name: "人資審核" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("有未存的變更")).toBeInTheDocument();
+  });
+
+  it("唯讀版本檢視在平板寬:點關卡打開唯讀屬性抽屜、Esc 關閉;草稿設計器的抽屜跟著設計器藏起來", async () => {
+    setViewportWidth(1024);
+    const { user } = renderWorkflows({ world });
+    const canvas = await findCanvas();
+    clickNode(canvas, "人資");
+    await screen.findByRole("region", { name: "屬性" });
+
+    await user.click(screen.getByRole("tab", { name: "流程版本" }));
+    const table = await screen.findByRole("table", { name: "流程版本" });
+    await user.click(
+      await within(table).findByRole("button", { name: "檢視 v1" }),
+    );
+    const viewer = await screen.findByRole("region", {
+      name: "檢視 v1(唯讀)",
+    });
+    // 草稿設計器藏起來了,它的抽屜也不在畫面上
+    expect(properties()).toBeNull();
+    expect(screen.queryByRole("region", { name: "屬性(唯讀)" })).toBeNull();
+
+    const versionCanvas = within(viewer).getByRole("region", {
+      name: "v1 的流程圖",
+    });
+    await within(versionCanvas).findByRole("group", { name: "直屬主管" });
+    clickNode(versionCanvas, "直屬主管");
+    const panel = await screen.findByRole("region", { name: "屬性(唯讀)" });
+    expect(within(panel).getByRole("textbox", { name: "名稱" })).toBeDisabled();
+    expect(isNodeSelected(versionCanvas, "直屬主管")).toBe(true);
+
+    await user.click(within(panel).getByRole("textbox", { name: "名稱" }));
+    await user.keyboard("{Escape}");
+    await waitFor(() => {
+      expect(screen.queryByRole("region", { name: "屬性(唯讀)" })).toBeNull();
+    });
   });
 });

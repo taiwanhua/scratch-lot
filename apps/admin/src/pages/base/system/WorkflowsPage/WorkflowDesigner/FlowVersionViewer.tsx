@@ -21,7 +21,6 @@ import { isFlowCcIssue } from "@/lib/base/workflow/validation";
 import { workflowErrorOf } from "@/lib/base/workflow/workflow-errors";
 
 import { DesignerPropertyPanel } from "../../DesignerPropertyPanel";
-import { designerDrawerReserve } from "../../designer-layout";
 import { useIsDesignerTablet } from "../../useIsDesignerTablet";
 import { BackToFlowButton } from "./BackToFlowButton";
 import { CheckFormField } from "./CheckFormField";
@@ -272,16 +271,7 @@ export const FlowVersionViewer = ({
           onLocate={locate}
         />
       )}
-      <Stack
-        direction="row"
-        spacing={2}
-        sx={{
-          alignItems: "flex-start",
-          pr: isDrawerOpen
-            ? (theme) => designerDrawerReserve(theme.spacing)
-            : 0,
-        }}
-      >
+      <Stack direction="row" spacing={2} sx={{ alignItems: "flex-start" }}>
         <Box sx={{ flex: 1, minWidth: 0 }}>
           <FlowCanvas
             definition={definition}

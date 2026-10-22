@@ -9,7 +9,12 @@ import { Stack } from "@repo/ui/stack";
 import { Tabs } from "@repo/ui/tabs";
 import { Typography } from "@repo/ui/typography";
 
-import { detailHeaderActionsSx, detailHeaderTitleSx } from "../designer-layout";
+import { DesignerDrawerReportContext } from "../designer-drawer-report";
+import {
+  designerDrawerReserve,
+  detailHeaderActionsSx,
+  detailHeaderTitleSx,
+} from "../designer-layout";
 import { FlowVersionViewer } from "./WorkflowDesigner/FlowVersionViewer";
 import { WorkflowDesigner } from "./WorkflowDesigner/WorkflowDesigner";
 import { AssignWorkflowDialog } from "./WorkflowDialogs/AssignWorkflowDialog";
@@ -52,6 +57,12 @@ export const WorkflowDetailPanel = ({
   const [tab, setTab] = useState<DetailTab>("design");
   /** 版本面板「檢視 vN」:設計頁籤換成唯讀檢視,草稿的設計器照樣掛著(未存變更不丟) */
   const [viewing, setViewing] = useState<number | null>(null);
+  /** 平板寬:設計器 / 唯讀版本檢視的屬性抽屜開著(卡片讓出抽屜寬;只看目前顯示的那一個) */
+  const [isDesignerDrawerOpen, setDesignerDrawerOpen] = useState(false);
+  const [isViewerDrawerOpen, setViewerDrawerOpen] = useState(false);
+  const isDrawerShown =
+    tab === "design" &&
+    (viewing === null ? isDesignerDrawerOpen : isViewerDrawerOpen);
   const [dialog, setDialog] = useState<OpenDialog>(() =>
     isForkRequested && workflow.abilities.canFork ? "fork" : null,
   );
@@ -60,7 +71,17 @@ export const WorkflowDetailPanel = ({
     <Card
       component="section"
       aria-label={t("region")}
-      sx={{ flex: 1, minWidth: 0, minHeight: 0, overflow: "auto", p: 3 }}
+      sx={{
+        flex: 1,
+        minWidth: 0,
+        minHeight: 0,
+        overflow: "auto",
+        p: 3,
+        // 平板寬屬性抽屜開著:整張卡片(含工具列的 [存草稿])縮到抽屜左邊
+        ...(isDrawerShown && {
+          pr: (theme) => designerDrawerReserve(theme.spacing),
+        }),
+      }}
     >
       <Stack spacing={2}>
         <Stack
@@ -154,18 +175,22 @@ export const WorkflowDetailPanel = ({
         {/* 兩個頁籤都保持掛載、只切顯示:切到「版本」不能讓設計器卸載(未存的改動會無聲消失) */}
         <Box hidden={tab !== "design"}>
           {viewing !== null && (
-            <FlowVersionViewer
-              key={viewing}
-              workflow={workflow}
-              version={viewing}
-              onClose={() => {
-                setViewing(null);
-              }}
-              onChanged={onChanged}
-            />
+            <DesignerDrawerReportContext value={setViewerDrawerOpen}>
+              <FlowVersionViewer
+                key={viewing}
+                workflow={workflow}
+                version={viewing}
+                onClose={() => {
+                  setViewing(null);
+                }}
+                onChanged={onChanged}
+              />
+            </DesignerDrawerReportContext>
           )}
           <Box hidden={viewing !== null}>
-            <WorkflowDesigner workflow={workflow} onChanged={onChanged} />
+            <DesignerDrawerReportContext value={setDesignerDrawerOpen}>
+              <WorkflowDesigner workflow={workflow} onChanged={onChanged} />
+            </DesignerDrawerReportContext>
           </Box>
         </Box>
         <Box hidden={tab !== "versions"}>

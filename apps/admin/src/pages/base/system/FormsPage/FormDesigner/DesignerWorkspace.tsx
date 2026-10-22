@@ -26,10 +26,7 @@ import {
 } from "@/lib/base/form-engine/field-references";
 
 import { DesignerPropertyPanel } from "../../DesignerPropertyPanel";
-import {
-  designerDrawerReserve,
-  designerWorkspaceSx,
-} from "../../designer-layout";
+import { designerWorkspaceSx } from "../../designer-layout";
 import { useIsDesignerTablet } from "../../useIsDesignerTablet";
 import { ComponentPalette } from "./ComponentPalette";
 import { DeleteFieldDialog } from "./DeleteFieldDialog";
@@ -61,7 +58,7 @@ export interface DesignerWorkspaceProps {
  *
  * 平板寬(`useIsDesignerTablet`)時屬性面板是右側抽屜(`DesignerPropertyPanel`):選了欄位 / 分區、
  * 新增欄位、按 [表單設定] 或點檢查結果時打開;關掉 = 取消選取,畫布回到滿寬。
- * 開著時畫布那一列讓出抽屜寬,選中的欄位捲進可視範圍。
+ * 開著時詳情卡片讓出抽屜寬(`DesignerPropertyPanel` 回報),選中的欄位捲進可視範圍。
  */
 export const DesignerWorkspace = ({
   form,
@@ -199,12 +196,7 @@ export const DesignerWorkspace = ({
           ref={rowRef}
           direction="row"
           spacing={2}
-          sx={{
-            ...designerWorkspaceSx,
-            pr: isDrawerOpen
-              ? (theme) => designerDrawerReserve(theme.spacing)
-              : 0,
-          }}
+          sx={designerWorkspaceSx}
         >
           <ComponentPalette
             onAddField={(type: FieldType) => {

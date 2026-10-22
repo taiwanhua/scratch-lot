@@ -3,13 +3,19 @@
 import MuiDrawer, {
   type DrawerProps as MuiDrawerProps,
 } from "@mui/material/Drawer";
-import Portal from "@mui/material/Portal";
-import { type KeyboardEvent, type ReactNode, useEffect, useRef } from "react";
+import {
+  type KeyboardEvent,
+  type ReactNode,
+  useEffect,
+  useId,
+  useRef,
+} from "react";
 
 import { IconButton } from "../IconButton/IconButton";
 import { Stack } from "../Stack/Stack";
 import { Typography } from "../Typography/Typography";
 import { CloseIcon } from "../icons/CloseIcon";
+import { mergeSx } from "../theme/sx";
 import { radius } from "../theme/tokens";
 
 export interface DrawerProps extends Omit<MuiDrawerProps, "title" | "anchor"> {
@@ -27,9 +33,18 @@ export interface DrawerProps extends Omit<MuiDrawerProps, "title" | "anchor"> {
    * false:**不蓋遮罩、不鎖焦點**的右側抽屜(MUI `persistent`),抽屜外的畫面照樣能看、能點 ——
    * 給「邊看邊改」的用途(例:設計器的屬性面板,改的同時要看得到畫布上選中的那一個)。
    * 這時由本元件補上鍵盤操作:打開時焦點移進抽屜、在抽屜裡按 Esc 呼叫 `onClose`、
-   * 關閉時焦點還給打開前的元素。只用在 `anchor="right"`。
+   * 關閉時焦點還給打開前的元素;內容是以標題命名的 `region`(`aria-labelledby`)。只用在 `anchor="right"`。
+   *
+   * 非遮罩抽屜**就地渲染、不開 portal**:Tab 順序跟著它在頁面上的位置走(不會跳到頁尾),
+   * 祖先被藏起來(`display: none`,例:切到別的頁籤)時抽屜跟著藏;紙面是 `position: fixed`,
+   * 所以祖先不能有 `transform` / `filter`(會把 fixed 的參照換成那個祖先)。外層那個 MUI 容器改成絕對定位,不佔呼叫端排版(flex 的 gap)。
    */
   isModal?: boolean;
+  /**
+   * 非遮罩抽屜的紙面從視窗頂端往下多少開始(theme.spacing 單位;預設 0 = 貼齊頂端)。
+   * 呼叫端有固定的頂部列時給它的高,抽屜就不會蓋住頂部列上的通知、頭像。
+   */
+  topOffset?: number;
 }
 
 /**
@@ -56,11 +71,14 @@ export const Drawer = ({
   children,
   slotProps,
   isModal = true,
+  topOffset = 0,
   open,
+  sx,
   ...rest
 }: DrawerProps) => {
   const isBottom = anchor === "bottom";
   const contentRef = useRef<HTMLDivElement>(null);
+  const titleId = useId();
   /** 非遮罩抽屜打開前的焦點(關閉時還回去) */
   const returnFocusRef = useRef<HTMLElement | null>(null);
 
@@ -100,7 +118,7 @@ export const Drawer = ({
     onClose();
   };
 
-  const drawer = (
+  return (
     <MuiDrawer
       anchor={anchor}
       open={open}
@@ -120,17 +138,24 @@ export const Drawer = ({
                 maxWidth: "100%",
                 borderTopLeftRadius: radius.lg,
                 borderBottomLeftRadius: radius.lg,
-                // 非遮罩(persistent)的紙面 MUI 不給陰影,補上與遮罩抽屜相同的層次
-                ...(!isModal && { boxShadow: 16 }),
+                // 非遮罩(persistent)的紙面 MUI 不給陰影,補上與遮罩抽屜相同的層次;從 `topOffset` 往下撐滿
+                ...(!isModal && {
+                  boxShadow: 16,
+                  top: (theme) => theme.spacing(topOffset),
+                  height: (theme) => `calc(100% - ${theme.spacing(topOffset)})`,
+                }),
               },
         },
       }}
+      // 非遮罩抽屜就地渲染:外層容器不參與呼叫端的排版
+      sx={isModal ? sx : mergeSx({ position: "absolute" }, sx)}
       {...rest}
     >
       <Stack
         ref={contentRef}
         tabIndex={isModal ? undefined : -1}
         onKeyDown={handleKeyDown}
+        {...(!isModal && { role: "region", "aria-labelledby": titleId })}
         sx={{
           height: "100%",
           minHeight: 0,
@@ -156,7 +181,7 @@ export const Drawer = ({
           direction="row"
           sx={{ alignItems: "center", pt: isBottom ? 1.5 : 2.5, pb: 1.5 }}
         >
-          <Typography variant="h6" sx={{ flex: 1 }}>
+          <Typography id={titleId} variant="h6" sx={{ flex: 1 }}>
             {title}
           </Typography>
           <IconButton aria-label={closeLabel} onClick={onClose}>
@@ -182,6 +207,4 @@ export const Drawer = ({
       </Stack>
     </MuiDrawer>
   );
-  // 非遮罩抽屜是就地渲染的(MUI 只替 temporary 開 portal):掛到 body,不佔呼叫端排版的位置(flex 的 gap)
-  return isModal ? drawer : <Portal>{drawer}</Portal>;
 };

@@ -92,7 +92,19 @@ export const WorkflowsPage = () => {
     edit.close();
   };
   const [isCreating, setIsCreating] = useState(false);
-  const [pendingKey, setPendingKey] = useState<string | null>(null);
+  /**
+   * 有未存變更時被攔下的離開:`key` 是要換過去的那一筆,null = 手機寬按 [← 返回] 回清單;
+   * `isFromList` = 從清單點的(真的換過去後平板寬要收起清單)。
+   */
+  const [pending, setPending] = useState<{
+    key: string | null;
+    isFromList: boolean;
+  } | null>(null);
+  /**
+   * 放棄變更時遞增,讓詳情以新的 key 重新掛載、丟掉草稿:手機寬返回清單時選取會退回預設那一筆,
+   * 可能就是正在改的那一筆,只靠 key 不會重掛(同資料範圍頁)
+   */
+  const [detailGeneration, setDetailGeneration] = useState(0);
   const isDirty = useWorkflowDraftStore(
     (state) => state.isDirty && state.workflowKey === data.selectedKey,
   );
@@ -105,19 +117,39 @@ export const WorkflowsPage = () => {
   const isDetailShown = urlPickedKey !== null || edit.requestedId !== null;
 
   /** 換流程:設計器有未存的變更就先問(留下 / 放棄 / 先存),不讓右欄一換就把改動丟掉。 */
-  const requestSelect = (key: string) => {
+  /** 真的離開:換到 `key`,或(null)手機寬回清單;從清單換過去的在平板寬收起清單 */
+  const leave = (key: string | null, isFromList: boolean) => {
+    if (key === null) {
+      edit.close();
+      setUrlPickedKey(null);
+      return;
+    }
+    data.select(key);
+    if (isFromList) {
+      list.collapse();
+    }
+  };
+
+  /**
+   * 換一筆或返回清單:設計器有未存的變更就先問(留下 / 放棄 / 先存),不讓右欄一換就把改動丟掉。
+   * 手機寬的 [← 返回] 也走這裡 —— 返回後選取會退回預設那一筆,正在改的那一筆會被重掛,草稿就沒了。
+   */
+  const requestLeave = (key: string | null, isFromList = false) => {
     // 同一筆不經過未存攔截(沒有要離開);網址還沒有選取時寫進去(手機寬才點得進預設那一筆)
-    if (key === data.selectedKey) {
+    if (key !== null && key === data.selectedKey) {
       if (urlPickedKey === null) {
         data.select(key);
+      }
+      if (isFromList) {
+        list.collapse();
       }
       return;
     }
     if (isDirty) {
-      setPendingKey(key);
+      setPending({ key, isFromList });
       return;
     }
-    data.select(key);
+    leave(key, isFromList);
   };
 
   const emptyText =
@@ -132,7 +164,7 @@ export const WorkflowsPage = () => {
       </Card>
     ) : (
       <WorkflowDetailPanel
-        key={data.selected.key}
+        key={`${data.selected.key}:${String(detailGeneration)}`}
         workflow={data.selected}
         isEditing={editingKey === data.selected.key}
         onEdit={edit.open}
@@ -193,8 +225,7 @@ export const WorkflowsPage = () => {
             onKeywordChange={data.setKeyword}
             selectedKey={isMobile ? urlPickedKey : data.selectedKey}
             onSelect={(key) => {
-              requestSelect(key);
-              list.collapse();
+              requestLeave(key, true);
             }}
             canCreate={hasPermission(WORKFLOWS_PERMISSIONS.create)}
             onCreate={() => {
@@ -227,8 +258,7 @@ export const WorkflowsPage = () => {
             isShown={isDetailShown}
             hasUnsavedChanges={isDirty}
             onBack={() => {
-              edit.close();
-              setUrlPickedKey(null);
+              requestLeave(null);
             }}
           />
         )}
@@ -245,21 +275,22 @@ export const WorkflowsPage = () => {
           </Box>
         )}
       </Stack>
-      {pendingKey !== null && (
+      {pending !== null && (
         <UnsavedWorkflowDialog
           onStay={() => {
-            setPendingKey(null);
+            setPending(null);
           }}
           onDiscard={() => {
-            data.select(pendingKey);
-            setPendingKey(null);
+            leave(pending.key, pending.isFromList);
+            setDetailGeneration((generation) => generation + 1);
+            setPending(null);
           }}
           onSaveAndLeave={async () => {
             const isSaved = saveDraft === null || (await saveDraft()) !== null;
             if (isSaved) {
-              data.select(pendingKey);
+              leave(pending.key, pending.isFromList);
             }
-            setPendingKey(null);
+            setPending(null);
             return isSaved;
           }}
         />

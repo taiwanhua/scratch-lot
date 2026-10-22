@@ -79,6 +79,7 @@ describe("Drawer", () => {
     const opener = screen.getByRole("button", { name: "打開" });
     await user.click(opener);
     const name = await screen.findByRole("textbox", { name: "名稱" });
+    expect(screen.getByRole("region", { name: "屬性" })).toContainElement(name);
     expect(screen.queryByRole("presentation")).toBeNull();
     expect(document.activeElement).not.toBe(opener);
     expect(document.activeElement?.contains(name)).toBe(true);

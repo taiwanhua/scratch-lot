@@ -8,6 +8,7 @@ import { Typography } from "@repo/ui/typography";
 
 import { NotificationBell } from "@/components/base/NotificationBell/NotificationBell";
 import { OrgSwitcher } from "@/components/base/OrgSwitcher/OrgSwitcher";
+import { APP_BAR_HEIGHT } from "@/lib/base/app-bar-geometry";
 import type { ShellModule } from "@/lib/base/module-tree";
 import { useSideNavStore } from "@/stores/base/useSideNavStore";
 
@@ -15,9 +16,6 @@ import { SIDE_NAV_DRAWER_ID } from "../SideNav/SideNav";
 import { useIsShellCompact } from "../shell-geometry";
 import { HelpButton } from "./HelpButton";
 import { UserMenu } from "./UserMenu";
-
-/** AppBar 高度(theme.spacing 單位;Figma AdminAppBar 64 高)。 */
-const BAR_HEIGHT = 8;
 
 export interface AppBarProps {
   me: MeQuery["me"];
@@ -46,7 +44,7 @@ export const AppBar = ({ me, title, module }: AppBarProps) => {
     <Box
       component="header"
       sx={{
-        height: (theme) => theme.spacing(BAR_HEIGHT),
+        height: (theme) => theme.spacing(APP_BAR_HEIGHT),
         display: "flex",
         alignItems: "center",
         gap: { xs: 1, sm: 2 },

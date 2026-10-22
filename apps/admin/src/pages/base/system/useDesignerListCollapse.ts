@@ -22,12 +22,20 @@ export interface DesignerListCollapse {
  * 按 [展開] 打開,在清單裡選一筆或按 [收起] 再收起。
  *
  * 收起與否是**暫時性介面狀態**,不放網址(REACT-14:同一個網址在電腦上打開本來就沒有收起這回事);
- * 視窗從電腦縮到平板寬時也是收起的。清單收起時藏起來、不卸載(搜尋與捲動留著,同 REACT-17)。
+ * 視窗從電腦或手機寬回到平板寬時也是收起的(離開平板寬就重設)。清單收起時藏起來、不卸載(搜尋與捲動留著,同 REACT-17)。
  * 使用者按的收起 / 展開會把焦點移到另一顆鈕上(被藏起來的鈕上的焦點會掉回 body);自動收起不搶焦點。
  */
 export const useDesignerListCollapse = (): DesignerListCollapse => {
   const isTablet = useIsDesignerTablet();
   const [isExpanded, setExpanded] = useState(false);
+  // 離開平板寬(拉寬成電腦或縮成手機)就忘掉展開過:下次回到平板寬又是收起的(render 中依前值調整,不用 effect)
+  const [wasTablet, setWasTablet] = useState(isTablet);
+  if (wasTablet !== isTablet) {
+    setWasTablet(isTablet);
+    if (!isTablet) {
+      setExpanded(false);
+    }
+  }
   const isCollapsed = isTablet && !isExpanded;
   const expandButtonRef = useRef<HTMLButtonElement>(null);
   const collapseButtonRef = useRef<HTMLButtonElement>(null);

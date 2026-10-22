@@ -20,7 +20,6 @@ import {
 import { isFlowCcIssue, mergeReports } from "@/lib/base/workflow/validation";
 
 import { DesignerPropertyPanel } from "../../DesignerPropertyPanel";
-import { designerDrawerReserve } from "../../designer-layout";
 import { useIsDesignerTablet } from "../../useIsDesignerTablet";
 import { BackToFlowButton } from "./BackToFlowButton";
 import { DesignerToolbar } from "./DesignerToolbar";
@@ -59,7 +58,7 @@ export interface FlowDesignerWorkspaceProps {
  *
  * 平板寬(`useIsDesignerTablet`)時屬性面板是右側抽屜(`DesignerPropertyPanel`):點關卡 / 匯合節點、
  * 按 [整個流程設定] 或點檢查結果時打開;關掉(或點流程圖空白處)= 取消選取,流程圖回到滿寬。
- * 開著時流程圖讓出抽屜寬,選中的節點跑出可視範圍就平移回來。
+ * 開著時詳情卡片讓出抽屜寬(`DesignerPropertyPanel` 回報),選中的節點跑出可視範圍就平移回來。
  */
 export const FlowDesignerWorkspace = ({
   workflow,
@@ -274,16 +273,7 @@ export const FlowDesignerWorkspace = ({
       {state.opError !== null && (
         <Alert severity="warning">{tOp(state.opError)}</Alert>
       )}
-      <Stack
-        direction="row"
-        spacing={2}
-        sx={{
-          alignItems: "flex-start",
-          pr: isDrawerOpen
-            ? (theme) => designerDrawerReserve(theme.spacing)
-            : 0,
-        }}
-      >
+      <Stack direction="row" spacing={2} sx={{ alignItems: "flex-start" }}>
         <Box sx={{ flex: 1, minWidth: 0 }}>
           <FlowCanvas
             definition={definition}

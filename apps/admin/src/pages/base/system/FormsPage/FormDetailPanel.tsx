@@ -22,7 +22,12 @@ import { useSession } from "@/hooks/base/useSession";
 import { formErrorOf } from "@/lib/base/form-engine/form-errors";
 
 import { ListColumnsDialog } from "../ListColumnsDialog/ListColumnsDialog";
-import { detailHeaderActionsSx, detailHeaderTitleSx } from "../designer-layout";
+import { DesignerDrawerReportContext } from "../designer-drawer-report";
+import {
+  designerDrawerReserve,
+  detailHeaderActionsSx,
+  detailHeaderTitleSx,
+} from "../designer-layout";
 import { AllowDraftField } from "./AllowDraftField";
 import { FormDesigner } from "./FormDesigner/FormDesigner";
 import { VersionViewer } from "./FormDesigner/VersionViewer";
@@ -72,6 +77,9 @@ export const FormDetailPanel = ({
   const [dialog, setDialog] = useState<OpenDialog>(null);
   /** 版本面板點「檢視」的版號:設計頁籤改成唯讀檢視那一版(草稿的設計器照樣掛著,不會丟未存變更) */
   const [viewing, setViewing] = useState<number | null>(null);
+  /** 平板寬:設計器的屬性抽屜開著(卡片讓出抽屜寬;設計器藏起來時不算) */
+  const [isDrawerOpen, setDrawerOpen] = useState(false);
+  const isDrawerShown = isDrawerOpen && tab === "design" && viewing === null;
   const { hasPermission } = usePermissions();
   // 流程綁定是租戶自己的設定(root 沒有表單綁定,api 回 TENANT_ONLY),且只對本組織**啟用中**的表單設
   // (每張啟用表單一個下拉):租戶視角才有 `tenantEnabled`,停用的不給綁
@@ -96,7 +104,17 @@ export const FormDetailPanel = ({
     <Card
       component="section"
       aria-label={t("region")}
-      sx={{ flex: 1, minWidth: 0, minHeight: 0, overflow: "auto", p: 3 }}
+      sx={{
+        flex: 1,
+        minWidth: 0,
+        minHeight: 0,
+        overflow: "auto",
+        p: 3,
+        // 平板寬屬性抽屜開著:整張卡片(含工具列的 [存草稿])縮到抽屜左邊
+        ...(isDrawerShown && {
+          pr: (theme) => designerDrawerReserve(theme.spacing),
+        }),
+      }}
     >
       <Stack spacing={2}>
         <Stack
@@ -226,7 +244,9 @@ export const FormDetailPanel = ({
             />
           )}
           <Box hidden={viewing !== null}>
-            <FormDesigner form={form} onChanged={onChanged} />
+            <DesignerDrawerReportContext value={setDrawerOpen}>
+              <FormDesigner form={form} onChanged={onChanged} />
+            </DesignerDrawerReportContext>
           </Box>
         </Box>
         <Box hidden={tab !== "versions"}>
