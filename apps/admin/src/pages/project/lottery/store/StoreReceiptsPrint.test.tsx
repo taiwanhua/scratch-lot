@@ -26,6 +26,13 @@ const PRINTING = {};
 /** 最後一張轉圖的單據文字。 */
 const printedText = () => receiptPngOf.mock.calls.at(-1)?.[0].textContent ?? "";
 
+/** 最後一張單據的 QR code 內容(`Receipt58Qr` 的 aria-label)。 */
+const printedQr = () =>
+  receiptPngOf.mock.calls
+    .at(-1)?.[0]
+    .querySelector("svg[role='img']")
+    ?.getAttribute("aria-label") ?? "";
+
 /** 等一下,確定沒有晚到的列印工作(「不印」的情境)。 */
 const settle = () =>
   new Promise((resolve) => {
@@ -81,6 +88,10 @@ describe("店面的 58mm 單據:看板動作後自動列印", () => {
     expect(printedText()).toContain("投庫單");
     expect(printedText()).toContain("店內櫃台");
     expect(printedText()).toContain("5,000");
+    // 店員沒有帳戶管理(看不到即時現金帳),QR 仍是完整路徑(依模組樹,不依權限)
+    expect(printedQr()).toBe(
+      `${globalThis.location.origin}/accounts?tab=cash&movementId=mv-1`,
+    );
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 

@@ -2495,6 +2495,12 @@ type LotteryPurchaseTrustee {
   label: String!
 }
 
+type LotteryReceiptLinks {
+  cashLedger: String
+  storeView: String
+  transferView: String
+}
+
 type LotteryRedemption {
   bookNo: String!
   cashPoint: LotteryAccountsRef!
@@ -3155,6 +3161,7 @@ type LotteryStoreShift {
 }
 
 type LotteryStoreShiftOption {
+  cashPointPrinterId: ID
   id: ID!
   label: String!
   mine: Boolean!
@@ -4335,6 +4342,7 @@ type Query {
   lotteryPurchaseReceiving(submissionId: ID!): LotteryPurchaseReceiving!
   lotteryPurchaseRedemptionRecords(submissionId: ID!): [LotteryRedemption!]!
   lotteryPurchaseRedemptions(orgId: ID!, submissionId: ID): LotteryPurchaseRedemptionsPayload!
+  lotteryReceiptLinks: LotteryReceiptLinks!
   lotteryRecentRedemptions(shiftId: ID!): [LotteryRedemption!]!
   lotteryRedemption(id: ID!): LotteryRedemptionPayload!
   lotteryRedemptionPreview(input: LotteryRedemptionPreviewInput!): LotteryRedemptionPreviewPayload!

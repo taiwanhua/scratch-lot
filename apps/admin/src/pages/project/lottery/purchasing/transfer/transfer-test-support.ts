@@ -12,6 +12,7 @@ import { accountsWorld } from "@/test/msw/project/lottery/accounts-handlers";
 import { masterDataOrgs } from "@/test/msw/project/lottery/master-data-fixtures";
 import { masterDataSharedLookupHandlers } from "@/test/msw/project/lottery/master-data-handlers";
 import { purchasingModules } from "@/test/msw/project/lottery/purchasing-fixtures";
+import { receiptLinksHandlers } from "@/test/msw/project/lottery/receipt-links-handlers";
 import {
   transferFormWorld,
   transferModules,
@@ -66,6 +67,7 @@ export const renderTransferPage = ({
     printing === undefined ? null : printButtonWorld(printing);
   server.use(
     ...(printingFake?.handlers ?? []),
+    ...(printing === undefined ? [] : receiptLinksHandlers()),
     ...(workflowFake?.handlers ?? []),
     ...transferFake.handlers,
     ...formsFake.handlers,

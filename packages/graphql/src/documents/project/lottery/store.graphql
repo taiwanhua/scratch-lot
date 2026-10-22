@@ -172,3 +172,11 @@ mutation WithdrawLotteryShiftCash($input: WithdrawLotteryShiftCashInput!) {
     cashPointPrinterId
   }
 }
+
+query LotteryReceiptLinks {
+  lotteryReceiptLinks {
+    cashLedger
+    storeView
+    transferView
+  }
+}

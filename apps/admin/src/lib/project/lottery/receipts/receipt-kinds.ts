@@ -232,7 +232,7 @@ export const RECEIPT_KINDS: {
     i18n: STORE_RECEIPTS_I18N,
     refIdOf: (payload) => payload.submissionId,
     orgIdOf: (payload) => payload.branchId,
-    defaultPrinterIdOf: () => null,
+    defaultPrinterIdOf: (payload) => payload.defaultPrinterId ?? null,
     documentNameOf: (payload, t) =>
       t("documentName", {
         title: t("saleRefund.title"),

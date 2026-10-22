@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { CHECKOUT_CONFIRM_FORM_KEY } from "@repo/domain/project/lottery";
 import { useFormSubmissionQuery, useLotteryCheckoutQuery } from "@repo/graphql";
 
+import { useReceiptLinks } from "@/components/project/lottery/ReceiptPrint/useReceiptLinks";
 import { useReceiptPrinter } from "@/components/project/lottery/ReceiptPrint/useReceiptPrinter";
 import { useSession } from "@/hooks/base/useSession";
 import type { WorkflowEffectProps } from "@/hooks/base/useWorkflowExtensions";
@@ -25,6 +26,7 @@ export const CheckoutReceiptEffect = ({
   const queryClient = useQueryClient();
   const { canPrint, printReceiptAfterCommit, host } = useReceiptPrinter();
   const receiptOf = useCheckoutReceipt();
+  const { fetchLinks } = useReceiptLinks();
   const started = useRef(false);
 
   useEffect(() => {
@@ -59,6 +61,7 @@ export const CheckoutReceiptEffect = ({
       const receipt = receiptOf(
         detail.lotteryCheckout,
         submission.serialNo ?? null,
+        await fetchLinks(),
       );
       await printCheckoutReceipt(printReceiptAfterCommit, receipt);
     };
@@ -70,6 +73,7 @@ export const CheckoutReceiptEffect = ({
   }, [
     canPrint,
     event,
+    fetchLinks,
     onDone,
     printReceiptAfterCommit,
     queryClient,

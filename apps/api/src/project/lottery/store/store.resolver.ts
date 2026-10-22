@@ -11,6 +11,7 @@ import {
   WithdrawLotteryShiftCashInput,
 } from "./dto/lottery-store.input";
 import {
+  LotteryReceiptLinksModel,
   LotteryShiftInfoPayload,
   LotteryStoreBoardModel,
   LotteryStoreBoardPayload,
@@ -18,6 +19,7 @@ import {
   LotteryStorePunchPayload,
   LotteryStoreShiftPayload,
 } from "./models/lottery-store.model";
+import { ReceiptLinksService } from "./receipt-links.service";
 import { StoreBoardService } from "./store-board.service";
 import { StoreCashService } from "./store-cash.service";
 import { StoreShiftsService } from "./store-shifts.service";
@@ -32,7 +34,20 @@ export class LotteryStoreResolver {
     private readonly board: StoreBoardService,
     private readonly shifts: StoreShiftsService,
     private readonly cash: StoreCashService,
+    private readonly receiptLinks: ReceiptLinksService,
   ) {}
+
+  /**
+   * 58mm 單據 QR code 的頁面路由(規格第 12 章):依模組樹組,不依操作者權限(印單的人不一定進得去,
+   * 掃的人進得去)。只有能列印的人需要。
+   */
+  @RequirePermission("api.printing.print")
+  @Query(() => LotteryReceiptLinksModel, { name: "lotteryReceiptLinks" })
+  lotteryReceiptLinks(
+    @CurrentOperator() operator: OperatorContext,
+  ): Promise<LotteryReceiptLinksModel> {
+    return this.receiptLinks.routes(operator);
+  }
 
   @Query(() => LotteryStoreBoardPayload, { name: "lotteryStoreBoard" })
   async lotteryStoreBoard(

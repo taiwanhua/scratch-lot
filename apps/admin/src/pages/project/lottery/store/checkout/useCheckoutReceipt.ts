@@ -1,8 +1,8 @@
 import { CHECKOUT_TYPE } from "@repo/domain/project/lottery";
 import type { LotteryCheckoutQuery } from "@repo/graphql";
 
+import type { ReceiptLinks } from "@/components/project/lottery/ReceiptPrint/useReceiptLinks";
 import type { ReceiptPrinter } from "@/components/project/lottery/ReceiptPrint/useReceiptPrinter";
-import { useStoreReceiptLinks } from "@/components/project/lottery/ReceiptPrint/useStoreReceiptLinks";
 import { useTemporalText } from "@/hooks/base/useTemporalText";
 import {
   type DailyCloseReceiptInput,
@@ -22,14 +22,17 @@ export type CheckoutReceipt =
 
 /**
  * 結帳單 → 58mm 單據的資料(送出後自動印的 `CheckoutReceiptEffect` 與檢視頁 [列印] 共用,補印和原單一致):
- * 時間依租戶時區(`formatTemporal` monthDayTime),QR 連到這張結帳確認申請的檢視頁。
+ * 時間依租戶時區(`formatTemporal` monthDayTime),QR 連到這張結帳確認申請的檢視頁(`links` 依模組樹,`useReceiptLinks`)。
  */
 export const useCheckoutReceipt = () => {
   const temporal = useTemporalText();
-  const { storeViewUrl } = useStoreReceiptLinks();
   const timeText = (value: string) => temporal(value, "monthDayTime");
-  return (detail: CheckoutDetail, serialNo: string | null): CheckoutReceipt => {
-    const url = storeViewUrl(detail.submissionId);
+  return (
+    detail: CheckoutDetail,
+    serialNo: string | null,
+    links: ReceiptLinks,
+  ): CheckoutReceipt => {
+    const url = links.storeViewUrl(detail.submissionId);
     return detail.type === CHECKOUT_TYPE.daily
       ? {
           kind: "store-daily-close",

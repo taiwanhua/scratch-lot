@@ -298,3 +298,22 @@ export class LotteryShiftInfoPayload {
   @Field(() => LotteryShiftInfoModel)
   item!: LotteryShiftInfoModel;
 }
+
+/**
+ * 58mm 單據 QR code 連到的頁面路由(依模組樹,不依讀者權限;`ReceiptLinksService`)。
+ * 模組或祖先停用、沒有 route → null。
+ */
+@ObjectType("LotteryReceiptLinks")
+export class LotteryReceiptLinksModel {
+  /** 即時現金帳(帳戶管理;投庫單、出庫單、存款單接 `?tab=cash&movementId=`) */
+  @Field(() => String, { nullable: true })
+  cashLedger!: string | null;
+
+  /** 店面管理檢視頁(交班結帳單、日結單、退貨退款收據接 `/<提交 id>`) */
+  @Field(() => String, { nullable: true })
+  storeView!: string | null;
+
+  /** 調貨單檢視頁(調貨出貨單、調貨付款收據接 `/<提交 id>`) */
+  @Field(() => String, { nullable: true })
+  transferView!: string | null;
+}

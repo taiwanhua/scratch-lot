@@ -2,9 +2,9 @@ import { useCallback } from "react";
 
 import type { LotterySettlementFieldsFragment } from "@repo/graphql";
 
-import { FORM_MODULE_PAGE_SUFFIXES } from "@/components/base/form-engine/FormModulePages/useFormModuleAccess";
+import { useReceiptLinks } from "@/components/project/lottery/ReceiptPrint/useReceiptLinks";
 import { useReceiptPrinter } from "@/components/project/lottery/ReceiptPrint/useReceiptPrinter";
-import { useModuleRoutes } from "@/hooks/base/useModuleRoutes";
+import { logReceiptPrintFailure } from "@/lib/project/lottery/receipts/receipt-log";
 import { transferPaymentInputOf } from "@/lib/project/lottery/receipts/transfer-payment-receipt";
 
 /**
@@ -14,19 +14,29 @@ import { transferPaymentInputOf } from "@/lib/project/lottery/receipts/transfer-
  */
 export const useSettlementReceipt = () => {
   const { printReceiptAfterCommit, host } = useReceiptPrinter();
-  const routeOf = useModuleRoutes();
+  // QR 的路由依模組樹(`lotteryReceiptLinks`),不依付款的人的權限
+  const { fetchLinks } = useReceiptLinks();
   const onRecorded = useCallback(
     (recordId: string, item: LotterySettlementFieldsFragment) => {
-      const viewRoute = routeOf(
-        `${item.moduleKey}.${FORM_MODULE_PAGE_SUFFIXES.viewPage}`,
-      );
-      const url = `${globalThis.location.origin}${viewRoute ?? ""}/${item.refId}`;
-      const input = transferPaymentInputOf(item, recordId, url);
-      if (input !== null) {
-        void printReceiptAfterCommit("transfer-payment", input);
-      }
+      const print = async () => {
+        const { transferViewUrl } = await fetchLinks();
+        const input = transferPaymentInputOf(
+          item,
+          recordId,
+          transferViewUrl(item.refId),
+        );
+        if (input !== null) {
+          await printReceiptAfterCommit("transfer-payment", input);
+        }
+      };
+      print().catch((error: unknown) => {
+        logReceiptPrintFailure("links failed", {
+          kind: "transfer-payment",
+          error,
+        });
+      });
     },
-    [printReceiptAfterCommit, routeOf],
+    [fetchLinks, printReceiptAfterCommit],
   );
   return { onRecorded, host };
 };

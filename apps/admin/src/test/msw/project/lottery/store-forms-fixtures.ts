@@ -299,6 +299,8 @@ export const sampleShiftOptions =
       openedAt: "2026-10-16T00:02:00.000Z",
       open: true,
       mine: true,
+      // 退貨退款收據印這個收銀點的印表機
+      cashPointPrinterId: "printer-counter",
     },
     {
       __typename: "LotteryStoreShiftOption",
@@ -307,6 +309,7 @@ export const sampleShiftOptions =
       openedAt: "2026-10-15T06:00:00.000Z",
       open: false,
       mine: false,
+      cashPointPrinterId: null,
     },
   ];
 

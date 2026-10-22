@@ -6,6 +6,7 @@ import { ScheduleModule } from "../../schedule/schedule.module";
 import { LotteryAccountsModule } from "../accounts/accounts.module";
 import { LotteryFieldOptionsModule } from "../field-options/lottery-field-options.module";
 import { LotteryTicketsModule } from "../tickets/tickets.module";
+import { ReceiptLinksService } from "./receipt-links.service";
 import { StoreShiftViews } from "./shift-views";
 import { StoreAccess } from "./store-access";
 import { StoreBoardService } from "./store-board.service";
@@ -53,6 +54,8 @@ import { LotteryStoreResolver } from "./store.resolver";
     StoreShiftsService,
     StoreCashService,
     StoreRegistrations,
+    // 58mm 單據 QR code 的頁面路由(依模組樹)
+    ReceiptLinksService,
     LotteryStoreResolver,
     // 銷售、當下撤銷、拆本、移櫃 / 收回(規格 6.2–6.4)
     StoreSalesSupport,

@@ -20,6 +20,7 @@ import {
   purchaseWorld,
 } from "@/test/msw/project/lottery/purchase-handlers";
 import { purchasingModules } from "@/test/msw/project/lottery/purchasing-fixtures";
+import { receiptLinksHandlers } from "@/test/msw/project/lottery/receipt-links-handlers";
 import { redemptionWorld } from "@/test/msw/project/lottery/redemption-handlers";
 import { server } from "@/test/msw/server";
 import { renderApp } from "@/test/render";
@@ -61,6 +62,7 @@ export const renderPurchasePage = ({
     printing === undefined ? null : printButtonWorld(printing);
   server.use(
     ...(printingFake?.handlers ?? []),
+    ...(printing === undefined ? [] : receiptLinksHandlers()),
     ...purchaseFake.handlers,
     // 新增頁的兌獎區(店內持有的兌獎紀錄)
     ...redemptionWorld().handlers,

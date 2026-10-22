@@ -32,6 +32,7 @@ import {
   requisitionFormWorld,
 } from "@/test/msw/project/lottery/purchasing-fixtures";
 import { purchasingWorld } from "@/test/msw/project/lottery/purchasing-handlers";
+import { receiptLinksHandlers } from "@/test/msw/project/lottery/receipt-links-handlers";
 import { redemptionWorld } from "@/test/msw/project/lottery/redemption-handlers";
 import {
   stocktakeFormWorld,
@@ -222,6 +223,8 @@ export const projectMockWorld: ProjectMockWorld = {
     ...storeFormsWorld().handlers,
     // 58mm 單據的 [列印]:可選的印表機(一台,可以試自動列印與補印)、已印次數、補印原因、建立工作;
     // 查工作沿用印表機管理那一個(每個操作只能有一個 handler)
+    // 58mm 單據 QR code 的頁面路由
+    ...receiptLinksHandlers(),
     ...printButtonWorld().handlers.filter(
       ({ info }) => info.operationName !== "PrintJob",
     ),

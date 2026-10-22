@@ -3,8 +3,9 @@ import { useTranslations } from "use-intl";
 
 import type { LotteryStoreShiftFieldsFragment } from "@repo/graphql";
 
+import { useReceiptLinks } from "@/components/project/lottery/ReceiptPrint/useReceiptLinks";
 import { useReceiptPrinter } from "@/components/project/lottery/ReceiptPrint/useReceiptPrinter";
-import { useStoreReceiptLinks } from "@/components/project/lottery/ReceiptPrint/useStoreReceiptLinks";
+import { logReceiptPrintFailure } from "@/lib/project/lottery/receipts/receipt-log";
 
 import { type CashMoveCommitted, CashMoveDialog } from "./CashMoveDialog";
 import type { BoardCashPoint } from "./CashPointSection";
@@ -47,28 +48,35 @@ export interface BoardDialogsProps {
 export const BoardDialogs = (props: BoardDialogsProps) => {
   const t = useTranslations("admin.lotteryStore.receipts");
   const { printReceiptAfterCommit, host } = useReceiptPrinter();
-  const { cashLedgerUrl } = useStoreReceiptLinks();
+  const { fetchLinks } = useReceiptLinks();
   const { org } = props;
   const printCashMove = (cashPointName: string, done: CashMoveCommitted) => {
     if (org === null) {
       return;
     }
-    const base = {
-      movementId: done.movementId,
-      branchId: org.id,
-      branchName: org.name,
-      cashPointName,
-      amount: done.amount,
-      note: done.note,
-      defaultPrinterId: done.cashPointPrinterId,
-      url: cashLedgerUrl(done.movementId),
+    const print = async () => {
+      const { cashLedgerUrl } = await fetchLinks();
+      const base = {
+        movementId: done.movementId,
+        branchId: org.id,
+        branchName: org.name,
+        cashPointName,
+        amount: done.amount,
+        note: done.note,
+        defaultPrinterId: done.cashPointPrinterId,
+        url: cashLedgerUrl(done.movementId),
+      };
+      await (done.kind === "deposit"
+        ? printReceiptAfterCommit("store-vault-deposit", base)
+        : printReceiptAfterCommit("store-vault-withdraw", {
+            ...base,
+            reasonLabel: done.reasonLabel,
+          }));
     };
-    void (done.kind === "deposit"
-      ? printReceiptAfterCommit("store-vault-deposit", base)
-      : printReceiptAfterCommit("store-vault-withdraw", {
-          ...base,
-          reasonLabel: done.reasonLabel,
-        }));
+    // 讀不到 QR 的路由:不印,只記 log(列印是交易後的附帶動作)
+    print().catch((error: unknown) => {
+      logReceiptPrintFailure("links failed", { kind: done.kind, error });
+    });
   };
   const printOpeningFloat = (
     cashPointName: string,

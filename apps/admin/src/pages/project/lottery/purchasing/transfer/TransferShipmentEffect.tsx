@@ -10,7 +10,7 @@ import {
   useWorkflowInstanceQuery,
 } from "@repo/graphql";
 
-import { useFormModuleAccess } from "@/components/base/form-engine/FormModulePages/useFormModuleAccess";
+import { useReceiptLinks } from "@/components/project/lottery/ReceiptPrint/useReceiptLinks";
 import { useReceiptPrinter } from "@/components/project/lottery/ReceiptPrint/useReceiptPrinter";
 import { useSession } from "@/hooks/base/useSession";
 import type {
@@ -18,8 +18,6 @@ import type {
   WorkflowEffectProps,
 } from "@/hooks/base/useWorkflowExtensions";
 import { transferShipmentInputOf } from "@/lib/project/lottery/receipts/transfer-shipment-receipt";
-
-import { TRANSFER_MODULE_KEY } from "./transfer-keys";
 
 type Instance = NonNullable<
   Awaited<
@@ -64,7 +62,8 @@ export const TransferShipmentEffect = ({
   const { session } = useSession();
   const queryClient = useQueryClient();
   const { canPrint, printReceiptAfterCommit, host } = useReceiptPrinter();
-  const { viewRoute } = useFormModuleAccess(TRANSFER_MODULE_KEY);
+  // QR 的路由依模組樹(`lotteryReceiptLinks`),不依核准的人的權限
+  const { fetchLinks } = useReceiptLinks();
   const started = useRef(false);
 
   useEffect(() => {
@@ -116,6 +115,7 @@ export const TransferShipmentEffect = ({
       if (inTransit.length === 0) {
         return;
       }
+      const links = await fetchLinks();
       await printReceiptAfterCommit(
         "transfer-shipment",
         transferShipmentInputOf(
@@ -124,7 +124,7 @@ export const TransferShipmentEffect = ({
             submissionId,
             serialNo: serialNo ?? null,
             fromBranchId: transferHeaderOf(values).fromBranchId ?? "",
-            url: `${globalThis.location.origin}${viewRoute ?? ""}/${submissionId}`,
+            url: links.transferViewUrl(submissionId),
           },
           inTransit,
         ),
@@ -138,11 +138,11 @@ export const TransferShipmentEffect = ({
   }, [
     canPrint,
     event,
+    fetchLinks,
     onDone,
     printReceiptAfterCommit,
     queryClient,
     session.client,
-    viewRoute,
   ]);
 
   return host;

@@ -28,6 +28,10 @@ export class LotteryStoreShiftOptionModel {
   /** 操作者自己開著的班(退款班次的預設 = 送出人目前的班)。 */
   @Field(() => Boolean)
   mine!: boolean;
+
+  /** 這一班收銀點的印表機(退貨退款收據列印的預設;null = 分店預設)。 */
+  @Field(() => ID, { nullable: true })
+  cashPointPrinterId!: string | null;
 }
 
 @ObjectType("LotteryStoreShiftOptionsPayload")

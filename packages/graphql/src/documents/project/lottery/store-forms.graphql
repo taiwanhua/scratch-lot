@@ -4,6 +4,7 @@ fragment LotteryStoreShiftOptionFields on LotteryStoreShiftOption {
   openedAt
   open
   mine
+  cashPointPrinterId
 }
 
 fragment LotteryStoreSaleReversalRowFields on LotteryStoreSaleReversalRow {

@@ -14,12 +14,13 @@ import { Tooltip } from "@repo/ui/tooltip";
 import { Typography } from "@repo/ui/typography";
 
 import { useFormModuleAccess } from "@/components/base/form-engine/FormModulePages/useFormModuleAccess";
+import { useReceiptLinks } from "@/components/project/lottery/ReceiptPrint/useReceiptLinks";
 import { useReceiptPrinter } from "@/components/project/lottery/ReceiptPrint/useReceiptPrinter";
-import { useStoreReceiptLinks } from "@/components/project/lottery/ReceiptPrint/useStoreReceiptLinks";
 import { useMe } from "@/hooks/base/useMe";
 import { usePermissions } from "@/hooks/base/usePermissions";
 import { useSession } from "@/hooks/base/useSession";
 import { useTemporalText } from "@/hooks/base/useTemporalText";
+import { logReceiptPrintFailure } from "@/lib/project/lottery/receipts/receipt-log";
 
 import { storeFormCreateHref } from "../forms/store-forms-keys";
 import { BankDepositDialog } from "./BankDepositDialog";
@@ -57,7 +58,7 @@ export const useDailyCloseEntry = (
   const access = useFormModuleAccess(STORE_KEY);
   const [depositOpen, setDepositOpen] = useState(false);
   const { printReceiptAfterCommit, host } = useReceiptPrinter();
-  const { cashLedgerUrl } = useStoreReceiptLinks();
+  const { fetchLinks } = useReceiptLinks();
   const handler = useMe().data?.me.name ?? "";
   const status = useLotteryDailyCloseStatusQuery(
     session.client,
@@ -146,11 +147,17 @@ export const useDailyCloseEntry = (
               setDepositOpen(false);
             }}
             onCommitted={(done) => {
-              void printReceiptAfterCommit("store-bank-deposit", {
-                ...done,
-                handler,
-                url: cashLedgerUrl(done.movementId),
-              });
+              fetchLinks()
+                .then(({ cashLedgerUrl }) =>
+                  printReceiptAfterCommit("store-bank-deposit", {
+                    ...done,
+                    handler,
+                    url: cashLedgerUrl(done.movementId),
+                  }),
+                )
+                .catch((error: unknown) => {
+                  logReceiptPrintFailure("links failed", { error });
+                });
             }}
           />
         ) : null}

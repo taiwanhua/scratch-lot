@@ -23,6 +23,7 @@ import {
 import { inventoryWorld } from "@/test/msw/project/lottery/inventory-handlers";
 import { masterDataOrgs } from "@/test/msw/project/lottery/master-data-fixtures";
 import { masterDataSharedLookupHandlers } from "@/test/msw/project/lottery/master-data-handlers";
+import { receiptLinksHandlers } from "@/test/msw/project/lottery/receipt-links-handlers";
 import type { RedemptionFixture } from "@/test/msw/project/lottery/redemption-fixtures";
 import { redemptionWorld } from "@/test/msw/project/lottery/redemption-handlers";
 import {
@@ -127,16 +128,18 @@ export const renderStore = ({
   const stocktakeFlow = stocktakeWorkflowWorld();
   const checkoutFlow = checkoutWorkflowWorld();
   const stocktake = stocktakeWorld(stocktakeOptions);
+  const workflow = workflowRuntimeWorld({
+    instances: [...stocktakeFlow.instances, ...checkoutFlow.instances],
+    tasks: [...stocktakeFlow.tasks, ...checkoutFlow.tasks],
+  });
   const dailyClose = dailyCloseWorld(dailyCloseOptions);
   server.use(
     ...(printingFake?.handlers ?? []),
+    ...(printing === undefined ? [] : receiptLinksHandlers()),
     ...stocktake.handlers,
     ...checkoutWorld(checkoutOptions).handlers,
     ...dailyClose.handlers,
-    ...workflowRuntimeWorld({
-      instances: [...stocktakeFlow.instances, ...checkoutFlow.instances],
-      tasks: [...stocktakeFlow.tasks, ...checkoutFlow.tasks],
-    }).handlers,
+    ...workflow.handlers,
     ...formsFake.handlers,
     ...runtime.handlers,
     ...fake.handlers,
@@ -173,5 +176,6 @@ export const renderStore = ({
     stocktake,
     dailyClose,
     printingFake,
+    workflow,
   };
 };

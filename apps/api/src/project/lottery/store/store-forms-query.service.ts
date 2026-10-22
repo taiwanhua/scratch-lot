@@ -98,11 +98,12 @@ export class StoreFormsQueryService {
         $or: [{ closedAt: null }, { openedAt: { $gte: since } }],
       },
       {
-        select: "label openedAt closedAt openedBy",
+        select: "label openedAt closedAt openedBy cashPointId",
         sort: { openedAt: -1 },
         limit: SHIFT_OPTION_LIMIT,
       },
     );
+    const points = await this.support.cashPointsOf(operator, store.orgId);
     return rows.map((shift) => ({
       id: String(shift._id),
       label: shift.label,
@@ -112,6 +113,8 @@ export class StoreFormsQueryService {
         shift.closedAt === null &&
         operator.actorId !== null &&
         shift.openedBy.equals(operator.actorId),
+      cashPointPrinterId:
+        points.get(String(shift.cashPointId))?.printerId?.toString() ?? null,
     }));
   }
 

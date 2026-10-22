@@ -20,6 +20,8 @@ export interface SaleRefundReceiptInput {
   branchId: string;
   /** 申請還在審核(送出後沒有自動通過)→ 標示「待核准」 */
   pending: boolean;
+  /** 印表機:退款班次所屬收銀點的印表機;沒有就用分店預設(規格 5.5) */
+  defaultPrinterId?: string | null;
   /** 退款班次(退款從哪一班的抽屜付) */
   refundShiftLabel: string;
   reasonLabel: string;

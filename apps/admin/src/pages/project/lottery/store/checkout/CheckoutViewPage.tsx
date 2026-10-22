@@ -18,6 +18,7 @@ import { ApprovalSection } from "@/components/base/workflow/ApprovalSection/Appr
 import { SubmissionStatusTag } from "@/components/base/workflow/SubmissionStatusTag";
 import { DenominationCount } from "@/components/project/lottery/DenominationCount/DenominationCount";
 import { ReceiptPrintButton } from "@/components/project/lottery/ReceiptPrint/ReceiptPrintButton";
+import { useReceiptLinks } from "@/components/project/lottery/ReceiptPrint/useReceiptLinks";
 import { useFormSubmission } from "@/hooks/base/useFormSubmission";
 import { useRouteTabHref } from "@/hooks/base/useRouteTabHref";
 import { useRouteTabItemLabel } from "@/hooks/base/useRouteTabItemLabel";
@@ -43,10 +44,11 @@ const CheckoutPrintButton = ({
   serialNo: string | null;
 }) => {
   const receiptOf = useCheckoutReceipt();
-  if (detail === null) {
+  const { links } = useReceiptLinks();
+  if (detail === null || links === null) {
     return null;
   }
-  const receipt = receiptOf(detail, serialNo);
+  const receipt = receiptOf(detail, serialNo, links);
   return receipt.kind === "store-daily-close" ? (
     <ReceiptPrintButton kind="store-daily-close" payload={receipt.payload} />
   ) : (

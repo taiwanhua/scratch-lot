@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, jest } from "@jest/globals";
-import { screen, waitFor } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 
 // jsdom 不會畫 canvas:轉圖換成固定的 PNG(受測頁面必須在替身掛上之後才載入,先例 TransferCreatePagePrint.test.tsx)
 const PNG = Uint8Array.of(137, 80, 78, 71, 13, 10, 26, 10);
@@ -21,6 +21,7 @@ const { sampleDailyCloseDetail } =
   await import("@/test/msw/project/lottery/daily-close-fixtures");
 const { fastUser } =
   await import("../../schedule/manage/roster/roster-test-queries");
+const { printerFixture } = await import("@/test/msw/print-button-handlers");
 const { renderStore } = await import("./store-test-support");
 
 const STORE_A = "org-store-a";
@@ -28,6 +29,13 @@ const PRINTING = {};
 
 /** 最後一張轉圖的單據文字。 */
 const printedText = () => receiptPngOf.mock.calls.at(-1)?.[0].textContent ?? "";
+
+/** 最後一張單據的 QR code 內容(`Receipt58Qr` 的 aria-label)。 */
+const printedQr = () =>
+  receiptPngOf.mock.calls
+    .at(-1)?.[0]
+    .querySelector("svg[role='img']")
+    ?.getAttribute("aria-label") ?? "";
 
 /** 等一下,確定沒有晚到的列印工作(「不印」的情境)。 */
 const settle = () =>
@@ -234,24 +242,45 @@ describe("店面的 58mm 單據:申請送出後自動列印", () => {
     expect(failing.printingFake?.created).toEqual([]);
     failing.unmount();
 
+    // 建立列印工作的回應先卡住:印的期間按鈕維持停用
+    const { promise: gate, resolve: release } = Promise.withResolvers<null>();
     const { printingFake } = renderStore({
       path,
-      printing: PRINTING,
+      printing: {
+        // 分店預設是 printer-1;退款班次(店內櫃台)的收銀點印表機是 printer-counter
+        printers: [
+          printerFixture(),
+          printerFixture({
+            id: "printer-counter",
+            name: "店內櫃台收據機",
+            isDefault: false,
+          }),
+        ],
+        createResponseGate: gate,
+      },
       formRuntime: { submitAs: { status: FormSubmissionStatus.Reviewing } },
     });
     await fill();
     await waitFor(() => {
       expect(printingFake?.created).toHaveLength(1);
     });
+    expect(
+      screen.getByRole("button", { name: "送出並列印收據" }),
+    ).toBeDisabled();
+    release(null);
     expect(printingFake?.created[0]).toMatchObject({
       documentType: "lottery-store-sale-refund",
       refType: "lottery-store-sale-refund",
+      printerId: "printer-counter",
     });
     const text = printedText();
     expect(text).toContain("退貨退款收據");
     expect(text).toContain("待核准");
     expect(text).toContain("5164 發大財");
     expect(text).toContain("#012");
+    expect(printedQr()).toMatch(
+      new RegExp(`^${globalThis.location.origin}/store/view-page/.+`, "u"),
+    );
   });
 
   it("撤銷售出申請(不退款給客人)→ 按鈕 [送出]、送出後不印", async () => {
@@ -274,6 +303,56 @@ describe("店面的 58mm 單據:申請送出後自動列印", () => {
     });
     await settle();
     expect(printingFake?.created).toEqual([]);
+  });
+
+  it("審核決定(店長核准結帳確認申請)→ 不印(只有送出才印)", async () => {
+    const user = fastUser();
+    const { printingFake, workflow } = renderStore({
+      path: "/store/view-page/sub-checkout-42",
+      printing: PRINTING,
+    });
+    checkoutDetailAs("shift");
+    const group = await screen.findByRole("group", { name: /店長審核/u });
+    await user.click(within(group).getByRole("button", { name: "核准" }));
+    const dialog = await screen.findByRole("dialog");
+    await user.click(
+      within(dialog).getByRole("button", { name: /核准|確認/u }),
+    );
+    await waitFor(() => {
+      expect(workflow.inputs.decide).toHaveLength(1);
+    });
+    await settle();
+    expect(printingFake?.created).toEqual([]);
+    expect(receiptPngOf).not.toHaveBeenCalled();
+  });
+
+  it("退回後在編輯頁再送出結帳確認申請 → 一張交班結帳單", async () => {
+    const user = fastUser();
+    const { printingFake, runtime } = renderStore({
+      path: "/store/edit-page/sub-checkout-42",
+      printing: PRINTING,
+      formRuntime: { submitAs: { status: FormSubmissionStatus.Reviewing } },
+    });
+    checkoutDetailAs("shift");
+    await screen.findByRole("heading", { name: "交班結帳 · 店內櫃台" });
+    for (let step = 0; step < 3; step += 1) {
+      const next = await screen.findByRole("button", { name: "下一步" });
+      await waitFor(() => {
+        expect(next).toBeEnabled();
+      });
+      await user.click(next);
+    }
+    await user.click(
+      await screen.findByRole("button", { name: "送出並列印結帳單" }),
+    );
+    await waitFor(() => {
+      expect(printingFake?.created).toHaveLength(1);
+    });
+    expect(runtime.inputs.submitFormSubmission).toHaveLength(1);
+    expect(printingFake?.created[0]).toMatchObject({
+      documentType: "lottery-store-shift-checkout",
+      refId: "sub-checkout-42",
+    });
   });
 
   it("結帳確認申請檢視頁:頁首 [列印] 印交班結帳單(和送出時同一份版面)", async () => {

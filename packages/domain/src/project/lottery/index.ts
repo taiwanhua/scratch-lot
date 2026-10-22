@@ -24,6 +24,7 @@ export * from "./daily-close";
 export * from "./inventory";
 export * from "./portable-lookups";
 export * from "./purchase";
+export * from "./receipt-links";
 export * from "./redemption";
 export * from "./requisition";
 export * from "./store";

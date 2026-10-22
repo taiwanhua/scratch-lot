@@ -155,6 +155,7 @@ const SHIFT_OPTIONS = /* GraphQL */ `
         label
         open
         mine
+        cashPointPrinterId
       }
     }
   }
@@ -1216,10 +1217,20 @@ describe("撤銷售出申請與現金更正單(規格 8.5、8.8)", () => {
       }
     });
 
-    it("退款班次的選項:本店的班,自己開著的標 mine", async () => {
+    it("退款班次的選項:本店的班,自己開著的標 mine;帶收銀點的印表機(退貨退款收據列印用)", async () => {
+      const printerId = new Types.ObjectId();
+      await db()
+        .collection(LOTTERY_CASH_POINTS_COLLECTION)
+        .updateOne({ orgId: xinyi, name: "店內櫃台" }, { $set: { printerId } });
       const data = await ok<{
         lotteryStoreShiftOptions: {
-          items: { id: string; label: string; open: boolean; mine: boolean }[];
+          items: {
+            id: string;
+            label: string;
+            open: boolean;
+            mine: boolean;
+            cashPointPrinterId: string | null;
+          }[];
         };
       }>(api, wang.token, SHIFT_OPTIONS, { orgId: String(xinyi) });
       expect(data.lotteryStoreShiftOptions.items).toEqual(
@@ -1229,12 +1240,14 @@ describe("撤銷售出申請與現金更正單(規格 8.5、8.8)", () => {
             label: "店內櫃台 · 王小明",
             open: true,
             mine: true,
+            cashPointPrinterId: String(printerId),
           },
           {
             id: String(closedShift),
             label: "店外攤位 · 王小明",
             open: false,
             mine: false,
+            cashPointPrinterId: null,
           },
         ]),
       );

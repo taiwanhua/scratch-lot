@@ -2727,6 +2727,13 @@ export type LotteryPurchaseTrustee = {
   label: Scalars['String']['output'];
 };
 
+export type LotteryReceiptLinks = {
+  __typename?: 'LotteryReceiptLinks';
+  cashLedger?: Maybe<Scalars['String']['output']>;
+  storeView?: Maybe<Scalars['String']['output']>;
+  transferView?: Maybe<Scalars['String']['output']>;
+};
+
 export type LotteryRedemption = {
   __typename?: 'LotteryRedemption';
   bookNo: Scalars['String']['output'];
@@ -3454,6 +3461,7 @@ export type LotteryStoreShift = {
 
 export type LotteryStoreShiftOption = {
   __typename?: 'LotteryStoreShiftOption';
+  cashPointPrinterId?: Maybe<Scalars['ID']['output']>;
   id: Scalars['ID']['output'];
   label: Scalars['String']['output'];
   mine: Scalars['Boolean']['output'];
@@ -5581,6 +5589,7 @@ export type Query = {
   lotteryPurchaseReceiving: LotteryPurchaseReceiving;
   lotteryPurchaseRedemptionRecords: Array<LotteryRedemption>;
   lotteryPurchaseRedemptions: LotteryPurchaseRedemptionsPayload;
+  lotteryReceiptLinks: LotteryReceiptLinks;
   lotteryRecentRedemptions: Array<LotteryRedemption>;
   lotteryRedemption: LotteryRedemptionPayload;
   lotteryRedemptionPreview: LotteryRedemptionPreviewPayload;
@@ -10687,7 +10696,7 @@ export type LotteryStocktakeQueryVariables = Exact<{
 
 export type LotteryStocktakeQuery = { __typename?: 'Query', lotteryStocktake: { __typename?: 'LotteryStocktakeDetail', id: string, submissionId: string, type: string, status: string, orgId: string, orgName: string, startedAt: string, submittedAt: string, confirmedAt?: string | null, draft: string, scopeCashPoint?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null, submittedBy?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null, lines: Array<{ __typename?: 'LotteryStocktakeDetailLine', bookId: string, cashPointId: string, cashPointName: string, gameCode: string, gameName: string, bookNo: string, method: string, countedAt: string, systemCount: number, presentCount: number, diffs: Array<{ __typename?: 'LotteryStocktakeDetailDiff', ticketNo: string, kind: string, action: string, postClose: boolean, amount: number }> }>, unopened: Array<{ __typename?: 'LotteryStocktakeDetailUnopened', gameCode: string, gameName: string, bookNo: string, ticketCount: number, present: boolean }>, lostReview: Array<{ __typename?: 'LotteryStocktakeDetailLostReview', label: string, action: string, reasonLabel?: string | null, reasonNote?: string | null }>, uncountedBooks: Array<{ __typename?: 'LotteryStocktakeDetailUncounted', bookId: string, cashPointId: string, cashPointName: string, gameCode: string, gameName: string, bookNo: string }>, summary: { __typename?: 'LotteryStocktakeSummary', books: number, backfillCount: number, backfillAmount: number, newInvestigate: number, flagged: number, confirmLost: number, confirmLostCost?: number | null, uncountedCount: number } } };
 
-export type LotteryStoreShiftOptionFieldsFragment = { __typename?: 'LotteryStoreShiftOption', id: string, label: string, openedAt: string, open: boolean, mine: boolean };
+export type LotteryStoreShiftOptionFieldsFragment = { __typename?: 'LotteryStoreShiftOption', id: string, label: string, openedAt: string, open: boolean, mine: boolean, cashPointPrinterId?: string | null };
 
 export type LotteryStoreSaleReversalRowFieldsFragment = { __typename?: 'LotteryStoreSaleReversalRow', id: string, serialNo?: string | null, status: FormSubmissionStatus, ticketGroups: Array<string>, ticketCount: number, reasonLabel: string, refund: boolean, refundAmount: number, refundShiftLabel?: string | null, submittedAt?: string | null };
 
@@ -10698,7 +10707,7 @@ export type LotteryStoreShiftOptionsQueryVariables = Exact<{
 }>;
 
 
-export type LotteryStoreShiftOptionsQuery = { __typename?: 'Query', lotteryStoreShiftOptions: { __typename?: 'LotteryStoreShiftOptionsPayload', items: Array<{ __typename?: 'LotteryStoreShiftOption', id: string, label: string, openedAt: string, open: boolean, mine: boolean }> } };
+export type LotteryStoreShiftOptionsQuery = { __typename?: 'Query', lotteryStoreShiftOptions: { __typename?: 'LotteryStoreShiftOptionsPayload', items: Array<{ __typename?: 'LotteryStoreShiftOption', id: string, label: string, openedAt: string, open: boolean, mine: boolean, cashPointPrinterId?: string | null }> } };
 
 export type LotteryStoreSaleReversalsQueryVariables = Exact<{
   orgId: Scalars['ID']['input'];
@@ -10858,6 +10867,11 @@ export type WithdrawLotteryShiftCashMutationVariables = Exact<{
 
 
 export type WithdrawLotteryShiftCashMutation = { __typename?: 'Mutation', withdrawLotteryShiftCash: { __typename?: 'LotteryStoreShiftPayload', movementId?: string | null, cashPointPrinterId?: string | null, item: { __typename?: 'LotteryStoreShift', id: string, openedAt: string, isMine: boolean, openingFloat: number, expectedCash: number, soldCount: number, soldAmount: number, unmatchedEntry: boolean, cashPoint: { __typename?: 'LotteryAccountsRef', id: string, name: string }, openedBy: { __typename?: 'LotteryAccountsRef', id: string, name: string } } } };
+
+export type LotteryReceiptLinksQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type LotteryReceiptLinksQuery = { __typename?: 'Query', lotteryReceiptLinks: { __typename?: 'LotteryReceiptLinks', cashLedger?: string | null, storeView?: string | null, transferView?: string | null } };
 
 export type LotteryTransferReceivingFieldsFragment = { __typename?: 'LotteryTransferReceiving', submissionId: string, fromBranchName: string, toBranchName: string, transferAmount: number, canReceive: boolean, receivedCount: number, totalCount: number, rows: Array<{ __typename?: 'LotteryTransferRow', rowId: string, bookId: string, gameCode: string, gameName: string, bookNo: string, mode: string, ticketNos: Array<string>, tickets: number, amount: number, rate: number, purchaseAmount: number, shipped: boolean, received: boolean, receivedAt?: string | null, shippedAt?: string | null }> };
 
@@ -12727,6 +12741,7 @@ export const LotteryStoreShiftOptionFieldsFragmentDoc = `
   openedAt
   open
   mine
+  cashPointPrinterId
 }
     `;
 export const LotteryStoreSaleReversalRowFieldsFragmentDoc = `
@@ -23871,6 +23886,39 @@ export const useWithdrawLotteryShiftCashMutation = <
 
 
 useWithdrawLotteryShiftCashMutation.fetcher = (client: GraphQLClient, variables: WithdrawLotteryShiftCashMutationVariables, headers?: RequestInit['headers']) => fetcher<WithdrawLotteryShiftCashMutation, WithdrawLotteryShiftCashMutationVariables>(client, WithdrawLotteryShiftCashDocument, variables, headers);
+
+export const LotteryReceiptLinksDocument = `
+    query LotteryReceiptLinks {
+  lotteryReceiptLinks {
+    cashLedger
+    storeView
+    transferView
+  }
+}
+    `;
+
+export const useLotteryReceiptLinksQuery = <
+      TData = LotteryReceiptLinksQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables?: LotteryReceiptLinksQueryVariables,
+      options?: Omit<UseQueryOptions<LotteryReceiptLinksQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotteryReceiptLinksQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<LotteryReceiptLinksQuery, TError, TData>(
+      {
+    queryKey: variables === undefined ? ['LotteryReceiptLinks'] : ['LotteryReceiptLinks', variables],
+    queryFn: fetcher<LotteryReceiptLinksQuery, LotteryReceiptLinksQueryVariables>(client, LotteryReceiptLinksDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useLotteryReceiptLinksQuery.getKey = (variables?: LotteryReceiptLinksQueryVariables) => variables === undefined ? ['LotteryReceiptLinks'] : ['LotteryReceiptLinks', variables];
+
+
+useLotteryReceiptLinksQuery.fetcher = (client: GraphQLClient, variables?: LotteryReceiptLinksQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryReceiptLinksQuery, LotteryReceiptLinksQueryVariables>(client, LotteryReceiptLinksDocument, variables, headers);
 
 export const LotteryTransferOptionsDocument = `
     query LotteryTransferOptions($fromOrgId: ID!, $toOrgId: ID) {
