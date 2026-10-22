@@ -1,0 +1,184 @@
+# 輸出報表:營運報表、班次結帳歷史報表(專案規格第 11 章;正本 docs/modules/project/reports.md)
+
+fragment LotteryReportQtyFields on LotteryReportQty {
+  count
+  amount
+}
+
+fragment LotteryReportStorePeriodFields on LotteryReportStorePeriod {
+  orgId
+  from
+  to
+  alignment
+}
+
+# LotteryOperationsReportInput: { periodKind, from, to, orgIds, alignDailyClose? }
+query LotteryOperationsReport($input: LotteryOperationsReportInput!) {
+  lotteryOperationsReport(input: $input) {
+    closedThrough
+    canShowCost
+    stores {
+      orgId
+      period {
+        ...LotteryReportStorePeriodFields
+      }
+      sales {
+        scan {
+          ...LotteryReportQtyFields
+        }
+        manual {
+          reasonKey
+          reason
+          count
+          amount
+        }
+        stocktake {
+          ...LotteryReportQtyFields
+        }
+        undo {
+          ...LotteryReportQtyFields
+        }
+        net {
+          ...LotteryReportQtyFields
+        }
+        cost
+        games {
+          gameId
+          gameCode
+          gameName
+          unitPrice
+          sold
+          undone
+          netAmount
+          cost
+        }
+      }
+      redemption {
+        valid {
+          ...LotteryReportQtyFields
+        }
+        inStore {
+          ...LotteryReportQtyFields
+        }
+        sent {
+          ...LotteryReportQtyFields
+        }
+        revoked {
+          ...LotteryReportQtyFields
+        }
+      }
+      inventory {
+        purchaseBooks
+        purchaseTickets
+        purchaseCost
+        transferInTickets
+        transferInAmount
+        transferOutTickets
+        transferOutAmount
+        transferGain
+        scrapTickets
+        scrapCost
+        lostTickets
+        lostCost
+        recoveredTickets
+        recoveredCost
+        skippedTickets
+        endingTickets
+        endingCost
+        investigatingBooks
+      }
+      cash {
+        shiftCount
+        shiftDifference
+        postClose {
+          category
+          count
+          amount
+        }
+        refund
+        transferExpense
+        transferIncome
+        deposit
+        bankDeposit
+        dailyCloseCount
+        vaultDifference
+      }
+      bankAccounts {
+        accountId
+        label
+        shared
+        types {
+          type
+          direction
+          amount
+        }
+        endingBalance
+      }
+      outstanding {
+        purchaseToPay
+        purchaseToRefund
+        transferToReceive
+        transferToPay
+      }
+      notes {
+        skippedStocktakes {
+          reason
+          count
+        }
+        uncountedStocktakes
+        uncountedBooks
+        uncoveredShifts
+        priorPeriodCount
+        priorPeriodAmount
+        openMonths
+      }
+    }
+  }
+}
+
+# 條件畫面:對齊日結的逐店實際期間、已關帳到哪
+query LotteryOperationsReportPeriods($input: LotteryOperationsReportInput!) {
+  lotteryOperationsReportPeriods(input: $input) {
+    closedThrough
+    stores {
+      ...LotteryReportStorePeriodFields
+    }
+  }
+}
+
+# LotteryShiftCheckoutsReportInput: { periodKind, from, to, orgIds, cashPointId?, onlyWithDifference? }
+query LotteryShiftCheckoutsReport($input: LotteryShiftCheckoutsReportInput!) {
+  lotteryShiftCheckoutsReport(input: $input) {
+    rows {
+      checkoutId
+      orgId
+      cashPointId
+      cashPointName
+      openedAt
+      submittedAt
+      leader
+      helpers
+      taskRole
+      taskPosition
+      taskName
+      expected
+      counted
+      difference
+      diffReason
+      postClose
+      stocktakeMode
+      skipReason
+      uncountedBooks
+      status
+    }
+  }
+}
+
+# 條件的收銀點下拉(LotteryReportRangeInput: { periodKind, from, to, orgIds })
+query LotteryShiftCheckoutsReportCashPoints($input: LotteryReportRangeInput!) {
+  lotteryShiftCheckoutsReportCashPoints(input: $input) {
+    id
+    orgId
+    name
+  }
+}

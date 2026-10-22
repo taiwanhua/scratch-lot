@@ -2455,6 +2455,142 @@ export type LotteryOccupiedStoresPayload = {
   totalCount: Scalars['Int']['output'];
 };
 
+export type LotteryOperationsBankAccount = {
+  __typename?: 'LotteryOperationsBankAccount';
+  accountId: Scalars['ID']['output'];
+  endingBalance: Scalars['Float']['output'];
+  label: Scalars['String']['output'];
+  shared: Scalars['Boolean']['output'];
+  types: Array<LotteryOperationsBankType>;
+};
+
+export type LotteryOperationsBankType = {
+  __typename?: 'LotteryOperationsBankType';
+  amount: Scalars['Float']['output'];
+  direction: Scalars['String']['output'];
+  type: Scalars['String']['output'];
+};
+
+export type LotteryOperationsCash = {
+  __typename?: 'LotteryOperationsCash';
+  bankDeposit: Scalars['Float']['output'];
+  dailyCloseCount: Scalars['Int']['output'];
+  deposit: Scalars['Float']['output'];
+  postClose: Array<LotteryReportPostClose>;
+  refund: Scalars['Float']['output'];
+  shiftCount: Scalars['Int']['output'];
+  shiftDifference: Scalars['Float']['output'];
+  transferExpense: Scalars['Float']['output'];
+  transferIncome: Scalars['Float']['output'];
+  vaultDifference: Scalars['Float']['output'];
+};
+
+export type LotteryOperationsGameSales = {
+  __typename?: 'LotteryOperationsGameSales';
+  cost?: Maybe<Scalars['Float']['output']>;
+  gameCode: Scalars['String']['output'];
+  gameId: Scalars['ID']['output'];
+  gameName: Scalars['String']['output'];
+  netAmount: Scalars['Float']['output'];
+  sold: Scalars['Int']['output'];
+  undone: Scalars['Int']['output'];
+  unitPrice: Scalars['Int']['output'];
+};
+
+export type LotteryOperationsInventory = {
+  __typename?: 'LotteryOperationsInventory';
+  endingCost?: Maybe<Scalars['Float']['output']>;
+  endingTickets: Scalars['Int']['output'];
+  investigatingBooks: Scalars['Int']['output'];
+  lostCost?: Maybe<Scalars['Float']['output']>;
+  lostTickets: Scalars['Int']['output'];
+  purchaseBooks: Scalars['Int']['output'];
+  purchaseCost?: Maybe<Scalars['Float']['output']>;
+  purchaseTickets: Scalars['Int']['output'];
+  recoveredCost?: Maybe<Scalars['Float']['output']>;
+  recoveredTickets: Scalars['Int']['output'];
+  scrapCost?: Maybe<Scalars['Float']['output']>;
+  scrapTickets: Scalars['Int']['output'];
+  skippedTickets: Scalars['Int']['output'];
+  transferGain?: Maybe<Scalars['Float']['output']>;
+  transferInAmount: Scalars['Float']['output'];
+  transferInTickets: Scalars['Int']['output'];
+  transferOutAmount: Scalars['Float']['output'];
+  transferOutTickets: Scalars['Int']['output'];
+};
+
+export type LotteryOperationsNotes = {
+  __typename?: 'LotteryOperationsNotes';
+  openMonths: Array<Scalars['String']['output']>;
+  priorPeriodAmount: Scalars['Float']['output'];
+  priorPeriodCount: Scalars['Int']['output'];
+  skippedStocktakes: Array<LotteryOperationsSkipReason>;
+  uncountedBooks: Scalars['Int']['output'];
+  uncountedStocktakes: Scalars['Int']['output'];
+  uncoveredShifts: Scalars['Int']['output'];
+};
+
+export type LotteryOperationsOutstanding = {
+  __typename?: 'LotteryOperationsOutstanding';
+  purchaseToPay: Scalars['Float']['output'];
+  purchaseToRefund: Scalars['Float']['output'];
+  transferToPay: Scalars['Float']['output'];
+  transferToReceive: Scalars['Float']['output'];
+};
+
+export type LotteryOperationsRedemption = {
+  __typename?: 'LotteryOperationsRedemption';
+  inStore: LotteryReportQty;
+  revoked: LotteryReportQty;
+  sent: LotteryReportQty;
+  valid: LotteryReportQty;
+};
+
+export type LotteryOperationsReport = {
+  __typename?: 'LotteryOperationsReport';
+  canShowCost: Scalars['Boolean']['output'];
+  closedThrough?: Maybe<Scalars['String']['output']>;
+  stores: Array<LotteryOperationsStore>;
+};
+
+export type LotteryOperationsReportInput = {
+  alignDailyClose?: InputMaybe<Scalars['Boolean']['input']>;
+  from: Scalars['DateTime']['input'];
+  orgIds: Array<Scalars['ID']['input']>;
+  periodKind: Scalars['String']['input'];
+  to: Scalars['DateTime']['input'];
+};
+
+export type LotteryOperationsSales = {
+  __typename?: 'LotteryOperationsSales';
+  cost?: Maybe<Scalars['Float']['output']>;
+  games: Array<LotteryOperationsGameSales>;
+  manual: Array<LotteryReportReasonQty>;
+  net: LotteryReportQty;
+  scan: LotteryReportQty;
+  stocktake: LotteryReportQty;
+  undo: LotteryReportQty;
+};
+
+export type LotteryOperationsSkipReason = {
+  __typename?: 'LotteryOperationsSkipReason';
+  count: Scalars['Int']['output'];
+  reason: Scalars['String']['output'];
+};
+
+export type LotteryOperationsStore = {
+  __typename?: 'LotteryOperationsStore';
+  bankAccounts: Array<LotteryOperationsBankAccount>;
+  cash: LotteryOperationsCash;
+  inventory: LotteryOperationsInventory;
+  notes: LotteryOperationsNotes;
+  orgId: Scalars['ID']['output'];
+  outstanding: LotteryOperationsOutstanding;
+  period: LotteryReportStorePeriod;
+  redemption: LotteryOperationsRedemption;
+  sales: LotteryOperationsSales;
+};
+
 export type LotteryOutstandingSettlement = {
   __typename?: 'LotteryOutstandingSettlement';
   amount: Scalars['Int']['output'];
@@ -2844,6 +2980,55 @@ export enum LotteryRentCycle {
   Year = 'YEAR'
 }
 
+export type LotteryReportCashPoint = {
+  __typename?: 'LotteryReportCashPoint';
+  id: Scalars['ID']['output'];
+  name: Scalars['String']['output'];
+  orgId: Scalars['ID']['output'];
+};
+
+export type LotteryReportPeriods = {
+  __typename?: 'LotteryReportPeriods';
+  closedThrough?: Maybe<Scalars['String']['output']>;
+  stores: Array<LotteryReportStorePeriod>;
+};
+
+export type LotteryReportPostClose = {
+  __typename?: 'LotteryReportPostClose';
+  amount: Scalars['Float']['output'];
+  category: Scalars['String']['output'];
+  count: Scalars['Int']['output'];
+};
+
+export type LotteryReportQty = {
+  __typename?: 'LotteryReportQty';
+  amount: Scalars['Float']['output'];
+  count: Scalars['Int']['output'];
+};
+
+export type LotteryReportRangeInput = {
+  from: Scalars['DateTime']['input'];
+  orgIds: Array<Scalars['ID']['input']>;
+  periodKind: Scalars['String']['input'];
+  to: Scalars['DateTime']['input'];
+};
+
+export type LotteryReportReasonQty = {
+  __typename?: 'LotteryReportReasonQty';
+  amount: Scalars['Float']['output'];
+  count: Scalars['Int']['output'];
+  reason: Scalars['String']['output'];
+  reasonKey: Scalars['String']['output'];
+};
+
+export type LotteryReportStorePeriod = {
+  __typename?: 'LotteryReportStorePeriod';
+  alignment: Scalars['String']['output'];
+  from: Scalars['DateTime']['output'];
+  orgId: Scalars['ID']['output'];
+  to: Scalars['DateTime']['output'];
+};
+
 export type LotteryRequisitionCandidate = {
   __typename?: 'LotteryRequisitionCandidate';
   bookPrice: Scalars['Int']['output'];
@@ -2939,6 +3124,44 @@ export type LotterySettlementSide = {
   side: Scalars['String']['output'];
   totalIn: Scalars['Int']['output'];
   totalOut: Scalars['Int']['output'];
+};
+
+export type LotteryShiftCheckoutRow = {
+  __typename?: 'LotteryShiftCheckoutRow';
+  cashPointId: Scalars['ID']['output'];
+  cashPointName: Scalars['String']['output'];
+  checkoutId: Scalars['ID']['output'];
+  counted: Scalars['Float']['output'];
+  diffReason?: Maybe<Scalars['String']['output']>;
+  difference: Scalars['Float']['output'];
+  expected: Scalars['Float']['output'];
+  helpers: Array<Scalars['String']['output']>;
+  leader: Scalars['String']['output'];
+  openedAt: Scalars['DateTime']['output'];
+  orgId: Scalars['ID']['output'];
+  postClose: Scalars['Float']['output'];
+  skipReason?: Maybe<Scalars['String']['output']>;
+  status: Scalars['String']['output'];
+  stocktakeMode: Scalars['String']['output'];
+  submittedAt: Scalars['DateTime']['output'];
+  taskName?: Maybe<Scalars['String']['output']>;
+  taskPosition?: Maybe<Scalars['String']['output']>;
+  taskRole?: Maybe<Scalars['String']['output']>;
+  uncountedBooks: Scalars['Int']['output'];
+};
+
+export type LotteryShiftCheckoutsReport = {
+  __typename?: 'LotteryShiftCheckoutsReport';
+  rows: Array<LotteryShiftCheckoutRow>;
+};
+
+export type LotteryShiftCheckoutsReportInput = {
+  cashPointId?: InputMaybe<Scalars['String']['input']>;
+  from: Scalars['DateTime']['input'];
+  onlyWithDifference?: InputMaybe<Scalars['Boolean']['input']>;
+  orgIds: Array<Scalars['ID']['input']>;
+  periodKind: Scalars['String']['input'];
+  to: Scalars['DateTime']['input'];
 };
 
 export type LotteryShiftInfo = {
@@ -5579,6 +5802,8 @@ export type Query = {
   lotteryInventoryStores: LotteryInventoryStoresPayload;
   lotteryInvestigations: LotteryInvestigationsPayload;
   lotteryOccupiedStores: LotteryOccupiedStoresPayload;
+  lotteryOperationsReport: LotteryOperationsReport;
+  lotteryOperationsReportPeriods: LotteryReportPeriods;
   lotteryOutstandingSettlements: LotteryOutstandingSettlementsPayload;
   lotteryPeriodClose: LotteryPeriodClose;
   lotteryPeriodCloseCheck: LotteryPeriodCloseCheck;
@@ -5600,6 +5825,8 @@ export type Query = {
   lotterySettlement: LotterySettlementPayload;
   lotterySettlementAccounts: LotterySettlementAccountsPayload;
   lotterySettlementCandidates: LotteryOutstandingSettlementsPayload;
+  lotteryShiftCheckoutsReport: LotteryShiftCheckoutsReport;
+  lotteryShiftCheckoutsReportCashPoints: Array<LotteryReportCashPoint>;
   lotteryShiftInfo: LotteryShiftInfoPayload;
   lotteryStockOverview: LotteryStockOverviewPayload;
   lotteryStocktake: LotteryStocktakeDetail;
@@ -5967,6 +6194,16 @@ export type QueryLotteryInventoryBooksArgs = {
 };
 
 
+export type QueryLotteryOperationsReportArgs = {
+  input: LotteryOperationsReportInput;
+};
+
+
+export type QueryLotteryOperationsReportPeriodsArgs = {
+  input: LotteryOperationsReportInput;
+};
+
+
 export type QueryLotteryPeriodCloseArgs = {
   month: Scalars['String']['input'];
 };
@@ -6053,6 +6290,16 @@ export type QueryLotterySettlementAccountsArgs = {
 
 export type QueryLotterySettlementCandidatesArgs = {
   input: LotterySettlementCandidatesInput;
+};
+
+
+export type QueryLotteryShiftCheckoutsReportArgs = {
+  input: LotteryShiftCheckoutsReportInput;
+};
+
+
+export type QueryLotteryShiftCheckoutsReportCashPointsArgs = {
+  input: LotteryReportRangeInput;
 };
 
 
@@ -10631,6 +10878,38 @@ export type LotteryPurchaseRedemptionRecordsQueryVariables = Exact<{
 
 export type LotteryPurchaseRedemptionRecordsQuery = { __typename?: 'Query', lotteryPurchaseRedemptionRecords: Array<{ __typename?: 'LotteryRedemption', id: string, serialNo?: string | null, orgId: string, gameCode: string, gameName?: string | null, bookNo: string, ticketNo: string, ticketLabel: string, isOwnStore: boolean, prizeAmount: number, status: string, redeemedAt: string, sentAt?: string | null, revokedAt?: string | null, revokeReason?: string | null, revokeReasonKey?: string | null, revokeNote?: string | null, replacesId?: string | null, isPostClose: boolean, note?: string | null, revokeMode?: string | null, revokeBlockedBySent: boolean, cashPoint: { __typename?: 'LotteryAccountsRef', id: string, name: string }, shift: { __typename?: 'LotteryRedemptionShift', id: string, openedAt: string, closed: boolean, openedBy: { __typename?: 'LotteryAccountsRef', id: string, name: string } }, redeemedBy: { __typename?: 'LotteryAccountsRef', id: string, name: string }, purchase?: { __typename?: 'LotteryRedemptionPurchase', id: string, serialNo?: string | null } | null, revokedBy?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null }> };
 
+export type LotteryReportQtyFieldsFragment = { __typename?: 'LotteryReportQty', count: number, amount: number };
+
+export type LotteryReportStorePeriodFieldsFragment = { __typename?: 'LotteryReportStorePeriod', orgId: string, from: string, to: string, alignment: string };
+
+export type LotteryOperationsReportQueryVariables = Exact<{
+  input: LotteryOperationsReportInput;
+}>;
+
+
+export type LotteryOperationsReportQuery = { __typename?: 'Query', lotteryOperationsReport: { __typename?: 'LotteryOperationsReport', closedThrough?: string | null, canShowCost: boolean, stores: Array<{ __typename?: 'LotteryOperationsStore', orgId: string, period: { __typename?: 'LotteryReportStorePeriod', orgId: string, from: string, to: string, alignment: string }, sales: { __typename?: 'LotteryOperationsSales', cost?: number | null, scan: { __typename?: 'LotteryReportQty', count: number, amount: number }, manual: Array<{ __typename?: 'LotteryReportReasonQty', reasonKey: string, reason: string, count: number, amount: number }>, stocktake: { __typename?: 'LotteryReportQty', count: number, amount: number }, undo: { __typename?: 'LotteryReportQty', count: number, amount: number }, net: { __typename?: 'LotteryReportQty', count: number, amount: number }, games: Array<{ __typename?: 'LotteryOperationsGameSales', gameId: string, gameCode: string, gameName: string, unitPrice: number, sold: number, undone: number, netAmount: number, cost?: number | null }> }, redemption: { __typename?: 'LotteryOperationsRedemption', valid: { __typename?: 'LotteryReportQty', count: number, amount: number }, inStore: { __typename?: 'LotteryReportQty', count: number, amount: number }, sent: { __typename?: 'LotteryReportQty', count: number, amount: number }, revoked: { __typename?: 'LotteryReportQty', count: number, amount: number } }, inventory: { __typename?: 'LotteryOperationsInventory', purchaseBooks: number, purchaseTickets: number, purchaseCost?: number | null, transferInTickets: number, transferInAmount: number, transferOutTickets: number, transferOutAmount: number, transferGain?: number | null, scrapTickets: number, scrapCost?: number | null, lostTickets: number, lostCost?: number | null, recoveredTickets: number, recoveredCost?: number | null, skippedTickets: number, endingTickets: number, endingCost?: number | null, investigatingBooks: number }, cash: { __typename?: 'LotteryOperationsCash', shiftCount: number, shiftDifference: number, refund: number, transferExpense: number, transferIncome: number, deposit: number, bankDeposit: number, dailyCloseCount: number, vaultDifference: number, postClose: Array<{ __typename?: 'LotteryReportPostClose', category: string, count: number, amount: number }> }, bankAccounts: Array<{ __typename?: 'LotteryOperationsBankAccount', accountId: string, label: string, shared: boolean, endingBalance: number, types: Array<{ __typename?: 'LotteryOperationsBankType', type: string, direction: string, amount: number }> }>, outstanding: { __typename?: 'LotteryOperationsOutstanding', purchaseToPay: number, purchaseToRefund: number, transferToReceive: number, transferToPay: number }, notes: { __typename?: 'LotteryOperationsNotes', uncountedStocktakes: number, uncountedBooks: number, uncoveredShifts: number, priorPeriodCount: number, priorPeriodAmount: number, openMonths: Array<string>, skippedStocktakes: Array<{ __typename?: 'LotteryOperationsSkipReason', reason: string, count: number }> } }> } };
+
+export type LotteryOperationsReportPeriodsQueryVariables = Exact<{
+  input: LotteryOperationsReportInput;
+}>;
+
+
+export type LotteryOperationsReportPeriodsQuery = { __typename?: 'Query', lotteryOperationsReportPeriods: { __typename?: 'LotteryReportPeriods', closedThrough?: string | null, stores: Array<{ __typename?: 'LotteryReportStorePeriod', orgId: string, from: string, to: string, alignment: string }> } };
+
+export type LotteryShiftCheckoutsReportQueryVariables = Exact<{
+  input: LotteryShiftCheckoutsReportInput;
+}>;
+
+
+export type LotteryShiftCheckoutsReportQuery = { __typename?: 'Query', lotteryShiftCheckoutsReport: { __typename?: 'LotteryShiftCheckoutsReport', rows: Array<{ __typename?: 'LotteryShiftCheckoutRow', checkoutId: string, orgId: string, cashPointId: string, cashPointName: string, openedAt: string, submittedAt: string, leader: string, helpers: Array<string>, taskRole?: string | null, taskPosition?: string | null, taskName?: string | null, expected: number, counted: number, difference: number, diffReason?: string | null, postClose: number, stocktakeMode: string, skipReason?: string | null, uncountedBooks: number, status: string }> } };
+
+export type LotteryShiftCheckoutsReportCashPointsQueryVariables = Exact<{
+  input: LotteryReportRangeInput;
+}>;
+
+
+export type LotteryShiftCheckoutsReportCashPointsQuery = { __typename?: 'Query', lotteryShiftCheckoutsReportCashPoints: Array<{ __typename?: 'LotteryReportCashPoint', id: string, orgId: string, name: string }> };
+
 export type LotteryRequisitionCandidateFieldsFragment = { __typename?: 'LotteryRequisitionCandidate', gameId: string, gameCode: string, name: string, unitPrice: number, bookPrice: number, defaultRate: number, launchedAt?: string | null, isNew: boolean, stockTickets: number, inTransitBooks: number, sold7?: number | null, sold30?: number | null, plannedBooks?: number | null, givenBooks: number };
 
 export type LotteryRequisitionCandidatesQueryVariables = Exact<{
@@ -12696,6 +12975,20 @@ export const LotteryRedemptionFieldsFragmentDoc = `
   note
   revokeMode
   revokeBlockedBySent
+}
+    `;
+export const LotteryReportQtyFieldsFragmentDoc = `
+    fragment LotteryReportQtyFields on LotteryReportQty {
+  count
+  amount
+}
+    `;
+export const LotteryReportStorePeriodFieldsFragmentDoc = `
+    fragment LotteryReportStorePeriodFields on LotteryReportStorePeriod {
+  orgId
+  from
+  to
+  alignment
 }
     `;
 export const LotteryRequisitionCandidateFieldsFragmentDoc = `
@@ -22733,6 +23026,274 @@ useLotteryPurchaseRedemptionRecordsQuery.getKey = (variables: LotteryPurchaseRed
 
 
 useLotteryPurchaseRedemptionRecordsQuery.fetcher = (client: GraphQLClient, variables: LotteryPurchaseRedemptionRecordsQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryPurchaseRedemptionRecordsQuery, LotteryPurchaseRedemptionRecordsQueryVariables>(client, LotteryPurchaseRedemptionRecordsDocument, variables, headers);
+
+export const LotteryOperationsReportDocument = `
+    query LotteryOperationsReport($input: LotteryOperationsReportInput!) {
+  lotteryOperationsReport(input: $input) {
+    closedThrough
+    canShowCost
+    stores {
+      orgId
+      period {
+        ...LotteryReportStorePeriodFields
+      }
+      sales {
+        scan {
+          ...LotteryReportQtyFields
+        }
+        manual {
+          reasonKey
+          reason
+          count
+          amount
+        }
+        stocktake {
+          ...LotteryReportQtyFields
+        }
+        undo {
+          ...LotteryReportQtyFields
+        }
+        net {
+          ...LotteryReportQtyFields
+        }
+        cost
+        games {
+          gameId
+          gameCode
+          gameName
+          unitPrice
+          sold
+          undone
+          netAmount
+          cost
+        }
+      }
+      redemption {
+        valid {
+          ...LotteryReportQtyFields
+        }
+        inStore {
+          ...LotteryReportQtyFields
+        }
+        sent {
+          ...LotteryReportQtyFields
+        }
+        revoked {
+          ...LotteryReportQtyFields
+        }
+      }
+      inventory {
+        purchaseBooks
+        purchaseTickets
+        purchaseCost
+        transferInTickets
+        transferInAmount
+        transferOutTickets
+        transferOutAmount
+        transferGain
+        scrapTickets
+        scrapCost
+        lostTickets
+        lostCost
+        recoveredTickets
+        recoveredCost
+        skippedTickets
+        endingTickets
+        endingCost
+        investigatingBooks
+      }
+      cash {
+        shiftCount
+        shiftDifference
+        postClose {
+          category
+          count
+          amount
+        }
+        refund
+        transferExpense
+        transferIncome
+        deposit
+        bankDeposit
+        dailyCloseCount
+        vaultDifference
+      }
+      bankAccounts {
+        accountId
+        label
+        shared
+        types {
+          type
+          direction
+          amount
+        }
+        endingBalance
+      }
+      outstanding {
+        purchaseToPay
+        purchaseToRefund
+        transferToReceive
+        transferToPay
+      }
+      notes {
+        skippedStocktakes {
+          reason
+          count
+        }
+        uncountedStocktakes
+        uncountedBooks
+        uncoveredShifts
+        priorPeriodCount
+        priorPeriodAmount
+        openMonths
+      }
+    }
+  }
+}
+    ${LotteryReportStorePeriodFieldsFragmentDoc}
+${LotteryReportQtyFieldsFragmentDoc}`;
+
+export const useLotteryOperationsReportQuery = <
+      TData = LotteryOperationsReportQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: LotteryOperationsReportQueryVariables,
+      options?: Omit<UseQueryOptions<LotteryOperationsReportQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotteryOperationsReportQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<LotteryOperationsReportQuery, TError, TData>(
+      {
+    queryKey: ['LotteryOperationsReport', variables],
+    queryFn: fetcher<LotteryOperationsReportQuery, LotteryOperationsReportQueryVariables>(client, LotteryOperationsReportDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useLotteryOperationsReportQuery.getKey = (variables: LotteryOperationsReportQueryVariables) => ['LotteryOperationsReport', variables];
+
+
+useLotteryOperationsReportQuery.fetcher = (client: GraphQLClient, variables: LotteryOperationsReportQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryOperationsReportQuery, LotteryOperationsReportQueryVariables>(client, LotteryOperationsReportDocument, variables, headers);
+
+export const LotteryOperationsReportPeriodsDocument = `
+    query LotteryOperationsReportPeriods($input: LotteryOperationsReportInput!) {
+  lotteryOperationsReportPeriods(input: $input) {
+    closedThrough
+    stores {
+      ...LotteryReportStorePeriodFields
+    }
+  }
+}
+    ${LotteryReportStorePeriodFieldsFragmentDoc}`;
+
+export const useLotteryOperationsReportPeriodsQuery = <
+      TData = LotteryOperationsReportPeriodsQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: LotteryOperationsReportPeriodsQueryVariables,
+      options?: Omit<UseQueryOptions<LotteryOperationsReportPeriodsQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotteryOperationsReportPeriodsQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<LotteryOperationsReportPeriodsQuery, TError, TData>(
+      {
+    queryKey: ['LotteryOperationsReportPeriods', variables],
+    queryFn: fetcher<LotteryOperationsReportPeriodsQuery, LotteryOperationsReportPeriodsQueryVariables>(client, LotteryOperationsReportPeriodsDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useLotteryOperationsReportPeriodsQuery.getKey = (variables: LotteryOperationsReportPeriodsQueryVariables) => ['LotteryOperationsReportPeriods', variables];
+
+
+useLotteryOperationsReportPeriodsQuery.fetcher = (client: GraphQLClient, variables: LotteryOperationsReportPeriodsQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryOperationsReportPeriodsQuery, LotteryOperationsReportPeriodsQueryVariables>(client, LotteryOperationsReportPeriodsDocument, variables, headers);
+
+export const LotteryShiftCheckoutsReportDocument = `
+    query LotteryShiftCheckoutsReport($input: LotteryShiftCheckoutsReportInput!) {
+  lotteryShiftCheckoutsReport(input: $input) {
+    rows {
+      checkoutId
+      orgId
+      cashPointId
+      cashPointName
+      openedAt
+      submittedAt
+      leader
+      helpers
+      taskRole
+      taskPosition
+      taskName
+      expected
+      counted
+      difference
+      diffReason
+      postClose
+      stocktakeMode
+      skipReason
+      uncountedBooks
+      status
+    }
+  }
+}
+    `;
+
+export const useLotteryShiftCheckoutsReportQuery = <
+      TData = LotteryShiftCheckoutsReportQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: LotteryShiftCheckoutsReportQueryVariables,
+      options?: Omit<UseQueryOptions<LotteryShiftCheckoutsReportQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotteryShiftCheckoutsReportQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<LotteryShiftCheckoutsReportQuery, TError, TData>(
+      {
+    queryKey: ['LotteryShiftCheckoutsReport', variables],
+    queryFn: fetcher<LotteryShiftCheckoutsReportQuery, LotteryShiftCheckoutsReportQueryVariables>(client, LotteryShiftCheckoutsReportDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useLotteryShiftCheckoutsReportQuery.getKey = (variables: LotteryShiftCheckoutsReportQueryVariables) => ['LotteryShiftCheckoutsReport', variables];
+
+
+useLotteryShiftCheckoutsReportQuery.fetcher = (client: GraphQLClient, variables: LotteryShiftCheckoutsReportQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryShiftCheckoutsReportQuery, LotteryShiftCheckoutsReportQueryVariables>(client, LotteryShiftCheckoutsReportDocument, variables, headers);
+
+export const LotteryShiftCheckoutsReportCashPointsDocument = `
+    query LotteryShiftCheckoutsReportCashPoints($input: LotteryReportRangeInput!) {
+  lotteryShiftCheckoutsReportCashPoints(input: $input) {
+    id
+    orgId
+    name
+  }
+}
+    `;
+
+export const useLotteryShiftCheckoutsReportCashPointsQuery = <
+      TData = LotteryShiftCheckoutsReportCashPointsQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: LotteryShiftCheckoutsReportCashPointsQueryVariables,
+      options?: Omit<UseQueryOptions<LotteryShiftCheckoutsReportCashPointsQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotteryShiftCheckoutsReportCashPointsQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<LotteryShiftCheckoutsReportCashPointsQuery, TError, TData>(
+      {
+    queryKey: ['LotteryShiftCheckoutsReportCashPoints', variables],
+    queryFn: fetcher<LotteryShiftCheckoutsReportCashPointsQuery, LotteryShiftCheckoutsReportCashPointsQueryVariables>(client, LotteryShiftCheckoutsReportCashPointsDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useLotteryShiftCheckoutsReportCashPointsQuery.getKey = (variables: LotteryShiftCheckoutsReportCashPointsQueryVariables) => ['LotteryShiftCheckoutsReportCashPoints', variables];
+
+
+useLotteryShiftCheckoutsReportCashPointsQuery.fetcher = (client: GraphQLClient, variables: LotteryShiftCheckoutsReportCashPointsQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryShiftCheckoutsReportCashPointsQuery, LotteryShiftCheckoutsReportCashPointsQueryVariables>(client, LotteryShiftCheckoutsReportCashPointsDocument, variables, headers);
 
 export const LotteryRequisitionCandidatesDocument = `
     query LotteryRequisitionCandidates($orgId: ID!) {

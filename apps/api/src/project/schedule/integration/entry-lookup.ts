@@ -7,7 +7,9 @@ import {
 } from "../../../database/operator-context";
 import {
   ScheduleAttendancePunchesRepository,
+  ScheduleDemandsRepository,
   ScheduleEntriesRepository,
+  ScheduleTaskAssignmentsRepository,
 } from "../../database/schedule/roster.repositories";
 import type { MySchedulePunchModel } from "../my/models/my-schedule.model";
 import {
@@ -85,6 +87,8 @@ export class ScheduleEntryLookup {
   constructor(
     private readonly entries: ScheduleEntriesRepository,
     private readonly punches: ScheduleAttendancePunchesRepository,
+    private readonly demands: ScheduleDemandsRepository,
+    private readonly assignments: ScheduleTaskAssignmentsRepository,
     private readonly published: PublishedEntries,
     private readonly rules: ScheduleRulesService,
     private readonly mySchedule: MyScheduleService,
@@ -224,6 +228,66 @@ export class ScheduleEntryLookup {
       duplicate: false,
     });
     return found !== null;
+  }
+
+  /**
+   * **收銀點的協同**(規格 14.9:同一筆人力需求裡協同任務填的人,從排班取得、不存在班次上;報表「班次結帳歷史」用):
+   * 每筆人力需求 → 填進協同任務的人(使用者 id,依任務在人力需求裡的順序)。讀取用呼叫端給的讀取身分,
+   * 條件另釘 `tenantId`;人力需求不存在 / 沒有協同 → 不在結果裡。
+   */
+  async helpersOfDemands(
+    reader: OperatorContext,
+    input: {
+      tenantId: Types.ObjectId | string;
+      demandIds: readonly (Types.ObjectId | string)[];
+    },
+  ): Promise<Map<string, string[]>> {
+    const result = new Map<string, string[]>();
+    const tenantId = idOf(input.tenantId, "tenantId");
+    const demandIds = [
+      ...new Set(input.demandIds.map((id) => String(id))),
+    ].flatMap((id) =>
+      Types.ObjectId.isValid(id) ? [new Types.ObjectId(id)] : [],
+    );
+    if (demandIds.length === 0) {
+      return result;
+    }
+    const [demands, assignments] = await Promise.all([
+      this.demands.findMany(reader, { tenantId, _id: { $in: demandIds } }),
+      this.assignments.findMany(reader, {
+        tenantId,
+        demandId: { $in: demandIds },
+      }),
+    ]);
+    const entries =
+      assignments.length === 0
+        ? []
+        : await this.entries.findMany(reader, {
+            tenantId,
+            _id: { $in: assignments.map((item) => item.entryId) },
+          });
+    const userOfEntry = new Map(
+      entries.map((entry) => [String(entry._id), String(entry.userId)]),
+    );
+    for (const demand of demands) {
+      const users = demand.tasks
+        .filter((task) => task.role === "helper")
+        .flatMap((task) => {
+          const assignment = assignments.find(
+            (item) =>
+              item.demandId.equals(demand._id) && item.taskId === task.taskId,
+          );
+          const userId =
+            assignment === undefined
+              ? undefined
+              : userOfEntry.get(String(assignment.entryId));
+          return userId === undefined ? [] : [userId];
+        });
+      if (users.length > 0) {
+        result.set(String(demand._id), [...new Set(users)]);
+      }
+    }
+    return result;
   }
 
   // ---- 內部 ----

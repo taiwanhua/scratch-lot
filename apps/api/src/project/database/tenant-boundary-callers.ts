@@ -149,4 +149,7 @@ export const PROJECT_TENANT_BOUNDARY_CONTEXT_CALLERS: Readonly<
   "project/lottery/period-close/period-close-reminders.service.ts": ["排程"],
   // 排班檢核:人的規則用那個人主要分店的生效設定(主要分店不一定在讀者的可見範圍)
   "project/schedule/check/schedule-check.service.ts": ["以人為準的資料"],
+  // 輸出報表:分店先確認在操作者的可見範圍內,再以租戶邊界讀這些分店的事件、流水、交易、點收、結帳
+  // (另一邊可能是別家店或總部記的;條件一律釘選的分店)
+  "project/lottery/reports/report-scope.ts": ["反查"],
 };
