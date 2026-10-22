@@ -228,6 +228,7 @@ export const StaffTab = () => {
         </Stack>
       ) : (
         <Table
+          minWidth={720}
           columns={columns}
           rows={rows}
           getRowKey={(row) => row.userId}

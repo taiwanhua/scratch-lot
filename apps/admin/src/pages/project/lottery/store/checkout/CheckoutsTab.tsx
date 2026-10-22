@@ -346,6 +346,7 @@ export const CheckoutsTab = () => {
         </Stack>
       ) : (
         <Table
+          minWidth={960}
           columns={columns}
           rows={rows}
           getRowKey={(row) => row.id}

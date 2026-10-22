@@ -7,6 +7,7 @@ import { delegationWorld } from "@/test/msw/delegation-handlers";
 import { api, server } from "@/test/msw/server";
 import { renderApp } from "@/test/render";
 import { findSnackbarAlert } from "@/test/snackbar";
+import { restoreViewportAfterEach, setMobileViewport } from "@/test/viewport";
 
 const DAY_MS = 86_400_000;
 
@@ -180,5 +181,23 @@ describe("代理人分頁", () => {
     await waitFor(() => {
       expect(screen.queryByText("李小華")).toBeNull();
     });
+  });
+});
+
+describe("代理人分頁:窄螢幕(STYLE-11)", () => {
+  restoreViewportAfterEach();
+
+  it("手機寬:表格最小寬 960,窄過它由表格容器橫向捲動,不把代理人、日期擠成一字一行", async () => {
+    setMobileViewport();
+    renderDelegations();
+
+    const table = await findTable();
+    expect(globalThis.getComputedStyle(table).minWidth).toBe("960px");
+    const container = table.closest<HTMLElement>(".MuiTableContainer-root");
+    if (container === null) {
+      throw new Error("找不到表格容器");
+    }
+    const style = globalThis.getComputedStyle(container);
+    expect([style.overflow, style.overflowX]).toContain("auto");
   });
 });

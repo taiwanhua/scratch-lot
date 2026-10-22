@@ -334,6 +334,7 @@ export const SettlementPanel = ({ moduleKey, refId }: SettlementPanelProps) => {
           </Stack>
         ) : (
           <Table
+            minWidth={960}
             aria-label={t("settlement.historyAria")}
             columns={columns}
             rows={rows}

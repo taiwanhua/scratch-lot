@@ -396,6 +396,7 @@ export const RedemptionsTab = () => {
         </Stack>
       ) : (
         <Table
+          minWidth={1080}
           aria-label={t("tab.title")}
           columns={columns}
           rows={rows}

@@ -263,6 +263,7 @@ export const ByStoreTab = () => {
             </Stack>
           ) : (
             <Table
+              minWidth={720}
               aria-label={t("rowsAria")}
               columns={columns}
               rows={rows}

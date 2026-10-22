@@ -304,6 +304,7 @@ export const ByPersonTab = () => {
           </Stack>
         ) : (
           <Table
+            minWidth={960}
             aria-label={t("rowsAria")}
             columns={columns}
             rows={rows}
