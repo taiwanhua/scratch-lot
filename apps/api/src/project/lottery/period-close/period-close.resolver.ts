@@ -3,6 +3,7 @@ import { Args, Mutation, Query, Resolver } from "@nestjs/graphql";
 import { CurrentOperator } from "../../../auth/decorators";
 import type { OperatorContext } from "../../../database/operator-context";
 import { RequirePermission } from "../../../permission/require-permission.decorator";
+import { RequireTenant } from "../../tenant-scope/require-tenant.decorator";
 import { CloseLotteryPeriodInput } from "./dto/period-close.input";
 import {
   LotteryPeriodCloseCheckModel,
@@ -15,6 +16,7 @@ import { PeriodCloseService } from "./period-close.service";
  * 關帳的 GraphQL 端點(權限表正本 `docs/modules/project/accounts.md`):關帳分頁、檢查清單、快照與 [關帳]
  * 一律守 `accounts.close-period`(沒有這條權限看不到分頁與 [關帳])。沒有修改 / 刪除(不能重新開帳)。
  */
+@RequireTenant()
 @Resolver(() => LotteryPeriodCloseModel)
 export class LotteryPeriodCloseResolver {
   constructor(private readonly periods: PeriodCloseService) {}

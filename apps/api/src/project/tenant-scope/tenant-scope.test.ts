@@ -93,6 +93,16 @@ const PROJECT_QUERIES: readonly {
     variables: (orgId) => ({ orgId }),
   },
   {
+    name: "帳戶管理 關帳 lotteryPeriodCloses",
+    query: `query { lotteryPeriodCloses { __typename } }`,
+    variables: () => ({}),
+  },
+  {
+    name: "店面單據 lotteryReceiptLinks",
+    query: `query { lotteryReceiptLinks { storeView } }`,
+    variables: () => ({}),
+  },
+  {
     name: "排班設定 scheduleStaff",
     query: `query { scheduleStaff(input: null) { totalCount } }`,
     variables: () => ({}),
