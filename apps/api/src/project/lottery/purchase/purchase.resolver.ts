@@ -6,6 +6,7 @@ import { PURCHASE_PERMISSIONS } from "@repo/domain/project/lottery";
 import { CurrentOperator } from "../../../auth/decorators";
 import type { OperatorContext } from "../../../database/operator-context";
 import { RequirePermission } from "../../../permission/require-permission.decorator";
+import { RequireTenant } from "../../tenant-scope/require-tenant.decorator";
 import { LotteryRedemptionModel } from "../redemption/models/redemption.model";
 import {
   CompleteLotteryPurchaseReceivingInput,
@@ -27,6 +28,7 @@ import { PurchaseReceivingService } from "./purchase-receiving.service";
  * 點收區塊與刷條碼點收不守模組權限(店長從申請中心進來):讀得到單據、點收任務在自己手上才行。
  * 進貨單本身的新增 / 送出 / 審核 / 作廢走表單引擎;收付走 `recordLotterySettlement`(總部那一邊要 `settle`)。
  */
+@RequireTenant()
 @Resolver()
 export class PurchaseResolver {
   constructor(

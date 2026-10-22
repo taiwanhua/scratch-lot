@@ -3,6 +3,7 @@ import { Args, Mutation, Query, Resolver } from "@nestjs/graphql";
 import { CurrentOperator } from "../../../auth/decorators";
 import type { OperatorContext } from "../../../database/operator-context";
 import { RequirePermission } from "../../../permission/require-permission.decorator";
+import { RequireTenant } from "../../tenant-scope/require-tenant.decorator";
 import {
   DeleteScheduleDemandInput,
   DeleteScheduleEntryInput,
@@ -26,6 +27,7 @@ import {
 } from "./schedule-roster.service";
 
 /** 排班作業 → 排班表(`schedule.manage`;讀要 `view`、寫要 `edit`)。 */
+@RequireTenant()
 @Resolver(() => ScheduleRosterPayload)
 export class ScheduleRosterResolver {
   constructor(

@@ -8,12 +8,12 @@ import { useBreakpointDown } from "@repo/ui/media-query";
 import { Typography } from "@repo/ui/typography";
 
 import { NotificationBell } from "@/components/base/NotificationBell/NotificationBell";
+import { OrgSwitcher } from "@/components/base/OrgSwitcher/OrgSwitcher";
 import type { ShellModule } from "@/lib/base/module-tree";
 import { useSideNavStore } from "@/stores/base/useSideNavStore";
 
 import { SIDE_NAV_DRAWER_ID } from "../SideNav/SideNav";
 import { HelpButton } from "./HelpButton";
-import { OrgSwitcher } from "./OrgSwitcher";
 import { UserMenu } from "./UserMenu";
 
 /** AppBar 高度(theme.spacing 單位;Figma AdminAppBar 64 高)。 */

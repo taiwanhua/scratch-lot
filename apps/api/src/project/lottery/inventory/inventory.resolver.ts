@@ -3,6 +3,7 @@ import { Args, ID, Mutation, Query, Resolver } from "@nestjs/graphql";
 import { CurrentOperator } from "../../../auth/decorators";
 import type { OperatorContext } from "../../../database/operator-context";
 import { RequirePermission } from "../../../permission/require-permission.decorator";
+import { RequireTenant } from "../../tenant-scope/require-tenant.decorator";
 import {
   CorrectLotterySkippedTicketsInput,
   LotteryAllocationsInput,
@@ -33,6 +34,7 @@ import {
  * 庫存管理的 GraphQL 端點(權限表正本 `docs/modules/project/inventory.md`)。
  * 讀取由 service 檢查庫存管理有沒有綁(本模組沒有 `view`);寫入守對應的頁內權限。
  */
+@RequireTenant()
 @Resolver(() => LotteryInventoryBookModel)
 export class LotteryInventoryResolver {
   constructor(

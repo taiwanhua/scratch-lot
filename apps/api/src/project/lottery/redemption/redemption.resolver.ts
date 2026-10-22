@@ -3,6 +3,7 @@ import { Args, ID, Mutation, Query, Resolver } from "@nestjs/graphql";
 import { CurrentOperator } from "../../../auth/decorators";
 import type { OperatorContext } from "../../../database/operator-context";
 import { RequirePermission } from "../../../permission/require-permission.decorator";
+import { RequireTenant } from "../../tenant-scope/require-tenant.decorator";
 import {
   LotteryRedemptionPreviewInput,
   LotteryRedemptionsInput,
@@ -25,6 +26,7 @@ import { RedemptionService } from "./redemption.service";
  * 兌獎的 GraphQL 端點(權限表正本 `docs/modules/project/store.md`「兌獎」)。讀取由 service 檢查
  * `store.view`;撤銷兩層(`store.redeem` 自己 / `store.undo-redeem`)依資料而定,在 service 判斷。
  */
+@RequireTenant()
 @Resolver(() => LotteryRedemptionModel)
 export class LotteryRedemptionResolver {
   constructor(

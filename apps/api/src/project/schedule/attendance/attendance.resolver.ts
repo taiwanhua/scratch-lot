@@ -3,6 +3,7 @@ import { Args, ID, Mutation, Query, Resolver } from "@nestjs/graphql";
 import { CurrentOperator } from "../../../auth/decorators";
 import type { OperatorContext } from "../../../database/operator-context";
 import { RequirePermission } from "../../../permission/require-permission.decorator";
+import { RequireTenant } from "../../tenant-scope/require-tenant.decorator";
 import { ScheduleAttendanceService } from "./attendance.service";
 import {
   MakeupPunchEntryOptionsInput,
@@ -24,6 +25,7 @@ import {
  * 出勤紀錄(`schedule.attendance`;規格 14.7、14.8):讀要 `view`(只看自己的;`view-all` 看全部由 service 判斷)、
  * 匯出要 `export`、改對應排班要 `reassign-punches`、補打卡新增頁的下拉要 `create`。
  */
+@RequireTenant()
 @Resolver(() => ScheduleAttendanceByStorePayload)
 export class ScheduleAttendanceResolver {
   constructor(

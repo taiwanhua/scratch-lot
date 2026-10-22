@@ -4,6 +4,7 @@ import { CurrentOperator } from "../../../auth/decorators";
 import type { GraphqlContext } from "../../../auth/request-context";
 import type { OperatorContext } from "../../../database/operator-context";
 import { RequirePermission } from "../../../permission/require-permission.decorator";
+import { RequireTenant } from "../../tenant-scope/require-tenant.decorator";
 import { MyScheduleInput, PunchMyScheduleInput } from "./dto/my-schedule.input";
 import {
   MySchedulePayload,
@@ -24,6 +25,7 @@ export function punchMetaOf(context: GraphqlContext): PunchRequestMeta {
 }
 
 /** 我的班表 → 班表分頁(`schedule.my.view`)與打卡(`schedule.my.punch`)。 */
+@RequireTenant()
 @Resolver(() => MySchedulePayload)
 export class MyScheduleResolver {
   constructor(private readonly service: MyScheduleService) {}

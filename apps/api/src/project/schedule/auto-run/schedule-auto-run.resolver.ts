@@ -3,6 +3,7 @@ import { Args, Mutation, Query, Resolver } from "@nestjs/graphql";
 import { CurrentOperator } from "../../../auth/decorators";
 import type { OperatorContext } from "../../../database/operator-context";
 import { RequirePermission } from "../../../permission/require-permission.decorator";
+import { RequireTenant } from "../../tenant-scope/require-tenant.decorator";
 import { ScheduleRosterInput } from "../roster/dto/schedule-roster.input";
 import { SCHEDULE_PERMISSIONS } from "../shared/schedule-permissions";
 import {
@@ -22,6 +23,7 @@ import { ScheduleAutoRunService } from "./schedule-auto-run.service";
  * 狀態要 `schedule.manage.view`;套用範本(預覽與套用)要 `edit`;自動排班、預覽與清除自動排入的人要 `auto-run`
  * (有 `auto-run` 就可以先以週範本補上人力需求,不需要 `edit`)。
  */
+@RequireTenant()
 @Resolver(() => ScheduleAutoRunStatusPayload)
 export class ScheduleAutoRunResolver {
   constructor(private readonly service: ScheduleAutoRunService) {}

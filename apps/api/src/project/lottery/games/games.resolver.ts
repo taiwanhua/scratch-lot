@@ -3,6 +3,7 @@ import { Args, ID, Mutation, Query, Resolver } from "@nestjs/graphql";
 import { CurrentOperator } from "../../../auth/decorators";
 import type { OperatorContext } from "../../../database/operator-context";
 import { RequirePermission } from "../../../permission/require-permission.decorator";
+import { RequireTenant } from "../../tenant-scope/require-tenant.decorator";
 import {
   CreateLotteryGameInput,
   DeleteLotteryGameInput,
@@ -22,6 +23,7 @@ import {
  * 讀取沒有 `view` 權限可守(規格 3.2),由 service 檢查有沒有綁 `master-data.games`;
  * 寫入守 `master-data.games.create` / `edit` / `delete`。
  */
+@RequireTenant()
 @Resolver(() => LotteryGameModel)
 export class LotteryGamesResolver {
   constructor(private readonly service: LotteryGamesService) {}

@@ -3,6 +3,7 @@ import { Args, ID, Query, Resolver } from "@nestjs/graphql";
 import { CurrentOperator } from "../../../auth/decorators";
 import type { OperatorContext } from "../../../database/operator-context";
 import { RequirePermission } from "../../../permission/require-permission.decorator";
+import { RequireTenant } from "../../tenant-scope/require-tenant.decorator";
 import { CheckoutQueryService } from "./checkout-query.service";
 import { LotteryCheckoutsInput } from "./dto/checkout.input";
 import {
@@ -16,6 +17,7 @@ import {
  * (service 另判斷負責人或店長);列表與檢視頁由 service 檢查 `store.view`。
  * 送出結帳確認申請走表單引擎(`createAndSubmitFormSubmission`),結帳單由掛接點建立。
  */
+@RequireTenant()
 @Resolver(() => LotteryCheckoutWizardModel)
 export class LotteryCheckoutResolver {
   constructor(private readonly queries: CheckoutQueryService) {}

@@ -13,5 +13,6 @@
 | GraphQL documents      | `packages/graphql/src/documents/project/{lottery,schedule}/` | operation 名稱全域唯一                                                                                              |
 | 前後端共用的專案純邏輯 | `packages/domain/src/project/<主題>/`                        | 刮刮樂的主題用 `lottery-` 開頭、排班的用 `schedule-` 開頭,兩邊共用的(例 `reason-note`)不帶前綴                      |
 
+- **根組織**:專案 resolver 類別一律標 `@RequireTenant()`(`tenant-scope/`):站在根組織(不屬於任何機構)→ `FORBIDDEN` + reason `TENANT_ONLY`(沿用底座通知設定等的原因碼),要看某個機構的資料先切進那個機構(ADR-0014、Spec #143 定案 8)。根組織也會讀的端點(欄位選項、選項顏色)不標;admin 端由 `app/project/module-pages.ts` 的 `gateTenant` 先顯示提示。
 - lookup 來源 key 同樣加前綴(`lottery_…`、`schedule_…`,格式照 `PROJECT_LOOKUP_KEY_PATTERN`)。
 - 排班要顯示刮刮樂的資料(例:排班表上的收銀點名稱)時,由排班開登記介面、刮刮樂登記進去;排班這邊不知道刮刮樂存在。

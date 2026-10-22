@@ -3,6 +3,7 @@ import { Args, ID, Mutation, Query, Resolver } from "@nestjs/graphql";
 import { CurrentOperator } from "../../../auth/decorators";
 import type { OperatorContext } from "../../../database/operator-context";
 import { RequirePermission } from "../../../permission/require-permission.decorator";
+import { RequireTenant } from "../../tenant-scope/require-tenant.decorator";
 import {
   BackfillLotteryStocktakeSalesInput,
   LotteryStocktakeReviewInput,
@@ -25,6 +26,7 @@ import { StocktakeService } from "./stocktake.service";
  * `store.stocktake`;[補登售出] 要 `store.sell`(service 另查 `store.stocktake`);讀取由 service 檢查 `store.view`。
  * 送出盤點確認申請走表單引擎(`createAndSubmitFormSubmission`),盤點單由掛接點建立。
  */
+@RequireTenant()
 @Resolver(() => LotteryStocktakeSheetModel)
 export class LotteryStocktakeResolver {
   constructor(

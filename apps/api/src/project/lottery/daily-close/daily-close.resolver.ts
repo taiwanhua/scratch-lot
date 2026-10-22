@@ -3,6 +3,7 @@ import { Args, ID, Mutation, Query, Resolver } from "@nestjs/graphql";
 import { CurrentOperator } from "../../../auth/decorators";
 import type { OperatorContext } from "../../../database/operator-context";
 import { RequirePermission } from "../../../permission/require-permission.decorator";
+import { RequireTenant } from "../../tenant-scope/require-tenant.decorator";
 import { BankDepositService } from "./bank-deposit.service";
 import { DailyCloseQueryService } from "./daily-close-query.service";
 import { DepositLotteryVaultToBankInput } from "./dto/daily-close.input";
@@ -17,6 +18,7 @@ import {
  * 日結與存銀行的 GraphQL 端點(權限表正本 `docs/modules/project/store.md`「日結與存銀行」)。
  * 送出日結走表單引擎(`createAndSubmitFormSubmission`,結帳確認申請類型 = 日結),結帳單由掛接點建立。
  */
+@RequireTenant()
 @Resolver(() => LotteryDailyCloseWizardModel)
 export class LotteryDailyCloseResolver {
   constructor(

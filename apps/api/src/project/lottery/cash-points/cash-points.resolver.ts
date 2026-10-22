@@ -3,6 +3,7 @@ import { Args, ID, Mutation, Query, Resolver } from "@nestjs/graphql";
 import { CurrentOperator } from "../../../auth/decorators";
 import type { OperatorContext } from "../../../database/operator-context";
 import { RequirePermission } from "../../../permission/require-permission.decorator";
+import { RequireTenant } from "../../tenant-scope/require-tenant.decorator";
 import { LotteryCashPointsService } from "./cash-points.service";
 import {
   CreateLotteryCashPointInput,
@@ -20,6 +21,7 @@ import {
  * 收銀點的 GraphQL 端點(權限表正本 `docs/modules/project/master-data.md`)。
  * 讀取由 service 檢查有沒有綁 `master-data.cash-points`;寫入守 `create` / `edit`。**沒有刪除端點**。
  */
+@RequireTenant()
 @Resolver(() => LotteryCashPointModel)
 export class LotteryCashPointsResolver {
   constructor(private readonly service: LotteryCashPointsService) {}

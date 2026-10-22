@@ -4,6 +4,7 @@ import { CurrentOperator } from "../../../auth/decorators";
 import type { GraphqlContext } from "../../../auth/request-context";
 import type { OperatorContext } from "../../../database/operator-context";
 import { RequirePermission } from "../../../permission/require-permission.decorator";
+import { RequireTenant } from "../../tenant-scope/require-tenant.decorator";
 import {
   DepositLotteryShiftCashInput,
   OpenLotteryShiftInput,
@@ -28,6 +29,7 @@ import { StoreShiftsService } from "./store-shifts.service";
  * 店面管理的 GraphQL 端點(權限表正本 `docs/modules/project/store.md`)。看板與班次資訊由 service 檢查
  * `store.view`;寫入守對應的頁內權限,「負責人或店長」這類依資料而定的判斷在 service。
  */
+@RequireTenant()
 @Resolver(() => LotteryStoreBoardModel)
 export class LotteryStoreResolver {
   constructor(

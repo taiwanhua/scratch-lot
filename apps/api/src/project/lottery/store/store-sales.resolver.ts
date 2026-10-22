@@ -3,6 +3,7 @@ import { Args, ID, Mutation, Query, Resolver } from "@nestjs/graphql";
 import { CurrentOperator } from "../../../auth/decorators";
 import type { OperatorContext } from "../../../database/operator-context";
 import { RequirePermission } from "../../../permission/require-permission.decorator";
+import { RequireTenant } from "../../tenant-scope/require-tenant.decorator";
 import {
   LotteryStoreScanInput,
   LotteryStoreTicketRefInput,
@@ -27,6 +28,7 @@ import { StoreSalesService } from "./store-sales.service";
  * 店面的銷售、當下撤銷、展開卡片、拆本、移櫃 / 收回(規格 6.2–6.4;權限表正本
  * `docs/modules/project/store.md`)。讀取由 service 檢查 `store.view`;寫入守對應的頁內權限。
  */
+@RequireTenant()
 @Resolver(() => LotteryStoreScanItemModel)
 export class LotteryStoreSalesResolver {
   constructor(

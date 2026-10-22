@@ -1,3 +1,8 @@
+import {
+  formModulePageKeys,
+  formModulePages,
+} from "@/components/base/form-engine/FormModulePages/form-module-pages";
+import { withTenantRequired } from "@/components/project/RootOrgNotice/WithTenantRequired";
 import { AccountsPage } from "@/pages/project/lottery/accounts/AccountsPage/AccountsPage";
 import { BankAccountViewPage } from "@/pages/project/lottery/accounts/BankAccountViewPage/BankAccountViewPage";
 import { ACCOUNTS_MODULE_KEYS } from "@/pages/project/lottery/accounts/accounts-config";
@@ -36,7 +41,11 @@ import { ScheduleManagePage } from "@/pages/project/schedule/manage/ScheduleMana
 import { ScheduleMyPage } from "@/pages/project/schedule/my/ScheduleMyPage";
 import { ScheduleSettingsPage } from "@/pages/project/schedule/settings/ScheduleSettingsPage";
 
-import type { ModulePageSource } from "../module-page-registry";
+import type {
+  FormPageSlot,
+  ModulePageSource,
+  PagePresentation,
+} from "../module-page-registry";
 
 /**
  * 專案的模組頁面來源:專案自己新增的模組在此登記(頁面放 `pages/project/`),底座更新不會動到這份。
@@ -44,8 +53,10 @@ import type { ModulePageSource } from "../module-page-registry";
  * - 固定頁寫進 `pages`;表單模組寫進 `forms`(四頁用表單引擎的預設組裝,單頁客製用 `pageOverrides`)
  * - key 不可與底座或彼此相撞;要換掉底座的頁不是在這裡撞 key,而是寫進 `page-replacements.ts`
  * - 登記不等於授權:進不進得去仍看 `me.modules`
+ * - 每一頁(含表單模組沒換掉、沿用表單引擎的那幾頁)都套 `withTenantRequired`:站在根組織(平台層級)
+ *   只顯示「請先切換到要管理的機構」,不發任何專案查詢(`gateTenant`)
  */
-export const projectModulePages: ModulePageSource = {
+const sources: ModulePageSource = {
   pages: [
     // 檔案管理(遊戲 | 收銀點);遊戲的新增 / 編輯共版型
     { key: MASTER_DATA_MODULE_KEYS.list, Page: MasterDataPage },
@@ -135,3 +146,31 @@ export const projectModulePages: ModulePageSource = {
     },
   ],
 };
+
+const FORM_SLOTS: readonly FormPageSlot[] = [
+  "list",
+  "viewPage",
+  "createPage",
+  "editPage",
+];
+
+/** 所有專案頁套上根組織守門;表單模組四頁都套(沒換掉的用表單引擎的預設頁)。 */
+const gateTenant = (source: ModulePageSource): ModulePageSource => ({
+  pages: source.pages.map((entry) => ({
+    ...entry,
+    Page: withTenantRequired(entry.Page),
+  })),
+  forms: source.forms.map((entry) => {
+    const defaults = formModulePages(entry.moduleKey);
+    const keys = formModulePageKeys(entry.moduleKey);
+    const pageOverrides: Partial<Record<FormPageSlot, PagePresentation>> = {};
+    for (const slot of FORM_SLOTS) {
+      const own = entry.pageOverrides?.[slot];
+      const Page = own?.Page ?? defaults[keys[slot]];
+      pageOverrides[slot] = { ...own, Page: withTenantRequired(Page) };
+    }
+    return { ...entry, pageOverrides };
+  }),
+});
+
+export const projectModulePages: ModulePageSource = gateTenant(sources);

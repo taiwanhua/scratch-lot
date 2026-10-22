@@ -2,6 +2,7 @@ import { Args, ID, Mutation, Query, Resolver } from "@nestjs/graphql";
 
 import { CurrentOperator } from "../../../auth/decorators";
 import type { OperatorContext } from "../../../database/operator-context";
+import { RequireTenant } from "../../tenant-scope/require-tenant.decorator";
 import {
   LotterySettlementCandidatesInput,
   RecordLotterySettlementInput,
@@ -20,6 +21,7 @@ import { SettlementService } from "./settlement.service";
  * 收付機制的端點(規格第 9 章)。按鈕權限沿用單據登記的(`settle` / `pay` / `receive`),由 service 依
  * 那一邊檢查;待結清款項要 `accounts.view-outstanding`,單據候選要 `accounts.record-bank-transaction`。
  */
+@RequireTenant()
 @Resolver(() => LotterySettlementModel)
 export class LotterySettlementResolver {
   constructor(private readonly settlement: SettlementService) {}
