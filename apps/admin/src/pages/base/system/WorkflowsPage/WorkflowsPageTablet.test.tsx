@@ -5,9 +5,9 @@ import { workflowFragment } from "@/test/msw/workflow-fixtures";
 import { setupReactFlowEnvironment } from "@/test/react-flow";
 import {
   resizeViewport,
-  restoreResizableViewportAfterEach,
-  setResizableViewport,
-} from "@/test/viewport-resize";
+  restoreViewportAfterEach,
+  setViewportWidth,
+} from "@/test/viewport";
 
 import {
   clickNode,
@@ -46,10 +46,10 @@ const isNodeSelected = (canvas: HTMLElement, name: string): boolean =>
     ?.classList.contains("selected") ?? false;
 
 describe("流程管理:平板寬(sm–lg)畫布優先", () => {
-  restoreResizableViewportAfterEach();
+  restoreViewportAfterEach();
 
   it("768:清單一進來收起 → [展開] 打開、焦點在 [收起] → 選一個再收起", async () => {
-    setResizableViewport(768);
+    setViewportWidth(768);
     const { user } = renderWorkflows({ world });
     await findCanvas();
     expect(workflowList()).toBeNull();
@@ -66,7 +66,7 @@ describe("流程管理:平板寬(sm–lg)畫布優先", () => {
   });
 
   it("1024:點關卡打開屬性抽屜、流程圖上仍選著它;改名稱流程圖跟著變;Esc 關閉、取消選取", async () => {
-    setResizableViewport(1024);
+    setViewportWidth(1024);
     const { user } = renderWorkflows({ world });
     const canvas = await findCanvas();
     expect(properties()).toBeNull();
@@ -91,7 +91,7 @@ describe("流程管理:平板寬(sm–lg)畫布優先", () => {
   });
 
   it("平板寬:[整個流程設定] 在抽屜裡打開整個流程的設定;[回到整個流程設定] 留在抽屜裡", async () => {
-    setResizableViewport(768);
+    setViewportWidth(768);
     const { user } = renderWorkflows({ world });
     const canvas = await findCanvas();
 
@@ -116,7 +116,7 @@ describe("流程管理:平板寬(sm–lg)畫布優先", () => {
   });
 
   it("≥ lg(1440)不變:清單常駐、沒有收起 / 展開鈕、屬性面板常駐、沒有 [整個流程設定] 鈕", async () => {
-    setResizableViewport(1440);
+    setViewportWidth(1440);
     renderWorkflows({ world });
     await findCanvas();
     expect(workflowList()).not.toBeNull();
@@ -131,7 +131,7 @@ describe("流程管理:平板寬(sm–lg)畫布優先", () => {
   });
 
   it("有未存變更時縮到手機寬再拉回來:草稿與「有未存的變更」都在;手機寬的摘要提示有未存變更", async () => {
-    setResizableViewport(1024);
+    setViewportWidth(1024);
     const { user } = renderWorkflows({ world });
     const canvas = await findCanvas();
     clickNode(canvas, "人資");

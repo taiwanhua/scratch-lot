@@ -4,9 +4,9 @@ import { screen, waitFor, within } from "@testing-library/react";
 import { formFragment } from "@/test/msw/form-fixtures";
 import {
   resizeViewport,
-  restoreResizableViewportAfterEach,
-  setResizableViewport,
-} from "@/test/viewport-resize";
+  restoreViewportAfterEach,
+  setViewportWidth,
+} from "@/test/viewport";
 
 import {
   canvas,
@@ -32,10 +32,10 @@ const expandButton = () =>
   screen.queryByRole("button", { name: "展開表單清單" });
 
 describe("表單管理:平板寬(sm–lg)畫布優先", () => {
-  restoreResizableViewportAfterEach();
+  restoreViewportAfterEach();
 
   it("768:清單一進來收起 → [展開] 打開、焦點在 [收起] → 選一張再收起;[收起] 後焦點回 [展開]", async () => {
-    setResizableViewport(768);
+    setViewportWidth(768);
     const { user } = renderFormsPage(options());
     await findDesigner();
     expect(formList()).toBeNull();
@@ -66,7 +66,7 @@ describe("表單管理:平板寬(sm–lg)畫布優先", () => {
   });
 
   it("1024:屬性面板平常收著;新增欄位打開抽屜、畫布照樣看得到選中的欄位;改屬性畫布跟著變;Esc 關閉", async () => {
-    setResizableViewport(1024);
+    setViewportWidth(1024);
     const { user } = renderFormsPage(options());
     const palette = await findDesigner();
     expect(properties()).toBeNull();
@@ -104,7 +104,7 @@ describe("表單管理:平板寬(sm–lg)畫布優先", () => {
   });
 
   it("平板寬:[表單設定] 在抽屜裡打開表單層設定,關閉鈕收回", async () => {
-    setResizableViewport(768);
+    setViewportWidth(768);
     const { user } = renderFormsPage(options());
     await findDesigner();
 
@@ -119,7 +119,7 @@ describe("表單管理:平板寬(sm–lg)畫布優先", () => {
   });
 
   it("≥ lg(1440)不變:清單常駐、沒有收起 / 展開鈕、屬性面板常駐顯示表單設定、沒有 [表單設定] 鈕", async () => {
-    setResizableViewport(1440);
+    setViewportWidth(1440);
     renderFormsPage(options());
     await findDesigner();
     expect(formList()).not.toBeNull();
@@ -135,7 +135,7 @@ describe("表單管理:平板寬(sm–lg)畫布優先", () => {
   });
 
   it("有未存變更時縮到手機寬再拉回來:草稿與「有未儲存的變更」都在;手機寬的摘要提示有未存變更", async () => {
-    setResizableViewport(1024);
+    setViewportWidth(1024);
     const { user } = renderFormsPage(options());
     const palette = await findDesigner();
     await user.click(
