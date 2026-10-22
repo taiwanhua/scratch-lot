@@ -12,7 +12,13 @@ import type { ReactNode } from "react";
 
 import "dayjs/locale/zh-tw";
 
-import { isCompleteDate, usePickerDraft } from "../DatePicker/usePickerDraft";
+import {
+  type PickerChangeDetails,
+  isCompleteDate,
+  usePickerDraft,
+} from "../DatePicker/usePickerDraft";
+
+export type { PickerChangeDetails } from "../DatePicker/usePickerDraft";
 
 // MUI X 的 `timezone` 需要 dayjs 的 utc + timezone 外掛(擴充一次,對整個 dayjs 生效)
 dayjs.extend(utcPlugin);
@@ -41,8 +47,9 @@ export interface DateTimePickerProps {
   defaultValue?: string | null;
   /**
    * 選到時間時回傳 **UTC** 的 ISO 8601(`YYYY-MM-DDTHH:mm:ssZ`,秒以下捨去);清空、輸入未完成(年份沒打滿 4 位)或不合法回 `null`。
+   * 第二個參數分辨「清空」與「打到一半」(`details.isIncomplete`)。
    */
-  onChange?: (value: string | null) => void;
+  onChange?: (value: string | null, details: PickerChangeDetails) => void;
   /**
    * 輸入與顯示用的 IANA 時區(如 `Asia/Taipei`,表單引擎傳租戶時區);預設瀏覽器時區。
    */

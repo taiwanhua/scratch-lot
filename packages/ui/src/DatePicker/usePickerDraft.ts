@@ -11,6 +11,16 @@ const MIN_COMPLETE_YEAR = 1000;
 export const isCompleteDate = (date: Dayjs | null): date is Dayjs =>
   date?.isValid() === true && date.year() >= MIN_COMPLETE_YEAR;
 
+/** `onChange` 的第二個參數:讓呼叫端分辨「清空」與「打到一半」(兩者都送 `null`)。 */
+export interface PickerChangeDetails {
+  /**
+   * 欄位有輸入但還不是完整、合法的值(年份沒打滿 4 位、只填了一部分區段、2/31 這種不存在的日期)。
+   * 清空(所有區段都空)與完成的值都是 `false`。
+   * 篩選條件用它在打到一半時不改查詢,沿用上一個有效值。
+   */
+  isIncomplete: boolean;
+}
+
 interface Draft {
   /** 這份草稿對應的對外值:最後一次從外部收到、或最後一次送出去的字串 */
   value: string | null | undefined;
@@ -54,7 +64,7 @@ export const usePickerDraft = ({
   toDate: (value: string) => Dayjs;
   /** MUI 的值 → 對外字串;未完成或不合法回 `null` */
   toValue: (date: Dayjs | null) => string | null;
-  onChange?: (value: string | null) => void;
+  onChange?: (value: string | null, details: PickerChangeDetails) => void;
 }) => {
   const external = value === "" ? null : value;
   const [draft, setDraft] = useState<Draft>(() => ({
@@ -74,7 +84,8 @@ export const usePickerDraft = ({
     if (external !== undefined) {
       setDraft({ value: next, date });
     }
-    onChange?.(next);
+    // MUI 在所有區段都空時回 `null`,有輸入但組不成完整日期時回不合法的物件
+    onChange?.(next, { isIncomplete: date !== null && next === null });
   };
 
   return { date: current.date, handleChange };

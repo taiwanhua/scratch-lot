@@ -3,7 +3,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 
-import { DatePicker } from "./DatePicker";
+import { DatePicker, type PickerChangeDetails } from "./DatePicker";
 
 /**
  * 輸入格:MUI X 的日期欄位是一組「區段」(年 / 月 / 日各一個 span)包在 `role="group"` 裡,
@@ -13,6 +13,10 @@ const field = () => screen.getByRole("group");
 
 /** 區段組的文字(尾巴會帶上 `fieldset` 的 legend 標籤,所以用 contains 比對)。 */
 const fieldText = () => field().textContent;
+
+/** `onChange` 第二個參數:打到一半 / 清空或完成。 */
+const PENDING = { isIncomplete: true };
+const DONE = { isIncomplete: false };
 
 /** 年 / 月 / 日區段(`role="spinbutton"`,名稱是 MUI 內建的英文)。 */
 const section = (name: "Year" | "Month" | "Day") =>
@@ -33,7 +37,7 @@ const Controlled = ({
   resetTo?: string | null;
   /** 模擬把清空存成空字串的呼叫端(`value ?? ""`) */
   storeNullAsEmpty?: boolean;
-  onChange: (value: string | null) => void;
+  onChange: (value: string | null, details: PickerChangeDetails) => void;
 }) => {
   const [value, setValue] = useState(initial);
   return (
@@ -49,8 +53,8 @@ const Controlled = ({
       <DatePicker
         label="期初日期"
         value={value}
-        onChange={(next) => {
-          onChange(next);
+        onChange={(next, details) => {
+          onChange(next, details);
           setValue(storeNullAsEmpty ? (next ?? "") : next);
         }}
       />
@@ -158,7 +162,8 @@ describe("DatePicker", () => {
   describe("鍵盤逐位輸入(受控往返)", () => {
     it("年份逐位輸入 2026:每一鍵都留在區段裡,打滿 4 位才跳到月份、才送出完整日期", async () => {
       const user = userEvent.setup();
-      const handleChange = jest.fn<(value: string | null) => void>();
+      const handleChange =
+        jest.fn<(value: string | null, details: PickerChangeDetails) => void>();
       render(<Controlled initial="2025-03-15" onChange={handleChange} />);
 
       await user.click(section("Year"));
@@ -175,38 +180,46 @@ describe("DatePicker", () => {
       const emitted = handleChange.mock.calls.map(([value]) => value);
       expect(emitted.at(-1)).toBe("2026-03-15");
       expect(emitted.slice(0, -1).every((value) => value === null)).toBe(true);
+      expect(
+        handleChange.mock.calls
+          .slice(0, -1)
+          .every(([, details]) => details.isIncomplete),
+      ).toBe(true);
       expect(fieldText()).toContain("2026-03-15");
     });
 
     it("跨月改月份:1/31 改成 2 月先送 null(不合法),日改成 28 才送出 2026-02-28", async () => {
       const user = userEvent.setup();
-      const handleChange = jest.fn<(value: string | null) => void>();
+      const handleChange =
+        jest.fn<(value: string | null, details: PickerChangeDetails) => void>();
       render(<Controlled initial="2026-01-31" onChange={handleChange} />);
 
       await user.click(section("Month"));
       await user.keyboard("02");
       expect(section("Month").textContent).toBe("02");
       expect(section("Day")).toHaveFocus();
-      expect(handleChange).toHaveBeenLastCalledWith(null);
+      expect(handleChange).toHaveBeenLastCalledWith(null, PENDING);
 
       await user.keyboard("28");
-      expect(handleChange).toHaveBeenLastCalledWith("2026-02-28");
+      expect(handleChange).toHaveBeenLastCalledWith("2026-02-28", DONE);
       expect(fieldText()).toContain("2026-02-28");
     });
 
     it("清空:全選刪除送出 null、顯示格式提示,之後可以重新逐位輸入", async () => {
       const user = userEvent.setup();
-      const handleChange = jest.fn<(value: string | null) => void>();
+      const handleChange =
+        jest.fn<(value: string | null, details: PickerChangeDetails) => void>();
       render(<Controlled initial="2026-01-31" onChange={handleChange} />);
 
       await user.click(section("Year"));
       await user.keyboard("{Control>}a{/Control}{Backspace}");
-      expect(handleChange).toHaveBeenLastCalledWith(null);
+      // 清空不是「打到一半」:篩選條件可以據此拿掉條件
+      expect(handleChange).toHaveBeenLastCalledWith(null, DONE);
       expect(fieldText()).toContain("YYYY-MM-DD");
 
       // 全選狀態下區段暫時不是 spinbutton,直接打字從年份開始填
       await user.keyboard("20261105");
-      expect(handleChange).toHaveBeenLastCalledWith("2026-11-05");
+      expect(handleChange).toHaveBeenLastCalledWith("2026-11-05", DONE);
       expect(fieldText()).toContain("2026-11-05");
     });
 
@@ -230,7 +243,8 @@ describe("DatePicker", () => {
 
     it("父層把 null 存成空字串再傳回時,年份逐位輸入不會清掉月、日", async () => {
       const user = userEvent.setup();
-      const handleChange = jest.fn<(value: string | null) => void>();
+      const handleChange =
+        jest.fn<(value: string | null, details: PickerChangeDetails) => void>();
       render(
         <Controlled
           initial="2025-03-15"
@@ -247,7 +261,7 @@ describe("DatePicker", () => {
       }
 
       expect(typed).toEqual(["0002", "0020", "0202", "2026"]);
-      expect(handleChange).toHaveBeenLastCalledWith("2026-03-15");
+      expect(handleChange).toHaveBeenLastCalledWith("2026-03-15", DONE);
       expect(fieldText()).toContain("2026-03-15");
     });
 

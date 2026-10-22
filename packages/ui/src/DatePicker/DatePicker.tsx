@@ -9,7 +9,13 @@ import type { ReactNode } from "react";
 
 import "dayjs/locale/zh-tw";
 
-import { isCompleteDate, usePickerDraft } from "./usePickerDraft";
+import {
+  type PickerChangeDetails,
+  isCompleteDate,
+  usePickerDraft,
+} from "./usePickerDraft";
+
+export type { PickerChangeDetails } from "./usePickerDraft";
 
 /**
  * 對外的值格式:ISO 日期字串。
@@ -33,8 +39,11 @@ export interface DatePickerProps {
   value?: string | null;
   /** 非受控的初始值,`YYYY-MM-DD` */
   defaultValue?: string | null;
-  /** 選到日期時回傳 `YYYY-MM-DD`;清空、輸入未完成(年份沒打滿 4 位)或不合法時回傳 `null` */
-  onChange?: (value: string | null) => void;
+  /**
+   * 選到日期時回傳 `YYYY-MM-DD`;清空、輸入未完成(年份沒打滿 4 位)或不合法時回傳 `null`。
+   * 第二個參數分辨「清空」與「打到一半」(`details.isIncomplete`)。
+   */
+  onChange?: (value: string | null, details: PickerChangeDetails) => void;
   /** 可選範圍(含),`YYYY-MM-DD` */
   minDate?: string;
   maxDate?: string;
