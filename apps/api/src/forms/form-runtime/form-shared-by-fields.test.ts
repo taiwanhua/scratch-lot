@@ -437,4 +437,48 @@ describe("依欄位共用(表單設定 sharedByFieldKeys)", () => {
     expect(viewed.abilities.canEdit).toBe(false);
     expect(await listIds(storeAManager)).not.toContain(submitted.id);
   });
+  it("租戶的「包含下層」開關關掉:上層組織的人看不到指到下層店的單(可見範圍只剩所屬組織)", async () => {
+    const district = await createOrg(connection, {
+      name: "南區",
+      parentId: tenant,
+    });
+    const southStore = await createOrg(connection, {
+      name: "南區的店",
+      parentId: district,
+    });
+    const submitted = await submit({ receiver_org: String(southStore) });
+    const tenants = connection.collection("orgs");
+    await tenants.updateOne(
+      { _id: tenant },
+      { $set: { "settings.visibility": "own" } },
+    );
+    try {
+      // 可見範圍在登入時算:開關關掉之後才登入
+      const districtManager = await createOperator(api, connection, {
+        orgId: district,
+        ownerOrgId: tenant,
+        permissionKeys: ALL,
+      });
+      expect(await listIds(districtManager)).not.toContain(submitted.id);
+      expect(
+        codeOf(
+          await call(api, districtManager.token, FORM_SUBMISSION, {
+            id: submitted.id,
+          }),
+        ),
+      ).toBe("NOT_FOUND");
+      // 店本身的人照樣看得到(所屬組織)
+      const storeManager = await createOperator(api, connection, {
+        orgId: southStore,
+        ownerOrgId: tenant,
+        permissionKeys: ALL,
+      });
+      expect(await listIds(storeManager)).toContain(submitted.id);
+    } finally {
+      await tenants.updateOne(
+        { _id: tenant },
+        { $set: { "settings.visibility": "subtree" } },
+      );
+    }
+  });
 });
