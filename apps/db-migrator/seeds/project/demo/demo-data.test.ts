@@ -5,10 +5,20 @@ import { describe, expect, it } from "@jest/globals";
 
 import { SCHEDULE_FIELD_CATEGORY_KEYS } from "@repo/domain/project/schedule-fields";
 
-import { DEMO_TENANT, demoPlan } from ".";
+import { DEMO_STEPS, DEMO_TENANT, demoPlan } from ".";
 import { PROJECT_FIELD_CATEGORIES } from "../field-categories";
 import { parseOnboardingPlan } from "../onboarding/plan";
+import { ONBOARDING_STEPS } from "../onboarding/steps";
+import { rolesStep } from "../onboarding/steps/roles";
+import { DEMO_BANK_ACCOUNTS } from "./bank-accounts";
+import {
+  DEMO_CLASS_A_DEALERS,
+  DEMO_CLASS_B_DEALERS,
+  DEMO_TRUSTEES,
+} from "./dealers";
 import { DEMO_GAMES } from "./games";
+import { DEMO_BRANCHES } from "./organization";
+import { DEMO_VAULT_CASH } from "./vault-cash";
 
 const DEMO_DIR = __dirname;
 const SOURCE_DIRS = [
@@ -108,6 +118,52 @@ describe("示範資料:檔案管理(遊戲、收銀點)", () => {
     expect(new Set(DEMO_GAMES.map((game) => game.gameCode)).size).toBe(
       DEMO_GAMES.length,
     );
+  });
+});
+
+describe("示範專用的步驟(開通腳本不做)", () => {
+  const keys = DEMO_STEPS.map((step) => step.key);
+
+  it("開通清單的步驟照原順序都在(「角色」換成多套列印權限的那一份),示範專用的接在後面", () => {
+    expect(keys.slice(0, ONBOARDING_STEPS.length)).toEqual(
+      ONBOARDING_STEPS.map((step) => step.key),
+    );
+    expect(DEMO_STEPS).not.toContain(rolesStep);
+    expect(keys.slice(ONBOARDING_STEPS.length)).toEqual([
+      "demo-games",
+      "demo-dealers",
+      "demo-bank-accounts",
+      "demo-vault-cash",
+    ]);
+    // 開通腳本本身不含示範專用的步驟
+    expect(ONBOARDING_STEPS.some((step) => step.key.startsWith("demo-"))).toBe(
+      false,
+    );
+  });
+
+  it("小金庫起始現金排在「流程」之後(現金更正單要走店長核准,不是送出就完成)", () => {
+    expect(keys.indexOf("demo-vault-cash")).toBeGreaterThan(
+      keys.indexOf("form-workflows"),
+    );
+  });
+
+  it("引用的分店、乙類、受託人都在示範資料裡", () => {
+    const branches = new Set(DEMO_BRANCHES.map((branch) => branch.name));
+    for (const account of DEMO_BANK_ACCOUNTS) {
+      expect(account.usedBy.every((name) => branches.has(name))).toBe(true);
+    }
+    for (const vault of DEMO_VAULT_CASH) {
+      expect(branches.has(vault.branch)).toBe(true);
+    }
+    const classB = new Set(
+      DEMO_CLASS_B_DEALERS.map((dealer) => dealer.licenseNo),
+    );
+    const trustees = new Set(DEMO_TRUSTEES.map((trustee) => trustee.name));
+    for (const dealer of DEMO_CLASS_A_DEALERS) {
+      expect(classB.has(dealer.coSalesLicenseNo)).toBe(true);
+      expect(dealer.trustees.every((name) => trustees.has(name))).toBe(true);
+      expect(classB.has(dealer.licenseNo)).toBe(false);
+    }
   });
 });
 

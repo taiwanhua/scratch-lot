@@ -6,26 +6,33 @@
  * 示範機構和真正開通的租戶走同一套步驟。示範資料不進一般 seed(ADR-0002)。
  *
  * 追加方式:模組 / 表單票把自己的示範資料放成本目錄的一檔(例:`cash-points.ts`),
- * 在 `demoPlan` 加一行把它放進開通資料;不改別人的檔。不放密碼、不放真實信箱(測試會掃)。
+ * 開通清單有的資料在 `demoPlan` 加一行把它放進開通資料;開通清單沒有(或標人工)的寫成示範專用的一步,
+ * 加進 `DEMO_STEPS`(例:`bank-accounts.ts`)。不改別人的檔。不放密碼、不放真實信箱(測試會掃)。
  */
 import {
   type DemoSource,
   type DemoTenant,
   aliasEmail,
 } from "../../../src/demo/demo-source";
+import type { OnboardingStep } from "../onboarding/context";
 import type { OnboardingPlan } from "../onboarding/plan";
+import { ROLE_GRANT_SECTIONS } from "../onboarding/role-grants";
 import { runOnboarding } from "../onboarding/run-onboarding";
 import { ONBOARDING_STEPS } from "../onboarding/steps";
+import { createRolesStep, rolesStep } from "../onboarding/steps/roles";
+import { demoBankAccountsStep } from "./bank-accounts";
 import { DEMO_CASH_POINTS } from "./cash-points";
-import { DEMO_CLASS_B_DEALERS } from "./dealers";
+import { DEMO_CLASS_B_DEALERS, demoDealersStep } from "./dealers";
 import { demoGamesStep } from "./games";
 import { DEMO_BRANCHES, DEMO_USERS } from "./organization";
 import { DEMO_POSITIONS } from "./positions";
+import { demoPrintingGrants } from "./printing-grants";
 import {
   DEMO_SCHEDULE_STAFF,
   DEMO_SCHEDULE_TEMPLATES,
   DEMO_SCHEDULE_WEEK_TEMPLATES,
 } from "./schedule";
+import { demoVaultCashStep } from "./vault-cash";
 
 /** 示範機構:名稱固定(重跑以它找回同一個機構),短碼全域唯一。 */
 export const DEMO_TENANT: DemoTenant = {
@@ -69,6 +76,23 @@ export function demoPlan(emailBase: string): OnboardingPlan {
   };
 }
 
+/**
+ * 示範指令跑的步驟 = 開通清單的步驟(「角色」那一步多套示範的列印權限)+ 示範資料專用的步驟。
+ * 開通清單標「人工」的項目(銀行帳戶、兩個批購基準日、列印權限)與不在清單裡的(遊戲、甲類與受託人、
+ * 小金庫起始現金)只在這裡做,真實租戶的開通不做。小金庫起始現金是送一張現金更正單,要排在「流程」之後。
+ */
+export const DEMO_STEPS: readonly OnboardingStep[] = [
+  ...ONBOARDING_STEPS.map((step) =>
+    step === rolesStep
+      ? createRolesStep([...ROLE_GRANT_SECTIONS, demoPrintingGrants])
+      : step,
+  ),
+  demoGamesStep,
+  demoDealersStep,
+  demoBankAccountsStep,
+  demoVaultCashStep,
+];
+
 export const lotteryDemoSource: DemoSource = {
   tenant: DEMO_TENANT,
   populate: ({ client, emailBase, password, print }) =>
@@ -78,7 +102,6 @@ export const lotteryDemoSource: DemoSource = {
       activation: { mode: "PASSWORD", password },
       tenantSlug: DEMO_TENANT.slug,
       print,
-      // 開通清單的步驟 + 示範資料專用的步驟(遊戲不在開通清單裡)
-      steps: [...ONBOARDING_STEPS, demoGamesStep],
+      steps: DEMO_STEPS,
     }),
 };

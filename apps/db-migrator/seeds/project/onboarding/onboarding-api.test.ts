@@ -36,6 +36,10 @@ import { STORE_MANAGER_NOTIFICATION_TYPES } from "./steps/notification-recipient
 
 jest.setTimeout(240_000);
 
+/** 字串排序(STRUCT-10:明給 zh-Hant)。 */
+const byText = (left: string, right: string): number =>
+  left.localeCompare(right, "zh-Hant");
+
 const DEMO_PASSWORD = ["demo", "pass", "word", "7"].join("-");
 const EMAIL_BASE = ["owner", "example.test"].join("@");
 const SETUP_TIMEOUT_MS = 900_000;
@@ -313,6 +317,147 @@ describe("開通腳本與 demo create(真 api + 真 MongoDB)", () => {
       );
     });
 
+    it("示範專用:三個角色多了列印權限(總部管理、店長 列印 + 補印;店員只有列印)", async () => {
+      const { roles } = await adminClient.request<{
+        roles: { items: RoleItem[] };
+      }>(ROLES);
+      const printingOf = async (name: string) => {
+        const role = roles.items.find((item) => item.name === name);
+        const { roleMatrix } = await adminClient.request<{
+          roleMatrix: { granted: { permissionKeys: string[] } };
+        }>(ROLE_MATRIX, { roleId: role?.id });
+        return roleMatrix.granted.permissionKeys
+          .filter((key) => key.startsWith("api.printing."))
+          .toSorted(byText);
+      };
+      // 兩筆都給 = 收斂成這一層的 `*`(矩陣的正規化)
+      expect(await printingOf("總部管理")).toEqual([
+        "api.printing.*",
+        "api.printing.print",
+        "api.printing.reprint",
+      ]);
+      expect(await printingOf("店長")).toEqual([
+        "api.printing.*",
+        "api.printing.print",
+        "api.printing.reprint",
+      ]);
+      expect(await printingOf("店員")).toEqual(["api.printing.print"]);
+    });
+
+    it("示範專用:受託人、甲類(兩個批購基準日、共同銷售處所、受託人)與銀行帳戶 A / B", async () => {
+      const { lotteryDealers } = await adminClient.request<{
+        lotteryDealers: { items: Document[] };
+      }>(/* GraphQL */ `
+        query TestClassADealers {
+          lotteryDealers(input: { type: A, pageSize: 100 }) {
+            items {
+              licenseNo
+              name
+              lastPurchaseBaseDate
+              lastSelfPurchaseBaseDate
+              coSalesDealer {
+                licenseNo
+              }
+              trustees {
+                name
+              }
+            }
+          }
+        }
+      `);
+      // 2026-03-01 00:00(租戶時區 Asia/Taipei)
+      expect(lotteryDealers.items).toEqual([
+        {
+          licenseNo: "90000011",
+          name: "示範甲類一",
+          lastPurchaseBaseDate: "2026-02-28T16:00:00.000Z",
+          lastSelfPurchaseBaseDate: "2026-02-28T16:00:00.000Z",
+          coSalesDealer: { licenseNo: "90000001" },
+          trustees: [{ name: "王受託" }],
+        },
+      ]);
+
+      const { lotteryBankAccounts } = await adminClient.request<{
+        lotteryBankAccounts: { items: Document[] };
+      }>(/* GraphQL */ `
+        query TestBankAccounts {
+          lotteryBankAccounts(input: { pageSize: 100 }) {
+            items {
+              label
+              openingBalance
+              openingDate
+              balance
+              usageOrgs {
+                name
+              }
+            }
+          }
+        }
+      `);
+      expect(
+        lotteryBankAccounts.items.map((item) => ({
+          ...item,
+          usageOrgs: (item.usageOrgs as { name: string }[])
+            .map((org) => org.name)
+            .toSorted(byText),
+        })),
+      ).toEqual(
+        expect.arrayContaining([
+          {
+            label: "示範彩券行 末 56789",
+            openingBalance: 500_000,
+            openingDate: "2026-09-30T16:00:00.000Z",
+            balance: 500_000,
+            usageOrgs: ["中山店", "信義店"].toSorted(byText),
+          },
+          {
+            label: "信義店零用 末 22333",
+            openingBalance: 120_000,
+            openingDate: "2026-09-30T16:00:00.000Z",
+            balance: 120_000,
+            usageOrgs: ["信義店"],
+          },
+        ]),
+      );
+      expect(lotteryBankAccounts.items).toHaveLength(2);
+    });
+
+    it("示範專用:中山店小金庫起始現金 20,000 = 一張待店長核准的現金更正單(核准前不寫小金庫)", async () => {
+      const branch = await findOne("orgs", {
+        parentId: tenantId,
+        name: "中山店",
+      });
+      const corrections = await find("form_submissions", {
+        tenantId,
+        formKey: "cash_correction",
+      });
+      expect(corrections).toHaveLength(1);
+      expect(corrections[0]).toMatchObject({
+        status: "reviewing",
+        serialNo: "X-0001",
+      });
+      expect(corrections[0]?.values).toMatchObject({
+        direction: "increase",
+        // 數字欄以十進位字串存
+        amount: "20000",
+        place: "vault",
+        note: "上線前小金庫既有現金",
+      });
+      expect(
+        await find("lottery_cash_movements", { orgId: branch._id as ObjectId }),
+      ).toEqual([]);
+      // 審核者 = 中山店店長(流程「店長限定分店」)
+      const manager = await findOne("users", {
+        account: `owner+demo-manager-a@example.test`,
+      });
+      const tasks = await find("workflow_tasks", {
+        submissionId: corrections[0]?._id as ObjectId,
+      });
+      expect(tasks.map((task) => String(task.assigneeId))).toEqual([
+        String(manager._id),
+      ]);
+    });
+
     it("三個角色在角色管理是一般角色,沒有「預設角色」標籤(規格 3.3)", async () => {
       const { roles } = await adminClient.request<{
         roles: { items: RoleItem[] };
@@ -588,7 +733,7 @@ describe("開通腳本與 demo create(真 api + 真 MongoDB)", () => {
         expect(createAndSubmitFormSubmission.submission.status).toBe(
           "REVIEWING",
         );
-        // 受管表單宣告的單號格式(S + 4 位、不分期間):這個租戶的第一張
+        // 受管表單宣告的單號格式(SP + 4 位、不分期間):這個租戶的第一張
         expect(createAndSubmitFormSubmission.submission.serialNo).toBe(
           "SP-0001",
         );
