@@ -1,10 +1,13 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from "use-intl";
 
 import type { WorkflowDefinition } from "@repo/domain/workflow";
 import {
   type WorkflowValidationFieldsFragment,
+  type WorkflowVersionsQuery,
   useSaveWorkflowVersionDraftMutation,
+  useWorkflowVersionsQuery,
 } from "@repo/graphql";
 
 import {
@@ -51,6 +54,7 @@ export const useWorkflowDraftSave = ({
   const t = useTranslations("admin.workflows.designer");
   const tErrors = useTranslations("admin.workflows.errors");
   const { session } = useSession();
+  const queryClient = useQueryClient();
   const [revision, setRevision] = useState(initialRevision);
   const [error, setError] = useState<WorkflowError | null>(null);
   const [serverReport, setServerReport] =
@@ -82,6 +86,25 @@ export const useWorkflowDraftSave = ({
       });
       const saved = payload.saveWorkflowVersionDraft;
       setRevision(saved.workflowVersion.draftRevision);
+      // 存成功當下就把新的草稿寫進版本清單的快取,不等重查:版本面板的「發布」帶的 `expectedDraftRevision`
+      // 取自那份清單,存完馬上去發布時重查還沒回來,會帶舊修訂號被擋成 `CONFLICT`(同表單設計器的 `useDesignerSave`)
+      queryClient.setQueryData<WorkflowVersionsQuery>(
+        useWorkflowVersionsQuery.getKey({ workflowKey }),
+        (current) =>
+          current === undefined
+            ? current
+            : {
+                ...current,
+                workflowVersions: {
+                  ...current.workflowVersions,
+                  items: current.workflowVersions.items.map((item) =>
+                    item.id === saved.workflowVersion.id
+                      ? { ...item, ...saved.workflowVersion }
+                      : item,
+                  ),
+                },
+              },
+      );
       setServerReport(saved.validation ?? null);
       markSaved(snapshot, checkFormSnapshot);
       feedback.onSuccess(payload);
