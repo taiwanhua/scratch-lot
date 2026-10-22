@@ -222,9 +222,9 @@
 
 分店人力不足時請總部協助;總部在排班作業排好人後核准(支援指派單已取消:看得到兩家店的人直接在排班作業排人)。
 
-- **表單**:受管表單 `support_request`(`apps/db-migrator/seeds/project/revisions/support_request.r1.seed.ts`,在 `seeds/project/registry.ts` 登記;部署時由受管定義 CLI 發布成共用表單,掛在 `schedule.manage`)。表單、提交、修訂、流程都用底座的表單引擎與流程引擎(`form_submissions`),沒有自己的資料表。
+- **表單**:受管表單 `support_request`(`apps/db-migrator/seeds/project/revisions/support_request.r3.seed.ts`,在 `seeds/project/registry.ts` 登記;部署時由受管定義 CLI 發布成共用表單,掛在 `schedule.manage`)。表單、提交、修訂、流程都用底座的表單引擎與流程引擎(`form_submissions`),沒有自己的資料表。
 - **欄位**:日期(`date`,必填)、崗位(`position`,欄位管理「崗位」`schedule-position`,必填)、開始 / 結束(`start_time` / `end_time`,`HH:mm` 24 小時制,必填,結束要晚於開始;**不能跨午夜**,跨過午夜的需求拆成兩筆)、需要人數(`headcount`,1–99 的整數)、分店(`branch`,組織引用,預設目前組織,必填;Figma SC-14 有這一欄,讓總部看得出是哪家店)、說明(`note`,200 字內)。摘要:標題 = 說明、日期 = 日期;頁籤標題「支援需求單 <日期>」。
-- **單號**:受管表單宣告 `serial: { prefix: "S", period: "none", digits: 4 }`,第一次送出時給號,例 `S-0001`(每個租戶各自計數、不分期間;存草稿不給號;機制見底座 `docs/modules/forms.md`「單號」、ADR-0015)。
+- **單號**:受管表單宣告 `serial: { prefix: "SP", period: "none", digits: 4 }`,第一次送出時給號,例 `SP-0001`(每個租戶各自計數、不分期間;存草稿不給號;機制見底座 `docs/modules/forms.md`「單號」、ADR-0015)。
 - **沒有草稿**:表單「允許存草稿」關(seed 宣告 `allowDraft: false`),新增頁只有 [送出](`docs/modules/forms.md`「允許存草稿」)。
 - **權限**:看列表與詳情 = `schedule.manage.view`(分頁也看它);新增 = `schedule.manage.create`;審核不看頁面權限(承辦人就能審,`docs/modules/workflows.md`)。
 - **表單要先分派**:受管表單是共用表單,租戶要平台管理員在表單管理「分派租戶」後才看得到、才能新增(分派是各環境的資料,不在 seed)。示範指令 `demo create` 由平台管理員建完示範機構後自動分派 registry 登記的每張受管表單;真實租戶由平台管理員分派。

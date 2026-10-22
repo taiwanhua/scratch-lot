@@ -523,7 +523,7 @@ describe("開通腳本與 demo create(真 api + 真 MongoDB)", () => {
         expect(workflows).toHaveLength(1);
       });
 
-      it("中山店店長送出 → 單號 S-0001,審核者 = 角色 總部管理 且屬於最上層組織的人(示範總部人員)", async () => {
+      it("中山店店長送出 → 單號 SP-0001,審核者 = 角色 總部管理 且屬於最上層組織的人(示範總部人員)", async () => {
         // 新建的示範帳號首登要先改密碼(一般規則),改完再登入
         const account = `owner+demo-manager-a@example.test`;
         const changed = ["changed", "by", "manager", "8"].join("-");
@@ -590,7 +590,7 @@ describe("開通腳本與 demo create(真 api + 真 MongoDB)", () => {
         );
         // 受管表單宣告的單號格式(S + 4 位、不分期間):這個租戶的第一張
         expect(createAndSubmitFormSubmission.submission.serialNo).toBe(
-          "S-0001",
+          "SP-0001",
         );
 
         const hq = await findOne("users", {

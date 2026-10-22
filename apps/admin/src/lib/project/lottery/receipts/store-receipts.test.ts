@@ -25,7 +25,7 @@ const VIEW = "https://admin.example/store/view-page";
 
 const refund: SaleRefundReceiptInput = {
   submissionId: "sub-r8",
-  serialNo: "R-0008",
+  serialNo: "SR-0008",
   branchId: "org-store",
   pending: true,
   refundShiftLabel: "店內櫃台 · 王小明 10/16 08:02",
@@ -169,7 +169,7 @@ describe("店面的 58mm 單據版面:投庫單、出庫單、存款單、退貨
       "好運彩券行",
       "退貨退款收據",
       "[標示] 待核准",
-      "單號 R-0008 | 2026-10-16 21:30",
+      "單號 SR-0008 | 2026-10-16 21:30",
       "----",
       "退款班次 | 店內櫃台 · 王小明 10/16 08:02",
       "原因 | 客人退貨",

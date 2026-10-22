@@ -188,7 +188,7 @@ export const sampleInvestigations =
         inventoryGames[2],
         "investigating",
         inventoryOrgs.storeA,
-        "S-0032",
+        "ST-0032",
         "2026-10-16T02:00:00.000Z",
         9200,
         100,

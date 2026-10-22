@@ -106,7 +106,7 @@
 
 正本:`packages/domain/src/project/lottery/store-forms.ts`(表單代號、欄位 key、存值解析、送出前的值檢查);掛接點規則 `apps/api/src/project/lottery/store/store-forms-rules.service.ts`。
 
-兩張都是**受管表單**(`seeds/project/revisions/sale_reversal.r1.seed.ts`、`cash_correction.r1.seed.ts`):綁 `store`、**沒有草稿**(`allowDraft: false`)、單號 `R-0001` / `X-0001`、作廢原因用共用「作廢原因」(`void-reason`)。流程不 seed,由開通腳本建(`onboarding/form-workflows/store-forms.ts`)。
+兩張都是**受管表單**(`seeds/project/revisions/sale_reversal.r3.seed.ts`、`cash_correction.r2.seed.ts`):綁 `store`、**沒有草稿**(`allowDraft: false`)、單號 `SR-0001` / `X-0001`、作廢原因用共用「作廢原因」(`void-reason`)。流程不 seed,由開通腳本建(`onboarding/form-workflows/store-forms.ts`)。
 
 | 表單         | formKey           | 欄位                                                                                                                                                                                                                                                                                                  | 新增頁           |
 | ------------ | ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------- |
@@ -156,7 +156,7 @@
 - **[補登售出]**(`backfillLotteryStocktakeSales`,要 `store.sell` + `store.stocktake`):寫「售出(盤點補登)」事件(`sale_stocktake`、`soldSource = stocktake`、金額 = 面額、`refType = stocktake`)。那個收銀點有開著的班 → 鎖住抽屜(`drawerVersion`)算那一班;沒有 → 那個收銀點最近一班、記 `postCloseOf`(事後更正,不算那一班結帳時的應有);從來沒開過班 → 擋下(`STOCKTAKE_NO_SHIFT`)。帳本條件更新(版本 = 盤點時讀到的):兩人同時補登、補登與看板補刷同時 → 只有一個成功,失敗方 `CONFLICT` + `STOCKTAKE_ALREADY_PROCESSED`(第 17 章第 1、3 題)。回傳事件 id,盤點內容記下,送出時核對「是自己補登的」。
 - **送出**(ST-15):各收銀點的補登售出與應有現金(已結帳 → 事後更正)、新增待查、標記異常、未拆的本不在、確認遺失(張 / 批購成本,有 `inventory.show-cost` 才給成本)、說明 → [送出盤點確認申請] 經表單引擎 `createAndSubmitFormSubmission`(退回後再送出走 `submitFormSubmission`)。
 - **沒盤完可以送出**(使用者 2026-10-21 定案):還有本沒盤時送出視窗提示「還有 N 本沒有盤;沒盤的本不比對,盤點單會記下未盤的本」。送出時 api 算出範圍內(單一收銀點 / 全店啟用中的收銀點)檯面上還有未售的張、卻不在盤點內容裡的本 × 收銀點,記進盤點單 `uncountedBooks[]`(遊戲、本號、收銀點)與 `summary.uncountedCount`;不比對、不記差異,張維持系統狀態;退回後再送出時重算。盤點紀錄分頁在狀態旁標「N 本未盤」,檢視頁列出那幾本;之後可另開一次盤點補盤。報表讀 `summary.uncountedCount`。
-- **盤點確認申請**(受管表單 `stocktake_confirm`,`seeds/project/revisions/stocktake_confirm.r1.seed.ts`):分店、盤點範圍、彙總(盤點頁組好帶入)、說明、盤點內容(系統,`serializeStocktakeDraft` 的 JSON;唯讀時不顯示);沒有草稿、單號 `S-0001`、作廢原因類別 `void-reason`(作廢一律擋下)。掛接點(`stocktake-lifecycle.ts`):
+- **盤點確認申請**(受管表單 `stocktake_confirm`,`seeds/project/revisions/stocktake_confirm.r3.seed.ts`):分店、盤點範圍、彙總(盤點頁組好帶入)、說明、盤點內容(系統,`serializeStocktakeDraft` 的 JSON;唯讀時不顯示);沒有草稿、單號 `ST-0001`、作廢原因類別 `void-reason`(作廢一律擋下)。掛接點(`stocktake-lifecycle.ts`):
   - `beforeSubmit`:盤點內容讀得懂、分店一致;有 `store.stocktake`(確認遺失另要 `store.confirm-lost` 與原因);每筆差異都已處理且還對得到(`STOCKTAKE_DIFF_STALE` / `STOCKTAKE_DIFF_UNHANDLED`)
   - `submitted`:同一個交易建立盤點單(待核准;退回後再送出改寫同一筆)、再比對一次(不合 → 整個送出回復)
   - `returned` / `withdrawn` → 已退回;`rejected` → 已駁回(補登的售出不退,錯了用撤銷售出申請「盤點錯誤」)

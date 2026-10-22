@@ -87,7 +87,7 @@ const stocktakeSubmission = (): MockSubmission =>
     formName: "盤點確認申請",
     status: FormSubmissionStatus.Reviewing,
     currentInstanceId: `inst-${STOCKTAKE_REVIEWING_ID}`,
-    serialNo: "S-0032",
+    serialNo: "ST-0032",
     values: {
       branch: { id: "org-store-a", label: "中山店" },
       scope_label: "全店",

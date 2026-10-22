@@ -713,14 +713,14 @@ describe("關帳(GraphQL 端點 + 真 MongoDB)", () => {
       SALE_REVERSAL_FORM_KEY,
       "reviewing",
       { refund: "yes", refund_shift: String(night.shiftId) },
-      "R-012",
+      "SR-012",
       taipei("2026-11-02", "10:00:00"),
     );
     await storeForm(
       SALE_REVERSAL_FORM_KEY,
       "reviewing",
       { refund: "yes", refund_shift: String(november.shiftId) },
-      "R-013",
+      "SR-013",
       taipei("2026-11-02", "10:00:00"),
     );
     // 現金更正單:位置 10/30 早班 → 擋;小金庫 10/31 送出 → 擋;小金庫 11/1 送出 → 不擋
@@ -769,7 +769,7 @@ describe("關帳(GraphQL 端點 + 真 MongoDB)", () => {
       },
       {
         kind: "sale_reversal",
-        serialNo: "R-012",
+        serialNo: "SR-012",
         shiftLabel: "店內櫃台 · 10/31 晚班",
       },
       {
@@ -882,7 +882,7 @@ describe("關帳(GraphQL 端點 + 真 MongoDB)", () => {
     await connection
       .collection("form_submissions")
       .updateMany(
-        { serialNo: { $in: ["R-013", "C-003"] } },
+        { serialNo: { $in: ["SR-013", "C-003"] } },
         { $set: { status: "completed" } },
       );
     await shiftOf(

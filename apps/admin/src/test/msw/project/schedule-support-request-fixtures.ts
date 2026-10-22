@@ -25,7 +25,7 @@ import type { WorkflowRuntimeWorldOptions } from "../workflow-runtime-handlers";
 
 /**
  * 排班作業 → 支援需求單(規格 14.10)的夾具。定義與受管表單同形
- * (正本 `apps/db-migrator/seeds/project/revisions/support_request.r2.seed.ts`);
+ * (正本 `apps/db-migrator/seeds/project/revisions/support_request.r3.seed.ts`);
  * 三筆提交:審核中(派給登入者小華)、已完成、已退回(Figma SC-31 274:32718)。
  */
 export const SUPPORT_REQUEST_FORM_KEY = "support_request";
@@ -108,7 +108,7 @@ export const supportRequestDefinition = (): FormDefinition => ({
   prefills: [],
 });
 
-/** `moduleForms("schedule.manage")` 的那一張(受管表單關了「允許存草稿」;單號格式 S-0001)。 */
+/** `moduleForms("schedule.manage")` 的那一張(受管表單關了「允許存草稿」;單號格式 SP-0001)。 */
 export const supportRequestForm = {
   key: SUPPORT_REQUEST_FORM_KEY,
   name: "支援需求單",
@@ -203,7 +203,7 @@ export const supportRequestSubmissions = (): MockSubmission[] => [
     {
       status: FormSubmissionStatus.Reviewing,
       currentInstanceId: "inst-support-12",
-      serialNo: "S-0012",
+      serialNo: "SP-0012",
     },
   ),
   supportRequest(
@@ -216,7 +216,7 @@ export const supportRequestSubmissions = (): MockSubmission[] => [
       headcount: "1",
       note: "週末到貨補貨",
     },
-    { serialNo: "S-0011" },
+    { serialNo: "SP-0011" },
   ),
   supportRequest(
     "sub-support-09",
@@ -228,7 +228,7 @@ export const supportRequestSubmissions = (): MockSubmission[] => [
       headcount: "2",
       note: "店員請假",
     },
-    { status: FormSubmissionStatus.Returned, serialNo: "S-0009" },
+    { status: FormSubmissionStatus.Returned, serialNo: "SP-0009" },
   ),
 ];
 

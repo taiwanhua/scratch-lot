@@ -60,7 +60,7 @@ const shiftDetail = (): Detail => ({
   stocktake: {
     __typename: "LotteryCheckoutReusableStocktake",
     submissionId: "sub-st",
-    serialNo: "S-0032",
+    serialNo: "ST-0032",
     startedAt: "2026-10-16T02:32:00.000Z",
     scopeName: null,
     diffCount: 0,

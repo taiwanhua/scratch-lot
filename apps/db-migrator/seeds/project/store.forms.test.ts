@@ -19,7 +19,7 @@ import { ROLE_GRANT_SECTIONS } from "./onboarding/role-grants";
 import { roleGrantOf } from "./onboarding/roles";
 import { projectSeedSource } from "./registry";
 import { seed as cashCorrectionForm } from "./revisions/cash_correction.r2.seed";
-import { seed as saleReversalForm } from "./revisions/sale_reversal.r2.seed";
+import { seed as saleReversalForm } from "./revisions/sale_reversal.r3.seed";
 import { projectSeedSettings } from "./settings";
 
 const keysOf = (form: { definition: { fields: readonly { key: string }[] } }) =>
@@ -37,9 +37,9 @@ describe("受管表單 撤銷售出申請(sale_reversal r1)、現金更正單(ca
     ).not.toThrow();
   });
 
-  it("綁店面管理、沒有草稿、單號 R / X、作廢原因 = 共用的「作廢原因」", () => {
+  it("綁店面管理、沒有草稿、單號 SR / X、作廢原因 = 共用的「作廢原因」", () => {
     for (const [form, key, prefix] of [
-      [saleReversalForm, SALE_REVERSAL_FORM_KEY, "R"],
+      [saleReversalForm, SALE_REVERSAL_FORM_KEY, "SR"],
       [cashCorrectionForm, CASH_CORRECTION_FORM_KEY, "X"],
     ] as const) {
       expect(form).toMatchObject({

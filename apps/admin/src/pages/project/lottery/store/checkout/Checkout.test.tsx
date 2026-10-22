@@ -107,7 +107,7 @@ describe("店面管理:交班結帳", () => {
     expect(screen.getByText("12,350")).toBeInTheDocument();
     expect(
       screen.getByText(
-        "審核中:現金更正 #C-012 + 500、撤銷售出 #R-008 − 500 → 已自動帶入差額原因說明。",
+        "審核中:現金更正 #X-012 + 500、撤銷售出 #SR-008 − 500 → 已自動帶入差額原因說明。",
       ),
     ).toBeInTheDocument();
     await user.type(countInput(1000), "12");
@@ -166,7 +166,7 @@ describe("店面管理:交班結帳", () => {
         { value: 100, count: 3 },
       ],
       diffReasonKey: "pending-documents",
-      diffReasonNote: "審核中:現金更正 #C-012 + 500、撤銷售出 #R-008 − 500",
+      diffReasonNote: "審核中:現金更正 #X-012 + 500、撤銷售出 #SR-008 − 500",
       leftForNext: 3000,
       successorId: "user-li",
     });
@@ -249,7 +249,7 @@ describe("店面管理:交班結帳", () => {
       screen.getByText("申請人 李小華 · 送出 10/16 22:10"),
     ).toBeInTheDocument();
     expect(
-      screen.getByText("沿用 10/16 21:40 全店盤點 S-0032"),
+      screen.getByText("沿用 10/16 21:40 全店盤點 ST-0032"),
     ).toBeInTheDocument();
     expect(screen.getByText("− 100 · 找錯錢")).toBeInTheDocument();
     expect(screen.getByText("0 / (沒有接班人)")).toBeInTheDocument();

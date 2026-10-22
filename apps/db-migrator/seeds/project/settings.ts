@@ -41,7 +41,7 @@ export const projectSeedSettings: ProjectSeedSettings = {
       settings: {
         list: {
           columns: [
-            // 單號(摘要槽 `serialNo`;受管表單宣告的單號格式 S-0001)
+            // 單號(摘要槽 `serialNo`;受管表單宣告的單號格式 SP-0001)
             { kind: "slot", key: "serialNo", width: 100, order: 0 },
             supportRequestColumn("date", 120, 1),
             supportRequestColumn("start_time", 100, 2),

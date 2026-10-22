@@ -264,7 +264,7 @@ export const sampleBookDetail =
         event("2026-10-15T12:10:00.000Z", "investigate", ["071"], {
           refType: "stocktake",
           refId: "s-31",
-          refSerialNo: "S-0031",
+          refSerialNo: "ST-0031",
         }),
         event(
           "2026-10-14T01:30:00.000Z",
