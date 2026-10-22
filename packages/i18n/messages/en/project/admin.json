@@ -870,7 +870,7 @@
         "counted": "Counted",
         "difference": "Difference",
         "reason": "Reason",
-        "postClose": "Post-close",
+        "postClose": "Later corrections",
         "stocktake": "Stocktake",
         "status": "Review"
       },
@@ -890,7 +890,9 @@
       },
       "noTask": "No matching schedule",
       "allCashPoints": "All",
-      "cashPointOfStore": "{store} · {name}"
+      "cashPointOfStore": "{store} · {name}",
+      "postCloseEntry": "{amount} ({date} {category})",
+      "postCloseEntryPrior": "{amount} ({date} {category}, prior period)"
     }
   },
   "schedule": {

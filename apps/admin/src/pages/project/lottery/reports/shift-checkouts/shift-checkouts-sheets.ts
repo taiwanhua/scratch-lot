@@ -96,7 +96,7 @@ const columnsOf = (t: T, withStore: boolean): SheetColumn[] => [
   {
     key: "postClose",
     header: t("admin.lotteryReports.shiftCheckouts.columns.postClose"),
-    ...money,
+    width: 26,
   },
   {
     key: "stocktake",
@@ -152,6 +152,67 @@ export const taskText = (row: ShiftCheckoutRow, t: T): string => {
     .join(" · ");
 };
 
+const POST_CLOSE_KEYS: Readonly<Record<string, string>> = {
+  redemption: "admin.lotteryReports.operations.postClose.redemption",
+  stocktake: "admin.lotteryReports.operations.postClose.stocktake",
+  refund: "admin.lotteryReports.operations.postClose.refund",
+  cashCorrection: "admin.lotteryReports.operations.postClose.cashCorrection",
+  other: "admin.lotteryReports.operations.postClose.other",
+};
+
+const signed = (amount: number) =>
+  `${amount > 0 ? "+" : ""}${amount.toLocaleString()}`;
+
+/**
+ * 「之後的更正」欄(使用者 10/12 定案):原班的應有 / 差額照結帳快照,之後的更正另外說明 ——
+ * 同一天、同一類別合併成一筆,例「+1,800(10/13 兌獎更正)」;記在關帳之後的加註「前期更正」。
+ */
+export const postCloseText = (
+  row: ShiftCheckoutRow,
+  t: T,
+  timezone: string,
+): string => {
+  const groups = new Map<
+    string,
+    { amount: number; date: string; category: string; prior: boolean }
+  >();
+  for (const entry of row.postCloseEntries) {
+    const date = formatTemporal(entry.recordedAt, {
+      type: "monthDay",
+      timezone,
+    });
+    const key = `${date}|${entry.category}|${String(entry.priorPeriod)}`;
+    const group = groups.get(key) ?? {
+      amount: 0,
+      date,
+      category: entry.category,
+      prior: entry.priorPeriod,
+    };
+    group.amount += entry.amount;
+    groups.set(key, group);
+  }
+  return [...groups.values()]
+    .map((group) =>
+      t(
+        group.prior
+          ? "admin.lotteryReports.shiftCheckouts.postCloseEntryPrior"
+          : "admin.lotteryReports.shiftCheckouts.postCloseEntry",
+        {
+          amount: signed(group.amount),
+          date: group.date,
+          category: t(
+            keyIn(
+              POST_CLOSE_KEYS,
+              group.category,
+              "admin.lotteryReports.operations.postClose.other",
+            ),
+          ),
+        },
+      ),
+    )
+    .join("、");
+};
+
 const rowOf = (
   row: ShiftCheckoutRow,
   context: ReportSheetContext,
@@ -176,7 +237,7 @@ const rowOf = (
     counted: row.counted,
     difference: row.difference,
     reason: row.diffReason ?? "",
-    postClose: row.postClose === 0 ? null : row.postClose,
+    postClose: postCloseText(row, t, timezone),
     stocktake: stocktakeText(row, t),
     status: t(
       keyIn(

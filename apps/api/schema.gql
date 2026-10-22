@@ -2871,6 +2871,7 @@ type LotteryShiftCheckoutRow {
   openedAt: DateTime!
   orgId: ID!
   postClose: Float!
+  postCloseEntries: [LotteryShiftPostCloseEntry!]!
   skipReason: String
   status: String!
   stocktakeMode: String!
@@ -2911,6 +2912,13 @@ type LotteryShiftInfo {
 
 type LotteryShiftInfoPayload {
   item: LotteryShiftInfo!
+}
+
+type LotteryShiftPostCloseEntry {
+  amount: Float!
+  category: String!
+  priorPeriod: Boolean!
+  recordedAt: DateTime!
 }
 
 """見簽季別的狀態:已見簽 / 已過沒登記(警告)/ 本季還沒登記 / 未到(停用)"""

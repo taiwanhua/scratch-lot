@@ -21,7 +21,11 @@ import type {
   LotteryShiftCheckoutRowModel,
   LotteryShiftCheckoutsReportModel,
 } from "./models/shift-checkouts-report.model";
-import { PostCloseCorrections } from "./post-close-corrections";
+import {
+  PostCloseCorrections,
+  type PostCloseRow,
+} from "./post-close-corrections";
+import { ReportPeriods, isPriorPeriodOf } from "./report-periods";
 import { ReportScopes, SHIFT_CHECKOUTS_RANGE } from "./report-scope";
 
 /** 任務快照的崗位、執行任務名稱要讀的排班類別(底座 `FieldOptionsService` 的白名單)。 */
@@ -40,6 +44,7 @@ export class ShiftCheckoutsReportService {
   constructor(
     private readonly scopes: ReportScopes,
     private readonly postClose: PostCloseCorrections,
+    private readonly periods: ReportPeriods,
     private readonly checkouts: LotteryCheckoutsRepository,
     private readonly shifts: LotteryShiftsRepository,
     private readonly stocktakes: LotteryStocktakesRepository,
@@ -112,8 +117,8 @@ export class ShiftCheckoutsReportService {
     const shiftIds = records.flatMap((row) =>
       row.shiftId === null ? [] : [row.shiftId],
     );
-    const [shifts, points, stocktakes, corrections, labels] = await Promise.all(
-      [
+    const [shifts, points, stocktakes, corrections, labels, closedAt] =
+      await Promise.all([
         this.shifts.findMany(scope.reader, { _id: { $in: shiftIds } }),
         this.cashPoints.findMany(
           scope.reader,
@@ -133,19 +138,19 @@ export class ShiftCheckoutsReportService {
         ),
         this.postClose.rowsOf(scope.reader, { shiftIds }),
         this.scheduleLabels(operator),
-      ],
-    );
+        this.periods.closedAtByMonth(scope),
+      ]);
     const shiftById = new Map(shifts.map((row) => [String(row._id), row]));
     const pointName = new Map(points.map((row) => [String(row._id), row.name]));
     const uncounted = new Map(
       stocktakes.map((row) => [String(row._id), row.summary.uncountedCount]),
     );
-    const postCloseOf = new Map<string, number>();
+    const postCloseOf = new Map<string, PostCloseRow[]>();
     for (const row of corrections) {
-      postCloseOf.set(
-        row.shiftId,
-        (postCloseOf.get(row.shiftId) ?? 0) + row.amount,
-      );
+      postCloseOf.set(row.shiftId, [
+        ...(postCloseOf.get(row.shiftId) ?? []),
+        row,
+      ]);
     }
     const helpers = await this.entryLookup.helpersOfDemands(scope.reader, {
       tenantId: scope.tenantId,
@@ -203,7 +208,17 @@ export class ShiftCheckoutsReportService {
             counted: record.counted,
             difference: record.difference,
             diffReason: reasonText(record.diffReason, record.diffReasonNote),
-            postClose: postCloseOf.get(String(record.shiftId)) ?? 0,
+            ...postCloseFieldsOf(
+              postCloseOf.get(String(record.shiftId)) ?? [],
+              (row) =>
+                shift !== undefined &&
+                isPriorPeriodOf(
+                  scope,
+                  closedAt,
+                  shift.openedAt,
+                  row.recordedAt,
+                ),
+            ),
             stocktakeMode: record.stocktakeMode,
             skipReason: reasonText(record.skipReason, record.skipReasonNote),
             uncountedBooks:
@@ -248,3 +263,29 @@ const reasonText = (
   }
   return note === null || note === "" ? reason : `${reason}(${note})`;
 };
+
+/**
+ * 原班之後的更正(規格 6.12、10.4;使用者 10/12 定案):不改原班的結帳快照(應有 / 實點 / 差額照舊),
+ * 另列每一筆「之後的更正」(類別、金額、記錄時間;記在那一班所在月份關帳之後的標「前期更正」)與合計。
+ */
+function postCloseFieldsOf(
+  rows: readonly PostCloseRow[],
+  isPrior: (row: PostCloseRow) => boolean,
+): Pick<LotteryShiftCheckoutRowModel, "postClose" | "postCloseEntries"> {
+  return {
+    postClose: rows.reduce((sum, row) => sum + row.amount, 0),
+    postCloseEntries: rows
+      // 依記錄時間;同一刻(例:撤銷並重新登記)再依金額,順序固定
+      .toSorted(
+        (a, b) =>
+          a.recordedAt.getTime() - b.recordedAt.getTime() ||
+          a.amount - b.amount,
+      )
+      .map((row) => ({
+        category: row.category,
+        amount: row.amount,
+        recordedAt: row.recordedAt,
+        priorPeriod: isPrior(row),
+      })),
+  };
+}

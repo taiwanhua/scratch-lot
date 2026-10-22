@@ -195,6 +195,12 @@ const SHIFT_CHECKOUTS = /* GraphQL */ `
         difference
         diffReason
         postClose
+        postCloseEntries {
+          category
+          amount
+          recordedAt
+          priorPeriod
+        }
         stocktakeMode
         skipReason
         uncountedBooks
@@ -675,6 +681,21 @@ describe("輸出報表:營運報表、班次結帳歷史報表(GraphQL 端點 + 
         difference: 1800,
         diffReason: "其他(兌獎金額待查)",
         postClose: 1800,
+        // 原班的結帳快照不變;之後的更正逐筆另列(記錄當時、類別)
+        postCloseEntries: [
+          {
+            category: "redemption",
+            amount: -200,
+            recordedAt: taipei("2026-10-13", "10:00").toISOString(),
+            priorPeriod: false,
+          },
+          {
+            category: "redemption",
+            amount: 2000,
+            recordedAt: taipei("2026-10-13", "10:00").toISOString(),
+            priorPeriod: false,
+          },
+        ],
         status: "confirmed",
       }),
     ]);
@@ -1529,6 +1550,31 @@ describe("輸出報表:營運報表、班次結帳歷史報表(GraphQL 端點 + 
       priorPeriodAmount: 300,
       openMonths: ["2026-10"],
     });
+    // 班次結帳歷史:9/30 那一班的差額照結帳快照,10/5 的更正另列並標前期更正
+    const history = await ok<{
+      lotteryShiftCheckoutsReport: { rows: Record<string, unknown>[] };
+    }>(hq, SHIFT_CHECKOUTS, {
+      input: {
+        periodKind: "day",
+        from: taipei("2026-09-30").toISOString(),
+        to: taipei("2026-10-01").toISOString(),
+        orgIds: [String(hsinchu)],
+      },
+    });
+    expect(history.lotteryShiftCheckoutsReport.rows).toEqual([
+      expect.objectContaining({
+        difference: 300,
+        postClose: 300,
+        postCloseEntries: [
+          {
+            category: "cashCorrection",
+            amount: 300,
+            recordedAt: taipei("2026-10-05", "11:00").toISOString(),
+            priorPeriod: true,
+          },
+        ],
+      }),
+    ]);
     const data = await ok<{
       lotteryOperationsReport: { closedThrough: string | null };
     }>(hq, OPERATIONS, {

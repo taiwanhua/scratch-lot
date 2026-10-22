@@ -7,6 +7,26 @@ import {
   ObjectType,
 } from "@nestjs/graphql";
 
+/** 原班之後的一筆更正(不改原班的結帳快照,另外列出)。 */
+@ObjectType("LotteryShiftPostCloseEntry")
+export class LotteryShiftPostCloseEntryModel {
+  /** `redemption` 兌獎 / `stocktake` 盤點補登 / `refund` 退貨退款 / `cashCorrection` 現金更正 / `other` */
+  @Field(() => String)
+  category!: string;
+
+  /** 對那一班抽屜的影響(帶正負號) */
+  @Field(() => Float)
+  amount!: number;
+
+  /** 記錄時間(更正發生當時) */
+  @Field(() => GraphQLISODateTime)
+  recordedAt!: Date;
+
+  /** 記在那一班所在月份關帳之後(營運報表歸「前期更正」) */
+  @Field(() => Boolean)
+  priorPeriod!: boolean;
+}
+
 /** 班次結帳歷史的一列(規格 11.3、14.9;Figma RE-05)。 */
 @ObjectType("LotteryShiftCheckoutRow")
 export class LotteryShiftCheckoutRowModel {
@@ -62,9 +82,13 @@ export class LotteryShiftCheckoutRowModel {
   @Field(() => String, { nullable: true })
   diffReason!: string | null;
 
-  /** 事後更正淨額(那一班的全部事後更正) */
+  /** 之後的更正合計(不加進應有 / 差額;差額照結帳快照) */
   @Field(() => Float)
   postClose!: number;
+
+  /** 之後的更正逐筆(依記錄時間) */
+  @Field(() => [LotteryShiftPostCloseEntryModel])
+  postCloseEntries!: LotteryShiftPostCloseEntryModel[];
 
   /** 盤點:`skip` 跳過 / `reuse` 沿用 / `new` 現在盤點 */
   @Field(() => String)

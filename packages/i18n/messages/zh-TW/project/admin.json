@@ -870,7 +870,7 @@
         "counted": "實點",
         "difference": "差額",
         "reason": "原因",
-        "postClose": "事後更正",
+        "postClose": "之後的更正",
         "stocktake": "盤點",
         "status": "審核"
       },
@@ -890,7 +890,9 @@
       },
       "noTask": "未對應排班",
       "allCashPoints": "全部",
-      "cashPointOfStore": "{store} · {name}"
+      "cashPointOfStore": "{store} · {name}",
+      "postCloseEntry": "{amount}({date} {category})",
+      "postCloseEntryPrior": "{amount}({date} {category},前期更正)"
     }
   },
   "schedule": {

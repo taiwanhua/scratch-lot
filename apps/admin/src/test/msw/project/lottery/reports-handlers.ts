@@ -208,6 +208,7 @@ const shiftRow = (
   difference: -100,
   diffReason: "找錯錢",
   postClose: 0,
+  postCloseEntries: [],
   stocktakeMode: "new",
   skipReason: null,
   uncountedBooks: 0,
@@ -312,6 +313,15 @@ export const reportsWorld = (options: ReportsWorldOptions = {}) => {
           difference: 200,
           diffReason: "審核中的單據",
           postClose: 200,
+          postCloseEntries: [
+            {
+              __typename: "LotteryShiftPostCloseEntry",
+              category: "cashCorrection",
+              amount: 200,
+              recordedAt: "2026-10-16T03:00:00.000Z",
+              priorPeriod: false,
+            },
+          ],
           stocktakeMode: "skip",
           skipReason: "人力不足",
           uncountedBooks: 0,

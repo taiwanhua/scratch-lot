@@ -166,6 +166,12 @@ query LotteryShiftCheckoutsReport($input: LotteryShiftCheckoutsReportInput!) {
       difference
       diffReason
       postClose
+      postCloseEntries {
+        category
+        amount
+        recordedAt
+        priorPeriod
+      }
       stocktakeMode
       skipReason
       uncountedBooks

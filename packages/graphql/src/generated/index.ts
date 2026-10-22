@@ -3140,6 +3140,7 @@ export type LotteryShiftCheckoutRow = {
   openedAt: Scalars['DateTime']['output'];
   orgId: Scalars['ID']['output'];
   postClose: Scalars['Float']['output'];
+  postCloseEntries: Array<LotteryShiftPostCloseEntry>;
   skipReason?: Maybe<Scalars['String']['output']>;
   status: Scalars['String']['output'];
   stocktakeMode: Scalars['String']['output'];
@@ -3183,6 +3184,14 @@ export type LotteryShiftInfo = {
 export type LotteryShiftInfoPayload = {
   __typename?: 'LotteryShiftInfoPayload';
   item: LotteryShiftInfo;
+};
+
+export type LotteryShiftPostCloseEntry = {
+  __typename?: 'LotteryShiftPostCloseEntry';
+  amount: Scalars['Float']['output'];
+  category: Scalars['String']['output'];
+  priorPeriod: Scalars['Boolean']['output'];
+  recordedAt: Scalars['DateTime']['output'];
 };
 
 /** 見簽季別的狀態:已見簽 / 已過沒登記(警告)/ 本季還沒登記 / 未到(停用) */
@@ -10901,7 +10910,7 @@ export type LotteryShiftCheckoutsReportQueryVariables = Exact<{
 }>;
 
 
-export type LotteryShiftCheckoutsReportQuery = { __typename?: 'Query', lotteryShiftCheckoutsReport: { __typename?: 'LotteryShiftCheckoutsReport', rows: Array<{ __typename?: 'LotteryShiftCheckoutRow', checkoutId: string, orgId: string, cashPointId: string, cashPointName: string, openedAt: string, submittedAt: string, leader: string, helpers: Array<string>, taskRole?: string | null, taskPosition?: string | null, taskName?: string | null, expected: number, counted: number, difference: number, diffReason?: string | null, postClose: number, stocktakeMode: string, skipReason?: string | null, uncountedBooks: number, status: string }> } };
+export type LotteryShiftCheckoutsReportQuery = { __typename?: 'Query', lotteryShiftCheckoutsReport: { __typename?: 'LotteryShiftCheckoutsReport', rows: Array<{ __typename?: 'LotteryShiftCheckoutRow', checkoutId: string, orgId: string, cashPointId: string, cashPointName: string, openedAt: string, submittedAt: string, leader: string, helpers: Array<string>, taskRole?: string | null, taskPosition?: string | null, taskName?: string | null, expected: number, counted: number, difference: number, diffReason?: string | null, postClose: number, stocktakeMode: string, skipReason?: string | null, uncountedBooks: number, status: string, postCloseEntries: Array<{ __typename?: 'LotteryShiftPostCloseEntry', category: string, amount: number, recordedAt: string, priorPeriod: boolean }> }> } };
 
 export type LotteryShiftCheckoutsReportCashPointsQueryVariables = Exact<{
   input: LotteryReportRangeInput;
@@ -23230,6 +23239,12 @@ export const LotteryShiftCheckoutsReportDocument = `
       difference
       diffReason
       postClose
+      postCloseEntries {
+        category
+        amount
+        recordedAt
+        priorPeriod
+      }
       stocktakeMode
       skipReason
       uncountedBooks

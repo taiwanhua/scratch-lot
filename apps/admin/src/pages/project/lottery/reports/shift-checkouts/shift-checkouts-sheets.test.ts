@@ -34,6 +34,26 @@ const row = (overrides: Partial<ShiftCheckoutRow>): ShiftCheckoutRow => ({
   difference: 1800,
   diffReason: "其他",
   postClose: 1800,
+  postCloseEntries: [
+    {
+      category: "redemption",
+      amount: 2000,
+      recordedAt: "2026-10-17T02:00:00.000Z",
+      priorPeriod: false,
+    },
+    {
+      category: "redemption",
+      amount: -200,
+      recordedAt: "2026-10-17T02:00:00.000Z",
+      priorPeriod: false,
+    },
+    {
+      category: "cashCorrection",
+      amount: 100,
+      recordedAt: "2026-11-05T02:00:00.000Z",
+      priorPeriod: true,
+    },
+  ],
   stocktakeMode: "new",
   skipReason: null,
   uncountedBooks: 0,
@@ -75,8 +95,17 @@ describe("班次結帳歷史報表的工作表", () => {
       leader: "李大華",
       helpers: "陳小美",
       time: "16:00 / 22:10",
+      // 差額照結帳快照;之後的更正同一天同類別合併、關帳後的標前期更正
       difference: 1800,
-      postClose: 1800,
+      postClose: `lotteryReports.shiftCheckouts.postCloseEntry${JSON.stringify({
+        amount: "+1,800",
+        date: "10/17",
+        category: "lotteryReports.operations.postClose.redemption",
+      })}、lotteryReports.shiftCheckouts.postCloseEntryPrior${JSON.stringify({
+        amount: "+100",
+        date: "11/5",
+        category: "lotteryReports.operations.postClose.cashCorrection",
+      })}`,
       status: "lotteryReports.shiftCheckouts.status.confirmed",
     });
   });
