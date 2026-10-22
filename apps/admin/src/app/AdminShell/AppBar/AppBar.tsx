@@ -32,7 +32,8 @@ export interface AppBarProps {
 
 /**
  * 後台 AppBar(Figma Draft/AdminAppBar):頁名、模組說明「?」、通知鈴、當前組織切換器、使用者選單(Draft/AdminUserMenu:使用者卡、外觀、語言、個人設定、登出 / 登出所有裝置)。
- * 手機寬(< `sm`)最左多一顆主選單鈕,打開側欄抽屜(`SideNav`);左右內距與間距跟著縮小。
+ * 手機寬(< `sm`)只留:主選單鈕(打開側欄抽屜)、頁名(放不下以省略號截斷)、通知鈴、精簡版組織切換(首字小按鈕);
+ * 「?」說明與頭像選單移到抽屜底部(`SideNav/MobileNavFooter`);左右內距與間距跟著縮小。`sm` 以上維持原樣。
  */
 export const AppBar = ({ me, title, module }: AppBarProps) => {
   const t = useTranslations("admin.shell");
@@ -71,24 +72,28 @@ export const AppBar = ({ me, title, module }: AppBarProps) => {
       <Typography variant="h6" component="div" noWrap sx={{ minWidth: 0 }}>
         {title}
       </Typography>
-      {/* 「?」模組說明彈窗(Figma help-button I44:119;81:51):只有模組路由才有 */}
-      {module !== undefined && (
+      {/* 「?」模組說明彈窗(Figma help-button I44:119;81:51):只有模組路由才有;手機寬改放抽屜底部 */}
+      {!isMobile && module !== undefined && (
         <HelpButton
           moduleKey={module.key}
           moduleName={module.name}
           moduleEngine={module.engine}
         />
       )}
-      <Box sx={{ flex: 1 }} />
+      {/* 撐開的空白:頁名放不下時讓它先縮(flex-shrink),右側按鈕不被擠出畫面 */}
+      <Box sx={{ flex: 1, minWidth: 0 }} />
 
       {/* 通知鈴:組織切換器左邊,所有登入者都有 */}
       <NotificationBell />
-      <OrgSwitcher me={me} />
-      <UserMenu
-        name={me.name}
-        account={me.account}
-        orgName={me.currentOrg?.name}
-      />
+      <OrgSwitcher me={me} isCompact={isMobile} />
+      {/* 頭像選單:手機寬改放抽屜底部 */}
+      {!isMobile && (
+        <UserMenu
+          name={me.name}
+          account={me.account}
+          orgName={me.currentOrg?.name}
+        />
+      )}
     </Box>
   );
 };

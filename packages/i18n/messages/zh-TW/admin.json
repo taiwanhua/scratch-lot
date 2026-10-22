@@ -95,6 +95,7 @@
     "expandNav": "展開側欄",
     "openNav": "開啟主選單",
     "currentOrg": "當前組織",
+    "currentOrgNamed": "當前組織:{name}",
     "placeholder": {
       "pending": "此頁面尚未建置"
     },

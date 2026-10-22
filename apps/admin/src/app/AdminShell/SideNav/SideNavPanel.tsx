@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { useTranslations } from "use-intl";
 
 import { Avatar } from "@repo/ui/avatar";
@@ -38,6 +39,8 @@ export interface SideNavPanelProps extends SideNavContentProps {
   onToggle?: () => void;
   /** 點了任一模組連結時額外要做的事(手機抽屜用來關掉自己) */
   onNavigate?: () => void;
+  /** 底部區塊(手機抽屜放說明與頭像選單);和收合開關佔同一個位置 */
+  footer?: ReactNode;
 }
 
 /**
@@ -58,6 +61,7 @@ export const SideNavPanel = ({
   isCollapsed,
   onToggle,
   onNavigate,
+  footer,
 }: SideNavPanelProps) => {
   const t = useTranslations("admin.shell");
   const tApp = useTranslations("admin.app");
@@ -159,6 +163,7 @@ export const SideNavPanel = ({
         )}
       </Box>
 
+      {footer}
       {onToggle !== undefined && (
         <SideNavToggle isCollapsed={isCollapsed} onToggle={onToggle} />
       )}

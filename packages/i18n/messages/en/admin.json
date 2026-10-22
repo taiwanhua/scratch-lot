@@ -95,6 +95,7 @@
     "expandNav": "Expand sidebar",
     "openNav": "Open main menu",
     "currentOrg": "Current organization",
+    "currentOrgNamed": "Current organization: {name}",
     "placeholder": {
       "pending": "This page is not built yet"
     },

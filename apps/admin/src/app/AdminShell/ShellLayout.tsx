@@ -20,6 +20,7 @@ import { useSideNavStore } from "@/stores/base/useSideNavStore";
 import { AppBar } from "./AppBar/AppBar";
 import { RouteTabs } from "./RouteTabs/RouteTabs";
 import { useRouteTabs } from "./RouteTabs/useRouteTabs";
+import { MobileNavFooter } from "./SideNav/MobileNavFooter";
 import { SideNav } from "./SideNav/SideNav";
 import {
   DEFAULT_SHELL_MIN_WIDTH,
@@ -108,6 +109,7 @@ export const ShellLayout = ({ me, pageMinWidths = {} }: ShellLayoutProps) => {
         tree={tree}
         currentPath={path}
         badges={navBadges}
+        mobileFooter={<MobileNavFooter me={me} module={currentModule} />}
       />
       <Box
         sx={{
