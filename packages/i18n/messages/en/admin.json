@@ -2144,13 +2144,13 @@
       "summaryNeedsCollapsible": "Turn on “Collapsible” first."
     },
     "mobile": {
-      "back": "← Back",
       "region": "Form summary",
       "hint": "Use a tablet or computer to design and edit.",
       "version": "Published version",
       "yes": "Yes",
       "no": "No"
-    }
+    },
+    "mobileBack": "← Back"
   },
   "approval": {
     "nameSeparator": ", ",
@@ -2830,11 +2830,11 @@
       "backToFlow": "Back to whole-flow settings"
     },
     "mobile": {
-      "back": "← Back",
       "region": "Workflow summary",
       "hint": "Use a tablet or computer to design and edit.",
-      "version": "Published version: {version}"
-    }
+      "version": "Published version"
+    },
+    "mobileBack": "← Back"
   },
   "userPicker": {
     "option": "{name} ({account})",

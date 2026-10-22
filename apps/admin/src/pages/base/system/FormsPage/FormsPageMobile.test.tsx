@@ -8,6 +8,7 @@ import { restoreViewportAfterEach, setMobileViewport } from "@/test/viewport";
 import {
   FORMS_ALL,
   defaultDesignOptions,
+  findDesigner,
   preloadFormsPage,
   renderFormsPage,
 } from "./forms-page-test-support";
@@ -81,5 +82,25 @@ describe("表單管理:手機寬只顯示清單或唯讀摘要", () => {
       await screen.findByRole("region", { name: "表單設定" }),
     ).toBeInTheDocument();
     expect(screen.queryByRole("region", { name: "表單摘要" })).toBeNull();
+  });
+});
+
+describe("表單管理:同一筆不經過未存攔截", () => {
+  it("sm 以上:網址沒有選取、設計器有未存變更時再點同一張 → 不跳攔截、改動留著,只把選取寫進網址", async () => {
+    const { user } = renderFormsPage(options());
+    const palette = await findDesigner();
+    await user.click(
+      within(palette).getByRole("button", { name: "新增數字欄位" }),
+    );
+    expect(await screen.findByText(/有未儲存的變更/)).toBeInTheDocument();
+    expect(urlParam("detail")).toBeNull();
+
+    const list = screen.getByRole("list", { name: "表單清單" });
+    await user.click(within(list).getByText("購物單"));
+    await waitFor(() => {
+      expect(urlParam("detail")).toBe("shopping_list");
+    });
+    expect(screen.queryByRole("dialog", { name: "有未存的變更" })).toBeNull();
+    expect(screen.getByText(/有未儲存的變更/)).toBeInTheDocument();
   });
 });

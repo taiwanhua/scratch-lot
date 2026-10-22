@@ -2144,13 +2144,13 @@
       "summaryNeedsCollapsible": "打開「可以收合」後才能設定。"
     },
     "mobile": {
-      "back": "← 返回",
       "region": "表單摘要",
       "hint": "設計與編輯請使用平板或電腦。",
       "version": "發布版本",
       "yes": "是",
       "no": "否"
-    }
+    },
+    "mobileBack": "← 返回"
   },
   "approval": {
     "nameSeparator": "、",
@@ -2830,11 +2830,11 @@
       "backToFlow": "回到整個流程設定"
     },
     "mobile": {
-      "back": "← 返回",
       "region": "流程摘要",
       "hint": "設計與編輯請使用平板或電腦。",
-      "version": "發布版本:{version}"
-    }
+      "version": "發布版本"
+    },
+    "mobileBack": "← 返回"
   },
   "userPicker": {
     "option": "{name}({account})",

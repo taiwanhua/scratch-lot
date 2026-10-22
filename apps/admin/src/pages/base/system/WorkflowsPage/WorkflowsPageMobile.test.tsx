@@ -7,7 +7,10 @@ import { urlParam } from "@/test/url-reload";
 import { restoreViewportAfterEach, setMobileViewport } from "@/test/viewport";
 
 import {
+  clickNode,
   defaultDesignOptions,
+  findCanvas,
+  propertiesPanel,
   renderWorkflows,
 } from "./workflows-page-test-support";
 
@@ -66,5 +69,29 @@ describe("流程管理:手機寬只顯示清單或唯讀摘要", () => {
       await screen.findByRole("region", { name: "流程內容" }),
     ).toBeInTheDocument();
     expect(screen.queryByRole("region", { name: "流程摘要" })).toBeNull();
+  });
+});
+
+describe("流程管理:同一筆不經過未存攔截", () => {
+  it("sm 以上:網址沒有選取、設計器有未存變更時再點同一個流程 → 不跳攔截、改動留著,只把選取寫進網址", async () => {
+    const { user } = renderWorkflows({ world });
+    const canvas = await findCanvas();
+    clickNode(canvas, "人資");
+    const name = within(propertiesPanel()).getByRole("textbox", {
+      name: "名稱",
+    });
+    await user.clear(name);
+    await user.type(name, "人資部");
+    expect(urlParam("detail")).toBeNull();
+
+    const list = screen.getByRole("list", { name: "流程清單" });
+    await user.click(within(list).getByText("病假審核"));
+    await waitFor(() => {
+      expect(urlParam("detail")).toBe("leave_review");
+    });
+    expect(screen.queryByRole("dialog", { name: "還有沒存的變更" })).toBeNull();
+    expect(
+      within(propertiesPanel()).getByRole("textbox", { name: "名稱" }),
+    ).toHaveValue("人資部");
   });
 });

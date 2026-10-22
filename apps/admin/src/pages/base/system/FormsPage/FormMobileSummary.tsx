@@ -131,7 +131,7 @@ export const FormMobileSummary = ({
     >
       <Box>
         <Button variant="text" size="small" onClick={onBack}>
-          {t("mobile.back")}
+          {t("mobileBack")}
         </Button>
       </Box>
       {form === null ? (

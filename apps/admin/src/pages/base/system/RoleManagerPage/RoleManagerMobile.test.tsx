@@ -4,7 +4,7 @@ import { screen, waitFor } from "@testing-library/react";
 import { currentSearch, urlParam } from "@/test/url-reload";
 import { restoreViewportAfterEach, setMobileViewport } from "@/test/viewport";
 
-import { renderRolePage } from "./role-manager-test-support";
+import { matrixCheckbox, renderRolePage } from "./role-manager-test-support";
 
 const list = () => screen.queryByRole("list", { name: "角色清單" });
 const detailTab = () => screen.queryByRole("tab", { name: "分配使用者" });
@@ -48,5 +48,34 @@ describe("角色管理:手機寬一次只顯示一邊(主從)", () => {
     expect(await screen.findByText("審核員")).toBeInTheDocument();
     expect(detailTab()).not.toBeNull();
     expect(screen.queryByRole("button", { name: "← 返回" })).toBeNull();
+  });
+});
+
+describe("角色管理:手機寬返回時的未存攔截", () => {
+  restoreViewportAfterEach();
+
+  it("矩陣有未存變更 → [← 返回] 先問 → 放棄 → 回清單,再點同一個角色是原本的勾選", async () => {
+    setMobileViewport();
+    const { user } = renderRolePage();
+    await user.click(await screen.findByText("內容編輯"));
+    await screen.findByText("內容編輯 — 權限設定");
+    await screen.findByText("示範模組1");
+    const create = "新增demo.sub.sample-one.create";
+    await user.click(matrixCheckbox(create));
+    expect(matrixCheckbox(create)).toBeChecked();
+
+    await user.click(screen.getByRole("button", { name: "← 返回" }));
+    expect(await screen.findByText("放棄未儲存的變更?")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "放棄變更" }));
+    await waitFor(() => {
+      expect(list()).not.toBeNull();
+    });
+    expect(urlParam("detail")).toBeNull();
+
+    await user.click(screen.getByText("內容編輯"));
+    await screen.findByText("內容編輯 — 權限設定");
+    await screen.findByText("示範模組1");
+    expect(matrixCheckbox(create)).not.toBeChecked();
+    expect(screen.queryByText("有未儲存的變更")).toBeNull();
   });
 });

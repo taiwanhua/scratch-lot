@@ -20,6 +20,7 @@
 | React 元件(front / admin / ui)                        | `react/components.md`、`react/styling.md`、`general/figma.md`(設計稿對照)                                                           |
 | admin 頁面的動作按鈕(列表 / 新增編輯 / 檢視 / 對話框) | `react/components.md` REACT-16                                                                                                      |
 | 選組織(組織選擇器)                                    | `react/components.md` REACT-15、`docs/concepts/frontend-architecture.md`「組織選擇器」用法表                                        |
+| admin 主從頁(左清單 / 樹、右詳情)的手機版             | `react/components.md` REACT-17                                                                                                      |
 | 新增 `@repo/ui` 元件 / 子路徑匯出                     | `general/structure.md` STRUCT-08 的四處清單、`general/naming.md` GEN-01、`react/styling.md` STYLE-05 / 07                           |
 | 前端資料存取(query / mutation)                        | `react/data-fetching.md`                                                                                                            |
 | api 的 GraphQL schema(resolver / model / input)       | `api/graphql-schema.md`                                                                                                             |

@@ -19,6 +19,25 @@ export interface WorkflowMobileSummaryProps {
   onBack: () => void;
 }
 
+/** 摘要標籤欄的最小寬(theme.spacing 單位),讓各列的值對齊。 */
+const LABEL_WIDTH = 12;
+
+/** 摘要的一列:標籤 + 值(唯讀)。 */
+const SummaryRow = ({ label, value }: { label: string; value: string }) => (
+  <Stack direction="row" spacing={1.5}>
+    <Typography
+      variant="body2"
+      color="text.secondary"
+      sx={{ flexShrink: 0, minWidth: (theme) => theme.spacing(LABEL_WIDTH) }}
+    >
+      {label}
+    </Typography>
+    <Typography variant="body2" sx={{ minWidth: 0, overflowWrap: "anywhere" }}>
+      {value}
+    </Typography>
+  </Stack>
+);
+
 /**
  * 流程管理在手機寬(< `sm`)的詳情:只顯示基本資料與摘要(唯讀),並提示到平板或電腦設計、編輯 ——
  * 流程設計器需要寬畫面,手機上不提供(`WorkflowsPage`)。
@@ -63,13 +82,12 @@ const WorkflowMobileSummaryCard = ({
         </Stack>
         <Alert severity="info">{t("mobile.hint")}</Alert>
         <Stack spacing={1}>
-          <Typography variant="body2">
-            {t("mobile.version", {
-              version: workflow.hasDraft
-                ? `${version} · ${t("list.hasDraft")}`
-                : version,
-            })}
-          </Typography>
+          <SummaryRow
+            label={t("mobile.version")}
+            value={
+              workflow.hasDraft ? `${version} · ${t("list.hasDraft")}` : version
+            }
+          />
           {workflow.assignments.length > 0 && (
             <Typography variant="body2" color="text.secondary">
               {t("detail.assignedTo", {
@@ -112,7 +130,7 @@ export const WorkflowMobileSummary = ({
     >
       <Box>
         <Button variant="text" size="small" onClick={onBack}>
-          {t("mobile.back")}
+          {t("mobileBack")}
         </Button>
       </Box>
       {workflow === null ? (

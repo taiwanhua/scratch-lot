@@ -21,7 +21,7 @@ import { useDataScopeData } from "./useDataScopeData";
  * Figma「Screen / Admin 資料範圍」166:318 + 註記卡 167:1901)。**根組織專屬**。
  *
  * 左選資料目標(一列 = 一個模組)→ 右顯示該目標的說明、預設提示與規則編輯器。編輯器的草稿住在
- * `RuleEditorPanel`,靠 `key={target.id}` 換目標時重新掛載;頁面只保管兩件跨兩邊的事:
+ * `RuleEditorPanel`,靠 `key`(目標 id + 放棄次數)換目標或放棄變更時重新掛載;頁面只保管兩件跨兩邊的事:
  * 有沒有未儲存的變更、以及被它擋下來的那次切換。
  *
  * **手機寬(< `sm`)一次只顯示一邊**:網址沒有選取(`?detail=`)時目標清單滿版;點一個目標 → 編輯器滿版,
@@ -44,9 +44,18 @@ export const DataScopePage = () => {
     null,
   );
 
+  /**
+   * 放棄變更時遞增,讓編輯器以新的 key 重新掛載、丟掉草稿:返回清單時選取會退回預設的同一個目標,
+   * 只靠 `target.id` 當 key 不會重掛,草稿就留下來了
+   */
+  const [editorGeneration, setEditorGeneration] = useState(0);
+
   const handleSelectTarget = (targetId: string) => {
-    // 手機寬沒有網址選取時,預設選中的那一筆也要點得進去
-    if (targetId === data.selectedTargetId && urlPickedTargetId !== null) {
+    // 同一筆不經過未存攔截(沒有要離開);網址還沒有選取時寫進去(手機寬才點得進預設那一筆)
+    if (targetId === data.selectedTargetId) {
+      if (urlPickedTargetId === null) {
+        data.selectTarget(targetId);
+      }
       return;
     }
     if (isDirty) {
@@ -70,6 +79,7 @@ export const DataScopePage = () => {
     }
     setPending(null);
     setIsDirty(false);
+    setEditorGeneration((generation) => generation + 1);
   };
 
   return (
@@ -134,7 +144,7 @@ export const DataScopePage = () => {
           </Card>
         ) : (
           <RuleEditorPanel
-            key={data.target.id}
+            key={`${data.target.id}:${String(editorGeneration)}`}
             target={data.target}
             rule={data.rule}
             canEdit={data.canEdit}

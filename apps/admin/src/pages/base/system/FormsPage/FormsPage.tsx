@@ -80,8 +80,11 @@ export const FormsPage = () => {
 
   /** 換表單:設計器有未存的變更就先問(留下 / 放棄 / 先存),不讓右欄一換就把改動丟掉。 */
   const requestSelect = (key: string) => {
-    // 手機寬沒有網址選取時,預設選中的那一筆也要點得進去
-    if (key === data.selectedKey && urlPickedKey !== null) {
+    // 同一筆不經過未存攔截(沒有要離開);網址還沒有選取時寫進去(手機寬才點得進預設那一筆)
+    if (key === data.selectedKey) {
+      if (urlPickedKey === null) {
+        data.select(key);
+      }
       return;
     }
     if (isDirty) {
