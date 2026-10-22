@@ -136,7 +136,9 @@ const TENANT_SCOPED: Record<string, TenantScope> = {
       mode: "shareable",
       defaultShareOrgs: "none",
       editable: false,
-      sharedByFields: [{ path: "sharedOrgIds", includeDescendants: false }],
+      sharedByFields: [
+        { path: "sharedOrgIds", includeDescendants: false, match: "visible" },
+      ],
     },
     refFields: [],
   },

@@ -237,7 +237,7 @@ export class TransferQueryService {
       moduleKey: TRANSFER_MODULE_KEY,
       formKey: TRANSFER_FORM_KEY,
     };
-    // 讀得到 = 一般讀取(可見範圍,或依欄位共用:出貨 / 收貨分店是讀者的所屬組織;ADR-0014),與
+    // 讀得到 = 一般讀取(可見範圍,或依欄位共用:出貨 / 收貨分店在讀者的可見範圍內;ADR-0014),與
     // `TransferAccess` / 收付同一個判準。點收紀錄與在途的張分在兩邊店,只對讀得到的這幾張單以租戶邊界讀
     const submissions = await this.submissions.findMany(operator, filter);
     if (submissions.length === 0) {

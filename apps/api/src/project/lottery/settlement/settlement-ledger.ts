@@ -122,7 +122,7 @@ export class SettlementLedger {
     const submission =
       refId === null
         ? null
-        : // 讀得到 = 可見範圍內,或依欄位共用給讀者的所屬組織(調貨單的出貨店、收貨店;ADR-0014)
+        : // 讀得到 = 可見範圍內,或依欄位共用指到讀者可見範圍內的組織(調貨單的出貨店、收貨店;ADR-0014)
           await this.submissions.findOne(operator, {
             _id: refId,
             moduleKey: registration.moduleKey,

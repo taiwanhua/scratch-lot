@@ -1718,7 +1718,7 @@ describe("調貨單(規格 8.4、第 9 章)", () => {
   });
 
   describe("列表進度", () => {
-    it("讀得到才有進度:可見範圍含收貨店、但不屬於收貨店的人(上層組織含下層)讀不到;收貨店的人讀得到", async () => {
+    it("讀得到才有進度:可見範圍含收貨店的人(上層組織含下層、收貨店本身)讀得到;可見範圍不含兩邊店的人讀不到", async () => {
       const district = await createOrg(api.connection, {
         name: "北區",
         parentId: tenant,
@@ -1755,8 +1755,10 @@ describe("調貨單(規格 8.4、第 9 章)", () => {
         }>(api, who.token, PROGRESS, { ids: [id] });
         return data.lotteryTransferProgress.map((row) => row.transferId);
       };
-      expect(await progressOf(districtManager)).toEqual([]);
+      expect(await progressOf(districtManager)).toEqual([id]);
       expect(await progressOf(northManager)).toEqual([id]);
+      // 台中店:可見範圍不含出貨店(中山店)也不含收貨店(北區分店)
+      expect(await progressOf(managerC)).toEqual([]);
     });
 
     it("本數 / 張數、點收進度、在途、結算", async () => {

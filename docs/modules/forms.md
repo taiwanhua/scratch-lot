@@ -141,14 +141,14 @@
 
 ### 依欄位共用
 
-`forms.sharedByFieldKeys`(`FormModel.sharedByFieldKeys`):表單層的組織引用欄(`type: reference`、`source.provider: org`,不在明細列內)key;空陣列 = 不共用(預設)。送出後,這幾欄指到的組織的**成員**也看得到這筆提交(唯讀),機制是資料共用的 `sharedByFields`(ADR-0014「表單提交:依欄位共用」):引擎每次寫入存值時從這幾欄算出頂層 `form_submissions.sharedOrgIds`(`forms/form-values/shared-org-ids.ts`),讀取由 `tenantScopePlugin` 放寬,寫入不放大。畫面是表單管理右側「作廢原因」下方的「依欄位共用」勾選框(`pages/base/system/FormsPage/SharedByFieldsField.tsx`):列目前發布版(沒有發布版用草稿)的組織引用欄,勾了立刻以 `updateForm` 存;已設、但這一版沒有的欄位以 key 列出;一個組織欄都沒有也沒設定 → 不顯示。
+`forms.sharedByFieldKeys`(`FormModel.sharedByFieldKeys`):表單層的組織引用欄(`type: reference`、`source.provider: org`,不在明細列內)key;空陣列 = 不共用(預設)。送出後,**可見範圍含**這幾欄指到的組織的人也看得到這筆提交(唯讀;等於單據也歸屬那個組織時看得到它的人),機制是資料共用的 `sharedByFields`(ADR-0014「表單提交:依欄位共用」):引擎每次寫入存值時從這幾欄算出頂層 `form_submissions.sharedOrgIds`(`forms/form-values/shared-org-ids.ts`),讀取由 `tenantScopePlugin` 放寬,寫入不放大。畫面是表單管理右側「作廢原因」下方的「依欄位共用」勾選框(`pages/base/system/FormsPage/SharedByFieldsField.tsx`):列目前發布版(沒有發布版用草稿)的組織引用欄,勾了立刻以 `updateForm` 存;已設、但這一版沒有的欄位以 key 列出;一個組織欄都沒有也沒設定 → 不顯示。
 
 | 情境                                     | 結果                                                                                                                                                     |
 | ---------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 建草稿 / 存草稿(狀態草稿)                | `sharedOrgIds = []`:草稿只屬於建立者,任何人都看不到別人的草稿                                                                                            |
 | 送出(不論走不走流程)、已完成後修改、升級 | 從這次的存值算(取 `values.<欄位>.id`,去重;沒值 / 不是組織 id 略過);被退回 / 撤回的單存草稿也照算                                                         |
-| 欄位指到的組織的成員                     | 列表、單筆(含申請中心的詳情頁;「我的申請」「待我審核」清單照舊)看得到;`abilities` 不給改 / 刪 / 作廢 / 複製為新單,呼叫 → `FORBIDDEN`(`SHARED_READ_ONLY`) |
-| 其他組織、別的租戶                       | 照舊看不到(比對所屬組織、不受可見性開關與上下層展開;每個分支釘 `tenantId`)                                                                               |
+| 可見範圍含欄位指到的組織的人             | 列表、單筆(含申請中心的詳情頁;「我的申請」「待我審核」清單照舊)看得到;`abilities` 不給改 / 刪 / 作廢 / 複製為新單,呼叫 → `FORBIDDEN`(`SHARED_READ_ONLY`) |
+| 可見範圍不含那些組織的人、別的租戶       | 照舊看不到(比對讀者在該租戶的可見範圍 `memberTenants[].visibleOrgIds`;每個分支釘 `tenantId`)                                                             |
 | 改了單上的組織欄                         | 下一次寫入就換成新的組織;看得到的人跟著變                                                                                                                |
 | 改了表單設定                             | 只影響之後的寫入;既有提交要跟著變就寫 migration 回填                                                                                                     |
 | 設定的欄位不存在 / 不是組織引用欄 / 重複 | `updateForm` 回 `VALIDATION_FAILED`(`fields: ["sharedByFieldKeys"]`;對照目前發布版,沒有發布版對照草稿,都沒有不對照)                                      |

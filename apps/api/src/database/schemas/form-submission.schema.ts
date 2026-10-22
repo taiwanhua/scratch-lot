@@ -182,7 +182,7 @@ export class FormSubmission {
    * 依欄位共用(ADR-0014 的 `sharedByFields`):這筆**也給哪些組織看**(唯讀)。表單設定 `sharedByFieldKeys`
    * 指的組織引用欄,引擎每次寫入存值(建草稿、存草稿、送出、修改、升級)時從存值算出;表單沒設 = 空,
    * **草稿(還沒送出過)一律空**(草稿只屬於建立者)。
-   * 不受可見性開關與上下層展開:只有就是這些組織的成員看得到(`includeDescendants: false`)。
+   * 比對讀者的**可見範圍**(`match: visible`):看得到這些組織的人就看得到(表單的組織欄代表「這張單屬於哪個組織」;ADR-0014)。
    * 缺席(這個欄位之前的舊資料、還沒回填)= 不共用。
    */
   @Prop({ type: [MongooseSchema.Types.ObjectId], default: [] })
@@ -224,6 +224,8 @@ FormSubmissionSchema.plugin(tenantScopePlugin, {
     mode: "shareable",
     defaultShareOrgs: "none",
     editable: false,
-    sharedByFields: [{ path: "sharedOrgIds", includeDescendants: false }],
+    sharedByFields: [
+      { path: "sharedOrgIds", includeDescendants: false, match: "visible" },
+    ],
   },
 });

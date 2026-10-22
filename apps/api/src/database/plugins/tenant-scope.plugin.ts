@@ -41,6 +41,14 @@ export interface ShareOrg {
 export interface SharedByField {
   path: string;
   includeDescendants: boolean;
+  /**
+   * 比對誰(預設 `members`):
+   * - `members`:欄位 ∈ 讀者在該租戶的**所屬組織**(`includeDescendants` 另含其上層鏈)—— 資料表的共用
+   * - `visible`:欄位 ∈ 讀者在該租戶的**可見範圍**(所屬組織 + 開關展開的下層)—— 表單提交的依欄位共用:
+   *   表單的組織欄代表「這張單屬於哪家店」,看得到那家店的人就看得到這張單(ADR-0014「表單提交:依欄位共用」);
+   *   不可再勾 `includeDescendants`
+   */
+  match?: "members" | "visible";
 }
 
 /**
@@ -267,7 +275,7 @@ function assertSharingDeclaration(schema: Schema, scope: TenantScope): void {
   }
   if (scope.sharing.mode === "shareable") {
     for (const field of scope.sharing.sharedByFields) {
-      assertSharedByField(schema, subject, field.path);
+      assertSharedByField(schema, subject, field);
     }
   }
   for (const field of scope.refFields) {
@@ -295,8 +303,14 @@ export function hasTenantIdPath(schema: Schema, scope: TenantScope): boolean {
 function assertSharedByField(
   schema: Schema,
   subject: string,
-  path: string,
+  field: SharedByField,
 ): void {
+  const { path } = field;
+  if (field.match === "visible" && field.includeDescendants) {
+    throw new TenantScopeError(
+      `${subject}:sharedByFields 的 ${path} 比對可見範圍(match: visible)時不能再勾 includeDescendants`,
+    );
+  }
   if (path === "orgId" || path === SHARE_ORGS_PATH) {
     throw new TenantScopeError(
       `${subject}:sharedByFields 不能是 ${path}(歸屬與共用清單已有自己的分支)`,
@@ -438,7 +452,8 @@ function readConditionOf(
  * 不會拿乙租戶的組織去命中甲租戶的資料:
  * - `inheritDown`:`orgId ∈ 該租戶所屬組織的上層鏈`(上層鏈就是該租戶的組織,不另釘 `tenantId`)
  * - `shareable`:`shareOrgs` 命中該租戶的所屬組織,或命中其上層鏈且勾了含下層
- * - `sharedByFields`:欄位 ∈ 該租戶的所屬組織(宣告含下層時另含其上層鏈)
+ * - `sharedByFields`:欄位 ∈ 該租戶的所屬組織(宣告含下層時另含其上層鏈);`match: visible` 的欄位改比對
+ *   該租戶的可見範圍
  *
  * 沒有所屬租戶(內部上下文)→ 一個分支都不加(fail-closed)。
  */
@@ -478,12 +493,23 @@ function tenantBranchesOf(scope: TenantScope, tenant: MemberTenant): Filter[] {
   for (const field of sharing.sharedByFields) {
     branches.push({
       tenantId: tenant.tenantId,
-      [field.path]: {
-        $in: field.includeDescendants ? [...members, ...ancestors] : members,
-      },
+      [field.path]: { $in: sharedByFieldTargetsOf(field, tenant) },
     });
   }
   return branches;
+}
+
+/** `sharedByFields` 一個欄位要比對的組織(見 `SharedByField.match`)。 */
+function sharedByFieldTargetsOf(
+  field: SharedByField,
+  tenant: MemberTenant,
+): Types.ObjectId[] {
+  if (field.match === "visible") {
+    return [...(tenant.visibleOrgIds ?? tenant.memberOrgIds)];
+  }
+  return field.includeDescendants
+    ? [...tenant.memberOrgIds, ...tenant.ancestorOrgIds]
+    : [...tenant.memberOrgIds];
 }
 
 /**

@@ -412,4 +412,29 @@ describe("依欄位共用(表單設定 sharedByFieldKeys)", () => {
     ).toBeGreaterThan(0);
     expect(await sharedOrgIdsOf(submitted.id)).toEqual([String(storeA)]);
   });
+  it("比對可見範圍:上層組織(租戶開了含下層)的人看得到指到下層店的單;可見範圍不含那家店的人看不到", async () => {
+    const district = await createOrg(connection, {
+      name: "北區",
+      parentId: tenant,
+    });
+    const northStore = await createOrg(connection, {
+      name: "北區的店",
+      parentId: district,
+    });
+    const districtManager = await createOperator(api, connection, {
+      orgId: district,
+      ownerOrgId: tenant,
+      permissionKeys: ALL,
+    });
+    const submitted = await submit({ receiver_org: String(northStore) });
+    expect(await listIds(districtManager)).toContain(submitted.id);
+    const viewed = await getSubmission(
+      api,
+      districtManager.token,
+      submitted.id,
+    );
+    // 讀得到,但寫入不放大:歸屬(最上層組織)不在他的可見範圍
+    expect(viewed.abilities.canEdit).toBe(false);
+    expect(await listIds(storeAManager)).not.toContain(submitted.id);
+  });
 });
