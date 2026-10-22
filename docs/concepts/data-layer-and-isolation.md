@@ -176,16 +176,16 @@ BaseRepository 資料操作方法的第一個參數。每個集合各有用途,�
 
 每張表在 schema 的 `tenantScopePlugin({ sharing })` 選一種宣告:
 
-| 宣告          | 讀取條件(`$or` 的分支,每個所屬租戶各一組、各釘該租戶的 `tenantId`)                                                       |
-| ------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| `private`     | `orgId ∈ 可見範圍`(預設)                                                                                                 |
-| `shareable`   | 再加 `shareOrgs` 命中所屬組織、或命中其上層鏈且勾含下層;`sharedByFields` 任一欄位 ∈ 所屬組織(欄位宣告含下層時另含上層鏈) |
-| `inheritDown` | 再加 `orgId ∈ 所屬組織的上層鏈`                                                                                          |
+| 宣告          | 讀取條件(`$or` 的分支,每個所屬租戶各一組、各釘該租戶的 `tenantId`)                                                                                                    |
+| ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `private`     | `orgId ∈ 可見範圍`(預設)                                                                                                                                              |
+| `shareable`   | 再加 `shareOrgs` 命中所屬組織、或命中其上層鏈且勾含下層;`sharedByFields` 任一欄位 ∈ 所屬組織(欄位宣告含下層時另含上層鏈;`match: visible` 的欄位改 ∈ 該租戶的可見範圍) |
+| `inheritDown` | 再加 `orgId ∈ 所屬組織的上層鏈`                                                                                                                                       |
 
 - `shareable` 由 plugin 加 `shareOrgs: [{ orgId, includeDescendants }]` 與索引 `{ tenantId, "shareOrgs.orgId" }`;`defaultShareOrgs`(`none` / `wholeTenant` = 全部分店)是新增時的預設,`editable: false` 時清單固定(受保護欄位)。只給模組資料表。
 - `sharedByFields` 的欄位與 `{ tenantId, <欄位> }` 索引由表自己建,掛 plugin 時驗證。
 - `form_submissions` 是 `shareable`(共用清單固定空)+ `sharedByFields: sharedOrgIds`:哪幾個組織欄位算數是表單設定「依欄位共用」(`forms.sharedByFieldKeys`),引擎寫入存值時算出 `sharedOrgIds`,比對讀者的**可見範圍**(`match: visible`;與資料表比所屬組織不同,理由見 ADR-0014),草稿一律空(`docs/modules/forms.md`「依欄位共用」)。
-- 判斷看全部所屬組織(依租戶分組:同時屬於兩個租戶的人,乙租戶的組織命中不了甲租戶的資料),不隨當前組織切換;不受可見性開關展開。可見範圍是 `"all"`(根組織、提升上下文)時不加任何條件。
+- 判斷看全部所屬組織(依租戶分組:同時屬於兩個租戶的人,乙租戶的組織命中不了甲租戶的資料),不隨當前組織切換;不受可見性開關展開(`match: visible` 的欄位例外:比對該租戶的可見範圍,見上一條)。可見範圍是 `"all"`(根組織、提升上下文)時不加任何條件。
 - `shareOrgs` 的寫入由 `BaseRepository` 檢查:每個組織都要存在且與資料同租戶(可以是分享者看不到的組織),否則 `VALIDATION_FAILED`;只能整份替換。
 - lookup 的專案來源走同一套讀取;`sharedToFilter` 宣告依表單欄位換值的共用篩選(`docs/modules/forms.md` 的 lookup 登錄表)。
 
