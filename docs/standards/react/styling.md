@@ -172,6 +172,8 @@ expect(chain.slice(1, -1).filter((l) => l.scrolls)).toEqual([]); // 只有最內
 
 app 端給 `@repo/ui` 元件傳 `sx` 時,只放與版面位置有關的值(`cursor`、`mt`、`flex`…);元件自己的幾何(高度、圓角、tone 色)由元件內的 `styled()` / theme `components` 決定(STYLE-07),呼叫端不要重設。需要不同尺寸或 tone 用元件的 props(`size`、`tone`),沒有就到 ui 加,不在呼叫端用 `sx` 硬改。
 
+**表單欄位的 `size`**:`TextField`、`SelectField`、`Autocomplete`、`DatePicker`、`DateTimePicker`、`OrgTreeSelect`、`ShareOrgsField` 不給 `size` 一律是 medium(`packages/ui/src/test/field-size.test.tsx` 鎖著),要 small 就明寫。同一張表單 / 同一列的欄位給同一個 `size`;隔壁寫了 `size="small"`、自己沒寫的那格會高一截。admin 的 ESLint(`no-restricted-syntax`)擋同一層直接並排的欄位 `size` 不一致;包在條件式或 helper 裡的看不到,review 時對照。
+
 **目前記錄在案的例外:沒有。**(`IconButton` 的外框與 32 / 40 / 48 正方形由 `variant="outlined"` 提供,
 `SideNavToggle` 這類外框圖示鈕照用即可,不要再用 `sx` 給幾何。)
 

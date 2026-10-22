@@ -78,6 +78,10 @@ export interface AutocompleteProps<
    */
   chipDeleteIcon?: "cancel" | "close";
   /* 以下沿用 MUI / `TextField` 的名字而不自創(STYLE-05 / FIGMA-01) */
+  /**
+   * 輸入格高度;預設 `medium`,與 `TextField` / `SelectField` / `DatePicker` 的預設相同,
+   * 同一張表單不論混用哪幾種欄位,高度都一致。精簡表單(工具列、篩選列)一律明寫 `small`。
+   */
   size?: "small" | "medium";
   disabled?: boolean;
   required?: boolean;
@@ -152,7 +156,7 @@ export const Autocomplete = <
   loadingText,
   noOptionsText,
   chipDeleteIcon = "cancel",
-  size = "small",
+  size = "medium",
   disabled,
   required,
   error,

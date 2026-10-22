@@ -27,6 +27,8 @@ export interface ShareOrgsFieldProps {
   disabled?: boolean;
   /** 欄位寬度(px);不給 = 撐滿 */
   width?: number;
+  /** 輸入格高度,跟著同一張表單其他欄位給;預設 `medium`(同 `TextField`) */
+  size?: "small" | "medium";
 }
 
 /** 租戶組織樹攤平 + 根組織的 id(與 `OrgTreeSelect` 同一支查詢,共用快取)。 */
@@ -66,6 +68,7 @@ export const ShareOrgsField = ({
   error,
   disabled,
   width,
+  size,
 }: ShareOrgsFieldProps) => {
   const t = useTranslations("admin.shareOrgsField");
   const { topIds } = useTenantOrgs();
@@ -87,7 +90,7 @@ export const ShareOrgsField = ({
         scope="tenant"
         isMultiSelect
         fullWidth
-        size="small"
+        size={size}
         label={label}
         value={ids}
         disabled={disabled === true || isAtRoot}

@@ -107,6 +107,7 @@ export const PurchaseHeaderFields = ({
         <OrgTreeSelect
           scope="visible"
           label={t("fields.branch")}
+          size="small"
           value={noBranch ? [] : [value.branchId]}
           required
           fullWidth
@@ -173,6 +174,7 @@ export const PurchaseHeaderFields = ({
         )}
         <DatePicker
           label={t("fields.purchaseDate")}
+          size="small"
           value={value.purchaseDay}
           required
           fullWidth

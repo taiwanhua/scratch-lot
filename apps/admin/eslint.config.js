@@ -62,6 +62,30 @@ const restrictedImports = ({ paths, patterns = [] }) => ({
   ],
 });
 
+/**
+ * 同一層並排的表單欄位 `size` 要一致(STYLE-10):每種欄位不給 `size` 都是 medium(`@repo/ui` 的契約,
+ * `packages/ui/src/test/field-size.test.tsx` 鎖著),所以隔壁寫了 `size="small"`、自己沒寫的那格會高一截
+ * (進貨單的分店、日期欄就是這樣)。只看同一個父元素底下直接並排的欄位;包在條件式或 helper 裡的看不到,靠 review。
+ */
+const FIELD = `JSXOpeningElement[name.name=/^(TextField|SelectField|Autocomplete|DatePicker|DateTimePicker|OrgTreeSelect|ShareOrgsField|ModuleIconPicker)$/]`;
+const SMALL_FIELD = `JSXElement:has(> ${FIELD}:has(> JSXAttribute[name.name="size"][value.value="small"]))`;
+const MEDIUM_FIELD = `JSXElement:has(> ${FIELD}:not(:has(> JSXAttribute[name.name="size"])))`;
+const FIELD_SIZE_MESSAGE =
+  '同一層並排的表單欄位 size 要一致(STYLE-10):不給 size 是 medium,隔壁是 size="small" 就一起明寫 small';
+const fieldSizeSiblings = {
+  "no-restricted-syntax": [
+    "error",
+    {
+      selector: `${SMALL_FIELD} ~ ${MEDIUM_FIELD}`,
+      message: FIELD_SIZE_MESSAGE,
+    },
+    {
+      selector: `${MEDIUM_FIELD} ~ ${SMALL_FIELD}`,
+      message: FIELD_SIZE_MESSAGE,
+    },
+  ],
+};
+
 /** @type {import("eslint").Linter.Config[]} */
 export default [
   ...config,
@@ -85,5 +109,9 @@ export default [
   {
     files: URL_STATE_OWNERS,
     rules: restrictedImports({ paths: [sectionPath] }),
+  },
+  {
+    files: ["src/**/*.tsx"],
+    rules: fieldSizeSiblings,
   },
 ];

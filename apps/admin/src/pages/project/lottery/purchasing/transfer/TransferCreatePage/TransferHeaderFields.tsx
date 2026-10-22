@@ -63,6 +63,7 @@ export const TransferHeaderFields = ({
       <OrgTreeSelect
         scope="visible"
         label={t("fields.fromBranch")}
+        size="small"
         value={fromBranchId === "" ? [] : [fromBranchId]}
         required
         fullWidth
@@ -74,6 +75,7 @@ export const TransferHeaderFields = ({
       <OrgTreeSelect
         scope="visible"
         label={t("fields.toBranch")}
+        size="small"
         value={toBranchId === "" ? [] : [toBranchId]}
         required
         fullWidth

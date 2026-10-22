@@ -230,6 +230,7 @@ export const CheckoutsTab = () => {
           >
             <DatePicker
               label={t("list.from")}
+              size="small"
               value={value.from === "" ? null : value.from}
               onChange={(next) => {
                 change({ ...value, from: next ?? "" });
@@ -237,6 +238,7 @@ export const CheckoutsTab = () => {
             />
             <DatePicker
               label={t("list.to")}
+              size="small"
               value={value.to === "" ? null : value.to}
               onChange={(next) => {
                 change({ ...value, to: next ?? "" });

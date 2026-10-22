@@ -320,6 +320,7 @@ export const RedemptionsTab = () => {
           <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
             <DatePicker
               label={t("tab.from")}
+              size="small"
               value={filters.from}
               onChange={(next) => {
                 setFilters({ ...filters, from: next });
@@ -327,6 +328,7 @@ export const RedemptionsTab = () => {
             />
             <DatePicker
               label={t("tab.to")}
+              size="small"
               value={filters.to}
               onChange={(next) => {
                 setFilters({ ...filters, to: next });

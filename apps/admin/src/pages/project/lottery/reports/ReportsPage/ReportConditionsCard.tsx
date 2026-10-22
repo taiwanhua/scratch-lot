@@ -105,6 +105,7 @@ export const ReportConditionsCard = ({
         )}
         <OrgTreeSelect
           label={t("lotteryReports.conditions.orgs")}
+          size="small"
           // 業務頁(用法表 ⑤):整棵租戶樹、可見範圍內的才能選,不是管理範圍
           scope="visible"
           isMultiSelect

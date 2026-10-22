@@ -237,6 +237,7 @@ export const RequisitionCreatePage = () => {
             <OrgTreeSelect
               scope="visible"
               label={t("fields.branch")}
+              size="small"
               value={branchId === "" ? [] : [branchId]}
               required
               fullWidth
@@ -248,6 +249,7 @@ export const RequisitionCreatePage = () => {
             />
             <DatePicker
               label={t("fields.expectedDate")}
+              size="small"
               value={expectedDay}
               fullWidth
               onChange={setExpectedDay}

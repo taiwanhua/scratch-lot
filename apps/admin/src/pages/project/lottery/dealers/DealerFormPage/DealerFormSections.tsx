@@ -378,6 +378,7 @@ export const DealerFormSections = ({
             <Wide>
               <ShareOrgsField
                 label={t("fields.shareOrgs")}
+                size="small"
                 value={values.shareOrgs}
                 error={isInvalid("shareOrgs")}
                 onChange={(next) => {

@@ -196,4 +196,18 @@ describe("OrgTreeSelect", () => {
     expect(within(tree).queryByText("平台根組織")).toBeNull();
     expect(within(tree).queryByText("租戶 B")).toBeNull();
   });
+  it('高度跟 TextField 同一組 size:不給是 medium,size="small" 單選、多選都是 small,外框只有一層 InputBase', () => {
+    const { unmount } = renderSelect();
+    expect(fieldRoot()).not.toHaveClass("MuiInputBase-sizeSmall");
+    unmount();
+
+    const single = renderSelect({ size: "small" });
+    expect(fieldRoot()).toHaveClass("MuiInputBase-sizeSmall");
+    single.unmount();
+
+    renderSelect({ size: "small", isMultiSelect: true });
+    expect(fieldRoot()).toHaveClass("MuiInputBase-sizeSmall");
+    // 欄位就是一個 TextField:外框裡不再套第二層 InputBase(多一層就多一份上下內距)
+    expect(fieldRoot().querySelectorAll(".MuiInputBase-root")).toHaveLength(0);
+  });
 });

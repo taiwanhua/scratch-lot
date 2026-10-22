@@ -232,6 +232,7 @@ export const sampleTwoModule: DemoModuleConfig<
         render: ({ values, setValue, tFields, hasError, helperText }) => (
           <ShareOrgsField
             label={tFields("shareOrgs")}
+            size="small"
             value={values.shareOrgs}
             width={480}
             error={hasError("shareOrgs")}
