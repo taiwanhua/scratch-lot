@@ -3,6 +3,7 @@ import { Args, Query, Resolver } from "@nestjs/graphql";
 import { CurrentOperator } from "../../../auth/decorators";
 import type { OperatorContext } from "../../../database/operator-context";
 import { RequirePermission } from "../../../permission/require-permission.decorator";
+import { RequireTenant } from "../../tenant-scope/require-tenant.decorator";
 import {
   LotteryOperationsReportInput,
   LotteryReportRangeInput,
@@ -23,8 +24,9 @@ import { ShiftCheckoutsReportService } from "./shift-checkouts-report.service";
 /**
  * 輸出報表的兩張報表(專案規格第 11 章;正本 `docs/modules/project/reports.md`「營運報表、班次結帳歷史報表」):
  * 每張報表一條頁內權限守門(`reports.operations` / `reports.shift-checkouts`);成本與毛利另看
- * `reports.show-cost`(service 內判斷,沒有就回 null)。唯讀,不寫稽核。
+ * `reports.show-cost`(service 內判斷,沒有就回 null)。唯讀,不寫稽核。根組織要先切進租戶(`@RequireTenant()`)。
  */
+@RequireTenant()
 @Resolver()
 export class LotteryReportsResolver {
   constructor(

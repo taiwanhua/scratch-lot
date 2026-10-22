@@ -103,6 +103,54 @@ const PROJECT_QUERIES: readonly {
     variables: () => ({}),
   },
   {
+    name: "輸出報表 lotteryOperationsReport",
+    query: `query ($input: LotteryOperationsReportInput!) { lotteryOperationsReport(input: $input) { canShowCost } }`,
+    variables: (orgId) => ({
+      input: {
+        periodKind: "day",
+        from: "2026-10-15T16:00:00.000Z",
+        to: "2026-10-16T16:00:00.000Z",
+        orgIds: [orgId],
+      },
+    }),
+  },
+  {
+    name: "輸出報表 lotteryOperationsReportPeriods",
+    query: `query ($input: LotteryOperationsReportInput!) { lotteryOperationsReportPeriods(input: $input) { closedThrough } }`,
+    variables: (orgId) => ({
+      input: {
+        periodKind: "day",
+        from: "2026-10-15T16:00:00.000Z",
+        to: "2026-10-16T16:00:00.000Z",
+        orgIds: [orgId],
+      },
+    }),
+  },
+  {
+    name: "輸出報表 lotteryShiftCheckoutsReport",
+    query: `query ($input: LotteryShiftCheckoutsReportInput!) { lotteryShiftCheckoutsReport(input: $input) { rows { checkoutId } } }`,
+    variables: (orgId) => ({
+      input: {
+        periodKind: "day",
+        from: "2026-10-15T16:00:00.000Z",
+        to: "2026-10-16T16:00:00.000Z",
+        orgIds: [orgId],
+      },
+    }),
+  },
+  {
+    name: "輸出報表 lotteryShiftCheckoutsReportCashPoints",
+    query: `query ($input: LotteryReportRangeInput!) { lotteryShiftCheckoutsReportCashPoints(input: $input) { id } }`,
+    variables: (orgId) => ({
+      input: {
+        periodKind: "day",
+        from: "2026-10-15T16:00:00.000Z",
+        to: "2026-10-16T16:00:00.000Z",
+        orgIds: [orgId],
+      },
+    }),
+  },
+  {
     name: "排班設定 scheduleStaff",
     query: `query { scheduleStaff(input: null) { totalCount } }`,
     variables: () => ({}),
