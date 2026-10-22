@@ -4,12 +4,15 @@ import { screen, waitFor, within } from "@testing-library/react";
 import { ACCOUNTS_PERMISSIONS as P } from "@repo/domain/project/lottery-accounts";
 
 import { blockedPeriodCheck } from "@/test/msw/project/lottery/period-close-fixtures";
+import { restoreViewportAfterEach, setMobileViewport } from "@/test/viewport";
 
 import { renderAccounts } from "../accounts-test-support";
 
 const CLOSE_TAB = "/accounts?tab=close";
 
-/** 月份那一列(表格列;手機卡片也以列為單位)。 */
+restoreViewportAfterEach();
+
+/** 月份那一列(表格列)。 */
 const rowOf = async (month: string) => {
   const cell = await screen.findByText(month);
   const row = cell.closest("tr");
@@ -126,5 +129,43 @@ describe("帳戶管理:關帳", () => {
     expect(dialog.getByText(/王總 於 .* 關帳/)).toBeInTheDocument();
     expect(dialog.getByText("86,400")).toBeInTheDocument();
     expect(dialog.getByText("31,500 / 2,000")).toBeInTheDocument();
+  });
+
+  it("手機:月份列表是卡片(月份、狀態、關帳時間、關帳人);[關帳] 只在最早的未關帳月份,已關帳的有 [快照]", async () => {
+    setMobileViewport();
+    renderAccounts({ path: CLOSE_TAB });
+    expect(
+      await screen.findByRole("list", { name: "關帳月份" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("table", { name: "關帳月份" }),
+    ).not.toBeInTheDocument();
+    const cardOf = async (month: string) => {
+      const text = await screen.findByText(month);
+      const card = text.closest<HTMLElement>('[role="listitem"]');
+      if (card === null) {
+        throw new Error(`找不到 ${month} 那張卡片`);
+      }
+      return within(card);
+    };
+    const current = await cardOf("2026-10");
+    expect(current.getByText("進行中")).toBeInTheDocument();
+    expect(current.queryByRole("button")).not.toBeInTheDocument();
+    const open = await cardOf("2026-09");
+    expect(open.getByRole("button", { name: "關帳" })).toBeInTheDocument();
+    const closed = await cardOf("2026-08");
+    expect(closed.getByText("王總")).toBeInTheDocument();
+    expect(closed.getByRole("button", { name: "快照" })).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "關帳" })).toHaveLength(1);
+  });
+
+  it("平板以上:月份列表照舊表格", async () => {
+    renderAccounts({ path: CLOSE_TAB });
+    expect(
+      await screen.findByRole("table", { name: "關帳月份" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("list", { name: "關帳月份" }),
+    ).not.toBeInTheDocument();
   });
 });

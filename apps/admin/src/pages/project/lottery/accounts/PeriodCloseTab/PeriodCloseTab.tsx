@@ -8,13 +8,14 @@ import {
 } from "@repo/graphql";
 import { Box } from "@repo/ui/box";
 import { Button } from "@repo/ui/button";
-import { Table, type TableColumn } from "@repo/ui/table";
+import type { TableColumn } from "@repo/ui/table";
 import { Tag } from "@repo/ui/tag";
 import { Typography } from "@repo/ui/typography";
 
 import { useSession } from "@/hooks/base/useSession";
 import { useTenantTimezone } from "@/hooks/base/useTenantTimezone";
 
+import { AccountsList } from "../AccountsList/AccountsList";
 import { PERIOD_TABLE_MIN_WIDTH } from "../accounts-config";
 import { PeriodCloseDialog } from "./PeriodCloseDialog";
 import { PeriodSnapshotDialog } from "./PeriodSnapshotDialog";
@@ -117,8 +118,9 @@ export const PeriodCloseTab = () => {
       >
         {t("periodClose.hint")}
       </Typography>
-      <Table
+      <AccountsList
         aria-label={t("periodClose.listAria")}
+        card={{ title: ["month"], tag: "status", actions: "actions" }}
         columns={columns}
         rows={rows}
         getRowKey={(row) => row.month}
