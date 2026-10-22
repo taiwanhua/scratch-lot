@@ -2381,7 +2381,7 @@
       "sheetName": "Purchase list"
     },
     "purchase": {
-      "badgeDescription": "Purchases waiting for my receiving",
+      "badgeDescription": "Purchases waiting for your receiving",
       "createFromRequisition": "Create purchase",
       "list": {
         "title": "Purchases",

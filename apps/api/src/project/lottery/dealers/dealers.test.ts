@@ -136,6 +136,12 @@ describe("經銷商管理(專案規格 5.2–5.4)", () => {
   const createError = (input: Record<string, unknown>, token = hq) =>
     errorOf(api, token, CREATE_DEALER, { input });
 
+  /** 列表查詢回來的經銷商 id(總部看)。 */
+  const idsOf = async (input: Record<string, unknown>): Promise<string[]> => {
+    const data = await ok<DealersData>(api, hq, DEALERS, { input });
+    return data.lotteryDealers.items.map((row) => row.id);
+  };
+
   describe("新增與讀取", () => {
     it("甲類 / 乙類各自列在自己的分頁;類型、證號、狀態照存", async () => {
       const a = await createDealer("A", { name: "陳志明" });
@@ -148,6 +154,28 @@ describe("經銷商管理(專案規格 5.2–5.4)", () => {
       const ids = list.lotteryDealers.items.map((row) => row.id);
       expect(ids).toContain(a.id);
       expect(ids).not.toContain(b.id);
+    });
+
+    it("證照篩選 licenseState:30 天內到期 / 已過期各自篩出,與類型一起套用(甲類、乙類列表共用)", async () => {
+      const day = 86_400_000;
+      const now = Date.now();
+      const expiresIn = (days: number) => ({
+        licenseExpiresAt: new Date(now + days * day).toISOString(),
+      });
+      const expiringB = await createDealer("B", expiresIn(10));
+      const expiredB = await createDealer("B", expiresIn(-10));
+      const okB = await createDealer("B", expiresIn(365));
+      const expiringA = await createDealer("A", expiresIn(10));
+      const expiring = await idsOf({ type: "B", licenseState: "EXPIRING" });
+      expect(expiring).toContain(expiringB.id);
+      expect(expiring).not.toContain(expiredB.id);
+      expect(expiring).not.toContain(okB.id);
+      expect(expiring).not.toContain(expiringA.id);
+
+      const expired = await idsOf({ type: "B", licenseState: "EXPIRED" });
+      expect(expired).toContain(expiredB.id);
+      expect(expired).not.toContain(expiringB.id);
+      expect(expired).not.toContain(okB.id);
     });
 
     it("證號格式不對、身分證字號格式不對 → VALIDATION_FAILED 一次標出", async () => {

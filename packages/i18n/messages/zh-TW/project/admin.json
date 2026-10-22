@@ -2381,7 +2381,7 @@
       "sheetName": "採購清單"
     },
     "purchase": {
-      "badgeDescription": "點收關卡在我手上、還沒點收完成的進貨單數",
+      "badgeDescription": "點收關卡在你手上、還沒點收完成的進貨單數",
       "createFromRequisition": "建立進貨單",
       "list": {
         "title": "進貨單",
