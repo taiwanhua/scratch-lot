@@ -6,8 +6,6 @@ import {
   REDEMPTION_STATUS,
   STOCKTAKE_STATUS,
   TICKET_EVENT_TYPE,
-  TICKET_LOCATION_KIND,
-  TICKET_STATUS,
   type TicketEventType,
 } from "@repo/domain/project/lottery";
 import { CASH_MOVEMENT_TYPE } from "@repo/domain/project/lottery-accounts";
@@ -31,7 +29,6 @@ import {
 import { LotteryRedemptionsRepository } from "../../database/lottery-redemptions/lottery-redemptions.repository";
 import { LotteryStocktakesRepository } from "../../database/lottery-stocktakes/lottery-stocktakes.repository";
 import { LotteryShiftsRepository } from "../../database/lottery-store/lottery-shifts.repository";
-import { LotteryTransferReceiptsRepository } from "../../database/lottery-transfers/lottery-transfer-receipts.repository";
 import { BankTransactionsService } from "../accounts/bank-transactions.service";
 import { LOTTERY_FIELD_CATEGORIES } from "../field-options/lottery-field-options";
 import { SettlementLedger } from "../settlement/settlement-ledger";
@@ -65,6 +62,7 @@ import {
   type ReportScope,
   ReportScopes,
 } from "./report-scope";
+import { ReportStock } from "./report-stock";
 
 /** 營運報表讀的張數事件類型(銷售、進貨、報廢、遺失、尋回、跳號)。 */
 const REPORT_EVENT_TYPES: readonly TicketEventType[] = [
@@ -85,12 +83,6 @@ const SOLD_TYPE_LIST: readonly TicketEventType[] = [
   TICKET_EVENT_TYPE.saleStocktake,
 ];
 const SOLD_TYPES: ReadonlySet<string> = new Set(SOLD_TYPE_LIST);
-
-/** 期末還在店裡的張:庫存、檯面(在途算在途中,不算任何一家店)。 */
-const ON_HAND_LOCATIONS: ReadonlySet<string> = new Set([
-  TICKET_LOCATION_KIND.stock,
-  TICKET_LOCATION_KIND.counter,
-]);
 
 /** 現金流水的「正常方向」:沖正的那一筆兩端對調,算負的(規格 10.2)。 */
 const NORMAL_ROUTE: Readonly<Record<string, { from?: string; to?: string }>> = {
@@ -151,7 +143,7 @@ export class OperationsReportService {
     private readonly books: LotteryBooksRepository,
     private readonly games: LotteryGamesRepository,
     private readonly redemptions: LotteryRedemptionsRepository,
-    private readonly receipts: LotteryTransferReceiptsRepository,
+    private readonly stock: ReportStock,
     private readonly movements: LotteryCashMovementsRepository,
     private readonly checkouts: LotteryCheckoutsRepository,
     private readonly stocktakes: LotteryStocktakesRepository,
@@ -187,18 +179,18 @@ export class OperationsReportService {
       this.periods.closedAtByMonth(scope),
       this.reasonLabels(operator),
     ]);
-    const outstanding = await this.outstandingOf(operator, scope);
-    const stores: LotteryOperationsStoreModel[] = [];
-    for (const period of periods) {
-      stores.push(
-        await this.storeOf(scope, period, {
+    const outstanding = await this.outstandingOf(operator, periods);
+    // 分店之間互不相依:平行算
+    const stores = await Promise.all(
+      periods.map((period) =>
+        this.storeOf(scope, period, {
           closedAt,
           manualReasons,
           outstanding: outstanding(period),
           operator,
         }),
-      );
-    }
+      ),
+    );
     return {
       closedThrough: scope.lastClosed?.month ?? null,
       canShowCost: scope.canShowCost,
@@ -431,58 +423,31 @@ export class OperationsReportService {
       );
     const purchased = booksOf(TICKET_EVENT_TYPE.purchase);
     const voided = booksOf(TICKET_EVENT_TYPE.purchaseVoid);
-    const [bookRows, incoming, outgoing, ending] = await Promise.all([
+    const [bookRows, transfers, ending] = await Promise.all([
       this.books.findMany(
         reader,
         { _id: { $in: [...purchased, ...voided] } },
         { select: "cost" },
       ),
-      this.receipts.findMany(
-        reader,
-        { orgId, receivedAt: { $gte: from, $lt: to } },
-        { select: "purchaseAmount tickets" },
-      ),
-      this.receipts.findMany(
-        reader,
-        { fromOrgId: orgId, receivedAt: { $gte: from, $lt: to } },
-        { select: "purchaseAmount tickets" },
-      ),
-      this.endingStockOf(reader, orgId, to),
+      this.stock.transfersOf(reader, orgId, from, to),
+      this.stock.endingOf(reader, orgId, to),
     ]);
     const bookCost = new Map(
       bookRows.map((row) => [String(row._id), row.cost]),
     );
     const sumBooks = (ids: readonly Types.ObjectId[]) =>
       ids.reduce((sum, id) => sum + (bookCost.get(String(id)) ?? 0), 0);
-    const outAmount = outgoing.reduce(
-      (sum, row) => sum + row.purchaseAmount,
-      0,
-    );
-    const outCost = outgoing.reduce(
-      (sum, row) =>
-        sum + row.tickets.reduce((inner, ticket) => inner + ticket.unitCost, 0),
-      0,
-    );
     return {
       purchaseBooks: purchased.length - voided.length,
       purchaseTickets:
         count(TICKET_EVENT_TYPE.purchase) -
         count(TICKET_EVENT_TYPE.purchaseVoid),
       purchaseCost: sumBooks(purchased) - sumBooks(voided),
-      transferInTickets: incoming.reduce(
-        (sum, row) => sum + row.tickets.length,
-        0,
-      ),
-      transferInAmount: incoming.reduce(
-        (sum, row) => sum + row.purchaseAmount,
-        0,
-      ),
-      transferOutTickets: outgoing.reduce(
-        (sum, row) => sum + row.tickets.length,
-        0,
-      ),
-      transferOutAmount: outAmount,
-      transferGain: outAmount - outCost,
+      transferInTickets: transfers.inTickets,
+      transferInAmount: transfers.inAmount,
+      transferOutTickets: transfers.outTickets,
+      transferOutAmount: transfers.outAmount,
+      transferGain: transfers.outAmount - transfers.outCost,
       scrapTickets: count(TICKET_EVENT_TYPE.scrap),
       // 報廢損失以報廢事件上的成本快照為準(調貨後張的單張成本可能已變)
       scrapCost: events
@@ -497,67 +462,6 @@ export class OperationsReportService {
       endingTickets: ending.tickets,
       endingCost: ending.cost,
       investigatingBooks: ending.investigatingBooks,
-    };
-  }
-
-  /**
-   * 期末(期間結束那一刻)的庫存:每一張取「迄」之前最後一筆事件的「變動後」;還在這家店、未售、
-   * 位置是庫存或檯面的算期末庫存,待查的算待查(本)。只看曾經在這家店的張(事件後或事件前在這家店:
-   * 被調走 / 尋回到別家店的那一筆事件,變動前一定是這家店)。
-   */
-  private async endingStockOf(
-    reader: OperatorContext,
-    orgId: Types.ObjectId,
-    to: Date,
-  ): Promise<{ tickets: number; cost: number; investigatingBooks: number }> {
-    const rows = (await this.events.aggregate(reader, [
-      {
-        $match: {
-          at: { $lt: to },
-          $or: [{ orgId }, { "from.orgId": orgId }],
-        },
-      },
-      { $sort: { at: 1, _id: 1 } },
-      {
-        $group: {
-          _id: "$ticketId",
-          last: { $last: "$to" },
-          bookId: { $last: "$bookId" },
-        },
-      },
-      {
-        $match: {
-          "last.orgId": orgId,
-          "last.status": {
-            $in: [TICKET_STATUS.unsold, TICKET_STATUS.investigating],
-          },
-        },
-      },
-    ])) as {
-      _id: Types.ObjectId;
-      bookId: Types.ObjectId;
-      last: { status: string; locationKind: string };
-    }[];
-    const onHand = rows.filter(
-      (row) =>
-        row.last.status === TICKET_STATUS.unsold &&
-        ON_HAND_LOCATIONS.has(row.last.locationKind),
-    );
-    const costs = await this.unitCostsOf(
-      reader,
-      onHand.map((row) => row._id),
-    );
-    return {
-      tickets: onHand.length,
-      cost: onHand.reduce(
-        (sum, row) => sum + (costs.get(String(row._id)) ?? 0),
-        0,
-      ),
-      investigatingBooks: new Set(
-        rows
-          .filter((row) => row.last.status === TICKET_STATUS.investigating)
-          .map((row) => String(row.bookId)),
-      ).size,
     };
   }
 
@@ -876,14 +780,25 @@ export class OperationsReportService {
   // ---- 區塊 7:未結清 ----
 
   /**
-   * 待付 / 待退批貨款、待收 / 待付調貨款(收付機制的待結清,依歸屬分店;只算期末以前送出的單據)。
-   * 收付的現況是「現在」的:報表期間結束之後才付的款不倒推回去(見模組文件「營運報表」)。
+   * 期末時的待付 / 待退批貨款、待收 / 待付調貨款(`SettlementLedger.outstandingAt`:單據當時還有效、
+   * 收付只算期末以前的),依歸屬分店。對齊日結時各店的「迄」不同,同一個「迄」只查一次。
    */
   private async outstandingOf(
     operator: OperatorContext,
-    scope: ReportScope,
+    periods: readonly StorePeriod[],
   ): Promise<(period: StorePeriod) => LotteryOperationsOutstandingModel> {
-    const rows = await this.settlement.outstanding(operator);
+    const ends = [...new Set(periods.map((period) => period.to.getTime()))];
+    const byEnd = new Map(
+      await Promise.all(
+        ends.map(
+          async (end) =>
+            [
+              end,
+              await this.settlement.outstandingAt(operator, new Date(end)),
+            ] as const,
+        ),
+      ),
+    );
     return (period) => {
       const result: LotteryOperationsOutstandingModel = {
         purchaseToPay: 0,
@@ -891,20 +806,11 @@ export class OperationsReportService {
         transferToReceive: 0,
         transferToPay: 0,
       };
-      if (!scope.storeIds.some((id) => id.equals(period.orgId))) {
-        return result;
-      }
-      for (const row of rows) {
-        const submittedAt = row.snapshot.submission.submittedAt;
+      for (const row of byEnd.get(period.to.getTime()) ?? []) {
         const field = OUTSTANDING_FIELDS[
           `${row.snapshot.registration.kind}|${row.kind}`
         ] as keyof LotteryOperationsOutstandingModel | undefined;
-        if (
-          field !== undefined &&
-          row.branchOrgId.equals(period.orgId) &&
-          submittedAt !== null &&
-          submittedAt < period.to
-        ) {
+        if (field !== undefined && row.branchOrgId.equals(period.orgId)) {
           result[field] += row.amount;
         }
       }

@@ -49,6 +49,23 @@ describe("營運報表", () => {
     ]);
   });
 
+  it("日:不勾對齊日結也提醒「不要把多天的日報加總」,但不列逐店期間", async () => {
+    render(
+      ["reports.operations"],
+      `?${conditions({
+        period: { kind: "day", date: "2026-10-16" },
+        orgIds: TWO_BRANCHES,
+        extra: {},
+      })}`,
+    );
+    expect(
+      await screen.findByText(/不要把多天的日報加總當成週報或月報/),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("table", { name: "各分店實際期間" }),
+    ).not.toBeInTheDocument();
+  });
+
   it("預覽:區塊卡片(同一份工作表);有 show-cost 才有毛利;依遊戲展開", async () => {
     const { user, world } = render(
       ["reports.operations", "reports.show-cost"],
@@ -109,6 +126,24 @@ describe("營運報表", () => {
 });
 
 describe("班次結帳歷史報表", () => {
+  it("選了多家店:收銀點選項加分店名", async () => {
+    const { user } = render(
+      ["reports.shift-checkouts"],
+      `?report=shift-checkouts&${conditions({
+        period: { kind: "week", date: "2026-10-11" },
+        orgIds: TWO_BRANCHES,
+        extra: {},
+      })}`,
+    );
+    await user.click(await screen.findByRole("combobox", { name: "收銀點" }));
+    expect(
+      await screen.findByRole("option", { name: "新竹店 · 店外攤位" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("option", { name: "中山店 · 店內櫃台" }),
+    ).toBeInTheDocument();
+  });
+
   it("條件有收銀點與只看有差額;預覽一班一列,盤點欄標示未盤點(跳過)", async () => {
     const { user, world } = render(
       ["reports.shift-checkouts"],

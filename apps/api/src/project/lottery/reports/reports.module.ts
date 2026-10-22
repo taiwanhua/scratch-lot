@@ -9,6 +9,7 @@ import { OperationsReportService } from "./operations-report.service";
 import { PostCloseCorrections } from "./post-close-corrections";
 import { ReportPeriods } from "./report-periods";
 import { ReportScopes } from "./report-scope";
+import { ReportStock } from "./report-stock";
 import { LotteryReportsResolver } from "./reports.resolver";
 import { ShiftCheckoutsReportService } from "./shift-checkouts-report.service";
 
@@ -30,6 +31,7 @@ import { ShiftCheckoutsReportService } from "./shift-checkouts-report.service";
     ReportScopes,
     ReportPeriods,
     PostCloseCorrections,
+    ReportStock,
     OperationsReportService,
     ShiftCheckoutsReportService,
     LotteryReportsResolver,

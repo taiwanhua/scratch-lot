@@ -24,7 +24,7 @@ interface PeriodRow {
 /**
  * 營運報表條件卡片的專屬區塊(Figma RE-01 `94:17`、RE-03 `129:421`;規格 11.1):
  *
- * - 日 + 勾「對齊日結」:提醒「不要把多天的日報加總當成週報」,下方逐店列出實際期間;
+ * - 日:勾選框旁一律提醒「不要把多天的日報加總當成週報」(勾不勾都顯示);勾了「對齊日結」再逐店列出實際期間,
  *   當天沒有日結的店註記「本店 10/16 未日結,期間改用整天,小金庫和盤點未核對」
  * - 月:選的月份已關帳 → 說明數字固定、之後的更正列在「前期更正」
  */
@@ -59,12 +59,19 @@ export const OperationsConditionsAddon = ({
     data?.closedThrough != null &&
     month <= data.closedThrough;
 
-  if (!aligned) {
+  if (periodKind === "month") {
     return monthClosed ? (
       <Alert severity="info">
         {t("closing.closedHint", { month: Number(month.slice(5, 7)) })}
       </Alert>
     ) : null;
+  }
+  if (periodKind !== "day") {
+    return null;
+  }
+  const warning = <Alert severity="warning">{t("alignment.warning")}</Alert>;
+  if (!aligned) {
+    return warning;
   }
 
   const time = (value: string) =>
@@ -92,7 +99,7 @@ export const OperationsConditionsAddon = ({
   ];
   return (
     <Stack spacing={1.5}>
-      <Alert severity="warning">{t("alignment.warning")}</Alert>
+      {warning}
       {input !== null && (
         <Table
           aria-label={t("alignment.tableAria")}

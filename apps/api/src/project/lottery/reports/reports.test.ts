@@ -5,6 +5,7 @@ import {
   PURCHASE_FIELD_KEYS,
   PURCHASE_FORM_KEY,
   PURCHASE_MODULE_KEY,
+  PURCHASE_SETTLEMENT_SIDE,
 } from "@repo/domain/project/lottery";
 
 import {
@@ -921,6 +922,7 @@ describe("輸出報表:營運報表、班次結帳歷史報表(GraphQL 端點 + 
           moduleKey: "inventory",
         });
       };
+      const lastState = new Map<string, Record<string, unknown>>();
       const event = async (
         ticketId: Types.ObjectId,
         bookId: Types.ObjectId,
@@ -940,7 +942,8 @@ describe("輸出報表:營運報表、班次結帳歷史報表(GraphQL 端點 + 
           at: when,
           by: null,
           type,
-          from: null,
+          // 變動前 = 這張上一筆事件的變動後(進貨沒有前一個狀態)
+          from: lastState.get(String(ticketId)) ?? null,
           to: {
             status: to.status,
             locationKind: to.locationKind,
@@ -960,6 +963,12 @@ describe("輸出報表:營運報表、班次結帳歷史報表(GraphQL 端點 + 
           postCloseOf: null,
           moduleKey: "inventory",
           ...extra,
+        });
+        lastState.set(String(ticketId), {
+          status: to.status,
+          locationKind: to.locationKind,
+          cashPointId: null,
+          orgId: to.orgId ?? taichung,
         });
       };
       const unsold = { status: "unsold", locationKind: "stock" };
@@ -1106,6 +1115,36 @@ describe("輸出報表:營運報表、班次結帳歷史報表(GraphQL 端點 + 
         moduleKey: "purchasing.transfer",
       });
 
+      // 張的現況 = 最後一筆事件的變動後(報表的期末庫存從現況往回推);調到中山店的兩張調入後單張成本 120
+      const finals = await connection
+        .collection(LOTTERY_TICKET_EVENTS_COLLECTION)
+        .aggregate<{
+          _id: Types.ObjectId;
+          last: { status: string; locationKind: string; orgId: Types.ObjectId };
+        }>([
+          { $sort: { at: 1, _id: 1 } },
+          { $group: { _id: "$ticketId", last: { $last: "$to" } } },
+        ])
+        .toArray();
+      for (const final of finals) {
+        await connection.collection(LOTTERY_TICKETS_COLLECTION).updateOne(
+          { _id: final._id },
+          {
+            $set: {
+              status: final.last.status,
+              location: { kind: final.last.locationKind, cashPointId: null },
+              orgId: final.last.orgId,
+            },
+          },
+        );
+      }
+      await connection
+        .collection(LOTTERY_TICKETS_COLLECTION)
+        .updateMany(
+          { _id: { $in: [nth(b2, 1), nth(b2, 2)] } },
+          { $set: { unitCost: 120 } },
+        );
+
       // 兌獎:店內持有 500、已送兌 300、已撤銷 1,000(另列)
       const { shiftId } = await shiftOf({
         orgId: taichung,
@@ -1238,32 +1277,52 @@ describe("輸出報表:營運報表、班次結帳歷史報表(GraphQL 端點 + 
       await bank(taichung, "purchase_expense", "out", 3000);
       await bank(zhongshan, "deposit", "in", 500);
 
-      // 未結清:審核中的進貨單,應付 5,000(總部還沒付)
-      await connection.collection("form_submissions").insertOne({
-        orgId: tenant,
-        tenantId: tenant,
-        moduleKey: PURCHASE_MODULE_KEY,
-        formKey: PURCHASE_FORM_KEY,
-        version: 1,
-        values: {
-          [PURCHASE_FIELD_KEYS.branch]: {
-            id: String(taichung),
-            label: "台中店",
+      // 未結清:審核中的進貨單,應付 5,000(總部 10/15 才付)
+      const { insertedId: purchaseId } = await connection
+        .collection("form_submissions")
+        .insertOne({
+          orgId: tenant,
+          tenantId: tenant,
+          moduleKey: PURCHASE_MODULE_KEY,
+          formKey: PURCHASE_FORM_KEY,
+          version: 1,
+          values: {
+            [PURCHASE_FIELD_KEYS.branch]: {
+              id: String(taichung),
+              label: "台中店",
+            },
+            [PURCHASE_FIELD_KEYS.deductedAmount]: 5000,
           },
-          [PURCHASE_FIELD_KEYS.deductedAmount]: 5000,
-        },
+          summary: null,
+          status: "reviewing",
+          revision: 1,
+          revisions: [],
+          editVersion: 1,
+          touched: [],
+          clientRequestId: String(new Types.ObjectId()),
+          serialNo: "P-0001",
+          submittedAt: at("09:30"),
+          currentInstanceId: null,
+          blocked: false,
+          ...base(),
+        });
+      await insert(LOTTERY_BANK_TRANSACTIONS_COLLECTION, {
+        orgId: tenant,
+        accountId,
+        occurredAt: taipei("2026-10-15", "10:00"),
+        type: "purchase_expense",
+        direction: "out",
+        amount: 5000,
+        branchOrgId: taichung,
+        refType: PURCHASE_MODULE_KEY,
+        refId: purchaseId,
+        refRevision: 1,
+        settlementSide: PURCHASE_SETTLEMENT_SIDE,
+        reversalOf: null,
         summary: null,
-        status: "reviewing",
-        revision: 1,
-        revisions: [],
-        editVersion: 1,
-        touched: [],
-        clientRequestId: String(new Types.ObjectId()),
-        serialNo: "P-0001",
-        submittedAt: at("09:30"),
-        currentInstanceId: null,
-        blocked: false,
-        ...base(),
+        handler: null,
+        note: null,
+        moduleKey: "accounts",
       });
 
       const input = { ...dayOf(day), orgIds: [String(taichung)] };
@@ -1370,12 +1429,41 @@ describe("輸出報表:營運報表、班次結帳歷史報表(GraphQL 端點 + 
       ]);
     });
 
-    it("區塊 7 未結清:期末以前送出、還沒付的批貨款", () => {
+    it("區塊 7 未結清:期末時的待付批貨款(期末之後才付的不算進期末);付了之後那天的期末是 0", async () => {
       expect(report.outstanding).toEqual({
         purchaseToPay: 5000,
         purchaseToRefund: 0,
         transferToReceive: 0,
         transferToPay: 0,
+      });
+      const before = await operations(hq, {
+        ...dayOf("2026-10-13"),
+        orgIds: [String(taichung)],
+      });
+      // 10/13 期末:進貨單還沒送出
+      expect(firstOf(before.stores).outstanding).toMatchObject({
+        purchaseToPay: 0,
+      });
+      const after = await operations(hq, {
+        ...dayOf("2026-10-15"),
+        orgIds: [String(taichung)],
+      });
+      expect(firstOf(after.stores).outstanding).toMatchObject({
+        purchaseToPay: 0,
+      });
+    });
+
+    it("期末庫存從現況往回推:期末之後的售出 / 調出 / 進貨都還原;期末之後調走的張用點收記的調入前成本", async () => {
+      // 10/13 期末:只有本 2 的 10 張(10/14 才進貨的本 1、調入的 3 張都還不存在 / 不在這家店);
+      // 調到中山店的兩張現在單張 120,期末當時是 90
+      const before = await operations(hq, {
+        ...dayOf("2026-10-13"),
+        orgIds: [String(taichung)],
+      });
+      expect(firstOf(before.stores).inventory).toMatchObject({
+        endingTickets: 10,
+        endingCost: 900,
+        investigatingBooks: 0,
       });
     });
 
@@ -1447,5 +1535,211 @@ describe("輸出報表:營運報表、班次結帳歷史報表(GraphQL 端點 + 
       input: { ...dayOf("2026-10-05"), orgIds: [String(hsinchu)] },
     });
     expect(data.lotteryOperationsReport.closedThrough).toBe("2026-09");
+  });
+
+  it("前期更正:撤銷的原售出、銀行沖正的原交易在已關帳月份(9 月,10/3 關帳)→ 記在 10/6 的前期更正", async () => {
+    const ticketId = new Types.ObjectId();
+    const bookId = new Types.ObjectId();
+    const gameId = new Types.ObjectId();
+    const ticketEvent = (type: string, at: Date, version: number) =>
+      insert(LOTTERY_TICKET_EVENTS_COLLECTION, {
+        orgId: hsinchu,
+        eventId: `${String(ticketId)}:${String(version)}`,
+        ticketId,
+        bookId,
+        gameId,
+        at,
+        by: null,
+        type,
+        from: null,
+        to: {
+          status: type === "sale" ? "sold" : "unsold",
+          locationKind: "counter",
+          cashPointId: null,
+          orgId: hsinchu,
+        },
+        quantity: 1,
+        amount: 200,
+        cost: null,
+        cashEffect: "none",
+        cashPointId: null,
+        shiftId: null,
+        refType: null,
+        refId: null,
+        reasonKey: null,
+        reasonNote: null,
+        postCloseOf: null,
+        moduleKey: "inventory",
+      });
+    await ticketEvent("sale", taipei("2026-09-29", "10:00"), 2);
+    await ticketEvent("sale_undo", taipei("2026-10-06", "10:00"), 3);
+    const accountId = await insert(LOTTERY_BANK_ACCOUNTS_COLLECTION, {
+      orgId: tenant,
+      bankCode: "812",
+      accountNo: "0009999900001",
+      accountName: "台新銀行",
+      label: "台新銀行 末 00001",
+      openingBalance: 0,
+      openingDate: taipei("2026-09-01"),
+      status: "active",
+      shareOrgs: [{ orgId: hsinchu, includeDescendants: false }],
+      moduleKey: "accounts",
+    });
+    const bankRow = (extra: Record<string, unknown>) =>
+      insert(LOTTERY_BANK_TRANSACTIONS_COLLECTION, {
+        orgId: tenant,
+        accountId,
+        type: "deposit",
+        amount: 1000,
+        branchOrgId: hsinchu,
+        refType: null,
+        refId: null,
+        refRevision: null,
+        settlementSide: null,
+        reversalOf: null,
+        summary: null,
+        handler: null,
+        note: null,
+        moduleKey: "accounts",
+        ...extra,
+      });
+    const original = await bankRow({
+      occurredAt: taipei("2026-09-28", "14:00"),
+      direction: "in",
+    });
+    await bankRow({
+      occurredAt: taipei("2026-10-06", "14:00"),
+      direction: "out",
+      reversalOf: original,
+    });
+    const report = await operations(hq, {
+      ...dayOf("2026-10-06"),
+      orgIds: [String(hsinchu)],
+    });
+    expect(firstOf(report.stores).notes).toMatchObject({
+      priorPeriodCount: 2,
+      // 撤銷 9 月的售出 −200、沖正 9 月的存入 −1,000
+      priorPeriodAmount: -1200,
+    });
+  });
+
+  it("同一個租戶、看不到的分店 → NOT_FOUND", async () => {
+    const storeOnly = await person(api, connection, zhongshan, tenant, {
+      moduleKeys: ["reports"],
+      permissionKeys: ["reports.operations"],
+    });
+    const result = await gql(storeOnly, OPERATIONS, {
+      input: { ...dayOf("2026-10-06"), orgIds: [String(hsinchu)] },
+    });
+    expect(result.errors?.[0]?.extensions).toMatchObject({ code: "NOT_FOUND" });
+    const own = await gql(storeOnly, OPERATIONS, {
+      input: { ...dayOf("2026-10-06"), orgIds: [String(zhongshan)] },
+    });
+    expect(own.errors).toBeUndefined();
+  });
+
+  it("調貨單作廢:點收那天算調出,作廢那天反向算回(調入、調出、調貨損益)", async () => {
+    const kaohsiung = await createOrg(connection, {
+      name: "高雄店",
+      parentId: tenant,
+    });
+    const { insertedId: submissionId } = await connection
+      .collection("form_submissions")
+      .insertOne({
+        orgId: kaohsiung,
+        tenantId: tenant,
+        moduleKey: "purchasing.transfer",
+        formKey: "transfer",
+        version: 1,
+        values: {
+          from_branch: { id: String(kaohsiung), label: "高雄店" },
+          to_branch: { id: String(zhongshan), label: "中山店" },
+          lines: [],
+        },
+        summary: null,
+        status: "voided",
+        revision: 1,
+        revisions: [],
+        editVersion: 1,
+        touched: [],
+        clientRequestId: String(new Types.ObjectId()),
+        serialNo: "T-0001",
+        submittedAt: taipei("2026-10-19", "10:00"),
+        voidedAt: taipei("2026-10-21", "10:00"),
+        currentInstanceId: null,
+        blocked: false,
+        ...base(),
+      });
+    await insert(LOTTERY_TRANSFER_RECEIPTS_COLLECTION, {
+      orgId: zhongshan,
+      fromOrgId: kaohsiung,
+      submissionId,
+      rowId: "r1",
+      bookId: new Types.ObjectId(),
+      purchaseAmount: 240,
+      tickets: [
+        { ticketId: new Types.ObjectId(), unitCost: 90 },
+        { ticketId: new Types.ObjectId(), unitCost: 90 },
+      ],
+      receivedBy: hq.userId,
+      receivedAt: taipei("2026-10-20", "10:00"),
+      moduleKey: "purchasing.transfer",
+    });
+    const dayReport = async (date: string, orgId: Types.ObjectId) => {
+      const result = await operations(hq, {
+        ...dayOf(date),
+        orgIds: [String(orgId)],
+      });
+      return firstOf(result.stores).inventory;
+    };
+    expect(await dayReport("2026-10-20", kaohsiung)).toMatchObject({
+      transferOutTickets: 2,
+      transferOutAmount: 240,
+      transferGain: 60,
+    });
+    expect(await dayReport("2026-10-21", kaohsiung)).toMatchObject({
+      transferOutTickets: -2,
+      transferOutAmount: -240,
+      transferGain: -60,
+    });
+    expect(await dayReport("2026-10-21", zhongshan)).toMatchObject({
+      transferInTickets: -2,
+      transferInAmount: -240,
+    });
+  });
+
+  it("對齊日結:同一天有兩張日結 → 起點取最早那張的起點、終點取最後一張的終點", async () => {
+    const tainan = await createOrg(connection, {
+      name: "台南店",
+      parentId: tenant,
+    });
+    await dailyClose(
+      tainan,
+      taipei("2026-10-17", "21:00"),
+      taipei("2026-10-18", "12:00"),
+    );
+    await dailyClose(
+      tainan,
+      taipei("2026-10-18", "12:00"),
+      taipei("2026-10-18", "22:00"),
+    );
+    const periods = await ok<{
+      lotteryOperationsReportPeriods: {
+        stores: { from: string; to: string; alignment: string }[];
+      };
+    }>(hq, PERIODS, {
+      input: {
+        ...dayOf("2026-10-18"),
+        orgIds: [String(tainan)],
+        alignDailyClose: true,
+      },
+    });
+    expect(periods.lotteryOperationsReportPeriods.stores).toEqual([
+      expect.objectContaining({
+        from: taipei("2026-10-17", "21:00").toISOString(),
+        to: taipei("2026-10-18", "22:00").toISOString(),
+        alignment: "dailyClose",
+      }),
+    ]);
   });
 });

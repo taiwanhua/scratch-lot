@@ -889,7 +889,8 @@
         "uncounted": "{count} books uncounted"
       },
       "noTask": "No matching schedule",
-      "allCashPoints": "All"
+      "allCashPoints": "All",
+      "cashPointOfStore": "{store} · {name}"
     }
   },
   "schedule": {

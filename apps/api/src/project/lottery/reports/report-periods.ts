@@ -24,7 +24,7 @@ export interface StorePeriod {
  * 報表的期間與關帳(規格 11.1、10.4):
  *
  * - **對齊日結**(只有日):每家店用「上一次日結 至 當天日結」= 當天送出的日結的涵蓋計算期間
- *   (`coveredFrom` ~ `coveredTo`;當天有多張取最後一張;第一次日結沒有起點 → 用當天 00:00);
+ *   (當天有多張:起點取最早那張的 `coveredFrom`、終點取最後一張的 `coveredTo`;第一次日結沒有起點 → 用當天 00:00);
  *   當天沒有日結的店改用整天(`fullDay`,畫面與工作表標示「本店 10/13 未日結…」)
  * - **關帳**:各月份的關帳時間(判斷前期更正)、期間涵蓋的尚未關帳月份
  */
@@ -57,14 +57,17 @@ export class ReportPeriods {
       { sort: { coveredTo: -1 }, select: "orgId coveredFrom coveredTo" },
     );
     return scope.storeIds.map((orgId): StorePeriod => {
-      const daily = dailies.find((row) => row.orgId.equals(orgId));
-      if (daily?.coveredTo == null) {
+      // 依 coveredTo 新到舊:第一張 = 當天最後一張(終點),最後一張 = 當天最早一張(起點)
+      const ofStore = dailies.filter((row) => row.orgId.equals(orgId));
+      const last = ofStore.at(0);
+      const first = ofStore.at(-1);
+      if (last?.coveredTo == null || first === undefined) {
         return { orgId, from: scope.from, to: scope.to, alignment: "fullDay" };
       }
       return {
         orgId,
-        from: daily.coveredFrom ?? scope.from,
-        to: daily.coveredTo,
+        from: first.coveredFrom ?? scope.from,
+        to: last.coveredTo,
         alignment: "dailyClose",
       };
     });

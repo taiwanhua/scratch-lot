@@ -149,6 +149,8 @@ LotteryTicketEventSchema.index({ orgId: 1, gameId: 1, type: 1 });
 LotteryTicketEventSchema.index({ shiftId: 1, type: 1 });
 // 事後更正淨額:指向那一班的事件(盤點補登售出)
 LotteryTicketEventSchema.index({ postCloseOf: 1 });
+// 報表的期末庫存:期末之後被移出這家店的事件(變動前在這家店;從現況往回推)
+LotteryTicketEventSchema.index({ "from.orgId": 1, at: 1 });
 LotteryTicketEventSchema.plugin(baseFieldsPlugin);
 LotteryTicketEventSchema.plugin(tenantScopePlugin, { moduleData: true });
 LotteryTicketEventSchema.path("moduleKey").default(INVENTORY_MODULE_KEY);

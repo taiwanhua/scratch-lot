@@ -889,7 +889,8 @@
         "uncounted": "{count} 本未盤"
       },
       "noTask": "未對應排班",
-      "allCashPoints": "全部"
+      "allCashPoints": "全部",
+      "cashPointOfStore": "{store} · {name}"
     }
   },
   "schedule": {

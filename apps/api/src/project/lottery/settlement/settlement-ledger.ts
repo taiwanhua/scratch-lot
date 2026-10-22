@@ -182,18 +182,54 @@ export class SettlementLedger {
 
   /** 看得到的單據裡有待付 / 待退 / 待收的每一邊(依可見範圍 + 依欄位共用,同一般讀取)。 */
   async outstanding(operator: OperatorContext): Promise<OutstandingRow[]> {
+    const live = { status: { $in: [...SETTLEMENT_LIVE_STATUSES] } };
+    return this.outstandingWhere(operator, live);
+  }
+
+  /**
+   * **某個時點的**待結清(輸出報表營運報表區塊 7「期末時」;報表正本 `docs/modules/project/reports.md`):
+   *
+   * - 單據:那個時點以前送出、當時還有效 —— 現在有效的,或之後才作廢(`voidedAt`)/ 駁回(以 `updatedAt` 為駁回時間)的
+   *   (作廢的當時是已完成、駁回的當時是審核中)
+   * - 收付:只算那個時點以前發生的銀行交易與現金流水(`occurredAt`;沖正照它自己的時間)
+   * - 應付 / 已點收金額照單據現在的內容(修訂、點收不倒推)
+   */
+  async outstandingAt(
+    operator: OperatorContext,
+    asOf: Date,
+  ): Promise<OutstandingRow[]> {
+    const filter = {
+      submittedAt: { $lt: asOf },
+      $or: [
+        { status: { $in: [...SETTLEMENT_LIVE_STATUSES] } },
+        { status: "voided", voidedAt: { $gte: asOf } },
+        { status: "rejected", updatedAt: { $gte: asOf } },
+      ],
+    };
+    return this.outstandingWhere(operator, filter, asOf, statusAtThen);
+  }
+
+  private async outstandingWhere(
+    operator: OperatorContext,
+    filter: Record<string, unknown>,
+    before?: Date,
+    asThen: (submission: SettlementSubmission) => SettlementSubmission = (
+      submission,
+    ) => submission,
+  ): Promise<OutstandingRow[]> {
     const rows: OutstandingRow[] = [];
     for (const registration of settlementDocuments()) {
-      const live = { status: { $in: [...SETTLEMENT_LIVE_STATUSES] } };
-      const submissions = (await this.submissions.findMany(
+      const visible = (await this.submissions.findMany(
         operator,
-        { moduleKey: registration.moduleKey, ...live },
+        { moduleKey: registration.moduleKey, ...filter },
         { sort: { submittedAt: 1, _id: 1 } },
       )) as unknown as SettlementSubmission[];
+      const submissions = visible.map((row) => asThen(row));
       const snapshots = await this.snapshotsOf(
         operator,
         registration,
         submissions,
+        before,
       );
       for (const snapshot of snapshots) {
         rows.push(...outstandingOf(snapshot));
@@ -238,11 +274,12 @@ export class SettlementLedger {
     };
   }
 
-  /** 一批提交的現況(不參與收付的略過)。 */
+  /** 一批提交的現況(不參與收付的略過);給了 `before` = 收付只算那個時點以前的。 */
   async snapshotsOf(
     operator: OperatorContext,
     registration: SettlementDocumentRegistration,
     submissions: readonly SettlementSubmission[],
+    before?: Date,
   ): Promise<SettlementSnapshot[]> {
     const withPayable: {
       submission: SettlementSubmission;
@@ -269,6 +306,7 @@ export class SettlementLedger {
         operator,
         tenantId,
         group.map((submission) => submission._id),
+        before,
       )) {
         totals.set(key, value);
       }
@@ -292,11 +330,13 @@ export class SettlementLedger {
     operator: OperatorContext,
     tenantId: Types.ObjectId | null,
     refIds: readonly Types.ObjectId[],
+    before?: Date,
   ): Promise<Map<string, Record<string, SettlementSideTotals>>> {
     const reader = await tenantBoundaryContext(this.orgs, operator, tenantId);
     const match = {
       refId: { $in: [...refIds] },
       settlementSide: { $ne: null },
+      ...(before === undefined ? {} : { occurredAt: { $lt: before } }),
     };
     const [bankRows, cashRows] = await Promise.all([
       this.bank.aggregate(reader, [
@@ -344,6 +384,31 @@ export class SettlementLedger {
     return result;
   }
 }
+
+/** 某個時點的單據狀態:之後才作廢的,當時是已完成;之後才駁回的,當時是審核中。 */
+function statusAtThen(submission: SettlementSubmission): SettlementSubmission {
+  const status = THEN_STATUS[submission.status];
+  if (status === undefined) {
+    return submission;
+  }
+  // 讀出來的是 mongoose 文件(展開會掉欄位):逐欄抄成純物件
+  return {
+    _id: submission._id,
+    orgId: submission.orgId,
+    tenantId: submission.tenantId,
+    moduleKey: submission.moduleKey,
+    status,
+    revision: submission.revision,
+    values: submission.values,
+    submittedAt: submission.submittedAt,
+    serialNo: submission.serialNo ?? null,
+  };
+}
+
+const THEN_STATUS: Readonly<Partial<Record<string, string>>> = {
+  voided: "completed",
+  rejected: "reviewing",
+};
 
 /** 一張單據每一邊的待結清(先填的金額 > 0 的那一顆)。 */
 export function outstandingOf(snapshot: SettlementSnapshot): OutstandingRow[] {
