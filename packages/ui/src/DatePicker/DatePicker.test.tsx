@@ -25,11 +25,14 @@ const section = (name: "Year" | "Month" | "Day") =>
 const Controlled = ({
   initial,
   resetTo = null,
+  storeNullAsEmpty = false,
   onChange,
 }: {
   initial: string | null;
   /** 「外部改值」按鈕要換成的值:模擬父層換成別的值(例如重設表單) */
   resetTo?: string | null;
+  /** 模擬把清空存成空字串的呼叫端(`value ?? ""`) */
+  storeNullAsEmpty?: boolean;
   onChange: (value: string | null) => void;
 }) => {
   const [value, setValue] = useState(initial);
@@ -48,7 +51,7 @@ const Controlled = ({
         value={value}
         onChange={(next) => {
           onChange(next);
-          setValue(next);
+          setValue(storeNullAsEmpty ? (next ?? "") : next);
         }}
       />
     </>
@@ -223,6 +226,29 @@ describe("DatePicker", () => {
 
       await user.click(screen.getByRole("button", { name: "外部改值" }));
       expect(fieldText()).toContain("2030-05-06");
+    });
+
+    it("父層把 null 存成空字串再傳回時,年份逐位輸入不會清掉月、日", async () => {
+      const user = userEvent.setup();
+      const handleChange = jest.fn<(value: string | null) => void>();
+      render(
+        <Controlled
+          initial="2025-03-15"
+          storeNullAsEmpty
+          onChange={handleChange}
+        />,
+      );
+
+      await user.click(section("Year"));
+      const typed: (string | null)[] = [];
+      for (const key of "2026") {
+        await user.keyboard(key);
+        typed.push(section("Year").textContent);
+      }
+
+      expect(typed).toEqual(["0002", "0020", "0202", "2026"]);
+      expect(handleChange).toHaveBeenLastCalledWith("2026-03-15");
+      expect(fieldText()).toContain("2026-03-15");
     });
 
     it("父層沒接受變更(值不變)時,畫面回到父層的值", async () => {

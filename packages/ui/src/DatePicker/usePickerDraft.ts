@@ -38,6 +38,8 @@ const fromValue = (
  * 做法:保留 MUI 回傳的物件當草稿,記住它對應的對外字串。外部 `value` 與這個字串相同(就是剛送出去的值,
  * 包含打字途中的 `null`)時繼續用草稿;外部真的換成別的值,才用 `toDate(value)` 換掉草稿。
  * `value === undefined`(非受控)原樣往下傳,交給 MUI 自己管。
+ * `value === ""` 視同 `null`:有呼叫端把清空存成空字串再傳回來(`value ?? ""`),
+ * 若當成另一個值,打字途中送出的 `null` 一往返就會用不合法日期換掉草稿,已填的月、日跟著被清掉。
  *
  * 已知限制:打字途中已送出 `null`,外部此時再設成 `null`(例如重設成空白)分辨不出來,草稿會留著。
  */
@@ -54,21 +56,22 @@ export const usePickerDraft = ({
   toValue: (date: Dayjs | null) => string | null;
   onChange?: (value: string | null) => void;
 }) => {
+  const external = value === "" ? null : value;
   const [draft, setDraft] = useState<Draft>(() => ({
-    value,
-    date: fromValue(value, toDate),
+    value: external,
+    date: fromValue(external, toDate),
   }));
 
   // 外部換了值:render 期間依前一次的值調整 state(React 文件「儲存前一次 render 的資訊」),不用 effect
   let current = draft;
-  if (value !== draft.value) {
-    current = { value, date: fromValue(value, toDate) };
+  if (external !== draft.value) {
+    current = { value: external, date: fromValue(external, toDate) };
     setDraft(current);
   }
 
   const handleChange = (date: Dayjs | null) => {
     const next = toValue(date);
-    if (value !== undefined) {
+    if (external !== undefined) {
       setDraft({ value: next, date });
     }
     onChange?.(next);
