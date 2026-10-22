@@ -16,10 +16,10 @@ set "TARGET=%ProgramFiles%\print-agent"
 set "CONFIG=%ProgramData%\print-agent"
 set "SERVICE=%TARGET%\print-agent-service.exe"
 
-rem 已安裝過:先停服務才能覆蓋執行檔
+rem 已安裝過:先停服務才能覆蓋執行檔(stopwait 等到真的停了;stop 只送出停止就返回)
 sc query print-agent >nul 2>&1
 if not errorlevel 1 (
-  "%SERVICE%" stop >nul 2>&1
+  "%SERVICE%" stopwait >nul 2>&1
 )
 
 if not exist "%TARGET%" mkdir "%TARGET%"

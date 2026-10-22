@@ -31,8 +31,8 @@ if not defined INSTALLED (
 
 call :pair || goto :fail
 
-rem 服務還拿著舊金鑰:停掉再啟動,改用新的設定
-"%SERVICE%" stop >nul 2>&1
+rem 服務還拿著舊金鑰:停掉再啟動,改用新的設定(stopwait 等到真的停了才 start,否則 start 會撞上停止中)
+"%SERVICE%" stopwait >nul 2>&1
 "%SERVICE%" start || goto :fail
 
 echo.

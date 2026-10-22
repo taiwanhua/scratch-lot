@@ -32,10 +32,9 @@ function echoLinesInBlocks(text: string): string[] {
 
 describe("Windows 安裝包的批次檔", () => {
   it("有安裝與重新配對兩支", () => {
-    expect(batchFiles.toSorted((a, b) => a.localeCompare(b))).toEqual([
-      "安裝.bat",
-      "重新配對.bat",
-    ]);
+    expect(
+      batchFiles.toSorted((a, b) => a.localeCompare(b, "zh-Hant")),
+    ).toEqual(["安裝.bat", "重新配對.bat"]);
   });
 
   it.each(batchFiles)("%s:CRLF、沒有 BOM、先切 UTF-8 字碼頁", (name) => {
@@ -69,6 +68,11 @@ describe("Windows 安裝包的批次檔", () => {
     expect(repair).toContain(
       String.raw`"%TARGET%\print-agent.exe" pair --server "%SERVER%" --code "%CODE%" --force`,
     );
+    // WinSW 的 stop 只送出停止就返回,緊接著 start 會撞上「停止中」;stopwait 等到真的停了
+    for (const text of [install, repair]) {
+      expect(text).toContain('"%SERVICE%" stopwait >nul 2>&1');
+      expect(text).not.toMatch(/"%SERVICE%" stop /);
+    }
     expect(repair).toContain('"%SERVICE%" start || goto :fail');
   });
 });

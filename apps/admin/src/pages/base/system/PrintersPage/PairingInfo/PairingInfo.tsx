@@ -93,8 +93,12 @@ export const PairingInfo = ({
         {row(t("code"), formatPairingCode(pairingCode), pairingCode, true)}
         <Typography variant="caption" color="textSecondary">
           {t("validUntil", { expiresAt: temporalText(expiresAt, "datetime") })}
-          {hint === undefined ? null : ` ${hint}`}
         </Typography>
+        {hint === undefined ? null : (
+          <Typography variant="caption" color="textSecondary">
+            {hint}
+          </Typography>
+        )}
       </Stack>
     </Box>
   );
