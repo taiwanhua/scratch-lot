@@ -6,7 +6,13 @@ import { PURCHASE_PERMISSIONS } from "@repo/domain/project/lottery";
 import { ACCOUNTS_PERMISSIONS as P } from "@repo/domain/project/lottery-accounts";
 
 import { expectButtonOrder } from "@/test/button-order";
-import { ALL_ACCOUNTS_PERMISSIONS } from "@/test/msw/project/lottery/accounts-fixtures";
+import {
+  ALL_ACCOUNTS_PERMISSIONS,
+  bankTransaction,
+  movement,
+  sampleMovements,
+  sampleTransactions,
+} from "@/test/msw/project/lottery/accounts-fixtures";
 import { api, server } from "@/test/msw/server";
 
 import { renderAccounts } from "../accounts-test-support";
@@ -84,6 +90,31 @@ describe("帳戶管理:分頁與按鈕", () => {
     expect(screen.getByText("抽屜 → 外部(王小明)")).toBeInTheDocument();
   });
 
+  it("跨班更正:現金流水標「前期更正,屬於 X 班」", async () => {
+    const { user } = renderAccounts({
+      world: {
+        movements: [
+          movement({
+            id: "cm-9",
+            type: "correction_increase",
+            from: "external",
+            to: "drawer",
+            amount: 300,
+            occurredAt: "2026-10-16T06:00:00.000Z",
+            correctionOfShift: "店內櫃台 · 李小華 10/15 13:00",
+          }),
+          ...sampleMovements(),
+        ],
+      },
+    });
+    await user.click(await screen.findByRole("tab", { name: "即時現金帳" }));
+    expect(
+      await screen.findByText(
+        "現金更正(增加)(前期更正,屬於 店內櫃台 · 李小華 10/15 13:00)",
+      ),
+    ).toBeInTheDocument();
+  });
+
   it("即時現金帳查詢失敗:顯示載入失敗提示,不是靜默空白", async () => {
     const { user } = renderAccounts();
     server.use(
@@ -139,6 +170,29 @@ describe("帳戶管理:分頁與按鈕", () => {
 });
 
 describe("銀行帳戶詳情", () => {
+  it("沖正的那一筆標原交易的日期", async () => {
+    renderAccounts({
+      path: "/accounts/view-page/ba-1",
+      world: {
+        transactions: [
+          bankTransaction({
+            id: "tx-rev",
+            type: "deposit",
+            direction: "out",
+            amount: 1000,
+            balanceAfter: 0,
+            reversalOf: "tx-orig",
+            reversalOfAt: "2026-09-28T06:00:00.000Z",
+          }),
+          ...sampleTransactions(),
+        ],
+      },
+    });
+    expect(
+      await screen.findByText("存入 · 沖正 · 原交易 9/28"),
+    ).toBeInTheDocument();
+  });
+
   it("有登記 / 沖正 / 編輯權限:[登記交易]、每列 [沖正](已沖正的顯示已沖正)、帳戶設定;有交易時期初鎖定、不能刪除", async () => {
     renderAccounts({ path: "/accounts/view-page/ba-1" });
     expect(

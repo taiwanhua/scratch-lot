@@ -139,7 +139,12 @@ export const CashLedgerTab = () => {
         ? t(`withdrawReasons.${row.reason}`)
         : null;
     const reason = reasonText === null ? "" : `(${reasonText})`;
-    return `${label}${reason}${row.reversalOf ? t("cash.reversal") : ""}`;
+    // 跨班更正:標「前期更正,屬於 X 班」(現金更正看歸屬班次、事後更正看它指向的班)
+    const correction =
+      row.correctionOfShift == null
+        ? ""
+        : t("cash.correctionOf", { shift: row.correctionOfShift });
+    return `${label}${reason}${row.reversalOf ? t("cash.reversal") : ""}${correction}`;
   };
 
   const columns: TableColumn<Movement>[] = [

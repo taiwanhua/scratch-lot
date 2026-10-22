@@ -109,6 +109,7 @@
 - 批貨收入 / 調貨收入:單據必填,只收有待退或待收的單據(那一邊 [收到退款] / [收款] 的先填 > 0),交易記在那一邊(`settlementSide`)。兌獎入帳:單據選填、不算進任何單據淨額。
 - **沖正**:寫一筆同類型、方向相反、同金額的交易(`reversalOf`),原交易不改;已被沖正或本身是沖正 → `ALREADY_REVERSED`;兩人同時沖正由唯一索引擋下後到的。
 - **沖正的權限**:沒掛單據的手動交易只要 `reverse-bank-transaction`;**掛在單據上的交易**(`refType` / `settlementSide` 有值)另要**那一邊的收付權限**、看得到那一邊(與單據結算區的「沖正收付」同一判準,`settlement/settlement-side-access.ts`),沒有 → `FORBIDDEN`。交易清單的 `abilities.canReverse` 依同一判準(只看登記的權限,不讀單據)。現金流水沒有獨立的沖正入口(收付的現金只能從單據結算區沖正,已檢查那一邊;沖正「存入」連動的存銀行流水跟著那筆交易)。
+- **沖正標原交易日期**:交易清單的沖正那一筆回 `reversalOfAt`(原交易的發生時間,以租戶邊界讀),畫面顯示「沖正 · 原交易 9/28」(沖正沒有班)。
 - 沖正「存入」→ 連結的「存銀行」流水(`bankTransactionId`)自動寫一筆反向(租戶邊界,用途「例外寫入」)。
 
 ### 即時現金帳
@@ -116,6 +117,7 @@
 - **流水一律在交易內寫**(比照 `BaseRepository.createMany`):`recordCashMovement` / `reverseCashMovement` 收 `withTransaction` 給的 session,缺席(`undefined`)= 用進行中的交易(不收 `null`,同 `createMany`);不在交易內 → `CashLedgerOutsideTransactionError`。流水與同一個動作的稽核、單據寫入一起成功、一起回復(稽核寫入失敗 → 流水回復,有測試)。
 - 小金庫應有 = `vaultBaseline(orgId)` 的清點金額 + 之後流水對小金庫的加總;**只由流水算**,沒有可被改寫的數字欄位(帳本 repository 的修改 / 刪除方法一律拋 `AppendOnlyLedgerError`)。
 - 起算點由日結功能以 `registerVaultBaselineProvider` 登記;登記前一律從 0 起算。
+- **跨班更正的標示**(規格 6.12、10.4;使用者 10/08 定案「前期更正,屬於 X 班」):流水的 `correctionOfShift` = 這筆更正屬於哪一班的顯示名稱 —— 現金更正看歸屬班次(和發生班次不同時)、事後更正看 `postCloseOf` 指向的班;一般流水是 null。畫面在類型後面加「(前期更正,屬於 店內櫃台 · 李小華 10/15 13:00)」。不另存欄位,讀取時由班次的 `label` 帶出。
 - 抽屜應有由店面(收銀班次)計算:本模組提供 `sumShiftMovements(operator, shiftId)`(流入抽屜 − 流出抽屜);即時現金帳的抽屜卡片讀店面登記的 `openDrawersOf`(`cash/open-shift.ts`;正本 `docs/modules/project/store.md`「抽屜應有」)。
 
 ### 收付機制

@@ -1623,6 +1623,7 @@ export type LotteryBankTransaction = {
   refId?: Maybe<Scalars['ID']['output']>;
   refType?: Maybe<Scalars['String']['output']>;
   reversalOf?: Maybe<Scalars['ID']['output']>;
+  reversalOfAt?: Maybe<Scalars['DateTime']['output']>;
   reversedById?: Maybe<Scalars['ID']['output']>;
   settlementSide?: Maybe<Scalars['String']['output']>;
   summary?: Maybe<Scalars['String']['output']>;
@@ -1674,6 +1675,7 @@ export type LotteryCashMovement = {
   __typename?: 'LotteryCashMovement';
   amount: Scalars['Int']['output'];
   cashPoint?: Maybe<LotteryAccountsRef>;
+  correctionOfShift?: Maybe<Scalars['String']['output']>;
   createdBy?: Maybe<LotteryAccountsRef>;
   from: Scalars['String']['output'];
   id: Scalars['ID']['output'];
@@ -10304,9 +10306,9 @@ export type LotteryAccountsRefFieldsFragment = { __typename?: 'LotteryAccountsRe
 
 export type LotteryBankAccountFieldsFragment = { __typename?: 'LotteryBankAccount', id: string, bankCode: string, branchName?: string | null, accountNo: string, accountName: string, label: string, openingBalance: number, openingDate: string, status: string, note?: string | null, balance: number, hasTransactions: boolean, createdAt: string, updatedAt: string, shareOrgs: Array<{ __typename?: 'ShareOrg', orgId: string, includeDescendants: boolean }>, usageOrgs: Array<{ __typename?: 'LotteryAccountsRef', id: string, name: string }>, abilities: { __typename?: 'LotteryBankAccountAbilities', canEdit: boolean, canDelete: boolean, canRecordTransaction: boolean, canReverse: boolean } };
 
-export type LotteryBankTransactionFieldsFragment = { __typename?: 'LotteryBankTransaction', id: string, accountId: string, occurredAt: string, type: string, direction: string, amount: number, balanceAfter: number, refType?: string | null, refId?: string | null, settlementSide?: string | null, summary?: string | null, handler?: string | null, note?: string | null, reversalOf?: string | null, reversedById?: string | null, createdAt: string, branch?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null, createdBy?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null, abilities: { __typename?: 'LotteryBankTransactionAbilities', canReverse: boolean } };
+export type LotteryBankTransactionFieldsFragment = { __typename?: 'LotteryBankTransaction', id: string, accountId: string, occurredAt: string, type: string, direction: string, amount: number, balanceAfter: number, refType?: string | null, refId?: string | null, settlementSide?: string | null, summary?: string | null, handler?: string | null, note?: string | null, reversalOf?: string | null, reversedById?: string | null, reversalOfAt?: string | null, createdAt: string, branch?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null, createdBy?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null, abilities: { __typename?: 'LotteryBankTransactionAbilities', canReverse: boolean } };
 
-export type LotteryCashMovementFieldsFragment = { __typename?: 'LotteryCashMovement', id: string, occurredAt: string, type: string, from: string, to: string, reason?: string | null, amount: number, payee?: string | null, note?: string | null, refType?: string | null, refId?: string | null, reversalOf?: string | null, reversedById?: string | null, org: { __typename?: 'LotteryAccountsRef', id: string, name: string }, cashPoint?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null, createdBy?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null };
+export type LotteryCashMovementFieldsFragment = { __typename?: 'LotteryCashMovement', id: string, occurredAt: string, type: string, from: string, to: string, reason?: string | null, amount: number, payee?: string | null, note?: string | null, refType?: string | null, refId?: string | null, reversalOf?: string | null, reversedById?: string | null, correctionOfShift?: string | null, org: { __typename?: 'LotteryAccountsRef', id: string, name: string }, cashPoint?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null, createdBy?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null };
 
 export type LotterySettlementFieldsFragment = { __typename?: 'LotterySettlement', moduleKey: string, label: string, kind: string, refId: string, docNo: string, counterparty: string, payable: number, pendingPayee: number, sides: Array<{ __typename?: 'LotterySettlementSide', side: string, label: string, role: string, methods: Array<string>, totalOut: number, totalIn: number, net: number, canSettle: boolean, branch: { __typename?: 'LotteryAccountsRef', id: string, name: string }, cashDrawers: Array<{ __typename?: 'LotteryAccountsRef', id: string, name: string }>, buttons: Array<{ __typename?: 'LotterySettlementButton', button: string, defaultAmount: number, canUse: boolean }> }>, records: Array<{ __typename?: 'LotterySettlementRecord', id: string, method: string, side: string, type: string, direction: string, amount: number, accountLabel?: string | null, cashPlace?: string | null, cashPointName?: string | null, cashPointPrinterId?: string | null, handler?: string | null, note?: string | null, occurredAt: string, reversalOf?: string | null, reversedById?: string | null, canReverse: boolean, createdBy?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null }> };
 
@@ -10331,7 +10333,7 @@ export type LotteryBankTransactionsQueryVariables = Exact<{
 }>;
 
 
-export type LotteryBankTransactionsQuery = { __typename?: 'Query', lotteryBankTransactions: { __typename?: 'LotteryBankTransactionsPayload', totalCount: number, totalIn: number, totalOut: number, items: Array<{ __typename?: 'LotteryBankTransaction', id: string, accountId: string, occurredAt: string, type: string, direction: string, amount: number, balanceAfter: number, refType?: string | null, refId?: string | null, settlementSide?: string | null, summary?: string | null, handler?: string | null, note?: string | null, reversalOf?: string | null, reversedById?: string | null, createdAt: string, branch?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null, createdBy?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null, abilities: { __typename?: 'LotteryBankTransactionAbilities', canReverse: boolean } }> } };
+export type LotteryBankTransactionsQuery = { __typename?: 'Query', lotteryBankTransactions: { __typename?: 'LotteryBankTransactionsPayload', totalCount: number, totalIn: number, totalOut: number, items: Array<{ __typename?: 'LotteryBankTransaction', id: string, accountId: string, occurredAt: string, type: string, direction: string, amount: number, balanceAfter: number, refType?: string | null, refId?: string | null, settlementSide?: string | null, summary?: string | null, handler?: string | null, note?: string | null, reversalOf?: string | null, reversedById?: string | null, reversalOfAt?: string | null, createdAt: string, branch?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null, createdBy?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null, abilities: { __typename?: 'LotteryBankTransactionAbilities', canReverse: boolean } }> } };
 
 export type CreateLotteryBankAccountMutationVariables = Exact<{
   input: CreateLotteryBankAccountInput;
@@ -10359,28 +10361,28 @@ export type RecordLotteryBankTransactionMutationVariables = Exact<{
 }>;
 
 
-export type RecordLotteryBankTransactionMutation = { __typename?: 'Mutation', recordLotteryBankTransaction: { __typename?: 'LotteryBankTransactionPayload', item: { __typename?: 'LotteryBankTransaction', id: string, accountId: string, occurredAt: string, type: string, direction: string, amount: number, balanceAfter: number, refType?: string | null, refId?: string | null, settlementSide?: string | null, summary?: string | null, handler?: string | null, note?: string | null, reversalOf?: string | null, reversedById?: string | null, createdAt: string, branch?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null, createdBy?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null, abilities: { __typename?: 'LotteryBankTransactionAbilities', canReverse: boolean } } } };
+export type RecordLotteryBankTransactionMutation = { __typename?: 'Mutation', recordLotteryBankTransaction: { __typename?: 'LotteryBankTransactionPayload', item: { __typename?: 'LotteryBankTransaction', id: string, accountId: string, occurredAt: string, type: string, direction: string, amount: number, balanceAfter: number, refType?: string | null, refId?: string | null, settlementSide?: string | null, summary?: string | null, handler?: string | null, note?: string | null, reversalOf?: string | null, reversedById?: string | null, reversalOfAt?: string | null, createdAt: string, branch?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null, createdBy?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null, abilities: { __typename?: 'LotteryBankTransactionAbilities', canReverse: boolean } } } };
 
 export type ReverseLotteryBankTransactionMutationVariables = Exact<{
   input: ReverseLotteryBankTransactionInput;
 }>;
 
 
-export type ReverseLotteryBankTransactionMutation = { __typename?: 'Mutation', reverseLotteryBankTransaction: { __typename?: 'LotteryBankTransactionPayload', item: { __typename?: 'LotteryBankTransaction', id: string, accountId: string, occurredAt: string, type: string, direction: string, amount: number, balanceAfter: number, refType?: string | null, refId?: string | null, settlementSide?: string | null, summary?: string | null, handler?: string | null, note?: string | null, reversalOf?: string | null, reversedById?: string | null, createdAt: string, branch?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null, createdBy?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null, abilities: { __typename?: 'LotteryBankTransactionAbilities', canReverse: boolean } } } };
+export type ReverseLotteryBankTransactionMutation = { __typename?: 'Mutation', reverseLotteryBankTransaction: { __typename?: 'LotteryBankTransactionPayload', item: { __typename?: 'LotteryBankTransaction', id: string, accountId: string, occurredAt: string, type: string, direction: string, amount: number, balanceAfter: number, refType?: string | null, refId?: string | null, settlementSide?: string | null, summary?: string | null, handler?: string | null, note?: string | null, reversalOf?: string | null, reversedById?: string | null, reversalOfAt?: string | null, createdAt: string, branch?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null, createdBy?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null, abilities: { __typename?: 'LotteryBankTransactionAbilities', canReverse: boolean } } } };
 
 export type LotteryCashLedgerQueryVariables = Exact<{
   input: LotteryCashLedgerInput;
 }>;
 
 
-export type LotteryCashLedgerQuery = { __typename?: 'Query', lotteryCashLedger: { __typename?: 'LotteryCashLedgerPayload', totalCount: number, vault: { __typename?: 'LotteryVaultExpected', amount: number, baselineAmount: number, baselineAt?: string | null }, drawers: Array<{ __typename?: 'LotteryDrawerExpected', shiftId: string, openedAt: string, amount: number, cashPoint: { __typename?: 'LotteryAccountsRef', id: string, name: string }, openedBy: { __typename?: 'LotteryAccountsRef', id: string, name: string } }>, items: Array<{ __typename?: 'LotteryCashMovement', id: string, occurredAt: string, type: string, from: string, to: string, reason?: string | null, amount: number, payee?: string | null, note?: string | null, refType?: string | null, refId?: string | null, reversalOf?: string | null, reversedById?: string | null, org: { __typename?: 'LotteryAccountsRef', id: string, name: string }, cashPoint?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null, createdBy?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null }> } };
+export type LotteryCashLedgerQuery = { __typename?: 'Query', lotteryCashLedger: { __typename?: 'LotteryCashLedgerPayload', totalCount: number, vault: { __typename?: 'LotteryVaultExpected', amount: number, baselineAmount: number, baselineAt?: string | null }, drawers: Array<{ __typename?: 'LotteryDrawerExpected', shiftId: string, openedAt: string, amount: number, cashPoint: { __typename?: 'LotteryAccountsRef', id: string, name: string }, openedBy: { __typename?: 'LotteryAccountsRef', id: string, name: string } }>, items: Array<{ __typename?: 'LotteryCashMovement', id: string, occurredAt: string, type: string, from: string, to: string, reason?: string | null, amount: number, payee?: string | null, note?: string | null, refType?: string | null, refId?: string | null, reversalOf?: string | null, reversedById?: string | null, correctionOfShift?: string | null, org: { __typename?: 'LotteryAccountsRef', id: string, name: string }, cashPoint?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null, createdBy?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null }> } };
 
 export type LotteryCashMovementQueryVariables = Exact<{
   id: Scalars['ID']['input'];
 }>;
 
 
-export type LotteryCashMovementQuery = { __typename?: 'Query', lotteryCashMovement: { __typename?: 'LotteryCashMovementPayload', item: { __typename?: 'LotteryCashMovement', id: string, occurredAt: string, type: string, from: string, to: string, reason?: string | null, amount: number, payee?: string | null, note?: string | null, refType?: string | null, refId?: string | null, reversalOf?: string | null, reversedById?: string | null, org: { __typename?: 'LotteryAccountsRef', id: string, name: string }, cashPoint?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null, createdBy?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null } } };
+export type LotteryCashMovementQuery = { __typename?: 'Query', lotteryCashMovement: { __typename?: 'LotteryCashMovementPayload', item: { __typename?: 'LotteryCashMovement', id: string, occurredAt: string, type: string, from: string, to: string, reason?: string | null, amount: number, payee?: string | null, note?: string | null, refType?: string | null, refId?: string | null, reversalOf?: string | null, reversedById?: string | null, correctionOfShift?: string | null, org: { __typename?: 'LotteryAccountsRef', id: string, name: string }, cashPoint?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null, createdBy?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null } } };
 
 export type LotterySettlementQueryVariables = Exact<{
   moduleKey: Scalars['String']['input'];
@@ -12388,6 +12390,7 @@ export const LotteryBankTransactionFieldsFragmentDoc = `
   note
   reversalOf
   reversedById
+  reversalOfAt
   createdBy {
     ...LotteryAccountsRefFields
   }
@@ -12418,6 +12421,7 @@ export const LotteryCashMovementFieldsFragmentDoc = `
   refId
   reversalOf
   reversedById
+  correctionOfShift
   createdBy {
     ...LotteryAccountsRefFields
   }

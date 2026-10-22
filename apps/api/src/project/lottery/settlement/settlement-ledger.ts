@@ -194,7 +194,8 @@ export class SettlementLedger {
    * - 單據:那個時點以前送出(`submittedAt` 是第一次送出的時間,退回後重送不改寫)、當時還有效 —— 現在有效的,
    *   或之後才作廢(`voidedAt`)/ 駁回(流程實例結束的時間 `finishedAt`)的(作廢的當時是已完成、駁回的當時是審核中)
    * - 收付:只算那個時點以前發生的銀行交易與現金流水(`occurredAt`;沖正照它自己的時間)
-   * - 應付照單據現在的內容(修訂不倒推);調貨單的已點收金額只算那個時點以前的點收(`payable(submission, asOf)`)
+   * - 應付照那個時點的內容:取 `ctx.at` 早於那個時點的最後一筆修訂(完整值快照)來算;沒有更早的修訂 = 當時還沒送出,不算
+   * - 調貨單的已點收金額只算那個時點以前的點收(`payable(submission, asOf)`)
    */
   async outstandingAt(
     operator: OperatorContext,
@@ -209,7 +210,9 @@ export class SettlementLedger {
         { status: "rejected", _id: { $in: rejectedLater } },
       ],
     };
-    return this.outstandingWhere(operator, filter, asOf, statusAtThen);
+    return this.outstandingWhere(operator, filter, asOf, (submission) =>
+      submissionAt(submission, asOf),
+    );
   }
 
   /**
@@ -255,9 +258,9 @@ export class SettlementLedger {
     operator: OperatorContext,
     filter: Record<string, unknown>,
     before?: Date,
-    asThen: (submission: SettlementSubmission) => SettlementSubmission = (
-      submission,
-    ) => submission,
+    asThen: (
+      submission: SettlementSubmission,
+    ) => SettlementSubmission | null = (submission) => submission,
   ): Promise<OutstandingRow[]> {
     const rows: OutstandingRow[] = [];
     for (const registration of settlementDocuments()) {
@@ -266,7 +269,10 @@ export class SettlementLedger {
         { moduleKey: registration.moduleKey, ...filter },
         { sort: { submittedAt: 1, _id: 1 } },
       )) as unknown as SettlementSubmission[];
-      const submissions = visible.map((row) => asThen(row));
+      const submissions = visible.flatMap((row) => {
+        const then = asThen(row);
+        return then === null ? [] : [then];
+      });
       const snapshots = await this.snapshotsOf(
         operator,
         registration,
@@ -427,11 +433,26 @@ export class SettlementLedger {
   }
 }
 
-/** 某個時點的單據狀態:之後才作廢的,當時是已完成;之後才駁回的,當時是審核中。 */
-function statusAtThen(submission: SettlementSubmission): SettlementSubmission {
-  const status = THEN_STATUS[submission.status];
-  if (status === undefined) {
-    return submission;
+/**
+ * 單據在某個時點的樣子:值取 `ctx.at` 早於那個時點的最後一筆修訂(修訂是完整值快照);狀態照 `THEN_STATUS`
+ * 還原。沒有更早的修訂(當時還沒送出)→ null(不算)。
+ */
+function submissionAt(
+  submission: SettlementSubmission,
+  asOf: Date,
+): SettlementSubmission | null {
+  const revisions =
+    (
+      submission as SettlementSubmission & {
+        revisions?: readonly {
+          values: SettlementSubmission["values"];
+          ctx: { at: Date };
+        }[];
+      }
+    ).revisions ?? [];
+  const last = revisions.findLast((entry) => entry.ctx.at < asOf);
+  if (last === undefined) {
+    return null;
   }
   // 讀出來的是 mongoose 文件(展開會掉欄位):逐欄抄成純物件
   return {
@@ -439,14 +460,15 @@ function statusAtThen(submission: SettlementSubmission): SettlementSubmission {
     orgId: submission.orgId,
     tenantId: submission.tenantId,
     moduleKey: submission.moduleKey,
-    status,
+    status: THEN_STATUS[submission.status] ?? submission.status,
     revision: submission.revision,
-    values: submission.values,
+    values: last.values,
     submittedAt: submission.submittedAt,
     serialNo: submission.serialNo ?? null,
   };
 }
 
+/** 某個時點的單據狀態:之後才作廢的,當時是已完成;之後才駁回的,當時是審核中。 */
 const THEN_STATUS: Readonly<Partial<Record<string, string>>> = {
   voided: "completed",
   rejected: "reviewing",

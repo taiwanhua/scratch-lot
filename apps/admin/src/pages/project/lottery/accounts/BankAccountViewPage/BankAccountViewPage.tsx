@@ -164,6 +164,15 @@ export const BankAccountViewPage = ({ routeParam }: ModulePageProps) => {
         [
           t(`transactionTypes.${row.type}`),
           row.reversalOf ? t("accountView.reversal") : null,
+          // 沖正沒有班:標原交易的日期
+          row.reversalOfAt == null
+            ? null
+            : t("accountView.reversalOf", {
+                date: formatTemporal(row.reversalOfAt, {
+                  type: "monthDay",
+                  timezone,
+                }),
+              }),
         ]
           .filter(Boolean)
           .join(" · "),

@@ -247,6 +247,17 @@ const sale = (amount: number, extra: Record<string, unknown> = {}) => ({
   ...extra,
 });
 
+/** 一筆修訂(完整值快照 + 當時的時間)。 */
+const revisionOf = (
+  revision: number,
+  values: Record<string, unknown>,
+  at: Date,
+) => ({
+  revision,
+  values,
+  ctx: { at, timezone: "Asia/Taipei", userId: null, orgId: null },
+});
+
 /** 清單的第 N 筆(測試資料一定有;沒有就讓測試直接失敗)。 */
 function nth<Item>(list: readonly Item[], index: number): Item {
   const item = list[index];
@@ -1326,7 +1337,19 @@ describe("輸出報表:營運報表、班次結帳歷史報表(GraphQL 端點 + 
           summary: null,
           status: "reviewing",
           revision: 1,
-          revisions: [],
+          revisions: [
+            revisionOf(
+              1,
+              {
+                [PURCHASE_FIELD_KEYS.branch]: {
+                  id: String(taichung),
+                  label: "台中店",
+                },
+                [PURCHASE_FIELD_KEYS.deductedAmount]: 5000,
+              },
+              at("09:30"),
+            ),
+          ],
           editVersion: 1,
           touched: [],
           clientRequestId: String(new Types.ObjectId()),
@@ -1712,7 +1735,19 @@ describe("輸出報表:營運報表、班次結帳歷史報表(GraphQL 端點 + 
         summary: null,
         status: "rejected",
         revision: 1,
-        revisions: [],
+        revisions: [
+          revisionOf(
+            1,
+            {
+              [PURCHASE_FIELD_KEYS.branch]: {
+                id: String(hsinchu),
+                label: "新竹店",
+              },
+              [PURCHASE_FIELD_KEYS.deductedAmount]: amount,
+            },
+            submittedAt,
+          ),
+        ],
         editVersion: 1,
         touched: [],
         clientRequestId: String(new Types.ObjectId()),
@@ -1748,6 +1783,52 @@ describe("輸出報表:營運報表、班次結帳歷史報表(GraphQL 端點 + 
     expect(firstOf(day26.stores).outstanding).toMatchObject({
       purchaseToPay: 0,
     });
+  });
+
+  it("未結清:應付照期末當時的修訂(10/5 送出 10,000、10/20 改成 9,500)", async () => {
+    const chiayi = await createOrg(connection, {
+      name: "嘉義店",
+      parentId: tenant,
+    });
+    const valuesOf = (amount: number) => ({
+      [PURCHASE_FIELD_KEYS.branch]: { id: String(chiayi), label: "嘉義店" },
+      [PURCHASE_FIELD_KEYS.deductedAmount]: amount,
+    });
+    await connection.collection("form_submissions").insertOne({
+      orgId: tenant,
+      tenantId: tenant,
+      moduleKey: PURCHASE_MODULE_KEY,
+      formKey: PURCHASE_FORM_KEY,
+      version: 1,
+      values: valuesOf(9500),
+      summary: null,
+      status: "reviewing",
+      revision: 2,
+      revisions: [
+        revisionOf(1, valuesOf(10_000), taipei("2026-10-05", "10:00")),
+        revisionOf(2, valuesOf(9500), taipei("2026-10-20", "10:00")),
+      ],
+      editVersion: 2,
+      touched: [],
+      clientRequestId: String(new Types.ObjectId()),
+      serialNo: null,
+      submittedAt: taipei("2026-10-05", "10:00"),
+      currentInstanceId: null,
+      blocked: false,
+      ...base(),
+    });
+    const toPayOn = async (date: string) => {
+      const result = await operations(hq, {
+        ...dayOf(date),
+        orgIds: [String(chiayi)],
+      });
+      const outstanding = firstOf(result.stores).outstanding as {
+        purchaseToPay: number;
+      };
+      return outstanding.purchaseToPay;
+    };
+    expect(await toPayOn("2026-10-10")).toBe(10_000);
+    expect(await toPayOn("2026-10-21")).toBe(9500);
   });
 
   it("同一個租戶、看不到的分店 → NOT_FOUND", async () => {

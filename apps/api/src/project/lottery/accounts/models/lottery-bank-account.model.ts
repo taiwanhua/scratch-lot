@@ -186,6 +186,10 @@ export class LotteryBankTransactionModel {
   @Field(() => ID, { nullable: true })
   reversedById!: string | null;
 
+  /** 沖正的那一筆:原交易的發生時間(畫面標「原交易 9/28」;規格 10.4「更正」);不是沖正 = null。 */
+  @Field(() => GraphQLISODateTime, { nullable: true })
+  reversalOfAt!: Date | null;
+
   @Field(() => LotteryAccountsRefModel, { nullable: true })
   createdBy!: LotteryAccountsRefModel | null;
 

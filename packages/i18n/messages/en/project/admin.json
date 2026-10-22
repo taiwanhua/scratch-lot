@@ -2069,7 +2069,8 @@
         "hint": "Pick the top-level organization with “and below” = all branches",
         "cancel": "Cancel",
         "save": "Save"
-      }
+      },
+      "reversalOf": "original {date}"
     },
     "recordForm": {
       "title": "Record transaction",
@@ -2124,7 +2125,8 @@
       "pickOrg": "Pick a branch first",
       "drawer": "{name} drawer",
       "drawerOwner": "Owner {name}",
-      "loadFailed": "Could not load the cash ledger. Please try again later."
+      "loadFailed": "Could not load the cash ledger. Please try again later.",
+      "correctionOf": " (prior correction, belongs to {shift})"
     },
     "outstanding": {
       "columns": {

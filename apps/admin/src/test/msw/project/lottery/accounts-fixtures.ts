@@ -141,6 +141,7 @@ export const bankTransaction = (
   note: null,
   reversalOf: null,
   reversedById: null,
+  reversalOfAt: null,
   createdBy: ref({ id: "u-1", name: "何家華" }),
   createdAt: "2026-10-16T14:30:00.000Z",
   abilities: {
@@ -200,7 +201,7 @@ export const sampleTransactions =
     }),
   ];
 
-const movement = (
+export const movement = (
   overrides: Partial<LotteryCashMovementFieldsFragment> &
     Pick<
       LotteryCashMovementFieldsFragment,
@@ -217,6 +218,7 @@ const movement = (
   refId: null,
   reversalOf: null,
   reversedById: null,
+  correctionOfShift: null,
   createdBy: ref({ id: "u-2", name: "李小華" }),
   ...overrides,
 });

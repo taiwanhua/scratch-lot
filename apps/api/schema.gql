@@ -1495,6 +1495,7 @@ type LotteryBankTransaction {
   refId: ID
   refType: String
   reversalOf: ID
+  reversalOfAt: DateTime
   reversedById: ID
   settlementSide: String
   summary: String
@@ -1541,6 +1542,7 @@ type LotteryCashLedgerPayload {
 type LotteryCashMovement {
   amount: Int!
   cashPoint: LotteryAccountsRef
+  correctionOfShift: String
   createdBy: LotteryAccountsRef
   from: String!
   id: ID!

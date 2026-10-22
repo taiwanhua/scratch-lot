@@ -60,6 +60,13 @@ export class LotteryCashMovementModel {
   @Field(() => ID, { nullable: true })
   reversedById!: string | null;
 
+  /**
+   * 跨班更正「前期更正,屬於 X 班」的 X(那一班的顯示名稱;規格 6.12、10.4,使用者 10/08 定案):
+   * 現金更正看歸屬班次(和發生班次不同時)、事後更正看它指向的班;都沒有 = null。
+   */
+  @Field(() => String, { nullable: true })
+  correctionOfShift!: string | null;
+
   @Field(() => LotteryAccountsRefModel, { nullable: true })
   createdBy!: LotteryAccountsRefModel | null;
 }

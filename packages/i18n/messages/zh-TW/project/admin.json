@@ -2069,7 +2069,8 @@
         "hint": "選最上層組織並勾「含下層」= 全部分店",
         "cancel": "取消",
         "save": "儲存"
-      }
+      },
+      "reversalOf": "原交易 {date}"
     },
     "recordForm": {
       "title": "登記交易",
@@ -2124,7 +2125,8 @@
       "pickOrg": "請先選分店",
       "drawer": "{name} 抽屜",
       "drawerOwner": "負責人 {name}",
-      "loadFailed": "即時現金帳載入失敗,請稍後再試"
+      "loadFailed": "即時現金帳載入失敗,請稍後再試",
+      "correctionOf": "(前期更正,屬於 {shift})"
     },
     "outstanding": {
       "columns": {

@@ -941,6 +941,140 @@ describe("關帳(GraphQL 端點 + 真 MongoDB)", () => {
     ).toBe(1);
   });
 
+  it("跨班更正的標示:現金流水回「屬於哪一班」(歸屬班次 / 事後更正指向的班),銀行沖正回原交易的時間", async () => {
+    const viewer = await person(api, connection, tenant, tenant, {
+      moduleKeys: ["accounts"],
+      permissionKeys: [A.viewCash, A.viewBankAccounts],
+    });
+    const { shiftId: earlier } = await shiftOf(
+      "店內櫃台 · 何家華 12/01 09:00",
+      taipei("2026-12-01", "09:00"),
+      taipei("2026-12-01", "17:00"),
+    );
+    const { shiftId: current } = await shiftOf(
+      "店內櫃台 · 何家華 12/02 09:00",
+      taipei("2026-12-02", "09:00"),
+      taipei("2026-12-02", "17:00"),
+    );
+    const movementOf = (extra: Record<string, unknown>) =>
+      connection.collection(LOTTERY_CASH_MOVEMENTS_COLLECTION).insertOne({
+        orgId: store,
+        tenantId: tenant,
+        occurredAt: taipei("2026-12-02", "10:00"),
+        type: "correction_increase",
+        from: "external",
+        to: "drawer",
+        reason: null,
+        cashPointId: counter,
+        shiftId: current,
+        attributedShiftId: null,
+        postCloseOf: null,
+        amount: 100,
+        refType: null,
+        refId: null,
+        refRevision: null,
+        settlementSide: null,
+        payee: null,
+        note: null,
+        reversalOf: null,
+        bankTransactionId: null,
+        moduleKey: "accounts",
+        ...base(),
+        ...extra,
+      });
+    // 現金更正:位置是 12/2 的班、歸屬 12/1 的班 → 屬於 12/1;退貨退款事後更正指向 12/1 → 屬於 12/1;一般的沒有
+    await movementOf({ attributedShiftId: earlier });
+    await movementOf({
+      type: "refund",
+      from: "drawer",
+      to: "external",
+      shiftId: earlier,
+      postCloseOf: earlier,
+    });
+    await movementOf({ attributedShiftId: current });
+    const ledger = await ok<{
+      lotteryCashLedger: {
+        items: { type: string; correctionOfShift: string | null }[];
+      };
+    }>(
+      viewer,
+      `query ($input: LotteryCashLedgerInput!) {
+        lotteryCashLedger(input: $input) { items { type correctionOfShift } }
+      }`,
+      {
+        input: {
+          orgId: String(store),
+          from: taipei("2026-12-02", "00:00").toISOString(),
+          to: taipei("2026-12-03", "00:00").toISOString(),
+        },
+      },
+    );
+    expect(
+      ledger.lotteryCashLedger.items.map((item) => item.correctionOfShift),
+    ).toEqual(
+      expect.arrayContaining([
+        "店內櫃台 · 何家華 12/01 09:00",
+        "店內櫃台 · 何家華 12/01 09:00",
+        null,
+      ]),
+    );
+    expect(
+      ledger.lotteryCashLedger.items.filter(
+        (item) => item.correctionOfShift !== null,
+      ),
+    ).toHaveLength(2);
+
+    const bank = connection.collection(LOTTERY_BANK_TRANSACTIONS_COLLECTION);
+    const row = (extra: Record<string, unknown>) => ({
+      orgId: tenant,
+      tenantId: tenant,
+      accountId: account,
+      type: "deposit",
+      amount: 700,
+      branchOrgId: null,
+      refType: null,
+      refId: null,
+      refRevision: null,
+      settlementSide: null,
+      reversalOf: null,
+      summary: null,
+      handler: null,
+      note: null,
+      moduleKey: "accounts",
+      ...base(),
+      ...extra,
+    });
+    const { insertedId: original } = await bank.insertOne(
+      row({ occurredAt: taipei("2026-12-01", "14:00"), direction: "in" }),
+    );
+    await bank.insertOne(
+      row({
+        occurredAt: taipei("2026-12-02", "14:00"),
+        direction: "out",
+        reversalOf: original,
+      }),
+    );
+    const transactions = await ok<{
+      lotteryBankTransactions: {
+        items: { reversalOf: string | null; reversalOfAt: string | null }[];
+      };
+    }>(
+      viewer,
+      `query ($input: LotteryBankTransactionsInput!) {
+        lotteryBankTransactions(input: $input) { items { reversalOf reversalOfAt } }
+      }`,
+      { input: { accountId: String(account) } },
+    );
+    expect(
+      transactions.lotteryBankTransactions.items.find(
+        (item) => item.reversalOf === String(original),
+      ),
+    ).toEqual({
+      reversalOf: String(original),
+      reversalOfAt: taipei("2026-12-01", "14:00").toISOString(),
+    });
+  });
+
   it("只新增:關帳紀錄、銀行交易、現金流水的修改 / 刪除一律拋 AppendOnlyLedgerError(不能重新開帳)", () => {
     for (const repository of [
       api.app.get(LotteryPeriodClosesRepository),

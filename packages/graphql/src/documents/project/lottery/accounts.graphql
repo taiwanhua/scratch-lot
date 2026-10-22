@@ -55,6 +55,7 @@ fragment LotteryBankTransactionFields on LotteryBankTransaction {
   note
   reversalOf
   reversedById
+  reversalOfAt
   createdBy {
     ...LotteryAccountsRefFields
   }
@@ -84,6 +85,7 @@ fragment LotteryCashMovementFields on LotteryCashMovement {
   refId
   reversalOf
   reversedById
+  correctionOfShift
   createdBy {
     ...LotteryAccountsRefFields
   }

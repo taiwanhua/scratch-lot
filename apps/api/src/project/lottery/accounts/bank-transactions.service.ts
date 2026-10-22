@@ -526,6 +526,24 @@ export class BankTransactionsService {
     return (rows[0] as { sum?: number } | undefined)?.sum ?? 0;
   }
 
+  /** 沖正的原交易 id → 原交易的發生時間(看得到帳戶就看得到它的交易:以租戶邊界讀)。 */
+  private async originalsOf(
+    operator: OperatorContext,
+    tenantId: Types.ObjectId | null,
+    ids: readonly Types.ObjectId[],
+  ): Promise<Map<string, Date>> {
+    if (ids.length === 0) {
+      return new Map();
+    }
+    const reader = await tenantBoundaryContext(this.orgs, operator, tenantId);
+    const rows = await this.transactions.findMany(
+      reader,
+      { _id: { $in: [...ids] } },
+      { select: "occurredAt" },
+    );
+    return new Map(rows.map((row) => [String(row._id), row.occurredAt]));
+  }
+
   /** 原交易 id → 沖正它的那一筆 id。 */
   private async reversalsOf(
     reader: OperatorContext,
@@ -552,7 +570,10 @@ export class BankTransactionsService {
   ): Promise<LotteryBankTransactionModel[]> {
     const canReverseAny =
       grant !== false && grant.has(ACCOUNTS_PERMISSIONS.reverseBankTransaction);
-    const [orgNames, userNames] = await Promise.all([
+    const originalIds = rows.flatMap(({ row }) =>
+      row.reversalOf === null ? [] : [row.reversalOf],
+    );
+    const [orgNames, userNames, originals] = await Promise.all([
       this.names.orgNames(
         operator,
         tenantId,
@@ -563,6 +584,7 @@ export class BankTransactionsService {
         tenantId,
         rows.map(({ row }) => row.createdBy),
       ),
+      this.originalsOf(operator, tenantId, originalIds),
     ]);
     return rows.map(({ row, balanceAfter }) => {
       const branchKey =
@@ -589,6 +611,10 @@ export class BankTransactionsService {
         note: row.note,
         reversalOf: row.reversalOf === null ? null : String(row.reversalOf),
         reversedById: reversed,
+        reversalOfAt:
+          row.reversalOf === null
+            ? null
+            : (originals.get(String(row.reversalOf)) ?? null),
         createdBy:
           creatorKey === null
             ? null
