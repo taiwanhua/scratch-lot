@@ -46,7 +46,7 @@ export interface ShellLayoutProps {
  * **寬度下限只在 `lg` 以上**:內容區的最小寬度 = 頁面宣告的主題斷點(預設 `lg`,可宣告 `md` / `xl`)− 側欄 − 內距,
  * 視窗比斷點窄時由 `<main>` 水平捲動,不擠壓內容;側欄收合時跟著重算。平板以下(< `lg`)不設下限,
  * 內容隨視窗縮放(表格靠自己的橫向捲動)。document 本身永遠不出現水平捲軸
- * (外框 `overflow: hidden`,主欄 `minWidth: 0`)。手機寬(< `sm`)側欄改成抽屜(`SideNav`)。幾何在 `shell-geometry.ts`。
+ * (外框 `overflow: hidden`,主欄 `minWidth: 0`)。精簡版(< `md`)側欄改成抽屜(`SideNav`)。幾何在 `shell-geometry.ts`。
  */
 export const ShellLayout = ({ me, pageMinWidths = {} }: ShellLayoutProps) => {
   const t = useTranslations("admin.shell");

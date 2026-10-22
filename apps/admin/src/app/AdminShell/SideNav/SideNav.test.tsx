@@ -9,7 +9,11 @@ import { authWorld, testOrg } from "@/test/msw/auth-handlers";
 import { superAdminModules } from "@/test/msw/module-fixtures";
 import { server } from "@/test/msw/server";
 import { renderApp } from "@/test/render";
-import { restoreViewportAfterEach, setMobileViewport } from "@/test/viewport";
+import {
+  restoreViewportAfterEach,
+  setMobileViewport,
+  setViewportWidth,
+} from "@/test/viewport";
 
 /**
  * 側欄收合:64px 圖示列、群組 flyout、狀態記憶,以及展開態改畫模組圖示。
@@ -137,7 +141,7 @@ describe("SideNav 收合(Figma Draft/AdminSideNavCollapsed 246:64)", () => {
   });
 });
 
-describe("手機寬(< sm)側欄改成抽屜", () => {
+describe("精簡版(< md)側欄改成抽屜", () => {
   restoreViewportAfterEach();
   beforeEach(() => {
     useSideNavStore.setState({ isMobileOpen: false, isCollapsed: false });
@@ -217,7 +221,7 @@ describe("手機寬(< sm)側欄改成抽屜", () => {
     });
   });
 
-  it("抽屜開著時切到 sm 以上:開關重設為收起(之後回到手機寬不會自己打開)", async () => {
+  it("抽屜開著時切到 md 以上:開關重設為收起(之後回到手機寬不會自己打開)", async () => {
     useSideNavStore.setState({ isMobileOpen: true });
     renderShell();
     await findSideNav();
@@ -350,7 +354,71 @@ describe("手機寬(< sm)側欄改成抽屜", () => {
     });
   });
 
-  it("sm 以上沒有主選單鈕,側欄常駐;頂部列維持完整的組織下拉、「?」與頭像選單", async () => {
+  it.each([
+    { width: 768, label: "直拿平板 768" },
+    { width: 899, label: "md 前一格 899" },
+  ])(
+    "$label 也是精簡版:頂部列沒有「?」與頭像選單,兩者在抽屜底部",
+    async ({ width }) => {
+      setViewportWidth(width);
+      const { user } = renderShell("/system/org-manager");
+      const banner = await screen.findByRole("banner");
+      const open = await within(banner).findByRole("button", {
+        name: "開啟主選單",
+      });
+      expect(within(banner).getByText("組織管理")).toBeInTheDocument();
+      expect(
+        within(banner).getByRole("button", { name: "當前組織:平台根組織" }),
+      ).toBeInTheDocument();
+      expect(
+        within(banner).queryByRole("button", { name: "小華" }),
+      ).not.toBeInTheDocument();
+      expect(
+        within(banner).queryByRole("button", { name: "模組說明" }),
+      ).not.toBeInTheDocument();
+      // 側欄不常駐(在收起的抽屜裡)
+      expect(
+        screen.queryByRole("navigation", { name: "主選單" }),
+      ).not.toBeInTheDocument();
+
+      await user.click(open);
+      const nav = await findSideNav();
+      expect(
+        within(nav).getByRole("button", { name: "小華" }),
+      ).toBeInTheDocument();
+      expect(
+        within(nav).getByRole("button", { name: "模組說明" }),
+      ).toBeInTheDocument();
+    },
+  );
+
+  it.each([
+    { width: 900, label: "md 900" },
+    { width: 1024, label: "橫拿平板 1024" },
+  ])(
+    "$label 是完整版:沒有主選單鈕,側欄常駐,頂部列有組織下拉、「?」與頭像選單",
+    async ({ width }) => {
+      setViewportWidth(width);
+      renderShell("/system/org-manager");
+      const nav = await findSideNav();
+      expect(nav).not.toHaveAttribute("id", "admin-side-nav-drawer");
+      const banner = screen.getByRole("banner");
+      expect(
+        within(banner).getByRole("button", { name: "小華" }),
+      ).toBeInTheDocument();
+      expect(
+        within(banner).getByRole("button", { name: "模組說明" }),
+      ).toBeInTheDocument();
+      expect(
+        within(banner).getByRole("combobox", { name: "當前組織" }),
+      ).toBeInTheDocument();
+      expect(
+        within(banner).queryByRole("button", { name: "開啟主選單" }),
+      ).not.toBeInTheDocument();
+    },
+  );
+
+  it("未模擬寬度(桌機)沒有主選單鈕,側欄常駐;頂部列維持完整的組織下拉、「?」與頭像選單", async () => {
     renderShell("/system/org-manager");
     await findSideNav();
     const banner = screen.getByRole("banner");

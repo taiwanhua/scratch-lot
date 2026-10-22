@@ -4,7 +4,6 @@ import type { MeQuery } from "@repo/graphql";
 import { Box } from "@repo/ui/box";
 import { IconButton } from "@repo/ui/icon-button";
 import { MenuIcon } from "@repo/ui/icons";
-import { useBreakpointDown } from "@repo/ui/media-query";
 import { Typography } from "@repo/ui/typography";
 
 import { NotificationBell } from "@/components/base/NotificationBell/NotificationBell";
@@ -13,6 +12,7 @@ import type { ShellModule } from "@/lib/base/module-tree";
 import { useSideNavStore } from "@/stores/base/useSideNavStore";
 
 import { SIDE_NAV_DRAWER_ID } from "../SideNav/SideNav";
+import { useIsShellCompact } from "../shell-geometry";
 import { HelpButton } from "./HelpButton";
 import { UserMenu } from "./UserMenu";
 
@@ -32,12 +32,13 @@ export interface AppBarProps {
 
 /**
  * 後台 AppBar(Figma Draft/AdminAppBar):頁名、模組說明「?」、通知鈴、當前組織切換器、使用者選單(Draft/AdminUserMenu:使用者卡、外觀、語言、個人設定、登出 / 登出所有裝置)。
- * 手機寬(< `sm`)只留:主選單鈕(打開側欄抽屜)、頁名(放不下以省略號截斷)、通知鈴、精簡版組織切換(首字小按鈕);
- * 「?」說明與頭像選單移到抽屜底部(`SideNav/MobileNavFooter`);左右內距與間距跟著縮小。`sm` 以上維持原樣。
+ * 精簡版(手機與直拿平板,< `md`,界線見 `shell-geometry.ts` 的 `SHELL_COMPACT_BELOW`)只留:主選單鈕(打開側欄抽屜)、
+ * 頁名(放不下以省略號截斷)、通知鈴、精簡版組織切換(首字小按鈕);「?」說明與頭像選單移到抽屜底部(`SideNav/MobileNavFooter`)。
+ * 左右內距與間距只在手機寬(< `sm`)縮小。`md` 以上是完整版。
  */
 export const AppBar = ({ me, title, module }: AppBarProps) => {
   const t = useTranslations("admin.shell");
-  const isMobile = useBreakpointDown("sm");
+  const isCompact = useIsShellCompact();
   const isNavOpen = useSideNavStore((state) => state.isMobileOpen);
   const setNavOpen = useSideNavStore((state) => state.setMobileOpen);
 
@@ -56,7 +57,7 @@ export const AppBar = ({ me, title, module }: AppBarProps) => {
         borderColor: "divider",
       }}
     >
-      {isMobile && (
+      {isCompact && (
         <IconButton
           aria-label={t("openNav")}
           aria-expanded={isNavOpen}
@@ -72,8 +73,8 @@ export const AppBar = ({ me, title, module }: AppBarProps) => {
       <Typography variant="h6" component="div" noWrap sx={{ minWidth: 0 }}>
         {title}
       </Typography>
-      {/* 「?」模組說明彈窗(Figma help-button I44:119;81:51):只有模組路由才有;手機寬改放抽屜底部 */}
-      {!isMobile && module !== undefined && (
+      {/* 「?」模組說明彈窗(Figma help-button I44:119;81:51):只有模組路由才有;精簡版改放抽屜底部 */}
+      {!isCompact && module !== undefined && (
         <HelpButton
           moduleKey={module.key}
           moduleName={module.name}
@@ -85,9 +86,9 @@ export const AppBar = ({ me, title, module }: AppBarProps) => {
 
       {/* 通知鈴:組織切換器左邊,所有登入者都有 */}
       <NotificationBell />
-      <OrgSwitcher me={me} isCompact={isMobile} />
-      {/* 頭像選單:手機寬改放抽屜底部 */}
-      {!isMobile && (
+      <OrgSwitcher me={me} isCompact={isCompact} />
+      {/* 頭像選單:精簡版改放抽屜底部 */}
+      {!isCompact && (
         <UserMenu
           name={me.name}
           account={me.account}

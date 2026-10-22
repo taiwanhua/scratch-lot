@@ -49,7 +49,7 @@ export interface SideNavPanelProps extends SideNavContentProps {
  * Figma 第一列的「總覽」是模組(key `overview`,seeds/base/modules/overview.ts),和其他模組一樣從 `me.modules` 長出來、受權限過濾,不是固定列。
  * 頂部租戶識別照 Figma 的 ShowLogo 變體:**有商標就顯示商標圖、沒有才顯示組織名稱**(兩者佔同一個位置);
  * 商標是 api 現簽的短效網址(ADR-0010),`alt` 用組織名,讓換成圖之後名稱仍讀得到。
- * 放在殼的左欄(`sm` 以上)或手機抽屜裡(`SideNav` 決定)。
+ * 放在殼的左欄(`md` 以上)或抽屜裡(`SideNav` 決定)。
  */
 export const SideNavPanel = ({
   orgName,

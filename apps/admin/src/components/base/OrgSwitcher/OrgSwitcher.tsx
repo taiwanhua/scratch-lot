@@ -30,7 +30,7 @@ const OrgPlaceholderIcon = moduleIconOf("business");
  * `switchOrg` 換發 access token 後精準 invalidate `me`(DATA-02 / DATA-04),當前組織隨之更新;
  * 並立即換發即時通道的訂閱憑證(換到別的租戶時改連新租戶的 Durable Object,不必等到期前的換發)。
  *
- * 手機寬(`isCompact`)放不下 180 寬的下拉:改成組織名首字的小按鈕(可及名稱「當前組織:名稱」),
+ * 精簡版頂部列(`isCompact`,殼 < `md`)放不下 180 寬的下拉:改成組織名首字的小按鈕(可及名稱「當前組織:名稱」),
  * 點了展開同一份組織清單(`Menu`,當前組織標為選中),選了走同一個切換流程;點目前組織不重複切換。
  * 沒有當前組織時首字換成組織佔位圖示,可及名稱「當前組織:尚未選擇」。
  */

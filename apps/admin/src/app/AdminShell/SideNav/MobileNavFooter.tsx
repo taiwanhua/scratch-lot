@@ -13,8 +13,8 @@ export interface MobileNavFooterProps {
 }
 
 /**
- * 手機抽屜底部:AppBar 在手機寬放不下的頭像選單(個人設定、外觀、語言、登出…)與「?」模組說明,
- * 直接沿用 AppBar 的 `UserMenu` / `HelpButton`,行為與 `sm` 以上相同。
+ * 抽屜底部(精簡版,< `md`):精簡版 AppBar 移走的頭像選單(個人設定、外觀、語言、登出…)與「?」模組說明,
+ * 直接沿用 AppBar 的 `UserMenu` / `HelpButton`,行為與 `md` 以上相同。
  */
 export const MobileNavFooter = ({ me, module }: MobileNavFooterProps) => (
   <Box
