@@ -150,47 +150,55 @@ export class ReportStock {
     to: Date,
   ): Promise<EndingStock> {
     // 期末之後碰過這家店的事件(進出這家店的那一筆,事件後或事件前一定是這家店);依時間
-    const later = await this.events.findMany(
-      reader,
-      { at: { $gte: to }, $or: [{ orgId }, { "from.orgId": orgId }] },
+    // 期末之後碰過這家店的張,各取期末之後第一筆碰到這家店的事件的「變動前」(在資料庫端彙總,一張一列)
+    const firsts = (await this.events.aggregate(reader, [
       {
-        select: "ticketId bookId from at",
-        sort: { at: 1, _id: 1 },
+        $match: { at: { $gte: to }, $or: [{ orgId }, { "from.orgId": orgId }] },
       },
-    );
-    const firstLater = new Map<string, (typeof later)[number]>();
-    for (const event of later) {
-      if (!firstLater.has(String(event.ticketId))) {
-        firstLater.set(String(event.ticketId), event);
-      }
-    }
+      { $sort: { at: 1, _id: 1 } },
+      {
+        $group: {
+          _id: "$ticketId",
+          bookId: { $first: "$bookId" },
+          from: { $first: "$from" },
+        },
+      },
+    ])) as {
+      _id: Types.ObjectId;
+      bookId: Types.ObjectId;
+      from: {
+        status: TicketStatus;
+        locationKind: string;
+        orgId: Types.ObjectId;
+      } | null;
+    }[];
+    const touched = new Set(firsts.map((row) => String(row._id)));
     const states: TicketState[] = [];
-    for (const event of firstLater.values()) {
+    for (const row of firsts) {
       // 期末在這家店 ⇔ 期末之後第一筆碰到這家店的事件,變動前是這家店(進貨的變動前是 null:期末還不存在)
       if (
-        event.from !== null &&
-        event.from.orgId.equals(orgId) &&
-        ENDING_STATUSES.includes(event.from.status)
+        row.from !== null &&
+        row.from.orgId.equals(orgId) &&
+        ENDING_STATUSES.includes(row.from.status)
       ) {
         states.push({
-          ticketId: event.ticketId,
-          bookId: event.bookId,
-          status: event.from.status,
-          locationKind: event.from.locationKind,
+          ticketId: row._id,
+          bookId: row.bookId,
+          status: row.from.status,
+          locationKind: row.from.locationKind,
         });
       }
     }
-    // 期末之後沒動過的張:現況就是期末狀態(索引 orgId + location.kind + status)
-    const untouched = await this.tickets.findMany(
+    // 期末之後沒動過的張:現況就是期末狀態(索引 orgId + location.kind + status;動過的在記憶體裡排除,不送大 `$nin`)
+    const current = await this.tickets.findMany(
       reader,
-      {
-        orgId,
-        status: { $in: [...ENDING_STATUSES] },
-        _id: { $nin: [...firstLater.values()].map((event) => event.ticketId) },
-      },
+      { orgId, status: { $in: [...ENDING_STATUSES] } },
       { select: "bookId status location" },
     );
-    for (const ticket of untouched) {
+    for (const ticket of current) {
+      if (touched.has(String(ticket._id))) {
+        continue;
+      }
       states.push({
         ticketId: ticket._id,
         bookId: ticket.bookId,

@@ -704,9 +704,18 @@ describe("輸出報表:營運報表、班次結帳歷史報表(GraphQL 端點 + 
       ...dayOf("2026-10-12"),
       orgIds: [String(zhongshan)],
     });
+    // 事後更正算在記錄當期:週一(10/12)的報表只有那一班的差額,週二(10/13)才出現 +1,800
     expect(report.stores[0]?.cash).toMatchObject({
       shiftCount: 1,
       shiftDifference: 1800,
+      postClose: [],
+    });
+    const tuesday = await operations(hq, {
+      ...dayOf("2026-10-13"),
+      orgIds: [String(zhongshan)],
+    });
+    expect(firstOf(tuesday.stores).cash).toMatchObject({
+      shiftCount: 0,
       postClose: [{ category: "redemption", count: 2, amount: 1800 }],
     });
     // 兌獎區塊只算有效的;被撤銷的 2,000 另列(重新登記的 200 在週二)
@@ -1550,6 +1559,10 @@ describe("輸出報表:營運報表、班次結帳歷史報表(GraphQL 端點 + 
       priorPeriodAmount: 300,
       openMonths: ["2026-10"],
     });
+    // 記錄當期照算進事後更正,前期更正只是另外標出
+    expect(october.stores[0]?.cash).toMatchObject({
+      postClose: [{ category: "cashCorrection", count: 1, amount: 300 }],
+    });
     // 班次結帳歷史:9/30 那一班的差額照結帳快照,10/5 的更正另列並標前期更正
     const history = await ok<{
       lotteryShiftCheckoutsReport: { rows: Record<string, unknown>[] };
@@ -1666,6 +1679,74 @@ describe("輸出報表:營運報表、班次結帳歷史報表(GraphQL 端點 + 
       priorPeriodCount: 2,
       // 撤銷 9 月的售出 −200、沖正 9 月的存入 −1,000
       priorPeriodAmount: -1200,
+    });
+  });
+
+  it("未結清:期末之後才駁回的進貨單,期末照算(駁回時間 = 流程實例結束時間)", async () => {
+    const purchase = async (
+      amount: number,
+      submittedAt: Date,
+      finishedAt: Date,
+    ) => {
+      const instanceId = await insert("workflow_instances", {
+        orgId: tenant,
+        submissionId: new Types.ObjectId(),
+        revision: 1,
+        status: "rejected",
+        finishedAt,
+        moduleKey: PURCHASE_MODULE_KEY,
+      });
+      await connection.collection("form_submissions").insertOne({
+        orgId: tenant,
+        tenantId: tenant,
+        moduleKey: PURCHASE_MODULE_KEY,
+        formKey: PURCHASE_FORM_KEY,
+        version: 1,
+        values: {
+          [PURCHASE_FIELD_KEYS.branch]: {
+            id: String(hsinchu),
+            label: "新竹店",
+          },
+          [PURCHASE_FIELD_KEYS.deductedAmount]: amount,
+        },
+        summary: null,
+        status: "rejected",
+        revision: 1,
+        revisions: [],
+        editVersion: 1,
+        touched: [],
+        clientRequestId: String(new Types.ObjectId()),
+        serialNo: null,
+        submittedAt,
+        currentInstanceId: instanceId,
+        blocked: false,
+        ...base(),
+      });
+    };
+    // 10/25 送出、10/26 才駁回 → 10/25 期末待付 700;當天就駁回的 50 不算
+    await purchase(
+      700,
+      taipei("2026-10-25", "10:00"),
+      taipei("2026-10-26", "10:00"),
+    );
+    await purchase(
+      50,
+      taipei("2026-10-25", "10:00"),
+      taipei("2026-10-25", "12:00"),
+    );
+    const day25 = await operations(hq, {
+      ...dayOf("2026-10-25"),
+      orgIds: [String(hsinchu)],
+    });
+    expect(firstOf(day25.stores).outstanding).toMatchObject({
+      purchaseToPay: 700,
+    });
+    const day26 = await operations(hq, {
+      ...dayOf("2026-10-26"),
+      orgIds: [String(hsinchu)],
+    });
+    expect(firstOf(day26.stores).outstanding).toMatchObject({
+      purchaseToPay: 0,
     });
   });
 

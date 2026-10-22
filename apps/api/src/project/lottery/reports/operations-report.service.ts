@@ -93,6 +93,9 @@ const NORMAL_ROUTE: Readonly<Record<string, { from?: string; to?: string }>> = {
   [CASH_MOVEMENT_TYPE.refund]: { to: "external" },
 };
 
+/** 同時算幾家店。 */
+const STORE_CONCURRENCY = 5;
+
 /** 待結清的「單據種類|待結清種類」→ 區塊 7 的欄位(調貨單收款方的待退不列)。 */
 const OUTSTANDING_FIELDS: Readonly<Record<string, string>> = {
   "purchase|to_pay": "purchaseToPay",
@@ -180,17 +183,22 @@ export class OperationsReportService {
       this.reasonLabels(operator),
     ]);
     const outstanding = await this.outstandingOf(operator, periods);
-    // 分店之間互不相依:平行算
-    const stores = await Promise.all(
-      periods.map((period) =>
-        this.storeOf(scope, period, {
-          closedAt,
-          manualReasons,
-          outstanding: outstanding(period),
-          operator,
-        }),
-      ),
-    );
+    // 分店之間互不相依:一次最多 5 家平行算(分店上限 50 家,不一次打滿資料庫)
+    const stores: LotteryOperationsStoreModel[] = [];
+    for (let start = 0; start < periods.length; start += STORE_CONCURRENCY) {
+      stores.push(
+        ...(await Promise.all(
+          periods.slice(start, start + STORE_CONCURRENCY).map((period) =>
+            this.storeOf(scope, period, {
+              closedAt,
+              manualReasons,
+              outstanding: outstanding(period),
+              operator,
+            }),
+          ),
+        )),
+      );
+    }
     return {
       closedThrough: scope.lastClosed?.month ?? null,
       canShowCost: scope.canShowCost,
@@ -513,8 +521,7 @@ export class OperationsReportService {
     const shiftIds = shiftCheckouts.flatMap((row) =>
       row.shiftId === null ? [] : [row.shiftId],
     );
-    const [ownRows, recordedRows, covering] = await Promise.all([
-      this.postClose.rowsOf(reader, { shiftIds }),
+    const [recordedRows, covering] = await Promise.all([
       this.postClose.rowsOf(reader, { orgId, from, to }),
       shiftIds.length === 0
         ? Promise.resolve([])
@@ -542,10 +549,9 @@ export class OperationsReportService {
         isPriorPeriodOf(scope, closedAt, openedAt, recordedAt)
       );
     };
-    // 這些班的事後更正:指向已關帳月份、關帳之後才記的不算(那個月的數字固定),另歸前期更正
-    const current = ownRows.filter(
-      (row) => !isPrior(row.shiftId, row.recordedAt),
-    );
+    // 事後更正算在**記錄當期**(使用者 10/12 定案):這家店這段期間記的,依原因類別彙總;
+    // 指向已關帳月份的照算,另在「前期更正」標出(與撤銷售出 / 銀行沖正一致)
+    const current = recordedRows;
     const prior: { amount: number }[] = recordedRows.filter((row) =>
       isPrior(row.shiftId, row.recordedAt),
     );

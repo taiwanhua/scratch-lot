@@ -15,6 +15,7 @@ import {
 import {
   FormSubmissionsRepository,
   OrgsRepository,
+  WorkflowInstancesRepository,
 } from "../../../database/base/repositories";
 import type { OperatorContext } from "../../../database/operator-context";
 import { tenantBoundaryContext } from "../../../database/tenant-boundary-context";
@@ -101,6 +102,7 @@ export class SettlementLedger {
     private readonly bank: LotteryBankTransactionsRepository,
     private readonly cash: LotteryCashMovementsRepository,
     private readonly orgs: OrgsRepository,
+    private readonly instances: WorkflowInstancesRepository,
   ) {}
 
   /** 一張單據的收付現況;沒登記 / 看不到 / 不參與收付 → 錯誤。 */
@@ -189,24 +191,64 @@ export class SettlementLedger {
   /**
    * **某個時點的**待結清(輸出報表營運報表區塊 7「期末時」;報表正本 `docs/modules/project/reports.md`):
    *
-   * - 單據:那個時點以前送出、當時還有效 —— 現在有效的,或之後才作廢(`voidedAt`)/ 駁回(以 `updatedAt` 為駁回時間)的
-   *   (作廢的當時是已完成、駁回的當時是審核中)
+   * - 單據:那個時點以前送出(`submittedAt` 是第一次送出的時間,退回後重送不改寫)、當時還有效 —— 現在有效的,
+   *   或之後才作廢(`voidedAt`)/ 駁回(流程實例結束的時間 `finishedAt`)的(作廢的當時是已完成、駁回的當時是審核中)
    * - 收付:只算那個時點以前發生的銀行交易與現金流水(`occurredAt`;沖正照它自己的時間)
-   * - 應付 / 已點收金額照單據現在的內容(修訂、點收不倒推)
+   * - 應付照單據現在的內容(修訂不倒推);調貨單的已點收金額只算那個時點以前的點收(`payable(submission, asOf)`)
    */
   async outstandingAt(
     operator: OperatorContext,
     asOf: Date,
   ): Promise<OutstandingRow[]> {
+    const rejectedLater = await this.rejectedAfter(operator, asOf);
     const filter = {
       submittedAt: { $lt: asOf },
       $or: [
         { status: { $in: [...SETTLEMENT_LIVE_STATUSES] } },
         { status: "voided", voidedAt: { $gte: asOf } },
-        { status: "rejected", updatedAt: { $gte: asOf } },
+        { status: "rejected", _id: { $in: rejectedLater } },
       ],
     };
     return this.outstandingWhere(operator, filter, asOf, statusAtThen);
+  }
+
+  /**
+   * 這個時點以前送出、之後才被駁回的單據(駁回時間 = 流程實例結束的時間;單據上沒有駁回時間欄位)。
+   * 實例以單據的租戶為邊界讀(審核流程不靠可見範圍)。
+   */
+  private async rejectedAfter(
+    operator: OperatorContext,
+    asOf: Date,
+  ): Promise<Types.ObjectId[]> {
+    const rejected = await this.submissions.findMany(
+      operator,
+      {
+        moduleKey: { $in: settlementDocuments().map((row) => row.moduleKey) },
+        status: "rejected",
+        submittedAt: { $lt: asOf },
+      },
+      { select: "_id tenantId currentInstanceId" },
+    );
+    const withInstance = rejected.filter(
+      (row) => row.currentInstanceId !== null,
+    );
+    const tenantId = withInstance[0]?.tenantId ?? null;
+    if (withInstance.length === 0 || tenantId === null) {
+      return [];
+    }
+    const reader = await tenantBoundaryContext(this.orgs, operator, tenantId);
+    const instances = await this.instances.findMany(
+      reader,
+      {
+        _id: { $in: withInstance.map((row) => row.currentInstanceId) },
+        finishedAt: { $gte: asOf },
+      },
+      { select: "_id" },
+    );
+    const later = new Set(instances.map((row) => String(row._id)));
+    return withInstance
+      .filter((row) => later.has(String(row.currentInstanceId)))
+      .map((row) => row._id);
   }
 
   private async outstandingWhere(
@@ -286,7 +328,7 @@ export class SettlementLedger {
       payable: SettlementPayable;
     }[] = [];
     for (const submission of submissions) {
-      const payable = await registration.payable(submission);
+      const payable = await registration.payable(submission, before);
       if (payable !== null) {
         withPayable.push({ submission, payable });
       }

@@ -99,9 +99,11 @@ export interface SettlementDocumentRegistration {
   kind: SettlementKind;
   /**
    * 這張單據的應付;回 null = 這張不參與收付(例 還沒送出的草稿)。可以是非同步的(調貨單要讀點收紀錄)。
+   * 給了 `asOf` = 算那個時點的(例:調貨單的已點收金額只算那個時點以前的點收;輸出報表的期末未結清)。
    */
   payable: (
     submission: SettlementSubmission,
+    asOf?: Date,
   ) => SettlementPayable | null | Promise<SettlementPayable | null>;
   /**
    * **兩邊店的單據**:單據存值裡各邊分店的組織欄位路徑(例 `values.to_branch.id`,存組織 id 字串;調貨單的出貨店、

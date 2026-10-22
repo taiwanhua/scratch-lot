@@ -81,7 +81,7 @@ export class TransferRegistrations implements OnModuleInit, OnModuleDestroy {
         moduleKey: TRANSFER_MODULE_KEY,
         label: "調貨單",
         kind: "transfer",
-        payable: (submission) => this.payableOf(submission),
+        payable: (submission, asOf) => this.payableOf(submission, asOf),
         sideBranchPaths: [FROM_PATH, TO_PATH],
         sides: [
           {
@@ -169,7 +169,8 @@ export class TransferRegistrations implements OnModuleInit, OnModuleDestroy {
   }
 
   /** 收付:調貨金額 = 批購金額合計;收貨店的先填值照已點收的批購金額。草稿、駁回、作廢 → 不參與。 */
-  private async payableOf(submission: SettlementSubmission) {
+  /** 調貨金額與已點收金額;給了 `asOf` = 已點收只算那個時點以前的點收(輸出報表的期末未結清)。 */
+  private async payableOf(submission: SettlementSubmission, asOf?: Date) {
     if (
       !(TRANSFER_LIVE_STATUSES as readonly string[]).includes(submission.status)
     ) {
@@ -185,7 +186,10 @@ export class TransferRegistrations implements OnModuleInit, OnModuleDestroy {
     );
     const receipts = await this.receipts.findMany(
       reader,
-      { submissionId: submission._id },
+      {
+        submissionId: submission._id,
+        ...(asOf === undefined ? {} : { receivedAt: { $lt: asOf } }),
+      },
       { select: "rowId" },
     );
     const received = new Set(receipts.map((receipt) => receipt.rowId));
