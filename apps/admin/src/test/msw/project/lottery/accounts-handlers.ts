@@ -34,6 +34,7 @@ import {
   sampleOutstanding,
   sampleTransactions,
   settlementOf,
+  sidePermissionOf,
 } from "./accounts-fixtures";
 import { masterDataOrgs } from "./master-data-fixtures";
 import {
@@ -103,16 +104,20 @@ export const accountsWorld = ({
   });
   const withTxAbilities = (
     row: LotteryBankTransactionFieldsFragment,
-  ): LotteryBankTransactionFieldsFragment => ({
-    ...row,
-    abilities: {
-      __typename: "LotteryBankTransactionAbilities",
-      canReverse:
-        has(PERMISSIONS.reverseBankTransaction) &&
-        !row.reversedById &&
-        !row.reversalOf,
-    },
-  });
+  ): LotteryBankTransactionFieldsFragment => {
+    const sidePermission = sidePermissionOf(row);
+    return {
+      ...row,
+      abilities: {
+        __typename: "LotteryBankTransactionAbilities",
+        canReverse:
+          has(PERMISSIONS.reverseBankTransaction) &&
+          !row.reversedById &&
+          !row.reversalOf &&
+          (sidePermission === null || has(sidePermission)),
+      },
+    };
+  };
   let accountState = accounts.map((row) => withAbilities(row));
   let txState = transactions;
   const inputs: AccountsWorld["inputs"] = {
@@ -267,6 +272,13 @@ export const accountsWorld = ({
       inputs.reverse.push(input);
       const original = txState.find((row) => row.id === input.id);
       if (original === undefined) return notFound();
+      const sidePermission = sidePermissionOf(original);
+      if (
+        !has(PERMISSIONS.reverseBankTransaction) ||
+        (sidePermission !== null && !has(sidePermission))
+      ) {
+        return graphqlError("FORBIDDEN", "FORBIDDEN", { code: "FORBIDDEN" });
+      }
       if (original.reversedById || original.reversalOf) {
         return validation("ALREADY_REVERSED", ["id"]);
       }

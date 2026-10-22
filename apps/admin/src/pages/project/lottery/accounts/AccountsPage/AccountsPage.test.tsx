@@ -2,9 +2,11 @@ import { describe, expect, it } from "@jest/globals";
 import { screen, waitFor, within } from "@testing-library/react";
 import { HttpResponse } from "msw";
 
+import { PURCHASE_PERMISSIONS } from "@repo/domain/project/lottery";
 import { ACCOUNTS_PERMISSIONS as P } from "@repo/domain/project/lottery-accounts";
 
 import { expectButtonOrder } from "@/test/button-order";
+import { ALL_ACCOUNTS_PERMISSIONS } from "@/test/msw/project/lottery/accounts-fixtures";
 import { api, server } from "@/test/msw/server";
 
 import { renderAccounts } from "../accounts-test-support";
@@ -146,7 +148,8 @@ describe("銀行帳戶詳情", () => {
       screen.getByRole("button", { name: "設定使用組織" }),
     ).toBeInTheDocument();
     expect(await screen.findByText("日結存入 · C-0040")).toBeInTheDocument();
-    expect(screen.getAllByRole("button", { name: "沖正" })).toHaveLength(3);
+    // 四筆:已沖正 1 筆;進貨單 P-0031 的批購支出掛在單據上,沒有進貨單收付權限 → 沒有 [沖正]
+    expect(screen.getAllByRole("button", { name: "沖正" })).toHaveLength(2);
     expect(screen.getByText("已沖正")).toBeInTheDocument();
     expect(screen.getByRole("textbox", { name: "期初餘額" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "刪除帳戶" })).toBeDisabled();
@@ -158,6 +161,21 @@ describe("銀行帳戶詳情", () => {
       "刪除帳戶",
       "登記交易",
     ]);
+  });
+
+  it("掛在單據上的交易:有沖正權限也要那一邊的收付權限(進貨單 settle)才有 [沖正]", async () => {
+    renderAccounts({
+      path: "/accounts/view-page/ba-1",
+      permissions: [...ALL_ACCOUNTS_PERMISSIONS, PURCHASE_PERMISSIONS.settle],
+    });
+    expect(await screen.findByText("日結存入 · C-0040")).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "沖正" })).toHaveLength(3);
+    const linkedRow = screen
+      .getByText("進貨單 P-0031 · 批購 10/12")
+      .closest<HTMLElement>("tr");
+    expect(
+      within(linkedRow ?? document.body).getByRole("button", { name: "沖正" }),
+    ).toBeInTheDocument();
   });
 
   it("沒有 record / reverse / edit 權限:看不到 [登記交易]、[沖正]、帳戶設定", async () => {

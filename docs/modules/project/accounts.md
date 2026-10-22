@@ -32,7 +32,7 @@
 | `accounts.create-bank-account`      | `accounts`    | [+ 新增帳戶] + `createLotteryBankAccount`                                                                                                           |
 | `accounts.edit-bank-account`        | `accounts`    | 帳戶設定、[設定使用組織]、停用 / 啟用、沒有交易時 [刪除帳戶](abilities `canEdit` / `canDelete`)                                                     |
 | `accounts.record-bank-transaction`  | `accounts`    | [登記交易] + 單據候選 `lotterySettlementCandidates`                                                                                                 |
-| `accounts.reverse-bank-transaction` | `accounts`    | 交易清單的 [沖正]                                                                                                                                   |
+| `accounts.reverse-bank-transaction` | `accounts`    | 交易清單的 [沖正](掛在單據上的交易另要那一邊的收付權限,見「交易」沖正)                                                                              |
 | `accounts.view-cash`                | `accounts`    | 即時現金帳分頁 + `lotteryCashLedger` / `lotteryCashMovement`                                                                                        |
 | `accounts.view-outstanding`         | `accounts`    | 待結清款項分頁 + 側欄數字;每列按鈕沿用單據的權限(進貨單 `settle`、調貨單 `pay` / `receive`)                                                         |
 | `accounts.close-period`             | `accounts`    | 關帳分頁、[關帳]、[快照] + `lotteryPeriodCloses` / `lotteryPeriodCloseCheck` / `lotteryPeriodClose` / `closeLotteryPeriod`;關帳逾期提醒的預設收件人 |
@@ -108,6 +108,7 @@
 - 方向照類型;調整 / 其他要選方向且說明必填;批貨與調貨歸屬分店必填。
 - 批貨收入 / 調貨收入:單據必填,只收有待退或待收的單據(那一邊 [收到退款] / [收款] 的先填 > 0),交易記在那一邊(`settlementSide`)。兌獎入帳:單據選填、不算進任何單據淨額。
 - **沖正**:寫一筆同類型、方向相反、同金額的交易(`reversalOf`),原交易不改;已被沖正或本身是沖正 → `ALREADY_REVERSED`;兩人同時沖正由唯一索引擋下後到的。
+- **沖正的權限**:沒掛單據的手動交易只要 `reverse-bank-transaction`;**掛在單據上的交易**(`refType` / `settlementSide` 有值)另要**那一邊的收付權限**、看得到那一邊(與單據結算區的「沖正收付」同一判準,`settlement/settlement-side-access.ts`),沒有 → `FORBIDDEN`。交易清單的 `abilities.canReverse` 依同一判準(只看登記的權限,不讀單據)。現金流水沒有獨立的沖正入口(收付的現金只能從單據結算區沖正,已檢查那一邊;沖正「存入」連動的存銀行流水跟著那筆交易)。
 - 沖正「存入」→ 連結的「存銀行」流水(`bankTransactionId`)自動寫一筆反向(租戶邊界,用途「例外寫入」)。
 
 ### 即時現金帳
@@ -254,12 +255,12 @@ targetType `lottery_bank_account` / `lottery_bank_transaction` / `lottery_cash_m
 ## 測試
 
 - `packages/domain/src/project/lottery-accounts/lottery-accounts.test.ts`:類型與方向、從 → 到、規格 9 的進貨單 ①–⑤ 驗算、調貨單例、分次付款例、待結清種類。
-- `apps/api/src/project/lottery/accounts/accounts.test.ts`(TEST-07):期初鎖定 / 刪除 / 停用、可見範圍(列表與單筆 `NOT_FOUND`、共用進來的只能看)、權限、交易方向與餘額、沖正(原交易不改、不能沖兩次)、沖正存入連動存銀行流水、小金庫只由流水算 + schema 與 repository 檢查、收付(分次付款、待結清、候選、作廢 / 駁回守門、帳戶使用組織、現金來源)。收付用兩種測試單據登記驗。
+- `apps/api/src/project/lottery/accounts/accounts.test.ts`(TEST-07):期初鎖定 / 刪除 / 停用、可見範圍(列表與單筆 `NOT_FOUND`、共用進來的只能看)、權限、交易方向與餘額、沖正(原交易不改、不能沖兩次;掛在單據上的要那一邊的收付權限)、沖正存入連動存銀行流水、小金庫只由流水算 + schema 與 repository 檢查、收付(分次付款、待結清、候選、作廢 / 駁回守門、帳戶使用組織、現金來源)。收付用兩種測試單據登記驗。
 - `apps/db-migrator/seeds/project/accounts.test.ts`:模組宣告與開通角色配方。
 - `packages/domain/src/project/lottery-accounts/period-close.test.ts`:月份期間(10/31 23:59:59.999 算 10 月)、依序、月份列表。
 - `apps/api/src/project/lottery/period-close/period-close.test.ts`(TEST-07):沒有 `close-period` → `FORBIDDEN`;跳過 9 月關 10 月、關本月、重關、確認月份不同 → 擋下;沒結帳的班 → 擋;三種單據審核中落在那個月 → 擋(11 月的不擋);沒被日結涵蓋的班 → 警告並記快照;月底餘額 / 小金庫只算到 10/31 23:59:59.999;`assertPeriodOpen` 的邊界;關帳逾期(3 號、上月未關 → 提醒;2 號不寄;已關不寄)。退款班次 / 現金更正位置 / 開班選排班的擋下在店面的 `store-forms.test.ts`、`store.test.ts`。
 - `apps/admin/src/pages/project/lottery/accounts/PeriodCloseTab/PeriodCloseTab.test.tsx`(TEST-08):分頁看 `close-period`、[關帳] 只在最早的未關帳月份、檢查清單與快照預覽、輸入月份確認、擋下時不能按、[快照]。
-- `apps/admin/src/pages/project/lottery/accounts/AccountsPage/AccountsPage.test.tsx`(TEST-08):分頁依 `view-*` 權限、[+ 新增帳戶]、即時現金帳、待結清款項的按鈕與付款視窗、帳戶詳情的按鈕依 abilities、沖正。
+- `apps/admin/src/pages/project/lottery/accounts/AccountsPage/AccountsPage.test.tsx`(TEST-08):分頁依 `view-*` 權限、[+ 新增帳戶]、即時現金帳、待結清款項的按鈕與付款視窗、帳戶詳情的按鈕依 abilities(掛在單據上的交易要那一邊的收付權限才有 [沖正])、沖正。
 
 ## 使用者說明(help.md)
 

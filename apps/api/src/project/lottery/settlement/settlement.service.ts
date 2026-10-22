@@ -69,33 +69,16 @@ import {
   bankTypeOf,
 } from "./settlement-ledger";
 import {
-  type SettlementSideRegistration,
   type SettlementSubmission,
   settlementDocumentOf,
   sideOf,
 } from "./settlement-registry";
+import {
+  assertSideReversible,
+  assertSideVisible,
+} from "./settlement-side-access";
 
 const DAY_MS = 86_400_000;
-
-/**
- * 兩邊店都看得到的單據(`sharedByValues`,調貨單):只能操作自己看得到的那一邊(這一邊的分店在可見範圍內);
- * 其他單據不另外檢查。
- */
-function assertSideVisible(
-  operator: OperatorContext,
-  snapshot: SettlementSnapshot,
-  side: SettlementSideRegistration,
-): void {
-  const sideBranch =
-    side.branchOf?.(snapshot.submission, snapshot.payable) ??
-    snapshot.payable.branchOrgId;
-  if (
-    snapshot.registration.sharedByValues !== undefined &&
-    !isOrgVisible(operator, sideBranch)
-  ) {
-    throw authError("FORBIDDEN", `Side ${side.side} is not visible`);
-  }
-}
 
 /**
  * 收付機制(專案規格第 9 章;正本 `docs/modules/project/accounts.md`「收付機制」)。
@@ -507,20 +490,12 @@ export class SettlementService {
     }
     const original = await this.findReversible(operator, input);
     // 看得到單據才看得到它的收付;沖正要那一邊的權限
-    const snapshot = await this.ledger.snapshotOf(
+    const snapshot = await assertSideReversible(
       operator,
-      original.refType,
-      original.refId,
+      this.ledger,
+      await this.access.grantOf(operator),
+      { ...original, id: input.id },
     );
-    const side = sideOf(snapshot.registration, original.settlementSide);
-    if (side === undefined) {
-      throw notFoundError(`settlement record not found: ${input.id}`);
-    }
-    const grant = await this.access.grantOf(operator);
-    if (!grant.has(side.permission)) {
-      throw authError("FORBIDDEN", `Missing permission ${side.permission}`);
-    }
-    assertSideVisible(operator, snapshot, side);
     await this.tx.withTransaction(async (session) => {
       if (original.method === "cash") {
         // 現金在這一邊的分店(已確認在操作者的可見範圍內):以操作者自己的上下文寫

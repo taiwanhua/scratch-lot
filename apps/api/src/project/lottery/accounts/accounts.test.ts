@@ -1184,6 +1184,75 @@ describe("帳戶管理(GraphQL 端點 + 真 MongoDB)", () => {
       });
     });
 
+    it("帳戶交易清單 [沖正]:掛在單據上的交易還要那一邊的收付權限(同單據結算區);沒掛單據的照舊只看 reverse-bank-transaction", async () => {
+      const { token: reverser } = await createAccountsOperator(
+        api,
+        api.connection,
+        {
+          orgId: tenantA,
+          permissionKeys: [P.viewBankAccounts, P.reverseBankTransaction],
+        },
+      );
+      const account = await create({
+        accountNo: "0005-00009",
+        openingBalance: 0,
+        shareOrgs: [{ orgId: String(tenantA), includeDescendants: true }],
+      });
+      const doc = await insertTestSubmission(api.connection, {
+        orgId: storeA,
+        tenantId: tenantA,
+        moduleKey: TEST_PURCHASE,
+        values: { payable: 800, store: String(storeA), docNo: "P-0039" },
+      });
+      await ok(api, hq, RECORD_SETTLEMENT, {
+        input: {
+          moduleKey: TEST_PURCHASE,
+          refId: String(doc),
+          side: "hq",
+          button: "out",
+          method: "bank",
+          accountId: account.id,
+          amount: 800,
+        },
+      });
+      const manual = await record({
+        accountId: account.id,
+        type: "withdrawal",
+        amount: 100,
+      });
+      const rows = await ok<{
+        lotteryBankTransactions: { items: TransactionRow[] };
+      }>(api, reverser, TRANSACTIONS, {
+        input: { accountId: account.id },
+      }).then((data) => data.lotteryBankTransactions.items);
+      const linked = rows.find((row) => row.settlementSide === "hq");
+      expect(linked?.abilities.canReverse).toBe(false);
+      expect(
+        rows.find((row) => row.id === manual.id)?.abilities.canReverse,
+      ).toBe(true);
+      // 有沖正權限、沒有那一邊的收付權限 → FORBIDDEN;手動交易照舊可沖
+      expect(
+        await errorOf(api, reverser, REVERSE, {
+          input: { id: linked?.id ?? "", reason: "記錯" },
+        }),
+      ).toMatchObject({ code: "FORBIDDEN" });
+      await ok(api, reverser, REVERSE, {
+        input: { id: manual.id, reason: "記錯" },
+      });
+      // 有那一邊權限的人(總部)照樣可沖,清單按鈕也開
+      const hqRows = await ok<{
+        lotteryBankTransactions: { items: TransactionRow[] };
+      }>(api, hq, TRANSACTIONS, {
+        input: { accountId: account.id },
+      }).then((data) => data.lotteryBankTransactions.items);
+      expect(
+        hqRows.find((row) => row.id === linked?.id)?.abilities.canReverse,
+      ).toBe(true);
+      await ok(api, hq, REVERSE, {
+        input: { id: linked?.id ?? "", reason: "記錯" },
+      });
+    });
+
     it("調貨型:收貨店從收銀點抽屜付現 → 收付紀錄帶抽屜來源、收銀點名稱與它的印表機(付款收據用)", async () => {
       const doc = await insertTestSubmission(api.connection, {
         orgId: storeA,

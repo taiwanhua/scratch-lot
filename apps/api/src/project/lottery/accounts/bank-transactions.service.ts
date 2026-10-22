@@ -32,8 +32,12 @@ import {
 } from "../../database/lottery-accounts/lottery-accounts.repositories";
 import { CashLedgerService } from "../cash/cash-ledger.service";
 import { SettlementLedger } from "../settlement/settlement-ledger";
+import {
+  assertSideReversible,
+  canReverseSide,
+} from "../settlement/settlement-side-access";
 import { AccountNames } from "./account-names";
-import { AccountsAccess } from "./accounts-access";
+import { AccountsAccess, type AccountsGrant } from "./accounts-access";
 import { ACCOUNTS_AUDIT } from "./accounts-audit";
 import {
   ACCOUNTS_REASONS,
@@ -146,13 +150,12 @@ export class BankTransactionsService {
       reader,
       shown.map(({ row }) => row._id),
     );
-    const canReverse = grant.has(ACCOUNTS_PERMISSIONS.reverseBankTransaction);
     const items = await this.toModels(
       operator,
       account.tenantId,
       shown,
       reversedBy,
-      canReverse,
+      grant,
     );
     return { items, totalCount: items.length, totalIn, totalOut };
   }
@@ -255,7 +258,7 @@ export class BankTransactionsService {
         account.tenantId,
         [{ row: created, balanceAfter: 0 }],
         new Map(),
-        grant.has(ACCOUNTS_PERMISSIONS.reverseBankTransaction),
+        grant,
       ),
     );
   }
@@ -297,16 +300,32 @@ export class BankTransactionsService {
     };
   }
 
-  /** 沖正(`accounts.reverse-bank-transaction`):帳戶要看得到;原因必填。 */
+  /**
+   * 沖正(`accounts.reverse-bank-transaction`):帳戶要看得到;原因必填。
+   * 掛在單據上的收付(`refType` / `settlementSide` 有值)還要那一邊的收付權限、看得到那一邊
+   * (與單據結算區的 [沖正] 同一判準,`settlement-side-access.ts`)。
+   */
   async reverse(
     operator: OperatorContext,
     input: { id: string; reason: string },
   ): Promise<LotteryBankTransactionModel> {
-    await this.access.assert(
+    const grant = await this.access.assert(
       operator,
       ACCOUNTS_PERMISSIONS.reverseBankTransaction,
     );
     const original = await this.mustFindTransaction(operator, input.id);
+    if (
+      original.refType !== null &&
+      original.refId !== null &&
+      original.settlementSide !== null
+    ) {
+      await assertSideReversible(operator, this.ledger, grant, {
+        id: input.id,
+        refType: original.refType,
+        refId: original.refId,
+        settlementSide: original.settlementSide,
+      });
+    }
     const reason = trimmed(input.reason);
     if (reason === null || reason.length > LIMITS.summary) {
       throw validationError("reason is required", ["reason"]);
@@ -528,8 +547,11 @@ export class BankTransactionsService {
     tenantId: Types.ObjectId | null,
     rows: readonly { row: BankTransactionRecord; balanceAfter: number }[],
     reversedBy: ReadonlyMap<string, string>,
-    canReverse: boolean,
+    /** 沖正按鈕:沒給 = 一律不能(例:剛寫入的那筆回傳) */
+    grant: AccountsGrant | false,
   ): Promise<LotteryBankTransactionModel[]> {
+    const canReverseAny =
+      grant !== false && grant.has(ACCOUNTS_PERMISSIONS.reverseBankTransaction);
     const [orgNames, userNames] = await Promise.all([
       this.names.orgNames(
         operator,
@@ -574,7 +596,10 @@ export class BankTransactionsService {
         createdAt: row.createdAt,
         abilities: {
           canReverse:
-            canReverse && reversed === null && row.reversalOf === null,
+            canReverseAny &&
+            reversed === null &&
+            row.reversalOf === null &&
+            canReverseSide(grant, row),
         },
       };
     });
