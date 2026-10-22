@@ -9,6 +9,8 @@ import type { ReactNode } from "react";
 
 import "dayjs/locale/zh-tw";
 
+import { isCompleteDate, usePickerDraft } from "./usePickerDraft";
+
 /**
  * 對外的值格式:ISO 日期字串。
  * 資料範圍規則把日期條件當字串存進 `data_scope_rules`(ADR-0008),
@@ -31,7 +33,7 @@ export interface DatePickerProps {
   value?: string | null;
   /** 非受控的初始值,`YYYY-MM-DD` */
   defaultValue?: string | null;
-  /** 選到日期時回傳 `YYYY-MM-DD`;清空或輸入不合法時回傳 `null` */
+  /** 選到日期時回傳 `YYYY-MM-DD`;清空、輸入未完成(年份沒打滿 4 位)或不合法時回傳 `null` */
   onChange?: (value: string | null) => void;
   /** 可選範圍(含),`YYYY-MM-DD` */
   minDate?: string;
@@ -64,13 +66,15 @@ const toDate = (value: string | null | undefined): Dayjs | null | undefined => {
   return value === null ? null : dayjs(value);
 };
 
+/** 未完成(年份沒打滿 4 位)或不合法回 `null`,不往外送錯值。 */
 const toValue = (date: Dayjs | null): string | null =>
-  date?.isValid() === true ? date.format(VALUE_FORMAT) : null;
+  isCompleteDate(date) ? date.format(VALUE_FORMAT) : null;
 
 /**
  * 日期選擇(MUI X Date Pickers 社群版 / MIT,dayjs adapter)。
  * 對外只收發 `YYYY-MM-DD` 字串,呼叫端不必碰 dayjs,也不必自己掛 `LocalizationProvider`。
  * 外觀就是一個 outlined `TextField` 加日曆按鈕,幾何與圓角由 theme 的 `MuiOutlinedInput` 供給(STYLE-07)。
+ * 受控時內部保留 MUI 的草稿值(`usePickerDraft`),鍵盤逐位輸入不會被外部值往返打斷。
  */
 export const DatePicker = ({
   label,
@@ -91,36 +95,45 @@ export const DatePicker = ({
   format = VALUE_FORMAT,
   locale = "zh-tw",
   sx,
-}: DatePickerProps) => (
-  <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale={locale}>
-    <MuiDatePicker
-      label={hiddenLabel ? undefined : label}
-      value={toDate(value)}
-      defaultValue={toDate(defaultValue)}
-      onChange={(date) => onChange?.(toValue(date))}
-      minDate={toDate(minDate) ?? undefined}
-      maxDate={toDate(maxDate) ?? undefined}
-      disabled={disabled}
-      readOnly={readOnly}
-      format={format}
-      sx={sx}
-      slotProps={{
-        textField: {
-          required,
-          error,
-          helperText,
-          fullWidth,
-          name,
-          size,
-          // 不畫標籤時名稱改掛在欄位的 group 上(沒有標籤元素可指,`aria-labelledby` 一併拿掉)
-          ...(hiddenLabel &&
-            typeof label === "string" && {
-              slotProps: {
-                input: { "aria-label": label, "aria-labelledby": undefined },
-              },
-            }),
-        },
-      }}
-    />
-  </LocalizationProvider>
-);
+}: DatePickerProps) => {
+  const draft = usePickerDraft({
+    value,
+    toDate: (date) => dayjs(date),
+    toValue,
+    onChange,
+  });
+
+  return (
+    <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale={locale}>
+      <MuiDatePicker
+        label={hiddenLabel ? undefined : label}
+        value={draft.date}
+        defaultValue={toDate(defaultValue)}
+        onChange={draft.handleChange}
+        minDate={toDate(minDate) ?? undefined}
+        maxDate={toDate(maxDate) ?? undefined}
+        disabled={disabled}
+        readOnly={readOnly}
+        format={format}
+        sx={sx}
+        slotProps={{
+          textField: {
+            required,
+            error,
+            helperText,
+            fullWidth,
+            name,
+            size,
+            // 不畫標籤時名稱改掛在欄位的 group 上(沒有標籤元素可指,`aria-labelledby` 一併拿掉)
+            ...(hiddenLabel &&
+              typeof label === "string" && {
+                slotProps: {
+                  input: { "aria-label": label, "aria-labelledby": undefined },
+                },
+              }),
+          },
+        }}
+      />
+    </LocalizationProvider>
+  );
+};

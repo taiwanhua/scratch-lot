@@ -1,10 +1,51 @@
 import { describe, expect, it, jest } from "@jest/globals";
 import { fireEvent, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { useState } from "react";
 
 import { DateTimePicker } from "./DateTimePicker";
 
 /** MUI X 的日期時間欄位是一組「區段」包在 `role="group"` 裡,值從整組的文字讀。 */
 const fieldText = () => screen.getByRole("group").textContent;
+
+/** 年 / 月 / 日 / 時區段(`role="spinbutton"`,名稱是 MUI 內建的英文)。 */
+const section = (name: "Year" | "Month" | "Day" | "Hours") =>
+  screen.getByRole("spinbutton", { name });
+
+/** 受控往返:父層把 `onChange` 回來的字串存進 state 再傳回 `value`(台北時區輸入)。 */
+const Controlled = ({
+  initial,
+  resetTo = null,
+  onChange,
+}: {
+  initial: string | null;
+  /** 「外部改值」按鈕要換成的值:模擬父層換成別的值(例如重設表單) */
+  resetTo?: string | null;
+  onChange: (value: string | null) => void;
+}) => {
+  const [value, setValue] = useState(initial);
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => {
+          setValue(resetTo);
+        }}
+      >
+        外部改值
+      </button>
+      <DateTimePicker
+        label="開始時間"
+        value={value}
+        timezone="Asia/Taipei"
+        onChange={(next) => {
+          onChange(next);
+          setValue(next);
+        }}
+      />
+    </>
+  );
+};
 
 describe("DateTimePicker", () => {
   it("以指定時區顯示 UTC 時點(台北 +8、東京 +9),並掛上標籤", () => {
@@ -102,5 +143,83 @@ describe("DateTimePicker", () => {
       "\u200B",
     );
     expect(screen.getByLabelText("開始時間")).toBe(screen.getByRole("group"));
+  });
+
+  describe("鍵盤逐位輸入(受控往返)", () => {
+    it("年份逐位輸入 2026:每一鍵都留在區段裡,打滿 4 位才跳到月份、才送出完整時點", async () => {
+      const user = userEvent.setup();
+      const handleChange = jest.fn<(value: string | null) => void>();
+      render(
+        <Controlled initial="2025-03-15T01:30:00Z" onChange={handleChange} />,
+      );
+
+      await user.click(section("Year"));
+      const typed: (string | null)[] = [];
+      for (const key of "2026") {
+        await user.keyboard(key);
+        typed.push(section("Year").textContent);
+      }
+
+      expect(typed).toEqual(["0002", "0020", "0202", "2026"]);
+      expect(section("Month")).toHaveFocus();
+      const emitted = handleChange.mock.calls.map(([value]) => value);
+      expect(emitted.at(-1)).toBe("2026-03-15T01:30:00Z");
+      expect(emitted.slice(0, -1).every((value) => value === null)).toBe(true);
+      expect(fieldText()).toContain("2026-03-15 09:30");
+    });
+
+    it("跨月改月份再改日、改小時:中途不合法送 null,完成後以台北牆上時間換算 UTC", async () => {
+      const user = userEvent.setup();
+      const handleChange = jest.fn<(value: string | null) => void>();
+      render(
+        <Controlled initial="2026-01-31T01:30:00Z" onChange={handleChange} />,
+      );
+
+      await user.click(section("Month"));
+      await user.keyboard("02");
+      expect(handleChange).toHaveBeenLastCalledWith(null);
+
+      await user.keyboard("28");
+      expect(handleChange).toHaveBeenLastCalledWith("2026-02-28T01:30:00Z");
+
+      await user.keyboard("14");
+      expect(handleChange).toHaveBeenLastCalledWith("2026-02-28T06:30:00Z");
+      expect(fieldText()).toContain("2026-02-28 14:30");
+    });
+
+    it("清空:全選刪除送出 null、顯示格式提示,之後可以重新逐位輸入", async () => {
+      const user = userEvent.setup();
+      const handleChange = jest.fn<(value: string | null) => void>();
+      render(
+        <Controlled initial="2026-01-31T01:30:00Z" onChange={handleChange} />,
+      );
+
+      await user.click(section("Year"));
+      await user.keyboard("{Control>}a{/Control}{Backspace}");
+      expect(handleChange).toHaveBeenLastCalledWith(null);
+      expect(fieldText()).toContain("YYYY-MM-DD");
+
+      // 全選狀態下區段暫時不是 spinbutton,直接打字從年份開始填
+      await user.keyboard("202611050800");
+      expect(handleChange).toHaveBeenLastCalledWith("2026-11-05T00:00:00Z");
+    });
+
+    it("外部換成別的值會覆蓋打到一半的草稿", async () => {
+      const user = userEvent.setup();
+      render(
+        <Controlled
+          initial="2025-03-15T01:30:00Z"
+          resetTo="2030-05-06T02:00:00Z"
+          onChange={jest.fn()}
+        />,
+      );
+
+      await user.click(section("Year"));
+      await user.keyboard("20");
+      expect(section("Year").textContent).toBe("0020");
+
+      await user.click(screen.getByRole("button", { name: "外部改值" }));
+      expect(fieldText()).toContain("2030-05-06 10:00");
+    });
   });
 });
