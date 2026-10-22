@@ -18,12 +18,16 @@ import { Radio } from "@repo/ui/radio";
 import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
 
+import { FieldErrorText } from "@/components/base/FieldErrorText/FieldErrorText";
 import { OrgTreeSelect } from "@/components/base/OrgTreeSelect/OrgTreeSelect";
 import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
 import { useSession } from "@/hooks/base/useSession";
 import { flattenOrgs, tenantTreeToOrgNodes } from "@/lib/base/org-tree";
 
-import { scheduleErrorOf } from "../../schedule-error";
+import { scheduleErrorTextsOf } from "../../schedule-field-errors";
+
+/** 會標回對話框的欄位(api `fields`)。 */
+const FIELDS = ["orgs"] as const;
 
 interface StaffOrg {
   orgId: string;
@@ -48,7 +52,7 @@ export const StaffDialog = ({ row, canEdit, onClose }: StaffDialogProps) => {
   const tStaff = useTranslations("admin.schedule.staff");
   const tCommon = useTranslations("admin.schedule.common");
   const tEmployment = useTranslations("admin.schedule.employment");
-  const tErrors = useTranslations("admin.schedule.errors");
+  const tSchedule = useTranslations("admin.schedule");
   const { session } = useSession();
   const queryClient = useQueryClient();
   const isMobile = useBreakpointDown("sm");
@@ -70,6 +74,8 @@ export const StaffDialog = ({ row, canEdit, onClose }: StaffDialogProps) => {
       isPrimary: org.isPrimary,
     })),
   );
+  // 分店清單被 api 擋下(同一家列兩次、主要分店不是剛好一家……)的原因寫在清單下(REACT-18)
+  const [orgsError, setOrgsError] = useState<string | undefined>();
   const primaryElsewhere = staff?.primaryElsewhere ?? false;
   const needsPrimary =
     !primaryElsewhere && orgs.length > 0 && !orgs.some((org) => org.isPrimary);
@@ -78,7 +84,10 @@ export const StaffDialog = ({ row, canEdit, onClose }: StaffDialogProps) => {
     session.client,
     useMutationFeedback({
       success: tStaff("feedback.updateSuccess"),
-      error: (error) => tErrors(scheduleErrorOf(error).code),
+      error: (error) => scheduleErrorTextsOf(error, FIELDS, tSchedule).summary,
+      onError: (error) => {
+        setOrgsError(scheduleErrorTextsOf(error, FIELDS, tSchedule).texts.orgs);
+      },
       onSuccess: () => {
         void queryClient.invalidateQueries({
           queryKey: useScheduleStaffQuery.getKey(),
@@ -239,6 +248,7 @@ export const StaffDialog = ({ row, canEdit, onClose }: StaffDialogProps) => {
             ))}
           </Stack>
         )}
+        <FieldErrorText text={orgsError} />
         {needsPrimary && (
           <Typography variant="caption" color="error">
             {t("primaryRequired")}

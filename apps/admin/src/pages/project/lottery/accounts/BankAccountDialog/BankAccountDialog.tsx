@@ -24,13 +24,19 @@ import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
 import { useSession } from "@/hooks/base/useSession";
 import { useTenantTimezone } from "@/hooks/base/useTenantTimezone";
 import {
+  type FieldErrorTexts,
+  withoutFieldError,
+} from "@/lib/base/field-errors";
+import {
   localDayInstantOf,
   localDayTextOf,
 } from "@/lib/base/form-engine/local-day";
+import { accountsErrorOf } from "@/lib/project/lottery/accounts-error";
+
 import {
-  type AccountsErrorCode,
-  accountsErrorOf,
-} from "@/lib/project/lottery/accounts-error";
+  accountErrorTextsOf,
+  accountFormatErrorsOf,
+} from "../account-field-errors";
 
 export interface BankAccountDialogProps {
   onClose: () => void;
@@ -44,6 +50,16 @@ type Field =
   | "openingBalance"
   | "openingDate"
   | "shareOrgs";
+
+const FIELDS: readonly Field[] = [
+  "bankCode",
+  "branchName",
+  "accountNo",
+  "accountName",
+  "openingBalance",
+  "openingDate",
+  "shareOrgs",
+];
 
 const BANK_CODE = /^\d{3}$/;
 
@@ -66,14 +82,16 @@ export const BankAccountDialog = ({ onClose }: BankAccountDialogProps) => {
     openingDate: localDayTextOf(new Date(), timezone),
   });
   const [shareOrgs, setShareOrgs] = useState<ShareOrgValue[]>([]);
-  const [invalid, setInvalid] = useState<Field[]>([]);
-  const [errorCode, setErrorCode] = useState<AccountsErrorCode | null>(null);
+  // 欄位錯了就在欄位正下方寫原因(REACT-18);上方提示只放通用句
+  const [fieldErrors, setFieldErrors] = useState<FieldErrorTexts<Field>>({});
+  const [errorText, setErrorText] = useState<string | null>(null);
 
   const create = useCreateLotteryBankAccountMutation(
     session.client,
     useMutationFeedback({
       success: t("feedback.createSuccess"),
-      error: (error: unknown) => t(`errors.${accountsErrorOf(error).code}`),
+      error: (error: unknown) =>
+        accountErrorTextsOf(accountsErrorOf(error), FIELDS, t).summary,
       onSuccess: () => {
         void queryClient.invalidateQueries({
           queryKey: useLotteryBankAccountsQuery
@@ -83,18 +101,22 @@ export const BankAccountDialog = ({ onClose }: BankAccountDialogProps) => {
         onClose();
       },
       onError: (error: unknown) => {
-        const parsed = accountsErrorOf(error);
-        setErrorCode(parsed.code);
-        setInvalid((parsed.fields ?? []) as Field[]);
+        const { texts, summary } = accountErrorTextsOf(
+          accountsErrorOf(error),
+          FIELDS,
+          t,
+        );
+        setFieldErrors(texts);
+        setErrorText(summary);
       },
     }),
   );
 
   const change = (key: keyof typeof values, value: string | null) => {
     setValues((current) => ({ ...current, [key]: value }));
-    setInvalid((current) => current.filter((field) => field !== key));
+    setFieldErrors((current) => withoutFieldError(current, key));
   };
-  const isInvalid = (field: Field) => invalid.includes(field);
+  const isInvalid = (field: Field) => fieldErrors[field] !== undefined;
 
   const submit = () => {
     const opening = Number(values.openingBalance.trim());
@@ -107,8 +129,8 @@ export const BankAccountDialog = ({ onClose }: BankAccountDialogProps) => {
       next.push("openingBalance");
     }
     if (openingDate === null) next.push("openingDate");
-    setInvalid(next);
-    setErrorCode(null);
+    setFieldErrors(accountFormatErrorsOf(next, t));
+    setErrorText(null);
     if (next.length > 0 || openingDate === null) {
       return;
     }
@@ -146,16 +168,14 @@ export const BankAccountDialog = ({ onClose }: BankAccountDialogProps) => {
       }
     >
       <Stack spacing={2.5} sx={{ pt: 1 }}>
-        {errorCode !== null && (
-          <Alert severity="error">{t(`errors.${errorCode}`)}</Alert>
-        )}
+        {errorText !== null && <Alert severity="error">{errorText}</Alert>}
         <Stack direction="row" spacing={2}>
           <TextField
             label={t("accountForm.fields.bankCode")}
             value={values.bankCode}
             required
             error={isInvalid("bankCode")}
-            helperText={t("accountForm.bankCodeHint")}
+            helperText={fieldErrors.bankCode ?? t("accountForm.bankCodeHint")}
             slotProps={{ htmlInput: { inputMode: "numeric", maxLength: 3 } }}
             onChange={(event) => {
               change("bankCode", event.target.value);
@@ -166,6 +186,7 @@ export const BankAccountDialog = ({ onClose }: BankAccountDialogProps) => {
             label={t("accountForm.fields.branchName")}
             value={values.branchName}
             error={isInvalid("branchName")}
+            helperText={fieldErrors.branchName}
             onChange={(event) => {
               change("branchName", event.target.value);
             }}
@@ -177,6 +198,7 @@ export const BankAccountDialog = ({ onClose }: BankAccountDialogProps) => {
           value={values.accountNo}
           required
           error={isInvalid("accountNo")}
+          helperText={fieldErrors.accountNo}
           onChange={(event) => {
             change("accountNo", event.target.value);
           }}
@@ -186,6 +208,7 @@ export const BankAccountDialog = ({ onClose }: BankAccountDialogProps) => {
           value={values.accountName}
           required
           error={isInvalid("accountName")}
+          helperText={fieldErrors.accountName}
           onChange={(event) => {
             change("accountName", event.target.value);
           }}
@@ -196,6 +219,7 @@ export const BankAccountDialog = ({ onClose }: BankAccountDialogProps) => {
           value={values.openingBalance}
           required
           error={isInvalid("openingBalance")}
+          helperText={fieldErrors.openingBalance}
           slotProps={{ htmlInput: { inputMode: "numeric" } }}
           onChange={(event) => {
             change("openingBalance", event.target.value);
@@ -205,6 +229,7 @@ export const BankAccountDialog = ({ onClose }: BankAccountDialogProps) => {
           label={t("accountForm.fields.openingDate")}
           value={values.openingDate}
           error={isInvalid("openingDate")}
+          helperText={fieldErrors.openingDate}
           fullWidth
           onChange={(value) => {
             change("openingDate", value);
@@ -218,7 +243,13 @@ export const BankAccountDialog = ({ onClose }: BankAccountDialogProps) => {
             label={t("accountForm.fields.shareOrgs")}
             value={shareOrgs}
             error={isInvalid("shareOrgs")}
-            onChange={setShareOrgs}
+            helperText={fieldErrors.shareOrgs}
+            onChange={(next) => {
+              setShareOrgs(next);
+              setFieldErrors((current) =>
+                withoutFieldError(current, "shareOrgs"),
+              );
+            }}
           />
         </Stack>
         <Typography variant="caption" color="textSecondary">

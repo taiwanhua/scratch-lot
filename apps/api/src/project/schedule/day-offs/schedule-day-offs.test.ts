@@ -606,6 +606,7 @@ describe("畫休(GraphQL 端點 + 真 MongoDB)", () => {
       expect(errorOf(withExisting)).toMatchObject({
         code: "VALIDATION_FAILED",
         fields: ["slots"],
+        reason: "TIME_RANGES_OVERLAP",
       });
       const withinRequest = await addMine(wang, {
         date: "2026-12-04",
@@ -618,13 +619,18 @@ describe("畫休(GraphQL 端點 + 真 MongoDB)", () => {
       expect(errorOf(withinRequest)).toMatchObject({
         code: "VALIDATION_FAILED",
         fields: ["slots"],
+        reason: "TIME_RANGES_OVERLAP",
       });
       const reversed = await addMine(wang, {
         date: "2026-12-04",
         kind: "time-range",
         slots: [{ startTime: "13:00", endTime: "09:00" }],
       });
-      expect(errorOf(reversed)).toMatchObject({ fields: ["slots"] });
+      // 開始不早於結束是格式錯:不帶 reason(前端寫該欄的格式要求)
+      expect(errorOf(reversed)).toEqual({
+        code: "VALIDATION_FAILED",
+        fields: ["slots"],
+      });
       // 相接不算重疊
       dataOf(
         await addMine(wang, {
@@ -645,6 +651,7 @@ describe("畫休(GraphQL 端點 + 真 MongoDB)", () => {
       expect(errorOf(twice)).toMatchObject({
         code: "VALIDATION_FAILED",
         fields: ["kind"],
+        reason: "DAY_OFF_DUPLICATE",
       });
       // 同時送兩筆:唯一索引擋下第二筆,回同一個錯誤
       const results = await Promise.all([

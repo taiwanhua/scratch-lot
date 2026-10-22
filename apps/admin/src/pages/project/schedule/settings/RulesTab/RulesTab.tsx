@@ -25,7 +25,7 @@ import { useSession } from "@/hooks/base/useSession";
 import { useUrlState } from "@/hooks/base/useUrlState";
 import { useScheduleFieldOptions } from "@/hooks/project/schedule/useScheduleFieldOptions/useScheduleFieldOptions";
 
-import { scheduleErrorOf } from "../../schedule-error";
+import { scheduleErrorKey, scheduleErrorOf } from "../../schedule-error";
 import { AutoRunDialog } from "./AutoRunDialog";
 import { RuleDialog, type RuleDialogSave } from "./RuleDialog";
 import { RuleRow } from "./RuleRow";
@@ -87,7 +87,7 @@ export const RulesTab = () => {
     setEditing(null);
     setIsEditingAutoRun(false);
   };
-  const error = (cause: unknown) => tErrors(scheduleErrorOf(cause).code);
+  const error = (cause: unknown) => tErrors(scheduleErrorKey(cause));
   const customize = useCustomizeScheduleRuleMutation(
     session.client,
     useMutationFeedback({

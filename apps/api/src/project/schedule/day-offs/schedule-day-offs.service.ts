@@ -48,6 +48,7 @@ import type {
 import { ScheduleRulesService } from "../rules/schedule-rules.service";
 import { ScheduleClock } from "../shared/schedule-clock";
 import {
+  SCHEDULE_REASONS,
   dayOffRuleError,
   forbiddenError,
   isDuplicateKeyError,
@@ -713,6 +714,7 @@ export class ScheduleDayOffsService implements OnModuleInit {
       throw validationError(
         `user ${String(userId)} has no primary store for schedule`,
         ["userId"],
+        SCHEDULE_REASONS.noPrimaryStore,
       );
     }
     // 畫休以人為準:主要分店不一定在操作者的可見範圍,以租戶為邊界讀它的生效設定
@@ -891,6 +893,7 @@ export class ScheduleDayOffsService implements OnModuleInit {
         }),
       `already has a full-day day off on ${write.date}`,
       ["kind"],
+      SCHEDULE_REASONS.dayOffDuplicate,
     );
     const names = await this.namesOf(created);
     return {
@@ -1378,9 +1381,11 @@ function assertNoConflict(
 ): void {
   if (write.kind === "full-day") {
     if (existing.some((record) => record.kind === "full-day")) {
-      throw validationError(`already has a full-day day off on ${write.date}`, [
-        "kind",
-      ]);
+      throw validationError(
+        `already has a full-day day off on ${write.date}`,
+        ["kind"],
+        SCHEDULE_REASONS.dayOffDuplicate,
+      );
     }
     return;
   }
@@ -1398,6 +1403,7 @@ function assertNoConflict(
       throw validationError(
         `time ranges overlap on ${write.date}: ${slot.startTime}–${slot.endTime}`,
         ["slots"],
+        SCHEDULE_REASONS.timeRangesOverlap,
       );
     }
     ranges.push(slot);

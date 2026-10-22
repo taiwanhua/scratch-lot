@@ -25,7 +25,7 @@ import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
 import { useSession } from "@/hooks/base/useSession";
 import { useUrlState } from "@/hooks/base/useUrlState";
 
-import { scheduleErrorOf } from "../../schedule-error";
+import { scheduleErrorKey } from "../../schedule-error";
 import { SCHEDULE_PERMISSIONS } from "../../schedule-permissions";
 import { StaffDialog } from "./StaffDialog";
 
@@ -76,7 +76,7 @@ export const StaffTab = () => {
     session.client,
     useMutationFeedback({
       success: t("feedback.addSuccess"),
-      error: (error) => tErrors(scheduleErrorOf(error).code),
+      error: (error) => tErrors(scheduleErrorKey(error)),
       onSuccess: () => {
         setSelected([]);
         void invalidate();

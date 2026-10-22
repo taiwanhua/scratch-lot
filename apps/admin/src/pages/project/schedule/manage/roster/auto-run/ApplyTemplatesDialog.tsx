@@ -36,7 +36,7 @@ import {
 import { datesOfMonth } from "@/lib/project/schedule-roster";
 import { isTagPaletteKey } from "@/lib/project/tag-palettes";
 
-import { scheduleErrorOf } from "../../../schedule-error";
+import { scheduleErrorKey } from "../../../schedule-error";
 import { useRosterCheck } from "../check-panel/roster-check-context";
 import { useChangeReason } from "../publish/useChangeReason";
 import { ROSTER_QUERY_ROOT } from "../roster-context";
@@ -116,7 +116,7 @@ export const ApplyTemplatesDialog = ({
   const errorText = (cause: unknown) =>
     autoRunBlockedReasonOf(cause) === "AUTO_RUN_IN_PROGRESS"
       ? tAutoRun("errors.AUTO_RUN_IN_PROGRESS")
-      : tErrors(scheduleErrorOf(cause).code);
+      : tErrors(scheduleErrorKey(cause));
   const apply = useApplyScheduleTemplatesMutation(
     session.client,
     useMutationFeedback({

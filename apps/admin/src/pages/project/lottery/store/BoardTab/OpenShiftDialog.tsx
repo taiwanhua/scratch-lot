@@ -21,8 +21,13 @@ import { Typography } from "@repo/ui/typography";
 import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
 import { usePermissions } from "@/hooks/base/usePermissions";
 import { useSession } from "@/hooks/base/useSession";
-import { storeErrorKey, storeErrorOf } from "@/lib/project/lottery/store-error";
+import {
+  type FieldErrorTexts,
+  withoutFieldError,
+} from "@/lib/base/field-errors";
+import { storeErrorKey } from "@/lib/project/lottery/store-error";
 
+import { storeErrorTextsOf, storeFormatErrorsOf } from "../store-field-errors";
 import { moneyText } from "../store-text";
 import { STORE_BOARD_QUERY_KEY } from "./board-query";
 import { useEntryText } from "./useEntryText";
@@ -41,13 +46,14 @@ const FloatSection = ({
   form,
   float,
   opening,
-  isInvalid,
+  errorText,
   onFloatChange,
 }: {
   form: OpenShiftForm;
   float: string;
   opening: number;
-  isInvalid: boolean;
+  /** 欄位下的原因(REACT-18);undefined = 沒錯 */
+  errorText: string | undefined;
   onFloatChange: (value: string) => void;
 }) => {
   const t = useTranslations("admin.lotteryStore.openShift");
@@ -80,8 +86,8 @@ const FloatSection = ({
         <TextField
           label={t("floatFromVault")}
           value={float}
-          helperText={t("floatFromVaultHint")}
-          error={isInvalid}
+          helperText={errorText ?? t("floatFromVaultHint")}
+          error={errorText !== undefined}
           slotProps={{ htmlInput: { inputMode: "numeric" } }}
           onChange={(event) => {
             onFloatChange(event.target.value);
@@ -96,6 +102,9 @@ const FloatSection = ({
     </>
   );
 };
+
+/** 會標回對話框的欄位(api `fields`)。 */
+const FIELDS = ["floatFromVault", "scheduleEntryId"] as const;
 
 /** 期初零用金:其他班 = 上一班留給下一班;第一班 = 從小金庫領的(沒有出庫權限 = 0)。 */
 const openingOf = (form: OpenShiftForm, float: number): number => {
@@ -209,14 +218,17 @@ export const OpenShiftDialog = ({
     chosenEntry ??
     (form === null ? null : (form.suggestedEntryId ?? TEMPORARY));
   const [float, setFloat] = useState("");
-  const [invalid, setInvalid] = useState<string[]>([]);
-  const [errorKey, setErrorKey] = useState<string | null>(null);
+  // 欄位錯了就在欄位正下方寫原因(REACT-18);上方提示只放通用句
+  const [fieldErrors, setFieldErrors] = useState<
+    FieldErrorTexts<(typeof FIELDS)[number]>
+  >({});
+  const [errorText, setErrorText] = useState<string | null>(null);
 
   const open = useOpenLotteryShiftMutation(
     session.client,
     useMutationFeedback({
       success: t("openShift.success"),
-      error: (error: unknown) => t(storeErrorKey(error)),
+      error: (error: unknown) => storeErrorTextsOf(error, FIELDS, t).summary,
       onSuccess: (data, variables) => {
         const { movementId, cashPointPrinterId } = data.openLotteryShift;
         const amount = variables.input.floatFromVault ?? 0;
@@ -231,8 +243,9 @@ export const OpenShiftDialog = ({
         onClose();
       },
       onError: (error: unknown) => {
-        setErrorKey(storeErrorKey(error));
-        setInvalid(storeErrorOf(error).fields ?? []);
+        const { texts, summary } = storeErrorTextsOf(error, FIELDS, t);
+        setFieldErrors(texts);
+        setErrorText(summary);
       },
     }),
   );
@@ -257,11 +270,11 @@ export const OpenShiftDialog = ({
       return;
     }
     if (!isFloatValid) {
-      setInvalid(["floatFromVault"]);
+      setFieldErrors(storeFormatErrorsOf(["floatFromVault"], t));
       return;
     }
-    setInvalid([]);
-    setErrorKey(null);
+    setFieldErrors({});
+    setErrorText(null);
     open.mutate({
       input: {
         cashPointId,
@@ -295,8 +308,8 @@ export const OpenShiftDialog = ({
       }
     >
       <Stack spacing={2} sx={{ pt: 1 }}>
-        {errorKey === null ? null : (
-          <Alert severity="error">{t(errorKey)}</Alert>
+        {errorText === null ? null : (
+          <Alert severity="error">{errorText}</Alert>
         )}
         {formQuery.isError ? (
           <Alert severity="error">{t(storeErrorKey(formQuery.error))}</Alert>
@@ -306,8 +319,13 @@ export const OpenShiftDialog = ({
             form={form}
             float={float}
             opening={openingOf(form, isFloatValid ? floatValue : 0)}
-            isInvalid={invalid.includes("floatFromVault")}
-            onFloatChange={setFloat}
+            errorText={fieldErrors.floatFromVault}
+            onFloatChange={(value) => {
+              setFloat(value);
+              setFieldErrors((current) =>
+                withoutFieldError(current, "floatFromVault"),
+              );
+            }}
           />
         )}
         {selected !== null &&
@@ -325,11 +343,12 @@ export const OpenShiftDialog = ({
           value={entry ?? ""}
           required
           fullWidth
-          error={invalid.includes("scheduleEntryId")}
+          error={fieldErrors.scheduleEntryId !== undefined}
           helperText={
-            form !== null && form.entries.length === 0
+            fieldErrors.scheduleEntryId ??
+            (form !== null && form.entries.length === 0
               ? t("openShift.noEntryToday")
-              : t("openShift.entryHint")
+              : t("openShift.entryHint"))
           }
           options={[
             ...(form?.entries ?? []).map((option) => ({
@@ -340,6 +359,9 @@ export const OpenShiftDialog = ({
           ]}
           onChange={(value: string) => {
             setEntry(value);
+            setFieldErrors((current) =>
+              withoutFieldError(current, "scheduleEntryId"),
+            );
           }}
         />
         {isMismatch ? (

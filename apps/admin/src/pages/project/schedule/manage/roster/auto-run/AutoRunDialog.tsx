@@ -21,7 +21,7 @@ import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
 import { useSession } from "@/hooks/base/useSession";
 import { datesOfMonth } from "@/lib/project/schedule-roster";
 
-import { scheduleErrorOf } from "../../../schedule-error";
+import { scheduleErrorKey } from "../../../schedule-error";
 import { useRosterCheck } from "../check-panel/roster-check-context";
 import { ROSTER_QUERY_ROOT } from "../roster-context";
 import {
@@ -94,7 +94,7 @@ export const AutoRunDialog = ({ onClose }: AutoRunDialogProps) => {
   const errorText = (cause: unknown) => {
     const reason = autoRunBlockedReasonOf(cause);
     return reason === null
-      ? tErrors(scheduleErrorOf(cause).code)
+      ? tErrors(scheduleErrorKey(cause))
       : t(`errors.${reason}`);
   };
   const run = useRunScheduleAutoRunMutation(

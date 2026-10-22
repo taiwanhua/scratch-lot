@@ -13,12 +13,16 @@ export const DEALER_REASONS = {
   nationalIdDuplicate: "NATIONAL_ID_DUPLICATE",
   /** 這個欄位不屬於這個類型(例:甲類給了店名) */
   notForType: "NOT_FOR_TYPE",
+  /** 有牌租週期時,繳費日必填 */
+  rentDueDayRequired: "RENT_DUE_DAY_REQUIRED",
   /** 週期是季或年時,起算月份必填 */
   rentStartMonthRequired: "RENT_START_MONTH_REQUIRED",
   /** 這個身分的人數超過上限(甲:代理人 2、受託人 2、介紹人 1;乙:代理人 2、介紹人 1) */
   roleLimit: "ROLE_LIMIT",
   /** 乙類不能有受託人 */
   trusteeNotAllowed: "TRUSTEE_NOT_ALLOWED",
+  /** 同一個身分選了同一位關係人兩次 */
+  contactRepeated: "CONTACT_REPEATED",
   /** 選的關係人沒有這個身分 */
   contactRoleMismatch: "CONTACT_ROLE_MISMATCH",
   /** 選的關係人已停用(停用後不能再被選取) */

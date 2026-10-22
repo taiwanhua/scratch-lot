@@ -18,6 +18,11 @@ export interface ReasonFieldsProps {
   onChange: (value: ReasonValue) => void;
   /** 標紅的欄位(api 或送出前檢查回的) */
   invalid: readonly string[];
+  /**
+   * 欄位下的原因(REACT-18;`reasonKey` / `reasonNote` → 那一句)。沒給的那一欄標紅時寫預設的格式要求:
+   * 原因「請選擇原因」、說明「選「其他」時要寫說明」。api 帶了原因(例:停用的選項)時由呼叫端傳入。
+   */
+  errorTexts?: Partial<Record<"reasonKey" | "reasonNote", string>>;
 }
 
 /**
@@ -30,6 +35,7 @@ export const ReasonFields = ({
   value,
   onChange,
   invalid,
+  errorTexts = {},
 }: ReasonFieldsProps) => {
   const t = useTranslations("admin.lotteryInventory.reason");
   const reasons = useLotteryFieldOptions(categoryKey);
@@ -42,6 +48,11 @@ export const ReasonFields = ({
         required
         fullWidth
         error={invalid.includes("reasonKey")}
+        helperText={
+          invalid.includes("reasonKey")
+            ? (errorTexts.reasonKey ?? t("keyError"))
+            : undefined
+        }
         options={reasons.options}
         onChange={(next: string) => {
           onChange({ ...value, reasonKey: next });
@@ -53,6 +64,11 @@ export const ReasonFields = ({
         required={noteRequired}
         fullWidth
         error={invalid.includes("reasonNote")}
+        helperText={
+          invalid.includes("reasonNote")
+            ? (errorTexts.reasonNote ?? t("noteError"))
+            : undefined
+        }
         onChange={(event) => {
           onChange({ ...value, reasonNote: event.target.value });
         }}

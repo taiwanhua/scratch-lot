@@ -36,6 +36,7 @@ import { useUrlState } from "@/hooks/base/useUrlState";
 import { useScheduleFieldOptions } from "@/hooks/project/schedule/useScheduleFieldOptions/useScheduleFieldOptions";
 import type { ModulePageProps } from "@/lib/base/module-tree";
 
+import { scheduleFormatText } from "../../schedule-field-errors";
 import {
   MAKEUP_PREFILL_KEYS,
   MAKEUP_PUNCH_FORM_KEY,
@@ -91,6 +92,7 @@ const MakeupPunchFormBody = ({
 }: FormBodyProps) => {
   const t = useTranslations("admin.schedule.attendance.makeup");
   const tAttendance = useTranslations("admin.schedule.attendance");
+  const tSchedule = useTranslations("admin.schedule");
   const text = useAttendanceText();
   const { session } = useSession();
   const reasons = useScheduleFieldOptions(
@@ -114,6 +116,16 @@ const MakeupPunchFormBody = ({
   const entryValue = entryOptions.some((option) => option.value === state.entry)
     ? state.entry
     : "";
+  // 欄位錯了就在欄位正下方寫原因(REACT-18);「說明」的規則同原因欄的說明
+  const fieldErrorOf = (field: MakeupPunchField) => {
+    if (!invalid.includes(field)) {
+      return;
+    }
+    return scheduleFormatText(
+      tSchedule,
+      field === "note" ? "reasonNote" : field,
+    );
+  };
   const clear = (field: MakeupPunchField) => {
     setInvalid((current) => current.filter((item) => item !== field));
   };
@@ -145,6 +157,7 @@ const MakeupPunchFormBody = ({
             fullWidth
             required
             error={invalid.includes("date")}
+            helperText={fieldErrorOf("date")}
             onChange={(next) => {
               setState((current) =>
                 withDateOrOrg(current, { date: next ?? "" }),
@@ -160,6 +173,7 @@ const MakeupPunchFormBody = ({
             required
             fullWidth
             error={invalid.includes("orgId")}
+            helperText={fieldErrorOf("orgId")}
             onChange={(ids) => {
               setState((current) =>
                 withDateOrOrg(current, { orgId: ids[0] ?? "" }),
@@ -217,6 +231,7 @@ const MakeupPunchFormBody = ({
             required
             fullWidth
             error={invalid.includes("time")}
+            helperText={fieldErrorOf("time")}
             slotProps={{ inputLabel: { shrink: true } }}
             onChange={(event) => {
               setState((current) => ({ ...current, time: event.target.value }));
@@ -229,6 +244,7 @@ const MakeupPunchFormBody = ({
             required
             fullWidth
             error={invalid.includes("reasonKey")}
+            helperText={fieldErrorOf("reasonKey")}
             options={reasons.options}
             onChange={(next) => {
               setState((current) => ({
@@ -246,6 +262,7 @@ const MakeupPunchFormBody = ({
           required={state.reasonKey === "other"}
           fullWidth
           error={invalid.includes("note")}
+          helperText={fieldErrorOf("note")}
           onChange={(event) => {
             setState((current) => ({ ...current, note: event.target.value }));
             clear("note");

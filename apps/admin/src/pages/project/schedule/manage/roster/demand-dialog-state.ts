@@ -1,7 +1,9 @@
 import type { ScheduleTaskRole } from "@repo/domain/project/schedule-settings";
 
+import type { FieldErrorTexts } from "@/lib/base/field-errors";
 import { localPartsOf } from "@/lib/project/schedule-roster";
 
+import { scheduleErrorTextsOf } from "../../schedule-field-errors";
 import type {
   DemandPreset,
   RosterDemand,
@@ -38,6 +40,20 @@ export type DemandField =
   | "tasks"
   | "templateName"
   | "templateShortName";
+
+/** 欄位 → 寫在欄位正下方的原因(REACT-18)。 */
+export type DemandFieldErrors = FieldErrorTexts<DemandField>;
+
+/** 對話框上的欄位(錯誤標回的範圍)。 */
+export const DEMAND_FIELDS: readonly DemandField[] = [
+  "date",
+  "startTime",
+  "endTime",
+  "positionKey",
+  "tasks",
+  "templateName",
+  "templateShortName",
+];
 
 /** api 標回的欄位 → 對話框的欄位。 */
 export const DEMAND_API_FIELDS: Readonly<Partial<Record<string, DemandField>>> =
@@ -121,3 +137,15 @@ export const missingDemandFields = (values: DemandValues): DemandField[] => {
   ];
   return required.filter(([, isMissing]) => isMissing).map(([key]) => key);
 };
+
+/** api 錯誤 → 對話框欄位下的原因與提示(REACT-18;api 的 `startAt` / `endAt` 對到開始 / 結束時間)。 */
+export const demandErrorTextsOf = (
+  error: unknown,
+  t: (key: string, values?: Record<string, string>) => string,
+) =>
+  scheduleErrorTextsOf(
+    error,
+    DEMAND_FIELDS,
+    t,
+    (field) => DEMAND_API_FIELDS[field],
+  );

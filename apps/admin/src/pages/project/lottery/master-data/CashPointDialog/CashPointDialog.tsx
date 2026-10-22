@@ -16,6 +16,7 @@ import { Stack } from "@repo/ui/stack";
 import { Switch } from "@repo/ui/switch";
 import { TextField } from "@repo/ui/text-field";
 
+import { FieldErrorText } from "@/components/base/FieldErrorText/FieldErrorText";
 import { OrgTreeSelect } from "@/components/base/OrgTreeSelect/OrgTreeSelect";
 import { useSession } from "@/hooks/base/useSession";
 
@@ -46,15 +47,15 @@ export const CashPointDialog = ({
   onClose,
 }: CashPointDialogProps) => {
   const t = useTranslations("admin.lotteryMasterData.cashPointForm");
-  const tErrors = useTranslations("admin.lotteryMasterData.errors");
   const { session } = useSession();
   const navigate = useNavigate();
   const isMobile = useBreakpointDown("sm");
   const form = useCashPointForm(cashPoint, defaultOrgId, onClose);
   const { values, change } = form;
   const isEditing = cashPoint !== null;
+  const errorText = (field: CashPointFormField) => form.fieldErrors[field];
   const isInvalid = (field: CashPointFormField) =>
-    form.invalidFields.includes(field);
+    errorText(field) !== undefined;
 
   const positions = useLotteryPositionOptionsQuery(
     session.client,
@@ -107,8 +108,8 @@ export const CashPointDialog = ({
       }
     >
       <Stack spacing={2.5} sx={{ pt: 1 }}>
-        {form.errorCode !== null && (
-          <Alert severity="error">{tErrors(form.errorCode)}</Alert>
+        {form.errorText !== null && (
+          <Alert severity="error">{form.errorText}</Alert>
         )}
         {/* 分店 = 可見範圍內的組織(業務頁,`scope="visible"`);建立後不能換 */}
         <OrgTreeSelect
@@ -119,7 +120,9 @@ export const CashPointDialog = ({
           required
           fullWidth
           error={isInvalid("orgId")}
-          {...(isEditing ? { helperText: t("orgFixed") } : {})}
+          helperText={
+            errorText("orgId") ?? (isEditing ? t("orgFixed") : undefined)
+          }
           onChange={(ids) => {
             change("orgId", ids[0] ?? "");
             change("positionKey", "");
@@ -133,6 +136,7 @@ export const CashPointDialog = ({
             options={positionOptions}
             required
             error={isInvalid("positionKey")}
+            helperText={errorText("positionKey")}
             onChange={choosePosition}
           />
           {access.fieldManagerRoute !== null && (
@@ -155,6 +159,7 @@ export const CashPointDialog = ({
           value={values.name}
           required
           error={isInvalid("name")}
+          helperText={errorText("name")}
           onChange={(event) => {
             change("name", event.target.value);
           }}
@@ -165,6 +170,7 @@ export const CashPointDialog = ({
             type="number"
             value={values.order}
             error={isInvalid("order")}
+            helperText={errorText("order")}
             onChange={(event) => {
               change("order", event.target.value);
             }}
@@ -177,6 +183,7 @@ export const CashPointDialog = ({
               options={printerOptions}
               displayEmpty
               error={isInvalid("printerId")}
+              helperText={errorText("printerId")}
               onChange={(value) => {
                 change("printerId", value);
               }}
@@ -185,17 +192,20 @@ export const CashPointDialog = ({
           )}
         </Stack>
         {isEditing && (
-          <FormControlLabel
-            control={
-              <Switch
-                checked={values.enabled}
-                onChange={(_event, checked) => {
-                  change("enabled", checked);
-                }}
-              />
-            }
-            label={t("fields.enabled")}
-          />
+          <Stack spacing={0.5}>
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={values.enabled}
+                  onChange={(_event, checked) => {
+                    change("enabled", checked);
+                  }}
+                />
+              }
+              label={t("fields.enabled")}
+            />
+            <FieldErrorText text={errorText("enabled")} />
+          </Stack>
         )}
         <TextField
           label={t("fields.note")}
@@ -203,6 +213,7 @@ export const CashPointDialog = ({
           multiline
           minRows={2}
           error={isInvalid("note")}
+          helperText={errorText("note")}
           onChange={(event) => {
             change("note", event.target.value);
           }}

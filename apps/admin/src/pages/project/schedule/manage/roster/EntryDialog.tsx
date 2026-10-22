@@ -16,6 +16,7 @@ import { SelectField } from "@repo/ui/select-field";
 import { Stack } from "@repo/ui/stack";
 import { TextField } from "@repo/ui/text-field";
 
+import { FieldErrorText } from "@/components/base/FieldErrorText/FieldErrorText";
 import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
 import { useSession } from "@/hooks/base/useSession";
 import {
@@ -26,7 +27,6 @@ import {
 } from "@/lib/project/schedule-roster";
 
 import { ConfirmDeleteDialog } from "../../ConfirmDeleteDialog";
-import { scheduleErrorOf } from "../../schedule-error";
 import { DemandDialog } from "./DemandDialog";
 import { EntryAssignmentRows } from "./EntryAssignmentRows";
 import {
@@ -42,7 +42,8 @@ import {
   type RosterEntry,
   useRoster,
 } from "./roster-context";
-import { blockedEntryIdsOf, errorFieldsOf } from "./roster-error";
+import { blockedEntryIdsOf } from "./roster-error";
+import { useEntryFieldErrors } from "./useEntryFieldErrors";
 import { useEntryPunches } from "./useEntryPunches";
 
 export interface EntryDialogProps {
@@ -73,7 +74,6 @@ export const EntryDialog = ({
   const t = useTranslations("admin.schedule.roster.entryDialog");
   const tRoster = useTranslations("admin.schedule.roster");
   const tCommon = useTranslations("admin.schedule.common");
-  const tErrors = useTranslations("admin.schedule.errors");
   const tCalendar = useTranslations("admin.schedule.calendar");
   const { session } = useSession();
   const queryClient = useQueryClient();
@@ -99,6 +99,8 @@ export const EntryDialog = ({
   const [isAddingDemand, setIsAddingDemand] = useState(false);
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // 欄位錯了就在欄位正下方寫原因(REACT-18);上方提示只放通用句
+  const { fieldErrors, ...errors } = useEntryFieldErrors();
   const changeReason = useChangeReason(canEdit);
 
   const person = data.people.find((item) => item.userId === form.userId);
@@ -111,6 +113,7 @@ export const EntryDialog = ({
 
   /** 改上下班時間;新增時休息還沒自己改過,就依規則「預設休息」重帶。 */
   const setTimes = (startTime: string, endTime: string) => {
+    errors.clear("startTime", "endTime");
     const next = spanOf(form.date, startTime, endTime, timezone);
     setForm((current) => ({
       ...current,
@@ -135,16 +138,7 @@ export const EntryDialog = ({
   });
   const invalidate = () =>
     queryClient.invalidateQueries({ queryKey: ROSTER_QUERY_ROOT });
-  const errorText = (cause: unknown) => tErrors(scheduleErrorOf(cause).code);
-  const saveErrorText = (cause: unknown) => {
-    const fields = errorFieldsOf(cause);
-    if (fields.includes("startAt")) {
-      return t("errors.time");
-    }
-    return fields.includes("assignments")
-      ? t("errors.assignments")
-      : errorText(cause);
-  };
+  const errorText = errors.summaryOf;
   const save = useSaveScheduleEntryMutation(
     session.client,
     useMutationFeedback({
@@ -155,9 +149,9 @@ export const EntryDialog = ({
         onClose();
       },
       onError: (cause) => {
-        setError(
-          changeReason.markFromError(cause) ? null : saveErrorText(cause),
-        );
+        const isReasonError = changeReason.markFromError(cause);
+        const summary = errors.markFromError(cause);
+        setError(isReasonError ? null : summary);
       },
     }),
   );
@@ -280,11 +274,14 @@ export const EntryDialog = ({
               required
               fullWidth
               disabled={!canEdit}
+              error={fieldErrors.userId !== undefined}
+              helperText={fieldErrors.userId}
               options={data.people
                 .filter((item) => item.isCandidate)
                 .map((item) => ({ value: item.userId, label: item.name }))}
               onChange={(next) => {
                 setForm((current) => ({ ...current, userId: next }));
+                errors.clear("userId");
               }}
             />
           )}
@@ -313,6 +310,8 @@ export const EntryDialog = ({
             required
             fullWidth
             disabled={!canEdit}
+            error={fieldErrors.startTime !== undefined}
+            helperText={fieldErrors.startTime}
             slotProps={{ inputLabel: { shrink: true } }}
             onChange={(event) => {
               setTimes(event.target.value, form.endTime);
@@ -325,6 +324,8 @@ export const EntryDialog = ({
             required
             fullWidth
             disabled={!canEdit}
+            error={fieldErrors.endTime !== undefined}
+            helperText={fieldErrors.endTime}
             slotProps={{ inputLabel: { shrink: true } }}
             onChange={(event) => {
               setTimes(form.startTime, event.target.value);
@@ -336,6 +337,8 @@ export const EntryDialog = ({
             value={form.breakText}
             fullWidth
             disabled={!canEdit}
+            error={fieldErrors.breakMinutes !== undefined}
+            helperText={fieldErrors.breakMinutes}
             slotProps={{ htmlInput: { min: 0, step: 5 } }}
             onChange={(event) => {
               setIsBreakEdited(true);
@@ -373,6 +376,7 @@ export const EntryDialog = ({
             }
           }}
         />
+        <FieldErrorText text={fieldErrors.assignments} />
         {entry !== null && punches.block}
         {changeReason.fields}
       </Stack>

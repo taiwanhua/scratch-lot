@@ -182,15 +182,15 @@ registerGameUsageChecker(name, (tenantId, gameId) => Promise<boolean>): () => vo
 
 只用通用碼(GQL-04),細分原因放 `extensions.reason`:
 
-| code / reason                                                 | 何時                           | 畫面                     |
-| ------------------------------------------------------------- | ------------------------------ | ------------------------ |
-| `FORBIDDEN`                                                   | 沒有寫入權限、沒綁讀取要的模組 | 「你沒有這個操作的權限」 |
-| `NOT_FOUND`                                                   | 別租戶 / 不在可見範圍 / 已刪除 | 「找不到這筆資料」       |
-| `VALIDATION_FAILED`                                           | 欄位不合(`fields` 標回欄位)    | 欄位標紅 + 通用說明      |
-| `VALIDATION_FAILED` + `GAME_CODE_DUPLICATE`                   | 代號在租戶內重複               | 「遊戲代號已被使用」     |
-| `VALIDATION_FAILED` + `GAME_IN_USE`                           | 有庫存還改鎖定欄位 / 刪除      | 說明鎖定原因             |
-| `VALIDATION_FAILED` + `POSITION_DUPLICATE` / `NAME_DUPLICATE` | 同分店重複                     | 對應說明                 |
-| `VALIDATION_FAILED` + `CASH_POINT_IN_USE`                     | 停用守門擋下                   | 說明不能停用的原因       |
+| code / reason                                                 | 何時                           | 畫面                                                                        |
+| ------------------------------------------------------------- | ------------------------------ | --------------------------------------------------------------------------- |
+| `FORBIDDEN`                                                   | 沒有寫入權限、沒綁讀取要的模組 | 「你沒有這個操作的權限」                                                    |
+| `NOT_FOUND`                                                   | 別租戶 / 不在可見範圍 / 已刪除 | 「找不到這筆資料」                                                          |
+| `VALIDATION_FAILED`                                           | 欄位不合(`fields` 標回欄位)    | 欄位標紅,欄位下寫該欄的格式要求;頁面提示放通用句(REACT-18)                  |
+| `VALIDATION_FAILED` + `GAME_CODE_DUPLICATE`                   | 代號在租戶內重複               | 代號欄下寫「遊戲代號已被使用」                                              |
+| `VALIDATION_FAILED` + `GAME_IN_USE`                           | 有庫存還改鎖定欄位 / 刪除      | 改到的欄位下說明鎖定原因;刪除時寫在確認框                                   |
+| `VALIDATION_FAILED` + `POSITION_DUPLICATE` / `NAME_DUPLICATE` | 同分店重複                     | 崗位 / 名稱欄下各寫各的(兩欄同時撞時 api 只帶崗位的原因,名稱欄照寫名稱重複) |
+| `VALIDATION_FAILED` + `CASH_POINT_IN_USE`                     | 停用守門擋下                   | 啟用開關下說明不能停用的原因                                                |
 
 ## 稽核
 

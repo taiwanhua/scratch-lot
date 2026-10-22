@@ -23,6 +23,7 @@ import {
 } from "../../database/schedule/schedule.repositories";
 import { ScheduleFieldOptionsService } from "../field-options/schedule-field-options.service";
 import {
+  SCHEDULE_REASONS,
   forbiddenError,
   notFoundError,
   savingUnique,
@@ -121,9 +122,11 @@ export class ScheduleCalendarService {
       date: data.date,
     });
     if (sameDate && String(sameDate._id) !== String(existing?._id)) {
-      throw validationError(`org already has a calendar day on ${data.date}`, [
-        "date",
-      ]);
+      throw validationError(
+        `org already has a calendar day on ${data.date}`,
+        ["date"],
+        SCHEDULE_REASONS.calendarDayDuplicate,
+      );
     }
     if (data.category !== null) {
       await this.fieldOptions.assertOptions(operator, [
@@ -142,6 +145,7 @@ export class ScheduleCalendarService {
           : this.days.create(operator, { orgId: org.id, ...data }),
       `org already has a calendar day on ${data.date}`,
       ["date"],
+      SCHEDULE_REASONS.calendarDayDuplicate,
     );
     if (!saved) {
       throw notFoundError(`calendar day not found: ${String(input.id)}`);

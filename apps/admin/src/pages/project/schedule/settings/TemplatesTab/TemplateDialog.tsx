@@ -25,17 +25,25 @@ import { Stack } from "@repo/ui/stack";
 import { TextField } from "@repo/ui/text-field";
 import { Typography } from "@repo/ui/typography";
 
+import { FieldErrorText } from "@/components/base/FieldErrorText/FieldErrorText";
 import { TagPaletteSelect } from "@/components/project/TagPaletteSelect/TagPaletteSelect";
 import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
 import { useSession } from "@/hooks/base/useSession";
 import { useScheduleFieldOptions } from "@/hooks/project/schedule/useScheduleFieldOptions/useScheduleFieldOptions";
+import {
+  type FieldErrorTexts,
+  withoutFieldError,
+} from "@/lib/base/field-errors";
 import {
   type TagPaletteKey,
   isTagPaletteKey,
 } from "@/lib/project/tag-palettes";
 
 import { ConfirmDeleteDialog } from "../../ConfirmDeleteDialog";
-import { scheduleErrorOf } from "../../schedule-error";
+import {
+  scheduleErrorTextsOf,
+  scheduleFormatErrorsOf,
+} from "../../schedule-field-errors";
 import { TemplateTaskList, type TemplateTaskRow } from "./TemplateTaskList";
 
 interface Values {
@@ -52,6 +60,16 @@ type Field =
   "name" | "shortName" | "startTime" | "endTime" | "positionKey" | "tasks";
 
 let rowSequence = 0;
+/** 會標回對話框的欄位(api `fields`)。 */
+const FIELDS: readonly Field[] = [
+  "name",
+  "shortName",
+  "startTime",
+  "endTime",
+  "positionKey",
+  "tasks",
+];
+
 const nextKey = (): string => {
   rowSequence += 1;
   return `new-${String(rowSequence)}`;
@@ -105,7 +123,7 @@ export const TemplateDialog = ({ template, onClose }: TemplateDialogProps) => {
   const t = useTranslations("admin.schedule.templates.dialog");
   const tTemplates = useTranslations("admin.schedule.templates");
   const tCommon = useTranslations("admin.schedule.common");
-  const tErrors = useTranslations("admin.schedule.errors");
+  const tSchedule = useTranslations("admin.schedule");
   const { session } = useSession();
   const queryClient = useQueryClient();
   const isMobile = useBreakpointDown("sm");
@@ -115,7 +133,9 @@ export const TemplateDialog = ({ template, onClose }: TemplateDialogProps) => {
   const tasks = useScheduleFieldOptions(SCHEDULE_FIELD_CATEGORY_KEYS.task);
   const rules = useScheduleRulesQuery(session.client, { input: null });
   const [values, setValues] = useState(() => initialValues(template));
-  const [invalid, setInvalid] = useState<Field[]>([]);
+  // 欄位錯了就在欄位正下方寫原因(REACT-18);提示只放通用句
+  const [fieldErrors, setFieldErrors] = useState<FieldErrorTexts<Field>>({});
+  const invalid = Object.keys(fieldErrors);
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
   const canEdit = template === null || template.canEdit;
 
@@ -134,7 +154,8 @@ export const TemplateDialog = ({ template, onClose }: TemplateDialogProps) => {
     queryClient.invalidateQueries({
       queryKey: useScheduleDemandTemplatesQuery.getKey(),
     });
-  const errorOf = (error: unknown) => tErrors(scheduleErrorOf(error).code);
+  const errorOf = (error: unknown) =>
+    scheduleErrorTextsOf(error, FIELDS, tSchedule).summary;
 
   const save = useSaveScheduleDemandTemplateMutation(
     session.client,
@@ -146,19 +167,7 @@ export const TemplateDialog = ({ template, onClose }: TemplateDialogProps) => {
         onClose();
       },
       onError: (error) => {
-        setInvalid(
-          (scheduleErrorOf(error).fields ?? []).filter(
-            (field): field is Field =>
-              [
-                "name",
-                "shortName",
-                "startTime",
-                "endTime",
-                "positionKey",
-                "tasks",
-              ].includes(field),
-          ),
-        );
+        setFieldErrors(scheduleErrorTextsOf(error, FIELDS, tSchedule).texts);
       },
     }),
   );
@@ -176,7 +185,7 @@ export const TemplateDialog = ({ template, onClose }: TemplateDialogProps) => {
 
   const change = <Key extends keyof Values>(key: Key, value: Values[Key]) => {
     setValues((current) => ({ ...current, [key]: value }));
-    setInvalid((current) => current.filter((field) => field !== key));
+    setFieldErrors((current) => withoutFieldError(current, key as Field));
   };
 
   const leaders = values.tasks.filter((task) => task.role === "leader");
@@ -196,7 +205,7 @@ export const TemplateDialog = ({ template, onClose }: TemplateDialogProps) => {
     if (values.startTime === "") missing.push("startTime");
     if (values.endTime === "") missing.push("endTime");
     if (values.positionKey === "") missing.push("positionKey");
-    setInvalid(missing);
+    setFieldErrors(scheduleFormatErrorsOf(missing, tSchedule));
     if (missing.length > 0) {
       return;
     }
@@ -289,6 +298,7 @@ export const TemplateDialog = ({ template, onClose }: TemplateDialogProps) => {
             fullWidth
             disabled={!canEdit}
             error={invalid.includes("name")}
+            helperText={fieldErrors.name}
             onChange={(event) => {
               change("name", event.target.value);
             }}
@@ -300,7 +310,7 @@ export const TemplateDialog = ({ template, onClose }: TemplateDialogProps) => {
             fullWidth
             disabled={!canEdit}
             error={invalid.includes("shortName")}
-            helperText={t("shortNameHint")}
+            helperText={fieldErrors.shortName ?? t("shortNameHint")}
             onChange={(event) => {
               change("shortName", event.target.value);
             }}
@@ -315,6 +325,7 @@ export const TemplateDialog = ({ template, onClose }: TemplateDialogProps) => {
             fullWidth
             disabled={!canEdit}
             error={invalid.includes("startTime")}
+            helperText={fieldErrors.startTime}
             slotProps={{ inputLabel: { shrink: true } }}
             onChange={(event) => {
               change("startTime", event.target.value);
@@ -328,7 +339,7 @@ export const TemplateDialog = ({ template, onClose }: TemplateDialogProps) => {
             fullWidth
             disabled={!canEdit}
             error={invalid.includes("endTime")}
-            helperText={t("timeHint")}
+            helperText={fieldErrors.endTime ?? t("timeHint")}
             slotProps={{ inputLabel: { shrink: true } }}
             onChange={(event) => {
               change("endTime", event.target.value);
@@ -342,6 +353,7 @@ export const TemplateDialog = ({ template, onClose }: TemplateDialogProps) => {
           fullWidth
           disabled={!canEdit}
           error={invalid.includes("positionKey")}
+          helperText={fieldErrors.positionKey}
           options={positions.options}
           onChange={(next) => {
             change("positionKey", next);
@@ -375,11 +387,7 @@ export const TemplateDialog = ({ template, onClose }: TemplateDialogProps) => {
           onChange={changeTask}
           onRemove={removeTask}
         />
-        {invalid.includes("tasks") && (
-          <Typography variant="caption" color="error">
-            {tErrors("VALIDATION_FAILED")}
-          </Typography>
-        )}
+        <FieldErrorText text={fieldErrors.tasks} />
         <Stack direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
           <Typography variant="subtitle2">{t("color")}</Typography>
           <TagPaletteSelect

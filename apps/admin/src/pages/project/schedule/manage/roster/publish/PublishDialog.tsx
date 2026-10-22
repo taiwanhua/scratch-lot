@@ -14,7 +14,7 @@ import { Typography } from "@repo/ui/typography";
 import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
 import { useSession } from "@/hooks/base/useSession";
 
-import { scheduleErrorOf } from "../../../schedule-error";
+import { scheduleErrorKey } from "../../../schedule-error";
 import { CheckItemList } from "../check-panel/CheckItemList";
 import { publishBlockedReasonOf } from "../check-panel/check-errors";
 import {
@@ -72,7 +72,7 @@ export const PublishDialog = ({ onClose }: PublishDialogProps) => {
         return t("errors.AUTO_RUN_IN_PROGRESS");
       }
       case null: {
-        return tErrors(scheduleErrorOf(cause).code);
+        return tErrors(scheduleErrorKey(cause));
       }
     }
   };

@@ -154,6 +154,15 @@ export const DailyCloseBankStep = ({
   const t = useTranslations("admin.lotteryStore.dailyClose.bank");
   const tStore = useTranslations("admin.lotteryStore");
   const noAccount = wizard.bankAccounts.length === 0;
+  // 欄位錯了就在欄位正下方寫原因(REACT-18)
+  const depositAmountError = (problem: typeof flow.depositProblem) => {
+    if (problem === "exceeds_available") {
+      return t("exceeds", { amount: moneyText(flow.counted) });
+    }
+    return problem === "invalid_amount"
+      ? tStore("fieldErrors.nonNegativeInteger")
+      : undefined;
+  };
   return (
     <Card sx={{ px: { xs: 2, sm: 3 }, py: 2.5 }}>
       <Stack spacing={2} sx={{ maxWidth: 640 }}>
@@ -170,11 +179,7 @@ export const DailyCloseBankStep = ({
             flow.depositProblem === "invalid_amount" ||
             flow.depositProblem === "exceeds_available"
           }
-          helperText={
-            flow.depositProblem === "exceeds_available"
-              ? t("exceeds", { amount: moneyText(flow.counted) })
-              : undefined
-          }
+          helperText={depositAmountError(flow.depositProblem)}
           slotProps={{ htmlInput: { inputMode: "numeric" } }}
           onChange={(event) => {
             flow.setDepositAmount(event.target.value);
@@ -185,6 +190,11 @@ export const DailyCloseBankStep = ({
           value={flow.accountId}
           disabled={noAccount}
           error={flow.depositProblem === "account_required"}
+          helperText={
+            flow.depositProblem === "account_required"
+              ? tStore("fieldErrors.required")
+              : undefined
+          }
           options={wizard.bankAccounts.map((account) => ({
             value: account.id,
             label: account.name,

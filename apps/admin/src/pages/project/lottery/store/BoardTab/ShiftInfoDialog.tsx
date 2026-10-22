@@ -19,6 +19,7 @@ import { Stack } from "@repo/ui/stack";
 import { TextField } from "@repo/ui/text-field";
 import { Typography } from "@repo/ui/typography";
 
+import { FieldErrorText } from "@/components/base/FieldErrorText/FieldErrorText";
 import {
   EMPTY_REASON,
   type ReasonValue,
@@ -28,8 +29,10 @@ import {
 import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
 import { useSession } from "@/hooks/base/useSession";
 import { useScheduleFieldOptions } from "@/hooks/project/schedule/useScheduleFieldOptions/useScheduleFieldOptions";
-import { storeErrorKey, storeErrorOf } from "@/lib/project/lottery/store-error";
+import type { FieldErrorTexts } from "@/lib/base/field-errors";
+import { storeErrorKey } from "@/lib/project/lottery/store-error";
 
+import { storeErrorTextsOf, storeFormatErrorsOf } from "../store-field-errors";
 import { moneyText } from "../store-text";
 import { STORE_BOARD_QUERY_KEY } from "./board-query";
 import { useEntryText } from "./useEntryText";
@@ -47,6 +50,9 @@ export interface ShiftInfoDialogProps {
  * [改對應排班] 只有這一班的負責人或店長、交班結帳送出前看得到(api 回 `canReassign`);
  * 原因必填(欄位管理「改對應排班原因」,選「其他」說明必填),改完任務快照依新的排班重寫。
  */
+/** 會標回對話框的欄位(api `fields`)。 */
+const FIELDS = ["scheduleEntryId", "reasonKey", "reasonNote"] as const;
+
 export const ShiftInfoDialog = ({ shiftId, onClose }: ShiftInfoDialogProps) => {
   const t = useTranslations("admin.lotteryStore");
   const { session } = useSession();
@@ -65,22 +71,25 @@ export const ShiftInfoDialog = ({ shiftId, onClose }: ShiftInfoDialogProps) => {
   const [isEditing, setIsEditing] = useState(false);
   const [entry, setEntry] = useState<string>(TEMPORARY);
   const [reason, setReason] = useState<ReasonValue>(EMPTY_REASON);
-  const [invalid, setInvalid] = useState<string[]>([]);
-  const [errorKey, setErrorKey] = useState<string | null>(null);
+  // 欄位錯了就在欄位正下方寫原因(REACT-18);上方提示只放通用句
+  const [fieldErrors, setFieldErrors] = useState<FieldErrorTexts<string>>({});
+  const invalid = Object.keys(fieldErrors);
+  const [errorText, setErrorText] = useState<string | null>(null);
 
   const reassign = useReassignLotteryShiftEntryMutation(
     session.client,
     useMutationFeedback({
       success: t("reassign.success"),
-      error: (error: unknown) => t(storeErrorKey(error)),
+      error: (error: unknown) => storeErrorTextsOf(error, FIELDS, t).summary,
       onSuccess: () => {
         void queryClient.invalidateQueries({ queryKey: STORE_BOARD_QUERY_KEY });
         void query.refetch();
         setIsEditing(false);
       },
       onError: (error: unknown) => {
-        setErrorKey(storeErrorKey(error));
-        setInvalid(storeErrorOf(error).fields ?? []);
+        const { texts, summary } = storeErrorTextsOf(error, FIELDS, t);
+        setFieldErrors(texts);
+        setErrorText(summary);
       },
     }),
   );
@@ -88,15 +97,15 @@ export const ShiftInfoDialog = ({ shiftId, onClose }: ShiftInfoDialogProps) => {
   const startEditing = () => {
     setEntry(info?.entry?.id ?? TEMPORARY);
     setReason(EMPTY_REASON);
-    setInvalid([]);
-    setErrorKey(null);
+    setFieldErrors({});
+    setErrorText(null);
     setIsEditing(true);
   };
 
   const submit = () => {
     const missing = missingReasonFields(reason);
-    setInvalid(missing);
-    setErrorKey(null);
+    setFieldErrors(storeFormatErrorsOf(missing, t));
+    setErrorText(null);
     if (missing.length > 0) {
       return;
     }
@@ -172,8 +181,8 @@ export const ShiftInfoDialog = ({ shiftId, onClose }: ShiftInfoDialogProps) => {
         }
       >
         <Stack spacing={2} sx={{ pt: 1 }}>
-          {errorKey === null ? null : (
-            <Alert severity="error">{t(errorKey)}</Alert>
+          {errorText === null ? null : (
+            <Alert severity="error">{errorText}</Alert>
           )}
           <RadioGroup
             value={entry}
@@ -195,12 +204,14 @@ export const ShiftInfoDialog = ({ shiftId, onClose }: ShiftInfoDialogProps) => {
               label={t("openShift.temporary")}
             />
           </RadioGroup>
+          <FieldErrorText text={fieldErrors.scheduleEntryId} />
           <SelectField
             label={t("reassign.reason")}
             value={reason.reasonKey}
             required
             fullWidth
             error={invalid.includes("reasonKey")}
+            helperText={fieldErrors.reasonKey}
             options={reasons.options}
             onChange={(value: string) => {
               setReason({ ...reason, reasonKey: value });
@@ -213,6 +224,7 @@ export const ShiftInfoDialog = ({ shiftId, onClose }: ShiftInfoDialogProps) => {
             value={reason.reasonNote}
             required={noteRequired}
             error={invalid.includes("reasonNote")}
+            helperText={fieldErrors.reasonNote}
             onChange={(event) => {
               setReason({ ...reason, reasonNote: event.target.value });
             }}

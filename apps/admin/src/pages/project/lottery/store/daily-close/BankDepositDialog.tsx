@@ -17,9 +17,13 @@ import { Typography } from "@repo/ui/typography";
 
 import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
 import { useSession } from "@/hooks/base/useSession";
-import { storeErrorKey, storeErrorOf } from "@/lib/project/lottery/store-error";
+import {
+  type FieldErrorTexts,
+  withoutFieldError,
+} from "@/lib/base/field-errors";
 
 import { STORE_BOARD_QUERY_KEY } from "../BoardTab/board-query";
+import { storeErrorTextsOf, storeFormatErrorsOf } from "../store-field-errors";
 import { moneyText } from "../store-text";
 import { STORE_BANK_DEPOSIT_FORM_QUERY_KEY } from "./daily-close-keys";
 
@@ -46,6 +50,9 @@ export interface BankDepositDialogProps {
  * (提示先用現金更正單補登);
  * 本店沒有可用的銀行帳戶 → 錯誤提示、不能存。寫入成功 → `onCommitted`(看板據此自動印存款單,規格第 12 章)。
  */
+/** 會標回對話框的欄位(api `fields`)。 */
+const FIELDS = ["amount", "accountId", "note"] as const;
+
 export const BankDepositDialog = ({
   orgId,
   onClose,
@@ -65,8 +72,11 @@ export const BankDepositDialog = ({
   const [amount, setAmount] = useState("");
   const [chosen, setChosen] = useState("");
   const [note, setNote] = useState("");
-  const [invalid, setInvalid] = useState<string[]>([]);
-  const [errorKey, setErrorKey] = useState<string | null>(null);
+  // 欄位錯了就在欄位正下方寫原因(REACT-18);上方提示只放通用句
+  const [fieldErrors, setFieldErrors] = useState<
+    FieldErrorTexts<(typeof FIELDS)[number]>
+  >({});
+  const [errorText, setErrorText] = useState<string | null>(null);
   // 只有一個帳戶時自動帶入
   const accountId =
     chosen === "" && accounts.length === 1 ? (accounts[0]?.id ?? "") : chosen;
@@ -74,7 +84,7 @@ export const BankDepositDialog = ({
     session.client,
     useMutationFeedback({
       success: t("bankDeposit.success"),
-      error: (error: unknown) => t(storeErrorKey(error)),
+      error: (error: unknown) => storeErrorTextsOf(error, FIELDS, t).summary,
       onSuccess: (result, variables) => {
         const { input } = variables;
         onCommitted?.({
@@ -96,8 +106,9 @@ export const BankDepositDialog = ({
         onClose();
       },
       onError: (error: unknown) => {
-        setErrorKey(storeErrorKey(error));
-        setInvalid(storeErrorOf(error).fields ?? []);
+        const { texts, summary } = storeErrorTextsOf(error, FIELDS, t);
+        setFieldErrors(texts);
+        setErrorText(summary);
       },
     }),
   );
@@ -110,15 +121,15 @@ export const BankDepositDialog = ({
   const noAccount = data !== null && accounts.length === 0;
 
   const submit = () => {
-    const missing: string[] = [];
+    const missing: (typeof FIELDS)[number][] = [];
     if (!isAmountValid || exceeds) {
       missing.push("amount");
     }
     if (accountId === "") {
       missing.push("accountId");
     }
-    setInvalid(missing);
-    setErrorKey(null);
+    setFieldErrors(storeFormatErrorsOf(missing, t));
+    setErrorText(null);
     if (missing.length > 0) {
       return;
     }
@@ -174,24 +185,25 @@ export const BankDepositDialog = ({
         {noAccount ? (
           <Alert severity="error">{t("errors.BANK_DEPOSIT_NO_ACCOUNT")}</Alert>
         ) : null}
-        {errorKey === null ? null : (
-          <Alert severity="error">{t(errorKey)}</Alert>
+        {errorText === null ? null : (
+          <Alert severity="error">{errorText}</Alert>
         )}
         <TextField
           label={t("bankDeposit.amount")}
           value={amount}
           required
-          error={invalid.includes("amount") || exceeds}
+          error={fieldErrors.amount !== undefined || exceeds}
           helperText={
             exceeds
               ? t("bankDeposit.exceeds", {
                   amount: moneyText(available),
                 })
-              : undefined
+              : fieldErrors.amount
           }
           slotProps={{ htmlInput: { inputMode: "numeric" } }}
           onChange={(event) => {
             setAmount(event.target.value);
+            setFieldErrors((current) => withoutFieldError(current, "amount"));
           }}
         />
         <SelectField
@@ -199,13 +211,17 @@ export const BankDepositDialog = ({
           value={accountId}
           required
           disabled={noAccount}
-          error={invalid.includes("accountId")}
+          error={fieldErrors.accountId !== undefined}
+          helperText={fieldErrors.accountId}
           options={accounts.map((account) => ({
             value: account.id,
             label: account.name,
           }))}
           onChange={(next: string) => {
             setChosen(next);
+            setFieldErrors((current) =>
+              withoutFieldError(current, "accountId"),
+            );
           }}
         />
         <TextField

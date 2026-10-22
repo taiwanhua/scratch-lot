@@ -21,7 +21,7 @@ import { Typography } from "@repo/ui/typography";
 import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
 import { useSession } from "@/hooks/base/useSession";
 
-import { scheduleErrorOf } from "../../schedule-error";
+import { scheduleErrorKey } from "../../schedule-error";
 import { WeekTemplateDialog } from "./WeekTemplateDialog";
 
 type Row = ScheduleDemandWeekTemplateFieldsFragment;
@@ -59,7 +59,7 @@ export const WeekTemplatesTab = () => {
         data.saveScheduleDemandWeekTemplate.item.enabled
           ? t("feedback.enableSuccess")
           : t("feedback.disableSuccess"),
-      error: (error) => tErrors(scheduleErrorOf(error).code),
+      error: (error) => tErrors(scheduleErrorKey(error)),
       onSuccess: () => {
         void queryClient.invalidateQueries({
           queryKey: useScheduleDemandWeekTemplatesQuery.getKey(),

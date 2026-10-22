@@ -909,6 +909,7 @@ describe("排班設定(GraphQL 端點 + 真 MongoDB)", () => {
       expect(errorOf(again)).toMatchObject({
         code: "VALIDATION_FAILED",
         fields: ["userIds"],
+        reason: "ALREADY_JOINED",
       });
 
       const joined = await staffRows(manager, { joined: true });
@@ -956,6 +957,7 @@ describe("排班設定(GraphQL 端點 + 真 MongoDB)", () => {
       expect(errorOf(again)).toMatchObject({
         code: "VALIDATION_FAILED",
         fields: ["userIds"],
+        reason: "ALREADY_JOINED",
       });
       // 加入的那一層看到的是自己的檔案,不標「其他組織」
       const managerList = await staffRows(manager);
@@ -1182,6 +1184,7 @@ describe("排班設定(GraphQL 端點 + 真 MongoDB)", () => {
           extensions: expect.objectContaining({
             code: "VALIDATION_FAILED",
             fields: ["userIds"],
+            reason: "ALREADY_JOINED",
           }),
         }),
       ]);
@@ -1536,6 +1539,7 @@ describe("排班設定(GraphQL 端點 + 真 MongoDB)", () => {
       expect(errorOf(duplicate)).toMatchObject({
         code: "VALIDATION_FAILED",
         fields: ["date"],
+        reason: "CALENDAR_DAY_DUPLICATE",
       });
       const missing = await gql(manager, SAVE_CALENDAR_DAY, {
         input: {
@@ -1602,6 +1606,7 @@ describe("排班設定(GraphQL 端點 + 真 MongoDB)", () => {
           extensions: expect.objectContaining({
             code: "VALIDATION_FAILED",
             fields: ["date"],
+            reason: "CALENDAR_DAY_DUPLICATE",
           }),
         }),
       ]);

@@ -19,8 +19,14 @@ import { useSession } from "@/hooks/base/useSession";
 import { useTenantTimezone } from "@/hooks/base/useTenantTimezone";
 import { accountsErrorOf } from "@/lib/project/lottery/accounts-error";
 
+import {
+  accountErrorTextsOf,
+  accountFormatText,
+} from "../account-field-errors";
 import { moneyText } from "../accounts-config";
 import { useInvalidateAccounts } from "../useInvalidateAccounts";
+
+const FIELDS = ["reason"] as const;
 
 export interface ReverseTransactionDialogProps {
   transaction: LotteryBankTransactionFieldsFragment;
@@ -40,27 +46,36 @@ export const ReverseTransactionDialog = ({
   const timezone = useTenantTimezone() ?? DEFAULT_TENANT_TIMEZONE;
   const invalidate = useInvalidateAccounts();
   const [reason, setReason] = useState("");
-  const [isInvalid, setInvalid] = useState(false);
-  const [errorCode, setErrorCode] = useState<string | null>(null);
+  // 原因錯了就寫在欄位正下方(REACT-18);上方提示只放通用句
+  const [reasonError, setReasonError] = useState<string | undefined>();
+  const [errorText, setErrorText] = useState<string | null>(null);
   const reverse = useReverseLotteryBankTransactionMutation(
     session.client,
     useMutationFeedback({
       success: t("feedback.reverseSuccess"),
-      error: (error: unknown) => t(`errors.${accountsErrorOf(error).code}`),
+      error: (error: unknown) =>
+        accountErrorTextsOf(accountsErrorOf(error), FIELDS, t).summary,
       onSuccess: () => {
         invalidate();
         onClose();
       },
       onError: (error: unknown) => {
-        setErrorCode(accountsErrorOf(error).code);
+        const { texts, summary } = accountErrorTextsOf(
+          accountsErrorOf(error),
+          FIELDS,
+          t,
+        );
+        setReasonError(texts.reason);
+        setErrorText(summary);
       },
     }),
   );
   const submit = () => {
     if (reason.trim() === "") {
-      setInvalid(true);
+      setReasonError(accountFormatText(t, "reason"));
       return;
     }
+    setErrorText(null);
     reverse.mutate({ input: { id: transaction.id, reason: reason.trim() } });
   };
   return (
@@ -83,9 +98,7 @@ export const ReverseTransactionDialog = ({
       }
     >
       <Stack spacing={2} sx={{ pt: 1 }}>
-        {errorCode !== null && (
-          <Alert severity="error">{t(`errors.${errorCode}`)}</Alert>
-        )}
+        {errorText !== null && <Alert severity="error">{errorText}</Alert>}
         <Stack direction="row" sx={{ justifyContent: "space-between" }}>
           <Typography variant="body2" color="textSecondary">
             {t("reverseForm.original")}
@@ -105,10 +118,11 @@ export const ReverseTransactionDialog = ({
           label={t("reverseForm.reason")}
           value={reason}
           required
-          error={isInvalid}
+          error={reasonError !== undefined}
+          helperText={reasonError}
           onChange={(event) => {
             setReason(event.target.value);
-            setInvalid(false);
+            setReasonError(undefined);
           }}
         />
         <Typography variant="caption" color="textSecondary">

@@ -26,8 +26,12 @@ import {
 import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
 import { useSession } from "@/hooks/base/useSession";
 import { useLotteryFieldOptions } from "@/hooks/project/useLotteryFieldOptions/useLotteryFieldOptions";
-import { storeErrorKey, storeErrorOf } from "@/lib/project/lottery/store-error";
+import {
+  type FieldErrorTexts,
+  withoutFieldError,
+} from "@/lib/base/field-errors";
 
+import { storeErrorTextsOf, storeFormatErrorsOf } from "../store-field-errors";
 import { moneyText } from "../store-text";
 import { STORE_BOARD_QUERY_KEY } from "./board-query";
 
@@ -61,6 +65,9 @@ export interface CashMoveDialogProps {
  * 投庫顯示抽屜的應有(超過 → api 擋下);出庫原因必填(欄位管理「出庫原因」)。
  * 寫入成功 → `onCommitted`(看板據此自動印投庫單 / 出庫單,規格第 12 章)。
  */
+/** 會標回對話框的欄位(api `fields`)。 */
+const FIELDS = ["amount", "reasonKey", "reasonNote", "note"] as const;
+
 export const CashMoveDialog = ({
   kind,
   shift,
@@ -76,8 +83,10 @@ export const CashMoveDialog = ({
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
   const [reason, setReason] = useState<ReasonValue>(EMPTY_REASON);
-  const [invalid, setInvalid] = useState<string[]>([]);
-  const [errorKey, setErrorKey] = useState<string | null>(null);
+  // 欄位錯了就在欄位正下方寫原因(REACT-18);上方提示只放通用句
+  const [fieldErrors, setFieldErrors] = useState<FieldErrorTexts<string>>({});
+  const invalid = Object.keys(fieldErrors);
+  const [errorText, setErrorText] = useState<string | null>(null);
 
   const reasons = useLotteryFieldOptions(
     LOTTERY_FIELD_CATEGORY_KEYS.withdrawReason,
@@ -105,14 +114,15 @@ export const CashMoveDialog = ({
     });
   };
   const feedback = {
-    error: (error: unknown) => t(storeErrorKey(error)),
+    error: (error: unknown) => storeErrorTextsOf(error, FIELDS, t).summary,
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: STORE_BOARD_QUERY_KEY });
       onClose();
     },
     onError: (error: unknown) => {
-      setErrorKey(storeErrorKey(error));
-      setInvalid(storeErrorOf(error).fields ?? []);
+      const { texts, summary } = storeErrorTextsOf(error, FIELDS, t);
+      setFieldErrors(texts);
+      setErrorText(summary);
     },
   };
   const deposit = useDepositLotteryShiftCashMutation(
@@ -147,8 +157,8 @@ export const CashMoveDialog = ({
     if (kind === "withdraw") {
       missing.push(...missingReasonFields(reason));
     }
-    setInvalid(missing);
-    setErrorKey(null);
+    setFieldErrors(storeFormatErrorsOf(missing, t));
+    setErrorText(null);
     if (missing.length > 0) {
       return;
     }
@@ -191,8 +201,8 @@ export const CashMoveDialog = ({
       }
     >
       <Stack spacing={2} sx={{ pt: 1 }}>
-        {errorKey === null ? null : (
-          <Alert severity="error">{t(errorKey)}</Alert>
+        {errorText === null ? null : (
+          <Alert severity="error">{errorText}</Alert>
         )}
         <Stack
           direction="row"
@@ -211,10 +221,12 @@ export const CashMoveDialog = ({
           label={t("cash.amount")}
           value={amount}
           required
-          error={invalid.includes("amount")}
+          error={fieldErrors.amount !== undefined}
+          helperText={fieldErrors.amount}
           slotProps={{ htmlInput: { inputMode: "numeric" } }}
           onChange={(event) => {
             setAmount(event.target.value);
+            setFieldErrors((current) => withoutFieldError(current, "amount"));
           }}
         />
         {kind === "withdraw" ? (
@@ -223,6 +235,7 @@ export const CashMoveDialog = ({
             label={t("cash.reason")}
             value={reason}
             invalid={invalid}
+            errorTexts={fieldErrors}
             onChange={setReason}
           />
         ) : null}

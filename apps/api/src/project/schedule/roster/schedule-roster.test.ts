@@ -764,6 +764,7 @@ describe("排班表(GraphQL 端點 + 真 MongoDB)", () => {
       expect(errorOf(overlap)).toMatchObject({
         code: "VALIDATION_FAILED",
         fields: ["startAt"],
+        reason: "ENTRY_OVERLAP",
       });
       const adjacent = await saveEntry(hq, {
         userId: String(chen.userId),
@@ -849,12 +850,14 @@ describe("排班表(GraphQL 端點 + 真 MongoDB)", () => {
       ).toMatchObject({
         code: "VALIDATION_FAILED",
         fields: ["startAt"],
+        reason: "DAY_OFF_CONFLICT",
       });
       expect(
         errorOf(await entryOn("2026-12-11", "08:30", "10:00")),
       ).toMatchObject({
         code: "VALIDATION_FAILED",
         fields: ["startAt"],
+        reason: "DAY_OFF_CONFLICT",
       });
       const adjacent = await entryOn("2026-12-11", "13:00", "17:00");
       expect(adjacent.errors).toBeUndefined();
@@ -948,7 +951,10 @@ describe("排班表(GraphQL 端點 + 真 MongoDB)", () => {
           { demandId: demand.id, taskId: taskOf(demand, "leader") },
         ],
       });
-      expect(errorOf(notLeader)).toMatchObject({ fields: ["assignments"] });
+      expect(errorOf(notLeader)).toMatchObject({
+        fields: ["assignments"],
+        reason: "CANNOT_LEAD",
+      });
       const stranger = await saveEntry(hq, {
         userId: String(manager.userId),
         startAt: taipei("2026-11-07", "08:30"),
@@ -957,7 +963,10 @@ describe("排班表(GraphQL 端點 + 真 MongoDB)", () => {
           { demandId: demand.id, taskId: taskOf(demand, "helper") },
         ],
       });
-      expect(errorOf(stranger)).toMatchObject({ fields: ["userId"] });
+      expect(errorOf(stranger)).toMatchObject({
+        fields: ["userId"],
+        reason: "NOT_CANDIDATE",
+      });
       const otherDay = await saveEntry(hq, {
         userId: String(li.userId),
         startAt: taipei("2026-11-08", "08:30"),
@@ -966,7 +975,10 @@ describe("排班表(GraphQL 端點 + 真 MongoDB)", () => {
           { demandId: demand.id, taskId: taskOf(demand, "helper") },
         ],
       });
-      expect(errorOf(otherDay)).toMatchObject({ fields: ["assignments"] });
+      expect(errorOf(otherDay)).toMatchObject({
+        fields: ["assignments"],
+        reason: "TASK_NOT_ON_DAY",
+      });
     });
 
     it("店休那天不能排", async () => {
@@ -989,7 +1001,10 @@ describe("排班表(GraphQL 端點 + 真 MongoDB)", () => {
           { demandId: demand.id, taskId: taskOf(demand, "helper") },
         ],
       });
-      expect(errorOf(result)).toMatchObject({ fields: ["startAt"] });
+      expect(errorOf(result)).toMatchObject({
+        fields: ["startAt"],
+        reason: "STORE_CLOSED",
+      });
     });
 
     it("編輯:人員不變、改填的任務(拿掉的解除、新的手動)", async () => {

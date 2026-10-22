@@ -233,9 +233,11 @@ function checkTypeRules(draft: DealerDraft): void {
     return;
   }
   if (draft.rentDueDay === null) {
-    throw validationError("rentDueDay is required with rentCycle", [
-      "rentDueDay",
-    ]);
+    throw validationError(
+      "rentDueDay is required with rentCycle",
+      ["rentDueDay"],
+      DEALER_REASONS.rentDueDayRequired,
+    );
   }
   if (draft.rentCycle !== "month" && draft.rentStartMonth === null) {
     throw validationError(

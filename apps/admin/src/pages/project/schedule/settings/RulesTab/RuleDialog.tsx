@@ -191,6 +191,9 @@ export const RuleDialog = ({
               fullWidth
               disabled={!canEdit}
               error={invalid.includes("order")}
+              helperText={
+                invalid.includes("order") ? t("errors.order") : undefined
+              }
               onChange={(event) => {
                 setOrder(event.target.value);
                 setInvalid([]);

@@ -345,7 +345,11 @@ export class DealerLinksService {
         (id, index) => ids.findIndex((other) => other.equals(id)) === index,
       );
       if (unique.length !== ids.length) {
-        throw validationError(`duplicate ${role}`, [ROLE_FIELDS[role]]);
+        throw validationError(
+          `duplicate ${role}`,
+          [ROLE_FIELDS[role]],
+          DEALER_REASONS.contactRepeated,
+        );
       }
       const limit = CONTACT_LIMITS[type][role];
       if (ids.length > limit) {

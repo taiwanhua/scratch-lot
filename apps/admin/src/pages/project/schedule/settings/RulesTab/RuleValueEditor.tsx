@@ -6,6 +6,7 @@ import { SelectField } from "@repo/ui/select-field";
 import { Stack } from "@repo/ui/stack";
 import { TextField } from "@repo/ui/text-field";
 
+import { FieldErrorText } from "@/components/base/FieldErrorText/FieldErrorText";
 import type { ScheduleFieldOption } from "@/hooks/project/schedule/useScheduleFieldOptions/useScheduleFieldOptions";
 
 export interface RuleValueEditorProps {
@@ -63,6 +64,19 @@ export const RuleValueEditor = ({
   const range = definition.range;
   const rangeText =
     range === null ? undefined : t("range", { min: range.min, max: range.max });
+  // 欄位錯了就在欄位正下方寫原因(REACT-18):數字欄寫範圍,結束日另提醒不能早於開始日
+  const rangeError =
+    range === null
+      ? t("errors.number")
+      : t("errors.range", { min: range.min, max: range.max });
+  const errorOf = (field: string): string | undefined => {
+    if (!invalid.includes(field)) {
+      return undefined;
+    }
+    return field === "endDay"
+      ? t("errors.endDay", { error: rangeError })
+      : rangeError;
+  };
 
   const numberField = (field: string, label: string, helper?: string) => (
     <TextField
@@ -73,7 +87,7 @@ export const RuleValueEditor = ({
       fullWidth
       disabled={disabled}
       error={invalid.includes(field)}
-      helperText={helper}
+      helperText={errorOf(field) ?? helper}
       slotProps={{ htmlInput: { step: range?.step ?? 1 } }}
       onChange={(event) => {
         onChange({ ...value, [field]: numberInput(event.target.value) });
@@ -117,6 +131,9 @@ export const RuleValueEditor = ({
           fullWidth
           disabled={disabled}
           error={invalid.includes("weekTemplateId")}
+          helperText={
+            invalid.includes("weekTemplateId") ? t("errors.choose") : undefined
+          }
           options={[
             { value: "", label: tRules("value.notSet") },
             ...weekTemplates.map((week) => ({
@@ -146,6 +163,9 @@ export const RuleValueEditor = ({
                 fullWidth
                 disabled={disabled}
                 error={invalid.includes(field)}
+                helperText={
+                  invalid.includes(field) ? t("errors.required") : undefined
+                }
                 options={[...taskOptions]}
                 onChange={(next) => {
                   onChange({ ...value, [field]: next });
@@ -256,6 +276,7 @@ const BreakTiersEditor = ({
           {t("addTier")}
         </Button>
       )}
+      <FieldErrorText text={isInvalid ? t("errors.tiers") : undefined} />
     </Stack>
   );
 };

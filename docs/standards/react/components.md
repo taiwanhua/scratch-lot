@@ -304,3 +304,23 @@ interface CellRenderContext<Row> {
 - `lg` 以上維持原本的三欄(清單、設計器、固定寬的屬性面板)。
 
 理由:主從兩欄在 390 寬硬塞會變成左右捲或兩欄都窄到不能用;以網址為準讓返回、重新整理、分享都一致,又不必多一份狀態。平板寬時殼的內容區不設最小寬度(≥ `lg` 才套用),左清單 320 加屬性面板 300 會把畫布擠到幾乎沒有(768 只剩約 90px、1024 約 30px);設計時畫布優先,清單與屬性要用時再叫出來。界線取 `lg` 與篩選抽屜(`FilterDrawer`)、`FormActions` 黏底同一條。屬性抽屜不蓋遮罩,因為改屬性時要邊看畫布上的效果、邊換選別的欄位。
+
+## REACT-18 欄位錯了,原因寫在欄位正下方;頁面提示只放通用句
+
+正本:`apps/admin/src/lib/base/field-errors.ts`(欄位 → 原因文案的對照)、`components/base/FieldErrorText/FieldErrorText.tsx`(沒有 `helperText` 的欄位);先例 `pages/base/system/PrintersPage/PrinterFormDialog/PrinterFormDialog.tsx`
+
+固定欄位的表單、對話框(表單引擎另有自己的逐欄訊息,見 `FormFieldCell`),欄位錯了一律**標紅 + 在那一欄正下方寫原因**,讓使用者不必猜:
+
+| 錯誤從哪來                                        | 欄位下寫什麼                                                                            |
+| ------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| 送出前的檢查沒過                                  | 那一欄的**格式要求**(「證號要 8 碼數字」「必填,最多 10 個字」「要填大於 0 的整數」)     |
+| api `VALIDATION_FAILED` 只指了欄位、沒有 `reason` | 同上(沒有原因 = 格式錯或必填;前端知道每一欄的規則,同一句寫在模組的 `*-field-errors.ts`) |
+| api 帶了 `reason`(重複、被占用、重疊、狀態不合…)  | **原因的文案**,寫在 `fields` 指到的每一欄下(「這個證號已經有經銷商使用」)               |
+
+- **頁面提示(表單底部 / 對話框上方的 `Alert`、Snackbar)只放通用句**(`errors.VALIDATION_FAILED`,例「資料未通過驗證,請檢查標示的欄位」);錯誤沒有對到畫面上任何一欄(`fields` 是 `id`、畫面上沒有的欄位,或根本沒帶)時,原因才寫在提示裡。判斷交給 `formErrorSummary`;錯誤解讀「依 `reason` 細分成本頁的碼」的頁面用 `fieldErrorsByCodeOf`。
+- 狀態存「欄位 → 原因」(`FieldErrorTexts<Field>`),不再只存「哪幾欄錯」;使用者改了那一欄就清掉那一欄(`withoutFieldError`)。原本的說明文字(`helperText` 的提示)在欄位沒錯時照常顯示,錯了換成原因。
+- 單選群組、勾選群組、色票、任務清單這類沒有 `helperText` 的欄位,用 `FieldErrorText` 把原因放在群組正下方(字級、顏色同 helperText)。共用欄位元件收 `errorTexts` / `errorText`(例:`ReasonFields`、`DayOffSlotFields`),呼叫端沒給時元件寫自己的預設格式要求。
+- 格式要求的數字(長度上限、範圍)從 `@repo/domain` 的常數帶進 ICU 參數,不在文案裡寫死,和 api 的檢查同一個來源。
+- **api 那邊**:會擋的情形若不是格式錯(重複、被占用、重疊、狀態不合),`VALIDATION_FAILED` 一定帶 `reason`(GQL-04「`VALIDATION_FAILED` 的 `reason`」),前端才寫得出原因;沒有原因的一律當成格式錯。
+
+理由:只標紅、原因只在頁面底部時,使用者看不出是哪一欄、為什麼錯(實例:證號 7 碼與證號重複,畫面上都只剩「資料未通過驗證」)。原因貼著欄位,看一眼就知道要改什麼;頁面提示只負責「這次沒存成」(DATA-06)。

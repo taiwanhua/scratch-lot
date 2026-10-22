@@ -29,8 +29,16 @@ import { OrgTreeSelect } from "@/components/base/OrgTreeSelect/OrgTreeSelect";
 import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
 import { useSession } from "@/hooks/base/useSession";
 import { useTenantTimezone } from "@/hooks/base/useTenantTimezone";
+import {
+  type FieldErrorTexts,
+  withoutFieldError,
+} from "@/lib/base/field-errors";
 import { accountsErrorOf } from "@/lib/project/lottery/accounts-error";
 
+import {
+  accountErrorTextsOf,
+  accountFormatErrorsOf,
+} from "../account-field-errors";
 import { moneyText } from "../accounts-config";
 import { useInvalidateAccounts } from "../useInvalidateAccounts";
 
@@ -47,6 +55,16 @@ type Field =
   | "occurredAt"
   | "branchOrgId"
   | "summary";
+
+const FIELDS: readonly Field[] = [
+  "type",
+  "direction",
+  "refId",
+  "amount",
+  "occurredAt",
+  "branchOrgId",
+  "summary",
+];
 
 /**
  * 登記交易(Figma AC-03b 222:23044;規格 9、10.1):類型 → 單據(批貨收入 / 調貨收入必填、只列有待退或待收的)→
@@ -70,8 +88,12 @@ export const RecordTransactionDialog = ({
   );
   const [branchOrgId, setBranchOrgId] = useState("");
   const [summary, setSummary] = useState("");
-  const [invalid, setInvalid] = useState<Field[]>([]);
-  const [errorCode, setErrorCode] = useState<string | null>(null);
+  // 欄位錯了就在欄位正下方寫原因(REACT-18);上方提示只放通用句
+  const [fieldErrors, setFieldErrors] = useState<FieldErrorTexts<Field>>({});
+  const [errorText, setErrorText] = useState<string | null>(null);
+  const clearError = (field: Field) => {
+    setFieldErrors((current) => withoutFieldError(current, field));
+  };
 
   const requirement = documentRequirementOf(type);
   const candidates = useLotterySettlementCandidatesQuery(
@@ -96,15 +118,20 @@ export const RecordTransactionDialog = ({
     session.client,
     useMutationFeedback({
       success: t("feedback.recordSuccess"),
-      error: (error: unknown) => t(`errors.${accountsErrorOf(error).code}`),
+      error: (error: unknown) =>
+        accountErrorTextsOf(accountsErrorOf(error), FIELDS, t).summary,
       onSuccess: () => {
         invalidate();
         onClose();
       },
       onError: (error: unknown) => {
-        const parsed = accountsErrorOf(error);
-        setErrorCode(parsed.code);
-        setInvalid((parsed.fields ?? []) as Field[]);
+        const { texts, summary } = accountErrorTextsOf(
+          accountsErrorOf(error),
+          FIELDS,
+          t,
+        );
+        setFieldErrors(texts);
+        setErrorText(summary);
       },
     }),
   );
@@ -113,7 +140,7 @@ export const RecordTransactionDialog = ({
   const chooseType = (value: BankTransactionType) => {
     setType(value);
     setRefId("");
-    setInvalid([]);
+    setFieldErrors({});
   };
 
   const selected = documents.find((row) => row.refId === refId);
@@ -137,8 +164,8 @@ export const RecordTransactionDialog = ({
 
   const submit = () => {
     const next = invalidFields();
-    setInvalid(next);
-    setErrorCode(null);
+    setFieldErrors(accountFormatErrorsOf(next, t));
+    setErrorText(null);
     if (next.length > 0 || occurredAt === null) {
       return;
     }
@@ -178,9 +205,7 @@ export const RecordTransactionDialog = ({
       }
     >
       <Stack spacing={2.5} sx={{ pt: 1 }}>
-        {errorCode !== null && (
-          <Alert severity="error">{t(`errors.${errorCode}`)}</Alert>
-        )}
+        {errorText !== null && <Alert severity="error">{errorText}</Alert>}
         <SelectField
           label={t("recordForm.fields.type")}
           value={type}
@@ -188,7 +213,8 @@ export const RecordTransactionDialog = ({
             value,
             label: t(`transactionTypes.${value}`),
           }))}
-          error={invalid.includes("type")}
+          error={fieldErrors.type !== undefined}
+          helperText={fieldErrors.type}
           onChange={chooseType}
         />
         {fixedDirectionOf(type) === null && (
@@ -200,8 +226,12 @@ export const RecordTransactionDialog = ({
               { value: "out" as const, label: t("direction.out") },
             ]}
             required
-            error={invalid.includes("direction")}
-            onChange={setDirection}
+            error={fieldErrors.direction !== undefined}
+            helperText={fieldErrors.direction}
+            onChange={(value) => {
+              setDirection(value);
+              clearError("direction");
+            }}
           />
         )}
         {requirement === "required" && (
@@ -210,12 +240,16 @@ export const RecordTransactionDialog = ({
             value={refId}
             options={documentOptions}
             required
-            error={invalid.includes("refId")}
-            {...(documentOptions.length === 0 && !candidates.isLoading
-              ? { helperText: t("recordForm.noDocument") }
-              : {})}
+            error={fieldErrors.refId !== undefined}
+            helperText={
+              fieldErrors.refId ??
+              (documentOptions.length === 0 && !candidates.isLoading
+                ? t("recordForm.noDocument")
+                : undefined)
+            }
             onChange={(value) => {
               setRefId(value);
+              clearError("refId");
               const row = documents.find((item) => item.refId === value);
               if (row !== undefined) {
                 setAmount(String(row.amount));
@@ -229,10 +263,12 @@ export const RecordTransactionDialog = ({
             label={t("recordForm.fields.amount")}
             value={amount}
             required
-            error={invalid.includes("amount")}
+            error={fieldErrors.amount !== undefined}
+            helperText={fieldErrors.amount}
             slotProps={{ htmlInput: { inputMode: "numeric" } }}
             onChange={(event) => {
               setAmount(event.target.value);
+              clearError("amount");
             }}
             sx={{ flex: 1 }}
           />
@@ -240,8 +276,12 @@ export const RecordTransactionDialog = ({
             label={t("recordForm.fields.occurredAt")}
             value={occurredAt}
             timezone={timezone}
-            error={invalid.includes("occurredAt")}
-            onChange={setOccurredAt}
+            error={fieldErrors.occurredAt !== undefined}
+            helperText={fieldErrors.occurredAt}
+            onChange={(value) => {
+              setOccurredAt(value);
+              clearError("occurredAt");
+            }}
             sx={{ flex: 1 }}
           />
         </Stack>
@@ -251,18 +291,22 @@ export const RecordTransactionDialog = ({
           value={branchOrgId === "" ? [] : [branchOrgId]}
           required={requiresBranch(type)}
           fullWidth
-          error={invalid.includes("branchOrgId")}
+          error={fieldErrors.branchOrgId !== undefined}
+          helperText={fieldErrors.branchOrgId}
           onChange={(ids) => {
             setBranchOrgId(ids.at(0) ?? "");
+            clearError("branchOrgId");
           }}
         />
         <TextField
           label={t("recordForm.fields.summary")}
           value={summary}
           required={requiresSummary(type)}
-          error={invalid.includes("summary")}
+          error={fieldErrors.summary !== undefined}
+          helperText={fieldErrors.summary}
           onChange={(event) => {
             setSummary(event.target.value);
+            clearError("summary");
           }}
         />
         <Typography variant="caption" color="textSecondary">

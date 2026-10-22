@@ -8,6 +8,7 @@ import { Stack } from "@repo/ui/stack";
 import { TextField } from "@repo/ui/text-field";
 import { Typography } from "@repo/ui/typography";
 
+import { FieldErrorText } from "@/components/base/FieldErrorText/FieldErrorText";
 import { FormActions } from "@/components/base/FormActions/FormActions";
 import { Section } from "@/components/base/Section/Section";
 import { TagPaletteSelect } from "@/components/project/TagPaletteSelect/TagPaletteSelect";
@@ -74,8 +75,8 @@ export const GameForm = ({ game, access }: GameFormProps) => {
           {game === null ? t("gameForm.createTitle") : t("gameForm.editTitle")}
         </Typography>
         {isLocked && <Alert severity="info">{t("gameForm.locked")}</Alert>}
-        {form.errorCode !== null && (
-          <Alert severity="error">{t(`errors.${form.errorCode}`)}</Alert>
+        {form.errorText !== null && (
+          <Alert severity="error">{form.errorText}</Alert>
         )}
         <Section
           pageId={pageId}
@@ -85,7 +86,7 @@ export const GameForm = ({ game, access }: GameFormProps) => {
           <GameInfoFields
             values={form.values}
             change={form.change}
-            invalidFields={form.invalidFields}
+            fieldErrors={form.fieldErrors}
             isLocked={isLocked}
           />
         </Section>
@@ -104,6 +105,7 @@ export const GameForm = ({ game, access }: GameFormProps) => {
                 form.change("color", value);
               }}
             />
+            <FieldErrorText text={form.fieldErrors.color} />
           </Stack>
         </Section>
         <Section
@@ -117,7 +119,8 @@ export const GameForm = ({ game, access }: GameFormProps) => {
             multiline
             minRows={2}
             fullWidth
-            error={form.invalidFields.includes("note")}
+            error={form.fieldErrors.note !== undefined}
+            helperText={form.fieldErrors.note}
             slotProps={{ htmlInput: { maxLength: 1000 } }}
             onChange={(event) => {
               form.change("note", event.target.value);

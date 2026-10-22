@@ -215,6 +215,15 @@ describe("經銷商管理(專案規格 5.2–5.4)", () => {
           }),
         ),
       ).toMatchObject({ reason: "RENT_START_MONTH_REQUIRED" });
+      // 有週期沒有繳費日:原因 RENT_DUE_DAY_REQUIRED(前端寫在繳費日欄下)
+      expect(
+        await createError(
+          dealerInput("B", { rentFee: 3000, rentCycle: "MONTH" }),
+        ),
+      ).toMatchObject({
+        reason: "RENT_DUE_DAY_REQUIRED",
+        fields: ["rentDueDay"],
+      });
       const b = await createDealer("B", {
         rentFee: 3000,
         rentCycle: "QUARTER",
@@ -270,6 +279,13 @@ describe("經銷商管理(專案規格 5.2–5.4)", () => {
           dealerInput("A", { coSalesDealerId: coSales.id, agentIds: ids }),
         ),
       ).toMatchObject({ reason: "ROLE_LIMIT", fields: ["agentIds"] });
+    });
+
+    it("同一位關係人選了兩次 → CONTACT_REPEATED", async () => {
+      const id = await createContact(["TRUSTEE"]);
+      expect(
+        await createError(dealerInput("A", { trusteeIds: [id, id] })),
+      ).toMatchObject({ reason: "CONTACT_REPEATED", fields: ["trusteeIds"] });
     });
 
     it("甲類受託人最多 2", async () => {
