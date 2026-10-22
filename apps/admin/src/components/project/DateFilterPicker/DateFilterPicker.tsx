@@ -52,6 +52,10 @@ export const DateFilterPicker = ({
     clearTimeout(leaveTimer.current);
     // 不只看 isPending:從空白開始打,MUI 在區段填滿前不回呼(值一直是 null),這邊不知道有草稿
     leaveTimer.current = setTimeout(() => {
+      // 切到別的視窗 / 分頁也會 blur,但焦點還留在欄位上:這時重掛會讓回來時焦點掉到 body、草稿也被清掉
+      if (!document.hasFocus()) {
+        return;
+      }
       setPendingFrom(null);
       setMountKey((key) => key + 1);
     });

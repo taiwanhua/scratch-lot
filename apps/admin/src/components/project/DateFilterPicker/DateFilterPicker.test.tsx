@@ -1,5 +1,5 @@
-import { describe, expect, it } from "@jest/globals";
-import { screen, waitFor } from "@testing-library/react";
+import { describe, expect, it, jest } from "@jest/globals";
+import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import { useState } from "react";
 
 import { authWorld } from "@/test/msw/auth-handlers";
@@ -158,6 +158,29 @@ describe("DateFilterPicker", () => {
           "YYYY-MM-DD",
         );
       });
+    });
+
+    it("切到別的視窗(文件失去焦點)不算離開:不重掛,回來還能接著打", async () => {
+      const { user } = renderHarness({ initial: "2026-10-14" });
+      await user.click(await screen.findByRole("spinbutton", { name: "Year" }));
+      await user.keyboard("20");
+      const section = year();
+
+      const hasFocus = jest.spyOn(document, "hasFocus").mockReturnValue(false);
+      try {
+        fireEvent.blur(section);
+        // 等 blur 之後的計時器跑完
+        await act(async () => {
+          await new Promise((resolve) => {
+            setTimeout(resolve, 10);
+          });
+        });
+      } finally {
+        hasFocus.mockRestore();
+      }
+
+      expect(year()).toBe(section);
+      expect(year().textContent).toBe("0020");
     });
 
     it("在欄位裡換區段、打開日曆不算離開:草稿留著,在日曆點一天照常套用", async () => {

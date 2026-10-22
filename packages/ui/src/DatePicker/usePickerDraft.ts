@@ -14,8 +14,9 @@ export const isCompleteDate = (date: Dayjs | null): date is Dayjs =>
 /** `onChange` 的第二個參數:讓呼叫端分辨「清空」與「打到一半」(兩者都送 `null`)。 */
 export interface PickerChangeDetails {
   /**
-   * 欄位有輸入但還不是完整、合法的值(年份沒打滿 4 位、只填了一部分區段、2/31 這種不存在的日期)。
+   * 欄位原本有值、改到一半還不是完整、合法的值:重打年份還沒打滿 4 位、清掉其中幾個區段、改成 2/31 這種不存在的日期。
    * 清空(所有區段都空)與完成的值都是 `false`。
+   * 從空白開始打時,MUI 在所有區段填滿前不回呼(不會收到 `true`);填滿後組不成合法日期(如 2/31、年份不足 4 位)才會是 `true`。
    * 篩選條件用它在打到一半時不改查詢,沿用上一個有效值。
    */
   isIncomplete: boolean;
