@@ -221,7 +221,9 @@
       "quick": {
         "over150": "逾 150 天",
         "over180": "逾 180 天",
-        "unsignedThisQuarter": "本季未見簽"
+        "unsignedThisQuarter": "本季未見簽",
+        "licenseExpiring": "證照 30 天內到期",
+        "licenseExpired": "證照已過期"
       },
       "filters": {
         "signin": "見簽狀態",
@@ -248,7 +250,8 @@
         "coSellers": "共同銷售人",
         "roles": "身分",
         "mobile": "手機",
-        "dealerCount": "關聯經銷商"
+        "dealerCount": "關聯經銷商",
+        "licenseExpiresAt": "證照到期"
       },
       "signed": "已見簽",
       "unsigned": "未見簽",

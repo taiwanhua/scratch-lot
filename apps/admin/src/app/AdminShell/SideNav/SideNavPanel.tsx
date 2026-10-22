@@ -7,6 +7,7 @@ import { List } from "@repo/ui/list";
 import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
 
+import type { NavBadges } from "@/hooks/base/useSidebarBadges";
 import type { NavNode } from "@/lib/base/module-tree";
 
 import { NAV_COLLAPSED_WIDTH, NAV_WIDTH } from "../shell-geometry";
@@ -26,8 +27,8 @@ export interface SideNavContentProps {
   tree: NavNode[];
   /** 目前網址(已正規化),決定哪一列為選中狀態 */
   currentPath: string;
-  /** 模組 key → 該列的待辦數(展開態畫數字、收合態畫小圓點) */
-  badges?: Readonly<Record<string, number>>;
+  /** 模組 key → 該列的待辦數與說明(展開態畫數字、收合態畫小圓點;說明是數字的提示) */
+  badges?: NavBadges;
 }
 
 export interface SideNavPanelProps extends SideNavContentProps {

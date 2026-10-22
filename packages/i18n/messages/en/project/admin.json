@@ -221,7 +221,9 @@
       "quick": {
         "over150": "Over 150 days",
         "over180": "Over 180 days",
-        "unsignedThisQuarter": "Not signed this quarter"
+        "unsignedThisQuarter": "Not signed this quarter",
+        "licenseExpiring": "License expiring in 30 days",
+        "licenseExpired": "License expired"
       },
       "filters": {
         "signin": "Sign-in",
@@ -248,7 +250,8 @@
         "coSellers": "Co-sellers",
         "roles": "Roles",
         "mobile": "Mobile",
-        "dealerCount": "Dealers"
+        "dealerCount": "Dealers",
+        "licenseExpiresAt": "License expires"
       },
       "signed": "Signed",
       "unsigned": "Not signed",

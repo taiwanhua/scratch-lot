@@ -34,6 +34,7 @@ const SIDEBAR_BADGES = /* GraphQL */ `
     sidebarBadges {
       moduleKey
       count
+      descriptionKey
     }
   }
 `;
@@ -49,6 +50,7 @@ const APPLY_CENTER_COUNTS = /* GraphQL */ `
 interface Badge {
   moduleKey: string;
   count: number;
+  descriptionKey: string | null;
 }
 
 describe("側欄計數(sidebarBadges)", () => {
@@ -180,6 +182,25 @@ describe("側欄計數(sidebarBadges)", () => {
     } finally {
       await setModuleEnabled(api.connection, WORKFLOW_MODULE, true);
     }
+  });
+
+  it("每一筆帶登記的 descriptionKey(側欄數字的提示);沒登記 = null", async () => {
+    const data = await ok<{ sidebarBadges: Badge[] }>(
+      api,
+      world.admin.token,
+      SIDEBAR_BADGES,
+    );
+    const descriptions = Object.fromEntries(
+      data.sidebarBadges.map((badge) => [
+        badge.moduleKey,
+        badge.descriptionKey,
+      ]),
+    );
+
+    expect(descriptions).toEqual({
+      "apply-center": "admin.sidebarBadgeSettings.descriptions.apply-center",
+      [WORKFLOW_MODULE]: null,
+    });
   });
 
   it("持有 view 的模組(有綁)行為不變;某一筆計算失敗只略過那一筆", async () => {

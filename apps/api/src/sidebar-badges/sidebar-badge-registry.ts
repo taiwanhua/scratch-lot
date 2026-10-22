@@ -35,7 +35,7 @@ export interface SidebarBadgeRegistration {
   readonly requires?: string;
   /**
    * 選填:「數什麼」的說明文字在 admin 訊息檔的完整 key(例 `admin.sidebarBadgeSettings.descriptions.orders`),
-   * 通知設定頁「側欄數字」區塊顯示;沒填 = 顯示「—」。底座的 key 寫在底座字典、專案的寫在專案字典。
+   * 通知設定頁「側欄數字」區塊顯示,`sidebarBadges` 也一併回傳給側欄當數字的提示;沒填 = 設定頁顯示「—」、側欄不提示。底座的 key 寫在底座字典、專案的寫在專案字典。
    */
   readonly descriptionKey?: string;
 }

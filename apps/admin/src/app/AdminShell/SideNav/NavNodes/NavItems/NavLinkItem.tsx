@@ -5,6 +5,9 @@ import { useTranslations } from "use-intl";
 import { Badge } from "@repo/ui/badge";
 import { moduleIconOf } from "@repo/ui/icons";
 import { ListItemButton, ListItemIcon, ListItemText } from "@repo/ui/list";
+import { Tooltip } from "@repo/ui/tooltip";
+
+import type { NavBadge } from "@/hooks/base/useSidebarBadges";
 
 import { useNavLinkHref } from "../../useNavLinkHref";
 import { itemSx } from "./nav-item-styles";
@@ -20,8 +23,11 @@ export interface NavLinkItemProps {
   isSelected: boolean;
   /** 點到這一列時額外要做的事(群組 flyout 用來收起自己;展開態不給) */
   onNavigate?: () => void;
-  /** 右側的待辦數(申請中心的待審數);0 或不給就不顯示,超過 99 顯示 `99+` */
-  badge?: number;
+  /**
+   * 右側的待辦數(申請中心的待審數);0 或不給就不顯示,超過 99 顯示 `99+`。
+   * 有說明(登記的「數什麼」)時,滑鼠移到數字上 / 觸控長按數字會出現提示(REACT-10 預設的補充說明)
+   */
+  badge?: NavBadge;
 }
 
 /** Figma Draft/NavItem:模組圖示 + 文字(+ 右側待辦數);選中時品牌淺色底 + 深色字。 */
@@ -55,12 +61,16 @@ export const NavLinkItem = ({
           primary: { variant: "subtitle2", component: "span", noWrap: true },
         }}
       />
-      {badge !== undefined && badge > 0 && (
-        <Badge
-          badgeContent={badge}
-          color="primary"
-          aria-label={t("navBadge", { count: badge })}
-        />
+      {badge !== undefined && badge.count > 0 && (
+        <Tooltip title={badge.description} placement="right">
+          <Badge
+            badgeContent={badge.count}
+            color="primary"
+            aria-label={t("navBadge", { count: badge.count })}
+            // 觸控長按看提示:不讓 iOS 跳出連結的長按選單蓋掉提示
+            sx={{ WebkitTouchCallout: "none" }}
+          />
+        </Tooltip>
       )}
     </ListItemButton>
   );
