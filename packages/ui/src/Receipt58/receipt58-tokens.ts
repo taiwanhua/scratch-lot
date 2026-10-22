@@ -38,6 +38,9 @@ export const RECEIPT58_TABLE_COL_WIDTHS = [88, 126] as const;
 /** 線寬:Figma 1px,放大後取 2 點,熱感紙上才看得清楚。 */
 export const RECEIPT58_STROKE = 2;
 
+/** QR 規範要求的四個模組安靜區(白邊;紙張本身是白底,只留位置不畫)。 */
+export const RECEIPT58_QR_QUIET_ZONE = 4;
+
 /** 零件之間的間距(Figma gap 6)。 */
 export const RECEIPT58_GAP = 8;
 

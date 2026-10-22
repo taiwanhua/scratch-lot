@@ -10,6 +10,7 @@ import {
 import { act, screen, waitFor, within } from "@testing-library/react";
 import { HttpResponse } from "msw";
 
+import { formatTemporal } from "@repo/domain/form";
 import { PrintJobError } from "@repo/graphql";
 
 // jsdom 不會畫 canvas:轉圖換成固定的 base64(受測頁面必須在替身掛上之後才載入,先例 useRegexSafety.test.ts)
@@ -182,5 +183,28 @@ describe("印表機管理:[測試列印] 等結果的方式", () => {
       "已印出測試頁:請核對字體大小、對齊、條碼、QR code 與切紙。",
     );
     expect(printing.inputs.printJob).toHaveLength(1);
+  });
+});
+
+describe("印表機管理:[測試列印] 測試頁的時間", () => {
+  it("印的是租戶時區(Asia/Taipei)的開窗時間,不是 UTC", async () => {
+    const before = new Date().toISOString();
+    const { user } = renderPrinters();
+
+    await openTestPrint(user);
+    await waitFor(() => {
+      expect(testPageImageOf).toHaveBeenCalled();
+    });
+    const after = new Date().toISOString();
+    const [node] = testPageImageOf.mock.calls.at(-1) ?? [];
+    const text = node?.textContent ?? "";
+    const taipei = [before, after].map((iso) =>
+      formatTemporal(iso, { type: "datetime", timezone: "Asia/Taipei" }),
+    );
+    expect(taipei.some((time) => text.includes(time))).toBe(true);
+    const utc = [before, after].map((iso) =>
+      formatTemporal(iso, { type: "datetime", timezone: "UTC" }),
+    );
+    expect(utc.some((time) => text.includes(time))).toBe(false);
   });
 });

@@ -264,6 +264,8 @@ operation 文件:`packages/graphql/src/documents/base/printing.graphql`。
 
 底座內沒有頁面使用;專案的單據頁放一顆 `<PrintButton>`,傳單據所屬分店 `orgId`、`documentType`、`refType` + `refId`、`documentName?`、`defaultPrinterId?`(專案的預設,如收銀點的印表機)與 `renderImage(reprint)`(把預覽中的 `Receipt58` 交給 `renderReceiptToPng`;補印時帶第幾次、原因、說明、時間、補印人,組 `Receipt58ReprintMark`)。
 
+轉圖(`renderReceiptToPng`)以節點的版面寬高(`offsetWidth` / `offsetHeight`)截圖,canvas 恰為 384 點寬,不受螢幕縮放與預覽縮小顯示影響。QR code(`Receipt58Qr`:每模組 6 點、約 0.75mm,內容太長放不下時才縮小,含四個模組的安靜區)不取截圖的結果:二值化後以同一個模組矩陣直接寫進 384 點點陣,每模組都是整數點。測試 `packages/ui/src/Receipt58/Receipt58Qr.test.tsx` 以 QR 解碼器讀回網址。
+
 | 狀態(Figma `Draft/PrintButton`) | 畫面                                                                                                                           |
 | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
 | Default                         | [列印]                                                                                                                         |

@@ -1,24 +1,10 @@
 import { describe, expect, it } from "@jest/globals";
 
-import { decodePng, makeRgba } from "./png-test-support";
+import { decodePng, makeRgba, readBlob } from "./png-test-support";
 import {
   type ReceiptRasterizer,
   renderReceiptToPng,
 } from "./render-receipt-to-png";
-
-/** jsdom 的 Blob 沒有 `arrayBuffer()`,用 FileReader 讀回位元組。 */
-const readBlob = (blob: Blob): Promise<Uint8Array> =>
-  new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.addEventListener("load", () => {
-      resolve(new Uint8Array(reader.result as ArrayBuffer));
-    });
-    reader.addEventListener("error", () => {
-      reject(reader.error ?? new Error("read failed"));
-    });
-    // eslint-disable-next-line unicorn/prefer-blob-reading-methods -- jsdom 的 Blob 沒有 arrayBuffer()
-    reader.readAsArrayBuffer(blob);
-  });
 
 /**
  * 模擬瀏覽器把節點畫出來的結果(jsdom 沒有 canvas):灰階漸層 + 彩色 + 半透明,寬度可指定。
