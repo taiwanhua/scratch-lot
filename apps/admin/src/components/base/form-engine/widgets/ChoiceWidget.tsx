@@ -60,7 +60,7 @@ export const ChoiceWidget = (props: WidgetProps) => {
   if (kind === "radio") {
     return (
       <Stack spacing={0.5}>
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" color="textSecondary">
           {field.label}
         </Typography>
         <RadioGroup
@@ -83,7 +83,7 @@ export const ChoiceWidget = (props: WidgetProps) => {
         {note !== undefined && (
           <Typography
             variant="caption"
-            color={hasError ? "error" : "text.secondary"}
+            color={hasError ? "error" : "textSecondary"}
           >
             {note}
           </Typography>

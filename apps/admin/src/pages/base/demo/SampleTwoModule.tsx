@@ -176,7 +176,7 @@ export const sampleTwoModule: DemoModuleConfig<
       {
         key: "note",
         render: (row, t) => (
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" color="textSecondary">
             {row.note ?? t("emptyValue")}
           </Typography>
         ),

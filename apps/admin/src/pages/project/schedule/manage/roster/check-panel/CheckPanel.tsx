@@ -107,12 +107,12 @@ export const CheckPanel = ({
               </Stack>
             )}
             {check === undefined && isCheckError && (
-              <Typography variant="body2" color="text.secondary">
+              <Typography variant="body2" color="textSecondary">
                 {t("loadError")}
               </Typography>
             )}
             {check !== undefined && items.length === 0 && (
-              <Typography variant="body2" color="text.secondary">
+              <Typography variant="body2" color="textSecondary">
                 {filter === "all" ? t("empty") : t("emptyFiltered")}
               </Typography>
             )}

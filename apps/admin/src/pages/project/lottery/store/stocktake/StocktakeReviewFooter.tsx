@@ -35,7 +35,7 @@ export const ReviewFooter = ({
       <Stack spacing={2}>
         <Stack direction="row" spacing={4} sx={{ flexWrap: "wrap" }}>
           <Stack>
-            <Typography variant="caption" color="text.secondary">
+            <Typography variant="caption" color="textSecondary">
               {t("summary.backfill")}
             </Typography>
             <Typography variant="subtitle1">
@@ -46,7 +46,7 @@ export const ReviewFooter = ({
             </Typography>
           </Stack>
           <Stack>
-            <Typography variant="caption" color="text.secondary">
+            <Typography variant="caption" color="textSecondary">
               {t("summary.newInvestigate")}
             </Typography>
             <Typography variant="subtitle1">
@@ -56,7 +56,7 @@ export const ReviewFooter = ({
             </Typography>
           </Stack>
           <Stack>
-            <Typography variant="caption" color="text.secondary">
+            <Typography variant="caption" color="textSecondary">
               {t("summary.flagged")}
             </Typography>
             <Typography variant="subtitle1" sx={{ color: "warning.dark" }}>
@@ -66,7 +66,7 @@ export const ReviewFooter = ({
             </Typography>
           </Stack>
           <Stack>
-            <Typography variant="caption" color="text.secondary">
+            <Typography variant="caption" color="textSecondary">
               {t("summary.unhandled")}
             </Typography>
             <Typography

@@ -67,7 +67,7 @@ export const DesignerToolbar = ({
             {t("openSettings")}
           </Button>
         )}
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" color="textSecondary">
           {isDirty ? t("unsaved", { revision }) : t("revision", { revision })}
         </Typography>
         <Button disabled={!isDirty || isSaving} onClick={onSave}>

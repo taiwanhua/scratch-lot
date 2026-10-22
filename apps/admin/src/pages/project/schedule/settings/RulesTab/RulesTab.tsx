@@ -123,7 +123,7 @@ export const RulesTab = () => {
 
   if (rules === undefined) {
     return (
-      <Typography color="text.secondary">
+      <Typography color="textSecondary">
         {query.isError ? tErrors(scheduleErrorOf(query.error).code) : null}
       </Typography>
     );
@@ -191,7 +191,7 @@ export const RulesTab = () => {
             {t("autoRunTitle")}
           </Typography>
           {autoRunSource !== undefined && (
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="body2" color="textSecondary">
               {ruleSourceText(translate, autoRunSource, rules.isTenantTop)}
             </Typography>
           )}

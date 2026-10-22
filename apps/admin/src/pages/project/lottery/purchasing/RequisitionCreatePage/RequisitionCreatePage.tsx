@@ -194,7 +194,7 @@ export const RequisitionCreatePage = () => {
   );
 
   let list = (
-    <Typography variant="body2" color="text.secondary">
+    <Typography variant="body2" color="textSecondary">
       {t("pickBranch")}
     </Typography>
   );

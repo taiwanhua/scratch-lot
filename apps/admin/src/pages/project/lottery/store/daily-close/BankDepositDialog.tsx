@@ -156,7 +156,7 @@ export const BankDepositDialog = ({
     >
       <Stack spacing={2} sx={{ pt: 1 }}>
         {data === null ? null : (
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" color="textSecondary">
             {t("bankDeposit.vault", {
               store: data.org.name,
               amount: moneyText(data.vaultExpected),
@@ -164,7 +164,7 @@ export const BankDepositDialog = ({
           </Typography>
         )}
         {data !== null && data.reserved > 0 ? (
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" color="textSecondary">
             {t("bankDeposit.reserved", {
               amount: moneyText(data.reserved),
               available: moneyText(available),
@@ -215,7 +215,7 @@ export const BankDepositDialog = ({
             setNote(event.target.value);
           }}
         />
-        <Typography variant="caption" color="text.secondary">
+        <Typography variant="caption" color="textSecondary">
           {t("bankDeposit.hint")}
         </Typography>
       </Stack>

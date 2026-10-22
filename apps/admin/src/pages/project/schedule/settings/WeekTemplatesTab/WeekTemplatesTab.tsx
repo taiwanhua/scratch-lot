@@ -145,7 +145,7 @@ export const WeekTemplatesTab = () => {
                 <Tag label={row.ownerOrg.name} />
                 {enabledOf(row)}
               </Stack>
-              <Typography variant="body2" color="text.secondary">
+              <Typography variant="body2" color="textSecondary">
                 {WEEKDAYS.map((day) =>
                   t("dayCell", {
                     day: weekdayOf(day),

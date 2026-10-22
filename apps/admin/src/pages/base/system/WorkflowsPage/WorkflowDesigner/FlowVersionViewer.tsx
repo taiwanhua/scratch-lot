@@ -257,7 +257,7 @@ export const FlowVersionViewer = ({
         </Stack>
       </Stack>
       {canEdit && workflow.hasDraft && (
-        <Typography variant="caption" color="text.secondary">
+        <Typography variant="caption" color="textSecondary">
           {t("viewingHasDraft")}
         </Typography>
       )}

@@ -70,12 +70,12 @@ const StatCard = ({
   tone?: "warning";
 }) => (
   <Card sx={{ p: 2, flex: 1, minWidth: 0 }}>
-    <Typography variant="caption" color="text.secondary">
+    <Typography variant="caption" color="textSecondary">
       {label}
     </Typography>
     <Typography
       variant="h6"
-      color={tone === "warning" ? "warning.main" : "text.primary"}
+      color={tone === "warning" ? "warning" : "textPrimary"}
     >
       {value}
     </Typography>
@@ -203,7 +203,7 @@ export const BankAccountViewPage = ({ routeParam }: ModulePageProps) => {
       render: (row) => (
         <Typography
           variant="body2"
-          color={row.balanceAfter < 0 ? "warning.main" : "text.primary"}
+          color={row.balanceAfter < 0 ? "warning" : "textPrimary"}
         >
           {moneyText(row.balanceAfter)}
         </Typography>
@@ -216,7 +216,7 @@ export const BankAccountViewPage = ({ routeParam }: ModulePageProps) => {
       render: (row) => {
         if (row.reversedById) {
           return (
-            <Typography variant="caption" color="text.secondary">
+            <Typography variant="caption" color="textSecondary">
               {t("accountView.reversed")}
             </Typography>
           );
@@ -317,7 +317,7 @@ export const BankAccountViewPage = ({ routeParam }: ModulePageProps) => {
                 )}
               />
             </Stack>
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="body2" color="textSecondary">
               {usage === ""
                 ? t("accountView.usageNone")
                 : t("accountView.usage", { names: usage })}

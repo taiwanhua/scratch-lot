@@ -191,7 +191,7 @@ export const UpgradeDialog = ({
       actions={renderActions()}
     >
       <Stack spacing={2}>
-        <Typography variant="caption" color="text.secondary">
+        <Typography variant="caption" color="textSecondary">
           {t("steps", { step: STEP_NUMBER[step], name: stepName })}
         </Typography>
         {renderBody()}

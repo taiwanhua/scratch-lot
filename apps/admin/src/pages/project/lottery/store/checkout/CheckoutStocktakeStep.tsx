@@ -74,7 +74,7 @@ const ModeOption = ({
       label={label}
       disabled={disabled}
     />
-    <Typography variant="body2" color="text.secondary" sx={{ pl: 4, mt: -0.5 }}>
+    <Typography variant="body2" color="textSecondary" sx={{ pl: 4, mt: -0.5 }}>
       {hint}
     </Typography>
   </Box>

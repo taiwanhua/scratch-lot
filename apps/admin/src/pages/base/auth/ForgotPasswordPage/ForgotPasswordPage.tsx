@@ -46,7 +46,7 @@ export const ForgotPasswordPage = () => {
     <AuthCard subtitle={t("subtitle")}>
       <Box component="form" onSubmit={handleSubmit}>
         <Stack spacing={2.5}>
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" color="textSecondary">
             {isSent ? t("sent") : t("description")}
           </Typography>
 

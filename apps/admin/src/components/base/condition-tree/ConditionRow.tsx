@@ -66,7 +66,7 @@ export const ConditionRow = <F extends string>({
         )}
       </Stack>
       {error !== undefined && (
-        <Typography variant="caption" color="error.main">
+        <Typography variant="caption" color="error">
           {error}
         </Typography>
       )}

@@ -357,7 +357,7 @@ export const EditNotificationSettingDialog = ({
           </Section>
         )}
         {errorCode !== null && (
-          <Typography variant="body2" color="error.main" role="alert">
+          <Typography variant="body2" color="error" role="alert">
             {tErrors(errorCode)}
           </Typography>
         )}

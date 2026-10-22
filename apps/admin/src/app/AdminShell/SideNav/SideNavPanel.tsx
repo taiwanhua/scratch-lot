@@ -121,7 +121,7 @@ export const SideNavPanel = ({
               }}
             />
           )}
-          <Typography variant="caption" color="text.secondary">
+          <Typography variant="caption" color="textSecondary">
             {tApp("subtitle")}
           </Typography>
         </Stack>

@@ -88,7 +88,7 @@ export const UnopenedSection = ({
           {t("title")}
         </Typography>
         {books.length === 0 ? (
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" color="textSecondary">
             {t("empty")}
           </Typography>
         ) : (
@@ -100,7 +100,7 @@ export const UnopenedSection = ({
               size="small"
               containerSx={{ height: "auto" }}
             />
-            <Typography variant="caption" color="text.secondary">
+            <Typography variant="caption" color="textSecondary">
               {t("hint")}
             </Typography>
           </>
@@ -170,7 +170,7 @@ export const LostSection = ({
           {t("title")}
         </Typography>
         {groups.length === 0 ? (
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" color="textSecondary">
             {t("empty")}
           </Typography>
         ) : null}
@@ -199,7 +199,7 @@ export const LostSection = ({
                 </Typography>
                 <Typography
                   variant="body2"
-                  color="text.secondary"
+                  color="textSecondary"
                   sx={{ flex: 1 }}
                 >
                   {sinceText(group)}
@@ -252,7 +252,7 @@ export const LostSection = ({
           );
         })}
         {groups.length > 0 ? (
-          <Typography variant="caption" color="text.secondary">
+          <Typography variant="caption" color="textSecondary">
             {t("hint")}
           </Typography>
         ) : null}

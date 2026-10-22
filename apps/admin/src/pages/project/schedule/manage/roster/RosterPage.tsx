@@ -241,7 +241,7 @@ export const RosterPage = () => {
         {context === null && (
           <Stack sx={{ alignItems: "center", py: 4 }}>
             {query.isError ? (
-              <Typography color="text.secondary">{t("loadError")}</Typography>
+              <Typography color="textSecondary">{t("loadError")}</Typography>
             ) : (
               <CircularProgress size={24} aria-label={t("loading")} />
             )}
@@ -261,7 +261,7 @@ export const RosterPage = () => {
                     </Typography>
                     <Typography
                       variant="body2"
-                      color="text.secondary"
+                      color="textSecondary"
                       sx={{ textAlign: "center", maxWidth: 360 }}
                     >
                       {t("empty.description")}

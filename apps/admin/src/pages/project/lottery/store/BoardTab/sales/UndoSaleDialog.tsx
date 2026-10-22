@@ -98,7 +98,7 @@ export const UndoSaleDialog = ({
     >
       <Stack spacing={1}>
         <Typography variant="body1">{line}</Typography>
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" color="textSecondary">
           {block === null
             ? t("undo.hint", {
                 amount: moneyText(sale.amount),

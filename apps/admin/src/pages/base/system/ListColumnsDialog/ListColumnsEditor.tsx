@@ -100,7 +100,7 @@ export const ListColumnsEditor = ({
     <Stack spacing={2}>
       <Typography variant="body2">{t("body")}</Typography>
       {rows.length === 0 && (
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" color="textSecondary">
           {t("usingDefault")}
         </Typography>
       )}
@@ -182,7 +182,7 @@ export const ListColumnsEditor = ({
             />
           ))}
         </Stack>
-        <Typography variant="caption" color="text.secondary">
+        <Typography variant="caption" color="textSecondary">
           {t("builtinHint")}
         </Typography>
       </Stack>

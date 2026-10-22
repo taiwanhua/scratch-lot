@@ -221,7 +221,7 @@ export const BankAccountDialog = ({ onClose }: BankAccountDialogProps) => {
             onChange={setShareOrgs}
           />
         </Stack>
-        <Typography variant="caption" color="text.secondary">
+        <Typography variant="caption" color="textSecondary">
           {t("accountForm.lockHint")}
         </Typography>
       </Stack>

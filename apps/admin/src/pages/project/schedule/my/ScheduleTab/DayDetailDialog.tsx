@@ -46,7 +46,7 @@ const EntryDetail = ({ entry }: { entry: MyEntry }) => {
   return (
     <Stack spacing={1.5} data-day-detail-entry={entry.id}>
       <Stack spacing={0.5}>
-        <Typography variant="body2" color="text.primary">
+        <Typography variant="body2" color="textPrimary">
           {[
             entry.orgName,
             `${text.shortName(entry)} ${text.time(entry)}`,
@@ -64,7 +64,7 @@ const EntryDetail = ({ entry }: { entry: MyEntry }) => {
             />
           ))}
           {entry.breakMinutes > 0 && (
-            <Typography variant="caption" color="text.secondary">
+            <Typography variant="caption" color="textSecondary">
               {t("breakMinutes", { minutes: entry.breakMinutes })}
             </Typography>
           )}
@@ -115,7 +115,7 @@ const EntryDetail = ({ entry }: { entry: MyEntry }) => {
         </tbody>
       </Box>
       {missing !== null && (
-        <Typography variant="caption" color="text.secondary">
+        <Typography variant="caption" color="textSecondary">
           {t("missingNote", { cards: missing })}
         </Typography>
       )}
@@ -155,7 +155,7 @@ export const DayDetailDialog = ({
   const body = (
     <Stack spacing={2.5}>
       {entries.length === 0 && (
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" color="textSecondary">
           {isDayOff ? t("dayOff") : t("none")}
         </Typography>
       )}

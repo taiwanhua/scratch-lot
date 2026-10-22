@@ -161,7 +161,7 @@ const DealerView = ({ dealer }: { dealer: LotteryDealerFieldsFragment }) => {
                   label={t(DEALER_STATUS_LABELS[dealer.status])}
                 />
               </Stack>
-              <Typography variant="body2" color="text.secondary">
+              <Typography variant="body2" color="textSecondary">
                 {header}
               </Typography>
             </Stack>

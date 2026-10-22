@@ -54,12 +54,12 @@ export const CheckoutRedemptionStep = ({
               {t("backfill")}
             </Button>
           ) : null}
-          <Typography variant="caption" color="text.secondary">
+          <Typography variant="caption" color="textSecondary">
             {t("immediate")}
           </Typography>
         </Stack>
         {wizard.redemptions.length === 0 ? (
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" color="textSecondary">
             {t("empty")}
           </Typography>
         ) : (
@@ -91,7 +91,7 @@ export const CheckoutRedemptionStep = ({
                   borderColor: "divider",
                 }}
               >
-                <Typography variant="body2" color="text.secondary">
+                <Typography variant="body2" color="textSecondary">
                   {temporal(row.redeemedAt, "monthDayTime").split(" ").at(-1)}
                 </Typography>
                 <Typography variant="body2" sx={{ flex: 1 }}>
@@ -105,14 +105,14 @@ export const CheckoutRedemptionStep = ({
           </Stack>
         )}
         <Stack direction="row" sx={{ justifyContent: "space-between" }}>
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" color="textSecondary">
             {t("total")}
           </Typography>
           <Typography variant="subtitle1">
             {moneyText(wizard.redemptionTotal)}
           </Typography>
         </Stack>
-        <Typography variant="caption" color="text.secondary">
+        <Typography variant="caption" color="textSecondary">
           {t("hint")}
         </Typography>
       </Stack>

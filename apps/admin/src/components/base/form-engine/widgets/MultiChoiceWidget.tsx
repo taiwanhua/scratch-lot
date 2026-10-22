@@ -118,7 +118,7 @@ export const MultiChoiceWidget = (props: WidgetProps) => {
 
   return (
     <Stack spacing={0.25} role="group" aria-label={field.label}>
-      <Typography variant="body2" color="text.secondary">
+      <Typography variant="body2" color="textSecondary">
         {field.label}
       </Typography>
       <Stack direction="row" sx={{ flexWrap: "wrap" }}>
@@ -145,7 +145,7 @@ export const MultiChoiceWidget = (props: WidgetProps) => {
       {note !== undefined && (
         <Typography
           variant="caption"
-          color={hasError ? "error" : "text.secondary"}
+          color={hasError ? "error" : "textSecondary"}
         >
           {note}
         </Typography>

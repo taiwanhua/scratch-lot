@@ -99,7 +99,7 @@ export const WorkflowDetailPanel = ({
             <Typography variant="h6" component="h1">
               {workflow.name}
             </Typography>
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="body2" color="textSecondary">
               {t("meta", {
                 key: workflow.key,
                 kind: workflow.isShared ? t("shared") : t("custom"),
@@ -107,7 +107,7 @@ export const WorkflowDetailPanel = ({
             </Typography>
             {workflow.forkedFrom !== null &&
               workflow.forkedFrom !== undefined && (
-                <Typography variant="body2" color="text.secondary">
+                <Typography variant="body2" color="textSecondary">
                   {t("forkedFrom", {
                     key: workflow.forkedFrom.workflowKey,
                     version: workflow.forkedFrom.version,
@@ -149,7 +149,7 @@ export const WorkflowDetailPanel = ({
           </Stack>
         </Stack>
         {workflow.assignments.length > 0 && (
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" color="textSecondary">
             {t("assignedTo", {
               tenants: workflow.assignments
                 .map((item) => item.tenantName ?? item.tenantOrgId)
@@ -158,7 +158,7 @@ export const WorkflowDetailPanel = ({
           </Typography>
         )}
         {workflow.boundForms.length > 0 && (
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" color="textSecondary">
             {t("boundForms", {
               forms: workflow.boundForms
                 .map((form) => form.formName ?? form.formKey)

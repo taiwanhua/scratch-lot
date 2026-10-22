@@ -99,7 +99,7 @@ export const DesignerPreview = ({
         spacing={1}
         sx={{ alignItems: "center", flexWrap: "wrap" }}
       >
-        <Typography variant="body2" color="text.secondary" sx={{ flex: 1 }}>
+        <Typography variant="body2" color="textSecondary" sx={{ flex: 1 }}>
           {isDirty ? t("dirtyHint") : t("hint")}
         </Typography>
         {definition.prefills.length > 0 && (

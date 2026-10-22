@@ -139,7 +139,7 @@ export const StocktakeWorkspace = ({
         <Typography variant="h6" component="h1">
           {t("page.title", { heading, scope: scopeLabel })}
         </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ flex: 1 }}>
+        <Typography variant="body2" color="textSecondary" sx={{ flex: 1 }}>
           {t("page.started", {
             time: temporal(state.startedAt, "monthDayTime"),
             name: me.data?.me.name ?? "",

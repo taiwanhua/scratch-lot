@@ -74,7 +74,7 @@ export const OrgDetailPanel = ({
           {isLoading ? (
             <CircularProgress aria-label={t("loading")} />
           ) : (
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="body2" color="textSecondary">
               {t("empty")}
             </Typography>
           )}

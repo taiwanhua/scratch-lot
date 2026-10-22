@@ -49,7 +49,7 @@ export const IncompletePunchAlert = ({
             </Typography>
             {makeup !== null &&
               (makeup.isPending(entry.id) ? (
-                <Typography variant="caption" color="text.secondary">
+                <Typography variant="caption" color="textSecondary">
                   {t("pending")}
                 </Typography>
               ) : (

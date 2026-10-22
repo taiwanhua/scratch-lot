@@ -178,7 +178,7 @@ const Checklist = ({ check, month }: { check: Check; month: string }) => {
           <Typography
             key={document.submissionId}
             variant="body2"
-            color="text.secondary"
+            color="textSecondary"
           >
             {t("documentLine", {
               kind: t(`documentKinds.${document.kind}`),

@@ -145,7 +145,7 @@ export const FormsPage = () => {
   const desktopDetail =
     data.selected === null ? (
       <Card sx={{ flex: 1, p: 3 }}>
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" color="textSecondary">
           {emptyText}
         </Typography>
       </Card>

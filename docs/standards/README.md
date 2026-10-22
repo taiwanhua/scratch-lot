@@ -22,6 +22,7 @@
 | 選組織(組織選擇器)                                      | `react/components.md` REACT-15、`docs/concepts/frontend-architecture.md`「組織選擇器」用法表                                        |
 | admin 主從頁(左清單 / 樹、右詳情)的手機版、設計器平板版 | `react/components.md` REACT-17                                                                                                      |
 | 新增 `@repo/ui` 元件 / 子路徑匯出                       | `general/structure.md` STRUCT-08 的四處清單、`general/naming.md` GEN-01、`react/styling.md` STYLE-05 / 07                           |
+| 文字顏色(`Typography` 的 `color`)                       | `react/styling.md` STYLE-12                                                                                                         |
 | 前端資料存取(query / mutation)                          | `react/data-fetching.md`                                                                                                            |
 | api 的 GraphQL schema(resolver / model / input)         | `api/graphql-schema.md`                                                                                                             |
 | api 的多步驟寫入 / 對外 adapter(寄信、GCS、HTTP)        | `api/transactions.md`(TX-01~05);決策見 ADR-0013                                                                                     |

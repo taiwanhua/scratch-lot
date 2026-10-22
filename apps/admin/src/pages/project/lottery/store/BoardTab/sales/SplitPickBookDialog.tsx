@@ -91,7 +91,7 @@ export const SplitPickBookDialog = ({
       }
     >
       <Stack spacing={1.5}>
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" color="textSecondary">
           {t("split.pickTo", { name: localName })}
         </Typography>
         <TextField
@@ -104,7 +104,7 @@ export const SplitPickBookDialog = ({
           }}
         />
         {books.length === 0 ? (
-          <Typography color="text.secondary">{t("split.none")}</Typography>
+          <Typography color="textSecondary">{t("split.none")}</Typography>
         ) : (
           <>
             <Typography variant="body2">
@@ -130,7 +130,7 @@ export const SplitPickBookDialog = ({
                           bookNo: displayBookNo(book.bookNo),
                         })}
                       </Typography>
-                      <Typography variant="caption" color="text.secondary">
+                      <Typography variant="caption" color="textSecondary">
                         {book.pendingSkipCount > 0
                           ? t("split.bookMetaSkip", {
                               price: moneyText(book.unitPrice),

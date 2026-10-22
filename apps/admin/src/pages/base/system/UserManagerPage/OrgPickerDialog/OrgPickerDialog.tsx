@@ -62,7 +62,7 @@ export const OrgPickerDialog = ({
         <>
           <Typography
             variant="subtitle2"
-            color="text.secondary"
+            color="textSecondary"
             sx={{ flex: 1 }}
           >
             {t("selected", { count: selectedIds.length })}
@@ -104,11 +104,11 @@ export const OrgPickerDialog = ({
         />
         {/* 鎖住的節點自己沒有文字說明(勾選框 disabled 收不到 hover),原因寫在樹下方 */}
         {lockedOrgIds.length > 0 && lockedHint !== undefined && (
-          <Typography variant="caption" color="text.secondary">
+          <Typography variant="caption" color="textSecondary">
             {lockedHint}
           </Typography>
         )}
-        <Typography variant="caption" color="text.secondary">
+        <Typography variant="caption" color="textSecondary">
           {t("hint")}
         </Typography>
       </Stack>

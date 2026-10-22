@@ -40,12 +40,12 @@ export const PermissionMatrixTab = ({
           <Typography variant="subtitle1">
             {t("title", { name: roleName })}
           </Typography>
-          <Typography variant="caption" color="text.secondary" component="p">
+          <Typography variant="caption" color="textSecondary" component="p">
             {t("subtitle")}
           </Typography>
         </Box>
         {matrix.isDirty && (
-          <Typography variant="caption" color="warning.main">
+          <Typography variant="caption" color="warning">
             {t("unsaved")}
           </Typography>
         )}
@@ -66,7 +66,7 @@ export const PermissionMatrixTab = ({
       {matrix.errorCode !== null && (
         <Alert severity="error">{tErrors(matrix.errorCode)}</Alert>
       )}
-      <Typography variant="caption" color="text.secondary">
+      <Typography variant="caption" color="textSecondary">
         {t("legend")}
       </Typography>
 

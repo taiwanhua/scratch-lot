@@ -226,7 +226,7 @@ export const AutoRunDialog = ({ onClose }: AutoRunDialogProps) => {
             )}
           </Stack>
           {weekTemplate !== null && (
-            <Typography variant="caption" color="text.secondary">
+            <Typography variant="caption" color="textSecondary">
               {/* 同人力需求週範本的說明文字(規格 14.5) */}
               {tApply("hintWeek")}
             </Typography>

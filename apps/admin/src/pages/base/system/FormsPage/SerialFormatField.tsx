@@ -120,7 +120,7 @@ export const SerialFormatField = ({
           />
         }
       />
-      <Typography variant="caption" color="text.secondary">
+      <Typography variant="caption" color="textSecondary">
         {t("serialHint")}
       </Typography>
       {isOn && (

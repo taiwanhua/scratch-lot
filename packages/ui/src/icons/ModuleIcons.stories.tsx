@@ -32,14 +32,14 @@ const ModuleIconGallery = ({ color }: { color?: string }) => (
           <Stack key={iconKey} sx={cellSx}>
             <Icon />
             <Typography variant="caption">{label}</Typography>
-            <Typography variant="caption" color="text.disabled">
+            <Typography variant="caption" color="textDisabled">
               {iconKey}
             </Typography>
           </Stack>
         );
       })}
     </Stack>
-    <Typography variant="caption" color="text.secondary">
+    <Typography variant="caption" color="textSecondary">
       共 {MODULE_ICON_KEYS.length} 個;不在表裡的值(舊資料、未設定)一律畫
       DotIcon。
     </Typography>

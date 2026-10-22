@@ -184,7 +184,7 @@ export const StaffDialog = ({ row, canEdit, onClose }: StaffDialogProps) => {
         </Stack>
         <Typography variant="subtitle2">{t("orgs")}</Typography>
         {orgs.length === 0 ? (
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" color="textSecondary">
             {t("noOrgs")}
           </Typography>
         ) : (
@@ -245,7 +245,7 @@ export const StaffDialog = ({ row, canEdit, onClose }: StaffDialogProps) => {
           </Typography>
         )}
         {primaryElsewhere && (
-          <Typography variant="caption" color="text.secondary">
+          <Typography variant="caption" color="textSecondary">
             {t("primaryElsewhere")}
           </Typography>
         )}

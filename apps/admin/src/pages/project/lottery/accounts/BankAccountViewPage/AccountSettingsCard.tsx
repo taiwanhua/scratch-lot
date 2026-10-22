@@ -138,7 +138,7 @@ export const AccountSettingsCard = ({ account }: AccountSettingsCardProps) => {
           />
         </Box>
         {locked && (
-          <Typography variant="caption" color="text.secondary">
+          <Typography variant="caption" color="textSecondary">
             {t("accountForm.lockHint")}
           </Typography>
         )}

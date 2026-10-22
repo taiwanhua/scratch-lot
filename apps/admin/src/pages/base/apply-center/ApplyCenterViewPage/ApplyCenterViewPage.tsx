@@ -137,7 +137,7 @@ export const ApplyCenterViewPage = ({ routeParam }: ModulePageProps) => {
             spacing={1}
             sx={{ alignItems: "center", flexWrap: "wrap" }}
           >
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="body2" color="textSecondary">
               {t("meta", {
                 module: instance.moduleName ?? instance.moduleKey,
                 form: instance.formName ?? instance.formKey,

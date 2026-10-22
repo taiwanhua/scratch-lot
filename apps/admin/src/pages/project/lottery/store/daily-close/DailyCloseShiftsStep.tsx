@@ -106,12 +106,12 @@ const ShiftReviewDrawer = ({
                   direction="row"
                   sx={{ justifyContent: "space-between", gap: 2 }}
                 >
-                  <Typography variant="body2" color="text.secondary">
+                  <Typography variant="body2" color="textSecondary">
                     {label}
                   </Typography>
                   <Typography
                     variant="body1"
-                    color={warn ? "error.main" : "text.primary"}
+                    color={warn ? "error" : "textPrimary"}
                     sx={{ textAlign: "right" }}
                   >
                     {value}
@@ -173,12 +173,12 @@ export const DailyCloseShiftsStep = ({
         </Button>
       ) : null}
       {!row.isMine && row.state === "pending" && row.waitingFor.length > 0 ? (
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" color="textSecondary">
           {t("waitingApprove", { names: row.waitingFor.join("、") })}
         </Typography>
       ) : null}
       {row.state === "returned" ? (
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" color="textSecondary">
           {t("waitingFix", { names: row.waitingFor.join("、") })}
         </Typography>
       ) : null}
@@ -219,7 +219,7 @@ export const DailyCloseShiftsStep = ({
       render: (row) => (
         <Typography
           variant="body2"
-          color={row.difference === 0 ? "text.primary" : "error.main"}
+          color={row.difference === 0 ? "textPrimary" : "error"}
         >
           {signedMoneyText(row.difference)}
         </Typography>
@@ -257,7 +257,7 @@ export const DailyCloseShiftsStep = ({
       {isMobile ? (
         <Stack spacing={1}>
           {wizard.shifts.length === 0 ? (
-            <Typography color="text.secondary">{t("empty")}</Typography>
+            <Typography color="textSecondary">{t("empty")}</Typography>
           ) : null}
           {wizard.shifts.map((row) => (
             <Card key={row.shiftId} variant="outlined" sx={{ px: 2, py: 1.5 }}>

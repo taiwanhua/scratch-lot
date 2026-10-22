@@ -124,7 +124,7 @@ export const BookPage = ({ routeParam }: ModulePageProps) => {
       <BookInfoCards detail={detail} />
 
       <Card sx={{ p: { xs: 2, sm: 3 } }}>
-        <Typography variant="subtitle1" color="text.primary">
+        <Typography variant="subtitle1" color="textPrimary">
           {t("book.grid")}
         </Typography>
         <SelectionBar
@@ -152,7 +152,7 @@ export const BookPage = ({ routeParam }: ModulePageProps) => {
       </Card>
 
       <Card sx={{ p: { xs: 2, sm: 3 } }}>
-        <Typography variant="subtitle1" color="text.primary" sx={{ mb: 1.5 }}>
+        <Typography variant="subtitle1" color="textPrimary" sx={{ mb: 1.5 }}>
           {t("book.timeline")}
         </Typography>
         <BookTimeline events={detail.events} />

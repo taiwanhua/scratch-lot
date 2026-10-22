@@ -73,7 +73,7 @@ export const DesignerToolbar = ({
         spacing={1.5}
         sx={{ alignItems: "center", flexWrap: "wrap", rowGap: 1 }}
       >
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" color="textSecondary">
           {t("revision", { revision })}
         </Typography>
         {isDirty && <Tag tone="warning" label={t("dirty")} />}

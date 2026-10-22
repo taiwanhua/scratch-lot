@@ -183,7 +183,7 @@ export const CalendarDayDialog = ({
     >
       <Stack spacing={2} sx={{ pt: 1 }}>
         {isInherited && (
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" color="textSecondary">
             {t("inherited", { org: day.ownerOrg.name })}
           </Typography>
         )}

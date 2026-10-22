@@ -188,7 +188,7 @@ export const EntryAssignmentRows = ({
         )}
       </Stack>
       {dayDemands.length === 0 && (
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" color="textSecondary">
           {t("noDemand")}
         </Typography>
       )}
@@ -268,7 +268,7 @@ export const EntryAssignmentRows = ({
         </Button>
       )}
       {canEdit && complete.length === 0 && (
-        <Typography variant="caption" color="warning.dark">
+        <Typography variant="caption" sx={{ color: "warning.dark" }}>
           {t("atLeastOne")}
         </Typography>
       )}

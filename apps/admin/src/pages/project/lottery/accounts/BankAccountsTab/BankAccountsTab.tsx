@@ -73,7 +73,7 @@ export const BankAccountsTab = ({
       render: (row) => (
         <Typography
           variant="body2"
-          color={row.balance < 0 ? "warning.main" : "text.primary"}
+          color={row.balance < 0 ? "warning" : "textPrimary"}
           {...(row.balance < 0 ? { title: t("bankAccounts.negative") } : {})}
         >
           {moneyText(row.balance)}

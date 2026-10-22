@@ -99,7 +99,7 @@ export const SaleReversalsTab = () => {
         cardBody={(row) => (
           <>
             <Typography variant="body2">{ticketsOf(row)}</Typography>
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="body2" color="textSecondary">
               {[row.reasonLabel, refundOf(row), row.refundShiftLabel ?? ""]
                 .filter((part) => part !== "")
                 .join(" · ")}

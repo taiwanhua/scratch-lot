@@ -95,7 +95,7 @@ export const GameForm = ({ game, access }: GameFormProps) => {
           title={t("gameForm.sections.color")}
         >
           <Stack spacing={1} sx={{ alignItems: "flex-start" }}>
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="body2" color="textSecondary">
               {t("gameForm.colorHint")}
             </Typography>
             <TagPaletteSelect

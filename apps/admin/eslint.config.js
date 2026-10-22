@@ -2,7 +2,10 @@ import {
   frontendStyle,
   projectOwnership,
 } from "@repo/eslint-config/frontend-style";
-import { designSystemWall } from "@repo/eslint-config/react";
+import {
+  designSystemWall,
+  typographyColorRestriction,
+} from "@repo/eslint-config/react";
 import { config } from "@repo/eslint-config/vite";
 
 /** 設計系統之牆的 patterns(STYLE-05);同一條規則後寫的 options 會整個取代先寫的,所以下面要帶著它一起寫。 */
@@ -86,6 +89,8 @@ const fieldSizeSiblings = {
       `${SMALL_FIELD} ~ ${medium}`,
       `${medium} ~ ${SMALL_FIELD}`,
     ]).map((selector) => ({ selector, message: FIELD_SIZE_MESSAGE })),
+    // 同一條規則後寫的 options 會整個取代先寫的:帶上共用設定的 Typography color 規則(STYLE-12)
+    typographyColorRestriction,
   ],
 };
 

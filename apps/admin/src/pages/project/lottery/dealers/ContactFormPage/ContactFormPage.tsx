@@ -156,7 +156,7 @@ const ContactFormBody = ({
               >
                 <Typography
                   variant="body2"
-                  color={isInvalid("roles") ? "error" : "text.secondary"}
+                  color={isInvalid("roles") ? "error" : "textSecondary"}
                 >
                   {t("fields.roles")}
                 </Typography>

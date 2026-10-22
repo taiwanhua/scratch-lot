@@ -157,11 +157,11 @@ export const RosterPersonCell = ({
                 >
                   {label}
                 </Box>
-                <Typography variant="caption" color="text.secondary">
+                <Typography variant="caption" color="textSecondary">
                   {t("break", { minutes: entry.breakMinutes })}
                 </Typography>
               </Stack>
-              <Typography variant="caption" color="text.secondary">
+              <Typography variant="caption" color="textSecondary">
                 {t("range", {
                   start: time(entry.startAt),
                   end: time(entry.endAt),

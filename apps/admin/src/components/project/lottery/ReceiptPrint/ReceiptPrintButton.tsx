@@ -47,7 +47,7 @@ export const ReceiptPrintButton = <Kind extends ReceiptKind>({
       {label === null ? null : (
         <Typography
           variant="body2"
-          color="text.secondary"
+          color="textSecondary"
           sx={{ whiteSpace: "nowrap" }}
         >
           {label}

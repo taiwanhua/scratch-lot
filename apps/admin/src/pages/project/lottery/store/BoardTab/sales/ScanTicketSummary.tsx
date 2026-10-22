@@ -21,14 +21,14 @@ export const ScanTicketSummary = ({ item }: { item: ScanItem }) => {
         direction="row"
         sx={{ justifyContent: "space-between", alignItems: "baseline" }}
       >
-        <Typography variant="subtitle1" color="text.primary">
+        <Typography variant="subtitle1" color="textPrimary">
           {item.gameCode} {item.gameName}
         </Typography>
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" color="textSecondary">
           {t("card.price", { price: moneyText(item.unitPrice) })}
         </Typography>
       </Stack>
-      <Typography variant="body2" color="text.secondary">
+      <Typography variant="body2" color="textSecondary">
         {[
           t("scan.bookTicket", {
             bookNo: displayBookNo(item.bookNo),

@@ -63,7 +63,7 @@ export const ArrayRowRangeEditor = ({
           }}
         />
       </Stack>
-      <Typography variant="caption" color="text.secondary">
+      <Typography variant="caption" color="textSecondary">
         {t("rowsHint", {
           fallback: DEFAULT_ARRAY_MAX_ROWS,
           max: MAX_ARRAY_ROWS,

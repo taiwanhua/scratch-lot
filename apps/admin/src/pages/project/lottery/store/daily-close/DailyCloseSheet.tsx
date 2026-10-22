@@ -76,12 +76,12 @@ export const DailyCloseSheet = ({
       direction="row"
       sx={{ justifyContent: "space-between", gap: 2 }}
     >
-      <Typography variant="body2" color="text.secondary">
+      <Typography variant="body2" color="textSecondary">
         {label}
       </Typography>
       <Typography
         variant="body1"
-        color={warn ? "error.main" : "text.primary"}
+        color={warn ? "error" : "textPrimary"}
         sx={{ textAlign: "right" }}
       >
         {value}
@@ -109,7 +109,7 @@ export const DailyCloseSheet = ({
       <Stack spacing={0.5}>
         {tail.map(([label, value, warn]) => row(label, value, warn))}
       </Stack>
-      <Typography variant="caption" color="text.secondary">
+      <Typography variant="caption" color="textSecondary">
         {t("checkout.view.hint")}
       </Typography>
     </Stack>

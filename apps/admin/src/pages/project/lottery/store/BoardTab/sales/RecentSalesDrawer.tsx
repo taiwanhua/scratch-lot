@@ -54,11 +54,11 @@ export const RecentSalesDrawer = ({
       onClose={onClose}
     >
       <Stack spacing={1.5}>
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" color="textSecondary">
           {t("recentSales.hint")}
         </Typography>
         {rows.length === 0 ? (
-          <Typography color="text.secondary">
+          <Typography color="textSecondary">
             {t("recentSales.empty")}
           </Typography>
         ) : (
@@ -67,7 +67,7 @@ export const RecentSalesDrawer = ({
               let status: ReactNode = null;
               if (row.undone) {
                 status = (
-                  <Typography variant="caption" color="text.secondary">
+                  <Typography variant="caption" color="textSecondary">
                     {t("recentSales.undone")}
                   </Typography>
                 );
@@ -85,7 +85,7 @@ export const RecentSalesDrawer = ({
                 );
               } else if (row.undoBlock === "expired") {
                 status = (
-                  <Typography variant="caption" color="text.secondary">
+                  <Typography variant="caption" color="textSecondary">
                     {t("recentSales.expired")}
                   </Typography>
                 );

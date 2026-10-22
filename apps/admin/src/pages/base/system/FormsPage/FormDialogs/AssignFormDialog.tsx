@@ -127,7 +127,7 @@ export const AssignFormDialog = ({
         <Typography variant="body2">{t("body")}</Typography>
         <Stack role="group" aria-label={t("tenants")}>
           {tenants.length === 0 && (
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="body2" color="textSecondary">
               {t("empty")}
             </Typography>
           )}

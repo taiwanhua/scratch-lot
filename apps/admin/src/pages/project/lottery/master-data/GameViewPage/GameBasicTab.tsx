@@ -55,7 +55,7 @@ export const GameBasicTab = ({ game }: GameBasicTabProps) => {
       >
         {rows.map((row) => (
           <Stack key={row.key} spacing={0.5}>
-            <Typography variant="caption" color="text.secondary">
+            <Typography variant="caption" color="textSecondary">
               {t(`gameForm.fields.${row.key}`)}
             </Typography>
             <Typography variant="body2">{row.value}</Typography>
@@ -63,7 +63,7 @@ export const GameBasicTab = ({ game }: GameBasicTabProps) => {
         ))}
       </Box>
       <Stack spacing={0.5} sx={{ alignItems: "flex-start" }}>
-        <Typography variant="caption" color="text.secondary">
+        <Typography variant="caption" color="textSecondary">
           {t("gameForm.sections.color")}
         </Typography>
         {isTagPaletteKey(game.color) ? (

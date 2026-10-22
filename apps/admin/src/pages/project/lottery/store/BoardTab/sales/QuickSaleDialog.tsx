@@ -69,7 +69,7 @@ export const QuickSaleDialog = ({
       <Stack spacing={1.5}>
         <ScanTicketSummary item={item} />
         <Stack direction="row" sx={{ justifyContent: "space-between" }}>
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" color="textSecondary">
             {t("quickSale.cashPoint")}
           </Typography>
           <Typography variant="body1">
@@ -79,7 +79,7 @@ export const QuickSaleDialog = ({
           </Typography>
         </Stack>
         <Stack direction="row" sx={{ justifyContent: "space-between" }}>
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" color="textSecondary">
             {t("quickSale.amount")}
           </Typography>
           <Typography variant="subtitle1">

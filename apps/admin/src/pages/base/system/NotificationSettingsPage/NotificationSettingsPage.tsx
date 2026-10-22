@@ -106,11 +106,11 @@ export const NotificationSettingsPage = () => {
   return (
     // 表格下面還有側欄數字設定,不是只有一層捲動能吃掉超出量 → 不釘高,交給 <main> 捲(STYLE-08)
     <Stack spacing={2} sx={{ flexGrow: 1, flexShrink: 0 }}>
-      <Typography variant="body2" color="text.secondary">
+      <Typography variant="body2" color="textSecondary">
         {t("intro")}
       </Typography>
       {data.isAtRoot && (
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" color="textSecondary">
           {t("rootReadOnly")}
         </Typography>
       )}
@@ -142,7 +142,7 @@ export const NotificationSettingsPage = () => {
           spacing={1}
           sx={{ alignItems: "center", px: 3, py: 1.5 }}
         >
-          <Typography variant="body2" color="text.secondary" sx={{ flex: 1 }}>
+          <Typography variant="body2" color="textSecondary" sx={{ flex: 1 }}>
             {t("total", {
               total: data.totalCount,
               pageSize: NOTIFICATION_SETTINGS_PAGE_SIZE,
@@ -158,7 +158,7 @@ export const NotificationSettingsPage = () => {
         </Stack>
       </Card>
       {data.isError && (
-        <Typography variant="body2" color="error.main">
+        <Typography variant="body2" color="error">
           {t("loadFailed")}
         </Typography>
       )}

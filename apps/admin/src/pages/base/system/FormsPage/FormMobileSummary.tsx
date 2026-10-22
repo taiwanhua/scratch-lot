@@ -29,7 +29,7 @@ const SummaryRow = ({ label, value }: { label: string; value: string }) => (
   <Stack direction="row" spacing={1.5}>
     <Typography
       variant="body2"
-      color="text.secondary"
+      color="textSecondary"
       sx={{ flexShrink: 0, minWidth: (theme) => theme.spacing(LABEL_WIDTH) }}
     >
       {label}
@@ -63,14 +63,14 @@ const FormMobileSummaryCard = ({ form }: { form: FormFieldsFragment }) => {
           <Typography variant="h6" component="h1">
             {form.name}
           </Typography>
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" color="textSecondary">
             {t("detail.meta", {
               key: form.key,
               module: form.moduleName ?? form.moduleKey,
             })}
           </Typography>
           {form.forkedFrom !== null && form.forkedFrom !== undefined && (
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="body2" color="textSecondary">
               {t("detail.forkedFrom", {
                 key: form.forkedFrom.formKey,
                 version: form.forkedFrom.version,
@@ -102,7 +102,7 @@ const FormMobileSummaryCard = ({ form }: { form: FormFieldsFragment }) => {
           />
         </Stack>
         {form.assignments.length > 0 && (
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" color="textSecondary">
             {t("detail.assignedTo", {
               tenants: form.assignments
                 .map((item) => item.tenantName ?? item.tenantOrgId)
@@ -141,7 +141,7 @@ export const FormMobileSummary = ({
         <Alert severity="warning">{t("mobile.unsaved")}</Alert>
       )}
       {form === null ? (
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" color="textSecondary">
           {emptyText}
         </Typography>
       ) : (

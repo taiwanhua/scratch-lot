@@ -277,7 +277,7 @@ export const TemplateDialog = ({ template, onClose }: TemplateDialogProps) => {
     >
       <Stack spacing={2} sx={{ pt: 1 }}>
         {template !== null && !template.canEdit && (
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" color="textSecondary">
             {t("readOnly", { org: template.ownerOrg.name })}
           </Typography>
         )}

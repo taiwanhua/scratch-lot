@@ -88,12 +88,12 @@ export const CheckoutDrawerStep = ({
             direction="row"
             sx={{ justifyContent: "space-between", alignItems: "baseline" }}
           >
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="body2" color="textSecondary">
               {t("drawer.difference")}
             </Typography>
             <Typography
               variant="h6"
-              color={flow.difference === 0 ? "text.primary" : "error.main"}
+              color={flow.difference === 0 ? "textPrimary" : "error"}
             >
               {signedMoneyText(flow.difference)}
             </Typography>

@@ -79,7 +79,7 @@ export const ChangePasswordPage = () => {
     <AuthCard subtitle={t("subtitle")}>
       <Box component="form" onSubmit={handleSubmit}>
         <Stack spacing={2.5}>
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" color="textSecondary">
             {isForced
               ? t("forced")
               : t("description", { min: PASSWORD_MIN_LENGTH })}

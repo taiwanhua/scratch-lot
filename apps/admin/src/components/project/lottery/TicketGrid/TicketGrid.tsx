@@ -135,7 +135,7 @@ export const TicketGrid = ({
         })}
       </Box>
       {summary === false ? null : (
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" color="textSecondary">
           {summary ?? defaultSummary}
         </Typography>
       )}

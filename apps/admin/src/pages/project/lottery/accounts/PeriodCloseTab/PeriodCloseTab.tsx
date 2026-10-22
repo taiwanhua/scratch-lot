@@ -112,7 +112,7 @@ export const PeriodCloseTab = () => {
     <Box sx={{ flexGrow: 1, flexShrink: 0 }}>
       <Typography
         variant="body2"
-        color="text.secondary"
+        color="textSecondary"
         component="p"
         sx={{ mb: 2 }}
       >

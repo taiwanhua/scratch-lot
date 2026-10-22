@@ -100,7 +100,7 @@ export const RevokeSelfDialog = ({ row, onClose }: RevokeSelfDialogProps) => {
       }
     >
       <Stack spacing={1}>
-        <Typography color="text.primary">
+        <Typography color="textPrimary">
           {t("revokeLine", {
             ticket: row.ticketLabel,
             amount,
@@ -185,7 +185,7 @@ export const RevokeManagerDialog = ({
       }
     >
       <Stack spacing={2} sx={{ pt: 1 }}>
-        <Typography color="text.primary">
+        <Typography color="textPrimary">
           {t("managerSubtitle", { ticket: row.ticketLabel, amount })}
         </Typography>
         <ReasonFields

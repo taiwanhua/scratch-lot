@@ -178,7 +178,7 @@ export const SplitPlaceStep = ({
         </tbody>
       </Box>
       {state.mode === "split" && unassigned.length > 0 ? (
-        <Typography variant="body2" color="warning.main">
+        <Typography variant="body2" color="warning">
           {t("split.remaining", { count: unassigned.length })}
         </Typography>
       ) : null}

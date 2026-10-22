@@ -7,7 +7,7 @@ import { Card } from "@repo/ui/card";
 import { SelectField } from "@repo/ui/select-field";
 import { Stack } from "@repo/ui/stack";
 import { TextField } from "@repo/ui/text-field";
-import { Typography } from "@repo/ui/typography";
+import { Typography, type TypographyColor } from "@repo/ui/typography";
 
 import { DenominationCount } from "@/components/project/lottery/DenominationCount/DenominationCount";
 import { ReasonFields } from "@/components/project/lottery/ReasonFields/ReasonFields";
@@ -37,14 +37,14 @@ const useShortTime = () => {
 const Fact = ({
   label,
   value,
-  tone = "text.primary",
+  tone = "textPrimary",
 }: {
   label: string;
   value: string;
-  tone?: string;
+  tone?: TypographyColor;
 }) => (
   <Stack direction="row" sx={{ justifyContent: "space-between", gap: 2 }}>
-    <Typography variant="body2" color="text.secondary">
+    <Typography variant="body2" color="textSecondary">
       {label}
     </Typography>
     <Typography variant="body1" color={tone} sx={{ textAlign: "right" }}>
@@ -118,12 +118,12 @@ export const DailyCloseVaultStep = ({
             direction="row"
             sx={{ justifyContent: "space-between", alignItems: "baseline" }}
           >
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="body2" color="textSecondary">
               {t("checkout.drawer.difference")}
             </Typography>
             <Typography
               variant="h6"
-              color={flow.difference === 0 ? "success.main" : "error.main"}
+              color={flow.difference === 0 ? "success" : "error"}
             >
               {signedMoneyText(flow.difference)}
             </Typography>
@@ -197,7 +197,7 @@ export const DailyCloseBankStep = ({
           label={t("after")}
           value={moneyText(flow.counted - flow.deposit)}
         />
-        <Typography variant="caption" color="text.secondary">
+        <Typography variant="caption" color="textSecondary">
           {t("hint")}
         </Typography>
       </Stack>
@@ -256,12 +256,12 @@ export const DailyCloseConfirmStep = ({
         <Fact
           label={t("confirm.shiftDifference")}
           value={signedMoneyText(wizard.differenceTotal)}
-          tone={wizard.differenceTotal === 0 ? "text.primary" : "error.main"}
+          tone={wizard.differenceTotal === 0 ? "textPrimary" : "error"}
         />
         <Fact
           label={t("confirm.vaultDifference")}
           value={signedMoneyText(flow.difference)}
-          tone={flow.difference === 0 ? "text.primary" : "error.main"}
+          tone={flow.difference === 0 ? "textPrimary" : "error"}
         />
         <Fact
           label={t("confirm.bankDeposit")}

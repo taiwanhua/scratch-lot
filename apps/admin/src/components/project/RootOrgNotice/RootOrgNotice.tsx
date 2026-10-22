@@ -23,7 +23,7 @@ export const RootOrgNotice = () => {
         <Alert severity="info" sx={{ alignSelf: "stretch" }}>
           {t("message")}
         </Alert>
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" color="textSecondary">
           {t("hint")}
         </Typography>
         {data === undefined ? null : <OrgSwitcher me={data} />}

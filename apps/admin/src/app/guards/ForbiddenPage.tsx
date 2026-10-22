@@ -22,7 +22,7 @@ export const ForbiddenPage = ({ isEntry = false }: ForbiddenPageProps) => {
       <Typography variant="h4" component="h1">
         {t("title")}
       </Typography>
-      <Typography color="text.secondary">{t("body")}</Typography>
+      <Typography color="textSecondary">{t("body")}</Typography>
       {isEntry ? null : (
         <Button<typeof Link> component={Link} to="/" variant="outlined">
           {t("backHome")}

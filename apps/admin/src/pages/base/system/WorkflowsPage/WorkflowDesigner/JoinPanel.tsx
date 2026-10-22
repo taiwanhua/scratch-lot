@@ -43,7 +43,7 @@ export const JoinPanel = ({
       <Typography variant="subtitle1" component="h2">
         {t("title")}
       </Typography>
-      <Typography variant="body2" color="text.secondary">
+      <Typography variant="body2" color="textSecondary">
         {t("body", { count: branchCount })}
       </Typography>
       <TextField

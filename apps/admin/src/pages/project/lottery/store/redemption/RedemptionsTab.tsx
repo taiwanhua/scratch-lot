@@ -351,7 +351,7 @@ export const RedemptionsTab = () => {
       {isNarrow ? (
         <Stack spacing={1.5}>
           {rows.length === 0 && !query.isLoading ? (
-            <Typography color="text.secondary">{t("tab.empty")}</Typography>
+            <Typography color="textSecondary">{t("tab.empty")}</Typography>
           ) : null}
           {rows.map((row) => (
             <Card
@@ -373,19 +373,19 @@ export const RedemptionsTab = () => {
                 direction="row"
                 sx={{ justifyContent: "space-between", alignItems: "center" }}
               >
-                <Typography color="text.primary">
+                <Typography color="textPrimary">
                   {`${serialText(row)} · ${row.ticketLabel} · ${t("money", { amount: moneyText(row.prizeAmount) })}`}
                 </Typography>
                 {statusTag(row)}
               </Stack>
-              <Typography variant="body2" color="text.secondary">
+              <Typography variant="body2" color="textSecondary">
                 {t("tab.cardMeta", {
                   cashPoint: row.cashPoint.name,
                   shift: shiftText(row),
                   time: temporal(row.redeemedAt, "monthDayTime"),
                 })}
               </Typography>
-              <Typography variant="body2" color="text.secondary">
+              <Typography variant="body2" color="textSecondary">
                 {t("tab.cardBy", {
                   name: row.redeemedBy.name,
                   purchase: purchaseText(row),
@@ -408,7 +408,7 @@ export const RedemptionsTab = () => {
         />
       )}
       <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
-        <Typography variant="body2" color="text.secondary" sx={{ flex: 1 }}>
+        <Typography variant="body2" color="textSecondary" sx={{ flex: 1 }}>
           {t("tab.summary", { count: total })}
         </Typography>
         <Pagination

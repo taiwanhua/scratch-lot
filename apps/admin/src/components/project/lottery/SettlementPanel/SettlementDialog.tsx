@@ -171,7 +171,7 @@ export const SettlementDialog = ({
       <Stack spacing={2.5} sx={{ pt: 1 }}>
         {errorKey !== null && <Alert severity="error">{t(errorKey)}</Alert>}
         <Stack spacing={0.5}>
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" color="textSecondary">
             {t("settleForm.documentValue", {
               docNo: settlement.docNo,
               label: settlement.label,

@@ -111,7 +111,7 @@ export const CashCorrectionsTab = () => {
             <Typography variant="body2">
               {`${directionOf(row)} ${moneyText(row.amount)} · ${placeOf(row)}`}
             </Typography>
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="body2" color="textSecondary">
               {[row.reasonLabel, row.attributedShiftLabel ?? ""]
                 .filter((part) => part !== "")
                 .join(" · ")}

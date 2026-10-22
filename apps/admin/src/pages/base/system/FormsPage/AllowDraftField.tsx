@@ -53,7 +53,7 @@ export const AllowDraftField = ({ form, onChanged }: AllowDraftFieldProps) => {
           />
         }
       />
-      <Typography variant="caption" color="text.secondary">
+      <Typography variant="caption" color="textSecondary">
         {t("allowDraftHint")}
       </Typography>
     </Stack>

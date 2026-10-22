@@ -65,7 +65,7 @@ export const ScheduleTabsPage = ({ title, tabs }: ScheduleTabsPageProps) => {
       {hasVisible ? (
         <PageTabs aria-label={title} items={items} />
       ) : (
-        <Typography color="text.secondary">{t("shell.empty")}</Typography>
+        <Typography color="textSecondary">{t("shell.empty")}</Typography>
       )}
     </Card>
   );

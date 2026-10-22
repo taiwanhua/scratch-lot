@@ -34,10 +34,10 @@ const Line = ({ label, value }: { label: string; value: ReactNode }) => (
     spacing={2}
     sx={{ justifyContent: "space-between", alignItems: "baseline" }}
   >
-    <Typography variant="body2" color="text.secondary">
+    <Typography variant="body2" color="textSecondary">
       {label}
     </Typography>
-    <Typography color="text.primary" sx={{ textAlign: "right" }}>
+    <Typography color="textPrimary" sx={{ textAlign: "right" }}>
       {value}
     </Typography>
   </Stack>
@@ -88,7 +88,7 @@ export const RedemptionDetailDialog = ({
         >
           <span>{t("detailTitle")}</span>
           {row === null ? null : (
-            <Typography component="span" variant="body2" color="text.secondary">
+            <Typography component="span" variant="body2" color="textSecondary">
               {row.serialNo ?? "—"}
             </Typography>
           )}

@@ -39,11 +39,7 @@ export const DenominationCount = ({
 }: DenominationCountProps) => {
   const total = rows.reduce((sum, row) => sum + row.value * row.count, 0);
   const cell = (text: string, align: "left" | "right" = "left") => (
-    <Typography
-      variant="body2"
-      color="text.secondary"
-      sx={{ textAlign: align }}
-    >
+    <Typography variant="body2" color="textSecondary" sx={{ textAlign: align }}>
       {text}
     </Typography>
   );
@@ -95,7 +91,7 @@ export const DenominationCount = ({
       ))}
       <Typography
         variant="subtitle2"
-        color="text.secondary"
+        color="textSecondary"
         sx={{
           gridColumn: "1 / 3",
           borderTop: 1,

@@ -91,7 +91,7 @@ export const BoardTopBar = ({
             bgcolor: status === "live" ? "success.main" : "warning.main",
           }}
         />
-        <Typography variant="caption" color="text.secondary">
+        <Typography variant="caption" color="textSecondary">
           {status === "live" ? t("live") : t("reconnecting")}
         </Typography>
       </Stack>

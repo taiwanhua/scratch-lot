@@ -127,14 +127,14 @@ export const FormDetailPanel = ({
             <Typography variant="h6" component="h1">
               {form.name}
             </Typography>
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="body2" color="textSecondary">
               {t("meta", {
                 key: form.key,
                 module: form.moduleName ?? form.moduleKey,
               })}
             </Typography>
             {form.forkedFrom !== null && form.forkedFrom !== undefined && (
-              <Typography variant="body2" color="text.secondary">
+              <Typography variant="body2" color="textSecondary">
                 {t("forkedFrom", {
                   key: form.forkedFrom.formKey,
                   version: form.forkedFrom.version,
@@ -211,7 +211,7 @@ export const FormDetailPanel = ({
           <WorkflowBindingField form={form} onChanged={onChanged} />
         )}
         {form.assignments.length > 0 && (
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" color="textSecondary">
             {t("assignedTo", {
               tenants: form.assignments
                 .map((item) => item.tenantName ?? item.tenantOrgId)

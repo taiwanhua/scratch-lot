@@ -45,7 +45,7 @@ export const FlowSettingsPanel = ({
 
   return (
     <Stack spacing={2} component="section" aria-label={t("region")}>
-      <Typography variant="body2" color="text.secondary">
+      <Typography variant="body2" color="textSecondary">
         {selectHint}
       </Typography>
       <Typography variant="subtitle1" component="h2">

@@ -53,7 +53,7 @@ export const AccountsList = <Row,>({
   }
   if (rows.length === 0) {
     return (
-      <Typography variant="body2" color="text.secondary">
+      <Typography variant="body2" color="textSecondary">
         {emptyMessage}
       </Typography>
     );
@@ -161,7 +161,7 @@ export const AccountsList = <Row,>({
                         alignItems: "baseline",
                       }}
                     >
-                      <Typography variant="body2" color="text.secondary">
+                      <Typography variant="body2" color="textSecondary">
                         {column.header}
                       </Typography>
                       <Box

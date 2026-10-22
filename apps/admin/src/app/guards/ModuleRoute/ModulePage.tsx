@@ -14,8 +14,8 @@ export const ModulePage = ({ module }: ModulePageProps) => {
       <Typography variant="h4" component="h1">
         {module.name}
       </Typography>
-      <Typography color="text.secondary">{t("pending")}</Typography>
-      <Typography variant="caption" color="text.disabled">
+      <Typography color="textSecondary">{t("pending")}</Typography>
+      <Typography variant="caption" color="textDisabled">
         {module.key}
       </Typography>
     </Stack>

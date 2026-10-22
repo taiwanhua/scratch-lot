@@ -119,7 +119,7 @@ export const PurchaseRedemptions = ({
           <Typography variant="subtitle1" component="h2" sx={{ flex: 1 }}>
             {t("title")}
           </Typography>
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" color="textSecondary">
             {t("scope")}
           </Typography>
         </Stack>
@@ -128,7 +128,7 @@ export const PurchaseRedemptions = ({
           fieldKey={PURCHASE_FIELD_KEYS.redemptions}
         />
         {branchId === "" ? (
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" color="textSecondary">
             {t("noBranch")}
           </Typography>
         ) : (

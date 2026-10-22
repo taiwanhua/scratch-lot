@@ -108,7 +108,7 @@ export const CashPointHeader = ({
       <Stack direction="row" spacing={3}>
         {stats.map((stat) => (
           <Box key={stat.key}>
-            <Typography variant="caption" color="text.secondary">
+            <Typography variant="caption" color="textSecondary">
               {stat.label}
             </Typography>
             <Typography variant="h6" sx={{ whiteSpace: "nowrap" }}>

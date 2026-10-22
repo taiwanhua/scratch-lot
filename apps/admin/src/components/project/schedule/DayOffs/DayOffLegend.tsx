@@ -36,7 +36,7 @@ const swatch = (children: ReactNode) => (
 const item = (key: string, mark: ReactNode, label: string) => (
   <Stack key={key} direction="row" spacing={0.75} sx={{ alignItems: "center" }}>
     {mark}
-    <Typography variant="caption" color="text.secondary">
+    <Typography variant="caption" color="textSecondary">
       {label}
     </Typography>
   </Stack>
@@ -81,7 +81,7 @@ export const DayOffLegend = ({ variant }: DayOffLegendProps) => {
           ),
           item(
             "info",
-            <Typography variant="caption" color="text.secondary">
+            <Typography variant="caption" color="textSecondary">
               ⓘ
             </Typography>,
             t("legend.info"),

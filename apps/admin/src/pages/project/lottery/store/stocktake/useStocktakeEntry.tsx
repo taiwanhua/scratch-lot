@@ -144,7 +144,7 @@ export const useStocktakeEntry = (
               />
             </Stack>
           </RadioGroup>
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" color="textSecondary">
             {t("scope.hint")}
           </Typography>
         </Stack>

@@ -217,7 +217,7 @@ export const ShiftInfoDialog = ({ shiftId, onClose }: ShiftInfoDialogProps) => {
               setReason({ ...reason, reasonNote: event.target.value });
             }}
           />
-          <Typography variant="caption" color="text.secondary">
+          <Typography variant="caption" color="textSecondary">
             {t("reassign.hint")}
           </Typography>
         </Stack>
@@ -258,14 +258,14 @@ export const ShiftInfoDialog = ({ shiftId, onClose }: ShiftInfoDialogProps) => {
           >
             <Typography
               variant="body2"
-              color="text.secondary"
+              color="textSecondary"
               sx={{ flexShrink: 0, whiteSpace: "nowrap" }}
             >
               {row.label}
             </Typography>
             <Typography
               variant="body2"
-              color="text.primary"
+              color="textPrimary"
               sx={{ textAlign: "right" }}
             >
               {row.value}
@@ -276,7 +276,7 @@ export const ShiftInfoDialog = ({ shiftId, onClose }: ShiftInfoDialogProps) => {
           <Alert severity="warning">{t("shiftInfo.mismatch")}</Alert>
         ) : null}
         {info?.closed === true ? (
-          <Typography variant="caption" color="text.secondary">
+          <Typography variant="caption" color="textSecondary">
             {t("shiftInfo.closedHint")}
           </Typography>
         ) : null}

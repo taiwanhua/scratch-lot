@@ -112,7 +112,7 @@ export const ApprovalSection = ({
           tone={INSTANCE_TONE[instance.status]}
           label={t(`statuses.${instance.status}`)}
         />
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" color="textSecondary">
           {t("workflowLine", {
             workflow: instance.workflowName ?? instance.workflowKey,
             version: instance.workflowVersion,

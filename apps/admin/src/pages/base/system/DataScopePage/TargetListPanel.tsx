@@ -46,7 +46,7 @@ export const TargetListPanel = ({
     >
       <Stack spacing={1} sx={{ flex: 1, minHeight: 0 }}>
         <Typography variant="subtitle1">{t("title")}</Typography>
-        <Typography variant="caption" color="text.secondary">
+        <Typography variant="caption" color="textSecondary">
           {t("hint")}
         </Typography>
         {/* 清單佔滿標題以外的高度,超出時自己捲(STYLE-08) */}
@@ -83,7 +83,7 @@ export const TargetListPanel = ({
                       <Tag tone="primary" label={t("hasRule")} />
                     )}
                   </Stack>
-                  <Typography variant="caption" color="text.secondary">
+                  <Typography variant="caption" color="textSecondary">
                     {target.collection}
                   </Typography>
                 </Stack>

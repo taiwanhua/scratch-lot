@@ -241,7 +241,7 @@ export const PurchaseCreatePage = () => {
               {t("title")}
             </Typography>
             {progress !== null && requisitionNo !== null && (
-              <Typography variant="body2" color="text.secondary">
+              <Typography variant="body2" color="textSecondary">
                 {t("fromRequisition", {
                   serialNo: requisitionNo,
                   requested: progress.requested,
@@ -317,7 +317,7 @@ export const PurchaseCreatePage = () => {
                 <Alert severity="warning">{scanError}</Alert>
               )}
               {branchId === "" ? (
-                <Typography variant="body2" color="text.secondary">
+                <Typography variant="body2" color="textSecondary">
                   {t("pickBranch")}
                 </Typography>
               ) : (

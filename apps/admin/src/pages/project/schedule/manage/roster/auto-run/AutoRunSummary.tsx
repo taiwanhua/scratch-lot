@@ -174,7 +174,7 @@ const ClearAutoDialog = ({ onClose }: { onClose: () => void }) => {
             }}
           />
         </Stack>
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" color="textSecondary">
           {t("clearBody", { count: preview?.autoCount ?? 0 })}
         </Typography>
       </Stack>

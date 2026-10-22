@@ -63,7 +63,7 @@ export const RosterColumnPicker = () => {
               }
             />
           ))}
-          <Typography variant="caption" color="text.secondary">
+          <Typography variant="caption" color="textSecondary">
             {t("columnPicker.hint")}
           </Typography>
         </Stack>

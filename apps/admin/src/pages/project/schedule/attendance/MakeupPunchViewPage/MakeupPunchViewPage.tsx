@@ -124,7 +124,7 @@ export const MakeupPunchViewPage = ({ routeParam }: ModulePageProps) => {
         >
           {rows.map(([label, value]) => (
             <Box key={label} sx={{ display: "contents" }}>
-              <Typography component="dt" variant="body2" color="text.secondary">
+              <Typography component="dt" variant="body2" color="textSecondary">
                 {label}
               </Typography>
               <Typography

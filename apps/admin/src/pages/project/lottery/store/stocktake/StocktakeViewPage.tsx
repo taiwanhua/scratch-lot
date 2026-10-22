@@ -216,7 +216,7 @@ export const StocktakeViewPage = ({ routeParam }: ModulePageProps) => {
             )}
           </Stack>
           {detail === null ? null : (
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="body2" color="textSecondary">
               {t("meta", {
                 name: detail.submittedBy?.name ?? "",
                 time: temporal(detail.submittedAt, "monthDayTime"),
@@ -255,7 +255,7 @@ export const StocktakeViewPage = ({ routeParam }: ModulePageProps) => {
                       count: uncounted.length,
                     })}
                   />
-                  <Typography variant="body2" color="text.secondary">
+                  <Typography variant="body2" color="textSecondary">
                     {t("uncountedHint")}
                   </Typography>
                 </Stack>
@@ -306,7 +306,7 @@ export const StocktakeViewPage = ({ routeParam }: ModulePageProps) => {
                   <Typography
                     component="dt"
                     variant="body2"
-                    color="text.secondary"
+                    color="textSecondary"
                   >
                     {label}
                   </Typography>

@@ -108,7 +108,7 @@ export const PrefillEditor = ({
       />
       <Stack spacing={0.25}>
         <Typography variant="body2">{t("mapping")}</Typography>
-        <Typography variant="caption" color="text.secondary">
+        <Typography variant="caption" color="textSecondary">
           {t("mappingHint")}
         </Typography>
       </Stack>

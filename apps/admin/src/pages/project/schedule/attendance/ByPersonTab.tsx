@@ -123,7 +123,7 @@ export const ByPersonTab = () => {
   ) =>
     text.time(value) ??
     (row.missing.includes(type) ? (
-      <Typography component="span" variant="body2" color="error.main">
+      <Typography component="span" variant="body2" color="error">
         {t("missing")}
       </Typography>
     ) : (
@@ -268,7 +268,7 @@ export const ByPersonTab = () => {
                   <Typography variant="subtitle2">
                     {`${text.dateTitle(row.date)} ${row.orgName} ${text.entry(row)}`}
                   </Typography>
-                  <Typography variant="body2" color="text.secondary">
+                  <Typography variant="body2" color="textSecondary">
                     {t("personCardLine", {
                       clockIn: text.time(row.clockIn) ?? t("none"),
                       clockOut: text.time(row.clockOut) ?? t("none"),
@@ -276,7 +276,7 @@ export const ByPersonTab = () => {
                     })}
                   </Typography>
                   {(row.lateMinutes > 0 || row.earlyLeaveMinutes > 0) && (
-                    <Typography variant="body2" color="warning.main">
+                    <Typography variant="body2" color="warning">
                       {[
                         row.lateMinutes > 0
                           ? t("lateShort", { minutes: row.lateMinutes })
@@ -290,7 +290,7 @@ export const ByPersonTab = () => {
                     </Typography>
                   )}
                   {row.missing.length > 0 && (
-                    <Typography variant="body2" color="error.main">
+                    <Typography variant="body2" color="error">
                       {t("missing")}
                     </Typography>
                   )}
@@ -299,7 +299,7 @@ export const ByPersonTab = () => {
               </Card>
             ))}
             {rows.length === 0 && !query.isLoading && (
-              <Typography color="text.secondary">{t("emptyMonth")}</Typography>
+              <Typography color="textSecondary">{t("emptyMonth")}</Typography>
             )}
           </Stack>
         ) : (

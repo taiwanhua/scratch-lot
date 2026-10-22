@@ -317,7 +317,7 @@ export const SaleReversalCreatePage = () => {
           {groups.length === 0 ? (
             <Typography
               variant="body2"
-              color={invalid.includes("lines") ? "error" : "text.secondary"}
+              color={invalid.includes("lines") ? "error" : "textSecondary"}
             >
               {t("noTickets")}
             </Typography>
@@ -393,7 +393,7 @@ export const SaleReversalCreatePage = () => {
               {moneyText(refund ? refundAmountOf(groups) : 0)}
             </Typography>
           </Stack>
-          <Typography variant="caption" color="text.secondary">
+          <Typography variant="caption" color="textSecondary">
             {t("rule")}
           </Typography>
           {draft.error !== null && (

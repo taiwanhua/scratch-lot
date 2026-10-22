@@ -80,7 +80,7 @@ export const SheetPreview = ({
       >
         <Stack spacing={1.5}>
           {(sheet.notes ?? []).map((note) => (
-            <Typography key={note} variant="body2" color="text.secondary">
+            <Typography key={note} variant="body2" color="textSecondary">
               {note}
             </Typography>
           ))}

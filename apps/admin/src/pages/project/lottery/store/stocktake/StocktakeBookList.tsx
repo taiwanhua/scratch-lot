@@ -84,7 +84,7 @@ export const StocktakeBookList = ({
           </Button>
         )}
       </Stack>
-      <Typography variant="body2" color="text.secondary">
+      <Typography variant="body2" color="textSecondary">
         {point.shift == null
           ? t("cashPoint.noShift")
           : `${t("cashPoint.expected", {
@@ -157,7 +157,7 @@ export const StocktakeBookList = ({
                         <Typography variant="body2" sx={{ fontWeight: 600 }}>
                           {`${book.gameCode} ${book.gameName}`}
                         </Typography>
-                        <Typography variant="caption" color="text.secondary">
+                        <Typography variant="caption" color="textSecondary">
                           {t("book.subtitle", {
                             bookNo: displayBookNo(book.bookNo),
                             count: book.tickets.filter(

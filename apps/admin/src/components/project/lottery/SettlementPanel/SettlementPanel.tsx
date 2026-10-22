@@ -71,12 +71,12 @@ const AmountRow = ({ settlement }: { settlement: Settlement }) => {
     <Stack direction="row" sx={{ flexWrap: "wrap", gap: 3 }}>
       {items.map((item) => (
         <Stack key={item.label} spacing={0.25}>
-          <Typography variant="caption" color="text.secondary">
+          <Typography variant="caption" color="textSecondary">
             {item.label}
           </Typography>
           <Typography
             variant="h6"
-            color={item.tone === "warning" ? "warning.main" : "text.primary"}
+            color={item.tone === "warning" ? "warning" : "textPrimary"}
           >
             {item.value}
           </Typography>
@@ -208,7 +208,7 @@ export const SettlementPanel = ({ moduleKey, refId }: SettlementPanelProps) => {
     }
     if (row.record.reversedById !== null) {
       return (
-        <Typography variant="caption" color="text.secondary">
+        <Typography variant="caption" color="textSecondary">
           {t("settlement.reversed")}
         </Typography>
       );
@@ -324,7 +324,7 @@ export const SettlementPanel = ({ moduleKey, refId }: SettlementPanelProps) => {
               >
                 <Box sx={{ flex: 1, minWidth: 0 }}>
                   <Typography variant="body2">{rowTitle(row)}</Typography>
-                  <Typography variant="caption" color="text.secondary">
+                  <Typography variant="caption" color="textSecondary">
                     {rowSubtitle(row)}
                   </Typography>
                 </Box>

@@ -38,7 +38,7 @@ export const UpgradePlanStep = ({
       <Stack component="section" spacing={0.5} aria-label={t("groupsTitle")}>
         <Typography variant="subtitle2">{t("groupsTitle")}</Typography>
         {plan.groups.length === 0 ? (
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" color="textSecondary">
             {t("nothing")}
           </Typography>
         ) : (
@@ -55,11 +55,11 @@ export const UpgradePlanStep = ({
       {plan.groups.length > 0 && (
         <Stack component="section" spacing={1.5} aria-label={t("fillsTitle")}>
           <Typography variant="subtitle2">{t("fillsTitle")}</Typography>
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" color="textSecondary">
             {t("fillsHint")}
           </Typography>
           {fillTargets.length === 0 ? (
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="body2" color="textSecondary">
               {t("noFills")}
             </Typography>
           ) : (

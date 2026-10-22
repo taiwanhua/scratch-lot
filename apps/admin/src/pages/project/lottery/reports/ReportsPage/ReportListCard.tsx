@@ -37,7 +37,7 @@ export const ReportListCard = ({
           {title}
         </Typography>
         {reports.length === 0 ? (
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" color="textSecondary">
             {t("lotteryReports.reportList.empty")}
           </Typography>
         ) : (

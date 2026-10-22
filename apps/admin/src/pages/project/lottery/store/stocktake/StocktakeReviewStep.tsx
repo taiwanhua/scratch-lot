@@ -279,7 +279,7 @@ export const StocktakeReviewStep = ({
         </Card>
       ) : null}
       {review !== null && allRows.length === 0 ? (
-        <Typography color="text.secondary">{t("noDiff")}</Typography>
+        <Typography color="textSecondary">{t("noDiff")}</Typography>
       ) : null}
       {lines
         .filter(
@@ -308,7 +308,7 @@ export const StocktakeReviewStep = ({
                   </Typography>
                   <Typography
                     variant="body2"
-                    color="text.secondary"
+                    color="textSecondary"
                     sx={{ flex: 1 }}
                   >
                     {`${moneyText(line.unitPrice)} · ${
@@ -338,12 +338,12 @@ export const StocktakeReviewStep = ({
                   />
                 ) : null}
                 {line.diffs.some((diff) => diff.kind === "extra") ? (
-                  <Typography variant="caption" color="text.secondary">
+                  <Typography variant="caption" color="textSecondary">
                     {t("extraHint")}
                   </Typography>
                 ) : null}
                 {line.pendingReversalTicketNos.length > 0 ? (
-                  <Typography variant="caption" color="text.secondary">
+                  <Typography variant="caption" color="textSecondary">
                     {t("pendingReversal", {
                       tickets: formatTicketRanges(
                         line.pendingReversalTicketNos,

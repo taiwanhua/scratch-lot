@@ -113,7 +113,7 @@ export const GameViewPage = ({ routeParam }: ModulePageProps) => {
               </Typography>
               <GameStatusTag status={game.status} />
             </Stack>
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="body2" color="textSecondary">
               {t("gameView.summary", {
                 unitPrice: game.unitPrice.toLocaleString("en-US"),
                 tickets: game.ticketsPerBook,

@@ -154,7 +154,7 @@ export const RosterGridView = () => {
               <Typography
                 variant="caption"
                 component="div"
-                color="text.secondary"
+                color="textSecondary"
               >
                 {t("cell.closed")}
               </Typography>
@@ -199,7 +199,7 @@ export const RosterGridView = () => {
     return (
       <Stack key={demand.id} spacing={0.25}>
         {showPosition && (
-          <Typography variant="caption" color="text.secondary">
+          <Typography variant="caption" color="textSecondary">
             {position}
           </Typography>
         )}

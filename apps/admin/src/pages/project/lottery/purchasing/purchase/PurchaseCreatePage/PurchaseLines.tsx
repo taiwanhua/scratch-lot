@@ -104,7 +104,7 @@ export const PurchaseLines = ({
     return (
       <>
         {errors}
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" color="textSecondary">
           {t("empty")}
         </Typography>
       </>
@@ -202,7 +202,7 @@ export const PurchaseLines = ({
                   <Typography
                     component="span"
                     variant="body2"
-                    color="text.secondary"
+                    color="textSecondary"
                     sx={{ ml: 1 }}
                   >
                     {t("requested", {
@@ -218,7 +218,7 @@ export const PurchaseLines = ({
                   spacing={1}
                   sx={{ alignItems: "center" }}
                 >
-                  <Typography variant="caption" color="text.secondary">
+                  <Typography variant="caption" color="textSecondary">
                     {t("groupRate")}
                   </Typography>
                   <RateInput
@@ -247,7 +247,7 @@ export const PurchaseLines = ({
                         <Typography variant="body2" sx={{ fontWeight: 700 }}>
                           {row.displayBookNo}
                         </Typography>
-                        <Typography variant="caption" color="text.secondary">
+                        <Typography variant="caption" color="textSecondary">
                           {t("cardFacts", {
                             lastTicketNo: lastTicketText(row.lastTicketNo),
                             amount: formatMoney(row.amount),

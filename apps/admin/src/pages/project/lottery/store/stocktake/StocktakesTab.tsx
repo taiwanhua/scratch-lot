@@ -185,7 +185,7 @@ export const StocktakesTab = () => {
       {isNarrow ? (
         <Stack spacing={1.5}>
           {rows.length === 0 && !query.isLoading ? (
-            <Typography color="text.secondary">{t("list.empty")}</Typography>
+            <Typography color="textSecondary">{t("list.empty")}</Typography>
           ) : null}
           {rows.map((row) => (
             <Card
@@ -214,7 +214,7 @@ export const StocktakesTab = () => {
                   </Typography>
                   {statusTag(row)}
                 </Stack>
-                <Typography variant="body2" color="text.secondary">
+                <Typography variant="body2" color="textSecondary">
                   {temporal(row.startedAt, "monthDayTime")}
                 </Typography>
                 <Typography variant="body2">
@@ -244,7 +244,7 @@ export const StocktakesTab = () => {
         spacing={2}
         sx={{ alignItems: "center", justifyContent: "flex-end" }}
       >
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" color="textSecondary">
           {t("list.total", { count: total })}
         </Typography>
         {total > STOCKTAKES_PAGE_SIZE ? (

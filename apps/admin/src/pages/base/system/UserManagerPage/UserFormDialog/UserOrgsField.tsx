@@ -59,7 +59,7 @@ export const UserOrgsField = ({
         )}
       </Stack>
       {!isEditable && (
-        <Typography variant="caption" color="text.secondary">
+        <Typography variant="caption" color="textSecondary">
           {t("orgsReadonly")}
         </Typography>
       )}

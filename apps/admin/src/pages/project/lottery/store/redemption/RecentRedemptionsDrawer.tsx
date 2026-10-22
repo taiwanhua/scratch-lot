@@ -64,7 +64,7 @@ export const RecentRedemptionsDrawer = ({
           <Typography
             component="div"
             variant="caption"
-            color="text.secondary"
+            color="textSecondary"
             noWrap
           >
             {row.serialNo ?? "—"}
@@ -84,7 +84,7 @@ export const RecentRedemptionsDrawer = ({
       render: (row) => {
         if (row.status === "revoked") {
           return (
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="body2" color="textSecondary">
               {t("status.revoked")}
             </Typography>
           );
@@ -115,7 +115,7 @@ export const RecentRedemptionsDrawer = ({
       onClose={onClose}
     >
       <Stack spacing={1.5}>
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" color="textSecondary">
           {t("recentHint")}
         </Typography>
         <Table

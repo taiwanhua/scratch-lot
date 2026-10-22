@@ -81,7 +81,7 @@ export const RuleEditorPanel = ({
               collection: target.collection,
             })}
           </Typography>
-          <Typography variant="caption" color="text.secondary">
+          <Typography variant="caption" color="textSecondary">
             {target.description ?? ""}
           </Typography>
         </Stack>
@@ -94,7 +94,7 @@ export const RuleEditorPanel = ({
             py: 1.25,
           }}
         >
-          <Typography variant="caption" color="text.secondary">
+          <Typography variant="caption" color="textSecondary">
             {t("defaultHint")}
           </Typography>
         </Box>
@@ -112,7 +112,7 @@ export const RuleEditorPanel = ({
             ]}
             onChange={editor.setCombineOp}
           />
-          <Typography variant="caption" color="text.secondary">
+          <Typography variant="caption" color="textSecondary">
             {t("combineOpHint")}
           </Typography>
           <Box sx={{ flex: 1 }} />

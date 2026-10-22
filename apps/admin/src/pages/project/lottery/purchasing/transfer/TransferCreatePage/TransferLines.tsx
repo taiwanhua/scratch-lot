@@ -87,7 +87,7 @@ export const TransferLines = ({
 
   if (lines.length === 0) {
     return (
-      <Typography variant="body2" color="text.secondary">
+      <Typography variant="body2" color="textSecondary">
         {t("noLines")}
       </Typography>
     );
@@ -103,7 +103,7 @@ export const TransferLines = ({
                 <Typography variant="body2" sx={{ fontWeight: 700 }}>
                   {`${line.book.gameCode} ${line.book.gameName} · ${bookLabelOf(line.book)}`}
                 </Typography>
-                <Typography variant="caption" color="text.secondary">
+                <Typography variant="caption" color="textSecondary">
                   {t("cardFacts", {
                     mode: modeText(line),
                     tickets: ticketsText(line),
@@ -132,7 +132,7 @@ export const TransferLines = ({
           <Typography variant="body2" sx={{ fontWeight: 700 }}>
             {bookLabelOf(line.book)}
           </Typography>
-          <Typography variant="caption" color="text.secondary">
+          <Typography variant="caption" color="textSecondary">
             {line.book.gameName}
           </Typography>
         </Stack>

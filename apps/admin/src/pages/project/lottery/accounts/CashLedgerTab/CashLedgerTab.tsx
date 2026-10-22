@@ -235,13 +235,13 @@ export const CashLedgerTab = () => {
         }}
       >
         <Card variant="outlined" sx={{ p: 2 }}>
-          <Typography variant="caption" color="text.secondary">
+          <Typography variant="caption" color="textSecondary">
             {t("cash.vault")}
           </Typography>
           <Typography variant="h6">
             {moneyText(ledger?.vault.amount ?? 0)}
           </Typography>
-          <Typography variant="caption" color="text.secondary">
+          <Typography variant="caption" color="textSecondary">
             {baselineAt === null
               ? t("cash.vaultFromZero")
               : t("cash.vaultBaseline", {
@@ -254,11 +254,11 @@ export const CashLedgerTab = () => {
         </Card>
         {(ledger?.drawers ?? []).map((drawer) => (
           <Card key={drawer.shiftId} variant="outlined" sx={{ p: 2 }}>
-            <Typography variant="caption" color="text.secondary">
+            <Typography variant="caption" color="textSecondary">
               {t("cash.drawer", { name: drawer.cashPoint.name })}
             </Typography>
             <Typography variant="h6">{moneyText(drawer.amount)}</Typography>
-            <Typography variant="caption" color="text.secondary">
+            <Typography variant="caption" color="textSecondary">
               {t("cash.drawerOwner", { name: drawer.openedBy.name })}
             </Typography>
           </Card>

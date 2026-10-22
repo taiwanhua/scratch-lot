@@ -131,7 +131,7 @@ export const ScrapTicketsDialog = ({
         {cost == null ? null : (
           <Stack direction="row" sx={{ justifyContent: "space-between" }}>
             <Typography variant="body2">{t("scrap.loss")}</Typography>
-            <Typography variant="body1" color="error.main">
+            <Typography variant="body1" color="error">
               {t("common.amount", {
                 amount: moneyText(Math.round(cost.unitCost * tickets.length)),
               })}

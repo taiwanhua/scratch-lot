@@ -196,7 +196,7 @@ export const UserManagerPage = () => {
             setIsCreating(true);
           }}
         />
-        <Typography variant="caption" color="text.secondary">
+        <Typography variant="caption" color="textSecondary">
           {t("outOfScopeHint")}
         </Typography>
         {/* 表格吃掉剩下的高度、自己捲;分頁列永遠留在卡片底部(Figma 31:82 + 31:157) */}
@@ -234,7 +234,7 @@ export const UserManagerPage = () => {
             spacing={1}
             sx={{ alignItems: "center", px: 3, py: 1.5 }}
           >
-            <Typography variant="body2" color="text.secondary" sx={{ flex: 1 }}>
+            <Typography variant="body2" color="textSecondary" sx={{ flex: 1 }}>
               {t("total", {
                 total: data.totalCount,
                 pageSize: USERS_PAGE_SIZE,
@@ -250,7 +250,7 @@ export const UserManagerPage = () => {
           </Stack>
         </Card>
         {actionError !== null && toggleUser === null && rolesUser === null && (
-          <Typography variant="body2" color="error.main">
+          <Typography variant="body2" color="error">
             {tErrors(actionError)}
           </Typography>
         )}

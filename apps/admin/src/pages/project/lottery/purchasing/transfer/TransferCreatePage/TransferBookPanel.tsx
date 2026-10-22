@@ -158,7 +158,7 @@ export const TransferBookPanel = ({
           fullWidth
         />
         {book === null ? (
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" color="textSecondary">
             {fromOrgId === "" ? t("pickFromBranch") : t("pickBookHint")}
           </Typography>
         ) : (
@@ -176,7 +176,7 @@ export const TransferBookPanel = ({
                     : book.bookNo,
                 })}
               </Typography>
-              <Typography variant="caption" color="text.secondary">
+              <Typography variant="caption" color="textSecondary">
                 {t("bookFacts", { count: book.availableCount })}
               </Typography>
             </Stack>

@@ -83,7 +83,7 @@ export const AudiencePicker = ({
   return (
     <Stack component="section" aria-label={title} spacing={1}>
       {!isTitleHidden && (
-        <Typography variant="subtitle2" color="text.secondary">
+        <Typography variant="subtitle2" color="textSecondary">
           {title}
         </Typography>
       )}
@@ -109,7 +109,7 @@ export const AudiencePicker = ({
         </RadioGroup>
       )}
       {modeError !== undefined && (
-        <Typography variant="caption" color="error.main">
+        <Typography variant="caption" color="error">
           {modeError}
         </Typography>
       )}

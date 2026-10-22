@@ -47,7 +47,7 @@ const EntryRow = ({
   const temporal = useTemporalText();
   return (
     <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
-      <Typography variant="caption" color="text.secondary">
+      <Typography variant="caption" color="textSecondary">
         {temporal(entry.occurredAt, "monthDayTime")}
       </Typography>
       <Typography variant="body2" sx={{ flex: 1 }}>
@@ -120,7 +120,7 @@ const ItemRow = ({
           cursor: expandable ? "pointer" : "default",
         }}
       >
-        <Typography variant="body2" color="text.secondary" sx={{ flex: 1 }}>
+        <Typography variant="body2" color="textSecondary" sx={{ flex: 1 }}>
           {label}
           {countText}
         </Typography>
@@ -192,13 +192,13 @@ export const ExpectedCashList = ({
           pt: 1,
         }}
       >
-        <Typography variant="subtitle2" color="text.secondary">
+        <Typography variant="subtitle2" color="textSecondary">
           {totalLabel ?? t("expectedTitle")}
         </Typography>
         <Typography variant="subtitle1">{moneyText(expected)}</Typography>
       </Stack>
       {hint === null ? null : (
-        <Typography variant="caption" color="text.secondary">
+        <Typography variant="caption" color="textSecondary">
           {hint}
         </Typography>
       )}

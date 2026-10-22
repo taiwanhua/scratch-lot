@@ -119,7 +119,7 @@ export const FieldBasicsEditor = ({
         />
       )}
       {!sections.span && (
-        <Typography variant="caption" color="text.secondary">
+        <Typography variant="caption" color="textSecondary">
           {t("spanFixed")}
         </Typography>
       )}

@@ -90,7 +90,7 @@ export const WorkflowListPanel = ({
           sx={{ flex: 1, minHeight: 0, overflow: "auto" }}
         >
           {workflows.length === 0 && (
-            <Typography variant="body2" color="text.secondary" sx={{ px: 2 }}>
+            <Typography variant="body2" color="textSecondary" sx={{ px: 2 }}>
               {t("empty")}
             </Typography>
           )}
@@ -141,7 +141,7 @@ export const WorkflowListPanel = ({
                   )}
                 </Stack>
                 {workflow.boundForms.length > 0 && (
-                  <Typography variant="caption" color="text.secondary">
+                  <Typography variant="caption" color="textSecondary">
                     {t("boundForms", {
                       forms: workflow.boundForms
                         .map((form) => form.formName ?? form.formKey)

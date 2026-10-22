@@ -55,7 +55,7 @@ export const NotificationSettingsTable = ({
     if (row.category !== "responsible" || row.audience == null) {
       const note = recipientNoteOf(row.type, row.recipientNote);
       return (
-        <Typography variant="body2" component="span" color="text.secondary">
+        <Typography variant="body2" component="span" color="textSecondary">
           {note === null
             ? t("partyRecipients")
             : t("partyRecipientsWithNote", { note })}
@@ -98,7 +98,7 @@ export const NotificationSettingsTable = ({
           <Typography
             variant="body2"
             component="span"
-            color={row.schedule ? undefined : "text.secondary"}
+            color={row.schedule ? undefined : "textSecondary"}
           >
             {scheduleOf(row.type, row.schedule, row.scheduleDateLabel)}
           </Typography>

@@ -58,15 +58,15 @@ const FloatSection = ({
         direction="row"
         sx={{ justifyContent: "space-between", alignItems: "baseline" }}
       >
-        <Typography variant="body1" color="text.secondary">
+        <Typography variant="body1" color="textSecondary">
           {t("float")}
         </Typography>
-        <Typography variant="h6" color="text.primary">
+        <Typography variant="h6" color="textPrimary">
           {moneyText(opening)}
         </Typography>
       </Stack>
       {form.plan === "handover" ? (
-        <Typography variant="caption" color="text.secondary">
+        <Typography variant="caption" color="textSecondary">
           {t("handoverSource", {
             name: form.previousOpenedBy?.name ?? "",
             time:
@@ -89,7 +89,7 @@ const FloatSection = ({
         />
       ) : null}
       {form.plan === "first" && !form.canTakeFloat ? (
-        <Typography variant="caption" color="text.secondary">
+        <Typography variant="caption" color="textSecondary">
           {t("floatFirstNoWithdraw")}
         </Typography>
       ) : null}

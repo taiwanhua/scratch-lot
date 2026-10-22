@@ -80,13 +80,13 @@ const EntryLine = ({ entry, withTime = false }: EntryLineProps) => {
       useFlexGap
       sx={{ alignItems: "center", flexWrap: "wrap" }}
     >
-      <Typography variant="body2" color="text.secondary">
+      <Typography variant="body2" color="textSecondary">
         {[head, position].filter((part) => part !== "").join(" · ")}
       </Typography>
       {entry.breakMinutes > 0 && (
         <Typography
           variant="caption"
-          color="text.secondary"
+          color="textSecondary"
           aria-label={t("punch.breakAria", { minutes: entry.breakMinutes })}
         >
           ☕{entry.breakMinutes}
@@ -125,12 +125,12 @@ const PunchCard = ({
     return (
       <Card variant="outlined" sx={{ p: 2 }} data-punch-card={entry.id}>
         <Stack spacing={1.5}>
-          <Typography variant="subtitle2" color="warning.dark">
+          <Typography variant="subtitle2" sx={{ color: "warning.dark" }}>
             {t("yesterdayTitle", { date: text.dateTitle(entry.date) })}
           </Typography>
           <EntryLine entry={entry} withTime />
           {clockIn !== null && (
-            <Typography variant="body2" color="success.main">
+            <Typography variant="body2" color="success">
               {t("clockedIn", { time: clockIn })}
             </Typography>
           )}
@@ -166,12 +166,12 @@ const PunchCard = ({
         {(clockIn !== null || clockOut !== null) && (
           <Stack spacing={0.25}>
             {clockIn !== null && (
-              <Typography variant="body2" color="success.main">
+              <Typography variant="body2" color="success">
                 {t("clockedIn", { time: clockIn })}
               </Typography>
             )}
             {clockOut !== null && (
-              <Typography variant="body2" color="success.main">
+              <Typography variant="body2" color="success">
                 {t("clockedOut", { time: clockOut })}
               </Typography>
             )}
@@ -238,7 +238,7 @@ const NoScheduleBlock = ({ page, onPunch, disabled }: NoScheduleBlockProps) => {
         <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
           {t("title")}
         </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ flex: 1 }}>
+        <Typography variant="body2" color="textSecondary" sx={{ flex: 1 }}>
           {t("hint")}
         </Typography>
         <IconButton
@@ -253,11 +253,11 @@ const NoScheduleBlock = ({ page, onPunch, disabled }: NoScheduleBlockProps) => {
       </Stack>
       <Collapse in={isExpanded}>
         <Stack spacing={1.5} sx={{ pt: 1.5 }}>
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" color="textSecondary">
             {t("org", { name: page.currentOrg.name })}
           </Typography>
           {open !== null && (
-            <Typography variant="body2" color="warning.dark">
+            <Typography variant="body2" sx={{ color: "warning.dark" }}>
               {t("openClockIn", { time: text.punchTime(open.at) ?? "" })}
             </Typography>
           )}

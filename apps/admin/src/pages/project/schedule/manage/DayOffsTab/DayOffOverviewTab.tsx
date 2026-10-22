@@ -198,7 +198,7 @@ export const DayOffOverviewTab = () => {
             days: window.daysLeft,
           })}
         </Typography>
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" color="textSecondary">
           {notRegistered.length === 0
             ? t("overview.allRegistered")
             : t("overview.notRegistered", {
@@ -226,7 +226,7 @@ export const DayOffOverviewTab = () => {
         <Card variant="outlined" sx={{ p: 2 }}>
           <Stack spacing={1}>
             {notRegistered.length === 0 ? (
-              <Typography variant="body2" color="text.secondary">
+              <Typography variant="body2" color="textSecondary">
                 {t("overview.allRegistered")}
               </Typography>
             ) : (

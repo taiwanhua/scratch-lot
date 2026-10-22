@@ -69,7 +69,7 @@ export const DayOffsTab = () => {
   }
   const { window, limits, violations } = page;
   if (page.primaryOrg === null || window === null || window === undefined) {
-    return <Typography color="text.secondary">{t("my.notJoined")}</Typography>;
+    return <Typography color="textSecondary">{t("my.notJoined")}</Typography>;
   }
 
   const range = {
@@ -177,7 +177,7 @@ export const DayOffsTab = () => {
         sx={{ alignItems: { sm: "center" } }}
       >
         <Typography variant="subtitle2">{summary}</Typography>
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" color="textSecondary">
           {stats}
         </Typography>
       </Stack>

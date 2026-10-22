@@ -227,7 +227,7 @@ export const TransferPage = () => {
     list = <CircularProgress aria-label={t("loading")} />;
   } else if (rows.length === 0) {
     list = (
-      <Typography variant="body2" color="text.secondary">
+      <Typography variant="body2" color="textSecondary">
         {t("empty")}
       </Typography>
     );
@@ -263,11 +263,7 @@ export const TransferPage = () => {
                 </Typography>
                 {status?.render(row)}
               </Stack>
-              <Typography
-                variant="body2"
-                color="text.secondary"
-                component="div"
-              >
+              <Typography variant="body2" color="textSecondary" component="div">
                 {joined(row, others.slice(HEADING_COUNT))}
               </Typography>
             </Stack>
@@ -298,7 +294,7 @@ export const TransferPage = () => {
             <Typography variant="h6" component="h1">
               {t("title")}
             </Typography>
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="body2" color="textSecondary">
               {t("subtitle")}
             </Typography>
           </Stack>
@@ -342,7 +338,7 @@ export const TransferPage = () => {
         />
         <Box sx={{ flex: 1, minHeight: 0 }}>{list}</Box>
         <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
-          <Typography variant="body2" color="text.secondary" sx={{ flex: 1 }}>
+          <Typography variant="body2" color="textSecondary" sx={{ flex: 1 }}>
             {t("total", { total: totalCount })}
           </Typography>
           <Pagination

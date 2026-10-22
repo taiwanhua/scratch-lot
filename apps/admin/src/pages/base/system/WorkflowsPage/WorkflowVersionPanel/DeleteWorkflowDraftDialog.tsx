@@ -71,7 +71,7 @@ export const DeleteWorkflowDraftDialog = ({
       <Stack spacing={1}>
         <Typography variant="body2">{t("body")}</Typography>
         {isDirty && (
-          <Typography variant="body2" color="warning.main">
+          <Typography variant="body2" color="warning">
             {t("dirty")}
           </Typography>
         )}

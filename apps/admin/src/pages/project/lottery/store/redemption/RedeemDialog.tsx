@@ -52,18 +52,18 @@ const PreviewCard = ({ item }: { item: PreviewItem }) => {
         direction="row"
         sx={{ justifyContent: "space-between", alignItems: "baseline" }}
       >
-        <Typography variant="subtitle1" color="text.primary">
+        <Typography variant="subtitle1" color="textPrimary">
           {item.gameName == null
             ? item.gameCode
             : `${item.gameCode} ${item.gameName}`}
         </Typography>
         {item.unitPrice == null ? null : (
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" color="textSecondary">
             {t("money", { amount: moneyText(item.unitPrice) })}
           </Typography>
         )}
       </Stack>
-      <Typography variant="body2" color="text.secondary">
+      <Typography variant="body2" color="textSecondary">
         {t("previewMeta", {
           bookNo: displayBookNo(item.bookNo),
           ticketNo: item.ticketNo,

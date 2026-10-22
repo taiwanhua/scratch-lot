@@ -109,19 +109,19 @@ export const StepProgress = ({ instance }: StepProgressProps) => {
                 </Typography>
                 <Tag tone={state.tone} label={state.label} />
                 {step.mode !== null && step.mode !== undefined && (
-                  <Typography variant="caption" color="text.secondary">
+                  <Typography variant="caption" color="textSecondary">
                     {t(`modes.${step.mode}`)}
                   </Typography>
                 )}
                 {assignees !== "" && (
-                  <Typography variant="body2" color="text.secondary">
+                  <Typography variant="body2" color="textSecondary">
                     {assignees}
                   </Typography>
                 )}
                 {step.kind !== "join" &&
                   step.plan.length === 0 &&
                   step.status === WorkflowStepStatus.Active && (
-                    <Typography variant="body2" color="warning.main">
+                    <Typography variant="body2" color="warning">
                       {t("noAssignee")}
                     </Typography>
                   )}

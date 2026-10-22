@@ -114,15 +114,15 @@ export const CheckoutConfirmStep = ({
               direction="row"
               sx={{ justifyContent: "space-between", gap: 2 }}
             >
-              <Typography variant="body2" color="text.secondary">
+              <Typography variant="body2" color="textSecondary">
                 {label}
               </Typography>
               <Typography
                 variant={strong ? "subtitle1" : "body1"}
                 color={
                   label === t("confirm.difference") && flow.difference !== 0
-                    ? "error.main"
-                    : "text.primary"
+                    ? "error"
+                    : "textPrimary"
                 }
                 sx={{ textAlign: "right" }}
               >
@@ -162,7 +162,7 @@ export const CheckoutConfirmStep = ({
               flow.setSuccessorId(next);
             }}
           />
-          <Typography variant="caption" color="text.secondary">
+          <Typography variant="caption" color="textSecondary">
             {t("confirm.hint")}
           </Typography>
           {noSuccessor ? (

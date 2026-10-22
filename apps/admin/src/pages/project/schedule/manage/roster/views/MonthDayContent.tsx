@@ -108,7 +108,7 @@ export const MonthDayContent = ({
         return (
           <Stack key={demand.id} spacing={0.25}>
             {showPosition && (
-              <Typography variant="caption" color="text.secondary">
+              <Typography variant="caption" color="textSecondary">
                 {wording.position}
               </Typography>
             )}

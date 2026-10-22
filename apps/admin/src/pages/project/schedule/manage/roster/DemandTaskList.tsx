@@ -42,12 +42,12 @@ export const DemandTaskList = ({
     <Stack spacing={1}>
       <Stack direction="row" spacing={1} sx={{ alignItems: "baseline" }}>
         <Typography variant="subtitle2">{t(`roles.${role}`)}</Typography>
-        <Typography variant="caption" color="text.secondary">
+        <Typography variant="caption" color="textSecondary">
           {t(`limits.${role}`)}
         </Typography>
       </Stack>
       {rows.length === 0 && (
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" color="textSecondary">
           {t(`empty.${role}`)}
         </Typography>
       )}
@@ -72,8 +72,11 @@ export const DemandTaskList = ({
           {row.taskId !== null && (
             <Typography
               variant="body2"
-              color={row.userName === null ? "warning.dark" : "text.secondary"}
-              sx={{ whiteSpace: "nowrap" }}
+              sx={{
+                color:
+                  row.userName === null ? "warning.dark" : "text.secondary",
+                whiteSpace: "nowrap",
+              }}
             >
               {row.userName === null
                 ? t("unfilled")

@@ -61,7 +61,7 @@ export const FieldOptionColorCell = ({
     field.canToggleEnabled && hasPermission(FIELD_MANAGER_PERMISSIONS.edit);
   if (!canSet) {
     return paletteKey === null ? (
-      <Typography component="span" variant="body2" color="text.secondary">
+      <Typography component="span" variant="body2" color="textSecondary">
         {tPalette("none")}
       </Typography>
     ) : (

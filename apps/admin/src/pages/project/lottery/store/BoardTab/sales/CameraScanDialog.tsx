@@ -77,7 +77,7 @@ export const CameraScanDialog = ({ onClose }: CameraScanDialogProps) => {
       }
     >
       <Stack spacing={1.5} sx={{ height: "100%" }}>
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" color="textSecondary">
           {t("camera.hint")}
         </Typography>
         {failed ? <Alert severity="error">{t("camera.error")}</Alert> : null}

@@ -178,7 +178,7 @@ export const EditSidebarBadgeDialog = ({
           issues={issues}
         />
         {errorCode !== null && (
-          <Typography variant="body2" color="error.main" role="alert">
+          <Typography variant="body2" color="error" role="alert">
             {tErrors(errorCode)}
           </Typography>
         )}

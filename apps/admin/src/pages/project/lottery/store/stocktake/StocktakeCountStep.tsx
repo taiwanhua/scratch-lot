@@ -112,7 +112,7 @@ export const StocktakeCountStep = ({
         />
         <Stack spacing={2} sx={{ minWidth: 0 }}>
           {current === undefined || currentKey === null ? (
-            <Typography color="text.secondary">{t("page.noBooks")}</Typography>
+            <Typography color="textSecondary">{t("page.noBooks")}</Typography>
           ) : (
             <StocktakeBookPanel
               key={currentKey}
@@ -167,7 +167,7 @@ export const StocktakeCountStep = ({
         spacing={1.5}
         sx={{ alignItems: { sm: "center" } }}
       >
-        <Typography variant="body2" color="text.secondary" sx={{ flex: 1 }}>
+        <Typography variant="body2" color="textSecondary" sx={{ flex: 1 }}>
           {t("page.footer")}
         </Typography>
         <Button

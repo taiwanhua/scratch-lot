@@ -75,11 +75,11 @@ export const BoardBookCard = ({
         <Typography variant="subtitle1" sx={{ fontWeight: 700 }} noWrap>
           {title}
         </Typography>
-        <Typography variant="body2" color="text.secondary" noWrap>
+        <Typography variant="body2" color="textSecondary" noWrap>
           {priceText}
         </Typography>
       </Stack>
-      <Typography variant="body2" color="text.secondary" noWrap>
+      <Typography variant="body2" color="textSecondary" noWrap>
         {metaText}
       </Typography>
       <Box

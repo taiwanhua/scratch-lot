@@ -216,12 +216,12 @@ export const Autocomplete = <
             <Stack spacing={0} sx={{ minWidth: 0 }}>
               <Typography variant="body2">{getOptionLabel(option)}</Typography>
               {secondary !== undefined && secondary !== null && (
-                <Typography variant="caption" color="text.secondary">
+                <Typography variant="caption" color="textSecondary">
                   {secondary}
                 </Typography>
               )}
               {reason !== undefined && reason !== null && (
-                <Typography variant="caption" color="text.secondary">
+                <Typography variant="caption" color="textSecondary">
                   {reason}
                 </Typography>
               )}

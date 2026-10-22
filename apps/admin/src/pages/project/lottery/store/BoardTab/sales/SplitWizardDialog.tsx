@@ -66,7 +66,7 @@ const SkipStep = ({
         summary={false}
       />
       <Stack direction="row" sx={{ justifyContent: "space-between" }}>
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" color="textSecondary">
           {t("split.skipSelected")}
         </Typography>
         <Typography variant="body1">
@@ -210,7 +210,7 @@ export const SplitWizardDialog = ({
       actions={actions}
     >
       <Stack spacing={2}>
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" color="textSecondary">
           {t("split.meta", {
             price: moneyText(card.unitPrice),
             first: card.firstTicketNo,

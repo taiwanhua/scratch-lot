@@ -198,12 +198,12 @@ export const CashMoveDialog = ({
           direction="row"
           sx={{ justifyContent: "space-between", alignItems: "baseline" }}
         >
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" color="textSecondary">
             {kind === "deposit"
               ? t("cash.drawerExpected", { name: cashPointName })
               : t("cash.vaultExpected")}
           </Typography>
-          <Typography variant="h6" color="text.primary">
+          <Typography variant="h6" color="textPrimary">
             {moneyText(kind === "deposit" ? shift.expectedCash : vaultExpected)}
           </Typography>
         </Stack>

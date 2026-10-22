@@ -173,7 +173,7 @@ export const StocktakeSubmitDialog = ({
       title={
         <Stack direction="row" sx={{ justifyContent: "space-between" }}>
           <span>{t("title")}</span>
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" color="textSecondary">
             {scopeLabel}
           </Typography>
         </Stack>
@@ -226,7 +226,7 @@ export const StocktakeSubmitDialog = ({
         >
           {facts.map(([label, value]) => (
             <Box key={label} sx={{ display: "contents" }}>
-              <Typography component="dt" variant="body2" color="text.secondary">
+              <Typography component="dt" variant="body2" color="textSecondary">
                 {label}
               </Typography>
               <Typography

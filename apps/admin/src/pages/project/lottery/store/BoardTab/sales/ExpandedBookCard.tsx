@@ -371,7 +371,7 @@ export const ExpandedBookCard = ({
               direction="row"
               sx={{ justifyContent: "space-between", alignItems: "center" }}
             >
-              <Typography variant="body2" color="text.secondary">
+              <Typography variant="body2" color="textSecondary">
                 {meta}
               </Typography>
               {detailButton}
@@ -403,7 +403,7 @@ export const ExpandedBookCard = ({
           <Typography variant="h6" component="h4">
             {title}
           </Typography>
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" color="textSecondary">
             {meta}
           </Typography>
         </Box>

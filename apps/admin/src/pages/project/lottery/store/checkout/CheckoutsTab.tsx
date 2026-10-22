@@ -159,7 +159,7 @@ export const CheckoutsTab = () => {
     <Typography
       variant="body2"
       component="span"
-      color={row.difference === 0 ? "text.primary" : "error.main"}
+      color={row.difference === 0 ? "textPrimary" : "error"}
     >
       {signedMoneyText(row.difference)}
     </Typography>
@@ -298,7 +298,7 @@ export const CheckoutsTab = () => {
       {isNarrow ? (
         <Stack spacing={1.5}>
           {rows.length === 0 && !query.isLoading ? (
-            <Typography color="text.secondary">{t("list.empty")}</Typography>
+            <Typography color="textSecondary">{t("list.empty")}</Typography>
           ) : null}
           {rows.map((row) => (
             <Card
@@ -360,7 +360,7 @@ export const CheckoutsTab = () => {
         spacing={2}
         sx={{ alignItems: "center", justifyContent: "flex-end" }}
       >
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" color="textSecondary">
           {t("list.total", { count: total })}
         </Typography>
         {total > CHECKOUTS_PAGE_SIZE ? (

@@ -29,7 +29,7 @@ const SummaryRow = ({ label, value }: { label: string; value: string }) => (
   <Stack direction="row" spacing={1.5}>
     <Typography
       variant="body2"
-      color="text.secondary"
+      color="textSecondary"
       sx={{ flexShrink: 0, minWidth: (theme) => theme.spacing(LABEL_WIDTH) }}
     >
       {label}
@@ -66,7 +66,7 @@ const WorkflowMobileSummaryCard = ({
           <Typography variant="h6" component="h1">
             {workflow.name}
           </Typography>
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" color="textSecondary">
             {t("detail.meta", {
               key: workflow.key,
               kind: workflow.isShared ? t("detail.shared") : t("detail.custom"),
@@ -74,7 +74,7 @@ const WorkflowMobileSummaryCard = ({
           </Typography>
           {workflow.forkedFrom !== null &&
             workflow.forkedFrom !== undefined && (
-              <Typography variant="body2" color="text.secondary">
+              <Typography variant="body2" color="textSecondary">
                 {t("detail.forkedFrom", {
                   key: workflow.forkedFrom.workflowKey,
                   version: workflow.forkedFrom.version,
@@ -91,7 +91,7 @@ const WorkflowMobileSummaryCard = ({
             }
           />
           {workflow.assignments.length > 0 && (
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="body2" color="textSecondary">
               {t("detail.assignedTo", {
                 tenants: workflow.assignments
                   .map((item) => item.tenantName ?? item.tenantOrgId)
@@ -100,7 +100,7 @@ const WorkflowMobileSummaryCard = ({
             </Typography>
           )}
           {workflow.boundForms.length > 0 && (
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="body2" color="textSecondary">
               {t("detail.boundForms", {
                 forms: workflow.boundForms
                   .map((form) => form.formName ?? form.formKey)
@@ -140,7 +140,7 @@ export const WorkflowMobileSummary = ({
         <Alert severity="warning">{t("mobile.unsaved")}</Alert>
       )}
       {workflow === null ? (
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" color="textSecondary">
           {emptyText}
         </Typography>
       ) : (

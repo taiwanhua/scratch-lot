@@ -85,7 +85,7 @@ const Section = ({
   <Stack spacing={0.75} sx={{ px: ITEM_INSET, py: 0.75 }}>
     <Typography
       variant="caption"
-      color="text.secondary"
+      color="textSecondary"
       sx={{ fontWeight: 600 }}
     >
       {title}
@@ -239,7 +239,7 @@ export const UserMenu = ({
               <Typography variant="subtitle2" noWrap>
                 {name}
               </Typography>
-              <Typography variant="caption" color="text.secondary" noWrap>
+              <Typography variant="caption" color="textSecondary" noWrap>
                 {orgName === undefined ? account : `${account} · ${orgName}`}
               </Typography>
             </Stack>

@@ -58,7 +58,7 @@ export const DayOffCellContent = ({
           event.stopPropagation();
         }}
       >
-        <Typography component="span" variant="caption" color="text.secondary">
+        <Typography component="span" variant="caption" color="textSecondary">
           ⓘ
         </Typography>
       </IconButton>

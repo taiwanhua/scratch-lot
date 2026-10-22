@@ -46,7 +46,7 @@ export const PeriodSnapshotDialog = ({
     >
       {item !== undefined && (
         <Stack spacing={2} sx={{ pt: 1 }}>
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" color="textSecondary">
             {t("snapshotDialog.closedBy", {
               name: item.closedBy.name,
               at: formatTemporal(item.closedAt, { type: "datetime", timezone }),

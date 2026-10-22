@@ -184,7 +184,7 @@ export const ScanOutcomeDialog = ({
     info: {
       title: t("scan.infoTitle"),
       body: (
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" color="textSecondary">
           {t("scan.infoHint")}
         </Typography>
       ),

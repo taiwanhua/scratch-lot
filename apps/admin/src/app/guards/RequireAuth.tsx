@@ -43,7 +43,7 @@ export const RequireAuth = ({ children }: RequireAuthProps) => {
         }}
       >
         <CircularProgress aria-label={t("restoring")} />
-        <Typography color="text.secondary">{t("restoring")}</Typography>
+        <Typography color="textSecondary">{t("restoring")}</Typography>
       </Stack>
     );
   }

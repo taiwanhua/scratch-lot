@@ -94,7 +94,7 @@ export const FormListPanel = ({
           sx={{ flex: 1, minHeight: 0, overflow: "auto" }}
         >
           {forms.length === 0 && (
-            <Typography variant="body2" color="text.secondary" sx={{ px: 2 }}>
+            <Typography variant="body2" color="textSecondary" sx={{ px: 2 }}>
               {t("empty")}
             </Typography>
           )}

@@ -5,7 +5,7 @@ import { Switch } from "@repo/ui/switch";
 import { Table, type TableColumn } from "@repo/ui/table";
 import { Tag } from "@repo/ui/tag";
 import { Tooltip } from "@repo/ui/tooltip";
-import { Typography } from "@repo/ui/typography";
+import { Typography, type TypographyColor } from "@repo/ui/typography";
 
 import type { FieldOptionLike } from "../field-manager-types";
 import {
@@ -69,8 +69,8 @@ export const FieldOptionsTable = ({
   };
 
   /** 別的組織加的選項整列淡色(反灰):看得到,但這一頁的人碰不到它。 */
-  const textColorOf = (field: FieldOptionLike): string =>
-    managedByOrgOf(field) === null ? "text.primary" : "text.disabled";
+  const textColorOf = (field: FieldOptionLike): TypographyColor =>
+    managedByOrgOf(field) === null ? "textPrimary" : "textDisabled";
 
   const columns: TableColumn<FieldOptionLike>[] = [
     {
@@ -94,7 +94,7 @@ export const FieldOptionsTable = ({
       header: t("value"),
       width: 140,
       render: (field) => (
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" color="textSecondary">
           {field.value}
         </Typography>
       ),
@@ -177,7 +177,7 @@ export const FieldOptionsTable = ({
         // 改不動的列講明「誰在管它」;只是沒有 edit 權限的自己人列不需要解釋
         return (
           <Tooltip title={field.canEdit ? "" : lockedHintOf(field)}>
-            <Typography component="span" variant="body2" color="text.disabled">
+            <Typography component="span" variant="body2" color="textDisabled">
               {lockedLabelOf(field)}
             </Typography>
           </Tooltip>

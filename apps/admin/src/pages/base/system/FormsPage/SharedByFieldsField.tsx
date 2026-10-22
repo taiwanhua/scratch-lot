@@ -93,7 +93,7 @@ export const SharedByFieldsField = ({
           />
         ))}
       </Stack>
-      <Typography variant="caption" color="text.secondary">
+      <Typography variant="caption" color="textSecondary">
         {t("sharedByFieldsHint")}
       </Typography>
     </Stack>

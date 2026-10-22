@@ -187,7 +187,7 @@ export const SidebarBadgeSettingsSection = ({
         <Typography variant="subtitle1" component="h2">
           {t("title")}
         </Typography>
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" color="textSecondary">
           {t("intro")}
         </Typography>
       </Stack>
@@ -204,7 +204,7 @@ export const SidebarBadgeSettingsSection = ({
         containerSx={{ height: "auto" }}
       />
       {query.isError && (
-        <Typography variant="body2" color="error.main" sx={{ px: 3, py: 1.5 }}>
+        <Typography variant="body2" color="error" sx={{ px: 3, py: 1.5 }}>
           {t("loadFailed")}
         </Typography>
       )}
@@ -260,7 +260,7 @@ export const SidebarBadgeSettingsSection = ({
                 audience: audienceText(resetTarget, { asDefault: true }),
               })}
             </Typography>
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="body2" color="textSecondary">
               {t("reset.body")}
             </Typography>
             {resetError !== null && (

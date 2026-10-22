@@ -66,7 +66,7 @@ export const ResetDefaultDialog = ({
             {t("scheduleLine", { schedule: defaultScheduleSummary })}
           </Typography>
         )}
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" color="textSecondary">
           {t("body")}
         </Typography>
         {errorCode !== null && (

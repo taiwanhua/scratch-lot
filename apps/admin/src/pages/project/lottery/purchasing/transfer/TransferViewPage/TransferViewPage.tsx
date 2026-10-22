@@ -301,7 +301,7 @@ export const TransferViewPage = ({ routeParam }: ModulePageProps) => {
               )}
             </Stack>
             {data !== null && (
-              <Typography variant="body2" color="text.secondary">
+              <Typography variant="body2" color="textSecondary">
                 {[
                   `${data.fromBranchName} → ${data.toBranchName}`,
                   requisitionNo === null
@@ -331,7 +331,7 @@ export const TransferViewPage = ({ routeParam }: ModulePageProps) => {
                       <Typography variant="body2" sx={{ fontWeight: 700 }}>
                         {`${row.gameCode} ${row.gameName} · ${displayBookNo(row.bookNo)}`}
                       </Typography>
-                      <Typography variant="caption" color="text.secondary">
+                      <Typography variant="caption" color="textSecondary">
                         {t("cardFacts", {
                           mode: modeText(row),
                           tickets: ticketsText(row),

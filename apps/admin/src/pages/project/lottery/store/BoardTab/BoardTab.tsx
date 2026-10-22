@@ -315,13 +315,13 @@ export const BoardTab = () => {
         </Alert>
       ) : null}
       {orgId === "" ? (
-        <Typography color="text.secondary">{t("board.pickOrg")}</Typography>
+        <Typography color="textSecondary">{t("board.pickOrg")}</Typography>
       ) : null}
       {query.isError ? (
         <Alert severity="error">{t("board.loadFailed")}</Alert>
       ) : null}
       {board !== null && cashPoints.length === 0 ? (
-        <Typography color="text.secondary">{t("board.noCashPoint")}</Typography>
+        <Typography color="textSecondary">{t("board.noCashPoint")}</Typography>
       ) : null}
       {cashPoints.map((point) => (
         <CashPointSection

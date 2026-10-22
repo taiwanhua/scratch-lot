@@ -98,7 +98,7 @@ export const StocktakeBookPanel = ({
                 bookNo: displayBookNo(book.bookNo),
               })}
             </Typography>
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="body2" color="textSecondary">
               {t("meta", {
                 cashPoint: cashPointName,
                 price: moneyText(book.unitPrice),
@@ -118,7 +118,7 @@ export const StocktakeBookPanel = ({
             sx={{ flexShrink: 0, width: { xs: "100%", sm: 180 } }}
           />
         </Stack>
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" color="textSecondary">
           {t("hint")}
         </Typography>
         {method === "scan" ? (
@@ -154,13 +154,13 @@ export const StocktakeBookPanel = ({
         />
         <Stack direction="row" spacing={4} sx={{ flexWrap: "wrap" }}>
           <Stack>
-            <Typography variant="caption" color="text.secondary">
+            <Typography variant="caption" color="textSecondary">
               {t("system", { time })}
             </Typography>
             <Typography variant="subtitle1">{systemRange}</Typography>
           </Stack>
           <Stack>
-            <Typography variant="caption" color="text.secondary">
+            <Typography variant="caption" color="textSecondary">
               {t("present")}
             </Typography>
             <Typography variant="subtitle1">
@@ -168,7 +168,7 @@ export const StocktakeBookPanel = ({
             </Typography>
           </Stack>
           <Stack>
-            <Typography variant="caption" color="text.secondary">
+            <Typography variant="caption" color="textSecondary">
               {t("diff")}
             </Typography>
             <Typography

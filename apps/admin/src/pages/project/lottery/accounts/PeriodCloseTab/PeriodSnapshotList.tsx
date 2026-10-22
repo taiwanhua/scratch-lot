@@ -13,7 +13,7 @@ const Line = ({ label, value }: { label: string; value: string }) => (
     spacing={2}
     sx={{ justifyContent: "space-between", alignItems: "baseline" }}
   >
-    <Typography variant="body2" color="text.secondary">
+    <Typography variant="body2" color="textSecondary">
       {label}
     </Typography>
     <Typography variant="body2" sx={{ fontWeight: 600, whiteSpace: "nowrap" }}>
@@ -66,7 +66,7 @@ export const PeriodSnapshotList = ({
                 <Typography
                   key={drawer.cashPointId}
                   variant="caption"
-                  color="text.secondary"
+                  color="textSecondary"
                 >
                   {t("spanning", {
                     store: store.name,

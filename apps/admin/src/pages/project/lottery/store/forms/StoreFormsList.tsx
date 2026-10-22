@@ -68,7 +68,7 @@ export const StoreFormsList = <Row extends { id: string }>({
   }
   if (rows.length === 0) {
     return (
-      <Typography variant="body2" color="text.secondary">
+      <Typography variant="body2" color="textSecondary">
         {t("empty")}
       </Typography>
     );

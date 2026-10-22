@@ -164,7 +164,7 @@ export const WeekTemplateDialog = ({
     >
       <Stack spacing={1.5} sx={{ pt: 1 }}>
         {weekTemplate !== null && !weekTemplate.canEdit && (
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" color="textSecondary">
             {t("readOnly", { org: weekTemplate.ownerOrg.name })}
           </Typography>
         )}
@@ -181,7 +181,7 @@ export const WeekTemplateDialog = ({
           }}
         />
         {templates.length === 0 && (
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" color="textSecondary">
             {tWeek("noTemplates")}
           </Typography>
         )}

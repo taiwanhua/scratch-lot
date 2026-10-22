@@ -45,7 +45,7 @@ export const OrgTreePanel = ({
     >
       <Stack spacing={1} sx={{ flex: 1, minHeight: 0 }}>
         <Typography variant="subtitle1">{t("title")}</Typography>
-        <Typography variant="caption" color="text.secondary">
+        <Typography variant="caption" color="textSecondary">
           {isAvailable ? t("hint") : t("all")}
         </Typography>
         {isAvailable ? (

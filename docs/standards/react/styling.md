@@ -200,3 +200,21 @@ app 端給 `@repo/ui` 元件傳 `sx` 時,只放與版面位置有關的值(`curs
 要限制高度或在彈窗裡用,傳 `containerSx` 覆寫(如 `{ height: "auto", maxHeight: 320 }`,
 命名慣例見 STYLE-07);父層高度不確定時 `height: 100%` 自然退回 auto,詳情面板那種
 整塊捲動的版面不受影響。
+
+## STYLE-12 Typography 的 `color` 用 MUI 正式值;指定色階用 `sx`
+
+`Typography` 的 `color` 只寫 MUI 認得的值:色票名 `primary` / `secondary` / `success` / `error` / `info` / `warning`,
+文字色 `textPrimary` / `textSecondary` / `textDisabled`。要指定色階(`warning.dark`、`primary.darker`)才改用
+`sx={{ color: "warning.dark" }}`,`sx` 裡照常寫 theme 路徑。
+
+```tsx
+<Typography color="textSecondary">說明文字</Typography>
+<Typography color={row.balance < 0 ? "warning" : "textPrimary"}>{amount}</Typography>
+<Typography sx={{ color: "warning.dark" }}>尚未排班</Typography>
+```
+
+- **為什麼**:MUI 的 Typography 依 `color` 值比對 variants 上色,`text.secondary`、`warning.main` 這類帶點的寫法比對不到,
+  會被忽略、畫成一般字色;MUI 的型別放寬成 `string & {}`,寫錯也不會報錯。
+- **怎麼擋**:`@repo/ui/typography` 的 `color` 型別只收上列正式值(`TypographyColor`),寫錯就 check-types 失敗;
+  算顏色的 helper 回傳型別寫 `TypographyColor`。`@repo/eslint-config/react` 的 `no-restricted-syntax` 另擋
+  `Typography` / `MuiTypography` 的 `color` 裡出現帶點字串(含三元式的兩支),`packages/ui` 內部直接用 MUI 的地方也照樣檢查。

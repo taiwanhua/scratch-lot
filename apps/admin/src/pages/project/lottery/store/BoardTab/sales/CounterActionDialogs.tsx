@@ -56,14 +56,14 @@ const BookBox = ({ book, line }: { book: CounterBook; line: string }) => {
   return (
     <Box sx={{ bgcolor: "action.hover", borderRadius: 1, p: 1.5 }}>
       <Stack direction="row" sx={{ justifyContent: "space-between" }}>
-        <Typography variant="subtitle1" color="text.primary">
+        <Typography variant="subtitle1" color="textPrimary">
           {book.gameCode} {book.gameName}
         </Typography>
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" color="textSecondary">
           {t("card.price", { price: moneyText(book.unitPrice) })}
         </Typography>
       </Stack>
-      <Typography variant="body2" color="text.secondary">
+      <Typography variant="body2" color="textSecondary">
         {line}
       </Typography>
     </Box>
@@ -72,7 +72,7 @@ const BookBox = ({ book, line }: { book: CounterBook; line: string }) => {
 
 const Row = ({ label, value }: { label: string; value: string }) => (
   <Stack direction="row" sx={{ justifyContent: "space-between", gap: 2 }}>
-    <Typography variant="body2" color="text.secondary">
+    <Typography variant="body2" color="textSecondary">
       {label}
     </Typography>
     <Typography variant="body1" sx={{ textAlign: "right" }}>
@@ -172,7 +172,7 @@ export const ManualSaleDialog = ({
       }
     >
       <Stack spacing={1.5}>
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" color="textSecondary">
           {t("manualSale.book", {
             code: book.gameCode,
             name: book.gameName,
@@ -202,7 +202,7 @@ export const ManualSaleDialog = ({
           onChange={setReason}
           invalid={invalid}
         />
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" color="textSecondary">
           {t("manualSale.hint", {
             name: cashPointName,
             amount: moneyText(total),

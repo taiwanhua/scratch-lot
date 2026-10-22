@@ -29,7 +29,7 @@ export const GameCards = ({ rows, isLoading, onOpen }: GameCardsProps) => {
   }
   if (rows.length === 0) {
     return (
-      <Typography variant="body2" color="text.secondary">
+      <Typography variant="body2" color="textSecondary">
         {t("games.empty")}
       </Typography>
     );
@@ -64,7 +64,7 @@ export const GameCards = ({ rows, isLoading, onOpen }: GameCardsProps) => {
               )}
               <GameStatusTag status={row.status} />
             </Stack>
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="body2" color="textSecondary">
               {t("gameView.summary", {
                 unitPrice: row.unitPrice.toLocaleString("en-US"),
                 tickets: row.ticketsPerBook,

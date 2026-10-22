@@ -58,11 +58,7 @@ export const PairingInfo = ({ pairingCode, expiresAt }: PairingInfoProps) => {
     isCode = false,
   ) => (
     <Stack direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
-      <Typography
-        variant="caption"
-        color="text.secondary"
-        sx={{ minWidth: 64 }}
-      >
+      <Typography variant="caption" color="textSecondary" sx={{ minWidth: 64 }}>
         {label}
       </Typography>
       <Typography
@@ -89,7 +85,7 @@ export const PairingInfo = ({ pairingCode, expiresAt }: PairingInfoProps) => {
       <Stack spacing={1}>
         {row(t("serverUrl"), serverUrl, serverUrl)}
         {row(t("code"), formatPairingCode(pairingCode), pairingCode, true)}
-        <Typography variant="caption" color="text.secondary">
+        <Typography variant="caption" color="textSecondary">
           {t("hint", { expiresAt: temporalText(expiresAt, "datetime") })}
         </Typography>
       </Stack>

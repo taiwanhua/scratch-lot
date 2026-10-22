@@ -161,7 +161,7 @@ export const RecoverTicketDialog = ({
       <Stack spacing={2} sx={{ pt: 1 }}>
         <Box sx={{ bgcolor: "action.hover", borderRadius: 1, p: 1.5 }}>
           <Stack direction="row" sx={{ justifyContent: "space-between" }}>
-            <Typography variant="subtitle1" color="text.primary">
+            <Typography variant="subtitle1" color="textPrimary">
               {book.gameCode} {book.gameName}
             </Typography>
             <Typography variant="body2">
@@ -207,7 +207,7 @@ export const RecoverTicketDialog = ({
         ) : (
           <Stack direction="row" sx={{ justifyContent: "space-between" }}>
             <Typography variant="body2">{t("recover.backTo")}</Typography>
-            <Typography variant="body1" color="text.primary">
+            <Typography variant="body1" color="textPrimary">
               {t("recover.backToStore", { store: fixedStore.name })}
             </Typography>
           </Stack>

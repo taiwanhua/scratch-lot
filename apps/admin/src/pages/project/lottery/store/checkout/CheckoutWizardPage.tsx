@@ -124,7 +124,7 @@ const WizardBody = ({
         <Typography variant="h6" component="h1">
           {t("page.title", { cashPoint: wizard.shift.cashPoint.name })}
         </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ flex: 1 }}>
+        <Typography variant="body2" color="textSecondary" sx={{ flex: 1 }}>
           {t("page.meta", {
             name: wizard.shift.openedBy.name,
             time:

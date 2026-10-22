@@ -76,7 +76,7 @@ export const OperationsSheetBody = ({ sheet }: ReportSheetBodyProps) => {
                 spacing={1}
                 sx={{ justifyContent: "space-between", alignItems: "baseline" }}
               >
-                <Typography variant="body2" color="text.secondary">
+                <Typography variant="body2" color="textSecondary">
                   {row.item}
                 </Typography>
                 <Typography variant="body2" sx={{ textAlign: "right" }}>

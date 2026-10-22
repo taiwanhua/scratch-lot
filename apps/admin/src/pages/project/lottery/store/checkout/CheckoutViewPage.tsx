@@ -192,7 +192,7 @@ export const CheckoutViewPage = ({ routeParam }: ModulePageProps) => {
             <CheckoutPrintButton detail={detail} serialNo={serialNo} />
           </Stack>
           {detail === null ? null : (
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="body2" color="textSecondary">
               {t("view.meta", {
                 name: detail.submittedBy?.name ?? "",
                 time: temporal(detail.submittedAt, "monthDayTime"),
@@ -229,7 +229,7 @@ export const CheckoutViewPage = ({ routeParam }: ModulePageProps) => {
                       direction="row"
                       sx={{ justifyContent: "space-between", gap: 2 }}
                     >
-                      <Typography variant="body2" color="text.secondary">
+                      <Typography variant="body2" color="textSecondary">
                         {label}
                       </Typography>
                       <Typography variant="body1" sx={{ textAlign: "right" }}>
@@ -251,7 +251,7 @@ export const CheckoutViewPage = ({ routeParam }: ModulePageProps) => {
                       direction="row"
                       sx={{ justifyContent: "space-between", gap: 2 }}
                     >
-                      <Typography variant="body2" color="text.secondary">
+                      <Typography variant="body2" color="textSecondary">
                         {label}
                       </Typography>
                       <Typography
@@ -259,8 +259,8 @@ export const CheckoutViewPage = ({ routeParam }: ModulePageProps) => {
                         color={
                           label === t("view.difference") &&
                           detail.difference !== 0
-                            ? "error.main"
-                            : "text.primary"
+                            ? "error"
+                            : "textPrimary"
                         }
                         sx={{ textAlign: "right" }}
                       >
@@ -276,7 +276,7 @@ export const CheckoutViewPage = ({ routeParam }: ModulePageProps) => {
                     })}
                   </Alert>
                 ) : null}
-                <Typography variant="caption" color="text.secondary">
+                <Typography variant="caption" color="textSecondary">
                   {t("view.hint")}
                 </Typography>
               </Stack>

@@ -47,7 +47,7 @@ export const LocalCashPointDialog = ({
         </>
       }
     >
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+      <Typography variant="body2" color="textSecondary" sx={{ mb: 1 }}>
         {t("description")}
       </Typography>
       <RadioGroup
