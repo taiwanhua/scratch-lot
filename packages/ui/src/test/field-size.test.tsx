@@ -5,6 +5,7 @@ import type { ReactElement } from "react";
 import { Autocomplete } from "../Autocomplete/Autocomplete";
 import { DatePicker } from "../DatePicker/DatePicker";
 import { DateTimePicker } from "../DateTimePicker/DateTimePicker";
+import { ModuleIconPicker } from "../ModuleIconPicker/ModuleIconPicker";
 import { SelectField } from "../SelectField/SelectField";
 import { TextField } from "../TextField/TextField";
 
@@ -44,6 +45,10 @@ const FIELDS: readonly [string, (size?: Size) => ReactElement][] = [
   ],
   ["DatePicker", (size) => <DatePicker label="欄位" size={size} />],
   ["DateTimePicker", (size) => <DateTimePicker label="欄位" size={size} />],
+  [
+    "ModuleIconPicker",
+    (size) => <ModuleIconPicker label="欄位" size={size} value={null} />,
+  ],
 ];
 
 /** 欄位的尺寸看標籤:MUI 與 MUI X 的欄位都把 `size` 反映在 `MuiInputLabel-sizeSmall` 上。 */
