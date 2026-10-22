@@ -150,6 +150,10 @@ export const BankAccountViewPage = ({ routeParam }: ModulePageProps) => {
   const list = transactions.data?.lotteryBankTransactions;
   const rows = list?.items ?? [];
   const usage = usageText(account, t);
+  const reversalOfText = (at: string) =>
+    t("accountView.reversalOf", {
+      date: formatTemporal(at, { type: "monthDay", timezone }),
+    });
   const columns: TableColumn<Transaction>[] = [
     {
       key: "occurredAt",
@@ -165,14 +169,7 @@ export const BankAccountViewPage = ({ routeParam }: ModulePageProps) => {
           t(`transactionTypes.${row.type}`),
           row.reversalOf ? t("accountView.reversal") : null,
           // 沖正沒有班:標原交易的日期
-          row.reversalOfAt == null
-            ? null
-            : t("accountView.reversalOf", {
-                date: formatTemporal(row.reversalOfAt, {
-                  type: "monthDay",
-                  timezone,
-                }),
-              }),
+          row.reversalOfAt == null ? null : reversalOfText(row.reversalOfAt),
         ]
           .filter(Boolean)
           .join(" · "),
