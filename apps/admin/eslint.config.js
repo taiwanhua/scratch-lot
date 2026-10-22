@@ -69,9 +69,12 @@ const restrictedImports = ({ paths, patterns = [] }) => ({
  */
 const FIELD = `JSXOpeningElement[name.name=/^(TextField|SelectField|Autocomplete|DatePicker|DateTimePicker|OrgTreeSelect|ShareOrgsField|ModuleIconPicker)$/]`;
 const SMALL_FIELD = `JSXElement:has(> ${FIELD}:has(> JSXAttribute[name.name="size"][value.value="small"]))`;
-/** 沒寫 size(且沒有 spread —— `{...SMALL}` 可能帶著 size,看不出來就不判)或明寫 medium */
+/**
+ * 沒寫 size 或明寫 medium。spread 單純識別字(`{...SMALL}`、`{...fieldProps}`)的可能帶著 size,看不出來就不判;
+ * 函式呼叫、條件式等其他 spread(`{...fieldErrorProps(...)}` 只帶錯誤訊息)照判。
+ */
 const MEDIUM_FIELD = [
-  `JSXElement:has(> ${FIELD}:not(:has(> JSXAttribute[name.name="size"])):not(:has(> JSXSpreadAttribute)))`,
+  `JSXElement:has(> ${FIELD}:not(:has(> JSXAttribute[name.name="size"])):not(:has(> JSXSpreadAttribute[argument.type="Identifier"])))`,
   `JSXElement:has(> ${FIELD}:has(> JSXAttribute[name.name="size"][value.value="medium"]))`,
 ];
 const FIELD_SIZE_MESSAGE =
