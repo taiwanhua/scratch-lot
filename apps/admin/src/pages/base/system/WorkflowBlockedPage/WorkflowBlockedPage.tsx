@@ -249,6 +249,7 @@ export const WorkflowBlockedPage = () => {
             fromName: handling.item.assigneeName,
           })}
           applicantId={handling.instance.applicant?.id ?? null}
+          allowsApplicant={handling.item.allowsApplicant}
           stepAssigneeIds={
             handling.item.kind === "task" ? handling.item.stepAssigneeIds : []
           }

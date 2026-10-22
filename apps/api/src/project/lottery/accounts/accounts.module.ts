@@ -9,6 +9,7 @@ import { CashLedgerService } from "../cash/cash-ledger.service";
 import { SettlementLedger } from "../settlement/settlement-ledger";
 import { LotterySettlementResolver } from "../settlement/settlement.resolver";
 import { SettlementService } from "../settlement/settlement.service";
+import { StoreVaultGuard } from "../store/store-vault-guard";
 import { AccountNames } from "./account-names";
 import { AccountsAccess } from "./accounts-access";
 import { AccountsBadge } from "./accounts-badge";
@@ -24,7 +25,8 @@ import { PeriodLock } from "./period-lock";
  * 匯出給其他刮刮樂功能:`CashLedgerService`(現金流水寫入的唯一入口)、`SettlementLedger`
  * (作廢 / 駁回守門 `settlementClearedGuard` 要 inject 它)、`SettlementService`、`BankTransactionsService`、
  * `PeriodLock`(「不能選已關帳月份」的唯一檢查 `assertPeriodOpen`;店面的退款班次、現金更正位置、開班選的排班)、
- * `AccountsAccess`(關帳分頁的權限)。
+ * `AccountsAccess`(關帳分頁的權限)、`StoreVaultGuard`(從小金庫拿錢不能超過應有:出庫、開班領零用金、存銀行、
+ * 日結,以及收付從小金庫付現;同一個守門文件序列化)。
  */
 @Module({
   imports: [DatabaseModule, RealtimeModule, SidebarBadgesModule],
@@ -34,6 +36,7 @@ import { PeriodLock } from "./period-lock";
     CashLedgerService,
     CashLedgerViewService,
     SettlementLedger,
+    StoreVaultGuard,
     BankTransactionsService,
     BankAccountsService,
     SettlementService,
@@ -50,6 +53,7 @@ import { PeriodLock } from "./period-lock";
     SettlementLedger,
     SettlementService,
     BankTransactionsService,
+    StoreVaultGuard,
   ],
 })
 export class LotteryAccountsModule {}

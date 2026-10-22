@@ -169,7 +169,7 @@ export const sampleDailyCloseWizard = (
     reusableStocktake: {
       __typename: "LotteryCheckoutReusableStocktake",
       submissionId: STOCKTAKE_REVIEWING_ID,
-      serialNo: "S-0032",
+      serialNo: "ST-0032",
       startedAt: "2026-10-16T13:40:00.000Z",
       scopeName: null,
       diffCount: 0,
@@ -215,7 +215,7 @@ export const sampleBankDepositForm = (
   accounts,
 });
 
-/** Figma ST-28b 的日結結帳單(C-0043:沿用全店盤點 S-0032、小金庫應有 25,000、存入 20,000)。 */
+/** Figma ST-28b 的日結結帳單(C-0043:沿用全店盤點 ST-0032、小金庫應有 25,000、存入 20,000)。 */
 export const sampleDailyCloseDetail = (): CheckoutDetail => {
   const rows: [number, number][] = [
     [1000, 20],
@@ -246,7 +246,7 @@ export const sampleDailyCloseDetail = (): CheckoutDetail => {
     stocktake: {
       __typename: "LotteryCheckoutReusableStocktake",
       submissionId: STOCKTAKE_REVIEWING_ID,
-      serialNo: "S-0032",
+      serialNo: "ST-0032",
       startedAt: "2026-10-16T13:40:00.000Z",
       scopeName: null,
       diffCount: 0,

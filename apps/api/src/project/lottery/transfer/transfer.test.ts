@@ -44,6 +44,7 @@ import {
   publishWorkflow,
   reviewStep,
 } from "../../../workflows/test-support/workflow-fixtures";
+import { LOTTERY_CASH_MOVEMENTS_COLLECTION } from "../../database/lottery-accounts/lottery-cash-movement.schema";
 import {
   insertBankAccount,
   insertGame,
@@ -621,6 +622,41 @@ describe("調貨單(規格 8.4、第 9 章)", () => {
         input.dedupeKey.startsWith(`transfer-shipped:${id}:`) &&
         String(input.orgId) === String(branchB),
     ).length;
+  }
+
+  /** 小金庫放進一筆錢(還沒有日結,從 0 起算;以現金更正的流水放進去)。 */
+  async function fundVault(
+    orgId: Types.ObjectId,
+    amount: number,
+  ): Promise<void> {
+    const now = new Date();
+    await db().collection(LOTTERY_CASH_MOVEMENTS_COLLECTION).insertOne({
+      orgId,
+      tenantId: tenant,
+      occurredAt: now,
+      type: "correction_increase",
+      from: "external",
+      to: "vault",
+      reason: null,
+      cashPointId: null,
+      shiftId: null,
+      attributedShiftId: null,
+      amount,
+      refType: null,
+      refId: null,
+      refRevision: null,
+      settlementSide: null,
+      payee: null,
+      note: null,
+      reversalOf: null,
+      bankTransactionId: null,
+      moduleKey: "accounts",
+      createdAt: now,
+      updatedAt: now,
+      createdBy: null,
+      updatedBy: null,
+      deletedAt: null,
+    });
   }
 
   /** 直接記一筆收付(模擬銀行 [登記交易] 掛單據;按鈕在點收前都停用)。 */
@@ -1416,6 +1452,8 @@ describe("調貨單(規格 8.4、第 9 章)", () => {
         refundOut: 0,
       });
       // 步驟 2:B 付現 10,000(付給送貨人)→ A [收款] 10,000;B [收到退款] 2,000;N 待出貨店入帳
+      // (從小金庫付現不能超過小金庫應有:B 的小金庫先有 10,000)
+      await fundVault(branchB, 10_000);
       expect(
         await record(managerB, id, "receiver", "out", 10_000, "cash"),
       ).toEqual({});

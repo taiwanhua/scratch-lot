@@ -19,16 +19,31 @@ export type BlockedItem =
       isInvalid: boolean;
       /** 同一關已在計畫裡的人(改派 / 新增時不能選) */
       stepAssigneeIds: string[];
+      /** 可否選申請人(這一關「申請人也是審核者時」= 照常審核) */
+      allowsApplicant: boolean;
     }
   /** 關卡解析不到任何審核者:新增一位 */
-  | { kind: "empty"; stepKey: string; stepName: string };
+  | {
+      kind: "empty";
+      stepKey: string;
+      stepName: string;
+      /** 可否選申請人(這一關「申請人也是審核者時」= 照常審核) */
+      allowsApplicant: boolean;
+    };
 
 const itemsOfStep = (step: InstanceStep): BlockedItem[] => {
   if (step.kind === "join" || step.status !== WorkflowStepStatus.Active) {
     return [];
   }
   if (step.plan.length === 0) {
-    return [{ kind: "empty", stepKey: step.stepKey, stepName: step.name }];
+    return [
+      {
+        kind: "empty",
+        stepKey: step.stepKey,
+        stepName: step.name,
+        allowsApplicant: step.allowsApplicantAssignee,
+      },
+    ];
   }
   const decided = new Set(step.decisions.map((item) => item.taskKey));
   const stepAssigneeIds = step.plan.map((item) => item.assignee.id);
@@ -44,6 +59,7 @@ const itemsOfStep = (step: InstanceStep): BlockedItem[] => {
       assigneeName: item.assignee.name ?? item.assignee.id,
       isInvalid: item.assigneeState === "invalid",
       stepAssigneeIds,
+      allowsApplicant: step.allowsApplicantAssignee,
     }));
 };
 

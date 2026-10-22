@@ -154,6 +154,13 @@ export class WorkflowInstanceStepModel {
   @Field(() => Boolean)
   allowReturn!: boolean;
 
+  /**
+   * 改派 / 新增審核者可否指定給申請人:這一關「申請人也是審核者時」= 照常審核(`autoApprove.applicant = "review"`)
+   * 才是 true;剔除申請人、自動通過與匯合節點為 false(api 同一個判準擋 `ASSIGNEE_NOT_ELIGIBLE`)。
+   */
+  @Field(() => Boolean)
+  allowsApplicantAssignee!: boolean;
+
   @Field(() => WorkflowStepStatusEnum)
   status!: WorkflowStepStatusEnum;
 

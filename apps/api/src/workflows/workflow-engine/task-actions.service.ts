@@ -6,6 +6,8 @@ import {
   type Decision,
   LIVE_INSTANCE_STATUSES,
   allowsReturn,
+  applicantAsReviewerOf,
+  isReviewStep,
   nextTaskKey,
   stepOf,
 } from "@repo/domain/workflow";
@@ -347,7 +349,7 @@ export class TaskActionsService {
     await this.assertEligible(task.tenantId, toUserId);
     const instance = await this.liveInstanceOf(task.instanceId);
     const step = this.activeStep(instance, task.stepKey);
-    assertNotApplicant(instance, toUserId);
+    await this.assertApplicantAllowed(instance, task.stepKey, toUserId);
     if (step.decisions.some((entry) => entry.taskKey === task.taskKey)) {
       throw workflowConflictError(
         `Task ${task.taskKey} has already been decided`,
@@ -433,7 +435,7 @@ export class TaskActionsService {
     await this.assertEligible(tenantId, userId);
     const instance = await this.liveInstanceOf(instanceId);
     const step = this.activeStep(instance, input.stepKey);
-    assertNotApplicant(instance, userId);
+    await this.assertApplicantAllowed(instance, input.stepKey, userId);
     if (!step.blocked || step.plan.length > 0) {
       throw workflowConflictError(
         `Step ${input.stepKey} is not blocked by an empty assignee list`,
@@ -628,6 +630,32 @@ export class TaskActionsService {
     return instance;
   }
 
+  /**
+   * 改派 / 新增審核者指到申請人:只有這一關「申請人也是審核者時」= 照常審核(`applicantAsReviewerOf` 為
+   * `review`)才允許;剔除申請人與自動通過 → `ASSIGNEE_NOT_ELIGIBLE`(與進關解析同一個判準)。
+   */
+  private async assertApplicantAllowed(
+    instance: InstanceRecord,
+    stepKey: string,
+    userId: Types.ObjectId,
+  ): Promise<void> {
+    if (instance.createdBy?.equals(userId) !== true) {
+      return;
+    }
+    const definition = await this.engine.definitionOf(instance);
+    const node = stepOf(definition, stepKey);
+    const isReview =
+      node !== undefined &&
+      isReviewStep(node) &&
+      applicantAsReviewerOf(node.autoApprove) === "review";
+    if (!isReview) {
+      throw workflowForbiddenError(
+        "The applicant cannot review their own submission in this step",
+        "ASSIGNEE_NOT_ELIGIBLE",
+      );
+    }
+  }
+
   private activeStep(
     instance: InstanceRecord,
     stepKey: string,
@@ -688,17 +716,4 @@ function requireActor(facts: FormOperatorFacts): Types.ObjectId {
     throw workflowForbiddenError("An operator is required");
   }
   return actorId;
-}
-
-/** 申請人不能審自己的單(改派 / 新增審核者也不能指給他)。 */
-function assertNotApplicant(
-  instance: InstanceRecord,
-  userId: Types.ObjectId,
-): void {
-  if (instance.createdBy?.equals(userId) === true) {
-    throw workflowForbiddenError(
-      "The applicant cannot review their own submission",
-      "ASSIGNEE_NOT_ELIGIBLE",
-    );
-  }
 }

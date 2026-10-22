@@ -1,20 +1,5 @@
-import {
-  DEFAULT_TENANT_TIMEZONE,
-  parseLocalDate,
-  startOfLocalDay,
-} from "@repo/domain/form";
-
 import { type OnboardingStep, requireBranchId } from "../context";
-
-const TIMEZONE = /* GraphQL */ `
-  query OnboardingTimezone {
-    me {
-      currentOrg {
-        timezone
-      }
-    }
-  }
-`;
+import { tenantDayInstants } from "../tenant-dates";
 
 const CLASS_B_DEALERS = /* GraphQL */ `
   query OnboardingClassBDealers($input: LotteryDealersInput!) {
@@ -50,17 +35,7 @@ export const classBDealersStep: OnboardingStep = {
     if (dealers.length === 0) {
       return ["沒有要建立的乙類"];
     }
-    const { me } = await client.request<{
-      me: { currentOrg: { timezone: string } | null };
-    }>(TIMEZONE);
-    const timezone = me.currentOrg?.timezone ?? DEFAULT_TENANT_TIMEZONE;
-    const instantOf = (text: string): string => {
-      const date = parseLocalDate(text);
-      if (date === null) {
-        throw new Error(`日期不合法:${text}`);
-      }
-      return new Date(startOfLocalDay(date, timezone)).toISOString();
-    };
+    const instantOf = await tenantDayInstants(client);
     const lines: string[] = [];
     for (const dealer of dealers) {
       const { lotteryDealers } = await client.request<{

@@ -5,7 +5,12 @@ import {
 } from "@repo/domain/project/lottery";
 
 import { requireRoleId } from "../context";
-import { type FormWorkflowSpec, audienceSource, reviewStep } from "./types";
+import {
+  type FormWorkflowSpec,
+  applicantReviews,
+  audienceSource,
+  reviewStep,
+} from "./types";
 
 /**
  * 結帳確認申請(規格 2.1、8.7):兩關,交班與日結同一張表單(`type` 欄位)。
@@ -15,7 +20,9 @@ import { type FormWorkflowSpec, audienceSource, reviewStep } from "./types";
  * - **第 2 關「店長審核」**:店長限定「分店」(人員條件「角色 店長 且 所屬組織屬於表單欄位『分店』(本身)」);
  *   跳過條件 = 類型是交班且接班人不為空
  *
- * 結果:交班有接班人 → 接班人審;交班沒有接班人 → 店長審;日結 → 店長審,照常審核(不自動通過)。
+ * 結果:交班有接班人 → 接班人審;交班沒有接班人 → 店長審;日結 → 店長審。第 2 關「申請人也是審核者時」=
+ * **照常審核**(`applicantReviews`):店長自己交班(沒有接班人)或自己送日結時,任務派給他自己再檢查一次,
+ * 不自動通過、也不因剔除申請人而找不到人。第 1 關不設:接班人不能是自己(結帳精靈擋 `successorSelf`)。
  */
 export const checkoutConfirmWorkflow: FormWorkflowSpec = {
   formKey: CHECKOUT_CONFIRM_FORM_KEY,
@@ -36,27 +43,29 @@ export const checkoutConfirmWorkflow: FormWorkflowSpec = {
         skipWhen: { or: [isDaily, noSuccessor] },
       },
       {
-        ...reviewStep(
-          "store_manager",
-          "店長審核",
-          audienceSource(
-            {
-              field: "role",
-              cond: "in",
-              value: {
-                kind: "static",
-                values: [requireRoleId(state, "store-manager")],
+        ...applicantReviews(
+          reviewStep(
+            "store_manager",
+            "店長審核",
+            audienceSource(
+              {
+                field: "role",
+                cond: "in",
+                value: {
+                  kind: "static",
+                  values: [requireRoleId(state, "store-manager")],
+                },
               },
-            },
-            {
-              field: "org",
-              cond: "in",
-              value: {
-                kind: "dynamic",
-                ref: `form-field:${CHECKOUT_FIELD_KEYS.branch}`,
+              {
+                field: "org",
+                cond: "in",
+                value: {
+                  kind: "dynamic",
+                  ref: `form-field:${CHECKOUT_FIELD_KEYS.branch}`,
+                },
+                range: "self",
               },
-              range: "self",
-            },
+            ),
           ),
         ),
         skipWhen: {

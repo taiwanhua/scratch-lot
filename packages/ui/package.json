@@ -545,6 +545,7 @@
     "@types/qrcode": "^1.5.6",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
+    "@zxing/library": "^0.23.0",
     "bunchee": "^6.4.0",
     "eslint": "^9.39.0",
     "jest": "^30.5.2",

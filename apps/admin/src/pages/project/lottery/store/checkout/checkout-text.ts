@@ -8,7 +8,7 @@ export const signedMoneyText = (amount: number): string => {
   return `${amount > 0 ? "+" : "−"} ${moneyText(Math.abs(amount))}`;
 };
 
-/** 審核中的單據文字:「現金更正 #C-012 +500、撤銷售出 #R-008 −500」(交班精靈第 ③ 步、檢視頁共用)。 */
+/** 審核中的單據文字:「現金更正 #X-012 +500、撤銷售出 #SR-008 −500」(交班精靈第 ③ 步、檢視頁共用)。 */
 export const pendingImpactsText = (
   t: (key: string, values?: Record<string, string | number>) => string,
   impacts: readonly {

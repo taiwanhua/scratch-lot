@@ -1,6 +1,11 @@
 import { type OutcomeCandidate, selectOutcome } from "./evaluate";
 import { endStepKey, nextStepKeys, previousStepKeys, stepOf } from "./graph";
-import { type AutoApproval, type BlockedAutoApproval, buildPlan } from "./plan";
+import {
+  type AutoApproval,
+  type BlockedAutoApproval,
+  applicantAsReviewerOf,
+  buildPlan,
+} from "./plan";
 import {
   evaluationOf,
   isProjectionInSync,
@@ -61,9 +66,10 @@ import {
  *
  * `autoApprovals` = 已過 `beforeApprove` 的自動通過(api 依 `autoApprovalCandidates` 列出、逐一跑守門):
  * 進關的同一次 CAS 記成他們的核准,接著建好他們的任務(投影 = 已核准);`any` 只記第一位(一人核准即過)。
- * **申請人只有在自動通過成立時才留在計畫裡**,否則照一般規則剔除(剔除後沒人 → 阻擋)。
+ * 申請人留不留在計畫看這一關的「申請人也是審核者時」(`applicantAsReviewerOf`):照常審核 → 一律留著
+ * (沒有自動通過成立就拿一張待審任務);其他設定 → **只有在自動通過成立時才留著**,否則剔除(剔除後沒人 → 阻擋)。
  *
- * `blockedAutoApprovals` = 被守門擋下的:申請人照上一句剔除;其他人照常留一張待審任務。每位在時間軸記一筆
+ * `blockedAutoApprovals` = 被守門擋下的:申請人照上一句(照常審核留著待審、否則剔除);其他人照常留一張待審任務。每位在時間軸記一筆
  * `auto_approve_blocked`(`reason` = 哪一種自動通過、`code` = 專案錯誤碼)。
  *
  * `delegatorOf` = 代理人(api 解析審核者後已把在代理期間的人換成代理人,`assigneeIds` 是換過的名單):
@@ -669,9 +675,12 @@ function enterRow5(input: AdvanceInput): AdvancePlan | null {
   const node = stepOf(definition, stepKey);
   const reviewNode = node !== undefined && isReviewStep(node) ? node : null;
   const plan = buildPlan(stepKey, entry.assigneeIds, instance.createdBy, {
-    keepApplicant: (entry.autoApprovals ?? []).some(
-      (approval) => approval.assigneeId === instance.createdBy,
-    ),
+    // 照常審核:申請人一律留著(自動通過被擋下也是);其他設定只在申請人的自動通過成立時留著
+    keepApplicant:
+      applicantAsReviewerOf(reviewNode?.autoApprove) === "review" ||
+      (entry.autoApprovals ?? []).some(
+        (approval) => approval.assigneeId === instance.createdBy,
+      ),
     ...(entry.delegatorOf !== undefined && { delegatorOf: entry.delegatorOf }),
   });
   const blockedNotes: HistoryEvent[] = (entry.blockedAutoApprovals ?? []).map(

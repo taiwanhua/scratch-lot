@@ -122,6 +122,7 @@ export const CreateAgentDialog = ({
           <PairingInfo
             pairingCode={pairing.pairingCode}
             expiresAt={pairing.pairingExpiresAt}
+            hint={t("pairingHint")}
           />
         )}
       </Stack>

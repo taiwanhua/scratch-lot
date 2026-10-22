@@ -69,7 +69,7 @@ const SelectedRequest = ({ id, viewRoute, onOpen }: SelectedRequestProps) => {
   const t = useTranslations("admin.schedule.supportRequests");
   const { submission } = useFormSubmission(id);
   const instanceId = submission?.currentInstanceId ?? null;
-  // Figma SC-31:「S-0012 · 中山店」;還沒有單號(舊資料)時退回「支援需求單 · 分店」
+  // Figma SC-31:「SP-0012 · 中山店」;還沒有單號(舊資料)時退回「支援需求單 · 分店」
   const panelTitleOf = (row: NonNullable<typeof submission>): string => {
     const branch = branchLabelOf(row);
     return row.serialNo === null || row.serialNo === undefined

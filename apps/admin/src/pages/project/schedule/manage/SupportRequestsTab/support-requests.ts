@@ -7,7 +7,7 @@ import {
 
 /**
  * 排班作業 → 支援需求單(規格 14.10)。表單是受管表單(正本
- * `apps/db-migrator/seeds/project/revisions/support_request.r2.seed.ts`),欄位 key 與它一致。
+ * `apps/db-migrator/seeds/project/revisions/support_request.r3.seed.ts`),欄位 key 與它一致。
  */
 export const SCHEDULE_MANAGE_MODULE_KEY = "schedule.manage";
 export const SUPPORT_REQUEST_FORM_KEY = "support_request";

@@ -128,7 +128,7 @@ export const sampleCheckoutWizard = (
     reusableStocktake: {
       __typename: "LotteryCheckoutReusableStocktake",
       submissionId: STOCKTAKE_REVIEWING_ID,
-      serialNo: "S-0032",
+      serialNo: "ST-0032",
       startedAt: "2026-10-16T02:32:00.000Z",
       scopeName: "店內櫃台",
       diffCount: 0,
@@ -168,14 +168,14 @@ export const sampleCheckoutWizard = (
         __typename: "LotteryCheckoutPendingImpact",
         submissionId: "sub-correction-12",
         formKey: "cash_correction",
-        serialNo: "C-012",
+        serialNo: "X-012",
         amount: 500,
       },
       {
         __typename: "LotteryCheckoutPendingImpact",
         submissionId: "sub-reversal-8",
         formKey: "sale_reversal",
-        serialNo: "R-008",
+        serialNo: "SR-008",
         amount: -500,
       },
     ],
@@ -258,7 +258,7 @@ export const sampleCheckoutList = (): CheckoutListRow[] => [
   ),
 ];
 
-/** Figma ST-28a 的結帳單(C-0042:沿用全店盤點 S-0032、差額 −100 找錯錢、沒有接班人)。 */
+/** Figma ST-28a 的結帳單(C-0042:沿用全店盤點 ST-0032、差額 −100 找錯錢、沒有接班人)。 */
 export const sampleCheckoutDetail = (): CheckoutDetailFixture => {
   const rows: [number, number][] = [
     [1000, 5],
@@ -290,7 +290,7 @@ export const sampleCheckoutDetail = (): CheckoutDetailFixture => {
     stocktake: {
       __typename: "LotteryCheckoutReusableStocktake",
       submissionId: STOCKTAKE_REVIEWING_ID,
-      serialNo: "S-0032",
+      serialNo: "ST-0032",
       startedAt: "2026-10-16T13:40:00.000Z",
       scopeName: null,
       diffCount: 3,

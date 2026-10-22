@@ -111,7 +111,7 @@ describe("帳戶管理:關帳", () => {
       ),
     ).toBeInTheDocument();
     expect(
-      dialog.getByText("撤銷售出 #R-012(店內櫃台 · 王小明 09/30 17:00)審核中"),
+      dialog.getByText("撤銷售出 #SR-012(店內櫃台 · 王小明 09/30 17:00)審核中"),
     ).toBeInTheDocument();
     await user.type(
       dialog.getByRole("textbox", { name: "輸入月份確認" }),

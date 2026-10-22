@@ -103,7 +103,9 @@ describe("開通(規格 2.1、3.3)", () => {
       },
     });
     expect(JSON.stringify(steps[1])).toContain("form-field:branch");
-    expect(steps[1]).not.toHaveProperty("autoApprove");
+    // 店長自己交班(沒有接班人)或送日結:照常審核,派給他自己再檢查一次(不自動通過、不剔除)
+    expect(steps[1]).toMatchObject({ autoApprove: { applicant: "review" } });
+    expect(steps[0]).not.toHaveProperty("autoApprove");
   });
 
   it("店員可以送結帳確認申請(store.create-checkout_confirm)", () => {

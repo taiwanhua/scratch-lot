@@ -78,3 +78,17 @@ export const makeRgba = (
   }
   return { width, height, data };
 };
+
+/** jsdom 的 Blob 沒有 `arrayBuffer()`,用 FileReader 讀回位元組。 */
+export const readBlob = (blob: Blob): Promise<Uint8Array> =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.addEventListener("load", () => {
+      resolve(new Uint8Array(reader.result as ArrayBuffer));
+    });
+    reader.addEventListener("error", () => {
+      reject(reader.error ?? new Error("read failed"));
+    });
+    // eslint-disable-next-line unicorn/prefer-blob-reading-methods -- jsdom 的 Blob 沒有 arrayBuffer()
+    reader.readAsArrayBuffer(blob);
+  });

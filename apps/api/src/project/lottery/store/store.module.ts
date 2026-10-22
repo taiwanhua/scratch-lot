@@ -23,7 +23,6 @@ import { StoreSalesSupport } from "./store-sales-support";
 import { LotteryStoreSalesResolver } from "./store-sales.resolver";
 import { StoreSalesService } from "./store-sales.service";
 import { StoreShiftsService } from "./store-shifts.service";
-import { StoreVaultGuard } from "./store-vault-guard";
 import { LotteryStoreResolver } from "./store.resolver";
 
 /**
@@ -31,7 +30,7 @@ import { LotteryStoreResolver } from "./store.resolver";
  * 收銀班次(開班、班次資訊、改對應排班)、投庫 / 出庫、抽屜應有與即時同步;銷售、當下撤銷、拆本、移櫃 / 收回;
  * 撤銷售出申請、現金更正單(掛接點規則與查詢)
  * (張的狀態與事件經 `LotteryTicketsModule` 的 `TicketLedgerService` 寫)。
- * 現金流水經 `LotteryAccountsModule` 的 `CashLedgerService` 寫;排班只經 `ScheduleModule` 匯出的
+ * 現金流水經 `LotteryAccountsModule` 的 `CashLedgerService` 寫(小金庫守門 `StoreVaultGuard` 也由它提供,收付從小金庫付現共用);排班只經 `ScheduleModule` 匯出的
  * `ScheduleEntryLookup` 讀;原因檢查用底座 `FieldOptionsService`(經 `LotteryFieldOptionsModule`)。
  * 稽核與權限解析由 @Global 的 AuditModule / PermissionModule 提供。
  */
@@ -48,7 +47,6 @@ import { LotteryStoreResolver } from "./store.resolver";
     StoreAccess,
     StoreClock,
     StorePersonLocks,
-    StoreVaultGuard,
     StoreShiftViews,
     StoreBoardService,
     StoreShiftsService,
@@ -77,8 +75,6 @@ import { LotteryStoreResolver } from "./store.resolver";
     StoreClock,
     StoreSalesSupport,
     StoreShiftViews,
-    // 存銀行 / 日結(`daily-close/`)動小金庫:同一個守門文件序列化
-    StoreVaultGuard,
   ],
 })
 export class LotteryStoreModule {}

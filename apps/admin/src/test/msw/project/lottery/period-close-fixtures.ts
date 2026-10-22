@@ -140,7 +140,7 @@ export const blockedPeriodCheck = (month: string): PeriodCheckFixture =>
         __typename: "LotteryPeriodPendingDocument",
         kind: "sale_reversal",
         submissionId: "sub-r012",
-        serialNo: "R-012",
+        serialNo: "SR-012",
         orgName: "中山店",
         shiftLabel: "店內櫃台 · 王小明 09/30 17:00",
         at: "2026-09-30T09:00:00.000Z",

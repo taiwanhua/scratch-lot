@@ -55,7 +55,7 @@ describe("排班作業:支援需求單", () => {
     const row = within(table).getByText("21:00").closest("tr");
     expect(row).not.toBeNull();
     const cells = within(row as HTMLElement);
-    expect(cells.getByText("S-0012")).toBeInTheDocument();
+    expect(cells.getByText("SP-0012")).toBeInTheDocument();
     expect(cells.getByText("店內櫃台")).toBeInTheDocument();
     expect(cells.getByText("台北分店")).toBeInTheDocument();
     expect(cells.getByText("審核中")).toBeInTheDocument();
@@ -149,7 +149,7 @@ describe("排班作業:支援需求單", () => {
       name: "支援需求單檢視與審核",
     });
     expect(
-      await within(panel).findByText("S-0012 · 台北分店"),
+      await within(panel).findByText("SP-0012 · 台北分店"),
     ).toBeInTheDocument();
     expect(
       await within(panel).findByDisplayValue("颱風後補人,晚間人手不足"),
@@ -205,7 +205,7 @@ describe("排班作業:支援需求單", () => {
     setMobileViewport();
     const { user } = renderSupport();
     const card = await screen.findByRole("button", {
-      name: /S-0012 · 2026-11-12/,
+      name: /SP-0012 · 2026-11-12/,
     });
     expect(screen.queryByRole("table")).toBeNull();
     await user.click(card);

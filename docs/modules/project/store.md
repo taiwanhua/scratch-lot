@@ -106,7 +106,7 @@
 
 正本:`packages/domain/src/project/lottery/store-forms.ts`(表單代號、欄位 key、存值解析、送出前的值檢查);掛接點規則 `apps/api/src/project/lottery/store/store-forms-rules.service.ts`。
 
-兩張都是**受管表單**(`seeds/project/revisions/sale_reversal.r1.seed.ts`、`cash_correction.r1.seed.ts`):綁 `store`、**沒有草稿**(`allowDraft: false`)、單號 `R-0001` / `X-0001`、作廢原因用共用「作廢原因」(`void-reason`)。流程不 seed,由開通腳本建(`onboarding/form-workflows/store-forms.ts`)。
+兩張都是**受管表單**(`seeds/project/revisions/sale_reversal.r3.seed.ts`、`cash_correction.r2.seed.ts`):綁 `store`、**沒有草稿**(`allowDraft: false`)、單號 `SR-0001` / `X-0001`、作廢原因用共用「作廢原因」(`void-reason`)。流程不 seed,由開通腳本建(`onboarding/form-workflows/store-forms.ts`)。
 
 | 表單         | formKey           | 欄位                                                                                                                                                                                                                                                                                                  | 新增頁           |
 | ------------ | ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------- |
@@ -133,7 +133,7 @@
 |              | `beforeVoid`                          | 一律擋下                                                                                                                                                                                                                                                                                            |
 
 - **完成時不檢查應有夠不夠**:撤銷售出申請完成時退款班次開著、抽屜應有不夠退款 → 照記(應有可以變負),由那一班交班結帳的差額呈現;不在審核後擋下(錢已經當面退給客人,擋下只會讓帳和現實不符)。
-- **小金庫的現金更正「減少」不檢查小金庫應有**:現金更正單登記的是實際短少的錢(例:假鈔、存款短少),短少已經發生,擋下只會讓帳記不進去;出庫、存銀行這類「從小金庫拿錢」的動作才檢查應有(`StoreVaultGuard.assertCovers`)。現金更正只碰同一個守門文件(`StoreVaultGuard.serialize`,帶掛接點交易的 session)和它們序列化。
+- **小金庫的現金更正「減少」不檢查小金庫應有**:現金更正單登記的是實際短少的錢(例:假鈔、存款短少),短少已經發生,擋下只會讓帳記不進去;出庫、存銀行、調貨從小金庫付現這類「從小金庫拿錢」的動作才檢查應有(`StoreVaultGuard.assertCovers`)。現金更正只碰同一個守門文件(`StoreVaultGuard.serialize`,帶掛接點交易的 session)和它們序列化。
 - 完成時讀不到退款班次 / 位置那一班或單據(送出後被刪)→ `CONFLICT`;值不完整 → `VALIDATION_FAILED`;整個核准回復。
 
 流水的 `refType = "store"`、`refId` = 提交 id、`refRevision` = 修訂號。完成時對 `board:<分店>` 送 `board` 信號。**不能選已關帳月份**:`beforeSubmit` 以退款班次、現金更正位置(某一班)的開班時間問帳戶管理的 `PeriodLock.closedPeriodOf`(規格 10.4;歸屬班次可以選已關帳月份,報表歸「前期更正」);開班、改對應排班選的排班以開始時間 `PeriodLock.assertPeriodOpen`。
@@ -156,7 +156,7 @@
 - **[補登售出]**(`backfillLotteryStocktakeSales`,要 `store.sell` + `store.stocktake`):寫「售出(盤點補登)」事件(`sale_stocktake`、`soldSource = stocktake`、金額 = 面額、`refType = stocktake`)。那個收銀點有開著的班 → 鎖住抽屜(`drawerVersion`)算那一班;沒有 → 那個收銀點最近一班、記 `postCloseOf`(事後更正,不算那一班結帳時的應有);從來沒開過班 → 擋下(`STOCKTAKE_NO_SHIFT`)。帳本條件更新(版本 = 盤點時讀到的):兩人同時補登、補登與看板補刷同時 → 只有一個成功,失敗方 `CONFLICT` + `STOCKTAKE_ALREADY_PROCESSED`(第 17 章第 1、3 題)。回傳事件 id,盤點內容記下,送出時核對「是自己補登的」。
 - **送出**(ST-15):各收銀點的補登售出與應有現金(已結帳 → 事後更正)、新增待查、標記異常、未拆的本不在、確認遺失(張 / 批購成本,有 `inventory.show-cost` 才給成本)、說明 → [送出盤點確認申請] 經表單引擎 `createAndSubmitFormSubmission`(退回後再送出走 `submitFormSubmission`)。
 - **沒盤完可以送出**(使用者 2026-10-21 定案):還有本沒盤時送出視窗提示「還有 N 本沒有盤;沒盤的本不比對,盤點單會記下未盤的本」。送出時 api 算出範圍內(單一收銀點 / 全店啟用中的收銀點)檯面上還有未售的張、卻不在盤點內容裡的本 × 收銀點,記進盤點單 `uncountedBooks[]`(遊戲、本號、收銀點)與 `summary.uncountedCount`;不比對、不記差異,張維持系統狀態;退回後再送出時重算。盤點紀錄分頁在狀態旁標「N 本未盤」,檢視頁列出那幾本;之後可另開一次盤點補盤。報表讀 `summary.uncountedCount`。
-- **盤點確認申請**(受管表單 `stocktake_confirm`,`seeds/project/revisions/stocktake_confirm.r1.seed.ts`):分店、盤點範圍、彙總(盤點頁組好帶入)、說明、盤點內容(系統,`serializeStocktakeDraft` 的 JSON;唯讀時不顯示);沒有草稿、單號 `S-0001`、作廢原因類別 `void-reason`(作廢一律擋下)。掛接點(`stocktake-lifecycle.ts`):
+- **盤點確認申請**(受管表單 `stocktake_confirm`,`seeds/project/revisions/stocktake_confirm.r3.seed.ts`):分店、盤點範圍、彙總(盤點頁組好帶入)、說明、盤點內容(系統,`serializeStocktakeDraft` 的 JSON;唯讀時不顯示);沒有草稿、單號 `ST-0001`、作廢原因類別 `void-reason`(作廢一律擋下)。掛接點(`stocktake-lifecycle.ts`):
   - `beforeSubmit`:盤點內容讀得懂、分店一致;有 `store.stocktake`(確認遺失另要 `store.confirm-lost` 與原因);每筆差異都已處理且還對得到(`STOCKTAKE_DIFF_STALE` / `STOCKTAKE_DIFF_UNHANDLED`)
   - `submitted`:同一個交易建立盤點單(待核准;退回後再送出改寫同一筆)、再比對一次(不合 → 整個送出回復)
   - `returned` / `withdrawn` → 已退回;`rejected` → 已駁回(補登的售出不退,錯了用撤銷售出申請「盤點錯誤」)
@@ -184,7 +184,7 @@
   - `returned` / `withdrawn`:結帳單 → 已退回(自己建立的盤點單一起退回);班不重開
   - `completed`:現在盤點 → `StocktakeService.apply`;結帳單 → 已確認,`confirmedBy` = 最後核准的審核者(兩關都跳過 = 申請人)。零用金成為下一班期初由 `registerHandoverAmount` 的登記讀結帳單(送出就算,核准前下一班先開也先用它)
   - `beforeReject` / `beforeVoid`:**一律擋下**(`CHECKOUT_REJECT_FORBIDDEN` / `CHECKOUT_VOID_FORBIDDEN`,只能退回)
-- **建議流程設定**(規格 2.1、8.7;開通腳本 `onboarding/form-workflows/checkout-confirm.ts`):兩關 —— 第 1 關「接班人確認」審核者 = 表單欄位「接班人」,跳過條件 `{ or: [type == "daily", !successor] }`;第 2 關「店長審核」人員條件「角色 店長 且 所屬組織屬於表單欄位『分店』(本身)」,跳過條件 `{ and: [type == "shift", !!successor] }`。結果:交班有接班人 → 接班人審;交班沒有接班人 → 店長審;日結 → 店長審(都照常審核,沒有 B5)。租戶要改審核者,自己改流程。
+- **建議流程設定**(規格 2.1、8.7;開通腳本 `onboarding/form-workflows/checkout-confirm.ts`):兩關 —— 第 1 關「接班人確認」審核者 = 表單欄位「接班人」,跳過條件 `{ or: [type == "daily", !successor] }`;第 2 關「店長審核」人員條件「角色 店長 且 所屬組織屬於表單欄位『分店』(本身)」,跳過條件 `{ and: [type == "shift", !!successor] }`。結果:交班有接班人 → 接班人審;交班沒有接班人 → 店長審;日結 → 店長審。第 2 關「申請人也是審核者時」= **照常審核**(`autoApprove.applicant = "review"`):店長自己交班(沒有接班人)或自己送日結時,任務派給他自己再檢查一次,不自動通過。第 1 關維持預設(接班人不能是自己)。租戶要改審核者,自己改流程。
 - **班次結帳歷史紀錄分頁**(ST-27,`CheckoutsTab`):篩選 期間(送出時間)、收銀點、類型、狀態(申請的狀態:待審核 = `reviewing` / 已退回 / 已撤回 / 已完成;`?checkouts=`);欄位 單號、收銀點、類型、交班人、應有、實點、差額、狀態;平板 / 手機改卡片;點一列開結帳確認申請的檢視頁。
 - **檢視頁**(ST-28a,`CheckoutViewPage`):類型、單號、狀態、申請人、送出時間;結帳單(收銀點、盤點方式、應有逐項可點回單據、應有 / 實點 / 差額與原因、留給下一班 / 接班人、送出時審核中的單據)、依面額清點(唯讀)+ 審核區塊;申請人在退回後 [修改後再送出] → 精靈帶入原內容(`lotteryCheckout.draft`)。讀取依據:看得到那家店,或讀得到那張申請(接班人 / 店長從申請中心進來)。
 - **沒有權限時**:沒有 `store.checkout` 看不到 [交班結帳];別人的班、不是店長 → 看不到(api `canSubmit = false`、送出 `CHECKOUT_FORBIDDEN`);沒有 `store.skip-stocktake` 第 ① 步沒有「跳過盤點」。

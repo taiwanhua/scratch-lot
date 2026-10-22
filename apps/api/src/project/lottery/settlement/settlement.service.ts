@@ -51,6 +51,7 @@ import {
   CashLedgerService,
 } from "../cash/cash-ledger.service";
 import { openDrawersOf, openShiftOf } from "../cash/open-shift";
+import { StoreVaultGuard } from "../store/store-vault-guard";
 import type {
   LotterySettlementCandidatesInput,
   RecordLotterySettlementInput,
@@ -106,6 +107,7 @@ export class SettlementService {
     private readonly audit: AuditService,
     private readonly tx: TransactionService,
     private readonly realtime: RealtimePublisher,
+    private readonly vault: StoreVaultGuard,
   ) {}
 
   // ---- 讀 ----
@@ -349,27 +351,15 @@ export class SettlementService {
         snapshot.submission.tenantId,
         branchOrgId,
       );
-      const row = await this.tx.withTransaction(async (session) => {
-        const created = await this.cashLedger.recordCashMovement(session, {
-          operator,
-          orgId: branchOrgId,
-          type: chosen === "out" ? "transfer_out" : "transfer_in",
-          from: chosen === "out" ? source.place : "external",
-          to: chosen === "out" ? "external" : source.place,
-          amount: input.amount,
-          cashPointId: source.cashPointId,
-          shiftId: source.shiftId,
-          ...ref,
-          payee: handler,
-          note,
-        });
-        await this.audit.record(operator, {
-          action: ACCOUNTS_AUDIT.movementCreate,
-          targetType: ACCOUNTS_AUDIT.movementTarget,
-          targetId: created._id,
-          after: { ...ref, amount: input.amount, direction: chosen },
-        });
-        return created;
+      const row = await this.writeCash(operator, {
+        source,
+        branchOrgId,
+        tenantId: snapshot.submission.tenantId,
+        direction: chosen,
+        amount: input.amount,
+        ref,
+        handler,
+        note,
       });
       recordId = row._id;
     }
@@ -497,7 +487,22 @@ export class SettlementService {
       await this.access.grantOf(operator),
       { ...original, id: input.id },
     );
+    // 沖正一筆「錢進小金庫」的收付 = 從小金庫拿錢:不能超過小金庫應有(與出庫、付現同一個守門文件;規格 9)
+    const vaultOut = original.method === "cash" ? original.vaultIn : null;
+    if (vaultOut !== null) {
+      await this.vault.prepare(operator, vaultOut.orgId);
+    }
     await this.tx.withTransaction(async (session) => {
+      if (vaultOut !== null) {
+        await this.vault.assertCovers(
+          session,
+          operator,
+          vaultOut.tenantId,
+          vaultOut.orgId,
+          vaultOut.amount,
+          "id",
+        );
+      }
       if (original.method === "cash") {
         // 現金在這一邊的分店(已確認在操作者的可見範圍內):以操作者自己的上下文寫
         const created = await this.cashLedger.reverseCashMovement(
@@ -545,7 +550,18 @@ export class SettlementService {
       refType: string;
       refId: Types.ObjectId;
       settlementSide: string;
-    } & ({ method: "cash" } | { method: "bank"; bank: BankTransactionRecord })
+    } & (
+      | {
+          method: "cash";
+          /** 這筆是錢進小金庫(沖正會從小金庫拿走這麼多);其他為 null。 */
+          vaultIn: {
+            orgId: Types.ObjectId;
+            tenantId: Types.ObjectId | null;
+            amount: number;
+          } | null;
+        }
+      | { method: "bank"; bank: BankTransactionRecord }
+    )
   > {
     const notFound = () =>
       notFoundError(`settlement record not found: ${input.id}`);
@@ -567,6 +583,10 @@ export class SettlementService {
         refId: row.refId,
         settlementSide: row.settlementSide,
         method: "cash",
+        vaultIn:
+          row.to === "vault"
+            ? { orgId: row.orgId, tenantId: row.tenantId, amount: row.amount }
+            : null,
       };
     }
     const row = await this.bank.findById(reader, id);
@@ -590,6 +610,67 @@ export class SettlementService {
   }
 
   // ---- 內部 ----
+
+  /**
+   * 收付的現金流水(只有調貨):一個交易寫流水與稽核。從小金庫付現不能超過小金庫應有
+   * (與出庫同一個判斷、同一個守門文件;規格 9),超過 `AMOUNT_EXCEEDS_VAULT`、一筆都不寫。
+   */
+  private async writeCash(
+    operator: OperatorContext,
+    input: {
+      source: Awaited<ReturnType<SettlementService["cashSourceOf"]>>;
+      branchOrgId: Types.ObjectId;
+      tenantId: Types.ObjectId | null;
+      direction: Direction;
+      amount: number;
+      ref: {
+        refType: string;
+        refId: Types.ObjectId;
+        refRevision: number;
+        settlementSide: string;
+      };
+      handler: string | null;
+      note: string | null;
+    },
+  ): Promise<{ _id: Types.ObjectId }> {
+    const { source, branchOrgId, direction, amount, ref } = input;
+    const fromVault = direction === "out" && source.place === "vault";
+    if (fromVault) {
+      await this.vault.prepare(operator, branchOrgId);
+    }
+    return this.tx.withTransaction(async (session) => {
+      if (fromVault) {
+        await this.vault.assertCovers(
+          session,
+          operator,
+          input.tenantId,
+          branchOrgId,
+          amount,
+          "amount",
+        );
+      }
+      const created = await this.cashLedger.recordCashMovement(session, {
+        operator,
+        orgId: branchOrgId,
+        type: direction === "out" ? "transfer_out" : "transfer_in",
+        from: direction === "out" ? source.place : "external",
+        to: direction === "out" ? "external" : source.place,
+        amount,
+        cashPointId: source.cashPointId,
+        shiftId: source.shiftId,
+        ...ref,
+        payee: input.handler,
+        note: input.note,
+      });
+      await this.audit.record(operator, {
+        action: ACCOUNTS_AUDIT.movementCreate,
+        targetType: ACCOUNTS_AUDIT.movementTarget,
+        targetId: created._id,
+        after: { ...ref, amount, direction },
+      });
+      return created;
+    });
+  }
 
   /** 銀行:帳戶看得到、使用中、使用組織包含這一邊的分店。 */
   private async usableAccount(

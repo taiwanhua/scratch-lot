@@ -119,7 +119,7 @@
 | `manager`  | `level`(1 起)                                                              | 從提交所屬組織往上第 `level` 組主管(`OrgManagersService.resolveManagers`) |
 
 - 人員條件的使用處選項在 `approver-audience.ts`:客製流程 = 使用者 / 角色 / 所屬組織 / 權限,所屬組織可選指定組織、`submission-org`(單據所屬組織 = 提交的 `orgId`)、`form-field:<欄位 key>`(表單的組織欄位)、`tenant`(租戶,畫面「最上層組織」);共用流程只有權限與三種非指定的組織來源。
-- 解析在 `workflow-engine/audience-source.service.ts` 的 `resolveAudienceSource(source, submissionCtx)`(`submissionCtx` = 租戶、單據所屬組織、申請人、該修訂的值),三種來源都回**啟用中且仍在本租戶**的人;剔除申請人在 domain `buildPlan`。名單為空 → 該關阻擋,可「新增審核者」。依單據找人的其他使用處直接呼叫它。表單的組織欄位沒填 → 那個條件列沒有人符合。
+- 解析在 `workflow-engine/audience-source.service.ts` 的 `resolveAudienceSource(source, submissionCtx)`(`submissionCtx` = 租戶、單據所屬組織、申請人、該修訂的值),三種來源都回**啟用中且仍在本租戶**的人(主管來源已不含申請人);名單上的申請人留不留由 domain `advance` 列 5 依「申請人也是審核者時」決定、`buildPlan` 剔除。名單為空 → 該關阻擋,可「新增審核者」。依單據找人的其他使用處直接呼叫它。表單的組織欄位沒填 → 那個條件列沒有人符合。
 - 解析的讀取依序 `await`(TX-02,推進在交易內):`AudienceService.listNode` 與 `PermissionResolver.resolveRoles` 都不平行讀。
 
 **錯誤碼**(檢查器 = 存草稿 / 發布前;綁定 = `BindingIssue.problem`;送出 = `SubmitCheckIssue.problem`):
@@ -176,19 +176,20 @@
 
 審核關卡定義(`ReviewStepDef`,`workflow_versions.steps[]` 的 JSON;設計器以 `saveWorkflowVersionDraft` 的 `definition.steps` 傳)多兩個欄位,與既有的 `skipWhen` 並存:
 
-| 欄位          | 形狀                                                | 省略 / `null`  |
-| ------------- | --------------------------------------------------- | -------------- |
-| `skipOrgs`    | `{ orgIds: string[], includeDescendants: boolean }` | 不看組織       |
-| `autoApprove` | `{ applicant?: boolean, priorApprover?: boolean }`  | 兩項都照常審核 |
+| 欄位          | 形狀                                                           | 省略 / `null`                 |
+| ------------- | -------------------------------------------------------------- | ----------------------------- |
+| `skipOrgs`    | `{ orgIds: string[], includeDescendants: boolean }`            | 不看組織                      |
+| `autoApprove` | `{ applicant?: boolean \| "review", priorApprover?: boolean }` | 剔除申請人;已核准過的照常審核 |
 
 - `orgIds` 是組織 id 或 `"tenant"`(`SKIP_ORG_TENANT`,租戶,畫面「最上層組織」)。
+- `applicant`(「申請人也是這一關的審核者時」,domain `applicantAsReviewerOf` 換算):省略 / `false` = 剔除申請人(`exclude`,預設)、`true` = 自動通過(`auto`)、`"review"`(`APPLICANT_REVIEW`)= 照常審核(`review`)。延伸既有欄位而不另開欄位:舊定義(省略或 `true`)不用遷移、行為不變;`priorApprover` 照舊只有布林。
 - **進關**(`step-entry.service.ts`,判斷表列 5 的查資料庫那一半)依序:
   1. `skipOrgs`:比對修訂 `ctx.orgIds`(送出當下的所屬組織全部,`org_user` 直接關聯)與名單;`includeDescendants` 時讀那些組織的 `ancestors`。快照沒有 `orgIds`(舊修訂)→ 不成立。
   2. `skipWhen`:照舊。
   3. 任一成立 → `{ kind: "skip", reason }`,`step_skipped` 帶 `reason`(`skip_orgs` / `skip_condition`,兩項都成立記 `skip_orgs`);不經 `beforeApprove`,推進照常觸發 `stepPassed(skipped: true)`。
   4. 否則解析審核者 → domain `autoApprovalCandidates` 列候選 → 逐位以**本人**的操作者上下文(`OperatorContextService.resolve`,單據組織為目前組織)跑 `FormLifecycleService.checkApproveGuard`(同一個 `beforeApprove`,擋下以回傳值表示,不拋)。通過的放進 `autoApprovals`、擋下的放進 `blockedAutoApprovals`(帶專案錯誤碼);`any` 一位通過就停。
 - **寫入**(domain `advance` 列 5):進關的同一次 CAS 寫計畫與自動通過的決定(`decisions` 整份 + 每筆 `approved` 事件帶 `reason`:`auto_applicant` / `auto_prior_approver`),接著建那幾位的任務(投影 = `approved`,不寄「有新任務」)。之後照判斷表:`any` 下一輪列 4 完成、`all` 等其他人。
-- 申請人**只有在自動通過成立(過了守門)時**才留在計畫(`buildPlan` 的 `keepApplicant`);被擋下就照舊剔除,剔除後沒人 → 列 5 的阻擋。其他人被擋下照常留待審任務。每位被擋下的在同一次 CAS 記一筆 `auto_approve_blocked`(`userId`、`reason` = `auto_applicant` / `auto_prior_approver`、`code` = 專案錯誤碼;GraphQL `WorkflowHistoryEventModel.code`),時間軸以 `admin.approval.timeline.autoApproveBlocked.*` + `admin.lifecycle.<碼>`(沒有就用通用句)顯示。
+- 申請人留不留在計畫(`buildPlan` 的 `keepApplicant`,`advance` 列 5 算):`applicant: "review"` → 一律留著(沒有自動通過成立就拿一張待審任務,任務照常寄「有新任務」);其他設定 → **只有在自動通過成立(過了守門)時**才留著,被擋下就剔除,剔除後沒人 → 列 5 的阻擋。其他人被擋下照常留待審任務。每位被擋下的在同一次 CAS 記一筆 `auto_approve_blocked`(`userId`、`reason` = `auto_applicant` / `auto_prior_approver`、`code` = 專案錯誤碼;GraphQL `WorkflowHistoryEventModel.code`),時間軸以 `admin.approval.timeline.autoApproveBlocked.*` + `admin.lifecycle.<碼>`(沒有就用通用句)顯示。
 - 「已在前關核准過」= `priorApproverIds`:同一實例、這一關**上游**(沿入線往回)的關卡裡,`evaluateStep` 算數的核准決定的 `userId`(自動通過記的也算;晚於結果的不算;不同分支不算)。退回後重送是新實例,自然從頭算。
 - 「需要推進」的識別(`blockedInstances` 的 `needsAdvance`,`planOf`)不跑自動通過的守門。
 - 修訂 `ctx` 快照另存 `orgIds`、`tenantId`(`revisionContext`;GraphQL `FormSubmissionContext.orgIds` / `tenantId`),對應表達式的 `ctx.user.orgIds`、`ctx.tenant.id`;填寫中的前端從 `me.orgs` 與 `me.currentOrg.tenantId` 取。
@@ -196,12 +197,12 @@
 
 **錯誤碼**(檢查器;發布擋):
 
-| 碼                     | 什麼時候                                                            |
-| ---------------------- | ------------------------------------------------------------------- |
-| `SKIP_ORGS_INVALID`    | `skipOrgs` 沒選組織、id 不是非空字串、`includeDescendants` 不是布林 |
-| `SKIP_ORGS_IN_SHARED`  | 共用流程的 `skipOrgs` 選了 `"tenant"` 以外的組織                    |
-| `ORG_NOT_IN_TENANT`    | 客製流程的 `skipOrgs` 選的組織不在本租戶(`property: "skipOrgs"`)    |
-| `AUTO_APPROVE_INVALID` | `autoApprove` 的值不是布林                                          |
+| 碼                     | 什麼時候                                                                  |
+| ---------------------- | ------------------------------------------------------------------------- |
+| `SKIP_ORGS_INVALID`    | `skipOrgs` 沒選組織、id 不是非空字串、`includeDescendants` 不是布林       |
+| `SKIP_ORGS_IN_SHARED`  | 共用流程的 `skipOrgs` 選了 `"tenant"` 以外的組織                          |
+| `ORG_NOT_IN_TENANT`    | 客製流程的 `skipOrgs` 選的組織不在本租戶(`property: "skipOrgs"`)          |
+| `AUTO_APPROVE_INVALID` | `autoApprove.priorApprover` 不是布林,或 `applicant` 不是布林 / `"review"` |
 
 匯合節點帶了 `skipOrgs` / `autoApprove` 一樣是 `JOIN_HAS_REVIEW_PROPS`;所有審核關卡都設了 `skipWhen` 或 `skipOrgs` → `ALL_STEPS_SKIPPABLE`(警告)。
 
@@ -287,7 +288,8 @@
 
 - **`decideTask`**(`task-actions.service.ts`):前置(任務是我的且 `pending`、提交仍指向這個實例、實例進行中、關卡為 active、退回要 `allowReturn`、駁回 / 退回理由必填、任務 `expectedEditVersion`)後寫實例:條件含「關卡仍 active、我仍是這一項的有效承辦人、這個 `taskKey` 還沒有決定」→ `$push steps.$[cur].decisions` + `$push history` + `$inc editVersion`;**不比對** `editVersion`。寫決定、任務版號、稽核與推進是一個交易;兩人同時決定同一份實例 → 後到的寫入衝突、重跑後依當下狀態判(關卡已結束 → `STEP_CLOSED`;關卡仍進行中 → 照常接受)。條件不成立、任務已不是 `pending`、我已被改派走 → 回 `result: STEP_CLOSED`、任務不動。
 - **撤回**(申請人本人:看得到這張單但不是申請人 → `FORBIDDEN`(`NOT_APPLICANT`),先於狀態檢查;依可見範圍與資料範圍規則根本讀不到 → `NOT_FOUND`;提交要是 `reviewing` 且有實例,否則 `CONFLICT` `STATUS_MISMATCH`;`instance-withdraw.service.ts` 另以實例的 `createdBy` 再比一次):條件更新 `{ editVersion, 進行中, 所有關卡都沒有決定 }` → `withdrawn`、active 關卡 `terminated`;撤回、推進收尾(提交同步成 `withdrawn`)與稽核是一個交易。決定在撤回讀完之後先提交 → 撤回的寫入衝突、重跑看到決定 → `CONFLICT`(`HAS_DECISIONS`);「沒有決定」也寫在條件裡。
-- **改派**:對 `pending` / `blocked` 任務指定新人(啟用、在本租戶、不是申請人,否則 `ASSIGNEE_NOT_ELIGIBLE`;已在本關的計畫裡 → `ALREADY_IN_STEP`);條件更新 `{ editVersion, 該 taskKey 尚無決定 }` → 計畫該項換人、原人進 `previousAssigneeIds`、`assigneeState = active`、`reassigned`(一個交易,含稽核與推進;推進在同一個交易給改派後的承辦人寫 `workflow.task-created`,見「通知信」)。決定先提交 → 改派寫入衝突、重跑讀到決定 → `ALREADY_DECIDED`。計畫固定:之後補建任務不會把原承辦人建回來。代理只在進關派任時套用:改派給正在代理期間的人,任務與「待你審核」通知仍給被選的人,不轉給他的代理人。
+- **改派**:對 `pending` / `blocked` 任務指定新人(啟用、在本租戶;是申請人時該關要是照常審核,否則 `ASSIGNEE_NOT_ELIGIBLE`;已在本關的計畫裡 → `ALREADY_IN_STEP`);條件更新 `{ editVersion, 該 taskKey 尚無決定 }` → 計畫該項換人、原人進 `previousAssigneeIds`、`assigneeState = active`、`reassigned`(一個交易,含稽核與推進;推進在同一個交易給改派後的承辦人寫 `workflow.task-created`,見「通知信」)。決定先提交 → 改派寫入衝突、重跑讀到決定 → `ALREADY_DECIDED`。計畫固定:之後補建任務不會把原承辦人建回來。代理只在進關派任時套用:改派給正在代理期間的人,任務與「待你審核」通知仍給被選的人,不轉給他的代理人。
+- **改派與新增審核者指定給申請人**(`task-actions.service.ts` 的 `assertApplicantAllowed`):讀實例版本的定義,該關 `applicantAsReviewerOf(autoApprove) === "review"` 才放行,剔除 / 自動通過 → `ASSIGNEE_NOT_ELIGIBLE`;與進關的 `keepApplicant` 同一個判準。實例詳情的關卡帶 `allowsApplicantAssignee`(GraphQL `WorkflowInstanceStepModel`,同一個判準)給選人跳窗。
 - **新增審核者**:只對「解析為空」而阻擋的關卡(`blocked` 且計畫為空);條件更新追加一項(`taskKey` 接在最大序號之後)、`assignee_added`;推進建任務、解除阻擋(一個交易)。
 - **審核者失效 hook**(`AssigneeInvalidationService.onUserChanged`):使用者管理的三個入口在稽核之後呼叫 —— 停用(`setUserEnabled(false)`;已停用再停用一次也會補做)、所屬組織異動(`setUserOrgs` 移除組織)、複製組織與角色的取代模式移除組織(`copyUserOrgRoles`)。**每個實例一個交易**(標失效 + 推進),對「進行中關卡、尚無決定、此刻已不合格(停用或已不在該租戶)」的計畫項目條件更新 `assigneeState = invalid`、`history: blocked`;該關 `any` 且仍有有效未決定的項目 → 不阻擋,否則該關與實例 `blocked`。推進同步任務投影(→ `blocked`)與提交的 `blocked`。已被接受的決定不受影響。
 - **人員條件派單後不再符合的人(例如被移除角色)仍可審**(計畫固定);被停用 / 移出租戶走失效。
@@ -391,7 +393,7 @@ admin 端(`hooks/base/useApplyCenterCounts.ts`):
 - **檢查用表單**(`CheckFormField`):設計時對照的表單 —— 列出可選的欄位、驗證審核者欄位與跳過條件;實際送出以綁定的表單為準,綁定時會再驗一次(這句說明就放在欄位旁)。隨草稿存(`checkFormKey`,換掉也算未存變更);新草稿(`draftRevision === 0`)沒有值時預設第一張綁定的表單;存過的草稿照存的值(存了 null = 明確不指定)。
 - **屬性面板**:名稱、key(已發布過的關卡 key 鎖定,以草稿的基底版本為準)、審核者來源三種(人員條件 / 表單欄位 / 主管)、會簽、允許退回,以及四個區塊(`StepSkipSection` / `StepAutoApproveSection` / `StepOverdueSection` / `PeopleCcSection`):
   - **跳過這一關(符合任一項就跳過)**:☑ 申請人屬於這些組織(`skipOrgs`;勾了預設「最上層組織」= `SKIP_ORG_TENANT`、不含下層;客製流程另有「指定組織」`OrgTreeSelect`;共用流程不給組織樹、最上層組織固定勾著)+ 包含下層;☑ 符合條件(`skipWhen`,原本單獨的「跳過條件」欄位搬進來,表單引擎的結構化表達式選擇器;既有公式載入後就是勾著)。取消勾選清掉那一項;「符合條件」勾了但沒設公式不存東西。
-  - **自動通過**:「申請人是這一關的審核者時」「審核者已在前面的關卡核准過時」各一組 照常審核(預設)/ 自動通過;兩項都照常 = 存 `null`。
+  - **自動通過**:「申請人是這一關的審核者時」一組 剔除申請人(預設)/ 自動通過 / 照常審核(存 `applicant: true` / `"review"`);「審核者已在前面的關卡核准過時」一組 照常審核(預設)/ 自動通過。預設不存鍵,兩項都預設 = 存 `null`(改了再改回預設不算未存變更)。
   - **逾時提醒**:開關預設關閉;開啟帶入 N = 24、M = 48、通知對象 `DEFAULT_OVERDUE_AUDIENCE`。N、M 是時數欄,通知對象是人員條件摘要 + 「編輯條件」(同審核者的對話框)。`OVERDUE_INVALID` → 時數欄標紅並說明,設計器擋下不讓存(api 存草稿照收、發布擋)。
   - **知會**:知會對象來源下拉(不知會(預設)/ 人員條件 / 表單欄位 / 主管,與審核者同一個 `AssigneeSourcePicker`,`purpose` 換標題與說明),說明「這一關通過或被跳過時通知;要知道最後結果請加進整個流程的知會對象」。
   - 審核者、知會對象、逾時通知對象共用 `AssigneeSourcePicker` / `AudienceSourceSummary` / `AudienceConditionDialog`,標題依用途(`PeoplePurpose`:`approver` / `cc` / `overdue`,文案 `admin.workflows.assignee.purposes.<用途>`)。
@@ -411,7 +413,7 @@ admin 端(`hooks/base/useApplyCenterCounts.ts`):
 
 - 頁籤「阻擋」/「需要推進」(`blockedInstances` 的兩種篩選);「需要推進」的候選超過上限時(`truncated`)提示只檢查了最久沒動的一批。
 - 每列:表單、實例上的標題槽(不含提交內容)、申請人、卡在哪 / 卡在誰(進行中審核關卡還沒決定的計畫項目,失效的排前面;解析為空的關卡標「找不到審核者」)、最後變動(`YYYY-MM-DD HH:mm`,讀者的租戶時區)。
-- 處置:**改派**(對計畫項目,用 `plan.taskId` 呼叫 `reassignTask`)、**新增審核者**(解析為空的關卡,`addStepAssignee`)、**重試推進**。選人跳窗把申請人與已在本關的人列出但灰掉。
+- 處置:**改派**(對計畫項目,用 `plan.taskId` 呼叫 `reassignTask`)、**新增審核者**(解析為空的關卡,`addStepAssignee`)、**重試推進**。選人跳窗把已在本關的人與申請人列出但灰掉;關卡的 `allowsApplicantAssignee` 為 true(照常審核)時申請人可選。
 
 ### 申請中心(`apply-center`)
 
@@ -525,7 +527,7 @@ input 欄位的缺席 / `null`:
 通用碼照 GQL-04,不新增 code;「為什麼」放 `extensions.reason`(正本 `apps/api/src/workflows/workflows-error.ts`)。
 
 - `CONFLICT`:`DRAFT_REVISION_MISMATCH`、`DRAFT_EXISTS`、`DRAFT_MISSING`、`NO_CURRENT_VERSION`、`CURRENT_VERSION_CHANGED`、`EDIT_VERSION_MISMATCH`、`STATUS_MISMATCH`、`HAS_DECISIONS`(撤回:已有審核意見)、`ALREADY_DECIDED`(改派:此任務已決定)、`ALREADY_IN_STEP`(改派 / 新增:此人已在本關)、`INSTANCE_CHANGED`(實例已結束、關卡已前進、不是解析為空的阻擋、一直被別的動作搶先)。送出時的容量上限 `REVISION_LIMIT` / `DOCUMENT_TOO_LARGE` 屬表單的錯誤(`docs/modules/forms.md`「錯誤」)。
-- `FORBIDDEN`:`ROOT_ONLY`、`NOT_WORKFLOW_OWNER`、`TENANT_ONLY`、`WORKFLOW_REMOVED` / `WORKFLOW_UNPUBLISHED` / `WORKFLOW_MISCONFIGURED`(送出時檢查,後者附 `issues`;綁定時沒有發布版也是 `WORKFLOW_UNPUBLISHED`)、`ASSIGNEE_NOT_ELIGIBLE`(改派 / 新增的對象停用、不在本租戶或是申請人)、`NOT_APPLICANT`(撤回別人的單)。
+- `FORBIDDEN`:`ROOT_ONLY`、`NOT_WORKFLOW_OWNER`、`TENANT_ONLY`、`WORKFLOW_REMOVED` / `WORKFLOW_UNPUBLISHED` / `WORKFLOW_MISCONFIGURED`(送出時檢查,後者附 `issues`;綁定時沒有發布版也是 `WORKFLOW_UNPUBLISHED`)、`ASSIGNEE_NOT_ELIGIBLE`(改派 / 新增的對象停用、不在本租戶,或是申請人而該關不是照常審核)、`NOT_APPLICANT`(撤回別人的單)。
 - `VALIDATION_FAILED`:發布的檢查器錯誤 → `fields: ["definition"]` + `issues`(`@repo/domain/workflow` 的 `WorkflowIssue`);綁定時檢查 → `fields: ["workflowKey"]` + `issues`(`BindingIssue`);匯出可攜性錯誤 → `fields: ["definition"]` + `issues[{ code, message, path }]`,匯出版本狀態不符 → `fields: ["version"]`;其餘照一般的 `fields`。
 - 送出時檢查擋下時給申請人看的訊息是「流程設定有誤,請聯絡管理員」「流程尚未發布」「此表單的審核流程已移除,請聯絡管理員」(`SUBMIT_CHECK_MESSAGES`),前端依 reason 對應。
 

@@ -360,7 +360,7 @@ describe("代理人:進關改派給代理人", () => {
     expect(delegatorsIn(plan[0])).toEqual([]);
   });
 
-  it("原審核者本人就是申請人 → 不換成他的代理人:沒開自動通過照規則剔除(阻擋);開了自動通過", async () => {
+  it("原審核者本人就是申請人 → 不換成他的代理人:預設剔除(阻擋);自動通過;照常審核由申請人自己審", async () => {
     const [deputy] = await freshStaff();
     const applicant = await person(
       api,
@@ -388,6 +388,23 @@ describe("代理人:進關改派給代理人", () => {
     expect(delegatorsIn(plan[0])).toEqual([]);
     const row = await submission(world, applicant, auto.id);
     expect(row.status).toBe("COMPLETED");
+
+    // 照常審核:申請人自己那張待審任務也不換成他的代理人
+    await bindNew({
+      steps: [
+        usersStep("first", [applicant], {
+          autoApprove: { applicant: "review" },
+        }),
+      ],
+    });
+    const reviewed = await submitLeave(world, null, applicant);
+    const kept = planOf(await latestInstance(reviewed.id), "first");
+    expect(kept.map((item) => String(item.assigneeId))).toEqual([
+      String(applicant.userId),
+    ]);
+    expect(delegatorsIn(kept[0])).toEqual([]);
+    expect(await tasksOn(deputy, reviewed.id)).toEqual([]);
+    expect(await pendingStep(applicant, reviewed.id)).toBe("first");
   });
 
   it("代理開始前已派出的任務不自動轉給代理人", async () => {

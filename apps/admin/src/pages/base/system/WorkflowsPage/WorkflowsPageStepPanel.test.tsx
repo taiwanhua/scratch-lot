@@ -112,7 +112,7 @@ const expectConfiguredPanel = () => {
     name: "申請人是這一關的審核者時",
   });
   expect(
-    within(applicant).getByRole("radio", { name: "照常審核" }),
+    within(applicant).getByRole("radio", { name: "剔除申請人" }),
   ).toBeChecked();
   expect(
     within(panel).getByRole("switch", { name: "開啟逾時提醒" }),
@@ -221,7 +221,33 @@ describe("流程管理:關卡面板的跳過、自動通過與存檔來回", () 
     );
   });
 
-  it("自動通過改成「自動通過」再改回「照常審核」→ 定義回到原樣,不算未存的變更", async () => {
+  it('申請人是審核者時有三個選項;選「照常審核」→ 存草稿帶 applicant: "review"', async () => {
+    const { user, world } = renderWorkflows();
+    const canvas = await findCanvas();
+    clickNode(canvas, "人資");
+    const applicant = within(propertiesPanel()).getByRole("radiogroup", {
+      name: "申請人是這一關的審核者時",
+    });
+    expect(
+      within(applicant)
+        .getAllByRole("radio")
+        .map((radio) => radio.closest("label")?.textContent),
+    ).toEqual(["剔除申請人", "自動通過", "照常審核"]);
+
+    await user.click(
+      within(applicant).getByRole("radio", { name: "照常審核" }),
+    );
+    await user.click(screen.getByRole("button", { name: "存草稿" }));
+
+    await waitFor(() => {
+      expect(world.inputs.saveDraft).toHaveLength(1);
+    });
+    expect(world.inputs.saveDraft[0]?.definition.steps[1]?.autoApprove).toEqual(
+      { applicant: "review" },
+    );
+  });
+
+  it("自動通過改成「自動通過」再改回「剔除申請人」→ 定義回到原樣,不算未存的變更", async () => {
     const { user } = renderWorkflows();
     const canvas = await findCanvas();
     clickNode(canvas, "人資");
@@ -234,7 +260,7 @@ describe("流程管理:關卡面板的跳過、自動通過與存檔來回", () 
     );
     expect(screen.getByText("有未存的變更")).toBeInTheDocument();
     await user.click(
-      within(applicant).getByRole("radio", { name: "照常審核" }),
+      within(applicant).getByRole("radio", { name: "剔除申請人" }),
     );
 
     expect(screen.queryByText("有未存的變更")).toBeNull();

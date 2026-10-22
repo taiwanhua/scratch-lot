@@ -6583,6 +6583,7 @@ enum WorkflowInstanceStatus {
 
 type WorkflowInstanceStepModel {
   allowReturn: Boolean!
+  allowsApplicantAssignee: Boolean!
   blocked: Boolean!
   decisions: [WorkflowDecisionModel!]!
   kind: String!

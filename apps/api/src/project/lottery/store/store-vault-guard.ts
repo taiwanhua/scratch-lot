@@ -11,7 +11,8 @@ import { CashLedgerService } from "../cash/cash-ledger.service";
 import { STORE_REASONS, validationError } from "./store-error";
 
 /**
- * 從小金庫拿錢(出庫、開班從小金庫領零用金)不能超過小金庫應有(使用者 10/21 定案;規格 6.7)。
+ * 從小金庫拿錢(出庫、開班從小金庫領零用金、存銀行、調貨的收付從小金庫付現)不能超過小金庫應有
+ * (使用者 10/21 定案;規格 6.7、9)。由 `LotteryAccountsModule` 提供(收付在那裡,店面與日結都 import 它)。
  * 小金庫應有沿用 `CashLedgerService.vaultExpected`(日結起算點 + 之後流水),再扣掉審核中日結要存入銀行的金額
  * (`reservedForDailyClose`)。
  *

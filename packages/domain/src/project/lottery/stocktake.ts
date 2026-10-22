@@ -13,7 +13,7 @@ import type { TicketLocationKind, TicketStatus } from "./ticket-events";
 /** 盤點確認申請的表單代號(B9b 權限 `store.create-stocktake_confirm`;底線,底座 `FORM_KEY_PATTERN` 不收 `-`)。 */
 export const STOCKTAKE_CONFIRM_FORM_KEY = "stocktake_confirm";
 
-/** 盤點確認申請的欄位 key(受管表單 `seeds/project/revisions/stocktake_confirm.r2.seed.ts`)。 */
+/** 盤點確認申請的欄位 key(受管表單 `seeds/project/revisions/stocktake_confirm.r3.seed.ts`)。 */
 export const STOCKTAKE_FIELD_KEYS = {
   /** 分店(reference org) */
   branch: "branch",

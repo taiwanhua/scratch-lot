@@ -12,7 +12,7 @@ import { FORM_WORKFLOWS } from "./onboarding/form-workflows";
 import { ROLE_GRANT_SECTIONS } from "./onboarding/role-grants";
 import { roleGrantOf } from "./onboarding/roles";
 import { projectSeedSource } from "./registry";
-import { seed as stocktakeForm } from "./revisions/stocktake_confirm.r2.seed";
+import { seed as stocktakeForm } from "./revisions/stocktake_confirm.r3.seed";
 import { projectSeedSettings } from "./settings";
 
 const fieldOf = (key: string) =>
@@ -27,7 +27,7 @@ describe("受管表單 盤點確認申請(stocktake_confirm r1)", () => {
     ).not.toThrow();
   });
 
-  it("綁在店面管理、沒有草稿、單號 S-0001、作廢原因 = 共用的「作廢原因」(作廢由掛接點一律擋下)", () => {
+  it("綁在店面管理、沒有草稿、單號 ST-0001、作廢原因 = 共用的「作廢原因」(作廢由掛接點一律擋下)", () => {
     expect(stocktakeForm).toMatchObject({
       key: STOCKTAKE_CONFIRM_FORM_KEY,
       moduleKey: STORE_KEY,
@@ -35,7 +35,7 @@ describe("受管表單 盤點確認申請(stocktake_confirm r1)", () => {
       voidReasonCategoryKey: SHARED_FIELD_CATEGORY_KEYS.voidReason,
       // 依欄位共用:分店欄指到的分店也看得到(唯讀)
       sharedByFieldKeys: ["branch"],
-      serial: { prefix: "S", period: "none", digits: 4 },
+      serial: { prefix: "ST", period: "none", digits: 4 },
     });
   });
 

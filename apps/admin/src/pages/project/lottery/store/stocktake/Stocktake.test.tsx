@@ -232,14 +232,14 @@ describe("店面管理:盤點", () => {
   it("盤點紀錄分頁(ST-29)點一列 → 盤點確認申請檢視頁(ST-30)", async () => {
     const user = fastUser();
     renderStore({ path: "/store?tab=stocktakes" });
-    const serial = await screen.findByText("S-0032");
+    const serial = await screen.findByText("ST-0032");
     expect(screen.getByText("待核准")).toBeInTheDocument();
     expect(screen.getByText("2 張 · 300")).toBeInTheDocument();
     // 沒盤完送出的那一筆在狀態旁標「N 本未盤」;盤完的沒有標
     expect(screen.getAllByText("3 本未盤")).toHaveLength(1);
     await user.click(serial);
     expect(
-      await screen.findByRole("heading", { name: "盤點確認申請 S-0032" }),
+      await screen.findByRole("heading", { name: "盤點確認申請 ST-0032" }),
     ).toBeInTheDocument();
     expect(await screen.findByText("5198 鼠來寶 · 088102")).toBeInTheDocument();
     expect(screen.getByText("補登售出 1、待查 1")).toBeInTheDocument();
