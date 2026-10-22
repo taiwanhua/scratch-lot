@@ -57,12 +57,13 @@ export interface StepEntryOptions {
  *      「包含下層」看組織的 `ancestors`
  *   2. 「符合條件」(`skipWhen`):拿該修訂的表單內容與送出當時的上下文算(同一實例內容固定,不重算公式)
  * - 審核者三種來源由 `AudienceSourceService.resolveAudienceSource` 算(只算啟用中、仍在本租戶的人);
- *   剔除申請人由 domain 的 `buildPlan` 做
+ *   申請人留不留(這一關「申請人也是審核者時」剔除 / 自動通過 / 照常審核)由 domain 的 `advance` 列 5 與
+ *   `buildPlan` 決定,這裡交出的名單含申請人
  * - **代理人**:解析完先把此刻在代理期間的人換成代理人(`AssigneeDelegationService`),
  *   自動通過與派任計畫都以換過的名單算(「已在前關核准過」只算代理人本人)
  * - **自動通過**:domain `autoApprovalCandidates` 列出候選,逐位以**他本人**的身分跑
- *   `checkApproveGuard`(`beforeApprove`);擋下的放進 `blockedAutoApprovals`(申請人照一般規則剔除,
- *   其他人照常審核;時間軸記 `auto_approve_blocked`)。`any` 一位通過就停(一人核准即過)
+ *   `checkApproveGuard`(`beforeApprove`);擋下的放進 `blockedAutoApprovals`(申請人回到這一關的設定:
+ *   照常審核就留著待審,否則剔除;其他人照常審核;時間軸記 `auto_approve_blocked`)。`any` 一位通過就停(一人核准即過)
  * - 解析不到任何人 → 空名單(該關阻擋,不自動改派、不自動跳過)
  *
  * 推進在交易內呼叫這裡:讀取依序 `await`(TX-02);守門擋下是結果不是錯誤,其他例外照樣往外拋(TX-04)。

@@ -1,3 +1,5 @@
+import { APPLICANT_REVIEW } from "@repo/domain/workflow";
+
 import type { OnboardingContext } from "../context";
 
 /** 流程定義的一關(`StepDef` 的 JSON;形狀正本 `@repo/domain/workflow` 的 `ReviewStepDef`)。 */
@@ -36,7 +38,16 @@ export function audienceSource(
   };
 }
 
-/** 一般審核關卡:任一人核准即通過、可退回、沒有跳過與自動通過。 */
+/**
+ * 這一關「申請人也是審核者時」設成**照常審核**(`autoApprove.applicant = "review"`):申請人留在名單、
+ * 自己再按一次核准。每家分店只有一位店長,店長自己送出的單照底座預設剔除申請人就找不到審核者而卡住;
+ * 申請人可能同時是審核者、又沒有設自動通過的關卡都套它(規格 2.1)。
+ */
+export function applicantReviews(step: WorkflowStepJson): WorkflowStepJson {
+  return { ...step, autoApprove: { applicant: APPLICANT_REVIEW } };
+}
+
+/** 一般審核關卡:任一人核准即通過、可退回、沒有跳過與自動通過(申請人照底座預設剔除)。 */
 export function reviewStep(
   key: string,
   name: string,

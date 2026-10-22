@@ -20,6 +20,7 @@ import {
   type WorkflowValidationReport,
 } from "./issues";
 import {
+  APPLICANT_REVIEW,
   APPROVAL_MODES,
   ASSIGNEE_KINDS,
   type AssigneeSource,
@@ -286,7 +287,7 @@ function checkSkipOrgs(
   }
 }
 
-/** 自動通過:兩項都是布林(省略 = 照常審核)。 */
+/** 自動通過:`priorApprover` 是布林;`applicant` 是布林或 `"review"`(照常審核)。省略 = 預設。 */
 function checkAutoApprove(
   step: ReviewStepDef,
   collector: WorkflowIssueCollector,
@@ -302,12 +303,14 @@ function checkAutoApprove(
     !Array.isArray(raw) &&
     ["applicant", "priorApprover"].every(
       (key) =>
-        candidate[key] === undefined || typeof candidate[key] === "boolean",
+        candidate[key] === undefined ||
+        typeof candidate[key] === "boolean" ||
+        (key === "applicant" && candidate[key] === APPLICANT_REVIEW),
     );
   if (!isValid) {
     collector.error(
       "AUTO_APPROVE_INVALID",
-      `關卡 ${step.key} 的自動通過設定不對(只能是照常審核或自動通過)`,
+      `關卡 ${step.key} 的自動通過設定不對(申請人是審核者時只能是剔除、自動通過或照常審核;已核准過時只能是照常審核或自動通過)`,
       { ...location, property: "autoApprove" },
     );
   }

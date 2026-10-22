@@ -30,6 +30,8 @@ import {
   decideOn,
   rawInstances,
   rawSubmissionDoc,
+  reviewStep,
+  setManagers,
   setupWorld,
   submission,
   submitExisting,
@@ -326,7 +328,7 @@ describe("每一關指定組織跳過與自動通過", () => {
       expect(stepIn(instance, "second").status).toBe("active");
     });
 
-    it("預設照常審核:申請人是唯一審核者 → 照舊剔除、該關阻擋", async () => {
+    it("預設(剔除申請人):申請人是唯一審核者 → 照舊剔除、該關阻擋", async () => {
       await bindNew({
         steps: [usersStep("first", [world.applicant])],
       });
@@ -484,6 +486,123 @@ describe("每一關指定組織跳過與自動通過", () => {
       const second = stepIn(instance, "second");
       expect(second.status).toBe("active");
       expect(second.decisions).toEqual([]);
+    });
+  });
+
+  describe("申請人也是審核者時:照常審核", () => {
+    it("申請人是唯一審核者 → 不剔除、不阻擋,派給申請人一張待審任務;他自己核准(經 beforeApprove)後完成", async () => {
+      await bindNew({
+        steps: [
+          usersStep("first", [world.applicant], {
+            autoApprove: { applicant: "review" },
+          }),
+        ],
+      });
+      const submitted = await submitLeave(world);
+      const instance = await latestInstance(submitted.id);
+      const first = stepIn(instance, "first");
+      expect(instance.status).toBe("running");
+      expect(first.status).toBe("active");
+      expect(first.plan.map((item) => String(item.assigneeId))).toEqual([
+        String(world.applicant.userId),
+      ]);
+      expect(first.decisions).toEqual([]);
+      // 進關不跑自動通過的守門
+      expect(guardsCalled()).not.toContain("beforeApprove");
+      expect(
+        await taskStatuses(world.connection, String(instance._id)),
+      ).toEqual({ "first-1": "pending" });
+
+      await decideOn(world, world.applicant, submitted.id, "APPROVE");
+      const done = await submission(world, world.applicant, submitted.id);
+      expect(done.status).toBe("COMPLETED");
+      const approveGuards = lifecycleProbe.guards.filter(
+        (one) => one.guard === "beforeApprove",
+      );
+      expect(approveGuards).toHaveLength(1);
+      expect(String(approveGuards[0]?.context.operator.actorId)).toBe(
+        String(world.applicant.userId),
+      );
+      const approved = eventsOf(await latestInstance(submitted.id), "approved");
+      expect(approved).toEqual([
+        expect.objectContaining({ stepKey: "first", reason: null }),
+      ]);
+    });
+
+    it("會簽(all):申請人與其他審核者各一張,申請人只算一票,兩人都核准才完成", async () => {
+      await bindNew({
+        steps: [
+          usersStep("first", [world.applicant, staff(0)], {
+            mode: "all",
+            autoApprove: { applicant: "review" },
+          }),
+        ],
+      });
+      const submitted = await submitLeave(world);
+      await decideOn(world, world.applicant, submitted.id, "APPROVE");
+      const half = await latestInstance(submitted.id);
+      expect(stepIn(half, "first").status).toBe("active");
+      expect(await taskStatuses(world.connection, String(half._id))).toEqual({
+        "first-1": "approved",
+        "first-2": "pending",
+      });
+      await decideOn(world, staff(0), submitted.id, "APPROVE");
+      const done = await submission(world, world.applicant, submitted.id);
+      expect(done.status).toBe("COMPLETED");
+    });
+
+    it("「已在前關核准過」被守門擋下 → 申請人仍留著一張待審任務(不剔除、不阻擋),時間軸記擋下原因", async () => {
+      await bindNew({
+        steps: [
+          usersStep("first", [world.applicant], {
+            autoApprove: { applicant: "review" },
+          }),
+          usersStep("second", [world.applicant], {
+            autoApprove: { applicant: "review", priorApprover: true },
+          }),
+        ],
+      });
+      const submitted = await submitLeave(world);
+      // 第一關申請人自己核准;進第二關時「已核准過」的自動通過被守門擋下
+      lifecycleProbe.blockOn = "beforeApprove";
+      lifecycleProbe.blockWhen = (context) => context.stepKey === "second";
+      await decideOn(world, world.applicant, submitted.id, "APPROVE");
+      const instance = await latestInstance(submitted.id);
+      const second = stepIn(instance, "second");
+      expect(instance.status).toBe("running");
+      expect(second.status).toBe("active");
+      expect(second.plan.map((item) => String(item.assigneeId))).toEqual([
+        String(world.applicant.userId),
+      ]);
+      expect(second.decisions).toEqual([]);
+      expect(eventsOf(instance, "auto_approve_blocked")).toEqual([
+        expect.objectContaining({
+          stepKey: "second",
+          reason: "auto_prior_approver",
+          code: LIFECYCLE_BLOCKED_CODE,
+        }),
+      ]);
+      expect(
+        await taskStatuses(world.connection, String(instance._id)),
+      ).toMatchObject({ "second-1": "pending" });
+    });
+
+    it("主管來源:主管本人送出 → 照舊往上一層找(照常審核不影響主管解析)", async () => {
+      await setManagers(api, world.kitchen, [world.applicant.userId]);
+      await bindNew({
+        steps: [
+          reviewStep(
+            "first",
+            { kind: "manager", level: 1 },
+            { autoApprove: { applicant: "review" } },
+          ),
+        ],
+      });
+      const submitted = await submitLeave(world);
+      const instance = await latestInstance(submitted.id);
+      expect(
+        stepIn(instance, "first").plan.map((item) => String(item.assigneeId)),
+      ).toEqual([String(world.manager.userId)]);
     });
   });
 });

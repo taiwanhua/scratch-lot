@@ -184,7 +184,7 @@
   - `returned` / `withdrawn`:結帳單 → 已退回(自己建立的盤點單一起退回);班不重開
   - `completed`:現在盤點 → `StocktakeService.apply`;結帳單 → 已確認,`confirmedBy` = 最後核准的審核者(兩關都跳過 = 申請人)。零用金成為下一班期初由 `registerHandoverAmount` 的登記讀結帳單(送出就算,核准前下一班先開也先用它)
   - `beforeReject` / `beforeVoid`:**一律擋下**(`CHECKOUT_REJECT_FORBIDDEN` / `CHECKOUT_VOID_FORBIDDEN`,只能退回)
-- **建議流程設定**(規格 2.1、8.7;開通腳本 `onboarding/form-workflows/checkout-confirm.ts`):兩關 —— 第 1 關「接班人確認」審核者 = 表單欄位「接班人」,跳過條件 `{ or: [type == "daily", !successor] }`;第 2 關「店長審核」人員條件「角色 店長 且 所屬組織屬於表單欄位『分店』(本身)」,跳過條件 `{ and: [type == "shift", !!successor] }`。結果:交班有接班人 → 接班人審;交班沒有接班人 → 店長審;日結 → 店長審(都照常審核,沒有 B5)。租戶要改審核者,自己改流程。
+- **建議流程設定**(規格 2.1、8.7;開通腳本 `onboarding/form-workflows/checkout-confirm.ts`):兩關 —— 第 1 關「接班人確認」審核者 = 表單欄位「接班人」,跳過條件 `{ or: [type == "daily", !successor] }`;第 2 關「店長審核」人員條件「角色 店長 且 所屬組織屬於表單欄位『分店』(本身)」,跳過條件 `{ and: [type == "shift", !!successor] }`。結果:交班有接班人 → 接班人審;交班沒有接班人 → 店長審;日結 → 店長審。第 2 關「申請人也是審核者時」= **照常審核**(`autoApprove.applicant = "review"`):店長自己交班(沒有接班人)或自己送日結時,任務派給他自己再檢查一次,不自動通過。第 1 關維持預設(接班人不能是自己)。租戶要改審核者,自己改流程。
 - **班次結帳歷史紀錄分頁**(ST-27,`CheckoutsTab`):篩選 期間(送出時間)、收銀點、類型、狀態(申請的狀態:待審核 = `reviewing` / 已退回 / 已撤回 / 已完成;`?checkouts=`);欄位 單號、收銀點、類型、交班人、應有、實點、差額、狀態;平板 / 手機改卡片;點一列開結帳確認申請的檢視頁。
 - **檢視頁**(ST-28a,`CheckoutViewPage`):類型、單號、狀態、申請人、送出時間;結帳單(收銀點、盤點方式、應有逐項可點回單據、應有 / 實點 / 差額與原因、留給下一班 / 接班人、送出時審核中的單據)、依面額清點(唯讀)+ 審核區塊;申請人在退回後 [修改後再送出] → 精靈帶入原內容(`lotteryCheckout.draft`)。讀取依據:看得到那家店,或讀得到那張申請(接班人 / 店長從申請中心進來)。
 - **沒有權限時**:沒有 `store.checkout` 看不到 [交班結帳];別人的班、不是店長 → 看不到(api `canSubmit = false`、送出 `CHECKOUT_FORBIDDEN`);沒有 `store.skip-stocktake` 第 ① 步沒有「跳過盤點」。

@@ -2677,9 +2677,10 @@
         "title": "Auto-approve",
         "applicant": "When the applicant is a reviewer of this step",
         "priorApprover": "When the reviewer already approved an earlier step",
+        "exclude": "Exclude the applicant",
         "normal": "Review as usual",
         "auto": "Auto-approve",
-        "hint": "Auto-approve records an approval by that person (only their vote in multi-reviewer steps) and still runs the pre-approval check; if it fails, they review as usual."
+        "hint": "Exclude the applicant: this step is not assigned to the applicant, and it waits for someone to handle it if no other reviewer is left. Review as usual: the applicant also gets a pending task and approves it again. Auto-approve records an approval by that person (only their vote in multi-reviewer steps) and still runs the pre-approval check; if it fails, they are excluded or review as usual."
       },
       "overdue": {
         "title": "Overdue reminders",
