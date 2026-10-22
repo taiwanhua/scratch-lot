@@ -1043,6 +1043,9 @@ describe("表單的值:語意值、引用快照、現名 / 快照、lookup 以�
       });
       expect(codeOf(protectedColumn)).toBe("VALIDATION_FAILED");
       expect(extensionsOf(protectedColumn).fields).toEqual(["columns.0"]);
+      expect(extensionsOf(protectedColumn).reason).toBe(
+        "LIST_COLUMN_PROTECTED",
+      );
       const unknown = await call(api, root, SET_COLUMNS, {
         input: {
           moduleKey: MODULE_KEY,

@@ -68,6 +68,30 @@ describe("排班設定:欄位下寫原因", () => {
     expect(value).toHaveAccessibleDescription(/^要填 \d+–\d+$/u);
   });
 
+  it("規則:選的週範本已不在(api 帶 reason)→ 週範本欄下寫原因,不是「必填」", async () => {
+    const { user } = renderSchedulePage({ path: `${SETTINGS}?tab=rules` });
+    server.use(
+      api.mutation("CustomizeScheduleRule", () =>
+        businessError({
+          fields: ["value.weekTemplateId"],
+          reason: "REFERENCE_NOT_FOUND",
+        }),
+      ),
+    );
+    const label = await screen.findByText("預設人力需求週範本");
+    const row = label.closest("[data-rule-key]");
+    if (!(row instanceof HTMLElement)) {
+      throw new TypeError("找不到規則列");
+    }
+    await user.click(within(row).getByRole("button", { name: /自訂|編輯/ }));
+    const dialog = await screen.findByRole("dialog");
+    await user.click(within(dialog).getByRole("button", { name: "儲存" }));
+    expect(
+      await within(dialog).findByText("選的資料已不存在或你看不到,請重新選擇"),
+    ).toBeInTheDocument();
+    expect(within(dialog).queryByText("必填")).not.toBeInTheDocument();
+  });
+
   it("排班人員設定:主要分店不是剛好一家(api 帶 reason)→ 分店清單下寫原因", async () => {
     const { user } = renderSchedulePage({ path: SETTINGS });
     server.use(
@@ -87,5 +111,8 @@ describe("排班設定:欄位下寫原因", () => {
     expect(
       await within(dialog).findByText("主要分店要剛好選一家"),
     ).toBeInTheDocument();
+    expect(
+      within(dialog).getByRole("group", { name: "可以排的分店" }),
+    ).toHaveAccessibleDescription("主要分店要剛好選一家");
   });
 });

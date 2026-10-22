@@ -26,6 +26,7 @@ import { useUrlState } from "@/hooks/base/useUrlState";
 import { useScheduleFieldOptions } from "@/hooks/project/schedule/useScheduleFieldOptions/useScheduleFieldOptions";
 
 import { scheduleErrorKey, scheduleErrorOf } from "../../schedule-error";
+import { scheduleErrorTextsOf } from "../../schedule-field-errors";
 import { AutoRunDialog } from "./AutoRunDialog";
 import { RuleDialog, type RuleDialogSave } from "./RuleDialog";
 import { RuleRow } from "./RuleRow";
@@ -43,6 +44,19 @@ type Rule = Rules["items"][number];
 /** `?org=`:規則頁看的組織;空字串 = 當前組織。 */
 const orgSchema = z.string().default("");
 
+/** 規則對話框上會標回的欄位(api 的 `value.<欄位>` 去掉 `value.`;REACT-18)。 */
+const RULE_VALUE_FIELDS = [
+  "amount",
+  "startDay",
+  "endDay",
+  "weekTemplateId",
+  "lateGraceMinutes",
+  "earlyLeaveGraceMinutes",
+  "tiers",
+  "defaultLeaderTaskKey",
+  "defaultHelperTaskKey",
+] as const;
+
 /**
  * 排班設定 → 規則(SC-10;規格 14.2):一條規則一列、依規格表的順序;自動排班條件整組列在最下面。
  *
@@ -55,6 +69,7 @@ const orgSchema = z.string().default("");
 export const RulesTab = () => {
   const t = useTranslations("admin.schedule.rules");
   const tErrors = useTranslations("admin.schedule.errors");
+  const tSchedule = useTranslations("admin.schedule");
   const { session } = useSession();
   const queryClient = useQueryClient();
   const [orgId, setOrgId] = useUrlState("org", orgSchema);
@@ -177,6 +192,7 @@ export const RulesTab = () => {
             isPending={isPending}
             lookups={lookups}
             onOpen={() => {
+              customize.reset();
               setEditing(rule);
             }}
             onRestore={() => {
@@ -242,6 +258,17 @@ export const RulesTab = () => {
           isPending={isPending}
           weekTemplates={weekTemplateItems}
           taskOptions={tasks.options}
+          apiErrors={
+            customize.error === null
+              ? {}
+              : scheduleErrorTextsOf(
+                  customize.error,
+                  RULE_VALUE_FIELDS,
+                  tSchedule,
+                  (field) => field.replace(/^value\./u, ""),
+                ).texts
+          }
+          onEdit={customize.reset}
           onSave={(save: RuleDialogSave) => {
             customize.mutate({
               input: {

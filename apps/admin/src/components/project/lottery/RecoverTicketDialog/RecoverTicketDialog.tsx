@@ -22,7 +22,10 @@ import { Typography } from "@repo/ui/typography";
 import { useMe } from "@/hooks/base/useMe";
 import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
 import { useSession } from "@/hooks/base/useSession";
-import { inventoryErrorOf } from "@/lib/project/lottery/inventory-error";
+import {
+  type FieldErrorTexts,
+  withoutFieldError,
+} from "@/lib/base/field-errors";
 
 import { ReasonFields } from "../ReasonFields/ReasonFields";
 import {
@@ -31,6 +34,13 @@ import {
   missingReasonFields,
   reasonInputOf,
 } from "../ReasonFields/reason-value";
+import {
+  inventoryErrorTextsOf,
+  inventoryFormatErrorsOf,
+} from "./inventory-field-errors";
+
+/** 會標回對話框的欄位(api `fields`)。 */
+const FIELDS = ["orgId", "reasonKey", "reasonNote"] as const;
 
 /** 要尋回的一張:id、讀到的版本(條件更新)、張號、狀態(`investigating` / `lost`)。 */
 export interface RecoverTicket {
@@ -99,12 +109,14 @@ export const RecoverTicketDialog = ({
   const [pickedStoreId, setPickedStoreId] = useState("");
   const targetId = fixedStore?.id ?? pickedStoreId;
   const [reason, setReason] = useState<ReasonValue>(EMPTY_REASON);
-  const [invalid, setInvalid] = useState<string[]>([]);
+  // 欄位錯了就在欄位正下方寫原因(REACT-18);Snackbar 只放通用句
+  const [fieldErrors, setFieldErrors] = useState<FieldErrorTexts<string>>({});
+  const invalid = Object.keys(fieldErrors);
   const recover = useRecoverLotteryTicketsMutation(
     session.client,
     useMutationFeedback({
       success: t("recover.success", { count: tickets.length }),
-      error: (error) => t(`errors.${inventoryErrorOf(error).code}`),
+      error: (error) => inventoryErrorTextsOf(error, FIELDS, t).summary,
       onSuccess: () => {
         for (const key of REFRESH_KEYS) {
           void queryClient.invalidateQueries({ queryKey: [key] });
@@ -113,7 +125,7 @@ export const RecoverTicketDialog = ({
         onRecovered?.();
       },
       onError: (error) => {
-        setInvalid(inventoryErrorOf(error).fields ?? []);
+        setFieldErrors(inventoryErrorTextsOf(error, FIELDS, t).texts);
       },
     }),
   );
@@ -123,7 +135,7 @@ export const RecoverTicketDialog = ({
     if (targetId === "") {
       missing.push("orgId");
     }
-    setInvalid(missing);
+    setFieldErrors(inventoryFormatErrorsOf(missing, t));
     if (missing.length > 0) {
       return;
     }
@@ -188,6 +200,7 @@ export const RecoverTicketDialog = ({
           value={reason}
           onChange={setReason}
           invalid={invalid}
+          errorTexts={fieldErrors}
         />
         {fixedStore === null ? (
           <SelectField
@@ -196,12 +209,14 @@ export const RecoverTicketDialog = ({
             required
             fullWidth
             error={invalid.includes("orgId")}
+            helperText={fieldErrors.orgId}
             options={storeOptions.map((option) => ({
               value: option.id,
               label: option.name,
             }))}
             onChange={(next: string) => {
               setPickedStoreId(next);
+              setFieldErrors((current) => withoutFieldError(current, "orgId"));
             }}
           />
         ) : (

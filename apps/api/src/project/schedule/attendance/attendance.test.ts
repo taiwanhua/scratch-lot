@@ -565,6 +565,7 @@ describe("出勤紀錄(GraphQL 端點 + 真 MongoDB)", () => {
       expect(result.errors?.[0]?.extensions).toMatchObject({
         code: "VALIDATION_FAILED",
         fields: ["entryId"],
+        reason: "REFERENCE_NOT_FOUND",
       });
     });
   });

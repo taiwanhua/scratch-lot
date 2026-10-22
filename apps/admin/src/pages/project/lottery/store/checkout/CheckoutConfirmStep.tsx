@@ -86,8 +86,11 @@ export const CheckoutConfirmStep = ({
   const noSuccessor = flow.successorId === NO_SUCCESSOR;
   const mustBeZero = flow.handoverProblem === "must_be_zero";
   const exceedsCounted = flow.handoverProblem === "exceeds_counted";
+  // 欄位錯了就在欄位正下方寫原因(REACT-18)
   let leftHelper: string | undefined;
-  if (mustBeZero) {
+  if (flow.handoverProblem === "invalid_amount") {
+    leftHelper = t("confirm.invalidAmount");
+  } else if (mustBeZero) {
     leftHelper = t("confirm.mustBeZero");
   } else if (exceedsCounted) {
     leftHelper = t("confirm.exceedsCounted", {

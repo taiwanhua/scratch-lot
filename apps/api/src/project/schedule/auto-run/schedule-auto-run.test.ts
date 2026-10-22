@@ -643,7 +643,11 @@ describe("套用範本與自動排班(GraphQL 端點 + 真 MongoDB)", () => {
             }),
           ),
         ),
-      ).toMatchObject({ code: "VALIDATION_FAILED", fields: ["templateIds"] });
+      ).toMatchObject({
+        code: "VALIDATION_FAILED",
+        fields: ["templateIds"],
+        reason: "REFERENCE_NOT_FOUND",
+      });
       expect(
         errorOf(
           await gql(

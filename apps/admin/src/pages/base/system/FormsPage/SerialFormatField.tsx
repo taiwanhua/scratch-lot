@@ -164,6 +164,15 @@ export const SerialFormatField = ({
               value={String(draft.digits)}
               disabled={isReadonly}
               error={hasIssue("digits")}
+              // 欄位錯了就在欄位正下方寫原因(REACT-18)
+              helperText={
+                hasIssue("digits")
+                  ? t("serialDigitsError", {
+                      min: String(SERIAL_DIGITS.min),
+                      max: String(SERIAL_DIGITS.max),
+                    })
+                  : undefined
+              }
               slotProps={{
                 htmlInput: { min: SERIAL_DIGITS.min, max: SERIAL_DIGITS.max },
               }}

@@ -25,7 +25,7 @@ import { Stack } from "@repo/ui/stack";
 import { TextField } from "@repo/ui/text-field";
 import { Typography } from "@repo/ui/typography";
 
-import { FieldErrorText } from "@/components/base/FieldErrorText/FieldErrorText";
+import { FieldErrorGroup } from "@/components/base/FieldErrorGroup/FieldErrorGroup";
 import { TagPaletteSelect } from "@/components/project/TagPaletteSelect/TagPaletteSelect";
 import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
 import { useSession } from "@/hooks/base/useSession";
@@ -359,35 +359,40 @@ export const TemplateDialog = ({ template, onClose }: TemplateDialogProps) => {
             change("positionKey", next);
           }}
         />
-        <TemplateTaskList
-          title={t("leaders")}
-          emptyText={t("noLeader")}
-          addLabel={t("addLeader")}
-          rows={leaders}
-          isFull={leaders.length >= MAX_LEADER_TASKS}
-          disabled={!canEdit}
-          taskOptions={tasks.options}
-          onAdd={() => {
-            addTask("leader");
-          }}
-          onChange={changeTask}
-          onRemove={removeTask}
-        />
-        <TemplateTaskList
-          title={t("helpers")}
-          emptyText={t("noHelper")}
-          addLabel={t("addHelper")}
-          rows={helpers}
-          isFull={helpers.length >= MAX_HELPER_TASKS}
-          disabled={!canEdit}
-          taskOptions={tasks.options}
-          onAdd={() => {
-            addTask("helper");
-          }}
-          onChange={changeTask}
-          onRemove={removeTask}
-        />
-        <FieldErrorText text={fieldErrors.tasks} />
+        <FieldErrorGroup
+          label={t("tasks")}
+          errorText={fieldErrors.tasks}
+          spacing={2}
+        >
+          <TemplateTaskList
+            title={t("leaders")}
+            emptyText={t("noLeader")}
+            addLabel={t("addLeader")}
+            rows={leaders}
+            isFull={leaders.length >= MAX_LEADER_TASKS}
+            disabled={!canEdit}
+            taskOptions={tasks.options}
+            onAdd={() => {
+              addTask("leader");
+            }}
+            onChange={changeTask}
+            onRemove={removeTask}
+          />
+          <TemplateTaskList
+            title={t("helpers")}
+            emptyText={t("noHelper")}
+            addLabel={t("addHelper")}
+            rows={helpers}
+            isFull={helpers.length >= MAX_HELPER_TASKS}
+            disabled={!canEdit}
+            taskOptions={tasks.options}
+            onAdd={() => {
+              addTask("helper");
+            }}
+            onChange={changeTask}
+            onRemove={removeTask}
+          />
+        </FieldErrorGroup>
         <Stack direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
           <Typography variant="subtitle2">{t("color")}</Typography>
           <TagPaletteSelect

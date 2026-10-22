@@ -18,7 +18,7 @@ import { Radio } from "@repo/ui/radio";
 import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
 
-import { FieldErrorText } from "@/components/base/FieldErrorText/FieldErrorText";
+import { FieldErrorGroup } from "@/components/base/FieldErrorGroup/FieldErrorGroup";
 import { OrgTreeSelect } from "@/components/base/OrgTreeSelect/OrgTreeSelect";
 import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
 import { useSession } from "@/hooks/base/useSession";
@@ -192,63 +192,64 @@ export const StaffDialog = ({ row, canEdit, onClose }: StaffDialogProps) => {
           ))}
         </Stack>
         <Typography variant="subtitle2">{t("orgs")}</Typography>
-        {orgs.length === 0 ? (
-          <Typography variant="body2" color="textSecondary">
-            {t("noOrgs")}
-          </Typography>
-        ) : (
-          <Stack spacing={1}>
-            {orgs.map((org) => (
-              <Stack
-                key={org.orgId}
-                direction="row"
-                spacing={1}
-                sx={{ alignItems: "center", flexWrap: "wrap" }}
-              >
-                <Typography sx={{ flex: 1, minWidth: 96 }}>
-                  {org.orgName}
-                </Typography>
-                <FormControlLabel
-                  label={t("canLead")}
-                  disabled={!canEdit}
-                  control={
-                    <Checkbox
-                      checked={org.canLead}
-                      onChange={(_event, checked) => {
-                        patch(org.orgId, { canLead: checked });
+        <FieldErrorGroup label={t("orgs")} errorText={orgsError}>
+          {orgs.length === 0 ? (
+            <Typography variant="body2" color="textSecondary">
+              {t("noOrgs")}
+            </Typography>
+          ) : (
+            <Stack spacing={1}>
+              {orgs.map((org) => (
+                <Stack
+                  key={org.orgId}
+                  direction="row"
+                  spacing={1}
+                  sx={{ alignItems: "center", flexWrap: "wrap" }}
+                >
+                  <Typography sx={{ flex: 1, minWidth: 96 }}>
+                    {org.orgName}
+                  </Typography>
+                  <FormControlLabel
+                    label={t("canLead")}
+                    disabled={!canEdit}
+                    control={
+                      <Checkbox
+                        checked={org.canLead}
+                        onChange={(_event, checked) => {
+                          patch(org.orgId, { canLead: checked });
+                        }}
+                      />
+                    }
+                  />
+                  <FormControlLabel
+                    label={t("isPrimary")}
+                    disabled={!canEdit || primaryElsewhere}
+                    control={
+                      <Radio
+                        checked={org.isPrimary}
+                        onChange={() => {
+                          patch(org.orgId, { isPrimary: true });
+                        }}
+                      />
+                    }
+                  />
+                  {canEdit && (
+                    <Button
+                      variant="text"
+                      color="error"
+                      size="small"
+                      onClick={() => {
+                        removeOrg(org.orgId);
                       }}
-                    />
-                  }
-                />
-                <FormControlLabel
-                  label={t("isPrimary")}
-                  disabled={!canEdit || primaryElsewhere}
-                  control={
-                    <Radio
-                      checked={org.isPrimary}
-                      onChange={() => {
-                        patch(org.orgId, { isPrimary: true });
-                      }}
-                    />
-                  }
-                />
-                {canEdit && (
-                  <Button
-                    variant="text"
-                    color="error"
-                    size="small"
-                    onClick={() => {
-                      removeOrg(org.orgId);
-                    }}
-                  >
-                    {tCommon("remove")}
-                  </Button>
-                )}
-              </Stack>
-            ))}
-          </Stack>
-        )}
-        <FieldErrorText text={orgsError} />
+                    >
+                      {tCommon("remove")}
+                    </Button>
+                  )}
+                </Stack>
+              ))}
+            </Stack>
+          )}
+        </FieldErrorGroup>
         {needsPrimary && (
           <Typography variant="caption" color="error">
             {t("primaryRequired")}

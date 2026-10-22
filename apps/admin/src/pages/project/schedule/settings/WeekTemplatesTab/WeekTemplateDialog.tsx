@@ -19,7 +19,7 @@ import { Stack } from "@repo/ui/stack";
 import { TextField } from "@repo/ui/text-field";
 import { Typography } from "@repo/ui/typography";
 
-import { FieldErrorText } from "@/components/base/FieldErrorText/FieldErrorText";
+import { FieldErrorGroup } from "@/components/base/FieldErrorGroup/FieldErrorGroup";
 import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
 import { useSession } from "@/hooks/base/useSession";
 import {
@@ -205,42 +205,47 @@ export const WeekTemplateDialog = ({
             {tWeek("noTemplates")}
           </Typography>
         )}
-        {WEEKDAYS.map((day) => (
-          <Stack
-            key={day}
-            direction="row"
-            spacing={1}
-            sx={{ alignItems: "center", flexWrap: "wrap" }}
-          >
-            <Typography sx={{ flex: 1, minWidth: 72 }}>
-              {tWeek(`weekdayLong.${String(day)}`)}
-            </Typography>
-            {templates.map((template) => (
-              <FormControlLabel
-                key={template.id}
-                label={template.shortName}
-                disabled={!canEdit}
-                control={
-                  <Checkbox
-                    checked={days[day]?.includes(template.id) ?? false}
-                    slotProps={{
-                      input: {
-                        "aria-label": t("pick", {
-                          day: tWeek(`weekdayLong.${String(day)}`),
-                          template: template.name,
-                        }),
-                      },
-                    }}
-                    onChange={(_event, checked) => {
-                      toggle(day, template.id, checked);
-                    }}
-                  />
-                }
-              />
-            ))}
-          </Stack>
-        ))}
-        <FieldErrorText text={fieldErrors.days} />
+        <FieldErrorGroup
+          label={t("days")}
+          errorText={fieldErrors.days}
+          spacing={1.5}
+        >
+          {WEEKDAYS.map((day) => (
+            <Stack
+              key={day}
+              direction="row"
+              spacing={1}
+              sx={{ alignItems: "center", flexWrap: "wrap" }}
+            >
+              <Typography sx={{ flex: 1, minWidth: 72 }}>
+                {tWeek(`weekdayLong.${String(day)}`)}
+              </Typography>
+              {templates.map((template) => (
+                <FormControlLabel
+                  key={template.id}
+                  label={template.shortName}
+                  disabled={!canEdit}
+                  control={
+                    <Checkbox
+                      checked={days[day]?.includes(template.id) ?? false}
+                      slotProps={{
+                        input: {
+                          "aria-label": t("pick", {
+                            day: tWeek(`weekdayLong.${String(day)}`),
+                            template: template.name,
+                          }),
+                        },
+                      }}
+                      onChange={(_event, checked) => {
+                        toggle(day, template.id, checked);
+                      }}
+                    />
+                  }
+                />
+              ))}
+            </Stack>
+          ))}
+        </FieldErrorGroup>
       </Stack>
       {isConfirmingDelete && weekTemplate !== null && (
         <ConfirmDeleteDialog

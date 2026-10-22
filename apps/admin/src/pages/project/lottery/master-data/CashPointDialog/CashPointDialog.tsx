@@ -16,7 +16,7 @@ import { Stack } from "@repo/ui/stack";
 import { Switch } from "@repo/ui/switch";
 import { TextField } from "@repo/ui/text-field";
 
-import { FieldErrorText } from "@/components/base/FieldErrorText/FieldErrorText";
+import { useFieldErrorText } from "@/components/base/FieldErrorText/useFieldErrorText";
 import { OrgTreeSelect } from "@/components/base/OrgTreeSelect/OrgTreeSelect";
 import { useSession } from "@/hooks/base/useSession";
 
@@ -54,6 +54,7 @@ export const CashPointDialog = ({
   const { values, change } = form;
   const isEditing = cashPoint !== null;
   const errorText = (field: CashPointFormField) => form.fieldErrors[field];
+  const enabledError = useFieldErrorText(errorText("enabled"));
   const isInvalid = (field: CashPointFormField) =>
     errorText(field) !== undefined;
 
@@ -197,6 +198,9 @@ export const CashPointDialog = ({
               control={
                 <Switch
                   checked={values.enabled}
+                  slotProps={{
+                    input: { "aria-describedby": enabledError.describedBy },
+                  }}
                   onChange={(_event, checked) => {
                     change("enabled", checked);
                   }}
@@ -204,7 +208,7 @@ export const CashPointDialog = ({
               }
               label={t("fields.enabled")}
             />
-            <FieldErrorText text={errorText("enabled")} />
+            {enabledError.errorText}
           </Stack>
         )}
         <TextField

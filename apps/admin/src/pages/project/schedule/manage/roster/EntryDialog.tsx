@@ -16,7 +16,7 @@ import { SelectField } from "@repo/ui/select-field";
 import { Stack } from "@repo/ui/stack";
 import { TextField } from "@repo/ui/text-field";
 
-import { FieldErrorText } from "@/components/base/FieldErrorText/FieldErrorText";
+import { FieldErrorGroup } from "@/components/base/FieldErrorGroup/FieldErrorGroup";
 import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
 import { useSession } from "@/hooks/base/useSession";
 import {
@@ -29,6 +29,7 @@ import {
 import { ConfirmDeleteDialog } from "../../ConfirmDeleteDialog";
 import { DemandDialog } from "./DemandDialog";
 import { EntryAssignmentRows } from "./EntryAssignmentRows";
+import { EntryTimeFields } from "./EntryTimeFields";
 import {
   type EntryFormState,
   initialEntryState,
@@ -302,81 +303,50 @@ export const EntryDialog = ({
             />
           )}
         </Stack>
-        <Stack direction="row" spacing={1.5}>
-          <TextField
-            label={t("startTime")}
-            type="time"
-            value={form.startTime}
-            required
-            fullWidth
-            disabled={!canEdit}
-            error={fieldErrors.startTime !== undefined}
-            helperText={fieldErrors.startTime}
-            slotProps={{ inputLabel: { shrink: true } }}
-            onChange={(event) => {
-              setTimes(event.target.value, form.endTime);
-            }}
-          />
-          <TextField
-            label={t("endTime")}
-            type="time"
-            value={form.endTime}
-            required
-            fullWidth
-            disabled={!canEdit}
-            error={fieldErrors.endTime !== undefined}
-            helperText={fieldErrors.endTime}
-            slotProps={{ inputLabel: { shrink: true } }}
-            onChange={(event) => {
-              setTimes(form.startTime, event.target.value);
-            }}
-          />
-          <TextField
-            label={t("breakMinutes")}
-            type="number"
-            value={form.breakText}
-            fullWidth
-            disabled={!canEdit}
-            error={fieldErrors.breakMinutes !== undefined}
-            helperText={fieldErrors.breakMinutes}
-            slotProps={{ htmlInput: { min: 0, step: 5 } }}
-            onChange={(event) => {
-              setIsBreakEdited(true);
-              setForm((current) => ({
-                ...current,
-                breakText: event.target.value,
-              }));
-            }}
-          />
-        </Stack>
-        {entry === null && punches.block}
-        <EntryAssignmentRows
-          rows={form.rows}
-          setRows={(update) => {
-            setForm((current) => ({
-              ...current,
-              rows:
-                typeof update === "function" ? update(current.rows) : update,
-            }));
-          }}
-          dayDemands={demands.filter((demand) => demand.date === form.date)}
-          entryId={entry?.id ?? null}
-          canLead={canLead}
-          span={span}
-          onExtend={(edge, time) => {
-            if (edge === "end") {
-              setTimes(form.startTime, time);
-            } else {
-              setTimes(time, form.endTime);
-            }
-          }}
-          onAddDemand={() => {
-            if (form.date !== "") {
-              setIsAddingDemand(true);
-            }
+        <EntryTimeFields
+          startTime={form.startTime}
+          endTime={form.endTime}
+          breakText={form.breakText}
+          disabled={!canEdit}
+          fieldErrors={fieldErrors}
+          onTimes={setTimes}
+          onBreak={(text) => {
+            setIsBreakEdited(true);
+            setForm((current) => ({ ...current, breakText: text }));
           }}
         />
-        <FieldErrorText text={fieldErrors.assignments} />
+        {entry === null && punches.block}
+        <FieldErrorGroup
+          label={t("assignments")}
+          errorText={fieldErrors.assignments}
+        >
+          <EntryAssignmentRows
+            rows={form.rows}
+            setRows={(update) => {
+              setForm((current) => ({
+                ...current,
+                rows:
+                  typeof update === "function" ? update(current.rows) : update,
+              }));
+            }}
+            dayDemands={demands.filter((demand) => demand.date === form.date)}
+            entryId={entry?.id ?? null}
+            canLead={canLead}
+            span={span}
+            onExtend={(edge, time) => {
+              if (edge === "end") {
+                setTimes(form.startTime, time);
+              } else {
+                setTimes(time, form.endTime);
+              }
+            }}
+            onAddDemand={() => {
+              if (form.date !== "") {
+                setIsAddingDemand(true);
+              }
+            }}
+          />
+        </FieldErrorGroup>
         {entry !== null && punches.block}
         {changeReason.fields}
       </Stack>

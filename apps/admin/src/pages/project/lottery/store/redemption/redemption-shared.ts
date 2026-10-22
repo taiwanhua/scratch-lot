@@ -107,3 +107,33 @@ export const redemptionErrorText = (
   }
   return t(`errors.${parsed.code}`);
 };
+
+/**
+ * 兌獎視窗的錯誤(REACT-18):api 指到編號(`code`)/ 獎金(`prizeAmount`)時原因寫在那一欄正下方,
+ * 下方提示只放通用句;沒有指到這兩欄的錯誤(班已結帳、已送兌……)原因照寫在提示裡。
+ */
+export const redemptionFieldErrorsOf = (
+  error: unknown,
+  t: (key: string, values?: Record<string, string>) => string,
+  timeText: (value: unknown) => string,
+): {
+  codeError: string | undefined;
+  prizeError: string | undefined;
+  errorText: string | null;
+} => {
+  if (error === null) {
+    return { codeError: undefined, prizeError: undefined, errorText: null };
+  }
+  const reason = redemptionErrorText(error, t, timeText);
+  const fields = redemptionErrorOf(error).fields ?? [];
+  const codeError = fields.includes("code") ? reason : undefined;
+  const prizeError = fields.includes("prizeAmount") ? reason : undefined;
+  return {
+    codeError,
+    prizeError,
+    errorText:
+      codeError === undefined && prizeError === undefined
+        ? reason
+        : t("errors.VALIDATION_FAILED"),
+  };
+};

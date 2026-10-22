@@ -444,6 +444,10 @@
     }
   },
   "lotteryInventory": {
+    "fieldErrors": {
+      "check": "Check this field",
+      "store": "Required; choose the store to return to"
+    },
     "ticketGrid": {
       "states": {
         "unsold": "Unsold",
@@ -977,6 +981,7 @@
     },
     "errors": {
       "reasons": {
+        "REFERENCE_NOT_FOUND": "The chosen item no longer exists or isn't visible to you; choose again",
         "CALENDAR_DAY_DUPLICATE": "This day already has a calendar entry",
         "DAY_OFF_DUPLICATE": "This day already has a full-day day off",
         "TIME_RANGES_OVERLAP": "The time range overlaps another day-off range on this day",
@@ -1066,6 +1071,7 @@
       "timeRange": "{start}–{end}",
       "cardMeta": "{time} · {position} · lead/helper {tasks}",
       "dialog": {
+        "tasks": "Tasks",
         "createTitle": "New demand template",
         "editTitle": "Demand template · {name}",
         "name": "Name",
@@ -1123,6 +1129,7 @@
       "noTemplates": "No demand templates yet. Create them under Demand templates first.",
       "dayCell": "{day} {templates}",
       "dialog": {
+        "days": "Demand templates by day",
         "createTitle": "New week template",
         "editTitle": "Week template · {name}",
         "name": "Name",
@@ -1207,6 +1214,7 @@
         "minute": "minutes"
       },
       "dialog": {
+        "tiers": "Default break tiers",
         "errors": {
           "number": "Enter a number",
           "range": "Enter {min}–{max}",
@@ -1331,6 +1339,7 @@
         "view": "View"
       },
       "dialog": {
+        "slots": "Time ranges",
         "title": "Register day-off · {date}",
         "titleNoDate": "Register day-off",
         "date": "Date",
@@ -1620,6 +1629,7 @@
         "feedback": "Removed {count} shifts"
       },
       "demandDialog": {
+        "tasks": "Tasks",
         "createTitle": "Add staffing need",
         "editTitle": "Staffing need · {date} {name}",
         "create": "Add",
@@ -1677,6 +1687,7 @@
         "deleteEmpty": "Nobody is filling this staffing need."
       },
       "entryDialog": {
+        "assignments": "Demands to fill",
         "createTitle": "Add shift · {date}",
         "editTitle": "Shift · {name} {date}",
         "person": "Staff",
@@ -3016,6 +3027,7 @@
       "reassign": "Change schedule entry"
     },
     "reassign": {
+      "entry": "Schedule entry",
       "title": "Change schedule entry",
       "reason": "Reason (required)",
       "hint": "Only the owner's entries at this branch on that day are listed. Not allowed after checkout; the task snapshot is rewritten from the new entry.",
@@ -3773,6 +3785,7 @@
         "cash_correction": "Cash correction"
       },
       "confirm": {
+        "invalidAmount": "Enter a whole number of 0 or more",
         "summaryTitle": "Expected cash",
         "expected": "Expected",
         "counted": "Counted",

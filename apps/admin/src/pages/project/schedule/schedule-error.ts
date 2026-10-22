@@ -49,6 +49,7 @@ export const SCHEDULE_REASONS = [
   "RULE_NOT_TOGGLEABLE",
   "PUNCH_NOT_ALLOWED",
   "CONCURRENT_EDIT",
+  "REFERENCE_NOT_FOUND",
 ] as const;
 
 export type ScheduleReason = (typeof SCHEDULE_REASONS)[number];

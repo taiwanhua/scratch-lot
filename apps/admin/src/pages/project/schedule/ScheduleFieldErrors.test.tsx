@@ -66,6 +66,9 @@ describe("排班:欄位下寫原因", () => {
     expect(
       await within(dialog).findByText("這一天已經有整天的畫休"),
     ).toBeInTheDocument();
+    expect(
+      within(dialog).getByRole("group", { name: "種類" }),
+    ).toHaveAccessibleDescription("這一天已經有整天的畫休");
   });
 
   it("登記畫休:沒選日期 → 日期欄下寫「必填,請選擇日期」;時段重疊(api 帶 reason)→ 時段下寫原因", async () => {
@@ -89,6 +92,9 @@ describe("排班:欄位下寫原因", () => {
     expect(
       await within(dialog).findByText("時段和這一天其他的畫休時段重疊"),
     ).toBeInTheDocument();
+    expect(
+      within(dialog).getByRole("group", { name: "時段" }),
+    ).toHaveAccessibleDescription("時段和這一天其他的畫休時段重疊");
   });
 
   it("改對應排班:沒選原因 → 原因欄下寫「必填,請選擇原因」", async () => {

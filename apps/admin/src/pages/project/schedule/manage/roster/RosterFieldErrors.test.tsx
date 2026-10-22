@@ -61,6 +61,9 @@ describe("排班作業:欄位下寫原因", () => {
     expect(
       await within(dialog).findByText("這個任務已經有人排了"),
     ).toBeInTheDocument();
+    expect(
+      within(dialog).getByRole("group", { name: "加入的人力需求" }),
+    ).toHaveAccessibleDescription("這個任務已經有人排了");
   });
 
   it("人力需求:沒填時間、沒選崗位 → 各欄下寫格式要求", async () => {

@@ -16,7 +16,7 @@ import { Stack } from "@repo/ui/stack";
 import { TextField } from "@repo/ui/text-field";
 import { Typography } from "@repo/ui/typography";
 
-import { FieldErrorText } from "@/components/base/FieldErrorText/FieldErrorText";
+import { FieldErrorGroup } from "@/components/base/FieldErrorGroup/FieldErrorGroup";
 import { FormActions } from "@/components/base/FormActions/FormActions";
 import { Section } from "@/components/base/Section/Section";
 import { useRouteTabItemLabel } from "@/hooks/base/useRouteTabItemLabel";
@@ -156,37 +156,41 @@ const ContactFormBody = ({
               }}
             />
             <Box sx={{ gridColumn: "1 / -1" }}>
-              <Stack
-                direction="row"
-                sx={{ alignItems: "center", gap: 1, flexWrap: "wrap" }}
+              <FieldErrorGroup
+                label={t("fields.roles")}
+                errorText={errorText("roles")}
               >
-                <Typography
-                  variant="body2"
-                  color={isInvalid("roles") ? "error" : "textSecondary"}
+                <Stack
+                  direction="row"
+                  sx={{ alignItems: "center", gap: 1, flexWrap: "wrap" }}
                 >
-                  {t("fields.roles")}
-                </Typography>
-                {CONTACT_ROLES.map((role) => (
-                  <FormControlLabel
-                    key={role}
-                    label={t(CONTACT_ROLE_LABELS[role])}
-                    control={
-                      <Checkbox
-                        checked={values.roles.includes(role)}
-                        onChange={(event) => {
-                          change(
-                            "roles",
-                            event.target.checked
-                              ? [...values.roles, role]
-                              : values.roles.filter((item) => item !== role),
-                          );
-                        }}
-                      />
-                    }
-                  />
-                ))}
-              </Stack>
-              <FieldErrorText text={errorText("roles")} />
+                  <Typography
+                    variant="body2"
+                    color={isInvalid("roles") ? "error" : "textSecondary"}
+                  >
+                    {t("fields.roles")}
+                  </Typography>
+                  {CONTACT_ROLES.map((role) => (
+                    <FormControlLabel
+                      key={role}
+                      label={t(CONTACT_ROLE_LABELS[role])}
+                      control={
+                        <Checkbox
+                          checked={values.roles.includes(role)}
+                          onChange={(event) => {
+                            change(
+                              "roles",
+                              event.target.checked
+                                ? [...values.roles, role]
+                                : values.roles.filter((item) => item !== role),
+                            );
+                          }}
+                        />
+                      }
+                    />
+                  ))}
+                </Stack>
+              </FieldErrorGroup>
             </Box>
             <SelectField<LotteryContactStatus>
               label={t("list.filters.status")}

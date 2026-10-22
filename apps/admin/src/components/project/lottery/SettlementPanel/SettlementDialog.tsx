@@ -17,12 +17,16 @@ import { Typography } from "@repo/ui/typography";
 
 import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
 import { useSession } from "@/hooks/base/useSession";
-import { parseAdminError } from "@/lib/base/errors";
+import {
+  type FieldErrorTexts,
+  withoutFieldError,
+} from "@/lib/base/field-errors";
 
 import {
   buttonLabelKey,
   moneyText,
-  settlementErrorKey,
+  settlementErrorTextsOf,
+  settlementFormatErrorsOf,
 } from "./settlement-text";
 
 export interface SettlementDialogProps {
@@ -42,6 +46,14 @@ export interface SettlementDialogProps {
 }
 
 type Field = "method" | "accountId" | "cashSource" | "amount" | "handler";
+
+const FIELDS: readonly Field[] = [
+  "method",
+  "accountId",
+  "cashSource",
+  "amount",
+  "handler",
+];
 
 /** 現金來源「小金庫」的選項值(其他選項是收銀點 id)。 */
 const VAULT = "vault";
@@ -80,8 +92,13 @@ export const SettlementDialog = ({
   const [amount, setAmount] = useState(String(defaultAmount));
   const [handler, setHandler] = useState("");
   const [note, setNote] = useState("");
-  const [invalid, setInvalid] = useState<Field[]>([]);
-  const [errorKey, setErrorKey] = useState<string | null>(null);
+  // 欄位錯了就在欄位正下方寫原因(REACT-18);上方提示只放通用句
+  const [fieldErrors, setFieldErrors] = useState<FieldErrorTexts<Field>>({});
+  const invalid = Object.keys(fieldErrors);
+  const [errorText, setErrorText] = useState<string | null>(null);
+  const clearError = (field: Field) => {
+    setFieldErrors((current) => withoutFieldError(current, field));
+  };
 
   const accounts = useLotterySettlementAccountsQuery(
     session.client,
@@ -96,7 +113,8 @@ export const SettlementDialog = ({
     session.client,
     useMutationFeedback({
       success: t("feedback.recordSuccess"),
-      error: (error: unknown) => t(settlementErrorKey(error)),
+      error: (error: unknown) =>
+        settlementErrorTextsOf(error, FIELDS, t).summary,
       onSuccess: (payload) => {
         const { recordId, item } = payload.recordLotterySettlement;
         onRecorded?.(recordId, item);
@@ -104,18 +122,17 @@ export const SettlementDialog = ({
         onClose();
       },
       onError: (error: unknown) => {
-        setErrorKey(settlementErrorKey(error));
-        setInvalid(
-          (parseAdminError(error, { codes: [] }).fields ?? []) as Field[],
-        );
+        const { texts, summary } = settlementErrorTextsOf(error, FIELDS, t);
+        setFieldErrors(texts);
+        setErrorText(summary);
       },
     }),
   );
 
   const noAccountHint =
     accountOptions.length === 0 && !accounts.isLoading
-      ? { helperText: t("settleForm.noAccount") }
-      : {};
+      ? t("settleForm.noAccount")
+      : undefined;
   const amountValue = Number(amount.trim());
   const isAmountValid =
     amount.trim() !== "" && Number.isInteger(amountValue) && amountValue > 0;
@@ -126,8 +143,8 @@ export const SettlementDialog = ({
     if (!isAmountValid) next.push("amount");
     if (method === "bank" && accountId === "") next.push("accountId");
     if (method === "cash" && handler.trim() === "") next.push("handler");
-    setInvalid(next);
-    setErrorKey(null);
+    setFieldErrors(settlementFormatErrorsOf(next, t));
+    setErrorText(null);
     if (next.length > 0) {
       return;
     }
@@ -169,7 +186,7 @@ export const SettlementDialog = ({
       }
     >
       <Stack spacing={2.5} sx={{ pt: 1 }}>
-        {errorKey !== null && <Alert severity="error">{t(errorKey)}</Alert>}
+        {errorText !== null && <Alert severity="error">{errorText}</Alert>}
         <Stack spacing={0.5}>
           <Typography variant="body2" color="textSecondary">
             {t("settleForm.documentValue", {
@@ -207,8 +224,11 @@ export const SettlementDialog = ({
             options={accountOptions}
             required
             error={invalid.includes("accountId")}
-            {...noAccountHint}
-            onChange={setAccountId}
+            helperText={fieldErrors.accountId ?? noAccountHint}
+            onChange={(next) => {
+              setAccountId(next);
+              clearError("accountId");
+            }}
           />
         ) : (
           <SelectField
@@ -222,7 +242,11 @@ export const SettlementDialog = ({
               })),
             ]}
             error={invalid.includes("cashSource")}
-            onChange={setCashSource}
+            helperText={fieldErrors.cashSource}
+            onChange={(next) => {
+              setCashSource(next);
+              clearError("cashSource");
+            }}
           />
         )}
         <TextField
@@ -230,9 +254,11 @@ export const SettlementDialog = ({
           value={amount}
           required
           error={invalid.includes("amount")}
+          helperText={fieldErrors.amount}
           slotProps={{ htmlInput: { inputMode: "numeric" } }}
           onChange={(event) => {
             setAmount(event.target.value);
+            clearError("amount");
           }}
         />
         <TextField
@@ -244,8 +270,10 @@ export const SettlementDialog = ({
           value={handler}
           required={method === "cash"}
           error={invalid.includes("handler")}
+          helperText={fieldErrors.handler}
           onChange={(event) => {
             setHandler(event.target.value);
+            clearError("handler");
           }}
         />
         <TextField

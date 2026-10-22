@@ -103,6 +103,23 @@ describe("店面管理:兌獎", () => {
     });
   });
 
+  it("編號看不懂(api 指到編號)→ 編號欄下寫原因,下方提示只放通用句(REACT-18)", async () => {
+    const { user } = renderStore();
+    const counter = await headerOf("店內櫃台");
+    await user.click(within(counter).getByRole("button", { name: "兌獎" }));
+    const dialog = await screen.findByRole("dialog", {
+      name: "兌獎 · 店內櫃台",
+    });
+    const code = within(dialog).getByRole("textbox", { name: "刷背面編號" });
+    await user.type(code, "abc{Enter}");
+    await waitFor(() => {
+      expect(code).toHaveAccessibleDescription("看不懂這個編號,請刷背面編號");
+    });
+    expect(
+      within(dialog).getByText("有欄位不正確,請檢查標紅的欄位"),
+    ).toBeInTheDocument();
+  });
+
   it("單張超過 5,000 → 畫面先擋、[確認兌獎] 停用;已兌過的張 → 提示時間與收銀點", async () => {
     const { user } = renderStore();
     const counter = await headerOf("店內櫃台");

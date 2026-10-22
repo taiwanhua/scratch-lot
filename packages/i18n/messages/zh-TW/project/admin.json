@@ -444,6 +444,10 @@
     }
   },
   "lotteryInventory": {
+    "fieldErrors": {
+      "check": "請檢查這一欄",
+      "store": "必填,請選擇回到哪家店"
+    },
     "ticketGrid": {
       "states": {
         "unsold": "未售",
@@ -977,6 +981,7 @@
     },
     "errors": {
       "reasons": {
+        "REFERENCE_NOT_FOUND": "選的資料已不存在或你看不到,請重新選擇",
         "CALENDAR_DAY_DUPLICATE": "這一天已經有行事曆了",
         "DAY_OFF_DUPLICATE": "這一天已經有整天的畫休",
         "TIME_RANGES_OVERLAP": "時段和這一天其他的畫休時段重疊",
@@ -1066,6 +1071,7 @@
       "timeRange": "{start}–{end}",
       "cardMeta": "{time} · {position} · 負責/協同 {tasks}",
       "dialog": {
+        "tasks": "執行任務",
         "createTitle": "新增人力需求範本",
         "editTitle": "人力需求範本 · {name}",
         "name": "名稱",
@@ -1122,6 +1128,7 @@
       "enabledAria": "啟用「{name}」",
       "noTemplates": "還沒有人力需求範本,請先到「人力需求範本」建立。",
       "dialog": {
+        "days": "每天的人力需求範本",
         "createTitle": "新增人力需求週範本",
         "editTitle": "人力需求週範本 · {name}",
         "name": "名稱",
@@ -1201,6 +1208,7 @@
       "summaryOwn": "{source}:{value}",
       "parent": "上層:{value}",
       "dialog": {
+        "tiers": "預設休息分級",
         "errors": {
           "number": "要填數字",
           "range": "要填 {min}–{max}",
@@ -1331,6 +1339,7 @@
         "view": "查看"
       },
       "dialog": {
+        "slots": "時段",
         "title": "登記畫休 · {date}",
         "titleNoDate": "登記畫休",
         "date": "日期",
@@ -1620,6 +1629,7 @@
         "feedback": "已移除 {count} 筆排班"
       },
       "demandDialog": {
+        "tasks": "執行任務",
         "createTitle": "新增人力需求",
         "editTitle": "人力需求 · {date}{name}",
         "create": "新增",
@@ -1677,6 +1687,7 @@
         "deleteEmpty": "目前沒有人填這筆人力需求。"
       },
       "entryDialog": {
+        "assignments": "加入的人力需求",
         "createTitle": "新增排班 · {date}",
         "editTitle": "排班 · {name} {date}",
         "person": "人員",
@@ -3016,6 +3027,7 @@
       "reassign": "改對應排班"
     },
     "reassign": {
+      "entry": "對應排班",
       "title": "改對應排班",
       "reason": "原因(必填)",
       "hint": "只列出負責人這天在這家店的排班。交班結帳送出後就不能改;改的時候任務快照會依新的排班重寫。",
@@ -3773,6 +3785,7 @@
         "cash_correction": "現金更正"
       },
       "confirm": {
+        "invalidAmount": "要填 0 以上的整數",
         "summaryTitle": "應有現金",
         "expected": "應有",
         "counted": "實點",

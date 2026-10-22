@@ -586,6 +586,12 @@
       "UNEXPECTED": "操作失敗,請稍後再試。"
     },
     "listColumns": {
+      "errors": {
+        "width": "寬度要填 {min}–{max} 的整數",
+        "LIST_COLUMN_DUPLICATE": "這一欄重複了,請移除其中一欄",
+        "LIST_COLUMN_UNAVAILABLE": "這個欄位已經不在目前的表單版本,請換一個",
+        "LIST_COLUMN_PROTECTED": "受保護的欄位不能當列表欄"
+      },
       "title": "列表欄位配置 — {name}",
       "loading": "載入配置",
       "moduleWide": "此設定影響整個模組的列表:模組裡的每張表單共用同一份列表欄位。",
@@ -1392,6 +1398,7 @@
     "loading": "載入中",
     "empty": "選一張表單以檢視設計與版本",
     "errors": {
+      "FORM_KEY_DUPLICATE": "這個 key 已經有表單使用,請換一個",
       "CONFLICT": "已被別人更新,請重新載入。",
       "FIELD_FORBIDDEN": "你沒有修改其中某個欄位的權限,這次變更沒有存檔。",
       "FORM_NOT_AVAILABLE": "這張表單目前不能使用。",
@@ -1425,6 +1432,7 @@
       "expand": "展開表單清單"
     },
     "detail": {
+      "serialDigitsError": "位數要填 {min}–{max} 的整數",
       "region": "表單設定",
       "meta": "key:{key} · 模組:{module}",
       "forkedFrom": "基底:{key} v{version}",

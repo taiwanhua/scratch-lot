@@ -350,9 +350,11 @@ export class ScheduleRulesService {
         })
       : null;
     if (!found) {
-      throw validationError(`week template not found: ${id}`, [
-        "value.weekTemplateId",
-      ]);
+      throw validationError(
+        `week template not found: ${id}`,
+        ["value.weekTemplateId"],
+        SCHEDULE_REASONS.referenceNotFound,
+      );
     }
   }
 

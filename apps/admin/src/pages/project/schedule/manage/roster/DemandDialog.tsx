@@ -22,11 +22,10 @@ import { SelectField } from "@repo/ui/select-field";
 import { Stack } from "@repo/ui/stack";
 import { TextField } from "@repo/ui/text-field";
 
-import { FieldErrorText } from "@/components/base/FieldErrorText/FieldErrorText";
+import { FieldErrorGroup } from "@/components/base/FieldErrorGroup/FieldErrorGroup";
 import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
 import { useSession } from "@/hooks/base/useSession";
 import { useScheduleFieldOptions } from "@/hooks/project/schedule/useScheduleFieldOptions/useScheduleFieldOptions";
-import { withoutFieldError } from "@/lib/base/field-errors";
 import {
   demandRemovalImpact,
   monthDayOf,
@@ -34,15 +33,12 @@ import {
   weekdayOf,
 } from "@/lib/project/schedule-roster";
 
-import { scheduleFormatErrorsOf } from "../../schedule-field-errors";
 import { DemandImpactDialog } from "./DemandImpactDialog";
 import { DemandTaskList } from "./DemandTaskList";
 import { DemandTemplateCopyFields } from "./DemandTemplateCopyFields";
 import {
   type DemandField,
-  type DemandFieldErrors,
   type DemandValues,
-  demandErrorTextsOf,
   initialDemandValues,
   missingDemandFields,
   nextTaskKey,
@@ -55,6 +51,7 @@ import {
   useRoster,
 } from "./roster-context";
 import { blockedEntryIdsOf } from "./roster-error";
+import { useDemandFieldErrors } from "./useDemandFieldErrors";
 
 export interface DemandDialogProps {
   /** 要看 / 改的那一筆;null = 新增 */
@@ -88,7 +85,6 @@ export const DemandDialog = ({
   const t = useTranslations("admin.schedule.roster.demandDialog");
   const tRoster = useTranslations("admin.schedule.roster");
   const tCommon = useTranslations("admin.schedule.common");
-  const tSchedule = useTranslations("admin.schedule");
   const tCalendar = useTranslations("admin.schedule.calendar");
   const { session } = useSession();
   const queryClient = useQueryClient();
@@ -108,20 +104,18 @@ export const DemandDialog = ({
     initialDemandValues(demand, preset, template, timezone),
   );
   // 欄位錯了就在欄位正下方寫原因(REACT-18);提示只放通用句
-  const [fieldErrors, setFieldErrors] = useState<DemandFieldErrors>({});
-  const invalid = Object.keys(fieldErrors) as DemandField[];
+  const { fieldErrors, invalid, ...errors } = useDemandFieldErrors();
   const [confirm, setConfirm] = useState<"save" | "delete" | null>(null);
   const [blockedIds, setBlockedIds] = useState<string[]>([]);
   const changeReason = useChangeReason(canEdit);
 
   const invalidate = () =>
     queryClient.invalidateQueries({ queryKey: ROSTER_QUERY_ROOT });
-  const errorText = (error: unknown) =>
-    demandErrorTextsOf(error, tSchedule).summary;
+  const errorText = errors.summaryOf;
   const handleError = (error: unknown) => {
     changeReason.markFromError(error);
     setBlockedIds(blockedEntryIdsOf(error));
-    setFieldErrors(demandErrorTextsOf(error, tSchedule).texts);
+    errors.markFromError(error);
   };
 
   const save = useSaveScheduleDemandMutation(
@@ -155,7 +149,7 @@ export const DemandDialog = ({
     value: DemandValues[Key],
   ) => {
     setValues((current) => ({ ...current, [key]: value }));
-    setFieldErrors((current) => withoutFieldError(current, key as DemandField));
+    errors.clear(key as DemandField);
   };
   const addTask = (role: ScheduleTaskRole) => {
     change("tasks", [
@@ -198,7 +192,7 @@ export const DemandDialog = ({
 
   const submit = (confirmed: boolean) => {
     const missing = missingDemandFields(values);
-    setFieldErrors(scheduleFormatErrorsOf(missing, tSchedule));
+    errors.markMissing(missing);
     const span = spanOf(
       values.date,
       values.startTime,
@@ -373,9 +367,14 @@ export const DemandDialog = ({
             />
           ))}
         </Stack>
-        {taskList("leader", MAX_LEADER_TASKS)}
-        {taskList("helper", MAX_HELPER_TASKS)}
-        <FieldErrorText text={fieldErrors.tasks} />
+        <FieldErrorGroup
+          label={t("tasks")}
+          errorText={fieldErrors.tasks}
+          spacing={2}
+        >
+          {taskList("leader", MAX_LEADER_TASKS)}
+          {taskList("helper", MAX_HELPER_TASKS)}
+        </FieldErrorGroup>
         {demand === null && canEdit && data.canSaveTemplate && (
           <DemandTemplateCopyFields
             values={values}

@@ -24,6 +24,7 @@ import {
 } from "../../database/schedule/schedule.repositories";
 import { ScheduleFieldOptionsService } from "../field-options/schedule-field-options.service";
 import {
+  SCHEDULE_REASONS,
   forbiddenError,
   notFoundError,
   validationError,
@@ -471,7 +472,11 @@ function validatedDays(
       new Set(ids).size !== ids.length ||
       ids.some((id) => !visibleTemplateIds.has(id))
     ) {
-      throw validationError("days contains unknown templates", ["days"]);
+      throw validationError(
+        "days contains unknown templates",
+        ["days"],
+        SCHEDULE_REASONS.referenceNotFound,
+      );
     }
     return ids.map((id) => new Types.ObjectId(id));
   });

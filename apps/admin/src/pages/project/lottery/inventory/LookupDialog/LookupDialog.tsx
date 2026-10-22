@@ -90,6 +90,7 @@ export const LookupDialog = ({ onClose }: LookupDialogProps) => {
     hint = t("lookup.notFound");
   }
 
+  const isInvalid = hint === t("lookup.invalid");
   const first = items.at(0);
   return (
     <Dialog
@@ -122,13 +123,14 @@ export const LookupDialog = ({ onClose }: LookupDialogProps) => {
           label={t("lookup.input")}
           value={text}
           fullWidth
-          error={hint === t("lookup.invalid")}
+          error={isInvalid}
+          // 格式錯的原因寫在欄位正下方(REACT-18);沒錯時是輸入說明
+          helperText={isInvalid ? t("lookup.invalid") : t("lookup.hint")}
           onChange={(event) => {
             setText(event.target.value);
           }}
         />
-        <Typography variant="caption">{t("lookup.hint")}</Typography>
-        {hint === null ? null : (
+        {hint === null || isInvalid ? null : (
           <Typography variant="body2" color="warning">
             {hint}
           </Typography>

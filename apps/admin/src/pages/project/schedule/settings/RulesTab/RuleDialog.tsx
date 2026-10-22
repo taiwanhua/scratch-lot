@@ -46,6 +46,9 @@ export interface RuleDialogProps {
   weekTemplates: readonly { id: string; name: string }[];
   taskOptions: readonly ScheduleFieldOption[];
   onSave: (save: RuleDialogSave) => void;
+  /** 上一次儲存被 api 擋下的原因(欄位 → 那一句;REACT-18),使用者一改就由 `onEdit` 清掉 */
+  apiErrors?: Partial<Record<string, string>>;
+  onEdit?: () => void;
   onRestore: () => void;
   onClose: () => void;
 }
@@ -65,6 +68,8 @@ export const RuleDialog = ({
   weekTemplates,
   taskOptions,
   onSave,
+  apiErrors = {},
+  onEdit,
   onRestore,
   onClose,
 }: RuleDialogProps) => {
@@ -139,12 +144,14 @@ export const RuleDialog = ({
           definition={definition}
           value={value}
           invalid={invalid}
+          apiErrors={apiErrors}
           disabled={!canEdit}
           weekTemplates={weekTemplates}
           taskOptions={taskOptions}
           onChange={(next) => {
             setValue(next);
             setInvalid([]);
+            onEdit?.();
           }}
         />
         {definition.group === "rule" &&

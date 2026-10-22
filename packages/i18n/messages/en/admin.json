@@ -586,6 +586,12 @@
       "UNEXPECTED": "The action failed. Please try again later."
     },
     "listColumns": {
+      "errors": {
+        "width": "Width must be a whole number from {min} to {max}",
+        "LIST_COLUMN_DUPLICATE": "This column is listed twice; remove one",
+        "LIST_COLUMN_UNAVAILABLE": "This field is no longer in the current form version; pick another",
+        "LIST_COLUMN_PROTECTED": "Protected fields can't be list columns"
+      },
       "title": "List columns — {name}",
       "loading": "Loading configuration",
       "moduleWide": "This setting affects the whole module's list: every form in the module shares the same list columns.",
@@ -1392,6 +1398,7 @@
     "loading": "Loading",
     "empty": "Select a form to see its design and versions",
     "errors": {
+      "FORM_KEY_DUPLICATE": "This key is already used by a form; choose another",
       "CONFLICT": "This was updated by someone else. Please reload.",
       "FIELD_FORBIDDEN": "You are not allowed to change one of the fields; nothing was saved.",
       "FORM_NOT_AVAILABLE": "This form is not available right now.",
@@ -1425,6 +1432,7 @@
       "expand": "Expand form list"
     },
     "detail": {
+      "serialDigitsError": "Digits must be a whole number from {min} to {max}",
       "region": "Form settings",
       "meta": "key: {key} · module: {module}",
       "forkedFrom": "Based on: {key} v{version}",

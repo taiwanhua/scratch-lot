@@ -881,7 +881,11 @@ export class ScheduleRosterWritesService {
       orgId: { $in: scope.org.chain },
     });
     if (!record) {
-      throw validationError(`template not visible: ${id}`, ["templateId"]);
+      throw validationError(
+        `template not visible: ${id}`,
+        ["templateId"],
+        SCHEDULE_REASONS.referenceNotFound,
+      );
     }
     return record._id;
   }

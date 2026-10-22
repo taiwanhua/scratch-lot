@@ -56,7 +56,11 @@ import { type EntryRecord, RosterPeopleReader } from "../roster/roster-people";
 import { monthRange } from "../roster/schedule-roster.service";
 import { ScheduleRulesService } from "../rules/schedule-rules.service";
 import { ScheduleClock } from "../shared/schedule-clock";
-import { isDuplicateKeyError, validationError } from "../shared/schedule-error";
+import {
+  SCHEDULE_REASONS,
+  isDuplicateKeyError,
+  validationError,
+} from "../shared/schedule-error";
 import {
   type ScheduleOrg,
   parseObjectId,
@@ -1346,7 +1350,11 @@ function templateRequestOf(
     const ids = [...new Set(input.templateIds)];
     const templates = ids.map((id) => book.templates.get(id));
     if (ids.length === 0 || templates.includes(undefined)) {
-      throw validationError("unknown demand templates", ["templateIds"]);
+      throw validationError(
+        "unknown demand templates",
+        ["templateIds"],
+        SCHEDULE_REASONS.referenceNotFound,
+      );
     }
     return {
       kind: "template",
@@ -1360,7 +1368,11 @@ function templateRequestOf(
     parseObjectId(id, "weekTemplateId");
     const weekTemplate = book.weekTemplates.find((item) => item.id === id);
     if (weekTemplate === undefined) {
-      throw validationError(`unknown week template: ${id}`, ["weekTemplateId"]);
+      throw validationError(
+        `unknown week template: ${id}`,
+        ["weekTemplateId"],
+        SCHEDULE_REASONS.referenceNotFound,
+      );
     }
     return weekRequestOf(weekTemplate, book);
   }

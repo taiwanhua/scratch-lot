@@ -131,5 +131,25 @@ describe("調貨單檢視頁", () => {
       ),
     ).toBeInTheDocument();
     expect(screen.getByRole("dialog", { name: "付款" })).toBeInTheDocument();
+    // REACT-18:原因寫在金額欄正下方,上方提示只放通用句
+    expect(
+      within(dialog).getByRole("textbox", { name: /金額/ }),
+    ).toHaveAccessibleDescription(
+      "小金庫應有不足,請先用現金更正單登記小金庫實際的錢",
+    );
+    expect(within(dialog).getByRole("alert")).toHaveTextContent(
+      "有欄位不正確,請檢查標示的欄位",
+    );
+  });
+
+  it("沖正收付:原因沒填 → 原因欄下寫格式要求(REACT-18)", async () => {
+    const user = userEvent.setup();
+    renderTransferPage({ path: "/purchasing/transfer/view-page/doc-t10" });
+    await user.click(await screen.findByRole("button", { name: "沖正" }));
+    const dialog = await screen.findByRole("dialog", { name: "沖正" });
+    await user.click(within(dialog).getByRole("button", { name: "沖正" }));
+    expect(
+      within(dialog).getByRole("textbox", { name: /原因/ }),
+    ).toHaveAccessibleDescription("必填,最多 200 個字");
   });
 });

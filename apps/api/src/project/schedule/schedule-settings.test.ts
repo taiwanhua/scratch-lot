@@ -637,6 +637,10 @@ describe("排班設定(GraphQL 端點 + 真 MongoDB)", () => {
         code: "VALIDATION_FAILED",
         fields,
       });
+      // 參照失效(選的週範本不在)帶 reason;格式錯不帶(前端寫格式要求)
+      expect(errorOf(result)?.reason).toBe(
+        key === "autoDemandWeekTemplateId" ? "REFERENCE_NOT_FOUND" : undefined,
+      );
     });
 
     it("最上層組織的規則要 edit-default-rules;分店店長改不了(看不到 → NOT_FOUND)", async () => {
@@ -1341,6 +1345,7 @@ describe("排班設定(GraphQL 端點 + 真 MongoDB)", () => {
       expect(errorOf(unknown)).toMatchObject({
         code: "VALIDATION_FAILED",
         fields: ["days"],
+        reason: "REFERENCE_NOT_FOUND",
       });
       const sixDays = await gql(hq, SAVE_WEEK_TEMPLATE, {
         input: { name: "六天", days: [[], [], [], [], [], []] },

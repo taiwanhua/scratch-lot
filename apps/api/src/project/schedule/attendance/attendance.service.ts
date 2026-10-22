@@ -40,6 +40,7 @@ import { monthRange } from "../roster/schedule-roster.service";
 import { ScheduleRulesService } from "../rules/schedule-rules.service";
 import { ScheduleClock } from "../shared/schedule-clock";
 import {
+  SCHEDULE_REASONS,
   forbiddenError,
   notFoundError,
   validationError,
@@ -399,7 +400,11 @@ export class ScheduleAttendanceService {
           ? []
           : await this.published.publishedOnly(operator, tenantId, [found]);
       if (published === undefined) {
-        throw validationError(`entry not found: ${input.entryId}`, ["entryId"]);
+        throw validationError(
+          `entry not found: ${input.entryId}`,
+          ["entryId"],
+          SCHEDULE_REASONS.referenceNotFound,
+        );
       }
       target = published;
     }

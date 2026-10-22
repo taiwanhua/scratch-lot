@@ -110,12 +110,35 @@ export function notFoundError(message: string): GraphQLError {
 }
 
 /** 一般輸入錯誤(GQL-04 `VALIDATION_FAILED`),`fields` 標在哪幾個 input 欄位上。 */
+/**
+ * `VALIDATION_FAILED` 的細分原因(`extensions.reason`;格式對但不能存的情形,前端寫在欄位下,REACT-18)。
+ * 沒有原因 = 格式錯。
+ */
+export const FORM_VALIDATION_REASONS = {
+  /** 表單 key 已被用過(含別的租戶的客製表單;唯一索引) */
+  formKeyDuplicate: "FORM_KEY_DUPLICATE",
+  /** 列表欄位:同一欄列了兩次 */
+  listColumnDuplicate: "LIST_COLUMN_DUPLICATE",
+  /** 列表欄位:摘要槽不存在,或欄位不在這個模組任何表單的目前版本 */
+  listColumnUnavailable: "LIST_COLUMN_UNAVAILABLE",
+  /** 列表欄位:受欄位級權限保護的欄位不能當列表欄 */
+  listColumnProtected: "LIST_COLUMN_PROTECTED",
+} as const;
+
+export type FormValidationReason =
+  (typeof FORM_VALIDATION_REASONS)[keyof typeof FORM_VALIDATION_REASONS];
+
 export function validationError(
   message: string,
   fields: string[],
+  reason?: FormValidationReason,
 ): GraphQLError {
   return new GraphQLError(message, {
-    extensions: { code: "VALIDATION_FAILED", fields },
+    extensions: {
+      code: "VALIDATION_FAILED",
+      fields,
+      ...(reason === undefined ? {} : { reason }),
+    },
   });
 }
 

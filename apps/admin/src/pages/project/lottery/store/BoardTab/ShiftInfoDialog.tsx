@@ -19,7 +19,7 @@ import { Stack } from "@repo/ui/stack";
 import { TextField } from "@repo/ui/text-field";
 import { Typography } from "@repo/ui/typography";
 
-import { FieldErrorText } from "@/components/base/FieldErrorText/FieldErrorText";
+import { useFieldErrorText } from "@/components/base/FieldErrorText/useFieldErrorText";
 import {
   EMPTY_REASON,
   type ReasonValue,
@@ -75,6 +75,7 @@ export const ShiftInfoDialog = ({ shiftId, onClose }: ShiftInfoDialogProps) => {
   const [fieldErrors, setFieldErrors] = useState<FieldErrorTexts<string>>({});
   const invalid = Object.keys(fieldErrors);
   const [errorText, setErrorText] = useState<string | null>(null);
+  const entryError = useFieldErrorText(fieldErrors.scheduleEntryId);
 
   const reassign = useReassignLotteryShiftEntryMutation(
     session.client,
@@ -186,6 +187,8 @@ export const ShiftInfoDialog = ({ shiftId, onClose }: ShiftInfoDialogProps) => {
           )}
           <RadioGroup
             value={entry}
+            aria-label={t("reassign.entry")}
+            aria-describedby={entryError.describedBy}
             onChange={(event) => {
               setEntry(event.target.value);
             }}
@@ -204,7 +207,7 @@ export const ShiftInfoDialog = ({ shiftId, onClose }: ShiftInfoDialogProps) => {
               label={t("openShift.temporary")}
             />
           </RadioGroup>
-          <FieldErrorText text={fieldErrors.scheduleEntryId} />
+          {entryError.errorText}
           <SelectField
             label={t("reassign.reason")}
             value={reason.reasonKey}

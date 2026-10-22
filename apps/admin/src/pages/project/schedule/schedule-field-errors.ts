@@ -36,7 +36,7 @@ const FORMAT_TEXTS: Record<string, [string, Record<string, string>?]> = {
   date: ["fieldErrors.date"],
   category: ["fieldErrors.required"],
   userId: ["fieldErrors.required"],
-  entryId: ["fieldErrors.required"],
+  entryId: ["fieldErrors.choose"],
   orgId: ["fieldErrors.required"],
   kind: ["fieldErrors.required"],
   reason: ["fieldErrors.reasonKey"],
@@ -49,7 +49,7 @@ const FORMAT_TEXTS: Record<string, [string, Record<string, string>?]> = {
   assignments: ["fieldErrors.assignments"],
   breakMinutes: ["fieldErrors.nonNegativeInteger"],
   order: ["fieldErrors.nonNegativeInteger"],
-  weekTemplateId: ["fieldErrors.required"],
+  weekTemplateId: ["fieldErrors.choose"],
   templateName: ["fieldErrors.required"],
   templateShortName: [
     "fieldErrors.shortName",
@@ -82,6 +82,7 @@ const REASON_TEXT_KEYS: Record<ScheduleReason, string> = {
   RULE_NOT_TOGGLEABLE: "errors.reasons.RULE_NOT_TOGGLEABLE",
   PUNCH_NOT_ALLOWED: "errors.reasons.PUNCH_NOT_ALLOWED",
   CONCURRENT_EDIT: "errors.reasons.CONCURRENT_EDIT",
+  REFERENCE_NOT_FOUND: "errors.reasons.REFERENCE_NOT_FOUND",
 };
 
 export const scheduleFormatText = (t: Translate, field: string): string => {

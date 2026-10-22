@@ -123,6 +123,10 @@ describe("經銷商管理:欄位下寫原因", () => {
     );
     await user.click(screen.getByRole("button", { name: "儲存" }));
     expect(await screen.findByText("至少要選一個身分")).toBeInTheDocument();
+    // 群組欄位:原因以 aria-describedby 連到「身分」那一組(報讀軟體讀得到)
+    expect(
+      screen.getByRole("group", { name: "身分(至少一個)" }),
+    ).toHaveAccessibleDescription("至少要選一個身分");
     expect(
       screen.getByRole("textbox", { name: /姓名/ }),
     ).toHaveAccessibleDescription("必填,最多 10 個字");

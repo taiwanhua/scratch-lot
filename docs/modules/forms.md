@@ -403,7 +403,7 @@
 
 `modules.settings.list = { columns: [ { kind: "slot" | "field", key, formKey?, width, order } ], builtin: { form, status, createdBy } }`,root 整份覆蓋(`setModuleListColumns`,`form-design/module-list-columns.service.ts`)。
 
-- 寫入時驗:摘要槽 key 只能是 `title` / `date` / `amount` / `serialNo`(單號,讀 `form_submissions.serialNo`);表單欄位要存在於該模組**共用表單**目前版本,且在那些版本裡都**不是受保護欄位**(`formKey` 給了就只看那一張,沒給就看模組內全部);欄寬 40–2000;同一欄不能重複;`builtin` 三個鍵都要是 boolean。空陣列 = 清掉配置、回前端預設欄。
+- 寫入時驗:摘要槽 key 只能是 `title` / `date` / `amount` / `serialNo`(單號,讀 `form_submissions.serialNo`);表單欄位要存在於該模組**共用表單**目前版本,且在那些版本裡都**不是受保護欄位**(`formKey` 給了就只看那一張,沒給就看模組內全部);欄寬 40–2000;同一欄不能重複(錯了 `VALIDATION_FAILED` 指到 `columns.<i>`,原因見「錯誤」;編輯器把原因寫在那一列下方);`builtin` 三個鍵都要是 boolean。空陣列 = 清掉配置、回前端預設欄。
 - 定義檢查器讀它出 `LIST_COLUMN_MISSING` 警告;表單改版後引用到不存在的欄位不自動清,前端顯示「—」。
 - `builtin`:內建欄「表單 / 狀態 / 建立者」各自顯不顯示;沒存過(或某個鍵不是 boolean)= 顯示(`listBuiltinColumnsOf`)。
 - 表單欄位欄的表頭讀該表單**目前版本**的定義(`moduleForms` 的 `currentVersion`;沒有資料列也顯示欄位名,欄位沒限定表單時取第一張有該欄位的),找不到再看這一頁資料列綁的版本,最後才顯示 key。
@@ -573,7 +573,7 @@ input 欄位的缺席 / `null`:
   - 舊版資料升級:`FORM_HAS_WORKFLOW`(本租戶綁了流程)、`VERSION_NOT_PUBLISHED`(目標版不是已發布)。
 - `FORBIDDEN` 的 `reason`:`FIELD_FORBIDDEN`(附 `fieldKey`)、`FORM_NOT_AVAILABLE`、`NOT_FORM_OWNER`、`ROOT_ONLY`、`DRAFT_DISABLED`(表單關了「允許存草稿」:建草稿、存狀態草稿的單;見[允許存草稿](#允許存草稿))、`SHARED_READ_ONLY`(依欄位共用進來的提交:改 / 刪 / 作廢 / 複製為新單;見[依欄位共用](#依欄位共用));端點層沒權限的 `FORBIDDEN` 沒有 reason。別人的草稿一律 `NOT_FOUND`(草稿只屬於建立者,不透露它存在)。
 - `PERMISSION_NOT_DELETABLE` 的 `reasons`:`NOT_DYNAMIC`、`NOT_RETIRED`、`USED_BY_DRAFTS`、`CONFIRM_REQUIRED`。
-- `VALIDATION_FAILED`:定義有錯 → `fields: ["definition"]` + `issues`(檢查器的 `DefinitionIssue[]`,每筆帶定位);值有錯 → `fields`(欄位 key)+ `fieldErrors`(`{ fieldKey, code, message }`,code 見 `@repo/domain/form` 的 `VALUE_ISSUE_CODES`);匯出可攜性錯誤同樣用 `fields: ["definition"]` + `issues`,每筆為共用契約的 `{ code, message, path }`,由彈窗逐項顯示;匯出版本狀態不符使用 `fields: ["version"]`。其他輸入錯誤照一般的 `fields`。
+- `VALIDATION_FAILED`:定義有錯 → `fields: ["definition"]` + `issues`(檢查器的 `DefinitionIssue[]`,每筆帶定位);值有錯 → `fields`(欄位 key)+ `fieldErrors`(`{ fieldKey, code, message }`,code 見 `@repo/domain/form` 的 `VALUE_ISSUE_CODES`);匯出可攜性錯誤同樣用 `fields: ["definition"]` + `issues`,每筆為共用契約的 `{ code, message, path }`,由彈窗逐項顯示;匯出版本狀態不符使用 `fields: ["version"]`。其他輸入錯誤照一般的 `fields`;格式對但不能存的另帶 `reason`(`FORM_VALIDATION_REASONS`,前端寫在欄位下,REACT-18):`FORM_KEY_DUPLICATE`(建立 / 另建表單時 key 已被用過,`fields: ["key"]`)、`LIST_COLUMN_DUPLICATE` / `LIST_COLUMN_UNAVAILABLE` / `LIST_COLUMN_PROTECTED`(列表欄位配置那一欄重複、不在目前版本、受保護,`fields: ["columns.<i>"]`;欄寬不合沒有 reason)。
 
 ## 稽核
 

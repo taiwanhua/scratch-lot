@@ -8,7 +8,7 @@ import { Stack } from "@repo/ui/stack";
 import { TextField } from "@repo/ui/text-field";
 import { Typography } from "@repo/ui/typography";
 
-import { FieldErrorText } from "@/components/base/FieldErrorText/FieldErrorText";
+import { FieldErrorGroup } from "@/components/base/FieldErrorGroup/FieldErrorGroup";
 import { FormActions } from "@/components/base/FormActions/FormActions";
 import { Section } from "@/components/base/Section/Section";
 import { TagPaletteSelect } from "@/components/project/TagPaletteSelect/TagPaletteSelect";
@@ -99,13 +99,17 @@ export const GameForm = ({ game, access }: GameFormProps) => {
             <Typography variant="body2" color="textSecondary">
               {t("gameForm.colorHint")}
             </Typography>
-            <TagPaletteSelect
-              value={form.values.color}
-              onChange={(value) => {
-                form.change("color", value);
-              }}
-            />
-            <FieldErrorText text={form.fieldErrors.color} />
+            <FieldErrorGroup
+              label={t("gameForm.sections.color")}
+              errorText={form.fieldErrors.color}
+            >
+              <TagPaletteSelect
+                value={form.values.color}
+                onChange={(value) => {
+                  form.change("color", value);
+                }}
+              />
+            </FieldErrorGroup>
           </Stack>
         </Section>
         <Section

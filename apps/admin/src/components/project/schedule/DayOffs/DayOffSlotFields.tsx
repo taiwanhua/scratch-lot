@@ -6,7 +6,7 @@ import { CloseIcon } from "@repo/ui/icons";
 import { Stack } from "@repo/ui/stack";
 import { TextField } from "@repo/ui/text-field";
 
-import { FieldErrorText } from "@/components/base/FieldErrorText/FieldErrorText";
+import { FieldErrorGroup } from "@/components/base/FieldErrorGroup/FieldErrorGroup";
 import {
   type DayOffSlot,
   EMPTY_SLOT,
@@ -44,7 +44,11 @@ export const DayOffSlotFields = ({
     );
   };
   return (
-    <Stack spacing={1.5}>
+    <FieldErrorGroup
+      label={t("slots")}
+      errorText={invalid ? errorText : undefined}
+      spacing={1.5}
+    >
       {slots.map((slot, index) => {
         const error =
           invalid && (!isCompleteSlot(slot) || slots.every(isCompleteSlot));
@@ -89,7 +93,6 @@ export const DayOffSlotFields = ({
           </Stack>
         );
       })}
-      <FieldErrorText text={invalid ? errorText : undefined} />
       {allowMultiple && (
         <Button
           variant="text"
@@ -102,6 +105,6 @@ export const DayOffSlotFields = ({
           {t("addSlot")}
         </Button>
       )}
-    </Stack>
+    </FieldErrorGroup>
   );
 };

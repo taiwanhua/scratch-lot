@@ -34,6 +34,7 @@ import {
 } from "../form-access.service";
 import { FORMS_PERMISSIONS } from "../form-permission-keys";
 import {
+  FORM_VALIDATION_REASONS,
   conflictError,
   forbiddenError,
   isDuplicateKeyError,
@@ -632,7 +633,11 @@ export class FormsService {
       });
     } catch (error) {
       if (isDuplicateKeyError(error)) {
-        throw validationError(`Form key already exists: ${data.key}`, ["key"]);
+        throw validationError(
+          `Form key already exists: ${data.key}`,
+          ["key"],
+          FORM_VALIDATION_REASONS.formKeyDuplicate,
+        );
       }
       throw error;
     }

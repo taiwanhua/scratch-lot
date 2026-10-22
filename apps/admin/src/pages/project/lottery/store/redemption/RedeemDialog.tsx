@@ -36,7 +36,7 @@ import {
   type RedemptionRow,
   invalidateRedemptions,
   prizeStateOf,
-  redemptionErrorText,
+  redemptionFieldErrorsOf,
 } from "./redemption-shared";
 
 type PreviewItem = NonNullable<
@@ -163,12 +163,11 @@ export const RedeemDialog = ({
   const isBlocked = existing !== null && !replacingSame;
 
   const errorSource = error ?? (preview.isError ? preview.error : null);
-  const errorText =
-    errorSource === null
-      ? null
-      : redemptionErrorText(errorSource, t, (value) =>
-          temporal(value, "monthDayTime"),
-        );
+  const { codeError, prizeError, errorText } = redemptionFieldErrorsOf(
+    errorSource,
+    t,
+    (value) => temporal(value, "monthDayTime"),
+  );
 
   const canSubmit =
     !isPending &&
@@ -229,7 +228,8 @@ export const RedeemDialog = ({
         <TextField
           label={t("code")}
           value={code}
-          helperText={t("codeHint")}
+          error={codeError !== undefined}
+          helperText={codeError ?? t("codeHint")}
           onChange={(event) => {
             setCode(event.target.value);
           }}
@@ -271,8 +271,8 @@ export const RedeemDialog = ({
           label={t("prize")}
           value={amount}
           required
-          error={amountProblem !== null}
-          helperText={amountProblem ?? undefined}
+          error={amountProblem !== null || prizeError !== undefined}
+          helperText={amountProblem ?? prizeError}
           slotProps={{ htmlInput: { inputMode: "numeric" } }}
           onChange={(event) => {
             setAmount(event.target.value);

@@ -18,7 +18,14 @@ import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
 import { useSession } from "@/hooks/base/useSession";
 import { useTenantTimezone } from "@/hooks/base/useTenantTimezone";
 
-import { moneyText, settlementErrorKey } from "./settlement-text";
+import {
+  moneyText,
+  settlementErrorTextsOf,
+  settlementFormatErrorsOf,
+} from "./settlement-text";
+
+/** 會標回視窗的欄位(api `fields`)。 */
+const FIELDS = ["reason"] as const;
 
 export interface ReverseSettlementDialogProps {
   record: LotterySettlementFieldsFragment["records"][number];
@@ -39,25 +46,29 @@ export const ReverseSettlementDialog = ({
   const isMobile = useBreakpointDown("sm");
   const timezone = useTenantTimezone() ?? DEFAULT_TENANT_TIMEZONE;
   const [reason, setReason] = useState("");
-  const [isInvalid, setInvalid] = useState(false);
-  const [errorKey, setErrorKey] = useState<string | null>(null);
+  // 原因錯了就寫在欄位正下方(REACT-18);上方提示只放通用句
+  const [reasonError, setReasonError] = useState<string | undefined>();
+  const [errorText, setErrorText] = useState<string | null>(null);
   const reverse = useReverseLotterySettlementMutation(
     session.client,
     useMutationFeedback({
       success: t("feedback.reverseSuccess"),
-      error: (error: unknown) => t(settlementErrorKey(error)),
+      error: (error: unknown) =>
+        settlementErrorTextsOf(error, FIELDS, t).summary,
       onSuccess: () => {
         onDone?.();
         onClose();
       },
       onError: (error: unknown) => {
-        setErrorKey(settlementErrorKey(error));
+        const { texts, summary } = settlementErrorTextsOf(error, FIELDS, t);
+        setReasonError(texts.reason);
+        setErrorText(summary);
       },
     }),
   );
   const submit = () => {
     if (reason.trim() === "") {
-      setInvalid(true);
+      setReasonError(settlementFormatErrorsOf(["reason"], t).reason);
       return;
     }
     reverse.mutate({
@@ -84,7 +95,7 @@ export const ReverseSettlementDialog = ({
       }
     >
       <Stack spacing={2} sx={{ pt: 1 }}>
-        {errorKey !== null && <Alert severity="error">{t(errorKey)}</Alert>}
+        {errorText !== null && <Alert severity="error">{errorText}</Alert>}
         <Stack direction="row" sx={{ justifyContent: "space-between" }}>
           <Typography variant="body2" color="textSecondary">
             {t("reverseForm.original")}
@@ -104,10 +115,11 @@ export const ReverseSettlementDialog = ({
           label={t("reverseForm.reason")}
           value={reason}
           required
-          error={isInvalid}
+          error={reasonError !== undefined}
+          helperText={reasonError}
           onChange={(event) => {
             setReason(event.target.value);
-            setInvalid(false);
+            setReasonError(undefined);
           }}
         />
         <Typography variant="caption" color="textSecondary">

@@ -267,6 +267,8 @@
 - **api 提供的列印資料**:`openLotteryShift` / `depositLotteryShiftCash` / `withdrawLotteryShiftCash` 的回傳多 `movementId`(這次寫的流水;開班沒領零用金 = null)與 `cashPointPrinterId`;`lotteryCheckout` 多 `cashPointPrinterId`、`shiftOpenedAt` / `shiftClosedAt`(交班的班次)與 `coveredShifts[].difference`(日結單依收銀點彙總);`lotteryStoreShiftOptions` 多 `cashPointPrinterId`(退貨退款收據的印表機)。
 - 版面純函式在 `apps/admin/src/lib/project/lottery/receipts/`(`vault-deposit-receipt.ts`、`vault-withdraw-receipt.ts`、`bank-deposit-receipt.ts`、`shift-checkout-receipt.ts`、`daily-close-receipt.ts`、`sale-refund-receipt.ts`,文案 `admin.lotteryStore.receipts`),種類登記 `receipt-kinds.ts`;QR 連結 `components/project/lottery/ReceiptPrint/useReceiptLinks.ts`(模組 key 正本 `@repo/domain/project/lottery` 的 `RECEIPT_LINK_MODULE_KEYS`)。
 
+- **欄位錯誤**(REACT-18):投庫 / 出庫、開班、改對應排班、存銀行、日結第 ④ 步、交班「留給下一班」、撤銷售出申請的原因欄,錯了在欄位下寫原因(`store-field-errors.ts`);兌獎視窗 api 指到編號(`code`)/ 獎金(`prizeAmount`)時原因寫在那一欄下,下方提示只放通用句(`redemption-shared.ts` 的 `redemptionFieldErrorsOf`)。
+
 ## api 介面
 
 ### GraphQL

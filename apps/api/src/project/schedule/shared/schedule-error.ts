@@ -57,6 +57,8 @@ export const SCHEDULE_REASONS = {
   ruleNotToggleable: "RULE_NOT_TOGGLEABLE",
   /** 這筆排班現在不能打這種卡 */
   punchNotAllowed: "PUNCH_NOT_ALLOWED",
+  /** 選的資料(排班、範本、週範本)不存在或看不到(已被刪除、不在可見範圍) */
+  referenceNotFound: "REFERENCE_NOT_FOUND",
   /** 別人同時改了同一筆(重新整理後再試) */
   concurrentEdit: "CONCURRENT_EDIT",
 } as const;

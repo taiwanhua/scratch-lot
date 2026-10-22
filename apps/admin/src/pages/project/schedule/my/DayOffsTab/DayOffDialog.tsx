@@ -15,7 +15,6 @@ import { Stack } from "@repo/ui/stack";
 import { TextField } from "@repo/ui/text-field";
 import { Typography } from "@repo/ui/typography";
 
-import { FieldErrorText } from "@/components/base/FieldErrorText/FieldErrorText";
 import { DayOffBlockedAlert } from "@/components/project/schedule/DayOffs/DayOffBlockedAlert";
 import { DayOffKindRadios } from "@/components/project/schedule/DayOffs/DayOffKindRadios";
 import { DayOffSlotFields } from "@/components/project/schedule/DayOffs/DayOffSlotFields";
@@ -187,12 +186,12 @@ export const DayOffDialog = ({
         />
         <DayOffKindRadios
           value={kind}
+          errorText={fieldErrors.kind}
           onChange={(next) => {
             setKind(next);
             setInvalid(null);
           }}
         />
-        <FieldErrorText text={fieldErrors.kind} />
         {existing.map((item) => (
           <Stack
             key={item.id}
