@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
+import { Box } from "@repo/ui/box";
 import { DatePicker, type DatePickerProps } from "@repo/ui/date-picker";
 
 export interface DateFilterPickerProps extends Omit<
@@ -19,6 +20,7 @@ export interface DateFilterPickerProps extends Omit<
  * 直接用 `DatePicker` 的篩選欄,打到一半送出的 `null` 會被呼叫端換成預設值(月初、今天)或直接忽略,
  * 傳回來的值跟剛送出的不同,欄位就用它蓋掉草稿(看不到自己打的數字);沒有預設值的則會先送一次不帶日期的查詢。
  * 外部換成別的值(快捷鍵、掃 QR 帶入)照常覆蓋。
+ * 打到一半就離開欄位(焦點移出整個欄位)時,畫面還原成目前套用中的值,與實際查詢一致。
  */
 export const DateFilterPicker = ({
   value,
@@ -32,18 +34,48 @@ export const DateFilterPicker = ({
   } | null>(null);
   const isPending = pendingFrom !== null && pendingFrom.value === applied;
 
+  // 離開時一律重掛欄位,畫面就是套用中的值:套用中的值若是 `null`,與欄位剛送出的 `null` 相同,
+  // 不重掛就清不掉打到一半的字(打完的值重掛後顯示不變)
+  const [mountKey, setMountKey] = useState(0);
+  // 「離開」= blur 之後焦點沒有回到欄位裡。日曆彈窗在 portal 裡(DOM 不在欄位底下),
+  // 但 React 的 focus 事件照元件樹冒泡上來,所以等焦點落定:有 focus 冒上來就不算離開
+  const leaveTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
+    undefined,
+  );
+  useEffect(
+    () => () => {
+      clearTimeout(leaveTimer.current);
+    },
+    [],
+  );
+  const handleBlur = () => {
+    clearTimeout(leaveTimer.current);
+    // 不只看 isPending:從空白開始打,MUI 在區段填滿前不回呼(值一直是 null),這邊不知道有草稿
+    leaveTimer.current = setTimeout(() => {
+      setPendingFrom(null);
+      setMountKey((key) => key + 1);
+    });
+  };
+  const handleFocus = () => {
+    clearTimeout(leaveTimer.current);
+  };
+
   return (
-    <DatePicker
-      {...props}
-      value={isPending ? null : applied}
-      onChange={(next, { isIncomplete }) => {
-        if (isIncomplete) {
-          setPendingFrom({ value: applied });
-          return;
-        }
-        setPendingFrom(null);
-        onChange(next);
-      }}
-    />
+    // `display: contents` 不佔版面,只用來收整個欄位(各區段、日曆鈕、日曆彈窗)冒泡上來的 focus / blur
+    <Box sx={{ display: "contents" }} onBlur={handleBlur} onFocus={handleFocus}>
+      <DatePicker
+        key={mountKey}
+        {...props}
+        value={isPending ? null : applied}
+        onChange={(next, { isIncomplete }) => {
+          if (isIncomplete) {
+            setPendingFrom({ value: applied });
+            return;
+          }
+          setPendingFrom(null);
+          onChange(next);
+        }}
+      />
+    </Box>
   );
 };

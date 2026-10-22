@@ -1,5 +1,5 @@
 import { describe, expect, it } from "@jest/globals";
-import { screen } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import { useState } from "react";
 
 import { authWorld } from "@/test/msw/auth-handlers";
@@ -40,6 +40,7 @@ const Harness = ({ initial, fallback }: HarnessProps) => {
       >
         外部改值
       </button>
+      <button type="button">別處</button>
       <output data-testid="applied">{applied}</output>
     </>
   );
@@ -109,5 +110,67 @@ describe("DateFilterPicker", () => {
     expect(screen.getByRole("group", { name: "期間起" })).toHaveTextContent(
       "2030-05-06",
     );
+  });
+
+  describe("打到一半就離開欄位:畫面還原成套用中的值(與查詢一致)", () => {
+    it("有預設值:還原成預設的月初,條件不變", async () => {
+      const { user } = renderHarness({ initial: "", fallback: "2026-10-01" });
+      await user.click(await screen.findByRole("spinbutton", { name: "Year" }));
+      await user.keyboard("20");
+      expect(year().textContent).toBe("0020");
+
+      await user.click(screen.getByRole("button", { name: "別處" }));
+      expect(applied()).toBe("");
+      // 焦點落定後才還原(等 blur 之後有沒有 focus 冒回來)
+      await waitFor(() => {
+        expect(screen.getByRole("group", { name: "期間起" })).toHaveTextContent(
+          "2026-10-01",
+        );
+      });
+    });
+
+    it("套用中有日期:還原成那一天", async () => {
+      const { user } = renderHarness({ initial: "2026-10-14" });
+      await user.click(await screen.findByRole("spinbutton", { name: "Year" }));
+      await user.keyboard("20");
+
+      await user.click(screen.getByRole("button", { name: "別處" }));
+      expect(applied()).toBe("2026-10-14");
+      // 焦點落定後才還原(等 blur 之後有沒有 focus 冒回來)
+      await waitFor(() => {
+        expect(screen.getByRole("group", { name: "期間起" })).toHaveTextContent(
+          "2026-10-14",
+        );
+      });
+    });
+
+    it("沒有條件:清掉打到一半的字,回到格式提示", async () => {
+      const { user } = renderHarness({ initial: "" });
+      await user.click(await screen.findByRole("spinbutton", { name: "Year" }));
+      await user.keyboard("20");
+      expect(year().textContent).toBe("0020");
+
+      await user.click(screen.getByRole("button", { name: "別處" }));
+      expect(applied()).toBe("");
+      // 焦點落定後才還原(等 blur 之後有沒有 focus 冒回來)
+      await waitFor(() => {
+        expect(screen.getByRole("group", { name: "期間起" })).toHaveTextContent(
+          "YYYY-MM-DD",
+        );
+      });
+    });
+
+    it("在欄位裡換區段、打開日曆不算離開:草稿留著,在日曆點一天照常套用", async () => {
+      const { user } = renderHarness({ initial: "2026-10-14" });
+      await user.click(await screen.findByRole("spinbutton", { name: "Year" }));
+      await user.keyboard("20");
+      await user.click(screen.getByRole("spinbutton", { name: "Day" }));
+      expect(year().textContent).toBe("0020");
+
+      await user.click(screen.getByRole("button", { name: /choose date/i }));
+      expect(year().textContent).toBe("0020");
+      await user.click(await screen.findByRole("gridcell", { name: "15" }));
+      expect(applied()).toMatch(/-15$/);
+    });
   });
 });
