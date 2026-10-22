@@ -244,9 +244,7 @@ export class ScheduleEntryLookup {
   ): Promise<Map<string, string[]>> {
     const result = new Map<string, string[]>();
     const tenantId = idOf(input.tenantId, "tenantId");
-    const demandIds = [
-      ...new Set(input.demandIds.map((id) => String(id))),
-    ].flatMap((id) =>
+    const demandIds = [...new Set(input.demandIds.map(String))].flatMap((id) =>
       Types.ObjectId.isValid(id) ? [new Types.ObjectId(id)] : [],
     );
     if (demandIds.length === 0) {

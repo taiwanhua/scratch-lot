@@ -10,6 +10,7 @@ import { ReportPeriodPicker } from "@/components/project/ReportPeriodPicker/Repo
 import type { ResolvedReportConditions } from "@/lib/project/reports/report-conditions";
 import {
   type ReportDefinition,
+  type ReportQueryInput,
   extraConditionsFor,
 } from "@/lib/project/reports/report-registry";
 
@@ -20,6 +21,8 @@ export interface ReportConditionsCardProps {
   conditions: ResolvedReportConditions;
   onChange: (conditions: ResolvedReportConditions) => void;
   today: string;
+  /** 目前條件組成的查詢 input;條件不完整 = null(給報表的自訂欄位與專屬區塊) */
+  input: ReportQueryInput | null;
   /** 有 `reports.export` 才有 [匯出 Excel] */
   canExport: boolean;
   /** 條件完整(有選分店)才能預覽 / 匯出 */
@@ -38,6 +41,7 @@ export const ReportConditionsCard = ({
   conditions,
   onChange,
   today,
+  input,
   canExport,
   isReady,
   isExporting,
@@ -47,6 +51,7 @@ export const ReportConditionsCard = ({
   const t = useTranslations("admin");
   const title = t("lotteryReports.conditions.title", { name: t(report.name) });
   const extras = extraConditionsFor(report.conditions, conditions.period.kind);
+  const { ConditionsAddon, MonthCaption } = report;
 
   return (
     <Card
@@ -65,6 +70,11 @@ export const ReportConditionsCard = ({
           }}
           kinds={report.conditions.period}
           today={today}
+          monthCaption={
+            MonthCaption === undefined
+              ? undefined
+              : (month) => <MonthCaption month={month} input={input} />
+          }
         />
         {extras.length > 0 && (
           <Stack spacing={1}>
@@ -79,9 +89,19 @@ export const ReportConditionsCard = ({
                     extra: { ...conditions.extra, [condition.key]: value },
                   });
                 }}
+                orgIds={conditions.orgIds}
+                input={input}
               />
             ))}
           </Stack>
+        )}
+        {ConditionsAddon !== undefined && (
+          <ConditionsAddon
+            input={input}
+            periodKind={conditions.period.kind}
+            periodDate={conditions.period.date}
+            extra={conditions.extra}
+          />
         )}
         <OrgTreeSelect
           label={t("lotteryReports.conditions.orgs")}

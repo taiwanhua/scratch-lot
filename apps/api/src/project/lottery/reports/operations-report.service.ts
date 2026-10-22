@@ -52,7 +52,6 @@ import type {
 } from "./models/operations-report.model";
 import {
   PostCloseCorrections,
-  type PostCloseRow,
   postCloseByCategory,
 } from "./post-close-corrections";
 import {
@@ -102,7 +101,15 @@ const NORMAL_ROUTE: Readonly<Record<string, { from?: string; to?: string }>> = {
   [CASH_MOVEMENT_TYPE.refund]: { to: "external" },
 };
 
-type EventRow = {
+/** 待結清的「單據種類|待結清種類」→ 區塊 7 的欄位(調貨單收款方的待退不列)。 */
+const OUTSTANDING_FIELDS: Readonly<Record<string, string>> = {
+  "purchase|to_pay": "purchaseToPay",
+  "purchase|to_refund": "purchaseToRefund",
+  "transfer|to_receive": "transferToReceive",
+  "transfer|to_pay": "transferToPay",
+};
+
+interface EventRow {
   _id: Types.ObjectId;
   ticketId: Types.ObjectId;
   bookId: Types.ObjectId;
@@ -112,7 +119,7 @@ type EventRow = {
   cost: number | null;
   reasonKey: string | null;
   at: Date;
-};
+}
 
 const qty = (count = 0, amount = 0): LotteryReportQtyModel => ({
   count,
@@ -349,7 +356,8 @@ export class OperationsReportService {
         .map(([reasonKey, row]) => ({
           reasonKey,
           reason: reasonLabels.get(reasonKey) ?? reasonKey,
-          ...row,
+          count: row.count,
+          amount: row.amount,
         }))
         .toSorted((a, b) => a.reason.localeCompare(b.reason, "zh-Hant")),
       stocktake,
@@ -679,7 +687,7 @@ export class OperationsReportService {
           (sum, row) => sum + row.difference,
           0,
         ),
-        postClose: postCloseByCategory(current as PostCloseRow[]),
+        postClose: postCloseByCategory(current),
         refund: net(CASH_MOVEMENT_TYPE.refund),
         transferExpense: net(CASH_MOVEMENT_TYPE.transferOut),
         transferIncome: net(CASH_MOVEMENT_TYPE.transferIn),
@@ -727,11 +735,9 @@ export class OperationsReportService {
       { select: "ticketId at", sort: { at: 1, _id: 1 } },
     );
     return undos.flatMap((undo) => {
-      const original = sales
-        .filter(
-          (sale) => sale.ticketId.equals(undo.ticketId) && sale.at <= undo.at,
-        )
-        .at(-1);
+      const original = sales.findLast(
+        (sale) => sale.ticketId.equals(undo.ticketId) && sale.at <= undo.at,
+      );
       return original !== undefined &&
         isPriorPeriodOf(scope, closedAt, original.at, undo.at)
         ? [{ amount: -undo.amount }]
@@ -885,22 +891,21 @@ export class OperationsReportService {
         transferToReceive: 0,
         transferToPay: 0,
       };
+      if (!scope.storeIds.some((id) => id.equals(period.orgId))) {
+        return result;
+      }
       for (const row of rows) {
         const submittedAt = row.snapshot.submission.submittedAt;
+        const field = OUTSTANDING_FIELDS[
+          `${row.snapshot.registration.kind}|${row.kind}`
+        ] as keyof LotteryOperationsOutstandingModel | undefined;
         if (
-          !row.branchOrgId.equals(period.orgId) ||
-          submittedAt === null ||
-          submittedAt >= period.to ||
-          !scope.storeIds.some((id) => id.equals(period.orgId))
+          field !== undefined &&
+          row.branchOrgId.equals(period.orgId) &&
+          submittedAt !== null &&
+          submittedAt < period.to
         ) {
-          continue;
-        }
-        if (row.snapshot.registration.kind === "purchase") {
-          if (row.kind === "to_pay") result.purchaseToPay += row.amount;
-          if (row.kind === "to_refund") result.purchaseToRefund += row.amount;
-        } else {
-          if (row.kind === "to_receive") result.transferToReceive += row.amount;
-          if (row.kind === "to_pay") result.transferToPay += row.amount;
+          result[field] += row.amount;
         }
       }
       return result;
@@ -967,25 +972,24 @@ const periodModelOf = (period: StorePeriod) => ({
 const signedCorrection = (row: { from: string; to: string; amount: number }) =>
   row.from === "external" ? row.amount : -row.amount;
 
-/** 沒有 `reports.show-cost`:成本與毛利相關欄位一律 null(api 不送出,不只是畫面不顯示)。 */
+/**
+ * 沒有 `reports.show-cost`:成本與毛利相關欄位一律 null(api 不送出,不只是畫面不顯示)。
+ * 直接改這次查詢剛組好的物件(沒有共用)。
+ */
 function withoutCost(
   store: LotteryOperationsStoreModel,
 ): LotteryOperationsStoreModel {
-  return {
-    ...store,
-    sales: {
-      ...store.sales,
-      cost: null,
-      games: store.sales.games.map((game) => ({ ...game, cost: null })),
-    },
-    inventory: {
-      ...store.inventory,
-      purchaseCost: null,
-      transferGain: null,
-      scrapCost: null,
-      lostCost: null,
-      recoveredCost: null,
-      endingCost: null,
-    },
-  };
+  store.sales.cost = null;
+  for (const game of store.sales.games) {
+    game.cost = null;
+  }
+  Object.assign(store.inventory, {
+    purchaseCost: null,
+    transferGain: null,
+    scrapCost: null,
+    lostCost: null,
+    recoveredCost: null,
+    endingCost: null,
+  });
+  return store;
 }

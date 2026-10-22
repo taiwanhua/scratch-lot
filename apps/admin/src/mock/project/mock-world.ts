@@ -34,6 +34,7 @@ import {
 import { purchasingWorld } from "@/test/msw/project/lottery/purchasing-handlers";
 import { receiptLinksHandlers } from "@/test/msw/project/lottery/receipt-links-handlers";
 import { redemptionWorld } from "@/test/msw/project/lottery/redemption-handlers";
+import { reportsWorld } from "@/test/msw/project/lottery/reports-handlers";
 import {
   stocktakeFormWorld,
   stocktakeWorkflowWorld,
@@ -225,6 +226,8 @@ export const projectMockWorld: ProjectMockWorld = {
     // 查工作沿用印表機管理那一個(每個操作只能有一個 handler)
     // 58mm 單據 QR code 的頁面路由
     ...receiptLinksHandlers(),
+    // 輸出報表:營運報表(Figma RE-01–RE-04 的示範數字,9 月已關帳)、班次結帳歷史報表(RE-05 的兩列)
+    ...reportsWorld().handlers,
     ...printButtonWorld().handlers.filter(
       ({ info }) => info.operationName !== "PrintJob",
     ),

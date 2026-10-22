@@ -736,6 +736,160 @@
       "VALIDATION_FAILED": "條件不完整,請檢查期間與分店。",
       "FORBIDDEN": "你沒有這張報表的權限。",
       "UNEXPECTED": "報表產生失敗,請稍後再試。"
+    },
+    "extra": {
+      "alignDailyClose": "對齊日結(每家店用「上一次日結 ~ 當天日結」)",
+      "cashPoint": "收銀點",
+      "onlyWithDifference": "只看有差額"
+    },
+    "operations": {
+      "blocks": {
+        "sales": "1 銷售",
+        "profit": "2 毛利",
+        "redemption": "3 兌獎",
+        "inventory": "4 庫存異動",
+        "cash": "5 現金",
+        "bank": "6 銀行",
+        "outstanding": "7 未結清",
+        "notes": "8 註記",
+        "games": "1 銷售 · 依遊戲展開"
+      },
+      "postClose": {
+        "redemption": "兌獎更正",
+        "stocktake": "盤點補登",
+        "refund": "退貨退款",
+        "cashCorrection": "現金更正",
+        "other": "其他"
+      },
+      "bankTypes": {
+        "deposit": "存入",
+        "withdrawal": "提款",
+        "redemption_income": "兌獎入帳",
+        "purchase_income": "批貨收入",
+        "purchase_expense": "批貨支出",
+        "transfer_income": "調貨收入",
+        "transfer_expense": "調貨支出",
+        "license_rent": "牌租",
+        "adjustment": "調整",
+        "other": "其他"
+      },
+      "units": {
+        "tickets": "張",
+        "records": "筆",
+        "books": "本",
+        "shifts": "班",
+        "times": "次"
+      },
+      "items": {
+        "columns": {
+          "block": "區塊",
+          "item": "項目",
+          "count": "數量",
+          "amount": "金額",
+          "note": "說明"
+        },
+        "scan": "刷條碼售出",
+        "manual": "手動標記 · {reason}",
+        "stocktake": "盤點補登",
+        "undo": "撤銷",
+        "net": "淨銷售",
+        "soldCost": "已售成本",
+        "grossProfit": "毛利",
+        "redemptionValid": "兌獎(扣掉已撤銷)",
+        "redemptionInStore": "店內持有",
+        "redemptionSent": "已送兌",
+        "redemptionRevoked": "已撤銷(另列)",
+        "purchase": "進貨",
+        "books": "{count} 本",
+        "transferIn": "調入(調貨金額)",
+        "transferOut": "調出(調貨金額)",
+        "transferGain": "調貨損益",
+        "scrap": "報廢(批購成本)",
+        "lost": "遺失(批購成本)",
+        "recovered": "尋回(批購成本)",
+        "skipped": "跳號",
+        "noCost": "不計成本",
+        "ending": "期末庫存",
+        "investigating": "待查",
+        "shiftDifference": "各班結帳差額合計",
+        "postClose": "事後更正 · {category}",
+        "postCloseNone": "事後更正",
+        "refund": "退貨退款",
+        "transferExpense": "調貨支出(現金)",
+        "transferIncome": "調貨收入(現金)",
+        "deposit": "投庫",
+        "bankDeposit": "存銀行",
+        "vaultDifference": "日結的小金庫差異",
+        "sharedAccount": "{label}(共用)",
+        "bankType": "{account} · {type}",
+        "bankBalance": "{account} · 期末餘額(整個帳戶)",
+        "purchaseToPay": "待付批貨款",
+        "purchaseToRefund": "待退批貨款",
+        "transferToReceive": "待收調貨款",
+        "transferToPay": "待付調貨款",
+        "skippedStocktakes": "跳過盤點",
+        "reasonCount": "{reason} {count} 次",
+        "uncountedBooks": "盤點未盤",
+        "uncountedNote": "{books} 本未盤({stocktakes} 張盤點單)",
+        "uncoveredShifts": "沒有被日結涵蓋計算的班",
+        "priorPeriod": "前期更正",
+        "openMonths": "尚未關帳",
+        "allClosed": "無(期間都已關帳)",
+        "game": "{code} {name} · {price}",
+        "gameNote": "售出 {sold} · 撤銷 {undone}",
+        "alignedPeriod": "本店期間 {from} ~ {to}(對齊日結)",
+        "fullDayNote": "{store} {date} 未日結,期間改用整天,小金庫和盤點未核對",
+        "thisStore": "本店",
+        "monthClosed": "已關帳:數字固定;之後的更正列在報表的「前期更正」",
+        "monthOpen": "尚未關帳:數字可能還會變動"
+      },
+      "closing": {
+        "closed": "已關帳",
+        "open": "尚未關帳",
+        "closedHint": "{month} 月已關帳:數字固定;之後的更正列在報表的「前期更正」。"
+      },
+      "alignment": {
+        "warning": "不要把多天的日報加總當成週報或月報;要看一週請選「週」。",
+        "tableAria": "各分店實際期間",
+        "store": "分店",
+        "period": "實際期間",
+        "note": "註記",
+        "loading": "選了分店就會列出各店實際期間"
+      }
+    },
+    "shiftCheckouts": {
+      "columns": {
+        "store": "分店",
+        "date": "日期",
+        "cashPoint": "收銀點",
+        "leader": "負責人",
+        "helpers": "協同",
+        "task": "任務內容",
+        "time": "開班 / 結帳",
+        "expected": "應有",
+        "counted": "實點",
+        "difference": "差額",
+        "reason": "原因",
+        "postClose": "事後更正",
+        "stocktake": "盤點",
+        "status": "審核"
+      },
+      "status": {
+        "pending": "待審核",
+        "confirmed": "已核准",
+        "returned": "已退回"
+      },
+      "roles": {
+        "leader": "負責",
+        "helper": "協同"
+      },
+      "stocktake": {
+        "skipped": "未盤點(跳過)",
+        "skippedWithReason": "未盤點(跳過):{reason}",
+        "uncounted": "{count} 本未盤"
+      },
+      "noTask": "未對應排班",
+      "allCashPoints": "全部"
     }
   },
   "schedule": {

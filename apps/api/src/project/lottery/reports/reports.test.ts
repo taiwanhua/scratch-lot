@@ -233,6 +233,24 @@ const dayOf = (date: string) => ({
   to: new Date(taipei(date).getTime() + 86_400_000).toISOString(),
 });
 
+/** 售出事件的金額與現金影響。 */
+const sale = (amount: number, extra: Record<string, unknown> = {}) => ({
+  amount,
+  cashEffect: "increase",
+  ...extra,
+});
+
+/** 清單的第 N 筆(測試資料一定有;沒有就讓測試直接失敗)。 */
+function nth<Item>(list: readonly Item[], index: number): Item {
+  const item = list[index];
+  if (item === undefined) {
+    throw new Error(`missing item ${String(index)}`);
+  }
+  return item;
+}
+
+const firstOf = <Item>(list: readonly Item[]): Item => nth(list, 0);
+
 /**
  * 營運報表、班次結帳歷史報表(規格第 11 章;票面 P29 的驗收條件):打真的 GraphQL 端點,對真 MongoDB(TEST-07)。
  * 張、事件、班、結帳單、兌獎、流水、交易直接寫成資料(各功能的寫入已在自己的測試驗過),報表只讀。
@@ -289,7 +307,7 @@ describe("輸出報表:營運報表、班次結帳歷史報表(GraphQL 端點 + 
     const { insertedId } = await connection
       .collection(collection)
       .insertOne({ tenantId: tenant, ...doc, ...base() });
-    return insertedId as Types.ObjectId;
+    return insertedId;
   };
 
   async function shiftOf(input: {
@@ -946,11 +964,6 @@ describe("輸出報表:營運報表、班次結帳歷史報表(GraphQL 端點 + 
       };
       const unsold = { status: "unsold", locationKind: "stock" };
       const sold = { status: "sold", locationKind: "counter" };
-      const sale = (amount: number, extra: Record<string, unknown> = {}) => ({
-        amount,
-        cashEffect: "increase",
-        ...extra,
-      });
 
       // 本 1(5164,成本 3,000、20 張、單張 150):今天進貨
       const b1: Types.ObjectId[] = [];
@@ -993,12 +1006,12 @@ describe("輸出報表:營運報表、班次結帳歷史報表(GraphQL 端點 + 
         cashEffect: "decrease",
       });
       // 跳號 #20(不計成本)、報廢 #19(成本快照 150)、遺失 #18、尋回 #17、待查 #16
-      await event(b1[19] as Types.ObjectId, book1, game1, "skip", at("11:00"), {
+      await event(nth(b1, 19), book1, game1, "skip", at("11:00"), {
         status: "skipped",
         locationKind: "stock",
       });
       await event(
-        b1[18] as Types.ObjectId,
+        nth(b1, 18),
         book1,
         game1,
         "scrap",
@@ -1006,26 +1019,15 @@ describe("輸出報表:營運報表、班次結帳歷史報表(GraphQL 端點 + 
         { status: "scrapped", locationKind: "stock" },
         { cost: 150 },
       );
-      await event(b1[17] as Types.ObjectId, book1, game1, "lose", at("11:10"), {
+      await event(nth(b1, 17), book1, game1, "lose", at("11:10"), {
         status: "lost",
         locationKind: "stock",
       });
-      await event(
-        b1[16] as Types.ObjectId,
-        book1,
-        game1,
-        "recover",
-        at("11:15"),
-        unsold,
-      );
-      await event(
-        b1[15] as Types.ObjectId,
-        book1,
-        game1,
-        "investigate",
-        at("11:20"),
-        { status: "investigating", locationKind: "stock" },
-      );
+      await event(nth(b1, 16), book1, game1, "recover", at("11:15"), unsold);
+      await event(nth(b1, 15), book1, game1, "investigate", at("11:20"), {
+        status: "investigating",
+        locationKind: "stock",
+      });
 
       // 本 2(5201,成本 900、10 張、單張 90):10/1 進貨;今天賣 1 張、調出 2 張給中山店
       const b2: Types.ObjectId[] = [];
@@ -1042,7 +1044,7 @@ describe("輸出報表:營運報表、班次結帳歷史報表(GraphQL 端點 + 
         );
       }
       await event(
-        b2[0] as Types.ObjectId,
+        nth(b2, 0),
         book2,
         game2,
         "sale",
@@ -1202,7 +1204,7 @@ describe("輸出報表:營運報表、班次結帳歷史報表(GraphQL 端點 + 
         accountNo: "0001234512345",
         accountName: "台灣銀行",
         label: "台灣銀行 末 12345",
-        openingBalance: 10000,
+        openingBalance: 10_000,
         openingDate: taipei("2026-09-01"),
         status: "active",
         shareOrgs: [{ orgId: tenant, includeDescendants: true }],
@@ -1265,8 +1267,10 @@ describe("輸出報表:營運報表、班次結帳歷史報表(GraphQL 端點 + 
       });
 
       const input = { ...dayOf(day), orgIds: [String(taichung)] };
-      report = (await operations(hq, input)).stores[0] as Store;
-      withoutCost = (await operations(noCost, input)).stores[0] as Store;
+      const full = await operations(hq, input);
+      const limited = await operations(noCost, input);
+      report = firstOf(full.stores);
+      withoutCost = firstOf(limited.stores);
     });
 
     it("區塊 1 銷售:刷條碼、手動(依原因)、盤點補登、撤銷、淨銷售;依遊戲展開", () => {
@@ -1361,7 +1365,7 @@ describe("輸出報表:營運報表、班次結帳歷史報表(GraphQL 端點 + 
             { type: "deposit", direction: "in", amount: 1000 },
             { type: "purchase_expense", direction: "out", amount: 3000 },
           ],
-          endingBalance: 10000 + 1000 - 3000 + 500,
+          endingBalance: 10_000 + 1000 - 3000 + 500,
         },
       ]);
     });

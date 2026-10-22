@@ -736,6 +736,160 @@
       "VALIDATION_FAILED": "The conditions are incomplete. Check the period and branches.",
       "FORBIDDEN": "You don't have permission for this report.",
       "UNEXPECTED": "Couldn't generate the report. Please try again later."
+    },
+    "extra": {
+      "alignDailyClose": "Align with daily close (each store uses previous close ~ close of the day)",
+      "cashPoint": "Cash point",
+      "onlyWithDifference": "Only with differences"
+    },
+    "operations": {
+      "blocks": {
+        "sales": "1 Sales",
+        "profit": "2 Gross profit",
+        "redemption": "3 Prize redemption",
+        "inventory": "4 Inventory changes",
+        "cash": "5 Cash",
+        "bank": "6 Bank",
+        "outstanding": "7 Outstanding",
+        "notes": "8 Notes",
+        "games": "1 Sales · by game"
+      },
+      "postClose": {
+        "redemption": "Redemption correction",
+        "stocktake": "Stocktake backfill",
+        "refund": "Return refund",
+        "cashCorrection": "Cash correction",
+        "other": "Other"
+      },
+      "bankTypes": {
+        "deposit": "Deposit",
+        "withdrawal": "Withdrawal",
+        "redemption_income": "Redemption income",
+        "purchase_income": "Purchase income",
+        "purchase_expense": "Purchase expense",
+        "transfer_income": "Transfer income",
+        "transfer_expense": "Transfer expense",
+        "license_rent": "License rent",
+        "adjustment": "Adjustment",
+        "other": "Other"
+      },
+      "units": {
+        "tickets": "tickets",
+        "records": "records",
+        "books": "books",
+        "shifts": "shifts",
+        "times": "times"
+      },
+      "items": {
+        "columns": {
+          "block": "Block",
+          "item": "Item",
+          "count": "Quantity",
+          "amount": "Amount",
+          "note": "Note"
+        },
+        "scan": "Scanned sales",
+        "manual": "Manual · {reason}",
+        "stocktake": "Stocktake backfill",
+        "undo": "Undone",
+        "net": "Net sales",
+        "soldCost": "Cost of sold tickets",
+        "grossProfit": "Gross profit",
+        "redemptionValid": "Redemptions (excl. revoked)",
+        "redemptionInStore": "Held in store",
+        "redemptionSent": "Sent for claim",
+        "redemptionRevoked": "Revoked (listed separately)",
+        "purchase": "Purchased",
+        "books": "{count} books",
+        "transferIn": "Transferred in (transfer amount)",
+        "transferOut": "Transferred out (transfer amount)",
+        "transferGain": "Transfer gain / loss",
+        "scrap": "Scrapped (cost)",
+        "lost": "Lost (cost)",
+        "recovered": "Recovered (cost)",
+        "skipped": "Skipped numbers",
+        "noCost": "No cost",
+        "ending": "Ending stock",
+        "investigating": "Under investigation",
+        "shiftDifference": "Shift checkout differences",
+        "postClose": "Post-close correction · {category}",
+        "postCloseNone": "Post-close corrections",
+        "refund": "Return refunds",
+        "transferExpense": "Transfer expense (cash)",
+        "transferIncome": "Transfer income (cash)",
+        "deposit": "Deposited to vault",
+        "bankDeposit": "Deposited to bank",
+        "vaultDifference": "Daily close vault difference",
+        "sharedAccount": "{label} (shared)",
+        "bankType": "{account} · {type}",
+        "bankBalance": "{account} · ending balance (whole account)",
+        "purchaseToPay": "Purchase payment due",
+        "purchaseToRefund": "Purchase refund due",
+        "transferToReceive": "Transfer payment to receive",
+        "transferToPay": "Transfer payment due",
+        "skippedStocktakes": "Skipped stocktakes",
+        "reasonCount": "{reason} x{count}",
+        "uncountedBooks": "Uncounted books",
+        "uncountedNote": "{books} books uncounted ({stocktakes} stocktakes)",
+        "uncoveredShifts": "Shifts not covered by a daily close",
+        "priorPeriod": "Prior-period corrections",
+        "openMonths": "Not yet closed",
+        "allClosed": "None (all closed)",
+        "game": "{code} {name} · {price}",
+        "gameNote": "Sold {sold} · undone {undone}",
+        "alignedPeriod": "Store period {from} ~ {to} (aligned with daily close)",
+        "fullDayNote": "{store} had no daily close on {date}; the whole day is used and the vault and stocktake are not reconciled",
+        "thisStore": "This store",
+        "monthClosed": "Closed: figures are fixed; later corrections appear under prior-period corrections",
+        "monthOpen": "Not yet closed: figures may still change"
+      },
+      "closing": {
+        "closed": "Closed",
+        "open": "Not closed",
+        "closedHint": "Month {month} is closed: figures are fixed; later corrections appear under prior-period corrections."
+      },
+      "alignment": {
+        "warning": "Do not add up several daily reports as a weekly or monthly report; choose Week to see a week.",
+        "tableAria": "Actual period per store",
+        "store": "Store",
+        "period": "Actual period",
+        "note": "Note",
+        "loading": "Choose stores to list the actual period of each store"
+      }
+    },
+    "shiftCheckouts": {
+      "columns": {
+        "store": "Store",
+        "date": "Date",
+        "cashPoint": "Cash point",
+        "leader": "Lead",
+        "helpers": "Helpers",
+        "task": "Task",
+        "time": "Open / checkout",
+        "expected": "Expected",
+        "counted": "Counted",
+        "difference": "Difference",
+        "reason": "Reason",
+        "postClose": "Post-close",
+        "stocktake": "Stocktake",
+        "status": "Review"
+      },
+      "status": {
+        "pending": "Pending",
+        "confirmed": "Approved",
+        "returned": "Returned"
+      },
+      "roles": {
+        "leader": "Lead",
+        "helper": "Helper"
+      },
+      "stocktake": {
+        "skipped": "Not counted (skipped)",
+        "skippedWithReason": "Not counted (skipped): {reason}",
+        "uncounted": "{count} books uncounted"
+      },
+      "noTask": "No matching schedule",
+      "allCashPoints": "All"
     }
   },
   "schedule": {

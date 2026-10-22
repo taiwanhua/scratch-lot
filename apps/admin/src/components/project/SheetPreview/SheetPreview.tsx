@@ -1,3 +1,4 @@
+import type { ComponentType } from "react";
 import { useTranslations } from "use-intl";
 
 import { Box } from "@repo/ui/box";
@@ -14,6 +15,8 @@ export interface SheetPreviewProps {
   /** 目前顯示第幾個工作表(0 起);超出範圍時顯示第一個 */
   value: number;
   onChange: (index: number) => void;
+  /** 工作表的畫法(例:區塊卡片);不給 = 表格。頁籤、說明照舊 */
+  Body?: ComponentType<{ sheet: SheetData }>;
 }
 
 type SheetRow = Readonly<Record<string, SheetCell>> & { rowIndex: number };
@@ -34,6 +37,7 @@ export const SheetPreview = ({
   sheets,
   value,
   onChange,
+  Body,
 }: SheetPreviewProps) => {
   const t = useTranslations("admin.lotteryReports.sheetPreview");
   const index = value >= 0 && value < sheets.length ? value : 0;
@@ -80,14 +84,18 @@ export const SheetPreview = ({
               {note}
             </Typography>
           ))}
-          <Table
-            aria-label={sheet.name}
-            columns={columns}
-            rows={rows}
-            getRowKey={(row) => String(row.rowIndex)}
-            emptyMessage={t("empty")}
-            size="small"
-          />
+          {Body === undefined ? (
+            <Table
+              aria-label={sheet.name}
+              columns={columns}
+              rows={rows}
+              getRowKey={(row) => String(row.rowIndex)}
+              emptyMessage={t("empty")}
+              size="small"
+            />
+          ) : (
+            <Body sheet={sheet} />
+          )}
         </Stack>
       </Box>
     </Stack>

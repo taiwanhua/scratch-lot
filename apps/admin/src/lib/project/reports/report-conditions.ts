@@ -51,6 +51,9 @@ const extraValueOf = (
   if (condition.type === "boolean") {
     return typeof raw === "boolean" ? raw : defaultExtraValue(condition);
   }
+  if (condition.type === "custom") {
+    return typeof raw === "string" ? raw : defaultExtraValue(condition);
+  }
   return typeof raw === "string" &&
     condition.options.some((option) => option.value === raw)
     ? raw

@@ -1,3 +1,4 @@
+import type { ComponentType } from "react";
 import { useTranslations } from "use-intl";
 
 import { Button } from "@repo/ui/button";
@@ -8,6 +9,7 @@ import { Typography } from "@repo/ui/typography";
 
 import { SheetPreview } from "@/components/project/SheetPreview/SheetPreview";
 import type { SheetData } from "@/lib/project/reports/excel";
+import type { ReportSheetBodyProps } from "@/lib/project/reports/report-registry";
 
 export interface ReportPreviewPanelProps {
   /** 「營運報表 · 2026-10-16」 */
@@ -16,6 +18,8 @@ export interface ReportPreviewPanelProps {
   orgNames: readonly string[];
   /** 還沒查到(或查詢失敗,錯誤由頁面顯示)是 `null` */
   sheets: readonly SheetData[] | null;
+  /** 報表自己的預覽畫法(不給 = 通用表格) */
+  SheetBody?: ComponentType<ReportSheetBodyProps>;
   isLoading: boolean;
   sheetIndex: number;
   onSheetChange: (index: number) => void;
@@ -33,6 +37,7 @@ export const ReportPreviewPanel = ({
   title,
   orgNames,
   sheets,
+  SheetBody,
   isLoading,
   sheetIndex,
   onSheetChange,
@@ -92,6 +97,7 @@ export const ReportPreviewPanel = ({
             sheets={sheets}
             value={sheetIndex}
             onChange={onSheetChange}
+            Body={SheetBody}
           />
         )}
       </Card>

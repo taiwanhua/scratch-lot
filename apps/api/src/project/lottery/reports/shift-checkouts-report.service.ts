@@ -221,24 +221,21 @@ export class ShiftCheckoutsReportService {
     positions: Map<string, string>;
     tasks: Map<string, string>;
   }> {
-    const [positions, tasks] = await Promise.all(
-      [
-        SCHEDULE_FIELD_CATEGORY_KEYS.position,
-        SCHEDULE_FIELD_CATEGORY_KEYS.task,
-      ].map(
-        async (category) =>
-          new Map(
-            (
-              await this.fieldOptions.optionsOf(
-                operator,
-                category,
-                SCHEDULE_LABEL_CATEGORIES,
-              )
-            ).map((option) => [option.value, option.label]),
-          ),
-      ),
-    );
-    return { positions: positions ?? new Map(), tasks: tasks ?? new Map() };
+    const labelsOf = async (category: string) => {
+      const options = await this.fieldOptions.optionsOf(
+        operator,
+        category,
+        SCHEDULE_LABEL_CATEGORIES,
+      );
+      return new Map<string, string>(
+        options.map((option) => [option.value, option.label]),
+      );
+    };
+    const [positions, tasks] = await Promise.all([
+      labelsOf(SCHEDULE_FIELD_CATEGORY_KEYS.position),
+      labelsOf(SCHEDULE_FIELD_CATEGORY_KEYS.task),
+    ]);
+    return { positions, tasks };
   }
 }
 
