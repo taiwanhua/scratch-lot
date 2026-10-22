@@ -587,6 +587,40 @@ describe("每一關指定組織跳過與自動通過", () => {
       ).toMatchObject({ "second-1": "pending" });
     });
 
+    it("申請人退回自己的單後重新送出 → 新一輪照樣派給申請人自己審", async () => {
+      await bindNew({
+        steps: [
+          usersStep("first", [world.applicant], {
+            autoApprove: { applicant: "review" },
+          }),
+        ],
+      });
+      const submitted = await submitLeave(world);
+      await decideOn(world, world.applicant, submitted.id, "RETURN");
+      const returned = await submission(world, world.applicant, submitted.id);
+      expect(returned.status).toBe("RETURNED");
+      const saved = await ok<{
+        saveFormDraft: { submission: WfSubmissionRow };
+      }>(api, world.applicant.token, SAVE_SUBMISSION, {
+        input: {
+          id: submitted.id,
+          expectedEditVersion: returned.editVersion,
+          values: { title: "改過了", days: 3 },
+        },
+      });
+      await submitExisting(world, saved.saveFormDraft.submission);
+      const instance = await latestInstance(submitted.id);
+      const first = stepIn(instance, "first");
+      expect(instance.status).toBe("running");
+      expect(first.status).toBe("active");
+      expect(first.plan.map((item) => String(item.assigneeId))).toEqual([
+        String(world.applicant.userId),
+      ]);
+      await decideOn(world, world.applicant, submitted.id, "APPROVE");
+      const done = await submission(world, world.applicant, submitted.id);
+      expect(done.status).toBe("COMPLETED");
+    });
+
     it("主管來源:主管本人送出 → 照舊往上一層找(照常審核不影響主管解析)", async () => {
       await setManagers(api, world.kitchen, [world.applicant.userId]);
       await bindNew({
