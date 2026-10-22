@@ -1600,6 +1600,152 @@ describe("帳戶管理(GraphQL 端點 + 真 MongoDB)", () => {
       ).toBe(0);
     });
 
+    it("從小金庫付現:審核中日結要存入的錢先扣;同一家店同時兩筆只過一筆", async () => {
+      const doc = await insertTestSubmission(api.connection, {
+        orgId: storeA,
+        tenantId: tenantA,
+        moduleKey: TEST_TRANSFER,
+        values: {
+          payable: 8000,
+          store: String(storeA),
+          shipper: String(storeB),
+          docNo: "T-0010",
+        },
+      });
+      const payCash = (amount: number) =>
+        api.graphql(
+          RECORD_SETTLEMENT,
+          {
+            input: {
+              moduleKey: TEST_TRANSFER,
+              refId: String(doc),
+              side: "receiver",
+              button: "out",
+              method: "cash",
+              cashSource: "vault",
+              handler: "送貨人",
+              amount,
+            },
+          },
+          { accessToken: hq },
+        );
+      // 小金庫 5,000,其中 2,000 是審核中的日結要存入銀行的 → 能付 3,000
+      await fillVault(storeA, 5000);
+      const now = new Date();
+      const checkout = await api.connection
+        .collection("lottery_checkouts")
+        .insertOne({
+          orgId: storeA,
+          tenantId: tenantA,
+          type: "daily",
+          status: "pending",
+          bankDepositAmount: 2000,
+          moduleKey: "store",
+          createdAt: now,
+          updatedAt: now,
+          createdBy: null,
+          updatedBy: null,
+          deletedAt: null,
+        });
+      try {
+        const over = await payCash(3001);
+        expect(over.errors?.[0]?.extensions).toMatchObject({
+          code: "VALIDATION_FAILED",
+          fields: ["amount"],
+          reason: "AMOUNT_EXCEEDS_VAULT",
+        });
+        // 同時兩筆 2,000(合計超過 3,000):在同一個守門文件上序列化,只有一筆成功
+        const results = await Promise.all([payCash(2000), payCash(2000)]);
+        expect(
+          results.filter((result) => result.errors === undefined),
+        ).toHaveLength(1);
+        expect(
+          results.find((result) => result.errors !== undefined)?.errors?.[0]
+            ?.extensions,
+        ).toMatchObject({ reason: "AMOUNT_EXCEEDS_VAULT" });
+        expect(
+          await api.connection
+            .collection("lottery_cash_movements")
+            .countDocuments({ refId: doc }),
+        ).toBe(1);
+      } finally {
+        await api.connection
+          .collection("lottery_checkouts")
+          .deleteOne({ _id: checkout.insertedId });
+      }
+    });
+
+    it("沖正一筆錢進小金庫的收付 = 從小金庫拿錢:超過小金庫應有擋下,剛好等於可以", async () => {
+      const account = await create({
+        accountNo: "0005-00007",
+        shareOrgs: [{ orgId: String(tenantA), includeDescendants: true }],
+      });
+      const doc = await insertTestSubmission(api.connection, {
+        orgId: storeA,
+        tenantId: tenantA,
+        moduleKey: TEST_TRANSFER,
+        values: {
+          payable: 1000,
+          store: String(storeA),
+          shipper: String(storeB),
+          docNo: "T-0011",
+        },
+      });
+      const record = (input: Record<string, unknown>) =>
+        ok(api, hq, RECORD_SETTLEMENT, {
+          input: {
+            moduleKey: TEST_TRANSFER,
+            refId: String(doc),
+            side: "receiver",
+            ...input,
+          },
+        });
+      // 收貨店多付 2,000(銀行)→ [收到退款] 2,000 收現金進小金庫
+      await record({
+        button: "out",
+        method: "bank",
+        accountId: account.id,
+        amount: 3000,
+      });
+      await record({
+        button: "in",
+        method: "cash",
+        cashSource: "vault",
+        handler: "送貨人",
+        amount: 2000,
+      });
+      const recorded = await settlement(TEST_TRANSFER, doc);
+      const refund = recorded.records.find((row) => row.method === "cash");
+      if (refund === undefined) throw new Error("缺收到退款的現金那一筆");
+      const reverse = () =>
+        api.graphql(
+          REVERSE_SETTLEMENT,
+          { input: { method: "cash", id: refund.id, reason: "記錯" } },
+          { accessToken: hq },
+        );
+      // 錢已經被拿走一部分:小金庫只剩 1,999 → 沖正 2,000 擋下,一筆都不寫
+      await fillVault(storeA, 1999);
+      const blocked = await reverse();
+      expect(blocked.errors?.[0]?.extensions).toMatchObject({
+        code: "VALIDATION_FAILED",
+        reason: "AMOUNT_EXCEEDS_VAULT",
+      });
+      expect(
+        await api.connection
+          .collection("lottery_cash_movements")
+          .countDocuments({ refId: doc }),
+      ).toBe(1);
+      // 剛好 2,000 → 可以沖正,小金庫歸 0
+      await fillVault(storeA, 2000);
+      const reversed = await reverse();
+      expect(reversed.errors).toBeUndefined();
+      const operator = await operatorOf(api, tenantA);
+      const vault = await api.app
+        .get(CashLedgerService)
+        .vaultExpected(operator, tenantA, storeA);
+      expect(vault.amount).toBe(0);
+    });
+
     it("收付沖正不能跨店:記帳分店不在可見範圍 → NOT_FOUND;同一筆同時沖正只有一個成功", async () => {
       const account = await create({
         accountNo: "0005-00004",

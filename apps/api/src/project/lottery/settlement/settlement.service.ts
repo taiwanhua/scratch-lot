@@ -487,7 +487,22 @@ export class SettlementService {
       await this.access.grantOf(operator),
       { ...original, id: input.id },
     );
+    // 沖正一筆「錢進小金庫」的收付 = 從小金庫拿錢:不能超過小金庫應有(與出庫、付現同一個守門文件;規格 9)
+    const vaultOut = original.method === "cash" ? original.vaultIn : null;
+    if (vaultOut !== null) {
+      await this.vault.prepare(operator, vaultOut.orgId);
+    }
     await this.tx.withTransaction(async (session) => {
+      if (vaultOut !== null) {
+        await this.vault.assertCovers(
+          session,
+          operator,
+          vaultOut.tenantId,
+          vaultOut.orgId,
+          vaultOut.amount,
+          "id",
+        );
+      }
       if (original.method === "cash") {
         // 現金在這一邊的分店(已確認在操作者的可見範圍內):以操作者自己的上下文寫
         const created = await this.cashLedger.reverseCashMovement(
@@ -535,7 +550,18 @@ export class SettlementService {
       refType: string;
       refId: Types.ObjectId;
       settlementSide: string;
-    } & ({ method: "cash" } | { method: "bank"; bank: BankTransactionRecord })
+    } & (
+      | {
+          method: "cash";
+          /** 這筆是錢進小金庫(沖正會從小金庫拿走這麼多);其他為 null。 */
+          vaultIn: {
+            orgId: Types.ObjectId;
+            tenantId: Types.ObjectId | null;
+            amount: number;
+          } | null;
+        }
+      | { method: "bank"; bank: BankTransactionRecord }
+    )
   > {
     const notFound = () =>
       notFoundError(`settlement record not found: ${input.id}`);
@@ -557,6 +583,10 @@ export class SettlementService {
         refId: row.refId,
         settlementSide: row.settlementSide,
         method: "cash",
+        vaultIn:
+          row.to === "vault"
+            ? { orgId: row.orgId, tenantId: row.tenantId, amount: row.amount }
+            : null,
       };
     }
     const row = await this.bank.findById(reader, id);
