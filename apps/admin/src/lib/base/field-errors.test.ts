@@ -14,8 +14,8 @@ const codeText = (code: string) => `碼 ${code}`;
 describe("欄位錯誤的原因(REACT-18)", () => {
   it("只收表單上有的欄位;每一欄寫呼叫端給的那一句", () => {
     expect(
-      fieldErrorTextsOf(["licenseNo", "id"], ["licenseNo", "name"], formatText),
-    ).toEqual({ licenseNo: "licenseNo 的格式要求" });
+      fieldErrorTextsOf(["code", "id"], ["code", "name"], formatText),
+    ).toEqual({ code: "code 的格式要求" });
     expect(fieldErrorTextsOf(undefined, ["name"], formatText)).toEqual({});
   });
 
@@ -33,22 +33,22 @@ describe("欄位錯誤的原因(REACT-18)", () => {
   it("依 reason 細分過的碼:VALIDATION_FAILED 寫格式要求,細分過的碼寫原因", () => {
     expect(
       fieldErrorsByCodeOf(
-        { code: "VALIDATION_FAILED", fields: ["bankCode"] },
-        ["bankCode", "accountNo"],
+        { code: "VALIDATION_FAILED", fields: ["group"] },
+        ["group", "code"],
         { formatText, codeText },
       ),
     ).toEqual({
-      texts: { bankCode: "bankCode 的格式要求" },
+      texts: { group: "group 的格式要求" },
       summary: "碼 VALIDATION_FAILED",
     });
     expect(
       fieldErrorsByCodeOf(
-        { code: "BANK_ACCOUNT_DUPLICATE", fields: ["accountNo"] },
-        ["bankCode", "accountNo"],
+        { code: "CODE_DUPLICATE", fields: ["code"] },
+        ["group", "code"],
         { formatText, codeText },
       ),
     ).toEqual({
-      texts: { accountNo: "碼 BANK_ACCOUNT_DUPLICATE" },
+      texts: { code: "碼 CODE_DUPLICATE" },
       summary: "碼 VALIDATION_FAILED",
     });
   });
@@ -56,8 +56,8 @@ describe("欄位錯誤的原因(REACT-18)", () => {
   it("指到多欄、各欄原因不同時由 codeOfField 指定;沒有對到欄位時提示寫原因", () => {
     expect(
       fieldErrorsByCodeOf(
-        { code: "POSITION_DUPLICATE", fields: ["positionKey", "name"] },
-        ["positionKey", "name"],
+        { code: "CODE_DUPLICATE", fields: ["code", "name"] },
+        ["code", "name"],
         {
           formatText,
           codeText,
@@ -66,15 +66,14 @@ describe("欄位錯誤的原因(REACT-18)", () => {
         },
       ).texts,
     ).toEqual({
-      positionKey: "碼 POSITION_DUPLICATE",
+      code: "碼 CODE_DUPLICATE",
       name: "碼 NAME_DUPLICATE",
     });
     expect(
-      fieldErrorsByCodeOf(
-        { code: "GAME_IN_USE", fields: ["id"] },
-        ["gameCode"],
-        { formatText, codeText },
-      ),
-    ).toEqual({ texts: {}, summary: "碼 GAME_IN_USE" });
+      fieldErrorsByCodeOf({ code: "RECORD_IN_USE", fields: ["id"] }, ["code"], {
+        formatText,
+        codeText,
+      }),
+    ).toEqual({ texts: {}, summary: "碼 RECORD_IN_USE" });
   });
 });

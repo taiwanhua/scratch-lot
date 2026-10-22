@@ -56,11 +56,11 @@ export const formErrorSummary = (
 
 /**
  * 「`VALIDATION_FAILED` 依 `reason` 細分成本頁的碼」那種錯誤解讀(`parseAdminError` 的 `refine`,
- * 例:帳戶 `BANK_ACCOUNT_DUPLICATE`、檔案管理 `GAME_CODE_DUPLICATE`)→ 欄位下的原因與頁面提示:
+ * 例:`VALIDATION_FAILED` + 重複的 reason 細分成 `CODE_DUPLICATE`)→ 欄位下的原因與頁面提示:
  *
  * - 碼還是 `VALIDATION_FAILED`(api 沒帶原因 = 格式錯 / 必填)→ 那一欄寫 `formatText(欄位)`
  * - 細分過的碼(重複、被占用…)→ 指到的欄位寫 `codeText(碼)`;同一個錯誤指到多欄、各欄原因不同時
- *   (例:同時撞崗位與名稱)由 `codeOfField` 指定那一欄用哪個碼
+ *   (例:兩欄同時撞重複)由 `codeOfField` 指定那一欄用哪個碼
  * - 提示:有欄位錯誤時 `codeText("VALIDATION_FAILED")`(通用句),否則 `codeText(碼)`
  */
 export const fieldErrorsByCodeOf = <Field extends string>(
