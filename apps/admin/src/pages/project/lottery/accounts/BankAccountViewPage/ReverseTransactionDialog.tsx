@@ -87,7 +87,7 @@ export const ReverseTransactionDialog = ({
           <Alert severity="error">{t(`errors.${errorCode}`)}</Alert>
         )}
         <Stack direction="row" sx={{ justifyContent: "space-between" }}>
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" color="textSecondary">
             {t("reverseForm.original")}
           </Typography>
           <Typography variant="body2">
@@ -111,7 +111,7 @@ export const ReverseTransactionDialog = ({
             setInvalid(false);
           }}
         />
-        <Typography variant="caption" color="text.secondary">
+        <Typography variant="caption" color="textSecondary">
           {t("reverseForm.hint")}
         </Typography>
       </Stack>

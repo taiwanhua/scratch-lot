@@ -71,7 +71,7 @@ export const FormDesigner = ({ form, onChanged }: FormDesignerProps) => {
   if (!canEdit) {
     const current = currentQuery.data?.formVersion.formVersion;
     return current === undefined ? (
-      <Typography variant="body2" color="text.secondary">
+      <Typography variant="body2" color="textSecondary">
         {t("readonlyEmpty")}
       </Typography>
     ) : (
@@ -91,7 +91,7 @@ export const FormDesigner = ({ form, onChanged }: FormDesignerProps) => {
   if (!form.hasDraft) {
     return (
       <Stack spacing={1.5} sx={{ alignItems: "flex-start" }}>
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" color="textSecondary">
           {t("noDraft")}
         </Typography>
         <Button

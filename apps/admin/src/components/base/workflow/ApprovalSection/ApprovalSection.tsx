@@ -13,14 +13,15 @@ import { Tag, type TagTone } from "@repo/ui/tag";
 import { Typography } from "@repo/ui/typography";
 
 import { useSession } from "@/hooks/base/useSession";
+import { useWorkflowExtensions } from "@/hooks/base/useWorkflowExtensions";
 import { workflowErrorOf } from "@/lib/base/workflow/workflow-errors";
 
 import { useWorkflowCache } from "../useWorkflowCache";
 import { ApplicantActions } from "./ApplicantActions";
 import { ApprovalTimeline } from "./ApprovalTimeline";
+import { MyTask } from "./MyTask";
 import { RetryAdvanceButton } from "./RetryAdvanceButton";
 import { StepProgress } from "./StepProgress";
-import { TaskActions } from "./TaskActions";
 
 const INSTANCE_TONE: Record<WorkflowInstanceStatus, TagTone> = {
   [WorkflowInstanceStatus.Running]: "primary",
@@ -44,7 +45,7 @@ export interface ApprovalSectionProps {
   onCopied?: (submissionId: string) => void;
   /**
    * 停用「核准」(駁回 / 退回照常):業務頁知道這張單現在不能核准時用(例:補打卡申請選的排班已被刪除);
-   * 只是畫面提示,api 的掛接點守門照樣擋。預設 false
+   * 只是畫面提示,api 的掛接點守門照樣擋。預設 false。模組登記的審核畫面擴充(`Review`)也能停用
    */
   approveDisabled?: boolean;
 }
@@ -54,7 +55,9 @@ export interface ApprovalSectionProps {
  *
  * - 實例狀態與阻擋標示;流程管理者可「重試推進」
  * - 關卡進度 / 分支進度(每個節點一列)
- * - 我的任務:核准 / 駁回 / 退回(理由跳窗;`STEP_CLOSED` 提示「此關已結束」並重載)
+ * - 我的任務:核准 / 駁回 / 退回(理由跳窗;`STEP_CLOSED` 提示「此關已結束」並重載);
+ *   決定被接受後通知該模組登記的審核後動作;模組登記的審核畫面擴充畫在任務上方、可停用 [核准]
+ *   (`useWorkflowExtensions`;不論這個區塊掛在申請中心或模組自己的頁面)
  * - 申請人:撤回 / 作廢 / 複製為新單
  * - 時間軸(`history`)
  */
@@ -68,6 +71,7 @@ export const ApprovalSection = ({
   const tErrors = useTranslations("admin.workflows.errors");
   const { session } = useSession();
   const refresh = useWorkflowCache();
+  const { notify } = useWorkflowExtensions();
   const [isStepClosed, setIsStepClosed] = useState(false);
   const query = useWorkflowInstanceQuery(
     session.client,
@@ -108,7 +112,7 @@ export const ApprovalSection = ({
           tone={INSTANCE_TONE[instance.status]}
           label={t(`statuses.${instance.status}`)}
         />
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" color="textSecondary">
           {t("workflowLine", {
             workflow: instance.workflowName ?? instance.workflowKey,
             version: instance.workflowVersion,
@@ -140,18 +144,25 @@ export const ApprovalSection = ({
       )}
       {isStepClosed && <Alert severity="info">{t("stepClosed")}</Alert>}
       {instance.myTasks.map((task) => (
-        <TaskActions
+        <MyTask
           key={task.id}
+          instance={instance}
           task={task}
           approveDisabled={approveDisabled}
-          allowReturn={
-            instance.steps.find((step) => step.stepKey === task.stepKey)
-              ?.allowReturn ?? false
-          }
-          onDecided={(closed) => {
+          onDecided={(closed, decision) => {
             setIsStepClosed(closed);
             refresh(instance.id);
             void query.refetch();
+            if (!closed) {
+              notify({
+                kind: "decided",
+                moduleKey: instance.moduleKey,
+                submissionId: instance.submissionId,
+                instanceId: instance.id,
+                stepKey: task.stepKey,
+                decision,
+              });
+            }
           }}
         />
       ))}

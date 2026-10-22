@@ -75,6 +75,11 @@ const DYNAMIC_KEYS: readonly { key: string; reason: string }[] = [
       "帳戶管理側欄計數的「數什麼」:由 api 側欄計數登記的 `descriptionKey` 給(`accounts-badge.ts`)",
   },
   {
+    key: "admin.lotteryStore.badgeDescription",
+    reason:
+      "店面管理側欄計數(日結逾期的店數)的「數什麼」:由 api 側欄計數登記的 `descriptionKey` 給(`daily-close/store-badge.ts`)",
+  },
+  {
     key: "admin.lotteryAccounts.errors.",
     reason:
       "`t(`errors.${code}`)`,code 由 `lib/project/lottery/accounts-error.ts` 從 api 錯誤碼與 reason 換算",
@@ -102,6 +107,16 @@ const DYNAMIC_KEYS: readonly { key: string; reason: string }[] = [
   {
     key: "admin.lotteryAccounts.outstanding.kinds.",
     reason: "待結清種類 `to_pay` / `to_refund` / `to_receive`(api 的 `kind`)",
+  },
+  {
+    key: "admin.lotteryAccounts.periodClose.statuses.",
+    reason:
+      "關帳月份的狀態 `PERIOD_STATUSES`(`periodClose.statuses.${status}`;`PeriodCloseTab`)",
+  },
+  {
+    key: "admin.lotteryAccounts.periodClose.documentKinds.",
+    reason:
+      "擋下關帳的單據種類 `PERIOD_PENDING_KINDS`(api 的 `kind`;`PeriodCloseDialog`)",
   },
   {
     key: "admin.lotteryAccounts.settlement.buttons.",
@@ -740,6 +755,21 @@ const DYNAMIC_KEYS: readonly { key: string; reason: string }[] = [
       "點收的 `t(`errors.${reason}`)`,reason 由 `PurchaseViewPage/receive-error.ts`(`RECEIVE_REASONS`)、`TransferViewPage/transfer-receive-error.ts`(`TRANSFER_RECEIVE_REASONS`)從 api 的 `extensions.reason` 換算",
   },
   {
+    key: "admin.lotteryStore.errors.",
+    reason:
+      "店面管理的 `t(`errors.${code}`)`,code 由 `lib/project/lottery/store-error.ts`(`storeErrorKey`)從 api 錯誤碼與 reason 換算",
+  },
+  {
+    key: "admin.lotteryStore.redemption.errors.",
+    reason:
+      "兌獎的 `t(`errors.${code}`)`,code 由 `lib/project/lottery/redemption-error.ts`(`redemptionErrorOf`)從 api 錯誤碼與 reason 換算",
+  },
+  {
+    key: "admin.lotteryStore.redemption.status.",
+    reason:
+      "兌獎紀錄的 `t(`status.${status}`)`,status 是兌獎狀態 `REDEMPTION_STATUSES`(api 回的值)",
+  },
+  {
     key: "admin.lotteryInventory.errors.",
     reason:
       "庫存管理的 `t(`errors.${code}`)`,code 由 `lib/project/lottery/inventory-error.ts` 從 api 錯誤碼與 reason 換算",
@@ -768,6 +798,81 @@ const DYNAMIC_KEYS: readonly { key: string; reason: string }[] = [
     key: "admin.lotteryInventory.sources.",
     reason:
       "本的詳情「來源」的 `t(`sources.${type}`)`,type 是來源事件類型(進貨 / 調入)",
+  },
+  {
+    key: "admin.lotteryStore.stocktake.types.",
+    reason:
+      "盤點的 `t(`types.${type}`)`,type 是盤點類型 `STOCKTAKE_TYPES`(api 回的值、盤點紀錄的篩選)",
+  },
+  {
+    key: "admin.lotteryStore.stocktake.statuses.",
+    reason:
+      "盤點紀錄的 `t(`statuses.${status}`)`,status 是盤點單狀態 `STOCKTAKE_STATUSES`(api 回的值、篩選)",
+  },
+  {
+    key: "admin.lotteryStore.stocktake.review.actions.",
+    reason:
+      "差異核對的 `t(`actions.${action}`)`,action 是差異的處理 `STOCKTAKE_DIFF_ACTIONS`",
+  },
+  {
+    key: "admin.lotteryStore.stocktake.lost.actions.",
+    reason:
+      "待查清單的 `t(`actions.${action}`)`,action 是待查清單的處理 `STOCKTAKE_LOST_ACTIONS`",
+  },
+  {
+    key: "admin.lotteryStore.stocktake.view.actions.",
+    reason:
+      "盤點確認申請檢視頁的 `t(`actions.${action}`)`,action 是差異的處理(api 回的盤點單明細)",
+  },
+  {
+    key: "admin.lotteryStore.stocktake.view.methods.",
+    reason:
+      "盤點確認申請檢視頁的 `t(`methods.${method}`)`,method 是盤點方式 `STOCKTAKE_METHODS`",
+  },
+  {
+    key: "admin.lotteryStore.stocktake.view.lostActions.",
+    reason:
+      "盤點確認申請檢視頁的 `t(`lostActions.${action}`)`,action 是待查清單的處理(api 回的值)",
+  },
+  {
+    key: "admin.lotteryStore.checkout.steps.",
+    reason:
+      "交班精靈 Stepper 的 `t(`steps.${step}`)`,step 是 `CHECKOUT_STEPS`(`checkout-keys.ts`)",
+  },
+  {
+    key: "admin.lotteryStore.checkout.items.",
+    reason:
+      "應有現金逐項的 `t(`items.${item.kind}`)`,kind 是 `EXPECTED_CASH_ITEM_KINDS`(api 回的值)",
+  },
+  {
+    key: "admin.lotteryStore.checkout.forms.",
+    reason:
+      "審核中的單據 `t(`forms.${impact.formKey}`)`,formKey 是撤銷售出申請 / 現金更正單的表單代號(api 回的值)",
+  },
+  {
+    key: "admin.lotteryStore.checkout.types.",
+    reason:
+      "結帳類型 `t(`types.${type}`)`,type 是 `CHECKOUT_TYPES`(api 回的值、班次結帳歷史紀錄的篩選)",
+  },
+  {
+    key: "admin.lotteryStore.dailyClose.steps.",
+    reason:
+      "日結精靈 Stepper 的 `t(`steps.${step}`)`,step 是 `DAILY_CLOSE_STEPS`(`@repo/domain/project/lottery`)",
+  },
+  {
+    key: "admin.lotteryStore.dailyClose.shifts.states.",
+    reason:
+      "日結第 ① 步各班結帳的 `t(`states.${row.state}`)`,state 是 api 回的值(approved / pending / returned)",
+  },
+  {
+    key: "admin.lotteryStore.dailyClose.vault.items.",
+    reason:
+      "小金庫應有逐項的 `t(`dailyClose.vault.items.${item.kind}`)`,kind 是 `VAULT_CASH_ITEM_KINDS`(api 回的值)",
+  },
+  {
+    key: "admin.lotteryStore.checkout.list.statuses.",
+    reason:
+      "班次結帳歷史紀錄的 `t(`list.statuses.${status}`)`,status 是申請的狀態(api 回的值、篩選)",
   },
 ];
 

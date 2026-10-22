@@ -55,7 +55,7 @@ export const TicketGridLegend = ({ items, labels }: TicketGridLegendProps) => {
               ...TICKET_CELL_SX[state],
             }}
           />
-          <Typography variant="caption" color="text.secondary">
+          <Typography variant="caption" color="textSecondary">
             {labelOf(state)}
           </Typography>
         </Stack>

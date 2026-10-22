@@ -148,7 +148,7 @@ export const AssignRolesDialog = ({
       }
     >
       <Stack spacing={1.75}>
-        <Typography variant="caption" color="text.secondary">
+        <Typography variant="caption" color="textSecondary">
           {t("hint", { name: user.name })}
         </Typography>
 

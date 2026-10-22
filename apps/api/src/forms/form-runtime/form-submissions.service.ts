@@ -33,7 +33,10 @@ import {
   FormVersionsRepository,
   FormsRepository,
 } from "../../database/database.module";
-import type { OperatorContext } from "../../database/operator-context";
+import {
+  type OperatorContext,
+  isOrgVisible,
+} from "../../database/operator-context";
 import {
   type FormRevision,
   type FormSubmissionStatus,
@@ -73,6 +76,7 @@ import {
 } from "../form-mapper";
 import { formModulePermission } from "../form-permission-keys";
 import { fieldStatesOf, projectValues } from "../form-values/field-states";
+import { sharedOrgIdsFor } from "../form-values/shared-org-ids";
 import { SubmissionValuesService } from "../form-values/submission-values.service";
 import { storedSummaryOf } from "../form-values/temporal-values";
 import {
@@ -768,6 +772,8 @@ export class FormSubmissionsService {
       submittedAt: null,
       copiedFrom,
       touched,
+      // 草稿不共用(`sharedOrgIdsFor`);送出時才算
+      sharedOrgIds: [],
     });
     // 直接送出:這筆在同一個交易內就送出了,稽核只記送出(`direct: true`)
     if (options.skipAudit !== true) {
@@ -831,6 +837,12 @@ export class FormSubmissionsService {
         {
           $set: {
             values,
+            sharedOrgIds: await this.sharedOrgIdsOf(
+              facts,
+              record.formKey,
+              values,
+              record.status,
+            ),
             ...(input.touched === null || input.touched === undefined
               ? {}
               : { touched: touchedKeysOf(version.fields, input.touched) }),
@@ -927,6 +939,13 @@ export class FormSubmissionsService {
         submittedAt: (record.submittedAt ?? at).toISOString(),
       }),
     );
+    // 送出後不再是草稿:不論走不走流程都算
+    const sharedOrgIds = await this.sharedOrgIdsOf(
+      facts,
+      record.formKey,
+      values,
+      "completed",
+    );
     const route = await this.workflowSubmit.route(record);
     // 容量上限:走流程 = 修訂 +1 並 push 快照;不走流程 = 第一次送出,修訂只剩這一筆
     assertSubmissionCapacity(
@@ -970,6 +989,7 @@ export class FormSubmissionsService {
           summary,
           ctx,
           at,
+          sharedOrgIds,
           ...(serialNo === null ? {} : { serialNo }),
         },
         route,
@@ -1003,6 +1023,7 @@ export class FormSubmissionsService {
         $set: {
           values,
           summary,
+          sharedOrgIds,
           status: "completed",
           revision: 1,
           revisions: [{ revision: 1, version: record.version, values, ctx }],
@@ -1057,6 +1078,7 @@ export class FormSubmissionsService {
         throw notFoundError(`Form submission not found: ${input.id}`);
       }
       this.access.assertModulePermission(facts, record.moduleKey, "edit");
+      this.assertInWriteScope(facts, record);
       this.assertEditVersion(record, input.expectedEditVersion);
       if (record.revision !== input.expectedRevision) {
         throw conflictError(
@@ -1107,7 +1129,17 @@ export class FormSubmissionsService {
           revision: input.expectedRevision,
         },
         {
-          $set: { values, summary, revision },
+          $set: {
+            values,
+            summary,
+            revision,
+            sharedOrgIds: await this.sharedOrgIdsOf(
+              facts,
+              record.formKey,
+              values,
+              record.status,
+            ),
+          },
           $push: {
             revisions: { revision, version: record.version, values, ctx },
           },
@@ -1169,6 +1201,7 @@ export class FormSubmissionsService {
           );
         }
         this.access.assertModulePermission(facts, record.moduleKey, "delete");
+        this.assertInWriteScope(facts, record);
         await this.lifecycle.guard("beforeDelete", {
           operator: facts.operator,
           submission: record,
@@ -1276,6 +1309,7 @@ export class FormSubmissionsService {
     }
     if (own === null) {
       this.access.assertModulePermission(facts, record.moduleKey, "edit");
+      this.assertInWriteScope(facts, record);
     }
     if (record.status !== "completed" || record.currentInstanceId === null) {
       throw conflictError(
@@ -1449,6 +1483,12 @@ export class FormSubmissionsService {
     );
     if (retried) {
       return { record: retried, cleared: null };
+    }
+    if (
+      facts.operator.actorId === null ||
+      source.createdBy?.equals(facts.operator.actorId) !== true
+    ) {
+      this.assertInWriteScope(facts, source);
     }
     if (source.replacedById !== null) {
       throw conflictError(
@@ -1786,6 +1826,8 @@ export class FormSubmissionsService {
    * - 改:申請人改草稿 / 退回 / 撤回(`create`);不綁流程的已完成(`edit`);綁流程的已完成鎖定
    * - 刪:草稿 / 被退回 / 撤回 = 申請人本人(`create`);不綁流程的已完成 / 已駁回(`delete`)
    * - 撤回:申請人、審核中;作廢:綁流程的已完成、申請人或 `edit`;複製為新單:已作廢 + `create`
+   * - **共用進來的**(歸屬組織不在可見範圍內、靠依欄位共用讀到的,ADR-0014):只能看 —— 已完成單的改 / 刪只看
+   *   可見範圍(同端點的 `assertInWriteScope`);作廢、複製為新單的申請人本人走自己的路徑,不受限
    */
   private abilitiesOf(
     facts: FormOperatorFacts,
@@ -1808,23 +1850,32 @@ export class FormSubmissionsService {
       record.formKey,
     );
     const isBound = record.currentInstanceId !== null;
+    // 共用只放寬讀:歸屬組織在可見範圍內才寫得動(同端點的 `assertInWriteScope`);
+    // 作廢與複製為新單的申請人本人走自己的路徑,不受限
+    const inVisibleScope = isOrgVisible(facts.operator, record.orgId);
+    const inWriteScope = isOwner || inVisibleScope;
     const isApplicantEditable =
       isOwner && APPLICANT_EDITABLE.includes(record.status) && canCreate;
     const canEdit =
       isApplicantEditable ||
-      (record.status === "completed" && !isBound && can("edit"));
+      (inVisibleScope &&
+        record.status === "completed" &&
+        !isBound &&
+        can("edit"));
     const canDelete =
       APPLICANT_EDITABLE.includes(record.status) && isOwner
         ? isApplicantEditable
-        : isDeletableRecord(record) && can("delete");
+        : inVisibleScope && isDeletableRecord(record) && can("delete");
     return {
       canEdit,
       canSaveDraft: isApplicantEditable && allowDraft,
       canDelete,
       canWithdraw: isOwner && record.status === "reviewing",
       canVoid:
-        record.status === "completed" && isBound && (isOwner || can("edit")),
-      canCopy: record.status === "voided" && canCreate,
+        record.status === "completed" &&
+        isBound &&
+        (isOwner || (inVisibleScope && can("edit"))),
+      canCopy: record.status === "voided" && canCreate && inWriteScope,
     };
   }
 
@@ -2086,6 +2137,37 @@ export class FormSubmissionsService {
       at,
       orgId: record.orgId,
     });
+  }
+
+  /**
+   * 共用進來的(歸屬組織不在可見範圍內、靠依欄位共用讀到的)只能看(ADR-0014「讀和寫分開」):改 / 刪 / 作廢 /
+   * 複製為新單 → `FORBIDDEN`(`SHARED_READ_ONLY`)。寫入中介層本來就只照可見範圍,這裡先擋,錯誤才講得清楚
+   * (不會變成「被別人更新了」)。申請人本人走自己的路徑,不經這裡。
+   */
+  private assertInWriteScope(
+    facts: FormOperatorFacts,
+    record: Pick<SubmissionRecord, "_id" | "orgId">,
+  ): void {
+    if (!isOrgVisible(facts.operator, record.orgId)) {
+      throw forbiddenError(
+        `Submission ${String(record._id)} is shared with the operator read-only`,
+        "SHARED_READ_ONLY",
+      );
+    }
+  }
+
+  /** 這次要寫的存值算出的 `sharedOrgIds`(表單設定「依欄位共用」;見 `sharedOrgIdsFor`)。 */
+  private async sharedOrgIdsOf(
+    facts: FormOperatorFacts,
+    formKey: string,
+    values: StoredValues,
+    status: SubmissionRecord["status"],
+  ): Promise<Types.ObjectId[]> {
+    if (status === "draft") {
+      return [];
+    }
+    const form = await this.forms.findOne(facts.operator, { key: formKey });
+    return sharedOrgIdsFor(form, values, status);
   }
 
   /** 這張表單允不允許存草稿(表單設定;缺席 = 開)。 */

@@ -55,6 +55,7 @@ fragment LotteryBankTransactionFields on LotteryBankTransaction {
   note
   reversalOf
   reversedById
+  reversalOfAt
   createdBy {
     ...LotteryAccountsRefFields
   }
@@ -84,6 +85,7 @@ fragment LotteryCashMovementFields on LotteryCashMovement {
   refId
   reversalOf
   reversedById
+  correctionOfShift
   createdBy {
     ...LotteryAccountsRefFields
   }
@@ -110,6 +112,9 @@ fragment LotterySettlementFields on LotterySettlement {
     totalIn
     net
     canSettle
+    cashDrawers {
+      ...LotteryAccountsRefFields
+    }
     buttons {
       button
       defaultAmount
@@ -124,6 +129,9 @@ fragment LotterySettlementFields on LotterySettlement {
     direction
     amount
     accountLabel
+    cashPlace
+    cashPointName
+    cashPointPrinterId
     handler
     note
     occurredAt
@@ -234,6 +242,17 @@ query LotteryCashLedger($input: LotteryCashLedgerInput!) {
       amount
       baselineAmount
       baselineAt
+    }
+    drawers {
+      cashPoint {
+        ...LotteryAccountsRefFields
+      }
+      shiftId
+      openedBy {
+        ...LotteryAccountsRefFields
+      }
+      openedAt
+      amount
     }
     items {
       ...LotteryCashMovementFields

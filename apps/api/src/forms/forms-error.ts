@@ -60,6 +60,8 @@ export const FORM_FORBIDDEN_REASONS = [
   "ROOT_ONLY",
   /** 表單關了「允許存草稿」:不能建草稿、不能存狀態為草稿的單(只能直接送出)。 */
   "DRAFT_DISABLED",
+  /** 依欄位共用進來的提交(歸屬組織不在可見範圍內):只能看,不能改 / 刪 / 作廢 / 複製為新單(ADR-0014)。 */
+  "SHARED_READ_ONLY",
 ] as const;
 
 export type FormForbiddenReason = (typeof FORM_FORBIDDEN_REASONS)[number];

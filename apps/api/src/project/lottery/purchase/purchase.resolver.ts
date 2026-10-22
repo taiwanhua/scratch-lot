@@ -6,7 +6,11 @@ import { PURCHASE_PERMISSIONS } from "@repo/domain/project/lottery";
 import { CurrentOperator } from "../../../auth/decorators";
 import type { OperatorContext } from "../../../database/operator-context";
 import { RequirePermission } from "../../../permission/require-permission.decorator";
+import { RequireTenant } from "../../tenant-scope/require-tenant.decorator";
+import { LotteryRedemptionModel } from "../redemption/models/redemption.model";
 import {
+  CompleteLotteryPurchaseReceivingInput,
+  CompleteLotteryPurchaseReceivingPayload,
   LotteryDealerPurchaseModel,
   LotteryPurchaseOptionsModel,
   LotteryPurchaseProgressModel,
@@ -24,6 +28,7 @@ import { PurchaseReceivingService } from "./purchase-receiving.service";
  * 點收區塊與刷條碼點收不守模組權限(店長從申請中心進來):讀得到單據、點收任務在自己手上才行。
  * 進貨單本身的新增 / 送出 / 審核 / 作廢走表單引擎;收付走 `recordLotterySettlement`(總部那一邊要 `settle`)。
  */
+@RequireTenant()
 @Resolver()
 export class PurchaseResolver {
   constructor(
@@ -75,12 +80,31 @@ export class PurchaseResolver {
     return this.receiving.receivingOf(operator, submissionId);
   }
 
+  /** 這張進貨單勾選的兌獎紀錄(讀得到單據就讀得到;兌獎紀錄詳情的入口,規格 6.5)。 */
+  @Query(() => [LotteryRedemptionModel], {
+    name: "lotteryPurchaseRedemptionRecords",
+  })
+  lotteryPurchaseRedemptionRecords(
+    @Args("submissionId", { type: () => ID }) submissionId: string,
+    @CurrentOperator() operator: OperatorContext,
+  ): Promise<LotteryRedemptionModel[]> {
+    return this.receiving.redemptionsOf(operator, submissionId);
+  }
+
   @Mutation(() => ReceiveLotteryPurchaseBookPayload)
   receiveLotteryPurchaseBook(
     @Args("input") input: ReceiveLotteryPurchaseBookInput,
     @CurrentOperator() operator: OperatorContext,
   ): Promise<ReceiveLotteryPurchaseBookPayload> {
     return this.receiving.receive(operator, input.submissionId, input.code);
+  }
+
+  @Mutation(() => CompleteLotteryPurchaseReceivingPayload)
+  completeLotteryPurchaseReceiving(
+    @Args("input") input: CompleteLotteryPurchaseReceivingInput,
+    @CurrentOperator() operator: OperatorContext,
+  ): Promise<CompleteLotteryPurchaseReceivingPayload> {
+    return this.receiving.complete(operator, input.submissionId, input.rowIds);
   }
 
   @Mutation(() => Boolean)

@@ -102,7 +102,7 @@ export const AutoRunDialog = ({
       }
     >
       <Stack spacing={1} sx={{ pt: 1 }}>
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" color="textSecondary">
           {t("hint")}
         </Typography>
         {items.map((item, index) => (

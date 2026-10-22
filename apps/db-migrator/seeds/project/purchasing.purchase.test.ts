@@ -7,7 +7,7 @@ import { ROLE_GRANT_SECTIONS } from "./onboarding/role-grants";
 import { roleGrantOf } from "./onboarding/roles";
 import { purchasingPurchaseModule } from "./purchasing.purchase";
 import { projectSeedSource } from "./registry";
-import { seed as purchaseForm } from "./revisions/purchase.r2.seed";
+import { seed as purchaseForm } from "./revisions/purchase.r5.seed";
 import { projectSeedSettings } from "./settings";
 
 describe("進貨單的模組宣告(規格 3.1、3.2、8.2)", () => {
@@ -73,12 +73,55 @@ describe("進貨單的模組宣告(規格 3.1、3.2、8.2)", () => {
       moduleKey: "purchasing.purchase",
       allowDraft: true,
       voidReasonCategoryKey: "void-reason",
+      // 依欄位共用:分店欄指到的分店也看得到(唯讀)
+      sharedByFieldKeys: ["branch"],
       serial: { prefix: "P", period: "none", digits: 4 },
     });
-    // 兌獎的欄位由兌獎的功能加,這一版沒有
+  });
+
+  it("r3 加兌獎:勾選欄(引用店內持有的兌獎紀錄,帶入中獎金額)與合計三列;扣款金額 = 批購合計 − 兌獎折抵", () => {
+    const fields = purchaseForm.definition.fields;
+    expect(fields.map((field) => field.key)).toEqual(
+      expect.arrayContaining([
+        "redemptions",
+        "redemption_total",
+        "redemption_offset",
+        "redemption_remainder",
+      ]),
+    );
+    const redemptions = fields.find((field) => field.key === "redemptions");
+    expect(redemptions).toMatchObject({
+      type: "array",
+      columns: [
+        {
+          key: "redemption",
+          source: {
+            provider: "lottery_redemption",
+            filter: { status: "in_store" },
+          },
+          prefill: {
+            mapping: [{ sourceField: "prizeAmount", fieldKey: "prize_amount" }],
+          },
+        },
+        { key: "prize_amount" },
+      ],
+    });
     expect(
-      purchaseForm.definition.fields.map((field) => field.key),
-    ).not.toContain("redemptions");
+      fields.find((field) => field.key === "deducted_amount")?.valueSource,
+    ).toEqual({
+      kind: "computed",
+      expr: { "-": [{ var: "purchase_total" }, { var: "redemption_offset" }] },
+    });
+  });
+
+  it("r4:批購受託人在本人批購 = 否時必填(本人批購 = 是時隱藏,隱藏欄不檢查)", () => {
+    const trustee = purchaseForm.definition.fields.find(
+      (field) => field.key === "trustee",
+    );
+    expect(trustee).toMatchObject({
+      rules: { required: true },
+      visibleWhen: { "!": [{ var: "self_purchase" }] },
+    });
   });
 
   it("列表欄位配置初值:單號、進貨分店、甲類、批購日、扣款金額 + 狀態", () => {

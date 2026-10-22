@@ -14,7 +14,7 @@ type MatrixPermissionView = MatrixModuleView["permissions"][number];
 
 /** 列尾的 key(Figma 172:281:12px、text.disabled);只影響呈現,不進無障礙名稱。 */
 const matrixKey = (value: string) => (
-  <Typography variant="caption" color="text.disabled">
+  <Typography variant="caption" color="textDisabled">
     {value}
   </Typography>
 );

@@ -3,6 +3,8 @@ import { screen, waitFor } from "@testing-library/react";
 
 import { MASTER_DATA_PERMISSIONS as P } from "@repo/domain/project/lottery-master-data";
 
+import { expectButtonOrder } from "@/test/button-order";
+
 import { renderMasterData } from "../master-data-test-support";
 
 const field = (name: RegExp) => screen.getByRole("textbox", { name });
@@ -87,7 +89,10 @@ describe("遊戲頁", () => {
     const { user } = renderMasterData({
       path: "/master-data/game-edit-page/g-5198",
     });
-    await user.click(await screen.findByRole("button", { name: "刪除" }));
+    await screen.findByRole("button", { name: "刪除" });
+    // 動作列(REACT-16):[刪除] 在左側,[取消] → [儲存] 靠右
+    expectButtonOrder(["刪除", "取消", "儲存"]);
+    await user.click(screen.getByRole("button", { name: "刪除" }));
     await user.click(
       await screen.findByRole("button", { name: "刪除", hidden: false }),
     );
@@ -122,7 +127,12 @@ describe("遊戲頁", () => {
     const { user } = renderMasterData({
       path: "/master-data/game-view-page/g-5164",
     });
-    await user.click(await screen.findByRole("button", { name: "編輯" }));
+    await screen.findByRole("button", { name: "編輯" });
+    // 檢視頁頂部列(REACT-16):左 [← 返回列表],右 [編輯](contained)
+    expect(expectButtonOrder(["← 返回列表", "編輯"])[1]).toHaveClass(
+      "MuiButton-contained",
+    );
+    await user.click(screen.getByRole("button", { name: "編輯" }));
     expect(
       await screen.findByRole("textbox", { name: /遊戲名稱/ }),
     ).toHaveValue("發大財");

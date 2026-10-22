@@ -16,6 +16,13 @@ export type AccountsErrorCode =
   | "SETTLEMENT_NOTHING_DUE"
   | "BANK_ACCOUNT_NOT_USABLE"
   | "NO_OPEN_SHIFT"
+  | "CASH_POINT_NOT_AT_BRANCH"
+  | "PERIOD_CLOSE_INVALID"
+  | "PERIOD_NOT_ENDED"
+  | "PERIOD_ALREADY_CLOSED"
+  | "PERIOD_OUT_OF_ORDER"
+  | "PERIOD_SHIFTS_NOT_CLOSED"
+  | "PERIOD_PENDING_DOCUMENTS"
   | "UNEXPECTED";
 
 export type AccountsError = AdminError<AccountsErrorCode, never>;
@@ -31,6 +38,14 @@ const REASON_CODES: readonly AccountsErrorCode[] = [
   "SETTLEMENT_NOTHING_DUE",
   "BANK_ACCOUNT_NOT_USABLE",
   "NO_OPEN_SHIFT",
+  "CASH_POINT_NOT_AT_BRANCH",
+  // 關帳(規格 10.4)
+  "PERIOD_CLOSE_INVALID",
+  "PERIOD_NOT_ENDED",
+  "PERIOD_ALREADY_CLOSED",
+  "PERIOD_OUT_OF_ORDER",
+  "PERIOD_SHIFTS_NOT_CLOSED",
+  "PERIOD_PENDING_DOCUMENTS",
 ];
 
 export const accountsErrorOf = (error: unknown): AccountsError =>

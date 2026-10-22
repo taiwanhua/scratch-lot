@@ -177,7 +177,7 @@ export const SupportRequestsTab = () => {
         <Stack spacing={1} sx={{ flex: 1, minWidth: 0, minHeight: 0 }}>
           <Box sx={{ flex: 1, minHeight: 0 }}>{list}</Box>
           <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
-            <Typography variant="body2" color="text.secondary" sx={{ flex: 1 }}>
+            <Typography variant="body2" color="textSecondary" sx={{ flex: 1 }}>
               {t("total", { total: totalCount })}
             </Typography>
             <Pagination

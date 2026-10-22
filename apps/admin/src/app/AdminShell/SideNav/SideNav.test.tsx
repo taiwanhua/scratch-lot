@@ -1,14 +1,19 @@
-import { describe, expect, it } from "@jest/globals";
+import { beforeEach, describe, expect, it } from "@jest/globals";
 import { screen, waitFor, within } from "@testing-library/react";
 
 import {
   SIDE_NAV_STORAGE_KEY,
   useSideNavStore,
 } from "@/stores/base/useSideNavStore";
-import { authWorld } from "@/test/msw/auth-handlers";
+import { authWorld, testOrg } from "@/test/msw/auth-handlers";
 import { superAdminModules } from "@/test/msw/module-fixtures";
 import { server } from "@/test/msw/server";
 import { renderApp } from "@/test/render";
+import {
+  restoreViewportAfterEach,
+  setMobileViewport,
+  setViewportWidth,
+} from "@/test/viewport";
 
 /**
  * 側欄收合:64px 圖示列、群組 flyout、狀態記憶,以及展開態改畫模組圖示。
@@ -133,5 +138,301 @@ describe("SideNav 收合(Figma Draft/AdminSideNavCollapsed 246:64)", () => {
         "SettingsOutlinedIcon",
       ),
     ).toBeInTheDocument();
+  });
+});
+
+describe("精簡版(< md)側欄改成抽屜", () => {
+  restoreViewportAfterEach();
+  beforeEach(() => {
+    useSideNavStore.setState({ isMobileOpen: false, isCollapsed: false });
+  });
+
+  it("預設收起;AppBar 的主選單鈕打開,點了模組連結導向並自動關閉", async () => {
+    setMobileViewport();
+    const { user } = renderShell();
+    const open = await screen.findByRole("button", { name: "開啟主選單" });
+    expect(
+      screen.queryByRole("navigation", { name: "主選單" }),
+    ).not.toBeInTheDocument();
+    expect(open).toHaveAttribute("aria-expanded", "false");
+    expect(open).toHaveAttribute("aria-controls", "admin-side-nav-drawer");
+
+    await user.click(open);
+    const nav = await findSideNav();
+    // 主選單鈕指向抽屜裡的側欄
+    expect(nav).toHaveAttribute("id", "admin-side-nav-drawer");
+    expect(open).toHaveAttribute("aria-expanded", "true");
+    // 抽屜裡一律展開、沒有收合開關
+    expect(
+      within(nav).queryByRole("button", { name: "收合側欄" }),
+    ).not.toBeInTheDocument();
+
+    await user.click(within(nav).getByRole("link", { name: "組織管理" }));
+    await waitFor(() => {
+      expect(screen.getByTestId("location")).toHaveTextContent(
+        "/system/org-manager",
+      );
+    });
+    await waitFor(() => {
+      expect(
+        screen.queryByRole("navigation", { name: "主選單" }),
+      ).not.toBeInTheDocument();
+    });
+  });
+
+  it("點群組列只展開子項、不關抽屜;按 Esc 關閉", async () => {
+    setMobileViewport();
+    const { user } = renderShell();
+    await user.click(await screen.findByRole("button", { name: "開啟主選單" }));
+    const nav = await findSideNav();
+
+    await user.click(within(nav).getByRole("button", { name: "示範群組" }));
+    expect(
+      screen.getByRole("navigation", { name: "主選單" }),
+    ).toBeInTheDocument();
+
+    await user.keyboard("{Escape}");
+    await waitFor(() => {
+      expect(
+        screen.queryByRole("navigation", { name: "主選單" }),
+      ).not.toBeInTheDocument();
+    });
+  });
+
+  it("點遮罩關閉;關閉後焦點回到主選單鈕", async () => {
+    setMobileViewport();
+    const { user } = renderShell();
+    const open = await screen.findByRole("button", { name: "開啟主選單" });
+    await user.click(open);
+    await findSideNav();
+
+    const backdrop = document.querySelector(".MuiBackdrop-root");
+    expect(backdrop).not.toBeNull();
+    if (backdrop !== null) {
+      await user.click(backdrop);
+    }
+    await waitFor(() => {
+      expect(
+        screen.queryByRole("navigation", { name: "主選單" }),
+      ).not.toBeInTheDocument();
+    });
+    await waitFor(() => {
+      expect(open).toHaveFocus();
+    });
+  });
+
+  it("抽屜開著時切到 md 以上:開關重設為收起(之後回到手機寬不會自己打開)", async () => {
+    useSideNavStore.setState({ isMobileOpen: true });
+    renderShell();
+    await findSideNav();
+    await waitFor(() => {
+      expect(useSideNavStore.getState().isMobileOpen).toBe(false);
+    });
+  });
+
+  it("頂部列只留主選單鈕、頁名、通知鈴、精簡版組織切換;「?」與頭像選單在抽屜底部", async () => {
+    setMobileViewport();
+    const { user } = renderShell("/system/org-manager");
+    const banner = await screen.findByRole("banner");
+    await within(banner).findByRole("button", { name: "開啟主選單" });
+    expect(within(banner).getByText("組織管理")).toBeInTheDocument();
+    expect(
+      within(banner).getByRole("button", { name: /^通知/ }),
+    ).toBeInTheDocument();
+    expect(
+      within(banner).queryByRole("button", { name: "小華" }),
+    ).not.toBeInTheDocument();
+    expect(
+      within(banner).queryByRole("button", { name: "模組說明" }),
+    ).not.toBeInTheDocument();
+    expect(
+      within(banner).queryByRole("combobox", { name: "當前組織" }),
+    ).not.toBeInTheDocument();
+
+    // 組織切換縮成首字小按鈕,點了展開同一份組織清單(當前組織選中)
+    const org = within(banner).getByRole("button", {
+      name: "當前組織:平台根組織",
+    });
+    expect(org).toHaveAttribute("aria-haspopup", "menu");
+    await user.click(org);
+    const orgMenu = await screen.findByRole("menu", { name: "當前組織" });
+    expect(
+      within(orgMenu).getByRole("menuitem", { name: "平台根組織" }),
+    ).toHaveClass("Mui-selected");
+    await user.keyboard("{Escape}");
+
+    await user.click(
+      within(banner).getByRole("button", { name: "開啟主選單" }),
+    );
+    const nav = await findSideNav();
+    expect(
+      within(nav).getByRole("button", { name: "小華" }),
+    ).toBeInTheDocument();
+    expect(
+      within(nav).getByRole("button", { name: "模組說明" }),
+    ).toBeInTheDocument();
+  });
+
+  it("精簡組織鈕:選另一個組織切換一次;點目前組織不切換", async () => {
+    setMobileViewport();
+    const world = authWorld({
+      hasRefreshCookie: true,
+      modules: superAdminModules,
+      orgs: [testOrg, { id: "org-2", name: "第二分店" }],
+    });
+    server.use(...world.handlers);
+    const { user } = renderApp({ path: "/overview" });
+    const banner = await screen.findByRole("banner");
+
+    await user.click(
+      await within(banner).findByRole("button", {
+        name: "當前組織:平台根組織",
+      }),
+    );
+    await user.click(
+      within(await screen.findByRole("menu", { name: "當前組織" })).getByRole(
+        "menuitem",
+        { name: "平台根組織" },
+      ),
+    );
+    expect(world.calls.switchOrg).toBe(0);
+
+    await user.click(
+      within(banner).getByRole("button", { name: "當前組織:平台根組織" }),
+    );
+    await user.click(
+      within(await screen.findByRole("menu", { name: "當前組織" })).getByRole(
+        "menuitem",
+        { name: "第二分店" },
+      ),
+    );
+    await waitFor(() => {
+      expect(world.calls.switchOrg).toBe(1);
+    });
+    expect(
+      await within(banner).findByRole("button", { name: "當前組織:第二分店" }),
+    ).toBeInTheDocument();
+  });
+
+  it("沒有當前組織:精簡鈕放佔位圖示,可及名稱「當前組織:尚未選擇」", async () => {
+    setMobileViewport();
+    server.use(
+      ...authWorld({
+        hasRefreshCookie: true,
+        modules: superAdminModules,
+        orgs: [],
+      }).handlers,
+    );
+    renderApp({ path: "/overview" });
+    const banner = await screen.findByRole("banner");
+    const org = await within(banner).findByRole("button", {
+      name: "當前組織:尚未選擇",
+    });
+    // 模組圖示白名單的「組織」(MUI 圖示在非 production 帶 data-testid = 元件名)
+    expect(within(org).getByTestId("BusinessOutlinedIcon")).toBeInTheDocument();
+    // 沒有可選的組織 → 停用
+    expect(org).toBeDisabled();
+  });
+
+  it("從抽屜底部的頭像選單去個人設定:導向並關閉抽屜", async () => {
+    setMobileViewport();
+    const { user } = renderShell();
+    await user.click(await screen.findByRole("button", { name: "開啟主選單" }));
+    const nav = await findSideNav();
+    await user.click(within(nav).getByRole("button", { name: "小華" }));
+    await user.click(await screen.findByRole("menuitem", { name: "個人設定" }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("location")).toHaveTextContent(
+        "/settings/personal",
+      );
+    });
+    await waitFor(() => {
+      expect(
+        screen.queryByRole("navigation", { name: "主選單" }),
+      ).not.toBeInTheDocument();
+    });
+  });
+
+  it.each([
+    { width: 768, label: "直拿平板 768" },
+    { width: 899, label: "md 前一格 899" },
+  ])(
+    "$label 也是精簡版:頂部列沒有「?」與頭像選單,兩者在抽屜底部",
+    async ({ width }) => {
+      setViewportWidth(width);
+      const { user } = renderShell("/system/org-manager");
+      const banner = await screen.findByRole("banner");
+      const open = await within(banner).findByRole("button", {
+        name: "開啟主選單",
+      });
+      expect(within(banner).getByText("組織管理")).toBeInTheDocument();
+      expect(
+        within(banner).getByRole("button", { name: "當前組織:平台根組織" }),
+      ).toBeInTheDocument();
+      expect(
+        within(banner).queryByRole("button", { name: "小華" }),
+      ).not.toBeInTheDocument();
+      expect(
+        within(banner).queryByRole("button", { name: "模組說明" }),
+      ).not.toBeInTheDocument();
+      // 側欄不常駐(在收起的抽屜裡)
+      expect(
+        screen.queryByRole("navigation", { name: "主選單" }),
+      ).not.toBeInTheDocument();
+
+      await user.click(open);
+      const nav = await findSideNav();
+      expect(
+        within(nav).getByRole("button", { name: "小華" }),
+      ).toBeInTheDocument();
+      expect(
+        within(nav).getByRole("button", { name: "模組說明" }),
+      ).toBeInTheDocument();
+    },
+  );
+
+  it.each([
+    { width: 900, label: "md 900" },
+    { width: 1024, label: "橫拿平板 1024" },
+  ])(
+    "$label 是完整版:沒有主選單鈕,側欄常駐,頂部列有組織下拉、「?」與頭像選單",
+    async ({ width }) => {
+      setViewportWidth(width);
+      renderShell("/system/org-manager");
+      const nav = await findSideNav();
+      expect(nav).not.toHaveAttribute("id", "admin-side-nav-drawer");
+      const banner = screen.getByRole("banner");
+      expect(
+        within(banner).getByRole("button", { name: "小華" }),
+      ).toBeInTheDocument();
+      expect(
+        within(banner).getByRole("button", { name: "模組說明" }),
+      ).toBeInTheDocument();
+      expect(
+        within(banner).getByRole("combobox", { name: "當前組織" }),
+      ).toBeInTheDocument();
+      expect(
+        within(banner).queryByRole("button", { name: "開啟主選單" }),
+      ).not.toBeInTheDocument();
+    },
+  );
+
+  it("未模擬寬度(桌機)沒有主選單鈕,側欄常駐;頂部列維持完整的組織下拉、「?」與頭像選單", async () => {
+    renderShell("/system/org-manager");
+    await findSideNav();
+    const banner = screen.getByRole("banner");
+    expect(
+      within(banner).getByRole("button", { name: "小華" }),
+    ).toBeInTheDocument();
+    expect(
+      within(banner).getByRole("button", { name: "模組說明" }),
+    ).toBeInTheDocument();
+    expect(
+      within(banner).queryByRole("button", { name: "當前組織:平台根組織" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "開啟主選單" }),
+    ).not.toBeInTheDocument();
   });
 });

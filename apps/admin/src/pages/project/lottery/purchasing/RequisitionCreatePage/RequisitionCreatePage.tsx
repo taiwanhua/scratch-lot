@@ -6,7 +6,6 @@ import { DEFAULT_TENANT_TIMEZONE } from "@repo/domain/form";
 import { useLotteryRequisitionCandidatesQuery } from "@repo/graphql";
 import { Alert } from "@repo/ui/alert";
 import { Box } from "@repo/ui/box";
-import { Button } from "@repo/ui/button";
 import { Card } from "@repo/ui/card";
 import { Checkbox } from "@repo/ui/checkbox";
 import { CircularProgress } from "@repo/ui/circular-progress";
@@ -18,6 +17,7 @@ import { Stack } from "@repo/ui/stack";
 import { TextField } from "@repo/ui/text-field";
 import { Typography } from "@repo/ui/typography";
 
+import { FormActions } from "@/components/base/FormActions/FormActions";
 import { OrgTreeSelect } from "@/components/base/OrgTreeSelect/OrgTreeSelect";
 import { useFormModuleAccess } from "@/components/base/form-engine/FormModulePages/useFormModuleAccess";
 import { useAdminErrorText } from "@/hooks/base/useAdminErrorText";
@@ -32,10 +32,13 @@ import { useTenantTimezone } from "@/hooks/base/useTenantTimezone";
 import { localDayInstantOf } from "@/lib/base/form-engine/local-day";
 
 import {
+  REQUISITION_FIELD_KEYS,
   REQUISITION_FORM_KEY,
   REQUISITION_MODULE_KEY,
   formatCount,
 } from "../purchasing-keys";
+import { LineErrorAlerts } from "../shared/LineErrorAlerts";
+import { fieldErrorProps } from "../shared/field-errors";
 import { CandidateCards } from "./CandidateCards";
 import { CandidateTable } from "./CandidateTable";
 import {
@@ -191,7 +194,7 @@ export const RequisitionCreatePage = () => {
   );
 
   let list = (
-    <Typography variant="body2" color="text.secondary">
+    <Typography variant="body2" color="textSecondary">
       {t("pickBranch")}
     </Typography>
   );
@@ -234,9 +237,11 @@ export const RequisitionCreatePage = () => {
             <OrgTreeSelect
               scope="visible"
               label={t("fields.branch")}
+              size="small"
               value={branchId === "" ? [] : [branchId]}
               required
               fullWidth
+              {...fieldErrorProps(draft.error, REQUISITION_FIELD_KEYS.branch)}
               onChange={(ids) => {
                 setPickedBranch(ids[0] ?? "");
                 setCounts({});
@@ -244,14 +249,23 @@ export const RequisitionCreatePage = () => {
             />
             <DatePicker
               label={t("fields.expectedDate")}
+              size="small"
               value={expectedDay}
               fullWidth
               onChange={setExpectedDay}
+              {...fieldErrorProps(
+                draft.error,
+                REQUISITION_FIELD_KEYS.expectedDate,
+              )}
             />
           </Box>
           <Card sx={{ p: { xs: 2, sm: 2.5 } }}>
             <Stack spacing={2}>
               {filtersRow}
+              <LineErrorAlerts
+                error={draft.error}
+                fieldKey={REQUISITION_FIELD_KEYS.lines}
+              />
               {list}
             </Stack>
           </Card>
@@ -260,50 +274,42 @@ export const RequisitionCreatePage = () => {
           )}
         </Stack>
       </Box>
-      <Stack
-        direction="row"
-        spacing={1.5}
-        sx={{
-          alignItems: "center",
-          justifyContent: "flex-end",
-          borderTop: { xs: 1, lg: 0 },
-          borderColor: "divider",
-          pt: { xs: 1.5, lg: 0 },
-        }}
-      >
-        <Typography
-          variant="subtitle1"
-          component="p"
-          sx={{ flex: { xs: 1, lg: "none" }, fontWeight: 700 }}
-        >
-          {isNarrow
-            ? t("totalsShort", {
-                books: totals.books,
-                amount: formatCount(totals.amount),
-              })
-            : t("totals", {
-                books: totals.books,
-                amount: formatCount(totals.amount),
-              })}
-        </Typography>
-        {form.allowDraft && (
-          <Button
-            variant="outlined"
-            disabled={draft.isPending || branchId === ""}
-            onClick={() => {
+      <FormActions
+        start={
+          <Typography
+            variant="subtitle1"
+            component="p"
+            sx={{ fontWeight: 700 }}
+          >
+            {isNarrow
+              ? t("totalsShort", {
+                  books: totals.books,
+                  amount: formatCount(totals.amount),
+                })
+              : t("totals", {
+                  books: totals.books,
+                  amount: formatCount(totals.amount),
+                })}
+          </Typography>
+        }
+        cancel={{ label: t("cancel"), onClick: backToList }}
+        {...(form.allowDraft && {
+          draft: {
+            label: t("saveDraft"),
+            disabled: draft.isPending || branchId === "",
+            onClick: () => {
               void draft.saveDraft(valuesOf(), []).then((saved) => {
                 if (saved !== null) {
                   showSnackbar("success", t("draftSaved"));
                 }
               });
-            }}
-          >
-            {t("saveDraft")}
-          </Button>
-        )}
-        <Button
-          disabled={draft.isPending || branchId === "" || totals.books === 0}
-          onClick={() => {
+            },
+          },
+        })}
+        submit={{
+          label: t("submit"),
+          disabled: draft.isPending || branchId === "" || totals.books === 0,
+          onClick: () => {
             void draft.submit(valuesOf(), []).then((submitted) => {
               if (submitted === null) {
                 return;
@@ -315,11 +321,9 @@ export const RequisitionCreatePage = () => {
                 void navigate(`${access.viewRoute}/${submitted.id}`);
               }
             });
-          }}
-        >
-          {t("submit")}
-        </Button>
-      </Stack>
+          },
+        }}
+      />
     </Stack>
   );
 };

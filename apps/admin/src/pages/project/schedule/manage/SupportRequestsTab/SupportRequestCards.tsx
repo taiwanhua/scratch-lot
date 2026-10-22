@@ -48,7 +48,7 @@ export const SupportRequestCards = ({
   }
   if (rows.length === 0) {
     return (
-      <Typography variant="body2" color="text.secondary">
+      <Typography variant="body2" color="textSecondary">
         {t("empty")}
       </Typography>
     );
@@ -83,11 +83,7 @@ export const SupportRequestCards = ({
               {status?.render(row)}
             </Stack>
             {detail.length > 0 && (
-              <Typography
-                variant="body2"
-                color="text.secondary"
-                component="div"
-              >
+              <Typography variant="body2" color="textSecondary" component="div">
                 {joined(row, detail)}
               </Typography>
             )}

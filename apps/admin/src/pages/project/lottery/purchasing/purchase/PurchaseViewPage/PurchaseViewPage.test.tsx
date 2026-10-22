@@ -73,4 +73,20 @@ describe("進貨單檢視頁", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("應付")).toBeInTheDocument();
   });
+
+  it("勾選的兌獎紀錄:點一列開兌獎紀錄詳情(讀得到這張進貨單就看得到;這裡不能撤銷)", async () => {
+    const user = userEvent.setup();
+    renderPurchasePage({ path: VIEW });
+    const table = await screen.findByRole("table", { name: "兌獎紀錄" });
+    expect(within(table).getByText("RD-0215")).toBeInTheDocument();
+    await user.click(within(table).getByText("5150 · 042210 · #083"));
+    const dialog = await screen.findByRole("dialog", { name: /^兌獎紀錄/ });
+    expect(within(dialog).getByText("RD-0215")).toBeInTheDocument();
+    expect(
+      within(dialog).getByText("已送兌(進貨單 P-0033)"),
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).queryByRole("button", { name: "撤銷兌獎" }),
+    ).toBeNull();
+  });
 });

@@ -21,7 +21,9 @@ import { OrgsRepository } from "../../../database/database.module";
 import type { OperatorContext } from "../../../database/operator-context";
 import { tenantBoundaryContext } from "../../../database/tenant-boundary-context";
 import { tenantTimezoneOf } from "../../../database/tenant-timezone";
+import { FormAccessService } from "../../../forms/form-access.service";
 import type { FormGuardResult } from "../../../workflows/workflow-engine/lifecycle/form-lifecycle-registration";
+import { SubmissionReadAccess } from "../../../workflows/workflow-engine/submission-read-access.service";
 import {
   ScheduleAttendancePunchesRepository,
   ScheduleEntriesRepository,
@@ -84,6 +86,8 @@ export class MakeupPunchService {
     private readonly lookup: ScheduleEntryLookup,
     private readonly submissions: FormSubmissionsRepository,
     private readonly ledger: SchedulePunchLedger,
+    private readonly formAccess: FormAccessService,
+    private readonly readAccess: SubmissionReadAccess,
   ) {}
 
   /** 新增頁的「對應排班」下拉:本人那天在那家店的已發布排班(最後一個選項「沒有排班」由畫面加)。 */
@@ -197,24 +201,32 @@ export class MakeupPunchService {
   }
 
   /**
-   * 這筆申請選的排班還在不在(審核頁的警告「對應的排班已被刪除」);選「沒有排班」= true。
-   * 讀得到申請的人(申請人、審核者)才查得到;讀不到申請 → `NOT_FOUND`。
+   * 這筆申請選的排班還在不在(審核畫面的警告「對應的排班已被刪除」;模組詳情頁與申請中心都用);
+   * 選「沒有排班」= true。誰查得到 = 讀得到這筆申請的人(底座的唯一判準 `SubmissionReadAccess`):
+   * 有 `schedule.attendance.view` 且照原規則讀得到(可見範圍 + 資料範圍)、申請人、這張申請流程上的審核者
+   * (現在或曾持有任務)、知會對象;其他人(含同租戶)→ `NOT_FOUND`。
+   * 申請以讀者的租戶為邊界讀(底座的審核流程存取,不套 `form_submissions` 的資料範圍),排班以租戶邊界反查。
    */
   async entryExistsFor(
     operator: OperatorContext,
     submissionId: string,
   ): Promise<boolean> {
     const id = toObjectId(submissionId);
-    const submission =
-      id === null
-        ? null
-        : await this.submissions.findOne(operator, {
-            _id: id,
-            moduleKey: MAKEUP_PUNCH_MODULE_KEY,
-            formKey: MAKEUP_PUNCH_FORM_KEY,
-          });
-    if (!submission) {
-      throw notFoundError(`makeup punch not found: ${submissionId}`);
+    const notFound = notFoundError(`makeup punch not found: ${submissionId}`);
+    if (id === null) {
+      throw notFound;
+    }
+    const facts = await this.formAccess.factsOf(operator);
+    const submission = await this.readAccess.findInTenant(facts, id);
+    if (
+      submission?.moduleKey !== MAKEUP_PUNCH_MODULE_KEY ||
+      submission.formKey !== MAKEUP_PUNCH_FORM_KEY
+    ) {
+      throw notFound;
+    }
+    const readable = await this.readAccess.readableRevisions(facts, submission);
+    if (readable.kind === "none") {
+      throw notFound;
     }
     const result = await this.checkApprove(
       operator,

@@ -21,7 +21,7 @@ export const DealersPager = ({
   const t = useTranslations("admin.lotteryDealers.common");
   return (
     <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
-      <Typography variant="body2" color="text.secondary" sx={{ flex: 1 }}>
+      <Typography variant="body2" color="textSecondary" sx={{ flex: 1 }}>
         {t("total", { total: totalCount })}
       </Typography>
       <Pagination

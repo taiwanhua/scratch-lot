@@ -58,6 +58,13 @@ export class LotteryCashMovement {
   @Prop({ type: MongooseSchema.Types.ObjectId, default: null })
   attributedShiftId!: Types.ObjectId | null;
 
+  /**
+   * **事後更正**(規格 6.12):寫入時發生班次已送出交班結帳 → 指向那一班(撤銷售出申請的退貨退款、現金更正單完成時)。
+   * 那一班結帳時的應有不含這一筆;事後更正淨額另外加總(`CashLedgerService.postCloseNet`)。
+   */
+  @Prop({ type: MongooseSchema.Types.ObjectId, default: null })
+  postCloseOf!: Types.ObjectId | null;
+
   /** 金額(正整數)。 */
   @Prop({ type: Number, required: true })
   amount!: number;
@@ -104,6 +111,10 @@ export const LotteryCashMovementSchema =
 LotteryCashMovementSchema.index({ orgId: 1, createdAt: 1 });
 LotteryCashMovementSchema.index({ orgId: 1, occurredAt: 1 });
 LotteryCashMovementSchema.index({ shiftId: 1 });
+LotteryCashMovementSchema.index(
+  { postCloseOf: 1 },
+  { partialFilterExpression: { postCloseOf: { $type: "objectId" } } },
+);
 LotteryCashMovementSchema.index({ tenantId: 1, refType: 1, refId: 1 });
 LotteryCashMovementSchema.index({ bankTransactionId: 1 });
 LotteryCashMovementSchema.index(

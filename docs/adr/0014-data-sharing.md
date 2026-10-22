@@ -37,7 +37,7 @@
 
 - 看**全部所屬組織**(`memberOrgIds`),不看當前組織;切換當前組織,看到的共用資料不變。
 - 共用給某組織且勾「含下層」→ 它的下層也看得到:比對方式是「共用的組織 ∈ 我的所屬組織的上層鏈」(不含根組織)。
-- 不受可見性開關展開:開關只放大可見範圍本身,共用分支只看所屬組織。
+- 不受可見性開關展開:開關只放大可見範圍本身,共用分支只看所屬組織(例外:表單提交的依欄位共用比對可見範圍,`match: visible`,見「表單提交:依欄位共用」)。
 - **別的租戶絕對看不到**:共用分支**依所屬租戶分組**(`memberTenants`),每個租戶 T 各產生 `{ tenantId: T, shareOrgs / 欄位 ∈ T 裡的所屬組織(與上層鏈)}`,由 plugin 強制帶上、呼叫端拿不掉。同時屬於兩個租戶的人,不會拿乙租戶的組織去命中甲租戶的資料;即使資料損毀、清單或欄位指到別租戶的組織也一樣。
 - 根組織維持現狀:可見範圍是全部,不需要共用;要看某租戶的資料先切進那個租戶。
 
@@ -62,6 +62,18 @@
 
 **理由**:分析時發現底座與專案多處各自把範圍提升成 `"all"` 再手動釘 `tenantId`,沒有登記、lint 或掃描,寫錯一個條件就是跨租戶讀寫;寫入也有放大的地方。把共用變成宣告、把提升變成登記,review 才看得到每一個例外。
 
+## 表單提交:依欄位共用
+
+**決策**:
+
+- 所有表單共用一張 `form_submissions`,共用與否卻因表單而異,所以宣告分兩層:表的宣告固定為 `shareable`(`defaultShareOrgs: none`、`editable: false`,提交沒有「共用給」),`sharedByFields` 只有一個頂層欄位 `sharedOrgIds`(`match: visible`,見下一條);**哪幾個欄位算數**由表單設定 `forms.sharedByFieldKeys`(表單層的組織引用欄 key)決定。
+- **比對可見範圍,不比對所屬組織**:`sharedOrgIds` ∩ 讀者在該租戶的可見範圍(所屬組織 + 租戶開了「含下層」時的整棵下層)非空就讀得到;仍依所屬租戶分組、每組釘該租戶的 `tenantId`(登入線把可見範圍依租戶分組,`memberTenants[].visibleOrgIds`),寫入不放大。這和資料表的 `sharedByFields`(比對所屬組織、不受可見性開關展開)不同。
+- 引擎每次寫入存值(建草稿、存草稿、送出、修改、升級)時,從設定的欄位算出 `sharedOrgIds`,與存值同一次寫入;**草稿一律空**(草稿只屬於建立者)。表單設定改了只影響之後的寫入;既有提交要回填就寫 migration(依那一版的宣告從存值算)。
+- 共用進來的提交只能看:詳情的 `abilities` 不給改 / 刪 / 作廢 / 複製為新單,呼叫端點 → `FORBIDDEN`(`SHARED_READ_ONLY`);申請人本人照常走自己的路徑。
+- 業務功能直接讀 `form_submissions` 的(自己的列表、單筆的讀取資格)不各自比對單據存值裡的組織欄,一律走一般讀取;「誰能操作哪一邊」這類寫入資格仍由功能自己判斷(寫入不放大)。
+
+**理由**:「上層建的單,單上指到的組織也要看得到」是表單的業務語意,同一張表的不同表單答案不同;把欄位清單放在表單設定(受管表單由 seed 宣告),讀取條件仍由 plugin 統一加,才不會每個功能各寫一套比對。比對可見範圍是因為表單的組織欄代表「這張單屬於哪個組織」—— 看得到那個組織的人(例:可見範圍含下層的上層主管)本來就該看得到它的單,依欄位共用只是多一條讀取路,不該比單據歸屬在那個組織時看得到的範圍更窄;資料表的共用清單則是「分享給誰」,維持比所屬組織。
+
 ## lookup
 
 **決策**:專案來源走同一套讀取,共用自動生效(搜尋、依值取回、送出重驗)。`ProjectLookupDeclaration.sharedToFilter` 宣告「依表單欄位換值的共用篩選」:`filter` 裡這個鍵的值是組織 id,只列「給那個組織看得到」的資料(歸屬是它、它沿用的上層,或共用給它),仍與操作者自己的讀取範圍 `$and`。
@@ -73,4 +85,4 @@
 - 示範模組 2 是「可共用、預設不共用、可編輯」的示範表(權限劇本 30–35)。
 - 前端「共用給」欄位是底座 `ShareOrgsField`(`OrgTreeSelect` 的 `scope="tenant"` 多選 + 每個已選組織一個「含下層」勾選框),示範模組 2 與專案的可編輯共用清單都用它。
 
-正本:`apps/api/src/database/plugins/tenant-scope.plugin.ts`、`apps/api/src/database/base.repository.ts`、`apps/api/src/database/share-orgs.ts`、`apps/api/src/database/elevated-contexts.ts`、`apps/api/src/database/system-tenant-reader.ts`、`apps/api/src/database/data-sharing.test.ts`
+正本:`apps/api/src/database/plugins/tenant-scope.plugin.ts`、`apps/api/src/database/schemas/form-submission.schema.ts`、`apps/api/src/forms/form-values/shared-org-ids.ts`、`apps/api/src/database/base.repository.ts`、`apps/api/src/database/share-orgs.ts`、`apps/api/src/database/elevated-contexts.ts`、`apps/api/src/database/system-tenant-reader.ts`、`apps/api/src/database/data-sharing.test.ts`

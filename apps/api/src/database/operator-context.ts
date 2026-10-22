@@ -64,6 +64,12 @@ export interface MemberTenant {
   memberOrgIds: Types.ObjectId[];
   /** 這些所屬組織的上層鏈聯集(不含根組織、不含所屬組織本身)。 */
   ancestorOrgIds: Types.ObjectId[];
+  /**
+   * 這個租戶裡的**可見範圍**(所屬組織 + 租戶開了「含下層」時各自的整棵下層;登入線計算)。
+   * 只給比對可見範圍的共用欄位用(`SharedByField.match: "visible"`,表單提交的依欄位共用);
+   * 缺席(內部上下文、測試)= 只有所屬組織。
+   */
+  visibleOrgIds?: Types.ObjectId[];
 }
 
 /** 掛在單一 Query 上的範圍資訊,供 plugin 的查詢中介層讀取。 */

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "@jest/globals";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 
+import { expectButtonOrder } from "@/test/button-order";
 import { dealerFixtures } from "@/test/msw/project/dealers-fixtures";
 import { setupFakeViewport } from "@/test/viewport";
 
@@ -31,6 +32,10 @@ describe("經銷商詳情頁", () => {
     ).toBeInTheDocument();
     expect(screen.getByText(/共同銷售處所:好運 2 號店/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "編輯" })).toBeInTheDocument();
+    // 檢視頁頂部列(REACT-16):左 [← 返回列表],右 [編輯](contained)
+    expect(expectButtonOrder(["← 返回列表", "編輯"])[1]).toHaveClass(
+      "MuiButton-contained",
+    );
     // 甲類只有一個詳情分頁(批購紀錄由進貨單追加):只剩一個時不顯示分頁籤,直接是內容
     expect(
       await screen.findByRole("heading", { name: "見簽紀錄" }),

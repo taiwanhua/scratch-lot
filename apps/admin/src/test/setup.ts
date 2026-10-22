@@ -8,6 +8,10 @@ import { defaultLocale } from "@repo/i18n";
 import { INITIAL_SESSION_SNAPSHOT } from "../lib/base/auth/session-store";
 import { LOCALE_STORAGE_KEY } from "../lib/base/locale";
 import { useDesignerDraftStore } from "../stores/base/useDesignerDraftStore";
+import {
+  INITIAL_DESIGNER_DRAWER,
+  useDesignerDrawerStore,
+} from "../stores/base/useDesignerDrawerStore";
 import { useLocaleStore } from "../stores/base/useLocaleStore";
 import { useSessionStore } from "../stores/base/useSessionStore";
 import {
@@ -57,6 +61,8 @@ afterEach(() => {
   useDesignerDraftStore.setState({ formKey: null, isDirty: false, save: null });
   // 流程設計器的「未存變更」回報同理
   useWorkflowDraftStore.setState(INITIAL_WORKFLOW_DRAFT);
+  // 設計器屬性抽屜的開關回報同理
+  useDesignerDrawerStore.setState(INITIAL_DESIGNER_DRAWER);
   // `useUrlState`(nuqs)寫入時也改 `window.history`:網址列回到起點,不讓上一個測試的網址參數漏進下一個
   globalThis.history.replaceState(null, "", "/");
 });

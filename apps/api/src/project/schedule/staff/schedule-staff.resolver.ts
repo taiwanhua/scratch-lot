@@ -3,6 +3,7 @@ import { Args, Mutation, Query, Resolver } from "@nestjs/graphql";
 import { CurrentOperator } from "../../../auth/decorators";
 import type { OperatorContext } from "../../../database/operator-context";
 import { RequirePermission } from "../../../permission/require-permission.decorator";
+import { RequireTenant } from "../../tenant-scope/require-tenant.decorator";
 import {
   AddScheduleStaffInput,
   ScheduleStaffListInput,
@@ -17,6 +18,7 @@ import {
 import { ScheduleStaffService } from "./schedule-staff.service";
 
 /** 排班設定 → 排班人員(`schedule.settings`;寫入要 `edit-staff`)。 */
+@RequireTenant()
 @Resolver(() => ScheduleStaffRowModel)
 export class ScheduleStaffResolver {
   constructor(private readonly service: ScheduleStaffService) {}

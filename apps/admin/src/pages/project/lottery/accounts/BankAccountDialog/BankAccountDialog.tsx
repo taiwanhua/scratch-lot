@@ -190,28 +190,26 @@ export const BankAccountDialog = ({ onClose }: BankAccountDialogProps) => {
             change("accountName", event.target.value);
           }}
         />
-        <Stack direction="row" spacing={2}>
-          <TextField
-            label={t("accountForm.fields.openingBalance")}
-            value={values.openingBalance}
-            required
-            error={isInvalid("openingBalance")}
-            slotProps={{ htmlInput: { inputMode: "numeric" } }}
-            onChange={(event) => {
-              change("openingBalance", event.target.value);
-            }}
-            sx={{ flex: 1 }}
-          />
-          <DatePicker
-            label={t("accountForm.fields.openingDate")}
-            value={values.openingDate}
-            error={isInvalid("openingDate")}
-            fullWidth
-            onChange={(value) => {
-              change("openingDate", value);
-            }}
-          />
-        </Stack>
+        {/* 期初餘額、期初日期各自一行(使用者驗收要求:不並排) */}
+        <TextField
+          label={t("accountForm.fields.openingBalance")}
+          value={values.openingBalance}
+          required
+          error={isInvalid("openingBalance")}
+          slotProps={{ htmlInput: { inputMode: "numeric" } }}
+          onChange={(event) => {
+            change("openingBalance", event.target.value);
+          }}
+        />
+        <DatePicker
+          label={t("accountForm.fields.openingDate")}
+          value={values.openingDate}
+          error={isInvalid("openingDate")}
+          fullWidth
+          onChange={(value) => {
+            change("openingDate", value);
+          }}
+        />
         <Stack spacing={1}>
           <Typography variant="subtitle2">
             {t("accountForm.usageTitle")}
@@ -223,7 +221,7 @@ export const BankAccountDialog = ({ onClose }: BankAccountDialogProps) => {
             onChange={setShareOrgs}
           />
         </Stack>
-        <Typography variant="caption" color="text.secondary">
+        <Typography variant="caption" color="textSecondary">
           {t("accountForm.lockHint")}
         </Typography>
       </Stack>

@@ -5,7 +5,7 @@ import { MAKEUP_PUNCH_FIELD_KEYS } from "@repo/domain/project/schedule-settings"
 
 import { assembleSeedRegistry } from "../registry";
 import { projectSeedSource } from "./registry";
-import { seed as makeupPunchForm } from "./revisions/makeup_punch.r2.seed";
+import { seed as makeupPunchForm } from "./revisions/makeup_punch.r3.seed";
 import { projectSeedSettings } from "./settings";
 
 const fieldOf = (key: string) =>
@@ -26,6 +26,8 @@ describe("受管表單 補打卡申請(makeup_punch r2)", () => {
       moduleKey: "schedule.attendance",
       allowDraft: false,
       voidReasonCategoryKey: SHARED_FIELD_CATEGORY_KEYS.voidReason,
+      // 依欄位共用:分店欄指到的分店也看得到(唯讀)
+      sharedByFieldKeys: ["branch"],
       serial: { prefix: "M", period: "none", digits: 4 },
     });
   });

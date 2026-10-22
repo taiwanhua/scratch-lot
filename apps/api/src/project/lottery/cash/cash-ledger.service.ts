@@ -44,6 +44,8 @@ export interface CashMovementInput {
   shiftId?: Types.ObjectId | null;
   /** 現金更正的歸屬班次。 */
   attributedShiftId?: Types.ObjectId | null;
+  /** 事後更正:發生班次已送出交班結帳 → 那一班(規格 6.12)。 */
+  postCloseOf?: Types.ObjectId | null;
   refType?: string | null;
   refId?: Types.ObjectId | null;
   refRevision?: number | null;
@@ -61,10 +63,14 @@ export interface VaultBaseline {
   since: Date | null;
 }
 
-/** 日結(P27)登記的起算點來源;回 null = 這家分店還沒有日結。 */
+/**
+ * 日結(P27)登記的起算點來源;回 null = 這家分店還沒有日結。`before` 給了 = 那個時點以前的起算點
+ * (關帳快照的月底小金庫:只看那之前送出的已完成日結)。
+ */
 export type VaultBaselineProvider = (
   tenantId: Types.ObjectId | null,
   orgId: Types.ObjectId,
+  before?: Date,
 ) => Promise<VaultBaseline | null>;
 
 let baselineProvider: VaultBaselineProvider | null = null;
@@ -118,6 +124,7 @@ export class CashLedgerService {
         cashPointId: input.cashPointId ?? null,
         shiftId: input.shiftId ?? null,
         attributedShiftId: input.attributedShiftId ?? null,
+        postCloseOf: input.postCloseOf ?? null,
         amount: input.amount,
         refType: input.refType ?? null,
         refId: input.refId ?? null,
@@ -173,6 +180,7 @@ export class CashLedgerService {
           cashPointId: original.cashPointId,
           shiftId: original.shiftId,
           attributedShiftId: original.attributedShiftId,
+          postCloseOf: original.postCloseOf ?? null,
           amount: original.amount,
           refType: original.refType,
           refId: original.refId,
@@ -193,36 +201,61 @@ export class CashLedgerService {
     }
   }
 
-  /** 小金庫的起算點(日結登記前一律從 0 起算)。 */
+  /** 小金庫的起算點(日結登記前一律從 0 起算);`before` 給了 = 那個時點以前的起算點。 */
   async vaultBaseline(
     tenantId: Types.ObjectId | null,
     orgId: Types.ObjectId,
+    before?: Date,
   ): Promise<VaultBaseline> {
-    return (await baselineProvider?.(tenantId, orgId)) ?? { ...ZERO_BASELINE };
+    return (
+      (await baselineProvider?.(tenantId, orgId, before)) ?? {
+        ...ZERO_BASELINE,
+      }
+    );
   }
 
-  /** 小金庫目前的應有金額 = 起算點 + 之後流水的加總(只從流水算,沒有可改寫的欄位)。 */
+  /**
+   * 小金庫目前的應有金額 = 起算點 + 之後流水的加總(只從流水算,沒有可改寫的欄位)。
+   * `before` 給了 = 那個時點(不含)的應有(關帳快照的月底小金庫):起算點與流水都只看那之前的。
+   */
   async vaultExpected(
     operator: OperatorContext,
     tenantId: Types.ObjectId | null,
     orgId: Types.ObjectId,
+    before?: Date,
   ): Promise<{ amount: number; baseline: VaultBaseline }> {
-    const baseline = await this.vaultBaseline(tenantId, orgId);
+    const baseline = await this.vaultBaseline(tenantId, orgId, before);
+    const occurredAt = {
+      ...(baseline.since === null ? {} : { $gt: baseline.since }),
+      ...(before === undefined ? {} : { $lt: before }),
+    };
     const sum = await this.sumPlace(operator, "vault", {
       orgId,
-      ...(baseline.since === null
-        ? {}
-        : { occurredAt: { $gt: baseline.since } }),
+      ...(Object.keys(occurredAt).length === 0 ? {} : { occurredAt }),
     });
     return { amount: baseline.amount + sum, baseline };
   }
 
-  /** 一個班次的抽屜流水淨額(流入抽屜 − 流出抽屜);抽屜應有由店面加上期初與售出。 */
+  /**
+   * 一個班次的抽屜流水淨額(流入抽屜 − 流出抽屜);抽屜應有由店面加上期初與售出。
+   * 不含事後更正(`postCloseOf`,規格 6.12:結帳時的應有不變)。
+   */
   sumShiftMovements(
     operator: OperatorContext,
     shiftId: Types.ObjectId,
   ): Promise<number> {
-    return this.sumPlace(operator, "drawer", { shiftId });
+    return this.sumPlace(operator, "drawer", { shiftId, postCloseOf: null });
+  }
+
+  /**
+   * 一個班次現金流水的**事後更正淨額**(規格 6.12;退貨退款 −、現金更正 ±):那一班的應有(含事後更正)=
+   * 結帳時的應有 + 各來源的事後更正淨額。交班結帳、報表由那些功能加總。
+   */
+  postCloseNet(
+    operator: OperatorContext,
+    shiftId: Types.ObjectId,
+  ): Promise<number> {
+    return this.sumPlace(operator, "drawer", { postCloseOf: shiftId });
   }
 
   private async sumPlace(

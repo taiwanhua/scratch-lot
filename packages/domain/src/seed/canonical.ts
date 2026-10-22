@@ -415,6 +415,10 @@ function managedMetadataOf(seed: DefinitionSeedSet): PlainRecord {
         ...(seed.voidReasonCategoryKey === undefined
           ? {}
           : { voidReasonCategoryKey: seed.voidReasonCategoryKey }),
+        // 依欄位共用:有宣告才進 hash(缺席 = 不共用,與這個欄位出現之前的 hash 相同)
+        ...(seed.sharedByFieldKeys === undefined
+          ? {}
+          : { sharedByFieldKeys: seed.sharedByFieldKeys }),
       }
     : { name: seed.name, checkFormKey: seed.checkFormKey };
 }

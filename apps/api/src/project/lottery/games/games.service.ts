@@ -19,6 +19,7 @@ import {
   type LotteryGameDocument,
   LotteryGamesRepository,
 } from "../../database/lottery-games/lottery-games.repository";
+import { rootOrgError } from "../../tenant-scope/root-org";
 import { MasterDataAccess, type MasterDataGrant } from "../master-data-access";
 import {
   MASTER_DATA_REASONS,
@@ -321,10 +322,14 @@ export class LotteryGamesService {
     }
   }
 
+  /** 操作者所在的租戶:沒有當前組織 → `NOT_FOUND`;站在根組織 → `FORBIDDEN` + `TENANT_ONLY`(根組織沒有遊戲)。 */
   private mustTenant(operator: OperatorContext): OperatorTenant {
     const tenant = tenantOfOperator(operator);
     if (tenant === null) {
       throw notFoundError("operator has no current org");
+    }
+    if (tenant.tenantId === null) {
+      throw rootOrgError();
     }
     return tenant;
   }
@@ -353,7 +358,7 @@ export class LotteryGamesService {
     gameCode: string,
   ): Promise<void> {
     // 代號是整個租戶唯一(含操作者看不到的分店建的):租戶邊界出口只回有無。
-    // 只在代號變了才查,所以命中的一定是別筆;根組織的遊戲(tenantId null)沒有租戶邊界,靠唯一索引守
+    // 只在代號變了才查,所以命中的一定是別筆;根組織進不來(`mustTenant` → TENANT_ONLY),tenantId 一定有值
     const duplicate =
       tenant.tenantId !== null &&
       (await this.games.existsInTenant(operator, tenant.tenantId, {

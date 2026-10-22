@@ -107,7 +107,7 @@ export const FieldOptionsPanel = ({
       </Stack>
 
       {category === null ? (
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" color="textSecondary">
           {t("noCategoryHint")}
         </Typography>
       ) : (

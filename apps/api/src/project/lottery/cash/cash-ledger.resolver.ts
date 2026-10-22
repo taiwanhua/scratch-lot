@@ -2,6 +2,7 @@ import { Args, ID, Query, Resolver } from "@nestjs/graphql";
 
 import { CurrentOperator } from "../../../auth/decorators";
 import type { OperatorContext } from "../../../database/operator-context";
+import { RequireTenant } from "../../tenant-scope/require-tenant.decorator";
 import { CashLedgerViewService } from "./cash-ledger-view.service";
 import {
   LotteryCashLedgerInput,
@@ -11,6 +12,7 @@ import {
 } from "./models/lottery-cash-ledger.model";
 
 /** 即時現金帳的端點(只能查看;`accounts.view-cash` 由 service 檢查)。沒有寫入端點:流水由各功能經服務寫。 */
+@RequireTenant()
 @Resolver(() => LotteryCashMovementModel)
 export class LotteryCashLedgerResolver {
   constructor(private readonly view: CashLedgerViewService) {}

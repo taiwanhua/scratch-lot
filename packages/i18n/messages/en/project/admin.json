@@ -98,6 +98,7 @@
     },
     "gameView": {
       "edit": "Edit",
+      "backToList": "← Back to list",
       "summary": "{unitPrice} × {tickets} tickets · book {bookPrice} · default rate {rate}%",
       "tabs": {
         "aria": "Game detail tabs",
@@ -175,6 +176,7 @@
       "newDealer": "+ New dealer",
       "newContact": "+ New contact",
       "edit": "Edit",
+      "backToList": "← Back to list",
       "save": "Save",
       "cancel": "Cancel",
       "clear": "Clear",
@@ -563,7 +565,8 @@
       "source": "{serial} ({count} tickets)",
       "recover": "Recover",
       "listAria": "Investigating · Lost",
-      "empty": "No investigating or lost tickets"
+      "empty": "No investigating or lost tickets",
+      "loadFailed": "Could not load investigating and lost tickets. Please try again later."
     },
     "book": {
       "tabLabel": "Book {key}",
@@ -598,7 +601,8 @@
       },
       "wholeBook": "Whole book",
       "aria": "Event timeline",
-      "empty": "No events yet"
+      "empty": "No events yet",
+      "correctionOf": " (prior correction, belongs to {shift})"
     },
     "correctSkips": {
       "title": "Correct skips",
@@ -733,6 +737,163 @@
       "VALIDATION_FAILED": "The conditions are incomplete. Check the period and branches.",
       "FORBIDDEN": "You don't have permission for this report.",
       "UNEXPECTED": "Couldn't generate the report. Please try again later."
+    },
+    "extra": {
+      "alignDailyClose": "Align with daily close (each store uses previous close ~ close of the day)",
+      "cashPoint": "Cash point",
+      "onlyWithDifference": "Only with differences"
+    },
+    "operations": {
+      "blocks": {
+        "sales": "1 Sales",
+        "profit": "2 Gross profit",
+        "redemption": "3 Prize redemption",
+        "inventory": "4 Inventory changes",
+        "cash": "5 Cash",
+        "bank": "6 Bank",
+        "outstanding": "7 Outstanding",
+        "notes": "8 Notes",
+        "games": "1 Sales · by game"
+      },
+      "postClose": {
+        "redemption": "Redemption correction",
+        "stocktake": "Stocktake backfill",
+        "refund": "Return refund",
+        "cashCorrection": "Cash correction",
+        "other": "Other"
+      },
+      "bankTypes": {
+        "deposit": "Deposit",
+        "withdrawal": "Withdrawal",
+        "redemption_income": "Redemption income",
+        "purchase_income": "Purchase income",
+        "purchase_expense": "Purchase expense",
+        "transfer_income": "Transfer income",
+        "transfer_expense": "Transfer expense",
+        "license_rent": "License rent",
+        "adjustment": "Adjustment",
+        "other": "Other"
+      },
+      "units": {
+        "tickets": "tickets",
+        "records": "records",
+        "books": "books",
+        "shifts": "shifts",
+        "times": "times"
+      },
+      "items": {
+        "columns": {
+          "block": "Block",
+          "item": "Item",
+          "count": "Quantity",
+          "amount": "Amount",
+          "note": "Note"
+        },
+        "scan": "Scanned sales",
+        "manual": "Manual · {reason}",
+        "stocktake": "Stocktake backfill",
+        "undo": "Undone",
+        "net": "Net sales",
+        "soldCost": "Cost of sold tickets",
+        "grossProfit": "Gross profit",
+        "redemptionValid": "Redemptions (excl. revoked)",
+        "redemptionInStore": "Held in store",
+        "redemptionSent": "Sent for claim",
+        "redemptionRevoked": "Revoked (listed separately)",
+        "purchase": "Purchased",
+        "books": "{count} books",
+        "transferIn": "Transferred in (transfer amount)",
+        "transferOut": "Transferred out (transfer amount)",
+        "transferGain": "Transfer gain / loss",
+        "scrap": "Scrapped (cost)",
+        "lost": "Lost (cost)",
+        "recovered": "Recovered (cost)",
+        "skipped": "Skipped numbers",
+        "noCost": "No cost",
+        "ending": "Ending stock",
+        "investigating": "Under investigation",
+        "shiftDifference": "Shift checkout differences",
+        "postClose": "Post-close correction · {category}",
+        "postCloseNone": "Post-close corrections",
+        "refund": "Return refunds",
+        "transferExpense": "Transfer expense (cash)",
+        "transferIncome": "Transfer income (cash)",
+        "deposit": "Deposited to vault",
+        "bankDeposit": "Deposited to bank",
+        "vaultDifference": "Daily close vault difference",
+        "sharedAccount": "{label} (shared)",
+        "bankType": "{account} · {type}",
+        "bankBalance": "{account} · ending balance (whole account)",
+        "purchaseToPay": "Purchase payment due",
+        "purchaseToRefund": "Purchase refund due",
+        "transferToReceive": "Transfer payment to receive",
+        "transferToPay": "Transfer payment due",
+        "skippedStocktakes": "Skipped stocktakes",
+        "reasonCount": "{reason} x{count}",
+        "uncountedBooks": "Uncounted books",
+        "uncountedNote": "{books} books uncounted ({stocktakes} stocktakes)",
+        "uncoveredShifts": "Shifts not covered by a daily close",
+        "priorPeriod": "Prior-period corrections",
+        "openMonths": "Not yet closed",
+        "allClosed": "None (all closed)",
+        "game": "{code} {name} · {price}",
+        "gameNote": "Sold {sold} · undone {undone}",
+        "alignedPeriod": "Store period {from} ~ {to} (aligned with daily close)",
+        "fullDayNote": "{store} had no daily close on {date}; the whole day is used and the vault and stocktake are not reconciled",
+        "thisStore": "This store",
+        "monthClosed": "Closed: figures are fixed; later corrections appear under prior-period corrections",
+        "monthOpen": "Not yet closed: figures may still change"
+      },
+      "closing": {
+        "closed": "Closed",
+        "open": "Not closed",
+        "closedHint": "Month {month} is closed: figures are fixed; later corrections appear under prior-period corrections."
+      },
+      "alignment": {
+        "warning": "Do not add up several daily reports as a weekly or monthly report; choose Week to see a week.",
+        "tableAria": "Actual period per store",
+        "store": "Store",
+        "period": "Actual period",
+        "note": "Note",
+        "loading": "Choose stores to list the actual period of each store"
+      }
+    },
+    "shiftCheckouts": {
+      "columns": {
+        "store": "Store",
+        "date": "Date",
+        "cashPoint": "Cash point",
+        "leader": "Lead",
+        "helpers": "Helpers",
+        "task": "Task",
+        "time": "Open / checkout",
+        "expected": "Expected",
+        "counted": "Counted",
+        "difference": "Difference",
+        "reason": "Reason",
+        "postClose": "Later corrections",
+        "stocktake": "Stocktake",
+        "status": "Review"
+      },
+      "status": {
+        "pending": "Pending",
+        "confirmed": "Approved",
+        "returned": "Returned"
+      },
+      "roles": {
+        "leader": "Lead",
+        "helper": "Helper"
+      },
+      "stocktake": {
+        "skipped": "Not counted (skipped)",
+        "skippedWithReason": "Not counted (skipped): {reason}",
+        "uncounted": "{count} books uncounted"
+      },
+      "noTask": "No matching schedule",
+      "allCashPoints": "All",
+      "cashPointOfStore": "{store} · {name}",
+      "postCloseEntry": "{amount} ({date} {category})",
+      "postCloseEntryPrior": "{amount} ({date} {category}, prior period)"
     }
   },
   "schedule": {
@@ -1008,7 +1169,7 @@
     },
     "calendar": {
       "org": "Branch",
-      "add": "Add",
+      "add": "+ New closed day / special day",
       "prevMonth": "Previous month",
       "nextMonth": "Next month",
       "monthTitle": "{month}/{year}",
@@ -1145,14 +1306,15 @@
         "message": "There are already shifts on this day ({list}). Please ask the store manager to adjust the roster.",
         "item": "{date} {start}–{end} {org}",
         "otherStore": "another branch"
-      }
+      },
+      "loadFailed": "Could not load day-off data. Please try again later."
     },
     "supportRequests": {
       "loading": "Loading",
       "empty": "No support requests yet",
       "listAria": "Support requests",
       "panelAria": "Support request review",
-      "create": "+ New",
+      "create": "+ New support request",
       "total": "{total} in total",
       "selectHint": "Select a support request to view and review it here",
       "panelTitle": "Support request · {branch}",
@@ -1784,7 +1946,8 @@
       "aria": "Accounts tabs",
       "bankAccounts": "Bank accounts",
       "cash": "Cash ledger",
-      "outstanding": "Outstanding"
+      "outstanding": "Outstanding",
+      "close": "Period close"
     },
     "status": {
       "active": "Active",
@@ -1861,6 +2024,7 @@
       "create": "Create"
     },
     "accountView": {
+      "backToList": "← Back to list",
       "usage": "Used by: {names}",
       "usageNone": "Used by: (not set)",
       "setUsage": "Set organizations",
@@ -1906,7 +2070,8 @@
         "hint": "Pick the top-level organization with “and below” = all branches",
         "cancel": "Cancel",
         "save": "Save"
-      }
+      },
+      "reversalOf": "original {date}"
     },
     "recordForm": {
       "title": "Record transaction",
@@ -1958,7 +2123,11 @@
       "reversal": " (reversal)",
       "empty": "No cash movements on this day",
       "listAria": "Cash movements",
-      "pickOrg": "Pick a branch first"
+      "pickOrg": "Pick a branch first",
+      "drawer": "{name} drawer",
+      "drawerOwner": "Owner {name}",
+      "loadFailed": "Could not load the cash ledger. Please try again later.",
+      "correctionOf": " (prior correction, belongs to {shift})"
     },
     "outstanding": {
       "columns": {
@@ -2034,7 +2203,7 @@
       },
       "sources": {
         "vault": "Vault",
-        "drawer": "Cash point drawer (open shift)"
+        "drawerOf": "{name} drawer (open shift)"
       },
       "noAccount": "No account available for this branch",
       "cancel": "Cancel",
@@ -2045,7 +2214,62 @@
       "saveSuccess": "Saved",
       "deleteSuccess": "Deleted",
       "recordSuccess": "Recorded",
-      "reverseSuccess": "Reversed"
+      "reverseSuccess": "Reversed",
+      "closeSuccess": "Period closed"
+    },
+    "periodClose": {
+      "listAria": "Period close months",
+      "columns": {
+        "month": "Month",
+        "status": "Status",
+        "closedAt": "Closed at",
+        "closedBy": "Closed by",
+        "actions": "Actions"
+      },
+      "statuses": {
+        "current": "In progress",
+        "open": "Not closed",
+        "closed": "Closed"
+      },
+      "close": "Close",
+      "snapshot": "Snapshot",
+      "empty": "No months yet",
+      "hint": "Close in order: only the earliest month that is not closed, after it has ended. A closed month cannot be reopened; correct mistakes now with the original features.",
+      "dialog": {
+        "title": "Close {month}",
+        "shiftsOk": "Every cash register shift has checked out",
+        "shiftsBlocked": "{count} shifts have not checked out: {list}",
+        "documentsOk": "No document under review is recorded in month {monthNumber}",
+        "documentsBlocked": "{count} documents are under review. Handle them first:",
+        "coverageOk": "Every shift is covered by a daily close",
+        "coverageWarning": "Every shift is covered by a daily close: {list} (warning only, kept in the snapshot)",
+        "coverageStore": "{store} has {count} shifts not covered",
+        "snapshotTitle": "Snapshot preview",
+        "bankBalance": "{label} month-end balance",
+        "storeCash": "{store} vault / drawers",
+        "storeCashValue": "{vault} / {drawers}",
+        "uncovered": "{store} shifts not covered by a daily close",
+        "uncoveredValue": "{count} shifts",
+        "spanning": "{store} {cashPoint}: the shift spanning month end ({shift}) is not counted",
+        "confirmLabel": "Type the month to confirm",
+        "confirmHelper": "Type {month}",
+        "cancel": "Cancel",
+        "submit": "Close"
+      },
+      "documentKinds": {
+        "sale_reversal": "Sale reversal",
+        "cash_correction": "Cash correction",
+        "shift_checkout": "Checkout confirmation (shift)",
+        "daily_close": "Checkout confirmation (daily close)"
+      },
+      "documentLine": "{kind} {serial}{shift} under review",
+      "documentShift": " ({shift})",
+      "listSeparator": ", ",
+      "snapshotDialog": {
+        "title": "Snapshot {month}",
+        "closedBy": "Closed by {name} at {at}",
+        "close": "Close"
+      }
     },
     "errors": {
       "FORBIDDEN": "You don't have permission to do this",
@@ -2059,7 +2283,14 @@
       "SETTLEMENT_NOTHING_DUE": "Nothing is due on this document; please refresh",
       "BANK_ACCOUNT_NOT_USABLE": "This account is not used by this branch",
       "NO_OPEN_SHIFT": "This cash point has no open shift",
-      "UNEXPECTED": "Something went wrong, please try again"
+      "UNEXPECTED": "Something went wrong, please try again",
+      "CASH_POINT_NOT_AT_BRANCH": "This cash point is not at this side's branch; pick an open drawer of this branch",
+      "PERIOD_CLOSE_INVALID": "The month you typed does not match the month to close",
+      "PERIOD_NOT_ENDED": "This month has not ended yet",
+      "PERIOD_ALREADY_CLOSED": "This month is already closed (it cannot be reopened)",
+      "PERIOD_OUT_OF_ORDER": "Close months in order; close the earlier month first",
+      "PERIOD_SHIFTS_NOT_CLOSED": "Some cash register shifts of that month have not checked out",
+      "PERIOD_PENDING_DOCUMENTS": "Some documents of that month are under review; handle them first"
     }
   },
   "lotteryPurchasing": {
@@ -2118,6 +2349,7 @@
       "totals": "{books} books, estimated purchase {amount}",
       "totalsShort": "{books} books · est. {amount}",
       "saveDraft": "Save draft",
+      "cancel": "Cancel",
       "submit": "Submit",
       "draftSaved": "Draft saved",
       "submitted": "Requisition submitted"
@@ -2149,7 +2381,7 @@
       "createFromRequisition": "Create purchase",
       "list": {
         "title": "Purchases",
-        "create": "+ New",
+        "create": "+ New purchase",
         "progress": "Received",
         "settlement": "Settlement",
         "cleared": "Settled",
@@ -2239,6 +2471,28 @@
         "status": "Status",
         "aria": "Purchase records",
         "empty": "No purchase records yet"
+      },
+      "redemption": {
+        "title": "Redemptions (tick the winning tickets taken to redeem this time)",
+        "viewTitle": "Redemptions ticked on this purchase",
+        "scope": "Only redemptions held in store at the purchasing branch",
+        "noBranch": "Choose the purchasing branch first",
+        "empty": "No redemptions held in store at this branch",
+        "aria": "Redemptions",
+        "pick": "Tick {ticket}",
+        "columns": {
+          "serialNo": "No.",
+          "time": "Redeemed",
+          "cashPoint": "Cash point",
+          "ticket": "Game / book / ticket",
+          "prize": "Prize",
+          "status": "Status"
+        },
+        "totals": {
+          "redemption": "Redemptions ({count} ticked)",
+          "offset": "Redemption offset",
+          "remainder": "Redemption remainder"
+        }
       }
     },
     "receive": {
@@ -2292,7 +2546,7 @@
       "list": {
         "title": "Transfers",
         "subtitle": "Receiving stores do not start transfers; place a requisition when short",
-        "create": "+ New",
+        "create": "+ New transfer",
         "count": "Books / tickets",
         "books": "{count} books",
         "tickets": "{count} tickets",
@@ -2407,7 +2661,9 @@
           "shipper_overreceived": "The shipping store received {amount} too much; record a refund first",
           "receiver_overpaid": "The receiving store paid {amount} too much; record the refund received"
         },
-        "wrongStoreNotified": "The creator of this transfer has been notified"
+        "wrongStoreNotified": "The creator of this transfer has been notified",
+        "printShipment": "Shipping slip",
+        "printPayment": "Payment receipt"
       },
       "wrongStore": {
         "facts": "Book {bookNo} · transfer {serialNo} · to {branch}",
@@ -2417,6 +2673,67 @@
     "allocation": {
       "title": "Over the planned books (warning only; you can still submit):",
       "item": "{game}: {excess} more"
+    },
+    "receipts": {
+      "documentNo": "No. {serialNo}",
+      "documentName": "{title} {serialNo}",
+      "qrCaption": "Scan to open this document",
+      "batchSelect": "Receiving",
+      "batchOption": "#{no} · {time}",
+      "purchaseReceiving": {
+        "title": "Purchase receiving slip",
+        "copyStore": "Copy 1 · Store copy",
+        "copyCourier": "Copy 2 · Courier copy",
+        "branch": "Receiving store",
+        "dealer": "Class A dealer",
+        "thisTime": "Receiving #{no} ({count} books)",
+        "receivedSoFar": "Received ({count} books)",
+        "missing": "Not yet arrived ({count} books)",
+        "noneMissing": "Not yet arrived: none",
+        "columns": {
+          "game": "Game",
+          "books": "Books",
+          "progress": "Received"
+        },
+        "progress": "{received} / {total}",
+        "bookNos": "Books: ",
+        "receiverSign": "Received by",
+        "courierSign": "Courier"
+      },
+      "transferShipment": {
+        "title": "Transfer shipping slip",
+        "route": "From → To",
+        "routeValue": "{from} → {to}",
+        "columns": {
+          "book": "Game / Book",
+          "tickets": "Tickets",
+          "amount": "Amount"
+        },
+        "bookValue": "{gameCode} · {bookNo}",
+        "ticketNos": "Tickets: ",
+        "ticketCount": " ({count} tickets)",
+        "total": "Transfer amount",
+        "shipperSign": "Shipped by",
+        "courierSign": "Courier",
+        "receiverSign": "Received by"
+      },
+      "transferPayment": {
+        "title": "Transfer payment receipt",
+        "payer": "Paid by",
+        "payerValue": "{branch} · {source}",
+        "sources": {
+          "vault": "Vault",
+          "drawer": "Cash point drawer"
+        },
+        "payee": "Paid to",
+        "cash": "Cash",
+        "courierSign": "Courier signature"
+      },
+      "reprint": {
+        "heading": "[Reprint] #{printNo}",
+        "reason": "Reason: {reason}",
+        "reprintedBy": "Reprinted by: {name}"
+      }
     }
   },
   "lifecycle": {
@@ -2454,6 +2771,1186 @@
     "MAKEUP_PUNCH_ENTRY_MISMATCH": "The shift must be yours at that store on that day",
     "MAKEUP_PUNCH_ENTRY_DELETED": "The chosen shift was deleted, so it cannot be approved. Return it so the applicant can choose again",
     "MAKEUP_PUNCH_INVALID_VALUES": "Date, store, type or time is missing",
-    "MAKEUP_PUNCH_NOTE_REQUIRED": "A note is required when the reason is Other"
+    "MAKEUP_PUNCH_NOTE_REQUIRED": "A note is required when the reason is Other",
+    "STORE_FORM_INVALID": "Some fields are missing; check and submit again",
+    "STORE_FORM_BRANCH_NOT_VISIBLE": "The store is outside your scope",
+    "STORE_FORM_SHIFT_NOT_IN_BRANCH": "The selected shift is not a shift of this store",
+    "SALE_REVERSAL_TICKET_NOT_REVERSIBLE": "Some tickets are not sold in this store, or are on another open sale reversal request",
+    "SALE_REVERSAL_AMOUNT_MISMATCH": "The refund amount does not match the face value of these tickets; pick them again",
+    "STORE_FORM_VOID_NOT_ALLOWED": "Sale reversals and cash corrections cannot be voided; create an opposite one instead",
+    "STOCKTAKE_DIFF_STALE": "These tickets were already processed. Please recheck.",
+    "STOCKTAKE_DIFF_UNHANDLED": "Some differences are not handled yet.",
+    "STOCKTAKE_DRAFT_INVALID": "The stocktake is incomplete (or a loss has no reason). Please count again.",
+    "STOCKTAKE_FORBIDDEN": "You do not have permission to stocktake or confirm losses.",
+    "STOCKTAKE_VOID_FORBIDDEN": "Stocktake confirmations cannot be voided; recover tickets when they are scanned.",
+    "CHECKOUT_DRAFT_INVALID": "The checkout content does not match this shift. Reopen close shift.",
+    "CHECKOUT_FORBIDDEN": "Only the shift owner or a store manager can close the shift; skipping the stocktake also needs the skip permission.",
+    "CHECKOUT_SHIFT_CLOSED": "This shift has already been closed.",
+    "CHECKOUT_PENDING_EXISTS": "This shift already has a checkout confirmation under review.",
+    "CHECKOUT_STOCKTAKE_NOT_REUSABLE": "That stocktake is older than 30 minutes or not for this cash point. Count now instead.",
+    "CHECKOUT_REASON_REQUIRED": "A reason is required when the difference is not 0 or the stocktake is skipped.",
+    "CHECKOUT_LEFT_MUST_BE_ZERO": "Without a successor the amount left for the next shift must be 0. Deposit the cash first.",
+    "CHECKOUT_SUCCESSOR_INVALID": "The successor must be a member of this store.",
+    "CHECKOUT_REJECT_FORBIDDEN": "Checkout confirmations cannot be rejected. Return it instead.",
+    "CHECKOUT_VOID_FORBIDDEN": "Checkout confirmations cannot be voided.",
+    "CHECKOUT_LEFT_EXCEEDS_COUNTED": "The amount left for the next shift cannot exceed the counted cash.",
+    "CHECKOUT_SUCCESSOR_SELF": "The successor cannot be the applicant or the shift owner.",
+    "DAILY_CLOSE_SHIFTS_OPEN": "Some cash points have not checked out. Check out every shift before the daily close.",
+    "DAILY_CLOSE_UNAPPROVED": "Some covered shift checkouts are not approved yet.",
+    "DAILY_CLOSE_PENDING_EXISTS": "This store already has a daily close under review or returned.",
+    "DAILY_CLOSE_DEPOSIT_INVALID": "The bank deposit amount is invalid (it cannot exceed the counted vault cash).",
+    "DAILY_CLOSE_ACCOUNT_NOT_USABLE": "Choose an active bank account used by this store.",
+    "PERIOD_CLOSED": "The selected shift is in a closed month and cannot be chosen."
+  },
+  "lotteryStore": {
+    "tabs": {
+      "aria": "Store",
+      "board": "Board",
+      "checkouts": "Shift checkouts",
+      "otherForms": "Other requests",
+      "redemptions": "Redemptions",
+      "saleReversals": "Sale reversals",
+      "cashCorrections": "Cash corrections",
+      "stocktakes": "Stocktakes"
+    },
+    "top": {
+      "org": "Branch",
+      "localCashPoint": "This device's cash point",
+      "notSet": "Not set",
+      "myShifts": "Your open shifts: {names}",
+      "live": "Live",
+      "reconnecting": "Reconnecting"
+    },
+    "board": {
+      "noLocal": "This device has no cash point yet: scanned tickets only show their info and cannot be sold or redeemed.",
+      "setLocal": "Set this device's cash point",
+      "localNotOpen": "This device's cash point \"{name}\" has no open shift: view only.",
+      "noCashPoint": "This branch has no active cash points.",
+      "pickOrg": "Pick a branch first",
+      "loadFailed": "Could not load the board. Please try again later."
+    },
+    "header": {
+      "local": "This device",
+      "open": "Open",
+      "closed": "Closed",
+      "owner": "Owner {name} · opened {time}",
+      "ownerUnmatched": "Owner {name} · opened {time} · no schedule entry",
+      "ownerAction": "Shift info",
+      "sold": "Sold this shift",
+      "soldValue": "{count} tickets / {amount}",
+      "expected": "Expected cash",
+      "openShift": "Open shift",
+      "deposit": "Deposit",
+      "withdraw": "Withdraw",
+      "switchTo": "Switch to this cash point",
+      "recentSales": "Recent sales",
+      "split": "Open book",
+      "redeem": "Redeem",
+      "recentRedemptions": "Recent redemptions",
+      "checkout": "Close shift"
+    },
+    "card": {
+      "title": "{code} {name}",
+      "price": "{price}",
+      "meta": "Book {bookNo} · sold today {count}",
+      "remaining": "{remaining} / {total} left",
+      "lowStock": "Running low"
+    },
+    "localDialog": {
+      "title": "Set this device's cash point",
+      "description": "Which cash point this device collects money at. Saved in this browser, not with your account.",
+      "cancel": "Cancel",
+      "save": "Save"
+    },
+    "switchDialog": {
+      "title": "Switch this device's cash point?",
+      "message": "You still have an open shift on this device ({from}). After switching, redemptions, deposits and withdrawals go to \"{to}\".",
+      "cancel": "Cancel",
+      "confirm": "Switch to {to}"
+    },
+    "openShift": {
+      "title": "Open shift · {name}",
+      "float": "Opening float",
+      "floatFromVault": "Take float from the vault",
+      "floatFromVaultHint": "Optional; records a withdrawal (opening float) when you open the shift",
+      "floatFirstNoWithdraw": "First shift: no withdraw permission, opening float 0.",
+      "handoverSource": "From the previous shift's \"left for next shift\" ({name}, checked out {time}).",
+      "notPunched": "You have not clocked in yet",
+      "punch": "Clock in",
+      "entry": "Schedule entry",
+      "entryHint": "The entry found by time is preselected; you can pick another entry of the day, or \"No schedule entry (temporary cover)\".",
+      "noEntryToday": "You have no schedule entry at this branch today; pick \"No schedule entry (temporary cover)\".",
+      "temporary": "No schedule entry (temporary cover)",
+      "mismatch": "Your schedule today is \"{positions}\". Open a shift at {cashPoint}? (Reminder only, it is recorded)",
+      "noTask": "No staffing need filled",
+      "cancel": "Cancel",
+      "submit": "Open shift",
+      "submitAnyway": "Open anyway",
+      "success": "Shift opened",
+      "punchSuccess": "Clocked in"
+    },
+    "entry": {
+      "label": "{shortName} {start}–{end} · {task}",
+      "noTemplate": "Temp",
+      "task": "{position} · {role} · {taskName}",
+      "roles": {
+        "leader": "Lead",
+        "helper": "Helper"
+      }
+    },
+    "shiftInfo": {
+      "title": "Shift info · {name}",
+      "owner": "Owner",
+      "ownerValue": "{name} · opened {time}",
+      "float": "Opening float",
+      "entry": "Schedule entry",
+      "unmatched": "No schedule entry (temporary cover)",
+      "snapshot": "Task snapshot",
+      "mismatch": "Position mismatch at opening (recorded)",
+      "empty": "—",
+      "closedHint": "The shift checkout was submitted; the schedule entry can no longer change.",
+      "close": "Close",
+      "reassign": "Change schedule entry"
+    },
+    "reassign": {
+      "title": "Change schedule entry",
+      "reason": "Reason (required)",
+      "hint": "Only the owner's entries at this branch on that day are listed. Not allowed after checkout; the task snapshot is rewritten from the new entry.",
+      "cancel": "Cancel",
+      "save": "Save",
+      "success": "Schedule entry changed"
+    },
+    "cash": {
+      "depositTitle": "Deposit · drawer → vault",
+      "withdrawTitle": "Withdraw · vault → drawer",
+      "drawerExpected": "{name} expected cash",
+      "vaultExpected": "Vault expected",
+      "amount": "Amount",
+      "reason": "Reason (required)",
+      "note": "Note",
+      "cancel": "Cancel",
+      "deposit": "Deposit",
+      "withdraw": "Withdraw",
+      "depositSuccess": "Deposited",
+      "withdrawSuccess": "Withdrawn"
+    },
+    "reasonNote": {
+      "note": "Details",
+      "noteRequired": "Details (required)"
+    },
+    "errors": {
+      "FORBIDDEN": "You do not have permission to do this",
+      "NOT_FOUND": "Not found; it may have been changed by someone else",
+      "VALIDATION_FAILED": "Some fields are invalid; check the highlighted fields",
+      "SHIFT_ALREADY_OPEN": "Someone already opened a shift at this cash point",
+      "SHIFT_IN_OTHER_STORE": "You still have an open shift at another branch; one person can only open shifts at one branch at a time",
+      "SHIFT_CLOSED": "This shift's checkout was already submitted",
+      "CASH_POINT_DISABLED": "This cash point is disabled",
+      "ENTRY_NOT_AVAILABLE": "The entry is not this person's entry at this branch on that day",
+      "OPENING_FLOAT_NOT_ALLOWED": "Only the first shift, with withdraw permission, can take a float from the vault",
+      "AMOUNT_EXCEEDS_DRAWER": "The deposit cannot exceed the drawer's expected cash",
+      "AMOUNT_EXCEEDS_VAULT": "The vault's expected cash is not enough; record the vault's actual cash with a cash correction first",
+      "BANK_DEPOSIT_NO_ACCOUNT": "This store has no usable bank account. Set the account using organizations in Accounts first.",
+      "BANK_ACCOUNT_NOT_USABLE": "This account cannot be used (inactive, or not used by this store).",
+      "PERIOD_CLOSED": "The selected schedule entry is in a closed month and cannot be chosen.",
+      "UNEXPECTED": "Something went wrong. Please try again later."
+    },
+    "sale": {
+      "cancel": "Cancel",
+      "soldTitle": "Sold",
+      "soldMessage": "{key} {amount} · {cashPoint}",
+      "undo": "Undo"
+    },
+    "scan": {
+      "bookTicket": "Book {bookNo} · ticket {ticketNo}",
+      "place": {
+        "counter": "Counter · {cashPoint}",
+        "counterOwned": "Counter · {cashPoint} ({owner}'s shift)",
+        "stock": "Stock",
+        "stockUnopened": "Stock (unopened)",
+        "inTransit": "In transit",
+        "other": "Other"
+      },
+      "statuses": {
+        "unsold": "Unsold",
+        "sold": "Sold",
+        "skipped": "Skipped",
+        "scrapped": "Scrapped",
+        "investigating": "Under investigation",
+        "lost": "Lost"
+      },
+      "pickTitle": "Pick a game",
+      "pickHint": "Book {bookNo} matches {count} games in this store:",
+      "pickOption": "{code} {name} · {price}",
+      "continue": "Continue",
+      "otherMineTitle": "Ticket on {cashPoint} · your shift",
+      "otherMineHint": "The shift on {cashPoint} is also yours: it counts to that shift without moving.",
+      "confirmSell": "Confirm sale",
+      "moveTitle": "Ticket on another cash point",
+      "moveHint": "This ticket is on {from}. Sell it at {to}? A move and a sale are recorded; the money counts to the local cash point ({to}).",
+      "moveAndSell": "Move and sell",
+      "unopenedTitle": "This book is not opened",
+      "unopenedHint": "Open the book and sell this ticket? The book goes to the local cash point ({cashPoint}).",
+      "unopenedSkipHint": " This book has {count} tickets to mark as skipped before selling.",
+      "splitAndSell": "Open and sell",
+      "blockedTitle": "Cannot sell",
+      "blocked": {
+        "notThisStore": "This ticket does not belong to this store.",
+        "sold": "This ticket was sold at {time}.",
+        "skipped": "This ticket is skipped and cannot be sold.",
+        "scrapped": "This ticket is scrapped and cannot be sold.",
+        "locked": "This ticket is locked by a form (transfer or sale reversal) and cannot be sold.",
+        "inTransit": "This ticket is in transit and cannot be sold.",
+        "inStock": "This ticket is in stock. Move it to a counter first.",
+        "moveForbidden": "This ticket is on {cashPoint} and you cannot move tickets. Sell it at {cashPoint}."
+      },
+      "notFound": "Ticket not found, or it does not belong to this store.",
+      "recoverNoPermission": "This ticket is under investigation. Someone with the recover permission has to handle it.",
+      "gotIt": "OK",
+      "infoTitle": "Ticket info",
+      "infoHint": "This device has no local cash point, the local cash point has no open shift, or you cannot sell: info only."
+    },
+    "quickSale": {
+      "title": "Quick sale",
+      "cashPoint": "Cash point",
+      "cashPointValue": "{name} (local, open)",
+      "amount": "Amount",
+      "cancel": "Cancel (Esc)",
+      "confirm": "Confirm sale (Enter)",
+      "local": "Local cash point"
+    },
+    "undo": {
+      "title": "Undo this sale?",
+      "blockedTitle": "Cannot undo now",
+      "line": "{key} · {amount} · sold at {time}",
+      "hint": "{amount} will be taken off the expected cash of {cashPoint}.",
+      "blocks": {
+        "notMine": "You did not sell this ticket.",
+        "expired": "More than 30 minutes have passed.",
+        "shiftClosed": "That shift has been checked out.",
+        "changed": "The ticket has changed since the sale.",
+        "alreadyUndone": "This sale has been undone."
+      },
+      "sendRequestHint": " Send a sale reversal request instead.",
+      "submit": "Undo",
+      "success": "Sale undone"
+    },
+    "manualSale": {
+      "title": "Mark as sold",
+      "book": "{code} {name} · book {bookNo}",
+      "cashPoint": "Cash point",
+      "cashPointValue": "{name} ({owner}'s shift since {time})",
+      "tickets": "Tickets",
+      "ticketsValue": "{ranges} ({count})",
+      "unitPrice": "Unit price",
+      "total": "Total",
+      "reason": "Reason (required)",
+      "hint": "Counts to the shift on {name}; expected cash +{amount}.",
+      "submit": "Confirm sale",
+      "success": "{count} tickets marked as sold"
+    },
+    "recentSales": {
+      "title": "Recent sales · {cashPoint}",
+      "hint": "Tickets you sold on this shift in the last 30 minutes; only unchanged tickets can be undone.",
+      "empty": "No sales of yours on this shift in the last 30 minutes.",
+      "undone": "Undone",
+      "expired": "Over 30 minutes",
+      "footer": "Over 30 minutes or the shift is checked out → send a sale reversal request.",
+      "close": "Close"
+    },
+    "expand": {
+      "title": "{code} {name} · book {bookNo}",
+      "meta": "{cashPoint} · {price} · {remaining} / {total} left",
+      "bookDetail": "Book details",
+      "collapse": "Collapse",
+      "close": "Close",
+      "selected": "{count} selected {ranges}",
+      "clear": "Clear selection",
+      "markSold": "Mark as sold",
+      "move": "Move",
+      "recall": "Recall",
+      "moveAndSell": "Move and sell",
+      "moveAndSellSuccess": "Moved and sold",
+      "undoSale": "Undo sale",
+      "recover": "Recover",
+      "atCashPoint": "On {name}",
+      "inStock": "In stock"
+    },
+    "move": {
+      "title": "Move",
+      "line": "Book {bookNo} · tickets {ranges} · {cashPoint} · {count} left",
+      "to": "Move to",
+      "all": "All {count} tickets",
+      "partial": "Selected tickets only ({count})",
+      "submit": "Move",
+      "success": "{count} tickets moved"
+    },
+    "recall": {
+      "title": "Recall to stock",
+      "all": "Whole book ({count} tickets)",
+      "partial": "Selected tickets only ({count})",
+      "submit": "Recall",
+      "success": "{count} tickets recalled"
+    },
+    "split": {
+      "pickTitle": "Open a book · pick a book",
+      "pickTo": "Goes to the local cash point: {name}",
+      "search": "Scan or type the book number",
+      "pickHint": "Unopened books in this store ({count}); scanning selects the book.",
+      "bookLine": "{code} {name} · book {bookNo}",
+      "bookMeta": "{price} · {count} tickets",
+      "bookMetaSkip": "{price} · tickets {first}–{last} · {count} to mark as skipped",
+      "none": "No unopened books in this store.",
+      "next": "Next",
+      "previous": "Back",
+      "title": "Open a book · {code} {name} · book {bookNo}",
+      "meta": "{price} · tickets {first}–{last}",
+      "stepsAria": "Open book steps",
+      "steps": {
+        "skip": "Mark skipped",
+        "place": "Place on cash points"
+      },
+      "progress": "Step {current} / {total} · {label}",
+      "skipHint": "Last ticket {last} is {count} over the standard count: {count} numbers do not exist. Pick them:",
+      "skipSelected": "Selected",
+      "skipSelectedValue": "{count} / {total}: {nos}",
+      "allTo": "All on one cash point",
+      "allToField": "Cash point",
+      "localOption": "{name} (local)",
+      "splitOption": "Split across cash points",
+      "splitHint": "Select tickets in the grid, then pick a cash point:",
+      "legendUnassigned": "Unassigned",
+      "legendAssigned": "Assigned",
+      "columns": {
+        "cashPoint": "Cash point",
+        "ticketNos": "Tickets",
+        "count": "Count"
+      },
+      "unassigned": "Unassigned",
+      "remaining": "{count} tickets are not assigned yet; assign all of them to open the book.",
+      "confirm": "Open book",
+      "success": "Book opened"
+    },
+    "camera": {
+      "button": "📷 Scan",
+      "title": "Camera scan",
+      "hint": "Point the barcode at the frame; scanning continues and each read is handled like the barcode scanner.",
+      "videoAria": "Camera view",
+      "lastRead": "Read: {code}",
+      "error": "Cannot open the camera. Allow camera access in the browser.",
+      "close": "Close"
+    },
+    "salesErrors": {
+      "LOCAL_SHIFT_NOT_OPEN": "The local cash point has no open shift",
+      "TICKET_NOT_SELLABLE": "This ticket cannot be sold",
+      "ALREADY_SOLD": "This ticket was sold at {time}",
+      "MOVE_CONFIRM_REQUIRED": "This ticket is on another cash point; confirm move and sell first",
+      "MOVE_NOT_ALLOWED": "You cannot move tickets; sell it at that cash point",
+      "UNDO_NOT_ALLOWED": "This sale cannot be undone now; send a sale reversal request",
+      "BOOK_ALREADY_OPENED": "This book has already been opened",
+      "SPLIT_PLAN_INVALID": "Skipped tickets are not all marked, or some tickets are not assigned",
+      "TICKET_NOT_ON_COUNTER": "Only unsold tickets on a counter can be moved or recalled",
+      "CONFLICT": "These tickets have been processed; please check again",
+      "GAME_NOT_FOUND": "The game of this ticket cannot be read, so it cannot be sold"
+    },
+    "redemption": {
+      "redeemTitle": "Redeem · {name}",
+      "replaceTitle": "Re-register · {name}",
+      "code": "Scan the back code",
+      "codeHint": "Scan the back code, or type it and press Enter",
+      "own": "Ticket from this store",
+      "other": "Not a ticket from this store",
+      "previewMeta": "Book {bookNo} · Ticket {ticketNo} · {source}",
+      "money": "{amount}",
+      "existing": "Already redeemed ({time} {cashPoint})",
+      "prize": "Prize",
+      "rule": "Prizes over 5,000 are redeemed at the bank; prizes over the drawer's expected cash ({expected}) are blocked.",
+      "overLimit": "Over 5,000: ask the customer to redeem at the bank",
+      "overDrawer": "Over the drawer's expected cash {expected}",
+      "cancel": "Cancel",
+      "confirm": "Redeem",
+      "successTitle": "Redeemed",
+      "successMessage": "{serial} · {ticket} · {amount} · {cashPoint}",
+      "undo": "Undo",
+      "revokeTitle": "Revoke this redemption?",
+      "revokeLine": "{ticket} · {amount} · registered {time}",
+      "revokeHint": "{amount} goes back to the expected cash of the {cashPoint} drawer.",
+      "revoke": "Revoke",
+      "revokeSuccess": "Redemption revoked",
+      "managerTitle": "Revoke redemption",
+      "managerSubtitle": "{ticket} · {amount}",
+      "reason": "Reason (required)",
+      "closedHint": "This shift is checked out: the revoke is recorded as a post-close correction of that shift, expected cash +{amount}.",
+      "openHint": "This shift is open: {amount} goes back to the expected cash of the {cashPoint} drawer.",
+      "replaceHint": "[Revoke and re-register]: revoke, then register the correct one in the same shift.",
+      "replace": "Revoke and re-register",
+      "revokeRedemption": "Revoke redemption",
+      "replaceSuccess": "Revoked and re-registered",
+      "recentTitle": "Recent redemptions · {name}",
+      "recentHint": "Redemptions you registered in this shift; select a row for details.",
+      "recentEmpty": "No redemptions in this shift yet",
+      "close": "Close",
+      "detailTitle": "Redemption",
+      "detail": {
+        "ticket": "Ticket",
+        "prize": "Prize",
+        "shift": "Cash point / shift",
+        "redeemed": "Registered",
+        "status": "Status",
+        "revoked": "Revoked",
+        "reason": "Revoke reason"
+      },
+      "ticketValue": "{game} · {bookNo} · #{ticketNo}",
+      "shiftValue": "{cashPoint} · {name} {time}",
+      "shiftClosed": "{cashPoint} · {name} {time} (checked out)",
+      "personTime": "{name} · {time}",
+      "sentValue": "Sent (purchase {serial})",
+      "sentBlocked": "Sent; withdraw or return purchase {serial} before revoking.",
+      "immediate": "Revoked on the spot",
+      "postClose": "Post-close correction",
+      "status": {
+        "in_store": "In store",
+        "sent": "Sent",
+        "revoked": "Revoked"
+      },
+      "columns": {
+        "serialNo": "No.",
+        "time": "Time",
+        "cashPoint": "Cash point",
+        "shift": "Shift",
+        "ticket": "Ticket",
+        "prize": "Amount",
+        "status": "Status",
+        "redeemedBy": "Registered by",
+        "purchase": "Purchase"
+      },
+      "tab": {
+        "title": "Redemptions",
+        "cashPoint": "Cash point",
+        "status": "Status",
+        "redeemedBy": "Registered by",
+        "serialNo": "No.",
+        "serialNoHint": "RD-0218 or 218",
+        "serialNoScope": "Any period when searching by No.",
+        "from": "From",
+        "to": "To",
+        "all": "All",
+        "empty": "No redemptions in this period",
+        "summary": "{count} records",
+        "cardMeta": "{cashPoint} · {shift} · {time}",
+        "cardBy": "Registered by {name} · Purchase {purchase}"
+      },
+      "errors": {
+        "FORBIDDEN": "You do not have permission to do this",
+        "NOT_FOUND": "This redemption was not found; it may have been changed",
+        "VALIDATION_FAILED": "Some fields are invalid; check the highlighted fields",
+        "REDEMPTION_CODE_INVALID": "Unknown code; scan the back code",
+        "REDEMPTION_CODE_NEEDS_BACK": "No ticket from this store matches; scan the back code",
+        "REDEMPTION_OVER_LIMIT": "Over 5,000: ask the customer to redeem at the bank",
+        "AMOUNT_EXCEEDS_DRAWER": "Over the drawer's expected cash",
+        "REDEMPTION_DUPLICATE": "This ticket has already been redeemed",
+        "SHIFT_CLOSED": "This shift has been checked out",
+        "REDEMPTION_SENT": "Sent; withdraw or return the purchase before revoking",
+        "REDEMPTION_ALREADY_REVOKED": "This redemption has been revoked",
+        "UNEXPECTED": "Something went wrong; try again later"
+      }
+    },
+    "storeForms": {
+      "branch": "Store",
+      "empty": "No documents yet",
+      "none": "—",
+      "saleReversals": {
+        "title": "Sale reversal requests",
+        "create": "+ New sale reversal request",
+        "listAria": "Sale reversal requests",
+        "columns": {
+          "serialNo": "No.",
+          "tickets": "Tickets",
+          "reason": "Reason",
+          "refundAmount": "Refund",
+          "refundShift": "Refund shift",
+          "status": "Status"
+        },
+        "ticketCount": "({count} tickets)"
+      },
+      "cashCorrections": {
+        "title": "Cash corrections",
+        "create": "+ New cash correction",
+        "listAria": "Cash corrections",
+        "columns": {
+          "serialNo": "No.",
+          "direction": "Direction",
+          "amount": "Amount",
+          "place": "Location",
+          "attributedShift": "Attributed shift",
+          "reason": "Reason",
+          "status": "Status"
+        },
+        "directions": {
+          "increase": "Cash in",
+          "decrease": "Cash out"
+        },
+        "vault": "Vault"
+      }
+    },
+    "saleReversal": {
+      "tabLabel": "New sale reversal",
+      "title": "Sale reversal request",
+      "loading": "Loading",
+      "unavailable": "You cannot create sale reversal requests, or the form is not available now",
+      "branch": "Store",
+      "reason": "Reason",
+      "scan": "Scan to add tickets",
+      "scanHint": "Scan or type a code, then press Enter",
+      "scanNotFound": "Ticket not found",
+      "scanNotReversible": "This ticket is not sold in this store, or is on another reversal request",
+      "bookHeader": "{gameCode} {gameName} · Book {bookNo}",
+      "removeBook": "Remove this book",
+      "cellReversible": "Sold",
+      "cellUnavailable": "Unavailable",
+      "selected": "Selected",
+      "noTickets": "Scan or pick the tickets to reverse",
+      "refund": "Refund the customer",
+      "yes": "Yes",
+      "no": "No",
+      "refundShift": "Refund shift",
+      "refundShiftCurrent": "{label} (current shift)",
+      "refundShiftRequired": "Pick the refund shift when refunding",
+      "note": "Note",
+      "refundAmount": "Refund amount",
+      "rule": "Only tickets sold in this store and not on another reversal request; they cannot be sold until the review ends.",
+      "cancel": "Cancel",
+      "submit": "Submit",
+      "submitted": "Sale reversal request submitted",
+      "submitAndPrint": "Submit and print receipt"
+    },
+    "undoRequest": {
+      "send": "Send sale reversal request"
+    },
+    "stocktake": {
+      "entry": {
+        "button": "Stocktake",
+        "reminder": "It has been over 24 hours since the last stocktake. Consider counting now."
+      },
+      "scope": {
+        "title": "Start stocktake (ad hoc)",
+        "store": "Whole store",
+        "cashPoint": "One cash point",
+        "cashPointLabel": "Cash point",
+        "hint": "Sales continue during the count; submit a stocktake confirmation when done.",
+        "cancel": "Cancel",
+        "start": "Start"
+      },
+      "types": {
+        "shift": "Shift handover",
+        "daily": "Daily close",
+        "adhoc": "Ad hoc stocktake"
+      },
+      "statuses": {
+        "pending": "Pending",
+        "confirmed": "Confirmed",
+        "rejected": "Rejected",
+        "returned": "Returned"
+      },
+      "totals": "Backfilled sales {backfill} · {amount}; new investigations {investigate}; flagged {flagged}; confirmed lost {lost}",
+      "page": {
+        "tabLabel": "Stocktake",
+        "title": "{heading} · {scope}",
+        "started": "Started {time} · {name}",
+        "wholeStore": "Whole store",
+        "cancel": "Cancel (discard)",
+        "progress": "Counted {done} / {total} books",
+        "diffCount": "{count} differences",
+        "footer": "Sales continue during the count; pending stocktakes do not block the next one.",
+        "review": "Review differences →",
+        "noBooks": "No books on the counters in this scope",
+        "loadFailed": "Could not load the stocktake data. Try again later.",
+        "pickBook": "Book to count",
+        "returnedHint": "This stocktake confirmation was returned. Edit and submit again."
+      },
+      "cashPoint": {
+        "expected": "Expected cash {amount}",
+        "immediate": "redemption backfills take effect immediately",
+        "noShift": "No open shift at this cash point",
+        "redeem": "Backfill redemption"
+      },
+      "bookStatus": {
+        "counted": "Counted",
+        "uncounted": "Not counted",
+        "current": "Current",
+        "diff": "{count} diff"
+      },
+      "book": {
+        "title": "{game} · Book {bookNo}",
+        "meta": "{cashPoint} · {price}",
+        "subtitle": "Book {bookNo} · {count} on counter",
+        "hint": "Select the tickets still on the counter (selected = present); system figures are as of when you started this book.",
+        "methodAria": "Count method",
+        "grid": "Tap cells",
+        "scan": "Scan",
+        "scanField": "Scan barcode",
+        "scanHint": "Scanned tickets are marked present, not sold.",
+        "scanned": "Marked #{ticketNo}",
+        "scanNotHere": "This ticket is not in this stocktake",
+        "system": "System ({time})",
+        "present": "Counted",
+        "diff": "Difference",
+        "tickets": "{count} tickets",
+        "none": "0 tickets",
+        "prev": "Previous",
+        "next": "Next",
+        "legendSelected": "Present (counted)",
+        "pendingReversal": "Reversal pending"
+      },
+      "unopened": {
+        "title": "Unopened books (present / missing)",
+        "book": "Book",
+        "game": "Game",
+        "count": "Tickets",
+        "state": "Present?",
+        "stateAria": "Is book {bookNo} present",
+        "present": "Present",
+        "absent": "Missing",
+        "hint": "Missing books are marked for investigation when the stocktake completes.",
+        "empty": "No unopened books"
+      },
+      "lost": {
+        "title": "Under investigation",
+        "action": "Action",
+        "wholeBook": "whole book",
+        "sinceTransfer": "{date} removed in transit",
+        "sinceStocktake": "{date} missing at stocktake",
+        "since": "{date} under investigation",
+        "actions": {
+          "found": "Found (scan barcode)",
+          "lost": "Confirm lost (reason required)",
+          "keep": "Keep investigating"
+        },
+        "scanToConfirm": "Whole book under investigation: scan any ticket of it to confirm the book was found",
+        "foundOk": "Scanned, found",
+        "lostReason": "Loss reason (required)",
+        "hint": "Confirming a loss requires permission and a reason; you can also keep investigating.",
+        "empty": "No tickets under investigation",
+        "foundTicket": "Scanned #{ticketNo}, found",
+        "scanEach": "Scan each ticket: only scanned tickets count as found; the rest stay under investigation",
+        "foundSome": "Scanned {count} / {total}; the rest stay under investigation"
+      },
+      "review": {
+        "title": "Review differences",
+        "info": "Handle each ticket; select several to apply at once. [Backfill sale] takes effect immediately: open shift at that cash point → counted in that shift; closed → recorded as a post-close correction of its latest shift.",
+        "selected": "{count} selected",
+        "pickAria": "Select #{ticketNo}",
+        "actions": {
+          "sale_backfill": "Backfill sale",
+          "investigate": "Investigate",
+          "flag": "Flag"
+        },
+        "clear": "Clear selection",
+        "recount": "Recount this book",
+        "recheck": "Recheck",
+        "lineTitle": "{cashPoint} · {game} · Book {bookNo}",
+        "shiftOpen": "Shift of {name} is open",
+        "shiftClosed": "No open shift at this cash point",
+        "columns": {
+          "ticket": "Ticket",
+          "system": "System",
+          "actual": "Actual",
+          "action": "Action",
+          "result": "Result"
+        },
+        "system": {
+          "unsold": "Unsold",
+          "sold": "Sold"
+        },
+        "actual": {
+          "absent": "Missing",
+          "present": "Present"
+        },
+        "backfilled": "Sale backfilled (immediate)",
+        "extraHint": "Sold in the system but still present: can only be flagged.",
+        "pendingReversal": "Reversal pending: {tickets} (not a difference)",
+        "result": {
+          "backfillOpen": "Sale counted in the shift at {cashPoint}; expected cash {amount}",
+          "backfillClosed": "Post-close correction of the latest shift at {cashPoint} {amount}",
+          "investigate": "Under investigation; responsible store = {store}",
+          "flag": "Correct later with a sale reversal (stocktake error)",
+          "none": "Not handled"
+        },
+        "summary": {
+          "backfill": "Backfilled sales",
+          "backfillValue": "{count} · {amount}",
+          "newInvestigate": "New investigations",
+          "flagged": "Flagged",
+          "unhandled": "Not handled",
+          "count": "{count}"
+        },
+        "back": "Back to counting",
+        "submit": "Submit →",
+        "noDiff": "No differences",
+        "stale": "These tickets were already processed. Please recheck: {tickets}",
+        "alreadyProcessed": "These tickets were already processed. Please recheck.",
+        "noShift": "This cash point has never had a shift, so the sale cannot be backfilled",
+        "backfillDone": "Backfilled {count} sales · {amount} (immediate)",
+        "lostNotReady": "Finish the investigation list: found tickets must be scanned and losses need a reason"
+      },
+      "submit": {
+        "title": "Submit stocktake?",
+        "hint": "Details lock after submission and a stocktake confirmation goes to the store manager; sales continue meanwhile.",
+        "cashPoint": "Cash point / shift",
+        "backfill": "Backfilled",
+        "expected": "Expected cash",
+        "postClose": "Post-close +{amount}",
+        "shiftOpen": "{name} {time} (open)",
+        "shiftClosed": "{name} {time} (checked out)",
+        "newInvestigate": "New investigations",
+        "flagged": "Flagged",
+        "unopenedAbsent": "Unopened books missing",
+        "confirmLost": "Confirmed lost",
+        "lostCost": "{count} · cost {cost}",
+        "count": "{count}",
+        "books": "{count} books",
+        "uncounted": "{count} books were not counted; they are not compared and the stocktake records them as uncounted.",
+        "note": "Note",
+        "back": "Back",
+        "confirm": "Submit stocktake confirmation"
+      },
+      "list": {
+        "type": "Type",
+        "status": "Status",
+        "all": "All",
+        "columns": {
+          "serialNo": "No.",
+          "type": "Type",
+          "time": "Counted at",
+          "backfill": "Backfilled",
+          "newInvestigate": "New investigations",
+          "confirmLost": "Confirmed lost",
+          "status": "Status"
+        },
+        "total": "{count} total",
+        "empty": "No stocktakes",
+        "backfillValue": "{count} · {amount}",
+        "cardFacts": "Backfilled {backfill} · new investigations {investigate} · lost {lost}",
+        "uncountedTag": "{count} uncounted"
+      },
+      "view": {
+        "title": "Stocktake confirmation",
+        "titleWithNo": "Stocktake confirmation {serialNo}",
+        "meta": "Applicant {name} · submitted {time} · {type} · {scope}",
+        "backToList": "← Back to list",
+        "edit": "Edit and resubmit",
+        "columns": {
+          "book": "Book",
+          "cashPoint": "Cash point",
+          "method": "Method",
+          "system": "System",
+          "present": "Counted",
+          "diffNos": "Differences",
+          "action": "Action"
+        },
+        "methods": {
+          "grid": "Tap cells",
+          "scan": "Scan"
+        },
+        "actions": {
+          "sale_backfill": "Backfill sale",
+          "investigate": "Investigate",
+          "flag": "Flag"
+        },
+        "postClose": " (post-close)",
+        "noLines": "No counted books",
+        "summary": {
+          "backfill": "Backfilled sales",
+          "newInvestigate": "New investigations",
+          "flagged": "Flagged",
+          "confirmLost": "Confirmed lost",
+          "uncounted": "Uncounted books"
+        },
+        "backfillValue": "{count} · {amount}",
+        "lostValue": "{count} · cost {cost}",
+        "count": "{count}",
+        "books": "{count} books",
+        "uncounted": "Uncounted book",
+        "uncountedHint": "Books not counted before submission; they are not compared and have no differences. Run another stocktake to count them.",
+        "unopened": "Unopened book",
+        "lost": "Investigation",
+        "present": "present",
+        "absent": "missing → investigate",
+        "lostActions": {
+          "found": "found → recovered",
+          "lost": "confirmed lost",
+          "keep": "keep investigating"
+        },
+        "loadFailed": "Could not load this stocktake"
+      }
+    },
+    "checkout": {
+      "page": {
+        "tabLabel": "Close shift",
+        "title": "Close shift · {cashPoint}",
+        "meta": "{name} · opened {time}",
+        "cancel": "Cancel",
+        "loadFailed": "Could not load this shift. Try again later.",
+        "cannotSubmit": "Only the shift owner or a store manager can close the shift.",
+        "returnedHint": "This checkout confirmation was returned. Edit and submit again.",
+        "progress": "Step {current} / {total} · {label}",
+        "back": "Back",
+        "next": "Next",
+        "submit": "Submit",
+        "stepperAria": "Close shift steps",
+        "submitAndPrint": "Submit and print checkout slip"
+      },
+      "steps": {
+        "stocktake": "Stocktake",
+        "redemption": "Redemptions",
+        "drawer": "Drawer",
+        "confirm": "Confirm"
+      },
+      "stocktake": {
+        "title": "① Stocktake",
+        "reuse": "Reuse a stocktake from the last 30 minutes",
+        "reuseDetail": "{time} · {scope} · {count} differences",
+        "wholeStore": "Whole store",
+        "noReusable": "No stocktake in the last 30 minutes to reuse",
+        "new": "Count now",
+        "newHint": "Counts this cash point only; opened books are counted by grid or scan",
+        "skip": "Skip stocktake",
+        "skipHint": "Requires the skip-stocktake permission; a reason is required and reports mark it as not counted.",
+        "skipReason": "Skip reason (required)",
+        "review": "Review differences →",
+        "reviewed": "Differences reviewed; continue to the next step"
+      },
+      "redemption": {
+        "title": "② Redemptions ({count} this shift)",
+        "backfill": "Backfill redemption",
+        "immediate": "Takes effect immediately",
+        "total": "Redemptions total",
+        "empty": "No redemptions in this shift yet",
+        "hint": "Prizes over 5,000 go to the bank; a prize over the drawer's expected cash is blocked.",
+        "rowAria": "Redemption {ticket} {amount}"
+      },
+      "drawer": {
+        "expectedTitle": "Expected cash",
+        "expectedHint": "Completed documents only; expand a row to see its entries and documents.",
+        "countedTitle": "Counted (by denomination)",
+        "columns": {
+          "value": "Denomination",
+          "count": "Count",
+          "subtotal": "Subtotal"
+        },
+        "countedTotal": "Counted total",
+        "difference": "Difference = counted − expected",
+        "diffReason": "Difference reason (required)",
+        "pending": "Under review: {items} → the difference reason was filled in automatically.",
+        "pendingItem": "{form} #{serialNo} {amount}",
+        "toggleAria": "Expand entries of {item}",
+        "openEntry": "Open document",
+        "pendingNote": "Under review: {items}"
+      },
+      "items": {
+        "opening": "Opening float",
+        "sales": "Sales",
+        "redemptions": "Redemptions",
+        "deposits": "Deposits",
+        "withdrawals": "Withdrawals",
+        "transfer_out": "Transfer out (cash)",
+        "transfer_in": "Transfer in (cash)",
+        "refunds": "Refunds",
+        "corrections": "Cash corrections",
+        "transfers": "Transfers (cash)",
+        "bank_deposits": "Bank deposits"
+      },
+      "itemCount": {
+        "sales": "({count} tickets)",
+        "other": "({count})"
+      },
+      "forms": {
+        "sale_reversal": "Sale reversal",
+        "cash_correction": "Cash correction"
+      },
+      "confirm": {
+        "summaryTitle": "Expected cash",
+        "expected": "Expected",
+        "counted": "Counted",
+        "difference": "Difference",
+        "handoverTitle": "Handover",
+        "leftForNext": "Left for next shift",
+        "successor": "Successor (optional)",
+        "noSuccessor": "(No successor)",
+        "hint": "A successor is required when the amount left is above 0; the successor approves this checkout after counting the float in person.",
+        "mustBeZero": "Must be 0 without a successor: deposit the cash first",
+        "managerReview": "No successor: this checkout confirmation goes to the store manager instead.",
+        "stocktakeReuse": "Reuse the {time} {scope}stocktake {serial}",
+        "stocktakeNew": "Count now",
+        "stocktakeSkip": "Skip stocktake ({reason})",
+        "stocktake": "Stocktake",
+        "exceedsCounted": "Cannot exceed the counted cash {counted}"
+      },
+      "types": {
+        "shift": "Shift",
+        "daily": "Daily close"
+      },
+      "list": {
+        "from": "From",
+        "to": "To",
+        "cashPoint": "Cash point",
+        "type": "Type",
+        "status": "Status",
+        "all": "All",
+        "statuses": {
+          "reviewing": "Under review",
+          "returned": "Returned",
+          "withdrawn": "Withdrawn",
+          "completed": "Completed"
+        },
+        "columns": {
+          "serialNo": "No.",
+          "cashPoint": "Cash point",
+          "type": "Type",
+          "submittedBy": "Closed by",
+          "expected": "Expected",
+          "counted": "Counted",
+          "difference": "Difference",
+          "status": "Status"
+        },
+        "total": "{count} total",
+        "empty": "No checkouts",
+        "cardFacts": "Expected {expected} · counted {counted} · difference {difference}"
+      },
+      "view": {
+        "title": "Checkout confirmation",
+        "titleWithNo": "Checkout confirmation · {type} {serialNo}",
+        "meta": "Applicant {name} · submitted {time}",
+        "backToList": "← Back to list",
+        "edit": "Edit and resubmit",
+        "sheetTitle": "Checkout sheet",
+        "type": "Type",
+        "cashPoint": "Cash point",
+        "stocktake": "Stocktake",
+        "stocktakeSkipped": "Skipped ({reason})",
+        "stocktakeReuse": "Reused the {time} {scope}stocktake {serial}",
+        "stocktakeNew": "Counted at {time}",
+        "expected": "Expected",
+        "counted": "Counted",
+        "difference": "Difference",
+        "handover": "Left for next / successor",
+        "noSuccessor": "(No successor)",
+        "pending": "Under review at submission: {items}",
+        "hint": "Each line opens the original document.",
+        "loadFailed": "Could not load this checkout sheet"
+      }
+    },
+    "badgeDescription": "Stores whose daily close is overdue: the earliest shift checkout not yet covered by a daily close passed its reminder time on the next day",
+    "bankDeposit": {
+      "title": "Bank deposit",
+      "vault": "{store} · vault expected {amount}",
+      "reserved": "{amount} is reserved for a daily close under review; you can deposit up to {available} now",
+      "amount": "Amount",
+      "account": "Bank account",
+      "note": "Note",
+      "hint": "Only active accounts used by this store are listed. Takes effect immediately; to correct a mistake, reverse the deposit in Accounts.",
+      "exceeds": "Exceeds the amount available now {amount} (vault expected minus deposits of daily closes under review). If there is more cash than recorded, register a cash correction first.",
+      "cancel": "Cancel",
+      "submit": "Deposit",
+      "success": "Deposited to the bank"
+    },
+    "dailyClose": {
+      "entry": {
+        "last": "Last daily close: {date} ({days} days ago)",
+        "never": "No daily close yet",
+        "bankDeposit": "Bank deposit",
+        "dailyClose": "Daily close",
+        "blockedTitle": "Cannot close yet:",
+        "blockedShift": "{cashPoint} has not checked out",
+        "blockedPending": "Daily close {serialNo} is under review",
+        "blockedReturned": "Daily close {serialNo} was returned; revise and resubmit it"
+      },
+      "steps": {
+        "shifts": "Shift checkouts",
+        "stocktake": "Store stocktake",
+        "vault": "Vault",
+        "bank": "Bank deposit",
+        "confirm": "Confirm"
+      },
+      "page": {
+        "tabLabel": "Daily close",
+        "title": "Daily close · {store}",
+        "cancel": "Cancel",
+        "period": "Covered period {from} – {to}. Missed days cannot be closed separately; they are covered now.",
+        "periodWithGaps": "Covered period {from} – {to} (no daily close on {gaps}). Missed days cannot be closed separately; they are covered now.",
+        "firstClose": "first daily close",
+        "now": "now",
+        "stepperAria": "Daily close steps",
+        "progress": "Step {current} / {total} · {label}",
+        "back": "Back",
+        "next": "Next",
+        "submit": "Submit checkout confirmation",
+        "loadFailed": "Could not load the daily close. Please try again later.",
+        "returnedHint": "This daily close was returned. Revise and resubmit; the covered period stays as originally submitted."
+      },
+      "shifts": {
+        "columns": {
+          "cashPoint": "Cash point",
+          "submittedBy": "Checked out by",
+          "submittedAt": "Submitted",
+          "expected": "Expected",
+          "counted": "Counted",
+          "difference": "Difference",
+          "reviewer": "Reviewer",
+          "state": "Status"
+        },
+        "states": {
+          "approved": "Approved",
+          "pending": "Pending",
+          "returned": "Returned"
+        },
+        "you": "You",
+        "review": "Review",
+        "waitingApprove": "Waiting for {names}",
+        "waitingFix": "Waiting for {names} to revise",
+        "openShifts": "Some shifts have not checked out: {names}. Check them out before the daily close.",
+        "pendingDaily": "Daily close {serialNo} is under review or returned; another one cannot be submitted.",
+        "empty": "No shift checkouts in this period",
+        "allApproved": "All shift checkouts are approved.",
+        "notApproved": "{count} shift checkouts are not approved yet. The status updates live.",
+        "cardFacts": "Expected {expected} · counted {counted} · difference {difference}",
+        "reviewTitle": "Checkout {serialNo} · {cashPoint} · {name}",
+        "closeReview": "Close"
+      },
+      "stocktake": {
+        "title": "② Store stocktake",
+        "newHint": "Count every cash point of the store; opened books can only be counted by tapping or scanning"
+      },
+      "vault": {
+        "expectedTitle": "Vault expected",
+        "opening": "Opening (counted at the {date} daily close)",
+        "openingNone": "Opening",
+        "items": {
+          "opening": "Opening",
+          "deposits": "Deposits",
+          "withdrawals": "Withdrawals",
+          "transfers": "Transfers (cash)",
+          "corrections": "Cash corrections",
+          "bank_deposits": "Bank deposits"
+        }
+      },
+      "bank": {
+        "title": "④ Bank deposit",
+        "amount": "Amount (0 = none)",
+        "account": "Bank account",
+        "exceeds": "Cannot exceed the counted vault cash {amount}",
+        "after": "Vault expected after deposit",
+        "hint": "Only active accounts used by this store are listed. The deposit is recorded when the daily close is approved."
+      },
+      "confirm": {
+        "title": "⑤ Confirm",
+        "period": "Covered period",
+        "periodValue": "{from} – {to}",
+        "firstClose": "first daily close",
+        "now": "now",
+        "stocktake": "Store stocktake",
+        "stocktakeNew": "Counted now · {count} backfilled sales",
+        "stocktakeSkip": "Skipped",
+        "shiftDifference": "Shift differences total",
+        "vaultDifference": "Vault difference",
+        "bankDeposit": "Bank deposit",
+        "noDeposit": "None"
+      },
+      "view": {
+        "period": "Covered period",
+        "shifts": "Covered shifts",
+        "shiftsValue": "{count} shifts ({serials})",
+        "stocktake": "Store stocktake",
+        "bankDeposit": "Bank deposit",
+        "after": "Vault after deposit",
+        "opening": "Vault opening"
+      }
+    },
+    "receipts": {
+      "documentNo": "No. {serialNo}",
+      "documentName": "{title} {serialNo}",
+      "documentNameNoSerial": "{title} · {branch}",
+      "qrCaption": "Scan to open",
+      "range": "{from} ~ {to}",
+      "none": "None",
+      "branch": "Branch",
+      "cashPoint": "Cash point",
+      "direction": "Direction",
+      "reason": "Reason",
+      "amount": "Amount",
+      "note": "Note",
+      "handler": "Handled by",
+      "counted": "Counted",
+      "difference": "Difference",
+      "differenceWithReason": "{amount} ({reason})",
+      "witnessSign": "Witness signature",
+      "handlerSign": "Handler signature",
+      "stocktake": {
+        "label": "Stocktake",
+        "skip": "Skipped ({reason})",
+        "reuse": "Reused {time}",
+        "new": "Counted now {time}"
+      },
+      "vaultDeposit": {
+        "title": "Vault deposit slip",
+        "directionValue": "Drawer → Vault",
+        "depositorSign": "Depositor signature"
+      },
+      "vaultWithdraw": {
+        "title": "Vault withdrawal slip",
+        "directionValue": "Vault → {cashPoint} drawer",
+        "openingFloat": "Opening float",
+        "receiverSign": "Receiver signature"
+      },
+      "bankDeposit": {
+        "title": "Bank deposit slip",
+        "account": "Deposit account"
+      },
+      "shiftCheckout": {
+        "title": "Shift checkout slip",
+        "shift": "Shift",
+        "handedBy": "Handed over by",
+        "successor": "Taken over by",
+        "expected": "Expected cash",
+        "leftForNext": "Left for next shift",
+        "handedSign": "Handed-over-by signature",
+        "successorSign": "Taken-over-by signature"
+      },
+      "dailyClose": {
+        "title": "Daily close slip",
+        "period": "Period",
+        "firstClose": "First daily close",
+        "columns": {
+          "shifts": "Shifts"
+        },
+        "vaultExpected": "Vault expected",
+        "vaultCounted": "Vault counted",
+        "vaultDifference": "Vault difference",
+        "bankDeposit": "Bank deposit",
+        "depositValue": "{amount} ({account})",
+        "noDeposit": "None",
+        "vaultAfter": "Vault remaining",
+        "managerSign": "Store manager signature"
+      },
+      "saleRefund": {
+        "title": "Return refund receipt",
+        "pending": "Pending approval",
+        "refundShift": "Refund shift",
+        "columns": {
+          "game": "Game",
+          "tickets": "Tickets"
+        },
+        "gameValue": "{gameCode} {gameName}",
+        "ticketNos": "Nos: ",
+        "ticketCount": " ({count} tickets)",
+        "refund": "Refund"
+      }
+    }
+  },
+  "projectShell": {
+    "rootOrg": {
+      "message": "You are at the platform level. Switch to the organization you want to manage first.",
+      "hint": "After switching the current organization you will see that organization’s data."
+    }
   }
 }

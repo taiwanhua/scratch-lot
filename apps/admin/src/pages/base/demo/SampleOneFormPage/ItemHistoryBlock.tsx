@@ -49,7 +49,7 @@ export const ItemHistoryBlock = ({ itemId }: ItemHistoryBlockProps) => {
       <Stack spacing={1}>
         <Typography variant="subtitle2">{t("title")}</Typography>
         {entries.length === 0 ? (
-          <Typography variant="caption" color="text.secondary">
+          <Typography variant="caption" color="textSecondary">
             {history.isLoading ? t("loading") : t("empty")}
           </Typography>
         ) : (
@@ -61,7 +61,7 @@ export const ItemHistoryBlock = ({ itemId }: ItemHistoryBlockProps) => {
               <Typography
                 key={entry.id}
                 variant="caption"
-                color="text.secondary"
+                color="textSecondary"
                 component="p"
               >
                 {t("entry", {

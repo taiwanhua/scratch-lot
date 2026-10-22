@@ -3,6 +3,7 @@ import { Args, Mutation, Query, Resolver } from "@nestjs/graphql";
 import { CurrentOperator } from "../../../auth/decorators";
 import type { OperatorContext } from "../../../database/operator-context";
 import { RequirePermission } from "../../../permission/require-permission.decorator";
+import { RequireTenant } from "../../tenant-scope/require-tenant.decorator";
 import {
   CustomizeScheduleAutoRunInput,
   CustomizeScheduleRuleInput,
@@ -20,6 +21,7 @@ import { ScheduleRulesService } from "./schedule-rules.service";
  * 排班設定 → 規則(`schedule.settings`)。寫入的權限依組織而定(最上層組織 `edit-default-rules`、
  * 其他 `edit-org-rules`),守門器只能守固定 key,所以寫入端點守 `view`、細分由 service 判斷。
  */
+@RequireTenant()
 @Resolver(() => ScheduleRuleModel)
 export class ScheduleRulesResolver {
   constructor(private readonly service: ScheduleRulesService) {}

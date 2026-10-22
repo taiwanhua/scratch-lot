@@ -187,7 +187,7 @@ export const PreferencesTab = () => {
   }
   if (query.isSuccess && items.length === 0) {
     return (
-      <Typography variant="body2" color="text.secondary">
+      <Typography variant="body2" color="textSecondary">
         {tSettings("preferencesEmpty")}
       </Typography>
     );

@@ -72,9 +72,11 @@ export const PROJECT_TENANT_BOUNDARY_CONTEXT_CALLERS: Readonly<
   // 出勤紀錄看自己的:我的班跨分店合併(支援別家店的班也列)
   "project/schedule/attendance/attendance.service.ts": ["以人為準的資料"],
   // 補打卡申請:本人在別家店的班(送出 / 核准時檢查);完成時以系統身分寫打卡(單據的組織不一定是班的分店)
+  // 審核畫面查選的排班還在不在(審核者不一定看得到排班的組織)
   "project/schedule/attendance/makeup-punch.service.ts": [
     "以人為準的資料",
     "例外寫入",
+    "反查",
   ],
   // 排班 / 畫休寫入的「人」守門文件掛在租戶頂層(兩家店同時排同一人、排班與畫休同時寫入互相衝突)
   "project/schedule/shared/schedule-person-locks.ts": ["例外寫入"],
@@ -85,6 +87,18 @@ export const PROJECT_TENANT_BOUNDARY_CONTEXT_CALLERS: Readonly<
   // 進貨單:本號和其他有效進貨單 / 既有的本重複、已點收的列、叫貨單 / 甲類 / 受託人(總部建的單,系統身分
   // 只看得到單據的組織);作廢時撤銷點收過的本、寫「進貨作廢」事件
   "project/lottery/purchase/purchase-rules.service.ts": ["反查", "例外寫入"],
+  // 店面:一個人在整個租戶開著的班(只能同時開同一家店的班)
+  "project/lottery/store/store-shifts.service.ts": ["以人為準的資料"],
+  // 店面:班次負責人的名稱(負責人可能是別家分店支援的人)
+  "project/lottery/store/shift-views.ts": ["反查"],
+  // 店面刷到刮刮樂:待查 / 遺失的張可能還在別家店(任何一家店刷到都提示尋回)、不是本店的也要說得出來
+  "project/lottery/store/store-sales.service.ts": ["反查"],
+  // 店面的登記:收付找開著的班、收銀點停用守門、崗位旁的收銀點名稱、被班次綁定的排班(沒有操作者)
+  "project/lottery/store/store-registrations.ts": ["系統重算"],
+  // 店面:開班的「人」守門文件掛在租戶頂層(兩家店同時開班互相衝突)
+  "project/lottery/store/store-person-locks.ts": ["例外寫入"],
+  // 撤銷售出申請 / 現金更正單:單據可能是總部建的,系統身分只看得到單據的組織;完成時寫分店的流水與班
+  "project/lottery/store/store-forms-rules.service.ts": ["反查", "例外寫入"],
   // 遊戲是否有進貨單引用、在途本數、甲類的批購日來源:沒有操作者,問的是整個租戶
   "project/lottery/purchase/purchase-registrations.ts": ["系統重算"],
   // 調貨單:本 / 張 / 其他調貨單 / 叫貨單(單據可能是總部建的,系統身分只看得到單據的組織;張分在多家店)、
@@ -94,14 +108,48 @@ export const PROJECT_TENANT_BOUNDARY_CONTEXT_CALLERS: Readonly<
   "project/lottery/transfer/transfer-access.ts": ["反查"],
   // 調貨點收:送錯分店時查別家店的調貨單與本
   "project/lottery/transfer/transfer-receiving.service.ts": ["反查"],
-  // 新增頁的選本與張數格子(本的張分在多家店)、列表進度(兩邊店都看得到)
+  // 新增頁的選本與張數格子(本的張分在多家店)、列表進度的點收紀錄與在途的張(分在兩邊店;單據本身走一般讀取)
   "project/lottery/transfer/transfer-query.service.ts": ["反查"],
   // 在途本數、收付的已點收金額、側欄計數讀流程實例:沒有操作者,問的是整個租戶
   "project/lottery/transfer/transfer-registrations.ts": ["系統重算"],
   // 點收:店長從申請中心進來,總部建的單不在他的可見範圍;送錯分店要查別家店的進貨單
+  // 進貨單檢視頁讀勾選的兌獎紀錄(兌獎紀錄在分店,讀取依據是讀得到這張進貨單)
   "project/lottery/purchase/purchase-receiving.service.ts": ["反查"],
   // 受託人的關聯(關係人可能是別的組織建的);點收進度讀點收紀錄
   "project/lottery/purchase/purchase-query.service.ts": ["反查"],
+  // 兌獎:這張在整個租戶有沒有未撤銷的兌獎(別家店兌過也算)
+  "project/lottery/redemption/redemption.service.ts": ["反查"],
+  // 兌獎紀錄:登記人 / 撤銷人 / 班次負責人的名稱、班次、進貨單單號(人可能是別家分店支援的、進貨單是總部建的)
+  "project/lottery/redemption/redemption-views.ts": ["反查"],
+  // 進貨單勾選兌獎:掛接點以系統身分執行,兌獎紀錄在分店(送出前讀勾選的紀錄;送兌 / 回到店內持有)
+  "project/lottery/redemption/redemption-purchase-link.ts": [
+    "反查",
+    "例外寫入",
+  ],
+  // 盤點:掛接點以系統身分建立盤點單、核准完成時套用待查 / 遺失 / 尋回(盤點單與張在分店,申請可能是總部送的)
+  "project/lottery/stocktake/stocktake.service.ts": ["反查", "例外寫入"],
+  // 盤點紀錄 / 檢視頁:審核者從申請中心進來讀盤點單、申請的單號(分店不一定在他的可見範圍)
+  "project/lottery/stocktake/stocktake-query.service.ts": ["反查"],
+  // 交班結帳:掛接點以系統身分建立結帳單、結束班次、更新下一班期初(例外寫入);人名、單號、接班人候選反查
+  "project/lottery/checkout/checkout.service.ts": ["反查", "例外寫入"],
+  "project/lottery/checkout/checkout-query.service.ts": ["反查"],
+  // 日結:掛接點以系統身分建立結帳單、全店盤點單,完成時寫銀行「存入」與「存銀行」流水(例外寫入);
+  // 精靈的人名、單號、流程任務反查
+  "project/lottery/daily-close/daily-close.service.ts": ["反查", "例外寫入"],
+  "project/lottery/daily-close/daily-close-query.service.ts": ["反查"],
+  // 小金庫起算點、上一班是否已被日結涵蓋:沒有操作者,問的是整個租戶
+  "project/lottery/daily-close/daily-close-registrations.ts": ["系統重算"],
+  // 日結逾期提醒逐租戶跑
+  "project/lottery/daily-close/daily-close-reminders.service.ts": ["排程"],
+  // 「不能選已關帳月份」:關帳紀錄歸屬租戶頂層,分店的人也要被同一條規則擋下
+  "project/lottery/accounts/period-lock.ts": ["反查"],
+  // 關帳:檢查清單與快照看整個租戶(班、單據、帳戶、小金庫);關帳紀錄寫在租戶頂層
+  "project/lottery/period-close/period-close.service.ts": ["反查", "例外寫入"],
+  // 關帳逾期提醒逐租戶跑
+  "project/lottery/period-close/period-close-reminders.service.ts": ["排程"],
   // 排班檢核:人的規則用那個人主要分店的生效設定(主要分店不一定在讀者的可見範圍)
   "project/schedule/check/schedule-check.service.ts": ["以人為準的資料"],
+  // 輸出報表:分店先確認在操作者的可見範圍內,再以租戶邊界讀這些分店的事件、流水、交易、點收、結帳
+  // (另一邊可能是別家店或總部記的;條件一律釘選的分店)
+  "project/lottery/reports/report-scope.ts": ["反查"],
 };

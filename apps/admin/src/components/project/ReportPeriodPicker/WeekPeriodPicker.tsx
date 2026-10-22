@@ -101,7 +101,7 @@ export const WeekPeriodPicker = ({
           }}
         />
       </Stack>
-      <Typography variant="caption" color="text.secondary">
+      <Typography variant="caption" color="textSecondary">
         {t("weekHint")}
       </Typography>
     </Stack>

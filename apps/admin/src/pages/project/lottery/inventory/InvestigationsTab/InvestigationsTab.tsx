@@ -7,6 +7,7 @@ import {
   type LotteryInvestigationRowFieldsFragment,
   useLotteryInvestigationsQuery,
 } from "@repo/graphql";
+import { Alert } from "@repo/ui/alert";
 import { Box } from "@repo/ui/box";
 import { Button } from "@repo/ui/button";
 import { Table, type TableColumn } from "@repo/ui/table";
@@ -123,6 +124,11 @@ export const InvestigationsTab = () => {
 
   return (
     <Box sx={{ flex: 1, minHeight: 0 }}>
+      {query.isError ? (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {t("investigations.loadFailed")}
+        </Alert>
+      ) : null}
       <Table
         aria-label={t("investigations.listAria")}
         columns={columns}

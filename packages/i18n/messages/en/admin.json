@@ -93,7 +93,10 @@
     "navBadge": "{count} pending",
     "collapseNav": "Collapse sidebar",
     "expandNav": "Expand sidebar",
+    "openNav": "Open main menu",
     "currentOrg": "Current organization",
+    "currentOrgNamed": "Current organization: {name}",
+    "currentOrgNone": "Current organization: none selected",
     "placeholder": {
       "pending": "This page is not built yet"
     },
@@ -106,12 +109,19 @@
     "tabs": {
       "label": "Route tabs",
       "close": "Close {label}",
-      "keyboardHint": "Use the left and right arrow keys to move focus and Enter to open a tab; hold Shift with an arrow key to reorder; press Delete to close the focused tab. Tabs can also be reordered by dragging.",
+      "keyboardHint": "Use the left and right arrow keys to move focus and Enter to open a tab; hold Shift with an arrow key to reorder; press Delete to close the focused tab; press the Menu key or Shift+F10 to open the tab menu. Tabs can also be reordered by dragging.",
       "dragStart": "Picked up \"{label}\"",
       "dragOver": "\"{label}\" was moved to the position of \"{over}\"",
       "dragEnd": "\"{label}\" was dropped at the position of \"{over}\"",
       "dragEndNoTarget": "\"{label}\" was returned to its original position",
-      "dragCancel": "Dragging \"{label}\" was cancelled"
+      "dragCancel": "Dragging \"{label}\" was cancelled",
+      "menu": {
+        "open": "Tab menu",
+        "label": "Tab menu — {label}",
+        "closeLeft": "Close all tabs to the left",
+        "closeRight": "Close all tabs to the right",
+        "closeOthers": "Close all other tabs"
+      }
     },
     "forbidden": {
       "title": "You do not have access to this page",
@@ -301,7 +311,8 @@
       "UPLOAD_REJECTED": "The logo file was rejected (PNG / JPG / WebP only, up to 2MB).",
       "FORBIDDEN": "You do not have permission to perform this action.",
       "UNEXPECTED": "The action failed; please try again later."
-    }
+    },
+    "mobileBack": "← Back"
   },
   "userManager": {
     "orgTree": {
@@ -502,7 +513,8 @@
       },
       "confirm": "Copy",
       "cancel": "Cancel"
-    }
+    },
+    "mobileBack": "← Back"
   },
   "moduleManager": {
     "seedNotice": "Modules and permissions are maintained by the system. This page is for viewing and toggling enabled / disabled only.",
@@ -627,7 +639,8 @@
       "failed": "Delete failed. Please try again later.",
       "cancel": "Cancel",
       "close": "Close"
-    }
+    },
+    "mobileBack": "← Back"
   },
   "moduleIcons": {
     "dashboard": "Dashboard",
@@ -823,7 +836,8 @@
       "FORBIDDEN": "You do not have permission for this action.",
       "VALIDATION_FAILED": "The data did not pass validation, please check and submit again.",
       "UNEXPECTED": "The action failed, please try again later."
-    }
+    },
+    "mobileBack": "← Back"
   },
   "dataScope": {
     "targets": {
@@ -895,7 +909,8 @@
       "NOT_FOUND": "That data target does not exist.",
       "FORBIDDEN": "You do not have permission for this action (this page is root-org only).",
       "UNEXPECTED": "The action failed, please try again later."
-    }
+    },
+    "mobileBack": "← Back"
   },
   "fieldManager": {
     "categories": {
@@ -1405,7 +1420,9 @@
       "disabled": "Disabled",
       "hasDraft": "Draft",
       "workflow": "Workflow: {name}",
-      "workflowInvalid": "Bound workflow is invalid"
+      "workflowInvalid": "Bound workflow is invalid",
+      "collapse": "Collapse form list",
+      "expand": "Expand form list"
     },
     "detail": {
       "region": "Form settings",
@@ -1425,6 +1442,9 @@
       "voidReasonCategoryHint": "With a Field manager category set, voiding requires picking a reason from its options (\"Other\" needs a note). Not set = free-text reason.",
       "voidReasonCategoryUnset": "Not set (free text)",
       "voidReasonCategorySaved": "Void reason setting updated.",
+      "sharedByFields": "Share by fields",
+      "sharedByFieldsHint": "Organizations picked in the checked organization fields can also see this form's submissions (view only, no editing or deleting). None checked = only people who can see the submission's organization.",
+      "sharedByFieldsSaved": "Share-by-fields setting updated.",
       "enabledOff": "Form disabled in this organization.",
       "assignedTo": "Assigned: {tenants}",
       "tabs": "Form settings tabs",
@@ -1642,7 +1662,9 @@
       "regexUnavailable": "Pattern safety can't be checked right now; it will be checked when you save the draft.",
       "newColumn": "Item",
       "sectionSettings": "Section settings",
-      "sectionSettingsOf": "Section settings for “{title}”"
+      "sectionSettingsOf": "Section settings for “{title}”",
+      "openSettings": "Form settings",
+      "closeProperties": "Close properties"
     },
     "preview": {
       "region": "Preview",
@@ -2124,7 +2146,16 @@
       "summaryFields": "Fields shown in the header when collapsed",
       "addSummaryField": "+ Field",
       "summaryNeedsCollapsible": "Turn on “Collapsible” first."
-    }
+    },
+    "mobile": {
+      "region": "Form summary",
+      "hint": "Use a tablet or computer to design and edit.",
+      "version": "Published version",
+      "yes": "Yes",
+      "no": "No",
+      "unsaved": "This form has unsaved changes, still kept in the designer. Switch to a tablet or computer width to save or discard them."
+    },
+    "mobileBack": "← Back"
   },
   "approval": {
     "nameSeparator": ", ",
@@ -2437,7 +2468,9 @@
       "version": "Version {version}",
       "assigned": "Assigned to {count}",
       "hasDraft": "Has draft",
-      "boundForms": "Bound forms: {forms}"
+      "boundForms": "Bound forms: {forms}",
+      "collapse": "Collapse workflow list",
+      "expand": "Expand workflow list"
     },
     "detail": {
       "region": "Workflow",
@@ -2579,7 +2612,9 @@
       "viewingCanvas": "Flow chart of v{version}",
       "viewingProperties": "Properties (read-only)",
       "closeViewing": "Close",
-      "saveBlockedOverdue": "Overdue reminder hours are invalid; fix them before saving the draft."
+      "saveBlockedOverdue": "Overdue reminder hours are invalid; fix them before saving the draft.",
+      "openFlowSettings": "Whole-flow settings",
+      "closeProperties": "Close properties"
     },
     "opErrors": {
       "FORK_NEEDS_SOURCE": "A fork needs a review step before it: delete or move the whole fork first.",
@@ -2802,7 +2837,14 @@
       "ccHint": "Notified when the document is completed, rejected or voided (no review needed; they can view the document read-only). Step CC recipients are only notified when that step passes or is skipped; returning for changes and withdrawing notify no one.",
       "issues": "Whole-flow issues",
       "backToFlow": "Back to whole-flow settings"
-    }
+    },
+    "mobile": {
+      "region": "Workflow summary",
+      "hint": "Use a tablet or computer to design and edit.",
+      "version": "Published version",
+      "unsaved": "This workflow has unsaved changes, still kept in the designer. Switch to a tablet or computer width to save or discard them."
+    },
+    "mobileBack": "← Back"
   },
   "userPicker": {
     "option": "{name} ({account})",

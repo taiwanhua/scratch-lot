@@ -246,7 +246,7 @@ export const ByStoreTab = () => {
                       </Typography>
                       <AttendanceStatusTags row={row} />
                     </Stack>
-                    <Typography variant="body2" color="text.secondary">
+                    <Typography variant="body2" color="textSecondary">
                       {t("cardLine", {
                         entry: text.entry(row),
                         clockIn: text.time(row.clockIn) ?? t("none"),
@@ -258,7 +258,7 @@ export const ByStoreTab = () => {
                 </Card>
               ))}
               {rows.length === 0 && !query.isLoading && (
-                <Typography color="text.secondary">{t("emptyRows")}</Typography>
+                <Typography color="textSecondary">{t("emptyRows")}</Typography>
               )}
             </Stack>
           ) : (
@@ -282,7 +282,7 @@ export const ByStoreTab = () => {
                 {t("unmatchedTitle")}
               </Typography>
               {unmatchedGroups.length === 0 && (
-                <Typography variant="body2" color="text.secondary">
+                <Typography variant="body2" color="textSecondary">
                   {t("unmatchedEmpty")}
                 </Typography>
               )}

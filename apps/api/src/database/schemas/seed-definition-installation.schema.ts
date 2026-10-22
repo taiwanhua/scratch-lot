@@ -69,6 +69,8 @@ export interface SeedInstallationMetadata {
   serial?: SerialFormat | null;
   /** 表單才有:作廢原因類別(缺席 = 自由填寫;這個欄位之前的快照沒有它)。 */
   voidReasonCategoryKey?: string | null;
+  /** 表單才有:依欄位共用(缺席 = 不共用;這個欄位之前的快照沒有它)。 */
+  sharedByFieldKeys?: string[];
   /** 流程才有。 */
   checkFormKey?: string | null;
 }
@@ -85,6 +87,7 @@ export interface SeedInstallationExpectation {
     allowDraft?: boolean;
     serial?: SerialFormat | null;
     voidReasonCategoryKey?: string | null;
+    sharedByFieldKeys?: string[];
   } | null;
 }
 

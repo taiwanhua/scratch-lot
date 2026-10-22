@@ -363,6 +363,7 @@ export class TicketLedgerService {
         refId: input.refId ?? null,
         reasonKey: input.reasonKey ?? null,
         reasonNote: input.reasonNote ?? null,
+        postCloseOf: input.postCloseOf ?? null,
       },
       { session },
     );

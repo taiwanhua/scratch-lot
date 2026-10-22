@@ -153,7 +153,7 @@ export const StepOverdueSection = ({
               setOverdue({ ...overdue, audience });
             }}
           />
-          <Typography variant="caption" color="text.secondary">
+          <Typography variant="caption" color="textSecondary">
             {t("hint")}
           </Typography>
         </>

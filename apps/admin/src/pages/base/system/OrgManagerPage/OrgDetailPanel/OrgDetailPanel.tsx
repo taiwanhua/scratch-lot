@@ -74,7 +74,7 @@ export const OrgDetailPanel = ({
           {isLoading ? (
             <CircularProgress aria-label={t("loading")} />
           ) : (
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="body2" color="textSecondary">
               {t("empty")}
             </Typography>
           )}
@@ -100,7 +100,8 @@ export const OrgDetailPanel = ({
       <Stack
         direction="row"
         spacing={1.25}
-        sx={{ alignItems: "center", pb: 1.75 }}
+        // 放不下(手機寬)時操作鈕整組換到下一列,不把組織名稱擠成直排
+        sx={{ alignItems: "center", flexWrap: "wrap", pb: 1.75 }}
       >
         <Typography variant="subtitle1">{org.name}</Typography>
         <Tag

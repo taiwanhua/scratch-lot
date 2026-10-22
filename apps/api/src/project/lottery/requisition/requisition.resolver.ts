@@ -4,6 +4,7 @@ import { Types } from "mongoose";
 import { CurrentOperator } from "../../../auth/decorators";
 import type { OperatorContext } from "../../../database/operator-context";
 import { RequirePermission } from "../../../permission/require-permission.decorator";
+import { RequireTenant } from "../../tenant-scope/require-tenant.decorator";
 import {
   LotteryPurchaseListModel,
   LotteryRequisitionCandidateModel,
@@ -17,6 +18,7 @@ import { RequisitionQueryService } from "./requisition-query.service";
  * 新增頁的遊戲清單守 `purchasing.requisition.create`、採購清單守 `purchasing.requisition.purchase-list`、
  * 列表的衍生狀態守 `purchasing.requisition.view`。叫貨單本身的新增 / 送出 / 作廢走表單引擎。
  */
+@RequireTenant()
 @Resolver()
 export class RequisitionResolver {
   constructor(private readonly query: RequisitionQueryService) {}

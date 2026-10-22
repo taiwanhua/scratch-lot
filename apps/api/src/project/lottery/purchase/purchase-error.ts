@@ -23,6 +23,8 @@ export const PURCHASE_REASONS = {
   trusteeInvalid: "PURCHASE_TRUSTEE_INVALID",
   /** 扣款帳戶沒填、停用或使用組織不含進貨分店:送出擋下 */
   accountInvalid: "PURCHASE_ACCOUNT_INVALID",
+  /** 勾選的兌獎紀錄不是進貨分店「店內持有」的、或金額和紀錄不同:送出擋下 */
+  redemptionInvalid: "PURCHASE_REDEMPTION_INVALID",
   /** 還有沒點收的列:核准擋下 */
   unreceivedRows: "PURCHASE_UNRECEIVED_ROWS",
   /** 已有點收:駁回 / 刪除擋下 */

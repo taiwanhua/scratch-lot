@@ -55,6 +55,8 @@ export interface SubmitContent {
   summary: SubmissionSummary;
   ctx: FormRevision["ctx"];
   at: Date;
+  /** 依欄位共用(`sharedOrgIds`,由呼叫端從這次的存值算);與第 3 步同一次寫入。 */
+  sharedOrgIds: Types.ObjectId[];
   /**
    * 第一次送出時給的單號(表單設了單號格式才有);與第 3 步同一次寫入,`submitted` 事後動作讀得到。
    * 缺席 = 不寫(已經有號、或表單沒設格式)。
@@ -212,6 +214,7 @@ export class WorkflowSubmitService {
           $set: {
             values: content.values,
             summary: content.summary,
+            sharedOrgIds: content.sharedOrgIds,
             revision,
             status: "reviewing",
             currentInstanceId: instance._id,

@@ -95,6 +95,8 @@ const lotteryTypes: NotificationTypeDefinition[] = [
     category: "responsible",
     orgScope: { ref: "event-org", range: "self" },
     defaultAudience: STORE_MANAGER_AUDIENCE,
+    // 這家店最早一張還沒被涵蓋的交班結帳,送出日的隔天起每天 09:00(規格 3.4、3.5;排程在 lottery/daily-close)
+    schedule: { default: { kind: "daily-overdue", time: "09:00" } },
     template: {
       "zh-TW": (params) => ({
         title: `日結逾期:${text(params, "orgName")}`,
@@ -183,6 +185,8 @@ const lotteryTypes: NotificationTypeDefinition[] = [
     category: "responsible",
     orgScope: { ref: "tenant", range: "self" },
     defaultAudience: PERIOD_CLOSER_AUDIENCE,
+    // 每月第 3 天 09:00 檢查上個月(規格 3.4、3.5;排程在 lottery/period-close)
+    schedule: { default: { kind: "monthly", dayOfMonth: 3, time: "09:00" } },
     template: {
       "zh-TW": (params) => ({
         title: `關帳逾期:${text(params, "period")}`,

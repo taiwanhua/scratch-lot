@@ -23,6 +23,9 @@ export const CASH_TABLE_MIN_WIDTH = 760;
 /** 待結清款項的最小寬度。 */
 export const OUTSTANDING_TABLE_MIN_WIDTH = 940;
 
+/** 關帳月份列表的最小寬度。 */
+export const PERIOD_TABLE_MIN_WIDTH = 640;
+
 /** 金額顯示(千分位;負數帶負號)。 */
 export const moneyText = (value: number): string =>
   value.toLocaleString("en-US");

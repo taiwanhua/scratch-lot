@@ -99,6 +99,43 @@ export const sampleReasonOptions: Record<
     { value: "damp", label: "受潮" },
     { value: "other", label: "其他" },
   ],
+  // 店面管理的交班結帳(規格 6.9):差額原因(審核中的單據由精靈自動帶入)、跳過盤點原因
+  [LOTTERY_FIELD_CATEGORY_KEYS.checkoutDiffReason]: [
+    { value: "wrong-change", label: "找錯錢" },
+    { value: "redemption-overpaid", label: "兌獎誤付" },
+    { value: "pending-documents", label: "審核中的單據" },
+    { value: "other", label: "其他" },
+  ],
+  [LOTTERY_FIELD_CATEGORY_KEYS.skipStocktakeReason]: [
+    { value: "short-staffed", label: "人力不足" },
+    { value: "system-error", label: "系統異常" },
+    { value: "other", label: "其他" },
+  ],
+  // 店面管理的出庫(規格 6.7)
+  [LOTTERY_FIELD_CATEGORY_KEYS.withdrawReason]: [
+    { value: "opening-float", label: "開班零用金" },
+    { value: "change-refill", label: "補零錢" },
+    { value: "other", label: "其他" },
+  ],
+  // 店面管理的手動標記售出(規格 6.3)
+  [LOTTERY_FIELD_CATEGORY_KEYS.manualSaleReason]: [
+    { value: "scan-failed", label: "刷不到條碼" },
+    { value: "system-backfill", label: "系統異常補登" },
+    { value: "other", label: "其他" },
+  ],
+  // 店面管理的撤銷兌獎(規格 6.5)
+  [LOTTERY_FIELD_CATEGORY_KEYS.redemptionRevokeReason]: [
+    { value: "entry-error", label: "登記錯誤" },
+    { value: "wrong-amount", label: "金額錯誤" },
+    { value: "other", label: "其他" },
+  ],
+  // 店面管理的撤銷售出申請(規格 8.5;客人退貨帶入「退款給客人 = 是」)
+  [LOTTERY_FIELD_CATEGORY_KEYS.saleReversalReason]: [
+    { value: "customer-return", label: "客人退貨" },
+    { value: "wrong-ticket", label: "刷錯刮刮樂" },
+    { value: "stocktake-error", label: "盤點錯誤" },
+    { value: "other", label: "其他" },
+  ],
 };
 
 /** Figma IN-05 的三列。 */

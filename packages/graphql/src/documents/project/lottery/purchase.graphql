@@ -24,7 +24,14 @@ fragment LotteryPurchaseReceivingFields on LotteryPurchaseReceiving {
       amount
       received
       receivedAt
+      batchId
     }
+  }
+  batches {
+    batchId
+    no
+    completedAt
+    rowIds
   }
 }
 
@@ -103,6 +110,22 @@ query LotteryDealerPurchases($dealerId: ID!) {
 mutation ReceiveLotteryPurchaseBook($input: ReceiveLotteryPurchaseBookInput!) {
   receiveLotteryPurchaseBook(input: $input) {
     rowId
+    receiving {
+      ...LotteryPurchaseReceivingFields
+    }
+  }
+}
+
+mutation CompleteLotteryPurchaseReceiving(
+  $input: CompleteLotteryPurchaseReceivingInput!
+) {
+  completeLotteryPurchaseReceiving(input: $input) {
+    batch {
+      batchId
+      no
+      completedAt
+      rowIds
+    }
     receiving {
       ...LotteryPurchaseReceivingFields
     }

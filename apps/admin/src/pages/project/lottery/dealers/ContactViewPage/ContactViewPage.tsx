@@ -79,6 +79,28 @@ const ContactView = ({
   return (
     <Box sx={{ flex: 1, minHeight: 0, overflow: "auto" }}>
       <Stack spacing={2} sx={{ pb: 2 }}>
+        {/* 檢視頁的頂部列(REACT-16):左 [← 返回列表],右 [編輯] */}
+        <Stack direction="row" sx={{ alignItems: "center", gap: 1.5 }}>
+          <Button
+            variant="text"
+            size="small"
+            onClick={() => {
+              access.goTo(access.routes.list);
+            }}
+          >
+            {t("actions.backToList")}
+          </Button>
+          <Box sx={{ flex: 1 }} />
+          {contact.abilities.canEdit && access.routes.contactEdit !== null && (
+            <Button
+              onClick={() => {
+                access.goTo(access.routes.contactEdit, contact.id);
+              }}
+            >
+              {t("actions.edit")}
+            </Button>
+          )}
+        </Stack>
         <Card sx={{ px: 3, py: 2 }}>
           <Stack direction="row" sx={{ alignItems: "center", gap: 1 }}>
             <Typography variant="h6" component="h1">
@@ -92,18 +114,6 @@ const ContactView = ({
               }
               label={t(CONTACT_STATUS_LABELS[contact.status])}
             />
-            <Box sx={{ flex: 1 }} />
-            {contact.abilities.canEdit &&
-              access.routes.contactEdit !== null && (
-                <Button
-                  variant="outlined"
-                  onClick={() => {
-                    access.goTo(access.routes.contactEdit, contact.id);
-                  }}
-                >
-                  {t("actions.edit")}
-                </Button>
-              )}
           </Stack>
         </Card>
 

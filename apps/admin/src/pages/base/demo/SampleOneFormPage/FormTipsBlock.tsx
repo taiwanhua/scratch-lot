@@ -19,7 +19,7 @@ export const FormTipsBlock = () => {
       aria-label={t("region")}
       sx={{ bgcolor: "background.default", borderRadius: 1, px: 1.5, py: 1.25 }}
     >
-      <Typography variant="caption" color="text.secondary">
+      <Typography variant="caption" color="textSecondary">
         {t("body")}
       </Typography>
     </Box>

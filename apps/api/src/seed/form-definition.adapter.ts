@@ -13,6 +13,7 @@ import {
 } from "../database/database.module";
 import {
   allowsDraft,
+  sharedByFieldKeysOf,
   voidReasonCategoryOf,
 } from "../database/schemas/form.schema";
 import type { SeedInstallationMetadata } from "../database/schemas/seed-definition-installation.schema";
@@ -74,6 +75,7 @@ export class FormDefinitionAdapter implements DefinitionAdapter<FormDefinitionSe
       allowDraft: seed.allowDraft ?? true,
       ...serialMetadataOf(seed.serial),
       ...voidReasonMetadataOf(seed.voidReasonCategoryKey),
+      ...sharedByMetadataOf(seed.sharedByFieldKeys),
     };
   }
 
@@ -93,6 +95,9 @@ export class FormDefinitionAdapter implements DefinitionAdapter<FormDefinitionSe
       ...(seed.voidReasonCategoryKey === undefined
         ? {}
         : { voidReasonCategoryKey: seed.voidReasonCategoryKey }),
+      ...(seed.sharedByFieldKeys === undefined
+        ? {}
+        : { sharedByFieldKeys: [...seed.sharedByFieldKeys] }),
     };
   }
 
@@ -114,6 +119,7 @@ export class FormDefinitionAdapter implements DefinitionAdapter<FormDefinitionSe
             allowDraft: allowsDraft(form),
             ...serialMetadataOf(form.serial),
             ...voidReasonMetadataOf(voidReasonCategoryOf(form)),
+            ...sharedByMetadataOf(sharedByFieldKeysOf(form)),
           },
         };
   }
@@ -210,6 +216,13 @@ export class FormDefinitionAdapter implements DefinitionAdapter<FormDefinitionSe
         (expected.metadata.voidReasonCategoryKey ?? null)
           ? {}
           : { voidReasonCategoryKey: seed.voidReasonCategoryKey ?? null }),
+        // 依欄位共用同理
+        ...(sameSharedByFields(
+          seed.sharedByFieldKeys,
+          expected.metadata.sharedByFieldKeys,
+        )
+          ? {}
+          : { sharedByFieldKeys: [...(seed.sharedByFieldKeys ?? [])] }),
       },
       {
         expected: {
@@ -221,6 +234,7 @@ export class FormDefinitionAdapter implements DefinitionAdapter<FormDefinitionSe
           serial: expected.metadata.serial ?? null,
           voidReasonCategoryKey:
             expected.metadata.voidReasonCategoryKey ?? null,
+          sharedByFieldKeys: expected.metadata.sharedByFieldKeys ?? [],
         },
       },
     );
@@ -353,6 +367,7 @@ function toSnapshot(
           allowDraft: metadata.allowDraft ?? true,
           serial: metadata.serial ?? null,
           voidReasonCategoryKey: metadata.voidReasonCategoryKey ?? null,
+          sharedByFieldKeys: metadata.sharedByFieldKeys ?? [],
         },
         {
           fields: record.fields,
@@ -371,6 +386,23 @@ function voidReasonMetadataOf(
   return key === null || key === undefined
     ? {}
     : { voidReasonCategoryKey: key };
+}
+
+/** 身分快照的依欄位共用:沒設(空)不帶這個鍵(這個欄位之前的快照與現在的比對結果相同)。 */
+function sharedByMetadataOf(
+  keys: readonly string[] | undefined,
+): Pick<IdentityMetadata, "sharedByFieldKeys"> {
+  return keys === undefined || keys.length === 0
+    ? {}
+    : { sharedByFieldKeys: [...keys] };
+}
+
+/** 兩份依欄位共用是否相同(缺席 = 空;順序算)。 */
+function sameSharedByFields(
+  left: readonly string[] | undefined,
+  right: readonly string[] | undefined,
+): boolean {
+  return JSON.stringify(left ?? []) === JSON.stringify(right ?? []);
 }
 
 /** 身分快照的單號格式:沒設不帶這個鍵(這個欄位之前的快照與現在的比對結果相同)。 */

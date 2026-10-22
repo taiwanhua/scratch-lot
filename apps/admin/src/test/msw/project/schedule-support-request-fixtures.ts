@@ -25,7 +25,7 @@ import type { WorkflowRuntimeWorldOptions } from "../workflow-runtime-handlers";
 
 /**
  * 排班作業 → 支援需求單(規格 14.10)的夾具。定義與受管表單同形
- * (正本 `apps/db-migrator/seeds/project/revisions/support_request.r1.seed.ts`);
+ * (正本 `apps/db-migrator/seeds/project/revisions/support_request.r2.seed.ts`);
  * 三筆提交:審核中(派給登入者小華)、已完成、已退回(Figma SC-31 274:32718)。
  */
 export const SUPPORT_REQUEST_FORM_KEY = "support_request";

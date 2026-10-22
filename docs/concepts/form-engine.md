@@ -63,6 +63,7 @@
 - 每次寫入帶 `expectedEditVersion`(已完成修改另帶 `expectedRevision`),不符 → 請重新載入。
 - 每個修訂號留**完整值快照** + `ctx`(時間、時區、操作者、當時的目前組織、當時的所屬組織全部、租戶;表達式的 `ctx.now` / `ctx.timezone` / `ctx.user.id` / `ctx.user.orgId` / `ctx.user.orgIds` / `ctx.tenant.id`)+ 這一筆修訂綁的表單版本(`revisions[].version`);差異在讀取時由相鄰兩筆算,各修訂用自己的版本渲染。唯讀檢視以該修訂的 `ctx` 重算顯示 / 唯讀條件,**不重算、不清空存值**,不拿讀者現在的身分補值。
 - 容量上限(整筆大小、修訂次數)見 `docs/modules/forms.md`「提交的寫入規則」。
+- **依欄位共用**:表單設定可勾表單層的組織引用欄(`forms.sharedByFieldKeys`);送出後可見範圍含這幾欄指到的組織的人也看得到這筆(只能看,不能改 / 刪 / 作廢),草稿不共用。引擎每次寫入存值時算出提交的 `sharedOrgIds`,讀取由資料共用宣告放寬(ADR-0014,`docs/modules/forms.md`「依欄位共用」)。
 - **單號**:表單設了單號格式(`forms.serial`)時,第一次送出(含直接送出、綁流程的送審)在同一個交易裡由 `SerialService` 給號,存在 `serialNo`;存草稿不給,退回 / 撤回再送不換號,作廢保留,複製為新單的草稿沒有號。列表欄位配置可選「單號」當欄,詳情頁標題下顯示。機制見 ADR-0015,設定見 `docs/modules/forms.md`「單號」。
 
 ## 值、計算與條件

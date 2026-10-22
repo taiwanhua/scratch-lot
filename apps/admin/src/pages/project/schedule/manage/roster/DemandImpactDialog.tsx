@@ -95,7 +95,7 @@ export const DemandImpactDialog = ({
           </>
         )}
         {deleted.map((entry) => (
-          <Typography key={entry.id} variant="body2" color="text.secondary">
+          <Typography key={entry.id} variant="body2" color="textSecondary">
             {t("deletedLine", {
               name: nameOf(entry),
               date: monthDayOf(entry.date),

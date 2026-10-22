@@ -1,4 +1,12 @@
 import {
+  PURCHASE_MODULE_KEY,
+  PURCHASE_PERMISSIONS,
+  PURCHASE_SETTLEMENT_SIDE,
+  TRANSFER_MODULE_KEY,
+  TRANSFER_PERMISSIONS,
+  TRANSFER_SETTLEMENT_SIDE,
+} from "@repo/domain/project/lottery";
+import {
   ACCOUNTS_MODULE_KEYS as KEYS,
   ACCOUNTS_PERMISSIONS as PERMISSIONS,
 } from "@repo/domain/project/lottery-accounts";
@@ -18,6 +26,28 @@ import { masterDataOrgs } from "./master-data-fixtures";
 /** 帳戶管理的夾具(元件測試、假 api 與 mock 模式共用;資料照 Figma AC-01 / 02 / 04 / 05)。 */
 
 export const ALL_ACCOUNTS_PERMISSIONS = Object.values(PERMISSIONS);
+
+/** 收付登記的「單據:那一邊」→ 那一邊的收付權限(同 api 的進貨單 / 調貨單登記)。 */
+const SIDE_PERMISSIONS: Partial<Record<string, string>> = {
+  [`${PURCHASE_MODULE_KEY}:${PURCHASE_SETTLEMENT_SIDE}`]:
+    PURCHASE_PERMISSIONS.settle,
+  [`${TRANSFER_MODULE_KEY}:${TRANSFER_SETTLEMENT_SIDE.receiver}`]:
+    TRANSFER_PERMISSIONS.pay,
+  [`${TRANSFER_MODULE_KEY}:${TRANSFER_SETTLEMENT_SIDE.shipper}`]:
+    TRANSFER_PERMISSIONS.receive,
+};
+
+/**
+ * 掛在單據上的交易沖正還要那一邊的收付權限(同 api `settlement-side-access.ts`):回那條權限;
+ * 沒掛單據 = null(只看 `reverse-bank-transaction`)。
+ */
+export const sidePermissionOf = (row: {
+  refType?: string | null;
+  settlementSide?: string | null;
+}): string | null =>
+  row.refType == null || row.settlementSide == null
+    ? null
+    : (SIDE_PERMISSIONS[[row.refType, row.settlementSide].join(":")] ?? "");
 
 const orgs = masterDataOrgs;
 const ref = (org: { id: string; name: string }) => ({
@@ -111,6 +141,7 @@ export const bankTransaction = (
   note: null,
   reversalOf: null,
   reversedById: null,
+  reversalOfAt: null,
   createdBy: ref({ id: "u-1", name: "何家華" }),
   createdAt: "2026-10-16T14:30:00.000Z",
   abilities: {
@@ -148,6 +179,10 @@ export const sampleTransactions =
       balanceAfter: 1_196_100,
       occurredAt: "2026-10-12T06:00:00.000Z",
       summary: "進貨單 P-0031 · 批購 10/12",
+      // 掛在進貨單上的收付(總部那一邊):沖正還要 `purchasing.purchase.settle`
+      refType: "purchasing.purchase",
+      refId: "pu-1",
+      settlementSide: "hq",
     }),
     bankTransaction({
       id: "bt-1",
@@ -166,7 +201,7 @@ export const sampleTransactions =
     }),
   ];
 
-const movement = (
+export const movement = (
   overrides: Partial<LotteryCashMovementFieldsFragment> &
     Pick<
       LotteryCashMovementFieldsFragment,
@@ -183,6 +218,7 @@ const movement = (
   refId: null,
   reversalOf: null,
   reversedById: null,
+  correctionOfShift: null,
   createdBy: ref({ id: "u-2", name: "李小華" }),
   ...overrides,
 });
@@ -321,6 +357,7 @@ export const settlementOf = (
       totalIn: 0,
       net: row.net,
       canSettle: row.canSettle,
+      cashDrawers: [],
       buttons: (["out", "in"] as const).map((button) => ({
         __typename: "LotterySettlementButton" as const,
         button,

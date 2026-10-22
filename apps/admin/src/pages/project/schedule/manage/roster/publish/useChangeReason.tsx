@@ -125,7 +125,7 @@ export const useChangeReason = (canEdit: boolean): ChangeReasonApi => {
           }}
         />
       )}
-      <Typography variant="caption" color="text.secondary">
+      <Typography variant="caption" color="textSecondary">
         {t("hint")}
       </Typography>
     </Stack>

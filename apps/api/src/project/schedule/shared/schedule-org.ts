@@ -5,6 +5,7 @@ import {
   type OperatorContext,
   isOrgVisible,
 } from "../../../database/operator-context";
+import { rootOrgError } from "../../tenant-scope/root-org";
 import { notFoundError, validationError } from "./schedule-error";
 
 /**
@@ -54,7 +55,7 @@ export function parseObjectId(value: string, field: string): Types.ObjectId {
 
 /**
  * 排班設定針對的組織:沒給 = 當前組織;要在操作者的**可見範圍**內(看不到 → `NOT_FOUND`);
- * 根組織不屬於任何租戶,沒有排班(→ `VALIDATION_FAILED`,欄位 `orgId`)。
+ * 根組織不屬於任何租戶,沒有排班(→ `FORBIDDEN` + reason `TENANT_ONLY`,與其他專案功能同一種回應)。
  */
 export async function resolveScheduleOrg(
   operator: OperatorContext,
@@ -74,7 +75,7 @@ export async function resolveScheduleOrg(
   }
   const [, tenantTop, ...between] = org.ancestors;
   if (tenantTop === undefined && org.ancestors.length === 0) {
-    throw validationError("the root org has no schedule settings", ["orgId"]);
+    throw rootOrgError();
   }
   const tenantId = tenantTop ?? org._id;
   // ancestors = [根, 租戶頂層, …, 父];鏈 = 自己 → 父 → … → 租戶頂層

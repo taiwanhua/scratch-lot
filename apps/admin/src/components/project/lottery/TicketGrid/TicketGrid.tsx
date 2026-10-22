@@ -43,6 +43,10 @@ export interface TicketGridProps {
    * `false` = 不顯示(使用處在操作列另外寫,例:「已選 2 / 2:#037、#064」)。
    */
   summary?: ReactNode;
+  /**
+   * 讓某一格閃一下(例:看板展開卡片時刷到這一張);`nonce` 每次刷到都換,同一張再刷也會再閃。
+   */
+  flash?: { ticketNo: string; nonce: number };
 }
 
 /**
@@ -60,6 +64,7 @@ export const TicketGrid = ({
   quickSelect = true,
   maxSelected,
   summary,
+  flash,
 }: TicketGridProps) => {
   const t = useTranslations("admin.lotteryInventory.ticketGrid");
   const labelOf = useTicketCellLabels(labels);
@@ -116,6 +121,9 @@ export const TicketGrid = ({
               label={labelOf(state)}
               selectable={selection.selectable.has(cell.ticketNo)}
               tooltip={cell.tooltip}
+              {...(flash?.ticketNo === cell.ticketNo && {
+                flashKey: flash.nonce,
+              })}
               onClick={(shiftKey) => {
                 onSelectedChange(
                   clickTicket(selection, cell.ticketNo, shiftKey, anchor),
@@ -127,7 +135,7 @@ export const TicketGrid = ({
         })}
       </Box>
       {summary === false ? null : (
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" color="textSecondary">
           {summary ?? defaultSummary}
         </Typography>
       )}

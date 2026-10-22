@@ -120,7 +120,7 @@ export const FormViewPage = ({ module, routeParam }: ModulePageProps) => {
           </Typography>
         )}
         {(submission?.serialNo ?? null) !== null && (
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" color="textSecondary">
             {t("serialNo", { serialNo: submission?.serialNo ?? "" })}
           </Typography>
         )}

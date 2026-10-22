@@ -14,7 +14,7 @@ export const OrgDisabledReason = ({ reason }: OrgDisabledReasonProps) => (
     <Typography
       component="span"
       variant="caption"
-      color="text.secondary"
+      color="textSecondary"
       noWrap
       sx={{ marginLeft: "auto", minWidth: 0 }}
     >

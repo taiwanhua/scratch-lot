@@ -7,7 +7,7 @@ import { Tree, type TreeNode } from "./Tree";
 
 /** 權限矩陣列在名稱右邊的權限 key(Figma 172:281:12px、text.disabled)。 */
 const MatrixKey = ({ value }: { value: string }) => (
-  <Typography variant="caption" color="text.disabled">
+  <Typography variant="caption" color="textDisabled">
     {value}
   </Typography>
 );
@@ -15,7 +15,7 @@ const MatrixKey = ({ value }: { value: string }) => (
 /** 頂層群組列的列尾:狀態說明 + 整組操作(Figma 172:283 / 172:284)。 */
 const MatrixActions = () => (
   <>
-    <Typography variant="caption" color="text.secondary">
+    <Typography variant="caption" color="textSecondary">
       有下層被勾選,不可取消
     </Typography>
     <Button size="small" variant="text">

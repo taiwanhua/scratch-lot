@@ -2,7 +2,6 @@ import { GraphQLHandler } from "msw";
 
 import {
   FormSubmissionStatus,
-  FormVersionStatus,
   WorkflowInstanceStatus,
   WorkflowStepStatus,
 } from "@repo/graphql";
@@ -26,10 +25,8 @@ import { formDesignWorld } from "@/test/msw/form-design-handlers";
 import {
   SHOPPING_FORM_KEY,
   field,
-  formFragment,
   shoppingDefinition,
   submissionFragment,
-  versionFragment,
 } from "@/test/msw/form-fixtures";
 import { formUpgradeWorld } from "@/test/msw/form-upgrade-handlers";
 import { moduleAdminTree } from "@/test/msw/module-admin-fixtures";
@@ -84,8 +81,8 @@ import {
   modulesForView,
   orgsForView,
 } from "./mock-fixtures";
+import { mockFormDesign } from "./mock-form-design";
 import { MOCK_FORM_RUNTIME_SETTINGS } from "./mock-form-runtime-settings";
-import { MOCK_SHOPPING_SERIAL } from "./mock-form-serial";
 import { mockNotificationSettings } from "./mock-notification-settings";
 import { mockWorkflowDesign } from "./mock-workflow-design";
 import type { MockHandler, MockWorldOptions } from "./mock-world-source";
@@ -143,8 +140,10 @@ export const mockHandlers = ({
     hasRefreshCookie: authenticated,
     modules: [...modulesForView(view), ...projectMockWorld.modules(view)],
     orgs: orgsForView(view),
-    // 根組織視角站在根組織(`tenantId: null`);租戶視角站在租戶 A(切換組織後沿用,mock 不重算)
-    currentOrgTenantId: view === "root" ? null : "org-tenant-a",
+    // 根組織視角預設站在根組織(`tenantId: null`),切到租戶 A 就是租戶 A;租戶視角的組織都屬租戶 A。
+    // 專案頁在根組織只顯示「請先切換到要管理的機構」(`app/project/module-pages.ts` 的 `gateTenant`)
+    currentOrgTenantId: (orgId) =>
+      orgId === "org-root" ? null : "org-tenant-a",
     preferences: notificationPreferenceDefaults(),
   });
 
@@ -220,23 +219,9 @@ export const mockHandlers = ({
     ...demoTwoWorld({ items: demoTwoItems }).handlers,
     // 表單引擎:表單管理(一張共用表單,已發布 v1 + 一份草稿)與示範表單(頂層)(兩筆提交);
     // 設計器「類別」下拉的 `FieldCategories` 讓給欄位管理(共用端點,正本只留一份)
-    ...withoutOperations(
-      formDesignWorld({
-        forms: [formFragment({ serial: MOCK_SHOPPING_SERIAL })],
-        versions: {
-          [SHOPPING_FORM_KEY]: [
-            versionFragment(shoppingDefinition(), { baseVersion: 1 }),
-            versionFragment(shoppingDefinition(), {
-              id: `ver-${SHOPPING_FORM_KEY}-1`,
-              version: 1,
-              status: FormVersionStatus.Published,
-              changelog: "第一版",
-            }),
-          ],
-        },
-      }).handlers,
-      ["FieldCategories"],
-    ),
+    ...withoutOperations(formDesignWorld(mockFormDesign()).handlers, [
+      "FieldCategories",
+    ]),
     // 版本面板「將舊版資料升級到此版」:計畫給兩個補值欄位(單選 / 日期),看得到補值依型別呈現
     ...formUpgradeWorld({
       plan: {

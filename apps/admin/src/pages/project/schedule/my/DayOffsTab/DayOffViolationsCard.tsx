@@ -30,7 +30,7 @@ export const DayOffViolationsCard = ({
           {t("violationsTitle", { count: violations.length })}
         </Typography>
         {violations.length === 0 && (
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" color="textSecondary">
             {t("noViolations")}
           </Typography>
         )}

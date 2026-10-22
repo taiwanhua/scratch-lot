@@ -39,7 +39,7 @@ const ControlledCalendar = (props: MonthCalendarProps) => {
         onSelectedDatesChange={setSelected}
       />
       {props.selectionMode && props.selectionMode !== "none" ? (
-        <Typography variant="caption" color="text.secondary">
+        <Typography variant="caption" color="textSecondary">
           selectedDates = {JSON.stringify(selected)}
         </Typography>
       ) : null}

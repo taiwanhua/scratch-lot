@@ -91,7 +91,7 @@ export const ChangesBanner = ({ changes, newIds }: ChangesBannerProps) => {
               <Typography variant="body2">
                 {[change.orgName, describe(change)].join(" ")}
               </Typography>
-              <Typography variant="caption" color="text.secondary">
+              <Typography variant="caption" color="textSecondary">
                 {reasonOf(change)}
               </Typography>
               {newIds.has(change.id) && <Tag tone="warning" label={t("new")} />}

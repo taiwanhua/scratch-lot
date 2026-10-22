@@ -198,7 +198,7 @@ export const sampleOneModule: DemoModuleConfig<
         key: "category",
         width: 110,
         render: (row, t) => (
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" color="textSecondary">
             {row.categoryLabel ?? row.category ?? t("emptyValue")}
           </Typography>
         ),
@@ -206,7 +206,7 @@ export const sampleOneModule: DemoModuleConfig<
       {
         key: "note",
         render: (row, t) => (
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" color="textSecondary">
             {row.note ?? t("emptyValue")}
           </Typography>
         ),

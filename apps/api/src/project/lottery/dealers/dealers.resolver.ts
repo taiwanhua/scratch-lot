@@ -3,6 +3,7 @@ import { Args, ID, Int, Mutation, Query, Resolver } from "@nestjs/graphql";
 import { CurrentOperator } from "../../../auth/decorators";
 import type { OperatorContext } from "../../../database/operator-context";
 import { RequirePermission } from "../../../permission/require-permission.decorator";
+import { RequireTenant } from "../../tenant-scope/require-tenant.decorator";
 import { DealerContactsService } from "./dealer-contacts.service";
 import { DEALERS_PERMISSIONS } from "./dealer-keys";
 import { DealerSigninsService } from "./dealer-signins.service";
@@ -39,6 +40,7 @@ import {
  * 讀取沒有 `view` 權限可守(規格 3.2),由 service 檢查有沒有綁 `dealers`;
  * 寫入守 `dealers.create` / `dealers.edit`(見簽也用 `edit`)。欄位級權限在 service。
  */
+@RequireTenant()
 @Resolver(() => LotteryDealerModel)
 export class LotteryDealersResolver {
   constructor(
@@ -128,6 +130,7 @@ export class LotteryDealersResolver {
 }
 
 /** 關係人的 GraphQL 端點:讀取同經銷商(綁 `dealers`),寫入守 `dealers.contacts.create` / `edit`。 */
+@RequireTenant()
 @Resolver(() => LotteryDealerContactModel)
 export class LotteryDealerContactsResolver {
   constructor(private readonly service: DealerContactsService) {}

@@ -62,7 +62,7 @@ export const ClassBDealersTab = ({ access }: DealersTabProps) => {
       width: 130,
       render: ({ row }) =>
         row.storeOrg === null || row.storeOrg === undefined ? (
-          <Typography variant="body2" color="warning.main">
+          <Typography variant="body2" color="warning">
             {t("list.storeOrgMissing")}
           </Typography>
         ) : (
@@ -78,7 +78,7 @@ export const ClassBDealersTab = ({ access }: DealersTabProps) => {
         return (
           <Typography
             variant="body2"
-            color={count > CO_SELLER_WARNING_OVER ? "error.main" : undefined}
+            color={count > CO_SELLER_WARNING_OVER ? "error" : undefined}
           >
             {t("list.coSellerCount", { count: String(count) })}
           </Typography>

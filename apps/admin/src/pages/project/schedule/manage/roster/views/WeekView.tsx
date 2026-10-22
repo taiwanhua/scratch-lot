@@ -11,8 +11,10 @@ import { Stack } from "@repo/ui/stack";
 
 import { tagPaletteBackgroundVarsSx } from "@/components/project/TagPaletteChip/tag-palette-background";
 import { ScheduleLegend } from "@/components/project/schedule/ScheduleLegend/ScheduleLegend";
+import { useFitMainHeight } from "@/hooks/base/useFitMainHeight";
 import { moreToneOf, weekDatesOf } from "@/lib/project/schedule-roster-views";
 
+import { ROSTER_CONTENT_SELECTOR } from "../check-panel/RosterCheckLayout";
 import { useRoster } from "../roster-context";
 import { WeekMobileList } from "./WeekMobileList";
 import { WeekMoreList } from "./WeekMoreList";
@@ -27,13 +29,6 @@ import {
  * 比這窄(平板、檢核面板打開)時不再擠欄寬,改在外層區塊內左右捲動。
  */
 const TIMELINE_MIN_WIDTH = 48 + 7 * 125;
-
-/** 週檢視的時間軸高度(版面由殼給,時間軸自己捲)。 */
-const TIMELINE_SX = {
-  height: { xs: "60vh", md: "calc(100vh - 340px)" },
-  minHeight: 360,
-  minWidth: TIMELINE_MIN_WIDTH,
-};
 
 const isRosterGroup = (
   group: ScheduleTimelineGroup,
@@ -61,6 +56,10 @@ export const WeekView = () => {
     anchor: { top: number; left: number };
   } | null>(null);
   const pointer = useRef({ top: 0, left: 0 });
+  // 時間軸自己捲(sticky 表頭、橫向捲軸看得到),高度 = <main> 扣掉工具列與圖例後剩下的
+  const [fitHeight, setFitTarget] = useFitMainHeight({
+    boundarySelector: ROSTER_CONTENT_SELECTOR,
+  });
 
   // 檢核 [查看]:目標日期不在這一週 → 切到那一週(格子畫出來後頁殼捲過去)
   const targetDate = scrollTarget?.date ?? null;
@@ -82,6 +81,7 @@ export const WeekView = () => {
     >
       {/* 時間軸在自己的區塊內左右捲動,不把卡片撐寬 */}
       <Box
+        ref={setFitTarget}
         onPointerDownCapture={(event) => {
           pointer.current = { top: event.clientY, left: event.clientX };
         }}
@@ -143,7 +143,11 @@ export const WeekView = () => {
           formatMoreLabel={(count) => t("timeline.moreLabel", { count })}
           prevDayLabel={t("timeline.prevDay")}
           nextDayLabel={t("timeline.nextDay")}
-          containerSx={TIMELINE_SX}
+          containerSx={{
+            // 空間不足時整條時間軸依內容長高,由 <main> 捲
+            height: fitHeight ?? "auto",
+            minWidth: TIMELINE_MIN_WIDTH,
+          }}
         />
       </Box>
       <ScheduleLegend

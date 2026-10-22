@@ -85,7 +85,7 @@ export const UploadWidget = ({
     // 唯讀檢視:標題 + 檔名;有 `onDownload`(看得到這一欄)就是下載按鈕,空值「—」
     return (
       <Stack spacing={0.5} sx={{ alignItems: "flex-start" }}>
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" color="textSecondary">
           {field.label}
         </Typography>
         {name !== "" && onDownload !== undefined ? (
@@ -104,7 +104,7 @@ export const UploadWidget = ({
           </Typography>
         )}
         {helperText !== undefined && (
-          <Typography variant="caption" color="text.secondary">
+          <Typography variant="caption" color="textSecondary">
             {helperText}
           </Typography>
         )}
@@ -121,7 +121,7 @@ export const UploadWidget = ({
 
   return (
     <Stack spacing={0.5}>
-      <Typography variant="body2" color="text.secondary">
+      <Typography variant="body2" color="textSecondary">
         {field.label}
       </Typography>
       {name === "" ? (
@@ -161,7 +161,7 @@ export const UploadWidget = ({
       {note !== undefined && (
         <Typography
           variant="caption"
-          color={hasError || failed || rejected ? "error" : "text.secondary"}
+          color={hasError || failed || rejected ? "error" : "textSecondary"}
         >
           {note}
         </Typography>

@@ -48,6 +48,9 @@ export const formUpdateHandler = (state: FormUpdateState) =>
       form.voidReasonCategoryKey =
         input.voidReasonCategoryKey === "" ? null : input.voidReasonCategoryKey;
     }
+    if (input.sharedByFieldKeys !== undefined) {
+      form.sharedByFieldKeys = [...(input.sharedByFieldKeys ?? [])];
+    }
     if (input.serial !== undefined) {
       form.serial =
         input.serial === null

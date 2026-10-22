@@ -76,7 +76,7 @@ export const ScheduleTab = () => {
   const page = query.data?.mySchedule;
   if (page === undefined) {
     return (
-      <Typography variant="body2" color="text.secondary">
+      <Typography variant="body2" color="textSecondary">
         {t("loading")}
       </Typography>
     );

@@ -16,7 +16,7 @@ export const DemoFieldRow = ({ label, children }: DemoFieldRowProps) => (
   <Stack direction="row" spacing={2} sx={{ alignItems: "center" }}>
     <Typography
       variant="body2"
-      color="text.secondary"
+      color="textSecondary"
       sx={{ width: 90, flexShrink: 0 }}
     >
       {label}

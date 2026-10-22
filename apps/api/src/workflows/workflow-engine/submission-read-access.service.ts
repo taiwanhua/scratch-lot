@@ -154,7 +154,7 @@ export class SubmissionReadAccess {
     return instance?.summary ?? null;
   }
 
-  /** 6a 原規則:可見範圍 + 資料範圍規則讀得到,且有模組 `view`。 */
+  /** 6a 原規則:一般讀取讀得到(可見範圍 + 依欄位共用等資料共用,再被資料範圍規則縮小),且有模組 `view`。 */
   private async isModuleReader(
     facts: FormOperatorFacts,
     submission: SubmissionSnapshotRecord,

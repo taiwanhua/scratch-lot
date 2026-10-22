@@ -7,6 +7,7 @@ import {
   isValidFormKey,
   normalizeSerialFormat,
   serialFormatIssues,
+  sharedByFieldIssues,
 } from "@repo/domain/form";
 
 import { AuditService } from "../../audit/audit.service";
@@ -20,6 +21,7 @@ import {
 import type { OperatorContext } from "../../database/operator-context";
 import {
   allowsDraft,
+  sharedByFieldKeysOf,
   voidReasonCategoryOf,
 } from "../../database/schemas/form.schema";
 import { FieldCategoryOptionsService } from "../field-category-options.service";
@@ -93,7 +95,46 @@ export interface UpdateFormInternalOptions {
     serial?: SerialFormat | null;
     /** 作廢原因類別(null / 缺席 = 沒設);缺席 = 不比對(這個欄位之前的呼叫端) */
     voidReasonCategoryKey?: string | null;
+    /** 依欄位共用(空 / 缺席 = 不共用);缺席 = 不比對(這個欄位之前的呼叫端) */
+    sharedByFieldKeys?: readonly string[];
   };
+}
+
+/** 受管安裝的條件更新條件:表單身分與各個受管 metadata 都還是 `expected`(見 `UpdateFormInternalOptions`)。 */
+function expectedFormFilterOf(
+  key: string,
+  expected: NonNullable<UpdateFormInternalOptions["expected"]>,
+): Record<string, unknown> {
+  const sharedByFieldKeys = expected.sharedByFieldKeys;
+  return {
+    _id: expected.definitionId,
+    key,
+    currentVersion: expected.currentVersion,
+    name: expected.name,
+    tabLabelTemplate: expected.tabLabelTemplate,
+    // 缺席 = 開:預期開時「不是 false」都算
+    allowDraft: expected.allowDraft ? { $ne: false } : false,
+    // 單號格式:null 也比到「沒有這個欄位」的舊表單;有值以存檔時的固定鍵順序整份比對
+    ...(expected.serial === undefined
+      ? {}
+      : { serial: normalizeSerialFormat(expected.serial) }),
+    // 作廢原因類別:null 也比到「沒有這個欄位」的舊表單
+    ...(expected.voidReasonCategoryKey === undefined
+      ? {}
+      : { voidReasonCategoryKey: expected.voidReasonCategoryKey ?? null }),
+    // 依欄位共用:空也比到「沒有這個欄位」的舊表單;有值整份比對(順序照存的)
+    ...(sharedByFieldKeys === undefined
+      ? {}
+      : sharedByFieldsFilterOf(sharedByFieldKeys)),
+  };
+}
+
+function sharedByFieldsFilterOf(
+  keys: readonly string[],
+): Record<string, unknown> {
+  return keys.length === 0
+    ? { sharedByFieldKeys: { $in: [null, []] } }
+    : { sharedByFieldKeys: [...keys] };
 }
 
 /** `updateForm` 要寫的欄位(缺席 = 不動;各欄的空值規則見 `UpdateFormInput`)。 */
@@ -120,6 +161,10 @@ function formSettingsSetOf(input: UpdateFormInput): Record<string, unknown> {
       ]);
     }
     set.voidReasonCategoryKey = key === "" ? null : key;
+  }
+  if (input.sharedByFieldKeys !== undefined) {
+    // null = 清空(不共用);欄位存不存在、是不是組織引用欄在 `assertSharedByFields` 對照版本驗
+    set.sharedByFieldKeys = [...(input.sharedByFieldKeys ?? [])];
   }
   return set;
 }
@@ -289,6 +334,36 @@ export class FormsService {
     }
   }
 
+  /**
+   * 要設的依欄位共用欄位要是表單層的組織引用欄(不重複):對照目前發布版(沒有發布版 = 草稿;都沒有 = 不對照)。
+   * 不合 → `VALIDATION_FAILED`(`fields: ["sharedByFieldKeys"]`)。
+   */
+  private async assertSharedByFields(
+    operator: OperatorContext,
+    form: FormRecord,
+    set: Record<string, unknown>,
+  ): Promise<void> {
+    const keys = set.sharedByFieldKeys;
+    if (!Array.isArray(keys) || keys.length === 0) {
+      return;
+    }
+    const version = await this.versions.findOne(
+      operator,
+      form.currentVersion === null
+        ? { formKey: form.key, status: "draft" }
+        : { formKey: form.key, version: form.currentVersion },
+    );
+    const issues = sharedByFieldIssues(version?.fields ?? [], keys as string[]);
+    if (version !== null && issues.length > 0) {
+      throw validationError(
+        `Shared-by fields must be org reference fields: ${issues
+          .map((issue) => `${issue.key} (${issue.reason})`)
+          .join(", ")}`,
+        ["sharedByFieldKeys"],
+      );
+    }
+  }
+
   /** 改名稱 / 頁籤模板(key 建立後不可改;欄位級權限的 `name` 在下次發布時跟著更新)。 */
   async update(
     facts: FormOperatorFacts,
@@ -301,30 +376,13 @@ export class FormsService {
       return this.toModel(facts, form);
     }
     await this.assertVoidReasonCategory(facts.operator, set);
+    await this.assertSharedByFields(facts.operator, form, set);
     const { expected } = internal;
     const updated = await this.forms.findOneAndUpdate(
       facts.operator,
       expected === undefined
         ? { _id: form._id }
-        : {
-            _id: expected.definitionId,
-            key: form.key,
-            currentVersion: expected.currentVersion,
-            name: expected.name,
-            tabLabelTemplate: expected.tabLabelTemplate,
-            // 缺席 = 開:預期開時「不是 false」都算
-            allowDraft: expected.allowDraft ? { $ne: false } : false,
-            // 單號格式:null 也比到「沒有這個欄位」的舊表單;有值以存檔時的固定鍵順序整份比對
-            ...(expected.serial === undefined
-              ? {}
-              : { serial: normalizeSerialFormat(expected.serial) }),
-            // 作廢原因類別:null 也比到「沒有這個欄位」的舊表單
-            ...(expected.voidReasonCategoryKey === undefined
-              ? {}
-              : {
-                  voidReasonCategoryKey: expected.voidReasonCategoryKey ?? null,
-                }),
-          },
+        : expectedFormFilterOf(form.key, expected),
       { $set: set },
     );
     if (!updated) {
@@ -346,6 +404,9 @@ export class FormsService {
         ...("serial" in set ? { serial: form.serial ?? null } : {}),
         ...("voidReasonCategoryKey" in set
           ? { voidReasonCategoryKey: voidReasonCategoryOf(form) }
+          : {}),
+        ...("sharedByFieldKeys" in set
+          ? { sharedByFieldKeys: sharedByFieldKeysOf(form) }
           : {}),
       },
       after: set,
@@ -616,6 +677,7 @@ export class FormsService {
       allowDraft: allowsDraft(form),
       serial: serialModelOf(form.serial),
       voidReasonCategoryKey: voidReasonCategoryOf(form),
+      sharedByFieldKeys: sharedByFieldKeysOf(form),
       hasDraft: draft !== null,
       tenantEnabled:
         tenantLink === null ? null : tenantLink.meta?.enabled === true,

@@ -46,7 +46,7 @@ export const FieldReferenceList = ({ references }: FieldReferenceListProps) => {
 
   if (references.length === 0) {
     return (
-      <Typography variant="body2" color="text.secondary">
+      <Typography variant="body2" color="textSecondary">
         {t("noReferences")}
       </Typography>
     );

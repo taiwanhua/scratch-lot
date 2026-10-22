@@ -112,6 +112,7 @@ export const ReportWorkspace = ({
           title={t("lotteryReports.preview.title", { name, period })}
           orgNames={run.orgs.map((org) => org.name)}
           sheets={run.sheets}
+          SheetBody={report.SheetBody}
           isLoading={run.isLoading}
           sheetIndex={preview.sheet}
           onSheetChange={(sheet) => {
@@ -140,6 +141,7 @@ export const ReportWorkspace = ({
           conditions={conditions}
           onChange={changeConditions}
           today={today}
+          input={input}
           canExport={canExport}
           isReady={input !== null}
           isExporting={run.isExporting}

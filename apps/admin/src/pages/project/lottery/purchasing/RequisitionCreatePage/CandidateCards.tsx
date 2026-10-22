@@ -30,7 +30,7 @@ export const CandidateCards = ({
   }
   if (rows.length === 0) {
     return (
-      <Typography variant="body2" color="text.secondary">
+      <Typography variant="body2" color="textSecondary">
         {t("empty")}
       </Typography>
     );
@@ -52,7 +52,7 @@ export const CandidateCards = ({
                 onChangeBooks={onChangeBooks}
               />
             </Stack>
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="body2" color="textSecondary">
               {t("cardFacts", {
                 stock: formatCount(row.stockTickets),
                 inTransit: formatCount(row.inTransitBooks),

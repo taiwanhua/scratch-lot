@@ -110,10 +110,13 @@ export function formContentHash(
     serial?: SerialFormat | null;
     /** 缺席 / null = 作廢原因自由填寫 */
     voidReasonCategoryKey?: string | null;
+    /** 缺席 / 空 = 不依欄位共用 */
+    sharedByFieldKeys?: readonly string[];
   },
   definition: FormDefinition,
 ): string {
-  const { serial, voidReasonCategoryKey, ...rest } = identity;
+  const { serial, voidReasonCategoryKey, sharedByFieldKeys, ...rest } =
+    identity;
   const format = normalizeSerialFormat(serial ?? null);
   return hashesOfSeed({
     kind: "form-definition",
@@ -123,6 +126,9 @@ export function formContentHash(
     ...(voidReasonCategoryKey === null || voidReasonCategoryKey === undefined
       ? {}
       : { voidReasonCategoryKey }),
+    ...(sharedByFieldKeys === undefined || sharedByFieldKeys.length === 0
+      ? {}
+      : { sharedByFieldKeys: [...sharedByFieldKeys] }),
     definition: plain(definition),
   }).contentHash;
 }

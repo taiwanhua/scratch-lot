@@ -57,6 +57,10 @@ export class LotterySettlementSideModel {
   @Field(() => Boolean)
   canSettle!: boolean;
 
+  /** 用現金時可以選的抽屜:這一邊的分店開著班的收銀點(小金庫不在這份,一律可選)。 */
+  @Field(() => [LotteryAccountsRefModel])
+  cashDrawers!: LotteryAccountsRefModel[];
+
   @Field(() => [LotterySettlementButtonModel])
   buttons!: LotterySettlementButtonModel[];
 }
@@ -88,6 +92,18 @@ export class LotterySettlementRecordModel {
   /** 銀行:帳戶名稱(戶名 + 末 5 碼);現金:null。 */
   @Field(() => String, { nullable: true })
   accountLabel!: string | null;
+
+  /** 現金:這筆錢從哪裡出 / 進哪裡(`vault` 小金庫、`drawer` 收銀點抽屜;付款收據印付款店的來源);銀行:null。 */
+  @Field(() => String, { nullable: true })
+  cashPlace!: string | null;
+
+  /** 現金從收銀點抽屜出 / 進時:收銀點名稱(付款收據印「分店 · 收銀點」);其他 = null。 */
+  @Field(() => String, { nullable: true })
+  cashPointName!: string | null;
+
+  /** 那個收銀點設定的印表機(付款收據的預設印表機;沒設定用分店預設);其他 = null。 */
+  @Field(() => ID, { nullable: true })
+  cashPointPrinterId!: string | null;
 
   /** 經手人 / 收款人。 */
   @Field(() => String, { nullable: true })

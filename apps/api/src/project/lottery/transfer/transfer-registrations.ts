@@ -54,7 +54,7 @@ const TO_PATH = `values.${TRANSFER_FIELD_KEYS.toBranch}.id`;
  *
  * - **在途來源**(`in-transit.ts`):送到這家店(收貨分店)、已建立還沒點收的列數(本;草稿不算)
  * - **收付**(`registerSettlementDocument`):收貨店(付款方,`pay`,銀行或現金)、出貨店(收款方,`receive`,一律銀行);
- *   調貨金額 = 批購金額合計,收貨店的先填值照已點收的批購金額;兩邊店都看得到這張單的收付(`sharedByValues`)
+ *   調貨金額 = 批購金額合計,收貨店的先填值照已點收的批購金額;兩邊店各操作自己那一邊的收付(`sideBranchPaths`;兩邊店看得到這張單靠依欄位共用 `from_branch` / `to_branch`)
  * - **側欄計數**(`registerBadge`):待點收 = 點收關卡(第二關)在我手上的審核任務數
  *
  * 沒有操作者的讀取用租戶邊界上下文的系統身分(呼叫端登記在 `project/database/tenant-boundary-callers.ts`)。
@@ -81,8 +81,8 @@ export class TransferRegistrations implements OnModuleInit, OnModuleDestroy {
         moduleKey: TRANSFER_MODULE_KEY,
         label: "調貨單",
         kind: "transfer",
-        payable: (submission) => this.payableOf(submission),
-        sharedByValues: [FROM_PATH, TO_PATH],
+        payable: (submission, asOf) => this.payableOf(submission, asOf),
+        sideBranchPaths: [FROM_PATH, TO_PATH],
         sides: [
           {
             side: TRANSFER_SETTLEMENT_SIDE.receiver,
@@ -169,7 +169,8 @@ export class TransferRegistrations implements OnModuleInit, OnModuleDestroy {
   }
 
   /** 收付:調貨金額 = 批購金額合計;收貨店的先填值照已點收的批購金額。草稿、駁回、作廢 → 不參與。 */
-  private async payableOf(submission: SettlementSubmission) {
+  /** 調貨金額與已點收金額;給了 `asOf` = 已點收只算那個時點以前的點收(輸出報表的期末未結清)。 */
+  private async payableOf(submission: SettlementSubmission, asOf?: Date) {
     if (
       !(TRANSFER_LIVE_STATUSES as readonly string[]).includes(submission.status)
     ) {
@@ -185,7 +186,10 @@ export class TransferRegistrations implements OnModuleInit, OnModuleDestroy {
     );
     const receipts = await this.receipts.findMany(
       reader,
-      { submissionId: submission._id },
+      {
+        submissionId: submission._id,
+        ...(asOf === undefined ? {} : { receivedAt: { $lt: asOf } }),
+      },
       { select: "rowId" },
     );
     const received = new Set(receipts.map((receipt) => receipt.rowId));

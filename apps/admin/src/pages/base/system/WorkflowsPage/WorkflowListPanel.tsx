@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { useTranslations } from "use-intl";
 
 import type { WorkflowFieldsFragment } from "@repo/graphql";
@@ -19,6 +20,10 @@ export interface WorkflowListPanelProps {
   onSelect: (key: string) => void;
   canCreate: boolean;
   onCreate: () => void;
+  /** 清單區塊的 id(平板寬收起 / 展開鈕的 `aria-controls`) */
+  id?: string;
+  /** 標頭右端的 [收起](平板寬才有,`DesignerListCollapseButton`) */
+  collapseButton?: ReactNode;
 }
 
 /**
@@ -34,15 +39,19 @@ export const WorkflowListPanel = ({
   onSelect,
   canCreate,
   onCreate,
+  id,
+  collapseButton,
 }: WorkflowListPanelProps) => {
   const t = useTranslations("admin.workflows.list");
 
   return (
     <Card
       component="section"
+      id={id}
       aria-label={t("region")}
       sx={{
-        width: 320,
+        // 手機寬(主從一次只顯示一邊)清單滿版
+        width: { xs: "100%", sm: 320 },
         flexShrink: 0,
         display: "flex",
         flexDirection: "column",
@@ -50,7 +59,7 @@ export const WorkflowListPanel = ({
       }}
     >
       <Stack spacing={1.5} sx={{ p: 2 }}>
-        <Stack direction="row" sx={{ alignItems: "center" }}>
+        <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
           <Typography variant="subtitle1" sx={{ flex: 1 }}>
             {t("title")}
           </Typography>
@@ -59,6 +68,7 @@ export const WorkflowListPanel = ({
               {t("create")}
             </Button>
           )}
+          {collapseButton}
         </Stack>
         <TextField
           label={t("search")}
@@ -80,7 +90,7 @@ export const WorkflowListPanel = ({
           sx={{ flex: 1, minHeight: 0, overflow: "auto" }}
         >
           {workflows.length === 0 && (
-            <Typography variant="body2" color="text.secondary" sx={{ px: 2 }}>
+            <Typography variant="body2" color="textSecondary" sx={{ px: 2 }}>
               {t("empty")}
             </Typography>
           )}
@@ -131,7 +141,7 @@ export const WorkflowListPanel = ({
                   )}
                 </Stack>
                 {workflow.boundForms.length > 0 && (
-                  <Typography variant="caption" color="text.secondary">
+                  <Typography variant="caption" color="textSecondary">
                     {t("boundForms", {
                       forms: workflow.boundForms
                         .map((form) => form.formName ?? form.formKey)

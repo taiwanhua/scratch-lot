@@ -32,8 +32,12 @@ import {
 } from "../../database/lottery-accounts/lottery-accounts.repositories";
 import { CashLedgerService } from "../cash/cash-ledger.service";
 import { SettlementLedger } from "../settlement/settlement-ledger";
+import {
+  assertSideReversible,
+  canReverseSide,
+} from "../settlement/settlement-side-access";
 import { AccountNames } from "./account-names";
-import { AccountsAccess } from "./accounts-access";
+import { AccountsAccess, type AccountsGrant } from "./accounts-access";
 import { ACCOUNTS_AUDIT } from "./accounts-audit";
 import {
   ACCOUNTS_REASONS,
@@ -146,21 +150,24 @@ export class BankTransactionsService {
       reader,
       shown.map(({ row }) => row._id),
     );
-    const canReverse = grant.has(ACCOUNTS_PERMISSIONS.reverseBankTransaction);
     const items = await this.toModels(
       operator,
       account.tenantId,
       shown,
       reversedBy,
-      canReverse,
+      grant,
     );
     return { items, totalCount: items.length, totalIn, totalOut };
   }
 
-  /** 帳戶目前餘額(期初 + 全部交易)。一批帳戶一次算。 */
+  /**
+   * 帳戶的交易淨額(收 − 支)與筆數,呼叫端加上期初就是餘額;一批帳戶一次算。
+   * `before` 給了 = 那個時點(不含)以前的交易(關帳快照的月底餘額)。
+   */
   async balancesOf(
     operator: OperatorContext,
-    accounts: readonly AccountRecord[],
+    accounts: readonly Pick<AccountRecord, "_id" | "tenantId">[],
+    before?: Date,
   ): Promise<Map<string, { sum: number; count: number }>> {
     const result = new Map<string, { sum: number; count: number }>();
     if (accounts.length === 0) {
@@ -172,7 +179,13 @@ export class BankTransactionsService {
       accounts[0]?.tenantId ?? null,
     );
     const rows = await this.transactions.aggregate(reader, [
-      { $match: { accountId: { $in: accounts.map((item) => item._id) } } },
+      {
+        $match: {
+          accountId: { $in: accounts.map((item) => item._id) },
+          // 給了 `before` = 那個時點(不含)以前的交易(關帳快照的月底餘額)
+          ...(before === undefined ? {} : { occurredAt: { $lt: before } }),
+        },
+      },
       {
         $group: {
           _id: "$accountId",
@@ -245,7 +258,7 @@ export class BankTransactionsService {
         account.tenantId,
         [{ row: created, balanceAfter: 0 }],
         new Map(),
-        grant.has(ACCOUNTS_PERMISSIONS.reverseBankTransaction),
+        grant,
       ),
     );
   }
@@ -287,16 +300,32 @@ export class BankTransactionsService {
     };
   }
 
-  /** 沖正(`accounts.reverse-bank-transaction`):帳戶要看得到;原因必填。 */
+  /**
+   * 沖正(`accounts.reverse-bank-transaction`):帳戶要看得到;原因必填。
+   * 掛在單據上的收付(`refType` / `settlementSide` 有值)還要那一邊的收付權限、看得到那一邊
+   * (與單據結算區的 [沖正] 同一判準,`settlement-side-access.ts`)。
+   */
   async reverse(
     operator: OperatorContext,
     input: { id: string; reason: string },
   ): Promise<LotteryBankTransactionModel> {
-    await this.access.assert(
+    const grant = await this.access.assert(
       operator,
       ACCOUNTS_PERMISSIONS.reverseBankTransaction,
     );
     const original = await this.mustFindTransaction(operator, input.id);
+    if (
+      original.refType !== null &&
+      original.refId !== null &&
+      original.settlementSide !== null
+    ) {
+      await assertSideReversible(operator, this.ledger, grant, {
+        id: input.id,
+        refType: original.refType,
+        refId: original.refId,
+        settlementSide: original.settlementSide,
+      });
+    }
     const reason = trimmed(input.reason);
     if (reason === null || reason.length > LIMITS.summary) {
       throw validationError("reason is required", ["reason"]);
@@ -323,14 +352,22 @@ export class BankTransactionsService {
   }
 
   /**
-   * 交易內寫一筆(登記交易與收付共用;呼叫端已檢查權限與欄位)。帳戶要使用中。
+   * 交易內寫一筆(登記交易與收付共用;呼叫端已檢查權限與欄位)。帳戶要使用中;
+   * `allowInactiveAccount` = **已送出單據的系統寫入**(例:日結核准完成時寫存入):帳戶在送出時已驗過,之後被停用
+   * 只是不能再被選用,不影響已送出的單(使用者 10/10 進貨單定案)。人工登記與收付一律不給。
    */
   async write(
     operator: OperatorContext,
     data: BankTransactionWrite,
-    options: { session?: ClientSession | null } = {},
+    options: {
+      session?: ClientSession | null;
+      allowInactiveAccount?: boolean;
+    } = {},
   ): Promise<BankTransactionRecord> {
-    assertActive(data.account);
+    const { allowInactiveAccount = false, ...createOptions } = options;
+    if (!allowInactiveAccount) {
+      assertActive(data.account);
+    }
     return this.transactions.create(
       operator,
       {
@@ -349,7 +386,7 @@ export class BankTransactionsService {
         handler: data.handler ?? null,
         note: data.note ?? null,
       },
-      options,
+      createOptions,
     );
   }
 
@@ -489,6 +526,24 @@ export class BankTransactionsService {
     return (rows[0] as { sum?: number } | undefined)?.sum ?? 0;
   }
 
+  /** 沖正的原交易 id → 原交易的發生時間(看得到帳戶就看得到它的交易:以租戶邊界讀)。 */
+  private async originalsOf(
+    operator: OperatorContext,
+    tenantId: Types.ObjectId | null,
+    ids: readonly Types.ObjectId[],
+  ): Promise<Map<string, Date>> {
+    if (ids.length === 0) {
+      return new Map();
+    }
+    const reader = await tenantBoundaryContext(this.orgs, operator, tenantId);
+    const rows = await this.transactions.findMany(
+      reader,
+      { _id: { $in: [...ids] } },
+      { select: "occurredAt" },
+    );
+    return new Map(rows.map((row) => [String(row._id), row.occurredAt]));
+  }
+
   /** 原交易 id → 沖正它的那一筆 id。 */
   private async reversalsOf(
     reader: OperatorContext,
@@ -510,9 +565,15 @@ export class BankTransactionsService {
     tenantId: Types.ObjectId | null,
     rows: readonly { row: BankTransactionRecord; balanceAfter: number }[],
     reversedBy: ReadonlyMap<string, string>,
-    canReverse: boolean,
+    /** 沖正按鈕的判準來源:傳 `false` = 一律不能(例:`reverse` 回傳剛寫入的那筆沖正) */
+    grant: AccountsGrant | false,
   ): Promise<LotteryBankTransactionModel[]> {
-    const [orgNames, userNames] = await Promise.all([
+    const canReverseAny =
+      grant !== false && grant.has(ACCOUNTS_PERMISSIONS.reverseBankTransaction);
+    const originalIds = rows.flatMap(({ row }) =>
+      row.reversalOf === null ? [] : [row.reversalOf],
+    );
+    const [orgNames, userNames, originals] = await Promise.all([
       this.names.orgNames(
         operator,
         tenantId,
@@ -523,6 +584,7 @@ export class BankTransactionsService {
         tenantId,
         rows.map(({ row }) => row.createdBy),
       ),
+      this.originalsOf(operator, tenantId, originalIds),
     ]);
     return rows.map(({ row, balanceAfter }) => {
       const branchKey =
@@ -549,6 +611,10 @@ export class BankTransactionsService {
         note: row.note,
         reversalOf: row.reversalOf === null ? null : String(row.reversalOf),
         reversedById: reversed,
+        reversalOfAt:
+          row.reversalOf === null
+            ? null
+            : (originals.get(String(row.reversalOf)) ?? null),
         createdBy:
           creatorKey === null
             ? null
@@ -556,7 +622,10 @@ export class BankTransactionsService {
         createdAt: row.createdAt,
         abilities: {
           canReverse:
-            canReverse && reversed === null && row.reversalOf === null,
+            canReverseAny &&
+            reversed === null &&
+            row.reversalOf === null &&
+            canReverseSide(grant, row),
         },
       };
     });

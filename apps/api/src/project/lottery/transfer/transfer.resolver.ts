@@ -6,6 +6,7 @@ import { TRANSFER_PERMISSIONS } from "@repo/domain/project/lottery";
 import { CurrentOperator } from "../../../auth/decorators";
 import type { OperatorContext } from "../../../database/operator-context";
 import { RequirePermission } from "../../../permission/require-permission.decorator";
+import { RequireTenant } from "../../tenant-scope/require-tenant.decorator";
 import {
   LotteryTransferOptionsModel,
   LotteryTransferProgressModel,
@@ -32,6 +33,7 @@ function orgIdOf(text: string): Types.ObjectId {
  * 點收關卡的任務在自己手上才行。調貨單本身的新增 / 送出 / 審核 / 作廢走表單引擎;收付走 `recordLotterySettlement`
  * (收貨店那一邊要 `pay`、出貨店那一邊要 `receive`)。
  */
+@RequireTenant()
 @Resolver()
 export class TransferResolver {
   constructor(

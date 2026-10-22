@@ -79,6 +79,21 @@ export class Form {
    */
   @Prop({ type: String, default: null })
   voidReasonCategoryKey?: string | null;
+
+  /**
+   * 依欄位共用(表單設定;`docs/modules/forms.md`「依欄位共用」):表單層組織引用欄的 key。提交也給這幾欄
+   * 指到的組織看(唯讀;引擎每次寫入存值時算出提交的 `sharedOrgIds`,ADR-0014)。空陣列 / 缺席 = 不共用;
+   * 一律用 `sharedByFieldKeysOf()` 讀。
+   */
+  @Prop({ type: [String], default: [] })
+  sharedByFieldKeys?: string[];
+}
+
+/** 表單的依欄位共用欄位:缺席(舊資料)= 不共用。 */
+export function sharedByFieldKeysOf(form: {
+  sharedByFieldKeys?: readonly string[] | null;
+}): string[] {
+  return [...(form.sharedByFieldKeys ?? [])];
 }
 
 /** 表單的作廢原因類別:缺席(舊資料)/ 空白 = 沒設(自由填寫)。 */

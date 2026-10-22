@@ -51,7 +51,7 @@ export const StepAutoApproveSection = ({
       </Typography>
       {CASES.map((key) => (
         <Stack key={key} spacing={0}>
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" color="textSecondary">
             {t(key)}
           </Typography>
           <RadioGroup
@@ -82,7 +82,7 @@ export const StepAutoApproveSection = ({
           </RadioGroup>
         </Stack>
       ))}
-      <Typography variant="caption" color="text.secondary">
+      <Typography variant="caption" color="textSecondary">
         {t("hint")}
       </Typography>
     </Stack>

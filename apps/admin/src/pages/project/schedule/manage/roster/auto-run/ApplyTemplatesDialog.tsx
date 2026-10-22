@@ -212,7 +212,7 @@ export const ApplyTemplatesDialog = ({
         <Stack spacing={0.5}>
           <Typography variant="subtitle2">{t("templatesTitle")}</Typography>
           {templates.length === 0 && (
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="body2" color="textSecondary">
               {t("noTemplates")}
             </Typography>
           )}
@@ -241,7 +241,7 @@ export const ApplyTemplatesDialog = ({
         <Stack spacing={0.5}>
           <Typography variant="subtitle2">{t("weekTitle")}</Typography>
           {weekTemplates.length === 0 && (
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="body2" color="textSecondary">
               {t("noWeekTemplates")}
             </Typography>
           )}
@@ -304,7 +304,7 @@ export const ApplyTemplatesDialog = ({
         formatWeekLabel={(week) => t("weekCheck", { week: week + 1 })}
         aria-label={t("applyTo", { year, month: Number(monthNumber) })}
       />
-      <Typography variant="caption" color="text.secondary">
+      <Typography variant="caption" color="textSecondary">
         {kind === "template" ? t("hintTemplate") : t("hintWeek")}
       </Typography>
       {changeReason.fields}

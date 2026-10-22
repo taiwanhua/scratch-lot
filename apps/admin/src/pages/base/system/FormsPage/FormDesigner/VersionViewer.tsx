@@ -137,7 +137,7 @@ export const VersionViewer = ({
         </Stack>
       </Stack>
       {form.abilities.canEdit && form.hasDraft && (
-        <Typography variant="caption" color="text.secondary">
+        <Typography variant="caption" color="textSecondary">
           {t("viewingHasDraft")}
         </Typography>
       )}

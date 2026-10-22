@@ -11,6 +11,7 @@ import {
 import { CurrentOperator } from "../../../auth/decorators";
 import type { OperatorContext } from "../../../database/operator-context";
 import { RequirePermission } from "../../../permission/require-permission.decorator";
+import { RequireTenant } from "../../tenant-scope/require-tenant.decorator";
 import { ScheduleRosterInput } from "../roster/dto/schedule-roster.input";
 import { SCHEDULE_PERMISSIONS } from "../shared/schedule-permissions";
 import {
@@ -34,6 +35,7 @@ export class PublishScheduleInput {
  * 排班作業 → 排班表的檢核與發布(規格 14.5「檢核面板」「發布」):
  * 檢核要 `schedule.manage.view`;發布要 `schedule.manage.publish`(沒有取消發布的端點)。
  */
+@RequireTenant()
 @Resolver(() => ScheduleCheckPayload)
 export class ScheduleCheckResolver {
   constructor(

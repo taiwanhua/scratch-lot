@@ -87,7 +87,7 @@ export const NavRailGroupItem = ({
         <Stack spacing={1} sx={{ width: FLYOUT_WIDTH, p: 1 }}>
           <Typography
             variant="caption"
-            color="text.disabled"
+            color="textDisabled"
             sx={{ px: 1.5, fontWeight: 600 }}
           >
             {label}

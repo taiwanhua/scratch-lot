@@ -61,7 +61,7 @@ export const ScheduleEditor = ({
     <Stack spacing={2}>
       {value.kind === NotificationScheduleKind.DaysBefore && (
         <Stack spacing={1}>
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" color="textSecondary">
             {t("daysBeforeHint")}
           </Typography>
           <Stack
@@ -127,14 +127,14 @@ export const ScheduleEditor = ({
             </Button>
           </Stack>
           {daysIssue !== undefined && (
-            <Typography variant="body2" color="error.main" role="alert">
+            <Typography variant="body2" color="error" role="alert">
               {tIssues(daysIssue)}
             </Typography>
           )}
         </Stack>
       )}
       {value.kind === NotificationScheduleKind.DailyOverdue && (
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" color="textSecondary">
           {t("dailyOverdueHint")}
         </Typography>
       )}

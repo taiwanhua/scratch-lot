@@ -2,7 +2,7 @@ import type { UrlStateInventory } from "../module-page-registry";
 
 /**
  * 專案頁面的網址狀態盤點(REACT-14 入口清單;底座的在 `app/base/url-state-inventory.ts`,不必動)。
- * 登記 `module-pages.ts` 的每一個固定頁、每個表單模組客製過的頁,以及 `page-replacements.ts` 換掉的底座頁
+ * 登記 `module-pages.ts` 的每一個固定頁、每個表單模組客製過(或套了根組織守門)的頁,以及 `page-replacements.ts` 換掉的底座頁
  * (換掉之後的頁放進網址的 key 以這裡為準):頁面 key → 這一頁以 `useUrlState` 放進網址的 key。
  */
 export const projectUrlStateInventory: UrlStateInventory = {
@@ -64,5 +64,24 @@ export const projectUrlStateInventory: UrlStateInventory = {
   // 庫存管理:頁內分頁 `tab`、庫存分頁的篩選 `stock`(分店、遊戲、狀態、批購日、本號);
   // 本的詳情:查刮刮樂帶來的張號 `ticket`(打開時標亮)
   inventory: ["tab", "stock"],
+  // 店面管理:頁內分頁 `tab`、看板 / 撤銷售出 / 現金更正 / 兌獎紀錄的分店 `org`、其他申請(表單引擎的預設列表)的篩選 `list`、
+  // 兌獎紀錄的篩選與頁碼 `redemptions`(期間、收銀點、狀態、登記人、單號、頁碼);
+  // 盤點紀錄的篩選與頁碼 `stocktakes`(類型、狀態、頁碼);班次結帳歷史紀錄的篩選與頁碼 `checkouts`(期間、收銀點、類型、狀態、頁碼);
+  // 新增頁:撤銷售出申請帶入的分店 `org` 與張 `ticket`(看板 [送撤銷售出申請]);臨時盤點的分店 `org` 與範圍 `scope`;
+  // 交班結帳帶入的那一班 `shift`(看板 [交班結帳]);日結的類型 `type=daily`(看板 [日結])
+  store: ["tab", "org", "list", "redemptions", "stocktakes", "checkouts"],
+  "store.create-page": ["org", "ticket", "scope", "shift", "type"],
+  // 檢視頁:盤點確認申請沒有網址狀態,其他表單沿用表單引擎的預設檢視頁(對話框、看的修訂)
+  "store.view-page": ["dialog", "revision"],
+  "store.edit-page": [],
   "inventory.book-page": ["ticket"],
+  // 沿用表單引擎預設頁、只套了根組織守門(`module-pages.ts` 的 `gateTenant`)的那幾頁:網址狀態同表單引擎預設
+  // (`app/base/url-state-inventory.ts` 的 `formModuleUrlStateInventory`)
+  "schedule.manage.view-page": ["dialog", "revision"],
+  "schedule.manage.create-page": [],
+  "schedule.manage.edit-page": [],
+  "purchasing.requisition.view-page": ["dialog", "revision"],
+  "purchasing.requisition.edit-page": [],
+  "purchasing.purchase.edit-page": [],
+  "purchasing.transfer.edit-page": [],
 };

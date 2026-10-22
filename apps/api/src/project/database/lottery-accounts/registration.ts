@@ -3,6 +3,7 @@ import {
   LotteryBankAccountsRepository,
   LotteryBankTransactionsRepository,
   LotteryCashMovementsRepository,
+  LotteryPeriodClosesRepository,
 } from "./lottery-accounts.repositories";
 import {
   LOTTERY_BANK_ACCOUNTS_COLLECTION,
@@ -19,8 +20,13 @@ import {
   LotteryCashMovement,
   LotteryCashMovementSchema,
 } from "./lottery-cash-movement.schema";
+import {
+  LOTTERY_PERIOD_CLOSES_COLLECTION,
+  LotteryPeriodClose,
+  LotteryPeriodCloseSchema,
+} from "./lottery-period-close.schema";
 
-/** 帳戶管理的資料登記:銀行帳戶、銀行交易、現金流水三張模組資料表。 */
+/** 帳戶管理的資料登記:銀行帳戶、銀行交易、現金流水、關帳四張模組資料表。 */
 export const LOTTERY_ACCOUNTS_REGISTRATION: DatabaseRegistration = {
   key: "lottery-accounts",
   models: [
@@ -39,6 +45,11 @@ export const LOTTERY_ACCOUNTS_REGISTRATION: DatabaseRegistration = {
       collection: LOTTERY_CASH_MOVEMENTS_COLLECTION,
       schema: LotteryCashMovementSchema,
     },
+    {
+      name: LotteryPeriodClose.name,
+      collection: LOTTERY_PERIOD_CLOSES_COLLECTION,
+      schema: LotteryPeriodCloseSchema,
+    },
   ],
   repositories: [
     {
@@ -52,6 +63,10 @@ export const LOTTERY_ACCOUNTS_REGISTRATION: DatabaseRegistration = {
     {
       modelName: LotteryCashMovement.name,
       provider: LotteryCashMovementsRepository,
+    },
+    {
+      modelName: LotteryPeriodClose.name,
+      provider: LotteryPeriodClosesRepository,
     },
   ],
   orgDataChecks: [
@@ -71,6 +86,12 @@ export const LOTTERY_ACCOUNTS_REGISTRATION: DatabaseRegistration = {
       key: "lottery-cash-movements",
       modelName: LotteryCashMovement.name,
       repository: LotteryCashMovementsRepository,
+      ownerField: "orgId",
+    },
+    {
+      key: "lottery-period-closes",
+      modelName: LotteryPeriodClose.name,
+      repository: LotteryPeriodClosesRepository,
       ownerField: "orgId",
     },
   ],

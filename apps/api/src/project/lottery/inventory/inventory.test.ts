@@ -57,6 +57,7 @@ const BOOK = /* GraphQL */ `
           ticketNos
           reasonKey
           reasonNote
+          correctionOfShift
         }
         cost {
           cost
@@ -226,6 +227,7 @@ interface BookData {
         ticketNos: string[];
         reasonKey: string | null;
         reasonNote: string | null;
+        correctionOfShift: string | null;
       }[];
       cost: { cost: number } | null;
       investigation: { status: string } | null;
@@ -637,12 +639,14 @@ describe("庫存管理(GraphQL 端點 + 真 MongoDB)", () => {
             ticketNos: ["064"],
             reasonKey: "other",
             reasonNote: "拆本時點錯格",
+            correctionOfShift: null,
           },
           {
             type: TICKET_EVENT_TYPE.skip,
             ticketNos: ["065"],
             reasonKey: "other",
             reasonNote: "拆本時點錯格",
+            correctionOfShift: null,
           },
         ]),
       );
@@ -1084,6 +1088,90 @@ describe("庫存管理(GraphQL 端點 + 真 MongoDB)", () => {
         },
       ]);
     });
+  });
+
+  it("事件時間軸:撤銷和原售出不在同一班、盤點補登的事後更正 → 標「前期更正,屬於 X 班」(讀取時算出)", async () => {
+    const bookId = await receiveBook(storeA);
+    const shiftOf = async (label: string) => {
+      const { insertedId } = await api.connection
+        .collection("lottery_shifts")
+        .insertOne({ orgId: storeA, tenantId: tenant, label, deletedAt: null });
+      return insertedId;
+    };
+    const monday = await shiftOf("店內櫃台 · 李小華 10/12 17:00");
+    const tuesday = await shiftOf("店內櫃台 · 王小明 10/13 09:00");
+    const write = async (
+      ticketNo: string,
+      event: Omit<TicketEventInput, "ticketId" | "expectedVersion">,
+    ) => {
+      const ticket = await ticketOf(bookId, ticketNo);
+      if (ticket === undefined) {
+        throw new Error(`ticket ${ticketNo} not found`);
+      }
+      await transactions().withTransaction((session) =>
+        ledger().applyTicketEvents(
+          session,
+          { operator: storeOperator(storeA) },
+          [{ ticketId: ticket._id, expectedVersion: ticket.version, ...event }],
+        ),
+      );
+    };
+    const sold = { status: "sold" as const, sold: null };
+    const unsold = { status: "unsold" as const, sold: null };
+    // #001 週一售出、週二撤銷(跨班)→ 屬於週一;#002 同一班售出又撤銷 → 不標
+    await write("001", {
+      type: "sale",
+      at: new Date("2026-10-12T10:00:00.000Z"),
+      patch: sold,
+      amount: 200,
+      cashEffect: "increase",
+      shiftId: monday,
+    });
+    await write("001", {
+      type: "sale_undo",
+      at: new Date("2026-10-13T02:00:00.000Z"),
+      patch: unsold,
+      amount: 200,
+      cashEffect: "decrease",
+      shiftId: tuesday,
+    });
+    await write("002", {
+      type: "sale",
+      at: new Date("2026-10-13T02:10:00.000Z"),
+      patch: sold,
+      amount: 200,
+      cashEffect: "increase",
+      shiftId: tuesday,
+    });
+    await write("002", {
+      type: "sale_undo",
+      at: new Date("2026-10-13T02:11:00.000Z"),
+      patch: unsold,
+      amount: 200,
+      cashEffect: "decrease",
+      shiftId: tuesday,
+    });
+    // #003 盤點補登售出,那個收銀點沒有開著的班 → 事後更正指向週一
+    await write("003", {
+      type: "sale_stocktake",
+      at: new Date("2026-10-13T03:00:00.000Z"),
+      patch: sold,
+      amount: 200,
+      cashEffect: "increase",
+      shiftId: monday,
+      postCloseOf: monday,
+    });
+    const book = await bookOf(bookId);
+    const marked = (type: string, ticketNo: string) =>
+      book.events.find(
+        (event) => event.type === type && event.ticketNos.includes(ticketNo),
+      )?.correctionOfShift;
+    expect(marked("sale_undo", "001")).toBe("店內櫃台 · 李小華 10/12 17:00");
+    expect(marked("sale_undo", "002")).toBeNull();
+    expect(marked("sale", "001")).toBeNull();
+    expect(marked("sale_stocktake", "003")).toBe(
+      "店內櫃台 · 李小華 10/12 17:00",
+    );
   });
 
   it("庫存分頁:狀態篩選(未拆 / 有待標註)", async () => {

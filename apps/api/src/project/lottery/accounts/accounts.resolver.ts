@@ -3,6 +3,7 @@ import { Args, ID, Mutation, Query, Resolver } from "@nestjs/graphql";
 import { CurrentOperator } from "../../../auth/decorators";
 import type { OperatorContext } from "../../../database/operator-context";
 import { RequirePermission } from "../../../permission/require-permission.decorator";
+import { RequireTenant } from "../../tenant-scope/require-tenant.decorator";
 import { BankAccountsService } from "./bank-accounts.service";
 import { BankTransactionsService } from "./bank-transactions.service";
 import {
@@ -26,6 +27,7 @@ import {
  * 銀行帳戶與交易的 GraphQL 端點(權限表正本 `docs/modules/project/accounts.md`)。
  * 讀取由 service 檢查 `accounts.view-bank-accounts`;寫入守對應的頁內權限。交易只新增(沒有修改 / 刪除端點)。
  */
+@RequireTenant()
 @Resolver(() => LotteryBankAccountModel)
 export class LotteryBankAccountsResolver {
   constructor(

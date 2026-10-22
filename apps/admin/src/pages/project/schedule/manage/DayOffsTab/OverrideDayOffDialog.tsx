@@ -282,7 +282,7 @@ export const OverrideDayOffDialog = ({
             }}
           />
         )}
-        <Typography variant="caption" color="text.secondary">
+        <Typography variant="caption" color="textSecondary">
           {t("override.reasonHint")}
         </Typography>
         <DayOffBlockedAlert violations={blocked} />

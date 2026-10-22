@@ -4,6 +4,7 @@ import { type ClientSession, Types } from "mongoose";
 import {
   ACCOUNTS_KEY,
   ACCOUNTS_PERMISSIONS,
+  BANK_TRANSACTION_TYPE,
   DIRECTIONS,
   type Direction,
   SETTLEMENT_METHODS,
@@ -30,6 +31,7 @@ import {
   LotteryBankTransactionsRepository,
   LotteryCashMovementsRepository,
 } from "../../database/lottery-accounts/lottery-accounts.repositories";
+import { LotteryCashPointsRepository } from "../../database/lottery-cash-points/lottery-cash-points.repository";
 import { AccountNames } from "../accounts/account-names";
 import { AccountsAccess } from "../accounts/accounts-access";
 import { ACCOUNTS_AUDIT } from "../accounts/accounts-audit";
@@ -48,7 +50,7 @@ import {
   CashLedgerOutsideTransactionError,
   CashLedgerService,
 } from "../cash/cash-ledger.service";
-import { openShiftOf } from "../cash/open-shift";
+import { openDrawersOf, openShiftOf } from "../cash/open-shift";
 import type {
   LotterySettlementCandidatesInput,
   RecordLotterySettlementInput,
@@ -67,33 +69,17 @@ import {
   bankTypeOf,
 } from "./settlement-ledger";
 import {
-  type SettlementSideRegistration,
   type SettlementSubmission,
   settlementDocumentOf,
   sideOf,
 } from "./settlement-registry";
+import {
+  assertSideReversible,
+  assertSideVisible,
+  isSideSettleable,
+} from "./settlement-side-access";
 
 const DAY_MS = 86_400_000;
-
-/**
- * 兩邊店都看得到的單據(`sharedByValues`,調貨單):只能操作自己看得到的那一邊(這一邊的分店在可見範圍內);
- * 其他單據不另外檢查。
- */
-function assertSideVisible(
-  operator: OperatorContext,
-  snapshot: SettlementSnapshot,
-  side: SettlementSideRegistration,
-): void {
-  const sideBranch =
-    side.branchOf?.(snapshot.submission, snapshot.payable) ??
-    snapshot.payable.branchOrgId;
-  if (
-    snapshot.registration.sharedByValues !== undefined &&
-    !isOrgVisible(operator, sideBranch)
-  ) {
-    throw authError("FORBIDDEN", `Side ${side.side} is not visible`);
-  }
-}
 
 /**
  * 收付機制(專案規格第 9 章;正本 `docs/modules/project/accounts.md`「收付機制」)。
@@ -113,6 +99,7 @@ export class SettlementService {
     private readonly accounts: LotteryBankAccountsRepository,
     private readonly bank: LotteryBankTransactionsRepository,
     private readonly cash: LotteryCashMovementsRepository,
+    private readonly cashPoints: LotteryCashPointsRepository,
     private readonly orgs: OrgsRepository,
     private readonly names: AccountNames,
     private readonly access: AccountsAccess,
@@ -360,6 +347,7 @@ export class SettlementService {
       const source = await this.cashSourceOf(
         input,
         snapshot.submission.tenantId,
+        branchOrgId,
       );
       const row = await this.tx.withTransaction(async (session) => {
         const created = await this.cashLedger.recordCashMovement(session, {
@@ -415,6 +403,11 @@ export class SettlementService {
       amount: number;
       handler?: string | null;
       note?: string | null;
+      /**
+       * 記成銀行「兌獎入帳」(進貨單的兌獎剩餘,規格 8.2):`refType` 照樣指回單據方便查來源,
+       * 但不記 `settlementSide` —— 不算進單據的已付 / 已收淨額、不算待結清。`button` 固定 `in`。
+       */
+      redemptionIncome?: boolean;
     },
   ): Promise<Types.ObjectId | null> {
     const active = session ?? currentSession();
@@ -464,16 +457,22 @@ export class SettlementService {
       input.operator,
       {
         account,
-        type: bankTypeOf(registration.kind, input.button),
-        direction: input.button,
+        type:
+          input.redemptionIncome === true
+            ? BANK_TRANSACTION_TYPE.redemptionIncome
+            : bankTypeOf(registration.kind, input.button),
+        direction: input.redemptionIncome === true ? "in" : input.button,
         amount: input.amount,
         occurredAt: new Date(),
         branchOrgId,
         refType: registration.moduleKey,
         refId: input.submission._id,
         refRevision: input.submission.revision,
-        settlementSide: side.side,
-        summary: `${registration.label} ${payable.docNo}`,
+        settlementSide: input.redemptionIncome === true ? null : side.side,
+        summary:
+          input.redemptionIncome === true
+            ? `兌獎入帳 ${payable.docNo}`
+            : `${registration.label} ${payable.docNo}`,
         handler: input.handler ?? null,
         note: input.note ?? null,
       },
@@ -492,20 +491,12 @@ export class SettlementService {
     }
     const original = await this.findReversible(operator, input);
     // 看得到單據才看得到它的收付;沖正要那一邊的權限
-    const snapshot = await this.ledger.snapshotOf(
+    const snapshot = await assertSideReversible(
       operator,
-      original.refType,
-      original.refId,
+      this.ledger,
+      await this.access.grantOf(operator),
+      { ...original, id: input.id },
     );
-    const side = sideOf(snapshot.registration, original.settlementSide);
-    if (side === undefined) {
-      throw notFoundError(`settlement record not found: ${input.id}`);
-    }
-    const grant = await this.access.grantOf(operator);
-    if (!grant.has(side.permission)) {
-      throw authError("FORBIDDEN", `Missing permission ${side.permission}`);
-    }
-    assertSideVisible(operator, snapshot, side);
     await this.tx.withTransaction(async (session) => {
       if (original.method === "cash") {
         // 現金在這一邊的分店(已確認在操作者的可見範圍內):以操作者自己的上下文寫
@@ -663,10 +654,11 @@ export class SettlementService {
       );
   }
 
-  /** 現金來源:小金庫,或有開著班的收銀點抽屜。 */
+  /** 現金來源:小金庫,或這一邊分店裡有開著班的收銀點抽屜(別家店的抽屜 → 擋下)。 */
   private async cashSourceOf(
     input: RecordLotterySettlementInput,
     tenantId: Types.ObjectId | null,
+    branchOrgId: Types.ObjectId,
   ): Promise<{
     place: "vault" | "drawer";
     cashPointId: Types.ObjectId | null;
@@ -686,6 +678,13 @@ export class SettlementService {
         "cash point has no open shift",
         ["cashSource"],
         ACCOUNTS_REASONS.noOpenShift,
+      );
+    }
+    if (!shift.orgId.equals(branchOrgId)) {
+      throw validationError(
+        "cash point is not at this side's branch",
+        ["cashSource"],
+        ACCOUNTS_REASONS.cashPointNotAtBranch,
       );
     }
     return { place: "drawer", cashPointId, shiftId: shift.shiftId };
@@ -720,8 +719,30 @@ export class SettlementService {
     const accountLabel = new Map(
       accountRows.map((row) => [String(row._id), row.label]),
     );
+    // 抽屜付 / 收的現金:收銀點名稱與它的印表機(付款收據用;以同一個租戶邊界讀)
+    const pointIds = cashRows.flatMap((row) =>
+      row.cashPointId == null ? [] : [row.cashPointId],
+    );
+    const pointRows =
+      pointIds.length === 0
+        ? []
+        : await this.cashPoints.findMany(
+            reader,
+            { _id: { $in: pointIds } },
+            { select: "name printerId" },
+          );
+    const pointOf = new Map(pointRows.map((row) => [String(row._id), row]));
     const sideBranches = registration.sides.map(
       (side) => side.branchOf?.(submission, payable) ?? payable.branchOrgId,
+    );
+    // 現金來源的抽屜:這一邊的分店開著班的收銀點(看得到那家店才列;店面登記的清單)
+    const sideDrawers = await Promise.all(
+      registration.sides.map((side, index) => {
+        const branch = sideBranches[index] ?? payable.branchOrgId;
+        return side.methods.includes("cash") && isOrgVisible(operator, branch)
+          ? openDrawersOf(operator, branch)
+          : Promise.resolve([]);
+      }),
     );
     const [orgNames, userNames] = await Promise.all([
       this.names.orgNames(operator, tenantId, sideBranches),
@@ -744,7 +765,18 @@ export class SettlementService {
     );
     const canSideSettle = (sideKey: string) => {
       const side = sideOf(registration, sideKey);
-      return side !== undefined && grant.has(side.permission);
+      const index = registration.sides.findIndex(
+        (candidate) => candidate.side === sideKey,
+      );
+      return (
+        side !== undefined &&
+        grant.has(side.permission) &&
+        isSideSettleable(
+          operator,
+          { registration, submission },
+          sideBranches[index] ?? payable.branchOrgId,
+        )
+      );
     };
     const creator = (id: Types.ObjectId | null | undefined) =>
       id == null
@@ -759,6 +791,9 @@ export class SettlementService {
         direction: row.direction,
         amount: row.amount,
         accountLabel: accountLabel.get(String(row.accountId)) ?? null,
+        cashPlace: null,
+        cashPointName: null,
+        cashPointPrinterId: null,
         handler: row.handler,
         note: row.note,
         occurredAt: row.occurredAt,
@@ -778,6 +813,16 @@ export class SettlementService {
         direction: row.to === "external" ? "out" : "in",
         amount: row.amount,
         accountLabel: null,
+        cashPlace: row.to === "external" ? row.from : row.to,
+        cashPointName:
+          row.cashPointId == null
+            ? null
+            : (pointOf.get(String(row.cashPointId))?.name ?? null),
+        cashPointPrinterId:
+          row.cashPointId == null
+            ? null
+            : (pointOf.get(String(row.cashPointId))?.printerId?.toString() ??
+              null),
         handler: row.payee,
         note: row.note,
         occurredAt: row.occurredAt,
@@ -810,11 +855,14 @@ export class SettlementService {
       sides: registration.sides.map((side, index) => {
         const totals = state.sides[side.side] ?? { out: 0, in: 0 };
         const branchId = String(sideBranches[index]);
-        // 兩邊店都看得到的單據(調貨單):這一邊的分店也要在讀者的可見範圍內才能按
+        // 兩邊店的單據(調貨單):這一邊的分店也要在讀者的可見範圍內才能按;其他單據:單據本身在可見範圍內
         const canSettle =
           grant.has(side.permission) &&
-          (registration.sharedByValues === undefined ||
-            isOrgVisible(operator, sideBranches[index] ?? payable.branchOrgId));
+          isSideSettleable(
+            operator,
+            { registration, submission },
+            sideBranches[index] ?? payable.branchOrgId,
+          );
         return {
           side: side.side,
           label: side.label,
@@ -828,6 +876,10 @@ export class SettlementService {
               ? totals.out - totals.in
               : totals.in - totals.out,
           canSettle,
+          cashDrawers: (sideDrawers[index] ?? []).map((drawer) => ({
+            id: String(drawer.cashPointId),
+            name: drawer.cashPointName,
+          })),
           buttons: (["out", "in"] as const).map((button) => {
             const defaultAmount = Math.max(
               0,

@@ -46,7 +46,7 @@ export const SelectionBar = ({
         gap: 1,
       }}
     >
-      <Typography variant="body2" color="text.primary" sx={{ flex: 1 }}>
+      <Typography variant="body2" color="textPrimary" sx={{ flex: 1 }}>
         {t("selected", {
           count: tickets.length,
           ranges: formatTicketRanges(tickets.map((ticket) => ticket.ticketNo)),

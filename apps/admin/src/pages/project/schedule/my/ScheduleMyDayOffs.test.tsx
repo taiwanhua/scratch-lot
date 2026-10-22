@@ -1,5 +1,8 @@
 import { describe, expect, it } from "@jest/globals";
 import { screen, waitFor, within } from "@testing-library/react";
+import { HttpResponse } from "msw";
+
+import { api, server } from "@/test/msw/server";
 
 import { renderSchedulePage } from "../schedule-test-support";
 
@@ -10,6 +13,18 @@ const DAY_OFFS = "/schedule/my?tab=day-offs";
  * 目標月 12 月、開放期間 11/15–11/25;我畫了 7、14、21 號與 10 號早上;24 號主要分店 3 人畫休。
  */
 describe("我的畫休", () => {
+  it("查詢失敗:顯示載入失敗提示,不是整頁空白", async () => {
+    renderSchedulePage({ path: DAY_OFFS });
+    server.use(
+      api.query("MyScheduleDayOffs", () =>
+        HttpResponse.json({ errors: [{ message: "boom" }] }),
+      ),
+    );
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "畫休資料載入失敗,請稍後再試",
+    );
+  });
+
   it("開放期間內:頂部期間與統計列、違規清單、[登記畫休]", async () => {
     renderSchedulePage({ path: DAY_OFFS });
     expect(
@@ -129,5 +144,22 @@ describe("我的畫休", () => {
     expect(
       screen.queryByRole("tab", { name: "我的畫休" }),
     ).not.toBeInTheDocument();
+  });
+});
+
+describe("班表管理頁殼的高度(STYLE-08)", () => {
+  it("分頁殼的卡片不釘高:內容少時撐滿、多時跟著長(flex-grow 1、flex-shrink 0),交給 <main> 捲", async () => {
+    renderSchedulePage({ path: DAY_OFFS });
+    // 殼的頁籤列也是 tablist:取包在卡片裡的那一個(頁內分頁)
+    const tablists = await screen.findAllByRole("tablist");
+    const card = tablists
+      .map((tabs) => tabs.closest<HTMLElement>(".MuiCard-root"))
+      .find((found): found is HTMLElement => found !== null);
+    if (card === undefined) {
+      throw new Error("找不到分頁殼的卡片");
+    }
+    const style = globalThis.getComputedStyle(card);
+    expect(style.flexGrow).toBe("1");
+    expect(style.flexShrink).toBe("0");
   });
 });

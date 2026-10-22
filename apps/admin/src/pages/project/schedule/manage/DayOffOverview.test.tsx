@@ -1,5 +1,8 @@
 import { describe, expect, it } from "@jest/globals";
 import { screen, waitFor, within } from "@testing-library/react";
+import { HttpResponse } from "msw";
+
+import { api, server } from "@/test/msw/server";
 
 import { renderSchedulePage } from "../schedule-test-support";
 
@@ -9,6 +12,18 @@ const OVERVIEW = "/schedule/manage?tab=day-offs";
  * 排班作業 → 畫休總覽(SC-06)與代改(SC-24;規格 14.5「畫休總覽」)。
  */
 describe("排班作業:畫休總覽與代改", () => {
+  it("查詢失敗:顯示載入失敗提示,不是整頁空白", async () => {
+    renderSchedulePage({ path: OVERVIEW });
+    server.use(
+      api.query("ScheduleDayOffOverview", () =>
+        HttpResponse.json({ errors: [{ message: "boom" }] }),
+      ),
+    );
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "畫休資料載入失敗,請稍後再試",
+    );
+  });
+
   it("月曆顯示誰整天畫休、誰時段不可排;頂部開放期間與尚未畫休的人", async () => {
     renderSchedulePage({ path: OVERVIEW });
     expect(

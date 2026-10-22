@@ -3,6 +3,7 @@ import { Args, Mutation, Query, Resolver } from "@nestjs/graphql";
 import { CurrentOperator } from "../../../auth/decorators";
 import type { OperatorContext } from "../../../database/operator-context";
 import { RequirePermission } from "../../../permission/require-permission.decorator";
+import { RequireTenant } from "../../tenant-scope/require-tenant.decorator";
 import {
   AddMyScheduleDayOffsInput,
   AddScheduleDayOffsOnBehalfInput,
@@ -24,6 +25,7 @@ import { ScheduleDayOffsService } from "./schedule-day-offs.service";
  * 畫休:我的畫休(`schedule.my.edit-day-offs`)、畫休總覽(`schedule.manage.view-day-offs`)、
  * 代改(`schedule.manage.edit-day-offs`)。
  */
+@RequireTenant()
 @Resolver(() => ScheduleDayOffModel)
 export class ScheduleDayOffsResolver {
   constructor(private readonly service: ScheduleDayOffsService) {}

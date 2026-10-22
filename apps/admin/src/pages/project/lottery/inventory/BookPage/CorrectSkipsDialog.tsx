@@ -40,7 +40,7 @@ export interface CorrectSkipsDialogProps {
 const Line = ({ label, value }: { label: string; value: string }) => (
   <Stack direction="row" sx={{ justifyContent: "space-between", gap: 2 }}>
     <Typography variant="body2">{label}</Typography>
-    <Typography variant="body1" color="text.primary">
+    <Typography variant="body1" color="textPrimary">
       {value}
     </Typography>
   </Stack>
@@ -147,8 +147,8 @@ export const CorrectSkipsDialog = ({
             variant="body1"
             color={
               invalid.includes("ticketNos") || selected.length !== required
-                ? "warning.main"
-                : "success.main"
+                ? "warning"
+                : "success"
             }
           >
             {changedText}

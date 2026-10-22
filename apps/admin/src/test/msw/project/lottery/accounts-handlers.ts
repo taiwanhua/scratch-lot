@@ -34,8 +34,14 @@ import {
   sampleOutstanding,
   sampleTransactions,
   settlementOf,
+  sidePermissionOf,
 } from "./accounts-fixtures";
 import { masterDataOrgs } from "./master-data-fixtures";
+import {
+  type PeriodCloseWorld,
+  type PeriodCloseWorldOptions,
+  periodCloseWorld,
+} from "./period-close-handlers";
 
 /**
  * 帳戶管理的假 api(夾具在 `accounts-fixtures.ts`;規則照 `docs/modules/project/accounts.md`):
@@ -50,6 +56,8 @@ export interface AccountsWorldOptions {
   movements?: LotteryCashMovementFieldsFragment[];
   outstanding?: LotteryOutstandingSettlementFieldsFragment[];
   permissions?: readonly string[];
+  /** 關帳分頁(`period-close-handlers.ts`) */
+  periodClose?: Omit<PeriodCloseWorldOptions, "permissions">;
 }
 
 export interface AccountsWorld {
@@ -61,6 +69,8 @@ export interface AccountsWorld {
     reverse: ReverseLotteryBankTransactionMutationVariables["input"][];
     settle: RecordLotterySettlementMutationVariables["input"][];
   };
+  /** 關帳分頁的假 api(已併進 `handlers`) */
+  periods: PeriodCloseWorld;
 }
 
 const validation = (reason: string, fields: string[]) =>
@@ -75,7 +85,9 @@ export const accountsWorld = ({
   movements = sampleMovements(),
   outstanding = sampleOutstanding(),
   permissions = ALL_ACCOUNTS_PERMISSIONS,
+  periodClose = {},
 }: AccountsWorldOptions = {}): AccountsWorld => {
+  const periods = periodCloseWorld({ ...periodClose, permissions });
   const has = (key: string) => permissions.includes(key);
   const withAbilities = (
     row: LotteryBankAccountFieldsFragment,
@@ -92,16 +104,20 @@ export const accountsWorld = ({
   });
   const withTxAbilities = (
     row: LotteryBankTransactionFieldsFragment,
-  ): LotteryBankTransactionFieldsFragment => ({
-    ...row,
-    abilities: {
-      __typename: "LotteryBankTransactionAbilities",
-      canReverse:
-        has(PERMISSIONS.reverseBankTransaction) &&
-        !row.reversedById &&
-        !row.reversalOf,
-    },
-  });
+  ): LotteryBankTransactionFieldsFragment => {
+    const sidePermission = sidePermissionOf(row);
+    return {
+      ...row,
+      abilities: {
+        __typename: "LotteryBankTransactionAbilities",
+        canReverse:
+          has(PERMISSIONS.reverseBankTransaction) &&
+          !row.reversedById &&
+          !row.reversalOf &&
+          (sidePermission === null || has(sidePermission)),
+      },
+    };
+  };
   let accountState = accounts.map((row) => withAbilities(row));
   let txState = transactions;
   const inputs: AccountsWorld["inputs"] = {
@@ -256,6 +272,13 @@ export const accountsWorld = ({
       inputs.reverse.push(input);
       const original = txState.find((row) => row.id === input.id);
       if (original === undefined) return notFound();
+      const sidePermission = sidePermissionOf(original);
+      if (
+        !has(PERMISSIONS.reverseBankTransaction) ||
+        (sidePermission !== null && !has(sidePermission))
+      ) {
+        return graphqlError("FORBIDDEN", "FORBIDDEN", { code: "FORBIDDEN" });
+      }
       if (original.reversedById || original.reversalOf) {
         return validation("ALREADY_REVERSED", ["id"]);
       }
@@ -297,6 +320,28 @@ export const accountsWorld = ({
               baselineAmount: 0,
               baselineAt: null,
             },
+            // 店面開著班的收銀點抽屜(店面的夾具;店 A 的店內櫃台)
+            drawers:
+              input.orgId === masterDataOrgs.storeA.id
+                ? [
+                    {
+                      __typename: "LotteryDrawerExpected",
+                      cashPoint: {
+                        __typename: "LotteryAccountsRef",
+                        id: "cp-counter",
+                        name: "店內櫃台",
+                      },
+                      shiftId: "shift-a-counter",
+                      openedBy: {
+                        __typename: "LotteryAccountsRef",
+                        id: "user-wang",
+                        name: "王小明",
+                      },
+                      openedAt: "2026-10-14T00:02:00.000Z",
+                      amount: 12_350,
+                    },
+                  ]
+                : [],
             items,
             totalCount: items.length,
           },
@@ -367,7 +412,8 @@ export const accountsWorld = ({
         },
       });
     }),
+    ...periods.handlers,
   ];
 
-  return { handlers, inputs };
+  return { handlers, inputs, periods };
 };

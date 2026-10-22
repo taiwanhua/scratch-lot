@@ -6,11 +6,13 @@ import {
   addScannedBook,
   groupBooks,
   parseRate,
+  pruneGroupRates,
   purchaseTotalOf,
   purchaseValuesOf,
   requisitionProgressOf,
   setBookRate,
   setGroupRate,
+  toggleRedemption,
 } from "./purchase-form";
 
 const HOT: PurchaseGame = {
@@ -82,6 +84,48 @@ describe("刷條碼加一本(規格 8.2;PU-05)", () => {
     expect(addScannedBook([], "abc", GAMES, null, nextId)).toEqual({
       kind: "invalid",
     });
+  });
+});
+
+describe("整組批購金額率沿用到新刷的本", () => {
+  it("改過整組率的遊戲:新刷的本用整組率;沒改過的遊戲用遊戲預設", () => {
+    const groupRates = new Map([["g-5164", 90]]);
+    const books = added(
+      addScannedBook(
+        [],
+        "5164-1-056527-100-0-6",
+        GAMES,
+        null,
+        nextId,
+        groupRates,
+      ),
+    );
+    expect(books[0]?.rate).toBe(90);
+    const more = added(
+      addScannedBook(
+        books,
+        "5201-1-060116-100-0-6",
+        GAMES,
+        null,
+        nextId,
+        groupRates,
+      ),
+    );
+    expect(more[1]?.rate).toBe(92);
+  });
+
+  it("整組率只留還有本的遊戲(本刪光就清掉)", () => {
+    const books = added(
+      addScannedBook([], "5201-1-060116-100-0-6", GAMES, null, nextId),
+    );
+    const pruned = pruneGroupRates(
+      new Map([
+        ["g-5164", 90],
+        ["g-5201", 88],
+      ]),
+      books,
+    );
+    expect([...pruned]).toEqual([["g-5201", 88]]);
   });
 });
 
@@ -187,6 +231,43 @@ describe("依遊戲分組、批購金額率、叫貨單帶入", () => {
           rate: 92,
         },
       ],
+      redemptions: [],
     });
+  });
+
+  it("兌獎:勾 / 再按取消;存值帶引用(張編號)與中獎金額", () => {
+    let sequence = 0;
+    const next = () => {
+      sequence += 1;
+      return `r${String(sequence)}`;
+    };
+    const one = { id: "rd-1", label: "5164-056527-012", prizeAmount: 1000 };
+    const two = { id: "rd-2", label: "5150-042210-083", prizeAmount: 2000 };
+    let picked = toggleRedemption([], one, next);
+    picked = toggleRedemption(picked, two, next);
+    expect(picked.map((item) => item.id)).toEqual(["rd-1", "rd-2"]);
+    picked = toggleRedemption(picked, one, next);
+    expect(picked).toEqual([{ ...two, rowId: "r2" }]);
+    const values = purchaseValuesOf(
+      {
+        branchId: "org-a",
+        requisitionNo: null,
+        dealerId: "d1",
+        selfPurchase: true,
+        trusteeId: null,
+        purchaseDate: null,
+        accountId: "acc-1",
+        note: "",
+      },
+      [],
+      picked,
+    );
+    expect(values.redemptions).toEqual([
+      {
+        rowId: "r2",
+        redemption: { id: "rd-2", label: "5150-042210-083" },
+        prize_amount: 2000,
+      },
+    ]);
   });
 });

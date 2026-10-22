@@ -49,7 +49,7 @@ export const DayMobileCards = ({ date, timeline }: DayMobileCardsProps) => {
   return (
     <Stack spacing={1.5} data-roster-cell={rosterCellKey({ date })}>
       {groups.length === 0 && (
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" color="textSecondary">
           {t("timeline.noDemand")}
         </Typography>
       )}
@@ -74,7 +74,7 @@ export const DayMobileCards = ({ date, timeline }: DayMobileCardsProps) => {
                   <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
                     {texts.title}
                   </Typography>
-                  <Typography variant="caption" color="text.secondary">
+                  <Typography variant="caption" color="textSecondary">
                     {texts.subtitle}
                   </Typography>
                 </Box>

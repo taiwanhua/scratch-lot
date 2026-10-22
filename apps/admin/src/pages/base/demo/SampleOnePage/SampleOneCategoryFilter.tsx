@@ -35,6 +35,7 @@ export const SampleOneCategoryFilter = ({
       getOptionLabel={(option) => option.label}
       getOptionKey={(option) => option.value}
       label={t("category")}
+      size="small"
       loading={categories.isLoading}
       noOptionsText={t("categoryEmpty")}
       sx={{ width: 240 }}

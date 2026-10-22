@@ -380,6 +380,7 @@ const receivingRow = (
   amount: Math.round((bookPrice * 92) / 100),
   received,
   receivedAt: received ? "2026-10-13T01:40:00.000Z" : null,
+  batchId: null,
 });
 
 /** Figma PU-06:5164 叫貨 5、已刷 4;5201 叫貨 1、已刷 1(審核中那一筆)。 */
@@ -421,4 +422,5 @@ export const purchaseReceiving = (
       rows: [receivingRow("row-6", "0001233", 99, 10_000, true)],
     },
   ],
+  batches: [],
 });

@@ -198,7 +198,7 @@ export const RuleDialog = ({
             />
           </>
         )}
-        <Typography variant="caption" color="text.secondary">
+        <Typography variant="caption" color="textSecondary">
           {t("current", { summary: currentText })}
         </Typography>
       </Stack>

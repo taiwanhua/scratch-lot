@@ -74,6 +74,7 @@ export function revisionVersionOf(
  * 表單提交(所有表單模組共用一張;`docs/data-model.md`「form_submissions」)。
  * 模組資料表:`tenantScopePlugin({ moduleData: true })` 宣告 `moduleKey`(= 綁的表單所屬模組)與
  * `tenantId`(後端依 `orgId` 推導);可見範圍與資料範圍規則照固定欄位模組一樣自動套用。
+ * 資料共用 = 可共用、只靠欄位(`sharedOrgIds`,表單設定「依欄位共用」),共用進來的只能看。
  */
 @Schema({
   collection: FORM_SUBMISSIONS_COLLECTION,
@@ -177,6 +178,16 @@ export class FormSubmission {
   @Prop({ type: Types.ObjectId, default: null })
   copiedFrom!: Types.ObjectId | null;
 
+  /**
+   * 依欄位共用(ADR-0014 的 `sharedByFields`):這筆**也給哪些組織看**(唯讀)。表單設定 `sharedByFieldKeys`
+   * 指的組織引用欄,引擎每次寫入存值(建草稿、存草稿、送出、修改、升級)時從存值算出;表單沒設 = 空,
+   * **草稿(還沒送出過)一律空**(草稿只屬於建立者)。
+   * 比對讀者的**可見範圍**(`match: visible`):看得到這些組織的人就看得到(表單的組織欄代表「這張單屬於哪個組織」;ADR-0014)。
+   * 缺席(這個欄位之前的舊資料、還沒回填)= 不共用。
+   */
+  @Prop({ type: [MongooseSchema.Types.ObjectId], default: [] })
+  sharedOrgIds!: Types.ObjectId[];
+
   /** 模組 key(`tenantScopePlugin` 的 `moduleData` 宣告;= 綁的表單的 `moduleKey`)。 */
   moduleKey!: string;
 
@@ -201,6 +212,20 @@ FormSubmissionSchema.index(
   { createdBy: 1, clientRequestId: 1 },
   { unique: true },
 );
+// 依欄位共用的讀取分支(`sharedOrgIds`;資料共用宣告要求 `{ tenantId, <欄位> }` 開頭的索引)
+FormSubmissionSchema.index({ tenantId: 1, sharedOrgIds: 1 });
 // 基礎欄位(ADR-0007)+ 模組資料表(可見範圍 + 資料範圍規則依 moduleKey,ADR-0005 / ADR-0008)
+// + 資料共用(ADR-0014):依欄位共用 —— 表單設定的組織欄位指到的組織也看得到(唯讀;寫入仍只照可見範圍)。
+// 共用清單 `shareOrgs` 固定為空(`editable: false`、預設不共用):提交沒有「共用給」,只靠欄位
 FormSubmissionSchema.plugin(baseFieldsPlugin);
-FormSubmissionSchema.plugin(tenantScopePlugin, { moduleData: true });
+FormSubmissionSchema.plugin(tenantScopePlugin, {
+  moduleData: true,
+  sharing: {
+    mode: "shareable",
+    defaultShareOrgs: "none",
+    editable: false,
+    sharedByFields: [
+      { path: "sharedOrgIds", includeDescendants: false, match: "visible" },
+    ],
+  },
+});

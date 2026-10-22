@@ -3,13 +3,30 @@
  * 測試檔只寫行為。
  */
 import { spawn } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, readdirSync } from "node:fs";
 import path from "node:path";
 
 import { type Db, type Document, MongoClient } from "mongodb";
 import { MongoMemoryReplSet } from "mongodb-memory-server";
 
 export const PACKAGE_ROOT = path.resolve(__dirname, "..", "..");
+
+/**
+ * 正式來源的全部 migration 檔名(根目錄的歷史檔 + `base/`、`project/`;檔名全域唯一,依檔名 = 執行順序)。
+ * 寫死清單、筆數或「最後一支」的測試一律從這裡算,新增 migration 不必改測試。
+ */
+export function migrationFileNames(root = PACKAGE_ROOT): string[] {
+  const namesIn = (...segments: string[]): string[] => {
+    const directory = path.join(root, "migrations", ...segments);
+    return existsSync(directory)
+      ? readdirSync(directory).filter((fileName) => fileName.endsWith(".js"))
+      : [];
+  };
+  // 依原始碼單位比對(同 `plan.ts` 的 compareNames)
+  return [...namesIn(), ...namesIn("base"), ...namesIn("project")].toSorted(
+    (left, right) => Number(left > right) - Number(left < right),
+  );
+}
 const TSX_CLI = path.join(
   PACKAGE_ROOT,
   "node_modules",

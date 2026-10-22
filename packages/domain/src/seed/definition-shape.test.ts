@@ -74,3 +74,46 @@ describe("表單定義宣告的形狀:voidReasonCategoryKey(作廢原因類別)"
     }
   });
 });
+
+describe("表單定義宣告的形狀:sharedByFieldKeys(依欄位共用)", () => {
+  const branch = field("branch", "reference", {
+    source: { provider: "org", labelField: "name" },
+  });
+
+  it("缺席或指到表單層組織引用欄都合格(缺席 = 不依欄位共用)", () => {
+    const fields = [branch, field("title", "text")];
+    expect(definitionSeedShapeIssues(formSeed(fields))).toEqual([]);
+    expect(
+      definitionSeedShapeIssues(
+        formSeed(fields, { sharedByFieldKeys: ["branch"] }),
+      ),
+    ).toEqual([]);
+  });
+
+  it("空陣列 / 不是字串陣列 / 不存在 / 不是組織引用欄 → 指到 sharedByFieldKeys", () => {
+    const fields = [branch, field("title", "text")];
+    for (const value of [[], "branch", [3]]) {
+      const seed = {
+        ...formSeed(fields),
+        sharedByFieldKeys: value,
+      } as unknown;
+      expect(definitionSeedShapeIssues(seed)).toEqual([
+        expect.objectContaining({ path: "sharedByFieldKeys" }),
+      ]);
+    }
+    expect(
+      definitionSeedShapeIssues(
+        formSeed(fields, { sharedByFieldKeys: ["missing", "title"] }),
+      ),
+    ).toEqual([
+      expect.objectContaining({
+        path: "sharedByFieldKeys",
+        detail: expect.stringContaining("missing") as unknown,
+      }),
+      expect.objectContaining({
+        path: "sharedByFieldKeys",
+        detail: expect.stringContaining("title") as unknown,
+      }),
+    ]);
+  });
+});

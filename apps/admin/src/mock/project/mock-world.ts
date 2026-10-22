@@ -2,11 +2,21 @@ import { ModuleEngine, ModuleSidebarType } from "@repo/graphql";
 
 import type { TestModule } from "@/test/msw/auth-handlers";
 import { fieldsByCategory } from "@/test/msw/field-fixtures";
+import {
+  printButtonWorld,
+  printingModule,
+} from "@/test/msw/print-button-handlers";
 import { dealersModules } from "@/test/msw/project/dealers-fixtures";
 import { dealersWorld } from "@/test/msw/project/dealers-handlers";
 import { fieldOptionColorWorld } from "@/test/msw/project/field-option-colors-handlers";
 import { accountsModules } from "@/test/msw/project/lottery/accounts-fixtures";
 import { accountsWorld } from "@/test/msw/project/lottery/accounts-handlers";
+import {
+  checkoutFormWorld,
+  checkoutWorkflowWorld,
+} from "@/test/msw/project/lottery/checkout-form-fixtures";
+import { checkoutWorld } from "@/test/msw/project/lottery/checkout-handlers";
+import { dailyCloseWorld } from "@/test/msw/project/lottery/daily-close-handlers";
 import { inventoryModules } from "@/test/msw/project/lottery/inventory-fixtures";
 import { inventoryWorld } from "@/test/msw/project/lottery/inventory-handlers";
 import { masterDataModules } from "@/test/msw/project/lottery/master-data-fixtures";
@@ -22,6 +32,18 @@ import {
   requisitionFormWorld,
 } from "@/test/msw/project/lottery/purchasing-fixtures";
 import { purchasingWorld } from "@/test/msw/project/lottery/purchasing-handlers";
+import { receiptLinksHandlers } from "@/test/msw/project/lottery/receipt-links-handlers";
+import { redemptionWorld } from "@/test/msw/project/lottery/redemption-handlers";
+import { reportsWorld } from "@/test/msw/project/lottery/reports-handlers";
+import {
+  stocktakeFormWorld,
+  stocktakeWorkflowWorld,
+} from "@/test/msw/project/lottery/stocktake-form-fixtures";
+import { stocktakeWorld } from "@/test/msw/project/lottery/stocktake-handlers";
+import { storeModules } from "@/test/msw/project/lottery/store-fixtures";
+import { storeFormsWorld } from "@/test/msw/project/lottery/store-forms-fixtures";
+import { storeWorld } from "@/test/msw/project/lottery/store-handlers";
+import { storeSalesWorld } from "@/test/msw/project/lottery/store-sales-handlers";
 import {
   transferFormWorld,
   transferModules,
@@ -136,6 +158,15 @@ const reportsModule: TestModule = {
  * - `modules`:該視角側欄要多出的模組(與 seed 宣告一致,權限給滿才點得到每一頁)
  * - `handlers`:專案頁的假 api,夾具取自 `src/test/msw/project/`(與元件測試共用)
  */
+/** 店面管理的看板 + 銷售(同一份看板狀態)。 */
+const storeAndSalesHandlers = () => {
+  const store = storeWorld();
+  return [
+    ...store.handlers,
+    ...storeSalesWorld({ board: store.state }).handlers,
+  ];
+};
+
 export const projectMockWorld: ProjectMockWorld = {
   // 檔案管理、經銷商管理:權限給滿(經銷商兩個批購基準日的欄位級權限也有),各分頁都看得到;輸出報表同樣給滿;
   // 班表管理(群組 + 四個子模組,權限給滿);帳戶管理、庫存管理(權限給滿)
@@ -149,6 +180,10 @@ export const projectMockWorld: ProjectMockWorld = {
     ...purchaseModules(),
     ...transferModules(),
     ...inventoryModules(),
+    // 店面管理(表單模組,權限給滿)
+    ...storeModules(),
+    // 58mm 單據的 [列印] / [補印](`api.printing`;底座 mock 沒有給)
+    printingModule(["api.printing.print", "api.printing.reprint"]),
   ],
   handlers: () => [
     ...fieldOptionColors(),
@@ -174,18 +209,44 @@ export const projectMockWorld: ProjectMockWorld = {
     }).handlers,
     ...inventoryWorld().handlers,
     ...purchaseWorld().handlers,
+    // 店面管理的看板:中山店三個收銀點(Figma ST-01;不管看哪家店都回這份);
+    // 銷售、展開卡片、拆本、移櫃共用同一份看板狀態(售出後本班已售跟著變)
+    ...storeAndSalesHandlers(),
+    // 兌獎:[最近兌獎]、兌獎紀錄分頁、進貨單新增頁的兌獎區(Figma ST-38b / ST-40 / PU-05)
+    ...redemptionWorld().handlers,
+    // 盤點:盤點頁(Figma ST-13)、差異核對、補登售出、盤點紀錄(ST-29)、盤點確認申請檢視頁(ST-30)
+    ...stocktakeWorld().handlers,
+    // 交班結帳:交班精靈(Figma ST-17a–19b)、班次結帳歷史紀錄(ST-27)、結帳確認申請檢視頁(ST-28a)
+    ...checkoutWorld().handlers,
+    // 日結 / 存銀行:看板頂部上次日結(ST-01)、日結精靈(ST-21–25b)、存銀行(ST-26a);日結檢視頁 C-0043(ST-28b)
+    ...dailyCloseWorld().handlers,
+    // 店面管理的撤銷售出 / 現金更正分頁(Figma ST-31a / ST-32a 的列)與退款班次的選項
+    ...storeFormsWorld().handlers,
+    // 58mm 單據的 [列印]:可選的印表機(一台,可以試自動列印與補印)、已印次數、補印原因、建立工作;
+    // 查工作沿用印表機管理那一個(每個操作只能有一個 handler)
+    // 58mm 單據 QR code 的頁面路由
+    ...receiptLinksHandlers(),
+    // 輸出報表:營運報表(Figma RE-01–RE-04 的示範數字,9 月已關帳)、班次結帳歷史報表(RE-05 的兩列)
+    ...reportsWorld().handlers,
+    ...printButtonWorld().handlers.filter(
+      ({ info }) => info.operationName !== "PrintJob",
+    ),
   ],
   // 排班作業 → 支援需求單:表單、三筆提交與審核中那一筆的流程(併進底座的表單執行端 / 審核流程 world);
   // 叫貨、採購單 → 叫貨單:表單與五筆提交(草稿、審核中、待購買、已進貨、已調貨);
   // 進貨單:表單與四筆提交(草稿、審核中、已完成待退、已完成已結清);
   // 調貨單:表單與四筆提交(草稿、第一關出貨確認、第二關點收、已完成);
-  // 出勤紀錄 → 補打卡申請:表單與兩筆審核中(一筆對應的排班已被刪除)
+  // 出勤紀錄 → 補打卡申請:表單與兩筆審核中(一筆對應的排班已被刪除);
+  // 店面管理:撤銷售出申請、現金更正單的定義(列表走專用查詢,沒有提交);盤點確認申請與一筆審核中(ST-30)
   formRuntime: () => {
     const support = supportRequestFormWorld();
     const makeup = makeupPunchFormWorld();
     const requisition = requisitionFormWorld();
     const purchase = purchaseFormWorld();
     const transfer = transferFormWorld();
+    const store = storeFormsWorld().runtime;
+    const stocktake = stocktakeFormWorld();
+    const checkout = checkoutFormWorld();
     return {
       moduleForms: [
         ...(support.moduleForms ?? []),
@@ -193,6 +254,9 @@ export const projectMockWorld: ProjectMockWorld = {
         ...(requisition.moduleForms ?? []),
         ...(purchase.moduleForms ?? []),
         ...(transfer.moduleForms ?? []),
+        ...(store.moduleForms ?? []),
+        ...(stocktake.moduleForms ?? []),
+        ...(checkout.moduleForms ?? []),
       ],
       versions: {
         ...support.versions,
@@ -200,6 +264,9 @@ export const projectMockWorld: ProjectMockWorld = {
         ...requisition.versions,
         ...purchase.versions,
         ...transfer.versions,
+        ...store.versions,
+        ...stocktake.versions,
+        ...checkout.versions,
       },
       submissions: [
         ...(support.submissions ?? []),
@@ -207,8 +274,10 @@ export const projectMockWorld: ProjectMockWorld = {
         ...(requisition.submissions ?? []),
         ...(purchase.submissions ?? []),
         ...(transfer.submissions ?? []),
+        ...(stocktake.submissions ?? []),
+        ...(checkout.submissions ?? []),
       ],
-      fieldOptions: { ...support.fieldOptions },
+      fieldOptions: { ...store.fieldOptions, ...support.fieldOptions },
       listColumns: {
         ...support.listColumns,
         ...requisition.listColumns,
@@ -223,13 +292,25 @@ export const projectMockWorld: ProjectMockWorld = {
       },
     };
   },
-  // 支援需求單、補打卡申請各自審核中的流程實例與待審任務
+  // 支援需求單、補打卡申請、盤點確認申請、結帳確認申請各自審核中的流程實例與待審任務
   workflowRuntime: () => {
     const support = supportRequestWorkflowWorld();
     const makeup = makeupPunchWorkflowWorld();
+    const stocktake = stocktakeWorkflowWorld();
+    const checkout = checkoutWorkflowWorld();
     return {
-      instances: [...support.instances, ...makeup.instances],
-      tasks: [...support.tasks, ...makeup.tasks],
+      instances: [
+        ...support.instances,
+        ...makeup.instances,
+        ...stocktake.instances,
+        ...checkout.instances,
+      ],
+      tasks: [
+        ...support.tasks,
+        ...makeup.tasks,
+        ...stocktake.tasks,
+        ...checkout.tasks,
+      ],
     };
   },
 };

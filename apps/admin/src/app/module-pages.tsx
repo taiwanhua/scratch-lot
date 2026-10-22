@@ -1,13 +1,20 @@
 // 專案的兩份來源刻意用 `@/` 別名而不是相對路徑:測試專案(`jest.config.mjs` 的 `project-fixture`)
 // 以 `moduleNameMapper` 只換掉這兩支,其餘組裝、路由、守門、殼都是真的
+import type { ComponentType } from "react";
+
 import { projectModulePages } from "@/app/project/module-pages";
 import { projectPageReplacements } from "@/app/project/page-replacements";
 import { projectRealtimeSignals } from "@/app/project/realtime-signals";
+import { projectShellExtensions } from "@/app/project/shell-extensions";
 import { projectUrlStateInventory } from "@/app/project/url-state-inventory";
+import { projectWorkflowExtensions } from "@/app/project/workflow-extensions";
+import type { WorkflowExtensionRegistration } from "@/hooks/base/useWorkflowExtensions";
 import { composeRealtimeSignals } from "@/lib/base/realtime/signal-registry";
 
 import { baseModulePages } from "./base/module-pages";
 import { baseRealtimeSignals } from "./base/realtime-signals";
+import { baseShellExtensions } from "./base/shell-extensions";
+import { baseWorkflowExtensions } from "./base/workflow-extensions";
 import { composeModulePages } from "./module-page-registry";
 
 /**
@@ -43,6 +50,24 @@ export const realtimeSignals = composeRealtimeSignals(
   baseRealtimeSignals,
   projectRealtimeSignals,
 );
+
+/**
+ * 依模組登記的審核擴充(`docs/modules/workflows.md`「依模組登記的審核擴充」):底座(`app/base/workflow-extensions.ts`)
+ * + 專案(`app/project/workflow-extensions.ts`)。由 `AdminShell` 交給 `WorkflowExtensionsProvider`。
+ */
+export const workflowExtensions: readonly WorkflowExtensionRegistration[] = [
+  ...baseWorkflowExtensions,
+  ...projectWorkflowExtensions,
+];
+
+/**
+ * 殼上的常駐元件(`docs/concepts/frontend-architecture.md`「殼上的常駐元件」):底座(`app/base/shell-extensions.ts`)
+ * + 專案(`app/project/shell-extensions.ts`)。由 `AdminShell` 在殼層渲染。
+ */
+export const shellExtensions: readonly ComponentType[] = [
+  ...baseShellExtensions,
+  ...projectShellExtensions,
+];
 
 /**
  * 專案來源的網址狀態盤點(REACT-14 入口清單):專案的頁面登記 + 換掉的底座頁 + 專案的盤點表。

@@ -164,7 +164,9 @@ describe("排班作業:支援需求單", () => {
 
   it("[+ 新增] → 新增頁:表單關了「允許存草稿」,只有 [送出]、沒有 [存草稿]", async () => {
     const { user } = renderSupport();
-    await user.click(await screen.findByRole("button", { name: "+ 新增" }));
+    await user.click(
+      await screen.findByRole("button", { name: "+ 新增支援需求單" }),
+    );
     await waitFor(() => {
       expect(screen.getByTestId("location")).toHaveTextContent(
         "/schedule/manage/create-page/support_request",
@@ -194,7 +196,9 @@ describe("排班作業:支援需求單", () => {
       }),
     });
     await screen.findByText("21:00");
-    expect(screen.queryByRole("button", { name: "+ 新增" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "+ 新增支援需求單" }),
+    ).toBeNull();
   });
 
   it("手機:列表改卡片,點卡片進詳情頁", async () => {

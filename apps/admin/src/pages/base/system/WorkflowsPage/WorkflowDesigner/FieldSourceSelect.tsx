@@ -84,7 +84,7 @@ export const FieldSourceSelect = ({
           onChange={ignoreChange}
         />
         {hasCurrent && (
-          <Typography variant="caption" color="text.secondary">
+          <Typography variant="caption" color="textSecondary">
             {t("fieldCurrent", {
               form: formNameOf(value.formKey),
               field: value.fieldKey,
@@ -114,12 +114,12 @@ export const FieldSourceSelect = ({
         }}
       />
       {isLoaded && choices.length === 0 && !isDisabled && (
-        <Typography variant="caption" color="warning.main">
+        <Typography variant="caption" color="warning">
           {t("fieldNoChoices")}
         </Typography>
       )}
       {isOnOtherForm && (
-        <Typography variant="caption" color="warning.main">
+        <Typography variant="caption" color="warning">
           {t("fieldOtherForm", { form: formNameOf(value.formKey) })}
         </Typography>
       )}

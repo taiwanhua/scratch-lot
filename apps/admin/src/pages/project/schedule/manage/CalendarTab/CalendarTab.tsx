@@ -148,7 +148,7 @@ export const CalendarTab = () => {
       >
         <Tag label={t("legendClosed")} />
         <TagPaletteChip paletteKey="cyan" label={t("legendSpecial")} />
-        <Typography variant="caption" color="text.secondary">
+        <Typography variant="caption" color="textSecondary">
           {t("legendInherit")}
         </Typography>
       </Stack>

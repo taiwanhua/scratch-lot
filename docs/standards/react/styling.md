@@ -139,6 +139,20 @@ expect(chain.slice(1, -1).filter((l) => l.scrolls)).toEqual([]); // 只有最內
 
 實際的視覺滿版仍以 dev(或 mock 模式,TEST-08)目視為準;這個測試守的是「不再退回去」。
 
+**釘高(`flex: 1` + `minHeight: 0`)只給「子樹有一層 `overflow: auto` 能吃掉全部超出量」的版面**:主從版面
+(左樹 / 右表各自捲)、整頁只有一張 DataTable(STYLE-11)。其餘 —— 一般內容頁、頁內分頁殼(`PageTabs` 外面那張卡片)、
+卡片包表單 / 清單、表格下面還有別的區塊 —— 一律 `flexGrow: 1; flexShrink: 0`:內容少時撐滿、多時跟著長,交給 `<main>` 捲。
+**MUI `Card` / `Paper` 預設 `overflow: hidden`**:釘了高的卡片,內容超出的部分直接被裁掉,`<main>` 也沒東西可捲
+(通知設定等頁都這樣被回報過)。連帶:
+
+- 主從版面在手機寬(xs)不釘高(`flex: { xs: "1 0 auto", sm: 1 }`):兩塊依內容長高、交給 `<main>` 捲;sm 起才各自捲。
+- 直排(xs `column`)時不給 `flex: 2` 之類的比例:flex-basis 0 會把 `overflow: hidden` 的卡片壓矮;比例只在並排的斷點給(`flex: { md: 2 }`)。
+- 不釘高的卡片裡放 `@repo/ui/table`,傳 `containerSx={{ height: "auto" }}`:預設的 `height: 100%` 在 flex 欄裡會解析成卡片高度,少掉標題那段。
+- 內層捲動區塊(要 sticky 表頭、看得到橫向捲軸的寬表格 / 時間軸)不寫 `calc(100vh - 320px)` 這種依工具列高度的魔術數字:
+  量 `<main>` 剩下的空間給上限,空間不足時不設上限(只由 `<main>` 捲),任何尺寸都只有一層垂直捲動
+  (`hooks/base/useFitMainHeight.ts`;量測邊界傳**只含內容、不含並排側欄**的那一欄,含了比內容高的側欄,上限會來回跳)。
+- 測試:頁殼卡片斷言 `flex-shrink: 0`;殼本身斷言 `<main>` 可捲、`shell-content` 不裁切(先例 `app/AdminShell/ShellLayout.test.tsx`);量測 hook 見 `hooks/base/useFitMainHeight.test.tsx`。
+
 **同一條鏈只標一次 `overflow: auto`**:父子兩層各標一次時,平常看不出來 ——
 兩層都是「高度跟著內容長」就不會有人捲;等到內層拿到確定高度(或內容給了 `minWidth`),
 就會冒出兩條捲軸,而且橫向那條貼在最後一列下方、卡在版面中間。決定**哪一層負責捲**,
@@ -157,6 +171,8 @@ expect(chain.slice(1, -1).filter((l) => l.scrolls)).toEqual([]); // 只有最內
 ## STYLE-10 從呼叫端看 `sx`:只疊加、不覆蓋幾何
 
 app 端給 `@repo/ui` 元件傳 `sx` 時,只放與版面位置有關的值(`cursor`、`mt`、`flex`…);元件自己的幾何(高度、圓角、tone 色)由元件內的 `styled()` / theme `components` 決定(STYLE-07),呼叫端不要重設。需要不同尺寸或 tone 用元件的 props(`size`、`tone`),沒有就到 ui 加,不在呼叫端用 `sx` 硬改。
+
+**表單欄位的 `size`**:`TextField`、`SelectField`、`Autocomplete`、`DatePicker`、`DateTimePicker`、`ModuleIconPicker`、`OrgTreeSelect`、`ShareOrgsField` 不給 `size` 一律是 medium(`packages/ui/src/test/field-size.test.tsx` 鎖著),要 small 就明寫。同一張表單 / 同一列的欄位給同一個 `size`;隔壁寫了 `size="small"`、自己沒寫的那格會高一截。admin 的 ESLint(`no-restricted-syntax`)擋同一層直接並排的欄位 `size` 不一致(明寫 `medium` 與沒寫同算 medium;spread 的值是單純識別字(`{...SMALL}`、`{...fieldProps}`)又沒寫 size 的看不出來,不判;函式呼叫等其他 spread(如 `{...fieldErrorProps(...)}`)照判)。包在條件式或 helper 裡的、每格各包一層 `Grid` / `Box` 的版面,規則都抓不到,review 時對照。
 
 **目前記錄在案的例外:沒有。**(`IconButton` 的外框與 32 / 40 / 48 正方形由 `variant="outlined"` 提供,
 `SideNavToggle` 這類外框圖示鈕照用即可,不要再用 `sx` 給幾何。)
@@ -184,3 +200,21 @@ app 端給 `@repo/ui` 元件傳 `sx` 時,只放與版面位置有關的值(`curs
 要限制高度或在彈窗裡用,傳 `containerSx` 覆寫(如 `{ height: "auto", maxHeight: 320 }`,
 命名慣例見 STYLE-07);父層高度不確定時 `height: 100%` 自然退回 auto,詳情面板那種
 整塊捲動的版面不受影響。
+
+## STYLE-12 Typography 的 `color` 用 MUI 正式值;指定色階用 `sx`
+
+`Typography` 的 `color` 只寫 MUI 認得的值:色票名 `primary` / `secondary` / `success` / `error` / `info` / `warning`,
+文字色 `textPrimary` / `textSecondary` / `textDisabled`。要指定色階(`warning.dark`、`primary.darker`)才改用
+`sx={{ color: "warning.dark" }}`,`sx` 裡照常寫 theme 路徑。
+
+```tsx
+<Typography color="textSecondary">說明文字</Typography>
+<Typography color={row.balance < 0 ? "warning" : "textPrimary"}>{amount}</Typography>
+<Typography sx={{ color: "warning.dark" }}>尚未排班</Typography>
+```
+
+- **為什麼**:MUI 的 Typography 依 `color` 值比對 variants 上色,`text.secondary`、`warning.main` 這類帶點的寫法比對不到,
+  會被忽略、畫成一般字色;MUI 的型別放寬成 `string & {}`,寫錯也不會報錯。
+- **怎麼擋**:`@repo/ui/typography` 的 `color` 型別只收上列正式值(`TypographyColor`),寫錯就 check-types 失敗;
+  算顏色的 helper 回傳型別寫 `TypographyColor`。`@repo/eslint-config/react` 的 `no-restricted-syntax` 另擋
+  `Typography` / `MuiTypography` 的 `color` 裡出現帶點字串(含三元式的兩支),`packages/ui` 內部直接用 MUI 的地方也照樣檢查。

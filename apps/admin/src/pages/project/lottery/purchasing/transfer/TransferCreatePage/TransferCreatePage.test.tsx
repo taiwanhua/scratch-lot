@@ -2,6 +2,8 @@ import { describe, expect, it } from "@jest/globals";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
+import { expectButtonOrder } from "@/test/button-order";
+
 import { renderTransferPage } from "../transfer-test-support";
 
 const CREATE = "/purchasing/transfer/create-page/transfer";
@@ -35,6 +37,8 @@ describe("調貨單新增頁", () => {
     // 同一本再刷 → 已經在明細裡
     await user.type(scan, "5201-1-001233-050-0-6{Enter}");
     expect(await screen.findByText("這本已經在明細裡")).toBeInTheDocument();
+    // 動作列(REACT-16):[取消] 在右側、送出前
+    expectButtonOrder(["取消", "送出"]);
     await user.click(screen.getByRole("button", { name: "送出" }));
     await waitFor(() => {
       expect(formsFake.inputs.createAndSubmitFormSubmission).toHaveLength(1);
@@ -98,5 +102,49 @@ describe("調貨單新增頁", () => {
       await screen.findByText("這本拆過了,只能選張;你沒有零碎張數的權限"),
     ).toBeInTheDocument();
     expect(screen.queryByRole("group", { name: "張數格子" })).toBeNull();
+  });
+
+  it("送出失敗:api 回的欄位錯誤標在對應欄位(取代平常的說明),明細的顯示在明細區", async () => {
+    const user = userEvent.setup();
+    renderTransferPage({
+      path: `${CREATE}?to=org-store-b`,
+      forms: {
+        failures: {
+          CreateAndSubmitFormSubmission: {
+            code: "VALIDATION_FAILED",
+            extensions: {
+              fields: ["to_branch", "lines"],
+              fieldErrors: [
+                {
+                  fieldKey: "to_branch",
+                  code: "INVALID",
+                  message: "收貨分店已停用",
+                },
+                {
+                  fieldKey: "lines",
+                  rowId: "r1",
+                  columnKey: "book",
+                  code: "LOCKED",
+                  message: "這本已被其他單據鎖定",
+                },
+              ],
+            },
+          },
+        },
+      },
+    });
+    const scan = await screen.findByRole("textbox", {
+      name: "刷條碼加入選取",
+    });
+    await user.type(scan, "5201-1-001233-050-0-6{Enter}");
+    await screen.findByRole("table", { name: "調貨明細" });
+    await user.click(screen.getByRole("button", { name: "送出" }));
+    expect(await screen.findByText("收貨分店已停用")).toHaveClass("Mui-error");
+    expect(
+      screen.queryByText(
+        "看不到收貨分店時:調貨由總部開單,或請管理員把你加入收貨分店",
+      ),
+    ).toBeNull();
+    expect(screen.getByText("這本已被其他單據鎖定")).toBeInTheDocument();
   });
 });

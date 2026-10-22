@@ -61,7 +61,7 @@ const EntryLines = ({
         <Typography variant="caption">{text.time(entry)}</Typography>
       </Stack>
       {(clockIn !== null || clockOut !== null) && (
-        <Typography variant="caption" color="text.secondary">
+        <Typography variant="caption" color="textSecondary">
           {t("punchTimes", {
             in: clockIn ?? t("noPunch"),
             out: clockOut ?? t("noPunch"),

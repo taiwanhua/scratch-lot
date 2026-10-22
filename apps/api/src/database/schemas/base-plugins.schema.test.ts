@@ -126,12 +126,20 @@ const TENANT_SCOPED: Record<string, TenantScope> = {
     },
     refFields: [],
   },
+  // 依欄位共用(表單設定 sharedByFieldKeys → sharedOrgIds;共用清單固定空)
   form_submissions: {
     path: "orgId",
     allowGlobal: false,
     kind: "business",
     moduleData: true,
-    sharing: PRIVATE,
+    sharing: {
+      mode: "shareable",
+      defaultShareOrgs: "none",
+      editable: false,
+      sharedByFields: [
+        { path: "sharedOrgIds", includeDescendants: false, match: "visible" },
+      ],
+    },
     refFields: [],
   },
   workflow_instances: {

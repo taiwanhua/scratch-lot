@@ -12,7 +12,7 @@ import {
   purchasingRequisitionModule,
 } from "./purchasing";
 import { projectSeedSource } from "./registry";
-import { seed as requisitionForm } from "./revisions/requisition.r3.seed";
+import { seed as requisitionForm } from "./revisions/requisition.r4.seed";
 import { projectSeedSettings } from "./settings";
 
 describe("叫貨與進貨的模組宣告(規格 3.1、3.2)", () => {
@@ -64,6 +64,8 @@ describe("叫貨與進貨的模組宣告(規格 3.1、3.2)", () => {
       allowDraft: true,
       serial: { prefix: "R", period: "none", digits: 4 },
       voidReasonCategoryKey: SHARED_FIELD_CATEGORY_KEYS.voidReason,
+      // 依欄位共用:分店欄指到的分店也看得到(唯讀)
+      sharedByFieldKeys: ["branch"],
     });
   });
 

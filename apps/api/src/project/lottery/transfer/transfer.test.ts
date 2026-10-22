@@ -14,6 +14,7 @@ import {
   CREATE_FORM,
   PASSWORD,
   type SubmissionRow,
+  UPDATE_FORM,
   call,
   createDraft,
   extensionsOf,
@@ -55,6 +56,7 @@ import { TicketLedgerService } from "../tickets/ticket-ledger.service";
 import {
   TRANSFER_MODULE_KEYS,
   TRANSFER_PERMISSION_KEYS,
+  TRANSFER_SHARED_BY_FIELD_KEYS,
   seedTransferAuthorization,
   transferDefinition,
 } from "./test-support/transfer-fixtures";
@@ -92,6 +94,7 @@ const RECEIVING = /* GraphQL */ `
         ticketNos
         shipped
         received
+        shippedAt
       }
     }
   }
@@ -159,6 +162,13 @@ const SETTLEMENT = /* GraphQL */ `
             defaultAmount
           }
         }
+        records {
+          method
+          side
+          direction
+          cashPlace
+          handler
+        }
       }
     }
   }
@@ -219,6 +229,13 @@ interface Settlement {
     net: number;
     canSettle: boolean;
     buttons: { button: string; defaultAmount: number }[];
+  }[];
+  records: {
+    method: string;
+    side: string;
+    direction: string;
+    cashPlace: string | null;
+    handler: string | null;
   }[];
 }
 
@@ -742,6 +759,10 @@ describe("調貨單(規格 8.4、第 9 章)", () => {
       input: { key: FORM, moduleKey: MODULE, name: "調貨單" },
     });
     await publishDefinition(api, root, FORM, transferDefinition(), null);
+    // 受管表單的依欄位共用(`transfer.r3.seed.ts`):出貨店、收貨店都看得到這張單
+    await ok(api, root, UPDATE_FORM, {
+      input: { key: FORM, sharedByFieldKeys: TRANSFER_SHARED_BY_FIELD_KEYS },
+    });
     await ok(api, root, ASSIGN, {
       input: { formKey: FORM, tenantOrgIds: [String(tenant)] },
     });
@@ -1233,6 +1254,113 @@ describe("調貨單(規格 8.4、第 9 章)", () => {
     });
   });
 
+  describe("出貨時間(調貨出貨單只印這次才出貨的列;使用者 10/21 定案)", () => {
+    it("第一次出貨 5 本 → 都有出貨時間;退回補 2 本重送 → 只有那 2 本換新時間;再退回、沒新增就重送 → 時間都不變", async () => {
+      const books = [];
+      for (let index = 0; index < 7; index += 1) {
+        books.push(await newBook(branchA));
+      }
+      const lines = books.map((book) => whole(book.bookId));
+      const id = await submit(hq, lines.slice(0, 5));
+      await ship(id);
+      const shippedAtOf = async () => {
+        const data = await ok<{
+          lotteryTransferReceiving: {
+            rows: { rowId: string; shippedAt: string | null }[];
+          };
+        }>(api, hq.token, RECEIVING, { id });
+        return new Map(
+          data.lotteryTransferReceiving.rows.map((row) => [
+            row.rowId,
+            row.shippedAt,
+          ]),
+        );
+      };
+      const first = await shippedAtOf();
+      expect([...first.values()].every((at) => at !== null)).toBe(true);
+      // 5 本還在途、沒點收就退回(退回後保持在途,規格 8.4)
+
+      const resubmit = async (next: Line[]) => {
+        await decideOn(world(), managerB, id, "RETURN");
+        const row = await current(id);
+        const saved = await call<{
+          saveFormDraft: { submission: { editVersion: number } };
+        }>(api, hq.token, SAVE_SUBMISSION, {
+          input: {
+            id,
+            expectedEditVersion: row.editVersion,
+            values: { ...header(), lines: next },
+          },
+        });
+        await ok(api, hq.token, SUBMIT_SUBMISSION, {
+          input: {
+            id,
+            expectedEditVersion:
+              saved.data?.saveFormDraft.submission.editVersion,
+          },
+        });
+        await ship(id);
+      };
+      await resubmit(lines);
+      const second = await shippedAtOf();
+      for (const line of lines.slice(0, 5)) {
+        expect(second.get(line.rowId)).toBe(first.get(line.rowId));
+      }
+      const added = lines.slice(5).map((line) => second.get(line.rowId));
+      expect(added.every((at) => at !== null && at !== undefined)).toBe(true);
+      const firstLatest = Math.max(
+        ...[...first.values()].map((at) => Date.parse(at ?? "")),
+      );
+      expect(added.every((at) => Date.parse(at ?? "") > firstLatest)).toBe(
+        true,
+      );
+
+      // 7 本都在途:沒新增就重送 → 送出成功、沒有新出貨
+      await resubmit(lines);
+      expect(await shippedAtOf()).toEqual(second);
+      for (const book of books) {
+        const tickets = await ticketsOf(book.bookId);
+        expect(
+          tickets.every(
+            (ticket) =>
+              ticket.location.kind === "in_transit" && ticket.lockedBy !== null,
+          ),
+        ).toBe(true);
+      }
+    });
+
+    it("退回後把在途的列換成別的本(改本號)→ 擋下 TRANSFER_LINE_INVALID", async () => {
+      const shippedBook = await newBook(branchA);
+      const otherBook = await newBook(branchA);
+      const line = whole(shippedBook.bookId);
+      const id = await submit(hq, [line]);
+      await ship(id);
+      await decideOn(world(), managerB, id, "RETURN");
+      const row = await current(id);
+      const saved = await call<{
+        saveFormDraft: { submission: { editVersion: number } };
+      }>(api, hq.token, SAVE_SUBMISSION, {
+        input: {
+          id,
+          expectedEditVersion: row.editVersion,
+          values: {
+            ...header(),
+            lines: [{ ...line, book: String(otherBook.bookId) }],
+          },
+        },
+      });
+      const result = await call(api, hq.token, SUBMIT_SUBMISSION, {
+        input: {
+          id,
+          expectedEditVersion: saved.data?.saveFormDraft.submission.editVersion,
+        },
+      });
+      expect(extensionsOf(result)).toMatchObject({
+        reason: "TRANSFER_LINE_INVALID",
+      });
+    });
+  });
+
   describe("在途的列被刪除", () => {
     it("退回後刪掉在途的那一列再送出 → 那幾張待查,責任分店 = 出貨店;規格第 9 章 5 步驟例逐步驗證", async () => {
       const books = [
@@ -1305,6 +1433,16 @@ describe("調貨單(規格 8.4、第 9 章)", () => {
       expect(await settlementOf(id).then((value) => value.pendingPayee)).toBe(
         10_000,
       );
+      // 現金那一筆帶現金從哪裡出(付款收據印「付款店 · 小金庫」);銀行的沒有
+      expect(await settlementOf(id).then((value) => value.records)).toEqual([
+        {
+          method: "cash",
+          side: "receiver",
+          direction: "out",
+          cashPlace: "vault",
+          handler: "王小明(送貨人)",
+        },
+      ]);
       // 步驟 3:A 收款 10,000 → A [退款] 2,000
       await record(managerA, id, "shipper", "in", 10_000);
       expect(await buttonsOf(id)).toEqual({
@@ -1580,6 +1718,49 @@ describe("調貨單(規格 8.4、第 9 章)", () => {
   });
 
   describe("列表進度", () => {
+    it("讀得到才有進度:可見範圍含收貨店的人(上層組織含下層、收貨店本身)讀得到;可見範圍不含兩邊店的人讀不到", async () => {
+      const district = await createOrg(api.connection, {
+        name: "北區",
+        parentId: tenant,
+      });
+      const northStore = await createOrg(api.connection, {
+        name: "北區分店",
+        parentId: district,
+      });
+      const scope = {
+        moduleKeys: [...TRANSFER_MODULE_KEYS],
+        permissionKeys: [TRANSFER_PERMISSION_KEYS.view],
+      };
+      const districtManager = await person(
+        api,
+        api.connection,
+        district,
+        tenant,
+        scope,
+      );
+      const northManager = await person(
+        api,
+        api.connection,
+        northStore,
+        tenant,
+        scope,
+      );
+      const book = await newBook(branchA);
+      const id = await submit(hq, [whole(book.bookId)], {
+        to_branch: String(northStore),
+      });
+      const progressOf = async (who: Person) => {
+        const data = await ok<{
+          lotteryTransferProgress: { transferId: string }[];
+        }>(api, who.token, PROGRESS, { ids: [id] });
+        return data.lotteryTransferProgress.map((row) => row.transferId);
+      };
+      expect(await progressOf(districtManager)).toEqual([id]);
+      expect(await progressOf(northManager)).toEqual([id]);
+      // 台中店:可見範圍不含出貨店(中山店)也不含收貨店(北區分店)
+      expect(await progressOf(managerC)).toEqual([]);
+    });
+
     it("本數 / 張數、點收進度、在途、結算", async () => {
       const book = await newBook(branchA);
       const opened = await newBook(branchA);

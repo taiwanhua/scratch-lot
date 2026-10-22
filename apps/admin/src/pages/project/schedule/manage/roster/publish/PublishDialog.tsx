@@ -148,7 +148,7 @@ export const PublishDialog = ({ onClose }: PublishDialogProps) => {
             <CircularProgress size={24} aria-label={t("checking")} />
           </Stack>
         ) : (
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" color="textSecondary">
             {intro}
           </Typography>
         )}
@@ -162,7 +162,7 @@ export const PublishDialog = ({ onClose }: PublishDialogProps) => {
                 scrollToCell(checkTargetOf(item));
               }}
             />
-            <Typography variant="caption" color="text.secondary">
+            <Typography variant="caption" color="textSecondary">
               {t("footnote")}
             </Typography>
           </>

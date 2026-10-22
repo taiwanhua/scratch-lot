@@ -208,7 +208,7 @@ export const ProvisionTenantForm = ({
             setSelectedIds(toggleModule(selectedIds, rows, id, isChecked));
           }}
         />
-        <Typography variant="caption" color="text.secondary">
+        <Typography variant="caption" color="textSecondary">
           {t("note")}
         </Typography>
         {errorCode !== null && (

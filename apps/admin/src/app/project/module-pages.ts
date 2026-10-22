@@ -1,3 +1,8 @@
+import {
+  formModulePageKeys,
+  formModulePages,
+} from "@/components/base/form-engine/FormModulePages/form-module-pages";
+import { withTenantRequired } from "@/components/project/RootOrgNotice/WithTenantRequired";
 import { AccountsPage } from "@/pages/project/lottery/accounts/AccountsPage/AccountsPage";
 import { BankAccountViewPage } from "@/pages/project/lottery/accounts/BankAccountViewPage/BankAccountViewPage";
 import { ACCOUNTS_MODULE_KEYS } from "@/pages/project/lottery/accounts/accounts-config";
@@ -23,6 +28,12 @@ import { TransferCreatePage } from "@/pages/project/lottery/purchasing/transfer/
 import { TransferPage } from "@/pages/project/lottery/purchasing/transfer/TransferPage/TransferPage";
 import { TransferViewPage } from "@/pages/project/lottery/purchasing/transfer/TransferViewPage/TransferViewPage";
 import { ReportsPage } from "@/pages/project/lottery/reports/ReportsPage/ReportsPage";
+import { StorePage } from "@/pages/project/lottery/store/StorePage/StorePage";
+import { StoreCreatePage } from "@/pages/project/lottery/store/forms/StoreCreatePage/StoreCreatePage";
+import {
+  StoreEditPage,
+  StoreViewPage,
+} from "@/pages/project/lottery/store/forms/StoreSubmissionPages/StoreSubmissionPages";
 import { MakeupPunchFormPage } from "@/pages/project/schedule/attendance/MakeupPunchFormPage/MakeupPunchFormPage";
 import { MakeupPunchViewPage } from "@/pages/project/schedule/attendance/MakeupPunchViewPage/MakeupPunchViewPage";
 import { ScheduleAttendancePage } from "@/pages/project/schedule/attendance/ScheduleAttendancePage";
@@ -30,7 +41,11 @@ import { ScheduleManagePage } from "@/pages/project/schedule/manage/ScheduleMana
 import { ScheduleMyPage } from "@/pages/project/schedule/my/ScheduleMyPage";
 import { ScheduleSettingsPage } from "@/pages/project/schedule/settings/ScheduleSettingsPage";
 
-import type { ModulePageSource } from "../module-page-registry";
+import type {
+  FormPageSlot,
+  ModulePageSource,
+  PagePresentation,
+} from "../module-page-registry";
 
 /**
  * 專案的模組頁面來源:專案自己新增的模組在此登記(頁面放 `pages/project/`),底座更新不會動到這份。
@@ -38,8 +53,10 @@ import type { ModulePageSource } from "../module-page-registry";
  * - 固定頁寫進 `pages`;表單模組寫進 `forms`(四頁用表單引擎的預設組裝,單頁客製用 `pageOverrides`)
  * - key 不可與底座或彼此相撞;要換掉底座的頁不是在這裡撞 key,而是寫進 `page-replacements.ts`
  * - 登記不等於授權:進不進得去仍看 `me.modules`
+ * - 每一頁(含表單模組沒換掉、沿用表單引擎的那幾頁)都套 `withTenantRequired`:站在根組織(平台層級)
+ *   只顯示「請先切換到要管理的機構」,不發任何專案查詢(`gateTenant`)
  */
-export const projectModulePages: ModulePageSource = {
+const sources: ModulePageSource = {
   pages: [
     // 檔案管理(遊戲 | 收銀點);遊戲的新增 / 編輯共版型
     { key: MASTER_DATA_MODULE_KEYS.list, Page: MasterDataPage },
@@ -73,8 +90,7 @@ export const projectModulePages: ModulePageSource = {
     // 排班作業(綁定 支援需求單)、出勤紀錄(綁定 補打卡申請):列表頁換成分頁頁殼,其餘三頁沿用表單引擎
     {
       moduleKey: "schedule.manage",
-      // 內容區最小寬度用 `md`:平板 1024 寬收合側欄時,排班表的工具列與檢核面板都放得下、不必左右捲
-      pageOverrides: { list: { Page: ScheduleManagePage, minWidth: "md" } },
+      pageOverrides: { list: { Page: ScheduleManagePage } },
     },
     // 出勤紀錄(綁定 補打卡申請;規格 14.7、14.8):列表頁換成分頁頁殼(依人員(月)| 依分店(日));
     // 新增 / 編輯頁換成有「對應排班」下拉的補打卡頁、檢視頁換成摘要 + 審核(排班被刪除時警告、不能核准)
@@ -116,5 +132,45 @@ export const projectModulePages: ModulePageSource = {
         viewPage: { Page: TransferViewPage },
       },
     },
+    // 店面管理(表單模組、開啟 B9b;規格 6.1):列表頁換成分頁頁殼(看板 | … | 其他申請);
+    // 新增頁:撤銷售出申請換成替換新增頁(ST-31b),其他表單沿用表單引擎;詳情 / 編輯沿用表單引擎
+    {
+      moduleKey: "store",
+      pageOverrides: {
+        list: { Page: StorePage },
+        createPage: { Page: StoreCreatePage },
+        // 盤點確認申請的檢視頁(盤點單明細 + 審核)與退回後的編輯頁(盤點頁帶入原內容);其他表單沿用表單引擎
+        viewPage: { Page: StoreViewPage },
+        editPage: { Page: StoreEditPage },
+      },
+    },
   ],
 };
+
+const FORM_SLOTS: readonly FormPageSlot[] = [
+  "list",
+  "viewPage",
+  "createPage",
+  "editPage",
+];
+
+/** 所有專案頁套上根組織守門;表單模組四頁都套(沒換掉的用表單引擎的預設頁)。 */
+const gateTenant = (source: ModulePageSource): ModulePageSource => ({
+  pages: source.pages.map((entry) => ({
+    ...entry,
+    Page: withTenantRequired(entry.Page),
+  })),
+  forms: source.forms.map((entry) => {
+    const defaults = formModulePages(entry.moduleKey);
+    const keys = formModulePageKeys(entry.moduleKey);
+    const pageOverrides: Partial<Record<FormPageSlot, PagePresentation>> = {};
+    for (const slot of FORM_SLOTS) {
+      const own = entry.pageOverrides?.[slot];
+      const Page = own?.Page ?? defaults[keys[slot]];
+      pageOverrides[slot] = { ...own, Page: withTenantRequired(Page) };
+    }
+    return { ...entry, pageOverrides };
+  }),
+});
+
+export const projectModulePages: ModulePageSource = gateTenant(sources);

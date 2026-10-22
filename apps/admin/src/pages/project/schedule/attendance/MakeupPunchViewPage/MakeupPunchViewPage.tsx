@@ -1,11 +1,6 @@
 import { useNavigate } from "react-router";
 import { useTranslations } from "use-intl";
 
-import {
-  FormSubmissionStatus,
-  useMakeupPunchEntryExistsQuery,
-} from "@repo/graphql";
-import { Alert } from "@repo/ui/alert";
 import { Box } from "@repo/ui/box";
 import { Button } from "@repo/ui/button";
 import { Card } from "@repo/ui/card";
@@ -18,7 +13,6 @@ import { SubmissionStatusTag } from "@/components/base/workflow/SubmissionStatus
 import { useFormSubmission } from "@/hooks/base/useFormSubmission";
 import { useRouteTabHref } from "@/hooks/base/useRouteTabHref";
 import { useRouteTabItemLabel } from "@/hooks/base/useRouteTabItemLabel";
-import { useSession } from "@/hooks/base/useSession";
 import type { ModulePageProps } from "@/lib/base/module-tree";
 
 import { makeupPunchStateOf } from "../MakeupPunchFormPage/makeup-punch-form";
@@ -27,8 +21,8 @@ import { useAttendanceText } from "../useAttendanceText";
 
 /**
  * 補打卡申請的檢視 / 審核頁(SC-30;規格 14.8;替換表單引擎的檢視頁):申請人、日期、分店、類型、時間、
- * 原因、當天排班(對應排班)+ 審核區塊。審核中選的那筆排班被刪除 → 警告「對應的排班已被刪除」、
- * [核准] 停用,只能退回讓本人重選(api 的掛接點同樣擋;從申請中心核准也擋)。
+ * 原因、當天排班(對應排班)+ 審核區塊。審核中選的那筆排班被刪除時的警告與停用 [核准] 由模組登記的
+ * 審核畫面擴充 `MakeupPunchReview` 畫(申請中心同一份)。
  */
 export const MakeupPunchViewPage = ({ routeParam }: ModulePageProps) => {
   const t = useTranslations("admin.schedule.attendance.makeup");
@@ -37,19 +31,11 @@ export const MakeupPunchViewPage = ({ routeParam }: ModulePageProps) => {
   const text = useAttendanceText();
   const navigate = useNavigate();
   const tabHref = useRouteTabHref();
-  const { session } = useSession();
   const access = useFormModuleAccess(MAKEUP_PUNCH_MODULE_KEY);
   const id = routeParam ?? "";
   const { submission } = useFormSubmission(id);
   const serialNo = submission?.serialNo ?? null;
   useRouteTabItemLabel(serialNo ?? t("title"));
-  const isReviewing = submission?.status === FormSubmissionStatus.Reviewing;
-  const exists = useMakeupPunchEntryExistsQuery(
-    session.client,
-    { submissionId: id },
-    { enabled: isReviewing, retry: false },
-  );
-  const entryDeleted = exists.data?.makeupPunchEntryExists === false;
 
   const values = submission === null ? null : submission.values;
   const state =
@@ -126,7 +112,6 @@ export const MakeupPunchViewPage = ({ routeParam }: ModulePageProps) => {
             />
           )}
         </Stack>
-        {entryDeleted && <Alert severity="warning">{t("entryDeleted")}</Alert>}
         <Box
           component="dl"
           sx={{
@@ -139,7 +124,7 @@ export const MakeupPunchViewPage = ({ routeParam }: ModulePageProps) => {
         >
           {rows.map(([label, value]) => (
             <Box key={label} sx={{ display: "contents" }}>
-              <Typography component="dt" variant="body2" color="text.secondary">
+              <Typography component="dt" variant="body2" color="textSecondary">
                 {label}
               </Typography>
               <Typography
@@ -157,7 +142,6 @@ export const MakeupPunchViewPage = ({ routeParam }: ModulePageProps) => {
             <ApprovalSection
               instanceId={submission.currentInstanceId}
               submission={submission}
-              approveDisabled={entryDeleted}
               onCopied={(copiedId) => {
                 if (access.editRoute !== null) {
                   void navigate(`${access.editRoute}/${copiedId}`);

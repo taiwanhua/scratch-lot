@@ -3,7 +3,9 @@ import { FIELD_OPTION_COLORS_COLLECTION } from "./field-option-colors/field-opti
 import { LOTTERY_BANK_ACCOUNTS_COLLECTION } from "./lottery-accounts/lottery-bank-account.schema";
 import { LOTTERY_BANK_TRANSACTIONS_COLLECTION } from "./lottery-accounts/lottery-bank-transaction.schema";
 import { LOTTERY_CASH_MOVEMENTS_COLLECTION } from "./lottery-accounts/lottery-cash-movement.schema";
+import { LOTTERY_PERIOD_CLOSES_COLLECTION } from "./lottery-accounts/lottery-period-close.schema";
 import { LOTTERY_CASH_POINTS_COLLECTION } from "./lottery-cash-points/lottery-cash-point.schema";
+import { LOTTERY_CHECKOUTS_COLLECTION } from "./lottery-checkouts/lottery-checkout.schema";
 import { LOTTERY_DEALER_CONTACTS_COLLECTION } from "./lottery-dealers/lottery-dealer-contact.schema";
 import { LOTTERY_DEALER_SIGNINS_COLLECTION } from "./lottery-dealers/lottery-dealer-signin.schema";
 import { LOTTERY_DEALERS_COLLECTION } from "./lottery-dealers/lottery-dealer.schema";
@@ -14,7 +16,12 @@ import { LOTTERY_BOOKS_COLLECTION } from "./lottery-inventory/lottery-book.schem
 import { LOTTERY_TICKET_EVENTS_COLLECTION } from "./lottery-inventory/lottery-ticket-event.schema";
 import { LOTTERY_TICKETS_COLLECTION } from "./lottery-inventory/lottery-ticket.schema";
 import { LOTTERY_PURCHASE_RECEIPTS_COLLECTION } from "./lottery-purchases/lottery-purchase-receipt.schema";
+import { LOTTERY_REDEMPTIONS_COLLECTION } from "./lottery-redemptions/lottery-redemption.schema";
 import { LOTTERY_REQUISITION_LINES_COLLECTION } from "./lottery-requisitions/lottery-requisition-line.schema";
+import { LOTTERY_STOCKTAKES_COLLECTION } from "./lottery-stocktakes/lottery-stocktake.schema";
+import { LOTTERY_SHIFT_PERSON_LOCKS_COLLECTION } from "./lottery-store/lottery-shift-person-lock.schema";
+import { LOTTERY_SHIFTS_COLLECTION } from "./lottery-store/lottery-shift.schema";
+import { LOTTERY_VAULT_LOCKS_COLLECTION } from "./lottery-store/lottery-vault-lock.schema";
 import { LOTTERY_TRANSFER_RECEIPTS_COLLECTION } from "./lottery-transfers/lottery-transfer-receipt.schema";
 import { SCHEDULE_ATTENDANCE_PUNCHES_COLLECTION } from "./schedule/schedule-attendance-punch.schema";
 import { SCHEDULE_AUTO_RUNS_COLLECTION } from "./schedule/schedule-auto-run.schema";
@@ -64,6 +71,13 @@ export const PROJECT_TENANT_PURGE_REGISTRATIONS: readonly TenantPurgeRegistratio
     LOTTERY_REQUISITION_LINES_COLLECTION,
     LOTTERY_PURCHASE_RECEIPTS_COLLECTION,
     LOTTERY_TRANSFER_RECEIPTS_COLLECTION,
+    LOTTERY_SHIFTS_COLLECTION,
+    LOTTERY_SHIFT_PERSON_LOCKS_COLLECTION,
+    LOTTERY_VAULT_LOCKS_COLLECTION,
+    LOTTERY_REDEMPTIONS_COLLECTION,
+    LOTTERY_STOCKTAKES_COLLECTION,
+    LOTTERY_CHECKOUTS_COLLECTION,
+    LOTTERY_PERIOD_CLOSES_COLLECTION,
     SCHEDULE_SETTINGS_COLLECTION,
     SCHEDULE_CALENDAR_DAYS_COLLECTION,
     SCHEDULE_DAY_OFFS_COLLECTION,

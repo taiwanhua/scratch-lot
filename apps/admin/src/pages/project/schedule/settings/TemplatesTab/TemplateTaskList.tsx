@@ -53,7 +53,7 @@ export const TemplateTaskList = ({
     <Stack spacing={1}>
       <Typography variant="subtitle2">{title}</Typography>
       {rows.length === 0 && (
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" color="textSecondary">
           {emptyText}
         </Typography>
       )}

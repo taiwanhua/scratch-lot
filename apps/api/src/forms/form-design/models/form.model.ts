@@ -133,6 +133,10 @@ export class FormModel {
   @Field(() => String, { nullable: true })
   voidReasonCategoryKey!: string | null;
 
+  /** 依欄位共用(表單設定):提交也給這幾個組織引用欄指到的組織看(唯讀);空陣列 = 不共用。 */
+  @Field(() => [String])
+  sharedByFieldKeys!: string[];
+
   /** 有一份草稿(版本面板的「編輯草稿」)。 */
   @Field(() => Boolean)
   hasDraft!: boolean;

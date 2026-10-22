@@ -6,6 +6,7 @@ import { RealtimeModule } from "../../../realtime/realtime.module";
 import { SidebarBadgesModule } from "../../../sidebar-badges/sidebar-badges.module";
 import { LotteryAccountsModule } from "../accounts/accounts.module";
 import { LotteryDealersModule } from "../dealers/dealers.module";
+import { LotteryRedemptionModule } from "../redemption/redemption.module";
 import { LotteryRequisitionModule } from "../requisition/requisition.module";
 import { LotteryTicketsModule } from "../tickets/tickets.module";
 import { PurchaseQueryService } from "./purchase-query.service";
@@ -28,6 +29,7 @@ import { PurchaseResolver } from "./purchase.resolver";
     SidebarBadgesModule,
     LotteryAccountsModule,
     LotteryDealersModule,
+    LotteryRedemptionModule,
     LotteryRequisitionModule,
     LotteryTicketsModule,
   ],

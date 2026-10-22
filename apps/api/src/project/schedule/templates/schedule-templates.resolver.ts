@@ -3,6 +3,7 @@ import { Args, Mutation, Query, Resolver } from "@nestjs/graphql";
 import { CurrentOperator } from "../../../auth/decorators";
 import type { OperatorContext } from "../../../database/operator-context";
 import { RequirePermission } from "../../../permission/require-permission.decorator";
+import { RequireTenant } from "../../tenant-scope/require-tenant.decorator";
 import {
   DeleteScheduleTemplateInput,
   SaveScheduleDemandTemplateInput,
@@ -20,6 +21,7 @@ import {
 import { ScheduleTemplatesService } from "./schedule-templates.service";
 
 /** 排班設定 → 人力需求範本 / 人力需求週範本(`schedule.settings`;寫入要 `edit-templates`)。 */
+@RequireTenant()
 @Resolver(() => ScheduleDemandTemplateModel)
 export class ScheduleTemplatesResolver {
   constructor(private readonly service: ScheduleTemplatesService) {}

@@ -173,21 +173,21 @@ exit 0 只表示報告已生成,**不是部署核准**。報告的 issues 仍可
 **job 圖**:拆成多個 job,各佔一台 runner 並行,牆鐘最短優先。
 
 ```
-project-settings             專案設定、發布前核對與底座同步 CLI 測試 + 三環境解析(每次都跑)
-figma-sync                   建置 UI / project-config + Figma 同步離線測試(每次都跑,不碰 Figma)
-prepare ─┬─ format-codegen   prettier --check(每次都跑)+ codegen 產物與 schema 一致(GQL-05)
-         ├─ lint-typecheck   turbo run lint check-types
-         ├─ test-api-1 / 2   api 的 jest 以 --shard=1/2、2/2 分兩片,各自由 jest globalSetup 起單一成員 replica set
-         ├─ test-admin-1 / 2 admin 的 jest 同樣分兩片(先 turbo build admin 的依賴)
-         ├─ test-others      api / admin 以外的 turbo run test(domain / ui / i18n / logger / db-migrator …)
-         └─ build            turbo run build(front 受影響時先 build 並啟動 api,給 ISR 預渲染打;Mongo 以 docker run 起單一成員 replica set)
-以上全部 ─→ verify           總結:任一 job failure / cancelled 就紅,skipped 算過
+project-settings               專案設定、發布前核對與底座同步 CLI 測試 + 三環境解析(每次都跑)
+figma-sync                     建置 UI / project-config + Figma 同步離線測試(每次都跑,不碰 Figma)
+prepare ─┬─ format-codegen     prettier --check(每次都跑)+ codegen 產物與 schema 一致(GQL-05)
+         ├─ lint-typecheck     turbo run lint check-types
+         ├─ test-api-1 / 2 / 3 api 的 jest 以 --shard=1/3、2/3、3/3 分三片,各自由 jest globalSetup 起單一成員 replica set
+         ├─ test-admin-1 / 2   admin 的 jest 分兩片(先 turbo build admin 的依賴)
+         ├─ test-others        api / admin 以外的 turbo run test(domain / ui / i18n / logger / db-migrator …)
+         └─ build              turbo run build(front 受影響時先 build 並啟動 api,給 ISR 預渲染打;Mongo 以 docker run 起單一成員 replica set)
+以上全部 ─→ verify             總結:任一 job failure / cancelled 就紅,skipped 算過
 ```
 
 - **PR 的必要檢查只看 `verify`**;紅的時候看是哪一個 job 紅,job 名稱就是壞的類別。
-- **受影響過濾**:`prepare` 用 `turbo ls --affected` 算出「改到的 package + 依賴它們的 package」,轉成 `--filter=<pkg>` 清單交給下游 job。api / admin 不在清單就跳過各自的兩個 shard;清單空就跳過 lint / test / build。改到 `.github/**` 或拿不到 base(首推、force push)時退回全跑。codegen 一致性檢查只在 api 或 `@repo/graphql` 受影響時跑;prettier 不看清單,每次都跑。
+- **受影響過濾**:`prepare` 用 `turbo ls --affected` 算出「改到的 package + 依賴它們的 package」,轉成 `--filter=<pkg>` 清單交給下游 job。api / admin 不在清單就跳過各自的 shard(api 三片、admin 兩片);清單空就跳過 lint / test / build。改到 `.github/**` 或拿不到 base(首推、force push)時退回全跑。codegen 一致性檢查只在 api 或 `@repo/graphql` 受影響時跑;prettier 不看清單,每次都跑。
 - **turbo 快取**:`.turbo/cache` 用 `actions/cache` 在 run 之間保存,每個跑 turbo 的 job 各一把 key(lockfile hash + job 名 + commit),找不到時退回同 lockfile 的最近一份;沒改到的 package 的 lint / typecheck / build 直接 `cache hit`。存回前刪掉 7 天前的項目,快取才不會無限長大;lockfile 一變就從頭累積。api 的 shard 不走 turbo(jest 直接吃 `@repo/domain` 原始碼),沒有快取。
-- **本機重現某一片**:api 是 `pnpm --filter @repo/api exec jest --shard=1/2`;admin 是 `pnpm --filter @repo/admin exec node --experimental-vm-modules node_modules/jest/bin/jest.js --shard=1/2`(要先有依賴的 dist)。不能寫成 `pnpm run test -- --shard=1/2`,參數會被 jest 當成路徑 pattern。
+- **本機重現某一片**:api 是 `pnpm --filter @repo/api exec jest --shard=1/3`;admin 是 `pnpm --filter @repo/admin exec node --experimental-vm-modules node_modules/jest/bin/jest.js --shard=1/2`(要先有依賴的 dist)。不能寫成 `pnpm run test -- --shard=1/2`,參數會被 jest 當成路徑 pattern。
 - **跨程序建置依賴**:api 有變時也驗 db-migrator;它的測試透過 Turbo 先建置同一 checkout 的 API CLI 與依賴。migration 與種子快照的不可變檢查在 `prepare` 對照 Git 基線執行。
 - **Figma 同步**:`figma-sync` 獨立於 `prepare`,先建置 `@repo/ui` 與 `@repo/project-config`,再跑本機外掛與舊工具的離線測試(`scripts/figma-local/*.test.mjs`、`scripts/figma-sync/*.test.mjs`);結果納入 `verify`。CI 不讀 Figma token、不操作設計檔;離線通過不代表 Library 已發布或專案已接受更新。實際操作見 [toolbox](agents/toolbox.md#figma-品牌同步)。
 - **逾時**:`prepare` 10 分、`project-settings` / `verify` 5 分、`figma-sync` 15 分、`test-others` 30 分,其餘 20 分。

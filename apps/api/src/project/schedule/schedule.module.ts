@@ -2,8 +2,10 @@ import { Module } from "@nestjs/common";
 
 import { DatabaseModule } from "../../database/database.module";
 import { FieldOptionsModule } from "../../fields/field-options.module";
+import { FormsCoreModule } from "../../forms/forms-core.module";
 import { NotificationsModule } from "../../notifications/notifications.module";
 import { ScheduledJobsModule } from "../../scheduled-jobs/scheduled-jobs.module";
+import { WorkflowEngineModule } from "../../workflows/workflow-engine/workflow-engine.module";
 import { ScheduleAttendanceResolver } from "./attendance/attendance.resolver";
 import { ScheduleAttendanceService } from "./attendance/attendance.service";
 import { MakeupPunchService } from "./attendance/makeup-punch.service";
@@ -57,6 +59,9 @@ import { ScheduleTemplatesService } from "./templates/schedule-templates.service
     FieldOptionsModule,
     NotificationsModule,
     ScheduledJobsModule,
+    // 補打卡申請的審核畫面查詢:誰讀得到這筆申請(底座的唯一判準 SubmissionReadAccess)
+    FormsCoreModule,
+    WorkflowEngineModule,
   ],
   providers: [
     SchedulePermissions,

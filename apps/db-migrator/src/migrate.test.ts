@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 
 import { afterAll, beforeAll, describe, expect, it } from "@jest/globals";
@@ -18,10 +18,34 @@ import { sourceFileHashOf } from "./update/content-hash";
 const DEMO_MIGRATION_FILENAME =
   "20260913120000_schema_changelog-filename-unique-index.js";
 
-/** migrations/ 根目錄的遷移檔(依檔名 = 執行順序)。 */
-const MIGRATION_FILENAMES = readdirSync(path.join(PACKAGE_ROOT, "migrations"))
-  .filter((fileName) => fileName.endsWith(".js"))
-  .toSorted((left, right) => left.localeCompare(right, "zh-Hant"));
+/** 一個目錄裡的遷移檔名(沒有這個目錄 = 空)。 */
+function migrationFilesIn(...segments: string[]): string[] {
+  const directory = path.join(PACKAGE_ROOT, "migrations", ...segments);
+  return existsSync(directory)
+    ? readdirSync(directory).filter((fileName) => fileName.endsWith(".js"))
+    : [];
+}
+
+const byFileName = (left: string, right: string): number =>
+  left.localeCompare(right, "zh-Hant");
+
+/** migrations/ 根目錄的遷移檔(已發布的歷史檔;依檔名 = 執行順序)。 */
+const MIGRATION_FILENAMES = migrationFilesIn().toSorted(byFileName);
+
+/** `base/`、`project/` 的遷移檔與來源標籤(`migrate:status` 的第二欄)。 */
+const SUBDIRECTORY_MIGRATIONS: ReadonlyMap<string, "base" | "project"> =
+  new Map([
+    ...migrationFilesIn("base").map((fileName) => [fileName, "base"] as const),
+    ...migrationFilesIn("project").map(
+      (fileName) => [fileName, "project"] as const,
+    ),
+  ]);
+
+/** 全部來源的遷移檔(檔名全域唯一,依檔名 = 執行順序)。 */
+const ALL_MIGRATION_FILENAMES = [
+  ...MIGRATION_FILENAMES,
+  ...SUBDIRECTORY_MIGRATIONS.keys(),
+].toSorted(byFileName);
 
 /**
  * 已發布的九支歷史 migration:檔名與內容(SHA-256,換行統一成 LF)都不可變 —— changelog 以檔名識別,
@@ -116,7 +140,7 @@ describe("migrate 指令(update 的別名,對真 MongoDB)", () => {
 
     const changelog = await changelogOf(databaseUri);
     expect(changelog.map((entry) => entry.fileName as string)).toEqual(
-      MIGRATION_FILENAMES,
+      ALL_MIGRATION_FILENAMES,
     );
     expect(changelog[0]?.fileName).toBe(DEMO_MIGRATION_FILENAME);
     expect(changelog[0]?.appliedAt).toBeInstanceOf(Date);
@@ -172,14 +196,28 @@ describe("migrate 指令(update 的別名,對真 MongoDB)", () => {
     expect(result.stderr).toBe("");
     expect(result.status).toBe(0);
 
-    expect(await changelogOf(databaseUri)).toEqual(before);
+    // 歷史檔的紀錄不動;之後新增的 base / project migration 照常執行
+    const after = await changelogOf(databaseUri);
+    expect(
+      after.filter((entry) =>
+        MIGRATION_FILENAMES.includes(entry.fileName as string),
+      ),
+    ).toEqual(before);
+    expect(after.map((entry) => entry.fileName as string)).toEqual(
+      ALL_MIGRATION_FILENAMES,
+    );
     for (const fileName of MIGRATION_FILENAMES) {
       expect(result.stdout).toContain(`migration ${fileName}:skipped`);
     }
     // 第一支沒有被重跑:它會建的唯一索引不存在
     expect(await uniqueFileNameIndexOf(databaseUri)).toBeUndefined();
-    // 沒有為已執行的 migration 補造任何 journal
-    expect(await journalOf(databaseUri, "migration")).toEqual([]);
+    // 沒有為已執行的 migration 補造任何 journal(只有新執行的那幾支有)
+    const journal = await journalOf(databaseUri, "migration");
+    expect(
+      journal.filter((record) =>
+        MIGRATION_FILENAMES.includes(record.fileName as string),
+      ),
+    ).toEqual([]);
   }, 180_000);
 
   it("status 唯讀:列出所有來源與 changelog 的狀態,不建立任何 collection、不取得鎖", async () => {
@@ -190,6 +228,9 @@ describe("migrate 指令(update 的別名,對真 MongoDB)", () => {
     expect(fresh.status).toBe(0);
     for (const fileName of MIGRATION_FILENAMES) {
       expect(fresh.stdout).toContain(`${fileName}  legacy  PENDING`);
+    }
+    for (const [fileName, origin] of SUBDIRECTORY_MIGRATIONS) {
+      expect(fresh.stdout).toContain(`${fileName}  ${origin}  PENDING`);
     }
     expect(fresh.stdout).toContain("鎖:無");
     expect(await collectionNames(databaseUri)).toEqual([]);
@@ -222,7 +263,7 @@ describe("migrate 指令(update 的別名,對真 MongoDB)", () => {
       }
     });
 
-    for (const fileName of MIGRATION_FILENAMES.toReversed()) {
+    for (const fileName of ALL_MIGRATION_FILENAMES.toReversed()) {
       const downResult = await runDown(databaseUri);
       expect({
         fileName,
@@ -237,7 +278,7 @@ describe("migrate 指令(update 的別名,對真 MongoDB)", () => {
     // 每一支都留下還原紀錄;down 不回滾種子(根組織還在)
     const journal = await journalOf(databaseUri, "migration");
     expect(journal.map((record) => record.status as string)).toEqual(
-      MIGRATION_FILENAMES.map(() => "rolled-back"),
+      ALL_MIGRATION_FILENAMES.map(() => "rolled-back"),
     );
     expect(
       await withDatabase(databaseUri, (database) =>

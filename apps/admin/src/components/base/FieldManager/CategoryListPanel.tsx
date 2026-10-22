@@ -62,7 +62,7 @@ export const CategoryListPanel = ({
             </Button>
           )}
         </Stack>
-        <Typography variant="caption" color="text.secondary">
+        <Typography variant="caption" color="textSecondary">
           {canManageCategories ? t("manageNotice") : t("seedNotice")}
         </Typography>
         {/* 清單佔滿標題列以外的高度,超出時自己捲(STYLE-08) */}

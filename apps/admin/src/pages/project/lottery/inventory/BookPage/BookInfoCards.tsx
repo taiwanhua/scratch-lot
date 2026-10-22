@@ -20,7 +20,7 @@ const InfoCard = ({
   lines: readonly { key: string; label: string; value: ReactNode }[];
 }) => (
   <Card sx={{ p: 2, flex: 1, minWidth: 0 }}>
-    <Typography variant="subtitle2" color="text.primary">
+    <Typography variant="subtitle2" color="textPrimary">
       {title}
     </Typography>
     <Stack spacing={0.75} sx={{ mt: 1 }}>
@@ -31,7 +31,7 @@ const InfoCard = ({
           sx={{ justifyContent: "space-between", gap: 2 }}
         >
           <Typography variant="body2">{line.label}</Typography>
-          <Typography variant="body2" color="text.primary">
+          <Typography variant="body2" color="textPrimary">
             {line.value}
           </Typography>
         </Stack>

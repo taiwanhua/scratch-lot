@@ -6,6 +6,7 @@ import {
   type ScheduleDayOffDayFieldsFragment,
   useScheduleDayOffOverviewQuery,
 } from "@repo/graphql";
+import { Alert } from "@repo/ui/alert";
 import { Button } from "@repo/ui/button";
 import { Card } from "@repo/ui/card";
 import { IconButton } from "@repo/ui/icon-button";
@@ -74,7 +75,10 @@ export const DayOffOverviewTab = () => {
   });
   const overview = query.data?.scheduleDayOffOverview;
   if (overview === undefined) {
-    return null;
+    // 載入中留白;查詢失敗要說出來,不能整頁空白
+    return query.isError ? (
+      <Alert severity="error">{t("loadFailed")}</Alert>
+    ) : null;
   }
   const { window, limits } = overview;
   const maxDaily = limits.maxDailyStaff ?? null;
@@ -194,7 +198,7 @@ export const DayOffOverviewTab = () => {
             days: window.daysLeft,
           })}
         </Typography>
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" color="textSecondary">
           {notRegistered.length === 0
             ? t("overview.allRegistered")
             : t("overview.notRegistered", {
@@ -222,7 +226,7 @@ export const DayOffOverviewTab = () => {
         <Card variant="outlined" sx={{ p: 2 }}>
           <Stack spacing={1}>
             {notRegistered.length === 0 ? (
-              <Typography variant="body2" color="text.secondary">
+              <Typography variant="body2" color="textSecondary">
                 {t("overview.allRegistered")}
               </Typography>
             ) : (

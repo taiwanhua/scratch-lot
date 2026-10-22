@@ -20,7 +20,7 @@ export const UnqualifiedRoleList = ({ roles }: UnqualifiedRoleListProps) => {
 
   if (roles.length === 0) {
     return (
-      <Typography variant="body2" color="text.secondary">
+      <Typography variant="body2" color="textSecondary">
         {t("noneAffected")}
       </Typography>
     );
@@ -45,7 +45,7 @@ export const UnqualifiedRoleList = ({ roles }: UnqualifiedRoleListProps) => {
             )}
           </Stack>
           {role.reasons.map((reason) => (
-            <Typography key={reason} variant="caption" color="text.secondary">
+            <Typography key={reason} variant="caption" color="textSecondary">
               {t(`reasons.${reason}`)}
             </Typography>
           ))}

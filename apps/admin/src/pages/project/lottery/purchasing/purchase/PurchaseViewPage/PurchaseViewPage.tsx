@@ -4,7 +4,10 @@ import { useNavigate } from "react-router";
 import { useTranslations } from "use-intl";
 
 import {
+  type CompleteLotteryPurchaseReceivingMutation,
+  type CompleteLotteryPurchaseReceivingMutationVariables,
   FormSubmissionStatus,
+  useCompleteLotteryPurchaseReceivingMutation,
   useLotteryPurchaseReceivingQuery,
   useLotterySettlementQuery,
   useNotifyLotteryPurchaseWrongStoreMutation,
@@ -21,29 +24,38 @@ import { useFormModuleAccess } from "@/components/base/form-engine/FormModulePag
 import { FormSubmissionDetail } from "@/components/base/form-engine/FormSubmissionDetail/FormSubmissionDetail";
 import { ApprovalSection } from "@/components/base/workflow/ApprovalSection/ApprovalSection";
 import { SubmissionStatusTag } from "@/components/base/workflow/SubmissionStatusTag";
+import { useReceiptPrinter } from "@/components/project/lottery/ReceiptPrint/useReceiptPrinter";
 import {
   type ReceiveBookGroup,
   ReceiveBooksPanel,
 } from "@/components/project/lottery/ReceiveBooksPanel/ReceiveBooksPanel";
 import { SettlementPanel } from "@/components/project/lottery/SettlementPanel/SettlementPanel";
 import { useFormSubmission } from "@/hooks/base/useFormSubmission";
-import { useSnackbar } from "@/hooks/base/useMutationFeedback";
+import {
+  useMutationFeedback,
+  useSnackbar,
+} from "@/hooks/base/useMutationFeedback";
 import { useRouteTabHref } from "@/hooks/base/useRouteTabHref";
 import { useRouteTabItemLabel } from "@/hooks/base/useRouteTabItemLabel";
 import { useSession } from "@/hooks/base/useSession";
 import type { ModulePageProps } from "@/lib/base/module-tree";
+import { purchaseReceivingInputOf } from "@/lib/project/lottery/receipts/purchase-receiving-receipt";
 
 import { PURCHASE_MODULE_KEY } from "../purchase-keys";
+import { PurchaseReceiptPrint } from "./PurchaseReceiptPrint";
+import { PurchaseRedemptionRecords } from "./PurchaseRedemptionRecords";
 import { WrongStoreDialog } from "./WrongStoreDialog";
 import { type WrongStoreInfo, receiveErrorOf } from "./receive-error";
 
 /**
  * 進貨單的替換檢視頁(專案規格 8.2「頁面」;Figma PU-06 69:651 / 127:26619 / 127:26898、
  * PU-07 127:2714 / 127:26961 / 127:27369、PU-11 127:2993 / 127:26671 / 209:27875):
- * 引擎零件(唯讀)+ 點收區塊 + `SettlementPanel` + 審核區塊。
+ * 引擎零件(唯讀)+ 點收區塊 + 勾選的兌獎紀錄(`PurchaseRedemptionRecords`,點一列開兌獎紀錄詳情)+
+ * `SettlementPanel` + 審核區塊。
  *
  * - 點收:店長(點收任務在自己手上)逐本刷條碼;「這一次」= 上次 [完成這次點收](或打開這頁)之後點收的本。
- *   [完成這次點收] 結束這一次(進貨點收單的列印由 58mm 的功能接在 `completeReceiving`)
+ *   [完成這次點收] 結束這一次,自動印進貨點收單兩張(店鋪留存、送貨人留存;規格第 12 章)
+ * - 標題列 [列印] / [補印]:進貨點收單(到目前為止已點收的本 + 尚未到的本;補印走底座補印對話框)
  * - 送錯分店:擋下、不入庫,彈窗提示;[知道了] 不記錄,[通知總部更正] 通知那張單的建立者
  * - 結算:送出之後才有(草稿不參與收付);按鈕要 `purchasing.purchase.settle`(api 回的 `canSettle`)
  */
@@ -75,13 +87,41 @@ export const PurchaseViewPage = ({ routeParam }: ModulePageProps) => {
     info: WrongStoreInfo;
   } | null>(null);
 
-  const refresh = () => {
-    void queryClient.invalidateQueries({
-      queryKey: useLotteryPurchaseReceivingQuery.getKey({ submissionId: id }),
-    });
-  };
   const receive = useReceiveLotteryPurchaseBookMutation(session.client);
+  const printer = useReceiptPrinter();
+  const documentUrl = `${globalThis.location.origin}${access.viewRoute ?? ""}/${id}`;
   const notify = useNotifyLotteryPurchaseWrongStoreMutation(session.client);
+  // [完成這次點收]:這一次的列標上點收批次(寫入成功後才印這一次的進貨點收單兩張;列印失敗只記 log)
+  const complete = useCompleteLotteryPurchaseReceivingMutation(
+    session.client,
+    useMutationFeedback<
+      CompleteLotteryPurchaseReceivingMutation,
+      CompleteLotteryPurchaseReceivingMutationVariables
+    >({
+      success: (_payload, variables) =>
+        tReceive("completed", { count: variables.input.rowIds.length }),
+      error: (error) => tReceive(`errors.${receiveErrorOf(error).reason}`),
+      onSuccess: ({ completeLotteryPurchaseReceiving: result }) => {
+        queryClient.setQueryData(
+          useLotteryPurchaseReceivingQuery.getKey({ submissionId: id }),
+          { lotteryPurchaseReceiving: result.receiving },
+        );
+        setThisTime(new Set());
+        const batch = result.batch ?? null;
+        if (submission !== null && batch !== null) {
+          void printer.printReceiptAfterCommit(
+            "purchase-receiving",
+            purchaseReceivingInputOf(
+              submission,
+              result.receiving,
+              batch,
+              documentUrl,
+            ),
+          );
+        }
+      },
+    }),
+  );
 
   const onScan = async (code: string): Promise<void> => {
     setScanError(null);
@@ -107,11 +147,8 @@ export const PurchaseViewPage = ({ routeParam }: ModulePageProps) => {
     }
   };
 
-  /** [完成這次點收]:結束這一次(不寫資料;列印由 58mm 的功能接在這裡)。 */
   const completeReceiving = () => {
-    showSnackbar("success", tReceive("completed", { count: thisTime.size }));
-    setThisTime(new Set());
-    refresh();
+    complete.mutate({ input: { submissionId: id, rowIds: [...thisTime] } });
   };
 
   const groups: ReceiveBookGroup[] = (data?.groups ?? []).map((group) => ({
@@ -148,7 +185,11 @@ export const PurchaseViewPage = ({ routeParam }: ModulePageProps) => {
   return (
     <Card sx={{ flex: 1, minHeight: 0, overflow: "auto", px: 3, py: 2.5 }}>
       <Stack spacing={2.25}>
-        <Stack direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
+        <Stack
+          direction="row"
+          spacing={1.5}
+          sx={{ alignItems: "center", flexWrap: "wrap", rowGap: 1 }}
+        >
           <Button
             variant="text"
             size="small"
@@ -161,6 +202,13 @@ export const PurchaseViewPage = ({ routeParam }: ModulePageProps) => {
             {tPages("backToList")}
           </Button>
           <Box sx={{ flex: 1 }} />
+          {submission !== null && data !== null && isSubmitted && (
+            <PurchaseReceiptPrint
+              submission={submission}
+              receiving={data}
+              url={documentUrl}
+            />
+          )}
           {access.editRoute !== null &&
             submission?.abilities.canEdit === true && (
               <Button
@@ -198,6 +246,7 @@ export const PurchaseViewPage = ({ routeParam }: ModulePageProps) => {
             error={scanError}
           />
         )}
+        {isSubmitted && <PurchaseRedemptionRecords submissionId={id} />}
         {settlement.data !== undefined && (
           <SettlementPanel moduleKey={PURCHASE_MODULE_KEY} refId={id} />
         )}
@@ -214,6 +263,7 @@ export const PurchaseViewPage = ({ routeParam }: ModulePageProps) => {
             />
           )}
       </Stack>
+      {printer.host}
       {wrongStore !== null && (
         <WrongStoreDialog
           info={wrongStore.info}

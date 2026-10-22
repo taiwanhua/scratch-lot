@@ -4,7 +4,6 @@ import type { Types } from "mongoose";
 import {
   TRANSFER_FORM_KEY,
   TRANSFER_MODULE_KEY,
-  transferHeaderOf,
 } from "@repo/domain/project/lottery";
 
 import {
@@ -12,10 +11,7 @@ import {
   OrgsRepository,
   WorkflowInstancesRepository,
 } from "../../../database/database.module";
-import {
-  type OperatorContext,
-  isOrgVisible,
-} from "../../../database/operator-context";
+import type { OperatorContext } from "../../../database/operator-context";
 import { tenantBoundaryContext } from "../../../database/tenant-boundary-context";
 import { WorkflowTasksRepository } from "../../../database/workflow-tasks.repository";
 import { tenantOfOperator } from "../master-data-tenant";
@@ -29,8 +25,8 @@ export type TransferSubmission = NonNullable<
 /**
  * 調貨單的讀取放行與點收資格(專案規格 8.4):
  *
- * - `readable`:看得到這張調貨單 = 可見範圍內,或建立者本人,或持有(曾持有)它的審核任務,
- *   或出貨分店 / 收貨分店在讀者的可見範圍內(兩邊店都看得到;同資料共用 `sharedByFields` 的意思,ADR-0014)
+ * - `readable`:看得到這張調貨單 = 一般讀取讀得到(可見範圍內,或出貨分店 / 收貨分店在讀者的可見範圍內 ——
+ *   受管表單的「依欄位共用」`from_branch` / `to_branch`,ADR-0014),或建立者本人,或持有(曾持有)它的審核任務
  * - `canReceive`:單據在審核中,而且點收關卡(流程實例的最後一關)的任務在操作者手上
  */
 @Injectable()
@@ -71,15 +67,6 @@ export class TransferAccess {
     }
     if (submission.createdBy?.equals(actorId) === true) {
       return submission;
-    }
-    if (submission.status !== "draft") {
-      const header = transferHeaderOf(submission.values);
-      const sides = [header.fromBranchId, header.toBranchId].flatMap((id) =>
-        id === null ? [] : [id],
-      );
-      if (sides.some((id) => isOrgVisible(operator, id))) {
-        return submission;
-      }
     }
     const held = await this.tasks.findOne(tenantId, {
       submissionId,

@@ -9,11 +9,13 @@ import {
 import { LotteryBankAccount } from "./lottery-bank-account.schema";
 import { LotteryBankTransaction } from "./lottery-bank-transaction.schema";
 import { LotteryCashMovement } from "./lottery-cash-movement.schema";
+import { LotteryPeriodClose } from "./lottery-period-close.schema";
 
 export type LotteryBankAccountDocument = HydratedDocument<LotteryBankAccount>;
 export type LotteryBankTransactionDocument =
   HydratedDocument<LotteryBankTransaction>;
 export type LotteryCashMovementDocument = HydratedDocument<LotteryCashMovement>;
+export type LotteryPeriodCloseDocument = HydratedDocument<LotteryPeriodClose>;
 
 /** 只新增的帳本被要求修改 / 刪除(程式錯誤:記錯一律沖正)。 */
 export class AppendOnlyLedgerError extends Error {
@@ -71,6 +73,14 @@ export class LotteryBankTransactionsRepository extends BaseRepository<
   override softDeleteById(): never {
     throw new AppendOnlyLedgerError(this.collectionName);
   }
+
+  override findOwnAndUpdate(): never {
+    throw new AppendOnlyLedgerError(this.collectionName);
+  }
+
+  override hardDeleteById(): never {
+    throw new AppendOnlyLedgerError(this.collectionName);
+  }
 }
 
 /** lottery_cash_movements(現金流水,只新增;寫入唯一入口 `CashLedgerService`)。 */
@@ -99,6 +109,55 @@ export class LotteryCashMovementsRepository extends BaseRepository<
   }
 
   override softDeleteById(): never {
+    throw new AppendOnlyLedgerError(this.collectionName);
+  }
+
+  override findOwnAndUpdate(): never {
+    throw new AppendOnlyLedgerError(this.collectionName);
+  }
+
+  override hardDeleteById(): never {
+    throw new AppendOnlyLedgerError(this.collectionName);
+  }
+}
+
+/**
+ * lottery_period_closes(關帳,專案規格 10.4)。**不能重新開帳**:修改 / 刪除的方法一律拋錯
+ * (上個月的錯誤用原本的功能在現在更正,報表自動歸「前期更正」)。
+ */
+@Injectable()
+export class LotteryPeriodClosesRepository extends BaseRepository<
+  LotteryPeriodClose,
+  LotteryPeriodCloseDocument
+> {
+  constructor(
+    @InjectModel(LotteryPeriodClose.name)
+    model: RepositoryModel<LotteryPeriodClose, LotteryPeriodCloseDocument>,
+  ) {
+    super(model);
+  }
+
+  override updateById(): never {
+    throw new AppendOnlyLedgerError(this.collectionName);
+  }
+
+  override findOneAndUpdate(): never {
+    throw new AppendOnlyLedgerError(this.collectionName);
+  }
+
+  override updateMany(): never {
+    throw new AppendOnlyLedgerError(this.collectionName);
+  }
+
+  override softDeleteById(): never {
+    throw new AppendOnlyLedgerError(this.collectionName);
+  }
+
+  override findOwnAndUpdate(): never {
+    throw new AppendOnlyLedgerError(this.collectionName);
+  }
+
+  override hardDeleteById(): never {
     throw new AppendOnlyLedgerError(this.collectionName);
   }
 }

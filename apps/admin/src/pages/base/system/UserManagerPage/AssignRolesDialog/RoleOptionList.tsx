@@ -25,7 +25,7 @@ export const RoleOptionList = ({ roles }: RoleOptionListProps) => {
 
   if (roles.length === 0) {
     return (
-      <Typography variant="body2" color="text.secondary">
+      <Typography variant="body2" color="textSecondary">
         {t("noneSelected")}
       </Typography>
     );
@@ -55,7 +55,7 @@ export const RoleOptionList = ({ roles }: RoleOptionListProps) => {
           {role.description !== null && role.description !== "" && (
             <Typography
               variant="caption"
-              color="text.disabled"
+              color="textDisabled"
               sx={{ flex: 1, minWidth: 0 }}
             >
               {role.description}

@@ -79,7 +79,7 @@ export const UsageOrgsDialog = ({ account, onClose }: UsageOrgsDialogProps) => {
           value={value}
           onChange={setValue}
         />
-        <Typography variant="caption" color="text.secondary">
+        <Typography variant="caption" color="textSecondary">
           {t("accountView.usageDialog.hint")}
         </Typography>
       </Stack>

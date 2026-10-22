@@ -106,7 +106,7 @@ export const TemplatesTab = () => {
                 </Typography>
                 {ownerOf(row)}
               </Stack>
-              <Typography variant="body2" color="text.secondary">
+              <Typography variant="body2" color="textSecondary">
                 {t("cardMeta", {
                   time: timeOf(row),
                   position: positions.labelOf(row.positionKey),
@@ -128,7 +128,7 @@ export const TemplatesTab = () => {
           size="small"
         />
       )}
-      <Typography variant="caption" color="text.secondary">
+      <Typography variant="caption" color="textSecondary">
         {t("hint")}
       </Typography>
       {editing !== null && (

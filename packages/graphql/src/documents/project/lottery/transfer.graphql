@@ -24,6 +24,7 @@ fragment LotteryTransferReceivingFields on LotteryTransferReceiving {
     shipped
     received
     receivedAt
+    shippedAt
   }
 }
 

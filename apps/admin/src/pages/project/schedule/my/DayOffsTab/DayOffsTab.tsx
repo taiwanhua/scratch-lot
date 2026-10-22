@@ -62,11 +62,14 @@ export const DayOffsTab = () => {
   const page = query.data?.myScheduleDayOffs;
 
   if (page === undefined) {
-    return null;
+    // 載入中留白;查詢失敗要說出來,不能整頁空白
+    return query.isError ? (
+      <Alert severity="error">{t("loadFailed")}</Alert>
+    ) : null;
   }
   const { window, limits, violations } = page;
   if (page.primaryOrg === null || window === null || window === undefined) {
-    return <Typography color="text.secondary">{t("my.notJoined")}</Typography>;
+    return <Typography color="textSecondary">{t("my.notJoined")}</Typography>;
   }
 
   const range = {
@@ -174,12 +177,13 @@ export const DayOffsTab = () => {
         sx={{ alignItems: { sm: "center" } }}
       >
         <Typography variant="subtitle2">{summary}</Typography>
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" color="textSecondary">
           {stats}
         </Typography>
       </Stack>
+      {/* 左右比例只在並排(md 起)時給:直排時 flex-basis 0 會把月曆卡片壓矮、裁掉圖例(STYLE-08) */}
       <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
-        <Card variant="outlined" sx={{ p: 2, flex: 2, minWidth: 0 }}>
+        <Card variant="outlined" sx={{ p: 2, flex: { md: 2 }, minWidth: 0 }}>
           <Stack spacing={1.5}>
             <Stack direction="row" sx={{ alignItems: "center" }}>
               <Typography variant="h6" sx={{ flex: 1 }}>
@@ -219,7 +223,7 @@ export const DayOffsTab = () => {
             <DayOffLegend variant="mine" />
           </Stack>
         </Card>
-        <Box sx={{ flex: 1, minWidth: 0 }}>
+        <Box sx={{ flex: { md: 1 }, minWidth: 0 }}>
           <DayOffViolationsCard
             violations={violations}
             onView={(date) => {

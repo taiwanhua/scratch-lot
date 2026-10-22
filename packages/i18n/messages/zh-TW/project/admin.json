@@ -98,6 +98,7 @@
     },
     "gameView": {
       "edit": "編輯",
+      "backToList": "← 返回列表",
       "summary": "{unitPrice} 元 × {tickets} 張 · 整本 {bookPrice} · 預設批購金額率 {rate}%",
       "tabs": {
         "aria": "遊戲詳情分頁",
@@ -175,6 +176,7 @@
       "newDealer": "+ 新增經銷商",
       "newContact": "+ 新增關係人",
       "edit": "編輯",
+      "backToList": "← 返回列表",
       "save": "儲存",
       "cancel": "取消",
       "clear": "清除",
@@ -563,7 +565,8 @@
       "source": "{serial}({count} 張)",
       "recover": "尋回",
       "listAria": "待查·遺失",
-      "empty": "目前沒有待查或遺失的刮刮樂"
+      "empty": "目前沒有待查或遺失的刮刮樂",
+      "loadFailed": "待查·遺失清單載入失敗,請稍後再試"
     },
     "book": {
       "tabLabel": "本 {key}",
@@ -598,7 +601,8 @@
       },
       "wholeBook": "整本",
       "aria": "事件時間軸",
-      "empty": "還沒有事件"
+      "empty": "還沒有事件",
+      "correctionOf": "(前期更正,屬於 {shift})"
     },
     "correctSkips": {
       "title": "更正跳號",
@@ -733,6 +737,163 @@
       "VALIDATION_FAILED": "條件不完整,請檢查期間與分店。",
       "FORBIDDEN": "你沒有這張報表的權限。",
       "UNEXPECTED": "報表產生失敗,請稍後再試。"
+    },
+    "extra": {
+      "alignDailyClose": "對齊日結(每家店用「上一次日結 ~ 當天日結」)",
+      "cashPoint": "收銀點",
+      "onlyWithDifference": "只看有差額"
+    },
+    "operations": {
+      "blocks": {
+        "sales": "1 銷售",
+        "profit": "2 毛利",
+        "redemption": "3 兌獎",
+        "inventory": "4 庫存異動",
+        "cash": "5 現金",
+        "bank": "6 銀行",
+        "outstanding": "7 未結清",
+        "notes": "8 註記",
+        "games": "1 銷售 · 依遊戲展開"
+      },
+      "postClose": {
+        "redemption": "兌獎更正",
+        "stocktake": "盤點補登",
+        "refund": "退貨退款",
+        "cashCorrection": "現金更正",
+        "other": "其他"
+      },
+      "bankTypes": {
+        "deposit": "存入",
+        "withdrawal": "提款",
+        "redemption_income": "兌獎入帳",
+        "purchase_income": "批貨收入",
+        "purchase_expense": "批貨支出",
+        "transfer_income": "調貨收入",
+        "transfer_expense": "調貨支出",
+        "license_rent": "牌租",
+        "adjustment": "調整",
+        "other": "其他"
+      },
+      "units": {
+        "tickets": "張",
+        "records": "筆",
+        "books": "本",
+        "shifts": "班",
+        "times": "次"
+      },
+      "items": {
+        "columns": {
+          "block": "區塊",
+          "item": "項目",
+          "count": "數量",
+          "amount": "金額",
+          "note": "說明"
+        },
+        "scan": "刷條碼售出",
+        "manual": "手動標記 · {reason}",
+        "stocktake": "盤點補登",
+        "undo": "撤銷",
+        "net": "淨銷售",
+        "soldCost": "已售成本",
+        "grossProfit": "毛利",
+        "redemptionValid": "兌獎(扣掉已撤銷)",
+        "redemptionInStore": "店內持有",
+        "redemptionSent": "已送兌",
+        "redemptionRevoked": "已撤銷(另列)",
+        "purchase": "進貨",
+        "books": "{count} 本",
+        "transferIn": "調入(調貨金額)",
+        "transferOut": "調出(調貨金額)",
+        "transferGain": "調貨損益",
+        "scrap": "報廢(批購成本)",
+        "lost": "遺失(批購成本)",
+        "recovered": "尋回(批購成本)",
+        "skipped": "跳號",
+        "noCost": "不計成本",
+        "ending": "期末庫存",
+        "investigating": "待查",
+        "shiftDifference": "各班結帳差額合計",
+        "postClose": "事後更正 · {category}",
+        "postCloseNone": "事後更正",
+        "refund": "退貨退款",
+        "transferExpense": "調貨支出(現金)",
+        "transferIncome": "調貨收入(現金)",
+        "deposit": "投庫",
+        "bankDeposit": "存銀行",
+        "vaultDifference": "日結的小金庫差異",
+        "sharedAccount": "{label}(共用)",
+        "bankType": "{account} · {type}",
+        "bankBalance": "{account} · 期末餘額(整個帳戶)",
+        "purchaseToPay": "待付批貨款",
+        "purchaseToRefund": "待退批貨款",
+        "transferToReceive": "待收調貨款",
+        "transferToPay": "待付調貨款",
+        "skippedStocktakes": "跳過盤點",
+        "reasonCount": "{reason} {count} 次",
+        "uncountedBooks": "盤點未盤",
+        "uncountedNote": "{books} 本未盤({stocktakes} 張盤點單)",
+        "uncoveredShifts": "沒有被日結涵蓋計算的班",
+        "priorPeriod": "前期更正",
+        "openMonths": "尚未關帳",
+        "allClosed": "無(期間都已關帳)",
+        "game": "{code} {name} · {price}",
+        "gameNote": "售出 {sold} · 撤銷 {undone}",
+        "alignedPeriod": "本店期間 {from} ~ {to}(對齊日結)",
+        "fullDayNote": "{store} {date} 未日結,期間改用整天,小金庫和盤點未核對",
+        "thisStore": "本店",
+        "monthClosed": "已關帳:數字固定;之後的更正列在報表的「前期更正」",
+        "monthOpen": "尚未關帳:數字可能還會變動"
+      },
+      "closing": {
+        "closed": "已關帳",
+        "open": "尚未關帳",
+        "closedHint": "{month} 月已關帳:數字固定;之後的更正列在報表的「前期更正」。"
+      },
+      "alignment": {
+        "warning": "不要把多天的日報加總當成週報或月報;要看一週請選「週」。",
+        "tableAria": "各分店實際期間",
+        "store": "分店",
+        "period": "實際期間",
+        "note": "註記",
+        "loading": "選了分店就會列出各店實際期間"
+      }
+    },
+    "shiftCheckouts": {
+      "columns": {
+        "store": "分店",
+        "date": "日期",
+        "cashPoint": "收銀點",
+        "leader": "負責人",
+        "helpers": "協同",
+        "task": "任務內容",
+        "time": "開班 / 結帳",
+        "expected": "應有",
+        "counted": "實點",
+        "difference": "差額",
+        "reason": "原因",
+        "postClose": "之後的更正",
+        "stocktake": "盤點",
+        "status": "審核"
+      },
+      "status": {
+        "pending": "待審核",
+        "confirmed": "已核准",
+        "returned": "已退回"
+      },
+      "roles": {
+        "leader": "負責",
+        "helper": "協同"
+      },
+      "stocktake": {
+        "skipped": "未盤點(跳過)",
+        "skippedWithReason": "未盤點(跳過):{reason}",
+        "uncounted": "{count} 本未盤"
+      },
+      "noTask": "未對應排班",
+      "allCashPoints": "全部",
+      "cashPointOfStore": "{store} · {name}",
+      "postCloseEntry": "{amount}({date} {category})",
+      "postCloseEntryPrior": "{amount}({date} {category},前期更正)"
     }
   },
   "schedule": {
@@ -1008,7 +1169,7 @@
     },
     "calendar": {
       "org": "分店",
-      "add": "新增",
+      "add": "+ 新增店休 / 特殊日",
       "prevMonth": "上個月",
       "nextMonth": "下個月",
       "monthTitle": "{year} 年 {month} 月",
@@ -1145,14 +1306,15 @@
         "message": "這天已經有排班({list}),請通知店長調整班表",
         "item": "{date} {start}–{end} {org}",
         "otherStore": "其他分店"
-      }
+      },
+      "loadFailed": "畫休資料載入失敗,請稍後再試"
     },
     "supportRequests": {
       "loading": "載入中",
       "empty": "目前沒有支援需求單",
       "listAria": "支援需求單列表",
       "panelAria": "支援需求單檢視與審核",
-      "create": "+ 新增",
+      "create": "+ 新增支援需求單",
       "total": "共 {total} 筆",
       "selectHint": "點一筆支援需求單,在這裡檢視與審核",
       "panelTitle": "支援需求單 · {branch}",
@@ -1784,7 +1946,8 @@
       "aria": "帳戶管理分頁",
       "bankAccounts": "銀行帳戶",
       "cash": "即時現金帳",
-      "outstanding": "待結清款項"
+      "outstanding": "待結清款項",
+      "close": "關帳"
     },
     "status": {
       "active": "使用中",
@@ -1861,6 +2024,7 @@
       "create": "新增"
     },
     "accountView": {
+      "backToList": "← 返回列表",
       "usage": "使用組織:{names}",
       "usageNone": "使用組織:(未設定)",
       "setUsage": "設定使用組織",
@@ -1906,7 +2070,8 @@
         "hint": "選最上層組織並勾「含下層」= 全部分店",
         "cancel": "取消",
         "save": "儲存"
-      }
+      },
+      "reversalOf": "原交易 {date}"
     },
     "recordForm": {
       "title": "登記交易",
@@ -1958,7 +2123,11 @@
       "reversal": "(沖正)",
       "empty": "這一天沒有流水",
       "listAria": "現金流水",
-      "pickOrg": "請先選分店"
+      "pickOrg": "請先選分店",
+      "drawer": "{name} 抽屜",
+      "drawerOwner": "負責人 {name}",
+      "loadFailed": "即時現金帳載入失敗,請稍後再試",
+      "correctionOf": "(前期更正,屬於 {shift})"
     },
     "outstanding": {
       "columns": {
@@ -2034,7 +2203,7 @@
       },
       "sources": {
         "vault": "小金庫",
-        "drawer": "收銀點抽屜(開著的班)"
+        "drawerOf": "{name} 抽屜(開著的班)"
       },
       "noAccount": "沒有這家分店可用的帳戶",
       "cancel": "取消",
@@ -2045,7 +2214,62 @@
       "saveSuccess": "已儲存",
       "deleteSuccess": "已刪除",
       "recordSuccess": "已登記",
-      "reverseSuccess": "已沖正"
+      "reverseSuccess": "已沖正",
+      "closeSuccess": "已關帳"
+    },
+    "periodClose": {
+      "listAria": "關帳月份",
+      "columns": {
+        "month": "月份",
+        "status": "狀態",
+        "closedAt": "關帳時間",
+        "closedBy": "關帳人",
+        "actions": "操作"
+      },
+      "statuses": {
+        "current": "進行中",
+        "open": "未關帳",
+        "closed": "已關帳"
+      },
+      "close": "關帳",
+      "snapshot": "快照",
+      "empty": "還沒有月份",
+      "hint": "依序關帳:只能關最早的未關帳月份,而且那個月要已經結束。關帳後不能重新開帳,錯誤請用原本的功能在現在更正。",
+      "dialog": {
+        "title": "關帳 {month}",
+        "shiftsOk": "所有收銀班次都已結帳",
+        "shiftsBlocked": "還有 {count} 個收銀班次沒結帳:{list}",
+        "documentsOk": "沒有審核中且會記到 {monthNumber} 月的單據",
+        "documentsBlocked": "還有 {count} 張單據審核中,請先處理:",
+        "coverageOk": "每一班都被日結涵蓋計算",
+        "coverageWarning": "每一班都被日結涵蓋計算:{list}(只警告,記入快照)",
+        "coverageStore": "{store}有 {count} 班沒有",
+        "snapshotTitle": "快照預覽",
+        "bankBalance": "{label} 月底餘額",
+        "storeCash": "{store} 小金庫 / 抽屜",
+        "storeCashValue": "{vault} / {drawers}",
+        "uncovered": "{store} 沒有被日結涵蓋計算的班",
+        "uncoveredValue": "{count} 班",
+        "spanning": "{store} {cashPoint}:跨月的班({shift})不計",
+        "confirmLabel": "輸入月份確認",
+        "confirmHelper": "請輸入 {month}",
+        "cancel": "取消",
+        "submit": "關帳"
+      },
+      "documentKinds": {
+        "sale_reversal": "撤銷售出",
+        "cash_correction": "現金更正",
+        "shift_checkout": "結帳確認(交班)",
+        "daily_close": "結帳確認(日結)"
+      },
+      "documentLine": "{kind} {serial}{shift}審核中",
+      "documentShift": "({shift})",
+      "listSeparator": "、",
+      "snapshotDialog": {
+        "title": "快照 {month}",
+        "closedBy": "{name} 於 {at} 關帳",
+        "close": "關閉"
+      }
     },
     "errors": {
       "FORBIDDEN": "你沒有這個操作的權限",
@@ -2059,7 +2283,14 @@
       "SETTLEMENT_NOTHING_DUE": "這張單據目前沒有要結清的金額,請重新整理",
       "BANK_ACCOUNT_NOT_USABLE": "這個帳戶的使用組織不含這家分店",
       "NO_OPEN_SHIFT": "這個收銀點沒有開著的班",
-      "UNEXPECTED": "發生錯誤,請稍後再試"
+      "UNEXPECTED": "發生錯誤,請稍後再試",
+      "CASH_POINT_NOT_AT_BRANCH": "這個收銀點不是這一邊分店的,請改選本店開班中的收銀點抽屜",
+      "PERIOD_CLOSE_INVALID": "輸入的月份和要關帳的月份不同",
+      "PERIOD_NOT_ENDED": "這個月還沒結束,不能關帳",
+      "PERIOD_ALREADY_CLOSED": "這個月已經關帳(不能重新開帳)",
+      "PERIOD_OUT_OF_ORDER": "要依序關帳,請先關更早的月份",
+      "PERIOD_SHIFTS_NOT_CLOSED": "那個月還有收銀班次沒結帳",
+      "PERIOD_PENDING_DOCUMENTS": "那個月還有審核中的單據,請先處理"
     }
   },
   "lotteryPurchasing": {
@@ -2118,6 +2349,7 @@
       "totals": "共叫 {books} 本,預估批購 {amount} 元",
       "totalsShort": "共叫 {books} 本 · 預估 {amount}",
       "saveDraft": "存草稿",
+      "cancel": "取消",
       "submit": "送出",
       "draftSaved": "已存草稿",
       "submitted": "叫貨單已送出"
@@ -2149,7 +2381,7 @@
       "createFromRequisition": "建立進貨單",
       "list": {
         "title": "進貨單",
-        "create": "+ 新增",
+        "create": "+ 新增進貨單",
         "progress": "點收進度",
         "settlement": "結算",
         "cleared": "已結清",
@@ -2239,6 +2471,28 @@
         "status": "狀態",
         "aria": "批購紀錄",
         "empty": "還沒有批購紀錄"
+      },
+      "redemption": {
+        "title": "兌獎(勾選這次拿去兌獎的兌獎紀錄)",
+        "viewTitle": "兌獎(這張單勾選的兌獎紀錄)",
+        "scope": "只列進貨分店「店內持有」的兌獎紀錄",
+        "noBranch": "先選進貨分店",
+        "empty": "這家店沒有店內持有的兌獎紀錄",
+        "aria": "兌獎紀錄",
+        "pick": "勾選 {ticket}",
+        "columns": {
+          "serialNo": "單號",
+          "time": "兌獎時間",
+          "cashPoint": "收銀點",
+          "ticket": "遊戲 / 本 / 張",
+          "prize": "中獎金額",
+          "status": "狀態"
+        },
+        "totals": {
+          "redemption": "兌獎金額(勾選 {count} 筆)",
+          "offset": "兌獎折抵",
+          "remainder": "兌獎剩餘"
+        }
       }
     },
     "receive": {
@@ -2292,7 +2546,7 @@
       "list": {
         "title": "調貨單",
         "subtitle": "收貨店不發起調貨單,缺貨請開叫貨單",
-        "create": "+ 新增",
+        "create": "+ 新增調貨單",
         "count": "本數 / 張數",
         "books": "{count} 本",
         "tickets": "{count} 張",
@@ -2407,7 +2661,9 @@
           "shipper_overreceived": "出貨店多收 {amount},請先記退款",
           "receiver_overpaid": "收貨店多付 {amount},請記收到退款"
         },
-        "wrongStoreNotified": "已通知這張調貨單的建立者更正"
+        "wrongStoreNotified": "已通知這張調貨單的建立者更正",
+        "printShipment": "調貨出貨單",
+        "printPayment": "調貨付款收據"
       },
       "wrongStore": {
         "facts": "本號 {bookNo} · 調貨單 {serialNo} · 送往 {branch}",
@@ -2417,6 +2673,67 @@
     "allocation": {
       "title": "超過預計要給本數(只提醒,照樣可以送出):",
       "item": "{game}:多 {excess} 本"
+    },
+    "receipts": {
+      "documentNo": "單號 {serialNo}",
+      "documentName": "{title} {serialNo}",
+      "qrCaption": "掃描開啟單據",
+      "batchSelect": "點收批次",
+      "batchOption": "第 {no} 次 · {time}",
+      "purchaseReceiving": {
+        "title": "進貨點收單",
+        "copyStore": "第 1 張 · 店鋪留存",
+        "copyCourier": "第 2 張 · 送貨人留存",
+        "branch": "進貨分店",
+        "dealer": "甲類",
+        "thisTime": "第 {no} 次點收({count} 本)",
+        "receivedSoFar": "已點收({count} 本)",
+        "missing": "尚未到的本({count} 本)",
+        "noneMissing": "尚未到的本:無",
+        "columns": {
+          "game": "遊戲",
+          "books": "本數",
+          "progress": "點收"
+        },
+        "progress": "{received} / {total}",
+        "bookNos": "本號:",
+        "receiverSign": "點收人簽名",
+        "courierSign": "送貨人簽名"
+      },
+      "transferShipment": {
+        "title": "調貨出貨單",
+        "route": "出貨店 → 收貨店",
+        "routeValue": "{from} → {to}",
+        "columns": {
+          "book": "遊戲 / 本",
+          "tickets": "張數",
+          "amount": "金額"
+        },
+        "bookValue": "{gameCode} · {bookNo}",
+        "ticketNos": "號碼:",
+        "ticketCount": "({count} 張)",
+        "total": "調貨金額",
+        "shipperSign": "出貨人簽名",
+        "courierSign": "送貨人簽名",
+        "receiverSign": "收貨人簽名"
+      },
+      "transferPayment": {
+        "title": "調貨付款收據",
+        "payer": "付款店",
+        "payerValue": "{branch} · {source}",
+        "sources": {
+          "vault": "小金庫",
+          "drawer": "收銀點抽屜"
+        },
+        "payee": "收款人",
+        "cash": "現金",
+        "courierSign": "送貨人簽收"
+      },
+      "reprint": {
+        "heading": "【補印】第 {printNo} 次",
+        "reason": "原因:{reason}",
+        "reprintedBy": "補印人:{name}"
+      }
     }
   },
   "lifecycle": {
@@ -2454,6 +2771,1186 @@
     "MAKEUP_PUNCH_ENTRY_MISMATCH": "對應排班要是你當天在那家店的排班,請重選",
     "MAKEUP_PUNCH_ENTRY_DELETED": "對應的排班已被刪除,不能核准;請退回讓申請人重選",
     "MAKEUP_PUNCH_INVALID_VALUES": "日期、分店、類型或時間沒填好",
-    "MAKEUP_PUNCH_NOTE_REQUIRED": "原因選「其他」時要填說明"
+    "MAKEUP_PUNCH_NOTE_REQUIRED": "原因選「其他」時要填說明",
+    "STORE_FORM_INVALID": "欄位沒填好,請檢查後再送出",
+    "STORE_FORM_BRANCH_NOT_VISIBLE": "分店不在你的範圍內",
+    "STORE_FORM_SHIFT_NOT_IN_BRANCH": "選的班不是這家分店的班",
+    "SALE_REVERSAL_TICKET_NOT_REVERSIBLE": "有張數不是本店已售,或已在其他還沒結束的撤銷售出申請上",
+    "SALE_REVERSAL_AMOUNT_MISMATCH": "退款金額和這些張數的面額合計不符,請重新選張數",
+    "STORE_FORM_VOID_NOT_ALLOWED": "撤銷售出申請、現金更正單不能作廢;錯了請再開一張反向的",
+    "STOCKTAKE_DIFF_STALE": "這幾張已被處理,請重新核對",
+    "STOCKTAKE_DIFF_UNHANDLED": "還有差異沒有處理,請在差異核對逐張處理",
+    "STOCKTAKE_DRAFT_INVALID": "盤點內容不完整(或確認遺失沒有原因),請重新盤點",
+    "STOCKTAKE_FORBIDDEN": "沒有盤點或確認遺失的權限",
+    "STOCKTAKE_VOID_FORBIDDEN": "盤點確認申請不能作廢;待查的張刷到時再尋回",
+    "CHECKOUT_DRAFT_INVALID": "結帳內容和這一班對不上,請重新打開交班結帳",
+    "CHECKOUT_FORBIDDEN": "只有這一班的負責人或店長能交班結帳;跳過盤點另要跳過盤點的權限",
+    "CHECKOUT_SHIFT_CLOSED": "這一班已經送出交班結帳",
+    "CHECKOUT_PENDING_EXISTS": "這一班已有審核中的結帳確認申請",
+    "CHECKOUT_STOCKTAKE_NOT_REUSABLE": "這次盤點已超過 30 分鐘或不是這個收銀點的,請現在盤點",
+    "CHECKOUT_REASON_REQUIRED": "差額不為 0 或跳過盤點時,原因必填",
+    "CHECKOUT_LEFT_MUST_BE_ZERO": "沒有接班人時「留給下一班」必須是 0,請先把錢投庫",
+    "CHECKOUT_SUCCESSOR_INVALID": "接班人要是這家店的人",
+    "CHECKOUT_REJECT_FORBIDDEN": "結帳確認申請不能駁回,請改用退回",
+    "CHECKOUT_VOID_FORBIDDEN": "結帳確認申請不能作廢",
+    "CHECKOUT_LEFT_EXCEEDS_COUNTED": "「留給下一班」不能超過實點",
+    "CHECKOUT_SUCCESSOR_SELF": "接班人不能是申請人或這一班的負責人",
+    "DAILY_CLOSE_SHIFTS_OPEN": "還有收銀點的班沒送出交班結帳,全部送出後才能日結",
+    "DAILY_CLOSE_UNAPPROVED": "涵蓋計算的交班結帳還有沒核准的,全部核准後才能送出日結",
+    "DAILY_CLOSE_PENDING_EXISTS": "這家店已有審核中或已退回的日結",
+    "DAILY_CLOSE_DEPOSIT_INVALID": "存入銀行的金額不對(不能超過小金庫實點)",
+    "DAILY_CLOSE_ACCOUNT_NOT_USABLE": "存入帳戶要選,而且要使用中、使用組織包含這家店",
+    "PERIOD_CLOSED": "選的班是已關帳月份的班,不能選"
+  },
+  "lotteryStore": {
+    "tabs": {
+      "aria": "店面管理",
+      "board": "看板",
+      "checkouts": "班次結帳歷史紀錄",
+      "otherForms": "其他申請",
+      "redemptions": "兌獎紀錄",
+      "saleReversals": "撤銷售出",
+      "cashCorrections": "現金更正",
+      "stocktakes": "盤點紀錄"
+    },
+    "top": {
+      "org": "分店",
+      "localCashPoint": "本機收銀點",
+      "notSet": "未設定",
+      "myShifts": "你開著的班:{names}",
+      "live": "即時",
+      "reconnecting": "重新連線中"
+    },
+    "board": {
+      "noLocal": "這台裝置還沒設定本機收銀點:刷到刮刮樂只顯示刮刮樂的資訊,不能銷售、兌獎。",
+      "setLocal": "設定本機收銀點",
+      "localNotOpen": "本機收銀點「{name}」還沒開班:只能查看。",
+      "noCashPoint": "這家店還沒有啟用中的收銀點。",
+      "pickOrg": "請先選分店",
+      "loadFailed": "看板載入失敗,請稍後再試"
+    },
+    "header": {
+      "local": "本機",
+      "open": "開班中",
+      "closed": "未開班",
+      "owner": "負責人 {name} · {time} 開班",
+      "ownerUnmatched": "負責人 {name} · {time} 開班 · 未對應排班",
+      "ownerAction": "班次資訊",
+      "sold": "本班已售",
+      "soldValue": "{count} 張 / {amount}",
+      "expected": "應有現金",
+      "openShift": "開班",
+      "deposit": "投庫",
+      "withdraw": "出庫",
+      "switchTo": "切換到這個收銀點",
+      "recentSales": "最近售出",
+      "split": "拆本",
+      "redeem": "兌獎",
+      "recentRedemptions": "最近兌獎",
+      "checkout": "交班結帳"
+    },
+    "card": {
+      "title": "{code} {name}",
+      "price": "{price} 元",
+      "meta": "本號 {bookNo} · 今日售出 {count}",
+      "remaining": "剩 {remaining} / {total}",
+      "lowStock": "剩很少"
+    },
+    "localDialog": {
+      "title": "設定本機收銀點",
+      "description": "這台裝置在哪個收銀點收錢。存在這台瀏覽器,不跟帳號走。",
+      "cancel": "取消",
+      "save": "儲存"
+    },
+    "switchDialog": {
+      "title": "切換本機收銀點?",
+      "message": "這台裝置還有你開著的班({from})。切換後,之後的兌獎、投庫、出庫都算到「{to}」。",
+      "cancel": "取消",
+      "confirm": "切換到{to}"
+    },
+    "openShift": {
+      "title": "開班 · {name}",
+      "float": "期初零用金",
+      "floatFromVault": "從小金庫領零用金",
+      "floatFromVaultHint": "選填;按 [開班] 時同時記一筆出庫(開班零用金)",
+      "floatFirstNoWithdraw": "第一班:沒有出庫權限,期初 0。",
+      "handoverSource": "來源:上一班「留給下一班」({name} {time} 交班)。",
+      "notPunched": "你還沒打上班卡",
+      "punch": "打卡",
+      "entry": "對應排班",
+      "entryHint": "系統依時間找到的排班,可以改選這天的其他排班;都不是請選「沒有排班(臨時代班)」。",
+      "noEntryToday": "你今天在這家店沒有排班,請選「沒有排班(臨時代班)」。",
+      "temporary": "沒有排班(臨時代班)",
+      "mismatch": "你今天排的是「{positions}」,確定要在{cashPoint}開班嗎?(只提醒,會記錄)",
+      "noTask": "沒有填進任何人力需求",
+      "cancel": "取消",
+      "submit": "開班",
+      "submitAnyway": "仍要開班",
+      "success": "已開班",
+      "punchSuccess": "已打上班卡"
+    },
+    "entry": {
+      "label": "{shortName} {start}–{end} · {task}",
+      "noTemplate": "臨",
+      "task": "{position} · {role} · {taskName}",
+      "roles": {
+        "leader": "負責",
+        "helper": "協同"
+      }
+    },
+    "shiftInfo": {
+      "title": "班次資訊 · {name}",
+      "owner": "負責人",
+      "ownerValue": "{name} · {time} 開班",
+      "float": "期初零用金",
+      "entry": "對應排班",
+      "unmatched": "未對應排班(臨時代班)",
+      "snapshot": "任務快照",
+      "mismatch": "開班時崗位不一致(已記錄)",
+      "empty": "—",
+      "closedHint": "交班結帳已送出,對應排班不能再改。",
+      "close": "關閉",
+      "reassign": "改對應排班"
+    },
+    "reassign": {
+      "title": "改對應排班",
+      "reason": "原因(必填)",
+      "hint": "只列出負責人這天在這家店的排班。交班結帳送出後就不能改;改的時候任務快照會依新的排班重寫。",
+      "cancel": "取消",
+      "save": "儲存",
+      "success": "已改對應排班"
+    },
+    "cash": {
+      "depositTitle": "投庫 · 抽屜 → 小金庫",
+      "withdrawTitle": "出庫 · 小金庫 → 抽屜",
+      "drawerExpected": "{name} 應有現金",
+      "vaultExpected": "小金庫 應有",
+      "amount": "金額",
+      "reason": "原因(必填)",
+      "note": "備註",
+      "cancel": "取消",
+      "deposit": "投庫",
+      "withdraw": "出庫",
+      "depositSuccess": "已投庫",
+      "withdrawSuccess": "已出庫"
+    },
+    "reasonNote": {
+      "note": "說明",
+      "noteRequired": "說明(必填)"
+    },
+    "errors": {
+      "FORBIDDEN": "沒有權限做這件事",
+      "NOT_FOUND": "找不到這筆資料,可能已被別人變更",
+      "VALIDATION_FAILED": "有欄位不正確,請檢查標紅的欄位",
+      "SHIFT_ALREADY_OPEN": "這個收銀點已經有人開班了",
+      "SHIFT_IN_OTHER_STORE": "你在別家店還有開著的班;一個人只能同時開同一家店的班",
+      "SHIFT_CLOSED": "這一班已送出交班結帳",
+      "CASH_POINT_DISABLED": "這個收銀點已停用",
+      "ENTRY_NOT_AVAILABLE": "選的排班不是這個人這天在這家店的排班",
+      "OPENING_FLOAT_NOT_ALLOWED": "只有第一班、而且有出庫權限才能從小金庫領零用金",
+      "AMOUNT_EXCEEDS_DRAWER": "投庫金額不能超過抽屜目前的應有現金",
+      "AMOUNT_EXCEEDS_VAULT": "小金庫應有不足,請先用現金更正單登記小金庫實際的錢",
+      "BANK_DEPOSIT_NO_ACCOUNT": "本店沒有可用的銀行帳戶,請先到帳戶管理設定帳戶的使用組織",
+      "BANK_ACCOUNT_NOT_USABLE": "這個帳戶不能用(停用,或使用組織不含這家店)",
+      "PERIOD_CLOSED": "選的排班在已關帳的月份,不能選",
+      "UNEXPECTED": "操作失敗,請稍後再試"
+    },
+    "sale": {
+      "cancel": "取消",
+      "soldTitle": "已售出",
+      "soldMessage": "{key} {amount} 元 · {cashPoint}",
+      "undo": "撤銷"
+    },
+    "scan": {
+      "bookTicket": "本號 {bookNo} · 張號 {ticketNo}",
+      "place": {
+        "counter": "檯面 · {cashPoint}",
+        "counterOwned": "檯面 · {cashPoint}({owner}的班)",
+        "stock": "庫存",
+        "stockUnopened": "庫存(未拆)",
+        "inTransit": "在途",
+        "other": "其他"
+      },
+      "statuses": {
+        "unsold": "未售",
+        "sold": "已售",
+        "skipped": "跳號",
+        "scrapped": "報廢",
+        "investigating": "待查",
+        "lost": "遺失"
+      },
+      "pickTitle": "選遊戲",
+      "pickHint": "本號 {bookNo} 在本店對到 {count} 款遊戲:",
+      "pickOption": "{code} {name} · {price} 元",
+      "continue": "繼續",
+      "otherMineTitle": "刷到{cashPoint}的刮刮樂 · 你開的班",
+      "otherMineHint": "{cashPoint}的班也是你開的:直接算{cashPoint}的班,不用移櫃。",
+      "confirmSell": "確認售出",
+      "moveTitle": "刷到別的收銀點的刮刮樂",
+      "moveHint": "這張刮刮樂在{from},確定在{to}售出?確認後寫「移櫃」+「售出」,錢算在本機收銀點({to})的班。",
+      "moveAndSell": "移櫃並售出",
+      "unopenedTitle": "這本還沒拆",
+      "unopenedHint": "要拆本並售出這張嗎?拆本會放到本機收銀點({cashPoint})。",
+      "unopenedSkipHint": "這本有待標註 {count} 張,要先在拆本視窗點滿跳號才售出。",
+      "splitAndSell": "拆本並售出",
+      "blockedTitle": "不能銷售",
+      "blocked": {
+        "notThisStore": "這張刮刮樂不是本店的,不能賣。",
+        "sold": "這張刮刮樂已於 {time} 售出。",
+        "skipped": "這張刮刮樂是「跳號」,不能賣。",
+        "scrapped": "這張刮刮樂已報廢,不能賣。",
+        "locked": "這張刮刮樂被單據鎖定(調貨中或撤銷審核中),不能賣。",
+        "inTransit": "這張刮刮樂在調貨途中,不能賣。",
+        "inStock": "這張刮刮樂在庫存,請先移到收銀點檯面再賣。",
+        "moveForbidden": "這張在{cashPoint},你沒有移櫃權限,請由{cashPoint}售出。"
+      },
+      "notFound": "找不到這張刮刮樂,或不是本店的刮刮樂。",
+      "recoverNoPermission": "這張刮刮樂待查中,尋回需要有權限的人處理。",
+      "gotIt": "知道了",
+      "infoTitle": "刮刮樂資訊",
+      "infoHint": "這台裝置沒有設定本機收銀點、本機收銀點沒有開班,或你沒有銷售權限:只顯示資訊,不能銷售。"
+    },
+    "quickSale": {
+      "title": "快速銷售",
+      "cashPoint": "收銀點",
+      "cashPointValue": "{name}(本機,開班中)",
+      "amount": "金額",
+      "cancel": "取消(Esc)",
+      "confirm": "確認售出(Enter)",
+      "local": "本機收銀點"
+    },
+    "undo": {
+      "title": "撤銷這張售出?",
+      "blockedTitle": "不能當下撤銷",
+      "line": "{key} · {amount} 元 · {time} 售出",
+      "hint": "撤銷後 {amount} 元從{cashPoint}的抽屜應有金額扣除。",
+      "blocks": {
+        "notMine": "這張不是你賣的。",
+        "expired": "已超過 30 分鐘。",
+        "shiftClosed": "那一班已交班結帳。",
+        "changed": "那張刮刮樂之後有其他異動。",
+        "alreadyUndone": "這張已經撤銷。"
+      },
+      "sendRequestHint": "請改送撤銷售出申請。",
+      "submit": "撤銷",
+      "success": "已撤銷"
+    },
+    "manualSale": {
+      "title": "標記售出",
+      "book": "{code} {name} · 本號 {bookNo}",
+      "cashPoint": "收銀點",
+      "cashPointValue": "{name}({owner} {time} 開的班)",
+      "tickets": "張號",
+      "ticketsValue": "{ranges}({count} 張)",
+      "unitPrice": "單張金額",
+      "total": "合計",
+      "reason": "原因(必填)",
+      "hint": "售出算進{name}這一班,應有現金 +{amount}。",
+      "submit": "確認售出",
+      "success": "已標記售出 {count} 張"
+    },
+    "recentSales": {
+      "title": "最近售出 · {cashPoint}",
+      "hint": "自己在這一班 30 分鐘內賣的張;那張刮刮樂之後沒有其他異動才能撤銷。",
+      "empty": "這一班 30 分鐘內沒有你賣的張。",
+      "undone": "已撤銷",
+      "expired": "超過 30 分鐘",
+      "footer": "超過 30 分鐘或這一班已交班 → 改送撤銷售出申請。",
+      "close": "關閉"
+    },
+    "expand": {
+      "title": "{code} {name} · 本號 {bookNo}",
+      "meta": "{cashPoint} · {price} 元 · 剩 {remaining} / {total}",
+      "bookDetail": "本的詳情",
+      "collapse": "收合",
+      "close": "關閉",
+      "selected": "已選 {count} 張 {ranges}",
+      "clear": "取消選取",
+      "markSold": "標記售出",
+      "move": "移櫃",
+      "recall": "收回",
+      "moveAndSell": "移櫃並售出",
+      "moveAndSellSuccess": "已移櫃並售出",
+      "undoSale": "撤銷售出",
+      "recover": "尋回",
+      "atCashPoint": "在{name}",
+      "inStock": "在庫存"
+    },
+    "move": {
+      "title": "移櫃",
+      "line": "本號 {bookNo} · 張號 {ranges} · {cashPoint} · 剩 {count} 張",
+      "to": "移到",
+      "all": "全部 {count} 張",
+      "partial": "部分張數(點格子,已選 {count} 張)",
+      "submit": "移櫃",
+      "success": "已移櫃 {count} 張"
+    },
+    "recall": {
+      "title": "收回到庫存",
+      "all": "整本收回({count} 張)",
+      "partial": "只收回部分張數(點格子,已選 {count} 張)",
+      "submit": "收回",
+      "success": "已收回 {count} 張"
+    },
+    "split": {
+      "pickTitle": "拆本 · 選要拆的本",
+      "pickTo": "放到本機收銀點:{name}",
+      "search": "刷條碼或輸入本號",
+      "pickHint": "本店還沒拆的本({count} 本);刷條碼會直接選中那一本。",
+      "bookLine": "{code} {name} · 本號 {bookNo}",
+      "bookMeta": "{price} 元 · {count} 張",
+      "bookMetaSkip": "{price} 元 · 張號 {first}–{last} · 待標註 {count} 張(拆本時要標好)",
+      "none": "本店沒有還沒拆的本。",
+      "next": "下一步",
+      "previous": "上一步",
+      "title": "拆本 · {code} {name} · 本號 {bookNo}",
+      "meta": "{price} 元 · 張號 {first}–{last}",
+      "stepsAria": "拆本步驟",
+      "steps": {
+        "skip": "標跳號",
+        "place": "放到哪個收銀點"
+      },
+      "progress": "第 {current} / {total} 步 · {label}",
+      "skipHint": "迄號 {last} 比標準張數多 {count} 張,有 {count} 個號碼不存在。點出不存在的號碼:",
+      "skipSelected": "已選",
+      "skipSelectedValue": "{count} / {total}:{nos}",
+      "allTo": "全部放到同一個收銀點",
+      "allToField": "收銀點",
+      "localOption": "{name}(本機)",
+      "splitOption": "分放到多個收銀點",
+      "splitHint": "在格子選張,再點要放的收銀點:",
+      "legendUnassigned": "未分配",
+      "legendAssigned": "已分配",
+      "columns": {
+        "cashPoint": "收銀點",
+        "ticketNos": "張號",
+        "count": "張數"
+      },
+      "unassigned": "未分配",
+      "remaining": "還有 {count} 張沒分配,全部分配完才能確認拆本。",
+      "confirm": "確認拆本",
+      "success": "已拆本"
+    },
+    "camera": {
+      "button": "📷 掃描",
+      "title": "相機掃描",
+      "hint": "把條碼對準框內;可以連續掃描,每讀到一張就照刷條碼處理。",
+      "videoAria": "相機畫面",
+      "lastRead": "讀到:{code}",
+      "error": "打不開相機,請確認瀏覽器已允許使用相機。",
+      "close": "關閉"
+    },
+    "salesErrors": {
+      "LOCAL_SHIFT_NOT_OPEN": "本機收銀點沒有開著的班,不能銷售",
+      "TICKET_NOT_SELLABLE": "這張刮刮樂不能賣",
+      "ALREADY_SOLD": "這張刮刮樂已於 {time} 售出",
+      "MOVE_CONFIRM_REQUIRED": "這張在別的收銀點,請先確認移櫃並售出",
+      "MOVE_NOT_ALLOWED": "你沒有移櫃權限,請由那個收銀點售出",
+      "UNDO_NOT_ALLOWED": "不符合當下撤銷的條件,請改送撤銷售出申請",
+      "BOOK_ALREADY_OPENED": "這本已經拆過了",
+      "SPLIT_PLAN_INVALID": "跳號還沒點滿,或還有張沒分配",
+      "TICKET_NOT_ON_COUNTER": "只有檯面上未售的張能移櫃或收回",
+      "CONFLICT": "這幾張已被處理,請重新核對",
+      "GAME_NOT_FOUND": "讀不到這張刮刮樂的遊戲(面額不明),不能賣;請洽系統管理員"
+    },
+    "redemption": {
+      "redeemTitle": "兌獎 · {name}",
+      "replaceTitle": "重新登記 · {name}",
+      "code": "刷背面編號",
+      "codeHint": "條碼槍刷背面編號,或輸入後按 Enter",
+      "own": "本店的刮刮樂",
+      "other": "不是本店的刮刮樂",
+      "previewMeta": "本號 {bookNo} · 張號 {ticketNo} · {source}",
+      "money": "{amount} 元",
+      "existing": "這張已兌過獎({time} {cashPoint})",
+      "prize": "中獎金額",
+      "rule": "單張超過 5,000 元請到銀行兌獎;超過抽屜目前應有現金({expected})時擋下。",
+      "overLimit": "單張超過 5,000 元:請客人到銀行兌獎",
+      "overDrawer": "超過抽屜目前應有現金 {expected}",
+      "cancel": "取消",
+      "confirm": "確認兌獎",
+      "successTitle": "已兌獎",
+      "successMessage": "{serial} · {ticket} · {amount} 元 · {cashPoint}",
+      "undo": "撤銷",
+      "revokeTitle": "撤銷兌獎?",
+      "revokeLine": "{ticket} · {amount} 元 · {time} 登記",
+      "revokeHint": "撤銷後 {amount} 元退回{cashPoint}的抽屜應有金額。",
+      "revoke": "撤銷",
+      "revokeSuccess": "已撤銷兌獎",
+      "managerTitle": "撤銷兌獎",
+      "managerSubtitle": "{ticket} · {amount} 元",
+      "reason": "撤銷原因(必填)",
+      "closedHint": "這一班已結帳:撤銷後記成那一班的事後更正,應有現金 +{amount}。",
+      "openHint": "這一班還開著:撤銷後 {amount} 元退回{cashPoint}的抽屜應有金額。",
+      "replaceHint": "[撤銷並重新登記]:撤銷後直接開兌獎視窗登記正確的那筆,算在同一班。",
+      "replace": "撤銷並重新登記",
+      "revokeRedemption": "撤銷兌獎",
+      "replaceSuccess": "已撤銷並重新登記",
+      "recentTitle": "最近兌獎 · {name}",
+      "recentHint": "自己在這一班登記的兌獎;點一列看詳情。",
+      "recentEmpty": "這一班還沒有兌獎",
+      "close": "關閉",
+      "detailTitle": "兌獎紀錄",
+      "detail": {
+        "ticket": "刮刮樂",
+        "prize": "獎金",
+        "shift": "收銀點 / 班",
+        "redeemed": "登記",
+        "status": "狀態",
+        "revoked": "撤銷",
+        "reason": "撤銷原因"
+      },
+      "ticketValue": "{game} · {bookNo} · #{ticketNo}",
+      "shiftValue": "{cashPoint} · {name} {time}",
+      "shiftClosed": "{cashPoint} · {name} {time}(已交班)",
+      "personTime": "{name} · {time}",
+      "sentValue": "已送兌(進貨單 {serial})",
+      "sentBlocked": "已送兌,不能撤銷;要先撤回或退回進貨單 {serial}。",
+      "immediate": "當下撤銷",
+      "postClose": "事後更正",
+      "status": {
+        "in_store": "店內持有",
+        "sent": "已送兌",
+        "revoked": "已撤銷"
+      },
+      "columns": {
+        "serialNo": "單號",
+        "time": "時間",
+        "cashPoint": "收銀點",
+        "shift": "班次",
+        "ticket": "刮刮樂",
+        "prize": "金額",
+        "status": "狀態",
+        "redeemedBy": "登記人",
+        "purchase": "進貨單"
+      },
+      "tab": {
+        "title": "兌獎紀錄",
+        "cashPoint": "收銀點",
+        "status": "狀態",
+        "redeemedBy": "登記人",
+        "serialNo": "單號",
+        "serialNoHint": "RD-0218 或 218",
+        "serialNoScope": "輸入單號時不限期間",
+        "from": "期間起",
+        "to": "期間迄",
+        "all": "全部",
+        "empty": "這段期間沒有兌獎紀錄",
+        "summary": "共 {count} 筆",
+        "cardMeta": "{cashPoint} · {shift} · {time}",
+        "cardBy": "登記 {name} · 進貨單 {purchase}"
+      },
+      "errors": {
+        "FORBIDDEN": "沒有權限做這件事",
+        "NOT_FOUND": "找不到這筆兌獎紀錄,可能已被別人變更",
+        "VALIDATION_FAILED": "有欄位不正確,請檢查標紅的欄位",
+        "REDEMPTION_CODE_INVALID": "看不懂這個編號,請刷背面編號",
+        "REDEMPTION_CODE_NEEDS_BACK": "對不到本店的刮刮樂,請刷背面編號",
+        "REDEMPTION_OVER_LIMIT": "單張超過 5,000 元:請客人到銀行兌獎",
+        "AMOUNT_EXCEEDS_DRAWER": "超過抽屜目前的應有現金",
+        "REDEMPTION_DUPLICATE": "這張已兌過獎",
+        "SHIFT_CLOSED": "這一班已送出交班結帳",
+        "REDEMPTION_SENT": "已送兌,要先撤回或退回進貨單才能撤銷",
+        "REDEMPTION_ALREADY_REVOKED": "這筆兌獎已撤銷",
+        "UNEXPECTED": "操作失敗,請稍後再試"
+      }
+    },
+    "storeForms": {
+      "branch": "分店",
+      "empty": "目前沒有單據",
+      "none": "—",
+      "saleReversals": {
+        "title": "撤銷售出申請",
+        "create": "+ 新增撤銷售出申請",
+        "listAria": "撤銷售出申請列表",
+        "columns": {
+          "serialNo": "單號",
+          "tickets": "張數",
+          "reason": "原因",
+          "refundAmount": "退款",
+          "refundShift": "退款班次",
+          "status": "狀態"
+        },
+        "ticketCount": "({count} 張)"
+      },
+      "cashCorrections": {
+        "title": "現金更正單",
+        "create": "+ 新增現金更正單",
+        "listAria": "現金更正單列表",
+        "columns": {
+          "serialNo": "單號",
+          "direction": "方向",
+          "amount": "金額",
+          "place": "位置",
+          "attributedShift": "歸屬班次",
+          "reason": "原因",
+          "status": "狀態"
+        },
+        "directions": {
+          "increase": "現金增加",
+          "decrease": "現金減少"
+        },
+        "vault": "小金庫"
+      }
+    },
+    "saleReversal": {
+      "tabLabel": "新增撤銷售出申請",
+      "title": "撤銷售出申請",
+      "loading": "載入中",
+      "unavailable": "你沒有新增撤銷售出申請的權限,或這張表單目前不能新增",
+      "branch": "分店",
+      "reason": "原因",
+      "scan": "刷條碼加入張數",
+      "scanHint": "刷條碼或輸入編號後按 Enter",
+      "scanNotFound": "找不到這張刮刮樂",
+      "scanNotReversible": "這張不是本店已售,或已在其他撤銷售出申請上",
+      "bookHeader": "{gameCode} {gameName} · 本號 {bookNo}",
+      "removeBook": "移除這本",
+      "cellReversible": "已售",
+      "cellUnavailable": "不能選",
+      "selected": "已選",
+      "noTickets": "刷條碼或從格子選要撤銷的張",
+      "refund": "退款給客人",
+      "yes": "是",
+      "no": "否",
+      "refundShift": "退款班次",
+      "refundShiftCurrent": "{label}(目前的班)",
+      "refundShiftRequired": "退款給客人時要選退款班次",
+      "note": "說明",
+      "refundAmount": "退款金額",
+      "rule": "只能選本店已售、不在其他撤銷申請上的張數;送出後這些張數在審核完成前不能賣。",
+      "cancel": "取消",
+      "submit": "送出",
+      "submitted": "已送出撤銷售出申請",
+      "submitAndPrint": "送出並列印收據"
+    },
+    "undoRequest": {
+      "send": "送撤銷售出申請"
+    },
+    "stocktake": {
+      "entry": {
+        "button": "盤點",
+        "reminder": "距離上次盤點已超過 24 小時,建議盤點一次"
+      },
+      "scope": {
+        "title": "開始盤點(臨時)",
+        "store": "全店",
+        "cashPoint": "單一收銀點",
+        "cashPointLabel": "收銀點",
+        "hint": "盤點期間照常銷售;完成後送「盤點確認申請」。",
+        "cancel": "取消",
+        "start": "開始盤點"
+      },
+      "types": {
+        "shift": "交班",
+        "daily": "日結",
+        "adhoc": "臨時盤點"
+      },
+      "statuses": {
+        "pending": "待核准",
+        "confirmed": "已確認",
+        "rejected": "已駁回",
+        "returned": "已退回"
+      },
+      "totals": "補登售出 {backfill} 張 · {amount} 元;新增待查 {investigate} 張;標記異常 {flagged} 張;確認遺失 {lost} 張",
+      "page": {
+        "tabLabel": "盤點",
+        "title": "{heading} · {scope}",
+        "started": "{time} 開始 · {name}",
+        "wholeStore": "全店",
+        "cancel": "取消(不保留)",
+        "progress": "已盤 {done} / {total} 本",
+        "diffCount": "差異 {count} 張",
+        "footer": "盤點期間照常銷售;待核准的盤點不擋下一次盤點。",
+        "review": "差異核對 →",
+        "noBooks": "這個範圍沒有檯面上的本",
+        "loadFailed": "讀不到盤點資料,請稍後再試",
+        "pickBook": "選擇要盤的本",
+        "returnedHint": "這張盤點確認申請已退回,修改後再送出。"
+      },
+      "cashPoint": {
+        "expected": "應有現金 {amount}",
+        "immediate": "補登兌獎立即生效",
+        "noShift": "這個收銀點沒有開著的班",
+        "redeem": "補登兌獎"
+      },
+      "bookStatus": {
+        "counted": "已盤",
+        "uncounted": "未盤",
+        "current": "目前這本",
+        "diff": "差異 {count}"
+      },
+      "book": {
+        "title": "{game} · 本號 {bookNo}",
+        "meta": "{cashPoint} · {price} 元",
+        "subtitle": "本號 {bookNo} · 檯面 {count} 張",
+        "hint": "點出實際還在檯面上的張(已選 = 在);系統數字是開始盤這本那一刻的數字。",
+        "methodAria": "盤點方式",
+        "grid": "點格子",
+        "scan": "掃描",
+        "scanField": "刷條碼",
+        "scanHint": "刷到的張記為「在」,不會被當成售出。",
+        "scanned": "已點 #{ticketNo}",
+        "scanNotHere": "這張不在這次盤點的範圍",
+        "system": "系統({time})",
+        "present": "實盤",
+        "diff": "差異",
+        "tickets": "{count} 張",
+        "none": "0 張",
+        "prev": "上一本",
+        "next": "下一本",
+        "legendSelected": "在(已點)",
+        "pendingReversal": "撤銷審核中"
+      },
+      "unopened": {
+        "title": "未拆的本(在 / 不在)",
+        "book": "本",
+        "game": "遊戲",
+        "count": "張數",
+        "state": "在不在",
+        "stateAria": "本號 {bookNo} 在不在",
+        "present": "在",
+        "absent": "不在",
+        "hint": "不在的本:盤點完成時列為待查。",
+        "empty": "沒有未拆的本"
+      },
+      "lost": {
+        "title": "待查清單",
+        "action": "處理",
+        "wholeBook": "整本",
+        "sinceTransfer": "{date} 調貨在途刪除",
+        "sinceStocktake": "{date} 盤點時不在",
+        "since": "{date} 待查",
+        "actions": {
+          "found": "找到了(刷條碼)",
+          "lost": "確認遺失(原因必填)",
+          "keep": "繼續待查"
+        },
+        "scanToConfirm": "整本都待查:刷這本任一張的條碼,確認整本找到了",
+        "foundOk": "已刷到,找到了",
+        "lostReason": "遺失原因(必填)",
+        "hint": "確認遺失需要有權限,原因必填;也可以「繼續待查」。",
+        "empty": "沒有待查的張",
+        "foundTicket": "已刷到 #{ticketNo},找到了",
+        "scanEach": "逐張刷條碼:刷到的張才算找到了,沒刷到的維持待查",
+        "foundSome": "已刷到 {count} / {total} 張;沒刷到的維持待查"
+      },
+      "review": {
+        "title": "差異核對",
+        "info": "每一張各自處理,可以多選後一次套用。[補登售出] 立即生效:那個收銀點有開著的班 → 算進那一班;已結帳 → 記成那個收銀點最近一班的事後更正。",
+        "selected": "已選 {count} 張",
+        "pickAria": "選取 #{ticketNo}",
+        "actions": {
+          "sale_backfill": "補登售出",
+          "investigate": "待查",
+          "flag": "標記異常"
+        },
+        "clear": "取消選取",
+        "recount": "重新盤點這本",
+        "recheck": "重新核對",
+        "lineTitle": "{cashPoint} · {game} · 本號 {bookNo}",
+        "shiftOpen": "{name} 的班開著",
+        "shiftClosed": "這個收銀點沒有開著的班",
+        "columns": {
+          "ticket": "張號",
+          "system": "系統",
+          "actual": "實際",
+          "action": "處理",
+          "result": "結果"
+        },
+        "system": {
+          "unsold": "未售",
+          "sold": "已售"
+        },
+        "actual": {
+          "absent": "不在",
+          "present": "還在"
+        },
+        "backfilled": "已補登售出(立即生效)",
+        "extraHint": "系統已售、實際還在:只能標記異常。",
+        "pendingReversal": "撤銷審核中:{tickets}(不算差異)",
+        "result": {
+          "backfillOpen": "售出算進{cashPoint}這一班,應有現金 {amount}",
+          "backfillClosed": "記成{cashPoint}最近一班的事後更正 {amount}",
+          "investigate": "待查,責任分店 = {store}",
+          "flag": "之後用撤銷售出申請「盤點錯誤」更正",
+          "none": "還沒處理"
+        },
+        "summary": {
+          "backfill": "補登售出",
+          "backfillValue": "{count} 張 · {amount} 元",
+          "newInvestigate": "新增待查",
+          "flagged": "標記異常",
+          "unhandled": "未處理",
+          "count": "{count} 張"
+        },
+        "back": "返回盤點",
+        "submit": "送出 →",
+        "noDiff": "沒有差異",
+        "stale": "這幾張已被處理,請重新核對:{tickets}",
+        "alreadyProcessed": "這幾張已被處理,請重新核對",
+        "noShift": "這個收銀點從來沒有開過班,沒有班可以記這筆補登售出",
+        "backfillDone": "已補登售出 {count} 張 · {amount} 元(立即生效)",
+        "lostNotReady": "待查清單還沒處理完:「找到了」要刷條碼,「確認遺失」要選原因"
+      },
+      "submit": {
+        "title": "送出盤點?",
+        "hint": "送出後明細鎖定,送「盤點確認申請」給店長核准;盤點期間照常銷售。",
+        "cashPoint": "收銀點 / 班",
+        "backfill": "補登售出",
+        "expected": "應有現金",
+        "postClose": "事後更正 +{amount}",
+        "shiftOpen": "{name} {time}(開著)",
+        "shiftClosed": "{name} {time}(已結帳)",
+        "newInvestigate": "新增待查",
+        "flagged": "標記異常",
+        "unopenedAbsent": "未拆的本不在",
+        "confirmLost": "確認遺失",
+        "lostCost": "{count} 張 · 批購成本 {cost} 元",
+        "count": "{count} 張",
+        "books": "{count} 本",
+        "uncounted": "還有 {count} 本沒有盤;沒盤的本不比對,盤點單會記下未盤的本。",
+        "note": "說明",
+        "back": "返回",
+        "confirm": "送出盤點確認申請"
+      },
+      "list": {
+        "type": "類型",
+        "status": "狀態",
+        "all": "全部",
+        "columns": {
+          "serialNo": "單號",
+          "type": "類型",
+          "time": "盤點時間",
+          "backfill": "補登售出",
+          "newInvestigate": "新增待查",
+          "confirmLost": "確認遺失",
+          "status": "狀態"
+        },
+        "total": "共 {count} 筆",
+        "empty": "沒有盤點紀錄",
+        "backfillValue": "{count} 張 · {amount}",
+        "cardFacts": "補登售出 {backfill} · 新增待查 {investigate} · 確認遺失 {lost}",
+        "uncountedTag": "{count} 本未盤"
+      },
+      "view": {
+        "title": "盤點確認申請",
+        "titleWithNo": "盤點確認申請 {serialNo}",
+        "meta": "申請人 {name} · 送出 {time} · {type} · {scope}",
+        "backToList": "← 返回列表",
+        "edit": "修改後再送出",
+        "columns": {
+          "book": "本",
+          "cashPoint": "收銀點",
+          "method": "方式",
+          "system": "系統",
+          "present": "實盤",
+          "diffNos": "差異張號",
+          "action": "處理"
+        },
+        "methods": {
+          "grid": "點格子",
+          "scan": "掃描"
+        },
+        "actions": {
+          "sale_backfill": "補登售出",
+          "investigate": "待查",
+          "flag": "標記異常"
+        },
+        "postClose": "(事後更正)",
+        "noLines": "沒有盤點明細",
+        "summary": {
+          "backfill": "補登售出",
+          "newInvestigate": "新增待查",
+          "flagged": "標記異常",
+          "confirmLost": "確認遺失",
+          "uncounted": "未盤的本"
+        },
+        "backfillValue": "{count} 張 · {amount} 元",
+        "lostValue": "{count} 張 · 批購成本 {cost}",
+        "count": "{count} 張",
+        "books": "{count} 本",
+        "uncounted": "未盤的本",
+        "uncountedHint": "送出時還沒盤的本,不比對、不記差異;可另開一次盤點補盤。",
+        "unopened": "未拆的本",
+        "lost": "待查清單",
+        "present": "在",
+        "absent": "不在 → 待查",
+        "lostActions": {
+          "found": "找到了 → 尋回",
+          "lost": "確認遺失",
+          "keep": "繼續待查"
+        },
+        "loadFailed": "讀不到這張盤點單"
+      }
+    },
+    "checkout": {
+      "page": {
+        "tabLabel": "交班結帳",
+        "title": "交班結帳 · {cashPoint}",
+        "meta": "{name} · {time} 開班",
+        "cancel": "取消",
+        "loadFailed": "讀不到這一班的資料,請稍後再試",
+        "cannotSubmit": "只有這一班的負責人或店長能交班結帳。",
+        "returnedHint": "這張結帳確認申請已退回,修改後再送出。",
+        "progress": "第 {current} / {total} 步 · {label}",
+        "back": "上一步",
+        "next": "下一步",
+        "submit": "送出",
+        "stepperAria": "交班結帳的步驟",
+        "submitAndPrint": "送出並列印結帳單"
+      },
+      "steps": {
+        "stocktake": "盤點",
+        "redemption": "兌獎",
+        "drawer": "抽屜",
+        "confirm": "確認"
+      },
+      "stocktake": {
+        "title": "① 盤點",
+        "reuse": "沿用 30 分鐘內的盤點",
+        "reuseDetail": "{time} · {scope} · 差異 {count}",
+        "wholeStore": "全店",
+        "noReusable": "30 分鐘內沒有可以沿用的盤點",
+        "new": "現在盤點",
+        "newHint": "只盤這個收銀點;被拆開的本只能點格子或掃描",
+        "skip": "跳過盤點",
+        "skipHint": "需要有跳過盤點的權限;原因必填,報表會標示「未盤點」。",
+        "skipReason": "跳過原因(必填)",
+        "review": "差異核對 →",
+        "reviewed": "差異已核對,可以到下一步"
+      },
+      "redemption": {
+        "title": "② 兌獎(本班 {count} 筆)",
+        "backfill": "補登兌獎",
+        "immediate": "立即生效",
+        "total": "兌獎合計",
+        "empty": "這一班還沒有兌獎",
+        "hint": "單張超過 5,000 元請到銀行兌獎;超過抽屜目前應有現金時擋下。",
+        "rowAria": "兌獎 {ticket} {amount}"
+      },
+      "drawer": {
+        "expectedTitle": "應有現金",
+        "expectedHint": "只算已完成的單據;每一列可以點開看明細與單據。",
+        "countedTitle": "實點(依面額清點)",
+        "columns": {
+          "value": "面額",
+          "count": "張 / 枚",
+          "subtotal": "小計"
+        },
+        "countedTotal": "實點合計",
+        "difference": "差額 = 實點 − 應有",
+        "diffReason": "差額原因(必填)",
+        "pending": "審核中:{items} → 已自動帶入差額原因說明。",
+        "pendingItem": "{form} #{serialNo} {amount}",
+        "toggleAria": "展開 {item} 的明細",
+        "openEntry": "點開單據",
+        "pendingNote": "審核中:{items}"
+      },
+      "items": {
+        "opening": "期初零用金",
+        "sales": "銷售",
+        "redemptions": "兌獎",
+        "deposits": "投庫",
+        "withdrawals": "出庫",
+        "transfer_out": "調貨支出(現金)",
+        "transfer_in": "調貨收入(現金)",
+        "refunds": "退貨退款",
+        "corrections": "現金更正",
+        "transfers": "調貨(現金)",
+        "bank_deposits": "存銀行"
+      },
+      "itemCount": {
+        "sales": "({count} 張)",
+        "other": "({count} 筆)"
+      },
+      "forms": {
+        "sale_reversal": "撤銷售出",
+        "cash_correction": "現金更正"
+      },
+      "confirm": {
+        "summaryTitle": "應有現金",
+        "expected": "應有",
+        "counted": "實點",
+        "difference": "差額",
+        "handoverTitle": "交接",
+        "leftForNext": "留給下一班",
+        "successor": "接班人(選填)",
+        "noSuccessor": "(沒有接班人)",
+        "hint": "「留給下一班」大於 0 時接班人必填;接班人當面點過零用金後核准這張結帳單。",
+        "mustBeZero": "沒有接班人時必須是 0:請先把錢投庫",
+        "managerReview": "沒有接班人:這張結帳確認申請改由店長審核。",
+        "stocktakeReuse": "沿用 {time} {scope}盤點 {serial}",
+        "stocktakeNew": "現在盤點",
+        "stocktakeSkip": "跳過盤點({reason})",
+        "stocktake": "盤點",
+        "exceedsCounted": "留給下一班不能超過實點 {counted}"
+      },
+      "types": {
+        "shift": "交班",
+        "daily": "日結"
+      },
+      "list": {
+        "from": "期間(起)",
+        "to": "期間(迄)",
+        "cashPoint": "收銀點",
+        "type": "類型",
+        "status": "狀態",
+        "all": "全部",
+        "statuses": {
+          "reviewing": "待審核",
+          "returned": "已退回",
+          "withdrawn": "已撤回",
+          "completed": "已完成"
+        },
+        "columns": {
+          "serialNo": "單號",
+          "cashPoint": "收銀點",
+          "type": "類型",
+          "submittedBy": "交班人",
+          "expected": "應有",
+          "counted": "實點",
+          "difference": "差額",
+          "status": "狀態"
+        },
+        "total": "共 {count} 筆",
+        "empty": "沒有結帳紀錄",
+        "cardFacts": "應有 {expected} · 實點 {counted} · 差額 {difference}"
+      },
+      "view": {
+        "title": "結帳確認申請",
+        "titleWithNo": "結帳確認申請 · {type} {serialNo}",
+        "meta": "申請人 {name} · 送出 {time}",
+        "backToList": "← 返回列表",
+        "edit": "修改後再送出",
+        "sheetTitle": "結帳單",
+        "type": "類型",
+        "cashPoint": "收銀點",
+        "stocktake": "盤點",
+        "stocktakeSkipped": "跳過({reason})",
+        "stocktakeReuse": "沿用 {time} {scope}盤點 {serial}",
+        "stocktakeNew": "{time} 盤點",
+        "expected": "應有",
+        "counted": "實點",
+        "difference": "差額",
+        "handover": "留給下一班 / 接班人",
+        "noSuccessor": "(沒有接班人)",
+        "pending": "送出時審核中:{items}",
+        "hint": "每一項可以點開原本的單據。",
+        "loadFailed": "讀不到這張結帳單"
+      }
+    },
+    "badgeDescription": "日結逾期的店數:最早一張還沒被日結涵蓋計算的交班結帳,送出日隔天的提醒時間已過",
+    "bankDeposit": {
+      "title": "存銀行",
+      "vault": "{store} · 小金庫目前應有 {amount}",
+      "reserved": "其中 {amount} 是審核中的日結要存入銀行的,這次最多能存 {available}",
+      "amount": "金額",
+      "account": "存入帳戶",
+      "note": "備註",
+      "hint": "帳戶只列使用組織包含這家分店、使用中的帳戶。不用審核,做完就生效;記錯請到帳戶管理沖正那筆存入。",
+      "exceeds": "超過這次能存的金額 {amount}(小金庫應有扣掉審核中日結要存入銀行的)。實際的錢比較多時,請先用現金更正單補登。",
+      "cancel": "取消",
+      "submit": "確認存入",
+      "success": "已存入銀行"
+    },
+    "dailyClose": {
+      "entry": {
+        "last": "上次日結:{date}(已 {days} 天)",
+        "never": "還沒有日結",
+        "bankDeposit": "存銀行",
+        "dailyClose": "日結",
+        "blockedTitle": "還不能日結:",
+        "blockedShift": "{cashPoint}還沒交班",
+        "blockedPending": "日結 {serialNo} 審核中",
+        "blockedReturned": "日結 {serialNo} 已退回,請修改後再送出"
+      },
+      "steps": {
+        "shifts": "各班結帳",
+        "stocktake": "全店盤點",
+        "vault": "小金庫",
+        "bank": "存入銀行",
+        "confirm": "確認"
+      },
+      "page": {
+        "tabLabel": "日結",
+        "title": "日結 · {store}",
+        "cancel": "取消",
+        "period": "涵蓋計算期間 {from} ~ {to}。不能補日結,這一次會一起涵蓋計算。",
+        "periodWithGaps": "涵蓋計算期間 {from} ~ {to}({gaps} 沒有日結)。不能補日結,這一次會一起涵蓋計算。",
+        "firstClose": "第一次日結",
+        "now": "現在",
+        "stepperAria": "日結的步驟",
+        "progress": "第 {current} / {total} 步 · {label}",
+        "back": "上一步",
+        "next": "下一步",
+        "submit": "送出結帳確認申請",
+        "loadFailed": "讀不到日結的資料,請稍後再試",
+        "returnedHint": "這張日結已退回,修改後再送出。涵蓋計算期間照原本送出時的那一段。"
+      },
+      "shifts": {
+        "columns": {
+          "cashPoint": "收銀點",
+          "submittedBy": "交班人",
+          "submittedAt": "送出",
+          "expected": "應有",
+          "counted": "實點",
+          "difference": "差額",
+          "reviewer": "審核者",
+          "state": "狀態"
+        },
+        "states": {
+          "approved": "已核准",
+          "pending": "待審核",
+          "returned": "已退回"
+        },
+        "you": "你",
+        "review": "審核",
+        "waitingApprove": "等{names}核准",
+        "waitingFix": "待{names}更正",
+        "openShifts": "還有班沒送出交班結帳:{names}。全部送出後才能日結。",
+        "pendingDaily": "日結 {serialNo} 還在審核中或已退回,不能再送一張。",
+        "empty": "這段期間沒有送出交班結帳的班",
+        "allApproved": "各班結帳都已核准,可以到下一步。",
+        "notApproved": "還有 {count} 班沒核准,全部核准後才能下一步。狀態會即時更新。",
+        "cardFacts": "應有 {expected} · 實點 {counted} · 差額 {difference}",
+        "reviewTitle": "結帳單 {serialNo} · {cashPoint} · {name}",
+        "closeReview": "關閉"
+      },
+      "stocktake": {
+        "title": "② 全店盤點",
+        "newHint": "盤全店每個收銀點;被拆開的本只能點格子或掃描"
+      },
+      "vault": {
+        "expectedTitle": "小金庫應有",
+        "opening": "期初({date} 日結清點)",
+        "openingNone": "期初",
+        "items": {
+          "opening": "期初",
+          "deposits": "投庫",
+          "withdrawals": "出庫",
+          "transfers": "調貨(現金)",
+          "corrections": "現金更正",
+          "bank_deposits": "存銀行"
+        }
+      },
+      "bank": {
+        "title": "④ 存入銀行",
+        "amount": "存入金額(0 = 不存)",
+        "account": "存入帳戶",
+        "exceeds": "不能超過小金庫實點 {amount}",
+        "after": "存入後小金庫應有",
+        "hint": "帳戶只列使用組織包含這家分店、使用中的帳戶。核准完成時才寫入「存銀行」與銀行「存入」。"
+      },
+      "confirm": {
+        "title": "⑤ 確認",
+        "period": "涵蓋計算期間",
+        "periodValue": "{from} ~ {to}",
+        "firstClose": "第一次日結",
+        "now": "現在",
+        "stocktake": "全店盤點",
+        "stocktakeNew": "現在盤點 · 補登售出 {count} 張",
+        "stocktakeSkip": "跳過盤點",
+        "shiftDifference": "各班差額合計",
+        "vaultDifference": "小金庫差額",
+        "bankDeposit": "存入銀行",
+        "noDeposit": "不存"
+      },
+      "view": {
+        "period": "涵蓋計算期間",
+        "shifts": "涵蓋計算的班",
+        "shiftsValue": "{count} 班({serials})",
+        "stocktake": "全店盤點",
+        "bankDeposit": "存入銀行",
+        "after": "存入後小金庫",
+        "opening": "小金庫期初"
+      }
+    },
+    "receipts": {
+      "documentNo": "單號 {serialNo}",
+      "documentName": "{title} {serialNo}",
+      "documentNameNoSerial": "{title} · {branch}",
+      "qrCaption": "掃描開啟單據",
+      "range": "{from} ~ {to}",
+      "none": "無",
+      "branch": "分店",
+      "cashPoint": "收銀點",
+      "direction": "方向",
+      "reason": "原因",
+      "amount": "金額",
+      "note": "備註",
+      "handler": "經手人",
+      "counted": "實點",
+      "difference": "差額",
+      "differenceWithReason": "{amount}({reason})",
+      "witnessSign": "見證人簽名",
+      "handlerSign": "經手人簽名",
+      "stocktake": {
+        "label": "盤點",
+        "skip": "跳過({reason})",
+        "reuse": "沿用 {time}",
+        "new": "現在盤點 {time}"
+      },
+      "vaultDeposit": {
+        "title": "投庫單",
+        "directionValue": "抽屜 → 小金庫",
+        "depositorSign": "投庫人簽名"
+      },
+      "vaultWithdraw": {
+        "title": "出庫單",
+        "directionValue": "小金庫 → {cashPoint}抽屜",
+        "openingFloat": "開班零用金",
+        "receiverSign": "領取人簽名"
+      },
+      "bankDeposit": {
+        "title": "存款單",
+        "account": "存入帳戶"
+      },
+      "shiftCheckout": {
+        "title": "交班結帳單",
+        "shift": "班次",
+        "handedBy": "交班人",
+        "successor": "接班人",
+        "expected": "應有現金",
+        "leftForNext": "留給下一班",
+        "handedSign": "交班人簽名",
+        "successorSign": "接班人簽名"
+      },
+      "dailyClose": {
+        "title": "日結單",
+        "period": "涵蓋計算期間",
+        "firstClose": "第一次日結",
+        "columns": {
+          "shifts": "班數"
+        },
+        "vaultExpected": "小金庫 應有",
+        "vaultCounted": "小金庫 實點",
+        "vaultDifference": "小金庫 差額",
+        "bankDeposit": "存入銀行",
+        "depositValue": "{amount}({account})",
+        "noDeposit": "不存",
+        "vaultAfter": "小金庫 留存",
+        "managerSign": "店長簽名"
+      },
+      "saleRefund": {
+        "title": "退貨退款收據",
+        "pending": "待核准",
+        "refundShift": "退款班次",
+        "columns": {
+          "game": "遊戲",
+          "tickets": "張數"
+        },
+        "gameValue": "{gameCode} {gameName}",
+        "ticketNos": "號碼:",
+        "ticketCount": "({count} 張)",
+        "refund": "退款"
+      }
+    }
+  },
+  "projectShell": {
+    "rootOrg": {
+      "message": "目前在平台層級,請先切換到要管理的機構",
+      "hint": "切換當前組織後,就會看到那個機構的資料。"
+    }
   }
 }

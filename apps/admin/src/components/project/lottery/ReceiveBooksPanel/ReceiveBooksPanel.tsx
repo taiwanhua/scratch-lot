@@ -234,7 +234,7 @@ export const ReceiveBooksPanel = ({
                         <Typography variant="body2" sx={{ fontWeight: 700 }}>
                           {row.bookNo}
                         </Typography>
-                        <Typography variant="caption" color="text.secondary">
+                        <Typography variant="caption" color="textSecondary">
                           {t("cardFacts", {
                             ticketLabel: header("lastTicketNo"),
                             lastTicketNo: ticketTextOf(row),

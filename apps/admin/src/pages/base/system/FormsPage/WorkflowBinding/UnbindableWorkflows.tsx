@@ -31,7 +31,7 @@ export const UnbindableWorkflows = ({
   }
   return (
     <Stack spacing={1} component="section" aria-label={t("unbindableRegion")}>
-      <Typography variant="caption" color="text.secondary">
+      <Typography variant="caption" color="textSecondary">
         {t("unbindableTitle")}
       </Typography>
       {items.map((item) => (
@@ -58,7 +58,7 @@ export const UnbindableWorkflows = ({
             <Typography
               key={`${issue.stepKey}-${issue.problem}`}
               variant="caption"
-              color="text.secondary"
+              color="textSecondary"
             >
               {t("issue", {
                 step: issue.stepNumber,

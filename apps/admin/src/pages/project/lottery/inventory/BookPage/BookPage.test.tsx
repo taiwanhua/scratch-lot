@@ -29,6 +29,10 @@ describe("本的詳情", () => {
     expect(screen.getByText("#041–065")).toBeInTheDocument();
     expect(screen.getByText("店內櫃台 → 店外攤位")).toBeInTheDocument();
     expect(screen.getByText("整本")).toBeInTheDocument();
+    // 跨班撤銷:標「前期更正,屬於 X 班」
+    expect(
+      screen.getByText("撤銷(前期更正,屬於 店外攤位 · 李小華 10/15 13:00)"),
+    ).toBeInTheDocument();
   });
 
   it("沒有 mark-skipped / scrap / show-cost:看不到 [更正跳號]、成本卡、[報廢]", async () => {

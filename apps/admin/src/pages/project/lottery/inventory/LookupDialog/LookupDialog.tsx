@@ -129,7 +129,7 @@ export const LookupDialog = ({ onClose }: LookupDialogProps) => {
         />
         <Typography variant="caption">{t("lookup.hint")}</Typography>
         {hint === null ? null : (
-          <Typography variant="body2" color="warning.main">
+          <Typography variant="body2" color="warning">
             {hint}
           </Typography>
         )}
@@ -154,7 +154,7 @@ export const LookupDialog = ({ onClose }: LookupDialogProps) => {
             }}
           >
             <Stack direction="row" sx={{ justifyContent: "space-between" }}>
-              <Typography variant="subtitle1" color="text.primary">
+              <Typography variant="subtitle1" color="textPrimary">
                 {item.gameCode} {item.gameName}
               </Typography>
               <Typography variant="body2">

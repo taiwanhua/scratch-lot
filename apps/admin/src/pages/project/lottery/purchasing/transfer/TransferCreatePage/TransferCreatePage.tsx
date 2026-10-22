@@ -7,7 +7,6 @@ import { TRANSFER_MODE } from "@repo/domain/project/lottery";
 import { useLotteryTransferOptionsQuery } from "@repo/graphql";
 import { Alert } from "@repo/ui/alert";
 import { Box } from "@repo/ui/box";
-import { Button } from "@repo/ui/button";
 import { Card } from "@repo/ui/card";
 import { CircularProgress } from "@repo/ui/circular-progress";
 import { useBreakpointDown } from "@repo/ui/media-query";
@@ -15,6 +14,7 @@ import { Stack } from "@repo/ui/stack";
 import { TextField } from "@repo/ui/text-field";
 import { Typography } from "@repo/ui/typography";
 
+import { FormActions } from "@/components/base/FormActions/FormActions";
 import { useFormModuleAccess } from "@/components/base/form-engine/FormModulePages/useFormModuleAccess";
 import { AllocationWarnings } from "@/components/project/lottery/AllocationWarnings/AllocationWarnings";
 import { useAdminErrorText } from "@/hooks/base/useAdminErrorText";
@@ -30,6 +30,7 @@ import { useUrlState } from "@/hooks/base/useUrlState";
 import { useScanner } from "@/hooks/project/useScanner/useScanner";
 import type { FormError } from "@/lib/base/form-engine/form-errors";
 
+import { LineErrorAlerts } from "../../shared/LineErrorAlerts";
 import {
   TRANSFER_FIELD_KEYS,
   TRANSFER_FORM_KEY,
@@ -233,6 +234,7 @@ export const TransferCreatePage = () => {
             }}
             onRequisition={setRequisitionNo}
             onNote={setNote}
+            error={draft.error}
           />
           <Box
             sx={{
@@ -278,6 +280,10 @@ export const TransferCreatePage = () => {
                 </Stack>
                 {notice !== null && <Alert severity="warning">{notice}</Alert>}
                 <AllocationWarnings items={allocationItems} />
+                <LineErrorAlerts
+                  error={draft.error}
+                  fieldKey={TRANSFER_FIELD_KEYS.lines}
+                />
                 <TransferLines
                   lines={lines}
                   isCompact={isNarrow}
@@ -335,38 +341,25 @@ export const TransferCreatePage = () => {
           )}
         </Stack>
       </Box>
-      <Stack
-        direction="row"
-        spacing={1.5}
-        sx={{
-          alignItems: "center",
-          borderTop: { xs: 1, lg: 0 },
-          borderColor: "divider",
-          pt: { xs: 1.5, lg: 0 },
-        }}
-      >
-        <Button variant="text" onClick={backToList}>
-          {t("cancel")}
-        </Button>
-        <Box sx={{ flex: 1 }} />
-        {form.allowDraft && (
-          <Button
-            variant="outlined"
-            disabled={draft.isPending || fromBranchId === ""}
-            onClick={() => {
+      <FormActions
+        cancel={{ label: t("cancel"), onClick: backToList }}
+        {...(form.allowDraft && {
+          draft: {
+            label: t("saveDraft"),
+            disabled: draft.isPending || fromBranchId === "",
+            onClick: () => {
               void draft.saveDraft(valuesOf(), []).then((saved) => {
                 if (saved !== null) {
                   showSnackbar("success", t("draftSaved"));
                 }
               });
-            }}
-          >
-            {t("saveDraft")}
-          </Button>
-        )}
-        <Button
-          disabled={!canSubmit}
-          onClick={() => {
+            },
+          },
+        })}
+        submit={{
+          label: t("submit"),
+          disabled: !canSubmit,
+          onClick: () => {
             void draft.submit(valuesOf(), []).then((submitted) => {
               if (submitted === null) {
                 return;
@@ -378,11 +371,9 @@ export const TransferCreatePage = () => {
                 void navigate(`${access.viewRoute}/${submitted.id}`);
               }
             });
-          }}
-        >
-          {t("submit")}
-        </Button>
-      </Stack>
+          },
+        }}
+      />
     </Stack>
   );
 };

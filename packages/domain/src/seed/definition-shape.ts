@@ -5,6 +5,8 @@
  */
 import { FORM_KEY_PATTERN, isValidFieldCategoryKey } from "../form/keys";
 import { serialFormatIssues } from "../form/serial";
+import { sharedByFieldIssues } from "../form/shared-by-fields";
+import type { FieldDef } from "../form/types";
 import {
   SeedSerializationError,
   assertPureSeedData,
@@ -44,6 +46,7 @@ const TOP_LEVEL_KEYS: Readonly<
     "allowDraft",
     "serial",
     "voidReasonCategoryKey",
+    "sharedByFieldKeys",
   ],
   "workflow-definition": [...COMMON_KEYS, "checkFormKey"],
 };
@@ -136,6 +139,46 @@ function voidReasonCategoryIssues(value: unknown): DefinitionSeedShapeIssue[] {
       ];
 }
 
+const SHARED_BY_FIELD_DETAIL: Record<
+  ReturnType<typeof sharedByFieldIssues>[number]["reason"],
+  string
+> = {
+  notFound: "不是 definition.fields 裡的欄位",
+  notOrgReference: "不是引用組織的欄位(type reference、source.provider org)",
+  duplicate: "重複",
+};
+
+/** 依欄位共用:缺席合格;有寫就要是非空陣列、每個都是表單層的組織引用欄(不重複)。 */
+function sharedByFieldKeysIssues(
+  value: unknown,
+  definition: unknown,
+): DefinitionSeedShapeIssue[] {
+  if (value === undefined) {
+    return [];
+  }
+  if (
+    !Array.isArray(value) ||
+    value.length === 0 ||
+    value.some((key) => typeof key !== "string")
+  ) {
+    return [
+      {
+        path: "sharedByFieldKeys",
+        detail:
+          "sharedByFieldKeys 必須是非空的欄位 key 陣列;缺席 = 不依欄位共用",
+      },
+    ];
+  }
+  const fields =
+    isPlainRecord(definition) && Array.isArray(definition.fields)
+      ? (definition.fields as FieldDef[])
+      : [];
+  return sharedByFieldIssues(fields, value as string[]).map((issue) => ({
+    path: "sharedByFieldKeys",
+    detail: `${issue.key}:${SHARED_BY_FIELD_DETAIL[issue.reason]}`,
+  }));
+}
+
 function formIssues(seed: Record<string, unknown>): DefinitionSeedShapeIssue[] {
   const issues = nullableStringIssues(seed, "tabLabelTemplate");
   if (seed.allowDraft !== undefined && typeof seed.allowDraft !== "boolean") {
@@ -152,7 +195,10 @@ function formIssues(seed: Record<string, unknown>): DefinitionSeedShapeIssue[] {
       });
     }
   }
-  issues.push(...voidReasonCategoryIssues(seed.voidReasonCategoryKey));
+  issues.push(
+    ...voidReasonCategoryIssues(seed.voidReasonCategoryKey),
+    ...sharedByFieldKeysIssues(seed.sharedByFieldKeys, seed.definition),
+  );
   if (!isNonBlankString(seed.moduleKey)) {
     issues.push({ path: "moduleKey", detail: "moduleKey 必填" });
   }

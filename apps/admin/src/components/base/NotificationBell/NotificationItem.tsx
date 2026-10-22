@@ -51,15 +51,15 @@ export const NotificationItem = ({
       <Stack spacing={0.5} sx={{ minWidth: 0 }}>
         <Typography
           variant="subtitle2"
-          color={unread ? "text.primary" : "text.secondary"}
+          color={unread ? "textPrimary" : "textSecondary"}
           sx={{ fontWeight: unread ? 700 : 500 }}
         >
           {notification.title}
         </Typography>
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" color="textSecondary">
           {notification.body}
         </Typography>
-        <Typography variant="caption" color="text.disabled">
+        <Typography variant="caption" color="textDisabled">
           {temporalText(notification.createdAt, "datetime")}
         </Typography>
       </Stack>

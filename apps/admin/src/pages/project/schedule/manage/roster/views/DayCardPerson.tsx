@@ -92,7 +92,7 @@ export const DayCardPerson = ({
           {name}
         </Box>
         {slot.role === "helper" && (
-          <Typography variant="caption" color="text.secondary">
+          <Typography variant="caption" color="textSecondary">
             {t("cell.roles.helper")}
           </Typography>
         )}
@@ -117,7 +117,7 @@ export const DayCardPerson = ({
         useFlexGap
         sx={{ flexWrap: "wrap", alignItems: "center" }}
       >
-        <Typography variant="caption" color="text.secondary">
+        <Typography variant="caption" color="textSecondary">
           {t("cell.range", {
             start: time(slot.startAt),
             end: time(slot.endAt),
@@ -133,7 +133,7 @@ export const DayCardPerson = ({
           </Typography>
         ))}
         {entry !== undefined && (
-          <Typography variant="caption" color="text.secondary">
+          <Typography variant="caption" color="textSecondary">
             {t("timeline.break", { minutes: entry.breakMinutes })}
           </Typography>
         )}

@@ -125,6 +125,15 @@ describe("contentHash / snapshotHash", () => {
     expect(withCategory.snapshotHash).not.toBe(base.snapshotHash);
   });
 
+  it("依欄位共用:缺席與這個欄位之前同一份內容;有宣告兩個 hash 都變", () => {
+    const base = hashesOf(formSeed(fields()));
+    const withSharing = hashesOf(
+      formSeed(fields(), { sharedByFieldKeys: ["title"] }),
+    );
+    expect(withSharing.contentHash).not.toBe(base.contentHash);
+    expect(withSharing.snapshotHash).not.toBe(base.snapshotHash);
+  });
+
   it("物件鍵的先後不影響 hash", () => {
     const reordered = fields().map(
       (item) =>

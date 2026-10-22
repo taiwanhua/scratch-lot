@@ -144,7 +144,7 @@ export const RemoveDayDialog = ({ date, onClose }: RemoveDayDialogProps) => {
           </Alert>
         )}
         {removable.length > 0 && changeReason.fields}
-        <Typography variant="caption" color="text.secondary">
+        <Typography variant="caption" color="textSecondary">
           {t("specialDayHint")}
         </Typography>
       </Stack>

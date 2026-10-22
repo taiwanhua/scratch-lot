@@ -131,7 +131,7 @@ export const AllocationsTable = ({
   };
 
   const caption = (
-    <Typography variant="caption" color="text.secondary">
+    <Typography variant="caption" color="textSecondary">
       {canEdit ? t("captionEditable") : t("caption")}
     </Typography>
   );
@@ -153,7 +153,7 @@ export const AllocationsTable = ({
       <Stack spacing={1.5}>
         {rows.map((row) => (
           <Card key={row.key} variant="outlined" sx={{ p: 2 }}>
-            <Typography variant="subtitle2" color="text.primary">
+            <Typography variant="subtitle2" color="textPrimary">
               {t("cardTitle", { name: row.label })}
             </Typography>
             <Stack spacing={1} sx={{ mt: 1 }}>

@@ -56,12 +56,12 @@ export const TransferWrongStoreDialog = ({
               {info.gameName}
             </Typography>
             {info.unitPrice !== null && (
-              <Typography variant="body2" color="text.secondary">
+              <Typography variant="body2" color="textSecondary">
                 {tShared("unitPrice", { price: info.unitPrice })}
               </Typography>
             )}
           </Stack>
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" color="textSecondary">
             {t("facts", {
               bookNo: info.bookNo,
               serialNo: info.serialNo,

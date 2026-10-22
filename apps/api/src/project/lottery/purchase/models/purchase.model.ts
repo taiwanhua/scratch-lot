@@ -154,6 +154,28 @@ export class LotteryPurchaseReceivingRowModel {
 
   @Field(() => GraphQLISODateTime, { nullable: true })
   receivedAt!: Date | null;
+
+  /** 點收批次([完成這次點收] 時給);還沒完成這一次或舊資料 = null。 */
+  @Field(() => ID, { nullable: true })
+  batchId!: string | null;
+}
+
+/** 一次點收(按一次 [完成這次點收]):進貨點收單照它印、補印照它重排版。 */
+@ObjectType("LotteryPurchaseReceivingBatch")
+export class LotteryPurchaseReceivingBatchModel {
+  @Field(() => ID)
+  batchId!: string;
+
+  /** 第幾次點收(依完成時間,從 1 起)。 */
+  @Field(() => Int)
+  no!: number;
+
+  @Field(() => GraphQLISODateTime)
+  completedAt!: Date;
+
+  /** 這一次點收的列。 */
+  @Field(() => [String])
+  rowIds!: string[];
 }
 
 /** 點收區塊的一組(同一個遊戲)。 */
@@ -204,6 +226,10 @@ export class LotteryPurchaseReceivingModel {
 
   @Field(() => [LotteryPurchaseReceivingGroupModel])
   groups!: LotteryPurchaseReceivingGroupModel[];
+
+  /** 每一次點收(依完成時間由舊到新)。 */
+  @Field(() => [LotteryPurchaseReceivingBatchModel])
+  batches!: LotteryPurchaseReceivingBatchModel[];
 }
 
 /** 點收一本的結果。 */
@@ -272,6 +298,27 @@ export class LotteryDealerPurchaseModel {
 
   @Field(() => String)
   status!: string;
+}
+
+/** [完成這次點收] 的結果。 */
+@ObjectType("CompleteLotteryPurchaseReceivingPayload")
+export class CompleteLotteryPurchaseReceivingPayload {
+  /** 這一次的點收批次;這一次沒有可以收進批次的列(都已在別的批次)= null,不印 */
+  @Field(() => LotteryPurchaseReceivingBatchModel, { nullable: true })
+  batch!: LotteryPurchaseReceivingBatchModel | null;
+
+  @Field(() => LotteryPurchaseReceivingModel)
+  receiving!: LotteryPurchaseReceivingModel;
+}
+
+@InputType()
+export class CompleteLotteryPurchaseReceivingInput {
+  @Field(() => ID)
+  submissionId!: string;
+
+  /** 「這一次」點收的列(畫面記的:上次 [完成這次點收] 或打開頁面之後點收的)。 */
+  @Field(() => [String])
+  rowIds!: string[];
 }
 
 @InputType()

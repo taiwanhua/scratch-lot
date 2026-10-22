@@ -15,6 +15,7 @@ import {
 import {
   FormSubmissionsRepository,
   OrgsRepository,
+  WorkflowInstancesRepository,
 } from "../../../database/base/repositories";
 import type { OperatorContext } from "../../../database/operator-context";
 import { tenantBoundaryContext } from "../../../database/tenant-boundary-context";
@@ -27,7 +28,6 @@ import {
   notFoundError,
   validationError,
 } from "../accounts/accounts-error";
-import { tenantOfOperator } from "../master-data-tenant";
 import {
   type SettlementDocumentRegistration,
   type SettlementPayable,
@@ -102,6 +102,7 @@ export class SettlementLedger {
     private readonly bank: LotteryBankTransactionsRepository,
     private readonly cash: LotteryCashMovementsRepository,
     private readonly orgs: OrgsRepository,
+    private readonly instances: WorkflowInstancesRepository,
   ) {}
 
   /** 一張單據的收付現況;沒登記 / 看不到 / 不參與收付 → 錯誤。 */
@@ -123,7 +124,11 @@ export class SettlementLedger {
     const submission =
       refId === null
         ? null
-        : await this.readableOf(operator, registration, refId);
+        : // 讀得到 = 可見範圍內,或依欄位共用指到讀者可見範圍內的組織(調貨單的出貨店、收貨店;ADR-0014)
+          await this.submissions.findOne(operator, {
+            _id: refId,
+            moduleKey: registration.moduleKey,
+          });
     if (!submission) {
       throw notFoundError(
         `settlement document not found: ${String(refIdText)}`,
@@ -177,24 +182,102 @@ export class SettlementLedger {
     return Object.values(bySide).every((side) => paidNetOf(side) === 0);
   }
 
-  /** 看得到的單據裡有待付 / 待退 / 待收的每一邊(依可見範圍)。 */
+  /** 看得到的單據裡有待付 / 待退 / 待收的每一邊(依可見範圍 + 依欄位共用,同一般讀取)。 */
   async outstanding(operator: OperatorContext): Promise<OutstandingRow[]> {
+    const live = { status: { $in: [...SETTLEMENT_LIVE_STATUSES] } };
+    return this.outstandingWhere(operator, live);
+  }
+
+  /**
+   * **某個時點的**待結清(輸出報表營運報表區塊 7「期末時」;報表正本 `docs/modules/project/reports.md`):
+   *
+   * - 單據:那個時點以前送出(`submittedAt` 是第一次送出的時間,退回後重送不改寫)、當時還有效 —— 現在有效的,
+   *   或之後才作廢(`voidedAt`)/ 駁回(流程實例結束的時間 `finishedAt`)的(作廢的當時是已完成、駁回的當時是審核中)
+   * - 收付:只算那個時點以前發生的銀行交易與現金流水(`occurredAt`;沖正照它自己的時間)
+   * - 應付照那個時點的內容:取 `ctx.at` 早於那個時點的最後一筆修訂(完整值快照)來算;沒有更早的修訂 = 當時還沒送出,不算
+   * - 調貨單的已點收金額只算那個時點以前的點收(`payable(submission, asOf)`)
+   */
+  async outstandingAt(
+    operator: OperatorContext,
+    asOf: Date,
+  ): Promise<OutstandingRow[]> {
+    const rejectedLater = await this.rejectedAfter(operator, asOf);
+    const filter = {
+      submittedAt: { $lt: asOf },
+      $or: [
+        { status: { $in: [...SETTLEMENT_LIVE_STATUSES] } },
+        { status: "voided", voidedAt: { $gte: asOf } },
+        { status: "rejected", _id: { $in: rejectedLater } },
+      ],
+    };
+    return this.outstandingWhere(operator, filter, asOf, (submission) =>
+      submissionAt(submission, asOf),
+    );
+  }
+
+  /**
+   * 這個時點以前送出、之後才被駁回的單據(駁回時間 = 流程實例結束的時間;單據上沒有駁回時間欄位)。
+   * 實例以單據的租戶為邊界讀(審核流程不靠可見範圍)。
+   */
+  private async rejectedAfter(
+    operator: OperatorContext,
+    asOf: Date,
+  ): Promise<Types.ObjectId[]> {
+    const rejected = await this.submissions.findMany(
+      operator,
+      {
+        moduleKey: { $in: settlementDocuments().map((row) => row.moduleKey) },
+        status: "rejected",
+        submittedAt: { $lt: asOf },
+      },
+      { select: "_id tenantId currentInstanceId" },
+    );
+    const withInstance = rejected.filter(
+      (row) => row.currentInstanceId !== null,
+    );
+    const tenantId = withInstance[0]?.tenantId ?? null;
+    if (withInstance.length === 0 || tenantId === null) {
+      return [];
+    }
+    const reader = await tenantBoundaryContext(this.orgs, operator, tenantId);
+    const instances = await this.instances.findMany(
+      reader,
+      {
+        _id: { $in: withInstance.map((row) => row.currentInstanceId) },
+        finishedAt: { $gte: asOf },
+      },
+      { select: "_id" },
+    );
+    const later = new Set(instances.map((row) => String(row._id)));
+    return withInstance
+      .filter((row) => later.has(String(row.currentInstanceId)))
+      .map((row) => row._id);
+  }
+
+  private async outstandingWhere(
+    operator: OperatorContext,
+    filter: Record<string, unknown>,
+    before?: Date,
+    asThen: (
+      submission: SettlementSubmission,
+    ) => SettlementSubmission | null = (submission) => submission,
+  ): Promise<OutstandingRow[]> {
     const rows: OutstandingRow[] = [];
     for (const registration of settlementDocuments()) {
-      const live = { status: { $in: [...SETTLEMENT_LIVE_STATUSES] } };
       const visible = (await this.submissions.findMany(
         operator,
-        { moduleKey: registration.moduleKey, ...live },
+        { moduleKey: registration.moduleKey, ...filter },
         { sort: { submittedAt: 1, _id: 1 } },
       )) as unknown as SettlementSubmission[];
-      const seen = new Set(visible.map((row) => String(row._id)));
-      const sharedRows = await this.sharedOf(operator, registration, live);
-      const shared = sharedRows.filter((row) => !seen.has(String(row._id)));
-      const submissions = [...visible, ...shared];
+      const submissions = visible.flatMap((row) => {
+        const then = asThen(row);
+        return then === null ? [] : [then];
+      });
       const snapshots = await this.snapshotsOf(
         operator,
         registration,
         submissions,
+        before,
       );
       for (const snapshot of snapshots) {
         rows.push(...outstandingOf(snapshot));
@@ -239,68 +322,19 @@ export class SettlementLedger {
     };
   }
 
-  /** 讀者讀得到的這張單據:可見範圍內,或兩邊店看得到(`sharedByValues`)。 */
-  private async readableOf(
-    operator: OperatorContext,
-    registration: SettlementDocumentRegistration,
-    refId: Types.ObjectId,
-  ): Promise<SettlementSubmission | null> {
-    const visible = await this.submissions.findOne(operator, {
-      _id: refId,
-      moduleKey: registration.moduleKey,
-    });
-    if (visible !== null) {
-      return visible;
-    }
-    const [shared] = await this.sharedOf(operator, registration, {
-      _id: refId,
-    });
-    return shared ?? null;
-  }
-
-  /**
-   * 歸屬看不到、但登記的 `sharedByValues` 欄位是讀者可見範圍內組織的單據(調貨單的出貨店、收貨店);
-   * 以讀者當前組織所在租戶的邊界讀。沒有宣告 / 讀者看得到全部 → 空。
-   */
-  private async sharedOf(
-    operator: OperatorContext,
-    registration: SettlementDocumentRegistration,
-    filter: Record<string, unknown>,
-  ): Promise<SettlementSubmission[]> {
-    const paths = registration.sharedByValues ?? [];
-    const tenantId = tenantOfOperator(operator)?.tenantId ?? null;
-    if (
-      paths.length === 0 ||
-      tenantId === null ||
-      operator.visibleOrgIds === "all"
-    ) {
-      return [];
-    }
-    const orgIds = operator.visibleOrgIds.map(String);
-    const reader = await tenantBoundaryContext(this.orgs, operator, tenantId);
-    return this.submissions.findMany(
-      reader,
-      {
-        ...filter,
-        moduleKey: registration.moduleKey,
-        $or: paths.map((path) => ({ [path]: { $in: orgIds } })),
-      },
-      { sort: { submittedAt: 1, _id: 1 } },
-    );
-  }
-
-  /** 一批提交的現況(不參與收付的略過)。 */
+  /** 一批提交的現況(不參與收付的略過);給了 `before` = 收付只算那個時點以前的。 */
   async snapshotsOf(
     operator: OperatorContext,
     registration: SettlementDocumentRegistration,
     submissions: readonly SettlementSubmission[],
+    before?: Date,
   ): Promise<SettlementSnapshot[]> {
     const withPayable: {
       submission: SettlementSubmission;
       payable: SettlementPayable;
     }[] = [];
     for (const submission of submissions) {
-      const payable = await registration.payable(submission);
+      const payable = await registration.payable(submission, before);
       if (payable !== null) {
         withPayable.push({ submission, payable });
       }
@@ -320,6 +354,7 @@ export class SettlementLedger {
         operator,
         tenantId,
         group.map((submission) => submission._id),
+        before,
       )) {
         totals.set(key, value);
       }
@@ -343,11 +378,13 @@ export class SettlementLedger {
     operator: OperatorContext,
     tenantId: Types.ObjectId | null,
     refIds: readonly Types.ObjectId[],
+    before?: Date,
   ): Promise<Map<string, Record<string, SettlementSideTotals>>> {
     const reader = await tenantBoundaryContext(this.orgs, operator, tenantId);
     const match = {
       refId: { $in: [...refIds] },
       settlementSide: { $ne: null },
+      ...(before === undefined ? {} : { occurredAt: { $lt: before } }),
     };
     const [bankRows, cashRows] = await Promise.all([
       this.bank.aggregate(reader, [
@@ -395,6 +432,47 @@ export class SettlementLedger {
     return result;
   }
 }
+
+/**
+ * 單據在某個時點的樣子:值取 `ctx.at` 早於那個時點的最後一筆修訂(修訂是完整值快照);狀態照 `THEN_STATUS`
+ * 還原。沒有更早的修訂(當時還沒送出)→ null(不算)。
+ */
+function submissionAt(
+  submission: SettlementSubmission,
+  asOf: Date,
+): SettlementSubmission | null {
+  const revisions =
+    (
+      submission as SettlementSubmission & {
+        revisions?: readonly {
+          values: SettlementSubmission["values"];
+          ctx: { at: Date };
+        }[];
+      }
+    ).revisions ?? [];
+  const last = revisions.findLast((entry) => entry.ctx.at < asOf);
+  if (last === undefined) {
+    return null;
+  }
+  // 讀出來的是 mongoose 文件(展開會掉欄位):逐欄抄成純物件
+  return {
+    _id: submission._id,
+    orgId: submission.orgId,
+    tenantId: submission.tenantId,
+    moduleKey: submission.moduleKey,
+    status: THEN_STATUS[submission.status] ?? submission.status,
+    revision: submission.revision,
+    values: last.values,
+    submittedAt: submission.submittedAt,
+    serialNo: submission.serialNo ?? null,
+  };
+}
+
+/** 某個時點的單據狀態:之後才作廢的,當時是已完成;之後才駁回的,當時是審核中。 */
+const THEN_STATUS: Readonly<Partial<Record<string, string>>> = {
+  voided: "completed",
+  rejected: "reviewing",
+};
 
 /** 一張單據每一邊的待結清(先填的金額 > 0 的那一顆)。 */
 export function outstandingOf(snapshot: SettlementSnapshot): OutstandingRow[] {

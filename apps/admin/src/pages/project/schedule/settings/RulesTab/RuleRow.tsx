@@ -78,7 +78,7 @@ export const RuleRow = ({
         <Typography variant="body2">{label}</Typography>
         <Typography
           variant="caption"
-          color="text.secondary"
+          color="textSecondary"
           sx={{ display: { sm: "none" } }}
         >
           {value} · {source}
@@ -87,7 +87,7 @@ export const RuleRow = ({
       <Stack sx={{ display: { xs: "none", sm: "flex" }, minWidth: 0 }}>
         <Typography variant="body2">{value}</Typography>
         {rule.parent && (
-          <Typography variant="caption" color="text.secondary">
+          <Typography variant="caption" color="textSecondary">
             {ruleParentText(translate, rule, rule.parent, lookups)}
           </Typography>
         )}
@@ -102,7 +102,7 @@ export const RuleRow = ({
       </Box>
       <Typography
         variant="body2"
-        color={isOwn ? "primary" : "text.secondary"}
+        color={isOwn ? "primary" : "textSecondary"}
         sx={{ display: { xs: "none", sm: "block" } }}
       >
         {source}

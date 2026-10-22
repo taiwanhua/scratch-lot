@@ -103,7 +103,7 @@ export const FlowCheckPanel = ({
       </Typography>
       {groups.map((group) => (
         <Stack key={group.stepKey ?? ""} spacing={0.25}>
-          <Typography variant="body2" color="text.secondary" component="h3">
+          <Typography variant="body2" color="textSecondary" component="h3">
             {group.stepKey === null
               ? t("wholeFlow")
               : t("step", { name: stepNameOf(group.stepKey) })}

@@ -4,10 +4,10 @@ import { useTranslations } from "use-intl";
 import { z } from "zod";
 
 import { DEFAULT_TENANT_TIMEZONE } from "@repo/domain/form";
+import { purchaseRedemptionTotalsOf } from "@repo/domain/project/lottery";
 import { useLotteryPurchaseOptionsQuery } from "@repo/graphql";
 import { Alert } from "@repo/ui/alert";
 import { Box } from "@repo/ui/box";
-import { Button } from "@repo/ui/button";
 import { Card } from "@repo/ui/card";
 import { CircularProgress } from "@repo/ui/circular-progress";
 import { useBreakpointDown } from "@repo/ui/media-query";
@@ -16,6 +16,7 @@ import { Stack } from "@repo/ui/stack";
 import { TextField } from "@repo/ui/text-field";
 import { Typography } from "@repo/ui/typography";
 
+import { FormActions } from "@/components/base/FormActions/FormActions";
 import { useFormModuleAccess } from "@/components/base/form-engine/FormModulePages/useFormModuleAccess";
 import { AllocationWarnings } from "@/components/project/lottery/AllocationWarnings/AllocationWarnings";
 import type { AllocationWarningItem } from "@/components/project/lottery/AllocationWarnings/allocation-warnings";
@@ -39,25 +40,24 @@ import {
   PURCHASE_FORM_KEY,
   PURCHASE_FROM_REQUISITION,
   PURCHASE_MODULE_KEY,
-  formatMoney,
 } from "../purchase-keys";
 import {
   type PurchaseHeaderDraft,
   PurchaseHeaderFields,
 } from "./PurchaseHeaderFields";
 import { PurchaseLines } from "./PurchaseLines";
+import { PurchaseRedemptions } from "./PurchaseRedemptions";
+import { PurchaseTotals } from "./PurchaseTotals";
 import {
-  type ScannedBook,
-  addScannedBook,
+  type PickedRedemption,
   defaultAccountOf,
   groupBooks,
   purchaseTotalOf,
   purchaseValuesOf,
-  removeBook,
   requisitionProgressOf,
-  setBookRate,
-  setGroupRate,
+  toggleRedemption,
 } from "./purchase-form";
+import { usePurchaseBooks } from "./usePurchaseBooks";
 
 const NONE = "none";
 
@@ -72,7 +72,8 @@ export const PURCHASE_CREATE_SCAN_PURPOSE = "purchase-create";
  * 單頭(進貨分店、叫貨單、批購甲類、本人批購、批購受託人、批購日期、扣款帳戶、備註)→ 刷條碼加一本
  * (依遊戲分組;從叫貨單帶入時顯示「叫貨 5,已刷 4」;批購金額率逐本 / 整組改,改過的列標色)→ 合計、
  * [存草稿] [送出]。存值交給表單引擎(`useFormDraft`),送出前的檢查在 api 的掛接點。
- * 兌獎區由兌獎的功能加。從採購清單 [建立進貨單] 進來時帶 `?requisition=<單號>&branch=<分店>`。
+ * 兌獎區(`PurchaseRedemptions`):勾選進貨分店店內持有的兌獎紀錄,合計多三列(兌獎金額 / 兌獎折抵 / 兌獎剩餘),
+ * 扣款金額 = 批購合計 − 兌獎折抵。從採購清單 [建立進貨單] 進來時帶 `?requisition=<單號>&branch=<分店>`。
  */
 export const PurchaseCreatePage = () => {
   const t = useTranslations("admin.lotteryPurchasing.purchase.create");
@@ -121,10 +122,12 @@ export const PurchaseCreatePage = () => {
     ...edited,
   };
   const branchId = header.branchId;
-  const [books, setBooks] = useState<ScannedBook[]>([]);
+  const purchaseBooks = usePurchaseBooks();
+  const { books } = purchaseBooks;
   const [code, setCode] = useState("");
   const [fallbackGameId, setFallbackGameId] = useState<string | null>(null);
   const [scanError, setScanError] = useState<string | null>(null);
+  const [redemptions, setRedemptions] = useState<PickedRedemption[]>([]);
 
   const options = useLotteryPurchaseOptionsQuery(
     session.client,
@@ -147,6 +150,10 @@ export const PurchaseCreatePage = () => {
   const groups = groupBooks(books, games, requested);
   const total = purchaseTotalOf(groups);
   const progress = requisitionProgressOf(groups);
+  const totals = purchaseRedemptionTotalsOf(
+    total,
+    redemptions.reduce((sum, item) => sum + item.prizeAmount, 0),
+  );
   // 超過進貨分店的預計要給本數只警告(規格 7.6)
   const allocationOf = new Map(
     (data?.allocations ?? []).map((item) => [item.gameId, item]),
@@ -168,11 +175,8 @@ export const PurchaseCreatePage = () => {
   });
 
   const scan = (raw: string) => {
-    const result = addScannedBook(books, raw, games, fallbackGameId, () =>
-      crypto.randomUUID(),
-    );
+    const result = purchaseBooks.add(raw, games, fallbackGameId);
     if (result.kind === "added") {
-      setBooks(result.books);
       setScanError(null);
       setCode("");
       return;
@@ -209,6 +213,7 @@ export const PurchaseCreatePage = () => {
         note: header.note,
       },
       groups,
+      redemptions,
     );
   const backToList = () => {
     if (access.listRoute !== null) {
@@ -236,7 +241,7 @@ export const PurchaseCreatePage = () => {
               {t("title")}
             </Typography>
             {progress !== null && requisitionNo !== null && (
-              <Typography variant="body2" color="text.secondary">
+              <Typography variant="body2" color="textSecondary">
                 {t("fromRequisition", {
                   serialNo: requisitionNo,
                   requested: progress.requested,
@@ -248,6 +253,7 @@ export const PurchaseCreatePage = () => {
           <PurchaseHeaderFields
             value={{ ...header, accountId }}
             options={data}
+            error={draft.error}
             onChange={(patch) => {
               setEdited((current) => ({ ...current, ...patch }));
             }}
@@ -258,7 +264,8 @@ export const PurchaseCreatePage = () => {
                 requisitionNo: null,
                 accountId: null,
               }));
-              setBooks([]);
+              purchaseBooks.reset();
+              setRedemptions([]);
             }}
           />
           <Card sx={{ p: { xs: 2, sm: 2.5 } }}>
@@ -310,81 +317,69 @@ export const PurchaseCreatePage = () => {
                 <Alert severity="warning">{scanError}</Alert>
               )}
               {branchId === "" ? (
-                <Typography variant="body2" color="text.secondary">
+                <Typography variant="body2" color="textSecondary">
                   {t("pickBranch")}
                 </Typography>
               ) : (
                 <PurchaseLines
                   groups={groups}
                   isCompact={isNarrow}
-                  onRate={(rowId, rate) => {
-                    setBooks((current) => setBookRate(current, rowId, rate));
-                  }}
-                  onGroupRate={(gameId, rate) => {
-                    setBooks((current) => setGroupRate(current, gameId, rate));
-                  }}
-                  onRemove={(rowId) => {
-                    setBooks((current) => removeBook(current, rowId));
-                  }}
+                  error={draft.error}
+                  groupRates={purchaseBooks.groupRates}
+                  onRate={purchaseBooks.setRate}
+                  onGroupRate={purchaseBooks.setGroupRate}
+                  onRemove={purchaseBooks.remove}
                 />
               )}
             </Stack>
           </Card>
-          <Card sx={{ p: { xs: 2, sm: 2.5 } }}>
-            <Stack spacing={1}>
-              <Stack direction="row">
-                <Typography variant="body2" sx={{ flex: 1 }}>
-                  {t("purchaseTotal")}
-                </Typography>
-                <Typography variant="body2">{formatMoney(total)}</Typography>
-              </Stack>
-              <Stack direction="row">
-                <Typography variant="body2" sx={{ flex: 1, fontWeight: 700 }}>
-                  {t("deductedAmount")}
-                </Typography>
-                <Typography variant="body2" sx={{ fontWeight: 700 }}>
-                  {formatMoney(total)}
-                </Typography>
-              </Stack>
-            </Stack>
-          </Card>
+          <PurchaseRedemptions
+            branchId={branchId}
+            error={draft.error}
+            pickedIds={new Set(redemptions.map((item) => item.id))}
+            onToggle={(row) => {
+              setRedemptions((current) =>
+                toggleRedemption(
+                  current,
+                  {
+                    id: row.id,
+                    label: row.ticketLabel,
+                    prizeAmount: row.prizeAmount,
+                  },
+                  () => crypto.randomUUID(),
+                ),
+              );
+            }}
+          />
+          <PurchaseTotals
+            purchaseTotal={total}
+            totals={totals}
+            pickedCount={redemptions.length}
+          />
           {draft.error !== null && (
             <Alert severity="error">{errorText(draft.error)}</Alert>
           )}
         </Stack>
       </Box>
-      <Stack
-        direction="row"
-        spacing={1.5}
-        sx={{
-          alignItems: "center",
-          borderTop: { xs: 1, lg: 0 },
-          borderColor: "divider",
-          pt: { xs: 1.5, lg: 0 },
-        }}
-      >
-        <Button variant="text" onClick={backToList}>
-          {t("cancel")}
-        </Button>
-        <Box sx={{ flex: 1 }} />
-        {form.allowDraft && (
-          <Button
-            variant="outlined"
-            disabled={draft.isPending || branchId === ""}
-            onClick={() => {
+      <FormActions
+        cancel={{ label: t("cancel"), onClick: backToList }}
+        {...(form.allowDraft && {
+          draft: {
+            label: t("saveDraft"),
+            disabled: draft.isPending || branchId === "",
+            onClick: () => {
               void draft.saveDraft(valuesOf(), []).then((saved) => {
                 if (saved !== null) {
                   showSnackbar("success", t("draftSaved"));
                 }
               });
-            }}
-          >
-            {t("saveDraft")}
-          </Button>
-        )}
-        <Button
-          disabled={draft.isPending || branchId === "" || books.length === 0}
-          onClick={() => {
+            },
+          },
+        })}
+        submit={{
+          label: t("submit"),
+          disabled: draft.isPending || branchId === "" || books.length === 0,
+          onClick: () => {
             void draft.submit(valuesOf(), []).then((submitted) => {
               if (submitted === null) {
                 return;
@@ -396,11 +391,9 @@ export const PurchaseCreatePage = () => {
                 void navigate(`${access.viewRoute}/${submitted.id}`);
               }
             });
-          }}
-        >
-          {t("submit")}
-        </Button>
-      </Stack>
+          },
+        }}
+      />
     </Stack>
   );
 };

@@ -3,6 +3,7 @@ import { Args, Mutation, Query, Resolver } from "@nestjs/graphql";
 import { CurrentOperator } from "../../../auth/decorators";
 import type { OperatorContext } from "../../../database/operator-context";
 import { RequirePermission } from "../../../permission/require-permission.decorator";
+import { RequireTenant } from "../../tenant-scope/require-tenant.decorator";
 import {
   DeleteScheduleCalendarDayInput,
   SaveScheduleCalendarDayInput,
@@ -17,6 +18,7 @@ import {
 import { ScheduleCalendarService } from "./schedule-calendar.service";
 
 /** 排班作業 → 行事曆(`schedule.manage`;寫入要 `edit-calendar`)。 */
+@RequireTenant()
 @Resolver(() => ScheduleCalendarDayModel)
 export class ScheduleCalendarResolver {
   constructor(private readonly service: ScheduleCalendarService) {}

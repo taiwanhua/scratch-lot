@@ -22,6 +22,7 @@ import { useTenantTimezone } from "@/hooks/base/useTenantTimezone";
 import { ReverseSettlementDialog } from "./ReverseSettlementDialog";
 import { SettlementDialog } from "./SettlementDialog";
 import { buttonLabelKey, moneyText } from "./settlement-text";
+import { useSettlementReceipt } from "./useSettlementReceipt";
 
 type Settlement = LotterySettlementFieldsFragment;
 type SettlementRecord = Settlement["records"][number];
@@ -70,12 +71,12 @@ const AmountRow = ({ settlement }: { settlement: Settlement }) => {
     <Stack direction="row" sx={{ flexWrap: "wrap", gap: 3 }}>
       {items.map((item) => (
         <Stack key={item.label} spacing={0.25}>
-          <Typography variant="caption" color="text.secondary">
+          <Typography variant="caption" color="textSecondary">
             {item.label}
           </Typography>
           <Typography
             variant="h6"
-            color={item.tone === "warning" ? "warning.main" : "text.primary"}
+            color={item.tone === "warning" ? "warning" : "textPrimary"}
           >
             {item.value}
           </Typography>
@@ -110,6 +111,7 @@ const rowKeyOf = (row: HistoryRow): string =>
  * - 上方:每一邊能按的按鈕(先填 > 0 且有那一邊的權限)、金額列;收貨店已付 > 出貨店已收時提示「N 待出貨店入帳」
  * - 下方:收付歷程(哪一店記的、類型、方式、金額、經手 / 收款人、登記人);還沒登記的一邊顯示「尚未登記」與按鈕
  * - 不用「對方」這類看情境才懂的字:一律寫店名的角色(總部、收貨店、出貨店)
+ * - 收貨店付現金之後自動印調貨付款收據(規格第 12 章;`useSettlementReceipt`)
  */
 export const SettlementPanel = ({ moduleKey, refId }: SettlementPanelProps) => {
   const t = useTranslations("admin.lotteryAccounts");
@@ -124,6 +126,7 @@ export const SettlementPanel = ({ moduleKey, refId }: SettlementPanelProps) => {
     button: "out" | "in";
   } | null>(null);
   const [reversing, setReversing] = useState<SettlementRecord | null>(null);
+  const receipt = useSettlementReceipt();
 
   if (settlement === null) {
     return null;
@@ -205,7 +208,7 @@ export const SettlementPanel = ({ moduleKey, refId }: SettlementPanelProps) => {
     }
     if (row.record.reversedById !== null) {
       return (
-        <Typography variant="caption" color="text.secondary">
+        <Typography variant="caption" color="textSecondary">
           {t("settlement.reversed")}
         </Typography>
       );
@@ -321,7 +324,7 @@ export const SettlementPanel = ({ moduleKey, refId }: SettlementPanelProps) => {
               >
                 <Box sx={{ flex: 1, minWidth: 0 }}>
                   <Typography variant="body2">{rowTitle(row)}</Typography>
-                  <Typography variant="caption" color="text.secondary">
+                  <Typography variant="caption" color="textSecondary">
                     {rowSubtitle(row)}
                   </Typography>
                 </Box>
@@ -348,6 +351,7 @@ export const SettlementPanel = ({ moduleKey, refId }: SettlementPanelProps) => {
             setPaying(null);
           }}
           onDone={refresh}
+          onRecorded={receipt.onRecorded}
         />
       )}
       {reversing !== null && (
@@ -360,6 +364,7 @@ export const SettlementPanel = ({ moduleKey, refId }: SettlementPanelProps) => {
           onDone={refresh}
         />
       )}
+      {receipt.host}
     </Card>
   );
 };

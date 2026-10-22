@@ -220,6 +220,13 @@ export class LotteryInventoryEventModel {
 
   @Field(() => String, { nullable: true })
   reasonNote!: string | null;
+
+  /**
+   * 跨班更正「前期更正,屬於 X 班」的 X(班次的顯示名稱):撤銷和原售出不在同一班 → 原售出那一班;
+   * 盤點補登的事後更正 → 它指向的班;都不是 = null。
+   */
+  @Field(() => String, { nullable: true })
+  correctionOfShift!: string | null;
 }
 
 /** 來源:進貨單 / 調貨單(調入)。 */

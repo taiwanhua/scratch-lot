@@ -33,6 +33,7 @@ import {
   LotteryTicketsRepository,
 } from "../../database/lottery-inventory/lottery-inventory.repository";
 import type { TicketStateSnapshot } from "../../database/lottery-inventory/lottery-ticket-event.schema";
+import { LotteryShiftsRepository } from "../../database/lottery-store/lottery-shifts.repository";
 import { parseId } from "../accounts/accounts-util";
 import { notFoundError } from "../tickets/inventory-error";
 import type {
@@ -59,6 +60,12 @@ import type {
 type BookRecord = Persisted<LotteryBookDocument>;
 type TicketRecord = Persisted<LotteryTicketDocument>;
 type EventRecord = Persisted<LotteryTicketEventDocument>;
+
+/** 售出(撤銷要找的原售出):刷條碼 / 手動 / 快速銷售、盤點補登。 */
+const SALE_EVENT_TYPES: ReadonlySet<string> = new Set([
+  TICKET_EVENT_TYPE.sale,
+  TICKET_EVENT_TYPE.saleStocktake,
+]);
 
 /** 庫存分頁最多列幾本(超過請縮小篩選)。 */
 const MAX_BOOKS = 500;
@@ -118,6 +125,7 @@ export class InventoryViewService {
     private readonly books: LotteryBooksRepository,
     private readonly tickets: LotteryTicketsRepository,
     private readonly events: LotteryTicketEventsRepository,
+    private readonly shifts: LotteryShiftsRepository,
     private readonly games: LotteryGamesRepository,
     private readonly orgs: OrgsRepository,
     private readonly names: InventoryNames,
@@ -203,7 +211,10 @@ export class InventoryViewService {
     const sortedTickets = tickets.toSorted((a, b) =>
       byTicketNo(a.ticketNo, b.ticketNo),
     );
-    const names = await this.namesOf(operator, sortedTickets, events);
+    const [names, corrections] = await Promise.all([
+      this.namesOf(operator, sortedTickets, events),
+      this.correctionsOf(whole, events),
+    ]);
     const [book] = await this.toBookModels(operator, [record], tickets);
     if (!book) {
       throw notFoundError("本不存在");
@@ -219,7 +230,7 @@ export class InventoryViewService {
       book,
       tickets: sortedTickets.map((ticket) => this.ticketModel(ticket, names)),
       locations: this.locationsOf(sortedTickets, names),
-      events: this.timelineOf(events, ticketNos, names),
+      events: this.timelineOf(events, ticketNos, names, corrections),
       sources: this.sourcesOf(events, ticketNos, names),
       cost: grant.canShowCost
         ? {
@@ -603,6 +614,7 @@ export class InventoryViewService {
     events: readonly EventRecord[],
     ticketNos: ReadonlyMap<string, string>,
     names: Names,
+    corrections: ReadonlyMap<string, string> = new Map(),
   ): LotteryInventoryEventModel[] {
     const rows = new Map<string, { event: EventRecord; ticketNos: string[] }>();
     const ticketNoOf = (event: EventRecord) =>
@@ -616,6 +628,7 @@ export class InventoryViewService {
         event.reasonKey ?? "",
         placeKey(event.from),
         placeKey(event.to),
+        corrections.get(String(event._id)) ?? "",
       ].join("~");
       const row = rows.get(key) ?? { event, ticketNos: [] };
       row.ticketNos.push(ticketNoOf(event));
@@ -637,7 +650,58 @@ export class InventoryViewService {
           : (names.serials.get(String(event.refId)) ?? null),
       reasonKey: event.reasonKey,
       reasonNote: event.reasonNote,
+      correctionOfShift: corrections.get(String(event._id)) ?? null,
     }));
+  }
+
+  /**
+   * 跨班更正「前期更正,屬於 X 班」(規格 6.12、10.4;使用者 10/08 定案,同即時現金帳的 `correctionOfShift`):
+   * 撤銷(當下撤銷、撤銷售出申請完成)和它撤銷的原售出不在同一班 → 原售出那一班;盤點補登的事後更正 → `postCloseOf`
+   * 指向的班。讀取時算出(事件 id → 班次的顯示名稱),不另存欄位;同一本的事件都已讀進來,原售出從裡面找。
+   */
+  private async correctionsOf(
+    reader: OperatorContext,
+    events: readonly EventRecord[],
+  ): Promise<Map<string, string>> {
+    const shiftOf = new Map<string, Types.ObjectId>();
+    const chronological = events.toReversed();
+    const lastSale = new Map<string, EventRecord>();
+    for (const event of chronological) {
+      const ticketKey = String(event.ticketId);
+      if (SALE_EVENT_TYPES.has(event.type)) {
+        lastSale.set(ticketKey, event);
+      }
+      if (event.postCloseOf !== null) {
+        shiftOf.set(String(event._id), event.postCloseOf);
+        continue;
+      }
+      if (event.type === TICKET_EVENT_TYPE.saleUndo) {
+        const originalShift = lastSale.get(ticketKey)?.shiftId ?? null;
+        if (
+          originalShift !== null &&
+          event.shiftId?.equals(originalShift) !== true
+        ) {
+          shiftOf.set(String(event._id), originalShift);
+        }
+      }
+    }
+    if (shiftOf.size === 0) {
+      return new Map();
+    }
+    const shifts = await this.shifts.findMany(
+      reader,
+      { _id: { $in: [...shiftOf.values()] } },
+      { select: "label" },
+    );
+    const labelOf = new Map(
+      shifts.map((shift) => [String(shift._id), shift.label]),
+    );
+    return new Map(
+      [...shiftOf.entries()].map(([eventId, shiftId]) => [
+        eventId,
+        labelOf.get(String(shiftId)) ?? "",
+      ]),
+    );
   }
 
   /** 來源:進貨與調入的單據(依單據合併,舊的在上)。 */

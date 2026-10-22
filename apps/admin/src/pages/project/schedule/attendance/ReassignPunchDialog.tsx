@@ -172,7 +172,7 @@ export const ReassignPunchDialog = ({
                 punch: text.punchLabel(punch),
               })}
             </Typography>
-            <Typography variant="caption" color="text.secondary">
+            <Typography variant="caption" color="textSecondary">
               {t("fixedHint")}
             </Typography>
           </Box>

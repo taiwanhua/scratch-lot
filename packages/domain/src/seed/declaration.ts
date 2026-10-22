@@ -155,6 +155,12 @@ export interface FormDefinitionSeedSet extends DefinitionSeedBase {
    * (沒寫的宣告 `contentHash` 也不含它,既有宣告的 hash 不變)。
    */
   voidReasonCategoryKey?: string;
+  /**
+   * 依欄位共用(表單層的組織引用欄 key,`@repo/domain/form` 的 `sharedByFieldIssues`);缺席 = 不共用。
+   * 提交也給這幾欄指到的組織看(唯讀)。只有要設定時才寫這個鍵(沒寫的宣告 `contentHash` 也不含它,
+   * 既有宣告的 hash 不變)。
+   */
+  sharedByFieldKeys?: string[];
   definition: FormDefinition;
 }
 

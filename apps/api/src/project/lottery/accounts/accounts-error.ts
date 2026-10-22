@@ -1,5 +1,7 @@
 import { GraphQLError } from "graphql";
 
+import { PERIOD_CLOSE_REASONS } from "@repo/domain/project/lottery-accounts";
+
 /**
  * 帳戶管理的業務錯誤(GQL-04):只用通用碼 `NOT_FOUND` / `VALIDATION_FAILED` / `FORBIDDEN`,
  * 需要細分原因時放 `extensions.reason`(正本 `docs/modules/project/accounts.md`「錯誤碼」)。
@@ -21,8 +23,12 @@ export const ACCOUNTS_REASONS = {
   accountNotUsable: "BANK_ACCOUNT_NOT_USABLE",
   /** 現金來源沒有開著的班(抽屜) */
   noOpenShift: "NO_OPEN_SHIFT",
+  /** 現金來源的抽屜不是這一邊分店的收銀點 */
+  cashPointNotAtBranch: "CASH_POINT_NOT_AT_BRANCH",
   /** 作廢 / 駁回前收付淨額必須 = 0(lifecycle 守門的 code) */
   settlementNotCleared: "SETTLEMENT_NOT_CLEARED",
+  /** 關帳(規格 10.4):月份不對、沒結束、已關、不依序、有沒結帳的班 / 審核中的單據、選到已關帳月份 */
+  ...PERIOD_CLOSE_REASONS,
 } as const;
 
 export type AccountsReason =

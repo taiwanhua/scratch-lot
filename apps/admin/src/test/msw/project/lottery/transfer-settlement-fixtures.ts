@@ -28,6 +28,16 @@ const side = (
     totalIn: totals.in,
     net: isReceiver ? totals.out - totals.in : totals.in - totals.out,
     canSettle,
+    // 收貨店有一個開著班的收銀點(用現金時可以選它的抽屜)
+    cashDrawers: isReceiver
+      ? [
+          {
+            __typename: "LotteryAccountsRef",
+            id: "cp-counter",
+            name: "店內櫃台",
+          },
+        ]
+      : [],
     buttons: (["out", "in"] as const).map((button) => ({
       __typename: "LotterySettlementButton" as const,
       button,
@@ -74,6 +84,9 @@ export const transferSettlement = (
             direction: "out",
             amount: 19_504,
             accountLabel: null,
+            cashPlace: "vault",
+            cashPointName: null,
+            cashPointPrinterId: null,
             handler: "王小明(送貨人)",
             note: null,
             occurredAt: "2026-10-16T07:20:00.000Z",

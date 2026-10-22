@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import type { ClientSession } from "mongoose";
+import { type ClientSession, Types } from "mongoose";
 
 import {
   PURCHASE_FIELD_KEYS,
@@ -12,6 +12,7 @@ import {
   parseTicketInput,
   purchaseHeaderOf,
   purchaseLinesOf,
+  purchaseRedemptionsOf,
 } from "@repo/domain/project/lottery";
 
 import {
@@ -25,14 +26,20 @@ import { WorkflowTasksRepository } from "../../../database/workflow-tasks.reposi
 import { isDuplicateKeyError } from "../../../forms/forms-error";
 import { NotificationService } from "../../../notifications/notification.service";
 import { LotteryPurchaseReceiptsRepository } from "../../database/lottery-purchases/lottery-purchase-receipts.repository";
+import { LotteryRedemptionsRepository } from "../../database/lottery-redemptions/lottery-redemptions.repository";
 import { LotteryRequisitionLinesRepository } from "../../database/lottery-requisitions/lottery-requisition-lines.repository";
 import {
   LOTTERY_PURCHASE_REF,
   LOTTERY_PURCHASE_WRONG_STORE,
 } from "../../notifications";
 import { tenantOfOperator } from "../master-data-tenant";
+import type { LotteryRedemptionModel } from "../redemption/models/redemption.model";
+import { RedemptionViews } from "../redemption/redemption-views";
+import type { StoreGrant } from "../store/store-access";
 import { LotteryBooksService } from "../tickets/books.service";
 import type {
+  CompleteLotteryPurchaseReceivingPayload,
+  LotteryPurchaseReceivingBatchModel,
   LotteryPurchaseReceivingGroupModel,
   LotteryPurchaseReceivingModel,
   ReceiveLotteryPurchaseBookPayload,
@@ -72,6 +79,34 @@ function labelOf(value: unknown): string {
     : "";
 }
 
+/** 點收紀錄 → 每一次點收(依完成時間由舊到新,編號從 1 起)。 */
+function batchesOf(
+  receipts: readonly {
+    rowId: string;
+    batchId?: Types.ObjectId | null;
+    batchedAt?: Date | null;
+  }[],
+): LotteryPurchaseReceivingBatchModel[] {
+  const batches = new Map<string, { completedAt: Date; rowIds: string[] }>();
+  for (const receipt of receipts) {
+    if (receipt.batchId == null) {
+      continue;
+    }
+    const key = String(receipt.batchId);
+    const batch = batches.get(key) ?? {
+      completedAt: receipt.batchedAt ?? new Date(0),
+      rowIds: [],
+    };
+    batch.rowIds.push(receipt.rowId);
+    batches.set(key, batch);
+  }
+  return [...batches.entries()]
+    .toSorted(
+      ([, a], [, b]) => a.completedAt.getTime() - b.completedAt.getTime(),
+    )
+    .map(([batchId, batch], index) => ({ batchId, no: index + 1, ...batch }));
+}
+
 /** 刷到別家店的進貨單上的本(送錯分店)。 */
 interface WrongStoreHit {
   owner: SubmissionDoc;
@@ -88,8 +123,12 @@ interface WrongStoreHit {
  *   進貨單(送錯分店:擋下、不入庫,錯誤帶那張單的分店與單號)
  * - `notifyWrongStore`:[通知總部更正] → 通知那張進貨單的建立者(`lottery.purchase-wrong-store`)
  *
- * [完成這次點收] 不寫資料(「這一次」由畫面記;列印由 58mm 的功能接在畫面的完成動作後)。
+ * - `complete`:[完成這次點收] → 「這一次」點收的列標上同一個點收批次(`batchId`);
+ *   「這一次」由畫面記(上次完成或打開頁面之後點收的列),已在別的批次的列不重收。進貨點收單照批次印
  */
+/** 從進貨單讀兌獎紀錄:不帶店面的權限(撤銷方式一律 null)。 */
+const NO_STORE_GRANT: StoreGrant = { has: () => false };
+
 @Injectable()
 export class PurchaseReceivingService {
   constructor(
@@ -102,7 +141,42 @@ export class PurchaseReceivingService {
     private readonly rules: PurchaseRules,
     private readonly notifications: NotificationService,
     private readonly tx: TransactionService,
+    private readonly redemptions: LotteryRedemptionsRepository,
+    private readonly redemptionViews: RedemptionViews,
   ) {}
+
+  /**
+   * 這張進貨單勾選的兌獎紀錄(兌獎紀錄詳情的入口之一,規格 6.5):讀取依據是**讀得到這張進貨單**
+   * (`readable`;總部不一定有 `store.view`),兌獎紀錄在分店,以租戶邊界讀(反查),只讀這張單存值裡勾的那幾筆。
+   * 回詳情欄位;撤銷方式一律 null(這個入口不能撤銷,撤銷走店面管理)。
+   */
+  async redemptionsOf(
+    operator: OperatorContext,
+    submissionIdText: string,
+  ): Promise<LotteryRedemptionModel[]> {
+    const submission = await this.readable(operator, submissionIdText);
+    const ids = purchaseRedemptionsOf(
+      submission.values as Record<string, unknown>,
+    ).flatMap((row) =>
+      Types.ObjectId.isValid(row.redemptionId)
+        ? [new Types.ObjectId(row.redemptionId)]
+        : [],
+    );
+    if (ids.length === 0) {
+      return [];
+    }
+    const reader = await tenantBoundaryContext(
+      this.orgs,
+      null,
+      submission.tenantId,
+    );
+    const rows = await this.redemptions.findMany(
+      reader,
+      { _id: { $in: ids }, tenantId: submission.tenantId },
+      { sort: { redeemedAt: 1, _id: 1 } },
+    );
+    return this.redemptionViews.toModels(operator, rows, NO_STORE_GRANT);
+  }
 
   async receivingOf(
     operator: OperatorContext,
@@ -194,6 +268,53 @@ export class PurchaseReceivingService {
       }
       throw error;
     }
+  }
+
+  /**
+   * [完成這次點收]:這一次點收的列(`rowIds` 裡這張單的、自己點收的、還沒有批次的)標上新的點收批次。
+   * 要點收任務在自己手上(跟刷條碼同一個資格);沒有可收進批次的列 → `batch` 為 null。
+   */
+  async complete(
+    operator: OperatorContext,
+    submissionIdText: string,
+    rowIds: readonly string[],
+  ): Promise<CompleteLotteryPurchaseReceivingPayload> {
+    const submission = await this.readable(operator, submissionIdText);
+    if (!(await this.canReceive(operator, submission))) {
+      throw forbiddenError(
+        "Purchase is not waiting for your receiving",
+        PURCHASE_REASONS.notReceivable,
+      );
+    }
+    // 只收這張單的列(上限 = 列數;送超過的是壞請求)
+    const lineRowIds = new Set(
+      purchaseLinesOf(submission.values).map((line) => line.rowId),
+    );
+    if (rowIds.length > lineRowIds.size) {
+      throw validationError("Too many rows", ["rowIds"]);
+    }
+    const batchId = new Types.ObjectId();
+    // 以點收人自己的身分寫(點收紀錄是他寫的、在他的分店):只收他自己點收的列,更新者記他
+    const updated = await this.receipts.updateMany(
+      operator,
+      {
+        submissionId: submission._id,
+        rowId: { $in: rowIds.filter((rowId) => lineRowIds.has(rowId)) },
+        receivedBy: operator.actorId,
+        batchId: null,
+      },
+      { $set: { batchId, batchedAt: new Date() } },
+    );
+    const receiving = await this.toModel(operator, submission);
+    return {
+      batch:
+        updated === 0
+          ? null
+          : (receiving.batches.find(
+              (batch) => batch.batchId === String(batchId),
+            ) ?? null),
+      receiving,
+    };
   }
 
   /** [通知總部更正]:這本若是別家店進貨單上的,通知那張單的建立者;不是 → `NOT_FOUND`。 */
@@ -426,6 +547,13 @@ export class PurchaseReceivingService {
     const receivedAt = new Map(
       receipts.map((receipt) => [receipt.rowId, receipt.receivedAt]),
     );
+    const batchOf = new Map(
+      receipts.flatMap((receipt) =>
+        receipt.batchId == null
+          ? []
+          : [[receipt.rowId, String(receipt.batchId)] as const],
+      ),
+    );
     const requested = await this.requestedBooksOf(reader, submission);
     const groups = groupPurchaseLines(lines).map(
       (group): LotteryPurchaseReceivingGroupModel => {
@@ -449,6 +577,7 @@ export class PurchaseReceivingService {
             amount: row.amount,
             received: receivedAt.has(row.rowId),
             receivedAt: receivedAt.get(row.rowId) ?? null,
+            batchId: batchOf.get(row.rowId) ?? null,
           })),
         };
       },
@@ -459,6 +588,7 @@ export class PurchaseReceivingService {
       receivedCount: lines.filter((line) => receivedAt.has(line.rowId)).length,
       totalCount: lines.length,
       groups,
+      batches: batchesOf(receipts),
     };
   }
 

@@ -96,7 +96,7 @@ export const RuleCard = ({
         spacing={1}
         sx={{ borderTop: 1, borderColor: "divider", pt: 1.5 }}
       >
-        <Typography variant="subtitle2" color="text.secondary">
+        <Typography variant="subtitle2" color="textSecondary">
           {t("conditions")}
         </Typography>
         <ConditionGroup<ConditionDraft>

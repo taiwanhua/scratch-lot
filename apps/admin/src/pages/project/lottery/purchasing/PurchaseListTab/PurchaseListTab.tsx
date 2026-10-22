@@ -109,7 +109,7 @@ export const PurchaseListTab = () => {
 
   return (
     <Stack spacing={2} sx={{ flex: 1, minHeight: 0, overflow: "auto" }}>
-      <Typography variant="body2" color="text.secondary">
+      <Typography variant="body2" color="textSecondary">
         {t("hint")}
       </Typography>
       <Table

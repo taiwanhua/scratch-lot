@@ -98,7 +98,7 @@ export const SigninsTab = ({ dealer }: DealerDetailTabProps) => {
         >
           ‹
         </Button>
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" color="textSecondary">
           {t("signins.year", { year: String(year) })}
         </Typography>
         <Button

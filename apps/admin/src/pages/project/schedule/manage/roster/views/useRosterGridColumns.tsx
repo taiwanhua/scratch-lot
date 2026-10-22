@@ -45,7 +45,7 @@ export const useRosterGridColumns = (
     render: ({ row }) => (
       <Box>
         <Typography variant="subtitle2">{row.name}</Typography>
-        <Typography variant="caption" color="text.secondary">
+        <Typography variant="caption" color="textSecondary">
           {[
             typeof row.employmentType === "string"
               ? tEmployment(row.employmentType)

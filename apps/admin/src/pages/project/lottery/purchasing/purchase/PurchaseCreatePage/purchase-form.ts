@@ -41,12 +41,19 @@ export type AddBookResult =
  * 刷一本(刷這本的最後一張):背面編號帶遊戲代號;正面的碼沒有遊戲代號時用 `fallbackGameId`
  * (畫面上先選的遊戲)。批購金額率預設遊戲的值。
  */
+/** 各遊戲最後一次改整組的批購金額率(遊戲 id → 率;沒改過的遊戲不在裡面)。 */
+export type GroupRates = ReadonlyMap<string, number>;
+
+const NO_GROUP_RATES: GroupRates = new Map();
+
+/** 新刷進的一本:那個遊戲改過整組率就沿用,沒改過用遊戲預設。 */
 export const addScannedBook = (
   books: readonly ScannedBook[],
   raw: string,
   games: readonly PurchaseGame[],
   fallbackGameId: string | null,
   newRowId: () => string,
+  groupRates: GroupRates = NO_GROUP_RATES,
 ): AddBookResult => {
   const parsed = parseTicketInput(raw);
   if (parsed === null) {
@@ -78,10 +85,19 @@ export const addScannedBook = (
         gameId: game.id,
         bookNo: parsed.bookNo,
         lastTicketNo: Number(parsed.ticketNo),
-        rate: game.defaultRate,
+        rate: groupRates.get(game.id) ?? game.defaultRate,
       },
     ],
   };
+};
+
+/** 整組率只留還有本的遊戲(整組刪光後再刷,回到遊戲預設)。 */
+export const pruneGroupRates = (
+  groupRates: GroupRates,
+  books: readonly ScannedBook[],
+): GroupRates => {
+  const gameIds = new Set(books.map((book) => book.gameId));
+  return new Map([...groupRates].filter(([gameId]) => gameIds.has(gameId)));
 };
 
 /** 批購金額率的輸入 → 整數 0–100;不合 → null(不改)。 */
@@ -208,10 +224,33 @@ export interface PurchaseHeaderState {
   note: string;
 }
 
-/** 表單存值(受管表單 `purchase`):單頭 + 明細(張數、整本金額照遊戲;批購金額由列內公式算)。 */
+/** 勾選的一筆兌獎紀錄(規格 8.2「兌獎」;`rowId` 在勾選時產生)。 */
+export interface PickedRedemption {
+  rowId: string;
+  id: string;
+  /** 張編號 `5164-056527-031`(引用欄的標籤) */
+  label: string;
+  prizeAmount: number;
+}
+
+/** 勾 / 取消勾一筆(同一筆再按 = 取消)。 */
+export const toggleRedemption = (
+  picked: readonly PickedRedemption[],
+  row: Omit<PickedRedemption, "rowId">,
+  newRowId: () => string,
+): PickedRedemption[] =>
+  picked.some((item) => item.id === row.id)
+    ? picked.filter((item) => item.id !== row.id)
+    : [...picked, { ...row, rowId: newRowId() }];
+
+/**
+ * 表單存值(受管表單 `purchase` r3):單頭 + 明細(張數、整本金額照遊戲;批購金額由列內公式算)+
+ * 勾選的兌獎紀錄(合計三列與扣款金額由計算欄算)。
+ */
 export const purchaseValuesOf = (
   header: PurchaseHeaderState,
   groups: readonly BookGroup[],
+  redemptions: readonly PickedRedemption[] = [],
 ): StoredValues => ({
   [K.branch]: header.branchId === "" ? null : header.branchId,
   [K.requisition]: header.requisitionNo,
@@ -232,6 +271,11 @@ export const purchaseValuesOf = (
       [K.rate]: row.rate,
     })),
   ),
+  [K.redemptions]: redemptions.map((item) => ({
+    rowId: item.rowId,
+    [K.redemption]: { id: item.id, label: item.label },
+    [K.prizeAmount]: item.prizeAmount,
+  })),
 });
 
 /** 扣款帳戶只有一個時自動帶入。 */

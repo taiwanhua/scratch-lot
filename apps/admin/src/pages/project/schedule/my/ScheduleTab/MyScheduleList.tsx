@@ -35,7 +35,7 @@ const EntryRow = ({ entry }: { entry: MyEntry }) => {
           {`${entry.orgName} ${text.shortName(entry)} ${text.time(entry)}`}
         </Typography>
         {(clockIn !== null || clockOut !== null || missing !== null) && (
-          <Typography variant="caption" color="text.secondary">
+          <Typography variant="caption" color="textSecondary">
             {t("list.punches", {
               in: clockIn ?? t("calendar.noPunch"),
               out: clockOut ?? t("calendar.noPunch"),
@@ -56,7 +56,7 @@ const EntryRow = ({ entry }: { entry: MyEntry }) => {
         {entry.breakMinutes > 0 && (
           <Typography
             variant="caption"
-            color="text.secondary"
+            color="textSecondary"
             aria-label={t("punch.breakAria", { minutes: entry.breakMinutes })}
           >
             ☕{entry.breakMinutes}
@@ -99,7 +99,7 @@ export const MyScheduleList = ({
   });
   if (dates.length === 0) {
     return (
-      <Typography variant="body2" color="text.secondary">
+      <Typography variant="body2" color="textSecondary">
         {t("list.empty")}
       </Typography>
     );
@@ -129,7 +129,7 @@ export const MyScheduleList = ({
             <Typography
               variant="body2"
               sx={{ width: { xs: 72, sm: 96 }, flexShrink: 0, fontWeight: 600 }}
-              color={isToday ? "primary.main" : "text.primary"}
+              color={isToday ? "primary" : "textPrimary"}
             >
               {isToday
                 ? `${text.dateTitle(date)}${t("list.todaySuffix")}`
@@ -146,7 +146,7 @@ export const MyScheduleList = ({
                 <EntryRow key={entry.id} entry={entry} />
               ))}
               {changedDates.has(date) && (
-                <Typography variant="caption" color="warning.dark">
+                <Typography variant="caption" sx={{ color: "warning.dark" }}>
                   {t("list.changed")}
                 </Typography>
               )}

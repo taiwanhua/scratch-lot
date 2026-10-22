@@ -3,6 +3,7 @@ import { Args, ID, Mutation, Query, Resolver } from "@nestjs/graphql";
 import { CurrentOperator } from "../../../auth/decorators";
 import type { OperatorContext } from "../../../database/operator-context";
 import { RequirePermission } from "../../../permission/require-permission.decorator";
+import { RequireTenant } from "../../tenant-scope/require-tenant.decorator";
 import { ScheduleAttendanceService } from "./attendance.service";
 import {
   MakeupPunchEntryOptionsInput,
@@ -24,6 +25,7 @@ import {
  * 出勤紀錄(`schedule.attendance`;規格 14.7、14.8):讀要 `view`(只看自己的;`view-all` 看全部由 service 判斷)、
  * 匯出要 `export`、改對應排班要 `reassign-punches`、補打卡新增頁的下拉要 `create`。
  */
+@RequireTenant()
 @Resolver(() => ScheduleAttendanceByStorePayload)
 export class ScheduleAttendanceResolver {
   constructor(
@@ -103,8 +105,10 @@ export class ScheduleAttendanceResolver {
     return this.makeup.pendingEntryIds(operator);
   }
 
-  /** 補打卡申請選的排班還在不在(審核頁的警告;選「沒有排班」= true)。 */
-  @RequirePermission("schedule.attendance.view")
+  /**
+   * 補打卡申請選的排班還在不在(審核畫面的警告)。只要登入就能呼叫,讀不讀得到由 service 依
+   * 「讀得到這筆申請的人」判斷(出勤紀錄 view + 原規則、申請人、審核者、知會對象),其他人 `NOT_FOUND`。
+   */
   @Query(() => Boolean)
   makeupPunchEntryExists(
     @Args("submissionId", { type: () => ID }) submissionId: string,

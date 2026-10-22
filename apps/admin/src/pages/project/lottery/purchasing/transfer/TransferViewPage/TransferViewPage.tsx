@@ -44,14 +44,19 @@ import { useSession } from "@/hooks/base/useSession";
 import type { ModulePageProps } from "@/lib/base/module-tree";
 
 import { TRANSFER_MODULE_KEY, formatMoney } from "../transfer-keys";
+import { TransferPrintButtons } from "./TransferPrintButtons";
 import { TransferWrongStoreDialog } from "./TransferWrongStoreDialog";
 import {
   type TransferWrongStoreInfo,
   transferReceiveErrorOf,
 } from "./transfer-receive-error";
+import { useTransferReceipts } from "./useTransferReceipts";
 
 type Row = LotteryTransferReceivingFieldsFragment["rows"][number];
 type Settlement = LotterySettlementFieldsFragment;
+
+/** 標頭第一列(返回、列印、編輯):窄螢幕時換行。 */
+const HEADER_ROW_SX = { alignItems: "center", flexWrap: "wrap", rowGap: 1 };
 
 const displayBookNo = (bookNo: string): string =>
   bookNo.startsWith("0") ? bookNo.slice(1) : bookNo;
@@ -78,6 +83,7 @@ const settlementProblemOf = (settlement: Settlement) => {
  * - 出貨之後:點收區塊(與進貨單共用 `ReceiveBooksPanel`;收貨店店長的點收任務在手上才能刷)
  * - 結算區塊(兩邊店的收付;按鈕依 `pay` / `receive` 與分店)+ 核准前三個數字不相等的提示 + 審核區塊
  * - 送錯分店:擋下、不入庫,彈窗提示這本屬於哪一家店的哪一張調貨單
+ * - 列印(規格第 12 章):標頭 [列印](`useTransferReceipts`);第一關通過後的自動列印是調貨單的審核擴充(`TransferShipmentEffect`)
  */
 export const TransferViewPage = ({ routeParam }: ModulePageProps) => {
   const t = useTranslations("admin.lotteryPurchasing.transfer.view");
@@ -241,13 +247,14 @@ export const TransferViewPage = ({ routeParam }: ModulePageProps) => {
     typeof values.requisition === "string" && values.requisition !== ""
       ? values.requisition
       : null;
+  const receipts = useTransferReceipts(id, submission, data, settlementItem);
 
   return (
     <Box sx={{ flex: 1, minWidth: 0, minHeight: 0, overflow: "auto" }}>
       <Stack spacing={2}>
         <Card sx={{ px: { xs: 2, sm: 3 }, py: 2 }}>
           <Stack spacing={1}>
-            <Stack direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
+            <Stack direction="row" spacing={1.5} sx={HEADER_ROW_SX}>
               <Button
                 variant="text"
                 size="small"
@@ -260,6 +267,7 @@ export const TransferViewPage = ({ routeParam }: ModulePageProps) => {
                 {tPages("backToList")}
               </Button>
               <Box sx={{ flex: 1 }} />
+              <TransferPrintButtons receipts={receipts} />
               {access.editRoute !== null &&
                 submission?.abilities.canEdit === true && (
                   <Button
@@ -293,7 +301,7 @@ export const TransferViewPage = ({ routeParam }: ModulePageProps) => {
               )}
             </Stack>
             {data !== null && (
-              <Typography variant="body2" color="text.secondary">
+              <Typography variant="body2" color="textSecondary">
                 {[
                   `${data.fromBranchName} → ${data.toBranchName}`,
                   requisitionNo === null
@@ -323,7 +331,7 @@ export const TransferViewPage = ({ routeParam }: ModulePageProps) => {
                       <Typography variant="body2" sx={{ fontWeight: 700 }}>
                         {`${row.gameCode} ${row.gameName} · ${displayBookNo(row.bookNo)}`}
                       </Typography>
-                      <Typography variant="caption" color="text.secondary">
+                      <Typography variant="caption" color="textSecondary">
                         {t("cardFacts", {
                           mode: modeText(row),
                           tickets: ticketsText(row),

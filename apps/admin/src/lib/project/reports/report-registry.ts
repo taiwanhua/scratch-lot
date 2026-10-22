@@ -1,4 +1,5 @@
 import type { QueryKey } from "@tanstack/react-query";
+import type { ComponentType } from "react";
 
 import type { GraphQLClient } from "@repo/graphql";
 
@@ -52,8 +53,30 @@ export interface ReportSelectCondition extends ReportExtraConditionBase {
   options: readonly { value: string; label: string }[];
 }
 
+/** 自訂條件欄位拿到的東西(值一律是字串)。 */
+export interface ReportCustomFieldProps {
+  /** 已翻譯的欄位名稱 */
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  /** 目前選的分店(例:收銀點下拉依分店列選項) */
+  orgIds: readonly string[];
+  /** 目前條件組成的查詢 input;條件不完整 = null */
+  input: ReportQueryInput | null;
+}
+
+/**
+ * 自訂(選項要查 api 的下拉這類):報表自己給欄位元件,值是字串(預設 `defaultValue`)。
+ * 網址裡的值不檢查選項(選項是查出來的),交給 api 驗。
+ */
+export interface ReportCustomCondition extends ReportExtraConditionBase {
+  type: "custom";
+  defaultValue: string;
+  Field: ComponentType<ReportCustomFieldProps>;
+}
+
 export type ReportExtraCondition =
-  ReportBooleanCondition | ReportSelectCondition;
+  ReportBooleanCondition | ReportSelectCondition | ReportCustomCondition;
 
 export interface ReportConditions {
   /** 這張報表可選的期間類型(頁籤的順序照這裡) */
@@ -111,6 +134,15 @@ export interface ReportSheetContext {
   canShowCost: boolean;
 }
 
+/**
+ * 工作表裡的訊息 key 寫**完整路徑**(`admin.` 開頭),死鍵掃描才認得(`packages/i18n/src/usage-scan.ts`:
+ * 字面字串本身就是完整路徑也算引用);外框給的 `context.t` 是 `admin` namespace,用這個包一層再用。
+ */
+export const fullPathTranslator =
+  (t: ReportSheetContext["t"]): ReportSheetContext["t"] =>
+  (key, values) =>
+    t(key.startsWith("admin.") ? key.slice("admin.".length) : key, values);
+
 /** 一個不含名稱的工作表(名稱由外框決定:合計固定一個名稱、分店用分店名)。 */
 export type ReportSheetBody = Omit<SheetData, "name">;
 
@@ -119,6 +151,30 @@ export interface ReportSheetSet {
   total: ReportSheetBody;
   /** 每家分店一張,`orgId` 對應 `context.orgs` */
   branches: readonly (ReportSheetBody & { orgId: string })[];
+}
+
+/** 條件卡片裡、其他條件下方的報表專屬區塊拿到的東西。 */
+export interface ReportConditionsAddonProps {
+  /** 目前條件組成的查詢 input(其他條件已依期間類型過濾);條件不完整 = null */
+  input: ReportQueryInput | null;
+  periodKind: ReportPeriodKind;
+  /** 期間的起點日期 `YYYY-MM-DD`(月 = 1 日) */
+  periodDate: string;
+  /** 其他條件目前的值(含沒選分店時;依 key) */
+  extra: Readonly<Record<string, ReportExtraValue>>;
+}
+
+/** 月份格子下方的註記拿到的東西。 */
+export interface ReportMonthCaptionProps {
+  /** `YYYY-MM` */
+  month: string;
+  /** 目前條件組成的查詢 input;條件不完整 = null */
+  input: ReportQueryInput | null;
+}
+
+/** 報表自己畫預覽的一個工作表(與 Excel 同一份 `SheetData`)。 */
+export interface ReportSheetBodyProps {
+  sheet: SheetData;
 }
 
 export interface ReportDefinition<TData = unknown> {
@@ -133,6 +189,12 @@ export interface ReportDefinition<TData = unknown> {
    * 才放得進同一份登記清單(`ReportDefinition` 預設的 `unknown`)。
    */
   sheets(data: TData, context: ReportSheetContext): ReportSheetSet;
+  /** 條件卡片的報表專屬區塊(例:對齊日結的逐店期間、已關帳說明);不給 = 沒有 */
+  ConditionsAddon?: ComponentType<ReportConditionsAddonProps>;
+  /** 月份格子下方的註記(例:已關帳 / 尚未關帳);不給 = 沒有 */
+  MonthCaption?: ComponentType<ReportMonthCaptionProps>;
+  /** 預覽換成報表自己的畫法(例:區塊卡片);不給 = 通用表格。Excel 一律是表格 */
+  SheetBody?: ComponentType<ReportSheetBodyProps>;
 }
 
 /** 查詢 input 已經用掉的欄位名,其他條件不能撞。 */
@@ -218,8 +280,15 @@ export const reportSheetsOf = (
 /** 其他條件的預設值:勾選 = false、下拉 = 第一個選項。 */
 export const defaultExtraValue = (
   condition: ReportExtraCondition,
-): ReportExtraValue =>
-  condition.type === "boolean" ? false : (condition.options[0]?.value ?? "");
+): ReportExtraValue => {
+  let value: ReportExtraValue = false;
+  if (condition.type === "custom") {
+    value = condition.defaultValue;
+  } else if (condition.type === "select") {
+    value = condition.options[0]?.value ?? "";
+  }
+  return value;
+};
 
 /** 這種期間類型下要顯示 / 要送的其他條件。 */
 export const extraConditionsFor = (

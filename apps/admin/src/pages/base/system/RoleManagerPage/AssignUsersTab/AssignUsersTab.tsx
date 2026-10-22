@@ -108,7 +108,7 @@ export const AssignUsersTab = ({
           <Typography variant="subtitle1">
             {t("title", { name: role.name })}
           </Typography>
-          <Typography variant="caption" color="text.secondary" component="p">
+          <Typography variant="caption" color="textSecondary" component="p">
             {t("outOfScopeHint")}
           </Typography>
         </Box>
@@ -143,7 +143,7 @@ export const AssignUsersTab = ({
       </Box>
 
       <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
-        <Typography variant="body2" color="text.secondary" sx={{ flex: 1 }}>
+        <Typography variant="body2" color="textSecondary" sx={{ flex: 1 }}>
           {t("total", {
             total: data.totalCount,
             pageSize: ROLE_USERS_PAGE_SIZE,

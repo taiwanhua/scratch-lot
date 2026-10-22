@@ -117,7 +117,7 @@ export const WeekMobileList = ({ dates }: WeekMobileListProps) => {
                 sx={{ flex: 1, flexWrap: "wrap", minWidth: 0 }}
               >
                 {closed && (
-                  <Typography variant="caption" color="text.secondary">
+                  <Typography variant="caption" color="textSecondary">
                     {t("cell.closed")}
                   </Typography>
                 )}

@@ -627,6 +627,72 @@ describe("資料共用(ADR-0014):三種宣告 × 人 × 資料歸屬", () => {
     ).resolves.toBeNull();
   });
 
+  it("sharedByFields match: visible:比對該租戶的可見範圍;上下文缺 visibleOrgIds 時退回所屬組織", async () => {
+    const visibleItems = new BaseRepository(
+      database.connection.model<Item>(
+        "VisibleItem",
+        itemSchema("sharing_visible_items", {
+          sharing: {
+            mode: "shareable",
+            defaultShareOrgs: "none",
+            editable: false,
+            sharedByFields: [
+              { path: "branchId", includeDescendants: false, match: "visible" },
+            ],
+          },
+        }),
+      ),
+    );
+    // 總部建、欄位指到分店一的下層
+    const created = await visibleItems.create(
+      { ...asRoot, currentOrgId: T },
+      { name: "指到下層", orgId: T, branchId: B1a },
+    );
+    const branchOne = PEOPLE.單一分店人員;
+    const withoutVisible: OperatorContext = {
+      ...branchOne,
+      visibleOrgIds: [B1, B1a],
+      memberTenants: branchOne.memberTenants.map((tenant) => ({
+        tenantId: tenant.tenantId,
+        memberOrgIds: tenant.memberOrgIds,
+        ancestorOrgIds: tenant.ancestorOrgIds,
+      })),
+    };
+    const withVisible: OperatorContext = {
+      ...withoutVisible,
+      memberTenants: withoutVisible.memberTenants.map((tenant) => ({
+        ...tenant,
+        visibleOrgIds: [B1, B1a],
+      })),
+    };
+    // 缺 visibleOrgIds:只比所屬組織(分店一)→ 看不到指到下層的
+    await expect(
+      visibleItems.findById(withoutVisible, created._id),
+    ).resolves.toBeNull();
+    // 該租戶的可見範圍含下層 → 看得到;寫入不放大
+    await expect(
+      visibleItems.findById(withVisible, created._id),
+    ).resolves.not.toBeNull();
+    await expect(
+      visibleItems.updateById(withVisible, created._id, {
+        $set: { name: "分店改的" },
+      }),
+    ).resolves.toBeNull();
+    // 別的租戶的可見範圍不算(分支釘 tenantId)
+    await expect(
+      visibleItems.findById(
+        {
+          ...PEOPLE.別租戶,
+          memberTenants: PEOPLE.別租戶.memberTenants.map((tenant) => ({
+            ...tenant,
+            visibleOrgIds: [U1, B1a],
+          })),
+        },
+        created._id,
+      ),
+    ).resolves.toBeNull();
+  });
+
   it("資料範圍規則仍會縮小共用資料(先放寬、再縮小)", async () => {
     setDataScopeRuleProvider({
       conditionFor: (collection) =>
@@ -916,6 +982,27 @@ describe("資料共用(ADR-0014):三種宣告 × 人 × 資料歸屬", () => {
             defaultShareOrgs: "none",
             editable: true,
             sharedByFields: [{ path: "branchId", includeDescendants: false }],
+          },
+        }),
+      ).toThrow(TenantScopeError);
+    });
+
+    it("sharedByFields 比對可見範圍(match: visible)又勾 includeDescendants → TenantScopeError", () => {
+      const schema = new Schema(
+        { orgId: Schema.Types.ObjectId, branchId: Schema.Types.ObjectId },
+        { collection: "visible_with_descendants" },
+      );
+      schema.index({ tenantId: 1, branchId: 1 });
+      expect(() =>
+        schema.plugin(tenantScopePlugin, {
+          moduleData: true,
+          sharing: {
+            mode: "shareable",
+            defaultShareOrgs: "none",
+            editable: false,
+            sharedByFields: [
+              { path: "branchId", includeDescendants: true, match: "visible" },
+            ],
           },
         }),
       ).toThrow(TenantScopeError);

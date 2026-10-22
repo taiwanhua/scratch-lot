@@ -93,7 +93,10 @@
     "navBadge": "{count} 筆待處理",
     "collapseNav": "收合側欄",
     "expandNav": "展開側欄",
+    "openNav": "開啟主選單",
     "currentOrg": "當前組織",
+    "currentOrgNamed": "當前組織:{name}",
+    "currentOrgNone": "當前組織:尚未選擇",
     "placeholder": {
       "pending": "此頁面尚未建置"
     },
@@ -106,12 +109,19 @@
     "tabs": {
       "label": "路由頁籤",
       "close": "關閉 {label}",
-      "keyboardHint": "左右方向鍵移動焦點、Enter 開啟頁籤;Shift 加方向鍵調整順序;Delete 關閉目前焦點的頁籤;也可用滑鼠拖曳排序。",
+      "keyboardHint": "左右方向鍵移動焦點、Enter 開啟頁籤;Shift 加方向鍵調整順序;Delete 關閉目前焦點的頁籤;選單鍵或 Shift+F10 開啟頁籤選單;也可用滑鼠拖曳排序。",
       "dragStart": "已拿起「{label}」",
       "dragOver": "「{label}」移到「{over}」的位置",
       "dragEnd": "「{label}」已放到「{over}」的位置",
       "dragEndNoTarget": "「{label}」已放回原位",
-      "dragCancel": "已取消拖曳「{label}」"
+      "dragCancel": "已取消拖曳「{label}」",
+      "menu": {
+        "open": "頁籤選單",
+        "label": "頁籤選單 — {label}",
+        "closeLeft": "關閉左側所有分頁",
+        "closeRight": "關閉右側所有分頁",
+        "closeOthers": "關閉其他所有分頁"
+      }
     },
     "forbidden": {
       "title": "沒有權限進入此頁面",
@@ -301,7 +311,8 @@
       "UPLOAD_REJECTED": "商標檔案不符規定(限 PNG / JPG / WebP,2MB 以內)。",
       "FORBIDDEN": "你沒有執行這個動作的權限。",
       "UNEXPECTED": "操作失敗,請稍後再試。"
-    }
+    },
+    "mobileBack": "← 返回"
   },
   "userManager": {
     "orgTree": {
@@ -502,7 +513,8 @@
       },
       "confirm": "確認複製",
       "cancel": "取消"
-    }
+    },
+    "mobileBack": "← 返回"
   },
   "moduleManager": {
     "seedNotice": "模組與權限由系統統一維護,此頁僅供檢視與啟用 / 停用切換。",
@@ -627,7 +639,8 @@
       "failed": "刪除失敗,請稍後再試。",
       "cancel": "取消",
       "close": "關閉"
-    }
+    },
+    "mobileBack": "← 返回"
   },
   "moduleIcons": {
     "dashboard": "儀表板",
@@ -823,7 +836,8 @@
       "FORBIDDEN": "你沒有執行這個動作的權限。",
       "VALIDATION_FAILED": "資料未通過驗證,請檢查後再送出。",
       "UNEXPECTED": "操作失敗,請稍後再試。"
-    }
+    },
+    "mobileBack": "← 返回"
   },
   "dataScope": {
     "targets": {
@@ -895,7 +909,8 @@
       "NOT_FOUND": "找不到這個資料目標。",
       "FORBIDDEN": "你沒有執行這個動作的權限(本頁僅根組織可用)。",
       "UNEXPECTED": "操作失敗,請稍後再試。"
-    }
+    },
+    "mobileBack": "← 返回"
   },
   "fieldManager": {
     "categories": {
@@ -1405,7 +1420,9 @@
       "disabled": "停用",
       "hasDraft": "有草稿",
       "workflow": "流程:{name}",
-      "workflowInvalid": "綁定的流程已失效"
+      "workflowInvalid": "綁定的流程已失效",
+      "collapse": "收起表單清單",
+      "expand": "展開表單清單"
     },
     "detail": {
       "region": "表單設定",
@@ -1426,6 +1443,9 @@
       "voidReasonCategoryHint": "選欄位管理的類別後,作廢時要從該類別的選項挑原因(選「其他」要填說明);不設定 = 自由填寫理由。",
       "voidReasonCategoryUnset": "不設定(自由填寫)",
       "voidReasonCategorySaved": "已更新作廢原因設定。",
+      "sharedByFields": "依欄位共用",
+      "sharedByFieldsHint": "勾選的組織欄位指到的組織,也看得到這張表單的單(只能看,不能修改或刪除);都不勾 = 只有看得到單據所屬組織的人看得到。",
+      "sharedByFieldsSaved": "已更新依欄位共用設定。",
       "assignedTo": "已分派:{tenants}",
       "tabs": "表單設定頁籤",
       "tabDesign": "表單設計",
@@ -1642,7 +1662,9 @@
       "regexUnavailable": "目前無法即時檢查正則的安全性;存草稿時會再檢查。",
       "newColumn": "項目",
       "sectionSettings": "分區設定",
-      "sectionSettingsOf": "分區設定「{title}」"
+      "sectionSettingsOf": "分區設定「{title}」",
+      "openSettings": "表單設定",
+      "closeProperties": "關閉屬性"
     },
     "preview": {
       "region": "預覽",
@@ -2124,7 +2146,16 @@
       "summaryFields": "收合時標題列顯示的欄位",
       "addSummaryField": "+ 欄位",
       "summaryNeedsCollapsible": "打開「可以收合」後才能設定。"
-    }
+    },
+    "mobile": {
+      "region": "表單摘要",
+      "hint": "設計與編輯請使用平板或電腦。",
+      "version": "發布版本",
+      "yes": "是",
+      "no": "否",
+      "unsaved": "這張表單有未儲存的變更,仍保留在設計器裡。請改用平板或電腦寬度儲存或放棄。"
+    },
+    "mobileBack": "← 返回"
   },
   "approval": {
     "nameSeparator": "、",
@@ -2437,7 +2468,9 @@
       "version": "第 {version} 版",
       "assigned": "已分派 {count} 個",
       "hasDraft": "有草稿",
-      "boundForms": "綁定表單:{forms}"
+      "boundForms": "綁定表單:{forms}",
+      "collapse": "收起流程清單",
+      "expand": "展開流程清單"
     },
     "detail": {
       "region": "流程內容",
@@ -2579,7 +2612,9 @@
       "viewingCanvas": "v{version} 的流程圖",
       "viewingProperties": "屬性(唯讀)",
       "closeViewing": "關閉檢視",
-      "saveBlockedOverdue": "逾時提醒的時數不正確,修正後才能存草稿。"
+      "saveBlockedOverdue": "逾時提醒的時數不正確,修正後才能存草稿。",
+      "openFlowSettings": "整個流程設定",
+      "closeProperties": "關閉屬性"
     },
     "opErrors": {
       "FORK_NEEDS_SOURCE": "分流前面一定要有一個審核關卡:先刪掉或移動整組分流。",
@@ -2802,7 +2837,14 @@
       "ccHint": "單據完成、被駁回或被作廢時通知(不用審核,可以唯讀查看這張單據)。各關的知會對象只在那一關通過或被跳過時收到;退回修改、撤回都不知會。",
       "issues": "整個流程的問題",
       "backToFlow": "回到整個流程設定"
-    }
+    },
+    "mobile": {
+      "region": "流程摘要",
+      "hint": "設計與編輯請使用平板或電腦。",
+      "version": "發布版本",
+      "unsaved": "這個流程有未儲存的變更,仍保留在設計器裡。請改用平板或電腦寬度儲存或放棄。"
+    },
+    "mobileBack": "← 返回"
   },
   "userPicker": {
     "option": "{name}({account})",

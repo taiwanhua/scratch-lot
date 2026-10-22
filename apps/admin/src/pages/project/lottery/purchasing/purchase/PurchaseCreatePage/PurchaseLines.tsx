@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useTranslations } from "use-intl";
 
 import { Box } from "@repo/ui/box";
@@ -8,22 +9,36 @@ import { Table, type TableColumn } from "@repo/ui/table";
 import { TextField } from "@repo/ui/text-field";
 import { Typography } from "@repo/ui/typography";
 
-import { formatMoney } from "../purchase-keys";
-import { type BookGroup, type BookRow, parseRate } from "./purchase-form";
+import { LineErrorAlerts } from "../../shared/LineErrorAlerts";
+import { type FieldErrorSource } from "../../shared/field-errors";
+import { PURCHASE_FIELD_KEYS, formatMoney } from "../purchase-keys";
+import {
+  type BookGroup,
+  type BookRow,
+  type GroupRates,
+  parseRate,
+} from "./purchase-form";
 
 export interface PurchaseLinesProps {
   groups: readonly BookGroup[];
   /** 平板 / 手機:每本一張卡片 */
   isCompact: boolean;
   onRate: (rowId: string, rate: number) => void;
+  /** 各遊戲最後一次改整組的率(沒改過 = 遊戲預設;改單本不影響整組框) */
+  groupRates: GroupRates;
   onGroupRate: (gameId: string, rate: number) => void;
   onRemove: (rowId: string) => void;
+  /** 送出 / 存草稿失敗的錯誤(`useFormDraft().error`;明細的欄位錯誤顯示在這一區) */
+  error: FieldErrorSource;
 }
 
 const lastTicketText = (value: number): string =>
   String(value).padStart(3, "0");
 
-/** 批購金額率的輸入框:改過(和遊戲預設不同)標色。 */
+/**
+ * 批購金額率的輸入框:改過(和遊戲預設不同)標色。輸入中的文字自己記(清空、打到一半不會被
+ * `value` 蓋回去);是 0–100 的整數才回報,離開時還原成目前的值;`value` 從外面改(例:改整組)時跟著換。
+ */
 const RateInput = ({
   label,
   value,
@@ -34,25 +49,39 @@ const RateInput = ({
   value: number;
   isEdited: boolean;
   onChange: (rate: number) => void;
-}) => (
-  <TextField
-    size="small"
-    type="number"
-    value={String(value)}
-    onChange={(event) => {
-      const rate = parseRate(event.target.value);
-      if (rate !== null) {
-        onChange(rate);
-      }
-    }}
-    sx={{
-      width: 88,
-      "& input": { textAlign: "right" },
-      ...(isEdited && { "& .MuiInputBase-root": { bgcolor: "warning.light" } }),
-    }}
-    slotProps={{ htmlInput: { "aria-label": label, min: 0, max: 100 } }}
-  />
-);
+}) => {
+  const [text, setText] = useState(String(value));
+  const [shown, setShown] = useState(value);
+  if (shown !== value) {
+    setShown(value);
+    setText(String(value));
+  }
+  return (
+    <TextField
+      size="small"
+      type="number"
+      value={text}
+      onChange={(event) => {
+        setText(event.target.value);
+        const rate = parseRate(event.target.value);
+        if (rate !== null) {
+          onChange(rate);
+        }
+      }}
+      onBlur={() => {
+        setText(String(value));
+      }}
+      sx={{
+        width: 88,
+        "& input": { textAlign: "right" },
+        ...(isEdited && {
+          "& .MuiInputBase-root": { bgcolor: "warning.light" },
+        }),
+      }}
+      slotProps={{ htmlInput: { "aria-label": label, min: 0, max: 100 } }}
+    />
+  );
+};
 
 /**
  * 進貨單新增頁的明細(規格 8.2 明細;Figma PU-05):依遊戲分組,組標題列顯示小計、「叫貨 N,已刷 M」與
@@ -62,15 +91,23 @@ export const PurchaseLines = ({
   groups,
   isCompact,
   onRate,
+  groupRates,
   onGroupRate,
   onRemove,
+  error,
 }: PurchaseLinesProps) => {
   const t = useTranslations("admin.lotteryPurchasing.purchase.create");
+  const errors = (
+    <LineErrorAlerts error={error} fieldKey={PURCHASE_FIELD_KEYS.lines} />
+  );
   if (groups.length === 0) {
     return (
-      <Typography variant="body2" color="text.secondary">
-        {t("empty")}
-      </Typography>
+      <>
+        {errors}
+        <Typography variant="body2" color="textSecondary">
+          {t("empty")}
+        </Typography>
+      </>
     );
   }
   const columns: TableColumn<BookRow>[] = [
@@ -139,6 +176,7 @@ export const PurchaseLines = ({
 
   return (
     <Stack spacing={2}>
+      {errors}
       {groups.map((group) => {
         const title = t("groupTitle", {
           code: group.game.gameCode,
@@ -164,7 +202,7 @@ export const PurchaseLines = ({
                   <Typography
                     component="span"
                     variant="body2"
-                    color="text.secondary"
+                    color="textSecondary"
                     sx={{ ml: 1 }}
                   >
                     {t("requested", {
@@ -180,12 +218,14 @@ export const PurchaseLines = ({
                   spacing={1}
                   sx={{ alignItems: "center" }}
                 >
-                  <Typography variant="caption" color="text.secondary">
+                  <Typography variant="caption" color="textSecondary">
                     {t("groupRate")}
                   </Typography>
                   <RateInput
                     label={t("groupRateOf", { code: group.game.gameCode })}
-                    value={group.rows[0]?.rate ?? group.game.defaultRate}
+                    value={
+                      groupRates.get(group.game.id) ?? group.game.defaultRate
+                    }
                     isEdited={false}
                     onChange={(rate) => {
                       onGroupRate(group.game.id, rate);
@@ -207,7 +247,7 @@ export const PurchaseLines = ({
                         <Typography variant="body2" sx={{ fontWeight: 700 }}>
                           {row.displayBookNo}
                         </Typography>
-                        <Typography variant="caption" color="text.secondary">
+                        <Typography variant="caption" color="textSecondary">
                           {t("cardFacts", {
                             lastTicketNo: lastTicketText(row.lastTicketNo),
                             amount: formatMoney(row.amount),

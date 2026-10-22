@@ -195,7 +195,7 @@ export const CategoryFormDialog = ({
             setDescription(event.target.value);
           }}
         />
-        <Typography variant="caption" color="text.secondary">
+        <Typography variant="caption" color="textSecondary">
           {t("createHint")}
         </Typography>
         {errorCode !== null && errorCode !== "FIELD_CATEGORY_KEY_DUPLICATE" && (

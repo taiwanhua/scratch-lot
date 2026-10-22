@@ -125,7 +125,7 @@ export const ScheduleLegend = ({ items }: ScheduleLegendProps) => {
           sx={{ alignItems: "center" }}
         >
           {markOf[item]}
-          <Typography variant="caption" color="text.secondary">
+          <Typography variant="caption" color="textSecondary">
             {t(`items.${item}`)}
           </Typography>
         </Stack>

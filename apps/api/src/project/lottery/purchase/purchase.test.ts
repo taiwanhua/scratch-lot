@@ -2,6 +2,11 @@ import { afterAll, beforeAll, describe, expect, it, jest } from "@jest/globals";
 import { Types } from "mongoose";
 
 import {
+  PURCHASE_FIELD_KEYS,
+  PURCHASE_SETTLEMENT_SIDE,
+} from "@repo/domain/project/lottery";
+
+import {
   type AuthTestApp,
   startAuthTestApp,
 } from "../../../auth/test-support/auth-app";
@@ -10,7 +15,10 @@ import { HOOK_TIMEOUT_MS } from "../../../database/test-support/mongo-connection
 import {
   ASSIGN,
   CREATE_FORM,
+  FORM_SUBMISSION,
+  FORM_SUBMISSIONS,
   type SubmissionRow,
+  UPDATE_FORM,
   call,
   createDraft,
   extensionsOf,
@@ -41,6 +49,7 @@ import {
 } from "../../../workflows/test-support/workflow-fixtures";
 import { isGameInUse } from "../games/game-usage";
 import { inTransitBooksOf } from "../requisition/in-transit";
+import { PURCHASE_REASONS } from "./purchase-error";
 import {
   PURCHASE_MODULE_KEYS,
   PURCHASE_PERMISSION_KEYS,
@@ -96,6 +105,39 @@ const RECEIVING = /* GraphQL */ `
   }
 `;
 
+const COMPLETE = /* GraphQL */ `
+  mutation TestComplete($input: CompleteLotteryPurchaseReceivingInput!) {
+    completeLotteryPurchaseReceiving(input: $input) {
+      batch {
+        batchId
+        no
+        rowIds
+      }
+      receiving {
+        batches {
+          batchId
+          no
+          rowIds
+        }
+        groups {
+          rows {
+            rowId
+            batchId
+          }
+        }
+      }
+    }
+  }
+`;
+
+interface CompletePayload {
+  batch: { batchId: string; no: number; rowIds: string[] } | null;
+  receiving: {
+    batches: { batchId: string; no: number; rowIds: string[] }[];
+    groups: { rows: { rowId: string; batchId: string | null }[] }[];
+  };
+}
+
 const NOTIFY_WRONG_STORE = /* GraphQL */ `
   mutation TestWrongStore($input: ReceiveLotteryPurchaseBookInput!) {
     notifyLotteryPurchaseWrongStore(input: $input)
@@ -124,6 +166,14 @@ const SETTLEMENT = /* GraphQL */ `
 const REVERSE_SETTLEMENT = /* GraphQL */ `
   mutation TestReverseSettlement($input: ReverseLotterySettlementInput!) {
     reverseLotterySettlement(input: $input) {
+      recordId
+    }
+  }
+`;
+
+const RECORD_SETTLEMENT = /* GraphQL */ `
+  mutation TestRecordSettlement($input: RecordLotterySettlementInput!) {
+    recordLotterySettlement(input: $input) {
       recordId
     }
   }
@@ -252,6 +302,8 @@ describe("進貨單(規格 8.2、8.3)", () => {
   let hqNoSettle: Person;
   let managerA: Person;
   let managerB: Person;
+  /** 分店 A、有進貨單 `view` + `settle`(依欄位共用進來的單:看得到收付、不能按) */
+  let settlerA: Person;
   let helperA: Person;
   let admin: Person;
   let gameHot: Types.ObjectId;
@@ -368,6 +420,16 @@ describe("進貨單(規格 8.2、8.3)", () => {
     return data.lotterySettlement.item;
   }
 
+  /** 進貨單列表(底座表單列表)裡這個人看得到的單。 */
+  async function listedTo(person: Person): Promise<string[]> {
+    const data = await ok<{
+      formSubmissions: { items: { id: string }[] };
+    }>(api, person.token, FORM_SUBMISSIONS, {
+      input: { moduleKey: MODULE, formKey: FORM, pageSize: 100 },
+    });
+    return data.formSubmissions.items.map((item) => item.id);
+  }
+
   async function bankRowsOf(submissionId: string) {
     return db()
       .collection("lottery_bank_transactions")
@@ -391,7 +453,11 @@ describe("進貨單(規格 8.2、8.3)", () => {
     await decideOn({ api } as World, managerA, id, "RETURN");
   }
 
-  async function resubmit(id: string, lines: BookLine[]): Promise<string[]> {
+  async function resubmit(
+    id: string,
+    lines: BookLine[],
+    branch = branchA,
+  ): Promise<string[]> {
     const row = await current(id);
     const saved = await call<{
       saveFormDraft: { submission: { id: string; editVersion: number } };
@@ -399,7 +465,7 @@ describe("進貨單(規格 8.2、8.3)", () => {
       input: {
         id,
         expectedEditVersion: row.editVersion,
-        values: { ...header(branchA), lines },
+        values: { ...header(branch), lines },
       },
     });
     if (saved.errors) {
@@ -515,6 +581,13 @@ describe("進貨單(規格 8.2、8.3)", () => {
     };
     managerA = await person(api, connection, branchA, tenant, managerScope);
     managerB = await person(api, connection, branchB, tenant, managerScope);
+    settlerA = await person(api, connection, branchA, tenant, {
+      moduleKeys: purchaseModules,
+      permissionKeys: [
+        PURCHASE_PERMISSION_KEYS.view,
+        PURCHASE_PERMISSION_KEYS.settle,
+      ],
+    });
     helperA = await person(api, connection, branchA, tenant, managerScope);
     const storeManager = await createRole(api.app, connection, {
       name: "店長",
@@ -526,6 +599,10 @@ describe("進貨單(規格 8.2、8.3)", () => {
       input: { key: FORM, moduleKey: MODULE, name: "進貨單" },
     });
     await publishDefinition(api, root, FORM, purchaseDefinition(), null);
+    // 受管表單的依欄位共用(`purchase.r5.seed.ts`):進貨分店看得到這張單
+    await ok(api, root, UPDATE_FORM, {
+      input: { key: FORM, sharedByFieldKeys: [PURCHASE_FIELD_KEYS.branch] },
+    });
     await ok(api, root, ASSIGN, {
       input: { formKey: FORM, tenantOrgIds: [String(tenant)] },
     });
@@ -705,12 +782,18 @@ describe("進貨單(規格 8.2、8.3)", () => {
       ).toBe("PURCHASE_REQUISITION_INVALID");
     });
 
-    it("本人批購 = 否:受託人要是這位甲類啟用中的受託人", async () => {
+    it("本人批購 = 否:受託人必填(表單 r4),且要是這位甲類啟用中的受託人", async () => {
+      // 沒填 → 表單引擎的必填檢查(本人批購 = 是時受託人隱藏,不檢查;其他案例都是這樣送)
       expect(
         await submitBlocked([book(gameHot)], branchA, {
           self_purchase: false,
-        }).then((value) => value.reason),
-      ).toBe("PURCHASE_TRUSTEE_INVALID");
+        }),
+      ).toMatchObject({
+        code: "VALIDATION_FAILED",
+        fieldErrors: [
+          expect.objectContaining({ fieldKey: "trustee", code: "REQUIRED" }),
+        ],
+      });
       expect(
         await submitBlocked([book(gameHot)], branchA, {
           self_purchase: false,
@@ -917,6 +1000,67 @@ describe("進貨單(規格 8.2、8.3)", () => {
     });
   });
 
+  describe("依欄位共用(總部建的單,進貨分店看得到)", () => {
+    it("進貨分店 A:列表看得到、不能改;B 店看不到;收付看得到但不能按(單據歸屬總部)", async () => {
+      const purchase = await submit([book(gameHot)]);
+      expect(await listedTo(settlerA)).toContain(purchase.id);
+      expect(await listedTo(managerB)).not.toContain(purchase.id);
+      const viewed = await ok<{
+        formSubmission: {
+          submission: { abilities: { canEdit: boolean; canDelete: boolean } };
+        };
+      }>(api, settlerA.token, FORM_SUBMISSION, { id: purchase.id });
+      expect(viewed.formSubmission.submission.abilities).toMatchObject({
+        canEdit: false,
+        canDelete: false,
+      });
+      const data = await ok<{ lotterySettlement: { item: Settlement } }>(
+        api,
+        settlerA.token,
+        SETTLEMENT,
+        { moduleKey: MODULE, refId: purchase.id },
+      );
+      expect(data.lotterySettlement.item.sides[0]?.canSettle).toBe(false);
+      const forHq = await settlementOf(purchase.id);
+      expect(forHq.sides[0]?.canSettle).toBe(true);
+    });
+
+    it("進貨分店的人實際記帳 / 沖正 → FORBIDDEN(共用進來的只能看;寫入不放大)", async () => {
+      const purchase = await submit([book(gameHot)]);
+      const recorded = await call(api, settlerA.token, RECORD_SETTLEMENT, {
+        input: {
+          moduleKey: MODULE,
+          refId: purchase.id,
+          side: PURCHASE_SETTLEMENT_SIDE,
+          button: "out",
+          method: "bank",
+          amount: 100,
+          accountId: String(account),
+        },
+      });
+      expect(extensionsOf(recorded).code).toBe("FORBIDDEN");
+      const [automatic] = await bankRowsOf(purchase.id);
+      const reversed = await call(api, settlerA.token, REVERSE_SETTLEMENT, {
+        input: {
+          id: String(automatic?._id),
+          method: "bank",
+          reason: "分店沖正",
+        },
+      });
+      expect(extensionsOf(reversed).code).toBe("FORBIDDEN");
+      expect(await bankRowsOf(purchase.id)).toHaveLength(1);
+    });
+
+    it("改了進貨分店(退回後改成 B 再送出):看得到的店跟著變", async () => {
+      const lines = [book(gameHot)];
+      const purchase = await submit(lines);
+      await returnToHq(purchase.id);
+      expect(await resubmit(purchase.id, lines, branchB)).toEqual([]);
+      expect(await listedTo(managerB)).toContain(purchase.id);
+      expect(await listedTo(settlerA)).not.toContain(purchase.id);
+    });
+  });
+
   describe("點收一本(規格 8.2、8.3)", () => {
     it("寫點收紀錄、本、張與「進貨」事件;進度 1 / 2", async () => {
       const lines = [book(gameHot), book(gameHot)];
@@ -963,6 +1107,103 @@ describe("進貨單(規格 8.2、8.3)", () => {
       ).toBe(100);
     });
 
+    it("[完成這次點收]:這一次的列標上點收批次(第 1 次、第 2 次);已在批次的列不重收;不是點收任務的人不能完成", async () => {
+      const lines = [book(gameHot), book(gameHot), book(gameHot)];
+      const purchase = await submit(lines);
+      const [first, second, third] = [
+        nth(lines, 0),
+        nth(lines, 1),
+        nth(lines, 2),
+      ];
+      const complete = async (who: Person, rowIds: string[]) =>
+        call(api, who.token, COMPLETE, {
+          input: { submissionId: purchase.id, rowIds },
+        });
+      await receiveAll(purchase.id, [first, second]);
+      const one = await ok<{
+        completeLotteryPurchaseReceiving: CompletePayload;
+      }>(api, managerA.token, COMPLETE, {
+        input: {
+          submissionId: purchase.id,
+          rowIds: [first.rowId, second.rowId],
+        },
+      });
+      expect(one.completeLotteryPurchaseReceiving.batch).toMatchObject({
+        no: 1,
+        rowIds: [first.rowId, second.rowId],
+      });
+      // 第二次:另一本;帶上已在第 1 次的列也不會搬過來
+      await receiveAll(purchase.id, [third]);
+      const two = await ok<{
+        completeLotteryPurchaseReceiving: CompletePayload;
+      }>(api, managerA.token, COMPLETE, {
+        input: {
+          submissionId: purchase.id,
+          rowIds: [first.rowId, third.rowId],
+        },
+      });
+      const { batch, receiving } = two.completeLotteryPurchaseReceiving;
+      expect(batch).toMatchObject({ no: 2, rowIds: [third.rowId] });
+      expect(receiving.batches.map((item) => [item.no, item.rowIds])).toEqual([
+        [1, [first.rowId, second.rowId]],
+        [2, [third.rowId]],
+      ]);
+      expect(
+        receiving.groups
+          .flatMap((group) => group.rows)
+          .map((row) => row.batchId),
+      ).toEqual([
+        receiving.batches[0]?.batchId,
+        receiving.batches[0]?.batchId,
+        batch?.batchId,
+      ]);
+      // 都已在批次裡:沒有新批次(不印)
+      const again = await ok<{
+        completeLotteryPurchaseReceiving: CompletePayload;
+      }>(api, managerA.token, COMPLETE, {
+        input: { submissionId: purchase.id, rowIds: [third.rowId] },
+      });
+      expect(again.completeLotteryPurchaseReceiving.batch).toBeNull();
+      expect(extensionsOf(await complete(hq, [third.rowId]))).toMatchObject({
+        reason: "PURCHASE_NOT_RECEIVABLE",
+      });
+      // 以點收人自己的身分寫:更新者記點收人
+      const stamped = await db()
+        .collection("lottery_purchase_receipts")
+        .findOne({
+          submissionId: new Types.ObjectId(purchase.id),
+          rowId: third.rowId,
+        });
+      expect(stamped?.updatedBy).toEqual(managerA.userId);
+    });
+
+    it("[完成這次點收] 只收這張單的列:別的 rowId 不算;送的列數超過這張單的列數 → 擋下", async () => {
+      const lines = [book(gameHot)];
+      const purchase = await submit(lines);
+      const [only] = [nth(lines, 0)];
+      await receiveAll(purchase.id, [only]);
+      const tooMany = await call(api, managerA.token, COMPLETE, {
+        input: { submissionId: purchase.id, rowIds: [only.rowId, "x", "y"] },
+      });
+      expect(extensionsOf(tooMany)).toMatchObject({
+        code: "VALIDATION_FAILED",
+      });
+      const foreign = await ok<{
+        completeLotteryPurchaseReceiving: CompletePayload;
+      }>(api, managerA.token, COMPLETE, {
+        input: { submissionId: purchase.id, rowIds: ["not-on-this-purchase"] },
+      });
+      expect(foreign.completeLotteryPurchaseReceiving.batch).toBeNull();
+      const done = await ok<{
+        completeLotteryPurchaseReceiving: CompletePayload;
+      }>(api, managerA.token, COMPLETE, {
+        input: { submissionId: purchase.id, rowIds: [only.rowId] },
+      });
+      expect(done.completeLotteryPurchaseReceiving.batch?.rowIds).toEqual([
+        only.rowId,
+      ]);
+    });
+
     it("刷到的最後張號和單上不同 → 擋下「請退回更正」,不入庫", async () => {
       const line = book(gameHot, { last_ticket_no: 102 });
       const purchase = await submit([line]);
@@ -983,9 +1224,11 @@ describe("進貨單(規格 8.2、8.3)", () => {
       expect(await receive(managerA, purchase.id, codeOf(line))).toMatchObject({
         reason: "PURCHASE_ALREADY_RECEIVED",
       });
+      // 同店的另一個人:依欄位共用看得到這張單(進貨分店 = A),但點收任務不在他手上
       const another = await submit([book(gameHot)]);
       expect(await receive(helperA, another.id, codeOf(line))).toMatchObject({
-        code: "NOT_FOUND",
+        code: "FORBIDDEN",
+        reason: PURCHASE_REASONS.notReceivable,
       });
     });
 

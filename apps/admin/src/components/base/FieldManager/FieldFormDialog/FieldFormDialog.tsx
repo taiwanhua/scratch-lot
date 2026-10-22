@@ -183,7 +183,7 @@ export const FieldFormDialog = ({
             setForm({ ...form, description: event.target.value });
           }}
         />
-        <Typography variant="caption" color="text.secondary">
+        <Typography variant="caption" color="textSecondary">
           {isEdit ? t("editHint") : t("createHint")}
         </Typography>
         {errorCode !== null && !valueError && (

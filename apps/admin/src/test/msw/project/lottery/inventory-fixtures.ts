@@ -215,6 +215,7 @@ const event = (
   refSerialNo: null,
   reasonKey: null,
   reasonNote: null,
+  correctionOfShift: null,
   ...overrides,
 });
 
@@ -250,6 +251,12 @@ export const sampleBookDetail =
         },
       ],
       events: [
+        // 跨班撤銷:原售出在 10/15 那一班(時間軸標「前期更正,屬於 X 班」)
+        event("2026-10-16T14:05:00.000Z", "sale_undo", ["064"], {
+          from: place(outStall),
+          to: place(outStall),
+          correctionOfShift: "店外攤位 · 李小華 10/15 13:00",
+        }),
         event("2026-10-16T13:52:00.000Z", "sale", ["065"], {
           from: place(outStall),
           to: place(outStall),

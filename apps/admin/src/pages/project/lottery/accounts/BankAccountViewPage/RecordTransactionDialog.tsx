@@ -265,7 +265,7 @@ export const RecordTransactionDialog = ({
             setSummary(event.target.value);
           }}
         />
-        <Typography variant="caption" color="text.secondary">
+        <Typography variant="caption" color="textSecondary">
           {t("recordForm.hint")}
         </Typography>
       </Stack>
