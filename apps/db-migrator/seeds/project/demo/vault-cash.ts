@@ -90,7 +90,9 @@ export const demoVaultCashStep: OnboardingStep = {
       }>(SUBMIT, {
         input: {
           formKey: CASH_CORRECTION_FORM_KEY,
-          clientRequestId: `demo-vault-cash-${orgId}`,
+          // 前一次被駁回 / 作廢後重跑要換一個 id(同建立者 + 同 id 會回原本那一筆,不會另送一張);
+          // 這家店的現金更正單筆數只增不減,當流水用
+          clientRequestId: `demo-vault-cash-${orgId}-${String(lotteryStoreCashCorrections.items.length)}`,
           values: {
             [KEYS.branch]: orgId,
             [KEYS.direction]: CASH_CORRECTION_DIRECTION.increase,
