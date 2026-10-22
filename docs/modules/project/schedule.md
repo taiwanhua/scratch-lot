@@ -368,6 +368,7 @@ GraphQL 文件 `packages/graphql/src/documents/project/schedule/schedule-setting
 | `taskSnapshotFor(operator, { tenantId, entryId, positionKey })` | 任務快照:這筆排班填進的執行任務裡,人力需求崗位 = 收銀點崗位的那一筆(同崗位多筆:先負責、再開始較早的);回 `{ demandId, taskId, role, taskKey, positionKey }`;排班不存在 / 未發布 / 對不到 → null                                                                                                           |
 | `punchStart(operator, { userId, entryId }, { ip, userAgent })`  | 開班彈窗「你還沒打上班卡 [打卡]」:打這一班的上班卡(只能替自己打,`userId` ≠ 操作者 → `VALIDATION_FAILED`;方法內再查一次 `schedule.my.punch`,沒有 → `FORBIDDEN`(`reason: MISSING_PERMISSION`);規則同 `punchMySchedule`)。`ip` / `userAgent` 可用 `my/my-schedule.resolver.ts` 的 `punchMetaOf(context)` 取 |
 | `hasStartPunch(operator, { tenantId, entryId })`                | 開班彈窗要不要顯示「你還沒打上班卡」:這一班有沒有(未標重複的)上班卡;排班看不到 → false                                                                                                                                                                                                                   |
+| `helpersOfDemands(reader, { tenantId, demandIds })`             | 收銀點的協同(規格 14.9;班次結帳歷史報表用):每筆人力需求 → 協同任務填的人(使用者 id,依任務在人力需求裡的順序);讀取用呼叫端給的讀取身分、條件另釘 `tenantId`;人力需求不存在 / 沒有協同 → 不在結果裡                                                                                                        |
 
 ## admin 頁面
 
