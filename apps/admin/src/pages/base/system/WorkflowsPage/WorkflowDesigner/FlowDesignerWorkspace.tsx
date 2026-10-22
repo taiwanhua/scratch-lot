@@ -292,6 +292,7 @@ export const FlowDesignerWorkspace = ({
           closeLabel={t("closeProperties")}
           isTablet={isTablet}
           isOpen={isDrawerOpen}
+          source="designer"
           onClose={closeDrawer}
           panelRef={panelRef}
         >

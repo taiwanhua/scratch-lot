@@ -289,6 +289,7 @@ export const FlowVersionViewer = ({
           closeLabel={t("closeProperties")}
           isTablet={isTablet}
           isOpen={isDrawerOpen}
+          source="viewer"
           onClose={() => {
             select(null);
           }}

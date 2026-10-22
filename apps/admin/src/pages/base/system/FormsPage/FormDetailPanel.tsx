@@ -20,9 +20,9 @@ import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
 import { usePermissions } from "@/hooks/base/usePermissions";
 import { useSession } from "@/hooks/base/useSession";
 import { formErrorOf } from "@/lib/base/form-engine/form-errors";
+import { useDesignerDrawerStore } from "@/stores/base/useDesignerDrawerStore";
 
 import { ListColumnsDialog } from "../ListColumnsDialog/ListColumnsDialog";
-import { DesignerDrawerReportContext } from "../designer-drawer-report";
 import {
   designerDrawerReserve,
   detailHeaderActionsSx,
@@ -78,7 +78,7 @@ export const FormDetailPanel = ({
   /** 版本面板點「檢視」的版號:設計頁籤改成唯讀檢視那一版(草稿的設計器照樣掛著,不會丟未存變更) */
   const [viewing, setViewing] = useState<number | null>(null);
   /** 平板寬:設計器的屬性抽屜開著(卡片讓出抽屜寬;設計器藏起來時不算) */
-  const [isDrawerOpen, setDrawerOpen] = useState(false);
+  const isDrawerOpen = useDesignerDrawerStore((state) => state.open.designer);
   const isDrawerShown = isDrawerOpen && tab === "design" && viewing === null;
   const { hasPermission } = usePermissions();
   // 流程綁定是租戶自己的設定(root 沒有表單綁定,api 回 TENANT_ONLY),且只對本組織**啟用中**的表單設
@@ -244,9 +244,7 @@ export const FormDetailPanel = ({
             />
           )}
           <Box hidden={viewing !== null}>
-            <DesignerDrawerReportContext value={setDrawerOpen}>
-              <FormDesigner form={form} onChanged={onChanged} />
-            </DesignerDrawerReportContext>
+            <FormDesigner form={form} onChanged={onChanged} />
           </Box>
         </Box>
         <Box hidden={tab !== "versions"}>

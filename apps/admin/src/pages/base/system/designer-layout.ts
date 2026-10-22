@@ -17,7 +17,7 @@ import { DRAWER_SIDE_WIDTH } from "@repo/ui/drawer";
  * **平板寬(`sm` ≤ 視窗 < `lg`,`DESIGNER_TABLET_BELOW`)另一套**:殼層的內容區最小寬度只在 ≥ `lg` 套用,
  * 平板以下內容隨視窗縮放,左清單 320 + 屬性面板 300 會把畫布擠到幾乎沒有。所以平板寬時
  * 左清單自動收起(`DesignerListRail`)、屬性面板改成右側滑出的非遮罩抽屜(`DesignerPropertyPanel`),
- * 抽屜開著時詳情卡片讓出抽屜寬(`designerDrawerReserve`、`DesignerDrawerReportContext`);
+ * 抽屜開著時詳情卡片讓出抽屜寬(`designerDrawerReserve`、`useDesignerDrawerStore`);
  * 手機寬(< `sm`)不掛設計器(REACT-17)。
  */
 

@@ -8,8 +8,8 @@ import { Typography } from "@repo/ui/typography";
 
 import { NotificationBell } from "@/components/base/NotificationBell/NotificationBell";
 import { OrgSwitcher } from "@/components/base/OrgSwitcher/OrgSwitcher";
-import { APP_BAR_HEIGHT } from "@/lib/base/app-bar-geometry";
 import type { ShellModule } from "@/lib/base/module-tree";
+import { APP_BAR_HEIGHT } from "@/lib/base/shell-header-geometry";
 import { useSideNavStore } from "@/stores/base/useSideNavStore";
 
 import { SIDE_NAV_DRAWER_ID } from "../SideNav/SideNav";

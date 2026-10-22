@@ -46,6 +46,39 @@ const isNodeSelected = (canvas: HTMLElement, name: string): boolean =>
     .closest(".react-flow__node")
     ?.classList.contains("selected") ?? false;
 
+/** 第一個是「出差審核」;平板寬展開清單改選第二個「病假審核」並改「人資」關的名稱(有未存變更) */
+const secondIsDirty = async () => {
+  const rendered = renderWorkflows({
+    world: {
+      ...defaultDesignOptions(),
+      workflows: [
+        workflowFragment({
+          id: "wf-trip_review",
+          key: "trip_review",
+          name: "出差審核",
+          hasDraft: false,
+        }),
+        workflowFragment(),
+      ],
+    },
+  });
+  const { user } = rendered;
+  await user.click(await screen.findByRole("button", { name: "展開流程清單" }));
+  const list = await screen.findByRole("list", { name: "流程清單" });
+  await user.click(within(list).getByText("病假審核"));
+  const canvas = await findCanvas();
+  clickNode(canvas, "人資");
+  await user.type(
+    within(await screen.findByRole("region", { name: "屬性" })).getByRole(
+      "textbox",
+      { name: "名稱" },
+    ),
+    "審核",
+  );
+  expect(screen.getByText("有未存的變更")).toBeInTheDocument();
+  return rendered;
+};
+
 describe("流程管理:平板寬(sm–lg)畫布優先", () => {
   restoreViewportAfterEach();
 
@@ -166,35 +199,7 @@ describe("流程管理:平板寬(sm–lg)畫布優先", () => {
 
   it("非第一個流程改到一半縮成手機寬按 [← 返回]:先問;留在設計 → 拉回平板寬,草稿還在", async () => {
     setViewportWidth(1024);
-    const { user } = renderWorkflows({
-      world: {
-        ...defaultDesignOptions(),
-        workflows: [
-          workflowFragment({
-            id: "wf-trip_review",
-            key: "trip_review",
-            name: "出差審核",
-            hasDraft: false,
-          }),
-          workflowFragment(),
-        ],
-      },
-    });
-    await user.click(
-      await screen.findByRole("button", { name: "展開流程清單" }),
-    );
-    const list = await screen.findByRole("list", { name: "流程清單" });
-    await user.click(within(list).getByText("病假審核"));
-    const canvas = await findCanvas();
-    clickNode(canvas, "人資");
-    await user.type(
-      within(await screen.findByRole("region", { name: "屬性" })).getByRole(
-        "textbox",
-        { name: "名稱" },
-      ),
-      "審核",
-    );
-    expect(screen.getByText("有未存的變更")).toBeInTheDocument();
+    const { user } = await secondIsDirty();
 
     resizeViewport(390);
     await screen.findByRole("region", { name: "流程摘要" });
@@ -246,5 +251,37 @@ describe("流程管理:平板寬(sm–lg)畫布優先", () => {
     await waitFor(() => {
       expect(screen.queryByRole("region", { name: "屬性(唯讀)" })).toBeNull();
     });
+  });
+
+  it("非第一個流程改到一半縮成手機寬按 [← 返回] → 放棄變更:回到清單,草稿確實丟掉", async () => {
+    setViewportWidth(1024);
+    const { user } = await secondIsDirty();
+
+    resizeViewport(390);
+    await screen.findByRole("region", { name: "流程摘要" });
+    await user.click(screen.getByRole("button", { name: "← 返回" }));
+    const dialog = await screen.findByRole("dialog", {
+      name: "還有沒存的變更",
+    });
+    await user.click(within(dialog).getByRole("button", { name: "放棄變更" }));
+    await waitFor(() => {
+      expect(workflowList()).not.toBeNull();
+    });
+    expect(urlParam("detail")).toBeNull();
+
+    resizeViewport(1024);
+    await user.click(
+      await screen.findByRole("button", { name: "展開流程清單" }),
+    );
+    const list = await screen.findByRole("list", { name: "流程清單" });
+    await user.click(within(list).getByText("病假審核"));
+    const canvas = await findCanvas();
+    expect(
+      within(canvas).getByRole("group", { name: "人資" }),
+    ).toBeInTheDocument();
+    expect(
+      within(canvas).queryByRole("group", { name: "人資審核" }),
+    ).toBeNull();
+    expect(screen.queryByText("有未存的變更")).toBeNull();
   });
 });

@@ -237,6 +237,7 @@ export const DesignerWorkspace = ({
             closeLabel={t("closeProperties")}
             isTablet={isTablet}
             isOpen={isDrawerOpen}
+            source="designer"
             onClose={closeDrawer}
           >
             {sectionPanel ??

@@ -288,7 +288,7 @@ Provider 內找不到模組設定時使用預設模板 `{{title}}`;缺少 Provid
 
 正本:`apps/admin/src/components/base/FilterDrawer/FilterDrawer.tsx`、`packages/ui/src/Drawer/Drawer.tsx`
 
-`Drawer` 另有**非遮罩**模式(`isModal={false}`,MUI `persistent`,就地渲染、不開 portal):不蓋遮罩、不鎖焦點,抽屜外照樣能看、能點,給「邊看邊改」的用途;元件自己補上打開時焦點移進抽屜、抽屜裡按 Esc 關閉、關閉時焦點還給打開前的元素,內容是以標題命名的 region;`topOffset` 讓紙面從頂部列下面開始(admin 給 `lib/base/app-bar-geometry.ts` 的 `APP_BAR_HEIGHT`);匯出寬度 `DRAWER_SIDE_WIDTH` 讓呼叫端算要讓出多寬。就地渲染的好處是 Tab 順序跟著頁面位置、祖先藏起來時抽屜跟著藏;代價是祖先不能有 `transform` / `filter`(紙面是 `position: fixed`)。先例:兩個設計器在平板寬的屬性面板(`pages/base/system/DesignerPropertyPanel.tsx`,REACT-17「平板設計器」)。
+`Drawer` 另有**非遮罩**模式(`isModal={false}`,MUI `persistent`,就地渲染、不開 portal):不蓋遮罩、不鎖焦點,抽屜外照樣能看、能點,給「邊看邊改」的用途;元件自己補上打開時焦點移進抽屜、抽屜裡按 Esc 關閉、關閉時焦點還給打開前的元素,內容是以標題命名的 region;`topOffset` 讓紙面從殼的頂部兩列下面開始(admin 給 `lib/base/shell-header-geometry.ts` 的 `SHELL_HEADER_HEIGHT` = 頂部列 + 頁籤列,不蓋通知、頭像與頁籤列的「⋯」);匯出寬度 `DRAWER_SIDE_WIDTH` 讓呼叫端算要讓出多寬。就地渲染的好處是 Tab 順序跟著頁面位置、祖先藏起來時抽屜跟著藏;代價是祖先不能有 `transform` / `filter`(紙面是 `position: fixed`)。先例:兩個設計器在平板寬的屬性面板(`pages/base/system/DesignerPropertyPanel.tsx`,REACT-17「平板設計器」)。
 
 ## 頁內權限判斷
 

@@ -36,8 +36,10 @@ export interface DrawerProps extends Omit<MuiDrawerProps, "title" | "anchor"> {
    * 關閉時焦點還給打開前的元素;內容是以標題命名的 `region`(`aria-labelledby`)。只用在 `anchor="right"`。
    *
    * 非遮罩抽屜**就地渲染、不開 portal**:Tab 順序跟著它在頁面上的位置走(不會跳到頁尾),
-   * 祖先被藏起來(`display: none`,例:切到別的頁籤)時抽屜跟著藏;紙面是 `position: fixed`,
-   * 所以祖先不能有 `transform` / `filter`(會把 fixed 的參照換成那個祖先)。外層那個 MUI 容器改成絕對定位,不佔呼叫端排版(flex 的 gap)。
+   * 祖先被藏起來(`display: none`,例:切到別的頁籤)時抽屜跟著藏,**不另外搬焦點**:讓它藏起來的操作
+   * (點頁籤、開另一個區塊)本身已經把焦點帶到那顆鈕上,抽屜裡不會留著焦點;打開前的元素(畫布上的欄位)
+   * 也在同一個被藏起來的區塊裡,還回去反而讓焦點落在看不見的地方。回到原頁籤時抽屜照原樣開著。
+   * 紙面是 `position: fixed`,所以祖先不能有 `transform` / `filter`(會把 fixed 的參照換成那個祖先)。外層那個 MUI 容器改成絕對定位,不佔呼叫端排版(flex 的 gap)。
    */
   isModal?: boolean;
   /**

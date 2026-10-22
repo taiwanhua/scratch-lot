@@ -21,6 +21,7 @@ import { IconButton } from "@repo/ui/icon-button";
 import { MoreHorizIcon } from "@repo/ui/icons";
 
 import type { BatchCloseKind, RouteTab } from "@/lib/base/route-tabs";
+import { ROUTE_TABS_HEIGHT } from "@/lib/base/shell-header-geometry";
 
 import {
   RouteTabMenu,
@@ -29,8 +30,6 @@ import {
 } from "./RouteTabMenu";
 import { SortableTab } from "./SortableTab";
 
-/** 頁籤列高(theme.spacing 單位;Figma AdminRouteTabs 46 高)。 */
-const BAR_HEIGHT = 5.75;
 /** 指標移動超過這個距離才算拖曳(px;之內是點擊 → 切換頁籤) */
 const DRAG_START_DISTANCE = 6;
 
@@ -201,7 +200,7 @@ export const RouteTabs = ({
             display: "flex",
             alignItems: "center",
             gap: 1,
-            minHeight: (theme) => theme.spacing(BAR_HEIGHT),
+            minHeight: (theme) => theme.spacing(ROUTE_TABS_HEIGHT),
             pl: 3,
             pr: 1,
             bgcolor: "background.paper",
