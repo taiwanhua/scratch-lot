@@ -11,6 +11,7 @@ import {
 import { api, server } from "@/test/msw/server";
 import { renderApp } from "@/test/render";
 import { findSnackbarAlert } from "@/test/snackbar";
+import { restoreViewportAfterEach, setMobileViewport } from "@/test/viewport";
 
 /**
  * 個人設定「偏好」分頁的通知管道開關(「開關三層」的個人層)。
@@ -158,5 +159,23 @@ describe("偏好分頁:通知管道開關", () => {
     expect(await screen.findByText("Awaiting your review")).toBeVisible();
     expect(screen.getByText("Print agent offline")).toBeVisible();
     expect(screen.queryByText("待你審核")).toBeNull();
+  });
+});
+
+describe("偏好分頁:窄螢幕(STYLE-11)", () => {
+  restoreViewportAfterEach();
+
+  it("手機寬:表格有最小寬(類型欄 200 + 兩個管道各 200 = 600),窄過它由表格容器橫向捲動,類型名稱不被擠成一字一行", async () => {
+    setMobileViewport();
+    renderPreferences();
+
+    const table = await findTable();
+    expect(globalThis.getComputedStyle(table).minWidth).toBe("600px");
+    const container = table.closest<HTMLElement>(".MuiTableContainer-root");
+    if (container === null) {
+      throw new Error("找不到表格容器");
+    }
+    const style = globalThis.getComputedStyle(container);
+    expect([style.overflow, style.overflowX]).toContain("auto");
   });
 });
