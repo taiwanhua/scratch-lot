@@ -300,6 +300,27 @@ describe("Receipt58Qr / Receipt58Barcode", () => {
     expect(screen.getByText("掃描開啟單據")).toBeInTheDocument();
   });
 
+  it("QR code 每模組最多 6 點;內容太長放不進可用寬時才縮小,仍是整數點", () => {
+    const short = "https://admin.example.test/doc/C-0031";
+    const long = `https://admin.example.test/doc/${"C".repeat(300)}`;
+    render(
+      <>
+        <Receipt58Qr value={short} />
+        <Receipt58Qr value={long} />
+      </>,
+    );
+
+    const shortQr = screen.getByRole("img", { name: short });
+    expect(Number(shortQr.dataset.moduleDots)).toBe(6);
+    const longQr = screen.getByRole("img", { name: long });
+    const unit = Number(longQr.dataset.moduleDots);
+    expect(Number.isInteger(unit)).toBe(true);
+    expect(unit).toBeLessThan(6);
+    expect(Number(longQr.getAttribute("width"))).toBeLessThanOrEqual(
+      RECEIPT58_CONTENT_WIDTH,
+    );
+  });
+
   it("一維條碼(Code128)寬度為模組數的整數倍、不超過可用寬,下方印內容", () => {
     render(<Receipt58Barcode value="D0031202610150001" />);
 

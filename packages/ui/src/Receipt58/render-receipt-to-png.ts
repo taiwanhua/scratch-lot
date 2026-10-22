@@ -78,7 +78,7 @@ const paintQr = (
  * 把節點裡的 QR code(`Receipt58Qr` 的 `data-receipt58-qr`)以模組矩陣直接寫進黑白點陣:
  * 每模組恰好 `data-module-dots` 點、含安靜區先整塊清白,不經截圖與縮放 ——
  * 截圖在 QR 位置的灰邊、半點偏移一律被蓋掉。位置以畫面上的相對位置換算成點(四捨五入到整數點)。
- * 節點沒有排版(寬 0,例:jsdom)時不動。
+ * 節點或 QR 沒有排版(寬 0,例:jsdom、display: none)時不動。
  */
 const stampQrSymbols = (node: HTMLElement, image: MonochromeImage): void => {
   const box = node.getBoundingClientRect();
@@ -91,6 +91,8 @@ const stampQrSymbols = (node: HTMLElement, image: MonochromeImage): void => {
     const unit = Number(symbol.dataset.moduleDots);
     if (value === "" || !Number.isInteger(unit) || unit < 1) continue;
     const rect = symbol.getBoundingClientRect();
+    // 沒有排版的 QR(例:被 display: none 藏起來)位置全是 0,寫進去會落在錯的地方
+    if (rect.width <= 0) continue;
     paintQr(image, qrModules(value), unit, {
       left: Math.round((rect.left - box.left) * dotsPerPx),
       top: Math.round((rect.top - box.top) * dotsPerPx),
