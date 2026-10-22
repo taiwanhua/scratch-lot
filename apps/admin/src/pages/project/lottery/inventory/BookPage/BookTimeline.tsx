@@ -94,7 +94,14 @@ export const BookTimeline = ({ events }: BookTimelineProps) => {
         const label = t(`eventTypes.${event.type}`);
         const reason = reasonLabelOf(event);
         const note = event.reasonNote ? `:${event.reasonNote}` : "";
-        return reason === null ? label : `${label}(${reason}${note})`;
+        // 跨班更正:標「前期更正,屬於 X 班」(撤銷看原售出那一班、事後更正看它指向的班)
+        const correction =
+          event.correctionOfShift == null
+            ? ""
+            : t("timeline.correctionOf", { shift: event.correctionOfShift });
+        return reason === null
+          ? `${label}${correction}`
+          : `${label}(${reason}${note})${correction}`;
       },
     },
     {

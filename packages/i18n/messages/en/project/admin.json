@@ -601,7 +601,8 @@
       },
       "wholeBook": "Whole book",
       "aria": "Event timeline",
-      "empty": "No events yet"
+      "empty": "No events yet",
+      "correctionOf": " (prior correction, belongs to {shift})"
     },
     "correctSkips": {
       "title": "Correct skips",

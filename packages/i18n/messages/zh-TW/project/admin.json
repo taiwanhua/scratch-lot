@@ -601,7 +601,8 @@
       },
       "wholeBook": "整本",
       "aria": "事件時間軸",
-      "empty": "還沒有事件"
+      "empty": "還沒有事件",
+      "correctionOf": "(前期更正,屬於 {shift})"
     },
     "correctSkips": {
       "title": "更正跳號",

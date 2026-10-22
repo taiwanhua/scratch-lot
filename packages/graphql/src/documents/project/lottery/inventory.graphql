@@ -98,6 +98,7 @@ fragment LotteryInventoryBookDetailFields on LotteryInventoryBookDetail {
     refSerialNo
     reasonKey
     reasonNote
+    correctionOfShift
   }
   sources {
     type
