@@ -2285,6 +2285,7 @@
       "NO_OPEN_SHIFT": "This cash point has no open shift",
       "UNEXPECTED": "Something went wrong, please try again",
       "CASH_POINT_NOT_AT_BRANCH": "This cash point is not at this side's branch; pick an open drawer of this branch",
+      "AMOUNT_EXCEEDS_VAULT": "The vault's expected cash is not enough; record the vault's actual cash with a cash correction first",
       "PERIOD_CLOSE_INVALID": "The month you typed does not match the month to close",
       "PERIOD_NOT_ENDED": "This month has not ended yet",
       "PERIOD_ALREADY_CLOSED": "This month is already closed (it cannot be reopened)",

@@ -130,7 +130,7 @@
 - 淨額只算 `settlementSide` 有值的交易 / 流水。**兌獎入帳**(`redemption_income`)可以掛單據(`refType` / `refId` / `refRevision`),但 `settlementSide` 一律是 null:不算進任何一邊的淨額、不出現在收付歷程;`bankTypeOf` 只會回批貨 / 調貨的支出與收入,不會回兌獎入帳(有測試)。
 - **沖正收付**(`reverseSettlement`):要看得到單據、有那一邊的權限,且**這一邊的記帳分店在操作者的可見範圍內**(現金 = 流水的分店;銀行 = 歸屬分店,沒有時看登記的組織),銀行另要求看得到那個帳戶;不符合一律 `NOT_FOUND`。現金沖正以操作者自己的上下文寫。同一筆同時沖正只有一個成功(唯一索引,有併發測試)。
 - **自動記帳**(`SettlementService.recordAutomatic(session, { operator, moduleKey, submission, side, button, accountId, amount })`):給單據在交易內記帳用(例:進貨單送出時記第一筆「批貨支出」)。不檢查按鈕權限、不看先填的金額;**金額 0 照記**(進貨單應付 0 也留一筆,淨額不受影響;人工登記仍要正數),負數或不是整數不記(回 null);沿用呼叫端的交易,不在交易內拋 `CashLedgerOutsideTransactionError`;帳戶仍要使用中、使用組織包含這一邊的分店(帳戶以單據的租戶為邊界讀)。
-- 銀行:帳戶要使用中、使用組織包含這一邊的分店(`BANK_ACCOUNT_NOT_USABLE`)。現金(只有調貨):經手人 / 收款人必填;來源小金庫,或收銀點抽屜(要有開著的班,`NO_OPEN_SHIFT`;要是這一邊分店的收銀點,`CASH_POINT_NOT_AT_BRANCH`;店面以 `registerOpenShiftResolver` 登記;付款視窗的抽屜選項 = 這一邊的 `cashDrawers`,店面以 `registerOpenDrawersLister` 登記)。
+- 銀行:帳戶要使用中、使用組織包含這一邊的分店(`BANK_ACCOUNT_NOT_USABLE`)。現金(只有調貨):經手人 / 收款人必填;來源小金庫(**付款**時金額不能超過小金庫應有扣掉審核中日結的存入,`AMOUNT_EXCEEDS_VAULT`,欄位 `amount`;與出庫同一個 `StoreVaultGuard`,同一家店同時動小金庫在同一個守門文件上序列化;剛好等於可以),或收銀點抽屜(要有開著的班,`NO_OPEN_SHIFT`;要是這一邊分店的收銀點,`CASH_POINT_NOT_AT_BRANCH`;店面以 `registerOpenShiftResolver` 登記;付款視窗的抽屜選項 = 這一邊的 `cashDrawers`,店面以 `registerOpenDrawersLister` 登記)。
 - 作廢 / 駁回前每一邊淨額都要是 0:單據在自己的 `registerFormLifecycle` 掛 `settlementClearedGuard`(`beforeVoid` / `beforeReject`,`inject: [SettlementLedger]`),擋下時 `FORBIDDEN` + `reason = SETTLEMENT_NOT_CLEARED`。
 - 參與收付的提交狀態:`reviewing` / `returned` / `withdrawn` / `completed`(草稿、作廢、駁回不算)。
 
@@ -237,6 +237,7 @@
 | `BANK_ACCOUNT_NOT_USABLE`       | 帳戶的使用組織不含這一邊的分店                                                                                               |
 | `NO_OPEN_SHIFT`                 | 現金來源選抽屜但沒有開著的班                                                                                                 |
 | `CASH_POINT_NOT_AT_BRANCH`      | 現金來源選的抽屜不是這一邊分店的收銀點                                                                                       |
+| `AMOUNT_EXCEEDS_VAULT`          | 收付從小金庫付現超過小金庫應有(扣掉審核中日結的存入;店面 `store-error.ts` 的同一個 reason)                                   |
 | `SETTLEMENT_NOT_CLEARED`        | lifecycle 守門(`FORBIDDEN` 的 reason):作廢 / 駁回前淨額 ≠ 0                                                                  |
 | `PERIOD_CLOSE_INVALID`          | 月份不是 `YYYY-MM`;輸入的確認月份和要關的月份不同(`fields: confirmMonth`)                                                    |
 | `PERIOD_NOT_ENDED`              | 關本月或未來的月份                                                                                                           |
@@ -257,7 +258,7 @@ targetType `lottery_bank_account` / `lottery_bank_transaction` / `lottery_cash_m
 ## 測試
 
 - `packages/domain/src/project/lottery-accounts/lottery-accounts.test.ts`:類型與方向、從 → 到、規格 9 的進貨單 ①–⑤ 驗算、調貨單例、分次付款例、待結清種類。
-- `apps/api/src/project/lottery/accounts/accounts.test.ts`(TEST-07):期初鎖定 / 刪除 / 停用、可見範圍(列表與單筆 `NOT_FOUND`、共用進來的只能看)、權限、交易方向與餘額、沖正(原交易不改、不能沖兩次;掛在單據上的要那一邊的收付權限)、沖正存入連動存銀行流水、小金庫只由流水算 + schema 與 repository 檢查、收付(分次付款、待結清、候選、作廢 / 駁回守門、帳戶使用組織、現金來源)。收付用兩種測試單據登記驗。
+- `apps/api/src/project/lottery/accounts/accounts.test.ts`(TEST-07):期初鎖定 / 刪除 / 停用、可見範圍(列表與單筆 `NOT_FOUND`、共用進來的只能看)、權限、交易方向與餘額、沖正(原交易不改、不能沖兩次;掛在單據上的要那一邊的收付權限)、沖正存入連動存銀行流水、小金庫只由流水算 + schema 與 repository 檢查、收付(分次付款、待結清、候選、作廢 / 駁回守門、帳戶使用組織、現金來源、從小金庫付現超過應有擋下 / 剛好等於可以)。收付用兩種測試單據登記驗。
 - `apps/db-migrator/seeds/project/accounts.test.ts`:模組宣告與開通角色配方。
 - `packages/domain/src/project/lottery-accounts/period-close.test.ts`:月份期間(10/31 23:59:59.999 算 10 月)、依序、月份列表。
 - `apps/api/src/project/lottery/period-close/period-close.test.ts`(TEST-07):沒有 `close-period` → `FORBIDDEN`;跳過 9 月關 10 月、關本月、重關、確認月份不同 → 擋下;沒結帳的班 → 擋;三種單據審核中落在那個月 → 擋(11 月的不擋);沒被日結涵蓋的班 → 警告並記快照;月底餘額 / 小金庫只算到 10/31 23:59:59.999;`assertPeriodOpen` 的邊界;關帳逾期(3 號、上月未關 → 提醒;2 號不寄;已關不寄)。退款班次 / 現金更正位置 / 開班選排班的擋下在店面的 `store-forms.test.ts`、`store.test.ts`。

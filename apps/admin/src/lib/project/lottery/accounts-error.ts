@@ -17,6 +17,7 @@ export type AccountsErrorCode =
   | "BANK_ACCOUNT_NOT_USABLE"
   | "NO_OPEN_SHIFT"
   | "CASH_POINT_NOT_AT_BRANCH"
+  | "AMOUNT_EXCEEDS_VAULT"
   | "PERIOD_CLOSE_INVALID"
   | "PERIOD_NOT_ENDED"
   | "PERIOD_ALREADY_CLOSED"
@@ -39,6 +40,8 @@ const REASON_CODES: readonly AccountsErrorCode[] = [
   "BANK_ACCOUNT_NOT_USABLE",
   "NO_OPEN_SHIFT",
   "CASH_POINT_NOT_AT_BRANCH",
+  // 收付從小金庫付現超過小金庫應有(與出庫同一個判斷,文案同店面)
+  "AMOUNT_EXCEEDS_VAULT",
   // 關帳(規格 10.4)
   "PERIOD_CLOSE_INVALID",
   "PERIOD_NOT_ENDED",
