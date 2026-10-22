@@ -6,12 +6,19 @@ import {
   ROOT_ADMIN,
   startAuthTestApp,
 } from "../../auth/test-support/auth-app";
-import { createOrg } from "../../auth/test-support/fixtures";
+import {
+  createOrg,
+  createUser,
+  findRootOrgId,
+} from "../../auth/test-support/fixtures";
 import type { OperatorContext } from "../../database/operator-context";
 import { HOOK_TIMEOUT_MS } from "../../database/test-support/mongo-connection";
 import { login } from "../../demo-items-two/test-support/fixtures";
+import { createRole } from "../../permission/test-support/fixtures";
+import { PROJECT_FORM_LIFECYCLES } from "../form-lifecycles";
 import {
   GAME_MODULES,
+  PASSWORD,
   createMasterDataOperator,
   errorOf,
   ok,
@@ -145,5 +152,98 @@ describe("根組織進專案功能:一律 FORBIDDEN + reason TENANT_ONLY(要先�
         {},
       ),
     ).toEqual({ code: "VALIDATION_FAILED", fields: ["categoryKey"] });
+  });
+
+  it("Mutation 也擋(沖正銀行交易)", async () => {
+    expect(
+      await errorOf(
+        api,
+        rootToken,
+        `mutation ($input: ReverseLotteryBankTransactionInput!) {
+          reverseLotteryBankTransaction(input: $input) { item { id } }
+        }`,
+        { input: { id: String(new Types.ObjectId()), reason: "記錯" } },
+      ),
+    ).toMatchObject({ code: "FORBIDDEN", reason: TENANT_ONLY_REASON });
+  });
+
+  it("根組織的成員切進租戶組織後放行(同一個人、同一個端點)", async () => {
+    const rootId = await findRootOrgId(api.connection);
+    const userId = await createUser(api.connection, {
+      account: "tenant-scope-both",
+      password: PASSWORD,
+      orgIds: [rootId, tenantId],
+    });
+    await createRole(api.app, api.connection, {
+      name: "租戶甲檔案管理",
+      ownerOrgId: tenantId,
+      moduleKeys: [...GAME_MODULES],
+      permissionKeys: [],
+      assignTo: [userId],
+    });
+    const atRoot = await login(api, "tenant-scope-both", PASSWORD);
+    const games = PROJECT_QUERIES[0]?.query ?? "";
+    expect(await errorOf(api, atRoot, games, { input: {} })).toMatchObject({
+      code: "FORBIDDEN",
+      reason: TENANT_ONLY_REASON,
+    });
+    const switched = await ok<{ switchOrg: { accessToken: string } }>(
+      api,
+      atRoot,
+      `mutation ($input: SwitchOrgInput!) { switchOrg(input: $input) { accessToken } }`,
+      { input: { orgId: String(tenantId) } },
+    );
+    const data = await ok<{ lotteryGames: { totalCount: number } }>(
+      api,
+      switched.switchOrg.accessToken,
+      games,
+      { input: {} },
+    );
+    expect(data.lotteryGames.totalCount).toBe(0);
+  });
+});
+
+describe("專案表單的掛接點:根組織用表單引擎送出 / 審核專案表單一律擋下", () => {
+  const atRoot = operatorOf();
+  const current = new Types.ObjectId();
+  const inTenant = operatorOf({
+    currentOrgId: current,
+    memberTenants: [
+      { tenantId: new Types.ObjectId(), memberOrgIds: [current] },
+    ] as unknown as OperatorContext["memberTenants"],
+  });
+  const contextOf = (operator: OperatorContext) =>
+    ({ guard: "beforeSubmit", operator }) as unknown as Parameters<
+      NonNullable<
+        NonNullable<
+          (typeof PROJECT_FORM_LIFECYCLES)[number]["guards"]
+        >["beforeSubmit"]
+      >
+    >[0];
+
+  it.each(
+    PROJECT_FORM_LIFECYCLES.map(
+      (registration) =>
+        [
+          `${registration.moduleKey}/${registration.formKey ?? "*"}`,
+          registration,
+        ] as const,
+    ),
+  )("%s:每個守門在根組織都回 TENANT_ONLY", async (_name, registration) => {
+    for (const guard of Object.values(registration.guards ?? {})) {
+      expect(await guard(contextOf(atRoot))).toEqual(
+        expect.objectContaining({ code: TENANT_ONLY_REASON }),
+      );
+    }
+    expect(Object.keys(registration.guards ?? {})).toHaveLength(8);
+  });
+
+  it("站在租戶裡交給原本的守門(支援需求單沒有自己的守門 → 通過)", async () => {
+    const support = PROJECT_FORM_LIFECYCLES.find(
+      (registration) => registration.formKey === "support_request",
+    );
+    expect(
+      await support?.guards?.beforeSubmit?.(contextOf(inTenant)),
+    ).toBeNull();
   });
 });

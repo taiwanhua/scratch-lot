@@ -1,6 +1,7 @@
 import { GraphQLError } from "graphql";
 
 import type { OperatorContext } from "../../database/operator-context";
+import { tenantOfOperator } from "./operator-tenant";
 
 /**
  * 根組織進專案功能的原因碼:沿用底座「站在根組織做租戶專屬的事」的回應(`FORBIDDEN` + reason
@@ -17,17 +18,7 @@ export function rootOrgError(): GraphQLError {
     { extensions: { code: "FORBIDDEN", reason: TENANT_ONLY_REASON } },
   );
 }
-/**
- * 當前組織是不是根組織(不讀資料庫,與 `tenantOfOperator` 同一判準):當前組織不在任何租戶的
- * 所屬組織分組裡、且可見範圍是全部 → 根組織。沒有當前組織(系統上下文)不算。
- */
+/** 當前組織是不是根組織(與 `tenantOfOperator` 同一個判準:有當前組織、算出來的租戶是 null)。 */
 export function isAtRootOrg(operator: OperatorContext): boolean {
-  const current = operator.currentOrgId;
-  if (current === null) {
-    return false;
-  }
-  const inTenant = operator.memberTenants.some((group) =>
-    group.memberOrgIds.some((id) => id.equals(current)),
-  );
-  return !inTenant && operator.visibleOrgIds === "all";
+  return tenantOfOperator(operator)?.tenantId === null;
 }

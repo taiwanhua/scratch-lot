@@ -143,8 +143,10 @@ export const mockHandlers = ({
     hasRefreshCookie: authenticated,
     modules: [...modulesForView(view), ...projectMockWorld.modules(view)],
     orgs: orgsForView(view),
-    // 根組織視角站在根組織(`tenantId: null`);租戶視角站在租戶 A(切換組織後沿用,mock 不重算)
-    currentOrgTenantId: view === "root" ? null : "org-tenant-a",
+    // 根組織視角預設站在根組織(`tenantId: null`),切到租戶 A 就是租戶 A;租戶視角的組織都屬租戶 A。
+    // 專案頁在根組織只顯示「請先切換到要管理的機構」(`app/project/module-pages.ts` 的 `gateTenant`)
+    currentOrgTenantId: (orgId) =>
+      orgId === "org-root" ? null : "org-tenant-a",
     preferences: notificationPreferenceDefaults(),
   });
 

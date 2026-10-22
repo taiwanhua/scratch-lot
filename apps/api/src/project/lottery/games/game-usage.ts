@@ -8,7 +8,7 @@ import type { Types } from "mongoose";
  *
  * checker 由該功能的 Nest provider 在 `onModuleInit` 登記(閉包拿自己注入的 repository),
  * 只回答「有沒有」,查詢要釘在傳入的 `tenantId` 上(遊戲是整個租戶共用的主檔)。
- * 根組織建的遊戲 `tenantId` 為 null。
+ * 遊戲一律屬於某個租戶(專案功能在根組織一律 `TENANT_ONLY`);`tenantId` 型別保留 null 只為相容舊呼叫端。
  */
 export type GameUsageChecker = (
   tenantId: Types.ObjectId | null,

@@ -106,9 +106,11 @@ export interface AuthWorldOptions {
   currentOrgTenantName?: string;
   /**
    * 當前組織的最上層組織 id(`me.currentOrg.tenantId`):`null` = 站在根組織;不給 = 不帶這個欄位
-   * (前端當成不在根組織)。切換組織後沿用同一個值。
+   * (前端當成不在根組織)。給值 = 切換組織後沿用同一個值;給函式 = 依組織 id 決定(切換組織後跟著重算,
+   * 例:mock 的根組織視角 `org-root → null`、租戶組織 → 它的租戶)。
    */
-  currentOrgTenantId?: string | null;
+  currentOrgTenantId?:
+    string | null | ((orgId: string) => string | null | undefined);
   /** 首登須改密碼(預設 false):true 時除 me / changePassword / logout 外的受保護操作回 MUST_CHANGE_PASSWORD */
   mustChangePassword?: boolean;
   /** 使用者目前的密碼(changePassword 驗「目前密碼」用) */
@@ -205,18 +207,22 @@ export const authWorld = (options: AuthWorldOptions = {}): AuthWorld => {
   };
   const resetRequests: string[] = [];
   /** 所屬組織 → 當前組織(多一個現簽的商標網址)。 */
-  const toCurrentOrg = (org: TestOrg | undefined): TestCurrentOrg | null =>
-    org === undefined
-      ? null
-      : {
-          ...org,
-          logoUrl: currentOrgLogoUrl,
-          timezone: currentOrgTimezone,
-          tenantName: currentOrgTenantName ?? org.name,
-          ...(currentOrgTenantId === undefined
-            ? {}
-            : { tenantId: currentOrgTenantId }),
-        };
+  const toCurrentOrg = (org: TestOrg | undefined): TestCurrentOrg | null => {
+    if (org === undefined) {
+      return null;
+    }
+    const tenantId =
+      typeof currentOrgTenantId === "function"
+        ? currentOrgTenantId(org.id)
+        : currentOrgTenantId;
+    return {
+      ...org,
+      logoUrl: currentOrgLogoUrl,
+      timezone: currentOrgTimezone,
+      tenantName: currentOrgTenantName ?? org.name,
+      ...(tenantId === undefined ? {} : { tenantId }),
+    };
+  };
 
   const me: MeQuery["me"] = {
     ...testUser,

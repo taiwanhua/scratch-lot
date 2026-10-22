@@ -547,7 +547,7 @@ export class BankTransactionsService {
     tenantId: Types.ObjectId | null,
     rows: readonly { row: BankTransactionRecord; balanceAfter: number }[],
     reversedBy: ReadonlyMap<string, string>,
-    /** 沖正按鈕:沒給 = 一律不能(例:剛寫入的那筆回傳) */
+    /** 沖正按鈕的判準來源:傳 `false` = 一律不能(例:`reverse` 回傳剛寫入的那筆沖正) */
     grant: AccountsGrant | false,
   ): Promise<LotteryBankTransactionModel[]> {
     const canReverseAny =

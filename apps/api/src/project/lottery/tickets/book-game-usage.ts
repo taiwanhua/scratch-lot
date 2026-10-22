@@ -15,7 +15,7 @@ export const BOOK_GAME_USAGE_CHECKER = "lottery-books";
 /**
  * 向檔案管理登記「有本引用這個遊戲」(專案規格 5.1:有庫存後代號、面額、張數鎖定,不能刪除)。
  * 問的是整個租戶有沒有(不是操作者看得到的那一部分),用租戶內存在性檢查 `existsInTenant`
- * (呼叫端登記在專案入口 `project/database/tenant-boundary-callers.ts`);根組織建的遊戲沒有租戶,不會有本。
+ * (呼叫端登記在專案入口 `project/database/tenant-boundary-callers.ts`)。
  */
 @Injectable()
 export class BookGameUsage implements OnModuleInit, OnModuleDestroy {
