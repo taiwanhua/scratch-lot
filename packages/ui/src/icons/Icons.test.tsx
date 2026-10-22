@@ -3,6 +3,7 @@ import { render } from "@testing-library/react";
 
 import { AddIcon } from "./AddIcon";
 import { ArrowDownIcon } from "./ArrowDownIcon";
+import { ArrowDropDownIcon } from "./ArrowDropDownIcon";
 import { ArrowUpIcon } from "./ArrowUpIcon";
 import { CheckCircleIcon } from "./CheckCircleIcon";
 import { CheckIcon } from "./CheckIcon";
@@ -52,6 +53,7 @@ const actionIcons = [
   { name: "AddIcon", Icon: AddIcon },
   { name: "ArrowUpIcon", Icon: ArrowUpIcon },
   { name: "ArrowDownIcon", Icon: ArrowDownIcon },
+  { name: "ArrowDropDownIcon", Icon: ArrowDropDownIcon },
   { name: "ChevronDoubleLeftIcon", Icon: ChevronDoubleLeftIcon },
   { name: "ChevronDoubleRightIcon", Icon: ChevronDoubleRightIcon },
   { name: "SystemModeIcon", Icon: SystemModeIcon },

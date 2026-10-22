@@ -30,6 +30,7 @@ export * from "./SettingsIcon";
 export * from "./AddIcon";
 export * from "./ArrowUpIcon";
 export * from "./ArrowDownIcon";
+export * from "./ArrowDropDownIcon";
 export * from "./SystemModeIcon";
 export * from "./LightModeIcon";
 export * from "./DarkModeIcon";
