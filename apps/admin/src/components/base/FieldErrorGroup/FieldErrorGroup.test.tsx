@@ -11,8 +11,8 @@ const RadioWithError = ({ text }: { text: string | undefined }) => {
   const { describedBy, errorText } = useFieldErrorText(text);
   return (
     <>
-      <div role="radiogroup" aria-label="種類" aria-describedby={describedBy}>
-        <input type="radio" aria-label="整天" />
+      <div role="radiogroup" aria-label="類型" aria-describedby={describedBy}>
+        <input type="radio" aria-label="甲" />
       </div>
       {errorText}
     </>
@@ -24,36 +24,36 @@ describe("群組欄位的錯誤原因", () => {
   it("FieldErrorGroup:有原因 → 群組的無障礙描述就是原因;沒有 → 不畫、不連", () => {
     const { rerender } = render(
       <AppThemeProvider brand={defaultBrand}>
-        <FieldErrorGroup label="執行任務" errorText="每一列都要選任務">
-          <input type="checkbox" aria-label="負責" />
+        <FieldErrorGroup label="通知對象" errorText="至少要選一位">
+          <input type="checkbox" aria-label="張三" />
         </FieldErrorGroup>
       </AppThemeProvider>,
     );
     expect(
-      screen.getByRole("group", { name: "執行任務" }),
-    ).toHaveAccessibleDescription("每一列都要選任務");
+      screen.getByRole("group", { name: "通知對象" }),
+    ).toHaveAccessibleDescription("至少要選一位");
 
     rerender(
       <AppThemeProvider brand={defaultBrand}>
-        <FieldErrorGroup label="執行任務" errorText={undefined}>
-          <input type="checkbox" aria-label="負責" />
+        <FieldErrorGroup label="通知對象" errorText={undefined}>
+          <input type="checkbox" aria-label="張三" />
         </FieldErrorGroup>
       </AppThemeProvider>,
     );
-    expect(screen.getByRole("group", { name: "執行任務" })).not.toHaveAttribute(
+    expect(screen.getByRole("group", { name: "通知對象" })).not.toHaveAttribute(
       "aria-describedby",
     );
-    expect(screen.queryByText("每一列都要選任務")).not.toBeInTheDocument();
+    expect(screen.queryByText("至少要選一位")).not.toBeInTheDocument();
   });
 
   it("useFieldErrorText:describedBy 放在自己的群組上(單選群組、開關)", () => {
     render(
       <AppThemeProvider brand={defaultBrand}>
-        <RadioWithError text="這一天已經有整天的畫休" />
+        <RadioWithError text="這個名稱已被使用" />
       </AppThemeProvider>,
     );
     expect(
-      screen.getByRole("radiogroup", { name: "種類" }),
-    ).toHaveAccessibleDescription("這一天已經有整天的畫休");
+      screen.getByRole("radiogroup", { name: "類型" }),
+    ).toHaveAccessibleDescription("這個名稱已被使用");
   });
 });

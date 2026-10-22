@@ -3282,6 +3282,7 @@
       "rule": "單張超過 5,000 元請到銀行兌獎;超過抽屜目前應有現金({expected})時擋下。",
       "overLimit": "單張超過 5,000 元:請客人到銀行兌獎",
       "overDrawer": "超過抽屜目前應有現金 {expected}",
+      "prizeInvalid": "要填大於 0 的整數",
       "cancel": "取消",
       "confirm": "確認兌獎",
       "successTitle": "已兌獎",

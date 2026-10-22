@@ -124,10 +124,16 @@ export const redemptionFieldErrorsOf = (
   if (error === null) {
     return { codeError: undefined, prizeError: undefined, errorText: null };
   }
+  const parsed = redemptionErrorOf(error);
   const reason = redemptionErrorText(error, t, timeText);
-  const fields = redemptionErrorOf(error).fields ?? [];
-  const codeError = fields.includes("code") ? reason : undefined;
-  const prizeError = fields.includes("prizeAmount") ? reason : undefined;
+  const fields = parsed.fields ?? [];
+  // 沒有細分原因(格式錯)寫該欄的格式要求,不把通用句寫在欄位下
+  const isFormat = parsed.code === "VALIDATION_FAILED";
+  const textOf = (formatText: string) => (isFormat ? formatText : reason);
+  const codeError = fields.includes("code") ? textOf(t("codeHint")) : undefined;
+  const prizeError = fields.includes("prizeAmount")
+    ? textOf(t("prizeInvalid"))
+    : undefined;
   return {
     codeError,
     prizeError,

@@ -109,7 +109,6 @@ export function notFoundError(message: string): GraphQLError {
   return new GraphQLError(message, { extensions: { code: "NOT_FOUND" } });
 }
 
-/** 一般輸入錯誤(GQL-04 `VALIDATION_FAILED`),`fields` 標在哪幾個 input 欄位上。 */
 /**
  * `VALIDATION_FAILED` 的細分原因(`extensions.reason`;格式對但不能存的情形,前端寫在欄位下,REACT-18)。
  * 沒有原因 = 格式錯。
@@ -128,6 +127,7 @@ export const FORM_VALIDATION_REASONS = {
 export type FormValidationReason =
   (typeof FORM_VALIDATION_REASONS)[keyof typeof FORM_VALIDATION_REASONS];
 
+/** 一般輸入錯誤(GQL-04 `VALIDATION_FAILED`),`fields` 標在哪幾個 input 欄位上;`reason` 選填(格式對但不能存才有)。 */
 export function validationError(
   message: string,
   fields: string[],

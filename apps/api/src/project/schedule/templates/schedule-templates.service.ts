@@ -468,10 +468,11 @@ function validatedDays(
     throw validationError("days must have 7 entries", ["days"]);
   }
   return days.map((ids) => {
-    if (
-      new Set(ids).size !== ids.length ||
-      ids.some((id) => !visibleTemplateIds.has(id))
-    ) {
+    // 同一格重複是格式錯(不帶 reason);範本不在或看不到才是參照失效
+    if (new Set(ids).size !== ids.length) {
+      throw validationError("days contains a template twice", ["days"]);
+    }
+    if (ids.some((id) => !visibleTemplateIds.has(id))) {
       throw validationError(
         "days contains unknown templates",
         ["days"],

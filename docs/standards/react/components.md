@@ -319,7 +319,7 @@ interface CellRenderContext<Row> {
 
 - **頁面提示(表單底部 / 對話框上方的 `Alert`、Snackbar)只放通用句**(`errors.VALIDATION_FAILED`,例「資料未通過驗證,請檢查標示的欄位」);錯誤沒有對到畫面上任何一欄(`fields` 是 `id`、畫面上沒有的欄位,或根本沒帶)時,原因才寫在提示裡。判斷交給 `formErrorSummary`;錯誤解讀「依 `reason` 細分成本頁的碼」的頁面用 `fieldErrorsByCodeOf`。
 - 狀態存「欄位 → 原因」(`FieldErrorTexts<Field>`),不再只存「哪幾欄錯」;使用者改了那一欄就清掉那一欄(`withoutFieldError`)。原本的說明文字(`helperText` 的提示)在欄位沒錯時照常顯示,錯了換成原因。
-- 單選群組、勾選群組、色票、可增減的清單這類沒有 `helperText` 的欄位,原因放在群組正下方(字級、顏色同 helperText),**並以 `aria-describedby` 連到那一組**,報讀軟體才讀得到:多個控制項組成的欄位包一層 `FieldErrorGroup`(`role="group"` + 名稱 + 描述);本身就是群組或單一控制項的(`RadioGroup`、開關、兩格時數)用 `useFieldErrorText(text)`,`describedBy` 放在那一層、`errorText` 畫在下方。測試以 `toHaveAccessibleDescription` 驗「原因在那一組下」。多個畫面共用的欄位元件收 `errorTexts` / `errorText`,呼叫端沒給時元件寫自己的預設格式要求。
+- 單選群組、勾選群組、色票、可增減的清單這類沒有 `helperText` 的欄位,原因放在群組正下方(字級、顏色同 helperText),**並以 `aria-describedby` 連到那一組**,報讀軟體才讀得到:多個控制項組成的欄位包一層 `FieldErrorGroup`(`role="group"` + 名稱 + 描述);本身就是群組或單一控制項的(`RadioGroup`、開關、兩格數字)用 `useFieldErrorText(text)`,`describedBy` 放在那一層、`errorText` 畫在下方。測試以 `toHaveAccessibleDescription` 驗「原因在那一組下」。多個畫面共用的欄位元件收 `errorTexts` / `errorText`,呼叫端沒給時元件寫自己的預設格式要求。
 - 格式要求的數字(長度上限、範圍)從 `@repo/domain` 的常數帶進 ICU 參數,不在文案裡寫死,和 api 的檢查同一個來源。
 - **api 那邊**:會擋的情形若不是格式錯(重複、被占用、重疊、狀態不合),`VALIDATION_FAILED` 一定帶 `reason`(GQL-04「`VALIDATION_FAILED` 的 `reason`」),前端才寫得出原因;沒有原因的一律當成格式錯。
 

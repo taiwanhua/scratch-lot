@@ -15,7 +15,7 @@ export interface FieldErrorGroupProps {
 }
 
 /**
- * 由多個控制項組成的欄位(勾選群組、任務清單、色票、一列條件)的外框(REACT-18):`role="group"`,
+ * 由多個控制項組成的欄位(勾選群組、可增減的清單、色票、一列設定)的外框(REACT-18):`role="group"`,
  * 錯誤原因畫在群組正下方,並以 `aria-describedby` 連到群組,報讀軟體讀得到。
  */
 export const FieldErrorGroup = ({

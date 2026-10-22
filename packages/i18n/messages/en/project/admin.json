@@ -3282,6 +3282,7 @@
       "rule": "Prizes over 5,000 are redeemed at the bank; prizes over the drawer's expected cash ({expected}) are blocked.",
       "overLimit": "Over 5,000: ask the customer to redeem at the bank",
       "overDrawer": "Over the drawer's expected cash {expected}",
+      "prizeInvalid": "Enter a whole number greater than 0",
       "cancel": "Cancel",
       "confirm": "Redeem",
       "successTitle": "Redeemed",

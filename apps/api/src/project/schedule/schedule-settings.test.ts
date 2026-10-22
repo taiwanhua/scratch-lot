@@ -1347,6 +1347,17 @@ describe("排班設定(GraphQL 端點 + 真 MongoDB)", () => {
         fields: ["days"],
         reason: "REFERENCE_NOT_FOUND",
       });
+      // 同一格列了同一個範本兩次:格式錯,不帶 reason
+      const twice = await gql(hq, SAVE_WEEK_TEMPLATE, {
+        input: {
+          name: "重複",
+          days: [[tenantTemplateId, tenantTemplateId], [], [], [], [], [], []],
+        },
+      });
+      expect(errorOf(twice)).toEqual({
+        code: "VALIDATION_FAILED",
+        fields: ["days"],
+      });
       const sixDays = await gql(hq, SAVE_WEEK_TEMPLATE, {
         input: { name: "六天", days: [[], [], [], [], [], []] },
       });
