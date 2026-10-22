@@ -245,7 +245,7 @@ operation 文件:`packages/graphql/src/documents/base/printing.graphql`。
 
 - **權限**:按鈕依 `usePermissions` 判斷(本模組不回 `abilities`)。`create` → 右上 [新增印表機] / [新增代理程式]、下載區;`edit` → 列上動作。
 - **狀態顯示**:印表機 = 停用 → 已停用;代理程式離線 → 離線;其餘照回報的 `status`(正常 / 缺紙 / 連不上;還沒回報 → 未回報)。代理程式 = 停用 → 已停用;`paired = false` → 等待配對;其餘已連線 / 離線。
-- **新增代理程式**:選組織(`orgTree` 管理範圍)+ 名稱 → 同一個對話框顯示伺服器網址(`AuthSession.endpoint` 的 origin)與配對碼(顯示成 `XXXX-XXXX`,複製的是 8 碼本身),各附 [複製]。[重新配對] 先確認,成功後同樣顯示。配對碼只在這個對話框出現,不進網址、不進快取以外的地方。
+- **新增代理程式**:選組織(`orgTree` 管理範圍)+ 名稱 → 同一個對話框顯示伺服器網址(`AuthSession.endpoint` 的 origin)與配對碼(顯示成 `XXXX-XXXX`,複製的是 8 碼本身),各附 [複製]。[重新配對] 先確認,成功後同樣顯示,上方說明改成在已安裝的 Windows 電腦以系統管理員執行安裝包的 `重新配對.bat`(安裝程式偵測到舊設定會保留舊金鑰),手動 `pair --force` 指令收合在下方給 Linux / macOS(`PairingInfo` 的 `hint` 由使用處傳入:新增顯示「執行安裝程式」,重新配對不另加;代理程式端見 [README「重新配對」](../../apps/print-agent/README.md))。配對碼只在這個對話框出現,不進網址、不進快取以外的地方。
 - **新增 / 編輯印表機**:「所屬組織」只列有啟用中代理程式的組織,選了才列該組織的代理程式(印表機的分店 = 代理程式的分店);編輯不能換組織、紙寬只有 58mm。編輯時「啟用」開關有變再接 `setPrinterEnabled`,整段算一次儲存(一則提示)。新增的一律啟用。
 - **下載**:平台建議由 `lib/base/print-agent-platform.ts` 依瀏覽器判斷(Windows / macOS / Linux x64 / Linux arm64;手機與認不出來的不建議)。按下才查 `printAgentDownloadUrl`(不吃快取),以連結點擊開始下載;失敗跳提示。
 - **測試列印**(`TestPrintDialog/`):開窗即送 —— 畫面外掛 `@repo/ui/receipt58` 的 `PrinterTestPage`(表頭 = 最上層組織名稱 `me.currentOrg.tenantName`(不印分店名稱)、印表機名稱與 IP、開窗時間;QR code = 本頁網址),`renderReceiptToPng` 轉 384 點 PNG → `printPrinterTestPage`。等結果見下方「等列印結果」。結果:成功、缺紙(warning)、代理程式離線(附最後連線時間)、其他失敗原因、api 擋下;失敗與擋下有 [重試]。結果就顯示在對話框裡,mutation 不另跳提示(DATA-06「結果就地顯示在開著的彈窗裡等候」)。

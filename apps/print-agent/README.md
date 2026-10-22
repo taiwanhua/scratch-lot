@@ -73,7 +73,10 @@ log 的保留期以代理程式自己的檔案為準(每天一個、14 天):服�
 
 **更新**:下載新版,再執行一次安裝。偵測到既有設定檔時保留金鑰,不必重新配對。
 
-**重新配對**(後台按了 [重新配對],舊金鑰已失效):服務 log 會出現「代理程式金鑰無效或已撤銷」。以系統管理員身分執行 `print-agent pair --server <網址> --code <新配對碼> --force`(Windows 在 `C:\Program Files\print-agent\`;Linux / macOS 用 `sudo`,Linux 完成後 `sudo chown print-agent:print-agent /etc/print-agent/config.json`),再重新啟動服務。
+**重新配對**(後台按了 [重新配對],舊金鑰已失效):服務 log 會出現「代理程式金鑰無效或已撤銷」。再執行一次安裝不會換金鑰(偵測到既有設定就保留),要另外做:
+
+- **Windows**:在安裝包的 `重新配對.bat` 上按右鍵 →「以系統管理員身分執行」,貼上後台 [重新配對] 畫面的伺服器網址與新配對碼(失敗可重輸)。它沿用 `安裝.bat` 的安裝位置與服務:執行已安裝的 `print-agent.exe pair --force`,再停止、啟動服務;找不到已安裝的執行檔、設定檔或服務時,提示先執行 `安裝.bat`。
+- **Linux / macOS**(或手邊沒有安裝包):以系統管理員身分執行 `print-agent pair --server <網址> --code <新配對碼> --force`(Windows 在 `C:\Program Files\print-agent\`;Linux / macOS 用 `sudo`,Linux 完成後 `sudo chown print-agent:print-agent /etc/print-agent/config.json`),再重新啟動服務(Windows `print-agent-service.exe stop` 再 `start`、Linux `sudo systemctl restart print-agent`、macOS `sudo launchctl kickstart -k system/print-agent`)。
 
 **移除**:
 
@@ -98,7 +101,7 @@ pnpm --filter @repo/print-agent package --version 1.0.0                         
 pnpm --filter @repo/print-agent package --version 1.0.0 --winsw <WinSW-x64.exe>  # Windows
 ```
 
-輸出 `dist/release/print-agent-<平台>.zip|tar.gz`,內含執行檔、安裝程式、服務設定與 `VERSION`。腳本最後會執行一次 `print-agent version` 核對版本。
+輸出 `dist/release/print-agent-<平台>.zip|tar.gz`,內含執行檔、安裝程式(`packaging/<os>/` 整個資料夾;Windows 是 `安裝.bat` 與 `重新配對.bat`)、服務設定與 `VERSION`。批次檔一律 CRLF(`packaging/windows/.gitattributes`),`if (...)` 區塊內 echo 的半形括號要寫成 `^(` `^)`(否則 cmd 把 `)` 當成區塊結束、整支中斷),`src/release/packaging-windows.test.ts` 守這兩項。腳本最後會執行一次 `print-agent version` 核對版本。
 
 | 平台        | 壓縮檔                           | runner             | 服務                           |
 | ----------- | -------------------------------- | ------------------ | ------------------------------ |
