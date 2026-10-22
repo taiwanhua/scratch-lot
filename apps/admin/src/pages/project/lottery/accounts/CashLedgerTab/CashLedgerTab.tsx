@@ -15,7 +15,7 @@ import { Card } from "@repo/ui/card";
 import { DatePicker } from "@repo/ui/date-picker";
 import { SelectField } from "@repo/ui/select-field";
 import { Stack } from "@repo/ui/stack";
-import { Table, type TableColumn } from "@repo/ui/table";
+import type { TableColumn } from "@repo/ui/table";
 import { Typography } from "@repo/ui/typography";
 
 import { OrgTreeSelect } from "@/components/base/OrgTreeSelect/OrgTreeSelect";
@@ -28,6 +28,7 @@ import {
   localDayTextOf,
 } from "@/lib/base/form-engine/local-day";
 
+import { AccountsList } from "../AccountsList/AccountsList";
 import { CASH_TABLE_MIN_WIDTH, moneyText } from "../accounts-config";
 import { nextDayText } from "./next-day";
 
@@ -297,8 +298,9 @@ export const CashLedgerTab = () => {
         </Box>
       </Stack>
       <Box sx={{ flex: 1, minHeight: 0 }}>
-        <Table
+        <AccountsList
           aria-label={t("cash.listAria")}
+          card={{ title: ["occurredAt", "type"] }}
           columns={columns}
           rows={rows}
           getRowKey={(row) => row.id}

@@ -10,7 +10,7 @@ import {
 } from "@repo/graphql";
 import { Box } from "@repo/ui/box";
 import { Button } from "@repo/ui/button";
-import { Table, type TableColumn } from "@repo/ui/table";
+import type { TableColumn } from "@repo/ui/table";
 import { Tag } from "@repo/ui/tag";
 
 import { SettlementDialog } from "@/components/project/lottery/SettlementPanel/SettlementDialog";
@@ -18,6 +18,7 @@ import { buttonLabelKey } from "@/components/project/lottery/SettlementPanel/set
 import { useSettlementReceipt } from "@/components/project/lottery/SettlementPanel/useSettlementReceipt";
 import { useSession } from "@/hooks/base/useSession";
 
+import { AccountsList } from "../AccountsList/AccountsList";
 import { OUTSTANDING_TABLE_MIN_WIDTH, moneyText } from "../accounts-config";
 
 type Row = LotteryOutstandingSettlementFieldsFragment;
@@ -154,8 +155,9 @@ export const OutstandingTab = () => {
 
   return (
     <Box sx={{ flex: 1, minHeight: 0 }}>
-      <Table
+      <AccountsList
         aria-label={t("outstanding.listAria")}
+        card={{ title: ["document"], tag: "diff", actions: "actions" }}
         columns={columns}
         rows={rows}
         getRowKey={(row) => `${row.refId}-${row.side}`}

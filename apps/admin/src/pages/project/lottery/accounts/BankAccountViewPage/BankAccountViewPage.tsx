@@ -18,7 +18,7 @@ import { CircularProgress } from "@repo/ui/circular-progress";
 import { DatePicker } from "@repo/ui/date-picker";
 import { SelectField } from "@repo/ui/select-field";
 import { Stack } from "@repo/ui/stack";
-import { Table, type TableColumn } from "@repo/ui/table";
+import type { TableColumn } from "@repo/ui/table";
 import { Tag } from "@repo/ui/tag";
 import { Typography } from "@repo/ui/typography";
 
@@ -34,6 +34,7 @@ import {
 import type { ModulePageProps } from "@/lib/base/module-tree";
 import { accountsErrorOf } from "@/lib/project/lottery/accounts-error";
 
+import { AccountsList } from "../AccountsList/AccountsList";
 import { usageText } from "../BankAccountsTab/usage-text";
 import { nextDayText } from "../CashLedgerTab/next-day";
 import { TRANSACTIONS_TABLE_MIN_WIDTH, moneyText } from "../accounts-config";
@@ -368,8 +369,9 @@ export const BankAccountViewPage = ({ routeParam }: ModulePageProps) => {
               sx={{ minWidth: 160 }}
             />
           </Stack>
-          <Table
+          <AccountsList
             aria-label={t("accountView.listAria")}
+            card={{ title: ["occurredAt", "type"], actions: "actions" }}
             columns={columns}
             rows={rows}
             getRowKey={(row) => row.id}

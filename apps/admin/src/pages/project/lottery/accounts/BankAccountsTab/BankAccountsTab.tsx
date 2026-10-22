@@ -6,12 +6,13 @@ import {
   useLotteryBankAccountsQuery,
 } from "@repo/graphql";
 import { Box } from "@repo/ui/box";
-import { Table, type TableColumn } from "@repo/ui/table";
+import type { TableColumn } from "@repo/ui/table";
 import { Tag } from "@repo/ui/tag";
 import { Typography } from "@repo/ui/typography";
 
 import { useSession } from "@/hooks/base/useSession";
 
+import { AccountsList } from "../AccountsList/AccountsList";
 import { BankAccountDialog } from "../BankAccountDialog/BankAccountDialog";
 import { BANK_ACCOUNTS_TABLE_MIN_WIDTH, moneyText } from "../accounts-config";
 import { useAccountsAccess } from "../useAccountsAccess";
@@ -94,8 +95,9 @@ export const BankAccountsTab = ({
 
   return (
     <Box sx={{ flex: 1, minHeight: 0 }}>
-      <Table
+      <AccountsList
         aria-label={t("bankAccounts.listAria")}
+        card={{ title: ["accountName"], tag: "status" }}
         columns={columns}
         rows={rows}
         getRowKey={(row) => row.id}

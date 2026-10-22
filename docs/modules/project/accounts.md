@@ -216,7 +216,7 @@
 - `CashLedgerTab`:分店選擇器 `OrgTreeSelect scope="visible"`、小金庫卡片、流水清單;`?movementId=` 帶到那一筆的分店與日期並標亮。
 - `OutstandingTab`:每列按鈕(`canSettle`)開 `SettlementDialog`。
 - `PeriodCloseTab`(`accounts.close-period`):月份列表(月份、狀態、關帳時間、關帳人);[關帳] 只在 `canClose` 那一列,開 `PeriodCloseDialog`(檢查清單:✓ 通過 / ✕ 擋下 / ! 只警告、快照預覽、輸入月份確認;輸入相同且 `canClose` 才能按);已關帳的 [快照] 開 `PeriodSnapshotDialog`。兩個彈窗在手機全螢幕。
-- 三尺寸:平板 / 手機照規則(Figma 標「規則」);彈窗在手機全螢幕,表格以最小寬度橫向捲動,`SettlementPanel` 的收付歷程在手機改成清單。
+- 三尺寸:平板 / 手機照規則(Figma 標「規則」,RW-01);彈窗在手機全螢幕,`SettlementPanel` 的收付歷程在手機改成清單。五個清單(銀行帳戶、交易清單、現金流水、待結清款項、關帳月份)都經 `AccountsList`:平板以上是表格(以最小寬度橫向捲動),手機(< `sm`)每列一張卡片 —— 標題列(銀行帳戶 = 戶名 + 狀態;交易 / 現金流水 = 時間 · 類型;待結清 = 單據 + 差額;關帳 = 月份 + 狀態)、其餘欄位一行一個「欄名 … 值」(值靠右)、列內按鈕([沖正]、[付款] 等、[關帳] / [快照])在卡片底部;按鈕條件與表格相同。
 
 正本:`apps/admin/src/pages/project/lottery/accounts/`、`apps/admin/src/components/project/lottery/SettlementPanel/`
 
@@ -259,8 +259,9 @@ targetType `lottery_bank_account` / `lottery_bank_transaction` / `lottery_cash_m
 - `apps/db-migrator/seeds/project/accounts.test.ts`:模組宣告與開通角色配方。
 - `packages/domain/src/project/lottery-accounts/period-close.test.ts`:月份期間(10/31 23:59:59.999 算 10 月)、依序、月份列表。
 - `apps/api/src/project/lottery/period-close/period-close.test.ts`(TEST-07):沒有 `close-period` → `FORBIDDEN`;跳過 9 月關 10 月、關本月、重關、確認月份不同 → 擋下;沒結帳的班 → 擋;三種單據審核中落在那個月 → 擋(11 月的不擋);沒被日結涵蓋的班 → 警告並記快照;月底餘額 / 小金庫只算到 10/31 23:59:59.999;`assertPeriodOpen` 的邊界;關帳逾期(3 號、上月未關 → 提醒;2 號不寄;已關不寄)。退款班次 / 現金更正位置 / 開班選排班的擋下在店面的 `store-forms.test.ts`、`store.test.ts`。
-- `apps/admin/src/pages/project/lottery/accounts/PeriodCloseTab/PeriodCloseTab.test.tsx`(TEST-08):分頁看 `close-period`、[關帳] 只在最早的未關帳月份、檢查清單與快照預覽、輸入月份確認、擋下時不能按、[快照]。
+- `apps/admin/src/pages/project/lottery/accounts/PeriodCloseTab/PeriodCloseTab.test.tsx`(TEST-08):分頁看 `close-period`、[關帳] 只在最早的未關帳月份、檢查清單與快照預覽、輸入月份確認、擋下時不能按、[快照];手機是卡片、平板以上是表格。
 - `apps/admin/src/pages/project/lottery/accounts/AccountsPage/AccountsPage.test.tsx`(TEST-08):分頁依 `view-*` 權限、[+ 新增帳戶]、即時現金帳、待結清款項的按鈕與付款視窗、帳戶詳情的按鈕依 abilities(掛在單據上的交易要那一邊的收付權限才有 [沖正])、沖正。
+- `apps/admin/src/pages/project/lottery/accounts/AccountsList/AccountsList.test.tsx`(TEST-08):銀行帳戶、交易清單、現金流水、待結清款項在手機是卡片、平板以上是表格;卡片上的按鈕照 abilities / `canSettle`,銀行帳戶卡片點進詳情(關帳月份的卡片在 `PeriodCloseTab.test.tsx`)。
 
 ## 使用者說明(help.md)
 
