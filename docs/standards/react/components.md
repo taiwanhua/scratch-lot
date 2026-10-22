@@ -157,7 +157,7 @@ MUI X 的 `RichTreeView`、DataGrid 這類元件收的是**元件本身**,不是
 - `onChange` 收到的是**選項的 `value` 本身**(以 `options` 查表),`Value` 可以是 enum / 字面量聯集,呼叫端不再 `event.target.value as X`。
 - 多選用 `multiple`(選項自帶勾選框、`onChange` 依點選先後回整個陣列),收合摘要不合用時給 `renderValue`。
 - 需要搜尋、分組、次文字或 chip 時改用 `@repo/ui/autocomplete`(STYLE-05 的分工:選項少於十個、不需搜尋 → `SelectField`)。
-- 殼的當前組織切換器也是 `SelectField`(標籤「當前組織」)。**不適用**:幾個互斥選項、切了立刻生效的設定(頭像選單的外觀、語言)用 `@repo/ui/segmented-control`;選單式動作(登出)用 `@repo/ui/menu`。
+- 殼的當前組織切換器也是 `SelectField`(標籤「當前組織」);**手機寬(< `sm`)例外**:頂部列放不下 180 寬的下拉,精簡版是當前組織名稱首字的小按鈕 + `@repo/ui/menu` 的組織清單(當前組織選中),選項與切換流程與下拉同一份(`OrgSwitcher` 的 `isCompact`)。**不適用**:幾個互斥選項、切了立刻生效的設定(頭像選單的外觀、語言)用 `@repo/ui/segmented-control`;選單式動作(登出)用 `@repo/ui/menu`。
 
 ## REACT-12 彈窗開著時,提示也要念得到:live region 不能是彈窗開啟前就在 body 裡的節點
 

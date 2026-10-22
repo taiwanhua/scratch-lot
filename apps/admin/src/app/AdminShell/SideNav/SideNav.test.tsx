@@ -5,7 +5,7 @@ import {
   SIDE_NAV_STORAGE_KEY,
   useSideNavStore,
 } from "@/stores/base/useSideNavStore";
-import { authWorld } from "@/test/msw/auth-handlers";
+import { authWorld, testOrg } from "@/test/msw/auth-handlers";
 import { superAdminModules } from "@/test/msw/module-fixtures";
 import { server } from "@/test/msw/server";
 import { renderApp } from "@/test/render";
@@ -267,6 +267,67 @@ describe("手機寬(< sm)側欄改成抽屜", () => {
     expect(
       within(nav).getByRole("button", { name: "模組說明" }),
     ).toBeInTheDocument();
+  });
+
+  it("精簡組織鈕:選另一個組織切換一次;點目前組織不切換", async () => {
+    setMobileViewport();
+    const world = authWorld({
+      hasRefreshCookie: true,
+      modules: superAdminModules,
+      orgs: [testOrg, { id: "org-2", name: "第二分店" }],
+    });
+    server.use(...world.handlers);
+    const { user } = renderApp({ path: "/overview" });
+    const banner = await screen.findByRole("banner");
+
+    await user.click(
+      await within(banner).findByRole("button", {
+        name: "當前組織:平台根組織",
+      }),
+    );
+    await user.click(
+      within(await screen.findByRole("menu", { name: "當前組織" })).getByRole(
+        "menuitem",
+        { name: "平台根組織" },
+      ),
+    );
+    expect(world.calls.switchOrg).toBe(0);
+
+    await user.click(
+      within(banner).getByRole("button", { name: "當前組織:平台根組織" }),
+    );
+    await user.click(
+      within(await screen.findByRole("menu", { name: "當前組織" })).getByRole(
+        "menuitem",
+        { name: "第二分店" },
+      ),
+    );
+    await waitFor(() => {
+      expect(world.calls.switchOrg).toBe(1);
+    });
+    expect(
+      await within(banner).findByRole("button", { name: "當前組織:第二分店" }),
+    ).toBeInTheDocument();
+  });
+
+  it("沒有當前組織:精簡鈕放佔位圖示,可及名稱「當前組織:尚未選擇」", async () => {
+    setMobileViewport();
+    server.use(
+      ...authWorld({
+        hasRefreshCookie: true,
+        modules: superAdminModules,
+        orgs: [],
+      }).handlers,
+    );
+    renderApp({ path: "/overview" });
+    const banner = await screen.findByRole("banner");
+    const org = await within(banner).findByRole("button", {
+      name: "當前組織:尚未選擇",
+    });
+    // 模組圖示白名單的「組織」(MUI 圖示在非 production 帶 data-testid = 元件名)
+    expect(within(org).getByTestId("BusinessOutlinedIcon")).toBeInTheDocument();
+    // 沒有可選的組織 → 停用
+    expect(org).toBeDisabled();
   });
 
   it("從抽屜底部的頭像選單去個人設定:導向並關閉抽屜", async () => {

@@ -33,6 +33,7 @@ export const MobileNavFooter = ({ me, module }: MobileNavFooterProps) => (
         name={me.name}
         account={me.account}
         orgName={me.currentOrg?.name}
+        placement="above"
       />
     </Box>
     {module !== undefined && (

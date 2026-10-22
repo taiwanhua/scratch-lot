@@ -5,7 +5,7 @@ import { useTranslations } from "use-intl";
 import { type MeQuery, useMeQuery, useSwitchOrgMutation } from "@repo/graphql";
 import { Avatar } from "@repo/ui/avatar";
 import { Button } from "@repo/ui/button";
-import { ChevronDownIcon } from "@repo/ui/icons";
+import { ChevronDownIcon, moduleIconOf } from "@repo/ui/icons";
 import { Menu, MenuItem } from "@repo/ui/menu";
 import { SelectField } from "@repo/ui/select-field";
 
@@ -22,6 +22,8 @@ export interface OrgSwitcherProps {
 const MIN_WIDTH = 180;
 /** 精簡版首字圓框的大小(theme.spacing 單位;與頭像同 32)。 */
 const COMPACT_BADGE_SIZE = 4;
+/** 沒有當前組織時精簡鈕的佔位圖示(模組圖示白名單的「組織」;模組層取出,不在 render 內宣告) */
+const OrgPlaceholderIcon = moduleIconOf("business");
 
 /**
  * AppBar 的當前組織切換器:標題「當前組織」的 `SelectField`(和其他表單下拉同一個外觀);
@@ -29,7 +31,8 @@ const COMPACT_BADGE_SIZE = 4;
  * 並立即換發即時通道的訂閱憑證(換到別的租戶時改連新租戶的 Durable Object,不必等到期前的換發)。
  *
  * 手機寬(`isCompact`)放不下 180 寬的下拉:改成組織名首字的小按鈕(可及名稱「當前組織:名稱」),
- * 點了展開同一份組織清單(`Menu`,當前組織標為選中),選了走同一個切換流程。
+ * 點了展開同一份組織清單(`Menu`,當前組織標為選中),選了走同一個切換流程;點目前組織不重複切換。
+ * 沒有當前組織時首字換成組織佔位圖示,可及名稱「當前組織:尚未選擇」。
  */
 export const OrgSwitcher = ({ me, isCompact = false }: OrgSwitcherProps) => {
   const t = useTranslations("admin.shell");
@@ -65,13 +68,17 @@ export const OrgSwitcher = ({ me, isCompact = false }: OrgSwitcherProps) => {
     );
   }
 
-  const currentName = me.currentOrg?.name ?? "";
+  const currentName = me.currentOrg?.name;
   return (
     <>
       <Button
         variant="text"
         color="inherit"
-        aria-label={t("currentOrgNamed", { name: currentName })}
+        aria-label={
+          currentName === undefined
+            ? t("currentOrgNone")
+            : t("currentOrgNamed", { name: currentName })
+        }
         aria-haspopup="menu"
         aria-expanded={menuAnchor !== null}
         disabled={isDisabled}
@@ -92,7 +99,11 @@ export const OrgSwitcher = ({ me, isCompact = false }: OrgSwitcherProps) => {
             typography: "subtitle2",
           }}
         >
-          {currentName.slice(0, 1)}
+          {currentName === undefined ? (
+            <OrgPlaceholderIcon fontSize="small" />
+          ) : (
+            currentName.slice(0, 1)
+          )}
         </Avatar>
       </Button>
       <Menu

@@ -96,6 +96,7 @@
     "openNav": "Open main menu",
     "currentOrg": "Current organization",
     "currentOrgNamed": "Current organization: {name}",
+    "currentOrgNone": "Current organization: none selected",
     "placeholder": {
       "pending": "This page is not built yet"
     },

@@ -56,7 +56,23 @@ export interface UserMenuProps {
   account: string;
   /** 當前組織名:使用者卡第二行接在帳號後面;沒有當前組織時只顯示帳號 */
   orgName?: string;
+  /**
+   * 選單往哪邊展開:`below`(預設,AppBar 右上角:往下、靠右對齊)/
+   * `above`(手機抽屜底部:往上、靠左對齊,不蓋住觸發鈕)
+   */
+  placement?: "below" | "above";
 }
+
+const PLACEMENTS = {
+  below: {
+    anchorOrigin: { vertical: "bottom", horizontal: "right" },
+    transformOrigin: { vertical: "top", horizontal: "right" },
+  },
+  above: {
+    anchorOrigin: { vertical: "top", horizontal: "left" },
+    transformOrigin: { vertical: "bottom", horizontal: "left" },
+  },
+} as const;
 
 /** 選單裡的一段:小標 + 分段按鈕(Figma 275:86 / 275:101)。 */
 const Section = ({
@@ -103,7 +119,12 @@ const Separator = () => (
  * 而且只讓 `MenuItem` 參與鍵盤移動,分段按鈕會變成鍵盤到不了;這裡只有登出兩項是 `MenuList`(上下鍵移動),
  * 其餘靠 Tab 依序走到(Popover 把焦點圈在浮層裡,Esc 關閉)。
  */
-export const UserMenu = ({ name, account, orgName }: UserMenuProps) => {
+export const UserMenu = ({
+  name,
+  account,
+  orgName,
+  placement = "below",
+}: UserMenuProps) => {
   const t = useTranslations("admin.shell.userMenu");
   const tSession = useTranslations("admin.session");
   const tRealtime = useTranslations("admin.realtime");
@@ -186,8 +207,8 @@ export const UserMenu = ({ name, account, orgName }: UserMenuProps) => {
         anchorEl={menuAnchor}
         open={menuAnchor !== null}
         onClose={closeMenu}
-        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-        transformOrigin={{ vertical: "top", horizontal: "right" }}
+        anchorOrigin={PLACEMENTS[placement].anchorOrigin}
+        transformOrigin={PLACEMENTS[placement].transformOrigin}
         slotProps={{
           paper: {
             role: "dialog",
