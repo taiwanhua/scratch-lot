@@ -311,7 +311,8 @@
       "UPLOAD_REJECTED": "The logo file was rejected (PNG / JPG / WebP only, up to 2MB).",
       "FORBIDDEN": "You do not have permission to perform this action.",
       "UNEXPECTED": "The action failed; please try again later."
-    }
+    },
+    "mobileBack": "← Back"
   },
   "userManager": {
     "orgTree": {
@@ -512,7 +513,8 @@
       },
       "confirm": "Copy",
       "cancel": "Cancel"
-    }
+    },
+    "mobileBack": "← Back"
   },
   "moduleManager": {
     "seedNotice": "Modules and permissions are maintained by the system. This page is for viewing and toggling enabled / disabled only.",
@@ -637,7 +639,8 @@
       "failed": "Delete failed. Please try again later.",
       "cancel": "Cancel",
       "close": "Close"
-    }
+    },
+    "mobileBack": "← Back"
   },
   "moduleIcons": {
     "dashboard": "Dashboard",
@@ -833,7 +836,8 @@
       "FORBIDDEN": "You do not have permission for this action.",
       "VALIDATION_FAILED": "The data did not pass validation, please check and submit again.",
       "UNEXPECTED": "The action failed, please try again later."
-    }
+    },
+    "mobileBack": "← Back"
   },
   "dataScope": {
     "targets": {
@@ -905,7 +909,8 @@
       "NOT_FOUND": "That data target does not exist.",
       "FORBIDDEN": "You do not have permission for this action (this page is root-org only).",
       "UNEXPECTED": "The action failed, please try again later."
-    }
+    },
+    "mobileBack": "← Back"
   },
   "fieldManager": {
     "categories": {
@@ -2137,6 +2142,14 @@
       "summaryFields": "Fields shown in the header when collapsed",
       "addSummaryField": "+ Field",
       "summaryNeedsCollapsible": "Turn on “Collapsible” first."
+    },
+    "mobile": {
+      "back": "← Back",
+      "region": "Form summary",
+      "hint": "Use a tablet or computer to design and edit.",
+      "version": "Published version",
+      "yes": "Yes",
+      "no": "No"
     }
   },
   "approval": {
@@ -2815,6 +2828,12 @@
       "ccHint": "Notified when the document is completed, rejected or voided (no review needed; they can view the document read-only). Step CC recipients are only notified when that step passes or is skipped; returning for changes and withdrawing notify no one.",
       "issues": "Whole-flow issues",
       "backToFlow": "Back to whole-flow settings"
+    },
+    "mobile": {
+      "back": "← Back",
+      "region": "Workflow summary",
+      "hint": "Use a tablet or computer to design and edit.",
+      "version": "Published version: {version}"
     }
   },
   "userPicker": {

@@ -79,7 +79,8 @@ export const OrgTreePanel = ({
     <Card
       sx={{
         p: 2,
-        width: 360,
+        // 手機寬(主從一次只顯示一邊)清單滿版
+        width: { xs: "100%", sm: 360 },
         flexShrink: 0,
         display: "flex",
         flexDirection: "column",

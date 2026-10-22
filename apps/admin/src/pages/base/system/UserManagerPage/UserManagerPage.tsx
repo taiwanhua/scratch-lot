@@ -9,7 +9,9 @@ import {
   useUserQuery,
 } from "@repo/graphql";
 import { Box } from "@repo/ui/box";
+import { Button } from "@repo/ui/button";
 import { Card } from "@repo/ui/card";
+import { useBreakpointDown } from "@repo/ui/media-query";
 import { Pagination } from "@repo/ui/pagination";
 import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
@@ -39,12 +41,16 @@ import { USERS_PAGE_SIZE, type UserRow } from "./user-manager-types";
  * 使用者管理(模組 key `system.user-manager`,正本 `docs/modules/user-manager.md`;
  * Figma「Screen / Admin 使用者管理」30:105)。
  * 左組織樹選範圍 → 右分頁清單;所有動作都是這一頁上的彈窗,顯示與否依權限(ADR-0011)。
+ *
+ * **手機寬(< `sm`)一次只顯示一邊**:網址沒有點選組織(`?list=` 的 `org`)時組織樹滿版;點一個組織 → 使用者清單滿版,
+ * 頂部 [← 返回] 清掉點選回到樹(樹藏起來不卸載,展開與捲動都留著)。看不到組織樹的人(沒有組織管理檢視權限)直接看清單。
  */
 export const UserManagerPage = () => {
   const t = useTranslations("admin.userManager");
   const tErrors = useTranslations("admin.userManager.errors");
   const { session } = useSession();
   const data = useUserManagerData();
+  const isMobile = useBreakpointDown("sm");
 
   /** 新增彈窗(不進網址:內容全是未存輸入) */
   const [isCreating, setIsCreating] = useState(false);
@@ -61,6 +67,11 @@ export const UserManagerPage = () => {
       retry: false,
     },
   );
+  // 手機寬顯示清單那一邊:點過組織、正在編輯某人,或根本沒有組織樹可選
+  const isDetailShown =
+    data.pickedOrgId !== null ||
+    edit.requestedId !== null ||
+    !data.isOrgTreeAvailable;
   const editingId = useUrlEditGuard({
     edit,
     canEdit: data.ability.canEdit,
@@ -131,18 +142,52 @@ export const UserManagerPage = () => {
     // 手機寬不釘高(STYLE-08):主從兩塊依內容長高、交給 <main> 捲;sm 起才撐滿殼高、各自內部捲動
     <Stack
       direction="row"
-      spacing={3}
+      spacing={{ xs: 0, sm: 3 }}
       sx={{ flex: { xs: "1 0 auto", sm: 1 }, minHeight: 0 }}
     >
-      <OrgTreePanel
-        nodes={data.orgNodes}
-        isLoading={data.isOrgTreeLoading}
-        isAvailable={data.isOrgTreeAvailable}
-        selectedOrgId={data.selectedOrgId}
-        onSelectOrg={data.selectOrg}
-      />
+      {/* sm 以上這層不參與排版(contents,仍標 minHeight: 0 守 STYLE-08 高度鏈);手機寬依點選只顯示一邊,另一邊藏起來但不卸載 */}
+      <Box
+        sx={
+          isMobile
+            ? {
+                display: isDetailShown ? "none" : "flex",
+                flex: 1,
+                minWidth: 0,
+              }
+            : { display: "contents", minHeight: 0 }
+        }
+      >
+        <OrgTreePanel
+          nodes={data.orgNodes}
+          isLoading={data.isOrgTreeLoading}
+          isAvailable={data.isOrgTreeAvailable}
+          selectedOrgId={isMobile ? data.pickedOrgId : data.selectedOrgId}
+          onSelectOrg={data.selectOrg}
+        />
+      </Box>
 
-      <Stack spacing={1.5} sx={{ flex: 1, minWidth: 0, minHeight: 0 }}>
+      <Stack
+        spacing={1.5}
+        sx={{
+          flex: 1,
+          minWidth: 0,
+          minHeight: 0,
+          display: isMobile && !isDetailShown ? "none" : "flex",
+        }}
+      >
+        {isMobile && data.isOrgTreeAvailable && (
+          <Box>
+            <Button
+              variant="text"
+              size="small"
+              onClick={() => {
+                data.selectOrg(null);
+              }}
+            >
+              {t("mobileBack")}
+            </Button>
+          </Box>
+        )}
         <UserToolbar
           keyword={data.keyword}
           onKeywordChange={data.setKeyword}

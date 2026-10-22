@@ -175,6 +175,8 @@ export const useUserManagerData = () => {
     protectedOwnerUserId,
     protectedOwnerOrgId,
     selectedOrgId,
+    /** 網址上點選的組織(`?list=` 的 `org`);沒點過為 null(此時 `selectedOrgId` 是樹根) */
+    pickedOrgId,
     selectOrg,
     keyword,
     setKeyword,

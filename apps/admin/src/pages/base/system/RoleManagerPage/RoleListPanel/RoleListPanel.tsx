@@ -78,7 +78,8 @@ export const RoleListPanel = ({
   return (
     <Card
       sx={{
-        width: 320,
+        // 手機寬(主從一次只顯示一邊)清單滿版
+        width: { xs: "100%", sm: 320 },
         flexShrink: 0,
         display: "flex",
         flexDirection: "column",

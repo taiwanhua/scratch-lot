@@ -311,7 +311,8 @@
       "UPLOAD_REJECTED": "商標檔案不符規定(限 PNG / JPG / WebP,2MB 以內)。",
       "FORBIDDEN": "你沒有執行這個動作的權限。",
       "UNEXPECTED": "操作失敗,請稍後再試。"
-    }
+    },
+    "mobileBack": "← 返回"
   },
   "userManager": {
     "orgTree": {
@@ -512,7 +513,8 @@
       },
       "confirm": "確認複製",
       "cancel": "取消"
-    }
+    },
+    "mobileBack": "← 返回"
   },
   "moduleManager": {
     "seedNotice": "模組與權限由系統統一維護,此頁僅供檢視與啟用 / 停用切換。",
@@ -637,7 +639,8 @@
       "failed": "刪除失敗,請稍後再試。",
       "cancel": "取消",
       "close": "關閉"
-    }
+    },
+    "mobileBack": "← 返回"
   },
   "moduleIcons": {
     "dashboard": "儀表板",
@@ -833,7 +836,8 @@
       "FORBIDDEN": "你沒有執行這個動作的權限。",
       "VALIDATION_FAILED": "資料未通過驗證,請檢查後再送出。",
       "UNEXPECTED": "操作失敗,請稍後再試。"
-    }
+    },
+    "mobileBack": "← 返回"
   },
   "dataScope": {
     "targets": {
@@ -905,7 +909,8 @@
       "NOT_FOUND": "找不到這個資料目標。",
       "FORBIDDEN": "你沒有執行這個動作的權限(本頁僅根組織可用)。",
       "UNEXPECTED": "操作失敗,請稍後再試。"
-    }
+    },
+    "mobileBack": "← 返回"
   },
   "fieldManager": {
     "categories": {
@@ -2137,6 +2142,14 @@
       "summaryFields": "收合時標題列顯示的欄位",
       "addSummaryField": "+ 欄位",
       "summaryNeedsCollapsible": "打開「可以收合」後才能設定。"
+    },
+    "mobile": {
+      "back": "← 返回",
+      "region": "表單摘要",
+      "hint": "設計與編輯請使用平板或電腦。",
+      "version": "發布版本",
+      "yes": "是",
+      "no": "否"
     }
   },
   "approval": {
@@ -2815,6 +2828,12 @@
       "ccHint": "單據完成、被駁回或被作廢時通知(不用審核,可以唯讀查看這張單據)。各關的知會對象只在那一關通過或被跳過時收到;退回修改、撤回都不知會。",
       "issues": "整個流程的問題",
       "backToFlow": "回到整個流程設定"
+    },
+    "mobile": {
+      "back": "← 返回",
+      "region": "流程摘要",
+      "hint": "設計與編輯請使用平板或電腦。",
+      "version": "發布版本:{version}"
     }
   },
   "userPicker": {

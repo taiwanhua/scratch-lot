@@ -1,18 +1,22 @@
 import { useCallback, useState } from "react";
 import { useTranslations } from "use-intl";
 
+import { Box } from "@repo/ui/box";
 import { Card } from "@repo/ui/card";
+import { useBreakpointDown } from "@repo/ui/media-query";
 import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
 
 import { useIsAtRootOrg } from "@/hooks/base/useIsAtRootOrg";
 import { usePermissions } from "@/hooks/base/usePermissions";
 import { useUrlEdit, useUrlEditGuard } from "@/hooks/base/useUrlEdit";
+import { useUrlSelectedId } from "@/hooks/base/useUrlSelectedId";
 import { useDesignerDraftStore } from "@/stores/base/useDesignerDraftStore";
 
 import { FormDetailPanel } from "./FormDetailPanel";
 import { CreateFormDialog } from "./FormDialogs/CreateFormDialog";
 import { FormListPanel } from "./FormListPanel";
+import { FormMobileSummary } from "./FormMobileSummary";
 import { UnsavedDesignDialog } from "./UnsavedDesignDialog";
 import { FORMS_PERMISSIONS } from "./forms-permissions";
 import { useFormsPageData } from "./useFormsPageData";
@@ -23,6 +27,10 @@ import { useFormsPageData } from "./useFormsPageData";
  *
  * **不是**根組織專屬:root 管共用表單,租戶管理員管自己的客製表單、開關分派來的表單。
  * 「建立表單」只有站在根組織做得到(租戶只能以某版本為基底建客製表單),租戶按了 api 回 `ROOT_ONLY`。
+ *
+ * **手機寬(< `sm`)一次只顯示一邊,而且不提供設計**:網址沒有選取(`?detail=` / `?edit=`)時清單滿版;
+ * 點一張表單 → 只顯示它的基本資料與設定摘要(`FormMobileSummary`,唯讀)與「請用平板或電腦設計、編輯」的提示,
+ * 設計器不掛載。頂部 [← 返回] 清掉選取回到清單(清單藏起來不卸載,搜尋與捲動都留著)。
  */
 export const FormsPage = () => {
   const t = useTranslations("admin.forms");
@@ -66,10 +74,14 @@ export const FormsPage = () => {
   );
   const saveDraft = useDesignerDraftStore((state) => state.save);
   const isAtRoot = useIsAtRootOrg() === true;
+  const isMobile = useBreakpointDown("sm");
+  const [urlPickedKey, setUrlPickedKey] = useUrlSelectedId();
+  const isDetailShown = urlPickedKey !== null || edit.requestedId !== null;
 
   /** 換表單:設計器有未存的變更就先問(留下 / 放棄 / 先存),不讓右欄一換就把改動丟掉。 */
   const requestSelect = (key: string) => {
-    if (key === data.selectedKey) {
+    // 手機寬沒有網址選取時,預設選中的那一筆也要點得進去
+    if (key === data.selectedKey && urlPickedKey !== null) {
       return;
     }
     if (isDirty) {
@@ -79,43 +91,77 @@ export const FormsPage = () => {
     data.select(key);
   };
 
-  return (
-    <Stack direction="row" spacing={3} sx={{ flex: 1, minHeight: 0 }}>
-      <FormListPanel
-        forms={data.forms}
-        isLoading={data.isLoading}
-        keyword={data.keyword}
-        onKeywordChange={data.setKeyword}
-        selectedKey={data.selectedKey}
-        onSelect={requestSelect}
-        canCreate={isAtRoot && hasPermission(FORMS_PERMISSIONS.create)}
-        onCreate={() => {
-          setIsCreating(true);
+  const emptyText =
+    data.isLoading || data.isSelectionPending ? t("loading") : t("empty");
+  /** sm 以上的右欄(手機寬改由 `FormMobileSummary` 顯示唯讀摘要) */
+  const desktopDetail =
+    data.selected === null ? (
+      <Card sx={{ flex: 1, p: 3 }}>
+        <Typography variant="body2" color="text.secondary">
+          {emptyText}
+        </Typography>
+      </Card>
+    ) : (
+      <FormDetailPanel
+        key={data.selected.key}
+        form={data.selected}
+        isEditing={editingKey === data.selected.key}
+        onEdit={edit.open}
+        onEditClose={closeEdit}
+        onChanged={() => {
+          void data.invalidate(data.selectedKey);
+        }}
+        onForked={(formKey) => {
+          void data.invalidate(formKey);
+          requestSelect(formKey);
         }}
       />
-      {data.selected === null ? (
-        <Card sx={{ flex: 1, p: 3 }}>
-          <Typography variant="body2" color="text.secondary">
-            {data.isLoading || data.isSelectionPending
-              ? t("loading")
-              : t("empty")}
-          </Typography>
-        </Card>
-      ) : (
-        <FormDetailPanel
-          key={data.selected.key}
-          form={data.selected}
-          isEditing={editingKey === data.selected.key}
-          onEdit={edit.open}
-          onEditClose={closeEdit}
-          onChanged={() => {
-            void data.invalidate(data.selectedKey);
-          }}
-          onForked={(formKey) => {
-            void data.invalidate(formKey);
-            requestSelect(formKey);
+    );
+
+  return (
+    <Stack
+      direction="row"
+      spacing={{ xs: 0, sm: 3 }}
+      sx={{ flex: 1, minHeight: 0 }}
+    >
+      {/* sm 以上這層不參與排版(contents,仍標 minHeight: 0 守 STYLE-08 高度鏈);手機寬依選取只顯示一邊,另一邊藏起來但不卸載 */}
+      <Box
+        sx={
+          isMobile
+            ? {
+                display: isDetailShown ? "none" : "flex",
+                flex: 1,
+                minWidth: 0,
+                minHeight: 0,
+              }
+            : { display: "contents", minHeight: 0 }
+        }
+      >
+        <FormListPanel
+          forms={data.forms}
+          isLoading={data.isLoading}
+          keyword={data.keyword}
+          onKeywordChange={data.setKeyword}
+          selectedKey={isMobile ? urlPickedKey : data.selectedKey}
+          onSelect={requestSelect}
+          canCreate={isAtRoot && hasPermission(FORMS_PERMISSIONS.create)}
+          onCreate={() => {
+            setIsCreating(true);
           }}
         />
+      </Box>
+      {isMobile ? (
+        <FormMobileSummary
+          form={data.selected}
+          emptyText={emptyText}
+          isShown={isDetailShown}
+          onBack={() => {
+            edit.close();
+            setUrlPickedKey(null);
+          }}
+        />
+      ) : (
+        desktopDetail
       )}
       {pendingKey !== null && (
         <UnsavedDesignDialog
