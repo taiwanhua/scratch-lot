@@ -95,9 +95,12 @@ export const LICENSE_TONES: Record<LotteryLicenseState, TagTone> = {
   [LotteryLicenseState.Expired]: "error",
 };
 
-/** 距批購 N 天的標籤色:超過 150 天警告、超過 180 天錯誤;無紀錄錯誤色(Figma DE-01)。 */
+/** 距批購 N 天的標籤色:超過 150 天警告、超過 180 天錯誤;無紀錄一般色(規格 5.2;側欄數字也不算它)。 */
 export const purchaseTone = (days: number | null): TagTone => {
-  if (days === null || days > PURCHASE_OVERDUE_DAYS) {
+  if (days === null) {
+    return "grey";
+  }
+  if (days > PURCHASE_OVERDUE_DAYS) {
     return "error";
   }
   return days > PURCHASE_WARNING_DAYS ? "warning" : "grey";
