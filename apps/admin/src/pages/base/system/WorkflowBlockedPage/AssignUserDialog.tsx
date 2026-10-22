@@ -16,8 +16,10 @@ export interface AssignUserDialogProps {
   stepName: string;
   /** 改派時:原承辦人 */
   fromName?: string;
-  /** 不能選的人:申請人、已在本關的人 */
+  /** 不能選的人:申請人(除非 `allowsApplicant`)、已在本關的人 */
   applicantId: string | null;
+  /** 這一關「申請人也是審核者時」= 照常審核:申請人可以選 */
+  allowsApplicant: boolean;
   stepAssigneeIds: readonly string[];
   isSubmitting: boolean;
   errorMessage: string | null;
@@ -26,14 +28,15 @@ export interface AssignUserDialogProps {
 }
 
 /**
- * 改派 / 新增審核者跳窗:選一位啟用中、在本租戶的人;申請人自己與已在本關的人
- * 列出但不能選(api 也會擋:`ASSIGNEE_NOT_ELIGIBLE` / `ALREADY_IN_STEP`)。
+ * 改派 / 新增審核者跳窗:選一位啟用中、在本租戶的人;已在本關的人與申請人自己列出但不能選
+ * (申請人在這一關設「照常審核」時可以選;api 也會擋:`ASSIGNEE_NOT_ELIGIBLE` / `ALREADY_IN_STEP`)。
  */
 export const AssignUserDialog = ({
   mode,
   stepName,
   fromName,
   applicantId,
+  allowsApplicant,
   stepAssigneeIds,
   isSubmitting,
   errorMessage,
@@ -81,7 +84,7 @@ export const AssignUserDialog = ({
           value={picked}
           onChange={setPicked}
           disabledReasonOf={(user) => {
-            if (user.id === applicantId) {
+            if (user.id === applicantId && !allowsApplicant) {
               return t("isApplicant");
             }
             return stepAssigneeIds.includes(user.id) ? t("inStep") : null;

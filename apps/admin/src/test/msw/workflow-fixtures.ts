@@ -297,6 +297,7 @@ export const instanceStep = (
   kind: "review",
   mode: "any",
   allowReturn: true,
+  allowsApplicantAssignee: false,
   status: WorkflowStepStatus.Pending,
   blocked: false,
   plan: [],
