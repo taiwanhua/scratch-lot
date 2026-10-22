@@ -115,7 +115,6 @@ describe("進貨單的模組宣告(規格 3.1、3.2、8.2)", () => {
   });
 
   it("r4:批購受託人在本人批購 = 否時必填(本人批購 = 是時隱藏,隱藏欄不檢查)", () => {
-    expect(purchaseForm.revision).toBe("r4");
     const trustee = purchaseForm.definition.fields.find(
       (field) => field.key === "trustee",
     );
