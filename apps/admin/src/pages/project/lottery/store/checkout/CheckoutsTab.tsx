@@ -15,7 +15,6 @@ import {
   useLotteryStoreBoardQuery,
 } from "@repo/graphql";
 import { Card } from "@repo/ui/card";
-import { DatePicker } from "@repo/ui/date-picker";
 import { useBreakpointDown } from "@repo/ui/media-query";
 import { Pagination } from "@repo/ui/pagination";
 import { SelectField } from "@repo/ui/select-field";
@@ -26,6 +25,7 @@ import { Typography } from "@repo/ui/typography";
 
 import { FilterDrawer } from "@/components/base/FilterDrawer/FilterDrawer";
 import { useFormModuleAccess } from "@/components/base/form-engine/FormModulePages/useFormModuleAccess";
+import { DateFilterPicker } from "@/components/project/DateFilterPicker/DateFilterPicker";
 import { useMe } from "@/hooks/base/useMe";
 import { useSession } from "@/hooks/base/useSession";
 import { useTenantTimezone } from "@/hooks/base/useTenantTimezone";
@@ -228,7 +228,7 @@ export const CheckoutsTab = () => {
             spacing={1.5}
             sx={{ flexWrap: "wrap" }}
           >
-            <DatePicker
+            <DateFilterPicker
               label={t("list.from")}
               size="small"
               value={value.from === "" ? null : value.from}
@@ -236,7 +236,7 @@ export const CheckoutsTab = () => {
                 change({ ...value, from: next ?? "" });
               }}
             />
-            <DatePicker
+            <DateFilterPicker
               label={t("list.to")}
               size="small"
               value={value.to === "" ? null : value.to}

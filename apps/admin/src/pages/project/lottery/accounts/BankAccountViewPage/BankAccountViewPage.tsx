@@ -15,13 +15,13 @@ import { Box } from "@repo/ui/box";
 import { Button } from "@repo/ui/button";
 import { Card } from "@repo/ui/card";
 import { CircularProgress } from "@repo/ui/circular-progress";
-import { DatePicker } from "@repo/ui/date-picker";
 import { SelectField } from "@repo/ui/select-field";
 import { Stack } from "@repo/ui/stack";
 import type { TableColumn } from "@repo/ui/table";
 import { Tag } from "@repo/ui/tag";
 import { Typography } from "@repo/ui/typography";
 
+import { DateFilterPicker } from "@/components/project/DateFilterPicker/DateFilterPicker";
 import { useRouteTabHref } from "@/hooks/base/useRouteTabHref";
 import { useRouteTabItemLabel } from "@/hooks/base/useRouteTabItemLabel";
 import { useSession } from "@/hooks/base/useSession";
@@ -344,7 +344,7 @@ export const BankAccountViewPage = ({ routeParam }: ModulePageProps) => {
         <Stack spacing={2}>
           <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
             <Box sx={{ maxWidth: { sm: 180 } }}>
-              <DatePicker
+              <DateFilterPicker
                 label={t("accountView.filters.from")}
                 value={from}
                 size="small"
@@ -354,7 +354,7 @@ export const BankAccountViewPage = ({ routeParam }: ModulePageProps) => {
               />
             </Box>
             <Box sx={{ maxWidth: { sm: 180 } }}>
-              <DatePicker
+              <DateFilterPicker
                 label={t("accountView.filters.to")}
                 value={to}
                 size="small"

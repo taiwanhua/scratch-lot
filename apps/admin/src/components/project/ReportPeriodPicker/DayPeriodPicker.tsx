@@ -1,9 +1,9 @@
 import { useTranslations } from "use-intl";
 
 import { parseLocalDate } from "@repo/domain/form";
-import { DatePicker } from "@repo/ui/date-picker";
 import { Stack } from "@repo/ui/stack";
 
+import { DateFilterPicker } from "@/components/project/DateFilterPicker/DateFilterPicker";
 import { shiftPeriod } from "@/lib/project/reports/report-period";
 
 import { PeriodShortcut } from "./PeriodShortcut";
@@ -24,7 +24,7 @@ export const DayPeriodPicker = ({
       useFlexGap
       sx={{ alignItems: "center", flexWrap: "wrap" }}
     >
-      <DatePicker
+      <DateFilterPicker
         label={t("date")}
         value={value}
         onChange={(next) => {

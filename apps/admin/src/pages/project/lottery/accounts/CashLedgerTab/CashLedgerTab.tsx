@@ -12,13 +12,13 @@ import {
 import { Alert } from "@repo/ui/alert";
 import { Box } from "@repo/ui/box";
 import { Card } from "@repo/ui/card";
-import { DatePicker } from "@repo/ui/date-picker";
 import { SelectField } from "@repo/ui/select-field";
 import { Stack } from "@repo/ui/stack";
 import type { TableColumn } from "@repo/ui/table";
 import { Typography } from "@repo/ui/typography";
 
 import { OrgTreeSelect } from "@/components/base/OrgTreeSelect/OrgTreeSelect";
+import { DateFilterPicker } from "@/components/project/DateFilterPicker/DateFilterPicker";
 import { useMe } from "@/hooks/base/useMe";
 import { useSession } from "@/hooks/base/useSession";
 import { useTenantTimezone } from "@/hooks/base/useTenantTimezone";
@@ -292,7 +292,7 @@ export const CashLedgerTab = () => {
           sx={{ minWidth: 160 }}
         />
         <Box sx={{ maxWidth: 200 }}>
-          <DatePicker
+          <DateFilterPicker
             label={t("cash.filters.date")}
             value={date}
             size="small"

@@ -18,7 +18,6 @@ import {
   useLotteryStoreBoardQuery,
 } from "@repo/graphql";
 import { Card } from "@repo/ui/card";
-import { DatePicker } from "@repo/ui/date-picker";
 import { useBreakpointDown } from "@repo/ui/media-query";
 import { Pagination } from "@repo/ui/pagination";
 import { SelectField } from "@repo/ui/select-field";
@@ -29,6 +28,7 @@ import { TextField } from "@repo/ui/text-field";
 import { Typography } from "@repo/ui/typography";
 
 import { FilterDrawer } from "@/components/base/FilterDrawer/FilterDrawer";
+import { DateFilterPicker } from "@/components/project/DateFilterPicker/DateFilterPicker";
 import { useMe } from "@/hooks/base/useMe";
 import { useSession } from "@/hooks/base/useSession";
 import { useTemporalText } from "@/hooks/base/useTemporalText";
@@ -318,7 +318,7 @@ export const RedemptionsTab = () => {
         )}
         search={
           <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
-            <DatePicker
+            <DateFilterPicker
               label={t("tab.from")}
               size="small"
               value={filters.from}
@@ -326,7 +326,7 @@ export const RedemptionsTab = () => {
                 setFilters({ ...filters, from: next });
               }}
             />
-            <DatePicker
+            <DateFilterPicker
               label={t("tab.to")}
               size="small"
               value={filters.to}

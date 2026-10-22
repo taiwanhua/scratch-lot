@@ -13,7 +13,6 @@ import {
   useLotteryInventoryBooksQuery,
 } from "@repo/graphql";
 import { Box } from "@repo/ui/box";
-import { DatePicker } from "@repo/ui/date-picker";
 import { SelectField } from "@repo/ui/select-field";
 import { Stack } from "@repo/ui/stack";
 import { Table, type TableColumn } from "@repo/ui/table";
@@ -22,6 +21,7 @@ import { TextField } from "@repo/ui/text-field";
 import { Typography } from "@repo/ui/typography";
 
 import { OrgTreeSelect } from "@/components/base/OrgTreeSelect/OrgTreeSelect";
+import { DateFilterPicker } from "@/components/project/DateFilterPicker/DateFilterPicker";
 import { useMe } from "@/hooks/base/useMe";
 import { useSession } from "@/hooks/base/useSession";
 import { useTemporalText } from "@/hooks/base/useTemporalText";
@@ -231,7 +231,7 @@ export const StockTab = () => {
             patch({ state: value });
           }}
         />
-        <DatePicker
+        <DateFilterPicker
           label={t("filters.purchasedFrom")}
           value={filters.from === "" ? null : filters.from}
           size="small"
@@ -239,7 +239,7 @@ export const StockTab = () => {
             patch({ from: value ?? "" });
           }}
         />
-        <DatePicker
+        <DateFilterPicker
           label={t("filters.purchasedTo")}
           value={filters.to === "" ? null : filters.to}
           size="small"
