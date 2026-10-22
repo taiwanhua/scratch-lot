@@ -148,10 +148,18 @@ expect(chain.slice(1, -1).filter((l) => l.scrolls)).toEqual([]); // 只有最內
 - 主從版面在手機寬(xs)不釘高(`flex: { xs: "1 0 auto", sm: 1 }`):兩塊依內容長高、交給 `<main>` 捲;sm 起才各自捲。
 - 直排(xs `column`)時不給 `flex: 2` 之類的比例:flex-basis 0 會把 `overflow: hidden` 的卡片壓矮;比例只在並排的斷點給(`flex: { md: 2 }`)。
 - 不釘高的卡片裡放 `@repo/ui/table`,傳 `containerSx={{ height: "auto" }}`:預設的 `height: 100%` 在 flex 欄裡會解析成卡片高度,少掉標題那段。
+  傳不了 `containerSx` 的清單(帳戶管理的 `AccountsList` 手機卡片也是 `height: 100%`)改成外面包一層 `flex: 1; minHeight: 0`、只放清單,
+  說明文字放在那一層外面(先例 `PeriodCloseTab`)。
+- 頁面根是 `Card` / `Paper`(會裁切)時一定要宣告 `flexShrink: 0`(或依上面的條件釘高):沒寫就是預設的 `flex-shrink: 1`,
+  裁切元素的 `min-height: auto` 又算成 0,內容一長卡片就被壓到殼高、下半直接消失(個人設定、補打卡新增頁都這樣)。
 - 內層捲動區塊(要 sticky 表頭、看得到橫向捲軸的寬表格 / 時間軸)不寫 `calc(100vh - 320px)` 這種依工具列高度的魔術數字:
   量 `<main>` 剩下的空間給上限,空間不足時不設上限(只由 `<main>` 捲),任何尺寸都只有一層垂直捲動
   (`hooks/base/useFitMainHeight.ts`;量測邊界傳**只含內容、不含並排側欄**的那一欄,含了比內容高的側欄,上限會來回跳)。
-- 測試:頁殼卡片斷言 `flex-shrink: 0`;殼本身斷言 `<main>` 可捲、`shell-content` 不裁切(先例 `app/AdminShell/ShellLayout.test.tsx`);量測 hook 見 `hooks/base/useFitMainHeight.test.tsx`。
+- 測試:頁殼卡片斷言 `flex-shrink: 0`;殼本身斷言 `<main>` 可捲、`shell-content` 不裁切(先例 `app/AdminShell/ShellLayout.test.tsx`);量測 hook 見 `hooks/base/useFitMainHeight.test.tsx`
+  (它觀察 `<main>`、邊界與邊界往上到 `<main>` 的每一層:上方工具列在資料載入後換行長高時,只有外層會變尺寸)。
+  **通用守門** `app/PageRootHeight.test.tsx`:用 mock 假世界(TEST-08)渲染每個有模組的列表頁、新增頁與個人設定,
+  以 `test/height-chain.ts` 的 `squeezedPageRootProblem` 驗頁面根 —— 會裁切的根要 `flex-shrink: 0`,或釘高且子樹有一層
+  經 `min-height: 0` 接上來的捲動容器;頁內分頁殼(根裡有 `tabpanel`)不得釘高。新頁只要在假世界有模組就自動納入。
 
 **同一條鏈只標一次 `overflow: auto`**:父子兩層各標一次時,平常看不出來 ——
 兩層都是「高度跟著內容長」就不會有人捲;等到內層拿到確定高度(或內容給了 `minWidth`),

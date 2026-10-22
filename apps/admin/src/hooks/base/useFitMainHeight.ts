@@ -83,7 +83,15 @@ export const useFitMainHeight = ({
     }
     const observer = new ResizeObserver(measure);
     observer.observe(main);
-    observer.observe(boundary);
+    // 邊界與它往上到 <main> 之間的每一層:上方工具列在資料載入後換行長高時,邊界自己與 <main> 都不變尺寸,
+    // 只有外層會長高 —— 不看外層就停在舊的上限,區塊比剩下的空間高,<main> 多出一段跟著捲(兩層垂直捲動)
+    for (
+      let node: HTMLElement | null = boundary;
+      node !== null && node !== main;
+      node = node.parentElement
+    ) {
+      observer.observe(node);
+    }
     return () => {
       observer.disconnect();
     };

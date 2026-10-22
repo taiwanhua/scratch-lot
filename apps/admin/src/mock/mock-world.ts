@@ -129,6 +129,12 @@ const withoutOperations = (
     );
   });
 
+/** 該視角側欄看得到的模組:底座 + 專案(`authWorld` 的 `me.modules`;殼內頁面的通用測試也從這裡取頁面清單)。 */
+export const mockModules = (view: MockWorldOptions["view"]) => [
+  ...modulesForView(view),
+  ...projectMockWorld.modules(view),
+];
+
 export const mockHandlers = ({
   view,
   authenticated,
@@ -138,7 +144,7 @@ export const mockHandlers = ({
   // 個人偏好先放好通知管道開關的 key(`UpdateMyPreferences` 只收已有的 key),通知假 api 讀同一份
   const auth = authWorld({
     hasRefreshCookie: authenticated,
-    modules: [...modulesForView(view), ...projectMockWorld.modules(view)],
+    modules: mockModules(view),
     orgs: orgsForView(view),
     // 根組織視角預設站在根組織(`tenantId: null`),切到租戶 A 就是租戶 A;租戶視角的組織都屬租戶 A。
     // 專案頁在根組織只顯示「請先切換到要管理的機構」(`app/project/module-pages.ts` 的 `gateTenant`)

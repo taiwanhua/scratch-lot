@@ -104,10 +104,11 @@ export const RequisitionPage = () => {
   }
 
   return (
+    // 頁內分頁殼(STYLE-08):內容少時撐滿、多時跟著長,交給 <main> 捲;不釘高(Card 預設 overflow: hidden,釘高會裁掉內容)
     <Card
       sx={{
-        flex: 1,
-        minHeight: 0,
+        flexGrow: 1,
+        flexShrink: 0,
         display: "flex",
         flexDirection: "column",
         px: { xs: 2, sm: 3 },

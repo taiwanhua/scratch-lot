@@ -67,3 +67,97 @@ export const heightChainOf = (anchor: HTMLElement): HeightChainLink[] => {
   }
   throw new Error("捲動容器不在 <main> 底下:高度不是殼給的(STYLE-08)");
 };
+
+/** 頁面根(`shell-content` 的直接子層)在殼的 column flex 欄裡的宣告值。 */
+export interface PageRootLink {
+  readonly label: string;
+  readonly flexGrow: string;
+  readonly flexShrink: string;
+  readonly flexBasis: string;
+  readonly minHeight: string;
+  /** 自己裁切溢出(`overflow: hidden` / `clip`;MUI `Card` 預設如此) */
+  readonly clips: boolean;
+}
+
+const clipsOverflow = (element: HTMLElement) => {
+  const style = globalThis.getComputedStyle(element);
+  return [style.overflow, style.overflowY].some((value) =>
+    ["hidden", "clip"].includes(value),
+  );
+};
+
+/** 宣告值是 0(jsdom 原樣回傳宣告值:`0`、`0px`、`0%` 都可能)。 */
+const isZero = (value: string) => ["0", "0px", "0%"].includes(value);
+
+/**
+ * 頁面根:`anchor` 往上找到 `shell-content`(殼的內容區,STYLE-08)的直接子層。
+ * 走不到 `shell-content` 時拋錯 —— 那代表頁面不在殼裡,測試該紅。
+ */
+export const pageRootOf = (anchor: HTMLElement): HTMLElement => {
+  let node: HTMLElement | null = anchor;
+  while (node !== null) {
+    const parent: HTMLElement | null = node.parentElement;
+    if (parent?.dataset.testid === "shell-content") {
+      return node;
+    }
+    node = parent;
+  }
+  throw new Error("找不到 shell-content:這個元素不在殼的內容區裡");
+};
+
+export const pageRootLinkOf = (root: HTMLElement): PageRootLink => {
+  const style = globalThis.getComputedStyle(root);
+  return {
+    ...linkOf(root),
+    flexShrink: style.flexShrink,
+    flexBasis: style.flexBasis,
+    clips: clipsOverflow(root),
+  };
+};
+
+/**
+ * 頁面根會不會被殼的 flex 欄壓扁、把內容裁掉(STYLE-08;回傳問題描述,沒問題回 null)。
+ *
+ * 殼的內容區是釘了高的 column flex,子層預設 `flex-shrink: 1`;`overflow` 不是 visible 的子層,
+ * `min-height: auto` 算成 0 —— 內容一長,裁切的根(`Card` / `Paper`)就被壓到殼高、超出的部分直接消失,
+ * `<main>` 也沒東西可捲。合法的只有兩種:
+ *
+ * 1. 不裁切(`Stack` / `Box` 這類 overflow visible 的根,壓了內容也會溢出給 `<main>` 捲),或 `flex-shrink: 0`
+ *    (一般內容頁 `flexGrow: 1; flexShrink: 0`,內容多時跟著長);
+ * 2. 刻意釘高(`flex-basis: 0` + `min-height: 0`),而且子樹有一層捲動容器,從它到頁面根的每一層都 `min-height: 0`
+ *    (主從版面、整頁一張 DataTable:超出量由那一層吃掉)。頁內分頁殼(根卡片裡有 `tabpanel`)不在此列:
+ *    各分頁內容不一,一律不釘高。
+ */
+export const squeezedPageRootProblem = (root: HTMLElement): string | null => {
+  const link = pageRootLinkOf(root);
+  if (!link.clips || link.flexShrink === "0") {
+    return null;
+  }
+  const pinned = isZero(link.minHeight) && isZero(link.flexBasis);
+  if (!pinned) {
+    return `${link.label} 會被壓扁:裁切溢出、flex-shrink ${link.flexShrink || "未宣告(預設 1)"}、flex-basis ${link.flexBasis || "未宣告(預設 auto)"}(一般內容頁用 flexGrow 1 + flexShrink 0)`;
+  }
+  if (root.querySelector('[role="tabpanel"]') !== null) {
+    return `${link.label} 是頁內分頁殼卻釘了高:分頁內容不一定由一層捲動吃掉超出量(用 flexGrow 1 + flexShrink 0)`;
+  }
+  const absorbs = [...root.querySelectorAll<HTMLElement>("*")].some(
+    (element) => {
+      if (!isScrollable(element)) {
+        return false;
+      }
+      for (
+        let node: HTMLElement | null = element.parentElement;
+        node !== null && node !== root;
+        node = node.parentElement
+      ) {
+        if (!isZero(globalThis.getComputedStyle(node).minHeight)) {
+          return false;
+        }
+      }
+      return true;
+    },
+  );
+  return absorbs
+    ? null
+    : `${link.label} 釘了高但子樹沒有一層吃得掉超出量的捲動容器:超出的內容會被裁掉`;
+};

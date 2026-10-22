@@ -8,6 +8,7 @@ import {
 } from "@repo/graphql";
 import { Box } from "@repo/ui/box";
 import { Button } from "@repo/ui/button";
+import { Stack } from "@repo/ui/stack";
 import type { TableColumn } from "@repo/ui/table";
 import { Tag } from "@repo/ui/tag";
 import { Typography } from "@repo/ui/typography";
@@ -109,25 +110,23 @@ export const PeriodCloseTab = () => {
   ];
 
   return (
-    <Box sx={{ flexGrow: 1, flexShrink: 0 }}>
-      <Typography
-        variant="body2"
-        color="textSecondary"
-        component="p"
-        sx={{ mb: 2 }}
-      >
+    // 說明與清單分兩層:清單(表格 / 手機卡片)預設 height: 100%,要量的是自己那一層,不是含說明的整個分頁(STYLE-08)
+    <Stack spacing={2} sx={{ flexGrow: 1, flexShrink: 0 }}>
+      <Typography variant="body2" color="textSecondary" component="p">
         {t("periodClose.hint")}
       </Typography>
-      <AccountsList
-        aria-label={t("periodClose.listAria")}
-        card={{ title: ["month"], tag: "status", actions: "actions" }}
-        columns={columns}
-        rows={rows}
-        getRowKey={(row) => row.month}
-        isLoading={query.isLoading}
-        emptyMessage={t("periodClose.empty")}
-        minWidth={PERIOD_TABLE_MIN_WIDTH}
-      />
+      <Box sx={{ flex: 1, minHeight: 0 }}>
+        <AccountsList
+          aria-label={t("periodClose.listAria")}
+          card={{ title: ["month"], tag: "status", actions: "actions" }}
+          columns={columns}
+          rows={rows}
+          getRowKey={(row) => row.month}
+          isLoading={query.isLoading}
+          emptyMessage={t("periodClose.empty")}
+          minWidth={PERIOD_TABLE_MIN_WIDTH}
+        />
+      </Box>
       {closing !== null && (
         <PeriodCloseDialog
           month={closing}
@@ -144,6 +143,6 @@ export const PeriodCloseTab = () => {
           }}
         />
       )}
-    </Box>
+    </Stack>
   );
 };

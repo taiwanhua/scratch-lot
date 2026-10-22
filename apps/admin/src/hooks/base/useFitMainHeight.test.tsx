@@ -57,7 +57,7 @@ const renderInMain = (mainHeight: number) =>
         ref={placeAt(100, 100 + mainHeight, mainHeight)}
         style={{ paddingBottom: "24px" }}
       >
-        <div ref={placeAt(150, 1400)}>
+        <div ref={placeAt(150, 1400)} data-testid="column">
           <div ref={placeAt(150, 880)} data-fit-boundary="">
             <Probe />
           </div>
@@ -69,13 +69,17 @@ const renderInMain = (mainHeight: number) =>
 
 /** 收下 ResizeObserver 的回呼,測試自己觸發(模擬版面改變後重算)。 */
 const observed: ResizeObserverCallback[] = [];
+/** 被觀察的節點(依 `observe()` 的呼叫順序)。 */
+const observedTargets: Element[] = [];
 const originalObserver = globalThis.ResizeObserver;
 
 class ResizeObserverStub {
   constructor(callback: ResizeObserverCallback) {
     observed.push(callback);
   }
-  observe = jest.fn();
+  observe = (target: Element) => {
+    observedTargets.push(target);
+  };
   unobserve = jest.fn();
   disconnect = jest.fn();
 }
@@ -84,6 +88,7 @@ describe("useFitMainHeight:內層捲動區塊的高度 = <main> 扣掉同頁其�
   afterEach(() => {
     globalThis.ResizeObserver = originalObserver;
     observed.length = 0;
+    observedTargets.length = 0;
   });
 
   it("扣掉上方(工具列)、下方(圖例)與 <main> 下內距:700 − 200 − 80 − 24 = 396", () => {
@@ -110,5 +115,25 @@ describe("useFitMainHeight:內層捲動區塊的高度 = <main> 扣掉同頁其�
     });
     expect(screen.getByTestId("target")).toHaveAttribute("data-height", "396");
     expect(renders).toBe(settled);
+  });
+
+  it("上方工具列長高(邊界與 <main> 尺寸都沒變):外層也在觀察範圍內,重算後上限跟著變小", () => {
+    globalThis.ResizeObserver = ResizeObserverStub;
+    renderInMain(700);
+    expect(screen.getByTestId("target")).toHaveAttribute("data-height", "396");
+    // <main>、邊界,以及邊界往上到 <main> 之間的外層(工具列與內容同一欄,工具列長高時只有它變高)
+    expect(observedTargets).toContain(screen.getByTestId("column"));
+    expect(observedTargets).toContain(
+      screen.getByTestId("target").closest("[data-fit-boundary]"),
+    );
+    // 工具列換行長高 32px:區塊上緣 300 → 332、邊界下緣跟著下移
+    const target = screen.getByTestId("target");
+    placeAt(332, 832)(target);
+    const boundary = target.closest<HTMLElement>("[data-fit-boundary]");
+    placeAt(150, 912)(boundary);
+    act(() => {
+      observed[0]?.([], {} as ResizeObserver);
+    });
+    expect(target).toHaveAttribute("data-height", "364");
   });
 });

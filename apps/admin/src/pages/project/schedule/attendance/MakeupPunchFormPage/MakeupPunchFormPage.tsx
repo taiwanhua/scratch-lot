@@ -142,7 +142,8 @@ const MakeupPunchFormBody = ({
   };
 
   return (
-    <Card sx={{ p: { xs: 2, sm: 3 }, maxWidth: 720 }}>
+    // 頁面根的卡片不可被殼的 flex 欄壓扁(STYLE-08):Card 預設 overflow: hidden,flex-shrink: 1 會在矮視窗裁掉下半的欄位與按鈕
+    <Card sx={{ p: { xs: 2, sm: 3 }, maxWidth: 720, flexShrink: 0 }}>
       <Stack spacing={2}>
         <Typography variant="h6" component="h1">
           {t("title")}
