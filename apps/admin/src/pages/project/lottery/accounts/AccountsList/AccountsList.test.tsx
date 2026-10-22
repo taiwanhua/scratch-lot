@@ -1,5 +1,6 @@
 import { describe, expect, it } from "@jest/globals";
-import { screen, within } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 
 import { PURCHASE_PERMISSIONS } from "@repo/domain/project/lottery";
 import { ACCOUNTS_PERMISSIONS as P } from "@repo/domain/project/lottery-accounts";
@@ -8,6 +9,7 @@ import { ALL_ACCOUNTS_PERMISSIONS } from "@/test/msw/project/lottery/accounts-fi
 import { restoreViewportAfterEach, setMobileViewport } from "@/test/viewport";
 
 import { renderAccounts } from "../accounts-test-support";
+import { AccountsList } from "./AccountsList";
 
 restoreViewportAfterEach();
 
@@ -128,5 +130,82 @@ describe("帳戶管理:手機卡片", () => {
   it("待結清款項:平板以上照舊表格", async () => {
     renderAccounts({ path: "/accounts?tab=outstanding" });
     await expectTable("待結清款項");
+  });
+});
+
+interface DemoRow {
+  id: string;
+  name: string;
+}
+
+const DEMO_ROWS: readonly DemoRow[] = [{ id: "r1", name: "第一列" }];
+
+/** 直接畫 `AccountsList`(整列可點 + 列內按鈕),驗卡片本身的行為。 */
+const renderDemo = ({
+  rows = DEMO_ROWS,
+  isLoading = false,
+}: { rows?: readonly DemoRow[]; isLoading?: boolean } = {}) => {
+  const clicked = { row: [] as string[], button: [] as string[] };
+  render(
+    <AccountsList<DemoRow>
+      aria-label="示範清單"
+      card={{ title: ["name"], actions: "actions" }}
+      columns={[
+        { key: "name", header: "名稱", render: (row) => row.name },
+        {
+          key: "actions",
+          header: "",
+          render: (row) => (
+            <button
+              type="button"
+              onClick={() => {
+                clicked.button.push(row.id);
+              }}
+            >
+              操作
+            </button>
+          ),
+        },
+      ]}
+      rows={rows}
+      getRowKey={(row) => row.id}
+      isLoading={isLoading}
+      emptyMessage="目前沒有資料"
+      onRowClick={(row) => {
+        clicked.row.push(row.id);
+      }}
+    />,
+  );
+  return { clicked, user: userEvent.setup() };
+};
+
+describe("AccountsList:手機卡片本身", () => {
+  it("點卡片上的按鈕(滑鼠或 Enter)只觸發按鈕,不觸發整張卡片的 onRowClick", async () => {
+    setMobileViewport();
+    const { clicked, user } = renderDemo();
+    const button = screen.getByRole("button", { name: "操作" });
+    await user.click(button);
+    button.focus();
+    await user.keyboard("{Enter}");
+    expect(clicked.button).toEqual(["r1", "r1"]);
+    expect(clicked.row).toEqual([]);
+    await user.click(screen.getByText("第一列"));
+    expect(clicked.row).toEqual(["r1"]);
+  });
+
+  it("沒有資料:顯示空清單文案,沒有卡片也沒有表格", () => {
+    setMobileViewport();
+    renderDemo({ rows: [] });
+    expect(screen.getByText("目前沒有資料")).toBeInTheDocument();
+    expect(screen.queryByRole("list")).not.toBeInTheDocument();
+    expect(screen.queryByRole("table")).not.toBeInTheDocument();
+  });
+
+  it("載入中:顯示載入指示,不畫卡片", () => {
+    setMobileViewport();
+    renderDemo({ isLoading: true });
+    expect(screen.getByRole("progressbar")).toBeInTheDocument();
+    expect(screen.queryByRole("listitem")).not.toBeInTheDocument();
+    expect(screen.queryByText("目前沒有資料")).not.toBeInTheDocument();
   });
 });

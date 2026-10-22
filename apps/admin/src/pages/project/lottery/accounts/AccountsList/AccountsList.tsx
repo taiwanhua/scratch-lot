@@ -177,7 +177,17 @@ export const AccountsList = <Row,>({
                   );
                 })}
                 {!isBlank(actions) && (
-                  <Stack direction="row" sx={{ justifyContent: "flex-end" }}>
+                  // 列內按鈕的點擊 / Enter 不冒泡到整張卡片的 onRowClick
+                  <Stack
+                    direction="row"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                    }}
+                    onKeyDown={(event) => {
+                      event.stopPropagation();
+                    }}
+                    sx={{ justifyContent: "flex-end" }}
+                  >
                     {actions}
                   </Stack>
                 )}
