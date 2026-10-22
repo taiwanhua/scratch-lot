@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useId, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { useTranslations } from "use-intl";
 
@@ -15,6 +15,9 @@ import { useUrlEdit, useUrlEditGuard } from "@/hooks/base/useUrlEdit";
 import { useUrlSelectedId } from "@/hooks/base/useUrlSelectedId";
 import { useWorkflowDraftStore } from "@/stores/base/useWorkflowDraftStore";
 
+import { DesignerListCollapseButton } from "../DesignerListCollapseButton";
+import { DesignerListRail } from "../DesignerListRail";
+import { useDesignerListCollapse } from "../useDesignerListCollapse";
 import {
   WORKFLOWS_BLOCKED_PAGE_KEY,
   WORKFLOWS_PERMISSIONS,
@@ -41,6 +44,11 @@ export interface WorkflowsPageLocationState {
  * **手機寬(< `sm`)一次只顯示一邊,而且不提供設計**:網址沒有選取(`?detail=` / `?edit=`)時清單滿版;
  * 點一個流程 → 只顯示它的基本資料與摘要(`WorkflowMobileSummary`,唯讀)與「請用平板或電腦設計、編輯」的提示,
  * 設計器不掛載。頂部 [← 返回] 清掉選取回到清單(清單藏起來不卸載,搜尋與捲動都留著)。
+ * 例外:設計器有未存的變更時縮到手機寬,設計器藏起來但**不卸載**(草稿與「有未存的變更」都留著),
+ * 摘要上方提示回到平板或電腦處理;換流程照樣經過未存攔截。
+ *
+ * **平板寬(`sm`–`lg`)畫布優先**:左清單一進來就收起成一條 [展開](`useDesignerListCollapse`),
+ * 在清單裡選一個或按 [收起] 再收起;設計器的屬性面板改成右側抽屜(`FlowDesignerWorkspace`)。
  */
 export const WorkflowsPage = () => {
   const t = useTranslations("admin.workflows");
@@ -91,6 +99,8 @@ export const WorkflowsPage = () => {
   const saveDraft = useWorkflowDraftStore((state) => state.save);
   const blockedRoute = routeOf(WORKFLOWS_BLOCKED_PAGE_KEY);
   const isMobile = useBreakpointDown("sm");
+  const list = useDesignerListCollapse();
+  const listId = useId();
   const [urlPickedKey, setUrlPickedKey] = useUrlSelectedId();
   const isDetailShown = urlPickedKey !== null || edit.requestedId !== null;
 
@@ -159,7 +169,7 @@ export const WorkflowsPage = () => {
         spacing={{ xs: 0, sm: 3 }}
         sx={{ flex: 1, minHeight: 0 }}
       >
-        {/* sm 以上這層不參與排版(contents,仍標 minHeight: 0 守 STYLE-08 高度鏈);手機寬依選取只顯示一邊,另一邊藏起來但不卸載 */}
+        {/* sm 以上這層不參與排版(contents,仍標 minHeight: 0 守 STYLE-08 高度鏈);手機寬依選取只顯示一邊,另一邊藏起來但不卸載;平板寬收起時也是藏起來 */}
         <Box
           sx={
             isMobile
@@ -169,34 +179,70 @@ export const WorkflowsPage = () => {
                   minWidth: 0,
                   minHeight: 0,
                 }
-              : { display: "contents", minHeight: 0 }
+              : {
+                  display: list.isCollapsed ? "none" : "contents",
+                  minHeight: 0,
+                }
           }
         >
           <WorkflowListPanel
+            id={listId}
             workflows={data.workflows}
             isLoading={data.isLoading}
             keyword={data.keyword}
             onKeywordChange={data.setKeyword}
             selectedKey={isMobile ? urlPickedKey : data.selectedKey}
-            onSelect={requestSelect}
+            onSelect={(key) => {
+              requestSelect(key);
+              list.collapse();
+            }}
             canCreate={hasPermission(WORKFLOWS_PERMISSIONS.create)}
             onCreate={() => {
               setIsCreating(true);
             }}
+            collapseButton={
+              list.isTablet && (
+                <DesignerListCollapseButton
+                  label={t("list.collapse")}
+                  listId={listId}
+                  onCollapse={list.collapse}
+                  buttonRef={list.collapseButtonRef}
+                />
+              )
+            }
           />
         </Box>
-        {isMobile ? (
+        {list.isCollapsed && (
+          <DesignerListRail
+            label={t("list.expand")}
+            listId={listId}
+            onExpand={list.expand}
+            buttonRef={list.expandButtonRef}
+          />
+        )}
+        {isMobile && (
           <WorkflowMobileSummary
             workflow={data.selected}
             emptyText={emptyText}
             isShown={isDetailShown}
+            hasUnsavedChanges={isDirty}
             onBack={() => {
               edit.close();
               setUrlPickedKey(null);
             }}
           />
-        ) : (
-          desktopDetail
+        )}
+        {/* 手機寬不掛設計器;但有未存變更時(從平板 / 電腦縮過來)藏起來保留,不讓草稿無聲消失。位置固定,縮放視窗不重掛 */}
+        {(!isMobile || isDirty) && (
+          <Box
+            sx={
+              isMobile
+                ? { display: "none" }
+                : { display: "contents", minHeight: 0 }
+            }
+          >
+            {desktopDetail}
+          </Box>
         )}
       </Stack>
       {pendingKey !== null && (

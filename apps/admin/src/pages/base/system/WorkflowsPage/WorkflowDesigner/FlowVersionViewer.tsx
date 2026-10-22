@@ -20,7 +20,9 @@ import { checkFormKeyOf, definitionOf } from "@/lib/base/workflow/definition";
 import { isFlowCcIssue } from "@/lib/base/workflow/validation";
 import { workflowErrorOf } from "@/lib/base/workflow/workflow-errors";
 
-import { designerPropertyPanelSx } from "../../designer-layout";
+import { DesignerPropertyPanel } from "../../DesignerPropertyPanel";
+import { designerDrawerReserve } from "../../designer-layout";
+import { useIsDesignerTablet } from "../../useIsDesignerTablet";
 import { BackToFlowButton } from "./BackToFlowButton";
 import { CheckFormField } from "./CheckFormField";
 import { FlowCanvas } from "./FlowCanvas";
@@ -67,6 +69,9 @@ export const FlowVersionViewer = ({
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   /** 屬性面板(「回到整個流程設定」後把焦點放回這裡) */
   const panelRef = useRef<HTMLElement>(null);
+  const isTablet = useIsDesignerTablet();
+  /** 平板寬:抽屜裡顯示整個流程的設定(沒有選關卡時;同 `FlowDesignerWorkspace`) */
+  const [isFlowSettingsOpen, setFlowSettingsOpen] = useState(false);
   const query = useWorkflowVersionQuery(
     session.client,
     { workflowKey: workflow.key, version },
@@ -125,6 +130,24 @@ export const FlowVersionViewer = ({
     allIssues.filter((issue) => issue.location.stepKey === stepKey);
   const stepNameOf = (stepKey: string): string =>
     definition.steps.find((step) => step.key === stepKey)?.name ?? stepKey;
+
+  const isDrawerOpen = isTablet && (selected !== null || isFlowSettingsOpen);
+  /** 選關卡;null(點流程圖空白處)在平板寬等於關抽屜 */
+  const select = (stepKey: string | null) => {
+    setSelectedKey(stepKey);
+    if (stepKey === null) {
+      setFlowSettingsOpen(false);
+    }
+  };
+  /** 點檢查結果定位:整個流程的問題(null)在平板寬打開抽屜看整個流程設定 */
+  const locate = (stepKey: string | null) => {
+    setSelectedKey(stepKey);
+    setFlowSettingsOpen(stepKey === null && isTablet);
+  };
+  const backToFlow = () => {
+    setSelectedKey(null);
+    setFlowSettingsOpen(isTablet);
+  };
 
   const renderPanel = () => {
     if (selected === null) {
@@ -224,6 +247,11 @@ export const FlowVersionViewer = ({
               {tVersions("baseOnViewing", { version })}
             </Button>
           )}
+          {isTablet && (
+            <Button variant="outlined" size="small" onClick={backToFlow}>
+              {t("openFlowSettings")}
+            </Button>
+          )}
           <Button variant="text" size="small" onClick={onClose}>
             {t("closeViewing")}
           </Button>
@@ -241,46 +269,59 @@ export const FlowVersionViewer = ({
           definition={definition}
           checkFormKey={checkFormKey}
           stepNameOf={stepNameOf}
-          onLocate={setSelectedKey}
+          onLocate={locate}
         />
       )}
-      <Stack direction="row" spacing={2} sx={{ alignItems: "flex-start" }}>
+      <Stack
+        direction="row"
+        spacing={2}
+        sx={{
+          alignItems: "flex-start",
+          pr: isDrawerOpen
+            ? (theme) => designerDrawerReserve(theme.spacing)
+            : 0,
+        }}
+      >
         <Box sx={{ flex: 1, minWidth: 0 }}>
           <FlowCanvas
             definition={definition}
             dataOf={dataOf}
             selectedKey={selectedKey}
-            onSelect={setSelectedKey}
+            onSelect={select}
             isEditable={false}
+            shouldKeepSelectedInView={isDrawerOpen}
             aria-label={t("viewingCanvas", { version })}
           />
         </Box>
-        <Box
-          component="section"
-          aria-label={t("viewingProperties")}
-          ref={panelRef}
-          // 「回到整個流程設定」按下後按鈕會卸載:焦點移到屬性面板本身,不掉回 body
-          tabIndex={-1}
-          sx={designerPropertyPanelSx}
+        {/* 「回到整個流程設定」按下後按鈕會卸載:焦點移到屬性面板本身(panelRef),不掉回 body */}
+        <DesignerPropertyPanel
+          label={t("viewingProperties")}
+          closeLabel={t("closeProperties")}
+          isTablet={isTablet}
+          isOpen={isDrawerOpen}
+          onClose={() => {
+            select(null);
+          }}
+          panelRef={panelRef}
         >
           <Stack spacing={1}>
             {selected !== null && (
               <BackToFlowButton
                 onBack={() => {
-                  setSelectedKey(null);
+                  backToFlow();
                   panelRef.current?.focus();
                 }}
               />
             )}
             {renderPanel()}
           </Stack>
-        </Box>
+        </DesignerPropertyPanel>
       </Stack>
       <FlowIssueList
         errors={report.errors}
         warnings={report.warnings}
         stepNameOf={stepNameOf}
-        onLocate={setSelectedKey}
+        onLocate={locate}
       />
     </Stack>
   );

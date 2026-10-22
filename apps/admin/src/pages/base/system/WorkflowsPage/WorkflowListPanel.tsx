@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { useTranslations } from "use-intl";
 
 import type { WorkflowFieldsFragment } from "@repo/graphql";
@@ -19,6 +20,10 @@ export interface WorkflowListPanelProps {
   onSelect: (key: string) => void;
   canCreate: boolean;
   onCreate: () => void;
+  /** 清單區塊的 id(平板寬收起 / 展開鈕的 `aria-controls`) */
+  id?: string;
+  /** 標頭右端的 [收起](平板寬才有,`DesignerListCollapseButton`) */
+  collapseButton?: ReactNode;
 }
 
 /**
@@ -34,12 +39,15 @@ export const WorkflowListPanel = ({
   onSelect,
   canCreate,
   onCreate,
+  id,
+  collapseButton,
 }: WorkflowListPanelProps) => {
   const t = useTranslations("admin.workflows.list");
 
   return (
     <Card
       component="section"
+      id={id}
       aria-label={t("region")}
       sx={{
         // 手機寬(主從一次只顯示一邊)清單滿版
@@ -51,7 +59,7 @@ export const WorkflowListPanel = ({
       }}
     >
       <Stack spacing={1.5} sx={{ p: 2 }}>
-        <Stack direction="row" sx={{ alignItems: "center" }}>
+        <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
           <Typography variant="subtitle1" sx={{ flex: 1 }}>
             {t("title")}
           </Typography>
@@ -60,6 +68,7 @@ export const WorkflowListPanel = ({
               {t("create")}
             </Button>
           )}
+          {collapseButton}
         </Stack>
         <TextField
           label={t("search")}

@@ -1420,7 +1420,9 @@
       "disabled": "Disabled",
       "hasDraft": "Draft",
       "workflow": "Workflow: {name}",
-      "workflowInvalid": "Bound workflow is invalid"
+      "workflowInvalid": "Bound workflow is invalid",
+      "collapse": "Collapse form list",
+      "expand": "Expand form list"
     },
     "detail": {
       "region": "Form settings",
@@ -1660,7 +1662,9 @@
       "regexUnavailable": "Pattern safety can't be checked right now; it will be checked when you save the draft.",
       "newColumn": "Item",
       "sectionSettings": "Section settings",
-      "sectionSettingsOf": "Section settings for “{title}”"
+      "sectionSettingsOf": "Section settings for “{title}”",
+      "openSettings": "Form settings",
+      "closeProperties": "Close properties"
     },
     "preview": {
       "region": "Preview",
@@ -2148,7 +2152,8 @@
       "hint": "Use a tablet or computer to design and edit.",
       "version": "Published version",
       "yes": "Yes",
-      "no": "No"
+      "no": "No",
+      "unsaved": "This form has unsaved changes, still kept in the designer. Switch to a tablet or computer width to save or discard them."
     },
     "mobileBack": "← Back"
   },
@@ -2463,7 +2468,9 @@
       "version": "Version {version}",
       "assigned": "Assigned to {count}",
       "hasDraft": "Has draft",
-      "boundForms": "Bound forms: {forms}"
+      "boundForms": "Bound forms: {forms}",
+      "collapse": "Collapse workflow list",
+      "expand": "Expand workflow list"
     },
     "detail": {
       "region": "Workflow",
@@ -2605,7 +2612,9 @@
       "viewingCanvas": "Flow chart of v{version}",
       "viewingProperties": "Properties (read-only)",
       "closeViewing": "Close",
-      "saveBlockedOverdue": "Overdue reminder hours are invalid; fix them before saving the draft."
+      "saveBlockedOverdue": "Overdue reminder hours are invalid; fix them before saving the draft.",
+      "openFlowSettings": "Whole-flow settings",
+      "closeProperties": "Close properties"
     },
     "opErrors": {
       "FORK_NEEDS_SOURCE": "A fork needs a review step before it: delete or move the whole fork first.",
@@ -2832,7 +2841,8 @@
     "mobile": {
       "region": "Workflow summary",
       "hint": "Use a tablet or computer to design and edit.",
-      "version": "Published version"
+      "version": "Published version",
+      "unsaved": "This workflow has unsaved changes, still kept in the designer. Switch to a tablet or computer width to save or discard them."
     },
     "mobileBack": "← Back"
   },

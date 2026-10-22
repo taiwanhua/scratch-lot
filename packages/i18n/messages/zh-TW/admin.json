@@ -1420,7 +1420,9 @@
       "disabled": "停用",
       "hasDraft": "有草稿",
       "workflow": "流程:{name}",
-      "workflowInvalid": "綁定的流程已失效"
+      "workflowInvalid": "綁定的流程已失效",
+      "collapse": "收起表單清單",
+      "expand": "展開表單清單"
     },
     "detail": {
       "region": "表單設定",
@@ -1660,7 +1662,9 @@
       "regexUnavailable": "目前無法即時檢查正則的安全性;存草稿時會再檢查。",
       "newColumn": "項目",
       "sectionSettings": "分區設定",
-      "sectionSettingsOf": "分區設定「{title}」"
+      "sectionSettingsOf": "分區設定「{title}」",
+      "openSettings": "表單設定",
+      "closeProperties": "關閉屬性"
     },
     "preview": {
       "region": "預覽",
@@ -2148,7 +2152,8 @@
       "hint": "設計與編輯請使用平板或電腦。",
       "version": "發布版本",
       "yes": "是",
-      "no": "否"
+      "no": "否",
+      "unsaved": "這張表單有未儲存的變更,仍保留在設計器裡。請改用平板或電腦寬度儲存或放棄。"
     },
     "mobileBack": "← 返回"
   },
@@ -2463,7 +2468,9 @@
       "version": "第 {version} 版",
       "assigned": "已分派 {count} 個",
       "hasDraft": "有草稿",
-      "boundForms": "綁定表單:{forms}"
+      "boundForms": "綁定表單:{forms}",
+      "collapse": "收起流程清單",
+      "expand": "展開流程清單"
     },
     "detail": {
       "region": "流程內容",
@@ -2605,7 +2612,9 @@
       "viewingCanvas": "v{version} 的流程圖",
       "viewingProperties": "屬性(唯讀)",
       "closeViewing": "關閉檢視",
-      "saveBlockedOverdue": "逾時提醒的時數不正確,修正後才能存草稿。"
+      "saveBlockedOverdue": "逾時提醒的時數不正確,修正後才能存草稿。",
+      "openFlowSettings": "整個流程設定",
+      "closeProperties": "關閉屬性"
     },
     "opErrors": {
       "FORK_NEEDS_SOURCE": "分流前面一定要有一個審核關卡:先刪掉或移動整組分流。",
@@ -2832,7 +2841,8 @@
     "mobile": {
       "region": "流程摘要",
       "hint": "設計與編輯請使用平板或電腦。",
-      "version": "發布版本"
+      "version": "發布版本",
+      "unsaved": "這個流程有未儲存的變更,仍保留在設計器裡。請改用平板或電腦寬度儲存或放棄。"
     },
     "mobileBack": "← 返回"
   },

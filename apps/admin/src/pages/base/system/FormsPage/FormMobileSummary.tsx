@@ -17,6 +17,8 @@ export interface FormMobileSummaryProps {
   isShown: boolean;
   /** [← 返回]:清掉選取回清單 */
   onBack: () => void;
+  /** 設計器有未存的變更(縮到手機寬時設計器藏起來保留草稿):提示回到平板或電腦處理 */
+  hasUnsavedChanges: boolean;
 }
 
 /** 摘要標籤欄的最小寬(theme.spacing 單位),讓各列的值對齊。 */
@@ -122,6 +124,7 @@ export const FormMobileSummary = ({
   emptyText,
   isShown,
   onBack,
+  hasUnsavedChanges,
 }: FormMobileSummaryProps) => {
   const t = useTranslations("admin.forms");
   return (
@@ -134,6 +137,9 @@ export const FormMobileSummary = ({
           {t("mobileBack")}
         </Button>
       </Box>
+      {hasUnsavedChanges && (
+        <Alert severity="warning">{t("mobile.unsaved")}</Alert>
+      )}
       {form === null ? (
         <Typography variant="body2" color="text.secondary">
           {emptyText}

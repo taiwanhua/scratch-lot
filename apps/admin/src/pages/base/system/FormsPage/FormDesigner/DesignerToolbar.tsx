@@ -20,11 +20,14 @@ export interface DesignerToolbarProps {
   error: FormError | null;
   onSave: () => void;
   onReload: () => void;
+  /** 平板寬才給:[表單設定] 打開屬性抽屜看表單層設定(電腦寬表單設定常駐在屬性面板,不需要這顆) */
+  onOpenSettings?: () => void;
 }
 
 /**
  * 設計器頂列:設計 / 預覽切換、草稿修訂號(有未存變更時標示)、「存草稿」,以及存檔失敗的說明
  * (`CONFLICT` = 草稿已被別人更新 → 重新載入;`VALIDATION_FAILED` 列出正則問題)。
+ * 平板寬多一顆 [表單設定](屬性面板收在抽屜裡,沒選欄位時要有入口)。
  */
 export const DesignerToolbar = ({
   mode,
@@ -35,6 +38,7 @@ export const DesignerToolbar = ({
   error,
   onSave,
   onReload,
+  onOpenSettings,
 }: DesignerToolbarProps) => {
   const t = useTranslations("admin.forms.designer");
   const tErrors = useTranslations("admin.forms.errors");
@@ -58,6 +62,11 @@ export const DesignerToolbar = ({
           ]}
         />
         <Box sx={{ flex: 1 }} />
+        {onOpenSettings !== undefined && (
+          <Button variant="outlined" onClick={onOpenSettings}>
+            {t("openSettings")}
+          </Button>
+        )}
         <Typography variant="body2" color="text.secondary">
           {isDirty ? t("unsaved", { revision }) : t("revision", { revision })}
         </Typography>
