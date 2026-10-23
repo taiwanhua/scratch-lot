@@ -215,7 +215,7 @@ describe("時區:一天以 timezone 的 00:00 起算", () => {
     expect(formatClock(start, "UTC")).toBe("01:00");
   });
 
-  it("夏令時間開始那天只有 23 小時:整天的範圍畫到 23:00 為止,不偏一小時", () => {
+  it("夏令時間開始那天只有 23 小時:位置以當天 00:00 起經過的時間算,整天的範圍畫到 23:00 為止(切換後的長條比牆上時間早一格,已知限制)", () => {
     const day = "2026-03-08";
     const dayStart = dayStartMs(day, "America/New_York");
     const nextStart = dayStartMs("2026-03-09", "America/New_York");

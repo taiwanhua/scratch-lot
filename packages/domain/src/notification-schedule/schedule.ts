@@ -47,19 +47,9 @@ export const DAYS_BEFORE_MAX_COUNT = 5;
 /** 每月第 N 天的範圍。 */
 export const DAY_OF_MONTH_MIN = 1;
 export const DAY_OF_MONTH_MAX = 31;
-/** 寄送時間的格子(分鐘),也是排程的間隔。 */
+/** 寄送時間的格子(分鐘),也是排程的間隔(編輯畫面 `TimePicker` 的 `minutesStep`)。 */
 export const SCHEDULE_STEP_MINUTES = 15;
 
-const pad = (value: number) => String(value).padStart(2, "0");
-
-/** 寄送時間的所有選項:00:00、00:15 … 23:45(編輯畫面的下拉用)。 */
-export const SCHEDULE_TIME_OPTIONS: readonly string[] = Array.from(
-  { length: (24 * 60) / SCHEDULE_STEP_MINUTES },
-  (_, index) => {
-    const minutes = index * SCHEDULE_STEP_MINUTES;
-    return `${pad(Math.floor(minutes / 60))}:${pad(minutes % 60)}`;
-  },
-);
 
 /** 驗證不過的位置(`path`,例 `daysBefore[2]`)與原因代碼。 */
 export interface ScheduleIssue {

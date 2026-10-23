@@ -127,6 +127,7 @@ export const DateTimePicker = ({
         value={draft.date}
         defaultValue={toDate(defaultValue)}
         onChange={draft.handleChange}
+        onSelectedSectionsChange={draft.handleSelectedSectionsChange}
         timezone={timezone ?? "system"}
         minDateTime={toDate(minDateTime) ?? undefined}
         maxDateTime={toDate(maxDateTime) ?? undefined}

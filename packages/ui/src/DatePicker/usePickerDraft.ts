@@ -1,5 +1,6 @@
+import type { FieldSelectedSections } from "@mui/x-date-pickers/models";
 import type { Dayjs } from "dayjs";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 /**
  * 年份區段還沒打滿 4 位時,MUI 組出來的是 `0002`、`0202` 這種年份。
@@ -17,6 +18,10 @@ export interface PickerChangeDetails {
    * 欄位原本有值、改到一半還不是完整、合法的值:重打年份還沒打滿 4 位、清掉其中幾個區段、改成 2/31 這種不存在的日期。
    * 清空(所有區段都空)與完成的值都是 `false`。
    * 從空白開始打時,MUI 在所有區段填滿前不回呼(不會收到 `true`);填滿後組不成合法日期(如 2/31、年份不足 4 位)才會是 `true`。
+   * 清掉區段:MUI 清掉單一區段時回 `null`,與全部清空同一個值(不是不合法的物件),
+   * 這裡以當時選取的區段分辨 —— 選著單一區段(Backspace / Delete 清那一段)是 `true`,全選刪除是 `false`。
+   * 已知限制:清掉第一段之後值已是 `null`,MUI 再清其餘區段時不回呼;逐段清到全空,呼叫端最後收到的仍是 `true`
+   * (要清空請全選刪除;篩選欄 `DateFilterPicker` 離開欄位時還原成套用中的值)。
    * 篩選條件用它在打到一半時不改查詢,沿用上一個有效值。
    */
   isIncomplete: boolean;
@@ -80,14 +85,27 @@ export const usePickerDraft = ({
     setDraft(current);
   }
 
+  // 目前選取的區段(MUI `onSelectedSectionsChange`):只拿來分辨 `null` 是清一段還是全部清空,不必觸發 render
+  const selectedSections = useRef<FieldSelectedSections>(null);
+  const handleSelectedSectionsChange = (sections: FieldSelectedSections) => {
+    selectedSections.current = sections;
+  };
+
   const handleChange = (date: Dayjs | null) => {
     const next = toValue(date);
     if (external !== undefined) {
       setDraft({ value: next, date });
     }
-    // MUI 在所有區段都空時回 `null`,有輸入但組不成完整日期時回不合法的物件
-    onChange?.(next, { isIncomplete: date !== null && next === null });
+    // 有輸入但組不成完整日期時 MUI 回不合法的物件;回 `null` 有兩種:全選刪除(或沒選區段時 Delete)清空所有區段,
+    // 或選著單一區段清掉那一段(其餘區段還在,MUI 只在原本有值時回呼,所以其餘區段一定填著)。
+    // 後者是打到一半;前提是格式至少兩個區段(日期、時間、日期時間都是)
+    const sections = selectedSections.current;
+    const clearedOneSection =
+      date === null && sections !== null && sections !== "all";
+    onChange?.(next, {
+      isIncomplete: (date !== null && next === null) || clearedOneSection,
+    });
   };
 
-  return { date: current.date, handleChange };
+  return { date: current.date, handleChange, handleSelectedSectionsChange };
 };

@@ -186,7 +186,7 @@ describe("TimePicker", () => {
       expect(fieldText()).toContain("14:30");
     });
 
-    it("清掉分鐘一段:送 null,小時留著;再打分鐘就送出完整時間", async () => {
+    it("清掉分鐘一段:送 null + isIncomplete(打到一半),小時留著;再打分鐘就送出完整時間", async () => {
       const user = userEvent.setup();
       const handleChange =
         jest.fn<(value: string | null, details: PickerChangeDetails) => void>();
@@ -195,8 +195,10 @@ describe("TimePicker", () => {
       await user.click(section("Minutes"));
       await user.keyboard("{Backspace}");
 
-      // MUI 清掉單一區段時回 `null`(與全部清空同一個值),所以這裡分辨不出打到一半(usePickerDraft 的已知限制)
-      expect(handleChange).toHaveBeenLastCalledWith(null, DONE);
+      // MUI 清掉單一區段時回 `null`(與全部清空同一個值),usePickerDraft 以選取中的區段分辨
+      expect(handleChange).toHaveBeenLastCalledWith(null, {
+        isIncomplete: true,
+      });
       expect(section("Hours").textContent).toBe("09");
       expect(section("Minutes").textContent).toBe("mm");
 

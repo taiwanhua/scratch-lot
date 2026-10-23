@@ -121,6 +121,7 @@ export const DatePicker = ({
         value={draft.date}
         defaultValue={toDate(defaultValue)}
         onChange={draft.handleChange}
+        onSelectedSectionsChange={draft.handleSelectedSectionsChange}
         minDate={toDate(minDate) ?? undefined}
         maxDate={toDate(maxDate) ?? undefined}
         shouldDisableDate={

@@ -129,6 +129,7 @@ export const TimePicker = ({
         value={draft.date}
         defaultValue={toDate(defaultValue)}
         onChange={draft.handleChange}
+        onSelectedSectionsChange={draft.handleSelectedSectionsChange}
         ampm={false}
         minutesStep={minutesStep}
         // 選單的分鐘欄只列格子上的分鐘(沒給時用 MUI 的預設 5 分鐘一格)

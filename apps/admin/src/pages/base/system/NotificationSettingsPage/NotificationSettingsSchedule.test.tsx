@@ -322,6 +322,40 @@ describe("通知設定頁:提醒時間", () => {
     expect(screen.getByRole("dialog")).toBeVisible();
   });
 
+  it("api 擋下 SCHEDULE_INVALID(path=time)→ 標在寄送時間欄", async () => {
+    const { user } = renderPage({
+      world: {
+        types: allTypes(),
+        failures: {
+          UpdateNotificationSetting: {
+            code: "VALIDATION_FAILED",
+            extensions: {
+              reason: "SCHEDULE_INVALID",
+              type: "demo.expiry-reminder",
+              path: "time",
+            },
+          },
+        },
+      },
+    });
+    await waitForRows();
+
+    const dialog = await openEdit(user, "到期提醒");
+    const schedule = within(dialog).getByRole("region", { name: "提醒時間" });
+    const first = within(schedule).getByRole("textbox", { name: "提前天數 1" });
+    await user.clear(first);
+    await user.type(first, "60");
+    await user.click(within(dialog).getByRole("button", { name: "儲存" }));
+
+    // 錯誤文字取代寄送時間的說明,欄位標紅
+    expect(await within(schedule).findByText("超出可以填的範圍")).toBeVisible();
+    expect(
+      within(schedule)
+        .getByRole("group", { name: "寄送時間" })
+        .closest(".Mui-error"),
+    ).not.toBeNull();
+  });
+
   it("清單的 [還原預設]:確認框寫出收件人與提醒時間的預設,兩塊一起還原", async () => {
     const { user, fake } = renderPage({
       world: { types: allTypes([60, 7, 0]) },

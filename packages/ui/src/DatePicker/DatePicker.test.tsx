@@ -244,6 +244,26 @@ describe("DatePicker", () => {
       expect(fieldText()).toContain("2026-11-05");
     });
 
+    it("清掉單一區段(Backspace / Delete)是打到一半:送 null + isIncomplete,其餘區段留著", async () => {
+      const user = userEvent.setup();
+      const handleChange =
+        jest.fn<(value: string | null, details: PickerChangeDetails) => void>();
+      render(<Controlled initial="2026-01-31" onChange={handleChange} />);
+
+      await user.click(section("Day"));
+      await user.keyboard("{Backspace}");
+      expect(handleChange).toHaveBeenLastCalledWith(null, PENDING);
+      expect(section("Year").textContent).toBe("2026");
+      expect(section("Month").textContent).toBe("01");
+
+      await user.keyboard("15");
+      expect(handleChange).toHaveBeenLastCalledWith("2026-01-15", DONE);
+
+      await user.click(section("Month"));
+      await user.keyboard("{Delete}");
+      expect(handleChange).toHaveBeenLastCalledWith(null, PENDING);
+    });
+
     it("外部換成別的值會覆蓋打到一半的草稿", async () => {
       const user = userEvent.setup();
       render(

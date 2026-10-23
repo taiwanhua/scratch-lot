@@ -1,15 +1,6 @@
 import { describe, expect, it } from "@jest/globals";
 
-import { SCHEDULE_TIME_OPTIONS, validateSchedule } from "./schedule";
-
-describe("寄送時間選項", () => {
-  it("15 分鐘一格:00:00 … 23:45,共 96 個", () => {
-    expect(SCHEDULE_TIME_OPTIONS).toHaveLength(96);
-    expect(SCHEDULE_TIME_OPTIONS[0]).toBe("00:00");
-    expect(SCHEDULE_TIME_OPTIONS.at(-1)).toBe("23:45");
-    expect(SCHEDULE_TIME_OPTIONS).not.toContain("09:10");
-  });
-});
+import { validateSchedule } from "./schedule";
 
 describe("提醒時間的驗證(validateSchedule)", () => {
   it.each([
