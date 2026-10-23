@@ -2,6 +2,7 @@ import {
   type InstantRange,
   type LocalDate,
   addLocalDays,
+  formatTemporal,
   localDateOf,
   localDateText,
   localDayRange,
@@ -57,6 +58,22 @@ export function instantOfKey(key: string, timezone: string): Date {
 export function monthKeyOf(key: string): string {
   const { year, month } = localDateOfKey(key);
   return localMonthText({ year, month });
+}
+
+/** 日期鍵是不是在這個月份鍵(`YYYY-MM`)裡。 */
+export function isDateKeyInMonth(key: string, month: string): boolean {
+  return monthKeyOf(key) === month;
+}
+
+/**
+ * 日期鍵的「M/D」(規則訊息用;走 `formatTemporal` 的 `monthDay`)。日期鍵本身就是當地的那一天、
+ * 和時區無關,所以用 UTC 當中性的換算框架(那天 UTC 00:00 印回 UTC 的月日),不必知道租戶時區。
+ */
+export function monthDayOfKey(key: string): string {
+  return formatTemporal(instantOfKey(key, "UTC"), {
+    type: "monthDay",
+    timezone: "UTC",
+  });
 }
 
 /** 日期鍵加減天數(`addLocalDays`)。 */

@@ -18,7 +18,7 @@ import type {
   ScheduleRuleEvaluator,
   ScheduleRuleViolation,
 } from "../rules/rule-registry";
-import { monthKeyOf } from "../shared/schedule-dates";
+import { isDateKeyInMonth, monthKeyOf } from "../shared/schedule-dates";
 import { seededRandom } from "./seeded-random";
 
 /**
@@ -336,7 +336,7 @@ class AutoScheduler {
       left.userId.localeCompare(right.userId),
     );
     for (const entry of this.entries) {
-      if (this.isStore(entry) && entry.date.startsWith(`${input.month}-`)) {
+      if (this.isStore(entry) && isDateKeyInMonth(entry.date, input.month)) {
         this.bumpShift(entry.userId);
       }
     }
