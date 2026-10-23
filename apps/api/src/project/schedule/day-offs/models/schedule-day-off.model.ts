@@ -218,7 +218,7 @@ export class ScheduleDayOffOverviewPayload {
   @Field(() => String)
   month!: string;
 
-  /** 今天在登記的月份(目標月,下個月);`month` 早於它 = 過去的月份 */
+  /** 今天在登記的月份(目標月 = 租戶時區的下個月);畫面以它的前一個月為「這個月」判斷過去的月份 */
   @Field(() => String)
   targetMonth!: string;
 

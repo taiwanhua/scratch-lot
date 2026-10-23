@@ -29,6 +29,7 @@ import { useUrlState } from "@/hooks/base/useUrlState";
 import {
   dateParts,
   isMonth,
+  isPastDayOffMonth,
   shiftMonth,
   shortDate,
 } from "@/lib/project/schedule-day-offs";
@@ -60,7 +61,7 @@ const WINDOW_KEY: Partial<
  * (只算主要分店是這家的人),
  * 篩選 [全部] [尚未畫休]。點日期 → 當天畫休(`DayOffDetailDialog`,看得到總覽的人都能看)。
  * 有 `edit-day-offs` 才看得到 [代改](SC-24,只做新增)與當天畫休裡每筆旁邊的 [刪除](先確認,
- * 截止後在確認框選原因)、下方 [代改](帶入那天;過去的月份不顯示)。
+ * 截止後在確認框選原因)、下方 [代改](帶入那天)。過去的月份(早於這個月)上方與當天畫休都不顯示 [代改]。
  *
  * 分店選擇器是可見範圍模式(`scope="visible"`,同行事曆):業務頁,沒有組織治理權限的人也打得開。
  */
@@ -98,8 +99,8 @@ export const DayOffOverviewTab = () => {
   );
   const separator = t("overview.nameSeparator");
   const { year, month } = dateParts(`${overview.month}-01`);
-  /** 早於目標月 = 過去的月份:當天畫休不顯示 [代改](刪除照 api 的規則,不另擋) */
-  const isPast = overview.month < overview.targetMonth;
+  /** 過去的月份(早於這個月):不顯示 [代改](上方與當天畫休;刪除照 api 的規則,不另擋) */
+  const isPast = isPastDayOffMonth(overview.month, overview.targetMonth);
 
   const linesOf = (day: ScheduleDayOffDayFieldsFragment) => {
     const fullDay = [
@@ -188,7 +189,7 @@ export const DayOffOverviewTab = () => {
           </IconButton>
         </Stack>
         <Stack sx={{ flex: 1 }} />
-        {overview.canEdit && (
+        {overview.canEdit && !isPast && (
           <Button
             variant="outlined"
             onClick={() => {

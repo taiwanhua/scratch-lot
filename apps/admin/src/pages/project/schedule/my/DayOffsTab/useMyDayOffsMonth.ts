@@ -4,7 +4,11 @@ import { useMyScheduleDayOffsQuery } from "@repo/graphql";
 
 import { useSession } from "@/hooks/base/useSession";
 import { useUrlState } from "@/hooks/base/useUrlState";
-import { isMonth, shiftMonth } from "@/lib/project/schedule-day-offs";
+import {
+  isMonth,
+  isPastDayOffMonth,
+  shiftMonth,
+} from "@/lib/project/schedule-day-offs";
 
 /**
  * `?month=YYYY-MM`:看過去的月份(唯讀);空字串 = 目標月(api 決定:下個月)。
@@ -18,6 +22,7 @@ const MONTH_SCHEMA = z.string().default("");
  *
  * - `query`:顯示中那個月的查詢
  * - `atTarget`:已經在目標月(▶ 停用)
+ * - `isPast`:顯示中是過去的月份(早於這個月,`isPastDayOffMonth`;這個月不算)
  * - `goMonth(±1)`:換月;回到目標月就清掉網址參數
  */
 export const useMyDayOffsMonth = () => {
@@ -42,6 +47,10 @@ export const useMyDayOffsMonth = () => {
   return {
     query,
     atTarget: targetMonth === null || shown === null || shown >= targetMonth,
+    isPast:
+      targetMonth !== null &&
+      shown !== null &&
+      isPastDayOffMonth(shown, targetMonth),
     goMonth: (delta: number) => {
       if (targetMonth === null || shown === null) {
         return;

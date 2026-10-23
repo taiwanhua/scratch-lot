@@ -6,7 +6,7 @@ import { Button } from "@repo/ui/button";
 import { Stack } from "@repo/ui/stack";
 
 export interface DayOffsNoticeProps {
-  /** 早於目標月 = 過去的月份(只能看) */
+  /** 過去的月份(早於這個月,`isPastDayOffMonth`;只能看) */
   isPast: boolean;
   /** 開放期間的狀態(`open` / `closed` / `before`) */
   state: string;
@@ -17,8 +17,8 @@ export interface DayOffsNoticeProps {
 }
 
 /**
- * 我的畫休頂部的提示(規格 14.6):過去的月份只說「只能查看」、沒有連結;
- * 目標月在開放期間外提示不能自己修改,有代改權限的人另有「到畫休總覽代改」;開放中不顯示。
+ * 我的畫休頂部的提示(規格 14.6):過去的月份(早於這個月)只說「只能查看」、沒有連結;
+ * 這個月與目標月在開放期間外提示不能自己修改,有代改權限的人另有「到畫休總覽代改」;開放中不顯示。
  */
 export const DayOffsNotice = ({
   isPast,
@@ -29,7 +29,8 @@ export const DayOffsNotice = ({
   const t = useTranslations("admin.schedule.dayOffs");
   const navigate = useNavigate();
   if (isPast) {
-    return <Alert severity="warning">{t("my.pastNotice")}</Alert>;
+    // 只是說明,不是警告
+    return <Alert severity="info">{t("my.pastNotice")}</Alert>;
   }
   if (state === "open") {
     return null;

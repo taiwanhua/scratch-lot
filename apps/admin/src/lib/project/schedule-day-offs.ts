@@ -78,6 +78,16 @@ const MONTH_PATTERN = /^\d{4}-(?:0[1-9]|1[0-2])$/u;
 /** 是不是 `YYYY-MM`。 */
 export const isMonth = (value: string): boolean => MONTH_PATTERN.test(value);
 
+/**
+ * 過去的月份(畫休總覽、我的畫休共用):早於「這個月」。這個月 = 目標月的前一個月 —— 目標月由 api
+ * 依租戶時區的今天決定(`targetMonth` / 我的畫休目標月的 `month`),所以不用瀏覽器的時鐘。
+ * 這個月與目標月都不算過去(截止後照樣顯示「已截止」與代改)。
+ */
+export const isPastDayOffMonth = (
+  month: string,
+  targetMonth: string,
+): boolean => month < shiftMonth(targetMonth, -1);
+
 /** 畫休種類(`@repo/domain/project/schedule-settings` 的 `SCHEDULE_DAY_OFF_KINDS`)。 */
 export type DayOffKind = "full-day" | "time-range";
 

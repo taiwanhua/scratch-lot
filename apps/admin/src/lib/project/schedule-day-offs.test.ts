@@ -4,6 +4,7 @@ import {
   completeSlots,
   dayOffBandOf,
   dayOffCountTone,
+  isPastDayOffMonth,
   shiftMonth,
   shortDate,
 } from "./schedule-day-offs";
@@ -49,5 +50,19 @@ describe("畫休畫面的換算", () => {
     expect(shortDate("2026-12-03")).toBe("12/3");
     expect(shiftMonth("2026-12", 1)).toBe("2027-01");
     expect(shiftMonth("2027-01", -1)).toBe("2026-12");
+  });
+
+  it.each([
+    ["2026-12", false], // 目標月
+    ["2026-11", false], // 這個月
+    ["2026-10", true], // 上個月
+    ["2025-03", true], // 更早
+  ] as const)("目標月 2026-12:%s → 過去的月份 %s", (month, past) => {
+    expect(isPastDayOffMonth(month, "2026-12")).toBe(past);
+  });
+
+  it("跨年:目標月 2027-01 的這個月是 2026-12,2026-11 才算過去", () => {
+    expect(isPastDayOffMonth("2026-12", "2027-01")).toBe(false);
+    expect(isPastDayOffMonth("2026-11", "2027-01")).toBe(true);
   });
 });

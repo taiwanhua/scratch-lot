@@ -161,18 +161,37 @@ describe("我的畫休", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("過去的月份:提示「只能查看」,沒有「到畫休總覽代改」(有代改權限也一樣)", async () => {
+  it("過去的月份(上個月 10 月):提示「只能查看」(info),沒有「到畫休總覽代改」(有代改權限也一樣)", async () => {
     renderSchedulePage({
-      path: `${DAY_OFFS}&month=2026-11`,
+      path: `${DAY_OFFS}&month=2026-10`,
       dayOffs: { windowState: "closed", canOverride: true },
     });
-    expect(await screen.findByText("2026 年 11 月")).toBeInTheDocument();
-    expect(
-      screen.getByText("這是過去月份的紀錄,只能查看。"),
-    ).toBeInTheDocument();
+    expect(await screen.findByText("2026 年 10 月")).toBeInTheDocument();
+    const notice = screen.getByRole("alert");
+    expect(notice).toHaveTextContent("這是過去月份的紀錄,只能查看。");
+    expect(notice).toHaveClass("MuiAlert-colorInfo");
     expect(screen.queryByText(/不能自己修改/)).not.toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "到畫休總覽代改" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("這個月(11 月)不算過去:維持「已截止」提示與代改連結", async () => {
+    renderSchedulePage({
+      path: `${DAY_OFFS}&month=2026-11`,
+      dayOffs: { canOverride: true },
+    });
+    expect(await screen.findByText("2026 年 11 月")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "畫休登記期間(10/15–10/25)已結束,不能自己修改。要調整請聯絡店長或排班負責人。",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "到畫休總覽代改" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("這是過去月份的紀錄,只能查看。"),
     ).not.toBeInTheDocument();
   });
 

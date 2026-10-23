@@ -12,12 +12,12 @@ import { renderSchedulePage } from "../schedule-test-support";
 
 const OVERVIEW = "/schedule/manage?tab=day-offs";
 
-/** 過去月份(11 月)的一筆:李小華 11/20 整天畫休。 */
-const NOVEMBER_DAY_OFF: ScheduleDayOffFieldsFragment = {
-  id: "d-li-nov-20",
+/** 夾具:目標月 12 月、這個月 11 月、上個月 10 月(過去的月份)。 */
+const dayOffOn = (date: string): ScheduleDayOffFieldsFragment => ({
+  id: `d-li-${date}`,
   userId: "u-li",
   name: "李小華",
-  date: "2026-11-20",
+  date,
   kind: "full-day",
   startTime: null,
   endTime: null,
@@ -26,12 +26,12 @@ const NOVEMBER_DAY_OFF: ScheduleDayOffFieldsFragment = {
   byName: null,
   reason: null,
   reasonNote: null,
-};
+});
 
 /**
  * 排班作業 → 畫休總覽(SC-06)與代改(SC-24;規格 14.5「畫休總覽」):
  * [代改] 只做新增;刪除在點日期打開的當天畫休裡,先確認、截止後在確認框選原因。
- * 點日期看得到總覽的人都能開;沒有代改權限是唯讀,過去的月份沒有 [代改]。
+ * 點日期看得到總覽的人都能開;沒有代改權限是唯讀,過去的月份(早於這個月)沒有 [代改]。
  */
 describe("排班作業:畫休總覽與代改", () => {
   it("查詢失敗:顯示載入失敗提示,不是整頁空白", async () => {
@@ -280,21 +280,40 @@ describe("排班作業:畫休總覽與代改", () => {
     ).toBeInTheDocument();
   });
 
-  it("過去的月份:當天畫休沒有 [代改];有代改權限照樣有 [刪除](刪不刪得掉由 api 判斷)", async () => {
+  it("過去的月份(上個月 10 月):上方與當天畫休都沒有 [代改];有代改權限照樣有 [刪除](刪不刪得掉由 api 判斷)", async () => {
     const { user } = renderSchedulePage({
-      path: `${OVERVIEW}&month=2026-11`,
-      dayOffs: { dayOffs: [...sampleDayOffs, NOVEMBER_DAY_OFF] },
+      path: `${OVERVIEW}&month=2026-10`,
+      dayOffs: { dayOffs: [...sampleDayOffs, dayOffOn("2026-10-20")] },
     });
     await user.click(
-      await screen.findByRole("gridcell", { name: "2026-11-20" }),
+      await screen.findByRole("gridcell", { name: "2026-10-20" }),
     );
-    const day = await screen.findByRole("dialog", { name: "11/20(五)" });
+    expect(
+      screen.queryByRole("button", { name: "代改" }),
+    ).not.toBeInTheDocument();
+    const day = await screen.findByRole("dialog", { name: "10/20(二)" });
     expect(
       within(day).getByRole("button", { name: "刪除 李小華" }),
     ).toBeInTheDocument();
     expect(
       within(day).queryByRole("button", { name: "代改" }),
     ).not.toBeInTheDocument();
+  });
+
+  it("這個月(11 月)不算過去:上方與當天畫休都有 [代改]", async () => {
+    const { user } = renderSchedulePage({
+      path: `${OVERVIEW}&month=2026-11`,
+      dayOffs: { dayOffs: [...sampleDayOffs, dayOffOn("2026-11-20")] },
+    });
+    await user.click(
+      await screen.findByRole("gridcell", { name: "2026-11-20" }),
+    );
+    const day = await screen.findByRole("dialog", { name: "11/20(五)" });
+    expect(
+      within(day).getByRole("button", { name: "代改" }),
+    ).toBeInTheDocument();
+    await user.click(within(day).getByRole("button", { name: "關閉" }));
+    expect(screen.getByRole("button", { name: "代改" })).toBeInTheDocument();
   });
 
   it("沒有 view-day-offs:看不到「畫休總覽」分頁(排班表、行事曆照常)", async () => {
