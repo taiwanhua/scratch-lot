@@ -245,24 +245,29 @@ export const pickTaskOf = (
 
 /**
  * 疊開新增的人力需求存好了(SC-04e ③):自動加一列、依規則填第一個空的任務;上下班時間還沒填好 →
- * 帶入那筆人力需求的時間。結果和「從缺額打開」帶入的一樣。
+ * 帶入那筆人力需求的時間。結果和「從缺額打開」帶入的一樣:這個人沒有可填的協同、只剩負責任務時
+ * 照樣填上負責任務(同缺額帶好的那一筆),不能擔任負責人由 `entryCheckReasonsOf` 寫原因、停用 [儲存]。
  */
 export const withAddedDemand = (
   form: EntryFormState,
   created: RosterDemand,
   rule: LeaderRule,
   context: EntryTimeContext,
-): EntryFormState => ({
-  ...withDemandTimes(form, created, context),
-  rows: [
-    ...form.rows,
-    {
-      key: nextRowKey(),
-      demandId: created.id,
-      taskId: pickTaskOf(created, null, rule),
-    },
-  ],
-});
+): EntryFormState => {
+  const picked = pickTaskOf(created, null, rule);
+  const leader = created.tasks.find((task) => task.role === "leader");
+  return {
+    ...withDemandTimes(form, created, context),
+    rows: [
+      ...form.rows,
+      {
+        key: nextRowKey(),
+        demandId: created.id,
+        taskId: picked === "" ? (leader?.taskId ?? "") : picked,
+      },
+    ],
+  };
+};
 
 /** 送出前就檢查的規則用到的資料(都在排班表的資料裡)。 */
 export interface EntryCheckContext {

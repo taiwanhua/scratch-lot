@@ -52,6 +52,27 @@ const openVacancy = async (user: User) => {
   return findDialog("新增排班 · 11/5(四)");
 };
 
+/** 疊開 [新增一筆人力需求]:09:00–13:00、店外攤位、只有一位負責人(人力需求對話框裡才填時間)。 */
+const addLeaderOnlyDemand = async (user: User, dialog: HTMLElement) => {
+  await user.click(
+    within(dialog).getByRole("button", { name: "新增一筆人力需求" }),
+  );
+  const demandDialog = await findDialog("新增人力需求");
+  await user.type(within(demandDialog).getByLabelText(/開始/), "09:00");
+  await user.type(within(demandDialog).getByLabelText(/結束/), "13:00");
+  await user.click(
+    within(demandDialog).getByRole("combobox", { name: /崗位/ }),
+  );
+  await user.click(await findOption("店外攤位"));
+  await user.click(
+    within(demandDialog).getByRole("button", { name: "+ 負責人" }),
+  );
+  await user.click(within(demandDialog).getByRole("button", { name: "新增" }));
+  await waitFor(() => {
+    expect(queryDialog("新增人力需求")).not.toBeInTheDocument();
+  });
+};
+
 const taskSelect = (dialog: HTMLElement) =>
   within(dialog).getByRole("combobox", { name: "職責 · 執行任務" });
 
@@ -70,25 +91,7 @@ describe("排班對話框:各入口一致", () => {
       "2026-11-10",
       "新增排班 · 11/10(二)",
     );
-    await user.click(
-      within(dialog).getByRole("button", { name: "新增一筆人力需求" }),
-    );
-    const demandDialog = await findDialog("新增人力需求");
-    await user.type(within(demandDialog).getByLabelText(/開始/), "09:00");
-    await user.type(within(demandDialog).getByLabelText(/結束/), "13:00");
-    await user.click(
-      within(demandDialog).getByRole("combobox", { name: /崗位/ }),
-    );
-    await user.click(await findOption("店外攤位"));
-    await user.click(
-      within(demandDialog).getByRole("button", { name: "+ 負責人" }),
-    );
-    await user.click(
-      within(demandDialog).getByRole("button", { name: "新增" }),
-    );
-    await waitFor(() => {
-      expect(queryDialog("新增人力需求")).not.toBeInTheDocument();
-    });
+    await addLeaderOnlyDemand(user, dialog);
 
     // 和從缺額打開一樣:時間、休息(依規則)、負責任務都帶好
     expect(within(dialog).getByLabelText(/上班/)).toHaveValue("09:00");
@@ -114,6 +117,60 @@ describe("排班對話框:各入口一致", () => {
     });
   });
 
+  it("同一個人、同一筆只有負責人的人力需求:疊開帶回與點缺額打開,畫面狀態相同(保留負責任務、組下寫原因、[儲存] 停用)", async () => {
+    const { user } = renderRoster(`${ROSTER}&view=week&date=2026-11-10`);
+    const stateOf = (dialog: HTMLElement) => ({
+      demand: within(dialog).getByRole("combobox", { name: "人力需求" })
+        .textContent,
+      task: taskSelect(dialog).textContent,
+      start: within(dialog).getByLabelText(/上班/).getAttribute("value"),
+      end: within(dialog).getByLabelText(/下班/).getAttribute("value"),
+      breakMinutes: within(dialog).getByLabelText(/休息/).getAttribute("value"),
+      reason: within(dialog)
+        .getByRole("group", { name: "加入的人力需求" })
+        .getAttribute("aria-describedby")
+        ?.split(" ")
+        .map((id) => document.querySelector(`#${CSS.escape(id)}`)?.textContent)
+        .join(""),
+      isSaveDisabled: saveButton(dialog).hasAttribute("disabled"),
+    });
+
+    // 疊開:先選林美麗(不能擔任負責人),回來後那一列照樣填上負責任務
+    const stacked = await openFromToolbar(
+      user,
+      "2026-11-10",
+      "新增排班 · 11/10(二)",
+    );
+    await pickPerson(user, stacked, "林美麗");
+    await addLeaderOnlyDemand(user, stacked);
+    const fromStacked = stateOf(stacked);
+    expect(fromStacked).toEqual(
+      expect.objectContaining({
+        task: "負責 · 店內事務與帳目負責",
+        reason: CANNOT_LEAD,
+        isSaveDisabled: true,
+      }),
+    );
+    await user.click(within(stacked).getByRole("button", { name: "取消" }));
+    await waitFor(() => {
+      expect(queryDialog(/^新增排班/)).not.toBeInTheDocument();
+    });
+
+    // 缺額:點剛建的那一筆的缺負責,選同一個人
+    const timeline = await screen.findByRole("group", { name: "週檢視" });
+    const vacancies = await within(timeline).findAllByRole("button", {
+      name: /缺負責 1$/,
+    });
+    const vacancy = vacancies.at(0);
+    if (vacancy === undefined) {
+      throw new Error("找不到缺額");
+    }
+    await user.click(vacancy);
+    const fromVacancyDialog = await findDialog("新增排班 · 11/10(二)");
+    await pickPerson(user, fromVacancyDialog, "林美麗");
+    expect(stateOf(fromVacancyDialog)).toEqual(fromStacked);
+  });
+
   it("缺額 → 選不能擔任負責人的人:人力需求下寫原因、[儲存] 停用;下拉裡負責選項反灰並寫原因", async () => {
     const { user, rosterFake } = renderRoster(WEEK);
     const dialog = await openVacancy(user);
@@ -131,7 +188,8 @@ describe("排班對話框:各入口一致", () => {
       option.textContent.startsWith("負責 · 店內事務與帳目負責"),
     );
     expect(leader).toHaveAttribute("aria-disabled", "true");
-    expect(leader).toHaveTextContent(CANNOT_LEAD);
+    // 選中的那一項不另寫次文字(原因已在這一組下方);沒選中時的次文字見「班表空白格」那條
+    expect(leader).not.toHaveTextContent(CANNOT_LEAD);
     // 改成協同 → 原因消失、可以存
     const helper = options.find((option) =>
       option.textContent.startsWith("協同"),
