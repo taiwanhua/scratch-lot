@@ -50,7 +50,6 @@ export const DAY_OF_MONTH_MAX = 31;
 /** 寄送時間的格子(分鐘),也是排程的間隔(編輯畫面 `TimePicker` 的 `minutesStep`)。 */
 export const SCHEDULE_STEP_MINUTES = 15;
 
-
 /** 驗證不過的位置(`path`,例 `daysBefore[2]`)與原因代碼。 */
 export interface ScheduleIssue {
   readonly path: string;
