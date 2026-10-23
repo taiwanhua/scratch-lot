@@ -47,3 +47,12 @@ export const Small: Story = {
 export const EnglishCalendar: Story = {
   args: { label: "Value", value: "2026-01-01", locale: "en" },
 };
+
+/** 個別日期不可選(日曆上反灰):此例 1/15、1/16 不可選。 */
+export const DisabledDates: Story = {
+  args: {
+    value: "2026-01-10",
+    shouldDisableDate: (date: string) =>
+      date === "2026-01-15" || date === "2026-01-16",
+  },
+};

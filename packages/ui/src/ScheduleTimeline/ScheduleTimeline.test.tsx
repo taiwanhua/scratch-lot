@@ -363,3 +363,64 @@ describe("今天(日期表頭主色實心圓)", () => {
     expect(todayHeaders()).toEqual([]);
   });
 });
+
+describe("時區(timezone)", () => {
+  // 11/4 10:00–14:00 東京時間(UTC+9)= 01:00–05:00 UTC
+  const start = Date.UTC(2026, 10, 4, 1);
+  const end = Date.UTC(2026, 10, 4, 5);
+  // 沒給 ariaLabel:名稱退回時間範圍(以時區顯示)
+  const unlabeled = {
+    ...bar("t1", D4, 0, 1, "甲"),
+    start,
+    end,
+    ariaLabel: undefined,
+  };
+  const tokyo = group("t", D4, 0, 1, "東京場", "東", [unlabeled], {
+    start,
+    end,
+  });
+
+  it("位置、預設名稱與回呼時點都用時區當地的時間", async () => {
+    const user = userEvent.setup();
+    const onBarClick =
+      jest.fn<NonNullable<ScheduleTimelineProps["onBarClick"]>>();
+    renderTimeline({
+      groups: [tokyo],
+      timezone: "Asia/Tokyo",
+      onBarClick,
+    });
+
+    // 東京 10:00 開始 → 捲到 09:00
+    expect(scrolled.top).toEqual([9 * 36]);
+    act(() => {
+      screen.getByRole("button", { name: "10:00–14:00" }).focus();
+    });
+    await user.keyboard("{Enter}");
+
+    expect(onBarClick.mock.calls[0]?.[2]).toEqual({
+      date: D4,
+      time: "10:00",
+      at: new Date(start),
+    });
+  });
+
+  it("沒給 today 時,今天依時區的此刻(UTC 11/4 16:00 = 東京 11/5)", () => {
+    jest.useFakeTimers({ now: Date.UTC(2026, 10, 4, 16) });
+    try {
+      render(
+        <ScheduleTimeline
+          mode="week"
+          dates={weekDates}
+          groups={[]}
+          timezone="Asia/Tokyo"
+          dayWidth={157}
+        />,
+      );
+
+      expect(todayHeaders()).toHaveLength(1);
+      expect(todayHeaders()[0]).toHaveTextContent("11/5");
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+});

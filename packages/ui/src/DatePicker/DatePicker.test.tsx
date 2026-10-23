@@ -109,6 +109,27 @@ describe("DatePicker", () => {
     ).toBeNull();
   });
 
+  it("shouldDisableDate 回 true 的日期反灰不可選(收 YYYY-MM-DD)", () => {
+    const handleChange = jest.fn();
+    render(
+      <DatePicker
+        label="值"
+        value="2026-01-10"
+        shouldDisableDate={(date) => date === "2026-01-15"}
+        onChange={handleChange}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /choose date/i }));
+    const closed = screen.getByRole("gridcell", { name: "15" });
+    expect(closed.getAttribute("disabled")).not.toBeNull();
+    expect(
+      screen.getByRole("gridcell", { name: "16" }).getAttribute("disabled"),
+    ).toBeNull();
+    fireEvent.click(closed);
+    expect(handleChange).not.toHaveBeenCalled();
+  });
+
   /**
    * 沒有 `size` 時固定 medium,在 `size="small"` 的下拉旁邊高一截。
    * MUI X 的日期欄不是一般的 `InputBase`,尺寸落在 `MuiPickersInputBase-inputSizeSmall`

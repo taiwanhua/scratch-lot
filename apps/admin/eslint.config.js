@@ -70,7 +70,7 @@ const restrictedImports = ({ paths, patterns = [] }) => ({
  * `packages/ui/src/test/field-size.test.tsx` 鎖著),所以隔壁寫了 `size="small"`、自己沒寫的那格會高一截
  * (組織欄、日期欄沒寫 size 就是這樣比同列高)。只看同一個父元素底下直接並排的欄位;包在條件式或 helper 裡的看不到,靠 review。
  */
-const FIELD = `JSXOpeningElement[name.name=/^(TextField|SelectField|Autocomplete|DatePicker|DateTimePicker|OrgTreeSelect|ShareOrgsField|ModuleIconPicker)$/]`;
+const FIELD = `JSXOpeningElement[name.name=/^(TextField|SelectField|Autocomplete|DatePicker|DateTimePicker|TimePicker|OrgTreeSelect|ShareOrgsField|ModuleIconPicker)$/]`;
 const SMALL_FIELD = `JSXElement:has(> ${FIELD}:has(> JSXAttribute[name.name="size"][value.value="small"]))`;
 /**
  * 沒寫 size 或明寫 medium。spread 單純識別字(`{...SMALL}`、`{...fieldProps}`)的可能帶著 size,看不出來就不判;

@@ -3115,6 +3115,7 @@
         "daysDuplicate": "天數不能重複",
         "daysEmpty": "至少要有一個提前天數",
         "dayOfMonthRange": "請填 1–31 的整數",
+        "timeStep": "請選 15 分鐘一格的時間(例 09:00、09:15)",
         "invalid": "超出可以填的範圍"
       }
     },

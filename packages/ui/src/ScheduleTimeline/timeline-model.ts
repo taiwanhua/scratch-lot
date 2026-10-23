@@ -52,8 +52,9 @@ const barParts = (
   bar: ScheduleTimelineBar,
   groupSpan: DaySpan,
   date: string,
+  timezone: string | undefined,
 ): BarDayParts | null => {
-  const span = clipToDay(bar.start, bar.end, date);
+  const span = clipToDay(bar.start, bar.end, date, timezone);
   if (span === null) {
     return null;
   }
@@ -67,14 +68,15 @@ const barParts = (
   };
 };
 
-/** 某一天的容器(依完整排序;時段沒落在當天的不列)。 */
+/** 某一天的容器(依完整排序;時段沒落在當天的不列)。`timezone` 沒給 = 瀏覽器時區。 */
 export const groupsOfDay = (
   groups: readonly ScheduleTimelineGroup[],
   date: string,
+  timezone?: string,
 ): GroupDayModel[] =>
   groups
     .flatMap((group): GroupDayModel[] => {
-      const span = clipToDay(group.start, group.end, date);
+      const span = clipToDay(group.start, group.end, date, timezone);
       if (span === null) {
         return [];
       }
@@ -82,7 +84,7 @@ export const groupsOfDay = (
         if (slot.kind === "vacancy") {
           return [{ slot, index, bar: null }];
         }
-        const bar = barParts(slot, span, date);
+        const bar = barParts(slot, span, date, timezone);
         return bar === null ? [] : [{ slot, index, bar }];
       });
       const barSpans = slotModels.flatMap((m) => (m.bar ? [m.bar.span] : []));
@@ -142,9 +144,10 @@ export interface DisabledDayRange extends MinuteRange {
 export const disabledRangesOfDay = (
   ranges: readonly ScheduleTimelineDisabledRange[],
   date: string,
+  timezone?: string,
 ): DisabledDayRange[] =>
   ranges.flatMap((range) => {
-    const span = clipToDay(range.start, range.end, date);
+    const span = clipToDay(range.start, range.end, date, timezone);
     return span === null
       ? []
       : [{ start: span.startMinute, end: span.endMinute, label: range.label }];

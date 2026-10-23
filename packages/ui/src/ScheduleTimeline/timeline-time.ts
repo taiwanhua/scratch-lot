@@ -1,5 +1,4 @@
-import dayjs from "dayjs";
-
+import { clockIn, dayStartIn, nextDayStartIn } from "../DatePicker/zoned-day";
 import type {
   ScheduleTimelinePoint,
   ScheduleTimelineTime,
@@ -7,7 +6,8 @@ import type {
 
 /**
  * 時間軸的時間換算(純函式):時點 ↔「某一天的第幾分鐘」。時間軸固定 00:00–24:00,
- * 一天以瀏覽器時區的 00:00 起算;跨午夜的東西由 `clipToDay` 切成兩天各一段。
+ * 一天以 `timezone`(IANA,元件的 `timezone` prop)的 00:00 起算,沒給時用瀏覽器時區;
+ * 跨午夜的東西由 `clipToDay` 切成兩天各一段。
  */
 
 export const MINUTES_PER_DAY = 24 * 60;
@@ -21,9 +21,9 @@ const MS_PER_MINUTE = 60_000;
 export const toMs = (time: ScheduleTimelineTime): number =>
   typeof time === "number" ? time : time.getTime();
 
-/** 那一天 00:00 的 epoch 毫秒(`YYYY-MM-DD`,瀏覽器時區)。 */
-export const dayStartMs = (date: string): number =>
-  dayjs(date).startOf("day").valueOf();
+/** 那一天 00:00 的 epoch 毫秒(`YYYY-MM-DD`;沒給時區 = 瀏覽器時區)。 */
+export const dayStartMs = (date: string, timezone?: string): number =>
+  dayStartIn(date, timezone);
 
 /** 一段時間落在某一天的那一段(分鐘,0–1440)。 */
 export interface DaySpan {
@@ -40,9 +40,10 @@ export const clipToDay = (
   start: ScheduleTimelineTime,
   end: ScheduleTimelineTime,
   date: string,
+  timezone?: string,
 ): DaySpan | null => {
-  const dayStart = dayStartMs(date);
-  const dayEnd = dayjs(date).add(1, "day").startOf("day").valueOf();
+  const dayStart = dayStartMs(date, timezone);
+  const dayEnd = nextDayStartIn(date, timezone);
   const startMs = toMs(start);
   const endMs = toMs(end);
   if (endMs <= dayStart || startMs >= dayEnd || endMs <= startMs) {
@@ -68,12 +69,13 @@ export const formatMinute = (minute: number): string => {
 export const pointAt = (
   date: string,
   minute: number,
+  timezone?: string,
 ): ScheduleTimelinePoint => {
   const hourStart = Math.min(Math.max(Math.floor(minute / 60), 0), 23) * 60;
   return {
     date,
     time: formatMinute(hourStart),
-    at: new Date(dayStartMs(date) + hourStart * MS_PER_MINUTE),
+    at: new Date(dayStartMs(date, timezone) + hourStart * MS_PER_MINUTE),
   };
 };
 
@@ -86,12 +88,15 @@ export const initialScrollMinute = (startMinutes: readonly number[]): number =>
     ? DEFAULT_SCROLL_MINUTE
     : Math.max(0, Math.min(...startMinutes) - SCROLL_LEAD_MINUTES);
 
-/** 時點 →「HH:mm」(瀏覽器時區)。 */
-export const formatClock = (time: ScheduleTimelineTime): string =>
-  dayjs(toMs(time)).format("HH:mm");
+/** 時點 →「HH:mm」(沒給時區 = 瀏覽器時區)。 */
+export const formatClock = (
+  time: ScheduleTimelineTime,
+  timezone?: string,
+): string => clockIn(toMs(time), timezone);
 
 /** 「HH:mm–HH:mm」:長條 / 容器沒給無障礙名稱時的預設。 */
 export const formatTimeRange = (
   start: ScheduleTimelineTime,
   end: ScheduleTimelineTime,
-): string => `${formatClock(start)}–${formatClock(end)}`;
+  timezone?: string,
+): string => `${formatClock(start, timezone)}–${formatClock(end, timezone)}`;

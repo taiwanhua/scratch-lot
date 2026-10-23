@@ -18,8 +18,7 @@ import {
 export type { PickerChangeDetails } from "./usePickerDraft";
 
 /**
- * 對外的值格式:ISO 日期字串。
- * 資料範圍規則把日期條件當字串存進 `data_scope_rules`(ADR-0008),
+ * 對外的值格式:ISO 日期字串。存值是時點(租戶時區當地 00:00),由使用處換算(admin `local-day.ts`);
  * 設計稿的值欄也直接顯示 `2026-01-01`(Figma 資料範圍 167:1819),所以顯示格式預設同一個。
  */
 const VALUE_FORMAT = "YYYY-MM-DD";
@@ -47,6 +46,8 @@ export interface DatePickerProps {
   /** 可選範圍(含),`YYYY-MM-DD` */
   minDate?: string;
   maxDate?: string;
+  /** 個別日期不可選(日曆上反灰,例:公休日);收 `YYYY-MM-DD`,回 `true` = 不可選 */
+  shouldDisableDate?: (date: string) => boolean;
   /* 以下沿用 MUI 的名字而不自創(STYLE-05 / FIGMA-01:包裝層能透傳就透傳) */
   disabled?: boolean;
   readOnly?: boolean;
@@ -93,6 +94,7 @@ export const DatePicker = ({
   onChange,
   minDate,
   maxDate,
+  shouldDisableDate,
   disabled,
   readOnly,
   required,
@@ -121,6 +123,11 @@ export const DatePicker = ({
         onChange={draft.handleChange}
         minDate={toDate(minDate) ?? undefined}
         maxDate={toDate(maxDate) ?? undefined}
+        shouldDisableDate={
+          shouldDisableDate === undefined
+            ? undefined
+            : (date) => shouldDisableDate(date.format(VALUE_FORMAT))
+        }
         disabled={disabled}
         readOnly={readOnly}
         format={format}

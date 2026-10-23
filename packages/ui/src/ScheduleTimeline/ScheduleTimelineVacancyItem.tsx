@@ -84,6 +84,7 @@ export const ScheduleTimelineVacancyItem = ({
               selected: pressedOf(actions, selected),
               date,
               range,
+              timezone: actions.timezone,
               onActivate: (point) => {
                 onVacancyClick(vacancy, group, point);
               },

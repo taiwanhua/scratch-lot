@@ -6,6 +6,7 @@ import {
   DAYS_BEFORE_MIN,
   DAY_OF_MONTH_MAX,
   DAY_OF_MONTH_MIN,
+  isScheduleTime,
 } from "@repo/domain/notification-schedule";
 import {
   type NotificationScheduleInput,
@@ -30,6 +31,7 @@ export interface ScheduleDraft {
   kind: NotificationScheduleKind;
   daysBefore: string[];
   dayOfMonth: string;
+  /** `HH:mm`;時間欄清空或打到一半時是空字串 */
   time: string;
 }
 
@@ -45,12 +47,14 @@ export const toScheduleDraft = (
   time: schedule.time,
 });
 
-/** 本地驗證的問題:`daysBefore[<i>]` / `daysBefore` / `dayOfMonth` → 原因。 */
+/** 本地驗證的問題:`daysBefore[<i>]` / `daysBefore` / `dayOfMonth` / `time` → 原因。 */
 export type ScheduleIssueReason =
   | "daysRange"
   | "daysDuplicate"
   | "daysEmpty"
   | "dayOfMonthRange"
+  /** 時間沒填、或不在 15 分鐘格子上(鍵盤打得出 09:10) */
+  | "timeStep"
   /** api 擋下(`SCHEDULE_INVALID` 的 `path`) */
   | "invalid";
 
@@ -67,6 +71,9 @@ const integerIn = (text: string, min: number, max: number): number | null => {
 /** 送出前的本地驗證;沒有問題回空 Map。 */
 export const validateScheduleDraft = (draft: ScheduleDraft): ScheduleIssues => {
   const issues = new Map<string, ScheduleIssueReason>();
+  if (!isScheduleTime(draft.time)) {
+    issues.set("time", "timeStep");
+  }
   if (draft.kind === NotificationScheduleKind.Monthly) {
     if (
       integerIn(draft.dayOfMonth, DAY_OF_MONTH_MIN, DAY_OF_MONTH_MAX) === null
