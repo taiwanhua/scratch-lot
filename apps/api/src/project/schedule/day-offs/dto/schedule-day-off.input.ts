@@ -2,7 +2,8 @@ import { Field, GraphQLISODateTime, ID, InputType } from "@nestjs/graphql";
 
 /**
  * 一段時段不可排:那天的開始 / 結束時點(admin 以租戶時區把日期 + `HH:mm` 合成時點);
- * 都要落在 `date` 那天、結束晚於開始(不跨午夜),精度到分鐘。
+ * 半開區間 `[startAt, endAt)` 要在 `date` 那天裡:開始落在那天、結束晚於開始且最晚 = 隔天 00:00
+ * (做到當天結束;不再往後跨),精度到分鐘。
  */
 @InputType()
 export class ScheduleDayOffSlotInput {

@@ -5,6 +5,7 @@ import {
   dayKeyOf,
   dayOffBandOf,
   dayOffCountTone,
+  isCompleteSlot,
   isPastDayOffMonth,
   monthRangeOf,
   slotInstantsOf,
@@ -53,6 +54,43 @@ describe("畫休畫面的換算", () => {
       completeSlots([{ startTime: "13:00", endTime: "09:00" }]),
     ).toBeNull();
     expect(completeSlots([{ startTime: "", endTime: "" }])).toBeNull();
+    // 結束 00:00 = 隔天 00:00(做到當天結束):任何開始都早於它
+    expect(completeSlots([{ startTime: "22:00", endTime: "00:00" }])).toEqual([
+      { startTime: "22:00", endTime: "00:00" },
+    ]);
+    expect(isCompleteSlot({ startTime: "00:00", endTime: "00:00" })).toBe(true);
+    // 其他「結束不晚於開始」不算隔天(時段不往後跨)
+    expect(isCompleteSlot({ startTime: "22:00", endTime: "02:00" })).toBe(
+      false,
+    );
+  });
+
+  it("時段結束 00:00 合成隔天 00:00(租戶時區)", () => {
+    expect(
+      slotInstantsOf(
+        "2026-12-10",
+        [{ startTime: "22:00", endTime: "00:00" }],
+        TAIPEI,
+      ),
+    ).toEqual([
+      {
+        startAt: taipei("2026-12-10", "22:00"),
+        endAt: taipei("2026-12-11", "00:00"),
+      },
+    ]);
+    // 洛杉磯 12/11 00:00 = UTC 12/11 08:00
+    expect(
+      slotInstantsOf(
+        "2026-12-10",
+        [{ startTime: "22:00", endTime: "00:00" }],
+        "America/Los_Angeles",
+      ),
+    ).toEqual([
+      {
+        startAt: "2026-12-11T06:00:00.000Z",
+        endAt: "2026-12-11T08:00:00.000Z",
+      },
+    ]);
   });
 
   it("時點 ↔ 日期鍵、月份的時點區間(租戶時區不是台北時也對)", () => {

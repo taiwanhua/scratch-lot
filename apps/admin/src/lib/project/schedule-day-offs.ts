@@ -1,4 +1,5 @@
 import {
+  addLocalDays,
   addLocalMonths,
   instantOfLocalHhMm,
   localMonthRange,
@@ -112,9 +113,17 @@ export interface DayOffSlot {
 
 export const EMPTY_SLOT: DayOffSlot = { startTime: "", endTime: "" };
 
-/** 一段有填完、而且開始早於結束。 */
+/**
+ * 結束選 `00:00` = 隔天 00:00(做到當天結束;api 的時段是半開區間 `[開始, 結束)`,結束最晚隔天 00:00)。
+ * 沿用排班上下班「結束不晚於開始就算隔天」(`spanOf`),但時段不能再往後跨:只有 00:00 算隔天。
+ */
+const END_OF_DAY = "00:00";
+
+/** 一段有填完、而且開始早於結束(結束 `00:00` = 隔天 00:00,任何開始都早於它)。 */
 export const isCompleteSlot = (slot: DayOffSlot): boolean =>
-  slot.startTime !== "" && slot.endTime !== "" && slot.startTime < slot.endTime;
+  slot.startTime !== "" &&
+  slot.endTime !== "" &&
+  (slot.endTime === END_OF_DAY || slot.startTime < slot.endTime);
 
 /**
  * 要送出的時段:每一段都要填完且開始早於結束(全空的一段略過);沒有任何一段、或有填一半的 → null。
@@ -134,8 +143,8 @@ export const completeSlots = (
 };
 
 /**
- * 時段(那天的 `HH:mm`)→ api 收的時點 `startAt` / `endAt`(日期 + 時刻以租戶時區合成);
- * 日期鍵或任一時刻不合法 → null。
+ * 時段(那天的 `HH:mm`)→ api 收的時點 `startAt` / `endAt`(日期 + 時刻以租戶時區合成;
+ * 結束 `00:00` = 隔天 00:00);日期鍵或任一時刻不合法 → null。
  */
 export const slotInstantsOf = (
   date: string,
@@ -146,9 +155,14 @@ export const slotInstantsOf = (
   if (day === null) {
     return null;
   }
+  const nextDay = addLocalDays(day, 1);
   const spans = slots.map((slot) => ({
     start: instantOfLocalHhMm(day, slot.startTime, timezone),
-    end: instantOfLocalHhMm(day, slot.endTime, timezone),
+    end: instantOfLocalHhMm(
+      slot.endTime === END_OF_DAY ? nextDay : day,
+      slot.endTime,
+      timezone,
+    ),
   }));
   return spans.every((span) => span.start !== null && span.end !== null)
     ? spans.map((span) => ({

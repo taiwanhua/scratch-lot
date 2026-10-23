@@ -43,7 +43,7 @@ export class ScheduleDayOff {
   @Prop({ type: Date, default: null })
   startAt!: Date | null;
 
-  /** 時段不可排的結束(時點,晚於開始;不跨午夜);整天畫休為 null。 */
+  /** 時段不可排的結束(時點,晚於開始;半開區間,最晚 = 隔天 00:00 = 做到當天結束);整天畫休為 null。 */
   @Prop({ type: Date, default: null })
   endAt!: Date | null;
 

@@ -406,7 +406,8 @@ const byTime = (
  * - **本人**:只能在主要分店的開放期間內登記 / 刪除下個月;不需核准,違反限制不存
  * - **代改**(`schedule.manage.edit-day-offs`):不受開放期間限制;截止後原因必填,選「其他」要說明;記代改人
  * - 違反限制(存檔後限制的違反比存檔前多)→ `VALIDATION_FAILED`(`fields: ["date"]`、`violations`);提醒照存
- * - **日期與時段是時點**:輸入的 `date` 以租戶時區正規化成那天 00:00,時段 `startAt` / `endAt` 要落在那天;
+ * - **日期與時段是時點**:輸入的 `date` 以租戶時區正規化成那天 00:00,時段 `[startAt, endAt)` 要在那天裡
+ *   (結束最晚 = 隔天 00:00);
  *   月份查詢收 `from` / `to`(那個月的時點區間)。規則與分組在記憶體裡用租戶時區的日期鍵算
  */
 @Injectable()
@@ -1475,27 +1476,33 @@ function daysOf(
     }));
 }
 
+/** 合法時點、精度到分鐘。 */
+const onMinute = (instant: number): boolean =>
+  Number.isFinite(instant) && instant % MS_PER_MINUTE === 0;
+
 /**
- * 時段不可排的幾段:至少一段;每段的開始、結束都落在那天(`[那天 00:00, 隔天 00:00)`)、
- * 開始早於結束、精度到分鐘(admin 由日期 + `HH:mm` 合成);否則 `VALIDATION_FAILED`(欄位 `slots`,
- * 格式錯不帶 reason)。
+ * 時段不可排的幾段:至少一段;每段是那天裡的半開區間 `[startAt, endAt)`:開始落在
+ * `[那天 00:00, 隔天 00:00)`、結束晚於開始且最晚 = 隔天 00:00(做到當天結束)、精度到分鐘
+ * (admin 由日期 + `HH:mm` 合成,結束選 00:00 = 隔天 00:00);否則 `VALIDATION_FAILED`
+ * (欄位 `slots`,格式錯不帶 reason)。
  */
 function validatedSlots(
   slots: readonly ScheduleDayOffSlotInput[] | null | undefined,
   day: InstantRange,
 ): ScheduleDayOffSpan[] {
   const list = slots ?? [];
-  const inDay = (instant: number) =>
-    Number.isFinite(instant) &&
-    instant >= day.from &&
-    instant < day.to &&
-    instant % MS_PER_MINUTE === 0;
   const valid =
     list.length > 0 &&
     list.every((slot) => {
       const start = slot.startAt.getTime();
       const end = slot.endAt.getTime();
-      return inDay(start) && inDay(end) && start < end;
+      return (
+        onMinute(start) &&
+        onMinute(end) &&
+        start >= day.from &&
+        start < end &&
+        end <= day.to
+      );
     });
   if (!valid) {
     throw validationError(

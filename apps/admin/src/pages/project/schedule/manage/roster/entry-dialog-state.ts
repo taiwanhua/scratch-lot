@@ -340,13 +340,16 @@ export const entryCheckReasonsOf = (
           instantOfDayTime(shiftDay(day.date, 1), "00:00", context.timezone),
         );
       }
-      return day.slots.some((slot) =>
-        overlaps(
-          span,
-          instantOfDayTime(day.date, slot.startTime, context.timezone),
-          instantOfDayTime(day.date, slot.endTime, context.timezone),
-        ),
-      );
+      // 時段結束 `00:00` = 隔天 00:00(做到當天結束):同上下班「結束不晚於開始就算隔天」(`spanOf`)
+      return day.slots.some((slot) => {
+        const busy = spanOf(
+          day.date,
+          slot.startTime,
+          slot.endTime,
+          context.timezone,
+        );
+        return busy !== null && overlaps(span, busy.startAt, busy.endAt);
+      });
     });
     if (isDayOff) {
       reasons.startTime = "DAY_OFF_CONFLICT";

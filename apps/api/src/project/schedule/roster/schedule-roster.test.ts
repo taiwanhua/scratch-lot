@@ -427,7 +427,12 @@ describe("排班表(GraphQL 端點 + 真 MongoDB)", () => {
     user: ScheduleTestUser,
     date: string,
     kind: "full-day" | "time-range",
-    slot: { startTime: string; endTime: string } | null = null,
+    /** `endDate`:結束在哪天(預設同一天;做到當天結束 = 隔天 00:00) */
+    slot: {
+      startTime: string;
+      endTime: string;
+      endDate?: string;
+    } | null = null,
   ): Promise<void> {
     const now = new Date();
     await connection.collection(SCHEDULE_DAY_OFFS_COLLECTION).insertOne({
@@ -438,7 +443,10 @@ describe("排班表(GraphQL 端點 + 真 MongoDB)", () => {
       date: new Date(taipei(date, "00:00")),
       kind,
       startAt: slot === null ? null : new Date(taipei(date, slot.startTime)),
-      endAt: slot === null ? null : new Date(taipei(date, slot.endTime)),
+      endAt:
+        slot === null
+          ? null
+          : new Date(taipei(slot.endDate ?? date, slot.endTime)),
       note: null,
       by: null,
       reason: null,
@@ -871,12 +879,33 @@ describe("排班表(GraphQL 端點 + 真 MongoDB)", () => {
       ).toMatchObject({ code: "VALIDATION_FAILED", fields: ["startAt"] });
 
       const closed = await gql(hq, SAVE_CALENDAR_DAY, {
-        input: { orgId: String(zhongshan), date: "2026-12-15", type: "closed" },
+        input: {
+          orgId: String(zhongshan),
+          date: taipei("2026-12-15", "00:00"),
+          type: "closed",
+        },
       });
       expect(closed.errors).toBeUndefined();
       expect(
         errorOf(await overnightEntry("2026-12-14", "2026-12-15", "02:00")),
       ).toMatchObject({ code: "VALIDATION_FAILED", fields: ["startAt"] });
+    });
+
+    it("時段做到當天結束(結束 = 隔天 00:00):跨午夜的班碰到 → 擋下;隔天 00:00 起的班不擋(頭尾相接)", async () => {
+      await insertDayOff(li, "2026-12-25", "time-range", {
+        startTime: "21:00",
+        endTime: "00:00",
+        endDate: "2026-12-26",
+      });
+      expect(
+        errorOf(await overnightEntry("2026-12-25", "2026-12-26", "06:00")),
+      ).toMatchObject({
+        code: "VALIDATION_FAILED",
+        fields: ["startAt"],
+        reason: "DAY_OFF_CONFLICT",
+      });
+      const nextDay = await entryOn("2026-12-26", "00:00", "06:00");
+      expect(nextDay.errors).toBeUndefined();
     });
 
     it("排班和畫休同時送出:排班成功就一定出現在畫休的衝突清單,否則排班被擋(「人」守門文件互相衝突)", async () => {

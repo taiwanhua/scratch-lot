@@ -1315,6 +1315,78 @@ describe("畫休(GraphQL 端點 + 真 MongoDB)", () => {
       }
     });
 
+    it("時段是半開區間:結束最晚 = 隔天 00:00(做到當天結束);開始在隔天或結束超過隔天 00:00 → 格式錯", async () => {
+      travelTo("2026-11-20");
+      const saved = dataOf(
+        await addMine(wang, {
+          date: iso("2026-12-14"),
+          kind: "time-range",
+          slots: [
+            { startAt: iso("2026-12-14", "20:00"), endAt: iso("2026-12-15") },
+          ],
+        }),
+        "addMyScheduleDayOffs",
+      );
+      expect(saved.items[0]).toMatchObject({
+        date: iso("2026-12-14"),
+        startAt: iso("2026-12-14", "20:00"),
+        endAt: iso("2026-12-15"),
+      });
+      // 那一段仍屬於 12/14(給排班作業的日期鍵);隔天 00:00 起的同一段不算重疊
+      const items = await api.app
+        .get(ScheduleDayOffsService)
+        .unavailableOfPerson(tenantA, wang.userId, "2026-12-14", "2026-12-15");
+      expect(items).toEqual([
+        {
+          userId: String(wang.userId),
+          date: "2026-12-14",
+          fullDay: false,
+          slots: [
+            {
+              startAt: taipei("2026-12-14", "20:00"),
+              endAt: taipei("2026-12-15", "00:00"),
+            },
+          ],
+        },
+      ]);
+      // 同一天再登記與它重疊的 → 時段重疊
+      expect(
+        errorOf(
+          await addMine(wang, {
+            date: iso("2026-12-14"),
+            kind: "time-range",
+            slots: [slot("2026-12-14", "23:00", "23:30")],
+          }),
+        ),
+      ).toMatchObject({
+        code: "VALIDATION_FAILED",
+        fields: ["slots"],
+        reason: "TIME_RANGES_OVERLAP",
+      });
+
+      for (const slots of [
+        // 結束超過隔天 00:00
+        [
+          {
+            startAt: iso("2026-12-16", "20:00"),
+            endAt: iso("2026-12-17", "00:01"),
+          },
+        ],
+        // 開始在隔天 00:00
+        [{ startAt: iso("2026-12-17"), endAt: iso("2026-12-17", "01:00") }],
+      ]) {
+        expect(
+          errorOf(
+            await addMine(wang, {
+              date: iso("2026-12-16"),
+              kind: "time-range",
+              slots,
+            }),
+          ),
+        ).toEqual({ code: "VALIDATION_FAILED", fields: ["slots"] });
+      }
+    });
+
     it("月份查詢的 from / to 要剛好是租戶時區的一個月,否則 VALIDATION_FAILED(from、to)", async () => {
       travelTo("2026-11-20");
       const invalid = [
