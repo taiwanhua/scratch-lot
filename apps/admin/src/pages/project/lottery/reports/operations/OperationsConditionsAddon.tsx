@@ -1,7 +1,12 @@
 import { useMemo } from "react";
 import { useTranslations } from "use-intl";
 
-import { DEFAULT_TENANT_TIMEZONE, formatTemporal } from "@repo/domain/form";
+import {
+  DEFAULT_TENANT_TIMEZONE,
+  formatTemporal,
+  localMonthText,
+  parseLocalDate,
+} from "@repo/domain/form";
 import { useTenantOrgTreeQuery } from "@repo/graphql";
 import { Alert } from "@repo/ui/alert";
 import { Stack } from "@repo/ui/stack";
@@ -53,16 +58,18 @@ export const OperationsConditionsAddon = ({
     [orgTree.data],
   );
   const data = periods.data?.lotteryOperationsReportPeriods;
-  const month = periodDate.slice(0, 7);
+  const periodDay = parseLocalDate(periodDate);
+  const month = periodDay === null ? "" : localMonthText(periodDay);
   const monthClosed =
     periodKind === "month" &&
+    periodDay !== null &&
     data?.closedThrough != null &&
     month <= data.closedThrough;
 
   if (periodKind === "month") {
     return monthClosed ? (
       <Alert severity="info">
-        {t("closing.closedHint", { month: Number(month.slice(5, 7)) })}
+        {t("closing.closedHint", { month: periodDay.month })}
       </Alert>
     ) : null;
   }

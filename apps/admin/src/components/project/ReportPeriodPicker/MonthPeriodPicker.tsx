@@ -1,6 +1,7 @@
 import { type ReactNode, useState } from "react";
 import { useTranslations } from "use-intl";
 
+import { localMonthText } from "@repo/domain/form";
 import { Box } from "@repo/ui/box";
 import { Button } from "@repo/ui/button";
 import { IconButton } from "@repo/ui/icon-button";
@@ -97,7 +98,7 @@ export const MonthPeriodPicker = ({
               }}
             >
               <span>{t("monthLabel", { month })}</span>
-              {monthCaption?.(first.slice(0, 7))}
+              {monthCaption?.(localMonthText({ year: shownYear, month }))}
             </Button>
           );
         })}

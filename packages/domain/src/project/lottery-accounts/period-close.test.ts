@@ -1,35 +1,40 @@
 import { describe, expect, it } from "@jest/globals";
 
-import {
-  addPeriodMonths,
-  isPeriodEnded,
-  nextClosableMonth,
-  periodMonthOf,
-  periodMonthsOf,
-  periodRangeOf,
-} from ".";
+import { isPeriodEnded, nextClosableMonth, periodMonthsOf } from ".";
 
 const TZ = "Asia/Taipei";
 const at = (iso: string) => new Date(iso).getTime();
 
 describe("關帳的月份(規格 10.4)", () => {
-  it("月份文字與加減", () => {
-    expect(() => addPeriodMonths("2026-13", 1)).toThrow(RangeError);
-    expect(() => addPeriodMonths("2026-1", 1)).toThrow(RangeError);
-    expect(addPeriodMonths("2026-01", -1)).toBe("2025-12");
-    expect(addPeriodMonths("2026-12", 1)).toBe("2027-01");
+  it("月份格式不對 → RangeError", () => {
+    expect(() =>
+      nextClosableMonth({
+        lastClosed: "2026-13",
+        firstMonth: "2026-01",
+        now: at("2026-11-03T09:00:00+08:00"),
+        timezone: TZ,
+      }),
+    ).toThrow(RangeError);
+    expect(() => isPeriodEnded("2026-1", 0, TZ)).toThrow(RangeError);
   });
 
-  it("永遠關到該月最後一刻:10/31 23:59:59.999 算 10 月、11/1 00:00 算 11 月(租戶時區)", () => {
-    const { start, end } = periodRangeOf("2026-10", TZ);
-    expect(start).toBe(at("2026-10-01T00:00:00+08:00"));
-    expect(end).toBe(at("2026-11-01T00:00:00+08:00"));
-    const last = at("2026-10-31T23:59:59.999+08:00");
-    expect(last < end).toBe(true);
-    expect(periodMonthOf(last, TZ)).toBe("2026-10");
-    expect(periodMonthOf(at("2026-11-01T00:00:00+08:00"), TZ)).toBe("2026-11");
+  it("永遠關到該月最後一刻:11/1 00:00(租戶時區)那一刻 10 月才結束;跨年加月", () => {
+    expect(
+      isPeriodEnded("2026-10", at("2026-10-31T23:59:59.999+08:00"), TZ),
+    ).toBe(false);
+    expect(isPeriodEnded("2026-10", at("2026-11-01T00:00:00+08:00"), TZ)).toBe(
+      true,
+    );
     // UTC 還在 10/31,台北已是 11/1
-    expect(periodMonthOf(at("2026-10-31T16:30:00Z"), TZ)).toBe("2026-11");
+    expect(isPeriodEnded("2026-10", at("2026-10-31T16:30:00Z"), TZ)).toBe(true);
+    expect(
+      nextClosableMonth({
+        lastClosed: "2025-12",
+        firstMonth: "2025-01",
+        now: at("2026-11-03T09:00:00+08:00"),
+        timezone: TZ,
+      }),
+    ).toBe("2026-01");
   });
 
   it("只能關已結束的月份:本月沒結束", () => {

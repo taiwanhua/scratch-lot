@@ -1,7 +1,11 @@
 import { useState } from "react";
 import { useTranslations } from "use-intl";
 
-import { DEFAULT_TENANT_TIMEZONE } from "@repo/domain/form";
+import {
+  DEFAULT_TENANT_TIMEZONE,
+  localMonthText,
+  parseLocalDate,
+} from "@repo/domain/form";
 import { useScheduleRosterQuery } from "@repo/graphql";
 import { Box } from "@repo/ui/box";
 import { Button } from "@repo/ui/button";
@@ -51,7 +55,10 @@ export const DayPicker = ({
 }: DayPickerProps) => {
   const t = useTranslations("admin.schedule.roster");
   const tCalendar = useTranslations("admin.schedule.calendar");
-  const [month, setMonth] = useState(date.slice(0, 7));
+  const [month, setMonth] = useState(() => {
+    const day = parseLocalDate(date);
+    return day === null ? "" : localMonthText(day);
+  });
   const { session } = useSession();
   const timezone = useTenantTimezone() ?? DEFAULT_TENANT_TIMEZONE;
   // 月曆翻到別的月:讀那家店那個月的排班表再標點、店休、特殊日

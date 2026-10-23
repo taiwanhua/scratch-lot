@@ -1,4 +1,4 @@
-import { type ReactNode, useState } from "react";
+import type { ReactNode } from "react";
 import { useTranslations } from "use-intl";
 
 import { DEFAULT_TENANT_TIMEZONE } from "@repo/domain/form";
@@ -7,6 +7,7 @@ import { Stack } from "@repo/ui/stack";
 
 import { usePermissions } from "@/hooks/base/usePermissions";
 import { useTenantTimezone } from "@/hooks/base/useTenantTimezone";
+import { useTenantToday } from "@/hooks/base/useTenantToday";
 import { useUrlState } from "@/hooks/base/useUrlState";
 import {
   type ResolvedReportConditions,
@@ -16,7 +17,6 @@ import {
 import {
   type ReportPeriodValue,
   lastDayOfWeek,
-  todayOf,
 } from "@/lib/project/reports/report-period";
 import {
   REPORTS_PERMISSIONS,
@@ -65,9 +65,8 @@ export const ReportWorkspace = ({
   const t = useTranslations("admin");
   const { hasPermission } = usePermissions();
   const timezone = useTenantTimezone() ?? DEFAULT_TENANT_TIMEZONE;
-  // 「今天」在頁面開啟時取一次(租戶時區)
-  const [openedAt] = useState(() => Date.now());
-  const today = todayOf(timezone, openedAt);
+  // 「今天」在頁面開啟時取一次(租戶時區;底座 `useTenantToday`)
+  const today = useTenantToday();
   const periodText = usePeriodText();
 
   const [state, setState] = useUrlState("conditions", reportConditionsSchema);

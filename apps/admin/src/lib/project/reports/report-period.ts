@@ -1,17 +1,20 @@
 import {
   type LocalDate,
-  addLocalCalendar,
-  localDateOf,
+  addLocalDays,
+  addLocalMonths,
   localDateText,
+  localDayRange,
+  localMonthRange,
   parseLocalDate,
-  startOfLocalDay,
   toIso,
+  weekdayOfLocalDate,
 } from "@repo/domain/form";
 
 /**
  * 輸出報表的期間(專案規格 11.1、18.4;正本 `docs/modules/project/reports.md`「期間」):
  * 選擇器給的是**租戶時區**的當地日期,換成起訖時點(迄不含)才交給 api(api 只收時點)。
- * 換算一律用表單引擎的 `startOfLocalDay`、`addLocalCalendar`(日期只有一種做法)。
+ * 換算一律用 `@repo/domain/form` 的日曆與期間工具(`addLocalDays`、`addLocalMonths`、`localDayRange`、
+ * `localMonthRange`;日期只有一種做法)。
  *
  * | 類型 | 起                 | 迄(不含)          |
  * | ---- | ------------------ | ------------------ |
@@ -42,38 +45,10 @@ export interface ReportPeriodRange {
   to: string;
 }
 
-const MS_PER_DAY = 86_400_000;
 const DAYS_PER_WEEK = 7;
 
-const UNIT_OF: Readonly<Record<ReportPeriodKind, "days" | "weeks" | "months">> =
-  {
-    day: "days",
-    week: "weeks",
-    month: "months",
-  };
-
-/** 日曆日的序數(以 UTC 計,與時區無關;只拿來做日期的加減與星期幾)。 */
-const dayNumberOf = (date: LocalDate): number =>
-  Date.UTC(date.year, date.month - 1, date.day) / MS_PER_DAY;
-
-const dateOfDayNumber = (dayNumber: number): LocalDate => {
-  const value = new Date(dayNumber * MS_PER_DAY);
-  return {
-    year: value.getUTCFullYear(),
-    month: value.getUTCMonth() + 1,
-    day: value.getUTCDate(),
-  };
-};
-
-const addDays = (date: LocalDate, days: number): LocalDate =>
-  dateOfDayNumber(dayNumberOf(date) + days);
-
-/** 星期幾:0 = 星期日 … 6 = 星期六。 */
-export const weekdayOf = (date: LocalDate): number =>
-  new Date(dayNumberOf(date) * MS_PER_DAY).getUTCDay();
-
 const startDateOf = (kind: ReportPeriodKind, date: LocalDate): LocalDate => {
-  if (kind === "week") return addDays(date, -weekdayOf(date));
+  if (kind === "week") return addLocalDays(date, -weekdayOfLocalDate(date));
   if (kind === "month") return { ...date, day: 1 };
   return date;
 };
@@ -89,7 +64,7 @@ export const lastDayOfWeek = (sunday: string): string => {
   const date = parseLocalDate(sunday);
   return date === null
     ? sunday
-    : localDateText(addDays(date, DAYS_PER_WEEK - 1));
+    : localDateText(addLocalDays(date, DAYS_PER_WEEK - 1));
 };
 
 /**
@@ -105,18 +80,12 @@ export const shiftPeriod = (
   if (date === null) return text;
   const start = startDateOf(kind, date);
   if (kind === "month") {
-    const months = start.year * 12 + (start.month - 1) + amount;
-    const year = Math.floor(months / 12);
-    return localDateText({ year, month: months - year * 12 + 1, day: 1 });
+    return localDateText({ ...addLocalMonths(start, amount), day: 1 });
   }
   return localDateText(
-    addDays(start, amount * (kind === "week" ? DAYS_PER_WEEK : 1)),
+    addLocalDays(start, amount * (kind === "week" ? DAYS_PER_WEEK : 1)),
   );
 };
-
-/** 租戶時區的今天(`YYYY-MM-DD`);`now` 只給測試。 */
-export const todayOf = (timezone: string, now: number = Date.now()): string =>
-  localDateText(localDateOf(now, timezone));
 
 /** 把值整理成「期間起點」;還沒選日期的代入今天所在的期間。 */
 export const normalizePeriod = (
@@ -137,7 +106,13 @@ export const reportPeriodRange = (
 ): ReportPeriodRange | null => {
   const date = parseLocalDate(value.date);
   if (date === null) return null;
-  const from = startOfLocalDay(startDateOf(value.kind, date), timezone);
-  const to = addLocalCalendar(from, 1, UNIT_OF[value.kind], timezone);
-  return { from: toIso(from), to: toIso(to) };
+  const start = startDateOf(value.kind, date);
+  if (value.kind === "month") {
+    const month = localMonthRange(start, timezone);
+    return { from: toIso(month.from), to: toIso(month.to) };
+  }
+  const last =
+    value.kind === "week" ? addLocalDays(start, DAYS_PER_WEEK - 1) : start;
+  const range = localDayRange(start, last, timezone);
+  return { from: toIso(range.from), to: toIso(range.to) };
 };

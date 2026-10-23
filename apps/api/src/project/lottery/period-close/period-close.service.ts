@@ -1,7 +1,13 @@
 import { Injectable } from "@nestjs/common";
 import { type ClientSession, Types } from "mongoose";
 
-import type { StoredValues } from "@repo/domain/form";
+import {
+  type StoredValues,
+  localMonthOf,
+  localMonthRange,
+  localMonthText,
+  parseLocalMonth,
+} from "@repo/domain/form";
 import {
   CASH_CORRECTION_FORM_KEY,
   CASH_CORRECTION_PLACE,
@@ -16,11 +22,8 @@ import {
   type PeriodPendingKind,
   isPeriodEnded,
   nextClosableMonth,
-  periodMonthOf,
   periodMonthsOf,
-  periodRangeOf,
 } from "@repo/domain/project/lottery-accounts";
-import { isIsoMonth } from "@repo/domain/project/schedule-settings";
 
 import { AuditService } from "../../../audit/audit.service";
 import { FormSubmissionsRepository } from "../../../database/base/repositories";
@@ -245,7 +248,7 @@ export class PeriodCloseService {
   ): Promise<LotteryPeriodCloseModel> {
     const tenant = await this.tenantOf(operator);
     const row =
-      tenant === null || !isIsoMonth(month)
+      tenant === null || parseLocalMonth(month) === null
         ? null
         : await this.closes.findOne(tenant.reader, { month });
     if (tenant === null || row === null) {
@@ -367,9 +370,8 @@ export class PeriodCloseService {
       select: "createdAt",
     });
     const startedAt = (org as { createdAt?: Date } | null)?.createdAt;
-    const firstMonth = periodMonthOf(
-      (startedAt ?? this.clock.now()).getTime(),
-      timezone,
+    const firstMonth = localMonthText(
+      localMonthOf((startedAt ?? this.clock.now()).getTime(), timezone),
     );
     return { tenantId, reader, timezone, firstMonth };
   }
@@ -378,7 +380,8 @@ export class PeriodCloseService {
     operator: OperatorContext,
     month: string,
   ): Promise<Period & { firstMonth: string }> {
-    if (!isIsoMonth(month)) {
+    const parsed = parseLocalMonth(month);
+    if (parsed === null) {
       throw validationError(
         "month must be YYYY-MM",
         ["month"],
@@ -389,12 +392,12 @@ export class PeriodCloseService {
     if (tenant === null) {
       throw notFoundError("tenant not found");
     }
-    const { start, end } = periodRangeOf(month, tenant.timezone);
+    const range = localMonthRange(parsed, tenant.timezone);
     return {
       ...tenant,
       month,
-      start: new Date(start),
-      end: new Date(end),
+      start: new Date(range.from),
+      end: new Date(range.to),
     };
   }
 

@@ -40,6 +40,7 @@ import {
   dayKeyRange,
   instantOfKey,
   instantRangeFilter,
+  monthKeyOf,
   monthKeyRange,
   violationPeriodOf,
 } from "../shared/schedule-dates";
@@ -516,7 +517,7 @@ export class ScheduleCheckService implements OnModuleInit {
       },
     ];
     const settings = (await this.personSettings(org, null, [userId]))(userId);
-    const months = [...new Set(dates.map((date) => date.slice(0, 7)))];
+    const months = [...new Set(dates.map((date) => monthKeyOf(date)))];
     const evaluate = async (entries: WorkEntryLike[]) => {
       const found: ScheduleRuleViolation[] = [];
       for (const month of months) {

@@ -2,10 +2,12 @@ import { Injectable, Logger, type OnModuleInit } from "@nestjs/common";
 import type { Types } from "mongoose";
 
 import {
-  addPeriodMonths,
-  periodMonthDiff,
-  periodMonthOf,
-} from "@repo/domain/project/lottery-accounts";
+  addLocalMonths,
+  localMonthDiff,
+  localMonthOf,
+  localMonthText,
+  parseLocalDate,
+} from "@repo/domain/form";
 
 import { OrgsRepository } from "../../../database/database.module";
 import { tenantBoundaryContext } from "../../../database/tenant-boundary-context";
@@ -82,7 +84,12 @@ export class PeriodCloseRemindersService implements OnModuleInit {
     if (hit === null) {
       return;
     }
-    const previous = addPeriodMonths(hit.localDate.slice(0, 7), -1);
+    const hitDate = parseLocalDate(hit.localDate);
+    if (hitDate === null) {
+      return;
+    }
+    const previousMonth = addLocalMonths(hitDate, -1);
+    const previous = localMonthText(previousMonth);
     // 排程的租戶系統身分(ADR-0005「例外出口」)
     const reader = await tenantBoundaryContext(this.orgs, null, tenantId);
     const org = await this.orgs.findById(reader, tenantId, {
@@ -91,9 +98,9 @@ export class PeriodCloseRemindersService implements OnModuleInit {
     const startedAt = (org as { createdAt?: Date } | null)?.createdAt;
     if (
       startedAt !== undefined &&
-      periodMonthDiff(
-        periodMonthOf(startedAt.getTime(), tenant.timezone),
-        previous,
+      localMonthDiff(
+        localMonthOf(startedAt.getTime(), tenant.timezone),
+        previousMonth,
       ) < 0
     ) {
       return;

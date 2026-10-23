@@ -1,7 +1,7 @@
 import { Injectable, Logger, type OnModuleInit } from "@nestjs/common";
 import type { Types } from "mongoose";
 
-import { type LocalDate, localDateText } from "@repo/domain/form";
+import { type LocalDate, addLocalDays, localDateText } from "@repo/domain/form";
 
 import { OrgsRepository } from "../../../database/database.module";
 import { tenantBoundaryContext } from "../../../database/tenant-boundary-context";
@@ -27,12 +27,7 @@ import {
   LOTTERY_LICENSE_EXPIRING,
   LOTTERY_STORE_RENT_DUE,
 } from "../../notifications";
-import {
-  type RentSetting,
-  addDays,
-  isRentDueDate,
-  localDayOf,
-} from "./dealer-dates";
+import { type RentSetting, isRentDueDate, localDayOf } from "./dealer-dates";
 import { ORG_DEALER } from "./dealer-links.service";
 import type { DealerRecord } from "./dealer-mapper";
 
@@ -229,8 +224,8 @@ export class DealerRemindersService implements OnModuleInit {
     }
     const today = localDayOf(at.scheduledFor, at.timezone);
     for (const days of effective.schedule.daysBefore) {
-      for (const base of [today, addDays(today, -1)]) {
-        const dueOn = addDays(base, days);
+      for (const base of [today, addLocalDays(today, -1)]) {
+        const dueOn = addLocalDays(base, days);
         if (!isRentDueDate(dueOn, rent)) {
           continue;
         }

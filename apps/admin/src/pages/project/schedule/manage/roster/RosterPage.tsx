@@ -189,7 +189,8 @@ export const RosterPage = () => {
    * (`rosterCellKey`)。找到元素就捲過去並閃爍。
    */
   const scrollToCell = (target: RosterCellTarget) => {
-    const targetMonth = target.date.slice(0, 7);
+    const targetDay = parseLocalDate(target.date);
+    const targetMonth = targetDay === null ? month : localMonthText(targetDay);
     if (targetMonth !== month) {
       setMonth(targetMonth);
     }

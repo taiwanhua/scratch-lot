@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { localMonthText, parseLocalDate } from "@repo/domain/form";
+
 import { useTenantToday } from "@/hooks/base/useTenantToday";
 import { useUrlState } from "@/hooks/base/useUrlState";
 import { rosterDateOf } from "@/lib/project/schedule-roster-views";
@@ -28,7 +30,8 @@ export const useRosterDate = (
     today,
     goTo: (date) => {
       setParam(date);
-      const nextMonth = date.slice(0, 7);
+      const day = parseLocalDate(date);
+      const nextMonth = day === null ? month : localMonthText(day);
       if (nextMonth !== month) {
         setMonth(nextMonth);
       }

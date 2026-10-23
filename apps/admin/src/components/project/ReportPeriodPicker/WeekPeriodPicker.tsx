@@ -1,17 +1,24 @@
 import { useState } from "react";
 import { useTranslations } from "use-intl";
 
-import { parseLocalDate } from "@repo/domain/form";
+import {
+  DEFAULT_TENANT_TIMEZONE,
+  formatTemporal,
+  localMonthText,
+  parseLocalDate,
+  weekdayOfLocalDate,
+} from "@repo/domain/form";
 import { Box } from "@repo/ui/box";
 import { MonthCalendar } from "@repo/ui/month-calendar";
 import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
 
+import { useTenantTimezone } from "@/hooks/base/useTenantTimezone";
+import { localDayInstantOf } from "@/lib/base/form-engine/local-day";
 import {
   lastDayOfWeek,
   periodStartOf,
   shiftPeriod,
-  weekdayOf,
 } from "@/lib/project/reports/report-period";
 
 import { PeriodShortcut } from "./PeriodShortcut";
@@ -23,10 +30,6 @@ const weekDaysOf = (sunday: string): string[] =>
 
 const WEEKDAYS = [0, 1, 2, 3, 4, 5, 6] as const;
 
-/** `YYYY-MM-DD` → `M/D`。 */
-const shortDate = (date: string) =>
-  `${String(Number(date.slice(5, 7)))}/${String(Number(date.slice(8, 10)))}`;
-
 /**
  * 週:月曆點任一天選整週(星期日起),下方「10/11(日)~ 10/17(六)」+ [本週] [上週];不顯示週次。
  * 月曆顯示的月份只在這裡記(換月不改選取)。
@@ -37,17 +40,33 @@ export const WeekPeriodPicker = ({
   onSelect,
 }: PeriodKindPickerProps) => {
   const t = useTranslations("admin.lotteryReports.periodPicker");
+  const timezone = useTenantTimezone() ?? DEFAULT_TENANT_TIMEZONE;
+  // 「M/D」走 `formatTemporal` 的 `monthDay`(那天租戶時區 00:00)
+  const monthDayOf = (date: string) =>
+    formatTemporal(localDayInstantOf(date, timezone), {
+      type: "monthDay",
+      timezone,
+    });
   const thisWeek = periodStartOf("week", today);
   const lastWeek = shiftPeriod("week", today, -1);
-  const [shownMonth, setShownMonth] = useState(value.slice(0, 7));
+  // 月曆顯示的月份 = 那一天所在的月份
+  const [shownMonth, setShownMonth] = useState(() => {
+    const day = parseLocalDate(value);
+    return day === null ? "" : localMonthText(day);
+  });
   const pick = (sunday: string) => {
     onSelect("week", sunday);
-    setShownMonth(sunday.slice(0, 7));
+    const day = parseLocalDate(sunday);
+    if (day !== null) {
+      setShownMonth(localMonthText(day));
+    }
   };
   const saturday = lastDayOfWeek(value);
   const weekday = (date: string) => {
     const parsed = parseLocalDate(date);
-    return parsed === null ? "" : t(`weekdays.${String(weekdayOf(parsed))}`);
+    return parsed === null
+      ? ""
+      : t(`weekdays.${String(weekdayOfLocalDate(parsed))}`);
   };
 
   return (
@@ -66,6 +85,7 @@ export const WeekPeriodPicker = ({
             if (date !== undefined) pick(periodStartOf("week", date));
           }}
           today={today}
+          timezone={timezone}
           weekdayLabels={WEEKDAYS.map((day) => t(`weekdays.${String(day)}`))}
           formatMonthTitle={(month) =>
             t("monthTitle", {
@@ -79,9 +99,9 @@ export const WeekPeriodPicker = ({
       </Box>
       <Typography variant="subtitle2" color="primary">
         {t("weekRange", {
-          from: shortDate(value),
+          from: monthDayOf(value),
           fromWeekday: weekday(value),
-          to: shortDate(saturday),
+          to: monthDayOf(saturday),
           toWeekday: weekday(saturday),
         })}
       </Typography>

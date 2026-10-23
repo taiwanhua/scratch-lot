@@ -3,8 +3,6 @@ import { describe, expect, it } from "@jest/globals";
 import {
   SCHEDULE_RULE_DEFINITIONS,
   exceededTaskRoles,
-  isIsoDate,
-  isIsoMonth,
   isScheduleRuleToggleable,
   isTemplateShortName,
   pickScheduleRuleValue,
@@ -170,12 +168,5 @@ describe("排班設定的固定值", () => {
     [" ", false],
   ])("簡稱 %p → %p", (value, expected) => {
     expect(isTemplateShortName(value)).toBe(expected);
-  });
-
-  it("日期格式", () => {
-    expect(isIsoDate("2026-02-29")).toBe(false);
-    expect(isIsoDate("2028-02-29")).toBe(true);
-    expect(isIsoMonth("2026-11")).toBe(true);
-    expect(isIsoMonth("2026-13")).toBe(false);
   });
 });

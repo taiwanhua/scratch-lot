@@ -8,6 +8,7 @@ import {
 } from "@repo/domain/audience";
 import {
   type LocalDate,
+  addLocalDays,
   localDateOf,
   startOfLocalDay,
   toInstant,
@@ -616,14 +617,6 @@ function compileLeaf(
 }
 
 /**
- * 日曆天 +1(`Date.UTC` 會進位到下個月 / 年)。直接在日期上加、不從某個時點往後推時間:
- * 午夜切換夏令時間的時區,次日邊界才不會差 1 小時。
- */
-function nextDateOf(date: LocalDate): LocalDate {
-  return localDateOf(Date.UTC(date.year, date.month - 1, date.day + 1), "UTC");
-}
-
-/**
  * 日期條件 → 時點範圍(與表單引擎的日期同一種做法,`docs/concepts/form-engine.md`「值、計算與條件」):
  * 條件是**日曆天,逐租戶套用** —— 「2/1」對每個租戶都是它自己時區的 2/1。
  *
@@ -650,9 +643,12 @@ function compileDateLeaf(
     localDateOf(instant, timezones.rule);
   const dayStartOf = (instant: number): Date =>
     new Date(startOfLocalDay(dayOf(instant), timezones.operator));
-  // 次日邊界 = 日曆天 +1 後取操作者時區那一天的起點(不從當天 00:00 往後推時間)
+  // 次日邊界 = 日曆天 +1(`addLocalDays`)後取操作者時區那一天的起點(不從當天 00:00 往後推時間:
+  // 午夜切換夏令時間的時區,次日邊界才不會差 1 小時)
   const nextDayOf = (instant: number): Date =>
-    new Date(startOfLocalDay(nextDateOf(dayOf(instant)), timezones.operator));
+    new Date(
+      startOfLocalDay(addLocalDays(dayOf(instant), 1), timezones.operator),
+    );
   if (leaf.cond === "before" && typeof from === "number") {
     return { [leaf.field]: { $lt: dayStartOf(from) } };
   }

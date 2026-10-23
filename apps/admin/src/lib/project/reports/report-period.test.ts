@@ -7,7 +7,6 @@ import {
   periodStartOf,
   reportPeriodRange,
   shiftPeriod,
-  todayOf,
 } from "./report-period";
 
 const TAIPEI = "Asia/Taipei";
@@ -25,6 +24,14 @@ describe("報表期間 → 起訖時點(迄不含)", () => {
       TAIPEI,
       "2026-10-15T16:00:00.000Z",
       "2026-10-16T16:00:00.000Z",
+    ],
+    [
+      // 聖地牙哥 9/6 00:00 跳到 01:00:那天只有 23 小時,迄是 9/7 00:00(不是 9/7 01:00)
+      "日:夏令時間在午夜開始(聖地牙哥)",
+      { kind: "day", date: "2026-09-06" },
+      "America/Santiago",
+      "2026-09-06T04:00:00.000Z",
+      "2026-09-07T03:00:00.000Z",
     ],
     [
       "日:UTC+0",
@@ -156,13 +163,6 @@ describe("期間的起點與快捷", () => {
     ["上月從 3/31(不溢出到 3 月)", "month", "2026-03-31", -1, "2026-02-01"],
   ] as const)("shiftPeriod:%s", (_label, kind, date, amount, expected) => {
     expect(shiftPeriod(kind, date, amount)).toBe(expected);
-  });
-
-  it("todayOf:租戶時區的今天(不是瀏覽器時區)", () => {
-    // UTC 10/16 20:00 = 台北 10/17 04:00
-    const now = Date.parse("2026-10-16T20:00:00.000Z");
-    expect(todayOf(TAIPEI, now)).toBe("2026-10-17");
-    expect(todayOf(UTC, now)).toBe("2026-10-16");
   });
 
   it("normalizePeriod:日期換成該期間的起點;空日期 → 今天所在的期間", () => {
