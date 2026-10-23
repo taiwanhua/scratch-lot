@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { useTranslations } from "use-intl";
 
-import { DEFAULT_TENANT_TIMEZONE } from "@repo/domain/form";
+import { DEFAULT_TENANT_TIMEZONE, parseLocalDate } from "@repo/domain/form";
 import { Alert } from "@repo/ui/alert";
 import { Stack } from "@repo/ui/stack";
 
@@ -39,10 +39,8 @@ const usePeriodText = () => {
       return t("week", { from: period.date, to: lastDayOfWeek(period.date) });
     }
     if (period.kind === "month") {
-      return t("month", {
-        year: Number(period.date.slice(0, 4)),
-        month: Number(period.date.slice(5, 7)),
-      });
+      const day = parseLocalDate(period.date);
+      return t("month", { year: day?.year ?? 0, month: day?.month ?? 0 });
     }
     return t("day", { date: period.date });
   };

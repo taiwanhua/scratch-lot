@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { useState } from "react";
 import { useTranslations } from "use-intl";
 
+import { parseLocalMonth } from "@repo/domain/form";
 import {
   type LotteryPeriodCloseCheckQuery,
   useCloseLotteryPeriodMutation,
@@ -168,7 +169,7 @@ const Checklist = ({ check, month }: { check: Check; month: string }) => {
         <Typography variant="body2">
           {check.pendingDocuments.length === 0
             ? t("dialog.documentsOk", {
-                monthNumber: Number(month.slice(5)),
+                monthNumber: parseLocalMonth(month)?.month ?? 0,
               })
             : t("dialog.documentsBlocked", {
                 count: check.pendingDocuments.length,

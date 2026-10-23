@@ -71,7 +71,7 @@ export class ReassignSchedulePunchInput {
 
 @InputType()
 export class MakeupPunchEntryOptionsInput {
-  /** 補打卡的時點(列出本人那天在那家店的排班,含前一天跨午夜到這天的班) */
+  /** 補打卡的時點(列出本人在那家店、那天前後各一天的排班) */
   @Field(() => GraphQLISODateTime)
   at!: Date;
 

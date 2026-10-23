@@ -727,7 +727,10 @@ describe("開通腳本與 demo create(真 api + 真 MongoDB)", () => {
               values: supportValues("2026-11-12T17:00:00.000Z"),
             },
           }),
-        ).rejects.toThrow();
+        ).rejects.toMatchObject({
+          code: "VALIDATION_FAILED",
+          fields: expect.arrayContaining(["end_at"]),
+        });
         const { createAndSubmitFormSubmission } = await manager.request<{
           createAndSubmitFormSubmission: {
             submission: { id: string; status: string; serialNo: string | null };

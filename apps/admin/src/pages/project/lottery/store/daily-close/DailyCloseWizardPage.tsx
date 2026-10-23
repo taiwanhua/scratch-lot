@@ -2,6 +2,7 @@ import { useNavigate } from "react-router";
 import { useTranslations } from "use-intl";
 import { z } from "zod";
 
+import { DEFAULT_TENANT_TIMEZONE } from "@repo/domain/form";
 import {
   DAILY_CLOSE_STEPS,
   type DailyCloseDraft,
@@ -29,7 +30,9 @@ import { useRouteTabHref } from "@/hooks/base/useRouteTabHref";
 import { useRouteTabItemLabel } from "@/hooks/base/useRouteTabItemLabel";
 import { useSession } from "@/hooks/base/useSession";
 import { useTemporalText } from "@/hooks/base/useTemporalText";
+import { useTenantTimezone } from "@/hooks/base/useTenantTimezone";
 import { useUrlState } from "@/hooks/base/useUrlState";
+import { localDayInstantOf } from "@/lib/base/form-engine/local-day";
 import type { ModulePageProps } from "@/lib/base/module-tree";
 
 import { CheckoutStocktakeStep } from "../checkout/CheckoutStocktakeStep";
@@ -99,6 +102,7 @@ const WizardBody = ({
 }: WizardBodyProps) => {
   const t = useTranslations("admin.lotteryStore.dailyClose");
   const temporal = useTemporalText();
+  const timezone = useTenantTimezone() ?? DEFAULT_TENANT_TIMEZONE;
   const flow = useDailyCloseWizard({ wizard, initialDraft });
   const redemption = useRedemptionFlow();
   useRealtimeBoard(STORE_BOARD_KEY, wizard.org.id);
@@ -112,9 +116,9 @@ const WizardBody = ({
     wizard.coveredTo == null
       ? t("page.now")
       : temporal(wizard.coveredTo, "monthDayTime");
-  // `YYYY-MM-DD`(租戶時區的日期)→「10/14」
+  // `YYYY-MM-DD`(租戶時區的日期)→「10/14」(那天 00:00 走 `formatTemporal` 的 `monthDay`)
   const gaps = wizard.gapDates.map((date) =>
-    date.slice(5).split("-").map(Number).join("/"),
+    temporal(localDayInstantOf(date, timezone), "monthDay"),
   );
   const submit = () => {
     const values = flow.valuesOf();

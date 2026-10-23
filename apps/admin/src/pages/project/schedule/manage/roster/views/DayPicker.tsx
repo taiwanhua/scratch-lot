@@ -5,6 +5,7 @@ import {
   DEFAULT_TENANT_TIMEZONE,
   localMonthText,
   parseLocalDate,
+  parseLocalMonth,
 } from "@repo/domain/form";
 import { useScheduleRosterQuery } from "@repo/graphql";
 import { Box } from "@repo/ui/box";
@@ -147,8 +148,8 @@ export const DayPicker = ({
           weekdayLabels={weekdayLabels}
           formatMonthTitle={(value) =>
             tCalendar("monthTitle", {
-              year: value.slice(0, 4),
-              month: Number(value.slice(5, 7)),
+              year: String(parseLocalMonth(value)?.year ?? ""),
+              month: parseLocalMonth(value)?.month ?? 0,
             })
           }
           prevMonthLabel={tCalendar("prevMonth")}

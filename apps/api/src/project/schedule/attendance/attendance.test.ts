@@ -214,7 +214,11 @@ describe("出勤紀錄(GraphQL 端點 + 真 MongoDB)", () => {
         userId: user.userId,
         date: taipei(date, "00:00:00"),
         startAt: taipei(date, `${start}:00`),
-        endAt: taipei(date, `${end}:00`),
+        // 結束不晚於開始 = 跨午夜,做到隔天
+        endAt:
+          end <= start
+            ? new Date(taipei(date, `${end}:00`).getTime() + 24 * 3_600_000)
+            : taipei(date, `${end}:00`),
         breakMinutes: 30,
         moduleKey: "schedule.manage",
         ...base(),
@@ -447,11 +451,21 @@ describe("出勤紀錄(GraphQL 端點 + 真 MongoDB)", () => {
     });
 
     it("出勤月報的月界:[月初 00:00, 下月初 00:00),跨午夜的班算開始那天", async () => {
-      const late = await entry(lin, zhongshan, "2026-11-30", "22:00", "23:59");
+      // 11/30 22:00 做到 12/1 02:00:整班算 11 月,12/1 的下班卡也跟著這一班
+      const late = await entry(lin, zhongshan, "2026-11-30", "22:00", "02:00");
+      // 12/1 的班不在 11 月
+      const december = await entry(
+        lin,
+        zhongshan,
+        "2026-12-01",
+        "08:30",
+        "14:30",
+      );
       const added = await Promise.all([
         punch(lin, zhongshan, taipei("2026-10-31", "23:59:59"), "in", null),
         punch(lin, zhongshan, taipei("2026-11-30", "23:59:59"), "in", null),
         punch(lin, zhongshan, taipei("2026-12-01", "00:00:00"), "in", null),
+        punch(lin, zhongshan, taipei("2026-12-01", "02:00:00"), "out", late),
       ]);
       try {
         const result = await gql(manager, BY_PERSON, {
@@ -470,6 +484,11 @@ describe("出勤紀錄(GraphQL 端點 + 真 MongoDB)", () => {
           [String(linNov4), taipei("2026-11-04", "00:00:00").toISOString()],
           [String(late), taipei("2026-11-30", "00:00:00").toISOString()],
         ]);
+        expect(
+          data.rows
+            .find((row) => row.entryId === String(late))
+            ?.punches.map((item) => item.id),
+        ).toEqual([String(added[3])]);
         expect(data.unmatched.map((item) => item.id)).toEqual([
           String(unmatched),
           String(added[1]),
@@ -477,7 +496,7 @@ describe("出勤紀錄(GraphQL 端點 + 真 MongoDB)", () => {
       } finally {
         await connection
           .collection(SCHEDULE_ENTRIES_COLLECTION)
-          .deleteOne({ _id: late });
+          .deleteMany({ _id: { $in: [late, december] } });
         await punches().deleteMany({ _id: { $in: added } });
       }
     });

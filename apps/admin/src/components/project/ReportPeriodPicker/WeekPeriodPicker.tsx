@@ -3,9 +3,9 @@ import { useTranslations } from "use-intl";
 
 import {
   DEFAULT_TENANT_TIMEZONE,
-  formatTemporal,
   localMonthText,
   parseLocalDate,
+  parseLocalMonth,
   weekdayOfLocalDate,
 } from "@repo/domain/form";
 import { Box } from "@repo/ui/box";
@@ -14,12 +14,12 @@ import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
 
 import { useTenantTimezone } from "@/hooks/base/useTenantTimezone";
-import { localDayInstantOf } from "@/lib/base/form-engine/local-day";
 import {
   lastDayOfWeek,
   periodStartOf,
   shiftPeriod,
 } from "@/lib/project/reports/report-period";
+import { monthDayOf } from "@/lib/project/schedule-roster";
 
 import { PeriodShortcut } from "./PeriodShortcut";
 import type { PeriodKindPickerProps } from "./period-picker-props";
@@ -41,12 +41,6 @@ export const WeekPeriodPicker = ({
 }: PeriodKindPickerProps) => {
   const t = useTranslations("admin.lotteryReports.periodPicker");
   const timezone = useTenantTimezone() ?? DEFAULT_TENANT_TIMEZONE;
-  // 「M/D」走 `formatTemporal` 的 `monthDay`(那天租戶時區 00:00)
-  const monthDayOf = (date: string) =>
-    formatTemporal(localDayInstantOf(date, timezone), {
-      type: "monthDay",
-      timezone,
-    });
   const thisWeek = periodStartOf("week", today);
   const lastWeek = shiftPeriod("week", today, -1);
   // 月曆顯示的月份 = 那一天所在的月份
@@ -89,8 +83,8 @@ export const WeekPeriodPicker = ({
           weekdayLabels={WEEKDAYS.map((day) => t(`weekdays.${String(day)}`))}
           formatMonthTitle={(month) =>
             t("monthTitle", {
-              year: Number(month.slice(0, 4)),
-              month: Number(month.slice(5, 7)),
+              year: parseLocalMonth(month)?.year ?? 0,
+              month: parseLocalMonth(month)?.month ?? 0,
             })
           }
           prevMonthLabel={t("prevMonth")}
@@ -99,9 +93,9 @@ export const WeekPeriodPicker = ({
       </Box>
       <Typography variant="subtitle2" color="primary">
         {t("weekRange", {
-          from: monthDayOf(value),
+          from: monthDayOf(value, timezone),
           fromWeekday: weekday(value),
-          to: monthDayOf(saturday),
+          to: monthDayOf(saturday, timezone),
           toWeekday: weekday(saturday),
         })}
       </Typography>
