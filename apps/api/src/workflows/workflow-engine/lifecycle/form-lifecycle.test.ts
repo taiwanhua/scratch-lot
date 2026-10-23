@@ -583,6 +583,8 @@ describe("表單 / 流程的掛接點", () => {
         "beforeWithdraw",
       ]);
       expect(events()).toEqual(["withdrawn"]);
+      // 造成的人 = 撤回的人(申請人)
+      expect(actors()).toEqual([String(world.applicant.userId)]);
     });
 
     it("事後動作拋錯 → 狀態、任務、實例、專案寫入全部回復", async () => {

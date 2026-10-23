@@ -73,6 +73,25 @@ function outcomeDeciderOf(instance: InstanceRecord): Types.ObjectId | null {
   );
 }
 
+/** 撤回的人(申請人;`instance-withdraw` 寫的那筆 `withdrawn` 歷程);沒有 → null。 */
+function withdrawerOf(instance: InstanceRecord): Types.ObjectId | null {
+  return (
+    instance.history.findLast((event) => event.kind === "withdrawn")?.userId ??
+    null
+  );
+}
+
+/** 造成這個終局事件的人(`FormEffectContext.actorId`):駁回 / 退回 = 做決定的審核者、撤回 = 申請人。 */
+function actorOfEvent(
+  event: FormEffectName,
+  instance: InstanceRecord,
+): Types.ObjectId | null {
+  if (event === "returned" || event === "rejected") {
+    return outcomeDeciderOf(instance);
+  }
+  return event === "withdrawn" ? withdrawerOf(instance) : null;
+}
+
 /** 推進的上限輪數(正常一次推進只要個位數輪;超過代表判斷表在來回打架,記 log 停下)。 */
 const MAX_ROUNDS = 60;
 
@@ -434,7 +453,7 @@ export class WorkflowEngineService {
     const decided = event === "returned" || event === "rejected";
     await this.lifecycle.emit(event, effectSubjectOf(instance), {
       stepKey: decided ? (instance.outcome?.stepKey ?? null) : null,
-      actorId: decided ? outcomeDeciderOf(instance) : null,
+      actorId: actorOfEvent(event, instance),
     });
     if (event === "completed" || event === "rejected") {
       await this.cc.outcome(instance, definition, event);
