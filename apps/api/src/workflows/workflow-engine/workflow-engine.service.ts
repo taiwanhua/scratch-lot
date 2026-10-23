@@ -58,6 +58,21 @@ const EFFECT_OF_SUBMISSION_STATUS: Partial<
   withdrawn: "withdrawn",
 };
 
+/** 全案終局那一筆決定(駁回 / 退回)是誰做的;沒有終局 → null。 */
+function outcomeDeciderOf(instance: InstanceRecord): Types.ObjectId | null {
+  const outcome = instance.outcome;
+  if (outcome === null) {
+    return null;
+  }
+  const step = instance.steps.find(
+    (state) => state.stepKey === outcome.stepKey,
+  );
+  return (
+    step?.decisions.find((decision) => decision.taskKey === outcome.taskKey)
+      ?.userId ?? null
+  );
+}
+
 /** 推進的上限輪數(正常一次推進只要個位數輪;超過代表判斷表在來回打架,記 log 停下)。 */
 const MAX_ROUNDS = 60;
 
@@ -416,11 +431,10 @@ export class WorkflowEngineService {
     if (!synced || event === undefined) {
       return;
     }
+    const decided = event === "returned" || event === "rejected";
     await this.lifecycle.emit(event, effectSubjectOf(instance), {
-      stepKey:
-        event === "returned" || event === "rejected"
-          ? (instance.outcome?.stepKey ?? null)
-          : null,
+      stepKey: decided ? (instance.outcome?.stepKey ?? null) : null,
+      actorId: decided ? outcomeDeciderOf(instance) : null,
     });
     if (event === "completed" || event === "rejected") {
       await this.cc.outcome(instance, definition, event);

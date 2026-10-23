@@ -199,6 +199,8 @@ export class FormLifecycleService implements OnModuleInit {
       skipped?: boolean;
       /** 作廢原因(`voided` 才給)。 */
       voidReason?: FormVoidReason;
+      /** 造成這個事件的人(`FormEffectContext.actorId`);不給 = null。 */
+      actorId?: Types.ObjectId | null;
     } = {},
   ): Promise<void> {
     const registration = this.lifecycles.lookup(
@@ -224,6 +226,7 @@ export class FormLifecycleService implements OnModuleInit {
         ? {}
         : { voidReason: detail.voidReason }),
       operator: await this.operators.systemOperatorOfOrg(subject.orgId),
+      actorId: detail.actorId ?? null,
       session,
       get: this.resolverOf(registration),
       notify: (input) => this.notifications.notify(input),

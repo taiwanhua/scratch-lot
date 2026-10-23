@@ -1041,8 +1041,9 @@ export class FormSubmissionsService {
     }
     // 沒走流程的單直接完成:先 submitted 再 completed(掛接點)
     const subject = effectSubjectOf(updated);
-    await this.lifecycle.emit("submitted", subject);
-    await this.lifecycle.emit("completed", subject);
+    const actor = { actorId: facts.operator.actorId };
+    await this.lifecycle.emit("submitted", subject, actor);
+    await this.lifecycle.emit("completed", subject, actor);
     await this.audit.record(facts.operator, {
       action: SUBMISSION_AUDIT.submit,
       targetType: SUBMISSION_TARGET,
@@ -1361,6 +1362,7 @@ export class FormSubmissionsService {
     }
     await this.lifecycle.emit("voided", effectSubjectOf(updated), {
       voidReason,
+      actorId: facts.operator.actorId,
     });
     // 知會:單據被作廢 → 整個流程的知會對象(同一個交易)
     await this.cc.voided(record.currentInstanceId);
