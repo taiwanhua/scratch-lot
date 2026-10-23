@@ -1,6 +1,7 @@
 import { HttpResponse } from "msw";
 
 import {
+  addLocalDays,
   localDateOf,
   localDateText,
   localMonthOf,
@@ -193,10 +194,23 @@ export const scheduleAttendanceWorld = (
     api.query("MakeupPunchEntryOptions", ({ variables }) => {
       const { input } = variables as MakeupPunchEntryOptionsQueryVariables;
       const day = dayKeyOf(input.at);
+      // 真 api 列那天前後各一天的班;這裡回前一天的晚班 + 那天的早、晚班
+      const previous = localDateText(
+        addLocalDays(localDateOf(Date.parse(input.at), TAIPEI), -1),
+      );
       inputs.makeupOptions.push(input);
       return HttpResponse.json({
         data: {
           makeupPunchEntryOptions: [
+            {
+              id: `e-wang-late-${previous}`,
+              orgId: input.orgId,
+              orgName: "",
+              date: at(previous, "00:00"),
+              startAt: at(previous, "17:00"),
+              endAt: at(previous, "22:00"),
+              shortName: "晚",
+            },
             {
               id: `e-wang-${day}`,
               orgId: input.orgId,

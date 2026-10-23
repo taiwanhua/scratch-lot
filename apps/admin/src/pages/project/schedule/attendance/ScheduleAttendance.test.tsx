@@ -134,7 +134,7 @@ describe("出勤紀錄", () => {
     });
     const entry = await screen.findByRole("combobox", { name: /對應排班/ });
     await waitFor(() => {
-      expect(entry).toHaveTextContent("早 08:30–14:30");
+      expect(entry).toHaveTextContent("11/3 早 08:30–14:30");
     });
     const picker = screen.getByRole("group", { name: /補打卡時間/ });
     expect(picker).toHaveTextContent("2026-11-03 14:30");
@@ -161,8 +161,10 @@ describe("出勤紀錄", () => {
     expect(await screen.findByText("請選擇對應排班")).toBeInTheDocument();
     expect(formsFake.inputs.createAndSubmitFormSubmission).toEqual([]);
     // 選了對應排班 → 送出整張表單的值(補打卡時間是時點、對應排班 + 顯示文字)
+    // 下拉列前後各一天的班,選項帶日期(前一天 11/4 的晚班也列得到)
     await user.click(entry);
-    await user.click(await findOption("晚 17:00–22:00"));
+    expect(await findOption("11/4 晚 17:00–22:00")).toBeInTheDocument();
+    await user.click(await findOption("11/5 晚 17:00–22:00"));
     await user.click(await findButton("送出"));
     await waitFor(() => {
       expect(formsFake.inputs.createAndSubmitFormSubmission).toHaveLength(1);
@@ -173,7 +175,7 @@ describe("出勤紀錄", () => {
       punch_at: "2026-11-05T06:35:00Z",
       branch: "org-store",
       entry: "e-wang-late-2026-11-05",
-      entry_label: "晚 17:00–22:00",
+      entry_label: "11/5 晚 17:00–22:00",
       punch_type: "out",
       reason: { value: "forgot-punch", label: "忘記打卡" },
     });

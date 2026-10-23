@@ -21,7 +21,11 @@ import {
 import { PublishedEntries } from "../my/published-entries";
 import type { EntryRecord } from "../roster/roster-people";
 import { ScheduleRulesService } from "../rules/schedule-rules.service";
-import { dayRangeOf, instantRangeFilter } from "../shared/schedule-dates";
+import {
+  aroundDayRangeOf,
+  dayRangeOf,
+  instantRangeFilter,
+} from "../shared/schedule-dates";
 import {
   forbiddenError,
   notFoundError,
@@ -149,10 +153,10 @@ export class ScheduleEntryLookup {
   }
 
   /**
-   * 這個人 `at` 那天(租戶時區)在這家店**有上班時間**的排班:那天的班,加上前一天跨午夜做到這天的班
-   * (`startAt < 隔天 00:00` 且 `endAt > 那天 00:00`;補打卡的「對應排班」下拉)。
+   * 這個人在這家店、`at` 那天(租戶時區)前後各一天的排班(補打卡的「對應排班」下拉;和 [改對應排班]
+   * 同一個範圍 `aroundDayRangeOf`:例如 00:00 結束的班,隔天 00:05 補下班卡也列得出來)。
    */
-  async listEntriesOverlappingDay(
+  async listEntriesAroundDay(
     operator: OperatorContext,
     input: EntryScope & { at: Date },
   ): Promise<ScheduleEntryForShift[]> {
@@ -162,10 +166,8 @@ export class ScheduleEntryLookup {
       operator,
       scope.tenantId,
     );
-    const day = dayRangeOf(input.at, timezone);
     const entries = await this.publishedOf(operator, scope, {
-      startAt: { $lt: new Date(day.to) },
-      endAt: { $gt: new Date(day.from) },
+      date: instantRangeFilter(aroundDayRangeOf(input.at, timezone)),
     });
     return this.withDetails(operator, scope.tenantId, entries);
   }

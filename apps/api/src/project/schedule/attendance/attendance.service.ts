@@ -30,6 +30,7 @@ import { type EntryRecord, RosterPeopleReader } from "../roster/roster-people";
 import { ScheduleRulesService } from "../rules/schedule-rules.service";
 import { ScheduleClock } from "../shared/schedule-clock";
 import {
+  aroundDayRangeOf,
   dateKeyOf,
   dayKeyRange,
   dayRangeOf,
@@ -37,7 +38,6 @@ import {
   monthKeyRange,
   monthOfWholeMonthRange,
   normalizedDay,
-  shiftDateKey,
 } from "../shared/schedule-dates";
 import {
   SCHEDULE_REASONS,
@@ -313,7 +313,6 @@ export class ScheduleAttendanceService {
     const punch = await this.mustFindPunch(operator, punchId);
     const tenantId = this.tenantOf(punch);
     const timezone = await tenantTimezoneOf(this.orgs, operator, tenantId);
-    const date = dateKeyOf(punch.at, timezone);
     const entries = await this.published.publishedOnly(
       operator,
       tenantId,
@@ -322,13 +321,7 @@ export class ScheduleAttendanceService {
         {
           tenantId,
           userId: punch.userId,
-          date: instantRangeFilter(
-            dayKeyRange(
-              shiftDateKey(date, -1),
-              shiftDateKey(date, 1),
-              timezone,
-            ),
-          ),
+          date: instantRangeFilter(aroundDayRangeOf(punch.at, timezone)),
         },
         { sort: { startAt: 1 } },
       ),

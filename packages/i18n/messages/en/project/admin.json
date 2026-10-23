@@ -2033,7 +2033,7 @@
         "punchAt": "Punch time",
         "branch": "Store",
         "entry": "Shift",
-        "entryHint": "Pick a punch time and a store to list your shifts there that day (including last night's overnight shift)",
+        "entryHint": "Pick a punch time and a store to list your shifts there from the day before to the day after",
         "entryRequired": "Please choose a shift",
         "noEntry": "No shift (covering)",
         "type": "Type",

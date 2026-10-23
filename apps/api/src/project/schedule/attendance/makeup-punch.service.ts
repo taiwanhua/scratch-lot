@@ -26,7 +26,7 @@ import {
 } from "../integration/entry-lookup";
 import { PublishedEntries } from "../my/published-entries";
 import type { EntryRecord } from "../roster/roster-people";
-import { dayRangeOf } from "../shared/schedule-dates";
+import { aroundDayRangeOf } from "../shared/schedule-dates";
 import { notFoundError, validationError } from "../shared/schedule-error";
 import { resolveScheduleOrg } from "../shared/schedule-org";
 import { SchedulePunchLedger } from "./punch-ledger";
@@ -38,7 +38,7 @@ import { SchedulePunchLedger } from "./punch-ledger";
 export const MAKEUP_PUNCH_REASONS = {
   /** 沒選對應排班(「請選擇對應排班」) */
   entryRequired: "MAKEUP_PUNCH_ENTRY_REQUIRED",
-  /** 對應排班不是本人在那家店、補打卡那天有上班時間的已發布排班 */
+  /** 對應排班不是本人在那家店、補打卡那天前後各一天的已發布排班 */
   entryMismatch: "MAKEUP_PUNCH_ENTRY_MISMATCH",
   /** 審核中,選的那筆排班已被刪除(只能退回讓本人重選) */
   entryDeleted: "MAKEUP_PUNCH_ENTRY_DELETED",
@@ -62,8 +62,8 @@ const toObjectId = (id: string | null | undefined): Types.ObjectId | null =>
  * 補打卡申請(規格 14.8;表單 `makeup_punch` 綁在 `schedule.attendance`;正本
  * `docs/modules/project/schedule.md`「出勤紀錄與補打卡」):
  *
- * - 「對應排班」**必選**:本人在那家店、補打卡那天(租戶時區)有上班時間的已發布排班(那天的班,與前一天
- *   跨午夜做到這天的班),或「沒有排班(臨時代班)」
+ * - 「對應排班」**必選**:本人在那家店、補打卡那天(租戶時區)前後各一天的已發布排班(和 [改對應排班]
+ *   同一個範圍),或「沒有排班(臨時代班)」
  * - 送出時檢查(`beforeSubmit`);審核中那筆排班被刪除 → 不能核准(`beforeApprove`),只改時間照常核准
  * - 完成(`completed`)寫一張打卡:source = 補打卡、`entryId` = 申請時選的那一筆(不自動找;選「沒有排班」=
  *   未對應排班),時間 = 表單的「補打卡時間」(日期時間欄,存的就是時點)
@@ -85,8 +85,8 @@ export class MakeupPunchService {
   ) {}
 
   /**
-   * 新增頁的「對應排班」下拉:本人在那家店、`at` 那天有上班時間的已發布排班(含前一天跨午夜的班;
-   * 最後一個選項「沒有排班」由畫面加)。
+   * 新增頁的「對應排班」下拉:本人在那家店、`at` 那天前後各一天的已發布排班(最後一個選項「沒有排班」
+   * 由畫面加)。
    */
   async entryOptions(
     operator: OperatorContext,
@@ -99,7 +99,7 @@ export class MakeupPunchService {
       throw notFoundError("no actor");
     }
     const org = await resolveScheduleOrg(operator, this.orgs, input.orgId);
-    return this.lookup.listEntriesOverlappingDay(operator, {
+    return this.lookup.listEntriesAroundDay(operator, {
       tenantId: org.tenantId,
       userId: operator.actorId,
       orgId: org.id,
@@ -164,7 +164,7 @@ export class MakeupPunchService {
       operator.actorId !== null &&
       entry.userId.equals(operator.actorId) &&
       entry.orgId.equals(branchId) &&
-      entryOverlapsDayOf(entry, parsed.punchAt, timezone)
+      entryAroundDayOf(entry, parsed.punchAt, timezone)
       ? null
       : block(
           MAKEUP_PUNCH_REASONS.entryMismatch,
@@ -317,14 +317,15 @@ export class MakeupPunchService {
 }
 
 /**
- * 這筆排班在 `at` 那天(租戶時區)有沒有上班時間:`startAt < 隔天 00:00` 且 `endAt > 那天 00:00`
- * (那天的班,與前一天跨午夜做到這天的班;「對應排班」下拉與送出檢查同一條)。
+ * 這筆排班是不是 `at` 那天(租戶時區)前後各一天的班(排班的 `date` 落在 `aroundDayRangeOf`;
+ * 「對應排班」下拉與送出檢查同一條,也和 [改對應排班] 的範圍一致)。
  */
-export function entryOverlapsDayOf(
-  entry: { startAt: Date; endAt: Date },
+export function entryAroundDayOf(
+  entry: { date: Date },
   at: Date,
   timezone: string,
 ): boolean {
-  const day = dayRangeOf(at, timezone);
-  return entry.startAt.getTime() < day.to && entry.endAt.getTime() > day.from;
+  const range = aroundDayRangeOf(at, timezone);
+  const date = entry.date.getTime();
+  return date >= range.from && date < range.to;
 }

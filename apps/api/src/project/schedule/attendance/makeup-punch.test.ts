@@ -374,12 +374,20 @@ describe("補打卡申請(規格 14.8)", () => {
     return options.map((item) => item.id);
   }
 
-  it("新增頁的「對應排班」下拉:本人補打卡那天在那家店的已發布排班;日期是那天台北 00:00 的時點", async () => {
+  it("新增頁的「對應排班」下拉:本人在那家店、補打卡那天前後各一天的已發布排班;日期是那天台北 00:00 的時點", async () => {
     expect(await entryOptions(taipei("2026-11-02", "23:59"))).toEqual([
       {
         id: String(wangNov2),
         date: taipei("2026-11-02", "00:00").toISOString(),
       },
+      {
+        id: String(wangNov3),
+        date: taipei("2026-11-03", "00:00").toISOString(),
+      },
+    ]);
+    // 11/4:列前一天(11/3),11/2 已超過一天不列
+    expect(await entryIdsOf(taipei("2026-11-04", "12:00"))).toEqual([
+      String(wangNov3),
     ]);
     // 只有日期、沒有時刻與時區的字串 → 拒收(嚴格 DateTime)
     const result = await call(api, wang.token, ENTRY_OPTIONS, {
@@ -388,21 +396,20 @@ describe("補打卡申請(規格 14.8)", () => {
     expect(extensionsOf(result)).toMatchObject({ code: "BAD_USER_INPUT" });
   });
 
-  it("非台北時區(洛杉磯):「那天」照租戶時區算", async () => {
+  it("非台北時區(洛杉磯):「那天」與前後一天照租戶時區算", async () => {
     const orgs = api.connection.collection("orgs");
     await orgs.updateOne(
       { _id: tenant },
       { $set: { "settings.timezone": "America/Los_Angeles" } },
     );
     try {
-      // 台北 11/2 08:00 = 洛杉磯 11/1 16:00:洛杉磯 11/1 是 [11/1 07:00Z, 11/2 08:00Z),台北 11/2 早班落在裡面
-      expect(await entryIdsOf(taipei("2026-11-02", "08:00"))).toEqual([
-        String(wangNov2),
-      ]);
-      // 台北 11/2 23:59 = 洛杉磯 11/2 07:59:洛杉磯 11/2 列的是台北 11/3 早班
-      expect(await entryIdsOf(taipei("2026-11-02", "23:59"))).toEqual([
+      // 排班的 date 是台北 00:00:11/2 的班 = 洛杉磯 11/1 08:00(歸 11/1),11/3 的班歸洛杉磯 11/2
+      // 台北 11/3 23:59 = 洛杉磯 11/3 08:59:範圍是洛杉磯 11/2–11/4,只有 11/3 的班(台北算會連 11/2 的班都列)
+      expect(await entryIdsOf(taipei("2026-11-03", "23:59"))).toEqual([
         String(wangNov3),
       ]);
+      // 台北 11/4 23:59 = 洛杉磯 11/4 08:59:範圍是洛杉磯 11/3–11/5,沒有班(台北算會列 11/3 的班)
+      expect(await entryIdsOf(taipei("2026-11-04", "23:59"))).toEqual([]);
     } finally {
       await orgs.updateOne(
         { _id: tenant },
@@ -414,11 +421,11 @@ describe("補打卡申請(規格 14.8)", () => {
   it("跨午夜的班:隔天的補打卡也列得到前一天做到這天的班,下班卡記在隔天的時點", async () => {
     const night = await entry(wang, "2026-11-07", "22:00", "02:00");
     try {
-      // 11/8 那天:前一天 22:00–02:00 的班做到這天,列出來
+      // 11/8 那天:前一天 22:00–02:00 的班列出來
       expect(await entryIdsOf(taipei("2026-11-08", "02:10"))).toEqual([
         String(night),
       ]);
-      // 11/9 那天:沒有任何一段落在這天,不列
+      // 11/9 那天:範圍 11/8–11/10,11/7 的班不列
       expect(await entryOptions(taipei("2026-11-09", "01:00"))).toEqual([]);
 
       const submitted = await submitAs(
@@ -436,10 +443,34 @@ describe("補打卡申請(規格 14.8)", () => {
     }
   });
 
-  it("對應排班不是本人補打卡那天在那家店的排班 → 擋下(MAKEUP_PUNCH_ENTRY_MISMATCH)", async () => {
+  it("班 00:00 結束、隔天 00:05 補下班卡:仍列得出前一天的班,送出通過、卡記在隔天 00:05", async () => {
+    const evening = await entry(wang, "2026-11-10", "16:00", "00:00");
+    try {
+      expect(await entryIdsOf(taipei("2026-11-11", "00:05"))).toEqual([
+        String(evening),
+      ]);
+      // 再隔一天(11/12)就超過前後一天,不列
+      expect(await entryIdsOf(taipei("2026-11-12", "00:05"))).toEqual([]);
+
+      const submitted = await submitAs(
+        wang,
+        values("2026-11-11", String(evening), { time: "00:05" }),
+      );
+      await decideOn(world, manager, submitted.id, "APPROVE");
+      expect(await makeupPunchOf(submitted.id)).toMatchObject({
+        entryId: evening,
+        type: "out",
+        at: taipei("2026-11-11", "00:05"),
+      });
+    } finally {
+      await entries().deleteOne({ _id: evening });
+    }
+  });
+
+  it("對應排班不是本人在那家店、補打卡那天前後各一天的排班 → 擋下(MAKEUP_PUNCH_ENTRY_MISMATCH)", async () => {
     for (const [date, entryId] of [
       ["2026-11-02", linNov2],
-      ["2026-11-03", wangNov2],
+      ["2026-11-05", wangNov2],
     ] as const) {
       const result = await submitError(wang, values(date, String(entryId)));
       expect(extensionsOf(result)).toMatchObject({

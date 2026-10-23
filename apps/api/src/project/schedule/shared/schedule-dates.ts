@@ -84,6 +84,18 @@ export function dayRangeOf(at: Date | number, timezone: string): InstantRange {
   return localDayRange(day, day, timezone);
 }
 
+/**
+ * 時點所在那天(租戶時區)的前一天到後一天 → 時點區間 `[前一天 00:00, 後一天的隔天 00:00)`:
+ * 「這張卡可能屬於哪一班」的範圍([改對應排班]、補打卡的「對應排班」下拉與送出檢查同一條)。
+ */
+export function aroundDayRangeOf(
+  at: Date | number,
+  timezone: string,
+): InstantRange {
+  const day = localDateOf(typeof at === "number" ? at : at.getTime(), timezone);
+  return localDayRange(addLocalDays(day, -1), addLocalDays(day, 1), timezone);
+}
+
 /** 月份鍵 → 時點區間 `[月初 00:00, 下月初 00:00)`;月份鍵不合法 → `RangeError`(呼叫端已驗過)。 */
 export function monthKeyRange(month: string, timezone: string): InstantRange {
   const parsed = parseLocalMonth(month);
