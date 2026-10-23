@@ -1,7 +1,7 @@
 import { describe, expect, it } from "@jest/globals";
 import { screen, waitFor, within } from "@testing-library/react";
 
-import { renderSchedulePage } from "../schedule-test-support";
+import { renderSchedulePage, typeDate } from "../schedule-test-support";
 
 const CALENDAR = "/schedule/manage?tab=calendar&month=2026-11";
 
@@ -36,13 +36,14 @@ describe("排班作業:行事曆", () => {
       name: "新增店休 / 特殊日",
     });
     await user.click(within(dialog).getByLabelText("店休"));
-    await user.type(within(dialog).getByLabelText(/日期/), "2026-11-20");
+    await typeDate(user, dialog, "2026-11-20");
     await user.click(within(dialog).getByRole("button", { name: "新增" }));
     await waitFor(() => {
       expect(calendarFake.inputs).toEqual([
         expect.objectContaining({
           orgId: "org-store",
-          date: "2026-11-20",
+          // 日期送台北那天 00:00 的時點
+          date: new Date("2026-11-20T00:00:00+08:00").toISOString(),
           type: "closed",
           category: null,
         }),

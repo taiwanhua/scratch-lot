@@ -2,6 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslations } from "use-intl";
 
+import { DEFAULT_TENANT_TIMEZONE } from "@repo/domain/form";
 import { REASON_OTHER_VALUE } from "@repo/domain/project/reason-note";
 import { SCHEDULE_FIELD_CATEGORY_KEYS } from "@repo/domain/project/schedule-fields";
 import {
@@ -9,6 +10,7 @@ import {
   useAddScheduleDayOffsOnBehalfMutation,
 } from "@repo/graphql";
 import { Button } from "@repo/ui/button";
+import { DatePicker } from "@repo/ui/date-picker";
 import { Dialog } from "@repo/ui/dialog";
 import { useBreakpointDown } from "@repo/ui/media-query";
 import { SelectField } from "@repo/ui/select-field";
@@ -21,14 +23,17 @@ import { DayOffKindRadios } from "@/components/project/schedule/DayOffs/DayOffKi
 import { DayOffSlotFields } from "@/components/project/schedule/DayOffs/DayOffSlotFields";
 import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
 import { useSession } from "@/hooks/base/useSession";
+import { useTenantTimezone } from "@/hooks/base/useTenantTimezone";
 import { useDayOffEntryConflictNotice } from "@/hooks/project/schedule/useDayOffEntryConflictNotice/useDayOffEntryConflictNotice";
 import { useScheduleFieldOptions } from "@/hooks/project/schedule/useScheduleFieldOptions/useScheduleFieldOptions";
 import type { FieldErrorTexts } from "@/lib/base/field-errors";
+import { localDayInstantOf } from "@/lib/base/form-engine/local-day";
 import {
   type DayOffKind,
   type DayOffSlot,
   EMPTY_SLOT,
   completeSlots,
+  slotInstantsOf,
 } from "@/lib/project/schedule-day-offs";
 
 import {
@@ -58,7 +63,7 @@ export interface OverrideDayOffDialogProps {
   /** 總覽選的分店(代改的對象要是這家店的排班人員) */
   orgId: string;
   staff: readonly { userId: string; name: string }[];
-  /** 帶入的日期(點日期);[代改] 為空字串 */
+  /** 帶入的日期鍵 `YYYY-MM-DD`(點日期);[代改] 為空字串 */
   initialDate: string;
   /** 這個月的開放期間已截止:原因必填(api 依那個人的主要分店再判斷一次) */
   reasonRequired: boolean;
@@ -83,6 +88,7 @@ export const OverrideDayOffDialog = ({
   const { session } = useSession();
   const queryClient = useQueryClient();
   const isMobile = useBreakpointDown("sm");
+  const timezone = useTenantTimezone() ?? DEFAULT_TENANT_TIMEZONE;
   const reasons = useScheduleFieldOptions(
     SCHEDULE_FIELD_CATEGORY_KEYS.dayOffOverrideReason,
   );
@@ -145,14 +151,21 @@ export const OverrideDayOffDialog = ({
     if (missing.length > 0) {
       return;
     }
+    // 日期與時段以租戶時區換成時點(api 只收時點)
+    const day = localDayInstantOf(date, timezone);
     const picked = completeSlots(slots);
+    const spans =
+      picked === null ? null : slotInstantsOf(date, picked, timezone);
+    if (day === null) {
+      return;
+    }
     save.mutate({
       input: {
         orgId,
         userId,
-        date,
+        date: day,
         kind,
-        ...(kind === "time-range" && picked !== null ? { slots: picked } : {}),
+        ...(kind === "time-range" && spans !== null ? { slots: spans } : {}),
         ...reasonInput,
       },
     });
@@ -195,17 +208,15 @@ export const OverrideDayOffDialog = ({
               setFieldErrors({});
             }}
           />
-          <TextField
+          <DatePicker
             label={t("dialog.date")}
-            type="date"
-            value={date}
+            value={date === "" ? null : date}
             required
             fullWidth
             error={invalid.includes("date")}
             helperText={fieldErrors.date}
-            slotProps={{ inputLabel: { shrink: true } }}
-            onChange={(event) => {
-              setDate(event.target.value);
+            onChange={(next) => {
+              setDate(next ?? "");
               setFieldErrors({});
             }}
           />

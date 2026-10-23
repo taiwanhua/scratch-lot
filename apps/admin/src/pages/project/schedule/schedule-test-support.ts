@@ -1,3 +1,5 @@
+import { within } from "@testing-library/react";
+import type { UserEvent } from "@testing-library/user-event";
 import { HttpResponse } from "msw";
 
 import { authWorld } from "@/test/msw/auth-handlers";
@@ -122,3 +124,22 @@ export const renderSchedulePage = ({
     attendanceFake,
   };
 };
+
+/**
+ * 在範圍內(對話框)唯一的日期選擇器打一個日期(`YYYY-MM-DD`):點年份區段後逐位打,
+ * 打滿 4 位年份 / 2 位月份會自動跳到下一段(`@repo/ui/date-picker` 的區段輸入)。
+ */
+export const typeDate = async (
+  user: UserEvent,
+  scope: HTMLElement,
+  date: string,
+): Promise<void> => {
+  await user.click(within(scope).getByRole("spinbutton", { name: "Year" }));
+  await user.keyboard(date.replaceAll("-", ""));
+};
+
+/** 範圍內(對話框)唯一的日期選擇器顯示的文字(年份區段所在的區段組;含格式提示)。 */
+export const datePickerText = (scope: HTMLElement): string =>
+  within(scope)
+    .getByRole("spinbutton", { name: "Year" })
+    .closest('[role="group"]')?.textContent ?? "";

@@ -5,10 +5,17 @@ import { HttpResponse } from "msw";
 import type { ScheduleDayOffFieldsFragment } from "@repo/graphql";
 
 import { graphqlError } from "@/test/msw/auth-handlers";
-import { sampleDayOffs } from "@/test/msw/project/schedule-day-offs-fixtures";
+import {
+  sampleDayOffs,
+  taipeiAt,
+} from "@/test/msw/project/schedule-day-offs-fixtures";
 import { api, server } from "@/test/msw/server";
 
-import { renderSchedulePage } from "../schedule-test-support";
+import {
+  datePickerText,
+  renderSchedulePage,
+  typeDate,
+} from "../schedule-test-support";
 
 const OVERVIEW = "/schedule/manage?tab=day-offs";
 
@@ -17,10 +24,10 @@ const dayOffOn = (date: string): ScheduleDayOffFieldsFragment => ({
   id: `d-li-${date}`,
   userId: "u-li",
   name: "李小華",
-  date,
+  date: taipeiAt(date),
   kind: "full-day",
-  startTime: null,
-  endTime: null,
+  startAt: null,
+  endAt: null,
   note: null,
   isPrimary: true,
   byName: null,
@@ -86,7 +93,7 @@ describe("排班作業:畫休總覽與代改", () => {
     const dialog = await screen.findByRole("dialog", { name: "代改畫休" });
     await user.click(within(dialog).getByRole("combobox", { name: /人員/ }));
     await user.click(await screen.findByRole("option", { name: "張小芳" }));
-    await user.type(within(dialog).getByLabelText(/日期/), "2026-12-18");
+    await typeDate(user, dialog, "2026-12-18");
     await user.click(within(dialog).getByRole("button", { name: "儲存" }));
     expect(dayOffsFake.inputs.addOnBehalf).toEqual([]);
 
@@ -100,7 +107,8 @@ describe("排班作業:畫休總覽與代改", () => {
         expect.objectContaining({
           orgId: "org-store",
           userId: "u-zhang",
-          date: "2026-12-18",
+          // 日期送台北那天 00:00 的時點
+          date: taipeiAt("2026-12-18"),
           kind: "full-day",
           reason: "staff-late-notice",
         }),
@@ -117,7 +125,7 @@ describe("排班作業:畫休總覽與代改", () => {
     const dialog = await screen.findByRole("dialog", { name: "代改畫休" });
     await user.click(within(dialog).getByRole("combobox", { name: /人員/ }));
     await user.click(await screen.findByRole("option", { name: "張小芳" }));
-    await user.type(within(dialog).getByLabelText(/日期/), "2026-12-18");
+    await typeDate(user, dialog, "2026-12-18");
     await user.click(within(dialog).getByRole("combobox", { name: /原因/ }));
     await user.click(await screen.findByRole("option", { name: "其他" }));
     await user.click(within(dialog).getByRole("button", { name: "儲存" }));
@@ -248,7 +256,7 @@ describe("排班作業:畫休總覽與代改", () => {
     const day = await screen.findByRole("dialog", { name: "12/24(四)" });
     await user.click(within(day).getByRole("button", { name: "代改" }));
     const dialog = await screen.findByRole("dialog", { name: "代改畫休" });
-    expect(within(dialog).getByLabelText(/日期/)).toHaveValue("2026-12-24");
+    expect(datePickerText(dialog)).toContain("2026-12-24");
     expect(
       within(dialog).queryByRole("button", { name: "刪除" }),
     ).not.toBeInTheDocument();

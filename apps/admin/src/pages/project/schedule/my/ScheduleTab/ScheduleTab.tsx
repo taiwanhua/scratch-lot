@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useTranslations } from "use-intl";
 import { z } from "zod";
 
+import { parseLocalMonth } from "@repo/domain/form";
 import { isIsoMonth } from "@repo/domain/project/schedule-settings";
 import { useMyScheduleQuery } from "@repo/graphql";
 import { Card } from "@repo/ui/card";
@@ -16,7 +17,6 @@ import { ScheduleLegend } from "@/components/project/schedule/ScheduleLegend/Sch
 import { useMe } from "@/hooks/base/useMe";
 import { useSession } from "@/hooks/base/useSession";
 import { useUrlState } from "@/hooks/base/useUrlState";
-import { dateParts } from "@/lib/project/schedule-day-offs";
 import {
   newChangeIdsOf,
   readLastVisit,
@@ -84,7 +84,7 @@ export const ScheduleTab = () => {
 
   const deviceView: View = isMobile ? "list" : "calendar";
   const view: View = viewParam === "" ? deviceView : viewParam;
-  const { year, month } = dateParts(`${page.month}-01`);
+  const { year, month } = parseLocalMonth(page.month) ?? { year: 0, month: 0 };
   const changedDates = new Set(
     page.changes
       .filter((change) => change.date.startsWith(`${page.month}-`))

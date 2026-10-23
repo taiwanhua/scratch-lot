@@ -3,6 +3,12 @@ import { useTranslations } from "use-intl";
 import { z } from "zod";
 
 import {
+  DEFAULT_TENANT_TIMEZONE,
+  addLocalMonths,
+  localMonthText,
+  parseLocalMonth,
+} from "@repo/domain/form";
+import {
   type ScheduleDayOffDayFieldsFragment,
   type ScheduleDayOffFieldsFragment,
   useScheduleDayOffOverviewQuery,
@@ -25,14 +31,15 @@ import { DayOffCellContent } from "@/components/project/schedule/DayOffs/DayOffC
 import { DayOffDetailDialog } from "@/components/project/schedule/DayOffs/DayOffDetailDialog";
 import { DayOffLegend } from "@/components/project/schedule/DayOffs/DayOffLegend";
 import { useSession } from "@/hooks/base/useSession";
+import { useTemporalText } from "@/hooks/base/useTemporalText";
+import { useTenantTimezone } from "@/hooks/base/useTenantTimezone";
 import { useUrlState } from "@/hooks/base/useUrlState";
 import {
-  dateParts,
-  isMonth,
+  dayKeyOf,
   isPastDayOffMonth,
-  shiftMonth,
-  shortDate,
+  monthRangeOf,
 } from "@/lib/project/schedule-day-offs";
+import { localPartsOf } from "@/lib/project/schedule-roster";
 
 import { DeleteDayOffDialog } from "./DeleteDayOffDialog";
 import { OverrideDayOffDialog } from "./OverrideDayOffDialog";
@@ -69,19 +76,23 @@ export const DayOffOverviewTab = () => {
   const t = useTranslations("admin.schedule.dayOffs");
   const tCalendar = useTranslations("admin.schedule.calendar");
   const { session } = useSession();
+  const text = useTemporalText();
+  const timezone = useTenantTimezone() ?? DEFAULT_TENANT_TIMEZONE;
   const [orgId, setOrgId] = useUrlState("org", orgSchema);
   const [monthParam, setMonth] = useUrlState("month", monthSchema);
   const [filter, setFilter] = useUrlState("dayOffFilter", filterSchema);
   const [overrideDate, setOverrideDate] = useState<string | null>(null);
-  /** 點日期打開的「當天畫休」 */
+  /** 點日期打開的「當天畫休」(日期鍵) */
   const [openedDate, setOpenedDate] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<ScheduleDayOffFieldsFragment | null>(
     null,
   );
+  // 月份查詢送那個月在租戶時區的時點區間;沒指定 = 目標月(api 決定)
+  const range = monthRangeOf(monthParam, timezone);
   const query = useScheduleDayOffOverviewQuery(session.client, {
     input: {
       ...(orgId === "" ? {} : { orgId }),
-      ...(isMonth(monthParam) ? { month: monthParam } : {}),
+      ...range,
     },
   });
   const overview = query.data?.scheduleDayOffOverview;
@@ -98,7 +109,18 @@ export const DayOffOverviewTab = () => {
     (item) => item.isPrimary && item.dayOffCount === 0,
   );
   const separator = t("overview.nameSeparator");
-  const { year, month } = dateParts(`${overview.month}-01`);
+  const shown = parseLocalMonth(overview.month);
+  const { year, month } = shown ?? { year: 0, month: 0 };
+  const goMonth = (delta: number) => {
+    if (shown !== null) {
+      setMonth(localMonthText(addLocalMonths(shown, delta)));
+    }
+  };
+  const keyOf = (value: string) => dayKeyOf(value, timezone);
+  const clockOf = (value: string | null | undefined) =>
+    value === null || value === undefined
+      ? ""
+      : localPartsOf(value, timezone).time;
   /** 過去的月份(早於這個月):不顯示 [代改](上方與當天畫休;刪除照 api 的規則,不另擋) */
   const isPast = isPastDayOffMonth(overview.month, overview.targetMonth);
 
@@ -119,8 +141,8 @@ export const DayOffOverviewTab = () => {
         .map((item) =>
           t("overview.cellTimeRange", {
             name: item.name,
-            start: item.startTime ?? "",
-            end: item.endTime ?? "",
+            start: clockOf(item.startAt),
+            end: clockOf(item.endAt),
           }),
         ),
     ];
@@ -128,7 +150,7 @@ export const DayOffOverviewTab = () => {
 
   const dayInfo: Record<string, MonthCalendarDayInfo> = Object.fromEntries(
     overview.days.map((day) => [
-      day.date,
+      keyOf(day.date),
       {
         content: (
           <DayOffCellContent
@@ -171,7 +193,7 @@ export const DayOffOverviewTab = () => {
           <IconButton
             aria-label={t("overview.prevMonth")}
             onClick={() => {
-              setMonth(shiftMonth(overview.month, -1));
+              goMonth(-1);
             }}
           >
             <ChevronLeftIcon />
@@ -182,7 +204,7 @@ export const DayOffOverviewTab = () => {
           <IconButton
             aria-label={t("overview.nextMonth")}
             onClick={() => {
-              setMonth(shiftMonth(overview.month, 1));
+              goMonth(1);
             }}
           >
             <ChevronRightIcon />
@@ -206,8 +228,8 @@ export const DayOffOverviewTab = () => {
       >
         <Typography variant="subtitle2">
           {t(WINDOW_KEY[window.state] ?? "overview.windowBefore", {
-            start: shortDate(window.startDate),
-            end: shortDate(window.endDate),
+            start: text(window.startDate, "monthDay"),
+            end: text(window.endDate, "monthDay"),
             days: window.daysLeft,
           })}
         </Typography>
@@ -277,7 +299,7 @@ export const DayOffOverviewTab = () => {
       {openedDate !== null && (
         <DayOffDetailDialog
           date={openedDate}
-          day={overview.days.find((day) => day.date === openedDate)}
+          day={overview.days.find((day) => keyOf(day.date) === openedDate)}
           limit={maxDaily}
           // 沒有代改權限 = 唯讀(沒有 [刪除]、[代改])
           {...(overview.canEdit ? { onDelete: setDeleting } : {})}

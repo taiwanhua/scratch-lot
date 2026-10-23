@@ -1,13 +1,19 @@
 import { z } from "zod";
 
+import {
+  DEFAULT_TENANT_TIMEZONE,
+  addLocalMonths,
+  localMonthText,
+  parseLocalMonth,
+} from "@repo/domain/form";
 import { useMyScheduleDayOffsQuery } from "@repo/graphql";
 
 import { useSession } from "@/hooks/base/useSession";
+import { useTenantTimezone } from "@/hooks/base/useTenantTimezone";
 import { useUrlState } from "@/hooks/base/useUrlState";
 import {
-  isMonth,
   isPastDayOffMonth,
-  shiftMonth,
+  monthRangeOf,
 } from "@/lib/project/schedule-day-offs";
 
 /**
@@ -18,7 +24,7 @@ const MONTH_SCHEMA = z.string().default("");
 
 /**
  * 我的畫休要顯示哪個月(同班表分頁的換月,月份放網址):目標月一律查(`input: null`,由 api 決定),
- * 網址指到更早的月份才另查那個月(api 回 `canEdit=false` → 唯讀)。
+ * 網址指到更早的月份才另查那個月(`from` / `to` = 那個月在租戶時區的時點區間;api 回 `canEdit=false` → 唯讀)。
  *
  * - `query`:顯示中那個月的查詢
  * - `atTarget`:已經在目標月(▶ 停用)
@@ -28,18 +34,23 @@ const MONTH_SCHEMA = z.string().default("");
 export const useMyDayOffsMonth = () => {
   const { session } = useSession();
   const [monthParam, setMonth] = useUrlState("month", MONTH_SCHEMA);
+  const timezone = useTenantTimezone() ?? DEFAULT_TENANT_TIMEZONE;
   const targetQuery = useMyScheduleDayOffsQuery(session.client, {
     input: null,
   });
   const targetMonth = targetQuery.data?.myScheduleDayOffs.month ?? null;
   const pastMonth =
-    targetMonth !== null && isMonth(monthParam) && monthParam < targetMonth
+    targetMonth !== null &&
+    parseLocalMonth(monthParam) !== null &&
+    monthParam < targetMonth
       ? monthParam
       : null;
+  const pastRange =
+    pastMonth === null ? null : monthRangeOf(pastMonth, timezone);
   const pastQuery = useMyScheduleDayOffsQuery(
     session.client,
-    { input: { month: pastMonth ?? "" } },
-    { enabled: pastMonth !== null },
+    { input: pastRange },
+    { enabled: pastRange !== null },
   );
   const query = pastMonth === null ? targetQuery : pastQuery;
   const shown = query.data?.myScheduleDayOffs.month ?? null;
@@ -52,10 +63,11 @@ export const useMyDayOffsMonth = () => {
       shown !== null &&
       isPastDayOffMonth(shown, targetMonth),
     goMonth: (delta: number) => {
-      if (targetMonth === null || shown === null) {
+      const parsed = shown === null ? null : parseLocalMonth(shown);
+      if (targetMonth === null || parsed === null) {
         return;
       }
-      const next = shiftMonth(shown, delta);
+      const next = localMonthText(addLocalMonths(parsed, delta));
       setMonth(next >= targetMonth ? "" : next);
     },
   };

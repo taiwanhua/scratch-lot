@@ -13,10 +13,11 @@ import type { ScheduleDayOffFieldsFragment } from "@repo/graphql";
 import {
   DAY_OFF_ME,
   sampleDayOffs,
+  taipeiAt,
 } from "@/test/msw/project/schedule-day-offs-fixtures";
 import { api, server } from "@/test/msw/server";
 
-import { renderSchedulePage } from "../schedule-test-support";
+import { renderSchedulePage, typeDate } from "../schedule-test-support";
 
 const DAY_OFFS = "/schedule/my?tab=day-offs";
 
@@ -25,10 +26,10 @@ const NOVEMBER_DAY_OFF: ScheduleDayOffFieldsFragment = {
   id: "d-me-nov-20",
   userId: DAY_OFF_ME.userId,
   name: DAY_OFF_ME.name,
-  date: "2026-11-20",
+  date: taipeiAt("2026-11-20"),
   kind: "full-day",
-  startTime: null,
-  endTime: null,
+  startAt: null,
+  endAt: null,
   note: null,
   isPrimary: true,
   byName: null,
@@ -77,7 +78,7 @@ describe("我的畫休", () => {
     const { user, dayOffsFake } = renderSchedulePage({ path: DAY_OFFS });
     await user.click(await screen.findByRole("button", { name: "登記畫休" }));
     const dialog = await screen.findByRole("dialog", { name: "登記畫休" });
-    await user.type(within(dialog).getByLabelText(/日期/), "2026-12-03");
+    await typeDate(user, dialog, "2026-12-03");
     await user.click(within(dialog).getByLabelText("時段不可排"));
     await user.click(
       within(dialog).getByRole("button", { name: "+ 再加一段" }),
@@ -92,11 +93,18 @@ describe("我的畫休", () => {
     await waitFor(() => {
       expect(dayOffsFake.inputs.addMine).toEqual([
         {
-          date: "2026-12-03",
+          // 日期與時段都以租戶時區(台北)換成時點
+          date: taipeiAt("2026-12-03"),
           kind: "time-range",
           slots: [
-            { startTime: "09:00", endTime: "12:00" },
-            { startTime: "18:00", endTime: "22:00" },
+            {
+              startAt: taipeiAt("2026-12-03", "09:00"),
+              endAt: taipeiAt("2026-12-03", "12:00"),
+            },
+            {
+              startAt: taipeiAt("2026-12-03", "18:00"),
+              endAt: taipeiAt("2026-12-03", "22:00"),
+            },
           ],
         },
       ]);
@@ -110,7 +118,7 @@ describe("我的畫休", () => {
     });
     await user.click(await screen.findByRole("button", { name: "登記畫休" }));
     const dialog = await screen.findByRole("dialog", { name: "登記畫休" });
-    await user.type(within(dialog).getByLabelText(/日期/), "2026-12-24");
+    await typeDate(user, dialog, "2026-12-24");
     await user.click(within(dialog).getByRole("button", { name: "儲存" }));
     expect(
       await within(dialog).findByText("違反限制,不能儲存:"),

@@ -2,6 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslations } from "use-intl";
 
+import { DEFAULT_TENANT_TIMEZONE } from "@repo/domain/form";
 import { REASON_OTHER_VALUE } from "@repo/domain/project/reason-note";
 import { SCHEDULE_FIELD_CATEGORY_KEYS } from "@repo/domain/project/schedule-fields";
 import {
@@ -14,9 +15,11 @@ import { Typography } from "@repo/ui/typography";
 
 import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
 import { useSession } from "@/hooks/base/useSession";
+import { useTemporalText } from "@/hooks/base/useTemporalText";
+import { useTenantTimezone } from "@/hooks/base/useTenantTimezone";
 import { useScheduleFieldOptions } from "@/hooks/project/schedule/useScheduleFieldOptions/useScheduleFieldOptions";
 import type { FieldErrorTexts } from "@/lib/base/field-errors";
-import { shortDate } from "@/lib/project/schedule-day-offs";
+import { localPartsOf } from "@/lib/project/schedule-roster";
 
 import { ConfirmDeleteDialog } from "../../ConfirmDeleteDialog";
 import {
@@ -52,6 +55,12 @@ export const DeleteDayOffDialog = ({
   onClose,
 }: DeleteDayOffDialogProps) => {
   const t = useTranslations("admin.schedule.dayOffs.override");
+  const text = useTemporalText();
+  const timezone = useTenantTimezone() ?? DEFAULT_TENANT_TIMEZONE;
+  const clockOf = (value: string | null | undefined) =>
+    value === null || value === undefined
+      ? ""
+      : localPartsOf(value, timezone).time;
   const tSchedule = useTranslations("admin.schedule");
   const { session } = useSession();
   const queryClient = useQueryClient();
@@ -107,7 +116,7 @@ export const DeleteDayOffDialog = ({
     });
   };
 
-  const values = { name: item.name, date: shortDate(item.date) };
+  const values = { name: item.name, date: text(item.date, "monthDay") };
   return (
     <ConfirmDeleteDialog
       title={t("deleteTitle")}
@@ -116,8 +125,8 @@ export const DeleteDayOffDialog = ({
           ? t("deleteFullDay", values)
           : t("deleteTimeRange", {
               ...values,
-              start: item.startTime ?? "",
-              end: item.endTime ?? "",
+              start: clockOf(item.startAt),
+              end: clockOf(item.endAt),
             })
       }
       confirmLabel={t("deleteConfirm")}

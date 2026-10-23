@@ -2,7 +2,12 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "use-intl";
 import { z } from "zod";
 
-import { DEFAULT_TENANT_TIMEZONE } from "@repo/domain/form";
+import {
+  DEFAULT_TENANT_TIMEZONE,
+  localMonthOf,
+  localMonthText,
+  parseLocalMonth,
+} from "@repo/domain/form";
 import { useScheduleRosterQuery } from "@repo/graphql";
 import { Card } from "@repo/ui/card";
 import { CircularProgress } from "@repo/ui/circular-progress";
@@ -44,7 +49,6 @@ const orgSchema = z.string().default("");
 const monthSchema = z.string().default("");
 /** `?view=`:月 / 週 / 日 / 班表;空字串 = 這台裝置上次選的(沒有 = 電腦班表、手機日)。 */
 const viewSchema = z.string().default("");
-const MONTH_PATTERN = /^\d{4}-(?:0[1-9]|1[0-2])$/u;
 
 /** 閃爍多久(檢核 [查看] 捲到那一格)。 */
 const FLASH_MS = 2000;
@@ -57,11 +61,6 @@ const FLASH_FRAMES: Keyframe[] = [
   },
   { boxShadow: "inset 0 0 0 2px transparent" },
 ];
-
-const currentMonth = (): string => {
-  const now = new Date();
-  return `${String(now.getFullYear())}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-};
 
 type DialogState =
   | { kind: "demand"; demand: RosterDemand | null; preset: DemandPreset }
@@ -99,7 +98,12 @@ export const RosterPage = () => {
   const [orgId, setOrgId] = useUrlState("org", orgSchema);
   const [monthParam, setMonth] = useUrlState("month", monthSchema);
   const [viewParam, setView] = useUrlState("view", viewSchema);
-  const month = MONTH_PATTERN.test(monthParam) ? monthParam : currentMonth();
+  // 這個月以租戶時區判斷(不用瀏覽器時區);「現在」進頁時取一次
+  const [now] = useState(Date.now);
+  const month =
+    parseLocalMonth(monthParam) === null
+      ? localMonthText(localMonthOf(now, timezone))
+      : monthParam;
   const view = pickView(
     viewParam === "" ? (readRosterView() ?? "") : viewParam,
     isMobile,

@@ -57,7 +57,7 @@ const nextId = (): string => {
 
 /**
  * 行事曆的假 api:有狀態;某天以最接近的那一層為準(分店 → 最上層組織),
- * 只有設定那一天的那一層 canEdit(且有 `edit-calendar`)。
+ * 只有設定那一天的那一層 canEdit(且有 `edit-calendar`)。日期是時點;查詢收 `[from, to)` 時點區間。
  */
 export const scheduleCalendarWorld = (
   options: ScheduleCalendarWorldOptions = {},
@@ -71,16 +71,20 @@ export const scheduleCalendarWorld = (
       const { input } = variables as ScheduleCalendarQueryVariables;
       const orgId = input.orgId ?? currentOrg.id;
       const chain = chainOf(orgId);
-      const byDate = new Map<string, (typeof calendarDays)[number]>();
+      const from = Date.parse(input.from);
+      const to = Date.parse(input.to);
+      const byDate = new Map<number, (typeof calendarDays)[number]>();
       for (const day of calendarDays) {
         const rank = chain.indexOf(day.orgId);
-        const current = byDate.get(day.date);
+        const at = Date.parse(day.date);
+        const current = byDate.get(at);
         if (
           rank !== -1 &&
-          day.date.startsWith(input.month) &&
+          at >= from &&
+          at < to &&
           (current === undefined || rank < chain.indexOf(current.orgId))
         ) {
-          byDate.set(day.date, day);
+          byDate.set(at, day);
         }
       }
       const days = [...byDate.values()].map((day) => ({
@@ -92,7 +96,8 @@ export const scheduleCalendarWorld = (
           scheduleCalendar: {
             orgId,
             orgName: nameOf(orgId),
-            month: input.month,
+            from: input.from,
+            to: input.to,
             canEdit: canEditCalendar,
             days,
           },

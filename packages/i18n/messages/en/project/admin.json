@@ -1306,7 +1306,7 @@
     },
     "dayOffs": {
       "monthTitle": "{month}/{year}",
-      "dateTitle": "{month}/{day} ({weekday})",
+      "dateTitle": "{date} ({weekday})",
       "fullDay": "Full day off",
       "timeRange": "Unavailable hours",
       "cellFullDay": "Day off",

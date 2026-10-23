@@ -1,6 +1,6 @@
 import { useTranslations } from "use-intl";
 
-import { shortDate } from "@/lib/project/schedule-day-offs";
+import { useTemporalText } from "@/hooks/base/useTemporalText";
 
 /** 畫休違反用得到的欄位(GraphQL `ScheduleDayOffViolation`,或存檔被擋時 `extensions.violations`)。 */
 export interface DayOffViolationTextInput {
@@ -8,6 +8,7 @@ export interface DayOffViolationTextInput {
   message: string;
   actual?: number | null;
   limit?: number | null;
+  /** 期間類的起訖日(時點) */
   from?: string | null;
   to?: string | null;
 }
@@ -20,17 +21,18 @@ export const useDayOffViolationText = (): ((
   violation: DayOffViolationTextInput,
 ) => string) => {
   const t = useTranslations("admin.schedule.dayOffs.violations");
+  const text = useTemporalText();
   return (violation) => {
     const actual = violation.actual ?? 0;
     const limit = violation.limit ?? 0;
     const from =
       violation.from === null || violation.from === undefined
         ? ""
-        : shortDate(violation.from);
+        : text(violation.from, "monthDay");
     const to =
       violation.to === null || violation.to === undefined
         ? ""
-        : shortDate(violation.to);
+        : text(violation.to, "monthDay");
     switch (violation.key) {
       case "maxMonthlyDayOffs": {
         return t("maxMonthlyDayOffs", { actual, limit });

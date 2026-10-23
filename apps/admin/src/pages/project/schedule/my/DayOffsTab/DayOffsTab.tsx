@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useTranslations } from "use-intl";
 
+import { DEFAULT_TENANT_TIMEZONE, parseLocalMonth } from "@repo/domain/form";
 import { Alert } from "@repo/ui/alert";
 import { Box } from "@repo/ui/box";
 import { Button } from "@repo/ui/button";
@@ -18,18 +19,18 @@ import { DayOffCellContent } from "@/components/project/schedule/DayOffs/DayOffC
 import { DayOffDetailDialog } from "@/components/project/schedule/DayOffs/DayOffDetailDialog";
 import { DayOffLegend } from "@/components/project/schedule/DayOffs/DayOffLegend";
 import { useModuleRoutes } from "@/hooks/base/useModuleRoutes";
-import {
-  dateParts,
-  dayOffBandOf,
-  shortDate,
-} from "@/lib/project/schedule-day-offs";
+import { useTemporalText } from "@/hooks/base/useTemporalText";
+import { useTenantTimezone } from "@/hooks/base/useTenantTimezone";
+import { localDayInstantOf } from "@/lib/base/form-engine/local-day";
+import { dayKeyOf, dayOffBandOf } from "@/lib/project/schedule-day-offs";
+import { localPartsOf } from "@/lib/project/schedule-roster";
 
 import { DayOffDialog } from "./DayOffDialog";
 import { DayOffViolationsCard } from "./DayOffViolationsCard";
 import { DayOffsNotice } from "./DayOffsNotice";
 import { useMyDayOffsMonth } from "./useMyDayOffsMonth";
 
-/** 對話框:登記(帶入日期;[登記畫休] 為空字串)或當天詳細。 */
+/** 對話框:登記(帶入日期鍵;[登記畫休] 為空字串)或當天詳細。 */
 type Opened =
   { mode: "register"; date: string } | { mode: "detail"; date: string };
 
@@ -59,6 +60,8 @@ export const DayOffsTab = () => {
   const t = useTranslations("admin.schedule.dayOffs");
   const tCalendar = useTranslations("admin.schedule.calendar");
   const routeOf = useModuleRoutes();
+  const text = useTemporalText();
+  const timezone = useTenantTimezone() ?? DEFAULT_TENANT_TIMEZONE;
   const [opened, setOpened] = useState<Opened | null>(null);
   const { query, atTarget, isPast, goMonth } = useMyDayOffsMonth();
   const page = query.data?.myScheduleDayOffs;
@@ -75,10 +78,11 @@ export const DayOffsTab = () => {
   }
 
   const range = {
-    start: shortDate(window.startDate),
-    end: shortDate(window.endDate),
+    start: text(window.startDate, "monthDay"),
+    end: text(window.endDate, "monthDay"),
   };
-  const monthNumber = dateParts(`${page.month}-01`).month;
+  const shownMonth = parseLocalMonth(page.month);
+  const monthNumber = shownMonth?.month ?? 0;
   const summary = t(SUMMARY_KEY[window.state] ?? "my.summaryBefore", {
     month: monthNumber,
     ...range,
@@ -97,14 +101,22 @@ export const DayOffsTab = () => {
 
   const maxDaily = limits.maxDailyStaff ?? null;
 
+  // 月曆格以租戶時區的日期鍵對日子(api 回的是那天 00:00 的時點)
+  const keyOf = (value: string) => dayKeyOf(value, timezone);
+  const clockOf = (value: string | null | undefined) =>
+    value === null || value === undefined
+      ? ""
+      : localPartsOf(value, timezone).time;
+  const dayOn = (date: string) =>
+    page.days.find((item) => keyOf(item.date) === date);
   const dayInfo: Record<string, MonthCalendarDayInfo> = {};
   const datesWithDayOffs = new Set([
-    ...page.days.map((day) => day.date),
-    ...page.myDayOffs.map((item) => item.date),
+    ...page.days.map((day) => keyOf(day.date)),
+    ...page.myDayOffs.map((item) => keyOf(item.date)),
   ]);
   for (const date of datesWithDayOffs) {
-    const mine = page.myDayOffs.filter((item) => item.date === date);
-    const day = page.days.find((item) => item.date === date);
+    const mine = page.myDayOffs.filter((item) => keyOf(item.date) === date);
+    const day = dayOn(date);
     dayInfo[date] = {
       content: (
         <DayOffCellContent
@@ -112,12 +124,12 @@ export const DayOffsTab = () => {
             item.kind === "full-day"
               ? t("cellFullDay")
               : t("cellTimeRange", {
-                  start: item.startTime ?? "",
-                  end: item.endTime ?? "",
+                  start: clockOf(item.startAt),
+                  end: clockOf(item.endAt),
                 }),
           )}
           hatched={mine.length > 0}
-          band={dayOffBandOf(violations, date)}
+          band={dayOffBandOf(violations, date, timezone)}
           {...(day === undefined || maxDaily === null
             ? {}
             : {
@@ -128,7 +140,9 @@ export const DayOffsTab = () => {
                 },
               })}
           info={{
-            label: t("infoAria", { date: shortDate(date) }),
+            label: t("infoAria", {
+              date: text(localDayInstantOf(date, timezone), "monthDay"),
+            }),
             onClick: () => {
               setOpened({ mode: "detail", date });
             },
@@ -139,10 +153,13 @@ export const DayOffsTab = () => {
   }
   // 沒有畫休、但有違反(例:連續上班)的日子也要有色帶
   for (const violation of violations) {
-    for (const date of violation.dates) {
+    for (const date of violation.dates.map((value) => keyOf(value))) {
       dayInfo[date] ??= {
         content: (
-          <DayOffCellContent lines={[]} band={dayOffBandOf(violations, date)} />
+          <DayOffCellContent
+            lines={[]}
+            band={dayOffBandOf(violations, date, timezone)}
+          />
         ),
       };
     }
@@ -186,7 +203,7 @@ export const DayOffsTab = () => {
               </IconButton>
               <Typography variant="h6" sx={{ whiteSpace: "nowrap" }}>
                 {t("monthTitle", {
-                  year: dateParts(`${page.month}-01`).year,
+                  year: shownMonth?.year ?? 0,
                   month: monthNumber,
                 })}
               </Typography>
@@ -254,7 +271,7 @@ export const DayOffsTab = () => {
       {opened?.mode === "detail" && (
         <DayOffDetailDialog
           date={opened.date}
-          day={page.days.find((item) => item.date === opened.date)}
+          day={dayOn(opened.date)}
           limit={maxDaily}
           violations={violations}
           onClose={() => {
