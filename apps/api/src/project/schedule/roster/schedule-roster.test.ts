@@ -434,10 +434,11 @@ describe("排班表(GraphQL 端點 + 真 MongoDB)", () => {
       orgId: zhongshan,
       tenantId: tenantA,
       userId: user.userId,
-      date,
+      // 日期與時段都是時點(租戶時區台北)
+      date: new Date(taipei(date, "00:00")),
       kind,
-      startTime: slot?.startTime ?? null,
-      endTime: slot?.endTime ?? null,
+      startAt: slot === null ? null : new Date(taipei(date, slot.startTime)),
+      endAt: slot === null ? null : new Date(taipei(date, slot.endTime)),
       note: null,
       by: null,
       reason: null,
@@ -477,7 +478,7 @@ describe("排班表(GraphQL 端點 + 真 MongoDB)", () => {
       input: {
         orgId: String(zhongshan),
         userId: String(user.userId),
-        date,
+        date: taipei(date, "00:00"),
         kind: "full-day",
       },
     });
@@ -817,16 +818,16 @@ describe("排班表(GraphQL 端點 + 真 MongoDB)", () => {
       await connection.collection(SCHEDULE_DAY_OFFS_COLLECTION).insertMany(
         [
           {
-            date: "2026-12-10",
+            date: new Date(taipei("2026-12-10", "00:00")),
             kind: "full-day",
-            startTime: null,
-            endTime: null,
+            startAt: null,
+            endAt: null,
           },
           {
-            date: "2026-12-11",
+            date: new Date(taipei("2026-12-11", "00:00")),
             kind: "time-range",
-            startTime: "09:00",
-            endTime: "13:00",
+            startAt: new Date(taipei("2026-12-11", "09:00")),
+            endAt: new Date(taipei("2026-12-11", "13:00")),
           },
         ].map((item) => ({
           orgId: zhongshan,
@@ -920,7 +921,8 @@ describe("排班表(GraphQL 端點 + 真 MongoDB)", () => {
       expect(saved.items).toHaveLength(1);
       expect(saved.entryConflicts).toEqual([
         {
-          date,
+          // 排班那天(租戶時區 00:00 的時點)
+          date: taipei(date, "00:00"),
           startAt: taipei(date, "14:30"),
           endAt: taipei(date, "22:00"),
           orgName: "中山店",
@@ -986,7 +988,7 @@ describe("排班表(GraphQL 端點 + 真 MongoDB)", () => {
         await gql(hq, SAVE_CALENDAR_DAY, {
           input: {
             orgId: String(zhongshan),
-            date: "2026-11-10",
+            date: taipei("2026-11-10", "00:00"),
             type: "closed",
           },
         }),
@@ -1240,19 +1242,19 @@ describe("排班表(GraphQL 端點 + 真 MongoDB)", () => {
       const date = "2026-11-20";
       await connection.collection(SCHEDULE_DAY_OFFS_COLLECTION).insertMany(
         [
-          { date: "2026-11-21", kind: "full-day" },
+          { date: new Date(taipei("2026-11-21", "00:00")), kind: "full-day" },
           {
-            date: "2026-11-22",
+            date: new Date(taipei("2026-11-22", "00:00")),
             kind: "time-range",
-            startTime: "09:00",
-            endTime: "13:00",
+            startAt: new Date(taipei("2026-11-22", "09:00")),
+            endAt: new Date(taipei("2026-11-22", "13:00")),
           },
         ].map((item) => ({
           orgId: zhongshan,
           tenantId: tenantA,
           userId: chen.userId,
-          startTime: null,
-          endTime: null,
+          startAt: null,
+          endAt: null,
           note: null,
           by: null,
           reason: null,

@@ -1,13 +1,19 @@
-import { Field, ID, InputType } from "@nestjs/graphql";
+import { Field, GraphQLISODateTime, ID, InputType } from "@nestjs/graphql";
 
-/** 某家店(缺席 = 當前組織)某個月(`YYYY-MM`)的行事曆。 */
+/**
+ * 某家店(缺席 = 當前組織)一段期間的行事曆:`from` / `to` 是半開的時點區間 `[起, 迄)`
+ * (月 = 租戶時區的月初 00:00 到下月初 00:00);最長一個月(31 天再多一小時給夏令時間)。
+ */
 @InputType()
 export class ScheduleCalendarInput {
   @Field(() => ID, { nullable: true })
   orgId?: string | null;
 
-  @Field(() => String)
-  month!: string;
+  @Field(() => GraphQLISODateTime)
+  from!: Date;
+
+  @Field(() => GraphQLISODateTime)
+  to!: Date;
 }
 
 /**
@@ -22,8 +28,9 @@ export class SaveScheduleCalendarDayInput {
   @Field(() => ID, { nullable: true })
   orgId?: string | null;
 
-  @Field(() => String)
-  date!: string;
+  /** 那天(租戶時區 00:00 的時點;api 以租戶時區正規化成那天 00:00) */
+  @Field(() => GraphQLISODateTime)
+  date!: Date;
 
   @Field(() => String)
   type!: string;

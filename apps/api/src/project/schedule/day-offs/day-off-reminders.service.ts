@@ -1,7 +1,13 @@
 import { Injectable, Logger, type OnModuleInit } from "@nestjs/common";
 import type { Types } from "mongoose";
 
-import { localDateOf, localDateText, parseLocalDate } from "@repo/domain/form";
+import {
+  addLocalDays,
+  addLocalMonths,
+  localDateOf,
+  localDateText,
+  localMonthText,
+} from "@repo/domain/form";
 
 import { OrgsRepository } from "../../../database/database.module";
 import type { OperatorContext } from "../../../database/operator-context";
@@ -28,8 +34,6 @@ import {
   type DayOffWindowValue,
   dayOffWindowFor,
   dayOffWindowValueOf,
-  shiftDate,
-  shiftMonth,
 } from "./day-off-window";
 
 /** 排程工作 key(`docs/deployment.md`「Cloud Scheduler」;全域唯一)。 */
@@ -208,19 +212,19 @@ export class DayOffRemindersService implements OnModuleInit {
     if (effective.schedule.kind !== "days-before") {
       return null;
     }
-    const today = localDateText(
-      localDateOf(at.scheduledFor.getTime(), at.timezone),
-    );
+    const today = localDateOf(at.scheduledFor.getTime(), at.timezone);
     for (const days of effective.schedule.daysBefore) {
-      for (const base of [today, shiftDate(today, -1)]) {
-        const target = shiftDate(base, days);
+      for (const base of [today, addLocalDays(today, -1)]) {
+        const date = addLocalDays(base, days);
+        const target = localDateText(date);
         // 目標日在某個月 → 它是下個月(目標月)的開放期間
         const window = dayOffWindowFor(
-          shiftMonth(target.slice(0, 7), 1),
+          localMonthText(
+            addLocalMonths({ year: date.year, month: date.month }, 1),
+          ),
           value,
         );
-        const date = parseLocalDate(target);
-        if (TARGET_OF[type](window) !== target || date === null) {
+        if (TARGET_OF[type](window) !== target) {
           continue;
         }
         const hit = scheduleHitAt(effective.schedule, {

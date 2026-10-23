@@ -3,7 +3,7 @@
 # ------------------------------------------------------
 
 input AddMyScheduleDayOffsInput {
-  date: String!
+  date: DateTime!
   kind: String!
   note: String
   slots: [ScheduleDayOffSlotInput!]
@@ -20,7 +20,7 @@ type AddOrgMembersPayload {
 }
 
 input AddScheduleDayOffsOnBehalfInput {
-  date: String!
+  date: DateTime!
   kind: String!
   orgId: ID
   reason: String
@@ -3951,7 +3951,8 @@ type MyScheduleChange {
 }
 
 input MyScheduleDayOffsInput {
-  month: String
+  from: DateTime
+  to: DateTime
 }
 
 type MyScheduleDayOffsPayload {
@@ -5117,7 +5118,7 @@ input SaveRoleMatrixInput {
 
 input SaveScheduleCalendarDayInput {
   category: String
-  date: String!
+  date: DateTime!
   id: ID
   name: String
   note: String
@@ -5355,7 +5356,7 @@ type ScheduleAutoRunSummary {
 type ScheduleCalendarDay {
   canEdit: Boolean!
   category: String
-  date: String!
+  date: DateTime!
   id: ID!
   name: String
   note: String
@@ -5369,16 +5370,18 @@ type ScheduleCalendarDayPayload {
 }
 
 input ScheduleCalendarInput {
-  month: String!
+  from: DateTime!
   orgId: ID
+  to: DateTime!
 }
 
 type ScheduleCalendarPayload {
   canEdit: Boolean!
   days: [ScheduleCalendarDay!]!
-  month: String!
+  from: DateTime!
   orgId: ID!
   orgName: String!
+  to: DateTime!
 }
 
 input ScheduleChangeReasonInput {
@@ -5426,8 +5429,8 @@ type ScheduleCheckUnderstaffed {
 
 type ScheduleDayOff {
   byName: String
-  date: String!
-  endTime: String
+  date: DateTime!
+  endAt: DateTime
   id: ID!
   isPrimary: Boolean!
   kind: String!
@@ -5435,18 +5438,18 @@ type ScheduleDayOff {
   note: String
   reason: String
   reasonNote: String
-  startTime: String
+  startAt: DateTime
   userId: ID!
 }
 
 type ScheduleDayOffDay {
-  date: String!
+  date: DateTime!
   dayOffs: [ScheduleDayOff!]!
   staffCount: Int!
 }
 
 type ScheduleDayOffEntryConflict {
-  date: String!
+  date: DateTime!
   endAt: DateTime!
   orgName: String
   startAt: DateTime!
@@ -5464,8 +5467,9 @@ type ScheduleDayOffOrg {
 }
 
 input ScheduleDayOffOverviewInput {
-  month: String
+  from: DateTime
   orgId: ID
+  to: DateTime
 }
 
 type ScheduleDayOffOverviewPayload {
@@ -5481,8 +5485,8 @@ type ScheduleDayOffOverviewPayload {
 }
 
 input ScheduleDayOffSlotInput {
-  endTime: String!
-  startTime: String!
+  endAt: DateTime!
+  startAt: DateTime!
 }
 
 type ScheduleDayOffStaff {
@@ -5494,20 +5498,20 @@ type ScheduleDayOffStaff {
 
 type ScheduleDayOffViolation {
   actual: Int
-  dates: [String!]!
-  from: String
+  dates: [DateTime!]!
+  from: DateTime
   key: String!
   level: String!
   limit: Int
   message: String!
-  to: String
+  to: DateTime
 }
 
 type ScheduleDayOffWindow {
   daysLeft: Int!
-  endDate: String!
+  endDate: DateTime!
   month: String!
-  startDate: String!
+  startDate: DateTime!
   state: String!
 }
 

@@ -1118,7 +1118,7 @@ export class ScheduleAutoRunService {
       shiftDate(to, 1),
     );
     return new Set(
-      days.filter((day) => day.type === "closed").map((day) => day.date),
+      days.filter((day) => day.type === "closed").map((day) => day.localDate),
     );
   }
 

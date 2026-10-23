@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { Types } from "mongoose";
 
+import { formatTemporal } from "@repo/domain/form";
 import { isIsoDate, isIsoMonth } from "@repo/domain/project/schedule-settings";
 
 import { OrgsRepository } from "../../../database/database.module";
@@ -210,6 +211,18 @@ export class ScheduleRosterService {
       this.periods.findOne(operator, { orgId: org.id, month }),
     ]);
     const timezone = await tenantTimezoneOf(this.orgs, operator, org.tenantId);
+    // 排班表的輸出仍是 `HH:mm`(排班表改時點是下一張票):畫休的時段(時點)在這裡換回租戶時區的時刻
+    const clockOf = (at: Date) =>
+      formatTemporal(at, { type: "datetime", timezone }).slice(11);
+    const rosterUnavailability = unavailability.map((day) => ({
+      userId: day.userId,
+      date: day.date,
+      fullDay: day.fullDay,
+      slots: day.slots.map((slot) => ({
+        startTime: clockOf(slot.startAt),
+        endTime: clockOf(slot.endAt),
+      })),
+    }));
     const unmatchedPunches = await this.unmatched.of(
       operator,
       org.id,
@@ -286,7 +299,7 @@ export class ScheduleRosterService {
       const mine = entries.filter(
         (entry) => String(entry.userId) === userId && inMonth(entry.date),
       );
-      const days = unavailability.filter(
+      const days = rosterUnavailability.filter(
         (item) => item.userId === userId && inMonth(item.date),
       );
       return {
@@ -386,9 +399,9 @@ export class ScheduleRosterService {
         endAt: entry.endAt,
         orgName: otherOrgNames.get(String(entry.orgId)) ?? null,
       })),
-      unavailability,
+      unavailability: rosterUnavailability,
       calendarDays: calendarDays.map((day) => ({
-        date: day.date,
+        date: day.localDate,
         type: day.type,
         name: day.name,
         paletteKey: day.paletteKey,

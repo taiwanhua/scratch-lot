@@ -237,7 +237,8 @@ query ScheduleCalendar($input: ScheduleCalendarInput!) {
   scheduleCalendar(input: $input) {
     orgId
     orgName
-    month
+    from
+    to
     canEdit
     days {
       ...ScheduleCalendarDayFields

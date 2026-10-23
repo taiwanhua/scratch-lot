@@ -52,8 +52,8 @@ const DAY_OFF = /* GraphQL */ `
   name
   date
   kind
-  startTime
-  endTime
+  startAt
+  endAt
   isPrimary
   byName
   reason
@@ -179,8 +179,8 @@ interface DayOffRow {
   name: string;
   date: string;
   kind: string;
-  startTime: string | null;
-  endTime: string | null;
+  startAt: string | null;
+  endAt: string | null;
   isPrimary: boolean;
   byName: string | null;
   reason: string | null;
@@ -277,6 +277,29 @@ function errorOf(result: GraphqlResult): Record<string, unknown> | undefined {
 const taipei = (date: string, time = "09:00") =>
   new Date(`${date}T${time}:00+08:00`);
 
+/** api 收發的時點(ISO):日期 = 租戶時區那天 00:00。 */
+const iso = (date: string, time = "00:00") => taipei(date, time).toISOString();
+
+/** 洛杉磯(冬令 UTC−8)某天某時刻:那天 00:00 = 台北 16:00(租戶時區不是台北的測試用)。 */
+const la = (date: string, time = "00:00") =>
+  new Date(`${date}T${time}:00-08:00`);
+
+/** 一段時段不可排:那天的開始 / 結束時點。 */
+const slot = (date: string, start: string, end: string) => ({
+  startAt: iso(date, start),
+  endAt: iso(date, end),
+});
+
+/** 月份查詢的 `from` / `to`:那個月在租戶時區的 `[月初 00:00, 下月初 00:00)`。 */
+const monthRange = (month: string) => {
+  const [year = 0, value = 0] = month.split("-").map(Number);
+  const next =
+    value === 12
+      ? `${String(year + 1)}-01`
+      : `${String(year)}-${String(value + 1).padStart(2, "0")}`;
+  return { from: iso(`${month}-01`), to: iso(`${next}-01`) };
+};
+
 /**
  * 畫休(規格 14.1、14.2、14.5 畫休總覽、14.6 我的畫休、3.4 畫休開放 / 截止通知):
  * 打真的 GraphQL 端點、對真 MongoDB(TEST-07);「今天」由 `ScheduleClock` 注入。
@@ -333,7 +356,7 @@ describe("畫休(GraphQL 端點 + 真 MongoDB)", () => {
   ): Promise<MyRow> {
     return dataOf(
       await gql(user, MY_DAY_OFFS, {
-        input: month === undefined ? null : { month },
+        input: month === undefined ? null : monthRange(month),
       }),
       "myScheduleDayOffs",
     );
@@ -345,7 +368,7 @@ describe("畫休(GraphQL 端點 + 真 MongoDB)", () => {
   ): Promise<OverviewRow> {
     return dataOf(
       await gql(user, OVERVIEW, {
-        input: { orgId: String(zhongshan), month },
+        input: { orgId: String(zhongshan), ...monthRange(month) },
       }),
       "scheduleDayOffOverview",
     );
@@ -387,7 +410,7 @@ describe("畫休(GraphQL 端點 + 真 MongoDB)", () => {
       .collection(SCHEDULE_DAY_OFFS_COLLECTION)
       .findOne<{ _id: Types.ObjectId }>({
         userId: user.userId,
-        date,
+        date: taipei(date, "00:00"),
         deletedAt: null,
       });
     if (!document) {
@@ -513,7 +536,11 @@ describe("畫休(GraphQL 端點 + 真 MongoDB)", () => {
       .toSorted((left, right) => left.localeCompare(right));
 
   function febFullDay(user: ScheduleTestUser, date: string) {
-    return onBehalf({ userId: String(user.userId), date, kind: "full-day" });
+    return onBehalf({
+      userId: String(user.userId),
+      date: iso(date),
+      kind: "full-day",
+    });
   }
 
   afterEach(() => {
@@ -533,8 +560,8 @@ describe("畫休(GraphQL 端點 + 真 MongoDB)", () => {
         primaryOrg: { name: "中山店" },
         window: {
           month: "2026-12",
-          startDate: "2026-11-15",
-          endDate: "2026-11-25",
+          startDate: iso("2026-11-15"),
+          endDate: iso("2026-11-25"),
           state: "open",
           daysLeft: 6,
         },
@@ -553,22 +580,22 @@ describe("畫休(GraphQL 端點 + 真 MongoDB)", () => {
       travelTo("2026-11-20");
       dataOf(
         await addMine(wang, {
-          date: "2026-12-03",
+          date: iso("2026-12-03"),
           kind: "time-range",
-          slots: [{ startTime: "09:00", endTime: "13:00" }],
+          slots: [slot("2026-12-03", "09:00", "13:00")],
         }),
         "addMyScheduleDayOffs",
       );
       dataOf(
         await addMine(li, {
-          date: "2026-12-03",
+          date: iso("2026-12-03"),
           kind: "time-range",
-          slots: [{ startTime: "14:00", endTime: "18:00" }],
+          slots: [slot("2026-12-03", "14:00", "18:00")],
         }),
         "addMyScheduleDayOffs",
       );
       const { days } = await overview(manager);
-      const day = days.find((item) => item.date === "2026-12-03");
+      const day = days.find((item) => item.date === iso("2026-12-03"));
       expect(day?.staffCount).toBe(2);
       expect(day?.dayOffs.map((item) => item.name)).toEqual([
         "王小明",
@@ -579,14 +606,14 @@ describe("畫休(GraphQL 端點 + 真 MongoDB)", () => {
     it("同一人同一天整天 + 時段 → 算 1 天", async () => {
       travelTo("2026-11-20");
       dataOf(
-        await addMine(wang, { date: "2026-12-05", kind: "full-day" }),
+        await addMine(wang, { date: iso("2026-12-05"), kind: "full-day" }),
         "addMyScheduleDayOffs",
       );
       dataOf(
         await addMine(wang, {
-          date: "2026-12-05",
+          date: iso("2026-12-05"),
           kind: "time-range",
-          slots: [{ startTime: "18:00", endTime: "22:00" }],
+          slots: [slot("2026-12-05", "18:00", "22:00")],
         }),
         "addMyScheduleDayOffs",
       );
@@ -594,16 +621,16 @@ describe("畫休(GraphQL 端點 + 真 MongoDB)", () => {
       expect(mine.dayOffCount).toBe(2);
       expect(mine.myDayOffs).toHaveLength(3);
       expect(
-        mine.days.find((item) => item.date === "2026-12-05")?.staffCount,
+        mine.days.find((item) => item.date === iso("2026-12-05"))?.staffCount,
       ).toBe(1);
     });
 
     it("時段不可排重疊 → VALIDATION_FAILED(既有的、或同一次送的幾段);開始不早於結束也擋", async () => {
       travelTo("2026-11-20");
       const withExisting = await addMine(wang, {
-        date: "2026-12-03",
+        date: iso("2026-12-03"),
         kind: "time-range",
-        slots: [{ startTime: "12:00", endTime: "14:00" }],
+        slots: [slot("2026-12-03", "12:00", "14:00")],
       });
       expect(errorOf(withExisting)).toMatchObject({
         code: "VALIDATION_FAILED",
@@ -611,11 +638,11 @@ describe("畫休(GraphQL 端點 + 真 MongoDB)", () => {
         reason: "TIME_RANGES_OVERLAP",
       });
       const withinRequest = await addMine(wang, {
-        date: "2026-12-04",
+        date: iso("2026-12-04"),
         kind: "time-range",
         slots: [
-          { startTime: "09:00", endTime: "12:00" },
-          { startTime: "11:00", endTime: "13:00" },
+          slot("2026-12-04", "09:00", "12:00"),
+          slot("2026-12-04", "11:00", "13:00"),
         ],
       });
       expect(errorOf(withinRequest)).toMatchObject({
@@ -624,9 +651,9 @@ describe("畫休(GraphQL 端點 + 真 MongoDB)", () => {
         reason: "TIME_RANGES_OVERLAP",
       });
       const reversed = await addMine(wang, {
-        date: "2026-12-04",
+        date: iso("2026-12-04"),
         kind: "time-range",
-        slots: [{ startTime: "13:00", endTime: "09:00" }],
+        slots: [slot("2026-12-04", "13:00", "09:00")],
       });
       // 開始不早於結束是格式錯:不帶 reason(前端寫該欄的格式要求)
       expect(errorOf(reversed)).toEqual({
@@ -636,9 +663,9 @@ describe("畫休(GraphQL 端點 + 真 MongoDB)", () => {
       // 相接不算重疊
       dataOf(
         await addMine(wang, {
-          date: "2026-12-03",
+          date: iso("2026-12-03"),
           kind: "time-range",
-          slots: [{ startTime: "13:00", endTime: "15:00" }],
+          slots: [slot("2026-12-03", "13:00", "15:00")],
         }),
         "addMyScheduleDayOffs",
       );
@@ -647,7 +674,7 @@ describe("畫休(GraphQL 端點 + 真 MongoDB)", () => {
     it("整天畫休一天兩筆 → 擋下(事前檢查與唯一索引)", async () => {
       travelTo("2026-11-20");
       const twice = await addMine(wang, {
-        date: "2026-12-05",
+        date: iso("2026-12-05"),
         kind: "full-day",
       });
       expect(errorOf(twice)).toMatchObject({
@@ -657,15 +684,18 @@ describe("畫休(GraphQL 端點 + 真 MongoDB)", () => {
       });
       // 同時送兩筆:唯一索引擋下第二筆,回同一個錯誤
       const results = await Promise.all([
-        addMine(chen, { date: "2026-12-06", kind: "full-day" }),
-        addMine(chen, { date: "2026-12-06", kind: "full-day" }),
+        addMine(chen, { date: iso("2026-12-06"), kind: "full-day" }),
+        addMine(chen, { date: iso("2026-12-06"), kind: "full-day" }),
       ]);
       expect(
         results.filter((result) => result.errors === undefined),
       ).toHaveLength(1);
       const count = await connection
         .collection(SCHEDULE_DAY_OFFS_COLLECTION)
-        .countDocuments({ userId: chen.userId, date: "2026-12-06" });
+        .countDocuments({
+          userId: chen.userId,
+          date: taipei("2026-12-06", "00:00"),
+        });
       expect(count).toBe(1);
     });
 
@@ -691,7 +721,7 @@ describe("畫休(GraphQL 端點 + 真 MongoDB)", () => {
         canEdit: false,
       });
       const result = await addMine(outsider, {
-        date: "2026-12-10",
+        date: iso("2026-12-10"),
         kind: "full-day",
       });
       expect(errorOf(result)).toMatchObject({
@@ -708,7 +738,10 @@ describe("畫休(GraphQL 端點 + 真 MongoDB)", () => {
       expect(mine.window).toMatchObject({ state: "closed", daysLeft: 0 });
       expect(mine.canEdit).toBe(false);
 
-      const add = await addMine(wang, { date: "2026-12-10", kind: "full-day" });
+      const add = await addMine(wang, {
+        date: iso("2026-12-10"),
+        kind: "full-day",
+      });
       expect(errorOf(add)).toMatchObject({
         code: "FORBIDDEN",
         reason: "OUTSIDE_DAY_OFF_WINDOW",
@@ -721,7 +754,7 @@ describe("畫休(GraphQL 端點 + 真 MongoDB)", () => {
 
       travelTo("2026-11-20");
       const nextMonth = await addMine(wang, {
-        date: "2027-01-10",
+        date: iso("2027-01-10"),
         kind: "full-day",
       });
       expect(errorOf(nextMonth)).toMatchObject({
@@ -734,7 +767,7 @@ describe("畫休(GraphQL 端點 + 真 MongoDB)", () => {
       const saved = dataOf(
         await onBehalf({
           userId: String(chen.userId),
-          date: "2026-12-08",
+          date: iso("2026-12-08"),
           kind: "full-day",
         }),
         "addScheduleDayOffsOnBehalf",
@@ -750,9 +783,9 @@ describe("畫休(GraphQL 端點 + 真 MongoDB)", () => {
       travelTo("2026-11-26");
       const input = {
         userId: String(chen.userId),
-        date: "2026-12-09",
+        date: iso("2026-12-09"),
         kind: "time-range",
-        slots: [{ startTime: "18:00", endTime: "22:00" }],
+        slots: [slot("2026-12-09", "18:00", "22:00")],
       };
       expect(errorOf(await onBehalf(input))).toMatchObject({
         code: "VALIDATION_FAILED",
@@ -803,7 +836,7 @@ describe("畫休(GraphQL 端點 + 真 MongoDB)", () => {
       travelTo("2026-11-20");
       const result = await onBehalf({
         userId: String(outsider.userId),
-        date: "2026-12-08",
+        date: iso("2026-12-08"),
         kind: "full-day",
       });
       expect(errorOf(result)).toMatchObject({ code: "NOT_FOUND" });
@@ -814,7 +847,7 @@ describe("畫休(GraphQL 端點 + 真 MongoDB)", () => {
     it("同日最多畫休 2 人已滿 → 第 3 人不存並回原因;主要分店不是這家的人不計入", async () => {
       travelTo("2026-11-20");
       const blocked = await addMine(chen, {
-        date: "2026-12-03",
+        date: iso("2026-12-03"),
         kind: "full-day",
       });
       expect(errorOf(blocked)).toMatchObject({
@@ -826,14 +859,14 @@ describe("畫休(GraphQL 端點 + 真 MongoDB)", () => {
             level: "limit",
             actual: 3,
             limit: 2,
-            from: "2026-12-03",
+            from: iso("2026-12-03"),
           }),
         ],
       });
       // 代改也照規則
       const onBehalfBlocked = await onBehalf({
         userId: String(chen.userId),
-        date: "2026-12-03",
+        date: iso("2026-12-03"),
         kind: "full-day",
       });
       // 代改違反限制一樣被擋下,回同一組原因
@@ -851,11 +884,11 @@ describe("畫休(GraphQL 端點 + 真 MongoDB)", () => {
 
       // 林的主要分店是新竹店:中山店的同日人數不算他
       dataOf(
-        await addMine(lin, { date: "2026-12-03", kind: "full-day" }),
+        await addMine(lin, { date: iso("2026-12-03"), kind: "full-day" }),
         "addMyScheduleDayOffs",
       );
       const { days } = await overview(manager);
-      const day = days.find((item) => item.date === "2026-12-03");
+      const day = days.find((item) => item.date === iso("2026-12-03"));
       expect(day?.staffCount).toBe(2);
       expect(
         day?.dayOffs.find((item) => item.name === "林新人")?.isPrimary,
@@ -866,7 +899,7 @@ describe("畫休(GraphQL 端點 + 真 MongoDB)", () => {
       travelTo("2026-11-20");
       for (const date of ["2026-12-14", "2026-12-15", "2026-12-16"]) {
         const saved = dataOf(
-          await addMine(chen, { date, kind: "full-day" }),
+          await addMine(chen, { date: iso(date), kind: "full-day" }),
           "addMyScheduleDayOffs",
         );
         expect(
@@ -874,7 +907,7 @@ describe("畫休(GraphQL 端點 + 真 MongoDB)", () => {
         ).toBe(false);
       }
       const fourth = dataOf(
-        await addMine(chen, { date: "2026-12-17", kind: "full-day" }),
+        await addMine(chen, { date: iso("2026-12-17"), kind: "full-day" }),
         "addMyScheduleDayOffs",
       );
       expect(fourth.violations).toContainEqual(
@@ -882,15 +915,19 @@ describe("畫休(GraphQL 端點 + 真 MongoDB)", () => {
           key: "maxConsecutiveDaysOff",
           level: "reminder",
           actual: 4,
-          from: "2026-12-14",
-          to: "2026-12-17",
+          from: iso("2026-12-14"),
+          to: iso("2026-12-17"),
         }),
       );
       const mine = await myDayOffs(chen);
       expect(
         mine.violations.find((item) => item.key === "maxConsecutiveDaysOff")
           ?.dates,
-      ).toEqual(["2026-12-14", "2026-12-15", "2026-12-16", "2026-12-17"]);
+      ).toEqual(
+        ["2026-12-14", "2026-12-15", "2026-12-16", "2026-12-17"].map((date) =>
+          iso(date),
+        ),
+      );
     });
 
     it("每月最多畫休(限制,本店自訂 6)→ 第 7 天不存;最少畫休不擋刪除", async () => {
@@ -906,14 +943,14 @@ describe("畫休(GraphQL 端點 + 真 MongoDB)", () => {
       // 陳:12/9(代改的時段不可排)+ 12/14–12/17 四天 + 12/20 = 6 天
       for (const date of ["2026-12-20"]) {
         dataOf(
-          await addMine(chen, { date, kind: "full-day" }),
+          await addMine(chen, { date: iso(date), kind: "full-day" }),
           "addMyScheduleDayOffs",
         );
       }
       const seventh = await addMine(chen, {
-        date: "2026-12-24",
+        date: iso("2026-12-24"),
         kind: "time-range",
-        slots: [{ startTime: "09:00", endTime: "10:00" }],
+        slots: [slot("2026-12-24", "09:00", "10:00")],
       });
       expect(errorOf(seventh)).toMatchObject({
         violations: [
@@ -941,7 +978,7 @@ describe("畫休(GraphQL 端點 + 真 MongoDB)", () => {
           .collection(SCHEDULE_DAY_OFFS_COLLECTION)
           .findOne<{ orgId: Types.ObjectId }>({
             userId: user.userId,
-            date,
+            date: taipei(date, "00:00"),
             deletedAt: null,
           });
         return String(document?.orgId);
@@ -994,7 +1031,10 @@ describe("畫休(GraphQL 端點 + 真 MongoDB)", () => {
       ).toMatchObject({ code: "VALIDATION_FAILED", fields: ["date"] });
       const count = await connection
         .collection(SCHEDULE_DAY_OFFS_COLLECTION)
-        .countDocuments({ date: "2027-02-10", deletedAt: null });
+        .countDocuments({
+          date: taipei("2027-02-10", "00:00"),
+          deletedAt: null,
+        });
       expect(count).toBe(2);
     });
 
@@ -1015,7 +1055,10 @@ describe("畫休(GraphQL 端點 + 真 MongoDB)", () => {
         .collection(SCHEDULE_DAY_OFFS_COLLECTION)
         .distinct("date", {
           userId: manager.userId,
-          date: { $regex: "^2027-02-" },
+          date: {
+            $gte: taipei("2027-02-01", "00:00"),
+            $lt: taipei("2027-03-01", "00:00"),
+          },
           deletedAt: null,
         });
       expect(days).toHaveLength(6);
@@ -1026,9 +1069,9 @@ describe("畫休(GraphQL 端點 + 真 MongoDB)", () => {
       const range = (startTime: string, endTime: string) =>
         onBehalf({
           userId: String(lin.userId),
-          date: "2027-02-15",
+          date: iso("2027-02-15"),
           kind: "time-range",
-          slots: [{ startTime, endTime }],
+          slots: [slot("2027-02-15", startTime, endTime)],
         });
       const results = await Promise.all([
         range("09:00", "12:00"),
@@ -1039,7 +1082,7 @@ describe("畫休(GraphQL 端點 + 真 MongoDB)", () => {
         .collection(SCHEDULE_DAY_OFFS_COLLECTION)
         .countDocuments({
           userId: lin.userId,
-          date: "2027-02-15",
+          date: taipei("2027-02-15", "00:00"),
           deletedAt: null,
         });
       expect(count).toBe(1);
@@ -1052,8 +1095,8 @@ describe("畫休(GraphQL 端點 + 真 MongoDB)", () => {
       const view = await overview(manager);
       expect(view.canEdit).toBe(true);
       expect(view.window).toMatchObject({
-        startDate: "2026-11-15",
-        endDate: "2026-11-25",
+        startDate: iso("2026-11-15"),
+        endDate: iso("2026-11-25"),
         state: "open",
       });
       expect(view.limits.maxDailyStaff).toBe(2);
@@ -1084,7 +1127,7 @@ describe("畫休(GraphQL 端點 + 真 MongoDB)", () => {
             input: {
               orgId: String(zhongshan),
               userId: String(wang.userId),
-              date: "2026-12-11",
+              date: iso("2026-12-11"),
               kind: "full-day",
             },
           }),
@@ -1120,12 +1163,23 @@ describe("畫休(GraphQL 端點 + 真 MongoDB)", () => {
         userId: String(li.userId),
         date: "2026-12-03",
         fullDay: false,
-        slots: [{ startTime: "14:00", endTime: "18:00" }],
+        // 時段是時點(租戶時區那天的 14:00–18:00)
+        slots: [
+          {
+            startAt: taipei("2026-12-03", "14:00"),
+            endAt: taipei("2026-12-03", "18:00"),
+          },
+        ],
       });
       expect(find(lin, "2026-12-03")?.fullDay).toBe(true);
       expect(find(wang, "2026-12-05")).toMatchObject({
         fullDay: true,
-        slots: [{ startTime: "18:00", endTime: "22:00" }],
+        slots: [
+          {
+            startAt: taipei("2026-12-05", "18:00"),
+            endAt: taipei("2026-12-05", "22:00"),
+          },
+        ],
       });
       // 新竹店的候選人只有林
       const hsinchuItems = await service.listUnavailable(
@@ -1206,6 +1260,169 @@ describe("畫休(GraphQL 端點 + 真 MongoDB)", () => {
           dedupeKey: { $regex: ":2027-01:" },
         }),
       ).toBe(0);
+    });
+  });
+
+  describe("時點與租戶時區", () => {
+    it("日期送當天任何時刻都正規化成租戶時區那天 00:00;時段要落在那天、精度到分鐘", async () => {
+      travelTo("2026-11-20");
+      const saved = dataOf(
+        await addMine(wang, {
+          date: iso("2026-12-12", "15:30"),
+          kind: "time-range",
+          slots: [slot("2026-12-12", "09:00", "10:00")],
+        }),
+        "addMyScheduleDayOffs",
+      );
+      expect(saved.items[0]).toMatchObject({
+        date: iso("2026-12-12"),
+        startAt: iso("2026-12-12", "09:00"),
+        endAt: iso("2026-12-12", "10:00"),
+      });
+      const stored = await connection
+        .collection(SCHEDULE_DAY_OFFS_COLLECTION)
+        .findOne<{ date: Date; startAt: Date }>({
+          _id: new Types.ObjectId(saved.items[0]?.id),
+        });
+      expect(stored?.date).toEqual(taipei("2026-12-12", "00:00"));
+      expect(stored?.startAt).toEqual(taipei("2026-12-12", "09:00"));
+
+      // 時段落在別天、有秒數 → 格式錯(不帶 reason)
+      for (const slots of [
+        [slot("2026-12-13", "09:00", "10:00")],
+        [
+          slot("2026-12-12", "23:00", "23:59"),
+          slot("2026-12-13", "00:00", "01:00"),
+        ],
+        [
+          {
+            startAt: new Date(
+              taipei("2026-12-12", "11:00").getTime() + 30_000,
+            ).toISOString(),
+            endAt: iso("2026-12-12", "12:00"),
+          },
+        ],
+      ]) {
+        const result = await addMine(wang, {
+          date: iso("2026-12-12"),
+          kind: "time-range",
+          slots,
+        });
+        expect(errorOf(result)).toEqual({
+          code: "VALIDATION_FAILED",
+          fields: ["slots"],
+        });
+      }
+    });
+
+    it("月份查詢的 from / to 要剛好是租戶時區的一個月,否則 VALIDATION_FAILED(from、to)", async () => {
+      travelTo("2026-11-20");
+      const invalid = [
+        { from: iso("2026-12-01"), to: iso("2026-12-31") },
+        { from: iso("2026-12-01") },
+        // UTC 的月初不是台北的月初
+        { from: "2026-12-01T00:00:00.000Z", to: "2027-01-01T00:00:00.000Z" },
+      ];
+      for (const input of invalid) {
+        expect(errorOf(await gql(wang, MY_DAY_OFFS, { input }))).toEqual({
+          code: "VALIDATION_FAILED",
+          fields: ["from", "to"],
+        });
+        expect(
+          errorOf(
+            await gql(manager, OVERVIEW, {
+              input: { orgId: String(zhongshan), ...input },
+            }),
+          ),
+        ).toEqual({ code: "VALIDATION_FAILED", fields: ["from", "to"] });
+      }
+    });
+
+    it("租戶時區不是台北:日期是那個時區的 00:00,截止依那個時區的今天判斷", async () => {
+      const orgs = connection.collection("orgs");
+      await orgs.updateOne(
+        { _id: tenantA },
+        { $set: { "settings.timezone": "America/Los_Angeles" } },
+      );
+      try {
+        // 台北 11/26 10:00 = 洛杉磯 11/25 18:00:12 月的開放期間(11/15–11/25)還在最後一天
+        travelTo("2026-11-26", "10:00");
+        const mine = await myDayOffs(wang);
+        expect(mine.window).toMatchObject({
+          month: "2026-12",
+          startDate: la("2026-11-15").toISOString(),
+          endDate: la("2026-11-25").toISOString(),
+          state: "open",
+          daysLeft: 1,
+        });
+        const saved = dataOf(
+          await addMine(wang, {
+            date: la("2026-12-19").toISOString(),
+            kind: "full-day",
+          }),
+          "addMyScheduleDayOffs",
+        );
+        expect(saved.items[0]?.date).toBe(la("2026-12-19").toISOString());
+        // 台北 12/20 00:00 = 洛杉磯 12/19 08:00 → 同一天:整天畫休重複
+        const sameDay = await addMine(wang, {
+          date: iso("2026-12-20"),
+          kind: "full-day",
+        });
+        expect(errorOf(sameDay)).toMatchObject({
+          code: "VALIDATION_FAILED",
+          reason: "DAY_OFF_DUPLICATE",
+        });
+
+        // 月份查詢的 from / to 也照洛杉磯的月初
+        const december = dataOf(
+          await gql(wang, MY_DAY_OFFS, {
+            input: {
+              from: la("2026-12-01").toISOString(),
+              to: la("2027-01-01").toISOString(),
+            },
+          }),
+          "myScheduleDayOffs",
+        );
+        expect(december.month).toBe("2026-12");
+        expect(
+          december.myDayOffs.some(
+            (item) => item.date === la("2026-12-19").toISOString(),
+          ),
+        ).toBe(true);
+        expect(
+          errorOf(
+            await gql(wang, MY_DAY_OFFS, { input: monthRange("2026-12") }),
+          ),
+        ).toMatchObject({ code: "VALIDATION_FAILED" });
+
+        // 給排班作業的日期鍵也是洛杉磯的那一天
+        const system = await systemTenantReader(
+          api.app.get(OrgsRepository),
+          tenantA,
+        );
+        const items = await api.app
+          .get(ScheduleDayOffsService)
+          .listUnavailable(system, zhongshan, "2026-12-19", "2026-12-19");
+        expect(
+          items.find((item) => item.userId === String(wang.userId)),
+        ).toMatchObject({ date: "2026-12-19", fullDay: true });
+
+        // 台北 11/26 17:00 = 洛杉磯 11/26 01:00:已截止
+        travelTo("2026-11-26", "17:00");
+        const closed = await addMine(wang, {
+          date: la("2026-12-21").toISOString(),
+          kind: "full-day",
+        });
+        expect(errorOf(closed)).toMatchObject({
+          code: "FORBIDDEN",
+          reason: "OUTSIDE_DAY_OFF_WINDOW",
+        });
+      } finally {
+        await orgs.updateOne(
+          { _id: tenantA },
+          { $unset: { "settings.timezone": "" } },
+        );
+      }
     });
   });
 });

@@ -4,8 +4,8 @@ fragment ScheduleDayOffFields on ScheduleDayOff {
   name
   date
   kind
-  startTime
-  endTime
+  startAt
+  endAt
   note
   isPrimary
   byName

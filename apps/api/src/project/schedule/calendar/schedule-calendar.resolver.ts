@@ -29,7 +29,10 @@ export class ScheduleCalendarResolver {
     @Args("input") input: ScheduleCalendarInput,
     @CurrentOperator() operator: OperatorContext,
   ): Promise<ScheduleCalendarPayload> {
-    return this.service.month(operator, input.orgId, input.month);
+    return this.service.range(operator, input.orgId, {
+      from: input.from,
+      to: input.to,
+    });
   }
 
   @RequirePermission("schedule.manage.edit-calendar")

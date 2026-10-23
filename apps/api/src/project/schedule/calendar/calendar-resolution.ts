@@ -4,7 +4,8 @@
  */
 export interface CalendarDayLike {
   orgId: { toString(): string };
-  date: string;
+  /** 租戶時區的日期鍵 `YYYY-MM-DD`(存值是那天 00:00 的時點,讀出來時換算) */
+  localDate: string;
 }
 
 /** `chain[0]` = 自己;回每個日期生效的那一筆(依日期排序)。 */
@@ -19,12 +20,12 @@ export function pickEffectiveDays<T extends CalendarDayLike>(
     if (recordRank === undefined) {
       continue;
     }
-    const current = byDate.get(record.date);
+    const current = byDate.get(record.localDate);
     if (current === undefined || recordRank < current.rank) {
-      byDate.set(record.date, { record, rank: recordRank });
+      byDate.set(record.localDate, { record, rank: recordRank });
     }
   }
   return [...byDate.values()]
     .map((entry) => entry.record)
-    .toSorted((left, right) => left.date.localeCompare(right.date));
+    .toSorted((left, right) => left.localDate.localeCompare(right.localDate));
 }

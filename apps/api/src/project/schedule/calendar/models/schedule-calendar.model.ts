@@ -1,4 +1,4 @@
-import { Field, ID, ObjectType } from "@nestjs/graphql";
+import { Field, GraphQLISODateTime, ID, ObjectType } from "@nestjs/graphql";
 
 import { ScheduleOwnerOrgModel } from "../../templates/models/schedule-template.model";
 
@@ -8,9 +8,9 @@ export class ScheduleCalendarDayModel {
   @Field(() => ID)
   id!: string;
 
-  /** `YYYY-MM-DD` */
-  @Field(() => String)
-  date!: string;
+  /** 那天(租戶時區 00:00 的時點) */
+  @Field(() => GraphQLISODateTime)
+  date!: Date;
 
   /** `closed` 店休 / `special` 特殊日 */
   @Field(() => String)
@@ -47,15 +47,18 @@ export class ScheduleCalendarPayload {
   @Field(() => String)
   orgName!: string;
 
-  /** `YYYY-MM` */
-  @Field(() => String)
-  month!: string;
+  /** 查詢的期間(照輸入回):`[from, to)` */
+  @Field(() => GraphQLISODateTime)
+  from!: Date;
+
+  @Field(() => GraphQLISODateTime)
+  to!: Date;
 
   /** 能不能 [新增](`schedule.manage.edit-calendar`) */
   @Field(() => Boolean)
   canEdit!: boolean;
 
-  /** 這個月有行事曆的日子(依日期) */
+  /** 這段期間有行事曆的日子(依日期) */
   @Field(() => [ScheduleCalendarDayModel])
   days!: ScheduleCalendarDayModel[];
 }

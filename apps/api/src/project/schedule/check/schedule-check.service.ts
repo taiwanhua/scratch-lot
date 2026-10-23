@@ -2,15 +2,10 @@ import { Injectable, type OnModuleInit } from "@nestjs/common";
 import { GraphQLError } from "graphql";
 import { Types } from "mongoose";
 
-import {
-  addLocalCalendar,
-  instantOfLocalTime,
-  parseLocalDate,
-} from "@repo/domain/form";
+import { localDayRange, parseLocalDate } from "@repo/domain/form";
 import {
   type ScheduleRuleLevel,
   isIsoMonth,
-  minutesOfHhMm,
 } from "@repo/domain/project/schedule-settings";
 
 import { OrgsRepository } from "../../../database/database.module";
@@ -310,7 +305,9 @@ export class ScheduleCheckService implements OnModuleInit {
 
     // ---- 人力不足(這家店的設定;店休那天不檢查) ----
     const closed = new Set(
-      calendarDays.filter((day) => day.type === "closed").map((d) => d.date),
+      calendarDays
+        .filter((day) => day.type === "closed")
+        .map((d) => d.localDate),
     );
     const entryById = new Map(
       storeEntries.map((entry) => [String(entry._id), entry]),
@@ -678,7 +675,10 @@ function dayOffLikesOf(
   ]);
 }
 
-/** 畫休 → 不能排的時點區間(租戶時區:整天 = 當天 00:00 到隔天 00:00)。 */
+/**
+ * 畫休 → 不能排的時點區間:整天 = 租戶時區那天 00:00 到隔天 00:00(`localDayRange`);
+ * 時段不可排本身就是時點。
+ */
 export function busyOfUnavailability(
   unavailability: readonly ScheduleUnavailability[],
   timezone: string,
@@ -688,32 +688,23 @@ export function busyOfUnavailability(
     if (date === null) {
       return [];
     }
-    const at = (time: string) => {
-      const minutes = minutesOfHhMm(time) ?? 0;
-      return instantOfLocalTime(
-        date,
-        Math.floor(minutes / 60),
-        minutes % 60,
-        timezone,
-      );
-    };
-    const dayStart = at("00:00");
+    const whole = localDayRange(date, date, timezone);
     return [
       ...(day.fullDay
         ? [
             {
               userId: day.userId,
               kind: "full-day" as const,
-              startAt: new Date(dayStart),
-              endAt: new Date(addLocalCalendar(dayStart, 1, "days", timezone)),
+              startAt: new Date(whole.from),
+              endAt: new Date(whole.to),
             },
           ]
         : []),
       ...day.slots.map((slot) => ({
         userId: day.userId,
         kind: "time-range" as const,
-        startAt: new Date(at(slot.startTime)),
-        endAt: new Date(at(slot.endTime)),
+        startAt: slot.startAt,
+        endAt: slot.endAt,
       })),
     ];
   });

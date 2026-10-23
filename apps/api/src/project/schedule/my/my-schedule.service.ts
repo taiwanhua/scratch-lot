@@ -251,7 +251,7 @@ export class MyScheduleService {
       }).map((item) => modelOf(item.entry.record)),
       changes,
       calendarDays: calendarDays.map((day) => ({
-        date: day.date,
+        date: day.localDate,
         type: day.type,
         name: day.name,
         paletteKey: day.paletteKey,

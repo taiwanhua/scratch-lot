@@ -646,7 +646,7 @@ export class ScheduleAttendanceService {
       );
       for (const day of days) {
         if (day.type === "special") {
-          specialByOrgDate.set(`${String(orgId)}|${day.date}`, {
+          specialByOrgDate.set(`${String(orgId)}|${day.localDate}`, {
             name: day.name,
             category:
               day.category === null

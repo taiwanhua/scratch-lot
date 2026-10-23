@@ -30,7 +30,7 @@ export type Scalars = {
 };
 
 export type AddMyScheduleDayOffsInput = {
-  date: Scalars['String']['input'];
+  date: Scalars['DateTime']['input'];
   kind: Scalars['String']['input'];
   note?: InputMaybe<Scalars['String']['input']>;
   slots?: InputMaybe<Array<ScheduleDayOffSlotInput>>;
@@ -48,7 +48,7 @@ export type AddOrgMembersPayload = {
 };
 
 export type AddScheduleDayOffsOnBehalfInput = {
-  date: Scalars['String']['input'];
+  date: Scalars['DateTime']['input'];
   kind: Scalars['String']['input'];
   orgId?: InputMaybe<Scalars['ID']['input']>;
   reason?: InputMaybe<Scalars['String']['input']>;
@@ -5183,7 +5183,8 @@ export type MyScheduleChange = {
 };
 
 export type MyScheduleDayOffsInput = {
-  month?: InputMaybe<Scalars['String']['input']>;
+  from?: InputMaybe<Scalars['DateTime']['input']>;
+  to?: InputMaybe<Scalars['DateTime']['input']>;
 };
 
 export type MyScheduleDayOffsPayload = {
@@ -7173,7 +7174,7 @@ export type SaveRoleMatrixInput = {
 
 export type SaveScheduleCalendarDayInput = {
   category?: InputMaybe<Scalars['String']['input']>;
-  date: Scalars['String']['input'];
+  date: Scalars['DateTime']['input'];
   id?: InputMaybe<Scalars['ID']['input']>;
   name?: InputMaybe<Scalars['String']['input']>;
   note?: InputMaybe<Scalars['String']['input']>;
@@ -7429,7 +7430,7 @@ export type ScheduleCalendarDay = {
   __typename?: 'ScheduleCalendarDay';
   canEdit: Scalars['Boolean']['output'];
   category?: Maybe<Scalars['String']['output']>;
-  date: Scalars['String']['output'];
+  date: Scalars['DateTime']['output'];
   id: Scalars['ID']['output'];
   name?: Maybe<Scalars['String']['output']>;
   note?: Maybe<Scalars['String']['output']>;
@@ -7444,17 +7445,19 @@ export type ScheduleCalendarDayPayload = {
 };
 
 export type ScheduleCalendarInput = {
-  month: Scalars['String']['input'];
+  from: Scalars['DateTime']['input'];
   orgId?: InputMaybe<Scalars['ID']['input']>;
+  to: Scalars['DateTime']['input'];
 };
 
 export type ScheduleCalendarPayload = {
   __typename?: 'ScheduleCalendarPayload';
   canEdit: Scalars['Boolean']['output'];
   days: Array<ScheduleCalendarDay>;
-  month: Scalars['String']['output'];
+  from: Scalars['DateTime']['output'];
   orgId: Scalars['ID']['output'];
   orgName: Scalars['String']['output'];
+  to: Scalars['DateTime']['output'];
 };
 
 export type ScheduleChangeReasonInput = {
@@ -7506,8 +7509,8 @@ export type ScheduleCheckUnderstaffed = {
 export type ScheduleDayOff = {
   __typename?: 'ScheduleDayOff';
   byName?: Maybe<Scalars['String']['output']>;
-  date: Scalars['String']['output'];
-  endTime?: Maybe<Scalars['String']['output']>;
+  date: Scalars['DateTime']['output'];
+  endAt?: Maybe<Scalars['DateTime']['output']>;
   id: Scalars['ID']['output'];
   isPrimary: Scalars['Boolean']['output'];
   kind: Scalars['String']['output'];
@@ -7515,20 +7518,20 @@ export type ScheduleDayOff = {
   note?: Maybe<Scalars['String']['output']>;
   reason?: Maybe<Scalars['String']['output']>;
   reasonNote?: Maybe<Scalars['String']['output']>;
-  startTime?: Maybe<Scalars['String']['output']>;
+  startAt?: Maybe<Scalars['DateTime']['output']>;
   userId: Scalars['ID']['output'];
 };
 
 export type ScheduleDayOffDay = {
   __typename?: 'ScheduleDayOffDay';
-  date: Scalars['String']['output'];
+  date: Scalars['DateTime']['output'];
   dayOffs: Array<ScheduleDayOff>;
   staffCount: Scalars['Int']['output'];
 };
 
 export type ScheduleDayOffEntryConflict = {
   __typename?: 'ScheduleDayOffEntryConflict';
-  date: Scalars['String']['output'];
+  date: Scalars['DateTime']['output'];
   endAt: Scalars['DateTime']['output'];
   orgName?: Maybe<Scalars['String']['output']>;
   startAt: Scalars['DateTime']['output'];
@@ -7548,8 +7551,9 @@ export type ScheduleDayOffOrg = {
 };
 
 export type ScheduleDayOffOverviewInput = {
-  month?: InputMaybe<Scalars['String']['input']>;
+  from?: InputMaybe<Scalars['DateTime']['input']>;
   orgId?: InputMaybe<Scalars['ID']['input']>;
+  to?: InputMaybe<Scalars['DateTime']['input']>;
 };
 
 export type ScheduleDayOffOverviewPayload = {
@@ -7566,8 +7570,8 @@ export type ScheduleDayOffOverviewPayload = {
 };
 
 export type ScheduleDayOffSlotInput = {
-  endTime: Scalars['String']['input'];
-  startTime: Scalars['String']['input'];
+  endAt: Scalars['DateTime']['input'];
+  startAt: Scalars['DateTime']['input'];
 };
 
 export type ScheduleDayOffStaff = {
@@ -7581,21 +7585,21 @@ export type ScheduleDayOffStaff = {
 export type ScheduleDayOffViolation = {
   __typename?: 'ScheduleDayOffViolation';
   actual?: Maybe<Scalars['Int']['output']>;
-  dates: Array<Scalars['String']['output']>;
-  from?: Maybe<Scalars['String']['output']>;
+  dates: Array<Scalars['DateTime']['output']>;
+  from?: Maybe<Scalars['DateTime']['output']>;
   key: Scalars['String']['output'];
   level: Scalars['String']['output'];
   limit?: Maybe<Scalars['Int']['output']>;
   message: Scalars['String']['output'];
-  to?: Maybe<Scalars['String']['output']>;
+  to?: Maybe<Scalars['DateTime']['output']>;
 };
 
 export type ScheduleDayOffWindow = {
   __typename?: 'ScheduleDayOffWindow';
   daysLeft: Scalars['Int']['output'];
-  endDate: Scalars['String']['output'];
+  endDate: Scalars['DateTime']['output'];
   month: Scalars['String']['output'];
-  startDate: Scalars['String']['output'];
+  startDate: Scalars['DateTime']['output'];
   state: Scalars['String']['output'];
 };
 
@@ -11362,7 +11366,7 @@ export type PublishScheduleMutationVariables = Exact<{
 
 export type PublishScheduleMutation = { __typename?: 'Mutation', publishSchedule: { __typename?: 'PublishSchedulePayload', notifiedCount: number, period: { __typename?: 'SchedulePeriod', status: string, publishedAt?: string | null, publishedByName?: string | null } } };
 
-export type ScheduleDayOffFieldsFragment = { __typename?: 'ScheduleDayOff', id: string, userId: string, name: string, date: string, kind: string, startTime?: string | null, endTime?: string | null, note?: string | null, isPrimary: boolean, byName?: string | null, reason?: string | null, reasonNote?: string | null };
+export type ScheduleDayOffFieldsFragment = { __typename?: 'ScheduleDayOff', id: string, userId: string, name: string, date: string, kind: string, startAt?: string | null, endAt?: string | null, note?: string | null, isPrimary: boolean, byName?: string | null, reason?: string | null, reasonNote?: string | null };
 
 export type ScheduleDayOffWindowFieldsFragment = { __typename?: 'ScheduleDayOffWindow', month: string, startDate: string, endDate: string, state: string, daysLeft: number };
 
@@ -11370,7 +11374,7 @@ export type ScheduleDayOffViolationFieldsFragment = { __typename?: 'ScheduleDayO
 
 export type ScheduleDayOffEntryConflictFieldsFragment = { __typename?: 'ScheduleDayOffEntryConflict', date: string, startAt: string, endAt: string, orgName?: string | null };
 
-export type ScheduleDayOffDayFieldsFragment = { __typename?: 'ScheduleDayOffDay', date: string, staffCount: number, dayOffs: Array<{ __typename?: 'ScheduleDayOff', id: string, userId: string, name: string, date: string, kind: string, startTime?: string | null, endTime?: string | null, note?: string | null, isPrimary: boolean, byName?: string | null, reason?: string | null, reasonNote?: string | null }> };
+export type ScheduleDayOffDayFieldsFragment = { __typename?: 'ScheduleDayOffDay', date: string, staffCount: number, dayOffs: Array<{ __typename?: 'ScheduleDayOff', id: string, userId: string, name: string, date: string, kind: string, startAt?: string | null, endAt?: string | null, note?: string | null, isPrimary: boolean, byName?: string | null, reason?: string | null, reasonNote?: string | null }> };
 
 export type ScheduleDayOffLimitsFieldsFragment = { __typename?: 'ScheduleDayOffLimits', maxMonthly?: number | null, minMonthly?: number | null, maxDailyStaff?: number | null };
 
@@ -11379,14 +11383,14 @@ export type MyScheduleDayOffsQueryVariables = Exact<{
 }>;
 
 
-export type MyScheduleDayOffsQuery = { __typename?: 'Query', myScheduleDayOffs: { __typename?: 'MyScheduleDayOffsPayload', month: string, canEdit: boolean, canOverride: boolean, dayOffCount: number, primaryOrg?: { __typename?: 'ScheduleDayOffOrg', id: string, name: string } | null, window?: { __typename?: 'ScheduleDayOffWindow', month: string, startDate: string, endDate: string, state: string, daysLeft: number } | null, limits: { __typename?: 'ScheduleDayOffLimits', maxMonthly?: number | null, minMonthly?: number | null, maxDailyStaff?: number | null }, myDayOffs: Array<{ __typename?: 'ScheduleDayOff', id: string, userId: string, name: string, date: string, kind: string, startTime?: string | null, endTime?: string | null, note?: string | null, isPrimary: boolean, byName?: string | null, reason?: string | null, reasonNote?: string | null }>, days: Array<{ __typename?: 'ScheduleDayOffDay', date: string, staffCount: number, dayOffs: Array<{ __typename?: 'ScheduleDayOff', id: string, userId: string, name: string, date: string, kind: string, startTime?: string | null, endTime?: string | null, note?: string | null, isPrimary: boolean, byName?: string | null, reason?: string | null, reasonNote?: string | null }> }>, violations: Array<{ __typename?: 'ScheduleDayOffViolation', key: string, level: string, message: string, dates: Array<string>, actual?: number | null, limit?: number | null, from?: string | null, to?: string | null }> } };
+export type MyScheduleDayOffsQuery = { __typename?: 'Query', myScheduleDayOffs: { __typename?: 'MyScheduleDayOffsPayload', month: string, canEdit: boolean, canOverride: boolean, dayOffCount: number, primaryOrg?: { __typename?: 'ScheduleDayOffOrg', id: string, name: string } | null, window?: { __typename?: 'ScheduleDayOffWindow', month: string, startDate: string, endDate: string, state: string, daysLeft: number } | null, limits: { __typename?: 'ScheduleDayOffLimits', maxMonthly?: number | null, minMonthly?: number | null, maxDailyStaff?: number | null }, myDayOffs: Array<{ __typename?: 'ScheduleDayOff', id: string, userId: string, name: string, date: string, kind: string, startAt?: string | null, endAt?: string | null, note?: string | null, isPrimary: boolean, byName?: string | null, reason?: string | null, reasonNote?: string | null }>, days: Array<{ __typename?: 'ScheduleDayOffDay', date: string, staffCount: number, dayOffs: Array<{ __typename?: 'ScheduleDayOff', id: string, userId: string, name: string, date: string, kind: string, startAt?: string | null, endAt?: string | null, note?: string | null, isPrimary: boolean, byName?: string | null, reason?: string | null, reasonNote?: string | null }> }>, violations: Array<{ __typename?: 'ScheduleDayOffViolation', key: string, level: string, message: string, dates: Array<string>, actual?: number | null, limit?: number | null, from?: string | null, to?: string | null }> } };
 
 export type AddMyScheduleDayOffsMutationVariables = Exact<{
   input: AddMyScheduleDayOffsInput;
 }>;
 
 
-export type AddMyScheduleDayOffsMutation = { __typename?: 'Mutation', addMyScheduleDayOffs: { __typename?: 'SaveScheduleDayOffsPayload', items: Array<{ __typename?: 'ScheduleDayOff', id: string, userId: string, name: string, date: string, kind: string, startTime?: string | null, endTime?: string | null, note?: string | null, isPrimary: boolean, byName?: string | null, reason?: string | null, reasonNote?: string | null }>, violations: Array<{ __typename?: 'ScheduleDayOffViolation', key: string, level: string, message: string, dates: Array<string>, actual?: number | null, limit?: number | null, from?: string | null, to?: string | null }>, entryConflicts: Array<{ __typename?: 'ScheduleDayOffEntryConflict', date: string, startAt: string, endAt: string, orgName?: string | null }> } };
+export type AddMyScheduleDayOffsMutation = { __typename?: 'Mutation', addMyScheduleDayOffs: { __typename?: 'SaveScheduleDayOffsPayload', items: Array<{ __typename?: 'ScheduleDayOff', id: string, userId: string, name: string, date: string, kind: string, startAt?: string | null, endAt?: string | null, note?: string | null, isPrimary: boolean, byName?: string | null, reason?: string | null, reasonNote?: string | null }>, violations: Array<{ __typename?: 'ScheduleDayOffViolation', key: string, level: string, message: string, dates: Array<string>, actual?: number | null, limit?: number | null, from?: string | null, to?: string | null }>, entryConflicts: Array<{ __typename?: 'ScheduleDayOffEntryConflict', date: string, startAt: string, endAt: string, orgName?: string | null }> } };
 
 export type DeleteMyScheduleDayOffMutationVariables = Exact<{
   input: DeleteMyScheduleDayOffInput;
@@ -11400,14 +11404,14 @@ export type ScheduleDayOffOverviewQueryVariables = Exact<{
 }>;
 
 
-export type ScheduleDayOffOverviewQuery = { __typename?: 'Query', scheduleDayOffOverview: { __typename?: 'ScheduleDayOffOverviewPayload', orgId: string, orgName: string, month: string, targetMonth: string, canEdit: boolean, window: { __typename?: 'ScheduleDayOffWindow', month: string, startDate: string, endDate: string, state: string, daysLeft: number }, limits: { __typename?: 'ScheduleDayOffLimits', maxMonthly?: number | null, minMonthly?: number | null, maxDailyStaff?: number | null }, staff: Array<{ __typename?: 'ScheduleDayOffStaff', userId: string, name: string, isPrimary: boolean, dayOffCount: number }>, days: Array<{ __typename?: 'ScheduleDayOffDay', date: string, staffCount: number, dayOffs: Array<{ __typename?: 'ScheduleDayOff', id: string, userId: string, name: string, date: string, kind: string, startTime?: string | null, endTime?: string | null, note?: string | null, isPrimary: boolean, byName?: string | null, reason?: string | null, reasonNote?: string | null }> }> } };
+export type ScheduleDayOffOverviewQuery = { __typename?: 'Query', scheduleDayOffOverview: { __typename?: 'ScheduleDayOffOverviewPayload', orgId: string, orgName: string, month: string, targetMonth: string, canEdit: boolean, window: { __typename?: 'ScheduleDayOffWindow', month: string, startDate: string, endDate: string, state: string, daysLeft: number }, limits: { __typename?: 'ScheduleDayOffLimits', maxMonthly?: number | null, minMonthly?: number | null, maxDailyStaff?: number | null }, staff: Array<{ __typename?: 'ScheduleDayOffStaff', userId: string, name: string, isPrimary: boolean, dayOffCount: number }>, days: Array<{ __typename?: 'ScheduleDayOffDay', date: string, staffCount: number, dayOffs: Array<{ __typename?: 'ScheduleDayOff', id: string, userId: string, name: string, date: string, kind: string, startAt?: string | null, endAt?: string | null, note?: string | null, isPrimary: boolean, byName?: string | null, reason?: string | null, reasonNote?: string | null }> }> } };
 
 export type AddScheduleDayOffsOnBehalfMutationVariables = Exact<{
   input: AddScheduleDayOffsOnBehalfInput;
 }>;
 
 
-export type AddScheduleDayOffsOnBehalfMutation = { __typename?: 'Mutation', addScheduleDayOffsOnBehalf: { __typename?: 'SaveScheduleDayOffsPayload', items: Array<{ __typename?: 'ScheduleDayOff', id: string, userId: string, name: string, date: string, kind: string, startTime?: string | null, endTime?: string | null, note?: string | null, isPrimary: boolean, byName?: string | null, reason?: string | null, reasonNote?: string | null }>, violations: Array<{ __typename?: 'ScheduleDayOffViolation', key: string, level: string, message: string, dates: Array<string>, actual?: number | null, limit?: number | null, from?: string | null, to?: string | null }>, entryConflicts: Array<{ __typename?: 'ScheduleDayOffEntryConflict', date: string, startAt: string, endAt: string, orgName?: string | null }> } };
+export type AddScheduleDayOffsOnBehalfMutation = { __typename?: 'Mutation', addScheduleDayOffsOnBehalf: { __typename?: 'SaveScheduleDayOffsPayload', items: Array<{ __typename?: 'ScheduleDayOff', id: string, userId: string, name: string, date: string, kind: string, startAt?: string | null, endAt?: string | null, note?: string | null, isPrimary: boolean, byName?: string | null, reason?: string | null, reasonNote?: string | null }>, violations: Array<{ __typename?: 'ScheduleDayOffViolation', key: string, level: string, message: string, dates: Array<string>, actual?: number | null, limit?: number | null, from?: string | null, to?: string | null }>, entryConflicts: Array<{ __typename?: 'ScheduleDayOffEntryConflict', date: string, startAt: string, endAt: string, orgName?: string | null }> } };
 
 export type DeleteScheduleDayOffOnBehalfMutationVariables = Exact<{
   input: DeleteScheduleDayOffOnBehalfInput;
@@ -11579,7 +11583,7 @@ export type ScheduleCalendarQueryVariables = Exact<{
 }>;
 
 
-export type ScheduleCalendarQuery = { __typename?: 'Query', scheduleCalendar: { __typename?: 'ScheduleCalendarPayload', orgId: string, orgName: string, month: string, canEdit: boolean, days: Array<{ __typename?: 'ScheduleCalendarDay', id: string, date: string, type: string, category?: string | null, name?: string | null, note?: string | null, paletteKey?: string | null, canEdit: boolean, ownerOrg: { __typename?: 'ScheduleOwnerOrg', id: string, name: string } }> } };
+export type ScheduleCalendarQuery = { __typename?: 'Query', scheduleCalendar: { __typename?: 'ScheduleCalendarPayload', orgId: string, orgName: string, from: string, to: string, canEdit: boolean, days: Array<{ __typename?: 'ScheduleCalendarDay', id: string, date: string, type: string, category?: string | null, name?: string | null, note?: string | null, paletteKey?: string | null, canEdit: boolean, ownerOrg: { __typename?: 'ScheduleOwnerOrg', id: string, name: string } }> } };
 
 export type SaveScheduleCalendarDayMutationVariables = Exact<{
   input: SaveScheduleCalendarDayInput;
@@ -13473,8 +13477,8 @@ export const ScheduleDayOffFieldsFragmentDoc = `
   name
   date
   kind
-  startTime
-  endTime
+  startAt
+  endAt
   note
   isPrimary
   byName
@@ -26320,7 +26324,8 @@ export const ScheduleCalendarDocument = `
   scheduleCalendar(input: $input) {
     orgId
     orgName
-    month
+    from
+    to
     canEdit
     days {
       ...ScheduleCalendarDayFields

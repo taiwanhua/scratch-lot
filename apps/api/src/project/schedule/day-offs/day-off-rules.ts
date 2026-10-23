@@ -1,3 +1,12 @@
+import {
+  type LocalDate,
+  addLocalDays,
+  daysInLocalMonth,
+  localDateText,
+  localMonthText,
+  parseLocalDate,
+  parseLocalMonth,
+} from "@repo/domain/form";
 import type { ScheduleRuleLevel } from "@repo/domain/project/schedule-settings";
 
 import {
@@ -8,7 +17,6 @@ import {
   registerRuleEvaluator,
   ruleEvaluatorOf,
 } from "../rules/rule-registry";
-import { shiftDate } from "./day-off-window";
 
 /**
  * 畫休類規則的檢查函式(規格 14.2;本功能擁有):登記在 P06 的 `registerRuleEvaluator`,
@@ -21,7 +29,7 @@ import { shiftDate } from "./day-off-window";
 /** 檢查只看得到這幾個欄位(資料表一筆 = 一段畫休)。 */
 export interface DayOffLike {
   userId: string;
-  /** `YYYY-MM-DD` */
+  /** 租戶時區的日期鍵 `YYYY-MM-DD`(存值是時點,service 讀出來時換算) */
   date: string;
   /** `full-day` / `time-range` */
   kind: string;
@@ -94,6 +102,18 @@ export function dayOffStaffCounts(
   );
 }
 
+/** 日期鍵 → `LocalDate`;日期鍵由 service 從時點換算而來,不合法是程式錯誤。 */
+function localDateOfKey(date: string): LocalDate {
+  const parsed = parseLocalDate(date);
+  if (parsed === null) {
+    throw new RangeError(`invalid date key: ${date}`);
+  }
+  return parsed;
+}
+
+const nextDateKey = (date: string, amount: number): string =>
+  localDateText(addLocalDays(localDateOfKey(date), amount));
+
 /** 連續的日期段(已排序、不重複的日期)。 */
 export function consecutiveRuns(
   dates: readonly string[],
@@ -101,7 +121,7 @@ export function consecutiveRuns(
   const runs: { from: string; to: string; length: number }[] = [];
   for (const date of dates) {
     const last = runs.at(-1);
-    if (last !== undefined && shiftDate(last.to, 1) === date) {
+    if (last !== undefined && nextDateKey(last.to, 1) === date) {
       last.to = date;
       last.length += 1;
     } else {
@@ -117,10 +137,17 @@ const amountOf = (setting: EffectiveRuleSetting): number =>
 const levelOf = (setting: EffectiveRuleSetting): ScheduleRuleLevel =>
   setting.level ?? "limit";
 
-const inMonth = (date: string, month: string) => date.startsWith(`${month}-`);
+/** 日期鍵在不在某個月份鍵(`YYYY-MM`)裡。 */
+const inMonth = (date: string, month: string): boolean => {
+  const { year, month: value } = localDateOfKey(date);
+  return localMonthText({ year, month: value }) === month;
+};
 
-const shortDate = (date: string) =>
-  `${String(Number(date.slice(5, 7)))}/${String(Number(date.slice(8, 10)))}`;
+/** 訊息裡的 `M/D`(api 端的中文說明;畫面依 `key` 與數字自己組文案)。 */
+const shortDate = (date: string): string => {
+  const { month, day } = localDateOfKey(date);
+  return `${String(month)}/${String(day)}`;
+};
 
 export const maxMonthlyDayOffsEvaluator = ({
   setting,
@@ -178,20 +205,27 @@ export const maxConsecutiveDaysOffEvaluator = ({
     return [];
   }
   const limit = amountOf(setting);
-  const monthStart = `${data.month}-01`;
-  const monthEnd = `${data.month}-31`;
+  // 涉及這個月:這一段有任何一天落在這個月(日期鍵補零,字串比較就是先後)
+  const parsed = parseLocalMonth(data.month);
+  if (parsed === null) {
+    throw new RangeError(`invalid month key: ${data.month}`);
+  }
+  const monthStart = localDateText({ ...parsed, day: 1 });
+  const monthEnd = localDateText({
+    ...parsed,
+    day: daysInLocalMonth(parsed),
+  });
+  const touchesMonth = (run: { from: string; to: string }) =>
+    run.to >= monthStart && run.from <= monthEnd;
   return consecutiveRuns(fullDayOffDates(data.dayOffs, data.userId))
-    .filter(
-      (run) =>
-        run.length > limit && run.to >= monthStart && run.from <= monthEnd,
-    )
+    .filter((run) => run.length > limit && touchesMonth(run))
     .map((run) => ({
       key: setting.key,
       level: levelOf(setting),
       message: `${shortDate(run.from)}–${shortDate(run.to)} 連續休 ${String(run.length)} 天,最多 ${String(limit)} 天`,
       targets: Array.from({ length: run.length }, (_, index) => ({
         userId: data.userId,
-        date: shiftDate(run.from, index),
+        date: nextDateKey(run.from, index),
       })),
       detail: { actual: run.length, limit, from: run.from, to: run.to },
     }));

@@ -2,9 +2,8 @@ import { Injectable } from "@nestjs/common";
 import { Types } from "mongoose";
 
 import {
-  addLocalCalendar,
   formatTemporal,
-  instantOfLocalTime,
+  localDayRange,
   parseLocalDate,
 } from "@repo/domain/form";
 import { SCHEDULE_FIELD_CATEGORY_KEYS } from "@repo/domain/project/schedule-fields";
@@ -12,7 +11,6 @@ import {
   SCHEDULE_TASK_ROLES,
   exceededTaskRoles,
   isIsoDate,
-  minutesOfHhMm,
 } from "@repo/domain/project/schedule-settings";
 
 import { AuditService } from "../../../audit/audit.service";
@@ -690,22 +688,13 @@ export class ScheduleRosterWritesService {
       if (date === null) {
         return false;
       }
-      const at = (time: string) => {
-        const minutes = minutesOfHhMm(time) ?? 0;
-        return instantOfLocalTime(
-          date,
-          Math.floor(minutes / 60),
-          minutes % 60,
-          scope.timezone,
-        );
-      };
       if (day.fullDay) {
-        const dayStart = at("00:00");
-        const nextDay = addLocalCalendar(dayStart, 1, "days", scope.timezone);
-        return start < nextDay && end > dayStart;
+        // 整天 = 租戶時區那天 00:00 到隔天 00:00
+        const whole = localDayRange(date, date, scope.timezone);
+        return start < whole.to && end > whole.from;
       }
       return day.slots.some(
-        (slot) => start < at(slot.endTime) && end > at(slot.startTime),
+        (slot) => start < slot.endAt.getTime() && end > slot.startAt.getTime(),
       );
     });
     if (blocked) {
