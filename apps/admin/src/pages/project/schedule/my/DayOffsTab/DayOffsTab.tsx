@@ -231,6 +231,7 @@ export const DayOffsTab = () => {
             <Box>
               <MonthCalendar
                 month={page.month}
+                timezone={timezone}
                 showHeader={false}
                 selectionMode={page.canEdit ? "single" : "none"}
                 selectedDates={[]}

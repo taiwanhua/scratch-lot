@@ -4,8 +4,8 @@ import { z } from "zod";
 
 import {
   DEFAULT_TENANT_TIMEZONE,
-  localMonthOf,
   localMonthText,
+  parseLocalDate,
   parseLocalMonth,
 } from "@repo/domain/form";
 import {
@@ -25,6 +25,7 @@ import { OrgTreeSelect } from "@/components/base/OrgTreeSelect/OrgTreeSelect";
 import { TagPaletteChip } from "@/components/project/TagPaletteChip/TagPaletteChip";
 import { useSession } from "@/hooks/base/useSession";
 import { useTenantTimezone } from "@/hooks/base/useTenantTimezone";
+import { useTenantToday } from "@/hooks/base/useTenantToday";
 import { useUrlState } from "@/hooks/base/useUrlState";
 import { dayKeyOf, monthRangeOf } from "@/lib/project/schedule-day-offs";
 import { isTagPaletteKey } from "@/lib/project/tag-palettes";
@@ -54,11 +55,12 @@ export const CalendarTab = () => {
   const [orgId, setOrgId] = useUrlState("org", orgSchema);
   const [monthParam, setMonth] = useUrlState("month", monthSchema);
   const timezone = useTenantTimezone() ?? DEFAULT_TENANT_TIMEZONE;
-  // 這個月以租戶時區判斷(不用瀏覽器時區);「現在」進頁時取一次
-  const [now] = useState(Date.now);
+  // 這個月以租戶時區的今天判斷(不用瀏覽器時區)
+  const today = useTenantToday();
+  const todayDate = parseLocalDate(today);
   const month =
-    parseLocalMonth(monthParam) === null
-      ? localMonthText(localMonthOf(now, timezone))
+    parseLocalMonth(monthParam) === null && todayDate !== null
+      ? localMonthText(todayDate)
       : monthParam;
   const [editing, setEditing] = useState<Editing | null>(null);
   // 送那個月在租戶時區的時點區間 `[月初 00:00, 下月初 00:00)`
@@ -130,6 +132,7 @@ export const CalendarTab = () => {
       </Stack>
       <MonthCalendar
         month={month}
+        timezone={timezone}
         onMonthChange={setMonth}
         selectionMode="single"
         selectedDates={[]}

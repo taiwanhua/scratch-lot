@@ -17,7 +17,11 @@ import {
 } from "@/test/msw/project/schedule-day-offs-fixtures";
 import { api, server } from "@/test/msw/server";
 
-import { renderSchedulePage, typeDate } from "../schedule-test-support";
+import {
+  renderSchedulePage,
+  typeDate,
+  typeTime,
+} from "../schedule-test-support";
 
 const DAY_OFFS = "/schedule/my?tab=day-offs";
 
@@ -83,12 +87,12 @@ describe("我的畫休", () => {
     await user.click(
       within(dialog).getByRole("button", { name: "+ 再加一段" }),
     );
-    const starts = within(dialog).getAllByLabelText(/開始/);
-    const ends = within(dialog).getAllByLabelText(/結束/);
-    await user.type(starts[0], "09:00");
-    await user.type(ends[0], "12:00");
-    await user.type(starts[1], "18:00");
-    await user.type(ends[1], "22:00");
+    const starts = within(dialog).getAllByRole("group", { name: /開始/ });
+    const ends = within(dialog).getAllByRole("group", { name: /結束/ });
+    await typeTime(user, starts[0], "09:00");
+    await typeTime(user, ends[0], "12:00");
+    await typeTime(user, starts[1], "18:00");
+    await typeTime(user, ends[1], "22:00");
     await user.click(within(dialog).getByRole("button", { name: "儲存" }));
     await waitFor(() => {
       expect(dayOffsFake.inputs.addMine).toEqual([

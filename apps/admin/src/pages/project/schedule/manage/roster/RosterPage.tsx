@@ -4,8 +4,8 @@ import { z } from "zod";
 
 import {
   DEFAULT_TENANT_TIMEZONE,
-  localMonthOf,
   localMonthText,
+  parseLocalDate,
   parseLocalMonth,
 } from "@repo/domain/form";
 import { useScheduleRosterQuery } from "@repo/graphql";
@@ -18,6 +18,7 @@ import { Typography } from "@repo/ui/typography";
 import { usePermissions } from "@/hooks/base/usePermissions";
 import { useSession } from "@/hooks/base/useSession";
 import { useTenantTimezone } from "@/hooks/base/useTenantTimezone";
+import { useTenantToday } from "@/hooks/base/useTenantToday";
 import { useUrlState } from "@/hooks/base/useUrlState";
 
 import { DemandDialog } from "./DemandDialog";
@@ -42,7 +43,7 @@ import { ROSTER_TOOLBAR_ACTIONS } from "./roster-toolbar";
 import { readRosterView, writeRosterView } from "./roster-view-memory";
 import { ROSTER_VIEWS, type RosterViewEntry } from "./roster-views";
 import { scrollCellIntoView } from "./scroll-cell";
-import { ROSTER_DATE_SCHEMA, useTenantToday } from "./views/useRosterDate";
+import { ROSTER_DATE_SCHEMA } from "./views/useRosterDate";
 
 const orgSchema = z.string().default("");
 /** `?month=YYYY-MM`;空字串 / 格式不對 = 這個月。 */
@@ -98,11 +99,12 @@ export const RosterPage = () => {
   const [orgId, setOrgId] = useUrlState("org", orgSchema);
   const [monthParam, setMonth] = useUrlState("month", monthSchema);
   const [viewParam, setView] = useUrlState("view", viewSchema);
-  // 這個月以租戶時區判斷(不用瀏覽器時區);「現在」進頁時取一次
-  const [now] = useState(Date.now);
+  // 這個月以租戶時區的今天判斷(不用瀏覽器時區)
+  const today = useTenantToday();
+  const todayDate = parseLocalDate(today);
   const month =
-    parseLocalMonth(monthParam) === null
-      ? localMonthText(localMonthOf(now, timezone))
+    parseLocalMonth(monthParam) === null && todayDate !== null
+      ? localMonthText(todayDate)
       : monthParam;
   const view = pickView(
     viewParam === "" ? (readRosterView() ?? "") : viewParam,
@@ -110,7 +112,6 @@ export const RosterPage = () => {
   );
   // 週 / 日檢視的日期(`?date=`);週檢視跨月時多讀那幾天(`readRangeOf`)
   const [dateParam] = useUrlState("date", ROSTER_DATE_SCHEMA);
-  const today = useTenantToday();
   const readRange = view.readRangeOf?.(dateParam, month, today) ?? null;
   const [dialog, setDialog] = useState<DialogState>(null);
   /**

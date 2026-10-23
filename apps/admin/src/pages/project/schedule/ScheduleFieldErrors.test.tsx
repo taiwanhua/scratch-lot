@@ -7,7 +7,11 @@ import { api, server } from "@/test/msw/server";
 import { setupFakeViewport } from "@/test/viewport";
 
 import { fastUser, findDialog } from "./manage/roster/roster-test-queries";
-import { renderSchedulePage, typeDate } from "./schedule-test-support";
+import {
+  renderSchedulePage,
+  typeDate,
+  typeTime,
+} from "./schedule-test-support";
 
 setupFakeViewport();
 
@@ -86,8 +90,16 @@ describe("排班:欄位下寫原因", () => {
 
     await typeDate(user, dialog, "2026-12-03");
     await user.click(within(dialog).getByLabelText("時段不可排"));
-    await user.type(within(dialog).getByLabelText(/開始/), "09:00");
-    await user.type(within(dialog).getByLabelText(/結束/), "12:00");
+    await typeTime(
+      user,
+      within(dialog).getByRole("group", { name: /開始/ }),
+      "09:00",
+    );
+    await typeTime(
+      user,
+      within(dialog).getByRole("group", { name: /結束/ }),
+      "12:00",
+    );
     await user.click(within(dialog).getByRole("button", { name: "儲存" }));
     expect(
       await within(dialog).findByText("時段和這一天其他的畫休時段重疊"),

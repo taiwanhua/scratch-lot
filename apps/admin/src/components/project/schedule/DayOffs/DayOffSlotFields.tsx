@@ -4,7 +4,7 @@ import { Button } from "@repo/ui/button";
 import { IconButton } from "@repo/ui/icon-button";
 import { CloseIcon } from "@repo/ui/icons";
 import { Stack } from "@repo/ui/stack";
-import { TextField } from "@repo/ui/text-field";
+import { TimePicker } from "@repo/ui/time-picker";
 
 import { FieldErrorGroup } from "@/components/base/FieldErrorGroup/FieldErrorGroup";
 import {
@@ -27,7 +27,10 @@ export interface DayOffSlotFieldsProps {
   allowMultiple?: boolean;
 }
 
-/** 時段不可排的開始 / 結束(`HH:mm`);選了時段不可排才出現。 */
+/**
+ * 時段不可排的開始 / 結束(`@repo/ui/time-picker`,值 `HH:mm`;送出時由呼叫端和日期合成時點);
+ * 選了時段不可排才出現。
+ */
 export const DayOffSlotFields = ({
   slots,
   invalid,
@@ -55,28 +58,24 @@ export const DayOffSlotFields = ({
         return (
           // 段落沒有自己的 id;順序就是身分(只會在尾端加、從中間拿掉)
           <Stack key={index} direction="row" spacing={1.5}>
-            <TextField
+            <TimePicker
               label={t("start")}
-              type="time"
-              value={slot.startTime}
+              value={slot.startTime === "" ? null : slot.startTime}
               required
               fullWidth
               error={error}
-              slotProps={{ inputLabel: { shrink: true } }}
-              onChange={(event) => {
-                update(index, { startTime: event.target.value });
+              onChange={(next) => {
+                update(index, { startTime: next ?? "" });
               }}
             />
-            <TextField
+            <TimePicker
               label={t("end")}
-              type="time"
-              value={slot.endTime}
+              value={slot.endTime === "" ? null : slot.endTime}
               required
               fullWidth
               error={error}
-              slotProps={{ inputLabel: { shrink: true } }}
-              onChange={(event) => {
-                update(index, { endTime: event.target.value });
+              onChange={(next) => {
+                update(index, { endTime: next ?? "" });
               }}
             />
             {slots.length > 1 && (

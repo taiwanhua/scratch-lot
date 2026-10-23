@@ -138,6 +138,19 @@ export const typeDate = async (
   await user.keyboard(date.replaceAll("-", ""));
 };
 
+/**
+ * 在一個時間選擇器(`@repo/ui/time-picker` 的區段組,例 `getByRole("group", { name: /開始/ })`)
+ * 打 `HH:mm`:點「時」區段後逐位打,打滿兩位自動跳到「分」。
+ */
+export const typeTime = async (
+  user: UserEvent,
+  picker: HTMLElement,
+  time: string,
+): Promise<void> => {
+  await user.click(within(picker).getByRole("spinbutton", { name: "Hours" }));
+  await user.keyboard(time.replace(":", ""));
+};
+
 /** 範圍內(對話框)唯一的日期選擇器顯示的文字(年份區段所在的區段組;含格式提示)。 */
 export const datePickerText = (scope: HTMLElement): string =>
   within(scope)

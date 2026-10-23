@@ -278,6 +278,7 @@ export const DayOffOverviewTab = () => {
           <Stack spacing={1.5}>
             <MonthCalendar
               month={overview.month}
+              timezone={timezone}
               showHeader={false}
               selectionMode="single"
               selectedDates={[]}
