@@ -10,9 +10,7 @@ import { FieldErrorGroup } from "@/components/base/FieldErrorGroup/FieldErrorGro
 import {
   type DayOffSlot,
   EMPTY_SLOT,
-  hasWholeDaySlot,
   isCompleteSlot,
-  isWholeDaySlot,
 } from "@/lib/project/schedule-day-offs";
 
 export interface DayOffSlotFieldsProps {
@@ -24,6 +22,11 @@ export interface DayOffSlotFieldsProps {
    * (api 擋下的重疊)時,所有段落一起標紅。
    */
   errorText?: string;
+  /**
+   * 填完的幾段合起來蓋滿整天(呼叫端用 `slotsCoverWholeDay` 算,同時停用儲存):填完的段落標紅、
+   * 群組下方提示改選整天畫休,不等送出
+   */
+  wholeDay: boolean;
   onChange: (slots: DayOffSlot[]) => void;
   /** 可以一次登記多段([+ 再加一段]);代改一次一段 */
   allowMultiple?: boolean;
@@ -31,13 +34,13 @@ export interface DayOffSlotFieldsProps {
 
 /**
  * 時段不可排的開始 / 結束(`@repo/ui/time-picker`,值 `HH:mm`;送出時由呼叫端和日期合成時點);
- * 選了時段不可排才出現。有一段選了 00:00–00:00(整天)時,那一段標紅、群組下方提示改選整天畫休
- * (不等送出;呼叫端用 `hasWholeDaySlot` 停用儲存)。
+ * 選了時段不可排才出現。幾段合起來是整天(`wholeDay`)時提示改選整天畫休。
  */
 export const DayOffSlotFields = ({
   slots,
   invalid,
   errorText,
+  wholeDay,
   onChange,
   allowMultiple = false,
 }: DayOffSlotFieldsProps) => {
@@ -53,12 +56,12 @@ export const DayOffSlotFields = ({
   return (
     <FieldErrorGroup
       label={t("slots")}
-      errorText={hasWholeDaySlot(slots) ? t("wholeDaySlot") : submitError}
+      errorText={wholeDay ? t("wholeDaySlot") : submitError}
       spacing={1.5}
     >
       {slots.map((slot, index) => {
         const error =
-          isWholeDaySlot(slot) ||
+          (wholeDay && isCompleteSlot(slot)) ||
           (invalid && (!isCompleteSlot(slot) || slots.every(isCompleteSlot)));
         return (
           // 段落沒有自己的 id;順序就是身分(只會在尾端加、從中間拿掉)

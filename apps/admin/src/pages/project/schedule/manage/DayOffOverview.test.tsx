@@ -15,6 +15,7 @@ import {
   datePickerText,
   renderSchedulePage,
   typeDate,
+  typeTime,
 } from "../schedule-test-support";
 
 const OVERVIEW = "/schedule/manage?tab=day-offs";
@@ -111,6 +112,43 @@ describe("排班作業:畫休總覽與代改", () => {
           date: taipeiAt("2026-12-18"),
           kind: "full-day",
           reason: "staff-late-notice",
+        }),
+      ]);
+    });
+  });
+
+  it("[代改] 時段選 00:00–00:00(整天):欄位下提示改選整天畫休,不能儲存", async () => {
+    const { user, dayOffsFake } = renderSchedulePage({ path: OVERVIEW });
+    await user.click(await screen.findByRole("button", { name: "代改" }));
+    const dialog = await screen.findByRole("dialog", { name: "代改畫休" });
+    await user.click(within(dialog).getByRole("combobox", { name: /人員/ }));
+    await user.click(await screen.findByRole("option", { name: "張小芳" }));
+    await typeDate(user, dialog, "2026-12-18");
+    await user.click(within(dialog).getByLabelText("時段不可排"));
+    const start = within(dialog).getByRole("group", { name: /開始/ });
+    const end = within(dialog).getByRole("group", { name: /結束/ });
+    await typeTime(user, start, "00:00");
+    await typeTime(user, end, "00:00");
+    const slots = within(dialog).getByRole("group", { name: "時段" });
+    expect(slots).toHaveAccessibleDescription("整天請改選整天畫休");
+    const save = within(dialog).getByRole("button", { name: "儲存" });
+    expect(save).toBeDisabled();
+    expect(dayOffsFake.inputs.addOnBehalf).toEqual([]);
+
+    // 改成做到中午就是一般的時段,可以儲存
+    await typeTime(user, end, "12:00");
+    expect(slots).not.toHaveAccessibleDescription("整天請改選整天畫休");
+    await user.click(save);
+    await waitFor(() => {
+      expect(dayOffsFake.inputs.addOnBehalf).toEqual([
+        expect.objectContaining({
+          kind: "time-range",
+          slots: [
+            {
+              startAt: taipeiAt("2026-12-18"),
+              endAt: taipeiAt("2026-12-18", "12:00"),
+            },
+          ],
         }),
       ]);
     });

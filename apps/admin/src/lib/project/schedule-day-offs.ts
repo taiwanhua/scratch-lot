@@ -2,12 +2,15 @@ import {
   addLocalDays,
   addLocalMonths,
   instantOfLocalHhMm,
+  localDayRange,
   localMonthRange,
   localMonthText,
+  minutesOfHhMm,
   parseLocalDate,
   parseLocalMonth,
   toIso,
 } from "@repo/domain/form";
+import { dayOffSlotsCoverDay } from "@repo/domain/project/schedule-settings";
 import type { TagTone } from "@repo/ui/tag";
 
 import { localDayTextOf } from "@/lib/base/form-engine/local-day";
@@ -119,25 +122,10 @@ export const EMPTY_SLOT: DayOffSlot = { startTime: "", endTime: "" };
  */
 const END_OF_DAY = "00:00";
 
-/**
- * 這一段是整天(`00:00`–`00:00` = 當天 00:00 到隔天 00:00):整天要改選整天畫休,不當成時段送出
- * (api 一樣擋,回 `VALIDATION_FAILED` `slots`)。
- */
-export const isWholeDaySlot = (slot: DayOffSlot): boolean =>
-  slot.startTime === END_OF_DAY && slot.endTime === END_OF_DAY;
-
-/** 有沒有哪一段選了整天:有就停用儲存,欄位下提示改選整天畫休。 */
-export const hasWholeDaySlot = (slots: readonly DayOffSlot[]): boolean =>
-  slots.some((slot) => isWholeDaySlot(slot));
-
-/**
- * 一段有填完、而且開始早於結束(結束 `00:00` = 隔天 00:00,任何開始都早於它);整天的一段不算
- * (`isWholeDaySlot`)。
- */
+/** 一段有填完、而且開始早於結束(結束 `00:00` = 隔天 00:00,任何開始都早於它)。 */
 export const isCompleteSlot = (slot: DayOffSlot): boolean =>
   slot.startTime !== "" &&
   slot.endTime !== "" &&
-  !isWholeDaySlot(slot) &&
   (slot.endTime === END_OF_DAY || slot.startTime < slot.endTime);
 
 /**
@@ -185,4 +173,46 @@ export const slotInstantsOf = (
         endAt: toIso(span.end ?? 0),
       }))
     : null;
+};
+
+const MINUTES_PER_DAY = 1440;
+
+/**
+ * 填完的幾段合起來蓋滿整天(一段 `00:00`–`00:00`,或重疊 / 相接的幾段):整天要改選整天畫休,
+ * 停用儲存、欄位下提示(api 用同一個 `dayOffSlotsCoverDay` 擋,回 `VALIDATION_FAILED` `slots`)。
+ * 有日期時以租戶時區換成時點比(夏令時間切換日是 23 / 25 小時,和 api 一致);還沒選日期時先照牆上時間
+ * `00:00`–`24:00` 判斷。
+ */
+export const slotsCoverWholeDay = (
+  slots: readonly DayOffSlot[],
+  date: string,
+  timezone: string,
+): boolean => {
+  const filled = slots.filter((slot) => isCompleteSlot(slot));
+  if (filled.length === 0) {
+    return false;
+  }
+  const day = parseLocalDate(date);
+  const spans = day === null ? null : slotInstantsOf(date, filled, timezone);
+  if (day !== null && spans !== null) {
+    // 和 api 的「那一天」同一個算法(`localDayRange`)
+    const range = localDayRange(day, day, timezone);
+    return dayOffSlotsCoverDay(
+      spans.map((span) => ({
+        startAt: Date.parse(span.startAt),
+        endAt: Date.parse(span.endAt),
+      })),
+      { startAt: range.from, endAt: range.to },
+    );
+  }
+  return dayOffSlotsCoverDay(
+    filled.map((slot) => ({
+      startAt: minutesOfHhMm(slot.startTime) ?? 0,
+      endAt:
+        slot.endTime === END_OF_DAY
+          ? MINUTES_PER_DAY
+          : (minutesOfHhMm(slot.endTime) ?? 0),
+    })),
+    { startAt: 0, endAt: MINUTES_PER_DAY },
+  );
 };

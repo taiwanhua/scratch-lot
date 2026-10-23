@@ -197,9 +197,10 @@ api-only 的票也一樣:只改 schema 不重產第二段,型別會停在舊 sch
 
 api 只收時點(`docs/concepts/form-engine.md`「日期與日期時間都是時點」)。schema 裡的 `DateTime`(`@Field(() => GraphQLISODateTime)` 或推導成 `Date` 的欄位)照下面的規則收值:
 
-- **輸入只收帶時間與時區(`Z` 或 `±hh:mm`)的 ISO 8601 字串**(`2026-12-15T00:00:00+08:00`、`2026-12-14T16:00:00.000Z`)。只有日期(`2026-12-15`)、沒帶時區(`2026-12-15T00:00`)、不存在的日期一律拒收,回 GraphQL 輸入錯誤(變數 → `BAD_USER_INPUT`),resolver 不會被呼叫。理由:`new Date("2026-12-15")` 是 UTC 00:00,UTC− 的租戶時區會靜默變成前一天。判斷和前後端換算共用 `@repo/domain/form` 的 `isDateTimeString`。
+- **輸入只收帶時間與時區(`Z` 或 `±hh:mm`;`±hhmm` 也收)的 ISO 8601 字串**(`2026-12-15T00:00:00+08:00`、`2026-12-14T16:00:00.000Z`)。只有日期(`2026-12-15`)、沒帶時區(`2026-12-15T00:00`)、不存在的日期一律拒收,回 GraphQL 輸入錯誤(變數 → `BAD_USER_INPUT`),resolver 不會被呼叫。理由:`new Date("2026-12-15")` 是 UTC 00:00,UTC− 的租戶時區會靜默變成前一天。判斷和前後端換算共用 `@repo/domain/form` 的 `isDateTimeString`。
 - 呼叫端(admin、seed / 開通 / 示範、e2e、手寫腳本)用租戶時區把當地日期換成時點再送(admin 用 `lib/base/form-engine/local-day.ts` 的 `localDayInstantOf`;db-migrator 的腳本先讀登入者的租戶時區再換)。api 測試也送完整時點。
 - 輸出不變:`toISOString()`(UTC,`Z` 結尾)。
-- 做法:`@nestjs/graphql` 的 `GraphQLISODateTime` 原本用 `new Date(value)` 解析;`app.module.ts` 啟動時呼叫 `applyStrictDateTimeInput()` 把它的 `parseValue` / `parseLiteral` 換成嚴格版,所有 `DateTime` 欄位(含日後新增的)一起生效,不必改每個 model / input。`scalarsMap` 只管 `Date` 型別推導,管不到明確寫出的 `() => GraphQLISODateTime`,所以不用它。
+- 做法:`@nestjs/graphql` 的 `GraphQLISODateTime` 原本用 `new Date(value)` 解析;`app.module.ts` 在模組載入時(早於 GraphQLModule 建 schema)呼叫 `applyStrictDateTimeInput()` 把它的 `parseValue` / `parseLiteral` 換成嚴格版,所有 `DateTime` 欄位(含日後新增的)一起生效,不必改每個 model / input。`scalarsMap` 只管 `Date` 型別推導,管不到明確寫出的 `() => GraphQLISODateTime`,所以不用它。
+- **這是對第三方物件的全域修補,升級 `@nestjs/graphql`(或 `graphql`)時要檢查**:跑 `apps/api/src/graphql-date-time.schema.test.ts`(啟動 AppModule、從建好的 schema 讀 `DateTime`,確認用的是嚴格版),並看新版 `GraphQLISODateTime` 是否仍是可改寫的 `GraphQLScalarType`、schema 是否仍取用它。換不掉時 `applyStrictDateTimeInput()` 讓啟動失敗,不會靜默退回寬鬆解析。新增 `DateTime` 以外的時間 scalar 前先回到這條討論。
 
 正本:`apps/api/src/graphql-date-time.ts`、`packages/domain/src/form/temporal.ts`(`isDateTimeString`)

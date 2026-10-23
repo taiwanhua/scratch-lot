@@ -15,11 +15,22 @@ import { isDateTimeString } from "@repo/domain/form";
  * 管不到明確寫出的參照;所以把這個物件的兩個輸入解析換成嚴格版,所有 `DateTime` 欄位(含日後新增的)一起生效,
  * 呼叫端照舊寫 `GraphQLISODateTime`。輸出(`serialize`)不變,仍是 `toISOString()`。
  *
- * 由 `app.module.ts` 在組 GraphQLModule 前呼叫;重複呼叫無副作用。
+ * 這是對第三方物件的**全域修補**:`app.module.ts` 在模組載入時(早於 GraphQLModule 建 schema)呼叫;
+ * 重複呼叫結果相同(冪等)。換上之後立刻讀回確認,沒換成功(例如 `@nestjs/graphql` 升級後物件被凍結)
+ * 就讓啟動失敗,不靜默退回寬鬆的解析。`graphql-date-time.schema.test.ts` 另外從啟動後的 schema 驗證
+ * `DateTime` 用的是嚴格版;升級 `@nestjs/graphql` 時要跑它(GQL-08)。
  */
 export function applyStrictDateTimeInput(): void {
   GraphQLISODateTime.parseValue = parseDateTimeValue;
   GraphQLISODateTime.parseLiteral = parseDateTimeLiteral;
+  if (
+    GraphQLISODateTime.parseValue !== parseDateTimeValue ||
+    GraphQLISODateTime.parseLiteral !== parseDateTimeLiteral
+  ) {
+    throw new Error(
+      "GraphQLISODateTime 的輸入解析換不掉:@nestjs/graphql 的內部可能改了,見 GQL-08",
+    );
+  }
 }
 
 const EXPECTED =

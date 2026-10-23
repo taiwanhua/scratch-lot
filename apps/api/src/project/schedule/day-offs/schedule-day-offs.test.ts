@@ -1376,6 +1376,16 @@ describe("畫休(GraphQL 端點 + 真 MongoDB)", () => {
         [{ startAt: iso("2026-12-17"), endAt: iso("2026-12-17", "01:00") }],
         // 一段就是一整天(00:00–隔天 00:00):整天要登記整天畫休
         [{ startAt: iso("2026-12-16"), endAt: iso("2026-12-17") }],
+        // 相接的兩段湊成整天
+        [
+          { startAt: iso("2026-12-16", "12:00"), endAt: iso("2026-12-17") },
+          slot("2026-12-16", "00:00", "12:00"),
+        ],
+        // 重疊的兩段湊成整天(整天的規則先於重疊)
+        [
+          slot("2026-12-16", "00:00", "13:00"),
+          { startAt: iso("2026-12-16", "11:00"), endAt: iso("2026-12-17") },
+        ],
       ]) {
         expect(
           errorOf(
@@ -1386,6 +1396,48 @@ describe("畫休(GraphQL 端點 + 真 MongoDB)", () => {
             }),
           ),
         ).toEqual({ code: "VALIDATION_FAILED", fields: ["slots"] });
+      }
+    });
+
+    it("整天看租戶時區那天的長度:洛杉磯夏令時間開始那天只有 23 小時", async () => {
+      const orgs = connection.collection("orgs");
+      await orgs.updateOne(
+        { _id: tenantA },
+        { $set: { "settings.timezone": "America/Los_Angeles" } },
+      );
+      try {
+        // 洛杉磯 2027-03-14 02:00 跳到 03:00:那天是 [08:00Z, 隔天 07:00Z)
+        travelTo("2027-02-20");
+        const date = "2027-03-14T08:00:00.000Z";
+        const noon = "2027-03-14T19:00:00.000Z";
+        const nextDay = "2027-03-15T07:00:00.000Z";
+        expect(
+          errorOf(
+            await addMine(wang, {
+              date,
+              kind: "time-range",
+              slots: [
+                { startAt: date, endAt: noon },
+                { startAt: noon, endAt: nextDay },
+              ],
+            }),
+          ),
+        ).toEqual({ code: "VALIDATION_FAILED", fields: ["slots"] });
+        // 少一小時就不是整天
+        const saved = dataOf(
+          await addMine(wang, {
+            date,
+            kind: "time-range",
+            slots: [{ startAt: date, endAt: "2027-03-15T06:00:00.000Z" }],
+          }),
+          "addMyScheduleDayOffs",
+        );
+        expect(saved.items).toHaveLength(1);
+      } finally {
+        await orgs.updateOne(
+          { _id: tenantA },
+          { $unset: { "settings.timezone": "" } },
+        );
       }
     });
 

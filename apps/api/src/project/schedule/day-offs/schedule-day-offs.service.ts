@@ -21,6 +21,7 @@ import { SCHEDULE_FIELD_CATEGORY_KEYS } from "@repo/domain/project/schedule-fiel
 import {
   SCHEDULE_DAY_OFF_KINDS,
   type ScheduleDayOffKind,
+  dayOffSlotsCoverDay,
 } from "@repo/domain/project/schedule-settings";
 
 import { AuditService } from "../../../audit/audit.service";
@@ -1483,8 +1484,9 @@ const onMinute = (instant: number): boolean =>
 /**
  * 時段不可排的幾段:至少一段;每段是那天裡的半開區間 `[startAt, endAt)`:開始落在
  * `[那天 00:00, 隔天 00:00)`、結束晚於開始且最晚 = 隔天 00:00(做到當天結束)、精度到分鐘
- * (admin 由日期 + `HH:mm` 合成,結束選 00:00 = 隔天 00:00);一段就是一整天(那天 00:00 到隔天 00:00)
- * 也不收,整天要登記整天畫休(admin 同一條規則,選 00:00–00:00 時停用儲存)。
+ * (admin 由日期 + `HH:mm` 合成,結束選 00:00 = 隔天 00:00);這次送的幾段合起來蓋滿那一天
+ * (一段 00:00–隔天 00:00,或重疊 / 相接的幾段;`dayOffSlotsCoverDay`,admin 同一條規則、停用儲存)也不收,
+ * 整天要登記整天畫休。
  * 不合規則 → `VALIDATION_FAILED`(欄位 `slots`,格式錯不帶 reason)。
  */
 function validatedSlots(
@@ -1511,13 +1513,16 @@ function validatedSlots(
       ["slots"],
     );
   }
-  const wholeDay = list.some(
-    (slot) =>
-      slot.startAt.getTime() === day.from && slot.endAt.getTime() === day.to,
+  const wholeDay = dayOffSlotsCoverDay(
+    list.map((slot) => ({
+      startAt: slot.startAt.getTime(),
+      endAt: slot.endAt.getTime(),
+    })),
+    { startAt: day.from, endAt: day.to },
   );
   if (wholeDay) {
     throw validationError(
-      "a time-range slot covering the whole day must be a full-day day off",
+      "time-range slots covering the whole day must be a full-day day off",
       ["slots"],
     );
   }

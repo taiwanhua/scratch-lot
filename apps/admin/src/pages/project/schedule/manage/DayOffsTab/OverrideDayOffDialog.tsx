@@ -33,8 +33,8 @@ import {
   type DayOffSlot,
   EMPTY_SLOT,
   completeSlots,
-  hasWholeDaySlot,
   slotInstantsOf,
+  slotsCoverWholeDay,
 } from "@/lib/project/schedule-day-offs";
 
 import {
@@ -145,6 +145,10 @@ export const OverrideDayOffDialog = ({
     return missing;
   };
 
+  // 幾段合起來是整天:欄位下提示改選整天畫休、停用儲存(api 同一條規則)
+  const wholeDay =
+    kind === "time-range" && slotsCoverWholeDay(slots, date, timezone);
+
   const submit = () => {
     const missing = missingFields();
     setFieldErrors(scheduleFormatErrorsOf(missing, tSchedule));
@@ -185,13 +189,7 @@ export const OverrideDayOffDialog = ({
           <Button variant="text" onClick={onClose}>
             {tCommon("cancel")}
           </Button>
-          <Button
-            disabled={
-              save.isPending ||
-              (kind === "time-range" && hasWholeDaySlot(slots))
-            }
-            onClick={submit}
-          >
+          <Button disabled={save.isPending || wholeDay} onClick={submit}>
             {tCommon("save")}
           </Button>
         </>
@@ -237,6 +235,7 @@ export const OverrideDayOffDialog = ({
         {kind === "time-range" && (
           <DayOffSlotFields
             slots={slots}
+            wholeDay={wholeDay}
             invalid={invalid.includes("slots")}
             errorText={fieldErrors.slots}
             onChange={setSlots}

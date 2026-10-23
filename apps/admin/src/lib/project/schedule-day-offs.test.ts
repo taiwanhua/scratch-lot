@@ -5,12 +5,11 @@ import {
   dayKeyOf,
   dayOffBandOf,
   dayOffCountTone,
-  hasWholeDaySlot,
   isCompleteSlot,
   isPastDayOffMonth,
-  isWholeDaySlot,
   monthRangeOf,
   slotInstantsOf,
+  slotsCoverWholeDay,
 } from "./schedule-day-offs";
 
 const TAIPEI = "Asia/Taipei";
@@ -60,28 +59,94 @@ describe("畫休畫面的換算", () => {
     expect(completeSlots([{ startTime: "22:00", endTime: "00:00" }])).toEqual([
       { startTime: "22:00", endTime: "00:00" },
     ]);
+    expect(isCompleteSlot({ startTime: "00:00", endTime: "00:00" })).toBe(true);
     // 其他「結束不晚於開始」不算隔天(時段不往後跨)
     expect(isCompleteSlot({ startTime: "22:00", endTime: "02:00" })).toBe(
       false,
     );
   });
 
-  it("時段 00:00–00:00 是整天:不算填完,要改選整天畫休", () => {
-    const wholeDay = { startTime: "00:00", endTime: "00:00" };
-    expect(isWholeDaySlot(wholeDay)).toBe(true);
-    expect(isCompleteSlot(wholeDay)).toBe(false);
-    expect(completeSlots([wholeDay])).toBeNull();
+  it("幾段合起來蓋滿整天(一段 00:00–00:00、相接、重疊)要改選整天畫休", () => {
+    const covers = (slots: { startTime: string; endTime: string }[]) =>
+      slotsCoverWholeDay(slots, "2026-12-10", TAIPEI);
+    expect(covers([{ startTime: "00:00", endTime: "00:00" }])).toBe(true);
     expect(
-      hasWholeDaySlot([{ startTime: "09:00", endTime: "12:00" }, wholeDay]),
+      covers([
+        { startTime: "12:00", endTime: "00:00" },
+        { startTime: "00:00", endTime: "12:00" },
+      ]),
     ).toBe(true);
-    // 00:00 開始、做到別的時刻,或做到當天結束但不是從 00:00 開始,都還是時段
-    expect(isWholeDaySlot({ startTime: "00:00", endTime: "12:00" })).toBe(
-      false,
-    );
-    expect(isWholeDaySlot({ startTime: "00:01", endTime: "00:00" })).toBe(
-      false,
-    );
-    expect(hasWholeDaySlot([{ startTime: "", endTime: "" }])).toBe(false);
+    expect(
+      covers([
+        { startTime: "00:00", endTime: "13:00" },
+        { startTime: "11:00", endTime: "00:00" },
+      ]),
+    ).toBe(true);
+    // 差一分鐘、沒從 00:00 開始、沒做到當天結束、還沒填完的段落不算
+    expect(
+      covers([
+        { startTime: "00:00", endTime: "12:00" },
+        { startTime: "12:01", endTime: "00:00" },
+      ]),
+    ).toBe(false);
+    expect(covers([{ startTime: "00:01", endTime: "00:00" }])).toBe(false);
+    expect(covers([{ startTime: "00:00", endTime: "23:59" }])).toBe(false);
+    expect(
+      covers([
+        { startTime: "00:00", endTime: "12:00" },
+        { startTime: "12:00", endTime: "" },
+      ]),
+    ).toBe(false);
+    expect(covers([{ startTime: "", endTime: "" }])).toBe(false);
+    // 還沒選日期:照牆上時間 00:00–24:00 判斷
+    expect(
+      slotsCoverWholeDay(
+        [{ startTime: "00:00", endTime: "00:00" }],
+        "",
+        TAIPEI,
+      ),
+    ).toBe(true);
+  });
+
+  it("整天以租戶時區那天的長度判斷(洛杉磯夏令時間開始那天只有 23 小時)", () => {
+    const la = "America/Los_Angeles";
+    // 2027-03-14 02:00 跳到 03:00:00:00–02:00 + 03:00–00:00 中間沒有空檔,是整天
+    expect(
+      slotsCoverWholeDay(
+        [
+          { startTime: "00:00", endTime: "02:00" },
+          { startTime: "03:00", endTime: "00:00" },
+        ],
+        "2027-03-14",
+        la,
+      ),
+    ).toBe(true);
+    // 平常的日子 02:00–03:00 是空檔
+    expect(
+      slotsCoverWholeDay(
+        [
+          { startTime: "00:00", endTime: "02:00" },
+          { startTime: "03:00", endTime: "00:00" },
+        ],
+        "2027-03-15",
+        la,
+      ),
+    ).toBe(false);
+    // 夏令時間結束那天(25 小時)一樣是 00:00–00:00 才整天
+    expect(
+      slotsCoverWholeDay(
+        [{ startTime: "00:00", endTime: "00:00" }],
+        "2026-11-01",
+        la,
+      ),
+    ).toBe(true);
+    expect(
+      slotsCoverWholeDay(
+        [{ startTime: "00:00", endTime: "23:00" }],
+        "2026-11-01",
+        la,
+      ),
+    ).toBe(false);
   });
 
   it("時段結束 00:00 合成隔天 00:00(租戶時區)", () => {

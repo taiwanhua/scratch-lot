@@ -36,8 +36,8 @@ import {
   EMPTY_SLOT,
   completeSlots,
   dayKeyOf,
-  hasWholeDaySlot,
   slotInstantsOf,
+  slotsCoverWholeDay,
 } from "@/lib/project/schedule-day-offs";
 import { localPartsOf } from "@/lib/project/schedule-roster";
 
@@ -148,6 +148,10 @@ export const DayOffDialog = ({
     (item) => dayKeyOf(item.date, timezone) === date,
   );
 
+  // 幾段合起來是整天:欄位下提示改選整天畫休、停用儲存(api 同一條規則)
+  const wholeDay =
+    kind === "time-range" && slotsCoverWholeDay(slots, date, timezone);
+
   const submit = () => {
     if (date === "") {
       setInvalid("date");
@@ -193,13 +197,7 @@ export const DayOffDialog = ({
           <Button variant="text" onClick={onClose}>
             {tCommon("cancel")}
           </Button>
-          <Button
-            disabled={
-              save.isPending ||
-              (kind === "time-range" && hasWholeDaySlot(slots))
-            }
-            onClick={submit}
-          >
+          <Button disabled={save.isPending || wholeDay} onClick={submit}>
             {tCommon("save")}
           </Button>
         </>
@@ -259,6 +257,7 @@ export const DayOffDialog = ({
         {kind === "time-range" && (
           <DayOffSlotFields
             slots={slots}
+            wholeDay={wholeDay}
             invalid={fieldErrors.slots !== undefined}
             errorText={fieldErrors.slots}
             onChange={(next) => {
