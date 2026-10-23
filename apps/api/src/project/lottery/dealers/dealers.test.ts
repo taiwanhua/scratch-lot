@@ -18,6 +18,7 @@ import {
   UPDATE_CONTACT,
   UPDATE_DEALER,
   contactInput,
+  createDealersOperator,
   dealerInput,
   dealersToken,
   errorOf,
@@ -40,6 +41,25 @@ interface DealerData {
 interface DealersData {
   lotteryDealers: { items: DealerRow[] };
 }
+
+/** 關係人單筆的系統資訊欄位。 */
+const CONTACT_SYSTEM = /* GraphQL */ `
+  query TestLotteryDealerContactSystem($id: ID!) {
+    lotteryDealerContact(id: $id) {
+      item {
+        ownerOrgName
+        createdBy {
+          id
+          name
+        }
+        updatedBy {
+          id
+          name
+        }
+      }
+    }
+  }
+`;
 
 /** 讀得到這一位經銷商嗎(單筆查詢沒有錯誤)。 */
 async function readableBy(
@@ -176,6 +196,60 @@ describe("經銷商管理(專案規格 5.2–5.4)", () => {
       expect(expired).toContain(expiredB.id);
       expect(expired).not.toContain(expiringB.id);
       expect(expired).not.toContain(okB.id);
+    });
+
+    it("keyword 比對證號、姓名、店名、身分證字號(同關係人)", async () => {
+      const a = await createDealer("A", { name: "關鍵字甲" });
+      const b = await createDealer("B", { storeName: "關鍵字店" });
+      expect(await idsOf({ type: "A", keyword: a.nationalId })).toEqual([a.id]);
+      // 大小寫不分(身分證字號的英文字母)
+      expect(
+        await idsOf({ type: "A", keyword: a.nationalId.toLowerCase() }),
+      ).toEqual([a.id]);
+      expect(await idsOf({ type: "B", keyword: b.nationalId })).toEqual([b.id]);
+      expect(await idsOf({ type: "A", keyword: a.licenseNo })).toEqual([a.id]);
+      expect(await idsOf({ type: "A", keyword: "關鍵字甲" })).toEqual([a.id]);
+      expect(await idsOf({ type: "B", keyword: "關鍵字店" })).toEqual([b.id]);
+    });
+
+    it("系統資訊:所屬組織、建立者、修改者都取這筆資料本身(orgId、createdBy、updatedBy)", async () => {
+      const writer = await createDealersOperator(api, api.connection, {
+        orgId: tenantId,
+        moduleKeys: ALL_MODULES,
+        permissionKeys: [P.edit, P.contactsEdit],
+      });
+      const a = await createDealer("A");
+      expect(a.ownerOrgName).toBe("好運彩券行");
+      expect(a.createdBy?.name).toBeTruthy();
+      expect(a.updatedBy).toEqual(a.createdBy);
+
+      const data = await ok<UpdateData>(api, writer.token, UPDATE_DEALER, {
+        input: { id: a.id, name: "改過的" },
+      });
+      const updated = data.updateLotteryDealer.item;
+      expect(updated.createdBy).toEqual(a.createdBy);
+      expect(updated.updatedBy).toMatchObject({ id: String(writer.userId) });
+      expect(updated.updatedBy?.name).toMatch(/^dealers-/);
+      expect(updated.ownerOrgName).toBe("好運彩券行");
+
+      const contactId = await createContact(["AGENT"]);
+      await ok(api, writer.token, UPDATE_CONTACT, {
+        input: { id: contactId, name: "改過的人" },
+      });
+      const contact = await ok<{
+        lotteryDealerContact: {
+          item: {
+            ownerOrgName: string | null;
+            createdBy: { id: string } | null;
+            updatedBy: { id: string } | null;
+          };
+        };
+      }>(api, hq, CONTACT_SYSTEM, { id: contactId });
+      expect(contact.lotteryDealerContact.item).toMatchObject({
+        ownerOrgName: "好運彩券行",
+        createdBy: a.createdBy,
+        updatedBy: { id: String(writer.userId) },
+      });
     });
 
     it("證號格式不對、身分證字號格式不對 → VALIDATION_FAILED 一次標出", async () => {
@@ -731,9 +805,11 @@ describe("經銷商管理(專案規格 5.2–5.4)", () => {
       const seen = await ok<DealerData>(api, branchBViewer, DEALER, {
         id: b.id,
       });
+      // 所屬組織(總部)不在分店的可見範圍,名稱照樣以租戶的組織樹讀出
       expect(seen.lotteryDealer.item).toMatchObject({
         isShared: true,
         abilities: { canEdit: false },
+        ownerOrgName: "好運彩券行",
       });
       const branchBEditor = await dealersToken(api, api.connection, {
         orgId: branchB,

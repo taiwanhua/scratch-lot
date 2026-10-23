@@ -246,7 +246,9 @@
         "licenseExpired": "Expired",
         "status": "Status",
         "role": "Role",
-        "contactKeyword": "Keyword (name, mobile, ID)"
+        "contactKeyword": "Keyword (name, mobile, ID)",
+        "classAKeyword": "Keyword (license no., name, ID)",
+        "classBKeyword": "Keyword (license no., store, name, ID)"
       },
       "columns": {
         "licenseNo": "License no.",
@@ -307,7 +309,12 @@
       "residentialSameAsMailing": "Same as mailing address",
       "note": "Note",
       "roles": "Roles (at least one)",
-      "month": "Month {month}"
+      "month": "Month {month}",
+      "ownerOrg": "Organization",
+      "createdAt": "Created at",
+      "createdBy": "Created by",
+      "updatedAt": "Last modified at",
+      "updatedBy": "Modified by"
     },
     "sections": {
       "dealer": "Dealer",

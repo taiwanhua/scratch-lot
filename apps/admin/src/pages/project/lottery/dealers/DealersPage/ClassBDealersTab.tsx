@@ -11,6 +11,7 @@ import { DataTable, type DataTableColumn } from "@repo/ui/data-table";
 import { SelectField } from "@repo/ui/select-field";
 import { Stack } from "@repo/ui/stack";
 import { Tag } from "@repo/ui/tag";
+import { TextField } from "@repo/ui/text-field";
 import { Typography } from "@repo/ui/typography";
 
 import { useSession } from "@/hooks/base/useSession";
@@ -32,7 +33,7 @@ import { LicenseExpiryTag } from "./LicenseExpiryTag";
 const listDefault = urlStateDefault(classBListSchema);
 
 /**
- * 乙類分頁(Figma DE-02):快速篩選 證照 30 天內到期 / 證照已過期 + 證照篩選(同甲類);
+ * 乙類分頁(Figma DE-02):快速篩選 證照 30 天內到期 / 證照已過期 + 證照篩選、關鍵字(同甲類);
  * 欄位 證號、店名、姓名、對應分店(未選警告色)、共同銷售人 N/6(超過 6 紅字,只警告)、證照到期、狀態。
  */
 export const ClassBDealersTab = ({ access }: DealersTabProps) => {
@@ -43,6 +44,7 @@ export const ClassBDealersTab = ({ access }: DealersTabProps) => {
     input: {
       type: LotteryDealerType.B,
       licenseState: LICENSE_FILTER[filters.license],
+      keyword: filters.keyword === "" ? null : filters.keyword,
       page: filters.page,
       pageSize: DEALERS_PAGE_SIZE,
     },
@@ -169,6 +171,15 @@ export const ClassBDealersTab = ({ access }: DealersTabProps) => {
           ]}
           onChange={(license) => {
             set({ license });
+          }}
+        />
+        <TextField
+          label={t("list.filters.classBKeyword")}
+          value={filters.keyword}
+          size="small"
+          sx={{ width: { xs: "100%", sm: 260 } }}
+          onChange={(event) => {
+            set({ keyword: event.target.value });
           }}
         />
         <Box sx={{ flex: 1 }} />

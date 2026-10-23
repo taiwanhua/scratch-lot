@@ -83,7 +83,8 @@ export const dealersWorld = ({
           (keyword === "" ||
             dealer.name.includes(keyword) ||
             dealer.licenseNo.includes(keyword) ||
-            (dealer.storeName ?? "").includes(keyword)) &&
+            (dealer.storeName ?? "").includes(keyword) ||
+            dealer.nationalId.includes(keyword)) &&
           (input.selectable !== true ||
             dealer.status !== LotteryDealerStatus.Terminated),
       );

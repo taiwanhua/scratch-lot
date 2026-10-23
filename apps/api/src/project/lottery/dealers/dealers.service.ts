@@ -409,7 +409,7 @@ export class LotteryDealersService {
   }
 
   /**
-   * 清單條件。**關鍵字不比對兩個批購基準日**(欄位級權限欄);比對證號、姓名、店名。
+   * 清單條件。**關鍵字不比對兩個批購基準日**(欄位級權限欄);比對證號、姓名、店名、身分證字號。
    * 「逾 N 天」= 最近一次批購日或本人批購日距今超過 N 天(兩個都無紀錄的不算)。
    */
   private async listFilterOf(
@@ -426,6 +426,7 @@ export class LotteryDealersService {
           { licenseNo: pattern },
           { name: pattern },
           { storeName: pattern },
+          { nationalId: pattern },
         ],
       });
     }

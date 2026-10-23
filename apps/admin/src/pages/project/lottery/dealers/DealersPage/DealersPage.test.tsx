@@ -116,6 +116,43 @@ describe("經銷商管理列表(/dealers)", () => {
     });
   });
 
+  it("甲類、乙類的關鍵字(證號、姓名、店名、身分證字號)送給 api,換字回第 1 頁", async () => {
+    const { user, fake } = renderDealers();
+    await screen.findByRole("row", { name: /陳志明/ });
+
+    await user.type(
+      screen.getByRole("textbox", { name: "關鍵字(證號、姓名、身分證)" }),
+      "A2234",
+    );
+    await waitFor(() => {
+      expect(fake.listInputs.at(-1)).toMatchObject({
+        type: "A",
+        keyword: "A2234",
+        page: 1,
+      });
+    });
+    // 身分證字號 A223456789 = 林大同
+    await waitFor(() => {
+      expect(
+        screen.queryByRole("row", { name: /陳志明/ }),
+      ).not.toBeInTheDocument();
+    });
+    expect(screen.getByRole("row", { name: /林大同/ })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("tab", { name: "乙類" }));
+    const keyword = await screen.findByRole("textbox", {
+      name: "關鍵字(證號、店名、姓名、身分證)",
+    });
+    expect(keyword).toHaveValue("");
+    await user.type(keyword, "好運");
+    await waitFor(() => {
+      expect(fake.listInputs.at(-1)).toMatchObject({
+        type: "B",
+        keyword: "好運",
+      });
+    });
+  });
+
   it("有 dealers.create:顯示 [+ 新增經銷商];沒有就不顯示(規格 5.2)", async () => {
     renderDealers();
     expect(

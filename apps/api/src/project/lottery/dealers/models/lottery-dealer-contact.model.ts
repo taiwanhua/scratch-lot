@@ -89,6 +89,14 @@ export class LotteryDealerContactModel {
   @Field(() => GraphQLISODateTime)
   updatedAt!: Date;
 
+  /** 最後修改者(`updatedBy`;系統資訊區塊)。 */
+  @Field(() => LotteryDealerUserRef, { nullable: true })
+  updatedBy!: LotteryDealerUserRef | null;
+
+  /** 所屬組織(`orgId` = 建立者當時的組織)的名稱;以租戶的組織樹讀,找不到為 null。 */
+  @Field(() => String, { nullable: true })
+  ownerOrgName!: string | null;
+
   @Field(() => LotteryDealerContactAbilities)
   abilities!: LotteryDealerContactAbilities;
 }

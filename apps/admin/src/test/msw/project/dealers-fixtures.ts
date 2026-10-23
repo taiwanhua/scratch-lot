@@ -179,6 +179,21 @@ const contactRef = (id: string, name: string) => ({
   status: LotteryContactStatus.Active,
 });
 
+const userRef = (id: string, name: string) => ({
+  __typename: "LotteryDealerUserRef" as const,
+  id,
+  name,
+});
+
+/** 系統資訊(建立 / 最後修改 / 所屬組織;經銷商、關係人共用)。 */
+const systemInfo = {
+  createdBy: userRef("u-1", "王總"),
+  createdAt: iso("2026-09-01"),
+  updatedAt: iso("2026-09-01"),
+  updatedBy: userRef("u-2", "李店長"),
+  ownerOrgName: "總公司",
+};
+
 const dealerBase = {
   __typename: "LotteryDealer" as const,
   status: LotteryDealerStatus.Active,
@@ -215,13 +230,7 @@ const dealerBase = {
   residentialAddress: null,
   residentialSameAsMailing: false,
   note: null,
-  createdBy: {
-    __typename: "LotteryDealerUserRef" as const,
-    id: "u-1",
-    name: "王總",
-  },
-  createdAt: iso("2026-09-01"),
-  updatedAt: iso("2026-09-01"),
+  ...systemInfo,
   abilities,
   shareOrgs: [],
   isShared: false,
@@ -336,13 +345,7 @@ const contactBase = {
   residentialAddress: null,
   residentialSameAsMailing: false,
   note: null,
-  createdBy: {
-    __typename: "LotteryDealerUserRef" as const,
-    id: "u-1",
-    name: "王總",
-  },
-  createdAt: iso("2026-09-01"),
-  updatedAt: iso("2026-09-01"),
+  ...systemInfo,
   abilities: {
     __typename: "LotteryDealerContactAbilities" as const,
     canEdit: true,

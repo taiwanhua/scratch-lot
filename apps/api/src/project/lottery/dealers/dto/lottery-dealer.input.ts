@@ -13,7 +13,7 @@ export const MAX_PAGE_SIZE = 100;
 
 /**
  * 經銷商清單(甲類 / 乙類分頁各查一次)。範圍由 `tenantScopePlugin` 套可見範圍,這裡只收窄。
- * 關鍵字比對證號、姓名、店名;**不比對兩個批購基準日**(欄位級權限欄)。
+ * 關鍵字比對證號、姓名、店名、身分證字號;**不比對兩個批購基準日**(欄位級權限欄)。
  */
 @InputType()
 export class LotteryDealersInput {

@@ -28,7 +28,7 @@ export const LICENSE_FILTER: Record<
 };
 
 /**
- * 甲類:見簽狀態、距上次批購、證照、頁碼。快速篩選(逾 150 / 180 天、本季未見簽、證照 30 天內到期 / 已過期)
+ * 甲類:見簽狀態、距上次批購、證照、關鍵字(證號、姓名、店名、身分證字號;同關係人)、頁碼。快速篩選(逾 150 / 180 天、本季未見簽、證照 30 天內到期 / 已過期)
  * 只是把對應的篩選設成那個值,不另外存。
  */
 export const classAListSchema = z
@@ -36,19 +36,27 @@ export const classAListSchema = z
     signin: z.enum(["all", "signed", "unsigned"]).default("all"),
     purchase: z.enum(["all", "150", "180"]).default("all"),
     license: licenseFilterSchema.default("all"),
+    keyword: z.string().default(""),
     page: z.number().int().min(1).default(1),
   })
-  .default({ signin: "all", purchase: "all", license: "all", page: 1 });
+  .default({
+    signin: "all",
+    purchase: "all",
+    license: "all",
+    keyword: "",
+    page: 1,
+  });
 
 export type ClassAListFilters = z.infer<typeof classAListSchema>;
 
-/** 乙類:證照、頁碼。快速篩選(證照 30 天內到期 / 已過期)同甲類,只是把證照篩選設成那個值。 */
+/** 乙類:證照、關鍵字(同甲類)、頁碼。快速篩選(證照 30 天內到期 / 已過期)同甲類,只是把證照篩選設成那個值。 */
 export const classBListSchema = z
   .object({
     license: licenseFilterSchema.default("all"),
+    keyword: z.string().default(""),
     page: z.number().int().min(1).default(1),
   })
-  .default({ license: "all", page: 1 });
+  .default({ license: "all", keyword: "", page: 1 });
 
 export type ClassBListFilters = z.infer<typeof classBListSchema>;
 

@@ -24,6 +24,7 @@ import type { ModulePageProps } from "@/lib/base/module-tree";
 
 import { FieldGrid } from "../DealerFormPage/DealerFormSections";
 import { ReadOnlyField } from "../ReadOnlyField";
+import { SystemInfoFields } from "../SystemInfoFields";
 import {
   DEALER_STATUS_LABELS,
   DEALER_STATUS_TONES,
@@ -316,12 +317,7 @@ const DealerView = ({ dealer }: { dealer: LotteryDealerFieldsFragment }) => {
           })}
           defaultCollapsed
         >
-          <Typography variant="body2">
-            {t("summary.system", {
-              date: temporal(dealer.createdAt, "datetime"),
-              name: dealer.createdBy?.name ?? "",
-            })}
-          </Typography>
+          <SystemInfoFields record={dealer} />
         </Section>
 
         {tabs.length > 0 && (

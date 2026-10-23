@@ -28,6 +28,11 @@ const latest = (dates: readonly (Date | null)[]): Date | null =>
     null,
   );
 
+const sameDay = (left: Date | null, right: Date | null): boolean =>
+  left === null || right === null
+    ? left === right
+    : left.getTime() === right.getTime();
+
 /**
  * 甲類的「最近一次批購日 / 本人批購日」(專案規格 5.2):存成欄位 `lastPurchaseDate` /
  * `lastSelfPurchaseDate`,值 = max(基準日, 各來源的候選日期)。
@@ -82,6 +87,13 @@ export class DealerPurchaseDates {
       dealer.lastSelfPurchaseBaseDate,
       ...candidates.map((candidate) => candidate.lastSelfPurchaseDate),
     ]);
+    // 沒變就不寫:系統身分的寫入會蓋掉 `updatedBy` / `updatedAt`(詳情頁「系統資訊」的修改者 / 修改時間)
+    if (
+      sameDay(lastPurchaseDate, dealer.lastPurchaseDate) &&
+      sameDay(lastSelfPurchaseDate, dealer.lastSelfPurchaseDate)
+    ) {
+      return;
+    }
     await this.dealers.updateById(
       writer,
       dealer._id,

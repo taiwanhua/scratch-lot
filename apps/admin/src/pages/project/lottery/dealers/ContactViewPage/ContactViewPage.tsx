@@ -23,6 +23,7 @@ import type { ModulePageProps } from "@/lib/base/module-tree";
 
 import { FieldGrid } from "../DealerFormPage/DealerFormSections";
 import { ReadOnlyField } from "../ReadOnlyField";
+import { SystemInfoFields } from "../SystemInfoFields";
 import {
   CONTACT_ROLE_LABELS,
   CONTACT_STATUS_LABELS,
@@ -180,12 +181,7 @@ const ContactView = ({
           })}
           defaultCollapsed
         >
-          <Typography variant="body2">
-            {t("summary.system", {
-              date: temporal(contact.createdAt, "datetime"),
-              name: contact.createdBy?.name ?? "",
-            })}
-          </Typography>
+          <SystemInfoFields record={contact} />
         </Section>
 
         <Typography variant="subtitle1" component="h2">

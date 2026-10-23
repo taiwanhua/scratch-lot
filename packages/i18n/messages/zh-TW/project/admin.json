@@ -246,7 +246,9 @@
         "licenseExpired": "已過期",
         "status": "狀態",
         "role": "身分",
-        "contactKeyword": "關鍵字(姓名、手機、身分證)"
+        "contactKeyword": "關鍵字(姓名、手機、身分證)",
+        "classAKeyword": "關鍵字(證號、姓名、身分證)",
+        "classBKeyword": "關鍵字(證號、店名、姓名、身分證)"
       },
       "columns": {
         "licenseNo": "證號",
@@ -307,7 +309,12 @@
       "residentialSameAsMailing": "戶籍地址同通訊地址",
       "note": "備註",
       "roles": "身分(至少一個)",
-      "month": "{month} 月"
+      "month": "{month} 月",
+      "ownerOrg": "所屬組織",
+      "createdAt": "建立時間",
+      "createdBy": "建立者",
+      "updatedAt": "最後修改時間",
+      "updatedBy": "修改者"
     },
     "sections": {
       "dealer": "經銷商資訊",
