@@ -262,6 +262,8 @@ Provider 內找不到模組設定時使用預設模板 `{{title}}`;缺少 Provid
 - **目前分頁記在網址**:內部用 `useUrlState`,預設 key 是 `tab`(同一頁有兩組分頁時用 `urlKey` 換);網址上的分頁不存在或看不到時顯示第一個看得到的分頁,不寫回網址。
 - **分頁權限**:分頁設 `permission`,`hasPermission` 不成立就不顯示;只剩一個分頁時不顯示分頁籤、直接顯示內容(右側動作 `actions` 仍在);一個都看不到時整個不渲染。
 
+分頁殼(`PageTabs` 外面那張卡片)的高度依目前分頁決定:列表分頁(`PageTabItem.isList`)平板以上釘高、表格在卡片裡捲,其餘整頁捲(`usePageTabsShellSx`;規則見 STYLE-08)。
+
 只有選到的分頁內容會掛載。放不下時分頁籤維持單列、橫向捲動:還有分頁的那一側顯示漸層 + ‹ / ›(點了捲一段),捲到底的那一側兩者都消失;選到的分頁(含從網址打開)自動捲進可視範圍。捲動是 `@repo/ui/tabs` 的 `scrollable`,窄寬同一行為。與殼的 `RouteTabs` 無關。
 
 正本:`apps/admin/src/hooks/base/useUrlState.ts`、`apps/admin/src/lib/base/url-state.ts`、`apps/admin/src/components/base/PageTabs/`、`packages/ui/src/Tabs/Tabs.tsx`、`docs/standards/react/components.md` REACT-14

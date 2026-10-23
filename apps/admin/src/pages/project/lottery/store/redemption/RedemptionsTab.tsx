@@ -17,6 +17,7 @@ import {
   useLotteryRedemptionsQuery,
   useLotteryStoreBoardQuery,
 } from "@repo/graphql";
+import { Box } from "@repo/ui/box";
 import { Card } from "@repo/ui/card";
 import { useBreakpointDown } from "@repo/ui/media-query";
 import { Pagination } from "@repo/ui/pagination";
@@ -248,7 +249,8 @@ export const RedemptionsTab = () => {
     (filters.redeemedBy === ALL ? 0 : 1);
 
   return (
-    <Stack spacing={2}>
+    // 列表分頁(STYLE-08):平板以上分頁殼釘高,清單那一層吃掉剩下的高度並自己捲(表頭固定);手機寬整頁捲
+    <Stack spacing={2} sx={{ flex: 1, minHeight: 0 }}>
       <Typography variant="h6" component="h2">
         {t("tab.title")}
       </Typography>
@@ -348,66 +350,69 @@ export const RedemptionsTab = () => {
           </Stack>
         }
       />
-      {isNarrow ? (
-        <Stack spacing={1.5}>
-          {rows.length === 0 && !query.isLoading ? (
-            <Typography color="textSecondary">{t("tab.empty")}</Typography>
-          ) : null}
-          {rows.map((row) => (
-            <Card
-              key={row.id}
-              variant="outlined"
-              role="button"
-              tabIndex={0}
-              onClick={() => {
-                flow.openDetail(row.id);
-              }}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") {
+      <Box sx={{ flex: 1, minHeight: 0 }}>
+        {isNarrow ? (
+          // 卡片清單(lg 以下):平板以上分頁殼釘高時由這一層在卡片裡捲;md 以下高度跟著內容,整頁捲
+          <Stack spacing={1.5} sx={{ height: "100%", overflow: "auto" }}>
+            {rows.length === 0 && !query.isLoading ? (
+              <Typography color="textSecondary">{t("tab.empty")}</Typography>
+            ) : null}
+            {rows.map((row) => (
+              <Card
+                key={row.id}
+                variant="outlined"
+                role="button"
+                tabIndex={0}
+                onClick={() => {
                   flow.openDetail(row.id);
-                }
-              }}
-              sx={{ px: 2, py: 1.5, cursor: "pointer" }}
-            >
-              <Stack
-                direction="row"
-                sx={{ justifyContent: "space-between", alignItems: "center" }}
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    flow.openDetail(row.id);
+                  }
+                }}
+                sx={{ flexShrink: 0, px: 2, py: 1.5, cursor: "pointer" }}
               >
-                <Typography color="textPrimary">
-                  {`${serialText(row)} · ${row.ticketLabel} · ${t("money", { amount: moneyText(row.prizeAmount) })}`}
+                <Stack
+                  direction="row"
+                  sx={{ justifyContent: "space-between", alignItems: "center" }}
+                >
+                  <Typography color="textPrimary">
+                    {`${serialText(row)} · ${row.ticketLabel} · ${t("money", { amount: moneyText(row.prizeAmount) })}`}
+                  </Typography>
+                  {statusTag(row)}
+                </Stack>
+                <Typography variant="body2" color="textSecondary">
+                  {t("tab.cardMeta", {
+                    cashPoint: row.cashPoint.name,
+                    shift: shiftText(row),
+                    time: temporal(row.redeemedAt, "monthDayTime"),
+                  })}
                 </Typography>
-                {statusTag(row)}
-              </Stack>
-              <Typography variant="body2" color="textSecondary">
-                {t("tab.cardMeta", {
-                  cashPoint: row.cashPoint.name,
-                  shift: shiftText(row),
-                  time: temporal(row.redeemedAt, "monthDayTime"),
-                })}
-              </Typography>
-              <Typography variant="body2" color="textSecondary">
-                {t("tab.cardBy", {
-                  name: row.redeemedBy.name,
-                  purchase: purchaseText(row),
-                })}
-              </Typography>
-            </Card>
-          ))}
-        </Stack>
-      ) : (
-        <Table
-          minWidth={1080}
-          aria-label={t("tab.title")}
-          columns={columns}
-          rows={rows}
-          getRowKey={(row) => row.id}
-          isLoading={query.isLoading}
-          emptyMessage={t("tab.empty")}
-          onRowClick={(row) => {
-            flow.openDetail(row.id);
-          }}
-        />
-      )}
+                <Typography variant="body2" color="textSecondary">
+                  {t("tab.cardBy", {
+                    name: row.redeemedBy.name,
+                    purchase: purchaseText(row),
+                  })}
+                </Typography>
+              </Card>
+            ))}
+          </Stack>
+        ) : (
+          <Table
+            minWidth={1080}
+            aria-label={t("tab.title")}
+            columns={columns}
+            rows={rows}
+            getRowKey={(row) => row.id}
+            isLoading={query.isLoading}
+            emptyMessage={t("tab.empty")}
+            onRowClick={(row) => {
+              flow.openDetail(row.id);
+            }}
+          />
+        )}
+      </Box>
       <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
         <Typography variant="body2" color="textSecondary" sx={{ flex: 1 }}>
           {t("tab.summary", { count: total })}

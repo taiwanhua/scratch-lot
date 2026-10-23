@@ -110,8 +110,9 @@ export const PeriodCloseTab = () => {
   ];
 
   return (
-    // 說明與清單分兩層:清單(表格 / 手機卡片)預設 height: 100%,要量的是自己那一層,不是含說明的整個分頁(STYLE-08)
-    <Stack spacing={2} sx={{ flexGrow: 1, flexShrink: 0 }}>
+    // 列表分頁(STYLE-08):平板以上分頁殼釘高,清單那一層吃掉剩下的高度並自己捲;
+    // 說明與清單分兩層 —— 清單(表格 / 手機卡片)預設 height: 100%,量的是自己那一層,不是含說明的整個分頁
+    <Stack spacing={2} sx={{ flex: 1, minHeight: 0 }}>
       <Typography variant="body2" color="textSecondary" component="p">
         {t("periodClose.hint")}
       </Typography>

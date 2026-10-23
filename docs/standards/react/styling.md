@@ -140,26 +140,40 @@ expect(chain.slice(1, -1).filter((l) => l.scrolls)).toEqual([]); // 只有最內
 實際的視覺滿版仍以 dev(或 mock 模式,TEST-08)目視為準;這個測試守的是「不再退回去」。
 
 **釘高(`flex: 1` + `minHeight: 0`)只給「子樹有一層 `overflow: auto` 能吃掉全部超出量」的版面**:主從版面
-(左樹 / 右表各自捲)、整頁只有一張 DataTable(STYLE-11)。其餘 —— 一般內容頁、頁內分頁殼(`PageTabs` 外面那張卡片)、
-卡片包表單 / 清單、表格下面還有別的區塊 —— 一律 `flexGrow: 1; flexShrink: 0`:內容少時撐滿、多時跟著長,交給 `<main>` 捲。
-**MUI `Card` / `Paper` 預設 `overflow: hidden`**:釘了高的卡片,內容超出的部分直接被裁掉,`<main>` 也沒東西可捲
-(通知設定等頁都這樣被回報過)。連帶:
+(左樹 / 右表各自捲)、列表頁與列表分頁。其餘 —— 表單、設定、看板這類內容頁與內容分頁、卡片包表單、
+表格下面還有別的區塊、只有卡片清單(沒有表格)的分頁 —— 一律 `flexGrow: 1; flexShrink: 0`(`CONTENT_PAGE_SHELL_SX`):
+內容少時撐滿、多時跟著長,交給 `<main>` 捲。
+
+**列表頁與列表分頁:平板以上(`md` 起)在卡片裡捲、表頭固定;`md` 以下整頁捲**(`lib/base/list-page-layout.ts` 的 `LIST_PAGE_SHELL_SX`,
+`flex: { xs: "1 0 auto", md: 1 }` + `minHeight: 0`)。列表頁 = 工具列 + 一張長表格 + 分頁器,平板以上工具列與分頁器一直看得到、
+只有表格那一層捲;手機寬螢幕矮,整頁捲比卡片裡再捲一層好用,表頭跟著捲。
+
+- 整頁都是列表分頁的頁殼直接用 `LIST_PAGE_SHELL_SX`;分頁混著列表與內容的頁殼用 `usePageTabsShellSx(items)`,
+  列表分頁在 `PageTabItem` 標 `isList: true`(分頁登記表照樣帶這個欄位),選到它時才換成列表頁殼。
+- 列表分頁的內容:最外層 `flex: 1; minHeight: 0`,表格(連同手機卡片清單)外面再包一層 `flex: 1; minHeight: 0`、只放清單,
+  工具列、說明、分頁器放在那一層外面;表格用預設的 `height: 100%`(不傳 `containerSx={{ height: "auto" }}`)。
+- 一個分頁裡有兩張以上的表:由分頁最外層 `overflow: auto` 整塊捲,每張表傳 `containerSx={{ height: "auto" }}` 依內容長高。
+- `@repo/ui/table` 一律 `stickyHeader`(同 DataTable):容器自己捲時表頭固定,交給 `<main>` 整頁捲時沒有作用。
+  **MUI `Card` / `Paper` 預設 `overflow: hidden`**:釘了高的卡片,內容超出的部分直接被裁掉,`<main>` 也沒東西可捲
+  (通知設定等頁都這樣被回報過)。連帶:
 
 - 主從版面在手機寬(xs)不釘高(`flex: { xs: "1 0 auto", sm: 1 }`):兩塊依內容長高、交給 `<main>` 捲;sm 起才各自捲。
 - 直排(xs `column`)時不給 `flex: 2` 之類的比例:flex-basis 0 會把 `overflow: hidden` 的卡片壓矮;比例只在並排的斷點給(`flex: { md: 2 }`)。
 - 不釘高的卡片裡放 `@repo/ui/table`,傳 `containerSx={{ height: "auto" }}`:預設的 `height: 100%` 在 flex 欄裡會解析成卡片高度,少掉標題那段。
   傳不了 `containerSx` 的清單(帳戶管理的 `AccountsList` 手機卡片也是 `height: 100%`)改成外面包一層 `flex: 1; minHeight: 0`、只放清單,
-  說明文字放在那一層外面(先例 `PeriodCloseTab`)。
+  說明文字放在那一層外面。
 - 頁面根是 `Card` / `Paper`(會裁切)時一定要宣告 `flexShrink: 0`(或依上面的條件釘高):沒寫就是預設的 `flex-shrink: 1`,
-  裁切元素的 `min-height: auto` 又算成 0,內容一長卡片就被壓到殼高、下半直接消失(個人設定、補打卡新增頁都這樣)。
+  裁切元素的 `min-height: auto` 又算成 0,內容一長卡片就被壓到殼高、下半直接消失(個人設定頁、表單卡片都這樣被回報過)。
 - 內層捲動區塊(要 sticky 表頭、看得到橫向捲軸的寬表格 / 時間軸)不寫 `calc(100vh - 320px)` 這種依工具列高度的魔術數字:
   量 `<main>` 剩下的空間給上限,空間不足時不設上限(只由 `<main>` 捲),任何尺寸都只有一層垂直捲動
   (`hooks/base/useFitMainHeight.ts`;量測邊界傳**只含內容、不含並排側欄**的那一欄,含了比內容高的側欄,上限會來回跳)。
 - 測試:頁殼卡片斷言 `flex-shrink: 0`;殼本身斷言 `<main>` 可捲、`shell-content` 不裁切(先例 `app/AdminShell/ShellLayout.test.tsx`);量測 hook 見 `hooks/base/useFitMainHeight.test.tsx`
   (它觀察 `<main>`、邊界與邊界往上到 `<main>` 的每一層:上方工具列在資料載入後換行長高時,只有外層會變尺寸)。
-  **通用守門** `app/PageRootHeight.test.tsx`:用 mock 假世界(TEST-08)渲染每個有模組的列表頁、新增頁與個人設定,
-  以 `test/height-chain.ts` 的 `squeezedPageRootProblem` 驗頁面根 —— 會裁切的根要 `flex-shrink: 0`,或釘高且子樹有一層
-  經 `min-height: 0` 接上來的捲動容器;頁內分頁殼(根裡有 `tabpanel`)不得釘高。新頁只要在假世界有模組就自動納入。
+  **通用守門** `app/PageRootHeight.test.tsx`:用 mock 假世界(TEST-08)渲染每個有模組的列表頁、新增頁與個人設定,逐一點開每個分頁,
+  以 `test/height-chain.ts` 讀頁面根在手機寬(390)與平板寬(1024)的宣告(jsdom 不套 `@media`,讀宣告原文):
+  `squeezedPageRootProblem` —— 會裁切的根要 `flex-shrink: 0`,或釘高且子樹有一層經 `min-height: 0` 接上來的捲動容器,
+  分頁殼在手機寬不得釘高;`isListPageShell` 對照測試裡的列表頁 / 列表分頁清單(`LIST_PAGES`、`LIST_TABS`,這份清單就是決定本身);
+  列表分頁在平板寬另驗表格那一層的高度鏈接到 `<main>`、沒有多開的捲動層、表頭 `stickyHeader`。新頁只要在假世界有模組就自動納入。
 
 **同一條鏈只標一次 `overflow: auto`**:父子兩層各標一次時,平常看不出來 ——
 兩層都是「高度跟著內容長」就不會有人捲;等到內層拿到確定高度(或內容給了 `minWidth`),

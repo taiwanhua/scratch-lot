@@ -9,6 +9,7 @@ import {
   useScheduleDemandTemplatesQuery,
   useScheduleDemandWeekTemplatesQuery,
 } from "@repo/graphql";
+import { Box } from "@repo/ui/box";
 import { Button } from "@repo/ui/button";
 import { Card } from "@repo/ui/card";
 import { useBreakpointDown } from "@repo/ui/media-query";
@@ -116,7 +117,8 @@ export const WeekTemplatesTab = () => {
   ];
 
   return (
-    <Stack spacing={2}>
+    // 列表分頁(STYLE-08):平板以上分頁殼釘高,清單那一層吃掉剩下的高度並自己捲(表頭固定);手機寬整頁捲
+    <Stack spacing={2} sx={{ flex: 1, minHeight: 0 }}>
       {canCreate && (
         <Button
           sx={{ alignSelf: "flex-end" }}
@@ -127,48 +129,54 @@ export const WeekTemplatesTab = () => {
           {t("create")}
         </Button>
       )}
-      {isMobile ? (
-        <Stack spacing={1.5}>
-          {rows.map((row) => (
-            <Card
-              key={row.id}
-              variant="outlined"
-              sx={{ p: 1.5, cursor: "pointer" }}
-              onClick={() => {
-                setEditing({ mode: "edit", row });
-              }}
-            >
-              <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
-                <Typography variant="subtitle2" sx={{ flex: 1 }}>
-                  {row.name}
+      <Box sx={{ flex: 1, minHeight: 0 }}>
+        {isMobile ? (
+          <Stack spacing={1.5}>
+            {rows.map((row) => (
+              <Card
+                key={row.id}
+                variant="outlined"
+                sx={{ p: 1.5, cursor: "pointer" }}
+                onClick={() => {
+                  setEditing({ mode: "edit", row });
+                }}
+              >
+                <Stack
+                  direction="row"
+                  spacing={1}
+                  sx={{ alignItems: "center" }}
+                >
+                  <Typography variant="subtitle2" sx={{ flex: 1 }}>
+                    {row.name}
+                  </Typography>
+                  <Tag label={row.ownerOrg.name} />
+                  {enabledOf(row)}
+                </Stack>
+                <Typography variant="body2" color="textSecondary">
+                  {WEEKDAYS.map((day) =>
+                    t("dayCell", {
+                      day: weekdayOf(day),
+                      templates: dayText(row, day),
+                    }),
+                  ).join(" · ")}
                 </Typography>
-                <Tag label={row.ownerOrg.name} />
-                {enabledOf(row)}
-              </Stack>
-              <Typography variant="body2" color="textSecondary">
-                {WEEKDAYS.map((day) =>
-                  t("dayCell", {
-                    day: weekdayOf(day),
-                    templates: dayText(row, day),
-                  }),
-                ).join(" · ")}
-              </Typography>
-            </Card>
-          ))}
-        </Stack>
-      ) : (
-        <Table
-          minWidth={960}
-          columns={columns}
-          rows={rows}
-          getRowKey={(row) => row.id}
-          isLoading={query.isLoading}
-          onRowClick={(row) => {
-            setEditing({ mode: "edit", row });
-          }}
-          size="small"
-        />
-      )}
+              </Card>
+            ))}
+          </Stack>
+        ) : (
+          <Table
+            minWidth={960}
+            columns={columns}
+            rows={rows}
+            getRowKey={(row) => row.id}
+            isLoading={query.isLoading}
+            onRowClick={(row) => {
+              setEditing({ mode: "edit", row });
+            }}
+            size="small"
+          />
+        )}
+      </Box>
       {editing !== null && (
         <WeekTemplateDialog
           weekTemplate={editing.mode === "edit" ? editing.row : null}

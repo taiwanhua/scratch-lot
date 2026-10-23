@@ -3,6 +3,7 @@ import { screen, within } from "@testing-library/react";
 
 import {
   heightChainOf,
+  isListPageShell,
   pageRootOf,
   squeezedPageRootProblem,
 } from "@/test/height-chain";
@@ -94,7 +95,10 @@ describe("個人設定頁的高度(STYLE-08:頁內分頁殼不釘高、不被壓
     const style = globalThis.getComputedStyle(root);
     expect(style.flexGrow).toBe("1");
     expect(style.flexShrink).toBe("0");
-    expect(squeezedPageRootProblem(root)).toBeNull();
+    // 內容頁(偏好、代理人):手機寬、平板寬都整頁捲,不是列表頁殼
+    expect(squeezedPageRootProblem(root, 390)).toBeNull();
+    expect(squeezedPageRootProblem(root, 1024)).toBeNull();
+    expect(isListPageShell(root)).toBe(false);
   });
 
   it("代理人分頁:表格外面不多開一層捲動,高度鏈直通殼的 <main>", async () => {

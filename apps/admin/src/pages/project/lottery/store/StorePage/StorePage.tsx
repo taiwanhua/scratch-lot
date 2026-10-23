@@ -6,6 +6,7 @@ import {
   type PageTabItem,
   PageTabs,
 } from "@/components/base/PageTabs/PageTabs";
+import { usePageTabsShellSx } from "@/components/base/PageTabs/usePageTabsShellSx";
 import type { ModulePageProps } from "@/lib/base/module-tree";
 
 import { STORE_TAB_ENTRIES } from "../store-tabs";
@@ -17,19 +18,20 @@ import { STORE_TAB_ENTRIES } from "../store-tabs";
 export const StorePage = (props: ModulePageProps) => {
   const t = useTranslations("admin.lotteryStore.tabs");
   const items: PageTabItem[] = STORE_TAB_ENTRIES.map(
-    ({ value, labelKey, permission, Content }) => ({
+    ({ value, labelKey, permission, isList, Content }) => ({
       value,
       label: t(labelKey),
       ...(permission === undefined ? {} : { permission }),
+      ...(isList === true ? { isList } : {}),
       content: <Content {...props} />,
     }),
   );
+  const shellSx = usePageTabsShellSx(items);
   return (
-    // 一般內容頁殼(STYLE-08):內容少時撐滿、多時跟著長,交給 <main> 捲;不釘高(Card 預設 overflow: hidden,釘高會裁掉內容)
+    // 分頁殼(STYLE-08):列表分頁平板以上釘高、表格在卡片裡捲;看板等內容分頁與手機寬整頁捲
     <Card
       sx={{
-        flexGrow: 1,
-        flexShrink: 0,
+        ...shellSx,
         display: "flex",
         flexDirection: "column",
         px: { xs: 2, sm: 3 },

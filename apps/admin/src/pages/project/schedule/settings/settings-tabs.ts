@@ -10,11 +10,17 @@ import { WeekTemplatesTab } from "./WeekTemplatesTab/WeekTemplatesTab";
  * 之後的功能只追加自己那一列。
  */
 export const SETTINGS_TABS: readonly ScheduleTabEntry[] = [
-  { value: "staff", labelKey: "staff", Content: StaffTab },
-  { value: "templates", labelKey: "templates", Content: TemplatesTab },
+  { value: "staff", labelKey: "staff", isList: true, Content: StaffTab },
+  {
+    value: "templates",
+    labelKey: "templates",
+    isList: true,
+    Content: TemplatesTab,
+  },
   {
     value: "week-templates",
     labelKey: "weekTemplates",
+    isList: true,
     Content: WeekTemplatesTab,
   },
   { value: "rules", labelKey: "rules", Content: RulesTab },

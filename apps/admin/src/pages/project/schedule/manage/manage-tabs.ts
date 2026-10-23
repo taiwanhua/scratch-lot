@@ -31,6 +31,7 @@ export const MANAGE_TABS: readonly ScheduleTabEntry[] = [
     value: "support-requests",
     labelKey: "supportRequests",
     permission: SCHEDULE_PERMISSIONS.manageView,
+    isList: true,
     Content: SupportRequestsTab,
   },
 ];

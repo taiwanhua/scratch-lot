@@ -14,6 +14,7 @@ import {
   useInvalidateApplyCenterCounts,
 } from "@/hooks/base/useApplyCenterCounts";
 import { useUrlState } from "@/hooks/base/useUrlState";
+import { LIST_PAGE_SHELL_SX } from "@/lib/base/list-page-layout";
 import { urlStateDefault } from "@/lib/base/url-state";
 
 import { ApplyCenterTabLabel } from "./ApplyCenterTabLabel";
@@ -82,11 +83,10 @@ export const ApplyCenterPage = () => {
   ];
 
   return (
-    // 頁內分頁殼(STYLE-08):內容少時撐滿、多時跟著長,交給 <main> 捲;不釘高(Card 預設 overflow: hidden,釘高會裁掉內容)
+    // 列表分頁的分頁殼(STYLE-08):平板以上釘高、表格在卡片裡捲(表頭固定);手機寬不釘高,整頁捲
     <Card
       sx={{
-        flexGrow: 1,
-        flexShrink: 0,
+        ...LIST_PAGE_SHELL_SX,
         display: "flex",
         flexDirection: "column",
         px: 3,

@@ -1,3 +1,5 @@
+import { mediaRulesOf } from "./media-rules";
+
 /**
  * 滿版版面的高度鏈檢查(STYLE-08 / STYLE-11;滿版高度曾反覆被回報)。
  *
@@ -105,18 +107,107 @@ export const pageRootOf = (anchor: HTMLElement): HTMLElement => {
   throw new Error("找不到 shell-content:這個元素不在殼的內容區裡");
 };
 
-export const pageRootLinkOf = (root: HTMLElement): PageRootLink => {
-  const style = globalThis.getComputedStyle(root);
-  return {
-    ...linkOf(root),
+/** 主題斷點(MUI 預設,px):`sx` 的斷點物件每個斷點各一條 `@media (min-width:<值>px)`。 */
+const BREAKPOINTS = [0, 600, 900, 1200, 1536] as const;
+
+/** 列表頁殼釘高的起點(`md`;`lib/base/list-page-layout.ts` 的 `LIST_PAGE_PIN_BREAKPOINT`)。 */
+export const LIST_PIN_MIN_WIDTH = 900;
+
+/** `flex` 簡寫 → 三個值(只處理 sx 會產生的寫法:`1`、`1 0 auto`、`none`)。 */
+const expandFlex = (value: string) => {
+  if (value === "none") {
+    return { flexGrow: "0", flexShrink: "0", flexBasis: "auto" };
+  }
+  const [grow = "0", shrink = "1", basis = "0%"] = value.trim().split(/\s+/);
+  return { flexGrow: grow, flexShrink: shrink, flexBasis: basis };
+};
+
+const declarationIn = (cssText: string, property: string) => {
+  const match = new RegExp(
+    String.raw`(?:^|[\s;{])${property}:\s*([^;}]+)`,
+  ).exec(cssText);
+  return match?.[1]?.trim();
+};
+
+/**
+ * 頁面根在視窗寬 `width` 時宣告的 flex 與 min-height:先取不分斷點的值(getComputedStyle),
+ * 再依序疊上不超過 `width` 的每條斷點 `@media` 宣告(jsdom 不套 `@media`,只能讀宣告;`test/media-rules.ts`)。
+ */
+export const declaredFlexAt = (element: HTMLElement, width: number) => {
+  const style = globalThis.getComputedStyle(element);
+  const declared = {
+    flexGrow: style.flexGrow,
     flexShrink: style.flexShrink,
     flexBasis: style.flexBasis,
+    minHeight: style.minHeight,
+  };
+  for (const breakpoint of BREAKPOINTS.filter((value) => value <= width)) {
+    const text = mediaRulesOf(element, breakpoint);
+    const flex = declarationIn(text, "flex");
+    if (flex !== undefined) {
+      Object.assign(declared, expandFlex(flex));
+    }
+    for (const [property, key] of [
+      ["flex-grow", "flexGrow"],
+      ["flex-shrink", "flexShrink"],
+      ["flex-basis", "flexBasis"],
+      ["min-height", "minHeight"],
+    ] as const) {
+      const value = declarationIn(text, property);
+      if (value !== undefined) {
+        declared[key] = value;
+      }
+    }
+  }
+  return declared;
+};
+
+export const pageRootLinkOf = (
+  root: HTMLElement,
+  width: number,
+): PageRootLink => {
+  const declared = declaredFlexAt(root, width);
+  return {
+    ...linkOf(root),
+    ...declared,
     clips: clipsOverflow(root),
   };
 };
 
+/** 釘高 = `flex-basis: 0` + `min-height: 0`(高度由殼給,不看內容)。 */
+export const isPinnedAt = (root: HTMLElement, width: number): boolean => {
+  const declared = declaredFlexAt(root, width);
+  return isZero(declared.minHeight) && isZero(declared.flexBasis);
+};
+
 /**
- * 頁面根會不會被殼的 flex 欄壓扁、把內容裁掉(STYLE-08;回傳問題描述,沒問題回 null)。
+ * 列表頁殼(`LIST_PAGE_SHELL_SX`):`md` 以下不釘高(`flex-shrink: 0`)、平板以上(`md` 起)釘高。
+ * 主從版面從 `sm` 起就釘高,不算(REACT-17)。
+ */
+export const isListPageShell = (root: HTMLElement): boolean =>
+  declaredFlexAt(root, LIST_PIN_MIN_WIDTH - 1).flexShrink === "0" &&
+  isPinnedAt(root, LIST_PIN_MIN_WIDTH);
+
+/** 子樹裡有一層捲動容器,從它到 `root` 的每一層都 `min-height: 0`:超出量由它吃掉。 */
+const hasAbsorbingScroller = (root: HTMLElement) =>
+  [...root.querySelectorAll<HTMLElement>("*")].some((element) => {
+    if (!isScrollable(element)) {
+      return false;
+    }
+    for (
+      let node: HTMLElement | null = element.parentElement;
+      node !== null && node !== root;
+      node = node.parentElement
+    ) {
+      if (!isZero(globalThis.getComputedStyle(node).minHeight)) {
+        return false;
+      }
+    }
+    return true;
+  });
+
+/**
+ * 頁面根在視窗寬 `width` 時會不會被殼的 flex 欄壓扁、把內容裁掉(STYLE-08;回傳問題描述,沒問題回 null)。
  *
  * 殼的內容區是釘了高的 column flex,子層預設 `flex-shrink: 1`;`overflow` 不是 visible 的子層,
  * `min-height: auto` 算成 0 —— 內容一長,裁切的根(`Card` / `Paper`)就被壓到殼高、超出的部分直接消失,
@@ -125,39 +216,28 @@ export const pageRootLinkOf = (root: HTMLElement): PageRootLink => {
  * 1. 不裁切(`Stack` / `Box` 這類 overflow visible 的根,壓了內容也會溢出給 `<main>` 捲),或 `flex-shrink: 0`
  *    (一般內容頁 `flexGrow: 1; flexShrink: 0`,內容多時跟著長);
  * 2. 刻意釘高(`flex-basis: 0` + `min-height: 0`),而且子樹有一層捲動容器,從它到頁面根的每一層都 `min-height: 0`
- *    (主從版面、整頁一張 DataTable:超出量由那一層吃掉)。頁內分頁殼(根卡片裡有 `tabpanel`)不在此列:
- *    各分頁內容不一,一律不釘高。
+ *    (主從版面、列表頁:超出量由那一層吃掉)。頁內分頁殼(根裡有 `tabpanel`)只有列表分頁在平板以上可以釘高,
+ *    手機寬一律不釘。
  */
-export const squeezedPageRootProblem = (root: HTMLElement): string | null => {
-  const link = pageRootLinkOf(root);
+export const squeezedPageRootProblem = (
+  root: HTMLElement,
+  width: number,
+): string | null => {
+  const link = pageRootLinkOf(root, width);
   if (!link.clips || link.flexShrink === "0") {
     return null;
   }
-  const pinned = isZero(link.minHeight) && isZero(link.flexBasis);
-  if (!pinned) {
-    return `${link.label} 會被壓扁:裁切溢出、flex-shrink ${link.flexShrink || "未宣告(預設 1)"}、flex-basis ${link.flexBasis || "未宣告(預設 auto)"}(一般內容頁用 flexGrow 1 + flexShrink 0)`;
+  const at = `${String(width)}px 寬`;
+  if (!isPinnedAt(root, width)) {
+    return `${at}:${link.label} 會被壓扁:裁切溢出、flex-shrink ${link.flexShrink || "未宣告(預設 1)"}、flex-basis ${link.flexBasis || "未宣告(預設 auto)"}(一般內容頁用 flexGrow 1 + flexShrink 0)`;
   }
-  if (root.querySelector('[role="tabpanel"]') !== null) {
-    return `${link.label} 是頁內分頁殼卻釘了高:分頁內容不一定由一層捲動吃掉超出量(用 flexGrow 1 + flexShrink 0)`;
+  if (
+    width < LIST_PIN_MIN_WIDTH &&
+    root.querySelector('[role="tabpanel"]') !== null
+  ) {
+    return `${at}:${link.label} 是頁內分頁殼,手機寬卻釘了高(列表分頁用 LIST_PAGE_SHELL_SX,其餘 flexGrow 1 + flexShrink 0)`;
   }
-  const absorbs = [...root.querySelectorAll<HTMLElement>("*")].some(
-    (element) => {
-      if (!isScrollable(element)) {
-        return false;
-      }
-      for (
-        let node: HTMLElement | null = element.parentElement;
-        node !== null && node !== root;
-        node = node.parentElement
-      ) {
-        if (!isZero(globalThis.getComputedStyle(node).minHeight)) {
-          return false;
-        }
-      }
-      return true;
-    },
-  );
-  return absorbs
+  return hasAbsorbingScroller(root)
     ? null
-    : `${link.label} 釘了高但子樹沒有一層吃得掉超出量的捲動容器:超出的內容會被裁掉`;
+    : `${at}:${link.label} 釘了高但子樹沒有一層吃得掉超出量的捲動容器:超出的內容會被裁掉`;
 };

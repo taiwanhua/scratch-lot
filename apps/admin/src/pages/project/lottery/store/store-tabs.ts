@@ -20,6 +20,8 @@ export interface StoreTabEntry {
   labelKey: string;
   /** 看得到這個分頁要的權限;不給 = 看得到這一頁的人都看得到 */
   permission?: string;
+  /** 列表分頁:平板以上分頁殼釘高、表格在卡片裡捲(`PageTabItem.isList`);不給 = 內容分頁,整頁捲 */
+  isList?: boolean;
   /** 分頁內容(拿得到模組,表單引擎的列表要用) */
   Content: ComponentType<ModulePageProps>;
 }
@@ -41,6 +43,7 @@ export const STORE_TAB_ENTRIES: readonly StoreTabEntry[] = [
     value: STORE_TABS.checkouts,
     labelKey: "checkouts",
     permission: STORE_PERMISSIONS.view,
+    isList: true,
     Content: CheckoutsTab,
   },
   // 盤點紀錄(規格 6.1、8.6;Figma ST-29):`store.view`(api `lotteryStocktakes` 也守它)
@@ -48,6 +51,7 @@ export const STORE_TAB_ENTRIES: readonly StoreTabEntry[] = [
     value: STORE_TABS.stocktakes,
     labelKey: "stocktakes",
     permission: STORE_PERMISSIONS.view,
+    isList: true,
     Content: StocktakesTab,
   },
   // 撤銷售出(規格 8.5;Figma ST-31a):`store.view`(api `lotteryStoreSaleReversals` 也守它)
@@ -69,12 +73,14 @@ export const STORE_TAB_ENTRIES: readonly StoreTabEntry[] = [
     value: STORE_TABS.redemptions,
     labelKey: "redemptions",
     permission: STORE_PERMISSIONS.view,
+    isList: true,
     Content: RedemptionsTab,
   },
   // 其他申請:租戶自己綁到本模組的表單,用表單引擎的預設列表
   {
     value: STORE_TABS.otherForms,
     labelKey: "otherForms",
+    isList: true,
     Content: OtherFormsTab,
   },
 ];

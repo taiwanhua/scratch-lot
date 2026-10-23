@@ -11,6 +11,7 @@ import {
   type LotteryStocktakesQuery,
   useLotteryStocktakesQuery,
 } from "@repo/graphql";
+import { Box } from "@repo/ui/box";
 import { Card } from "@repo/ui/card";
 import { useBreakpointDown } from "@repo/ui/media-query";
 import { Pagination } from "@repo/ui/pagination";
@@ -147,7 +148,8 @@ export const StocktakesTab = () => {
   ];
 
   return (
-    <Stack spacing={2}>
+    // 列表分頁(STYLE-08):平板以上分頁殼釘高,清單那一層吃掉剩下的高度並自己捲(表頭固定);手機寬整頁捲
+    <Stack spacing={2} sx={{ flex: 1, minHeight: 0 }}>
       <Stack direction="row" spacing={1.5} sx={{ flexWrap: "wrap" }}>
         <SelectField
           label={t("list.type")}
@@ -182,64 +184,68 @@ export const StocktakesTab = () => {
           sx={{ minWidth: 140 }}
         />
       </Stack>
-      {isNarrow ? (
-        <Stack spacing={1.5}>
-          {rows.length === 0 && !query.isLoading ? (
-            <Typography color="textSecondary">{t("list.empty")}</Typography>
-          ) : null}
-          {rows.map((row) => (
-            <Card
-              key={row.id}
-              variant="outlined"
-              role="button"
-              tabIndex={0}
-              onClick={() => {
-                open(row);
-              }}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") {
+      <Box sx={{ flex: 1, minHeight: 0 }}>
+        {isNarrow ? (
+          // 卡片清單(lg 以下):平板以上分頁殼釘高時由這一層在卡片裡捲;md 以下高度跟著內容,整頁捲
+          <Stack spacing={1.5} sx={{ height: "100%", overflow: "auto" }}>
+            {rows.length === 0 && !query.isLoading ? (
+              <Typography color="textSecondary">{t("list.empty")}</Typography>
+            ) : null}
+            {rows.map((row) => (
+              <Card
+                key={row.id}
+                variant="outlined"
+                role="button"
+                tabIndex={0}
+                onClick={() => {
                   open(row);
-                }
-              }}
-              sx={{ px: 2, py: 1.5, cursor: "pointer" }}
-            >
-              <Stack spacing={0.5}>
-                <Stack
-                  direction="row"
-                  spacing={1}
-                  sx={{ alignItems: "center" }}
-                >
-                  <Typography variant="subtitle2" sx={{ flex: 1 }}>
-                    {[row.serialNo ?? "—", t(`types.${row.type}`)].join(" · ")}
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    open(row);
+                  }
+                }}
+                sx={{ flexShrink: 0, px: 2, py: 1.5, cursor: "pointer" }}
+              >
+                <Stack spacing={0.5}>
+                  <Stack
+                    direction="row"
+                    spacing={1}
+                    sx={{ alignItems: "center" }}
+                  >
+                    <Typography variant="subtitle2" sx={{ flex: 1 }}>
+                      {[row.serialNo ?? "—", t(`types.${row.type}`)].join(
+                        " · ",
+                      )}
+                    </Typography>
+                    {statusTag(row)}
+                  </Stack>
+                  <Typography variant="body2" color="textSecondary">
+                    {temporal(row.startedAt, "monthDayTime")}
                   </Typography>
-                  {statusTag(row)}
+                  <Typography variant="body2">
+                    {t("list.cardFacts", {
+                      backfill: backfillText(row),
+                      investigate: row.summary.newInvestigate,
+                      lost: row.summary.confirmLost,
+                    })}
+                  </Typography>
                 </Stack>
-                <Typography variant="body2" color="textSecondary">
-                  {temporal(row.startedAt, "monthDayTime")}
-                </Typography>
-                <Typography variant="body2">
-                  {t("list.cardFacts", {
-                    backfill: backfillText(row),
-                    investigate: row.summary.newInvestigate,
-                    lost: row.summary.confirmLost,
-                  })}
-                </Typography>
-              </Stack>
-            </Card>
-          ))}
-        </Stack>
-      ) : (
-        <Table
-          minWidth={960}
-          columns={columns}
-          rows={rows}
-          getRowKey={(row) => row.id}
-          isLoading={query.isLoading}
-          emptyMessage={t("list.empty")}
-          onRowClick={open}
-          containerSx={{ height: "auto" }}
-        />
-      )}
+              </Card>
+            ))}
+          </Stack>
+        ) : (
+          <Table
+            minWidth={960}
+            columns={columns}
+            rows={rows}
+            getRowKey={(row) => row.id}
+            isLoading={query.isLoading}
+            emptyMessage={t("list.empty")}
+            onRowClick={open}
+          />
+        )}
+      </Box>
       <Stack
         direction="row"
         spacing={2}

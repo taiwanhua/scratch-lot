@@ -3,7 +3,12 @@ import { screen, waitFor, within } from "@testing-library/react";
 
 import { ACCOUNTS_PERMISSIONS as P } from "@repo/domain/project/lottery-accounts";
 
-import { pageRootOf, squeezedPageRootProblem } from "@/test/height-chain";
+import {
+  heightChainOf,
+  isListPageShell,
+  pageRootOf,
+  squeezedPageRootProblem,
+} from "@/test/height-chain";
 import { blockedPeriodCheck } from "@/test/msw/project/lottery/period-close-fixtures";
 import { restoreViewportAfterEach, setMobileViewport } from "@/test/viewport";
 
@@ -172,7 +177,7 @@ describe("帳戶管理:關帳", () => {
 });
 
 describe("關帳分頁的高度(STYLE-08)", () => {
-  it("清單(預設 height: 100%)量高度的那一層只有清單:說明文字不在同一層,清單不會比分頁多出說明那段而被殼卡片裁掉", async () => {
+  it("清單(預設 height: 100%)量高度的那一層只有清單:說明文字不在同一層,清單不會比分頁多出說明那段而被殼卡片裁掉;平板以上表格在卡片裡捲", async () => {
     renderAccounts({ path: CLOSE_TAB });
     const table = await screen.findByRole("table", { name: "關帳月份" });
     const container = table.closest<HTMLElement>(".MuiTableContainer-root");
@@ -181,8 +186,14 @@ describe("關帳分頁的高度(STYLE-08)", () => {
       throw new Error("找不到清單外層");
     }
     expect([...wrapper.children]).toEqual([container]);
-    // 頁內分頁殼不釘高、也不會被壓扁
-    expect(squeezedPageRootProblem(pageRootOf(table))).toBeNull();
-    expect(globalThis.getComputedStyle(pageRootOf(table)).flexShrink).toBe("0");
+    // 列表分頁的分頁殼:手機寬整頁捲、平板以上釘高,表格那一層經 min-height: 0 接到 <main>、自己捲
+    const root = pageRootOf(table);
+    expect(isListPageShell(root)).toBe(true);
+    expect(squeezedPageRootProblem(root, 390)).toBeNull();
+    expect(squeezedPageRootProblem(root, 1024)).toBeNull();
+    const chain = heightChainOf(table);
+    expect(chain.at(-1)?.label).toBe("MAIN.MuiBox-root");
+    expect(chain.map((link) => link.minHeight)).toEqual(chain.map(() => "0"));
+    expect(chain.slice(1, -1).filter((link) => link.scrolls)).toEqual([]);
   });
 });

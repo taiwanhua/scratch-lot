@@ -23,6 +23,7 @@ import { useRouteTabHref } from "@/hooks/base/useRouteTabHref";
 import { useSession } from "@/hooks/base/useSession";
 import { useTemporalText } from "@/hooks/base/useTemporalText";
 import { useUrlState } from "@/hooks/base/useUrlState";
+import { LIST_PAGE_SHELL_SX } from "@/lib/base/list-page-layout";
 
 import { WORKFLOWS_MODULE_KEY } from "../workflows-permissions";
 import { AssignUserDialog } from "./AssignUserDialog";
@@ -123,10 +124,10 @@ export const WorkflowBlockedPage = () => {
   };
 
   return (
+    // 列表頁殼(STYLE-08):平板以上釘高、表格在卡片裡捲(表頭固定);手機寬不釘高,整頁捲
     <Card
       sx={{
-        flex: 1,
-        minHeight: 0,
+        ...LIST_PAGE_SHELL_SX,
         display: "flex",
         flexDirection: "column",
         px: 3,
