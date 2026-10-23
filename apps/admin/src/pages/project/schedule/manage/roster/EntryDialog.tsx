@@ -294,7 +294,8 @@ export const EntryDialog = ({
                 .map((item) => ({ value: item.userId, label: item.name }))}
               onChange={(next) => {
                 setForm((current) => ({ ...current, userId: next }));
-                errors.clear("userId");
+                // 重疊、畫休(上班欄)與不能擔任負責人(任務那一組)都跟著人,換人一起清
+                errors.clear("userId", "startTime", "endTime", "assignments");
               }}
             />
           )}
@@ -313,6 +314,8 @@ export const EntryDialog = ({
                   date: next ?? "",
                   rows: [],
                 }));
+                // 店休(上班欄)跟著日期;換日期清空了人力需求,那一組的原因也一起清
+                errors.clear("date", "startTime", "endTime", "assignments");
               }}
             />
           )}
@@ -326,6 +329,7 @@ export const EntryDialog = ({
           onTimes={setTimes}
           onBreak={(text) => {
             setIsBreakEdited(true);
+            errors.clear("breakMinutes");
             setForm((current) => ({ ...current, breakText: text }));
           }}
         />
@@ -337,6 +341,7 @@ export const EntryDialog = ({
           <EntryAssignmentRows
             rows={form.rows}
             setRows={(update) => {
+              errors.clear("assignments");
               setForm((current) => ({
                 ...current,
                 rows:
@@ -378,6 +383,7 @@ export const EntryDialog = ({
           }}
           onSaved={(created) => {
             setAddedDemands((current) => [...current, created]);
+            errors.clear("assignments");
             setForm((current) =>
               withAddedDemand(current, created, leaderRule, timeContext),
             );
