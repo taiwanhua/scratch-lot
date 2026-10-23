@@ -1,4 +1,9 @@
-import { toInstant, toIso } from "@repo/domain/form";
+import {
+  localDateDiff,
+  parseLocalDate,
+  toInstant,
+  toIso,
+} from "@repo/domain/form";
 import { REASON_OTHER_VALUE } from "@repo/domain/project/reason-note";
 import {
   MAKEUP_PUNCH_FIELD_KEYS as KEYS,
@@ -43,22 +48,45 @@ export const EMPTY_MAKEUP_PUNCH: MakeupPunchState = {
   note: "",
 };
 
+/** 兩個日期鍵相差不超過一天(「對應排班」下拉的範圍:補打卡那天前後各一天,同 api `aroundDayRangeOf`)。 */
+const withinOneDay = (left: string, right: string): boolean => {
+  const a = parseLocalDate(left);
+  const b = parseLocalDate(right);
+  return a !== null && b !== null && Math.abs(localDateDiff(a, b)) <= 1;
+};
+
 /**
- * 改了補打卡時間的**日期**(租戶時區)或分店 → 對應排班清空,重新選(規格 14.8 情境表);
- * 同一天只改時刻不清(下拉列的是那天的排班,沒變)。
+ * 改了補打卡時間或分店之後,對應排班要不要清空(規格 14.8 情境表):
+ *
+ * - 改分店 → 清空,重新選
+ * - 改補打卡時間:選的班還在新的「前後各一天」範圍內就保留,不在才清空(同一天只改時刻也是這個道理);
+ *   「沒有排班(臨時代班)」永遠在下拉裡,保留
+ * - `entryDate` = 選的那一班的日期(時點;從目前的下拉選項來)。不知道(下拉還沒載到)時保守判斷:
+ *   同一天保留、換了一天清空
  */
 export const withPunchAtOrOrg = (
   state: MakeupPunchState,
   next: Partial<Pick<MakeupPunchState, "punchAt" | "orgId">>,
   timezone: string,
+  entryDate: string | null = null,
 ): MakeupPunchState => {
-  const changed =
-    (next.punchAt !== undefined &&
-      dayKeyOf(next.punchAt, timezone) !== dayKeyOf(state.punchAt, timezone)) ||
-    (next.orgId !== undefined && next.orgId !== state.orgId);
-  return changed
-    ? { ...state, ...next, entry: "", entryLabel: "" }
-    : { ...state, ...next };
+  const cleared = { ...state, ...next, entry: "", entryLabel: "" };
+  if (next.orgId !== undefined && next.orgId !== state.orgId) {
+    return cleared;
+  }
+  if (
+    next.punchAt === undefined ||
+    state.entry === "" ||
+    state.entry === MAKEUP_PUNCH_NO_ENTRY
+  ) {
+    return { ...state, ...next };
+  }
+  const nextDay = dayKeyOf(next.punchAt, timezone);
+  const keep =
+    entryDate === null
+      ? nextDay === dayKeyOf(state.punchAt, timezone)
+      : withinOneDay(dayKeyOf(entryDate, timezone), nextDay);
+  return keep ? { ...state, ...next } : cleared;
 };
 
 /** 送出前檢查:沒選對應排班要擋「請選擇對應排班」;其他必填。 */

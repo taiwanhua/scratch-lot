@@ -125,7 +125,7 @@ describe("出勤紀錄", () => {
     );
   });
 
-  it("補打卡新增頁:帶入補打卡時間與對應排班;改了日期就清空(同一天改時刻不清);沒選對應排班 → 「請選擇對應排班」", async () => {
+  it("補打卡新增頁:帶入補打卡時間與對應排班;改了日期,選的班還在前後一天範圍內就保留、不在才清空;沒選對應排班 → 「請選擇對應排班」", async () => {
     const user = fastUser();
     const { formsFake, attendanceFake } = renderSchedulePage({
       // 帶入台北 11/3 14:30 下班(那一班的排班下班時間)
@@ -149,7 +149,18 @@ describe("出勤紀錄", () => {
     );
     await user.keyboard("35");
     expect(entry).toHaveTextContent("早 08:30–14:30");
-    // 改日期:對應排班清空
+    // 改成隔天 11/4:11/3 的班還在 11/3–11/5 → 保留
+    await user.click(within(picker).getByRole("spinbutton", { name: "Day" }));
+    await user.keyboard("04");
+    await waitFor(() => {
+      expect(attendanceFake.inputs.makeupOptions.at(-1)?.at).toBe(
+        "2026-11-03T16:00:00.000Z",
+      );
+    });
+    await waitFor(() => {
+      expect(entry).toHaveTextContent("11/3 早 08:30–14:30");
+    });
+    // 再改成 11/5:範圍 11/4–11/6,不含 11/3 → 清空
     await user.click(within(picker).getByRole("spinbutton", { name: "Day" }));
     await user.keyboard("05");
     await waitFor(() => {

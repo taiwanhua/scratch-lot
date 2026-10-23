@@ -120,7 +120,12 @@ const MakeupPunchFormBody = ({
     })),
     { value: MAKEUP_PUNCH_NO_ENTRY, label: t("noEntry") },
   ];
-  // 帶入的排班不在清單裡(已刪除 / 換了日期)時不選,讓本人重選
+  // 選的那一班的日期(改補打卡時間時判斷它還在不在新的前後一天範圍內);不在目前清單裡 = null
+  const entryDateOf = (entryId: string): string | null =>
+    options.data?.makeupPunchEntryOptions.find(
+      (option) => option.id === entryId,
+    )?.date ?? null;
+  // 帶入的排班不在清單裡(已刪除 / 不在前後一天範圍內)時不選,讓本人重選
   const entryValue = entryOptions.some((option) => option.value === state.entry)
     ? state.entry
     : "";
@@ -168,12 +173,17 @@ const MakeupPunchFormBody = ({
             required
             error={invalid.includes("punchAt")}
             helperText={fieldErrorOf("punchAt")}
-            onChange={(next) => {
+            onChange={(next, { isIncomplete }) => {
+              // 打到一半(某一段還沒打完)不算改了時間:等打完再判斷對應排班要不要清空
+              if (isIncomplete) {
+                return;
+              }
               setState((current) =>
                 withPunchAtOrOrg(
                   current,
                   { punchAt: next ?? "" },
                   text.timezone,
+                  entryDateOf(current.entry),
                 ),
               );
               clear("punchAt");
@@ -285,7 +295,7 @@ const MakeupPunchFormBody = ({
 /**
  * 補打卡申請的新增 / 編輯頁(SC-13;規格 14.8;替換表單引擎的新增頁與編輯頁):補打卡時間(日期時間)、分店、
  * **對應排班(必選)**、類型、原因。對應排班 = 選了補打卡時間與分店後列出本人在那家店、那天(租戶時區)前後各一天的
- * 排班(和 [改對應排班] 同一個範圍),最後一個是「沒有排班(臨時代班)」;改了日期或分店就清空重選(同一天只改時刻不清)。沒有草稿(送出即進審核)。新增頁的帶入值在網址;編輯頁(被退回 / 撤回)
+ * 排班(和 [改對應排班] 同一個範圍),最後一個是「沒有排班(臨時代班)」;改了分店就清空重選;改了補打卡時間,選的班還在新的前後一天範圍內就保留、不在才清空。沒有草稿(送出即進審核)。新增頁的帶入值在網址;編輯頁(被退回 / 撤回)
  * 讀那一筆的值。存值交給表單引擎(`useFormDraft` / `useFormSubmission`),流程與掛接點照常。
  */
 export const MakeupPunchFormPage = ({
