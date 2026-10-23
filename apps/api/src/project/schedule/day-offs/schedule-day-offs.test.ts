@@ -76,7 +76,7 @@ const MY_DAY_OFFS = /* GraphQL */ `
     myScheduleDayOffs(input: $input) {
       month
       primaryOrg { id name }
-      window { month startDate endDate state daysLeft }
+      window { month from to state daysLeft }
       canEdit
       canOverride
       limits { maxMonthly minMonthly maxDailyStaff }
@@ -111,7 +111,7 @@ const OVERVIEW = /* GraphQL */ `
       orgId
       month
       targetMonth
-      window { startDate endDate state daysLeft }
+      window { from to state daysLeft }
       canEdit
       limits { maxDailyStaff }
       staff { userId name isPrimary dayOffCount }
@@ -209,8 +209,8 @@ interface MyRow {
   primaryOrg: { id: string; name: string } | null;
   window: {
     month: string;
-    startDate: string;
-    endDate: string;
+    from: string;
+    to: string;
     state: string;
     daysLeft: number;
   } | null;
@@ -231,7 +231,7 @@ interface OverviewRow {
   orgId: string;
   month: string;
   targetMonth: string;
-  window: { startDate: string; endDate: string; state: string };
+  window: { from: string; to: string; state: string };
   canEdit: boolean;
   limits: { maxDailyStaff: number | null };
   staff: {
@@ -565,8 +565,8 @@ describe("畫休(GraphQL 端點 + 真 MongoDB)", () => {
         primaryOrg: { name: "中山店" },
         window: {
           month: "2026-12",
-          startDate: iso("2026-11-15"),
-          endDate: iso("2026-11-25"),
+          from: iso("2026-11-15"),
+          to: iso("2026-11-26"),
           state: "open",
           daysLeft: 6,
         },
@@ -1102,8 +1102,8 @@ describe("畫休(GraphQL 端點 + 真 MongoDB)", () => {
       const view = await overview(manager);
       expect(view.canEdit).toBe(true);
       expect(view.window).toMatchObject({
-        startDate: iso("2026-11-15"),
-        endDate: iso("2026-11-25"),
+        from: iso("2026-11-15"),
+        to: iso("2026-11-26"),
         state: "open",
       });
       expect(view.limits.maxDailyStaff).toBe(2);
@@ -1514,8 +1514,8 @@ describe("畫休(GraphQL 端點 + 真 MongoDB)", () => {
         const mine = await myDayOffs(wang);
         expect(mine.window).toMatchObject({
           month: "2026-12",
-          startDate: la("2026-11-15").toISOString(),
-          endDate: la("2026-11-25").toISOString(),
+          from: la("2026-11-15").toISOString(),
+          to: la("2026-11-26").toISOString(),
           state: "open",
           daysLeft: 1,
         });

@@ -5512,10 +5512,10 @@ type ScheduleDayOffViolation {
 
 type ScheduleDayOffWindow {
   daysLeft: Int!
-  endDate: DateTime!
+  from: DateTime!
   month: String!
-  startDate: DateTime!
   state: String!
+  to: DateTime!
 }
 
 type ScheduleDemand {

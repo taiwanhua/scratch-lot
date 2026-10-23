@@ -52,6 +52,7 @@ import {
   monthKeyOf,
   monthKeyRange,
   monthOfWholeMonthRange,
+  shiftDateKey,
   violationPeriodOf,
 } from "../shared/schedule-dates";
 import {
@@ -262,8 +263,8 @@ function windowModelOf(
 ): ScheduleDayOffWindowModel {
   return {
     month: window.month,
-    startDate: instantOfKey(window.startDate, timezone),
-    endDate: instantOfKey(window.endDate, timezone),
+    from: instantOfKey(window.startDate, timezone),
+    to: instantOfKey(shiftDateKey(window.endDate, 1), timezone),
     state: dayOffWindowState(window, today),
     daysLeft: dayOffWindowDaysLeft(window, today),
   };

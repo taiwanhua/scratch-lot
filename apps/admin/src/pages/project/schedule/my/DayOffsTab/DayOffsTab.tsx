@@ -23,7 +23,7 @@ import { useTemporalText } from "@/hooks/base/useTemporalText";
 import { useTenantTimezone } from "@/hooks/base/useTenantTimezone";
 import { localDayInstantOf } from "@/lib/base/form-engine/local-day";
 import { dayKeyOf, dayOffBandOf } from "@/lib/project/schedule-day-offs";
-import { localPartsOf } from "@/lib/project/schedule-roster";
+import { lastDayShownAt, localPartsOf } from "@/lib/project/schedule-roster";
 
 import { DayOffDialog } from "./DayOffDialog";
 import { DayOffViolationsCard } from "./DayOffViolationsCard";
@@ -78,8 +78,8 @@ export const DayOffsTab = () => {
   }
 
   const range = {
-    start: text(window.startDate, "monthDay"),
-    end: text(window.endDate, "monthDay"),
+    start: text(window.from, "monthDay"),
+    end: text(lastDayShownAt(window.to), "monthDay"),
   };
   const shownMonth = parseLocalMonth(page.month);
   const monthNumber = shownMonth?.month ?? 0;

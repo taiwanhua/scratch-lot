@@ -60,12 +60,15 @@ export class ScheduleDayOffWindowModel {
   @Field(() => String)
   month!: string;
 
-  /** 開始日 / 截止日(含頭尾;各是那天租戶時區 00:00 的時點) */
+  /**
+   * 開放期間:半開的時點區間 `[開始日 00:00, 截止日的隔天 00:00)`(租戶時區;「期間一律是起 ≤ 時間 < 迄」,
+   * 同檢核項目、自動排班範圍)
+   */
   @Field(() => GraphQLISODateTime)
-  startDate!: Date;
+  from!: Date;
 
   @Field(() => GraphQLISODateTime)
-  endDate!: Date;
+  to!: Date;
 
   /** `before` 還沒開始 / `open` 開放中 / `closed` 已截止(以租戶時區的今天判斷) */
   @Field(() => String)

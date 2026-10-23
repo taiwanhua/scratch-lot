@@ -15,8 +15,8 @@ fragment ScheduleDayOffFields on ScheduleDayOff {
 
 fragment ScheduleDayOffWindowFields on ScheduleDayOffWindow {
   month
-  startDate
-  endDate
+  from
+  to
   state
   daysLeft
 }

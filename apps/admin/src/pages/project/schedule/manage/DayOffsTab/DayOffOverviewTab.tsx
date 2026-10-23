@@ -39,7 +39,7 @@ import {
   isPastDayOffMonth,
   monthRangeOf,
 } from "@/lib/project/schedule-day-offs";
-import { localPartsOf } from "@/lib/project/schedule-roster";
+import { lastDayShownAt, localPartsOf } from "@/lib/project/schedule-roster";
 
 import { DeleteDayOffDialog } from "./DeleteDayOffDialog";
 import { OverrideDayOffDialog } from "./OverrideDayOffDialog";
@@ -228,8 +228,8 @@ export const DayOffOverviewTab = () => {
       >
         <Typography variant="subtitle2">
           {t(WINDOW_KEY[window.state] ?? "overview.windowBefore", {
-            start: text(window.startDate, "monthDay"),
-            end: text(window.endDate, "monthDay"),
+            start: text(window.from, "monthDay"),
+            end: text(lastDayShownAt(window.to), "monthDay"),
             days: window.daysLeft,
           })}
         </Typography>

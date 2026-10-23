@@ -43,8 +43,9 @@ const MAX_DAILY = 2;
 const LIMITS = { maxMonthly: 8, minMonthly: 4, maxDailyStaff: MAX_DAILY };
 const WINDOW = {
   month: DAY_OFF_MONTH,
-  startDate: taipeiAt("2026-11-15"),
-  endDate: taipeiAt("2026-11-25"),
+  // 半開區間 [11/15 00:00, 11/26 00:00)
+  from: taipeiAt("2026-11-15"),
+  to: taipeiAt("2026-11-26"),
 };
 
 /** 時點 → 台北的日期鍵(分組、比對日期用)。 */
@@ -58,8 +59,8 @@ const pastWindowOf = (month: string) => {
   const previous = `${String(Math.floor(index / 12))}-${String((index % 12) + 1).padStart(2, "0")}`;
   return {
     month,
-    startDate: taipeiAt(`${previous}-15`),
-    endDate: taipeiAt(`${previous}-25`),
+    from: taipeiAt(`${previous}-15`),
+    to: taipeiAt(`${previous}-26`),
     state: "closed",
     daysLeft: 0,
   };
