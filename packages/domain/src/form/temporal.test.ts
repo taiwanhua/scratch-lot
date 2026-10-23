@@ -753,4 +753,17 @@ describe("@repo/domain/form 期間 → 時點區間(半開)", () => {
     expect(localDateOf(range.to, "America/Santiago").day).toBe(6);
     expect(localDateOf(range.to - 1000, "America/Santiago").day).toBe(5);
   });
+
+  it("起日本身 00:00 不存在(聖地牙哥 9/6)→ 迄仍是隔天 00:00,那天只有 23 小時", () => {
+    // 不能從起點時點往後加一天(01:00 + 1 天 = 隔天 01:00,會多吃隔天一小時)
+    const day = { year: 2026, month: 9, day: 6 };
+    const range = localDayRange(day, day, "America/Santiago");
+    expect(
+      formatTemporal(new Date(range.to), {
+        type: "datetime",
+        timezone: "America/Santiago",
+      }),
+    ).toBe("2026-09-07 00:00");
+    expect(range.to - range.from).toBe(23 * 60 * 60_000);
+  });
 });

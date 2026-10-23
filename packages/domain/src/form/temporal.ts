@@ -447,7 +447,7 @@ export function minutesOfHhMm(value: string): number | null {
 }
 
 /**
- * 當地日期 + `HH:mm` 在某時區的時點(ms),例如排班「那天 09:00」;`HH:mm` 不合法 → null。
+ * 當地日期 + `HH:mm` 在某時區的時點(ms),例如「那天 09:00」;`HH:mm` 不合法 → null。
  * 夏令時間照 `instantOfLocalTime`:重複的時刻取較早的一個,不存在的時刻往後推到切換後的第一個時點。
  * 時區不合法 → 丟 `RangeError`。
  */
@@ -551,7 +551,7 @@ export interface InstantRange {
 
 /**
  * 當地日期期間(`from`–`to`,含頭尾)在某時區的時點區間 `[from 00:00, to 隔天 00:00)`。
- * 邊界用 `startOfLocalDay` 算(夏令時間在午夜切換的時區也對)。時區不合法 → 丟 `RangeError`。
+ * 邊界用 `startOfLocalDay` 算(夏令時間在午夜切換的時區也對);`from` 晚於 `to` 不檢查(回的 `to` ≤ `from`,呼叫端先驗)。時區不合法 → 丟 `RangeError`。
  */
 export function localDayRange(
   from: LocalDate,
