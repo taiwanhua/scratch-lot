@@ -181,6 +181,16 @@ export const isPinnedAt = (root: HTMLElement, width: number): boolean => {
 };
 
 /**
+ * 哪些頁用列表頁殼(`app/PageRootHeight.test.tsx` 的對照清單;底座的寫在該測試裡,專案的在 `test/project/list-page-shells.ts`)。
+ */
+export interface ListPageShellDecisions {
+  /** 整頁都是列表(或分頁全是列表)的頁:路徑 */
+  readonly pages: readonly string[];
+  /** 分頁混著列表與內容的頁,標成列表分頁(`PageTabItem.isList`)的那幾頁:`<路徑>#<分頁名>` */
+  readonly tabs: readonly string[];
+}
+
+/**
  * 列表頁殼(`LIST_PAGE_SHELL_SX`):`md` 以下不釘高(`flex-shrink: 0`)、平板以上(`md` 起)釘高。
  * 主從版面從 `sm` 起就釘高,不算(REACT-17)。
  */

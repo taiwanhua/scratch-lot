@@ -9,7 +9,7 @@ import { usePageTabs } from "./usePageTabs";
 /**
  * 分頁殼(PageTabs 外面那張卡片)的高度樣式,依目前分頁決定(STYLE-08):
  * 列表分頁(`isList`)用列表頁殼(平板以上釘高、表格在卡片裡捲),其餘用內容頁殼(整頁捲)。
- * 分頁混著列表與內容的頁(店面管理、班表)用它;分頁全是列表的頁直接用 `LIST_PAGE_SHELL_SX`。
+ * 分頁混著列表與內容的頁用它;分頁全是列表的頁直接用 `LIST_PAGE_SHELL_SX`。
  * 呼叫端照常疊上自己的 `display` / 內距:`sx={{ ...shellSx, px: 3 }}`。
  */
 export const usePageTabsShellSx = (
