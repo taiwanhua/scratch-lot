@@ -4,7 +4,6 @@ import {
   type ApplyTemplateLike,
   type ExistingDemandLike,
   planTemplateApply,
-  weekdayOf,
 } from "./template-apply";
 
 const at = (date: string, time: string) => new Date(`${date}T${time}:00+08:00`);
@@ -106,7 +105,6 @@ describe("套用人力需求週範本(規格 14.4)", () => {
   const days = [[], [MORNING, EVENING], [MORNING], [], [], [], []];
 
   it("星期幾用那一格的範本;只補完全沒有人力需求的日子,已有任何人力需求的日子不動", () => {
-    expect(weekdayOf("2026-11-01")).toBe(0);
     const plan = planTemplateApply({
       request: { kind: "week-template", days },
       dates: ["2026-11-01", "2026-11-02", "2026-11-03", "2026-11-09"],

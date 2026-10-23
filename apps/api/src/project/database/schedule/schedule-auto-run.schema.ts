@@ -64,12 +64,12 @@ export class ScheduleAutoRun {
   @Prop({ type: String, required: true })
   month!: string;
 
-  /** 範圍 `YYYY-MM-DD`(含頭尾,在這個月內)。 */
-  @Prop({ type: String, required: true })
-  from!: string;
+  /** 範圍:半開的時點區間 `[from, to)`(租戶時區的 00:00;在這個月內)。 */
+  @Prop({ type: Date, required: true })
+  from!: Date;
 
-  @Prop({ type: String, required: true })
-  to!: string;
+  @Prop({ type: Date, required: true })
+  to!: Date;
 
   /** 方式:只填空位 / 重排自動排入的人 / 全部重排。 */
   @Prop({ type: String, enum: [...SCHEDULE_AUTO_RUN_MODES], required: true })

@@ -36,9 +36,9 @@ export class MyScheduleEntryModel {
   @Field(() => String)
   orgName!: string;
 
-  /** `YYYY-MM-DD` */
-  @Field(() => String)
-  date!: string;
+  /** 那天(上班時點在租戶時區那天的 00:00) */
+  @Field(() => GraphQLISODateTime)
+  date!: Date;
 
   @Field(() => GraphQLISODateTime)
   startAt!: Date;
@@ -118,9 +118,9 @@ export class MyScheduleChangeModel {
   @Field(() => ID)
   id!: string;
 
-  /** 異動那天 `YYYY-MM-DD` */
-  @Field(() => String)
-  date!: string;
+  /** 異動那天(租戶時區 00:00 的時點) */
+  @Field(() => GraphQLISODateTime)
+  date!: Date;
 
   /** `entry.create` / `entry.edit` / `entry.delete` / `demand.*` */
   @Field(() => String)
@@ -175,9 +175,9 @@ export class MySchedulePayload {
   @Field(() => String)
   month!: string;
 
-  /** 租戶時區的今天 `YYYY-MM-DD` */
-  @Field(() => String)
-  today!: string;
+  /** 今天(租戶時區 00:00 的時點) */
+  @Field(() => GraphQLISODateTime)
+  today!: Date;
 
   /** 有 `schedule.my.punch`(沒有就不顯示打卡按鈕) */
   @Field(() => Boolean)
@@ -215,7 +215,7 @@ export class MySchedulePayload {
   @Field(() => [ScheduleRosterCalendarDayModel])
   calendarDays!: ScheduleRosterCalendarDayModel[];
 
-  /** 這個月我有整天畫休的日子 */
-  @Field(() => [String])
-  dayOffDates!: string[];
+  /** 這個月我有整天畫休的日子(各是那天租戶時區 00:00 的時點) */
+  @Field(() => [GraphQLISODateTime])
+  dayOffDates!: Date[];
 }

@@ -1,7 +1,6 @@
 import type { ScheduleRuleLevel } from "@repo/domain/project/schedule-settings";
 
 import { consecutiveRuns } from "../day-offs/day-off-rules";
-import { shiftDate } from "../day-offs/day-off-window";
 import { workMinutesOf } from "../roster/roster-stats";
 import {
   type EffectiveRuleSetting,
@@ -12,6 +11,7 @@ import {
   registerRuleEvaluator,
   ruleEvaluatorOf,
 } from "../rules/rule-registry";
+import { shiftDateKey } from "../shared/schedule-dates";
 
 /**
  * 排班類規則的檢查函式(規格 14.2;本功能擁有):登記在 P06 的 `registerRuleEvaluator`,
@@ -494,7 +494,7 @@ export function widenedRange(
   to: string,
   days: number,
 ): { from: string; to: string } {
-  return { from: shiftDate(from, -days), to: shiftDate(to, days) };
+  return { from: shiftDateKey(from, -days), to: shiftDateKey(to, days) };
 }
 
 /**

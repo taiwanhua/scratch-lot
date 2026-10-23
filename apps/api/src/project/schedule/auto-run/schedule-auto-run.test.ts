@@ -125,6 +125,7 @@ const ROSTER = /* GraphQL */ `
         id
         date
         startAt
+        endAt
         templateId
         positionKey
         tasks {
@@ -221,6 +222,7 @@ interface RosterDemand {
   id: string;
   date: string;
   startAt: string;
+  endAt: string;
   templateId: string | null;
   positionKey: string;
   tasks: { taskId: string; role: string; userId: string | null }[];
@@ -307,6 +309,19 @@ function dataOf<Key extends keyof Payloads>(
 const taipei = (date: string, time: string) =>
   new Date(`${date}T${time}:00+08:00`).toISOString();
 
+/** api 收發的日期:那天台北 00:00 的時點。 */
+const day = (date: string) => taipei(date, "00:00");
+
+/** 自動排班範圍(日期含頭尾)→ 半開的時點區間 `[from 00:00, to 隔天 00:00)`(台北沒有夏令時間)。 */
+const rangeOf = (from: string, to: string) => ({
+  from: day(from),
+  to: new Date(Date.parse(day(to)) + 86_400_000).toISOString(),
+});
+
+/** 洛杉磯(夏令 UTC−7)某天某時刻(租戶時區不是台北的測試用)。 */
+const laDaylight = (date: string, time: string) =>
+  new Date(`${date}T${time}:00-07:00`).toISOString();
+
 const LEAD = "store-and-accounts-lead";
 const DUTY = "store-duties";
 const COUNTER = "in-store-counter";
@@ -381,8 +396,7 @@ describe("套用範本與自動排班(GraphQL 端點 + 真 MongoDB)", () => {
       input: {
         orgId: String(orgId),
         month,
-        from: `${month}-01`,
-        to: `${month}-28`,
+        ...rangeOf(`${month}-01`, `${month}-28`),
         mode: "fill-empty",
         conditions: ALL_CONDITIONS,
         ...extra,
@@ -552,7 +566,7 @@ describe("套用範本與自動排班(GraphQL 端點 + 真 MongoDB)", () => {
       const input = applyInput("2027-01", {
         kind: "template",
         templateIds: [morning.id, evening.id],
-        dates: ["2027-01-05", "2027-01-06"],
+        dates: [day("2027-01-05"), day("2027-01-06")],
       });
       const preview = dataOf(
         await gql(editor, APPLY_PREVIEW, input),
@@ -576,7 +590,9 @@ describe("套用範本與自動排班(GraphQL 端點 + 真 MongoDB)", () => {
       const fromMorning = demands.filter(
         (demand) => demand.templateId === morning.id,
       );
-      expect(fromMorning.map((demand) => demand.date)).toEqual(["2027-01-06"]);
+      expect(fromMorning.map((demand) => demand.date)).toEqual([
+        day("2027-01-06"),
+      ]);
       const copied = fromMorning[0]?.tasks.map((task) => task.taskId) ?? [];
       expect(copied).toHaveLength(2);
       expect(copied).not.toContain(morning.tasks[0]?.taskId);
@@ -593,7 +609,7 @@ describe("套用範本與自動排班(GraphQL 端點 + 真 MongoDB)", () => {
             kind: "week-template",
             weekTemplateId,
             // 2027-02-01 星期一、02-02 星期二(已有人力需求)、02-07 星期日
-            dates: ["2027-02-01", "2027-02-02", "2027-02-07"],
+            dates: [day("2027-02-01"), day("2027-02-02"), day("2027-02-07")],
           }),
         ),
         "applyScheduleTemplates",
@@ -610,11 +626,65 @@ describe("套用範本與自動排班(GraphQL 端點 + 真 MongoDB)", () => {
           (demand) => `${demand.date}:${String(demand.templateId === null)}`,
         ),
       ).toEqual([
-        "2027-02-01:false",
-        "2027-02-01:false",
-        "2027-02-02:true",
-        "2027-02-07:false",
+        `${day("2027-02-01")}:false`,
+        `${day("2027-02-01")}:false`,
+        `${day("2027-02-02")}:true`,
+        `${day("2027-02-07")}:false`,
       ]);
+    });
+
+    it("範本結束 00:00 = 隔天 00:00;租戶時區不是台北:套用到洛杉磯那天", async () => {
+      const night = dataOf(
+        await gql(hq, SAVE_TEMPLATE, {
+          input: {
+            name: "夜班",
+            shortName: "夜",
+            startTime: "18:00",
+            endTime: "00:00",
+            positionKey: COUNTER,
+            tasks: [{ role: "leader", taskKey: LEAD }],
+          },
+        }),
+        "saveScheduleDemandTemplate",
+      ).item;
+      const orgs = connection.collection("orgs");
+      await orgs.updateOne(
+        { _id: tenant },
+        { $set: { "settings.timezone": "America/Los_Angeles" } },
+      );
+      try {
+        const applied = dataOf(
+          await gql(
+            hq,
+            APPLY,
+            applyInput(
+              "2028-06",
+              {
+                kind: "template",
+                templateIds: [night.id],
+                // 洛杉磯 6/30 00:00(= UTC 6/30 07:00)
+                dates: [laDaylight("2028-06-30", "00:00")],
+              },
+              zhonghe,
+            ),
+          ),
+          "applyScheduleTemplates",
+        );
+        expect(applied.createdCount).toBe(1);
+        const { demands } = await roster("2028-06", zhonghe);
+        expect(demands).toEqual([
+          expect.objectContaining({
+            date: laDaylight("2028-06-30", "00:00"),
+            startAt: laDaylight("2028-06-30", "18:00"),
+            endAt: laDaylight("2028-07-01", "00:00"),
+          }),
+        ]);
+      } finally {
+        await orgs.updateOne(
+          { _id: tenant },
+          { $unset: { "settings.timezone": "" } },
+        );
+      }
     });
 
     it("不是這個月的日子、看不到的範本 → VALIDATION_FAILED;沒有 edit → FORBIDDEN", async () => {
@@ -626,7 +696,7 @@ describe("套用範本與自動排班(GraphQL 端點 + 真 MongoDB)", () => {
             applyInput("2027-02", {
               kind: "template",
               templateIds: [morning.id],
-              dates: ["2027-03-01"],
+              dates: [day("2027-03-01")],
             }),
           ),
         ),
@@ -639,7 +709,7 @@ describe("套用範本與自動排班(GraphQL 端點 + 真 MongoDB)", () => {
             applyInput("2027-02", {
               kind: "template",
               templateIds: [new Types.ObjectId().toHexString()],
-              dates: ["2027-02-10"],
+              dates: [day("2027-02-10")],
             }),
           ),
         ),
@@ -656,7 +726,7 @@ describe("套用範本與自動排班(GraphQL 端點 + 真 MongoDB)", () => {
             applyInput("2027-02", {
               kind: "template",
               templateIds: [morning.id],
-              dates: ["2027-02-10"],
+              dates: [day("2027-02-10")],
             }),
           ),
         ),
@@ -671,8 +741,7 @@ describe("套用範本與自動排班(GraphQL 端點 + 真 MongoDB)", () => {
           input: {
             orgId: String(zhonghe),
             month: "2027-03",
-            from: "2027-03-01",
-            to: "2027-03-31",
+            ...rangeOf("2027-03-01", "2027-03-31"),
           },
         }),
         "scheduleAutoRunPreview",
@@ -711,8 +780,7 @@ describe("套用範本與自動排班(GraphQL 端點 + 真 MongoDB)", () => {
           input: {
             orgId: String(daan),
             month: "2027-05",
-            from: "2027-05-03",
-            to: "2027-05-04",
+            ...rangeOf("2027-05-03", "2027-05-04"),
           },
         }),
         "scheduleAutoRunPreview",
@@ -727,8 +795,7 @@ describe("套用範本與自動排班(GraphQL 端點 + 真 MongoDB)", () => {
           runner,
           RUN,
           runInput("2027-05", {
-            from: "2027-05-03",
-            to: "2027-05-04",
+            ...rangeOf("2027-05-03", "2027-05-04"),
             fillWeekTemplate: true,
           }),
         ),
@@ -869,8 +936,7 @@ describe("套用範本與自動排班(GraphQL 端點 + 真 MongoDB)", () => {
             input: {
               orgId: String(daan),
               month: "2027-08",
-              from: "2027-08-01",
-              to: "2027-08-31",
+              ...rangeOf("2027-08-01", "2027-08-31"),
             },
           }),
           "scheduleAutoRunPreview",
@@ -919,8 +985,7 @@ describe("套用範本與自動排班(GraphQL 端點 + 真 MongoDB)", () => {
           input: {
             orgId: String(daan),
             month: "2027-09",
-            from: "2027-09-01",
-            to: "2027-09-30",
+            ...rangeOf("2027-09-01", "2027-09-30"),
           },
         }),
         "clearScheduleAutoAssignments",
@@ -1019,8 +1084,7 @@ describe("套用範本與自動排班(GraphQL 端點 + 真 MongoDB)", () => {
             input: {
               orgId: String(daan),
               month: "2027-12",
-              from: "2027-12-01",
-              to: "2027-12-31",
+              ...rangeOf("2027-12-01", "2027-12-31"),
             },
           }),
         ),
@@ -1151,8 +1215,7 @@ describe("套用範本與自動排班(GraphQL 端點 + 真 MongoDB)", () => {
         input: {
           orgId: String(daan),
           month: "2028-03",
-          from: "2028-03-01",
-          to: "2028-03-31",
+          ...rangeOf("2028-03-01", "2028-03-31"),
         },
       });
       expect(cleared.errors).toBeUndefined();
@@ -1205,8 +1268,7 @@ describe("套用範本與自動排班(GraphQL 端點 + 真 MongoDB)", () => {
           input: {
             orgId: String(daan),
             month: "2028-04",
-            from: "2028-04-01",
-            to: "2028-04-30",
+            ...rangeOf("2028-04-01", "2028-04-30"),
           },
         }),
         "clearScheduleAutoAssignments",

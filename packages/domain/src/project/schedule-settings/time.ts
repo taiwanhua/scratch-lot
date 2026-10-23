@@ -1,8 +1,3 @@
-/**
- * `HH:mm` 的判斷已搬到 `@repo/domain/form`(`temporal.ts` 的「時刻」段);這裡先轉出,呼叫端改完後移除。
- */
-export { isHhMm, minutesOfHhMm } from "../../form/temporal";
-
 /** `YYYY-MM-DD`(行事曆的日期;日期本身合法,如 2 月沒有 30 日)。 */
 export function isIsoDate(value: unknown): value is string {
   if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/u.test(value)) {

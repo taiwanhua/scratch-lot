@@ -5,13 +5,13 @@
  * 之後的模組票若要開通時建資料(例:收銀點、乙類、銀行帳戶、排班人員),在這裡加自己的欄位
  * (選填、預設空清單)、在 `parseOnboardingPlan` 驗它,並在 `steps.ts` 追加自己的步驟。
  */
+import { isHhMm } from "@repo/domain/form";
 import {
   SCHEDULE_EMPLOYMENT_TYPES,
   SCHEDULE_TASK_ROLES,
   type ScheduleEmploymentType,
   type ScheduleTaskRole,
   WEEK_DAY_COUNT,
-  isHhMm,
   isTemplateShortName,
 } from "@repo/domain/project/schedule-settings";
 import {

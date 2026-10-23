@@ -2,15 +2,14 @@ import { Injectable } from "@nestjs/common";
 import { Types } from "mongoose";
 
 import {
+  type InstantRange,
   formatTemporal,
   localDayRange,
-  parseLocalDate,
 } from "@repo/domain/form";
 import { SCHEDULE_FIELD_CATEGORY_KEYS } from "@repo/domain/project/schedule-fields";
 import {
   SCHEDULE_TASK_ROLES,
   exceededTaskRoles,
-  isIsoDate,
 } from "@repo/domain/project/schedule-settings";
 
 import { AuditService } from "../../../audit/audit.service";
@@ -51,6 +50,14 @@ import { ScheduleFieldOptionsService } from "../field-options/schedule-field-opt
 import { blockedEntryIdsOf } from "../integration/entry-deletion-guards";
 import { positionAnnotationsOf } from "../integration/position-annotations";
 import { ScheduleClock } from "../shared/schedule-clock";
+import {
+  dateKeyOf,
+  dayKeyRange,
+  dayStartOf,
+  localDateOfKey,
+  monthKeyOf,
+  normalizedDay,
+} from "../shared/schedule-dates";
 import {
   SCHEDULE_REASONS,
   forbiddenError,
@@ -105,8 +112,6 @@ interface RosterScope {
   timezone: string;
 }
 
-const monthOf = (date: string) => date.slice(0, 7);
-
 /**
  * 排班表的寫入(規格 14.4「手動新增」、14.5「兩種對話框」「移除這天所有排班」;
  * 正本 `docs/modules/project/schedule.md`「排班表」)。
@@ -155,7 +160,7 @@ export class ScheduleRosterWritesService {
   ): Promise<SaveScheduleDemandPayload> {
     const scope = await this.scopeOf(operator, input.orgId);
     const span = validatedSpan(input.startAt, input.endAt);
-    const date = this.dateOf(scope, span.startAt);
+    const date = this.dayOf(scope, span.startAt);
     const isCreate = input.id === undefined || input.id === null;
     const tasksInput = validatedTasks(input.tasks);
     const positionKey = input.positionKey.trim();
@@ -201,8 +206,8 @@ export class ScheduleRosterWritesService {
 
     const months = [
       ...new Set([
-        monthOf(date),
-        ...(existing ? [monthOf(existing.date)] : []),
+        this.monthOf(scope, date),
+        ...(existing ? [this.monthOf(scope, existing.date)] : []),
       ]),
     ];
     await this.ensurePeriods(operator, scope, months);
@@ -216,7 +221,7 @@ export class ScheduleRosterWritesService {
             input.changeReason,
           );
           const fillersBefore = await this.fillersOf(operator, existing);
-          if (existing && existing.date !== date) {
+          if (existing && existing.date.getTime() !== date.getTime()) {
             const filled = await this.assignments.count(operator, {
               demandId: existing._id,
             });
@@ -303,7 +308,7 @@ export class ScheduleRosterWritesService {
   ): Promise<DeleteScheduleDemandPayload> {
     const scope = await this.scopeOf(operator, input.orgId);
     const existing = await this.mustFindDemand(operator, scope, input.id);
-    const months = [monthOf(existing.date)];
+    const months = [this.monthOf(scope, existing.date)];
     await this.ensurePeriods(operator, scope, months);
     const deletedEntryIds = await this.transactions.withTransaction(
       async () => {
@@ -329,8 +334,8 @@ export class ScheduleRosterWritesService {
           after: { deletedEntries: released },
         });
         if (reason !== null) {
-          await this.changes.record(operator, scope.org, reason, {
-            month: monthOf(existing.date),
+          await this.changes.record(operator, scope, reason, {
+            month: this.monthOf(scope, existing.date),
             date: existing.date,
             action: "demand.delete",
             targetId: existing._id,
@@ -369,7 +374,7 @@ export class ScheduleRosterWritesService {
     const span = validatedSpan(
       ...(await this.spanWithPunchTime(operator, input, chosenPunches)),
     );
-    const date = this.dateOf(scope, span.startAt);
+    const date = this.dayOf(scope, span.startAt);
     const spanMinutes =
       (span.endAt.getTime() - span.startAt.getTime()) / MS_PER_MINUTE;
     if (
@@ -395,8 +400,7 @@ export class ScheduleRosterWritesService {
     const calendarDays = await this.calendar.effectiveDays(
       operator,
       scope.org.id,
-      date,
-      this.dateOf(scope, new Date(span.endAt.getTime() - 1)),
+      this.daysOfSpan(scope, span),
     );
     if (calendarDays.some((day) => day.type === "closed")) {
       throw validationError(
@@ -408,8 +412,8 @@ export class ScheduleRosterWritesService {
 
     const months = [
       ...new Set([
-        monthOf(date),
-        ...(existing ? [monthOf(existing.date)] : []),
+        this.monthOf(scope, date),
+        ...(existing ? [this.monthOf(scope, existing.date)] : []),
       ]),
     ];
     await this.ensurePeriods(operator, scope, months);
@@ -461,20 +465,20 @@ export class ScheduleRosterWritesService {
               entryId: existing?._id ?? null,
               before: existing
                 ? {
-                    date: existing.date,
+                    date: this.keyOf(scope, existing.date),
                     demandIds: current.map((item) => item.demandId),
                   }
                 : null,
               after: {
                 ...span,
-                date,
+                date: this.keyOf(scope, date),
                 breakMinutes: input.breakMinutes,
                 demandIds: wanted.map((item) => item.demandId),
               },
             },
           );
           if (ruleViolations.length > 0) {
-            throw rosterRuleError(ruleViolations);
+            throw rosterRuleError(ruleViolations, scope.timezone);
           }
           const data = {
             date,
@@ -542,7 +546,7 @@ export class ScheduleRosterWritesService {
     if (blocked.size > 0) {
       throw entriesLockedError([...blocked], ["id"]);
     }
-    const months = [monthOf(existing.date)];
+    const months = [this.monthOf(scope, existing.date)];
     await this.ensurePeriods(operator, scope, months);
     await this.transactions.withTransaction(async () => {
       const published = await this.touchPeriods(operator, scope, months);
@@ -565,10 +569,8 @@ export class ScheduleRosterWritesService {
     input: RemoveScheduleDayEntriesInput,
   ): Promise<RemoveScheduleDayEntriesPayload> {
     const scope = await this.scopeOf(operator, input.orgId);
-    if (!isIsoDate(input.date)) {
-      throw validationError(`invalid date: ${String(input.date)}`, ["date"]);
-    }
-    const months = [monthOf(input.date)];
+    const date = normalizedDay(input.date, scope.timezone, "date");
+    const months = [this.monthOf(scope, date)];
     await this.ensurePeriods(operator, scope, months);
     return this.transactions.withTransaction(async () => {
       const published = await this.touchPeriods(operator, scope, months);
@@ -579,7 +581,7 @@ export class ScheduleRosterWritesService {
       );
       const records = await this.entries.findMany(operator, {
         orgId: scope.org.id,
-        date: input.date,
+        date,
       });
       const blocked = await blockedEntryIdsOf(
         String(scope.org.tenantId),
@@ -673,24 +675,18 @@ export class ScheduleRosterWritesService {
     userId: Types.ObjectId,
     span: { startAt: Date; endAt: Date },
   ): Promise<void> {
-    const from = this.dateOf(scope, span.startAt);
-    const to = this.dateOf(scope, new Date(span.endAt.getTime() - 1));
     const days = await this.dayOffs.unavailableOfPerson(
       scope.org.tenantId,
       userId,
-      from,
-      to,
+      this.daysOfSpan(scope, span),
     );
     const start = span.startAt.getTime();
     const end = span.endAt.getTime();
     const blocked = days.some((day) => {
-      const date = parseLocalDate(day.date);
-      if (date === null) {
-        return false;
-      }
       if (day.fullDay) {
         // 整天 = 租戶時區那天 00:00 到隔天 00:00
-        const whole = localDayRange(date, date, scope.timezone);
+        const local = localDateOfKey(this.keyOf(scope, day.date));
+        const whole = localDayRange(local, local, scope.timezone);
         return start < whole.to && end > whole.from;
       }
       return day.slots.some(
@@ -714,7 +710,7 @@ export class ScheduleRosterWritesService {
     operator: OperatorContext,
     scope: RosterScope,
     check: {
-      date: string;
+      date: Date;
       wanted: readonly WantedAssignment[];
       current: readonly WantedAssignment[];
       canLead: boolean;
@@ -731,7 +727,7 @@ export class ScheduleRosterWritesService {
         (record) => String(record._id) === String(item.demandId),
       );
       const task = demand?.tasks.find((t) => t.taskId === item.taskId);
-      if (!demand || !task || demand.date !== check.date) {
+      if (!demand || !task || demand.date.getTime() !== check.date.getTime()) {
         throw validationError(
           `demand task not on this day: ${String(item.demandId)}/${item.taskId}`,
           ["assignments"],
@@ -817,9 +813,31 @@ export class ScheduleRosterWritesService {
     return { org, timezone };
   }
 
-  /** 開始時點在租戶時區的那一天(跨午夜的算開始那天)。 */
-  private dateOf(scope: RosterScope, at: Date): string {
-    return formatTemporal(at, { type: "date", timezone: scope.timezone });
+  /** 開始時點在租戶時區那一天的 00:00(排班 / 人力需求的 `date`;跨午夜的算開始那天)。 */
+  private dayOf(scope: RosterScope, at: Date): Date {
+    return dayStartOf(at, scope.timezone);
+  }
+
+  /** 日期(時點)→ 租戶時區的日期鍵(規則運算用)。 */
+  private keyOf(scope: RosterScope, date: Date): string {
+    return dateKeyOf(date, scope.timezone);
+  }
+
+  /** 日期(時點)所在的月份鍵 `YYYY-MM`(`schedule_periods` 的鍵)。 */
+  private monthOf(scope: RosterScope, date: Date): string {
+    return monthKeyOf(this.keyOf(scope, date));
+  }
+
+  /** 一段時間碰到的日子(跨午夜含隔天):`[開始那天 00:00, 結束前一刻那天的隔天 00:00)`。 */
+  private daysOfSpan(
+    scope: RosterScope,
+    span: { startAt: Date; endAt: Date },
+  ): InstantRange {
+    return dayKeyRange(
+      this.keyOf(scope, span.startAt),
+      this.keyOf(scope, new Date(span.endAt.getTime() - 1)),
+      scope.timezone,
+    );
   }
 
   private hhmmOf(scope: RosterScope, at: Date): string {
@@ -1049,18 +1067,19 @@ export class ScheduleRosterWritesService {
     reason: ChangeReason | null,
     published: ReadonlySet<string>,
     change: Omit<ScheduleChangeRecord, "month"> & {
-      previousDate: string | null;
+      previousDate: Date | null;
     },
   ): Promise<void> {
     if (reason === null) {
       return;
     }
     const { previousDate, ...rest } = change;
-    await this.changes.record(operator, scope.org, reason, {
+    const month = this.monthOf(scope, change.date);
+    await this.changes.record(operator, scope, reason, {
       ...rest,
-      month: published.has(monthOf(change.date))
-        ? monthOf(change.date)
-        : monthOf(previousDate ?? change.date),
+      month: published.has(month)
+        ? month
+        : this.monthOf(scope, previousDate ?? change.date),
     });
   }
 
@@ -1072,8 +1091,8 @@ export class ScheduleRosterWritesService {
     records: readonly EntryRecord[],
   ): Promise<void> {
     for (const record of records) {
-      await this.changes.record(operator, scope.org, reason, {
-        month: monthOf(record.date),
+      await this.changes.record(operator, scope, reason, {
+        month: this.monthOf(scope, record.date),
         date: record.date,
         action: "entry.delete",
         targetId: record._id,

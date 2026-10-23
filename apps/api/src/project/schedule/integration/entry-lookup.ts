@@ -1,10 +1,12 @@
 import { Injectable } from "@nestjs/common";
 import { Types } from "mongoose";
 
+import { OrgsRepository } from "../../../database/database.module";
 import {
   type OperatorContext,
   isOrgVisible,
 } from "../../../database/operator-context";
+import { tenantTimezoneOf } from "../../../database/tenant-timezone";
 import {
   ScheduleAttendancePunchesRepository,
   ScheduleDemandsRepository,
@@ -19,6 +21,11 @@ import {
 import { PublishedEntries } from "../my/published-entries";
 import type { EntryRecord } from "../roster/roster-people";
 import { ScheduleRulesService } from "../rules/schedule-rules.service";
+import {
+  dateKeyOf,
+  dayKeyRange,
+  instantRangeFilter,
+} from "../shared/schedule-dates";
 import {
   forbiddenError,
   notFoundError,
@@ -43,7 +50,7 @@ export interface ScheduleEntryForShift {
   id: string;
   orgId: string;
   userId: string;
-  /** `YYYY-MM-DD` */
+  /** 那天(租戶時區的日期鍵 `YYYY-MM-DD`;排班存的是那天 00:00 的時點) */
   date: string;
   startAt: Date;
   endAt: Date;
@@ -93,6 +100,7 @@ export class ScheduleEntryLookup {
     private readonly rules: ScheduleRulesService,
     private readonly mySchedule: MyScheduleService,
     private readonly permissions: SchedulePermissions,
+    private readonly orgs: OrgsRepository,
   ) {}
 
   /**
@@ -133,8 +141,13 @@ export class ScheduleEntryLookup {
     input: EntryScope & { date: string },
   ): Promise<ScheduleEntryForShift[]> {
     const scope = this.scopeOf(operator, input);
+    const timezone = await tenantTimezoneOf(
+      this.orgs,
+      operator,
+      scope.tenantId,
+    );
     const entries = await this.publishedOf(operator, scope, {
-      date: input.date,
+      date: instantRangeFilter(dayKeyRange(input.date, input.date, timezone)),
     });
     return this.withDetails(operator, scope.tenantId, entries);
   }
@@ -337,13 +350,17 @@ export class ScheduleEntryLookup {
     entries: readonly EntryRecord[],
   ): Promise<ScheduleEntryForShift[]> {
     const details = await this.published.detailsOf(operator, tenantId, entries);
+    const timezone =
+      entries.length === 0
+        ? null
+        : await tenantTimezoneOf(this.orgs, operator, tenantId);
     return entries.map((entry) => {
       const detail = details.get(String(entry._id));
       return {
         id: String(entry._id),
         orgId: String(entry.orgId),
         userId: String(entry.userId),
-        date: entry.date,
+        date: timezone === null ? "" : dateKeyOf(entry.date, timezone),
         startAt: entry.startAt,
         endAt: entry.endAt,
         breakMinutes: entry.breakMinutes,

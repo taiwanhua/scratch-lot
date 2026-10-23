@@ -15,7 +15,10 @@ export class ScheduleChangeReasonInput {
   reasonNote?: string | null;
 }
 
-/** 某家店(缺席 = 當前組織)某個月(`YYYY-MM`)的排班表。 */
+/**
+ * 某家店(缺席 = 當前組織)某個月的排班表:`month` 是月份鍵 `YYYY-MM`(發布狀態、統計以它為準;
+ * 讀取範圍 = 那個月在租戶時區的 `[月初 00:00, 下月初 00:00)`)。
+ */
 @InputType()
 export class ScheduleRosterInput {
   @Field(() => ID, { nullable: true })
@@ -25,14 +28,14 @@ export class ScheduleRosterInput {
   month!: string;
 
   /**
-   * 週檢視跨月時多讀的日期範圍(`YYYY-MM-DD`,含頭尾;要一起給):人力需求、排班、別家店的班、畫休、
-   * 行事曆改讀「這個月 ∪ from–to」;統計與發布狀態仍只算這個月。只能落在這個月前後 6 天內。
+   * 週檢視跨月時多讀的期間(半開的時點區間 `[from, to)`,租戶時區的 00:00;要一起給):人力需求、排班、
+   * 別家店的班、畫休、行事曆改讀「這個月 ∪ [from, to)」;統計與發布狀態仍只算這個月。只能落在這個月前後 6 天內。
    */
-  @Field(() => String, { nullable: true })
-  from?: string | null;
+  @Field(() => GraphQLISODateTime, { nullable: true })
+  from?: Date | null;
 
-  @Field(() => String, { nullable: true })
-  to?: string | null;
+  @Field(() => GraphQLISODateTime, { nullable: true })
+  to?: Date | null;
 }
 
 /** 人力需求的一筆執行任務;`taskId` 缺席 = 新的一筆(api 產生)。 */
@@ -180,14 +183,15 @@ export class DeleteScheduleEntryInput {
   changeReason?: ScheduleChangeReasonInput | null;
 }
 
-/** 移除這天所有排班(`YYYY-MM-DD`)。 */
+/** 移除這天所有排班。 */
 @InputType()
 export class RemoveScheduleDayEntriesInput {
   @Field(() => ID, { nullable: true })
   orgId?: string | null;
 
-  @Field(() => String)
-  date!: string;
+  /** 那天(租戶時區 00:00 的時點;api 以租戶時區正規化成那天 00:00) */
+  @Field(() => GraphQLISODateTime)
+  date!: Date;
 
   /** 已發布的月份必填(見 `ScheduleChangeReasonInput`) */
   @Field(() => ScheduleChangeReasonInput, { nullable: true })

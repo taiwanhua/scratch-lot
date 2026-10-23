@@ -189,7 +189,7 @@ describe("補打卡申請(規格 14.8)", () => {
       orgId: zhongshan,
       tenantId: tenant,
       userId: who.userId,
-      date,
+      date: taipei(date, "00:00"),
       startAt: taipei(date, start),
       endAt: taipei(date, end),
       breakMinutes: 30,

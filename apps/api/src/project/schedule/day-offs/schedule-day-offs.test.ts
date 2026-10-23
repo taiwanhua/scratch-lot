@@ -30,6 +30,7 @@ import {
   SCHEDULE_DAY_OFF_OPEN,
 } from "../../notifications";
 import { ScheduleClock } from "../shared/schedule-clock";
+import { dayKeyRange } from "../shared/schedule-dates";
 import {
   ALL_SCHEDULE_TEST_PERMISSIONS,
   SCHEDULE_TEST_PERMISSIONS as P,
@@ -279,6 +280,10 @@ const taipei = (date: string, time = "09:00") =>
 
 /** api 收發的時點(ISO):日期 = 租戶時區那天 00:00。 */
 const iso = (date: string, time = "00:00") => taipei(date, time).toISOString();
+
+/** 台北的日期期間(含頭尾)→ 半開的時點區間(給排班作業的讀取介面)。 */
+const taipeiDays = (from: string, to: string) =>
+  dayKeyRange(from, to, "Asia/Taipei");
 
 /** 洛杉磯(冬令 UTC−8)某天某時刻:那天 00:00 = 台北 16:00(租戶時區不是台北的測試用)。 */
 const la = (date: string, time = "00:00") =>
@@ -1152,16 +1157,18 @@ describe("畫休(GraphQL 端點 + 真 MongoDB)", () => {
       const items = await service.listUnavailable(
         system,
         zhongshan,
-        "2026-12-03",
-        "2026-12-05",
+        taipeiDays("2026-12-03", "2026-12-05"),
       );
       const find = (user: ScheduleTestUser, date: string) =>
         items.find(
-          (item) => item.userId === String(user.userId) && item.date === date,
+          (item) =>
+            item.userId === String(user.userId) &&
+            item.date.getTime() === taipei(date, "00:00").getTime(),
         );
       expect(find(li, "2026-12-03")).toEqual({
         userId: String(li.userId),
-        date: "2026-12-03",
+        // 那天(租戶時區 00:00 的時點)
+        date: taipei("2026-12-03", "00:00"),
         fullDay: false,
         // 時段是時點(租戶時區那天的 14:00–18:00)
         slots: [
@@ -1185,8 +1192,7 @@ describe("畫休(GraphQL 端點 + 真 MongoDB)", () => {
       const hsinchuItems = await service.listUnavailable(
         system,
         hsinchu,
-        "2026-12-01",
-        "2026-12-31",
+        taipeiDays("2026-12-01", "2026-12-31"),
       );
       expect(new Set(hsinchuItems.map((item) => item.userId))).toEqual(
         new Set([String(lin.userId)]),
@@ -1335,11 +1341,15 @@ describe("畫休(GraphQL 端點 + 真 MongoDB)", () => {
       // 那一段仍屬於 12/14(給排班作業的日期鍵);隔天 00:00 起的同一段不算重疊
       const items = await api.app
         .get(ScheduleDayOffsService)
-        .unavailableOfPerson(tenantA, wang.userId, "2026-12-14", "2026-12-15");
+        .unavailableOfPerson(
+          tenantA,
+          wang.userId,
+          taipeiDays("2026-12-14", "2026-12-15"),
+        );
       expect(items).toEqual([
         {
           userId: String(wang.userId),
-          date: "2026-12-14",
+          date: taipei("2026-12-14", "00:00"),
           fullDay: false,
           slots: [
             {
@@ -1554,10 +1564,14 @@ describe("畫休(GraphQL 端點 + 真 MongoDB)", () => {
         );
         const items = await api.app
           .get(ScheduleDayOffsService)
-          .listUnavailable(system, zhongshan, "2026-12-19", "2026-12-19");
+          .listUnavailable(
+            system,
+            zhongshan,
+            dayKeyRange("2026-12-19", "2026-12-19", "America/Los_Angeles"),
+          );
         expect(
           items.find((item) => item.userId === String(wang.userId)),
-        ).toMatchObject({ date: "2026-12-19", fullDay: true });
+        ).toMatchObject({ date: la("2026-12-19"), fullDay: true });
 
         // 台北 11/26 17:00 = 洛杉磯 11/26 01:00:已截止
         travelTo("2026-11-26", "17:00");

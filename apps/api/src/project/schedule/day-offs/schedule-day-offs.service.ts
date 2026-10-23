@@ -3,18 +3,10 @@ import { Types } from "mongoose";
 
 import {
   type InstantRange,
-  type LocalDate,
   addLocalMonths,
-  localDateOf,
-  localDateText,
-  localDayRange,
-  localMonthOf,
   localMonthRange,
   localMonthText,
-  parseLocalDate,
   parseLocalMonth,
-  startOfLocalDay,
-  startOfLocalDayOf,
 } from "@repo/domain/form";
 import { requiresReasonNote } from "@repo/domain/project/reason-note";
 import { SCHEDULE_FIELD_CATEGORY_KEYS } from "@repo/domain/project/schedule-fields";
@@ -52,6 +44,15 @@ import type {
 } from "../rules/rule-registry";
 import { ScheduleRulesService } from "../rules/schedule-rules.service";
 import { ScheduleClock } from "../shared/schedule-clock";
+import {
+  dateKeyOf,
+  dayKeyRange,
+  instantOfKey,
+  localDateOfKey,
+  monthKeyOf,
+  monthKeyRange,
+  monthOfWholeMonthRange,
+} from "../shared/schedule-dates";
 import {
   SCHEDULE_REASONS,
   dayOffRuleError,
@@ -148,12 +149,6 @@ function loadedOf(record: DayOffRecord, localDate: string): LoadedDayOff {
   };
 }
 
-const notWholeMonth = () =>
-  validationError("from / to must be one whole month in the tenant timezone", [
-    "from",
-    "to",
-  ]);
-
 const ORG_STAFF = "org_schedule_staff";
 const AUDIT_TARGET_TYPE = "schedule_day_off";
 const DAY_OFF_WINDOW_KEY = "dayOffWindow";
@@ -179,8 +174,8 @@ export interface ScheduleDayOffSpan {
 /** 某個人某天不能排的時間(`listUnavailable`;給排班表、自動排班)。 */
 export interface ScheduleUnavailability {
   userId: string;
-  /** 租戶時區的日期鍵 `YYYY-MM-DD` */
-  date: string;
+  /** 那天(租戶時區 00:00 的時點) */
+  date: Date;
   /** 有整天畫休 */
   fullDay: boolean;
   /** 時段不可排(時點;依開始時間) */
@@ -205,29 +200,6 @@ interface DayOffWrite {
   reasonNote: string | null;
 }
 
-/** 日期鍵 → `LocalDate`;日期鍵都由時點換算而來,不合法是程式錯誤。 */
-function localDateOfKey(date: string): LocalDate {
-  const parsed = parseLocalDate(date);
-  if (parsed === null) {
-    throw new RangeError(`invalid date key: ${date}`);
-  }
-  return parsed;
-}
-
-/** 日期鍵所在的月份鍵(`YYYY-MM`)。 */
-function monthKeyOf(date: string): string {
-  const { year, month } = localDateOfKey(date);
-  return localMonthText({ year, month });
-}
-
-/** 日期鍵 → 那天租戶時區 00:00 的時點(api 輸出的日期)。 */
-function instantOfKey(date: string, timezone: string): Date {
-  return new Date(startOfLocalDay(localDateOfKey(date), timezone));
-}
-
-const dateKeyOf = (instant: Date, timezone: string): string =>
-  localDateText(localDateOf(instant.getTime(), timezone));
-
 /**
  * 寫入要碰哪幾個月的守門文件:那天的月份;整天畫休另加前後一個月 ——「最多連續休假」會跨月,
  * 月初 / 月底的整天畫休和相鄰月份的寫入要互相衝突。依月份順序。守門文件以月份鍵 `YYYY-MM` 為鍵。
@@ -242,40 +214,6 @@ export function dayOffLockMonths(date: string, kind: string): string[] {
         localMonthText(addLocalMonths(current, 1)),
       ]
     : [localMonthText(current)];
-}
-
-/**
- * 月份查詢(我的畫休、畫休總覽)的 `from` / `to`:兩個都缺席 = null(呼叫端用目標月);
- * 有給就要剛好是租戶時區某個月的 `[月初 00:00, 下月初 00:00)`,回那個月的月份鍵;
- * 只給一個、或不是整個月 → `VALIDATION_FAILED`(欄位 `from`、`to`)。
- */
-function monthOfRange(
-  input: { from?: Date | null; to?: Date | null } | null | undefined,
-  timezone: string,
-): string | null {
-  const from = input?.from ?? null;
-  const to = input?.to ?? null;
-  if (from === null && to === null) {
-    return null;
-  }
-  if (from === null || to === null || !Number.isFinite(from.getTime())) {
-    throw notWholeMonth();
-  }
-  const month = localMonthOf(from.getTime(), timezone);
-  const range = localMonthRange(month, timezone);
-  if (range.from !== from.getTime() || range.to !== to.getTime()) {
-    throw notWholeMonth();
-  }
-  return localMonthText(month);
-}
-
-/** 月份鍵的時點區間 `[月初 00:00, 下月初 00:00)`。 */
-function monthRangeOf(month: string, timezone: string): InstantRange {
-  const parsed = parseLocalMonth(month);
-  if (parsed === null) {
-    throw new RangeError(`invalid month key: ${month}`);
-  }
-  return localMonthRange(parsed, timezone);
 }
 
 function blankToNull(value: string | null | undefined): string | null {
@@ -443,7 +381,8 @@ export class ScheduleDayOffsService implements OnModuleInit {
   ): Promise<MyScheduleDayOffsPayload> {
     const { tenantId, userId } = await this.self(operator);
     const { today, timezone } = await this.today(operator, tenantId);
-    const target = monthOfRange(range, timezone) ?? dayOffTargetMonth(today);
+    const target =
+      monthOfWholeMonthRange(range, timezone) ?? dayOffTargetMonth(today);
     const holds = await this.permissions.holderOf(operator);
     const canOverride =
       holds(SCHEDULE_PERMISSIONS.viewDayOffs) &&
@@ -573,7 +512,7 @@ export class ScheduleDayOffsService implements OnModuleInit {
     const org = await resolveScheduleOrg(operator, this.orgs, orgId);
     const { today, timezone } = await this.today(operator, org.tenantId);
     const targetMonth = dayOffTargetMonth(today);
-    const target = monthOfRange(range, timezone) ?? targetMonth;
+    const target = monthOfWholeMonthRange(range, timezone) ?? targetMonth;
     const settings = await this.rules.effectiveSettingsForOrg(operator, org.id);
     const candidates = await this.staffService.listScheduleCandidates(
       operator,
@@ -587,7 +526,7 @@ export class ScheduleDayOffsService implements OnModuleInit {
     const records = await this.recordsBetween(
       org.tenantId,
       candidates.map((candidate) => candidate.userId),
-      monthRangeOf(target, timezone),
+      monthKeyRange(target, timezone),
       timezone,
     );
     const names = new Map(
@@ -688,15 +627,14 @@ export class ScheduleDayOffsService implements OnModuleInit {
   // ---- 給其他功能 ----
 
   /**
-   * 某家店的排班人員在一段日期(`YYYY-MM-DD` 日期鍵,含頭尾;以租戶時區換成時點區間查)每天的
+   * 某家店的排班人員在一段期間(半開的時點區間 `[from, to)`)每天的
    * 整天畫休 / 時段不可排(給排班表、人力不足原因、自動排班;畫休屬於人,不分是在哪家店登記的)。
    * 只列有畫休的那幾天;這家店要在操作者的可見範圍內(看不到 → 空清單)。
    */
   async listUnavailable(
     operator: OperatorContext,
     orgId: Types.ObjectId,
-    from: string,
-    to: string,
+    range: InstantRange,
   ): Promise<ScheduleUnavailability[]> {
     // 這家店要在操作者(或排程的租戶系統身分)的可見範圍內;畫休屬於人,以租戶為邊界讀
     if (!isOrgVisible(operator, orgId)) {
@@ -717,29 +655,28 @@ export class ScheduleDayOffsService implements OnModuleInit {
     const records = await this.recordsBetween(
       tenantId,
       candidates.map((candidate) => candidate.userId),
-      dayRangeOf(from, to, timezone),
+      range,
       timezone,
     );
     return unavailabilityOf(records);
   }
 
   /**
-   * 一個人在一段日期(`YYYY-MM-DD` 日期鍵,含頭尾)每天的整天畫休 / 時段不可排,**以租戶與人為準**
+   * 一個人在一段期間(半開的時點區間 `[from, to)`)每天的整天畫休 / 時段不可排,**以租戶與人為準**
    * (不經「某家店的候選人」:修改舊排班時,那個人可能已經不能排這家店,仍要擋)。
    * 給排班寫入檢查「畫休那段時間不能排」;租戶由呼叫端確認(操作者看得到的店所屬的租戶)。
    */
   async unavailableOfPerson(
     tenantId: Types.ObjectId,
     userId: Types.ObjectId,
-    from: string,
-    to: string,
+    range: InstantRange,
   ): Promise<ScheduleUnavailability[]> {
     const reader = await tenantBoundaryContext(this.orgs, null, tenantId);
     const timezone = await tenantTimezoneOf(this.orgs, reader, tenantId);
     const records = await this.recordsBetween(
       tenantId,
       [String(userId)],
-      dayRangeOf(from, to, timezone),
+      range,
       timezone,
     );
     return unavailabilityOf(records);
@@ -992,7 +929,7 @@ export class ScheduleDayOffsService implements OnModuleInit {
           const existing = await this.recordsBetween(
             context.tenantId,
             [String(context.userId)],
-            dayRangeOf(write.localDate, write.localDate, context.timezone),
+            dayKeyRange(write.localDate, write.localDate, context.timezone),
             context.timezone,
           );
           assertNoConflict(existing, write);
@@ -1057,7 +994,7 @@ export class ScheduleDayOffsService implements OnModuleInit {
   ): Promise<ScheduleDayOffEntryConflictModel[]> {
     const windows =
       write.kind === "full-day"
-        ? [dayRangeOf(write.localDate, write.localDate, context.timezone)]
+        ? [dayKeyRange(write.localDate, write.localDate, context.timezone)]
         : write.slots.map((slot) => ({
             from: slot.startAt.getTime(),
             to: slot.endAt.getTime(),
@@ -1089,10 +1026,8 @@ export class ScheduleDayOffsService implements OnModuleInit {
         .filter((orgId) => isOrgVisible(operator, orgId)),
     );
     return conflicts.map((record) => ({
-      // 排班那天 = 上班時點在租戶時區的那一天(與排班的 `date` 同一個判斷)
-      date: new Date(
-        startOfLocalDayOf(record.startAt.getTime(), context.timezone),
-      ),
+      // 排班那天(排班的 `date`:上班時點在租戶時區那天的 00:00)
+      date: record.date,
       startAt: record.startAt,
       endAt: record.endAt,
       orgName: isOrgVisible(operator, record.orgId)
@@ -1408,16 +1343,6 @@ interface PersonContext {
   timezone: string;
 }
 
-/** 日期鍵期間(含頭尾)→ 時點區間;日期鍵不合法 → `VALIDATION_FAILED`(呼叫端應先驗過)。 */
-function dayRangeOf(from: string, to: string, timezone: string): InstantRange {
-  const first = parseLocalDate(from);
-  const last = parseLocalDate(to);
-  if (first === null || last === null) {
-    throw validationError(`invalid date range: ${from}–${to}`, ["from", "to"]);
-  }
-  return localDayRange(first, last, timezone);
-}
-
 function dayOffModelOf(
   record: LoadedDayOff,
   names: ReadonlyMap<string, string>,
@@ -1550,7 +1475,7 @@ function validatedWrite(
   }
   // 以租戶時區正規化成那天 00:00(admin 送的就是 00:00;送了當天其他時刻也歸到同一天)
   const localDate = dateKeyOf(input.date, timezone);
-  const day = dayRangeOf(localDate, localDate, timezone);
+  const day = dayKeyRange(localDate, localDate, timezone);
   return {
     ...who,
     date: new Date(day.from),
@@ -1628,7 +1553,7 @@ function unavailabilityOf(
     const key = `${String(record.userId)}|${record.localDate}`;
     const item = byKey.get(key) ?? {
       userId: String(record.userId),
-      date: record.localDate,
+      date: record.date,
       fullDay: false,
       slots: [],
     };

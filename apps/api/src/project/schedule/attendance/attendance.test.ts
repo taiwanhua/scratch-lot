@@ -201,7 +201,7 @@ describe("出勤紀錄(GraphQL 端點 + 真 MongoDB)", () => {
         orgId,
         tenantId: tenant,
         userId: user.userId,
-        date,
+        date: taipei(date, "00:00:00"),
         startAt: taipei(date, `${start}:00`),
         endAt: taipei(date, `${end}:00`),
         breakMinutes: 30,

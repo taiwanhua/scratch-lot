@@ -32,16 +32,19 @@ export class ApplyScheduleTemplatesInput {
   @Field(() => ID, { nullable: true })
   weekTemplateId?: string | null;
 
-  /** 套用到的日子 `YYYY-MM-DD` */
-  @Field(() => [String])
-  dates!: string[];
+  /** 套用到的日子(各是那天租戶時區 00:00 的時點;api 以租戶時區正規化) */
+  @Field(() => [GraphQLISODateTime])
+  dates!: Date[];
 
   /** 已發布的月份必填 */
   @Field(() => ScheduleChangeReasonInput, { nullable: true })
   changeReason?: ScheduleChangeReasonInput | null;
 }
 
-/** 自動排班 / 清除自動排入的人的範圍:某家店某個月裡的 `from`–`to`(含頭尾)。 */
+/**
+ * 自動排班 / 清除自動排入的人的範圍:某家店某個月(`month` = 月份鍵 `YYYY-MM`)裡的期間,
+ * 半開的時點區間 `[from, to)`(租戶時區的 00:00;迄 = 最後一天的隔天 00:00),要落在這個月內。
+ */
 @InputType()
 export class ScheduleAutoRunRangeInput {
   @Field(() => ID, { nullable: true })
@@ -50,11 +53,11 @@ export class ScheduleAutoRunRangeInput {
   @Field(() => String)
   month!: string;
 
-  @Field(() => String)
-  from!: string;
+  @Field(() => GraphQLISODateTime)
+  from!: Date;
 
-  @Field(() => String)
-  to!: string;
+  @Field(() => GraphQLISODateTime)
+  to!: Date;
 }
 
 @InputType()
@@ -118,11 +121,12 @@ export class ScheduleAutoRunSummaryModel {
   @Field(() => String, { nullable: true })
   byName!: string | null;
 
-  @Field(() => String)
-  from!: string;
+  /** 這次的範圍:半開的時點區間 `[from, to)`(租戶時區的 00:00;迄 = 最後一天的隔天 00:00) */
+  @Field(() => GraphQLISODateTime)
+  from!: Date;
 
-  @Field(() => String)
-  to!: string;
+  @Field(() => GraphQLISODateTime)
+  to!: Date;
 
   /** 填入的人次 */
   @Field(() => Int)

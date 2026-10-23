@@ -34,6 +34,7 @@ import {
 } from "../integration/entry-lookup";
 import { PublishedEntries } from "../my/published-entries";
 import type { EntryRecord } from "../roster/roster-people";
+import { dateKeyOf } from "../shared/schedule-dates";
 import { notFoundError, validationError } from "../shared/schedule-error";
 import { resolveScheduleOrg } from "../shared/schedule-org";
 import { SchedulePunchLedger } from "./punch-ledger";
@@ -171,7 +172,7 @@ export class MakeupPunchService {
       operator.actorId !== null &&
       entry.userId.equals(operator.actorId) &&
       entry.orgId.equals(branchId) &&
-      entry.date === date
+      dateKeyOf(entry.date, timezone) === date
       ? null
       : block(
           MAKEUP_PUNCH_REASONS.entryMismatch,

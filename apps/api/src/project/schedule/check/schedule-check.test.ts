@@ -504,8 +504,8 @@ describe("排班檢核與發布(GraphQL 端點 + 真 MongoDB)", () => {
       expect(
         understaffed.map((item) => [item.understaffed?.role, item.date]),
       ).toEqual([
-        ["leader", "2026-11-05"],
-        ["helper", "2026-11-05"],
+        ["leader", taipei("2026-11-05", "00:00")],
+        ["helper", taipei("2026-11-05", "00:00")],
       ]);
       // 負責:李不能負責(先算)、陳在信義店不能負責 → 可排 1(王)
       expect(understaffed[0]?.understaffed).toMatchObject({
@@ -533,7 +533,7 @@ describe("排班檢核與發布(GraphQL 端點 + 真 MongoDB)", () => {
       expect(item).toMatchObject({
         level: "reminder",
         userName: "陳大文",
-        date: "2026-11-10",
+        date: taipei("2026-11-10", "00:00"),
         actual: 9,
         limit: 8,
       });
@@ -548,7 +548,7 @@ describe("排班檢核與發布(GraphQL 端點 + 真 MongoDB)", () => {
       expect(item).toMatchObject({
         level: "reminder",
         userName: "王小明",
-        date: "2026-11-12",
+        date: taipei("2026-11-12", "00:00"),
         isOtherStore: false,
         orgName: "信義店",
       });
@@ -584,7 +584,7 @@ describe("排班檢核與發布(GraphQL 端點 + 真 MongoDB)", () => {
         expect.objectContaining({
           level: "reminder",
           userName: "王小明",
-          date: "2026-11-13",
+          date: taipei("2026-11-13", "00:00"),
           actual: 2,
         }),
       ]);
@@ -642,13 +642,14 @@ describe("排班檢核與發布(GraphQL 端點 + 真 MongoDB)", () => {
       expect(
         roster.entries.some(
           (entry) =>
-            entry.date === "2027-02-03" && entry.userId === String(li.userId),
+            entry.date === taipei("2027-02-03", "00:00") &&
+            entry.userId === String(li.userId),
         ),
       ).toBe(true);
       const result = await check("2027-02");
       expect(
         result.items.find((item) => item.key === "maxDailyWorkHours"),
-      ).toMatchObject({ level: "limit", date: "2027-02-03" });
+      ).toMatchObject({ level: "limit", date: taipei("2027-02-03", "00:00") });
 
       const blocked = await publish("2027-02");
       expect(errorOf(blocked)).toMatchObject({
@@ -803,14 +804,14 @@ describe("排班檢核與發布(GraphQL 端點 + 真 MongoDB)", () => {
         changeReason: SWAP,
       });
       const noReason = await gql(hq, REMOVE_DAY, {
-        input: { orgId: String(xinyi), date: "2027-08-20" },
+        input: { orgId: String(xinyi), date: taipei("2027-08-20", "00:00") },
       });
       expect(errorOf(noReason)).toMatchObject({ fields: ["reasonKey"] });
       const removed = dataOf(
         await gql(hq, REMOVE_DAY, {
           input: {
             orgId: String(xinyi),
-            date: "2027-08-20",
+            date: taipei("2027-08-20", "00:00"),
             changeReason: SWAP,
           },
         }),
@@ -820,7 +821,10 @@ describe("排班檢核與發布(GraphQL 端點 + 真 MongoDB)", () => {
       expect(
         await connection
           .collection(SCHEDULE_CHANGES_COLLECTION)
-          .countDocuments({ date: "2027-08-20", action: "entry.delete" }),
+          .countDocuments({
+            date: new Date(taipei("2027-08-20", "00:00")),
+            action: "entry.delete",
+          }),
       ).toBe(2);
     });
 

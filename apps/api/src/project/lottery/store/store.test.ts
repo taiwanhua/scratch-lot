@@ -348,7 +348,7 @@ describe("店面(一):看板、收銀班次、投庫 / 出庫(GraphQL 端點 + �
         orgId: xinyi,
         tenantId: tenant,
         userId,
-        date,
+        date: taipei(date, "00:00"),
         startAt: taipei(date, start),
         endAt: taipei(date, end),
         breakMinutes: 30,
@@ -360,7 +360,7 @@ describe("店面(一):看板、收銀班次、投庫 / 出庫(GraphQL 端點 + �
       .insertOne({
         orgId: xinyi,
         tenantId: tenant,
-        date,
+        date: taipei(date, "00:00"),
         startAt: taipei(date, start),
         endAt: taipei(date, end),
         positionKey,

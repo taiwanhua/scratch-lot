@@ -77,7 +77,7 @@ type ApplyCenterCounts {
 
 input ApplyScheduleTemplatesInput {
   changeReason: ScheduleChangeReasonInput
-  dates: [String!]!
+  dates: [DateTime!]!
   kind: String!
   month: String!
   orgId: ID
@@ -3943,7 +3943,7 @@ type MyScheduleChange {
   beforeEndAt: DateTime
   beforeStartAt: DateTime
   createdAt: DateTime!
-  date: String!
+  date: DateTime!
   id: ID!
   orgName: String!
   reason: String!
@@ -3972,7 +3972,7 @@ type MyScheduleEntry {
   breakMinutes: Int!
   clockIn: DateTime
   clockOut: DateTime
-  date: String!
+  date: DateTime!
   endAt: DateTime!
   id: ID!
   isLead: Boolean!
@@ -3986,7 +3986,8 @@ type MyScheduleEntry {
 }
 
 input MyScheduleInput {
-  month: String
+  from: DateTime
+  to: DateTime
 }
 
 type MyScheduleOrg {
@@ -3999,14 +4000,14 @@ type MySchedulePayload {
   canPunch: Boolean!
   changes: [MyScheduleChange!]!
   currentOrg: MyScheduleOrg!
-  dayOffDates: [String!]!
+  dayOffDates: [DateTime!]!
   entries: [MyScheduleEntry!]!
   hasEntryToday: Boolean!
   incomplete: [MyScheduleEntry!]!
   month: String!
   openUnmatchedClockIn: MySchedulePunch
   punchCards: [MySchedulePunchCard!]!
-  today: String!
+  today: DateTime!
 }
 
 type MySchedulePunch {
@@ -4796,7 +4797,7 @@ input RegisterLotteryDealerSigninInput {
 
 input RemoveScheduleDayEntriesInput {
   changeReason: ScheduleChangeReasonInput
-  date: String!
+  date: DateTime!
   orgId: ID
 }
 
@@ -5077,11 +5078,11 @@ type RolesPayload {
 input RunScheduleAutoRunInput {
   conditions: [ScheduleAutoRunConditionInput!]!
   fillWeekTemplate: Boolean
-  from: String!
+  from: DateTime!
   mode: String!
   month: String!
   orgId: ID
-  to: String!
+  to: DateTime!
 }
 
 input SaveDataScopeRuleInput {
@@ -5327,10 +5328,10 @@ type ScheduleAutoRunPreviewPayload {
 }
 
 input ScheduleAutoRunRangeInput {
-  from: String!
+  from: DateTime!
   month: String!
   orgId: ID
-  to: String!
+  to: DateTime!
 }
 
 type ScheduleAutoRunStatusPayload {
@@ -5347,9 +5348,9 @@ type ScheduleAutoRunSummary {
   at: DateTime!
   byName: String
   filledCount: Int!
-  from: String!
+  from: DateTime!
   id: ID!
-  to: String!
+  to: DateTime!
   unfilledCount: Int!
 }
 
@@ -5391,10 +5392,10 @@ input ScheduleChangeReasonInput {
 
 type ScheduleCheckItem {
   actual: Float
-  date: String!
+  date: DateTime!
   endAt: DateTime
   entryIds: [ID!]!
-  from: String
+  from: DateTime
   isOtherStore: Boolean!
   key: String!
   level: String!
@@ -5402,7 +5403,7 @@ type ScheduleCheckItem {
   message: String!
   orgName: String
   startAt: DateTime
-  to: String
+  to: DateTime
   understaffed: ScheduleCheckUnderstaffed
   userId: ID
   userName: String
@@ -5517,7 +5518,7 @@ type ScheduleDayOffWindow {
 
 type ScheduleDemand {
   createdAt: DateTime!
-  date: String!
+  date: DateTime!
   endAt: DateTime!
   id: ID!
   positionKey: String!
@@ -5597,7 +5598,7 @@ type ScheduleDemandWeekTemplatesPayload {
 type ScheduleEntry {
   assignments: [ScheduleEntryAssignment!]!
   breakMinutes: Int!
-  date: String!
+  date: DateTime!
   deletable: Boolean!
   endAt: DateTime!
   id: ID!
@@ -5630,7 +5631,7 @@ type ScheduleFieldOptionsPayload {
 }
 
 type ScheduleOtherStoreEntry {
-  date: String!
+  date: DateTime!
   endAt: DateTime!
   orgName: String
   startAt: DateTime!
@@ -5654,17 +5655,17 @@ type ScheduleRosterBreakTier {
 }
 
 type ScheduleRosterCalendarDay {
-  date: String!
+  date: DateTime!
   name: String
   paletteKey: String
   type: String!
 }
 
 input ScheduleRosterInput {
-  from: String
+  from: DateTime
   month: String!
   orgId: ID
-  to: String
+  to: DateTime
 }
 
 type ScheduleRosterPayload {
@@ -5698,7 +5699,7 @@ type ScheduleRosterPerson {
 
 type ScheduleRosterPunch {
   at: DateTime!
-  date: String!
+  date: DateTime!
   id: ID!
   type: String!
   userId: ID!
@@ -5714,8 +5715,8 @@ type ScheduleRosterSettings {
 }
 
 type ScheduleRosterSlot {
-  endTime: String!
-  startTime: String!
+  endAt: DateTime!
+  startAt: DateTime!
 }
 
 type ScheduleRosterStats {
@@ -5740,12 +5741,12 @@ type ScheduleRosterTemplate {
 }
 
 type ScheduleRosterTimeRangeDay {
-  date: String!
+  date: DateTime!
   slots: [ScheduleRosterSlot!]!
 }
 
 type ScheduleRosterUnavailability {
-  date: String!
+  date: DateTime!
   fullDay: Boolean!
   slots: [ScheduleRosterSlot!]!
   userId: ID!

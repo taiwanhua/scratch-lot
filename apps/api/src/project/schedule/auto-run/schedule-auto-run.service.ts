@@ -2,10 +2,11 @@ import { Injectable } from "@nestjs/common";
 import { Types } from "mongoose";
 
 import {
-  addLocalCalendar,
-  formatTemporal,
-  instantOfLocalTime,
-  parseLocalDate,
+  type InstantRange,
+  addLocalDays,
+  instantOfLocalHhMm,
+  minutesOfHhMm,
+  parseLocalMonth,
 } from "@repo/domain/form";
 import {
   SCHEDULE_AUTO_RUN_MODES,
@@ -14,9 +15,6 @@ import {
   SCHEDULE_RULE_DEFINITIONS,
   type ScheduleAutoRunSortCondition,
   type ScheduleBreakTier,
-  isIsoDate,
-  isIsoMonth,
-  minutesOfHhMm,
 } from "@repo/domain/project/schedule-settings";
 
 import { AuditService } from "../../../audit/audit.service";
@@ -48,14 +46,25 @@ import {
   ScheduleCheckService,
   busyOfUnavailability,
 } from "../check/schedule-check.service";
-import { shiftDate } from "../day-offs/day-off-window";
 import { ScheduleDayOffsService } from "../day-offs/schedule-day-offs.service";
 import { blockedEntryIdsOf } from "../integration/entry-deletion-guards";
 import type { DemandRecord } from "../roster/roster-models";
 import { type EntryRecord, RosterPeopleReader } from "../roster/roster-people";
-import { monthRange } from "../roster/schedule-roster.service";
 import { ScheduleRulesService } from "../rules/schedule-rules.service";
 import { ScheduleClock } from "../shared/schedule-clock";
+import {
+  dateKeyOf,
+  dateKeysOfRange,
+  dayKeyRange,
+  instantOfKey,
+  instantRangeFilter,
+  localDateOfKey,
+  monthKeyOf,
+  monthKeyRange,
+  normalizedDay,
+  normalizedDayRange,
+  shiftDateKey,
+} from "../shared/schedule-dates";
 import {
   SCHEDULE_REASONS,
   isDuplicateKeyError,
@@ -136,11 +145,11 @@ interface ClearPlan {
   touchedEntryIds: string[];
 }
 
-/** 要建立的一筆人力需求(id 先產生)。 */
+/** 要建立的一筆人力需求(id 先產生;`date` = 那天租戶時區 00:00 的時點)。 */
 interface DemandDoc {
   _id: Types.ObjectId;
   orgId: Types.ObjectId;
-  date: string;
+  date: Date;
   startAt: Date;
   endAt: Date;
   positionKey: string;
@@ -163,10 +172,9 @@ interface PreparedRun {
   extended: ScheduleAutoRunExtendedEntry[];
 }
 
-/** 一次自動排班的設定(驗過的輸入)。 */
+/** 一次自動排班的設定(驗過的輸入;範圍是半開的時點區間)。 */
 interface RunPlan {
-  from: string;
-  to: string;
+  range: InstantRange;
   mode: (typeof SCHEDULE_AUTO_RUN_MODES)[number];
   conditions: { key: string; enabled: boolean }[];
   fillWeekTemplate: boolean;
@@ -259,7 +267,7 @@ export class ScheduleAutoRunService {
     options: { dryRun: boolean },
   ): Promise<ApplyScheduleTemplatesPayload> {
     const scope = await this.scopeOf(operator, input.orgId, input.month);
-    const dates = validatedDates(input.dates, input.month);
+    const dates = validatedDates(input.dates, input.month, scope.timezone);
     const book = await this.templateBook(operator, scope);
     const request = templateRequestOf(input, book);
     const plan = async () =>
@@ -300,13 +308,8 @@ export class ScheduleAutoRunService {
     input: ScheduleAutoRunRangeInput,
   ): Promise<ScheduleAutoRunPreviewPayload> {
     const scope = await this.scopeOf(operator, input.orgId, input.month);
-    const range = validatedRange(input);
-    const closed = await this.closedDates(
-      operator,
-      scope,
-      range.from,
-      range.to,
-    );
+    const range = validatedRange(input, scope.timezone);
+    const closed = await this.closedDates(operator, scope, range);
     const demands = await this.openDemands(operator, scope, range, closed);
     const weekFill = await this.weekFillOf(operator, scope, input.month, range);
     const assignments =
@@ -330,7 +333,7 @@ export class ScheduleAutoRunService {
     input: RunScheduleAutoRunInput,
   ): Promise<ScheduleAutoRunSummaryModel> {
     const scope = await this.scopeOf(operator, input.orgId, input.month);
-    const plan = validatedRunPlan(input);
+    const plan = validatedRunPlan(input, scope.timezone);
     await this.ensurePeriod(operator, scope, input.month);
     const lockedAt = await this.acquireLock(operator, scope, input.month);
     try {
@@ -376,7 +379,7 @@ export class ScheduleAutoRunService {
     input: ScheduleAutoRunRangeInput,
   ): Promise<ClearScheduleAutoAssignmentsPayload> {
     const scope = await this.scopeOf(operator, input.orgId, input.month);
-    const range = validatedRange(input);
+    const range = validatedRange(input, scope.timezone);
     await this.ensurePeriod(operator, scope, input.month);
     return this.transactions.withTransaction(async () => {
       await this.touchPeriod(operator, scope, input.month, {
@@ -384,7 +387,7 @@ export class ScheduleAutoRunService {
       });
       const demands = await this.demands.findMany(operator, {
         orgId: scope.org.id,
-        date: { $gte: range.from, $lte: range.to },
+        date: instantRangeFilter(range),
       });
       const cleared = await this.planClear(
         operator,
@@ -403,8 +406,8 @@ export class ScheduleAutoRunService {
         targetType: AUTO_RUN_TARGET,
         after: {
           month: input.month,
-          from: range.from,
-          to: range.to,
+          from: new Date(range.from),
+          to: new Date(range.to),
           removed: cleared.assignmentIds.length,
           deletedEntries: cleared.entryIds,
           shrunkEntries: shrunk,
@@ -429,19 +432,14 @@ export class ScheduleAutoRunService {
     month: string,
     plan: RunPlan,
   ): Promise<PreparedRun> {
-    const range = { from: plan.from, to: plan.to };
+    const { range } = plan;
     // 1. 先以預設人力需求週範本補上人力需求(有 auto-run 就可以補,不需要 edit)
     const weekFill = plan.fillWeekTemplate
       ? await this.weekFillOf(operator, scope, month, range)
       : null;
     const weekDocs =
       weekFill === null ? [] : this.demandDocsOf(scope, weekFill.plan, "auto");
-    const closed = await this.closedDates(
-      operator,
-      scope,
-      range.from,
-      range.to,
-    );
+    const closed = await this.closedDates(operator, scope, range);
     const existing = await this.openDemands(operator, scope, range, closed);
     // 2. 依方式要清的(只填空位 = 不清)
     const clearWhich = plan.mode === "redo-auto" ? "auto" : "all";
@@ -457,10 +455,10 @@ export class ScheduleAutoRunService {
     // 3. 填人(補上的人力需求也一起填;要清的當作已經不在)
     const input = await this.scheduleInput(operator, scope, month, {
       demands: [
-        ...existing.map((demand) => autoDemandOf(demand)),
+        ...existing.map((demand) => autoDemandOf(demand, scope.timezone)),
         ...weekDocs
-          .filter((doc) => !closed.has(doc.date))
-          .map((doc) => autoDemandOf(doc)),
+          .filter((doc) => !closed.has(dateKeyOf(doc.date, scope.timezone)))
+          .map((doc) => autoDemandOf(doc, scope.timezone)),
       ],
       closed,
       plan,
@@ -534,8 +532,8 @@ export class ScheduleAutoRunService {
     const run = await this.autoRuns.create(operator, {
       orgId: scope.org.id,
       month,
-      from: plan.from,
-      to: plan.to,
+      from: new Date(plan.range.from),
+      to: new Date(plan.range.to),
       mode: plan.mode,
       conditions: plan.conditions,
       weekTemplateId:
@@ -550,7 +548,7 @@ export class ScheduleAutoRunService {
       result.newEntries.map((entry) => ({
         orgId: scope.org.id,
         userId: new Types.ObjectId(entry.userId),
-        date: entry.date,
+        date: instantOfKey(entry.date, scope.timezone),
         startAt: entry.startAt,
         endAt: entry.endAt,
         breakMinutes: entry.breakMinutes,
@@ -590,8 +588,8 @@ export class ScheduleAutoRunService {
       targetId: run._id,
       after: {
         month,
-        from: plan.from,
-        to: plan.to,
+        from: new Date(plan.range.from),
+        to: new Date(plan.range.to),
         mode: plan.mode,
         conditions: plan.conditions,
         stats,
@@ -613,11 +611,12 @@ export class ScheduleAutoRunService {
       excluded: { assignmentIds: Set<string>; entryIds: Set<string> };
     },
   ) {
-    const { from, to } = monthRange(month);
-    const wide = {
-      from: shiftDate(from, -WIDEN_DAYS),
-      to: shiftDate(to, WIDEN_DAYS),
-    };
+    const own = monthKeyRange(month, scope.timezone);
+    const wide = dayKeyRange(
+      shiftDateKey(dateKeyOf(own.from, scope.timezone), -WIDEN_DAYS),
+      shiftDateKey(dateKeyOf(own.to - 1, scope.timezone), WIDEN_DAYS),
+      scope.timezone,
+    );
     const candidates = await this.staff.listScheduleCandidates(
       operator,
       scope.org.id,
@@ -627,8 +626,7 @@ export class ScheduleAutoRunService {
       operator,
       scope.org.tenantId,
       userIds.map((id) => new Types.ObjectId(id)),
-      wide.from,
-      wide.to,
+      wide,
     );
     const personEntries = allPersonEntries.filter(
       (entry) => !context.excluded.entryIds.has(String(entry._id)),
@@ -661,8 +659,7 @@ export class ScheduleAutoRunService {
     const unavailability = await this.dayOffs.listUnavailable(
       operator,
       scope.org.id,
-      wide.from,
-      wide.to,
+      wide,
     );
     const settings = await this.rules.effectiveSettingsForOrg(
       operator,
@@ -683,8 +680,10 @@ export class ScheduleAutoRunService {
       month,
       seed: newAutoRunSeed(),
       demands: context.demands,
-      otherDemands: otherDemands.map((demand) => autoDemandOf(demand)),
-      entries: personEntries.map((entry) => autoEntryOf(entry)),
+      otherDemands: otherDemands.map((demand) =>
+        autoDemandOf(demand, scope.timezone),
+      ),
+      entries: personEntries.map((entry) => autoEntryOf(entry, scope.timezone)),
       assignments: assignments.map((item) => ({
         entryId: String(item.entryId),
         demandId: String(item.demandId),
@@ -709,7 +708,7 @@ export class ScheduleAutoRunService {
       leaderCounts: await this.leaderCounts(operator, scope),
       breakTiers: breakTiersOf(settings.get("defaultBreaks")?.value.tiers),
       settingsOf,
-      dateOf: (at: Date) => this.dateOf(scope, at),
+      dateOf: (at: Date) => dateKeyOf(at, scope.timezone),
     };
   }
 
@@ -721,13 +720,16 @@ export class ScheduleAutoRunService {
     operator: OperatorContext,
     scope: Scope,
   ): Promise<Map<string, number>> {
-    const today = this.dateOf(scope, this.clock.now());
+    const today = dateKeyOf(this.clock.now(), scope.timezone);
     const records = await this.entries.findMany(operator, {
       orgId: scope.org.id,
-      date: {
-        $gte: shiftDate(today, -LEADER_COUNT_DAYS),
-        $lte: shiftDate(today, -1),
-      },
+      date: instantRangeFilter(
+        dayKeyRange(
+          shiftDateKey(today, -LEADER_COUNT_DAYS),
+          shiftDateKey(today, -1),
+          scope.timezone,
+        ),
+      ),
     });
     if (records.length === 0) {
       return new Map();
@@ -901,16 +903,21 @@ export class ScheduleAutoRunService {
     request: TemplateApplyRequest,
     dates: readonly string[],
   ): Promise<TemplateApplyPlan> {
-    const { from, to } = monthRange(month);
+    const own = monthKeyRange(month, scope.timezone);
     const existing = await this.demands.findMany(operator, {
       orgId: scope.org.id,
-      date: { $gte: from, $lte: to },
+      date: instantRangeFilter(own),
     });
     return planTemplateApply({
       request,
       dates,
-      existing,
-      closedDates: await this.closedDates(operator, scope, from, to),
+      existing: existing.map((demand) => ({
+        date: dateKeyOf(demand.date, scope.timezone),
+        startAt: demand.startAt,
+        endAt: demand.endAt,
+        positionKey: demand.positionKey,
+      })),
+      closedDates: await this.closedDates(operator, scope, own),
       spanOf: (date, startTime, endTime) =>
         this.spanOf(scope, date, startTime, endTime),
     });
@@ -921,7 +928,7 @@ export class ScheduleAutoRunService {
     operator: OperatorContext,
     scope: Scope,
     month: string,
-    range: { from: string; to: string },
+    range: InstantRange,
   ): Promise<{
     weekTemplate: ScheduleApplyWeekTemplateModel;
     plan: TemplateApplyPlan;
@@ -944,7 +951,7 @@ export class ScheduleAutoRunService {
       scope,
       month,
       weekRequestOf(weekTemplate, book),
-      datesBetween(range.from, range.to),
+      dateKeysOfRange(range, scope.timezone),
     );
     return { weekTemplate, plan };
   }
@@ -959,7 +966,7 @@ export class ScheduleAutoRunService {
     return plan.created.map((item) => ({
       _id: new Types.ObjectId(),
       orgId: scope.org.id,
-      date: item.date,
+      date: instantOfKey(item.date, scope.timezone),
       startAt: item.startAt,
       endAt: item.endAt,
       positionKey: item.positionKey,
@@ -999,8 +1006,8 @@ export class ScheduleAutoRunService {
       return;
     }
     for (const record of created) {
-      await this.changes.record(operator, scope.org, reason, {
-        month: record.date.slice(0, 7),
+      await this.changes.record(operator, scope, reason, {
+        month: monthKeyOf(dateKeyOf(record.date, scope.timezone)),
         date: record.date,
         action: "demand.create",
         targetId: record._id,
@@ -1064,61 +1071,64 @@ export class ScheduleAutoRunService {
     orgId: string | null | undefined,
     month: string,
   ): Promise<Scope> {
-    if (!isIsoMonth(month)) {
-      throw validationError(`invalid month: ${String(month)}`, ["month"]);
+    if (parseLocalMonth(month) === null) {
+      throw validationError(`invalid month: ${month}`, ["month"]);
     }
     const org = await resolveScheduleOrg(operator, this.orgs, orgId);
     const timezone = await tenantTimezoneOf(this.orgs, operator, org.tenantId);
     return { org, timezone };
   }
 
-  private dateOf(scope: Scope, at: Date): string {
-    return formatTemporal(at, { type: "date", timezone: scope.timezone });
-  }
-
-  /** 某天的 `HH:mm`–`HH:mm`(租戶時區;結束不晚於開始 = 跨午夜)。 */
+  /**
+   * 某天(日期鍵)的範本時段 `HH:mm`–`HH:mm` → 時點(租戶時區;`instantOfLocalHhMm`)。
+   * 結束不晚於開始 = 跨午夜,結束算隔天(含結束 00:00 = 隔天 00:00)。
+   * 範本的時刻存檔時已驗過;讀到不合法的 → `VALIDATION_FAILED`(欄位 `templateIds`),不當成 00:00。
+   */
   private spanOf(
     scope: Scope,
     date: string,
     startTime: string,
     endTime: string,
   ): { startAt: Date; endAt: Date } {
-    const day = parseLocalDate(date);
-    if (day === null) {
-      throw validationError(`invalid date: ${date}`, ["dates"]);
+    const day = localDateOfKey(date);
+    const start = minutesOfHhMm(startTime);
+    const end = minutesOfHhMm(endTime);
+    if (start === null || end === null) {
+      throw validationError(`invalid template time: ${startTime}–${endTime}`, [
+        "templateIds",
+      ]);
     }
-    const at = (time: string) => {
-      const minutes = minutesOfHhMm(time) ?? 0;
-      return instantOfLocalTime(
-        day,
-        Math.floor(minutes / 60),
-        minutes % 60,
-        scope.timezone,
-      );
-    };
-    const start = at(startTime);
-    let end = at(endTime);
-    if (end <= start) {
-      end = addLocalCalendar(end, 1, "days", scope.timezone);
+    const startAt = instantOfLocalHhMm(day, startTime, scope.timezone);
+    const endAt = instantOfLocalHhMm(
+      end <= start ? addLocalDays(day, 1) : day,
+      endTime,
+      scope.timezone,
+    );
+    if (startAt === null || endAt === null) {
+      throw validationError(`invalid template time: ${startTime}–${endTime}`, [
+        "templateIds",
+      ]);
     }
-    return { startAt: new Date(start), endAt: new Date(end) };
+    return { startAt: new Date(startAt), endAt: new Date(endAt) };
   }
 
+  /** 範圍內店休的日子(日期鍵);跨午夜的班會碰到隔天,多讀一天。 */
   private async closedDates(
     operator: OperatorContext,
     scope: Scope,
-    from: string,
-    to: string,
+    range: InstantRange,
   ): Promise<Set<string>> {
-    // 跨午夜的班會碰到隔天:多讀一天
-    const days = await this.calendar.effectiveDays(
-      operator,
-      scope.org.id,
-      from,
-      shiftDate(to, 1),
-    );
+    const days = await this.calendar.effectiveDays(operator, scope.org.id, {
+      from: range.from,
+      to: instantOfKey(
+        shiftDateKey(dateKeyOf(range.to, scope.timezone), 1),
+        scope.timezone,
+      ).getTime(),
+    });
     return new Set(
-      days.filter((day) => day.type === "closed").map((day) => day.localDate),
+      days
+        .filter((day) => day.type === "closed")
+        .map((day) => dateKeyOf(day.date, scope.timezone)),
     );
   }
 
@@ -1126,15 +1136,17 @@ export class ScheduleAutoRunService {
   private async openDemands(
     operator: OperatorContext,
     scope: Scope,
-    range: { from: string; to: string },
+    range: InstantRange,
     closed: ReadonlySet<string>,
   ): Promise<DemandRecord[]> {
     const records = await this.demands.findMany(
       operator,
-      { orgId: scope.org.id, date: { $gte: range.from, $lte: range.to } },
+      { orgId: scope.org.id, date: instantRangeFilter(range) },
       { sort: { startAt: 1 } },
     );
-    return records.filter((record) => !closed.has(record.date));
+    return records.filter(
+      (record) => !closed.has(dateKeyOf(record.date, scope.timezone)),
+    );
   }
 
   private async ensurePeriod(
@@ -1250,8 +1262,8 @@ export class ScheduleAutoRunService {
     _id: Types.ObjectId;
     createdAt?: Date;
     createdBy?: Types.ObjectId | null;
-    from: string;
-    to: string;
+    from: Date;
+    to: Date;
     stats: ScheduleAutoRunStats;
   }): Promise<ScheduleAutoRunSummaryModel> {
     const by = record.createdBy ?? null;
@@ -1279,29 +1291,31 @@ function payloadOf(plan: TemplateApplyPlan): ApplyScheduleTemplatesPayload {
   };
 }
 
-/** 範圍要在這個月內、`from` 不晚於 `to`;否則 `VALIDATION_FAILED`(欄位 `from` / `to`)。 */
-function validatedRange(input: { month: string; from: string; to: string }): {
-  from: string;
-  to: string;
-} {
-  if (
-    !isIsoDate(input.from) ||
-    !isIsoDate(input.to) ||
-    !input.from.startsWith(`${input.month}-`) ||
-    !input.to.startsWith(`${input.month}-`) ||
-    input.from > input.to
-  ) {
-    throw validationError(`invalid range: ${input.from}–${input.to}`, [
-      "from",
-      "to",
-    ]);
+/**
+ * 範圍 `[from, to)`(以租戶時區正規化成 00:00)要在這個月內、迄晚於起;
+ * 否則 `VALIDATION_FAILED`(欄位 `from` / `to`)。
+ */
+function validatedRange(
+  input: { month: string; from: Date; to: Date },
+  timezone: string,
+): InstantRange {
+  const range = normalizedDayRange(input.from, input.to, timezone);
+  const month = monthKeyRange(input.month, timezone);
+  if (range.from < month.from || range.to > month.to) {
+    throw validationError(
+      `range not in ${input.month}: ${new Date(range.from).toISOString()}–${new Date(range.to).toISOString()}`,
+      ["from", "to"],
+    );
   }
-  return { from: input.from, to: input.to };
+  return range;
 }
 
 /** 方式要是三種之一;條件只能是自動排班條件、每條最多一次(沒列的 = 不勾)。 */
-function validatedRunPlan(input: RunScheduleAutoRunInput): RunPlan {
-  const range = validatedRange(input);
+function validatedRunPlan(
+  input: RunScheduleAutoRunInput,
+  timezone: string,
+): RunPlan {
+  const range = validatedRange(input, timezone);
   const mode = SCHEDULE_AUTO_RUN_MODES.find((item) => item === input.mode);
   if (mode === undefined) {
     throw validationError(`invalid mode: ${input.mode}`, ["mode"]);
@@ -1314,7 +1328,7 @@ function validatedRunPlan(input: RunScheduleAutoRunInput): RunPlan {
     throw validationError("invalid auto-run conditions", ["conditions"]);
   }
   return {
-    ...range,
+    range,
     mode,
     // 記下這次實際用的整組條件與順序:沒列的補在後面、視為不勾
     conditions: [
@@ -1330,15 +1344,19 @@ function validatedRunPlan(input: RunScheduleAutoRunInput): RunPlan {
   };
 }
 
-/** 套用到的日子:都要是這個月的日期。 */
-function validatedDates(dates: readonly string[], month: string): string[] {
-  if (
-    dates.length === 0 ||
-    dates.some((date) => !isIsoDate(date) || !date.startsWith(`${month}-`))
-  ) {
+/** 套用到的日子(時點,以租戶時區正規化)→ 日期鍵;都要是這個月的日子,否則 `VALIDATION_FAILED`。 */
+function validatedDates(
+  dates: readonly Date[],
+  month: string,
+  timezone: string,
+): string[] {
+  const keys = dates.map((date) =>
+    dateKeyOf(normalizedDay(date, timezone, "dates"), timezone),
+  );
+  if (keys.length === 0 || keys.some((key) => monthKeyOf(key) !== month)) {
     throw validationError("dates must be days of this month", ["dates"]);
   }
-  return [...new Set(dates)];
+  return [...new Set(keys)];
 }
 
 /** 種類與選的範本 / 週範本(要是這家店組織鏈上看得到的;週範本要啟用中)。 */
@@ -1394,15 +1412,6 @@ function weekRequestOf(
   };
 }
 
-/** `from`–`to` 的每一天(含頭尾)。 */
-function datesBetween(from: string, to: string): string[] {
-  const dates: string[] = [];
-  for (let date = from; date <= to; date = shiftDate(date, 1)) {
-    dates.push(date);
-  }
-  return dates;
-}
-
 function breakTiersOf(value: unknown): ScheduleBreakTier[] {
   if (!Array.isArray(value)) {
     return [];
@@ -1418,10 +1427,14 @@ function breakTiersOf(value: unknown): ScheduleBreakTier[] {
   });
 }
 
-function autoDemandOf(record: DemandRecord | DemandDoc): AutoDemand {
+/** 自動排班核心吃的人力需求(`date` = 租戶時區的日期鍵)。 */
+function autoDemandOf(
+  record: DemandRecord | DemandDoc,
+  timezone: string,
+): AutoDemand {
   return {
     id: String(record._id),
-    date: record.date,
+    date: dateKeyOf(record.date, timezone),
     startAt: record.startAt,
     endAt: record.endAt,
     tasks: record.tasks.map((task) => ({
@@ -1431,12 +1444,13 @@ function autoDemandOf(record: DemandRecord | DemandDoc): AutoDemand {
   };
 }
 
-function autoEntryOf(record: EntryRecord) {
+/** 自動排班核心吃的排班(`date` = 租戶時區的日期鍵)。 */
+function autoEntryOf(record: EntryRecord, timezone: string) {
   return {
     id: String(record._id),
     userId: String(record.userId),
     orgId: String(record.orgId),
-    date: record.date,
+    date: dateKeyOf(record.date, timezone),
     startAt: record.startAt,
     endAt: record.endAt,
     breakMinutes: record.breakMinutes,

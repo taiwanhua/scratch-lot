@@ -1,7 +1,9 @@
 import { Injectable } from "@nestjs/common";
 import type { Types } from "mongoose";
 
+import { OrgsRepository } from "../../../database/database.module";
 import type { OperatorContext } from "../../../database/operator-context";
+import { tenantTimezoneOf } from "../../../database/tenant-timezone";
 import {
   ScheduleDemandsRepository,
   SchedulePeriodsRepository,
@@ -10,6 +12,7 @@ import {
 import { ScheduleDemandTemplatesRepository } from "../../database/schedule/schedule.repositories";
 import type { FilledTask } from "../integration/entry-matching";
 import type { EntryRecord } from "../roster/roster-people";
+import { dateKeyOf, monthKeyOf } from "../shared/schedule-dates";
 
 /** 一筆排班填進的執行任務與畫面上的簡稱。 */
 export interface EntryDetail {
@@ -18,8 +21,6 @@ export interface EntryDetail {
   /** 第一筆執行任務所在人力需求的範本簡稱;未套用範本 / 範本看不到 = null(畫面顯示「臨」) */
   shortName: string | null;
 }
-
-const monthOf = (date: string) => date.slice(0, 7);
 
 /**
  * 員工看得到的排班(規格 14.6「只顯示已發布的班」、P10 發布):讀取用的上下文由呼叫端決定
@@ -33,9 +34,10 @@ export class PublishedEntries {
     private readonly assignments: ScheduleTaskAssignmentsRepository,
     private readonly demands: ScheduleDemandsRepository,
     private readonly templates: ScheduleDemandTemplatesRepository,
+    private readonly orgs: OrgsRepository,
   ) {}
 
-  /** 只留下所在分店、所在月份已發布的排班(順序不變)。 */
+  /** 只留下所在分店、所在月份(排班日期在租戶時區的月份)已發布的排班(順序不變)。 */
   async publishedOnly(
     reader: OperatorContext,
     tenantId: Types.ObjectId,
@@ -44,17 +46,20 @@ export class PublishedEntries {
     if (entries.length === 0) {
       return [];
     }
+    const timezone = await tenantTimezoneOf(this.orgs, reader, tenantId);
+    const monthOf = (entry: EntryRecord) =>
+      monthKeyOf(dateKeyOf(entry.date, timezone));
     const periods = await this.periods.findMany(reader, {
       tenantId,
       orgId: { $in: [...new Set(entries.map((entry) => entry.orgId))] },
-      month: { $in: [...new Set(entries.map((entry) => monthOf(entry.date)))] },
+      month: { $in: [...new Set(entries.map((entry) => monthOf(entry)))] },
       status: "published",
     });
     const published = new Set(
       periods.map((period) => `${String(period.orgId)}|${period.month}`),
     );
     return entries.filter((entry) =>
-      published.has(`${String(entry.orgId)}|${monthOf(entry.date)}`),
+      published.has(`${String(entry.orgId)}|${monthOf(entry)}`),
     );
   }
 

@@ -27,6 +27,7 @@ import {
 } from "../database/schedule/schedule-staff.schema";
 import { ScheduleCalendarService } from "./calendar/schedule-calendar.service";
 import { ScheduleRulesService } from "./rules/schedule-rules.service";
+import { dayKeyRange } from "./shared/schedule-dates";
 import { ScheduleStaffService } from "./staff/schedule-staff.service";
 import {
   ALL_SCHEDULE_TEST_PERMISSIONS,
@@ -873,14 +874,17 @@ describe("排班設定(GraphQL 端點 + 真 MongoDB)", () => {
         rules.effectiveSettingsForOrg(asOther, zhongshan),
       ).rejects.toMatchObject({ extensions: { code: "NOT_FOUND" } });
       await expect(
-        calendar.effectiveDays(asOther, zhongshan, "2026-11-01", "2026-11-30"),
+        calendar.effectiveDays(
+          asOther,
+          zhongshan,
+          dayKeyRange("2026-11-01", "2026-11-30", "Asia/Taipei"),
+        ),
       ).rejects.toMatchObject({ extensions: { code: "NOT_FOUND" } });
       await expect(
         calendar.effectiveDays(
           asManager,
           zhongshan,
-          "2026-11-01",
-          "2026-11-30",
+          dayKeyRange("2026-11-01", "2026-11-30", "Asia/Taipei"),
         ),
       ).resolves.toEqual(expect.any(Array));
     });

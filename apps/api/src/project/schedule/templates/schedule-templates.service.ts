@@ -1,12 +1,12 @@
 import { Injectable } from "@nestjs/common";
 import { Types } from "mongoose";
 
+import { isHhMm } from "@repo/domain/form";
 import { SCHEDULE_FIELD_CATEGORY_KEYS } from "@repo/domain/project/schedule-fields";
 import {
   SCHEDULE_TASK_ROLES,
   WEEK_DAY_COUNT,
   exceededTaskRoles,
-  isHhMm,
   isTemplateShortName,
 } from "@repo/domain/project/schedule-settings";
 import { isTagPaletteKey } from "@repo/domain/project/tag-palette";

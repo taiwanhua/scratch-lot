@@ -1,13 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import type { Types } from "mongoose";
 
-import {
-  localDateOf,
-  localDateText,
-  localDayRange,
-  parseLocalDate,
-  startOfLocalDayOf,
-} from "@repo/domain/form";
+import { type InstantRange, startOfLocalDayOf } from "@repo/domain/form";
 import { SCHEDULE_FIELD_CATEGORY_KEYS } from "@repo/domain/project/schedule-fields";
 import {
   SCHEDULE_CALENDAR_DAY_TYPES,
@@ -22,15 +16,13 @@ import {
   type OperatorContext,
   isOrgVisible,
 } from "../../../database/operator-context";
-import {
-  tenantTimezoneOf,
-  tenantTimezoneOfOrg,
-} from "../../../database/tenant-timezone";
+import { tenantTimezoneOf } from "../../../database/tenant-timezone";
 import {
   type ScheduleCalendarDayDocument,
   ScheduleCalendarDaysRepository,
 } from "../../database/schedule/schedule.repositories";
 import { ScheduleFieldOptionsService } from "../field-options/schedule-field-options.service";
+import { dateKeyOf, instantRangeFilter } from "../shared/schedule-dates";
 import {
   SCHEDULE_REASONS,
   forbiddenError,
@@ -61,39 +53,6 @@ import type {
 
 type DayRecord = Persisted<ScheduleCalendarDayDocument>;
 
-/**
- * 讀出來的一天(複製成純物件:文件是 Mongoose 文件,不能展開):存值(`date` = 那天 00:00 的時點)
- * + 租戶時區的日期鍵 `localDate`(排班作業用它對日子)。
- */
-export type EffectiveCalendarDay = Pick<
-  DayRecord,
-  | "_id"
-  | "orgId"
-  | "date"
-  | "type"
-  | "category"
-  | "name"
-  | "note"
-  | "paletteKey"
-> & { localDate: string };
-
-function effectiveOf(
-  record: DayRecord,
-  timezone: string,
-): EffectiveCalendarDay {
-  return {
-    _id: record._id,
-    orgId: record.orgId,
-    date: record.date,
-    type: record.type,
-    category: record.category,
-    name: record.name,
-    note: record.note,
-    paletteKey: record.paletteKey,
-    localDate: localDateKeyOf(record.date, timezone),
-  };
-}
-
 const AUDIT_TARGET_TYPE = "schedule_calendar_day";
 
 const MS_PER_HOUR = 3_600_000;
@@ -115,10 +74,6 @@ function assertCalendarRange(from: Date, to: Date): void {
       ["from", "to"],
     );
   }
-}
-
-function localDateKeyOf(date: Date, timezone: string): string {
-  return localDateText(localDateOf(date.getTime(), timezone));
 }
 
 function isDayType(value: string): value is ScheduleCalendarDayType {
@@ -157,13 +112,10 @@ export class ScheduleCalendarService {
   ): Promise<ScheduleCalendarPayload> {
     assertCalendarRange(range.from, range.to);
     const org = await resolveScheduleOrg(operator, this.orgs, orgId);
-    const timezone = await tenantTimezoneOf(this.orgs, operator, org.tenantId);
-    const records = await this.effectiveRecords(
-      operator,
-      org.chain,
-      { $gte: range.from, $lt: range.to },
-      timezone,
-    );
+    const records = await this.effectiveRecords(operator, org.chain, {
+      $gte: range.from,
+      $lt: range.to,
+    });
     const canEdit = await this.canEdit(operator);
     const names = await loadOrgNames(operator, this.orgs, org.chain);
     return {
@@ -183,7 +135,7 @@ export class ScheduleCalendarService {
     const org = await resolveScheduleOrg(operator, this.orgs, input.orgId);
     const timezone = await tenantTimezoneOf(this.orgs, operator, org.tenantId);
     const data = validatedDay(input, timezone);
-    const dayText = localDateKeyOf(data.date, timezone);
+    const dayText = dateKeyOf(data.date, timezone);
     const context = operator;
     const existing =
       input.id === undefined || input.id === null
@@ -252,17 +204,15 @@ export class ScheduleCalendarService {
   }
 
   /**
-   * 某家店一段日期(`YYYY-MM-DD` 日期鍵,含頭尾;以租戶時區換成時點區間查)的生效行事曆;
-   * 排班作業(店休擋排班、特殊日背景)共用,每一天帶租戶時區的日期鍵 `localDate`。
+   * 某家店一段期間(半開的時點區間 `[from, to)`)的生效行事曆;排班作業(店休擋排班、特殊日背景)共用。
    * 這家店要在操作者的可見範圍內(排程以 `tenantBoundaryContext` 呼叫 = 整個租戶),否則 `NOT_FOUND`;
-   * 上層鏈建的行事曆照「上層沿用到下層」讀。日期鍵不合法 → `VALIDATION_FAILED`(呼叫端應先驗過)。
+   * 上層鏈建的行事曆照「上層沿用到下層」讀。
    */
   async effectiveDays(
     operator: OperatorContext,
     orgId: Types.ObjectId,
-    from: string,
-    to: string,
-  ): Promise<EffectiveCalendarDay[]> {
+    range: InstantRange,
+  ): Promise<DayRecord[]> {
     // 這家店要在操作者(或排程的租戶系統身分)的可見範圍內 —— 可見範圍本身就以租戶為界
     if (!isOrgVisible(operator, orgId)) {
       throw notFoundError(`org not found: ${String(orgId)}`);
@@ -272,22 +222,7 @@ export class ScheduleCalendarService {
       throw notFoundError(`org not found: ${String(orgId)}`);
     }
     const chain = [org._id, ...org.ancestors.slice(1).toReversed()];
-    const first = parseLocalDate(from);
-    const last = parseLocalDate(to);
-    if (first === null || last === null) {
-      throw validationError(`invalid date range: ${from}–${to}`, [
-        "from",
-        "to",
-      ]);
-    }
-    const timezone = await tenantTimezoneOfOrg(this.orgs, operator, orgId);
-    const range = localDayRange(first, last, timezone);
-    return this.effectiveRecords(
-      operator,
-      chain,
-      { $gte: new Date(range.from), $lt: new Date(range.to) },
-      timezone,
-    );
+    return this.effectiveRecords(operator, chain, instantRangeFilter(range));
   }
 
   // ---- 內部 ----
@@ -296,16 +231,12 @@ export class ScheduleCalendarService {
     operator: OperatorContext,
     chain: readonly Types.ObjectId[],
     dateRange: { $gte: Date; $lt: Date },
-    timezone: string,
-  ): Promise<EffectiveCalendarDay[]> {
+  ): Promise<DayRecord[]> {
     const records = await this.days.findMany(operator, {
       orgId: { $in: [...chain] },
       date: dateRange,
     });
-    return pickEffectiveDays(
-      chain.map(String),
-      records.map((record) => effectiveOf(record, timezone)),
-    );
+    return pickEffectiveDays(chain.map(String), records);
   }
 
   private async canEdit(operator: OperatorContext): Promise<boolean> {
@@ -393,7 +324,7 @@ function auditOf(record: DayRecord): Record<string, unknown> {
 }
 
 function dayModelOf(
-  record: EffectiveCalendarDay | DayRecord,
+  record: DayRecord,
   org: ScheduleOrg,
   names: ReadonlyMap<string, string>,
   canEdit: boolean,

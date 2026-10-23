@@ -36,9 +36,15 @@ import { ScheduleFieldOptionsService } from "../field-options/schedule-field-opt
 import { PublishedEntries } from "../my/published-entries";
 import { effectivePunchesOf, missingPunchesOf } from "../my/punch-rules";
 import { type EntryRecord, RosterPeopleReader } from "../roster/roster-people";
-import { monthRange } from "../roster/schedule-roster.service";
 import { ScheduleRulesService } from "../rules/schedule-rules.service";
 import { ScheduleClock } from "../shared/schedule-clock";
+import {
+  dateKeyOf,
+  dayKeyRange,
+  instantOfKey,
+  instantRangeFilter,
+  monthKeyRange,
+} from "../shared/schedule-dates";
 import {
   SCHEDULE_REASONS,
   forbiddenError,
@@ -165,15 +171,15 @@ export class ScheduleAttendanceService {
         "MISSING_PERMISSION",
       );
     }
-    const range = monthRange(input.month);
+    // 排班的日期是時點(4b);出勤的輸入輸出仍是日期字串(4c),這裡只改讀取
+    const monthRange = monthKeyRange(input.month, scope.timezone);
     const entries = await this.publishedEntries(scope, {
       userId,
-      date: { $gte: range.from, $lte: range.to },
+      date: instantRangeFilter(monthRange),
     });
-    const dayRange = this.instantRange(scope.timezone, range.from, range.to);
     const punches = await this.punchesOf(scope, entries, {
       userId,
-      at: { $gte: dayRange.from, $lt: dayRange.to },
+      at: instantRangeFilter(monthRange),
     });
 
     let people = [{ userId: String(self), name: "" }];
@@ -229,7 +235,7 @@ export class ScheduleAttendanceService {
     const entries = await this.publishedEntries(scope, {
       ...own,
       orgId: org.id,
-      date: input.date,
+      date: instantOfKey(input.date, scope.timezone),
     });
     const day = this.instantRange(scope.timezone, input.date, input.date);
     const punches = await this.punchesOf(scope, entries, {
@@ -278,12 +284,12 @@ export class ScheduleAttendanceService {
       }
       userId = self;
     }
-    const range = monthRange(input.month);
     const scope: ReadScope = {
       reader: operator,
       tenantId: org.tenantId,
       timezone: await tenantTimezoneOf(this.orgs, operator, org.tenantId),
     };
+    const range = monthKeyRange(input.month, scope.timezone);
     const descendants = await this.orgs.findMany(scheduleOrgReader(operator), {
       ancestors: org.id,
     });
@@ -296,7 +302,7 @@ export class ScheduleAttendanceService {
     const entries = await this.publishedEntries(scope, {
       ...(userId === null ? {} : { userId }),
       orgId: { $in: orgIds },
-      date: { $gte: range.from, $lte: range.to },
+      date: instantRangeFilter(range),
     });
     const punches = await this.punchesOf(scope, entries, null);
     const { rows } = await this.build(operator, scope, entries, punches);
@@ -337,7 +343,9 @@ export class ScheduleAttendanceService {
         {
           tenantId,
           userId: punch.userId,
-          date: { $gte: shiftDate(date, -1), $lte: shiftDate(date, 1) },
+          date: instantRangeFilter(
+            dayKeyRange(shiftDate(date, -1), shiftDate(date, 1), timezone),
+          ),
         },
         { sort: { startAt: 1 } },
       ),
@@ -354,7 +362,7 @@ export class ScheduleAttendanceService {
       id: String(entry._id),
       orgId: String(entry.orgId),
       orgName: orgNames.get(String(entry.orgId)) ?? "",
-      date: entry.date,
+      date: dateKeyOf(entry.date, timezone),
       startAt: entry.startAt,
       endAt: entry.endAt,
       shortName: details.get(String(entry._id))?.shortName ?? null,
@@ -602,8 +610,9 @@ export class ScheduleAttendanceService {
     const orgIds = [
       ...new Map(entries.map((e) => [String(e.orgId), e.orgId])).values(),
     ];
+    const keyOf = (date: Date) => dateKeyOf(date, scope.timezone);
     const dates = entries
-      .map((entry) => entry.date)
+      .map((entry) => keyOf(entry.date))
       .toSorted((left, right) => left.localeCompare(right));
     const [details, orgNames, names, categories] = await Promise.all([
       this.published.detailsOf(scope.reader, scope.tenantId, entries),
@@ -641,12 +650,11 @@ export class ScheduleAttendanceService {
       const days = await this.calendar.effectiveDays(
         scope.reader,
         orgId,
-        first,
-        last,
+        dayKeyRange(first, last, scope.timezone),
       );
       for (const day of days) {
         if (day.type === "special") {
-          specialByOrgDate.set(`${String(orgId)}|${day.localDate}`, {
+          specialByOrgDate.set(`${String(orgId)}|${keyOf(day.date)}`, {
             name: day.name,
             category:
               day.category === null
@@ -667,9 +675,8 @@ export class ScheduleAttendanceService {
         graceByOrg.get(String(entry.orgId)) ?? DEFAULT_ATTENDANCE_GRACE,
         now,
       );
-      const special = specialByOrgDate.get(
-        `${String(entry.orgId)}|${entry.date}`,
-      );
+      const date = keyOf(entry.date);
+      const special = specialByOrgDate.get(`${String(entry.orgId)}|${date}`);
       const own = punchModels.filter((punch) => punch.entryId === id);
       return {
         entryId: id,
@@ -677,7 +684,7 @@ export class ScheduleAttendanceService {
         userName: names.get(String(entry.userId)) ?? "",
         orgId: String(entry.orgId),
         orgName: orgNames.get(String(entry.orgId)) ?? "",
-        date: entry.date,
+        date,
         startAt: entry.startAt,
         endAt: entry.endAt,
         breakMinutes: entry.breakMinutes,
@@ -686,7 +693,7 @@ export class ScheduleAttendanceService {
         clockOut,
         ...attendance,
         missing: missingPunchesOf(
-          { id, date: entry.date, startAt: entry.startAt, endAt: entry.endAt },
+          { id, date, startAt: entry.startAt, endAt: entry.endAt },
           likes,
           now,
         ),

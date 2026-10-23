@@ -1,7 +1,6 @@
 import {
   type LocalDate,
   type LocalMonth,
-  addLocalDays,
   addLocalMonths,
   clampedDateOfMonth,
   localDateDiff,
@@ -53,14 +52,6 @@ function dateOf(date: string): LocalDate {
     throw new RangeError(`invalid date: ${date}`);
   }
   return parsed;
-}
-
-/**
- * `YYYY-MM-DD` 加減幾天。畫休這一區已改用 `@repo/domain/form` 的 `addLocalDays`;
- * 這個轉接只留給排班檢核 / 自動排班(下一張票換成時點時一起換掉)。
- */
-export function shiftDate(date: string, amount: number): string {
-  return localDateText(addLocalDays(dateOf(date), amount));
 }
 
 /** 目標月的開放期間(前一個月的 N 日至 M 日,超過月底用月底)。 */

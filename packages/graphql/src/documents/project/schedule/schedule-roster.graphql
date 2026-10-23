@@ -55,8 +55,8 @@ fragment ScheduleRosterPersonFields on ScheduleRosterPerson {
     timeRangeDays {
       date
       slots {
-        startTime
-        endTime
+        startAt
+        endAt
       }
     }
     longestStreak
@@ -78,8 +78,8 @@ fragment ScheduleRosterTemplateFields on ScheduleRosterTemplate {
   }
 }
 
-# month = YYYY-MM;一次回這家店這個月排班表要的全部。週檢視跨月時另給 from / to(YYYY-MM-DD,
-# 這個月前後 6 天內):人力需求、排班、別家店的班、畫休、行事曆多讀那幾天,統計仍只算這個月
+# month = YYYY-MM;一次回這家店這個月排班表要的全部。週檢視跨月時另給 from / to(半開的時點區間,
+# 租戶時區的 00:00;這個月前後 6 天內):人力需求、排班、別家店的班、畫休、行事曆多讀那幾天,統計仍只算這個月
 query ScheduleRoster($input: ScheduleRosterInput!) {
   scheduleRoster(input: $input) {
     orgId
@@ -125,8 +125,8 @@ query ScheduleRoster($input: ScheduleRosterInput!) {
       date
       fullDay
       slots {
-        startTime
-        endTime
+        startAt
+        endAt
       }
     }
     calendarDays {

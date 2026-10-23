@@ -33,9 +33,9 @@ export class ScheduleChange {
   @Prop({ type: String, required: true })
   month!: string;
 
-  /** 異動那天 `YYYY-MM-DD`(排班 / 人力需求的日期;改到別天時是改之後的那天)。 */
-  @Prop({ type: String, required: true })
-  date!: string;
+  /** 異動那天(租戶時區 00:00 的時點;排班 / 人力需求的日期,改到別天時是改之後的那天)。 */
+  @Prop({ type: Date, required: true })
+  date!: Date;
 
   /** 見 `SCHEDULE_CHANGE_ACTIONS`。 */
   @Prop({ type: String, enum: [...SCHEDULE_CHANGE_ACTIONS], required: true })
