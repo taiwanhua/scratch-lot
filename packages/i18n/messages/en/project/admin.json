@@ -1339,6 +1339,7 @@
         "register": "Register day-off",
         "closedNotice": "Day-off registration ({start}–{end}) has ended, you can no longer change it yourself. Ask your store manager or scheduler.",
         "beforeNotice": "Day-off registration ({start}–{end}) has not started, you cannot change it yourself yet. Ask your store manager or scheduler.",
+        "pastNotice": "This is a past month's record and is view-only.",
         "overrideLink": "Change it in the day-off overview",
         "notJoined": "You have not joined the schedule yet. Ask your store manager or scheduler.",
         "violationsTitle": "Rule violations ({count})",

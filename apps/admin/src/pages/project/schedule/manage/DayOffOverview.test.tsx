@@ -1,17 +1,37 @@
 import { describe, expect, it } from "@jest/globals";
-import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import { HttpResponse } from "msw";
 
+import type { ScheduleDayOffFieldsFragment } from "@repo/graphql";
+
 import { graphqlError } from "@/test/msw/auth-handlers";
+import { sampleDayOffs } from "@/test/msw/project/schedule-day-offs-fixtures";
 import { api, server } from "@/test/msw/server";
 
 import { renderSchedulePage } from "../schedule-test-support";
 
 const OVERVIEW = "/schedule/manage?tab=day-offs";
 
+/** 過去月份(11 月)的一筆:李小華 11/20 整天畫休。 */
+const NOVEMBER_DAY_OFF: ScheduleDayOffFieldsFragment = {
+  id: "d-li-nov-20",
+  userId: "u-li",
+  name: "李小華",
+  date: "2026-11-20",
+  kind: "full-day",
+  startTime: null,
+  endTime: null,
+  note: null,
+  isPrimary: true,
+  byName: null,
+  reason: null,
+  reasonNote: null,
+};
+
 /**
  * 排班作業 → 畫休總覽(SC-06)與代改(SC-24;規格 14.5「畫休總覽」):
  * [代改] 只做新增;刪除在點日期打開的當天畫休裡,先確認、截止後在確認框選原因。
+ * 點日期看得到總覽的人都能開;沒有代改權限是唯讀,過去的月份沒有 [代改]。
  */
 describe("排班作業:畫休總覽與代改", () => {
   it("查詢失敗:顯示載入失敗提示,不是整頁空白", async () => {
@@ -234,8 +254,8 @@ describe("排班作業:畫休總覽與代改", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("沒有 edit-day-offs:看不到 [代改]", async () => {
-    renderSchedulePage({
+  it("沒有 edit-day-offs:看不到 [代改];點日期打開唯讀的當天畫休(沒有 [刪除]、[代改])", async () => {
+    const { user } = renderSchedulePage({
       path: OVERVIEW,
       omit: ["schedule.manage.edit-day-offs"],
       dayOffs: { canEditOverview: false },
@@ -244,9 +264,37 @@ describe("排班作業:畫休總覽與代改", () => {
     expect(
       screen.queryByRole("button", { name: "代改" }),
     ).not.toBeInTheDocument();
-    // 點日期也不會打開當天畫休(沒有刪除)
-    fireEvent.click(screen.getByRole("gridcell", { name: "2026-12-24" }));
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("gridcell", { name: "2026-12-24" }));
+    const day = await screen.findByRole("dialog", { name: "12/24(四)" });
+    // 當天所有人的畫休照樣看得到
+    expect(within(day).getByText("李小華、陳大文、林新人")).toBeInTheDocument();
+    expect(within(day).getByText("王小明 18:00–22:00")).toBeInTheDocument();
+    expect(
+      within(day).queryByRole("button", { name: /^刪除/ }),
+    ).not.toBeInTheDocument();
+    expect(
+      within(day).queryByRole("button", { name: "代改" }),
+    ).not.toBeInTheDocument();
+    expect(
+      within(day).getByRole("button", { name: "關閉" }),
+    ).toBeInTheDocument();
+  });
+
+  it("過去的月份:當天畫休沒有 [代改];有代改權限照樣有 [刪除](刪不刪得掉由 api 判斷)", async () => {
+    const { user } = renderSchedulePage({
+      path: `${OVERVIEW}&month=2026-11`,
+      dayOffs: { dayOffs: [...sampleDayOffs, NOVEMBER_DAY_OFF] },
+    });
+    await user.click(
+      await screen.findByRole("gridcell", { name: "2026-11-20" }),
+    );
+    const day = await screen.findByRole("dialog", { name: "11/20(五)" });
+    expect(
+      within(day).getByRole("button", { name: "刪除 李小華" }),
+    ).toBeInTheDocument();
+    expect(
+      within(day).queryByRole("button", { name: "代改" }),
+    ).not.toBeInTheDocument();
   });
 
   it("沒有 view-day-offs:看不到「畫休總覽」分頁(排班表、行事曆照常)", async () => {

@@ -7561,6 +7561,7 @@ export type ScheduleDayOffOverviewPayload = {
   orgId: Scalars['ID']['output'];
   orgName: Scalars['String']['output'];
   staff: Array<ScheduleDayOffStaff>;
+  targetMonth: Scalars['String']['output'];
   window: ScheduleDayOffWindow;
 };
 
@@ -11399,7 +11400,7 @@ export type ScheduleDayOffOverviewQueryVariables = Exact<{
 }>;
 
 
-export type ScheduleDayOffOverviewQuery = { __typename?: 'Query', scheduleDayOffOverview: { __typename?: 'ScheduleDayOffOverviewPayload', orgId: string, orgName: string, month: string, canEdit: boolean, window: { __typename?: 'ScheduleDayOffWindow', month: string, startDate: string, endDate: string, state: string, daysLeft: number }, limits: { __typename?: 'ScheduleDayOffLimits', maxMonthly?: number | null, minMonthly?: number | null, maxDailyStaff?: number | null }, staff: Array<{ __typename?: 'ScheduleDayOffStaff', userId: string, name: string, isPrimary: boolean, dayOffCount: number }>, days: Array<{ __typename?: 'ScheduleDayOffDay', date: string, staffCount: number, dayOffs: Array<{ __typename?: 'ScheduleDayOff', id: string, userId: string, name: string, date: string, kind: string, startTime?: string | null, endTime?: string | null, note?: string | null, isPrimary: boolean, byName?: string | null, reason?: string | null, reasonNote?: string | null }> }> } };
+export type ScheduleDayOffOverviewQuery = { __typename?: 'Query', scheduleDayOffOverview: { __typename?: 'ScheduleDayOffOverviewPayload', orgId: string, orgName: string, month: string, targetMonth: string, canEdit: boolean, window: { __typename?: 'ScheduleDayOffWindow', month: string, startDate: string, endDate: string, state: string, daysLeft: number }, limits: { __typename?: 'ScheduleDayOffLimits', maxMonthly?: number | null, minMonthly?: number | null, maxDailyStaff?: number | null }, staff: Array<{ __typename?: 'ScheduleDayOffStaff', userId: string, name: string, isPrimary: boolean, dayOffCount: number }>, days: Array<{ __typename?: 'ScheduleDayOffDay', date: string, staffCount: number, dayOffs: Array<{ __typename?: 'ScheduleDayOff', id: string, userId: string, name: string, date: string, kind: string, startTime?: string | null, endTime?: string | null, note?: string | null, isPrimary: boolean, byName?: string | null, reason?: string | null, reasonNote?: string | null }> }> } };
 
 export type AddScheduleDayOffsOnBehalfMutationVariables = Exact<{
   input: AddScheduleDayOffsOnBehalfInput;
@@ -25517,6 +25518,7 @@ export const ScheduleDayOffOverviewDocument = `
     orgId
     orgName
     month
+    targetMonth
     window {
       ...ScheduleDayOffWindowFields
     }

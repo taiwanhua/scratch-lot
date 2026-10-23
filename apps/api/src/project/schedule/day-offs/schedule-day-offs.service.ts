@@ -443,7 +443,8 @@ export class ScheduleDayOffsService implements OnModuleInit {
   ): Promise<ScheduleDayOffOverviewPayload> {
     const org = await resolveScheduleOrg(operator, this.orgs, orgId);
     const today = await this.today(operator, org.tenantId);
-    const target = month ?? dayOffTargetMonth(today);
+    const targetMonth = dayOffTargetMonth(today);
+    const target = month ?? targetMonth;
     if (!isIsoMonth(target)) {
       throw validationError("month must be YYYY-MM", ["month"]);
     }
@@ -472,6 +473,7 @@ export class ScheduleDayOffsService implements OnModuleInit {
       orgId: String(org.id),
       orgName: org.name,
       month: target,
+      targetMonth,
       window: windowModelOf(
         dayOffWindowFor(target, windowValueOf(settings)),
         today,

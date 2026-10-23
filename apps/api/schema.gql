@@ -5476,6 +5476,7 @@ type ScheduleDayOffOverviewPayload {
   orgId: ID!
   orgName: String!
   staff: [ScheduleDayOffStaff!]!
+  targetMonth: String!
   window: ScheduleDayOffWindow!
 }
 

@@ -161,6 +161,21 @@ describe("我的畫休", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("過去的月份:提示「只能查看」,沒有「到畫休總覽代改」(有代改權限也一樣)", async () => {
+    renderSchedulePage({
+      path: `${DAY_OFFS}&month=2026-11`,
+      dayOffs: { windowState: "closed", canOverride: true },
+    });
+    expect(await screen.findByText("2026 年 11 月")).toBeInTheDocument();
+    expect(
+      screen.getByText("這是過去月份的紀錄,只能查看。"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/不能自己修改/)).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "到畫休總覽代改" }),
+    ).not.toBeInTheDocument();
+  });
+
   it("◀ 換到過去的月份:那個月的畫休、唯讀(沒有 [登記畫休]);▶ 只到目標月", async () => {
     const { user } = renderSchedulePage({
       path: DAY_OFFS,

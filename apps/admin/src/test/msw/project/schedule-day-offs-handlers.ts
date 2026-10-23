@@ -44,7 +44,7 @@ const WINDOW = {
   endDate: "2026-11-25",
 };
 
-/** 過去月份的開放期間(前一個月 15–25 日,已截止;只給「我的畫休」換月用)。 */
+/** 過去月份的開放期間(前一個月 15–25 日,已截止;我的畫休與總覽換月用)。 */
 const pastWindowOf = (month: string) => {
   const [year = 0, value = 0] = month.split("-").map(Number);
   const index = year * 12 + (value - 1) - 1;
@@ -221,24 +221,30 @@ export const scheduleDayOffsWorld = (
     }),
     api.query("ScheduleDayOffOverview", ({ variables }) => {
       const { input } = variables as ScheduleDayOffOverviewQueryVariables;
+      const month = input?.month ?? DAY_OFF_MONTH;
+      const isPast = month < DAY_OFF_MONTH;
+      const ofMonth = dayOffs.filter((item) =>
+        item.date.startsWith(`${month}-`),
+      );
       return HttpResponse.json({
         data: {
           scheduleDayOffOverview: {
             orgId: input?.orgId ?? SCHEDULE_BRANCH.id,
             orgName: SCHEDULE_BRANCH.name,
-            month: input?.month ?? DAY_OFF_MONTH,
-            window,
+            month,
+            targetMonth: DAY_OFF_MONTH,
+            window: isPast ? pastWindowOf(month) : window,
             canEdit: canEditOverview,
             limits: LIMITS,
             staff: DAY_OFF_STAFF.map((person) => ({
               ...person,
               dayOffCount: new Set(
-                dayOffs
+                ofMonth
                   .filter((item) => item.userId === person.userId)
                   .map((item) => item.date),
               ).size,
             })),
-            days: daysOf(dayOffs),
+            days: daysOf(ofMonth),
           },
         },
       });

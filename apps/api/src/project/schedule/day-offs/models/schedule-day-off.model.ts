@@ -218,6 +218,10 @@ export class ScheduleDayOffOverviewPayload {
   @Field(() => String)
   month!: string;
 
+  /** 今天在登記的月份(目標月,下個月);`month` 早於它 = 過去的月份 */
+  @Field(() => String)
+  targetMonth!: string;
+
   /** 這家店的開放期間(這個月是目標月時) */
   @Field(() => ScheduleDayOffWindowModel)
   window!: ScheduleDayOffWindowModel;

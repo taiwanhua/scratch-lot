@@ -109,6 +109,7 @@ const OVERVIEW = /* GraphQL */ `
     scheduleDayOffOverview(input: $input) {
       orgId
       month
+      targetMonth
       window { startDate endDate state daysLeft }
       canEdit
       limits { maxDailyStaff }
@@ -228,6 +229,7 @@ interface MyRow {
 interface OverviewRow {
   orgId: string;
   month: string;
+  targetMonth: string;
   window: { startDate: string; endDate: string; state: string };
   canEdit: boolean;
   limits: { maxDailyStaff: number | null };
@@ -1061,6 +1063,12 @@ describe("畫休(GraphQL 端點 + 真 MongoDB)", () => {
 
       const viewerView = await overview(viewer);
       expect(viewerView.canEdit).toBe(false);
+      // 沒有代改權限的人點日期看的明細和代改的人一樣(不縮也不放大)
+      expect(viewerView.days).toEqual(view.days);
+      // 目標月 = 下個月;換到更早的月份照樣回目標月(畫面判斷過去的月份)
+      expect(view.targetMonth).toBe("2026-12");
+      const past = await overview(manager, "2026-10");
+      expect(past).toMatchObject({ month: "2026-10", targetMonth: "2026-12" });
     });
 
     it("沒有 view-day-offs → 總覽 FORBIDDEN;沒有 edit-day-offs → 代改 FORBIDDEN;沒有 my.edit-day-offs → 我的畫休 FORBIDDEN", async () => {

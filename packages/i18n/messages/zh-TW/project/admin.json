@@ -1339,6 +1339,7 @@
         "register": "登記畫休",
         "closedNotice": "畫休登記期間({start}–{end})已結束,不能自己修改。要調整請聯絡店長或排班負責人。",
         "beforeNotice": "畫休登記期間({start}–{end})還沒開始,不能自己修改。要調整請聯絡店長或排班負責人。",
+        "pastNotice": "這是過去月份的紀錄,只能查看。",
         "overrideLink": "到畫休總覽代改",
         "notJoined": "你還沒有加入排班,不能登記畫休。請聯絡店長或排班負責人。",
         "violationsTitle": "違反規則({count})",

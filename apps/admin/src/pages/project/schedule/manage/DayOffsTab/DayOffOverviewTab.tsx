@@ -58,9 +58,9 @@ const WINDOW_KEY: Partial<
  * 排班作業 → 畫休總覽(SC-06;規格 14.5「畫休總覽」,`view-day-offs`):月曆每天顯示誰整天畫休、
  * 誰時段不可排(含時間)、同日畫休人數「2/2」(只計以這家店為主要分店的人);頂部開放期間與尚未畫休的人
  * (只算主要分店是這家的人),
- * 篩選 [全部] [尚未畫休]。有 `edit-day-offs` 才看得到 [代改](SC-24,只做新增)與點日期:
- * 點日期 → 當天畫休(`DayOffDetailDialog`),每筆旁邊 [刪除](先確認,截止後在確認框選原因),
- * 下方 [代改] 帶入那天。
+ * 篩選 [全部] [尚未畫休]。點日期 → 當天畫休(`DayOffDetailDialog`,看得到總覽的人都能看)。
+ * 有 `edit-day-offs` 才看得到 [代改](SC-24,只做新增)與當天畫休裡每筆旁邊的 [刪除](先確認,
+ * 截止後在確認框選原因)、下方 [代改](帶入那天;過去的月份不顯示)。
  *
  * 分店選擇器是可見範圍模式(`scope="visible"`,同行事曆):業務頁,沒有組織治理權限的人也打得開。
  */
@@ -98,6 +98,8 @@ export const DayOffOverviewTab = () => {
   );
   const separator = t("overview.nameSeparator");
   const { year, month } = dateParts(`${overview.month}-01`);
+  /** 早於目標月 = 過去的月份:當天畫休不顯示 [代改](刪除照 api 的規則,不另擋) */
+  const isPast = overview.month < overview.targetMonth;
 
   const linesOf = (day: ScheduleDayOffDayFieldsFragment) => {
     const fullDay = [
@@ -254,7 +256,7 @@ export const DayOffOverviewTab = () => {
             <MonthCalendar
               month={overview.month}
               showHeader={false}
-              selectionMode={overview.canEdit ? "single" : "none"}
+              selectionMode="single"
               selectedDates={[]}
               onSelectedDatesChange={(dates) => {
                 const date = dates.at(0);
@@ -276,18 +278,23 @@ export const DayOffOverviewTab = () => {
           date={openedDate}
           day={overview.days.find((day) => day.date === openedDate)}
           limit={maxDaily}
-          onDelete={setDeleting}
-          extraActions={
-            <Button
-              variant="outlined"
-              onClick={() => {
-                setOverrideDate(openedDate);
-                setOpenedDate(null);
-              }}
-            >
-              {t("overview.override")}
-            </Button>
-          }
+          // 沒有代改權限 = 唯讀(沒有 [刪除]、[代改])
+          {...(overview.canEdit ? { onDelete: setDeleting } : {})}
+          {...(overview.canEdit && !isPast
+            ? {
+                extraActions: (
+                  <Button
+                    variant="outlined"
+                    onClick={() => {
+                      setOverrideDate(openedDate);
+                      setOpenedDate(null);
+                    }}
+                  >
+                    {t("overview.override")}
+                  </Button>
+                ),
+              }
+            : {})}
           onClose={() => {
             setOpenedDate(null);
           }}

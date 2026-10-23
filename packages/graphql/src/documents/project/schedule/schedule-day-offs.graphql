@@ -107,6 +107,7 @@ query ScheduleDayOffOverview($input: ScheduleDayOffOverviewInput) {
     orgId
     orgName
     month
+    targetMonth
     window {
       ...ScheduleDayOffWindowFields
     }

@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useNavigate } from "react-router";
 import { useTranslations } from "use-intl";
 
 import { Alert } from "@repo/ui/alert";
@@ -27,6 +26,7 @@ import {
 
 import { DayOffDialog } from "./DayOffDialog";
 import { DayOffViolationsCard } from "./DayOffViolationsCard";
+import { DayOffsNotice } from "./DayOffsNotice";
 import { useMyDayOffsMonth } from "./useMyDayOffsMonth";
 
 /** 對話框:登記(帶入日期;[登記畫休] 為空字串)或當天詳細。 */
@@ -50,14 +50,14 @@ const SUMMARY_KEY: Partial<
  * - 開放期間內畫的是下個月;只有一個 [登記畫休](點日期也會打開,帶入那天);不需核准,違反限制不存
  * - 格子:整天畫休「畫休」、時段不可排「09:00–13:00 不可排」、主要分店的同日畫休人數「2/2」、
  *   我那天有畫休就整格灰色斜線底;違反的日子底部加色帶;ⓘ 看當天誰畫休
- * - 開放期間外:提示不能自己修改;有代改權限的人看到「到畫休總覽代改」
+ * - 開放期間外:提示不能自己修改;有代改權限的人看到「到畫休總覽代改」(目標月才有;
+ *   過去的月份只提示「只能查看」,沒有連結)
  * - `◀ 2026 年 12 月 ▶` 換月(同班表分頁,月份放網址 `?month=`):往前看過去的月份(api 回
  *   `canEdit=false` → 唯讀,只能看 ⓘ);往後只到目標月
  */
 export const DayOffsTab = () => {
   const t = useTranslations("admin.schedule.dayOffs");
   const tCalendar = useTranslations("admin.schedule.calendar");
-  const navigate = useNavigate();
   const routeOf = useModuleRoutes();
   const [opened, setOpened] = useState<Opened | null>(null);
   const { query, atTarget, goMonth } = useMyDayOffsMonth();
@@ -150,30 +150,16 @@ export const DayOffsTab = () => {
 
   return (
     <Stack spacing={2}>
-      {window.state !== "open" && (
-        <Stack spacing={1}>
-          <Alert severity="warning">
-            {t(
-              window.state === "closed" ? "my.closedNotice" : "my.beforeNotice",
-              range,
-            )}
-          </Alert>
-          {page.canOverride && manageRoute !== null && (
-            <Button
-              variant="text"
-              size="small"
-              sx={{ alignSelf: "flex-start" }}
-              onClick={() => {
-                void navigate(
-                  `${manageRoute}?tab=day-offs&month=${page.month}`,
-                );
-              }}
-            >
-              {t("my.overrideLink")}
-            </Button>
-          )}
-        </Stack>
-      )}
+      <DayOffsNotice
+        isPast={!atTarget}
+        state={window.state}
+        range={range}
+        overrideHref={
+          page.canOverride && manageRoute !== null
+            ? `${manageRoute}?tab=day-offs&month=${page.month}`
+            : null
+        }
+      />
       <Stack
         direction={{ xs: "column", sm: "row" }}
         spacing={{ xs: 0.5, sm: 2 }}
