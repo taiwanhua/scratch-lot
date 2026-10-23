@@ -285,12 +285,12 @@ describe("排班作業:畫休總覽與代改", () => {
       path: `${OVERVIEW}&month=2026-10`,
       dayOffs: { dayOffs: [...sampleDayOffs, dayOffOn("2026-10-20")] },
     });
-    await user.click(
-      await screen.findByRole("gridcell", { name: "2026-10-20" }),
-    );
+    const cell = await screen.findByRole("gridcell", { name: "2026-10-20" });
+    // 上方要在打開對話框前看(打開後背景是 aria-hidden,查不到不代表沒有)
     expect(
       screen.queryByRole("button", { name: "代改" }),
     ).not.toBeInTheDocument();
+    await user.click(cell);
     const day = await screen.findByRole("dialog", { name: "10/20(二)" });
     expect(
       within(day).getByRole("button", { name: "刪除 李小華" }),
