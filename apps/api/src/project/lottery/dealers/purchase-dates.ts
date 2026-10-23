@@ -2,7 +2,6 @@ import { Injectable } from "@nestjs/common";
 import type { ClientSession, Types } from "mongoose";
 
 import { OrgsRepository } from "../../../database/database.module";
-import type { OperatorContext } from "../../../database/operator-context";
 import { tenantBoundaryContext } from "../../../database/tenant-boundary-context";
 import { LotteryDealersRepository } from "../../database/lottery-dealers/lottery-dealers.repository";
 
@@ -41,8 +40,9 @@ const sameDate = (left: Date | null, right: Date | null): boolean =>
  * - 經銷商的基準日改了 → 經銷商管理在同一個交易裡呼叫
  * - 進貨單送出 / 駁回 / 作廢 → 進貨單在同一個交易裡呼叫(並以 `registerSource` 提供進貨單那一份)
  *
- * 介面固定:`recomputeDealerPurchaseDates(session, tenantId, dealerId, operator?)`。`operator` = 觸發重算的人
- * (經銷商管理傳操作者,寫入的 `updatedBy` 才記得是他;沒傳 = 系統身分)。
+ * 介面固定:`recomputeDealerPurchaseDates(session, tenantId, dealerId, actorId?)`。`actorId` = 讓日期變了的人
+ * (經銷商管理 = 改基準日的人;進貨單 = 送出 / 駁回 / 作廢的人),寫入的 `updatedBy` 才記得是他;
+ * 沒有(排程等沒有登入主體的動作)= 系統身分。
  */
 @Injectable()
 export class DealerPurchaseDates {
@@ -61,7 +61,7 @@ export class DealerPurchaseDates {
     session: ClientSession | null,
     tenantId: Types.ObjectId | null,
     dealerId: Types.ObjectId,
-    operator: OperatorContext | null = null,
+    actorId: Types.ObjectId | null = null,
   ): Promise<void> {
     // 根組織沒有經銷商(經銷商一律屬於某個租戶)
     if (tenantId === null) {
@@ -69,8 +69,9 @@ export class DealerPurchaseDates {
     }
     const options = session === null ? {} : { session };
     // 進貨單 / 經銷商在交易內呼叫:以租戶系統身分讀寫這一筆(條件另釘 `_id` + `tenantId`);
-    // 有操作者時保留他的 `actorId`(`updatedBy` = 改基準日的人)
-    const writer = await tenantBoundaryContext(this.orgs, operator, tenantId);
+    // 只換上 `actorId`(基礎欄位的 `updatedBy` = 讓日期變了的人),範圍與權限仍是租戶系統身分
+    const reader = await tenantBoundaryContext(this.orgs, null, tenantId);
+    const writer = actorId === null ? reader : { ...reader, actorId };
     const dealer = await this.dealers.findOne(
       writer,
       { _id: dealerId, tenantId },

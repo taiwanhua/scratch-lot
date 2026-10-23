@@ -219,7 +219,7 @@ export class LotteryDealersService {
         null,
         record.tenantId,
         record._id,
-        operator,
+        operator.actorId,
       );
       await this.audit.record(operator, {
         action: AUDIT_ACTIONS.dealerCreate,
@@ -293,7 +293,7 @@ export class LotteryDealersService {
           null,
           current.tenantId,
           current._id,
-          operator,
+          operator.actorId,
         );
       }
       if (input.shareOrgs !== undefined) {

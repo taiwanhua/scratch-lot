@@ -696,6 +696,8 @@ export class PurchaseRules {
         context.session,
         context.tenantId,
         dealerId,
+        // 修改者 = 送出 / 駁回 / 作廢這張進貨單的人(沒有登入主體 = 系統身分)
+        context.actorId,
       );
     }
   }

@@ -247,7 +247,7 @@
 
 **在途**:向 `in-transit.ts` 登記 `lottery-purchases`:這家店(進貨分店)審核中 / 被退回 / 已撤回的進貨單還沒點收的本數。
 
-**甲類批購日**:向 `DealerPurchaseDates.registerSource` 登記:有效進貨單(送出之後、沒有駁回 / 作廢)上最新的批購日期;本人批購另算一份。
+**甲類批購日**:向 `DealerPurchaseDates.registerSource` 登記:有效進貨單(送出之後、沒有駁回 / 作廢)上最新的批購日期;本人批購另算一份。送出 / 駁回 / 作廢時重算,傳事後動作的 `actorId`(日期變了時經銷商的修改者 = 處理這張單的人;正本 `docs/modules/project/dealers.md`)。
 
 **側欄計數** `purchasing.purchase`(`registerBadge`):點收關卡在我手上、還沒決定的任務數(`workflow_tasks`,`status: pending`)。送出 / 任務結束時由事後動作送 `badge:purchasing.purchase`;**改派 A → C** 不經掛接點(底座沒有改派的掛接點,已列入回收底座清單),由流程引擎對 A、C 送的 `badge:apply-center` 讓前端整份重抓側欄數字(底座 `badge:*`),計數本身照任務算,A −1、C +1。
 
