@@ -273,6 +273,45 @@ describe("排班對話框:各入口一致", () => {
     ).toBeEnabled();
   });
 
+  it("日期欄的店休日反灰(只有排班對話框;人力需求的日期欄不反灰,店休日可以建人力需求)", async () => {
+    const { user } = renderRoster(ROSTER);
+    /** 打開對話框裡日期欄的月曆,回 11/3(店休)與 11/4 兩格 */
+    const daysIn = async (dialog: HTMLElement) => {
+      const date = within(dialog).getByRole("group", { name: /日期/ });
+      await user.click(
+        within(date.parentElement ?? dialog).getByRole("button", {
+          name: /choose date/i,
+        }),
+      );
+      return {
+        closed: await screen.findByRole("gridcell", { name: "3" }),
+        open: screen.getByRole("gridcell", { name: "4" }),
+      };
+    };
+
+    // 先填 11/4,月曆才會開在 11 月
+    const entryDialog = await openFromToolbar(
+      user,
+      "2026-11-04",
+      "新增排班 · 11/4(三)",
+    );
+    const entryDays = await daysIn(entryDialog);
+    expect(entryDays.closed).toBeDisabled();
+    expect(entryDays.open).toBeEnabled();
+    await user.keyboard("{Escape}");
+    await user.click(within(entryDialog).getByRole("button", { name: "取消" }));
+    await waitFor(() => {
+      expect(queryDialog(/^新增排班/)).not.toBeInTheDocument();
+    });
+
+    await user.click(await findButton("+ 人力需求"));
+    const demandDialog = await findDialog("新增人力需求");
+    await user.click(within(demandDialog).getByRole("group", { name: /日期/ }));
+    await user.keyboard("20261104");
+    const demandDays = await daysIn(demandDialog);
+    expect(demandDays.closed).toBeEnabled();
+  });
+
   it("編輯既有的負責人排班:原本就填著的負責任務不擋", async () => {
     const { user } = renderRoster(ROSTER);
     const wang = await findLabelled("王小明 11/1");

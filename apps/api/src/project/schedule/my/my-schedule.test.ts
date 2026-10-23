@@ -157,12 +157,15 @@ const base = () => {
 const taipei = (date: string, time: string) =>
   new Date(`${date}T${time}:00+08:00`);
 
+/** 洛杉磯夏令時間(UTC−7)的時點。 */
+const la = (date: string, time: string) => new Date(`${date}T${time}:00-07:00`);
+
 /** api 輸出的日期:那天租戶時區(台北)00:00 的時點。 */
 const day = (date: string) => taipei(date, "00:00").toISOString();
 
-/** 月份查詢的 `from` / `to`:那個月在台北的 `[月初 00:00, 下月初 00:00)`。 */
-const monthRangeOf = (month: string) => {
-  const range = monthKeyRange(month, "Asia/Taipei");
+/** 月份查詢的 `from` / `to`:那個月在租戶時區(預設台北)的 `[月初 00:00, 下月初 00:00)`。 */
+const monthRangeOf = (month: string, timezone = "Asia/Taipei") => {
+  const range = monthKeyRange(month, timezone);
   return {
     from: new Date(range.from).toISOString(),
     to: new Date(range.to).toISOString(),
@@ -275,6 +278,8 @@ describe("我的班表與打卡(GraphQL 端點 + 真 MongoDB)", () => {
       start?: string;
       templateId?: Types.ObjectId;
     }[] = [{ role: "helper", positionKey: "in-store-counter" }],
+    /** 日期 + 時刻 → 時點(預設台北;換租戶時區的情境傳別的) */
+    at: (date: string, time: string) => Date = taipei,
   ): Promise<Types.ObjectId> {
     const { insertedId } = await connection
       .collection(SCHEDULE_ENTRIES_COLLECTION)
@@ -282,9 +287,9 @@ describe("我的班表與打卡(GraphQL 端點 + 真 MongoDB)", () => {
         orgId,
         tenantId: tenant,
         userId: user.userId,
-        date: taipei(date, "00:00"),
-        startAt: taipei(date, start),
-        endAt: taipei(date, end),
+        date: at(date, "00:00"),
+        startAt: at(date, start),
+        endAt: at(date, end),
         breakMinutes: 30,
         moduleKey: "schedule.manage",
         ...base(),
@@ -296,9 +301,9 @@ describe("我的班表與打卡(GraphQL 端點 + 真 MongoDB)", () => {
         .insertOne({
           orgId,
           tenantId: tenant,
-          date: taipei(date, "00:00"),
-          startAt: taipei(date, task.start ?? start),
-          endAt: taipei(date, end),
+          date: at(date, "00:00"),
+          startAt: at(date, task.start ?? start),
+          endAt: at(date, end),
           positionKey: task.positionKey,
           tasks: [
             {
@@ -627,6 +632,61 @@ describe("我的班表與打卡(GraphQL 端點 + 真 MongoDB)", () => {
     ]);
     expect(page.changes[0]?.beforeStartAt).not.toBeNull();
     expect(page.changes[0]?.orgName).toBe("信義店");
+  });
+
+  it("租戶時區不是台北(洛杉磯):月份查詢要是洛杉磯的整個月;日期、今天都是洛杉磯那天 00:00;月底晚上的班算那個月", async () => {
+    const LA = "America/Los_Angeles";
+    // 洛杉磯 3/31 是夏令時間;20:00–23:00 在 UTC 已是 4/1
+    const orgs = connection.collection("orgs");
+    await orgs.updateOne(
+      { _id: tenant },
+      { $set: { "settings.timezone": LA } },
+    );
+    try {
+      await period(xinyi, "2027-03", "published");
+      await period(xinyi, "2027-04", "published");
+      const late = await entry(
+        wang,
+        xinyi,
+        "2027-03-31",
+        "20:00",
+        "23:00",
+        undefined,
+        la,
+      );
+      jest.spyOn(clock, "now").mockReturnValue(la("2027-03-31", "21:00"));
+      const result = await gql(wang, MY_SCHEDULE, {
+        input: monthRangeOf("2027-03", LA),
+      });
+      expect(result.errors).toBeUndefined();
+      const page = result.data?.mySchedule as MyScheduleRow;
+      expect(page.month).toBe("2027-03");
+      expect(page.today).toBe(la("2027-03-31", "00:00").toISOString());
+      expect(page.hasEntryToday).toBe(true);
+      expect(page.entries.map((item) => [item.id, item.date])).toEqual([
+        [String(late), la("2027-03-31", "00:00").toISOString()],
+      ]);
+      // 4 月(洛杉磯)看不到這一班,即使它在 UTC 是 4/1
+      const april = await gql(wang, MY_SCHEDULE, {
+        input: monthRangeOf("2027-04", LA),
+      });
+      expect(
+        (april.data?.mySchedule as MyScheduleRow).entries.map(
+          (item) => item.id,
+        ),
+      ).not.toContain(String(late));
+      // 台北的 3 月不是洛杉磯的整個月 → VALIDATION_FAILED(from、to)
+      expect(
+        errorOf(
+          await gql(wang, MY_SCHEDULE, { input: monthRangeOf("2027-03") }),
+        ),
+      ).toMatchObject({ code: "VALIDATION_FAILED", fields: ["from", "to"] });
+    } finally {
+      await orgs.updateOne(
+        { _id: tenant },
+        { $unset: { "settings.timezone": "" } },
+      );
+    }
   });
 
   describe("給刮刮樂的排班查詢(integration/entry-lookup.ts)", () => {
