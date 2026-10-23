@@ -115,6 +115,28 @@ describe("我的畫休", () => {
     });
   });
 
+  it("[登記畫休] 時段選 00:00–00:00(整天):欄位下提示改選整天畫休,不能儲存", async () => {
+    const { user, dayOffsFake } = renderSchedulePage({ path: DAY_OFFS });
+    await user.click(await screen.findByRole("button", { name: "登記畫休" }));
+    const dialog = await screen.findByRole("dialog", { name: "登記畫休" });
+    await typeDate(user, dialog, "2026-12-03");
+    await user.click(within(dialog).getByLabelText("時段不可排"));
+    const start = within(dialog).getByRole("group", { name: /開始/ });
+    const end = within(dialog).getByRole("group", { name: /結束/ });
+    await typeTime(user, start, "00:00");
+    await typeTime(user, end, "00:00");
+    const slots = within(dialog).getByRole("group", { name: "時段" });
+    expect(slots).toHaveAccessibleDescription("整天請改選整天畫休");
+    const save = within(dialog).getByRole("button", { name: "儲存" });
+    expect(save).toBeDisabled();
+    expect(dayOffsFake.inputs.addMine).toEqual([]);
+
+    // 改成做到中午就是一般的時段,可以儲存
+    await typeTime(user, end, "12:00");
+    expect(slots).not.toHaveAccessibleDescription("整天請改選整天畫休");
+    expect(save).toBeEnabled();
+  });
+
   it("違反限制:不存,對話框列出原因", async () => {
     const { user } = renderSchedulePage({
       path: DAY_OFFS,

@@ -5,8 +5,10 @@ import {
   dayKeyOf,
   dayOffBandOf,
   dayOffCountTone,
+  hasWholeDaySlot,
   isCompleteSlot,
   isPastDayOffMonth,
+  isWholeDaySlot,
   monthRangeOf,
   slotInstantsOf,
 } from "./schedule-day-offs";
@@ -58,11 +60,28 @@ describe("畫休畫面的換算", () => {
     expect(completeSlots([{ startTime: "22:00", endTime: "00:00" }])).toEqual([
       { startTime: "22:00", endTime: "00:00" },
     ]);
-    expect(isCompleteSlot({ startTime: "00:00", endTime: "00:00" })).toBe(true);
     // 其他「結束不晚於開始」不算隔天(時段不往後跨)
     expect(isCompleteSlot({ startTime: "22:00", endTime: "02:00" })).toBe(
       false,
     );
+  });
+
+  it("時段 00:00–00:00 是整天:不算填完,要改選整天畫休", () => {
+    const wholeDay = { startTime: "00:00", endTime: "00:00" };
+    expect(isWholeDaySlot(wholeDay)).toBe(true);
+    expect(isCompleteSlot(wholeDay)).toBe(false);
+    expect(completeSlots([wholeDay])).toBeNull();
+    expect(
+      hasWholeDaySlot([{ startTime: "09:00", endTime: "12:00" }, wholeDay]),
+    ).toBe(true);
+    // 00:00 開始、做到別的時刻,或做到當天結束但不是從 00:00 開始,都還是時段
+    expect(isWholeDaySlot({ startTime: "00:00", endTime: "12:00" })).toBe(
+      false,
+    );
+    expect(isWholeDaySlot({ startTime: "00:01", endTime: "00:00" })).toBe(
+      false,
+    );
+    expect(hasWholeDaySlot([{ startTime: "", endTime: "" }])).toBe(false);
   });
 
   it("時段結束 00:00 合成隔天 00:00(租戶時區)", () => {

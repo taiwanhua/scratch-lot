@@ -119,10 +119,25 @@ export const EMPTY_SLOT: DayOffSlot = { startTime: "", endTime: "" };
  */
 const END_OF_DAY = "00:00";
 
-/** 一段有填完、而且開始早於結束(結束 `00:00` = 隔天 00:00,任何開始都早於它)。 */
+/**
+ * 這一段是整天(`00:00`–`00:00` = 當天 00:00 到隔天 00:00):整天要改選整天畫休,不當成時段送出
+ * (api 一樣擋,回 `VALIDATION_FAILED` `slots`)。
+ */
+export const isWholeDaySlot = (slot: DayOffSlot): boolean =>
+  slot.startTime === END_OF_DAY && slot.endTime === END_OF_DAY;
+
+/** 有沒有哪一段選了整天:有就停用儲存,欄位下提示改選整天畫休。 */
+export const hasWholeDaySlot = (slots: readonly DayOffSlot[]): boolean =>
+  slots.some((slot) => isWholeDaySlot(slot));
+
+/**
+ * 一段有填完、而且開始早於結束(結束 `00:00` = 隔天 00:00,任何開始都早於它);整天的一段不算
+ * (`isWholeDaySlot`)。
+ */
 export const isCompleteSlot = (slot: DayOffSlot): boolean =>
   slot.startTime !== "" &&
   slot.endTime !== "" &&
+  !isWholeDaySlot(slot) &&
   (slot.endTime === END_OF_DAY || slot.startTime < slot.endTime);
 
 /**

@@ -36,6 +36,7 @@ import {
   EMPTY_SLOT,
   completeSlots,
   dayKeyOf,
+  hasWholeDaySlot,
   slotInstantsOf,
 } from "@/lib/project/schedule-day-offs";
 import { localPartsOf } from "@/lib/project/schedule-roster";
@@ -192,7 +193,13 @@ export const DayOffDialog = ({
           <Button variant="text" onClick={onClose}>
             {tCommon("cancel")}
           </Button>
-          <Button disabled={save.isPending} onClick={submit}>
+          <Button
+            disabled={
+              save.isPending ||
+              (kind === "time-range" && hasWholeDaySlot(slots))
+            }
+            onClick={submit}
+          >
             {tCommon("save")}
           </Button>
         </>

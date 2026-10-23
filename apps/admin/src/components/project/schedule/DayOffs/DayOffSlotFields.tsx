@@ -10,7 +10,9 @@ import { FieldErrorGroup } from "@/components/base/FieldErrorGroup/FieldErrorGro
 import {
   type DayOffSlot,
   EMPTY_SLOT,
+  hasWholeDaySlot,
   isCompleteSlot,
+  isWholeDaySlot,
 } from "@/lib/project/schedule-day-offs";
 
 export interface DayOffSlotFieldsProps {
@@ -29,7 +31,8 @@ export interface DayOffSlotFieldsProps {
 
 /**
  * 時段不可排的開始 / 結束(`@repo/ui/time-picker`,值 `HH:mm`;送出時由呼叫端和日期合成時點);
- * 選了時段不可排才出現。
+ * 選了時段不可排才出現。有一段選了 00:00–00:00(整天)時,那一段標紅、群組下方提示改選整天畫休
+ * (不等送出;呼叫端用 `hasWholeDaySlot` 停用儲存)。
  */
 export const DayOffSlotFields = ({
   slots,
@@ -46,15 +49,17 @@ export const DayOffSlotFields = ({
       ),
     );
   };
+  const submitError = invalid ? errorText : undefined;
   return (
     <FieldErrorGroup
       label={t("slots")}
-      errorText={invalid ? errorText : undefined}
+      errorText={hasWholeDaySlot(slots) ? t("wholeDaySlot") : submitError}
       spacing={1.5}
     >
       {slots.map((slot, index) => {
         const error =
-          invalid && (!isCompleteSlot(slot) || slots.every(isCompleteSlot));
+          isWholeDaySlot(slot) ||
+          (invalid && (!isCompleteSlot(slot) || slots.every(isCompleteSlot)));
         return (
           // 段落沒有自己的 id;順序就是身分(只會在尾端加、從中間拿掉)
           <Stack key={index} direction="row" spacing={1.5}>

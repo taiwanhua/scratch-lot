@@ -1374,6 +1374,8 @@ describe("畫休(GraphQL 端點 + 真 MongoDB)", () => {
         ],
         // 開始在隔天 00:00
         [{ startAt: iso("2026-12-17"), endAt: iso("2026-12-17", "01:00") }],
+        // 一段就是一整天(00:00–隔天 00:00):整天要登記整天畫休
+        [{ startAt: iso("2026-12-16"), endAt: iso("2026-12-17") }],
       ]) {
         expect(
           errorOf(
@@ -1384,6 +1386,32 @@ describe("畫休(GraphQL 端點 + 真 MongoDB)", () => {
             }),
           ),
         ).toEqual({ code: "VALIDATION_FAILED", fields: ["slots"] });
+      }
+    });
+
+    it("日期只收完整時點:只有日期、沒帶時區的字串是輸入錯誤(洛杉磯不會靜默變成前一天)", async () => {
+      const orgs = connection.collection("orgs");
+      await orgs.updateOne(
+        { _id: tenantA },
+        { $set: { "settings.timezone": "America/Los_Angeles" } },
+      );
+      try {
+        travelTo("2026-11-20");
+        for (const date of ["2026-12-15", "2026-12-15T00:00:00"]) {
+          expect(
+            errorOf(await addMine(wang, { date, kind: "full-day" })),
+          ).toMatchObject({ code: "BAD_USER_INPUT" });
+        }
+        // 沒擋時:`2026-12-15` 被當成 UTC 00:00 = 洛杉磯 12/14 16:00,存成 12/14
+        const { myDayOffs: saved } = await myDayOffs(wang);
+        expect(
+          saved.some((item) => item.date === la("2026-12-14").toISOString()),
+        ).toBe(false);
+      } finally {
+        await orgs.updateOne(
+          { _id: tenantA },
+          { $unset: { "settings.timezone": "" } },
+        );
       }
     });
 

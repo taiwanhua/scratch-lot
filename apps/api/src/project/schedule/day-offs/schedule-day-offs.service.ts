@@ -1483,8 +1483,9 @@ const onMinute = (instant: number): boolean =>
 /**
  * 時段不可排的幾段:至少一段;每段是那天裡的半開區間 `[startAt, endAt)`:開始落在
  * `[那天 00:00, 隔天 00:00)`、結束晚於開始且最晚 = 隔天 00:00(做到當天結束)、精度到分鐘
- * (admin 由日期 + `HH:mm` 合成,結束選 00:00 = 隔天 00:00);否則 `VALIDATION_FAILED`
- * (欄位 `slots`,格式錯不帶 reason)。
+ * (admin 由日期 + `HH:mm` 合成,結束選 00:00 = 隔天 00:00);一段就是一整天(那天 00:00 到隔天 00:00)
+ * 也不收,整天要登記整天畫休(admin 同一條規則,選 00:00–00:00 時停用儲存)。
+ * 不合規則 → `VALIDATION_FAILED`(欄位 `slots`,格式錯不帶 reason)。
  */
 function validatedSlots(
   slots: readonly ScheduleDayOffSlotInput[] | null | undefined,
@@ -1507,6 +1508,16 @@ function validatedSlots(
   if (!valid) {
     throw validationError(
       "time-range needs slots on that day with start before end",
+      ["slots"],
+    );
+  }
+  const wholeDay = list.some(
+    (slot) =>
+      slot.startAt.getTime() === day.from && slot.endAt.getTime() === day.to,
+  );
+  if (wholeDay) {
+    throw validationError(
+      "a time-range slot covering the whole day must be a full-day day off",
       ["slots"],
     );
   }

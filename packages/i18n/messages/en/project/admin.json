@@ -1357,6 +1357,7 @@
         "end": "End",
         "addSlot": "+ Add another",
         "removeSlot": "Remove this range",
+        "wholeDaySlot": "For the whole day, choose Full day off instead",
         "registeredFullDay": "Registered: full day off",
         "registeredTimeRange": "Registered: {start}–{end}",
         "delete": "Delete",

@@ -1357,6 +1357,7 @@
         "end": "結束",
         "addSlot": "+ 再加一段",
         "removeSlot": "拿掉這一段",
+        "wholeDaySlot": "整天請改選整天畫休",
         "registeredFullDay": "已登記 整天畫休",
         "registeredTimeRange": "已登記 {start}–{end}",
         "delete": "刪除",

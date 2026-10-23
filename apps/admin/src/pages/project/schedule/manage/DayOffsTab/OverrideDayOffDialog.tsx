@@ -33,6 +33,7 @@ import {
   type DayOffSlot,
   EMPTY_SLOT,
   completeSlots,
+  hasWholeDaySlot,
   slotInstantsOf,
 } from "@/lib/project/schedule-day-offs";
 
@@ -184,7 +185,13 @@ export const OverrideDayOffDialog = ({
           <Button variant="text" onClick={onClose}>
             {tCommon("cancel")}
           </Button>
-          <Button disabled={save.isPending} onClick={submit}>
+          <Button
+            disabled={
+              save.isPending ||
+              (kind === "time-range" && hasWholeDaySlot(slots))
+            }
+            onClick={submit}
+          >
             {tCommon("save")}
           </Button>
         </>
