@@ -69,7 +69,7 @@
 ## 值、計算與條件
 
 - **值依型別存**:選項 `{ value, label }`、引用 `{ id, label }`、上傳 `{ path, name, size, contentType }`、數字十進位字串、日期與日期時間存 Mongo `Date`;表達式看到的是語意值(選項的 value、引用的 id、日期的 ISO 字串)。
-- **日期與日期時間都是時點**:`date` 是時間固定在租戶時區當地 00:00 的時點,和 `datetime` 只差在顯示精度。輸入以租戶時區的當地日期(時間)換成時點;顯示一律換成**讀者現在的租戶時區**(填寫中與唯讀歷史都一樣;修訂的 `ctx.timezone` 只用於重算條件),`date` 印 `YYYY-MM-DD`、`datetime` 印 `YYYY-MM-DD HH:mm`,前後端共用 `formatTemporal`(另有省略年份的 `monthDay` `M/D` / `monthDayTime` `M/D HH:mm`(月日不補零),給同年份內的密集畫面)。日期與日期時間互比、`dateDiff` 的天數、`dateAdd` 的日曆加減、「今天」的邊界都換成租戶時區的當地日期再算。同一個時點在不同時區可能落在不同日期,這是預期行為;租戶改時區時,跨過午夜的既有日期會位移一天。正本:`packages/domain/src/form/temporal.ts`
+- **日期與日期時間都是時點**:`date` 是時間固定在租戶時區當地 00:00 的時點,和 `datetime` 只差在顯示精度。輸入以租戶時區的當地日期(時間)換成時點;顯示一律換成**讀者現在的租戶時區**(填寫中與唯讀歷史都一樣;修訂的 `ctx.timezone` 只用於重算條件),`date` 印 `YYYY-MM-DD`、`datetime` 印 `YYYY-MM-DD HH:mm`,前後端共用 `formatTemporal`(另有省略年份的 `monthDay` `M/D` / `monthDayTime` `M/D HH:mm`(月日不補零),給同年份內的密集畫面)。日期與日期時間互比、`dateDiff` 的天數、`dateAdd` 的日曆加減、「今天」的邊界都換成租戶時區的當地日期再算。api 只收時點:GraphQL 的 `DateTime` 輸入只收帶時間與時區(`Z` 或 `±hh:mm`)的 ISO 8601 字串,只有日期 / 沒帶時區的字串一律拒收(`docs/standards/api/graphql-schema.md` GQL-08)。同一個時點在不同時區可能落在不同日期,這是預期行為;租戶改時區時,跨過午夜的既有日期會位移一天。正本:`packages/domain/src/form/temporal.ts`
 - **日期工具**(`@repo/domain/form`,前後端共用;日期加減、月份、期間不在 app 裡另寫一份):
   - 時點與當地日期:`toInstant`、`toIso`、`localDateOf`、`startOfLocalDay` / `startOfLocalDayOf`、`instantOfLocalTime`(時、分)、`instantOfLocalHhMm`(`HH:mm`)、`compareLocalDay`、`sameLocalDay`、`localDayDiff`、`addLocalCalendar`、`formatTemporal`
   - 日期鍵與月份鍵:`parseLocalDate` / `localDateText`(`YYYY-MM-DD` ↔ `LocalDate`)、`parseLocalMonth` / `localMonthText`(`YYYY-MM` ↔ `LocalMonth`)、`localMonthOf`(時點 → 租戶時區的月份);格式檢查用 parse 的結果是否為 null
