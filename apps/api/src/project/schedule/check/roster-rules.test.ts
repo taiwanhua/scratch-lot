@@ -184,6 +184,8 @@ describe("最多連續上班(規格 14.2;有排班的日子,任何分店)", () =
       to: "2026-11-12",
     });
     expect(result[0]?.targets).toHaveLength(7);
+    // 訊息的日期是 M/D(月日不補零,`formatTemporal` 的 monthDay)
+    expect(result[0]?.message).toBe("11/6–11/12 連續上班 7 天,最多 6 天");
   });
 
   it("跨月:10/28–11/3 連續 7 天算進 11 月;同一天兩段只算一天", () => {
@@ -196,6 +198,7 @@ describe("最多連續上班(規格 14.2;有排班的日子,任何分店)", () =
       setting: rule,
     });
     expect(result.map((item) => item.detail?.actual)).toEqual([7]);
+    expect(result[0]?.message).toBe("10/28–11/3 連續上班 7 天,最多 6 天");
   });
 
   it("等級照設定:改成限制 → 違反是限制", () => {

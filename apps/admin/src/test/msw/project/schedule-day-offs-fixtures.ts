@@ -6,6 +6,13 @@ import type {
 /** 畫休夾具的目標月(開放期間 11/15–11/25 登記 12 月)。 */
 export const DAY_OFF_MONTH = "2026-12";
 
+/** 夾具的時區(租戶時區 = 預設的台北)。 */
+export const DAY_OFF_TIMEZONE = "Asia/Taipei";
+
+/** 台北那天某時刻的時點(api 收發的 ISO);日期 = 那天 00:00。 */
+export const taipeiAt = (date: string, time = "00:00") =>
+  new Date(`${date}T${time}:00+08:00`).toISOString();
+
 /** 當前使用者(登入者;主要分店 = A-2 台北分店)。 */
 export const DAY_OFF_ME = {
   userId: "u-me",
@@ -35,10 +42,10 @@ const dayOff = (
   id,
   userId: person.userId,
   name: person.name,
-  date,
+  date: taipeiAt(date),
   kind: range === null ? "full-day" : "time-range",
-  startTime: range?.[0] ?? null,
-  endTime: range?.[1] ?? null,
+  startAt: range === null ? null : taipeiAt(date, range[0]),
+  endAt: range === null ? null : taipeiAt(date, range[1]),
   note: null,
   isPrimary: person.isPrimary,
   byName: null,
@@ -76,20 +83,23 @@ export const sampleDayOffViolations: ScheduleDayOffViolationFieldsFragment[] = [
     key: "maxDailyDayOffStaff",
     level: "limit",
     message: "12/24 畫休 3 人,同日最多 2 人",
-    dates: ["2026-12-24"],
+    dates: [taipeiAt("2026-12-24")],
     actual: 3,
     limit: 2,
-    from: "2026-12-24",
-    to: "2026-12-24",
+    // 期間是半開區間 `[起那天 00:00, 迄那天的隔天 00:00)`
+    from: taipeiAt("2026-12-24"),
+    to: taipeiAt("2026-12-25"),
   },
   {
     key: "maxConsecutiveDaysOff",
     level: "reminder",
     message: "12/13–12/16 連續休 4 天,最多 3 天",
-    dates: ["2026-12-13", "2026-12-14", "2026-12-15", "2026-12-16"],
+    dates: ["2026-12-13", "2026-12-14", "2026-12-15", "2026-12-16"].map(
+      (date) => taipeiAt(date),
+    ),
     actual: 4,
     limit: 3,
-    from: "2026-12-13",
-    to: "2026-12-16",
+    from: taipeiAt("2026-12-13"),
+    to: taipeiAt("2026-12-17"),
   },
 ];

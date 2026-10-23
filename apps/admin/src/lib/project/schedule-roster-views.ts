@@ -1,3 +1,5 @@
+import { parseLocalDate } from "@repo/domain/form";
+
 import {
   type DemandCounts,
   type RosterDemandLike,
@@ -5,7 +7,6 @@ import {
   demandCountText,
   demandCountsOf,
   demandToneOf,
-  localPartsOf,
   minutesBetween,
   overlaps,
   shiftDay,
@@ -20,11 +21,9 @@ import {
 
 // ---- 日期 ----
 
-const ISO_DATE = /^\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\d|3[01])$/u;
-
-/** `YYYY-MM-DD` 而且是真的日期(2/30 不算)。 */
+/** `YYYY-MM-DD` 而且是真的日期(2/30 不算;`parseLocalDate`)。 */
 export const isRosterDate = (value: string): boolean =>
-  ISO_DATE.test(value) && shiftDay(value, 0) === value;
+  parseLocalDate(value) !== null;
 
 /** 那一週的 7 天(一週從星期日開始,同底座 `MonthCalendar`)。 */
 export const weekDatesOf = (date: string): string[] => {
@@ -202,17 +201,6 @@ export const entryOffsetsOf = (
 });
 
 // ---- 時間軸 ----
-
-/**
- * 時點 → 租戶時區的牆上時間,換成「瀏覽器時區同一個牆上時間」的 epoch 毫秒。
- * 底座 `ScheduleTimeline` 依瀏覽器時區把時點換成「哪一天的幾點」,先換過才會畫在租戶的時間上。
- */
-export const wallClockMs = (iso: string, timezone: string): number => {
-  const { date, time } = localPartsOf(iso, timezone);
-  const [year = 0, month = 1, day = 1] = date.split("-").map(Number);
-  const [hour = 0, minute = 0] = time.split(":").map(Number);
-  return new Date(year, month - 1, day, hour, minute).getTime();
-};
 
 export interface TimelineTaskLike {
   taskId: string;

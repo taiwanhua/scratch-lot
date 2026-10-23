@@ -27,6 +27,7 @@ import {
 } from "../database/schedule/schedule-staff.schema";
 import { ScheduleCalendarService } from "./calendar/schedule-calendar.service";
 import { ScheduleRulesService } from "./rules/schedule-rules.service";
+import { dayKeyRange } from "./shared/schedule-dates";
 import { ScheduleStaffService } from "./staff/schedule-staff.service";
 import {
   ALL_SCHEDULE_TEST_PERMISSIONS,
@@ -302,6 +303,10 @@ function errorOf(result: GraphqlResult): Record<string, unknown> | undefined {
   return result.errors?.[0]?.extensions;
 }
 
+/** 租戶時區(預設 Asia/Taipei)那天 00:00 的時點(行事曆的日期;api 回 ISO 字串)。 */
+const taipeiDay = (date: string, time = "00:00") =>
+  new Date(`${date}T${time}:00+08:00`).toISOString();
+
 interface WeekTemplateRow {
   id: string;
   name: string;
@@ -461,9 +466,27 @@ describe("排班設定(GraphQL 端點 + 真 MongoDB)", () => {
   ): Promise<{ canEdit: boolean; days: CalendarDayRow[] }> {
     return dataOf(
       await gql(user, CALENDAR, {
-        input: { orgId: String(orgId), month: "2026-11" },
+        input: {
+          orgId: String(orgId),
+          from: taipeiDay("2026-11-01"),
+          to: taipeiDay("2026-12-01"),
+        },
       }),
       "scheduleCalendar",
+    );
+  }
+
+  /** 中山店一段期間的行事曆(店長身分;`from` / `to` 是時點)。 */
+  function calendarBetween(from: string, to: string): Promise<GraphqlResult> {
+    return gql(manager, CALENDAR, {
+      input: { orgId: String(zhongshan), from, to },
+    });
+  }
+
+  /** 同上,只取日期。 */
+  async function datesBetween(from: string, to: string): Promise<string[]> {
+    return dataOf(await calendarBetween(from, to), "scheduleCalendar").days.map(
+      (item) => item.date,
     );
   }
 
@@ -851,14 +874,17 @@ describe("排班設定(GraphQL 端點 + 真 MongoDB)", () => {
         rules.effectiveSettingsForOrg(asOther, zhongshan),
       ).rejects.toMatchObject({ extensions: { code: "NOT_FOUND" } });
       await expect(
-        calendar.effectiveDays(asOther, zhongshan, "2026-11-01", "2026-11-30"),
+        calendar.effectiveDays(
+          asOther,
+          zhongshan,
+          dayKeyRange("2026-11-01", "2026-11-30", "Asia/Taipei"),
+        ),
       ).rejects.toMatchObject({ extensions: { code: "NOT_FOUND" } });
       await expect(
         calendar.effectiveDays(
           asManager,
           zhongshan,
-          "2026-11-01",
-          "2026-11-30",
+          dayKeyRange("2026-11-01", "2026-11-30", "Asia/Taipei"),
         ),
       ).resolves.toEqual(expect.any(Array));
     });
@@ -1484,7 +1510,7 @@ describe("排班設定(GraphQL 端點 + 真 MongoDB)", () => {
       const closed = await gql(hq, SAVE_CALENDAR_DAY, {
         input: {
           orgId: String(tenantA),
-          date: "2026-11-03",
+          date: taipeiDay("2026-11-03"),
           type: "closed",
           name: "盤點日",
         },
@@ -1495,7 +1521,7 @@ describe("排班設定(GraphQL 端點 + 真 MongoDB)", () => {
       expect(inherited.canEdit).toBe(true);
       expect(inherited.days).toEqual([
         expect.objectContaining({
-          date: "2026-11-03",
+          date: taipeiDay("2026-11-03"),
           type: "closed",
           ownerOrg: expect.objectContaining({ name: "租戶甲" }),
           canEdit: false,
@@ -1506,7 +1532,7 @@ describe("排班設定(GraphQL 端點 + 真 MongoDB)", () => {
       const special = await gql(manager, SAVE_CALENDAR_DAY, {
         input: {
           orgId: String(zhongshan),
-          date: "2026-11-03",
+          date: taipeiDay("2026-11-03"),
           type: "special",
           category: "event-day",
           name: "店慶",
@@ -1518,7 +1544,7 @@ describe("排班設定(GraphQL 端點 + 真 MongoDB)", () => {
       const own = await calendarOf(manager, zhongshan);
       expect(own.days).toEqual([
         expect.objectContaining({
-          date: "2026-11-03",
+          date: taipeiDay("2026-11-03"),
           type: "special",
           name: "店慶",
           paletteKey: "cyan",
@@ -1534,7 +1560,7 @@ describe("排班設定(GraphQL 端點 + 真 MongoDB)", () => {
         input: {
           id: upperId,
           orgId: String(zhongshan),
-          date: "2026-11-03",
+          date: taipeiDay("2026-11-03"),
           type: "closed",
         },
       });
@@ -1548,7 +1574,7 @@ describe("排班設定(GraphQL 端點 + 真 MongoDB)", () => {
       const duplicate = await gql(manager, SAVE_CALENDAR_DAY, {
         input: {
           orgId: String(zhongshan),
-          date: "2026-11-03",
+          date: taipeiDay("2026-11-03"),
           type: "closed",
         },
       });
@@ -1560,7 +1586,7 @@ describe("排班設定(GraphQL 端點 + 真 MongoDB)", () => {
       const missing = await gql(manager, SAVE_CALENDAR_DAY, {
         input: {
           orgId: String(zhongshan),
-          date: "2026-11-30",
+          date: taipeiDay("2026-11-30"),
           type: "special",
         },
       });
@@ -1574,7 +1600,7 @@ describe("排班設定(GraphQL 端點 + 真 MongoDB)", () => {
       const result = await gql(manager, SAVE_CALENDAR_DAY, {
         input: {
           orgId: String(zhongshan),
-          date: "2026-11-21",
+          date: taipeiDay("2026-11-21"),
           type: "special",
           category: "no-such-category",
           name: "活動",
@@ -1590,7 +1616,7 @@ describe("排班設定(GraphQL 端點 + 真 MongoDB)", () => {
       const days = connection.collection(SCHEDULE_CALENDAR_DAYS_COLLECTION);
       const row = {
         orgId: hsinchu,
-        date: "2026-12-01",
+        date: new Date(taipeiDay("2026-12-01")),
         type: "closed",
         category: null,
         name: null,
@@ -1609,7 +1635,7 @@ describe("排班設定(GraphQL 端點 + 真 MongoDB)", () => {
     it("同時新增同一天:只成功一筆,另一筆 VALIDATION_FAILED(date)", async () => {
       const input = {
         orgId: String(zhongshan),
-        date: "2026-11-25",
+        date: taipeiDay("2026-11-25"),
         type: "closed",
       };
       const results = await Promise.all(
@@ -1635,11 +1661,62 @@ describe("排班設定(GraphQL 端點 + 真 MongoDB)", () => {
       const result = await gql(viewer, SAVE_CALENDAR_DAY, {
         input: {
           orgId: String(zhongshan),
-          date: "2026-11-20",
+          date: taipeiDay("2026-11-20"),
           type: "closed",
         },
       });
       expect(errorOf(result)).toMatchObject({ code: "FORBIDDEN" });
+    });
+
+    it("日期以租戶時區正規化成那天 00:00;查詢是半開區間 [from, to)", async () => {
+      const saved = await gql(manager, SAVE_CALENDAR_DAY, {
+        input: {
+          orgId: String(zhongshan),
+          // 當天其他時刻(15:30)也歸到同一天
+          date: taipeiDay("2026-11-28", "15:30"),
+          type: "closed",
+        },
+      });
+      expect(saved.errors).toBeUndefined();
+      expect(saved.data?.saveScheduleCalendarDay).toMatchObject({
+        item: { date: taipeiDay("2026-11-28") },
+      });
+      const stored = await connection
+        .collection(SCHEDULE_CALENDAR_DAYS_COLLECTION)
+        .findOne<{ date: Date }>({
+          orgId: zhongshan,
+          deletedAt: null,
+          type: "closed",
+          date: new Date(taipeiDay("2026-11-28")),
+        });
+      expect(stored?.date.toISOString()).toBe(taipeiDay("2026-11-28"));
+
+      expect(
+        await datesBetween(taipeiDay("2026-11-28"), taipeiDay("2026-11-29")),
+      ).toEqual([taipeiDay("2026-11-28")]);
+      // 迄不含:到 11/28 00:00 為止不含 11/28
+      expect(
+        await datesBetween(taipeiDay("2026-11-27"), taipeiDay("2026-11-28")),
+      ).toEqual([]);
+    });
+
+    it("from / to:迄要晚於起、最長一個月(31 天再多一小時)→ 否則 VALIDATION_FAILED(from、to)", async () => {
+      for (const [from, to] of [
+        [taipeiDay("2026-11-02"), taipeiDay("2026-11-01")],
+        [taipeiDay("2026-11-01"), taipeiDay("2026-11-01")],
+        [taipeiDay("2026-11-01"), taipeiDay("2026-12-03")],
+      ] as const) {
+        expect(errorOf(await calendarBetween(from, to))).toEqual({
+          code: "VALIDATION_FAILED",
+          fields: ["from", "to"],
+        });
+      }
+      // 31 天的月剛好可以
+      const december = await calendarBetween(
+        taipeiDay("2026-12-01"),
+        taipeiDay("2027-01-01"),
+      );
+      expect(december.errors).toBeUndefined();
     });
   });
 

@@ -44,11 +44,11 @@ export const WeekMoreList = ({
 }: WeekMoreListProps) => {
   const t = useTranslations("admin.schedule.roster");
   const tCalendar = useTranslations("admin.schedule.calendar");
-  const { openDemand } = useRoster();
+  const { openDemand, timezone } = useRoster();
   const showDay = useShowDay();
   const title = t("timeline.moreTitle", {
     date: t("dateTitle", {
-      date: monthDayOf(date),
+      date: monthDayOf(date, timezone),
       weekday: tCalendar(`weekdays.${String(weekdayOf(date))}`),
     }),
   });

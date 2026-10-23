@@ -25,42 +25,38 @@ import type { WorkflowRuntimeWorldOptions } from "../workflow-runtime-handlers";
 
 /**
  * 排班作業 → 支援需求單(規格 14.10)的夾具。定義與受管表單同形
- * (正本 `apps/db-migrator/seeds/project/revisions/support_request.r3.seed.ts`);
+ * (正本 `apps/db-migrator/seeds/project/revisions/support_request.r4.seed.ts`);
  * 三筆提交:審核中(派給登入者小華)、已完成、已退回(Figma SC-31 274:32718)。
  */
 export const SUPPORT_REQUEST_FORM_KEY = "support_request";
 export const SCHEDULE_MANAGE_MODULE_KEY = "schedule.manage";
 
-const TIME_PATTERN = "^([01][0-9]|2[0-3]):[0-5][0-9]$";
-
 export const supportRequestDefinition = (): FormDefinition => ({
   fields: [
-    field("date", "日期", "date", {
-      widget: { kind: "datePicker" },
+    field("start_at", "開始", "datetime", {
+      widget: { kind: "dateTimePicker" },
       rules: { required: true },
+    }),
+    field("end_at", "結束", "datetime", {
+      widget: { kind: "dateTimePicker" },
+      rules: {
+        required: true,
+        custom: {
+          and: [
+            { ">": [{ var: "end_at" }, { var: "start_at" }] },
+            {
+              "==": [{ dateDiff: [{ var: "start_at" }, { var: "end_at" }] }, 0],
+            },
+          ],
+        },
+        customMessage:
+          "結束要晚於開始,而且在同一天(不能跨午夜,跨過午夜請拆成兩張)",
+      },
     }),
     field("position", "崗位", "select", {
       widget: { kind: "dropdown" },
       options: { kind: "fieldCategory", key: "schedule-position" },
       rules: { required: true },
-    }),
-    field("start_time", "開始", "text", {
-      widget: { kind: "textField", placeholder: "HH:mm" },
-      rules: {
-        required: true,
-        pattern: TIME_PATTERN,
-        patternMessage: "請輸入 24 小時制的時間,例 17:00",
-      },
-    }),
-    field("end_time", "結束", "text", {
-      widget: { kind: "textField", placeholder: "HH:mm" },
-      rules: {
-        required: true,
-        pattern: TIME_PATTERN,
-        patternMessage: "請輸入 24 小時制的時間,例 21:00",
-        custom: { ">": [{ var: "end_time" }, { var: "start_time" }] },
-        customMessage: "結束時間要晚於開始時間",
-      },
     }),
     field("headcount", "需要人數", "number", {
       precision: 0,
@@ -83,28 +79,23 @@ export const supportRequestDefinition = (): FormDefinition => ({
         rows: [
           {
             cols: [
-              { fieldKey: "date", span: 6 },
+              { fieldKey: "start_at", span: 6 },
+              { fieldKey: "end_at", span: 6 },
+            ],
+          },
+          {
+            cols: [
               { fieldKey: "position", span: 6 },
-            ],
-          },
-          {
-            cols: [
-              { fieldKey: "start_time", span: 6 },
-              { fieldKey: "end_time", span: 6 },
-            ],
-          },
-          {
-            cols: [
               { fieldKey: "headcount", span: 6 },
-              { fieldKey: "branch", span: 6 },
             ],
           },
+          { cols: [{ fieldKey: "branch", span: 6 }] },
           { cols: [{ fieldKey: "note", span: 12 }] },
         ],
       },
     ],
   },
-  summaryMap: { title: "note", date: "date" },
+  summaryMap: { title: "note", date: "start_at" },
   prefills: [],
 });
 
@@ -138,10 +129,10 @@ const LOCKED = {
 const supportRequest = (
   id: string,
   values: {
-    date: string;
-    position: string;
+    /** 開始 / 結束(ISO 時點) */
     start: string;
     end: string;
+    position: string;
     headcount: string;
     note: string;
   },
@@ -157,10 +148,9 @@ const supportRequest = (
     formName: "支援需求單",
     status: FormSubmissionStatus.Completed,
     values: {
-      date: values.date,
+      start_at: values.start,
+      end_at: values.end,
       position: values.position,
-      start_time: values.start,
-      end_time: values.end,
       headcount: values.headcount,
       branch: "org-store",
       note: values.note,
@@ -181,7 +171,7 @@ const supportRequest = (
         items: [{ value: "org-store", label: "台北分店", available: true }],
       },
     ],
-    summary: { title: values.note, date: values.date, amount: null },
+    summary: { title: values.note, date: values.start, amount: null },
     createdBy: APPLICANT,
     abilities: LOCKED,
     ...overrides,
@@ -193,10 +183,10 @@ export const supportRequestSubmissions = (): MockSubmission[] => [
   supportRequest(
     "sub-support-12",
     {
-      date: "2026-11-11T16:00:00.000Z",
+      // 台北 11/12 17:00–21:00
+      start: "2026-11-12T09:00:00.000Z",
+      end: "2026-11-12T13:00:00.000Z",
       position: "in-store-counter",
-      start: "17:00",
-      end: "21:00",
       headcount: "1",
       note: "颱風後補人,晚間人手不足",
     },
@@ -209,10 +199,10 @@ export const supportRequestSubmissions = (): MockSubmission[] => [
   supportRequest(
     "sub-support-11",
     {
-      date: "2026-11-07T16:00:00.000Z",
+      // 台北 11/8 13:00–17:00
+      start: "2026-11-08T05:00:00.000Z",
+      end: "2026-11-08T09:00:00.000Z",
       position: "restock",
-      start: "13:00",
-      end: "17:00",
       headcount: "1",
       note: "週末到貨補貨",
     },
@@ -221,10 +211,10 @@ export const supportRequestSubmissions = (): MockSubmission[] => [
   supportRequest(
     "sub-support-09",
     {
-      date: "2026-10-29T16:00:00.000Z",
+      // 台北 10/30 14:30–22:00
+      start: "2026-10-30T06:30:00.000Z",
+      end: "2026-10-30T14:00:00.000Z",
       position: "in-store-counter",
-      start: "14:30",
-      end: "22:00",
       headcount: "2",
       note: "店員請假",
     },
@@ -234,7 +224,7 @@ export const supportRequestSubmissions = (): MockSubmission[] => [
 
 /**
  * `schedule.manage` 的列表欄位配置(與 seed 初值 `apps/db-migrator/seeds/project/settings.ts` 同):
- * 單號、日期、開始、結束、崗位、需要人數、分店 + 內建欄「狀態」。
+ * 單號、開始、結束、崗位、需要人數、分店 + 內建欄「狀態」。
  */
 export const supportRequestListColumns = (): ModuleListColumn[] => [
   {
@@ -246,9 +236,8 @@ export const supportRequestListColumns = (): ModuleListColumn[] => [
   },
   ...(
     [
-      ["date", 120],
-      ["start_time", 100],
-      ["end_time", 100],
+      ["start_at", 150],
+      ["end_at", 150],
       ["position", 140],
       ["headcount", 100],
       ["branch", 140],

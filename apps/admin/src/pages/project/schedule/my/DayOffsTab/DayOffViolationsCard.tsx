@@ -1,5 +1,6 @@
 import { useTranslations } from "use-intl";
 
+import { DEFAULT_TENANT_TIMEZONE } from "@repo/domain/form";
 import type { ScheduleDayOffViolationFieldsFragment } from "@repo/graphql";
 import { Button } from "@repo/ui/button";
 import { Card } from "@repo/ui/card";
@@ -7,11 +8,13 @@ import { Stack } from "@repo/ui/stack";
 import { Tag } from "@repo/ui/tag";
 import { Typography } from "@repo/ui/typography";
 
+import { useTenantTimezone } from "@/hooks/base/useTenantTimezone";
 import { useDayOffViolationText } from "@/hooks/project/schedule/useDayOffViolationText/useDayOffViolationText";
+import { dayKeyOf } from "@/lib/project/schedule-day-offs";
 
 export interface DayOffViolationsCardProps {
   violations: readonly ScheduleDayOffViolationFieldsFragment[];
-  /** [查看]:打開那天的詳細(違反有日期才有按鈕) */
+  /** [查看]:打開那天(日期鍵 `YYYY-MM-DD`)的詳細(違反有日期才有按鈕) */
   onView: (date: string) => void;
 }
 
@@ -23,6 +26,7 @@ export const DayOffViolationsCard = ({
   const t = useTranslations("admin.schedule.dayOffs.my");
   const tRules = useTranslations("admin.schedule.rules");
   const violationText = useDayOffViolationText();
+  const timezone = useTenantTimezone() ?? DEFAULT_TENANT_TIMEZONE;
   return (
     <Card variant="outlined" sx={{ p: 2 }}>
       <Stack spacing={1.5}>
@@ -35,7 +39,10 @@ export const DayOffViolationsCard = ({
           </Typography>
         )}
         {violations.map((violation) => {
-          const date = violation.dates.at(0);
+          // [查看] 跳到第一天:api 的時點換成月曆格的日期鍵
+          const first = violation.dates.at(0);
+          const date =
+            first === undefined ? undefined : dayKeyOf(first, timezone);
           return (
             <Stack
               key={`${violation.key}-${violation.from ?? ""}`}

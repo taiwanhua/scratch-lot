@@ -1,5 +1,12 @@
-import { localDateOf, startOfLocalDay } from "../../form/temporal";
-import { isIsoMonth } from "../schedule-settings/time";
+import {
+  type LocalMonth,
+  addLocalMonths,
+  localMonthDiff,
+  localMonthOf,
+  localMonthRange,
+  localMonthText,
+  parseLocalMonth,
+} from "../../form/temporal";
 
 /**
  * 關帳 `lottery_period_closes`(專案規格 10.4、3.4 關帳逾期;正本 `docs/modules/project/accounts.md`「關帳」)。
@@ -7,7 +14,9 @@ import { isIsoMonth } from "../schedule-settings/time";
  *
  * - 範圍是**整個租戶**;依序關帳;只能關已結束的月份;不能重新開帳
  * - **永遠關到該月最後一刻**:月份的期間 = 當地 1 日 00:00(含)至 下月 1 日 00:00(不含),與按下的時間無關
- *   (10/31 23:59:59.999 的紀錄算 10 月)
+ *   (10/31 23:59:59.999 的紀錄算 10 月;`localMonthRange`)
+ * - 月份是資料的鍵 `YYYY-MM`;月份的換算與加減一律用 `form/temporal`(`parseLocalMonth`、`localMonthOf`、
+ *   `addLocalMonths`、`localMonthDiff`、`localMonthRange`)
  */
 
 /** 關帳擋下的原因(api 的 `extensions.reason`;模組文件「錯誤碼」)。 */
@@ -44,71 +53,13 @@ export const PERIOD_PENDING_KINDS = [
 ] as const;
 export type PeriodPendingKind = (typeof PERIOD_PENDING_KINDS)[number];
 
-interface Month {
-  year: number;
-  month: number;
-}
-
-/** 月份文字 `YYYY-MM`(格式判斷沿用 `isIsoMonth`)→ 年、月;不合法 → null。 */
-function parse(text: string): Month | null {
-  if (!isIsoMonth(text)) {
-    return null;
-  }
-  const [year = 0, month = 0] = text.split("-").map(Number);
-  return { year, month };
-}
-
-const format = ({ year, month }: Month): string =>
-  `${String(year).padStart(4, "0")}-${String(month).padStart(2, "0")}`;
-
-/** 月份 ± N 個月(`2026-01` − 1 = `2025-12`);格式不對 → 丟 `RangeError`。 */
-export function addPeriodMonths(month: string, amount: number): string {
-  const parsed = parse(month);
+/** 月份鍵 `YYYY-MM` → `LocalMonth`;格式不對 → 丟 `RangeError`(呼叫端先驗,`parseLocalMonth`)。 */
+function monthOf(text: string): LocalMonth {
+  const parsed = parseLocalMonth(text);
   if (parsed === null) {
-    throw new RangeError(`月份格式不對:${month}`);
+    throw new RangeError(`月份格式不對:${text}`);
   }
-  const index = parsed.year * 12 + (parsed.month - 1) + Math.trunc(amount);
-  const year = Math.floor(index / 12);
-  return format({ year, month: index - year * 12 + 1 });
-}
-
-/** 兩個月份相差幾個月(`to − from`)。 */
-export function periodMonthDiff(from: string, to: string): number {
-  const a = parse(from);
-  const b = parse(to);
-  if (a === null || b === null) {
-    throw new RangeError(`月份格式不對:${from} / ${to}`);
-  }
-  return b.year * 12 + b.month - (a.year * 12 + a.month);
-}
-
-/** 時點在租戶時區屬於哪個月份。 */
-export function periodMonthOf(instant: number, timezone: string): string {
-  const { year, month } = localDateOf(instant, timezone);
-  return format({ year, month });
-}
-
-/**
- * 月份的期間(時點,ms):`start` = 當地 1 日 00:00(含),`end` = 下月 1 日 00:00(不含)。
- * 關帳「永遠關到該月最後一刻」:時點 < `end` 的紀錄都屬於這個月或更早。
- */
-export function periodRangeOf(
-  month: string,
-  timezone: string,
-): { start: number; end: number } {
-  const parsed = parse(month);
-  if (parsed === null) {
-    throw new RangeError(`月份格式不對:${month}`);
-  }
-  const nextIndex = parsed.year * 12 + parsed.month;
-  const next: Month = {
-    year: Math.floor(nextIndex / 12),
-    month: (nextIndex % 12) + 1,
-  };
-  return {
-    start: startOfLocalDay({ ...parsed, day: 1 }, timezone),
-    end: startOfLocalDay({ ...next, day: 1 }, timezone),
-  };
+  return parsed;
 }
 
 /** 這個月份在 `now` 時已經結束(下月 1 日 00:00 已過)。 */
@@ -117,7 +68,7 @@ export function isPeriodEnded(
   now: number,
   timezone: string,
 ): boolean {
-  return periodRangeOf(month, timezone).end <= now;
+  return localMonthRange(monthOf(month), timezone).to <= now;
 }
 
 /**
@@ -133,7 +84,7 @@ export function nextClosableMonth(input: {
   const candidate =
     input.lastClosed === null
       ? input.firstMonth
-      : addPeriodMonths(input.lastClosed, 1);
+      : localMonthText(addLocalMonths(monthOf(input.lastClosed), 1));
   return isPeriodEnded(candidate, input.now, input.timezone) ? candidate : null;
 }
 
@@ -147,16 +98,17 @@ export function periodMonthsOf(input: {
   now: number;
   timezone: string;
 }): { month: string; status: PeriodStatus }[] {
-  const current = periodMonthOf(input.now, input.timezone);
+  const current = localMonthText(localMonthOf(input.now, input.timezone));
   const closed = new Set(input.closed);
   const earliest = input.closed.reduce(
-    (min, month) => (periodMonthDiff(min, month) < 0 ? month : min),
+    (min, month) =>
+      localMonthDiff(monthOf(min), monthOf(month)) < 0 ? month : min,
     input.firstMonth,
   );
   const rows: { month: string; status: PeriodStatus }[] = [];
-  const count = periodMonthDiff(earliest, current);
+  const count = localMonthDiff(monthOf(earliest), monthOf(current));
   for (let offset = count; offset >= 0; offset -= 1) {
-    const month = addPeriodMonths(earliest, offset);
+    const month = localMonthText(addLocalMonths(monthOf(earliest), offset));
     let status: PeriodStatus = "open";
     if (closed.has(month)) {
       status = "closed";

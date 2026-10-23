@@ -37,7 +37,7 @@ export class MyScheduleResolver {
     input: MyScheduleInput | null,
     @CurrentOperator() operator: OperatorContext,
   ): Promise<MySchedulePayload> {
-    return this.service.mySchedule(operator, input?.month);
+    return this.service.mySchedule(operator, input);
   }
 
   @RequirePermission("schedule.my.punch")

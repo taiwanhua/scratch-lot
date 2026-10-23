@@ -2,15 +2,15 @@ import { useTranslations } from "use-intl";
 
 import {
   DAYS_BEFORE_MAX_COUNT,
-  SCHEDULE_TIME_OPTIONS,
+  SCHEDULE_STEP_MINUTES,
 } from "@repo/domain/notification-schedule";
 import { NotificationScheduleKind } from "@repo/graphql";
 import { Button } from "@repo/ui/button";
 import { IconButton } from "@repo/ui/icon-button";
 import { CloseIcon } from "@repo/ui/icons";
-import { SelectField } from "@repo/ui/select-field";
 import { Stack } from "@repo/ui/stack";
 import { TextField } from "@repo/ui/text-field";
+import { TimePicker } from "@repo/ui/time-picker";
 import { Typography } from "@repo/ui/typography";
 
 import {
@@ -25,15 +25,10 @@ export interface ScheduleEditorProps {
   issues: ScheduleIssues;
 }
 
-const TIME_OPTIONS = SCHEDULE_TIME_OPTIONS.map((time) => ({
-  value: time,
-  label: time,
-}));
-
 /**
  * 提醒時間的編輯區(寫法由類型宣告、不能換):
  * 某日期前 N 天 = 提前天數 `[30] [7] [0] [+ 加一個]` + 時間;逾期後每天 = 時間;每月第 N 天 = 第幾天 + 時間。
- * 時間只能從 15 分鐘一格的選單挑。
+ * 時間用 `TimePicker`(`HH:mm`),選單只列 15 分鐘一格;鍵盤打出不在格子上的時間由送出前的驗證擋下。
  */
 export const ScheduleEditor = ({
   value,
@@ -56,6 +51,7 @@ export const ScheduleEditor = ({
 
   const daysIssue = issues.get("daysBefore");
   const dayOfMonthIssue = issues.get("dayOfMonth");
+  const timeIssue = issues.get("time");
 
   return (
     <Stack spacing={2}>
@@ -156,15 +152,19 @@ export const ScheduleEditor = ({
           }}
         />
       )}
-      <SelectField
+      <TimePicker
         size="small"
         label={t("time")}
-        options={TIME_OPTIONS}
         value={value.time}
-        helperText={t("timeHint")}
+        minutesStep={SCHEDULE_STEP_MINUTES}
+        error={timeIssue === undefined ? undefined : true}
+        helperText={
+          timeIssue === undefined ? t("timeHint") : tIssues(timeIssue)
+        }
         sx={{ width: { xs: "100%", sm: 400 } }}
         onChange={(time) => {
-          onChange({ ...value, time });
+          // 清空或打到一半存空字串(草稿的 `time` 是字串),送出前的驗證會擋下
+          onChange({ ...value, time: time ?? "" });
         }}
       />
     </Stack>

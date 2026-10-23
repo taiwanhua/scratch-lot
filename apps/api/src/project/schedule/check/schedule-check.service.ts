@@ -2,16 +2,8 @@ import { Injectable, type OnModuleInit } from "@nestjs/common";
 import { GraphQLError } from "graphql";
 import { Types } from "mongoose";
 
-import {
-  addLocalCalendar,
-  instantOfLocalTime,
-  parseLocalDate,
-} from "@repo/domain/form";
-import {
-  type ScheduleRuleLevel,
-  isIsoMonth,
-  minutesOfHhMm,
-} from "@repo/domain/project/schedule-settings";
+import { type InstantRange, parseLocalMonth } from "@repo/domain/form";
+import type { ScheduleRuleLevel } from "@repo/domain/project/schedule-settings";
 
 import { OrgsRepository } from "../../../database/database.module";
 import {
@@ -37,13 +29,21 @@ import {
   type ScheduleUnavailability,
 } from "../day-offs/schedule-day-offs.service";
 import { type EntryRecord, RosterPeopleReader } from "../roster/roster-people";
-import { monthRange } from "../roster/schedule-roster.service";
 import {
   type EffectiveRuleSetting,
   type ScheduleRuleViolation,
   ruleEvaluatorOf,
 } from "../rules/rule-registry";
 import { ScheduleRulesService } from "../rules/schedule-rules.service";
+import {
+  dateKeyOf,
+  dayKeyRange,
+  instantOfKey,
+  instantRangeFilter,
+  monthKeyOf,
+  monthKeyRange,
+  violationPeriodOf,
+} from "../shared/schedule-dates";
 import { validationError } from "../shared/schedule-error";
 import {
   type ScheduleOrg,
@@ -77,28 +77,35 @@ const WIDEN_DAYS = 31;
 /** 不屬於規則的類別排在規則後面。 */
 const NON_RULE_ORDER = 10_000;
 
-/** 存排班被擋下(限制):`VALIDATION_FAILED`(欄位 `rules`)+ `extensions.violations`。 */
+/**
+ * 存排班被擋下(限制):`VALIDATION_FAILED`(欄位 `rules`)+ `extensions.violations`
+ * (`from` / `to` = 期間,半開的時點區間 `[起那天 00:00, 迄那天的隔天 00:00)`,租戶時區;`violationPeriodOf`)。
+ */
 export function rosterRuleError(
   violations: readonly ScheduleRuleViolation[],
+  timezone: string,
 ): GraphQLError {
   return new GraphQLError("schedule entry violates schedule rules", {
     extensions: {
       code: "VALIDATION_FAILED",
       fields: ["rules"],
-      violations: violations.map((violation) => ({
-        key: violation.key,
-        level: violation.level,
-        message: violation.message,
-        actual: violation.detail?.actual ?? null,
-        limit: violation.detail?.limit ?? null,
-        from: violation.detail?.from ?? null,
-        to: violation.detail?.to ?? null,
-      })),
+      violations: violations.map((violation) => {
+        const period = violationPeriodOf(violation.detail, timezone);
+        return {
+          key: violation.key,
+          level: violation.level,
+          message: violation.message,
+          actual: violation.detail?.actual ?? null,
+          limit: violation.detail?.limit ?? null,
+          from: period.from?.toISOString() ?? null,
+          to: period.to?.toISOString() ?? null,
+        };
+      }),
     },
   });
 }
 
-/** 一筆排班存檔前後(存排班時的規則檢查用)。 */
+/** 一筆排班存檔前後(存排班時的規則檢查用;`date` 是租戶時區的日期鍵)。 */
 export interface EntryRuleCheck {
   userId: Types.ObjectId;
   /** 修改的那一筆(新增 = null) */
@@ -147,8 +154,8 @@ export class ScheduleCheckService implements OnModuleInit {
     orgId: string | null | undefined,
     month: string,
   ): Promise<ScheduleCheckPayload> {
-    if (!isIsoMonth(month)) {
-      throw validationError(`invalid month: ${String(month)}`, ["month"]);
+    if (parseLocalMonth(month) === null) {
+      throw validationError(`invalid month: ${month}`, ["month"]);
     }
     const org = await resolveScheduleOrg(operator, this.orgs, orgId);
     return this.evaluateOrg(operator, org, month);
@@ -161,20 +168,21 @@ export class ScheduleCheckService implements OnModuleInit {
     month: string,
   ): Promise<ScheduleCheckPayload> {
     const timezone = await tenantTimezoneOf(this.orgs, operator, org.tenantId);
-    const { from, to } = monthRange(month);
-    const wide = widenedRange(from, to, WIDEN_DAYS);
+    const own = monthKeyRange(month, timezone);
+    const keyOf = (date: Date) => dateKeyOf(date, timezone);
+    const wide = widenedDays(own, timezone);
     const candidates = await this.staff.listScheduleCandidates(
       operator,
       org.id,
     );
     const storeEntries = await this.entries.findMany(
       operator,
-      { orgId: org.id, date: { $gte: from, $lte: to } },
+      { orgId: org.id, date: instantRangeFilter(own) },
       { sort: { startAt: 1 } },
     );
     const demands = await this.demands.findMany(
       operator,
-      { orgId: org.id, date: { $gte: from, $lte: to } },
+      { orgId: org.id, date: instantRangeFilter(own) },
       { sort: { startAt: 1 } },
     );
     const assignments =
@@ -191,14 +199,12 @@ export class ScheduleCheckService implements OnModuleInit {
     const calendarDays = await this.calendar.effectiveDays(
       operator,
       org.id,
-      from,
-      to,
+      own,
     );
     const unavailability = await this.dayOffs.listUnavailable(
       operator,
       org.id,
-      wide.from,
-      wide.to,
+      wide,
     );
 
     const candidateIds = candidates.map((candidate) => candidate.userId);
@@ -212,8 +218,7 @@ export class ScheduleCheckService implements OnModuleInit {
       operator,
       org.tenantId,
       peopleIds.map((id) => new Types.ObjectId(id)),
-      wide.from,
-      wide.to,
+      wide,
     );
     const names = new Map([
       ...(await this.people.namesOf(peopleIds)),
@@ -249,6 +254,7 @@ export class ScheduleCheckService implements OnModuleInit {
         storeEntryIds.has(String(entry._id))
           ? demandsOfEntry(String(entry._id))
           : [],
+        timezone,
       ),
     );
 
@@ -282,7 +288,7 @@ export class ScheduleCheckService implements OnModuleInit {
         .filter((candidate) => candidate.isPrimary)
         .map((candidate) => candidate.userId),
     );
-    const dayOffLikes = dayOffLikesOf(unavailability).filter((item) =>
+    const dayOffLikes = dayOffLikesOf(unavailability, timezone).filter((item) =>
       primaryIds.has(item.userId),
     );
     for (const userId of primaryIds) {
@@ -310,7 +316,9 @@ export class ScheduleCheckService implements OnModuleInit {
 
     // ---- 人力不足(這家店的設定;店休那天不檢查) ----
     const closed = new Set(
-      calendarDays.filter((day) => day.type === "closed").map((d) => d.date),
+      calendarDays
+        .filter((day) => day.type === "closed")
+        .map((day) => keyOf(day.date)),
     );
     const entryById = new Map(
       storeEntries.map((entry) => [String(entry._id), entry]),
@@ -337,10 +345,10 @@ export class ScheduleCheckService implements OnModuleInit {
         data: {
           month,
           demands: demands
-            .filter((demand) => !closed.has(demand.date))
+            .filter((demand) => !closed.has(keyOf(demand.date)))
             .map((demand) => ({
               id: String(demand._id),
-              date: demand.date,
+              date: keyOf(demand.date),
               startAt: demand.startAt,
               endAt: demand.endAt,
               tasks: demand.tasks.map((task) => {
@@ -367,13 +375,14 @@ export class ScheduleCheckService implements OnModuleInit {
     );
 
     const items = violations.map((violation) =>
-      itemOfViolation(violation, month, names),
+      itemOfViolation(violation, month, names, timezone),
     );
 
     // ---- 畫休日有排班(人 × 日,含跨店;看不到的分店不帶名稱) ----
     items.push(
       ...(await this.dayOffEntryConflicts(operator, org, {
-        month,
+        month: own,
+        timezone,
         candidateIds: new Set(candidateIds),
         allEntries,
         busy: busyOfUnavailability(unavailability, timezone),
@@ -382,16 +391,13 @@ export class ScheduleCheckService implements OnModuleInit {
     );
 
     // ---- 未對應排班的打卡(提醒;人 × 日,這家店這個月打的卡) ----
-    const punches = await this.unmatched.of(operator, org.id, timezone, {
-      from,
-      to,
-    });
+    const punches = await this.unmatched.of(operator, org.id, timezone, own);
     const punchNames = await this.people.namesOf(
       punches.map((punch) => punch.userId),
     );
     const byPersonDay = new Map<string, typeof punches>();
     for (const punch of punches) {
-      const key = `${punch.userId}|${punch.date}`;
+      const key = `${punch.userId}|${String(punch.date.getTime())}`;
       byPersonDay.set(key, [...(byPersonDay.get(key) ?? []), punch]);
     }
     for (const list of byPersonDay.values()) {
@@ -400,14 +406,13 @@ export class ScheduleCheckService implements OnModuleInit {
         continue;
       }
       items.push({
-        ...emptyItem(),
+        ...emptyItem(first.date),
         key: UNMATCHED_PUNCHES_KEY,
         level: "reminder",
-        message: `${first.date} 有 ${String(list.length)} 張未對應排班的打卡`,
+        message: `${keyOf(first.date)} 有 ${String(list.length)} 張未對應排班的打卡`,
         userId: first.userId,
         userName:
           names.get(first.userId) ?? punchNames.get(first.userId) ?? null,
-        date: first.date,
         actual: list.length,
       });
     }
@@ -418,7 +423,7 @@ export class ScheduleCheckService implements OnModuleInit {
       (left, right) =>
         levelRank(left.level) - levelRank(right.level) ||
         orderOf(left.key) - orderOf(right.key) ||
-        left.date.localeCompare(right.date) ||
+        left.date.getTime() - right.date.getTime() ||
         compareScheduleNames(left.userName ?? "", right.userName ?? "") ||
         (left.startAt?.getTime() ?? 0) - (right.startAt?.getTime() ?? 0),
     );
@@ -450,14 +455,14 @@ export class ScheduleCheckService implements OnModuleInit {
     );
     const first = sortedDates[0] ?? check.after.date;
     const last = sortedDates.at(-1) ?? check.after.date;
+    const timezone = await tenantTimezoneOf(this.orgs, operator, org.tenantId);
     const wide = widenedRange(first, last, WIDEN_DAYS);
     const userId = String(check.userId);
     const records = await this.people.entriesOfPeople(
       operator,
       org.tenantId,
       [check.userId],
-      wide.from,
-      wide.to,
+      dayKeyRange(wide.from, wide.to, timezone),
     );
     const demandIds = [
       ...check.after.demandIds,
@@ -485,14 +490,18 @@ export class ScheduleCheckService implements OnModuleInit {
     const entryId = check.entryId === null ? null : String(check.entryId);
     const others = records
       .filter((record) => String(record._id) !== entryId)
-      .map((record) => workEntryOf(record, []));
+      .map((record) => workEntryOf(record, [], timezone));
     const existing = records.find((record) => String(record._id) === entryId);
     const beforeEntries =
       existing === undefined
         ? others
         : [
             ...others,
-            workEntryOf(existing, windowsOf(check.before?.demandIds ?? [])),
+            workEntryOf(
+              existing,
+              windowsOf(check.before?.demandIds ?? []),
+              timezone,
+            ),
           ];
     const afterEntries: WorkEntryLike[] = [
       ...others,
@@ -508,7 +517,7 @@ export class ScheduleCheckService implements OnModuleInit {
       },
     ];
     const settings = (await this.personSettings(org, null, [userId]))(userId);
-    const months = [...new Set(dates.map((date) => date.slice(0, 7)))];
+    const months = [...new Set(dates.map((date) => monthKeyOf(date)))];
     const evaluate = async (entries: WorkEntryLike[]) => {
       const found: ScheduleRuleViolation[] = [];
       for (const month of months) {
@@ -582,7 +591,9 @@ export class ScheduleCheckService implements OnModuleInit {
     operator: OperatorContext,
     org: ScheduleOrg,
     input: {
-      month: string;
+      /** 這個月的時點區間 */
+      month: InstantRange;
+      timezone: string;
       candidateIds: ReadonlySet<string>;
       allEntries: readonly EntryRecord[];
       busy: readonly BusyLike[];
@@ -591,7 +602,8 @@ export class ScheduleCheckService implements OnModuleInit {
   ): Promise<ScheduleCheckItemModel[]> {
     const conflicts = input.allEntries.filter(
       (entry) =>
-        entry.date.startsWith(`${input.month}-`) &&
+        entry.date.getTime() >= input.month.from &&
+        entry.date.getTime() < input.month.to &&
         input.candidateIds.has(String(entry.userId)) &&
         input.busy.some(
           (item) =>
@@ -614,13 +626,12 @@ export class ScheduleCheckService implements OnModuleInit {
       const isOtherStore = String(entry.orgId) !== String(org.id);
       const userId = String(entry.userId);
       return {
-        ...emptyItem(),
+        ...emptyItem(entry.date),
         key: DAY_OFF_ENTRY_CONFLICT_KEY,
         level: "reminder",
-        message: `${entry.date} 畫休日有排班`,
+        message: `${dateKeyOf(entry.date, input.timezone)} 畫休日有排班`,
         userId,
         userName: input.names.get(userId) ?? null,
-        date: entry.date,
         entryIds: [String(entry._id)],
         startAt: entry.startAt,
         endAt: entry.endAt,
@@ -646,15 +657,17 @@ const signatureOf = (violation: ScheduleRuleViolation) =>
 
 const levelRank = (level: string) => (level === "limit" ? 0 : 1);
 
+/** 規則運算吃的排班(`date` = 租戶時區的日期鍵)。 */
 function workEntryOf(
   entry: EntryRecord,
   demands: WorkEntryLike["demands"],
+  timezone: string,
 ): WorkEntryLike {
   return {
     id: String(entry._id),
     userId: String(entry.userId),
     orgId: String(entry.orgId),
-    date: entry.date,
+    date: dateKeyOf(entry.date, timezone),
     startAt: entry.startAt,
     endAt: entry.endAt,
     breakMinutes: entry.breakMinutes,
@@ -662,58 +675,61 @@ function workEntryOf(
   };
 }
 
-/** 畫休(每天一列)→ 畫休規則吃的一段一筆(整天一筆、時段不可排每段一筆)。 */
+/** 畫休(每天一列)→ 畫休規則吃的一段一筆(整天一筆、時段不可排每段一筆;`date` = 日期鍵)。 */
 function dayOffLikesOf(
   unavailability: readonly ScheduleUnavailability[],
+  timezone: string,
 ): DayOffLike[] {
-  return unavailability.flatMap((day) => [
-    ...(day.fullDay
-      ? [{ userId: day.userId, date: day.date, kind: "full-day" }]
-      : []),
-    ...day.slots.map(() => ({
-      userId: day.userId,
-      date: day.date,
-      kind: "time-range",
-    })),
-  ]);
+  return unavailability.flatMap((day) => {
+    const date = dateKeyOf(day.date, timezone);
+    return [
+      ...(day.fullDay ? [{ userId: day.userId, date, kind: "full-day" }] : []),
+      ...day.slots.map(() => ({
+        userId: day.userId,
+        date,
+        kind: "time-range",
+      })),
+    ];
+  });
 }
 
-/** 畫休 → 不能排的時點區間(租戶時區:整天 = 當天 00:00 到隔天 00:00)。 */
+/** 這個月前後各讀 `WIDEN_DAYS` 天(連續上班 / 休假、兩班之間的休息會跨月)。 */
+function widenedDays(month: InstantRange, timezone: string): InstantRange {
+  const wide = widenedRange(
+    dateKeyOf(month.from, timezone),
+    dateKeyOf(month.to - 1, timezone),
+    WIDEN_DAYS,
+  );
+  return dayKeyRange(wide.from, wide.to, timezone);
+}
+
+/**
+ * 畫休 → 不能排的時點區間:整天 = 租戶時區那天 00:00 到隔天 00:00(`localDayRange`);
+ * 時段不可排本身就是時點。
+ */
 export function busyOfUnavailability(
   unavailability: readonly ScheduleUnavailability[],
   timezone: string,
 ): BusyLike[] {
   return unavailability.flatMap((day) => {
-    const date = parseLocalDate(day.date);
-    if (date === null) {
-      return [];
-    }
-    const at = (time: string) => {
-      const minutes = minutesOfHhMm(time) ?? 0;
-      return instantOfLocalTime(
-        date,
-        Math.floor(minutes / 60),
-        minutes % 60,
-        timezone,
-      );
-    };
-    const dayStart = at("00:00");
+    const key = dateKeyOf(day.date, timezone);
+    const whole = dayKeyRange(key, key, timezone);
     return [
       ...(day.fullDay
         ? [
             {
               userId: day.userId,
               kind: "full-day" as const,
-              startAt: new Date(dayStart),
-              endAt: new Date(addLocalCalendar(dayStart, 1, "days", timezone)),
+              startAt: new Date(whole.from),
+              endAt: new Date(whole.to),
             },
           ]
         : []),
       ...day.slots.map((slot) => ({
         userId: day.userId,
         kind: "time-range" as const,
-        startAt: new Date(at(slot.startTime)),
-        endAt: new Date(at(slot.endTime)),
+        startAt: slot.startAt,
+        endAt: slot.endAt,
       })),
     ];
   });
@@ -732,14 +748,15 @@ async function runRule(
   return evaluator({ ...context, setting });
 }
 
-function emptyItem(): CheckItem {
+/** 空的檢核項目;`date` = [查看] 要捲到的那一天(租戶時區 00:00 的時點)。 */
+function emptyItem(date: Date): CheckItem {
   return {
     key: "",
     level: "reminder",
     message: "",
     userId: null,
     userName: null,
-    date: "",
+    date,
     entryIds: [],
     actual: null,
     limit: null,
@@ -757,6 +774,7 @@ function itemOfViolation(
   violation: ScheduleRuleViolation,
   month: string,
   names: ReadonlyMap<string, string>,
+  timezone: string,
 ): ScheduleCheckItemModel {
   const userId =
     violation.targets.find((target) => target.userId !== undefined)?.userId ??
@@ -769,13 +787,17 @@ function itemOfViolation(
     `${month}-01`;
   const level: ScheduleRuleLevel = violation.level;
   return {
-    ...emptyItem(),
+    ...emptyItem(
+      instantOfKey(
+        date.startsWith(`${month}-`) ? date : `${month}-01`,
+        timezone,
+      ),
+    ),
     key: violation.key,
     level,
     message: violation.message,
     userId,
     userName: userId === null ? null : (names.get(userId) ?? null),
-    date: date.startsWith(`${month}-`) ? date : `${month}-01`,
     entryIds: [
       ...new Set(
         violation.targets.flatMap((target) =>
@@ -785,8 +807,7 @@ function itemOfViolation(
     ],
     actual: violation.detail?.actual ?? null,
     limit: violation.detail?.limit ?? null,
-    from: violation.detail?.from ?? null,
-    to: violation.detail?.to ?? null,
+    ...violationPeriodOf(violation.detail, timezone),
     startAt: violation.detail?.startAt ?? null,
     endAt: violation.detail?.endAt ?? null,
     understaffed: violation.detail?.understaffed ?? null,

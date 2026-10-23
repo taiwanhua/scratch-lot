@@ -1,7 +1,7 @@
 import { describe, expect, it } from "@jest/globals";
 import { screen, within } from "@testing-library/react";
 
-import { renderSchedulePage } from "../schedule-test-support";
+import { renderSchedulePage, typeDate } from "../schedule-test-support";
 
 /**
  * 先排班、後登記畫休(使用者定案:照樣可以登記,但要提醒):存檔後 api 回這天已有的排班,
@@ -15,7 +15,7 @@ describe("登記畫休:那天已經有排班", () => {
     });
     await user.click(await screen.findByRole("button", { name: "登記畫休" }));
     const dialog = await screen.findByRole("dialog", { name: "登記畫休" });
-    await user.type(within(dialog).getByLabelText(/日期/), "2026-12-03");
+    await typeDate(user, dialog, "2026-12-03");
     await user.click(within(dialog).getByRole("button", { name: "儲存" }));
     expect(
       await screen.findByText(
@@ -38,7 +38,7 @@ describe("登記畫休:那天已經有排班", () => {
       throw new Error("沒有可以選的人");
     }
     await user.click(firstPerson);
-    await user.type(within(dialog).getByLabelText(/日期/), "2026-12-03");
+    await typeDate(user, dialog, "2026-12-03");
     await user.click(within(dialog).getByRole("button", { name: "儲存" }));
     expect(
       await screen.findByText(

@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { useTranslations } from "use-intl";
 
+import { DEFAULT_TENANT_TIMEZONE } from "@repo/domain/form";
 import type {
   ScheduleDayOffDayFieldsFragment,
   ScheduleDayOffFieldsFragment,
@@ -14,8 +15,10 @@ import { Tag } from "@repo/ui/tag";
 import type { TagTone } from "@repo/ui/tag";
 import { Typography } from "@repo/ui/typography";
 
+import { useTenantTimezone } from "@/hooks/base/useTenantTimezone";
 import { useDayOffDateTitle } from "@/hooks/project/schedule/useDayOffDateTitle/useDayOffDateTitle";
 import { dayOffCountTone, violationsOn } from "@/lib/project/schedule-day-offs";
+import { localPartsOf } from "@/lib/project/schedule-roster";
 
 /** 「(2/2 已滿)」的文案依顏色:未滿 / 滿了 / 超過。 */
 const COUNT_KEY: Record<TagTone, "countSuffix" | "countFull" | "countOver"> = {
@@ -27,6 +30,7 @@ const COUNT_KEY: Record<TagTone, "countSuffix" | "countFull" | "countOver"> = {
 };
 
 export interface DayOffDetailDialogProps {
+  /** 那天的日期鍵 `YYYY-MM-DD`(租戶時區;月曆格) */
   date: string;
   /** 那天的畫休(沒有人畫休 = undefined) */
   day: ScheduleDayOffDayFieldsFragment | undefined;
@@ -45,7 +49,8 @@ export interface DayOffDetailDialogProps {
  * 當天畫休詳細(SC-42;規格 14.6「點格子的 ⓘ」):誰整天畫休、誰時段不可排(含時間)、同日人數、
  * 涉及哪些規則。電腦 / 平板置中小視窗,手機全螢幕(規格 16.0 的底部面板以全螢幕對話框呈現)。
  *
- * 畫休總覽點日期也用這個對話框(SC-24):有代改權限時每筆畫休一列、旁邊 [刪除],下方 [代改]。
+ * 畫休總覽點日期也用這個對話框:沒有代改權限時唯讀;有代改權限時每筆畫休一列、旁邊 [刪除],
+ * 下方 [代改](SC-24)。
  */
 export const DayOffDetailDialog = ({
   date,
@@ -61,6 +66,11 @@ export const DayOffDetailDialog = ({
   const tCommon = useTranslations("admin.schedule.common");
   const isMobile = useBreakpointDown("sm");
   const title = useDayOffDateTitle();
+  const timezone = useTenantTimezone() ?? DEFAULT_TENANT_TIMEZONE;
+  const clockOf = (value: string | null | undefined) =>
+    value === null || value === undefined
+      ? ""
+      : localPartsOf(value, timezone).time;
   const dayOffs = day?.dayOffs ?? [];
   const fullDayRecords = dayOffs.filter((item) => item.kind === "full-day");
   const fullDay = [...new Set(fullDayRecords.map((item) => item.name))];
@@ -70,12 +80,13 @@ export const DayOffDetailDialog = ({
     limit === null
       ? ""
       : t(COUNT_KEY[dayOffCountTone(count, limit)], { count, limit });
-  const rules = violations === undefined ? [] : violationsOn(violations, date);
+  const rules =
+    violations === undefined ? [] : violationsOn(violations, date, timezone);
   const timeRangeText = (item: ScheduleDayOffFieldsFragment) =>
     t("timeRangeItem", {
       name: item.name,
-      start: item.startTime ?? "",
-      end: item.endTime ?? "",
+      start: clockOf(item.startAt),
+      end: clockOf(item.endAt),
     });
   /** 刪除模式:一筆畫休一列,旁邊 [刪除](同一人同一天可能有多段時段不可排) */
   const deletableRow = (item: ScheduleDayOffFieldsFragment, text: string) => (

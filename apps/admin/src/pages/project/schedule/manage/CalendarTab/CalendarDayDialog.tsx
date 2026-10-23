@@ -2,6 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslations } from "use-intl";
 
+import { DEFAULT_TENANT_TIMEZONE } from "@repo/domain/form";
 import { SCHEDULE_FIELD_CATEGORY_KEYS } from "@repo/domain/project/schedule-fields";
 import {
   type ScheduleCalendarDayFieldsFragment,
@@ -9,6 +10,7 @@ import {
   useSaveScheduleCalendarDayMutation,
 } from "@repo/graphql";
 import { Button } from "@repo/ui/button";
+import { DatePicker } from "@repo/ui/date-picker";
 import { Dialog } from "@repo/ui/dialog";
 import { FormControlLabel } from "@repo/ui/form-control-label";
 import { useBreakpointDown } from "@repo/ui/media-query";
@@ -21,8 +23,12 @@ import { Typography } from "@repo/ui/typography";
 import { TagPaletteSelect } from "@/components/project/TagPaletteSelect/TagPaletteSelect";
 import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
 import { useSession } from "@/hooks/base/useSession";
+import { useTemporalText } from "@/hooks/base/useTemporalText";
+import { useTenantTimezone } from "@/hooks/base/useTenantTimezone";
 import { useScheduleFieldOptions } from "@/hooks/project/schedule/useScheduleFieldOptions/useScheduleFieldOptions";
 import type { FieldErrorTexts } from "@/lib/base/field-errors";
+import { localDayInstantOf } from "@/lib/base/form-engine/local-day";
+import { dayKeyOf } from "@/lib/project/schedule-day-offs";
 import {
   type TagPaletteKey,
   isTagPaletteKey,
@@ -49,7 +55,7 @@ export interface CalendarDayDialogProps {
   orgId: string;
   /** 點到的那一天;null = 新增 */
   day: Day | null;
-  /** 新增時帶入的日期(點空白日期);[新增] 按鈕為空字串 */
+  /** 新增時帶入的日期鍵 `YYYY-MM-DD`(點空白日期);[新增] 按鈕為空字串 */
   initialDate: string;
   onClose: () => void;
 }
@@ -71,6 +77,8 @@ export const CalendarDayDialog = ({
   const { session } = useSession();
   const queryClient = useQueryClient();
   const isMobile = useBreakpointDown("sm");
+  const text = useTemporalText();
+  const timezone = useTenantTimezone() ?? DEFAULT_TENANT_TIMEZONE;
   const categories = useScheduleFieldOptions(
     SCHEDULE_FIELD_CATEGORY_KEYS.specialDayCategory,
   );
@@ -79,7 +87,10 @@ export const CalendarDayDialog = ({
   const [type, setType] = useState<DayType>(
     day?.type === "closed" ? "closed" : "special",
   );
-  const [date, setDate] = useState(day?.date ?? initialDate);
+  // 日期欄是租戶時區的日期鍵;送出時換回那天 00:00 的時點
+  const [date, setDate] = useState(
+    day === null ? initialDate : dayKeyOf(day.date, timezone),
+  );
   const [category, setCategory] = useState(day?.category ?? "");
   const [name, setName] = useState(day?.name ?? "");
   const [note, setNote] = useState(day?.note ?? "");
@@ -126,18 +137,19 @@ export const CalendarDayDialog = ({
 
   const submit = () => {
     const missing: Field[] = [];
-    if (date === "") missing.push("date");
+    const instant = localDayInstantOf(date, timezone);
+    if (instant === null) missing.push("date");
     if (isSpecial && category === "") missing.push("category");
     if (isSpecial && name.trim() === "") missing.push("name");
     setFieldErrors(scheduleFormatErrorsOf(missing, tSchedule));
-    if (missing.length > 0) {
+    if (missing.length > 0 || instant === null) {
       return;
     }
     save.mutate({
       input: {
         ...(day === null ? {} : { id: day.id }),
         orgId,
-        date,
+        date: instant,
         type,
         category: isSpecial ? category : null,
         name: name.trim() === "" ? null : name.trim(),
@@ -148,7 +160,9 @@ export const CalendarDayDialog = ({
   };
 
   const title =
-    day === null ? t("createTitle") : t("editTitle", { date: day.date });
+    day === null
+      ? t("createTitle")
+      : t("editTitle", { date: text(day.date, "date") });
 
   return (
     <Dialog
@@ -211,18 +225,16 @@ export const CalendarDayDialog = ({
           ))}
         </Stack>
         <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
-          <TextField
+          <DatePicker
             label={t("date")}
-            type="date"
-            value={date}
+            value={date === "" ? null : date}
             required
             fullWidth
             disabled={!canEdit}
             error={invalid.includes("date")}
             helperText={fieldErrors.date}
-            slotProps={{ inputLabel: { shrink: true } }}
-            onChange={(event) => {
-              setDate(event.target.value);
+            onChange={(next) => {
+              setDate(next ?? "");
               setFieldErrors({});
             }}
           />
@@ -281,7 +293,7 @@ export const CalendarDayDialog = ({
       {isConfirmingDelete && day !== null && (
         <ConfirmDeleteDialog
           title={t("delete")}
-          message={t("deleteConfirm", { date: day.date })}
+          message={t("deleteConfirm", { date: text(day.date, "date") })}
           isPending={remove.isPending}
           onConfirm={() => {
             remove.mutate({ input: { id: day.id, orgId } });

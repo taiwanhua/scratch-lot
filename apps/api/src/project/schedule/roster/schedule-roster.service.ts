@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { Types } from "mongoose";
 
-import { isIsoDate, isIsoMonth } from "@repo/domain/project/schedule-settings";
+import { type InstantRange, parseLocalMonth } from "@repo/domain/form";
 
 import { OrgsRepository } from "../../../database/database.module";
 import {
@@ -23,6 +23,14 @@ import { blockedEntryIdsOf } from "../integration/entry-deletion-guards";
 import { positionAnnotationsOf } from "../integration/position-annotations";
 import type { EffectiveRuleSetting } from "../rules/rule-registry";
 import { ScheduleRulesService } from "../rules/schedule-rules.service";
+import {
+  dateKeyOf,
+  instantOfKey,
+  instantRangeFilter,
+  monthKeyRange,
+  normalizedDayRange,
+  shiftDateKey,
+} from "../shared/schedule-dates";
 import { validationError } from "../shared/schedule-error";
 import { loadOrgNames, resolveScheduleOrg } from "../shared/schedule-org";
 import {
@@ -35,10 +43,11 @@ import type {
   ScheduleRosterPayload,
   ScheduleRosterPersonModel,
   ScheduleRosterSettingsModel,
+  ScheduleRosterStatsModel,
 } from "./models/schedule-roster.model";
 import { demandModelOf, entryModelOf } from "./roster-models";
 import { RosterPeopleReader } from "./roster-people";
-import { rosterStatsOf } from "./roster-stats";
+import { type RosterStats, rosterStatsOf } from "./roster-stats";
 
 /** 排班表要的權限(`@RequirePermission` 守端點;service 裡算 `canEdit`)。 */
 export const ROSTER_PERMISSIONS = {
@@ -46,55 +55,56 @@ export const ROSTER_PERMISSIONS = {
   edit: "schedule.manage.edit",
 } as const;
 
-/** `YYYY-MM` 的第一天與最後一天(`YYYY-MM-DD`)。 */
-export function monthRange(month: string): { from: string; to: string } {
-  const [year = 0, monthNumber = 0] = month.split("-").map(Number);
-  const lastDay = new Date(Date.UTC(year, monthNumber, 0)).getUTCDate();
-  return { from: `${month}-01`, to: `${month}-${String(lastDay)}` };
-}
-
 /** 週檢視跨月多讀的範圍最多超出這個月幾天(一週 7 天,跨月最多多 6 天)。 */
 const RANGE_MARGIN_DAYS = 6;
 
-const shiftIsoDate = (date: string, days: number): string => {
-  const [year = 0, month = 1, day = 1] = date.split("-").map(Number);
-  return new Date(Date.UTC(year, month - 1, day + days))
-    .toISOString()
-    .slice(0, 10);
-};
-
 /**
- * 讀取範圍 = 這個月 ∪ `from`–`to`(週檢視跨月)。兩個都沒給 = 只讀這個月;
- * 只給一個、日期不合法、`from` 晚於 `to`、或超出這個月前後 6 天 → VALIDATION_FAILED。
+ * 讀取範圍 = 這個月 ∪ `[from, to)`(週檢視跨月;時點以租戶時區正規化成 00:00)。兩個都沒給 = 只讀這個月;
+ * 只給一個、不是時點、`from` 不早於 `to`、或超出這個月前後 6 天 → VALIDATION_FAILED(欄位 `from`、`to`)。
  */
 export function rosterReadRange(
-  month: string,
-  from: string | null | undefined,
-  to: string | null | undefined,
-): { from: string; to: string } {
-  const own = monthRange(month);
+  own: InstantRange,
+  from: Date | null | undefined,
+  to: Date | null | undefined,
+  timezone: string,
+): InstantRange {
   const hasFrom = from !== null && from !== undefined;
   const hasTo = to !== null && to !== undefined;
   if (!hasFrom && !hasTo) {
     return own;
   }
-  if (
-    !hasFrom ||
-    !hasTo ||
-    !isIsoDate(from) ||
-    !isIsoDate(to) ||
-    from > to ||
-    from < shiftIsoDate(own.from, -RANGE_MARGIN_DAYS) ||
-    to > shiftIsoDate(own.to, RANGE_MARGIN_DAYS)
-  ) {
-    throw validationError(`invalid range: ${String(from)}–${String(to)}`, [
-      "from",
-      "to",
-    ]);
+  const extra = normalizedDayRange(from, to, timezone);
+  const lowest = instantOfKey(
+    shiftDateKey(dateKeyOf(own.from, timezone), -RANGE_MARGIN_DAYS),
+    timezone,
+  ).getTime();
+  const highest = instantOfKey(
+    shiftDateKey(dateKeyOf(own.to, timezone), RANGE_MARGIN_DAYS),
+    timezone,
+  ).getTime();
+  if (extra.from < lowest || extra.to > highest) {
+    throw validationError(
+      `range out of the month margin: ${new Date(extra.from).toISOString()}–${new Date(extra.to).toISOString()}`,
+      ["from", "to"],
+    );
   }
   return {
-    from: from < own.from ? from : own.from,
-    to: to > own.to ? to : own.to,
+    from: Math.min(extra.from, own.from),
+    to: Math.max(extra.to, own.to),
+  };
+}
+
+/** 統計 → 畫面:只有時段不可排的日子換回那天 00:00 的時點。 */
+function statsModelOf(
+  stats: RosterStats,
+  timezone: string,
+): ScheduleRosterStatsModel {
+  return {
+    ...stats,
+    timeRangeDays: stats.timeRangeDays.map((day) => ({
+      date: instantOfKey(day.date, timezone),
+      slots: day.slots,
+    })),
   };
 }
 
@@ -167,15 +177,17 @@ export class ScheduleRosterService {
     operator: OperatorContext,
     orgId: string | null | undefined,
     month: string,
-    range: { from?: string | null; to?: string | null } = {},
+    range: { from?: Date | null; to?: Date | null } = {},
   ): Promise<ScheduleRosterPayload> {
-    if (!isIsoMonth(month)) {
-      throw validationError(`invalid month: ${String(month)}`, ["month"]);
+    if (parseLocalMonth(month) === null) {
+      throw validationError(`invalid month: ${month}`, ["month"]);
     }
-    const { from, to } = rosterReadRange(month, range.from, range.to);
-    const own = monthRange(month);
-    const inMonth = (date: string) => date >= own.from && date <= own.to;
     const org = await resolveScheduleOrg(operator, this.orgs, orgId);
+    const timezone = await tenantTimezoneOf(this.orgs, operator, org.tenantId);
+    const own = monthKeyRange(month, timezone);
+    const read = rosterReadRange(own, range.from, range.to, timezone);
+    const inMonth = (date: Date) =>
+      date.getTime() >= own.from && date.getTime() < own.to;
     const holds = await this.permissions.holderOf(operator);
 
     const [
@@ -191,12 +203,12 @@ export class ScheduleRosterService {
       this.staff.listScheduleCandidates(operator, org.id),
       this.demands.findMany(
         operator,
-        { orgId: org.id, date: { $gte: from, $lte: to } },
+        { orgId: org.id, date: instantRangeFilter(read) },
         { sort: { startAt: 1, createdAt: 1 } },
       ),
       this.entries.findMany(
         operator,
-        { orgId: org.id, date: { $gte: from, $lte: to } },
+        { orgId: org.id, date: instantRangeFilter(read) },
         { sort: { startAt: 1 } },
       ),
       this.templates.findMany(
@@ -204,17 +216,16 @@ export class ScheduleRosterService {
         { orgId: { $in: org.chain } },
         { sort: { startTime: 1, createdAt: 1 } },
       ),
-      this.dayOffs.listUnavailable(operator, org.id, from, to),
-      this.calendar.effectiveDays(operator, org.id, from, to),
+      this.dayOffs.listUnavailable(operator, org.id, read),
+      this.calendar.effectiveDays(operator, org.id, read),
       this.rules.effectiveSettingsForOrg(operator, org.id),
       this.periods.findOne(operator, { orgId: org.id, month }),
     ]);
-    const timezone = await tenantTimezoneOf(this.orgs, operator, org.tenantId);
     const unmatchedPunches = await this.unmatched.of(
       operator,
       org.id,
       timezone,
-      { from, to },
+      read,
     );
 
     const assignments =
@@ -252,8 +263,7 @@ export class ScheduleRosterService {
       operator,
       org.tenantId,
       peopleIds,
-      from,
-      to,
+      read,
     );
     const otherEntries = allEntries.filter(
       (entry) => String(entry.orgId) !== String(org.id),
@@ -289,6 +299,8 @@ export class ScheduleRosterService {
       const days = unavailability.filter(
         (item) => item.userId === userId && inMonth(item.date),
       );
+      // 統計的規則運算用租戶時區的日期鍵(輸出再換回那天 00:00 的時點)
+      const keyOf = (date: Date) => dateKeyOf(date, timezone);
       return {
         userId,
         name: candidate?.name ?? names.get(userId) ?? "",
@@ -296,34 +308,38 @@ export class ScheduleRosterService {
         canLead: candidate?.canLead ?? false,
         isPrimary: candidate?.isPrimary ?? false,
         isCandidate: candidate !== undefined,
-        stats: rosterStatsOf({
-          userId,
-          entries: mine.map((entry) => ({
-            date: entry.date,
-            startAt: entry.startAt,
-            endAt: entry.endAt,
-            breakMinutes: entry.breakMinutes,
-            isLead: leadEntryIds.has(String(entry._id)),
-          })),
-          allWorkDates: allEntries
-            .filter(
-              (entry) => String(entry.userId) === userId && inMonth(entry.date),
-            )
-            .map((entry) => entry.date),
-          dayOffs: days.flatMap((day) => [
-            ...(day.fullDay
-              ? [{ userId, date: day.date, kind: "full-day" }]
-              : []),
-            ...day.slots.map(() => ({
-              userId,
-              date: day.date,
-              kind: "time-range",
+        stats: statsModelOf(
+          rosterStatsOf({
+            userId,
+            entries: mine.map((entry) => ({
+              date: keyOf(entry.date),
+              startAt: entry.startAt,
+              endAt: entry.endAt,
+              breakMinutes: entry.breakMinutes,
+              isLead: leadEntryIds.has(String(entry._id)),
             })),
-          ]),
-          slots: days.flatMap((day) =>
-            day.slots.map((slot) => ({ date: day.date, ...slot })),
-          ),
-        }),
+            allWorkDates: allEntries
+              .filter(
+                (entry) =>
+                  String(entry.userId) === userId && inMonth(entry.date),
+              )
+              .map((entry) => keyOf(entry.date)),
+            dayOffs: days.flatMap((day) => [
+              ...(day.fullDay
+                ? [{ userId, date: keyOf(day.date), kind: "full-day" }]
+                : []),
+              ...day.slots.map(() => ({
+                userId,
+                date: keyOf(day.date),
+                kind: "time-range",
+              })),
+            ]),
+            slots: days.flatMap((day) =>
+              day.slots.map((slot) => ({ date: keyOf(day.date), ...slot })),
+            ),
+          }),
+          timezone,
+        ),
       };
     };
 

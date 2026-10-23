@@ -7,7 +7,7 @@ import {
 
 /** 統計用到的一筆排班。 */
 export interface StatEntryLike {
-  /** `YYYY-MM-DD` */
+  /** 租戶時區的日期鍵 `YYYY-MM-DD` */
   date: string;
   startAt: Date;
   endAt: Date;
@@ -16,11 +16,11 @@ export interface StatEntryLike {
   isLead: boolean;
 }
 
-/** 統計用到的時段不可排(畫休 `time-range`)。 */
+/** 統計用到的時段不可排(畫休 `time-range`;`date` 是租戶時區的日期鍵,時段是時點)。 */
 export interface StatSlotLike {
   date: string;
-  startTime: string;
-  endTime: string;
+  startAt: Date;
+  endAt: Date;
 }
 
 export interface RosterStats {
@@ -29,9 +29,10 @@ export interface RosterStats {
   workMinutes: number;
   dayOffDays: number;
   fullDayOffDays: number;
+  /** 只有時段不可排的日子(日期鍵)與那天的時段(時點) */
   timeRangeDays: {
     date: string;
-    slots: { startTime: string; endTime: string }[];
+    slots: { startAt: Date; endAt: Date }[];
   }[];
   longestStreak: number;
 }
@@ -78,7 +79,7 @@ export function rosterStatsOf(input: {
       date,
       slots: slots
         .filter((slot) => slot.date === date)
-        .map((slot) => ({ startTime: slot.startTime, endTime: slot.endTime })),
+        .map((slot) => ({ startAt: slot.startAt, endAt: slot.endAt })),
     }));
   const workDates = [...new Set(input.allWorkDates)].toSorted((left, right) =>
     left.localeCompare(right),

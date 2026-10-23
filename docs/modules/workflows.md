@@ -496,7 +496,7 @@ GraphQL 文件:`packages/graphql/src/documents/base/workflows.graphql`(設計、
 
 - `guard(name, { operator, submission, values?, stepKey? })`:動作的交易內、寫入之前呼叫;擋下 → `FORBIDDEN` + `reason` = 專案錯誤碼。
 - `runApproveGuard({ operator, submission, stepKey })`:`beforeApprove` 的單一入口(`decideTask` 的核准、`batchApproveTasks` 的每一筆);其他會核准的路徑一律經它,不各自呼叫 `guard`。
-- `emit(event, subject, { stepKey?, skipped? })`:事後動作,以系統身分在同一個交易內執行;推進(`WorkflowEngineService`)在關卡完成 / 跳過與提交同步成終局時呼叫,送出(`WorkflowSubmitService`)在建好實例後呼叫 `submitted`。
+- `emit(event, subject, { stepKey?, skipped?, voidReason?, actorId? })`:事後動作,以系統身分在同一個交易內執行(`actorId` = 造成事件的人,見 `docs/concepts/workflow-engine.md`「掛接點」;駁回 / 退回取全案終局那筆決定的審核者,撤回取 `withdrawn` 歷程的人);推進(`WorkflowEngineService`)在關卡完成 / 跳過與提交同步成終局時呼叫,送出(`WorkflowSubmitService`)在建好實例後呼叫 `submitted`。
 
 時機與帶入的資料見 `docs/concepts/workflow-engine.md`「掛接點:守門與事後動作」。
 

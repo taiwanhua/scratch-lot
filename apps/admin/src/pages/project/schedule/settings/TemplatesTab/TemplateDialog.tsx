@@ -23,6 +23,7 @@ import { useBreakpointDown } from "@repo/ui/media-query";
 import { SelectField } from "@repo/ui/select-field";
 import { Stack } from "@repo/ui/stack";
 import { TextField } from "@repo/ui/text-field";
+import { TimePicker } from "@repo/ui/time-picker";
 import { Typography } from "@repo/ui/typography";
 
 import { FieldErrorGroup } from "@/components/base/FieldErrorGroup/FieldErrorGroup";
@@ -317,32 +318,29 @@ export const TemplateDialog = ({ template, onClose }: TemplateDialogProps) => {
           />
         </Stack>
         <Stack direction="row" spacing={1.5}>
-          <TextField
+          {/* 範本是「每天幾點」:值維持 `HH:mm`,套用到某一天時才和日期合成時點 */}
+          <TimePicker
             label={t("startTime")}
-            type="time"
-            value={values.startTime}
+            value={values.startTime === "" ? null : values.startTime}
             required
             fullWidth
             disabled={!canEdit}
             error={invalid.includes("startTime")}
             helperText={fieldErrors.startTime}
-            slotProps={{ inputLabel: { shrink: true } }}
-            onChange={(event) => {
-              change("startTime", event.target.value);
+            onChange={(next) => {
+              change("startTime", next ?? "");
             }}
           />
-          <TextField
+          <TimePicker
             label={t("endTime")}
-            type="time"
-            value={values.endTime}
+            value={values.endTime === "" ? null : values.endTime}
             required
             fullWidth
             disabled={!canEdit}
             error={invalid.includes("endTime")}
             helperText={fieldErrors.endTime ?? t("timeHint")}
-            slotProps={{ inputLabel: { shrink: true } }}
-            onChange={(event) => {
-              change("endTime", event.target.value);
+            onChange={(next) => {
+              change("endTime", next ?? "");
             }}
           />
         </Stack>

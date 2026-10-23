@@ -1,3 +1,7 @@
+import { weekdayOfLocalDate } from "@repo/domain/form";
+
+import { localDateOfKey } from "../shared/schedule-dates";
+
 /**
  * 套用範本的規劃(規格 14.4「套用範本」;純函式,預覽與實際套用用同一個):
  *
@@ -5,7 +9,8 @@
  *   (不論來自哪個範本,含這次前面已經產生的)直接略過,只是時間重疊的照常產生
  * - **人力需求週範本**:只補**完全沒有人力需求**的日子(依星期幾用週範本那一格的範本);已有任何人力需求的日子不動
  * - 店休的日子不產生(畫面上不能選;送來了也略過)
- * - 範本的時間是 `HH:mm`:結束不晚於開始 = 跨午夜(結束在隔天)
+ * - 範本的時間是 `HH:mm`:結束不晚於開始 = 跨午夜(結束在隔天;結束 00:00 = 隔天 00:00)
+ * - 日期是租戶時區的日期鍵 `YYYY-MM-DD`(存值是時點,由呼叫端換算)
  */
 
 /** 套用時用到的範本內容。 */
@@ -52,11 +57,6 @@ export interface TemplateApplyPlan {
   skippedDays: number;
 }
 
-/** `YYYY-MM-DD` 的星期(0 = 星期日)。 */
-export function weekdayOf(date: string): number {
-  return new Date(`${date}T00:00:00Z`).getUTCDay();
-}
-
 const slotKey = (startAt: Date, endAt: Date, positionKey: string) =>
   `${String(startAt.getTime())}|${String(endAt.getTime())}|${positionKey}`;
 
@@ -69,7 +69,8 @@ function templatesOfDay(
   if (request.kind === "template") {
     return request.templates;
   }
-  const templates = request.days[weekdayOf(date)] ?? [];
+  const templates =
+    request.days[weekdayOfLocalDate(localDateOfKey(date))] ?? [];
   if (templates.length === 0) {
     return [];
   }

@@ -1,5 +1,12 @@
 import { HttpResponse } from "msw";
 
+import {
+  addLocalDays,
+  localDateOf,
+  localDateText,
+  localMonthOf,
+  localMonthText,
+} from "@repo/domain/form";
 import type {
   MakeupPunchEntryExistsQueryVariables,
   MakeupPunchEntryOptionsQueryVariables,
@@ -33,8 +40,16 @@ export interface ScheduleAttendanceWorldOptions {
 
 const SELF = "u-wang";
 
+const TAIPEI = "Asia/Taipei";
+
 const at = (date: string, time: string) =>
   new Date(`${date}T${time}:00+08:00`).toISOString();
+
+/** api 收的時點 → 台北的日期鍵 / 月份鍵(夾具以台北的日子組資料)。 */
+const dayKeyOf = (instant: string) =>
+  localDateText(localDateOf(Date.parse(instant), TAIPEI));
+const monthKeyOf = (from: string) =>
+  localMonthText(localMonthOf(Date.parse(from), TAIPEI));
 
 /**
  * 出勤紀錄的假 api(有狀態):任何日期 / 月份都回同一組示範資料(SC-11 / SC-12);
@@ -54,6 +69,7 @@ export const scheduleAttendanceWorld = (
     reassigned: [] as ReassignSchedulePunchMutationVariables["input"][],
     byStore: [] as ScheduleAttendanceByStoreQueryVariables["input"][],
     exports: [] as ScheduleAttendanceExportQueryVariables["input"][],
+    makeupOptions: [] as MakeupPunchEntryOptionsQueryVariables["input"][],
   };
   const isOwn = (userId: string) => abilities.canViewAll || userId === SELF;
   const stillUnmatched = (punch: ScheduleAttendancePunchFieldsFragment) =>
@@ -63,8 +79,9 @@ export const scheduleAttendanceWorld = (
     api.query("ScheduleAttendanceByStore", ({ variables }) => {
       const { input } = variables as ScheduleAttendanceByStoreQueryVariables;
       inputs.byStore.push(input);
-      const rows = storeDayRows(input.date).filter((row) => isOwn(row.userId));
-      const unmatched = storeDayUnmatched(input.date)
+      const day = dayKeyOf(input.date);
+      const rows = storeDayRows(day).filter((row) => isOwn(row.userId));
+      const unmatched = storeDayUnmatched(day)
         .filter((punch) => isOwn(punch.userId))
         .filter((punch) => stillUnmatched(punch));
       return HttpResponse.json({
@@ -72,7 +89,7 @@ export const scheduleAttendanceWorld = (
           scheduleAttendanceByStore: {
             orgId: input.orgId ?? ATTENDANCE_ORG.id,
             orgName: ATTENDANCE_ORG.name,
-            date: input.date,
+            date: at(day, "00:00"),
             rows: input.unmatchedOnly === true ? [] : rows,
             unmatched,
             scheduledCount: rows.length,
@@ -97,16 +114,17 @@ export const scheduleAttendanceWorld = (
         });
       }
       const person = ATTENDANCE_PEOPLE.find((item) => item.userId === userId);
+      const month = monthKeyOf(input.from);
       return HttpResponse.json({
         data: {
           scheduleAttendanceByPerson: {
-            month: input.month,
+            month,
             orgId: input.orgId ?? ATTENDANCE_ORG.id,
             userId,
             people: abilities.canViewAll
               ? ATTENDANCE_PEOPLE
               : ATTENDANCE_PEOPLE.filter((item) => item.userId === SELF),
-            rows: personMonthRows(input.month).map((row) => ({
+            rows: personMonthRows(month).map((row) => ({
               ...row,
               userId,
               userName: person?.name ?? row.userName,
@@ -123,12 +141,12 @@ export const scheduleAttendanceWorld = (
       return HttpResponse.json({
         data: {
           scheduleAttendanceExport: {
-            month: input.month,
+            month: monthKeyOf(input.from),
             sheets: [
               {
                 orgId: ATTENDANCE_ORG.id,
                 orgName: ATTENDANCE_ORG.name,
-                rows: personMonthRows(input.month),
+                rows: personMonthRows(monthKeyOf(input.from)),
               },
             ],
           },
@@ -143,7 +161,7 @@ export const scheduleAttendanceWorld = (
               id: "e-chang-temp",
               orgId: ATTENDANCE_ORG.id,
               orgName: ATTENDANCE_ORG.name,
-              date: "2026-11-04",
+              date: at("2026-11-04", "00:00"),
               startAt: at("2026-11-04", "13:00"),
               endAt: at("2026-11-04", "17:00"),
               shortName: "補",
@@ -175,25 +193,49 @@ export const scheduleAttendanceWorld = (
     }),
     api.query("MakeupPunchEntryOptions", ({ variables }) => {
       const { input } = variables as MakeupPunchEntryOptionsQueryVariables;
+      const day = dayKeyOf(input.at);
+      // 真 api 列那天前後各一天的班;這裡回前一天與那天的早、晚班
+      const previous = localDateText(
+        addLocalDays(localDateOf(Date.parse(input.at), TAIPEI), -1),
+      );
+      inputs.makeupOptions.push(input);
       return HttpResponse.json({
         data: {
           makeupPunchEntryOptions: [
             {
-              id: `e-wang-${input.date}`,
+              id: `e-wang-${previous}`,
               orgId: input.orgId,
               orgName: "",
-              date: input.date,
-              startAt: at(input.date, "08:30"),
-              endAt: at(input.date, "14:30"),
+              date: at(previous, "00:00"),
+              startAt: at(previous, "08:30"),
+              endAt: at(previous, "14:30"),
               shortName: "早",
             },
             {
-              id: `e-wang-late-${input.date}`,
+              id: `e-wang-late-${previous}`,
               orgId: input.orgId,
               orgName: "",
-              date: input.date,
-              startAt: at(input.date, "17:00"),
-              endAt: at(input.date, "22:00"),
+              date: at(previous, "00:00"),
+              startAt: at(previous, "17:00"),
+              endAt: at(previous, "22:00"),
+              shortName: "晚",
+            },
+            {
+              id: `e-wang-${day}`,
+              orgId: input.orgId,
+              orgName: "",
+              date: at(day, "00:00"),
+              startAt: at(day, "08:30"),
+              endAt: at(day, "14:30"),
+              shortName: "早",
+            },
+            {
+              id: `e-wang-late-${day}`,
+              orgId: input.orgId,
+              orgName: "",
+              date: at(day, "00:00"),
+              startAt: at(day, "17:00"),
+              endAt: at(day, "22:00"),
               shortName: "晚",
             },
           ],

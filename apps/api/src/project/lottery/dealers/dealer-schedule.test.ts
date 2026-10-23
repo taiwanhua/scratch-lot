@@ -9,7 +9,7 @@ import {
 } from "@jest/globals";
 import type { Types } from "mongoose";
 
-import { startOfLocalDay } from "@repo/domain/form";
+import { addLocalDays, startOfLocalDay } from "@repo/domain/form";
 
 import {
   type AuthTestApp,
@@ -21,7 +21,7 @@ import {
   NotificationService,
   type NotifyInput,
 } from "../../../notifications/notification.service";
-import { addDays, localDayOf, quarterOf } from "./dealer-dates";
+import { localDayOf, quarterOf } from "./dealer-dates";
 import {
   DEALER_REMINDERS_JOB_KEY,
   DealerRemindersService,
@@ -327,7 +327,7 @@ describe("經銷商管理的排程、見簽與側欄計數", () => {
       const today = localDayOf(new Date(), TIMEZONE);
       const at = (offset: number) =>
         new Date(
-          startOfLocalDay(addDays(today, offset), TIMEZONE),
+          startOfLocalDay(addLocalDays(today, offset), TIMEZONE),
         ).toISOString();
       const far = at(400);
       // 算:到期日 = 今天 + 30

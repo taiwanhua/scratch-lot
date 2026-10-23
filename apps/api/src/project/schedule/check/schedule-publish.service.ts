@@ -1,11 +1,12 @@
 import { Injectable } from "@nestjs/common";
 import { GraphQLError } from "graphql";
 
-import { isIsoMonth } from "@repo/domain/project/schedule-settings";
+import { parseLocalMonth } from "@repo/domain/form";
 
 import { AuditService } from "../../../audit/audit.service";
 import { OrgsRepository } from "../../../database/database.module";
 import type { OperatorContext } from "../../../database/operator-context";
+import { tenantTimezoneOf } from "../../../database/tenant-timezone";
 import { TransactionService } from "../../../database/transaction";
 import { NotificationService } from "../../../notifications/notification.service";
 import {
@@ -15,8 +16,8 @@ import {
 import { SCHEDULE_PUBLISHED } from "../../notifications";
 import { isAutoRunLocked, lockExpiredBefore } from "../auto-run/period-lock";
 import { RosterPeopleReader } from "../roster/roster-people";
-import { monthRange } from "../roster/schedule-roster.service";
 import { ScheduleClock } from "../shared/schedule-clock";
+import { instantRangeFilter, monthKeyRange } from "../shared/schedule-dates";
 import { isDuplicateKeyError, validationError } from "../shared/schedule-error";
 import { type ScheduleOrg, resolveScheduleOrg } from "../shared/schedule-org";
 import type { PublishSchedulePayload } from "./models/schedule-check.model";
@@ -89,8 +90,8 @@ export class SchedulePublishService {
     operator: OperatorContext,
     input: { orgId?: string | null; month: string },
   ): Promise<PublishSchedulePayload> {
-    if (!isIsoMonth(input.month)) {
-      throw validationError(`invalid month: ${String(input.month)}`, ["month"]);
+    if (parseLocalMonth(input.month) === null) {
+      throw validationError(`invalid month: ${input.month}`, ["month"]);
     }
     const org = await resolveScheduleOrg(operator, this.orgs, input.orgId);
     await this.ensurePeriod(operator, org, input.month);
@@ -172,10 +173,10 @@ export class SchedulePublishService {
     org: ScheduleOrg,
     month: string,
   ): Promise<number> {
-    const { from, to } = monthRange(month);
+    const timezone = await tenantTimezoneOf(this.orgs, operator, org.tenantId);
     const records = await this.entries.findMany(operator, {
       orgId: org.id,
-      date: { $gte: from, $lte: to },
+      date: instantRangeFilter(monthKeyRange(month, timezone)),
     });
     const userIds = [
       ...new Set(records.map((record) => String(record.userId))),

@@ -58,7 +58,7 @@ export const MonthDayContent = ({
   punchCount,
 }: MonthDayContentProps) => {
   const t = useTranslations("admin.schedule.roster");
-  const { canEdit, openDemand } = useRoster();
+  const { canEdit, openDemand, timezone } = useRoster();
   const punch =
     punchCount > 0 ? (
       <Box
@@ -157,7 +157,7 @@ export const MonthDayContent = ({
         <Box
           role="button"
           tabIndex={0}
-          aria-label={t("addDemandAria", { date: monthDayOf(date) })}
+          aria-label={t("addDemandAria", { date: monthDayOf(date, timezone) })}
           onClick={(event: MouseEvent) => {
             event.stopPropagation();
             openDemand({ date });

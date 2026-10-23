@@ -9,6 +9,7 @@ export { SCHEDULE_BRANCH as ROSTER_ORG } from "./schedule-settings-fixtures";
 /**
  * 排班表(班表檢視)的夾具:元件測試與 mock 模式共用。依查的月份產生(那個月的 1–7 日),
  * mock 模式打開「這個月」也看得到資料。時間一律台北時區(+08:00)。
+ * 形狀同 api:日期是那天台北 00:00 的時點(`dayAt`),時段不可排是時點。
  */
 
 type Roster = ScheduleRosterQuery["scheduleRoster"];
@@ -35,6 +36,9 @@ const CREATED_AT = "2026-10-01T00:00:00.000Z";
 
 const at = (date: string, time: string) =>
   new Date(`${date}T${time}:00+08:00`).toISOString();
+
+/** api 的日期:那天台北 00:00 的時點。 */
+export const dayAt = (date: string): string => at(date, "00:00");
 
 export const ROSTER_TEMPLATES: Roster["templates"] = [
   {
@@ -102,8 +106,13 @@ export const ROSTER_PEOPLE: Person[] = [
       fullDayOffDays: 1,
       timeRangeDays: [
         {
-          date: "2026-11-05",
-          slots: [{ startTime: "09:00", endTime: "13:00" }],
+          date: dayAt("2026-11-05"),
+          slots: [
+            {
+              startAt: at("2026-11-05", "09:00"),
+              endAt: at("2026-11-05", "13:00"),
+            },
+          ],
         },
       ],
       longestStreak: 5,
@@ -171,7 +180,7 @@ export const sampleRoster = (
   ) => {
     demands.push({
       id,
-      date,
+      date: dayAt(date),
       startAt: at(date, start),
       endAt: at(date, end),
       positionKey,
@@ -237,7 +246,7 @@ export const sampleRoster = (
     entries.push({
       id: `e-${userId}-${String(n)}-${start}`,
       userId,
-      date: day(n),
+      date: dayAt(day(n)),
       startAt: at(day(n), start),
       endAt: at(day(n), end),
       breakMinutes,
@@ -287,25 +296,25 @@ export const sampleRosterExtras = (
   const day = (n: number) => `${month}-${String(n).padStart(2, "0")}`;
   return {
     unavailability: [
-      { userId: "u-wang", date: day(5), fullDay: true, slots: [] },
+      { userId: "u-wang", date: dayAt(day(5)), fullDay: true, slots: [] },
       {
         userId: "u-chang",
-        date: day(6),
+        date: dayAt(day(6)),
         fullDay: false,
-        slots: [{ startTime: "09:00", endTime: "13:00" }],
+        slots: [{ startAt: at(day(6), "09:00"), endAt: at(day(6), "13:00") }],
       },
     ],
     otherStoreEntries: [
       {
         userId: "u-chen",
-        date: day(2),
+        date: dayAt(day(2)),
         startAt: at(day(2), "14:00"),
         endAt: at(day(2), "22:00"),
         orgName: null,
       },
     ],
     calendarDays: [
-      { date: day(3), type: "closed", name: null, paletteKey: null },
+      { date: dayAt(day(3)), type: "closed", name: null, paletteKey: null },
     ],
   };
 };
@@ -328,7 +337,7 @@ const unmatchedPunch = (
   date: string,
   time: string,
   type: "in" | "out",
-) => ({ id, userId, date, type, at: at(date, time) });
+) => ({ id, userId, date: dayAt(date), type, at: at(date, time) });
 
 /**
  * 某月未對應排班的打卡(SC-04d / SC-04e ①):王小明 4 日有班(08:30–14:30)、打了 3 張未對應的卡

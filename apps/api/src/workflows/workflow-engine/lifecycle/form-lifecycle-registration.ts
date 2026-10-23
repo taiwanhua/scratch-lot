@@ -131,6 +131,13 @@ export interface FormEffectContext {
    * 不使用按下按鈕那個人的權限。專案寫入以它當 operator。
    */
   readonly operator: OperatorContext;
+  /**
+   * 造成這個事件的人(只給「誰讓資料變了」的記錄用,例:基礎欄位的修改者;**不是**權限來源):
+   * `submitted` = 送出的人(沒走流程直接完成的單,接著的 `completed` 也是送出的人)、`voided` = 作廢的人、
+   * `rejected` / `returned` = 做這個決定的審核者、`withdrawn` = 撤回的人(申請人)。
+   * 只有系統推進的事件(排程、自動通過、重試)是 null:`stepPassed` 與走流程的 `completed`。
+   */
+  readonly actorId: Types.ObjectId | null;
   readonly session: ClientSession;
   readonly get: LifecycleResolver;
   readonly notify: LifecycleNotify;

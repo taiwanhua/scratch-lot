@@ -1,21 +1,12 @@
 import { Injectable } from "@nestjs/common";
 import { Types } from "mongoose";
 
-import {
-  addLocalCalendar,
-  localDateOf,
-  localDateText,
-  parseLocalDate,
-  startOfLocalDay,
-} from "@repo/domain/form";
 import { requiresReasonNote } from "@repo/domain/project/reason-note";
 import { SCHEDULE_FIELD_CATEGORY_KEYS } from "@repo/domain/project/schedule-fields";
 import {
   type AttendanceGrace,
   DEFAULT_ATTENDANCE_GRACE,
   attendanceOf,
-  isIsoDate,
-  isIsoMonth,
 } from "@repo/domain/project/schedule-settings";
 
 import { AuditService } from "../../../audit/audit.service";
@@ -36,9 +27,18 @@ import { ScheduleFieldOptionsService } from "../field-options/schedule-field-opt
 import { PublishedEntries } from "../my/published-entries";
 import { effectivePunchesOf, missingPunchesOf } from "../my/punch-rules";
 import { type EntryRecord, RosterPeopleReader } from "../roster/roster-people";
-import { monthRange } from "../roster/schedule-roster.service";
 import { ScheduleRulesService } from "../rules/schedule-rules.service";
 import { ScheduleClock } from "../shared/schedule-clock";
+import {
+  aroundDayRangeOf,
+  dateKeyOf,
+  dayKeyRange,
+  dayRangeOf,
+  instantRangeFilter,
+  monthKeyRange,
+  monthOfWholeMonthRange,
+  normalizedDay,
+} from "../shared/schedule-dates";
 import {
   SCHEDULE_REASONS,
   forbiddenError,
@@ -86,13 +86,6 @@ export const PUNCH_REASSIGN_ACTION = "schedule-punch.reassign";
 const blankToNull = (value: string | null | undefined): string | null => {
   const trimmed = value?.trim() ?? "";
   return trimmed === "" ? null : trimmed;
-};
-
-const shiftDate = (date: string, days: number): string => {
-  const [year = 0, month = 1, day = 1] = date.split("-").map(Number);
-  return new Date(Date.UTC(year, month - 1, day + days))
-    .toISOString()
-    .slice(0, 10);
 };
 
 function graceOf(value: Record<string, unknown> | undefined): AttendanceGrace {
@@ -148,9 +141,6 @@ export class ScheduleAttendanceService {
     operator: OperatorContext,
     input: ScheduleAttendanceByPersonInput,
   ): Promise<ScheduleAttendanceByPersonPayload> {
-    if (!isIsoMonth(input.month)) {
-      throw validationError("month must be YYYY-MM", ["month"]);
-    }
     const org = await resolveScheduleOrg(operator, this.orgs, input.orgId);
     const abilities = await this.abilitiesOf(operator);
     const self = this.selfOf(operator);
@@ -165,15 +155,15 @@ export class ScheduleAttendanceService {
         "MISSING_PERMISSION",
       );
     }
-    const range = monthRange(input.month);
+    const month = this.wholeMonthOf(input, scope.timezone);
+    const monthRange = monthKeyRange(month, scope.timezone);
     const entries = await this.publishedEntries(scope, {
       userId,
-      date: { $gte: range.from, $lte: range.to },
+      date: instantRangeFilter(monthRange),
     });
-    const dayRange = this.instantRange(scope.timezone, range.from, range.to);
     const punches = await this.punchesOf(scope, entries, {
       userId,
-      at: { $gte: dayRange.from, $lt: dayRange.to },
+      at: instantRangeFilter(monthRange),
     });
 
     let people = [{ userId: String(self), name: "" }];
@@ -196,7 +186,7 @@ export class ScheduleAttendanceService {
     ]);
     const built = await this.build(operator, scope, entries, punches);
     return {
-      month: input.month,
+      month,
       orgId: String(org.id),
       userId: String(userId),
       people: people
@@ -215,9 +205,6 @@ export class ScheduleAttendanceService {
     operator: OperatorContext,
     input: ScheduleAttendanceByStoreInput,
   ): Promise<ScheduleAttendanceByStorePayload> {
-    if (!isIsoDate(input.date)) {
-      throw validationError("date must be YYYY-MM-DD", ["date"]);
-    }
     const org = await resolveScheduleOrg(operator, this.orgs, input.orgId);
     const abilities = await this.abilitiesOf(operator);
     const own = abilities.canViewAll ? {} : { userId: this.selfOf(operator) };
@@ -226,22 +213,22 @@ export class ScheduleAttendanceService {
       tenantId: org.tenantId,
       timezone: await tenantTimezoneOf(this.orgs, operator, org.tenantId),
     };
+    const date = normalizedDay(input.date, scope.timezone, "date");
     const entries = await this.publishedEntries(scope, {
       ...own,
       orgId: org.id,
-      date: input.date,
+      date,
     });
-    const day = this.instantRange(scope.timezone, input.date, input.date);
     const punches = await this.punchesOf(scope, entries, {
       ...own,
       orgId: org.id,
-      at: { $gte: day.from, $lt: day.to },
+      at: instantRangeFilter(dayRangeOf(date, scope.timezone)),
     });
     const built = await this.build(operator, scope, entries, punches);
     return {
       orgId: String(org.id),
       orgName: org.name,
-      date: input.date,
+      date,
       rows: input.unmatchedOnly === true ? [] : built.rows,
       unmatched: built.unmatched,
       scheduledCount: built.rows.length,
@@ -259,9 +246,6 @@ export class ScheduleAttendanceService {
     operator: OperatorContext,
     input: ScheduleAttendanceExportInput,
   ): Promise<ScheduleAttendanceExportPayload> {
-    if (!isIsoMonth(input.month)) {
-      throw validationError("month must be YYYY-MM", ["month"]);
-    }
     const org = await resolveScheduleOrg(operator, this.orgs, input.orgId);
     const abilities = await this.abilitiesOf(operator);
     const self = this.selfOf(operator);
@@ -278,12 +262,13 @@ export class ScheduleAttendanceService {
       }
       userId = self;
     }
-    const range = monthRange(input.month);
     const scope: ReadScope = {
       reader: operator,
       tenantId: org.tenantId,
       timezone: await tenantTimezoneOf(this.orgs, operator, org.tenantId),
     };
+    const month = this.wholeMonthOf(input, scope.timezone);
+    const range = monthKeyRange(month, scope.timezone);
     const descendants = await this.orgs.findMany(scheduleOrgReader(operator), {
       ancestors: org.id,
     });
@@ -296,7 +281,7 @@ export class ScheduleAttendanceService {
     const entries = await this.publishedEntries(scope, {
       ...(userId === null ? {} : { userId }),
       orgId: { $in: orgIds },
-      date: { $gte: range.from, $lte: range.to },
+      date: instantRangeFilter(range),
     });
     const punches = await this.punchesOf(scope, entries, null);
     const { rows } = await this.build(operator, scope, entries, punches);
@@ -307,7 +292,7 @@ export class ScheduleAttendanceService {
       byOrg.set(row.orgId, list);
     }
     return {
-      month: input.month,
+      month,
       sheets: [...byOrg.entries()]
         .map(([orgId, list]) => ({
           orgId,
@@ -328,7 +313,6 @@ export class ScheduleAttendanceService {
     const punch = await this.mustFindPunch(operator, punchId);
     const tenantId = this.tenantOf(punch);
     const timezone = await tenantTimezoneOf(this.orgs, operator, tenantId);
-    const date = localDateText(localDateOf(punch.at.getTime(), timezone));
     const entries = await this.published.publishedOnly(
       operator,
       tenantId,
@@ -337,7 +321,7 @@ export class ScheduleAttendanceService {
         {
           tenantId,
           userId: punch.userId,
-          date: { $gte: shiftDate(date, -1), $lte: shiftDate(date, 1) },
+          date: instantRangeFilter(aroundDayRangeOf(punch.at, timezone)),
         },
         { sort: { startAt: 1 } },
       ),
@@ -490,22 +474,16 @@ export class ScheduleAttendanceService {
     };
   }
 
-  /** `from`–`to`(`YYYY-MM-DD`,含頭尾)在租戶時區的時點範圍 `[from 00:00, to 隔天 00:00)`。 */
-  private instantRange(
+  /** 月份查詢的 `from` / `to`(必填)→ 月份鍵;不是租戶時區的整個月 → `VALIDATION_FAILED`(`from`、`to`)。 */
+  private wholeMonthOf(
+    input: { from: Date; to: Date },
     timezone: string,
-    from: string,
-    to: string,
-  ): { from: Date; to: Date } {
-    const start = parseLocalDate(from);
-    const end = parseLocalDate(to);
-    if (start === null || end === null) {
-      throw validationError(`invalid range: ${from}–${to}`, ["date"]);
+  ): string {
+    const month = monthOfWholeMonthRange(input, timezone);
+    if (month === null) {
+      throw validationError("from / to are required", ["from", "to"]);
     }
-    const endStart = startOfLocalDay(end, timezone);
-    return {
-      from: new Date(startOfLocalDay(start, timezone)),
-      to: new Date(addLocalCalendar(endStart, 1, "days", timezone)),
-    };
+    return month;
   }
 
   private async publishedEntries(
@@ -602,8 +580,9 @@ export class ScheduleAttendanceService {
     const orgIds = [
       ...new Map(entries.map((e) => [String(e.orgId), e.orgId])).values(),
     ];
+    const keyOf = (date: Date) => dateKeyOf(date, scope.timezone);
     const dates = entries
-      .map((entry) => entry.date)
+      .map((entry) => keyOf(entry.date))
       .toSorted((left, right) => left.localeCompare(right));
     const [details, orgNames, names, categories] = await Promise.all([
       this.published.detailsOf(scope.reader, scope.tenantId, entries),
@@ -641,12 +620,11 @@ export class ScheduleAttendanceService {
       const days = await this.calendar.effectiveDays(
         scope.reader,
         orgId,
-        first,
-        last,
+        dayKeyRange(first, last, scope.timezone),
       );
       for (const day of days) {
         if (day.type === "special") {
-          specialByOrgDate.set(`${String(orgId)}|${day.date}`, {
+          specialByOrgDate.set(`${String(orgId)}|${keyOf(day.date)}`, {
             name: day.name,
             category:
               day.category === null
@@ -667,9 +645,8 @@ export class ScheduleAttendanceService {
         graceByOrg.get(String(entry.orgId)) ?? DEFAULT_ATTENDANCE_GRACE,
         now,
       );
-      const special = specialByOrgDate.get(
-        `${String(entry.orgId)}|${entry.date}`,
-      );
+      const date = keyOf(entry.date);
+      const special = specialByOrgDate.get(`${String(entry.orgId)}|${date}`);
       const own = punchModels.filter((punch) => punch.entryId === id);
       return {
         entryId: id,
@@ -686,7 +663,7 @@ export class ScheduleAttendanceService {
         clockOut,
         ...attendance,
         missing: missingPunchesOf(
-          { id, date: entry.date, startAt: entry.startAt, endAt: entry.endAt },
+          { id, date, startAt: entry.startAt, endAt: entry.endAt },
           likes,
           now,
         ),

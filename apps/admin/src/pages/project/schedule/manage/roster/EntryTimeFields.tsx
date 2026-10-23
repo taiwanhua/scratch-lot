@@ -2,6 +2,7 @@ import { useTranslations } from "use-intl";
 
 import { Stack } from "@repo/ui/stack";
 import { TextField } from "@repo/ui/text-field";
+import { TimePicker } from "@repo/ui/time-picker";
 
 import type { EntryFieldErrors } from "./entry-dialog-state";
 
@@ -17,7 +18,8 @@ export interface EntryTimeFieldsProps {
 }
 
 /**
- * 排班對話框的上班 / 下班 / 休息:平板以上三欄一列;手機寬上班 / 下班一列、休息自己一列,
+ * 排班對話框的上班 / 下班 / 休息(上下班用 `@repo/ui/time-picker`,值 `HH:mm`;送出時和日期合成時點,
+ * 結束不晚於開始 = 隔天):平板以上三欄一列;手機寬上班 / 下班一列、休息自己一列,
  * 欄位下的原因(重疊、店休、畫休……)才有地方換行,不把欄位擠扁(REACT-18)。
  */
 export const EntryTimeFields = ({
@@ -40,34 +42,30 @@ export const EntryTimeFields = ({
         alignItems: "flex-start",
       }}
     >
-      <TextField
+      <TimePicker
         label={t("startTime")}
-        type="time"
         sx={{ flex: "1 1 0", minWidth: 0 }}
-        value={startTime}
+        value={startTime === "" ? null : startTime}
         required
         fullWidth
         disabled={disabled}
         error={fieldErrors.startTime !== undefined}
         helperText={fieldErrors.startTime}
-        slotProps={{ inputLabel: { shrink: true } }}
-        onChange={(event) => {
-          onTimes(event.target.value, endTime);
+        onChange={(next) => {
+          onTimes(next ?? "", endTime);
         }}
       />
-      <TextField
+      <TimePicker
         label={t("endTime")}
-        type="time"
         sx={{ flex: "1 1 0", minWidth: 0 }}
-        value={endTime}
+        value={endTime === "" ? null : endTime}
         required
         fullWidth
         disabled={disabled}
         error={fieldErrors.endTime !== undefined}
         helperText={fieldErrors.endTime}
-        slotProps={{ inputLabel: { shrink: true } }}
-        onChange={(event) => {
-          onTimes(startTime, event.target.value);
+        onChange={(next) => {
+          onTimes(startTime, next ?? "");
         }}
       />
       <TextField

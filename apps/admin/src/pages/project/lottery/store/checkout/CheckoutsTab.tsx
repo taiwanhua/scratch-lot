@@ -4,9 +4,9 @@ import { z } from "zod";
 
 import {
   DEFAULT_TENANT_TIMEZONE,
-  addLocalCalendar,
+  localDayRange,
   parseLocalDate,
-  startOfLocalDay,
+  toIso,
 } from "@repo/domain/form";
 import { CHECKOUT_TYPES, STORE_KEY } from "@repo/domain/project/lottery";
 import {
@@ -85,7 +85,10 @@ const statusTone = (status: string) => {
   return status === "returned" ? ("error" as const) : ("grey" as const);
 };
 
-/** 當地日期(含)→ api 的時點;空 = 不限。 */
+/**
+ * 當地日期(含)→ api 的時點(`localDayRange` 那一天的 `[00:00, 隔天 00:00)`:起用 `from`、迄用 `to`);
+ * 空 = 不限。
+ */
 const instantOf = (
   text: string,
   timezone: string,
@@ -95,10 +98,8 @@ const instantOf = (
   if (date === null) {
     return null;
   }
-  const start = startOfLocalDay(date, timezone);
-  return new Date(
-    endOfDay ? addLocalCalendar(start, 1, "days", timezone) : start,
-  ).toISOString();
+  const day = localDayRange(date, date, timezone);
+  return toIso(endOfDay ? day.to : day.from);
 };
 
 /**

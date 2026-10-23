@@ -8,6 +8,7 @@ import { DateTimePicker } from "../DateTimePicker/DateTimePicker";
 import { ModuleIconPicker } from "../ModuleIconPicker/ModuleIconPicker";
 import { SelectField } from "../SelectField/SelectField";
 import { TextField } from "../TextField/TextField";
+import { TimePicker } from "../TimePicker/TimePicker";
 
 type Size = "small" | "medium";
 
@@ -45,6 +46,7 @@ const FIELDS: readonly [string, (size?: Size) => ReactElement][] = [
   ],
   ["DatePicker", (size) => <DatePicker label="欄位" size={size} />],
   ["DateTimePicker", (size) => <DateTimePicker label="欄位" size={size} />],
+  ["TimePicker", (size) => <TimePicker label="欄位" size={size} />],
   [
     "ModuleIconPicker",
     (size) => <ModuleIconPicker label="欄位" size={size} value={null} />,

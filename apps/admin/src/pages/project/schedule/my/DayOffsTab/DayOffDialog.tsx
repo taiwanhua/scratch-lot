@@ -3,16 +3,21 @@ import { useState } from "react";
 import { useTranslations } from "use-intl";
 
 import {
+  DEFAULT_TENANT_TIMEZONE,
+  daysInLocalMonth,
+  parseLocalMonth,
+} from "@repo/domain/form";
+import {
   type AddMyScheduleDayOffsMutation,
   type ScheduleDayOffFieldsFragment,
   useAddMyScheduleDayOffsMutation,
   useDeleteMyScheduleDayOffMutation,
 } from "@repo/graphql";
 import { Button } from "@repo/ui/button";
+import { DatePicker } from "@repo/ui/date-picker";
 import { Dialog } from "@repo/ui/dialog";
 import { useBreakpointDown } from "@repo/ui/media-query";
 import { Stack } from "@repo/ui/stack";
-import { TextField } from "@repo/ui/text-field";
 import { Typography } from "@repo/ui/typography";
 
 import { DayOffBlockedAlert } from "@/components/project/schedule/DayOffs/DayOffBlockedAlert";
@@ -20,15 +25,21 @@ import { DayOffKindRadios } from "@/components/project/schedule/DayOffs/DayOffKi
 import { DayOffSlotFields } from "@/components/project/schedule/DayOffs/DayOffSlotFields";
 import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
 import { useSession } from "@/hooks/base/useSession";
+import { useTenantTimezone } from "@/hooks/base/useTenantTimezone";
 import { useDayOffDateTitle } from "@/hooks/project/schedule/useDayOffDateTitle/useDayOffDateTitle";
 import { useDayOffEntryConflictNotice } from "@/hooks/project/schedule/useDayOffEntryConflictNotice/useDayOffEntryConflictNotice";
 import type { FieldErrorTexts } from "@/lib/base/field-errors";
+import { localDayInstantOf } from "@/lib/base/form-engine/local-day";
 import {
   type DayOffKind,
   type DayOffSlot,
   EMPTY_SLOT,
   completeSlots,
+  dayKeyOf,
+  slotInstantsOf,
+  slotsCoverWholeDay,
 } from "@/lib/project/schedule-day-offs";
+import { localPartsOf } from "@/lib/project/schedule-roster";
 
 import {
   type ScheduleDayOffViolationError,
@@ -47,9 +58,9 @@ const FIELDS = ["date", "kind", "slots"] as const;
 type Field = (typeof FIELDS)[number];
 
 export interface DayOffDialogProps {
-  /** 帶入的日期(點日期);[登記畫休] 為空字串 */
+  /** 帶入的日期鍵 `YYYY-MM-DD`(點日期);[登記畫休] 為空字串 */
   initialDate: string;
-  /** 開放中的目標月(日期只能選這個月) */
+  /** 開放中的目標月 `YYYY-MM`(日期只能選這個月) */
   month: string;
   /** 我這個月的畫休(列出那天已登記的,可以刪除) */
   myDayOffs: readonly ScheduleDayOffFieldsFragment[];
@@ -74,6 +85,19 @@ export const DayOffDialog = ({
   const queryClient = useQueryClient();
   const isMobile = useBreakpointDown("sm");
   const dateTitle = useDayOffDateTitle();
+  const timezone = useTenantTimezone() ?? DEFAULT_TENANT_TIMEZONE;
+  const clockOf = (value: string | null | undefined) =>
+    value === null || value === undefined
+      ? ""
+      : localPartsOf(value, timezone).time;
+  const parsedMonth = parseLocalMonth(month);
+  const monthBounds =
+    parsedMonth === null
+      ? {}
+      : {
+          minDate: `${month}-01`,
+          maxDate: `${month}-${String(daysInLocalMonth(parsedMonth))}`,
+        };
   const [date, setDate] = useState(initialDate);
   const [kind, setKind] = useState<DayOffKind>("full-day");
   const [slots, setSlots] = useState<DayOffSlot[]>([EMPTY_SLOT]);
@@ -120,7 +144,13 @@ export const DayOffDialog = ({
     }),
   );
 
-  const existing = myDayOffs.filter((item) => item.date === date);
+  const existing = myDayOffs.filter(
+    (item) => dayKeyOf(item.date, timezone) === date,
+  );
+
+  // 幾段合起來是整天:欄位下提示改選整天畫休、停用儲存(api 同一條規則)
+  const wholeDay =
+    kind === "time-range" && slotsCoverWholeDay(slots, date, timezone);
 
   const submit = () => {
     if (date === "") {
@@ -132,12 +162,20 @@ export const DayOffDialog = ({
       setInvalid("slots");
       return;
     }
+    // 日期與時段以租戶時區換成時點(api 只收時點)
+    const day = localDayInstantOf(date, timezone);
+    const spans =
+      picked === null ? null : slotInstantsOf(date, picked, timezone);
+    if (day === null) {
+      setInvalid("date");
+      return;
+    }
     setBlocked([]);
     save.mutate({
       input: {
-        date,
+        date: day,
         kind,
-        ...(kind === "time-range" && picked !== null ? { slots: picked } : {}),
+        ...(kind === "time-range" && spans !== null ? { slots: spans } : {}),
       },
     });
   };
@@ -159,27 +197,23 @@ export const DayOffDialog = ({
           <Button variant="text" onClick={onClose}>
             {tCommon("cancel")}
           </Button>
-          <Button disabled={save.isPending} onClick={submit}>
+          <Button disabled={save.isPending || wholeDay} onClick={submit}>
             {tCommon("save")}
           </Button>
         </>
       }
     >
       <Stack spacing={2} sx={{ pt: 1 }}>
-        <TextField
+        <DatePicker
           label={t("dialog.date")}
-          type="date"
-          value={date}
+          value={date === "" ? null : date}
           required
           fullWidth
           error={fieldErrors.date !== undefined}
           helperText={fieldErrors.date}
-          slotProps={{
-            inputLabel: { shrink: true },
-            htmlInput: { min: `${month}-01`, max: `${month}-31` },
-          }}
-          onChange={(event) => {
-            setDate(event.target.value);
+          {...monthBounds}
+          onChange={(next) => {
+            setDate(next ?? "");
             setInvalid(null);
             setBlocked([]);
           }}
@@ -203,8 +237,8 @@ export const DayOffDialog = ({
               {item.kind === "full-day"
                 ? t("dialog.registeredFullDay")
                 : t("dialog.registeredTimeRange", {
-                    start: item.startTime ?? "",
-                    end: item.endTime ?? "",
+                    start: clockOf(item.startAt),
+                    end: clockOf(item.endAt),
                   })}
             </Typography>
             <Button
@@ -223,6 +257,7 @@ export const DayOffDialog = ({
         {kind === "time-range" && (
           <DayOffSlotFields
             slots={slots}
+            wholeDay={wholeDay}
             invalid={fieldErrors.slots !== undefined}
             errorText={fieldErrors.slots}
             onChange={(next) => {

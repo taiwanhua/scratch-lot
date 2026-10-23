@@ -211,24 +211,57 @@ describe("通知設定頁:提醒時間", () => {
     expect(add).toBeDisabled();
   });
 
-  it("寄送時間只能從 15 分鐘一格的選單挑(沒有 09:10)", async () => {
-    const { user } = renderPage({ world: { types: allTypes() } });
+  it("寄送時間的選單只列 15 分鐘一格(沒有 09:10);挑 08:00 儲存送出 08:00", async () => {
+    const { user, fake } = renderPage({ world: { types: allTypes() } });
     await waitForRows();
 
     const dialog = await openEdit(user, "到期提醒");
     await user.click(
-      within(dialog).getByRole("combobox", { name: "寄送時間" }),
+      within(dialog).getByRole("button", { name: /choose time/i }),
     );
-    const options = screen
-      .getAllByRole("option")
-      .map((option) => option.textContent);
-    expect(options).toHaveLength(96);
-    expect(options).toContain("09:15");
-    expect(options).not.toContain("09:10");
-    await user.click(screen.getByRole("option", { name: "08:00" }));
+    // 時、分各一個選單
+    const [hours, minutes] = screen.getAllByRole("listbox");
     expect(
-      within(dialog).getByRole("combobox", { name: "寄送時間" }),
-    ).toHaveTextContent("08:00");
+      within(minutes)
+        .getAllByRole("option")
+        .map((option) => option.textContent),
+    ).toEqual(["00", "15", "30", "45"]);
+    await user.click(within(hours).getByRole("option", { name: "8 hours" }));
+    await user.click(
+      within(minutes).getByRole("option", { name: "0 minutes" }),
+    );
+    await user.keyboard("{Escape}");
+    await user.click(within(dialog).getByRole("button", { name: "儲存" }));
+
+    await waitFor(() => {
+      expect(fake.inputs.update).toEqual([
+        {
+          type: "demo.expiry-reminder",
+          schedule: {
+            kind: NotificationScheduleKind.DaysBefore,
+            daysBefore: [30, 7, 0],
+            time: "08:00",
+          },
+        },
+      ]);
+    });
+  });
+
+  it("寄送時間用鍵盤打成 09:10(不在 15 分鐘格子上)→ 擋下", async () => {
+    const { user, fake } = renderPage({ world: { types: allTypes() } });
+    await waitForRows();
+
+    const dialog = await openEdit(user, "到期提醒");
+    await user.click(
+      within(dialog).getByRole("spinbutton", { name: "Minutes" }),
+    );
+    await user.keyboard("10");
+    await user.click(within(dialog).getByRole("button", { name: "儲存" }));
+
+    expect(
+      within(dialog).getByText("請選 15 分鐘一格的時間(例 09:00、09:15)"),
+    ).toBeVisible();
+    expect(fake.inputs.update).toEqual([]);
   });
 
   it("每月第 N 天填 32 → 擋下;填 31 → 送出", async () => {
@@ -287,6 +320,40 @@ describe("通知設定頁:提醒時間", () => {
 
     expect(await within(schedule).findByText("超出可以填的範圍")).toBeVisible();
     expect(screen.getByRole("dialog")).toBeVisible();
+  });
+
+  it("api 擋下 SCHEDULE_INVALID(path=time)→ 標在寄送時間欄", async () => {
+    const { user } = renderPage({
+      world: {
+        types: allTypes(),
+        failures: {
+          UpdateNotificationSetting: {
+            code: "VALIDATION_FAILED",
+            extensions: {
+              reason: "SCHEDULE_INVALID",
+              type: "demo.expiry-reminder",
+              path: "time",
+            },
+          },
+        },
+      },
+    });
+    await waitForRows();
+
+    const dialog = await openEdit(user, "到期提醒");
+    const schedule = within(dialog).getByRole("region", { name: "提醒時間" });
+    const first = within(schedule).getByRole("textbox", { name: "提前天數 1" });
+    await user.clear(first);
+    await user.type(first, "60");
+    await user.click(within(dialog).getByRole("button", { name: "儲存" }));
+
+    // 錯誤文字取代寄送時間的說明,欄位標紅
+    expect(await within(schedule).findByText("超出可以填的範圍")).toBeVisible();
+    expect(
+      within(schedule)
+        .getByRole("group", { name: "寄送時間" })
+        .closest(".Mui-error"),
+    ).not.toBeNull();
   });
 
   it("清單的 [還原預設]:確認框寫出收件人與提醒時間的預設,兩塊一起還原", async () => {

@@ -1,8 +1,13 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "use-intl";
 import { z } from "zod";
 
-import { DEFAULT_TENANT_TIMEZONE } from "@repo/domain/form";
+import {
+  DEFAULT_TENANT_TIMEZONE,
+  localMonthText,
+  parseLocalDate,
+  parseLocalMonth,
+} from "@repo/domain/form";
 import { useScheduleRosterQuery } from "@repo/graphql";
 import { Card } from "@repo/ui/card";
 import { CircularProgress } from "@repo/ui/circular-progress";
@@ -13,7 +18,9 @@ import { Typography } from "@repo/ui/typography";
 import { usePermissions } from "@/hooks/base/usePermissions";
 import { useSession } from "@/hooks/base/useSession";
 import { useTenantTimezone } from "@/hooks/base/useTenantTimezone";
+import { useTenantToday } from "@/hooks/base/useTenantToday";
 import { useUrlState } from "@/hooks/base/useUrlState";
+import { dayRangeOf } from "@/lib/project/schedule-roster";
 
 import { DemandDialog } from "./DemandDialog";
 import { EntryDialog } from "./EntryDialog";
@@ -32,19 +39,19 @@ import {
   isDemand,
   isEntry,
   rosterCellKey,
+  rosterDataOf,
 } from "./roster-context";
 import { ROSTER_TOOLBAR_ACTIONS } from "./roster-toolbar";
 import { readRosterView, writeRosterView } from "./roster-view-memory";
 import { ROSTER_VIEWS, type RosterViewEntry } from "./roster-views";
 import { scrollCellIntoView } from "./scroll-cell";
-import { ROSTER_DATE_SCHEMA, useTenantToday } from "./views/useRosterDate";
+import { ROSTER_DATE_SCHEMA } from "./views/useRosterDate";
 
 const orgSchema = z.string().default("");
 /** `?month=YYYY-MM`;空字串 / 格式不對 = 這個月。 */
 const monthSchema = z.string().default("");
 /** `?view=`:月 / 週 / 日 / 班表;空字串 = 這台裝置上次選的(沒有 = 電腦班表、手機日)。 */
 const viewSchema = z.string().default("");
-const MONTH_PATTERN = /^\d{4}-(?:0[1-9]|1[0-2])$/u;
 
 /** 閃爍多久(檢核 [查看] 捲到那一格)。 */
 const FLASH_MS = 2000;
@@ -57,11 +64,6 @@ const FLASH_FRAMES: Keyframe[] = [
   },
   { boxShadow: "inset 0 0 0 2px transparent" },
 ];
-
-const currentMonth = (): string => {
-  const now = new Date();
-  return `${String(now.getFullYear())}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-};
 
 type DialogState =
   | { kind: "demand"; demand: RosterDemand | null; preset: DemandPreset }
@@ -99,14 +101,19 @@ export const RosterPage = () => {
   const [orgId, setOrgId] = useUrlState("org", orgSchema);
   const [monthParam, setMonth] = useUrlState("month", monthSchema);
   const [viewParam, setView] = useUrlState("view", viewSchema);
-  const month = MONTH_PATTERN.test(monthParam) ? monthParam : currentMonth();
+  // 這個月以租戶時區的今天判斷(不用瀏覽器時區)
+  const today = useTenantToday();
+  const todayDate = parseLocalDate(today);
+  const month =
+    parseLocalMonth(monthParam) === null && todayDate !== null
+      ? localMonthText(todayDate)
+      : monthParam;
   const view = pickView(
     viewParam === "" ? (readRosterView() ?? "") : viewParam,
     isMobile,
   );
   // 週 / 日檢視的日期(`?date=`);週檢視跨月時多讀那幾天(`readRangeOf`)
   const [dateParam] = useUrlState("date", ROSTER_DATE_SCHEMA);
-  const today = useTenantToday();
   const readRange = view.readRangeOf?.(dateParam, month, today) ?? null;
   const [dialog, setDialog] = useState<DialogState>(null);
   /**
@@ -120,14 +127,24 @@ export const RosterPage = () => {
   /** 已經捲過的那一次請求(同一個物件就不再捲;新的請求是新物件) */
   const handledRequest = useRef<object | null>(null);
 
+  // 週檢視跨月多讀的日子(日期鍵,含頭尾)→ api 的半開時點區間
+  const readInstants =
+    readRange === null
+      ? null
+      : dayRangeOf(readRange.from, readRange.to, timezone);
   const query = useScheduleRosterQuery(session.client, {
     input: {
       month,
       ...(orgId === "" ? {} : { orgId }),
-      ...readRange,
+      ...readInstants,
     },
   });
-  const data = query.data?.scheduleRoster;
+  const raw = query.data?.scheduleRoster;
+  // 日期換成租戶時區的日期鍵(格子以它對日子);同一份 api 資料只換一次
+  const data = useMemo(
+    () => (raw === undefined ? undefined : rosterDataOf(raw, timezone)),
+    [raw, timezone],
+  );
 
   // 目標格子畫出來之後才捲並閃爍(直接在元素上播動畫,不經狀態)
   useEffect(() => {
@@ -172,7 +189,8 @@ export const RosterPage = () => {
    * (`rosterCellKey`)。找到元素就捲過去並閃爍。
    */
   const scrollToCell = (target: RosterCellTarget) => {
-    const targetMonth = target.date.slice(0, 7);
+    const targetDay = parseLocalDate(target.date);
+    const targetMonth = targetDay === null ? month : localMonthText(targetDay);
     if (targetMonth !== month) {
       setMonth(targetMonth);
     }

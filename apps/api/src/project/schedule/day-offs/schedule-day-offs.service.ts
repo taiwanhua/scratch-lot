@@ -2,21 +2,18 @@ import { Injectable, type OnModuleInit } from "@nestjs/common";
 import { Types } from "mongoose";
 
 import {
-  addLocalCalendar,
-  instantOfLocalTime,
-  localDateOf,
-  localDateText,
-  parseLocalDate,
+  type InstantRange,
+  addLocalMonths,
+  localMonthRange,
+  localMonthText,
+  parseLocalMonth,
 } from "@repo/domain/form";
 import { requiresReasonNote } from "@repo/domain/project/reason-note";
 import { SCHEDULE_FIELD_CATEGORY_KEYS } from "@repo/domain/project/schedule-fields";
 import {
   SCHEDULE_DAY_OFF_KINDS,
   type ScheduleDayOffKind,
-  isHhMm,
-  isIsoDate,
-  isIsoMonth,
-  minutesOfHhMm,
+  dayOffSlotsCoverDay,
 } from "@repo/domain/project/schedule-settings";
 
 import { AuditService } from "../../../audit/audit.service";
@@ -47,6 +44,17 @@ import type {
 } from "../rules/rule-registry";
 import { ScheduleRulesService } from "../rules/schedule-rules.service";
 import { ScheduleClock } from "../shared/schedule-clock";
+import {
+  dateKeyOf,
+  dayKeyRange,
+  instantOfKey,
+  localDateOfKey,
+  monthKeyOf,
+  monthKeyRange,
+  monthOfWholeMonthRange,
+  shiftDateKey,
+  violationPeriodOf,
+} from "../shared/schedule-dates";
 import {
   SCHEDULE_REASONS,
   dayOffRuleError,
@@ -86,7 +94,6 @@ import {
   dayOffWindowFor,
   dayOffWindowState,
   dayOffWindowValueOf,
-  shiftMonth,
 } from "./day-off-window";
 import type {
   AddMyScheduleDayOffsInput,
@@ -108,9 +115,46 @@ import type {
 
 type DayOffRecord = Persisted<ScheduleDayOffDocument>;
 
+/**
+ * 讀出來的一筆畫休(複製成純物件:文件是 Mongoose 文件,不能展開):存值 + 租戶時區的日期鍵
+ * `localDate`(規則、分組、守門月份用它)。
+ */
+type LoadedDayOff = Pick<
+  DayOffRecord,
+  | "_id"
+  | "orgId"
+  | "userId"
+  | "date"
+  | "kind"
+  | "startAt"
+  | "endAt"
+  | "note"
+  | "by"
+  | "reason"
+  | "reasonNote"
+> & { localDate: string };
+
+function loadedOf(record: DayOffRecord, localDate: string): LoadedDayOff {
+  return {
+    _id: record._id,
+    orgId: record.orgId,
+    userId: record.userId,
+    date: record.date,
+    kind: record.kind,
+    startAt: record.startAt,
+    endAt: record.endAt,
+    note: record.note,
+    by: record.by,
+    reason: record.reason,
+    reasonNote: record.reasonNote,
+    localDate,
+  };
+}
+
 const ORG_STAFF = "org_schedule_staff";
 const AUDIT_TARGET_TYPE = "schedule_day_off";
 const DAY_OFF_WINDOW_KEY = "dayOffWindow";
+const MS_PER_MINUTE = 60_000;
 
 /** 讀使用者名稱用的上下文:`users` 不掛租戶過濾,範圍在此無作用,只為讓 BaseRepository 收得到上下文。 */
 const NAMES_READER: OperatorContext = {
@@ -123,15 +167,21 @@ const NAMES_READER: OperatorContext = {
   memberTenants: [],
 };
 
+/** 時段不可排的一段(時點;落在那天、結束晚於開始)。 */
+export interface ScheduleDayOffSpan {
+  startAt: Date;
+  endAt: Date;
+}
+
 /** 某個人某天不能排的時間(`listUnavailable`;給排班表、自動排班)。 */
 export interface ScheduleUnavailability {
   userId: string;
-  /** `YYYY-MM-DD` */
-  date: string;
+  /** 那天(租戶時區 00:00 的時點) */
+  date: Date;
   /** 有整天畫休 */
   fullDay: boolean;
-  /** 時段不可排(依開始時間) */
-  slots: { startTime: string; endTime: string }[];
+  /** 時段不可排(時點;依開始時間) */
+  slots: ScheduleDayOffSpan[];
 }
 
 /** 一次要寫的畫休(登記 / 代改共用)。 */
@@ -140,9 +190,12 @@ interface DayOffWrite {
   /** 歸屬組織:本人登記 = 當前組織;代改 = 總覽選的那家店 */
   ownerOrgId: Types.ObjectId;
   userId: Types.ObjectId;
-  date: string;
+  /** 那天租戶時區 00:00 的時點(存值) */
+  date: Date;
+  /** 那天的日期鍵 `YYYY-MM-DD` */
+  localDate: string;
   kind: ScheduleDayOffKind;
-  slots: { startTime: string; endTime: string }[];
+  slots: ScheduleDayOffSpan[];
   note: string | null;
   by: Types.ObjectId | null;
   reason: string | null;
@@ -151,13 +204,18 @@ interface DayOffWrite {
 
 /**
  * 寫入要碰哪幾個月的守門文件:那天的月份;整天畫休另加前後一個月 ——「最多連續休假」會跨月,
- * 月初 / 月底的整天畫休和相鄰月份的寫入要互相衝突。依月份順序。
+ * 月初 / 月底的整天畫休和相鄰月份的寫入要互相衝突。依月份順序。守門文件以月份鍵 `YYYY-MM` 為鍵。
  */
 export function dayOffLockMonths(date: string, kind: string): string[] {
-  const month = date.slice(0, 7);
+  const { year, month } = localDateOfKey(date);
+  const current = { year, month };
   return kind === "full-day"
-    ? [shiftMonth(month, -1), month, shiftMonth(month, 1)]
-    : [month];
+    ? [
+        localMonthText(addLocalMonths(current, -1)),
+        localMonthText(current),
+        localMonthText(addLocalMonths(current, 1)),
+      ]
+    : [localMonthText(current)];
 }
 
 function blankToNull(value: string | null | undefined): string | null {
@@ -169,10 +227,10 @@ function isKind(value: string): value is ScheduleDayOffKind {
   return (SCHEDULE_DAY_OFF_KINDS as readonly string[]).includes(value);
 }
 
-const overlaps = (
-  left: { startTime: string; endTime: string },
-  right: { startTime: string; endTime: string },
-) => left.startTime < right.endTime && right.startTime < left.endTime;
+/** 兩段時段重疊(頭尾相接不算)。 */
+const overlaps = (left: ScheduleDayOffSpan, right: ScheduleDayOffSpan) =>
+  left.startAt.getTime() < right.endAt.getTime() &&
+  right.startAt.getTime() < left.endAt.getTime();
 
 function windowValueOf(
   settings: ReadonlyMap<string, EffectiveRuleSetting>,
@@ -201,9 +259,12 @@ function limitsOf(
 function windowModelOf(
   window: DayOffWindow,
   today: string,
+  timezone: string,
 ): ScheduleDayOffWindowModel {
   return {
-    ...window,
+    month: window.month,
+    from: instantOfKey(window.startDate, timezone),
+    to: instantOfKey(shiftDateKey(window.endDate, 1), timezone),
     state: dayOffWindowState(window, today),
     daysLeft: dayOffWindowDaysLeft(window, today),
   };
@@ -211,6 +272,7 @@ function windowModelOf(
 
 function violationModelOf(
   violation: ScheduleRuleViolation,
+  timezone: string,
 ): ScheduleDayOffViolationModel {
   const dates = [
     ...new Set(
@@ -223,11 +285,10 @@ function violationModelOf(
     key: violation.key,
     level: violation.level,
     message: violation.message,
-    dates,
+    dates: dates.map((date) => instantOfKey(date, timezone)),
     actual: violation.detail?.actual ?? null,
     limit: violation.detail?.limit ?? null,
-    from: violation.detail?.from ?? null,
-    to: violation.detail?.to ?? null,
+    ...violationPeriodOf(violation.detail, timezone),
   };
 }
 
@@ -259,22 +320,19 @@ function severityByKey(
   return severity;
 }
 
-const toLike = (record: {
-  userId: Types.ObjectId | string;
-  date: string;
-  kind: string;
-}): DayOffLike => ({
+const toLike = (record: LoadedDayOff): DayOffLike => ({
   userId: String(record.userId),
-  date: record.date,
+  date: record.localDate,
   kind: record.kind,
 });
 
+/** 依日期、開始時間(整天畫休在前)、人名排序。 */
 const byTime = (
-  left: { date: string; startTime: string | null; name?: string },
-  right: { date: string; startTime: string | null; name?: string },
+  left: { localDate: string; startAt: Date | null; name?: string },
+  right: { localDate: string; startAt: Date | null; name?: string },
 ) =>
-  left.date.localeCompare(right.date) ||
-  (left.startTime ?? "").localeCompare(right.startTime ?? "") ||
+  left.localDate.localeCompare(right.localDate) ||
+  (left.startAt?.getTime() ?? 0) - (right.startAt?.getTime() ?? 0) ||
   compareScheduleNames(left.name ?? "", right.name ?? "");
 
 /**
@@ -286,6 +344,9 @@ const byTime = (
  * - **本人**:只能在主要分店的開放期間內登記 / 刪除下個月;不需核准,違反限制不存
  * - **代改**(`schedule.manage.edit-day-offs`):不受開放期間限制;截止後原因必填,選「其他」要說明;記代改人
  * - 違反限制(存檔後限制的違反比存檔前多)→ `VALIDATION_FAILED`(`fields: ["date"]`、`violations`);提醒照存
+ * - **日期與時段是時點**:輸入的 `date` 以租戶時區正規化成那天 00:00,時段 `[startAt, endAt)` 要在那天裡
+ *   (結束最晚 = 隔天 00:00);
+ *   月份查詢收 `from` / `to`(那個月的時點區間)。規則與分組在記憶體裡用租戶時區的日期鍵算
  */
 @Injectable()
 export class ScheduleDayOffsService implements OnModuleInit {
@@ -315,14 +376,12 @@ export class ScheduleDayOffsService implements OnModuleInit {
 
   async mine(
     operator: OperatorContext,
-    month: string | null | undefined,
+    range: { from?: Date | null; to?: Date | null } | null | undefined,
   ): Promise<MyScheduleDayOffsPayload> {
     const { tenantId, userId } = await this.self(operator);
-    const today = await this.today(operator, tenantId);
-    const target = month ?? dayOffTargetMonth(today);
-    if (!isIsoMonth(target)) {
-      throw validationError("month must be YYYY-MM", ["month"]);
-    }
+    const { today, timezone } = await this.today(operator, tenantId);
+    const target =
+      monthOfWholeMonthRange(range, timezone) ?? dayOffTargetMonth(today);
     const holds = await this.permissions.holderOf(operator);
     const canOverride =
       holds(SCHEDULE_PERMISSIONS.viewDayOffs) &&
@@ -350,20 +409,22 @@ export class ScheduleDayOffsService implements OnModuleInit {
     const window = windowModelOf(
       dayOffWindowFor(target, windowValueOf(settings)),
       today,
+      timezone,
     );
     const members = await this.primaryMembersOf(tenantId, primaryOrgId);
     const records = await this.recordsAround(
       tenantId,
       [...new Set([...members, String(userId)])],
       target,
+      timezone,
     );
     const names = await this.namesOf(records);
     const me = String(userId);
-    const monthRecords = records.filter((record) =>
-      record.date.startsWith(`${target}-`),
+    const monthRecords = records.filter(
+      (record) => monthKeyOf(record.localDate) === target,
     );
     const mine = monthRecords.filter((record) => String(record.userId) === me);
-    const myDates = new Set(mine.map((record) => record.date));
+    const myDates = new Set(mine.map((record) => record.localDate));
     const violations = await this.evaluate({
       tenantId,
       orgId: primaryOrgId,
@@ -387,14 +448,15 @@ export class ScheduleDayOffsService implements OnModuleInit {
       limits: limitsOf(settings),
       dayOffCount: myDates.size,
       myDayOffs: mine
-        .map((record) => this.modelOf(record, names, true))
-        .toSorted(byTime),
+        .toSorted(byTime)
+        .map((record) => dayOffModelOf(record, names, true)),
       days: daysOf(
         monthRecords.filter((record) =>
           members.includes(String(record.userId)),
         ),
         names,
         new Set(members),
+        timezone,
       ),
       violations: violations
         .filter(
@@ -404,7 +466,7 @@ export class ScheduleDayOffsService implements OnModuleInit {
               (item) => item.date !== undefined && myDates.has(item.date),
             ),
         )
-        .map((violation) => violationModelOf(violation)),
+        .map((violation) => violationModelOf(violation, timezone)),
     };
   }
 
@@ -413,9 +475,9 @@ export class ScheduleDayOffsService implements OnModuleInit {
     input: AddMyScheduleDayOffsInput,
   ): Promise<SaveScheduleDayOffsPayload> {
     const { tenantId, orgId, userId } = await this.self(operator);
-    const write = validatedWrite(input, { tenantId, userId });
     const context = await this.personContext(operator, tenantId, userId);
-    this.assertWindowOpen(context, write.date);
+    const write = validatedWrite(input, { tenantId, userId }, context.timezone);
+    this.assertWindowOpen(context, write.localDate);
     return this.save(operator, context, {
       ...write,
       ownerOrgId: orgId,
@@ -428,9 +490,14 @@ export class ScheduleDayOffsService implements OnModuleInit {
 
   async removeMine(operator: OperatorContext, id: string): Promise<string> {
     const { tenantId, userId } = await this.self(operator);
-    const record = await this.mustRecord(tenantId, id, [String(userId)]);
     const context = await this.personContext(operator, tenantId, userId);
-    this.assertWindowOpen(context, record.date);
+    const record = await this.mustRecord(
+      tenantId,
+      id,
+      [String(userId)],
+      context.timezone,
+    );
+    this.assertWindowOpen(context, record.localDate);
     return this.remove(operator, context, record, null);
   }
 
@@ -439,14 +506,12 @@ export class ScheduleDayOffsService implements OnModuleInit {
   async overview(
     operator: OperatorContext,
     orgId: string | null | undefined,
-    month: string | null | undefined,
+    range: { from?: Date | null; to?: Date | null } | null | undefined,
   ): Promise<ScheduleDayOffOverviewPayload> {
     const org = await resolveScheduleOrg(operator, this.orgs, orgId);
-    const today = await this.today(operator, org.tenantId);
-    const target = month ?? dayOffTargetMonth(today);
-    if (!isIsoMonth(target)) {
-      throw validationError("month must be YYYY-MM", ["month"]);
-    }
+    const { today, timezone } = await this.today(operator, org.tenantId);
+    const targetMonth = dayOffTargetMonth(today);
+    const target = monthOfWholeMonthRange(range, timezone) ?? targetMonth;
     const settings = await this.rules.effectiveSettingsForOrg(operator, org.id);
     const candidates = await this.staffService.listScheduleCandidates(
       operator,
@@ -460,8 +525,8 @@ export class ScheduleDayOffsService implements OnModuleInit {
     const records = await this.recordsBetween(
       org.tenantId,
       candidates.map((candidate) => candidate.userId),
-      `${target}-01`,
-      `${target}-31`,
+      monthKeyRange(target, timezone),
+      timezone,
     );
     const names = new Map(
       candidates.map((candidate) => [candidate.userId, candidate.name]),
@@ -472,9 +537,11 @@ export class ScheduleDayOffsService implements OnModuleInit {
       orgId: String(org.id),
       orgName: org.name,
       month: target,
+      targetMonth,
       window: windowModelOf(
         dayOffWindowFor(target, windowValueOf(settings)),
         today,
+        timezone,
       ),
       canEdit: holds(SCHEDULE_PERMISSIONS.editDayOffs),
       limits: limitsOf(settings),
@@ -487,7 +554,7 @@ export class ScheduleDayOffsService implements OnModuleInit {
           candidate.userId,
         ).length,
       })),
-      days: daysOf(records, names, primary),
+      days: daysOf(records, names, primary, timezone),
     };
   }
 
@@ -500,12 +567,17 @@ export class ScheduleDayOffsService implements OnModuleInit {
       input.orgId,
       input.userId,
     );
-    const write = validatedWrite(input, { tenantId, userId });
     const context = await this.personContext(operator, tenantId, userId);
-    const reason = await this.validatedReason(operator, context, write.date, {
-      reason: input.reason,
-      reasonNote: input.reasonNote,
-    });
+    const write = validatedWrite(input, { tenantId, userId }, context.timezone);
+    const reason = await this.validatedReason(
+      operator,
+      context,
+      write.localDate,
+      {
+        reason: input.reason,
+        reasonNote: input.reasonNote,
+      },
+    );
     return this.save(operator, context, {
       ...write,
       ownerOrgId: orgId,
@@ -524,20 +596,27 @@ export class ScheduleDayOffsService implements OnModuleInit {
       operator,
       org.id,
     );
+    const timezone = await tenantTimezoneOf(this.orgs, operator, org.tenantId);
     const record = await this.mustRecord(
       org.tenantId,
       input.id,
       candidates.map((candidate) => candidate.userId),
+      timezone,
     );
     const context = await this.personContext(
       operator,
       org.tenantId,
       record.userId,
     );
-    const reason = await this.validatedReason(operator, context, record.date, {
-      reason: input.reason,
-      reasonNote: input.reasonNote,
-    });
+    const reason = await this.validatedReason(
+      operator,
+      context,
+      record.localDate,
+      {
+        reason: input.reason,
+        reasonNote: input.reasonNote,
+      },
+    );
     return this.remove(operator, context, record, {
       by: operator.actorId,
       ...reason,
@@ -547,15 +626,14 @@ export class ScheduleDayOffsService implements OnModuleInit {
   // ---- 給其他功能 ----
 
   /**
-   * 某家店的排班人員在一段日期(`YYYY-MM-DD`,含頭尾)每天的整天畫休 / 時段不可排
-   * (給排班表、人力不足原因、自動排班;畫休屬於人,不分是在哪家店登記的)。
+   * 某家店的排班人員在一段期間(半開的時點區間 `[from, to)`)每天的
+   * 整天畫休 / 時段不可排(給排班表、人力不足原因、自動排班;畫休屬於人,不分是在哪家店登記的)。
    * 只列有畫休的那幾天;這家店要在操作者的可見範圍內(看不到 → 空清單)。
    */
   async listUnavailable(
     operator: OperatorContext,
     orgId: Types.ObjectId,
-    from: string,
-    to: string,
+    range: InstantRange,
   ): Promise<ScheduleUnavailability[]> {
     // 這家店要在操作者(或排程的租戶系統身分)的可見範圍內;畫休屬於人,以租戶為邊界讀
     if (!isOrgVisible(operator, orgId)) {
@@ -567,35 +645,38 @@ export class ScheduleDayOffsService implements OnModuleInit {
     }
     const [, tenantTop] = org.ancestors;
     const tenantId = tenantTop ?? org._id;
+    const reader = await tenantBoundaryContext(this.orgs, null, tenantId);
     const candidates = await this.staffService.listScheduleCandidates(
-      await tenantBoundaryContext(this.orgs, null, tenantId),
+      reader,
       orgId,
     );
+    const timezone = await tenantTimezoneOf(this.orgs, reader, tenantId);
     const records = await this.recordsBetween(
       tenantId,
       candidates.map((candidate) => candidate.userId),
-      from,
-      to,
+      range,
+      timezone,
     );
     return unavailabilityOf(records);
   }
 
   /**
-   * 一個人在一段日期(`YYYY-MM-DD`,含頭尾)每天的整天畫休 / 時段不可排,**以租戶與人為準**
+   * 一個人在一段期間(半開的時點區間 `[from, to)`)每天的整天畫休 / 時段不可排,**以租戶與人為準**
    * (不經「某家店的候選人」:修改舊排班時,那個人可能已經不能排這家店,仍要擋)。
    * 給排班寫入檢查「畫休那段時間不能排」;租戶由呼叫端確認(操作者看得到的店所屬的租戶)。
    */
   async unavailableOfPerson(
     tenantId: Types.ObjectId,
     userId: Types.ObjectId,
-    from: string,
-    to: string,
+    range: InstantRange,
   ): Promise<ScheduleUnavailability[]> {
+    const reader = await tenantBoundaryContext(this.orgs, null, tenantId);
+    const timezone = await tenantTimezoneOf(this.orgs, reader, tenantId);
     const records = await this.recordsBetween(
       tenantId,
       [String(userId)],
-      from,
-      to,
+      range,
+      timezone,
     );
     return unavailabilityOf(records);
   }
@@ -651,12 +732,13 @@ export class ScheduleDayOffsService implements OnModuleInit {
     return { tenantId: org.tenantId, orgId: org.id, userId: operator.actorId };
   }
 
+  /** 租戶時區與那個時區的今天(日期鍵)。 */
   private async today(
     operator: OperatorContext,
     tenantId: Types.ObjectId,
-  ): Promise<string> {
+  ): Promise<{ today: string; timezone: string }> {
     const timezone = await tenantTimezoneOf(this.orgs, operator, tenantId);
-    return localDateText(localDateOf(this.clock.now().getTime(), timezone));
+    return { today: dateKeyOf(this.clock.now(), timezone), timezone };
   }
 
   /**
@@ -703,7 +785,7 @@ export class ScheduleDayOffsService implements OnModuleInit {
     return profiles.map((profile) => String(profile.userId));
   }
 
-  /** 檢查一個人的畫休要用的:主要分店、它的生效設定、今天。 */
+  /** 檢查一個人的畫休要用的:主要分店、它的生效設定、租戶時區與今天。 */
   private async personContext(
     operator: OperatorContext,
     tenantId: Types.ObjectId,
@@ -722,19 +804,14 @@ export class ScheduleDayOffsService implements OnModuleInit {
       await tenantBoundaryContext(this.orgs, null, tenantId),
       primaryOrgId,
     );
-    return {
-      tenantId,
-      userId,
-      primaryOrgId,
-      settings,
-      today: await this.today(operator, tenantId),
-    };
+    const { today, timezone } = await this.today(operator, tenantId);
+    return { tenantId, userId, primaryOrgId, settings, today, timezone };
   }
 
   /** 本人:這一天所在的月份要正在開放中(主要分店的開放期間)。 */
   private assertWindowOpen(context: PersonContext, date: string): void {
     const window = dayOffWindowFor(
-      date.slice(0, 7),
+      monthKeyOf(date),
       windowValueOf(context.settings),
     );
     if (dayOffWindowState(window, context.today) !== "open") {
@@ -755,7 +832,7 @@ export class ScheduleDayOffsService implements OnModuleInit {
     const reason = blankToNull(input.reason);
     const reasonNote = blankToNull(input.reasonNote);
     const window = dayOffWindowFor(
-      date.slice(0, 7),
+      monthKeyOf(date),
       windowValueOf(context.settings),
     );
     const closed = dayOffWindowState(window, context.today) === "closed";
@@ -806,7 +883,8 @@ export class ScheduleDayOffsService implements OnModuleInit {
     tenantId: Types.ObjectId,
     id: string,
     userIds: readonly string[],
-  ): Promise<DayOffRecord> {
+    timezone: string,
+  ): Promise<LoadedDayOff> {
     const record = await this.dayOffs.findOne(
       await tenantBoundaryContext(this.orgs, null, tenantId),
       { _id: parseObjectId(id, "id"), tenantId },
@@ -814,7 +892,7 @@ export class ScheduleDayOffsService implements OnModuleInit {
     if (!record || !userIds.includes(String(record.userId))) {
       throw notFoundError(`day off not found: ${id}`);
     }
-    return record;
+    return loadedOf(record, dateKeyOf(record.date, timezone));
   }
 
   /**
@@ -826,23 +904,22 @@ export class ScheduleDayOffsService implements OnModuleInit {
     context: PersonContext,
     write: DayOffWrite,
   ): Promise<SaveScheduleDayOffsPayload> {
+    const like = {
+      userId: String(write.userId),
+      date: write.localDate,
+      kind: write.kind,
+    };
     const added: DayOffLike[] =
+      write.kind === "full-day" ? [like] : write.slots.map(() => like);
+    const rows: { startAt: Date | null; endAt: Date | null }[] =
       write.kind === "full-day"
-        ? [{ userId: String(write.userId), date: write.date, kind: write.kind }]
-        : write.slots.map(() => ({
-            userId: String(write.userId),
-            date: write.date,
-            kind: write.kind,
-          }));
-    const rows =
-      write.kind === "full-day"
-        ? [{ startTime: null, endTime: null }]
+        ? [{ startAt: null, endAt: null }]
         : write.slots;
     const withAdded = (entries: { like: DayOffLike }[]) => [
       ...entries.map((entry) => entry.like),
       ...added,
     ];
-    const lockMonths = dayOffLockMonths(write.date, write.kind);
+    const lockMonths = dayOffLockMonths(write.localDate, write.kind);
     await this.ensureLocks(operator, context, lockMonths);
     const { created, after } = await savingUnique(
       () =>
@@ -851,16 +928,16 @@ export class ScheduleDayOffsService implements OnModuleInit {
           const existing = await this.recordsBetween(
             context.tenantId,
             [String(context.userId)],
-            write.date,
-            write.date,
+            dayKeyRange(write.localDate, write.localDate, context.timezone),
+            context.timezone,
           );
           assertNoConflict(existing, write);
           const violations = await this.assertRules(
             context,
-            write.date,
+            write.localDate,
             withAdded,
           );
-          const items: DayOffRecord[] = [];
+          const items: LoadedDayOff[] = [];
           for (const row of rows) {
             const record = await this.dayOffs.create(
               await tenantBoundaryContext(
@@ -873,8 +950,8 @@ export class ScheduleDayOffsService implements OnModuleInit {
                 userId: write.userId,
                 date: write.date,
                 kind: write.kind,
-                startTime: row.startTime,
-                endTime: row.endTime,
+                startAt: row.startAt,
+                endAt: row.endAt,
                 note: write.note,
                 by: write.by,
                 reason: write.reason,
@@ -887,18 +964,20 @@ export class ScheduleDayOffsService implements OnModuleInit {
               targetId: record._id,
               after: auditOf(record),
             });
-            items.push(record);
+            items.push(loadedOf(record, write.localDate));
           }
           return { created: items, after: violations };
         }),
-      `already has a full-day day off on ${write.date}`,
+      `already has a full-day day off on ${write.localDate}`,
       ["kind"],
       SCHEDULE_REASONS.dayOffDuplicate,
     );
     const names = await this.namesOf(created);
     return {
-      items: created.map((record) => this.modelOf(record, names, true)),
-      violations: after.map((violation) => violationModelOf(violation)),
+      items: created.map((record) => dayOffModelOf(record, names, true)),
+      violations: after.map((violation) =>
+        violationModelOf(violation, context.timezone),
+      ),
       entryConflicts: await this.entryConflictsOf(operator, context, write),
     };
   }
@@ -912,39 +991,15 @@ export class ScheduleDayOffsService implements OnModuleInit {
     context: PersonContext,
     write: DayOffWrite,
   ): Promise<ScheduleDayOffEntryConflictModel[]> {
-    const day = parseLocalDate(write.date);
-    if (day === null) {
-      return [];
-    }
-    const timezone = await tenantTimezoneOf(
-      this.orgs,
-      operator,
-      context.tenantId,
-    );
-    const at = (time: string) => {
-      const minutes = minutesOfHhMm(time) ?? 0;
-      return instantOfLocalTime(
-        day,
-        Math.floor(minutes / 60),
-        minutes % 60,
-        timezone,
-      );
-    };
-    const dayStart = at("00:00");
     const windows =
       write.kind === "full-day"
-        ? [
-            {
-              start: dayStart,
-              end: addLocalCalendar(dayStart, 1, "days", timezone),
-            },
-          ]
+        ? [dayKeyRange(write.localDate, write.localDate, context.timezone)]
         : write.slots.map((slot) => ({
-            start: at(slot.startTime),
-            end: at(slot.endTime),
+            from: slot.startAt.getTime(),
+            to: slot.endAt.getTime(),
           }));
-    const from = Math.min(...windows.map((window) => window.start));
-    const to = Math.max(...windows.map((window) => window.end));
+    const from = Math.min(...windows.map((window) => window.from));
+    const to = Math.max(...windows.map((window) => window.to));
     const records = await this.entries.findMany(
       await tenantBoundaryContext(this.orgs, operator, context.tenantId),
       {
@@ -958,8 +1013,8 @@ export class ScheduleDayOffsService implements OnModuleInit {
     const conflicts = records.filter((record) =>
       windows.some(
         (window) =>
-          record.startAt.getTime() < window.end &&
-          record.endAt.getTime() > window.start,
+          record.startAt.getTime() < window.to &&
+          record.endAt.getTime() > window.from,
       ),
     );
     const names = await loadOrgNames(
@@ -970,6 +1025,7 @@ export class ScheduleDayOffsService implements OnModuleInit {
         .filter((orgId) => isOrgVisible(operator, orgId)),
     );
     return conflicts.map((record) => ({
+      // 排班那天(排班的 `date`:上班時點在租戶時區那天的 00:00)
       date: record.date,
       startAt: record.startAt,
       endAt: record.endAt,
@@ -983,7 +1039,7 @@ export class ScheduleDayOffsService implements OnModuleInit {
   private async remove(
     operator: OperatorContext,
     context: PersonContext,
-    record: DayOffRecord,
+    record: LoadedDayOff,
     override: {
       by: Types.ObjectId | null;
       reason: string | null;
@@ -995,7 +1051,7 @@ export class ScheduleDayOffsService implements OnModuleInit {
       operator,
       context.tenantId,
     );
-    const lockMonths = [record.date.slice(0, 7)];
+    const lockMonths = [monthKeyOf(record.localDate)];
     await this.ensureLocks(operator, context, lockMonths);
     await this.transactions.withTransaction(async () => {
       await this.touchLocks(operator, context, lockMonths);
@@ -1006,7 +1062,7 @@ export class ScheduleDayOffsService implements OnModuleInit {
       if (!current) {
         throw notFoundError(`day off not found: ${String(record._id)}`);
       }
-      await this.assertRules(context, record.date, (entries) =>
+      await this.assertRules(context, record.localDate, (entries) =>
         entries
           .filter((entry) => entry.id !== String(record._id))
           .map((entry) => entry.like),
@@ -1097,14 +1153,14 @@ export class ScheduleDayOffsService implements OnModuleInit {
 
   /**
    * 跑畫休規則,存檔後限制的違反比存檔前多(新的、或更嚴重)→ 擋下並回原因;回存檔後涉及這個人的違反。
-   * 店的規則只看這次改的那一天。
+   * 店的規則只看這次改的那一天(日期鍵)。
    */
   private async assertRules(
     context: PersonContext,
     date: string,
     change: (entries: { id: string; like: DayOffLike }[]) => DayOffLike[],
   ): Promise<ScheduleRuleViolation[]> {
-    const month = date.slice(0, 7);
+    const month = monthKeyOf(date);
     const members = await this.primaryMembersOf(
       context.tenantId,
       context.primaryOrgId,
@@ -1114,6 +1170,7 @@ export class ScheduleDayOffsService implements OnModuleInit {
       context.tenantId,
       [...new Set([...members, me])],
       month,
+      context.timezone,
     );
     const entries = records.map((record) => ({
       id: String(record._id),
@@ -1151,7 +1208,7 @@ export class ScheduleDayOffsService implements OnModuleInit {
             (violation) =>
               violation.level === "limit" && worse.includes(violation.key),
           )
-          .map((violation) => violationModelOf(violation)),
+          .map((violation) => violationModelOf(violation, context.timezone)),
       );
     }
     return afterViolations;
@@ -1186,42 +1243,54 @@ export class ScheduleDayOffsService implements OnModuleInit {
     });
   }
 
-  /** 這些人在某個月前後各一個月的畫休(連續休假會跨月)。 */
+  /** 這些人在某個月(月份鍵)前後各一個月的畫休(連續休假會跨月)。 */
   private recordsAround(
     tenantId: Types.ObjectId,
     userIds: readonly string[],
     month: string,
-  ): Promise<DayOffRecord[]> {
+    timezone: string,
+  ): Promise<LoadedDayOff[]> {
+    const parsed = parseLocalMonth(month);
+    if (parsed === null) {
+      throw new RangeError(`invalid month key: ${month}`);
+    }
     return this.recordsBetween(
       tenantId,
       userIds,
-      `${shiftMonth(month, -1)}-01`,
-      `${shiftMonth(month, 1)}-31`,
+      {
+        from: localMonthRange(addLocalMonths(parsed, -1), timezone).from,
+        to: localMonthRange(addLocalMonths(parsed, 1), timezone).to,
+      },
+      timezone,
     );
   }
 
+  /** 這些人在時點區間 `[from, to)` 裡的畫休,每筆帶租戶時區的日期鍵。 */
   private async recordsBetween(
     tenantId: Types.ObjectId,
     userIds: readonly string[],
-    from: string,
-    to: string,
-  ): Promise<DayOffRecord[]> {
+    range: InstantRange,
+    timezone: string,
+  ): Promise<LoadedDayOff[]> {
     if (userIds.length === 0) {
       return [];
     }
-    return this.dayOffs.findMany(
+    const records = await this.dayOffs.findMany(
       await tenantBoundaryContext(this.orgs, null, tenantId),
       {
         tenantId,
         userId: { $in: userIds.map((id) => new Types.ObjectId(id)) },
-        date: { $gte: from, $lte: to },
+        date: { $gte: new Date(range.from), $lt: new Date(range.to) },
       },
+    );
+    return records.map((record) =>
+      loadedOf(record, dateKeyOf(record.date, timezone)),
     );
   }
 
   /** 畫休的人與代改人的名稱。 */
   private async namesOf(
-    records: readonly DayOffRecord[],
+    records: readonly Pick<DayOffRecord, "userId" | "by">[],
   ): Promise<Map<string, string>> {
     const names = new Map<string, string>();
     await this.addNames(
@@ -1234,7 +1303,7 @@ export class ScheduleDayOffsService implements OnModuleInit {
   }
 
   private async addByNames(
-    records: readonly DayOffRecord[],
+    records: readonly Pick<DayOffRecord, "by">[],
     names: Map<string, string>,
   ): Promise<void> {
     await this.addNames(
@@ -1261,14 +1330,6 @@ export class ScheduleDayOffsService implements OnModuleInit {
       names.set(String(user._id), user.name);
     }
   }
-
-  private modelOf(
-    record: DayOffRecord,
-    names: ReadonlyMap<string, string>,
-    isPrimary: boolean,
-  ): ScheduleDayOffModel {
-    return dayOffModelOf(record, names, isPrimary);
-  }
 }
 
 interface PersonContext {
@@ -1276,11 +1337,13 @@ interface PersonContext {
   userId: Types.ObjectId;
   primaryOrgId: Types.ObjectId;
   settings: ReadonlyMap<string, EffectiveRuleSetting>;
+  /** 租戶時區的今天(日期鍵) */
   today: string;
+  timezone: string;
 }
 
 function dayOffModelOf(
-  record: DayOffRecord,
+  record: LoadedDayOff,
   names: ReadonlyMap<string, string>,
   isPrimary: boolean,
 ): ScheduleDayOffModel {
@@ -1290,8 +1353,8 @@ function dayOffModelOf(
     name: names.get(String(record.userId)) ?? "",
     date: record.date,
     kind: record.kind,
-    startTime: record.startTime,
-    endTime: record.endTime,
+    startAt: record.startAt,
+    endAt: record.endAt,
     note: record.note,
     isPrimary,
     byName: record.by === null ? null : (names.get(String(record.by)) ?? ""),
@@ -1302,106 +1365,151 @@ function dayOffModelOf(
 
 /** 有畫休的日子:同日畫休人數只計主要分店的人。 */
 function daysOf(
-  records: readonly DayOffRecord[],
+  records: readonly LoadedDayOff[],
   names: ReadonlyMap<string, string>,
   primary: ReadonlySet<string>,
+  timezone: string,
 ): ScheduleDayOffDayModel[] {
   const counts = dayOffStaffCounts(
     records
       .filter((record) => primary.has(String(record.userId)))
       .map((record) => toLike(record)),
   );
-  const byDate = new Map<string, DayOffRecord[]>();
+  const byDate = new Map<string, LoadedDayOff[]>();
   for (const record of records) {
-    byDate.set(record.date, [...(byDate.get(record.date) ?? []), record]);
+    byDate.set(record.localDate, [
+      ...(byDate.get(record.localDate) ?? []),
+      record,
+    ]);
   }
   return [...byDate.keys()]
     .toSorted((left, right) => left.localeCompare(right))
     .map((date) => ({
-      date,
+      date: instantOfKey(date, timezone),
       staffCount: counts.get(date) ?? 0,
       dayOffs: (byDate.get(date) ?? [])
-        .map((record) =>
+        .map((record) => ({
+          record,
+          localDate: record.localDate,
+          startAt: record.startAt,
+          name: names.get(String(record.userId)) ?? "",
+        }))
+        .toSorted(byTime)
+        .map(({ record }) =>
           dayOffModelOf(record, names, primary.has(String(record.userId))),
-        )
-        .toSorted(byTime),
+        ),
     }));
 }
 
+/** 合法時點、精度到分鐘。 */
+const onMinute = (instant: number): boolean =>
+  Number.isFinite(instant) && instant % MS_PER_MINUTE === 0;
+
+/**
+ * 時段不可排的幾段:至少一段;每段是那天裡的半開區間 `[startAt, endAt)`:開始落在
+ * `[那天 00:00, 隔天 00:00)`、結束晚於開始且最晚 = 隔天 00:00(做到當天結束)、精度到分鐘
+ * (admin 由日期 + `HH:mm` 合成,結束選 00:00 = 隔天 00:00);這次送的幾段合起來蓋滿那一天
+ * (一段 00:00–隔天 00:00,或重疊 / 相接的幾段;`dayOffSlotsCoverDay`,admin 同一條規則、停用儲存)也不收,
+ * 整天要登記整天畫休。
+ * 不合規則 → `VALIDATION_FAILED`(欄位 `slots`,格式錯不帶 reason)。
+ */
 function validatedSlots(
   slots: readonly ScheduleDayOffSlotInput[] | null | undefined,
-): { startTime: string; endTime: string }[] {
+  day: InstantRange,
+): ScheduleDayOffSpan[] {
   const list = slots ?? [];
   const valid =
     list.length > 0 &&
-    list.every(
-      (slot) =>
-        isHhMm(slot.startTime) &&
-        isHhMm(slot.endTime) &&
-        (minutesOfHhMm(slot.startTime) ?? 0) <
-          (minutesOfHhMm(slot.endTime) ?? 0),
-    );
+    list.every((slot) => {
+      const start = slot.startAt.getTime();
+      const end = slot.endAt.getTime();
+      return (
+        onMinute(start) &&
+        onMinute(end) &&
+        start >= day.from &&
+        start < end &&
+        end <= day.to
+      );
+    });
   if (!valid) {
-    throw validationError("time-range needs slots with start before end", [
-      "slots",
-    ]);
+    throw validationError(
+      "time-range needs slots on that day with start before end",
+      ["slots"],
+    );
   }
-  return list.map((slot) => ({
-    startTime: slot.startTime,
-    endTime: slot.endTime,
-  }));
+  const wholeDay = dayOffSlotsCoverDay(
+    list.map((slot) => ({
+      startAt: slot.startAt.getTime(),
+      endAt: slot.endAt.getTime(),
+    })),
+    { startAt: day.from, endAt: day.to },
+  );
+  if (wholeDay) {
+    throw validationError(
+      "time-range slots covering the whole day must be a full-day day off",
+      ["slots"],
+    );
+  }
+  return list.map((slot) => ({ startAt: slot.startAt, endAt: slot.endAt }));
 }
 
 function validatedWrite(
   input: {
-    date: string;
+    date: Date;
     kind: string;
     slots?: readonly ScheduleDayOffSlotInput[] | null;
   },
   who: { tenantId: Types.ObjectId; userId: Types.ObjectId },
-): Pick<DayOffWrite, "tenantId" | "userId" | "date" | "kind" | "slots"> {
-  if (!isIsoDate(input.date)) {
-    throw validationError("date must be YYYY-MM-DD", ["date"]);
+  timezone: string,
+): Pick<
+  DayOffWrite,
+  "tenantId" | "userId" | "date" | "localDate" | "kind" | "slots"
+> {
+  const instant = input.date.getTime();
+  if (!Number.isFinite(instant)) {
+    throw validationError("date must be an instant", ["date"]);
   }
   if (!isKind(input.kind)) {
     throw validationError(`unknown day off kind: ${input.kind}`, ["kind"]);
   }
+  // 以租戶時區正規化成那天 00:00(admin 送的就是 00:00;送了當天其他時刻也歸到同一天)
+  const localDate = dateKeyOf(input.date, timezone);
+  const day = dayKeyRange(localDate, localDate, timezone);
   return {
     ...who,
-    date: input.date,
+    date: new Date(day.from),
+    localDate,
     kind: input.kind,
-    slots: input.kind === "time-range" ? validatedSlots(input.slots) : [],
+    slots: input.kind === "time-range" ? validatedSlots(input.slots, day) : [],
   };
 }
 
 /** 整天畫休一天一筆;時段不可排之間(含這次送的幾段)不能重疊。 */
 function assertNoConflict(
-  existing: readonly DayOffRecord[],
-  write: Pick<DayOffWrite, "date" | "kind" | "slots">,
+  existing: readonly LoadedDayOff[],
+  write: Pick<DayOffWrite, "localDate" | "kind" | "slots">,
 ): void {
   if (write.kind === "full-day") {
     if (existing.some((record) => record.kind === "full-day")) {
       throw validationError(
-        `already has a full-day day off on ${write.date}`,
+        `already has a full-day day off on ${write.localDate}`,
         ["kind"],
         SCHEDULE_REASONS.dayOffDuplicate,
       );
     }
     return;
   }
-  const ranges = [
-    ...existing.flatMap((record) =>
-      record.kind === "time-range" &&
-      record.startTime !== null &&
-      record.endTime !== null
-        ? [{ startTime: record.startTime, endTime: record.endTime }]
-        : [],
-    ),
-  ];
+  const ranges: ScheduleDayOffSpan[] = existing.flatMap((record) =>
+    record.kind === "time-range" &&
+    record.startAt !== null &&
+    record.endAt !== null
+      ? [{ startAt: record.startAt, endAt: record.endAt }]
+      : [],
+  );
   for (const slot of write.slots) {
     if (ranges.some((range) => overlaps(range, slot))) {
       throw validationError(
-        `time ranges overlap on ${write.date}: ${slot.startTime}–${slot.endTime}`,
+        `time ranges overlap on ${write.localDate}: ${slot.startAt.toISOString()}–${slot.endAt.toISOString()}`,
         ["slots"],
         SCHEDULE_REASONS.timeRangesOverlap,
       );
@@ -1410,13 +1518,25 @@ function assertNoConflict(
   }
 }
 
-function auditOf(record: DayOffRecord): Record<string, unknown> {
+function auditOf(
+  record: Pick<
+    DayOffRecord,
+    | "userId"
+    | "date"
+    | "kind"
+    | "startAt"
+    | "endAt"
+    | "by"
+    | "reason"
+    | "reasonNote"
+  >,
+): Record<string, unknown> {
   return {
     userId: record.userId,
     date: record.date,
     kind: record.kind,
-    startTime: record.startTime,
-    endTime: record.endTime,
+    startAt: record.startAt,
+    endAt: record.endAt,
     by: record.by,
     reason: record.reason,
     reasonNote: record.reasonNote,
@@ -1425,11 +1545,11 @@ function auditOf(record: DayOffRecord): Record<string, unknown> {
 
 /** 畫休紀錄 → 每人每天的整天畫休 / 時段不可排(時段依開始時間)。 */
 function unavailabilityOf(
-  records: readonly DayOffRecord[],
+  records: readonly LoadedDayOff[],
 ): ScheduleUnavailability[] {
   const byKey = new Map<string, ScheduleUnavailability>();
   for (const record of records.toSorted(byTime)) {
-    const key = `${String(record.userId)}|${record.date}`;
+    const key = `${String(record.userId)}|${record.localDate}`;
     const item = byKey.get(key) ?? {
       userId: String(record.userId),
       date: record.date,
@@ -1438,11 +1558,8 @@ function unavailabilityOf(
     };
     if (record.kind === "full-day") {
       item.fullDay = true;
-    } else if (record.startTime !== null && record.endTime !== null) {
-      item.slots.push({
-        startTime: record.startTime,
-        endTime: record.endTime,
-      });
+    } else if (record.startAt !== null && record.endAt !== null) {
+      item.slots.push({ startAt: record.startAt, endAt: record.endAt });
     }
     byKey.set(key, item);
   }

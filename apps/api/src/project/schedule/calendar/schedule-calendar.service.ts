@@ -1,12 +1,11 @@
 import { Injectable } from "@nestjs/common";
 import type { Types } from "mongoose";
 
+import { type InstantRange, startOfLocalDayOf } from "@repo/domain/form";
 import { SCHEDULE_FIELD_CATEGORY_KEYS } from "@repo/domain/project/schedule-fields";
 import {
   SCHEDULE_CALENDAR_DAY_TYPES,
   type ScheduleCalendarDayType,
-  isIsoDate,
-  isIsoMonth,
 } from "@repo/domain/project/schedule-settings";
 import { isTagPaletteKey } from "@repo/domain/project/tag-palette";
 
@@ -17,11 +16,13 @@ import {
   type OperatorContext,
   isOrgVisible,
 } from "../../../database/operator-context";
+import { tenantTimezoneOf } from "../../../database/tenant-timezone";
 import {
   type ScheduleCalendarDayDocument,
   ScheduleCalendarDaysRepository,
 } from "../../database/schedule/schedule.repositories";
 import { ScheduleFieldOptionsService } from "../field-options/schedule-field-options.service";
+import { dateKeyOf, instantRangeFilter } from "../shared/schedule-dates";
 import {
   SCHEDULE_REASONS,
   forbiddenError,
@@ -54,6 +55,27 @@ type DayRecord = Persisted<ScheduleCalendarDayDocument>;
 
 const AUDIT_TARGET_TYPE = "schedule_calendar_day";
 
+const MS_PER_HOUR = 3_600_000;
+/** 一次查詢最長一個月:31 天再多一小時(夏令時間那天;同報表期間的上限算法)。 */
+const MAX_RANGE_MS = 31 * 24 * MS_PER_HOUR + MS_PER_HOUR;
+
+/** 時點區間 `[from, to)` 要迄晚於起、最長一個月;否則 `VALIDATION_FAILED`(欄位 `from`、`to`)。 */
+function assertCalendarRange(from: Date, to: Date): void {
+  const start = from.getTime();
+  const end = to.getTime();
+  if (
+    !Number.isFinite(start) ||
+    !Number.isFinite(end) ||
+    end <= start ||
+    end - start > MAX_RANGE_MS
+  ) {
+    throw validationError(
+      "from / to must be instants with from < to, at most one month",
+      ["from", "to"],
+    );
+  }
+}
+
 function isDayType(value: string): value is ScheduleCalendarDayType {
   return (SCHEDULE_CALENDAR_DAY_TYPES as readonly string[]).includes(value);
 }
@@ -66,7 +88,8 @@ function blankToNull(value: string | null | undefined): string | null {
 /**
  * 行事曆(規格 14.5「行事曆」;正本 `docs/modules/project/schedule.md`「行事曆」)。
  *
- * - 讀:某家店某個月,每天以最接近的那一層為準(`calendar-resolution.ts`)
+ * - 讀:某家店一段期間(`[from, to)` 時點區間,最長一個月),每天以最接近的那一層為準(`calendar-resolution.ts`)
+ * - 日期是時點:`date` 存那天租戶時區 00:00;寫入時以租戶時區正規化成那天 00:00
  * - 寫:要 `schedule.manage.edit-calendar`;寫在選的那家店那一層,只有那一層能改 / 刪
  *   (沿用上層的那一天在本店看得到、改不了 → `FORBIDDEN` / `NOT_OWNER`)
  * - 同一層同一天只有一筆(店休與特殊日擇一;唯一索引兜底同時寫入)
@@ -82,25 +105,24 @@ export class ScheduleCalendarService {
     private readonly fieldOptions: ScheduleFieldOptionsService,
   ) {}
 
-  async month(
+  async range(
     operator: OperatorContext,
     orgId: string | null | undefined,
-    month: string,
+    range: { from: Date; to: Date },
   ): Promise<ScheduleCalendarPayload> {
-    if (!isIsoMonth(month)) {
-      throw validationError("month must be YYYY-MM", ["month"]);
-    }
+    assertCalendarRange(range.from, range.to);
     const org = await resolveScheduleOrg(operator, this.orgs, orgId);
     const records = await this.effectiveRecords(operator, org.chain, {
-      $gte: `${month}-01`,
-      $lte: `${month}-31`,
+      $gte: range.from,
+      $lt: range.to,
     });
     const canEdit = await this.canEdit(operator);
     const names = await loadOrgNames(operator, this.orgs, org.chain);
     return {
       orgId: String(org.id),
       orgName: org.name,
-      month,
+      from: range.from,
+      to: range.to,
       canEdit,
       days: records.map((record) => dayModelOf(record, org, names, canEdit)),
     };
@@ -111,7 +133,9 @@ export class ScheduleCalendarService {
     input: SaveScheduleCalendarDayInput,
   ): Promise<ScheduleCalendarDayModel> {
     const org = await resolveScheduleOrg(operator, this.orgs, input.orgId);
-    const data = validatedDay(input);
+    const timezone = await tenantTimezoneOf(this.orgs, operator, org.tenantId);
+    const data = validatedDay(input, timezone);
+    const dayText = dateKeyOf(data.date, timezone);
     const context = operator;
     const existing =
       input.id === undefined || input.id === null
@@ -123,7 +147,7 @@ export class ScheduleCalendarService {
     });
     if (sameDate && String(sameDate._id) !== String(existing?._id)) {
       throw validationError(
-        `org already has a calendar day on ${data.date}`,
+        `org already has a calendar day on ${dayText}`,
         ["date"],
         SCHEDULE_REASONS.calendarDayDuplicate,
       );
@@ -143,7 +167,7 @@ export class ScheduleCalendarService {
         existing
           ? this.days.updateById(context, existing._id, { $set: data })
           : this.days.create(operator, { orgId: org.id, ...data }),
-      `org already has a calendar day on ${data.date}`,
+      `org already has a calendar day on ${dayText}`,
       ["date"],
       SCHEDULE_REASONS.calendarDayDuplicate,
     );
@@ -180,15 +204,14 @@ export class ScheduleCalendarService {
   }
 
   /**
-   * 某家店一段日期(`YYYY-MM-DD`,含頭尾)的生效行事曆;排班作業(店休擋排班、特殊日背景)共用。
+   * 某家店一段期間(半開的時點區間 `[from, to)`)的生效行事曆;排班作業(店休擋排班、特殊日背景)共用。
    * 這家店要在操作者的可見範圍內(排程以 `tenantBoundaryContext` 呼叫 = 整個租戶),否則 `NOT_FOUND`;
    * 上層鏈建的行事曆照「上層沿用到下層」讀。
    */
   async effectiveDays(
     operator: OperatorContext,
     orgId: Types.ObjectId,
-    from: string,
-    to: string,
+    range: InstantRange,
   ): Promise<DayRecord[]> {
     // 這家店要在操作者(或排程的租戶系統身分)的可見範圍內 —— 可見範圍本身就以租戶為界
     if (!isOrgVisible(operator, orgId)) {
@@ -199,7 +222,7 @@ export class ScheduleCalendarService {
       throw notFoundError(`org not found: ${String(orgId)}`);
     }
     const chain = [org._id, ...org.ancestors.slice(1).toReversed()];
-    return this.effectiveRecords(operator, chain, { $gte: from, $lte: to });
+    return this.effectiveRecords(operator, chain, instantRangeFilter(range));
   }
 
   // ---- 內部 ----
@@ -207,7 +230,7 @@ export class ScheduleCalendarService {
   private async effectiveRecords(
     operator: OperatorContext,
     chain: readonly Types.ObjectId[],
-    dateRange: { $gte: string; $lte: string },
+    dateRange: { $gte: Date; $lt: Date },
   ): Promise<DayRecord[]> {
     const records = await this.days.findMany(operator, {
       orgId: { $in: [...chain] },
@@ -244,8 +267,11 @@ export class ScheduleCalendarService {
   }
 }
 
-function validatedDay(input: SaveScheduleCalendarDayInput): {
-  date: string;
+function validatedDay(
+  input: SaveScheduleCalendarDayInput,
+  timezone: string,
+): {
+  date: Date;
   type: ScheduleCalendarDayType;
   category: string | null;
   name: string | null;
@@ -253,7 +279,8 @@ function validatedDay(input: SaveScheduleCalendarDayInput): {
   paletteKey: string | null;
 } {
   const errors: string[] = [];
-  if (!isIsoDate(input.date)) {
+  const instant = input.date.getTime();
+  if (!Number.isFinite(instant)) {
     errors.push("date");
   }
   if (!isDayType(input.type)) {
@@ -276,7 +303,8 @@ function validatedDay(input: SaveScheduleCalendarDayInput): {
     throw validationError(`invalid calendar day: ${errors.join(", ")}`, errors);
   }
   return {
-    date: input.date,
+    // 以租戶時區正規化成那天 00:00(admin 送的就是 00:00;送了當天其他時刻也歸到同一天)
+    date: new Date(startOfLocalDayOf(instant, timezone)),
     type: input.type as ScheduleCalendarDayType,
     category,
     name,

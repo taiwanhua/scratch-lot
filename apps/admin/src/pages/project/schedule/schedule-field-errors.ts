@@ -45,6 +45,7 @@ const FORMAT_TEXTS: Record<string, [string, Record<string, string>?]> = {
   slots: ["fieldErrors.slots"],
   time: ["fieldErrors.time"],
   startAt: ["fieldErrors.dateTime"],
+  punchAt: ["fieldErrors.dateTime"],
   endAt: ["fieldErrors.endAt"],
   assignments: ["fieldErrors.assignments"],
   breakMinutes: ["fieldErrors.nonNegativeInteger"],

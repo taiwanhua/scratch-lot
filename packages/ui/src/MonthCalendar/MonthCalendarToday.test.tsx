@@ -1,5 +1,5 @@
 import { describe, expect, it, jest } from "@jest/globals";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { AppThemeProvider } from "../AppThemeProvider/AppThemeProvider";
@@ -105,5 +105,30 @@ describe("MonthCalendar 已選日期", () => {
         "box-shadow",
       ),
     ).toBe("none");
+  });
+});
+
+describe("MonthCalendar 沒給 today 時依 timezone", () => {
+  it("UTC 10/31 16:00 = 東京 11/1:[今天] 跳到 2026-11", () => {
+    jest.useFakeTimers({ now: Date.UTC(2026, 9, 31, 16) });
+    try {
+      const onMonthChange = jest.fn<(month: string) => void>();
+      render(
+        <MonthCalendar
+          month="2027-02"
+          timezone="Asia/Tokyo"
+          showTodayButton
+          onMonthChange={onMonthChange}
+        />,
+      );
+
+      const button = todayButton();
+      if (button === null) throw new Error("沒有 [今天]");
+      fireEvent.click(button);
+
+      expect(onMonthChange).toHaveBeenCalledWith("2026-11");
+    } finally {
+      jest.useRealTimers();
+    }
   });
 });

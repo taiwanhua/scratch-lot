@@ -35,9 +35,9 @@ export class ScheduleDemand {
   @Prop({ type: MongooseSchema.Types.ObjectId, required: true })
   orgId!: Types.ObjectId;
 
-  /** 日期(`YYYY-MM-DD`,租戶當地日期 = 開始時點的那一天;跨午夜的算開始那天)。 */
-  @Prop({ type: String, required: true })
-  date!: string;
+  /** 日期:開始時點在租戶時區那一天的 00:00(時點;跨午夜的算開始那天)。 */
+  @Prop({ type: Date, required: true })
+  date!: Date;
 
   /** 開始時點。 */
   @Prop({ type: Date, required: true })

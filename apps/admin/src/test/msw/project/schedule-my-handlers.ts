@@ -29,6 +29,39 @@ export interface ScheduleMyWorldOptions {
   calendarDays?: MyScheduleQuery["mySchedule"]["calendarDays"];
 }
 
+/** 台北某天 00:00 的時點(api 的日期)。 */
+const dayAt = (date: string): string =>
+  new Date(`${date}T00:00:00+08:00`).toISOString();
+
+/** 時點 → 台北的月份鍵。 */
+const taipeiMonth = (iso: string): string =>
+  new Date(Date.parse(iso) + 8 * 60 * 60 * 1000).toISOString().slice(0, 7);
+
+/**
+ * 夾具以台北的日期鍵寫(好讀、測試好覆寫);回給畫面前換成 api 的形狀:日期 = 那天台北 00:00 的時點。
+ */
+const toApi = (
+  page: MyScheduleQuery["mySchedule"],
+): MyScheduleQuery["mySchedule"] => {
+  const keyed = <T extends { date: string }>(item: T): T => ({
+    ...item,
+    date: dayAt(item.date),
+  });
+  return {
+    ...page,
+    today: dayAt(page.today),
+    entries: page.entries.map((item) => keyed(item)),
+    punchCards: page.punchCards.map((card) => ({
+      ...card,
+      entry: keyed(card.entry),
+    })),
+    incomplete: page.incomplete.map((item) => keyed(item)),
+    changes: page.changes.map((item) => keyed(item)),
+    calendarDays: page.calendarDays.map((item) => keyed(item)),
+    dayOffDates: page.dayOffDates.map((item) => dayAt(item)),
+  };
+};
+
 /** 假的打卡時間:今天 10:00(租戶時區)。 */
 const PUNCH_AT = new Date(`${MY_TODAY}T10:00:00+08:00`).toISOString();
 const YESTERDAY = "2026-11-04";
@@ -76,8 +109,11 @@ export const scheduleMyWorld = (options: ScheduleMyWorldOptions = {}) => {
   const handlers = [
     api.query("MySchedule", ({ variables }) => {
       const { input } = variables as MyScheduleQueryVariables;
+      // 月份查詢是那個月的 `[月初 00:00, 下月初 00:00)`;沒給 = 今天所在的月份
+      const month =
+        typeof input?.from === "string" ? taipeiMonth(input.from) : MY_MONTH;
       return HttpResponse.json({
-        data: { mySchedule: payload(input?.month ?? MY_MONTH) },
+        data: { mySchedule: toApi(payload(month)) },
       });
     }),
     api.mutation("PunchMySchedule", ({ variables }) => {

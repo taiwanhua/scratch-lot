@@ -65,9 +65,9 @@ export class ScheduleCheckItemModel {
   @Field(() => String, { nullable: true })
   userName!: string | null;
 
-  /** [查看] 要捲到的那一天(`YYYY-MM-DD`;人的規則捲到 `userId|date`) */
-  @Field(() => String)
-  date!: string;
+  /** [查看] 要捲到的那一天(租戶時區 00:00 的時點;人的規則捲到那個人那一天) */
+  @Field(() => GraphQLISODateTime)
+  date!: Date;
 
   /** 違反的排班 */
   @Field(() => [ID])
@@ -79,12 +79,15 @@ export class ScheduleCheckItemModel {
   @Field(() => Float, { nullable: true })
   limit!: number | null;
 
-  /** 期間(連續上班、兩班之間的休息)的起訖日 */
-  @Field(() => String, { nullable: true })
-  from!: string | null;
+  /**
+   * 期間(連續上班、兩班之間的休息、某一天):半開的時點區間 `[起那天 00:00, 迄那天的隔天 00:00)`(租戶時區;
+   * 和自動排班範圍、月份查詢同一個語意;畫面顯示的迄日 = `to` 的前一天)
+   */
+  @Field(() => GraphQLISODateTime, { nullable: true })
+  from!: Date | null;
 
-  @Field(() => String, { nullable: true })
-  to!: string | null;
+  @Field(() => GraphQLISODateTime, { nullable: true })
+  to!: Date | null;
 
   /** 違反的那段時間(兩班之間的休息、兼多個崗位的重疊、人力不足的時段、畫休日的那筆排班) */
   @Field(() => GraphQLISODateTime, { nullable: true })

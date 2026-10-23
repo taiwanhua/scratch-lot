@@ -118,8 +118,8 @@ export const MAKEUP_PUNCH_MODULE_KEY = "schedule.attendance";
 
 /** 補打卡申請的欄位 key(seed、掛接點、新增頁讀同一份)。 */
 export const MAKEUP_PUNCH_FIELD_KEYS = {
-  /** 日期(date;當地 00:00 的時點) */
-  date: "date",
+  /** 補打卡的時間(datetime;時點) */
+  punchAt: "punch_at",
   /** 分店(reference org) */
   branch: "branch",
   /** 對應排班(text):排班 id,或 `MAKEUP_PUNCH_NO_ENTRY`「沒有排班(臨時代班)」 */
@@ -128,8 +128,6 @@ export const MAKEUP_PUNCH_FIELD_KEYS = {
   entryLabel: "entry_label",
   /** 類型(select static):`in` 上班 / `out` 下班 */
   punchType: "punch_type",
-  /** 時間(text `HH:mm`) */
-  time: "time",
   /** 原因(select fieldCategory 補打卡原因) */
   reason: "reason",
   /** 說明(text;原因選「其他」必填) */
@@ -185,39 +183,31 @@ const textOf = (value: unknown): string | null =>
 
 /** 補打卡申請的欄位值(解析後;格式不對的欄位是 null)。 */
 export interface MakeupPunchValues {
-  /** 日期欄的時點(當地 00:00);沒有 / 不是時點 = null */
-  dateInstant: Date | null;
+  /** 補打卡的時點;沒有 / 不是時點 = null */
+  punchAt: Date | null;
   branchId: string | null;
   /** 排班 id;null = 沒有排班(臨時代班);undefined = 沒選 */
   entryId: string | null | undefined;
   /** `in` / `out`;其他 = null */
   punchType: "in" | "out" | null;
-  /** `HH:mm`;其他 = null */
-  time: string | null;
   reasonKey: string | null;
   note: string | null;
 }
-
-const HH_MM = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 /** 表單存值 → 補打卡申請的欄位(掛接點與新增頁共用)。 */
 export function makeupPunchValuesOf(
   values: Readonly<Record<string, unknown>>,
 ): MakeupPunchValues {
   const keys = MAKEUP_PUNCH_FIELD_KEYS;
-  const rawDate = values[keys.date];
-  const date =
-    typeof rawDate === "string" || rawDate instanceof Date
-      ? new Date(rawDate)
-      : null;
+  const rawAt = values[keys.punchAt];
+  const at =
+    typeof rawAt === "string" || rawAt instanceof Date ? new Date(rawAt) : null;
   const type = optionValueOf(values[keys.punchType]);
-  const time = textOf(values[keys.time]);
   return {
-    dateInstant: date === null || Number.isNaN(date.getTime()) ? null : date,
+    punchAt: at === null || Number.isNaN(at.getTime()) ? null : at,
     branchId: referenceIdOf(values[keys.branch]),
     entryId: makeupPunchEntryIdOf(values[keys.entry]),
     punchType: type === "in" || type === "out" ? type : null,
-    time: time !== null && HH_MM.test(time) ? time : null,
     reasonKey: optionValueOf(values[keys.reason]),
     note: textOf(values[keys.note]),
   };

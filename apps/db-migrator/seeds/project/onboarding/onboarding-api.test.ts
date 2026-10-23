@@ -696,40 +696,52 @@ describe("開通腳本與 demo create(真 api + 真 MongoDB)", () => {
           parentId: tenantId,
           name: "中山店",
         });
+        const SUBMIT_SUPPORT_REQUEST = /* GraphQL */ `
+          mutation TestSubmitSupportRequest(
+            $input: CreateAndSubmitFormSubmissionInput!
+          ) {
+            createAndSubmitFormSubmission(input: $input) {
+              submission {
+                id
+                status
+                serialNo
+              }
+            }
+          }
+        `;
+        const supportValues = (endAt: string) => ({
+          // 台北 11/12 17:00–21:00
+          start_at: "2026-11-12T09:00:00.000Z",
+          end_at: endAt,
+          position: "in-store-counter",
+          headcount: 1,
+          branch: String(branch._id),
+          note: "颱風後補人,晚間人手不足",
+        });
+        // 結束跨過午夜(台北 11/13 01:00)→ 擋下(要在同一天)
+        await expect(
+          manager.request(SUBMIT_SUPPORT_REQUEST, {
+            input: {
+              formKey: SUPPORT_REQUEST_FORM_KEY,
+              clientRequestId: "support-request-overnight",
+              values: supportValues("2026-11-12T17:00:00.000Z"),
+            },
+          }),
+        ).rejects.toMatchObject({
+          code: "VALIDATION_FAILED",
+          fields: expect.arrayContaining(["end_at"]),
+        });
         const { createAndSubmitFormSubmission } = await manager.request<{
           createAndSubmitFormSubmission: {
             submission: { id: string; status: string; serialNo: string | null };
           };
-        }>(
-          /* GraphQL */ `
-            mutation TestSubmitSupportRequest(
-              $input: CreateAndSubmitFormSubmissionInput!
-            ) {
-              createAndSubmitFormSubmission(input: $input) {
-                submission {
-                  id
-                  status
-                  serialNo
-                }
-              }
-            }
-          `,
-          {
-            input: {
-              formKey: SUPPORT_REQUEST_FORM_KEY,
-              clientRequestId: "support-request-1",
-              values: {
-                date: "2026-11-11T16:00:00.000Z",
-                position: "in-store-counter",
-                start_time: "17:00",
-                end_time: "21:00",
-                headcount: 1,
-                branch: String(branch._id),
-                note: "颱風後補人,晚間人手不足",
-              },
-            },
+        }>(SUBMIT_SUPPORT_REQUEST, {
+          input: {
+            formKey: SUPPORT_REQUEST_FORM_KEY,
+            clientRequestId: "support-request-1",
+            values: supportValues("2026-11-12T13:00:00.000Z"),
           },
-        );
+        });
         expect(createAndSubmitFormSubmission.submission.status).toBe(
           "REVIEWING",
         );
@@ -737,6 +749,14 @@ describe("開通腳本與 demo create(真 api + 真 MongoDB)", () => {
         expect(createAndSubmitFormSubmission.submission.serialNo).toBe(
           "SP-0001",
         );
+        // 開始 / 結束存成時點(Mongo Date)
+        const stored = await findOne("form_submissions", {
+          _id: new ObjectId(createAndSubmitFormSubmission.submission.id),
+        });
+        expect(stored.values).toMatchObject({
+          start_at: new Date("2026-11-12T09:00:00.000Z"),
+          end_at: new Date("2026-11-12T13:00:00.000Z"),
+        });
 
         const hq = await findOne("users", {
           account: `owner+demo-hq@example.test`,

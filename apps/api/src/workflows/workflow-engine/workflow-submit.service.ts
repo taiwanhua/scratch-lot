@@ -242,14 +242,18 @@ export class WorkflowSubmitService {
         );
       }
       await this.hooks.reached("submit:submission-linked");
-      await this.lifecycle.emit("submitted", {
-        submissionId: record._id,
-        tenantId: record.tenantId,
-        orgId: record.orgId,
-        moduleKey: record.moduleKey,
-        formKey: record.formKey,
-        revision,
-      });
+      await this.lifecycle.emit(
+        "submitted",
+        {
+          submissionId: record._id,
+          tenantId: record.tenantId,
+          orgId: record.orgId,
+          moduleKey: record.moduleKey,
+          formKey: record.formKey,
+          revision,
+        },
+        { actorId: operator.actorId },
+      );
       await this.supersedeOlder(record._id, revision);
       // 第 4 步
       await this.engine.advance(instance._id);

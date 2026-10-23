@@ -6,7 +6,12 @@ import { api, server } from "@/test/msw/server";
 import { setupFakeViewport } from "@/test/viewport";
 
 import { renderSchedulePage } from "../../schedule-test-support";
-import { fastUser, findDialog, findLabelled } from "./roster-test-queries";
+import {
+  fastUser,
+  findDialog,
+  findLabelled,
+  timeField,
+} from "./roster-test-queries";
 
 setupFakeViewport();
 
@@ -43,7 +48,7 @@ describe("排班作業:欄位下寫原因", () => {
     expect(
       await within(dialog).findByText("和這個人的另一筆排班時間重疊"),
     ).toBeInTheDocument();
-    expect(within(dialog).getByLabelText(/上班/)).toHaveAccessibleDescription(
+    expect(timeField(dialog, /上班/)).toHaveAccessibleDescription(
       "和這個人的另一筆排班時間重疊",
     );
     expect(within(dialog).getByRole("alert")).toHaveTextContent(GENERIC);
@@ -111,7 +116,7 @@ describe("排班作業:欄位下寫原因", () => {
     );
     const dialog = await findDialog("新增人力需求");
     await user.click(within(dialog).getByRole("button", { name: "新增" }));
-    expect(within(dialog).getByLabelText(/開始/)).toHaveAccessibleDescription(
+    expect(timeField(dialog, /開始/)).toHaveAccessibleDescription(
       "必填,請填時間(時:分)",
     );
     expect(within(dialog).getByText("必填")).toBeInTheDocument();

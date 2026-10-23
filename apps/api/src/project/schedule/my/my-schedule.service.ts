@@ -1,16 +1,11 @@
 import { Injectable } from "@nestjs/common";
 import { Types } from "mongoose";
 
-import {
-  localDateOf,
-  localDateText,
-  startOfLocalDayOf,
-} from "@repo/domain/form";
+import { startOfLocalDayOf } from "@repo/domain/form";
 import { SCHEDULE_FIELD_CATEGORY_KEYS } from "@repo/domain/project/schedule-fields";
 import {
   SCHEDULE_PUNCH_TYPES,
   type SchedulePunchType,
-  isIsoMonth,
 } from "@repo/domain/project/schedule-settings";
 
 import { OrgsRepository } from "../../../database/database.module";
@@ -32,8 +27,16 @@ import { ScheduleCalendarService } from "../calendar/schedule-calendar.service";
 import { ScheduleDayOffsService } from "../day-offs/schedule-day-offs.service";
 import { ScheduleFieldOptionsService } from "../field-options/schedule-field-options.service";
 import type { EntryRecord } from "../roster/roster-people";
-import { monthRange } from "../roster/schedule-roster.service";
 import { ScheduleClock } from "../shared/schedule-clock";
+import {
+  dateKeyOf,
+  instantOfKey,
+  instantRangeFilter,
+  monthKeyOf,
+  monthKeyRange,
+  monthOfWholeMonthRange,
+  shiftDateKey,
+} from "../shared/schedule-dates";
 import {
   SCHEDULE_REASONS,
   notFoundError,
@@ -69,22 +72,6 @@ import {
 
 /** 打卡不完整提醒看最近幾天(含今天)。 */
 export const INCOMPLETE_LOOKBACK_DAYS = 7;
-
-/** `YYYY-MM-DD` 加減天數。 */
-export function shiftDate(date: string, days: number): string {
-  const [year = 0, month = 1, day = 1] = date.split("-").map(Number);
-  return new Date(Date.UTC(year, month - 1, day + days))
-    .toISOString()
-    .slice(0, 10);
-}
-
-/** 兩個 `YYYY-MM-DD` 中較早的(字典序 = 日期順序)。 */
-function earlierDate(left: string, right: string): string {
-  if (left <= right) {
-    return left;
-  }
-  return right;
-}
 
 export function punchModelOf(record: PunchRecord): MySchedulePunchModel {
   return {
@@ -142,19 +129,19 @@ export class MyScheduleService {
 
   async mySchedule(
     operator: OperatorContext,
-    month: string | null | undefined,
+    range: { from?: Date | null; to?: Date | null } | null | undefined,
   ): Promise<MySchedulePayload> {
     const self = await this.self(operator);
     const now = this.clock.now();
     const timezone = await tenantTimezoneOf(this.orgs, operator, self.tenantId);
-    const today = localDateText(localDateOf(now.getTime(), timezone));
-    const target = month ?? today.slice(0, 7);
-    if (!isIsoMonth(target)) {
-      throw validationError("month must be YYYY-MM", ["month"]);
-    }
-    const own = monthRange(target);
-    const yesterday = shiftDate(today, -1);
-    const lookbackFrom = shiftDate(today, 1 - INCOMPLETE_LOOKBACK_DAYS);
+    const keyOf = (date: Date) => dateKeyOf(date, timezone);
+    const today = dateKeyOf(now, timezone);
+    const target = monthOfWholeMonthRange(range, timezone) ?? monthKeyOf(today);
+    const own = monthKeyRange(target, timezone);
+    const inMonth = (date: Date) =>
+      date.getTime() >= own.from && date.getTime() < own.to;
+    const yesterday = shiftDateKey(today, -1);
+    const lookbackFrom = shiftDateKey(today, 1 - INCOMPLETE_LOOKBACK_DAYS);
     const reader = await tenantBoundaryContext(
       this.orgs,
       operator,
@@ -162,8 +149,13 @@ export class MyScheduleService {
     );
 
     // 讀這個月 ∪ 最近 7 天(打卡不完整提醒、打卡區可能跨月)
-    const from = earlierDate(own.from, lookbackFrom);
-    const to = earlierDate(own.to, today) === today ? own.to : today;
+    const read = {
+      from: Math.min(own.from, instantOfKey(lookbackFrom, timezone).getTime()),
+      to: Math.max(
+        own.to,
+        instantOfKey(shiftDateKey(today, 1), timezone).getTime(),
+      ),
+    };
     const entries = await this.published.publishedOnly(
       reader,
       self.tenantId,
@@ -172,7 +164,7 @@ export class MyScheduleService {
         {
           tenantId: self.tenantId,
           userId: self.userId,
-          date: { $gte: from, $lte: to },
+          date: instantRangeFilter(read),
         },
         { sort: { startAt: 1 } },
       ),
@@ -205,10 +197,11 @@ export class MyScheduleService {
         orgName: orgNames.get(String(entry.orgId)) ?? "",
         punches: punchLikes,
         now,
+        timezone,
       });
     const likes = entries.map((entry) => ({
       id: String(entry._id),
-      date: entry.date,
+      date: keyOf(entry.date),
       startAt: entry.startAt,
       endAt: entry.endAt,
       record: entry,
@@ -220,29 +213,24 @@ export class MyScheduleService {
 
     const holds = await this.permissions.holderOf(operator);
     const [changes, calendarDays, dayOffs] = await Promise.all([
-      this.recentChanges(operator, reader, self, today),
-      this.calendar.effectiveDays(operator, self.org.id, own.from, own.to),
-      this.dayOffs.unavailableOfPerson(
-        self.tenantId,
-        self.userId,
-        own.from,
-        own.to,
-      ),
+      this.recentChanges(operator, reader, self, instantOfKey(today, timezone)),
+      this.calendar.effectiveDays(operator, self.org.id, own),
+      this.dayOffs.unavailableOfPerson(self.tenantId, self.userId, own),
     ]);
 
     return {
       month: target,
-      today,
+      today: instantOfKey(today, timezone),
       canPunch: holds(SCHEDULE_PERMISSIONS.myPunch),
       currentOrg: { id: String(self.org.id), name: self.org.name },
       entries: entries
-        .filter((entry) => entry.date >= own.from && entry.date <= own.to)
+        .filter((entry) => inMonth(entry.date))
         .map((entry) => modelOf(entry)),
       punchCards: punchableEntriesOf(likes, punchLikes, {
         today,
         yesterday,
       }).map((item) => ({ day: item.day, entry: modelOf(item.entry.record) })),
-      hasEntryToday: entries.some((entry) => entry.date === today),
+      hasEntryToday: entries.some((entry) => keyOf(entry.date) === today),
       openUnmatchedClockIn:
         openUnmatched === null ? null : punchModelOf(openUnmatched.record),
       incomplete: incompleteEntriesOf(likes, punchLikes, now, {
@@ -308,7 +296,12 @@ export class MyScheduleService {
         self,
         parseObjectId(input.entryId, "entryId"),
       );
-      const today = await this.today(operator, self.tenantId, now);
+      const timezone = await tenantTimezoneOf(
+        this.orgs,
+        operator,
+        self.tenantId,
+      );
+      const today = dateKeyOf(now, timezone);
       const existing = await this.punches.findMany(writer, {
         tenantId: self.tenantId,
         entryId: entry._id,
@@ -317,13 +310,13 @@ export class MyScheduleService {
         !canPunchEntry(
           {
             id: String(entry._id),
-            date: entry.date,
+            date: dateKeyOf(entry.date, timezone),
             startAt: entry.startAt,
             endAt: entry.endAt,
           },
           type,
           existing.map((record) => punchLikeOf(record)),
-          { today, yesterday: shiftDate(today, -1) },
+          { today, yesterday: shiftDateKey(today, -1) },
         )
       ) {
         throw validationError(
@@ -394,7 +387,7 @@ export class MyScheduleService {
     operator: OperatorContext,
     reader: OperatorContext,
     self: Self,
-    today: string,
+    today: Date,
   ): Promise<MyScheduleChangeModel[]> {
     const rows = await this.changes.findMany(
       reader,
@@ -441,15 +434,6 @@ export class MyScheduleService {
     }
     return { org, tenantId: org.tenantId, userId: operator.actorId };
   }
-
-  private async today(
-    operator: OperatorContext,
-    tenantId: Types.ObjectId,
-    now: Date,
-  ): Promise<string> {
-    const timezone = await tenantTimezoneOf(this.orgs, operator, tenantId);
-    return localDateText(localDateOf(now.getTime(), timezone));
-  }
 }
 
 /** 一筆排班 → 畫面(打卡紀錄取生效的那兩張;缺卡只算已結束的班)。 */
@@ -460,6 +444,7 @@ export function entryModelOf(
     orgName: string;
     punches: readonly PunchLike[];
     now: Date;
+    timezone: string;
   },
 ): MyScheduleEntryModel {
   const id = String(entry._id);
@@ -484,7 +469,12 @@ export function entryModelOf(
     clockIn,
     clockOut,
     missing: missingPunchesOf(
-      { id, date: entry.date, startAt: entry.startAt, endAt: entry.endAt },
+      {
+        id,
+        date: dateKeyOf(entry.date, context.timezone),
+        startAt: entry.startAt,
+        endAt: entry.endAt,
+      },
       context.punches,
       context.now,
     ),

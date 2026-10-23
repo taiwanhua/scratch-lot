@@ -1,6 +1,11 @@
 import { type ReactNode, useState } from "react";
 import { useTranslations } from "use-intl";
 
+import {
+  localDateText,
+  localMonthText,
+  parseLocalDate,
+} from "@repo/domain/form";
 import { Box } from "@repo/ui/box";
 import { Button } from "@repo/ui/button";
 import { IconButton } from "@repo/ui/icon-button";
@@ -18,9 +23,8 @@ import type { PeriodKindPickerProps } from "./period-picker-props";
 
 const MONTHS = Array.from({ length: 12 }, (_, index) => index + 1);
 
-const pad2 = (value: number) => String(value).padStart(2, "0");
-
-const yearOf = (date: string) => Number(date.slice(0, 4));
+/** 期間起點(日期鍵)的年份;不是日期鍵 → 0。 */
+const yearOf = (date: string) => parseLocalDate(date)?.year ?? 0;
 
 export interface MonthPeriodPickerProps extends PeriodKindPickerProps {
   /** 月格子下方的註記(`month` 是 `YYYY-MM`) */
@@ -78,7 +82,7 @@ export const MonthPeriodPicker = ({
         }}
       >
         {MONTHS.map((month) => {
-          const first = `${String(shownYear)}-${pad2(month)}-01`;
+          const first = localDateText({ year: shownYear, month, day: 1 });
           const isSelected = first === value;
           return (
             <Button
@@ -97,7 +101,7 @@ export const MonthPeriodPicker = ({
               }}
             >
               <span>{t("monthLabel", { month })}</span>
-              {monthCaption?.(first.slice(0, 7))}
+              {monthCaption?.(localMonthText({ year: shownYear, month }))}
             </Button>
           );
         })}

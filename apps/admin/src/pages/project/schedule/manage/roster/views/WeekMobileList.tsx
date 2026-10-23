@@ -51,7 +51,7 @@ export interface WeekMobileListProps {
 export const WeekMobileList = ({ dates }: WeekMobileListProps) => {
   const t = useTranslations("admin.schedule.roster");
   const tCalendar = useTranslations("admin.schedule.calendar");
-  const { data } = useRoster();
+  const { data, timezone } = useRoster();
   const showDay = useShowDay();
   const timeline = useTimelineGroups(dates, "week");
   const calendarByDate = new Map(
@@ -76,7 +76,7 @@ export const WeekMobileList = ({ dates }: WeekMobileListProps) => {
             },
           }));
           const title = t("dateTitle", {
-            date: monthDayOf(date),
+            date: monthDayOf(date, timezone),
             weekday: tCalendar(`weekdays.${String(weekdayOf(date))}`),
           });
           return (

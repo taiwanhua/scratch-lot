@@ -82,12 +82,15 @@ return createElement(moduleIconOf(module.icon), { fontSize: "small" });
 | `SegmentedControl`                                        | `@repo/ui/segmented-control`                         | 幾個互斥選項的分段按鈕(頭像選單的外觀、語言)   |
 | `Badge`                                                   | `@repo/ui/badge`                                     | 數字 / 小圓點提示(側欄待辦數)                  |
 | `DatePicker` / `DateTimePicker`                           | `@repo/ui/date-picker` / `@repo/ui/date-time-picker` | 日期、日期時間欄位                             |
+| `TimePicker`                                              | `@repo/ui/time-picker`                               | 時間欄位(`HH:mm`,24 小時制)                    |
 | `Table` / `DataTable`                                     | `@repo/ui/table` / `@repo/ui/data-table`             | 小表 / 大量資料列表(REACT-13、STYLE-11)        |
 | `Tag`                                                     | `@repo/ui/tag`                                       | 狀態標籤(tone)                                 |
 | `Snackbar`                                                | `@repo/ui/snackbar`                                  | 只由 `SnackbarProvider` 渲染(DATA-06)          |
 | `useColorMode` / `AppThemeProvider`                       | `@repo/ui/app-theme-provider`                        | 外觀切換(STYLE-04)                             |
 | `useBreakpointDown`                                       | `@repo/ui/media-query`                               | JS 端需要知道斷點時(版面仍用 STYLE-03)         |
 | `EditIcon` / `DeleteIcon` / `ChevronDoubleLeftIcon` / `…` | `@repo/ui/icons`                                     | 介面圖示(見上方圖示規則)                       |
+
+**日期、時間欄位一律用上表的 picker,不用原生 `input`**:時間欄位一律用 `@repo/ui/time-picker`,不用 `TextField type="time"`;日期欄位同理不用 `type="date"` / `datetime-local`。原生欄位的外觀與格式隨瀏覽器和語系變(12 / 24 小時制、`yyyy/mm/dd`),也接不上 picker 共用的草稿行為(打到一半不往外送值,`onChange` 第二參數 `isIncomplete`)。
 
 **「停用的選項」不能靠 Tooltip 說明原因**:MUI 對 `aria-disabled` 的
 Autocomplete 選項下 `pointer-events: none`,hover 根本不會觸發;把它改回 `auto` 又會讓停用的
@@ -197,7 +200,7 @@ expect(chain.slice(1, -1).filter((l) => l.scrolls)).toEqual([]); // 只有最內
 
 app 端給 `@repo/ui` 元件傳 `sx` 時,只放與版面位置有關的值(`cursor`、`mt`、`flex`…);元件自己的幾何(高度、圓角、tone 色)由元件內的 `styled()` / theme `components` 決定(STYLE-07),呼叫端不要重設。需要不同尺寸或 tone 用元件的 props(`size`、`tone`),沒有就到 ui 加,不在呼叫端用 `sx` 硬改。
 
-**表單欄位的 `size`**:`TextField`、`SelectField`、`Autocomplete`、`DatePicker`、`DateTimePicker`、`ModuleIconPicker`、`OrgTreeSelect`、`ShareOrgsField` 不給 `size` 一律是 medium(`packages/ui/src/test/field-size.test.tsx` 鎖著),要 small 就明寫。同一張表單 / 同一列的欄位給同一個 `size`;隔壁寫了 `size="small"`、自己沒寫的那格會高一截。admin 的 ESLint(`no-restricted-syntax`)擋同一層直接並排的欄位 `size` 不一致(明寫 `medium` 與沒寫同算 medium;spread 的值是單純識別字(`{...SMALL}`、`{...fieldProps}`)又沒寫 size 的看不出來,不判;函式呼叫等其他 spread(如 `{...fieldErrorProps(...)}`)照判)。包在條件式或 helper 裡的、每格各包一層 `Grid` / `Box` 的版面,規則都抓不到,review 時對照。
+**表單欄位的 `size`**:`TextField`、`SelectField`、`Autocomplete`、`DatePicker`、`DateTimePicker`、`TimePicker`、`ModuleIconPicker`、`OrgTreeSelect`、`ShareOrgsField` 不給 `size` 一律是 medium(`packages/ui/src/test/field-size.test.tsx` 鎖著),要 small 就明寫。同一張表單 / 同一列的欄位給同一個 `size`;隔壁寫了 `size="small"`、自己沒寫的那格會高一截。admin 的 ESLint(`no-restricted-syntax`)擋同一層直接並排的欄位 `size` 不一致(明寫 `medium` 與沒寫同算 medium;spread 的值是單純識別字(`{...SMALL}`、`{...fieldProps}`)又沒寫 size 的看不出來,不判;函式呼叫等其他 spread(如 `{...fieldErrorProps(...)}`)照判)。包在條件式或 helper 裡的、每格各包一層 `Grid` / `Box` 的版面,規則都抓不到,review 時對照。
 
 **目前記錄在案的例外:沒有。**(`IconButton` 的外框與 32 / 40 / 48 正方形由 `variant="outlined"` 提供,
 `SideNavToggle` 這類外框圖示鈕照用即可,不要再用 `sx` 給幾何。)

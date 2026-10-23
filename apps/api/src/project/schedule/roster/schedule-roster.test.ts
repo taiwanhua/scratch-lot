@@ -69,7 +69,7 @@ const ROSTER = /* GraphQL */ `
       settings { breakTiers { minMinutes breakMinutes } defaultLeaderTaskKey defaultHelperTaskKey maxMonthlyDayOffs minMonthlyDayOffs entryMatchToleranceMinutes }
       people {
         userId name canLead isCandidate
-        stats { shiftCount leadShiftCount workMinutes dayOffDays fullDayOffDays longestStreak timeRangeDays { date slots { startTime endTime } } }
+        stats { shiftCount leadShiftCount workMinutes dayOffDays fullDayOffDays longestStreak timeRangeDays { date slots { startAt endAt } } }
       }
       demands { ${DEMAND} }
       entries { ${ENTRY} }
@@ -305,6 +305,10 @@ const taskOf = (demand: DemandRow, role: string, index = 0): string => {
   return task.taskId;
 };
 
+/** 洛杉磯(夏令 UTC−7)某天某時刻(租戶時區不是台北的測試用)。 */
+const laDaylight = (date: string, time: string) =>
+  new Date(`${date}T${time}:00-07:00`).toISOString();
+
 const LEAD = "store-and-accounts-lead";
 const DUTY = "store-duties";
 const COUNTER = "in-store-counter";
@@ -427,17 +431,26 @@ describe("排班表(GraphQL 端點 + 真 MongoDB)", () => {
     user: ScheduleTestUser,
     date: string,
     kind: "full-day" | "time-range",
-    slot: { startTime: string; endTime: string } | null = null,
+    /** `endDate`:結束在哪天(預設同一天;做到當天結束 = 隔天 00:00) */
+    slot: {
+      startTime: string;
+      endTime: string;
+      endDate?: string;
+    } | null = null,
   ): Promise<void> {
     const now = new Date();
     await connection.collection(SCHEDULE_DAY_OFFS_COLLECTION).insertOne({
       orgId: zhongshan,
       tenantId: tenantA,
       userId: user.userId,
-      date,
+      // 日期與時段都是時點(租戶時區台北)
+      date: new Date(taipei(date, "00:00")),
       kind,
-      startTime: slot?.startTime ?? null,
-      endTime: slot?.endTime ?? null,
+      startAt: slot === null ? null : new Date(taipei(date, slot.startTime)),
+      endAt:
+        slot === null
+          ? null
+          : new Date(taipei(slot.endDate ?? date, slot.endTime)),
       note: null,
       by: null,
       reason: null,
@@ -477,7 +490,7 @@ describe("排班表(GraphQL 端點 + 真 MongoDB)", () => {
       input: {
         orgId: String(zhongshan),
         userId: String(user.userId),
-        date,
+        date: taipei(date, "00:00"),
         kind: "full-day",
       },
     });
@@ -631,7 +644,8 @@ describe("排班表(GraphQL 端點 + 真 MongoDB)", () => {
     it("新增:日期 = 開始時點的當地日期、執行任務產生 id、未套用範本 → 來源手動、templateId null", async () => {
       const demand = await demandOn("2026-11-02", "14:30", "22:00", 2);
       expect(demand).toMatchObject({
-        date: "2026-11-02",
+        // 那天 = 開始時點在租戶時區那天的 00:00
+        date: taipei("2026-11-02", "00:00"),
         positionKey: COUNTER,
         templateId: null,
         source: "manual",
@@ -817,16 +831,16 @@ describe("排班表(GraphQL 端點 + 真 MongoDB)", () => {
       await connection.collection(SCHEDULE_DAY_OFFS_COLLECTION).insertMany(
         [
           {
-            date: "2026-12-10",
+            date: new Date(taipei("2026-12-10", "00:00")),
             kind: "full-day",
-            startTime: null,
-            endTime: null,
+            startAt: null,
+            endAt: null,
           },
           {
-            date: "2026-12-11",
+            date: new Date(taipei("2026-12-11", "00:00")),
             kind: "time-range",
-            startTime: "09:00",
-            endTime: "13:00",
+            startAt: new Date(taipei("2026-12-11", "09:00")),
+            endAt: new Date(taipei("2026-12-11", "13:00")),
           },
         ].map((item) => ({
           orgId: zhongshan,
@@ -870,12 +884,33 @@ describe("排班表(GraphQL 端點 + 真 MongoDB)", () => {
       ).toMatchObject({ code: "VALIDATION_FAILED", fields: ["startAt"] });
 
       const closed = await gql(hq, SAVE_CALENDAR_DAY, {
-        input: { orgId: String(zhongshan), date: "2026-12-15", type: "closed" },
+        input: {
+          orgId: String(zhongshan),
+          date: taipei("2026-12-15", "00:00"),
+          type: "closed",
+        },
       });
       expect(closed.errors).toBeUndefined();
       expect(
         errorOf(await overnightEntry("2026-12-14", "2026-12-15", "02:00")),
       ).toMatchObject({ code: "VALIDATION_FAILED", fields: ["startAt"] });
+    });
+
+    it("時段做到當天結束(結束 = 隔天 00:00):跨午夜的班碰到 → 擋下;隔天 00:00 起的班不擋(頭尾相接)", async () => {
+      await insertDayOff(li, "2026-12-25", "time-range", {
+        startTime: "21:00",
+        endTime: "00:00",
+        endDate: "2026-12-26",
+      });
+      expect(
+        errorOf(await overnightEntry("2026-12-25", "2026-12-26", "06:00")),
+      ).toMatchObject({
+        code: "VALIDATION_FAILED",
+        fields: ["startAt"],
+        reason: "DAY_OFF_CONFLICT",
+      });
+      const nextDay = await entryOn("2026-12-26", "00:00", "06:00");
+      expect(nextDay.errors).toBeUndefined();
     });
 
     it("排班和畫休同時送出:排班成功就一定出現在畫休的衝突清單,否則排班被擋(「人」守門文件互相衝突)", async () => {
@@ -920,7 +955,8 @@ describe("排班表(GraphQL 端點 + 真 MongoDB)", () => {
       expect(saved.items).toHaveLength(1);
       expect(saved.entryConflicts).toEqual([
         {
-          date,
+          // 排班那天(租戶時區 00:00 的時點)
+          date: taipei(date, "00:00"),
           startAt: taipei(date, "14:30"),
           endAt: taipei(date, "22:00"),
           orgName: "中山店",
@@ -986,7 +1022,7 @@ describe("排班表(GraphQL 端點 + 真 MongoDB)", () => {
         await gql(hq, SAVE_CALENDAR_DAY, {
           input: {
             orgId: String(zhongshan),
-            date: "2026-11-10",
+            date: taipei("2026-11-10", "00:00"),
             type: "closed",
           },
         }),
@@ -1119,7 +1155,10 @@ describe("排班表(GraphQL 端點 + 真 MongoDB)", () => {
       expect(errorOf(denied)).toMatchObject({ blockedEntryIds: [lead.id] });
       const removed = dataOf(
         await gql(hq, REMOVE_DAY, {
-          input: { orgId: String(zhongshan), date: "2026-11-16" },
+          input: {
+            orgId: String(zhongshan),
+            date: taipei("2026-11-16", "00:00"),
+          },
         }),
         "removeScheduleDayEntries",
       );
@@ -1142,12 +1181,14 @@ describe("排班表(GraphQL 端點 + 真 MongoDB)", () => {
         expect.objectContaining({
           id: String(own),
           userId: String(li.userId),
-          date: "2026-11-20",
+          date: taipei("2026-11-20", "00:00"),
           type: "in",
         }),
       );
       expect(
-        data.unmatchedPunches.filter((item) => item.date === "2026-11-20"),
+        data.unmatchedPunches.filter(
+          (item) => item.date === taipei("2026-11-20", "00:00"),
+        ),
       ).toHaveLength(1);
       expect(data.settings.entryMatchToleranceMinutes).toBe(60);
       expect(data.canUsePunchTime).toBe(true);
@@ -1240,19 +1281,19 @@ describe("排班表(GraphQL 端點 + 真 MongoDB)", () => {
       const date = "2026-11-20";
       await connection.collection(SCHEDULE_DAY_OFFS_COLLECTION).insertMany(
         [
-          { date: "2026-11-21", kind: "full-day" },
+          { date: new Date(taipei("2026-11-21", "00:00")), kind: "full-day" },
           {
-            date: "2026-11-22",
+            date: new Date(taipei("2026-11-22", "00:00")),
             kind: "time-range",
-            startTime: "09:00",
-            endTime: "13:00",
+            startAt: new Date(taipei("2026-11-22", "09:00")),
+            endAt: new Date(taipei("2026-11-22", "13:00")),
           },
         ].map((item) => ({
           orgId: zhongshan,
           tenantId: tenantA,
           userId: chen.userId,
-          startTime: null,
-          endTime: null,
+          startAt: null,
+          endAt: null,
           note: null,
           by: null,
           reason: null,
@@ -1295,26 +1336,31 @@ describe("排班表(GraphQL 端點 + 真 MongoDB)", () => {
         longestStreak: 2,
         timeRangeDays: [
           {
-            date: "2026-11-22",
-            slots: [{ startTime: "09:00", endTime: "13:00" }],
+            date: taipei("2026-11-22", "00:00"),
+            slots: [
+              {
+                startAt: taipei("2026-11-22", "09:00"),
+                endAt: taipei("2026-11-22", "13:00"),
+              },
+            ],
           },
         ],
       });
       expect(view.otherStoreEntries).toContainEqual({
         userId: String(chen.userId),
-        date: "2026-11-19",
+        date: taipei("2026-11-19", "00:00"),
         orgName: "新竹店",
       });
       expect(view.unavailability).toContainEqual({
         userId: String(chen.userId),
-        date: "2026-11-21",
+        date: taipei("2026-11-21", "00:00"),
         fullDay: true,
       });
 
       const managerView = await roster(manager);
       expect(managerView.otherStoreEntries).toContainEqual({
         userId: String(chen.userId),
-        date: "2026-11-19",
+        date: taipei("2026-11-19", "00:00"),
         orgName: null,
       });
       expect(managerView.canEdit).toBe(true);
@@ -1393,12 +1439,16 @@ describe("排班表(GraphQL 端點 + 真 MongoDB)", () => {
       const monthOnly = await read({});
       expect(monthOnly.demands.map((item) => item.id)).not.toContain(next.id);
 
-      const week = await read({ from: "2026-12-27", to: "2027-01-02" });
+      // 半開的時點區間:12/27 00:00 到 1/3 00:00(含 1/2 整天)
+      const week = await read({
+        from: taipei("2026-12-27", "00:00"),
+        to: taipei("2027-01-03", "00:00"),
+      });
       const found = week.demands.find((item) => item.id === next.id);
-      expect(found?.date).toBe("2027-01-02");
+      expect(found?.date).toBe(taipei("2027-01-02", "00:00"));
       expect(Number.isNaN(Date.parse(found?.createdAt ?? ""))).toBe(false);
       expect(week.entries).toContainEqual({
-        date: "2027-01-02",
+        date: taipei("2027-01-02", "00:00"),
         assignments: [{ source: "manual", reason: null }],
       });
       // 統計只算 12 月:王小明 12 月沒有班
@@ -1407,16 +1457,93 @@ describe("排班表(GraphQL 端點 + 真 MongoDB)", () => {
           ?.stats.shiftCount,
       ).toBe(0);
 
+      // 前後 6 天:11/25 00:00 起、1/7 00:00 止;超出、迄不晚於起、只給一個 → VALIDATION_FAILED
       for (const range of [
-        { from: "2026-11-24", to: "2026-12-01" },
-        { from: "2026-12-27", to: "2027-01-07" },
-        { from: "2027-01-02", to: "2026-12-27" },
-        { from: "2026-12-27", to: "2027-02-30" },
+        {
+          from: taipei("2026-11-24", "00:00"),
+          to: taipei("2026-12-02", "00:00"),
+        },
+        {
+          from: taipei("2026-12-27", "00:00"),
+          to: taipei("2027-01-08", "00:00"),
+        },
+        {
+          from: taipei("2027-01-02", "00:00"),
+          to: taipei("2026-12-27", "00:00"),
+        },
+        { from: taipei("2026-12-27", "00:00") },
       ]) {
         const result = await gql(hq, RANGE, {
           input: { orgId: String(zhongshan), month: "2026-12", ...range },
         });
         expect(errorOf(result)).toMatchObject({ fields: ["from", "to"] });
+      }
+    });
+
+    it("租戶時區不是台北:日期 = 洛杉磯那天 00:00;結束 = 隔天 00:00 / 跨午夜算開始那天;月界與移除這天以洛杉磯為準", async () => {
+      const orgs = connection.collection("orgs");
+      await orgs.updateOne(
+        { _id: tenantA },
+        { $set: { "settings.timezone": "America/Los_Angeles" } },
+      );
+      try {
+        // 洛杉磯 5/31 18:00 – 6/1 00:00 = UTC 6/1 01:00–07:00:仍是 5/31、5 月
+        const late = dataOf(
+          await saveDemand(hq, {
+            startAt: laDaylight("2027-05-31", "18:00"),
+            endAt: laDaylight("2027-06-01", "00:00"),
+            tasks: [{ role: "leader", taskKey: LEAD }],
+          }),
+          "saveScheduleDemand",
+        ).item;
+        expect(late.date).toBe(laDaylight("2027-05-31", "00:00"));
+        const evening = dataOf(
+          await saveEntry(hq, {
+            userId: String(wang.userId),
+            startAt: laDaylight("2027-05-31", "18:00"),
+            endAt: laDaylight("2027-06-01", "00:00"),
+            assignments: [
+              { demandId: late.id, taskId: taskOf(late, "leader") },
+            ],
+          }),
+          "saveScheduleEntry",
+        ).item;
+        expect(evening.date).toBe(laDaylight("2027-05-31", "00:00"));
+        // 跨午夜(22:00 – 隔天 02:00)算開始那天
+        const overnight = dataOf(
+          await saveDemand(hq, {
+            startAt: laDaylight("2027-05-20", "22:00"),
+            endAt: laDaylight("2027-05-21", "02:00"),
+            tasks: [{ role: "leader", taskKey: LEAD }],
+          }),
+          "saveScheduleDemand",
+        ).item;
+        expect(overnight.date).toBe(laDaylight("2027-05-20", "00:00"));
+
+        const may = await roster(hq, "2027-05");
+        expect(may.demands.map((item) => item.id)).toEqual(
+          expect.arrayContaining([late.id, overnight.id]),
+        );
+        expect(may.entries.map((item) => item.id)).toContain(evening.id);
+        const june = await roster(hq, "2027-06");
+        expect(june.demands.map((item) => item.id)).not.toContain(late.id);
+
+        // 移除這天所有排班:送洛杉磯那天的 00:00
+        const removed = dataOf(
+          await gql(hq, REMOVE_DAY, {
+            input: {
+              orgId: String(zhongshan),
+              date: laDaylight("2027-05-31", "00:00"),
+            },
+          }),
+          "removeScheduleDayEntries",
+        );
+        expect(removed).toEqual({ deletedIds: [evening.id], skippedIds: [] });
+      } finally {
+        await orgs.updateOne(
+          { _id: tenantA },
+          { $unset: { "settings.timezone": "" } },
+        );
       }
     });
   });

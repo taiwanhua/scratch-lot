@@ -19,20 +19,20 @@ export class ScheduleDayOffModel {
   @Field(() => String)
   name!: string;
 
-  /** `YYYY-MM-DD` */
-  @Field(() => String)
-  date!: string;
+  /** 那天(租戶時區 00:00 的時點) */
+  @Field(() => GraphQLISODateTime)
+  date!: Date;
 
   /** `full-day` 整天畫休 / `time-range` 時段不可排 */
   @Field(() => String)
   kind!: string;
 
-  /** 時段不可排的開始 / 結束(`HH:mm`);整天畫休為 null */
-  @Field(() => String, { nullable: true })
-  startTime!: string | null;
+  /** 時段不可排的開始 / 結束(時點);整天畫休為 null */
+  @Field(() => GraphQLISODateTime, { nullable: true })
+  startAt!: Date | null;
 
-  @Field(() => String, { nullable: true })
-  endTime!: string | null;
+  @Field(() => GraphQLISODateTime, { nullable: true })
+  endAt!: Date | null;
 
   @Field(() => String, { nullable: true })
   note!: string | null;
@@ -56,16 +56,19 @@ export class ScheduleDayOffModel {
 /** 某個月的畫休開放期間(這家店的規則「畫休開放期間」;登記的是下個月)。 */
 @ObjectType("ScheduleDayOffWindow")
 export class ScheduleDayOffWindowModel {
-  /** 目標月 `YYYY-MM` */
+  /** 目標月 `YYYY-MM`(月份鍵) */
   @Field(() => String)
   month!: string;
 
-  /** `YYYY-MM-DD`(含頭尾) */
-  @Field(() => String)
-  startDate!: string;
+  /**
+   * 開放期間:半開的時點區間 `[開始日 00:00, 截止日的隔天 00:00)`(租戶時區;「期間一律是起 ≤ 時間 < 迄」,
+   * 同檢核項目、自動排班範圍)
+   */
+  @Field(() => GraphQLISODateTime)
+  from!: Date;
 
-  @Field(() => String)
-  endDate!: string;
+  @Field(() => GraphQLISODateTime)
+  to!: Date;
 
   /** `before` 還沒開始 / `open` 開放中 / `closed` 已截止(以租戶時區的今天判斷) */
   @Field(() => String)
@@ -79,8 +82,9 @@ export class ScheduleDayOffWindowModel {
 /** 某一天:同日畫休人數與畫休的人。 */
 @ObjectType("ScheduleDayOffDay")
 export class ScheduleDayOffDayModel {
-  @Field(() => String)
-  date!: string;
+  /** 那天(租戶時區 00:00 的時點) */
+  @Field(() => GraphQLISODateTime)
+  date!: Date;
 
   /** 同日畫休人數(只計以這家店為主要分店的人;整天或時段不可排都算 1 人) */
   @Field(() => Int)
@@ -106,9 +110,9 @@ export class ScheduleDayOffViolationModel {
   @Field(() => String)
   message!: string;
 
-  /** 違反涉及的日期(色帶畫在這些日子;[查看] 跳到第一天) */
-  @Field(() => [String])
-  dates!: string[];
+  /** 違反涉及的日期(各是那天 00:00 的時點;色帶畫在這些日子;[查看] 跳到第一天) */
+  @Field(() => [GraphQLISODateTime])
+  dates!: Date[];
 
   @Field(() => Int, { nullable: true })
   actual!: number | null;
@@ -116,12 +120,15 @@ export class ScheduleDayOffViolationModel {
   @Field(() => Int, { nullable: true })
   limit!: number | null;
 
-  /** 期間類(連續休假、某一天)的起訖 `YYYY-MM-DD` */
-  @Field(() => String, { nullable: true })
-  from!: string | null;
+  /**
+   * 期間類(連續休假、某一天):半開的時點區間 `[起那天 00:00, 迄那天的隔天 00:00)`(租戶時區;
+   * 和自動排班範圍、月份查詢同一個語意;畫面顯示的迄日 = `to` 的前一天)
+   */
+  @Field(() => GraphQLISODateTime, { nullable: true })
+  from!: Date | null;
 
-  @Field(() => String, { nullable: true })
-  to!: string | null;
+  @Field(() => GraphQLISODateTime, { nullable: true })
+  to!: Date | null;
 }
 
 /** 規則的數字(統計列「已畫 4 天 · 上限 8 · 下限 4」、同日「2/2」);規則關掉為 null。 */
@@ -150,6 +157,7 @@ export class ScheduleDayOffOrgModel {
 /** 我的畫休(SC-02 / SC-23)。 */
 @ObjectType("MyScheduleDayOffsPayload")
 export class MyScheduleDayOffsPayload {
+  /** 顯示的月份 `YYYY-MM`(月份鍵) */
   @Field(() => String)
   month!: string;
 
@@ -218,6 +226,10 @@ export class ScheduleDayOffOverviewPayload {
   @Field(() => String)
   month!: string;
 
+  /** 今天在登記的月份(目標月 = 租戶時區的下個月);畫面以它的前一個月為「這個月」判斷過去的月份 */
+  @Field(() => String)
+  targetMonth!: string;
+
   /** 這家店的開放期間(這個月是目標月時) */
   @Field(() => ScheduleDayOffWindowModel)
   window!: ScheduleDayOffWindowModel;
@@ -242,9 +254,9 @@ export class ScheduleDayOffOverviewPayload {
 /** 登記的畫休和這個人已有的排班重疊(畫休照樣存;提醒通知店長調整班表)。 */
 @ObjectType("ScheduleDayOffEntryConflict")
 export class ScheduleDayOffEntryConflictModel {
-  /** 排班的日期 `YYYY-MM-DD` */
-  @Field(() => String)
-  date!: string;
+  /** 排班那天(上班時點在租戶時區那天的 00:00) */
+  @Field(() => GraphQLISODateTime)
+  date!: Date;
 
   @Field(() => GraphQLISODateTime)
   startAt!: Date;

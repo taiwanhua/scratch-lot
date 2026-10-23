@@ -1,5 +1,6 @@
 import { HttpResponse } from "msw";
 
+import { formatTemporal } from "@repo/domain/form";
 import type {
   AddMyScheduleDayOffsMutationVariables,
   AddScheduleDayOffsOnBehalfMutationVariables,
@@ -17,8 +18,10 @@ import {
   DAY_OFF_ME,
   DAY_OFF_MONTH,
   DAY_OFF_STAFF,
+  DAY_OFF_TIMEZONE,
   sampleDayOffViolations,
   sampleDayOffs,
+  taipeiAt,
 } from "./schedule-day-offs-fixtures";
 import { SCHEDULE_BRANCH } from "./schedule-settings-fixtures";
 
@@ -30,9 +33,9 @@ export interface ScheduleDayOffsWorldOptions {
   /** 總覽:有 `edit-day-offs`(顯示 [代改]) */
   canEditOverview?: boolean;
   dayOffs?: ScheduleDayOffFieldsFragment[];
-  /** 登記這些日期會被擋下(回 `VALIDATION_FAILED` + 同日最多畫休人數的違反) */
+  /** 登記這些日期(日期鍵)會被擋下(回 `VALIDATION_FAILED` + 同日最多畫休人數的違反) */
   blockedDates?: string[];
-  /** 登記這些日期時回「這天已經有排班」的衝突清單(先排班、後登記畫休:照樣存,提醒) */
+  /** 登記這些日期(日期鍵)時回「這天已經有排班」的衝突清單(先排班、後登記畫休:照樣存,提醒) */
   scheduledDates?: string[];
 }
 
@@ -40,19 +43,24 @@ const MAX_DAILY = 2;
 const LIMITS = { maxMonthly: 8, minMonthly: 4, maxDailyStaff: MAX_DAILY };
 const WINDOW = {
   month: DAY_OFF_MONTH,
-  startDate: "2026-11-15",
-  endDate: "2026-11-25",
+  // 半開區間 [11/15 00:00, 11/26 00:00)
+  from: taipeiAt("2026-11-15"),
+  to: taipeiAt("2026-11-26"),
 };
 
-/** 過去月份的開放期間(前一個月 15–25 日,已截止;只給「我的畫休」換月用)。 */
+/** 時點 → 台北的日期鍵(分組、比對日期用)。 */
+const keyOf = (value: string) =>
+  formatTemporal(value, { type: "date", timezone: DAY_OFF_TIMEZONE });
+
+/** 過去月份的開放期間(前一個月 15–25 日,已截止;我的畫休與總覽換月用)。 */
 const pastWindowOf = (month: string) => {
   const [year = 0, value = 0] = month.split("-").map(Number);
   const index = year * 12 + (value - 1) - 1;
   const previous = `${String(Math.floor(index / 12))}-${String((index % 12) + 1).padStart(2, "0")}`;
   return {
     month,
-    startDate: `${previous}-15`,
-    endDate: `${previous}-25`,
+    from: taipeiAt(`${previous}-15`),
+    to: taipeiAt(`${previous}-26`),
     state: "closed",
     daysLeft: 0,
   };
@@ -60,12 +68,12 @@ const pastWindowOf = (month: string) => {
 
 /** 有畫休的日子:同日畫休人數只算主要分店是這家的人。 */
 const daysOf = (dayOffs: readonly ScheduleDayOffFieldsFragment[]) =>
-  [...new Set(dayOffs.map((item) => item.date))]
+  [...new Set(dayOffs.map((item) => keyOf(item.date)))]
     .toSorted((left, right) => left.localeCompare(right))
     .map((date) => {
-      const onDate = dayOffs.filter((item) => item.date === date);
+      const onDate = dayOffs.filter((item) => keyOf(item.date) === date);
       return {
-        date,
+        date: taipeiAt(date),
         staffCount: new Set(
           onDate.filter((item) => item.isPrimary).map((item) => item.userId),
         ).size,
@@ -87,13 +95,18 @@ const blockedViolation = (date: string) => ({
   actual: MAX_DAILY + 1,
   limit: MAX_DAILY,
   from: date,
-  to: date,
+  // 半開區間:迄 = 那天的隔天 00:00(台北沒有夏令時間,加 24 小時)
+  to: new Date(Date.parse(date) + 24 * 60 * 60 * 1000).toISOString(),
 });
+
+/** 月份查詢的 `from`(時點)→ 月份鍵;沒給 = 目標月。 */
+const monthOfInput = (from: string | null | undefined) =>
+  from === null || from === undefined ? DAY_OFF_MONTH : keyOf(from).slice(0, 7);
 
 /**
  * 畫休的假 api(我的畫休、畫休總覽、代改;有狀態):當前使用者 = 何家華(主要分店 A-2 台北分店),
- * 目標月 2026-12、開放期間 11/15–11/25;同日最多畫休 2 人。
- * 我的畫休帶 `month`(早於目標月)→ 那個月的紀錄、已截止、唯讀。
+ * 目標月 2026-12、開放期間 11/15–11/25;同日最多畫休 2 人。日期與時段都是時點(台北)。
+ * 我的畫休帶 `from` / `to`(早於目標月的那個月)→ 那個月的紀錄、已截止、唯讀。
  */
 export const scheduleDayOffsWorld = (
   options: ScheduleDayOffsWorldOptions = {},
@@ -105,14 +118,14 @@ export const scheduleDayOffsWorld = (
     blockedDates = [],
     scheduledDates = [],
   } = options;
-  /** 那天已有的排班(14:30–22:00,在本店) */
+  /** 那天(時點)已有的排班(14:30–22:00,在本店) */
   const entryConflictsOf = (date: string) =>
-    scheduledDates.includes(date)
+    scheduledDates.includes(keyOf(date))
       ? [
           {
             date,
-            startAt: new Date(`${date}T14:30:00+08:00`).toISOString(),
-            endAt: new Date(`${date}T22:00:00+08:00`).toISOString(),
+            startAt: taipeiAt(keyOf(date), "14:30"),
+            endAt: taipeiAt(keyOf(date), "22:00"),
             orgName: "A-2 台北分店",
           },
         ]
@@ -142,8 +155,8 @@ export const scheduleDayOffsWorld = (
     const person =
       DAY_OFF_STAFF.find((item) => item.userId === userId) ?? DAY_OFF_ME;
     const slots = (input.slots ?? [null]) as ({
-      startTime: string;
-      endTime: string;
+      startAt: string;
+      endAt: string;
     } | null)[];
     const created = (input.kind === "full-day" ? [null] : slots).map(
       (slot): ScheduleDayOffFieldsFragment => ({
@@ -152,8 +165,8 @@ export const scheduleDayOffsWorld = (
         name: person.name,
         date: input.date,
         kind: input.kind,
-        startTime: slot?.startTime ?? null,
-        endTime: slot?.endTime ?? null,
+        startAt: slot?.startAt ?? null,
+        endAt: slot?.endAt ?? null,
         note: null,
         isPrimary: person.isPrimary,
         byName,
@@ -168,10 +181,10 @@ export const scheduleDayOffsWorld = (
   const handlers = [
     api.query("MyScheduleDayOffs", ({ variables }) => {
       const { input } = variables as MyScheduleDayOffsQueryVariables;
-      const month = input?.month ?? DAY_OFF_MONTH;
+      const month = monthOfInput(input?.from);
       const isPast = month < DAY_OFF_MONTH;
       const ofMonth = dayOffs.filter((item) =>
-        item.date.startsWith(`${month}-`),
+        keyOf(item.date).startsWith(`${month}-`),
       );
       const mine = ofMonth.filter((item) => item.userId === DAY_OFF_ME.userId);
       return HttpResponse.json({
@@ -183,7 +196,7 @@ export const scheduleDayOffsWorld = (
             canEdit: !isPast && windowState === "open",
             canOverride,
             limits: LIMITS,
-            dayOffCount: new Set(mine.map((item) => item.date)).size,
+            dayOffCount: new Set(mine.map((item) => keyOf(item.date))).size,
             myDayOffs: mine,
             days: daysOf(ofMonth.filter((item) => item.isPrimary)),
             violations: isPast ? [] : violations,
@@ -194,7 +207,7 @@ export const scheduleDayOffsWorld = (
     api.mutation("AddMyScheduleDayOffs", ({ variables }) => {
       const { input } = variables as AddMyScheduleDayOffsMutationVariables;
       inputs.addMine.push(input);
-      if (blockedDates.includes(input.date)) {
+      if (blockedDates.includes(keyOf(input.date))) {
         return graphqlError("VALIDATION_FAILED", "blocked", {
           fields: ["date"],
           violations: [blockedViolation(input.date)],
@@ -221,24 +234,30 @@ export const scheduleDayOffsWorld = (
     }),
     api.query("ScheduleDayOffOverview", ({ variables }) => {
       const { input } = variables as ScheduleDayOffOverviewQueryVariables;
+      const month = monthOfInput(input?.from);
+      const isPast = month < DAY_OFF_MONTH;
+      const ofMonth = dayOffs.filter((item) =>
+        keyOf(item.date).startsWith(`${month}-`),
+      );
       return HttpResponse.json({
         data: {
           scheduleDayOffOverview: {
             orgId: input?.orgId ?? SCHEDULE_BRANCH.id,
             orgName: SCHEDULE_BRANCH.name,
-            month: input?.month ?? DAY_OFF_MONTH,
-            window,
+            month,
+            targetMonth: DAY_OFF_MONTH,
+            window: isPast ? pastWindowOf(month) : window,
             canEdit: canEditOverview,
             limits: LIMITS,
             staff: DAY_OFF_STAFF.map((person) => ({
               ...person,
               dayOffCount: new Set(
-                dayOffs
+                ofMonth
                   .filter((item) => item.userId === person.userId)
-                  .map((item) => item.date),
+                  .map((item) => keyOf(item.date)),
               ).size,
             })),
-            days: daysOf(dayOffs),
+            days: daysOf(ofMonth),
           },
         },
       });

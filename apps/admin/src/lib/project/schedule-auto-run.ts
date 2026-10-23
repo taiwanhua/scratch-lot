@@ -1,12 +1,16 @@
+import { parseLocalDate, weekdayOfLocalDate } from "@repo/domain/form";
+
 /**
  * 排班表的套用範本與自動排班(規格 14.4「套用範本」、14.5「自動排班」)的純函式:
  * 套用到的日子的快選([全選] [全不選] [平日] [週末])、範本與週範本的一行說明、條件的拖拉排序。
  * 套用的規則(相同時段略過、週範本只補空白日)在 api 算(預覽與套用同一個規劃),畫面不重算。
  */
 
-/** `YYYY-MM-DD` 的星期(0 = 星期日)。 */
-const weekdayOfDate = (date: string): number =>
-  new Date(`${date}T00:00:00Z`).getUTCDay();
+/** 日期鍵的星期(0 = 星期日;`weekdayOfLocalDate`);不是日期鍵 → null(不算平日也不算週末)。 */
+const weekdayOfDate = (date: string): number | null => {
+  const day = parseLocalDate(date);
+  return day === null ? null : weekdayOfLocalDate(day);
+};
 
 export type DatePreset = "all" | "none" | "weekdays" | "weekends";
 
@@ -25,7 +29,7 @@ export const datesOfPreset = (
     case "weekdays": {
       return selectable.filter((date) => {
         const day = weekdayOfDate(date);
-        return day >= 1 && day <= 5;
+        return day !== null && day >= 1 && day <= 5;
       });
     }
     case "weekends": {

@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useTranslations } from "use-intl";
 
-import { DEFAULT_TENANT_TIMEZONE } from "@repo/domain/form";
 import { Button } from "@repo/ui/button";
 import { Drawer } from "@repo/ui/drawer";
 import { IconButton } from "@repo/ui/icon-button";
@@ -16,12 +15,8 @@ import { Typography } from "@repo/ui/typography";
 
 import { OrgTreeSelect } from "@/components/base/OrgTreeSelect/OrgTreeSelect";
 import { usePermissions } from "@/hooks/base/usePermissions";
-import { useTenantTimezone } from "@/hooks/base/useTenantTimezone";
-import {
-  localPartsOf,
-  monthDayOf,
-  shiftMonthOf,
-} from "@/lib/project/schedule-roster";
+import { useTemporalText } from "@/hooks/base/useTemporalText";
+import { shiftMonthOf } from "@/lib/project/schedule-roster";
 
 import type { RosterData } from "./roster-context";
 import { ROSTER_TOOLBAR_ACTIONS, ROSTER_TOOLBAR_END } from "./roster-toolbar";
@@ -62,7 +57,7 @@ export const RosterToolbar = ({
   const tCalendar = useTranslations("admin.schedule.calendar");
   const isMobile = useBreakpointDown("sm");
   const { hasPermission } = usePermissions();
-  const timezone = useTenantTimezone() ?? DEFAULT_TENANT_TIMEZONE;
+  const text = useTemporalText();
   const [sheet, setSheet] = useState<"add" | "more" | null>(null);
   const canEdit = data?.canEdit === true;
   const actions = ROSTER_TOOLBAR_ACTIONS.filter((action) =>
@@ -118,10 +113,7 @@ export const RosterToolbar = ({
                           data.period.publishedAt === null ||
                           data.period.publishedAt === undefined
                             ? ""
-                            : monthDayOf(
-                                localPartsOf(data.period.publishedAt, timezone)
-                                  .date,
-                              ),
+                            : text(data.period.publishedAt, "monthDay"),
                         by: data.period.publishedByName ?? "",
                       })
                     : t("status.unpublished")

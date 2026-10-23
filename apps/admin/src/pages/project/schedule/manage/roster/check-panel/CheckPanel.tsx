@@ -1,6 +1,7 @@
 import { type ReactNode, useState } from "react";
 import { useTranslations } from "use-intl";
 
+import { DEFAULT_TENANT_TIMEZONE } from "@repo/domain/form";
 import { Box } from "@repo/ui/box";
 import { Button } from "@repo/ui/button";
 import { CircularProgress } from "@repo/ui/circular-progress";
@@ -8,6 +9,8 @@ import { IconButton } from "@repo/ui/icon-button";
 import { CloseIcon } from "@repo/ui/icons";
 import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
+
+import { useTenantTimezone } from "@/hooks/base/useTenantTimezone";
 
 import { CheckItemList } from "./CheckItemList";
 import { CHECK_PANEL_HEADER } from "./check-panel-slots";
@@ -32,6 +35,7 @@ export const CheckPanel = ({
   isCollapsed = false,
 }: CheckPanelProps) => {
   const t = useTranslations("admin.schedule.roster.check");
+  const timezone = useTenantTimezone() ?? DEFAULT_TENANT_TIMEZONE;
   const { check, data, isChecking, isCheckError, setOpen, scrollToCell } =
     useRosterCheck();
   const [filter, setFilter] = useState<CheckFilter>("all");
@@ -121,7 +125,7 @@ export const CheckPanel = ({
                 items={items}
                 data={data}
                 onView={(item) => {
-                  scrollToCell(checkTargetOf(item));
+                  scrollToCell(checkTargetOf(item, timezone));
                 }}
               />
             )}

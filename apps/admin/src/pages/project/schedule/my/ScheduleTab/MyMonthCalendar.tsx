@@ -1,5 +1,6 @@
 import { useTranslations } from "use-intl";
 
+import { DEFAULT_TENANT_TIMEZONE } from "@repo/domain/form";
 import type { MyScheduleQuery } from "@repo/graphql";
 import { Box } from "@repo/ui/box";
 import { useBreakpointDown } from "@repo/ui/media-query";
@@ -12,6 +13,7 @@ import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
 
 import { leaderMarkSx } from "@/components/project/schedule/ScheduleLegend/schedule-legend-styles";
+import { useTenantTimezone } from "@/hooks/base/useTenantTimezone";
 import { groupByDate } from "@/lib/project/schedule-my";
 import { isTagPaletteKey, tagPaletteColorOf } from "@/lib/project/tag-palettes";
 
@@ -113,6 +115,7 @@ export const MyMonthCalendar = ({
   const t = useTranslations("admin.schedule.mySchedule.calendar");
   const tCalendar = useTranslations("admin.schedule.calendar");
   const isMobile = useBreakpointDown("sm");
+  const timezone = useTenantTimezone() ?? DEFAULT_TENANT_TIMEZONE;
   const byDate = groupByDate(page.entries);
   const calendarByDate = new Map(
     page.calendarDays.map((day) => [day.date, day]),
@@ -164,6 +167,7 @@ export const MyMonthCalendar = ({
       month={page.month}
       showHeader={false}
       today={page.today}
+      timezone={timezone}
       selectionMode="single"
       selectedDates={[]}
       onSelectedDatesChange={(selected) => {

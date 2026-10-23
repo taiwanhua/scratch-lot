@@ -40,7 +40,7 @@ describe("我的班表 → 班表", () => {
     expect(screen.getByText("沒有排到班但臨時來上班?")).toBeInTheDocument();
   });
 
-  it("[申請補卡] 開補打卡新增頁並帶入日期、分店、類型、對應排班;審核中的那一班顯示「補卡審核中」", async () => {
+  it("[申請補卡] 開補打卡新增頁並帶入補打卡時間(缺的那張卡的排班時間)、分店、類型、對應排班;審核中的那一班顯示「補卡審核中」", async () => {
     const user = fastUser();
     renderSchedulePage({
       path: SCHEDULE,
@@ -57,7 +57,10 @@ describe("我的班表 → 班表", () => {
     ).toBeInTheDocument();
     expect(globalThis.location.search).toContain("entry=my-entry-2026-11-04");
     expect(globalThis.location.search).toContain("type=out");
-    expect(globalThis.location.search).toContain("date=2026-11-04");
+    // 缺下班卡 → 帶那一班的排班下班時點
+    expect(new URLSearchParams(globalThis.location.search).get("at")).toBe(
+      "2026-11-04T14:00:00.000Z",
+    );
   });
 
   it("在今天的卡片打上班卡:送出那一筆排班,卡片顯示已打卡", async () => {

@@ -496,6 +496,8 @@ describe("進貨單(規格 8.2、8.3)", () => {
     return {
       lastPurchaseDate: doc?.lastPurchaseDate as Date | null,
       lastSelfPurchaseDate: doc?.lastSelfPurchaseDate as Date | null,
+      /** 系統資訊的修改者:讓批購日變了的人(送出 / 駁回 / 作廢這張單的人) */
+      updatedBy: doc?.updatedBy === null ? null : String(doc?.updatedBy),
     };
   }
 
@@ -866,6 +868,7 @@ describe("進貨單(規格 8.2、8.3)", () => {
       expect(dates.lastSelfPurchaseDate?.toISOString()).toBe(
         "2026-10-15T16:00:00.000Z",
       );
+      expect(dates.updatedBy).toBe(String(hq.userId));
       const line = await db()
         .collection("lottery_requisition_lines")
         .findOne({ requisitionId });
@@ -1395,6 +1398,10 @@ describe("進貨單(規格 8.2、8.3)", () => {
       // 收到退款把淨額歸 0 後才能駁回
       await reverseAutomatic(unpaid.id);
       await decideOn({ api } as World, managerA, unpaid.id, "REJECT");
+      // 修改者 = 駁回的人(不是送出的人)
+      expect(
+        await dealerDates(lateDealer).then((value) => value.updatedBy),
+      ).toBe(String(managerA.userId));
       const line = await db()
         .collection("lottery_requisition_lines")
         .findOne({ requisitionId });
@@ -1476,6 +1483,10 @@ describe("進貨單(規格 8.2、8.3)", () => {
       });
       expect(extensionsOf(notCleared).reason).toBe("SETTLEMENT_NOT_CLEARED");
       await reverseAutomatic(purchase.id);
+      // 先清掉送出時記的修改者,才分得出作廢這一次有沒有記到人
+      await db()
+        .collection("lottery_dealers")
+        .updateOne({ _id: voidDealer }, { $set: { updatedBy: null } });
       const stockBefore = await unopenedOf(gameHot);
       const fresh = await current(purchase.id);
       await ok(api, hq.token, FORM_VOID, {
@@ -1500,9 +1511,9 @@ describe("進貨單(規格 8.2、8.3)", () => {
         .collection("lottery_requisition_lines")
         .findOne({ requisitionId });
       expect(requisition?.referencedBy).toBeNull();
-      expect(
-        await dealerDates(voidDealer).then((value) => value.lastPurchaseDate),
-      ).toBeNull();
+      const voidedDates = await dealerDates(voidDealer);
+      expect(voidedDates.lastPurchaseDate).toBeNull();
+      expect(voidedDates.updatedBy).toBe(String(hq.userId));
     });
 
     it("撤回、退回不擋", async () => {

@@ -1,6 +1,8 @@
 import { Injectable } from "@nestjs/common";
 import { Types } from "mongoose";
 
+import type { InstantRange } from "@repo/domain/form";
+
 import type { Persisted } from "../../../database/base.repository";
 import {
   OrgsRepository,
@@ -12,6 +14,7 @@ import {
   ScheduleEntriesRepository,
   type ScheduleEntryDocument,
 } from "../../database/schedule/roster.repositories";
+import { instantRangeFilter } from "../shared/schedule-dates";
 
 export type EntryRecord = Persisted<ScheduleEntryDocument>;
 
@@ -41,13 +44,12 @@ export class RosterPeopleReader {
     private readonly users: UsersRepository,
   ) {}
 
-  /** 這些人在租戶裡某段日期(`YYYY-MM-DD`,含頭尾)的所有排班(任何分店)。 */
+  /** 這些人在租戶裡某段期間(排班日期落在半開的時點區間 `[from, to)`)的所有排班(任何分店)。 */
   async entriesOfPeople(
     operator: OperatorContext,
     tenantId: Types.ObjectId,
     userIds: readonly Types.ObjectId[],
-    from: string,
-    to: string,
+    range: InstantRange,
   ): Promise<EntryRecord[]> {
     if (userIds.length === 0) {
       return [];
@@ -58,7 +60,7 @@ export class RosterPeopleReader {
       {
         tenantId,
         userId: { $in: [...userIds] },
-        date: { $gte: from, $lte: to },
+        date: instantRangeFilter(range),
       },
       { sort: { startAt: 1 } },
     );

@@ -4,8 +4,8 @@ fragment ScheduleDayOffFields on ScheduleDayOff {
   name
   date
   kind
-  startTime
-  endTime
+  startAt
+  endAt
   note
   isPrimary
   byName
@@ -15,8 +15,8 @@ fragment ScheduleDayOffFields on ScheduleDayOff {
 
 fragment ScheduleDayOffWindowFields on ScheduleDayOffWindow {
   month
-  startDate
-  endDate
+  from
+  to
   state
   daysLeft
 }
@@ -107,6 +107,7 @@ query ScheduleDayOffOverview($input: ScheduleDayOffOverviewInput) {
     orgId
     orgName
     month
+    targetMonth
     window {
       ...ScheduleDayOffWindowFields
     }

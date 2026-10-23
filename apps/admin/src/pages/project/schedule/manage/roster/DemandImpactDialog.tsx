@@ -1,5 +1,6 @@
 import { useTranslations } from "use-intl";
 
+import { DEFAULT_TENANT_TIMEZONE } from "@repo/domain/form";
 import { Alert } from "@repo/ui/alert";
 import { Box } from "@repo/ui/box";
 import { Button } from "@repo/ui/button";
@@ -7,6 +8,7 @@ import { Dialog } from "@repo/ui/dialog";
 import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
 
+import { useTenantTimezone } from "@/hooks/base/useTenantTimezone";
 import { monthDayOf } from "@/lib/project/schedule-roster";
 
 import type { RosterDemand, RosterEntry } from "./roster-context";
@@ -44,6 +46,7 @@ export const DemandImpactDialog = ({
 }: DemandImpactDialogProps) => {
   const t = useTranslations("admin.schedule.roster.impact");
   const tCommon = useTranslations("admin.schedule.common");
+  const timezone = useTenantTimezone() ?? DEFAULT_TENANT_TIMEZONE;
   const nameOf = (entry: RosterEntry) => names.get(entry.userId) ?? "";
   const withEntries = deleted.length > 0;
   const deleteLabel = withEntries
@@ -98,7 +101,7 @@ export const DemandImpactDialog = ({
           <Typography key={entry.id} variant="body2" color="textSecondary">
             {t("deletedLine", {
               name: nameOf(entry),
-              date: monthDayOf(entry.date),
+              date: monthDayOf(entry.date, timezone),
             })}
           </Typography>
         ))}
@@ -109,7 +112,7 @@ export const DemandImpactDialog = ({
               <Box key={entry.id}>
                 {t("blockedLine", {
                   name: nameOf(entry),
-                  date: monthDayOf(entry.date),
+                  date: monthDayOf(entry.date, timezone),
                 })}
               </Box>
             ))}

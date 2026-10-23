@@ -6,7 +6,6 @@ import {
   type TimelineGroupPlan,
   type TimelineSlotPlan,
   timelineGroupPlansOf,
-  wallClockMs,
 } from "./schedule-roster-views";
 
 /**
@@ -14,7 +13,6 @@ import {
  * (人力需求 + 排班 + 填進紀錄)。測試資料(不是測試檔):`schedule-roster-timeline.test.ts` 用。
  */
 
-const TZ = "Asia/Taipei";
 const DAY = "2026-11-10";
 
 // ---- 規則頁(Figma 401:805)T-01–T-18 的輸入寫法(同 `docs/tmp/figma-base-round/project/r6-timeline-cases.js`) ----
@@ -379,8 +377,8 @@ export const layoutOf = (
     plans.map((plan) => ({
       id: plan.demand.id,
       plan,
-      start: wallClockMs(plan.demand.startAt, TZ),
-      end: wallClockMs(plan.demand.endAt, TZ),
+      start: Date.parse(plan.demand.startAt),
+      end: Date.parse(plan.demand.endAt),
       slots: plan.slots.length,
       sortKeys: plan.sortKeys,
       createdAt: plan.createdAt,

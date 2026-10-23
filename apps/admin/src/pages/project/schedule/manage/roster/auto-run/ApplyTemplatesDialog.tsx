@@ -2,6 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useState } from "react";
 import { useTranslations } from "use-intl";
 
+import { DEFAULT_TENANT_TIMEZONE } from "@repo/domain/form";
 import { SCHEDULE_FIELD_CATEGORY_KEYS } from "@repo/domain/project/schedule-fields";
 import {
   useApplyScheduleTemplatesMutation,
@@ -26,6 +27,7 @@ import { Typography } from "@repo/ui/typography";
 import { TagPaletteChip } from "@/components/project/TagPaletteChip/TagPaletteChip";
 import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
 import { useSession } from "@/hooks/base/useSession";
+import { useTenantTimezone } from "@/hooks/base/useTenantTimezone";
 import { useScheduleFieldOptions } from "@/hooks/project/schedule/useScheduleFieldOptions/useScheduleFieldOptions";
 import {
   type DatePreset,
@@ -33,7 +35,7 @@ import {
   templateHeadcountOf,
   weekTemplateSummary,
 } from "@/lib/project/schedule-auto-run";
-import { datesOfMonth } from "@/lib/project/schedule-roster";
+import { datesOfMonth, dayInstantOf } from "@/lib/project/schedule-roster";
 import { isTagPaletteKey } from "@/lib/project/tag-palettes";
 
 import { scheduleErrorKey } from "../../../schedule-error";
@@ -73,6 +75,7 @@ export const ApplyTemplatesDialog = ({
   const { session } = useSession();
   const queryClient = useQueryClient();
   const isMobile = useBreakpointDown("sm");
+  const timezone = useTenantTimezone() ?? DEFAULT_TENANT_TIMEZONE;
   const { data, month } = useRosterCheck();
   const status = useAutoRunStatus();
   const positions = useScheduleFieldOptions(
@@ -101,7 +104,11 @@ export const ApplyTemplatesDialog = ({
   const input = {
     month,
     kind,
-    dates,
+    // 月曆選的是日期鍵;api 收那幾天租戶時區 00:00 的時點
+    dates: dates.flatMap((date) => {
+      const instant = dayInstantOf(date, timezone);
+      return instant === null ? [] : [instant];
+    }),
     ...(data === undefined ? {} : { orgId: data.orgId }),
     ...(kind === "template" ? { templateIds } : { weekTemplateId }),
   };
@@ -293,6 +300,7 @@ export const ApplyTemplatesDialog = ({
       </Stack>
       <MonthCalendar
         month={month}
+        timezone={timezone}
         showHeader={false}
         selectionMode="multiple"
         selectedDates={dates}

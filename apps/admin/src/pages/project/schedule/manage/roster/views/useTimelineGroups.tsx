@@ -19,8 +19,8 @@ import {
 import { useScheduleFieldOptions } from "@/hooks/project/schedule/useScheduleFieldOptions/useScheduleFieldOptions";
 import { unmatchedCountsByDate } from "@/lib/project/schedule-attendance";
 import {
+  dayRangeOf,
   localPartsOf,
-  shiftDay,
   weekdayOf,
 } from "@/lib/project/schedule-roster";
 import {
@@ -31,7 +31,6 @@ import {
   compareGroupPlans,
   dayGroupTitle,
   timelineGroupPlansOf,
-  wallClockMs,
   weekFullTitle,
   weekShortTitle,
 } from "@/lib/project/schedule-roster-views";
@@ -73,7 +72,7 @@ export interface RosterTimeline {
 /**
  * 週 / 日檢視的時間軸資料(規格 14.5「時間軸的人力需求容器」):每筆人力需求一個容器,
  * 條的順序與缺額、×2、延伸由 `timelineGroupPlansOf` 決定,排版交給底座 `ScheduleTimeline`。
- * 時點先換成租戶時區的牆上時間(`wallClockMs`),時間軸才畫在租戶的時間上。
+ * 時點照原樣給時間軸(epoch 毫秒),時間軸以租戶時區(`timezone`)畫「哪一天的幾點」。
  */
 export const useTimelineGroups = (
   dates: readonly string[],
@@ -235,8 +234,8 @@ export const useTimelineGroups = (
     return {
       kind: "bar",
       id: slotIdOf(demand.id, slot.taskId),
-      start: wallClockMs(slot.startAt, timezone),
-      end: wallClockMs(slot.endAt, timezone),
+      start: Date.parse(slot.startAt),
+      end: Date.parse(slot.endAt),
       title: (
         <Box
           component="span"
@@ -278,8 +277,8 @@ export const useTimelineGroups = (
         id: demand.id,
         plan,
         wording,
-        start: wallClockMs(demand.startAt, timezone),
-        end: wallClockMs(demand.endAt, timezone),
+        start: Date.parse(demand.startAt),
+        end: Date.parse(demand.endAt),
         title: dayGroupTitle(wording, labels.long),
         shortTitle: (
           <Box component="span" sx={{ textAlign: "center" }}>
@@ -335,17 +334,20 @@ export const useTimelineGroups = (
     };
   });
 
+  // 店休整天:租戶時區那天 00:00 到隔天 00:00
   const disabledRanges = shownDates.flatMap(
-    (date): ScheduleTimelineDisabledRange[] =>
-      calendarByDate.get(date)?.type === "closed"
+    (date): ScheduleTimelineDisabledRange[] => {
+      const whole = dayRangeOf(date, date, timezone);
+      return calendarByDate.get(date)?.type === "closed" && whole !== null
         ? [
             {
-              start: new Date(`${date}T00:00:00`).getTime(),
-              end: new Date(`${shiftDay(date, 1)}T00:00:00`).getTime(),
+              start: Date.parse(whole.from),
+              end: Date.parse(whole.to),
               label: t("cell.closed"),
             },
           ]
-        : [],
+        : [];
+    },
   );
 
   return {

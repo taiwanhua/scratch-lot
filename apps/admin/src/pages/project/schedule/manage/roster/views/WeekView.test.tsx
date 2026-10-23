@@ -4,6 +4,7 @@ import { screen, waitFor, within } from "@testing-library/react";
 import { restoreViewportAfterEach, setupFakeViewport } from "@/test/viewport";
 
 import { renderSchedulePage } from "../../../schedule-test-support";
+import { timeValue } from "../roster-test-queries";
 import {
   rosterPath,
   searchParam,
@@ -90,7 +91,7 @@ describe("排班表:週檢視", () => {
     expect(
       within(dialog).getByRole("group", { name: /日期/ }),
     ).toHaveTextContent("2026-11-06");
-    expect(within(dialog).getByLabelText(/開始/)).toHaveValue("03:00");
+    expect(timeValue(dialog, /開始/)).toBe("03:00");
   });
 
   it("「+N」長條 → 清單浮層(簡稱、時間、人數);點一列 → 人力需求對話框;[看整天] → 日檢視", async () => {
@@ -169,8 +170,9 @@ describe("排班表:週檢視", () => {
       expect(rosterFake.inputs.queries).toContainEqual(
         expect.objectContaining({
           month: "2026-11",
-          from: "2026-11-29",
-          to: "2026-12-05",
+          // 11/29–12/5(含頭尾)= 台北的 `[11/29 00:00, 12/6 00:00)`
+          from: "2026-11-28T16:00:00.000Z",
+          to: "2026-12-05T16:00:00.000Z",
         }),
       );
     });

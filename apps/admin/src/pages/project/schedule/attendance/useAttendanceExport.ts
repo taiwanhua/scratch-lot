@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useTranslations } from "use-intl";
 
+import { localMonthOf, localMonthText } from "@repo/domain/form";
 import {
   type ScheduleAttendanceExportQueryVariables,
   useScheduleAttendanceExportQuery,
@@ -31,8 +32,9 @@ export const useAttendanceExport = (): {
 
   const run = (input: ScheduleAttendanceExportQueryVariables["input"]) => {
     setIsPending(true);
-    const [year = "", month = ""] = input.month.split("-");
-    const note = t("note", { year, month: Number(month) });
+    // 匯出的月份 = from(月初 00:00)在租戶時區的那個月
+    const month = localMonthOf(Date.parse(input.from), text.timezone);
+    const note = t("note", { year: String(month.year), month: month.month });
     void useScheduleAttendanceExportQuery
       .fetcher(session.client, { input })()
       .then(async (data) => {
@@ -66,7 +68,7 @@ export const useAttendanceExport = (): {
         }
         await downloadWorkbook({
           sheets,
-          fileName: t("fileName", { month: input.month }),
+          fileName: t("fileName", { month: localMonthText(month) }),
         });
       })
       .catch((error: unknown) => {

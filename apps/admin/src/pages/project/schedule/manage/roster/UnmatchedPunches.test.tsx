@@ -4,7 +4,12 @@ import { screen, waitFor, within } from "@testing-library/react";
 import { setupFakeViewport } from "@/test/viewport";
 
 import { renderSchedulePage } from "../../schedule-test-support";
-import { fastUser, findDialog, findLabelled } from "./roster-test-queries";
+import {
+  fastUser,
+  findDialog,
+  findLabelled,
+  timeValue,
+} from "./roster-test-queries";
 
 setupFakeViewport();
 
@@ -66,12 +71,8 @@ describe("排班表:未對應排班的打卡", () => {
       within(dialog).getByLabelText("上下班時間改用打卡時間");
     expect(usePunchTime).not.toBeChecked();
     await user.click(usePunchTime);
-    expect(
-      within(dialog).getByLabelText(/上班/, { selector: "input[type=time]" }),
-    ).toHaveValue("08:27");
-    expect(
-      within(dialog).getByLabelText(/下班/, { selector: "input[type=time]" }),
-    ).toHaveValue("14:36");
+    expect(timeValue(dialog, /上班/)).toBe("08:27");
+    expect(timeValue(dialog, /下班/)).toBe("14:36");
     await user.click(within(dialog).getByRole("button", { name: "儲存" }));
     await waitFor(() => {
       expect(rosterFake.inputs.entries).toHaveLength(1);

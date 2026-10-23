@@ -3115,6 +3115,7 @@
         "daysDuplicate": "Days cannot repeat",
         "daysEmpty": "Add at least one day",
         "dayOfMonthRange": "Enter a whole number from 1 to 31",
+        "timeStep": "Pick a time on a 15-minute step (e.g. 09:00, 09:15)",
         "invalid": "Out of the allowed range"
       }
     },

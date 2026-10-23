@@ -1,12 +1,13 @@
-import { type ReactNode, useState } from "react";
+import type { ReactNode } from "react";
 import { useTranslations } from "use-intl";
 
-import { DEFAULT_TENANT_TIMEZONE } from "@repo/domain/form";
+import { DEFAULT_TENANT_TIMEZONE, parseLocalDate } from "@repo/domain/form";
 import { Alert } from "@repo/ui/alert";
 import { Stack } from "@repo/ui/stack";
 
 import { usePermissions } from "@/hooks/base/usePermissions";
 import { useTenantTimezone } from "@/hooks/base/useTenantTimezone";
+import { useTenantToday } from "@/hooks/base/useTenantToday";
 import { useUrlState } from "@/hooks/base/useUrlState";
 import {
   type ResolvedReportConditions,
@@ -16,7 +17,6 @@ import {
 import {
   type ReportPeriodValue,
   lastDayOfWeek,
-  todayOf,
 } from "@/lib/project/reports/report-period";
 import {
   REPORTS_PERMISSIONS,
@@ -39,10 +39,8 @@ const usePeriodText = () => {
       return t("week", { from: period.date, to: lastDayOfWeek(period.date) });
     }
     if (period.kind === "month") {
-      return t("month", {
-        year: Number(period.date.slice(0, 4)),
-        month: Number(period.date.slice(5, 7)),
-      });
+      const day = parseLocalDate(period.date);
+      return t("month", { year: day?.year ?? 0, month: day?.month ?? 0 });
     }
     return t("day", { date: period.date });
   };
@@ -65,9 +63,8 @@ export const ReportWorkspace = ({
   const t = useTranslations("admin");
   const { hasPermission } = usePermissions();
   const timezone = useTenantTimezone() ?? DEFAULT_TENANT_TIMEZONE;
-  // 「今天」在頁面開啟時取一次(租戶時區)
-  const [openedAt] = useState(() => Date.now());
-  const today = todayOf(timezone, openedAt);
+  // 「今天」在頁面開啟時取一次(租戶時區;底座 `useTenantToday`)
+  const today = useTenantToday();
   const periodText = usePeriodText();
 
   const [state, setState] = useUrlState("conditions", reportConditionsSchema);

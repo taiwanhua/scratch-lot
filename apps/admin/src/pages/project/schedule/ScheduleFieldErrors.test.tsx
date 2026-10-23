@@ -7,7 +7,11 @@ import { api, server } from "@/test/msw/server";
 import { setupFakeViewport } from "@/test/viewport";
 
 import { fastUser, findDialog } from "./manage/roster/roster-test-queries";
-import { renderSchedulePage } from "./schedule-test-support";
+import {
+  renderSchedulePage,
+  typeDate,
+  typeTime,
+} from "./schedule-test-support";
 
 setupFakeViewport();
 
@@ -36,8 +40,8 @@ describe("排班:欄位下寫原因", () => {
       name: "新增店休 / 特殊日",
     });
     await user.click(within(dialog).getByLabelText("店休"));
-    const date = within(dialog).getByLabelText(/日期/);
-    await user.type(date, "2026-11-20");
+    await typeDate(user, dialog, "2026-11-20");
+    const date = within(dialog).getByRole("group", { name: /日期/ });
     await user.click(within(dialog).getByRole("button", { name: "新增" }));
     expect(
       await within(dialog).findByText("這一天已經有行事曆了"),
@@ -56,7 +60,7 @@ describe("排班:欄位下寫原因", () => {
     );
     await user.click(await screen.findByRole("button", { name: "代改" }));
     const dialog = await screen.findByRole("dialog", { name: "代改畫休" });
-    await user.type(within(dialog).getByLabelText(/日期/), "2026-12-18");
+    await typeDate(user, dialog, "2026-12-18");
     await user.click(within(dialog).getByRole("button", { name: "儲存" }));
     expect(within(dialog).getByText("必填")).toBeInTheDocument();
 
@@ -81,13 +85,21 @@ describe("排班:欄位下寫原因", () => {
     await user.click(await screen.findByRole("button", { name: "登記畫休" }));
     const dialog = await screen.findByRole("dialog", { name: "登記畫休" });
     await user.click(within(dialog).getByRole("button", { name: "儲存" }));
-    const date = within(dialog).getByLabelText(/日期/);
+    const date = within(dialog).getByRole("group", { name: /日期/ });
     expect(date).toHaveAccessibleDescription("必填,請選擇日期");
 
-    await user.type(date, "2026-12-03");
+    await typeDate(user, dialog, "2026-12-03");
     await user.click(within(dialog).getByLabelText("時段不可排"));
-    await user.type(within(dialog).getByLabelText(/開始/), "09:00");
-    await user.type(within(dialog).getByLabelText(/結束/), "12:00");
+    await typeTime(
+      user,
+      within(dialog).getByRole("group", { name: /開始/ }),
+      "09:00",
+    );
+    await typeTime(
+      user,
+      within(dialog).getByRole("group", { name: /結束/ }),
+      "12:00",
+    );
     await user.click(within(dialog).getByRole("button", { name: "儲存" }));
     expect(
       await within(dialog).findByText("時段和這一天其他的畫休時段重疊"),
@@ -113,17 +125,17 @@ describe("排班:欄位下寫原因", () => {
     expect(within(dialog).getByText("必填,請選擇原因")).toBeInTheDocument();
   });
 
-  it("補打卡新增頁:沒填時間、沒選原因 → 各欄下寫格式要求", async () => {
+  it("補打卡新增頁:沒選補打卡時間、沒選原因 → 各欄下寫格式要求", async () => {
     const user = fastUser();
     renderSchedulePage({
-      path: "/schedule/attendance/create-page/makeup_punch?date=2026-11-03&org=org-store&type=out&entry=e-wang-2026-11-03",
+      path: "/schedule/attendance/create-page/makeup_punch?org=org-store&type=out",
       forms: makeupPunchFormWorld(),
     });
     await screen.findByRole("combobox", { name: /對應排班/ });
     await user.click(await screen.findByRole("button", { name: /^送出/ }));
-    expect(screen.getByLabelText(/時間/)).toHaveAccessibleDescription(
-      "必填,請填時間(時:分)",
-    );
+    expect(
+      screen.getByRole("group", { name: /補打卡時間/ }),
+    ).toHaveAccessibleDescription("必填,請選擇日期與時間");
     expect(screen.getByText("必填,請選擇原因")).toBeInTheDocument();
   });
 });

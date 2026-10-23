@@ -1,10 +1,12 @@
 import { Injectable } from "@nestjs/common";
 import { Types } from "mongoose";
 
+import { OrgsRepository } from "../../../database/database.module";
 import {
   type OperatorContext,
   isOrgVisible,
 } from "../../../database/operator-context";
+import { tenantTimezoneOf } from "../../../database/tenant-timezone";
 import {
   ScheduleAttendancePunchesRepository,
   ScheduleDemandsRepository,
@@ -19,6 +21,11 @@ import {
 import { PublishedEntries } from "../my/published-entries";
 import type { EntryRecord } from "../roster/roster-people";
 import { ScheduleRulesService } from "../rules/schedule-rules.service";
+import {
+  aroundDayRangeOf,
+  dayRangeOf,
+  instantRangeFilter,
+} from "../shared/schedule-dates";
 import {
   forbiddenError,
   notFoundError,
@@ -43,8 +50,8 @@ export interface ScheduleEntryForShift {
   id: string;
   orgId: string;
   userId: string;
-  /** `YYYY-MM-DD` */
-  date: string;
+  /** 那天(上班時點在租戶時區那天的 00:00) */
+  date: Date;
   startAt: Date;
   endAt: Date;
   breakMinutes: number;
@@ -93,6 +100,7 @@ export class ScheduleEntryLookup {
     private readonly rules: ScheduleRulesService,
     private readonly mySchedule: MyScheduleService,
     private readonly permissions: SchedulePermissions,
+    private readonly orgs: OrgsRepository,
   ) {}
 
   /**
@@ -127,14 +135,39 @@ export class ScheduleEntryLookup {
     return item ?? null;
   }
 
-  /** 這個人某天(`YYYY-MM-DD`)在這家店的排班(開班可以手動改選;補打卡的「對應排班」下拉)。 */
+  /** 這個人 `at` 那天(租戶時區)在這家店的排班(開班可以手動改選)。 */
   async listEntriesOfDay(
     operator: OperatorContext,
-    input: EntryScope & { date: string },
+    input: EntryScope & { at: Date },
   ): Promise<ScheduleEntryForShift[]> {
     const scope = this.scopeOf(operator, input);
+    const timezone = await tenantTimezoneOf(
+      this.orgs,
+      operator,
+      scope.tenantId,
+    );
     const entries = await this.publishedOf(operator, scope, {
-      date: input.date,
+      date: instantRangeFilter(dayRangeOf(input.at, timezone)),
+    });
+    return this.withDetails(operator, scope.tenantId, entries);
+  }
+
+  /**
+   * 這個人在這家店、`at` 那天(租戶時區)前後各一天的排班(補打卡的「對應排班」下拉;和 [改對應排班]
+   * 同一個範圍 `aroundDayRangeOf`:例如 00:00 結束的班,隔天 00:05 補下班卡也列得出來)。
+   */
+  async listEntriesAroundDay(
+    operator: OperatorContext,
+    input: EntryScope & { at: Date },
+  ): Promise<ScheduleEntryForShift[]> {
+    const scope = this.scopeOf(operator, input);
+    const timezone = await tenantTimezoneOf(
+      this.orgs,
+      operator,
+      scope.tenantId,
+    );
+    const entries = await this.publishedOf(operator, scope, {
+      date: instantRangeFilter(aroundDayRangeOf(input.at, timezone)),
     });
     return this.withDetails(operator, scope.tenantId, entries);
   }

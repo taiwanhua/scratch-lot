@@ -1,11 +1,16 @@
-import { Field, ID, InputType } from "@nestjs/graphql";
+import { Field, GraphQLISODateTime, ID, InputType } from "@nestjs/graphql";
 
-/** 我的班表 → 班表分頁(SC-01):缺席 = 今天所在的月份(租戶時區)。 */
+/**
+ * 我的班表 → 班表分頁(SC-01):`from` / `to` = 那個月的時點區間 `[月初 00:00, 下月初 00:00)`(租戶時區);
+ * 兩個都缺席 = 今天所在的月份。
+ */
 @InputType()
 export class MyScheduleInput {
-  /** `YYYY-MM` */
-  @Field(() => String, { nullable: true })
-  month?: string | null;
+  @Field(() => GraphQLISODateTime, { nullable: true })
+  from?: Date | null;
+
+  @Field(() => GraphQLISODateTime, { nullable: true })
+  to?: Date | null;
 }
 
 /**

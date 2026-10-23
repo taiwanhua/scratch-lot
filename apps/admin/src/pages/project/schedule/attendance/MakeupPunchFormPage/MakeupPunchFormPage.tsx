@@ -3,7 +3,7 @@ import { useNavigate } from "react-router";
 import { useTranslations } from "use-intl";
 import { z } from "zod";
 
-import { DEFAULT_TENANT_TIMEZONE } from "@repo/domain/form";
+import { toInstant, toIso } from "@repo/domain/form";
 import { SCHEDULE_FIELD_CATEGORY_KEYS } from "@repo/domain/project/schedule-fields";
 import {
   FormSubmissionStatus,
@@ -12,7 +12,7 @@ import {
 import { Alert } from "@repo/ui/alert";
 import { Card } from "@repo/ui/card";
 import { CircularProgress } from "@repo/ui/circular-progress";
-import { DatePicker } from "@repo/ui/date-picker";
+import { DateTimePicker } from "@repo/ui/date-time-picker";
 import { FormControlLabel } from "@repo/ui/form-control-label";
 import { Radio } from "@repo/ui/radio";
 import { SelectField } from "@repo/ui/select-field";
@@ -31,10 +31,11 @@ import { useSnackbar } from "@/hooks/base/useMutationFeedback";
 import { useRouteTabHref } from "@/hooks/base/useRouteTabHref";
 import { useRouteTabItemLabel } from "@/hooks/base/useRouteTabItemLabel";
 import { useSession } from "@/hooks/base/useSession";
-import { useTenantTimezone } from "@/hooks/base/useTenantTimezone";
 import { useUrlState } from "@/hooks/base/useUrlState";
 import { useScheduleFieldOptions } from "@/hooks/project/schedule/useScheduleFieldOptions/useScheduleFieldOptions";
 import type { ModulePageProps } from "@/lib/base/module-tree";
+import { dayKeyOf } from "@/lib/project/schedule-day-offs";
+import { dayInstantOf } from "@/lib/project/schedule-roster";
 
 import { scheduleFormatText } from "../../schedule-field-errors";
 import {
@@ -51,21 +52,22 @@ import {
   invalidFieldsOf,
   makeupPunchStateOf,
   makeupPunchStoredValues,
-  withDateOrOrg,
+  withPunchAtOrOrg,
 } from "./makeup-punch-form";
 
 const PREFILL_SCHEMA = z.string().default("");
-const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/u;
 
 /** 網址帶入的值(我的班表 [申請補卡]、出勤紀錄某一列 [補打卡]);本人可以改。 */
 const usePrefill = (): MakeupPunchState => {
-  const [date] = useUrlState(MAKEUP_PREFILL_KEYS.date, PREFILL_SCHEMA);
+  const [at] = useUrlState(MAKEUP_PREFILL_KEYS.at, PREFILL_SCHEMA);
   const [org] = useUrlState(MAKEUP_PREFILL_KEYS.org, PREFILL_SCHEMA);
   const [type] = useUrlState(MAKEUP_PREFILL_KEYS.type, PREFILL_SCHEMA);
   const [entry] = useUrlState(MAKEUP_PREFILL_KEYS.entry, PREFILL_SCHEMA);
+  const prefillAt = toInstant(at);
   return {
     ...EMPTY_MAKEUP_PUNCH,
-    date: DATE_PATTERN.test(date) ? date : "",
+    // 帶入的是時點(缺的那張卡的排班時間);不是時點就不帶
+    punchAt: prefillAt === null ? "" : toIso(prefillAt),
     orgId: org,
     type: type === "out" ? "out" : "in",
     entry,
@@ -100,19 +102,30 @@ const MakeupPunchFormBody = ({
   );
   const [state, setState] = useState(initial);
   const [invalid, setInvalid] = useState<MakeupPunchField[]>([]);
+  // 下拉列那天(租戶時區)前後各一天的排班:同一天只改時刻,查詢條件不變(以那天 00:00 查)
+  const dayAt = dayInstantOf(
+    dayKeyOf(state.punchAt, text.timezone),
+    text.timezone,
+  );
   const options = useMakeupPunchEntryOptionsQuery(
     session.client,
-    { input: { date: state.date, orgId: state.orgId } },
-    { enabled: state.date !== "" && state.orgId !== "" },
+    { input: { at: dayAt ?? "", orgId: state.orgId } },
+    { enabled: dayAt !== null && state.orgId !== "" },
   );
   const entryOptions = [
     ...(options.data?.makeupPunchEntryOptions ?? []).map((option) => ({
       value: option.id,
-      label: text.entry(option),
+      // 跨三天:和 [改對應排班] 一樣帶日期(「11/4 早 08:30–14:30」)
+      label: text.entryOption(option),
     })),
     { value: MAKEUP_PUNCH_NO_ENTRY, label: t("noEntry") },
   ];
-  // 帶入的排班不在清單裡(已刪除 / 換了日期)時不選,讓本人重選
+  // 選的那一班的日期(改補打卡時間時判斷它還在不在新的前後一天範圍內);不在目前清單裡 = null
+  const entryDateOf = (entryId: string): string | null =>
+    options.data?.makeupPunchEntryOptions.find(
+      (option) => option.id === entryId,
+    )?.date ?? null;
+  // 帶入的排班不在清單裡(已刪除 / 不在前後一天範圍內)時不選,讓本人重選
   const entryValue = entryOptions.some((option) => option.value === state.entry)
     ? state.entry
     : "";
@@ -152,18 +165,28 @@ const MakeupPunchFormBody = ({
           <Alert severity="info">{notice}</Alert>
         )}
         <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-          <DatePicker
-            label={t("date")}
-            value={state.date === "" ? null : state.date}
+          <DateTimePicker
+            label={t("punchAt")}
+            value={state.punchAt === "" ? null : state.punchAt}
+            timezone={text.timezone}
             fullWidth
             required
-            error={invalid.includes("date")}
-            helperText={fieldErrorOf("date")}
-            onChange={(next) => {
+            error={invalid.includes("punchAt")}
+            helperText={fieldErrorOf("punchAt")}
+            onChange={(next, { isIncomplete }) => {
+              // 打到一半(某一段還沒打完)不算改了時間:等打完再判斷對應排班要不要清空
+              if (isIncomplete) {
+                return;
+              }
               setState((current) =>
-                withDateOrOrg(current, { date: next ?? "" }),
+                withPunchAtOrOrg(
+                  current,
+                  { punchAt: next ?? "" },
+                  text.timezone,
+                  entryDateOf(current.entry),
+                ),
               );
-              clear("date");
+              clear("punchAt");
             }}
           />
           <OrgTreeSelect
@@ -177,7 +200,11 @@ const MakeupPunchFormBody = ({
             helperText={fieldErrorOf("orgId")}
             onChange={(ids) => {
               setState((current) =>
-                withDateOrOrg(current, { orgId: ids[0] ?? "" }),
+                withPunchAtOrOrg(
+                  current,
+                  { orgId: ids[0] ?? "" },
+                  text.timezone,
+                ),
               );
               clear("orgId");
             }}
@@ -188,7 +215,7 @@ const MakeupPunchFormBody = ({
           value={entryValue}
           required
           fullWidth
-          disabled={state.date === "" || state.orgId === ""}
+          disabled={state.punchAt === "" || state.orgId === ""}
           error={invalid.includes("entry")}
           helperText={
             invalid.includes("entry") ? t("entryRequired") : t("entryHint")
@@ -224,39 +251,23 @@ const MakeupPunchFormBody = ({
             ))}
           </Stack>
         </Stack>
-        <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-          <TextField
-            label={t("time")}
-            type="time"
-            value={state.time}
-            required
-            fullWidth
-            error={invalid.includes("time")}
-            helperText={fieldErrorOf("time")}
-            slotProps={{ inputLabel: { shrink: true } }}
-            onChange={(event) => {
-              setState((current) => ({ ...current, time: event.target.value }));
-              clear("time");
-            }}
-          />
-          <SelectField
-            label={t("reason")}
-            value={state.reasonKey}
-            required
-            fullWidth
-            error={invalid.includes("reasonKey")}
-            helperText={fieldErrorOf("reasonKey")}
-            options={reasons.options}
-            onChange={(next) => {
-              setState((current) => ({
-                ...current,
-                reasonKey: next,
-                reasonLabel: reasons.labelOf(next),
-              }));
-              clear("reasonKey");
-            }}
-          />
-        </Stack>
+        <SelectField
+          label={t("reason")}
+          value={state.reasonKey}
+          required
+          fullWidth
+          error={invalid.includes("reasonKey")}
+          helperText={fieldErrorOf("reasonKey")}
+          options={reasons.options}
+          onChange={(next) => {
+            setState((current) => ({
+              ...current,
+              reasonKey: next,
+              reasonLabel: reasons.labelOf(next),
+            }));
+            clear("reasonKey");
+          }}
+        />
         <TextField
           label={t("note")}
           value={state.note}
@@ -282,9 +293,9 @@ const MakeupPunchFormBody = ({
 };
 
 /**
- * 補打卡申請的新增 / 編輯頁(SC-13;規格 14.8;替換表單引擎的新增頁與編輯頁):日期、分店、**對應排班(必選)**、
- * 類型、時間、原因。對應排班 = 選了日期與分店後列出本人當天在那家店的排班,最後一個是「沒有排班(臨時代班)」;
- * 改了日期或分店就清空重選。沒有草稿(送出即進審核)。新增頁的帶入值在網址;編輯頁(被退回 / 撤回)
+ * 補打卡申請的新增 / 編輯頁(SC-13;規格 14.8;替換表單引擎的新增頁與編輯頁):補打卡時間(日期時間)、分店、
+ * **對應排班(必選)**、類型、原因。對應排班 = 選了補打卡時間與分店後列出本人在那家店、那天(租戶時區)前後各一天的
+ * 排班(和 [改對應排班] 同一個範圍),最後一個是「沒有排班(臨時代班)」;改了分店就清空重選;改了補打卡時間,選的班還在新的前後一天範圍內就保留、不在才清空。沒有草稿(送出即進審核)。新增頁的帶入值在網址;編輯頁(被退回 / 撤回)
  * 讀那一筆的值。存值交給表單引擎(`useFormDraft` / `useFormSubmission`),流程與掛接點照常。
  */
 export const MakeupPunchFormPage = ({
@@ -296,7 +307,6 @@ export const MakeupPunchFormPage = ({
   const navigate = useNavigate();
   const tabHref = useRouteTabHref();
   const showSnackbar = useSnackbar();
-  const timezone = useTenantTimezone() ?? DEFAULT_TENANT_TIMEZONE;
   const access = useFormModuleAccess(MAKEUP_PUNCH_MODULE_KEY);
   const me = useMe();
   const isEdit = module.key.endsWith(".edit-page");
@@ -334,7 +344,7 @@ export const MakeupPunchFormPage = ({
     return (
       <MakeupPunchFormBody
         key={submission.editVersion}
-        initial={makeupPunchStateOf(submission.values, timezone)}
+        initial={makeupPunchStateOf(submission.values)}
         isPending={existing.isPending}
         errorText={existing.error === null ? null : errorText(existing.error)}
         notice={
@@ -344,7 +354,7 @@ export const MakeupPunchFormPage = ({
         }
         onSubmit={(state) => {
           void existing
-            .submit(makeupPunchStoredValues(state, timezone))
+            .submit(makeupPunchStoredValues(state))
             .then(afterSubmit);
         }}
         onCancel={leave}
@@ -367,9 +377,7 @@ export const MakeupPunchFormPage = ({
       isPending={draft.isPending}
       errorText={draft.error === null ? null : errorText(draft.error)}
       onSubmit={(state) => {
-        void draft
-          .submit(makeupPunchStoredValues(state, timezone), [])
-          .then(afterSubmit);
+        void draft.submit(makeupPunchStoredValues(state), []).then(afterSubmit);
       }}
       onCancel={leave}
     />

@@ -1,5 +1,9 @@
 import {
   type LocalDate,
+  addLocalDays,
+  addLocalMonths,
+  clampedDateOfMonth,
+  localDateDiff,
   localDateOf,
   startOfLocalDay,
 } from "@repo/domain/form";
@@ -10,30 +14,8 @@ import { LICENSE_EXPIRING_DAYS, PURCHASE_OVERDUE_DAYS } from "./dealer-keys";
 /**
  * 經銷商管理的日期規則(純函式;時區一律是租戶時區)。
  * 正本:專案規格 5.2「牌租繳費日」「側欄計數」;模組文件 `docs/modules/project/dealers.md`「規則」。
+ * 日曆運算一律用 `@repo/domain/form`(`addLocalDays`、`localDateDiff`、`clampedDateOfMonth`、`addLocalMonths`)。
  */
-
-const MS_PER_DAY = 24 * 60 * 60_000;
-
-const dayNumber = (date: LocalDate): number =>
-  Date.UTC(date.year, date.month - 1, date.day) / MS_PER_DAY;
-
-export const lastDayOfMonth = (year: number, month: number): number =>
-  new Date(Date.UTC(year, month, 0)).getUTCDate();
-
-/** 當地日期加減天數。 */
-export function addDays(date: LocalDate, days: number): LocalDate {
-  const shifted = new Date((dayNumber(date) + days) * MS_PER_DAY);
-  return {
-    year: shifted.getUTCFullYear(),
-    month: shifted.getUTCMonth() + 1,
-    day: shifted.getUTCDate(),
-  };
-}
-
-/** `to − from` 的日曆日數。 */
-export function daysBetween(from: LocalDate, to: LocalDate): number {
-  return dayNumber(to) - dayNumber(from);
-}
 
 /** 某時點在租戶時區是哪一天。 */
 export function localDayOf(instant: Date, timezone: string): LocalDate {
@@ -73,11 +55,7 @@ export function rentDueDateIn(
   if (!isRentMonth(month, rent)) {
     return null;
   }
-  return {
-    year,
-    month,
-    day: Math.min(rent.dueDay, lastDayOfMonth(year, month)),
-  };
+  return clampedDateOfMonth({ year, month }, rent.dueDay);
 }
 
 /** 這一天是不是繳費日。 */
@@ -92,11 +70,9 @@ export function nextRentDueDate(
   rent: RentSetting,
 ): LocalDate | null {
   for (let offset = 0; offset <= 12; offset += 1) {
-    const months = from.year * 12 + (from.month - 1) + offset;
-    const year = Math.floor(months / 12);
-    const month = months - year * 12 + 1;
+    const { year, month } = addLocalMonths(from, offset);
     const due = rentDueDateIn(year, month, rent);
-    if (due !== null && dayNumber(due) >= dayNumber(from)) {
+    if (due !== null && localDateDiff(from, due) >= 0) {
       return due;
     }
   }
@@ -111,7 +87,7 @@ export function licenseStateOf(
   today: LocalDate,
   timezone: string,
 ): LicenseState {
-  const days = daysBetween(today, localDayOf(expiresAt, timezone));
+  const days = localDateDiff(today, localDayOf(expiresAt, timezone));
   if (days < 0) {
     return "expired";
   }
@@ -124,7 +100,9 @@ export function daysSince(
   today: LocalDate,
   timezone: string,
 ): number | null {
-  return date === null ? null : daysBetween(localDayOf(date, timezone), today);
+  return date === null
+    ? null
+    : localDateDiff(localDayOf(date, timezone), today);
 }
 
 /**
@@ -135,9 +113,9 @@ export function daysSince(
 export function thresholdsOf(today: LocalDate, timezone: string) {
   return {
     licenseBefore: new Date(
-      startOfLocalDay(addDays(today, LICENSE_EXPIRING_DAYS + 1), timezone),
+      startOfLocalDay(addLocalDays(today, LICENSE_EXPIRING_DAYS + 1), timezone),
     ),
     purchaseBefore: (overDays: number = PURCHASE_OVERDUE_DAYS): Date =>
-      new Date(startOfLocalDay(addDays(today, -overDays), timezone)),
+      new Date(startOfLocalDay(addLocalDays(today, -overDays), timezone)),
   };
 }

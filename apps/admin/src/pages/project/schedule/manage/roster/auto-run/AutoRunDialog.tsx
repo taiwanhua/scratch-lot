@@ -2,6 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslations } from "use-intl";
 
+import { DEFAULT_TENANT_TIMEZONE } from "@repo/domain/form";
 import {
   useRunScheduleAutoRunMutation,
   useScheduleAutoRunPreviewQuery,
@@ -19,7 +20,8 @@ import { Typography } from "@repo/ui/typography";
 
 import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
 import { useSession } from "@/hooks/base/useSession";
-import { datesOfMonth } from "@/lib/project/schedule-roster";
+import { useTenantTimezone } from "@/hooks/base/useTenantTimezone";
+import { datesOfMonth, dayRangeOf } from "@/lib/project/schedule-roster";
 
 import { scheduleErrorKey } from "../../../schedule-error";
 import { useRosterCheck } from "../check-panel/roster-check-context";
@@ -54,6 +56,7 @@ export const AutoRunDialog = ({ onClose }: AutoRunDialogProps) => {
   const { session } = useSession();
   const queryClient = useQueryClient();
   const isMobile = useBreakpointDown("sm");
+  const timezone = useTenantTimezone() ?? DEFAULT_TENANT_TIMEZONE;
   const { data, month, setOpen } = useRosterCheck();
   const status = useAutoRunStatus();
   const days = datesOfMonth(month);
@@ -71,11 +74,12 @@ export const AutoRunDialog = ({ onClose }: AutoRunDialogProps) => {
     }));
   const [, monthNumber = ""] = month.split("-");
 
-  const isRangeValid = from !== "" && to !== "" && from <= to;
+  // 選的是日期(含頭尾);api 收半開的時點區間 `[起 00:00, 迄隔天 00:00)`
+  const instants = from <= to ? dayRangeOf(from, to, timezone) : null;
+  const isRangeValid = instants !== null;
   const range = {
     month,
-    from,
-    to,
+    ...(instants ?? { from: "", to: "" }),
     ...(data === undefined ? {} : { orgId: data.orgId }),
   };
   const preview = useScheduleAutoRunPreviewQuery(

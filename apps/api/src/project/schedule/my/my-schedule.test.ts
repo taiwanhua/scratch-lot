@@ -28,6 +28,7 @@ import { SCHEDULE_PERIODS_COLLECTION } from "../../database/schedule/schedule-pe
 import { SCHEDULE_TASK_ASSIGNMENTS_COLLECTION } from "../../database/schedule/schedule-task-assignment.schema";
 import { ScheduleEntryLookup } from "../integration/entry-lookup";
 import { ScheduleClock } from "../shared/schedule-clock";
+import { monthKeyRange } from "../shared/schedule-dates";
 import {
   SCHEDULE_TEST_PERMISSIONS as P,
   type ScheduleTestUser,
@@ -156,6 +157,21 @@ const base = () => {
 const taipei = (date: string, time: string) =>
   new Date(`${date}T${time}:00+08:00`);
 
+/** 洛杉磯夏令時間(UTC−7)的時點。 */
+const la = (date: string, time: string) => new Date(`${date}T${time}:00-07:00`);
+
+/** api 輸出的日期:那天租戶時區(台北)00:00 的時點。 */
+const day = (date: string) => taipei(date, "00:00").toISOString();
+
+/** 月份查詢的 `from` / `to`:那個月在租戶時區(預設台北)的 `[月初 00:00, 下月初 00:00)`。 */
+const monthRangeOf = (month: string, timezone = "Asia/Taipei") => {
+  const range = monthKeyRange(month, timezone);
+  return {
+    from: new Date(range.from).toISOString(),
+    to: new Date(range.to).toISOString(),
+  };
+};
+
 function errorOf(result: GraphqlResult): Record<string, unknown> | undefined {
   return result.errors?.[0]?.extensions;
 }
@@ -200,7 +216,7 @@ describe("我的班表與打卡(GraphQL 端點 + 真 MongoDB)", () => {
     month?: string,
   ): Promise<MyScheduleRow> {
     const result = await gql(user, MY_SCHEDULE, {
-      input: month === undefined ? null : { month },
+      input: month === undefined ? null : monthRangeOf(month),
     });
     expect(result.errors).toBeUndefined();
     return result.data?.mySchedule as MyScheduleRow;
@@ -262,6 +278,8 @@ describe("我的班表與打卡(GraphQL 端點 + 真 MongoDB)", () => {
       start?: string;
       templateId?: Types.ObjectId;
     }[] = [{ role: "helper", positionKey: "in-store-counter" }],
+    /** 日期 + 時刻 → 時點(預設台北;換租戶時區的情境傳別的) */
+    at: (date: string, time: string) => Date = taipei,
   ): Promise<Types.ObjectId> {
     const { insertedId } = await connection
       .collection(SCHEDULE_ENTRIES_COLLECTION)
@@ -269,9 +287,9 @@ describe("我的班表與打卡(GraphQL 端點 + 真 MongoDB)", () => {
         orgId,
         tenantId: tenant,
         userId: user.userId,
-        date,
-        startAt: taipei(date, start),
-        endAt: taipei(date, end),
+        date: at(date, "00:00"),
+        startAt: at(date, start),
+        endAt: at(date, end),
         breakMinutes: 30,
         moduleKey: "schedule.manage",
         ...base(),
@@ -283,9 +301,9 @@ describe("我的班表與打卡(GraphQL 端點 + 真 MongoDB)", () => {
         .insertOne({
           orgId,
           tenantId: tenant,
-          date,
-          startAt: taipei(date, task.start ?? start),
-          endAt: taipei(date, end),
+          date: at(date, "00:00"),
+          startAt: at(date, task.start ?? start),
+          endAt: at(date, end),
           positionKey: task.positionKey,
           tasks: [
             {
@@ -418,13 +436,13 @@ describe("我的班表與打卡(GraphQL 端點 + 真 MongoDB)", () => {
     now("2026-11-05", "10:00");
     const page = await mySchedule(wang);
     expect(page.month).toBe("2026-11");
-    expect(page.today).toBe("2026-11-05");
+    expect(page.today).toBe(day("2026-11-05"));
     expect(page.canPunch).toBe(true);
     expect(page.currentOrg.name).toBe("信義店");
     expect(page.entries.map((item) => [item.date, item.orgName])).toEqual([
-      ["2026-11-02", "板橋店"],
-      ["2026-11-04", "信義店"],
-      ["2026-11-05", "信義店"],
+      [day("2026-11-02"), "板橋店"],
+      [day("2026-11-04"), "信義店"],
+      [day("2026-11-05"), "信義店"],
     ]);
     const today = page.entries.at(-1);
     expect(today).toMatchObject({
@@ -434,8 +452,8 @@ describe("我的班表與打卡(GraphQL 端點 + 真 MongoDB)", () => {
     });
     expect(today?.tasks.map((task) => task.role)).toEqual(["leader", "helper"]);
     expect(page.punchCards.map((card) => [card.day, card.entry.date])).toEqual([
-      ["today", "2026-11-05"],
-      ["yesterday", "2026-11-04"],
+      ["today", day("2026-11-05")],
+      ["yesterday", day("2026-11-04")],
     ]);
     expect(page.hasEntryToday).toBe(true);
   });
@@ -445,14 +463,14 @@ describe("我的班表與打卡(GraphQL 端點 + 真 MongoDB)", () => {
     const evening = await mySchedule(wang);
     // 11/4 晚班還沒結束 → 不列;11/2 早班已結束、上下班都沒打
     expect(evening.incomplete.map((item) => [item.date, item.missing])).toEqual(
-      [["2026-11-02", ["in", "out"]]],
+      [[day("2026-11-02"), ["in", "out"]]],
     );
 
     now("2026-11-05", "10:00");
     const next = await mySchedule(wang);
     expect(next.incomplete.map((item) => [item.date, item.missing])).toEqual([
-      ["2026-11-02", ["in", "out"]],
-      ["2026-11-04", ["in", "out"]],
+      [day("2026-11-02"), ["in", "out"]],
+      [day("2026-11-04"), ["in", "out"]],
     ]);
     // 11/5 早班還沒結束:不算缺卡
     expect(next.entries.at(-1)?.missing).toEqual([]);
@@ -461,8 +479,8 @@ describe("我的班表與打卡(GraphQL 端點 + 真 MongoDB)", () => {
     now("2026-11-09", "10:00");
     const later = await mySchedule(wang, "2026-11");
     expect(later.incomplete.map((item) => item.date)).toEqual([
-      "2026-11-04",
-      "2026-11-05",
+      day("2026-11-04"),
+      day("2026-11-05"),
     ]);
   });
 
@@ -579,7 +597,7 @@ describe("我的班表與打卡(GraphQL 端點 + 真 MongoDB)", () => {
       orgId: xinyi,
       tenantId: tenant,
       month: date.slice(0, 7),
-      date,
+      date: taipei(date, "00:00"),
       action: "entry.edit",
       targetId: new Types.ObjectId(),
       userIds: [wang.userId],
@@ -609,11 +627,66 @@ describe("我的班表與打卡(GraphQL 端點 + 真 MongoDB)", () => {
           String(left[0]).localeCompare(String(right[0])),
         ),
     ).toEqual([
-      ["2026-11-08", "shift-swap", null],
-      ["2026-11-12", "other", "臨時請假"],
+      [day("2026-11-08"), "shift-swap", null],
+      [day("2026-11-12"), "other", "臨時請假"],
     ]);
     expect(page.changes[0]?.beforeStartAt).not.toBeNull();
     expect(page.changes[0]?.orgName).toBe("信義店");
+  });
+
+  it("租戶時區不是台北(洛杉磯):月份查詢要是洛杉磯的整個月;日期、今天都是洛杉磯那天 00:00;月底晚上的班算那個月", async () => {
+    const LA = "America/Los_Angeles";
+    // 洛杉磯 3/31 是夏令時間;20:00–23:00 在 UTC 已是 4/1
+    const orgs = connection.collection("orgs");
+    await orgs.updateOne(
+      { _id: tenant },
+      { $set: { "settings.timezone": LA } },
+    );
+    try {
+      await period(xinyi, "2027-03", "published");
+      await period(xinyi, "2027-04", "published");
+      const late = await entry(
+        wang,
+        xinyi,
+        "2027-03-31",
+        "20:00",
+        "23:00",
+        undefined,
+        la,
+      );
+      jest.spyOn(clock, "now").mockReturnValue(la("2027-03-31", "21:00"));
+      const result = await gql(wang, MY_SCHEDULE, {
+        input: monthRangeOf("2027-03", LA),
+      });
+      expect(result.errors).toBeUndefined();
+      const page = result.data?.mySchedule as MyScheduleRow;
+      expect(page.month).toBe("2027-03");
+      expect(page.today).toBe(la("2027-03-31", "00:00").toISOString());
+      expect(page.hasEntryToday).toBe(true);
+      expect(page.entries.map((item) => [item.id, item.date])).toEqual([
+        [String(late), la("2027-03-31", "00:00").toISOString()],
+      ]);
+      // 4 月(洛杉磯)看不到這一班,即使它在 UTC 是 4/1
+      const april = await gql(wang, MY_SCHEDULE, {
+        input: monthRangeOf("2027-04", LA),
+      });
+      expect(
+        (april.data?.mySchedule as MyScheduleRow).entries.map(
+          (item) => item.id,
+        ),
+      ).not.toContain(String(late));
+      // 台北的 3 月不是洛杉磯的整個月 → VALIDATION_FAILED(from、to)
+      expect(
+        errorOf(
+          await gql(wang, MY_SCHEDULE, { input: monthRangeOf("2027-03") }),
+        ),
+      ).toMatchObject({ code: "VALIDATION_FAILED", fields: ["from", "to"] });
+    } finally {
+      await orgs.updateOne(
+        { _id: tenant },
+        { $unset: { "settings.timezone": "" } },
+      );
+    }
   });
 
   describe("給刮刮樂的排班查詢(integration/entry-lookup.ts)", () => {
@@ -638,12 +711,13 @@ describe("我的班表與打卡(GraphQL 端點 + 真 MongoDB)", () => {
           at: taipei("2026-12-03", "09:00"),
         }),
       ).toBeNull();
+      // 那天的任何時刻都歸到同一天;日期是那天台北 00:00 的時點
       const day = await lookup.listEntriesOfDay(operator, {
         ...scope,
-        date: "2026-11-05",
+        at: taipei("2026-11-05", "23:59"),
       });
-      expect(day.map((item) => [item.id, item.shortName])).toEqual([
-        [String(nov5), "早"],
+      expect(day.map((item) => [item.id, item.shortName, item.date])).toEqual([
+        [String(nov5), "早", taipei("2026-11-05", "00:00")],
       ]);
     });
 

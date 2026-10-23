@@ -4,6 +4,11 @@ import { useTranslations } from "use-intl";
 import { z } from "zod";
 
 import {
+  localMonthText,
+  parseLocalDate,
+  parseLocalMonth,
+} from "@repo/domain/form";
+import {
   type ScheduleAttendancePunchFieldsFragment,
   type ScheduleAttendanceRowFieldsFragment,
   useScheduleAttendanceByPersonQuery,
@@ -21,15 +26,17 @@ import { Table, type TableColumn } from "@repo/ui/table";
 import { Typography } from "@repo/ui/typography";
 
 import { useSession } from "@/hooks/base/useSession";
+import { useTenantToday } from "@/hooks/base/useTenantToday";
 import { useUrlState } from "@/hooks/base/useUrlState";
+import { monthRangeOf } from "@/lib/project/schedule-day-offs";
+import { shiftMonthOf } from "@/lib/project/schedule-roster";
 
-import { useTenantToday } from "../manage/roster/views/useRosterDate";
 import { scheduleErrorOf } from "../schedule-error";
 import { AttendanceActions } from "./AttendanceActions";
 import { ReassignPunchDialog } from "./ReassignPunchDialog";
 import { ATTENDANCE_URL_KEYS } from "./attendance-keys";
 import { useAttendanceText } from "./useAttendanceText";
-import { useMakeupPunchHref } from "./useMakeupPunchHref";
+import { makeupPrefillOf, useMakeupPunchHref } from "./useMakeupPunchHref";
 
 type Row = ScheduleAttendanceRowFieldsFragment;
 type Punch = ScheduleAttendancePunchFieldsFragment;
@@ -38,13 +45,6 @@ type Punch = ScheduleAttendancePunchFieldsFragment;
 const MONTH_SCHEMA = z.string().default("");
 /** `?person=<使用者 id>`;空字串 = 自己。 */
 const PERSON_SCHEMA = z.string().default("");
-const MONTH_PATTERN = /^\d{4}-(?:0[1-9]|1[0-2])$/u;
-
-const shiftMonth = (month: string, months: number): string => {
-  const [year = 0, monthNumber = 1] = month.split("-").map(Number);
-  const shifted = new Date(Date.UTC(year, monthNumber - 1 + months, 1));
-  return shifted.toISOString().slice(0, 7);
-};
 
 /**
  * 出勤紀錄 → 依人員(月)(SC-11;規格 14.7):一個人一個月的班與打卡(跨分店合併)、實際工時、遲到 / 早退、
@@ -68,14 +68,21 @@ export const ByPersonTab = () => {
     ATTENDANCE_URL_KEYS.person,
     PERSON_SCHEMA,
   );
-  const month = MONTH_PATTERN.test(monthParam) ? monthParam : today.slice(0, 7);
+  // 這個月以租戶時區的今天判斷
+  const todayDate = parseLocalDate(today);
+  const month =
+    parseLocalMonth(monthParam) === null && todayDate !== null
+      ? localMonthText(todayDate)
+      : monthParam;
+  // 送那個月在租戶時區的時點區間 `[月初 00:00, 下月初 00:00)`
+  const range = monthRangeOf(month, text.timezone) ?? { from: "", to: "" };
   const [reassigning, setReassigning] = useState<readonly Punch[] | null>(null);
   const query = useScheduleAttendanceByPersonQuery(session.client, {
-    input: { month, ...(person === "" ? {} : { userId: person }) },
+    input: { ...range, ...(person === "" ? {} : { userId: person }) },
   });
   const data = query.data?.scheduleAttendanceByPerson;
   const canReassign = data?.abilities.canReassign ?? false;
-  const [year = "", monthNumber = ""] = month.split("-");
+  const shown = parseLocalMonth(month);
 
   const makeupButton = (row: Row) =>
     makeupHref !== null &&
@@ -85,14 +92,7 @@ export const ByPersonTab = () => {
         variant="text"
         size="small"
         onClick={() => {
-          void navigate(
-            makeupHref({
-              date: row.date,
-              orgId: row.orgId,
-              type: row.missing.includes("in") ? "in" : "out",
-              entryId: row.entryId,
-            }),
-          );
+          void navigate(makeupHref(makeupPrefillOf(row)));
         }}
       >
         {t("makeupRow")}
@@ -214,19 +214,22 @@ export const ByPersonTab = () => {
           size="small"
           aria-label={t("prevMonth")}
           onClick={() => {
-            setMonth(shiftMonth(month, -1));
+            setMonth(shiftMonthOf(month, -1));
           }}
         >
           <ChevronLeftIcon />
         </IconButton>
         <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-          {t("monthTitle", { year, month: Number(monthNumber) })}
+          {t("monthTitle", {
+            year: String(shown?.year ?? ""),
+            month: shown?.month ?? 0,
+          })}
         </Typography>
         <IconButton
           size="small"
           aria-label={t("nextMonth")}
           onClick={() => {
-            setMonth(shiftMonth(month, 1));
+            setMonth(shiftMonthOf(month, 1));
           }}
         >
           <ChevronRightIcon />
@@ -235,7 +238,7 @@ export const ByPersonTab = () => {
       {data !== undefined && (
         <AttendanceActions
           canExport={data.abilities.canExport}
-          exportInput={{ month, orgId: data.orgId, userId: data.userId }}
+          exportInput={{ ...range, orgId: data.orgId, userId: data.userId }}
         />
       )}
     </Stack>

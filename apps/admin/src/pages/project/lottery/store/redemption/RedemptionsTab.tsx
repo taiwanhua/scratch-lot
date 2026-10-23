@@ -3,11 +3,11 @@ import { z } from "zod";
 
 import {
   DEFAULT_TENANT_TIMEZONE,
-  addLocalCalendar,
   localDateOf,
   localDateText,
+  localDayRange,
   parseLocalDate,
-  startOfLocalDay,
+  toIso,
 } from "@repo/domain/form";
 import {
   REDEMPTION_STATUSES,
@@ -91,7 +91,10 @@ const defaultPeriodOf = (timezone: string): { from: string; to: string } => {
   };
 };
 
-/** 期間(當地日期,含頭尾)→ api 的時點區間 `[from, to + 1 天)`。 */
+/**
+ * 期間(當地日期,含頭尾)→ api 的時點區間 `[from 00:00, to 隔天 00:00)`(`localDayRange`;
+ * 只給一邊時單邊篩選)。
+ */
 const rangeOf = (
   filters: Filters,
   timezone: string,
@@ -100,20 +103,8 @@ const rangeOf = (
   const to = parseLocalDate(filters.to);
   return {
     from:
-      from === null
-        ? null
-        : new Date(startOfLocalDay(from, timezone)).toISOString(),
-    to:
-      to === null
-        ? null
-        : new Date(
-            addLocalCalendar(
-              startOfLocalDay(to, timezone),
-              1,
-              "days",
-              timezone,
-            ),
-          ).toISOString(),
+      from === null ? null : toIso(localDayRange(from, from, timezone).from),
+    to: to === null ? null : toIso(localDayRange(to, to, timezone).to),
   };
 };
 

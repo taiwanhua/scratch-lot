@@ -7,15 +7,31 @@ import { CTX, definitionOf, field } from "./form-test-support";
 import { computeSummary } from "./summary";
 import {
   addLocalCalendar,
+  addLocalDays,
+  addLocalMonths,
+  clampedDateOfMonth,
   compareLocalDay,
+  datesOfLocalMonth,
+  daysInLocalMonth,
   formatTemporal,
+  instantOfLocalHhMm,
   instantOfLocalTime,
+  isHhMm,
+  localDateDiff,
   localDateOf,
+  localDayRange,
+  localMonthDiff,
+  localMonthOf,
+  localMonthRange,
+  localMonthText,
+  minutesOfHhMm,
   parseLocalDate,
+  parseLocalMonth,
   sameLocalDay,
   startOfLocalDay,
   toInstant,
   toIso,
+  weekdayOfLocalDate,
 } from "./temporal";
 import type { Expression } from "./types";
 import { validateDefinition } from "./validate-definition";
@@ -514,5 +530,429 @@ describe("@repo/domain/form dateDiff 三種單位", () => {
       evaluate({ dateDiff: [null, "2026-03-01T02:00:00Z", "hours"] }),
     ).toBeNull();
     expect(evaluate({ dateDiff: ["2026-03-01", "2026-03-03"] })).toBeNull();
+  });
+});
+
+describe("@repo/domain/form 時刻 HH:mm", () => {
+  it.each([
+    ["00:00", true],
+    ["08:30", true],
+    ["23:59", true],
+    ["24:00", false],
+    ["8:30", false],
+    ["08:60", false],
+    ["08:30:00", false],
+    ["", false],
+    [null, false],
+    [830, false],
+  ])("isHhMm(%p) → %p", (value, expected) => {
+    expect(isHhMm(value)).toBe(expected);
+  });
+
+  it("minutesOfHhMm:換成 00:00 起算的分鐘數,不合法 → null", () => {
+    expect(minutesOfHhMm("00:00")).toBe(0);
+    expect(minutesOfHhMm("13:45")).toBe(825);
+    expect(minutesOfHhMm("23:59")).toBe(1439);
+    expect(minutesOfHhMm("24:00")).toBeNull();
+  });
+});
+
+describe("@repo/domain/form instantOfLocalHhMm", () => {
+  it("租戶當地那天的 HH:mm → 時點", () => {
+    expect(
+      iso(
+        instantOfLocalHhMm({ year: 2026, month: 10, day: 24 }, "09:30", TAIPEI),
+      ),
+    ).toBe("2026-10-24T01:30:00.000Z");
+    expect(
+      iso(
+        instantOfLocalHhMm({ year: 2026, month: 10, day: 24 }, "00:00", TAIPEI),
+      ),
+    ).toBe("2026-10-23T16:00:00.000Z");
+  });
+
+  it("HH:mm 不合法 → null", () => {
+    expect(
+      instantOfLocalHhMm({ year: 2026, month: 10, day: 24 }, "24:00", TAIPEI),
+    ).toBeNull();
+    expect(
+      instantOfLocalHhMm({ year: 2026, month: 10, day: 24 }, "", TAIPEI),
+    ).toBeNull();
+  });
+
+  it("不存在的時刻(紐約夏令時間開始)往後推到切換後", () => {
+    // 2026-03-08 02:00 → 03:00;02:30 不存在,落在 03:30 EDT(與 instantOfLocalTime 同一條規則)
+    expect(
+      iso(
+        instantOfLocalHhMm({ year: 2026, month: 3, day: 8 }, "02:30", NEW_YORK),
+      ),
+    ).toBe("2026-03-08T07:30:00.000Z");
+  });
+
+  it("重複的時刻(紐約夏令時間結束)取較早的一個", () => {
+    // 2026-11-01 01:30 出現兩次:EDT(05:30Z)與 EST(06:30Z)
+    expect(
+      iso(
+        instantOfLocalHhMm(
+          { year: 2026, month: 11, day: 1 },
+          "01:30",
+          NEW_YORK,
+        ),
+      ),
+    ).toBe("2026-11-01T05:30:00.000Z");
+  });
+});
+
+describe("@repo/domain/form 純日曆:日期", () => {
+  it("addLocalDays:跨月、跨年、閏年照日曆進位;負數往前", () => {
+    expect(addLocalDays({ year: 2026, month: 1, day: 31 }, 1)).toEqual({
+      year: 2026,
+      month: 2,
+      day: 1,
+    });
+    expect(addLocalDays({ year: 2026, month: 12, day: 31 }, 1)).toEqual({
+      year: 2027,
+      month: 1,
+      day: 1,
+    });
+    expect(addLocalDays({ year: 2028, month: 2, day: 28 }, 1)).toEqual({
+      year: 2028,
+      month: 2,
+      day: 29,
+    });
+    expect(addLocalDays({ year: 2026, month: 3, day: 1 }, -1)).toEqual({
+      year: 2026,
+      month: 2,
+      day: 28,
+    });
+    expect(addLocalDays({ year: 2026, month: 3, day: 1 }, 0)).toEqual({
+      year: 2026,
+      month: 3,
+      day: 1,
+    });
+  });
+
+  it("addLocalDays:夏令時間切換日不影響(純日曆,不經過時點)", () => {
+    expect(addLocalDays({ year: 2026, month: 3, day: 7 }, 2)).toEqual({
+      year: 2026,
+      month: 3,
+      day: 9,
+    });
+  });
+
+  it("localDateDiff:to − from 的日曆日數", () => {
+    expect(
+      localDateDiff(
+        { year: 2026, month: 2, day: 27 },
+        { year: 2026, month: 3, day: 2 },
+      ),
+    ).toBe(3);
+    expect(
+      localDateDiff(
+        { year: 2026, month: 3, day: 2 },
+        { year: 2026, month: 2, day: 27 },
+      ),
+    ).toBe(-3);
+    expect(
+      localDateDiff(
+        { year: 2026, month: 3, day: 2 },
+        { year: 2026, month: 3, day: 2 },
+      ),
+    ).toBe(0);
+  });
+
+  it("weekdayOfLocalDate:0 = 星期日 … 6 = 星期六", () => {
+    expect(weekdayOfLocalDate({ year: 2026, month: 10, day: 25 })).toBe(0);
+    expect(weekdayOfLocalDate({ year: 2026, month: 10, day: 24 })).toBe(6);
+    expect(weekdayOfLocalDate({ year: 2028, month: 2, day: 29 })).toBe(2);
+  });
+});
+
+describe("@repo/domain/form 純日曆:月份", () => {
+  it("parseLocalMonth / localMonthText:YYYY-MM 互換,格式不對 → null", () => {
+    expect(parseLocalMonth("2026-01")).toEqual({ year: 2026, month: 1 });
+    expect(localMonthText({ year: 2026, month: 1 })).toBe("2026-01");
+    for (const value of [
+      "2026-13",
+      "2026-00",
+      "2026-1",
+      "2026-01-01",
+      "",
+      null,
+    ]) {
+      expect(parseLocalMonth(value)).toBeNull();
+    }
+  });
+
+  it("addLocalMonths:跨年進退", () => {
+    expect(addLocalMonths({ year: 2026, month: 1 }, -1)).toEqual({
+      year: 2025,
+      month: 12,
+    });
+    expect(addLocalMonths({ year: 2026, month: 12 }, 1)).toEqual({
+      year: 2027,
+      month: 1,
+    });
+    expect(addLocalMonths({ year: 2026, month: 5 }, -17)).toEqual({
+      year: 2024,
+      month: 12,
+    });
+    expect(addLocalMonths({ year: 2026, month: 5 }, 0)).toEqual({
+      year: 2026,
+      month: 5,
+    });
+  });
+
+  it("daysInLocalMonth / datesOfLocalMonth:閏年 2 月 29 天,由 1 日排到月底", () => {
+    expect(daysInLocalMonth({ year: 2026, month: 2 })).toBe(28);
+    expect(daysInLocalMonth({ year: 2028, month: 2 })).toBe(29);
+    expect(daysInLocalMonth({ year: 2026, month: 4 })).toBe(30);
+    const dates = datesOfLocalMonth({ year: 2028, month: 2 });
+    expect(dates).toHaveLength(29);
+    expect(dates[0]).toEqual({ year: 2028, month: 2, day: 1 });
+    expect(dates.at(-1)).toEqual({ year: 2028, month: 2, day: 29 });
+  });
+});
+
+describe("@repo/domain/form 期間 → 時點區間(半開)", () => {
+  it("localDayRange:[from 00:00, to 隔天 00:00)", () => {
+    const range = localDayRange(
+      { year: 2026, month: 10, day: 1 },
+      { year: 2026, month: 10, day: 24 },
+      TAIPEI,
+    );
+    expect(iso(range.from)).toBe("2026-09-30T16:00:00.000Z");
+    expect(iso(range.to)).toBe("2026-10-24T16:00:00.000Z");
+  });
+
+  it("localDayRange:同一天 = 那一整天", () => {
+    const day = { year: 2026, month: 10, day: 24 };
+    const range = localDayRange(day, day, TAIPEI);
+    expect(range.to - range.from).toBe(24 * 60 * 60_000);
+  });
+
+  it("localMonthRange:[月初 00:00, 下月初 00:00),跨年也對", () => {
+    const range = localMonthRange({ year: 2026, month: 12 }, TAIPEI);
+    expect(iso(range.from)).toBe("2026-11-30T16:00:00.000Z");
+    expect(iso(range.to)).toBe("2026-12-31T16:00:00.000Z");
+  });
+
+  it("localMonthRange:夏令時間開始的月份,邊界仍是當地 00:00", () => {
+    // 紐約 3 月:月初 EST(-05:00)、下月初 EDT(-04:00)
+    const range = localMonthRange({ year: 2026, month: 3 }, NEW_YORK);
+    expect(iso(range.from)).toBe("2026-03-01T05:00:00.000Z");
+    expect(iso(range.to)).toBe("2026-04-01T04:00:00.000Z");
+  });
+
+  it("午夜不存在的時區(聖地牙哥 9/6 00:00 開始夏令時間)→ 迄 = 隔天的第一個時點", () => {
+    const range = localDayRange(
+      { year: 2026, month: 9, day: 5 },
+      { year: 2026, month: 9, day: 5 },
+      "America/Santiago",
+    );
+    expect(range.to).toBe(
+      startOfLocalDay({ year: 2026, month: 9, day: 6 }, "America/Santiago"),
+    );
+    expect(localDateOf(range.to, "America/Santiago").day).toBe(6);
+    expect(localDateOf(range.to - 1000, "America/Santiago").day).toBe(5);
+  });
+
+  it("起日本身 00:00 不存在(聖地牙哥 9/6)→ 迄仍是隔天 00:00,那天只有 23 小時", () => {
+    // 不能從起點時點往後加一天(01:00 + 1 天 = 隔天 01:00,會多吃隔天一小時)
+    const day = { year: 2026, month: 9, day: 6 };
+    const range = localDayRange(day, day, "America/Santiago");
+    expect(
+      formatTemporal(new Date(range.to), {
+        type: "datetime",
+        timezone: "America/Santiago",
+      }),
+    ).toBe("2026-09-07 00:00");
+    expect(range.to - range.from).toBe(23 * 60 * 60_000);
+  });
+});
+
+describe("@repo/domain/form 月份:每月 N 日、時點 → 月份、月份差", () => {
+  it("clampedDateOfMonth:超過月底用月底(2 月平年 / 閏年、小月),月內照原日", () => {
+    expect(clampedDateOfMonth({ year: 2026, month: 2 }, 31)).toEqual({
+      year: 2026,
+      month: 2,
+      day: 28,
+    });
+    expect(clampedDateOfMonth({ year: 2028, month: 2 }, 30)).toEqual({
+      year: 2028,
+      month: 2,
+      day: 29,
+    });
+    expect(clampedDateOfMonth({ year: 2026, month: 4 }, 31)).toEqual({
+      year: 2026,
+      month: 4,
+      day: 30,
+    });
+    expect(clampedDateOfMonth({ year: 2026, month: 12 }, 31)).toEqual({
+      year: 2026,
+      month: 12,
+      day: 31,
+    });
+    expect(clampedDateOfMonth({ year: 2026, month: 3 }, 15)).toEqual({
+      year: 2026,
+      month: 3,
+      day: 15,
+    });
+    expect(clampedDateOfMonth({ year: 2026, month: 3 }, 0).day).toBe(1);
+  });
+
+  it("clampedDateOfMonth:配 addLocalMonths 跨年(1/31 的下個月是 2/28,12 月往後是隔年 1 月)", () => {
+    expect(
+      clampedDateOfMonth(addLocalMonths({ year: 2026, month: 1 }, 1), 31),
+    ).toEqual({ year: 2026, month: 2, day: 28 });
+    expect(
+      clampedDateOfMonth(addLocalMonths({ year: 2026, month: 12 }, 1), 31),
+    ).toEqual({ year: 2027, month: 1, day: 31 });
+  });
+
+  it("localMonthOf:跨年邊界照租戶時區(UTC 還在 12 月,台北已經 1 月)", () => {
+    expect(localMonthOf(Date.parse("2026-12-31T16:00:00Z"), TAIPEI)).toEqual({
+      year: 2027,
+      month: 1,
+    });
+    expect(localMonthOf(Date.parse("2026-12-31T15:59:59Z"), TAIPEI)).toEqual({
+      year: 2026,
+      month: 12,
+    });
+  });
+
+  it("localMonthOf:閏年 2 月底", () => {
+    expect(localMonthOf(Date.parse("2028-02-29T15:59:59Z"), TAIPEI)).toEqual({
+      year: 2028,
+      month: 2,
+    });
+    expect(localMonthOf(Date.parse("2028-02-29T16:00:00Z"), TAIPEI)).toEqual({
+      year: 2028,
+      month: 3,
+    });
+  });
+
+  it("localMonthOf:夏令時間開始的月份,月底邊界用當時的位移(紐約 EDT -04:00)", () => {
+    // 3/31 23:30 EDT = 4/1 03:30Z;4/1 00:00 EDT = 4/1 04:00Z
+    expect(localMonthOf(Date.parse("2026-04-01T03:30:00Z"), NEW_YORK)).toEqual({
+      year: 2026,
+      month: 3,
+    });
+    expect(localMonthOf(Date.parse("2026-04-01T04:00:00Z"), NEW_YORK)).toEqual({
+      year: 2026,
+      month: 4,
+    });
+  });
+
+  it("localMonthDiff:to − from 的月數,跨年、同月、往前", () => {
+    expect(
+      localMonthDiff({ year: 2025, month: 12 }, { year: 2026, month: 1 }),
+    ).toBe(1);
+    expect(
+      localMonthDiff({ year: 2026, month: 1 }, { year: 2025, month: 12 }),
+    ).toBe(-1);
+    expect(
+      localMonthDiff({ year: 2026, month: 2 }, { year: 2026, month: 2 }),
+    ).toBe(0);
+    expect(
+      localMonthDiff({ year: 2024, month: 2 }, { year: 2026, month: 3 }),
+    ).toBe(25);
+  });
+
+  it("localMonthDiff 與 addLocalMonths 互為反運算", () => {
+    const from = { year: 2026, month: 11 };
+    for (const amount of [-14, -1, 0, 1, 3, 26]) {
+      expect(localMonthDiff(from, addLocalMonths(from, amount))).toBe(amount);
+    }
+  });
+});
+
+describe("@repo/domain/form 純日曆與區間:補跨年、2 月、夏令時間", () => {
+  it("localDateDiff:跨年、跨閏年 2 月、跨夏令時間切換日都是日曆日數", () => {
+    expect(
+      localDateDiff(
+        { year: 2026, month: 12, day: 30 },
+        { year: 2027, month: 1, day: 2 },
+      ),
+    ).toBe(3);
+    expect(
+      localDateDiff(
+        { year: 2028, month: 2, day: 28 },
+        { year: 2028, month: 3, day: 1 },
+      ),
+    ).toBe(2);
+    expect(
+      localDateDiff(
+        { year: 2026, month: 3, day: 7 },
+        { year: 2026, month: 3, day: 9 },
+      ),
+    ).toBe(2);
+  });
+
+  it("weekdayOfLocalDate:跨年、夏令時間切換日", () => {
+    expect(weekdayOfLocalDate({ year: 2026, month: 12, day: 31 })).toBe(4);
+    expect(weekdayOfLocalDate({ year: 2027, month: 1, day: 1 })).toBe(5);
+    expect(weekdayOfLocalDate({ year: 2026, month: 3, day: 8 })).toBe(0);
+  });
+
+  it("addLocalMonths:經過 2 月不受天數影響", () => {
+    expect(addLocalMonths({ year: 2028, month: 1 }, 1)).toEqual({
+      year: 2028,
+      month: 2,
+    });
+    expect(addLocalMonths({ year: 2028, month: 2 }, 12)).toEqual({
+      year: 2029,
+      month: 2,
+    });
+  });
+
+  it("datesOfLocalMonth:12 月排到 31 日,不跨到隔年", () => {
+    const dates = datesOfLocalMonth({ year: 2026, month: 12 });
+    expect(dates).toHaveLength(31);
+    expect(dates.at(-1)).toEqual({ year: 2026, month: 12, day: 31 });
+  });
+
+  it("instantOfLocalHhMm:跨年前一刻、閏日", () => {
+    expect(
+      iso(
+        instantOfLocalHhMm({ year: 2026, month: 12, day: 31 }, "23:30", TAIPEI),
+      ),
+    ).toBe("2026-12-31T15:30:00.000Z");
+    expect(
+      iso(
+        instantOfLocalHhMm({ year: 2028, month: 2, day: 29 }, "08:00", TAIPEI),
+      ),
+    ).toBe("2028-02-29T00:00:00.000Z");
+  });
+
+  it("localDayRange:迄日是年底 → 隔年 1/1 00:00;閏年 2/28–2/29 是兩整天", () => {
+    const yearEnd = { year: 2026, month: 12, day: 31 };
+    expect(iso(localDayRange(yearEnd, yearEnd, TAIPEI).to)).toBe(
+      "2026-12-31T16:00:00.000Z",
+    );
+    const leap = localDayRange(
+      { year: 2028, month: 2, day: 28 },
+      { year: 2028, month: 2, day: 29 },
+      TAIPEI,
+    );
+    expect(iso(leap.to)).toBe("2028-02-29T16:00:00.000Z");
+    expect(leap.to - leap.from).toBe(2 * 24 * 60 * 60_000);
+  });
+
+  it("localDayRange:夏令時間開始 / 結束那天是 23 / 25 小時(紐約)", () => {
+    const start = { year: 2026, month: 3, day: 8 };
+    const end = { year: 2026, month: 11, day: 1 };
+    const short = localDayRange(start, start, NEW_YORK);
+    const long = localDayRange(end, end, NEW_YORK);
+    expect(short.to - short.from).toBe(23 * 60 * 60_000);
+    expect(long.to - long.from).toBe(25 * 60 * 60_000);
+  });
+
+  it("localMonthRange:閏年 2 月 29 天、夏令時間結束的月份(紐約 11 月)", () => {
+    const february = localMonthRange({ year: 2028, month: 2 }, TAIPEI);
+    expect(february.to - february.from).toBe(29 * 24 * 60 * 60_000);
+    const november = localMonthRange({ year: 2026, month: 11 }, NEW_YORK);
+    expect(iso(november.from)).toBe("2026-11-01T04:00:00.000Z");
+    expect(iso(november.to)).toBe("2026-12-01T05:00:00.000Z");
   });
 });

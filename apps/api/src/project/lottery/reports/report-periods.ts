@@ -1,11 +1,13 @@
 import { Injectable } from "@nestjs/common";
 import type { Types } from "mongoose";
 
-import { CHECKOUT_TYPE } from "@repo/domain/project/lottery";
 import {
-  addPeriodMonths,
-  periodMonthOf,
-} from "@repo/domain/project/lottery-accounts";
+  addLocalMonths,
+  localMonthDiff,
+  localMonthOf,
+  localMonthText,
+} from "@repo/domain/form";
+import { CHECKOUT_TYPE } from "@repo/domain/project/lottery";
 
 import { LotteryPeriodClosesRepository } from "../../database/lottery-accounts/lottery-accounts.repositories";
 import { LotteryCheckoutsRepository } from "../../database/lottery-checkouts/lottery-checkouts.repository";
@@ -101,7 +103,9 @@ export function isPriorPeriodOf(
   if (last === null || pointerAt >= last.periodEnd) {
     return false;
   }
-  const month = periodMonthOf(pointerAt.getTime(), scope.timezone);
+  const month = localMonthText(
+    localMonthOf(pointerAt.getTime(), scope.timezone),
+  );
   const at = closedAt.get(month) ?? new Date(0);
   return recordedAt >= at;
 }
@@ -112,14 +116,15 @@ export function openMonthsOf(
   from: Date,
   to: Date,
 ): string[] {
-  const first = periodMonthOf(from.getTime(), scope.timezone);
-  const last = periodMonthOf(to.getTime() - 1, scope.timezone);
+  const first = localMonthOf(from.getTime(), scope.timezone);
+  const last = localMonthOf(to.getTime() - 1, scope.timezone);
   const months: string[] = [];
   for (
-    let month = first;
-    month <= last && months.length < 3;
-    month = addPeriodMonths(month, 1)
+    let offset = 0;
+    offset <= localMonthDiff(first, last) && months.length < 3;
+    offset += 1
   ) {
+    const month = localMonthText(addLocalMonths(first, offset));
     if (scope.lastClosed === null || month > scope.lastClosed.month) {
       months.push(month);
     }

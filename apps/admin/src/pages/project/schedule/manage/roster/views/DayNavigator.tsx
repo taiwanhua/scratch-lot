@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { useTranslations } from "use-intl";
 
+import { DEFAULT_TENANT_TIMEZONE } from "@repo/domain/form";
 import { Button } from "@repo/ui/button";
 import { IconButton } from "@repo/ui/icon-button";
 import { ChevronLeftIcon, ChevronRightIcon } from "@repo/ui/icons";
 import { Stack } from "@repo/ui/stack";
 
+import { useTenantTimezone } from "@/hooks/base/useTenantTimezone";
 import { monthDayOf, shiftDay, weekdayOf } from "@/lib/project/schedule-roster";
 
 import type { RosterNavigatorProps } from "../roster-views";
@@ -19,10 +21,11 @@ import { useRosterDate } from "./useRosterDate";
 export const DayNavigator = ({ data, month }: RosterNavigatorProps) => {
   const t = useTranslations("admin.schedule.roster");
   const tCalendar = useTranslations("admin.schedule.calendar");
+  const timezone = useTenantTimezone() ?? DEFAULT_TENANT_TIMEZONE;
   const { date, today, goTo } = useRosterDate(month);
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
   const title = t("dateTitle", {
-    date: monthDayOf(date),
+    date: monthDayOf(date, timezone),
     weekday: tCalendar(`weekdays.${String(weekdayOf(date))}`),
   });
   return (

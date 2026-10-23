@@ -195,11 +195,15 @@ export const sampleScheduleStaff: ScheduleStaffRowFieldsFragment[] = [
   },
 ];
 
+/** 台北時區那天 00:00 的時點(行事曆的日期;api 回 ISO)。 */
+const taipeiDay = (date: string) =>
+  new Date(`${date}T00:00:00+08:00`).toISOString();
+
 export const sampleScheduleCalendarDays: TestCalendarDay[] = [
   {
     id: "cal-1",
     orgId: SCHEDULE_TENANT.id,
-    date: "2026-11-03",
+    date: taipeiDay("2026-11-03"),
     type: "closed",
     category: null,
     name: "盤點日",
@@ -211,7 +215,7 @@ export const sampleScheduleCalendarDays: TestCalendarDay[] = [
   {
     id: "cal-2",
     orgId: SCHEDULE_BRANCH.id,
-    date: "2026-11-11",
+    date: taipeiDay("2026-11-11"),
     type: "special",
     category: "event-day",
     name: "店慶",

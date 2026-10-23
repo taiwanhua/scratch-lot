@@ -1,7 +1,6 @@
 import type { ScheduleRuleLevel } from "@repo/domain/project/schedule-settings";
 
 import { consecutiveRuns } from "../day-offs/day-off-rules";
-import { shiftDate } from "../day-offs/day-off-window";
 import { workMinutesOf } from "../roster/roster-stats";
 import {
   type EffectiveRuleSetting,
@@ -12,6 +11,11 @@ import {
   registerRuleEvaluator,
   ruleEvaluatorOf,
 } from "../rules/rule-registry";
+import {
+  isDateKeyInMonth,
+  monthDayOfKey,
+  shiftDateKey,
+} from "../shared/schedule-dates";
 
 /**
  * 排班類規則的檢查函式(規格 14.2;本功能擁有):登記在 P06 的 `registerRuleEvaluator`,
@@ -96,11 +100,6 @@ const amountOf = (setting: EffectiveRuleSetting): number =>
 const levelOf = (setting: EffectiveRuleSetting): ScheduleRuleLevel =>
   setting.level ?? "reminder";
 
-const inMonth = (date: string, month: string) => date.startsWith(`${month}-`);
-
-const shortDate = (date: string) =>
-  `${String(Number(date.slice(5, 7)))}/${String(Number(date.slice(8, 10)))}`;
-
 /** 小時,到小數第 2 位(10.5、7.75)。 */
 const hoursOf = (ms: number) => Math.round((ms / MS_PER_HOUR) * 100) / 100;
 
@@ -151,7 +150,7 @@ export const maxConsecutiveWorkDaysEvaluator = ({
     .map((run) => ({
       key: setting.key,
       level: levelOf(setting),
-      message: `${shortDate(run.from)}–${shortDate(run.to)} 連續上班 ${String(run.length)} 天,最多 ${String(limit)} 天`,
+      message: `${monthDayOfKey(run.from)}–${monthDayOfKey(run.to)} 連續上班 ${String(run.length)} 天,最多 ${String(limit)} 天`,
       targets: entries
         .filter((entry) => entry.date >= run.from && entry.date <= run.to)
         .map((entry) => targetOf(entry)),
@@ -175,7 +174,10 @@ export const minRestBetweenShiftsEvaluator = ({
       continue;
     }
     const [nextDate, nextEntries] = following;
-    if (!inMonth(date, data.month) && !inMonth(nextDate, data.month)) {
+    if (
+      !isDateKeyInMonth(date, data.month) &&
+      !isDateKeyInMonth(nextDate, data.month)
+    ) {
       continue;
     }
     const [previous] = entries.toSorted(
@@ -192,7 +194,7 @@ export const minRestBetweenShiftsEvaluator = ({
     violations.push({
       key: setting.key,
       level: levelOf(setting),
-      message: `${shortDate(date)} 到 ${shortDate(nextDate)} 只休息 ${String(hoursOf(rest))} 小時,最少 ${String(limit)} 小時`,
+      message: `${monthDayOfKey(date)} 到 ${monthDayOfKey(nextDate)} 只休息 ${String(hoursOf(rest))} 小時,最少 ${String(limit)} 小時`,
       targets: [targetOf(previous), targetOf(next)],
       detail: {
         actual: hoursOf(rest),
@@ -216,7 +218,7 @@ export const maxDailyWorkHoursEvaluator = ({
   }
   const limit = amountOf(setting);
   return [...groupByDate(ownEntries(data))].flatMap(([date, entries]) => {
-    if (!inMonth(date, data.month)) {
+    if (!isDateKeyInMonth(date, data.month)) {
       return [];
     }
     const minutes = entries.reduce(
@@ -231,7 +233,7 @@ export const maxDailyWorkHoursEvaluator = ({
       {
         key: setting.key,
         level: levelOf(setting),
-        message: `${shortDate(date)} 排 ${String(actual)} 小時,最多 ${String(limit)} 小時`,
+        message: `${monthDayOfKey(date)} 排 ${String(actual)} 小時,最多 ${String(limit)} 小時`,
         targets: entries.map((entry) => targetOf(entry)),
         detail: { actual, limit, from: date, to: date },
       },
@@ -280,7 +282,7 @@ export const multiPositionOverlapEvaluator = ({
     return [];
   }
   return ownEntries(data).flatMap((entry) => {
-    if (!inMonth(entry.date, data.month)) {
+    if (!isDateKeyInMonth(entry.date, data.month)) {
       return [];
     }
     const overlap = overlapOf(entry);
@@ -290,7 +292,7 @@ export const multiPositionOverlapEvaluator = ({
           {
             key: setting.key,
             level: levelOf(setting),
-            message: `${shortDate(entry.date)} 同一筆排班同時填進 ${String(overlap.count)} 筆人力需求`,
+            message: `${monthDayOfKey(entry.date)} 同一筆排班同時填進 ${String(overlap.count)} 筆人力需求`,
             targets: [targetOf(entry)],
             detail: {
               actual: overlap.count,
@@ -406,7 +408,7 @@ export const understaffedEvaluator = ({
     return [];
   }
   return data.demands
-    .filter((demand) => inMonth(demand.date, data.month))
+    .filter((demand) => isDateKeyInMonth(demand.date, data.month))
     .toSorted(
       (left, right) =>
         left.startAt.getTime() - right.startAt.getTime() ||
@@ -424,7 +426,7 @@ export const understaffedEvaluator = ({
           return {
             key: setting.key,
             level: levelOf(setting),
-            message: `${shortDate(demand.date)} 缺 ${String(segment.missing)} 人(${ROLE_LABELS[role] ?? role}),可排 ${String(availability.available)} 人`,
+            message: `${monthDayOfKey(demand.date)} 缺 ${String(segment.missing)} 人(${ROLE_LABELS[role] ?? role}),可排 ${String(availability.available)} 人`,
             targets: [{ date: demand.date }],
             detail: {
               actual: segment.missing,
@@ -494,7 +496,7 @@ export function widenedRange(
   to: string,
   days: number,
 ): { from: string; to: string } {
-  return { from: shiftDate(from, -days), to: shiftDate(to, days) };
+  return { from: shiftDateKey(from, -days), to: shiftDateKey(to, days) };
 }
 
 /**

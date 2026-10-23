@@ -18,6 +18,7 @@ import type {
   ScheduleRuleEvaluator,
   ScheduleRuleViolation,
 } from "../rules/rule-registry";
+import { isDateKeyInMonth, monthKeyOf } from "../shared/schedule-dates";
 import { seededRandom } from "./seeded-random";
 
 /**
@@ -335,7 +336,7 @@ class AutoScheduler {
       left.userId.localeCompare(right.userId),
     );
     for (const entry of this.entries) {
-      if (this.isStore(entry) && entry.date.startsWith(`${input.month}-`)) {
+      if (this.isStore(entry) && isDateKeyInMonth(entry.date, input.month)) {
         this.bumpShift(entry.userId);
       }
     }
@@ -583,7 +584,7 @@ class AutoScheduler {
 
   /** 排進去之後,這個人限制等級的違反比排之前嚴重(同手動存排班的判斷)。 */
   private worsensLimits(option: Option, demand: AutoDemand): boolean {
-    const months = [demand.date.slice(0, 7)];
+    const months = [monthKeyOf(demand.date)];
     const before = this.severityOf(
       option.userId,
       months,

@@ -22,22 +22,22 @@ export class SchedulePeriodModel {
   publishedByName!: string | null;
 }
 
-/** 時段不可排的一段。 */
+/** 時段不可排的一段(時點;畫面以租戶時區顯示時刻)。 */
 @ObjectType("ScheduleRosterSlot")
 export class ScheduleRosterSlotModel {
-  /** `HH:mm` */
-  @Field(() => String)
-  startTime!: string;
+  @Field(() => GraphQLISODateTime)
+  startAt!: Date;
 
-  @Field(() => String)
-  endTime!: string;
+  @Field(() => GraphQLISODateTime)
+  endAt!: Date;
 }
 
 /** 時段不可排的一天(畫休天數的 hover 明細)。 */
 @ObjectType("ScheduleRosterTimeRangeDay")
 export class ScheduleRosterTimeRangeDayModel {
-  @Field(() => String)
-  date!: string;
+  /** 那天(租戶時區 00:00 的時點) */
+  @Field(() => GraphQLISODateTime)
+  date!: Date;
 
   @Field(() => [ScheduleRosterSlotModel])
   slots!: ScheduleRosterSlotModel[];
@@ -132,9 +132,9 @@ export class ScheduleDemandModel {
   @Field(() => ID)
   id!: string;
 
-  /** `YYYY-MM-DD` */
-  @Field(() => String)
-  date!: string;
+  /** 那天(開始時點在租戶時區那天的 00:00;跨午夜的算開始那天) */
+  @Field(() => GraphQLISODateTime)
+  date!: Date;
 
   @Field(() => GraphQLISODateTime)
   startAt!: Date;
@@ -198,8 +198,9 @@ export class ScheduleEntryModel {
   @Field(() => ID)
   userId!: string;
 
-  @Field(() => String)
-  date!: string;
+  /** 那天(上班時點在租戶時區那天的 00:00;跨午夜的算開始那天) */
+  @Field(() => GraphQLISODateTime)
+  date!: Date;
 
   @Field(() => GraphQLISODateTime)
   startAt!: Date;
@@ -224,8 +225,9 @@ export class ScheduleOtherStoreEntryModel {
   @Field(() => ID)
   userId!: string;
 
-  @Field(() => String)
-  date!: string;
+  /** 那天(租戶時區 00:00 的時點) */
+  @Field(() => GraphQLISODateTime)
+  date!: Date;
 
   @Field(() => GraphQLISODateTime)
   startAt!: Date;
@@ -243,8 +245,9 @@ export class ScheduleRosterUnavailabilityModel {
   @Field(() => ID)
   userId!: string;
 
-  @Field(() => String)
-  date!: string;
+  /** 那天(租戶時區 00:00 的時點) */
+  @Field(() => GraphQLISODateTime)
+  date!: Date;
 
   @Field(() => Boolean)
   fullDay!: boolean;
@@ -256,8 +259,9 @@ export class ScheduleRosterUnavailabilityModel {
 /** 這家店某天的行事曆(生效的那一筆)。 */
 @ObjectType("ScheduleRosterCalendarDay")
 export class ScheduleRosterCalendarDayModel {
-  @Field(() => String)
-  date!: string;
+  /** 那天(租戶時區 00:00 的時點) */
+  @Field(() => GraphQLISODateTime)
+  date!: Date;
 
   /** `closed` 店休 / `special` 特殊日 */
   @Field(() => String)
@@ -341,9 +345,9 @@ export class ScheduleRosterPunchModel {
   @Field(() => ID)
   userId!: string;
 
-  /** 打卡時點的租戶當地日期 `YYYY-MM-DD` */
-  @Field(() => String)
-  date!: string;
+  /** 打卡那天(打卡時點在租戶時區那天的 00:00) */
+  @Field(() => GraphQLISODateTime)
+  date!: Date;
 
   /** `in` 上班 / `out` 下班 */
   @Field(() => String)

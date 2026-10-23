@@ -13,10 +13,15 @@ import type { ScheduleDayOffFieldsFragment } from "@repo/graphql";
 import {
   DAY_OFF_ME,
   sampleDayOffs,
+  taipeiAt,
 } from "@/test/msw/project/schedule-day-offs-fixtures";
 import { api, server } from "@/test/msw/server";
 
-import { renderSchedulePage } from "../schedule-test-support";
+import {
+  renderSchedulePage,
+  typeDate,
+  typeTime,
+} from "../schedule-test-support";
 
 const DAY_OFFS = "/schedule/my?tab=day-offs";
 
@@ -25,10 +30,10 @@ const NOVEMBER_DAY_OFF: ScheduleDayOffFieldsFragment = {
   id: "d-me-nov-20",
   userId: DAY_OFF_ME.userId,
   name: DAY_OFF_ME.name,
-  date: "2026-11-20",
+  date: taipeiAt("2026-11-20"),
   kind: "full-day",
-  startTime: null,
-  endTime: null,
+  startAt: null,
+  endAt: null,
   note: null,
   isPrimary: true,
   byName: null,
@@ -77,30 +82,87 @@ describe("我的畫休", () => {
     const { user, dayOffsFake } = renderSchedulePage({ path: DAY_OFFS });
     await user.click(await screen.findByRole("button", { name: "登記畫休" }));
     const dialog = await screen.findByRole("dialog", { name: "登記畫休" });
-    await user.type(within(dialog).getByLabelText(/日期/), "2026-12-03");
+    await typeDate(user, dialog, "2026-12-03");
     await user.click(within(dialog).getByLabelText("時段不可排"));
     await user.click(
       within(dialog).getByRole("button", { name: "+ 再加一段" }),
     );
-    const starts = within(dialog).getAllByLabelText(/開始/);
-    const ends = within(dialog).getAllByLabelText(/結束/);
-    await user.type(starts[0], "09:00");
-    await user.type(ends[0], "12:00");
-    await user.type(starts[1], "18:00");
-    await user.type(ends[1], "22:00");
+    const starts = within(dialog).getAllByRole("group", { name: /開始/ });
+    const ends = within(dialog).getAllByRole("group", { name: /結束/ });
+    await typeTime(user, starts[0], "09:00");
+    await typeTime(user, ends[0], "12:00");
+    await typeTime(user, starts[1], "18:00");
+    await typeTime(user, ends[1], "22:00");
     await user.click(within(dialog).getByRole("button", { name: "儲存" }));
     await waitFor(() => {
       expect(dayOffsFake.inputs.addMine).toEqual([
         {
-          date: "2026-12-03",
+          // 日期與時段都以租戶時區(台北)換成時點
+          date: taipeiAt("2026-12-03"),
           kind: "time-range",
           slots: [
-            { startTime: "09:00", endTime: "12:00" },
-            { startTime: "18:00", endTime: "22:00" },
+            {
+              startAt: taipeiAt("2026-12-03", "09:00"),
+              endAt: taipeiAt("2026-12-03", "12:00"),
+            },
+            {
+              startAt: taipeiAt("2026-12-03", "18:00"),
+              endAt: taipeiAt("2026-12-03", "22:00"),
+            },
           ],
         },
       ]);
     });
+  });
+
+  it("[登記畫休] 時段選 00:00–00:00(整天):欄位下提示改選整天畫休,不能儲存", async () => {
+    const { user, dayOffsFake } = renderSchedulePage({ path: DAY_OFFS });
+    await user.click(await screen.findByRole("button", { name: "登記畫休" }));
+    const dialog = await screen.findByRole("dialog", { name: "登記畫休" });
+    await typeDate(user, dialog, "2026-12-03");
+    await user.click(within(dialog).getByLabelText("時段不可排"));
+    const start = within(dialog).getByRole("group", { name: /開始/ });
+    const end = within(dialog).getByRole("group", { name: /結束/ });
+    await typeTime(user, start, "00:00");
+    await typeTime(user, end, "00:00");
+    const slots = within(dialog).getByRole("group", { name: "時段" });
+    expect(slots).toHaveAccessibleDescription("整天請改選整天畫休");
+    const save = within(dialog).getByRole("button", { name: "儲存" });
+    expect(save).toBeDisabled();
+    expect(dayOffsFake.inputs.addMine).toEqual([]);
+
+    // 改成做到中午就是一般的時段,可以儲存
+    await typeTime(user, end, "12:00");
+    expect(slots).not.toHaveAccessibleDescription("整天請改選整天畫休");
+    expect(save).toBeEnabled();
+  });
+
+  it("[登記畫休] 兩段湊成整天(00:00–12:00 + 12:00–00:00):一樣提示改選整天畫休,不能儲存", async () => {
+    const { user, dayOffsFake } = renderSchedulePage({ path: DAY_OFFS });
+    await user.click(await screen.findByRole("button", { name: "登記畫休" }));
+    const dialog = await screen.findByRole("dialog", { name: "登記畫休" });
+    await typeDate(user, dialog, "2026-12-03");
+    await user.click(within(dialog).getByLabelText("時段不可排"));
+    await user.click(
+      within(dialog).getByRole("button", { name: "+ 再加一段" }),
+    );
+    const starts = within(dialog).getAllByRole("group", { name: /開始/ });
+    const ends = within(dialog).getAllByRole("group", { name: /結束/ });
+    await typeTime(user, starts[0], "00:00");
+    await typeTime(user, ends[0], "12:00");
+    await typeTime(user, starts[1], "12:00");
+    await typeTime(user, ends[1], "00:00");
+    const slots = within(dialog).getByRole("group", { name: "時段" });
+    expect(slots).toHaveAccessibleDescription("整天請改選整天畫休");
+    expect(within(dialog).getByRole("button", { name: "儲存" })).toBeDisabled();
+    expect(dayOffsFake.inputs.addMine).toEqual([]);
+
+    // 拿掉一段就不是整天
+    await user.click(
+      within(dialog).getAllByRole("button", { name: "拿掉這一段" })[1],
+    );
+    expect(slots).not.toHaveAccessibleDescription("整天請改選整天畫休");
+    expect(within(dialog).getByRole("button", { name: "儲存" })).toBeEnabled();
   });
 
   it("違反限制:不存,對話框列出原因", async () => {
@@ -110,7 +172,7 @@ describe("我的畫休", () => {
     });
     await user.click(await screen.findByRole("button", { name: "登記畫休" }));
     const dialog = await screen.findByRole("dialog", { name: "登記畫休" });
-    await user.type(within(dialog).getByLabelText(/日期/), "2026-12-24");
+    await typeDate(user, dialog, "2026-12-24");
     await user.click(within(dialog).getByRole("button", { name: "儲存" }));
     expect(
       await within(dialog).findByText("違反限制,不能儲存:"),
@@ -158,6 +220,40 @@ describe("我的畫休", () => {
     expect(await screen.findByText(/已結束,不能自己修改/)).toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "到畫休總覽代改" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("過去的月份(上個月 10 月):提示「只能查看」(info),沒有「到畫休總覽代改」(有代改權限也一樣)", async () => {
+    renderSchedulePage({
+      path: `${DAY_OFFS}&month=2026-10`,
+      dayOffs: { windowState: "closed", canOverride: true },
+    });
+    expect(await screen.findByText("2026 年 10 月")).toBeInTheDocument();
+    const notice = screen.getByRole("alert");
+    expect(notice).toHaveTextContent("這是過去月份的紀錄,只能查看。");
+    expect(notice).toHaveClass("MuiAlert-colorInfo");
+    expect(screen.queryByText(/不能自己修改/)).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "到畫休總覽代改" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("這個月(11 月)不算過去:維持「已截止」提示與代改連結", async () => {
+    renderSchedulePage({
+      path: `${DAY_OFFS}&month=2026-11`,
+      dayOffs: { canOverride: true },
+    });
+    expect(await screen.findByText("2026 年 11 月")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "畫休登記期間(10/15–10/25)已結束,不能自己修改。要調整請聯絡店長或排班負責人。",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "到畫休總覽代改" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("這是過去月份的紀錄,只能查看。"),
     ).not.toBeInTheDocument();
   });
 

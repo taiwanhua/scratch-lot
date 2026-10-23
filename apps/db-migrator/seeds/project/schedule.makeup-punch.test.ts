@@ -5,14 +5,14 @@ import { MAKEUP_PUNCH_FIELD_KEYS } from "@repo/domain/project/schedule-settings"
 
 import { assembleSeedRegistry } from "../registry";
 import { projectSeedSource } from "./registry";
-import { seed as makeupPunchForm } from "./revisions/makeup_punch.r3.seed";
+import { seed as makeupPunchForm } from "./revisions/makeup_punch.r4.seed";
 import { projectSeedSettings } from "./settings";
 
 const fieldOf = (key: string) =>
   makeupPunchForm.definition.fields.find((field) => field.key === key);
 
 /** 補打卡申請的受管表單(規格 14.8;正本 `docs/modules/project/schedule.md`「出勤紀錄與補打卡」)。 */
-describe("受管表單 補打卡申請(makeup_punch r2)", () => {
+describe("受管表單 補打卡申請(makeup_punch r4)", () => {
   it("登記進專案來源,與底座一起組裝不衝突(定義檢查與可攜性檢查都過)", () => {
     expect(projectSeedSource.seeds).toContain(makeupPunchForm);
     expect(() =>
@@ -42,5 +42,18 @@ describe("受管表單 補打卡申請(makeup_punch r2)", () => {
     expect(
       fieldOf(MAKEUP_PUNCH_FIELD_KEYS.entryLabel)?.widget,
     ).not.toHaveProperty("hideWhenReadonly");
+  });
+
+  it("補打卡時間是一個日期時間欄(存打卡的時點);沒有日期與 HH:mm 文字欄", () => {
+    expect(fieldOf(MAKEUP_PUNCH_FIELD_KEYS.punchAt)).toMatchObject({
+      type: "datetime",
+      widget: { kind: "dateTimePicker" },
+      rules: { required: true },
+    });
+    expect(fieldOf("date")).toBeUndefined();
+    expect(fieldOf("time")).toBeUndefined();
+    expect(makeupPunchForm.definition.summaryMap.date).toBe(
+      MAKEUP_PUNCH_FIELD_KEYS.punchAt,
+    );
   });
 });

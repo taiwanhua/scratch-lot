@@ -301,7 +301,7 @@ Provider 內找不到模組設定時使用預設模板 `{{title}}`;缺少 Provid
 
 ## 日期與時間的顯示
 
-日期 / 日期時間在 admin 一律是**時點**(api 只收時點),顯示一律經 `@repo/domain/form` 的 `formatTemporal(value, { type, timezone })`,時區用讀者當前租戶的時區(`me.currentOrg.timezone`),不各頁自己 `toLocaleString`。`type`:
+日期 / 日期時間在 admin 一律是**時點**(api 只收時點:GraphQL 的 `DateTime` 輸入拒收只有日期 / 沒帶時區的字串,見 `docs/standards/api/graphql-schema.md` GQL-08),顯示一律經 `@repo/domain/form` 的 `formatTemporal(value, { type, timezone })`,時區用讀者當前租戶的時區(`me.currentOrg.timezone`),不各頁自己 `toLocaleString`。`type`:
 
 | type           | 輸出                       | 用在                                          |
 | -------------- | -------------------------- | --------------------------------------------- |
@@ -311,6 +311,10 @@ Provider 內找不到模組設定時使用預設模板 `{{title}}`;缺少 Provid
 | `monthDayTime` | `10/12 14:35`、`3/5 09:05` | 同上,帶時間(時分補零)                         |
 
 空值 → 空字串;不是時點的字串原樣回;時區不合法以 UTC 顯示。正本:`packages/domain/src/form/temporal.ts`;規則見 `docs/concepts/form-engine.md`「日期與日期時間都是時點」。
+
+**輸入欄位**:日期用 `@repo/ui/date-picker`、日期時間用 `@repo/ui/date-time-picker`、時間用 `@repo/ui/time-picker`(收發 `HH:mm`,24 小時制;`minutesStep` 限定分鐘格子,`minTime` / `maxTime` 限定範圍),不用原生 `type="date"` / `type="time"`(STYLE-05)。三者共用 `DatePicker/usePickerDraft.ts` 的草稿行為:打到一半不往外送值,`onChange` 第二參數 `{ isIncomplete }`。`DatePicker` 的 `shouldDisableDate` 讓個別日期反灰不可選。
+
+**「今天」與時區**:要以「今天」為準的地方(月曆的今天、預設日期、本月)用 `apps/admin/src/hooks/base/useTenantToday.ts`,回租戶時區的 `YYYY-MM-DD`(進畫面時取一次),不用 `new Date()` / `dayjs()` 取瀏覽器的日期。底座 `MonthCalendar` 與 `ScheduleTimeline` 收 `timezone`(admin 傳 `useTenantTimezone()`):沒給 `today` 時以它推今天;`ScheduleTimeline` 的刻度、長條位置、點擊帶出的時點與時間文字也都依它,「一天」= 該時區的 00:00–24:00。沒給 `timezone` 時退回瀏覽器時區,只適合 story / 測試。
 
 ## 表格兩種
 

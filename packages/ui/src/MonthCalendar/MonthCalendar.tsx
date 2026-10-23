@@ -1,10 +1,10 @@
 "use client";
 
 import type { SxProps, Theme } from "@mui/material/styles";
-import dayjs from "dayjs";
 import type { ReactNode } from "react";
 
 import { Box } from "../Box/Box";
+import { todayIn } from "../DatePicker/zoned-day";
 import { mergeSx } from "../theme/sx";
 import { MonthCalendarDayCell } from "./MonthCalendarDayCell";
 import { MonthCalendarHeader } from "./MonthCalendarHeader";
@@ -67,10 +67,15 @@ export interface MonthCalendarProps {
   /** 各日期的設定(停用、註記、角標、自訂內容),key 是 `YYYY-MM-DD` */
   days?: Readonly<Partial<Record<string, MonthCalendarDayInfo>>>;
   /**
-   * 今天(`YYYY-MM-DD`,畫圓底標示)。使用處要傳**租戶時區**的今天(瀏覽器時區可能和租戶不同);
-   * 沒給時退回瀏覽器當地日期,只適合 story / 測試
+   * 今天(`YYYY-MM-DD`,畫圓底標示、[今天] 跳到的月份)。沒給時取 `timezone` 此刻的日期;
+   * 測試可固定。
    */
   today?: string;
+  /**
+   * 推算「今天」用的 IANA 時區(admin 傳租戶時區,瀏覽器時區可能和租戶不同);
+   * 沒給時用瀏覽器時區,只適合 story / 測試。有傳 `today` 時不用它。
+   */
+  timezone?: string;
   /** 星期列文字,從星期日開始的 7 個 */
   weekdayLabels?: readonly string[];
   /** 表頭標題;預設「2026 年 11 月」 */
@@ -102,7 +107,8 @@ export const MonthCalendar = ({
   selectedDates = EMPTY_SELECTION,
   onSelectedDatesChange,
   days,
-  today = dayjs().format("YYYY-MM-DD"),
+  today: todayProp,
+  timezone,
   weekdayLabels = DEFAULT_WEEKDAY_LABELS,
   formatMonthTitle = defaultMonthTitle,
   prevMonthLabel = "上一個月",
@@ -112,6 +118,7 @@ export const MonthCalendar = ({
   "aria-label": ariaLabel,
   sx,
 }: MonthCalendarProps) => {
+  const today = todayProp ?? todayIn(timezone);
   // `today` 是 `YYYY-MM-DD`,前 7 碼就是今天所在的月份 `YYYY-MM`
   const todayMonth = today.slice(0, 7);
   const weeks = buildMonthWeeks(month);

@@ -1,11 +1,11 @@
 import { useTranslations } from "use-intl";
 
-import { DEFAULT_TENANT_TIMEZONE } from "@repo/domain/form";
+import { DEFAULT_TENANT_TIMEZONE, formatTemporal } from "@repo/domain/form";
 import type { ScheduleDayOffEntryConflictFieldsFragment } from "@repo/graphql";
 
 import { useSnackbar } from "@/hooks/base/useMutationFeedback";
 import { useTenantTimezone } from "@/hooks/base/useTenantTimezone";
-import { localPartsOf, monthDayOf } from "@/lib/project/schedule-roster";
+import { localPartsOf } from "@/lib/project/schedule-roster";
 
 /**
  * 先排班、後登記畫休(使用者定案:照樣可以登記,但要提醒):登記 / 代改畫休存檔後,api 回的
@@ -25,7 +25,7 @@ export const useDayOffEntryConflictNotice = (): ((
     const list = conflicts
       .map((conflict) =>
         t("item", {
-          date: monthDayOf(conflict.date),
+          date: formatTemporal(conflict.date, { type: "monthDay", timezone }),
           start: localPartsOf(conflict.startAt, timezone).time,
           end: localPartsOf(conflict.endAt, timezone).time,
           org: conflict.orgName ?? t("otherStore"),

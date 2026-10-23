@@ -114,6 +114,7 @@ const OPTIONS = /* GraphQL */ `
 
 interface Row {
   entryId: string;
+  date: string;
   userId: string;
   userName: string;
   status: string;
@@ -128,6 +129,16 @@ interface Row {
 
 const taipei = (date: string, time: string) =>
   new Date(`${date}T${time}+08:00`);
+
+/** 洛杉磯的時點(`offset` 是那天的 UTC 偏移:夏令 -07:00、標準 -08:00)。 */
+const la = (date: string, time: string, offset: string) =>
+  new Date(`${date}T${time}${offset}`);
+
+/** 台北 2026 年 11 月的查詢範圍 `[11/1 00:00, 12/1 00:00)`。 */
+const NOV = {
+  from: taipei("2026-11-01", "00:00:00").toISOString(),
+  to: taipei("2026-12-01", "00:00:00").toISOString(),
+};
 
 const base = () => {
   const now = new Date();
@@ -201,9 +212,13 @@ describe("出勤紀錄(GraphQL 端點 + 真 MongoDB)", () => {
         orgId,
         tenantId: tenant,
         userId: user.userId,
-        date,
+        date: taipei(date, "00:00:00"),
         startAt: taipei(date, `${start}:00`),
-        endAt: taipei(date, `${end}:00`),
+        // 結束不晚於開始 = 跨午夜,做到隔天
+        endAt:
+          end <= start
+            ? new Date(taipei(date, `${end}:00`).getTime() + 24 * 3_600_000)
+            : taipei(date, `${end}:00`),
         breakMinutes: 30,
         moduleKey: "schedule.manage",
         ...base(),
@@ -241,16 +256,26 @@ describe("出勤紀錄(GraphQL 端點 + 真 MongoDB)", () => {
     input: Record<string, unknown> = {},
   ) {
     const result = await gql(user, BY_STORE, {
-      input: { orgId: String(zhongshan), date: "2026-11-04", ...input },
+      input: {
+        orgId: String(zhongshan),
+        date: taipei("2026-11-04", "00:00:00").toISOString(),
+        ...input,
+      },
     });
     expect(result.errors).toBeUndefined();
     return result.data?.scheduleAttendanceByStore as {
+      date: string;
       rows: Row[];
       unmatched: { id: string; userName: string; entryId: string | null }[];
       scheduledCount: number;
       arrivedCount: number;
       absentCount: number;
     };
+  }
+
+  async function errorOf(query: string, input: Record<string, unknown>) {
+    const { errors } = await gql(manager, query, { input });
+    return errors?.[0]?.extensions;
   }
 
   beforeAll(async () => {
@@ -351,11 +376,13 @@ describe("出勤紀錄(GraphQL 端點 + 真 MongoDB)", () => {
   describe("依分店(日)", () => {
     it("view-all 看全店:已到 / 未到、遲到 / 早退用分店的寬限(預設 5 分鐘)、實際工時、未對應排班另列", async () => {
       const data = await byStore(manager);
+      expect(data.date).toBe(taipei("2026-11-04", "00:00:00").toISOString());
       expect(data.scheduledCount).toBe(2);
       expect(data.arrivedCount).toBe(1);
       expect(data.absentCount).toBe(1);
       const wangRow = data.rows.find((row) => row.userName === "王小明");
       expect(wangRow).toMatchObject({
+        date: taipei("2026-11-04", "00:00:00").toISOString(),
         status: "arrived",
         lateMinutes: 11,
         earlyLeaveMinutes: 6,
@@ -392,10 +419,146 @@ describe("出勤紀錄(GraphQL 端點 + 真 MongoDB)", () => {
     });
   });
 
+  describe("日期與月份是時點", () => {
+    it("依分店(日):送當天其他時刻也歸到那天;回的日期是那天 00:00", async () => {
+      const data = await byStore(manager, {
+        date: taipei("2026-11-04", "18:30:00").toISOString(),
+      });
+      expect(data.date).toBe(taipei("2026-11-04", "00:00:00").toISOString());
+      expect(data.scheduledCount).toBe(2);
+    });
+
+    it("依人員(月)/ 匯出:from / to 不是租戶時區的整個月 → VALIDATION_FAILED(from、to)", async () => {
+      const notWhole = {
+        from: NOV.from,
+        to: taipei("2026-11-30", "00:00:00").toISOString(),
+      };
+      expect(await errorOf(BY_PERSON, notWhole)).toMatchObject({
+        code: "VALIDATION_FAILED",
+        fields: ["from", "to"],
+      });
+      expect(await errorOf(EXPORT, notWhole)).toMatchObject({
+        code: "VALIDATION_FAILED",
+        fields: ["from", "to"],
+      });
+      // UTC 的月初不是台北的月初
+      expect(
+        await errorOf(BY_PERSON, {
+          from: "2026-11-01T00:00:00.000Z",
+          to: "2026-12-01T00:00:00.000Z",
+        }),
+      ).toMatchObject({ code: "VALIDATION_FAILED", fields: ["from", "to"] });
+    });
+
+    it("出勤月報的月界:[月初 00:00, 下月初 00:00),跨午夜的班算開始那天", async () => {
+      // 11/30 22:00 做到 12/1 02:00:整班算 11 月,12/1 的下班卡也跟著這一班
+      const late = await entry(lin, zhongshan, "2026-11-30", "22:00", "02:00");
+      // 12/1 的班不在 11 月
+      const december = await entry(
+        lin,
+        zhongshan,
+        "2026-12-01",
+        "08:30",
+        "14:30",
+      );
+      const added = await Promise.all([
+        punch(lin, zhongshan, taipei("2026-10-31", "23:59:59"), "in", null),
+        punch(lin, zhongshan, taipei("2026-11-30", "23:59:59"), "in", null),
+        punch(lin, zhongshan, taipei("2026-12-01", "00:00:00"), "in", null),
+        punch(lin, zhongshan, taipei("2026-12-01", "02:00:00"), "out", late),
+      ]);
+      try {
+        const result = await gql(manager, BY_PERSON, {
+          input: {
+            ...NOV,
+            orgId: String(zhongshan),
+            userId: String(lin.userId),
+          },
+        });
+        expect(result.errors).toBeUndefined();
+        const data = result.data?.scheduleAttendanceByPerson as {
+          rows: Row[];
+          unmatched: { id: string }[];
+        };
+        expect(data.rows.map((row) => [row.entryId, row.date])).toEqual([
+          [String(linNov4), taipei("2026-11-04", "00:00:00").toISOString()],
+          [String(late), taipei("2026-11-30", "00:00:00").toISOString()],
+        ]);
+        expect(
+          data.rows
+            .find((row) => row.entryId === String(late))
+            ?.punches.map((item) => item.id),
+        ).toEqual([String(added[3])]);
+        expect(data.unmatched.map((item) => item.id)).toEqual([
+          String(unmatched),
+          String(added[1]),
+        ]);
+      } finally {
+        await connection
+          .collection(SCHEDULE_ENTRIES_COLLECTION)
+          .deleteMany({ _id: { $in: [late, december] } });
+        await punches().deleteMany({ _id: { $in: added } });
+      }
+    });
+
+    it("非台北時區(洛杉磯):日與月都照租戶時區算(11/1 夏令時間結束,那個月從 -07:00 開始)", async () => {
+      const orgs = connection.collection("orgs");
+      const entries = connection.collection(SCHEDULE_ENTRIES_COLLECTION);
+      await orgs.updateOne(
+        { _id: tenant },
+        { $set: { "settings.timezone": "America/Los_Angeles" } },
+      );
+      const { insertedId: laEntry } = await entries.insertOne({
+        orgId: zhongshan,
+        tenantId: tenant,
+        userId: wang.userId,
+        date: la("2026-11-20", "00:00:00", "-08:00"),
+        startAt: la("2026-11-20", "09:00:00", "-08:00"),
+        endAt: la("2026-11-20", "17:00:00", "-08:00"),
+        breakMinutes: 30,
+        moduleKey: "schedule.manage",
+        ...base(),
+      });
+      try {
+        const day = await byStore(manager, {
+          date: la("2026-11-20", "15:00:00", "-08:00").toISOString(),
+        });
+        expect(day.date).toBe(
+          la("2026-11-20", "00:00:00", "-08:00").toISOString(),
+        );
+        expect(day.rows.map((row) => row.entryId)).toEqual([String(laEntry)]);
+
+        const laNov = {
+          from: la("2026-11-01", "00:00:00", "-07:00").toISOString(),
+          to: la("2026-12-01", "00:00:00", "-08:00").toISOString(),
+        };
+        const month = await gql(wang, BY_PERSON, { input: laNov });
+        expect(month.errors).toBeUndefined();
+        expect(
+          (month.data?.scheduleAttendanceByPerson as { rows: Row[] }).rows.map(
+            (row) => row.entryId,
+          ),
+        ).toContain(String(laEntry));
+        // 台北的整個月不是洛杉磯的整個月
+        const taipeiMonth = await gql(wang, BY_PERSON, { input: NOV });
+        expect(taipeiMonth.errors?.[0]?.extensions).toMatchObject({
+          code: "VALIDATION_FAILED",
+          fields: ["from", "to"],
+        });
+      } finally {
+        await entries.deleteOne({ _id: laEntry });
+        await orgs.updateOne(
+          { _id: tenant },
+          { $unset: { "settings.timezone": "" } },
+        );
+      }
+    });
+  });
+
   describe("依人員(月)", () => {
     it("員工看自己:跨分店合併(支援別家店的班也列);人員選單只有自己", async () => {
       const result = await gql(wang, BY_PERSON, {
-        input: { month: "2026-11" },
+        input: NOV,
       });
       expect(result.errors).toBeUndefined();
       const data = result.data?.scheduleAttendanceByPerson as {
@@ -415,7 +578,7 @@ describe("出勤紀錄(GraphQL 端點 + 真 MongoDB)", () => {
 
     it("員工看別人 → FORBIDDEN(API 擋);view-all 看得到", async () => {
       const denied = await gql(wang, BY_PERSON, {
-        input: { month: "2026-11", userId: String(lin.userId) },
+        input: { ...NOV, userId: String(lin.userId) },
       });
       expect(denied.errors?.[0]?.extensions).toMatchObject({
         code: "FORBIDDEN",
@@ -423,7 +586,7 @@ describe("出勤紀錄(GraphQL 端點 + 真 MongoDB)", () => {
       });
       const allowed = await gql(manager, BY_PERSON, {
         input: {
-          month: "2026-11",
+          ...NOV,
           orgId: String(zhongshan),
           userId: String(lin.userId),
         },
@@ -443,7 +606,7 @@ describe("出勤紀錄(GraphQL 端點 + 真 MongoDB)", () => {
   describe("Excel 的資料", () => {
     it("選最上層組織:一家分店一個工作表(依名稱);沒有 view-all 只匯出自己的", async () => {
       const result = await gql(manager, EXPORT, {
-        input: { month: "2026-11", orgId: String(zhongshan) },
+        input: { ...NOV, orgId: String(zhongshan) },
       });
       expect(result.errors).toBeUndefined();
       const sheets = (
@@ -456,7 +619,7 @@ describe("出勤紀錄(GraphQL 端點 + 真 MongoDB)", () => {
     });
 
     it("沒有 export → FORBIDDEN", async () => {
-      const result = await gql(wang, EXPORT, { input: { month: "2026-11" } });
+      const result = await gql(wang, EXPORT, { input: NOV });
       expect(result.errors?.[0]?.extensions?.code).toBe("FORBIDDEN");
     });
   });

@@ -146,7 +146,7 @@ export const RosterGridView = () => {
           <Box>
             <Typography variant="caption" sx={{ fontWeight: 600 }}>
               {t("dateHeader", {
-                date: monthDayOf(date),
+                date: monthDayOf(date, timezone),
                 weekday: tCalendar(`weekdays.${String(weekdayOf(date))}`),
               })}
             </Typography>
@@ -166,7 +166,7 @@ export const RosterGridView = () => {
           {canEdit && !closed && (
             <IconButton
               size="small"
-              aria-label={t("dayMenu", { date: monthDayOf(date) })}
+              aria-label={t("dayMenu", { date: monthDayOf(date, timezone) })}
               onClick={(event: MouseEvent<HTMLElement>) => {
                 setDayMenu({ anchor: event.currentTarget, date });
               }}
@@ -331,10 +331,13 @@ export const RosterGridView = () => {
           }}
           topGroup={topGroup}
           formatCellLabel={(person, date) =>
-            t("cellAria", { name: person.name, date: monthDayOf(date) })
+            t("cellAria", {
+              name: person.name,
+              date: monthDayOf(date, timezone),
+            })
           }
           formatEmptyGroupCellLabel={(date) =>
-            t("addDemandAria", { date: monthDayOf(date) })
+            t("addDemandAria", { date: monthDayOf(date, timezone) })
           }
           {...(canEdit
             ? {

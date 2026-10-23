@@ -20,18 +20,14 @@ import { Dialog } from "@repo/ui/dialog";
 import { useBreakpointDown } from "@repo/ui/media-query";
 import { SelectField } from "@repo/ui/select-field";
 import { Stack } from "@repo/ui/stack";
-import { TextField } from "@repo/ui/text-field";
+import { TimePicker } from "@repo/ui/time-picker";
 
 import { FieldErrorGroup } from "@/components/base/FieldErrorGroup/FieldErrorGroup";
 import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
 import { useSession } from "@/hooks/base/useSession";
 import { useScheduleFieldOptions } from "@/hooks/project/schedule/useScheduleFieldOptions/useScheduleFieldOptions";
-import {
-  demandRemovalImpact,
-  monthDayOf,
-  spanOf,
-  weekdayOf,
-} from "@/lib/project/schedule-roster";
+import { dayKeyOf } from "@/lib/project/schedule-day-offs";
+import { demandRemovalImpact, spanOf } from "@/lib/project/schedule-roster";
 
 import { DemandImpactDialog } from "./DemandImpactDialog";
 import { DemandTaskList } from "./DemandTaskList";
@@ -52,6 +48,7 @@ import {
 } from "./roster-context";
 import { blockedEntryIdsOf } from "./roster-error";
 import { useDemandFieldErrors } from "./useDemandFieldErrors";
+import { useRosterDateTitle } from "./useRosterDateTitle";
 
 export interface DemandDialogProps {
   /** 要看 / 改的那一筆;null = 新增 */
@@ -85,7 +82,6 @@ export const DemandDialog = ({
   const t = useTranslations("admin.schedule.roster.demandDialog");
   const tRoster = useTranslations("admin.schedule.roster");
   const tCommon = useTranslations("admin.schedule.common");
-  const tCalendar = useTranslations("admin.schedule.calendar");
   const { session } = useSession();
   const queryClient = useQueryClient();
   const isMobile = useBreakpointDown("sm");
@@ -125,7 +121,9 @@ export const DemandDialog = ({
       error: errorText,
       onSuccess: (result) => {
         void invalidate();
-        onSaved?.(result.saveScheduleDemand.item);
+        // api 回的日期是時點;交給排班對話框前換成日期鍵(同頁殼的 `rosterDataOf`)
+        const saved = result.saveScheduleDemand.item;
+        onSaved?.({ ...saved, date: dayKeyOf(saved.date, timezone) });
         onClose();
       },
       onError: handleError,
@@ -235,11 +233,7 @@ export const DemandDialog = ({
   const templateName =
     data.templates.find((item) => item.id === demand?.templateId)?.name ??
     tRoster("cell.temp");
-  const dateTitle = (date: string) =>
-    tRoster("dateTitle", {
-      date: monthDayOf(date),
-      weekday: tCalendar(`weekdays.${String(weekdayOf(date))}`),
-    });
+  const dateTitle = useRosterDateTitle();
   const title =
     demand === null
       ? t("createTitle")
@@ -350,19 +344,17 @@ export const DemandDialog = ({
         </Stack>
         <Stack direction="row" spacing={1.5}>
           {(["startTime", "endTime"] as const).map((field) => (
-            <TextField
+            <TimePicker
               key={field}
               label={t(field)}
-              type="time"
-              value={values[field]}
+              value={values[field] === "" ? null : values[field]}
               required
               fullWidth
               disabled={!canEdit}
               error={invalid.includes(field)}
               helperText={fieldErrors[field]}
-              slotProps={{ inputLabel: { shrink: true } }}
-              onChange={(event) => {
-                change(field, event.target.value);
+              onChange={(next) => {
+                change(field, next ?? "");
               }}
             />
           ))}

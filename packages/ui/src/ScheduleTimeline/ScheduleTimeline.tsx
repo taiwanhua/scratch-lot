@@ -1,10 +1,10 @@
 "use client";
 
 import type { SxProps, Theme } from "@mui/material/styles";
-import dayjs from "dayjs";
 import type { ReactNode } from "react";
 
 import { Box } from "../Box/Box";
+import { todayIn } from "../DatePicker/zoned-day";
 import { mergeSx } from "../theme/sx";
 import { ScheduleTimelineDayView } from "./ScheduleTimelineDayView";
 import { ScheduleTimelineWeekView } from "./ScheduleTimelineWeekView";
@@ -52,7 +52,12 @@ export interface ScheduleTimelineProps {
   groups: readonly ScheduleTimelineGroup[];
   /** 不能操作的時間範圍(灰色;例:公休、已排於其他場地) */
   disabledRanges?: readonly ScheduleTimelineDisabledRange[];
-  /** 今天(`YYYY-MM-DD`;預設依瀏覽器時鐘,測試可固定):表頭的日期畫成主色實心圓 */
+  /**
+   * 刻度、長條位置、回呼時點與時間文字用的 IANA 時區(admin 傳租戶時區);沒給 = 瀏覽器時區。
+   * 「一天」= 這個時區的 00:00–24:00,`dates` 的 `YYYY-MM-DD` 也以它解讀。
+   */
+  timezone?: string;
+  /** 今天(`YYYY-MM-DD`;預設依 `timezone` 的此刻,測試可固定):表頭的日期畫成主色實心圓 */
   today?: string;
   /** 已選取的東西(受控);`null` = 沒有。沒給 = 不追蹤選取,按鈕不標 `aria-pressed` */
   selection?: ScheduleTimelineSelection | null;
@@ -113,7 +118,8 @@ export const ScheduleTimeline = ({
   dates,
   groups,
   disabledRanges = NO_RANGES,
-  today = dayjs().format("YYYY-MM-DD"),
+  timezone,
+  today: todayProp,
   selection,
   onGroupClick,
   onBarClick,
@@ -129,10 +135,11 @@ export const ScheduleTimeline = ({
   containerSx,
   "aria-label": ariaLabel,
 }: ScheduleTimelineProps) => {
+  const today = todayProp ?? todayIn(timezone);
   const shown = mode === "day" ? dates.slice(0, 1) : dates;
-  const models = shown.map((day) => groupsOfDay(groups, day.date));
+  const models = shown.map((day) => groupsOfDay(groups, day.date, timezone));
   const ranges = shown.map((day) =>
-    disabledRangesOfDay(disabledRanges, day.date),
+    disabledRangesOfDay(disabledRanges, day.date, timezone),
   );
   const { ref, width } = useElementWidth<HTMLDivElement>();
   const weekDayWidth =
@@ -178,6 +185,7 @@ export const ScheduleTimeline = ({
     prevDayLabel,
     nextDayLabel,
     emptyCursor,
+    timezone,
   };
   const firstDay = shown[0];
 

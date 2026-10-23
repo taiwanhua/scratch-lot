@@ -1,6 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "use-intl";
 
+import { DEFAULT_TENANT_TIMEZONE } from "@repo/domain/form";
 import {
   usePublishScheduleMutation,
   useScheduleCheckQuery,
@@ -13,6 +14,7 @@ import { Typography } from "@repo/ui/typography";
 
 import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
 import { useSession } from "@/hooks/base/useSession";
+import { useTenantTimezone } from "@/hooks/base/useTenantTimezone";
 
 import { scheduleErrorKey } from "../../../schedule-error";
 import { CheckItemList } from "../check-panel/CheckItemList";
@@ -41,6 +43,7 @@ export const PublishDialog = ({ onClose }: PublishDialogProps) => {
   const tErrors = useTranslations("admin.schedule.errors");
   const { session } = useSession();
   const queryClient = useQueryClient();
+  const timezone = useTenantTimezone() ?? DEFAULT_TENANT_TIMEZONE;
   const { data, month, scrollToCell } = useRosterCheck();
   const variables = {
     input: { month, ...(data === undefined ? {} : { orgId: data.orgId }) },
@@ -159,7 +162,7 @@ export const PublishDialog = ({ onClose }: PublishDialogProps) => {
               data={data}
               onView={(item) => {
                 onClose();
-                scrollToCell(checkTargetOf(item));
+                scrollToCell(checkTargetOf(item, timezone));
               }}
             />
             <Typography variant="caption" color="textSecondary">

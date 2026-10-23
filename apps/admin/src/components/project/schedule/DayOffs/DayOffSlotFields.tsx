@@ -4,7 +4,7 @@ import { Button } from "@repo/ui/button";
 import { IconButton } from "@repo/ui/icon-button";
 import { CloseIcon } from "@repo/ui/icons";
 import { Stack } from "@repo/ui/stack";
-import { TextField } from "@repo/ui/text-field";
+import { TimePicker } from "@repo/ui/time-picker";
 
 import { FieldErrorGroup } from "@/components/base/FieldErrorGroup/FieldErrorGroup";
 import {
@@ -22,16 +22,25 @@ export interface DayOffSlotFieldsProps {
    * (api 擋下的重疊)時,所有段落一起標紅。
    */
   errorText?: string;
+  /**
+   * 填完的幾段合起來蓋滿整天(呼叫端用 `slotsCoverWholeDay` 算,同時停用儲存):填完的段落標紅、
+   * 群組下方提示改選整天畫休,不等送出
+   */
+  wholeDay: boolean;
   onChange: (slots: DayOffSlot[]) => void;
   /** 可以一次登記多段([+ 再加一段]);代改一次一段 */
   allowMultiple?: boolean;
 }
 
-/** 時段不可排的開始 / 結束(`HH:mm`);選了時段不可排才出現。 */
+/**
+ * 時段不可排的開始 / 結束(`@repo/ui/time-picker`,值 `HH:mm`;送出時由呼叫端和日期合成時點);
+ * 選了時段不可排才出現。幾段合起來是整天(`wholeDay`)時提示改選整天畫休。
+ */
 export const DayOffSlotFields = ({
   slots,
   invalid,
   errorText,
+  wholeDay,
   onChange,
   allowMultiple = false,
 }: DayOffSlotFieldsProps) => {
@@ -43,40 +52,38 @@ export const DayOffSlotFields = ({
       ),
     );
   };
+  const submitError = invalid ? errorText : undefined;
   return (
     <FieldErrorGroup
       label={t("slots")}
-      errorText={invalid ? errorText : undefined}
+      errorText={wholeDay ? t("wholeDaySlot") : submitError}
       spacing={1.5}
     >
       {slots.map((slot, index) => {
         const error =
-          invalid && (!isCompleteSlot(slot) || slots.every(isCompleteSlot));
+          (wholeDay && isCompleteSlot(slot)) ||
+          (invalid && (!isCompleteSlot(slot) || slots.every(isCompleteSlot)));
         return (
           // 段落沒有自己的 id;順序就是身分(只會在尾端加、從中間拿掉)
           <Stack key={index} direction="row" spacing={1.5}>
-            <TextField
+            <TimePicker
               label={t("start")}
-              type="time"
-              value={slot.startTime}
+              value={slot.startTime === "" ? null : slot.startTime}
               required
               fullWidth
               error={error}
-              slotProps={{ inputLabel: { shrink: true } }}
-              onChange={(event) => {
-                update(index, { startTime: event.target.value });
+              onChange={(next) => {
+                update(index, { startTime: next ?? "" });
               }}
             />
-            <TextField
+            <TimePicker
               label={t("end")}
-              type="time"
-              value={slot.endTime}
+              value={slot.endTime === "" ? null : slot.endTime}
               required
               fullWidth
               error={error}
-              slotProps={{ inputLabel: { shrink: true } }}
-              onChange={(event) => {
-                update(index, { endTime: event.target.value });
+              onChange={(next) => {
+                update(index, { endTime: next ?? "" });
               }}
             />
             {slots.length > 1 && (

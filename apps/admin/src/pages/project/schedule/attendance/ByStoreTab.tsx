@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useTranslations } from "use-intl";
 import { z } from "zod";
 
+import { localMonthText, parseLocalDate } from "@repo/domain/form";
 import {
   type ScheduleAttendancePunchFieldsFragment,
   type ScheduleAttendanceRowFieldsFragment,
@@ -22,10 +23,11 @@ import { Typography } from "@repo/ui/typography";
 
 import { OrgTreeSelect } from "@/components/base/OrgTreeSelect/OrgTreeSelect";
 import { useSession } from "@/hooks/base/useSession";
+import { useTenantToday } from "@/hooks/base/useTenantToday";
 import { useUrlState } from "@/hooks/base/useUrlState";
-import { shiftDay } from "@/lib/project/schedule-roster";
+import { monthRangeOf } from "@/lib/project/schedule-day-offs";
+import { dayInstantOf, shiftDay } from "@/lib/project/schedule-roster";
 
-import { useTenantToday } from "../manage/roster/views/useRosterDate";
 import { scheduleErrorOf } from "../schedule-error";
 import { AttendanceActions } from "./AttendanceActions";
 import { AttendanceStatusTags } from "./AttendanceStatusTags";
@@ -40,7 +42,6 @@ const ORG_SCHEMA = z.string().default("");
 /** `?date=YYYY-MM-DD`;空字串 / 格式不對 = 今天。 */
 const DATE_SCHEMA = z.string().default("");
 const UNMATCHED_SCHEMA = z.boolean().default(false);
-const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/u;
 
 /** 依人分組的未對應排班的卡(畫面一人一行:「張小芳 · 09:02 上班 · 15:10 下班」)。 */
 const groupByPerson = (punches: readonly Punch[]): Punch[][] => {
@@ -73,11 +74,17 @@ export const ByStoreTab = () => {
     ATTENDANCE_URL_KEYS.unmatched,
     UNMATCHED_SCHEMA,
   );
-  const date = DATE_PATTERN.test(dateParam) ? dateParam : today;
+  const day = parseLocalDate(dateParam) ?? parseLocalDate(today);
+  const date = parseLocalDate(dateParam) === null ? today : dateParam;
+  // 送那天在租戶時區 00:00 的時點;匯出送那天所在月份的 `[月初 00:00, 下月初 00:00)`
+  const dayAt = dayInstantOf(date, text.timezone) ?? "";
+  const monthRange = (day === null
+    ? null
+    : monthRangeOf(localMonthText(day), text.timezone)) ?? { from: "", to: "" };
   const [reassigning, setReassigning] = useState<readonly Punch[] | null>(null);
   const query = useScheduleAttendanceByStoreQuery(session.client, {
     input: {
-      date,
+      date: dayAt,
       unmatchedOnly,
       ...(orgId === "" ? {} : { orgId }),
     },
@@ -166,7 +173,7 @@ export const ByStoreTab = () => {
           <ChevronLeftIcon />
         </IconButton>
         <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-          {text.dateTitle(date)}
+          {text.dateTitle(dayAt)}
         </Typography>
         <IconButton
           size="small"
@@ -192,7 +199,7 @@ export const ByStoreTab = () => {
       {data !== undefined && (
         <AttendanceActions
           canExport={data.abilities.canExport}
-          exportInput={{ month: date.slice(0, 7), orgId: data.orgId }}
+          exportInput={{ ...monthRange, orgId: data.orgId }}
         />
       )}
     </Stack>

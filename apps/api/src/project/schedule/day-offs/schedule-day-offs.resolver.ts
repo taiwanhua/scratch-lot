@@ -37,7 +37,7 @@ export class ScheduleDayOffsResolver {
     input: MyScheduleDayOffsInput | null,
     @CurrentOperator() operator: OperatorContext,
   ): Promise<MyScheduleDayOffsPayload> {
-    return this.service.mine(operator, input?.month);
+    return this.service.mine(operator, input);
   }
 
   @RequirePermission("schedule.my.edit-day-offs")
@@ -67,7 +67,7 @@ export class ScheduleDayOffsResolver {
     input: ScheduleDayOffOverviewInput | null,
     @CurrentOperator() operator: OperatorContext,
   ): Promise<ScheduleDayOffOverviewPayload> {
-    return this.service.overview(operator, input?.orgId, input?.month);
+    return this.service.overview(operator, input?.orgId, input);
   }
 
   @RequirePermission("schedule.manage.edit-day-offs")

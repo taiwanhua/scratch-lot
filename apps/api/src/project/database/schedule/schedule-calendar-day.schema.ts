@@ -21,9 +21,9 @@ export class ScheduleCalendarDay {
   @Prop({ type: MongooseSchema.Types.ObjectId, required: true })
   orgId!: Types.ObjectId;
 
-  /** 日期(`YYYY-MM-DD`,租戶當地日期)。 */
-  @Prop({ type: String, required: true })
-  date!: string;
+  /** 日期:租戶時區那天 00:00 的時點(入口用租戶時區正規化)。 */
+  @Prop({ type: Date, required: true })
+  date!: Date;
 
   /** 類型:店休 `closed` / 特殊日 `special`(程式固定)。 */
   @Prop({

@@ -1,4 +1,4 @@
-import { screen, waitFor } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 /**
@@ -68,3 +68,28 @@ export const findOption = (name: string) => findByRoleAttribute("option", name);
 /** 選單項目(`role="menuitem"`)。 */
 export const findMenuItem = (name: string) =>
   findByRoleAttribute("menuitem", name);
+
+/** 對話框裡的時間選擇器(`@repo/ui/time-picker` 的區段組,依標籤找;例 `/上班/`)。 */
+export const timeField = (scope: HTMLElement, name: RegExp): HTMLElement =>
+  within(scope).getByRole("group", { name });
+
+/** 時間選擇器顯示的 `HH:mm`(「時」「分」兩個區段的文字;沒填時是區段的提示文字)。 */
+export const timeValue = (scope: HTMLElement, name: RegExp): string => {
+  const field = timeField(scope, name);
+  const section = (part: "Hours" | "Minutes") =>
+    within(field).getByRole("spinbutton", { name: part }).textContent;
+  return `${section("Hours")}:${section("Minutes")}`;
+};
+
+/** 在時間選擇器打 `HH:mm`(點「時」區段後逐位打,打滿兩位自動跳到「分」)。 */
+export const typeTimeIn = async (
+  user: ReturnType<typeof fastUser>,
+  scope: HTMLElement,
+  name: RegExp,
+  time: string,
+): Promise<void> => {
+  await user.click(
+    within(timeField(scope, name)).getByRole("spinbutton", { name: "Hours" }),
+  );
+  await user.keyboard(time.replace(":", ""));
+};

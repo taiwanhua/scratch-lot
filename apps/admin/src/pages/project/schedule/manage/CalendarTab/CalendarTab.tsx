@@ -3,6 +3,12 @@ import { useTranslations } from "use-intl";
 import { z } from "zod";
 
 import {
+  DEFAULT_TENANT_TIMEZONE,
+  localMonthText,
+  parseLocalDate,
+  parseLocalMonth,
+} from "@repo/domain/form";
+import {
   type ScheduleCalendarDayFieldsFragment,
   useScheduleCalendarQuery,
 } from "@repo/graphql";
@@ -18,7 +24,10 @@ import { Typography } from "@repo/ui/typography";
 import { OrgTreeSelect } from "@/components/base/OrgTreeSelect/OrgTreeSelect";
 import { TagPaletteChip } from "@/components/project/TagPaletteChip/TagPaletteChip";
 import { useSession } from "@/hooks/base/useSession";
+import { useTenantTimezone } from "@/hooks/base/useTenantTimezone";
+import { useTenantToday } from "@/hooks/base/useTenantToday";
 import { useUrlState } from "@/hooks/base/useUrlState";
+import { dayKeyOf, monthRangeOf } from "@/lib/project/schedule-day-offs";
 import { isTagPaletteKey } from "@/lib/project/tag-palettes";
 
 import { CalendarDayDialog } from "./CalendarDayDialog";
@@ -26,16 +35,10 @@ import { CalendarDayDialog } from "./CalendarDayDialog";
 type Day = ScheduleCalendarDayFieldsFragment;
 
 const orgSchema = z.string().default("");
-/** `?month=YYYY-MM`;空字串 / 格式不對 = 這個月。 */
+/** `?month=YYYY-MM`;空字串 / 格式不對 = 這個月(租戶時區)。 */
 const monthSchema = z.string().default("");
-const MONTH_PATTERN = /^\d{4}-(?:0[1-9]|1[0-2])$/u;
 
-const currentMonth = (): string => {
-  const now = new Date();
-  return `${String(now.getFullYear())}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-};
-
-/** 對話框:新增(可帶入日期)或某一天。 */
+/** 對話框:新增(可帶入日期鍵)或某一天。 */
 type Editing = { mode: "create"; date: string } | { mode: "day"; day: Day };
 
 /**
@@ -51,10 +54,19 @@ export const CalendarTab = () => {
   const { session } = useSession();
   const [orgId, setOrgId] = useUrlState("org", orgSchema);
   const [monthParam, setMonth] = useUrlState("month", monthSchema);
-  const month = MONTH_PATTERN.test(monthParam) ? monthParam : currentMonth();
+  const timezone = useTenantTimezone() ?? DEFAULT_TENANT_TIMEZONE;
+  // 這個月以租戶時區的今天判斷(不用瀏覽器時區)
+  const today = useTenantToday();
+  const todayDate = parseLocalDate(today);
+  const month =
+    parseLocalMonth(monthParam) === null && todayDate !== null
+      ? localMonthText(todayDate)
+      : monthParam;
   const [editing, setEditing] = useState<Editing | null>(null);
+  // 送那個月在租戶時區的時點區間 `[月初 00:00, 下月初 00:00)`
+  const range = monthRangeOf(month, timezone) ?? { from: "", to: "" };
   const query = useScheduleCalendarQuery(session.client, {
-    input: { month, ...(orgId === "" ? {} : { orgId }) },
+    input: { ...range, ...(orgId === "" ? {} : { orgId }) },
   });
   const calendar = query.data?.scheduleCalendar;
   const days = calendar?.days ?? [];
@@ -69,7 +81,7 @@ export const CalendarTab = () => {
 
   const dayInfo: Record<string, MonthCalendarDayInfo> = Object.fromEntries(
     days.map((day) => [
-      day.date,
+      dayKeyOf(day.date, timezone),
       {
         content:
           day.type === "special" && isTagPaletteKey(day.paletteKey) ? (
@@ -82,7 +94,7 @@ export const CalendarTab = () => {
   );
 
   const openDate = (date: string) => {
-    const day = days.find((item) => item.date === date);
+    const day = days.find((item) => dayKeyOf(item.date, timezone) === date);
     if (day !== undefined) {
       setEditing({ mode: "day", day });
     } else if (canEdit) {
@@ -120,6 +132,7 @@ export const CalendarTab = () => {
       </Stack>
       <MonthCalendar
         month={month}
+        timezone={timezone}
         onMonthChange={setMonth}
         selectionMode="single"
         selectedDates={[]}

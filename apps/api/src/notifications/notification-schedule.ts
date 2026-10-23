@@ -1,10 +1,11 @@
 import {
   type LocalDate,
-  addLocalCalendar,
+  addLocalDays,
+  clampedDateOfMonth,
   instantOfLocalTime,
+  localDateDiff,
   localDateOf,
   localDateText,
-  startOfLocalDay,
 } from "@repo/domain/form";
 import type { NotificationSchedule } from "@repo/domain/notification-schedule";
 
@@ -14,8 +15,6 @@ import { DAILY_CATCH_UP_MS } from "../scheduled-jobs/schedule";
  * 排程用的「這個時點該不該寄」(`docs/modules/notification-settings.md`「排程接口」)。
  * 提醒時間的格式、範圍與驗證正本在 `@repo/domain/notification-schedule`。
  */
-const MS_PER_DAY = 24 * 60 * 60_000;
-
 /**
  * 補寄窗(同排程工作的 `DAILY_CATCH_UP_MS`,6 小時):排程漏跑(停機、呼叫失敗)時,
  * 6 小時內最近一個應寄時點還沒寄就補寄;超過就放棄,免得新部署把昨天的補寄出去。
@@ -58,12 +57,6 @@ export interface ScheduleCheck {
 const toMs = (value: Date | number) =>
   typeof value === "number" ? value : value.getTime();
 
-const dayNumber = (date: LocalDate) =>
-  Date.UTC(date.year, date.month - 1, date.day) / MS_PER_DAY;
-
-const lastDayOfMonth = (year: number, month: number) =>
-  new Date(Date.UTC(year, month, 0)).getUTCDate();
-
 function requireDate(schedule: NotificationSchedule, check: ScheduleCheck) {
   if (check.date === undefined) {
     throw new TypeError(`提醒時間 ${schedule.kind} 需要 date`);
@@ -92,15 +85,7 @@ export function scheduleHitAt(
   ];
   // 窗只有 6 小時:應寄時點的當地日期只可能是 slot 當天或前一天;由近到遠找第一個符合的
   const today = localDateOf(slot, check.timezone);
-  const yesterday = localDateOf(
-    addLocalCalendar(
-      startOfLocalDay(today, check.timezone),
-      -1,
-      "days",
-      check.timezone,
-    ),
-    check.timezone,
-  );
+  const yesterday = addLocalDays(today, -1);
   for (const localDate of [today, yesterday]) {
     const at = instantOfLocalTime(localDate, hour, minute, check.timezone);
     if (at > slot || slot - at >= SCHEDULE_CATCH_UP_MS) {
@@ -137,13 +122,11 @@ function matchDate(
   localDate: LocalDate,
 ): { daysBefore?: number } | null {
   if (schedule.kind === "monthly") {
-    const day = Math.min(
-      schedule.dayOfMonth,
-      lastDayOfMonth(localDate.year, localDate.month),
-    );
+    // 「每月 N 日」超過月底就用月底
+    const { day } = clampedDateOfMonth(localDate, schedule.dayOfMonth);
     return localDate.day === day ? {} : null;
   }
-  const diff = dayNumber(requireDate(schedule, check)) - dayNumber(localDate);
+  const diff = localDateDiff(localDate, requireDate(schedule, check));
   if (schedule.kind === "daily-overdue") {
     return diff < 0 ? {} : null;
   }

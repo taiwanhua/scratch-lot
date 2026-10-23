@@ -14,11 +14,12 @@ export const SCHEDULE_DAY_OFFS_COLLECTION = "schedule_day_offs";
  * (那段時間所有分店都不能排)。
  *
  * - `kind`:整天畫休 `full-day`(整天不可排的捷徑,一天一筆)/ 時段不可排 `time-range`
- *   (`startTime` / `endTime`,一天可以多段、不能重疊)
+ *   (`startAt` / `endAt`,一天可以多段、不能重疊)
  * - `orgId`:歸屬組織 = 登記時的組織(本人登記 = 當前組織;代改 = 畫休總覽選的那家店),不共用;
  *   讀取以人為準(`tenantId` + `userId`),不看歸屬組織
  * - 代改:`by` 記代改人;截止後代改必填 `reason`(欄位管理「代改畫休原因」),選「其他」要填 `reasonNote`
  * - 唯一:同一人同一天只有一筆未刪除的整天畫休(partial index)
+ * - 日期與時段都是時點(`docs/concepts/form-engine.md`「日期與日期時間都是時點」):`date` = 租戶時區那天 00:00
  */
 @Schema({ collection: SCHEDULE_DAY_OFFS_COLLECTION, timestamps: true })
 export class ScheduleDayOff {
@@ -30,21 +31,21 @@ export class ScheduleDayOff {
   @Prop({ type: MongooseSchema.Types.ObjectId, required: true })
   userId!: Types.ObjectId;
 
-  /** 日期(`YYYY-MM-DD`,租戶當地日期)。 */
-  @Prop({ type: String, required: true })
-  date!: string;
+  /** 日期:租戶時區那天 00:00 的時點(入口用租戶時區正規化)。 */
+  @Prop({ type: Date, required: true })
+  date!: Date;
 
   /** 種類:整天畫休 `full-day` / 時段不可排 `time-range`(程式固定)。 */
   @Prop({ type: String, enum: [...SCHEDULE_DAY_OFF_KINDS], required: true })
   kind!: string;
 
-  /** 時段不可排的開始(`HH:mm`);整天畫休為 null。 */
-  @Prop({ type: String, default: null })
-  startTime!: string | null;
+  /** 時段不可排的開始(時點,落在 `date` 那天);整天畫休為 null。 */
+  @Prop({ type: Date, default: null })
+  startAt!: Date | null;
 
-  /** 時段不可排的結束(`HH:mm`,晚於開始;不跨午夜);整天畫休為 null。 */
-  @Prop({ type: String, default: null })
-  endTime!: string | null;
+  /** 時段不可排的結束(時點,晚於開始;半開區間,最晚 = 隔天 00:00 = 做到當天結束);整天畫休為 null。 */
+  @Prop({ type: Date, default: null })
+  endAt!: Date | null;
 
   /** 備註(選填)。 */
   @Prop({ type: String, default: null })

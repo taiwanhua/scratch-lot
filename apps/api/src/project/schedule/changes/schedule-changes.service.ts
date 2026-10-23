@@ -9,6 +9,7 @@ import { NotificationService } from "../../../notifications/notification.service
 import { ScheduleChangesRepository } from "../../database/schedule/roster.repositories";
 import { SCHEDULE_CHANGED } from "../../notifications";
 import { ScheduleFieldOptionsService } from "../field-options/schedule-field-options.service";
+import { dateKeyOf } from "../shared/schedule-dates";
 import { SCHEDULE_REASONS, validationError } from "../shared/schedule-error";
 import type { ScheduleOrg } from "../shared/schedule-org";
 
@@ -25,10 +26,10 @@ export interface ChangeReason {
   label: string;
 }
 
-/** 一筆要記下的異動。 */
+/** 一筆要記下的異動:`month` = 月份鍵 `YYYY-MM`;`date` = 異動那天(租戶時區 00:00 的時點)。 */
 export interface ScheduleChangeRecord {
   month: string;
-  date: string;
+  date: Date;
   action: string;
   targetId: Types.ObjectId;
   userIds: readonly (Types.ObjectId | string)[];
@@ -86,13 +87,14 @@ export class ScheduleChangesService {
     return { reasonKey, reasonNote, label: option.label };
   }
 
-  /** 寫一列異動並通知牽涉的人(每列各自 `dedupeKey`)。 */
+  /** 寫一列異動並通知牽涉的人(每列各自 `dedupeKey`;通知的日期以租戶時區寫成 `YYYY-MM-DD`)。 */
   async record(
     operator: OperatorContext,
-    org: ScheduleOrg,
+    scope: { org: ScheduleOrg; timezone: string },
     reason: ChangeReason,
     change: ScheduleChangeRecord,
   ): Promise<void> {
+    const { org } = scope;
     const userIds = [...new Set(change.userIds.map(String))];
     const row = await this.changes.create(operator, {
       orgId: org.id,
@@ -116,7 +118,7 @@ export class ScheduleChangesService {
       recipients: { kind: "users", userIds },
       params: {
         orgName: org.name,
-        date: change.date,
+        date: dateKeyOf(change.date, scope.timezone),
         reason:
           reason.reasonNote === null
             ? reason.label

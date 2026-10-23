@@ -111,7 +111,12 @@ describe("entryCheckReasonsOf", () => {
           userId: "u-1",
           date: "2026-11-10",
           fullDay: false,
-          slots: [{ startTime: "13:00", endTime: "17:00" }],
+          slots: [
+            {
+              startAt: "2026-11-10T13:00:00+08:00",
+              endAt: "2026-11-10T17:00:00+08:00",
+            },
+          ],
         },
       ],
     });
@@ -119,6 +124,42 @@ describe("entryCheckReasonsOf", () => {
     expect(
       entryCheckReasonsOf(form({ startTime: "12:00", endTime: "14:00" }), slot),
     ).toEqual({ startTime: "DAY_OFF_CONFLICT" });
+
+    // 時段做到當天結束(結束 00:00 = 隔天 00:00):晚上的班擋;跨午夜的班碰到也擋;隔天 00:00 起的不擋
+    const untilMidnight = context({
+      unavailability: [
+        {
+          userId: "u-1",
+          date: "2026-11-10",
+          fullDay: false,
+          // 結束 = 隔天 00:00(時點)
+          slots: [
+            {
+              startAt: "2026-11-10T20:00:00+08:00",
+              endAt: "2026-11-11T00:00:00+08:00",
+            },
+          ],
+        },
+      ],
+    });
+    expect(
+      entryCheckReasonsOf(
+        form({ startTime: "21:00", endTime: "23:00" }),
+        untilMidnight,
+      ),
+    ).toEqual({ startTime: "DAY_OFF_CONFLICT" });
+    expect(
+      entryCheckReasonsOf(
+        form({ startTime: "17:00", endTime: "20:00" }),
+        untilMidnight,
+      ),
+    ).toEqual({});
+    expect(
+      entryCheckReasonsOf(
+        form({ date: "2026-11-11", startTime: "00:00", endTime: "06:00" }),
+        untilMidnight,
+      ),
+    ).toEqual({});
   });
 
   it("不能擔任負責人:填了負責任務才擋;還沒選人不擋;編輯時原本就填著的不擋", () => {

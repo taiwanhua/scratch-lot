@@ -4,6 +4,7 @@
  * 範圍只有這一份(STRUCT-07)。日期本身(例:到期日)不在這裡,由排程工作從各自的資料帶進來;
  * 時間一律以租戶時區計。語意見 `docs/modules/notification-settings.md`「可調時間」。
  */
+import { isHhMm, minutesOfHhMm } from "../form/temporal";
 
 /** 某日期前 N 天(可多個,0 = 當天)的 `time` 寄。 */
 export interface DaysBeforeSchedule {
@@ -46,21 +47,8 @@ export const DAYS_BEFORE_MAX_COUNT = 5;
 /** 每月第 N 天的範圍。 */
 export const DAY_OF_MONTH_MIN = 1;
 export const DAY_OF_MONTH_MAX = 31;
-/** 寄送時間的格子(分鐘),也是排程的間隔。 */
+/** 寄送時間的格子(分鐘),也是排程的間隔(編輯畫面 `TimePicker` 的 `minutesStep`)。 */
 export const SCHEDULE_STEP_MINUTES = 15;
-
-const pad = (value: number) => String(value).padStart(2, "0");
-
-/** 寄送時間的所有選項:00:00、00:15 … 23:45(編輯畫面的下拉用)。 */
-export const SCHEDULE_TIME_OPTIONS: readonly string[] = Array.from(
-  { length: (24 * 60) / SCHEDULE_STEP_MINUTES },
-  (_, index) => {
-    const minutes = index * SCHEDULE_STEP_MINUTES;
-    return `${pad(Math.floor(minutes / 60))}:${pad(minutes % 60)}`;
-  },
-);
-
-const TIME_PATTERN = /^([01]\d|2[0-3]):([0-5]\d)$/;
 
 /** 驗證不過的位置(`path`,例 `daysBefore[2]`)與原因代碼。 */
 export interface ScheduleIssue {
@@ -92,11 +80,8 @@ const isIntegerIn = (
 
 /** `HH:mm` 而且分鐘落在 15 分鐘格子上。 */
 export function isScheduleTime(value: unknown): value is string {
-  if (typeof value !== "string") {
-    return false;
-  }
-  const match = TIME_PATTERN.exec(value);
-  return match !== null && Number(match[2]) % SCHEDULE_STEP_MINUTES === 0;
+  const minutes = isHhMm(value) ? minutesOfHhMm(value) : null;
+  return minutes !== null && minutes % SCHEDULE_STEP_MINUTES === 0;
 }
 
 /**

@@ -69,6 +69,13 @@ describe("排班作業:檢核面板與發布", () => {
         "畫休日有排班:陳大文 11/6 14:00–22:00(排於其他分店)",
       ),
     ).toBeInTheDocument();
+    // 期間是半開區間 `[起 00:00, 迄隔天 00:00)`:顯示的迄日 = `to` 的前一天
+    expect(
+      within(panel).getByText(/陳大文 11\/6–11\/12 連續上班 7 天/),
+    ).toBeInTheDocument();
+    expect(
+      within(panel).getByText(/李小華 11\/4 22:00 下班到 11\/5 08:30 上班/),
+    ).toBeInTheDocument();
 
     await user.click(within(panel).getByRole("button", { name: "限制 1" }));
     expect(within(panel).getAllByRole("listitem")).toHaveLength(1);

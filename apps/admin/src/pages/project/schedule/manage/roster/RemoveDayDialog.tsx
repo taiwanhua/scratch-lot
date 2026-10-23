@@ -13,6 +13,7 @@ import { Typography } from "@repo/ui/typography";
 import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
 import { useSession } from "@/hooks/base/useSession";
 import {
+  dayInstantOf,
   localPartsOf,
   monthDayOf,
   weekdayOf,
@@ -81,7 +82,7 @@ export const RemoveDayDialog = ({ date, onClose }: RemoveDayDialogProps) => {
       maxWidth="sm"
       title={t("title", {
         date: tRoster("dateTitle", {
-          date: monthDayOf(date),
+          date: monthDayOf(date, timezone),
           weekday: tCalendar(`weekdays.${String(weekdayOf(date))}`),
         }),
       })}
@@ -95,8 +96,13 @@ export const RemoveDayDialog = ({ date, onClose }: RemoveDayDialogProps) => {
             onClick={() => {
               const reason = changeReason.take();
               if (reason !== null) {
+                // api 收那天租戶時區 00:00 的時點
                 remove.mutate({
-                  input: { ...reason, orgId: data.orgId, date },
+                  input: {
+                    ...reason,
+                    orgId: data.orgId,
+                    date: dayInstantOf(date, timezone) ?? "",
+                  },
                 });
               }
             }}

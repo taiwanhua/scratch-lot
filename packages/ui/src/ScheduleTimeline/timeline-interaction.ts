@@ -45,6 +45,8 @@ export interface TimelineActions {
   nextDayLabel: ReactNode;
   /** 空白格的 roving tabindex(整個時間軸只有一格在 tab 順序裡,方向鍵移動) */
   emptyCursor: EmptyCellCursor;
+  /** 時間軸的時區(IANA);`undefined` = 瀏覽器時區 */
+  timezone: string | undefined;
 }
 
 /** 空白格的鍵盤游標:`key` 是 `emptyCellKey(date, hour)`。 */
@@ -111,6 +113,8 @@ export interface ActivationOptions {
   date: string;
   /** 這一段在當天的時間;點到的時間不會超出它,鍵盤操作時取它的開始 */
   range: MinuteRange;
+  /** 回呼帶出的時點用的時區;`undefined` = 瀏覽器時區 */
+  timezone: string | undefined;
   onActivate: (point: ScheduleTimelinePoint) => void;
 }
 
@@ -120,6 +124,7 @@ export const activationProps = ({
   selected,
   date,
   range,
+  timezone,
   onActivate,
 }: ActivationOptions) => ({
   role: "button",
@@ -128,12 +133,16 @@ export const activationProps = ({
   "aria-pressed": selected,
   onClick: (event: MouseEvent<HTMLElement>) => {
     onActivate(
-      pointAt(date, clamp(minuteFromPointer(event) ?? range.start, range)),
+      pointAt(
+        date,
+        clamp(minuteFromPointer(event) ?? range.start, range),
+        timezone,
+      ),
     );
   },
   onKeyDown: (event: KeyboardEvent<HTMLElement>) => {
     handleActivationKey(event, () => {
-      onActivate(pointAt(date, range.start));
+      onActivate(pointAt(date, range.start, timezone));
     });
   },
 });
@@ -142,11 +151,16 @@ export const activationProps = ({
 export const pointerOnlyProps = ({
   date,
   range,
+  timezone,
   onActivate,
-}: Pick<ActivationOptions, "date" | "range" | "onActivate">) => ({
+}: Pick<ActivationOptions, "date" | "range" | "timezone" | "onActivate">) => ({
   onClick: (event: MouseEvent<HTMLElement>) => {
     onActivate(
-      pointAt(date, clamp(minuteFromPointer(event) ?? range.start, range)),
+      pointAt(
+        date,
+        clamp(minuteFromPointer(event) ?? range.start, range),
+        timezone,
+      ),
     );
   },
 });
