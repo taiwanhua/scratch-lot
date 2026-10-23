@@ -1,7 +1,9 @@
+import type { ReactNode } from "react";
 import { useTranslations } from "use-intl";
 
 import { Button } from "@repo/ui/button";
 import { Dialog } from "@repo/ui/dialog";
+import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
 
 export interface ConfirmDeleteDialogProps {
@@ -10,6 +12,8 @@ export interface ConfirmDeleteDialogProps {
   /** 確定鍵的文字(預設同標題) */
   confirmLabel?: string;
   isPending: boolean;
+  /** 確認句下方的欄位(例:代改畫休截止後的原因);不給 = 只有一句話 */
+  children?: ReactNode;
   onConfirm: () => void;
   onCancel: () => void;
 }
@@ -22,6 +26,7 @@ export const ConfirmDeleteDialog = ({
   message,
   confirmLabel,
   isPending,
+  children,
   onConfirm,
   onCancel,
 }: ConfirmDeleteDialogProps) => {
@@ -43,7 +48,14 @@ export const ConfirmDeleteDialog = ({
         </>
       }
     >
-      <Typography>{message}</Typography>
+      {children === undefined ? (
+        <Typography>{message}</Typography>
+      ) : (
+        <Stack spacing={2}>
+          <Typography>{message}</Typography>
+          {children}
+        </Stack>
+      )}
     </Dialog>
   );
 };

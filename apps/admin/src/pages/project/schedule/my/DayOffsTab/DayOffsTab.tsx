@@ -2,11 +2,12 @@ import { useState } from "react";
 import { useNavigate } from "react-router";
 import { useTranslations } from "use-intl";
 
-import { useMyScheduleDayOffsQuery } from "@repo/graphql";
 import { Alert } from "@repo/ui/alert";
 import { Box } from "@repo/ui/box";
 import { Button } from "@repo/ui/button";
 import { Card } from "@repo/ui/card";
+import { IconButton } from "@repo/ui/icon-button";
+import { ChevronLeftIcon, ChevronRightIcon } from "@repo/ui/icons";
 import {
   MonthCalendar,
   type MonthCalendarDayInfo,
@@ -18,7 +19,6 @@ import { DayOffCellContent } from "@/components/project/schedule/DayOffs/DayOffC
 import { DayOffDetailDialog } from "@/components/project/schedule/DayOffs/DayOffDetailDialog";
 import { DayOffLegend } from "@/components/project/schedule/DayOffs/DayOffLegend";
 import { useModuleRoutes } from "@/hooks/base/useModuleRoutes";
-import { useSession } from "@/hooks/base/useSession";
 import {
   dateParts,
   dayOffBandOf,
@@ -27,6 +27,7 @@ import {
 
 import { DayOffDialog } from "./DayOffDialog";
 import { DayOffViolationsCard } from "./DayOffViolationsCard";
+import { useMyDayOffsMonth } from "./useMyDayOffsMonth";
 
 /** 對話框:登記(帶入日期;[登記畫休] 為空字串)或當天詳細。 */
 type Opened =
@@ -50,15 +51,16 @@ const SUMMARY_KEY: Partial<
  * - 格子:整天畫休「畫休」、時段不可排「09:00–13:00 不可排」、主要分店的同日畫休人數「2/2」、
  *   我那天有畫休就整格灰色斜線底;違反的日子底部加色帶;ⓘ 看當天誰畫休
  * - 開放期間外:提示不能自己修改;有代改權限的人看到「到畫休總覽代改」
+ * - `◀ 2026 年 12 月 ▶` 換月(同班表分頁,月份放網址 `?month=`):往前看過去的月份(api 回
+ *   `canEdit=false` → 唯讀,只能看 ⓘ);往後只到目標月
  */
 export const DayOffsTab = () => {
   const t = useTranslations("admin.schedule.dayOffs");
   const tCalendar = useTranslations("admin.schedule.calendar");
-  const { session } = useSession();
   const navigate = useNavigate();
   const routeOf = useModuleRoutes();
   const [opened, setOpened] = useState<Opened | null>(null);
-  const query = useMyScheduleDayOffsQuery(session.client, { input: null });
+  const { query, atTarget, goMonth } = useMyDayOffsMonth();
   const page = query.data?.myScheduleDayOffs;
 
   if (page === undefined) {
@@ -92,6 +94,7 @@ export const DayOffsTab = () => {
       : [t("my.statsMin", { limit: limits.minMonthly })]),
   ].join(" · ");
   const manageRoute = routeOf(MANAGE_MODULE);
+
   const maxDaily = limits.maxDailyStaff ?? null;
 
   const dayInfo: Record<string, MonthCalendarDayInfo> = {};
@@ -185,13 +188,33 @@ export const DayOffsTab = () => {
       <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
         <Card variant="outlined" sx={{ p: 2, flex: { md: 2 }, minWidth: 0 }}>
           <Stack spacing={1.5}>
-            <Stack direction="row" sx={{ alignItems: "center" }}>
-              <Typography variant="h6" sx={{ flex: 1 }}>
+            <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
+              <IconButton
+                size="small"
+                aria-label={t("my.prevMonth")}
+                onClick={() => {
+                  goMonth(-1);
+                }}
+              >
+                <ChevronLeftIcon />
+              </IconButton>
+              <Typography variant="h6" sx={{ whiteSpace: "nowrap" }}>
                 {t("monthTitle", {
                   year: dateParts(`${page.month}-01`).year,
                   month: monthNumber,
                 })}
               </Typography>
+              <IconButton
+                size="small"
+                aria-label={t("my.nextMonth")}
+                disabled={atTarget}
+                onClick={() => {
+                  goMonth(1);
+                }}
+              >
+                <ChevronRightIcon />
+              </IconButton>
+              <Stack sx={{ flex: 1 }} />
               {page.canEdit && (
                 <Button
                   onClick={() => {

@@ -5,6 +5,7 @@ import type {
   AddScheduleDayOffsOnBehalfMutationVariables,
   DeleteMyScheduleDayOffMutationVariables,
   DeleteScheduleDayOffOnBehalfMutationVariables,
+  MyScheduleDayOffsQueryVariables,
   ScheduleDayOffFieldsFragment,
   ScheduleDayOffOverviewQueryVariables,
   ScheduleDayOffViolationFieldsFragment,
@@ -43,6 +44,20 @@ const WINDOW = {
   endDate: "2026-11-25",
 };
 
+/** 過去月份的開放期間(前一個月 15–25 日,已截止;只給「我的畫休」換月用)。 */
+const pastWindowOf = (month: string) => {
+  const [year = 0, value = 0] = month.split("-").map(Number);
+  const index = year * 12 + (value - 1) - 1;
+  const previous = `${String(Math.floor(index / 12))}-${String((index % 12) + 1).padStart(2, "0")}`;
+  return {
+    month,
+    startDate: `${previous}-15`,
+    endDate: `${previous}-25`,
+    state: "closed",
+    daysLeft: 0,
+  };
+};
+
 /** 有畫休的日子:同日畫休人數只算主要分店是這家的人。 */
 const daysOf = (dayOffs: readonly ScheduleDayOffFieldsFragment[]) =>
   [...new Set(dayOffs.map((item) => item.date))]
@@ -78,6 +93,7 @@ const blockedViolation = (date: string) => ({
 /**
  * 畫休的假 api(我的畫休、畫休總覽、代改;有狀態):當前使用者 = 何家華(主要分店 A-2 台北分店),
  * 目標月 2026-12、開放期間 11/15–11/25;同日最多畫休 2 人。
+ * 我的畫休帶 `month`(早於目標月)→ 那個月的紀錄、已截止、唯讀。
  */
 export const scheduleDayOffsWorld = (
   options: ScheduleDayOffsWorldOptions = {},
@@ -150,21 +166,27 @@ export const scheduleDayOffsWorld = (
   };
 
   const handlers = [
-    api.query("MyScheduleDayOffs", () => {
-      const mine = dayOffs.filter((item) => item.userId === DAY_OFF_ME.userId);
+    api.query("MyScheduleDayOffs", ({ variables }) => {
+      const { input } = variables as MyScheduleDayOffsQueryVariables;
+      const month = input?.month ?? DAY_OFF_MONTH;
+      const isPast = month < DAY_OFF_MONTH;
+      const ofMonth = dayOffs.filter((item) =>
+        item.date.startsWith(`${month}-`),
+      );
+      const mine = ofMonth.filter((item) => item.userId === DAY_OFF_ME.userId);
       return HttpResponse.json({
         data: {
           myScheduleDayOffs: {
-            month: DAY_OFF_MONTH,
+            month,
             primaryOrg: { id: SCHEDULE_BRANCH.id, name: SCHEDULE_BRANCH.name },
-            window,
-            canEdit: windowState === "open",
+            window: isPast ? pastWindowOf(month) : window,
+            canEdit: !isPast && windowState === "open",
             canOverride,
             limits: LIMITS,
             dayOffCount: new Set(mine.map((item) => item.date)).size,
             myDayOffs: mine,
-            days: daysOf(dayOffs.filter((item) => item.isPrimary)),
-            violations,
+            days: daysOf(ofMonth.filter((item) => item.isPrimary)),
+            violations: isPast ? [] : violations,
           },
         },
       });

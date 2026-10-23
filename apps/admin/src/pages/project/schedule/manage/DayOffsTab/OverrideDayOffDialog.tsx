@@ -6,9 +6,7 @@ import { REASON_OTHER_VALUE } from "@repo/domain/project/reason-note";
 import { SCHEDULE_FIELD_CATEGORY_KEYS } from "@repo/domain/project/schedule-fields";
 import {
   type AddScheduleDayOffsOnBehalfMutation,
-  type ScheduleDayOffDayFieldsFragment,
   useAddScheduleDayOffsOnBehalfMutation,
-  useDeleteScheduleDayOffOnBehalfMutation,
 } from "@repo/graphql";
 import { Button } from "@repo/ui/button";
 import { Dialog } from "@repo/ui/dialog";
@@ -60,8 +58,6 @@ export interface OverrideDayOffDialogProps {
   /** 總覽選的分店(代改的對象要是這家店的排班人員) */
   orgId: string;
   staff: readonly { userId: string; name: string }[];
-  /** 總覽這個月的畫休(列出選的人那天已登記的,可以刪除) */
-  days: readonly ScheduleDayOffDayFieldsFragment[];
   /** 帶入的日期(點日期);[代改] 為空字串 */
   initialDate: string;
   /** 這個月的開放期間已截止:原因必填(api 依那個人的主要分店再判斷一次) */
@@ -72,12 +68,11 @@ export interface OverrideDayOffDialogProps {
 /**
  * 代改畫休(SC-24;規格 14.5,`edit-day-offs`):選人、日期、種類(整天畫休 / 時段不可排 + 時間);
  * 截止後必填原因(欄位管理「代改畫休原因」,選「其他」要填說明);寫入代改人。
- * 那個人那天已登記的列在上方,可以刪除(原因規則相同)。手機全螢幕。
+ * 只做新增;刪除在畫休總覽點日期的「當天畫休」裡(`DeleteDayOffDialog`)。手機全螢幕。
  */
 export const OverrideDayOffDialog = ({
   orgId,
   staff,
-  days,
   initialDate,
   reasonRequired,
   onClose,
@@ -102,45 +97,27 @@ export const OverrideDayOffDialog = ({
   const invalid = Object.keys(fieldErrors);
   const [blocked, setBlocked] = useState<ScheduleDayOffViolationError[]>([]);
 
-  const refresh = () => {
-    void queryClient.invalidateQueries({ queryKey: [OVERVIEW_QUERY_KEY] });
-  };
-  const errorOf = (error: unknown) =>
-    scheduleErrorTextsOf(error, FIELD_LIST, tSchedule).summary;
-  const onError = (error: unknown) => {
-    setBlocked(dayOffViolationsOf(error));
-    setFieldErrors(scheduleErrorTextsOf(error, FIELD_LIST, tSchedule).texts);
-  };
   const noticeEntryConflicts = useDayOffEntryConflictNotice();
   const save = useAddScheduleDayOffsOnBehalfMutation(
     session.client,
     useMutationFeedback<AddScheduleDayOffsOnBehalfMutation>({
       success: t("override.saveSuccess"),
-      error: errorOf,
+      error: (error: unknown) =>
+        scheduleErrorTextsOf(error, FIELD_LIST, tSchedule).summary,
       onSuccess: (data) => {
-        refresh();
+        void queryClient.invalidateQueries({ queryKey: [OVERVIEW_QUERY_KEY] });
         noticeEntryConflicts(data.addScheduleDayOffsOnBehalf.entryConflicts);
         onClose();
       },
-      onError,
-    }),
-  );
-  const remove = useDeleteScheduleDayOffOnBehalfMutation(
-    session.client,
-    useMutationFeedback({
-      success: t("override.deleteSuccess"),
-      error: errorOf,
-      onSuccess: refresh,
-      onError,
+      onError: (error: unknown) => {
+        setBlocked(dayOffViolationsOf(error));
+        setFieldErrors(
+          scheduleErrorTextsOf(error, FIELD_LIST, tSchedule).texts,
+        );
+      },
     }),
   );
 
-  const existing =
-    userId === ""
-      ? []
-      : (days.find((day) => day.date === date)?.dayOffs ?? []).filter(
-          (item) => item.userId === userId,
-        );
   const reasonInput = {
     reason: reason === "" ? null : reason,
     reasonNote: reasonNote.trim() === "" ? null : reasonNote.trim(),
@@ -239,42 +216,6 @@ export const OverrideDayOffDialog = ({
           errorText={fieldErrors.kind}
           onChange={setKind}
         />
-        {existing.map((item) => (
-          <Stack
-            key={item.id}
-            direction="row"
-            spacing={1}
-            sx={{ alignItems: "center" }}
-          >
-            <Typography variant="body2" sx={{ flex: 1 }}>
-              {item.kind === "full-day"
-                ? t("dialog.registeredFullDay")
-                : t("dialog.registeredTimeRange", {
-                    start: item.startTime ?? "",
-                    end: item.endTime ?? "",
-                  })}
-            </Typography>
-            <Button
-              variant="text"
-              color="error"
-              size="small"
-              disabled={remove.isPending}
-              onClick={() => {
-                const missing = reasonRequired && reason === "";
-                setFieldErrors(
-                  missing ? scheduleFormatErrorsOf(["reason"], tSchedule) : {},
-                );
-                if (!missing) {
-                  remove.mutate({
-                    input: { orgId, id: item.id, ...reasonInput },
-                  });
-                }
-              }}
-            >
-              {t("dialog.delete")}
-            </Button>
-          </Stack>
-        ))}
         {kind === "time-range" && (
           <DayOffSlotFields
             slots={slots}
