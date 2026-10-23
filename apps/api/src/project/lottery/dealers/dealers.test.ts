@@ -216,7 +216,7 @@ describe("經銷商管理(專案規格 5.2–5.4)", () => {
       const writer = await createDealersOperator(api, api.connection, {
         orgId: tenantId,
         moduleKeys: ALL_MODULES,
-        permissionKeys: [P.edit, P.contactsEdit],
+        permissionKeys: [P.edit, P.editBase, P.showBase, P.contactsEdit],
       });
       const a = await createDealer("A");
       expect(a.ownerOrgName).toBe("好運彩券行");
@@ -231,6 +231,25 @@ describe("經銷商管理(專案規格 5.2–5.4)", () => {
       expect(updated.updatedBy).toMatchObject({ id: String(writer.userId) });
       expect(updated.updatedBy?.name).toMatch(/^dealers-/);
       expect(updated.ownerOrgName).toBe("好運彩券行");
+
+      // 批購基準日會觸發重算(系統身分寫入):修改者仍是操作的人
+      const based = await createDealer("A", {
+        lastPurchaseBaseDate: "2026-01-05T16:00:00.000Z",
+      });
+      expect(based.lastPurchaseDate).toBe("2026-01-05T16:00:00.000Z");
+      expect(based.updatedBy).toEqual(based.createdBy);
+      const rebased = await ok<UpdateData>(api, writer.token, UPDATE_DEALER, {
+        input: {
+          id: based.id,
+          lastPurchaseBaseDate: "2026-02-05T16:00:00.000Z",
+        },
+      });
+      expect(rebased.updateLotteryDealer.item.lastPurchaseDate).toBe(
+        "2026-02-05T16:00:00.000Z",
+      );
+      expect(rebased.updateLotteryDealer.item.updatedBy).toMatchObject({
+        id: String(writer.userId),
+      });
 
       const contactId = await createContact(["AGENT"]);
       await ok(api, writer.token, UPDATE_CONTACT, {

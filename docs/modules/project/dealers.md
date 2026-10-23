@@ -106,7 +106,7 @@
 - `lastPurchaseBaseDate` / `lastSelfPurchaseBaseDate`:沒有對應的 `show-` 權限時回 `null`(api 不放進回傳物件),前端依權限集決定顯示,不拿值猜權限。
 - `lastPurchaseDate` / `lastSelfPurchaseDate`:顯示值(max(基準日, 進貨單));`null` = 無紀錄。`daysSince…` 以租戶時區的今天算。
 - `licenseState`:`OK` / `EXPIRING`(30 天內到期,含當天)/ `EXPIRED`。
-- 系統資訊(經銷商、關係人都有):`ownerOrgName`(`orgId` 的組織名稱,以租戶的組織樹讀;共用進來的也讀得到)、`createdAt` / `createdBy`、`updatedAt` / `updatedBy`(`baseFieldsPlugin` 的欄位,不查稽核紀錄)。重算批購日的系統寫入只在日期真的變了才寫,避免蓋掉修改者。
+- 系統資訊(經銷商、關係人都有):`ownerOrgName`(`orgId` 的組織名稱,以租戶的組織樹讀;共用進來的也讀得到)、`createdAt` / `createdBy`、`updatedAt` / `updatedBy`(`baseFieldsPlugin` 的欄位,不查稽核紀錄)。重算批購日只在日期真的變了才寫;經銷商管理觸發的重算保留操作者(修改者 = 改基準日的人),進貨單觸發的是系統身分寫入(修改者清空)。
 - `abilities`:**已含權限判斷**(業務模組那一種,GQL-07),前端直接用:`canEdit` = 持有 `dealers.edit`;`canEditLastPurchaseBaseDate` / `canEditLastSelfPurchaseBaseDate` = 甲類且持有對應的 `edit-`。關係人的 `abilities.canEdit` = 持有 `dealers.contacts.edit`。
 - `CONFLICT` 的 `extensions.relationships`:`[{ role, dealerId, dealerName, licenseNo, contactId, contactName }]`,`role` 是落庫的小寫值。
 
