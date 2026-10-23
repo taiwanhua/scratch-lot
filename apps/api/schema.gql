@@ -3533,7 +3533,7 @@ type LotteryVaultExpected {
 }
 
 input MakeupPunchEntryOptionsInput {
-  date: String!
+  at: DateTime!
   orgId: ID!
 }
 
@@ -5206,8 +5206,9 @@ type ScheduleAttendanceAbilities {
 }
 
 input ScheduleAttendanceByPersonInput {
-  month: String!
+  from: DateTime!
   orgId: ID
+  to: DateTime!
   userId: ID
 }
 
@@ -5222,7 +5223,7 @@ type ScheduleAttendanceByPersonPayload {
 }
 
 input ScheduleAttendanceByStoreInput {
-  date: String!
+  date: DateTime!
   orgId: ID
   unmatchedOnly: Boolean
 }
@@ -5231,7 +5232,7 @@ type ScheduleAttendanceByStorePayload {
   abilities: ScheduleAttendanceAbilities!
   absentCount: Int!
   arrivedCount: Int!
-  date: String!
+  date: DateTime!
   orgId: ID!
   orgName: String!
   rows: [ScheduleAttendanceRow!]!
@@ -5240,7 +5241,7 @@ type ScheduleAttendanceByStorePayload {
 }
 
 type ScheduleAttendanceEntryOption {
-  date: String!
+  date: DateTime!
   endAt: DateTime!
   id: ID!
   orgId: ID!
@@ -5250,8 +5251,9 @@ type ScheduleAttendanceEntryOption {
 }
 
 input ScheduleAttendanceExportInput {
-  month: String!
+  from: DateTime!
   orgId: ID
+  to: DateTime!
   userId: ID
 }
 
@@ -5288,7 +5290,7 @@ type ScheduleAttendanceRow {
   breakMinutes: Int!
   clockIn: DateTime
   clockOut: DateTime
-  date: String!
+  date: DateTime!
   earlyLeaveMinutes: Int!
   endAt: DateTime!
   entryId: ID!

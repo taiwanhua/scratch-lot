@@ -78,6 +78,12 @@ export function dayKeyRange(
   return localDayRange(first, last, timezone);
 }
 
+/** 時點所在那天(租戶時區)→ 時點區間 `[那天 00:00, 隔天 00:00)`(23 / 25 小時的日子也對)。 */
+export function dayRangeOf(at: Date | number, timezone: string): InstantRange {
+  const day = localDateOf(typeof at === "number" ? at : at.getTime(), timezone);
+  return localDayRange(day, day, timezone);
+}
+
 /** 月份鍵 → 時點區間 `[月初 00:00, 下月初 00:00)`;月份鍵不合法 → `RangeError`(呼叫端已驗過)。 */
 export function monthKeyRange(month: string, timezone: string): InstantRange {
   const parsed = parseLocalMonth(month);

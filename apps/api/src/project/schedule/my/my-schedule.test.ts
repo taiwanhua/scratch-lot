@@ -711,12 +711,13 @@ describe("我的班表與打卡(GraphQL 端點 + 真 MongoDB)", () => {
           at: taipei("2026-12-03", "09:00"),
         }),
       ).toBeNull();
+      // 那天的任何時刻都歸到同一天;日期是那天台北 00:00 的時點
       const day = await lookup.listEntriesOfDay(operator, {
         ...scope,
-        date: "2026-11-05",
+        at: taipei("2026-11-05", "23:59"),
       });
-      expect(day.map((item) => [item.id, item.shortName])).toEqual([
-        [String(nov5), "早"],
+      expect(day.map((item) => [item.id, item.shortName, item.date])).toEqual([
+        [String(nov5), "早", taipei("2026-11-05", "00:00")],
       ]);
     });
 

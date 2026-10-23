@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import type { Types } from "mongoose";
 
-import { localDateOf, localDateText } from "@repo/domain/form";
 import {
   STORE_PERMISSIONS,
   openingFloatPlanOf,
@@ -605,16 +604,11 @@ export class StoreShiftsService {
     if (point.tenantId === null) {
       return [];
     }
-    const timezone = await tenantTimezoneOf(
-      this.orgs,
-      operator,
-      point.tenantId,
-    );
     return this.lookup.listEntriesOfDay(operator, {
       tenantId: point.tenantId,
       userId,
       orgId: point.orgId,
-      date: localDateText(localDateOf(at.getTime(), timezone)),
+      at,
     });
   }
 

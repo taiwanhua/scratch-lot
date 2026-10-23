@@ -105,20 +105,18 @@ describe("makeupPunchValuesOf:表單存值 → 補打卡申請的欄位", () => 
   it("解析各欄(引用存 { id, label }、類別選項存 { value, label })", () => {
     expect(
       makeupPunchValuesOf({
-        date: "2026-11-02T16:00:00.000Z",
+        punch_at: "2026-11-03T06:35:00.000Z",
         branch: { id: "b1", label: "中山店" },
         entry: "none",
         punch_type: "out",
-        time: "14:35",
         reason: { value: "forgot-punch", label: "忘記打卡" },
         note: "  ",
       }),
     ).toEqual({
-      dateInstant: new Date("2026-11-02T16:00:00.000Z"),
+      punchAt: new Date("2026-11-03T06:35:00.000Z"),
       branchId: "b1",
       entryId: null,
       punchType: "out",
-      time: "14:35",
       reasonKey: "forgot-punch",
       note: null,
     });
@@ -126,13 +124,12 @@ describe("makeupPunchValuesOf:表單存值 → 補打卡申請的欄位", () => 
 
   it("格式不對的欄位是 null;沒選對應排班是 undefined", () => {
     expect(
-      makeupPunchValuesOf({ date: "x", punch_type: "lunch", time: "25:00" }),
+      makeupPunchValuesOf({ punch_at: "x", punch_type: "lunch" }),
     ).toMatchObject({
-      dateInstant: null,
+      punchAt: null,
       branchId: null,
       entryId: undefined,
       punchType: null,
-      time: null,
       reasonKey: null,
     });
   });

@@ -1,21 +1,12 @@
 import { Injectable } from "@nestjs/common";
 import { Types } from "mongoose";
 
-import {
-  addLocalCalendar,
-  localDateOf,
-  localDateText,
-  parseLocalDate,
-  startOfLocalDay,
-} from "@repo/domain/form";
 import { requiresReasonNote } from "@repo/domain/project/reason-note";
 import { SCHEDULE_FIELD_CATEGORY_KEYS } from "@repo/domain/project/schedule-fields";
 import {
   type AttendanceGrace,
   DEFAULT_ATTENDANCE_GRACE,
   attendanceOf,
-  isIsoDate,
-  isIsoMonth,
 } from "@repo/domain/project/schedule-settings";
 
 import { AuditService } from "../../../audit/audit.service";
@@ -41,9 +32,12 @@ import { ScheduleClock } from "../shared/schedule-clock";
 import {
   dateKeyOf,
   dayKeyRange,
-  instantOfKey,
+  dayRangeOf,
   instantRangeFilter,
   monthKeyRange,
+  monthOfWholeMonthRange,
+  normalizedDay,
+  shiftDateKey,
 } from "../shared/schedule-dates";
 import {
   SCHEDULE_REASONS,
@@ -92,13 +86,6 @@ export const PUNCH_REASSIGN_ACTION = "schedule-punch.reassign";
 const blankToNull = (value: string | null | undefined): string | null => {
   const trimmed = value?.trim() ?? "";
   return trimmed === "" ? null : trimmed;
-};
-
-const shiftDate = (date: string, days: number): string => {
-  const [year = 0, month = 1, day = 1] = date.split("-").map(Number);
-  return new Date(Date.UTC(year, month - 1, day + days))
-    .toISOString()
-    .slice(0, 10);
 };
 
 function graceOf(value: Record<string, unknown> | undefined): AttendanceGrace {
@@ -154,9 +141,6 @@ export class ScheduleAttendanceService {
     operator: OperatorContext,
     input: ScheduleAttendanceByPersonInput,
   ): Promise<ScheduleAttendanceByPersonPayload> {
-    if (!isIsoMonth(input.month)) {
-      throw validationError("month must be YYYY-MM", ["month"]);
-    }
     const org = await resolveScheduleOrg(operator, this.orgs, input.orgId);
     const abilities = await this.abilitiesOf(operator);
     const self = this.selfOf(operator);
@@ -171,8 +155,8 @@ export class ScheduleAttendanceService {
         "MISSING_PERMISSION",
       );
     }
-    // 排班的日期是時點(4b);出勤的輸入輸出仍是日期字串(4c),這裡只改讀取
-    const monthRange = monthKeyRange(input.month, scope.timezone);
+    const month = this.wholeMonthOf(input, scope.timezone);
+    const monthRange = monthKeyRange(month, scope.timezone);
     const entries = await this.publishedEntries(scope, {
       userId,
       date: instantRangeFilter(monthRange),
@@ -202,7 +186,7 @@ export class ScheduleAttendanceService {
     ]);
     const built = await this.build(operator, scope, entries, punches);
     return {
-      month: input.month,
+      month,
       orgId: String(org.id),
       userId: String(userId),
       people: people
@@ -221,9 +205,6 @@ export class ScheduleAttendanceService {
     operator: OperatorContext,
     input: ScheduleAttendanceByStoreInput,
   ): Promise<ScheduleAttendanceByStorePayload> {
-    if (!isIsoDate(input.date)) {
-      throw validationError("date must be YYYY-MM-DD", ["date"]);
-    }
     const org = await resolveScheduleOrg(operator, this.orgs, input.orgId);
     const abilities = await this.abilitiesOf(operator);
     const own = abilities.canViewAll ? {} : { userId: this.selfOf(operator) };
@@ -232,22 +213,22 @@ export class ScheduleAttendanceService {
       tenantId: org.tenantId,
       timezone: await tenantTimezoneOf(this.orgs, operator, org.tenantId),
     };
+    const date = normalizedDay(input.date, scope.timezone, "date");
     const entries = await this.publishedEntries(scope, {
       ...own,
       orgId: org.id,
-      date: instantOfKey(input.date, scope.timezone),
+      date,
     });
-    const day = this.instantRange(scope.timezone, input.date, input.date);
     const punches = await this.punchesOf(scope, entries, {
       ...own,
       orgId: org.id,
-      at: { $gte: day.from, $lt: day.to },
+      at: instantRangeFilter(dayRangeOf(date, scope.timezone)),
     });
     const built = await this.build(operator, scope, entries, punches);
     return {
       orgId: String(org.id),
       orgName: org.name,
-      date: input.date,
+      date,
       rows: input.unmatchedOnly === true ? [] : built.rows,
       unmatched: built.unmatched,
       scheduledCount: built.rows.length,
@@ -265,9 +246,6 @@ export class ScheduleAttendanceService {
     operator: OperatorContext,
     input: ScheduleAttendanceExportInput,
   ): Promise<ScheduleAttendanceExportPayload> {
-    if (!isIsoMonth(input.month)) {
-      throw validationError("month must be YYYY-MM", ["month"]);
-    }
     const org = await resolveScheduleOrg(operator, this.orgs, input.orgId);
     const abilities = await this.abilitiesOf(operator);
     const self = this.selfOf(operator);
@@ -289,7 +267,8 @@ export class ScheduleAttendanceService {
       tenantId: org.tenantId,
       timezone: await tenantTimezoneOf(this.orgs, operator, org.tenantId),
     };
-    const range = monthKeyRange(input.month, scope.timezone);
+    const month = this.wholeMonthOf(input, scope.timezone);
+    const range = monthKeyRange(month, scope.timezone);
     const descendants = await this.orgs.findMany(scheduleOrgReader(operator), {
       ancestors: org.id,
     });
@@ -313,7 +292,7 @@ export class ScheduleAttendanceService {
       byOrg.set(row.orgId, list);
     }
     return {
-      month: input.month,
+      month,
       sheets: [...byOrg.entries()]
         .map(([orgId, list]) => ({
           orgId,
@@ -334,7 +313,7 @@ export class ScheduleAttendanceService {
     const punch = await this.mustFindPunch(operator, punchId);
     const tenantId = this.tenantOf(punch);
     const timezone = await tenantTimezoneOf(this.orgs, operator, tenantId);
-    const date = localDateText(localDateOf(punch.at.getTime(), timezone));
+    const date = dateKeyOf(punch.at, timezone);
     const entries = await this.published.publishedOnly(
       operator,
       tenantId,
@@ -344,7 +323,11 @@ export class ScheduleAttendanceService {
           tenantId,
           userId: punch.userId,
           date: instantRangeFilter(
-            dayKeyRange(shiftDate(date, -1), shiftDate(date, 1), timezone),
+            dayKeyRange(
+              shiftDateKey(date, -1),
+              shiftDateKey(date, 1),
+              timezone,
+            ),
           ),
         },
         { sort: { startAt: 1 } },
@@ -362,7 +345,7 @@ export class ScheduleAttendanceService {
       id: String(entry._id),
       orgId: String(entry.orgId),
       orgName: orgNames.get(String(entry.orgId)) ?? "",
-      date: dateKeyOf(entry.date, timezone),
+      date: entry.date,
       startAt: entry.startAt,
       endAt: entry.endAt,
       shortName: details.get(String(entry._id))?.shortName ?? null,
@@ -498,22 +481,16 @@ export class ScheduleAttendanceService {
     };
   }
 
-  /** `from`–`to`(`YYYY-MM-DD`,含頭尾)在租戶時區的時點範圍 `[from 00:00, to 隔天 00:00)`。 */
-  private instantRange(
+  /** 月份查詢的 `from` / `to`(必填)→ 月份鍵;不是租戶時區的整個月 → `VALIDATION_FAILED`(`from`、`to`)。 */
+  private wholeMonthOf(
+    input: { from: Date; to: Date },
     timezone: string,
-    from: string,
-    to: string,
-  ): { from: Date; to: Date } {
-    const start = parseLocalDate(from);
-    const end = parseLocalDate(to);
-    if (start === null || end === null) {
-      throw validationError(`invalid range: ${from}–${to}`, ["date"]);
+  ): string {
+    const month = monthOfWholeMonthRange(input, timezone);
+    if (month === null) {
+      throw validationError("from / to are required", ["from", "to"]);
     }
-    const endStart = startOfLocalDay(end, timezone);
-    return {
-      from: new Date(startOfLocalDay(start, timezone)),
-      to: new Date(addLocalCalendar(endStart, 1, "days", timezone)),
-    };
+    return month;
   }
 
   private async publishedEntries(
@@ -684,7 +661,7 @@ export class ScheduleAttendanceService {
         userName: names.get(String(entry.userId)) ?? "",
         orgId: String(entry.orgId),
         orgName: orgNames.get(String(entry.orgId)) ?? "",
-        date,
+        date: entry.date,
         startAt: entry.startAt,
         endAt: entry.endAt,
         breakMinutes: entry.breakMinutes,

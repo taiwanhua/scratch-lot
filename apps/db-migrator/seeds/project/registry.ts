@@ -19,12 +19,12 @@ import { purchasingTransferModule } from "./purchasing.transfer";
 import { reportsModule } from "./reports";
 import { seed as cashCorrectionForm } from "./revisions/cash_correction.r2.seed";
 import { seed as checkoutConfirmForm } from "./revisions/checkout_confirm.r2.seed";
-import { seed as makeupPunchForm } from "./revisions/makeup_punch.r3.seed";
+import { seed as makeupPunchForm } from "./revisions/makeup_punch.r4.seed";
 import { seed as purchaseForm } from "./revisions/purchase.r5.seed";
 import { seed as requisitionForm } from "./revisions/requisition.r4.seed";
 import { seed as saleReversalForm } from "./revisions/sale_reversal.r3.seed";
 import { seed as stocktakeConfirmForm } from "./revisions/stocktake_confirm.r3.seed";
-import { seed as supportRequestForm } from "./revisions/support_request.r3.seed";
+import { seed as supportRequestForm } from "./revisions/support_request.r4.seed";
 import { seed as transferForm } from "./revisions/transfer.r3.seed";
 import { scheduleModuleDeclarations } from "./schedule";
 import { storeModule } from "./store";
@@ -73,8 +73,9 @@ export const projectSeedSource: SeedSource = {
     projectFields,
     // 全域選項的初始顏色(目前只有崗位;規格 18.5)
     projectFieldOptionColors,
-    // 排班作業的受管表單:支援需求單(規格 14.10;流程不 seed,由開通腳本依租戶角色建)
-    supportRequestForm,
+    // 排班作業的受管表單:支援需求單(規格 14.10;流程不 seed,由開通腳本依租戶角色建)。
+    // 結束欄的 custom 公式是 `and` 兩種形狀的聯集,型別收窄理由同下面的進貨單
+    supportRequestForm as SeedSet,
     // 出勤紀錄的受管表單:補打卡申請(規格 14.8;流程不 seed,由開通腳本依租戶角色建)
     makeupPunchForm,
     // 叫貨、採購單的受管表單:叫貨單(規格 8.1;流程不 seed,由開通腳本依租戶角色建)

@@ -21,11 +21,7 @@ import {
 import { PublishedEntries } from "../my/published-entries";
 import type { EntryRecord } from "../roster/roster-people";
 import { ScheduleRulesService } from "../rules/schedule-rules.service";
-import {
-  dateKeyOf,
-  dayKeyRange,
-  instantRangeFilter,
-} from "../shared/schedule-dates";
+import { dayRangeOf, instantRangeFilter } from "../shared/schedule-dates";
 import {
   forbiddenError,
   notFoundError,
@@ -50,8 +46,8 @@ export interface ScheduleEntryForShift {
   id: string;
   orgId: string;
   userId: string;
-  /** 那天(租戶時區的日期鍵 `YYYY-MM-DD`;排班存的是那天 00:00 的時點) */
-  date: string;
+  /** 那天(上班時點在租戶時區那天的 00:00) */
+  date: Date;
   startAt: Date;
   endAt: Date;
   breakMinutes: number;
@@ -135,10 +131,10 @@ export class ScheduleEntryLookup {
     return item ?? null;
   }
 
-  /** 這個人某天(`YYYY-MM-DD`)在這家店的排班(開班可以手動改選;補打卡的「對應排班」下拉)。 */
+  /** 這個人 `at` 那天(租戶時區)在這家店的排班(開班可以手動改選)。 */
   async listEntriesOfDay(
     operator: OperatorContext,
-    input: EntryScope & { date: string },
+    input: EntryScope & { at: Date },
   ): Promise<ScheduleEntryForShift[]> {
     const scope = this.scopeOf(operator, input);
     const timezone = await tenantTimezoneOf(
@@ -147,7 +143,29 @@ export class ScheduleEntryLookup {
       scope.tenantId,
     );
     const entries = await this.publishedOf(operator, scope, {
-      date: instantRangeFilter(dayKeyRange(input.date, input.date, timezone)),
+      date: instantRangeFilter(dayRangeOf(input.at, timezone)),
+    });
+    return this.withDetails(operator, scope.tenantId, entries);
+  }
+
+  /**
+   * 這個人 `at` 那天(租戶時區)在這家店**有上班時間**的排班:那天的班,加上前一天跨午夜做到這天的班
+   * (`startAt < 隔天 00:00` 且 `endAt > 那天 00:00`;補打卡的「對應排班」下拉)。
+   */
+  async listEntriesOverlappingDay(
+    operator: OperatorContext,
+    input: EntryScope & { at: Date },
+  ): Promise<ScheduleEntryForShift[]> {
+    const scope = this.scopeOf(operator, input);
+    const timezone = await tenantTimezoneOf(
+      this.orgs,
+      operator,
+      scope.tenantId,
+    );
+    const day = dayRangeOf(input.at, timezone);
+    const entries = await this.publishedOf(operator, scope, {
+      startAt: { $lt: new Date(day.to) },
+      endAt: { $gt: new Date(day.from) },
     });
     return this.withDetails(operator, scope.tenantId, entries);
   }
@@ -350,17 +368,13 @@ export class ScheduleEntryLookup {
     entries: readonly EntryRecord[],
   ): Promise<ScheduleEntryForShift[]> {
     const details = await this.published.detailsOf(operator, tenantId, entries);
-    const timezone =
-      entries.length === 0
-        ? null
-        : await tenantTimezoneOf(this.orgs, operator, tenantId);
     return entries.map((entry) => {
       const detail = details.get(String(entry._id));
       return {
         id: String(entry._id),
         orgId: String(entry.orgId),
         userId: String(entry.userId),
-        date: timezone === null ? "" : dateKeyOf(entry.date, timezone),
+        date: entry.date,
         startAt: entry.startAt,
         endAt: entry.endAt,
         breakMinutes: entry.breakMinutes,

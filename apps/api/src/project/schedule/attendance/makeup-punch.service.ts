@@ -1,18 +1,10 @@
 import { Injectable } from "@nestjs/common";
 import { type ClientSession, Types } from "mongoose";
 
-import {
-  addLocalCalendar,
-  instantOfLocalTime,
-  localDateOf,
-  localDateText,
-  parseLocalDate,
-} from "@repo/domain/form";
 import { requiresReasonNote } from "@repo/domain/project/reason-note";
 import {
   MAKEUP_PUNCH_FORM_KEY,
   MAKEUP_PUNCH_MODULE_KEY,
-  type MakeupPunchValues,
   makeupPunchValuesOf,
 } from "@repo/domain/project/schedule-settings";
 
@@ -34,7 +26,7 @@ import {
 } from "../integration/entry-lookup";
 import { PublishedEntries } from "../my/published-entries";
 import type { EntryRecord } from "../roster/roster-people";
-import { dateKeyOf } from "../shared/schedule-dates";
+import { dayRangeOf } from "../shared/schedule-dates";
 import { notFoundError, validationError } from "../shared/schedule-error";
 import { resolveScheduleOrg } from "../shared/schedule-org";
 import { SchedulePunchLedger } from "./punch-ledger";
@@ -46,11 +38,11 @@ import { SchedulePunchLedger } from "./punch-ledger";
 export const MAKEUP_PUNCH_REASONS = {
   /** 沒選對應排班(「請選擇對應排班」) */
   entryRequired: "MAKEUP_PUNCH_ENTRY_REQUIRED",
-  /** 對應排班不是本人那天在那家店的已發布排班 */
+  /** 對應排班不是本人在那家店、補打卡那天有上班時間的已發布排班 */
   entryMismatch: "MAKEUP_PUNCH_ENTRY_MISMATCH",
   /** 審核中,選的那筆排班已被刪除(只能退回讓本人重選) */
   entryDeleted: "MAKEUP_PUNCH_ENTRY_DELETED",
-  /** 日期 / 分店 / 類型 / 時間缺或格式不對 */
+  /** 補打卡時間 / 分店 / 類型缺或格式不對 */
   invalidValues: "MAKEUP_PUNCH_INVALID_VALUES",
   /** 原因選「其他」沒填說明 */
   noteRequired: "MAKEUP_PUNCH_NOTE_REQUIRED",
@@ -70,10 +62,11 @@ const toObjectId = (id: string | null | undefined): Types.ObjectId | null =>
  * 補打卡申請(規格 14.8;表單 `makeup_punch` 綁在 `schedule.attendance`;正本
  * `docs/modules/project/schedule.md`「出勤紀錄與補打卡」):
  *
- * - 「對應排班」**必選**:本人那天在那家店的已發布排班,或「沒有排班(臨時代班)」
+ * - 「對應排班」**必選**:本人在那家店、補打卡那天(租戶時區)有上班時間的已發布排班(那天的班,與前一天
+ *   跨午夜做到這天的班),或「沒有排班(臨時代班)」
  * - 送出時檢查(`beforeSubmit`);審核中那筆排班被刪除 → 不能核准(`beforeApprove`),只改時間照常核准
  * - 完成(`completed`)寫一張打卡:source = 補打卡、`entryId` = 申請時選的那一筆(不自動找;選「沒有排班」=
- *   未對應排班),時間 = 那天的那個時間(下班卡早於排班上班時間 = 跨午夜的班,算隔天)
+ *   未對應排班),時間 = 表單的「補打卡時間」(日期時間欄,存的就是時點)
  *
  * 讀寫以租戶為邊界(支援別家店的班、系統身分只看得到單據的組織)。
  */
@@ -91,23 +84,26 @@ export class MakeupPunchService {
     private readonly readAccess: SubmissionReadAccess,
   ) {}
 
-  /** 新增頁的「對應排班」下拉:本人那天在那家店的已發布排班(最後一個選項「沒有排班」由畫面加)。 */
+  /**
+   * 新增頁的「對應排班」下拉:本人在那家店、`at` 那天有上班時間的已發布排班(含前一天跨午夜的班;
+   * 最後一個選項「沒有排班」由畫面加)。
+   */
   async entryOptions(
     operator: OperatorContext,
-    input: { date: string; orgId: string },
+    input: { at: Date; orgId: string },
   ): Promise<ScheduleEntryForShift[]> {
-    if (parseLocalDate(input.date) === null) {
-      throw validationError("date must be YYYY-MM-DD", ["date"]);
+    if (!Number.isFinite(input.at.getTime())) {
+      throw validationError("at must be an instant", ["at"]);
     }
     if (operator.actorId === null) {
       throw notFoundError("no actor");
     }
     const org = await resolveScheduleOrg(operator, this.orgs, input.orgId);
-    return this.lookup.listEntriesOfDay(operator, {
+    return this.lookup.listEntriesOverlappingDay(operator, {
       tenantId: org.tenantId,
       userId: operator.actorId,
       orgId: org.id,
-      date: input.date,
+      at: input.at,
     });
   }
 
@@ -150,9 +146,8 @@ export class MakeupPunchService {
     if (
       tenantId === null ||
       branchId === null ||
-      parsed.dateInstant === null ||
-      parsed.punchType === null ||
-      parsed.time === null
+      parsed.punchAt === null ||
+      parsed.punchType === null
     ) {
       return block(MAKEUP_PUNCH_REASONS.invalidValues, "invalid values");
     }
@@ -165,14 +160,11 @@ export class MakeupPunchService {
     const reader = await tenantBoundaryContext(this.orgs, operator, tenantId);
     const timezone = await tenantTimezoneOf(this.orgs, operator, tenantId);
     const entry = await this.publishedEntry(reader, tenantId, parsed.entryId);
-    const date = localDateText(
-      localDateOf(parsed.dateInstant.getTime(), timezone),
-    );
     return entry !== null &&
       operator.actorId !== null &&
       entry.userId.equals(operator.actorId) &&
       entry.orgId.equals(branchId) &&
-      dateKeyOf(entry.date, timezone) === date
+      entryOverlapsDayOf(entry, parsed.punchAt, timezone)
       ? null
       : block(
           MAKEUP_PUNCH_REASONS.entryMismatch,
@@ -265,9 +257,8 @@ export class MakeupPunchService {
     const branchId = toObjectId(parsed.branchId);
     if (
       branchId === null ||
-      parsed.dateInstant === null ||
+      parsed.punchAt === null ||
       parsed.punchType === null ||
-      parsed.time === null ||
       parsed.entryId === undefined
     ) {
       throw new Error(`補打卡申請 ${String(submissionId)} 的欄位不完整`);
@@ -284,14 +275,12 @@ export class MakeupPunchService {
       // 核准前已擋(beforeApprove);走到這裡 = 同時被刪
       throw new Error(`補打卡申請 ${String(submissionId)} 的對應排班已被刪除`);
     }
-    const timezone = await tenantTimezoneOf(this.orgs, writer, tenantId);
-    const at = punchInstantOf(parsed, timezone, entry);
     await this.punches.create(
       writer,
       {
         orgId: entry?.orgId ?? branchId,
         userId: submission.createdBy,
-        at,
+        at: parsed.punchAt,
         type: parsed.punchType,
         entryId: entry?._id ?? null,
         ip: null,
@@ -328,25 +317,14 @@ export class MakeupPunchService {
 }
 
 /**
- * 補打卡的時點:那天(租戶時區)的那個時間;下班卡早於對應排班的上班時點 = 跨午夜的班,算隔天。
+ * 這筆排班在 `at` 那天(租戶時區)有沒有上班時間:`startAt < 隔天 00:00` 且 `endAt > 那天 00:00`
+ * (那天的班,與前一天跨午夜做到這天的班;「對應排班」下拉與送出檢查同一條)。
  */
-export function punchInstantOf(
-  values: Pick<MakeupPunchValues, "dateInstant" | "time" | "punchType">,
+export function entryOverlapsDayOf(
+  entry: { startAt: Date; endAt: Date },
+  at: Date,
   timezone: string,
-  entry: { startAt: Date } | null,
-): Date {
-  if (values.dateInstant === null || values.time === null) {
-    throw new Error("補打卡缺日期或時間");
-  }
-  const day = localDateOf(values.dateInstant.getTime(), timezone);
-  const [hour = 0, minute = 0] = values.time.split(":").map(Number);
-  const at = instantOfLocalTime(day, hour, minute, timezone);
-  if (
-    entry !== null &&
-    values.punchType === "out" &&
-    at < entry.startAt.getTime()
-  ) {
-    return new Date(addLocalCalendar(at, 1, "days", timezone));
-  }
-  return new Date(at);
+): boolean {
+  const day = dayRangeOf(at, timezone);
+  return entry.startAt.getTime() < day.to && entry.endAt.getTime() > day.from;
 }

@@ -3869,7 +3869,7 @@ export type LotteryVaultExpected = {
 };
 
 export type MakeupPunchEntryOptionsInput = {
-  date: Scalars['String']['input'];
+  at: Scalars['DateTime']['input'];
   orgId: Scalars['ID']['input'];
 };
 
@@ -7267,8 +7267,9 @@ export type ScheduleAttendanceAbilities = {
 };
 
 export type ScheduleAttendanceByPersonInput = {
-  month: Scalars['String']['input'];
+  from: Scalars['DateTime']['input'];
   orgId?: InputMaybe<Scalars['ID']['input']>;
+  to: Scalars['DateTime']['input'];
   userId?: InputMaybe<Scalars['ID']['input']>;
 };
 
@@ -7284,7 +7285,7 @@ export type ScheduleAttendanceByPersonPayload = {
 };
 
 export type ScheduleAttendanceByStoreInput = {
-  date: Scalars['String']['input'];
+  date: Scalars['DateTime']['input'];
   orgId?: InputMaybe<Scalars['ID']['input']>;
   unmatchedOnly?: InputMaybe<Scalars['Boolean']['input']>;
 };
@@ -7294,7 +7295,7 @@ export type ScheduleAttendanceByStorePayload = {
   abilities: ScheduleAttendanceAbilities;
   absentCount: Scalars['Int']['output'];
   arrivedCount: Scalars['Int']['output'];
-  date: Scalars['String']['output'];
+  date: Scalars['DateTime']['output'];
   orgId: Scalars['ID']['output'];
   orgName: Scalars['String']['output'];
   rows: Array<ScheduleAttendanceRow>;
@@ -7304,7 +7305,7 @@ export type ScheduleAttendanceByStorePayload = {
 
 export type ScheduleAttendanceEntryOption = {
   __typename?: 'ScheduleAttendanceEntryOption';
-  date: Scalars['String']['output'];
+  date: Scalars['DateTime']['output'];
   endAt: Scalars['DateTime']['output'];
   id: Scalars['ID']['output'];
   orgId: Scalars['ID']['output'];
@@ -7314,8 +7315,9 @@ export type ScheduleAttendanceEntryOption = {
 };
 
 export type ScheduleAttendanceExportInput = {
-  month: Scalars['String']['input'];
+  from: Scalars['DateTime']['input'];
   orgId?: InputMaybe<Scalars['ID']['input']>;
+  to: Scalars['DateTime']['input'];
   userId?: InputMaybe<Scalars['ID']['input']>;
 };
 
@@ -7357,7 +7359,7 @@ export type ScheduleAttendanceRow = {
   breakMinutes: Scalars['Int']['output'];
   clockIn?: Maybe<Scalars['DateTime']['output']>;
   clockOut?: Maybe<Scalars['DateTime']['output']>;
-  date: Scalars['String']['output'];
+  date: Scalars['DateTime']['output'];
   earlyLeaveMinutes: Scalars['Int']['output'];
   endAt: Scalars['DateTime']['output'];
   entryId: Scalars['ID']['output'];

@@ -1,4 +1,4 @@
-import { Field, ID, InputType } from "@nestjs/graphql";
+import { Field, GraphQLISODateTime, ID, InputType } from "@nestjs/graphql";
 
 @InputType()
 export class ScheduleAttendanceByPersonInput {
@@ -10,9 +10,12 @@ export class ScheduleAttendanceByPersonInput {
   @Field(() => ID, { nullable: true })
   userId?: string | null;
 
-  /** `YYYY-MM` */
-  @Field(() => String)
-  month!: string;
+  /** 那個月的時點區間 `[月初 00:00, 下月初 00:00)`(租戶時區);不是整個月 → `VALIDATION_FAILED`(`from`、`to`) */
+  @Field(() => GraphQLISODateTime)
+  from!: Date;
+
+  @Field(() => GraphQLISODateTime)
+  to!: Date;
 }
 
 @InputType()
@@ -21,9 +24,9 @@ export class ScheduleAttendanceByStoreInput {
   @Field(() => ID, { nullable: true })
   orgId?: string | null;
 
-  /** `YYYY-MM-DD` */
-  @Field(() => String)
-  date!: string;
+  /** 那天(時點;租戶時區那天的 00:00,送當天其他時刻也歸到同一天) */
+  @Field(() => GraphQLISODateTime)
+  date!: Date;
 
   /** 只看未對應排班的打卡 */
   @Field(() => Boolean, { nullable: true })
@@ -32,9 +35,12 @@ export class ScheduleAttendanceByStoreInput {
 
 @InputType()
 export class ScheduleAttendanceExportInput {
-  /** `YYYY-MM` */
-  @Field(() => String)
-  month!: string;
+  /** 那個月的時點區間 `[月初 00:00, 下月初 00:00)`(租戶時區);不是整個月 → `VALIDATION_FAILED`(`from`、`to`) */
+  @Field(() => GraphQLISODateTime)
+  from!: Date;
+
+  @Field(() => GraphQLISODateTime)
+  to!: Date;
 
   /** 分店(含看得到的下層分店,一家一個工作表);沒給 = 當前組織 */
   @Field(() => ID, { nullable: true })
@@ -65,9 +71,9 @@ export class ReassignSchedulePunchInput {
 
 @InputType()
 export class MakeupPunchEntryOptionsInput {
-  /** `YYYY-MM-DD` */
-  @Field(() => String)
-  date!: string;
+  /** 補打卡的時點(列出本人那天在那家店的排班,含前一天跨午夜到這天的班) */
+  @Field(() => GraphQLISODateTime)
+  at!: Date;
 
   @Field(() => ID)
   orgId!: string;

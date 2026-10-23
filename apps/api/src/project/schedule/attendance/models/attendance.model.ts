@@ -63,9 +63,9 @@ export class ScheduleAttendanceRowModel {
   @Field(() => String)
   orgName!: string;
 
-  /** `YYYY-MM-DD` */
-  @Field(() => String)
-  date!: string;
+  /** 那天(上班時點在租戶時區那天的 00:00;跨午夜算開始那天) */
+  @Field(() => GraphQLISODateTime)
+  date!: Date;
 
   @Field(() => GraphQLISODateTime)
   startAt!: Date;
@@ -195,9 +195,9 @@ export class ScheduleAttendanceByStorePayload {
   @Field(() => String)
   orgName!: string;
 
-  /** `YYYY-MM-DD` */
-  @Field(() => String)
-  date!: string;
+  /** 那天(租戶時區 00:00 的時點) */
+  @Field(() => GraphQLISODateTime)
+  date!: Date;
 
   /** 當天排班的人(只看未對應排班的打卡時是空的) */
   @Field(() => [ScheduleAttendanceRowModel])
@@ -257,9 +257,9 @@ export class ScheduleAttendanceEntryOptionModel {
   @Field(() => String)
   orgName!: string;
 
-  /** `YYYY-MM-DD` */
-  @Field(() => String)
-  date!: string;
+  /** 那天(上班時點在租戶時區那天的 00:00;跨午夜算開始那天) */
+  @Field(() => GraphQLISODateTime)
+  date!: Date;
 
   @Field(() => GraphQLISODateTime)
   startAt!: Date;
