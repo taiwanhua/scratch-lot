@@ -2,6 +2,7 @@ import { describe, expect, it } from "@jest/globals";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { HttpResponse } from "msw";
 
+import { graphqlError } from "@/test/msw/auth-handlers";
 import { api, server } from "@/test/msw/server";
 
 import { renderSchedulePage } from "../schedule-test-support";
@@ -186,6 +187,37 @@ describe("排班作業:畫休總覽與代改", () => {
         expect.objectContaining({ id: "d-li-24", reason: "staff-late-notice" }),
       ]);
     });
+  });
+
+  it("畫面判斷開放中、api 回原因必填:確認框打開原因欄並標在欄位下,不關閉", async () => {
+    const { user } = renderSchedulePage({ path: OVERVIEW });
+    // renderSchedulePage 會裝預設的假 api,覆寫要在它之後
+    server.use(
+      api.mutation("DeleteScheduleDayOffOnBehalf", () =>
+        graphqlError("VALIDATION_FAILED", "VALIDATION_FAILED", {
+          fields: ["reason"],
+        }),
+      ),
+    );
+    await user.click(
+      await screen.findByRole("gridcell", { name: "2026-12-24" }),
+    );
+    const day = await screen.findByRole("dialog", { name: "12/24(四)" });
+    await user.click(within(day).getByRole("button", { name: "刪除 李小華" }));
+    const confirm = await screen.findByRole("dialog", { name: "刪除畫休" });
+    expect(
+      within(confirm).queryByRole("combobox", { name: /原因/ }),
+    ).not.toBeInTheDocument();
+    await user.click(within(confirm).getByRole("button", { name: "刪除" }));
+    expect(
+      await within(confirm).findByText("必填,請選擇原因"),
+    ).toBeInTheDocument();
+    expect(
+      within(confirm).getByRole("combobox", { name: /原因/ }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("dialog", { name: "刪除畫休" }),
+    ).toBeInTheDocument();
   });
 
   it("當天畫休的 [代改]:打開代改(只有新增),帶入那天", async () => {
