@@ -70,6 +70,13 @@
 
 - **值依型別存**:選項 `{ value, label }`、引用 `{ id, label }`、上傳 `{ path, name, size, contentType }`、數字十進位字串、日期與日期時間存 Mongo `Date`;表達式看到的是語意值(選項的 value、引用的 id、日期的 ISO 字串)。
 - **日期與日期時間都是時點**:`date` 是時間固定在租戶時區當地 00:00 的時點,和 `datetime` 只差在顯示精度。輸入以租戶時區的當地日期(時間)換成時點;顯示一律換成**讀者現在的租戶時區**(填寫中與唯讀歷史都一樣;修訂的 `ctx.timezone` 只用於重算條件),`date` 印 `YYYY-MM-DD`、`datetime` 印 `YYYY-MM-DD HH:mm`,前後端共用 `formatTemporal`(另有省略年份的 `monthDay` `M/D` / `monthDayTime` `M/D HH:mm`(月日不補零),給同年份內的密集畫面)。日期與日期時間互比、`dateDiff` 的天數、`dateAdd` 的日曆加減、「今天」的邊界都換成租戶時區的當地日期再算。同一個時點在不同時區可能落在不同日期,這是預期行為;租戶改時區時,跨過午夜的既有日期會位移一天。正本:`packages/domain/src/form/temporal.ts`
+- **日期工具**(`@repo/domain/form`,前後端共用;日期加減、月份、期間不在 app 裡另寫一份):
+  - 時點與當地日期:`toInstant`、`toIso`、`localDateOf`、`startOfLocalDay` / `startOfLocalDayOf`、`instantOfLocalTime`(時、分)、`instantOfLocalHhMm`(`HH:mm`)、`compareLocalDay`、`sameLocalDay`、`localDayDiff`、`addLocalCalendar`、`formatTemporal`
+  - 日期鍵與月份鍵:`parseLocalDate` / `localDateText`(`YYYY-MM-DD` ↔ `LocalDate`)、`parseLocalMonth` / `localMonthText`(`YYYY-MM` ↔ `LocalMonth`);格式檢查用 parse 的結果是否為 null
+  - 純日曆(不看時區):`addLocalDays`、`localDateDiff`、`weekdayOfLocalDate`(0 = 星期日)、`addLocalMonths`、`daysInLocalMonth`、`datesOfLocalMonth`
+  - 期間 → 時點區間(半開 `[from, to)`,查詢寫 `$gte` / `$lt`):`localDayRange`(日期含頭尾 → `[起日 00:00, 迄日隔天 00:00)`)、`localMonthRange`(`[月初 00:00, 下月初 00:00)`)
+  - `HH:mm`:`isHhMm`、`minutesOfHhMm`
+  - 夏令時間:不存在的時刻往後推到切換後,重複的時刻取較早的一個;一天的起點一律用 `startOfLocalDay`(午夜切換的時區也對)
 - **明細列**(`array`)= 一個欄位裝多列同結構的子欄位(採購品項、出差行程),存 `[{ rowId, <子欄 key>: 值 }]`,每列有穩定的 `rowId`;子欄可用列內公式(`row.<子欄 key>`),表單層以彙總(`sumOf` / `countOf` / `minOf` / `maxOf` / `avgOf`)讀它;子欄可以是**引用**(存 `{ id, label }`,同表單層引用欄:送出時每一列重驗來源並重取 label,同一子欄的 id 合併成一次查詢;表格格子是自動完成、手機寬是卡片;現名以 `<明細 key>.<子欄 key>` 回;修訂差異比 id);權限、顯示條件與「不能填的原因」都套在整個明細欄上,有列數與子欄數的硬上限。細節見 `docs/modules/forms.md`「明細列」。
 - **被顯示條件隱藏的欄位當 null 算**(明細整欄 null、彙總視為空明細):下游公式讀到被隱藏的計算欄位也是 null;前端即時預覽與後端送出同一套語意(`packages/domain/src/form/visibility.ts` 的 `settleHidden`),預覽算出的值 = 存下的值。被隱藏的欄位每次寫入都清空(含存草稿)。
 - **預設值**(只有使用者填的欄位;固定值或公式):建草稿時後端算一次、只填沒碰過的空欄;填寫時沒碰過的欄位依賴變了跟著重算,碰過(`touched[]`)就停。預設值計算不看顯示條件,前後端一致。

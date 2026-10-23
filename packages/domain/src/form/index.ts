@@ -16,7 +16,7 @@
  * - `list-settings.ts`:列表欄位配置(`modules.settings.list`)的內建欄開關
  * - `shared-by-fields.ts`:表單設定「依欄位共用」的欄位檢查與從存值取組織 id
  * - `serial.ts`:單號格式(前綴 / 期間 / 位數 / 分隔符)的檢查、期間鍵與組字
- * - `temporal.ts`:日期 / 日期時間的單一入口(時點 `toInstant`、租戶時區的當地日期、日曆加減、`formatTemporal`)
+ * - `temporal.ts`:日期 / 日期時間的單一入口(時點 `toInstant`、租戶時區的當地日期、日曆加減、月份、期間的時點區間、`HH:mm`、`formatTemporal`)
  * - `defaults.ts`:欄位預設值的計算(api 建草稿填空欄、admin 沒碰過的欄位跟著重算)
  * - `upload.ts`:上傳欄的檔型 / 大小上限(平台上限 + 欄位收窄)
  * - `upgrade.ts`:提交的值從一版搬到另一版(舊版資料升級、複製為新單共用)與升級的補值欄位
