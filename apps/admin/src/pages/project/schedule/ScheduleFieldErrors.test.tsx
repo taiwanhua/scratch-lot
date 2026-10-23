@@ -125,17 +125,17 @@ describe("排班:欄位下寫原因", () => {
     expect(within(dialog).getByText("必填,請選擇原因")).toBeInTheDocument();
   });
 
-  it("補打卡新增頁:沒填時間、沒選原因 → 各欄下寫格式要求", async () => {
+  it("補打卡新增頁:沒選補打卡時間、沒選原因 → 各欄下寫格式要求", async () => {
     const user = fastUser();
     renderSchedulePage({
-      path: "/schedule/attendance/create-page/makeup_punch?date=2026-11-03&org=org-store&type=out&entry=e-wang-2026-11-03",
+      path: "/schedule/attendance/create-page/makeup_punch?org=org-store&type=out",
       forms: makeupPunchFormWorld(),
     });
     await screen.findByRole("combobox", { name: /對應排班/ });
     await user.click(await screen.findByRole("button", { name: /^送出/ }));
-    expect(screen.getByLabelText(/時間/)).toHaveAccessibleDescription(
-      "必填,請填時間(時:分)",
-    );
+    expect(
+      screen.getByRole("group", { name: /補打卡時間/ }),
+    ).toHaveAccessibleDescription("必填,請選擇日期與時間");
     expect(screen.getByText("必填,請選擇原因")).toBeInTheDocument();
   });
 });

@@ -20,7 +20,7 @@ import { MAKEUP_PUNCH_MODULE_KEY } from "../attendance-keys";
 import { useAttendanceText } from "../useAttendanceText";
 
 /**
- * 補打卡申請的檢視 / 審核頁(SC-30;規格 14.8;替換表單引擎的檢視頁):申請人、日期、分店、類型、時間、
+ * 補打卡申請的檢視 / 審核頁(SC-30;規格 14.8;替換表單引擎的檢視頁):申請人、補打卡時間、分店、類型、
  * 原因、當天排班(對應排班)+ 審核區塊。審核中選的那筆排班被刪除時的警告與停用 [核准] 由模組登記的
  * 審核畫面擴充 `MakeupPunchReview` 畫(申請中心同一份)。
  */
@@ -38,8 +38,7 @@ export const MakeupPunchViewPage = ({ routeParam }: ModulePageProps) => {
   useRouteTabItemLabel(serialNo ?? t("title"));
 
   const values = submission === null ? null : submission.values;
-  const state =
-    values === null ? null : makeupPunchStateOf(values, text.timezone);
+  const state = values === null ? null : makeupPunchStateOf(values);
   const branch = values?.branch;
   const branchName =
     typeof branch === "object" &&
@@ -55,7 +54,12 @@ export const MakeupPunchViewPage = ({ routeParam }: ModulePageProps) => {
       ? []
       : [
           [t("applicant"), submission?.createdBy?.name ?? ""],
-          [t("date"), state.date === "" ? "" : text.dateTitle(state.date)],
+          [
+            t("punchAt"),
+            state.punchAt === ""
+              ? ""
+              : `${text.dateTitle(state.punchAt)}${text.time(state.punchAt) ?? ""}`,
+          ],
           [t("branch"), branchName],
           [
             t("type"),
@@ -63,7 +67,6 @@ export const MakeupPunchViewPage = ({ routeParam }: ModulePageProps) => {
               ? tAttendance("types.in")
               : tAttendance("types.out"),
           ],
-          [t("time"), state.time],
           [t("reason"), state.reasonLabel],
           ...(state.note === ""
             ? []

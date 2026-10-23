@@ -41,6 +41,7 @@ interface RowInput {
   entryId: string;
   userId: string;
   userName: string;
+  /** 日期鍵 `YYYY-MM-DD`(台北) */
   date: string;
   shortName: string | null;
   start: string;
@@ -71,7 +72,8 @@ export const attendanceRow = (
     userName: input.userName,
     orgId: ATTENDANCE_ORG.id,
     orgName: ATTENDANCE_ORG.name,
-    date: input.date,
+    // api 的日期是那天台北 00:00 的時點
+    date: at(input.date, "00:00"),
     startAt,
     endAt,
     breakMinutes,

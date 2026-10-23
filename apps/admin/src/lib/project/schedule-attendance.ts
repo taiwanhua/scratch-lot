@@ -1,3 +1,5 @@
+import { formatTemporal } from "@repo/domain/form";
+
 import type { SheetColumn, SheetData } from "./reports/excel";
 import { localPartsOf } from "./schedule-roster";
 
@@ -16,6 +18,7 @@ export const hoursOf = (minutes: number | null | undefined): string | null =>
 
 /** 一筆出勤列(Excel 用到的欄位;api 的 `ScheduleAttendanceRow`)。 */
 export interface AttendanceSheetRow {
+  /** 那天(租戶時區 00:00 的時點) */
   date: string;
   userName: string;
   orgName: string;
@@ -118,7 +121,7 @@ export const attendanceSheetsOf = (
                 MS_PER_MINUTE,
             );
       return {
-        date: row.date,
+        date: formatTemporal(row.date, { type: "date", timezone }),
         person: row.userName,
         entry: `${row.shortName ?? text.temporary} ${timeOf(row.startAt, timezone) ?? ""}–${timeOf(row.endAt, timezone) ?? ""}`,
         clockIn: timeOf(clockIn, timezone),

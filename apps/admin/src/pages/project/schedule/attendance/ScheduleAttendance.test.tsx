@@ -1,5 +1,5 @@
 import { describe, expect, it } from "@jest/globals";
-import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 
 import {
   MAKEUP_ENTRY_DELETED_ID,
@@ -29,12 +29,16 @@ const BY_PERSON = "/schedule/attendance?tab=person&month=2026-11";
  */
 describe("出勤紀錄", () => {
   it("依分店(日):排班人數 / 已到 / 未到、狀態標籤(遲到 11 分、未到)、未對應排班另列", async () => {
-    renderSchedulePage({ path: BY_STORE });
+    const { attendanceFake } = renderSchedulePage({ path: BY_STORE });
     expect(
       await screen.findByText(
         "排班 4 人 · 已到 3 · 未到 1 · 未對應排班的打卡 2 張",
       ),
     ).toBeInTheDocument();
+    // 送那天台北 00:00 的時點
+    expect(attendanceFake.inputs.byStore[0]?.date).toBe(
+      "2026-11-03T16:00:00.000Z",
+    );
     expect(screen.getByText("遲到 11 分")).toBeInTheDocument();
     expect(screen.getByText("未到")).toBeInTheDocument();
     expect(
@@ -75,6 +79,21 @@ describe("出勤紀錄", () => {
     });
   });
 
+  it("匯出 Excel:送那天所在月份在台北的 [月初 00:00, 下月初 00:00)", async () => {
+    const user = fastUser();
+    const { attendanceFake } = renderSchedulePage({ path: BY_STORE });
+    await user.click(await findButton("匯出 Excel"));
+    await waitFor(() => {
+      expect(attendanceFake.inputs.exports).toEqual([
+        {
+          from: "2026-10-31T16:00:00.000Z",
+          to: "2026-11-30T16:00:00.000Z",
+          orgId: "org-store",
+        },
+      ]);
+    });
+  });
+
   it("沒有 reassign-punches / export:看不到 [改對應排班] [匯出 Excel]", async () => {
     renderSchedulePage({
       path: BY_STORE,
@@ -106,34 +125,42 @@ describe("出勤紀錄", () => {
     );
   });
 
-  it("補打卡新增頁:帶入對應排班;改了日期就清空;沒選對應排班 → 「請選擇對應排班」", async () => {
+  it("補打卡新增頁:帶入補打卡時間與對應排班;改了日期就清空(同一天改時刻不清);沒選對應排班 → 「請選擇對應排班」", async () => {
     const user = fastUser();
-    const { formsFake } = renderSchedulePage({
-      path: "/schedule/attendance/create-page/makeup_punch?date=2026-11-03&org=org-store&type=out&entry=e-wang-2026-11-03",
+    const { formsFake, attendanceFake } = renderSchedulePage({
+      // 帶入台北 11/3 14:30 下班(那一班的排班下班時間)
+      path: "/schedule/attendance/create-page/makeup_punch?at=2026-11-03T06:30:00.000Z&org=org-store&type=out&entry=e-wang-2026-11-03",
       forms: makeupPunchFormWorld(),
     });
     const entry = await screen.findByRole("combobox", { name: /對應排班/ });
     await waitFor(() => {
       expect(entry).toHaveTextContent("早 08:30–14:30");
     });
-    // 改日期:對應排班清空
-    const date = screen.getByRole("group", { name: /日期/ });
-    fireEvent.click(
-      within(date.parentElement ?? document.body).getByRole("button", {
-        name: /choose date/i,
-      }),
+    const picker = screen.getByRole("group", { name: /補打卡時間/ });
+    expect(picker).toHaveTextContent("2026-11-03 14:30");
+    // 下拉以那天台北 00:00 查
+    expect(attendanceFake.inputs.makeupOptions.at(-1)).toEqual({
+      at: "2026-11-02T16:00:00.000Z",
+      orgId: "org-store",
+    });
+    // 同一天只改分鐘:對應排班不清
+    await user.click(
+      within(picker).getByRole("spinbutton", { name: "Minutes" }),
     );
-    fireEvent.click(await screen.findByRole("gridcell", { name: "5" }));
+    await user.keyboard("35");
+    expect(entry).toHaveTextContent("早 08:30–14:30");
+    // 改日期:對應排班清空
+    await user.click(within(picker).getByRole("spinbutton", { name: "Day" }));
+    await user.keyboard("05");
     await waitFor(() => {
       expect(entry).not.toHaveTextContent("早 08:30–14:30");
     });
-    await user.type(screen.getByLabelText(/時間/), "14:35");
     await user.click(screen.getByRole("combobox", { name: /原因/ }));
     await user.click(await findOption("忘記打卡"));
     await user.click(await findButton("送出"));
     expect(await screen.findByText("請選擇對應排班")).toBeInTheDocument();
     expect(formsFake.inputs.createAndSubmitFormSubmission).toEqual([]);
-    // 選了對應排班 → 送出整張表單的值(對應排班 + 顯示文字)
+    // 選了對應排班 → 送出整張表單的值(補打卡時間是時點、對應排班 + 顯示文字)
     await user.click(entry);
     await user.click(await findOption("晚 17:00–22:00"));
     await user.click(await findButton("送出"));
@@ -143,12 +170,11 @@ describe("出勤紀錄", () => {
     expect(
       formsFake.inputs.createAndSubmitFormSubmission[0]?.values,
     ).toMatchObject({
-      date: "2026-11-04T16:00:00.000Z",
+      punch_at: "2026-11-05T06:35:00Z",
       branch: "org-store",
       entry: "e-wang-late-2026-11-05",
       entry_label: "晚 17:00–22:00",
       punch_type: "out",
-      time: "14:35",
       reason: { value: "forgot-punch", label: "忘記打卡" },
     });
   });
@@ -156,12 +182,11 @@ describe("出勤紀錄", () => {
   it("補打卡新增頁:選「沒有排班(臨時代班)」→ 對應排班存 none、顯示文字照規格用詞", async () => {
     const user = fastUser();
     const { formsFake } = renderSchedulePage({
-      path: "/schedule/attendance/create-page/makeup_punch?date=2026-11-03&org=org-store&type=in",
+      path: "/schedule/attendance/create-page/makeup_punch?at=2026-11-03T01:02:00.000Z&org=org-store&type=in",
       forms: makeupPunchFormWorld(),
     });
     await user.click(await screen.findByRole("combobox", { name: /對應排班/ }));
     await user.click(await findOption("沒有排班(臨時代班)"));
-    await user.type(screen.getByLabelText(/時間/), "09:02");
     await user.click(screen.getByRole("combobox", { name: /原因/ }));
     await user.click(await findOption("忘記打卡"));
     await user.click(await findButton("送出"));
@@ -170,7 +195,11 @@ describe("出勤紀錄", () => {
     });
     expect(
       formsFake.inputs.createAndSubmitFormSubmission[0]?.values,
-    ).toMatchObject({ entry: "none", entry_label: "沒有排班(臨時代班)" });
+    ).toMatchObject({
+      punch_at: "2026-11-03T01:02:00.000Z",
+      entry: "none",
+      entry_label: "沒有排班(臨時代班)",
+    });
   });
 
   it("審核頁:選的排班已被刪除 → 警告、[核准] 停用;排班還在 → 可以核准", async () => {

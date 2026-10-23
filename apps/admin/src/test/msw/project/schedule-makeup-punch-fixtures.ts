@@ -28,16 +28,14 @@ import {
 
 /**
  * 出勤紀錄 → 補打卡申請(規格 14.8)的夾具:定義與受管表單同形
- * (正本 `apps/db-migrator/seeds/project/revisions/makeup_punch.r3.seed.ts`);兩筆審核中
+ * (正本 `apps/db-migrator/seeds/project/revisions/makeup_punch.r4.seed.ts`);兩筆審核中
  * (一筆對應的排班還在、一筆已被刪除),各有派給登入者(小華,店長)的待審任務。
  */
 
-const TIME_PATTERN = "^([01][0-9]|2[0-3]):[0-5][0-9]$";
-
 export const makeupPunchDefinition = (): FormDefinition => ({
   fields: [
-    field("date", "日期", "date", {
-      widget: { kind: "datePicker" },
+    field("punch_at", "補打卡時間", "datetime", {
+      widget: { kind: "dateTimePicker" },
       rules: { required: true },
     }),
     field("branch", "分店", "reference", {
@@ -61,9 +59,6 @@ export const makeupPunchDefinition = (): FormDefinition => ({
       },
       rules: { required: true },
     }),
-    field("time", "時間", "text", {
-      rules: { required: true, pattern: TIME_PATTERN, patternMessage: "HH:mm" },
-    }),
     field("reason", "原因", "select", {
       widget: { kind: "dropdown" },
       options: { kind: "fieldCategory", key: "schedule-makeup-punch-reason" },
@@ -79,7 +74,7 @@ export const makeupPunchDefinition = (): FormDefinition => ({
         rows: [
           {
             cols: [
-              { fieldKey: "date", span: 6 },
+              { fieldKey: "punch_at", span: 6 },
               { fieldKey: "branch", span: 6 },
             ],
           },
@@ -92,20 +87,15 @@ export const makeupPunchDefinition = (): FormDefinition => ({
           {
             cols: [
               { fieldKey: "punch_type", span: 6 },
-              { fieldKey: "time", span: 6 },
-            ],
-          },
-          {
-            cols: [
               { fieldKey: "reason", span: 6 },
-              { fieldKey: "note", span: 6 },
             ],
           },
+          { cols: [{ fieldKey: "note", span: 12 }] },
         ],
       },
     ],
   },
-  summaryMap: { title: "entry_label", date: "date" },
+  summaryMap: { title: "entry_label", date: "punch_at" },
   prefills: [],
 });
 
@@ -126,7 +116,7 @@ export const MAKEUP_ENTRY_DELETED_ID = "sub-makeup-32";
 const makeup = (
   id: string,
   serialNo: string,
-  values: { date: string; entry: string; entryLabel: string; time: string },
+  values: { punchAt: string; entry: string; entryLabel: string },
 ): MockSubmission =>
   submissionFragment({
     id,
@@ -137,12 +127,11 @@ const makeup = (
     currentInstanceId: `inst-${id}`,
     serialNo,
     values: {
-      date: values.date,
+      punch_at: values.punchAt,
       branch: { id: ATTENDANCE_ORG.id, label: ATTENDANCE_ORG.name },
       entry: values.entry,
       entry_label: values.entryLabel,
       punch_type: "out",
-      time: values.time,
       reason: { value: "forgot-punch", label: "忘記打卡" },
       note: null,
     },
@@ -158,7 +147,7 @@ const makeup = (
         ],
       },
     ],
-    summary: { title: values.entryLabel, date: values.date, amount: null },
+    summary: { title: values.entryLabel, date: values.punchAt, amount: null },
     createdBy: APPLICANT,
     abilities: {
       canEdit: false,
@@ -173,16 +162,16 @@ const makeup = (
 
 export const makeupPunchSubmissions = (): MockSubmission[] => [
   makeup(MAKEUP_REVIEWING_ID, "M-0031", {
-    date: "2026-11-01T16:00:00.000Z",
+    // 台北 11/2 14:35
+    punchAt: "2026-11-02T06:35:00.000Z",
     entry: "e-wang-2026-11-02",
     entryLabel: "早 08:30–14:30",
-    time: "14:35",
   }),
   makeup(MAKEUP_ENTRY_DELETED_ID, "M-0032", {
-    date: "2026-11-03T16:00:00.000Z",
+    // 台北 11/4 14:31
+    punchAt: "2026-11-04T06:31:00.000Z",
     entry: "e-wang-deleted",
     entryLabel: "早 08:30–14:30",
-    time: "14:31",
   }),
 ];
 

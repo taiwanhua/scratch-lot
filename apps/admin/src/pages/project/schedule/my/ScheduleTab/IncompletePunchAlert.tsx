@@ -57,12 +57,7 @@ export const IncompletePunchAlert = ({
                   variant="text"
                   size="small"
                   onClick={() => {
-                    makeup.open({
-                      date: entry.date,
-                      orgId: entry.orgId,
-                      type: entry.missing.includes("in") ? "in" : "out",
-                      entryId: entry.id,
-                    });
+                    makeup.open(entry);
                   }}
                 >
                   {t("apply")}

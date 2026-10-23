@@ -19,11 +19,11 @@ export const ATTENDANCE_PERMISSIONS = {
 } as const;
 
 /**
- * 補打卡新增頁的帶入值放網址(REACT-14):`?date=YYYY-MM-DD&org=<分店>&type=in|out&entry=<排班 id>`
- * (我的班表的 [申請補卡]、出勤紀錄某一列的 [補打卡])。
+ * 補打卡新增頁的帶入值放網址(REACT-14):`?at=<ISO 時點>&org=<分店>&type=in|out&entry=<排班 id>`
+ * (我的班表的 [申請補卡]、出勤紀錄某一列的 [補打卡];`at` = 缺的那張卡的排班上班 / 下班時點)。
  */
 export const MAKEUP_PREFILL_KEYS = {
-  date: "date",
+  at: "at",
   org: "org",
   type: "type",
   entry: "entry",

@@ -9,7 +9,7 @@ import { Stack } from "@repo/ui/stack";
 import { Tag } from "@repo/ui/tag";
 import { Typography } from "@repo/ui/typography";
 
-import { type MakeupPunchLink, useMakeupPunchLink } from "./makeup-punch";
+import { useMakeupPunchLink } from "./makeup-punch";
 import { type MyEntry, useMyEntryText } from "./useMyEntryText";
 
 export interface DayDetailDialogProps {
@@ -20,18 +20,6 @@ export interface DayDetailDialogProps {
   isDayOff: boolean;
   onClose: () => void;
 }
-
-const firstMissing = (entry: MyEntry): "in" | "out" =>
-  entry.missing.includes("in") ? "in" : "out";
-
-const openMakeup = (link: MakeupPunchLink, entry: MyEntry) => {
-  link.open({
-    date: entry.date,
-    orgId: entry.orgId,
-    type: firstMissing(entry),
-    entryId: entry.id,
-  });
-};
 
 /** 一筆班的詳情:分店 · 簡稱 時間 · 崗位、職責與任務內容、打卡紀錄表、缺卡說明。 */
 const EntryDetail = ({ entry }: { entry: MyEntry }) => {
@@ -146,7 +134,7 @@ export const DayDetailDialog = ({
       <Button
         fullWidth={isMobile}
         onClick={() => {
-          openMakeup(makeup, missingEntry);
+          makeup.open(missingEntry);
         }}
       >
         {t("apply")}
