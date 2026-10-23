@@ -235,39 +235,44 @@ export const isLeaderBlocked = (
   rule.canLead === false &&
   !rule.keptKeys.has(assignmentKeyOf(demandId, task.taskId));
 
-/** 選了一筆人力需求時自動填的任務(還沒選人 = 先當可以擔任負責人,和從缺額打開一樣)。 */
+/**
+ * 選了一筆人力需求時自動填的任務(手動選、疊開帶回同一條;還沒選人 = 先當可以擔任負責人,和從缺額打開
+ * 一樣)。這個人沒有可填的協同、只剩空的負責任務時照樣填上負責任務(同缺額帶好的那一筆),不能擔任
+ * 負責人由 `entryCheckReasonsOf` 寫原因、停用 [儲存]。
+ */
 export const pickTaskOf = (
   demand: RosterDemand,
   entryId: string | null,
   rule: LeaderRule,
-): string =>
-  pickOpenTask(tasksWithFilled(demand, entryId), rule.canLead !== false) ?? "";
+): string => {
+  const tasks = tasksWithFilled(demand, entryId);
+  return (
+    pickOpenTask(tasks, rule.canLead !== false) ??
+    tasks.find((task) => task.role === "leader" && !task.filled)?.taskId ??
+    ""
+  );
+};
 
 /**
- * 疊開新增的人力需求存好了(SC-04e ③):自動加一列、依規則填第一個空的任務;上下班時間還沒填好 →
- * 帶入那筆人力需求的時間。結果和「從缺額打開」帶入的一樣:這個人沒有可填的協同、只剩負責任務時
- * 照樣填上負責任務(同缺額帶好的那一筆),不能擔任負責人由 `entryCheckReasonsOf` 寫原因、停用 [儲存]。
+ * 疊開新增的人力需求存好了(SC-04e ③):自動加一列、依規則填第一個空的任務(`pickTaskOf`,和手動選、
+ * 從缺額打開一樣);上下班時間還沒填好 → 帶入那筆人力需求的時間。
  */
 export const withAddedDemand = (
   form: EntryFormState,
   created: RosterDemand,
   rule: LeaderRule,
   context: EntryTimeContext,
-): EntryFormState => {
-  const picked = pickTaskOf(created, null, rule);
-  const leader = created.tasks.find((task) => task.role === "leader");
-  return {
-    ...withDemandTimes(form, created, context),
-    rows: [
-      ...form.rows,
-      {
-        key: nextRowKey(),
-        demandId: created.id,
-        taskId: picked === "" ? (leader?.taskId ?? "") : picked,
-      },
-    ],
-  };
-};
+): EntryFormState => ({
+  ...withDemandTimes(form, created, context),
+  rows: [
+    ...form.rows,
+    {
+      key: nextRowKey(),
+      demandId: created.id,
+      taskId: pickTaskOf(created, null, rule),
+    },
+  ],
+});
 
 /** 送出前就檢查的規則用到的資料(都在排班表的資料裡)。 */
 export interface EntryCheckContext {

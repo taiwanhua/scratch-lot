@@ -66,7 +66,7 @@ describe("排班作業:欄位下寫原因", () => {
     ).toHaveAccessibleDescription("這個任務已經有人排了");
   });
 
-  it("排班:api 標回的原因,改了那一組 / 那一欄就清掉,不殘留", async () => {
+  it("排班:api 標回的原因,改了那一組 / 那一欄就清掉,不殘留;全清掉時上方通用句也清掉", async () => {
     const { user } = renderRoster({ path: ROSTER });
     server.use(
       api.mutation("SaveScheduleEntry", () =>
@@ -86,15 +86,20 @@ describe("排班作業:欄位下寫原因", () => {
     await within(dialog).findAllByText("這個任務已經有人排了");
     expect(group).toHaveAccessibleDescription("這個任務已經有人排了");
     expect(breakField).toHaveAccessibleDescription("這個任務已經有人排了");
+    expect(within(dialog).getByRole("alert")).toHaveTextContent(GENERIC);
 
     await user.click(
       within(dialog).getByRole("combobox", { name: "職責 · 執行任務" }),
     );
     await user.click(await screen.findByRole("option", { name: /^協同/ }));
     expect(group).not.toHaveAccessibleDescription("這個任務已經有人排了");
+    // 還有休息欄標著 → 上方通用句還在
+    expect(within(dialog).getByRole("alert")).toHaveTextContent(GENERIC);
 
     await user.type(breakField, "0");
     expect(breakField).not.toHaveAccessibleDescription("這個任務已經有人排了");
+    // 欄位錯誤全清掉 → 上方通用句一起清掉
+    expect(within(dialog).queryByText(GENERIC)).not.toBeInTheDocument();
   });
 
   it("人力需求:沒填時間、沒選崗位 → 各欄下寫格式要求", async () => {

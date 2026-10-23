@@ -19,11 +19,13 @@ export const useEntryFieldErrors = () => {
   return {
     fieldErrors,
     summaryOf: (error: unknown) => entryErrorTextsOf(error, t).summary,
-    /** 標回欄位,回提示的那一句 */
+    /**
+     * 標回欄位,回提示的那一句;`hasFieldErrors` = 有標回欄位(提示是通用句,欄位都改好就該一起清掉)
+     */
     markFromError: (error: unknown) => {
       const { texts, summary } = entryErrorTextsOf(error, t);
       setFieldErrors(texts);
-      return summary;
+      return { summary, hasFieldErrors: Object.keys(texts).length > 0 };
     },
     clear: (...fields: EntryField[]) => {
       setFieldErrors((current) =>

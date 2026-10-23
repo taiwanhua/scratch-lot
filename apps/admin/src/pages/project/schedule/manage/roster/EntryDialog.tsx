@@ -102,7 +102,11 @@ export const EntryDialog = ({
   const [isBreakEdited, setIsBreakEdited] = useState(entry !== null);
   const [isAddingDemand, setIsAddingDemand] = useState(false);
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  /** 對話框上方的提示;`isFieldSummary` = 通用句(原因在欄位下),欄位錯誤全清掉就跟著消失(REACT-18) */
+  const [error, setError] = useState<{
+    text: string;
+    isFieldSummary: boolean;
+  } | null>(null);
   // 欄位錯了就在欄位正下方寫原因(REACT-18);上方提示只放通用句
   const { fieldErrors, ...errors } = useEntryFieldErrors();
   const changeReason = useChangeReason(canEdit);
@@ -131,6 +135,11 @@ export const EntryDialog = ({
       shownErrors[field] = scheduleReasonText(tSchedule, reason);
     }
   }
+  const alertText =
+    error === null ||
+    (error.isFieldSummary && Object.keys(fieldErrors).length === 0)
+      ? null
+      : error.text;
   const timeContext = {
     timezone,
     breakTiers: data.settings.breakTiers,
@@ -162,8 +171,12 @@ export const EntryDialog = ({
       },
       onError: (cause) => {
         const isReasonError = changeReason.markFromError(cause);
-        const summary = errors.markFromError(cause);
-        setError(isReasonError ? null : summary);
+        const { summary, hasFieldErrors } = errors.markFromError(cause);
+        setError(
+          isReasonError
+            ? null
+            : { text: summary, isFieldSummary: hasFieldErrors },
+        );
       },
     }),
   );
@@ -179,7 +192,9 @@ export const EntryDialog = ({
       onError: (cause) => {
         changeReason.markFromError(cause);
         setError(
-          blockedEntryIdsOf(cause).length > 0 ? t("errors.locked") : null,
+          blockedEntryIdsOf(cause).length > 0
+            ? { text: t("errors.locked"), isFieldSummary: false }
+            : null,
         );
       },
     }),
@@ -246,7 +261,10 @@ export const EntryDialog = ({
                 sx={{ mr: "auto" }}
                 onClick={() => {
                   if (!entry.deletable) {
-                    setError(t("errors.locked"));
+                    setError({
+                      text: t("errors.locked"),
+                      isFieldSummary: false,
+                    });
                   } else if (changeReason.take() !== null) {
                     setIsConfirmingDelete(true);
                   }
@@ -270,7 +288,7 @@ export const EntryDialog = ({
       }
     >
       <Stack spacing={2} sx={{ pt: 1 }}>
-        {error !== null && <Alert severity="error">{error}</Alert>}
+        {alertText !== null && <Alert severity="error">{alertText}</Alert>}
         {changeReason.alert}
         <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
           {isPersonFixed ? (

@@ -117,7 +117,7 @@ describe("排班對話框:各入口一致", () => {
     });
   });
 
-  it("同一個人、同一筆只有負責人的人力需求:疊開帶回與點缺額打開,畫面狀態相同(保留負責任務、組下寫原因、[儲存] 停用)", async () => {
+  it("同一個人、同一筆只有負責人的人力需求:疊開帶回、點缺額打開、手動選,畫面狀態相同(保留負責任務、組下寫原因、[儲存] 停用)", async () => {
     const { user } = renderRoster(`${ROSTER}&view=week&date=2026-11-10`);
     const stateOf = (dialog: HTMLElement) => ({
       demand: within(dialog).getByRole("combobox", { name: "人力需求" })
@@ -169,6 +169,32 @@ describe("排班對話框:各入口一致", () => {
     const fromVacancyDialog = await findDialog("新增排班 · 11/10(二)");
     await pickPerson(user, fromVacancyDialog, "林美麗");
     expect(stateOf(fromVacancyDialog)).toEqual(fromStacked);
+    await user.click(
+      within(fromVacancyDialog).getByRole("button", { name: "取消" }),
+    );
+    await waitFor(() => {
+      expect(queryDialog(/^新增排班/)).not.toBeInTheDocument();
+    });
+
+    // 手動:工具列選同一天、同一個人、同樣的時間,[+ 加入人力需求] 選剛建的那一筆
+    const manual = await openFromToolbar(
+      user,
+      "2026-11-10",
+      "新增排班 · 11/10(二)",
+    );
+    await pickPerson(user, manual, "林美麗");
+    await user.type(within(manual).getByLabelText(/上班/), "09:00");
+    await user.type(within(manual).getByLabelText(/下班/), "13:00");
+    await user.click(
+      within(manual).getByRole("button", { name: "+ 加入人力需求" }),
+    );
+    await user.click(
+      within(manual).getByRole("combobox", { name: "人力需求" }),
+    );
+    await user.click(
+      await screen.findByRole("option", { name: /09:00–13:00/ }),
+    );
+    expect(stateOf(manual)).toEqual(fromStacked);
   });
 
   it("缺額 → 選不能擔任負責人的人:人力需求下寫原因、[儲存] 停用;下拉裡負責選項反灰並寫原因", async () => {
