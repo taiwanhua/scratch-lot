@@ -14,12 +14,19 @@ import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
 import { useSession } from "@/hooks/base/useSession";
 import { useTenantTimezone } from "@/hooks/base/useTenantTimezone";
 import {
+  type FieldErrorTexts,
+  formErrorSummary,
+  withoutFieldError,
+} from "@/lib/base/field-errors";
+import {
   localDayInstantOf,
   localDayTextOf,
 } from "@/lib/base/form-engine/local-day";
 
+import { dealerFieldErrorsOf } from "../dealer-field-errors";
 import {
   type ConflictRelationship,
+  type DealersError,
   conflictHiddenCountOf,
   conflictRelationshipsOf,
   dealersErrorKey,
@@ -111,7 +118,9 @@ export const useContactForm = (
   const [touched, setTouched] = useState<ReadonlySet<ContactFormKey>>(
     () => new Set(),
   );
-  const [invalidFields, setInvalidFields] = useState<string[]>([]);
+  const [fieldErrors, setFieldErrors] = useState<
+    FieldErrorTexts<ContactFormKey>
+  >({});
   const [error, setError] = useState<string | null>(null);
   const [conflict, setConflict] = useState<{
     relationships: ConflictRelationship[];
@@ -120,12 +129,24 @@ export const useContactForm = (
   const [isSubmitting, setIsSubmitting] = useState(false);
   const create = useCreateLotteryDealerContactMutation(session.client);
   const update = useUpdateLotteryDealerContactMutation(session.client);
+  /** api 錯誤 → 欄位下的原因與頁面提示(REACT-18:有欄位錯誤時頁面只放通用句)。 */
+  const errorTextsOf = (parsed: DealersError) => {
+    const texts = dealerFieldErrorsOf(parsed, KEYS, t);
+    return {
+      texts,
+      summary: formErrorSummary(
+        texts,
+        tErrors(parsed.code),
+        tErrors(dealersErrorKey(parsed)),
+      ),
+    };
+  };
   const feedback = useMutationFeedback({
     success:
       contact === null
         ? t("feedback.contactCreateSuccess")
         : t("feedback.updateSuccess"),
-    error: (failure) => tErrors(dealersErrorKey(dealersErrorOf(failure))),
+    error: (failure) => errorTextsOf(dealersErrorOf(failure)).summary,
   });
 
   const change = <Key extends ContactFormKey>(
@@ -134,7 +155,7 @@ export const useContactForm = (
   ) => {
     setValues((current) => ({ ...current, [key]: value }));
     setTouched((current) => new Set([...current, key]));
-    setInvalidFields((current) => current.filter((field) => field !== key));
+    setFieldErrors((current) => withoutFieldError(current, key));
   };
 
   const inputOf = (keys: readonly ContactFormKey[]) =>
@@ -173,8 +194,9 @@ export const useContactForm = (
         });
         return;
       }
-      setInvalidFields(parsed.fields ?? []);
-      setError(tErrors(dealersErrorKey(parsed)));
+      const { texts, summary } = errorTextsOf(parsed);
+      setFieldErrors(texts);
+      setError(summary);
       feedback.onError(error_);
     } finally {
       setIsSubmitting(false);
@@ -184,7 +206,7 @@ export const useContactForm = (
   return {
     values,
     change,
-    invalidFields,
+    fieldErrors,
     error,
     conflict,
     closeConflict: () => {

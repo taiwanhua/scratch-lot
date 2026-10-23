@@ -4,6 +4,7 @@ import {
   type LotteryStoreSaleReversalRowFieldsFragment,
   useLotteryStoreSaleReversalsQuery,
 } from "@repo/graphql";
+import { Box } from "@repo/ui/box";
 import { Stack } from "@repo/ui/stack";
 import type { TableColumn } from "@repo/ui/table";
 import { Typography } from "@repo/ui/typography";
@@ -75,7 +76,8 @@ export const SaleReversalsTab = () => {
     },
   ];
   return (
-    <Stack spacing={2} sx={{ pt: 2 }}>
+    // 列表分頁(STYLE-08):平板以上分頁殼釘高,清單那一層吃掉剩下的高度並自己捲(表頭固定);手機寬整頁捲
+    <Stack spacing={2} sx={{ pt: 2, flex: 1, minHeight: 0 }}>
       <StoreFormsHeader
         title={t("saleReversals.title")}
         createLabel={t("saleReversals.create")}
@@ -83,30 +85,32 @@ export const SaleReversalsTab = () => {
         orgId={orgId}
         onOrgChange={setOrgId}
       />
-      <StoreFormsList
-        ariaLabel={t("saleReversals.listAria")}
-        rows={rows}
-        isLoading={query.isLoading && orgId !== ""}
-        columns={columns}
-        cardTitle={(row) => (
-          <Stack direction="row" sx={{ alignItems: "center" }}>
-            <Typography variant="subtitle2" sx={{ flex: 1 }}>
-              {row.serialNo ?? t("none")}
-            </Typography>
-            <SubmissionStatusTag status={row.status} />
-          </Stack>
-        )}
-        cardBody={(row) => (
-          <>
-            <Typography variant="body2">{ticketsOf(row)}</Typography>
-            <Typography variant="body2" color="textSecondary">
-              {[row.reasonLabel, refundOf(row), row.refundShiftLabel ?? ""]
-                .filter((part) => part !== "")
-                .join(" · ")}
-            </Typography>
-          </>
-        )}
-      />
+      <Box sx={{ flex: 1, minHeight: 0 }}>
+        <StoreFormsList
+          ariaLabel={t("saleReversals.listAria")}
+          rows={rows}
+          isLoading={query.isLoading && orgId !== ""}
+          columns={columns}
+          cardTitle={(row) => (
+            <Stack direction="row" sx={{ alignItems: "center" }}>
+              <Typography variant="subtitle2" sx={{ flex: 1 }}>
+                {row.serialNo ?? t("none")}
+              </Typography>
+              <SubmissionStatusTag status={row.status} />
+            </Stack>
+          )}
+          cardBody={(row) => (
+            <>
+              <Typography variant="body2">{ticketsOf(row)}</Typography>
+              <Typography variant="body2" color="textSecondary">
+                {[row.reasonLabel, refundOf(row), row.refundShiftLabel ?? ""]
+                  .filter((part) => part !== "")
+                  .join(" · ")}
+              </Typography>
+            </>
+          )}
+        />
+      </Box>
     </Stack>
   );
 };

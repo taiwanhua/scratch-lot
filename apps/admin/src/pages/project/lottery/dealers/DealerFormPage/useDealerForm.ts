@@ -12,9 +12,16 @@ import {
 import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
 import { useSession } from "@/hooks/base/useSession";
 import { useTenantTimezone } from "@/hooks/base/useTenantTimezone";
+import {
+  type FieldErrorTexts,
+  formErrorSummary,
+  withoutFieldError,
+} from "@/lib/base/field-errors";
 
+import { dealerFieldErrorsOf } from "../dealer-field-errors";
 import {
   type ConflictRelationship,
+  type DealersError,
   conflictRelationshipsOf,
   dealersErrorKey,
   dealersErrorOf,
@@ -30,6 +37,11 @@ import {
   inputOf,
   valuesOf,
 } from "./dealer-form-values";
+
+/** 表單上的欄位(api `fields` 對得到的 key)。 */
+const FORM_KEYS = Object.keys(
+  emptyValues(LotteryDealerType.A),
+) as DealerFormKey[];
 
 /** 欄位級權限欄在這個表單的狀態:看不看得到、改不改得動。 */
 export interface ProtectedFieldState {
@@ -62,19 +74,33 @@ export const useDealerForm = (
   const [touched, setTouched] = useState<ReadonlySet<DealerFormKey>>(
     () => new Set(),
   );
-  const [invalidFields, setInvalidFields] = useState<DealerFormKey[]>([]);
+  const [fieldErrors, setFieldErrors] = useState<
+    FieldErrorTexts<DealerFormKey>
+  >({});
   const [error, setError] = useState<string | null>(null);
   const [conflict, setConflict] = useState<ConflictRelationship[] | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const create = useCreateLotteryDealerMutation(session.client);
   const update = useUpdateLotteryDealerMutation(session.client);
+  /** api 錯誤 → 欄位下的原因與頁面提示(REACT-18:有欄位錯誤時頁面只放通用句)。 */
+  const errorTextsOf = (parsed: DealersError) => {
+    const texts = dealerFieldErrorsOf(parsed, FORM_KEYS, t, formKeyOf);
+    return {
+      texts,
+      summary: formErrorSummary(
+        texts,
+        tErrors(parsed.code),
+        tErrors(dealersErrorKey(parsed)),
+      ),
+    };
+  };
   const feedback = useMutationFeedback({
     success:
       dealer === null
         ? t("feedback.createSuccess")
         : t("feedback.updateSuccess"),
-    error: (failure) => tErrors(dealersErrorKey(dealersErrorOf(failure))),
+    error: (failure) => errorTextsOf(dealersErrorOf(failure)).summary,
   });
 
   const isCreate = dealer === null;
@@ -114,7 +140,7 @@ export const useDealerForm = (
   ) => {
     setValues((current) => ({ ...current, [key]: value }));
     setTouched((current) => new Set([...current, key]));
-    setInvalidFields((current) => current.filter((field) => field !== key));
+    setFieldErrors((current) => withoutFieldError(current, key));
   };
 
   const submit = async (releaseAgents = false) => {
@@ -150,12 +176,9 @@ export const useDealerForm = (
         setConflict(conflictRelationshipsOf(error_));
         return;
       }
-      setInvalidFields(
-        (parsed.fields ?? [])
-          .map((field) => formKeyOf(field))
-          .filter((key): key is DealerFormKey => key !== null),
-      );
-      setError(tErrors(dealersErrorKey(parsed)));
+      const { texts, summary } = errorTextsOf(parsed);
+      setFieldErrors(texts);
+      setError(summary);
       feedback.onError(error_);
     } finally {
       setIsSubmitting(false);
@@ -167,7 +190,7 @@ export const useDealerForm = (
     values,
     change,
     touched,
-    invalidFields,
+    fieldErrors,
     error,
     conflict,
     closeConflict: () => {

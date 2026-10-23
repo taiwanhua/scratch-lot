@@ -19,11 +19,22 @@ import { Stack } from "@repo/ui/stack";
 import { TextField } from "@repo/ui/text-field";
 import { Typography } from "@repo/ui/typography";
 
+import { FieldErrorGroup } from "@/components/base/FieldErrorGroup/FieldErrorGroup";
 import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
 import { useSession } from "@/hooks/base/useSession";
+import {
+  type FieldErrorTexts,
+  withoutFieldError,
+} from "@/lib/base/field-errors";
 
 import { ConfirmDeleteDialog } from "../../ConfirmDeleteDialog";
-import { scheduleErrorOf } from "../../schedule-error";
+import {
+  scheduleErrorTextsOf,
+  scheduleFormatErrorsOf,
+} from "../../schedule-field-errors";
+
+/** 會標回對話框的欄位(api `fields`)。 */
+const FIELDS = ["name", "days"] as const;
 
 const WEEKDAYS = Array.from({ length: WEEK_DAY_COUNT }, (_, day) => day);
 
@@ -65,7 +76,7 @@ export const WeekTemplateDialog = ({
   const t = useTranslations("admin.schedule.weekTemplates.dialog");
   const tWeek = useTranslations("admin.schedule.weekTemplates");
   const tCommon = useTranslations("admin.schedule.common");
-  const tErrors = useTranslations("admin.schedule.errors");
+  const tSchedule = useTranslations("admin.schedule");
   const { session } = useSession();
   const queryClient = useQueryClient();
   const isMobile = useBreakpointDown("sm");
@@ -74,7 +85,10 @@ export const WeekTemplateDialog = ({
   const [days, setDays] = useState<string[][]>(() =>
     WEEKDAYS.map((day) => [...(weekTemplate?.days[day] ?? [])]),
   );
-  const [isNameInvalid, setIsNameInvalid] = useState(false);
+  // 欄位錯了就在欄位正下方寫原因(REACT-18);提示只放通用句
+  const [fieldErrors, setFieldErrors] = useState<
+    FieldErrorTexts<(typeof FIELDS)[number]>
+  >({});
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
 
   const done = () => {
@@ -83,13 +97,17 @@ export const WeekTemplateDialog = ({
     });
     onClose();
   };
-  const errorOf = (error: unknown) => tErrors(scheduleErrorOf(error).code);
+  const errorOf = (error: unknown) =>
+    scheduleErrorTextsOf(error, FIELDS, tSchedule).summary;
   const save = useSaveScheduleDemandWeekTemplateMutation(
     session.client,
     useMutationFeedback({
       success: tWeek("feedback.saveSuccess"),
       error: errorOf,
       onSuccess: done,
+      onError: (error) => {
+        setFieldErrors(scheduleErrorTextsOf(error, FIELDS, tSchedule).texts);
+      },
     }),
   );
   const remove = useDeleteScheduleDemandWeekTemplateMutation(
@@ -105,11 +123,12 @@ export const WeekTemplateDialog = ({
     setDays((current) =>
       toggledDays(current, templates, { day, templateId, checked }),
     );
+    setFieldErrors((current) => withoutFieldError(current, "days"));
   };
 
   const submit = () => {
     if (name.trim() === "") {
-      setIsNameInvalid(true);
+      setFieldErrors(scheduleFormatErrorsOf(["name"], tSchedule));
       return;
     }
     save.mutate({
@@ -174,10 +193,11 @@ export const WeekTemplateDialog = ({
           required
           fullWidth
           disabled={!canEdit}
-          error={isNameInvalid}
+          error={fieldErrors.name !== undefined}
+          helperText={fieldErrors.name}
           onChange={(event) => {
             setName(event.target.value);
-            setIsNameInvalid(false);
+            setFieldErrors((current) => withoutFieldError(current, "name"));
           }}
         />
         {templates.length === 0 && (
@@ -185,41 +205,47 @@ export const WeekTemplateDialog = ({
             {tWeek("noTemplates")}
           </Typography>
         )}
-        {WEEKDAYS.map((day) => (
-          <Stack
-            key={day}
-            direction="row"
-            spacing={1}
-            sx={{ alignItems: "center", flexWrap: "wrap" }}
-          >
-            <Typography sx={{ flex: 1, minWidth: 72 }}>
-              {tWeek(`weekdayLong.${String(day)}`)}
-            </Typography>
-            {templates.map((template) => (
-              <FormControlLabel
-                key={template.id}
-                label={template.shortName}
-                disabled={!canEdit}
-                control={
-                  <Checkbox
-                    checked={days[day]?.includes(template.id) ?? false}
-                    slotProps={{
-                      input: {
-                        "aria-label": t("pick", {
-                          day: tWeek(`weekdayLong.${String(day)}`),
-                          template: template.name,
-                        }),
-                      },
-                    }}
-                    onChange={(_event, checked) => {
-                      toggle(day, template.id, checked);
-                    }}
-                  />
-                }
-              />
-            ))}
-          </Stack>
-        ))}
+        <FieldErrorGroup
+          label={t("days")}
+          errorText={fieldErrors.days}
+          spacing={1.5}
+        >
+          {WEEKDAYS.map((day) => (
+            <Stack
+              key={day}
+              direction="row"
+              spacing={1}
+              sx={{ alignItems: "center", flexWrap: "wrap" }}
+            >
+              <Typography sx={{ flex: 1, minWidth: 72 }}>
+                {tWeek(`weekdayLong.${String(day)}`)}
+              </Typography>
+              {templates.map((template) => (
+                <FormControlLabel
+                  key={template.id}
+                  label={template.shortName}
+                  disabled={!canEdit}
+                  control={
+                    <Checkbox
+                      checked={days[day]?.includes(template.id) ?? false}
+                      slotProps={{
+                        input: {
+                          "aria-label": t("pick", {
+                            day: tWeek(`weekdayLong.${String(day)}`),
+                            template: template.name,
+                          }),
+                        },
+                      }}
+                      onChange={(_event, checked) => {
+                        toggle(day, template.id, checked);
+                      }}
+                    />
+                  }
+                />
+              ))}
+            </Stack>
+          ))}
+        </FieldErrorGroup>
       </Stack>
       {isConfirmingDelete && weekTemplate !== null && (
         <ConfirmDeleteDialog

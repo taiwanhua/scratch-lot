@@ -14,10 +14,20 @@ import { TextField } from "@repo/ui/text-field";
 import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
 import { useSession } from "@/hooks/base/useSession";
 import { useTenantTimezone } from "@/hooks/base/useTenantTimezone";
+import {
+  type FieldErrorTexts,
+  fieldErrorTextsOf,
+  formErrorSummary,
+  withoutFieldError,
+} from "@/lib/base/field-errors";
 import { localDayInstantOf } from "@/lib/base/form-engine/local-day";
 
+import { dealerFieldErrorsOf, dealerFormatText } from "../dealer-field-errors";
 import { dealersErrorKey, dealersErrorOf } from "../dealers-error";
 import { useInvalidateDealers } from "../useInvalidateDealers";
+
+/** 會標回對話框的欄位(api `fields`)。 */
+const FIELDS = ["quarter", "signedAt", "note"] as const;
 
 export interface SigninDialogProps {
   dealerId: string;
@@ -43,15 +53,40 @@ export const SigninDialog = ({
   const [signedAt, setSignedAt] = useState<string | null>(null);
   const [note, setNote] = useState("");
   const [error, setError] = useState<string | null>(null);
+  // 欄位錯了就在欄位正下方寫原因(REACT-18);下方提示只放通用句
+  const [fieldErrors, setFieldErrors] = useState<
+    FieldErrorTexts<(typeof FIELDS)[number]>
+  >({});
+  const errorTextsOf = (failure: unknown) => {
+    const parsed = dealersErrorOf(failure);
+    const texts = dealerFieldErrorsOf(parsed, FIELDS, t);
+    return {
+      texts,
+      summary: formErrorSummary(
+        texts,
+        tErrors(parsed.code),
+        tErrors(dealersErrorKey(parsed)),
+      ),
+    };
+  };
   const register = useRegisterLotteryDealerSigninMutation(session.client);
   const feedback = useMutationFeedback({
     success: t("feedback.signinSuccess"),
-    error: (failure) => tErrors(dealersErrorKey(dealersErrorOf(failure))),
+    error: (failure) => errorTextsOf(failure).summary,
   });
 
   const submit = async () => {
     const instant = localDayInstantOf(signedAt, timezone);
-    if (quarter === "" || instant === null) {
+    const missing = [
+      ...(quarter === "" ? (["quarter"] as const) : []),
+      ...(instant === null ? (["signedAt"] as const) : []),
+    ];
+    if (missing.length > 0 || instant === null) {
+      setFieldErrors(
+        fieldErrorTextsOf(missing, FIELDS, (field) =>
+          dealerFormatText(t, field),
+        ),
+      );
       setError(tErrors("VALIDATION_FAILED"));
       return;
     }
@@ -69,7 +104,9 @@ export const SigninDialog = ({
       await invalidate();
       onClose();
     } catch (error_) {
-      setError(tErrors(dealersErrorKey(dealersErrorOf(error_))));
+      const { texts, summary } = errorTextsOf(error_);
+      setFieldErrors(texts);
+      setError(summary);
       feedback.onError(error_);
     }
   };
@@ -113,7 +150,14 @@ export const SigninDialog = ({
               value: String(item),
               label: t("signins.quarterOption", { quarter: String(item) }),
             }))}
-            onChange={setQuarter}
+            error={fieldErrors.quarter !== undefined}
+            helperText={fieldErrors.quarter}
+            onChange={(next) => {
+              setQuarter(next);
+              setFieldErrors((current) =>
+                withoutFieldError(current, "quarter"),
+              );
+            }}
           />
         </Stack>
         <DatePicker
@@ -122,15 +166,23 @@ export const SigninDialog = ({
           required
           size="small"
           fullWidth
-          onChange={setSignedAt}
+          error={fieldErrors.signedAt !== undefined}
+          helperText={fieldErrors.signedAt}
+          onChange={(next) => {
+            setSignedAt(next);
+            setFieldErrors((current) => withoutFieldError(current, "signedAt"));
+          }}
         />
         <TextField
           label={t("signins.note")}
           value={note}
           size="small"
           fullWidth
+          error={fieldErrors.note !== undefined}
+          helperText={fieldErrors.note}
           onChange={(event) => {
             setNote(event.target.value);
+            setFieldErrors((current) => withoutFieldError(current, "note"));
           }}
         />
         {error !== null && <Alert severity="error">{error}</Alert>}

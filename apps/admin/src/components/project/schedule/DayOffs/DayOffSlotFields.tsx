@@ -6,6 +6,7 @@ import { CloseIcon } from "@repo/ui/icons";
 import { Stack } from "@repo/ui/stack";
 import { TextField } from "@repo/ui/text-field";
 
+import { FieldErrorGroup } from "@/components/base/FieldErrorGroup/FieldErrorGroup";
 import {
   type DayOffSlot,
   EMPTY_SLOT,
@@ -16,6 +17,11 @@ export interface DayOffSlotFieldsProps {
   slots: readonly DayOffSlot[];
   /** 送出時有沒填完或開始不早於結束的段落:標紅 */
   invalid: boolean;
+  /**
+   * 寫在時段下方的原因(REACT-18;沒填完、開始不早於結束、和已有時段重疊)。每段都填完了還是錯
+   * (api 擋下的重疊)時,所有段落一起標紅。
+   */
+  errorText?: string;
   onChange: (slots: DayOffSlot[]) => void;
   /** 可以一次登記多段([+ 再加一段]);代改一次一段 */
   allowMultiple?: boolean;
@@ -25,6 +31,7 @@ export interface DayOffSlotFieldsProps {
 export const DayOffSlotFields = ({
   slots,
   invalid,
+  errorText,
   onChange,
   allowMultiple = false,
 }: DayOffSlotFieldsProps) => {
@@ -37,9 +44,14 @@ export const DayOffSlotFields = ({
     );
   };
   return (
-    <Stack spacing={1.5}>
+    <FieldErrorGroup
+      label={t("slots")}
+      errorText={invalid ? errorText : undefined}
+      spacing={1.5}
+    >
       {slots.map((slot, index) => {
-        const error = invalid && !isCompleteSlot(slot);
+        const error =
+          invalid && (!isCompleteSlot(slot) || slots.every(isCompleteSlot));
         return (
           // 段落沒有自己的 id;順序就是身分(只會在尾端加、從中間拿掉)
           <Stack key={index} direction="row" spacing={1.5}>
@@ -93,6 +105,6 @@ export const DayOffSlotFields = ({
           {t("addSlot")}
         </Button>
       )}
-    </Stack>
+    </FieldErrorGroup>
   );
 };

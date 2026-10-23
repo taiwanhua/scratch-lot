@@ -64,6 +64,11 @@ export const FORM_ERROR_REASONS = [
   "NOT_RETIRED",
   "USED_BY_DRAFTS",
   "CONFIRM_REQUIRED",
+  // `VALIDATION_FAILED` 的細分原因(api `FORM_VALIDATION_REASONS`):寫在欄位下(REACT-18)
+  "FORM_KEY_DUPLICATE",
+  "LIST_COLUMN_DUPLICATE",
+  "LIST_COLUMN_UNAVAILABLE",
+  "LIST_COLUMN_PROTECTED",
 ] as const;
 
 export type FormErrorReason = (typeof FORM_ERROR_REASONS)[number];
@@ -135,6 +140,20 @@ const extensionsOf = (error: unknown): Record<string, unknown> => {
     errors?: { extensions?: Record<string, unknown> }[];
   };
   return errors?.[0]?.extensions ?? {};
+};
+
+/**
+ * 表單 key 欄位下的原因(REACT-18):api 指到 `key` 時,key 已被用過寫原因,其餘(格式不合)回 `formatText`;
+ * 沒指到 `key` 回 undefined。原因的文案在 `admin.forms.errors.FORM_KEY_DUPLICATE`。
+ */
+export const formKeyErrorOf = (
+  error: FormError | null,
+  texts: { duplicate: string; format: string },
+): string | undefined => {
+  if (error?.fields?.includes("key") !== true) {
+    return undefined;
+  }
+  return error.reason === "FORM_KEY_DUPLICATE" ? texts.duplicate : texts.format;
 };
 
 export const formErrorOf = (error: unknown): FormError => {

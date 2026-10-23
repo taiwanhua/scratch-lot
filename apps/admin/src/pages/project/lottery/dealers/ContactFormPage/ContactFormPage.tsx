@@ -16,6 +16,7 @@ import { Stack } from "@repo/ui/stack";
 import { TextField } from "@repo/ui/text-field";
 import { Typography } from "@repo/ui/typography";
 
+import { FieldErrorGroup } from "@/components/base/FieldErrorGroup/FieldErrorGroup";
 import { FormActions } from "@/components/base/FormActions/FormActions";
 import { Section } from "@/components/base/Section/Section";
 import { useRouteTabItemLabel } from "@/hooks/base/useRouteTabItemLabel";
@@ -113,7 +114,9 @@ const ContactFormBody = ({
     }
   });
   const { values, change } = form;
-  const isInvalid = (key: string) => form.invalidFields.includes(key);
+  // 欄位錯了就在欄位正下方寫原因(REACT-18);頁面底部只放通用句
+  const errorText = (key: ContactFormKey) => form.fieldErrors[key];
+  const isInvalid = (key: ContactFormKey) => errorText(key) !== undefined;
 
   const text = (key: TextKey, options: { required?: boolean } = {}) => (
     <TextField
@@ -121,6 +124,7 @@ const ContactFormBody = ({
       value={values[key]}
       required={options.required}
       error={isInvalid(key)}
+      helperText={errorText(key)}
       size="small"
       fullWidth
       onChange={(event) => {
@@ -143,6 +147,8 @@ const ContactFormBody = ({
             <DatePicker
               label={t("fields.birthday")}
               value={values.birthday}
+              error={isInvalid("birthday")}
+              helperText={errorText("birthday")}
               size="small"
               fullWidth
               onChange={(next) => {
@@ -150,36 +156,41 @@ const ContactFormBody = ({
               }}
             />
             <Box sx={{ gridColumn: "1 / -1" }}>
-              <Stack
-                direction="row"
-                sx={{ alignItems: "center", gap: 1, flexWrap: "wrap" }}
+              <FieldErrorGroup
+                label={t("fields.roles")}
+                errorText={errorText("roles")}
               >
-                <Typography
-                  variant="body2"
-                  color={isInvalid("roles") ? "error" : "textSecondary"}
+                <Stack
+                  direction="row"
+                  sx={{ alignItems: "center", gap: 1, flexWrap: "wrap" }}
                 >
-                  {t("fields.roles")}
-                </Typography>
-                {CONTACT_ROLES.map((role) => (
-                  <FormControlLabel
-                    key={role}
-                    label={t(CONTACT_ROLE_LABELS[role])}
-                    control={
-                      <Checkbox
-                        checked={values.roles.includes(role)}
-                        onChange={(event) => {
-                          change(
-                            "roles",
-                            event.target.checked
-                              ? [...values.roles, role]
-                              : values.roles.filter((item) => item !== role),
-                          );
-                        }}
-                      />
-                    }
-                  />
-                ))}
-              </Stack>
+                  <Typography
+                    variant="body2"
+                    color={isInvalid("roles") ? "error" : "textSecondary"}
+                  >
+                    {t("fields.roles")}
+                  </Typography>
+                  {CONTACT_ROLES.map((role) => (
+                    <FormControlLabel
+                      key={role}
+                      label={t(CONTACT_ROLE_LABELS[role])}
+                      control={
+                        <Checkbox
+                          checked={values.roles.includes(role)}
+                          onChange={(event) => {
+                            change(
+                              "roles",
+                              event.target.checked
+                                ? [...values.roles, role]
+                                : values.roles.filter((item) => item !== role),
+                            );
+                          }}
+                        />
+                      }
+                    />
+                  ))}
+                </Stack>
+              </FieldErrorGroup>
             </Box>
             <SelectField<LotteryContactStatus>
               label={t("list.filters.status")}

@@ -9,16 +9,25 @@ import { TextField } from "@repo/ui/text-field";
 import { Typography } from "@repo/ui/typography";
 
 import { useScheduleFieldOptions } from "@/hooks/project/schedule/useScheduleFieldOptions/useScheduleFieldOptions";
+import {
+  type FieldErrorTexts,
+  withoutFieldError,
+} from "@/lib/base/field-errors";
 
+import {
+  scheduleErrorTextsOf,
+  scheduleFormatErrorsOf,
+} from "../../../schedule-field-errors";
 import { RuleViolationsAlert } from "../check-panel/RuleViolationsAlert";
 import {
   type RosterRuleViolationError,
   rosterRuleViolationsOf,
 } from "../check-panel/check-errors";
 import { useRosterCheck } from "../check-panel/roster-check-context";
-import { errorFieldsOf } from "../roster-error";
 
 type ReasonField = "reasonKey" | "reasonNote";
+
+const REASON_FIELDS: readonly ReasonField[] = ["reasonKey", "reasonNote"];
 
 /** 送出時附在 input 的異動原因(未發布 = 不附)。 */
 export interface ChangeReasonPart {
@@ -51,6 +60,7 @@ export interface ChangeReasonApi {
  */
 export const useChangeReason = (canEdit: boolean): ChangeReasonApi => {
   const t = useTranslations("admin.schedule.roster.changeReason");
+  const tSchedule = useTranslations("admin.schedule");
   // 讀檢核的 context(包住整頁):工具列登記的對話框(套用範本)畫在排班表內容外面,也用得到
   const { data } = useRosterCheck();
   const reasons = useScheduleFieldOptions(
@@ -59,7 +69,10 @@ export const useChangeReason = (canEdit: boolean): ChangeReasonApi => {
   const isRequired = data?.period.status === "published";
   const [reasonKey, setReasonKey] = useState("");
   const [reasonNote, setReasonNote] = useState("");
-  const [invalid, setInvalid] = useState<ReasonField[]>([]);
+  // 欄位錯了就在欄位正下方寫原因(REACT-18)
+  const [fieldErrors, setFieldErrors] = useState<FieldErrorTexts<ReasonField>>(
+    {},
+  );
   const [violations, setViolations] = useState<RosterRuleViolationError[]>([]);
 
   const take = (): ChangeReasonPart | null => {
@@ -74,7 +87,7 @@ export const useChangeReason = (canEdit: boolean): ChangeReasonApi => {
     if (reasonKey === REASON_OTHER_VALUE && note === "") {
       missing.push("reasonNote");
     }
-    setInvalid(missing);
+    setFieldErrors(scheduleFormatErrorsOf(missing, tSchedule));
     if (missing.length > 0) {
       return null;
     }
@@ -86,14 +99,12 @@ export const useChangeReason = (canEdit: boolean): ChangeReasonApi => {
   const markFromError = (error: unknown) => {
     const blocked = rosterRuleViolationsOf(error);
     setViolations(blocked);
-    const fields = errorFieldsOf(error).filter(
-      (field): field is ReasonField =>
-        field === "reasonKey" || field === "reasonNote",
-    );
-    if (fields.length > 0) {
-      setInvalid(fields);
+    const { texts } = scheduleErrorTextsOf(error, REASON_FIELDS, tSchedule);
+    const isMarked = Object.keys(texts).length > 0;
+    if (isMarked) {
+      setFieldErrors(texts);
     }
-    return fields.length > 0 || blocked.length > 0;
+    return isMarked || blocked.length > 0;
   };
 
   const fields = isRequired ? (
@@ -104,11 +115,12 @@ export const useChangeReason = (canEdit: boolean): ChangeReasonApi => {
         required
         fullWidth
         disabled={!canEdit}
-        error={invalid.includes("reasonKey")}
+        error={fieldErrors.reasonKey !== undefined}
+        helperText={fieldErrors.reasonKey}
         options={reasons.options}
         onChange={(next) => {
           setReasonKey(next);
-          setInvalid((current) => current.filter((f) => f !== "reasonKey"));
+          setFieldErrors((current) => withoutFieldError(current, "reasonKey"));
         }}
       />
       {reasonKey === REASON_OTHER_VALUE && (
@@ -118,10 +130,13 @@ export const useChangeReason = (canEdit: boolean): ChangeReasonApi => {
           required
           fullWidth
           disabled={!canEdit}
-          error={invalid.includes("reasonNote")}
+          error={fieldErrors.reasonNote !== undefined}
+          helperText={fieldErrors.reasonNote}
           onChange={(event) => {
             setReasonNote(event.target.value);
-            setInvalid((current) => current.filter((f) => f !== "reasonNote"));
+            setFieldErrors((current) =>
+              withoutFieldError(current, "reasonNote"),
+            );
           }}
         />
       )}

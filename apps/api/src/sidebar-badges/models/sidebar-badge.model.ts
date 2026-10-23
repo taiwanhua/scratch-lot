@@ -10,4 +10,11 @@ export class SidebarBadge {
     description: "數字;0 也回傳,前端只在大於 0 時顯示",
   })
   count!: number;
+
+  @Field(() => String, {
+    nullable: true,
+    description:
+      "「數什麼」的說明文字在 admin 訊息檔的 key(登記時給;側欄數字的提示與通知設定頁同一份);沒有 = null",
+  })
+  descriptionKey!: string | null;
 }

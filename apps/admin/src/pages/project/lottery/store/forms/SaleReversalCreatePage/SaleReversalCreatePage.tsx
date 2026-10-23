@@ -291,6 +291,9 @@ export const SaleReversalCreatePage = () => {
               required
               fullWidth
               error={invalid.includes("reason")}
+              helperText={
+                invalid.includes("reason") ? t("reasonRequired") : undefined
+              }
               options={reasons.options}
               onChange={(next: string) => {
                 setReasonKey(next);

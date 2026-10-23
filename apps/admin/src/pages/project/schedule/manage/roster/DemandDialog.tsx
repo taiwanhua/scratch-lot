@@ -21,8 +21,8 @@ import { useBreakpointDown } from "@repo/ui/media-query";
 import { SelectField } from "@repo/ui/select-field";
 import { Stack } from "@repo/ui/stack";
 import { TextField } from "@repo/ui/text-field";
-import { Typography } from "@repo/ui/typography";
 
+import { FieldErrorGroup } from "@/components/base/FieldErrorGroup/FieldErrorGroup";
 import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
 import { useSession } from "@/hooks/base/useSession";
 import { useScheduleFieldOptions } from "@/hooks/project/schedule/useScheduleFieldOptions/useScheduleFieldOptions";
@@ -33,12 +33,10 @@ import {
   weekdayOf,
 } from "@/lib/project/schedule-roster";
 
-import { scheduleErrorOf } from "../../schedule-error";
 import { DemandImpactDialog } from "./DemandImpactDialog";
 import { DemandTaskList } from "./DemandTaskList";
 import { DemandTemplateCopyFields } from "./DemandTemplateCopyFields";
 import {
-  DEMAND_API_FIELDS,
   type DemandField,
   type DemandValues,
   initialDemandValues,
@@ -52,7 +50,8 @@ import {
   type RosterDemand,
   useRoster,
 } from "./roster-context";
-import { blockedEntryIdsOf, errorFieldsOf } from "./roster-error";
+import { blockedEntryIdsOf } from "./roster-error";
+import { useDemandFieldErrors } from "./useDemandFieldErrors";
 
 export interface DemandDialogProps {
   /** 要看 / 改的那一筆;null = 新增 */
@@ -86,7 +85,6 @@ export const DemandDialog = ({
   const t = useTranslations("admin.schedule.roster.demandDialog");
   const tRoster = useTranslations("admin.schedule.roster");
   const tCommon = useTranslations("admin.schedule.common");
-  const tErrors = useTranslations("admin.schedule.errors");
   const tCalendar = useTranslations("admin.schedule.calendar");
   const { session } = useSession();
   const queryClient = useQueryClient();
@@ -105,23 +103,19 @@ export const DemandDialog = ({
   const [values, setValues] = useState<DemandValues>(() =>
     initialDemandValues(demand, preset, template, timezone),
   );
-  const [invalid, setInvalid] = useState<DemandField[]>([]);
+  // 欄位錯了就在欄位正下方寫原因(REACT-18);提示只放通用句
+  const { fieldErrors, invalid, ...errors } = useDemandFieldErrors();
   const [confirm, setConfirm] = useState<"save" | "delete" | null>(null);
   const [blockedIds, setBlockedIds] = useState<string[]>([]);
   const changeReason = useChangeReason(canEdit);
 
   const invalidate = () =>
     queryClient.invalidateQueries({ queryKey: ROSTER_QUERY_ROOT });
-  const errorText = (error: unknown) => tErrors(scheduleErrorOf(error).code);
+  const errorText = errors.summaryOf;
   const handleError = (error: unknown) => {
     changeReason.markFromError(error);
     setBlockedIds(blockedEntryIdsOf(error));
-    setInvalid(
-      errorFieldsOf(error).flatMap((field) => {
-        const mapped = DEMAND_API_FIELDS[field];
-        return mapped === undefined ? [] : [mapped];
-      }),
-    );
+    errors.markFromError(error);
   };
 
   const save = useSaveScheduleDemandMutation(
@@ -155,7 +149,7 @@ export const DemandDialog = ({
     value: DemandValues[Key],
   ) => {
     setValues((current) => ({ ...current, [key]: value }));
-    setInvalid((current) => current.filter((field) => field !== key));
+    errors.clear(key as DemandField);
   };
   const addTask = (role: ScheduleTaskRole) => {
     change("tasks", [
@@ -198,7 +192,7 @@ export const DemandDialog = ({
 
   const submit = (confirmed: boolean) => {
     const missing = missingDemandFields(values);
-    setInvalid(missing);
+    errors.markMissing(missing);
     const span = spanOf(
       values.date,
       values.startTime,
@@ -335,6 +329,7 @@ export const DemandDialog = ({
             fullWidth
             disabled={!canEdit || isDateLocked || hasFilledTask}
             error={invalid.includes("date")}
+            helperText={fieldErrors.date}
             onChange={(next) => {
               change("date", next ?? "");
             }}
@@ -346,6 +341,7 @@ export const DemandDialog = ({
             fullWidth
             disabled={!canEdit}
             error={invalid.includes("positionKey")}
+            helperText={fieldErrors.positionKey}
             options={positions.options}
             onChange={(next) => {
               change("positionKey", next);
@@ -363,6 +359,7 @@ export const DemandDialog = ({
               fullWidth
               disabled={!canEdit}
               error={invalid.includes(field)}
+              helperText={fieldErrors[field]}
               slotProps={{ inputLabel: { shrink: true } }}
               onChange={(event) => {
                 change(field, event.target.value);
@@ -370,17 +367,18 @@ export const DemandDialog = ({
             />
           ))}
         </Stack>
-        {taskList("leader", MAX_LEADER_TASKS)}
-        {taskList("helper", MAX_HELPER_TASKS)}
-        {invalid.includes("tasks") && (
-          <Typography variant="caption" color="error">
-            {tErrors("VALIDATION_FAILED")}
-          </Typography>
-        )}
+        <FieldErrorGroup
+          label={t("tasks")}
+          errorText={fieldErrors.tasks}
+          spacing={2}
+        >
+          {taskList("leader", MAX_LEADER_TASKS)}
+          {taskList("helper", MAX_HELPER_TASKS)}
+        </FieldErrorGroup>
         {demand === null && canEdit && data.canSaveTemplate && (
           <DemandTemplateCopyFields
             values={values}
-            invalid={invalid}
+            fieldErrors={fieldErrors}
             onChange={change}
           />
         )}

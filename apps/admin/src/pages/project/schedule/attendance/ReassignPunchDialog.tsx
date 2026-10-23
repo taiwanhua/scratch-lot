@@ -21,18 +21,22 @@ import { Typography } from "@repo/ui/typography";
 import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
 import { useSession } from "@/hooks/base/useSession";
 import { useScheduleFieldOptions } from "@/hooks/project/schedule/useScheduleFieldOptions/useScheduleFieldOptions";
+import {
+  type FieldErrorTexts,
+  withoutFieldError,
+} from "@/lib/base/field-errors";
 
-import { scheduleErrorOf } from "../schedule-error";
+import {
+  scheduleErrorTextsOf,
+  scheduleFormatErrorsOf,
+} from "../schedule-field-errors";
 import { useAttendanceText } from "./useAttendanceText";
 
 type Punch = ScheduleAttendancePunchFieldsFragment;
-type Field = "punchId" | "entryId" | "reasonKey" | "reasonNote";
+/** 會標回對話框的欄位(api `fields`)。 */
+const FIELD_LIST = ["punchId", "entryId", "reasonKey", "reasonNote"] as const;
 
-const EDITABLE_FIELDS: ReadonlySet<Field> = new Set([
-  "entryId",
-  "reasonKey",
-  "reasonNote",
-]);
+type Field = "punchId" | "entryId" | "reasonKey" | "reasonNote";
 
 /** 「沒有排班」在下拉的值(送出時換成 null)。 */
 const NO_ENTRY = "none";
@@ -60,7 +64,7 @@ export const ReassignPunchDialog = ({
 }: ReassignPunchDialogProps) => {
   const t = useTranslations("admin.schedule.attendance.reassign");
   const tCommon = useTranslations("admin.schedule.common");
-  const tErrors = useTranslations("admin.schedule.errors");
+  const tSchedule = useTranslations("admin.schedule");
   const text = useAttendanceText();
   const { session } = useSession();
   const queryClient = useQueryClient();
@@ -73,7 +77,9 @@ export const ReassignPunchDialog = ({
   const [entryId, setEntryId] = useState<string | null>(null);
   const [reasonKey, setReasonKey] = useState("");
   const [reasonNote, setReasonNote] = useState("");
-  const [invalid, setInvalid] = useState<Field[]>([]);
+  // 欄位錯了就在欄位正下方寫原因(REACT-18);提示只放通用句
+  const [fieldErrors, setFieldErrors] = useState<FieldErrorTexts<Field>>({});
+  const invalid = Object.keys(fieldErrors);
   const options = useScheduleAttendancePunchEntryOptionsQuery(
     session.client,
     { punchId },
@@ -87,7 +93,8 @@ export const ReassignPunchDialog = ({
     session.client,
     useMutationFeedback({
       success: t("saved"),
-      error: (error) => tErrors(scheduleErrorOf(error).code),
+      error: (error) =>
+        scheduleErrorTextsOf(error, FIELD_LIST, tSchedule).summary,
       onSuccess: () => {
         for (const queryKey of ATTENDANCE_QUERY_KEYS) {
           void queryClient.invalidateQueries({ queryKey });
@@ -95,10 +102,8 @@ export const ReassignPunchDialog = ({
         onClose();
       },
       onError: (error) => {
-        setInvalid(
-          (scheduleErrorOf(error).fields ?? []).filter(
-            (field): field is Field => EDITABLE_FIELDS.has(field as Field),
-          ),
+        setFieldErrors(
+          scheduleErrorTextsOf(error, FIELD_LIST, tSchedule).texts,
         );
       },
     }),
@@ -112,7 +117,7 @@ export const ReassignPunchDialog = ({
     if (reasonKey === REASON_OTHER_VALUE && note === "") {
       missing.push("reasonNote");
     }
-    setInvalid(missing);
+    setFieldErrors(scheduleFormatErrorsOf(missing, tSchedule));
     if (missing.length > 0 || punch === null) {
       return;
     }
@@ -182,6 +187,7 @@ export const ReassignPunchDialog = ({
           value={selected}
           fullWidth
           error={invalid.includes("entryId")}
+          helperText={fieldErrors.entryId}
           options={[
             ...entryOptions.map((option) => ({
               value: option.id,
@@ -191,7 +197,7 @@ export const ReassignPunchDialog = ({
           ]}
           onChange={(next) => {
             setEntryId(next);
-            setInvalid((current) => current.filter((f) => f !== "entryId"));
+            setFieldErrors((current) => withoutFieldError(current, "entryId"));
           }}
         />
         <SelectField
@@ -200,10 +206,13 @@ export const ReassignPunchDialog = ({
           required
           fullWidth
           error={invalid.includes("reasonKey")}
+          helperText={fieldErrors.reasonKey}
           options={reasons.options}
           onChange={(next) => {
             setReasonKey(next);
-            setInvalid((current) => current.filter((f) => f !== "reasonKey"));
+            setFieldErrors((current) =>
+              withoutFieldError(current, "reasonKey"),
+            );
           }}
         />
         {reasonKey === REASON_OTHER_VALUE && (
@@ -213,10 +222,11 @@ export const ReassignPunchDialog = ({
             required
             fullWidth
             error={invalid.includes("reasonNote")}
+            helperText={fieldErrors.reasonNote}
             onChange={(event) => {
               setReasonNote(event.target.value);
-              setInvalid((current) =>
-                current.filter((f) => f !== "reasonNote"),
+              setFieldErrors((current) =>
+                withoutFieldError(current, "reasonNote"),
               );
             }}
           />

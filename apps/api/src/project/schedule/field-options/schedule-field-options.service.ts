@@ -4,7 +4,7 @@ import { SCHEDULE_FIELD_CATEGORY_KEYS } from "@repo/domain/project/schedule-fiel
 
 import type { OperatorContext } from "../../../database/operator-context";
 import { FieldOptionsService } from "../../../fields/field-options.service";
-import { validationError } from "../shared/schedule-error";
+import { SCHEDULE_REASONS, validationError } from "../shared/schedule-error";
 import type { ScheduleFieldOptionModel } from "./schedule-field-option.model";
 
 /** 一個要驗的下拉值:哪個類別、值、錯誤時標回哪個欄位。 */
@@ -71,6 +71,7 @@ export class ScheduleFieldOptionsService {
       throw validationError(
         `not an enabled option: ${invalid.join(", ")}`,
         invalid,
+        SCHEDULE_REASONS.optionDisabled,
       );
     }
   }

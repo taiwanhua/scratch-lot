@@ -25,6 +25,7 @@ import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
 import { useSession } from "@/hooks/base/useSession";
 import { useDayOffEntryConflictNotice } from "@/hooks/project/schedule/useDayOffEntryConflictNotice/useDayOffEntryConflictNotice";
 import { useScheduleFieldOptions } from "@/hooks/project/schedule/useScheduleFieldOptions/useScheduleFieldOptions";
+import type { FieldErrorTexts } from "@/lib/base/field-errors";
 import {
   type DayOffKind,
   type DayOffSlot,
@@ -35,12 +36,25 @@ import {
 import {
   type ScheduleDayOffViolationError,
   dayOffViolationsOf,
-  scheduleErrorOf,
 } from "../../schedule-error";
+import {
+  scheduleErrorTextsOf,
+  scheduleFormatErrorsOf,
+} from "../../schedule-field-errors";
 
 /** codegen 的 query key 第一段是 operation 名稱(`useScheduleDayOffOverviewQuery.getKey`)。 */
 const OVERVIEW_QUERY_KEY = "ScheduleDayOffOverview";
-type Field = "userId" | "date" | "slots" | "reason" | "reasonNote";
+/** 會標回對話框的欄位(api `fields`)。 */
+const FIELD_LIST = [
+  "userId",
+  "date",
+  "kind",
+  "slots",
+  "reason",
+  "reasonNote",
+] as const;
+
+type Field = (typeof FIELD_LIST)[number];
 
 export interface OverrideDayOffDialogProps {
   /** 總覽選的分店(代改的對象要是這家店的排班人員) */
@@ -70,7 +84,7 @@ export const OverrideDayOffDialog = ({
 }: OverrideDayOffDialogProps) => {
   const t = useTranslations("admin.schedule.dayOffs");
   const tCommon = useTranslations("admin.schedule.common");
-  const tErrors = useTranslations("admin.schedule.errors");
+  const tSchedule = useTranslations("admin.schedule");
   const { session } = useSession();
   const queryClient = useQueryClient();
   const isMobile = useBreakpointDown("sm");
@@ -83,16 +97,19 @@ export const OverrideDayOffDialog = ({
   const [slots, setSlots] = useState<DayOffSlot[]>([EMPTY_SLOT]);
   const [reason, setReason] = useState("");
   const [reasonNote, setReasonNote] = useState("");
-  const [invalid, setInvalid] = useState<Field[]>([]);
+  // 欄位錯了就在欄位正下方寫原因(REACT-18);提示只放通用句
+  const [fieldErrors, setFieldErrors] = useState<FieldErrorTexts<Field>>({});
+  const invalid = Object.keys(fieldErrors);
   const [blocked, setBlocked] = useState<ScheduleDayOffViolationError[]>([]);
 
   const refresh = () => {
     void queryClient.invalidateQueries({ queryKey: [OVERVIEW_QUERY_KEY] });
   };
-  const errorOf = (error: unknown) => tErrors(scheduleErrorOf(error).code);
+  const errorOf = (error: unknown) =>
+    scheduleErrorTextsOf(error, FIELD_LIST, tSchedule).summary;
   const onError = (error: unknown) => {
     setBlocked(dayOffViolationsOf(error));
-    setInvalid((scheduleErrorOf(error).fields ?? []) as Field[]);
+    setFieldErrors(scheduleErrorTextsOf(error, FIELD_LIST, tSchedule).texts);
   };
   const noticeEntryConflicts = useDayOffEntryConflictNotice();
   const save = useAddScheduleDayOffsOnBehalfMutation(
@@ -146,7 +163,7 @@ export const OverrideDayOffDialog = ({
 
   const submit = () => {
     const missing = missingFields();
-    setInvalid(missing);
+    setFieldErrors(scheduleFormatErrorsOf(missing, tSchedule));
     setBlocked([]);
     if (missing.length > 0) {
       return;
@@ -191,13 +208,14 @@ export const OverrideDayOffDialog = ({
             required
             fullWidth
             error={invalid.includes("userId")}
+            helperText={fieldErrors.userId}
             options={staff.map((item) => ({
               value: item.userId,
               label: item.name,
             }))}
             onChange={(next) => {
               setUserId(next);
-              setInvalid([]);
+              setFieldErrors({});
             }}
           />
           <TextField
@@ -207,15 +225,20 @@ export const OverrideDayOffDialog = ({
             required
             fullWidth
             error={invalid.includes("date")}
+            helperText={fieldErrors.date}
             slotProps={{ inputLabel: { shrink: true } }}
             onChange={(event) => {
               setDate(event.target.value);
-              setInvalid([]);
+              setFieldErrors({});
             }}
           />
         </Stack>
         <Typography variant="subtitle2">{t("override.kind")}</Typography>
-        <DayOffKindRadios value={kind} onChange={setKind} />
+        <DayOffKindRadios
+          value={kind}
+          errorText={fieldErrors.kind}
+          onChange={setKind}
+        />
         {existing.map((item) => (
           <Stack
             key={item.id}
@@ -238,7 +261,9 @@ export const OverrideDayOffDialog = ({
               disabled={remove.isPending}
               onClick={() => {
                 const missing = reasonRequired && reason === "";
-                setInvalid(missing ? ["reason"] : []);
+                setFieldErrors(
+                  missing ? scheduleFormatErrorsOf(["reason"], tSchedule) : {},
+                );
                 if (!missing) {
                   remove.mutate({
                     input: { orgId, id: item.id, ...reasonInput },
@@ -254,6 +279,7 @@ export const OverrideDayOffDialog = ({
           <DayOffSlotFields
             slots={slots}
             invalid={invalid.includes("slots")}
+            errorText={fieldErrors.slots}
             onChange={setSlots}
           />
         )}
@@ -263,10 +289,11 @@ export const OverrideDayOffDialog = ({
           required={reasonRequired}
           fullWidth
           error={invalid.includes("reason")}
+          helperText={fieldErrors.reason}
           options={reasons.options}
           onChange={(next) => {
             setReason(next);
-            setInvalid([]);
+            setFieldErrors({});
           }}
         />
         {reason === REASON_OTHER_VALUE && (
@@ -276,9 +303,10 @@ export const OverrideDayOffDialog = ({
             required
             fullWidth
             error={invalid.includes("reasonNote")}
+            helperText={fieldErrors.reasonNote}
             onChange={(event) => {
               setReasonNote(event.target.value);
-              setInvalid([]);
+              setFieldErrors({});
             }}
           />
         )}

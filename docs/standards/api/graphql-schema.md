@@ -118,6 +118,13 @@ type UsersPayload {
 
 規則表正本見 ADR-0004「角色種類與可改動範圍」與 `docs/modules/role-manager.md`。其他模組自己的 `FORBIDDEN` reason(欄位管理、表單、流程)依上一節的原則寫在各自的 error 檔與模組文件「錯誤」節,不進本表。
 
+### `VALIDATION_FAILED` 的 `reason`
+
+`VALIDATION_FAILED` 的 `fields` 只說「哪一欄」。**格式錯、必填**不帶 `reason`(前端知道每一欄的規則,寫那一欄的格式要求);
+**格式對但不能存**的情形 —— 重複(代號、帳號、同一天已有一筆)、被占用(已被別筆對應)、重疊(時段)、
+狀態不合(選項已停用、對象已停用)—— 一律帶 `reason`,前端才能把原因寫在欄位下(REACT-18)。`reason` 的列舉值
+照上一節屬模組自己的 error 檔、寫進模組文件「錯誤」節;唯一索引撞到(兩個請求同時寫)時回與事前檢查**同一個** `reason`。
+
 ### `USER_NOT_ELIGIBLE` 的兩個入口
 
 `USER_NOT_ELIGIBLE` 是**授予資格的唯一錯誤碼**,兩個入口同碼:角色頁的 `grantRoleUsers` 與使用者頁的

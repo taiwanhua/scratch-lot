@@ -8,6 +8,7 @@ import { Stack } from "@repo/ui/stack";
 import { Tooltip } from "@repo/ui/tooltip";
 import { Typography } from "@repo/ui/typography";
 
+import type { NavBadges } from "@/hooks/base/useSidebarBadges";
 import type { NavNode } from "@/lib/base/module-tree";
 
 import { NavNodes } from "../NavNodes/NavNodes";
@@ -24,8 +25,8 @@ export interface NavRailGroupItemProps {
   currentPath: string;
   /** 目前網址落在這個群組底下(收合後看不到子列,選中狀態改標在群組這一格) */
   isSelected: boolean;
-  /** 模組 key → 待辦數;交給 flyout 裡的子列 */
-  badges?: Readonly<Record<string, number>>;
+  /** 模組 key → 待辦數與說明;交給 flyout 裡的子列 */
+  badges?: NavBadges;
 }
 
 /**

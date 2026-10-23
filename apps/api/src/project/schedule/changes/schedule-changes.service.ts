@@ -9,7 +9,7 @@ import { NotificationService } from "../../../notifications/notification.service
 import { ScheduleChangesRepository } from "../../database/schedule/roster.repositories";
 import { SCHEDULE_CHANGED } from "../../notifications";
 import { ScheduleFieldOptionsService } from "../field-options/schedule-field-options.service";
-import { validationError } from "../shared/schedule-error";
+import { SCHEDULE_REASONS, validationError } from "../shared/schedule-error";
 import type { ScheduleOrg } from "../shared/schedule-org";
 
 /** 送來的異動原因(未發布的月份不用給)。 */
@@ -74,9 +74,11 @@ export class ScheduleChangesService {
     );
     const option = options.find((item) => item.value === reasonKey);
     if (option === undefined) {
-      throw validationError(`not an enabled option: ${reasonKey}`, [
-        "reasonKey",
-      ]);
+      throw validationError(
+        `not an enabled option: ${reasonKey}`,
+        ["reasonKey"],
+        SCHEDULE_REASONS.optionDisabled,
+      );
     }
     if (requiresReasonNote(reasonKey) && reasonNote === null) {
       throw validationError("reasonNote is required for other", ["reasonNote"]);

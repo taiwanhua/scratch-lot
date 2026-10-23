@@ -197,6 +197,20 @@ describe("店面管理:交班結帳", () => {
     expect(runtime.inputs.createFormDraft).toHaveLength(0);
   });
 
+  it("留給下一班不是整數 → 欄位下寫「要填 0 以上的整數」(REACT-18)", async () => {
+    const user = fastUser();
+    renderStore({ path: WIZARD_PATH });
+    await toDrawerStep(user);
+    await user.type(countInput(1000), "12");
+    await user.type(countInput(100), "3");
+    await user.type(countInput(50), "1");
+    await user.click(screen.getByRole("button", { name: "下一步" }));
+    await screen.findByText("交接");
+    const left = screen.getByRole("textbox", { name: "留給下一班" });
+    await user.type(left, "1.5");
+    expect(left).toHaveAccessibleDescription("要填 0 以上的整數");
+  });
+
   it("沒有接班人、留給下一班 0 → 可以送出(改由店長審核)", async () => {
     const user = fastUser();
     const { runtime } = renderStore({ path: WIZARD_PATH });

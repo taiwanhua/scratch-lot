@@ -22,22 +22,27 @@ import { TagPaletteSelect } from "@/components/project/TagPaletteSelect/TagPalet
 import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
 import { useSession } from "@/hooks/base/useSession";
 import { useScheduleFieldOptions } from "@/hooks/project/schedule/useScheduleFieldOptions/useScheduleFieldOptions";
+import type { FieldErrorTexts } from "@/lib/base/field-errors";
 import {
   type TagPaletteKey,
   isTagPaletteKey,
 } from "@/lib/project/tag-palettes";
 
 import { ConfirmDeleteDialog } from "../../ConfirmDeleteDialog";
-import { scheduleErrorOf } from "../../schedule-error";
+import {
+  scheduleErrorTextsOf,
+  scheduleFormatErrorsOf,
+} from "../../schedule-field-errors";
 
 type Day = ScheduleCalendarDayFieldsFragment;
 
 /** codegen 的 query key 第一段是 operation 名稱(`useScheduleCalendarQuery.getKey`)。 */
 const SCHEDULE_CALENDAR_QUERY_KEY = "ScheduleCalendar";
 type DayType = "closed" | "special";
-type Field = "date" | "category" | "name";
+/** 會標回對話框的欄位(api `fields`)。 */
+const FIELD_LIST = ["date", "category", "name"] as const;
 
-const FIELDS: ReadonlySet<Field> = new Set(["date", "category", "name"]);
+type Field = "date" | "category" | "name";
 
 export interface CalendarDayDialogProps {
   /** 寫在哪一層(行事曆頁選的分店) */
@@ -62,7 +67,7 @@ export const CalendarDayDialog = ({
   const t = useTranslations("admin.schedule.calendar.dialog");
   const tCalendar = useTranslations("admin.schedule.calendar");
   const tCommon = useTranslations("admin.schedule.common");
-  const tErrors = useTranslations("admin.schedule.errors");
+  const tSchedule = useTranslations("admin.schedule");
   const { session } = useSession();
   const queryClient = useQueryClient();
   const isMobile = useBreakpointDown("sm");
@@ -81,7 +86,9 @@ export const CalendarDayDialog = ({
   const [paletteKey, setPaletteKey] = useState<TagPaletteKey | null>(
     isTagPaletteKey(day?.paletteKey) ? day.paletteKey : null,
   );
-  const [invalid, setInvalid] = useState<Field[]>([]);
+  // 欄位錯了就在欄位正下方寫原因(REACT-18);提示只放通用句
+  const [fieldErrors, setFieldErrors] = useState<FieldErrorTexts<Field>>({});
+  const invalid = Object.keys(fieldErrors);
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
 
   const done = () => {
@@ -91,7 +98,8 @@ export const CalendarDayDialog = ({
     });
     onClose();
   };
-  const errorOf = (error: unknown) => tErrors(scheduleErrorOf(error).code);
+  const errorOf = (error: unknown) =>
+    scheduleErrorTextsOf(error, FIELD_LIST, tSchedule).summary;
   const save = useSaveScheduleCalendarDayMutation(
     session.client,
     useMutationFeedback({
@@ -99,10 +107,8 @@ export const CalendarDayDialog = ({
       error: errorOf,
       onSuccess: done,
       onError: (error) => {
-        setInvalid(
-          (scheduleErrorOf(error).fields ?? []).filter(
-            (field): field is Field => FIELDS.has(field as Field),
-          ),
+        setFieldErrors(
+          scheduleErrorTextsOf(error, FIELD_LIST, tSchedule).texts,
         );
       },
     }),
@@ -123,7 +129,7 @@ export const CalendarDayDialog = ({
     if (date === "") missing.push("date");
     if (isSpecial && category === "") missing.push("category");
     if (isSpecial && name.trim() === "") missing.push("name");
-    setInvalid(missing);
+    setFieldErrors(scheduleFormatErrorsOf(missing, tSchedule));
     if (missing.length > 0) {
       return;
     }
@@ -213,10 +219,11 @@ export const CalendarDayDialog = ({
             fullWidth
             disabled={!canEdit}
             error={invalid.includes("date")}
+            helperText={fieldErrors.date}
             slotProps={{ inputLabel: { shrink: true } }}
             onChange={(event) => {
               setDate(event.target.value);
-              setInvalid([]);
+              setFieldErrors({});
             }}
           />
           {isSpecial && (
@@ -227,10 +234,11 @@ export const CalendarDayDialog = ({
               fullWidth
               disabled={!canEdit}
               error={invalid.includes("category")}
+              helperText={fieldErrors.category}
               options={categories.options}
               onChange={(next) => {
                 setCategory(next);
-                setInvalid([]);
+                setFieldErrors({});
               }}
             />
           )}
@@ -242,9 +250,10 @@ export const CalendarDayDialog = ({
           fullWidth
           disabled={!canEdit}
           error={invalid.includes("name")}
+          helperText={fieldErrors.name}
           onChange={(event) => {
             setName(event.target.value);
-            setInvalid([]);
+            setFieldErrors({});
           }}
         />
         <TextField

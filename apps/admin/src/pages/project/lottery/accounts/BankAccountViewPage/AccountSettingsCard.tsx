@@ -18,11 +18,16 @@ import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
 import { useSession } from "@/hooks/base/useSession";
 import { useTenantTimezone } from "@/hooks/base/useTenantTimezone";
 import {
+  type FieldErrorTexts,
+  withoutFieldError,
+} from "@/lib/base/field-errors";
+import {
   localDayInstantOf,
   localDayTextOf,
 } from "@/lib/base/form-engine/local-day";
 import { accountsErrorOf } from "@/lib/project/lottery/accounts-error";
 
+import { accountErrorTextsOf } from "../account-field-errors";
 import { useInvalidateAccounts } from "../useInvalidateAccounts";
 
 export interface AccountSettingsCardProps {
@@ -36,6 +41,15 @@ type Field =
   | "branchName"
   | "openingBalance"
   | "openingDate";
+
+const FIELDS: readonly Field[] = [
+  "bankCode",
+  "accountNo",
+  "accountName",
+  "branchName",
+  "openingBalance",
+  "openingDate",
+];
 
 const GRID_SX = {
   display: "grid",
@@ -65,14 +79,17 @@ export const AccountSettingsCard = ({ account }: AccountSettingsCardProps) => {
     openingBalance: String(account.openingBalance),
     openingDate: localDayTextOf(account.openingDate, timezone),
   }));
-  const [invalid, setInvalid] = useState<Field[]>([]);
+  // 欄位錯了就在欄位正下方寫原因(REACT-18);Snackbar 只放通用句
+  const [fieldErrors, setFieldErrors] = useState<FieldErrorTexts<Field>>({});
   const locked = account.hasTransactions;
 
   const onError = (error: unknown) => {
-    setInvalid((accountsErrorOf(error).fields ?? []) as Field[]);
+    setFieldErrors(
+      accountErrorTextsOf(accountsErrorOf(error), FIELDS, t).texts,
+    );
   };
   const feedbackError = (error: unknown) =>
-    t(`errors.${accountsErrorOf(error).code}`);
+    accountErrorTextsOf(accountsErrorOf(error), FIELDS, t).summary;
   const update = useUpdateLotteryBankAccountMutation(
     session.client,
     useMutationFeedback({
@@ -84,7 +101,7 @@ export const AccountSettingsCard = ({ account }: AccountSettingsCardProps) => {
   );
   const change = (key: keyof typeof values, value: string | null) => {
     setValues((current) => ({ ...current, [key]: value }));
-    setInvalid((current) => current.filter((field) => field !== key));
+    setFieldErrors((current) => withoutFieldError(current, key));
   };
   const save = () => {
     const opening = Number(values.openingBalance.trim());
@@ -109,7 +126,8 @@ export const AccountSettingsCard = ({ account }: AccountSettingsCardProps) => {
       label={t(`accountForm.fields.${field}`)}
       value={values[field] ?? ""}
       disabled={isDisabled}
-      error={invalid.includes(field)}
+      error={fieldErrors[field] !== undefined}
+      helperText={fieldErrors[field]}
       onChange={(event) => {
         change(field, event.target.value);
       }}
@@ -130,7 +148,8 @@ export const AccountSettingsCard = ({ account }: AccountSettingsCardProps) => {
             label={t("accountForm.fields.openingDate")}
             value={values.openingDate}
             disabled={locked}
-            error={invalid.includes("openingDate")}
+            error={fieldErrors.openingDate !== undefined}
+            helperText={fieldErrors.openingDate}
             fullWidth
             onChange={(value) => {
               change("openingDate", value);

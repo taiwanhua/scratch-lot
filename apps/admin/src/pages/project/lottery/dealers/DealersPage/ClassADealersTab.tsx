@@ -3,7 +3,6 @@ import { useTranslations } from "use-intl";
 import {
   type LotteryDealerFieldsFragment,
   LotteryDealerType,
-  LotteryLicenseState,
   useLotteryDealersQuery,
 } from "@repo/graphql";
 import { Box } from "@repo/ui/box";
@@ -26,19 +25,12 @@ import { DEALERS_PAGE_SIZE } from "../dealers-keys";
 import {
   type ClassAListFilters,
   DEALERS_LIST_KEY,
+  LICENSE_FILTER,
   classAListSchema,
 } from "../dealers-list";
 import type { DealersAccess } from "../useDealersAccess";
 import { DealersPager } from "./DealersPager";
-
-const LICENSE_FILTER: Record<
-  ClassAListFilters["license"],
-  LotteryLicenseState | undefined
-> = {
-  all: undefined,
-  expiring: LotteryLicenseState.Expiring,
-  expired: LotteryLicenseState.Expired,
-};
+import { LicenseExpiryTag } from "./LicenseExpiryTag";
 
 const SIGNIN_FILTER: Record<ClassAListFilters["signin"], boolean | undefined> =
   {
@@ -63,8 +55,9 @@ export interface DealersTabProps {
 }
 
 /**
- * 甲類分頁(Figma DE-01):快速篩選 逾 150 天 / 逾 180 天 / 本季未見簽 + 三個篩選(見簽狀態、距上次批購、證照);
- * 欄位 證號、姓名、共同銷售處所、距批購 N 天、距本人批購 N 天、本季見簽、狀態。點一列進詳情頁。
+ * 甲類分頁(Figma DE-01):快速篩選 逾 150 天 / 逾 180 天 / 本季未見簽 / 證照 30 天內到期 / 證照已過期
+ * + 三個篩選(見簽狀態、距上次批購、證照);欄位 證號、姓名、共同銷售處所、距批購 N 天、距本人批購 N 天、
+ * 證照到期、本季見簽、狀態。點一列進詳情頁。
  */
 export const ClassADealersTab = ({ access }: DealersTabProps) => {
   const t = useTranslations("admin.lotteryDealers");
@@ -133,6 +126,12 @@ export const ClassADealersTab = ({ access }: DealersTabProps) => {
       render: ({ row }) => daysTag(row.daysSinceLastSelfPurchase ?? null),
     },
     {
+      key: "licenseExpiresAt",
+      header: t("list.columns.licenseExpiresAt"),
+      width: 120,
+      render: ({ row }) => <LicenseExpiryTag dealer={row} />,
+    },
+    {
       key: "signed",
       header: t("list.columns.signedThisQuarter"),
       width: 110,
@@ -174,6 +173,18 @@ export const ClassADealersTab = ({ access }: DealersTabProps) => {
       label: t("list.quick.unsignedThisQuarter"),
       isOn: filters.signin === "unsigned",
       patch: { signin: filters.signin === "unsigned" ? "all" : "unsigned" },
+    },
+    {
+      key: "licenseExpiring",
+      label: t("list.quick.licenseExpiring"),
+      isOn: filters.license === "expiring",
+      patch: { license: filters.license === "expiring" ? "all" : "expiring" },
+    },
+    {
+      key: "licenseExpired",
+      label: t("list.quick.licenseExpired"),
+      isOn: filters.license === "expired",
+      patch: { license: filters.license === "expired" ? "all" : "expired" },
     },
   ] as const;
 

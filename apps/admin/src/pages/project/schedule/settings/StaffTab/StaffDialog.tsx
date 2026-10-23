@@ -18,12 +18,16 @@ import { Radio } from "@repo/ui/radio";
 import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
 
+import { FieldErrorGroup } from "@/components/base/FieldErrorGroup/FieldErrorGroup";
 import { OrgTreeSelect } from "@/components/base/OrgTreeSelect/OrgTreeSelect";
 import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
 import { useSession } from "@/hooks/base/useSession";
 import { flattenOrgs, tenantTreeToOrgNodes } from "@/lib/base/org-tree";
 
-import { scheduleErrorOf } from "../../schedule-error";
+import { scheduleErrorTextsOf } from "../../schedule-field-errors";
+
+/** 會標回對話框的欄位(api `fields`)。 */
+const FIELDS = ["orgs"] as const;
 
 interface StaffOrg {
   orgId: string;
@@ -48,7 +52,7 @@ export const StaffDialog = ({ row, canEdit, onClose }: StaffDialogProps) => {
   const tStaff = useTranslations("admin.schedule.staff");
   const tCommon = useTranslations("admin.schedule.common");
   const tEmployment = useTranslations("admin.schedule.employment");
-  const tErrors = useTranslations("admin.schedule.errors");
+  const tSchedule = useTranslations("admin.schedule");
   const { session } = useSession();
   const queryClient = useQueryClient();
   const isMobile = useBreakpointDown("sm");
@@ -70,6 +74,8 @@ export const StaffDialog = ({ row, canEdit, onClose }: StaffDialogProps) => {
       isPrimary: org.isPrimary,
     })),
   );
+  // 分店清單被 api 擋下(同一家列兩次、主要分店不是剛好一家……)的原因寫在清單下(REACT-18)
+  const [orgsError, setOrgsError] = useState<string | undefined>();
   const primaryElsewhere = staff?.primaryElsewhere ?? false;
   const needsPrimary =
     !primaryElsewhere && orgs.length > 0 && !orgs.some((org) => org.isPrimary);
@@ -78,7 +84,10 @@ export const StaffDialog = ({ row, canEdit, onClose }: StaffDialogProps) => {
     session.client,
     useMutationFeedback({
       success: tStaff("feedback.updateSuccess"),
-      error: (error) => tErrors(scheduleErrorOf(error).code),
+      error: (error) => scheduleErrorTextsOf(error, FIELDS, tSchedule).summary,
+      onError: (error) => {
+        setOrgsError(scheduleErrorTextsOf(error, FIELDS, tSchedule).texts.orgs);
+      },
       onSuccess: () => {
         void queryClient.invalidateQueries({
           queryKey: useScheduleStaffQuery.getKey(),
@@ -183,62 +192,64 @@ export const StaffDialog = ({ row, canEdit, onClose }: StaffDialogProps) => {
           ))}
         </Stack>
         <Typography variant="subtitle2">{t("orgs")}</Typography>
-        {orgs.length === 0 ? (
-          <Typography variant="body2" color="textSecondary">
-            {t("noOrgs")}
-          </Typography>
-        ) : (
-          <Stack spacing={1}>
-            {orgs.map((org) => (
-              <Stack
-                key={org.orgId}
-                direction="row"
-                spacing={1}
-                sx={{ alignItems: "center", flexWrap: "wrap" }}
-              >
-                <Typography sx={{ flex: 1, minWidth: 96 }}>
-                  {org.orgName}
-                </Typography>
-                <FormControlLabel
-                  label={t("canLead")}
-                  disabled={!canEdit}
-                  control={
-                    <Checkbox
-                      checked={org.canLead}
-                      onChange={(_event, checked) => {
-                        patch(org.orgId, { canLead: checked });
+        <FieldErrorGroup label={t("orgs")} errorText={orgsError}>
+          {orgs.length === 0 ? (
+            <Typography variant="body2" color="textSecondary">
+              {t("noOrgs")}
+            </Typography>
+          ) : (
+            <Stack spacing={1}>
+              {orgs.map((org) => (
+                <Stack
+                  key={org.orgId}
+                  direction="row"
+                  spacing={1}
+                  sx={{ alignItems: "center", flexWrap: "wrap" }}
+                >
+                  <Typography sx={{ flex: 1, minWidth: 96 }}>
+                    {org.orgName}
+                  </Typography>
+                  <FormControlLabel
+                    label={t("canLead")}
+                    disabled={!canEdit}
+                    control={
+                      <Checkbox
+                        checked={org.canLead}
+                        onChange={(_event, checked) => {
+                          patch(org.orgId, { canLead: checked });
+                        }}
+                      />
+                    }
+                  />
+                  <FormControlLabel
+                    label={t("isPrimary")}
+                    disabled={!canEdit || primaryElsewhere}
+                    control={
+                      <Radio
+                        checked={org.isPrimary}
+                        onChange={() => {
+                          patch(org.orgId, { isPrimary: true });
+                        }}
+                      />
+                    }
+                  />
+                  {canEdit && (
+                    <Button
+                      variant="text"
+                      color="error"
+                      size="small"
+                      onClick={() => {
+                        removeOrg(org.orgId);
                       }}
-                    />
-                  }
-                />
-                <FormControlLabel
-                  label={t("isPrimary")}
-                  disabled={!canEdit || primaryElsewhere}
-                  control={
-                    <Radio
-                      checked={org.isPrimary}
-                      onChange={() => {
-                        patch(org.orgId, { isPrimary: true });
-                      }}
-                    />
-                  }
-                />
-                {canEdit && (
-                  <Button
-                    variant="text"
-                    color="error"
-                    size="small"
-                    onClick={() => {
-                      removeOrg(org.orgId);
-                    }}
-                  >
-                    {tCommon("remove")}
-                  </Button>
-                )}
-              </Stack>
-            ))}
-          </Stack>
-        )}
+                    >
+                      {tCommon("remove")}
+                    </Button>
+                  )}
+                </Stack>
+              ))}
+            </Stack>
+          )}
+        </FieldErrorGroup>
         {needsPrimary && (
           <Typography variant="caption" color="error">
             {t("primaryRequired")}

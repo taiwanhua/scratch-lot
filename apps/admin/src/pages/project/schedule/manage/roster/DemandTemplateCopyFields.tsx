@@ -5,11 +5,14 @@ import { FormControlLabel } from "@repo/ui/form-control-label";
 import { Stack } from "@repo/ui/stack";
 import { TextField } from "@repo/ui/text-field";
 
+import type { FieldErrorTexts } from "@/lib/base/field-errors";
+
 import type { DemandField, DemandValues } from "./demand-dialog-state";
 
 export interface DemandTemplateCopyFieldsProps {
   values: DemandValues;
-  invalid: readonly DemandField[];
+  /** 欄位 → 寫在欄位正下方的原因(REACT-18) */
+  fieldErrors: FieldErrorTexts<DemandField>;
   onChange: <
     Key extends "saveAsTemplate" | "templateName" | "templateShortName",
   >(
@@ -24,7 +27,7 @@ export interface DemandTemplateCopyFieldsProps {
  */
 export const DemandTemplateCopyFields = ({
   values,
-  invalid,
+  fieldErrors,
   onChange,
 }: DemandTemplateCopyFieldsProps) => {
   const t = useTranslations("admin.schedule.roster.demandDialog");
@@ -50,7 +53,8 @@ export const DemandTemplateCopyFields = ({
               value={values[field]}
               required
               fullWidth
-              error={invalid.includes(field)}
+              error={fieldErrors[field] !== undefined}
+              helperText={fieldErrors[field]}
               onChange={(event) => {
                 onChange(field, event.target.value);
               }}

@@ -26,6 +26,17 @@
     }
   },
   "lotteryMasterData": {
+    "fieldErrors": {
+      "choose": "Choose again",
+      "required": "Required",
+      "gameCode": "Game code must be 4 digits",
+      "requiredText": "Required, up to {max} characters",
+      "maxLength": "Up to {max} characters",
+      "positiveInteger": "Enter a whole number greater than 0",
+      "integerRange": "Enter a whole number from {min} to {max}",
+      "order": "Enter a whole number of 0 or more",
+      "date": "Invalid date"
+    },
     "tabs": {
       "aria": "Master data tabs",
       "games": "Games",
@@ -221,7 +232,9 @@
       "quick": {
         "over150": "Over 150 days",
         "over180": "Over 180 days",
-        "unsignedThisQuarter": "Not signed this quarter"
+        "unsignedThisQuarter": "Not signed this quarter",
+        "licenseExpiring": "License expiring in 30 days",
+        "licenseExpired": "License expired"
       },
       "filters": {
         "signin": "Sign-in",
@@ -248,7 +261,8 @@
         "coSellers": "Co-sellers",
         "roles": "Roles",
         "mobile": "Mobile",
-        "dealerCount": "Dealers"
+        "dealerCount": "Dealers",
+        "licenseExpiresAt": "License expires"
       },
       "signed": "Signed",
       "unsigned": "Not signed",
@@ -320,7 +334,21 @@
       "occupied": "Mapped to {name}",
       "pickContacts": "Only active contacts with this role are listed",
       "coSalesHint": "Class A needs a co-sales store before agents",
-      "readOnlyField": "No permission to change"
+      "readOnlyField": "No permission to change",
+      "fieldErrors": {
+        "choose": "Choose again",
+        "licenseNo": "License number must be 8 digits",
+        "nationalId": "National ID must be 1 letter followed by 9 digits",
+        "requiredText": "Required, up to {max} characters",
+        "maxLength": "Up to {max} characters",
+        "digits": "Digits only, up to {max}",
+        "email": "Invalid email (up to {max} characters)",
+        "requiredDate": "Required; choose a date",
+        "date": "Invalid date",
+        "rentFee": "Enter a whole number of 0 or more",
+        "rentDueDay": "Enter a whole number from 1 to 31; required when a rent cycle is set",
+        "roles": "Choose at least one role"
+      }
     },
     "detail": {
       "tabsLabel": "Dealer detail tabs",
@@ -385,9 +413,11 @@
         "LICENSE_NO_DUPLICATE": "This license number is already used",
         "NATIONAL_ID_DUPLICATE": "This national ID is already registered",
         "NOT_FOR_TYPE": "This field doesn't apply to this type",
+        "RENT_DUE_DAY_REQUIRED": "Due day is required when a rent cycle is set",
         "RENT_START_MONTH_REQUIRED": "Starting month is required for quarterly or yearly rent",
         "ROLE_LIMIT": "Too many for this role (Class A: 2 agents, 2 trustees, 1 introducer; Class B: 2 agents, 1 introducer)",
         "TRUSTEE_NOT_ALLOWED": "Class B cannot have trustees",
+        "CONTACT_REPEATED": "The same contact is chosen twice",
         "CONTACT_ROLE_MISMATCH": "The contact doesn't have this role",
         "CONTACT_DISABLED": "The contact is disabled and can't be selected",
         "SELF_RELATION": "A dealer cannot be their own contact",
@@ -414,6 +444,10 @@
     }
   },
   "lotteryInventory": {
+    "fieldErrors": {
+      "check": "Check this field",
+      "store": "Required; choose the store to return to"
+    },
     "ticketGrid": {
       "states": {
         "unsold": "Unsold",
@@ -454,6 +488,8 @@
       "amount": "NT${amount}"
     },
     "reason": {
+      "noteError": "A note is required when you choose Other",
+      "keyError": "Required; choose a reason",
       "note": "Note",
       "noteRequired": "Note (required)"
     },
@@ -897,6 +933,23 @@
     }
   },
   "schedule": {
+    "fieldErrors": {
+      "check": "Check this field",
+      "choose": "Choose again",
+      "required": "Required",
+      "shortName": "Enter 1–{max} characters",
+      "time": "Required; enter a time (hh:mm)",
+      "endTime": "Required; can't be the same as the start time",
+      "tasks": "Choose a task on every row; up to {leaders} leader and {helpers} helper rows",
+      "date": "Required; choose a date",
+      "dateTime": "Required; choose a date and time",
+      "endAt": "The end must be after the start, within 24 hours",
+      "reasonKey": "Required; choose a reason",
+      "reasonNote": "A note is required when you choose Other",
+      "slots": "Each time range must start before it ends",
+      "assignments": "Fill at least one task",
+      "nonNegativeInteger": "Enter a whole number of 0 or more"
+    },
     "pages": {
       "my": "My schedule",
       "manage": "Scheduling",
@@ -927,6 +980,31 @@
       "remove": "Remove"
     },
     "errors": {
+      "reasons": {
+        "REFERENCE_NOT_FOUND": "The chosen item no longer exists or isn't visible to you; choose again",
+        "CALENDAR_DAY_DUPLICATE": "This day already has a calendar entry",
+        "DAY_OFF_DUPLICATE": "This day already has a full-day day off",
+        "TIME_RANGES_OVERLAP": "The time range overlaps another day-off range on this day",
+        "NO_PRIMARY_STORE": "This person has no primary branch yet",
+        "DEMAND_HAS_ASSIGNMENTS": "People are already scheduled on this demand, so it can't move to another day",
+        "NOT_CANDIDATE": "This person isn't on this branch's staff list",
+        "STORE_CLOSED": "The store is closed during this time",
+        "ENTRY_OVERLAP": "Overlaps another schedule entry of this person",
+        "DAY_OFF_CONFLICT": "Overlaps this person's day off",
+        "PUNCH_UNAVAILABLE": "The chosen punch is already matched to another entry; choose again",
+        "TASK_NOT_ON_DAY": "The chosen task isn't a demand on this day",
+        "CANNOT_LEAD": "This person can't be a leader",
+        "TASK_TAKEN": "Someone is already scheduled for this task",
+        "DEMAND_REPEATED": "Choose only one task per demand",
+        "TASK_ROLE_LOCKED": "An existing task can't change its role",
+        "ALREADY_JOINED": "Already on the staff list",
+        "ORG_REPEATED": "The same branch is listed twice",
+        "PRIMARY_ORG_REQUIRED": "Choose exactly one primary branch",
+        "OPTION_DISABLED": "The chosen option is disabled; choose again",
+        "RULE_NOT_TOGGLEABLE": "This rule can't be turned off",
+        "PUNCH_NOT_ALLOWED": "This entry can't take this punch now",
+        "CONCURRENT_EDIT": "Someone else changed this at the same time; refresh and try again"
+      },
       "FORBIDDEN": "You don't have permission to do this",
       "NOT_FOUND": "This item was not found; it may have been deleted or you can't see it",
       "VALIDATION_FAILED": "Some fields are invalid; please check the highlighted fields",
@@ -993,6 +1071,7 @@
       "timeRange": "{start}–{end}",
       "cardMeta": "{time} · {position} · lead/helper {tasks}",
       "dialog": {
+        "tasks": "Tasks",
         "createTitle": "New demand template",
         "editTitle": "Demand template · {name}",
         "name": "Name",
@@ -1050,6 +1129,7 @@
       "noTemplates": "No demand templates yet. Create them under Demand templates first.",
       "dayCell": "{day} {templates}",
       "dialog": {
+        "days": "Demand templates by day",
         "createTitle": "New week template",
         "editTitle": "Week template · {name}",
         "name": "Name",
@@ -1134,6 +1214,16 @@
         "minute": "minutes"
       },
       "dialog": {
+        "tiers": "Default break tiers",
+        "errors": {
+          "number": "Enter a number",
+          "range": "Enter {min}–{max}",
+          "endDay": "{error}, not before the start day",
+          "choose": "Choose again",
+          "required": "Required",
+          "tiers": "1–10 tiers; every tier needs hours and break minutes of 0 or more, with no repeated hours",
+          "order": "Enter a whole number of 0 or more"
+        },
         "title": "Rule · {label}",
         "amount": "Value",
         "amountWithUnit": "Value ({unit})",
@@ -1249,6 +1339,7 @@
         "view": "View"
       },
       "dialog": {
+        "slots": "Time ranges",
         "title": "Register day-off · {date}",
         "titleNoDate": "Register day-off",
         "date": "Date",
@@ -1538,6 +1629,7 @@
         "feedback": "Removed {count} shifts"
       },
       "demandDialog": {
+        "tasks": "Tasks",
         "createTitle": "Add staffing need",
         "editTitle": "Staffing need · {date} {name}",
         "create": "Add",
@@ -1595,6 +1687,7 @@
         "deleteEmpty": "Nobody is filling this staffing need."
       },
       "entryDialog": {
+        "assignments": "Demands to fill",
         "createTitle": "Add shift · {date}",
         "editTitle": "Shift · {name} {date}",
         "person": "Staff",
@@ -1618,8 +1711,6 @@
         "delete": "Delete shift",
         "deleteConfirm": "Delete {name}'s shift on {date}? Its tasks are released.",
         "errors": {
-          "time": "The time overlaps another shift of this person (including other branches), or the branch is closed that day",
-          "assignments": "A chosen task is already filled, is not on this day, or this person cannot lead",
           "locked": "This shift already has a cash shift and cannot be deleted; change its time instead"
         },
         "feedback": {
@@ -1941,6 +2032,18 @@
     }
   },
   "lotteryAccounts": {
+    "fieldErrors": {
+      "choose": "Choose again",
+      "required": "Required",
+      "bankCode": "Bank code must be 3 digits",
+      "requiredText": "Required, up to {max} characters",
+      "maxLength": "Up to {max} characters",
+      "integer": "Enter a whole number",
+      "positiveInteger": "Enter a whole number greater than 0",
+      "requiredDate": "Required; choose a date",
+      "requiredTime": "Required; choose a time",
+      "summary": "Up to {max} characters; required for adjustments and others"
+    },
     "badgeDescription": "Number of outstanding settlements (documents to pay, refund or receive)",
     "tabs": {
       "aria": "Accounts tabs",
@@ -2378,7 +2481,7 @@
       "sheetName": "Purchase list"
     },
     "purchase": {
-      "badgeDescription": "Purchases waiting for my receiving",
+      "badgeDescription": "Purchases waiting for your receiving",
       "createFromRequisition": "Create purchase",
       "list": {
         "title": "Purchases",
@@ -2804,6 +2907,16 @@
     "PERIOD_CLOSED": "The selected shift is in a closed month and cannot be chosen."
   },
   "lotteryStore": {
+    "fieldErrors": {
+      "choose": "Choose again",
+      "required": "Required",
+      "positiveInteger": "Enter a whole number greater than 0",
+      "nonNegativeInteger": "Enter a whole number of 0 or more",
+      "entry": "Choose a schedule entry or temporary cover",
+      "reasonKey": "Required; choose a reason",
+      "reasonNote": "A note is required when you choose Other",
+      "lines": "Choose at least one ticket"
+    },
     "tabs": {
       "aria": "Store",
       "board": "Board",
@@ -2914,6 +3027,7 @@
       "reassign": "Change schedule entry"
     },
     "reassign": {
+      "entry": "Schedule entry",
       "title": "Change schedule entry",
       "reason": "Reason (required)",
       "hint": "Only the owner's entries at this branch on that day are listed. Not allowed after checkout; the task snapshot is rewritten from the new entry.",
@@ -3168,6 +3282,7 @@
       "rule": "Prizes over 5,000 are redeemed at the bank; prizes over the drawer's expected cash ({expected}) are blocked.",
       "overLimit": "Over 5,000: ask the customer to redeem at the bank",
       "overDrawer": "Over the drawer's expected cash {expected}",
+      "prizeInvalid": "Enter a whole number greater than 0",
       "cancel": "Cancel",
       "confirm": "Redeem",
       "successTitle": "Redeemed",
@@ -3295,6 +3410,7 @@
       }
     },
     "saleReversal": {
+      "reasonRequired": "Required; choose a reason",
       "tabLabel": "New sale reversal",
       "title": "Sale reversal request",
       "loading": "Loading",
@@ -3670,6 +3786,7 @@
         "cash_correction": "Cash correction"
       },
       "confirm": {
+        "invalidAmount": "Enter a whole number of 0 or more",
         "summaryTitle": "Expected cash",
         "expected": "Expected",
         "counted": "Counted",

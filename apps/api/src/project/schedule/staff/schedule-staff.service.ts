@@ -29,6 +29,7 @@ import {
   ScheduleStaffRepository,
 } from "../../database/schedule/schedule.repositories";
 import {
+  SCHEDULE_REASONS,
   forbiddenError,
   notFoundError,
   savingUnique,
@@ -149,9 +150,11 @@ export class ScheduleStaffService {
     // 已加入 = 整個租戶裡已經有這個人的排班檔案(一人一份;含操作者看不到的組織加入的)
     const existing = await this.joinedInTenant(operator, tenantId, picked);
     if (existing.size > 0) {
-      throw validationError(`already joined: ${[...existing].join(", ")}`, [
-        "userIds",
-      ]);
+      throw validationError(
+        `already joined: ${[...existing].join(", ")}`,
+        ["userIds"],
+        SCHEDULE_REASONS.alreadyJoined,
+      );
     }
     // 兩個請求同時加入同一人:唯一索引 (tenantId, userId) 擋下第二筆,回同一個錯誤
     await savingUnique(
@@ -175,6 +178,7 @@ export class ScheduleStaffService {
         }),
       "already joined (concurrent add)",
       ["userIds"],
+      SCHEDULE_REASONS.alreadyJoined,
     );
     const staffByUser = await this.staffByUser(operator, picked);
     return this.rowsOf(
@@ -265,6 +269,7 @@ export class ScheduleStaffService {
         }),
       "schedule staff branches changed at the same time",
       ["orgs"],
+      SCHEDULE_REASONS.concurrentEdit,
     );
     const staffByUser = await this.staffByUser(operator, [user]);
     const [row] = await this.rowsOf(
@@ -482,7 +487,11 @@ export class ScheduleStaffService {
   ): Promise<OrgPlan> {
     const ids = orgs.map((org) => parseObjectId(org.orgId, "orgs"));
     if (new Set(ids.map(String)).size !== ids.length) {
-      throw validationError("duplicated org in orgs", ["orgs"]);
+      throw validationError(
+        "duplicated org in orgs",
+        ["orgs"],
+        SCHEDULE_REASONS.orgRepeated,
+      );
     }
     for (const id of ids) {
       if (!visibleOrgs.has(String(id))) {
@@ -506,6 +515,7 @@ export class ScheduleStaffService {
       throw validationError(
         `a staff member needs exactly one primary org (got ${String(primaryCount)})`,
         ["orgs"],
+        SCHEDULE_REASONS.primaryOrgRequired,
       );
     }
     return {

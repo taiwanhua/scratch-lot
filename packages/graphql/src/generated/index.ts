@@ -8116,6 +8116,8 @@ export type SidebarBadge = {
   __typename?: 'SidebarBadge';
   /** 數字;0 也回傳,前端只在大於 0 時顯示 */
   count: Scalars['Int']['output'];
+  /** 「數什麼」的說明文字在 admin 訊息檔的 key(登記時給;側欄數字的提示與通知設定頁同一份);沒有 = null */
+  descriptionKey?: Maybe<Scalars['String']['output']>;
   /** 模組 key(側欄以它對上模組節點) */
   moduleKey: Scalars['String']['output'];
 };
@@ -9992,7 +9994,7 @@ export type RevokeRoleUsersMutation = { __typename?: 'Mutation', revokeRoleUsers
 export type SidebarBadgesQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type SidebarBadgesQuery = { __typename?: 'Query', sidebarBadges: Array<{ __typename?: 'SidebarBadge', moduleKey: string, count: number }> };
+export type SidebarBadgesQuery = { __typename?: 'Query', sidebarBadges: Array<{ __typename?: 'SidebarBadge', moduleKey: string, count: number, descriptionKey?: string | null }> };
 
 export type SidebarBadgeSettingItemFragment = { __typename?: 'SidebarBadgeSetting', moduleKey: string, moduleName: string, descriptionKey?: string | null, requires?: string | null, audience?: Record<string, unknown> | null, isDefault: boolean, updatedAt?: string | null, updatedBy?: string | null };
 
@@ -18710,6 +18712,7 @@ export const SidebarBadgesDocument = `
   sidebarBadges {
     moduleKey
     count
+    descriptionKey
   }
 }
     `;

@@ -20,16 +20,21 @@ import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
 import { useSession } from "@/hooks/base/useSession";
 import { useTenantTimezone } from "@/hooks/base/useTenantTimezone";
 import {
+  type FieldErrorTexts,
+  withoutFieldError,
+} from "@/lib/base/field-errors";
+import {
   localDayInstantOf,
   localDayTextOf,
 } from "@/lib/base/form-engine/local-day";
 import type { TagPaletteKey } from "@/lib/project/tag-palettes";
 import { isTagPaletteKey } from "@/lib/project/tag-palettes";
 
+import { masterDataErrorOf } from "../master-data-error";
 import {
-  type MasterDataErrorCode,
-  masterDataErrorOf,
-} from "../master-data-error";
+  masterDataErrorTextsOf,
+  masterDataFormatErrorsOf,
+} from "../master-data-field-errors";
 
 /** 表單欄位(= api `VALIDATION_FAILED` 的 `fields`)。 */
 export type GameFormField =
@@ -60,6 +65,20 @@ export interface GameFormValues {
   color: TagPaletteKey | null;
   note: string;
 }
+
+const FIELDS: readonly GameFormField[] = [
+  "gameCode",
+  "name",
+  "status",
+  "unitPrice",
+  "ticketsPerBook",
+  "defaultRate",
+  "launchedAt",
+  "discontinuedAt",
+  "claimDeadline",
+  "color",
+  "note",
+];
 
 const DATE_FIELDS = ["launchedAt", "discontinuedAt", "claimDeadline"] as const;
 const INTEGER_FIELDS = ["unitPrice", "ticketsPerBook", "defaultRate"] as const;
@@ -126,17 +145,18 @@ export const useGameForm = (
   const timezone = useTenantTimezone() ?? DEFAULT_TENANT_TIMEZONE;
   const [initial] = useState(() => valuesOf(game, timezone));
   const [values, setValues] = useState(initial);
-  const [invalidFields, setInvalidFields] = useState<GameFormField[]>([]);
-  const [errorCode, setErrorCode] = useState<MasterDataErrorCode | null>(null);
+  // 欄位錯了就在欄位正下方寫原因(REACT-18);頁面提示只放通用句
+  const [fieldErrors, setFieldErrors] = useState<
+    FieldErrorTexts<GameFormField>
+  >({});
+  const [errorText, setErrorText] = useState<string | null>(null);
+  const errorTextsOf = (error: unknown) =>
+    masterDataErrorTextsOf("game", masterDataErrorOf(error), FIELDS, t);
 
   const onError = (error: unknown) => {
-    const parsed = masterDataErrorOf(error);
-    setErrorCode(parsed.code);
-    setInvalidFields(
-      (parsed.fields ?? []).filter((field): field is GameFormField =>
-        Object.hasOwn(initial, field),
-      ),
-    );
+    const { texts, summary } = errorTextsOf(error);
+    setFieldErrors(texts);
+    setErrorText(summary);
   };
   const onSuccess = (item: LotteryGameFieldsFragment) => {
     queryClient.setQueryData(useLotteryGameQuery.getKey({ id: item.id }), {
@@ -147,8 +167,7 @@ export const useGameForm = (
     });
     onSaved(item.id);
   };
-  const feedbackError = (error: unknown) =>
-    t(`errors.${masterDataErrorOf(error).code}`);
+  const feedbackError = (error: unknown) => errorTextsOf(error).summary;
   const create = useCreateLotteryGameMutation(
     session.client,
     useMutationFeedback({
@@ -187,7 +206,7 @@ export const useGameForm = (
       }
       return next;
     });
-    setInvalidFields((current) => current.filter((field) => field !== key));
+    setFieldErrors((current) => withoutFieldError(current, key));
   };
 
   const inputOf = () => {
@@ -222,8 +241,8 @@ export const useGameForm = (
 
   const submit = () => {
     const invalid = invalidFieldsOf(values);
-    setInvalidFields(invalid);
-    setErrorCode(null);
+    setFieldErrors(masterDataFormatErrorsOf("game", invalid, t));
+    setErrorText(null);
     if (invalid.length > 0) {
       return;
     }
@@ -244,8 +263,8 @@ export const useGameForm = (
   return {
     values,
     change,
-    invalidFields,
-    errorCode,
+    fieldErrors,
+    errorText,
     isDirty,
     isSubmitting: create.isPending || update.isPending,
     submit,

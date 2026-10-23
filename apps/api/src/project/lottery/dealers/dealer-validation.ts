@@ -1,3 +1,5 @@
+import { DEALER_TEXT_LIMITS } from "@repo/domain/project/lottery";
+
 import type {
   DealerStatus,
   DealerType,
@@ -28,19 +30,8 @@ export function isEmailLike(value: string): boolean {
   return local !== "" && dot > 0 && !domain.endsWith(".");
 }
 
-export const TEXT_LIMITS = {
-  name: 10,
-  storeName: 30,
-  businessAddress: 60,
-  storePhone: 15,
-  terminalNo: 20,
-  phone: 15,
-  mobile: 15,
-  email: 60,
-  mailingAddress: 60,
-  residentialAddress: 60,
-  note: 1000,
-} as const;
+/** 文字欄位的長度上限(與 admin 欄位下的格式要求同一份)。 */
+export const TEXT_LIMITS = DEALER_TEXT_LIMITS;
 
 /** 一次檢查收集所有出錯的欄位。 */
 export class FieldErrors {
@@ -233,9 +224,11 @@ function checkTypeRules(draft: DealerDraft): void {
     return;
   }
   if (draft.rentDueDay === null) {
-    throw validationError("rentDueDay is required with rentCycle", [
-      "rentDueDay",
-    ]);
+    throw validationError(
+      "rentDueDay is required with rentCycle",
+      ["rentDueDay"],
+      DEALER_REASONS.rentDueDayRequired,
+    );
   }
   if (draft.rentCycle !== "month" && draft.rentStartMonth === null) {
     throw validationError(

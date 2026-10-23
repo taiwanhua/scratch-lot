@@ -201,9 +201,11 @@ export const AllocationsTable = ({
     })),
   ];
   return (
-    <Stack spacing={1.5}>
+    // 放在列表分頁時(庫存管理 #預計要給本數)平板以上分頁殼釘高:表格那一層吃掉剩下的高度並自己捲(STYLE-08);
+    // 父層不是 flex 欄(彈窗)時 flex / minHeight 不起作用,照內容長高
+    <Stack spacing={1.5} sx={{ flex: 1, minHeight: 0 }}>
       {caption}
-      <Box>
+      <Box sx={{ flex: 1, minHeight: 0 }}>
         <Table
           aria-label={t("aria")}
           columns={columns}

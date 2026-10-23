@@ -213,7 +213,12 @@ export const workflowRuntimeWorld = (
       HttpResponse.json({
         data: {
           sidebarBadges: [
-            { moduleKey: "apply-center", count: countsOf().myTasks },
+            {
+              moduleKey: "apply-center",
+              count: countsOf().myTasks,
+              descriptionKey:
+                "admin.sidebarBadgeSettings.descriptions.apply-center",
+            },
           ],
         },
       }),

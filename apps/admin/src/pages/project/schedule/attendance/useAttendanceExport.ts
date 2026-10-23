@@ -11,7 +11,7 @@ import { useSession } from "@/hooks/base/useSession";
 import { downloadWorkbook } from "@/lib/project/reports/excel";
 import { attendanceSheetsOf } from "@/lib/project/schedule-attendance";
 
-import { scheduleErrorOf } from "../schedule-error";
+import { scheduleErrorKey } from "../schedule-error";
 import { useAttendanceText } from "./useAttendanceText";
 
 /**
@@ -70,7 +70,7 @@ export const useAttendanceExport = (): {
         });
       })
       .catch((error: unknown) => {
-        showSnackbar("error", tErrors(scheduleErrorOf(error).code));
+        showSnackbar("error", tErrors(scheduleErrorKey(error)));
       })
       .finally(() => {
         setIsPending(false);

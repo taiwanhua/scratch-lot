@@ -90,7 +90,14 @@ export const Table = <Row,>({
     <MuiTableContainer
       sx={mergeSx({ height: "100%", minHeight: 0 }, containerSx)}
     >
-      <MuiTable size={size} sx={{ minWidth }} aria-label={ariaLabel}>
+      {/* 表頭固定(同 DataTable):容器自己捲時(列表頁在平板以上釘高,STYLE-08)表頭留在頂端;
+          容器不捲時(交給 <main> 整頁捲)sticky 沒有作用,表頭照常跟著捲。表頭底色本來就是不透明的 background.default */}
+      <MuiTable
+        stickyHeader
+        size={size}
+        sx={{ minWidth }}
+        aria-label={ariaLabel}
+      >
         <MuiTableHead>
           <MuiTableRow>
             {columns.map((column) => (

@@ -29,6 +29,7 @@ import {
 } from "../../database/schedule/schedule.repositories";
 import { ScheduleFieldOptionsService } from "../field-options/schedule-field-options.service";
 import {
+  SCHEDULE_REASONS,
   forbiddenError,
   notFoundError,
   savingUnique,
@@ -299,9 +300,11 @@ export class ScheduleRulesService {
     }
     // 只有可以切換的規則能關(其他規則一律開著)
     if (!write.enabled && !isScheduleRuleToggleable(definition)) {
-      throw validationError(`${definition.key} cannot be turned off`, [
-        "enabled",
-      ]);
+      throw validationError(
+        `${definition.key} cannot be turned off`,
+        ["enabled"],
+        SCHEDULE_REASONS.ruleNotToggleable,
+      );
     }
     if (
       hasRuleLevel(definition) ? !isLevel(write.level) : write.level !== null
@@ -347,9 +350,11 @@ export class ScheduleRulesService {
         })
       : null;
     if (!found) {
-      throw validationError(`week template not found: ${id}`, [
-        "value.weekTemplateId",
-      ]);
+      throw validationError(
+        `week template not found: ${id}`,
+        ["value.weekTemplateId"],
+        SCHEDULE_REASONS.referenceNotFound,
+      );
     }
   }
 
@@ -409,6 +414,7 @@ export class ScheduleRulesService {
         }),
       "schedule setting customized twice at the same time",
       ["key"],
+      SCHEDULE_REASONS.concurrentEdit,
     );
   }
 

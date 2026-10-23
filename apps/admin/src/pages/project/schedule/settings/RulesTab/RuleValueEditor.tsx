@@ -6,6 +6,7 @@ import { SelectField } from "@repo/ui/select-field";
 import { Stack } from "@repo/ui/stack";
 import { TextField } from "@repo/ui/text-field";
 
+import { FieldErrorGroup } from "@/components/base/FieldErrorGroup/FieldErrorGroup";
 import type { ScheduleFieldOption } from "@/hooks/project/schedule/useScheduleFieldOptions/useScheduleFieldOptions";
 
 export interface RuleValueEditorProps {
@@ -14,6 +15,8 @@ export interface RuleValueEditorProps {
   onChange: (value: Record<string, unknown>) => void;
   /** 不合法的欄位(`scheduleRuleValueErrors` 的結果,例 `amount`、`tiers`) */
   invalid: readonly string[];
+  /** api 擋下的原因(欄位 → 那一句;例:選的週範本已不在),寫在欄位下(REACT-18) */
+  apiErrors?: Partial<Record<string, string>>;
   disabled: boolean;
   weekTemplates: readonly { id: string; name: string }[];
   taskOptions: readonly ScheduleFieldOption[];
@@ -54,6 +57,7 @@ export const RuleValueEditor = ({
   value,
   onChange,
   invalid,
+  apiErrors = {},
   disabled,
   weekTemplates,
   taskOptions,
@@ -63,6 +67,22 @@ export const RuleValueEditor = ({
   const range = definition.range;
   const rangeText =
     range === null ? undefined : t("range", { min: range.min, max: range.max });
+  // 欄位錯了就在欄位正下方寫原因(REACT-18):數字欄寫範圍,結束日另提醒不能早於開始日
+  const rangeError =
+    range === null
+      ? t("errors.number")
+      : t("errors.range", { min: range.min, max: range.max });
+  const errorOf = (field: string): string | undefined => {
+    if (!invalid.includes(field)) {
+      return apiErrors[field];
+    }
+    return field === "endDay"
+      ? t("errors.endDay", { error: rangeError })
+      : rangeError;
+  };
+  /** 送出前沒過寫 `format`,否則寫 api 的原因 */
+  const textOf = (field: string, format: string) =>
+    invalid.includes(field) ? format : apiErrors[field];
 
   const numberField = (field: string, label: string, helper?: string) => (
     <TextField
@@ -72,8 +92,8 @@ export const RuleValueEditor = ({
       value={asText(value[field])}
       fullWidth
       disabled={disabled}
-      error={invalid.includes(field)}
-      helperText={helper}
+      error={errorOf(field) !== undefined}
+      helperText={errorOf(field) ?? helper}
       slotProps={{ htmlInput: { step: range?.step ?? 1 } }}
       onChange={(event) => {
         onChange({ ...value, [field]: numberInput(event.target.value) });
@@ -116,7 +136,8 @@ export const RuleValueEditor = ({
           value={asText(value.weekTemplateId)}
           fullWidth
           disabled={disabled}
-          error={invalid.includes("weekTemplateId")}
+          error={textOf("weekTemplateId", t("errors.choose")) !== undefined}
+          helperText={textOf("weekTemplateId", t("errors.choose"))}
           options={[
             { value: "", label: tRules("value.notSet") },
             ...weekTemplates.map((week) => ({
@@ -145,7 +166,8 @@ export const RuleValueEditor = ({
                 value={asText(value[field])}
                 fullWidth
                 disabled={disabled}
-                error={invalid.includes(field)}
+                error={textOf(field, t("errors.required")) !== undefined}
+                helperText={textOf(field, t("errors.required"))}
                 options={[...taskOptions]}
                 onChange={(next) => {
                   onChange({ ...value, [field]: next });
@@ -196,7 +218,11 @@ const BreakTiersEditor = ({
     );
   };
   return (
-    <Stack spacing={1.5}>
+    <FieldErrorGroup
+      label={t("tiers")}
+      errorText={isInvalid ? t("errors.tiers") : undefined}
+      spacing={1.5}
+    >
       {tiers.map((tier, index) => (
         <Stack
           // 分級只是值的陣列、沒有穩定 id;同一筆資料只有使用者自己增刪,以位置為 key
@@ -256,6 +282,6 @@ const BreakTiersEditor = ({
           {t("addTier")}
         </Button>
       )}
-    </Stack>
+    </FieldErrorGroup>
   );
 };

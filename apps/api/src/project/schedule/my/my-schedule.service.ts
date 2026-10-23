@@ -34,7 +34,11 @@ import { ScheduleFieldOptionsService } from "../field-options/schedule-field-opt
 import type { EntryRecord } from "../roster/roster-people";
 import { monthRange } from "../roster/schedule-roster.service";
 import { ScheduleClock } from "../shared/schedule-clock";
-import { notFoundError, validationError } from "../shared/schedule-error";
+import {
+  SCHEDULE_REASONS,
+  notFoundError,
+  validationError,
+} from "../shared/schedule-error";
 import {
   type ScheduleOrg,
   loadOrgNames,
@@ -325,6 +329,7 @@ export class MyScheduleService {
         throw validationError(
           `entry ${String(entry._id)} cannot take a ${type} punch now`,
           ["entryId"],
+          SCHEDULE_REASONS.punchNotAllowed,
         );
       }
       orgId = entry.orgId;

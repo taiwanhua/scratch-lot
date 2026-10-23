@@ -20,7 +20,7 @@ import { Typography } from "@repo/ui/typography";
 import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
 import { useSession } from "@/hooks/base/useSession";
 
-import { scheduleErrorOf } from "../../schedule-error";
+import { scheduleErrorKey } from "../../schedule-error";
 import { type MyEntry, useMyEntryText } from "./useMyEntryText";
 
 type Page = MyScheduleQuery["mySchedule"];
@@ -43,7 +43,7 @@ const usePunch = (): { punch: Punch; isPending: boolean } => {
         data.punchMySchedule.type === "in"
           ? t("clockInSuccess")
           : t("clockOutSuccess"),
-      error: (error) => tErrors(scheduleErrorOf(error).code),
+      error: (error) => tErrors(scheduleErrorKey(error)),
       onSuccess: () => {
         void queryClient.invalidateQueries({
           queryKey: [MY_SCHEDULE_QUERY_KEY],

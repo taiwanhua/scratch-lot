@@ -637,6 +637,10 @@ describe("排班設定(GraphQL 端點 + 真 MongoDB)", () => {
         code: "VALIDATION_FAILED",
         fields,
       });
+      // 參照失效(選的週範本不在)帶 reason;格式錯不帶(前端寫格式要求)
+      expect(errorOf(result)?.reason).toBe(
+        key === "autoDemandWeekTemplateId" ? "REFERENCE_NOT_FOUND" : undefined,
+      );
     });
 
     it("最上層組織的規則要 edit-default-rules;分店店長改不了(看不到 → NOT_FOUND)", async () => {
@@ -909,6 +913,7 @@ describe("排班設定(GraphQL 端點 + 真 MongoDB)", () => {
       expect(errorOf(again)).toMatchObject({
         code: "VALIDATION_FAILED",
         fields: ["userIds"],
+        reason: "ALREADY_JOINED",
       });
 
       const joined = await staffRows(manager, { joined: true });
@@ -956,6 +961,7 @@ describe("排班設定(GraphQL 端點 + 真 MongoDB)", () => {
       expect(errorOf(again)).toMatchObject({
         code: "VALIDATION_FAILED",
         fields: ["userIds"],
+        reason: "ALREADY_JOINED",
       });
       // 加入的那一層看到的是自己的檔案,不標「其他組織」
       const managerList = await staffRows(manager);
@@ -1182,6 +1188,7 @@ describe("排班設定(GraphQL 端點 + 真 MongoDB)", () => {
           extensions: expect.objectContaining({
             code: "VALIDATION_FAILED",
             fields: ["userIds"],
+            reason: "ALREADY_JOINED",
           }),
         }),
       ]);
@@ -1336,6 +1343,18 @@ describe("排班設定(GraphQL 端點 + 真 MongoDB)", () => {
         },
       });
       expect(errorOf(unknown)).toMatchObject({
+        code: "VALIDATION_FAILED",
+        fields: ["days"],
+        reason: "REFERENCE_NOT_FOUND",
+      });
+      // 同一格列了同一個範本兩次:格式錯,不帶 reason
+      const twice = await gql(hq, SAVE_WEEK_TEMPLATE, {
+        input: {
+          name: "重複",
+          days: [[tenantTemplateId, tenantTemplateId], [], [], [], [], [], []],
+        },
+      });
+      expect(errorOf(twice)).toEqual({
         code: "VALIDATION_FAILED",
         fields: ["days"],
       });
@@ -1536,6 +1555,7 @@ describe("排班設定(GraphQL 端點 + 真 MongoDB)", () => {
       expect(errorOf(duplicate)).toMatchObject({
         code: "VALIDATION_FAILED",
         fields: ["date"],
+        reason: "CALENDAR_DAY_DUPLICATE",
       });
       const missing = await gql(manager, SAVE_CALENDAR_DAY, {
         input: {
@@ -1602,6 +1622,7 @@ describe("排班設定(GraphQL 端點 + 真 MongoDB)", () => {
           extensions: expect.objectContaining({
             code: "VALIDATION_FAILED",
             fields: ["date"],
+            reason: "CALENDAR_DAY_DUPLICATE",
           }),
         }),
       ]);

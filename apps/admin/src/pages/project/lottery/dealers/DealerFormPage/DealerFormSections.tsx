@@ -136,12 +136,14 @@ export const DealerFormSections = ({
   isCreate,
 }: DealerFormSectionsProps) => {
   const t = useTranslations("admin.lotteryDealers");
-  const { values, change, invalidFields } = form;
+  const { values, change, fieldErrors } = form;
   const pageId = isCreate
     ? SECTION_PAGE_IDS.dealerCreate
     : SECTION_PAGE_IDS.dealerEdit;
   const isClassA = values.type === LotteryDealerType.A;
-  const isInvalid = (key: DealerFormKey) => invalidFields.includes(key);
+  // 欄位錯了就在欄位正下方寫原因(REACT-18);頁面底部只放通用句
+  const errorText = (key: DealerFormKey) => fieldErrors[key];
+  const isInvalid = (key: DealerFormKey) => errorText(key) !== undefined;
 
   const text = (
     key: TextKey,
@@ -154,6 +156,7 @@ export const DealerFormSections = ({
       multiline={options.multiline}
       minRows={options.multiline === true ? 2 : undefined}
       error={isInvalid(key)}
+      helperText={errorText(key)}
       size="small"
       fullWidth
       onChange={(event) => {
@@ -174,7 +177,9 @@ export const DealerFormSections = ({
         value={values[key]}
         required={options.required}
         readOnly={isReadOnly}
-        helperText={isReadOnly ? t("form.readOnlyField") : undefined}
+        helperText={
+          errorText(key) ?? (isReadOnly ? t("form.readOnlyField") : undefined)
+        }
         error={isInvalid(key)}
         size="small"
         fullWidth
@@ -217,7 +222,7 @@ export const DealerFormSections = ({
               label={t("fields.coSalesDealerId")}
               value={values.coSalesDealer}
               error={isInvalid("coSalesDealer")}
-              helperText={t("form.coSalesHint")}
+              helperText={errorText("coSalesDealer") ?? t("form.coSalesHint")}
               onChange={(next) => {
                 change("coSalesDealer", next);
               }}
@@ -228,6 +233,7 @@ export const DealerFormSections = ({
             role={LotteryContactRole.Agent}
             value={values.agents}
             error={isInvalid("agents")}
+            helperText={errorText("agents")}
             onChange={(next) => {
               change("agents", next);
             }}
@@ -238,6 +244,7 @@ export const DealerFormSections = ({
               role={LotteryContactRole.Trustee}
               value={values.trustees}
               error={isInvalid("trustees")}
+              helperText={errorText("trustees")}
               onChange={(next) => {
                 change("trustees", next);
               }}
@@ -248,6 +255,7 @@ export const DealerFormSections = ({
             role={LotteryContactRole.Introducer}
             value={values.introducers}
             error={isInvalid("introducers")}
+            helperText={errorText("introducers")}
             onChange={(next) => {
               change("introducers", next);
             }}
@@ -270,6 +278,7 @@ export const DealerFormSections = ({
               value={values.storeOrgId}
               dealerId={dealerId}
               error={isInvalid("storeOrgId")}
+              helperText={errorText("storeOrgId")}
               onChange={(next) => {
                 change("storeOrgId", next);
               }}
@@ -321,6 +330,7 @@ export const DealerFormSections = ({
                   displayEmpty
                   required
                   error={isInvalid("rentStartMonth")}
+                  helperText={errorText("rentStartMonth")}
                   size="small"
                   fullWidth
                   options={[
@@ -381,6 +391,7 @@ export const DealerFormSections = ({
                 size="small"
                 value={values.shareOrgs}
                 error={isInvalid("shareOrgs")}
+                helperText={errorText("shareOrgs")}
                 onChange={(next) => {
                   change("shareOrgs", next);
                 }}

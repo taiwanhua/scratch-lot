@@ -23,7 +23,7 @@ import {
   monthDayOf,
 } from "@/lib/project/schedule-roster";
 
-import { scheduleErrorOf } from "../../../schedule-error";
+import { scheduleErrorKey } from "../../../schedule-error";
 import { useRosterCheck } from "../check-panel/roster-check-context";
 import { ROSTER_QUERY_ROOT } from "../roster-context";
 import { autoRunBlockedReasonOf, useAutoRunStatus } from "./auto-run-status";
@@ -115,7 +115,7 @@ const ClearAutoDialog = ({ onClose }: { onClose: () => void }) => {
       error: (cause) => {
         const reason = autoRunBlockedReasonOf(cause);
         return reason === null
-          ? tErrors(scheduleErrorOf(cause).code)
+          ? tErrors(scheduleErrorKey(cause))
           : t(`errors.${reason}`);
       },
       onSuccess: () => {

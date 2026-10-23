@@ -18,7 +18,7 @@ import {
   weekdayOf,
 } from "@/lib/project/schedule-roster";
 
-import { scheduleErrorOf } from "../../schedule-error";
+import { scheduleErrorKey } from "../../schedule-error";
 import { useChangeReason } from "./publish/useChangeReason";
 import { ROSTER_QUERY_ROOT, useRoster } from "./roster-context";
 
@@ -61,7 +61,7 @@ export const RemoveDayDialog = ({ date, onClose }: RemoveDayDialogProps) => {
         t("feedback", {
           count: result.removeScheduleDayEntries.deletedIds.length,
         }),
-      error: (error) => tErrors(scheduleErrorOf(error).code),
+      error: (error) => tErrors(scheduleErrorKey(error)),
       onSuccess: () => {
         void queryClient.invalidateQueries({ queryKey: ROSTER_QUERY_ROOT });
         onClose();

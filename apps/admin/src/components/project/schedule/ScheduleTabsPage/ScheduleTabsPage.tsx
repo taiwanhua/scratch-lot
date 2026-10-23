@@ -8,6 +8,7 @@ import {
   type PageTabItem,
   PageTabs,
 } from "@/components/base/PageTabs/PageTabs";
+import { usePageTabsShellSx } from "@/components/base/PageTabs/usePageTabsShellSx";
 import { usePermissions } from "@/hooks/base/usePermissions";
 
 /**
@@ -21,6 +22,8 @@ export interface ScheduleTabEntry {
   labelKey: string;
   /** 看得到這個分頁要的權限;不給 = 看得到這一頁的人都看得到 */
   permission?: string;
+  /** 列表分頁:平板以上分頁殼釘高、表格在卡片裡捲(`PageTabItem.isList`);不給 = 內容分頁,整頁捲 */
+  isList?: boolean;
   /** 分頁內容 */
   Content: ComponentType;
 }
@@ -39,23 +42,24 @@ export const ScheduleTabsPage = ({ title, tabs }: ScheduleTabsPageProps) => {
   const t = useTranslations("admin.schedule");
   const { hasPermission } = usePermissions();
   const items: PageTabItem[] = tabs.map(
-    ({ value, labelKey, permission, Content }) => ({
+    ({ value, labelKey, permission, isList, Content }) => ({
       value,
       label: t(`tabs.${labelKey}`),
       ...(permission === undefined ? {} : { permission }),
+      ...(isList === true ? { isList } : {}),
       content: <Content />,
     }),
   );
+  const shellSx = usePageTabsShellSx(items);
   const hasVisible = tabs.some(
     (tab) => tab.permission === undefined || hasPermission(tab.permission),
   );
 
   return (
-    // 一般內容頁殼(STYLE-08):內容少時撐滿、多時跟著長,交給 <main> 捲;不釘高(Card 預設 overflow: hidden,釘高會裁掉內容)
+    // 分頁殼(STYLE-08):列表分頁平板以上釘高、表格在卡片裡捲;內容分頁與手機寬整頁捲
     <Card
       sx={{
-        flexGrow: 1,
-        flexShrink: 0,
+        ...shellSx,
         display: "flex",
         flexDirection: "column",
         px: { xs: 2, sm: 3 },

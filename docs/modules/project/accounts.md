@@ -226,6 +226,8 @@
 
 一律通用碼 `FORBIDDEN` / `NOT_FOUND` / `VALIDATION_FAILED`(GQL-04),細分放 `extensions.reason`:
 
+欄位錯誤(新增帳戶、帳戶設定、登記交易、沖正、收付 / 沖正收付視窗):`fields` 指到的那一欄下寫原因 —— 細分過的碼(帳戶重複、有交易鎖定、帳戶不能用、超過小金庫……)寫原因,沒有 reason 寫該欄的格式要求;視窗上方只放通用句(REACT-18;`accounts/account-field-errors.ts`、`SettlementPanel/settlement-text.ts`)。
+
 | reason                          | 何時                                                                                                                         |
 | ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
 | `BANK_ACCOUNT_DUPLICATE`        | 同租戶同銀行代碼 + 帳號                                                                                                      |

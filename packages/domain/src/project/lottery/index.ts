@@ -17,10 +17,12 @@
  * - `stocktake.ts`:盤點的類型 / 狀態、盤點內容、與盤點那一刻比對的差異、送出前的檢查
  * - `checkout.ts`:交班結帳的表單代號 / 欄位 key、結帳內容、面額表、應有 / 實點 / 差額與交接的檢查
  * - `daily-close.ts`:日結的結帳內容、精靈步驟、小金庫應有的各項、存入銀行的檢查、涵蓋計算期間沒有日結的日子
+ * - `dealer-limits.ts`:經銷商與關係人文字欄位的長度上限(api 檢查與 admin 欄位下的格式要求共用)
  */
 export * from "./book-stats";
 export * from "./checkout";
 export * from "./daily-close";
+export * from "./dealer-limits";
 export * from "./inventory";
 export * from "./portable-lookups";
 export * from "./purchase";

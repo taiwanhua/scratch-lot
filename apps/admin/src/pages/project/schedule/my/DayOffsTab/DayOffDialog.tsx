@@ -22,6 +22,7 @@ import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
 import { useSession } from "@/hooks/base/useSession";
 import { useDayOffDateTitle } from "@/hooks/project/schedule/useDayOffDateTitle/useDayOffDateTitle";
 import { useDayOffEntryConflictNotice } from "@/hooks/project/schedule/useDayOffEntryConflictNotice/useDayOffEntryConflictNotice";
+import type { FieldErrorTexts } from "@/lib/base/field-errors";
 import {
   type DayOffKind,
   type DayOffSlot,
@@ -32,11 +33,18 @@ import {
 import {
   type ScheduleDayOffViolationError,
   dayOffViolationsOf,
-  scheduleErrorOf,
 } from "../../schedule-error";
+import {
+  scheduleErrorTextsOf,
+  scheduleFormatErrorsOf,
+} from "../../schedule-field-errors";
 
 /** codegen 的 query key 第一段是 operation 名稱(`useMyScheduleDayOffsQuery.getKey`)。 */
 const MY_DAY_OFFS_QUERY_KEY = "MyScheduleDayOffs";
+
+/** 會標回對話框的欄位(api `fields`)。 */
+const FIELDS = ["date", "kind", "slots"] as const;
+type Field = (typeof FIELDS)[number];
 
 export interface DayOffDialogProps {
   /** 帶入的日期(點日期);[登記畫休] 為空字串 */
@@ -61,7 +69,7 @@ export const DayOffDialog = ({
 }: DayOffDialogProps) => {
   const t = useTranslations("admin.schedule.dayOffs");
   const tCommon = useTranslations("admin.schedule.common");
-  const tErrors = useTranslations("admin.schedule.errors");
+  const tSchedule = useTranslations("admin.schedule");
   const { session } = useSession();
   const queryClient = useQueryClient();
   const isMobile = useBreakpointDown("sm");
@@ -69,13 +77,20 @@ export const DayOffDialog = ({
   const [date, setDate] = useState(initialDate);
   const [kind, setKind] = useState<DayOffKind>("full-day");
   const [slots, setSlots] = useState<DayOffSlot[]>([EMPTY_SLOT]);
-  const [invalid, setInvalid] = useState(false);
+  // 欄位錯了就在欄位正下方寫原因(REACT-18);提示只放通用句
+  const [fieldErrors, setFieldErrors] = useState<FieldErrorTexts<Field>>({});
+  const setInvalid = (field: Field | null) => {
+    setFieldErrors(
+      field === null ? {} : scheduleFormatErrorsOf([field], tSchedule),
+    );
+  };
   const [blocked, setBlocked] = useState<ScheduleDayOffViolationError[]>([]);
 
   const refresh = () => {
     void queryClient.invalidateQueries({ queryKey: [MY_DAY_OFFS_QUERY_KEY] });
   };
-  const errorOf = (error: unknown) => tErrors(scheduleErrorOf(error).code);
+  const errorOf = (error: unknown) =>
+    scheduleErrorTextsOf(error, FIELDS, tSchedule).summary;
   const noticeEntryConflicts = useDayOffEntryConflictNotice();
   const save = useAddMyScheduleDayOffsMutation(
     session.client,
@@ -92,7 +107,7 @@ export const DayOffDialog = ({
       },
       onError: (error) => {
         setBlocked(dayOffViolationsOf(error));
-        setInvalid(scheduleErrorOf(error).fields?.includes("slots") ?? false);
+        setFieldErrors(scheduleErrorTextsOf(error, FIELDS, tSchedule).texts);
       },
     }),
   );
@@ -109,12 +124,12 @@ export const DayOffDialog = ({
 
   const submit = () => {
     if (date === "") {
-      setInvalid(true);
+      setInvalid("date");
       return;
     }
     const picked = completeSlots(slots);
     if (kind === "time-range" && picked === null) {
-      setInvalid(true);
+      setInvalid("slots");
       return;
     }
     setBlocked([]);
@@ -157,22 +172,24 @@ export const DayOffDialog = ({
           value={date}
           required
           fullWidth
-          error={invalid && date === ""}
+          error={fieldErrors.date !== undefined}
+          helperText={fieldErrors.date}
           slotProps={{
             inputLabel: { shrink: true },
             htmlInput: { min: `${month}-01`, max: `${month}-31` },
           }}
           onChange={(event) => {
             setDate(event.target.value);
-            setInvalid(false);
+            setInvalid(null);
             setBlocked([]);
           }}
         />
         <DayOffKindRadios
           value={kind}
+          errorText={fieldErrors.kind}
           onChange={(next) => {
             setKind(next);
-            setInvalid(false);
+            setInvalid(null);
           }}
         />
         {existing.map((item) => (
@@ -206,10 +223,11 @@ export const DayOffDialog = ({
         {kind === "time-range" && (
           <DayOffSlotFields
             slots={slots}
-            invalid={invalid}
+            invalid={fieldErrors.slots !== undefined}
+            errorText={fieldErrors.slots}
             onChange={(next) => {
               setSlots(next);
-              setInvalid(false);
+              setInvalid(null);
             }}
             allowMultiple
           />

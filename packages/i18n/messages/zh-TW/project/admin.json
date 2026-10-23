@@ -26,6 +26,17 @@
     }
   },
   "lotteryMasterData": {
+    "fieldErrors": {
+      "choose": "請重新選擇",
+      "required": "必填",
+      "gameCode": "遊戲代號要 4 碼數字",
+      "requiredText": "必填,最多 {max} 個字",
+      "maxLength": "最多 {max} 個字",
+      "positiveInteger": "要填大於 0 的整數",
+      "integerRange": "要填 {min}–{max} 的整數",
+      "order": "要填 0 以上的整數",
+      "date": "日期不正確"
+    },
     "tabs": {
       "aria": "檔案管理分頁",
       "games": "遊戲",
@@ -221,7 +232,9 @@
       "quick": {
         "over150": "逾 150 天",
         "over180": "逾 180 天",
-        "unsignedThisQuarter": "本季未見簽"
+        "unsignedThisQuarter": "本季未見簽",
+        "licenseExpiring": "證照 30 天內到期",
+        "licenseExpired": "證照已過期"
       },
       "filters": {
         "signin": "見簽狀態",
@@ -248,7 +261,8 @@
         "coSellers": "共同銷售人",
         "roles": "身分",
         "mobile": "手機",
-        "dealerCount": "關聯經銷商"
+        "dealerCount": "關聯經銷商",
+        "licenseExpiresAt": "證照到期"
       },
       "signed": "已見簽",
       "unsigned": "未見簽",
@@ -320,7 +334,21 @@
       "occupied": "已由 {name} 對應",
       "pickContacts": "只列出有這個身分且啟用中的關係人",
       "coSalesHint": "甲類要先有共同銷售處所才能設代理人",
-      "readOnlyField": "沒有修改權限"
+      "readOnlyField": "沒有修改權限",
+      "fieldErrors": {
+        "choose": "請重新選擇",
+        "licenseNo": "證號要 8 碼數字",
+        "nationalId": "身分證字號要 1 個英文字母加 9 碼數字",
+        "requiredText": "必填,最多 {max} 個字",
+        "maxLength": "最多 {max} 個字",
+        "digits": "只能填數字,最多 {max} 碼",
+        "email": "email 格式不正確(最多 {max} 個字)",
+        "requiredDate": "必填,請選擇日期",
+        "date": "日期不正確",
+        "rentFee": "要填 0 以上的整數",
+        "rentDueDay": "要填 1–31 的整數;有牌租週期時必填",
+        "roles": "至少要選一個身分"
+      }
     },
     "detail": {
       "tabsLabel": "經銷商詳情分頁",
@@ -385,9 +413,11 @@
         "LICENSE_NO_DUPLICATE": "這個證號已經有經銷商使用",
         "NATIONAL_ID_DUPLICATE": "這個身分證字號已經登記過",
         "NOT_FOR_TYPE": "這個欄位不屬於這個類型",
+        "RENT_DUE_DAY_REQUIRED": "有牌租週期時,繳費日必填",
         "RENT_START_MONTH_REQUIRED": "週期是季或年時,起算月份必填",
         "ROLE_LIMIT": "人數超過上限(甲類:代理人 2、受託人 2、介紹人 1;乙類:代理人 2、介紹人 1)",
         "TRUSTEE_NOT_ALLOWED": "乙類不能有受託人",
+        "CONTACT_REPEATED": "同一位關係人選了兩次",
         "CONTACT_ROLE_MISMATCH": "選的關係人沒有這個身分",
         "CONTACT_DISABLED": "選的關係人已停用,不能再被選取",
         "SELF_RELATION": "經銷商本人不能登記成自己的關係人",
@@ -414,6 +444,10 @@
     }
   },
   "lotteryInventory": {
+    "fieldErrors": {
+      "check": "請檢查這一欄",
+      "store": "必填,請選擇回到哪家店"
+    },
     "ticketGrid": {
       "states": {
         "unsold": "未售",
@@ -454,6 +488,8 @@
       "amount": "{amount} 元"
     },
     "reason": {
+      "noteError": "選「其他」時要寫說明",
+      "keyError": "必填,請選擇原因",
       "note": "說明",
       "noteRequired": "說明(必填)"
     },
@@ -897,6 +933,23 @@
     }
   },
   "schedule": {
+    "fieldErrors": {
+      "check": "請檢查這一欄",
+      "choose": "請重新選擇",
+      "required": "必填",
+      "shortName": "要填 1–{max} 個字",
+      "time": "必填,請填時間(時:分)",
+      "endTime": "必填,不能和開始時間相同",
+      "tasks": "每一列都要選任務;負責人最多 {leaders} 列、協同最多 {helpers} 列",
+      "date": "必填,請選擇日期",
+      "dateTime": "必填,請選擇日期與時間",
+      "endAt": "結束要晚於開始,且在 24 小時內",
+      "reasonKey": "必填,請選擇原因",
+      "reasonNote": "選「其他」時要寫說明",
+      "slots": "每個時段的開始要早於結束",
+      "assignments": "至少要填一個任務",
+      "nonNegativeInteger": "要填 0 以上的整數"
+    },
     "pages": {
       "my": "我的班表",
       "manage": "排班作業",
@@ -927,6 +980,31 @@
       "remove": "移除"
     },
     "errors": {
+      "reasons": {
+        "REFERENCE_NOT_FOUND": "選的資料已不存在或你看不到,請重新選擇",
+        "CALENDAR_DAY_DUPLICATE": "這一天已經有行事曆了",
+        "DAY_OFF_DUPLICATE": "這一天已經有整天的畫休",
+        "TIME_RANGES_OVERLAP": "時段和這一天其他的畫休時段重疊",
+        "NO_PRIMARY_STORE": "這個人還沒有設定主要分店",
+        "DEMAND_HAS_ASSIGNMENTS": "已經有人排進這筆人力需求,不能改到別天",
+        "NOT_CANDIDATE": "這個人不在這家店的排班名單",
+        "STORE_CLOSED": "這段時間有店休,不能排班",
+        "ENTRY_OVERLAP": "和這個人的另一筆排班時間重疊",
+        "DAY_OFF_CONFLICT": "和這個人的畫休重疊",
+        "PUNCH_UNAVAILABLE": "選的打卡紀錄已經對應到別的排班,請重新選擇",
+        "TASK_NOT_ON_DAY": "選的任務不是這一天的人力需求",
+        "CANNOT_LEAD": "這個人不能擔任負責人",
+        "TASK_TAKEN": "這個任務已經有人排了",
+        "DEMAND_REPEATED": "同一筆人力需求只能選一個任務",
+        "TASK_ROLE_LOCKED": "已經存在的任務不能改成另一種角色",
+        "ALREADY_JOINED": "已經在排班名單裡了",
+        "ORG_REPEATED": "同一家分店列了兩次",
+        "PRIMARY_ORG_REQUIRED": "主要分店要剛好選一家",
+        "OPTION_DISABLED": "選的選項已停用,請重新選擇",
+        "RULE_NOT_TOGGLEABLE": "這條規則不能關閉",
+        "PUNCH_NOT_ALLOWED": "這筆排班現在不能打這種卡",
+        "CONCURRENT_EDIT": "別人剛好也在修改,請重新整理後再試"
+      },
       "FORBIDDEN": "你沒有這個操作的權限",
       "NOT_FOUND": "找不到這筆資料,可能已被刪除或你看不到它",
       "VALIDATION_FAILED": "有欄位不正確,請檢查標示的欄位",
@@ -993,6 +1071,7 @@
       "timeRange": "{start}–{end}",
       "cardMeta": "{time} · {position} · 負責/協同 {tasks}",
       "dialog": {
+        "tasks": "執行任務",
         "createTitle": "新增人力需求範本",
         "editTitle": "人力需求範本 · {name}",
         "name": "名稱",
@@ -1049,6 +1128,7 @@
       "enabledAria": "啟用「{name}」",
       "noTemplates": "還沒有人力需求範本,請先到「人力需求範本」建立。",
       "dialog": {
+        "days": "每天的人力需求範本",
         "createTitle": "新增人力需求週範本",
         "editTitle": "人力需求週範本 · {name}",
         "name": "名稱",
@@ -1128,6 +1208,16 @@
       "summaryOwn": "{source}:{value}",
       "parent": "上層:{value}",
       "dialog": {
+        "tiers": "預設休息分級",
+        "errors": {
+          "number": "要填數字",
+          "range": "要填 {min}–{max}",
+          "endDay": "{error},且不能早於開始日",
+          "choose": "請重新選擇",
+          "required": "必填",
+          "tiers": "1–10 級;每一級的時數與休息分鐘都要填 0 以上的數字,時數不能重複",
+          "order": "要填 0 以上的整數"
+        },
         "title": "規則 · {label}",
         "amount": "值",
         "startDay": "每月開始日",
@@ -1249,6 +1339,7 @@
         "view": "查看"
       },
       "dialog": {
+        "slots": "時段",
         "title": "登記畫休 · {date}",
         "titleNoDate": "登記畫休",
         "date": "日期",
@@ -1538,6 +1629,7 @@
         "feedback": "已移除 {count} 筆排班"
       },
       "demandDialog": {
+        "tasks": "執行任務",
         "createTitle": "新增人力需求",
         "editTitle": "人力需求 · {date}{name}",
         "create": "新增",
@@ -1595,6 +1687,7 @@
         "deleteEmpty": "目前沒有人填這筆人力需求。"
       },
       "entryDialog": {
+        "assignments": "加入的人力需求",
         "createTitle": "新增排班 · {date}",
         "editTitle": "排班 · {name} {date}",
         "person": "人員",
@@ -1618,8 +1711,6 @@
         "delete": "刪除這筆排班",
         "deleteConfirm": "刪除 {name} {date} 的排班?填進的執行任務一起解除。",
         "errors": {
-          "time": "上下班時間和這個人其他的排班重疊(含其他分店),或這天店休",
-          "assignments": "選的執行任務已經有人填了、不在這一天,或這個人不能擔任負責人",
           "locked": "這筆排班已經有開班紀錄,不能刪除;要調整請改時間"
         },
         "feedback": {
@@ -1941,6 +2032,18 @@
     }
   },
   "lotteryAccounts": {
+    "fieldErrors": {
+      "choose": "請重新選擇",
+      "required": "必填",
+      "bankCode": "銀行代碼要 3 碼數字",
+      "requiredText": "必填,最多 {max} 個字",
+      "maxLength": "最多 {max} 個字",
+      "integer": "要填整數",
+      "positiveInteger": "要填大於 0 的整數",
+      "requiredDate": "必填,請選擇日期",
+      "requiredTime": "必填,請選擇時間",
+      "summary": "最多 {max} 個字;調整、其他必填"
+    },
     "badgeDescription": "待結清款項的筆數(有待付、待退、待收的單據)",
     "tabs": {
       "aria": "帳戶管理分頁",
@@ -2378,7 +2481,7 @@
       "sheetName": "採購清單"
     },
     "purchase": {
-      "badgeDescription": "點收關卡在我手上、還沒點收完成的進貨單數",
+      "badgeDescription": "點收關卡在你手上、還沒點收完成的進貨單數",
       "createFromRequisition": "建立進貨單",
       "list": {
         "title": "進貨單",
@@ -2804,6 +2907,16 @@
     "PERIOD_CLOSED": "選的班是已關帳月份的班,不能選"
   },
   "lotteryStore": {
+    "fieldErrors": {
+      "choose": "請重新選擇",
+      "required": "必填",
+      "positiveInteger": "要填大於 0 的整數",
+      "nonNegativeInteger": "要填 0 以上的整數",
+      "entry": "請選擇排班或臨時代班",
+      "reasonKey": "必填,請選擇原因",
+      "reasonNote": "選「其他」時要寫說明",
+      "lines": "至少要選一張"
+    },
     "tabs": {
       "aria": "店面管理",
       "board": "看板",
@@ -2914,6 +3027,7 @@
       "reassign": "改對應排班"
     },
     "reassign": {
+      "entry": "對應排班",
       "title": "改對應排班",
       "reason": "原因(必填)",
       "hint": "只列出負責人這天在這家店的排班。交班結帳送出後就不能改;改的時候任務快照會依新的排班重寫。",
@@ -3168,6 +3282,7 @@
       "rule": "單張超過 5,000 元請到銀行兌獎;超過抽屜目前應有現金({expected})時擋下。",
       "overLimit": "單張超過 5,000 元:請客人到銀行兌獎",
       "overDrawer": "超過抽屜目前應有現金 {expected}",
+      "prizeInvalid": "要填大於 0 的整數",
       "cancel": "取消",
       "confirm": "確認兌獎",
       "successTitle": "已兌獎",
@@ -3295,6 +3410,7 @@
       }
     },
     "saleReversal": {
+      "reasonRequired": "必填,請選擇原因",
       "tabLabel": "新增撤銷售出申請",
       "title": "撤銷售出申請",
       "loading": "載入中",
@@ -3670,6 +3786,7 @@
         "cash_correction": "現金更正"
       },
       "confirm": {
+        "invalidAmount": "要填 0 以上的整數",
         "summaryTitle": "應有現金",
         "expected": "應有",
         "counted": "實點",

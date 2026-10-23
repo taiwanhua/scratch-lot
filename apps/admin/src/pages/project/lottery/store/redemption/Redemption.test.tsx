@@ -5,11 +5,13 @@ import { STORE_PERMISSIONS as P } from "@repo/domain/project/lottery";
 
 import { injectScan } from "@/hooks/project/useScanner/scanner-registry";
 import { writeLocalCashPoint } from "@/lib/project/lottery/local-cash-point";
+import { graphqlError } from "@/test/msw/auth-handlers";
 import {
   type RedemptionFixture,
   redemptionRow,
   sampleRedemptions,
 } from "@/test/msw/project/lottery/redemption-fixtures";
+import { api, server } from "@/test/msw/server";
 
 import { renderStore } from "../store-test-support";
 
@@ -101,6 +103,48 @@ describe("店面管理:兌獎", () => {
     await waitFor(() => {
       expect(redemptions.inputs.revoke).toEqual([{ id: "rd-new-1" }]);
     });
+  });
+
+  it("編號看不懂(api 指到編號)→ 編號欄下寫原因,下方提示只放通用句(REACT-18)", async () => {
+    const { user } = renderStore();
+    const counter = await headerOf("店內櫃台");
+    await user.click(within(counter).getByRole("button", { name: "兌獎" }));
+    const dialog = await screen.findByRole("dialog", {
+      name: "兌獎 · 店內櫃台",
+    });
+    const code = within(dialog).getByRole("textbox", { name: "刷背面編號" });
+    await user.type(code, "abc{Enter}");
+    await waitFor(() => {
+      expect(code).toHaveAccessibleDescription("看不懂這個編號,請刷背面編號");
+    });
+    expect(
+      within(dialog).getByText("有欄位不正確,請檢查標紅的欄位"),
+    ).toBeInTheDocument();
+  });
+
+  it("api 只指到編號、沒有細分原因(格式錯)→ 編號欄下寫格式要求,不寫通用句", async () => {
+    const { user } = renderStore();
+    server.use(
+      api.query("LotteryRedemptionPreview", () =>
+        graphqlError("VALIDATION_FAILED", "VALIDATION_FAILED", {
+          code: "VALIDATION_FAILED",
+          fields: ["code"],
+        }),
+      ),
+    );
+    const counter = await headerOf("店內櫃台");
+    await user.click(within(counter).getByRole("button", { name: "兌獎" }));
+    const dialog = await screen.findByRole("dialog", {
+      name: "兌獎 · 店內櫃台",
+    });
+    const code = within(dialog).getByRole("textbox", { name: "刷背面編號" });
+    await user.type(code, "abc{Enter}");
+    await waitFor(() => {
+      expect(code).toBeInvalid();
+    });
+    expect(code).toHaveAccessibleDescription(
+      "條碼槍刷背面編號,或輸入後按 Enter",
+    );
   });
 
   it("單張超過 5,000 → 畫面先擋、[確認兌獎] 停用;已兌過的張 → 提示時間與收銀點", async () => {

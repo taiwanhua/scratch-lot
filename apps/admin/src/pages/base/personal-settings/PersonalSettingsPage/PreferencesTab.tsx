@@ -29,6 +29,12 @@ type TypePreference =
 /** 管道欄寬(px;Figma 的「站內通知」「Email」欄)。 */
 const CHANNEL_COLUMN_WIDTH = 200;
 
+/**
+ * 類型欄不折行的合理寬度(px;最長的類型名稱如「列印代理程式離線」一行放得下)。
+ * 表格最小寬 = 類型欄 + 每個管道一欄,窄過它就橫向捲動,不把類型名稱擠成一字一行(STYLE-11)。
+ */
+const PREFERENCES_TYPE_COLUMN_MIN_WIDTH = 200;
+
 /** 各類型出現過的管道,依第一次出現的順序(底座:站內通知、Email;專案登記的新管道排在後面)。 */
 const channelsOf = (items: readonly TypePreference[]): string[] => {
   const channels: string[] = [];
@@ -205,6 +211,10 @@ export const PreferencesTab = () => {
         getRowKey={(row) => row.type}
         isLoading={query.isPending}
         size="small"
+        minWidth={
+          PREFERENCES_TYPE_COLUMN_MIN_WIDTH +
+          channels.length * CHANNEL_COLUMN_WIDTH
+        }
       />
       <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
         <Button

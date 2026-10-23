@@ -108,6 +108,8 @@ export const PurchaseListTab = () => {
   ];
 
   return (
+    // 兩張表 + 標題的分頁:平板以上由這一層在卡片裡整塊捲(唯一的垂直捲動層);兩張表依內容長高
+    // (containerSx height auto,STYLE-08),不各自撐滿再各自捲
     <Stack spacing={2} sx={{ flex: 1, minHeight: 0, overflow: "auto" }}>
       <Typography variant="body2" color="textSecondary">
         {t("hint")}
@@ -119,6 +121,7 @@ export const PurchaseListTab = () => {
         getRowKey={(row) => row.gameId}
         isLoading={isLoading}
         emptyMessage={t("empty")}
+        containerSx={{ height: "auto" }}
         minWidth={gameColumns.reduce(
           (sum, column) =>
             sum + (typeof column.width === "number" ? column.width : 0),
@@ -135,6 +138,7 @@ export const PurchaseListTab = () => {
         getRowKey={(row) => row.requisitionId}
         isLoading={isLoading}
         emptyMessage={t("pendingEmpty")}
+        containerSx={{ height: "auto" }}
         minWidth={460}
       />
     </Stack>

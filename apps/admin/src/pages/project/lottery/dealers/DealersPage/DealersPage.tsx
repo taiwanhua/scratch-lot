@@ -11,6 +11,7 @@ import {
   PageTabs,
 } from "@/components/base/PageTabs/PageTabs";
 import { useUrlState } from "@/hooks/base/useUrlState";
+import { LIST_PAGE_SHELL_SX } from "@/lib/base/list-page-layout";
 import type { ModulePageProps } from "@/lib/base/module-tree";
 import { urlStateDefault } from "@/lib/base/url-state";
 
@@ -85,10 +86,10 @@ export const DealersPage = ({ module }: ModulePageProps) => {
   }
 
   return (
+    // 列表分頁的分頁殼(STYLE-08):平板以上釘高、表格在卡片裡捲(表頭固定);手機寬不釘高,整頁捲
     <Card
       sx={{
-        flex: 1,
-        minHeight: 0,
+        ...LIST_PAGE_SHELL_SX,
         display: "flex",
         flexDirection: "column",
         px: { xs: 2, sm: 3 },

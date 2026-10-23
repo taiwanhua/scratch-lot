@@ -83,6 +83,8 @@
 
 - 分店 × 遊戲:未拆(本;這本在這家店的張全部未售且在庫存)、檯面(張;未售且在檯面)、已售(張)。張照操作者的範圍讀。
 
+- **欄位錯誤**(REACT-18):查刮刮樂的編號格式不對寫在輸入欄下;尋回的原因、回到哪家店沒選或被擋下(`RECOVER_TARGET_NOT_STORE`)寫在那一欄下,Snackbar 只放通用句(`RecoverTicketDialog/inventory-field-errors.ts`);原因欄的預設句在 `ReasonFields`。
+
 ## api 介面
 
 ### GraphQL

@@ -12,6 +12,8 @@ import { DatePicker } from "@repo/ui/date-picker";
 import { SelectField } from "@repo/ui/select-field";
 import { TextField } from "@repo/ui/text-field";
 
+import type { FieldErrorTexts } from "@/lib/base/field-errors";
+
 import type { GameFormField, GameFormValues } from "./useGameForm";
 
 export interface GameInfoFieldsProps {
@@ -20,7 +22,8 @@ export interface GameInfoFieldsProps {
     key: Key,
     value: GameFormValues[Key],
   ) => void;
-  invalidFields: readonly GameFormField[];
+  /** 欄位 → 寫在欄位正下方的原因(REACT-18) */
+  fieldErrors: FieldErrorTexts<GameFormField>;
   /** 有庫存:代號、單張金額、整本張數唯讀 */
   isLocked: boolean;
 }
@@ -49,13 +52,14 @@ const integerOrNull = (raw: string): number | null => {
 export const GameInfoFields = ({
   values,
   change,
-  invalidFields,
+  fieldErrors,
   isLocked,
 }: GameInfoFieldsProps) => {
   const t = useTranslations("admin.lotteryMasterData.gameForm");
   const tStatus = useTranslations("admin.lotteryMasterData.status");
   const priceListId = useId();
-  const isInvalid = (field: GameFormField) => invalidFields.includes(field);
+  const errorText = (field: GameFormField) => fieldErrors[field];
+  const isInvalid = (field: GameFormField) => errorText(field) !== undefined;
 
   const unitPrice = integerOrNull(values.unitPrice);
   const tickets = integerOrNull(values.ticketsPerBook);
@@ -84,6 +88,7 @@ export const GameInfoFields = ({
       label={t(`fields.${field}`)}
       value={values[field]}
       error={isInvalid(field)}
+      helperText={errorText(field)}
       fullWidth
       onChange={(value) => {
         change(field, value);
@@ -99,7 +104,7 @@ export const GameInfoFields = ({
         required
         disabled={isLocked}
         error={isInvalid("gameCode")}
-        helperText={t("gameCodeHint")}
+        helperText={errorText("gameCode") ?? t("gameCodeHint")}
         slotProps={{ htmlInput: { inputMode: "numeric", maxLength: 4 } }}
         onChange={(event) => {
           change("gameCode", event.target.value);
@@ -110,6 +115,7 @@ export const GameInfoFields = ({
         value={values.name}
         required
         error={isInvalid("name")}
+        helperText={errorText("name")}
         slotProps={{ htmlInput: { maxLength: 30 } }}
         onChange={(event) => {
           change("name", event.target.value);
@@ -123,6 +129,7 @@ export const GameInfoFields = ({
           { value: "discontinued", label: tStatus("discontinued") },
         ]}
         error={isInvalid("status")}
+        helperText={errorText("status")}
         onChange={(value) => {
           change("status", value);
         }}
@@ -135,6 +142,7 @@ export const GameInfoFields = ({
           fullWidth
           disabled={isLocked}
           error={isInvalid("unitPrice")}
+          helperText={errorText("unitPrice")}
           slotProps={{
             htmlInput: { inputMode: "numeric", list: priceListId },
           }}
@@ -155,7 +163,7 @@ export const GameInfoFields = ({
         required
         disabled={isLocked}
         error={isInvalid("ticketsPerBook")}
-        {...(ticketsHint === undefined ? {} : { helperText: ticketsHint })}
+        helperText={errorText("ticketsPerBook") ?? ticketsHint}
         slotProps={{ htmlInput: { inputMode: "numeric" } }}
         onChange={(event) => {
           change("ticketsPerBook", event.target.value);
@@ -167,6 +175,7 @@ export const GameInfoFields = ({
         value={values.defaultRate}
         required
         error={isInvalid("defaultRate")}
+        helperText={errorText("defaultRate")}
         slotProps={{ htmlInput: { inputMode: "numeric" } }}
         onChange={(event) => {
           change("defaultRate", event.target.value);

@@ -54,6 +54,7 @@ import { blockedEntryIdsOf } from "../integration/entry-deletion-guards";
 import { positionAnnotationsOf } from "../integration/position-annotations";
 import { ScheduleClock } from "../shared/schedule-clock";
 import {
+  SCHEDULE_REASONS,
   forbiddenError,
   isDuplicateKeyError,
   notFoundError,
@@ -225,6 +226,7 @@ export class ScheduleRosterWritesService {
               throw validationError(
                 "a demand with assigned people cannot move to another day",
                 ["startAt"],
+                SCHEDULE_REASONS.demandHasAssignments,
               );
             }
           }
@@ -289,6 +291,7 @@ export class ScheduleRosterWritesService {
         }),
       "task already assigned (concurrent write)",
       ["tasks"],
+      SCHEDULE_REASONS.taskTaken,
     );
     return {
       item: await this.demandModel(operator, scope, saved),
@@ -384,9 +387,11 @@ export class ScheduleRosterWritesService {
     );
     const candidate = candidates.find((item) => item.userId === String(userId));
     if (!existing && candidate === undefined) {
-      throw validationError(`not a schedule candidate: ${String(userId)}`, [
-        "userId",
-      ]);
+      throw validationError(
+        `not a schedule candidate: ${String(userId)}`,
+        ["userId"],
+        SCHEDULE_REASONS.notCandidate,
+      );
     }
     // 店休那天不能排;跨午夜的班連隔天一起看(同畫休)
     const calendarDays = await this.calendar.effectiveDays(
@@ -396,9 +401,11 @@ export class ScheduleRosterWritesService {
       this.dateOf(scope, new Date(span.endAt.getTime() - 1)),
     );
     if (calendarDays.some((day) => day.type === "closed")) {
-      throw validationError("store is closed on a day of this entry", [
-        "startAt",
-      ]);
+      throw validationError(
+        "store is closed on a day of this entry",
+        ["startAt"],
+        SCHEDULE_REASONS.storeClosed,
+      );
     }
 
     const months = [
@@ -442,9 +449,11 @@ export class ScheduleRosterWritesService {
             existing?._id ?? null,
           );
           if (overlap.length > 0) {
-            throw validationError("overlaps another schedule entry", [
-              "startAt",
-            ]);
+            throw validationError(
+              "overlaps another schedule entry",
+              ["startAt"],
+              SCHEDULE_REASONS.entryOverlap,
+            );
           }
           const ruleViolations = await this.checks.limitViolationsOfEntry(
             operator,
@@ -518,6 +527,7 @@ export class ScheduleRosterWritesService {
         }),
       "task already assigned (concurrent write)",
       ["assignments"],
+      SCHEDULE_REASONS.taskTaken,
     );
     return this.entryModel(operator, scope, saved);
   }
@@ -614,7 +624,11 @@ export class ScheduleRosterWritesService {
       entryId: null,
     });
     if (found.length !== ids.length) {
-      throw validationError("punch not found or already matched", ["punchIds"]);
+      throw validationError(
+        "punch not found or already matched",
+        ["punchIds"],
+        SCHEDULE_REASONS.punchUnavailable,
+      );
     }
     return found;
   }
@@ -695,7 +709,11 @@ export class ScheduleRosterWritesService {
       );
     });
     if (blocked) {
-      throw validationError("overlaps a day off of this person", ["startAt"]);
+      throw validationError(
+        "overlaps a day off of this person",
+        ["startAt"],
+        SCHEDULE_REASONS.dayOffConflict,
+      );
     }
   }
 
@@ -728,6 +746,7 @@ export class ScheduleRosterWritesService {
         throw validationError(
           `demand task not on this day: ${String(item.demandId)}/${item.taskId}`,
           ["assignments"],
+          SCHEDULE_REASONS.taskNotOnDay,
         );
       }
       if (
@@ -735,7 +754,11 @@ export class ScheduleRosterWritesService {
         !check.canLead &&
         !currentKeys.has(assignmentKey(item))
       ) {
-        throw validationError("this person cannot lead", ["assignments"]);
+        throw validationError(
+          "this person cannot lead",
+          ["assignments"],
+          SCHEDULE_REASONS.cannotLead,
+        );
       }
     }
     const taken = await this.assignments.findMany(operator, {
@@ -748,7 +771,11 @@ export class ScheduleRosterWritesService {
         : { entryId: { $ne: check.excludeEntryId } }),
     });
     if (taken.length > 0) {
-      throw validationError("task already assigned", ["assignments"]);
+      throw validationError(
+        "task already assigned",
+        ["assignments"],
+        SCHEDULE_REASONS.taskTaken,
+      );
     }
   }
 
@@ -854,7 +881,11 @@ export class ScheduleRosterWritesService {
       orgId: { $in: scope.org.chain },
     });
     if (!record) {
-      throw validationError(`template not visible: ${id}`, ["templateId"]);
+      throw validationError(
+        `template not visible: ${id}`,
+        ["templateId"],
+        SCHEDULE_REASONS.referenceNotFound,
+      );
     }
     return record._id;
   }
@@ -1173,7 +1204,11 @@ function mergedTasks(
     const known = task.taskId === null ? undefined : byId.get(task.taskId);
     if (known !== undefined && !used.has(known.taskId)) {
       if (known.role !== task.role) {
-        throw validationError("a task cannot change its role", ["tasks"]);
+        throw validationError(
+          "a task cannot change its role",
+          ["tasks"],
+          SCHEDULE_REASONS.taskRoleLocked,
+        );
       }
       used.add(known.taskId);
       return { taskId: known.taskId, role: known.role, taskKey: task.taskKey };
@@ -1197,9 +1232,11 @@ function validatedAssignments(
   }
   const demandIds = new Set(items.map((item) => item.demandId));
   if (demandIds.size !== items.length) {
-    throw validationError("one demand can only be filled once per entry", [
-      "assignments",
-    ]);
+    throw validationError(
+      "one demand can only be filled once per entry",
+      ["assignments"],
+      SCHEDULE_REASONS.demandRepeated,
+    );
   }
   return items.map((item) => ({
     demandId: parseObjectId(item.demandId, "assignments"),

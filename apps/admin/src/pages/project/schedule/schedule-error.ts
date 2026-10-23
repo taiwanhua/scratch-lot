@@ -22,7 +22,39 @@ export const SCHEDULE_ERROR_CODES = [
 export type ScheduleErrorCode =
   (typeof SCHEDULE_ERROR_CODES)[number] | "UNEXPECTED";
 
-export type ScheduleError = AdminError<ScheduleErrorCode, never>;
+/**
+ * `VALIDATION_FAILED` 的細分原因(api 正本 `SCHEDULE_REASONS`):衝突、重複、狀態不合;文案在
+ * `admin.schedule.errors.reasons.<reason>`,寫在指到的欄位下(REACT-18)。沒有原因 = 格式錯 / 必填。
+ */
+export const SCHEDULE_REASONS = [
+  "CALENDAR_DAY_DUPLICATE",
+  "DAY_OFF_DUPLICATE",
+  "TIME_RANGES_OVERLAP",
+  "NO_PRIMARY_STORE",
+  "DEMAND_HAS_ASSIGNMENTS",
+  "NOT_CANDIDATE",
+  "STORE_CLOSED",
+  "ENTRY_OVERLAP",
+  "DAY_OFF_CONFLICT",
+  "PUNCH_UNAVAILABLE",
+  "TASK_NOT_ON_DAY",
+  "CANNOT_LEAD",
+  "TASK_TAKEN",
+  "DEMAND_REPEATED",
+  "TASK_ROLE_LOCKED",
+  "ALREADY_JOINED",
+  "ORG_REPEATED",
+  "PRIMARY_ORG_REQUIRED",
+  "OPTION_DISABLED",
+  "RULE_NOT_TOGGLEABLE",
+  "PUNCH_NOT_ALLOWED",
+  "CONCURRENT_EDIT",
+  "REFERENCE_NOT_FOUND",
+] as const;
+
+export type ScheduleReason = (typeof SCHEDULE_REASONS)[number];
+
+export type ScheduleError = AdminError<ScheduleErrorCode, ScheduleReason>;
 
 const REFINED = new Set([
   "NOT_OWNER",
@@ -33,6 +65,7 @@ const REFINED = new Set([
 export const scheduleErrorOf = (error: unknown): ScheduleError =>
   parseAdminError(error, {
     codes: SCHEDULE_ERROR_CODES,
+    reasons: SCHEDULE_REASONS,
     refine: (code, reason) => {
       if (
         code === "FORBIDDEN" &&
@@ -78,4 +111,13 @@ export const dayOffViolationsOf = (
   };
   const violations = errors?.[0]?.extensions?.violations;
   return Array.isArray(violations) ? violations.filter(isViolation) : [];
+};
+
+/**
+ * 提示(Snackbar / Alert)的文案 key(`admin.schedule.errors` 底下):`VALIDATION_FAILED` 帶了原因就用原因
+ * (`reasons.<reason>`),否則用碼。對話框有欄位可以標時改用 `scheduleErrorTextsOf`(REACT-18:原因寫在欄位下)。
+ */
+export const scheduleErrorKey = (error: unknown): string => {
+  const parsed = scheduleErrorOf(error);
+  return parsed.reason === undefined ? parsed.code : `reasons.${parsed.reason}`;
 };

@@ -1,8 +1,50 @@
 import { pickOpenTask } from "@repo/domain/project/schedule-settings";
 
+import type { FieldErrorTexts } from "@/lib/base/field-errors";
 import { localPartsOf } from "@/lib/project/schedule-roster";
 
+import { scheduleErrorTextsOf } from "../../schedule-field-errors";
 import type { EntryPreset, RosterDemand, RosterEntry } from "./roster-context";
+
+/** 會標回排班對話框的欄位。 */
+export type EntryField =
+  "userId" | "date" | "startTime" | "endTime" | "breakMinutes" | "assignments";
+
+/** 欄位 → 寫在欄位正下方的原因(REACT-18)。 */
+export type EntryFieldErrors = FieldErrorTexts<EntryField>;
+
+const ENTRY_FIELDS: readonly EntryField[] = [
+  "userId",
+  "date",
+  "startTime",
+  "endTime",
+  "breakMinutes",
+  "assignments",
+];
+
+/** api 的欄位名 → 對話框的欄位(上下班時間在 api 是時點)。 */
+const ENTRY_API_FIELDS: Readonly<Partial<Record<string, EntryField>>> = {
+  userId: "userId",
+  startAt: "startTime",
+  endAt: "endTime",
+  breakMinutes: "breakMinutes",
+  assignments: "assignments",
+};
+
+/**
+ * api 錯誤 → 欄位下的原因與對話框提示(REACT-18):重疊、店休、畫休、任務已被填、不能擔任負責人……
+ * 寫在指到的欄位下;沒對到欄位的(例:勾選的打卡已被對應)才寫在提示裡。
+ */
+export const entryErrorTextsOf = (
+  error: unknown,
+  t: (key: string, values?: Record<string, string>) => string,
+) =>
+  scheduleErrorTextsOf(
+    error,
+    ENTRY_FIELDS,
+    t,
+    (field) => ENTRY_API_FIELDS[field],
+  );
 
 /** 「加入這天的人力需求」的一列。 */
 export interface AssignmentRow {

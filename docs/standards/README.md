@@ -21,6 +21,7 @@
 | admin 頁面的動作按鈕(列表 / 新增編輯 / 檢視 / 對話框)   | `react/components.md` REACT-16                                                                                                      |
 | 選組織(組織選擇器)                                      | `react/components.md` REACT-15、`docs/concepts/frontend-architecture.md`「組織選擇器」用法表                                        |
 | admin 主從頁(左清單 / 樹、右詳情)的手機版、設計器平板版 | `react/components.md` REACT-17                                                                                                      |
+| 表單 / 對話框的欄位錯誤(標紅、原因、頁面提示)           | `react/components.md` REACT-18;api 的 `reason` 見 `api/graphql-schema.md` GQL-04                                                    |
 | 新增 `@repo/ui` 元件 / 子路徑匯出                       | `general/structure.md` STRUCT-08 的四處清單、`general/naming.md` GEN-01、`react/styling.md` STYLE-05 / 07                           |
 | 文字顏色(`Typography` 的 `color`)                       | `react/styling.md` STYLE-12                                                                                                         |
 | 前端資料存取(query / mutation)                          | `react/data-fetching.md`                                                                                                            |

@@ -163,4 +163,12 @@ describe("Table", () => {
     expect(declaredValue(rules, "max-height")).toBe("240px");
     expect(declaredValue(rules, "min-height")).toBe("0");
   });
+
+  it("表頭固定(stickyHeader):容器自己捲時表頭留在頂端", () => {
+    render(<Table columns={columns} rows={rows} getRowKey={getRowKey} />);
+
+    for (const header of screen.getAllByRole("columnheader")) {
+      expect(header).toHaveClass("MuiTableCell-stickyHeader");
+    }
+  });
 });

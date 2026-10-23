@@ -14,6 +14,7 @@ import { useCloseItemTabs } from "@/hooks/base/useCloseItemTabs";
 import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
 import { useSession } from "@/hooks/base/useSession";
 import { useUrlState } from "@/hooks/base/useUrlState";
+import { LIST_PAGE_SHELL_SX } from "@/lib/base/list-page-layout";
 
 import { DeleteItemDialog } from "./DeleteItemDialog";
 import { DemoListTable } from "./DemoListTable";
@@ -169,8 +170,8 @@ export const DemoListPage = <
   };
 
   return (
-    // 撐滿殼給的內容區高度(STYLE-08):工具列固定,表格吃掉剩下的高度並自己捲(STYLE-11)
-    <Stack spacing={2} sx={{ flex: 1, minHeight: 0 }}>
+    // 列表頁殼(STYLE-08):平板以上撐滿殼高、工具列固定、表格吃掉剩下的高度並自己捲;手機寬不釘高,整頁捲
+    <Stack spacing={2} sx={LIST_PAGE_SHELL_SX}>
       <DemoListToolbar
         i18nNamespace={i18nNamespace}
         keyword={keyword}

@@ -11,11 +11,16 @@ import {
 
 import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
 import { useSession } from "@/hooks/base/useSession";
-
 import {
-  type MasterDataErrorCode,
-  masterDataErrorOf,
-} from "../master-data-error";
+  type FieldErrorTexts,
+  withoutFieldError,
+} from "@/lib/base/field-errors";
+
+import { masterDataErrorOf } from "../master-data-error";
+import {
+  masterDataErrorTextsOf,
+  masterDataFormatErrorsOf,
+} from "../master-data-field-errors";
 
 /** 表單欄位(錯誤標示的 key 與 api `VALIDATION_FAILED` 的 `fields` 同名)。 */
 export type CashPointFormField =
@@ -32,6 +37,16 @@ export interface CashPointFormValues {
   enabled: boolean;
   note: string;
 }
+
+const FIELDS: readonly CashPointFormField[] = [
+  "orgId",
+  "positionKey",
+  "name",
+  "order",
+  "printerId",
+  "enabled",
+  "note",
+];
 
 const initialValues = (
   cashPoint: LotteryCashPointFieldsFragment | null,
@@ -88,17 +103,18 @@ export const useCashPointForm = (
   const queryClient = useQueryClient();
   const [initial] = useState(() => initialValues(cashPoint, defaultOrgId));
   const [values, setValues] = useState(initial);
-  const [invalidFields, setInvalidFields] = useState<CashPointFormField[]>([]);
-  const [errorCode, setErrorCode] = useState<MasterDataErrorCode | null>(null);
+  // 欄位錯了就在欄位正下方寫原因(REACT-18);上方提示只放通用句
+  const [fieldErrors, setFieldErrors] = useState<
+    FieldErrorTexts<CashPointFormField>
+  >({});
+  const [errorText, setErrorText] = useState<string | null>(null);
+  const errorTextsOf = (error: unknown) =>
+    masterDataErrorTextsOf("cashPoint", masterDataErrorOf(error), FIELDS, t);
 
   const onError = (error: unknown) => {
-    const parsed = masterDataErrorOf(error);
-    setErrorCode(parsed.code);
-    setInvalidFields(
-      (parsed.fields ?? []).filter((field): field is CashPointFormField =>
-        Object.hasOwn(initial, field),
-      ),
-    );
+    const { texts, summary } = errorTextsOf(error);
+    setFieldErrors(texts);
+    setErrorText(summary);
   };
   const onSuccess = () => {
     void queryClient.invalidateQueries({
@@ -106,8 +122,7 @@ export const useCashPointForm = (
     });
     onDone();
   };
-  const feedbackError = (error: unknown) =>
-    t(`errors.${masterDataErrorOf(error).code}`);
+  const feedbackError = (error: unknown) => errorTextsOf(error).summary;
   const create = useCreateLotteryCashPointMutation(
     session.client,
     useMutationFeedback({
@@ -132,13 +147,13 @@ export const useCashPointForm = (
     value: CashPointFormValues[Key],
   ) => {
     setValues((current) => ({ ...current, [key]: value }));
-    setInvalidFields((current) => current.filter((field) => field !== key));
+    setFieldErrors((current) => withoutFieldError(current, key));
   };
 
   const submit = () => {
     const invalid = invalidFieldsOf(values);
-    setInvalidFields(invalid);
-    setErrorCode(null);
+    setFieldErrors(masterDataFormatErrorsOf("cashPoint", invalid, t));
+    setErrorText(null);
     if (invalid.length > 0) {
       return;
     }
@@ -180,8 +195,8 @@ export const useCashPointForm = (
   return {
     values,
     change,
-    invalidFields,
-    errorCode,
+    fieldErrors,
+    errorText,
     isSubmitting: create.isPending || update.isPending,
     submit,
   };

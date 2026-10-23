@@ -34,6 +34,13 @@ import {
 import { ListColumnRow } from "./ListColumnRow";
 import { useListColumnCandidates } from "./useListColumnCandidates";
 
+/** api 帶的原因 → 這一列下的文案(`admin.moduleManager.listColumns` 底下;字面值,死鍵掃描看得到)。 */
+const ROW_REASON_KEYS: Partial<Record<string, string>> = {
+  LIST_COLUMN_DUPLICATE: "errors.LIST_COLUMN_DUPLICATE",
+  LIST_COLUMN_UNAVAILABLE: "errors.LIST_COLUMN_UNAVAILABLE",
+  LIST_COLUMN_PROTECTED: "errors.LIST_COLUMN_PROTECTED",
+};
+
 export interface ListColumnsEditorProps {
   moduleKey: string;
   initial: readonly ListColumnSpec[];
@@ -96,6 +103,22 @@ export const ListColumnsEditor = ({
     setRows(next);
   };
 
+  /**
+   * 這一列的原因(REACT-18):api 帶了原因(重複、欄位不在了、受保護)寫原因,沒有原因 = 欄寬不合。
+   */
+  const rowErrorText = (index: number): string | undefined => {
+    if (error?.fields?.includes(`columns.${String(index)}`) !== true) {
+      return undefined;
+    }
+    const reasonKey = ROW_REASON_KEYS[error.reason ?? ""];
+    return reasonKey === undefined
+      ? t("errors.width", {
+          min: String(LIST_COLUMN_WIDTH.min),
+          max: String(LIST_COLUMN_WIDTH.max),
+        })
+      : t(reasonKey);
+  };
+
   return (
     <Stack spacing={2}>
       <Typography variant="body2">{t("body")}</Typography>
@@ -111,9 +134,7 @@ export const ListColumnsEditor = ({
           index={index}
           count={rows.length}
           candidates={candidates}
-          hasError={
-            error?.fields?.includes(`columns.${String(index)}`) === true
-          }
+          errorText={rowErrorText(index)}
           onChange={(next) => {
             setRows(rows.map((item, at) => (at === index ? next : item)));
           }}

@@ -9,6 +9,7 @@ import {
   useAddScheduleStaffMutation,
   useScheduleStaffQuery,
 } from "@repo/graphql";
+import { Box } from "@repo/ui/box";
 import { Button } from "@repo/ui/button";
 import { Card } from "@repo/ui/card";
 import { Checkbox } from "@repo/ui/checkbox";
@@ -25,7 +26,7 @@ import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
 import { useSession } from "@/hooks/base/useSession";
 import { useUrlState } from "@/hooks/base/useUrlState";
 
-import { scheduleErrorOf } from "../../schedule-error";
+import { scheduleErrorKey } from "../../schedule-error";
 import { SCHEDULE_PERMISSIONS } from "../../schedule-permissions";
 import { StaffDialog } from "./StaffDialog";
 
@@ -76,7 +77,7 @@ export const StaffTab = () => {
     session.client,
     useMutationFeedback({
       success: t("feedback.addSuccess"),
-      error: (error) => tErrors(scheduleErrorOf(error).code),
+      error: (error) => tErrors(scheduleErrorKey(error)),
       onSuccess: () => {
         setSelected([]);
         void invalidate();
@@ -161,7 +162,8 @@ export const StaffTab = () => {
   };
 
   return (
-    <Stack spacing={2}>
+    // 列表分頁(STYLE-08):平板以上分頁殼釘高,清單那一層吃掉剩下的高度並自己捲(表頭固定);手機寬整頁捲
+    <Stack spacing={2} sx={{ flex: 1, minHeight: 0 }}>
       <Stack
         direction={{ xs: "column", sm: "row" }}
         spacing={1.5}
@@ -200,42 +202,49 @@ export const StaffTab = () => {
           </Button>
         )}
       </Stack>
-      {isMobile ? (
-        <Stack spacing={1.5}>
-          {rows.map((row) => (
-            <Card
-              key={row.userId}
-              variant="outlined"
-              sx={{ p: 1.5, cursor: row.staff ? "pointer" : "default" }}
-              onClick={() => {
-                open(row);
-              }}
-            >
-              <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
-                {!row.staff && checkboxOf(row)}
-                <Typography variant="subtitle2" sx={{ flex: 1 }}>
-                  {row.name}
-                </Typography>
-                {statusOf(row)}
-              </Stack>
-              {row.staff && (
-                <Typography variant="body2" color="textSecondary">
-                  {tEmployment(row.staff.employmentType)} · {orgsOf(row)}
-                </Typography>
-              )}
-            </Card>
-          ))}
-        </Stack>
-      ) : (
-        <Table
-          columns={columns}
-          rows={rows}
-          getRowKey={(row) => row.userId}
-          isLoading={query.isLoading}
-          onRowClick={open}
-          size="small"
-        />
-      )}
+      <Box sx={{ flex: 1, minHeight: 0 }}>
+        {isMobile ? (
+          <Stack spacing={1.5}>
+            {rows.map((row) => (
+              <Card
+                key={row.userId}
+                variant="outlined"
+                sx={{ p: 1.5, cursor: row.staff ? "pointer" : "default" }}
+                onClick={() => {
+                  open(row);
+                }}
+              >
+                <Stack
+                  direction="row"
+                  spacing={1}
+                  sx={{ alignItems: "center" }}
+                >
+                  {!row.staff && checkboxOf(row)}
+                  <Typography variant="subtitle2" sx={{ flex: 1 }}>
+                    {row.name}
+                  </Typography>
+                  {statusOf(row)}
+                </Stack>
+                {row.staff && (
+                  <Typography variant="body2" color="textSecondary">
+                    {tEmployment(row.staff.employmentType)} · {orgsOf(row)}
+                  </Typography>
+                )}
+              </Card>
+            ))}
+          </Stack>
+        ) : (
+          <Table
+            minWidth={720}
+            columns={columns}
+            rows={rows}
+            getRowKey={(row) => row.userId}
+            isLoading={query.isLoading}
+            onRowClick={open}
+            size="small"
+          />
+        )}
+      </Box>
       {userManagerRoute !== null && (
         <Button
           variant="text"

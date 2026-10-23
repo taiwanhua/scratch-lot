@@ -14,8 +14,8 @@ import {
   useLotteryCheckoutsQuery,
   useLotteryStoreBoardQuery,
 } from "@repo/graphql";
+import { Box } from "@repo/ui/box";
 import { Card } from "@repo/ui/card";
-import { DatePicker } from "@repo/ui/date-picker";
 import { useBreakpointDown } from "@repo/ui/media-query";
 import { Pagination } from "@repo/ui/pagination";
 import { SelectField } from "@repo/ui/select-field";
@@ -26,6 +26,7 @@ import { Typography } from "@repo/ui/typography";
 
 import { FilterDrawer } from "@/components/base/FilterDrawer/FilterDrawer";
 import { useFormModuleAccess } from "@/components/base/form-engine/FormModulePages/useFormModuleAccess";
+import { DateFilterPicker } from "@/components/project/DateFilterPicker/DateFilterPicker";
 import { useMe } from "@/hooks/base/useMe";
 import { useSession } from "@/hooks/base/useSession";
 import { useTenantTimezone } from "@/hooks/base/useTenantTimezone";
@@ -214,7 +215,8 @@ export const CheckoutsTab = () => {
   ].filter(Boolean).length;
 
   return (
-    <Stack spacing={2}>
+    // 列表分頁(STYLE-08):平板以上分頁殼釘高,清單那一層吃掉剩下的高度並自己捲(表頭固定);手機寬整頁捲
+    <Stack spacing={2} sx={{ flex: 1, minHeight: 0 }}>
       <FilterDrawer<Filters>
         value={filters}
         emptyValue={EMPTY_FILTERS}
@@ -228,7 +230,7 @@ export const CheckoutsTab = () => {
             spacing={1.5}
             sx={{ flexWrap: "wrap" }}
           >
-            <DatePicker
+            <DateFilterPicker
               label={t("list.from")}
               size="small"
               value={value.from === "" ? null : value.from}
@@ -236,7 +238,7 @@ export const CheckoutsTab = () => {
                 change({ ...value, from: next ?? "" });
               }}
             />
-            <DatePicker
+            <DateFilterPicker
               label={t("list.to")}
               size="small"
               value={value.to === "" ? null : value.to}
@@ -295,66 +297,69 @@ export const CheckoutsTab = () => {
           </Stack>
         )}
       />
-      {isNarrow ? (
-        <Stack spacing={1.5}>
-          {rows.length === 0 && !query.isLoading ? (
-            <Typography color="textSecondary">{t("list.empty")}</Typography>
-          ) : null}
-          {rows.map((row) => (
-            <Card
-              key={row.id}
-              variant="outlined"
-              role="button"
-              tabIndex={0}
-              onClick={() => {
-                open(row);
-              }}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") {
+      <Box sx={{ flex: 1, minHeight: 0 }}>
+        {isNarrow ? (
+          // 卡片清單(lg 以下):平板以上分頁殼釘高時由這一層在卡片裡捲;md 以下高度跟著內容,整頁捲
+          <Stack spacing={1.5} sx={{ height: "100%", overflow: "auto" }}>
+            {rows.length === 0 && !query.isLoading ? (
+              <Typography color="textSecondary">{t("list.empty")}</Typography>
+            ) : null}
+            {rows.map((row) => (
+              <Card
+                key={row.id}
+                variant="outlined"
+                role="button"
+                tabIndex={0}
+                onClick={() => {
                   open(row);
-                }
-              }}
-              sx={{ px: 2, py: 1.5, cursor: "pointer" }}
-            >
-              <Stack spacing={0.5}>
-                <Stack
-                  direction="row"
-                  spacing={1}
-                  sx={{ alignItems: "center" }}
-                >
-                  <Typography variant="subtitle2" sx={{ flex: 1 }}>
-                    {[
-                      row.serialNo ?? "—",
-                      row.cashPoint?.name ?? t(`types.${row.type}`),
-                      row.submittedBy?.name ?? "",
-                    ]
-                      .filter((part) => part !== "")
-                      .join(" · ")}
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    open(row);
+                  }
+                }}
+                sx={{ flexShrink: 0, px: 2, py: 1.5, cursor: "pointer" }}
+              >
+                <Stack spacing={0.5}>
+                  <Stack
+                    direction="row"
+                    spacing={1}
+                    sx={{ alignItems: "center" }}
+                  >
+                    <Typography variant="subtitle2" sx={{ flex: 1 }}>
+                      {[
+                        row.serialNo ?? "—",
+                        row.cashPoint?.name ?? t(`types.${row.type}`),
+                        row.submittedBy?.name ?? "",
+                      ]
+                        .filter((part) => part !== "")
+                        .join(" · ")}
+                    </Typography>
+                    {statusTag(row)}
+                  </Stack>
+                  <Typography variant="body2">
+                    {t("list.cardFacts", {
+                      expected: moneyText(row.expected),
+                      counted: moneyText(row.counted),
+                      difference: signedMoneyText(row.difference),
+                    })}
                   </Typography>
-                  {statusTag(row)}
                 </Stack>
-                <Typography variant="body2">
-                  {t("list.cardFacts", {
-                    expected: moneyText(row.expected),
-                    counted: moneyText(row.counted),
-                    difference: signedMoneyText(row.difference),
-                  })}
-                </Typography>
-              </Stack>
-            </Card>
-          ))}
-        </Stack>
-      ) : (
-        <Table
-          columns={columns}
-          rows={rows}
-          getRowKey={(row) => row.id}
-          isLoading={query.isLoading}
-          emptyMessage={t("list.empty")}
-          onRowClick={open}
-          containerSx={{ height: "auto" }}
-        />
-      )}
+              </Card>
+            ))}
+          </Stack>
+        ) : (
+          <Table
+            minWidth={960}
+            columns={columns}
+            rows={rows}
+            getRowKey={(row) => row.id}
+            isLoading={query.isLoading}
+            emptyMessage={t("list.empty")}
+            onRowClick={open}
+          />
+        )}
+      </Box>
       <Stack
         direction="row"
         spacing={2}

@@ -72,6 +72,7 @@ export class SidebarBadgesService {
           return {
             moduleKey: badge.moduleKey,
             count: await badge.count(operator),
+            descriptionKey: badge.descriptionKey ?? null,
           };
         } catch (error) {
           this.logger.error(
