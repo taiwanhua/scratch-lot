@@ -119,7 +119,7 @@ export const DelegationsTab = () => {
       <Alert severity="info">{t("hint")}</Alert>
       <Box sx={{ flex: 1, minHeight: 0 }}>
         <Table
-          minWidth={960}
+          minWidth={1070}
           columns={columns}
           rows={list.data?.myDelegations.items ?? []}
           getRowKey={(row) => row.id}

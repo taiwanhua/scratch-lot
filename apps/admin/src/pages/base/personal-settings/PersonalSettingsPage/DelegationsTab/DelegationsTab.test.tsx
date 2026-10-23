@@ -187,12 +187,12 @@ describe("代理人分頁", () => {
 describe("代理人分頁:窄螢幕(STYLE-11)", () => {
   restoreViewportAfterEach();
 
-  it("手機寬:表格最小寬 960,窄過它由表格容器橫向捲動,不把代理人、日期擠成一字一行", async () => {
+  it("手機寬:表格最小寬 1070(各欄寬合計),窄過它由表格容器橫向捲動,不把代理人、日期擠成一字一行", async () => {
     setMobileViewport();
     renderDelegations();
 
     const table = await findTable();
-    expect(globalThis.getComputedStyle(table).minWidth).toBe("960px");
+    expect(globalThis.getComputedStyle(table).minWidth).toBe("1070px");
     const container = table.closest<HTMLElement>(".MuiTableContainer-root");
     if (container === null) {
       throw new Error("找不到表格容器");
