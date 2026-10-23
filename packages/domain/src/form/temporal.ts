@@ -186,7 +186,7 @@ const sameDate = (left: LocalDate, right: LocalDate): boolean =>
 
 /**
  * 某時區的牆上時間 → 時點。重複的時刻(夏令時間結束)取較早的一個;不存在的時刻(夏令時間開始)
- * 往後推到切換後的第一個時點。時區不合法 → 丟 `RangeError`。
+ * 把跳過的時間平移過去(例如跳過 02:00–03:00 時,02:30 → 03:30)。時區不合法 → 丟 `RangeError`。
  */
 function instantOfLocal(wall: LocalDateTime, timezone: string): number {
   const target = wallMs(wall);
@@ -225,8 +225,8 @@ export function startOfLocalDay(date: LocalDate, timezone: string): number {
 
 /**
  * 當地日期的某個牆上時刻(時、分)在某時區的時點(ms),例如租戶當地「今天 08:00」。
- * 重複的時刻(夏令時間結束)取較早的一個;不存在的時刻(夏令時間開始)往後推到切換後的第一個時點。
- * 時區不合法 → 丟 `RangeError`。
+ * 重複的時刻(夏令時間結束)取較早的一個;不存在的時刻(夏令時間開始)把跳過的時間平移過去
+ * (例如跳過 02:00–03:00 時,02:30 → 03:30)。時區不合法 → 丟 `RangeError`。
  */
 export function instantOfLocalTime(
   date: LocalDate,
@@ -448,7 +448,7 @@ export function minutesOfHhMm(value: string): number | null {
 
 /**
  * 當地日期 + `HH:mm` 在某時區的時點(ms),例如「那天 09:00」;`HH:mm` 不合法 → null。
- * 夏令時間照 `instantOfLocalTime`:重複的時刻取較早的一個,不存在的時刻往後推到切換後的第一個時點。
+ * 夏令時間照 `instantOfLocalTime`:重複的時刻取較早的一個,不存在的時刻把跳過的時間平移過去(02:30 → 03:30)。
  * 時區不合法 → 丟 `RangeError`。
  */
 export function instantOfLocalHhMm(
@@ -532,6 +532,24 @@ export function addLocalMonths(month: LocalMonth, amount: number): LocalMonth {
   return { year, month: index - year * 12 + 1 };
 }
 
+/** 兩個月份相差幾個月(`to − from`;同月 = 0、`2025-12` → `2026-01` = 1)。 */
+export function localMonthDiff(from: LocalMonth, to: LocalMonth): number {
+  return to.year * 12 + to.month - (from.year * 12 + from.month);
+}
+
+/**
+ * 那個月的第 `day` 日,超過月底就用月底(「每月 N 日」:31 日 → 2 月 28 / 29 日、4 月 30 日);
+ * 小於 1 → 1 日,小數捨去。
+ */
+export function clampedDateOfMonth(month: LocalMonth, day: number): LocalDate {
+  const last = daysInLocalMonth(month);
+  return {
+    year: month.year,
+    month: month.month,
+    day: Math.min(Math.max(Math.trunc(day), 1), last),
+  };
+}
+
 /** 那個月的每一天(1 日到月底,由早到晚)。 */
 export function datesOfLocalMonth(month: LocalMonth): LocalDate[] {
   return Array.from({ length: daysInLocalMonth(month) }, (_, index) => ({
@@ -539,6 +557,12 @@ export function datesOfLocalMonth(month: LocalMonth): LocalDate[] {
     month: month.month,
     day: index + 1,
   }));
+}
+
+/** 時點在某時區屬於哪個月份;時區不合法 → 丟 `RangeError`。 */
+export function localMonthOf(instant: number, timezone: string): LocalMonth {
+  const { year, month } = localDateOf(instant, timezone);
+  return { year, month };
 }
 
 // ---- 期間 → 時點區間 ----
