@@ -20,6 +20,8 @@ export const projectListPageShells: ListPageShellDecisions = {
   tabs: [
     "/store#班次結帳歷史紀錄",
     "/store#盤點紀錄",
+    "/store#撤銷售出",
+    "/store#現金更正",
     "/store#兌獎紀錄",
     "/store#其他申請",
     "/schedule/manage#支援需求單",

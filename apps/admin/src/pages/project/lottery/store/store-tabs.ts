@@ -59,6 +59,7 @@ export const STORE_TAB_ENTRIES: readonly StoreTabEntry[] = [
     value: STORE_TABS.saleReversals,
     labelKey: "saleReversals",
     permission: STORE_PERMISSIONS.view,
+    isList: true,
     Content: SaleReversalsTab,
   },
   // 現金更正(規格 8.8;Figma ST-32a):`store.view`
@@ -66,6 +67,7 @@ export const STORE_TAB_ENTRIES: readonly StoreTabEntry[] = [
     value: STORE_TABS.cashCorrections,
     labelKey: "cashCorrections",
     permission: STORE_PERMISSIONS.view,
+    isList: true,
     Content: CashCorrectionsTab,
   },
   // 兌獎紀錄(規格 6.5;ST-40):`store.view`(api `lotteryRedemptions` 也守它)
