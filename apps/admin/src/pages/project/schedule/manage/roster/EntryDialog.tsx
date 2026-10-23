@@ -2,7 +2,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslations } from "use-intl";
 
-import { defaultBreakMinutes } from "@repo/domain/project/schedule-settings";
 import {
   useDeleteScheduleEntryMutation,
   useSaveScheduleEntryMutation,
@@ -19,21 +18,22 @@ import { TextField } from "@repo/ui/text-field";
 import { FieldErrorGroup } from "@/components/base/FieldErrorGroup/FieldErrorGroup";
 import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
 import { useSession } from "@/hooks/base/useSession";
-import {
-  minutesBetween,
-  monthDayOf,
-  spanOf,
-  weekdayOf,
-} from "@/lib/project/schedule-roster";
+import { monthDayOf, spanOf, weekdayOf } from "@/lib/project/schedule-roster";
 
 import { ConfirmDeleteDialog } from "../../ConfirmDeleteDialog";
+import { scheduleReasonText } from "../../schedule-field-errors";
 import { DemandDialog } from "./DemandDialog";
 import { EntryAssignmentRows } from "./EntryAssignmentRows";
 import { EntryTimeFields } from "./EntryTimeFields";
 import {
+  type EntryField,
+  type EntryFieldErrors,
   type EntryFormState,
+  entryCheckReasonsOf,
   initialEntryState,
+  leaderRuleOf,
   withAddedDemand,
+  withTimes,
 } from "./entry-dialog-state";
 import { useChangeReason } from "./publish/useChangeReason";
 import {
@@ -62,6 +62,8 @@ export interface EntryDialogProps {
  * - [新增一筆人力需求]:疊開人力需求對話框(日期鎖定、時間帶入這筆排班);新增成功 → 自動加一列
  *   (依規則填第一個空的任務);取消 → 不變;之後排班按取消,人力需求保留(它已經獨立存檔)
  * - 至少要填進一筆才能存:移除最後一列時 [儲存] 停用並提示
+ * - 前端已經知道的規則(店休、畫休、不能擔任負責人;`entryCheckReasonsOf`)送出前就寫在欄位下、
+ *   [儲存] 停用,每個入口(工具列、班表空白格、缺額、編輯、疊開新增人力需求)同一套
  * - [刪除這筆排班]:已被收銀班次綁定的擋下(「已經有開班紀錄,不能刪除」)
  * - 這個人那天在這家店有未對應排班的打卡:多一個區塊(`UnmatchedPunchesBlock`,SC-04d / SC-04e ①),
  *   勾選的卡儲存時一起對應到這筆排班;「上下班時間改用打卡時間」要 `use-punch-time`、預設不勾
@@ -76,6 +78,7 @@ export const EntryDialog = ({
   const tRoster = useTranslations("admin.schedule.roster");
   const tCommon = useTranslations("admin.schedule.common");
   const tCalendar = useTranslations("admin.schedule.calendar");
+  const tSchedule = useTranslations("admin.schedule");
   const { session } = useSession();
   const queryClient = useQueryClient();
   const isMobile = useBreakpointDown("sm");
@@ -93,7 +96,7 @@ export const EntryDialog = ({
       entry,
       preset,
       data.demands.find((demand) => demand.id === preset.demandId),
-      timezone,
+      { timezone, breakTiers: data.settings.breakTiers },
     ),
   );
   const [isBreakEdited, setIsBreakEdited] = useState(entry !== null);
@@ -105,31 +108,39 @@ export const EntryDialog = ({
   const changeReason = useChangeReason(canEdit);
 
   const person = data.people.find((item) => item.userId === form.userId);
-  const canLead = person?.canLead === true;
+  const leaderRule = leaderRuleOf(person, entry);
   const span = spanOf(form.date, form.startTime, form.endTime, timezone);
   const breakMinutes = Number(form.breakText === "" ? "0" : form.breakText);
   const completeRows = form.rows.filter(
     (row) => row.demandId !== "" && row.taskId !== "",
   );
+  // 送出前就知道會被擋的(店休、畫休、不能擔任負責人):原因寫在欄位下;api 標回的優先
+  const checkReasons = entryCheckReasonsOf(form, {
+    calendarDays: data.calendarDays,
+    unavailability: data.unavailability,
+    demands,
+    rule: leaderRule,
+    timezone,
+  });
+  const shownErrors: EntryFieldErrors = { ...fieldErrors };
+  for (const [field, reason] of Object.entries(checkReasons) as [
+    EntryField,
+    (typeof checkReasons)[EntryField],
+  ][]) {
+    if (reason !== undefined && shownErrors[field] === undefined) {
+      shownErrors[field] = scheduleReasonText(tSchedule, reason);
+    }
+  }
+  const timeContext = {
+    timezone,
+    breakTiers: data.settings.breakTiers,
+    isBreakEdited,
+  };
 
   /** 改上下班時間;新增時休息還沒自己改過,就依規則「預設休息」重帶。 */
   const setTimes = (startTime: string, endTime: string) => {
     errors.clear("startTime", "endTime");
-    const next = spanOf(form.date, startTime, endTime, timezone);
-    setForm((current) => ({
-      ...current,
-      startTime,
-      endTime,
-      breakText:
-        isBreakEdited || next === null
-          ? current.breakText
-          : String(
-              defaultBreakMinutes(
-                data.settings.breakTiers,
-                minutesBetween(next.startAt, next.endAt),
-              ),
-            ),
-    }));
+    setForm((current) => withTimes(current, startTime, endTime, timeContext));
   };
 
   const punches = useEntryPunches(form, person?.name ?? "", {
@@ -178,6 +189,7 @@ export const EntryDialog = ({
     canEdit &&
     completeRows.length > 0 &&
     span !== null &&
+    Object.keys(checkReasons).length === 0 &&
     form.userId !== "" &&
     Number.isInteger(breakMinutes) &&
     breakMinutes >= 0;
@@ -275,8 +287,8 @@ export const EntryDialog = ({
               required
               fullWidth
               disabled={!canEdit}
-              error={fieldErrors.userId !== undefined}
-              helperText={fieldErrors.userId}
+              error={shownErrors.userId !== undefined}
+              helperText={shownErrors.userId}
               options={data.people
                 .filter((item) => item.isCandidate)
                 .map((item) => ({ value: item.userId, label: item.name }))}
@@ -293,6 +305,8 @@ export const EntryDialog = ({
               required
               fullWidth
               disabled={!canEdit}
+              error={shownErrors.date !== undefined}
+              helperText={shownErrors.date}
               onChange={(next) => {
                 setForm((current) => ({
                   ...current,
@@ -308,7 +322,7 @@ export const EntryDialog = ({
           endTime={form.endTime}
           breakText={form.breakText}
           disabled={!canEdit}
-          fieldErrors={fieldErrors}
+          fieldErrors={shownErrors}
           onTimes={setTimes}
           onBreak={(text) => {
             setIsBreakEdited(true);
@@ -318,7 +332,7 @@ export const EntryDialog = ({
         {entry === null && punches.block}
         <FieldErrorGroup
           label={t("assignments")}
-          errorText={fieldErrors.assignments}
+          errorText={shownErrors.assignments}
         >
           <EntryAssignmentRows
             rows={form.rows}
@@ -331,7 +345,7 @@ export const EntryDialog = ({
             }}
             dayDemands={demands.filter((demand) => demand.date === form.date)}
             entryId={entry?.id ?? null}
-            canLead={canLead}
+            leaderRule={leaderRule}
             span={span}
             onExtend={(edge, time) => {
               if (edge === "end") {
@@ -364,7 +378,9 @@ export const EntryDialog = ({
           }}
           onSaved={(created) => {
             setAddedDemands((current) => [...current, created]);
-            setForm((current) => withAddedDemand(current, created, canLead));
+            setForm((current) =>
+              withAddedDemand(current, created, leaderRule, timeContext),
+            );
           }}
         />
       )}

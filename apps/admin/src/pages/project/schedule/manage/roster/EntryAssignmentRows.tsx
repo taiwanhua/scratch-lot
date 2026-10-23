@@ -2,10 +2,7 @@ import type { Dispatch, SetStateAction } from "react";
 import { useTranslations } from "use-intl";
 
 import { SCHEDULE_FIELD_CATEGORY_KEYS } from "@repo/domain/project/schedule-fields";
-import {
-  leaderCoverageGaps,
-  pickOpenTask,
-} from "@repo/domain/project/schedule-settings";
+import { leaderCoverageGaps } from "@repo/domain/project/schedule-settings";
 import { Alert } from "@repo/ui/alert";
 import { Button } from "@repo/ui/button";
 import { SelectField } from "@repo/ui/select-field";
@@ -15,9 +12,13 @@ import { Typography } from "@repo/ui/typography";
 import { useScheduleFieldOptions } from "@/hooks/project/schedule/useScheduleFieldOptions/useScheduleFieldOptions";
 import { localPartsOf } from "@/lib/project/schedule-roster";
 
+import { scheduleReasonText } from "../../schedule-field-errors";
 import {
   type AssignmentRow,
+  type LeaderRule,
+  isLeaderBlocked,
   nextRowKey,
+  pickTaskOf,
   tasksWithFilled,
 } from "./entry-dialog-state";
 import { type RosterDemand, useRoster } from "./roster-context";
@@ -29,7 +30,8 @@ export interface EntryAssignmentRowsProps {
   dayDemands: readonly RosterDemand[];
   /** 編輯中的排班 id(它自己填的任務不算「別人填了」) */
   entryId: string | null;
-  canLead: boolean;
+  /** 負責人任務誰能填(選的人、編輯中原本填著的;`leaderRuleOf`) */
+  leaderRule: LeaderRule;
   /** 目前的上下班時點(負責人時間涵蓋提示用);時間還沒填好為 null */
   span: { startAt: string; endAt: string } | null;
   /** 改上下班時間([往後延長到] / [往前延長到]) */
@@ -41,13 +43,15 @@ export interface EntryAssignmentRowsProps {
  * 排班對話框的「加入這天的人力需求」(規格 14.5):標題列右邊 [新增一筆人力需求](疊開人力需求對話框);
  * 每列 = 人力需求 + 職責 · 執行任務 + [移除];清單最下面 [+ 加入人力需求] 從這天已有的加一列;
  * 這天沒有人力需求時寫「這天沒有合適的人力需求」。負責人沒涵蓋那筆人力需求 → 提示與延長按鈕。
+ * 不能選的任務反灰,原因寫在選項的次文字(STYLE-05「停用的選項」):別人填了 → 誰填的;
+ * 選的人不能擔任負責人 → 那句原因(和 api 擋下時同一句)。
  */
 export const EntryAssignmentRows = ({
   rows,
   setRows,
   dayDemands,
   entryId,
-  canLead,
+  leaderRule,
   span,
   onExtend,
   onAddDemand,
@@ -55,6 +59,7 @@ export const EntryAssignmentRows = ({
   const t = useTranslations("admin.schedule.roster.entryDialog");
   const tRoster = useTranslations("admin.schedule.roster");
   const tCommon = useTranslations("admin.schedule.common");
+  const tSchedule = useTranslations("admin.schedule");
   const { data, timezone, canEdit } = useRoster();
   const positions = useScheduleFieldOptions(
     SCHEDULE_FIELD_CATEGORY_KEYS.position,
@@ -85,16 +90,13 @@ export const EntryAssignmentRows = ({
     updateRow(key, {
       demandId,
       taskId:
-        demand === undefined
-          ? ""
-          : (pickOpenTask(tasksWithFilled(demand, entryId), canLead) ?? ""),
+        demand === undefined ? "" : pickTaskOf(demand, entryId, leaderRule),
     });
   };
 
-  const taskOptionsOf = (demand: RosterDemand, row: AssignmentRow) =>
-    tasksWithFilled(demand, entryId).map((task) => ({
-      value: task.taskId,
-      label: task.filled
+  const taskOptionsOf = (demand: RosterDemand) =>
+    tasksWithFilled(demand, entryId).map((task) => {
+      const text = task.filled
         ? t("taskOptionFilled", {
             role: roleText(task.role),
             task: taskOptions.labelOf(task.taskKey),
@@ -103,11 +105,23 @@ export const EntryAssignmentRows = ({
         : t("taskOption", {
             role: roleText(task.role),
             task: taskOptions.labelOf(task.taskKey),
-          }),
-      disabled:
-        task.filled ||
-        (task.role === "leader" && !canLead && task.taskId !== row.taskId),
-    }));
+          });
+      const isBlocked = isLeaderBlocked(leaderRule, demand.id, task);
+      return {
+        value: task.taskId,
+        label: isBlocked ? (
+          <Stack>
+            <span>{text}</span>
+            <Typography variant="caption" color="textSecondary">
+              {scheduleReasonText(tSchedule, "CANNOT_LEAD")}
+            </Typography>
+          </Stack>
+        ) : (
+          text
+        ),
+        disabled: task.filled || isBlocked,
+      };
+    });
 
   const coverageHint = (row: AssignmentRow) => {
     const demand = demandOf(row.demandId);
@@ -230,7 +244,7 @@ export const EntryAssignmentRows = ({
                 size="small"
                 fullWidth
                 disabled={!canEdit || demand === undefined}
-                options={demand === undefined ? [] : taskOptionsOf(demand, row)}
+                options={demand === undefined ? [] : taskOptionsOf(demand)}
                 onChange={(next) => {
                   updateRow(row.key, { taskId: next });
                 }}
