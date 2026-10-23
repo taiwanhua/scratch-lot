@@ -78,11 +78,12 @@ export class DealerViewService {
         CONTACT_ROLES_IN_ORDER.flatMap((role) => link.contacts[role]),
       ),
     );
-    const orgIds = uniqueIds(
-      linkValues.flatMap((link) =>
+    const orgIds = [
+      ...linkValues.flatMap((link) =>
         link.storeOrgId === null ? [] : [link.storeOrgId],
       ),
-    );
+      ...records.map((record) => record.orgId),
+    ];
     const classA = records.filter((record) => record.type === "a");
     const classB = records.filter((record) => record.type === "b");
 
@@ -96,14 +97,7 @@ export class DealerViewService {
       contactIds.length === 0 || tenantId === null
         ? []
         : await this.contacts.findRefsInTenant(operator, tenantId, contactIds);
-    // 對應分店的名稱:分店可能不在讀者的可見範圍,以租戶的組織樹讀
-    const orgs =
-      orgIds.length === 0
-        ? []
-        : await this.orgs.findMany(
-            await tenantBoundaryContext(this.orgs, operator, tenantId),
-            { _id: { $in: orgIds } },
-          );
+    const orgNames = await this.orgNames(operator, tenantId, orgIds);
     const coSellers =
       classB.length === 0
         ? []
@@ -120,15 +114,10 @@ export class DealerViewService {
             year: grant.today.year,
             quarter: quarterOf(grant.today),
           });
-    const creatorIds = uniqueIds(
-      records.flatMap((record) =>
-        record.createdBy === null ? [] : [record.createdBy],
-      ),
+    const users = await this.userNames(
+      operator,
+      records.flatMap((record) => [record.createdBy, record.updatedBy]),
     );
-    const users =
-      creatorIds.length === 0
-        ? []
-        : await this.users.findMany(operator, { _id: { $in: creatorIds } });
 
     const coSellerCounts = new Map<string, number>();
     for (const row of coSellers) {
@@ -154,15 +143,35 @@ export class DealerViewService {
           },
         ]),
       ),
-      orgNames: new Map(orgs.map((org) => [String(org._id), org.name])),
+      orgNames,
       coSellerCounts,
       signedThisQuarter: new Set(signed.map((row) => String(row.dealerId))),
-      users: new Map(users.map((user) => [String(user._id), user.name])),
+      users,
       owns: (orgId) => isOrgVisible(operator, orgId),
     };
   }
 
-  /** 使用者 id → 名稱(關係人的建立者)。 */
+  /**
+   * 組織 id → 名稱(對應分店、所屬組織)。組織可能不在讀者的可見範圍(對應分店、共用進來的),
+   * 以租戶的組織樹讀:看得到這筆資料就看得到它掛的組織名稱。
+   */
+  async orgNames(
+    operator: OperatorContext,
+    tenantId: Types.ObjectId | null,
+    ids: readonly Types.ObjectId[],
+  ): Promise<Map<string, string>> {
+    const unique = uniqueIds(ids);
+    if (unique.length === 0) {
+      return new Map();
+    }
+    const found = await this.orgs.findMany(
+      await tenantBoundaryContext(this.orgs, operator, tenantId),
+      { _id: { $in: unique } },
+    );
+    return new Map(found.map((org) => [String(org._id), org.name]));
+  }
+
+  /** 使用者 id → 名稱(建立者、修改者)。 */
   async userNames(
     operator: OperatorContext,
     ids: readonly (Types.ObjectId | null)[],

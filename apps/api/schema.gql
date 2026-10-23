@@ -1834,6 +1834,7 @@ type LotteryDealer {
   nationalId: String!
   nextRentDueAt: DateTime
   note: String
+  ownerOrgName: String
   phone: String
   rentCycle: LotteryRentCycle
   rentDueDay: Int
@@ -1850,6 +1851,7 @@ type LotteryDealer {
   trustees: [LotteryDealerContactRef!]!
   type: LotteryDealerType!
   updatedAt: DateTime!
+  updatedBy: LotteryDealerUserRef
 }
 
 type LotteryDealerAbilities {
@@ -1882,12 +1884,14 @@ type LotteryDealerContact {
   name: String!
   nationalId: String!
   note: String
+  ownerOrgName: String
   phone: String
   residentialAddress: String
   residentialSameAsMailing: Boolean!
   roles: [LotteryContactRole!]!
   status: LotteryContactStatus!
   updatedAt: DateTime!
+  updatedBy: LotteryDealerUserRef
 }
 
 type LotteryDealerContactAbilities {

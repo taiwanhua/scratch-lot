@@ -4,6 +4,7 @@ import { z } from "zod";
 
 import {
   type ScheduleDayOffDayFieldsFragment,
+  type ScheduleDayOffFieldsFragment,
   useScheduleDayOffOverviewQuery,
 } from "@repo/graphql";
 import { Alert } from "@repo/ui/alert";
@@ -21,6 +22,7 @@ import { Typography } from "@repo/ui/typography";
 
 import { OrgTreeSelect } from "@/components/base/OrgTreeSelect/OrgTreeSelect";
 import { DayOffCellContent } from "@/components/project/schedule/DayOffs/DayOffCellContent";
+import { DayOffDetailDialog } from "@/components/project/schedule/DayOffs/DayOffDetailDialog";
 import { DayOffLegend } from "@/components/project/schedule/DayOffs/DayOffLegend";
 import { useSession } from "@/hooks/base/useSession";
 import { useUrlState } from "@/hooks/base/useUrlState";
@@ -31,6 +33,7 @@ import {
   shortDate,
 } from "@/lib/project/schedule-day-offs";
 
+import { DeleteDayOffDialog } from "./DeleteDayOffDialog";
 import { OverrideDayOffDialog } from "./OverrideDayOffDialog";
 
 const orgSchema = z.string().default("");
@@ -55,7 +58,9 @@ const WINDOW_KEY: Partial<
  * 排班作業 → 畫休總覽(SC-06;規格 14.5「畫休總覽」,`view-day-offs`):月曆每天顯示誰整天畫休、
  * 誰時段不可排(含時間)、同日畫休人數「2/2」(只計以這家店為主要分店的人);頂部開放期間與尚未畫休的人
  * (只算主要分店是這家的人),
- * 篩選 [全部] [尚未畫休]。[代改](SC-24)要 `edit-day-offs`,點日期也會打開並帶入那天。
+ * 篩選 [全部] [尚未畫休]。有 `edit-day-offs` 才看得到 [代改](SC-24,只做新增)與點日期:
+ * 點日期 → 當天畫休(`DayOffDetailDialog`),每筆旁邊 [刪除](先確認,截止後在確認框選原因),
+ * 下方 [代改] 帶入那天。
  *
  * 分店選擇器是可見範圍模式(`scope="visible"`,同行事曆):業務頁,沒有組織治理權限的人也打得開。
  */
@@ -67,6 +72,11 @@ export const DayOffOverviewTab = () => {
   const [monthParam, setMonth] = useUrlState("month", monthSchema);
   const [filter, setFilter] = useUrlState("dayOffFilter", filterSchema);
   const [overrideDate, setOverrideDate] = useState<string | null>(null);
+  /** 點日期打開的「當天畫休」 */
+  const [openedDate, setOpenedDate] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState<ScheduleDayOffFieldsFragment | null>(
+    null,
+  );
   const query = useScheduleDayOffOverviewQuery(session.client, {
     input: {
       ...(orgId === "" ? {} : { orgId }),
@@ -249,7 +259,7 @@ export const DayOffOverviewTab = () => {
               onSelectedDatesChange={(dates) => {
                 const date = dates.at(0);
                 if (date !== undefined) {
-                  setOverrideDate(date);
+                  setOpenedDate(date);
                 }
               }}
               days={dayInfo}
@@ -261,11 +271,42 @@ export const DayOffOverviewTab = () => {
           </Stack>
         </Card>
       )}
+      {openedDate !== null && (
+        <DayOffDetailDialog
+          date={openedDate}
+          day={overview.days.find((day) => day.date === openedDate)}
+          limit={maxDaily}
+          onDelete={setDeleting}
+          extraActions={
+            <Button
+              variant="outlined"
+              onClick={() => {
+                setOverrideDate(openedDate);
+                setOpenedDate(null);
+              }}
+            >
+              {t("overview.override")}
+            </Button>
+          }
+          onClose={() => {
+            setOpenedDate(null);
+          }}
+        />
+      )}
+      {deleting !== null && (
+        <DeleteDayOffDialog
+          orgId={overview.orgId}
+          item={deleting}
+          reasonRequired={window.state === "closed"}
+          onClose={() => {
+            setDeleting(null);
+          }}
+        />
+      )}
       {overrideDate !== null && (
         <OverrideDayOffDialog
           orgId={overview.orgId}
           staff={overview.staff}
-          days={overview.days}
           initialDate={overrideDate}
           reasonRequired={window.state === "closed"}
           onClose={() => {

@@ -85,6 +85,13 @@ const REASON_TEXT_KEYS: Record<ScheduleReason, string> = {
   REFERENCE_NOT_FOUND: "errors.reasons.REFERENCE_NOT_FOUND",
 };
 
+/**
+ * 原因的文案(`errors.reasons.<reason>`)。前端送出前就知道的規則(店休、不能擔任負責人……)
+ * 也寫這一句:和 api 擋下時同一個文案、寫在同一欄下(REACT-18)。
+ */
+export const scheduleReasonText = (t: Translate, reason: ScheduleReason) =>
+  t(REASON_TEXT_KEYS[reason]);
+
 export const scheduleFormatText = (t: Translate, field: string): string => {
   const [key, values] = FORMAT_TEXTS[field] ?? ["fieldErrors.check"];
   return t(key, values);

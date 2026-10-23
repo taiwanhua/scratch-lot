@@ -24,7 +24,7 @@ export const projectUrlStateInventory: UrlStateInventory = {
   // 輸出報表:選的報表、條件(期間、分店、其他條件)、預覽(開著沒、第幾個工作表)
   reports: ["report", "conditions", "preview"],
   // 班表管理:頁內分頁 `tab`;排班人員篩選 `joined`;規則 / 行事曆 / 畫休總覽的分店 `org`;
-  // 行事曆 / 畫休總覽的月份 `month`;我的班表的月份 `month` 與 `[月曆 | 條列]` `view`;畫休總覽的篩選 `dayOffFilter`;
+  // 行事曆 / 畫休總覽的月份 `month`;我的班表(班表 / 我的畫休分頁)的月份 `month` 與 `[月曆 | 條列]` `view`;畫休總覽的篩選 `dayOffFilter`;
   // 支援需求單的篩選 `support`、右側打開的那一筆 `detail`、詳情看的修訂 `revision`
   "schedule.my": ["tab", "month", "view"],
   "schedule.settings": ["tab", "joined", "org"],

@@ -21,7 +21,7 @@ import {
   DealerLinksService,
   toObjectId,
 } from "./dealer-links.service";
-import type { ContactRecord } from "./dealer-mapper";
+import { type ContactRecord, userRefOf } from "./dealer-mapper";
 import { dealerRefFrom } from "./dealer-tenant";
 import {
   FieldErrors,
@@ -423,7 +423,12 @@ export class DealerContactsService {
     );
     const users = await this.view.userNames(
       operator,
-      records.map((record) => record.createdBy),
+      records.flatMap((record) => [record.createdBy, record.updatedBy]),
+    );
+    const orgNames = await this.view.orgNames(
+      operator,
+      grant.tenantId,
+      records.map((record) => record.orgId),
     );
     const canEdit = grant.has(DEALERS_PERMISSIONS.contactsEdit);
     return records.map((record) => {
@@ -456,15 +461,11 @@ export class DealerContactsService {
         note: record.note,
         dealerCount: new Set(links.map((link) => link.dealer.id)).size,
         links,
-        createdBy:
-          record.createdBy === null
-            ? null
-            : {
-                id: String(record.createdBy),
-                name: users.get(String(record.createdBy)) ?? "",
-              },
+        createdBy: userRefOf(record.createdBy, users),
         createdAt: record.createdAt,
         updatedAt: record.updatedAt,
+        updatedBy: userRefOf(record.updatedBy, users),
+        ownerOrgName: orgNames.get(String(record.orgId)) ?? null,
         abilities: { canEdit },
       };
     });

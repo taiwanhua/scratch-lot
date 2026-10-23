@@ -66,6 +66,42 @@ describe("排班作業:欄位下寫原因", () => {
     ).toHaveAccessibleDescription("這個任務已經有人排了");
   });
 
+  it("排班:api 標回的原因,改了那一組 / 那一欄就清掉,不殘留;全清掉時上方通用句也清掉", async () => {
+    const { user } = renderRoster({ path: ROSTER });
+    server.use(
+      api.mutation("SaveScheduleEntry", () =>
+        businessError({
+          code: "VALIDATION_FAILED",
+          fields: ["assignments", "breakMinutes"],
+          reason: "TASK_TAKEN",
+        }),
+      ),
+    );
+    const wang = await findLabelled("王小明 11/1");
+    await user.click(within(wang).getByRole("button", { name: /^早/ }));
+    const dialog = await findDialog("排班 · 王小明 11/1(日)");
+    await user.click(within(dialog).getByRole("button", { name: "儲存" }));
+    const group = within(dialog).getByRole("group", { name: "加入的人力需求" });
+    const breakField = within(dialog).getByLabelText(/休息/);
+    await within(dialog).findAllByText("這個任務已經有人排了");
+    expect(group).toHaveAccessibleDescription("這個任務已經有人排了");
+    expect(breakField).toHaveAccessibleDescription("這個任務已經有人排了");
+    expect(within(dialog).getByRole("alert")).toHaveTextContent(GENERIC);
+
+    await user.click(
+      within(dialog).getByRole("combobox", { name: "職責 · 執行任務" }),
+    );
+    await user.click(await screen.findByRole("option", { name: /^協同/ }));
+    expect(group).not.toHaveAccessibleDescription("這個任務已經有人排了");
+    // 還有休息欄標著 → 上方通用句還在
+    expect(within(dialog).getByRole("alert")).toHaveTextContent(GENERIC);
+
+    await user.type(breakField, "0");
+    expect(breakField).not.toHaveAccessibleDescription("這個任務已經有人排了");
+    // 欄位錯誤全清掉 → 上方通用句一起清掉
+    expect(within(dialog).queryByText(GENERIC)).not.toBeInTheDocument();
+  });
+
   it("人力需求:沒填時間、沒選崗位 → 各欄下寫格式要求", async () => {
     const { user } = renderRoster({ path: ROSTER });
     await user.click(await findLabelled("林美麗 11/6"));

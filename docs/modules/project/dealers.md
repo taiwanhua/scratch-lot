@@ -83,17 +83,17 @@
 
 ## api 介面
 
-| 端點                                                                      | 守門                               | 說明                                                                                                                                   |
-| ------------------------------------------------------------------------- | ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| `lotteryDealers(input)`                                                   | 綁 `dealers`                       | 清單:`type` 必填;`keyword`(證號、姓名、店名)、`status`、`selectable`、`purchaseOverDays`、`currentQuarterSigned`、`licenseState`、分頁 |
-| `lotteryDealer(id)`                                                       | 綁 `dealers`                       | 單筆;看不到 → `NOT_FOUND`                                                                                                              |
-| `lotteryDealerSignins(dealerId, year)`                                    | 綁 `dealers`                       | 某年四季(一定四筆)                                                                                                                     |
-| `lotteryDealerCoSellers(dealerId)`                                        | 綁 `dealers`                       | 乙類的共同銷售人(整個租戶,反查)                                                                                                        |
-| `lotteryOccupiedStores`                                                   | 綁 `dealers`                       | 已對應乙類的分店(整個租戶)                                                                                                             |
-| `createLotteryDealer(input)` / `updateLotteryDealer(input)`               | `dealers.create` / `edit`          | 主檔 + 關聯                                                                                                                            |
-| `registerLotteryDealerSignin(input)` / `updateLotteryDealerSignin(input)` | `dealers.edit`                     | 見簽                                                                                                                                   |
-| `lotteryDealerContacts(input)` / `lotteryDealerContact(id)`               | 綁 `dealers`                       | 關係人清單(`keyword` 比對姓名、手機、身分證字號;`role`、`status`)/ 單筆                                                                |
-| `createLotteryDealerContact(input)` / `updateLotteryDealerContact(input)` | `dealers.contacts.create` / `edit` | 關係人                                                                                                                                 |
+| 端點                                                                      | 守門                               | 說明                                                                                                                                               |
+| ------------------------------------------------------------------------- | ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `lotteryDealers(input)`                                                   | 綁 `dealers`                       | 清單:`type` 必填;`keyword`(證號、姓名、店名、身分證字號)、`status`、`selectable`、`purchaseOverDays`、`currentQuarterSigned`、`licenseState`、分頁 |
+| `lotteryDealer(id)`                                                       | 綁 `dealers`                       | 單筆;看不到 → `NOT_FOUND`                                                                                                                          |
+| `lotteryDealerSignins(dealerId, year)`                                    | 綁 `dealers`                       | 某年四季(一定四筆)                                                                                                                                 |
+| `lotteryDealerCoSellers(dealerId)`                                        | 綁 `dealers`                       | 乙類的共同銷售人(整個租戶,反查)                                                                                                                    |
+| `lotteryOccupiedStores`                                                   | 綁 `dealers`                       | 已對應乙類的分店(整個租戶)                                                                                                                         |
+| `createLotteryDealer(input)` / `updateLotteryDealer(input)`               | `dealers.create` / `edit`          | 主檔 + 關聯                                                                                                                                        |
+| `registerLotteryDealerSignin(input)` / `updateLotteryDealerSignin(input)` | `dealers.edit`                     | 見簽                                                                                                                                               |
+| `lotteryDealerContacts(input)` / `lotteryDealerContact(id)`               | 綁 `dealers`                       | 關係人清單(`keyword` 比對姓名、手機、身分證字號;`role`、`status`)/ 單筆                                                                            |
+| `createLotteryDealerContact(input)` / `updateLotteryDealerContact(input)` | `dealers.contacts.create` / `edit` | 關係人                                                                                                                                             |
 
 **input 的缺席 / `null`(GQL-06)**:
 
@@ -106,6 +106,7 @@
 - `lastPurchaseBaseDate` / `lastSelfPurchaseBaseDate`:沒有對應的 `show-` 權限時回 `null`(api 不放進回傳物件),前端依權限集決定顯示,不拿值猜權限。
 - `lastPurchaseDate` / `lastSelfPurchaseDate`:顯示值(max(基準日, 進貨單));`null` = 無紀錄。`daysSince…` 以租戶時區的今天算。
 - `licenseState`:`OK` / `EXPIRING`(30 天內到期,含當天)/ `EXPIRED`。
+- 系統資訊(經銷商、關係人都有):`ownerOrgName`(`orgId` 的組織名稱,以租戶的組織樹讀;共用進來的也讀得到)、`createdAt` / `createdBy`、`updatedAt` / `updatedBy`(`baseFieldsPlugin` 的欄位,不查稽核紀錄)。重算批購日只在日期真的變了才寫;經銷商管理觸發的重算保留操作者(修改者 = 改基準日的人),進貨單觸發的是系統身分寫入(修改者清空)。
 - `abilities`:**已含權限判斷**(業務模組那一種,GQL-07),前端直接用:`canEdit` = 持有 `dealers.edit`;`canEditLastPurchaseBaseDate` / `canEditLastSelfPurchaseBaseDate` = 甲類且持有對應的 `edit-`。關係人的 `abilities.canEdit` = 持有 `dealers.contacts.edit`。
 - `CONFLICT` 的 `extensions.relationships`:`[{ role, dealerId, dealerName, licenseNo, contactId, contactName }]`,`role` 是落庫的小寫值。
 
@@ -113,12 +114,12 @@
 
 ## admin 頁面
 
-| 頁                            | 內容                                                                                                                                                                                                                             |
-| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 列表(`DealersPage`)           | `PageTabs` 甲類 / 乙類 / 關係人(`?tab=`,篩選在 `?list=`,切分頁清回預設);右上新增鈕跟著分頁換,沒有 `create` 權限不顯示。甲類有快速篩選與三個篩選;甲類、乙類都有「證照到期」欄(`LicenseExpiryTag`,色同詳情頁)與證照快速篩選 / 篩選 |
-| 經銷商詳情(`DealerViewPage`)  | 頂部列([← 返回列表] …… [編輯](`abilities.canEdit`),REACT-16)+ 標頭摘要、區塊(檢視時收合)、詳情分頁(`dealer-detail-tabs.ts` 登記:甲類 見簽紀錄、乙類 共同銷售人)                                                                  |
-| 新增 / 編輯(`DealerFormPage`) | 新增頁第一步選類型;區塊 ①經銷商資訊 ②店面(乙類)③牌租(乙類,收合 + 摘要)④基本資訊(編輯頁收合);欄位級權限欄沒有 `show-` 不顯示、沒有 `edit-` 唯讀;移除共同銷售處所的確認框                                                          |
-| 關係人詳情 / 新增 / 編輯      | 區塊 ①基本資料 ②聯絡資訊 ③備註 ④系統資訊;詳情列出關聯的經銷商;取消身分的確認框                                                                                                                                                   |
+| 頁                            | 內容                                                                                                                                                                                                                                                                               |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 列表(`DealersPage`)           | `PageTabs` 甲類 / 乙類 / 關係人(`?tab=`,篩選在 `?list=`,切分頁清回預設);右上新增鈕跟著分頁換,沒有 `create` 權限不顯示。甲類有快速篩選與三個篩選;甲類、乙類都有「證照到期」欄(`LicenseExpiryTag`,色同詳情頁)與證照快速篩選 / 篩選;三個分頁都有關鍵字搜尋(`keyword`,同步進 `?list=`) |
+| 經銷商詳情(`DealerViewPage`)  | 頂部列([← 返回列表] …… [編輯](`abilities.canEdit`),REACT-16)+ 標頭摘要、區塊(檢視時收合;系統資訊 = `SystemInfoFields`,與關係人詳情共用)、詳情分頁(`dealer-detail-tabs.ts` 登記:甲類 見簽紀錄、乙類 共同銷售人)                                                                     |
+| 新增 / 編輯(`DealerFormPage`) | 新增頁第一步選類型;區塊 ①經銷商資訊 ②店面(乙類)③牌租(乙類,收合 + 摘要)④基本資訊(編輯頁收合);欄位級權限欄沒有 `show-` 不顯示、沒有 `edit-` 唯讀;移除共同銷售處所的確認框                                                                                                            |
+| 關係人詳情 / 新增 / 編輯      | 區塊 ①基本資料 ②聯絡資訊 ③備註 ④系統資訊;詳情列出關聯的經銷商;取消身分的確認框                                                                                                                                                                                                     |
 
 欄位錯誤(新增 / 編輯、關係人、見簽登記):原因寫在欄位正下方 —— 格式錯寫該欄的格式要求(證號 8 碼數字、身分證字號 1 碼英文 + 9 碼數字、長度上限……),api 帶了 `reason` 寫原因(證號重複、人數上限、分店已被對應……);頁面底部只留通用句(REACT-18;`dealer-field-errors.ts`)。
 

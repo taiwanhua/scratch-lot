@@ -246,7 +246,9 @@
         "licenseExpired": "已過期",
         "status": "狀態",
         "role": "身分",
-        "contactKeyword": "關鍵字(姓名、手機、身分證)"
+        "contactKeyword": "關鍵字(姓名、手機、身分證)",
+        "classAKeyword": "關鍵字(證號、姓名、身分證)",
+        "classBKeyword": "關鍵字(證號、店名、姓名、身分證)"
       },
       "columns": {
         "licenseNo": "證號",
@@ -307,7 +309,12 @@
       "residentialSameAsMailing": "戶籍地址同通訊地址",
       "note": "備註",
       "roles": "身分(至少一個)",
-      "month": "{month} 月"
+      "month": "{month} 月",
+      "ownerOrg": "所屬組織",
+      "createdAt": "建立時間",
+      "createdBy": "建立者",
+      "updatedAt": "最後修改時間",
+      "updatedBy": "修改者"
     },
     "sections": {
       "dealer": "經銷商資訊",
@@ -1336,7 +1343,9 @@
         "notJoined": "你還沒有加入排班,不能登記畫休。請聯絡店長或排班負責人。",
         "violationsTitle": "違反規則({count})",
         "noViolations": "沒有違反規則",
-        "view": "查看"
+        "view": "查看",
+        "prevMonth": "上一個月",
+        "nextMonth": "下一個月"
       },
       "dialog": {
         "slots": "時段",
@@ -1364,7 +1373,9 @@
         "timeRangeItem": "{name} {start}–{end}",
         "rulesTitle": "涉及的規則",
         "ruleItem": "{label} {limit}",
-        "none": "沒有"
+        "none": "沒有",
+        "delete": "刪除",
+        "deleteAria": "刪除 {item}"
       },
       "overview": {
         "org": "分店",
@@ -1391,7 +1402,11 @@
         "reasonNote": "說明",
         "reasonHint": "畫休截止後代改要選原因;選「其他」要填說明。",
         "saveSuccess": "已代改畫休",
-        "deleteSuccess": "已刪除畫休"
+        "deleteSuccess": "已刪除畫休",
+        "deleteTitle": "刪除畫休",
+        "deleteFullDay": "刪除 {name} {date} 的整天畫休?",
+        "deleteTimeRange": "刪除 {name} {date} {start}–{end} 的時段不可排?",
+        "deleteConfirm": "刪除"
       },
       "entryConflict": {
         "message": "這天已經有排班({list}),請通知店長調整班表",

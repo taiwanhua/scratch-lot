@@ -1,12 +1,40 @@
 import { describe, expect, it } from "@jest/globals";
-import { screen, waitFor, within } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { HttpResponse } from "msw";
 
+import type { ScheduleDayOffFieldsFragment } from "@repo/graphql";
+
+import {
+  DAY_OFF_ME,
+  sampleDayOffs,
+} from "@/test/msw/project/schedule-day-offs-fixtures";
 import { api, server } from "@/test/msw/server";
 
 import { renderSchedulePage } from "../schedule-test-support";
 
 const DAY_OFFS = "/schedule/my?tab=day-offs";
+
+/** 過去月份(11 月)的一筆:我 11/20 整天畫休。 */
+const NOVEMBER_DAY_OFF: ScheduleDayOffFieldsFragment = {
+  id: "d-me-nov-20",
+  userId: DAY_OFF_ME.userId,
+  name: DAY_OFF_ME.name,
+  date: "2026-11-20",
+  kind: "full-day",
+  startTime: null,
+  endTime: null,
+  note: null,
+  isPrimary: true,
+  byName: null,
+  reason: null,
+  reasonNote: null,
+};
 
 /**
  * 我的班表 → 我的畫休(SC-02 / SC-23 / SC-41a/b / SC-42;規格 14.6):
@@ -131,6 +159,55 @@ describe("我的畫休", () => {
     expect(
       screen.queryByRole("button", { name: "到畫休總覽代改" }),
     ).not.toBeInTheDocument();
+  });
+
+  it("◀ 換到過去的月份:那個月的畫休、唯讀(沒有 [登記畫休]);▶ 只到目標月", async () => {
+    const { user } = renderSchedulePage({
+      path: DAY_OFFS,
+      dayOffs: { dayOffs: [...sampleDayOffs, NOVEMBER_DAY_OFF] },
+    });
+    expect(await screen.findByText("2026 年 12 月")).toBeInTheDocument();
+    // 目標月:不能再往後
+    expect(screen.getByRole("button", { name: "下一個月" })).toBeDisabled();
+
+    await user.click(screen.getByRole("button", { name: "上一個月" }));
+    expect(await screen.findByText("2026 年 11 月")).toBeInTheDocument();
+    expect(
+      screen.getByText("11 月的畫休 · 登記期間 10/15–10/25 已結束"),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/^已畫 1 天/)).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "登記畫休" }),
+    ).not.toBeInTheDocument();
+    // 點日期不開登記;ⓘ 照樣看得到當天詳細
+    fireEvent.click(screen.getByRole("gridcell", { name: "2026-11-20" }));
+    expect(
+      screen.queryByRole("dialog", { name: /登記畫休/ }),
+    ).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "看 11/20 誰畫休" }));
+    expect(
+      await screen.findByRole("dialog", { name: "11/20(五)" }),
+    ).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "關閉" }));
+
+    await user.click(screen.getByRole("button", { name: "下一個月" }));
+    expect(await screen.findByText("2026 年 12 月")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "登記畫休" }),
+    ).toBeInTheDocument();
+  });
+
+  it("網址 ?month=:更早的月份照樣看(往前不限);晚於目標月不採用,顯示目標月", async () => {
+    renderSchedulePage({ path: `${DAY_OFFS}&month=2025-03` });
+    expect(await screen.findByText("2025 年 3 月")).toBeInTheDocument();
+    expect(screen.getByText(/^已畫 0 天/)).toBeInTheDocument();
+    cleanup();
+
+    renderSchedulePage({ path: `${DAY_OFFS}&month=2027-03` });
+    expect(await screen.findByText("2026 年 12 月")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "登記畫休" }),
+    ).toBeInTheDocument();
   });
 
   it("沒有 schedule.my.edit-day-offs:看不到「我的畫休」分頁(只剩班表分頁)", async () => {

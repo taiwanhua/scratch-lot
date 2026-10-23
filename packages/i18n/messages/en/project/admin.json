@@ -246,7 +246,9 @@
         "licenseExpired": "Expired",
         "status": "Status",
         "role": "Role",
-        "contactKeyword": "Keyword (name, mobile, ID)"
+        "contactKeyword": "Keyword (name, mobile, ID)",
+        "classAKeyword": "Keyword (license no., name, ID)",
+        "classBKeyword": "Keyword (license no., store, name, ID)"
       },
       "columns": {
         "licenseNo": "License no.",
@@ -307,7 +309,12 @@
       "residentialSameAsMailing": "Same as mailing address",
       "note": "Note",
       "roles": "Roles (at least one)",
-      "month": "Month {month}"
+      "month": "Month {month}",
+      "ownerOrg": "Organization",
+      "createdAt": "Created at",
+      "createdBy": "Created by",
+      "updatedAt": "Last modified at",
+      "updatedBy": "Modified by"
     },
     "sections": {
       "dealer": "Dealer",
@@ -1336,7 +1343,9 @@
         "notJoined": "You have not joined the schedule yet. Ask your store manager or scheduler.",
         "violationsTitle": "Rule violations ({count})",
         "noViolations": "No rule violations",
-        "view": "View"
+        "view": "View",
+        "prevMonth": "Previous month",
+        "nextMonth": "Next month"
       },
       "dialog": {
         "slots": "Time ranges",
@@ -1364,7 +1373,9 @@
         "timeRangeItem": "{name} {start}–{end}",
         "rulesTitle": "Rules involved",
         "ruleItem": "{label} {limit}",
-        "none": "None"
+        "none": "None",
+        "delete": "Delete",
+        "deleteAria": "Delete {item}"
       },
       "overview": {
         "org": "Store",
@@ -1391,7 +1402,11 @@
         "reasonNote": "Details",
         "reasonHint": "After the deadline a reason is required; \"Other\" needs details.",
         "saveSuccess": "Day-off changed",
-        "deleteSuccess": "Day-off deleted"
+        "deleteSuccess": "Day-off deleted",
+        "deleteTitle": "Delete day-off",
+        "deleteFullDay": "Delete the full-day off of {name} on {date}?",
+        "deleteTimeRange": "Delete the unavailable time {start}–{end} of {name} on {date}?",
+        "deleteConfirm": "Delete"
       },
       "entryConflict": {
         "message": "There are already shifts on this day ({list}). Please ask the store manager to adjust the roster.",

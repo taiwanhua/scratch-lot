@@ -19,6 +19,7 @@ import type {
   LotteryDealerRef,
   LotteryDealerStatusEnum,
   LotteryDealerTypeEnum,
+  LotteryDealerUserRef,
   LotteryLicenseStateEnum,
   LotteryRentCycleEnum,
 } from "./models/lottery-dealer.model";
@@ -34,13 +35,13 @@ export interface DealerViewContext {
   dealerRefs: ReadonlyMap<string, LotteryDealerRef>;
   /** 關係人 id → 參照。 */
   contactRefs: ReadonlyMap<string, LotteryDealerContactRef>;
-  /** 組織 id → 名稱(對應分店)。 */
+  /** 組織 id → 名稱(對應分店、所屬組織)。 */
   orgNames: ReadonlyMap<string, string>;
   /** 乙類 id → 共同銷售人數。 */
   coSellerCounts: ReadonlyMap<string, number>;
   /** 本季已見簽的甲類 id。 */
   signedThisQuarter: ReadonlySet<string>;
-  /** 使用者 id → 名稱(建立者)。 */
+  /** 使用者 id → 名稱(建立者、修改者)。 */
   users: ReadonlyMap<string, string>;
   /** 這個組織在讀者的可見範圍內嗎(歸屬組織看得到 = 自己的;否則是共用進來的,只能看)。 */
   owns: (orgId: Types.ObjectId) => boolean;
@@ -55,6 +56,16 @@ export function dealerRefOf(record: DealerRecord): LotteryDealerRef {
     storeName: record.storeName,
     status: record.status as LotteryDealerStatusEnum,
   };
+}
+
+/** 建立者 / 修改者(`createdBy` / `updatedBy`)的參照;沒有記錄操作者為 null。 */
+export function userRefOf(
+  id: Types.ObjectId | null,
+  users: ReadonlyMap<string, string>,
+): LotteryDealerUserRef | null {
+  return id === null
+    ? null
+    : { id: String(id), name: users.get(String(id)) ?? "" };
 }
 
 export function contactRefOf(record: ContactRecord): LotteryDealerContactRef {
@@ -165,15 +176,11 @@ export function toDealerModel(
     residentialAddress: record.residentialAddress,
     residentialSameAsMailing: record.residentialSameAsMailing,
     note: record.note,
-    createdBy:
-      record.createdBy === null
-        ? null
-        : {
-            id: String(record.createdBy),
-            name: context.users.get(String(record.createdBy)) ?? "",
-          },
+    createdBy: userRefOf(record.createdBy, context.users),
     createdAt: record.createdAt,
     updatedAt: record.updatedAt,
+    updatedBy: userRefOf(record.updatedBy, context.users),
+    ownerOrgName: context.orgNames.get(String(record.orgId)) ?? null,
     shareOrgs: toShareOrgModels(record.shareOrgs),
     isShared: !owned,
     // 共用進來的只能看(ADR-0014):三個編輯能力都是 false

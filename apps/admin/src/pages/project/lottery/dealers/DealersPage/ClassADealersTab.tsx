@@ -11,6 +11,7 @@ import { DataTable, type DataTableColumn } from "@repo/ui/data-table";
 import { SelectField } from "@repo/ui/select-field";
 import { Stack } from "@repo/ui/stack";
 import { Tag } from "@repo/ui/tag";
+import { TextField } from "@repo/ui/text-field";
 
 import { useSession } from "@/hooks/base/useSession";
 import { useUrlState } from "@/hooks/base/useUrlState";
@@ -56,7 +57,7 @@ export interface DealersTabProps {
 
 /**
  * 甲類分頁(Figma DE-01):快速篩選 逾 150 天 / 逾 180 天 / 本季未見簽 / 證照 30 天內到期 / 證照已過期
- * + 三個篩選(見簽狀態、距上次批購、證照);欄位 證號、姓名、共同銷售處所、距批購 N 天、距本人批購 N 天、
+ * + 三個篩選(見簽狀態、距上次批購、證照)+ 關鍵字(證號、姓名、店名、身分證字號);欄位 證號、姓名、共同銷售處所、距批購 N 天、距本人批購 N 天、
  * 證照到期、本季見簽、狀態。點一列進詳情頁。
  */
 export const ClassADealersTab = ({ access }: DealersTabProps) => {
@@ -69,6 +70,7 @@ export const ClassADealersTab = ({ access }: DealersTabProps) => {
       currentQuarterSigned: SIGNIN_FILTER[filters.signin],
       purchaseOverDays: PURCHASE_FILTER[filters.purchase],
       licenseState: LICENSE_FILTER[filters.license],
+      keyword: filters.keyword === "" ? null : filters.keyword,
       page: filters.page,
       pageSize: DEALERS_PAGE_SIZE,
     },
@@ -249,6 +251,15 @@ export const ClassADealersTab = ({ access }: DealersTabProps) => {
           ]}
           onChange={(license) => {
             set({ license });
+          }}
+        />
+        <TextField
+          label={t("list.filters.classAKeyword")}
+          value={filters.keyword}
+          size="small"
+          sx={{ width: { xs: "100%", sm: 260 } }}
+          onChange={(event) => {
+            set({ keyword: event.target.value });
           }}
         />
         <Box sx={{ flex: 1 }} />

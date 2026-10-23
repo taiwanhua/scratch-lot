@@ -73,6 +73,11 @@ fragment LotteryDealerFields on LotteryDealer {
   }
   createdAt
   updatedAt
+  updatedBy {
+    id
+    name
+  }
+  ownerOrgName
   abilities {
     canEdit
     canEditLastPurchaseBaseDate
@@ -113,6 +118,11 @@ fragment LotteryDealerContactFields on LotteryDealerContact {
   }
   createdAt
   updatedAt
+  updatedBy {
+    id
+    name
+  }
+  ownerOrgName
   abilities {
     canEdit
   }

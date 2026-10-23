@@ -31,7 +31,7 @@ export const PROJECT_TENANT_BOUNDARY_CONTEXT_CALLERS: Readonly<
   // 共同銷售人 / 已被對應的分店 / 關係人掛在哪些經銷商、看得到的經銷商的關聯列、對應分店是否在租戶;
   // 關係人取消身分時連帶解除看不到的經銷商上的關聯
   "project/lottery/dealers/dealer-links.service.ts": ["反查", "例外寫入"],
-  // 對應分店的名稱(分店可能不在讀者的可見範圍)
+  // 對應分店、所屬組織的名稱(可能不在讀者的可見範圍:分店、共用進來的)
   "project/lottery/dealers/dealer-view.service.ts": ["反查"],
   // 證照到期 / 牌租提醒逐租戶跑
   "project/lottery/dealers/dealer-reminders.service.ts": ["排程"],
