@@ -117,7 +117,10 @@ export class ScheduleDayOffViolationModel {
   @Field(() => Int, { nullable: true })
   limit!: number | null;
 
-  /** 期間類(連續休假、某一天)的起訖日(含頭尾;各是那天 00:00 的時點) */
+  /**
+   * 期間類(連續休假、某一天):半開的時點區間 `[起那天 00:00, 迄那天的隔天 00:00)`(租戶時區;
+   * 和自動排班範圍、月份查詢同一個語意;畫面顯示的迄日 = `to` 的前一天)
+   */
   @Field(() => GraphQLISODateTime, { nullable: true })
   from!: Date | null;
 

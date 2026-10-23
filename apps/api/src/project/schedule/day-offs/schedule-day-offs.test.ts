@@ -865,6 +865,7 @@ describe("畫休(GraphQL 端點 + 真 MongoDB)", () => {
             actual: 3,
             limit: 2,
             from: iso("2026-12-03"),
+            to: iso("2026-12-04"),
           }),
         ],
       });
@@ -920,8 +921,9 @@ describe("畫休(GraphQL 端點 + 真 MongoDB)", () => {
           key: "maxConsecutiveDaysOff",
           level: "reminder",
           actual: 4,
+          // 半開區間:迄 = 最後一天(12/17)的隔天 00:00
           from: iso("2026-12-14"),
-          to: iso("2026-12-17"),
+          to: iso("2026-12-18"),
         }),
       );
       const mine = await myDayOffs(chen);

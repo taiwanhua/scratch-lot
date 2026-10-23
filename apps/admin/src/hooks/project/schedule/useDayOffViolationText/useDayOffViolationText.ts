@@ -1,6 +1,7 @@
 import { useTranslations } from "use-intl";
 
 import { useTemporalText } from "@/hooks/base/useTemporalText";
+import { lastDayShownAt } from "@/lib/project/schedule-roster";
 
 /** 畫休違反用得到的欄位(GraphQL `ScheduleDayOffViolation`,或存檔被擋時 `extensions.violations`)。 */
 export interface DayOffViolationTextInput {
@@ -8,7 +9,7 @@ export interface DayOffViolationTextInput {
   message: string;
   actual?: number | null;
   limit?: number | null;
-  /** 期間類的起訖日(時點) */
+  /** 期間類:半開的時點區間 `[起那天 00:00, 迄那天的隔天 00:00)`(顯示的迄日 = `to` 的前一天) */
   from?: string | null;
   to?: string | null;
 }
@@ -29,10 +30,8 @@ export const useDayOffViolationText = (): ((
       violation.from === null || violation.from === undefined
         ? ""
         : text(violation.from, "monthDay");
-    const to =
-      violation.to === null || violation.to === undefined
-        ? ""
-        : text(violation.to, "monthDay");
+    const lastDay = lastDayShownAt(violation.to);
+    const to = lastDay === null ? "" : text(lastDay, "monthDay");
     switch (violation.key) {
       case "maxMonthlyDayOffs": {
         return t("maxMonthlyDayOffs", { actual, limit });

@@ -159,6 +159,16 @@ const CUSTOMIZE_RULE = /* GraphQL */ `
   }
 `;
 
+const SAVE_CALENDAR_DAY = /* GraphQL */ `
+  mutation SaveScheduleCalendarDay($input: SaveScheduleCalendarDayInput!) {
+    saveScheduleCalendarDay(input: $input) {
+      item {
+        id
+      }
+    }
+  }
+`;
+
 const MUTATION_FIELDS = /* GraphQL */ `
   query MutationFields {
     __type(name: "Mutation") {
@@ -241,6 +251,10 @@ function dataOf<Key extends keyof Payloads>(
 
 const taipei = (date: string, time: string) =>
   new Date(`${date}T${time}:00+08:00`).toISOString();
+
+/** 洛杉磯夏令時間(UTC−7)的時點。 */
+const la = (date: string, time: string) =>
+  new Date(`${date}T${time}:00-07:00`).toISOString();
 
 const taskOf = (demand: DemandRow, role: string) => {
   const task = demand.tasks.find((item) => item.role === role);
@@ -590,6 +604,103 @@ describe("排班檢核與發布(GraphQL 端點 + 真 MongoDB)", () => {
       ]);
     });
 
+    it("租戶時區不是台北(洛杉磯):連續上班跨月、期間是半開區間;店休日的人力需求不列人力不足", async () => {
+      // 18:00–23:00 在 UTC 已是隔天,日期仍以洛杉磯為準
+      const orgs = connection.collection("orgs");
+      await orgs.updateOne(
+        { _id: tenant },
+        { $set: { "settings.timezone": "America/Los_Angeles" } },
+      );
+      try {
+        const demandAt = async (date: string) =>
+          dataOf(
+            await gql(hq, SAVE_DEMAND, {
+              input: {
+                orgId: String(xinyi),
+                positionKey: COUNTER,
+                startAt: la(date, "18:00"),
+                endAt: la(date, "23:00"),
+                tasks: [{ role: "helper", taskKey: DUTY }],
+              },
+            }),
+            "saveScheduleDemand",
+          ).item;
+        // 李:7/29–8/4 連續 7 天(上限 6)
+        for (const date of [
+          "2028-07-29",
+          "2028-07-30",
+          "2028-07-31",
+          "2028-08-01",
+          "2028-08-02",
+          "2028-08-03",
+          "2028-08-04",
+        ]) {
+          const demand = await demandAt(date);
+          dataOf(
+            await gql(hq, SAVE_ENTRY, {
+              input: {
+                orgId: String(xinyi),
+                userId: String(li.userId),
+                startAt: la(date, "18:00"),
+                endAt: la(date, "23:00"),
+                breakMinutes: 0,
+                assignments: [
+                  { demandId: demand.id, taskId: taskOf(demand, "helper") },
+                ],
+              },
+            }),
+            "saveScheduleEntry",
+          );
+        }
+        // 8/10 店休(洛杉磯那天 00:00):那天的人力需求不列人力不足;8/11 照列
+        const closed = await gql(hq, SAVE_CALENDAR_DAY, {
+          input: {
+            orgId: String(xinyi),
+            date: la("2028-08-10", "00:00"),
+            type: "closed",
+          },
+        });
+        expect(closed.errors).toBeUndefined();
+        await demandAt("2028-08-10");
+        await demandAt("2028-08-11");
+
+        const { items } = await check("2028-08");
+        expect(
+          items.find(
+            (item) =>
+              item.key === "maxConsecutiveWorkDays" &&
+              item.userId === String(li.userId),
+          ),
+        ).toMatchObject({
+          actual: 7,
+          limit: 6,
+          // [查看] 捲到這個月的第一天;期間 = [7/29 00:00, 8/5 00:00)(洛杉磯)
+          date: la("2028-08-01", "00:00"),
+          from: la("2028-07-29", "00:00"),
+          to: la("2028-08-05", "00:00"),
+        });
+        expect(
+          items
+            .filter((item) => item.key === "understaffed")
+            .map((item) => item.date),
+        ).toEqual([la("2028-08-11", "00:00")]);
+        // 7 月的檢核也看得到同一段(往前後多讀),期間相同
+        const july = await check("2028-07");
+        expect(
+          july.items.find((item) => item.key === "maxConsecutiveWorkDays"),
+        ).toMatchObject({
+          date: la("2028-07-29", "00:00"),
+          from: la("2028-07-29", "00:00"),
+          to: la("2028-08-05", "00:00"),
+        });
+      } finally {
+        await orgs.updateOne(
+          { _id: tenant },
+          { $unset: { "settings.timezone": "" } },
+        );
+      }
+    });
+
     it("排序:限制在前、提醒在後", async () => {
       await customize("maxDailyWorkHours", { level: "limit" });
       const result = await check("2026-11");
@@ -624,6 +735,9 @@ describe("排班檢核與發布(GraphQL 端點 + 真 MongoDB)", () => {
           key: "maxDailyWorkHours",
           level: "limit",
           actual: 10,
+          // 期間是半開的時點區間:那一天 = [2/4 00:00, 2/5 00:00)
+          from: taipei("2027-02-04", "00:00"),
+          to: taipei("2027-02-05", "00:00"),
         }),
       ]);
       // 剛好 8 小時不擋

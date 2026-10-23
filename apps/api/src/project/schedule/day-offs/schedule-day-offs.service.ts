@@ -52,6 +52,7 @@ import {
   monthKeyOf,
   monthKeyRange,
   monthOfWholeMonthRange,
+  violationPeriodOf,
 } from "../shared/schedule-dates";
 import {
   SCHEDULE_REASONS,
@@ -279,8 +280,6 @@ function violationModelOf(
       ),
     ),
   ];
-  const from = violation.detail?.from;
-  const to = violation.detail?.to;
   return {
     key: violation.key,
     level: violation.level,
@@ -288,8 +287,7 @@ function violationModelOf(
     dates: dates.map((date) => instantOfKey(date, timezone)),
     actual: violation.detail?.actual ?? null,
     limit: violation.detail?.limit ?? null,
-    from: from === undefined ? null : instantOfKey(from, timezone),
-    to: to === undefined ? null : instantOfKey(to, timezone),
+    ...violationPeriodOf(violation.detail, timezone),
   };
 }
 

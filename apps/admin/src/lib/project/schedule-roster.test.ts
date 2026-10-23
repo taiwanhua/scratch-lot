@@ -1,5 +1,7 @@
 import { describe, expect, it } from "@jest/globals";
 
+import { formatTemporal } from "@repo/domain/form";
+
 import {
   datesOfMonth,
   dayInstantOf,
@@ -11,6 +13,7 @@ import {
   demandRemovalImpact,
   demandToneOf,
   entryChipOf,
+  lastDayShownAt,
   localPartsOf,
   monthDayOf,
   shiftDay,
@@ -82,6 +85,15 @@ describe("排班表的時間換算(租戶時區)", () => {
     });
     expect(monthDayOf("2026-11-04", LA)).toBe("11/4");
     expect(monthDayOf("", LA)).toBe("");
+    // 半開區間的迄 → 顯示的迄日是前一天(夏令時間結束那天也一樣)
+    const range = dayRangeOf("2026-10-30", "2026-11-01", LA);
+    expect(
+      formatTemporal(lastDayShownAt(range?.to) ?? "", {
+        type: "monthDay",
+        timezone: LA,
+      }),
+    ).toBe("11/1");
+    expect(lastDayShownAt(null)).toBeNull();
   });
 
   it("一個月的每一天、加減天 / 月、星期幾(日曆運算用 @repo/domain/form)", () => {

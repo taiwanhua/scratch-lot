@@ -94,7 +94,8 @@ const blockedViolation = (date: string) => ({
   actual: MAX_DAILY + 1,
   limit: MAX_DAILY,
   from: date,
-  to: date,
+  // 半開區間:迄 = 那天的隔天 00:00(台北沒有夏令時間,加 24 小時)
+  to: new Date(Date.parse(date) + 24 * 60 * 60 * 1000).toISOString(),
 });
 
 /** 月份查詢的 `from`(時點)→ 月份鍵;沒給 = 目標月。 */

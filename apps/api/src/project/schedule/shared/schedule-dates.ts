@@ -187,3 +187,20 @@ export function monthOfWholeMonthRange(
   }
   return localMonthText(month);
 }
+
+/**
+ * 規則違反的期間(規則運算的日期鍵起訖,含頭尾)→ api 輸出的半開時點區間
+ * `[起那天 00:00, 迄那天的隔天 00:00)`(和自動排班範圍、月份查詢同一個語意);沒有的那端 = null。
+ * 檢核項目、存排班 / 畫休被擋時的 `violations`、畫休違規清單都用這個。
+ */
+export function violationPeriodOf(
+  detail: { from?: string; to?: string } | undefined,
+  timezone: string,
+): { from: Date | null; to: Date | null } {
+  const from = detail?.from;
+  const to = detail?.to;
+  return {
+    from: from === undefined ? null : instantOfKey(from, timezone),
+    to: to === undefined ? null : instantOfKey(shiftDateKey(to, 1), timezone),
+  };
+}

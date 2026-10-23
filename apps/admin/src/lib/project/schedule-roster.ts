@@ -9,6 +9,7 @@ import {
   minutesOfHhMm,
   parseLocalDate,
   parseLocalMonth,
+  toInstant,
   toIso,
   weekdayOfLocalDate,
 } from "@repo/domain/form";
@@ -125,6 +126,15 @@ export const dayRangeOf = (
   const start = localDayInstantOf(from, timezone);
   const end = localDayInstantOf(shiftDay(to, 1), timezone);
   return start === null || end === null ? null : { from: start, to: end };
+};
+
+/**
+ * 半開區間 `[from, to)` 的迄(最後一天的隔天 00:00)→ 顯示迄日用的時點(迄的前一刻,落在最後一天;
+ * 交給 `formatTemporal` 的 `monthDay` / `date`)。檢核項目、規則違反的 `to` 都是這種;不是時點 → null。
+ */
+export const lastDayShownAt = (to: unknown): string | null => {
+  const instant = toInstant(to);
+  return instant === null ? null : toIso(instant - 1);
 };
 
 // ---- 人數寫法與三態 ----

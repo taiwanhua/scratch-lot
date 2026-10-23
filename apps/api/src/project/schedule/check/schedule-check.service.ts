@@ -41,6 +41,7 @@ import {
   instantOfKey,
   instantRangeFilter,
   monthKeyRange,
+  violationPeriodOf,
 } from "../shared/schedule-dates";
 import { validationError } from "../shared/schedule-error";
 import {
@@ -77,27 +78,28 @@ const NON_RULE_ORDER = 10_000;
 
 /**
  * 存排班被擋下(限制):`VALIDATION_FAILED`(欄位 `rules`)+ `extensions.violations`
- * (`from` / `to` = 期間的起訖日,各是那天租戶時區 00:00 的時點,含頭尾)。
+ * (`from` / `to` = 期間,半開的時點區間 `[起那天 00:00, 迄那天的隔天 00:00)`,租戶時區;`violationPeriodOf`)。
  */
 export function rosterRuleError(
   violations: readonly ScheduleRuleViolation[],
   timezone: string,
 ): GraphQLError {
-  const instantOf = (key: string | undefined) =>
-    key === undefined ? null : instantOfKey(key, timezone).toISOString();
   return new GraphQLError("schedule entry violates schedule rules", {
     extensions: {
       code: "VALIDATION_FAILED",
       fields: ["rules"],
-      violations: violations.map((violation) => ({
-        key: violation.key,
-        level: violation.level,
-        message: violation.message,
-        actual: violation.detail?.actual ?? null,
-        limit: violation.detail?.limit ?? null,
-        from: instantOf(violation.detail?.from),
-        to: instantOf(violation.detail?.to),
-      })),
+      violations: violations.map((violation) => {
+        const period = violationPeriodOf(violation.detail, timezone);
+        return {
+          key: violation.key,
+          level: violation.level,
+          message: violation.message,
+          actual: violation.detail?.actual ?? null,
+          limit: violation.detail?.limit ?? null,
+          from: period.from?.toISOString() ?? null,
+          to: period.to?.toISOString() ?? null,
+        };
+      }),
     },
   });
 }
@@ -783,8 +785,6 @@ function itemOfViolation(
     violation.detail?.from ??
     `${month}-01`;
   const level: ScheduleRuleLevel = violation.level;
-  const from = violation.detail?.from;
-  const to = violation.detail?.to;
   return {
     ...emptyItem(
       instantOfKey(
@@ -806,8 +806,7 @@ function itemOfViolation(
     ],
     actual: violation.detail?.actual ?? null,
     limit: violation.detail?.limit ?? null,
-    from: from === undefined ? null : instantOfKey(from, timezone),
-    to: to === undefined ? null : instantOfKey(to, timezone),
+    ...violationPeriodOf(violation.detail, timezone),
     startAt: violation.detail?.startAt ?? null,
     endAt: violation.detail?.endAt ?? null,
     understaffed: violation.detail?.understaffed ?? null,

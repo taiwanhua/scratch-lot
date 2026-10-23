@@ -77,8 +77,9 @@ const reminderItems = (month: string): CheckItem[] => {
       date: at(day(6), "00:00"),
       actual: 7,
       limit: 6,
+      // 期間是半開區間:迄 = 最後一天(12 日)的隔天 00:00
       from: at(day(6), "00:00"),
-      to: at(day(12), "00:00"),
+      to: at(day(13), "00:00"),
     }),
     item({
       key: "minRestBetweenShifts",
@@ -88,7 +89,7 @@ const reminderItems = (month: string): CheckItem[] => {
       actual: 10.5,
       limit: 11,
       from: at(day(4), "00:00"),
-      to: at(day(5), "00:00"),
+      to: at(day(6), "00:00"),
       startAt: at(day(4), "22:00"),
       endAt: at(day(5), "08:30"),
     }),
@@ -100,7 +101,7 @@ const reminderItems = (month: string): CheckItem[] => {
       actual: 10.5,
       limit: 8,
       from: at(day(7), "00:00"),
-      to: at(day(7), "00:00"),
+      to: at(day(8), "00:00"),
     }),
     item({
       key: "dayOffEntryConflict",

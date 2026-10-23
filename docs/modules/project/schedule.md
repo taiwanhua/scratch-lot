@@ -163,7 +163,7 @@
   - 畫休類規則(P07 的檢查函式)列以這家店為主要分店的人;同日最多畫休人數用這家店的設定。
   - `dayOffEntryConflict` 畫休日有排班(先排班、後登記畫休;使用者 10/21 定案,等級提醒):可以排這家店的人,這個月的排班(**含其他分店**)碰到他的整天畫休或和時段不可排重疊;別家店的排班帶 `isOtherStore`,看不到那家店 `orgName = null`。
   - 排序:限制在前、提醒在後;同等級依規則排序(這家店生效設定的 `order`,不屬於規則的類別在最後)→ 日期 → 姓名(zh-Hant)。
-  - 每項的 `date` 是 [查看] 要捲到的那一天(這個月內;那天租戶時區 00:00 的時點,畫面換成日期鍵對格子),有 `userId` 的捲到 `userId|date`、店的項目捲到 `|date`(找不到時頁殼退回那一天)。期間類的 `from` / `to`(連續上班、兩班之間的休息)是起訖日(含頭尾,各是那天 00:00 的時點);存排班被擋的 `extensions.violations[].from` / `to` 同。「未對應排班的打卡」由打卡的功能追加一類 `key`。
+  - 每項的 `date` 是 [查看] 要捲到的那一天(這個月內;那天租戶時區 00:00 的時點,畫面換成日期鍵對格子),有 `userId` 的捲到 `userId|date`、店的項目捲到 `|date`(找不到時頁殼退回那一天)。期間類的 `from` / `to`(連續上班、兩班之間的休息、某一天)是半開的時點區間 `[起那天 00:00, 迄那天的隔天 00:00)`(租戶時區;和自動排班範圍、月份查詢同一個語意,`violationPeriodOf`;畫面顯示的迄日 = `to` 的前一天,`lastDayShownAt`);存排班被擋的 `extensions.violations[].from` / `to` 同。「未對應排班的打卡」由打卡的功能追加一類 `key`。
 - **等級**:限制 → 不能存、不能發布;提醒 → 照存照發布。
   - **存排班**(`saveScheduleEntry`)在寫入的交易內跑這個人的排班類規則(他主要分店的設定,`limitViolationsOfEntry`):存檔後**限制**的違反比存檔前嚴重(每條規則超出規則值的總量變大)→ `VALIDATION_FAILED`(欄位 `rules`)+ `extensions.violations`(`key`、`level`、`message`、`actual`、`limit`、`from`、`to`;只列這次造成的)。人力需求的新增 / 修改 / 刪除、刪排班、移除這天所有排班不跑規則(它們不會讓人的規則變嚴重;人力不足要靠排人補,刪人力需求不擋)。
   - **改規則不改已排的班**:已存的排班照留,檢核與發布用新的設定重新標示。
@@ -211,7 +211,7 @@
 ### 畫休(規格 14.1 `schedule_day_offs`、14.2、14.5「畫休總覽」、14.6「我的畫休」)
 
 - **讀取以人為準**:那段時間這個人可以排的每一家店都不能排(查詢以 `tenantId` + `userId` 為準,不看歸屬組織)。**歸屬組織**(`orgId`,不共用):本人登記 = 當前組織;代改 = 畫休總覽選的那家店。整天畫休一天一筆(重複 → `VALIDATION_FAILED`,欄位 `kind`;同時送出由唯一索引擋下,回同一個錯誤);時段不可排一天可以多段,`startAt` / `endAt` 是時點(admin 以租戶時區把日期 + `HH:mm` 合成),是那天裡的半開區間 `[startAt, endAt)`:開始落在那天 `[00:00, 隔天 00:00)`、結束晚於開始且最晚 = 隔天 00:00(做到當天結束;admin 結束選 00:00 = 隔天 00:00)、精度到分鐘;同一次送的幾段合起來蓋滿那一天(一段 00:00–隔天 00:00,或重疊 / 相接的幾段,如 00:00–12:00 + 12:00–00:00;以租戶時區那天的長度算,夏令時間切換日是 23 / 25 小時)也不收,整天要登記整天畫休(admin 與 api 共用 `@repo/domain/project/schedule-settings` 的 `dayOffSlotsCoverDay`;admin 欄位下提示「整天請改選整天畫休」並停用儲存;不和同一天已登記的段落合併判斷)。不合規則 → `VALIDATION_FAILED`(欄位 `slots`,不帶 reason);和同一天既有的或同一次送的其他段重疊 → `VALIDATION_FAILED`(欄位 `slots`,相接不算重疊)。整天 + 時段可以同一天並存。
-- **日期與月份**:`date` 收發都是租戶時區那天 00:00 的時點,入口以租戶時區正規化;規則、分組、守門文件在記憶體裡用租戶時區的日期鍵 / 月份鍵(`YYYY-MM-DD` / `YYYY-MM`)算。月份查詢(我的畫休、畫休總覽)收 `from` / `to`,要剛好是租戶時區某個月的 `[月初 00:00, 下月初 00:00)`(只給一個、或不是整個月 → `VALIDATION_FAILED`,欄位 `from`、`to`);兩個都缺席 = 目標月。以月為鍵的資料(payload 的 `month` / `targetMonth`、開放期間的 `month`、守門文件 `schedule_day_off_locks.month`)維持 `YYYY-MM`。輸出的日期(畫休、有畫休的日子、開放期間起訖、違反的 `dates` / `from` / `to`、`entryConflicts.date`)都是那天 00:00 的時點。
+- **日期與月份**:`date` 收發都是租戶時區那天 00:00 的時點,入口以租戶時區正規化;規則、分組、守門文件在記憶體裡用租戶時區的日期鍵 / 月份鍵(`YYYY-MM-DD` / `YYYY-MM`)算。月份查詢(我的畫休、畫休總覽)收 `from` / `to`,要剛好是租戶時區某個月的 `[月初 00:00, 下月初 00:00)`(只給一個、或不是整個月 → `VALIDATION_FAILED`,欄位 `from`、`to`);兩個都缺席 = 目標月。以月為鍵的資料(payload 的 `month` / `targetMonth`、開放期間的 `month`、守門文件 `schedule_day_off_locks.month`)維持 `YYYY-MM`。輸出的日期(畫休、有畫休的日子、開放期間起訖、違反的 `dates`、`entryConflicts.date`)都是那天 00:00 的時點;違反的 `from` / `to`(違規清單、存檔被擋的 `extensions.violations`)是半開的時點區間 `[起那天 00:00, 迄那天的隔天 00:00)`(同檢核項目;畫面顯示的迄日 = `to` 的前一天)。
 - **畫休的算法**(`apps/api/src/project/schedule/day-offs/day-off-rules.ts`):那一天只要有任何一種就算 1 天、1 人;「最多連續休假」只算整天畫休(跨月也連續)。
 - **檢查函式**:畫休類四條規則(`maxMonthlyDayOffs`、`minMonthlyDayOffs`、`maxConsecutiveDaysOff`、`maxDailyDayOffStaff`)由 `ScheduleDayOffsService` 啟動時以 `registerRuleEvaluator` 登記;資料由呼叫端準備:人的規則給這個人前後各一個月的畫休,店的規則給**以這家店為主要分店的人**的畫休。違反附 `detail`(`actual`、`limit`、期間類的 `from` / `to`)給畫面組文案。
 - **用哪家店的設定**:人的規則與開放期間都用這個人的**主要分店**的生效值;同日最多畫休人數檢查主要分店那一天。
@@ -220,7 +220,7 @@
 - **開放期間**(規則 `dayOffWindow`,`apps/api/src/project/schedule/day-offs/day-off-window.ts`):目標月的開放期間 = 前一個月的 N 日至 M 日(超過月底用月底);今天(租戶時區,`ScheduleClock`)在期間內 = 開放中。這條規則沒有等級,只看值、不看開關,登記檢查與通知用同一個判斷(`dayOffWindowValueOf`)。**本人**只能在開放中登記 / 刪除那個目標月的畫休,其他時候 → `FORBIDDEN`(`reason: OUTSIDE_DAY_OFF_WINDOW`)。
 - **代改**(`edit-day-offs`):對象要是選的那家店(要看得到)的排班人員(否則 `NOT_FOUND`);不受開放期間限制;那個月的截止日(對象主要分店的開放期間)已過 → `reason` 必填(欄位管理「代改畫休原因」啟用中的選項),選「其他」`reasonNote` 必填(否則 `VALIDATION_FAILED`,欄位 `reason` / `reasonNote`);截止前原因選填。記代改人 `by`;代改刪除先寫入代改人與原因再軟刪除。代改一樣跑規則。
 - **畫休總覽**:候選人(可以排這家店的排班人員)這個月的畫休;同日畫休人數只計 `isPrimary` 的人;「尚未畫休」= 主要分店是這家、這個月還沒畫任何一天的候選人。
-- **給其他功能**:`ScheduleDayOffsService.listUnavailable(operator, orgId, from, to)`(日期鍵含頭尾,以租戶時區換成時點區間查)回這家店的候選人每人每天的整天畫休 / 時段不可排(`date` 是租戶時區的日期鍵,`slots` 是 `startAt` / `endAt` 時點;只列有畫休的日子;這家店要在操作者的可見範圍內,否則空清單)。**空清單分不出「沒有畫休」與「看不到這家店」**:呼叫端(排班表、自動排班)要先自己確認看得到這家店(例:`resolveScheduleOrg`,看不到 → `NOT_FOUND`),再呼叫它。
+- **給其他功能**:`ScheduleDayOffsService.listUnavailable(operator, orgId, range)`(半開的時點區間 `[from, to)`)回這家店的候選人每人每天的整天畫休 / 時段不可排(`date` 是那天租戶時區 00:00 的時點,`slots` 是 `startAt` / `endAt` 時點;只列有畫休的日子;這家店要在操作者的可見範圍內,否則空清單)。**空清單分不出「沒有畫休」與「看不到這家店」**:呼叫端(排班表、自動排班)要先自己確認看得到這家店(例:`resolveScheduleOrg`,看不到 → `NOT_FOUND`),再呼叫它。
 
 ### 支援需求單(規格 8.9、14.10)
 

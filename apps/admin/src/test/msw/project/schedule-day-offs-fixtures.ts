@@ -86,8 +86,9 @@ export const sampleDayOffViolations: ScheduleDayOffViolationFieldsFragment[] = [
     dates: [taipeiAt("2026-12-24")],
     actual: 3,
     limit: 2,
+    // 期間是半開區間 `[起那天 00:00, 迄那天的隔天 00:00)`
     from: taipeiAt("2026-12-24"),
-    to: taipeiAt("2026-12-24"),
+    to: taipeiAt("2026-12-25"),
   },
   {
     key: "maxConsecutiveDaysOff",
@@ -99,6 +100,6 @@ export const sampleDayOffViolations: ScheduleDayOffViolationFieldsFragment[] = [
     actual: 4,
     limit: 3,
     from: taipeiAt("2026-12-13"),
-    to: taipeiAt("2026-12-16"),
+    to: taipeiAt("2026-12-17"),
   },
 ];

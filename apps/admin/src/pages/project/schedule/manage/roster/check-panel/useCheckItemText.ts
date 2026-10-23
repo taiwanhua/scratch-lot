@@ -6,7 +6,7 @@ import { SCHEDULE_FIELD_CATEGORY_KEYS } from "@repo/domain/project/schedule-fiel
 import { useTemporalText } from "@/hooks/base/useTemporalText";
 import { useTenantTimezone } from "@/hooks/base/useTenantTimezone";
 import { useScheduleFieldOptions } from "@/hooks/project/schedule/useScheduleFieldOptions/useScheduleFieldOptions";
-import { localPartsOf } from "@/lib/project/schedule-roster";
+import { lastDayShownAt, localPartsOf } from "@/lib/project/schedule-roster";
 
 import type { RosterData } from "../roster-context";
 import type { RosterCheckItem } from "./roster-check-context";
@@ -84,7 +84,8 @@ export const useCheckItemText = (
     const actual = item.actual ?? 0;
     const limit = item.limit ?? 0;
     const from = dayOf(item.from);
-    const to = dayOf(item.to);
+    // `from` / `to` 是半開區間:顯示的迄日 = `to` 的前一天
+    const to = dayOf(lastDayShownAt(item.to));
     const date = dayOf(item.date);
     const start = time(item.startAt);
     const end = time(item.endAt);
