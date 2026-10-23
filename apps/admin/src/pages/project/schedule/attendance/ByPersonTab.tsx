@@ -21,9 +21,9 @@ import { Table, type TableColumn } from "@repo/ui/table";
 import { Typography } from "@repo/ui/typography";
 
 import { useSession } from "@/hooks/base/useSession";
+import { useTenantToday } from "@/hooks/base/useTenantToday";
 import { useUrlState } from "@/hooks/base/useUrlState";
 
-import { useTenantToday } from "../manage/roster/views/useRosterDate";
 import { scheduleErrorOf } from "../schedule-error";
 import { AttendanceActions } from "./AttendanceActions";
 import { ReassignPunchDialog } from "./ReassignPunchDialog";

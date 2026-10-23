@@ -10,6 +10,7 @@ import { Stack } from "@repo/ui/stack";
 
 import { TagPaletteChip } from "@/components/project/TagPaletteChip/TagPaletteChip";
 import { ScheduleLegend } from "@/components/project/schedule/ScheduleLegend/ScheduleLegend";
+import { useTenantToday } from "@/hooks/base/useTenantToday";
 import { useScheduleFieldOptions } from "@/hooks/project/schedule/useScheduleFieldOptions/useScheduleFieldOptions";
 import {
   datesOfMonth,
@@ -24,7 +25,7 @@ import { isTagPaletteKey } from "@/lib/project/tag-palettes";
 import { type RosterData, useRoster } from "../roster-context";
 import { MonthDayContent, type MonthDayItem } from "./MonthDayContent";
 import { useUnmatchedPunchCounts } from "./unmatched-punches";
-import { useShowDay, useTenantToday } from "./useRosterDate";
+import { useShowDay } from "./useRosterDate";
 
 const deviceOf = (isMobile: boolean, isNarrow: boolean) => {
   if (isMobile) {
@@ -148,6 +149,7 @@ export const MonthView = () => {
       <Stack sx={{ overflowX: "auto" }}>
         <MonthCalendar
           month={data.month}
+          timezone={timezone}
           showHeader={false}
           // 點日期數字(格子裡標籤與空白處以外的地方)→ 那天的日檢視;手機點日期同
           selectionMode="single"
@@ -166,7 +168,7 @@ export const MonthView = () => {
           formatDayLabel={(date) =>
             t("timeline.monthDayAria", {
               date: t("dateTitle", {
-                date: monthDayOf(date),
+                date: monthDayOf(date, timezone),
                 weekday: tCalendar(`weekdays.${String(weekdayOf(date))}`),
               }),
             })

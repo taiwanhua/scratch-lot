@@ -111,7 +111,12 @@ describe("entryCheckReasonsOf", () => {
           userId: "u-1",
           date: "2026-11-10",
           fullDay: false,
-          slots: [{ startTime: "13:00", endTime: "17:00" }],
+          slots: [
+            {
+              startAt: "2026-11-10T13:00:00+08:00",
+              endAt: "2026-11-10T17:00:00+08:00",
+            },
+          ],
         },
       ],
     });
@@ -127,7 +132,13 @@ describe("entryCheckReasonsOf", () => {
           userId: "u-1",
           date: "2026-11-10",
           fullDay: false,
-          slots: [{ startTime: "20:00", endTime: "00:00" }],
+          // 結束 = 隔天 00:00(時點)
+          slots: [
+            {
+              startAt: "2026-11-10T20:00:00+08:00",
+              endAt: "2026-11-11T00:00:00+08:00",
+            },
+          ],
         },
       ],
     });

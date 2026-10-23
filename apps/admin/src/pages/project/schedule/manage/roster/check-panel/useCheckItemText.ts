@@ -3,15 +3,13 @@ import { useTranslations } from "use-intl";
 import { DEFAULT_TENANT_TIMEZONE } from "@repo/domain/form";
 import { SCHEDULE_FIELD_CATEGORY_KEYS } from "@repo/domain/project/schedule-fields";
 
+import { useTemporalText } from "@/hooks/base/useTemporalText";
 import { useTenantTimezone } from "@/hooks/base/useTenantTimezone";
 import { useScheduleFieldOptions } from "@/hooks/project/schedule/useScheduleFieldOptions/useScheduleFieldOptions";
-import { localPartsOf, monthDayOf } from "@/lib/project/schedule-roster";
+import { localPartsOf } from "@/lib/project/schedule-roster";
 
 import type { RosterData } from "../roster-context";
 import type { RosterCheckItem } from "./roster-check-context";
-
-const dayOf = (date: string | null | undefined): string =>
-  typeof date === "string" && date !== "" ? monthDayOf(date) : "";
 
 /**
  * 檢核項目的一句話(檢核面板、發布確認視窗;規格 14.5):依規則 key 組文案(`admin.schedule.roster.check.items`),
@@ -24,6 +22,10 @@ export const useCheckItemText = (
   const t = useTranslations("admin.schedule.roster.check");
   const tRoster = useTranslations("admin.schedule.roster");
   const timezone = useTenantTimezone() ?? DEFAULT_TENANT_TIMEZONE;
+  const text = useTemporalText();
+  /** 檢核項目的日期(時點)→「M/D」;沒有 → 空字串 */
+  const dayOf = (value: string | null | undefined): string =>
+    value === null || value === undefined ? "" : text(value, "monthDay");
   const positions = useScheduleFieldOptions(
     SCHEDULE_FIELD_CATEGORY_KEYS.position,
   );

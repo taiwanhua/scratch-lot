@@ -2,6 +2,8 @@ import { createContext, useContext } from "react";
 
 import type { ScheduleCheckQuery } from "@repo/graphql";
 
+import { dayKeyOf } from "@/lib/project/schedule-day-offs";
+
 import type { RosterCellTarget, RosterData } from "../roster-context";
 
 export type RosterCheckResult = ScheduleCheckQuery["scheduleCheck"];
@@ -51,8 +53,16 @@ export const useRosterCheck = (): RosterCheckContextValue => {
 export const useRosterCheckPanelOpen = (): boolean =>
   useContext(RosterCheckContext)?.isOpen === true;
 
-/** [查看] 要捲到的格子:人的項目 `userId|date`、店的項目 `|date`。 */
-export const checkTargetOf = (item: RosterCheckItem): RosterCellTarget =>
-  typeof item.userId === "string"
-    ? { userId: item.userId, date: item.date }
-    : { date: item.date };
+/**
+ * [查看] 要捲到的格子:人的項目 `userId|date`、店的項目 `|date`
+ * (檢核項目的 `date` 是時點,換成租戶時區的日期鍵對格子)。
+ */
+export const checkTargetOf = (
+  item: RosterCheckItem,
+  timezone: string,
+): RosterCellTarget => {
+  const date = dayKeyOf(item.date, timezone);
+  return typeof item.userId === "string"
+    ? { userId: item.userId, date }
+    : { date };
+};

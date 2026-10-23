@@ -11,6 +11,9 @@ import {
   findOption,
   queryButton,
   queryDialog,
+  timeField,
+  timeValue,
+  typeTimeIn,
 } from "./roster-test-queries";
 
 setupFakeViewport();
@@ -72,7 +75,11 @@ describe("排班作業:排班表(班表檢視)", () => {
     expect(screen.queryByLabelText("11/1 的更多動作")).not.toBeInTheDocument();
     await user.click(within(wang).getByRole("button", { name: /^早/ }));
     const dialog = await findDialog("排班 · 王小明 11/1(日)");
-    expect(within(dialog).getByLabelText(/上班/)).toBeDisabled();
+    expect(
+      within(timeField(dialog, /上班/)).getByRole("spinbutton", {
+        name: "Hours",
+      }),
+    ).toHaveAttribute("aria-disabled", "true");
     expect(
       within(dialog).queryByRole("button", { name: "儲存" }),
     ).not.toBeInTheDocument();
@@ -101,8 +108,8 @@ describe("排班作業:排班表(班表檢視)", () => {
     // 11/5 早班:王小明整天畫休,負責、協同都空著;陳大文可以擔任負責人
     await user.click(await cell("陳大文", "11/5"));
     const dialog = await findDialog("新增排班 · 11/5(四)");
-    await user.type(within(dialog).getByLabelText(/上班/), "08:30");
-    await user.type(within(dialog).getByLabelText(/下班/), "14:00");
+    await typeTimeIn(user, dialog, /上班/, "08:30");
+    await typeTimeIn(user, dialog, /下班/, "14:00");
     await user.click(
       within(dialog).getByRole("button", { name: "+ 加入人力需求" }),
     );
@@ -117,7 +124,7 @@ describe("排班作業:排班表(班表檢視)", () => {
     await user.click(
       within(dialog).getByRole("button", { name: "往後延長到 14:30" }),
     );
-    expect(within(dialog).getByLabelText(/下班/)).toHaveValue("14:30");
+    expect(timeValue(dialog, /下班/)).toBe("14:30");
     await user.click(within(dialog).getByRole("button", { name: "儲存" }));
     await waitFor(() => {
       expect(rosterFake.inputs.entries).toEqual([
@@ -133,8 +140,8 @@ describe("排班作業:排班表(班表檢視)", () => {
     const { user, rosterFake } = renderRoster({ path: ROSTER });
     await user.click(await cell("林美麗", "11/6"));
     const entryDialog = await findDialog("新增排班 · 11/6(五)");
-    await user.type(within(entryDialog).getByLabelText(/上班/), "13:00");
-    await user.type(within(entryDialog).getByLabelText(/下班/), "18:00");
+    await typeTimeIn(user, entryDialog, /上班/, "13:00");
+    await typeTimeIn(user, entryDialog, /下班/, "18:00");
 
     // 先開再取消:什麼都不變
     await user.click(
@@ -156,7 +163,7 @@ describe("排班作業:排班表(班表檢視)", () => {
     );
     demandDialog = await findDialog("新增人力需求");
     // 日期鎖定為這筆排班那天、時間帶入排班的上下班
-    expect(within(demandDialog).getByLabelText(/開始/)).toHaveValue("13:00");
+    expect(timeValue(demandDialog, /開始/)).toBe("13:00");
     await user.click(
       within(demandDialog).getByRole("combobox", { name: /崗位/ }),
     );

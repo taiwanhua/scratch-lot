@@ -1,10 +1,12 @@
 import { useTranslations } from "use-intl";
 
+import { DEFAULT_TENANT_TIMEZONE } from "@repo/domain/form";
 import { IconButton } from "@repo/ui/icon-button";
 import { ChevronLeftIcon, ChevronRightIcon } from "@repo/ui/icons";
 import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
 
+import { useTenantTimezone } from "@/hooks/base/useTenantTimezone";
 import { monthDayOf, shiftDay } from "@/lib/project/schedule-roster";
 import { weekDatesOf } from "@/lib/project/schedule-roster-views";
 
@@ -14,6 +16,7 @@ import { useRosterDate } from "./useRosterDate";
 /** 週檢視工具列的 `◀ 11/8–11/14 ▶`(一週從星期日開始;換週跨月時排班表跟著換月份)。 */
 export const WeekNavigator = ({ month }: RosterNavigatorProps) => {
   const t = useTranslations("admin.schedule.roster.timeline");
+  const timezone = useTenantTimezone() ?? DEFAULT_TENANT_TIMEZONE;
   const { date, goTo } = useRosterDate(month);
   const dates = weekDatesOf(date);
   const first = dates.at(0) ?? date;
@@ -30,7 +33,10 @@ export const WeekNavigator = ({ month }: RosterNavigatorProps) => {
         <ChevronLeftIcon />
       </IconButton>
       <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-        {t("weekTitle", { from: monthDayOf(first), to: monthDayOf(last) })}
+        {t("weekTitle", {
+          from: monthDayOf(first, timezone),
+          to: monthDayOf(last, timezone),
+        })}
       </Typography>
       <IconButton
         size="small"

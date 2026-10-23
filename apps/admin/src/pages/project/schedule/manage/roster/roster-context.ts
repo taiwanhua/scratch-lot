@@ -6,7 +6,41 @@ import type {
   ScheduleRosterQuery,
 } from "@repo/graphql";
 
+import { dayKeyOf } from "@/lib/project/schedule-day-offs";
+
+/**
+ * 排班表資料(頁殼經 `rosterDataOf` 換過):各處的 `date` 是租戶時區的日期鍵 `YYYY-MM-DD`
+ * (格子、`byDate` 以它對日子;顯示用 `monthDayOf(date, timezone)` 走 `formatTemporal`);
+ * 時點(`startAt` / `endAt`、時段、打卡 `at`)照 api 原樣。
+ */
 export type RosterData = ScheduleRosterQuery["scheduleRoster"];
+
+/**
+ * api 的排班表(日期是那天租戶時區 00:00 的時點)→ 畫面的資料:每個 `date` 換成租戶時區的日期鍵。
+ * 只在頁殼讀到資料時換一次。
+ */
+export const rosterDataOf = (raw: RosterData, timezone: string): RosterData => {
+  const keyOf = <T extends { date: string }>(item: T): T => ({
+    ...item,
+    date: dayKeyOf(item.date, timezone),
+  });
+  return {
+    ...raw,
+    people: raw.people.map((person) => ({
+      ...person,
+      stats: {
+        ...person.stats,
+        timeRangeDays: person.stats.timeRangeDays.map((item) => keyOf(item)),
+      },
+    })),
+    demands: raw.demands.map((item) => keyOf(item)),
+    entries: raw.entries.map((item) => keyOf(item)),
+    otherStoreEntries: raw.otherStoreEntries.map((item) => keyOf(item)),
+    unavailability: raw.unavailability.map((item) => keyOf(item)),
+    calendarDays: raw.calendarDays.map((item) => keyOf(item)),
+    unmatchedPunches: raw.unmatchedPunches.map((item) => keyOf(item)),
+  };
+};
 
 /** 排班表查詢的快取 key 前綴(寫入後一律讓它失效;前綴比對涵蓋每家店、每個月)。 */
 export const ROSTER_QUERY_ROOT = ["ScheduleRoster"];

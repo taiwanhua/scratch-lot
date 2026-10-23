@@ -95,9 +95,9 @@ describe("排班作業:套用範本", () => {
       kind: "week-template",
       weekTemplateId: "wk-normal",
     });
-    // 2026-11-01 是星期日:平日不含 1、7、8 日
-    expect(sent.dates).not.toContain("2026-11-01");
-    expect(sent.dates).toContain("2026-11-02");
+    // 2026-11-01 是星期日:平日不含 1、7、8 日(送的是那天台北 00:00 的時點)
+    expect(sent.dates).not.toContain("2026-10-31T16:00:00.000Z");
+    expect(sent.dates).toContain("2026-11-01T16:00:00.000Z");
   });
 
   it("沒有 edit → 看不到 [套用範本]", async () => {
@@ -138,8 +138,9 @@ describe("排班作業:自動排班", () => {
     });
     expect(rosterFake.autoInputs.runs[0]).toMatchObject({
       month: "2026-11",
-      from: "2026-11-01",
-      to: "2026-11-30",
+      // 11/1–11/30(含頭尾)= 台北的 `[11/1 00:00, 12/1 00:00)`
+      from: "2026-10-31T16:00:00.000Z",
+      to: "2026-11-30T16:00:00.000Z",
       mode: "fill-empty",
       fillWeekTemplate: true,
       conditions: [
@@ -271,8 +272,8 @@ describe("排班作業:自動排班", () => {
       expect(rosterFake.autoInputs.cleared).toEqual([
         expect.objectContaining({
           month: "2026-11",
-          from: "2026-11-01",
-          to: "2026-11-30",
+          from: "2026-10-31T16:00:00.000Z",
+          to: "2026-11-30T16:00:00.000Z",
         }),
       ]);
     });

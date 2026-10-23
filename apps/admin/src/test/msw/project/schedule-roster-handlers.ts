@@ -26,6 +26,7 @@ import {
   ROSTER_TEMPLATES,
   type TestRosterDemand,
   type TestRosterEntry,
+  dayAt,
   sampleRoster,
   sampleRosterExtras,
   sampleUnmatchedPunches,
@@ -57,9 +58,12 @@ const nextId = (prefix: string): string => {
   return `${prefix}-new-${String(sequence)}`;
 };
 
-/** 夾具時間一律台北時區:時點 → 當地日期。 */
+/** 夾具時間一律台北時區:時點 → 當地日期鍵。 */
 const localDate = (iso: string): string =>
   new Date(Date.parse(iso) + 8 * 60 * 60 * 1000).toISOString().slice(0, 10);
+
+/** 時點 → 那天台北 00:00(api 的日期)。 */
+const dayOf = (iso: string): string => dayAt(localDate(iso));
 
 /**
  * 排班表的假 api:有狀態(依第一次查的月份產生夾具);人力需求每筆執行任務的填的人由排班的
@@ -101,6 +105,7 @@ export const scheduleRosterWorld = (
   const inputs = {
     demands: [] as SaveScheduleDemandMutationVariables["input"][],
     entries: [] as SaveScheduleEntryMutationVariables["input"][],
+    /** 移除這天所有排班送的日期(台北的日期鍵) */
     removedDays: [] as string[],
     /** 排班表查詢的 input(週檢視跨月多讀的 from / to) */
     queries: [] as ScheduleRosterQueryVariables["input"][],
@@ -239,7 +244,7 @@ export const scheduleRosterWorld = (
       const deletedEntryIds = release(id, removed);
       const demand: TestRosterDemand = {
         id,
-        date: localDate(input.startAt),
+        date: dayOf(input.startAt),
         startAt: input.startAt,
         endAt: input.endAt,
         positionKey: input.positionKey,
@@ -279,7 +284,7 @@ export const scheduleRosterWorld = (
       const entry: TestRosterEntry = {
         id,
         userId: existing?.userId ?? input.userId ?? "",
-        date: localDate(input.startAt),
+        date: dayOf(input.startAt),
         startAt: input.startAt,
         endAt: input.endAt,
         breakMinutes: input.breakMinutes,
@@ -304,10 +309,11 @@ export const scheduleRosterWorld = (
     }),
     api.mutation("RemoveScheduleDayEntries", ({ variables }) => {
       const { input } = variables as RemoveScheduleDayEntriesMutationVariables;
-      inputs.removedDays.push(input.date);
+      inputs.removedDays.push(localDate(input.date));
       inputs.removedDayInputs.push(input);
-      const removed = entries.filter((entry) => entry.date === input.date);
-      entries = entries.filter((entry) => entry.date !== input.date);
+      const day = dayOf(input.date);
+      const removed = entries.filter((entry) => entry.date === day);
+      entries = entries.filter((entry) => entry.date !== day);
       return HttpResponse.json({
         data: {
           removeScheduleDayEntries: {

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useTranslations } from "use-intl";
 
+import { DEFAULT_TENANT_TIMEZONE } from "@repo/domain/form";
 import { useScheduleRosterQuery } from "@repo/graphql";
 import { Box } from "@repo/ui/box";
 import { Button } from "@repo/ui/button";
@@ -17,10 +18,11 @@ import { Typography } from "@repo/ui/typography";
 import { TagPaletteChip } from "@/components/project/TagPaletteChip/TagPaletteChip";
 import { ScheduleLegend } from "@/components/project/schedule/ScheduleLegend/ScheduleLegend";
 import { useSession } from "@/hooks/base/useSession";
+import { useTenantTimezone } from "@/hooks/base/useTenantTimezone";
 import { dayWorstTones } from "@/lib/project/schedule-roster-views";
 import { isTagPaletteKey } from "@/lib/project/tag-palettes";
 
-import type { RosterData } from "../roster-context";
+import { type RosterData, rosterDataOf } from "../roster-context";
 
 export interface DayPickerProps {
   anchor: HTMLElement;
@@ -51,13 +53,18 @@ export const DayPicker = ({
   const tCalendar = useTranslations("admin.schedule.calendar");
   const [month, setMonth] = useState(date.slice(0, 7));
   const { session } = useSession();
+  const timezone = useTenantTimezone() ?? DEFAULT_TENANT_TIMEZONE;
   // 月曆翻到別的月:讀那家店那個月的排班表再標點、店休、特殊日
   const other = useScheduleRosterQuery(
     session.client,
     { input: { month, ...(data === undefined ? {} : { orgId: data.orgId }) } },
     { enabled: data !== undefined && month !== data.month },
   );
-  const shown = month === data?.month ? data : other.data?.scheduleRoster;
+  const otherData = other.data?.scheduleRoster;
+  // 別的月是 api 原樣(日期是時點):同頁殼換成租戶時區的日期鍵
+  const otherShown =
+    otherData === undefined ? undefined : rosterDataOf(otherData, timezone);
+  const shown = month === data?.month ? data : otherShown;
   const days: Record<string, MonthCalendarDayInfo> = {};
   // 當天最嚴重的狀態:缺負責紅點、只缺協同橘點、排滿不畫(同手機月檢視的點)
   for (const [date, tone] of dayWorstTones(shown?.demands ?? [])) {
@@ -118,6 +125,7 @@ export const DayPicker = ({
         </Stack>
         <MonthCalendar
           month={month}
+          timezone={timezone}
           onMonthChange={setMonth}
           selectionMode="single"
           selectedDates={[date]}

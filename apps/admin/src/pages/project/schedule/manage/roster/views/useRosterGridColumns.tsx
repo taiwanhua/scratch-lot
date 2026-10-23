@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { useTranslations } from "use-intl";
 
+import { DEFAULT_TENANT_TIMEZONE } from "@repo/domain/form";
 import {
   type ScheduleRosterStatColumn,
   formatWorkMinutes,
@@ -11,8 +12,9 @@ import type { DataTableColumn } from "@repo/ui/roster-grid";
 import { Tooltip } from "@repo/ui/tooltip";
 import { Typography } from "@repo/ui/typography";
 
+import { useTenantTimezone } from "@/hooks/base/useTenantTimezone";
 import { useRosterColumns } from "@/hooks/project/schedule/useRosterColumns/useRosterColumns";
-import { monthDayOf } from "@/lib/project/schedule-roster";
+import { localPartsOf, monthDayOf } from "@/lib/project/schedule-roster";
 
 import type { RosterData, RosterPerson } from "../roster-context";
 
@@ -33,6 +35,7 @@ export const useRosterGridColumns = (
 } => {
   const t = useTranslations("admin.schedule.roster");
   const tEmployment = useTranslations("admin.schedule.employment");
+  const timezone = useTenantTimezone() ?? DEFAULT_TENANT_TIMEZONE;
   const isMobile = useBreakpointDown("sm");
   const { columns } = useRosterColumns();
 
@@ -62,7 +65,8 @@ export const useRosterGridColumns = (
   const dayOffDetail = (stats: RosterPerson["stats"]) => {
     const slots = stats.timeRangeDays.flatMap((day) =>
       day.slots.map(
-        (slot) => `${monthDayOf(day.date)} ${slot.startTime}–${slot.endTime}`,
+        (slot) =>
+          `${monthDayOf(day.date, timezone)} ${localPartsOf(slot.startAt, timezone).time}–${localPartsOf(slot.endAt, timezone).time}`,
       ),
     );
     const summary = t("dayOffDetail", {

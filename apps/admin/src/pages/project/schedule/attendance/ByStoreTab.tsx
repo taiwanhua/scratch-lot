@@ -22,10 +22,10 @@ import { Typography } from "@repo/ui/typography";
 
 import { OrgTreeSelect } from "@/components/base/OrgTreeSelect/OrgTreeSelect";
 import { useSession } from "@/hooks/base/useSession";
+import { useTenantToday } from "@/hooks/base/useTenantToday";
 import { useUrlState } from "@/hooks/base/useUrlState";
 import { shiftDay } from "@/lib/project/schedule-roster";
 
-import { useTenantToday } from "../manage/roster/views/useRosterDate";
 import { scheduleErrorOf } from "../schedule-error";
 import { AttendanceActions } from "./AttendanceActions";
 import { AttendanceStatusTags } from "./AttendanceStatusTags";

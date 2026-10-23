@@ -65,7 +65,7 @@ export const useEntryPunches = (
   return {
     block: (
       <UnmatchedPunchesBlock
-        heading={`${personName} ${date === "" ? "" : monthDayOf(date)}`}
+        heading={`${personName} ${date === "" ? "" : monthDayOf(date, timezone)}`}
         punches={punches}
         checked={checked}
         disabled={!canEdit}

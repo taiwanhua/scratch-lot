@@ -1,15 +1,28 @@
 import {
+  addLocalDays,
+  addLocalMonths,
+  datesOfLocalMonth,
   formatTemporal,
-  instantOfLocalTime,
+  instantOfLocalHhMm,
+  localDateText,
+  localMonthText,
+  minutesOfHhMm,
   parseLocalDate,
+  parseLocalMonth,
   toIso,
+  weekdayOfLocalDate,
 } from "@repo/domain/form";
-import { minutesOfHhMm } from "@repo/domain/project/schedule-settings";
 import type { TagTone } from "@repo/ui/tag";
+
+import { localDayInstantOf } from "@/lib/base/form-engine/local-day";
 
 /**
  * 排班表(規格 14.5「排班表」)的純函式:時點與當地日期 / 時間的換算、人數寫法、三態顏色、
  * 人力需求區的列、收合時的每日彙總、人員格子的內容。畫面元件只組字串與排版。
+ *
+ * api 的日期是時點(那天租戶時區 00:00);排班表的格子、`byDate` 以租戶時區的日期鍵 `YYYY-MM-DD`
+ * 對日子(頁殼讀到資料時換一次,`rosterDataOf`)。日曆運算一律用 `@repo/domain/form`,
+ * 顯示一律走 `formatTemporal`。
  */
 
 // ---- 時間 ----
@@ -23,31 +36,25 @@ export const localPartsOf = (
   return { date: text.slice(0, 10), time: text.slice(11, 16) };
 };
 
-/** 某天的 `HH:mm`(租戶時區)→ ISO 時點;日期或時間不合法 → null。 */
+/** 某天(日期鍵)的 `HH:mm`(租戶時區)→ ISO 時點(`instantOfLocalHhMm`);日期或時間不合法 → null。 */
 export const instantOfDayTime = (
   date: string,
   time: string,
   timezone: string,
 ): string | null => {
   const day = parseLocalDate(date);
-  const minutes = minutesOfHhMm(time);
-  if (day === null || minutes === null) {
-    return null;
-  }
-  return toIso(
-    instantOfLocalTime(day, Math.floor(minutes / 60), minutes % 60, timezone),
-  );
+  const at = day === null ? null : instantOfLocalHhMm(day, time, timezone);
+  return at === null ? null : toIso(at);
 };
 
-/** `YYYY-MM-DD` 加減天數。 */
+/** 日期鍵加減天數(`addLocalDays`);不是日期鍵 → 原樣回。 */
 export const shiftDay = (date: string, days: number): string => {
-  const [year = 0, month = 1, day = 1] = date.split("-").map(Number);
-  const shifted = new Date(Date.UTC(year, month - 1, day + days));
-  return shifted.toISOString().slice(0, 10);
+  const day = parseLocalDate(date);
+  return day === null ? date : localDateText(addLocalDays(day, days));
 };
 
 /**
- * 開始 / 結束(同一天的 `HH:mm`)→ 兩個時點;結束不晚於開始 = 跨午夜(結束算隔天)。
+ * 開始 / 結束(同一天的 `HH:mm`)→ 兩個時點;結束不晚於開始 = 跨午夜(結束算隔天;結束 00:00 = 隔天 00:00)。
  * 任一不合法 → null。
  */
 export const spanOf = (
@@ -74,32 +81,51 @@ export const spanOf = (
 export const minutesBetween = (startAt: string, endAt: string): number =>
   Math.round((Date.parse(endAt) - Date.parse(startAt)) / 60_000);
 
-/** 某月(`YYYY-MM`)的每一天(`YYYY-MM-DD`)。 */
+/** 某月(`YYYY-MM`)的每一天(日期鍵;`datesOfLocalMonth`);不是月份鍵 → 空陣列。 */
 export const datesOfMonth = (month: string): string[] => {
-  const [year = 0, monthNumber = 1] = month.split("-").map(Number);
-  const last = new Date(Date.UTC(year, monthNumber, 0)).getUTCDate();
-  return Array.from(
-    { length: last },
-    (_, index) => `${month}-${String(index + 1).padStart(2, "0")}`,
-  );
+  const parsed = parseLocalMonth(month);
+  return parsed === null
+    ? []
+    : datesOfLocalMonth(parsed).map((day) => localDateText(day));
 };
 
-/** `YYYY-MM` 加減月份。 */
+/** `YYYY-MM` 加減月份(`addLocalMonths`);不是月份鍵 → 原樣回。 */
 export const shiftMonthOf = (month: string, delta: number): string => {
-  const [year = 0, monthNumber = 1] = month.split("-").map(Number);
-  const shifted = new Date(Date.UTC(year, monthNumber - 1 + delta, 1));
-  return shifted.toISOString().slice(0, 7);
+  const parsed = parseLocalMonth(month);
+  return parsed === null
+    ? month
+    : localMonthText(addLocalMonths(parsed, delta));
 };
 
-/** 星期幾(0 = 星期日)。 */
+/** 星期幾(0 = 星期日;`weekdayOfLocalDate`);不是日期鍵 → 0。 */
 export const weekdayOf = (date: string): number => {
-  const [year = 0, month = 1, day = 1] = date.split("-").map(Number);
-  return new Date(Date.UTC(year, month - 1, day)).getUTCDay();
+  const day = parseLocalDate(date);
+  return day === null ? 0 : weekdayOfLocalDate(day);
 };
 
-/** `M/D`。 */
-export const monthDayOf = (date: string): string =>
-  `${String(Number(date.slice(5, 7)))}/${String(Number(date.slice(8, 10)))}`;
+/** 日期鍵的「M/D」(那天租戶時區 00:00 走 `formatTemporal` 的 `monthDay`);不是日期鍵 → 空字串。 */
+export const monthDayOf = (date: string, timezone: string): string =>
+  formatTemporal(localDayInstantOf(date, timezone), {
+    type: "monthDay",
+    timezone,
+  });
+
+/** 日期鍵 → api 的日期(那天租戶時區 00:00 的 ISO);不是日期鍵 → null。 */
+export const dayInstantOf = (date: string, timezone: string): string | null =>
+  localDayInstantOf(date, timezone);
+
+/**
+ * 日期鍵期間(含頭尾)→ api 的半開時點區間 `[from 00:00, to 隔天 00:00)`(ISO);任一不是日期鍵 → null。
+ */
+export const dayRangeOf = (
+  from: string,
+  to: string,
+  timezone: string,
+): { from: string; to: string } | null => {
+  const start = localDayInstantOf(from, timezone);
+  const end = localDayInstantOf(shiftDay(to, 1), timezone);
+  return start === null || end === null ? null : { from: start, to: end };
+};
 
 // ---- 人數寫法與三態 ----
 

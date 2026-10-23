@@ -1,11 +1,7 @@
-import { useState } from "react";
 import { z } from "zod";
 
-import { DEFAULT_TENANT_TIMEZONE } from "@repo/domain/form";
-
-import { useTenantTimezone } from "@/hooks/base/useTenantTimezone";
+import { useTenantToday } from "@/hooks/base/useTenantToday";
 import { useUrlState } from "@/hooks/base/useUrlState";
-import { localPartsOf } from "@/lib/project/schedule-roster";
 import { rosterDateOf } from "@/lib/project/schedule-roster-views";
 
 /** `?date=YYYY-MM-DD`:週 / 日檢視顯示的那一天(週檢視 = 那一天所在的週);空字串 = 今天或這個月 1 日。 */
@@ -16,13 +12,6 @@ const VIEW_SCHEMA = z.string().default("");
 
 /** 日檢視在網址 `?view=` 的值(`roster-views.ts` 登記的同一個)。 */
 export const DAY_VIEW = "day";
-
-/** 租戶時區的今天(`YYYY-MM-DD`);進頁時算一次。 */
-export const useTenantToday = (): string => {
-  const timezone = useTenantTimezone() ?? DEFAULT_TENANT_TIMEZONE;
-  const [now] = useState(() => new Date().toISOString());
-  return localPartsOf(now, timezone).date;
-};
 
 /**
  * 週 / 日檢視的日期(網址 `?date=`,規格 14.5「檢視與月份 / 日期放網址參數」):`date` 是目前顯示的那一天,

@@ -6,10 +6,9 @@ import {
 
 import type { FieldErrorTexts } from "@/lib/base/field-errors";
 import {
-  instantOfDayTime,
+  dayRangeOf,
   localPartsOf,
   minutesBetween,
-  shiftDay,
   spanOf,
 } from "@/lib/project/schedule-roster";
 
@@ -21,6 +20,16 @@ import type {
   RosterDemand,
   RosterEntry,
 } from "./roster-context";
+
+/** 讀到的店休日(日期鍵)→ 日期欄反灰的判斷(api 一樣會擋;沒讀到的月份不反灰)。 */
+export const closedDatePredicateOf = (
+  calendarDays: readonly { date: string; type: string }[],
+): ((date: string) => boolean) => {
+  const closed = new Set(
+    calendarDays.filter((day) => day.type === "closed").map((day) => day.date),
+  );
+  return (date) => closed.has(date);
+};
 
 /** 會標回排班對話框的欄位。 */
 export type EntryField =
@@ -334,22 +343,12 @@ export const entryCheckReasonsOf = (
         return false;
       }
       if (day.fullDay) {
-        return overlaps(
-          span,
-          instantOfDayTime(day.date, "00:00", context.timezone),
-          instantOfDayTime(shiftDay(day.date, 1), "00:00", context.timezone),
-        );
+        // 整天 = 租戶時區那天 00:00 到隔天 00:00
+        const whole = dayRangeOf(day.date, day.date, context.timezone);
+        return whole !== null && overlaps(span, whole.from, whole.to);
       }
-      // 時段結束 `00:00` = 隔天 00:00(做到當天結束):同上下班「結束不晚於開始就算隔天」(`spanOf`)
-      return day.slots.some((slot) => {
-        const busy = spanOf(
-          day.date,
-          slot.startTime,
-          slot.endTime,
-          context.timezone,
-        );
-        return busy !== null && overlaps(span, busy.startAt, busy.endAt);
-      });
+      // 時段不可排是時點(做到當天結束的時段,結束就是隔天 00:00)
+      return day.slots.some((slot) => overlaps(span, slot.startAt, slot.endAt));
     });
     if (isDayOff) {
       reasons.startTime = "DAY_OFF_CONFLICT";

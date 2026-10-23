@@ -18,7 +18,7 @@ import { TextField } from "@repo/ui/text-field";
 import { FieldErrorGroup } from "@/components/base/FieldErrorGroup/FieldErrorGroup";
 import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
 import { useSession } from "@/hooks/base/useSession";
-import { monthDayOf, spanOf, weekdayOf } from "@/lib/project/schedule-roster";
+import { spanOf } from "@/lib/project/schedule-roster";
 
 import { ConfirmDeleteDialog } from "../../ConfirmDeleteDialog";
 import { scheduleReasonText } from "../../schedule-field-errors";
@@ -29,6 +29,7 @@ import {
   type EntryField,
   type EntryFieldErrors,
   type EntryFormState,
+  closedDatePredicateOf,
   entryCheckReasonsOf,
   initialEntryState,
   leaderRuleOf,
@@ -46,6 +47,7 @@ import {
 import { blockedEntryIdsOf } from "./roster-error";
 import { useEntryFieldErrors } from "./useEntryFieldErrors";
 import { useEntryPunches } from "./useEntryPunches";
+import { useRosterDateTitle } from "./useRosterDateTitle";
 
 export interface EntryDialogProps {
   /** 要看 / 改的那一筆;null = 新增 */
@@ -61,11 +63,10 @@ export interface EntryDialogProps {
  *
  * - [新增一筆人力需求]:疊開人力需求對話框(日期鎖定、時間帶入這筆排班);新增成功 → 自動加一列
  *   (依規則填第一個空的任務);取消 → 不變;之後排班按取消,人力需求保留(它已經獨立存檔)
- * - 至少要填進一筆才能存:移除最後一列時 [儲存] 停用並提示
+ * - 至少要填進一筆才能存:移除最後一列時 [儲存] 停用並提示;日期欄的店休日反灰
  * - 前端已經知道的規則(店休、畫休、不能擔任負責人;`entryCheckReasonsOf`)送出前就寫在欄位下、
  *   [儲存] 停用,每個入口(工具列、班表空白格、缺額、編輯、疊開新增人力需求)同一套
- * - [刪除這筆排班]:已被收銀班次綁定的擋下(「已經有開班紀錄,不能刪除」)
- * - 這個人那天在這家店有未對應排班的打卡:多一個區塊(`UnmatchedPunchesBlock`,SC-04d / SC-04e ①),
+ * - [刪除這筆排班]:已被收銀班次綁定的擋下(「已經有開班紀錄,不能刪除」)。這個人那天在這家店有未對應排班的打卡:多一個區塊(`UnmatchedPunchesBlock`,SC-04d / SC-04e ①),
  *   勾選的卡儲存時一起對應到這筆排班;「上下班時間改用打卡時間」要 `use-punch-time`、預設不勾
  * - 沒有 `edit`:欄位停用、只剩 [關閉]。電腦 / 平板置中、手機全螢幕
  */
@@ -75,9 +76,8 @@ export const EntryDialog = ({
   onClose,
 }: EntryDialogProps) => {
   const t = useTranslations("admin.schedule.roster.entryDialog");
-  const tRoster = useTranslations("admin.schedule.roster");
   const tCommon = useTranslations("admin.schedule.common");
-  const tCalendar = useTranslations("admin.schedule.calendar");
+  const rosterDateTitle = useRosterDateTitle();
   const tSchedule = useTranslations("admin.schedule");
   const { session } = useSession();
   const queryClient = useQueryClient();
@@ -110,7 +110,6 @@ export const EntryDialog = ({
   // 欄位錯了就在欄位正下方寫原因(REACT-18);上方提示只放通用句
   const { fieldErrors, ...errors } = useEntryFieldErrors();
   const changeReason = useChangeReason(canEdit);
-
   const person = data.people.find((item) => item.userId === form.userId);
   const leaderRule = leaderRuleOf(person, entry);
   const span = spanOf(form.date, form.startTime, form.endTime, timezone);
@@ -230,13 +229,7 @@ export const EntryDialog = ({
     });
   };
 
-  const dateTitle =
-    form.date === ""
-      ? ""
-      : tRoster("dateTitle", {
-          date: monthDayOf(form.date),
-          weekday: tCalendar(`weekdays.${String(weekdayOf(form.date))}`),
-        });
+  const dateTitle = rosterDateTitle(form.date);
   const title =
     entry === null
       ? t("createTitle", { date: dateTitle })
@@ -324,6 +317,7 @@ export const EntryDialog = ({
               required
               fullWidth
               disabled={!canEdit}
+              shouldDisableDate={closedDatePredicateOf(data.calendarDays)}
               error={shownErrors.date !== undefined}
               helperText={shownErrors.date}
               onChange={(next) => {

@@ -1,10 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "use-intl";
 import { z } from "zod";
 
-import { parseLocalMonth } from "@repo/domain/form";
-import { isIsoMonth } from "@repo/domain/project/schedule-settings";
-import { useMyScheduleQuery } from "@repo/graphql";
+import { DEFAULT_TENANT_TIMEZONE, parseLocalMonth } from "@repo/domain/form";
+import { type MyScheduleQuery, useMyScheduleQuery } from "@repo/graphql";
 import { Card } from "@repo/ui/card";
 import { IconButton } from "@repo/ui/icon-button";
 import { ChevronLeftIcon, ChevronRightIcon } from "@repo/ui/icons";
@@ -16,7 +15,9 @@ import { Typography } from "@repo/ui/typography";
 import { ScheduleLegend } from "@/components/project/schedule/ScheduleLegend/ScheduleLegend";
 import { useMe } from "@/hooks/base/useMe";
 import { useSession } from "@/hooks/base/useSession";
+import { useTenantTimezone } from "@/hooks/base/useTenantTimezone";
 import { useUrlState } from "@/hooks/base/useUrlState";
+import { dayKeyOf, monthRangeOf } from "@/lib/project/schedule-day-offs";
 import {
   newChangeIdsOf,
   readLastVisit,
@@ -37,6 +38,35 @@ const MONTH_SCHEMA = z.string().default("");
 const VIEW_SCHEMA = z.enum(["", "calendar", "list"]).default("");
 
 type View = "calendar" | "list";
+
+type MySchedulePage = MyScheduleQuery["mySchedule"];
+
+/**
+ * api 的我的班表(日期是那天租戶時區 00:00 的時點)→ 畫面的資料:每個日期換成租戶時區的日期鍵
+ * (月曆格、條列分組以它對日子;顯示走 `formatTemporal`,`useDayOffDateTitle`)。時點(上下班、打卡)照原樣。
+ */
+const myScheduleOf = (
+  raw: MySchedulePage,
+  timezone: string,
+): MySchedulePage => {
+  const keyOf = <T extends { date: string }>(item: T): T => ({
+    ...item,
+    date: dayKeyOf(item.date, timezone),
+  });
+  return {
+    ...raw,
+    today: dayKeyOf(raw.today, timezone),
+    entries: raw.entries.map((item) => keyOf(item)),
+    punchCards: raw.punchCards.map((card) => ({
+      ...card,
+      entry: keyOf(card.entry),
+    })),
+    incomplete: raw.incomplete.map((item) => keyOf(item)),
+    changes: raw.changes.map((item) => keyOf(item)),
+    calendarDays: raw.calendarDays.map((item) => keyOf(item)),
+    dayOffDates: raw.dayOffDates.map((date) => dayKeyOf(date, timezone)),
+  };
+};
 
 /** `[月曆 | 條列]` 的寬度(兩個選項;底座 `SegmentedControl` 預設撐滿,先例 `RosterToolbar`)。 */
 const VIEW_TOGGLE_WIDTH = 144;
@@ -70,10 +100,16 @@ export const ScheduleTab = () => {
   const [viewParam, setView] = useUrlState("view", VIEW_SCHEMA);
   const [openedDay, setOpenedDay] = useState<string | null>(null);
   const lastVisit = useLastVisit();
+  const timezone = useTenantTimezone() ?? DEFAULT_TENANT_TIMEZONE;
+  // 月份鍵 → 那個月在租戶時區的 `[月初 00:00, 下月初 00:00)`;沒給 = api 用今天所在的月份
   const query = useMyScheduleQuery(session.client, {
-    input: isIsoMonth(monthParam) ? { month: monthParam } : null,
+    input: monthRangeOf(monthParam, timezone),
   });
-  const page = query.data?.mySchedule;
+  const raw = query.data?.mySchedule;
+  const page = useMemo(
+    () => (raw === undefined ? undefined : myScheduleOf(raw, timezone)),
+    [raw, timezone],
+  );
   if (page === undefined) {
     return (
       <Typography variant="body2" color="textSecondary">

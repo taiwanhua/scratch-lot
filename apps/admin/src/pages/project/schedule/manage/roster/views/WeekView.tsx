@@ -45,7 +45,8 @@ const isRosterGroup = (
  */
 export const WeekView = () => {
   const t = useTranslations("admin.schedule.roster");
-  const { data, canEdit, openDemand, openEntry, scrollTarget } = useRoster();
+  const { data, timezone, canEdit, openDemand, openEntry, scrollTarget } =
+    useRoster();
   const isMobile = useBreakpointDown("sm");
   const { date, today, goTo } = useRosterDate(data.month);
   const dates = weekDatesOf(date);
@@ -94,6 +95,7 @@ export const WeekView = () => {
           groups={timeline.groups}
           disabledRanges={timeline.disabledRanges}
           today={today}
+          timezone={timezone}
           onGroupClick={(group) => {
             const demand = timeline.demandOfGroup(group.id);
             if (demand !== undefined) {

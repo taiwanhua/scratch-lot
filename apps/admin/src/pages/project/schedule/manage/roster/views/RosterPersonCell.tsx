@@ -185,12 +185,12 @@ export const RosterPersonCell = ({
       ))}
       {!fullDay &&
         (unavailability?.slots ?? []).map((slot) => (
-          <Box key={slot.startTime} sx={unavailableBlockSx}>
+          <Box key={slot.startAt} sx={unavailableBlockSx}>
             <Typography variant="caption" sx={{ fontWeight: 600 }}>
               {t("unavailable")}
             </Typography>
             <Typography variant="caption" component="div">
-              {t("range", { start: slot.startTime, end: slot.endTime })}
+              {t("range", { start: time(slot.startAt), end: time(slot.endAt) })}
             </Typography>
           </Box>
         ))}

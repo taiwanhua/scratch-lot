@@ -18,6 +18,7 @@ import {
   ROSTER_TEMPLATES,
   type TestRosterDemand,
   type TestRosterEntry,
+  dayAt,
 } from "./schedule-roster-fixtures";
 
 export interface AutoRunWorldOptions {
@@ -37,12 +38,12 @@ export interface RosterWorldState {
   setEntries: (next: TestRosterEntry[]) => void;
   ensure: (month: string) => void;
   isEmpty: boolean;
-  /** 這個月的畫休(整天 / 時段不可排;假的自動排班要避開) */
+  /** 這個月的畫休(整天 / 時段不可排;日期與時段都是時點;假的自動排班要避開) */
   unavailability: () => readonly {
     userId: string;
     date: string;
     fullDay: boolean;
-    slots: readonly { startTime: string; endTime: string }[];
+    slots: readonly { startAt: string; endAt: string }[];
   }[];
 }
 
@@ -58,9 +59,17 @@ interface AutoRunSummary {
   addedDemandDays: number;
 }
 
-/** ISO 時點 → 台北的 `HH:mm`(夾具一律台北時區)。 */
-const taipeiTime = (iso: string): string =>
-  new Date(Date.parse(iso) + 8 * 60 * 60 * 1000).toISOString().slice(11, 16);
+/** ISO 時點 → 台北的日期鍵(夾具一律台北時區)。 */
+const taipeiDate = (iso: string): string =>
+  new Date(Date.parse(iso) + 8 * 60 * 60 * 1000).toISOString().slice(0, 10);
+
+/** 日期鍵加一天(台北沒有夏令時間)。 */
+const nextDate = (date: string): string =>
+  taipeiDate(new Date(`${date}T24:00:00+08:00`).toISOString());
+
+/** 時點落在 `[from, to)`(api 收發的 ISO 都是同一種格式,字串比較 = 先後)。 */
+const isWithin = (iso: string, from: string, to: string) =>
+  iso >= from && iso < to;
 
 let sequence = 0;
 const nextId = (prefix: string): string => {
@@ -97,11 +106,14 @@ const demandOfTemplate = (
   if (template === undefined) {
     return null;
   }
+  // 結束不晚於開始 = 跨午夜(結束算隔天;結束 00:00 = 隔天 00:00)
+  const endDate =
+    template.endTime <= template.startTime ? nextDate(date) : date;
   return {
     id: nextId("d"),
-    date,
+    date: dayAt(date),
     startAt: new Date(`${date}T${template.startTime}:00+08:00`).toISOString(),
-    endAt: new Date(`${date}T${template.endTime}:00+08:00`).toISOString(),
+    endAt: new Date(`${endDate}T${template.endTime}:00+08:00`).toISOString(),
     positionKey: template.positionKey,
     positionNote: null,
     templateId: template.id,
@@ -159,8 +171,8 @@ export const scheduleAutoRunHandlers = (
           id: "run-1",
           at: "2026-10-30T06:20:00.000Z",
           byName: "何家華",
-          from: "",
-          to: "",
+          from: "2026-10-31T16:00:00.000Z",
+          to: "2026-11-30T16:00:00.000Z",
           filledCount: 112,
           unfilledCount: 3,
           addedDemandCount: 40,
@@ -185,10 +197,11 @@ export const scheduleAutoRunHandlers = (
     };
     const isWeek = input.kind !== "template";
     const existing = state.demands();
-    for (const date of input.dates.toSorted((left, right) =>
-      left.localeCompare(right),
-    )) {
-      if (isWeek && existing.some((demand) => demand.date === date)) {
+    // 套用到的日子是那天台北 00:00 的時點 → 日期鍵
+    for (const date of input.dates
+      .map((iso) => taipeiDate(iso))
+      .toSorted((left, right) => left.localeCompare(right))) {
+      if (isWeek && existing.some((demand) => demand.date === dayAt(date))) {
         plan.skippedDays += 1;
         continue;
       }
@@ -214,7 +227,7 @@ export const scheduleAutoRunHandlers = (
   });
   const inRange = (demandId: string, from: string, to: string) => {
     const demand = state.demands().find((item) => item.id === demandId);
-    return demand !== undefined && demand.date >= from && demand.date <= to;
+    return demand !== undefined && isWithin(demand.date, from, to);
   };
   /** 清掉範圍內的填進紀錄(`auto` 只清自動的);零筆的排班一起刪。 */
   const clearRange = (from: string, to: string, which: "auto" | "all") => {
@@ -247,11 +260,9 @@ export const scheduleAutoRunHandlers = (
           (item) => item.demandId === demandId && item.taskId === taskId,
         ),
       );
-  /** 這個人那段時間有畫休(整天,或和時段不可排重疊)。 */
-  const isOff = (userId: string, demand: TestRosterDemand) => {
-    const start = taipeiTime(demand.startAt);
-    const end = taipeiTime(demand.endAt);
-    return state
+  /** 這個人那段時間有畫休(整天,或和時段不可排重疊;時段是時點)。 */
+  const isOff = (userId: string, demand: TestRosterDemand) =>
+    state
       .unavailability()
       .some(
         (day) =>
@@ -259,10 +270,11 @@ export const scheduleAutoRunHandlers = (
           day.date === demand.date &&
           (day.fullDay ||
             day.slots.some(
-              (slot) => slot.startTime < end && slot.endTime > start,
+              (slot) =>
+                Date.parse(slot.startAt) < Date.parse(demand.endAt) &&
+                Date.parse(slot.endAt) > Date.parse(demand.startAt),
             )),
       );
-  };
   /** 假的自動排班:依序把空的任務排給那天還沒有班、沒有畫休的人(負責只給可負責的人)。 */
   const fakeAutoRun = (input: RunScheduleAutoRunMutationVariables["input"]) => {
     if (input.mode !== "fill-empty") {
@@ -276,7 +288,7 @@ export const scheduleAutoRunHandlers = (
     let unfilled = 0;
     const open = state
       .demands()
-      .filter((demand) => demand.date >= input.from && demand.date <= input.to)
+      .filter((demand) => isWithin(demand.date, input.from, input.to))
       .flatMap((demand) =>
         demand.tasks
           .filter((task) => !isFilled(demand.id, task.taskId))
@@ -384,10 +396,8 @@ export const scheduleAutoRunHandlers = (
           scheduleAutoRunPreview: {
             demandCount: state
               .demands()
-              .filter(
-                (demand) =>
-                  demand.date >= input.from && demand.date <= input.to,
-              ).length,
+              .filter((demand) => isWithin(demand.date, input.from, input.to))
+              .length,
             fillableDays: state.isEmpty ? 0 : 3,
             manualCount: filled.filter((item) => item.source !== "auto").length,
             autoCount: filled.filter((item) => item.source === "auto").length,

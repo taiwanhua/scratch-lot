@@ -4,6 +4,7 @@ import { screen, waitFor, within } from "@testing-library/react";
 import { restoreViewportAfterEach, setupFakeViewport } from "@/test/viewport";
 
 import { renderSchedulePage } from "../../../schedule-test-support";
+import { timeValue } from "../roster-test-queries";
 import {
   rosterPath,
   searchParam,
@@ -86,7 +87,7 @@ describe("排班表:日檢視", () => {
     expect(
       within(dialog).getByRole("group", { name: /日期/ }),
     ).toHaveTextContent("2026-11-02");
-    expect(within(dialog).getByLabelText(/開始/)).toHaveValue("05:00");
+    expect(timeValue(dialog, /開始/)).toBe("05:00");
   });
 
   it("工具列 ◀ ▶ 換前一天 / 後一天;點日期彈出月曆(點 = 當天最嚴重的狀態:缺負責紅、只缺協同橘),選一天 → 切到那天;重新整理保持", async () => {

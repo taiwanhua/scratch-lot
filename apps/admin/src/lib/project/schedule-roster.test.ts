@@ -2,6 +2,8 @@ import { describe, expect, it } from "@jest/globals";
 
 import {
   datesOfMonth,
+  dayInstantOf,
+  dayRangeOf,
   daySummaryOf,
   demandAreaRows,
   demandCountText,
@@ -10,7 +12,11 @@ import {
   demandToneOf,
   entryChipOf,
   localPartsOf,
+  monthDayOf,
+  shiftDay,
+  shiftMonthOf,
   spanOf,
+  weekdayOf,
 } from "./schedule-roster";
 
 const TZ = "Asia/Taipei";
@@ -55,9 +61,36 @@ describe("排班表的時間換算(租戶時區)", () => {
     });
   });
 
-  it("一個月的每一天", () => {
+  it("結束 00:00 = 隔天 00:00(做到當天結束)", () => {
+    expect(spanOf("2026-11-04", "18:00", "00:00", TZ)).toEqual({
+      startAt: iso("2026-11-04", "18:00"),
+      endAt: iso("2026-11-05", "00:00"),
+    });
+  });
+
+  it("租戶時區不是台北:日期鍵 → 那天洛杉磯 00:00;期間是半開區間;夏令時間結束那天 25 小時", () => {
+    const LA = "America/Los_Angeles";
+    expect(dayInstantOf("2026-11-04", LA)).toBe("2026-11-04T08:00:00.000Z");
+    // 11/1 夏令時間結束:11/1 00:00 是 UTC−7,11/2 00:00 是 UTC−8
+    expect(dayRangeOf("2026-11-01", "2026-11-01", LA)).toEqual({
+      from: "2026-11-01T07:00:00.000Z",
+      to: "2026-11-02T08:00:00.000Z",
+    });
+    expect(spanOf("2026-11-04", "22:00", "06:00", LA)).toEqual({
+      startAt: "2026-11-05T06:00:00.000Z",
+      endAt: "2026-11-05T14:00:00.000Z",
+    });
+    expect(monthDayOf("2026-11-04", LA)).toBe("11/4");
+    expect(monthDayOf("", LA)).toBe("");
+  });
+
+  it("一個月的每一天、加減天 / 月、星期幾(日曆運算用 @repo/domain/form)", () => {
     expect(datesOfMonth("2026-02")).toHaveLength(28);
+    expect(datesOfMonth("2028-02")).toHaveLength(29);
     expect(datesOfMonth("2026-11").at(-1)).toBe("2026-11-30");
+    expect(shiftDay("2026-12-31", 1)).toBe("2027-01-01");
+    expect(shiftMonthOf("2026-01", -1)).toBe("2025-12");
+    expect(weekdayOf("2026-11-01")).toBe(0);
   });
 });
 

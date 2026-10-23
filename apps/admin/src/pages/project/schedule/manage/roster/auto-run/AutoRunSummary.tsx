@@ -16,11 +16,12 @@ import { Typography } from "@repo/ui/typography";
 
 import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
 import { useSession } from "@/hooks/base/useSession";
+import { useTemporalText } from "@/hooks/base/useTemporalText";
 import { useTenantTimezone } from "@/hooks/base/useTenantTimezone";
 import {
   datesOfMonth,
+  dayRangeOf,
   localPartsOf,
-  monthDayOf,
 } from "@/lib/project/schedule-roster";
 
 import { scheduleErrorKey } from "../../../schedule-error";
@@ -36,6 +37,7 @@ import { autoRunBlockedReasonOf, useAutoRunStatus } from "./auto-run-status";
 export const AutoRunSummary = () => {
   const t = useTranslations("admin.schedule.roster.autoRun");
   const timezone = useTenantTimezone() ?? DEFAULT_TENANT_TIMEZONE;
+  const text = useTemporalText();
   const { data } = useRosterCheck();
   const status = useAutoRunStatus();
   const [isClearing, setClearing] = useState(false);
@@ -50,7 +52,7 @@ export const AutoRunSummary = () => {
     <Box sx={{ bgcolor: "action.hover", borderRadius: 1, p: 1.5 }}>
       <Typography variant="body2">
         {t("summary", {
-          date: monthDayOf(at.date),
+          date: text(latest.at, "monthDay"),
           time: at.time,
           filled: latest.filledCount,
         })}
@@ -86,15 +88,17 @@ const ClearAutoDialog = ({ onClose }: { onClose: () => void }) => {
   const tErrors = useTranslations("admin.schedule.errors");
   const { session } = useSession();
   const queryClient = useQueryClient();
+  const timezone = useTenantTimezone() ?? DEFAULT_TENANT_TIMEZONE;
   const { data, month } = useRosterCheck();
   const days = datesOfMonth(month);
   const [from, setFrom] = useState(days.at(0) ?? "");
   const [to, setTo] = useState(days.at(-1) ?? "");
-  const isValid = from !== "" && to !== "" && from <= to;
+  // 選的是日期(含頭尾);api 收半開的時點區間 `[起 00:00, 迄隔天 00:00)`
+  const instants = from <= to ? dayRangeOf(from, to, timezone) : null;
+  const isValid = instants !== null;
   const range = {
     month,
-    from,
-    to,
+    ...(instants ?? { from: "", to: "" }),
     ...(data === undefined ? {} : { orgId: data.orgId }),
   };
   const preview = useScheduleAutoRunPreviewQuery(

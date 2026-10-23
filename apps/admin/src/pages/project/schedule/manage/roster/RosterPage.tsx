@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "use-intl";
 import { z } from "zod";
 
@@ -20,6 +20,7 @@ import { useSession } from "@/hooks/base/useSession";
 import { useTenantTimezone } from "@/hooks/base/useTenantTimezone";
 import { useTenantToday } from "@/hooks/base/useTenantToday";
 import { useUrlState } from "@/hooks/base/useUrlState";
+import { dayRangeOf } from "@/lib/project/schedule-roster";
 
 import { DemandDialog } from "./DemandDialog";
 import { EntryDialog } from "./EntryDialog";
@@ -38,6 +39,7 @@ import {
   isDemand,
   isEntry,
   rosterCellKey,
+  rosterDataOf,
 } from "./roster-context";
 import { ROSTER_TOOLBAR_ACTIONS } from "./roster-toolbar";
 import { readRosterView, writeRosterView } from "./roster-view-memory";
@@ -125,14 +127,24 @@ export const RosterPage = () => {
   /** 已經捲過的那一次請求(同一個物件就不再捲;新的請求是新物件) */
   const handledRequest = useRef<object | null>(null);
 
+  // 週檢視跨月多讀的日子(日期鍵,含頭尾)→ api 的半開時點區間
+  const readInstants =
+    readRange === null
+      ? null
+      : dayRangeOf(readRange.from, readRange.to, timezone);
   const query = useScheduleRosterQuery(session.client, {
     input: {
       month,
       ...(orgId === "" ? {} : { orgId }),
-      ...readRange,
+      ...readInstants,
     },
   });
-  const data = query.data?.scheduleRoster;
+  const raw = query.data?.scheduleRoster;
+  // 日期換成租戶時區的日期鍵(格子以它對日子);同一份 api 資料只換一次
+  const data = useMemo(
+    () => (raw === undefined ? undefined : rosterDataOf(raw, timezone)),
+    [raw, timezone],
+  );
 
   // 目標格子畫出來之後才捲並閃爍(直接在元素上播動畫,不經狀態)
   useEffect(() => {
