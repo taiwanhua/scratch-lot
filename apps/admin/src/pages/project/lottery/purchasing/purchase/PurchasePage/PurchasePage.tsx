@@ -246,7 +246,7 @@ export const PurchasePage = () => {
   }
 
   return (
-    // 列表頁殼(STYLE-08):平板以上釘高、表格在卡片裡捲(表頭固定);手機寬不釘高,整頁捲
+    // 列表頁殼(STYLE-08):平板以上且視窗夠高時釘高、表格在卡片裡捲(表頭固定);手機寬與矮視窗不釘高,整頁捲
     <Card
       sx={[
         LIST_PAGE_SHELL_SX,

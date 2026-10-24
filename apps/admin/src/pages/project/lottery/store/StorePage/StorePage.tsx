@@ -28,7 +28,7 @@ export const StorePage = (props: ModulePageProps) => {
   );
   const shellSx = usePageTabsShellSx(items);
   return (
-    // 分頁殼(STYLE-08):列表分頁平板以上釘高、表格在卡片裡捲;看板等內容分頁與手機寬整頁捲
+    // 分頁殼(STYLE-08):列表分頁平板以上且視窗夠高時釘高、表格在卡片裡捲;看板等內容分頁、手機寬與矮視窗整頁捲
     <Card
       sx={[
         shellSx,
