@@ -58,13 +58,15 @@ export const ScheduleTabsPage = ({ title, tabs }: ScheduleTabsPageProps) => {
   return (
     // 分頁殼(STYLE-08):列表分頁平板以上釘高、表格在卡片裡捲;內容分頁與手機寬整頁捲
     <Card
-      sx={{
-        ...shellSx,
-        display: "flex",
-        flexDirection: "column",
-        px: { xs: 2, sm: 3 },
-        py: 2,
-      }}
+      sx={[
+        shellSx,
+        {
+          display: "flex",
+          flexDirection: "column",
+          px: { xs: 2, sm: 3 },
+          py: 2,
+        },
+      ]}
     >
       {hasVisible ? (
         <PageTabs aria-label={title} items={items} />

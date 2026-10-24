@@ -22,7 +22,8 @@ review 最友善;Minimal Dashboard 級的統一感靠 theme 工程達成。
 ## STYLE-03 響應式只用 theme 斷點
 
 用 `sx` 的斷點物件語法(`{ xs: ..., md: ... }`)或 `theme.breakpoints`;不手寫
-`@media` 查詢。
+`@media` 查詢。theme 沒有高度斷點:要看視窗高度時,寬度一樣取 `theme.breakpoints.up(...)`,
+再接上 `and (min-height:…)`,而且條件寫成具名常數 / 函式只留一個正本(目前只有列表頁殼,見 STYLE-08 的 `listPagePinMediaQuery`)。
 
 ## STYLE-04 深色模式只透過 palette
 
@@ -147,9 +148,15 @@ expect(chain.slice(1, -1).filter((l) => l.scrolls)).toEqual([]); // 只有最內
 表格下面還有別的區塊、只有卡片清單(沒有表格)的分頁 —— 一律 `flexGrow: 1; flexShrink: 0`(`CONTENT_PAGE_SHELL_SX`):
 內容少時撐滿、多時跟著長,交給 `<main>` 捲。
 
-**列表頁與列表分頁:平板以上(`md` 起)在卡片裡捲、表頭固定;`md` 以下整頁捲**(`lib/base/list-page-layout.ts` 的 `LIST_PAGE_SHELL_SX`,
-`flex: { xs: "1 0 auto", md: 1 }` + `minHeight: 0`)。列表頁 = 工具列 + 一張長表格 + 分頁器,平板以上工具列與分頁器一直看得到、
-只有表格那一層捲;手機寬螢幕矮,整頁捲比卡片裡再捲一層好用,表頭跟著捲。
+**列表頁與列表分頁:寬 ≥ `md` 且視窗高 ≥ 720px 時在卡片裡捲、表頭固定;其餘(`md` 以下、或寬但矮)整頁捲**
+(`lib/base/list-page-layout.ts` 的 `LIST_PAGE_SHELL_SX`:`flex: 1 0 auto` + `minHeight: 0`,在 `listPagePinMediaQuery` 成立時換成 `flex: 1`)。
+列表頁 = 工具列 + 一張長表格 + 分頁器,夠大的視窗裡工具列與分頁器一直看得到、只有表格那一層捲;手機寬螢幕矮,
+寬但矮的視窗(例:1024×600 的平板橫放,扣掉頁首、工具列、分頁器後表格只剩約 94px)也一樣,整頁捲比卡片裡再捲一層好用,表頭跟著捲。
+
+- **釘高的條件只有一個正本**:`listPagePinMediaQuery(theme)`(寬度取 theme 斷點 `md`,再接上 `LIST_PAGE_PIN_MIN_HEIGHT` 的高度條件;
+  高度不是 theme 斷點能表達的,STYLE-03 的例外只限這一處)。要跟頁殼同步釘高 / 開捲動的樣式一律用它,不另寫 `@media`。
+- `LIST_PAGE_SHELL_SX` 是 theme 函式(媒體查詢要讀 theme 斷點),不能用 `...` 展開:呼叫端用 `sx` 陣列疊加,
+  `sx={[LIST_PAGE_SHELL_SX, { display: "flex", px: 3 }]}`(`usePageTabsShellSx` 回傳值同樣用陣列疊)。
 
 - 整頁都是列表分頁的頁殼直接用 `LIST_PAGE_SHELL_SX`;分頁混著列表與內容的頁殼用 `usePageTabsShellSx(items)`,
   列表分頁在 `PageTabItem` 標 `isList: true`(分頁登記表照樣帶這個欄位),選到它時才換成列表頁殼。
@@ -176,10 +183,11 @@ expect(chain.slice(1, -1).filter((l) => l.scrolls)).toEqual([]); // 只有最內
 - 測試:頁殼卡片斷言 `flex-shrink: 0`;殼本身斷言 `<main>` 可捲、`shell-content` 不裁切(先例 `app/AdminShell/ShellLayout.test.tsx`);量測 hook 見 `hooks/base/useFitMainHeight.test.tsx`
   (它觀察 `<main>`、邊界與邊界往上到 `<main>` 的每一層:上方工具列在資料載入後換行長高時,只有外層會變尺寸)。
   **通用守門** `app/PageRootHeight.test.tsx`:用 mock 假世界(TEST-08)渲染每個有模組的列表頁、新增頁與個人設定,逐一點開每個分頁,
-  以 `test/height-chain.ts` 讀頁面根在手機寬(390)與平板寬(1024)的宣告(jsdom 不套 `@media`,讀宣告原文):
+  以 `test/height-chain.ts` 讀頁面根在手機寬(390)、平板寬(1024×768)與寬但矮(1024×600)的宣告
+  (jsdom 不套 `@media`,讀宣告原文;`test/media-rules.ts` 的 `mediaRulesAt` 依視窗寬高判斷 `min/max-width`、`min/max-height` 條件):
   `squeezedPageRootProblem` —— 會裁切的根要 `flex-shrink: 0`,或釘高且子樹有一層經 `min-height: 0` 接上來的捲動容器,
-  分頁殼在手機寬不得釘高;`isListPageShell` 對照列表頁 / 列表分頁清單(這份清單就是決定本身:底座的寫在該測試,專案的在 `test/project/list-page-shells.ts`);
-  列表分頁在平板寬另驗表格那一層的高度鏈接到 `<main>`、沒有多開的捲動層、表頭 `stickyHeader`。新頁只要在假世界有模組就自動納入。
+  分頁殼在手機寬與寬但矮的視窗不得釘高;`isListPageShell` 對照列表頁 / 列表分頁清單(這份清單就是決定本身:底座的寫在該測試,專案的在 `test/project/list-page-shells.ts`);
+  列表頁 / 列表分頁另驗 1024×600 不釘高、1024×768 釘高,並在平板寬驗表格那一層的高度鏈接到 `<main>`、沒有多開的捲動層、表頭 `stickyHeader`。新頁只要在假世界有模組就自動納入。
 
 **同一條鏈只標一次 `overflow: auto`**:父子兩層各標一次時,平常看不出來 ——
 兩層都是「高度跟著內容長」就不會有人捲;等到內層拿到確定高度(或內容給了 `minWidth`),

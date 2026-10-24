@@ -89,13 +89,15 @@ export const AccountsPage = () => {
   return (
     // 列表分頁的分頁殼(STYLE-08):平板以上釘高、表格在卡片裡捲(表頭固定);手機寬不釘高,整頁捲
     <Card
-      sx={{
-        ...LIST_PAGE_SHELL_SX,
-        display: "flex",
-        flexDirection: "column",
-        px: { xs: 2, sm: 3 },
-        py: 2,
-      }}
+      sx={[
+        LIST_PAGE_SHELL_SX,
+        {
+          display: "flex",
+          flexDirection: "column",
+          px: { xs: 2, sm: 3 },
+          py: 2,
+        },
+      ]}
     >
       <PageTabs aria-label={t("tabs.aria")} items={items} actions={action} />
     </Card>

@@ -126,13 +126,15 @@ export const WorkflowBlockedPage = () => {
   return (
     // 列表頁殼(STYLE-08):平板以上釘高、表格在卡片裡捲(表頭固定);手機寬不釘高,整頁捲
     <Card
-      sx={{
-        ...LIST_PAGE_SHELL_SX,
-        display: "flex",
-        flexDirection: "column",
-        px: 3,
-        py: 2,
-      }}
+      sx={[
+        LIST_PAGE_SHELL_SX,
+        {
+          display: "flex",
+          flexDirection: "column",
+          px: 3,
+          py: 2,
+        },
+      ]}
     >
       <Stack spacing={2} sx={{ flex: 1, minHeight: 0 }}>
         <Stack direction="row" spacing={2} sx={{ alignItems: "center" }}>

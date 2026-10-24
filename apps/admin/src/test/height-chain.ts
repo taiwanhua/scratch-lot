@@ -1,4 +1,6 @@
-import { mediaRulesOf } from "./media-rules";
+import { LIST_PAGE_PIN_MIN_HEIGHT } from "@/lib/base/list-page-layout";
+
+import { mediaRulesAt } from "./media-rules";
 
 /**
  * 滿版版面的高度鏈檢查(STYLE-08 / STYLE-11;滿版高度曾反覆被回報)。
@@ -107,11 +109,23 @@ export const pageRootOf = (anchor: HTMLElement): HTMLElement => {
   throw new Error("找不到 shell-content:這個元素不在殼的內容區裡");
 };
 
-/** 主題斷點(MUI 預設,px):`sx` 的斷點物件每個斷點各一條 `@media (min-width:<值>px)`。 */
-const BREAKPOINTS = [0, 600, 900, 1200, 1536] as const;
-
-/** 列表頁殼釘高的起點(`md`;`lib/base/list-page-layout.ts` 的 `LIST_PAGE_PIN_BREAKPOINT`)。 */
+/** 列表頁殼釘高的寬度起點(`md`;`lib/base/list-page-layout.ts` 的 `LIST_PAGE_PIN_BREAKPOINT`)。 */
 export const LIST_PIN_MIN_WIDTH = 900;
+
+/** 列表頁殼釘高的視窗高度下限(正本 `lib/base/list-page-layout.ts` 的 `LIST_PAGE_PIN_MIN_HEIGHT`)。 */
+export const LIST_PIN_MIN_HEIGHT = LIST_PAGE_PIN_MIN_HEIGHT;
+
+/**
+ * 沒指定視窗高時用的高度(px):夠高、會釘高的一般平板 / 桌機視窗(1024×768)。
+ * 要驗「寬但矮」(例:1024×600 的平板橫放)時明確傳高度。
+ */
+export const DEFAULT_VIEWPORT_HEIGHT = 768;
+
+/** 這個視窗大小會不會讓列表頁殼釘高(寬 ≥ `md` 且高 ≥ 720px)。 */
+export const isListPinViewport = (
+  width: number,
+  height = DEFAULT_VIEWPORT_HEIGHT,
+): boolean => width >= LIST_PIN_MIN_WIDTH && height >= LIST_PIN_MIN_HEIGHT;
 
 /** `flex` 簡寫 → 三個值(只處理 sx 會產生的寫法:`1`、`1 0 auto`、`none`)。 */
 const expandFlex = (value: string) => {
@@ -130,10 +144,15 @@ const declarationIn = (cssText: string, property: string) => {
 };
 
 /**
- * 頁面根在視窗寬 `width` 時宣告的 flex 與 min-height:先取不分斷點的值(getComputedStyle),
- * 再依序疊上不超過 `width` 的每條斷點 `@media` 宣告(jsdom 不套 `@media`,只能讀宣告;`test/media-rules.ts`)。
+ * 頁面根在視窗 `width` × `height` 時宣告的 flex 與 min-height:先取不分條件的值(getComputedStyle),
+ * 再依樣式表順序疊上在這個視窗下成立的每條 `@media` 宣告(斷點物件的 `min-width`,
+ * 以及列表頁殼的 `min-width … and min-height …`;jsdom 不套 `@media`,只能讀宣告;`test/media-rules.ts`)。
  */
-export const declaredFlexAt = (element: HTMLElement, width: number) => {
+export const declaredFlexAt = (
+  element: HTMLElement,
+  width: number,
+  height = DEFAULT_VIEWPORT_HEIGHT,
+) => {
   const style = globalThis.getComputedStyle(element);
   const declared = {
     flexGrow: style.flexGrow,
@@ -141,8 +160,7 @@ export const declaredFlexAt = (element: HTMLElement, width: number) => {
     flexBasis: style.flexBasis,
     minHeight: style.minHeight,
   };
-  for (const breakpoint of BREAKPOINTS.filter((value) => value <= width)) {
-    const text = mediaRulesOf(element, breakpoint);
+  for (const text of mediaRulesAt(element, { width, height })) {
     const flex = declarationIn(text, "flex");
     if (flex !== undefined) {
       Object.assign(declared, expandFlex(flex));
@@ -165,8 +183,9 @@ export const declaredFlexAt = (element: HTMLElement, width: number) => {
 export const pageRootLinkOf = (
   root: HTMLElement,
   width: number,
+  height = DEFAULT_VIEWPORT_HEIGHT,
 ): PageRootLink => {
-  const declared = declaredFlexAt(root, width);
+  const declared = declaredFlexAt(root, width, height);
   return {
     ...linkOf(root),
     ...declared,
@@ -175,8 +194,12 @@ export const pageRootLinkOf = (
 };
 
 /** 釘高 = `flex-basis: 0` + `min-height: 0`(高度由殼給,不看內容)。 */
-export const isPinnedAt = (root: HTMLElement, width: number): boolean => {
-  const declared = declaredFlexAt(root, width);
+export const isPinnedAt = (
+  root: HTMLElement,
+  width: number,
+  height = DEFAULT_VIEWPORT_HEIGHT,
+): boolean => {
+  const declared = declaredFlexAt(root, width, height);
   return isZero(declared.minHeight) && isZero(declared.flexBasis);
 };
 
@@ -191,12 +214,14 @@ export interface ListPageShellDecisions {
 }
 
 /**
- * 列表頁殼(`LIST_PAGE_SHELL_SX`):`md` 以下不釘高(`flex-shrink: 0`)、平板以上(`md` 起)釘高。
- * 主從版面從 `sm` 起就釘高,不算(REACT-17)。
+ * 列表頁殼(`LIST_PAGE_SHELL_SX`):寬 ≥ `md` 且視窗高 ≥ 720px 才釘高;`md` 以下、或寬但矮的視窗
+ * 不釘高(`flex-shrink: 0`,整頁捲)。主從版面從 `sm` 起就釘高、不看高度,不算(REACT-17)。
  */
 export const isListPageShell = (root: HTMLElement): boolean =>
   declaredFlexAt(root, LIST_PIN_MIN_WIDTH - 1).flexShrink === "0" &&
-  isPinnedAt(root, LIST_PIN_MIN_WIDTH);
+  declaredFlexAt(root, LIST_PIN_MIN_WIDTH, LIST_PIN_MIN_HEIGHT - 1)
+    .flexShrink === "0" &&
+  isPinnedAt(root, LIST_PIN_MIN_WIDTH, LIST_PIN_MIN_HEIGHT);
 
 /** 子樹裡有一層捲動容器,從它到 `root` 的每一層都 `min-height: 0`:超出量由它吃掉。 */
 const hasAbsorbingScroller = (root: HTMLElement) =>
@@ -217,7 +242,7 @@ const hasAbsorbingScroller = (root: HTMLElement) =>
   });
 
 /**
- * 頁面根在視窗寬 `width` 時會不會被殼的 flex 欄壓扁、把內容裁掉(STYLE-08;回傳問題描述,沒問題回 null)。
+ * 頁面根在視窗 `width` × `height` 時會不會被殼的 flex 欄壓扁、把內容裁掉(STYLE-08;回傳問題描述,沒問題回 null)。
  *
  * 殼的內容區是釘了高的 column flex,子層預設 `flex-shrink: 1`;`overflow` 不是 visible 的子層,
  * `min-height: auto` 算成 0 —— 內容一長,裁切的根(`Card` / `Paper`)就被壓到殼高、超出的部分直接消失,
@@ -226,26 +251,27 @@ const hasAbsorbingScroller = (root: HTMLElement) =>
  * 1. 不裁切(`Stack` / `Box` 這類 overflow visible 的根,壓了內容也會溢出給 `<main>` 捲),或 `flex-shrink: 0`
  *    (一般內容頁 `flexGrow: 1; flexShrink: 0`,內容多時跟著長);
  * 2. 刻意釘高(`flex-basis: 0` + `min-height: 0`),而且子樹有一層捲動容器,從它到頁面根的每一層都 `min-height: 0`
- *    (主從版面、列表頁:超出量由那一層吃掉)。頁內分頁殼(根裡有 `tabpanel`)只有列表分頁在平板以上可以釘高,
- *    手機寬一律不釘。
+ *    (主從版面、列表頁:超出量由那一層吃掉)。頁內分頁殼(根裡有 `tabpanel`)只有列表分頁在寬 ≥ `md`
+ *    且視窗夠高時可以釘高,手機寬與寬但矮的視窗一律不釘。
  */
 export const squeezedPageRootProblem = (
   root: HTMLElement,
   width: number,
+  height = DEFAULT_VIEWPORT_HEIGHT,
 ): string | null => {
-  const link = pageRootLinkOf(root, width);
+  const link = pageRootLinkOf(root, width, height);
   if (!link.clips || link.flexShrink === "0") {
     return null;
   }
-  const at = `${String(width)}px 寬`;
-  if (!isPinnedAt(root, width)) {
+  const at = `${String(width)}×${String(height)}px`;
+  if (!isPinnedAt(root, width, height)) {
     return `${at}:${link.label} 會被壓扁:裁切溢出、flex-shrink ${link.flexShrink || "未宣告(預設 1)"}、flex-basis ${link.flexBasis || "未宣告(預設 auto)"}(一般內容頁用 flexGrow 1 + flexShrink 0)`;
   }
   if (
-    width < LIST_PIN_MIN_WIDTH &&
+    !isListPinViewport(width, height) &&
     root.querySelector('[role="tabpanel"]') !== null
   ) {
-    return `${at}:${link.label} 是頁內分頁殼,手機寬卻釘了高(列表分頁用 LIST_PAGE_SHELL_SX,其餘 flexGrow 1 + flexShrink 0)`;
+    return `${at}:${link.label} 是頁內分頁殼,這個視窗不該釘高(列表分頁用 LIST_PAGE_SHELL_SX,其餘 flexGrow 1 + flexShrink 0)`;
   }
   return hasAbsorbingScroller(root)
     ? null

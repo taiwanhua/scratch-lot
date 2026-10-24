@@ -259,10 +259,11 @@ export const ByPersonTab = () => {
   const unmatched = data?.unmatched ?? [];
 
   return (
-    // 內容比分頁高時在分頁內捲動(卡片不被壓扁)
-    <Box sx={{ flex: 1, minHeight: 0, overflow: "auto", pt: 1 }}>
-      <Stack spacing={2}>
-        {toolbar}
+    // 列表分頁(STYLE-08):最外層 `flex: 1; minHeight: 0`,清單外面再包一層 `flex: 1; minHeight: 0`、只放清單,
+    // 平板以上且視窗夠高時由表格在卡片裡捲(表頭固定);工具列與未對應排班的打卡在那一層外面
+    <Stack spacing={2} sx={{ flex: 1, minHeight: 0, pt: 1 }}>
+      {toolbar}
+      <Box sx={{ flex: 1, minHeight: 0 }}>
         {isNarrow ? (
           <Stack spacing={1.5} aria-label={t("rowsAria")} role="list">
             {rows.map((row) => (
@@ -316,51 +317,51 @@ export const ByPersonTab = () => {
             emptyMessage={t("emptyMonth")}
           />
         )}
-        {unmatched.length > 0 && (
-          <Card
-            sx={{ p: 2 }}
-            component="section"
-            aria-label={t("unmatchedTitle")}
-          >
-            <Stack spacing={1}>
-              <Typography variant="subtitle2" component="h3">
-                {t("unmatchedTitle")}
-              </Typography>
-              {unmatched.map((punch) => (
-                <Stack
-                  key={punch.id}
-                  direction="row"
-                  spacing={1}
-                  sx={{ alignItems: "center", justifyContent: "space-between" }}
-                >
-                  <Typography variant="body2">
-                    {`${punch.orgName} · ${text.punchLabel(punch)}`}
-                  </Typography>
-                  {canReassign && (
-                    <Button
-                      variant="outlined"
-                      size="small"
-                      onClick={() => {
-                        setReassigning([punch]);
-                      }}
-                    >
-                      {t("reassignButton")}
-                    </Button>
-                  )}
-                </Stack>
-              ))}
-            </Stack>
-          </Card>
-        )}
-        {reassigning !== null && (
-          <ReassignPunchDialog
-            punches={reassigning}
-            onClose={() => {
-              setReassigning(null);
-            }}
-          />
-        )}
-      </Stack>
-    </Box>
+      </Box>
+      {unmatched.length > 0 && (
+        <Card
+          sx={{ p: 2, flexShrink: 0 }}
+          component="section"
+          aria-label={t("unmatchedTitle")}
+        >
+          <Stack spacing={1}>
+            <Typography variant="subtitle2" component="h3">
+              {t("unmatchedTitle")}
+            </Typography>
+            {unmatched.map((punch) => (
+              <Stack
+                key={punch.id}
+                direction="row"
+                spacing={1}
+                sx={{ alignItems: "center", justifyContent: "space-between" }}
+              >
+                <Typography variant="body2">
+                  {`${punch.orgName} · ${text.punchLabel(punch)}`}
+                </Typography>
+                {canReassign && (
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={() => {
+                      setReassigning([punch]);
+                    }}
+                  >
+                    {t("reassignButton")}
+                  </Button>
+                )}
+              </Stack>
+            ))}
+          </Stack>
+        </Card>
+      )}
+      {reassigning !== null && (
+        <ReassignPunchDialog
+          punches={reassigning}
+          onClose={() => {
+            setReassigning(null);
+          }}
+        />
+      )}
+    </Stack>
   );
 };

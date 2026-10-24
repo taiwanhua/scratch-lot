@@ -219,114 +219,127 @@ export const ByStoreTab = () => {
   const unmatchedGroups = groupByPerson(data?.unmatched ?? []);
   const rows = data?.rows ?? [];
 
-  return (
-    // 內容比分頁高時在分頁內捲動(卡片不被壓扁)
-    <Box sx={{ flex: 1, minHeight: 0, overflow: "auto", pt: 1 }}>
-      <Stack spacing={2}>
-        {toolbar}
-        {data !== undefined && (
-          <Typography variant="subtitle2" component="p">
-            {t("summary", {
-              scheduled: data.scheduledCount,
-              arrived: data.arrivedCount,
-              absent: data.absentCount,
-              unmatched: data.unmatched.length,
-            })}
+  const unmatchedCard = (
+    <Card
+      sx={{ p: 2, flexShrink: 0 }}
+      component="section"
+      aria-label={t("unmatchedTitle")}
+    >
+      <Stack spacing={1}>
+        <Typography variant="subtitle2" component="h3">
+          {t("unmatchedTitle")}
+        </Typography>
+        {unmatchedGroups.length === 0 && (
+          <Typography variant="body2" color="textSecondary">
+            {t("unmatchedEmpty")}
           </Typography>
         )}
-        {!unmatchedOnly &&
-          (isNarrow ? (
-            <Stack spacing={1.5} aria-label={t("rowsAria")} role="list">
-              {rows.map((row) => (
-                <Card key={row.entryId} role="listitem" sx={{ p: 2 }}>
-                  <Stack spacing={0.75}>
-                    <Stack
-                      direction="row"
-                      spacing={1}
-                      sx={{
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                      }}
-                    >
-                      <Typography variant="subtitle2">
-                        {row.userName}
-                      </Typography>
-                      <AttendanceStatusTags row={row} />
-                    </Stack>
-                    <Typography variant="body2" color="textSecondary">
-                      {t("cardLine", {
-                        entry: text.entry(row),
-                        clockIn: text.time(row.clockIn) ?? t("none"),
-                        clockOut: text.time(row.clockOut) ?? t("none"),
-                      })}
-                    </Typography>
-                    <Box>{reassignButton(row.punches)}</Box>
-                  </Stack>
-                </Card>
-              ))}
-              {rows.length === 0 && !query.isLoading && (
-                <Typography color="textSecondary">{t("emptyRows")}</Typography>
-              )}
-            </Stack>
-          ) : (
-            <Table
-              minWidth={720}
-              aria-label={t("rowsAria")}
-              columns={columns}
-              rows={rows}
-              getRowKey={(row) => row.entryId}
-              isLoading={query.isLoading}
-              emptyMessage={t("emptyRows")}
-            />
-          ))}
-        {(unmatchedOnly || unmatchedGroups.length > 0) && (
-          <Card
-            sx={{ p: 2 }}
-            component="section"
-            aria-label={t("unmatchedTitle")}
-          >
-            <Stack spacing={1}>
-              <Typography variant="subtitle2" component="h3">
-                {t("unmatchedTitle")}
-              </Typography>
-              {unmatchedGroups.length === 0 && (
-                <Typography variant="body2" color="textSecondary">
-                  {t("unmatchedEmpty")}
-                </Typography>
-              )}
-              {unmatchedGroups.map((punches) => (
-                <Stack
-                  key={punches[0]?.userId}
-                  direction="row"
-                  spacing={1}
-                  useFlexGap
-                  sx={{
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    flexWrap: "wrap",
-                  }}
-                >
-                  <Typography variant="body2">
-                    {[
-                      punches[0]?.userName ?? "",
-                      ...punches.map((punch) => text.punchShort(punch)),
-                    ].join(" · ")}
-                  </Typography>
-                  {reassignButton(punches, "outlined")}
-                </Stack>
-              ))}
-            </Stack>
-          </Card>
-        )}
-        {reassigning !== null && (
-          <ReassignPunchDialog
-            punches={reassigning}
-            onClose={() => {
-              setReassigning(null);
+        {unmatchedGroups.map((punches) => (
+          <Stack
+            key={punches[0]?.userId}
+            direction="row"
+            spacing={1}
+            useFlexGap
+            sx={{
+              alignItems: "center",
+              justifyContent: "space-between",
+              flexWrap: "wrap",
             }}
-          />
-        )}
+          >
+            <Typography variant="body2">
+              {[
+                punches[0]?.userName ?? "",
+                ...punches.map((punch) => text.punchShort(punch)),
+              ].join(" · ")}
+            </Typography>
+            {reassignButton(punches, "outlined")}
+          </Stack>
+        ))}
       </Stack>
-    </Box>
+    </Card>
+  );
+
+  return (
+    // 列表分頁(STYLE-08):最外層 `flex: 1; minHeight: 0`,清單外面再包一層 `flex: 1; minHeight: 0`、只放清單,
+    // 平板以上且視窗夠高時由表格在卡片裡捲(表頭固定);工具列、摘要與未對應排班的打卡在那一層外面。
+    // 只看未對應排班的打卡時沒有表格,改由那一層自己捲
+    <Stack spacing={2} sx={{ flex: 1, minHeight: 0, pt: 1 }}>
+      {toolbar}
+      {data !== undefined && (
+        <Typography variant="subtitle2" component="p">
+          {t("summary", {
+            scheduled: data.scheduledCount,
+            arrived: data.arrivedCount,
+            absent: data.absentCount,
+            unmatched: data.unmatched.length,
+          })}
+        </Typography>
+      )}
+      {unmatchedOnly ? (
+        <Box sx={{ flex: 1, minHeight: 0, overflow: "auto" }}>
+          {unmatchedCard}
+        </Box>
+      ) : (
+        <>
+          <Box sx={{ flex: 1, minHeight: 0 }}>
+            {isNarrow ? (
+              <Stack spacing={1.5} aria-label={t("rowsAria")} role="list">
+                {rows.map((row) => (
+                  <Card key={row.entryId} role="listitem" sx={{ p: 2 }}>
+                    <Stack spacing={0.75}>
+                      <Stack
+                        direction="row"
+                        spacing={1}
+                        sx={{
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                        }}
+                      >
+                        <Typography variant="subtitle2">
+                          {row.userName}
+                        </Typography>
+                        <AttendanceStatusTags row={row} />
+                      </Stack>
+                      <Typography variant="body2" color="textSecondary">
+                        {t("cardLine", {
+                          entry: text.entry(row),
+                          clockIn: text.time(row.clockIn) ?? t("none"),
+                          clockOut: text.time(row.clockOut) ?? t("none"),
+                        })}
+                      </Typography>
+                      <Box>{reassignButton(row.punches)}</Box>
+                    </Stack>
+                  </Card>
+                ))}
+                {rows.length === 0 && !query.isLoading && (
+                  <Typography color="textSecondary">
+                    {t("emptyRows")}
+                  </Typography>
+                )}
+              </Stack>
+            ) : (
+              <Table
+                minWidth={720}
+                aria-label={t("rowsAria")}
+                columns={columns}
+                rows={rows}
+                getRowKey={(row) => row.entryId}
+                isLoading={query.isLoading}
+                emptyMessage={t("emptyRows")}
+              />
+            )}
+          </Box>
+          {unmatchedGroups.length > 0 && unmatchedCard}
+        </>
+      )}
+      {reassigning !== null && (
+        <ReassignPunchDialog
+          punches={reassigning}
+          onClose={() => {
+            setReassigning(null);
+          }}
+        />
+      )}
+    </Stack>
   );
 };
