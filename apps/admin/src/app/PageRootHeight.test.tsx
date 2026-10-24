@@ -4,10 +4,12 @@ import { screen, waitFor, within } from "@testing-library/react";
 import { PERSONAL_SETTINGS_PATH } from "@/lib/base/paths";
 import { mockHandlers, mockModules } from "@/mock/mock-world";
 import {
+  LIST_PIN_MIN_HEIGHT,
   LIST_PIN_MIN_WIDTH,
   type ListPageShellDecisions,
   heightChainOf,
   isListPageShell,
+  isPinnedAt,
   squeezedPageRootProblem,
 } from "@/test/height-chain";
 import { server } from "@/test/msw/server";
@@ -74,12 +76,21 @@ const CASES: PageCase[] = [
   { view: "tenant", path: `${PERSONAL_SETTINGS_PATH}?tab=delegations` },
 ];
 
-/** 手機寬與平板寬(`md` 起)各驗一次頁面根的宣告。 */
+/**
+ * 手機寬、平板寬(`md` 起,夠高)與「寬但矮」(平板橫放 1024×600:列表頁殼不釘高、整頁捲)各驗一次頁面根的宣告。
+ */
 const MOBILE_WIDTH = 390;
 const TABLET_WIDTH = 1024;
+const TABLET_HEIGHT = 768;
+const SHORT_HEIGHT = 600;
+const VIEWPORTS = [
+  { width: MOBILE_WIDTH, height: TABLET_HEIGHT },
+  { width: TABLET_WIDTH, height: TABLET_HEIGHT },
+  { width: TABLET_WIDTH, height: SHORT_HEIGHT },
+] as const;
 
 /**
- * 底座的列表頁(`LIST_PAGE_SHELL_SX`:平板以上釘高、表格在卡片裡捲,手機寬整頁捲)。
+ * 底座的列表頁(`LIST_PAGE_SHELL_SX`:平板以上且視窗夠高時釘高、表格在卡片裡捲,手機寬與矮視窗整頁捲)。
  * 這份清單是決定本身:新列表頁要用列表頁殼就加進來;表單、設定、看板、個人設定等內容頁不在這裡(整頁捲)。
  * 專案的列表頁 / 列表分頁登記在 `test/project/list-page-shells.ts`(專案加頁只改那一支,不碰這裡)。
  */
@@ -185,10 +196,13 @@ describe("殼內頁面的頁面根不被壓扁(STYLE-08)", () => {
     if (!(root instanceof HTMLElement)) {
       throw new TypeError("頁面根不是 HTML 元素");
     }
-    expect(squeezedPageRootProblem(root, MOBILE_WIDTH)).toBeNull();
-    expect(squeezedPageRootProblem(root, TABLET_WIDTH)).toBeNull();
+    for (const { width, height } of VIEWPORTS) {
+      expect(squeezedPageRootProblem(root, width, height)).toBeNull();
+    }
     const [bare = path] = path.split("?", 1);
     expect(TABLET_WIDTH).toBeGreaterThanOrEqual(LIST_PIN_MIN_WIDTH);
+    expect(TABLET_HEIGHT).toBeGreaterThanOrEqual(LIST_PIN_MIN_HEIGHT);
+    expect(SHORT_HEIGHT).toBeLessThan(LIST_PIN_MIN_HEIGHT);
     // 有分頁的頁:逐一點每個分頁,列表分頁(LIST_PAGES 的整頁、LIST_TABS 的單一分頁)在平板寬由卡片裡那一層捲、
     // 表頭固定;其餘分頁整頁捲(頁殼不釘高也不被壓扁)
     const tablist = within(root).queryAllByRole("tablist").at(0);
@@ -204,16 +218,27 @@ describe("殼內頁面的頁面根不被壓扁(STYLE-08)", () => {
       }
       if (isListPageShell(root) !== expected) {
         problems.push(
-          `${label}:${expected ? "應該是" : "不應該是"}列表頁殼(平板以上釘高、手機寬整頁捲)`,
+          `${label}:${expected ? "應該是" : "不應該是"}列表頁殼(寬 ≥ md 且夠高才釘高、手機寬與矮視窗整頁捲)`,
         );
       }
-      for (const width of [MOBILE_WIDTH, TABLET_WIDTH]) {
-        const problem = squeezedPageRootProblem(root, width);
+      for (const { width, height } of VIEWPORTS) {
+        const problem = squeezedPageRootProblem(root, width, height);
         if (problem !== null) {
           problems.push(`${label}:${problem}`);
         }
       }
       if (expected) {
+        // 寬但矮:不釘高、整頁交給 <main> 捲(表頭跟著捲);寬且夠高:釘高、表格在卡片裡捲
+        if (isPinnedAt(root, TABLET_WIDTH, SHORT_HEIGHT)) {
+          problems.push(
+            `${label}:${String(TABLET_WIDTH)}×${String(SHORT_HEIGHT)} 不應釘高(矮視窗整頁捲)`,
+          );
+        }
+        if (!isPinnedAt(root, TABLET_WIDTH, TABLET_HEIGHT)) {
+          problems.push(
+            `${label}:${String(TABLET_WIDTH)}×${String(TABLET_HEIGHT)} 應釘高(表格在卡片裡捲)`,
+          );
+        }
         problems.push(...listTableProblems(root, label));
       }
     };

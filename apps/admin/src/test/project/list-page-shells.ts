@@ -28,5 +28,7 @@ export const projectListPageShells: ListPageShellDecisions = {
     "/schedule/settings#排班人員",
     "/schedule/settings#人力需求範本",
     "/schedule/settings#人力需求週範本",
+    "/schedule/attendance#依人員(月)",
+    "/schedule/attendance#依分店(日)",
   ],
 };

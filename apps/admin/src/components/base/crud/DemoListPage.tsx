@@ -170,7 +170,7 @@ export const DemoListPage = <
   };
 
   return (
-    // 列表頁殼(STYLE-08):平板以上撐滿殼高、工具列固定、表格吃掉剩下的高度並自己捲;手機寬不釘高,整頁捲
+    // 列表頁殼(STYLE-08):平板以上且視窗夠高時撐滿殼高、工具列固定、表格吃掉剩下的高度並自己捲;手機寬與矮視窗不釘高,整頁捲
     <Stack spacing={2} sx={LIST_PAGE_SHELL_SX}>
       <DemoListToolbar
         i18nNamespace={i18nNamespace}
