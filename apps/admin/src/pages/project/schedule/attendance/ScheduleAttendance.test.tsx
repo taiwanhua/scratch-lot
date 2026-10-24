@@ -1,6 +1,8 @@
 import { describe, expect, it } from "@jest/globals";
 import { screen, waitFor, within } from "@testing-library/react";
 
+import { LIST_PAGE_ASIDE_MAX_HEIGHT } from "@/lib/base/list-page-layout";
+import { mediaRulesAt } from "@/test/media-rules";
 import {
   MAKEUP_ENTRY_DELETED_ID,
   MAKEUP_REVIEWING_ID,
@@ -44,6 +46,23 @@ describe("出勤紀錄", () => {
     expect(
       screen.getByText("張小芳 · 09:02 上班 · 15:10 下班"),
     ).toBeInTheDocument();
+  });
+
+  it("依分店(日):未對應排班的打卡在表格上方;釘高時(1024×768)限高自捲、矮視窗(1024×600)不限高(STYLE-08)", async () => {
+    renderSchedulePage({ path: BY_STORE });
+    const table = await screen.findByRole("table", { name: "出勤紀錄" });
+    const aside = await screen.findByRole("region", { name: "未對應排班" });
+    expect(
+      aside.compareDocumentPosition(table) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    const capped = `max-height: ${LIST_PAGE_ASIDE_MAX_HEIGHT}`;
+    const pinned = mediaRulesAt(aside, { width: 1024, height: 768 }).join(" ");
+    expect(pinned).toContain(capped);
+    expect(pinned).toContain("overflow: auto");
+    expect(
+      mediaRulesAt(aside, { width: 1024, height: 600 }).join(" "),
+    ).not.toContain(capped);
+    expect(globalThis.getComputedStyle(aside).flexShrink).toBe("0");
   });
 
   it("改對應排班:原因必填;選了原因送出 → 帶對應排班與原因", async () => {

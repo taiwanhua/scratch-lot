@@ -25,6 +25,7 @@ import { OrgTreeSelect } from "@/components/base/OrgTreeSelect/OrgTreeSelect";
 import { useSession } from "@/hooks/base/useSession";
 import { useTenantToday } from "@/hooks/base/useTenantToday";
 import { useUrlState } from "@/hooks/base/useUrlState";
+import { LIST_PAGE_ASIDE_SX } from "@/lib/base/list-page-layout";
 import { monthRangeOf } from "@/lib/project/schedule-day-offs";
 import { dayInstantOf, shiftDay } from "@/lib/project/schedule-roster";
 
@@ -219,9 +220,10 @@ export const ByStoreTab = () => {
   const unmatchedGroups = groupByPerson(data?.unmatched ?? []);
   const rows = data?.rows ?? [];
 
-  const unmatchedCard = (
+  // 只看未對應排班的打卡時它是唯一的內容(由外層那一層捲);否則是表格上方的區塊(限高自捲)
+  const unmatchedCard = (isAside: boolean) => (
     <Card
-      sx={{ p: 2, flexShrink: 0 }}
+      sx={isAside ? [LIST_PAGE_ASIDE_SX, { p: 2 }] : { p: 2 }}
       component="section"
       aria-label={t("unmatchedTitle")}
     >
@@ -261,7 +263,7 @@ export const ByStoreTab = () => {
 
   return (
     // 列表分頁(STYLE-08):最外層 `flex: 1; minHeight: 0`,清單外面再包一層 `flex: 1; minHeight: 0`、只放清單,
-    // 平板以上且視窗夠高時由表格在卡片裡捲(表頭固定);工具列、摘要與未對應排班的打卡在那一層外面。
+    // 平板以上且視窗夠高時由表格在卡片裡捲(表頭固定);未對應排班的打卡放在表格上方、限高自捲(LIST_PAGE_ASIDE_SX)。
     // 只看未對應排班的打卡時沒有表格,改由那一層自己捲
     <Stack spacing={2} sx={{ flex: 1, minHeight: 0, pt: 1 }}>
       {toolbar}
@@ -277,10 +279,11 @@ export const ByStoreTab = () => {
       )}
       {unmatchedOnly ? (
         <Box sx={{ flex: 1, minHeight: 0, overflow: "auto" }}>
-          {unmatchedCard}
+          {unmatchedCard(false)}
         </Box>
       ) : (
         <>
+          {unmatchedGroups.length > 0 && unmatchedCard(true)}
           <Box sx={{ flex: 1, minHeight: 0 }}>
             {isNarrow ? (
               <Stack spacing={1.5} aria-label={t("rowsAria")} role="list">
@@ -329,7 +332,6 @@ export const ByStoreTab = () => {
               />
             )}
           </Box>
-          {unmatchedGroups.length > 0 && unmatchedCard}
         </>
       )}
       {reassigning !== null && (

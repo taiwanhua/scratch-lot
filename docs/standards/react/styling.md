@@ -145,7 +145,7 @@ expect(chain.slice(1, -1).filter((l) => l.scrolls)).toEqual([]); // 只有最內
 
 **釘高(`flex: 1` + `minHeight: 0`)只給「子樹有一層 `overflow: auto` 能吃掉全部超出量」的版面**:主從版面
 (左樹 / 右表各自捲)、列表頁與列表分頁。其餘 —— 表單、設定、看板這類內容頁與內容分頁、卡片包表單、
-表格下面還有別的區塊、只有卡片清單(沒有表格)的分頁 —— 一律 `flexGrow: 1; flexShrink: 0`(`CONTENT_PAGE_SHELL_SX`):
+表格下面還有別的區塊且不照下面「表格旁的其他區塊」寫法的版面、只有卡片清單(沒有表格)的分頁 —— 一律 `flexGrow: 1; flexShrink: 0`(`CONTENT_PAGE_SHELL_SX`):
 內容少時撐滿、多時跟著長,交給 `<main>` 捲。
 
 **列表頁與列表分頁:寬 ≥ `md` 且視窗高 ≥ 720px 時在卡片裡捲、表頭固定;其餘(`md` 以下、或寬但矮)整頁捲**
@@ -162,6 +162,10 @@ expect(chain.slice(1, -1).filter((l) => l.scrolls)).toEqual([]); // 只有最內
   列表分頁在 `PageTabItem` 標 `isList: true`(分頁登記表照樣帶這個欄位),選到它時才換成列表頁殼。
 - 列表分頁的內容:最外層 `flex: 1; minHeight: 0`,表格(連同手機卡片清單)外面再包一層 `flex: 1; minHeight: 0`、只放清單,
   工具列、說明、分頁器放在那一層外面;表格用預設的 `height: 100%`(不傳 `containerSx={{ height: "auto" }}`)。
+- 列表分頁裡表格旁還有其他區塊(例:表格以外的摘要清單)時,那區塊放在**表格上方**、套 `LIST_PAGE_ASIDE_SX`
+  (`flexShrink: 0`;釘高成立時限高 `LIST_PAGE_ASIDE_MAX_HEIGHT`、自己 `overflow: auto`),表格那一層照樣 `flex: 1; minHeight: 0`
+  吃剩下的高度、表頭固定。釘高不成立(手機寬、寬但矮)時整頁捲,區塊不限高。不要把區塊放在表格下面:
+  釘高時它會先把表格壓到 0,再被分頁殼卡片(`overflow: hidden`)裁掉。
 - 一個分頁裡有兩張以上的表:由分頁最外層 `overflow: auto` 整塊捲,每張表傳 `containerSx={{ height: "auto" }}` 依內容長高。
 - 卡片清單在 `md` 以上也會出現時(例:`lg` 以下改卡片):清單自己 `height: 100%; overflow: auto`、每張卡片 `flexShrink: 0`,
   釘高時由它在卡片裡捲;只在 `sm` 以下出現的卡片清單不必(那個寬度不釘高)。
