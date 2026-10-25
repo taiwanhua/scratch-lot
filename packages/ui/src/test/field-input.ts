@@ -46,12 +46,21 @@ export const typeRaw = (text: string) => {
 
 /**
  * 輸入法組字後確認成 `committed`(注音輸入法打數字、或選字)。
- * - `"compositionend"`:Chrome / Edge 的順序 —— 組字中的 `input`(`isComposing`)→ `compositionend`,確認不再補 `input`
- * - `"insertText"`:另一種順序(CDP `Input.insertText` 模擬、部分瀏覽器)—— 組字中的 `input` → 確認用的一般 `input`,沒有 `compositionend`
+ * 每種順序都先有一個組字中的 `input`(`isComposing`,`compositionupdate` 帶出),確認時:
+ * - `"compositionend"`:Chrome / Edge 的順序 —— 再一個組字中的 `input`(內容即確認文字)→ `compositionend`,之後不再補 `input`
+ *   (沒攔截時 MUI 會把這兩個 `input` 各套用一次,就是「每個數字變兩個」)
+ * - `"insertText"`:CDP `Input.insertText` 模擬的順序 —— 確認用的一般 `input`,沒有 `compositionend`
+ * - `"insertFromComposition"`:Safari 的順序 —— `compositionend` 先到,之後補一個不在組字中的 `input`(`insertFromComposition`)
+ *
+ * `whileComposing`:第一個組字中的 `input` 之後、確認之前呼叫(檢查組字途中的 DOM 沒被 MUI 改回去)。
  */
+export type CommitOrder =
+  "compositionend" | "insertText" | "insertFromComposition";
+
 export const compose = async (
   committed: string,
-  commitWith: "compositionend" | "insertText" = "compositionend",
+  commitWith: CommitOrder = "compositionend",
+  whileComposing?: () => void,
 ) => {
   const target = focused();
   fireEvent.compositionStart(target, { data: target.textContent });
@@ -60,8 +69,16 @@ export const compose = async (
     inputType: "insertCompositionText",
     isComposing: true,
   });
+  whileComposing?.();
   if (commitWith === "compositionend") {
+    writeAndInput(target, committed, {
+      inputType: "insertCompositionText",
+      isComposing: true,
+    });
     fireEvent.compositionEnd(target, { data: committed });
+  } else if (commitWith === "insertFromComposition") {
+    fireEvent.compositionEnd(target, { data: committed });
+    writeAndInput(target, committed, { inputType: "insertFromComposition" });
   } else {
     writeAndInput(target, committed, { inputType: "insertText" });
   }
@@ -71,7 +88,7 @@ export const compose = async (
 /** 每個字各自組字、確認一次(注音輸入法逐鍵打數字) */
 export const composeEach = async (
   text: string,
-  commitWith: "compositionend" | "insertText" = "compositionend",
+  commitWith: CommitOrder = "compositionend",
 ) => {
   for (const char of text) {
     await compose(char, commitWith);

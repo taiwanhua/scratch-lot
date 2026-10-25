@@ -248,7 +248,7 @@ describe("DateTimePicker", () => {
 
   /** MUI X 的組字、全形數字、NBSP 問題由 `useFieldInputGuard` 攔截(與 DatePicker 同一份)。 */
   describe("輸入法組字、全形數字、空白", () => {
-    it.each(["compositionend", "insertText"] as const)(
+    it.each(["compositionend", "insertText", "insertFromComposition"] as const)(
       "注音逐鍵組字打 202611031830(%s):每個數字只套用一次",
       async (commitWith) => {
         const user = userEvent.setup();

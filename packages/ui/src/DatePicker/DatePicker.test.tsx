@@ -322,7 +322,7 @@ describe("DatePicker", () => {
    * 組字分兩種事件順序(`test/field-input.ts`):確認後只送 `compositionend`,或再補一個確認用的 `input`。
    */
   describe("輸入法組字、全形數字、空白", () => {
-    it.each(["compositionend", "insertText"] as const)(
+    it.each(["compositionend", "insertText", "insertFromComposition"] as const)(
       "注音逐鍵組字打 20261103(%s):每個數字只套用一次",
       async (commitWith) => {
         const user = userEvent.setup();
@@ -356,13 +356,16 @@ describe("DatePicker", () => {
       expect(handleChange).toHaveBeenLastCalledWith("2026-11-03", DONE);
     });
 
-    it("組字成非數字(注音、漢字)不改欄位,之後照常輸入", async () => {
+    it("組字成非數字(注音、漢字)不改欄位,之後照常輸入;組字途中的 DOM 留給輸入法", async () => {
       const user = userEvent.setup();
       const handleChange = jest.fn();
       render(<Controlled initial="2026-01-15" onChange={handleChange} />);
 
       await user.click(section("Month"));
-      await compose("當");
+      // 沒攔截時 MUI 在組字中的 `input` 就把區段改回 01,打斷輸入法
+      await compose("當", "compositionend", () => {
+        expect(section("Month").textContent).toBe("當");
+      });
       await compose("ㄉ", "insertText");
 
       expect(section("Month").textContent).toBe("01");

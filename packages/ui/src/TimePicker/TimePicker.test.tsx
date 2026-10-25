@@ -236,7 +236,7 @@ describe("TimePicker", () => {
 
   /** MUI X 的組字、全形數字、NBSP 問題由 `useFieldInputGuard` 攔截(與 DatePicker 同一份)。 */
   describe("輸入法組字、全形數字、空白", () => {
-    it.each(["compositionend", "insertText"] as const)(
+    it.each(["compositionend", "insertText", "insertFromComposition"] as const)(
       "注音逐鍵組字打 1830(%s):每個數字只套用一次",
       async (commitWith) => {
         const user = userEvent.setup();
@@ -264,16 +264,18 @@ describe("TimePicker", () => {
       expect(handleChange).toHaveBeenLastCalledWith("18:45", DONE);
     });
 
-    it("時與分之間打空白(Chromium 寫成 NBSP)不當成 0", async () => {
+    it("時與分之間打空白(Chromium 寫成 NBSP)不當成 0:打 18 45 得到 18:45,不是 18:05", async () => {
       const user = userEvent.setup();
       const handleChange = jest.fn();
       render(<Controlled initial={null} onChange={handleChange} />);
 
       await user.click(section("Hours"));
-      typeRaw("18\u00A030");
+      typeRaw("18\u00A045");
 
-      expect(handleChange).toHaveBeenLastCalledWith("18:30", DONE);
-      expect(fieldText()).toContain("18:30");
+      // \u6C92\u6514\u622A\u6642\u7A7A\u767D\u5148\u628A\u5206\u9418\u586B\u6210 00(\u9014\u4E2D\u9001\u51FA 18:00),\u4E4B\u5F8C\u7684 45 \u624D\u84CB\u6389,\u6700\u5F8C\u4E00\u7B46\u770B\u4E0D\u51FA\u4F86
+      expect(handleChange).not.toHaveBeenCalledWith("18:00", DONE);
+      expect(handleChange).toHaveBeenLastCalledWith("18:45", DONE);
+      expect(fieldText()).toContain("18:45");
     });
   });
 });
