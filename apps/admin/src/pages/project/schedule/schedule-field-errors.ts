@@ -64,6 +64,7 @@ const REASON_TEXT_KEYS: Record<ScheduleReason, string> = {
   CALENDAR_DAY_DUPLICATE: "errors.reasons.CALENDAR_DAY_DUPLICATE",
   DAY_OFF_DUPLICATE: "errors.reasons.DAY_OFF_DUPLICATE",
   TIME_RANGES_OVERLAP: "errors.reasons.TIME_RANGES_OVERLAP",
+  DAY_OFF_WHOLE_DAY: "errors.reasons.DAY_OFF_WHOLE_DAY",
   NO_PRIMARY_STORE: "errors.reasons.NO_PRIMARY_STORE",
   DEMAND_HAS_ASSIGNMENTS: "errors.reasons.DEMAND_HAS_ASSIGNMENTS",
   NOT_CANDIDATE: "errors.reasons.NOT_CANDIDATE",

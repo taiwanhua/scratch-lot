@@ -21,6 +21,8 @@ export const SCHEDULE_REASONS = {
   dayOffDuplicate: "DAY_OFF_DUPLICATE",
   /** 畫休的時段互相重疊(含同一天已有的時段) */
   timeRangesOverlap: "TIME_RANGES_OVERLAP",
+  /** 時段不可排(連同同一天已有的)合起來蓋滿整天:要改登記整天畫休 */
+  dayOffWholeDay: "DAY_OFF_WHOLE_DAY",
   /** 這個人沒有主要分店(排班檔案沒設主要分店) */
   noPrimaryStore: "NO_PRIMARY_STORE",
   /** 已經有人填進的人力需求不能改到別天 */

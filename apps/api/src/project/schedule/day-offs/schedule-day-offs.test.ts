@@ -1386,6 +1386,18 @@ describe("畫休(GraphQL 端點 + 真 MongoDB)", () => {
         ],
         // 開始在隔天 00:00
         [{ startAt: iso("2026-12-17"), endAt: iso("2026-12-17", "01:00") }],
+      ]) {
+        expect(
+          errorOf(
+            await addMine(wang, {
+              date: iso("2026-12-16"),
+              kind: "time-range",
+              slots,
+            }),
+          ),
+        ).toEqual({ code: "VALIDATION_FAILED", fields: ["slots"] });
+      }
+      for (const slots of [
         // 一段就是一整天(00:00–隔天 00:00):整天要登記整天畫休
         [{ startAt: iso("2026-12-16"), endAt: iso("2026-12-17") }],
         // 相接的兩段湊成整天
@@ -1407,7 +1419,11 @@ describe("畫休(GraphQL 端點 + 真 MongoDB)", () => {
               slots,
             }),
           ),
-        ).toEqual({ code: "VALIDATION_FAILED", fields: ["slots"] });
+        ).toEqual({
+          code: "VALIDATION_FAILED",
+          fields: ["slots"],
+          reason: "DAY_OFF_WHOLE_DAY",
+        });
       }
     });
 
@@ -1434,7 +1450,11 @@ describe("畫休(GraphQL 端點 + 真 MongoDB)", () => {
             ],
           }),
         ),
-      ).toEqual({ code: "VALIDATION_FAILED", fields: ["slots"] });
+      ).toEqual({
+        code: "VALIDATION_FAILED",
+        fields: ["slots"],
+        reason: "DAY_OFF_WHOLE_DAY",
+      });
       // 沒補滿就照存
       expect(
         dataOf(
@@ -1474,7 +1494,11 @@ describe("畫休(GraphQL 端點 + 真 MongoDB)", () => {
             ],
           }),
         ),
-      ).toEqual({ code: "VALIDATION_FAILED", fields: ["slots"] });
+      ).toEqual({
+        code: "VALIDATION_FAILED",
+        fields: ["slots"],
+        reason: "DAY_OFF_WHOLE_DAY",
+      });
       const march = await overview(manager, "2027-03");
       expect(
         march.days
@@ -1506,7 +1530,11 @@ describe("畫休(GraphQL 端點 + 真 MongoDB)", () => {
               ],
             }),
           ),
-        ).toEqual({ code: "VALIDATION_FAILED", fields: ["slots"] });
+        ).toEqual({
+          code: "VALIDATION_FAILED",
+          fields: ["slots"],
+          reason: "DAY_OFF_WHOLE_DAY",
+        });
         // 少一小時就不是整天
         const saved = dataOf(
           await addMine(wang, {

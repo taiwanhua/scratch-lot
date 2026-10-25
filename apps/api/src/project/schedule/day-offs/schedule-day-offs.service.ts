@@ -1427,6 +1427,7 @@ const wholeDayError = () =>
   validationError(
     "time-range slots covering the whole day must be a full-day day off",
     ["slots"],
+    SCHEDULE_REASONS.dayOffWholeDay,
   );
 
 /** 合法時點、精度到分鐘。 */
@@ -1437,7 +1438,7 @@ const onMinute = (instant: number): boolean =>
  * 時段不可排的幾段:至少一段;每段是那天裡的半開區間 `[startAt, endAt)`:開始落在
  * `[那天 00:00, 隔天 00:00)`、結束晚於開始且最晚 = 隔天 00:00(做到當天結束)、精度到分鐘
  * (admin 由日期 + `HH:mm` 合成,結束選 00:00 = 隔天 00:00);這次送的幾段合起來蓋滿那一天也不收
- * (`coversWholeDay`;連同那天已存的段落,在交易裡由 `assertNotWholeDay` 再判斷一次)。
+ * (`coversWholeDay`,reason `DAY_OFF_WHOLE_DAY`;連同那天已存的段落,在交易裡由 `assertNotWholeDay` 再判斷一次)。
  * 不合規則 → `VALIDATION_FAILED`(欄位 `slots`,格式錯不帶 reason)。
  */
 function validatedSlots(
@@ -1537,7 +1538,7 @@ function assertNoConflict(
 
 /**
  * 這次送的時段不可排連同那天已存的時段不可排合起來蓋滿那一天(分幾次登記補滿也算)→ `VALIDATION_FAILED`
- * (欄位 `slots`,不帶 reason;同 `validatedSlots`)。整天畫休不算進來(整天 + 時段可以並存)。
+ * (欄位 `slots`、reason `DAY_OFF_WHOLE_DAY`;同 `validatedSlots`)。整天畫休不算進來(整天 + 時段可以並存)。
  */
 function assertNotWholeDay(
   existing: readonly LoadedDayOff[],

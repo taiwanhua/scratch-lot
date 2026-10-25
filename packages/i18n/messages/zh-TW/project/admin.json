@@ -992,6 +992,7 @@
         "CALENDAR_DAY_DUPLICATE": "這一天已經有行事曆了",
         "DAY_OFF_DUPLICATE": "這一天已經有整天的畫休",
         "TIME_RANGES_OVERLAP": "時段和這一天其他的畫休時段重疊",
+        "DAY_OFF_WHOLE_DAY": "整天請改選整天畫休",
         "NO_PRIMARY_STORE": "這個人還沒有設定主要分店",
         "DEMAND_HAS_ASSIGNMENTS": "已經有人排進這筆人力需求,不能改到別天",
         "NOT_CANDIDATE": "這個人不在這家店的排班名單",

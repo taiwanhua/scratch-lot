@@ -75,6 +75,40 @@ describe("排班:欄位下寫原因", () => {
     ).toHaveAccessibleDescription("這一天已經有整天的畫休");
   });
 
+  it("代改畫休:畫面沒有那天已登記的段落(例:選了總覽以外的月份),api 判斷連同已存的蓋滿整天(DAY_OFF_WHOLE_DAY)→ 時段下寫「整天請改選整天畫休」", async () => {
+    const { user } = renderSchedulePage({
+      path: "/schedule/manage?tab=day-offs",
+    });
+    server.use(
+      api.mutation("AddScheduleDayOffsOnBehalf", () =>
+        businessError({ fields: ["slots"], reason: "DAY_OFF_WHOLE_DAY" }),
+      ),
+    );
+    await user.click(await screen.findByRole("button", { name: "代改" }));
+    const dialog = await screen.findByRole("dialog", { name: "代改畫休" });
+    await user.click(within(dialog).getByRole("combobox", { name: /人員/ }));
+    await user.click(await screen.findByRole("option", { name: "張小芳" }));
+    await typeDate(user, dialog, "2027-01-05");
+    await user.click(within(dialog).getByLabelText("時段不可排"));
+    await typeTime(
+      user,
+      within(dialog).getByRole("group", { name: /開始/ }),
+      "09:00",
+    );
+    await typeTime(
+      user,
+      within(dialog).getByRole("group", { name: /結束/ }),
+      "12:00",
+    );
+    await user.click(within(dialog).getByRole("button", { name: "儲存" }));
+    expect(
+      await within(dialog).findByText("整天請改選整天畫休"),
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).getByRole("group", { name: "時段" }),
+    ).toHaveAccessibleDescription("整天請改選整天畫休");
+  });
+
   it("登記畫休:沒選日期 → 日期欄下寫「必填,請選擇日期」;時段重疊(api 帶 reason)→ 時段下寫原因", async () => {
     const { user } = renderSchedulePage({ path: "/schedule/my?tab=day-offs" });
     server.use(

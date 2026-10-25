@@ -992,6 +992,7 @@
         "CALENDAR_DAY_DUPLICATE": "This day already has a calendar entry",
         "DAY_OFF_DUPLICATE": "This day already has a full-day day off",
         "TIME_RANGES_OVERLAP": "The time range overlaps another day-off range on this day",
+        "DAY_OFF_WHOLE_DAY": "For the whole day, choose Full day off instead",
         "NO_PRIMARY_STORE": "This person has no primary branch yet",
         "DEMAND_HAS_ASSIGNMENTS": "People are already scheduled on this demand, so it can't move to another day",
         "NOT_CANDIDATE": "This person isn't on this branch's staff list",
