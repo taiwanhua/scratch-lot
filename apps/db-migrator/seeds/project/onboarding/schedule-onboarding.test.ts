@@ -65,7 +65,7 @@ describe("開通資料:排班人員與人力需求範本(班表管理)", () => {
             shortName: "早班一",
             startTime: "08:30",
             endTime: "14:30",
-            positionKey: "restock",
+            positionKey: "in-store-counter-a",
             tasks: [],
           },
         ],
@@ -100,8 +100,18 @@ describe("開通資料:排班人員與人力需求範本(班表管理)", () => {
     expect(plan.scheduleTemplates.map((template) => template.name)).toEqual([
       "早班",
       "晚班",
-      "補貨",
     ]);
+    // 範本的崗位都是示範機構自己建的崗位(專案 seed 不內建崗位)
+    const positions = new Set(plan.positions.map((position) => position.value));
+    for (const template of plan.scheduleTemplates) {
+      expect({
+        template: template.name,
+        known: positions.has(template.positionKey),
+      }).toEqual({
+        template: template.name,
+        known: true,
+      });
+    }
     expect(plan.scheduleWeekTemplates.map((week) => week.name)).toEqual([
       "一般週",
     ]);

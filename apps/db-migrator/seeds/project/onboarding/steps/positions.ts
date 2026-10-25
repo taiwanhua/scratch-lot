@@ -66,8 +66,8 @@ interface FieldRow {
 }
 
 /**
- * 開通清單第 5 點的前半:崗位。專案 seed 已有店內櫃台、店外攤位、補貨(全域選項);
- * 開通資料另列的自訂崗位(示範資料:櫃台 A、櫃台 B、彩券機旁)建成這個租戶自己的選項,
+ * 開通清單第 5 點的前半:崗位。專案 seed 不內建崗位(沒有全域選項);
+ * 開通資料列的崗位(示範資料:店內櫃台A、店外櫃台B)建成這個租戶自己的選項,
  * 已有同一個代碼的就沿用。
  *
  * 選項顏色(欄位管理的「顏色」,色票代號 `paletteKey`):開通資料有給、選項是這個租戶自己的、
@@ -78,7 +78,7 @@ export const positionsStep: OnboardingStep = {
   title: "崗位",
   run: async ({ client, plan }) => {
     if (plan.positions.length === 0) {
-      return ["沒有自訂崗位(用專案預設的店內櫃台、店外攤位、補貨)"];
+      return ["開通資料沒有崗位(之後在欄位管理建立)"];
     }
     const categoryKey = SCHEDULE_FIELD_CATEGORY_KEYS.position;
     const { fieldCategories } = await client.request<{

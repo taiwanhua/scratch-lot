@@ -4,7 +4,7 @@
 
 - 選項 value 一律英文 kebab-case;「其他」一律 `other`,選它時說明必填,全系統一致(`@repo/domain/project/reason-note` 的 `requiresReasonNote`)。
 - 選項依表中順序 1 起算(`order`);租戶可以再自己加選項。
-- 崗位的三個全域選項有初始顏色:店內櫃台 = blue、店外攤位 = green、補貨 = orange(專案 seed `projectFieldOptionColors`,見下方「選項顏色」);其餘選項沒有初始顏色。示範租戶另加的崗位(櫃台 A、櫃台 B、彩券機旁)放示範資料,不是系統選項。
+- 崗位類別**不內建選項**:各機構開通時自己建(開通資料的 `positions`;示範機構的店內櫃台A、店外櫃台B 放示範資料,不是系統選項)。全域選項目前都沒有初始顏色(專案 seed `projectFieldOptionColors` 保留機制、沒有條目,見下方「選項顏色」)。
 - 不放欄位管理(程式依值做事):銀行交易類型、現金流水類型、張的狀態 / 位置、經銷商類型與狀態、關係人身分、職責、行事曆類型。
 
 ## 類別與預設選項
@@ -22,7 +22,7 @@
 | `lottery-lost-reason`              | 遺失原因       | 調貨途中遺失 `lost-in-transfer`、店內遺失 `lost-in-store`、原因不明 `unknown`、其他                                                                                         | 確認遺失                     |
 | `lottery-recover-reason`           | 尋回原因       | 盤點找到 `found-in-stocktake`、調貨送錯 `transfer-misdelivered`、其他                                                                                                       | 尋回                         |
 | `lottery-scrap-reason`             | 報廢原因       | 破損 `damaged`、污損 `soiled`、其他                                                                                                                                         | 報廢                         |
-| `schedule-position`                | 崗位           | 店內櫃台 `in-store-counter`、店外攤位 `outdoor-stall`、補貨 `restock`                                                                                                       | 人力需求、收銀點、支援需求單 |
+| `schedule-position`                | 崗位           | 不內建(各機構開通時自建)                                                                                                                                                    | 人力需求、收銀點、支援需求單 |
 | `schedule-task`                    | 執行任務       | 店內事務與帳目負責 `store-and-accounts-lead`、店內事務 `store-duties`                                                                                                       | 人力需求的每筆執行任務       |
 | `schedule-change-reason`           | 排班異動原因   | 臨時請假 `emergency-leave`、換班 `shift-swap`、病假 `sick-leave`、其他                                                                                                      | 發布後排班異動               |
 | `schedule-makeup-punch-reason`     | 補打卡原因     | 忘記打卡 `forgot-punch`、裝置故障 `device-failure`、其他                                                                                                                    | 補打卡申請                   |

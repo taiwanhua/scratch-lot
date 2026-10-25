@@ -35,7 +35,7 @@ const other: FieldOption = { value: REASON_OTHER_VALUE, label: "其他" };
  * 專案的欄位管理系統類別(專案規格第 13 章;內容正本:`docs/modules/project/field-manager.md`)。
  * 類別 key 與程式要認得的選項代碼在 `@repo/domain/project/{lottery,schedule}-fields`;
  * 選項 value 一律英文 kebab-case,「其他」一律 `other`(選它時說明必填,`requiresReasonNote`)。
- * 有 `color` 的選項另由 `projectFieldOptionColors` 種下初始顏色(目前只有崗位);不含示範租戶自己的崗位。
+ * 有 `color` 的選項另由 `projectFieldOptionColors` 種下初始顏色(目前沒有;崗位不內建,由各機構開通時自建)。
  */
 export const PROJECT_FIELD_CATEGORIES: readonly ProjectFieldCategory[] = [
   {
@@ -163,11 +163,8 @@ export const PROJECT_FIELD_CATEGORIES: readonly ProjectFieldCategory[] = [
     name: "崗位",
     usedIn:
       "人力需求、人力需求範本、收銀點、支援需求單(同一家店崗位和收銀點 1:1)",
-    options: [
-      { value: "in-store-counter", label: "店內櫃台", color: "blue" },
-      { value: "outdoor-stall", label: "店外攤位", color: "green" },
-      { value: "restock", label: "補貨", color: "orange" },
-    ],
+    // 不內建崗位:各機構開通時自己建(開通清單第 5 點)
+    options: [],
   },
   {
     key: SCHEDULE.task,

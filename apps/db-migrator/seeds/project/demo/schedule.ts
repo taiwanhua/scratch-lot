@@ -44,6 +44,9 @@ export const DEMO_SCHEDULE_STAFF: readonly DemoScheduleStaff[] = [
 const LEAD = { role: "leader", taskKey: "store-and-accounts-lead" } as const;
 const HELP = { role: "helper", taskKey: "store-duties" } as const;
 
+/** 範本的崗位:示範崗位「店內櫃台A」(兩家店都有同崗位的收銀點,開班不會跳崗位不一致)。 */
+const IN_STORE_COUNTER_A = "in-store-counter-a";
+
 /** 最上層組織的人力需求範本(規格 14.4;各分店都能用)。 */
 export const DEMO_SCHEDULE_TEMPLATES: readonly OnboardingScheduleTemplate[] = [
   {
@@ -51,7 +54,7 @@ export const DEMO_SCHEDULE_TEMPLATES: readonly OnboardingScheduleTemplate[] = [
     shortName: "早",
     startTime: "08:30",
     endTime: "14:30",
-    positionKey: "in-store-counter",
+    positionKey: IN_STORE_COUNTER_A,
     tasks: [LEAD, HELP],
     color: "yellow",
   },
@@ -60,29 +63,19 @@ export const DEMO_SCHEDULE_TEMPLATES: readonly OnboardingScheduleTemplate[] = [
     shortName: "晚",
     startTime: "14:30",
     endTime: "22:00",
-    positionKey: "in-store-counter",
+    positionKey: IN_STORE_COUNTER_A,
     tasks: [LEAD, HELP],
     color: "blue",
-  },
-  {
-    name: "補貨",
-    shortName: "補",
-    startTime: "13:00",
-    endTime: "17:00",
-    positionKey: "restock",
-    tasks: [HELP],
-    color: "green",
   },
 ];
 
 const BOTH = ["早班", "晚班"];
-const BOTH_RESTOCK = ["早班", "晚班", "補貨"];
 
-/** 「一般週」:每天早晚班,週三、週五加補貨(0 = 星期日)。 */
+/** 「一般週」:每天早晚班(0 = 星期日)。 */
 export const DEMO_SCHEDULE_WEEK_TEMPLATES: readonly OnboardingScheduleWeekTemplate[] =
   [
     {
       name: "一般週",
-      days: [BOTH, BOTH, BOTH, BOTH_RESTOCK, BOTH, BOTH_RESTOCK, BOTH],
+      days: [BOTH, BOTH, BOTH, BOTH, BOTH, BOTH, BOTH],
     },
   ];

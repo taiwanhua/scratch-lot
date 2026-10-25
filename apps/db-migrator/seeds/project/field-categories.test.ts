@@ -12,7 +12,6 @@ import {
   TestMongo,
   documentsOf,
   startEntry,
-  withDatabase,
 } from "../../test/support/update-harness";
 import { PROJECT_FIELD_CATEGORIES } from "./field-categories";
 import { projectSeedSource } from "./registry";
@@ -70,7 +69,8 @@ const EXPECTED: readonly [key: string, name: string, labels: string[]][] = [
   ],
   ["lottery-recover-reason", "尋回原因", ["盤點找到", "調貨送錯", "其他"]],
   ["lottery-scrap-reason", "報廢原因", ["破損", "污損", "其他"]],
-  ["schedule-position", "崗位", ["店內櫃台", "店外攤位", "補貨"]],
+  // 崗位不內建:各機構開通時自己建
+  ["schedule-position", "崗位", []],
   ["schedule-task", "執行任務", ["店內事務與帳目負責", "店內事務"]],
   [
     "schedule-change-reason",
@@ -252,100 +252,22 @@ describe("正式 registry 的 seed:專案類別落庫且冪等", () => {
   }, 300_000);
 });
 
-/** 每個有顏色的全域選項(以選項 key 表示)→ 色票代號。 */
-async function colorsByKey(databaseUri: string) {
-  const fields = await documentsOf(databaseUri, "fields", { isSystem: true });
-  const keyOf = new Map(
-    fields.map((field) => [String(field._id), String(field.key)]),
-  );
-  const colors = await documentsOf(databaseUri, "project_field_option_colors");
-  return Object.fromEntries(
-    colors.map((color) => [
-      keyOf.get(String(color.fieldId)) ?? "?",
-      color.paletteKey as string | null,
-    ]),
-  );
-}
-
-describe("正式 registry 的 seed:崗位三個全域選項的初始顏色", () => {
-  const POSITION_COLORS = {
-    "schedule-position.in-store-counter": "blue",
-    "schedule-position.outdoor-stall": "green",
-    "schedule-position.restock": "orange",
-  };
-
-  it("首跑寫入三筆(orgId = 根組織、tenantId = null);重跑冪等;已改過的顏色(改成 red)重跑不覆蓋", async () => {
-    const databaseUri = mongo.uri("colors");
-    const first = await startEntry(SEED_ENTRY, [], databaseUri).done;
-    expect(first.status).toBe(0);
-
-    const [rootOrg] = await documentsOf(databaseUri, "orgs", { key: "root" });
-    const seeded = await documentsOf(
-      databaseUri,
-      "project_field_option_colors",
-    );
-    expect(seeded).toHaveLength(3);
-    for (const color of seeded) {
-      expect(color).toMatchObject({
-        orgId: rootOrg?._id as unknown,
-        tenantId: null,
-        isSystem: true,
-      });
-    }
-    expect(await colorsByKey(databaseUri)).toEqual(POSITION_COLORS);
-
-    const again = await startEntry(SEED_ENTRY, [], databaseUri).done;
-    expect(again.status).toBe(0);
-    expect(again.stdout).toMatch(
-      /project_field_option_colors:新增 0 \/ 更新 0 \/ 認養 0 \/ 未變 3/,
-    );
-
-    // 平台管理員在欄位管理把「補貨」改成 red、把「店外攤位」清成不設定
-    await withDatabase(databaseUri, async (database) => {
-      const colors = database.collection("project_field_option_colors");
-      await colors.updateOne(
-        { key: "schedule-position.restock" },
-        { $set: { paletteKey: "red" } },
-      );
-      await colors.updateOne(
-        { key: "schedule-position.outdoor-stall" },
-        { $set: { paletteKey: null } },
-      );
-    });
-    const afterEdit = await startEntry(SEED_ENTRY, [], databaseUri).done;
-    expect(afterEdit.status).toBe(0);
-    expect(await colorsByKey(databaseUri)).toEqual({
-      ...POSITION_COLORS,
-      "schedule-position.restock": "red",
-      "schedule-position.outdoor-stall": null,
-    });
-  }, 300_000);
-
-  it("seed 之前平台管理員就設過顏色:以 fieldId 認養那一筆,顏色保留,不另建", async () => {
-    const databaseUri = mongo.uri("colors-adopt");
+describe("正式 registry 的 seed:崗位不內建", () => {
+  it("崗位類別在,但沒有全域選項,也不種任何全域選項顏色", async () => {
+    const databaseUri = mongo.uri("positions");
     const seeded = await startEntry(SEED_ENTRY, [], databaseUri).done;
     expect(seeded.status).toBe(0);
-    // 模擬 seed 加入顏色之前、人在欄位管理建的那一筆(沒有 key、不是種子)
-    await withDatabase(databaseUri, (database) =>
-      database
-        .collection("project_field_option_colors")
-        .updateOne(
-          { key: "schedule-position.restock" },
-          { $unset: { key: "" }, $set: { isSystem: false, paletteKey: "red" } },
-        ),
-    );
-    const rerun = await startEntry(SEED_ENTRY, [], databaseUri).done;
-    expect(rerun.status).toBe(0);
-    expect(rerun.stdout).toMatch(
-      /project_field_option_colors:新增 0 \/ 更新 0 \/ 認養 1/,
-    );
-    const colors = await documentsOf(
-      databaseUri,
-      "project_field_option_colors",
-    );
-    expect(colors).toHaveLength(3);
-    expect(await colorsByKey(databaseUri)).toMatchObject({
-      "schedule-position.restock": "red",
+    const [category] = await documentsOf(databaseUri, "field_categories", {
+      key: "schedule-position",
     });
+    expect(category).toBeDefined();
+    expect(
+      await documentsOf(databaseUri, "fields", {
+        categoryId: category?._id as unknown,
+      }),
+    ).toEqual([]);
+    expect(
+      await documentsOf(databaseUri, "project_field_option_colors"),
+    ).toEqual([]);
   }, 300_000);
 });

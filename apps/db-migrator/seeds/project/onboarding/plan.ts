@@ -58,7 +58,7 @@ export interface OnboardingPosition {
 export interface OnboardingCashPoint {
   /** 分店名稱(須在 `branches` 內) */
   branch: string;
-  /** 崗位選項值(專案預設或 `positions` 裡的) */
+  /** 崗位選項值(這個租戶已有的崗位,通常列在 `positions`) */
   positionKey: string;
   name: string;
   order: number;
@@ -83,7 +83,7 @@ export interface OnboardingPlan {
   /** 總部是某家分店時填那家店的名稱(須在 `branches` 內);總部就是租戶本身時為 null。 */
   headquartersBranch: string | null;
   users: OnboardingUser[];
-  /** 租戶自訂的崗位(專案 seed 的店內櫃台、店外攤位、補貨之外;沒有就空清單)。 */
+  /** 這個租戶的崗位(專案 seed 不內建崗位;收銀點、範本用到的崗位都要列在這裡;沒有就空清單)。 */
   positions: OnboardingPosition[];
   /** 開通時建立的收銀點(沒有就空清單)。 */
   cashPoints: OnboardingCashPoint[];
@@ -120,7 +120,7 @@ export interface OnboardingScheduleTemplate {
   /** `HH:mm`。 */
   startTime: string;
   endTime: string;
-  /** 崗位選項代碼(專案 seed 或 `positions` 的)。 */
+  /** 崗位選項代碼(這個租戶已有的崗位,通常列在 `positions`)。 */
   positionKey: string;
   tasks: { role: ScheduleTaskRole; taskKey: string }[];
   color: TagPaletteKey | null;

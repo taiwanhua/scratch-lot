@@ -72,7 +72,7 @@ describe("示範資料(seeds/project/demo/)不放機密", () => {
     expect(DEMO_TENANT.adminAlias).toBe("demo-admin");
   });
 
-  it("示範內容:分店、總部人員 / 店長 / 店員、自訂崗位 櫃台 A、櫃台 B、彩券機旁", () => {
+  it("示範內容:分店、總部人員 / 店長 / 店員、崗位只有 店內櫃台A、店外櫃台B", () => {
     const plan = demoPlan("owner@example.test");
     expect(plan.branches.length).toBeGreaterThan(0);
     const roles = new Set(plan.users.flatMap((user) => user.roles));
@@ -81,36 +81,41 @@ describe("示範資料(seeds/project/demo/)不放機密", () => {
     expect(
       plan.positions.map((position) => [position.label, position.color]),
     ).toEqual([
-      ["櫃台 A", "cyan"],
-      ["櫃台 B", "purple"],
-      ["彩券機旁", "pink"],
+      ["店內櫃台A", "blue"],
+      ["店外櫃台B", "green"],
     ]);
   });
 });
 
 describe("示範資料:檔案管理(遊戲、收銀點)", () => {
-  it("收銀點的崗位都在專案預設崗位或示範自訂崗位裡;彩券機旁對應彩券機旁", () => {
+  it("專案 seed 不內建崗位;兩家店的收銀點都是 店內櫃台A、店外櫃台B 各一,和崗位一對一", () => {
     const plan = demoPlan("owner@example.test");
-    const seeded =
+    expect(
       PROJECT_FIELD_CATEGORIES.find(
         (category) => category.key === SCHEDULE_FIELD_CATEGORY_KEYS.position,
-      )?.options.map((option) => option.value) ?? [];
-    const known = new Set([
-      ...seeded,
-      ...plan.positions.map((position) => position.value),
-    ]);
-    for (const point of plan.cashPoints) {
-      expect({ point, known: known.has(point.positionKey) }).toEqual({
-        point,
-        known: true,
-      });
-    }
-    const machine = plan.positions.find(
-      (position) => position.label === "彩券機旁",
+      )?.options,
+    ).toEqual([]);
+    const labelOf = new Map(
+      plan.positions.map((position) => [position.value, position.label]),
     );
-    expect(
-      plan.cashPoints.find((point) => point.name === "彩券機旁")?.positionKey,
-    ).toBe(machine?.value);
+    for (const branch of plan.branches) {
+      const points = plan.cashPoints.filter(
+        (point) => point.branch === branch.name,
+      );
+      expect({
+        branch: branch.name,
+        points: points.map((point) => [point.name, point.positionKey]),
+      }).toEqual({
+        branch: branch.name,
+        points: plan.positions.map((position) => [
+          position.label,
+          position.value,
+        ]),
+      });
+      for (const point of points) {
+        expect(labelOf.get(point.positionKey)).toBe(point.name);
+      }
+    }
   });
 
   it("遊戲:有示範遊戲,代號不重複", () => {

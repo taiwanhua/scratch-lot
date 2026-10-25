@@ -1,12 +1,11 @@
 import type { OnboardingPosition } from "../onboarding/plan";
 
 /**
- * 示範機構自訂的崗位(專案規格 2.2):示範「預設崗位不夠時租戶自己加」。
- * 收銀點「彩券機旁」對應崗位「彩券機旁」(收銀點由檔案管理的票追加)。
- * 顏色從標籤色票選(規格 18.5),避開專案預設崗位的 blue / green / orange。
+ * 示範機構的崗位(專案規格 2.2):專案 seed 不內建崗位,示範機構和真正開通的租戶一樣自己建。
+ * 兩家店各有一個同名的收銀點,崗位和收銀點一對一(`cash-points.ts`)。
+ * 顏色從標籤色票選(規格 18.5)。
  */
 export const DEMO_POSITIONS: readonly OnboardingPosition[] = [
-  { value: "counter-a", label: "櫃台 A", color: "cyan" },
-  { value: "counter-b", label: "櫃台 B", color: "purple" },
-  { value: "lottery-machine-side", label: "彩券機旁", color: "pink" },
+  { value: "in-store-counter-a", label: "店內櫃台A", color: "blue" },
+  { value: "outdoor-counter-b", label: "店外櫃台B", color: "green" },
 ];

@@ -269,13 +269,13 @@ describe("開通腳本與 demo create(真 api + 真 MongoDB)", () => {
       const category = await findOne("field_categories", {
         key: "schedule-position",
       });
-      // 租戶自訂的選項(orgId 有值;全域種子的 orgId 為 null)
+      // 崗位全是租戶自己的選項(專案 seed 不內建崗位,沒有 orgId 為 null 的全域選項)
       const positions = await find("fields", {
         categoryId: category._id as ObjectId,
-        orgId: { $ne: null },
       });
+      expect(positions.every((field) => field.orgId !== null)).toBe(true);
       expect(new Set(positions.map((field) => field.label as string))).toEqual(
-        new Set(["彩券機旁", "櫃台 A", "櫃台 B"]),
+        new Set(["店內櫃台A", "店外櫃台B"]),
       );
       // 選項顏色(P02 的 project_field_option_colors:一筆 = 一個選項的色票代號)
       const colors = await find("project_field_option_colors", {
@@ -292,13 +292,12 @@ describe("開通腳本與 demo create(真 api + 真 MongoDB)", () => {
           ]),
         ),
       ).toEqual({
-        "櫃台 A": "cyan",
-        "櫃台 B": "purple",
-        彩券機旁: "pink",
+        店內櫃台A: "blue",
+        店外櫃台B: "green",
       });
     });
 
-    it("檔案管理:示範遊戲與收銀點(收銀點「彩券機旁」對應自訂崗位「彩券機旁」)", async () => {
+    it("檔案管理:示範遊戲與收銀點(兩家店都是 店內櫃台A、店外櫃台B,對應同名崗位)", async () => {
       const games = await find("lottery_games", { tenantId });
       expect(new Set(games.map((game) => game.gameCode as string))).toEqual(
         new Set(DEMO_GAMES.map((game) => game.gameCode)),
@@ -713,7 +712,7 @@ describe("開通腳本與 demo create(真 api + 真 MongoDB)", () => {
           // 台北 11/12 17:00–21:00
           start_at: "2026-11-12T09:00:00.000Z",
           end_at: endAt,
-          position: "in-store-counter",
+          position: "in-store-counter-a",
           headcount: 1,
           branch: String(branch._id),
           note: "颱風後補人,晚間人手不足",
@@ -1120,7 +1119,7 @@ describe("開通腳本與 demo create(真 api + 真 MongoDB)", () => {
       expect(output).toContain("「中山店」已存在");
       expect(output).toContain("「店長」已存在,權限不覆蓋");
       expect(output).toContain("「中山店店員」已存在");
-      expect(output).toContain("建立「櫃台 A」");
+      expect(output).toContain("建立「店內櫃台A」");
       expect(output).toContain("建立乙類「示範彩券 中山店」,對應「中山店」");
       expect(output).toContain("「證照到期」租戶已調整過收件人,不動");
 

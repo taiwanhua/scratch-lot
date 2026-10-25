@@ -1,28 +1,32 @@
 import type { OnboardingCashPoint } from "../onboarding/plan";
 
 /**
- * 示範收銀點(檔案管理,規格 5.5、2.2):中山店用專案預設崗位 + 自訂崗位「彩券機旁」
- * (示範「預設崗位不夠時租戶自己加」);信義店用自訂崗位 櫃台 A、櫃台 B。
+ * 示範收銀點(檔案管理,規格 5.5、2.2):兩家店都是「店內櫃台A」「店外櫃台B」各一個,
+ * 名稱同崗位,崗位和收銀點一對一(`positions.ts`)。
  */
 export const DEMO_CASH_POINTS: readonly OnboardingCashPoint[] = [
   {
     branch: "中山店",
-    positionKey: "in-store-counter",
-    name: "店內櫃台",
+    positionKey: "in-store-counter-a",
+    name: "店內櫃台A",
     order: 1,
   },
   {
     branch: "中山店",
-    positionKey: "outdoor-stall",
-    name: "店外攤位",
+    positionKey: "outdoor-counter-b",
+    name: "店外櫃台B",
     order: 2,
   },
   {
-    branch: "中山店",
-    positionKey: "lottery-machine-side",
-    name: "彩券機旁",
-    order: 3,
+    branch: "信義店",
+    positionKey: "in-store-counter-a",
+    name: "店內櫃台A",
+    order: 1,
   },
-  { branch: "信義店", positionKey: "counter-a", name: "櫃台 A", order: 1 },
-  { branch: "信義店", positionKey: "counter-b", name: "櫃台 B", order: 2 },
+  {
+    branch: "信義店",
+    positionKey: "outdoor-counter-b",
+    name: "店外櫃台B",
+    order: 2,
+  },
 ];
