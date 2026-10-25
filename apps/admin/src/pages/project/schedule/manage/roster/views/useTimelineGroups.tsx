@@ -14,7 +14,6 @@ import {
   autoMarkSx,
   leaderMarkSx,
   multiBadgeSx,
-  unmatchedPunchSx,
 } from "@/components/project/schedule/ScheduleLegend/schedule-legend-styles";
 import { useScheduleFieldOptions } from "@/hooks/project/schedule/useScheduleFieldOptions/useScheduleFieldOptions";
 import { unmatchedCountsByDate } from "@/lib/project/schedule-attendance";
@@ -43,6 +42,7 @@ import {
   rosterCellKey,
   useRoster,
 } from "../roster-context";
+import { UnmatchedPunchMark } from "./UnmatchedPunchMark";
 
 /** 時間軸上一個容器的資料(群組 + 它對應的人力需求)。 */
 export interface RosterTimelineGroup extends ScheduleTimelineGroup {
@@ -315,17 +315,10 @@ export const useTimelineGroups = (
           {/* 表頭的日期由時間軸畫,這裡只寫星期與特殊日名稱 */}
           {tCalendar(`weekdays.${String(weekdayOf(date))}`)}
           {special !== null && day?.name ? ` ${day.name}` : ""}
-          {(punchCounts.get(date) ?? 0) > 0 && (
-            <Box
-              component="span"
-              aria-label={t("timeline.punchAria", {
-                count: punchCounts.get(date) ?? 0,
-              })}
-              sx={[unmatchedPunchSx, { ml: 0.5 }]}
-            >
-              {t("timeline.punch", { count: punchCounts.get(date) ?? 0 })}
-            </Box>
-          )}
+          <UnmatchedPunchMark
+            count={punchCounts.get(date) ?? 0}
+            placement={{ ml: 0.5 }}
+          />
         </Box>
       ),
       ...(special === null

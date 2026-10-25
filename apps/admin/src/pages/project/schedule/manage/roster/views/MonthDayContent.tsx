@@ -7,10 +7,7 @@ import { Tag } from "@repo/ui/tag";
 import { Tooltip } from "@repo/ui/tooltip";
 import { Typography } from "@repo/ui/typography";
 
-import {
-  demandDotSx,
-  unmatchedPunchSx,
-} from "@/components/project/schedule/ScheduleLegend/schedule-legend-styles";
+import { demandDotSx } from "@/components/project/schedule/ScheduleLegend/schedule-legend-styles";
 import { demandToneOf, monthDayOf } from "@/lib/project/schedule-roster";
 import {
   type CountLabels,
@@ -19,6 +16,7 @@ import {
 } from "@/lib/project/schedule-roster-views";
 
 import { type RosterDemand, rosterCellKey, useRoster } from "../roster-context";
+import { UnmatchedPunchMark } from "./UnmatchedPunchMark";
 
 const dotToneOf = (tone: string): "grey" | "warning" | "error" => {
   if (tone === "error" || tone === "warning") {
@@ -59,16 +57,12 @@ export const MonthDayContent = ({
 }: MonthDayContentProps) => {
   const t = useTranslations("admin.schedule.roster");
   const { canEdit, openDemand, timezone } = useRoster();
-  const punch =
-    punchCount > 0 ? (
-      <Box
-        component="span"
-        aria-label={t("timeline.punchAria", { count: punchCount })}
-        sx={[unmatchedPunchSx, { position: "absolute", top: 4, right: 4 }]}
-      >
-        {t("timeline.punch", { count: punchCount })}
-      </Box>
-    ) : null;
+  const punch = (
+    <UnmatchedPunchMark
+      count={punchCount}
+      placement={{ position: "absolute", top: 4, right: 4 }}
+    />
+  );
 
   if (device === "mobile") {
     return (

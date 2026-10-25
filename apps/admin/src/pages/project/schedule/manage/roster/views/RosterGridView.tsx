@@ -42,6 +42,7 @@ import {
   useRoster,
 } from "../roster-context";
 import { RosterPersonCell } from "./RosterPersonCell";
+import { ROSTER_LEGEND_ITEMS } from "./roster-legend";
 import { useRosterGridColumns } from "./useRosterGridColumns";
 
 const PAGE_ID = "schedule.roster";
@@ -377,22 +378,7 @@ export const RosterGridView = () => {
           containerSx={fitHeight === null ? {} : { maxHeight: fitHeight }}
         />
       </Box>
-      <ScheduleLegend
-        items={[
-          "leader",
-          "entry",
-          "temp",
-          "auto",
-          "unavailable",
-          "dayOff",
-          "missingHelper",
-          "missingLeader",
-          "breakMinutes",
-          "full",
-          "multi",
-          "unmatchedPunch",
-        ]}
-      />
+      <ScheduleLegend items={ROSTER_LEGEND_ITEMS.grid} />
       <Menu
         open={dayMenu !== null}
         anchorEl={dayMenu?.anchor ?? null}

@@ -10,6 +10,7 @@ import {
   tagPaletteBackgroundVarsSx,
 } from "@/components/project/TagPaletteChip/tag-palette-background";
 import { ScheduleLegend } from "@/components/project/schedule/ScheduleLegend/ScheduleLegend";
+import { unmatchedCountsByDate } from "@/lib/project/schedule-attendance";
 import {
   demandToneOf,
   monthDayOf,
@@ -25,6 +26,8 @@ import {
 } from "@/lib/project/tag-palettes";
 
 import { rosterCellKey, useRoster } from "../roster-context";
+import { UnmatchedPunchMark } from "./UnmatchedPunchMark";
+import { ROSTER_LEGEND_ITEMS } from "./roster-legend";
 import { useShowDay } from "./useRosterDate";
 import { useTimelineGroups } from "./useTimelineGroups";
 
@@ -46,7 +49,8 @@ export interface WeekMobileListProps {
 
 /**
  * 手機週檢視(SC-44 手機;規格 14.5 週):7 天清單,每天一列,列出各人力需求的簡稱與人數
- * (「早 2/2 · 晚 1/2」,每筆一個三態標籤);點一天切到那天的日檢視。特殊日用它的顏色當底。
+ * (「早 2/2 · 晚 1/2」,每筆一個三態標籤);點一天切到那天的日檢視。特殊日用它的顏色當底、店休停用底色;
+ * 有未對應排班的打卡的日子在日期旁顯示「⏲ N」(同電腦版)。
  */
 export const WeekMobileList = ({ dates }: WeekMobileListProps) => {
   const t = useTranslations("admin.schedule.roster");
@@ -54,6 +58,7 @@ export const WeekMobileList = ({ dates }: WeekMobileListProps) => {
   const { data, timezone } = useRoster();
   const showDay = useShowDay();
   const timeline = useTimelineGroups(dates, "week");
+  const punchCounts = unmatchedCountsByDate(data.unmatchedPunches);
   const calendarByDate = new Map(
     data.calendarDays.map((day) => [day.date, day]),
   );
@@ -109,6 +114,10 @@ export const WeekMobileList = ({ dates }: WeekMobileListProps) => {
               <Typography variant="subtitle2" sx={{ flex: "none" }}>
                 {title}
                 {special !== null && day?.name ? day.name : ""}
+                <UnmatchedPunchMark
+                  count={punchCounts.get(date) ?? 0}
+                  placement={{ ml: 0.5 }}
+                />
               </Typography>
               <Stack
                 direction="row"
@@ -140,9 +149,7 @@ export const WeekMobileList = ({ dates }: WeekMobileListProps) => {
           );
         })}
       </Stack>
-      <ScheduleLegend
-        items={["missingLeader", "missingHelper", "full", "special", "temp"]}
-      />
+      <ScheduleLegend items={ROSTER_LEGEND_ITEMS.weekMobile} />
     </Stack>
   );
 };

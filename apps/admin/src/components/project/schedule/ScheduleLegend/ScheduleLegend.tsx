@@ -9,8 +9,10 @@ import { Typography } from "@repo/ui/typography";
 import { dayOffHatchSx } from "../DayOffs/day-off-styles";
 import {
   autoMarkSx,
+  closedBlockSx,
   cornerDotSx,
   demandDotSx,
+  entryBlockSx,
   extensionSwatchSx,
   leaderMarkSx,
   legendSwatchSx,
@@ -21,7 +23,8 @@ import {
 } from "./schedule-legend-styles";
 
 /**
- * 班表管理的圖例項目(規格 14.5「圖例」)。每個檢視只列自己畫面上會出現的項目;
+ * 班表管理的圖例項目(規格 14.5「圖例」)。每個檢視列自己畫面上**可能**出現的項目(不看當下資料;
+ * 排班表各檢視的清單在 `roster/views/roster-legend.ts`);
  * 各功能追加自己的項目(本型別、元件裡的 `markOf` 與 i18n `admin.schedule.legend.items.*` 各加一筆)。
  */
 export type ScheduleLegendItem =
@@ -36,6 +39,7 @@ export type ScheduleLegendItem =
   | "missingHelper"
   | "full"
   | "multi"
+  | "multiText"
   | "closed"
   | "special"
   | "unmatchedPunch"
@@ -93,7 +97,20 @@ export const ScheduleLegend = ({ items }: ScheduleLegendProps) => {
     missingHelper: <Tag tone="warning" label={t("countSample")} />,
     full: <Tag tone="grey" label={t("countSample")} />,
     multi: mark("×2", multiBadgeSx),
-    closed: swatch(null, { bgcolor: "action.disabledBackground" }),
+    // 班表格子:範本簡稱後面寫「×2」(已排的班的底色),不是小徽章
+    multiText: (
+      <Box
+        component="span"
+        aria-hidden
+        sx={[
+          entryBlockSx,
+          { position: "static", py: 0, typography: "caption", fontWeight: 600 },
+        ]}
+      >
+        {t("multiTextSample")}
+      </Box>
+    ),
+    closed: swatch(null, closedBlockSx),
     special: swatch(null, { borderColor: "text.secondary" }),
     unmatchedPunch: mark(t("punchSample"), unmatchedPunchSx),
     extension: swatch(null, extensionSwatchSx),

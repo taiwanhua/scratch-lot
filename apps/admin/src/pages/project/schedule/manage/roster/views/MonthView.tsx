@@ -24,6 +24,7 @@ import { isTagPaletteKey } from "@/lib/project/tag-palettes";
 
 import { type RosterData, useRoster } from "../roster-context";
 import { MonthDayContent, type MonthDayItem } from "./MonthDayContent";
+import { ROSTER_LEGEND_ITEMS } from "./roster-legend";
 import { useUnmatchedPunchCounts } from "./unmatched-punches";
 import { useShowDay } from "./useRosterDate";
 
@@ -179,24 +180,7 @@ export const MonthView = () => {
       </Stack>
       <ScheduleLegend
         items={
-          isMobile
-            ? [
-                "dotFull",
-                "dotMissingHelper",
-                "dotMissingLeader",
-                "closed",
-                "special",
-                "unmatchedPunch",
-              ]
-            : [
-                "full",
-                "missingHelper",
-                "missingLeader",
-                "closed",
-                "special",
-                "unmatchedPunch",
-                "temp",
-              ]
+          isMobile ? ROSTER_LEGEND_ITEMS.monthMobile : ROSTER_LEGEND_ITEMS.month
         }
       />
     </Stack>

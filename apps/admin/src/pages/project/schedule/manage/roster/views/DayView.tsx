@@ -13,6 +13,7 @@ import { useFitMainHeight } from "@/hooks/base/useFitMainHeight";
 import { ROSTER_CONTENT_SELECTOR } from "../check-panel/RosterCheckLayout";
 import { useRoster } from "../roster-context";
 import { DayMobileCards } from "./DayMobileCards";
+import { ROSTER_LEGEND_ITEMS } from "./roster-legend";
 import { useRosterDate } from "./useRosterDate";
 import { useTimelineGroups } from "./useTimelineGroups";
 
@@ -90,18 +91,7 @@ export const DayView = () => {
           containerSx={fitHeight === null ? {} : { maxHeight: fitHeight }}
         />
       </Box>
-      <ScheduleLegend
-        items={[
-          "leader",
-          "entry",
-          "auto",
-          "multi",
-          "breakMinutes",
-          "extension",
-          "vacancyLeader",
-          "vacancyHelper",
-        ]}
-      />
+      <ScheduleLegend items={ROSTER_LEGEND_ITEMS.day} />
     </Stack>
   );
 };

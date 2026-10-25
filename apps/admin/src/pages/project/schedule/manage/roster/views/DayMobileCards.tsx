@@ -7,6 +7,7 @@ import { Tag } from "@repo/ui/tag";
 import { Typography } from "@repo/ui/typography";
 
 import { ScheduleLegend } from "@/components/project/schedule/ScheduleLegend/ScheduleLegend";
+import { unmatchedCountsByDate } from "@/lib/project/schedule-attendance";
 import { demandToneOf } from "@/lib/project/schedule-roster";
 import {
   compareGroupPlans,
@@ -16,6 +17,8 @@ import {
 import { rosterCellKey, useRoster } from "../roster-context";
 import { DayCardPerson } from "./DayCardPerson";
 import { DayCardVacancy } from "./DayCardVacancy";
+import { UnmatchedPunchMark } from "./UnmatchedPunchMark";
+import { ROSTER_LEGEND_ITEMS } from "./roster-legend";
 import { type RosterTimeline, slotIdOf } from "./useTimelineGroups";
 
 export interface DayMobileCardsProps {
@@ -37,17 +40,24 @@ const pressableSx = {
 /**
  * 手機日檢視(SC-45 手機;規格 14.5 日):人力需求卡片清單,依開始時間排序;卡片標題「班名 時間」、
  * 副標「崗位 · 負責 x/y · 協同 x/y」、右上已填 / 總筆數(有缺時加「缺 N」);每個人一列(負責人套綠底,
- * 上下班和需求不同時加註),缺人用虛線空位。點標題 → 人力需求對話框、點人 → 排班對話框、點缺額 → 新增排班。
+ * 上下班和需求不同時加註),缺人用虛線空位;那天有未對應排班的打卡時上方顯示「⏲ N」。點標題 → 人力需求對話框、點人 → 排班對話框、點缺額 → 新增排班。
  */
 export const DayMobileCards = ({ date, timeline }: DayMobileCardsProps) => {
   const t = useTranslations("admin.schedule.roster");
-  const { canEdit, openDemand, openEntry } = useRoster();
+  const { data, canEdit, openDemand, openEntry } = useRoster();
+  // 未對應排班的打卡:同電腦版日期旁的「⏲ N」(規格 14.5)
+  const punchCount =
+    unmatchedCountsByDate(data.unmatchedPunches).get(date) ?? 0;
   const groups = timeline.groups.toSorted((left, right) =>
     compareGroupPlans(left.plan, right.plan),
   );
 
   return (
     <Stack spacing={1.5} data-roster-cell={rosterCellKey({ date })}>
+      <UnmatchedPunchMark
+        count={punchCount}
+        placement={{ alignSelf: "flex-start" }}
+      />
       {groups.length === 0 && (
         <Typography variant="body2" color="textSecondary">
           {t("timeline.noDemand")}
@@ -142,16 +152,7 @@ export const DayMobileCards = ({ date, timeline }: DayMobileCardsProps) => {
           {t("addDemandHint")}
         </Box>
       )}
-      <ScheduleLegend
-        items={[
-          "leader",
-          "auto",
-          "multi",
-          "breakMinutes",
-          "vacancyLeader",
-          "vacancyHelper",
-        ]}
-      />
+      <ScheduleLegend items={ROSTER_LEGEND_ITEMS.dayMobile} />
     </Stack>
   );
 };

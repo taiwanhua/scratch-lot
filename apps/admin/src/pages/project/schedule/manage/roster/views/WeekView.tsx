@@ -18,6 +18,7 @@ import { ROSTER_CONTENT_SELECTOR } from "../check-panel/RosterCheckLayout";
 import { useRoster } from "../roster-context";
 import { WeekMobileList } from "./WeekMobileList";
 import { WeekMoreList } from "./WeekMoreList";
+import { ROSTER_LEGEND_ITEMS } from "./roster-legend";
 import { useRosterDate } from "./useRosterDate";
 import {
   type RosterTimelineGroup,
@@ -152,22 +153,7 @@ export const WeekView = () => {
           }}
         />
       </Box>
-      <ScheduleLegend
-        items={[
-          "leader",
-          "entry",
-          "auto",
-          "multi",
-          "breakMinutes",
-          "special",
-          "extension",
-          "vacancyLeader",
-          "vacancyHelper",
-          "moreNeutral",
-          "moreWarning",
-          "moreError",
-        ]}
-      />
+      <ScheduleLegend items={ROSTER_LEGEND_ITEMS.week} />
       {more !== null && (
         <WeekMoreList
           date={more.date}

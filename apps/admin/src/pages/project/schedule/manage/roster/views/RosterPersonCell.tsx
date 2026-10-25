@@ -9,6 +9,7 @@ import { Typography } from "@repo/ui/typography";
 import { dayOffHatchSx } from "@/components/project/schedule/DayOffs/day-off-styles";
 import {
   autoMarkSx,
+  closedBlockSx,
   entryBlockSx,
   leaderMarkSx,
   unavailableBlockSx,
@@ -38,7 +39,7 @@ export interface RosterPersonCellProps {
 
 /**
  * 班表檢視的人員格子(規格 14.5 班表):已排的班(範本簡稱、時間、☕ 休息;負責人簡稱套負責人底色、
- * 未套用範本寫「臨」、同一段時間兩筆寫「晚 ×2」、自動排入右上角圖示);店休;別家店的班(灰色區塊,
+ * 未套用範本寫「臨」、同一段時間兩筆寫「晚 ×2」、自動排入右上角圖示);店休(停用底色);別家店的班(灰色區塊,
  * 看不到那家店寫「已排於其他分店」);整天畫休(灰色斜線底「畫休」);時段不可排(灰色區塊);
  * 未對應排班的打卡在右上角顯示時鐘圖示 + 張數(規格 14.5),點了打開排班對話框(有班)或新增排班(沒班)。
  */
@@ -59,10 +60,18 @@ export const RosterPersonCell = ({
   const tTimeline = useTranslations("admin.schedule.roster.timeline");
   const time = (iso: string) => localPartsOf(iso, timezone).time;
   if (isClosed) {
+    // 店休整天不能排:同時間軸的停用區、圖例「店休」的停用底色
     return (
-      <Typography variant="caption" sx={{ fontWeight: 600 }}>
-        {t("closed")}
-      </Typography>
+      <Box
+        sx={[
+          closedBlockSx,
+          { minHeight: 40, borderRadius: 1, px: 0.75, py: 0.5 },
+        ]}
+      >
+        <Typography variant="caption" sx={{ fontWeight: 600 }}>
+          {t("closed")}
+        </Typography>
+      </Box>
     );
   }
   const fullDay = unavailability?.fullDay === true;

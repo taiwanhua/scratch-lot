@@ -28,6 +28,7 @@ import { dayWorstTones } from "@/lib/project/schedule-roster-views";
 import { isTagPaletteKey } from "@/lib/project/tag-palettes";
 
 import { type RosterData, rosterDataOf } from "../roster-context";
+import { ROSTER_LEGEND_ITEMS } from "./roster-legend";
 
 export interface DayPickerProps {
   anchor: HTMLElement;
@@ -156,9 +157,7 @@ export const DayPicker = ({
           nextMonthLabel={tCalendar("nextMonth")}
           aria-label={t("timeline.pickDate")}
         />
-        <ScheduleLegend
-          items={["dotMissingLeader", "dotMissingHelper", "closed", "special"]}
-        />
+        <ScheduleLegend items={ROSTER_LEGEND_ITEMS.dayPicker} />
         <Box>
           <Button
             variant="outlined"

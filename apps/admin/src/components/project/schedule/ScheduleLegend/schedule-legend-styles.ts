@@ -27,7 +27,7 @@ export const leaderMarkSx: Sx = {
   fontWeight: 600,
 };
 
-/** 不能排(店休、已排在其他分店、時段不可排):灰色區塊。 */
+/** 不能排(已排在其他分店、時段不可排):灰色區塊。店休用 `closedBlockSx`。 */
 export const unavailableBlockSx: Sx = {
   position: "relative",
   bgcolor: "grey.100",
@@ -35,6 +35,12 @@ export const unavailableBlockSx: Sx = {
   borderRadius: 1,
   px: 0.75,
   py: 0.5,
+};
+
+/** 店休(整天不能排;時間軸的停用區、手機週清單那一列、班表格子同一個停用底色)。 */
+export const closedBlockSx: Sx = {
+  bgcolor: "action.disabledBackground",
+  color: "text.secondary",
 };
 
 /** 自動排入的小圖示(右上角;四種檢視一致)。 */
