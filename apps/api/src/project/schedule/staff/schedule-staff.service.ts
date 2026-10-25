@@ -449,11 +449,15 @@ export class ScheduleStaffService {
     candidates: readonly UserRecord[],
   ): Promise<{ records: StaffRecord[]; users: UserRecord[] }> {
     const known = new Set(candidates.map((user) => String(user._id)));
-    const readable = await this.staff.findMany(operator, { tenantId });
+    // 歸屬組織在可見範圍內的在資料庫就排除(看得到全部分店時讀不到任何一筆,不重讀整個租戶的檔案)
+    const readable = await this.staff.findMany(operator, {
+      tenantId,
+      orgId: {
+        $nin: [...visibleOrgs.keys()].map((id) => new Types.ObjectId(id)),
+      },
+    });
     const records = readable.filter(
-      (record) =>
-        !known.has(String(record.userId)) &&
-        !visibleOrgs.has(String(record.orgId)),
+      (record) => !known.has(String(record.userId)),
     );
     if (records.length === 0) {
       return { records: [], users: [] };
