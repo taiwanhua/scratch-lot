@@ -1411,6 +1411,78 @@ describe("畫休(GraphQL 端點 + 真 MongoDB)", () => {
       }
     });
 
+    it("連同那天已存的時段不可排一起判斷整天:分兩次登記剛好補滿 → 擋下(我的畫休、代改);代改一次可以多段", async () => {
+      // 2027-03 的開放期間是 2027/2/15–2/25(其他測試沒用到這個月)
+      travelTo("2027-02-20");
+      expect(
+        dataOf(
+          await addMine(wang, {
+            date: iso("2027-03-05"),
+            kind: "time-range",
+            slots: [slot("2027-03-05", "00:00", "20:00")],
+          }),
+          "addMyScheduleDayOffs",
+        ).items,
+      ).toHaveLength(1);
+      expect(
+        errorOf(
+          await addMine(wang, {
+            date: iso("2027-03-05"),
+            kind: "time-range",
+            slots: [
+              { startAt: iso("2027-03-05", "20:00"), endAt: iso("2027-03-06") },
+            ],
+          }),
+        ),
+      ).toEqual({ code: "VALIDATION_FAILED", fields: ["slots"] });
+      // 沒補滿就照存
+      expect(
+        dataOf(
+          await addMine(wang, {
+            date: iso("2027-03-05"),
+            kind: "time-range",
+            slots: [slot("2027-03-05", "20:00", "23:00")],
+          }),
+          "addMyScheduleDayOffs",
+        ).items,
+      ).toHaveLength(1);
+
+      // 代改:一次送兩段 → 存兩筆
+      const saved = dataOf(
+        await onBehalf({
+          userId: String(chen.userId),
+          date: iso("2027-03-09"),
+          kind: "time-range",
+          slots: [
+            slot("2027-03-09", "00:00", "08:00"),
+            slot("2027-03-09", "12:00", "14:00"),
+          ],
+        }),
+        "addScheduleDayOffsOnBehalf",
+      );
+      expect(saved.items).toHaveLength(2);
+      // 再代改兩段剛好補滿那天 → 擋下,什麼都不存
+      expect(
+        errorOf(
+          await onBehalf({
+            userId: String(chen.userId),
+            date: iso("2027-03-09"),
+            kind: "time-range",
+            slots: [
+              slot("2027-03-09", "08:00", "12:00"),
+              { startAt: iso("2027-03-09", "14:00"), endAt: iso("2027-03-10") },
+            ],
+          }),
+        ),
+      ).toEqual({ code: "VALIDATION_FAILED", fields: ["slots"] });
+      const march = await overview(manager, "2027-03");
+      expect(
+        march.days
+          .filter((day) => day.date === iso("2027-03-09"))
+          .flatMap((day) => day.dayOffs),
+      ).toHaveLength(2);
+    });
+
     it("整天看租戶時區那天的長度:洛杉磯夏令時間開始那天只有 23 小時", async () => {
       const orgs = connection.collection("orgs");
       await orgs.updateOne(

@@ -165,6 +165,32 @@ describe("我的畫休", () => {
     expect(within(dialog).getByRole("button", { name: "儲存" })).toBeEnabled();
   });
 
+  it("[登記畫休] 連同那天已登記的段落一起判斷:12/10 已有 09:00–13:00,再填 13:00–00:00 + 00:00–09:00 補滿 → 提示改選整天畫休,不能儲存", async () => {
+    const { user, dayOffsFake } = renderSchedulePage({ path: DAY_OFFS });
+    await user.click(await screen.findByRole("button", { name: "登記畫休" }));
+    const dialog = await screen.findByRole("dialog", { name: "登記畫休" });
+    await typeDate(user, dialog, "2026-12-10");
+    expect(within(dialog).getByText("已登記 09:00–13:00")).toBeInTheDocument();
+    await user.click(within(dialog).getByLabelText("時段不可排"));
+    const start = within(dialog).getByRole("group", { name: /開始/ });
+    const end = within(dialog).getByRole("group", { name: /結束/ });
+    // 只補下午到隔天 00:00:還差早上,不是整天
+    await typeTime(user, start, "13:00");
+    await typeTime(user, end, "00:00");
+    const slots = within(dialog).getByRole("group", { name: "時段" });
+    expect(slots).not.toHaveAccessibleDescription("整天請改選整天畫休");
+    await user.click(
+      within(dialog).getByRole("button", { name: "+ 再加一段" }),
+    );
+    const starts = within(dialog).getAllByRole("group", { name: /開始/ });
+    const ends = within(dialog).getAllByRole("group", { name: /結束/ });
+    await typeTime(user, starts[1], "00:00");
+    await typeTime(user, ends[1], "09:00");
+    expect(slots).toHaveAccessibleDescription("整天請改選整天畫休");
+    expect(within(dialog).getByRole("button", { name: "儲存" })).toBeDisabled();
+    expect(dayOffsFake.inputs.addMine).toEqual([]);
+  });
+
   it("違反限制:不存,對話框列出原因", async () => {
     const { user } = renderSchedulePage({
       path: DAY_OFFS,

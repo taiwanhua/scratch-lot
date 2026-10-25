@@ -36,6 +36,7 @@ import {
   EMPTY_SLOT,
   completeSlots,
   dayKeyOf,
+  registeredSlotsOf,
   slotInstantsOf,
   slotsCoverWholeDay,
 } from "@/lib/project/schedule-day-offs";
@@ -148,9 +149,10 @@ export const DayOffDialog = ({
     (item) => dayKeyOf(item.date, timezone) === date,
   );
 
-  // 幾段合起來是整天:欄位下提示改選整天畫休、停用儲存(api 同一條規則)
+  // 這次的幾段連同那天已登記的時段合起來是整天:欄位下提示改選整天畫休、停用儲存(api 同一條規則)
   const wholeDay =
-    kind === "time-range" && slotsCoverWholeDay(slots, date, timezone);
+    kind === "time-range" &&
+    slotsCoverWholeDay(slots, date, timezone, registeredSlotsOf(existing));
 
   const submit = () => {
     if (date === "") {

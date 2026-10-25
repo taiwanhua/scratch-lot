@@ -1399,6 +1399,7 @@
       "override": {
         "title": "代改畫休",
         "person": "人員",
+        "registered": "這天已登記的時段不可排",
         "kind": "種類",
         "reason": "原因",
         "reasonNote": "說明",

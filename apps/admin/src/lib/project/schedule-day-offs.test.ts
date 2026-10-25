@@ -8,6 +8,7 @@ import {
   isCompleteSlot,
   isPastDayOffMonth,
   monthRangeOf,
+  registeredSlotsOf,
   slotInstantsOf,
   slotsCoverWholeDay,
 } from "./schedule-day-offs";
@@ -106,6 +107,44 @@ describe("畫休畫面的換算", () => {
         TAIPEI,
       ),
     ).toBe(true);
+  });
+
+  it("連同那天已登記的時段不可排一起判斷;這次沒填完任何一段不算", () => {
+    // 已登記 00:00–20:00(台北 12/10)
+    const registered = registeredSlotsOf([
+      {
+        kind: "time-range",
+        startAt: taipei("2026-12-10"),
+        endAt: taipei("2026-12-10", "20:00"),
+      },
+      // 整天畫休不算進來
+      { kind: "full-day", startAt: null, endAt: null },
+    ]);
+    expect(registered).toHaveLength(1);
+    expect(
+      slotsCoverWholeDay(
+        [{ startTime: "20:00", endTime: "00:00" }],
+        "2026-12-10",
+        TAIPEI,
+        registered,
+      ),
+    ).toBe(true);
+    expect(
+      slotsCoverWholeDay(
+        [{ startTime: "20:00", endTime: "23:00" }],
+        "2026-12-10",
+        TAIPEI,
+        registered,
+      ),
+    ).toBe(false);
+    expect(
+      slotsCoverWholeDay(
+        [{ startTime: "", endTime: "" }],
+        "2026-12-10",
+        TAIPEI,
+        registered,
+      ),
+    ).toBe(false);
   });
 
   it("整天以租戶時區那天的長度判斷(洛杉磯夏令時間開始那天只有 23 小時)", () => {

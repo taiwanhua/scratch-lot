@@ -1399,6 +1399,7 @@
       "override": {
         "title": "Change day-off for staff",
         "person": "Staff",
+        "registered": "Unavailable times already registered for this day",
         "kind": "Kind",
         "reason": "Reason",
         "reasonNote": "Details",

@@ -28,7 +28,7 @@ export interface DayOffSlotFieldsProps {
    */
   wholeDay: boolean;
   onChange: (slots: DayOffSlot[]) => void;
-  /** 可以一次登記多段([+ 再加一段]);代改一次一段 */
+  /** 可以一次登記多段([+ 再加一段];我的畫休、代改都開) */
   allowMultiple?: boolean;
 }
 

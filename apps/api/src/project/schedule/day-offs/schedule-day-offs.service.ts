@@ -925,13 +925,19 @@ export class ScheduleDayOffsService implements OnModuleInit {
       () =>
         this.transactions.withTransaction(async () => {
           await this.touchLocks(operator, context, lockMonths);
+          const day = dayKeyRange(
+            write.localDate,
+            write.localDate,
+            context.timezone,
+          );
           const existing = await this.recordsBetween(
             context.tenantId,
             [String(context.userId)],
-            dayKeyRange(write.localDate, write.localDate, context.timezone),
+            day,
             context.timezone,
           );
           assertNoConflict(existing, write);
+          assertNotWholeDay(existing, write, day);
           const violations = await this.assertRules(
             context,
             write.localDate,
@@ -1401,6 +1407,28 @@ function daysOf(
     }));
 }
 
+/**
+ * 幾段時段不可排合起來蓋滿那一天(一段 00:00–隔天 00:00,或重疊 / 相接的幾段;`dayOffSlotsCoverDay`,
+ * admin 同一條規則、停用儲存):整天要登記整天畫休。
+ */
+const coversWholeDay = (
+  spans: readonly { startAt: Date; endAt: Date }[],
+  day: InstantRange,
+): boolean =>
+  dayOffSlotsCoverDay(
+    spans.map((span) => ({
+      startAt: span.startAt.getTime(),
+      endAt: span.endAt.getTime(),
+    })),
+    { startAt: day.from, endAt: day.to },
+  );
+
+const wholeDayError = () =>
+  validationError(
+    "time-range slots covering the whole day must be a full-day day off",
+    ["slots"],
+  );
+
 /** 合法時點、精度到分鐘。 */
 const onMinute = (instant: number): boolean =>
   Number.isFinite(instant) && instant % MS_PER_MINUTE === 0;
@@ -1408,9 +1436,8 @@ const onMinute = (instant: number): boolean =>
 /**
  * 時段不可排的幾段:至少一段;每段是那天裡的半開區間 `[startAt, endAt)`:開始落在
  * `[那天 00:00, 隔天 00:00)`、結束晚於開始且最晚 = 隔天 00:00(做到當天結束)、精度到分鐘
- * (admin 由日期 + `HH:mm` 合成,結束選 00:00 = 隔天 00:00);這次送的幾段合起來蓋滿那一天
- * (一段 00:00–隔天 00:00,或重疊 / 相接的幾段;`dayOffSlotsCoverDay`,admin 同一條規則、停用儲存)也不收,
- * 整天要登記整天畫休。
+ * (admin 由日期 + `HH:mm` 合成,結束選 00:00 = 隔天 00:00);這次送的幾段合起來蓋滿那一天也不收
+ * (`coversWholeDay`;連同那天已存的段落,在交易裡由 `assertNotWholeDay` 再判斷一次)。
  * 不合規則 → `VALIDATION_FAILED`(欄位 `slots`,格式錯不帶 reason)。
  */
 function validatedSlots(
@@ -1437,18 +1464,8 @@ function validatedSlots(
       ["slots"],
     );
   }
-  const wholeDay = dayOffSlotsCoverDay(
-    list.map((slot) => ({
-      startAt: slot.startAt.getTime(),
-      endAt: slot.endAt.getTime(),
-    })),
-    { startAt: day.from, endAt: day.to },
-  );
-  if (wholeDay) {
-    throw validationError(
-      "time-range slots covering the whole day must be a full-day day off",
-      ["slots"],
-    );
+  if (coversWholeDay(list, day)) {
+    throw wholeDayError();
   }
   return list.map((slot) => ({ startAt: slot.startAt, endAt: slot.endAt }));
 }
@@ -1515,6 +1532,30 @@ function assertNoConflict(
       );
     }
     ranges.push(slot);
+  }
+}
+
+/**
+ * 這次送的時段不可排連同那天已存的時段不可排合起來蓋滿那一天(分幾次登記補滿也算)→ `VALIDATION_FAILED`
+ * (欄位 `slots`,不帶 reason;同 `validatedSlots`)。整天畫休不算進來(整天 + 時段可以並存)。
+ */
+function assertNotWholeDay(
+  existing: readonly LoadedDayOff[],
+  write: Pick<DayOffWrite, "kind" | "slots">,
+  day: InstantRange,
+): void {
+  if (write.kind !== "time-range") {
+    return;
+  }
+  const saved: ScheduleDayOffSpan[] = existing.flatMap((record) =>
+    record.kind === "time-range" &&
+    record.startAt !== null &&
+    record.endAt !== null
+      ? [{ startAt: record.startAt, endAt: record.endAt }]
+      : [],
+  );
+  if (coversWholeDay([...saved, ...write.slots], day)) {
+    throw wholeDayError();
   }
 }
 

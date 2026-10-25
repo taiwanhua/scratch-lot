@@ -7,6 +7,7 @@ import { REASON_OTHER_VALUE } from "@repo/domain/project/reason-note";
 import { SCHEDULE_FIELD_CATEGORY_KEYS } from "@repo/domain/project/schedule-fields";
 import {
   type AddScheduleDayOffsOnBehalfMutation,
+  type ScheduleDayOffDayFieldsFragment,
   useAddScheduleDayOffsOnBehalfMutation,
 } from "@repo/graphql";
 import { Button } from "@repo/ui/button";
@@ -33,9 +34,12 @@ import {
   type DayOffSlot,
   EMPTY_SLOT,
   completeSlots,
+  dayKeyOf,
+  registeredSlotsOf,
   slotInstantsOf,
   slotsCoverWholeDay,
 } from "@/lib/project/schedule-day-offs";
+import { localPartsOf } from "@/lib/project/schedule-roster";
 
 import {
   type ScheduleDayOffViolationError,
@@ -64,6 +68,8 @@ export interface OverrideDayOffDialogProps {
   /** 總覽選的分店(代改的對象要是這家店的排班人員) */
   orgId: string;
   staff: readonly { userId: string; name: string }[];
+  /** 總覽這個月每天的畫休(選好人與日期後列出那人那天已登記的時段不可排、一起判斷是不是整天) */
+  days: readonly ScheduleDayOffDayFieldsFragment[];
   /** 帶入的日期鍵 `YYYY-MM-DD`(點日期);[代改] 為空字串 */
   initialDate: string;
   /** 這個月的開放期間已截止:原因必填(api 依那個人的主要分店再判斷一次) */
@@ -72,13 +78,15 @@ export interface OverrideDayOffDialogProps {
 }
 
 /**
- * 代改畫休(SC-24;規格 14.5,`edit-day-offs`):選人、日期、種類(整天畫休 / 時段不可排 + 時間);
+ * 代改畫休(SC-24;規格 14.5,`edit-day-offs`):先選人、日期(兩者都選好後上方唯讀列出那人那天已登記的
+ * 時段不可排;總覽沒有那天的資料就不顯示),再選種類(整天畫休 / 時段不可排 + 時間,一次可以多段);
  * 截止後必填原因(欄位管理「代改畫休原因」,選「其他」要填說明);寫入代改人。
  * 只做新增;刪除在畫休總覽點日期的「當天畫休」裡(`DeleteDayOffDialog`)。手機全螢幕。
  */
 export const OverrideDayOffDialog = ({
   orgId,
   staff,
+  days,
   initialDate,
   reasonRequired,
   onClose,
@@ -145,9 +153,22 @@ export const OverrideDayOffDialog = ({
     return missing;
   };
 
-  // 幾段合起來是整天:欄位下提示改選整天畫休、停用儲存(api 同一條規則)
+  // 那人那天已登記的時段不可排(總覽這個月的資料;換人或換日期就重算)
+  const registered =
+    userId === "" || date === ""
+      ? []
+      : registeredSlotsOf(
+          days
+            .filter((day) => dayKeyOf(day.date, timezone) === date)
+            .flatMap((day) => day.dayOffs)
+            .filter((item) => item.userId === userId),
+        );
+  const clockOf = (value: string) => localPartsOf(value, timezone).time;
+
+  // 這次的幾段連同已登記的合起來是整天:欄位下提示改選整天畫休、停用儲存(api 同一條規則)
   const wholeDay =
-    kind === "time-range" && slotsCoverWholeDay(slots, date, timezone);
+    kind === "time-range" &&
+    slotsCoverWholeDay(slots, date, timezone, registered);
 
   const submit = () => {
     const missing = missingFields();
@@ -226,6 +247,21 @@ export const OverrideDayOffDialog = ({
             }}
           />
         </Stack>
+        {registered.length > 0 && (
+          <Stack spacing={0.5} aria-label={t("override.registered")}>
+            <Typography variant="subtitle2">
+              {t("override.registered")}
+            </Typography>
+            {registered.map((slot) => (
+              <Typography key={slot.startAt} variant="body2">
+                {t("dialog.registeredTimeRange", {
+                  start: clockOf(slot.startAt),
+                  end: clockOf(slot.endAt),
+                })}
+              </Typography>
+            ))}
+          </Stack>
+        )}
         <Typography variant="subtitle2">{t("override.kind")}</Typography>
         <DayOffKindRadios
           value={kind}
@@ -238,7 +274,11 @@ export const OverrideDayOffDialog = ({
             wholeDay={wholeDay}
             invalid={invalid.includes("slots")}
             errorText={fieldErrors.slots}
-            onChange={setSlots}
+            onChange={(next) => {
+              setSlots(next);
+              setFieldErrors({});
+            }}
+            allowMultiple
           />
         )}
         <SelectField

@@ -177,16 +177,40 @@ export const slotInstantsOf = (
 
 const MINUTES_PER_DAY = 1440;
 
+/** 那天已經登記的一段時段不可排(api 的時點)。 */
+export interface RegisteredSlot {
+  startAt: string;
+  endAt: string;
+}
+
+/** 畫休清單裡的時段不可排段落(整天畫休不算;給整天判斷合併、代改對話框唯讀列出)。 */
+export const registeredSlotsOf = (
+  items: readonly {
+    kind: string;
+    startAt?: string | null;
+    endAt?: string | null;
+  }[],
+): RegisteredSlot[] =>
+  items.flatMap((item) =>
+    item.kind === "time-range" &&
+    typeof item.startAt === "string" &&
+    typeof item.endAt === "string"
+      ? [{ startAt: item.startAt, endAt: item.endAt }]
+      : [],
+  );
+
 /**
- * 填完的幾段合起來蓋滿整天(一段 `00:00`–`00:00`,或重疊 / 相接的幾段):整天要改選整天畫休,
- * 停用儲存、欄位下提示(api 用同一個 `dayOffSlotsCoverDay` 擋,回 `VALIDATION_FAILED` `slots`)。
+ * 這次填完的幾段,連同那天已登記的時段不可排(`registered`),合起來蓋滿整天(一段 `00:00`–`00:00`,
+ * 或重疊 / 相接的幾段):整天要改選整天畫休,停用儲存、欄位下提示(api 用同一個 `dayOffSlotsCoverDay`、
+ * 同樣連同那天已存的段落擋,回 `VALIDATION_FAILED` `slots`)。這次沒填完任何一段 → 不算。
  * 有日期時以租戶時區換成時點比(夏令時間切換日是 23 / 25 小時,和 api 一致);還沒選日期時先照牆上時間
- * `00:00`–`24:00` 判斷。
+ * `00:00`–`24:00` 判斷(沒有日期就沒有已登記的段落)。
  */
 export const slotsCoverWholeDay = (
   slots: readonly DayOffSlot[],
   date: string,
   timezone: string,
+  registered: readonly RegisteredSlot[] = [],
 ): boolean => {
   const filled = slots.filter((slot) => isCompleteSlot(slot));
   if (filled.length === 0) {
@@ -198,7 +222,7 @@ export const slotsCoverWholeDay = (
     // 和 api 的「那一天」同一個算法(`localDayRange`)
     const range = localDayRange(day, day, timezone);
     return dayOffSlotsCoverDay(
-      spans.map((span) => ({
+      [...registered, ...spans].map((span) => ({
         startAt: Date.parse(span.startAt),
         endAt: Date.parse(span.endAt),
       })),
