@@ -144,6 +144,7 @@ export const TimePicker = ({
         sx={sx}
         slotProps={{
           textField: {
+            ...draft.fieldInputProps,
             required,
             error,
             helperText,

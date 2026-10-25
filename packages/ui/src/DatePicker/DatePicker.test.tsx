@@ -3,6 +3,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 
+import { compose, composeEach, typeRaw } from "../test/field-input";
 import { DatePicker, type PickerChangeDetails } from "./DatePicker";
 
 /**
@@ -313,6 +314,74 @@ describe("DatePicker", () => {
       await user.click(section("Day"));
       await user.keyboard("15");
       expect(fieldText()).toContain("2026-01-31");
+    });
+  });
+
+  /**
+   * MUI X 的組字、全形數字、NBSP 問題由 `useFieldInputGuard` 攔截(見該檔檔頭)。
+   * 組字分兩種事件順序(`test/field-input.ts`):確認後只送 `compositionend`,或再補一個確認用的 `input`。
+   */
+  describe("輸入法組字、全形數字、空白", () => {
+    it.each(["compositionend", "insertText"] as const)(
+      "注音逐鍵組字打 20261103(%s):每個數字只套用一次",
+      async (commitWith) => {
+        const user = userEvent.setup();
+        const handleChange = jest.fn();
+        render(<Controlled initial={null} onChange={handleChange} />);
+
+        await user.click(section("Year"));
+        const typed: (string | null)[] = [];
+        for (const digit of "2026") {
+          await compose(digit, commitWith);
+          typed.push(section("Year").textContent);
+        }
+        await composeEach("1103", commitWith);
+
+        expect(typed).toEqual(["0002", "0020", "0202", "2026"]);
+        expect(handleChange).toHaveBeenLastCalledWith("2026-11-03", DONE);
+        expect(fieldText()).toContain("2026-11-03");
+      },
+    );
+
+    it("全形數字:逐字組字、一次確認整串、不經組字直接送出,都當半形數字", async () => {
+      const user = userEvent.setup();
+      const handleChange = jest.fn();
+      render(<Controlled initial={null} onChange={handleChange} />);
+
+      await user.click(section("Year"));
+      await composeEach("２０２６");
+      await compose("１１");
+      typeRaw("０３");
+
+      expect(handleChange).toHaveBeenLastCalledWith("2026-11-03", DONE);
+    });
+
+    it("組字成非數字(注音、漢字)不改欄位,之後照常輸入", async () => {
+      const user = userEvent.setup();
+      const handleChange = jest.fn();
+      render(<Controlled initial="2026-01-15" onChange={handleChange} />);
+
+      await user.click(section("Month"));
+      await compose("當");
+      await compose("ㄉ", "insertText");
+
+      expect(section("Month").textContent).toBe("01");
+      expect(handleChange).not.toHaveBeenCalled();
+
+      await user.keyboard("11");
+      expect(handleChange).toHaveBeenLastCalledWith("2026-11-15", DONE);
+    });
+
+    it("空白(Chromium 寫成 NBSP)不當成 0:打 2026 11 03 得到 2026-11-03", async () => {
+      const user = userEvent.setup();
+      const handleChange = jest.fn();
+      render(<Controlled initial={null} onChange={handleChange} />);
+
+      await user.click(section("Year"));
+      typeRaw("2026\u00A011\u3000\u00A003");
+
+      expect(handleChange).toHaveBeenLastCalledWith("2026-11-03", DONE);
+      expect(fieldText()).toContain("2026-11-03");
     });
   });
 });

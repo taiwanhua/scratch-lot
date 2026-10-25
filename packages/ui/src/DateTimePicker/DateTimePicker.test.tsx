@@ -3,6 +3,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 
+import { composeEach, typeRaw } from "../test/field-input";
 import { DateTimePicker, type PickerChangeDetails } from "./DateTimePicker";
 
 /** MUI X 的日期時間欄位是一組「區段」包在 `role="group"` 裡,值從整組的文字讀。 */
@@ -242,6 +243,56 @@ describe("DateTimePicker", () => {
 
       await user.click(screen.getByRole("button", { name: "外部改值" }));
       expect(fieldText()).toContain("2030-05-06 10:00");
+    });
+  });
+
+  /** MUI X 的組字、全形數字、NBSP 問題由 `useFieldInputGuard` 攔截(與 DatePicker 同一份)。 */
+  describe("輸入法組字、全形數字、空白", () => {
+    it.each(["compositionend", "insertText"] as const)(
+      "注音逐鍵組字打 202611031830(%s):每個數字只套用一次",
+      async (commitWith) => {
+        const user = userEvent.setup();
+        const handleChange = jest.fn();
+        render(<Controlled initial={null} onChange={handleChange} />);
+
+        await user.click(section("Year"));
+        await composeEach("202611031830", commitWith);
+
+        expect(handleChange).toHaveBeenLastCalledWith(
+          "2026-11-03T10:30:00Z",
+          DONE,
+        );
+        expect(fieldText()).toContain("2026-11-03 18:30");
+      },
+    );
+
+    it("全形數字組字確認後當半形數字", async () => {
+      const user = userEvent.setup();
+      const handleChange = jest.fn();
+      render(<Controlled initial={null} onChange={handleChange} />);
+
+      await user.click(section("Year"));
+      await composeEach("２０２６１１０３１８３０");
+
+      expect(handleChange).toHaveBeenLastCalledWith(
+        "2026-11-03T10:30:00Z",
+        DONE,
+      );
+    });
+
+    it("日期與時間之間打空白(Chromium 寫成 NBSP):2026-11-03 18:30 得到 18:30,不是 01:30", async () => {
+      const user = userEvent.setup();
+      const handleChange = jest.fn();
+      render(<Controlled initial={null} onChange={handleChange} />);
+
+      await user.click(section("Year"));
+      typeRaw("2026-11-03\u00A018:30");
+
+      expect(handleChange).toHaveBeenLastCalledWith(
+        "2026-11-03T10:30:00Z",
+        DONE,
+      );
+      expect(fieldText()).toContain("2026-11-03 18:30");
     });
   });
 });

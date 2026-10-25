@@ -135,6 +135,7 @@ export const DatePicker = ({
         sx={sx}
         slotProps={{
           textField: {
+            ...draft.fieldInputProps,
             required,
             error,
             helperText,

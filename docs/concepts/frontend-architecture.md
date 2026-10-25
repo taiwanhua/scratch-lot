@@ -314,6 +314,8 @@ Provider 內找不到模組設定時使用預設模板 `{{title}}`;缺少 Provid
 
 **輸入欄位**:日期用 `@repo/ui/date-picker`、日期時間用 `@repo/ui/date-time-picker`、時間用 `@repo/ui/time-picker`(收發 `HH:mm`,24 小時制;`minutesStep` 限定分鐘格子,`minTime` / `maxTime` 限定範圍),不用原生 `type="date"` / `type="time"`(STYLE-05)。三者共用 `DatePicker/usePickerDraft.ts` 的草稿行為:打到一半不往外送值,`onChange` 第二參數 `{ isIncomplete }`。`DatePicker` 的 `shouldDisableDate` 讓個別日期反灰不可選。
 
+**MUI X 的輸入暫時處理**:三者經 `usePickerDraft` 共用 `DatePicker/useFieldInputGuard.ts`,在欄位外層攔截 `@mui/x-date-pickers` 9.14.0 的三個問題 —— 輸入法組字的數字被套用兩次([mui/mui-x#9465](https://github.com/mui/mui-x/issues/9465))、全形數字打不進去、`contenteditable` 打空白產生的 NBSP 被當成 0(尚未回報)。處理後組字確認的數字只交給 MUI 一次、全形數字當半形、空白與 `-` `/` `:` 一樣略過。**升級 `@mui/x-date-pickers` 時**,先拿掉 `slotProps.textField` 上的 `fieldInputProps`、跑三個元件測試裡「輸入法組字、全形數字、空白」那組,仍失敗就保留攔截;MUI 修正後刪掉 `useFieldInputGuard.ts` 與 `test/field-input.ts` 的用法。
+
 **「今天」與時區**:要以「今天」為準的地方(月曆的今天、預設日期、本月)用 `apps/admin/src/hooks/base/useTenantToday.ts`,回租戶時區的 `YYYY-MM-DD`(進畫面時取一次),不用 `new Date()` / `dayjs()` 取瀏覽器的日期。底座 `MonthCalendar` 與 `ScheduleTimeline` 收 `timezone`(admin 傳 `useTenantTimezone()`):沒給 `today` 時以它推今天;`ScheduleTimeline` 的刻度、長條位置、點擊帶出的時點與時間文字也都依它,「一天」= 該時區的 00:00–24:00。沒給 `timezone` 時退回瀏覽器時區,只適合 story / 測試。
 
 ## 表格兩種

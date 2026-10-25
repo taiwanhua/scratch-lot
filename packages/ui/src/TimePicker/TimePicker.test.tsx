@@ -3,6 +3,7 @@ import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 
+import { compose, composeEach, typeRaw } from "../test/field-input";
 import { type PickerChangeDetails, TimePicker } from "./TimePicker";
 
 /** 輸入格:MUI X 的欄位是一組「區段」(時 / 分各一個 span)包在 `role="group"` 裡。 */
@@ -230,6 +231,49 @@ describe("TimePicker", () => {
       await user.click(screen.getByRole("button", { name: "外部改值" }));
 
       expect(fieldText()).toContain("18:15");
+    });
+  });
+
+  /** MUI X 的組字、全形數字、NBSP 問題由 `useFieldInputGuard` 攔截(與 DatePicker 同一份)。 */
+  describe("輸入法組字、全形數字、空白", () => {
+    it.each(["compositionend", "insertText"] as const)(
+      "注音逐鍵組字打 1830(%s):每個數字只套用一次",
+      async (commitWith) => {
+        const user = userEvent.setup();
+        const handleChange = jest.fn();
+        render(<Controlled initial={null} onChange={handleChange} />);
+
+        await user.click(section("Hours"));
+        await composeEach("18", commitWith);
+        expect(section("Hours").textContent).toBe("18");
+        await composeEach("30", commitWith);
+
+        expect(handleChange).toHaveBeenLastCalledWith("18:30", DONE);
+      },
+    );
+
+    it("全形數字:一次確認整串、不經組字直接送出,都當半形數字", async () => {
+      const user = userEvent.setup();
+      const handleChange = jest.fn();
+      render(<Controlled initial="09:30" onChange={handleChange} />);
+
+      await user.click(section("Hours"));
+      await compose("１８");
+      typeRaw("４５");
+
+      expect(handleChange).toHaveBeenLastCalledWith("18:45", DONE);
+    });
+
+    it("時與分之間打空白(Chromium 寫成 NBSP)不當成 0", async () => {
+      const user = userEvent.setup();
+      const handleChange = jest.fn();
+      render(<Controlled initial={null} onChange={handleChange} />);
+
+      await user.click(section("Hours"));
+      typeRaw("18\u00A030");
+
+      expect(handleChange).toHaveBeenLastCalledWith("18:30", DONE);
+      expect(fieldText()).toContain("18:30");
     });
   });
 });

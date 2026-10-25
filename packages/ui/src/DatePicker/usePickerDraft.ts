@@ -2,6 +2,8 @@ import type { FieldSelectedSections } from "@mui/x-date-pickers/models";
 import type { Dayjs } from "dayjs";
 import { useRef, useState } from "react";
 
+import { useFieldInputGuard } from "./useFieldInputGuard";
+
 /**
  * 年份區段還沒打滿 4 位時,MUI 組出來的是 `0002`、`0202` 這種年份。
  * 這種值不往外送:它不是使用者要的日期,而且 `dayjs("0002-…")` 會解析成 1902,往返一次就變成別的年份。
@@ -57,6 +59,8 @@ const fromValue = (
  * `value === ""` 視同 `null`:有呼叫端把清空存成空字串再傳回來(`value ?? ""`),
  * 若當成另一個值,打字途中送出的 `null` 一往返就會用不合法日期換掉草稿,已填的月、日跟著被清掉。
  *
+ * 回傳的 `fieldInputProps` 掛在 MUI picker 的 `slotProps.textField`:修正輸入法組字、全形數字與空白(`useFieldInputGuard`)。
+ *
  * 已知限制:打字途中已送出 `null`,外部此時再設成 `null`(例如重設成空白)分辨不出來,草稿會留著。
  */
 export const usePickerDraft = ({
@@ -107,5 +111,13 @@ export const usePickerDraft = ({
     });
   };
 
-  return { date: current.date, handleChange, handleSelectedSectionsChange };
+  // 輸入法組字、全形數字、空白的攔截(MUI X 的 bug 暫時處理,見 `useFieldInputGuard.ts`);掛在 `slotProps.textField`
+  const fieldInputProps = useFieldInputGuard();
+
+  return {
+    date: current.date,
+    handleChange,
+    handleSelectedSectionsChange,
+    fieldInputProps,
+  };
 };
