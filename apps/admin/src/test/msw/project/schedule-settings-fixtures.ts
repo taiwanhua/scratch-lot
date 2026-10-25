@@ -178,6 +178,22 @@ export const sampleScheduleStaff: ScheduleStaffRowFieldsFragment[] = [
     joinedElsewhere: false,
     staff: null,
   },
+  // 別店建的檔案、可以排的分店有這家店(共用進來):只能看
+  {
+    userId: "u-wu",
+    name: "吳外店",
+    account: "wu",
+    joinedElsewhere: false,
+    staff: {
+      id: "s-wu",
+      employmentType: "part-time",
+      enabled: true,
+      note: null,
+      primaryElsewhere: true,
+      isShared: true,
+      orgs: [staffOrg(SCHEDULE_BRANCH, false, false, 2)],
+    },
+  },
   // 已被看不到的組織加入(一人一份):不能再加入
   {
     userId: "u-chen",

@@ -52,6 +52,24 @@ describe("排班設定", () => {
       expect(screen.getByText("已在其他組織加入")).toBeInTheDocument();
     });
 
+    it("共用進來的別店人員:標「其他店的排班人員(只能看)」;點開唯讀,沒有 [儲存]", async () => {
+      const { user } = renderSchedulePage({ path: SETTINGS });
+      expect(
+        await screen.findByRole("checkbox", { name: "選取「吳外店」" }),
+      ).toBeDisabled();
+      expect(screen.getByText("其他店的排班人員(只能看)")).toBeInTheDocument();
+      await user.click(screen.getByText("吳外店"));
+      const dialog = await screen.findByRole("dialog", {
+        name: "排班人員設定 · 吳外店",
+      });
+      expect(
+        within(dialog).queryByRole("button", { name: "儲存" }),
+      ).not.toBeInTheDocument();
+      expect(
+        within(dialog).getByRole("button", { name: "關閉" }),
+      ).toBeEnabled();
+    });
+
     it("篩選「未加入」不列出已在其他組織加入的人;「已加入」才列出", async () => {
       renderSchedulePage({ path: `${SETTINGS}?joined=no` });
       expect(

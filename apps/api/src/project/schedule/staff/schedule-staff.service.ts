@@ -78,7 +78,8 @@ type VisibleOrgs = ReadonlyMap<string, string>;
  * - **候選使用者** = 所屬組織落在操作者可見範圍內(且在同一個租戶)的使用者;不是新建人
  * - 排班檔案是使用者的子檔,**一個租戶一人一份**(唯一 `(tenantId, userId)`);建立時 `orgId` = 當前組織。
  *   讀取:可見範圍,加上「可以排的分店」的店(資料共用的 sharedByFields,ADR-0014;跨店支援也看得到);
- *   修改:只有歸屬組織在可見範圍內的(別店建的只能看,`staff.isShared = true`)。
+ *   修改:只有歸屬組織在可見範圍內的(別店建的只能看,`staff.isShared = true`;改了回 `NOT_OWNER`)。
+ *   列表 = 候選使用者,加上共用進來的檔案的人(使用者本身不在可見範圍也列)。
  *   完全看不到的組織加入的人,列表標 `joinedElsewhere`、不能再加入
  * - 可以排的分店只能加操作者看得到的(看不到 → `NOT_FOUND`);看不到的分店的關聯保留不動
  * - 每人一家主要分店(有任何可以排的分店時恰好一家)
@@ -100,8 +101,25 @@ export class ScheduleStaffService {
     operator: OperatorContext,
     input: ScheduleStaffListInput | null,
   ): Promise<ScheduleStaffListPayload> {
-    const { tenantId, visibleOrgs, users } = await this.candidatesOf(operator);
-    const staffByUser = await this.staffByUser(operator, users);
+    const {
+      tenantId,
+      visibleOrgs,
+      users: candidates,
+    } = await this.candidatesOf(operator);
+    const staffByUser = await this.staffByUser(operator, candidates);
+    // 共用進來的:可以排的分店有我的店、但使用者不在可見範圍(只能看,`staff.isShared = true`)
+    const shared = await this.sharedFromElsewhere(
+      operator,
+      tenantId,
+      visibleOrgs,
+      candidates,
+    );
+    for (const record of shared.records) {
+      staffByUser.set(String(record.userId), record);
+    }
+    const users = [...candidates, ...shared.users].toSorted((left, right) =>
+      compareScheduleNames(left.name, right.name),
+    );
     const joinedInTenant = await this.joinedInTenant(operator, tenantId, users);
     const rows = await this.rowsOf(
       operator,
@@ -197,20 +215,23 @@ export class ScheduleStaffService {
   ): Promise<ScheduleStaffRowModel> {
     const staffId = parseObjectId(input.staffId, "staffId");
     const { tenantId, visibleOrgs, users } = await this.candidatesOf(operator);
-    // 一般可見性:看得到這份排班檔案所屬的組織才改得到
+    // 讀得到(含依可以排的分店共用進來的)才往下判斷;找不到 → NOT_FOUND
     const record = await this.staff.findOne(operator, { _id: staffId });
-    const user = users.find(
-      (candidate) => String(candidate._id) === String(record?.userId),
-    );
-    if (!record || !user) {
+    if (!record) {
       throw notFoundError(`schedule staff not found: ${input.staffId}`);
     }
-    // 共用進來的(別店建的檔案)只能看(ADR-0014)
+    // 共用進來的(別店建的檔案)只能看(ADR-0014):先於候選使用者判斷,使用者不在可見範圍也回 NOT_OWNER
     if (!isOrgVisible(operator, record.orgId)) {
       throw forbiddenError(
         `schedule staff ${input.staffId} belongs to another org`,
         "NOT_OWNER",
       );
+    }
+    const user = users.find(
+      (candidate) => String(candidate._id) === String(record.userId),
+    );
+    if (!user) {
+      throw notFoundError(`schedule staff not found: ${input.staffId}`);
     }
     if (
       input.employmentType !== undefined &&
@@ -414,6 +435,38 @@ export class ScheduleStaffService {
       userId: { $in: users.map((user) => user._id) },
     });
     return new Map(records.map((record) => [String(record.userId), record]));
+  }
+
+  /**
+   * 共用進來、但使用者不在候選使用者裡的排班檔案(別店建的,可以排的分店有操作者看得到的店)。
+   * 檔案用一般可見性讀(資料共用的 sharedByFields 已處理);使用者資料以租戶為邊界讀。
+   * 歸屬組織在可見範圍內的檔案不在這裡補(使用者不在可見範圍時維持舊行為,不列)。
+   */
+  private async sharedFromElsewhere(
+    operator: OperatorContext,
+    tenantId: Types.ObjectId,
+    visibleOrgs: VisibleOrgs,
+    candidates: readonly UserRecord[],
+  ): Promise<{ records: StaffRecord[]; users: UserRecord[] }> {
+    const known = new Set(candidates.map((user) => String(user._id)));
+    const readable = await this.staff.findMany(operator, { tenantId });
+    const records = readable.filter(
+      (record) =>
+        !known.has(String(record.userId)) &&
+        !visibleOrgs.has(String(record.orgId)),
+    );
+    if (records.length === 0) {
+      return { records: [], users: [] };
+    }
+    const users = await this.users.findMany(
+      await tenantBoundaryContext(this.orgs, null, tenantId),
+      { _id: { $in: records.map((record) => record.userId) } },
+    );
+    const found = new Set(users.map((user) => String(user._id)));
+    return {
+      records: records.filter((record) => found.has(String(record.userId))),
+      users,
+    };
   }
 
   /**

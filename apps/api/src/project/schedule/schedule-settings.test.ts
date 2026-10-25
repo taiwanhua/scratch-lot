@@ -1121,11 +1121,12 @@ describe("排班設定(GraphQL 端點 + 真 MongoDB)", () => {
       ).toEqual([]);
     });
 
-    it("依可以排的分店共用:別店建的檔案,可以排的分店有我的店就看得到(isShared),但改不了(NOT_OWNER)", async () => {
+    it("依可以排的分店共用:只屬於別店的人,可以排的分店有我的店就看得到(isShared),但改不了(NOT_OWNER)", async () => {
+      // 使用者只屬於中山店:新竹店長本來不會把他當成候選使用者,只能靠共用進來的檔案看到
       const support = await createScheduleUser(
         api,
         connection,
-        [zhongshan, hsinchu],
+        [zhongshan],
         [],
         "跨店支援的人",
       );
@@ -1145,8 +1146,7 @@ describe("排班設定(GraphQL 端點 + 真 MongoDB)", () => {
           (item) => item.userId === String(support.userId),
         );
       };
-      const before = await rowOf(hsinchuManager);
-      expect(before).toMatchObject({ joinedElsewhere: true, staff: null });
+      expect(await rowOf(hsinchuManager)).toBeUndefined();
 
       // 總部(看得到兩家)把新竹店加進可以排的分店:檔案上的副本跟著寫
       const row = await rowOf(hq);
@@ -1175,8 +1175,23 @@ describe("排班設定(GraphQL 端點 + 真 MongoDB)", () => {
       );
 
       const after = await rowOf(hsinchuManager);
+      expect(after?.name).toBe("跨店支援的人");
       expect(after?.joinedElsewhere).toBe(false);
-      expect(after?.staff).toMatchObject({ id: staffId, isShared: true });
+      expect(after?.staff).toMatchObject({
+        id: staffId,
+        isShared: true,
+        primaryElsewhere: true,
+        orgs: [expect.objectContaining({ orgId: String(hsinchu) })],
+      });
+      // 共用進來的一定是已加入:「已加入」篩得到、「未加入」篩不到
+      const joinedRows = await staffRows(hsinchuManager, { joined: true });
+      expect(joinedRows.items.map((item) => item.userId)).toContain(
+        String(support.userId),
+      );
+      const notJoinedRows = await staffRows(hsinchuManager, { joined: false });
+      expect(notJoinedRows.items.map((item) => item.userId)).not.toContain(
+        String(support.userId),
+      );
       expect(
         errorOf(
           await gql(hsinchuManager, UPDATE_STAFF, {
