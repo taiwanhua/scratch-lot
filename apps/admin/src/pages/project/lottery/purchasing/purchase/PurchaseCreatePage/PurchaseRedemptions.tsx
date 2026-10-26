@@ -26,6 +26,8 @@ type Row = LotteryRedemptionFieldsFragment;
 export interface PurchaseRedemptionsProps {
   /** 進貨分店;還沒選 = "" */
   branchId: string;
+  /** 編輯中的那張進貨單(清單另含它已勾的兌獎紀錄);新增 = null */
+  submissionId?: string | null;
   /** 已勾的兌獎紀錄 id */
   pickedIds: ReadonlySet<string>;
   onToggle: (row: Row) => void;
@@ -40,6 +42,7 @@ export interface PurchaseRedemptionsProps {
  */
 export const PurchaseRedemptions = ({
   branchId,
+  submissionId = null,
   pickedIds,
   onToggle,
   error,
@@ -50,7 +53,7 @@ export const PurchaseRedemptions = ({
   const temporal = useTemporalText();
   const query = useLotteryPurchaseRedemptionsQuery(
     session.client,
-    { orgId: branchId, submissionId: null },
+    { orgId: branchId, submissionId },
     { enabled: branchId !== "" },
   );
   const rows = query.data?.lotteryPurchaseRedemptions.items ?? [];

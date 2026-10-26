@@ -100,7 +100,7 @@ const receivingAfterSubmit = (
 const submitOneBook = async (user: ReturnType<typeof userEvent.setup>) => {
   const scan = await screen.findByRole("textbox", { name: "刷條碼加入選取" });
   await user.type(scan, "5201-1-001233-050-0-6{Enter}");
-  await screen.findByRole("table", { name: "調貨明細" });
+  await screen.findByRole("table", { name: /^調貨明細/ });
   await user.click(screen.getByRole("button", { name: "送出" }));
 };
 

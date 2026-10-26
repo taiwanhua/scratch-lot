@@ -26,6 +26,8 @@ export interface TransferHeaderFieldsProps {
   onToBranch: (branchId: string) => void;
   onRequisition: (serialNo: string | null) => void;
   onNote: (note: string) => void;
+  /** 出貨 / 收貨分店不能換(編輯頁已有出貨或點收的本) */
+  isBranchLocked?: boolean;
   /** 送出 / 存草稿失敗的錯誤(`useFormDraft().error`;欄位錯誤標在對應欄位) */
   error: FieldErrorSource;
 }
@@ -44,6 +46,7 @@ export const TransferHeaderFields = ({
   onToBranch,
   onRequisition,
   onNote,
+  isBranchLocked = false,
   error,
 }: TransferHeaderFieldsProps) => {
   const t = useTranslations("admin.lotteryPurchasing.transfer.create");
@@ -67,6 +70,7 @@ export const TransferHeaderFields = ({
         value={fromBranchId === "" ? [] : [fromBranchId]}
         required
         fullWidth
+        disabled={isBranchLocked}
         {...fieldErrorProps(error, K.fromBranch)}
         onChange={(ids) => {
           onFromBranch(ids[0] ?? "");
@@ -79,6 +83,7 @@ export const TransferHeaderFields = ({
         value={toBranchId === "" ? [] : [toBranchId]}
         required
         fullWidth
+        disabled={isBranchLocked}
         {...(isSameBranch
           ? { error: true, helperText: t("sameBranch") }
           : fieldErrorProps(error, K.toBranch, t("toBranchHint")))}

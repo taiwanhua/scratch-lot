@@ -2,7 +2,10 @@ import { describe, expect, it } from "@jest/globals";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
-import { WRONG_STORE_CODE } from "@/test/msw/project/lottery/purchase-handlers";
+import {
+  AMBIGUOUS_FRONT_CODE,
+  WRONG_STORE_CODE,
+} from "@/test/msw/project/lottery/purchase-handlers";
 
 import { renderPurchasePage } from "../purchase-test-support";
 
@@ -12,11 +15,13 @@ const VIEW = "/purchasing/purchase/view-page/doc-p33";
  * 進貨單的替換檢視頁(規格 8.2;Figma PU-06、PU-07、PU-11):點收區塊、送錯分店、結算區塊。
  */
 describe("進貨單檢視頁", () => {
-  it("點收區塊:依遊戲分組、「叫貨 5,已刷 4」;刷到單上的本 → 已點收,[完成這次點收] 可以按", async () => {
+  it("點收區塊:依遊戲分組、組標題「已點收 4 / 5」;刷到單上的本 → 已點收,[完成這次點收] 可以按", async () => {
     const user = userEvent.setup();
     const { purchaseFake } = renderPurchasePage({ path: VIEW });
     expect(
-      await screen.findByText("5164 發大財 · 200 元 · 叫貨 5,已刷 4"),
+      await screen.findByRole("heading", {
+        name: /5164 發大財 · 200 元.*已點收 4 \/ 5/,
+      }),
     ).toBeInTheDocument();
     expect(
       screen.getByText(/還有 1 本沒點收;核准前要全部點收/),
@@ -28,13 +33,46 @@ describe("進貨單檢視頁", () => {
     await user.type(scan, "0056531099{Enter}");
     await waitFor(() => {
       expect(
-        screen.getByText("5164 發大財 · 200 元 · 叫貨 5,已刷 5"),
+        screen.getByRole("heading", {
+          name: /5164 發大財 · 200 元.*已點收 5 \/ 5/,
+        }),
       ).toBeInTheDocument();
     });
     expect(purchaseFake.scanned).toEqual(["0056531099"]);
     expect(
       screen.getByRole("button", { name: "完成這次點收(1 本)" }),
     ).toBeEnabled();
+  });
+
+  it("正面條碼對到多款遊戲同本號 → 擋下、出現「正面條碼的遊戲」;選了遊戲 → 照所選的遊戲再確認、點收成功後收起", async () => {
+    const user = userEvent.setup();
+    const { purchaseFake } = renderPurchasePage({ path: VIEW });
+    const scan = await screen.findByRole("textbox", { name: "刷條碼點收" });
+    // 平常不顯示遊戲選單
+    expect(
+      screen.queryByRole("combobox", { name: "正面條碼的遊戲" }),
+    ).toBeNull();
+    await user.type(scan, `${AMBIGUOUS_FRONT_CODE}{Enter}`);
+    expect(
+      await screen.findByText("這個本號有多款遊戲,請刷背面編號或選遊戲"),
+    ).toBeInTheDocument();
+    await user.click(screen.getByRole("combobox", { name: "正面條碼的遊戲" }));
+    expect(
+      await screen.findByRole("option", { name: "5201 金好運" }),
+    ).toBeInTheDocument();
+    await user.click(screen.getByRole("option", { name: "5164 發大財" }));
+    await waitFor(() => {
+      expect(purchaseFake.pickedGameIds).toEqual([null, "game-5164"]);
+    });
+    await waitFor(() => {
+      expect(
+        screen.queryByRole("combobox", { name: "正面條碼的遊戲" }),
+      ).toBeNull();
+    });
+    expect(
+      screen.getByRole("button", { name: "完成這次點收(1 本)" }),
+    ).toBeEnabled();
+    expect(screen.getByRole("textbox", { name: "刷條碼點收" })).toHaveValue("");
   });
 
   it("送錯分店:擋下並提示是哪一家店的哪一張單;[通知總部更正] → 通知建立者", async () => {

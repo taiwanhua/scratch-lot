@@ -2619,6 +2619,12 @@
           "offset": "兌獎折抵",
           "remainder": "兌獎剩餘"
         }
+      },
+      "edit": {
+        "title": "編輯進貨單",
+        "titleWithNo": "編輯進貨單 {serialNo}",
+        "lockedHint": "已點收的本不能修改;送出後會回到點收,由進貨分店點收剩下的本",
+        "loadFailed": "讀不到這張進貨單的點收狀態,請重新整理"
       }
     },
     "receive": {
@@ -2627,18 +2633,17 @@
       "complete": "完成這次點收({count} 本)",
       "completed": "這次點收了 {count} 本",
       "groupTitle": "{code} {name} · {price} 元",
-      "groupWithRequested": "{title} · 叫貨 {requested},已刷 {scanned}",
       "received": "已點收",
       "notReceived": "未點收",
       "cardFacts": "{ticketLabel} {lastTicketNo} · {rate}% · 批購 {amount}",
       "columns": {
         "bookNo": "本號",
-        "lastTicketNo": "最後張號",
+        "ticket": "最後張號",
         "tickets": "張數",
         "bookPrice": "整本金額",
         "rate": "批購金額率",
         "amount": "批購金額",
-        "received": "點收"
+        "status": "狀態"
       },
       "errors": {
         "PURCHASE_NOT_RECEIVABLE": "這張進貨單現在不在你的點收關卡",
@@ -2654,7 +2659,9 @@
         "TRANSFER_ALREADY_RECEIVED": "這一列已經點收過了",
         "TRANSFER_NOT_SHIPPED": "這一列還沒出貨,出貨確認後才能點收",
         "TRANSFER_WRONG_STORE": "這本不是送到這家店",
-        "TRANSFER_BOOK_NOT_ON_TRANSFER": "這本(或這張)不在這張調貨單上"
+        "TRANSFER_BOOK_NOT_ON_TRANSFER": "這本(或這張)不在這張調貨單上",
+        "PURCHASE_SCAN_AMBIGUOUS_GAME": "這個本號有多款遊戲,請刷背面編號或選遊戲",
+        "TRANSFER_SCAN_AMBIGUOUS_GAME": "這個本號有多款遊戲,請刷背面編號或選遊戲"
       },
       "wrongStore": {
         "title": "這本不是送到這家店",
@@ -2664,7 +2671,11 @@
         "facts": "本號 {bookNo} · 進貨單 {serialNo} · {branch}",
         "message": "這本屬於「{branch}」的進貨單 #{serialNo},請交給送貨人帶到{branch},本店不用點收。",
         "notified": "已通知這張進貨單的建立者更正"
-      }
+      },
+      "inTransit": "在途",
+      "receivedOf": "已點收 {received} / {total}",
+      "pickGame": "正面條碼的遊戲",
+      "pickGameNone": "請選遊戲"
     },
     "transfer": {
       "badgeDescription": "點收關卡(第二關)在你手上的調貨單",
@@ -2713,16 +2724,15 @@
         "scanNotFound": "這本不在出貨分店可以調的本裡",
         "partialForbidden": "這本拆過了,只能選張;你沒有零碎張數的權限",
         "noLines": "還沒有加入任何一本",
-        "linesAria": "調貨明細",
+        "linesAria": "調貨明細 {game}",
         "modes": {
           "whole": "整本",
           "partial": "選張"
         },
         "opened": "拆過",
-        "cardFacts": "{mode} · {tickets} · {count} 張 · 金額 {amount} · 批購金額 {purchase}",
+        "cardFacts": "{tickets} · {count} 張 · 金額 {amount} · 批購金額 {purchase}",
         "columns": {
           "book": "遊戲 / 本",
-          "mode": "方式",
           "ticketNos": "張號",
           "tickets": "張數",
           "amount": "金額",
@@ -2731,7 +2741,6 @@
         },
         "rateOf": "{book} 的批購金額率",
         "remove": "移除",
-        "removeOf": "移除 {book}",
         "transferTotal": "調貨金額(批購金額合計)",
         "pickBook": "選本",
         "pickBookNone": "選一本",
@@ -2754,7 +2763,8 @@
         "draftSaved": "已存草稿",
         "submitted": "已送出調貨單",
         "toBranchHint": "看不到收貨分店時:調貨由總部開單,或請管理員把你加入收貨分店",
-        "toBranchUnavailable": "你選不到這家收貨分店:調貨由總部開單,或請管理員把你加入收貨分店"
+        "toBranchUnavailable": "你選不到這家收貨分店:調貨由總部開單,或請管理員把你加入收貨分店",
+        "scanAmbiguousGame": "這個本號有多款遊戲,請刷背面編號或先選「正面條碼的遊戲」"
       },
       "view": {
         "title": "調貨單",
@@ -2770,17 +2780,14 @@
           "partial": "選張"
         },
         "columns": {
-          "game": "遊戲",
           "book": "本",
-          "mode": "方式",
           "ticketNos": "張號",
           "tickets": "張數",
           "amount": "金額",
           "rate": "批購金額率",
           "purchaseAmount": "批購金額"
         },
-        "cardFacts": "{mode} · {tickets} · {count} 張 · {rate}% · 批購金額 {amount}",
-        "receiveRow": "{game} · {bookNo} · {mode} {tickets}",
+        "cardFacts": "{tickets} · {count} 張 · {rate}% · 批購金額 {amount}",
         "problems": {
           "receiver_underpaid": "收貨店還沒記付款 {amount};收貨店已付 = 出貨店已收 = 調貨金額才能核准",
           "shipper_unreceived": "出貨店還沒記收款 {amount};收貨店已付 = 出貨店已收 = 調貨金額才能核准",
@@ -2794,6 +2801,12 @@
       "wrongStore": {
         "facts": "本號 {bookNo} · 調貨單 {serialNo} · 送往 {branch}",
         "message": "這本屬於送往「{branch}」的調貨單 #{serialNo},請交給送貨人帶到{branch},本店不用點收。"
+      },
+      "edit": {
+        "title": "編輯調貨單",
+        "titleWithNo": "編輯調貨單 {serialNo}",
+        "lockedHint": "已點收的本不能修改或移除;在途(已出貨)的本不能修改,路上遺失時可以移除,送出後變待查。送出後重新走出貨確認與點收,由收貨店點收剩下的本",
+        "loadFailed": "讀不到這張調貨單的出貨與點收狀態,請重新整理"
       }
     },
     "allocation": {
@@ -2860,6 +2873,11 @@
         "reason": "原因:{reason}",
         "reprintedBy": "補印人:{name}"
       }
+    },
+    "edit": {
+      "title": "編輯叫貨單",
+      "titleWithNo": "編輯叫貨單 {serialNo}",
+      "notOnSale": "這些遊戲已不在販售中,畫面沒有列出,會照原樣保留:{games}"
     }
   },
   "lifecycle": {

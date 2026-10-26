@@ -248,7 +248,7 @@ describe("進貨單新增頁", () => {
     for (const bookNo of ["056527", "056528"]) {
       const table = screen.getByRole("table", { name: /5164 發大財/ });
       await user.click(
-        within(table).getAllByRole("button", { name: "移除" })[0],
+        within(table).getAllByRole("button", { name: /^移除/ })[0],
       );
       await waitFor(() => {
         expect(screen.queryByText(bookNo)).toBeNull();

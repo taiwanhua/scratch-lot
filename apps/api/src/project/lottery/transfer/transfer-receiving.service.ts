@@ -49,7 +49,6 @@ import {
 } from "./transfer-error";
 import {
   TRANSFER_OPEN_STATUSES,
-  type TransferBook,
   type TransferGame,
   TransferRules,
   type TransferTicket,

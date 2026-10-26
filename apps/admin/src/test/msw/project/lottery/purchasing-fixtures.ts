@@ -241,7 +241,12 @@ export const requisitionSubmissions = (): MockSubmission[] => [
     5,
     {
       status: FormSubmissionStatus.Draft,
-      abilities: { ...LOCKED, canEdit: true, canDelete: true },
+      abilities: {
+        ...LOCKED,
+        canEdit: true,
+        canSaveDraft: true,
+        canDelete: true,
+      },
     },
   ),
   requisition(

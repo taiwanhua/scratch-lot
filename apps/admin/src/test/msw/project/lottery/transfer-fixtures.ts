@@ -190,7 +190,31 @@ const transfer = (
 export const transferSubmissions = (): MockSubmission[] => [
   transfer("sub-t9", "T-0009", storeA, storeB, 18_400, {
     status: FormSubmissionStatus.Draft,
-    abilities: { ...LOCKED, canEdit: true, canDelete: true },
+    abilities: {
+      ...LOCKED,
+      canEdit: true,
+      canSaveDraft: true,
+      canDelete: true,
+    },
+    values: {
+      from_branch: { id: storeA.id, label: storeA.name },
+      to_branch: { id: storeB.id, label: storeB.name },
+      requisition: "R-0022",
+      transfer_total: "18400",
+      note: null,
+      lines: [
+        {
+          rowId: "row-1",
+          game: { id: "game-5164", label: "發大財" },
+          book: { id: "book-6501", label: "5164-056501" },
+          mode: "whole",
+          ticket_nos: "001-100",
+          tickets: 100,
+          amount: 20_000,
+          rate: 92,
+        },
+      ],
+    },
   }),
   transfer("doc-t8", "T-0008", storeA, storeB, 1840),
   transfer("doc-t10", "T-0010", storeB, storeA, 19_504),
@@ -389,3 +413,11 @@ export const transferReceiving = (
           }),
         ],
       };
+
+/** 編輯頁的測試資料(`transfer-edit-fixtures.ts`)共用 */
+export {
+  LOCKED as TRANSFER_LOCKED_ABILITIES,
+  range as transferTicketRange,
+  row as transferReceivingRow,
+  transfer as transferSubmission,
+};

@@ -22,8 +22,8 @@ describe("調貨單新增頁", () => {
       name: "刷條碼加入選取",
     });
     await user.type(scan, "5201-1-001233-050-0-6{Enter}");
-    const table = await screen.findByRole("table", { name: "調貨明細" });
-    expect(within(table).getByText("5201-001233")).toBeInTheDocument();
+    const table = await screen.findByRole("table", { name: /^調貨明細/ });
+    expect(within(table).getByText("001233")).toBeInTheDocument();
     expect(within(table).getByText("整本")).toBeInTheDocument();
     expect(within(table).getByText("9,200")).toBeInTheDocument();
     // 收貨店 5201 預計 3、已給 2、在途 1 → 超過 1 本,只警告(規格 7.6)
@@ -81,7 +81,7 @@ describe("調貨單新增頁", () => {
     );
     await user.click(screen.getByRole("button", { name: "加入" }));
     await user.click(screen.getByRole("button", { name: "加入選取(5 張)" }));
-    const table = await screen.findByRole("table", { name: "調貨明細" });
+    const table = await screen.findByRole("table", { name: /^調貨明細/ });
     expect(within(table).getByText("選張")).toBeInTheDocument();
     expect(within(table).getByText("#012–016")).toBeInTheDocument();
     expect(within(table).getByText("1,000")).toBeInTheDocument();
@@ -137,7 +137,7 @@ describe("調貨單新增頁", () => {
       name: "刷條碼加入選取",
     });
     await user.type(scan, "5201-1-001233-050-0-6{Enter}");
-    await screen.findByRole("table", { name: "調貨明細" });
+    await screen.findByRole("table", { name: /^調貨明細/ });
     await user.click(screen.getByRole("button", { name: "送出" }));
     expect(await screen.findByText("收貨分店已停用")).toHaveClass("Mui-error");
     expect(

@@ -424,3 +424,6 @@ export const purchaseReceiving = (
   ],
   batches: [],
 });
+
+/** 編輯頁的測試資料(`purchase-edit-fixtures.ts`)共用 */
+export { purchase as purchaseSubmission, receivingRow as purchaseReceivingRow };

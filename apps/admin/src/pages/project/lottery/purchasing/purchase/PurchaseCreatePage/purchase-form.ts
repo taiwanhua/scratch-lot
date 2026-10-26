@@ -4,6 +4,9 @@ import {
   displayBookNo,
   parseTicketInput,
   purchaseAmountOf,
+  purchaseHeaderOf,
+  purchaseLinesOf,
+  referenceIdOf,
 } from "@repo/domain/project/lottery";
 import type { LotteryPurchaseOptionsQuery } from "@repo/graphql";
 
@@ -100,16 +103,8 @@ export const pruneGroupRates = (
   return new Map([...groupRates].filter(([gameId]) => gameIds.has(gameId)));
 };
 
-/** 批購金額率的輸入 → 整數 0–100;不合 → null(不改)。 */
-export const parseRate = (raw: string): number | null => {
-  const value = Number(raw);
-  return raw.trim() !== "" &&
-    Number.isInteger(value) &&
-    value >= 0 &&
-    value <= 100
-    ? value
-    : null;
-};
+/** 批購金額率的輸入 → 整數 0–100(和明細元件共用)。 */
+export { parseRate } from "@/components/project/lottery/BookGroupList/parse-rate";
 
 /** 逐本改批購金額率。 */
 export const setBookRate = (
@@ -119,13 +114,18 @@ export const setBookRate = (
 ): ScannedBook[] =>
   books.map((book) => (book.rowId === rowId ? { ...book, rate } : book));
 
-/** 組標題列一次改整組。 */
+/** 組標題列一次改整組(編輯頁鎖住的列 `locked` 不動)。 */
 export const setGroupRate = (
   books: readonly ScannedBook[],
   gameId: string,
   rate: number,
+  locked: ReadonlySet<string> = new Set(),
 ): ScannedBook[] =>
-  books.map((book) => (book.gameId === gameId ? { ...book, rate } : book));
+  books.map((book) =>
+    book.gameId === gameId && !locked.has(book.rowId)
+      ? { ...book, rate }
+      : book,
+  );
 
 export const removeBook = (
   books: readonly ScannedBook[],
@@ -151,13 +151,19 @@ export interface BookGroup {
   requestedBooks: number | null;
 }
 
-/** 依遊戲分組(順序照第一次刷到);叫貨單有叫、還沒刷到的遊戲也列一組(已刷 0)。 */
+/**
+ * 依遊戲分組(順序照第一次刷到);叫貨單有叫、還沒刷到的遊戲也列一組(已刷 0)。
+ * `games` 找不到的遊戲(例:編輯頁裡已點收、後來停售的遊戲)用 `extraGames` 補,不讓那幾本消失。
+ */
 export const groupBooks = (
   books: readonly ScannedBook[],
   games: readonly PurchaseGame[],
   requested: ReadonlyMap<string, number> | null,
+  extraGames: readonly PurchaseGame[] = [],
 ): BookGroup[] => {
-  const gameOf = new Map(games.map((game) => [game.id, game]));
+  const gameOf = new Map(
+    [...extraGames, ...games].map((game) => [game.id, game]),
+  );
   const order = [
     ...new Set([
       ...books.map((book) => book.gameId),
@@ -282,3 +288,87 @@ export const purchaseValuesOf = (
 export const defaultAccountOf = (
   accounts: readonly { id: string }[],
 ): string | null => (accounts.length === 1 ? (accounts[0]?.id ?? null) : null);
+
+/** 編輯頁帶入的內容(存值 → 新增頁的畫面狀態)。 */
+export interface PurchaseFormState {
+  header: {
+    branchId: string;
+    requisitionNo: string | null;
+    dealerId: string | null;
+    selfPurchase: boolean;
+    trusteeId: string | null;
+    /** 批購日期(時點 ISO);沒有 = null */
+    purchaseDate: string | null;
+    accountId: string | null;
+    note: string;
+  };
+  books: ScannedBook[];
+  redemptions: PickedRedemption[];
+}
+
+const labelOf = (value: unknown): string =>
+  typeof value === "object" &&
+  value !== null &&
+  "label" in value &&
+  typeof value.label === "string"
+    ? value.label
+    : "";
+
+/**
+ * 存值 → 畫面狀態(草稿 / 被退回帶入原內容;`purchaseValuesOf` 的反向):明細的 rowId 照舊
+ * (api 用 rowId 比對已點收的列)、批購金額率照存的;本號格式不對的列略過。
+ */
+export const purchaseFormStateOf = (
+  values: StoredValues,
+): PurchaseFormState => {
+  const record = values as Record<string, unknown>;
+  const header = purchaseHeaderOf(record);
+  const note = record[K.note];
+  const rows = record[K.redemptions];
+  return {
+    header: {
+      branchId: header.branchId ?? "",
+      requisitionNo: header.requisitionNo,
+      dealerId: header.dealerId,
+      selfPurchase: header.selfPurchase,
+      trusteeId: header.trusteeId,
+      purchaseDate: header.purchaseDate?.toISOString() ?? null,
+      accountId: header.accountId,
+      note: typeof note === "string" ? note : "",
+    },
+    books: purchaseLinesOf(record).flatMap((line) =>
+      line.bookNo === null
+        ? []
+        : [
+            {
+              rowId: line.rowId,
+              gameId: line.gameId,
+              bookNo: line.bookNo,
+              lastTicketNo: line.lastTicketNo,
+              rate: line.rate,
+            },
+          ],
+    ),
+    redemptions: (Array.isArray(rows) ? rows : []).flatMap(
+      (row: unknown): PickedRedemption[] => {
+        if (typeof row !== "object" || row === null) {
+          return [];
+        }
+        const item = row as Record<string, unknown>;
+        const ref = item[K.redemption];
+        const id = referenceIdOf(ref);
+        if (id === null || typeof item.rowId !== "string") {
+          return [];
+        }
+        return [
+          {
+            rowId: item.rowId,
+            id,
+            label: labelOf(ref),
+            prizeAmount: Number(item[K.prizeAmount] ?? 0),
+          },
+        ];
+      },
+    ),
+  };
+};

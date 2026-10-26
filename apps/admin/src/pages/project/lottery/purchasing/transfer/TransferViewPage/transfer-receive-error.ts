@@ -1,9 +1,12 @@
 import { ClientError } from "@repo/graphql";
 
+import { gameIdsOf } from "../../purchase/PurchaseViewPage/receive-error";
+
 /** 調貨點收刷條碼會擋下的原因(api `transfer-error.ts`;文案 `admin.lotteryPurchasing.receive.errors.<reason>`)。 */
 export const TRANSFER_RECEIVE_REASONS = [
   "TRANSFER_NOT_RECEIVABLE",
   "TRANSFER_SCAN_INVALID",
+  "TRANSFER_SCAN_AMBIGUOUS_GAME",
   "TRANSFER_ALREADY_RECEIVED",
   "TRANSFER_NOT_SHIPPED",
   "TRANSFER_WRONG_STORE",
@@ -25,6 +28,8 @@ export interface TransferWrongStoreInfo {
 export interface TransferReceiveError {
   reason: TransferReceiveReason;
   wrongStore: TransferWrongStoreInfo | null;
+  /** 正面的碼對到好幾款遊戲同本號(`TRANSFER_SCAN_AMBIGUOUS_GAME`):要選的遊戲;其他 = 空 */
+  gameIds: string[];
 }
 
 const text = (value: unknown): string =>
@@ -35,7 +40,7 @@ export const transferReceiveErrorOf = (
   error: unknown,
 ): TransferReceiveError => {
   if (!(error instanceof ClientError)) {
-    return { reason: "UNEXPECTED", wrongStore: null };
+    return { reason: "UNEXPECTED", wrongStore: null, gameIds: [] };
   }
   const { errors } = error.response as {
     errors?: { extensions?: Record<string, unknown> }[];
@@ -45,10 +50,11 @@ export const transferReceiveErrorOf = (
     (item) => item === extensions.reason,
   );
   if (reason === undefined) {
-    return { reason: "UNEXPECTED", wrongStore: null };
+    return { reason: "UNEXPECTED", wrongStore: null, gameIds: [] };
   }
   return {
     reason,
+    gameIds: gameIdsOf(extensions.gameIds),
     wrongStore:
       reason === "TRANSFER_WRONG_STORE"
         ? {

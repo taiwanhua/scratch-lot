@@ -2619,6 +2619,12 @@
           "offset": "Redemption offset",
           "remainder": "Redemption remainder"
         }
+      },
+      "edit": {
+        "title": "Edit purchase",
+        "titleWithNo": "Edit purchase {serialNo}",
+        "lockedHint": "Received books cannot be changed; after you submit, the purchase goes back to receiving and the branch receives the remaining books",
+        "loadFailed": "Could not load the receiving status of this purchase; reload the page"
       }
     },
     "receive": {
@@ -2627,18 +2633,17 @@
       "complete": "Finish this receiving ({count})",
       "completed": "Received {count} books this time",
       "groupTitle": "{code} {name} · {price}",
-      "groupWithRequested": "{title} · requested {requested}, scanned {scanned}",
       "received": "Received",
       "notReceived": "Not received",
       "cardFacts": "{ticketLabel} {lastTicketNo} · {rate}% · {amount}",
       "columns": {
         "bookNo": "Book",
-        "lastTicketNo": "Last ticket",
+        "ticket": "Last ticket",
         "tickets": "Tickets",
         "bookPrice": "Book price",
         "rate": "Purchase rate",
         "amount": "Purchase amount",
-        "received": "Receiving"
+        "status": "Status"
       },
       "errors": {
         "PURCHASE_NOT_RECEIVABLE": "This purchase is not waiting for your receiving",
@@ -2654,7 +2659,9 @@
         "TRANSFER_ALREADY_RECEIVED": "This line is already received",
         "TRANSFER_NOT_SHIPPED": "This line is not shipped yet; receive it after shipping is confirmed",
         "TRANSFER_WRONG_STORE": "This book is not for this store",
-        "TRANSFER_BOOK_NOT_ON_TRANSFER": "This book (or ticket) is not on this transfer"
+        "TRANSFER_BOOK_NOT_ON_TRANSFER": "This book (or ticket) is not on this transfer",
+        "PURCHASE_SCAN_AMBIGUOUS_GAME": "Several games share this book number; scan the back code or pick a game",
+        "TRANSFER_SCAN_AMBIGUOUS_GAME": "Several games share this book number; scan the back code or pick a game"
       },
       "wrongStore": {
         "title": "This book was not sent to this store",
@@ -2664,7 +2671,11 @@
         "facts": "Book {bookNo} · purchase {serialNo} · {branch}",
         "message": "This book belongs to purchase #{serialNo} of {branch}. Hand it back to the courier for {branch}; this store does not receive it.",
         "notified": "The creator of that purchase has been notified"
-      }
+      },
+      "inTransit": "In transit",
+      "receivedOf": "Received {received} / {total}",
+      "pickGame": "Game for front barcodes",
+      "pickGameNone": "Pick a game"
     },
     "transfer": {
       "badgeDescription": "Transfers waiting for your receiving (second step)",
@@ -2713,16 +2724,15 @@
         "scanNotFound": "This book is not available in the from store",
         "partialForbidden": "This book is opened and can only be transferred by ticket; you lack the partial tickets permission",
         "noLines": "No books added yet",
-        "linesAria": "Transfer lines",
+        "linesAria": "Transfer lines {game}",
         "modes": {
           "whole": "Whole",
           "partial": "Tickets"
         },
         "opened": "opened",
-        "cardFacts": "{mode} · {tickets} · {count} tickets · amount {amount} · purchase {purchase}",
+        "cardFacts": "{tickets} · {count} tickets · amount {amount} · purchase {purchase}",
         "columns": {
           "book": "Game / book",
-          "mode": "Mode",
           "ticketNos": "Tickets",
           "tickets": "Count",
           "amount": "Amount",
@@ -2731,7 +2741,6 @@
         },
         "rateOf": "Purchase rate of {book}",
         "remove": "Remove",
-        "removeOf": "Remove {book}",
         "transferTotal": "Transfer amount (purchase total)",
         "pickBook": "Book",
         "pickBookNone": "Pick a book",
@@ -2754,7 +2763,8 @@
         "draftSaved": "Draft saved",
         "submitted": "Transfer submitted",
         "toBranchHint": "Cannot find the to store? Headquarters opens transfers, or ask an admin to add you to the to store",
-        "toBranchUnavailable": "You cannot pick this to store: headquarters opens transfers, or ask an admin to add you to the to store"
+        "toBranchUnavailable": "You cannot pick this to store: headquarters opens transfers, or ask an admin to add you to the to store",
+        "scanAmbiguousGame": "Several games share this book number; scan the back code or pick the game for front barcodes first"
       },
       "view": {
         "title": "Transfer",
@@ -2770,17 +2780,14 @@
           "partial": "Tickets"
         },
         "columns": {
-          "game": "Game",
           "book": "Book",
-          "mode": "Mode",
           "ticketNos": "Tickets",
           "tickets": "Count",
           "amount": "Amount",
           "rate": "Purchase rate",
           "purchaseAmount": "Purchase amount"
         },
-        "cardFacts": "{mode} · {tickets} · {count} tickets · {rate}% · purchase {amount}",
-        "receiveRow": "{game} · {bookNo} · {mode} {tickets}",
+        "cardFacts": "{tickets} · {count} tickets · {rate}% · purchase {amount}",
         "problems": {
           "receiver_underpaid": "The receiving store has not recorded payment of {amount}; paid, received and transfer amount must match before approval",
           "shipper_unreceived": "The shipping store has not recorded receipt of {amount}; paid, received and transfer amount must match before approval",
@@ -2794,6 +2801,12 @@
       "wrongStore": {
         "facts": "Book {bookNo} · transfer {serialNo} · to {branch}",
         "message": "This book belongs to transfer #{serialNo} for {branch}. Hand it to the courier for {branch}; this store does not receive it."
+      },
+      "edit": {
+        "title": "Edit transfer",
+        "titleWithNo": "Edit transfer {serialNo}",
+        "lockedHint": "Received books cannot be changed or removed; books in transit (shipped) cannot be changed but can be removed when lost on the way, which marks them for investigation after you submit. After you submit, the transfer goes through shipping and receiving again and the receiving branch receives the remaining books",
+        "loadFailed": "Could not load the shipping and receiving status of this transfer; reload the page"
       }
     },
     "allocation": {
@@ -2860,6 +2873,11 @@
         "reason": "Reason: {reason}",
         "reprintedBy": "Reprinted by: {name}"
       }
+    },
+    "edit": {
+      "title": "Edit requisition",
+      "titleWithNo": "Edit requisition {serialNo}",
+      "notOnSale": "These games are no longer on sale; they are not listed and are kept as they are: {games}"
     }
   },
   "lifecycle": {

@@ -4,12 +4,18 @@ import {
   TRANSFER_MODE,
   type TransferMode,
   displayBookKey,
+  matchBookScan,
   parseTicketInput,
   purchaseAmountOf,
   ticketNosText,
+  transferHeaderOf,
   transferLineAmountOf,
+  transferLinesOf,
 } from "@repo/domain/project/lottery";
-import type { LotteryTransferOptionsQuery } from "@repo/graphql";
+import type {
+  LotteryTransferOptionsQuery,
+  LotteryTransferReceivingFieldsFragment,
+} from "@repo/graphql";
 
 import type { AllocationWarningItem } from "@/components/project/lottery/AllocationWarnings/allocation-warnings";
 
@@ -87,18 +93,25 @@ export const addWhole = (
   };
 };
 
-/** 選張加入:同一本已有選張的列就併進去(張號去重),已有整本 → 重複。 */
+/**
+ * 選張加入:同一本已有選張的列就併進去(張號去重),已有整本 → 重複;
+ * 那一列鎖住(編輯頁已出貨 / 已點收)→ 也算重複(鎖住的列不能改)。
+ */
 export const addPartial = (
   lines: readonly TransferDraftLine[],
   book: TransferBookOption,
   ticketNos: readonly string[],
   newRowId: () => string,
+  locked: ReadonlySet<string> = new Set(),
 ): AddLineResult => {
   if (ticketNos.length === 0) {
     return { kind: "empty" };
   }
   const existing = lines.find((line) => line.book.bookId === book.bookId);
-  if (existing?.mode === TRANSFER_MODE.whole) {
+  if (
+    existing?.mode === TRANSFER_MODE.whole ||
+    (existing !== undefined && locked.has(existing.rowId))
+  ) {
     return { kind: "duplicate" };
   }
   if (existing !== undefined) {
@@ -141,21 +154,43 @@ export const setLineRate = (
 ): TransferDraftLine[] =>
   lines.map((line) => (line.rowId === rowId ? { ...line, rate } : line));
 
-/** 刷到的碼 → 出貨店能調的哪一本、哪一張;找不到 → null(背面編號另比遊戲代號)。 */
+/** 刷到的碼找本的結果。 */
+export type BookOfScanResult =
+  | { kind: "found"; book: TransferBookOption; ticketNo: string }
+  /** 正面的碼對到好幾款遊戲同本號,也沒選「正面條碼的遊戲」 */
+  | { kind: "ambiguous_game" }
+  | { kind: "not_found" };
+
+/**
+ * 刷到的碼 → 出貨店能調的哪一本、哪一張(`matchBookScan`):背面編號另比遊戲代號;正面的碼有選
+ * 「正面條碼的遊戲」(`pickedGameId`)就只看那款遊戲,沒選而好幾款遊戲同本號 → `ambiguous_game`。
+ */
 export const bookOfScan = (
   books: readonly TransferBookOption[],
   raw: string,
-): { book: TransferBookOption; ticketNo: string } | null => {
+  pickedGameId: string | null = null,
+): BookOfScanResult => {
   const parsed = parseTicketInput(raw);
   if (parsed === null) {
-    return null;
+    return { kind: "not_found" };
   }
-  const book = books.find(
-    (item) =>
-      item.bookNo === parsed.bookNo &&
-      (parsed.gameCode === undefined || item.gameCode === parsed.gameCode),
+  const matched = matchBookScan(
+    books,
+    { gameCode: parsed.gameCode ?? null, bookNo: parsed.bookNo },
+    (item) => ({
+      gameId: item.gameId,
+      gameCode: item.gameCode,
+      bookNo: item.bookNo,
+    }),
+    pickedGameId,
   );
-  return book === undefined ? null : { book, ticketNo: parsed.ticketNo };
+  if (matched.kind === "ambiguous_game") {
+    return { kind: "ambiguous_game" };
+  }
+  const book = matched.kind === "matched" ? matched.items[0] : undefined;
+  return book === undefined
+    ? { kind: "not_found" }
+    : { kind: "found", book, ticketNo: parsed.ticketNo };
 };
 
 /** 單頭的畫面狀態。 */
@@ -218,3 +253,115 @@ export const transferAllocationItemsOf = (
           },
         ];
   });
+
+type ReceivingRow = LotteryTransferReceivingFieldsFragment["rows"][number];
+
+/** 編輯頁帶入的內容。 */
+export interface TransferFormState {
+  header: TransferHeaderState;
+  lines: TransferDraftLine[];
+}
+
+const labelOf = (value: unknown): string =>
+  typeof value === "object" &&
+  value !== null &&
+  "label" in value &&
+  typeof value.label === "string"
+    ? value.label
+    : "";
+
+/**
+ * 存值 → 畫面狀態(草稿 / 被退回帶入原內容;`transferValuesOf` 的反向):rowId、方式、張號、批購金額率照舊;
+ * 本的事實(遊戲代號、本號)取點收區塊讀到的列(`receivingRows`),金額照存的(整本 = 整本金額、選張 = 面額 × 張數),
+ * 所以帶入後金額不變。讀不到本的列略過。
+ */
+export const transferFormStateOf = (
+  values: StoredValues,
+  receivingRows: readonly ReceivingRow[],
+): TransferFormState => {
+  const record = values as Record<string, unknown>;
+  const header = transferHeaderOf(record);
+  const note = record[K.note];
+  const rawLines = Array.isArray(record[K.lines])
+    ? (record[K.lines] as unknown[])
+    : [];
+  const gameNameOf = new Map(
+    rawLines.flatMap((row): [string, string][] =>
+      typeof row === "object" &&
+      row !== null &&
+      "rowId" in row &&
+      typeof row.rowId === "string"
+        ? [[row.rowId, labelOf((row as Record<string, unknown>)[K.game])]]
+        : [],
+    ),
+  );
+  const rowOf = new Map(receivingRows.map((row) => [row.rowId, row]));
+  const bookLabelOfRow = new Map(
+    rawLines.flatMap((row): [string, string][] =>
+      typeof row === "object" &&
+      row !== null &&
+      "rowId" in row &&
+      typeof row.rowId === "string"
+        ? [[row.rowId, labelOf((row as Record<string, unknown>)[K.book])]]
+        : [],
+    ),
+  );
+  /** 本的遊戲代號與本號:點收區塊讀到的列優先;讀不到時拆存值的本編號標籤(`5164-056527`)。 */
+  const bookFactsOf = (
+    rowId: string,
+  ): { gameCode: string; bookNo: string; gameName: string } | null => {
+    const row = rowOf.get(rowId);
+    if (row !== undefined) {
+      return {
+        gameCode: row.gameCode,
+        bookNo: row.bookNo,
+        gameName: row.gameName,
+      };
+    }
+    const match = /^(\d{4})-(\d{6})$/.exec(bookLabelOfRow.get(rowId) ?? "");
+    if (match === null) {
+      return null;
+    }
+    const [, gameCode = "", bookNo = ""] = match;
+    return { gameCode, bookNo: `0${bookNo}`, gameName: "" };
+  };
+  return {
+    header: {
+      fromBranchId: header.fromBranchId ?? "",
+      toBranchId: header.toBranchId ?? "",
+      requisitionNo: header.requisitionNo,
+      note: typeof note === "string" ? note : "",
+    },
+    lines: transferLinesOf(record).flatMap((line): TransferDraftLine[] => {
+      const row = bookFactsOf(line.rowId);
+      if (row === null || line.gameId === null) {
+        return [];
+      }
+      const isWhole = line.mode === TRANSFER_MODE.whole;
+      return [
+        {
+          rowId: line.rowId,
+          book: {
+            bookId: line.bookId,
+            gameId: line.gameId,
+            gameCode: row.gameCode,
+            gameName:
+              row.gameName === ""
+                ? (gameNameOf.get(line.rowId) ?? "")
+                : row.gameName,
+            bookNo: row.bookNo,
+            unitPrice:
+              line.tickets > 0 ? Math.round(line.amount / line.tickets) : 0,
+            bookPrice: line.amount,
+            rate: line.rate,
+            isWhole,
+            availableCount: line.tickets,
+          },
+          mode: line.mode,
+          ticketNos: isWhole ? [] : line.ticketNos,
+          rate: line.rate,
+        },
+      ];
+    }),
+  };
+};

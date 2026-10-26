@@ -67,15 +67,40 @@ describe("調貨單新增頁的純函式(規格 8.4)", () => {
     expect(removeLine(rated, rated[0]?.rowId ?? "")).toEqual([]);
   });
 
-  it("刷條碼找本:背面編號比遊戲代號,正面條碼只比本號", () => {
-    const books = [book("b1", true), book("b3", true, { gameCode: "5201" })];
-    expect(bookOfScan(books, "5201-1-056527-010-0-6")?.book.bookId).toBe("b3");
-    expect(bookOfScan(books, "0056527010")).toMatchObject({
-      book: { bookId: "b1" },
+  it("刷條碼找本:背面編號比遊戲代號;正面條碼對到多款遊戲同本號 → 請選遊戲", () => {
+    const books = [
+      book("b1", true),
+      book("b3", true, { gameId: "game-5201", gameCode: "5201" }),
+      book("b4", true, { bookNo: "0060116" }),
+    ];
+    expect(bookOfScan(books, "5201-1-056527-010-0-6")).toMatchObject({
+      kind: "found",
+      book: { bookId: "b3" },
+    });
+    expect(bookOfScan(books, "0056527010")).toEqual({
+      kind: "ambiguous_game",
+    });
+    expect(bookOfScan(books, "0056527010", "game-5201")).toMatchObject({
+      kind: "found",
+      book: { bookId: "b3" },
       ticketNo: "010",
     });
-    expect(bookOfScan(books, "0099999010")).toBeNull();
-    expect(bookOfScan(books, "x")).toBeNull();
+    expect(bookOfScan(books, "0060116010")).toMatchObject({
+      kind: "found",
+      book: { bookId: "b4" },
+    });
+    expect(bookOfScan(books, "0099999010")).toEqual({ kind: "not_found" });
+    expect(bookOfScan(books, "x")).toEqual({ kind: "not_found" });
+  });
+
+  it("選張加入:那一列鎖住(編輯頁已出貨 / 已點收)→ 不能併進去", () => {
+    const opened = book("b2", false);
+    const first = addPartial([], opened, ["012"], nextId);
+    const lines = first.kind === "added" ? first.lines : [];
+    const lockedRow = new Set([lines[0]?.rowId ?? ""]);
+    expect(addPartial(lines, opened, ["013"], nextId, lockedRow)).toEqual({
+      kind: "duplicate",
+    });
   });
 
   it("存值:單頭 + 明細(整本的張號 = 起訖、選張 = 區段文字)", () => {

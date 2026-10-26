@@ -4,6 +4,7 @@ import { ClientError } from "@repo/graphql";
 export const RECEIVE_REASONS = [
   "PURCHASE_NOT_RECEIVABLE",
   "PURCHASE_SCAN_INVALID",
+  "PURCHASE_SCAN_AMBIGUOUS_GAME",
   "PURCHASE_ALREADY_RECEIVED",
   "PURCHASE_LAST_TICKET_MISMATCH",
   "PURCHASE_WRONG_STORE",
@@ -25,7 +26,15 @@ export interface WrongStoreInfo {
 export interface ReceiveError {
   reason: ReceiveReason;
   wrongStore: WrongStoreInfo | null;
+  /** 正面的碼對到好幾款遊戲同本號(`PURCHASE_SCAN_AMBIGUOUS_GAME`):要選的遊戲;其他 = 空 */
+  gameIds: string[];
 }
+
+/** `extensions.gameIds` → 字串陣列(其他型別略過)。 */
+export const gameIdsOf = (value: unknown): string[] =>
+  Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === "string")
+    : [];
 
 const text = (value: unknown): string =>
   typeof value === "string" ? value : "";
@@ -33,7 +42,7 @@ const text = (value: unknown): string =>
 /** 點收的錯誤 → 原因 + (送錯分店時)那張單的資訊;認不得 → `UNEXPECTED`。 */
 export const receiveErrorOf = (error: unknown): ReceiveError => {
   if (!(error instanceof ClientError)) {
-    return { reason: "UNEXPECTED", wrongStore: null };
+    return { reason: "UNEXPECTED", wrongStore: null, gameIds: [] };
   }
   const { errors } = error.response as {
     errors?: { extensions?: Record<string, unknown> }[];
@@ -41,10 +50,11 @@ export const receiveErrorOf = (error: unknown): ReceiveError => {
   const extensions = errors?.[0]?.extensions ?? {};
   const reason = RECEIVE_REASONS.find((item) => item === extensions.reason);
   if (reason === undefined) {
-    return { reason: "UNEXPECTED", wrongStore: null };
+    return { reason: "UNEXPECTED", wrongStore: null, gameIds: [] };
   }
   return {
     reason,
+    gameIds: gameIdsOf(extensions.gameIds),
     wrongStore:
       reason === "PURCHASE_WRONG_STORE"
         ? {

@@ -878,15 +878,14 @@ describe("進貨單(規格 8.2、8.3)", () => {
       } | null;
       expect(String(referencedBy?.submissionId)).toBe(purchase.id);
       // 編輯這張單(退回修改)時,叫貨單清單另含它已引用的 R-9010;新增頁(不帶單號)不列
-      const listed = async (submissionId: string | null) =>
-        (
-          await ok<{
-            lotteryPurchaseOptions: { requisitions: { serialNo: string }[] };
-          }>(api, hq.token, OPTIONS, {
-            orgId: String(branchA),
-            submissionId,
-          })
-        ).lotteryPurchaseOptions.requisitions.map((item) => item.serialNo);
+      const listed = async (submissionId: string | null) => {
+        const data = await ok<{
+          lotteryPurchaseOptions: { requisitions: { serialNo: string }[] };
+        }>(api, hq.token, OPTIONS, { orgId: String(branchA), submissionId });
+        return data.lotteryPurchaseOptions.requisitions.map(
+          (item) => item.serialNo,
+        );
+      };
       expect(await listed(null)).not.toContain("R-9010");
       expect(await listed(purchase.id)).toContain("R-9010");
       // 點收區塊顯示「叫貨 2,已刷 0」

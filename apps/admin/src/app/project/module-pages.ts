@@ -20,11 +20,14 @@ import { GameViewPage } from "@/pages/project/lottery/master-data/GameViewPage/G
 import { MasterDataPage } from "@/pages/project/lottery/master-data/MasterDataPage/MasterDataPage";
 import { MASTER_DATA_MODULE_KEYS } from "@/pages/project/lottery/master-data/master-data-config";
 import { RequisitionCreatePage } from "@/pages/project/lottery/purchasing/RequisitionCreatePage/RequisitionCreatePage";
+import { RequisitionEditPage } from "@/pages/project/lottery/purchasing/RequisitionEditPage/RequisitionEditPage";
 import { RequisitionPage } from "@/pages/project/lottery/purchasing/RequisitionPage/RequisitionPage";
 import { PurchaseCreatePage } from "@/pages/project/lottery/purchasing/purchase/PurchaseCreatePage/PurchaseCreatePage";
+import { PurchaseEditPage } from "@/pages/project/lottery/purchasing/purchase/PurchaseEditPage/PurchaseEditPage";
 import { PurchasePage } from "@/pages/project/lottery/purchasing/purchase/PurchasePage/PurchasePage";
 import { PurchaseViewPage } from "@/pages/project/lottery/purchasing/purchase/PurchaseViewPage/PurchaseViewPage";
 import { TransferCreatePage } from "@/pages/project/lottery/purchasing/transfer/TransferCreatePage/TransferCreatePage";
+import { TransferEditPage } from "@/pages/project/lottery/purchasing/transfer/TransferEditPage/TransferEditPage";
 import { TransferPage } from "@/pages/project/lottery/purchasing/transfer/TransferPage/TransferPage";
 import { TransferViewPage } from "@/pages/project/lottery/purchasing/transfer/TransferViewPage/TransferViewPage";
 import { ReportsPage } from "@/pages/project/lottery/reports/ReportsPage/ReportsPage";
@@ -103,32 +106,35 @@ const sources: ModulePageSource = {
         viewPage: { Page: MakeupPunchViewPage },
       },
     },
-    // 叫貨、採購單(綁定 叫貨單;規格 8.1):列表頁換成分頁頁殼(叫貨單 | 採購清單)、新增頁換成
-    // 列出所有販售中遊戲的叫貨頁;詳情 / 編輯(草稿)沿用表單引擎
+    // 叫貨、採購單(綁定 叫貨單;規格 8.1):列表頁換成分頁頁殼(叫貨單 | 採購清單)、新增 / 編輯頁(草稿、被退回)
+    // 換成列出所有販售中遊戲的叫貨頁(編輯帶入原內容);詳情沿用表單引擎
     {
       moduleKey: "purchasing.requisition",
       pageOverrides: {
         list: { Page: RequisitionPage },
         createPage: { Page: RequisitionCreatePage },
+        editPage: { Page: RequisitionEditPage },
       },
     },
-    // 進貨單(綁定 進貨單;規格 8.2):列表加點收進度與結算、新增頁換成刷條碼頁、檢視頁換成
-    // 引擎零件 + 點收區塊 + 結算 + 審核;編輯(草稿、被退回)沿用表單引擎
+    // 進貨單(綁定 進貨單;規格 8.2):列表加點收進度與結算、新增 / 編輯頁(草稿、被退回)換成刷條碼頁
+    // (編輯帶入原內容、已點收的列鎖住)、檢視頁換成引擎零件 + 點收區塊 + 結算 + 審核
     {
       moduleKey: "purchasing.purchase",
       pageOverrides: {
         list: { Page: PurchasePage },
         createPage: { Page: PurchaseCreatePage },
+        editPage: { Page: PurchaseEditPage },
         viewPage: { Page: PurchaseViewPage },
       },
     },
-    // 調貨單(綁定 調貨單;規格 8.4):列表加本數 / 張數、點收進度、結算與「在途」、新增頁換成選本 + 張數格子、
-    // 檢視頁換成出貨確認清單 / 點收區塊 + 結算 + 審核;編輯(草稿、被退回)沿用表單引擎
+    // 調貨單(綁定 調貨單;規格 8.4):列表加本數 / 張數、點收進度、結算與「在途」、新增 / 編輯頁(草稿、被退回)
+    // 換成選本 + 張數格子(編輯帶入原內容、已出貨 / 已點收的列鎖住)、檢視頁換成出貨確認清單 / 點收區塊 + 結算 + 審核
     {
       moduleKey: "purchasing.transfer",
       pageOverrides: {
         list: { Page: TransferPage },
         createPage: { Page: TransferCreatePage },
+        editPage: { Page: TransferEditPage },
         viewPage: { Page: TransferViewPage },
       },
     },

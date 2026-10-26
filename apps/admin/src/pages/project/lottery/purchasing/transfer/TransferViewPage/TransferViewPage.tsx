@@ -7,6 +7,7 @@ import {
   TRANSFER_MODE,
   TRANSFER_SETTLEMENT_SIDE,
   formatTicketRanges,
+  transferLinesOf,
   transferSettlementProblemOf,
 } from "@repo/domain/project/lottery";
 import {
@@ -22,9 +23,7 @@ import { Alert } from "@repo/ui/alert";
 import { Box } from "@repo/ui/box";
 import { Button } from "@repo/ui/button";
 import { Card } from "@repo/ui/card";
-import { useBreakpointDown } from "@repo/ui/media-query";
 import { Stack } from "@repo/ui/stack";
-import { Table, type TableColumn } from "@repo/ui/table";
 import { Tag } from "@repo/ui/tag";
 import { Typography } from "@repo/ui/typography";
 
@@ -32,8 +31,14 @@ import { useFormModuleAccess } from "@/components/base/form-engine/FormModulePag
 import { ApprovalSection } from "@/components/base/workflow/ApprovalSection/ApprovalSection";
 import { SubmissionStatusTag } from "@/components/base/workflow/SubmissionStatusTag";
 import {
-  type ReceiveBookGroup,
+  BookGroupList,
+  type BookListLabels,
+  type BookListRow,
+} from "@/components/project/lottery/BookGroupList/BookGroupList";
+import { groupBooksByGame } from "@/components/project/lottery/BookGroupList/book-groups";
+import {
   ReceiveBooksPanel,
+  type ReceiveScanOutcome,
 } from "@/components/project/lottery/ReceiveBooksPanel/ReceiveBooksPanel";
 import { SettlementPanel } from "@/components/project/lottery/SettlementPanel/SettlementPanel";
 import { useFormSubmission } from "@/hooks/base/useFormSubmission";
@@ -60,6 +65,8 @@ const HEADER_ROW_SX = { alignItems: "center", flexWrap: "wrap", rowGap: 1 };
 
 const displayBookNo = (bookNo: string): string =>
   bookNo.startsWith("0") ? bookNo.slice(1) : bookNo;
+
+const ticketsText = (row: Row) => formatTicketRanges(row.ticketNos);
 
 /** 核准前三個數字不相等時,提示哪一邊還沒記(規格 8.4「核准前」;api 也擋)。 */
 const settlementProblemOf = (settlement: Settlement) => {
@@ -94,7 +101,6 @@ export const TransferViewPage = ({ routeParam }: ModulePageProps) => {
   const showSnackbar = useSnackbar();
   const queryClient = useQueryClient();
   const { session } = useSession();
-  const isMobile = useBreakpointDown("sm");
   const access = useFormModuleAccess(TRANSFER_MODULE_KEY);
   const id = routeParam ?? "";
   const { submission } = useFormSubmission(id);
@@ -108,7 +114,6 @@ export const TransferViewPage = ({ routeParam }: ModulePageProps) => {
   );
   const data = receiving.data?.lotteryTransferReceiving ?? null;
   const [thisTime, setThisTime] = useState<ReadonlySet<string>>(new Set());
-  const [scanError, setScanError] = useState<string | null>(null);
   const [wrongStore, setWrongStore] = useState<{
     code: string;
     info: TransferWrongStoreInfo;
@@ -124,11 +129,13 @@ export const TransferViewPage = ({ routeParam }: ModulePageProps) => {
     { enabled: isSubmitted, retry: false },
   );
 
-  const onScan = async (code: string): Promise<void> => {
-    setScanError(null);
+  const onScan = async (
+    code: string,
+    gameId: string | null,
+  ): Promise<ReceiveScanOutcome> => {
     try {
       const result = await receive.mutateAsync({
-        input: { submissionId: id, code },
+        input: { submissionId: id, code, gameId },
       });
       const { rowId } = result.receiveLotteryTransferBook;
       setThisTime((current) => new Set([...current, rowId]));
@@ -144,13 +151,17 @@ export const TransferViewPage = ({ routeParam }: ModulePageProps) => {
           refId: id,
         }),
       });
+      return { kind: "received" };
     } catch (error) {
       const parsed = transferReceiveErrorOf(error);
       if (parsed.wrongStore !== null) {
         setWrongStore({ code, info: parsed.wrongStore });
-        return;
+        return { kind: "failed", message: null };
       }
-      setScanError(tReceive(`errors.${parsed.reason}`));
+      const message = tReceive(`errors.${parsed.reason}`);
+      return parsed.gameIds.length > 0
+        ? { kind: "ambiguous_game", gameIds: parsed.gameIds, message }
+        : { kind: "failed", message };
     }
   };
 
@@ -159,72 +170,56 @@ export const TransferViewPage = ({ routeParam }: ModulePageProps) => {
   const isReviewing = submission?.status === FormSubmissionStatus.Reviewing;
   const modeText = (row: Row) =>
     row.mode === TRANSFER_MODE.whole ? t("modes.whole") : t("modes.partial");
-  const ticketsText = (row: Row) => formatTicketRanges(row.ticketNos);
 
-  const groups: ReceiveBookGroup[] = rows.map((row) => ({
-    key: row.rowId,
-    title: t("receiveRow", {
-      game: `${row.gameCode} ${row.gameName}`,
-      bookNo: displayBookNo(row.bookNo),
-      mode: modeText(row),
-      tickets: ticketsText(row),
+  // 一列 = 一本(或一本的選張);依遊戲分組(出貨確認清單與點收同一個清單元件)
+  const gameIdOf = new Map(
+    transferLinesOf(submission?.values ?? {}).map((line) => [
+      line.rowId,
+      line.gameId,
+    ]),
+  );
+  const bookRowOf = (row: Row): BookListRow => ({
+    rowId: row.rowId,
+    bookNo: displayBookNo(row.bookNo),
+    detail: modeText(row),
+    ticketText: ticketsText(row),
+    tickets: row.tickets,
+    bookPrice: row.amount,
+    rate: row.rate,
+    amount: row.purchaseAmount,
+    status: row.received ? "received" : "notReceived",
+  });
+  const groups = groupBooksByGame(
+    rows,
+    (row) => ({
+      key: gameIdOf.get(row.rowId) ?? row.gameCode,
+      title: `${row.gameCode} ${row.gameName}`,
     }),
-    requestedBooks: null,
-    receivedBooks: row.received ? 1 : 0,
-    rows: [
-      {
-        rowId: row.rowId,
-        bookNo: displayBookNo(row.bookNo),
-        lastTicketNo: Number(row.ticketNos.at(-1) ?? 0),
-        ticketText: ticketsText(row),
-        tickets: row.tickets,
-        bookPrice: row.amount,
+    bookRowOf,
+  );
+  const gameLabelOf = (gameId: string): string =>
+    groups.find((group) => group.key === gameId)?.title ?? gameId;
+  const shipLabels: BookListLabels = {
+    columns: {
+      bookNo: t("columns.book"),
+      ticket: t("columns.ticketNos"),
+      tickets: t("columns.tickets"),
+      bookPrice: t("columns.amount"),
+      rate: t("columns.rate"),
+      amount: t("columns.purchaseAmount"),
+      status: "",
+    },
+    status: { received: "", notReceived: "", inTransit: "" },
+    remove: "",
+    rateOf: () => "",
+    cardFacts: (row) =>
+      t("cardFacts", {
+        tickets: row.ticketText,
+        count: row.tickets,
         rate: row.rate,
-        amount: row.purchaseAmount,
-        received: row.received,
-      },
-    ],
-  }));
-
-  const columns: TableColumn<Row>[] = [
-    {
-      key: "game",
-      header: t("columns.game"),
-      render: (row) => `${row.gameCode} ${row.gameName}`,
-    },
-    {
-      key: "book",
-      header: t("columns.book"),
-      render: (row) => displayBookNo(row.bookNo),
-      isEmphasized: true,
-    },
-    { key: "mode", header: t("columns.mode"), render: modeText },
-    { key: "ticketNos", header: t("columns.ticketNos"), render: ticketsText },
-    {
-      key: "tickets",
-      header: t("columns.tickets"),
-      align: "right",
-      render: (row) => formatMoney(row.tickets),
-    },
-    {
-      key: "amount",
-      header: t("columns.amount"),
-      align: "right",
-      render: (row) => formatMoney(row.amount),
-    },
-    {
-      key: "rate",
-      header: t("columns.rate"),
-      align: "right",
-      render: (row) => `${String(row.rate)}%`,
-    },
-    {
-      key: "purchaseAmount",
-      header: t("columns.purchaseAmount"),
-      align: "right",
-      render: (row) => formatMoney(row.purchaseAmount),
-    },
-  ];
+        amount: formatMoney(row.amount),
+      }),
+  };
 
   const settlementItem = settlement.data?.lotterySettlement.item ?? null;
   const allReceived =
@@ -319,49 +314,22 @@ export const TransferViewPage = ({ routeParam }: ModulePageProps) => {
           </Stack>
         </Card>
         {data !== null && rows.length > 0 && !isShipped && (
-          <Card sx={{ p: { xs: 2, sm: 2.5 } }}>
-            <Stack spacing={1.5}>
-              <Typography variant="subtitle1" component="h2">
-                {t("shipList")}
-              </Typography>
-              {isMobile ? (
-                <Stack spacing={1}>
-                  {rows.map((row) => (
-                    <Card key={row.rowId} variant="outlined" sx={{ p: 1.5 }}>
-                      <Typography variant="body2" sx={{ fontWeight: 700 }}>
-                        {`${row.gameCode} ${row.gameName} · ${displayBookNo(row.bookNo)}`}
-                      </Typography>
-                      <Typography variant="caption" color="textSecondary">
-                        {t("cardFacts", {
-                          mode: modeText(row),
-                          tickets: ticketsText(row),
-                          count: row.tickets,
-                          rate: row.rate,
-                          amount: formatMoney(row.purchaseAmount),
-                        })}
-                      </Typography>
-                    </Card>
-                  ))}
-                </Stack>
-              ) : (
-                <Table
-                  aria-label={t("shipList")}
-                  size="small"
-                  columns={columns}
-                  rows={rows}
-                  getRowKey={(row) => row.rowId}
-                  minWidth={760}
-                  containerSx={{ height: "auto" }}
-                />
-              )}
-            </Stack>
-          </Card>
+          <BookGroupList
+            mode="view"
+            title={t("shipList")}
+            labels={shipLabels}
+            groups={groups.map((group) => ({
+              ...group,
+              rows: group.rows.map((row) => ({ ...row, status: null })),
+            }))}
+          />
         )}
         {data !== null && rows.length > 0 && isShipped && (
           <ReceiveBooksPanel
             groups={groups}
             canReceive={data.canReceive}
             onScan={onScan}
+            gameLabelOf={gameLabelOf}
             thisTimeCount={thisTime.size}
             onComplete={() => {
               showSnackbar(
@@ -371,9 +339,8 @@ export const TransferViewPage = ({ routeParam }: ModulePageProps) => {
               setThisTime(new Set());
             }}
             isPending={receive.isPending}
-            error={scanError}
             columnLabels={{
-              lastTicketNo: t("columns.ticketNos"),
+              ticket: t("columns.ticketNos"),
               bookPrice: t("columns.amount"),
             }}
           />

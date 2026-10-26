@@ -26,6 +26,8 @@ export interface PurchaseWorld {
   scanned: string[];
   /** 按過 [通知總部更正] 的碼 */
   notified: string[];
+  /** 刷 `AMBIGUOUS_FRONT_CODE` 時帶的遊戲(null = 沒選) */
+  pickedGameIds: (string | null)[];
 }
 
 const PROGRESS = new Map<
@@ -122,6 +124,9 @@ const wrongStore = () =>
     },
   );
 
+/** 正面條碼:對到單上兩款遊戲同本號(這個假 api 當成要選遊戲;選了配 row-5)。 */
+export const AMBIGUOUS_FRONT_CODE = "0056531098";
+
 export interface PurchaseWorldOptions {
   /** 點收區塊的起始資料(預設 Figma PU-06 那一筆) */
   receiving?: LotteryPurchaseReceivingFieldsFragment;
@@ -131,11 +136,13 @@ export const purchaseWorld = ({
   receiving: initial = purchaseReceiving(),
 }: PurchaseWorldOptions = {}): PurchaseWorld => {
   const scanned: string[] = [];
+  const pickedGameIds: (string | null)[] = [];
   const notified: string[] = [];
   let receiving: LotteryPurchaseReceivingFieldsFragment = initial;
   return {
     scanned,
     notified,
+    pickedGameIds,
     handlers: [
       api.query("LotteryPurchaseOptions", () =>
         HttpResponse.json({
@@ -151,6 +158,20 @@ export const purchaseWorld = ({
         scanned.push(input.code);
         if (input.code === WRONG_STORE_CODE) {
           return wrongStore();
+        }
+        // 正面條碼對到單上兩款遊戲同本號:沒選遊戲 → 擋下;選了 → 照所選的遊戲(這裡配 row-5)
+        if (input.code === AMBIGUOUS_FRONT_CODE) {
+          pickedGameIds.push(input.gameId ?? null);
+          if (input.gameId === null || input.gameId === undefined) {
+            return graphqlError(
+              "VALIDATION_FAILED",
+              "Several games share the book number",
+              {
+                reason: "PURCHASE_SCAN_AMBIGUOUS_GAME",
+                gameIds: ["game-5164", "game-5201"],
+              },
+            );
+          }
         }
         const pending = receiving.groups
           .flatMap((group) => group.rows)

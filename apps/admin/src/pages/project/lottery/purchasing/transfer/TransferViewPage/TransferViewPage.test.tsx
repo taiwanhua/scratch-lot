@@ -20,7 +20,10 @@ describe("調貨單檢視頁", () => {
     expect(
       screen.getByText(/中山店 → 新竹店 · 叫貨單 R-0022 · 調貨金額 1,840/),
     ).toBeInTheDocument();
-    const table = screen.getByRole("table", { name: "出貨確認清單" });
+    expect(
+      screen.getByRole("heading", { name: "出貨確認清單" }),
+    ).toBeInTheDocument();
+    const [table] = screen.getAllByRole("table");
     expect(within(table).getByText("選張")).toBeInTheDocument();
     expect(within(table).getByText("#090–099")).toBeInTheDocument();
     expect(within(table).getByText("1,840")).toBeInTheDocument();

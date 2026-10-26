@@ -35,6 +35,8 @@ export interface PurchaseHeaderFieldsProps {
   onChange: (patch: Partial<PurchaseHeaderDraft>) => void;
   /** 換了進貨分店(叫貨單、扣款帳戶、已刷的本要清掉) */
   onBranchChange: (branchId: string) => void;
+  /** 進貨分店不能換(編輯頁已有點收的本) */
+  isBranchLocked?: boolean;
   /** 送出 / 存草稿失敗的錯誤(`useFormDraft().error`;欄位錯誤標在對應欄位) */
   error: FieldErrorSource;
 }
@@ -50,6 +52,7 @@ export const PurchaseHeaderFields = ({
   options,
   onChange,
   onBranchChange,
+  isBranchLocked = false,
   error,
 }: PurchaseHeaderFieldsProps) => {
   const t = useTranslations("admin.lotteryPurchasing.purchase.create");
@@ -111,6 +114,7 @@ export const PurchaseHeaderFields = ({
           value={noBranch ? [] : [value.branchId]}
           required
           fullWidth
+          disabled={isBranchLocked}
           {...fieldErrorProps(error, K.branch)}
           onChange={(ids) => {
             onBranchChange(ids[0] ?? "");

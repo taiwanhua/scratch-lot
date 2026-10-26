@@ -28,6 +28,7 @@ import { useReceiptPrinter } from "@/components/project/lottery/ReceiptPrint/use
 import {
   type ReceiveBookGroup,
   ReceiveBooksPanel,
+  type ReceiveScanOutcome,
 } from "@/components/project/lottery/ReceiveBooksPanel/ReceiveBooksPanel";
 import { SettlementPanel } from "@/components/project/lottery/SettlementPanel/SettlementPanel";
 import { useFormSubmission } from "@/hooks/base/useFormSubmission";
@@ -81,7 +82,6 @@ export const PurchaseViewPage = ({ routeParam }: ModulePageProps) => {
   );
   const data = receiving.data?.lotteryPurchaseReceiving ?? null;
   const [thisTime, setThisTime] = useState<ReadonlySet<string>>(new Set());
-  const [scanError, setScanError] = useState<string | null>(null);
   const [wrongStore, setWrongStore] = useState<{
     code: string;
     info: WrongStoreInfo;
@@ -123,11 +123,13 @@ export const PurchaseViewPage = ({ routeParam }: ModulePageProps) => {
     }),
   );
 
-  const onScan = async (code: string): Promise<void> => {
-    setScanError(null);
+  const onScan = async (
+    code: string,
+    gameId: string | null,
+  ): Promise<ReceiveScanOutcome> => {
     try {
       const result = await receive.mutateAsync({
-        input: { submissionId: id, code },
+        input: { submissionId: id, code, gameId },
       });
       const { rowId } = result.receiveLotteryPurchaseBook;
       setThisTime((current) => new Set([...current, rowId]));
@@ -137,13 +139,17 @@ export const PurchaseViewPage = ({ routeParam }: ModulePageProps) => {
           lotteryPurchaseReceiving: result.receiveLotteryPurchaseBook.receiving,
         },
       );
+      return { kind: "received" };
     } catch (error) {
       const parsed = receiveErrorOf(error);
       if (parsed.wrongStore !== null) {
         setWrongStore({ code, info: parsed.wrongStore });
-        return;
+        return { kind: "failed", message: null };
       }
-      setScanError(tReceive(`errors.${parsed.reason}`));
+      const message = tReceive(`errors.${parsed.reason}`);
+      return parsed.gameIds.length > 0
+        ? { kind: "ambiguous_game", gameIds: parsed.gameIds, message }
+        : { kind: "failed", message };
     }
   };
 
@@ -158,19 +164,21 @@ export const PurchaseViewPage = ({ routeParam }: ModulePageProps) => {
       name: group.gameName,
       price: group.unitPrice,
     }),
-    requestedBooks: group.requestedBooks ?? null,
-    receivedBooks: group.receivedBooks,
     rows: group.rows.map((row) => ({
       rowId: row.rowId,
       bookNo: row.bookNo.startsWith("0") ? row.bookNo.slice(1) : row.bookNo,
-      lastTicketNo: row.lastTicketNo,
+      ticketText: String(row.lastTicketNo).padStart(3, "0"),
       tickets: row.tickets,
       bookPrice: row.bookPrice,
       rate: row.rate,
       amount: row.amount,
-      received: row.received,
+      status: row.received ? "received" : "notReceived",
     })),
   }));
+  const gameLabelOf = (gameId: string): string => {
+    const group = data?.groups.find((item) => item.gameId === gameId);
+    return group === undefined ? gameId : `${group.gameCode} ${group.gameName}`;
+  };
   const remaining =
     data === null ? 0 : Math.max(0, data.totalCount - data.receivedCount);
   const isSubmitted =
@@ -240,10 +248,10 @@ export const PurchaseViewPage = ({ routeParam }: ModulePageProps) => {
             groups={groups}
             canReceive={data.canReceive}
             onScan={onScan}
+            gameLabelOf={gameLabelOf}
             thisTimeCount={thisTime.size}
             onComplete={completeReceiving}
             isPending={receive.isPending}
-            error={scanError}
           />
         )}
         {isSubmitted && <PurchaseRedemptionRecords submissionId={id} />}

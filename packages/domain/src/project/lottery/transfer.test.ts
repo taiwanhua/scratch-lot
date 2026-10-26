@@ -18,6 +18,14 @@ import {
   transferUnitCostOf,
 } from "./transfer";
 
+function scan(raw: string) {
+  const parsed = transferScanOf(raw);
+  if (parsed === null) {
+    throw new Error("bad code");
+  }
+  return parsed;
+}
+
 function row(
   rowId: string,
   overrides: Record<string, unknown> = {},
@@ -149,13 +157,6 @@ describe("調貨單(規格 8.4)", () => {
       },
     ];
     const bookOf = (bookId: string) => books.get(bookId);
-    const scan = (raw: string) => {
-      const parsed = transferScanOf(raw);
-      if (parsed === null) {
-        throw new Error("bad code");
-      }
-      return parsed;
-    };
 
     it("正面的碼對到多款遊戲同本號、沒選遊戲 → 擋下", () => {
       expect(matchTransferScan(lines, bookOf, scan("0056527099"))).toEqual({
