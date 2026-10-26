@@ -34,7 +34,12 @@ const LABELS: BookListLabels = {
     amount: "批購金額",
     status: "狀態",
   },
-  status: { received: "已點收", notReceived: "未點收", inTransit: "在途" },
+  status: {
+    received: "已點收",
+    notReceived: "未點收",
+    inTransit: "在途",
+    partial: "部分點收",
+  },
   remove: "移除",
   rateOf: (row) => `本號 ${row.bookNo} 的批購金額率`,
   cardFacts: (row) => `最後張號 ${row.ticketText}`,

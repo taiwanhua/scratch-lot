@@ -125,6 +125,7 @@ export const ReceiveBooksPanel = ({
       received: t("received"),
       notReceived: t("notReceived"),
       inTransit: t("inTransit"),
+      partial: t("partial"),
     },
     remove: "",
     rateOf: () => "",

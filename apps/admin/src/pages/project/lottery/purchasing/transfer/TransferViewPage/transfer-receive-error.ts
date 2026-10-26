@@ -11,6 +11,7 @@ export const TRANSFER_RECEIVE_REASONS = [
   "TRANSFER_NOT_SHIPPED",
   "TRANSFER_WRONG_STORE",
   "TRANSFER_BOOK_NOT_ON_TRANSFER",
+  "TRANSFER_WHOLE_ROW_TICKETS",
 ] as const;
 
 export type TransferReceiveReason =
@@ -30,6 +31,8 @@ export interface TransferReceiveError {
   wrongStore: TransferWrongStoreInfo | null;
   /** 正面的碼對到好幾款遊戲同本號(`TRANSFER_SCAN_AMBIGUOUS_GAME`):要選的遊戲;其他 = 空 */
   gameIds: string[];
+  /** 選張的列這幾張已點收(`TRANSFER_ALREADY_RECEIVED`);整列已點收 / 其他 = 空 */
+  ticketNos: string[];
 }
 
 const text = (value: unknown): string =>
@@ -40,7 +43,12 @@ export const transferReceiveErrorOf = (
   error: unknown,
 ): TransferReceiveError => {
   if (!(error instanceof ClientError)) {
-    return { reason: "UNEXPECTED", wrongStore: null, gameIds: [] };
+    return {
+      reason: "UNEXPECTED",
+      wrongStore: null,
+      gameIds: [],
+      ticketNos: [],
+    };
   }
   const { errors } = error.response as {
     errors?: { extensions?: Record<string, unknown> }[];
@@ -50,11 +58,17 @@ export const transferReceiveErrorOf = (
     (item) => item === extensions.reason,
   );
   if (reason === undefined) {
-    return { reason: "UNEXPECTED", wrongStore: null, gameIds: [] };
+    return {
+      reason: "UNEXPECTED",
+      wrongStore: null,
+      gameIds: [],
+      ticketNos: [],
+    };
   }
   return {
     reason,
     gameIds: gameIdsOf(extensions.gameIds),
+    ticketNos: gameIdsOf(extensions.ticketNos),
     wrongStore:
       reason === "TRANSFER_WRONG_STORE"
         ? {

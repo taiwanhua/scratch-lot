@@ -32,8 +32,11 @@ export interface TransferReceivingReceiptInput {
       /** 單上這一列的張號 */
       ticketNos: readonly string[];
       tickets: number;
+      /** 這一列全部到齊 */
       received: boolean;
-      /** 點收紀錄實際搬進來的張號(這一次點收的號碼照它印;還沒點收 = 空) */
+      /** 已點收幾張(選張的列逐張點收) */
+      receivedTickets: number;
+      /** 點收紀錄實際搬進來的張號(還沒點收 = 空) */
       receivedTicketNos: readonly string[];
     }[];
   }[];
@@ -41,7 +44,13 @@ export interface TransferReceivingReceiptInput {
    * 印哪一次點收([完成這次點收] 時給的點收批次;補印照它重排版,和原單一致)。
    * `null` = 這張單還沒有任何點收批次(批次功能上線前點收的舊資料):印到目前為止已點收的全部列
    */
-  batch: { batchId: string; no: number; rowIds: readonly string[] } | null;
+  batch: {
+    batchId: string;
+    no: number;
+    rowIds: readonly string[];
+    /** 這一次每一列點收的張(選張的列逐張點收,一列可能分好幾次);不給 = 照列的已點收張號 */
+    rows?: readonly { rowId: string; ticketNos: readonly string[] }[];
+  } | null;
   /** 這張調貨單在後台的連結(QR code) */
   url: string;
 }
@@ -51,36 +60,43 @@ type Row = Group["rows"][number];
 
 const gameText = (group: Group) => `${group.gameCode} ${group.gameName}`;
 
-/**
- * 這一列要印的張號:點收的列照點收紀錄實際搬進來的張(之後逐張點收時一列可能只到部分張);
- * 尚未到的列(或沒有點收紀錄張號的舊資料)照單上的張號。
- */
-const ticketNosOf = (row: Row, received: boolean): readonly string[] =>
-  received && row.receivedTicketNos.length > 0
-    ? row.receivedTicketNos
-    : row.ticketNos;
+/** 印在單上的一列:那一列與這一段要印的張號。 */
+interface PrintedRow {
+  row: Row;
+  ticketNos: readonly string[];
+}
 
-/** 整本、而且(點收的列)整本都到了:寫本號;否則寫張號區段。 */
-const isWholeBook = (row: Row, received: boolean): boolean =>
+/** 這一列還沒點收的張(尚未到;選張的列逐張點收,可能只剩部分張)。 */
+const missingNosOf = (row: Row): readonly string[] => {
+  const received = new Set(row.receivedTicketNos);
+  return row.ticketNos.filter((no) => !received.has(no));
+};
+
+/** 尚未到:還沒到齊的列,印還沒點收的張(整本沒點收 = 整本)。 */
+const missingOf = (row: Row): PrintedRow | null =>
+  row.received ? null : { row, ticketNos: missingNosOf(row) };
+
+/** 整本、而且這一段是整本的張:寫本號;否則寫張號區段。 */
+const isWholeBook = ({ row, ticketNos }: PrintedRow): boolean =>
   row.mode === TRANSFER_MODE.whole &&
-  (!received ||
-    row.receivedTicketNos.length === 0 ||
-    row.receivedTicketNos.length >= row.tickets);
+  (ticketNos.length === 0 || ticketNos.length >= row.tickets);
 
 /**
- * 每個遊戲一列(遊戲、本數、點收進度)+ 號碼:整本的寫本號區段;選張(或整本只到部分張)的每一列寫
- * 「本號 #張號區段(N 張)」。`progress` = 這一次點收的列(號碼照點收紀錄);否則 = 尚未到的列。沒有列的遊戲不列。
+ * 每個遊戲一列(遊戲、本數、點收進度)+ 號碼:整本的寫本號區段;選張的每一列寫「本號 #張號區段(N 張)」
+ * (這一次點收的張 / 還沒到的張)。`progress` = 這一次點收的列;否則 = 尚未到的列。沒有列的遊戲不列。
  */
 const rowSectionOf = (
   t: ReceiptTranslator,
-  picked: readonly { group: Group; rows: readonly Row[] }[],
+  picked: readonly { group: Group; rows: readonly PrintedRow[] }[],
   progress: boolean,
 ): ReceiptBlock[] =>
   picked.flatMap(({ group, rows }) => {
     const received = group.rows.filter((row) => row.received).length;
-    const whole = rows.filter((row) => isWholeBook(row, progress));
-    const partial = rows.filter((row) => !isWholeBook(row, progress));
-    const { numbers, digits } = bookNumbersOf(whole.map((row) => row.bookNo));
+    const whole = rows.filter((item) => isWholeBook(item));
+    const partial = rows.filter((item) => !isWholeBook(item));
+    const { numbers, digits } = bookNumbersOf(
+      whole.map((item) => item.row.bookNo),
+    );
     return [
       {
         type: "table" as const,
@@ -107,8 +123,7 @@ const rowSectionOf = (
               digits,
             },
           ]),
-      ...partial.map((row) => {
-        const ticketNos = ticketNosOf(row, progress);
+      ...partial.map(({ row, ticketNos }) => {
         return {
           type: "range" as const,
           label: t("transferReceiving.ticketNos", {
@@ -138,14 +153,35 @@ export const transferReceivingReceiptOf = (
 ): ReceiptLayout => {
   const { batch } = input;
   const session = batch === null ? null : new Set(batch.rowIds);
-  const isPicked = (row: Row) =>
-    session === null ? row.received : session.has(row.rowId);
-  const pick = (test: (row: Row) => boolean) =>
+  const batchNosOf = new Map(
+    (batch?.rows ?? []).map((item) => [item.rowId, item.ticketNos] as const),
+  );
+  /** 這一次點收的列與張:有點收批次 → 照批次記的張;沒有(舊資料)→ 已點收的張。 */
+  const thisTimeOf = (row: Row): PrintedRow | null => {
+    if (session === null) {
+      return row.receivedTickets > 0 || row.received
+        ? { row, ticketNos: row.receivedTicketNos }
+        : null;
+    }
+    return session.has(row.rowId)
+      ? {
+          row,
+          ticketNos: batchNosOf.get(row.rowId) ?? row.receivedTicketNos,
+        }
+      : null;
+  };
+  const pick = (test: (row: Row) => PrintedRow | null) =>
     input.groups
-      .map((group) => ({ group, rows: group.rows.filter((row) => test(row)) }))
+      .map((group) => ({
+        group,
+        rows: group.rows.flatMap((row) => {
+          const item = test(row);
+          return item === null ? [] : [item];
+        }),
+      }))
       .filter(({ rows }) => rows.length > 0);
-  const received = pick(isPicked);
-  const missing = pick((row) => !row.received);
+  const received = pick(thisTimeOf);
+  const missing = pick(missingOf);
   const count = (items: typeof received) =>
     items.reduce((sum, item) => sum + item.rows.length, 0);
 
@@ -237,6 +273,7 @@ export const transferReceivingInputOf = (
       ticketNos: row.ticketNos,
       tickets: row.tickets,
       received: row.received,
+      receivedTickets: row.receivedTickets,
       receivedTicketNos: row.receivedTicketNos,
     });
     groups.set(row.gameCode, group);

@@ -21,14 +21,35 @@ import { RateInput } from "./RateInput";
  */
 export type BookListMode = "create" | "edit" | "receive" | "view";
 
-/** 一本的狀態(顏色由這個元件固定;文字由使用處給)。 */
-export type BookRowStatus = "received" | "notReceived" | "inTransit";
+/**
+ * 一本的狀態(顏色由這個元件固定;文字由使用處給):已點收 / 未點收 / 在途 / 部分點收
+ * (調貨單選張的列逐張點收,只到了部分張)。
+ */
+export type BookRowStatus =
+  "received" | "notReceived" | "inTransit" | "partial";
 
 const STATUS_TONE: Record<BookRowStatus, TagTone> = {
   received: "success",
   notReceived: "grey",
   inTransit: "primary",
+  partial: "warning",
 };
+
+/** 帶點收資訊的狀態(組標題顯示「已點收 X / M」)。 */
+const RECEIVING_STATUSES = new Set<BookRowStatus | null | undefined>([
+  "received",
+  "notReceived",
+  "partial",
+]);
+
+/** 一列展開的內容(例 調貨單選張的列的張數格子):收合 / 展開由使用處控制。 */
+export interface BookRowPanel {
+  isOpen: boolean;
+  /** 展開 / 收合按鈕的文字(使用處給,例「展開格子」「收合」) */
+  toggleLabel: string;
+  onToggle: () => void;
+  content: ReactNode;
+}
 
 /** 清單的一本。 */
 export interface BookListRow {
@@ -49,6 +70,10 @@ export interface BookListRow {
   isRateEdited?: boolean;
   /** 狀態;null / 不給 = 不顯示 */
   status?: BookRowStatus | null;
+  /** 狀態標籤的文字(例「部分點收 9 / 12」);不給 = `labels.status[status]` */
+  statusLabel?: string;
+  /** 展開的內容(電腦:表格下方;平板 / 手機:卡片裡);不給 = 這列不能展開 */
+  panel?: BookRowPanel;
   /** 編輯模式:鎖住(不能改批購金額率、不能移除) */
   isLocked?: boolean;
   /**
@@ -130,7 +155,8 @@ const money = (value: number): string => value.toLocaleString("en-US");
 /**
  * 依遊戲分組的本清單(專案規格 8.2 明細 / 點收一本、8.4;進貨單與調貨單的新增、編輯、出貨確認、點收、檢視共用):
  * 組標題(+ 進度、整組批購金額率)→ 每本一列;電腦表格、平板 / 手機卡片(同一個斷點,所有模式一樣)。
- * 能不能改由 `mode` 與每列的 `isLocked` 決定;狀態的顏色固定在這裡,文字由使用處的 `labels` 給。
+ * 能不能改由 `mode` 與每列的 `isLocked` 決定;狀態的顏色固定在這裡,文字由使用處的 `labels` 給(每列可以覆寫)。
+ * 每列可以帶展開的內容(`panel`,例 調貨單選張的列的張數格子):電腦放在那一組的表格下方,平板 / 手機放在卡片裡。
  */
 export const BookGroupList = ({
   mode,
@@ -158,11 +184,9 @@ export const BookGroupList = ({
     ).length;
     const hasReceiving =
       mode === "edit"
-        ? received > 0
+        ? received > 0 || group.rows.some((row) => row.status === "partial")
         : mode !== "create" &&
-          group.rows.some(
-            (row) => row.status === "received" || row.status === "notReceived",
-          );
+          group.rows.some((row) => RECEIVING_STATUSES.has(row.status));
     return labels.progress({
       requested: group.requestedBooks ?? null,
       scanned: group.rows.length,
@@ -174,8 +198,32 @@ export const BookGroupList = ({
 
   const statusTag = (row: BookListRow) =>
     row.status === null || row.status === undefined ? null : (
-      <Tag tone={STATUS_TONE[row.status]} label={labels.status[row.status]} />
+      <Tag
+        tone={STATUS_TONE[row.status]}
+        label={row.statusLabel ?? labels.status[row.status]}
+      />
     );
+  const hasPanel = groups.some((group) =>
+    group.rows.some((row) => row.panel !== undefined),
+  );
+  const toggleButton = (row: BookListRow) =>
+    row.panel === undefined ? null : (
+      <Button
+        variant="text"
+        size="small"
+        aria-expanded={row.panel.isOpen}
+        onClick={row.panel.onToggle}
+      >
+        {row.panel.toggleLabel}
+      </Button>
+    );
+  /** 展開的內容(捲到這一列用 `data-row-panel`)。 */
+  const panelOf = (row: BookListRow) =>
+    row.panel?.isOpen === true ? (
+      <Box data-row-panel={row.rowId} sx={{ pt: 1 }}>
+        {row.panel.content}
+      </Box>
+    ) : null;
   const rateCell = (row: BookListRow) =>
     canEdit(row) && onRate !== undefined ? (
       <RateInput
@@ -257,6 +305,16 @@ export const BookGroupList = ({
             key: "status",
             header: labels.columns.status,
             render: statusTag,
+          } satisfies TableColumn<BookListRow>,
+        ]
+      : []),
+    ...(hasPanel
+      ? [
+          {
+            key: "panel",
+            header: "",
+            width: 96,
+            render: toggleButton,
           } satisfies TableColumn<BookListRow>,
         ]
       : []),
@@ -360,19 +418,41 @@ export const BookGroupList = ({
                         {canEdit(row) && rateCell(row)}
                         {removeButton(row)}
                       </Stack>
+                      {row.panel !== undefined && (
+                        <Box sx={{ pt: 0.5 }}>{toggleButton(row)}</Box>
+                      )}
+                      {panelOf(row)}
                     </Card>
                   ))}
                 </Stack>
               ) : (
-                <Table
-                  aria-label={labels.tableAria?.(group) ?? group.title}
-                  size="small"
-                  columns={columns}
-                  rows={group.rows}
-                  getRowKey={(row) => row.rowId}
-                  minWidth={760}
-                  containerSx={{ height: "auto" }}
-                />
+                <>
+                  <Table
+                    aria-label={labels.tableAria?.(group) ?? group.title}
+                    size="small"
+                    columns={columns}
+                    rows={group.rows}
+                    getRowKey={(row) => row.rowId}
+                    minWidth={760}
+                    containerSx={{ height: "auto" }}
+                  />
+                  {group.rows.map((row) =>
+                    row.panel?.isOpen === true ? (
+                      <Card
+                        key={`${row.rowId}-panel`}
+                        variant="outlined"
+                        sx={{ p: 1.5 }}
+                      >
+                        <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                          {row.detail === undefined
+                            ? row.bookNo
+                            : `${row.bookNo} · ${row.detail}`}
+                        </Typography>
+                        {panelOf(row)}
+                      </Card>
+                    ) : null,
+                  )}
+                </>
               ))}
           </Stack>
         ))}

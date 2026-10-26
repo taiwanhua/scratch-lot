@@ -29,7 +29,7 @@ describe("調貨單檢視頁", () => {
     expect(within(table).getByText("1,840")).toBeInTheDocument();
   });
 
-  it("第二關點收:刷這一列的任何一張 → 已點收;送錯分店 → 擋下並提示是哪一家店的哪一張調貨單,[通知總部更正] 通知建立者", async () => {
+  it("第二關點收:刷選張那一列的一張 → 只點收那一張;送錯分店 → 擋下並提示是哪一家店的哪一張調貨單,[通知總部更正] 通知建立者", async () => {
     const user = userEvent.setup();
     const { transferFake } = renderTransferPage({
       path: "/purchasing/transfer/view-page/doc-t10",
@@ -63,6 +63,49 @@ describe("調貨單檢視頁", () => {
     await waitFor(() => {
       expect(transferFake.notified).toEqual([TRANSFER_WRONG_STORE_CODE]);
     });
+  });
+
+  it("選張的列逐張點收:刷一張 → 展開格子、列顯示「部分點收 1 / 12」;同張再刷 →「這張已經點收」;選格子 [點收選取的 N 張];提示還有哪幾張沒點收;[其餘全部到齊…] 確認句列出剩下的張", async () => {
+    const user = userEvent.setup();
+    renderTransferPage({ path: "/purchasing/transfer/view-page/doc-t10" });
+    expect(await screen.findByText("未點收 0 / 12")).toBeInTheDocument();
+    const scan = await screen.findByRole("textbox", { name: "刷條碼點收" });
+    await user.type(scan, "0060112050{Enter}");
+    expect(await screen.findByText("部分點收 1 / 12")).toBeInTheDocument();
+    // 那一列自動展開格子:#050 已點收、其他未點收
+    const grid = await screen.findByRole("group", { name: "張數格子" });
+    expect(
+      within(grid).getByRole("button", { name: "#050 已點收" }),
+    ).toBeDisabled();
+    expect(
+      within(grid).getByRole("button", { name: "#045 未點收" }),
+    ).toBeEnabled();
+    // 還有 11 張沒點收:列出哪幾張,請退回由出貨店移除
+    expect(
+      screen.getByText(
+        "還有 11 張沒點收(060112 #045–049、#051–056),請退回由出貨店移除沒到的張",
+      ),
+    ).toBeInTheDocument();
+    await user.clear(scan);
+    await user.type(scan, "0060112050{Enter}");
+    expect(await screen.findByText("這張已經點收")).toBeInTheDocument();
+    // 點選格子 → [點收選取的 2 張]
+    await user.click(within(grid).getByRole("button", { name: "#045 未點收" }));
+    await user.click(within(grid).getByRole("button", { name: "#046 未點收" }));
+    await user.click(screen.getByRole("button", { name: "點收選取的 2 張" }));
+    expect(await screen.findByText("部分點收 3 / 12")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "其餘全部到齊…" }));
+    const dialog = await screen.findByRole("dialog", { name: "其餘全部到齊" });
+    expect(
+      within(dialog).getByText("確認 #047–049、#051–056 這 9 張都到了?"),
+    ).toBeInTheDocument();
+    await user.click(
+      within(dialog).getByRole("button", { name: "都到了,點收" }),
+    );
+    await waitFor(() => {
+      expect(screen.queryByText(/部分點收/)).toBeNull();
+    });
+    expect(screen.queryByText(/還有 \d+ 張沒點收/)).toBeNull();
   });
 
   it("結算區塊:調貨金額、收貨店已付、出貨店已收與「N 待出貨店入帳」", async () => {

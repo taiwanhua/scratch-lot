@@ -83,6 +83,7 @@ export const useTransferLineList = (
       received: tReceive("received"),
       notReceived: tReceive("notReceived"),
       inTransit: tReceive("inTransit"),
+      partial: tReceive("partial"),
     },
     remove: t("remove"),
     rateOf: (row) => t("rateOf", { book: row.bookNo }),

@@ -20,7 +20,6 @@ import {
   useLotterySettlementQuery,
   useLotteryTransferReceivingQuery,
   useNotifyLotteryTransferWrongStoreMutation,
-  useReceiveLotteryTransferBookMutation,
 } from "@repo/graphql";
 import { Alert } from "@repo/ui/alert";
 import { Box } from "@repo/ui/box";
@@ -41,10 +40,7 @@ import {
 import { groupBooksByGame } from "@/components/project/lottery/BookGroupList/book-groups";
 import { useBookProgressLabel } from "@/components/project/lottery/BookGroupList/useBookProgressLabel";
 import { useReceiptPrinter } from "@/components/project/lottery/ReceiptPrint/useReceiptPrinter";
-import {
-  ReceiveBooksPanel,
-  type ReceiveScanOutcome,
-} from "@/components/project/lottery/ReceiveBooksPanel/ReceiveBooksPanel";
+import { ReceiveBooksPanel } from "@/components/project/lottery/ReceiveBooksPanel/ReceiveBooksPanel";
 import { SettlementPanel } from "@/components/project/lottery/SettlementPanel/SettlementPanel";
 import { useFormSubmission } from "@/hooks/base/useFormSubmission";
 import {
@@ -63,7 +59,9 @@ import {
   type TransferWrongStoreInfo,
   transferReceiveErrorOf,
 } from "./transfer-receive-error";
+import { unreceivedTextOf } from "./transfer-unreceived";
 import { useTransferReceipts } from "./useTransferReceipts";
+import { useTransferReceiving } from "./useTransferReceiving";
 
 type Row = LotteryTransferReceivingFieldsFragment["rows"][number];
 type Settlement = LotterySettlementFieldsFragment;
@@ -95,7 +93,10 @@ const settlementProblemOf = (settlement: Settlement) => {
  *
  * - 標頭:單號、關卡標籤(第一關出貨確認 / 第二關點收)、出貨店 → 收貨店、叫貨單、建立者
  * - 第一關(還沒出貨):出貨確認清單(遊戲、本、方式、張號、張數、金額、批購金額率、批購金額)
- * - 出貨之後:點收區塊(與進貨單共用 `ReceiveBooksPanel`;收貨店店長的點收任務在手上才能刷)
+ * - 出貨之後:點收區塊(與進貨單共用 `ReceiveBooksPanel`;收貨店店長的點收任務在手上才能刷)。整本的列刷一張
+ *   整列點收;選張的列逐張點收(刷背面編號 → 那一列展開、捲到並閃一下;展開格子點選 → [點收選取的 N 張];
+ *   [其餘全部到齊…] 確認後點收剩下的張;`TransferRowTickets`)。列顯示「未點收 0 / 10」「部分點收 9 / 12」「已點收」,
+ *   點收過一部分還有張沒到時提示哪幾張(核准會被擋下,沒到的請退回由出貨店移除)
  * - 結算區塊(兩邊店的收付;按鈕依 `pay` / `receive` 與分店)+ 核准前三個數字不相等的提示 + 審核區塊
  * - 送錯分店:擋下、不入庫,彈窗提示這本屬於哪一家店的哪一張調貨單
  * - 列印(規格第 12 章):標頭 [列印](`useTransferReceipts`);第一關通過後的自動列印是調貨單的審核擴充(`TransferShipmentEffect`);
@@ -122,13 +123,14 @@ export const TransferViewPage = ({ routeParam }: ModulePageProps) => {
     { enabled: id !== "" },
   );
   const data = receiving.data?.lotteryTransferReceiving ?? null;
-  const [thisTime, setThisTime] = useState<ReadonlySet<string>>(new Set());
   const [wrongStore, setWrongStore] = useState<{
     code: string;
     info: TransferWrongStoreInfo;
   } | null>(null);
   const notify = useNotifyLotteryTransferWrongStoreMutation(session.client);
-  const receive = useReceiveLotteryTransferBookMutation(session.client);
+  const receiving$ = useTransferReceiving(id, data, (code, info) => {
+    setWrongStore({ code, info });
+  });
 
   const isSubmitted =
     submission !== null && submission.status !== FormSubmissionStatus.Draft;
@@ -137,42 +139,6 @@ export const TransferViewPage = ({ routeParam }: ModulePageProps) => {
     { moduleKey: TRANSFER_MODULE_KEY, refId: id },
     { enabled: isSubmitted, retry: false },
   );
-
-  const onScan = async (
-    code: string,
-    gameId: string | null,
-  ): Promise<ReceiveScanOutcome> => {
-    try {
-      const result = await receive.mutateAsync({
-        input: { submissionId: id, code, gameId },
-      });
-      const { rowId } = result.receiveLotteryTransferBook;
-      setThisTime((current) => new Set([...current, rowId]));
-      queryClient.setQueryData(
-        useLotteryTransferReceivingQuery.getKey({ submissionId: id }),
-        {
-          lotteryTransferReceiving: result.receiveLotteryTransferBook.receiving,
-        },
-      );
-      void queryClient.invalidateQueries({
-        queryKey: useLotterySettlementQuery.getKey({
-          moduleKey: TRANSFER_MODULE_KEY,
-          refId: id,
-        }),
-      });
-      return { kind: "received" };
-    } catch (error) {
-      const parsed = transferReceiveErrorOf(error);
-      if (parsed.wrongStore !== null) {
-        setWrongStore({ code, info: parsed.wrongStore });
-        return { kind: "failed", message: null };
-      }
-      const message = tReceive(`errors.${parsed.reason}`);
-      return parsed.gameIds.length > 0
-        ? { kind: "ambiguous_game", gameIds: parsed.gameIds, message }
-        : { kind: "failed", message };
-    }
-  };
 
   const rows = data?.rows ?? [];
   const isShipped = rows.some((row) => row.shipped);
@@ -196,7 +162,7 @@ export const TransferViewPage = ({ routeParam }: ModulePageProps) => {
     bookPrice: row.amount,
     rate: row.rate,
     amount: row.purchaseAmount,
-    status: row.received ? "received" : "notReceived",
+    ...receiving$.rowReceivingOf(row),
   });
   const groups = groupBooksByGame(
     rows,
@@ -219,7 +185,7 @@ export const TransferViewPage = ({ routeParam }: ModulePageProps) => {
       amount: t("columns.purchaseAmount"),
       status: "",
     },
-    status: { received: "", notReceived: "", inTransit: "" },
+    status: { received: "", notReceived: "", inTransit: "", partial: "" },
     remove: "",
     rateOf: () => "",
     progress,
@@ -241,6 +207,8 @@ export const TransferViewPage = ({ routeParam }: ModulePageProps) => {
     isReviewing && allReceived && settlementItem !== null
       ? settlementProblemOf(settlementItem)
       : null;
+
+  const unreceivedText = isReviewing ? unreceivedTextOf(t, rows) : null;
 
   let stage: string | null = null;
   if (isReviewing) {
@@ -271,7 +239,7 @@ export const TransferViewPage = ({ routeParam }: ModulePageProps) => {
           useLotteryTransferReceivingQuery.getKey({ submissionId: id }),
           { lotteryTransferReceiving: result.receiving },
         );
-        setThisTime(new Set());
+        receiving$.resetThisTime();
         const batch = result.batch ?? null;
         // 印不印只看 api 回的結果:有這一次的點收批次才印(資料也用 api 回的點收區塊)
         if (batch !== null && receipts.receivingInputOf !== null) {
@@ -368,20 +336,23 @@ export const TransferViewPage = ({ routeParam }: ModulePageProps) => {
           <ReceiveBooksPanel
             groups={groups.map((group) => ({ ...group, requestedBooks: null }))}
             canReceive={data.canReceive}
-            onScan={onScan}
+            onScan={receiving$.onScan}
             gameLabelOf={gameLabelOf}
-            thisTimeCount={thisTime.size}
+            thisTimeCount={receiving$.thisTime.size}
             onComplete={() => {
               complete.mutate({
-                input: { submissionId: id, rowIds: [...thisTime] },
+                input: { submissionId: id, rowIds: [...receiving$.thisTime] },
               });
             }}
-            isPending={receive.isPending}
+            isPending={receiving$.isPending}
             columnLabels={{
               ticket: t("columns.ticketNos"),
               bookPrice: t("columns.amount"),
             }}
           />
+        )}
+        {unreceivedText !== null && (
+          <Alert severity="warning">{unreceivedText}</Alert>
         )}
         {settlementItem !== null && (
           <SettlementPanel moduleKey={TRANSFER_MODULE_KEY} refId={id} />

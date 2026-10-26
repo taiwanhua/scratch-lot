@@ -286,6 +286,7 @@ const row = (
   purchaseAmount: 0,
   shipped: false,
   received: false,
+  receivedTickets: 0,
   receivedAt: null,
   shippedAt: null,
   batchId: null,
@@ -318,6 +319,7 @@ export const transferReceiving = (
             shipped: true,
             shippedAt: "2026-10-16T01:10:00.000Z",
             received: true,
+            receivedTickets: 100,
             receivedAt: "2026-10-16T07:20:00.000Z",
             batchId: "tbatch-1",
             receivedTicketNos: range(1, 100),
@@ -340,6 +342,7 @@ export const transferReceiving = (
             no: 1,
             completedAt: "2026-10-16T07:25:00.000Z",
             rowIds: ["t10-1"],
+            rows: [{ rowId: "t10-1", ticketNos: range(1, 100) }],
           },
         ],
       }

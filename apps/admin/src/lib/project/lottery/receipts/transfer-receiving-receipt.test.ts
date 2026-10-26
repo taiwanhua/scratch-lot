@@ -40,6 +40,7 @@ const transferReceiving: TransferReceivingReceiptInput = {
           ticketNos: [],
           tickets: 100,
           received: true,
+          receivedTickets: 100,
           receivedTicketNos: Array.from({ length: 100 }, (_, index) =>
             String(index + 1).padStart(3, "0"),
           ),
@@ -51,6 +52,7 @@ const transferReceiving: TransferReceivingReceiptInput = {
           ticketNos: [],
           tickets: 100,
           received: false,
+          receivedTickets: 0,
           receivedTicketNos: [],
         },
         {
@@ -70,19 +72,28 @@ const transferReceiving: TransferReceivingReceiptInput = {
             "099",
           ],
           tickets: 10,
-          received: true,
-          // 號碼照點收紀錄實際搬進來的張印(不照單上的列)
+          // 選張的列逐張點收:這一次只到了 5 張
+          received: false,
+          receivedTickets: 5,
           receivedTicketNos: ["090", "091", "092", "093", "094"],
         },
       ],
     },
   ],
-  batch: { batchId: "tbatch-1", no: 1, rowIds: ["t1", "t3"] },
+  batch: {
+    batchId: "tbatch-1",
+    no: 1,
+    rowIds: ["t1", "t3"],
+    rows: [
+      { rowId: "t1", ticketNos: [] },
+      { rowId: "t3", ticketNos: ["090", "091", "092", "093", "094"] },
+    ],
+  },
   url: "https://admin.example/purchasing/transfer/view-page/doc-t8",
 };
 
 describe("調貨點收單(規格第 12 章、8.4;Figma RC-10 待補)", () => {
-  it("調貨點收單:兩聯(收貨店留存、送貨人留存);出貨店 → 收貨店、第 N 次點收、遊戲 / 本數 / 點收、整本寫本號、選張寫號碼區段(照點收紀錄實際的張)、尚未到的本;簽名欄 點收人、送貨人", () => {
+  it("調貨點收單:兩聯(收貨店留存、送貨人留存);出貨店 → 收貨店、第 N 次點收、遊戲 / 本數 / 點收、整本寫本號、選張寫號碼區段(照這一次點收的張)、尚未到的本(選張的列寫還沒到的張);簽名欄 點收人、送貨人", () => {
     const copies = receiptLayoutsOf(
       "transfer-receiving",
       transferReceiving,
@@ -101,13 +112,15 @@ describe("調貨點收單(規格第 12 章、8.4;Figma RC-10 待補)", () => {
       "----",
       "第 1 次點收(2 本)",
       "[表頭] 遊戲 | 本數 | 點收",
-      "5164 發大財 | 2 | 2 / 3",
+      "5164 發大財 | 2 | 1 / 3",
       "本號:056527",
       "056529 號碼:#090~094(5 張)",
       "----",
-      "尚未到的本(1 本)",
-      "5164 發大財 | 1",
+      "尚未到的本(2 本)",
+      "5164 發大財 | 2",
       "本號:056528",
+      // 選張的列只到部分張:尚未到的寫還沒點收的張
+      "056529 號碼:#095~099(5 張)",
       "----",
       `[QR] ${transferReceiving.url}`,
       "掃描開啟單據",

@@ -2773,7 +2773,9 @@
         "TRANSFER_WRONG_STORE": "This book is not for this store",
         "TRANSFER_BOOK_NOT_ON_TRANSFER": "This book (or ticket) is not on this transfer",
         "PURCHASE_SCAN_AMBIGUOUS_GAME": "Several games share this book number; scan the back code or pick a game",
-        "TRANSFER_SCAN_AMBIGUOUS_GAME": "Several games share this book number; scan the back code or pick a game"
+        "TRANSFER_SCAN_AMBIGUOUS_GAME": "Several games share this book number; scan the back code or pick a game",
+        "ticketAlreadyReceived": "{count, plural, =1 {This ticket is already received} other {{tickets} are already received}}",
+        "TRANSFER_WHOLE_ROW_TICKETS": "Scan one ticket of a whole-book line to receive the whole book"
       },
       "wrongStore": {
         "title": "This book was not sent to this store",
@@ -2792,7 +2794,8 @@
         "scanned": "scanned {count}",
         "received": "received {received} / {total}",
         "separator": ", "
-      }
+      },
+      "partial": "Partly received"
     },
     "transfer": {
       "badgeDescription": "Transfers waiting for your receiving (second step)",
@@ -2915,7 +2918,28 @@
         "wrongStoreNotified": "The creator of this transfer has been notified",
         "printShipment": "Shipping slip",
         "printReceiving": "Receiving slip",
-        "printPayment": "Payment receipt"
+        "printPayment": "Payment receipt",
+        "rowStatus": {
+          "notReceived": "Not received {received} / {total}",
+          "partial": "Partly received {received} / {total}"
+        },
+        "grid": {
+          "expand": "Show tickets",
+          "collapse": "Hide tickets",
+          "notReceived": "Not received",
+          "received": "Received",
+          "receiveSelected": "Receive {count} selected",
+          "receiveRest": "All the rest arrived…",
+          "restTitle": "All the rest arrived",
+          "restBody": "Did all {count} tickets {tickets} arrive?",
+          "restConfirm": "Yes, receive them",
+          "cancel": "Cancel",
+          "receivedCount": "Received {count} tickets"
+        },
+        "unreceived": "{count} tickets are not received yet ({items}). Return the transfer so the shipping store removes the tickets that did not arrive",
+        "unreceivedItem": "{bookNo} {tickets}",
+        "unreceivedWhole": "{bookNo} whole book",
+        "unreceivedSeparator": ", "
       },
       "wrongStore": {
         "facts": "Book {bookNo} · transfer {serialNo} · to {branch}",
@@ -3068,7 +3092,7 @@
     "TRANSFER_TICKETS_UNAVAILABLE": "Some books or tickets are not in the from store, are sold, locked, or on another open transfer",
     "TRANSFER_RECEIVED_ROW_CHANGED": "Received lines cannot be changed or removed",
     "TRANSFER_REQUISITION_INVALID": "The requisition must be a pending requisition of the to store",
-    "TRANSFER_UNRECEIVED_ROWS": "Receive every line before approval",
+    "TRANSFER_UNRECEIVED_ROWS": "Some tickets are not received yet. Receive them all before approval; return the transfer so the shipping store removes tickets that did not arrive",
     "TRANSFER_RECEIVER_UNDERPAID": "The receiving store has not recorded payment; paid, received and transfer amount must match",
     "TRANSFER_SHIPPER_UNRECEIVED": "The shipping store has not recorded receipt; paid, received and transfer amount must match",
     "TRANSFER_SHIPPER_OVERRECEIVED": "The shipping store received too much; record a refund first",

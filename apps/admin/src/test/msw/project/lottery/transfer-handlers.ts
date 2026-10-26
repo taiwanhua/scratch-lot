@@ -8,6 +8,7 @@ import type {
   LotteryTransferReceivingQueryVariables,
   NotifyLotteryTransferWrongStoreMutationVariables,
   ReceiveLotteryTransferBookMutationVariables,
+  ReceiveLotteryTransferTicketsMutationVariables,
 } from "@repo/graphql";
 
 import { graphqlError } from "../../auth-handlers";
@@ -157,6 +158,66 @@ export const transferWorld = ({
   const receivings = new Map<string, LotteryTransferReceivingFieldsFragment>();
   const receivingOf = (id: string) =>
     receivings.get(id) ?? transferReceiving(id);
+  /** 點收這一列的幾張(mock;整本的列整列)。已點收的張 → 已點收。 */
+  const receiveRow = (
+    submissionId: string,
+    rowId: string,
+    ticketNos: readonly string[],
+  ) => {
+    const current = receivingOf(submissionId);
+    const target = current.rows.find((row) => row.rowId === rowId);
+    if (target === undefined) {
+      return graphqlError("VALIDATION_FAILED", "Not on this transfer", {
+        reason: "TRANSFER_BOOK_NOT_ON_TRANSFER",
+      });
+    }
+    const already = ticketNos.filter((no) =>
+      target.receivedTicketNos.includes(no),
+    );
+    if (already.length > 0 || target.received) {
+      return graphqlError("VALIDATION_FAILED", "Already received", {
+        reason: "TRANSFER_ALREADY_RECEIVED",
+        ticketNos: already,
+      });
+    }
+    const receivedTicketNos = [
+      ...new Set([...target.receivedTicketNos, ...ticketNos]),
+    ].toSorted((a, b) => a.localeCompare(b));
+    const isFull = receivedTicketNos.length >= target.tickets;
+    const next = {
+      ...current,
+      receivedCount: current.receivedCount + (isFull ? 1 : 0),
+      rows: current.rows.map((row) =>
+        row.rowId === rowId
+          ? {
+              ...row,
+              received: isFull,
+              receivedTickets: receivedTicketNos.length,
+              receivedTicketNos,
+              batchId: null,
+            }
+          : row,
+      ),
+    };
+    receivings.set(submissionId, next);
+    return HttpResponse.json<{ data: Record<string, unknown> }>({
+      data: {
+        receiveLotteryTransferBook: {
+          __typename: "ReceiveLotteryTransferBookPayload",
+          rowId,
+          ticketNos: [...ticketNos],
+          receiving: next,
+        },
+        receiveLotteryTransferTickets: {
+          __typename: "ReceiveLotteryTransferBookPayload",
+          rowId,
+          ticketNos: [...ticketNos],
+          receiving: next,
+        },
+      },
+    });
+  };
+
   return {
     scanned,
     notified,
@@ -204,25 +265,18 @@ export const transferWorld = ({
             { reason: "TRANSFER_BOOK_NOT_ON_TRANSFER" },
           );
         }
-        const next = {
-          ...current,
-          receivedCount: current.receivedCount + 1,
-          rows: current.rows.map((row) =>
-            row.rowId === pending.rowId
-              ? { ...row, received: true, receivedTicketNos: row.ticketNos }
-              : row,
-          ),
-        };
-        receivings.set(input.submissionId, next);
-        return HttpResponse.json({
-          data: {
-            receiveLotteryTransferBook: {
-              __typename: "ReceiveLotteryTransferBookPayload",
-              rowId: pending.rowId,
-              receiving: next,
-            },
-          },
-        });
+        // 整本的列刷一張 = 整列;選張的列只點收刷到的那一張(正面碼最後 3 碼 = 張號)
+        const ticketNos =
+          pending.mode === "whole" ? pending.ticketNos : [input.code.slice(-3)];
+        return receiveRow(input.submissionId, pending.rowId, ticketNos);
+      }),
+      api.mutation("ReceiveLotteryTransferTickets", ({ variables }) => {
+        const { input } =
+          variables as ReceiveLotteryTransferTicketsMutationVariables;
+        const ticketNos = Array.isArray(input.ticketNos)
+          ? input.ticketNos
+          : [input.ticketNos];
+        return receiveRow(input.submissionId, input.rowId, ticketNos);
       }),
       api.mutation("CompleteLotteryTransferReceiving", ({ variables }) => {
         const { input } =
@@ -234,7 +288,9 @@ export const transferWorld = ({
         const rowIds = current.rows
           .filter(
             (row) =>
-              row.received && row.batchId == null && wanted.has(row.rowId),
+              row.receivedTickets > 0 &&
+              row.batchId == null &&
+              wanted.has(row.rowId),
           )
           .map((row) => row.rowId);
         const batch =
@@ -246,6 +302,13 @@ export const transferWorld = ({
                 no: current.batches.length + 1,
                 completedAt: new Date().toISOString(),
                 rowIds,
+                rows: rowIds.map((rowId) => ({
+                  __typename: "LotteryTransferReceivingBatchRow" as const,
+                  rowId,
+                  ticketNos:
+                    current.rows.find((row) => row.rowId === rowId)
+                      ?.receivedTicketNos ?? [],
+                })),
               };
         const next =
           batch === null

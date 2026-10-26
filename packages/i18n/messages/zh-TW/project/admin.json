@@ -2773,7 +2773,9 @@
         "TRANSFER_WRONG_STORE": "這本不是送到這家店",
         "TRANSFER_BOOK_NOT_ON_TRANSFER": "這本(或這張)不在這張調貨單上",
         "PURCHASE_SCAN_AMBIGUOUS_GAME": "這個本號有多款遊戲,請刷背面編號或選遊戲",
-        "TRANSFER_SCAN_AMBIGUOUS_GAME": "這個本號有多款遊戲,請刷背面編號或選遊戲"
+        "TRANSFER_SCAN_AMBIGUOUS_GAME": "這個本號有多款遊戲,請刷背面編號或選遊戲",
+        "ticketAlreadyReceived": "{count, plural, =1 {這張已經點收} other {{tickets} 已經點收}}",
+        "TRANSFER_WHOLE_ROW_TICKETS": "整本的列請刷一張,整本一起點收"
       },
       "wrongStore": {
         "title": "這本不是送到這家店",
@@ -2792,7 +2794,8 @@
         "scanned": "已刷 {count}",
         "received": "已點收 {received} / {total}",
         "separator": ","
-      }
+      },
+      "partial": "部分點收"
     },
     "transfer": {
       "badgeDescription": "點收關卡(第二關)在你手上的調貨單",
@@ -2915,7 +2918,28 @@
         "wrongStoreNotified": "已通知這張調貨單的建立者更正",
         "printShipment": "調貨出貨單",
         "printReceiving": "調貨點收單",
-        "printPayment": "調貨付款收據"
+        "printPayment": "調貨付款收據",
+        "rowStatus": {
+          "notReceived": "未點收 {received} / {total}",
+          "partial": "部分點收 {received} / {total}"
+        },
+        "grid": {
+          "expand": "展開格子",
+          "collapse": "收合格子",
+          "notReceived": "未點收",
+          "received": "已點收",
+          "receiveSelected": "點收選取的 {count} 張",
+          "receiveRest": "其餘全部到齊…",
+          "restTitle": "其餘全部到齊",
+          "restBody": "確認 {tickets} 這 {count} 張都到了?",
+          "restConfirm": "都到了,點收",
+          "cancel": "取消",
+          "receivedCount": "點收了 {count} 張"
+        },
+        "unreceived": "還有 {count} 張沒點收({items}),請退回由出貨店移除沒到的張",
+        "unreceivedItem": "{bookNo} {tickets}",
+        "unreceivedWhole": "{bookNo} 整本",
+        "unreceivedSeparator": "、"
       },
       "wrongStore": {
         "facts": "本號 {bookNo} · 調貨單 {serialNo} · 送往 {branch}",
@@ -3068,7 +3092,7 @@
     "TRANSFER_TICKETS_UNAVAILABLE": "有本或張不在出貨分店、已售、被鎖定,或在其他還沒結束的調貨單上",
     "TRANSFER_RECEIVED_ROW_CHANGED": "已點收的列不能修改或刪除",
     "TRANSFER_REQUISITION_INVALID": "叫貨單要是收貨分店、待購買的叫貨單",
-    "TRANSFER_UNRECEIVED_ROWS": "還有沒點收的列,全部點收後才能核准",
+    "TRANSFER_UNRECEIVED_ROWS": "還有張沒點收,全部點收後才能核准;沒到的張請退回,由出貨店移除",
     "TRANSFER_RECEIVER_UNDERPAID": "收貨店還沒記付款;收貨店已付 = 出貨店已收 = 調貨金額才能核准",
     "TRANSFER_SHIPPER_UNRECEIVED": "出貨店還沒記收款;收貨店已付 = 出貨店已收 = 調貨金額才能核准",
     "TRANSFER_SHIPPER_OVERRECEIVED": "出貨店多收,請先記退款",

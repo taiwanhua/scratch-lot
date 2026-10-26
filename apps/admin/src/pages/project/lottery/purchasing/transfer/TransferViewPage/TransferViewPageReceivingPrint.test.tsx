@@ -32,7 +32,14 @@ describe("調貨單檢視頁:調貨點收單", () => {
       printing: { printOnRead: true },
     });
     const scan = await screen.findByRole("textbox", { name: "刷條碼點收" });
+    // 選張的列逐張點收:刷 #045 → 那一列展開格子;[其餘全部到齊…] 確認後點收剩下的 11 張
     await user.type(scan, "0060112045{Enter}");
+    await user.click(
+      await screen.findByRole("button", { name: "其餘全部到齊…" }),
+    );
+    await user.click(
+      await screen.findByRole("button", { name: "都到了,點收" }),
+    );
     await user.click(
       await screen.findByRole("button", { name: "完成這次點收(1 本)" }),
     );
