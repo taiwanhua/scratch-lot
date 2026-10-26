@@ -1338,8 +1338,16 @@ describe("盤點(GraphQL 端點 + 真 MongoDB)", () => {
 
     // 退回後補盤 3 本再送出 → 改寫同一筆,未盤剩 3 本
     await decideOn(world, manager, submitted.id, "RETURN");
-    expect(await stocktakeOf(submitted.id)).toMatchObject({
+    const returned = await stocktakeOf(submitted.id);
+    // 那一次送出的快照記退回時間(營運報表依期末那一刻有效的那一次算)
+    expect(returned).toMatchObject({
       status: "returned",
+      attempts: [
+        expect.objectContaining({
+          closedAt: expect.any(Date),
+          uncountedCount: 6,
+        }),
+      ],
     });
     const raw = await connection
       .collection<{ editVersion: number }>("form_submissions")
@@ -1366,6 +1374,12 @@ describe("盤點(GraphQL 端點 + 真 MongoDB)", () => {
     expect(again).toMatchObject({
       status: "pending",
       summary: { books: 15, uncountedCount: 3 },
+      // 重送不改寫第一次送出的時間;多一次送出的快照
+      firstSubmittedAt: returned?.firstSubmittedAt,
+      attempts: [
+        expect.objectContaining({ uncountedCount: 6 }),
+        expect.objectContaining({ closedAt: null, uncountedCount: 3 }),
+      ],
     });
     expect(again?.uncountedBooks.map((book) => book.bookNo)).toEqual(
       books.slice(15).map((book) => book.bookNo),

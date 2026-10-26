@@ -473,11 +473,19 @@ export class StocktakeService {
       { submissionId: options.submissionId },
       { session },
     );
+    // 這一次送出的快照(營運報表依期末那一刻有效的那一次算)
+    const attempt = {
+      submittedAt: content.submittedAt,
+      closedAt: null,
+      uncountedCount: built.summary.uncountedCount,
+    };
     if (existing === null) {
       await this.stocktakes.create(
         reader,
         {
           ...content,
+          firstSubmittedAt: content.submittedAt,
+          attempts: [attempt],
           orgId: storeId,
           submissionId: options.submissionId,
           version: 0,
@@ -489,7 +497,14 @@ export class StocktakeService {
     await this.stocktakes.findOneAndUpdate(
       reader,
       { _id: existing._id, version: existing.version },
-      { $set: content, $inc: { version: 1 } },
+      {
+        $set: {
+          ...content,
+          firstSubmittedAt: existing.firstSubmittedAt ?? existing.submittedAt,
+          attempts: [...existing.attempts, attempt],
+        },
+        $inc: { version: 1 },
+      },
       { session },
     );
   }
@@ -528,11 +543,30 @@ export class StocktakeService {
     status: Exclude<StocktakeStatus, "pending" | "confirmed">,
   ): Promise<void> {
     const reader = await tenantBoundaryContext(this.orgs, null, tenantId);
+    const now = this.clock.now();
+    // 舊資料沒有送出快照:先補空陣列(陣列篩選要欄位存在)
+    await this.stocktakes.updateMany(
+      reader,
+      {
+        submissionId,
+        status: STOCKTAKE_STATUS.pending,
+        attempts: { $exists: false },
+      },
+      { $set: { attempts: [] } },
+      { session },
+    );
     await this.stocktakes.findOneAndUpdate(
       reader,
       { submissionId, status: STOCKTAKE_STATUS.pending },
-      { $set: { status, closedAt: this.clock.now() }, $inc: { version: 1 } },
-      { session },
+      {
+        $set: {
+          status,
+          closedAt: now,
+          "attempts.$[open].closedAt": now,
+        },
+        $inc: { version: 1 },
+      },
+      { session, arrayFilters: [{ "open.closedAt": null }] },
     );
   }
 

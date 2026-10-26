@@ -2845,6 +2845,23 @@ describe("輸出報表:營運報表、班次結帳歷史報表(GraphQL 端點 + 
         summary: { books: 3, uncountedCount: 2 },
         moduleKey: "store",
       });
+      // R5b:另一張盤點單期末待審核、4 本未盤(之後退回、重送剩 1 本)
+      const resubmittedStocktake = await insert(LOTTERY_STOCKTAKES_COLLECTION, {
+        orgId: penghu,
+        type: "shift",
+        status: "pending",
+        scopeCashPointId: null,
+        startedAt: at("15:50"),
+        submittedAt: at("16:00"),
+        closedAt: null,
+        firstSubmittedAt: at("16:00"),
+        attempts: [
+          { submittedAt: at("16:00"), closedAt: null, uncountedCount: 4 },
+        ],
+        submissionId: new Types.ObjectId(),
+        summary: { books: 5, uncountedCount: 4 },
+        moduleKey: "store",
+      });
       // R6:整本調貨期末在途(出貨事件記調貨金額快照 200 × 100)
       const bookId = await purchase(penghu, at("09:00"));
       const lineValues = transferValues(penghu, yunlin, [
@@ -2906,8 +2923,8 @@ describe("輸出報表:營運報表、班次結帳歷史報表(GraphQL 端點 + 
       });
       expect(before.notes).toMatchObject({
         uncoveredShifts: 0,
-        uncountedStocktakes: 1,
-        uncountedBooks: 2,
+        uncountedStocktakes: 2,
+        uncountedBooks: 2 + 4,
       });
       expect(before.inventory).toMatchObject({
         transferOutTickets: 100,
@@ -3019,6 +3036,26 @@ describe("輸出報表:營運報表、班次結帳歷史報表(GraphQL 端點 + 
           { _id: stocktakeId },
           { $set: { status: "rejected", closedAt: next("09:00") } },
         );
+      // R5b 盤點單退回(`markStatus`)再重送(`submitStocktakeDraft` 改寫送出時間與彙總、加一次送出)
+      await connection.collection(LOTTERY_STOCKTAKES_COLLECTION).updateOne(
+        { _id: resubmittedStocktake },
+        {
+          $set: {
+            status: "pending",
+            submittedAt: next("10:00"),
+            closedAt: null,
+            summary: { books: 5, uncountedCount: 1 },
+            attempts: [
+              {
+                submittedAt: at("16:00"),
+                closedAt: next("09:00"),
+                uncountedCount: 4,
+              },
+              { submittedAt: next("10:00"), closedAt: null, uncountedCount: 1 },
+            ],
+          },
+        },
+      );
       // R6 退回重送、把在途那一列刪掉(單上沒有那一列了;那幾張變待查)
       await connection
         .collection("form_submissions")

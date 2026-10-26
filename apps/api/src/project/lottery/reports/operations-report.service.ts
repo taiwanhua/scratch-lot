@@ -464,7 +464,7 @@ export class OperationsReportService {
   }> {
     const { reader } = scope;
     const { orgId, from, to } = period;
-    const [movements, submitted, stocktakes] = await Promise.all([
+    const [movements, submitted, submittedStocktakes] = await Promise.all([
       this.movements.findMany(
         reader,
         { orgId, occurredAt: { $gte: from, $lt: to } },
@@ -485,21 +485,24 @@ export class OperationsReportService {
         },
         { select: CHECKOUT_SELECT },
       ),
+      // 依第一次送出的時間歸期間(退回後再送出不改寫;舊資料沒有就用送出時間)
       this.stocktakes.findMany(
         reader,
         {
           orgId,
-          submittedAt: { $gte: from, $lt: to },
-          // 期末那一刻還沒被駁回(之後才駁回的照算)
           $or: [
-            { status: { $ne: STOCKTAKE_STATUS.rejected } },
-            { closedAt: { $gte: to } },
+            { firstSubmittedAt: { $gte: from, $lt: to } },
+            { firstSubmittedAt: null, submittedAt: { $gte: from, $lt: to } },
           ],
-          "summary.uncountedCount": { $gt: 0 },
         },
-        { select: "summary" },
+        { select: "status submittedAt closedAt summary attempts" },
       ),
     ]);
+    // 盤點單期末那一刻有效的那一次送出的未盤本數(期末前已退回 / 駁回、還沒重送的不算)
+    const uncounted = submittedStocktakes.flatMap((row) => {
+      const count = uncountedAt(row, to);
+      return count > 0 ? [count] : [];
+    });
     // 期末那一刻有效的那一次送出:待審核或已核准;期末前已退回、還沒重送的不算
     const checkouts = submitted.flatMap((row) => {
       const attempt = attemptAt(row, to);
@@ -604,11 +607,8 @@ export class OperationsReportService {
         skippedStocktakes: [...skipped.entries()]
           .map(([reason, count]) => ({ reason, count }))
           .toSorted((a, b) => b.count - a.count),
-        uncountedStocktakes: stocktakes.length,
-        uncountedBooks: stocktakes.reduce(
-          (sum, row) => sum + row.summary.uncountedCount,
-          0,
-        ),
+        uncountedStocktakes: uncounted.length,
+        uncountedBooks: uncounted.reduce((sum, count) => sum + count, 0),
         uncoveredShifts: uncovered.length,
         uncoveredShiftLabels: uncovered
           .slice(0, MAX_LISTED)
@@ -911,6 +911,36 @@ function isSentAt(
       entry.sentAt < at &&
       (entry.releasedAt === null || entry.releasedAt >= at),
   );
+}
+
+interface StocktakeRow {
+  status: string;
+  submittedAt: Date;
+  closedAt?: Date | null;
+  summary: { uncountedCount: number };
+  attempts?: {
+    submittedAt: Date;
+    closedAt: Date | null;
+    uncountedCount: number;
+  }[];
+}
+
+/**
+ * 盤點單在 `at` 那一刻有效的那一次送出的未盤本數:`at` 以前最後一次送出、那一刻還沒被退回 / 駁回;沒有 = 0。
+ * 舊資料沒有送出快照:照現在的欄位(期末前已駁回的不算)。
+ */
+function uncountedAt(row: StocktakeRow, at: Date): number {
+  const attempts = row.attempts ?? [];
+  if (attempts.length === 0) {
+    const rejected =
+      row.status === STOCKTAKE_STATUS.rejected &&
+      !(row.closedAt != null && row.closedAt >= at);
+    return row.submittedAt >= at || rejected ? 0 : row.summary.uncountedCount;
+  }
+  const last = attempts.findLast((attempt) => attempt.submittedAt < at);
+  return last === undefined || (last.closedAt !== null && last.closedAt < at)
+    ? 0
+    : last.uncountedCount;
 }
 
 /** 結帳單讀的欄位(期末那一刻有效的那一次送出)。 */

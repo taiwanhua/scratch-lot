@@ -215,6 +215,31 @@ export class LotteryStocktake {
   @Prop({ type: Date, default: null })
   closedAt!: Date | null;
 
+  /** 第一次送出的時間(退回後再送出不改寫;營運報表依它判斷屬於哪段期間)。 */
+  @Prop({ type: Date, default: null })
+  firstSubmittedAt!: Date | null;
+
+  /**
+   * 每一次送出的快照(依時間;最後一筆 = 現在這一次):送出時間、這一次被退回 / 駁回的時間、未盤本數。
+   * 營運報表依「期末那一刻有效的那一次」算(重跑舊報表數字不變)。
+   */
+  @Prop({
+    type: [
+      {
+        _id: false,
+        submittedAt: { type: Date, required: true },
+        closedAt: { type: Date, default: null },
+        uncountedCount: { type: Number, default: 0 },
+      },
+    ],
+    default: [],
+  })
+  attempts!: {
+    submittedAt: Date;
+    closedAt: Date | null;
+    uncountedCount: number;
+  }[];
+
   /** 核准的人(最後核准的審核者;申請人是審核者自動通過時 = 申請人)。 */
   @Prop({ type: OBJECT_ID, default: null })
   confirmedBy!: Types.ObjectId | null;
