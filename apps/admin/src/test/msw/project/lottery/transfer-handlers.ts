@@ -13,11 +13,11 @@ import type {
 import { graphqlError } from "../../auth-handlers";
 import { api, type server } from "../../server";
 import { sampleOutstanding, settlementOf } from "./accounts-fixtures";
+import { transferReceiving } from "./transfer-fixtures";
 import {
   transferBookTickets,
   transferOptions,
-  transferReceiving,
-} from "./transfer-fixtures";
+} from "./transfer-option-fixtures";
 import { transferSettlement } from "./transfer-settlement-fixtures";
 
 /**
