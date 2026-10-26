@@ -6,6 +6,7 @@ import { projectPublic } from "@repo/project-config/public";
 
 import {
   RECEIPT_KINDS,
+  receiptDocumentNameOf,
   receiptLayoutsOf,
   receiptPrintRefOf,
 } from "./receipt-kinds";
@@ -85,6 +86,12 @@ describe("店面的 58mm 單據版面:投庫單、出庫單、存款單、退貨
       documentName: "投庫單 · 中山店",
       defaultPrinterId: "printer-counter",
     });
+    // 一聯的單據:補印時列印紀錄的名稱不變(不加聯別、不加「補印」)
+    expect(
+      receiptDocumentNameOf("store-vault-deposit", payload, t, {
+        isReprint: true,
+      }),
+    ).toBe("投庫單 · 中山店");
   });
 
   it("出庫單:分店、方向(小金庫 → 收銀點抽屜)、原因、備註、金額;簽名欄 領取人、見證人", () => {

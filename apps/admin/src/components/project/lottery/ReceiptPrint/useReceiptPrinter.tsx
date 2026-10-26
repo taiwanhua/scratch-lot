@@ -12,7 +12,10 @@ import type { Receipt58ReprintMarkProps } from "@repo/ui/receipt58";
 
 import type { PrintReprintMark } from "@/components/base/PrintButton/PrintButton";
 import { useMe } from "@/hooks/base/useMe";
-import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
+import {
+  useMutationFeedback,
+  useSnackbar,
+} from "@/hooks/base/useMutationFeedback";
 import { usePermissions } from "@/hooks/base/usePermissions";
 import { useSession } from "@/hooks/base/useSession";
 import { useTemporalText } from "@/hooks/base/useTemporalText";
@@ -21,6 +24,7 @@ import {
   blobToBase64,
   resolvePrinterId,
 } from "@/lib/base/print-button";
+import { isPrintImageTooLarge } from "@/lib/project/lottery/receipts/receipt-image-limits";
 import {
   RECEIPT_ALL_COPIES,
   type ReceiptKind,
@@ -40,6 +44,8 @@ import { PrintResultWatch, type WatchedPrintJob } from "./PrintResultWatch";
 
 /** 補印標示的文案(`admin.lotteryPurchasing.receipts.reprint.*`)。 */
 const REPRINT_I18N = "admin.lotteryPurchasing.receipts.reprint";
+/** 單據太長沒印出的提示(`admin.lotteryPurchasing.receipts.tooLong`)。 */
+const RECEIPTS_I18N = "admin.lotteryPurchasing.receipts";
 
 export interface ReceiptPrinter {
   /** 有 `api.printing.print`(沒有就什麼都不印;呼叫端可據此省掉為列印而查的資料) */
@@ -48,7 +54,8 @@ export interface ReceiptPrinter {
    * 交易成功之後自動列印(專案規格第 12 章的「自動」):呼叫端在寫入成功之後才呼叫,寫入失敗就不叫。
    * 沒有 `api.printing.print` → 不印;分店沒有可用的印表機 → 不印。
    * 印表機 = 單據的預設(收銀點的印表機)→ 分店預設 → 第一台。
-   * 任何失敗(查印表機、轉圖、建立工作)只記 log,不拋錯、不跳提示,呼叫端照常往下做。
+   * 任何失敗(查印表機、轉圖、建立工作)只記 log,不拋錯、不跳提示,呼叫端照常往下做;
+   * 唯一的例外:接成一張的圖超過高度 / 大小上限(多聯加總、明細很長)→ 不送,跳一則提示請到 [列印] 補印(可分聯補印)。
    * 工作有結果時重查那張單據的已印次數(`PrintResultWatch`;呼叫端還掛著 `host` 時),標頭按鈕跟著變 [補印]。
    */
   printReceiptAfterCommit: <Kind extends ReceiptKind>(
@@ -76,6 +83,8 @@ export interface ReceiptPrinter {
 export const useReceiptPrinter = (): ReceiptPrinter => {
   const tRoot = useTranslations();
   const tReprint = useTranslations(REPRINT_I18N);
+  const tReceipts = useTranslations(RECEIPTS_I18N);
+  const showSnackbar = useSnackbar();
   const temporalText = useTemporalText();
   const tenantName = useMe().data?.me.currentOrg?.tenantName ?? "";
   const { session } = useSession();
@@ -172,6 +181,12 @@ export const useReceiptPrinter = (): ReceiptPrinter => {
             null,
           ),
         );
+        if (isPrintImageTooLarge(image)) {
+          // api 一定擋(INVALID_IMAGE):不送,告訴使用者這次沒印出、怎麼補
+          logReceiptPrintFailure("image too large", { kind, orgId });
+          showSnackbar("warning", tReceipts("tooLong"));
+          return;
+        }
         const created = await createPrintJob({
           input: { printerId, ...document, image },
         });
@@ -190,6 +205,8 @@ export const useReceiptPrinter = (): ReceiptPrinter => {
       queryClient,
       renderLayouts,
       session.client,
+      showSnackbar,
+      tReceipts,
       translatorOf,
     ],
   );

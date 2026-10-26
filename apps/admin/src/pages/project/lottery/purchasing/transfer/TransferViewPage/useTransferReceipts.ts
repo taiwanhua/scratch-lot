@@ -59,28 +59,33 @@ export const useTransferReceipts = (
         );
   const payment =
     settlement === null ? null : latestTransferPaymentInputOf(settlement, url);
+  /** 調貨點收單的資料:`latest` = 這次要印的點收區塊(完成點收後用 api 回的那一份);還沒載到調貨單 → null */
+  const receivingInputOf =
+    submission === null
+      ? null
+      : (
+          latest: LotteryTransferReceivingFieldsFragment,
+          batch: TransferReceivingReceiptInput["batch"],
+        ): TransferReceivingReceiptInput =>
+          transferReceivingInputOf(
+            latest,
+            {
+              submissionId: id,
+              serialNo: submission.serialNo ?? null,
+              toBranchId: transferHeaderOf(submission.values).toBranchId ?? "",
+              url,
+            },
+            batch,
+          );
   const receivingReceipt =
-    receiving === null || submission === null
+    receiving === null || receivingInputOf === null
       ? null
       : {
           batches: receiving.batches,
           receivedCount: receiving.receivedCount,
-          inputOf: (
-            batch: TransferReceivingReceiptInput["batch"],
-            latest: LotteryTransferReceivingFieldsFragment = receiving,
-          ): TransferReceivingReceiptInput =>
-            transferReceivingInputOf(
-              latest,
-              {
-                submissionId: id,
-                serialNo: submission.serialNo ?? null,
-                toBranchId:
-                  transferHeaderOf(submission.values).toBranchId ?? "",
-                url,
-              },
-              batch,
-            ),
+          inputOf: (batch: TransferReceivingReceiptInput["batch"]) =>
+            receivingInputOf(receiving, batch),
         };
 
-  return { shipment, receiving: receivingReceipt, payment };
+  return { shipment, receiving: receivingReceipt, receivingInputOf, payment };
 };

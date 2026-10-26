@@ -92,8 +92,13 @@ export interface PrintButtonWorld {
     status: PrintJobStatus,
     error?: PrintJobError | null,
   ) => void;
-  /** 別處送的同一張單據印好了(例:交易後的自動列印):已印次數 +1,不經過這顆按鈕 */
-  printElsewhere: () => void;
+  /** `documentPrintCount` 被查的次數 */
+  countReads: () => number;
+  /**
+   * 別處送的工作印好了(例:交易後的自動列印;不經過這顆按鈕):建一張已印的工作,回它的 id
+   * (測試再送這個 id 的 `print-result`)。預設是按鈕那張單據(`order` / `order-1`)
+   */
+  printElsewhere: (refType?: string, refId?: string) => string;
 }
 
 export const printButtonWorld = ({
@@ -105,14 +110,13 @@ export const printButtonWorld = ({
   failPrintCount = false,
   createResponseGate,
 }: PrintButtonWorldOptions = {}): PrintButtonWorld => {
-  let elsewhere = 0;
+  let countReads = 0;
   let reads = 0;
   let printerReads = 0;
   const jobs = new Map<string, PrintJobFieldsFragment>();
   const created: CreatePrintJobMutationVariables["input"][] = [];
   const printedCountOf = (refType: string, refId: string) =>
     initialCount +
-    elsewhere +
     [...jobs.values()].filter(
       (job) =>
         job.status === PrintJobStatus.Printed &&
@@ -136,8 +140,9 @@ export const printButtonWorld = ({
     api.query<
       Record<string, unknown>,
       { input: { refType: string; refId: string } }
-    >("DocumentPrintCount", ({ variables }) =>
-      failPrintCount
+    >("DocumentPrintCount", ({ variables }) => {
+      countReads += 1;
+      return failPrintCount
         ? HttpResponse.json({
             data: null,
             errors: [{ message: "boom", extensions: { code: "UNEXPECTED" } }],
@@ -151,8 +156,8 @@ export const printButtonWorld = ({
                 ),
               },
             },
-          }),
-    ),
+          });
+    }),
     api.query("ReprintReasons", () =>
       HttpResponse.json({
         data: { reprintReasons: { items: reasons } },
@@ -225,8 +230,29 @@ export const printButtonWorld = ({
         error: status === PrintJobStatus.Failed ? error : null,
       });
     },
-    printElsewhere: () => {
-      elsewhere += 1;
+    countReads: () => countReads,
+    printElsewhere: (refType = "order", refId = "order-1") => {
+      const id = `job-elsewhere-${String(jobs.size + 1)}`;
+      jobs.set(id, {
+        id,
+        orgId: "store-a",
+        printerId: "printer-1",
+        documentType: "receipt",
+        refType,
+        refId,
+        documentName: null,
+        status: PrintJobStatus.Printed,
+        error: null,
+        isReprint: false,
+        printNo: printedCountOf(refType, refId) + 1,
+        reprintReason: null,
+        reprintNote: null,
+        requestedBy: { id: "user-1", name: "小華" },
+        createdAt: new Date().toISOString(),
+        sentAt: null,
+        printedAt: null,
+      });
+      return id;
     },
   };
 };

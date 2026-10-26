@@ -2832,6 +2832,7 @@
       "documentNameReprint": "{name}補印",
       "reprintCopies": "補印哪一聯",
       "reprintAllCopies": "{count, plural, =2 {兩聯都補} other {# 聯都補}}",
+      "tooLong": "單據太長,這次沒有印出,請到 [列印] 補印(可分聯補印)",
       "purchaseReceiving": {
         "title": "進貨點收單",
         "copies": {

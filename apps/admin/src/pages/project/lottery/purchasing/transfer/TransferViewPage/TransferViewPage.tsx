@@ -273,10 +273,11 @@ export const TransferViewPage = ({ routeParam }: ModulePageProps) => {
         );
         setThisTime(new Set());
         const batch = result.batch ?? null;
-        if (receipts.receiving !== null && batch !== null) {
+        // 印不印只看 api 回的結果:有這一次的點收批次才印(資料也用 api 回的點收區塊)
+        if (batch !== null && receipts.receivingInputOf !== null) {
           void printer.printReceiptAfterCommit(
             "transfer-receiving",
-            receipts.receiving.inputOf(batch, result.receiving),
+            receipts.receivingInputOf(result.receiving, batch),
           );
         }
       },

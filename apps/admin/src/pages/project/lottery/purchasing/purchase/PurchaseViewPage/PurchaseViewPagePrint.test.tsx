@@ -98,7 +98,7 @@ describe("進貨單檢視頁:進貨點收單", () => {
     expect(text).toContain("送貨人簽名");
   });
 
-  it("自動列印印好之後,標頭按鈕跟著變 [補印]「已印 1 次」(不會停在 [列印] 讓人多印一張)", async () => {
+  it("自動列印印好之後,標頭按鈕跟著變 [補印]「已印 1 次」(不會停在 [列印] 讓人多印一次)", async () => {
     receiptPngOf.mockClear();
     const user = userEvent.setup();
     const { printingFake } = renderPurchasePage({
@@ -119,6 +119,32 @@ describe("進貨單檢視頁:進貨點收單", () => {
     expect(
       printingFake?.printedCountOf("lottery-purchase-receiving", "batch-1"),
     ).toBe(1);
+  });
+
+  it("兩聯接成一張超過高度上限 → 不送列印,提示「單據太長,這次沒有印出,請到 [列印] 補印(可分聯補印)」", async () => {
+    receiptPngOf.mockClear();
+    // 一張 9,000 點高的圖(簽章 + IHDR;超過 8,000 點的上限)
+    const tall = new Uint8Array(33);
+    tall.set([137, 80, 78, 71, 13, 10, 26, 10], 0);
+    tall.set([0, 0, 0, 13, 0x49, 0x48, 0x44, 0x52], 8);
+    new DataView(tall.buffer).setUint32(16, 384);
+    new DataView(tall.buffer).setUint32(20, 9000);
+    receiptPngOf.mockResolvedValueOnce(new Blob([tall], { type: "image/png" }));
+    const user = userEvent.setup();
+    const { printingFake } = renderPurchasePage({ path: VIEW, printing: {} });
+    const scan = await screen.findByRole("textbox", { name: "刷條碼點收" });
+    await user.type(scan, "0056531099{Enter}");
+    await user.click(
+      await screen.findByRole("button", { name: "完成這次點收(1 本)" }),
+    );
+
+    expect(
+      await screen.findByText(
+        "單據太長,這次沒有印出,請到 [列印] 補印(可分聯補印)",
+      ),
+    ).toBeInTheDocument();
+    expect(receiptPngOf).toHaveBeenCalledTimes(1);
+    expect(printingFake?.created).toEqual([]);
   });
 
   it("沒有 api.printing(沒有收據機的租戶):[完成這次點收] 照常完成,不送列印、標題列沒有 [列印]", async () => {

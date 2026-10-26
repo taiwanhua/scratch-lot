@@ -2832,6 +2832,7 @@
       "documentNameReprint": "{name} reprint",
       "reprintCopies": "Copy to reprint",
       "reprintAllCopies": "{count, plural, =2 {Both copies} other {All # copies}}",
+      "tooLong": "This slip is too long and was not printed. Use [Print] to print it again (you can reprint one copy at a time).",
       "purchaseReceiving": {
         "title": "Purchase receiving slip",
         "copies": {

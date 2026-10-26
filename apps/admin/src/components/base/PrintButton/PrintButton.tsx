@@ -1,3 +1,4 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { type MouseEvent, useState } from "react";
 import { useTranslations } from "use-intl";
 
@@ -5,6 +6,7 @@ import { PRINT_SIGNALS } from "@repo/domain/printing";
 import {
   useCreatePrintJobMutation,
   useDocumentPrintCountQuery,
+  usePrintJobQuery,
   usePrintablePrintersQuery,
 } from "@repo/graphql";
 import { Box } from "@repo/ui/box";
@@ -89,8 +91,9 @@ export interface PrintButtonProps {
  * - 選印表機:可選的只有一台就直接送;多台時按下先選(預設排序不變,預設那台標「預設」並先選中)。
  *   預設 = `defaultPrinterId` → 分店預設 → 第一台。
  * - 送出的回饋就是按鈕旁的進度文字,成功不另跳提示;送不出去(轉圖片失敗、API 錯誤)跳一則失敗提示(DATA-06)。
- * - 已印次數:自己送的工作有結果時重查;收到任何一則自己的 `print-result`(例:交易後自動列印的那一張印完)也重查,
- *   按鈕不會停在印完之前查到的 [列印]。
+ * - 已印次數:自己送的工作有結果時重查;收到別張工作的 `print-result`(例:交易後自動列印的那一張印完)時,
+ *   查那張工作,是這張單據(`refType` + `refId`)的才重查,按鈕不會停在印完之前查到的 [列印]
+ *   (同一頁好幾顆按鈕查的是同一筆工作,TanStack Query 合併成一次)。
  */
 export const PrintButton = ({
   orgId,
@@ -120,12 +123,7 @@ export const PrintButton = ({
     { enabled: canPrint },
   );
   const { refetch: refetchCount } = count;
-  // 已印次數只算「已印」:別處送的同一張單據(交易後自動列印)印完時,按鈕要跟著變
-  useRealtimeSignal(PRINT_SIGNALS.result, () => {
-    if (canPrint) {
-      void refetchCount();
-    }
-  });
+  const queryClient = useQueryClient();
   const createJob = useCreatePrintJobMutation(session.client);
   const feedback = useMutationFeedback({
     // 送出的結果顯示在按鈕旁(已送到印表機 → 已印出 / 失敗),成功不另跳提示
@@ -133,6 +131,27 @@ export const PrintButton = ({
     error: (error) => t(`errors.${printButtonErrorOf(error).code}`),
   });
   const job = usePrintJob(refType, refId);
+  // 已印次數只算「已印」:別處送的同一張單據(交易後自動列印)印完時,按鈕要跟著變;別張單據的不重查
+  useRealtimeSignal(PRINT_SIGNALS.result, (signal) => {
+    const jobId = signal.id;
+    // 自己正在送的這張(建立回應可能還沒回來)由 usePrintJob 等;它有結果時本來就會重查
+    if (!canPrint || jobId === undefined || job.phase.kind === "sending") {
+      return;
+    }
+    queryClient
+      .fetchQuery({
+        queryKey: usePrintJobQuery.getKey({ id: jobId }),
+        queryFn: usePrintJobQuery.fetcher(session.client, { id: jobId }),
+      })
+      .then(({ printJob }) => {
+        if (printJob.job.refType === refType && printJob.job.refId === refId) {
+          void refetchCount();
+        }
+      })
+      .catch(() => {
+        // 查不到(不是自己的、已刪)= 不是這張單據的
+      });
+  });
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
   const [reprintPrinterId, setReprintPrinterId] = useState<string | null>(null);
 

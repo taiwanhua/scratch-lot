@@ -198,6 +198,7 @@ describe("列印結果", () => {
     await act(async () => {
       await Promise.resolve();
     });
+    // 自己這張還在等:別張的信號不查也不影響進度
     expect(world.jobReads()).toBe(0);
     expect(status()).toHaveTextContent("已送到印表機…");
   });
@@ -206,11 +207,30 @@ describe("列印結果", () => {
     const { world, emit } = renderPrintButton();
     await findPrintButton("列印");
 
-    world.printElsewhere();
-    emit(PRINT_SIGNALS.result, "job-auto");
+    const jobId = world.printElsewhere();
+    emit(PRINT_SIGNALS.result, jobId);
 
     expect(await findPrintButton("補印")).toBeVisible();
     expect(status()).toHaveTextContent("已印 1 次");
+  });
+
+  it("別張單據的工作印好(print-result)→ 查那張工作,不是這張單據 → 不重查已印次數", async () => {
+    const { world, emit } = renderPrintButton();
+    await findPrintButton("列印");
+    const before = world.countReads();
+
+    emit(PRINT_SIGNALS.result, world.printElsewhere("order", "order-2"));
+
+    await waitFor(() => {
+      expect(world.jobReads()).toBe(1);
+    });
+    await act(async () => {
+      await new Promise((resolve) => {
+        setTimeout(resolve, 50);
+      });
+    });
+    expect(world.countReads()).toBe(before);
+    expect(screen.getByRole("button", { name: "列印" })).toBeVisible();
   });
 
   it("單據轉圖片失敗 → 不建立工作,回到 [列印],跳失敗提示", async () => {

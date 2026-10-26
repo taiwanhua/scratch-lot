@@ -329,7 +329,7 @@ export const receiptLayoutsOf = <Kind extends ReceiptKind>(
 
 /**
  * 列印紀錄 / 失敗通知上的單據名稱:多聯的單據寫印了哪幾聯,補印另標「補印」
- * (例「進貨點收單 P-0001(兩聯)」「進貨點收單 P-0001(送貨人留存)補印」);一聯的單據補印也標「補印」。
+ * (例「進貨點收單 P-0001(兩聯)」「進貨點收單 P-0001(送貨人留存)補印」);一聯的單據維持原本的單據名稱(補印與否看列印紀錄的「次數」欄)。
  */
 export const receiptDocumentNameOf = <Kind extends ReceiptKind>(
   kind: Kind,
@@ -342,17 +342,17 @@ export const receiptDocumentNameOf = <Kind extends ReceiptKind>(
 ): string => {
   const definition = receiptKindOf(kind);
   const name = definition.documentNameOf(payload, t);
+  if (definition.copies.length === 0) {
+    return name;
+  }
   const one = copyOf(definition, t, which);
-  const named =
-    definition.copies.length === 0
-      ? name
-      : t("documentNameWithCopies", {
-          name,
-          copies:
-            one === null
-              ? t("allCopies", { count: definition.copies.length })
-              : one.name,
-        });
+  const named = t("documentNameWithCopies", {
+    name,
+    copies:
+      one === null
+        ? t("allCopies", { count: definition.copies.length })
+        : one.name,
+  });
   return isReprint ? t("documentNameReprint", { name: named }) : named;
 };
 
