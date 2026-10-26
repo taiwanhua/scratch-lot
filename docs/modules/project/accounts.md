@@ -41,11 +41,14 @@
 
 **開通時建立的角色**(規格 3.3;配方 `apps/db-migrator/seeds/project/onboarding/role-grants/accounts.ts`):
 
-| 角色     | 模組                             | 權限                            |
-| -------- | -------------------------------- | ------------------------------- |
-| 總部管理 | `accounts`、`accounts.view-page` | 各節點 `*`(含關帳)              |
-| 店長     | `accounts`                       | `view-cash`、`view-outstanding` |
-| 店員     | 不給                             | —                               |
+| 角色     | 模組                             | 權限                                                  |
+| -------- | -------------------------------- | ----------------------------------------------------- |
+| 總部管理 | `accounts`、`accounts.view-page` | 各節點 `*`(含關帳)                                    |
+| 店長     | `accounts`、`accounts.view-page` | `view-bank-accounts`、`view-cash`、`view-outstanding` |
+| 店員     | 不給                             | —                                                     |
+
+- 店長的銀行帳戶**只看**:列表與帳戶詳情(餘額、交易清單、篩選);新增 / 編輯帳戶、登記交易、沖正都不給,詳情頁的按鈕照 `abilities` 隱藏。帳戶詳情只給模組 `accounts.view-page`,不給 `accounts.view-page.*`(之後在詳情頁節點加的頁內權限不會自動給店長)。
+- 店長看得到使用組織包含自己分店的帳戶;**共用帳戶的餘額與交易清單包含其他使用這個帳戶的分店的交易**(餘額 = 期初 + 全部交易;交易清單每列有歸屬分店)。
 
 正本:`packages/domain/src/project/lottery-accounts/keys.ts`
 

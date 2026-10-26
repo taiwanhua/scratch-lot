@@ -15,17 +15,22 @@ const HQ: RoleGrant = {
 };
 
 /**
- * 店長:即時現金帳、待結清款項(規格 3.3);**不含**銀行帳戶的登記交易 / 沖正與關帳。
- * 銀行帳戶分頁與主檔修改不在店長的清單內(付款視窗選帳戶走 lookup,不需要分頁)。
+ * 店長:銀行帳戶(只看:分頁 + 帳戶詳情)、即時現金帳、待結清款項(規格 3.3);**不含**新增 / 編輯帳戶、
+ * 登記交易 / 沖正與關帳。帳戶詳情只給模組(隱藏頁節點),不給 `accounts.view-page.*`:
+ * 之後在詳情頁節點加的頁內權限不會自動落到店長身上。
  */
 const STORE_MANAGER: RoleGrant = {
-  moduleKeys: [ACCOUNTS_KEY],
-  permissionKeys: [PERMISSIONS.viewCash, PERMISSIONS.viewOutstanding],
+  moduleKeys: [ACCOUNTS_KEY, KEYS.bankAccountViewPage],
+  permissionKeys: [
+    PERMISSIONS.viewBankAccounts,
+    PERMISSIONS.viewCash,
+    PERMISSIONS.viewOutstanding,
+  ],
 };
 
 /**
  * 帳戶管理(規格 3.3;權限表正本 `docs/modules/project/accounts.md`):
- * 總部管理全部、店長即時現金帳 + 待結清款項、店員不給。
+ * 總部管理全部、店長銀行帳戶(只看)+ 即時現金帳 + 待結清款項、店員不給。
  */
 export const accountsGrants: ModuleRoleGrants = {
   section: "帳戶管理",

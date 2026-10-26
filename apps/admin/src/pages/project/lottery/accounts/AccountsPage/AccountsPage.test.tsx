@@ -247,6 +247,27 @@ describe("銀行帳戶詳情", () => {
     expect(screen.queryByText("帳戶設定")).not.toBeInTheDocument();
   });
 
+  it("店長(開通配方:銀行帳戶只看 + 帳戶詳情模組):看得到帳戶與餘額、點進詳情,沒有新增 / 登記交易 / 沖正 / 帳戶設定", async () => {
+    const { user } = renderAccounts({
+      permissions: [P.viewBankAccounts, P.viewCash, P.viewOutstanding],
+    });
+    expect(await screen.findByText("好運彩券行新竹")).toBeInTheDocument();
+    expect(screen.getByText("1,284,300")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "+ 新增帳戶" }),
+    ).not.toBeInTheDocument();
+    // 中山店使用的帳戶(好運彩券行 中山分行)
+    await user.click(screen.getByText("1,284,300"));
+    expect(await screen.findByText("日結存入 · C-0040")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "登記交易" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "沖正" }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText("帳戶設定")).not.toBeInTheDocument();
+  });
+
   it("沖正:原因必填,送出後原交易顯示已沖正", async () => {
     const { user, fake } = renderAccounts({ path: "/accounts/view-page/ba-1" });
     await screen.findByText("日結存入 · C-0040");

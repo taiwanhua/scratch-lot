@@ -29,9 +29,10 @@ import { CorrectSkipsDialog } from "./CorrectSkipsDialog";
 import { ScrapTicketsDialog } from "./ScrapTicketsDialog";
 import { SelectionBar } from "./SelectionBar";
 import {
-  BOOK_LEGEND,
   BOOK_SELECTABLE,
   bookCellsOf,
+  bookLegendOf,
+  isRecoverable,
   selectionActionsOf,
 } from "./book-cells";
 
@@ -45,7 +46,8 @@ const ticketSchema = z.string().default("");
  * 本的詳情(隱藏頁 `inventory.book-page`;Figma IN-03 125:1159 / 整本待查 125:1699;規格 7.3):
  * 頁首(遊戲 · 本號、面額 · 張號、狀態、[更正跳號])→ 整本待查時的狀態列 [整本尋回] →
  * 來源 / 所在 / 成本(`show-cost`)→ 張數格子(選張後上方出現操作列:未售 → [報廢];待查 / 遺失 → [尋回])
- * → 事件時間軸。按鈕依 api 的 `abilities`(沒有權限的按鈕不顯示)。
+ * → 事件時間軸。按鈕依 api 的 `abilities`(沒有權限的按鈕不顯示)。別店的張(`operable = false`)
+ * 顯示「其他分店」、不能選;尋回不換店(每張回到自己所在分店的庫存)。
  */
 export const BookPage = ({ routeParam }: ModulePageProps) => {
   const t = useTranslations("admin.lotteryInventory");
@@ -91,9 +93,8 @@ export const BookPage = ({ routeParam }: ModulePageProps) => {
     selected.includes(ticket.ticketNo),
   );
   const actions = selectionActionsOf(selectedTickets);
-  const missingTickets = detail.tickets.filter(
-    (ticket) => ticket.status === "investigating" || ticket.status === "lost",
-  );
+  // [整本尋回] 只算自己能操作的張(別店的張只能看)
+  const missingTickets = detail.tickets.filter(isRecoverable);
   const clearSelection = () => {
     setSelected([]);
   };
@@ -113,7 +114,7 @@ export const BookPage = ({ routeParam }: ModulePageProps) => {
     >
       <BookHeader
         detail={detail}
-        canRecoverAll={abilities.canRecover}
+        canRecoverAll={abilities.canRecover && missingTickets.length > 0}
         onCorrect={() => {
           setDialog("correct");
         }}
@@ -145,7 +146,7 @@ export const BookPage = ({ routeParam }: ModulePageProps) => {
             selectableStates={BOOK_SELECTABLE}
             selected={selected}
             onSelectedChange={setSelected}
-            legendItems={BOOK_LEGEND}
+            legendItems={bookLegendOf(detail.tickets)}
             summary={false}
           />
         </Box>
@@ -179,7 +180,11 @@ export const BookPage = ({ routeParam }: ModulePageProps) => {
       {dialog === "recover" || dialog === "recoverAll" ? (
         <RecoverTicketDialog
           book={book}
-          tickets={recoverTickets}
+          tickets={recoverTickets.map((ticket) => ({
+            ...ticket,
+            orgName: ticket.org.name,
+          }))}
+          keepStore
           onClose={() => {
             setDialog(null);
           }}

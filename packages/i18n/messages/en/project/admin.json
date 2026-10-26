@@ -465,7 +465,8 @@
         "assigned": "Assigned",
         "skipped": "Skipped",
         "scrapped": "Scrapped",
-        "lost": "Investigating / lost"
+        "lost": "Investigating / lost",
+        "otherStore": "Other branch"
       },
       "quickSelect": {
         "label": "Select a run",
@@ -506,7 +507,7 @@
       "VALIDATION_FAILED": "Some fields are invalid; check the highlighted fields",
       "CONFLICT": "These tickets were already processed; refresh and try again",
       "TICKET_ALREADY_PROCESSED": "These tickets were already processed; refresh and try again",
-      "CROSS_STORE_NOT_ALLOWED": "Tickets can only be moved into a branch you can see",
+      "CROSS_STORE_NOT_ALLOWED": "Some tickets are at another branch; you can only act on tickets at branches you can see",
       "NO_SKIPPED_TICKETS": "This book has no skipped tickets to correct",
       "SKIP_COUNT_MISMATCH": "The number of skipped tickets must equal the tickets to mark",
       "SKIP_UNCHANGED": "The skipped tickets did not change",

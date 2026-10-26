@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 import { authWorld, overviewModule } from "@/test/msw/auth-handlers";
 import {
   ALL_INVENTORY_PERMISSIONS,
@@ -29,6 +31,7 @@ export const renderInventory = ({
   inventory = true,
   masterData = false,
   world = {},
+  extra,
 }: {
   path?: string;
   permissions?: readonly string[];
@@ -38,6 +41,8 @@ export const renderInventory = ({
   /** 另外綁檔案管理(遊戲詳情的庫存分頁) */
   masterData?: boolean;
   world?: InventoryWorldOptions;
+  /** 額外掛在路由旁的元件(例:單獨測共用對話框) */
+  extra?: ReactNode;
 } = {}) => {
   const fake = inventoryWorld({ permissions, ...world });
   server.use(
@@ -54,5 +59,5 @@ export const renderInventory = ({
       ],
     }).handlers,
   );
-  return { ...renderApp({ path }), fake };
+  return { ...renderApp({ path, extra }), fake };
 };

@@ -70,6 +70,13 @@ const notFound = () =>
 const forbiddenError = () =>
   graphqlError("FORBIDDEN", "FORBIDDEN", { code: "FORBIDDEN" });
 
+/** 別店的張(`operable = false`)不能操作(api 的 `CROSS_STORE_NOT_ALLOWED`)。 */
+const crossStore = (ticketIds: string[]) =>
+  graphqlError("FORBIDDEN", "CROSS_STORE_NOT_ALLOWED", {
+    reason: "CROSS_STORE_NOT_ALLOWED",
+    ticketIds,
+  });
+
 const action = (count: number, lossCost: number | null = null) => ({
   __typename: "LotteryInventoryActionPayload" as const,
   count,
@@ -107,8 +114,16 @@ export const inventoryWorld = ({
     cost: has(PERMISSIONS.showCost) ? detail.cost : null,
     abilities: {
       __typename: "LotteryInventoryBookAbilities",
+      // 至少一張自己範圍內的跳號、一張自己範圍內的未售(未鎖定)
       canCorrectSkips:
-        has(PERMISSIONS.markSkipped) && detail.book.skippedTicketNos.length > 0,
+        has(PERMISSIONS.markSkipped) &&
+        detail.tickets.some(
+          (ticket) => ticket.operable && ticket.status === "skipped",
+        ) &&
+        detail.tickets.some(
+          (ticket) =>
+            ticket.operable && ticket.status === "unsold" && !ticket.locked,
+        ),
       canRecover: has(PERMISSIONS.recover),
       canScrap: has(PERMISSIONS.scrap),
       canShowCost: has(PERMISSIONS.showCost),
@@ -332,6 +347,13 @@ export const inventoryWorld = ({
       if (denied) return denied;
       inputs.recover.push(input);
       const ids = input.tickets.map((item) => item.ticketId);
+      // 從清單選(不給 orgId)只能尋回自己範圍內的張;刷到實體(給 orgId)可跨店
+      const outside = allTickets().filter(
+        (ticket) => ids.includes(ticket.id) && !ticket.operable,
+      );
+      if (input.orgId == null && outside.length > 0) {
+        return crossStore(outside.map((ticket) => ticket.id));
+      }
       const wrong = allTickets().filter(
         (ticket) =>
           ids.includes(ticket.id) &&
@@ -352,6 +374,12 @@ export const inventoryWorld = ({
       if (denied) return denied;
       inputs.scrap.push(input);
       const ids = input.tickets.map((item) => item.ticketId);
+      const outside = allTickets().filter(
+        (ticket) => ids.includes(ticket.id) && !ticket.operable,
+      );
+      if (outside.length > 0) {
+        return crossStore(outside.map((ticket) => ticket.id));
+      }
       const wrong = allTickets().filter(
         (ticket) => ids.includes(ticket.id) && ticket.status !== "unsold",
       );

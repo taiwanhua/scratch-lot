@@ -150,6 +150,13 @@ export class LotteryInventoryTicketModel {
   @Field(() => Boolean)
   locked!: boolean;
 
+  /**
+   * 操作者能不能操作這張(尋回、報廢、更正跳號):這張的所在分店在操作者的可見範圍內。
+   * 不能操作的張在本的詳情頁顯示成「其他分店」、不能選。
+   */
+  @Field(() => Boolean)
+  operable!: boolean;
+
   @Field(() => Int)
   version!: number;
 }

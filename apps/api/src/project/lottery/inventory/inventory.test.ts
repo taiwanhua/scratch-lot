@@ -50,6 +50,7 @@ const BOOK = /* GraphQL */ `
           id
           ticketNo
           status
+          operable
           version
         }
         events {
@@ -208,6 +209,7 @@ interface TicketView {
   id: string;
   ticketNo: string;
   status: string;
+  operable?: boolean;
   version: number;
 }
 
@@ -359,6 +361,14 @@ function versionsOf(tickets: readonly TicketView[], nos: string[]) {
     .map((ticket) => ({ ticketId: ticket.id, version: ticket.version }));
 }
 
+/** 這一張能不能操作(api 的 `operable`)。 */
+const operableOf = (tickets: readonly TicketView[], no: string) =>
+  tickets.find((ticket) => ticket.ticketNo === no)?.operable;
+
+/** 這幾張的 id。 */
+const idsOf = (tickets: readonly TicketView[], nos: string[]) =>
+  versionsOf(tickets, nos).map((item) => item.ticketId);
+
 /**
  * 庫存管理(專案規格 7.3、7.4、7.6):打真的 GraphQL 端點、對真 MongoDB(TEST-07)。
  * 張與本由帳本 / 本的服務直接建(進貨點收、拆本標跳號、待查是別的功能的入口)。
@@ -495,6 +505,55 @@ describe("庫存管理(GraphQL 端點 + 真 MongoDB)", () => {
         })),
       ),
     );
+  }
+
+  /** 把幾張調進另一家店(帳本的跨店寫入,同調貨點收)。 */
+  async function moveTo(
+    orgId: Types.ObjectId,
+    bookId: Types.ObjectId,
+    ticketNos: readonly string[],
+  ): Promise<void> {
+    const all = await ticketsOf(bookId);
+    const tickets = all.filter((ticket) => ticketNos.includes(ticket.ticketNo));
+    await transactions().withTransaction((session) =>
+      ledger().applyTicketEvents(
+        session,
+        { operator: storeOperator(orgId), crossStoreTenantId: tenant },
+        tickets.map((ticket) => ({
+          ticketId: ticket._id,
+          expectedVersion: ticket.version,
+          type: TICKET_EVENT_TYPE.transferIn,
+          patch: {
+            orgId,
+            location: { kind: TICKET_LOCATION_KIND.stock, cashPointId: null },
+          },
+        })),
+      ),
+    );
+  }
+
+  /** 中山店的本,#001–010 調到新竹店;中山店的 #050 待查、新竹店的 #005 待查。 */
+  async function splitBook(lastTicketNo = 100): Promise<Types.ObjectId> {
+    const bookId = await receiveBook(storeA, lastTicketNo);
+    const moved = Array.from({ length: 10 }, (_, index) =>
+      String(index + 1).padStart(3, "0"),
+    );
+    await moveTo(storeB, bookId, moved);
+    await apply(storeA, bookId, ["050"], {
+      type: TICKET_EVENT_TYPE.investigate,
+      patch: {
+        status: TICKET_STATUS.investigating,
+        responsibleOrgId: storeA,
+      },
+    });
+    await apply(storeB, bookId, ["005"], {
+      type: TICKET_EVENT_TYPE.investigate,
+      patch: {
+        status: TICKET_STATUS.investigating,
+        responsibleOrgId: storeB,
+      },
+    });
+    return bookId;
   }
 
   const bookOf = (bookId: Types.ObjectId, token = hq) =>
@@ -924,6 +983,193 @@ describe("庫存管理(GraphQL 端點 + 真 MongoDB)", () => {
       expect(result.scrapLotteryTickets.lossCost).toBeNull();
       const withCost = await bookOf(bookId, managerA);
       expect(withCost.cost).toEqual({ cost: 18_400 });
+    });
+  });
+
+  describe("別店的張只能看(規格 7.5;能操作 = 張的所在分店在可見範圍內)", () => {
+    it("每張帶 operable:收貨店只能操作自己店的張;總部(上層組織)每張都能操作", async () => {
+      const bookId = await splitBook();
+      const receiver = await bookOf(bookId, managerB);
+      expect(operableOf(receiver.tickets, "001")).toBe(true);
+      expect(operableOf(receiver.tickets, "050")).toBe(false);
+      const shipper = await bookOf(bookId, managerA);
+      expect(operableOf(shipper.tickets, "001")).toBe(false);
+      expect(operableOf(shipper.tickets, "050")).toBe(true);
+      const head = await bookOf(bookId, hq);
+      expect(head.tickets.every((ticket) => ticket.operable)).toBe(true);
+    });
+
+    it("詳情頁尋回(不給 orgId):收貨店尋回出貨店的待查張 → CROSS_STORE_NOT_ALLOWED;自己店的留在自己店", async () => {
+      const bookId = await splitBook();
+      const detail = await bookOf(bookId, managerB);
+      expect(
+        await errorOf(api, managerB, RECOVER, {
+          input: {
+            tickets: versionsOf(detail.tickets, ["050"]),
+            reasonKey: "mistake",
+          },
+        }),
+      ).toMatchObject({
+        code: "FORBIDDEN",
+        reason: "CROSS_STORE_NOT_ALLOWED",
+        ticketIds: idsOf(detail.tickets, ["050"]),
+      });
+      const current050 = await ticketOf(bookId, "050");
+      expect(current050?.status).toBe(TICKET_STATUS.investigating);
+      // 混了別店的張 → 整批擋下,自己店的也不動
+      expect(
+        await errorOf(api, managerB, RECOVER, {
+          input: {
+            tickets: versionsOf(detail.tickets, ["005", "050"]),
+            reasonKey: "mistake",
+          },
+        }),
+      ).toMatchObject({ reason: "CROSS_STORE_NOT_ALLOWED" });
+      const current005 = await ticketOf(bookId, "005");
+      expect(current005?.status).toBe(TICKET_STATUS.investigating);
+      await ok(api, managerB, RECOVER, {
+        input: {
+          tickets: versionsOf(detail.tickets, ["005"]),
+          reasonKey: "mistake",
+        },
+      });
+      const own = await ticketOf(bookId, "005");
+      expect(own).toMatchObject({
+        status: TICKET_STATUS.unsold,
+        location: { kind: TICKET_LOCATION_KIND.stock },
+        responsibleOrgId: null,
+      });
+      expect(own?.orgId.equals(storeB)).toBe(true);
+    });
+
+    it("總部從詳情頁替中山店尋回 → 張留在中山店(不換店);一次選兩家店的張各回各店", async () => {
+      const bookId = await splitBook();
+      const detail = await bookOf(bookId, hq);
+      await ok(api, hq, RECOVER, {
+        input: {
+          tickets: versionsOf(detail.tickets, ["005", "050"]),
+          reasonKey: "mistake",
+        },
+      });
+      const [ticket050, ticket005] = await Promise.all([
+        ticketOf(bookId, "050"),
+        ticketOf(bookId, "005"),
+      ]);
+      expect(ticket050?.status).toBe(TICKET_STATUS.unsold);
+      expect(ticket050?.orgId.equals(storeA)).toBe(true);
+      expect(ticket005?.status).toBe(TICKET_STATUS.unsold);
+      expect(ticket005?.orgId.equals(storeB)).toBe(true);
+      const after = await bookOf(bookId, hq);
+      expect(after.book.holdings).toEqual(
+        expect.arrayContaining([
+          { org: { name: "中山店" }, count: 90 },
+          { org: { name: "新竹店" }, count: 10 },
+        ]),
+      );
+    });
+
+    it("店面刷到別店的待查張(給 orgId)仍可尋回到刷到的那家店", async () => {
+      const bookId = await splitBook();
+      const detail = await bookOf(bookId, managerB);
+      await ok(api, managerB, RECOVER, {
+        input: {
+          tickets: versionsOf(detail.tickets, ["050"]),
+          orgId: String(storeB),
+          reasonKey: "mistake",
+        },
+      });
+      const current050 = await ticketOf(bookId, "050");
+      expect(current050?.orgId.equals(storeB)).toBe(true);
+    });
+
+    it("報廢別店的張 → CROSS_STORE_NOT_ALLOWED(不是已被處理);總部可以報廢、事件記在張的分店", async () => {
+      const bookId = await splitBook();
+      const detail = await bookOf(bookId, managerB);
+      expect(
+        await errorOf(api, managerB, SCRAP, {
+          input: {
+            tickets: versionsOf(detail.tickets, ["001", "060"]),
+            reasonKey: "mistake",
+          },
+        }),
+      ).toMatchObject({
+        code: "FORBIDDEN",
+        reason: "CROSS_STORE_NOT_ALLOWED",
+        ticketIds: idsOf(detail.tickets, ["060"]),
+      });
+      const current001 = await ticketOf(bookId, "001");
+      expect(current001?.status).toBe(TICKET_STATUS.unsold);
+      await ok(api, hq, SCRAP, {
+        input: {
+          tickets: versionsOf(detail.tickets, ["001", "060"]),
+          reasonKey: "mistake",
+        },
+      });
+      const events = await api.connection
+        .collection<{ orgId: Types.ObjectId; ticketId: Types.ObjectId }>(
+          "lottery_ticket_events",
+        )
+        .find({ bookId, type: TICKET_EVENT_TYPE.scrap })
+        .toArray();
+      const orgOfEvent = (no: string) => {
+        const [id] = idsOf(detail.tickets, [no]);
+        return events.find((event) => String(event.ticketId) === id)?.orgId;
+      };
+      expect(orgOfEvent("001")?.equals(storeB)).toBe(true);
+      expect(orgOfEvent("060")?.equals(storeA)).toBe(true);
+    });
+
+    it("不存在的張仍是已被處理(CONFLICT)", async () => {
+      expect(
+        await errorOf(api, managerB, SCRAP, {
+          input: {
+            tickets: [{ ticketId: String(newObjectId()), version: 1 }],
+            reasonKey: "mistake",
+          },
+        }),
+      ).toMatchObject({ code: "CONFLICT", reason: "TICKET_ALREADY_PROCESSED" });
+    });
+
+    it("更正跳號:跳號在別店 → 收貨店沒有 [更正跳號]、送出 → CROSS_STORE_NOT_ALLOWED;出貨店照常", async () => {
+      // 迄號 102、標準 100 → 中山店拆本時標了 #037、#064;#001–010 在新竹店
+      const bookId = await splitBook(102);
+      await apply(storeA, bookId, ["037", "064"], {
+        type: TICKET_EVENT_TYPE.skip,
+        patch: { status: TICKET_STATUS.skipped },
+      });
+      const receiver = await bookOf(bookId, managerB);
+      expect(receiver.abilities.canCorrectSkips).toBe(false);
+      expect(
+        await errorOf(api, managerB, CORRECT, {
+          input: {
+            bookId: String(bookId),
+            ticketNos: ["037", "002"],
+            reasonKey: "mistake",
+          },
+        }),
+      ).toMatchObject({
+        code: "FORBIDDEN",
+        reason: "CROSS_STORE_NOT_ALLOWED",
+      });
+      const shipper = await bookOf(bookId, managerA);
+      expect(shipper.abilities.canCorrectSkips).toBe(true);
+      // 出貨店改標到新竹店的 #002 → 也擋
+      expect(
+        await errorOf(api, managerA, CORRECT, {
+          input: {
+            bookId: String(bookId),
+            ticketNos: ["037", "002"],
+            reasonKey: "mistake",
+          },
+        }),
+      ).toMatchObject({ reason: "CROSS_STORE_NOT_ALLOWED" });
+      await ok(api, managerA, CORRECT, {
+        input: {
+          bookId: String(bookId),
+          ticketNos: ["037", "065"],
+          reasonKey: "mistake",
+        },
+      });
     });
   });
 

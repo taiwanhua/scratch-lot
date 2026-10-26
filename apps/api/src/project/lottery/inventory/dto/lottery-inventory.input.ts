@@ -71,14 +71,17 @@ export class CorrectLotterySkippedTicketsInput {
   reasonNote?: string | null;
 }
 
-/** 尋回(`inventory.recover`):待查 / 遺失的張回到 `orgId`(刷到的那家店)的庫存。 */
+/**
+ * 尋回(`inventory.recover`):待查 / 遺失的張回到庫存。給 `orgId` = 刷到實體(回到刷到的那家店,
+ * 可跨店);不給 = 從清單選(本的詳情、待查·遺失分頁:不換店,只能尋回自己範圍內的張)。
+ */
 @InputType()
 export class RecoverLotteryTicketsInput {
   @Field(() => [LotteryTicketVersionInput])
   tickets!: LotteryTicketVersionInput[];
 
-  @Field(() => ID)
-  orgId!: string;
+  @Field(() => ID, { nullable: true })
+  orgId?: string | null;
 
   /** 欄位管理「尋回原因」;選「其他」要填說明。 */
   @Field(() => String)

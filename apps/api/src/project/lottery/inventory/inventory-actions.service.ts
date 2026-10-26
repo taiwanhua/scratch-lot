@@ -32,6 +32,7 @@ import { LOTTERY_FIELD_CATEGORIES } from "../field-options/lottery-field-options
 import { tenantOfOperator } from "../master-data-tenant";
 import {
   INVENTORY_REASONS,
+  crossStoreForbiddenError,
   notFoundError,
   ticketConflictError,
   validationError,
@@ -149,18 +150,21 @@ export class InventoryActionsService {
       input,
       LOTTERY_FIELD_CATEGORIES,
     );
+    const whole = await this.view.wholeBookReader(operator, book);
     await this.transactions.withTransaction(async (session) => {
+      // 讀整本(反查),再擋所在分店不在操作者範圍內的張(別店的張只能看)
       const found = await this.tickets.findMany(
-        operator,
+        whole,
         { bookId: book._id, ticketNo: { $in: [...diff.skip, ...diff.unskip] } },
         { session },
       );
+      this.assertOperable(operator, found);
       const byNo = new Map(found.map((ticket) => [ticket.ticketNo, ticket]));
       const missing = [...diff.skip, ...diff.unskip].filter(
         (no) => !byNo.has(no),
       );
       if (missing.length > 0) {
-        throw notFoundError("有幾張不在你看得到的分店");
+        throw notFoundError("有幾張不在這本");
       }
       const pick = (nos: readonly string[]) =>
         nos.flatMap((no) => {
@@ -201,16 +205,84 @@ export class InventoryActionsService {
   }
 
   /**
-   * 尋回(`inventory.recover`):待查 / 遺失的張回到 `orgId`(刷到的那家店;要是操作者看得到的**店**,
-   * `isVisibleStore`;不是店 → `VALIDATION_FAILED` `RECOVER_TARGET_NOT_STORE`)的
-   * 庫存,清掉責任分店。張可能還在別的分店:以帳本的跨店寫入(只准把張移進自己看得到的店)。
+   * 尋回(`inventory.recover`):待查 / 遺失的張回到庫存,清掉責任分店。兩種入口:
+   *
+   * - **刷到實體**(給 `orgId`;店面看板刷到、展開卡片):回到 `orgId` 這家店(刷到的那家店;要是操作者
+   *   看得到的**店**,`isVisibleStore`;不是店 → `VALIDATION_FAILED` `RECOVER_TARGET_NOT_STORE`)。
+   *   張可能還在別的分店:以帳本的跨店寫入(只准把張移進自己看得到的店)。
+   * - **從清單選**(不給 `orgId`;本的詳情、待查·遺失分頁):**不換店**,每張回到自己所在分店的庫存;
+   *   張的所在分店要在操作者的可見範圍內,否則 `FORBIDDEN` `CROSS_STORE_NOT_ALLOWED`。
    */
   async recover(
     operator: OperatorContext,
     input: RecoverLotteryTicketsInput,
   ): Promise<LotteryInventoryActionPayload> {
     const refs = ticketRefsOf(input.tickets);
-    const orgId = parseId(input.orgId);
+    const target =
+      input.orgId == null
+        ? null
+        : await this.recoverTargetOf(operator, input.orgId);
+    const tenantId = tenantOfOperator(operator)?.tenantId ?? null;
+    if (tenantId === null) {
+      throw notFoundError("找不到所在租戶");
+    }
+    const reason = await this.fieldOptions.assertReason(
+      operator,
+      LOTTERY_FIELD_CATEGORY_KEYS.recoverReason,
+      input,
+      LOTTERY_FIELD_CATEGORIES,
+    );
+    const missingStatuses: TicketStatus[] = [
+      TICKET_STATUS.investigating,
+      TICKET_STATUS.lost,
+    ];
+    await this.transactions.withTransaction(async (session) => {
+      // 張可能在別的分店(反查整個租戶);從清單選的再擋別店的張
+      const reader = await tenantBoundaryContext(this.orgs, operator, tenantId);
+      const found = await this.tickets.findMany(
+        reader,
+        { _id: { $in: refs.map((item) => item.id) } },
+        { session },
+      );
+      this.assertFound(refs, found);
+      if (target === null) {
+        this.assertOperable(operator, found);
+      }
+      this.assertStatuses(found, missingStatuses, "只有待查或遺失的張能尋回");
+      const at = new Date();
+      const recovered = refs.map((item) => ({
+        ticketId: item.id,
+        expectedVersion: item.version,
+        expectedStatuses: missingStatuses,
+        type: TICKET_EVENT_TYPE.recover,
+        at,
+        patch: {
+          status: TICKET_STATUS.unsold,
+          location: { kind: TICKET_LOCATION_KIND.stock, cashPointId: null },
+          responsibleOrgId: null,
+        },
+        ...reason,
+      }));
+      await (target === null
+        ? this.ledger.applyTicketEvents(session, { operator }, recovered)
+        : this.ledger.applyTicketEvents(
+            session,
+            { operator, crossStoreTenantId: tenantId },
+            recovered.map((event) => ({
+              ...event,
+              patch: { ...event.patch, orgId: target },
+            })),
+          ));
+    });
+    return { count: refs.length, lossCost: null };
+  }
+
+  /** 刷到實體的尋回要回到的店:看得到、而且是店(沒有下層組織)。 */
+  private async recoverTargetOf(
+    operator: OperatorContext,
+    id: string,
+  ): Promise<Types.ObjectId> {
+    const orgId = parseId(id);
     if (orgId === null || !isOrgVisible(operator, orgId)) {
       throw notFoundError("分店不存在");
     }
@@ -227,55 +299,12 @@ export class InventoryActionsService {
         INVENTORY_REASONS.recoverTargetNotStore,
       );
     }
-    const tenantId = tenantOfOperator(operator)?.tenantId ?? null;
-    if (tenantId === null) {
-      throw notFoundError("找不到所在租戶");
-    }
-    const reason = await this.fieldOptions.assertReason(
-      operator,
-      LOTTERY_FIELD_CATEGORY_KEYS.recoverReason,
-      input,
-      LOTTERY_FIELD_CATEGORIES,
-    );
-    const missingStatuses: TicketStatus[] = [
-      TICKET_STATUS.investigating,
-      TICKET_STATUS.lost,
-    ];
-    await this.transactions.withTransaction(async (session) => {
-      // 刷到的張可能在別的分店(看得到本或刷到實體即可尋回;反查整個租戶)
-      const reader = await tenantBoundaryContext(this.orgs, operator, tenantId);
-      const found = await this.tickets.findMany(
-        reader,
-        { _id: { $in: refs.map((item) => item.id) } },
-        { session },
-      );
-      this.assertFound(refs, found);
-      this.assertStatuses(found, missingStatuses, "只有待查或遺失的張能尋回");
-      const at = new Date();
-      await this.ledger.applyTicketEvents(
-        session,
-        { operator, crossStoreTenantId: tenantId },
-        refs.map((item) => ({
-          ticketId: item.id,
-          expectedVersion: item.version,
-          expectedStatuses: missingStatuses,
-          type: TICKET_EVENT_TYPE.recover,
-          at,
-          patch: {
-            status: TICKET_STATUS.unsold,
-            location: { kind: TICKET_LOCATION_KIND.stock, cashPointId: null },
-            orgId,
-            responsibleOrgId: null,
-          },
-          ...reason,
-        })),
-      );
-    });
-    return { count: refs.length, lossCost: null };
+    return orgId;
   }
 
   /**
-   * 報廢(`inventory.scrap`):只能報未售的張(破損、污損、受潮);照操作者自己的範圍。
+   * 報廢(`inventory.scrap`):只能報未售的張(破損、污損、受潮);張的所在分店要在操作者的可見範圍內
+   * (別店的張 → `FORBIDDEN` `CROSS_STORE_NOT_ALLOWED`),帳本照操作者自己的範圍寫。
    * 回損失 = 這幾張的單張成本加總(批購成本,四捨五入到元;要 `inventory.show-cost`)。
    */
   async scrap(
@@ -290,14 +319,21 @@ export class InventoryActionsService {
       LOTTERY_FIELD_CATEGORIES,
     );
     const grant = await this.access.grantOf(operator);
+    const tenantId = tenantOfOperator(operator)?.tenantId ?? null;
+    if (tenantId === null) {
+      throw notFoundError("找不到所在租戶");
+    }
     let loss = 0;
     await this.transactions.withTransaction(async (session) => {
+      // 反查整個租戶,才分得出「別店的張」(CROSS_STORE_NOT_ALLOWED)與「已被處理」
+      const reader = await tenantBoundaryContext(this.orgs, operator, tenantId);
       const found = await this.tickets.findMany(
-        operator,
+        reader,
         { _id: { $in: refs.map((item) => item.id) } },
         { session },
       );
       this.assertFound(refs, found);
+      this.assertOperable(operator, found);
       this.assertStatuses(found, [TICKET_STATUS.unsold], "只能報廢未售的張");
       const unitCostOf = new Map(
         found.map((ticket) => [String(ticket._id), ticket.unitCost]),
@@ -328,7 +364,23 @@ export class InventoryActionsService {
     };
   }
 
-  /** 讀不到(不在範圍內或不存在)的張 → `CONFLICT`「已被處理」(與帳本同一個碼)。 */
+  /**
+   * 能不能操作某一張 = 它的所在分店在操作者的可見範圍內(底座可見範圍;不另寫總部特例)。
+   * 別店的張(例:調貨後留在出貨店的張)→ `FORBIDDEN` `CROSS_STORE_NOT_ALLOWED`(`ticketIds` 列出)。
+   */
+  private assertOperable(
+    operator: OperatorContext,
+    tickets: readonly TicketRecord[],
+  ): void {
+    const outside = tickets
+      .filter((ticket) => !isOrgVisible(operator, ticket.orgId))
+      .map((ticket) => String(ticket._id));
+    if (outside.length > 0) {
+      throw crossStoreForbiddenError(outside);
+    }
+  }
+
+  /** 租戶裡讀不到(不存在或已刪除)的張 → `CONFLICT`「已被處理」(與帳本同一個碼)。 */
   private assertFound(
     refs: readonly { id: Types.ObjectId }[],
     found: readonly TicketRecord[],

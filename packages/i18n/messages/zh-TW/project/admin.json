@@ -465,7 +465,8 @@
         "assigned": "已分配",
         "skipped": "跳號",
         "scrapped": "報廢",
-        "lost": "待查·遺失"
+        "lost": "待查·遺失",
+        "otherStore": "其他分店"
       },
       "quickSelect": {
         "label": "連號快選",
@@ -506,7 +507,7 @@
       "VALIDATION_FAILED": "有欄位沒填好,請檢查標紅的欄位",
       "CONFLICT": "這幾張已被處理,請重新整理後再試",
       "TICKET_ALREADY_PROCESSED": "這幾張已被處理,請重新整理後再試",
-      "CROSS_STORE_NOT_ALLOWED": "只能把張移進你看得到的分店",
+      "CROSS_STORE_NOT_ALLOWED": "有幾張在其他分店,只能操作你看得到的分店的張",
       "NO_SKIPPED_TICKETS": "這本沒有跳號,不需要更正",
       "SKIP_COUNT_MISMATCH": "改完的跳號張數要等於待標註張數",
       "SKIP_UNCHANGED": "跳號沒有更動",

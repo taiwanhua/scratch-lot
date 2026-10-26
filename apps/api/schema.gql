@@ -2228,6 +2228,7 @@ type LotteryInventoryTicket {
   id: ID!
   locationKind: String!
   locked: Boolean!
+  operable: Boolean!
   org: LotteryInventoryRef!
   responsibleOrg: LotteryInventoryRef
   status: String!
@@ -4793,7 +4794,7 @@ type RecordLotterySettlementPayload {
 }
 
 input RecoverLotteryTicketsInput {
-  orgId: ID!
+  orgId: ID
   reasonKey: String!
   reasonNote: String
   tickets: [LotteryTicketVersionInput!]!

@@ -150,6 +150,7 @@ export const inventoryTicket = (
   org: inventoryOrgs.storeA,
   responsibleOrg: null,
   locked: false,
+  operable: true,
   version: 3,
   ...overrides,
 });

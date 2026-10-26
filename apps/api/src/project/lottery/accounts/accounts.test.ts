@@ -729,6 +729,52 @@ describe("帳戶管理(GraphQL 端點 + 真 MongoDB)", () => {
       );
     });
 
+    it("店長(開通配方:銀行帳戶只看):看得到自己分店使用的帳戶與餘額;共用帳戶的餘額與交易清單含別家分店的交易;沒有編輯 / 登記 / 沖正", async () => {
+      const shared = await create({
+        accountNo: "0003-00002",
+        openingBalance: 1000,
+        shareOrgs: [{ orgId: String(storeA) }, { orgId: String(storeB) }],
+      });
+      // 新竹店的批貨支出(總部登記)
+      await record({
+        accountId: shared.id,
+        type: "purchase_expense",
+        amount: 300,
+        branchOrgId: String(storeB),
+      });
+      const one = await ok<{ lotteryBankAccount: { item: AccountRow } }>(
+        api,
+        managerA,
+        ONE,
+        { id: shared.id },
+      );
+      expect(one.lotteryBankAccount.item).toMatchObject({
+        balance: 700,
+        abilities: {
+          canEdit: false,
+          canDelete: false,
+          canRecordTransaction: false,
+          canReverse: false,
+        },
+      });
+      const list = await ok<{
+        lotteryBankTransactions: { items: TransactionRow[] };
+      }>(api, managerA, TRANSACTIONS, { input: { accountId: shared.id } });
+      expect(list.lotteryBankTransactions.items).toEqual([
+        expect.objectContaining({
+          type: "purchase_expense",
+          amount: 300,
+          abilities: { canReverse: false },
+        }),
+      ]);
+      const [transaction] = list.lotteryBankTransactions.items;
+      expect(
+        await errorOf(api, managerA, REVERSE, {
+          input: { id: transaction?.id, reason: "測試" },
+        }),
+      ).toMatchObject({ code: "FORBIDDEN" });
+    });
+
     it("權限:沒有 view-bank-accounts 讀不到;沒有 record / reverse 寫不了", async () => {
       expect(await errorOf(api, nobody, LIST, { input: {} })).toMatchObject({
         code: "FORBIDDEN",

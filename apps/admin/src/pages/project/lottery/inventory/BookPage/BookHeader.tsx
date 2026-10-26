@@ -14,7 +14,7 @@ import { moneyText } from "../inventory-config";
 
 export interface BookHeaderProps {
   detail: LotteryInventoryBookDetailFieldsFragment;
-  /** 顯示 [整本尋回](有 `recover`、而且知道要回到哪家店) */
+  /** 顯示 [整本尋回](有 `recover`、而且有自己能操作的待查 / 遺失張) */
   canRecoverAll: boolean;
   onCorrect: () => void;
   onRecoverAll: () => void;

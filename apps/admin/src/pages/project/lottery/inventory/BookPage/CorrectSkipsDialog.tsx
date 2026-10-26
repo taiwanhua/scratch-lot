@@ -29,7 +29,7 @@ import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
 import { useSession } from "@/hooks/base/useSession";
 import { inventoryErrorOf } from "@/lib/project/lottery/inventory-error";
 
-import { skipCorrectionCellsOf } from "./book-cells";
+import { skipCorrectionCellsOf, skipCorrectionLegendOf } from "./book-cells";
 
 export interface CorrectSkipsDialogProps {
   detail: LotteryInventoryBookDetailFieldsFragment;
@@ -159,7 +159,7 @@ export const CorrectSkipsDialog = ({
           selectableStates={["unsold"]}
           selected={selected}
           onSelectedChange={setSelected}
-          legendItems={["unsold", "selected"]}
+          legendItems={skipCorrectionLegendOf(detail.tickets)}
           quickSelect={false}
           maxSelected={required}
           summary={false}

@@ -222,13 +222,28 @@ export class InventoryViewService {
     const usable = sortedTickets.filter(
       (ticket) => ticket.status !== TICKET_STATUS.skipped,
     );
-    const hasSkips = sortedTickets.length - usable.length > 0;
+    // 能不能操作某一張 = 它的所在分店在操作者的可見範圍內(別店的張只能看)
+    const operable = (ticket: TicketRecord) =>
+      isOrgVisible(operator, ticket.orgId);
+    // 更正跳號要至少一張自己範圍內的跳號可以取消、一張自己範圍內的未售(未鎖定)可以改標
+    const canCorrectSkips =
+      sortedTickets.some(
+        (ticket) => ticket.status === TICKET_STATUS.skipped && operable(ticket),
+      ) &&
+      sortedTickets.some(
+        (ticket) =>
+          ticket.status === TICKET_STATUS.unsold &&
+          ticket.lockedBy === null &&
+          operable(ticket),
+      );
     const ticketNos = new Map(
       sortedTickets.map((ticket) => [String(ticket._id), ticket.ticketNo]),
     );
     return {
       book,
-      tickets: sortedTickets.map((ticket) => this.ticketModel(ticket, names)),
+      tickets: sortedTickets.map((ticket) =>
+        this.ticketModel(operator, ticket, names),
+      ),
       locations: this.locationsOf(sortedTickets, names),
       events: this.timelineOf(events, ticketNos, names, corrections),
       sources: this.sourcesOf(events, ticketNos, names),
@@ -242,7 +257,7 @@ export class InventoryViewService {
       investigation: this.investigationOf(usable, events, names),
       abilities: {
         canCorrectSkips:
-          grant.has(INVENTORY_PERMISSIONS.markSkipped) && hasSkips,
+          grant.has(INVENTORY_PERMISSIONS.markSkipped) && canCorrectSkips,
         canRecover: grant.has(INVENTORY_PERMISSIONS.recover),
         canScrap: grant.has(INVENTORY_PERMISSIONS.scrap),
         canShowCost: grant.canShowCost,
@@ -375,7 +390,9 @@ export class InventoryViewService {
                 tickets.reduce((sum, ticket) => sum + ticket.unitCost, 0),
               )
             : null,
-          tickets: tickets.map((ticket) => this.ticketModel(ticket, names)),
+          tickets: tickets.map((ticket) =>
+            this.ticketModel(operator, ticket, names),
+          ),
         });
       }
     }
@@ -551,6 +568,7 @@ export class InventoryViewService {
   }
 
   private ticketModel(
+    operator: OperatorContext,
     ticket: TicketRecord,
     names: Names,
   ): LotteryInventoryTicketModel {
@@ -563,6 +581,7 @@ export class InventoryViewService {
       org: mustRef(ticket.orgId, names.orgs),
       responsibleOrg: ref(ticket.responsibleOrgId, names.orgs),
       locked: ticket.lockedBy !== null,
+      operable: isOrgVisible(operator, ticket.orgId),
       version: ticket.version,
     };
   }

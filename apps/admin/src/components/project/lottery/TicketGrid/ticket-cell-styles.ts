@@ -1,7 +1,7 @@
 import type { BoxProps } from "@repo/ui/box";
 
 /**
- * 張數格子的九種狀態(專案規格 7.5 的樣式表;Figma `Draft/TicketCell` 64:132 的九個變體)。
+ * 張數格子的十種狀態(專案規格 7.5 的樣式表;Figma `Draft/TicketCell` 64:132 的變體)。
  * **顏色和狀態一對一固定**,每種狀態的文字、可不可以選、圖例要顯示哪幾項由使用處決定。
  *
  * | 狀態             | 規格名稱          | 樣式                                         |
@@ -15,6 +15,7 @@ import type { BoxProps } from "@repo/ui/box";
  * | `skipped`        | 跳號              | 停用底 + 錯誤色虛線框                        |
  * | `scrapped`       | 報廢              | 停用底 + 錯誤色細框                          |
  * | `lost`           | 待查 / 遺失       | 停用底 + 警告色框                            |
+ * | `otherStore`     | 其他分店          | 灰底、停用字色、停用字色點線框               |
  */
 export const TICKET_CELL_STATES = [
   "unsold",
@@ -26,6 +27,7 @@ export const TICKET_CELL_STATES = [
   "skipped",
   "scrapped",
   "lost",
+  "otherStore",
 ] as const;
 
 export type TicketCellState = (typeof TICKET_CELL_STATES)[number];
@@ -83,4 +85,11 @@ export const TICKET_CELL_SX: Record<TicketCellState, TicketCellSx> = {
   },
   scrapped: { ...DISABLED, border: 1, borderColor: "error.main" },
   lost: { ...DISABLED, border: 2, borderColor: "warning.main" },
+  otherStore: {
+    bgcolor: "grey.200",
+    color: "text.disabled",
+    border: 1,
+    borderStyle: "dotted",
+    borderColor: "text.disabled",
+  },
 };

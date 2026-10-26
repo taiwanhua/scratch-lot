@@ -48,6 +48,8 @@ export interface RecoverTicket {
   version: number;
   ticketNo: string;
   status: string;
+  /** 目前所在分店的名稱(`keepStore` 時顯示「回到 X 庫存」) */
+  orgName?: string;
 }
 
 export interface RecoverTicketDialogProps {
@@ -60,7 +62,12 @@ export interface RecoverTicketDialogProps {
   };
   tickets: readonly RecoverTicket[];
   /**
-   * 回到哪家店(刷到的那家店,例:店面看板)。不給 = 目前組織是店就回到它;目前組織不是店
+   * 從清單選(本的詳情、待查·遺失分頁):**不換店**,每張回到自己所在分店的庫存(不送 `orgId`;
+   * 規格 7.4)。不給 = 刷到實體,回到 `store` 或目前組織
+   */
+  keepStore?: boolean;
+  /**
+   * 刷到實體時回到哪家店(刷到的那家店,例:店面看板)。不給 = 目前組織是店就回到它;目前組織不是店
    * (最上層組織、區域)時讓使用者選「回到哪家店」(只列看得到的店)
    */
   store?: { id: string; name: string };
@@ -78,14 +85,16 @@ const REFRESH_KEYS = [
 ];
 
 /**
- * 尋回(Figma IN-04b;規格 7.4,`inventory.recover`):待查 / 遺失的張回到一家**店**的庫存
- * (`store`;沒給時用目前組織,目前組織不是店就選「回到哪家店」),
- * 原因必填(欄位管理「尋回原因」,選「其他」要填說明)。本的詳情頁、待查·遺失分頁、
- * 店面刷到待查或遺失的張(看板)共用。手機全螢幕。
+ * 尋回(Figma IN-04b;規格 7.4,`inventory.recover`):待查 / 遺失的張回到庫存,原因必填
+ * (欄位管理「尋回原因」,選「其他」要填說明)。手機全螢幕。
+ *
+ * - 本的詳情頁、待查·遺失分頁(`keepStore`):不換店,每張回到自己所在分店的庫存
+ * - 店面刷到待查或遺失的張(看板):回到一家**店**(`store`;沒給時用目前組織,目前組織不是店就選「回到哪家店」)
  */
 export const RecoverTicketDialog = ({
   book,
   tickets,
+  keepStore = false,
   store,
   onClose,
   onRecovered,
@@ -98,14 +107,21 @@ export const RecoverTicketDialog = ({
   const stores = useLotteryInventoryStoresQuery(
     session.client,
     {},
-    { enabled: store === undefined },
+    { enabled: !keepStore && store === undefined },
   );
   const storeOptions = stores.data?.lotteryInventoryStores.items ?? [];
   const currentOrgId = me.data?.me.currentOrg?.id ?? "";
   /** 目前組織就是一家店 → 直接回到它,不用選。 */
   const currentStore =
     storeOptions.find((option) => option.id === currentOrgId) ?? null;
-  const fixedStore = store ?? currentStore;
+  const fixedStore = keepStore
+    ? {
+        id: "",
+        name: [...new Set(tickets.map((ticket) => ticket.orgName ?? ""))]
+          .filter((name) => name !== "")
+          .join("、"),
+      }
+    : (store ?? currentStore);
   const [pickedStoreId, setPickedStoreId] = useState("");
   const targetId = fixedStore?.id ?? pickedStoreId;
   const [reason, setReason] = useState<ReasonValue>(EMPTY_REASON);
@@ -132,7 +148,7 @@ export const RecoverTicketDialog = ({
   const statuses = [...new Set(tickets.map((ticket) => ticket.status))];
   const submit = () => {
     const missing: string[] = missingReasonFields(reason);
-    if (targetId === "") {
+    if (!keepStore && targetId === "") {
       missing.push("orgId");
     }
     setFieldErrors(inventoryFormatErrorsOf(missing, t));
@@ -145,7 +161,7 @@ export const RecoverTicketDialog = ({
           ticketId: ticket.id,
           version: ticket.version,
         })),
-        orgId: targetId,
+        ...(keepStore ? {} : { orgId: targetId }),
         ...reasonInputOf(reason),
       },
     });

@@ -53,6 +53,7 @@ fragment LotteryInventoryTicketFields on LotteryInventoryTicket {
     ...LotteryInventoryRefFields
   }
   locked
+  operable
   version
 }
 

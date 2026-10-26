@@ -24,7 +24,7 @@ type Row = LotteryInvestigationRowFieldsFragment;
 
 /**
  * 待查·遺失分頁(Figma IN-05 91:1109;規格 7.4):列出有待查或遺失的張的本(一本 × 一種狀態一列):
- * 本、遊戲、狀態、責任分店、來源單據、日期、批購成本(`show-cost`)、[尋回](`recover`;回到目前組織的庫存)。
+ * 本、遊戲、狀態、責任分店、來源單據、日期、批購成本(`show-cost`)、[尋回](`recover`;不換店,回到張所在分店的庫存)。
  * 「確認遺失」在盤點確認申請(店面管理)。點一列進本的詳情。
  */
 export const InvestigationsTab = () => {
@@ -152,7 +152,9 @@ export const InvestigationsTab = () => {
             version: ticket.version,
             ticketNo: ticket.ticketNo,
             status: ticket.status,
+            orgName: ticket.org.name,
           }))}
+          keepStore
           onClose={() => {
             setRecovering(null);
           }}

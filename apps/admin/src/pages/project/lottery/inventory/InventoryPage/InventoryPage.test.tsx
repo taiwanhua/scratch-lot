@@ -1,12 +1,29 @@
-import { describe, expect, it } from "@jest/globals";
+import { describe, expect, it, jest } from "@jest/globals";
 import { screen, waitFor, within } from "@testing-library/react";
 import { HttpResponse } from "msw";
 
 import { INVENTORY_PERMISSIONS as P } from "@repo/domain/project/lottery";
 
+import { RecoverTicketDialog } from "@/components/project/lottery/RecoverTicketDialog/RecoverTicketDialog";
 import { api, server } from "@/test/msw/server";
 
 import { renderInventory } from "../inventory-test-support";
+
+/** 刷到實體的尋回(店面看板刷到一張待查;不給 `store` → 目前組織是店就回到它,否則選回到哪家店)。 */
+const ScannedRecover = () => (
+  <RecoverTicketDialog
+    book={{
+      gameCode: "5164",
+      gameName: "發大財",
+      unitPrice: 200,
+      bookNo: "0056527",
+    }}
+    tickets={[
+      { id: "t-071", version: 3, ticketNo: "071", status: "investigating" },
+    ]}
+    onClose={jest.fn()}
+  />
+);
 
 /**
  * 庫存管理(規格 7.3、7.4、7.6;Figma IN-01、IN-02、IN-05、IN-06):三個分頁、查刮刮樂、
@@ -88,7 +105,7 @@ describe("庫存管理:分頁、查刮刮樂、預計要給本數", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("待查·遺失:列出本、責任分店、批購成本;[尋回] 回到目前組織的庫存(原因必填)", async () => {
+  it("待查·遺失:列出本、責任分店、批購成本;[尋回] 不換店、回到張所在分店的庫存(原因必填)", async () => {
     const { user, fake } = renderInventory();
     await user.click(await screen.findByRole("tab", { name: "待查·遺失" }));
     expect(await screen.findByText("056420")).toBeInTheDocument();
@@ -108,10 +125,11 @@ describe("庫存管理:分頁、查刮刮樂、預計要給本數", () => {
       expect(fake.inputs.recover).toHaveLength(1);
     });
     expect(fake.inputs.recover[0]).toMatchObject({
-      orgId: "org-store-a",
       reasonKey: "found-in-store",
       reasonNote: null,
     });
+    // 從清單選:不送 orgId(api 不換店)
+    expect(fake.inputs.recover[0]?.orgId).toBeUndefined();
   });
 
   it("待查·遺失查詢失敗:顯示載入失敗提示,不是靜默空白", async () => {
@@ -137,14 +155,12 @@ describe("庫存管理:分頁、查刮刮樂、預計要給本數", () => {
     expect(screen.queryByText("批購成本")).not.toBeInTheDocument();
   });
 
-  it("目前組織不是店:尋回要選「回到哪家店」(只列看得到的店)", async () => {
+  it("刷到實體(店面看板)、目前組織不是店:尋回要選「回到哪家店」(只列看得到的店)", async () => {
     const { user, fake } = renderInventory({
       world: { stores: [{ id: "org-store-b", name: "新竹店" }] },
+      extra: <ScannedRecover />,
     });
-    await user.click(await screen.findByRole("tab", { name: "待查·遺失" }));
-    const [recover] = await screen.findAllByRole("button", { name: "尋回" });
-    await user.click(recover);
-    const dialog = await screen.findByRole("dialog", { name: "尋回 10 張" });
+    const dialog = await screen.findByRole("dialog", { name: "尋回 1 張" });
     await user.click(
       within(dialog).getByRole("combobox", { name: /尋回原因/ }),
     );

@@ -47,26 +47,35 @@
 
 ### 本的詳情(IN-03)
 
-- 格子狀態:未售 / 已售 / 跳號 / 報廢 / 待查·遺失 / 已選;被單據鎖定的未售顯示「已售 / 不能選」。能選:未售、待查·遺失。
-- 選張後的操作列:全部未售 → [報廢];全部待查 / 遺失 → [尋回];混在一起只有 [取消選取]。
-- 整本(可用的張)都待查或遺失 → 頁首狀態列「這本待查中:日期 單號,責任分店 = …」+ [整本尋回]。
+- 格子狀態:未售 / 已售 / 跳號 / 報廢 / 待查·遺失 / 其他分店 / 已選;被單據鎖定的未售顯示「已售 / 不能選」。能選:未售、待查·遺失。
+- **能不能操作某一張 = 張的所在分店在操作者的可見範圍內**(api 每張回 `operable`;底座可見範圍,不另寫總部特例):別店的張(例:調貨後留在出貨店的張)顯示「其他分店」(`TicketCell` 的 `otherStore` 變體)、不能選,圖例在有別店的張時才打開這一項。張分在不止一家店時,每格的提示寫所在分店。
+- 選張後的操作列:全部未售 → [報廢];全部待查 / 遺失 → [尋回];混在一起只有 [取消選取];選到別店的張(`?ticket=` 帶來的)沒有按鈕。
+- 整本(可用的張)都待查或遺失 → 頁首狀態列「這本待查中:日期 單號,責任分店 = …」+ [整本尋回](只算自己能操作的張;沒有就不顯示按鈕)。
+- [更正跳號](`abilities.canCorrectSkips`)要有權限、至少一張自己範圍內的跳號與一張自己範圍內的未售(未鎖定)張;對話框的別店張也是「其他分店」。
 - 事件時間軸:同一時間、類型、人、單據、原因、從 → 到的張合成一列(「#041–065」或「整本」);人 / 單據欄有單號顯示單號,否則顯示操作的人。
 - 跨班更正(規格的「銷售流水」就是張數事件;規格 6.12、10.4,使用者 10/08 定案):撤銷(當下撤銷、撤銷售出申請完成)和它撤銷的原售出不在同一班 → 類型後面標「(前期更正,屬於 X 班)」,X = 原售出那一班;盤點補登的事後更正(`postCloseOf`)→ 標它指向的那一班。讀取時從同一本的事件找原售出、以班次的 `label` 帶出(`correctionOfShift`),不另存欄位;格式與即時現金帳的流水相同。兌獎的事後更正不是張數事件,不在時間軸上。
 
 ### 更正跳號(IN-04a)
 
 - 只有已經有跳號的本(拆本時標過)能更正;改完的張數要等於**待標註張數 = 迄號 − 標準張數**;新標的要是未售、沒被鎖定;原因必填(欄位管理「更正跳號原因」,「其他」要說明)。
+- 要改的張(取消的跳號、新標的)都要在操作者的可見範圍內,否則 `FORBIDDEN` `CROSS_STORE_NOT_ALLOWED`(讀整本的張再擋;帳本照操作者的範圍寫)。
 - 寫「取消跳號」(原本是跳號、改完不是 → 未售)+「跳號」(新標的),同一個交易;帳本順便重算本的 `skippedTicketNos`。
 
 ### 尋回(IN-04b)
 
-- 待查 / 遺失的張 → 未售、庫存、`orgId` = 回到的**店**、清掉責任分店;原因必填(「尋回原因」)。
-- 回到的要是操作者看得到的店(`store-orgs.ts` 的 `isVisibleStore`:沒有下層組織;與分店清單共用同一個認定),否則 `VALIDATION_FAILED` `RECOVER_TARGET_NOT_STORE`。畫面:呼叫端給了店(刷到的那家店)就用它;沒給時目前組織是店就回到它,不是店(最上層組織、區域)就選「回到哪家店」(`lotteryInventoryStores`)。
-- 張可能在別的分店:經帳本的跨店寫入(只能移進操作者看得到的店)。
+- 待查 / 遺失的張 → 未售、庫存、清掉責任分店;原因必填(「尋回原因」)。兩種入口,以有沒有給 `orgId` 區分:
+
+| 入口                                                      | `orgId` | 回到哪裡                    | 範圍                                                                                               |
+| --------------------------------------------------------- | ------- | --------------------------- | -------------------------------------------------------------------------------------------------- |
+| 從清單選(本的詳情、待查·遺失分頁;`keepStore`)             | 不給    | **不換店**:張自己的所在分店 | 張的所在分店要在操作者的可見範圍內,否則 `FORBIDDEN` `CROSS_STORE_NOT_ALLOWED`;帳本照操作者的範圍寫 |
+| 刷到實體(店面看板刷到、展開卡片;規格 7.4「刷到的那家店」) | 給      | `orgId` 這家店              | 張可能在別的分店:經帳本的跨店寫入(只能移進操作者看得到的店)                                        |
+
+- 刷到實體時,回到的要是操作者看得到的店(`store-orgs.ts` 的 `isVisibleStore`:沒有下層組織;與分店清單共用同一個認定),否則 `VALIDATION_FAILED` `RECOVER_TARGET_NOT_STORE`。畫面:呼叫端給了店(刷到的那家店)就用它;沒給時目前組織是店就回到它,不是店(最上層組織、區域)就選「回到哪家店」(`lotteryInventoryStores`)。從清單選時對話框寫「回到 X 庫存」(X = 這幾張的所在分店),不讓人選。
+- 張換店只有調貨單與刷到實體的尋回;總部從本的詳情替中山店尋回 → 回到中山店。
 
 ### 報廢(IN-04c)
 
-- 只能報**未售**、沒被鎖定的張(位置不變);原因必填(「報廢原因」)。
+- 只能報**未售**、沒被鎖定的張(位置不變);原因必填(「報廢原因」)。張的所在分店要在操作者的可見範圍內,否則 `FORBIDDEN` `CROSS_STORE_NOT_ALLOWED`(反查整個租戶再擋,才分得出別店的張與「已被處理」)。
 - 報廢事件存當下的成本快照 `cost`(= 那張的單張成本);**報表的報廢損失加總報廢事件的 `cost`**(四捨五入到元),`amount` 是 0。
 
 ### 預計要給本數(IN-06)
@@ -89,22 +98,22 @@
 
 ### GraphQL
 
-| 端點                                  | 權限                         | 說明                                                                                          |
-| ------------------------------------- | ---------------------------- | --------------------------------------------------------------------------------------------- |
-| `lotteryInventoryBooks(input)`        | 綁了 `inventory`             | 庫存分頁;`orgId`(子樹)、`gameId`、`state`、`purchasedFrom` / `purchasedTo`、`bookNo`          |
-| `lotteryInventoryBook(id)`            | 綁了 `inventory`             | 本的詳情:本、全部的張(含版本)、所在、事件時間軸、來源、成本(`show-cost`)、狀態列、`abilities` |
-| `lotteryTicketLookup(input)`          | 綁了 `inventory`             | 查刮刮樂:`{ gameCode?, bookNo, ticketNo }`;沒有遊戲代號時列出本號對到的每一款                 |
-| `lotteryInvestigations`               | 綁了 `inventory`             | 待查·遺失分頁;`canRecover`                                                                    |
-| `lotteryAllocations(input)`           | 綁了 `inventory`             | 預計要給本數:`{ orgId?, gameId? }` → 分店、遊戲、格子、`canEdit`                              |
-| `lotteryStockOverview(input)`         | 綁了 `inventory`             | 庫存概況 / 在店庫存:`{ orgId?, gameId? }`                                                     |
-| `lotteryInventoryStores`              | 登入即可                     | 看得到的店(尋回「回到哪家店」的選項)                                                          |
-| `lotteryFieldOptions(categoryKey)`    | 登入即可                     | 刮刮樂的原因類別下拉(只收 `LOTTERY_FIELD_CATEGORY_KEYS`)                                      |
-| `setLotteryAllocation(input)`         | `inventory.edit-allocations` | 修改一格(0 以上的整數、備註 200 字內)                                                         |
-| `correctLotterySkippedTickets(input)` | `inventory.mark-skipped`     | `{ bookId, ticketNos, reasonKey, reasonNote? }`                                               |
-| `recoverLotteryTickets(input)`        | `inventory.recover`          | `{ tickets: [{ ticketId, version }], orgId, reasonKey, reasonNote? }`                         |
-| `scrapLotteryTickets(input)`          | `inventory.scrap`            | `{ tickets: [{ ticketId, version }], reasonKey, reasonNote? }` → `lossCost`(`show-cost`)      |
+| 端點                                  | 權限                         | 說明                                                                                                      |
+| ------------------------------------- | ---------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `lotteryInventoryBooks(input)`        | 綁了 `inventory`             | 庫存分頁;`orgId`(子樹)、`gameId`、`state`、`purchasedFrom` / `purchasedTo`、`bookNo`                      |
+| `lotteryInventoryBook(id)`            | 綁了 `inventory`             | 本的詳情:本、全部的張(含版本、`operable`)、所在、事件時間軸、來源、成本(`show-cost`)、狀態列、`abilities` |
+| `lotteryTicketLookup(input)`          | 綁了 `inventory`             | 查刮刮樂:`{ gameCode?, bookNo, ticketNo }`;沒有遊戲代號時列出本號對到的每一款                             |
+| `lotteryInvestigations`               | 綁了 `inventory`             | 待查·遺失分頁;`canRecover`                                                                                |
+| `lotteryAllocations(input)`           | 綁了 `inventory`             | 預計要給本數:`{ orgId?, gameId? }` → 分店、遊戲、格子、`canEdit`                                          |
+| `lotteryStockOverview(input)`         | 綁了 `inventory`             | 庫存概況 / 在店庫存:`{ orgId?, gameId? }`                                                                 |
+| `lotteryInventoryStores`              | 登入即可                     | 看得到的店(尋回「回到哪家店」的選項)                                                                      |
+| `lotteryFieldOptions(categoryKey)`    | 登入即可                     | 刮刮樂的原因類別下拉(只收 `LOTTERY_FIELD_CATEGORY_KEYS`)                                                  |
+| `setLotteryAllocation(input)`         | `inventory.edit-allocations` | 修改一格(0 以上的整數、備註 200 字內)                                                                     |
+| `correctLotterySkippedTickets(input)` | `inventory.mark-skipped`     | `{ bookId, ticketNos, reasonKey, reasonNote? }`                                                           |
+| `recoverLotteryTickets(input)`        | `inventory.recover`          | `{ tickets: [{ ticketId, version }], orgId?, reasonKey, reasonNote? }`;不給 `orgId` = 從清單選、不換店    |
+| `scrapLotteryTickets(input)`          | `inventory.scrap`            | `{ tickets: [{ ticketId, version }], reasonKey, reasonNote? }` → `lossCost`(`show-cost`)                  |
 
-- 讀取範圍:**本**照操作者自己的範圍(所在分店或持有任何一張的分店,資料共用 `holderOrgIds`);讀得到本,就以租戶邊界上下文讀它全部的張與事件(反查,`inventory-view.service.ts`)。
+- 讀取範圍:**本**照操作者自己的範圍(所在分店或持有任何一張的分店,資料共用 `holderOrgIds`);讀得到本,就以租戶邊界上下文讀它全部的張與事件(反查,`inventory-view.service.ts`)。每張的 `operable` = 張的所在分店在操作者的可見範圍內(`isOrgVisible`);報廢、尋回(從清單選)、更正跳號用同一個判斷擋下別店的張。
 - 組織、使用者名稱以租戶邊界讀(`inventory-names.ts`);收銀點、經銷商、單號照操作者的範圍讀(看不到的不顯示)。
 - 原因檢查:底座 `FieldOptionsService.assertReason`(`apps/api/src/fields/field-options.service.ts`;類別白名單 `LOTTERY_FIELD_CATEGORIES`,`apps/api/src/project/lottery/field-options/lottery-field-options.ts`;要是該類別啟用中的選項,「其他」說明必填)。下拉 `lotteryFieldOptions` 用同一支的 `optionsOf`。
 
@@ -221,26 +230,26 @@
 
 ### 錯誤碼
 
-| code                | reason                              | 什麼時候                                                                      |
-| ------------------- | ----------------------------------- | ----------------------------------------------------------------------------- |
-| `CONFLICT`          | `TICKET_ALREADY_PROCESSED`          | 條件更新沒命中(`extensions.ticketIds` 列出張)                                 |
-| `FORBIDDEN`         | `CROSS_STORE_NOT_ALLOWED`           | 跨店寫入不是把張移進自己看得到的店(`extensions.ticketIds` 列出不合的張)       |
-| `VALIDATION_FAILED` | `STORE_OUTSIDE_TENANT`              | 點收分店不在操作者當前組織的租戶                                              |
-| `VALIDATION_FAILED` | `BOOK_KEY_DUPLICATE`                | 同一本點收兩次                                                                |
-| `VALIDATION_FAILED` | `LAST_TICKET_NO_OUT_OF_RANGE`       | 迄號不在標準張數 ~ 999                                                        |
-| `NOT_FOUND`         | —                                   | 遊戲、本或分店不存在 / 看不到                                                 |
-| `VALIDATION_FAILED` | `NO_SKIPPED_TICKETS`                | 更正跳號:這本沒有跳號                                                         |
-| `VALIDATION_FAILED` | `SKIP_COUNT_MISMATCH`               | 更正跳號:改完的張數不等於待標註張數,或張號不在這本                            |
-| `VALIDATION_FAILED` | `SKIP_UNCHANGED`                    | 更正跳號:跟目前的跳號一樣                                                     |
-| `VALIDATION_FAILED` | `RECOVER_TARGET_NOT_STORE`          | 尋回:回到的不是店(有下層組織,例:最上層組織)                                   |
-| `VALIDATION_FAILED` | `TICKET_STATUS_NOT_ALLOWED`         | 報廢不是未售、尋回不是待查 / 遺失、新標的跳號不是未售(`extensions.ticketIds`) |
-| `VALIDATION_FAILED` | —(`fields: reasonKey / reasonNote`) | 原因沒選、不是啟用中的選項,或選「其他」沒寫說明                               |
-| `FORBIDDEN`         | —                                   | 沒綁庫存管理(讀取)或沒有那條權限(寫入)                                        |
+| code                | reason                              | 什麼時候                                                                                                           |
+| ------------------- | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `CONFLICT`          | `TICKET_ALREADY_PROCESSED`          | 條件更新沒命中(`extensions.ticketIds` 列出張)                                                                      |
+| `FORBIDDEN`         | `CROSS_STORE_NOT_ALLOWED`           | 跨店寫入不是把張移進自己看得到的店;報廢、從清單選的尋回、更正跳號選到別店的張(`extensions.ticketIds` 列出不合的張) |
+| `VALIDATION_FAILED` | `STORE_OUTSIDE_TENANT`              | 點收分店不在操作者當前組織的租戶                                                                                   |
+| `VALIDATION_FAILED` | `BOOK_KEY_DUPLICATE`                | 同一本點收兩次                                                                                                     |
+| `VALIDATION_FAILED` | `LAST_TICKET_NO_OUT_OF_RANGE`       | 迄號不在標準張數 ~ 999                                                                                             |
+| `NOT_FOUND`         | —                                   | 遊戲、本或分店不存在 / 看不到                                                                                      |
+| `VALIDATION_FAILED` | `NO_SKIPPED_TICKETS`                | 更正跳號:這本沒有跳號                                                                                              |
+| `VALIDATION_FAILED` | `SKIP_COUNT_MISMATCH`               | 更正跳號:改完的張數不等於待標註張數,或張號不在這本                                                                 |
+| `VALIDATION_FAILED` | `SKIP_UNCHANGED`                    | 更正跳號:跟目前的跳號一樣                                                                                          |
+| `VALIDATION_FAILED` | `RECOVER_TARGET_NOT_STORE`          | 尋回:回到的不是店(有下層組織,例:最上層組織)                                                                        |
+| `VALIDATION_FAILED` | `TICKET_STATUS_NOT_ALLOWED`         | 報廢不是未售、尋回不是待查 / 遺失、新標的跳號不是未售(`extensions.ticketIds`)                                      |
+| `VALIDATION_FAILED` | —(`fields: reasonKey / reasonNote`) | 原因沒選、不是啟用中的選項,或選「其他」沒寫說明                                                                    |
+| `FORBIDDEN`         | —                                   | 沒綁庫存管理(讀取)或沒有那條權限(寫入)                                                                             |
 
 ### 前端共用
 
 - 編號解析 `parseTicketInput`(`@repo/domain/project/lottery`):背面編號 `5164-1-056527-099-0-6`(第 5、6 段不驗證)、正面編號 `056527-099` / `056527099`、正面條碼 `0056527099`,回 `{ format, gameCode?, printVersion?, bookNo(7 位), ticketNo(3 位) }`;沒有遊戲代號時由呼叫端依本店對到的遊戲決定。
-- 張數格子 `apps/admin/src/components/project/lottery/TicketGrid/`(`TicketGrid`、`TicketCell` 九種狀態、`TicketGridLegend`):狀態與顏色固定;可選的狀態、每種狀態的文字、圖例項目由使用處傳入。
+- 張數格子 `apps/admin/src/components/project/lottery/TicketGrid/`(`TicketGrid`、`TicketCell` 十種狀態(含別店的張「其他分店」)、`TicketGridLegend`):狀態與顏色固定;可選的狀態、每種狀態的文字、圖例項目由使用處傳入。
 - 條碼槍 `apps/admin/src/hooks/project/useScanner/`:`useScanner(purpose, handler)`、`registerDefaultScanHandler(handler)`、`injectScan(code)`;判斷門檻 `SCANNER_KEY_INTERVAL_MS = 30`(程式常數;字元間隔不超過 30ms)。
 
 ### 測試

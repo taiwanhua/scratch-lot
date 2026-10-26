@@ -3,6 +3,11 @@ import { screen, waitFor, within } from "@testing-library/react";
 
 import { INVENTORY_PERMISSIONS as P } from "@repo/domain/project/lottery";
 
+import {
+  inventoryOrgs,
+  sampleBookDetail,
+} from "@/test/msw/project/lottery/inventory-fixtures";
+
 import { renderInventory } from "../inventory-test-support";
 
 const BOOK = "/inventory/book-page/b-056527";
@@ -144,5 +149,49 @@ describe("本的詳情", () => {
     expect(
       await screen.findByRole("dialog", { name: "尋回 100 張" }),
     ).toBeInTheDocument();
+  });
+  it("別店的張:灰色「其他分店」、不能選(圖例同步);自己店的待查張尋回不換店(不送 orgId)", async () => {
+    // 收貨店(新竹店)的視角:#001–070 留在中山店(看得到、不能操作),#071 起在新竹店
+    const base = sampleBookDetail();
+    const detail = {
+      ...base,
+      tickets: base.tickets.map((ticket) =>
+        Number(ticket.ticketNo) <= 70
+          ? { ...ticket, operable: false }
+          : { ...ticket, org: inventoryOrgs.storeB },
+      ),
+    };
+    const { user, fake } = renderInventory({
+      path: BOOK,
+      world: { details: [detail] },
+    });
+    await screen.findByRole("heading", { name: "5164 發大財 · 本號 056527" });
+    const other = within(grid()).getByRole("button", { name: "#066 其他分店" });
+    expect(other).toBeDisabled();
+    expect(
+      within(screen.getByRole("list", { name: "格子圖例" })).getByText(
+        "其他分店",
+      ),
+    ).toBeInTheDocument();
+    // 跳號都在中山店 → 沒有 [更正跳號]
+    expect(
+      screen.queryByRole("button", { name: "更正跳號" }),
+    ).not.toBeInTheDocument();
+    await user.click(within(grid()).getByRole("button", { name: /^#071 / }));
+    await user.click(screen.getByRole("button", { name: "尋回" }));
+    const dialog = await screen.findByRole("dialog", { name: "尋回 1 張" });
+    expect(within(dialog).getByText("新竹店 庫存")).toBeInTheDocument();
+    expect(
+      within(dialog).queryByRole("combobox", { name: /回到哪家店/ }),
+    ).not.toBeInTheDocument();
+    await user.click(
+      within(dialog).getByRole("combobox", { name: /尋回原因/ }),
+    );
+    await user.click(await screen.findByRole("option", { name: "店內找到" }));
+    await user.click(within(dialog).getByRole("button", { name: "尋回" }));
+    await waitFor(() => {
+      expect(fake.inputs.recover).toHaveLength(1);
+    });
+    expect(fake.inputs.recover[0]?.orgId).toBeUndefined();
   });
 });
