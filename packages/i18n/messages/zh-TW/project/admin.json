@@ -1401,6 +1401,8 @@
         "title": "代改畫休",
         "person": "人員",
         "registered": "這天已登記的時段不可排",
+        "registeredLoading": "載入這天已登記的時段…",
+        "registeredLoadFailed": "這天已登記的時段載入失敗;儲存時仍會檢查。",
         "kind": "種類",
         "reason": "原因",
         "reasonNote": "說明",

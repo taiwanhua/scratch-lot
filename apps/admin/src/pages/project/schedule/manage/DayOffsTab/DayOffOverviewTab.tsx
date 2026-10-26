@@ -338,6 +338,7 @@ export const DayOffOverviewTab = () => {
         <OverrideDayOffDialog
           orgId={overview.orgId}
           staff={overview.staff}
+          month={overview.month}
           days={overview.days}
           initialDate={overrideDate}
           reasonRequired={window.state === "closed"}

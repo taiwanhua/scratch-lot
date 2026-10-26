@@ -33,6 +33,11 @@ export function dateKeyOf(at: Date | number, timezone: string): string {
   );
 }
 
+/** 時點 → 租戶時區的時刻 `HH:mm`(隔天 00:00 印 `00:00`;通知內文、稽核用)。 */
+export function clockTextOf(at: Date | number, timezone: string): string {
+  return formatTemporal(at, { type: "datetime", timezone }).slice(11);
+}
+
 /** 時點 → 那天租戶時區 00:00(日期的存值)。 */
 export function dayStartOf(at: Date | number, timezone: string): Date {
   return new Date(

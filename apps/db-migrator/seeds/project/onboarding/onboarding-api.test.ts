@@ -499,6 +499,10 @@ describe("開通腳本與 demo create(真 api + 真 MongoDB)", () => {
         (item) => item.type === "lottery.period-close-overdue",
       );
       expect(closing?.isDefault).toBe(true);
+      // 當事人通知(收件人由事件決定)不在通知設定頁、開通也不設:例 畫休被代改
+      expect(notificationSettings.items.map((item) => item.type)).not.toContain(
+        "schedule.day-off-overridden",
+      );
     });
 
     it("走 api:操作紀錄的操作者 = 租戶管理員(root 只有開通機構與分派受管表單)", async () => {

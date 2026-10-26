@@ -75,7 +75,7 @@ describe("排班:欄位下寫原因", () => {
     ).toHaveAccessibleDescription("這一天已經有整天的畫休");
   });
 
-  it("代改畫休:畫面沒有那天已登記的段落(例:選了總覽以外的月份),api 判斷連同已存的蓋滿整天(DAY_OFF_WHOLE_DAY)→ 時段下寫「整天請改選整天畫休」", async () => {
+  it("代改畫休:畫面拿到的資料沒有那天已登記的段落(例:別人剛代改過、資料過期),api 判斷連同已存的蓋滿整天(DAY_OFF_WHOLE_DAY)→ 時段下寫「整天請改選整天畫休」", async () => {
     const { user } = renderSchedulePage({
       path: "/schedule/manage?tab=day-offs",
     });

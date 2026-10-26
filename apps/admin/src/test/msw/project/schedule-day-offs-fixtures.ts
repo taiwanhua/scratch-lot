@@ -33,7 +33,8 @@ export const DAY_OFF_STAFF = [
   { userId: "u-support", name: "趙支援", isPrimary: false },
 ];
 
-const dayOff = (
+/** 一筆畫休夾具(`range` = 時段不可排的 `HH:mm` 起迄;不給 = 整天畫休)。 */
+export const dayOff = (
   id: string,
   person: { userId: string; name: string; isPrimary: boolean },
   date: string,

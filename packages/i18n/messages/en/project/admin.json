@@ -1401,6 +1401,8 @@
         "title": "Change day-off for staff",
         "person": "Staff",
         "registered": "Unavailable times already registered for this day",
+        "registeredLoading": "Loading the unavailable times already registered for this day…",
+        "registeredLoadFailed": "Couldn't load the unavailable times registered for this day; they are still checked when you save.",
         "kind": "Kind",
         "reason": "Reason",
         "reasonNote": "Details",

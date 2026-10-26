@@ -1,11 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { Types } from "mongoose";
 
-import {
-  type InstantRange,
-  formatTemporal,
-  localDayRange,
-} from "@repo/domain/form";
+import { type InstantRange, localDayRange } from "@repo/domain/form";
 import { SCHEDULE_FIELD_CATEGORY_KEYS } from "@repo/domain/project/schedule-fields";
 import {
   SCHEDULE_TASK_ROLES,
@@ -51,6 +47,7 @@ import { blockedEntryIdsOf } from "../integration/entry-deletion-guards";
 import { positionAnnotationsOf } from "../integration/position-annotations";
 import { ScheduleClock } from "../shared/schedule-clock";
 import {
+  clockTextOf,
   dateKeyOf,
   dayKeyRange,
   dayStartOf,
@@ -841,10 +838,7 @@ export class ScheduleRosterWritesService {
   }
 
   private hhmmOf(scope: RosterScope, at: Date): string {
-    return formatTemporal(at, {
-      type: "datetime",
-      timezone: scope.timezone,
-    }).slice(11);
+    return clockTextOf(at, scope.timezone);
   }
 
   private async mustFindDemand(

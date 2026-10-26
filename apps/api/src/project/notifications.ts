@@ -43,6 +43,8 @@ export const SCHEDULE_DAY_OFF_CLOSING = "schedule.day-off-closing";
 export const SCHEDULE_PUBLISHED = "schedule.published";
 /** 排班:發布後的異動 → 給異動牽涉的人。 */
 export const SCHEDULE_CHANGED = "schedule.changed";
+/** 排班:別人代改(新增 / 刪除)我的畫休 → 給被代改的那位員工(自己改自己的不送)。 */
+export const SCHEDULE_DAY_OFF_OVERRIDDEN = "schedule.day-off-overridden";
 
 const permissionHolders = (permissionKey: string): Audience => ({
   mode: "match",
@@ -86,6 +88,23 @@ const optional = (
 
 const isToday = (params: NotificationParams): boolean =>
   params.daysLeft === "0";
+
+/** 代改畫休的時段參數:`HH:mm–HH:mm` 以 `,` 串起(各語系用自己的分隔字)。 */
+const slotsOf = (params: NotificationParams, separator: string): string =>
+  text(params, "slots").split(",").filter(Boolean).join(separator);
+
+/** 代改畫休那筆是什麼:整天畫休,或時段不可排(附時段)。 */
+const dayOffDetail = (
+  params: NotificationParams,
+  labels: {
+    fullDay: string;
+    timeRange: (slots: string) => string;
+    separator: string;
+  },
+): string =>
+  params.kind === "time-range"
+    ? labels.timeRange(slotsOf(params, labels.separator))
+    : labels.fullDay;
 
 const lotteryTypes: NotificationTypeDefinition[] = [
   {
@@ -307,6 +326,44 @@ const scheduleTypes: NotificationTypeDefinition[] = [
         title: `Schedule changed: ${text(params, "orgName")}`,
         body: `The schedule on ${text(params, "date")} at "${text(params, "orgName")}" has changed.${optional(params, "reason", " Reason: ")}`,
       }),
+    },
+  },
+  {
+    key: SCHEDULE_DAY_OFF_OVERRIDDEN,
+    name: "畫休被代改",
+    ...CHANNELS,
+    category: "party",
+    template: {
+      "zh-TW": (params) => {
+        const detail = dayOffDetail(params, {
+          fullDay: "整天畫休",
+          timeRange: (slots) => `時段不可排(${slots})`,
+          separator: "、",
+        });
+        const reason = optional(params, "reason", "原因:");
+        return {
+          title: `畫休被代改:${text(params, "date")}`,
+          body:
+            params.action === "delete"
+              ? `${text(params, "byName")} 在「${text(params, "orgName")}」刪除了你 ${text(params, "date")} 的${detail}。${reason}`
+              : `${text(params, "byName")} 在「${text(params, "orgName")}」替你登記了 ${text(params, "date")} 的${detail}。${reason}`,
+        };
+      },
+      en: (params) => {
+        const detail = dayOffDetail(params, {
+          fullDay: "full day",
+          timeRange: (slots) => `unavailable hours (${slots})`,
+          separator: ", ",
+        });
+        const reason = optional(params, "reason", " Reason: ");
+        return {
+          title: `Day off changed for you: ${text(params, "date")}`,
+          body:
+            params.action === "delete"
+              ? `${text(params, "byName")} deleted your day off on ${text(params, "date")} at "${text(params, "orgName")}": ${detail}.${reason}`
+              : `${text(params, "byName")} registered a day off for you on ${text(params, "date")} at "${text(params, "orgName")}": ${detail}.${reason}`,
+        };
+      },
     },
   },
 ];

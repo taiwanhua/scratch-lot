@@ -9,8 +9,10 @@ import {
   type AddScheduleDayOffsOnBehalfMutation,
   type ScheduleDayOffDayFieldsFragment,
   useAddScheduleDayOffsOnBehalfMutation,
+  useScheduleDayOffOverviewQuery,
 } from "@repo/graphql";
 import { Button } from "@repo/ui/button";
+import { CircularProgress } from "@repo/ui/circular-progress";
 import { DatePicker } from "@repo/ui/date-picker";
 import { Dialog } from "@repo/ui/dialog";
 import { useBreakpointDown } from "@repo/ui/media-query";
@@ -35,6 +37,7 @@ import {
   EMPTY_SLOT,
   completeSlots,
   dayKeyOf,
+  monthRangeOf,
   registeredSlotsOf,
   slotInstantsOf,
   slotsCoverWholeDay,
@@ -68,27 +71,31 @@ export interface OverrideDayOffDialogProps {
   /** 總覽選的分店(代改的對象要是這家店的排班人員) */
   orgId: string;
   staff: readonly { userId: string; name: string }[];
+  /** 總覽顯示的月份 `YYYY-MM`(`days` 是這個月的) */
+  month: string;
   /** 總覽這個月每天的畫休(選好人與日期後列出那人那天已登記的時段不可排、一起判斷是不是整天) */
   days: readonly ScheduleDayOffDayFieldsFragment[];
   /** 帶入的日期鍵 `YYYY-MM-DD`(點日期);[代改] 為空字串 */
   initialDate: string;
-  /** 這個月的開放期間已截止:原因必填(api 依那個人的主要分店再判斷一次) */
+  /** 總覽這個月的開放期間已截止:原因必填(選了別的月份的日期改看那個月;api 依那個人的主要分店再判斷一次) */
   reasonRequired: boolean;
   onClose: () => void;
 }
 
 /**
  * 代改畫休(SC-24;規格 14.5,`edit-day-offs`):先選人、日期(兩者都選好後上方唯讀列出那人那天已登記的
- * 時段不可排;總覽沒有那天的資料就不顯示),再選種類(整天畫休 / 時段不可排 + 時間,一次可以多段);
+ * 時段不可排;日期不限月份,選到總覽以外的月份時用同一個總覽查詢載入那個月,載入中顯示載入、不能儲存),
+ * 再選種類(整天畫休 / 時段不可排 + 時間,一次可以多段);
  * 截止後必填原因(欄位管理「代改畫休原因」,選「其他」要填說明);寫入代改人。
  * 只做新增;刪除在畫休總覽點日期的「當天畫休」裡(`DeleteDayOffDialog`)。手機全螢幕。
  */
 export const OverrideDayOffDialog = ({
   orgId,
   staff,
+  month,
   days,
   initialDate,
-  reasonRequired,
+  reasonRequired: overviewReasonRequired,
   onClose,
 }: OverrideDayOffDialogProps) => {
   const t = useTranslations("admin.schedule.dayOffs");
@@ -111,6 +118,27 @@ export const OverrideDayOffDialog = ({
   const [fieldErrors, setFieldErrors] = useState<FieldErrorTexts<Field>>({});
   const invalid = Object.keys(fieldErrors);
   const [blocked, setBlocked] = useState<ScheduleDayOffViolationError[]>([]);
+
+  // 選的日期不在總覽的月份:用總覽同一個查詢載入那個月(那天已登記的段落、那個月是否已截止)
+  const pickedMonth = date.slice(0, 7);
+  const otherRange =
+    date === "" || pickedMonth === month
+      ? null
+      : monthRangeOf(pickedMonth, timezone);
+  const other = useScheduleDayOffOverviewQuery(
+    session.client,
+    { input: { orgId, ...otherRange } },
+    { enabled: otherRange !== null },
+  );
+  const otherOverview =
+    otherRange === null ? undefined : other.data?.scheduleDayOffOverview;
+  const loadingOther =
+    otherRange !== null && otherOverview === undefined && !other.isError;
+  const shownDays = otherRange === null ? days : (otherOverview?.days ?? []);
+  const reasonRequired =
+    otherOverview === undefined
+      ? overviewReasonRequired
+      : otherOverview.window.state === "closed";
 
   const noticeEntryConflicts = useDayOffEntryConflictNotice();
   const save = useAddScheduleDayOffsOnBehalfMutation(
@@ -153,12 +181,12 @@ export const OverrideDayOffDialog = ({
     return missing;
   };
 
-  // 那人那天已登記的時段不可排(總覽這個月的資料;換人或換日期就重算)
+  // 那人那天已登記的時段不可排(總覽這個月或另外載入的那個月;換人或換日期就重算)
   const registered =
     userId === "" || date === ""
       ? []
       : registeredSlotsOf(
-          days
+          shownDays
             .filter((day) => dayKeyOf(day.date, timezone) === date)
             .flatMap((day) => day.dayOffs)
             .filter((item) => item.userId === userId),
@@ -210,7 +238,10 @@ export const OverrideDayOffDialog = ({
           <Button variant="text" onClick={onClose}>
             {tCommon("cancel")}
           </Button>
-          <Button disabled={save.isPending || wholeDay} onClick={submit}>
+          <Button
+            disabled={save.isPending || wholeDay || loadingOther}
+            onClick={submit}
+          >
             {tCommon("save")}
           </Button>
         </>
@@ -247,6 +278,19 @@ export const OverrideDayOffDialog = ({
             }}
           />
         </Stack>
+        {userId !== "" && loadingOther && (
+          <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
+            <CircularProgress size={20} aria-hidden />
+            <Typography variant="body2" color="textSecondary">
+              {t("override.registeredLoading")}
+            </Typography>
+          </Stack>
+        )}
+        {userId !== "" && otherRange !== null && other.isError && (
+          <Typography variant="body2" color="error">
+            {t("override.registeredLoadFailed")}
+          </Typography>
+        )}
         {registered.length > 0 && (
           <Stack spacing={0.5} aria-label={t("override.registered")}>
             <Typography variant="subtitle2">

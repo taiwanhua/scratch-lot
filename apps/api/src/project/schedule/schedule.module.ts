@@ -20,6 +20,7 @@ import { ScheduleChangesService } from "./changes/schedule-changes.service";
 import { ScheduleCheckResolver } from "./check/schedule-check.resolver";
 import { ScheduleCheckService } from "./check/schedule-check.service";
 import { SchedulePublishService } from "./check/schedule-publish.service";
+import { DayOffOverrideNotices } from "./day-offs/day-off-override-notices";
 import { DayOffRemindersService } from "./day-offs/day-off-reminders.service";
 import { ScheduleDayOffsResolver } from "./day-offs/schedule-day-offs.resolver";
 import { ScheduleDayOffsService } from "./day-offs/schedule-day-offs.service";
@@ -80,6 +81,7 @@ import { ScheduleTemplatesService } from "./templates/schedule-templates.service
     ScheduleDayOffsService,
     ScheduleDayOffsResolver,
     DayOffRemindersService,
+    DayOffOverrideNotices,
     RosterPeopleReader,
     ScheduleRosterService,
     ScheduleRosterWritesService,

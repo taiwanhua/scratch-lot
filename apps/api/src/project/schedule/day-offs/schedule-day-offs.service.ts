@@ -65,6 +65,7 @@ import {
   validationError,
 } from "../shared/schedule-error";
 import {
+  type ScheduleOrg,
   loadOrgNames,
   parseObjectId,
   resolveScheduleOrg,
@@ -78,6 +79,7 @@ import { SchedulePersonLocks } from "../shared/schedule-person-locks";
 import { compareScheduleNames } from "../shared/schedule-sort";
 import type { ScheduleCandidate } from "../staff/schedule-candidates";
 import { ScheduleStaffService } from "../staff/schedule-staff.service";
+import { DayOffOverrideNotices } from "./day-off-override-notices";
 import {
   DAY_OFF_STORE_RULE_KEY,
   type DayOffLike,
@@ -342,7 +344,8 @@ const byTime = (
  * - **屬於人**:一筆歸屬租戶頂層;那段時間所有分店都不能排
  * - **人的規則用主要分店的設定**;同日最多畫休人數只計以那家店為主要分店的人
  * - **本人**:只能在主要分店的開放期間內登記 / 刪除下個月;不需核准,違反限制不存
- * - **代改**(`schedule.manage.edit-day-offs`):不受開放期間限制;截止後原因必填,選「其他」要說明;記代改人
+ * - **代改**(`schedule.manage.edit-day-offs`):不受開放期間限制;截止後原因必填,選「其他」要說明;記代改人;
+ *   通知被代改的員工(`DayOffOverrideNotices`,一次送出 / 一筆刪除各一則,代改自己不送)
  * - 違反限制(存檔後限制的違反比存檔前多)→ `VALIDATION_FAILED`(`fields: ["date"]`、`violations`);提醒照存
  * - **日期與時段是時點**:輸入的 `date` 以租戶時區正規化成那天 00:00,時段 `[startAt, endAt)` 要在那天裡
  *   (結束最晚 = 隔天 00:00);
@@ -366,6 +369,7 @@ export class ScheduleDayOffsService implements OnModuleInit {
     private readonly clock: ScheduleClock,
     private readonly personLocks: SchedulePersonLocks,
     private readonly entries: ScheduleEntriesRepository,
+    private readonly overrideNotices: DayOffOverrideNotices,
   ) {}
 
   onModuleInit(): void {
@@ -562,13 +566,17 @@ export class ScheduleDayOffsService implements OnModuleInit {
     operator: OperatorContext,
     input: AddScheduleDayOffsOnBehalfInput,
   ): Promise<SaveScheduleDayOffsPayload> {
-    const { tenantId, orgId, userId } = await this.mustCandidate(
+    const { org, userId } = await this.mustCandidate(
       operator,
       input.orgId,
       input.userId,
     );
-    const context = await this.personContext(operator, tenantId, userId);
-    const write = validatedWrite(input, { tenantId, userId }, context.timezone);
+    const context = await this.personContext(operator, org.tenantId, userId);
+    const write = validatedWrite(
+      input,
+      { tenantId: org.tenantId, userId },
+      context.timezone,
+    );
     const reason = await this.validatedReason(
       operator,
       context,
@@ -578,13 +586,35 @@ export class ScheduleDayOffsService implements OnModuleInit {
         reasonNote: input.reasonNote,
       },
     );
-    return this.save(operator, context, {
-      ...write,
-      ownerOrgId: orgId,
-      note: null,
-      by: operator.actorId,
-      ...reason,
-    });
+    return this.save(
+      operator,
+      context,
+      {
+        ...write,
+        ownerOrgId: org.id,
+        note: null,
+        by: operator.actorId,
+        ...reason,
+      },
+      // 一次送出 = 一則通知(列出這次所有段落);和寫入同一個交易
+      async (created) => {
+        const [first] = created;
+        if (first === undefined) {
+          return;
+        }
+        await this.overrideNotices.notify(operator, {
+          action: "add",
+          org,
+          timezone: context.timezone,
+          userId,
+          localDate: write.localDate,
+          kind: write.kind,
+          slots: created,
+          ...reason,
+          dayOffId: first._id,
+        });
+      },
+    );
   }
 
   async removeOnBehalf(
@@ -617,10 +647,24 @@ export class ScheduleDayOffsService implements OnModuleInit {
         reasonNote: input.reasonNote,
       },
     );
-    return this.remove(operator, context, record, {
-      by: operator.actorId,
-      ...reason,
-    });
+    return this.remove(
+      operator,
+      context,
+      record,
+      { by: operator.actorId, ...reason },
+      () =>
+        this.overrideNotices.notify(operator, {
+          action: "delete",
+          org,
+          timezone,
+          userId: record.userId,
+          localDate: record.localDate,
+          kind: record.kind,
+          slots: [record],
+          ...reason,
+          dayOffId: record._id,
+        }),
+    );
   }
 
   // ---- 給其他功能 ----
@@ -863,11 +907,7 @@ export class ScheduleDayOffsService implements OnModuleInit {
     operator: OperatorContext,
     orgId: string | null | undefined,
     userId: string,
-  ): Promise<{
-    tenantId: Types.ObjectId;
-    orgId: Types.ObjectId;
-    userId: Types.ObjectId;
-  }> {
+  ): Promise<{ org: ScheduleOrg; userId: Types.ObjectId }> {
     const org = await resolveScheduleOrg(operator, this.orgs, orgId);
     const target = parseObjectId(userId, "userId");
     const candidates: ScheduleCandidate[] =
@@ -875,7 +915,7 @@ export class ScheduleDayOffsService implements OnModuleInit {
     if (!candidates.some((candidate) => candidate.userId === String(target))) {
       throw notFoundError(`schedule staff not found: ${userId}`);
     }
-    return { tenantId: org.tenantId, orgId: org.id, userId: target };
+    return { org, userId: target };
   }
 
   /** 這個租戶裡、屬於這些人的一筆畫休;否則 `NOT_FOUND`。 */
@@ -903,6 +943,7 @@ export class ScheduleDayOffsService implements OnModuleInit {
     operator: OperatorContext,
     context: PersonContext,
     write: DayOffWrite,
+    afterWrite?: (created: readonly LoadedDayOff[]) => Promise<void>,
   ): Promise<SaveScheduleDayOffsPayload> {
     const like = {
       userId: String(write.userId),
@@ -972,6 +1013,7 @@ export class ScheduleDayOffsService implements OnModuleInit {
             });
             items.push(loadedOf(record, write.localDate));
           }
+          await afterWrite?.(items);
           return { created: items, after: violations };
         }),
       `already has a full-day day off on ${write.localDate}`,
@@ -1051,6 +1093,7 @@ export class ScheduleDayOffsService implements OnModuleInit {
       reason: string | null;
       reasonNote: string | null;
     } | null,
+    afterWrite?: () => Promise<void>,
   ): Promise<string> {
     const writer = await tenantBoundaryContext(
       this.orgs,
@@ -1084,6 +1127,7 @@ export class ScheduleDayOffsService implements OnModuleInit {
         before: auditOf(record),
         after: override ?? undefined,
       });
+      await afterWrite?.();
     });
     return String(record._id);
   }

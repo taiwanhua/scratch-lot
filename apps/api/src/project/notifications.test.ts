@@ -3,7 +3,11 @@ import { describe, expect, it } from "@jest/globals";
 import { PRINTING_AGENT_OFFLINE } from "../notifications/base-notification-types";
 import type { NotificationOrgScope } from "../notifications/notification-registry";
 import { composeAllNotificationTypes } from "../notifications/notification-registry.module";
-import { PROJECT_NOTIFICATIONS, STORE_MANAGER_AUDIENCE } from "./notifications";
+import {
+  PROJECT_NOTIFICATIONS,
+  SCHEDULE_DAY_OFF_OVERRIDDEN,
+  STORE_MANAGER_AUDIENCE,
+} from "./notifications";
 
 const permissionAudience = (key: string) => ({
   mode: "match",
@@ -76,10 +80,15 @@ const EXPECTED = [
   { key: "schedule.day-off-closing", name: "畫休即將截止", category: "party" },
   { key: "schedule.published", name: "排班發布", category: "party" },
   { key: "schedule.changed", name: "排班異動", category: "party" },
+  {
+    key: "schedule.day-off-overridden",
+    name: "畫休被代改",
+    category: "party",
+  },
 ];
 
 describe("專案通知類型(專案規格 3.4)", () => {
-  it("十一種類型逐列與 3.4 一致(加調貨送錯分店):key、名稱、類別、組織範圍、預設人員條件", () => {
+  it("十二種類型逐列與 3.4 一致(加調貨送錯分店、畫休被代改):key、名稱、類別、組織範圍、預設人員條件", () => {
     expect(
       PROJECT_NOTIFICATIONS.types.map(
         ({ key, name, category, orgScope, defaultAudience }) => ({
@@ -153,5 +162,48 @@ describe("專案通知類型(專案規格 3.4)", () => {
         daysLeft: "0",
       }).body,
     ).toBe("乙類「王小明」的證照今天(2026-12-31)到期。");
+  });
+
+  it("畫休被代改:新增 / 刪除兩種說法;時段逐段列出、整天畫休不列時段;原因選填", () => {
+    const type = PROJECT_NOTIFICATIONS.types.find(
+      (item) => item.key === SCHEDULE_DAY_OFF_OVERRIDDEN,
+    );
+    const base = {
+      orgName: "中山店",
+      date: "2027-04-06",
+      byName: "李店長",
+    };
+    expect(
+      type?.template["zh-TW"]?.({
+        ...base,
+        action: "add",
+        kind: "time-range",
+        slots: "09:00–12:00,14:00–18:00",
+        reason: "其他(支援活動)",
+      }),
+    ).toEqual({
+      title: "畫休被代改:2027-04-06",
+      body: "李店長 在「中山店」替你登記了 2027-04-06 的時段不可排(09:00–12:00、14:00–18:00)。原因:其他(支援活動)",
+    });
+    expect(
+      type?.template["zh-TW"]?.({
+        ...base,
+        action: "delete",
+        kind: "full-day",
+        slots: "",
+        reason: null,
+      }).body,
+    ).toBe("李店長 在「中山店」刪除了你 2027-04-06 的整天畫休。");
+    expect(
+      type?.template.en?.({
+        ...base,
+        action: "add",
+        kind: "time-range",
+        slots: "09:00–12:00,14:00–18:00",
+        reason: null,
+      }).body,
+    ).toBe(
+      '李店長 registered a day off for you on 2027-04-06 at "中山店": unavailable hours (09:00–12:00, 14:00–18:00).',
+    );
   });
 });

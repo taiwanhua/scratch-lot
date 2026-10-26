@@ -19,6 +19,10 @@ import { createOrg } from "../../../auth/test-support/fixtures";
 import { OrgsRepository } from "../../../database/database.module";
 import { systemTenantReader } from "../../../database/system-tenant-reader";
 import { HOOK_TIMEOUT_MS } from "../../../database/test-support/mongo-connection";
+import {
+  NOTIFICATION_CHANNEL_ADAPTERS,
+  type NotificationChannelAdapter,
+} from "../../../notifications/notification-channels";
 import { ScheduleDayOffLock } from "../../database/schedule/schedule-day-off-lock.schema";
 import {
   SCHEDULE_DAY_OFFS_COLLECTION,
@@ -28,6 +32,7 @@ import { ScheduleStaff } from "../../database/schedule/schedule-staff.schema";
 import {
   SCHEDULE_DAY_OFF_CLOSING,
   SCHEDULE_DAY_OFF_OPEN,
+  SCHEDULE_DAY_OFF_OVERRIDDEN,
 } from "../../notifications";
 import { ScheduleClock } from "../shared/schedule-clock";
 import { dayKeyRange } from "../shared/schedule-dates";
@@ -535,6 +540,22 @@ describe("畫休(GraphQL 端點 + 真 MongoDB)", () => {
       .toSorted((left, right) => left.localeCompare(right));
   };
 
+  const overriddenOf = (user: ScheduleTestUser) =>
+    connection
+      .collection("notifications")
+      .find<{ title: string; body: string; orgId: Types.ObjectId }>({
+        type: SCHEDULE_DAY_OFF_OVERRIDDEN,
+        recipientId: user.userId,
+      })
+      .sort({ _id: 1 })
+      .toArray();
+
+  function deleteOnBehalf(input: Record<string, unknown>) {
+    return gql(manager, DELETE_ON_BEHALF, {
+      input: { orgId: String(zhongshan), ...input },
+    });
+  }
+
   const ids = (...users: ScheduleTestUser[]) =>
     users
       .map((user) => String(user.userId))
@@ -845,6 +866,106 @@ describe("畫休(GraphQL 端點 + 真 MongoDB)", () => {
         kind: "full-day",
       });
       expect(errorOf(result)).toMatchObject({ code: "NOT_FOUND" });
+    });
+  });
+
+  describe("代改通知員工本人(schedule.day-off-overridden)", () => {
+    // 2027-04 的開放期間是 2027/3/15–3/25(11/20 時還沒開放,原因選填;其他測試沒用到這個月)
+    it("代改儲存一次送出 = 一則(列出所有段落、代改人、原因);代改刪除一則寫刪除", async () => {
+      travelTo("2026-11-20");
+      const saved = dataOf(
+        await onBehalf({
+          userId: String(li.userId),
+          date: iso("2027-04-06"),
+          kind: "time-range",
+          slots: [
+            slot("2027-04-06", "09:00", "12:00"),
+            slot("2027-04-06", "14:00", "18:00"),
+          ],
+          reason: "other",
+          reasonNote: "支援活動",
+        }),
+        "addScheduleDayOffsOnBehalf",
+      );
+      expect(saved.items).toHaveLength(2);
+      const added = await overriddenOf(li);
+      expect(added).toHaveLength(1);
+      expect(added[0]).toMatchObject({
+        title: "畫休被代改:2027-04-06",
+        body: "李店長 在「中山店」替你登記了 2027-04-06 的時段不可排(09:00–12:00、14:00–18:00)。原因:other(支援活動)",
+        orgId: zhongshan,
+      });
+
+      // 整天畫休、截止前沒給原因:不寫原因
+      dataOf(
+        await onBehalf({
+          userId: String(li.userId),
+          date: iso("2027-04-07"),
+          kind: "full-day",
+        }),
+        "addScheduleDayOffsOnBehalf",
+      );
+      const afterFullDay = await overriddenOf(li);
+      expect(afterFullDay.at(-1)?.body).toBe(
+        "李店長 在「中山店」替你登記了 2027-04-07 的整天畫休。",
+      );
+
+      // 刪除其中一段:同一種類型,內容寫刪除
+      dataOf(
+        await deleteOnBehalf({
+          id: saved.items[0]?.id,
+          reason: "entry-error",
+        }),
+        "deleteScheduleDayOffOnBehalf",
+      );
+      const all = await overriddenOf(li);
+      expect(all).toHaveLength(3);
+      expect(all.at(-1)).toMatchObject({
+        title: "畫休被代改:2027-04-06",
+        body: "李店長 在「中山店」刪除了你 2027-04-06 的時段不可排(09:00–12:00)。原因:entry-error",
+      });
+    });
+
+    it("代改自己的畫休(店長也是排班人員)不送", async () => {
+      travelTo("2026-11-20");
+      const saved = dataOf(
+        await onBehalf({
+          userId: String(manager.userId),
+          date: iso("2027-04-08"),
+          kind: "full-day",
+        }),
+        "addScheduleDayOffsOnBehalf",
+      );
+      dataOf(
+        await deleteOnBehalf({ id: saved.items[0]?.id }),
+        "deleteScheduleDayOffOnBehalf",
+      );
+      expect(await overriddenOf(manager)).toEqual([]);
+    });
+
+    it("通知送出失敗(站內 / email 轉接器都丟錯)不影響儲存", async () => {
+      travelTo("2026-11-20");
+      const adapters = api.app.get<readonly NotificationChannelAdapter[]>(
+        NOTIFICATION_CHANNEL_ADAPTERS,
+        { strict: false },
+      );
+      const spies = adapters.map((adapter) =>
+        jest
+          .spyOn(adapter, "deliver")
+          .mockRejectedValue(new Error("模擬通知送出失敗")),
+      );
+      const saved = dataOf(
+        await onBehalf({
+          userId: String(wang.userId),
+          date: iso("2027-04-09"),
+          kind: "full-day",
+        }),
+        "addScheduleDayOffsOnBehalf",
+      );
+      expect(saved.items[0]).toMatchObject({ kind: "full-day" });
+      expect(await dayOffIdOf(wang, "2027-04-09")).toBe(saved.items[0]?.id);
+      expect(await overriddenOf(wang)).toHaveLength(1);
+      expect(spies.some((spy) => spy.mock.calls.length > 0)).toBe(true);
     });
   });
 
