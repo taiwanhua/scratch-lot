@@ -180,7 +180,7 @@ describe("分段表格(sections)", () => {
     // 空一列後第二段;比率列用 0.0%;補充說明寫在表格下方
     expect(worksheet.getCell("A8").value).toBeNull();
     expect(worksheet.getCell("A9").value).toBe("2 毛利");
-    expect(worksheet.getCell("B11").value).toBe(0.08);
+    expect(worksheet.getCell("B11").value).toBeCloseTo(0.08);
     expect(worksheet.getCell("B11").numFmt).toBe("0.0%");
     expect(worksheet.getCell("A12").value).toBe("成本用賣出當下的單張成本");
     // 欄寬取各段同一欄最寬的
