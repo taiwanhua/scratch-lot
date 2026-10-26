@@ -1,11 +1,14 @@
 import { afterAll, beforeAll, describe, expect, it, jest } from "@jest/globals";
 
+import { isRealtimeSignal } from "@repo/domain/realtime";
+
 import {
   type AuthTestApp,
   startAuthTestApp,
 } from "../auth/test-support/auth-app";
 import { ok } from "../forms/test-support/form-fixtures";
 import { setModuleEnabled } from "../permission/test-support/fixtures";
+import { badgeSignalType } from "../realtime/realtime-publisher.service";
 import {
   type Person,
   WORKFLOW_MODULE,
@@ -201,6 +204,19 @@ describe("側欄計數(sidebarBadges)", () => {
       "apply-center": "admin.sidebarBadgeSettings.descriptions.apply-center",
       [WORKFLOW_MODULE]: null,
     });
+  });
+
+  it("每一筆登記的模組 key 都送得出側欄計數信號(`badge:<模組 key>`,模組 key 可帶 .)", () => {
+    const moduleKeys = api.app
+      .get(SidebarBadgeRegistry)
+      .badges()
+      .map((badge) => badge.moduleKey);
+    expect(moduleKeys.length).toBeGreaterThan(0);
+    expect(
+      moduleKeys.filter(
+        (moduleKey) => !isRealtimeSignal({ type: badgeSignalType(moduleKey) }),
+      ),
+    ).toEqual([]);
   });
 
   it("持有 view 的模組(有綁)行為不變;某一筆計算失敗只略過那一筆", async () => {

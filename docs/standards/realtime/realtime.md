@@ -25,6 +25,7 @@ Worker 跑在 V8(不是 Node),只用 fetch、WebSocket、WebCrypto;`@repo/domain
 - 理由:權限與可見範圍只由 API 判斷;Cloudflare 不留業務資料;連線當下沒訂閱的人錯過信號也沒關係(重連後補抓一次資料)。
 - 把關:`isRealtimeSignal` 拒絕 `type` / `id` 以外的欄位,Worker 的 `/publish` 收到夾帶資料的信號回 400;Durable Object 不寫 storage。
 - 要傳「哪一筆變了」用 `id`;要傳「變成什麼」就是該向 API 拿的資料,不放進信號。
+- **類型格式**:`<種類>`(小寫英數與連字號)或 `<種類>:<子類型>`;子類型可以是以 `.` 分段的 key(模組 key 帶 `.` 時的 `badge:<模組 key>`),每段英數、底線、連字號,不能以 `.` 開頭、結尾或連續兩個 `.`。正本 `packages/domain/src/realtime/topic.ts`;登記的每一個側欄計數模組 key 都要送得出信號(`apps/api/src/sidebar-badges/sidebar-badges.test.ts` 鎖住)。
 
 ## RT-04 訂閱憑證只放自己的頻道,看板頻道按需換發
 
