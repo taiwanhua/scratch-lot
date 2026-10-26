@@ -211,6 +211,52 @@ describe("點收刷條碼(規格 8.2 點收一本)", () => {
       kind: "invalid",
     });
   });
+
+  describe("單上多款遊戲同本號", () => {
+    const sameNo = [
+      line("r1"),
+      line("r2", { gameId: "g2", bookNo: "0056527", lastTicketNo: 100 }),
+    ];
+
+    it("正面的碼沒選遊戲 → 擋下,不自動配第一筆", () => {
+      expect(matchReceiveScan(sameNo, new Set(), "0056527100", codeOf)).toEqual(
+        { kind: "ambiguous_game", gameIds: ["g1", "g2"] },
+      );
+    });
+
+    it("其中一款已點收,也照樣請選遊戲", () => {
+      expect(
+        matchReceiveScan(sameNo, new Set(["r1"]), "0056527100", codeOf),
+      ).toEqual({ kind: "ambiguous_game", gameIds: ["g1", "g2"] });
+    });
+
+    it("選了遊戲 → 照所選的遊戲配對", () => {
+      expect(
+        matchReceiveScan(sameNo, new Set(), "0056527100", codeOf, "g2"),
+      ).toEqual({ kind: "match", row: sameNo[1] });
+    });
+
+    it("背面編號帶遊戲代號 → 直接配對(不看選的遊戲)", () => {
+      expect(
+        matchReceiveScan(sameNo, new Set(), "5201-1-056527-100-0-6", codeOf),
+      ).toEqual({ kind: "match", row: sameNo[1] });
+      expect(
+        matchReceiveScan(
+          sameNo,
+          new Set(),
+          "5164-1-056527-100-0-6",
+          codeOf,
+          "g2",
+        ),
+      ).toEqual({ kind: "match", row: sameNo[0] });
+    });
+
+    it("選的遊戲單上沒有這本 → not_on_purchase", () => {
+      expect(
+        matchReceiveScan(lines, new Set(), "0060116100", codeOf, "g1"),
+      ).toEqual({ kind: "not_on_purchase", bookNo: "0060116", gameCode: null });
+    });
+  });
 });
 
 describe("點收進度與「這一次」(規格 8.2 情境表)", () => {

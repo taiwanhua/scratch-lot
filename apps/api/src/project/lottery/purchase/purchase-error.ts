@@ -35,6 +35,8 @@ export const PURCHASE_REASONS = {
   notReceivable: "PURCHASE_NOT_RECEIVABLE",
   /** 點收:看不懂的碼 */
   scanInvalid: "PURCHASE_SCAN_INVALID",
+  /** 點收:正面的碼對到單上好幾款遊戲同本號、沒選遊戲(`extensions.gameIds` = 對到的遊戲) */
+  scanAmbiguousGame: "PURCHASE_SCAN_AMBIGUOUS_GAME",
   /** 點收:這一列已點收 */
   alreadyReceived: "PURCHASE_ALREADY_RECEIVED",
   /** 點收:刷到的最後張號和單上不同 → 請退回更正 */

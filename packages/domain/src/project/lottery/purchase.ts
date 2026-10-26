@@ -1,3 +1,4 @@
+import { matchBookScan } from "./book-scan";
 import { bookKeyOf, normalizeBookNo, parseTicketInput } from "./ticket-code";
 
 /**
@@ -270,29 +271,42 @@ export type ReceiveScanResult =
   | { kind: "already_received"; row: PurchaseLineValue }
   /** 刷到的最後張號和單上不同 → 擋下「請退回更正」 */
   | { kind: "last_ticket_mismatch"; row: PurchaseLineValue }
+  /** 正面的碼對到單上好幾款遊戲同本號 → 擋下,請刷背面編號或選遊戲(`gameIds` = 對到的遊戲) */
+  | { kind: "ambiguous_game"; gameIds: string[] }
   /** 單上沒有這本(再查是不是別家店的進貨單:送錯分店) */
   | { kind: "not_on_purchase"; bookNo: string; gameCode: string | null };
 
 /**
- * 刷到的碼(背面編號 / 正面編號 / 正面條碼)對這張單的明細:背面編號有遊戲代號,遊戲 + 本號都要對;
- * 正面的碼沒有遊戲代號,只用本號對。刷的是這本的**最後一張**:張號要等於單上的最後張號。
+ * 刷到的碼(背面編號 / 正面編號 / 正面條碼)對這張單的明細(`matchBookScan`):背面編號有遊戲代號,遊戲 + 本號都要對;
+ * 正面的碼沒有遊戲代號,用本號對 —— 有選遊戲(`pickedGameId`)只看那款遊戲;沒選而單上有好幾款遊戲同本號 →
+ * `ambiguous_game`(不自動配第一筆)。刷的是這本的**最後一張**:張號要等於單上的最後張號。
  */
 export function matchReceiveScan(
   lines: readonly PurchaseLineValue[],
   receivedRowIds: ReadonlySet<string>,
   raw: string,
   gameCodeOf: (gameId: string) => string | undefined,
+  pickedGameId: string | null = null,
 ): ReceiveScanResult {
   const parsed = parseTicketInput(raw);
   if (parsed === null) {
     return { kind: "invalid" };
   }
   const gameCode = parsed.gameCode ?? null;
-  const row = lines.find(
-    (line) =>
-      line.bookNo === parsed.bookNo &&
-      (gameCode === null || gameCodeOf(line.gameId) === gameCode),
+  const matched = matchBookScan(
+    lines,
+    { gameCode, bookNo: parsed.bookNo },
+    (line) => ({
+      gameId: line.gameId,
+      gameCode: gameCodeOf(line.gameId),
+      bookNo: line.bookNo,
+    }),
+    pickedGameId,
   );
+  if (matched.kind === "ambiguous_game") {
+    return matched;
+  }
+  const row = matched.kind === "matched" ? matched.items[0] : undefined;
   if (row === undefined) {
     return { kind: "not_on_purchase", bookNo: parsed.bookNo, gameCode };
   }

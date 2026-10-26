@@ -37,6 +37,8 @@ export const TRANSFER_REASONS = {
   notReceivable: "TRANSFER_NOT_RECEIVABLE",
   /** 點收:看不懂的碼 */
   scanInvalid: "TRANSFER_SCAN_INVALID",
+  /** 點收:正面的碼對到單上好幾款遊戲同本號、沒選遊戲(`extensions.gameIds` = 對到的遊戲) */
+  scanAmbiguousGame: "TRANSFER_SCAN_AMBIGUOUS_GAME",
   /** 點收:這一列已點收 */
   alreadyReceived: "TRANSFER_ALREADY_RECEIVED",
   /** 點收:這列還沒出貨(第一關還沒通過) */

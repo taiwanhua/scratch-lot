@@ -4560,7 +4560,7 @@ type Query {
   lotteryPeriodCloses: LotteryPeriodCloses!
   lotteryPositionOptions(orgId: ID!): LotteryPositionOptionsPayload!
   lotteryPurchaseList: LotteryPurchaseList!
-  lotteryPurchaseOptions(orgId: ID!): LotteryPurchaseOptions!
+  lotteryPurchaseOptions(orgId: ID!, submissionId: ID): LotteryPurchaseOptions!
   lotteryPurchaseProgress(purchaseIds: [ID!]!): [LotteryPurchaseProgress!]!
   lotteryPurchaseReceiving(submissionId: ID!): LotteryPurchaseReceiving!
   lotteryPurchaseRedemptionRecords(submissionId: ID!): [LotteryRedemption!]!
@@ -4596,7 +4596,7 @@ type Query {
   lotteryStoreUnopenedBooks(orgId: ID!): LotteryStoreUnopenedBooksPayload!
   lotteryTicketLookup(input: LotteryTicketLookupInput!): LotteryTicketLookupPayload!
   lotteryTransferBookTickets(bookId: ID!, fromOrgId: ID!): [LotteryTransferTicketCell!]!
-  lotteryTransferOptions(fromOrgId: ID!, toOrgId: ID): LotteryTransferOptions!
+  lotteryTransferOptions(fromOrgId: ID!, submissionId: ID, toOrgId: ID): LotteryTransferOptions!
   lotteryTransferProgress(transferIds: [ID!]!): [LotteryTransferProgress!]!
   lotteryTransferReceiving(submissionId: ID!): LotteryTransferReceiving!
   makeupPunchEntryExists(submissionId: ID!): Boolean!
@@ -4719,6 +4719,7 @@ input RecallLotteryTicketsInput {
 
 input ReceiveLotteryPurchaseBookInput {
   code: String!
+  gameId: ID
   submissionId: ID!
 }
 
@@ -4729,6 +4730,7 @@ type ReceiveLotteryPurchaseBookPayload {
 
 input ReceiveLotteryTransferBookInput {
   code: String!
+  gameId: ID
   submissionId: ID!
 }
 

@@ -324,18 +324,21 @@ describe("調貨單(規格 8.4、第 9 章)", () => {
   }
 
   /** 點收一本到某家店(100 張,整本金額 2,000;成本率 100、成本 2,000 → 單張 20)。 */
-  async function newBook(orgId: Types.ObjectId): Promise<{
+  async function newBook(
+    orgId: Types.ObjectId,
+    other: { gameId: Types.ObjectId; bookNo: string } | null = null,
+  ): Promise<{
     bookId: Types.ObjectId;
     bookNo: string;
   }> {
     bookSequence += 1;
-    const bookNo = String(bookSequence).padStart(6, "0");
+    const bookNo = other?.bookNo ?? String(bookSequence).padStart(6, "0");
     const { book } = await transactions().withTransaction((session) =>
       api.app
         .get(LotteryBooksService)
         .createBook(session, storeOperator(orgId), {
           orgId,
-          gameId: game,
+          gameId: other?.gameId ?? game,
           bookNo,
           lastTicketNo: 100,
           rate: 100,
@@ -500,9 +503,10 @@ describe("調貨單(規格 8.4、第 9 章)", () => {
     who: Person,
     submissionId: string,
     code: string,
+    gameId: string | null = null,
   ): Promise<Record<string, unknown>> {
     const result = await call(api, who.token, RECEIVE, {
-      input: { submissionId, code },
+      input: { submissionId, code, ...(gameId === null ? {} : { gameId }) },
     });
     return result.errors ? extensionsOf(result) : {};
   }
@@ -1110,6 +1114,41 @@ describe("調貨單(規格 8.4、第 9 章)", () => {
   });
 
   describe("點收一本", () => {
+    it("正面條碼對到單上兩款遊戲同本號 → 擋下請選遊戲;選了遊戲才配對", async () => {
+      const otherGame = await insertGame(db(), tenant, {
+        gameCode: "5202",
+        name: "金好運",
+        unitPrice: 20,
+        ticketsPerBook: 100,
+      });
+      const first = await newBook(branchA);
+      const second = await newBook(branchA, {
+        gameId: otherGame,
+        bookNo: first.bookNo.slice(1),
+      });
+      const firstLine = whole(first.bookId);
+      const secondLine = whole(second.bookId, { game: String(otherGame) });
+      const id = await submit(hq, [firstLine, secondLine]);
+      await ship(id);
+      expect(
+        await receive(managerB, id, codeOf(first.bookNo, 5)),
+      ).toMatchObject({
+        code: "VALIDATION_FAILED",
+        reason: "TRANSFER_SCAN_AMBIGUOUS_GAME",
+        gameIds: [String(game), String(otherGame)],
+      });
+      const picked = await ok<{
+        receiveLotteryTransferBook: { rowId: string };
+      }>(api, managerB.token, RECEIVE, {
+        input: {
+          submissionId: id,
+          code: codeOf(first.bookNo, 5),
+          gameId: String(otherGame),
+        },
+      });
+      expect(picked.receiveLotteryTransferBook.rowId).toBe(secondLine.rowId);
+    });
+
     it("改為收貨店庫存 + 「調入」事件,單張成本 = 該列批購金額 ÷ 張數;選張只搬選的張", async () => {
       const opened = await newBook(branchA);
       await openBook(branchA, opened.bookId);

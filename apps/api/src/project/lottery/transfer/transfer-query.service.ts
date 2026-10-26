@@ -91,6 +91,7 @@ export class TransferQueryService {
     operator: OperatorContext,
     fromId: Types.ObjectId,
     toId: Types.ObjectId | null,
+    editingId: Types.ObjectId | null = null,
   ): Promise<LotteryTransferOptionsModel> {
     const reader = await this.readerFor(operator, fromId);
     const available = (await this.tickets.findMany(
@@ -170,7 +171,7 @@ export class TransferQueryService {
     return {
       books,
       requisitions:
-        toId === null ? [] : await this.requisitionsOf(reader, toId),
+        toId === null ? [] : await this.requisitionsOf(reader, toId, editingId),
       allocations:
         toId === null
           ? []
@@ -340,14 +341,29 @@ export class TransferQueryService {
     }));
   }
 
-  /** 收貨店待購買的叫貨單(有效、未被引用的副本列,依叫貨單合計本數)。 */
+  /**
+   * 收貨店待購買的叫貨單(有效、未被引用的副本列,依叫貨單合計本數);編輯中的調貨單(`editingId`)
+   * 另含它自己已引用的那張(退回修改時叫貨單仍是「已調貨」,要能照原樣帶入)。
+   */
   private async requisitionsOf(
     reader: OperatorContext,
     toId: Types.ObjectId,
+    editingId: Types.ObjectId | null,
   ): Promise<LotteryTransferRequisitionModel[]> {
     const rows = await this.requisitionLines.findMany(
       reader,
-      { orgId: toId, voidedAt: null, referencedBy: null },
+      {
+        orgId: toId,
+        voidedAt: null,
+        ...(editingId === null
+          ? { referencedBy: null }
+          : {
+              $or: [
+                { referencedBy: null },
+                { "referencedBy.submissionId": editingId },
+              ],
+            }),
+      },
       {
         select: "requisitionId serialNo books completedAt",
         sort: { completedAt: -1, _id: 1 },

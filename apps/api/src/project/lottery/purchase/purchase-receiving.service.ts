@@ -190,9 +190,15 @@ export class PurchaseReceivingService {
     operator: OperatorContext,
     submissionIdText: string,
     code: string,
+    gameId: string | null = null,
   ): Promise<ReceiveLotteryPurchaseBookPayload> {
     const submission = await this.readable(operator, submissionIdText);
-    const rowId = await this.receiveInTransaction(operator, submission, code);
+    const rowId = await this.receiveInTransaction(
+      operator,
+      submission,
+      code,
+      gameId,
+    );
     return {
       rowId,
       receiving: await this.toModel(
@@ -210,6 +216,7 @@ export class PurchaseReceivingService {
     operator: OperatorContext,
     submission: SubmissionDoc,
     code: string,
+    gameId: string | null,
   ): Promise<string> {
     try {
       return await this.tx.withTransaction(async (session) => {
@@ -236,13 +243,22 @@ export class PurchaseReceivingService {
           lines,
           received,
           code,
-          (gameId) => games.get(gameId)?.gameCode,
+          (lineGameId) => games.get(lineGameId)?.gameCode,
+          gameId,
         );
         if (result.kind === "invalid") {
           throw validationError(
             "Unknown code",
             ["code"],
             PURCHASE_REASONS.scanInvalid,
+          );
+        }
+        if (result.kind === "ambiguous_game") {
+          throw validationError(
+            "Several games on this purchase share the book number; scan the back code or pick a game",
+            ["code"],
+            PURCHASE_REASONS.scanAmbiguousGame,
+            { gameIds: result.gameIds },
           );
         }
         if (result.kind === "not_on_purchase") {

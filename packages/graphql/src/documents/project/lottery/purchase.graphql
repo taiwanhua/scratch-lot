@@ -35,8 +35,9 @@ fragment LotteryPurchaseReceivingFields on LotteryPurchaseReceiving {
   }
 }
 
-query LotteryPurchaseOptions($orgId: ID!) {
-  lotteryPurchaseOptions(orgId: $orgId) {
+# submissionId:編輯中的那張進貨單(叫貨單清單另含它已引用的那張);新增頁不給
+query LotteryPurchaseOptions($orgId: ID!, $submissionId: ID) {
+  lotteryPurchaseOptions(orgId: $orgId, submissionId: $submissionId) {
     dealers {
       id
       label
@@ -107,6 +108,7 @@ query LotteryDealerPurchases($dealerId: ID!) {
   }
 }
 
+# ReceiveLotteryPurchaseBookInput: { submissionId, code, gameId? }(gameId = 同本號多款遊戲時選的遊戲)
 mutation ReceiveLotteryPurchaseBook($input: ReceiveLotteryPurchaseBookInput!) {
   receiveLotteryPurchaseBook(input: $input) {
     rowId

@@ -41,11 +41,22 @@ export class PurchaseResolver {
   lotteryPurchaseOptions(
     @Args("orgId", { type: () => ID }) orgId: string,
     @CurrentOperator() operator: OperatorContext,
+    /** 編輯中的那張進貨單(草稿 / 退回):叫貨單清單另含它已引用的那張;新增頁不給 */
+    @Args("submissionId", { type: () => ID, nullable: true })
+    submissionId?: string | null,
   ): Promise<LotteryPurchaseOptionsModel> {
     if (!Types.ObjectId.isValid(orgId)) {
       throw notFoundError("分店不存在");
     }
-    return this.query.optionsOf(operator, new Types.ObjectId(orgId));
+    return this.query.optionsOf(
+      operator,
+      new Types.ObjectId(orgId),
+      submissionId !== null &&
+        submissionId !== undefined &&
+        Types.ObjectId.isValid(submissionId)
+        ? new Types.ObjectId(submissionId)
+        : null,
+    );
   }
 
   @RequirePermission(PURCHASE_PERMISSIONS.view)
@@ -96,7 +107,12 @@ export class PurchaseResolver {
     @Args("input") input: ReceiveLotteryPurchaseBookInput,
     @CurrentOperator() operator: OperatorContext,
   ): Promise<ReceiveLotteryPurchaseBookPayload> {
-    return this.receiving.receive(operator, input.submissionId, input.code);
+    return this.receiving.receive(
+      operator,
+      input.submissionId,
+      input.code,
+      input.gameId ?? null,
+    );
   }
 
   @Mutation(() => CompleteLotteryPurchaseReceivingPayload)

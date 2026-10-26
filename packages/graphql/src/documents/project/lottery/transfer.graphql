@@ -28,8 +28,13 @@ fragment LotteryTransferReceivingFields on LotteryTransferReceiving {
   }
 }
 
-query LotteryTransferOptions($fromOrgId: ID!, $toOrgId: ID) {
-  lotteryTransferOptions(fromOrgId: $fromOrgId, toOrgId: $toOrgId) {
+# submissionId:編輯中的那張調貨單(叫貨單清單另含它已引用的那張);新增頁不給
+query LotteryTransferOptions($fromOrgId: ID!, $toOrgId: ID, $submissionId: ID) {
+  lotteryTransferOptions(
+    fromOrgId: $fromOrgId
+    toOrgId: $toOrgId
+    submissionId: $submissionId
+  ) {
     books {
       bookId
       gameId
@@ -83,6 +88,7 @@ query LotteryTransferReceiving($submissionId: ID!) {
   }
 }
 
+# ReceiveLotteryTransferBookInput: { submissionId, code, gameId? }(gameId = 同本號多款遊戲時選的遊戲)
 mutation ReceiveLotteryTransferBook($input: ReceiveLotteryTransferBookInput!) {
   receiveLotteryTransferBook(input: $input) {
     rowId

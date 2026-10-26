@@ -6,6 +6,7 @@ import {
   payerDefaultAmount,
   receivedNetOf,
 } from "../lottery-accounts/settlement";
+import { type ScanBookFacts, matchBookScan } from "./book-scan";
 import { purchaseAmountOf } from "./purchase";
 import { formatTicketNo, parseTicketInput } from "./ticket-code";
 
@@ -349,4 +350,48 @@ export function transferScanOf(raw: string): TransferScan | null {
         bookNo: parsed.bookNo,
         ticketNo: parsed.ticketNo,
       };
+}
+
+/** 調貨點收刷到的碼對到哪一列(規格 8.4「點收一本」)。 */
+export type TransferScanMatch<T> =
+  | { kind: "match"; line: T }
+  /** 正面的碼對到單上好幾款遊戲同本號 → 擋下,請刷背面編號或選遊戲 */
+  | { kind: "ambiguous_game"; gameIds: string[] }
+  /** 單上有這本、但刷到的那張不在任何一列(選張沒選到它) */
+  | { kind: "ticket_not_on_transfer" }
+  /** 單上沒有這本(再查是不是送往別家店的調貨單:送錯分店) */
+  | { kind: "not_on_transfer" };
+
+/**
+ * 刷到的碼對這張調貨單的明細(`matchBookScan`;本號 + 遊戲代號,正面的碼另看選的遊戲):
+ * 整本的列刷哪一張都算,選張的列要刷到選的張。`bookOf` = 這一列的本(遊戲 id、遊戲代號、本號)。
+ */
+export function matchTransferScan<
+  T extends Pick<TransferLineValue, "bookId" | "mode" | "ticketNos">,
+>(
+  lines: readonly T[],
+  bookOf: (bookId: string) => ScanBookFacts | undefined,
+  scan: TransferScan,
+  pickedGameId: string | null = null,
+): TransferScanMatch<T> {
+  const matched = matchBookScan(
+    lines,
+    scan,
+    (line) => bookOf(line.bookId),
+    pickedGameId,
+  );
+  if (matched.kind === "ambiguous_game") {
+    return matched;
+  }
+  if (matched.kind === "none") {
+    return { kind: "not_on_transfer" };
+  }
+  const line = matched.items.find(
+    (item) =>
+      item.mode === TRANSFER_MODE.whole ||
+      item.ticketNos.includes(scan.ticketNo),
+  );
+  return line === undefined
+    ? { kind: "ticket_not_on_transfer" }
+    : { kind: "match", line };
 }

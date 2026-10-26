@@ -12,6 +12,7 @@ import {
   type TransferLineValue,
   type TransferScan,
   displayBookNo,
+  matchTransferScan,
   transferHeaderOf,
   transferLinesOf,
   transferScanOf,
@@ -66,28 +67,6 @@ function alreadyReceivedError(rowId: string | null) {
   );
 }
 
-/** 刷到的碼對到這張單的哪一列(本號 + 遊戲代號;選張另看張號)。 */
-function rowOf(
-  lines: readonly TransferLineValue[],
-  books: ReadonlyMap<string, TransferBook>,
-  scan: TransferScan,
-): { line: TransferLineValue | null; sameBook: boolean } {
-  const onBook = lines.filter((line) => {
-    const book = books.get(line.bookId);
-    return (
-      book?.bookNo === scan.bookNo &&
-      (scan.gameCode === null || book.gameCode === scan.gameCode)
-    );
-  });
-  const line =
-    onBook.find(
-      (item) =>
-        item.mode === TRANSFER_MODE.whole ||
-        item.ticketNos.includes(scan.ticketNo),
-    ) ?? null;
-  return { line, sameBook: onBook.length > 0 };
-}
-
 /**
  * 調貨點收(專案規格 8.4「點收一本」、送錯分店同進貨單;正本 `docs/modules/project/purchasing.md`「調貨單」):
  *
@@ -137,9 +116,15 @@ export class TransferReceivingService {
     operator: OperatorContext,
     submissionIdText: string,
     code: string,
+    gameId: string | null = null,
   ): Promise<ReceiveLotteryTransferBookPayload> {
     const submission = await this.access.readable(operator, submissionIdText);
-    const rowId = await this.receiveInTransaction(operator, submission, code);
+    const rowId = await this.receiveInTransaction(
+      operator,
+      submission,
+      code,
+      gameId,
+    );
     return {
       rowId,
       receiving: await this.toModel(
@@ -154,6 +139,7 @@ export class TransferReceivingService {
     operator: OperatorContext,
     submission: TransferSubmission,
     code: string,
+    gameId: string | null,
   ): Promise<string> {
     try {
       return await this.tx.withTransaction(async (session) => {
@@ -174,12 +160,36 @@ export class TransferReceivingService {
         const reader = await this.rules.readerOf(submission.tenantId);
         const lines = transferLinesOf(submission.values);
         const books = await this.rules.booksOf(reader, lines);
-        const { line, sameBook } = rowOf(lines, books, scan);
-        if (line === null) {
-          throw sameBook
-            ? this.notOnTransferError()
-            : await this.notOnTransferOrWrongStore(submission, scan);
+        const matched = matchTransferScan(
+          lines,
+          (bookId) => {
+            const book = books.get(bookId);
+            return book === undefined
+              ? undefined
+              : {
+                  gameId: String(book.gameId),
+                  gameCode: book.gameCode,
+                  bookNo: book.bookNo,
+                };
+          },
+          scan,
+          gameId,
+        );
+        if (matched.kind === "ambiguous_game") {
+          throw validationError(
+            "Several games on this transfer share the book number; scan the back code or pick a game",
+            ["code"],
+            TRANSFER_REASONS.scanAmbiguousGame,
+            { gameIds: matched.gameIds },
+          );
         }
+        if (matched.kind === "ticket_not_on_transfer") {
+          throw this.notOnTransferError();
+        }
+        if (matched.kind === "not_on_transfer") {
+          throw await this.notOnTransferOrWrongStore(submission, scan);
+        }
+        const { line } = matched;
         const receipts = await this.rules.receiptsOf(
           reader,
           submission._id,

@@ -48,11 +48,19 @@ export class TransferResolver {
     @Args("toOrgId", { type: () => ID, nullable: true })
     toOrgId: string | null,
     @CurrentOperator() operator: OperatorContext,
+    /** 編輯中的那張調貨單(草稿 / 退回):叫貨單清單另含它已引用的那張;新增頁不給 */
+    @Args("submissionId", { type: () => ID, nullable: true })
+    submissionId?: string | null,
   ): Promise<LotteryTransferOptionsModel> {
     return this.query.optionsOf(
       operator,
       orgIdOf(fromOrgId),
       toOrgId === null || toOrgId === "" ? null : orgIdOf(toOrgId),
+      submissionId !== null &&
+        submissionId !== undefined &&
+        Types.ObjectId.isValid(submissionId)
+        ? new Types.ObjectId(submissionId)
+        : null,
     );
   }
 
@@ -94,7 +102,12 @@ export class TransferResolver {
     @Args("input") input: ReceiveLotteryTransferBookInput,
     @CurrentOperator() operator: OperatorContext,
   ): Promise<ReceiveLotteryTransferBookPayload> {
-    return this.receiving.receive(operator, input.submissionId, input.code);
+    return this.receiving.receive(
+      operator,
+      input.submissionId,
+      input.code,
+      input.gameId ?? null,
+    );
   }
 
   /** 送錯分店的 [通知總部更正]:通知那張(送往別家分店的)調貨單的建立者。 */

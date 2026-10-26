@@ -203,8 +203,8 @@ const DEALER_PURCHASES = /* GraphQL */ `
 `;
 
 const OPTIONS = /* GraphQL */ `
-  query TestOptions($orgId: ID!) {
-    lotteryPurchaseOptions(orgId: $orgId) {
+  query TestOptions($orgId: ID!, $submissionId: ID) {
+    lotteryPurchaseOptions(orgId: $orgId, submissionId: $submissionId) {
       dealers {
         id
       }
@@ -394,9 +394,10 @@ describe("進貨單(規格 8.2、8.3)", () => {
     who: Person,
     submissionId: string,
     code: string,
+    gameId: string | null = null,
   ): Promise<Record<string, unknown>> {
     const result = await call(api, who.token, RECEIVE, {
-      input: { submissionId, code },
+      input: { submissionId, code, ...(gameId === null ? {} : { gameId }) },
     });
     return result.errors ? extensionsOf(result) : {};
   }
@@ -876,6 +877,18 @@ describe("進貨單(規格 8.2、8.3)", () => {
         submissionId?: Types.ObjectId;
       } | null;
       expect(String(referencedBy?.submissionId)).toBe(purchase.id);
+      // 編輯這張單(退回修改)時,叫貨單清單另含它已引用的 R-9010;新增頁(不帶單號)不列
+      const listed = async (submissionId: string | null) =>
+        (
+          await ok<{
+            lotteryPurchaseOptions: { requisitions: { serialNo: string }[] };
+          }>(api, hq.token, OPTIONS, {
+            orgId: String(branchA),
+            submissionId,
+          })
+        ).lotteryPurchaseOptions.requisitions.map((item) => item.serialNo);
+      expect(await listed(null)).not.toContain("R-9010");
+      expect(await listed(purchase.id)).toContain("R-9010");
       // 點收區塊顯示「叫貨 2,已刷 0」
       const receiving = await ok<{
         lotteryPurchaseReceiving: {
@@ -1233,6 +1246,31 @@ describe("進貨單(規格 8.2、8.3)", () => {
         code: "FORBIDDEN",
         reason: PURCHASE_REASONS.notReceivable,
       });
+    });
+
+    it("正面條碼對到單上兩款遊戲同本號 → 擋下請選遊戲;選了遊戲 / 刷背面編號才配對", async () => {
+      const hot = book(gameHot);
+      const gold = book(gameGold, { book_no: hot.book_no });
+      const purchase = await submit([hot, gold]);
+      const front = `0${hot.book_no.slice(1)}100`;
+      expect(await receive(managerA, purchase.id, front)).toMatchObject({
+        code: "VALIDATION_FAILED",
+        reason: PURCHASE_REASONS.scanAmbiguousGame,
+        gameIds: [String(gameHot), String(gameGold)],
+      });
+      expect(
+        await db()
+          .collection("lottery_purchase_receipts")
+          .countDocuments({ submissionId: new Types.ObjectId(purchase.id) }),
+      ).toBe(0);
+      expect(
+        await receive(managerA, purchase.id, front, String(gameGold)),
+      ).toEqual({});
+      const receipt = await db()
+        .collection("lottery_purchase_receipts")
+        .findOne({ submissionId: new Types.ObjectId(purchase.id) });
+      expect(receipt?.rowId).toBe(gold.rowId);
+      expect(await receive(managerA, purchase.id, codeOf(hot))).toEqual({});
     });
 
     it("同一本同時刷兩次:一個點收成功,另一個是「已點收」(撞唯一索引也一樣)", async () => {

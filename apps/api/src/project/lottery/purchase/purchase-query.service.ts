@@ -89,6 +89,7 @@ export class PurchaseQueryService {
   async optionsOf(
     operator: OperatorContext,
     orgId: Types.ObjectId,
+    editingId: Types.ObjectId | null = null,
   ): Promise<LotteryPurchaseOptionsModel> {
     const tenantId = tenantOfOperator(operator)?.tenantId ?? null;
     if (tenantId === null || !isOrgVisible(operator, orgId)) {
@@ -101,7 +102,7 @@ export class PurchaseQueryService {
         { select: "name licenseNo" },
       ),
       this.settlement.usableAccountsOf(operator, tenantId, orgId),
-      this.requisitionsOf(operator, orgId),
+      this.requisitionsOf(operator, orgId, editingId),
       this.games.findMany(
         operator,
         { status: GAME_STATUS.onSale },
@@ -259,14 +260,29 @@ export class PurchaseQueryService {
 
   // ---- 內部 ----
 
-  /** 這家店待購買的叫貨單(有效、未被引用的副本列,依叫貨單分組)。 */
+  /**
+   * 這家店待購買的叫貨單(有效、未被引用的副本列,依叫貨單分組);編輯中的進貨單(`editingId`)
+   * 另含它自己已引用的那張(退回修改時叫貨單仍是「已進貨」,要能照原樣帶入)。
+   */
   private async requisitionsOf(
     operator: OperatorContext,
     orgId: Types.ObjectId,
+    editingId: Types.ObjectId | null,
   ): Promise<LotteryPurchaseRequisitionModel[]> {
     const rows = await this.requisitionLines.findMany(
       operator,
-      { orgId, voidedAt: null, referencedBy: null },
+      {
+        orgId,
+        voidedAt: null,
+        ...(editingId === null
+          ? { referencedBy: null }
+          : {
+              $or: [
+                { referencedBy: null },
+                { "referencedBy.submissionId": editingId },
+              ],
+            }),
+      },
       {
         select: "requisitionId serialNo gameId books completedAt",
         sort: { completedAt: -1, _id: 1 },

@@ -6239,6 +6239,7 @@ export type QueryLotteryPositionOptionsArgs = {
 
 export type QueryLotteryPurchaseOptionsArgs = {
   orgId: Scalars['ID']['input'];
+  submissionId?: InputMaybe<Scalars['ID']['input']>;
 };
 
 
@@ -6420,6 +6421,7 @@ export type QueryLotteryTransferBookTicketsArgs = {
 
 export type QueryLotteryTransferOptionsArgs = {
   fromOrgId: Scalars['ID']['input'];
+  submissionId?: InputMaybe<Scalars['ID']['input']>;
   toOrgId?: InputMaybe<Scalars['ID']['input']>;
 };
 
@@ -6750,6 +6752,7 @@ export type RecallLotteryTicketsInput = {
 
 export type ReceiveLotteryPurchaseBookInput = {
   code: Scalars['String']['input'];
+  gameId?: InputMaybe<Scalars['ID']['input']>;
   submissionId: Scalars['ID']['input'];
 };
 
@@ -6761,6 +6764,7 @@ export type ReceiveLotteryPurchaseBookPayload = {
 
 export type ReceiveLotteryTransferBookInput = {
   code: Scalars['String']['input'];
+  gameId?: InputMaybe<Scalars['ID']['input']>;
   submissionId: Scalars['ID']['input'];
 };
 
@@ -10792,6 +10796,7 @@ export type LotteryPurchaseReceivingFieldsFragment = { __typename?: 'LotteryPurc
 
 export type LotteryPurchaseOptionsQueryVariables = Exact<{
   orgId: Scalars['ID']['input'];
+  submissionId?: InputMaybe<Scalars['ID']['input']>;
 }>;
 
 
@@ -11186,6 +11191,7 @@ export type LotteryTransferReceivingFieldsFragment = { __typename?: 'LotteryTran
 export type LotteryTransferOptionsQueryVariables = Exact<{
   fromOrgId: Scalars['ID']['input'];
   toOrgId?: InputMaybe<Scalars['ID']['input']>;
+  submissionId?: InputMaybe<Scalars['ID']['input']>;
 }>;
 
 
@@ -22499,8 +22505,8 @@ export const useCloseLotteryPeriodMutation = <
 useCloseLotteryPeriodMutation.fetcher = (client: GraphQLClient, variables: CloseLotteryPeriodMutationVariables, headers?: RequestInit['headers']) => fetcher<CloseLotteryPeriodMutation, CloseLotteryPeriodMutationVariables>(client, CloseLotteryPeriodDocument, variables, headers);
 
 export const LotteryPurchaseOptionsDocument = `
-    query LotteryPurchaseOptions($orgId: ID!) {
-  lotteryPurchaseOptions(orgId: $orgId) {
+    query LotteryPurchaseOptions($orgId: ID!, $submissionId: ID) {
+  lotteryPurchaseOptions(orgId: $orgId, submissionId: $submissionId) {
     dealers {
       id
       label
@@ -24533,8 +24539,12 @@ useLotteryReceiptLinksQuery.getKey = (variables?: LotteryReceiptLinksQueryVariab
 useLotteryReceiptLinksQuery.fetcher = (client: GraphQLClient, variables?: LotteryReceiptLinksQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryReceiptLinksQuery, LotteryReceiptLinksQueryVariables>(client, LotteryReceiptLinksDocument, variables, headers);
 
 export const LotteryTransferOptionsDocument = `
-    query LotteryTransferOptions($fromOrgId: ID!, $toOrgId: ID) {
-  lotteryTransferOptions(fromOrgId: $fromOrgId, toOrgId: $toOrgId) {
+    query LotteryTransferOptions($fromOrgId: ID!, $toOrgId: ID, $submissionId: ID) {
+  lotteryTransferOptions(
+    fromOrgId: $fromOrgId
+    toOrgId: $toOrgId
+    submissionId: $submissionId
+  ) {
     books {
       bookId
       gameId

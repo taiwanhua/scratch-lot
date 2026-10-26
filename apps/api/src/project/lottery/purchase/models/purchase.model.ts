@@ -329,4 +329,11 @@ export class ReceiveLotteryPurchaseBookInput {
   /** 刷到的碼(背面編號 / 正面編號 / 正面條碼;刷這本的最後一張)。 */
   @Field(() => String)
   code!: string;
+
+  /**
+   * 選的遊戲(正面的碼對到單上好幾款遊戲同本號時,畫面請操作者選;背面編號不看)。
+   * 缺席 / null = 沒選:對到好幾款遊戲 → `PURCHASE_SCAN_AMBIGUOUS_GAME`。
+   */
+  @Field(() => ID, { nullable: true })
+  gameId?: string | null;
 }

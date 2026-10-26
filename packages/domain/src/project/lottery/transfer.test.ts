@@ -3,6 +3,7 @@ import { describe, expect, it } from "@jest/globals";
 import type { SettlementSideTotals } from "../lottery-accounts/settlement";
 import {
   TRANSFER_FIELD_KEYS as K,
+  matchTransferScan,
   parseTicketNos,
   receivedTransferAmountOf,
   ticketNosText,
@@ -129,6 +130,61 @@ describe("調貨單(規格 8.4)", () => {
       ticketNo: "099",
     });
     expect(transferScanOf("x")).toBeNull();
+  });
+
+  describe("點收刷到的碼對到哪一列", () => {
+    const books = new Map([
+      ["b1", { gameId: "g1", gameCode: "5164", bookNo: "0056527" }],
+      ["b2", { gameId: "g2", gameCode: "5201", bookNo: "0056527" }],
+      ["b3", { gameId: "g1", gameCode: "5164", bookNo: "0060116" }],
+    ]);
+    const lines = [
+      { rowId: "r1", bookId: "b1", mode: "whole" as const, ticketNos: [] },
+      { rowId: "r2", bookId: "b2", mode: "whole" as const, ticketNos: [] },
+      {
+        rowId: "r3",
+        bookId: "b3",
+        mode: "partial" as const,
+        ticketNos: ["045", "046"],
+      },
+    ];
+    const bookOf = (bookId: string) => books.get(bookId);
+    const scan = (raw: string) => {
+      const parsed = transferScanOf(raw);
+      if (parsed === null) {
+        throw new Error("bad code");
+      }
+      return parsed;
+    };
+
+    it("正面的碼對到多款遊戲同本號、沒選遊戲 → 擋下", () => {
+      expect(matchTransferScan(lines, bookOf, scan("0056527099"))).toEqual({
+        kind: "ambiguous_game",
+        gameIds: ["g1", "g2"],
+      });
+    });
+
+    it("選了遊戲 / 背面編號 → 對到那款遊戲的列", () => {
+      expect(
+        matchTransferScan(lines, bookOf, scan("0056527099"), "g2"),
+      ).toEqual({ kind: "match", line: lines[1] });
+      expect(
+        matchTransferScan(lines, bookOf, scan("5164-1-056527-099-0-6")),
+      ).toEqual({ kind: "match", line: lines[0] });
+    });
+
+    it("選張的列要刷到選的張;單上沒有這本 → not_on_transfer", () => {
+      expect(matchTransferScan(lines, bookOf, scan("0060116045"))).toEqual({
+        kind: "match",
+        line: lines[2],
+      });
+      expect(matchTransferScan(lines, bookOf, scan("0060116047"))).toEqual({
+        kind: "ticket_not_on_transfer",
+      });
+      expect(matchTransferScan(lines, bookOf, scan("0099999001"))).toEqual({
+        kind: "not_on_transfer",
+      });
+    });
   });
 
   /**
