@@ -1,4 +1,7 @@
-import { TICKET_STATUS } from "@repo/domain/project/lottery";
+import {
+  TICKET_LOCATION_KIND,
+  TICKET_STATUS,
+} from "@repo/domain/project/lottery";
 import type { LotteryInventoryTicketFieldsFragment } from "@repo/graphql";
 
 import type {
@@ -8,7 +11,7 @@ import type {
 
 type Ticket = Pick<
   LotteryInventoryTicketFieldsFragment,
-  "ticketNo" | "status" | "locked" | "operable"
+  "ticketNo" | "status" | "locked" | "operable" | "locationKind"
 > & { org: { id: string; name: string } };
 type CellState = TicketGridCell["state"];
 
@@ -28,13 +31,16 @@ const spansStores = (tickets: readonly Ticket[]): boolean =>
 
 /**
  * 本的詳情頁的格子:別店的張(`operable = false`,所在分店不在可見範圍內)用「其他分店」、不能選;
+ * 跳號一律畫成跳號(跳號不算任何店的庫存;對調跳號時記在哪家店都能選,規格 7.3 做法 D);
  * 被調貨單鎖住的未售用「調貨中」、不能選(使用者 10/27 定案)。張分在不止一家店時,每格的提示寫所在分店。
  */
 export const bookCellsOf = (tickets: readonly Ticket[]): TicketGridCell[] => {
   const showStore = spansStores(tickets);
   return tickets.map((ticket) => {
     let state: CellState;
-    if (!ticket.operable) {
+    if (ticket.status === TICKET_STATUS.skipped) {
+      state = "skipped";
+    } else if (!ticket.operable) {
       state = "otherStore";
     } else if (ticket.locked && ticket.status === TICKET_STATUS.unsold) {
       state = "transferring";
@@ -62,11 +68,15 @@ const withOtherStore = (
 const isTransferring = (ticket: Ticket): boolean =>
   ticket.operable && ticket.locked && ticket.status === TICKET_STATUS.unsold;
 
-/** 本的詳情頁能選:未售(報廢)、待查·遺失(尋回)。 */
-export const BOOK_SELECTABLE: TicketGridProps["selectableStates"] = [
-  "unsold",
-  "lost",
-];
+/** 本的詳情頁能選:未售(報廢)、待查·遺失(尋回);能對調跳號時另加跳號。 */
+export const bookSelectableOf = (
+  canSwapSkips: boolean,
+): TicketGridProps["selectableStates"] =>
+  canSwapSkips ? ["unsold", "lost", "skipped"] : ["unsold", "lost"];
+
+/** 選到的張能不能出現在操作列:自己範圍內的張;跳號記在哪家店都可以(對調跳號用)。 */
+export const isSelectable = (ticket: Ticket): boolean =>
+  ticket.operable || ticket.status === TICKET_STATUS.skipped;
 
 /** 本的詳情頁的圖例(未售 / 已售 /(調貨中)/ 跳號 / 報廢 / 待查·遺失 /(其他分店)/ 已選)。 */
 export const bookLegendOf = (
@@ -88,29 +98,28 @@ export const bookLegendOf = (
   );
 
 /**
- * 更正跳號的格子(Figma IN-04a):自己範圍內的目前跳號與未售(未被鎖定)的張能選,別店的張是「其他分店」,
- * 其他都是「不能選」;圖例只有未售 /(其他分店)/ 已選。
+ * 對調跳號的一對(規格 7.3 做法 D):剛好兩張,一張跳號(記在哪家店都可以)+ 一張自己範圍內未售、未鎖定、
+ * 不在途的張;其他組合 → null(按鈕停用並提示)。
  */
-export const skipCorrectionCellsOf = (
-  tickets: readonly Ticket[],
-): TicketGridCell[] => {
-  const showStore = spansStores(tickets);
-  return tickets.map((ticket) => {
-    let state: CellState = "sold";
-    if (!ticket.operable) {
-      state = "otherStore";
-    } else if (
-      ticket.status === TICKET_STATUS.skipped ||
-      (ticket.status === TICKET_STATUS.unsold && !ticket.locked)
-    ) {
-      state = "unsold";
-    }
-    return {
-      ticketNo: ticket.ticketNo,
-      state,
-      ...(showStore && { tooltip: ticket.org.name }),
-    };
-  });
+export const swapPairOf = <T extends Ticket>(
+  tickets: readonly T[],
+): { skipped: T; unsold: T } | null => {
+  if (tickets.length !== 2) {
+    return null;
+  }
+  const skipped = tickets.find(
+    (ticket) => ticket.status === TICKET_STATUS.skipped,
+  );
+  const unsold = tickets.find(
+    (ticket) =>
+      ticket.status === TICKET_STATUS.unsold &&
+      ticket.operable &&
+      !ticket.locked &&
+      ticket.locationKind !== TICKET_LOCATION_KIND.inTransit,
+  );
+  return skipped === undefined || unsold === undefined
+    ? null
+    : { skipped, unsold };
 };
 
 /**

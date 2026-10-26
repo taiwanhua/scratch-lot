@@ -509,9 +509,7 @@
       "CONFLICT": "These tickets were already processed; refresh and try again",
       "TICKET_ALREADY_PROCESSED": "These tickets were already processed; refresh and try again",
       "CROSS_STORE_NOT_ALLOWED": "Some tickets are at another branch; you can only act on tickets at branches you can see",
-      "NO_SKIPPED_TICKETS": "This book has no skipped tickets to correct",
       "SKIP_COUNT_MISMATCH": "The number of skipped tickets must equal the tickets to mark",
-      "SKIP_UNCHANGED": "The skipped tickets did not change",
       "TICKET_STATUS_NOT_ALLOWED": "The selected tickets are not in a status that allows this",
       "UNEXPECTED": "Something went wrong; try again later",
       "RECOVER_TARGET_NOT_STORE": "Recovered tickets must go back to a branch; pick one",
@@ -631,7 +629,6 @@
       "loading": "Loading book",
       "title": "{game} · Book {bookNo}",
       "subtitle": "NT${price} · tickets {first}–{last}",
-      "correctSkips": "Correct skips",
       "recoverAll": "Recover whole book",
       "investigation": "This book is {status}: {date} {serial}, responsible branch = {store}",
       "sources": "Source",
@@ -648,7 +645,9 @@
       "recover": "Recover",
       "clearSelection": "Clear selection",
       "timeline": "Event timeline",
-      "markSkips": "Mark skipped"
+      "markSkips": "Mark skipped",
+      "swapSkip": "Swap skipped ticket…",
+      "swapSkipHint": "Pick one skipped and one unsold ticket to swap"
     },
     "timeline": {
       "columns": {
@@ -662,17 +661,6 @@
       "aria": "Event timeline",
       "empty": "No events yet",
       "correctionOf": " (prior correction, belongs to {shift})"
-    },
-    "correctSkips": {
-      "title": "Correct skips",
-      "required": "To mark",
-      "current": "Current skips",
-      "changed": "Change to",
-      "changedTo": "{ranges} ({count} / {required})",
-      "reason": "Correction reason",
-      "hint": "Current skips are preselected; the count must equal the tickets to mark.",
-      "submit": "Correct",
-      "success": "Skips corrected"
     },
     "scrap": {
       "title": "Scrap {count} tickets",
@@ -689,7 +677,8 @@
       "backToStore": "{store} stock",
       "submit": "Recover",
       "success": "Recovered {count} tickets",
-      "pickStore": "Back to which branch"
+      "pickStore": "Back to which branch",
+      "switchStore": "Switch to \"{store}\" in the top-right corner before recovering"
     },
     "allocations": {
       "aria": "Planned books",
@@ -729,6 +718,18 @@
       "reason": "Reason",
       "submit": "Mark skipped",
       "success": "Skipped tickets marked"
+    },
+    "swapSkip": {
+      "title": "Swap skipped ticket",
+      "toUnsold": "{ticketNo} skipped → unsold, placed at {place}",
+      "toSkipped": "{ticketNo} unsold → skipped",
+      "counter": "{store} · {cashPoint} counter",
+      "stock": "{store} stock",
+      "reason": "Correction reason",
+      "confirm": "I confirm ticket {skipped} is physically in my hands and {unsold} does not exist",
+      "hint": "One pair at a time; the ticket set back to unsold takes the other ticket's store, place and unit cost.",
+      "submit": "Swap",
+      "success": "Skipped ticket swapped"
     }
   },
   "lotteryReports": {

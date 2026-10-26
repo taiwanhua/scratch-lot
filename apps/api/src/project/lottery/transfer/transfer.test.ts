@@ -1,6 +1,8 @@
 import { afterAll, beforeAll, describe, expect, it, jest } from "@jest/globals";
 import { Types } from "mongoose";
 
+import { LOTTERY_FIELD_CATEGORY_KEYS } from "@repo/domain/project/lottery-fields";
+
 import {
   type AuthTestApp,
   startAuthTestApp,
@@ -49,6 +51,7 @@ import {
   reviewStep,
 } from "../../../workflows/test-support/workflow-fixtures";
 import { LOTTERY_CASH_MOVEMENTS_COLLECTION } from "../../database/lottery-accounts/lottery-cash-movement.schema";
+import { InventoryActionsService } from "../inventory/inventory-actions.service";
 import {
   insertBankAccount,
   insertGame,
@@ -2419,6 +2422,189 @@ describe("調貨單(規格 8.4、第 9 章)", () => {
       });
       expect(await badgeOf(managerB)).toBe(fromBefore - 1);
       expect(await badgeOf(helperB)).toBe(toBefore + 1);
+    });
+  });
+
+  describe("調貨後對調跳號(做法 D;規格 7.x 例外:改回未售的張歸到做更正的那家店)", () => {
+    it("中山店拆本標 #047 跳號 → 選張 041–060 調給新竹店、點收完成 → 新竹店對調 #047(跳號、記在中山店)↔ #048(未售、新竹店)", async () => {
+      // 更正跳號原因(欄位管理類別,全域)
+      const now = new Date();
+      const stamp = {
+        createdAt: now,
+        updatedAt: now,
+        createdBy: null,
+        updatedBy: null,
+        deletedAt: null,
+      };
+      const categoryKey = LOTTERY_FIELD_CATEGORY_KEYS.skipCorrectionReason;
+      if (
+        (await db()
+          .collection("field_categories")
+          .countDocuments({ key: categoryKey })) === 0
+      ) {
+        const { insertedId: categoryId } = await db()
+          .collection("field_categories")
+          .insertOne({
+            key: categoryKey,
+            name: categoryKey,
+            isSystem: true,
+            enabled: true,
+            ...stamp,
+          });
+        await db()
+          .collection("fields")
+          .insertOne({
+            value: "mistake",
+            label: "標註錯誤",
+            key: `${categoryKey}.mistake`,
+            categoryId,
+            orgId: null,
+            order: 1,
+            enabled: true,
+            isSystem: true,
+            ...stamp,
+          });
+      }
+      const opened = await newBook(branchA);
+      await openBook(branchA, opened.bookId);
+      const openedTickets = await ticketsOf(opened.bookId);
+      const at047 = openedTickets.find((ticket) => ticket.ticketNo === "047");
+      if (at047 === undefined) {
+        throw new Error("沒有 #047");
+      }
+      await transactions().withTransaction((session) =>
+        api.app
+          .get(TicketLedgerService)
+          .applyTicketEvents(session, { operator: storeOperator(branchA) }, [
+            {
+              ticketId: at047._id,
+              expectedVersion: at047.version,
+              type: "skip" as const,
+              patch: { status: "skipped" as const },
+            },
+          ]),
+      );
+      // 041–060 扣掉跳號 #047 = 19 張 × 20 元 × 92% = 349.6 → 批購金額 350
+      const line = partial(opened.bookId, 41, 60, {
+        ticket_nos: "041-046,048-060",
+        tickets: 19,
+        amount: 380,
+      });
+      const id = await submit(hq, [line]);
+      await ship(id);
+      expect(
+        await receiveTickets(managerB, id, line.rowId, [
+          "041",
+          "042",
+          "043",
+          "044",
+          "045",
+          "046",
+          "048",
+          "049",
+          "050",
+          "051",
+          "052",
+          "053",
+          "054",
+          "055",
+          "056",
+          "057",
+          "058",
+          "059",
+          "060",
+        ]),
+      ).toEqual({});
+      await settle(id, 350);
+      expect(await decideBlocked(managerB, id, "APPROVE")).toBeNull();
+      const stockA = async () => {
+        const all = await ticketsOf(opened.bookId);
+        return all.filter(
+          (ticket) =>
+            ticket.orgId.equals(branchA) &&
+            ticket.status === "unsold" &&
+            ticket.location.kind === "stock",
+        ).length;
+      };
+      const stockABefore = await stockA();
+      const tickets = await ticketsOf(opened.bookId);
+      const t047 = tickets.find((ticket) => ticket.ticketNo === "047");
+      const t048 = tickets.find((ticket) => ticket.ticketNo === "048");
+      if (t047 === undefined || t048 === undefined) {
+        throw new Error("沒有 #047 / #048");
+      }
+      expect(String(t047.orgId)).toBe(String(branchA));
+      expect(t047.status).toBe("skipped");
+      const swappedAt = new Date();
+      await api.app
+        .get(InventoryActionsService)
+        .swapSkip(storeOperator(branchB), {
+          bookId: String(opened.bookId),
+          skipped: { ticketId: String(t047._id), version: t047.version },
+          unsold: { ticketId: String(t048._id), version: t048.version },
+          reasonKey: "mistake",
+        });
+      const after = await ticketsOf(opened.bookId);
+      const a047 = after.find((ticket) => ticket.ticketNo === "047");
+      const a048 = after.find((ticket) => ticket.ticketNo === "048");
+      // #047 → 未售、歸新竹店、接手 #048 的位置與單張成本(350 ÷ 19)
+      expect({
+        status: a047?.status,
+        orgId: String(a047?.orgId),
+        location: a047?.location.kind,
+        unitCost: a047?.unitCost,
+      }).toEqual({
+        status: "unsold",
+        orgId: String(branchB),
+        location: "stock",
+        unitCost: t048.unitCost,
+      });
+      expect(Math.abs((a047?.unitCost ?? 0) - 350 / 19)).toBeLessThan(1e-9);
+      expect({ status: a048?.status, orgId: String(a048?.orgId) }).toEqual({
+        status: "skipped",
+        orgId: String(branchB),
+      });
+      // 中山店庫存不變(100 − 檯面 10 − 調走 19 − 跳號 #047 = 70);新竹店仍是 19 張(#048 換成 #047)
+      expect(stockABefore).toBe(70);
+      expect(await stockA()).toBe(stockABefore);
+      expect(
+        after.filter(
+          (ticket) =>
+            ticket.orgId.equals(branchB) &&
+            ticket.status === "unsold" &&
+            ticket.location.kind === "stock",
+        ),
+      ).toHaveLength(19);
+      // 兩張的時間軸
+      expect(await eventTrail(t047._id)).toEqual([
+        ["purchase", String(branchA)],
+        ["skip", String(branchA)],
+        ["unskip", String(branchB)],
+      ]);
+      expect(await eventTrail(t048._id)).toEqual([
+        ["purchase", String(branchA)],
+        ["transfer_out", String(branchA)],
+        ["transfer_in", String(branchB)],
+        ["skip", String(branchB)],
+      ]);
+      // 新竹店報表的跳號(跳號 − 取消跳號,依事件的分店)淨額 0;中山店不受影響
+      const skipNetOf = async (orgId: Types.ObjectId) => {
+        const rows = await db()
+          .collection<{ type: string }>("lottery_ticket_events")
+          .find({
+            orgId,
+            bookId: opened.bookId,
+            at: { $gte: swappedAt },
+            type: { $in: ["skip", "unskip"] },
+          })
+          .toArray();
+        return (
+          rows.filter((row) => row.type === "skip").length -
+          rows.filter((row) => row.type === "unskip").length
+        );
+      };
+      expect(await skipNetOf(branchB)).toBe(0);
+      expect(await skipNetOf(branchA)).toBe(0);
     });
   });
 

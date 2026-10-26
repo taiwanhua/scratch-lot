@@ -289,13 +289,6 @@ export type CopyUserOrgRolesRoleDiff = {
   removed: Array<CopyUserOrgRolesRole>;
 };
 
-export type CorrectLotterySkippedTicketsInput = {
-  bookId: Scalars['ID']['input'];
-  reasonKey: Scalars['String']['input'];
-  reasonNote?: InputMaybe<Scalars['String']['input']>;
-  ticketNos: Array<Scalars['String']['input']>;
-};
-
 export type CreateAndSubmitFormSubmissionInput = {
   clientRequestId: Scalars['String']['input'];
   formKey: Scalars['ID']['input'];
@@ -4120,7 +4113,6 @@ export type Mutation = {
   completeLotteryTransferReceiving: CompleteLotteryTransferReceivingPayload;
   copySubmissionToDraft: FormSubmissionPayload;
   copyUserOrgRoles: CopyUserOrgRolesPayload;
-  correctLotterySkippedTickets: LotteryInventoryActionPayload;
   createAndSubmitFormSubmission: FormSubmissionPayload;
   createChildOrg: OrgPayload;
   createDemoItemOne: DemoItemOnePayload;
@@ -4255,6 +4247,7 @@ export type Mutation = {
   setUserOrgs: SetUserOrgsPayload;
   splitLotteryBook: LotteryStoreCounterPayload;
   submitFormSubmission: FormSubmissionPayload;
+  swapLotterySkippedTicket: LotteryInventoryActionPayload;
   switchOrg: SwitchOrgPayload;
   transferOrgOwner: OrgPayload;
   unbindFormWorkflow: FormPayload;
@@ -4379,11 +4372,6 @@ export type MutationCopySubmissionToDraftArgs = {
 
 export type MutationCopyUserOrgRolesArgs = {
   input: CopyUserOrgRolesInput;
-};
-
-
-export type MutationCorrectLotterySkippedTicketsArgs = {
-  input: CorrectLotterySkippedTicketsInput;
 };
 
 
@@ -5034,6 +5022,11 @@ export type MutationSplitLotteryBookArgs = {
 
 export type MutationSubmitFormSubmissionArgs = {
   input: SubmitFormSubmissionInput;
+};
+
+
+export type MutationSwapLotterySkippedTicketArgs = {
+  input: SwapLotterySkippedTicketInput;
 };
 
 
@@ -8284,6 +8277,14 @@ export type SubmitFormSubmissionInput = {
   values?: InputMaybe<Scalars['JSONObject']['input']>;
 };
 
+export type SwapLotterySkippedTicketInput = {
+  bookId: Scalars['ID']['input'];
+  reasonKey: Scalars['String']['input'];
+  reasonNote?: InputMaybe<Scalars['String']['input']>;
+  skipped: LotteryTicketVersionInput;
+  unsold: LotteryTicketVersionInput;
+};
+
 export type SwitchOrgInput = {
   orgId: Scalars['ID']['input'];
 };
@@ -10781,12 +10782,12 @@ export type MarkLotterySkippedTicketsMutationVariables = Exact<{
 
 export type MarkLotterySkippedTicketsMutation = { __typename?: 'Mutation', markLotterySkippedTickets: { __typename?: 'LotteryInventoryActionPayload', count: number, lossCost?: number | null } };
 
-export type CorrectLotterySkippedTicketsMutationVariables = Exact<{
-  input: CorrectLotterySkippedTicketsInput;
+export type SwapLotterySkippedTicketMutationVariables = Exact<{
+  input: SwapLotterySkippedTicketInput;
 }>;
 
 
-export type CorrectLotterySkippedTicketsMutation = { __typename?: 'Mutation', correctLotterySkippedTickets: { __typename?: 'LotteryInventoryActionPayload', count: number, lossCost?: number | null } };
+export type SwapLotterySkippedTicketMutation = { __typename?: 'Mutation', swapLotterySkippedTicket: { __typename?: 'LotteryInventoryActionPayload', count: number, lossCost?: number | null } };
 
 export type RecoverLotteryTicketsMutationVariables = Exact<{
   input: RecoverLotteryTicketsInput;
@@ -22111,34 +22112,34 @@ export const useMarkLotterySkippedTicketsMutation = <
 
 useMarkLotterySkippedTicketsMutation.fetcher = (client: GraphQLClient, variables: MarkLotterySkippedTicketsMutationVariables, headers?: RequestInit['headers']) => fetcher<MarkLotterySkippedTicketsMutation, MarkLotterySkippedTicketsMutationVariables>(client, MarkLotterySkippedTicketsDocument, variables, headers);
 
-export const CorrectLotterySkippedTicketsDocument = `
-    mutation CorrectLotterySkippedTickets($input: CorrectLotterySkippedTicketsInput!) {
-  correctLotterySkippedTickets(input: $input) {
+export const SwapLotterySkippedTicketDocument = `
+    mutation SwapLotterySkippedTicket($input: SwapLotterySkippedTicketInput!) {
+  swapLotterySkippedTicket(input: $input) {
     count
     lossCost
   }
 }
     `;
 
-export const useCorrectLotterySkippedTicketsMutation = <
+export const useSwapLotterySkippedTicketMutation = <
       TError = unknown,
       TContext = unknown
     >(
       client: GraphQLClient,
-      options?: UseMutationOptions<CorrectLotterySkippedTicketsMutation, TError, CorrectLotterySkippedTicketsMutationVariables, TContext>,
+      options?: UseMutationOptions<SwapLotterySkippedTicketMutation, TError, SwapLotterySkippedTicketMutationVariables, TContext>,
       headers?: RequestInit['headers']
     ) => {
     
-    return useMutation<CorrectLotterySkippedTicketsMutation, TError, CorrectLotterySkippedTicketsMutationVariables, TContext>(
+    return useMutation<SwapLotterySkippedTicketMutation, TError, SwapLotterySkippedTicketMutationVariables, TContext>(
       {
-    mutationKey: ['CorrectLotterySkippedTickets'],
-    mutationFn: (variables?: CorrectLotterySkippedTicketsMutationVariables) => fetcher<CorrectLotterySkippedTicketsMutation, CorrectLotterySkippedTicketsMutationVariables>(client, CorrectLotterySkippedTicketsDocument, variables, headers)(),
+    mutationKey: ['SwapLotterySkippedTicket'],
+    mutationFn: (variables?: SwapLotterySkippedTicketMutationVariables) => fetcher<SwapLotterySkippedTicketMutation, SwapLotterySkippedTicketMutationVariables>(client, SwapLotterySkippedTicketDocument, variables, headers)(),
     ...options
   }
     )};
 
 
-useCorrectLotterySkippedTicketsMutation.fetcher = (client: GraphQLClient, variables: CorrectLotterySkippedTicketsMutationVariables, headers?: RequestInit['headers']) => fetcher<CorrectLotterySkippedTicketsMutation, CorrectLotterySkippedTicketsMutationVariables>(client, CorrectLotterySkippedTicketsDocument, variables, headers);
+useSwapLotterySkippedTicketMutation.fetcher = (client: GraphQLClient, variables: SwapLotterySkippedTicketMutationVariables, headers?: RequestInit['headers']) => fetcher<SwapLotterySkippedTicketMutation, SwapLotterySkippedTicketMutationVariables>(client, SwapLotterySkippedTicketDocument, variables, headers);
 
 export const RecoverLotteryTicketsDocument = `
     mutation RecoverLotteryTickets($input: RecoverLotteryTicketsInput!) {

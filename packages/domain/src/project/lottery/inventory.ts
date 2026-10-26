@@ -60,21 +60,3 @@ export function requiredSkipCountOf(
 ): number {
   return Math.max(0, lastTicketNo - standardTickets);
 }
-
-/** 跳號更正前後的差:要取消的(原本是跳號、改完不是)與要新標的(改完才是)。順序照傳入的清單。 */
-export interface SkipCorrectionDiff {
-  unskip: string[];
-  skip: string[];
-}
-
-export function skipCorrectionDiffOf(
-  current: readonly string[],
-  next: readonly string[],
-): SkipCorrectionDiff {
-  const before = new Set(current);
-  const after = new Set(next);
-  return {
-    unskip: [...before].filter((no) => !after.has(no)),
-    skip: [...after].filter((no) => !before.has(no)),
-  };
-}

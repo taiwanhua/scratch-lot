@@ -246,13 +246,6 @@ type CopyUserOrgRolesRoleDiff {
   removed: [CopyUserOrgRolesRole!]!
 }
 
-input CorrectLotterySkippedTicketsInput {
-  bookId: ID!
-  reasonKey: String!
-  reasonNote: String
-  ticketNos: [String!]!
-}
-
 input CreateAndSubmitFormSubmissionInput {
   clientRequestId: String!
   formKey: ID!
@@ -3768,7 +3761,6 @@ type Mutation {
   completeLotteryTransferReceiving(input: CompleteLotteryTransferReceivingInput!): CompleteLotteryTransferReceivingPayload!
   copySubmissionToDraft(input: CopySubmissionToDraftInput!): FormSubmissionPayload!
   copyUserOrgRoles(input: CopyUserOrgRolesInput!): CopyUserOrgRolesPayload!
-  correctLotterySkippedTickets(input: CorrectLotterySkippedTicketsInput!): LotteryInventoryActionPayload!
   createAndSubmitFormSubmission(input: CreateAndSubmitFormSubmissionInput!): FormSubmissionPayload!
   createChildOrg(input: CreateChildOrgInput!): OrgPayload!
   createDemoItemOne(input: CreateDemoItemOneInput!): DemoItemOnePayload!
@@ -3903,6 +3895,7 @@ type Mutation {
   setUserOrgs(input: SetUserOrgsInput!): SetUserOrgsPayload!
   splitLotteryBook(input: SplitLotteryBookInput!): LotteryStoreCounterPayload!
   submitFormSubmission(input: SubmitFormSubmissionInput!): FormSubmissionPayload!
+  swapLotterySkippedTicket(input: SwapLotterySkippedTicketInput!): LotteryInventoryActionPayload!
   switchOrg(input: SwitchOrgInput!): SwitchOrgPayload!
   transferOrgOwner(input: TransferOrgOwnerInput!): OrgPayload!
   unbindFormWorkflow(input: UnbindFormWorkflowInput!): FormPayload!
@@ -6137,6 +6130,14 @@ input SubmitFormSubmissionInput {
   expectedEditVersion: Int!
   id: ID!
   values: JSONObject
+}
+
+input SwapLotterySkippedTicketInput {
+  bookId: ID!
+  reasonKey: String!
+  reasonNote: String
+  skipped: LotteryTicketVersionInput!
+  unsold: LotteryTicketVersionInput!
 }
 
 input SwitchOrgInput {

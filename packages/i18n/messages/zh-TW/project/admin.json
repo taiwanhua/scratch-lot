@@ -509,9 +509,7 @@
       "CONFLICT": "這幾張已被處理,請重新整理後再試",
       "TICKET_ALREADY_PROCESSED": "這幾張已被處理,請重新整理後再試",
       "CROSS_STORE_NOT_ALLOWED": "有幾張在其他分店,只能操作你看得到的分店的張",
-      "NO_SKIPPED_TICKETS": "這本沒有跳號,不需要更正",
       "SKIP_COUNT_MISMATCH": "改完的跳號張數要等於待標註張數",
-      "SKIP_UNCHANGED": "跳號沒有更動",
       "TICKET_STATUS_NOT_ALLOWED": "選到的張的狀態不能做這件事",
       "UNEXPECTED": "發生錯誤,請稍後再試",
       "RECOVER_TARGET_NOT_STORE": "尋回要回到一家店,請選擇回到哪家店",
@@ -631,7 +629,6 @@
       "loading": "載入本的詳情",
       "title": "{game} · 本號 {bookNo}",
       "subtitle": "{price} 元 · 張號 {first}–{last}",
-      "correctSkips": "更正跳號",
       "recoverAll": "整本尋回",
       "investigation": "這本{status}中:{date} {serial},責任分店 = {store}",
       "sources": "來源",
@@ -648,7 +645,9 @@
       "recover": "尋回",
       "clearSelection": "取消選取",
       "timeline": "事件時間軸",
-      "markSkips": "標跳號"
+      "markSkips": "標跳號",
+      "swapSkip": "對調跳號…",
+      "swapSkipHint": "選一格跳號 + 一格未售才能對調"
     },
     "timeline": {
       "columns": {
@@ -662,17 +661,6 @@
       "aria": "事件時間軸",
       "empty": "還沒有事件",
       "correctionOf": "(前期更正,屬於 {shift})"
-    },
-    "correctSkips": {
-      "title": "更正跳號",
-      "required": "待標註",
-      "current": "目前跳號",
-      "changed": "改成",
-      "changedTo": "{ranges}({count} / {required})",
-      "reason": "更正原因",
-      "hint": "格子預選目前的跳號;改完的張數要等於待標註張數。",
-      "submit": "更正",
-      "success": "已更正跳號"
     },
     "scrap": {
       "title": "報廢 {count} 張",
@@ -689,7 +677,8 @@
       "backToStore": "{store} 庫存",
       "submit": "尋回",
       "success": "已尋回 {count} 張",
-      "pickStore": "回到哪家店"
+      "pickStore": "回到哪家店",
+      "switchStore": "要先把右上角切換到「{store}」才能尋回"
     },
     "allocations": {
       "aria": "預計要給本數",
@@ -729,6 +718,18 @@
       "reason": "原因",
       "submit": "確認標跳號",
       "success": "已標跳號"
+    },
+    "swapSkip": {
+      "title": "對調跳號",
+      "toUnsold": "{ticketNo} 跳號 → 未售,放到 {place}",
+      "toSkipped": "{ticketNo} 未售 → 跳號",
+      "counter": "{store} · {cashPoint} 檯面",
+      "stock": "{store} 庫存",
+      "reason": "更正原因",
+      "confirm": "我已確認 {skipped} 的實體在我手上,{unsold} 實際不存在",
+      "hint": "一次對調一對;改回未售的張接手另一張的所在分店、位置與單張成本。",
+      "submit": "對調",
+      "success": "已對調跳號"
     }
   },
   "lotteryReports": {

@@ -276,7 +276,7 @@ mutation SetLotteryAllocation($input: SetLotteryAllocationInput!) {
   }
 }
 
-# CorrectLotterySkippedTicketsInput: { bookId, ticketNos, reasonKey, reasonNote? }
+# MarkLotterySkippedTicketsInput: { bookId, ticketNos, reasonKey, reasonNote? }
 mutation MarkLotterySkippedTickets($input: MarkLotterySkippedTicketsInput!) {
   markLotterySkippedTickets(input: $input) {
     count
@@ -284,10 +284,9 @@ mutation MarkLotterySkippedTickets($input: MarkLotterySkippedTicketsInput!) {
   }
 }
 
-mutation CorrectLotterySkippedTickets(
-  $input: CorrectLotterySkippedTicketsInput!
-) {
-  correctLotterySkippedTickets(input: $input) {
+# SwapLotterySkippedTicketInput: { bookId, skipped: { ticketId, version }, unsold: { ticketId, version }, reasonKey, reasonNote? }
+mutation SwapLotterySkippedTicket($input: SwapLotterySkippedTicketInput!) {
+  swapLotterySkippedTicket(input: $input) {
     count
     lossCost
   }

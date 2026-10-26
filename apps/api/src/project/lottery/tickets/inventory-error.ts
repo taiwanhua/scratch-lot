@@ -18,15 +18,11 @@ export const INVENTORY_REASONS = {
   bookKeyDuplicate: "BOOK_KEY_DUPLICATE",
   /** 迄號不在「標準張數 ~ 999」之間 */
   lastTicketNoOutOfRange: "LAST_TICKET_NO_OUT_OF_RANGE",
-  /** 更正跳號:這本沒有跳號(跳號在拆本時標註) */
-  noSkippedTickets: "NO_SKIPPED_TICKETS",
-  /** 更正跳號:改完的張數不等於待標註張數,或張號不在這本 */
-  skipCountMismatch: "SKIP_COUNT_MISMATCH",
   /** 標跳號:這本沒有待標註(跳號都標完了) */
   noPendingSkips: "NO_PENDING_SKIPS",
-  /** 更正跳號:跟目前的跳號一樣 */
-  skipUnchanged: "SKIP_UNCHANGED",
-  /** 這個狀態的張不能做這件事(例:報廢只能報未售、尋回只能尋待查 / 遺失、新標的跳號要是未售) */
+  /** 標跳號:張數超過待標註張數,或張號不在這本 */
+  skipCountMismatch: "SKIP_COUNT_MISMATCH",
+  /** 這個狀態的張不能做這件事(例:報廢只能報未售、尋回只能尋待查 / 遺失、對調跳號要一張跳號 + 一張未售) */
   ticketStatusNotAllowed: "TICKET_STATUS_NOT_ALLOWED",
   /** 尋回:回到的組織不是店(有下層組織,例:最上層組織) */
   recoverTargetNotStore: "RECOVER_TARGET_NOT_STORE",

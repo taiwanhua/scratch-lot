@@ -66,14 +66,22 @@ export class LotteryTicketVersionInput {
   version!: number;
 }
 
-/** 更正跳號(`inventory.mark-skipped`):改完的跳號張號,張數要等於待標註張數。 */
+/**
+ * 對調跳號(`inventory.mark-skipped`;規格 7.3,使用者 10/26 定案做法 D):這本的一張跳號(記在哪家店都可以)
+ * 與一張未售(自己範圍內、未鎖定、不在途)對調,一次一對;兩張都帶版本。
+ */
 @InputType()
-export class CorrectLotterySkippedTicketsInput {
+export class SwapLotterySkippedTicketInput {
   @Field(() => ID)
   bookId!: string;
 
-  @Field(() => [String])
-  ticketNos!: string[];
+  /** 改回未售的那張(目前是跳號) */
+  @Field(() => LotteryTicketVersionInput)
+  skipped!: LotteryTicketVersionInput;
+
+  /** 改標跳號的那張(目前是未售) */
+  @Field(() => LotteryTicketVersionInput)
+  unsold!: LotteryTicketVersionInput;
 
   /** 欄位管理「更正跳號原因」;選「其他」要填說明。 */
   @Field(() => String)

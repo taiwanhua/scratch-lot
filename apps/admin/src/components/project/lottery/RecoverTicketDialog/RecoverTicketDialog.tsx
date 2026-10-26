@@ -11,6 +11,7 @@ import {
   useLotteryInventoryStoresQuery,
   useRecoverLotteryTicketsMutation,
 } from "@repo/graphql";
+import { Alert } from "@repo/ui/alert";
 import { Box } from "@repo/ui/box";
 import { Button } from "@repo/ui/button";
 import { Dialog } from "@repo/ui/dialog";
@@ -90,7 +91,8 @@ const REFRESH_KEYS = [
  * (欄位管理「尋回原因」,選「其他」要填說明)。手機全螢幕。
  *
  * - 本的詳情頁、待查·遺失分頁(`keepStore`):不換店,每張回到自己所在分店的庫存
- * - 店面刷到待查或遺失的張(看板):回到一家**店**(`store`;沒給時用目前組織,目前組織不是店就選「回到哪家店」)
+ * - 店面刷到待查或遺失的張(看板):回到一家**店**(`store`;沒給時用目前組織,目前組織不是店就選「回到哪家店」);
+ *   目前組織是另一家店時提示「要先把右上角切換到這家店才能尋回」並停用送出
  */
 export const RecoverTicketDialog = ({
   book,
@@ -108,7 +110,8 @@ export const RecoverTicketDialog = ({
   const stores = useLotteryInventoryStoresQuery(
     session.client,
     {},
-    { enabled: !keepStore && store?.name === undefined },
+    // 刷到實體時都要讀:判斷目前組織是不是一家店(是店 → 只能尋回到它)
+    { enabled: !keepStore },
   );
   const storeOptions = stores.data?.lotteryInventoryStores.items ?? [];
   const currentOrgId = me.data?.me.currentOrg?.id ?? "";
@@ -134,6 +137,18 @@ export const RecoverTicketDialog = ({
           .join("、"),
       }
     : (givenStore ?? currentStore);
+  /**
+   * 刷到的那家店不是正在操作的店(api `recoverTargetOf` 同一條規則):目前組織是一家店、而刷到的店是另一家
+   * (例:同時屬於兩家店的店長在看板看的店 ≠ 目前組織)→ 提示先切換組織,不能送出。
+   * 目前組織是上層組織(總部、區域)時不在這裡擋(api 另看店面權限)。
+   */
+  const mustSwitchTo =
+    !keepStore &&
+    givenStore !== null &&
+    currentStore !== null &&
+    givenStore.id !== currentStore.id
+      ? givenStore
+      : null;
   const [pickedStoreId, setPickedStoreId] = useState("");
   const targetId = fixedStore?.id ?? pickedStoreId;
   const [reason, setReason] = useState<ReasonValue>(EMPTY_REASON);
@@ -192,13 +207,21 @@ export const RecoverTicketDialog = ({
           <Button variant="text" onClick={onClose}>
             {t("common.cancel")}
           </Button>
-          <Button disabled={recover.isPending} onClick={submit}>
+          <Button
+            disabled={recover.isPending || mustSwitchTo !== null}
+            onClick={submit}
+          >
             {t("recover.submit")}
           </Button>
         </>
       }
     >
       <Stack spacing={2} sx={{ pt: 1 }}>
+        {mustSwitchTo === null ? null : (
+          <Alert severity="warning">
+            {t("recover.switchStore", { store: mustSwitchTo.name })}
+          </Alert>
+        )}
         <Box sx={{ bgcolor: "action.hover", borderRadius: 1, p: 1.5 }}>
           <Stack direction="row" sx={{ justifyContent: "space-between" }}>
             <Typography variant="subtitle1" color="textPrimary">

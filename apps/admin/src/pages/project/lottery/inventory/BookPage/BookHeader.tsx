@@ -16,7 +16,6 @@ export interface BookHeaderProps {
   detail: LotteryInventoryBookDetailFieldsFragment;
   /** 顯示 [整本尋回](有 `recover`、而且有自己能操作的待查 / 遺失張) */
   canRecoverAll: boolean;
-  onCorrect: () => void;
   /** [標跳號](`abilities.canMarkSkips`:還有待標註) */
   onMarkSkips: () => void;
   onRecoverAll: () => void;
@@ -24,19 +23,18 @@ export interface BookHeaderProps {
 
 /**
  * 本的詳情頁首(Figma IN-03):遊戲 · 本號、面額 · 張號、顯示狀態(`bookStates.*`,含已撤銷)、
- * [更正跳號](`abilities.canCorrectSkips`);沒有未售、而且有待查 / 遺失時下方加狀態列
- * 「這本待查中 … [整本尋回]」(Figma 125:1699)。
+ * [標跳號](`abilities.canMarkSkips`;更正標錯的跳號改在格子上選一對 [對調跳號…]);沒有未售、而且有待查 / 遺失時
+ * 下方加狀態列「這本待查中 … [整本尋回]」(Figma 125:1699)。
  */
 export const BookHeader = ({
   detail,
   canRecoverAll,
-  onCorrect,
   onMarkSkips,
   onRecoverAll,
 }: BookHeaderProps) => {
   const t = useTranslations("admin.lotteryInventory");
   const temporal = useTemporalText();
-  const { book, abilities, investigation } = detail;
+  const { book, investigation } = detail;
   return (
     <>
       <Stack
@@ -69,11 +67,6 @@ export const BookHeader = ({
           {abilities.canMarkSkips ? (
             <Button variant="outlined" onClick={onMarkSkips}>
               {t("book.markSkips")}
-            </Button>
-          ) : null}
-          {abilities.canCorrectSkips ? (
-            <Button variant="outlined" onClick={onCorrect}>
-              {t("book.correctSkips")}
             </Button>
           ) : null}
         </Stack>

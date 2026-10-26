@@ -2,7 +2,6 @@ import { HttpResponse } from "msw";
 
 import { INVENTORY_PERMISSIONS as PERMISSIONS } from "@repo/domain/project/lottery";
 import type {
-  CorrectLotterySkippedTicketsMutationVariables,
   LotteryAllocationCellFieldsFragment,
   LotteryAllocationsQueryVariables,
   LotteryFieldOptionsQueryVariables,
@@ -16,6 +15,7 @@ import type {
   RecoverLotteryTicketsMutationVariables,
   ScrapLotteryTicketsMutationVariables,
   SetLotteryAllocationMutationVariables,
+  SwapLotterySkippedTicketMutationVariables,
 } from "@repo/graphql";
 
 import { graphqlError } from "../../auth-handlers";
@@ -54,7 +54,7 @@ export interface InventoryWorldOptions {
 export interface InventoryWorld {
   handlers: Parameters<typeof server.use>;
   inputs: {
-    correct: CorrectLotterySkippedTicketsMutationVariables["input"][];
+    swap: SwapLotterySkippedTicketMutationVariables["input"][];
     recover: RecoverLotteryTicketsMutationVariables["input"][];
     scrap: ScrapLotteryTicketsMutationVariables["input"][];
     allocation: SetLotteryAllocationMutationVariables["input"][];
@@ -114,12 +114,10 @@ export const inventoryWorld = ({
     cost: has(PERMISSIONS.showCost) ? detail.cost : null,
     abilities: {
       __typename: "LotteryInventoryBookAbilities",
-      // 至少一張自己範圍內的跳號、一張自己範圍內的未售(未鎖定)
+      // 這本有跳號(記在哪家店都可以)、一張自己範圍內的未售(未鎖定)
       canCorrectSkips:
         has(PERMISSIONS.markSkipped) &&
-        detail.tickets.some(
-          (ticket) => ticket.operable && ticket.status === "skipped",
-        ) &&
+        detail.tickets.some((ticket) => ticket.status === "skipped") &&
         detail.tickets.some(
           (ticket) =>
             ticket.operable && ticket.status === "unsold" && !ticket.locked,
@@ -139,7 +137,7 @@ export const inventoryWorld = ({
   let detailState = details;
   let cellState = cells;
   const inputs: InventoryWorld["inputs"] = {
-    correct: [],
+    swap: [],
     recover: [],
     scrap: [],
     allocation: [],
@@ -324,35 +322,54 @@ export const inventoryWorld = ({
       cellState = [...cellState.filter((cell) => cell !== current), item];
       return HttpResponse.json({ data: { setLotteryAllocation: { item } } });
     }),
-    api.mutation("CorrectLotterySkippedTickets", ({ variables }) => {
-      const { input } =
-        variables as CorrectLotterySkippedTicketsMutationVariables;
+    api.mutation("SwapLotterySkippedTicket", ({ variables }) => {
+      const { input } = variables as SwapLotterySkippedTicketMutationVariables;
       const denied = forbidden(PERMISSIONS.markSkipped);
       if (denied) return denied;
-      inputs.correct.push(input);
+      inputs.swap.push(input);
       const detail = detailState.find((item) => item.book.id === input.bookId);
       if (detail === undefined) return notFound();
-      if (input.ticketNos.length !== detail.book.requiredSkipCount) {
-        return validation("SKIP_COUNT_MISMATCH", ["ticketNos"]);
-      }
+      const skipped = detail.tickets.find(
+        (ticket) => ticket.id === input.skipped.ticketId,
+      );
+      const unsold = detail.tickets.find(
+        (ticket) => ticket.id === input.unsold.ticketId,
+      );
+      if (skipped === undefined || unsold === undefined) return notFound();
       detailState = detailState.map((item) =>
         item === detail
           ? {
               ...item,
-              book: { ...item.book, skippedTicketNos: input.ticketNos },
+              book: {
+                ...item.book,
+                skippedTicketNos: [
+                  ...item.book.skippedTicketNos.filter(
+                    (no) => no !== skipped.ticketNo,
+                  ),
+                  unsold.ticketNo,
+                ].toSorted((a, b) => a.localeCompare(b)),
+              },
               tickets: item.tickets.map((ticket) => {
-                if (input.ticketNos.includes(ticket.ticketNo)) {
-                  return { ...ticket, status: "skipped" };
+                if (ticket.id === skipped.id) {
+                  // 改回未售:接手配對那張的分店與位置
+                  return {
+                    ...ticket,
+                    status: "unsold",
+                    org: unsold.org,
+                    locationKind: unsold.locationKind,
+                    cashPoint: unsold.cashPoint,
+                    operable: true,
+                  };
                 }
-                return ticket.status === "skipped"
-                  ? { ...ticket, status: "unsold" }
+                return ticket.id === unsold.id
+                  ? { ...ticket, status: "skipped" }
                   : ticket;
               }),
             }
           : item,
       );
       return HttpResponse.json({
-        data: { correctLotterySkippedTickets: action(input.ticketNos.length) },
+        data: { swapLotterySkippedTicket: action(2) },
       });
     }),
     api.mutation("RecoverLotteryTickets", ({ variables }) => {

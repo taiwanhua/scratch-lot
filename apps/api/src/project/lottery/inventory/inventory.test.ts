@@ -93,9 +93,9 @@ const BOOKS = /* GraphQL */ `
   }
 `;
 
-const CORRECT = /* GraphQL */ `
-  mutation TestCorrectSkips($input: CorrectLotterySkippedTicketsInput!) {
-    correctLotterySkippedTickets(input: $input) {
+const SWAP = /* GraphQL */ `
+  mutation TestSwapSkip($input: SwapLotterySkippedTicketInput!) {
+    swapLotterySkippedTicket(input: $input) {
       count
     }
   }
@@ -622,8 +622,16 @@ describe("庫存管理(GraphQL 端點 + 真 MongoDB)", () => {
     await api.close();
   }, HOOK_TIMEOUT_MS);
 
-  describe("更正跳號(規格 7.3)", () => {
+  describe("對調跳號(規格 7.3;做法 D)", () => {
     let bookId: Types.ObjectId;
+
+    /** 這本某幾張的 id 與版本(對調的輸入)。 */
+    const pairOf = async (skippedNo: string, unsoldNo: string) => {
+      const detail = await bookOf(bookId, managerA);
+      const [skipped] = versionsOf(detail.tickets, [skippedNo]);
+      const [unsold] = versionsOf(detail.tickets, [unsoldNo]);
+      return { bookId: String(bookId), skipped, unsold };
+    };
 
     beforeAll(async () => {
       // 迄號 102、標準 100 → 待標註 2 張;拆本時標了 #037、#064
@@ -634,63 +642,70 @@ describe("庫存管理(GraphQL 端點 + 真 MongoDB)", () => {
       });
     });
 
-    it("改完張數 ≠ 待標註 → 擋下(SKIP_COUNT_MISMATCH)", async () => {
-      const extensions = await errorOf(api, managerA, CORRECT, {
-        input: {
-          bookId: String(bookId),
-          ticketNos: ["037"],
-          reasonKey: "mistake",
-        },
-      });
-      expect(extensions).toMatchObject({
-        code: "VALIDATION_FAILED",
-        reason: "SKIP_COUNT_MISMATCH",
-      });
-    });
-
-    it("沒有更動 → 擋下(SKIP_UNCHANGED)", async () => {
-      const extensions = await errorOf(api, managerA, CORRECT, {
-        input: {
-          bookId: String(bookId),
-          ticketNos: ["037", "064"],
-          reasonKey: "mistake",
-        },
-      });
-      expect(extensions).toMatchObject({ reason: "SKIP_UNCHANGED" });
-    });
-
     it("原因必填;選「其他」要填說明", async () => {
-      const input = { bookId: String(bookId), ticketNos: ["037", "065"] };
+      const input = await pairOf("064", "065");
       expect(
-        await errorOf(api, managerA, CORRECT, {
+        await errorOf(api, managerA, SWAP, {
           input: { ...input, reasonKey: "" },
         }),
       ).toMatchObject({ code: "VALIDATION_FAILED", fields: ["reasonKey"] });
       expect(
-        await errorOf(api, managerA, CORRECT, {
+        await errorOf(api, managerA, SWAP, {
           input: { ...input, reasonKey: "other" },
         }),
       ).toMatchObject({ code: "VALIDATION_FAILED", fields: ["reasonNote"] });
     });
 
-    it("沒有 mark-skipped → FORBIDDEN;詳情頁沒有 [更正跳號]", async () => {
-      const extensions = await errorOf(api, scrapOnly, CORRECT, {
-        input: {
-          bookId: String(bookId),
-          ticketNos: ["037", "065"],
-          reasonKey: "mistake",
-        },
+    it("沒有 mark-skipped → FORBIDDEN;詳情頁沒有 [對調跳號]", async () => {
+      const extensions = await errorOf(api, scrapOnly, SWAP, {
+        input: { ...(await pairOf("064", "065")), reasonKey: "mistake" },
       });
       expect(extensions).toMatchObject({ code: "FORBIDDEN" });
       const detail = await bookOf(bookId, scrapOnly);
       expect(detail.abilities.canCorrectSkips).toBe(false);
     });
 
-    it("#064 → #065:時間軸出現「取消跳號」+「跳號」,本的跳號清單跟著改", async () => {
-      await ok(api, managerA, CORRECT, {
+    it("組合不對(兩張都是跳號 / 未售那張已售)→ TICKET_STATUS_NOT_ALLOWED;版本不對 → CONFLICT", async () => {
+      expect(
+        await errorOf(api, managerA, SWAP, {
+          input: { ...(await pairOf("064", "037")), reasonKey: "mistake" },
+        }),
+      ).toMatchObject({ reason: "TICKET_STATUS_NOT_ALLOWED" });
+      await apply(storeA, bookId, ["070"], {
+        type: TICKET_EVENT_TYPE.sale,
+        patch: { status: TICKET_STATUS.sold },
+      });
+      expect(
+        await errorOf(api, managerA, SWAP, {
+          input: { ...(await pairOf("064", "070")), reasonKey: "mistake" },
+        }),
+      ).toMatchObject({ reason: "TICKET_STATUS_NOT_ALLOWED" });
+      const stale = await pairOf("064", "065");
+      expect(
+        await errorOf(api, managerA, SWAP, {
+          input: {
+            ...stale,
+            unsold: {
+              ...stale.unsold,
+              version: (stale.unsold?.version ?? 0) + 5,
+            },
+            reasonKey: "mistake",
+          },
+        }),
+      ).toMatchObject({ code: "CONFLICT" });
+    });
+
+    it("同店 #064 ↔ #065:#064 改回未售、接手 #065 的位置與單張成本;時間軸「取消跳號」+「跳號」,本的跳號清單跟著改", async () => {
+      const cashPointId = newObjectId();
+      await apply(storeA, bookId, ["065"], {
+        type: TICKET_EVENT_TYPE.open,
+        patch: {
+          location: { kind: TICKET_LOCATION_KIND.counter, cashPointId },
+        },
+      });
+      await ok(api, managerA, SWAP, {
         input: {
-          bookId: String(bookId),
-          ticketNos: ["037", "065"],
+          ...(await pairOf("064", "065")),
           reasonKey: "other",
           reasonNote: "拆本時點錯格",
         },
@@ -715,25 +730,15 @@ describe("庫存管理(GraphQL 端點 + 真 MongoDB)", () => {
           },
         ]),
       );
-      const statusOf = (no: string) =>
-        detail.tickets.find((ticket) => ticket.ticketNo === no)?.status;
-      expect(statusOf("064")).toBe(TICKET_STATUS.unsold);
-      expect(statusOf("065")).toBe(TICKET_STATUS.skipped);
-    });
-
-    it("新標的跳號要是未售(已售 → TICKET_STATUS_NOT_ALLOWED)", async () => {
-      await apply(storeA, bookId, ["070"], {
-        type: TICKET_EVENT_TYPE.sale,
-        patch: { status: TICKET_STATUS.sold },
+      const back = await ticketOf(bookId, "064");
+      expect(back).toMatchObject({
+        status: TICKET_STATUS.unsold,
+        location: { kind: TICKET_LOCATION_KIND.counter, cashPointId },
+        unitCost: 184,
       });
-      const extensions = await errorOf(api, managerA, CORRECT, {
-        input: {
-          bookId: String(bookId),
-          ticketNos: ["037", "070"],
-          reasonKey: "mistake",
-        },
-      });
-      expect(extensions).toMatchObject({ reason: "TICKET_STATUS_NOT_ALLOWED" });
+      expect(String(back?.orgId)).toBe(String(storeA));
+      const swapped = await ticketOf(bookId, "065");
+      expect(swapped?.status).toBe(TICKET_STATUS.skipped);
     });
   });
 
@@ -1264,46 +1269,51 @@ describe("庫存管理(GraphQL 端點 + 真 MongoDB)", () => {
       ).toMatchObject({ code: "CONFLICT", reason: "TICKET_ALREADY_PROCESSED" });
     });
 
-    it("更正跳號:跳號在別店 → 收貨店沒有 [更正跳號]、送出 → CROSS_STORE_NOT_ALLOWED;出貨店照常", async () => {
-      // 迄號 102、標準 100 → 中山店拆本時標了 #037、#064;#001–010 在新竹店
+    it("對調跳號:跳號記在別店也可以選;改回未售的張歸到做對調的那家店(接手配對那張的分店、位置、單張成本,留換店稽核);未售那張要是自己店的", async () => {
+      // 迄號 102、標準 100 → 中山店拆本時標了 #037、#064;#001–010 在新竹店(調入,單張成本照調入)
       const bookId = await splitBook(102);
       await apply(storeA, bookId, ["037", "064"], {
         type: TICKET_EVENT_TYPE.skip,
         patch: { status: TICKET_STATUS.skipped },
       });
       const receiver = await bookOf(bookId, managerB);
-      expect(receiver.abilities.canCorrectSkips).toBe(false);
+      expect(receiver.abilities.canCorrectSkips).toBe(true);
+      const pair = (skippedNo: string, unsoldNo: string) => {
+        const [skipped] = versionsOf(receiver.tickets, [skippedNo]);
+        const [unsold] = versionsOf(receiver.tickets, [unsoldNo]);
+        return {
+          bookId: String(bookId),
+          skipped,
+          unsold,
+          reasonKey: "mistake",
+        };
+      };
+      // 未售那張在中山店(別店)→ 擋
       expect(
-        await errorOf(api, managerB, CORRECT, {
-          input: {
-            bookId: String(bookId),
-            ticketNos: ["037", "002"],
-            reasonKey: "mistake",
-          },
-        }),
+        await errorOf(api, managerB, SWAP, { input: pair("037", "070") }),
       ).toMatchObject({
         code: "FORBIDDEN",
         reason: "CROSS_STORE_NOT_ALLOWED",
       });
-      const shipper = await bookOf(bookId, managerA);
-      expect(shipper.abilities.canCorrectSkips).toBe(true);
-      // 出貨店改標到新竹店的 #002 → 也擋
-      expect(
-        await errorOf(api, managerA, CORRECT, {
-          input: {
-            bookId: String(bookId),
-            ticketNos: ["037", "002"],
-            reasonKey: "mistake",
-          },
-        }),
-      ).toMatchObject({ reason: "CROSS_STORE_NOT_ALLOWED" });
-      await ok(api, managerA, CORRECT, {
-        input: {
-          bookId: String(bookId),
-          ticketNos: ["037", "065"],
-          reasonKey: "mistake",
-        },
+      const before002 = await ticketOf(bookId, "002");
+      await ok(api, managerB, SWAP, { input: pair("037", "002") });
+      const back = await ticketOf(bookId, "037");
+      expect(back).toMatchObject({
+        status: TICKET_STATUS.unsold,
+        location: { kind: TICKET_LOCATION_KIND.stock },
+        unitCost: before002?.unitCost,
       });
+      expect(String(back?.orgId)).toBe(String(storeB));
+      const swapped = await ticketOf(bookId, "002");
+      expect(swapped?.status).toBe(TICKET_STATUS.skipped);
+      // 換店稽核
+      const audits = await api.connection
+        .collection<{ after: { ids: string[] } }>("audit_logs")
+        .find({ action: "data.reassign-org", targetType: "lottery_tickets" })
+        .toArray();
+      expect(
+        audits.some((audit) => audit.after.ids.includes(String(back?._id))),
+      ).toBe(true);
     });
   });
 

@@ -9,9 +9,6 @@ import {
   TICKET_LOCATION_KIND,
   TICKET_STATUS,
   type TicketStatus,
-  formatTicketNo,
-  requiredSkipCountOf,
-  skipCorrectionDiffOf,
 } from "@repo/domain/project/lottery";
 import { LOTTERY_FIELD_CATEGORY_KEYS } from "@repo/domain/project/lottery-fields";
 
@@ -42,11 +39,11 @@ import {
 } from "../tickets/inventory-error";
 import { TicketLedgerService } from "../tickets/ticket-ledger.service";
 import type {
-  CorrectLotterySkippedTicketsInput,
   LotteryTicketVersionInput,
   MarkLotterySkippedTicketsInput,
   RecoverLotteryTicketsInput,
   ScrapLotteryTicketsInput,
+  SwapLotterySkippedTicketInput,
 } from "./dto/lottery-inventory.input";
 import { InventoryAccess } from "./inventory-access";
 import { InventoryNames } from "./inventory-names";
@@ -92,7 +89,7 @@ function ticketRefsOf(
 }
 
 /**
- * 庫存管理的寫入(專案規格 7.3、7.4;正本 `docs/modules/project/inventory.md`):更正跳號、尋回、報廢。
+ * 庫存管理的寫入(專案規格 7.3、7.4;正本 `docs/modules/project/inventory.md`):對調跳號、尋回、報廢。
  * 張的狀態與事件一律經帳本(`TicketLedgerService`),在同一個交易;權限由 resolver 的
  * `@RequirePermission` 守,這裡檢查業務規則與原因(欄位管理的原因類別,選「其他」說明必填)。
  */
@@ -110,43 +107,28 @@ export class InventoryActionsService {
   ) {}
 
   /**
-   * 更正跳號(`inventory.mark-skipped`):改完的跳號張數要等於待標註張數(迄號 − 標準張數);
-   * 寫「取消跳號」(原本是跳號、改完不是 → 未售)與「跳號」(新標的,要是未售);原因必填。
+   * 對調跳號(`inventory.mark-skipped`;規格 7.3「更正跳號」,使用者 10/26 定案做法 D):這本的一張跳號
+   * (記在哪家店都可以)與一張未售對調,一次一對、帶版本。未售那張要在操作者的範圍內、未鎖定、不在途。
+   *
+   * - 跳號那張 → 未售(「取消跳號」),**接手配對那張的所在分店、位置、單張成本**(規格 7.x 例外:更正跳號時,
+   *   改回未售的張歸到做更正的那家店);所在分店不同時以帳本的跨店寫入換店(留一筆換店稽核)
+   * - 未售那張 → 跳號(「跳號」);跳號不算任何店的庫存,一張換一張、成本中性
+   * - 原因必填(欄位管理「更正跳號原因」,選「其他」要填說明);兩筆事件同一個時間、同一個交易
    */
-  async correctSkips(
+  async swapSkip(
     operator: OperatorContext,
-    input: CorrectLotterySkippedTicketsInput,
+    input: SwapLotterySkippedTicketInput,
   ): Promise<LotteryInventoryActionPayload> {
     const book = await this.view.mustBook(operator, input.bookId);
-    const lastTicketNo = Number(book.lastTicketNo);
-    const required = requiredSkipCountOf(lastTicketNo, book.standardTickets);
-    if (book.skippedTicketNos.length === 0) {
-      throw validationError(
-        "這本沒有跳號",
-        ["ticketNos"],
-        INVENTORY_REASONS.noSkippedTickets,
-      );
-    }
-    const next = [...new Set(input.ticketNos)];
-    const inRange = (no: string) =>
-      /^\d{3}$/.test(no) && Number(no) >= 1 && Number(no) <= lastTicketNo;
-    if (next.length !== required || !next.every((no) => inRange(no))) {
-      throw validationError(
-        `跳號要剛好 ${String(required)} 張`,
-        ["ticketNos"],
-        INVENTORY_REASONS.skipCountMismatch,
-      );
-    }
-    const diff = skipCorrectionDiffOf(
-      book.skippedTicketNos,
-      next.map((no) => formatTicketNo(Number(no))),
+    const [skippedRef, unsoldRef] = [input.skipped, input.unsold].map(
+      (ticket) => ticketRefsOf([ticket])[0],
     );
-    if (diff.skip.length === 0 && diff.unskip.length === 0) {
-      throw validationError(
-        "跳號沒有更動",
-        ["ticketNos"],
-        INVENTORY_REASONS.skipUnchanged,
-      );
+    if (
+      skippedRef === undefined ||
+      unsoldRef === undefined ||
+      skippedRef.id.equals(unsoldRef.id)
+    ) {
+      throw validationError("要選一張跳號與一張未售", ["tickets"]);
     }
     const reason = await this.fieldOptions.assertReason(
       operator,
@@ -154,58 +136,83 @@ export class InventoryActionsService {
       input,
       LOTTERY_FIELD_CATEGORIES,
     );
+    const tenantId = tenantOfOperator(operator)?.tenantId ?? null;
+    if (tenantId === null) {
+      throw notFoundError("找不到所在租戶");
+    }
     const whole = await this.view.wholeBookReader(operator, book);
     await this.transactions.withTransaction(async (session) => {
-      // 讀整本(反查),再擋所在分店不在操作者範圍內的張(別店的張只能看)
+      // 讀整本(跳號那張可能記在別家店)
       const found = await this.tickets.findMany(
         whole,
-        { bookId: book._id, ticketNo: { $in: [...diff.skip, ...diff.unskip] } },
+        { bookId: book._id, _id: { $in: [skippedRef.id, unsoldRef.id] } },
         { session },
       );
-      this.assertOperable(operator, found);
-      const byNo = new Map(found.map((ticket) => [ticket.ticketNo, ticket]));
-      const missing = [...diff.skip, ...diff.unskip].filter(
-        (no) => !byNo.has(no),
-      );
-      if (missing.length > 0) {
+      const skipped = found.find((ticket) => ticket._id.equals(skippedRef.id));
+      const unsold = found.find((ticket) => ticket._id.equals(unsoldRef.id));
+      if (skipped === undefined || unsold === undefined) {
         throw notFoundError("有幾張不在這本");
       }
-      const pick = (nos: readonly string[]) =>
-        nos.flatMap((no) => {
-          const ticket = byNo.get(no);
-          return ticket ? [ticket] : [];
-        });
-      const toSkip = pick(diff.skip);
-      const toUnskip = pick(diff.unskip);
-      this.assertStatuses(toSkip, [TICKET_STATUS.unsold], "新標的跳號要是未售");
+      // 未售那張要能操作;跳號那張記在哪家店都可以(跳號不算任何店的庫存)
+      this.assertOperable(operator, [unsold]);
       this.assertStatuses(
-        toUnskip,
+        [skipped],
         [TICKET_STATUS.skipped],
-        "要取消的不是跳號",
+        "要改回未售的不是跳號",
       );
+      this.assertStatuses(
+        [unsold],
+        [TICKET_STATUS.unsold],
+        "要改標跳號的不是未售",
+      );
+      if (
+        unsold.lockedBy !== null ||
+        unsold.location.kind === TICKET_LOCATION_KIND.inTransit
+      ) {
+        throw statusNotAllowedError("要改標跳號的張被鎖定或在途", [
+          String(unsold._id),
+        ]);
+      }
       const at = new Date();
+      const takeOver = {
+        status: TICKET_STATUS.unsold,
+        location: {
+          kind: unsold.location.kind,
+          cashPointId: unsold.location.cashPointId,
+        },
+        unitCost: unsold.unitCost,
+      };
+      const unskip = {
+        ticketId: skipped._id,
+        expectedVersion: skippedRef.version,
+        expectedStatuses: [TICKET_STATUS.skipped],
+        type: TICKET_EVENT_TYPE.unskip,
+        at,
+        ...reason,
+      };
+      // 跳號那張改回未售、接手配對那張的所在分店:同一家店 → 照操作者的範圍寫;不同 → 跨店寫入(留換店稽核)
+      await (skipped.orgId.equals(unsold.orgId)
+        ? this.ledger.applyTicketEvents(session, { operator }, [
+            { ...unskip, patch: takeOver },
+          ])
+        : this.ledger.applyTicketEvents(
+            session,
+            { operator, crossStoreTenantId: tenantId },
+            [{ ...unskip, patch: { ...takeOver, orgId: unsold.orgId } }],
+          ));
       await this.ledger.applyTicketEvents(session, { operator }, [
-        ...toUnskip.map((ticket) => ({
-          ticketId: ticket._id,
-          expectedVersion: ticket.version,
-          expectedStatuses: [TICKET_STATUS.skipped],
-          type: TICKET_EVENT_TYPE.unskip,
-          at,
-          patch: { status: TICKET_STATUS.unsold },
-          ...reason,
-        })),
-        ...toSkip.map((ticket) => ({
-          ticketId: ticket._id,
-          expectedVersion: ticket.version,
+        {
+          ticketId: unsold._id,
+          expectedVersion: unsoldRef.version,
           expectedStatuses: [TICKET_STATUS.unsold],
           type: TICKET_EVENT_TYPE.skip,
           at,
           patch: { status: TICKET_STATUS.skipped },
           ...reason,
-        })),
+        },
       ]);
     });
-    return { count: diff.skip.length + diff.unskip.length, lossCost: null };
+    return { count: 2, lossCost: null };
   }
 
   /**

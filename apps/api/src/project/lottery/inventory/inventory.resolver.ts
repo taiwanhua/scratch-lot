@@ -5,7 +5,6 @@ import type { OperatorContext } from "../../../database/operator-context";
 import { RequirePermission } from "../../../permission/require-permission.decorator";
 import { RequireTenant } from "../../tenant-scope/require-tenant.decorator";
 import {
-  CorrectLotterySkippedTicketsInput,
   LotteryAllocationsInput,
   LotteryInventoryBooksInput,
   LotteryStockOverviewInput,
@@ -14,6 +13,7 @@ import {
   RecoverLotteryTicketsInput,
   ScrapLotteryTicketsInput,
   SetLotteryAllocationInput,
+  SwapLotterySkippedTicketInput,
 } from "./dto/lottery-inventory.input";
 import { InventoryActionsService } from "./inventory-actions.service";
 import { InventoryStockService } from "./inventory-stock.service";
@@ -114,11 +114,11 @@ export class LotteryInventoryResolver {
 
   @RequirePermission("inventory.mark-skipped")
   @Mutation(() => LotteryInventoryActionPayload)
-  correctLotterySkippedTickets(
-    @Args("input") input: CorrectLotterySkippedTicketsInput,
+  swapLotterySkippedTicket(
+    @Args("input") input: SwapLotterySkippedTicketInput,
     @CurrentOperator() operator: OperatorContext,
   ): Promise<LotteryInventoryActionPayload> {
-    return this.actions.correctSkips(operator, input);
+    return this.actions.swapSkip(operator, input);
   }
 
   @RequirePermission("inventory.mark-skipped")

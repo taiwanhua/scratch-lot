@@ -6,6 +6,7 @@ import {
   INVENTORY_PERMISSIONS,
   type InventoryBookFilterState,
   TICKET_EVENT_TYPE,
+  TICKET_LOCATION_KIND,
   TICKET_STATUS,
   type TicketEventType,
   bookDisplayStateOf,
@@ -236,15 +237,14 @@ export class InventoryViewService {
     // 能不能操作某一張 = 它的所在分店在操作者的可見範圍內(別店的張只能看)
     const operable = (ticket: TicketRecord) =>
       isOrgVisible(operator, ticket.orgId);
-    // 更正跳號要至少一張自己範圍內的跳號可以取消、一張自己範圍內的未售(未鎖定)可以改標
+    // 對調跳號要這本有跳號(記在哪家店都可以),和一張自己範圍內未售、未鎖定、不在途的張可以改標
     const canCorrectSkips =
-      sortedTickets.some(
-        (ticket) => ticket.status === TICKET_STATUS.skipped && operable(ticket),
-      ) &&
+      sortedTickets.some((ticket) => ticket.status === TICKET_STATUS.skipped) &&
       sortedTickets.some(
         (ticket) =>
           ticket.status === TICKET_STATUS.unsold &&
           ticket.lockedBy === null &&
+          ticket.location.kind !== TICKET_LOCATION_KIND.inTransit &&
           operable(ticket),
       );
     const ticketNos = new Map(
