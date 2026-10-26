@@ -32,6 +32,7 @@ import {
   REQUISITION_STATUS_ORDER,
   requisitionListSchema,
 } from "../../RequisitionsTab/requisitions";
+import { SubmissionDeleteButton } from "../../shared/SubmissionDeleteButton";
 import {
   type SubmissionColumn,
   type SubmissionRow,
@@ -51,6 +52,8 @@ type StatusFilter = typeof ALL | FormSubmissionStatus;
 
 type Translate = ReturnType<typeof useTranslations>;
 
+/** [刪除] 欄寬。 */
+const DELETE_WIDTH = 80;
 /** 調貨單列表的篩選(狀態、頁碼;同叫貨單列表的形狀)。 */
 const listSchema = requisitionListSchema;
 
@@ -203,12 +206,28 @@ export const TransferPage = () => {
     }
   };
 
-  const columns: TableColumn<SubmissionRow>[] = listColumns.map((column) => ({
-    key: column.key,
-    header: column.header,
-    width: column.width,
-    render: (row) => column.render(row),
-  }));
+  const columns: TableColumn<SubmissionRow>[] = [
+    ...listColumns.map((column) => ({
+      key: column.key,
+      header: column.header,
+      width: column.width,
+      render: (row: SubmissionRow) => column.render(row),
+    })),
+    // 草稿 [刪除](照引擎的 abilities;檢視頁也有)
+    {
+      key: "delete",
+      header: "",
+      width: DELETE_WIDTH,
+      render: (row) => (
+        <SubmissionDeleteButton
+          moduleKey={TRANSFER_MODULE_KEY}
+          id={row.id}
+          label={row.serialNo ?? row.formName ?? row.id}
+          canDelete={row.abilities.canDelete}
+        />
+      ),
+    },
+  ];
 
   let list: ReactNode;
   if (!isMobile) {
@@ -220,7 +239,10 @@ export const TransferPage = () => {
         getRowKey={(row) => row.id}
         isLoading={query.isLoading}
         emptyMessage={t("empty")}
-        minWidth={listColumns.reduce((sum, column) => sum + column.width, 0)}
+        minWidth={listColumns.reduce(
+          (sum, column) => sum + column.width,
+          DELETE_WIDTH,
+        )}
         onRowClick={open}
       />
     );

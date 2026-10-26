@@ -52,6 +52,7 @@ import { useRouteTabItemLabel } from "@/hooks/base/useRouteTabItemLabel";
 import { useSession } from "@/hooks/base/useSession";
 import type { ModulePageProps } from "@/lib/base/module-tree";
 
+import { SubmissionDeleteButton } from "../../shared/SubmissionDeleteButton";
 import { TRANSFER_MODULE_KEY, formatMoney } from "../transfer-keys";
 import { TransferPrintButtons } from "./TransferPrintButtons";
 import { TransferWrongStoreDialog } from "./TransferWrongStoreDialog";
@@ -271,6 +272,14 @@ export const TransferViewPage = ({ routeParam }: ModulePageProps) => {
               </Button>
               <Box sx={{ flex: 1 }} />
               <TransferPrintButtons receipts={receipts} />
+              {submission !== null && (
+                <SubmissionDeleteButton
+                  moduleKey={TRANSFER_MODULE_KEY}
+                  id={id}
+                  label={submission.serialNo ?? submission.formName ?? id}
+                  canDelete={submission.abilities.canDelete}
+                />
+              )}
               {access.editRoute !== null &&
                 submission?.abilities.canEdit === true && (
                   <Button

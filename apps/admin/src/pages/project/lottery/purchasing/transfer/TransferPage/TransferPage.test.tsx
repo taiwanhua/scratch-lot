@@ -1,5 +1,6 @@
 import { describe, expect, it } from "@jest/globals";
-import { screen, within } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 
 import { renderTransferPage } from "../transfer-test-support";
 
@@ -25,6 +26,23 @@ describe("調貨單列表", () => {
     expect(
       screen.getByRole("button", { name: "+ 新增調貨單" }),
     ).toBeInTheDocument();
+  });
+
+  it("草稿照引擎的 abilities 有 [刪除]:確認後刪掉、列表不再有它;其他狀態沒有", async () => {
+    const user = userEvent.setup();
+    renderTransferPage({ path: "/purchasing/transfer" });
+    const table = await screen.findByRole("table", { name: "調貨單列表" });
+    const serial = await within(table).findByText("T-0009");
+    const draft = serial.closest("tr") as HTMLElement;
+    expect(
+      within(table).queryByRole("button", { name: /刪除 T-0010/ }),
+    ).toBeNull();
+    await user.click(within(draft).getByRole("button", { name: /刪除/ }));
+    const dialog = await screen.findByRole("dialog");
+    await user.click(within(dialog).getByRole("button", { name: /刪除/ }));
+    await waitFor(() => {
+      expect(within(table).queryByText("T-0009")).toBeNull();
+    });
   });
 
   it("沒有新增權限看不到 [+ 新增]", async () => {

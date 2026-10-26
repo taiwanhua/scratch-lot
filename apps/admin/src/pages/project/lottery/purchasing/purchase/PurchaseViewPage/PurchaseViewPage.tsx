@@ -42,6 +42,7 @@ import { useSession } from "@/hooks/base/useSession";
 import type { ModulePageProps } from "@/lib/base/module-tree";
 import { purchaseReceivingInputOf } from "@/lib/project/lottery/receipts/purchase-receiving-receipt";
 
+import { SubmissionDeleteButton } from "../../shared/SubmissionDeleteButton";
 import { PURCHASE_MODULE_KEY } from "../purchase-keys";
 import { PurchaseReceiptPrint } from "./PurchaseReceiptPrint";
 import { PurchaseRedemptionRecords } from "./PurchaseRedemptionRecords";
@@ -216,6 +217,14 @@ export const PurchaseViewPage = ({ routeParam }: ModulePageProps) => {
               submission={submission}
               receiving={data}
               url={documentUrl}
+            />
+          )}
+          {submission !== null && (
+            <SubmissionDeleteButton
+              moduleKey={PURCHASE_MODULE_KEY}
+              id={id}
+              label={submission.serialNo ?? submission.formName ?? id}
+              canDelete={submission.abilities.canDelete}
             />
           )}
           {access.editRoute !== null &&
