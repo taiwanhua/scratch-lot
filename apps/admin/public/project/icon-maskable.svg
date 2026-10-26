@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <!-- 可遮罩版(暫用):滿版底色,圖案縮到中央安全區。與 icon.svg 同一個圖案 -->
+  <!-- 可遮罩版(暫用):滿版底色,圖案約佔 57%,四角仍在中央 80% 圓的安全區內。與 icon.svg 同一個圖案 -->
   <rect width="512" height="512" fill="#1B2440"/>
-  <g transform="translate(256 256) scale(0.78) translate(-256 -256)">
+  <g transform="translate(256 256) scale(0.91) translate(-256 -256)">
     <rect x="96" y="96" width="320" height="320" rx="40" fill="#C9CED8"/>
     <g fill="#9AA2B1" opacity="0.55">
       <circle cx="140" cy="140" r="6"/>

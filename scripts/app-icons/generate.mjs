@@ -6,8 +6,8 @@
  *
  * 讀(專案資產,放 `<public>/project/`):
  *   icon.svg           一般圖示:四角可透明,給瀏覽器分頁、桌面捷徑、app 清單
- *   icon-maskable.svg  可遮罩圖示:滿版不透明底色,圖案留在中央 80% 的安全區內;
- *                      Android 依啟動器形狀裁切,iOS 主畫面也用它(iOS 自己裁圓角、不吃透明)
+ *   icon-maskable.svg  可遮罩圖示:滿版不透明底色,圖案留在中央 80% 的安全區內;Android 依啟動器形狀裁切
+ *   icon-apple.svg     iOS 主畫面圖示:滿版不透明底色(iOS 自己裁圓角、不吃透明、不吃 maskable),圖案可以放大
  * 寫:
  *   <public>/project/icon-192.png、icon-512.png、icon-maskable-512.png、apple-touch-icon.png(180)
  *   <public>/favicon.ico(16 / 32 / 48)
@@ -22,13 +22,17 @@ import sharp from "sharp";
 
 import { packIco } from "./ico.mjs";
 
-const SOURCES = { any: "icon.svg", maskable: "icon-maskable.svg" };
+const SOURCES = {
+  any: "icon.svg",
+  maskable: "icon-maskable.svg",
+  apple: "icon-apple.svg",
+};
 
 const OUTPUTS = [
   { file: "icon-192.png", source: "any", size: 192 },
   { file: "icon-512.png", source: "any", size: 512 },
   { file: "icon-maskable-512.png", source: "maskable", size: 512 },
-  { file: "apple-touch-icon.png", source: "maskable", size: 180 },
+  { file: "apple-touch-icon.png", source: "apple", size: 180 },
 ];
 
 const FAVICON_SIZES = [16, 32, 48];
