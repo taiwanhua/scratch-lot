@@ -11,9 +11,11 @@ import type { OperatorContext } from "../../../database/operator-context";
 import {
   LotteryBooksRepository,
   LotteryTicketEventsRepository,
+  LotteryTicketsRepository,
 } from "../../database/lottery-inventory/lottery-inventory.repository";
 import type { LotteryOperationsInventoryModel } from "./models/operations-report.model";
 import { type BookPendings, loadBookPendings } from "./report-pending";
+import { type PendingStores, loadPendingStores } from "./report-pending-store";
 import type { StorePeriod } from "./report-periods";
 import {
   ReportStock,
@@ -103,6 +105,36 @@ function lostFiguresOf(
   return { tickets, cost };
 }
 
+/**
+ * 一種庫存進出(依本 × 單據一組)扣掉待標註後的張數與成本。期間內有待標註的本(`PendingStores`):這組事件前後
+ * 這家店庫存要扣的待標註差多少(進:張數 − 差;出:張數 + 差);其他照整本規則(`BookPendings.adjustmentOf`)。
+ */
+function flowFiguresOf(
+  groups: readonly TicketGroupInput[],
+  pendings: BookPendings,
+  pendingStores: PendingStores | null,
+  orgId: Types.ObjectId,
+  direction: 1 | -1,
+): StockFigures {
+  let tickets = 0;
+  let cost = 0;
+  for (const group of groups) {
+    const size = group.costs.length;
+    if (size === 0) {
+      continue;
+    }
+    const total = group.costs.reduce((sum, value) => sum + value, 0);
+    const pending =
+      pendingStores?.covers(group.bookId) === true
+        ? direction *
+          pendingStores.adjustmentChange(group.bookId, orgId, group.at)
+        : pendings.adjustmentOf(group.bookId, group.at, size);
+    tickets += size - pending;
+    cost += total - (pending * total) / size;
+  }
+  return { tickets, cost };
+}
+
 const minus = (left: StockFigures, right: StockFigures): StockFigures => ({
   tickets: left.tickets - right.tickets,
   cost: left.cost - right.cost,
@@ -125,6 +157,7 @@ export class OperationsInventory {
     private readonly stock: ReportStock,
     private readonly books: LotteryBooksRepository,
     private readonly events: LotteryTicketEventsRepository,
+    private readonly tickets: LotteryTicketsRepository,
   ) {}
 
   async inventoryOf(
@@ -151,12 +184,29 @@ export class OperationsInventory {
         ...outbound.map((row) => row.bookId),
       ],
     );
-    const opening = this.stock.snapshotOf(openingHeld, pendings, from);
-    const ending = this.stock.snapshotOf(endingHeld, pendings, to);
+    const pendingStores = await loadPendingStores(
+      reader,
+      { tickets: this.tickets, events: this.events },
+      pendings,
+      [
+        ...openingHeld.map((ticket) => ticket.bookId),
+        ...endingHeld.map((ticket) => ticket.bookId),
+        ...events.map((event) => event.bookId),
+      ],
+      from,
+      to,
+    );
+    const stores = { pendingStores, orgId };
+    const opening = this.stock.snapshotOf(openingHeld, pendings, from, stores);
+    const ending = this.stock.snapshotOf(endingHeld, pendings, to, stores);
     const ofType = (type: string, keep: (event: InventoryEvent) => boolean) =>
       events.filter((event) => event.type === type && keep(event));
-    const figures = (list: readonly InventoryEvent[]) =>
-      figuresOf(groupsOf(list), pendings);
+    // 庫存的進(+1)/ 出(−1):有待標註的本,這組事件讓這家店庫存要扣的待標註變了多少就照算(期初 + 進 − 出 = 期末)
+    const figures = (
+      list: readonly InventoryEvent[],
+      direction: 1 | -1 = 1,
+      stores: PendingStores | null = pendingStores,
+    ) => flowFiguresOf(groupsOf(list), pendings, stores, orgId, direction);
     const onHandBefore = (event: InventoryEvent) =>
       isOnHandAt(event.from, orgId);
     const onHandAfter = (event: InventoryEvent) => isOnHandAt(event.to, orgId);
@@ -164,7 +214,11 @@ export class OperationsInventory {
     const purchasedEvents = ofType(TICKET_EVENT_TYPE.purchase, onHandAfter);
     // 進貨作廢:張的狀態不變、本改已撤銷 → 作廢那一刻起不算庫存(只算作廢時還在這家店庫存的張)
     const voidedEvents = ofType(TICKET_EVENT_TYPE.purchaseVoid, onHandBefore);
-    const purchase = minus(figures(purchasedEvents), figures(voidedEvents));
+    const purchase = minus(
+      figures(purchasedEvents),
+      // 作廢不改張的狀態(本改已撤銷),照整本規則
+      figures(voidedEvents, -1, null),
+    );
     const booksOf = (list: readonly InventoryEvent[]) =>
       new Set(list.map((event) => String(event.bookId))).size;
     const voidBooks = booksOf(voidedEvents);
@@ -204,7 +258,7 @@ export class OperationsInventory {
       ),
     );
 
-    const scrap = figures(ofType(TICKET_EVENT_TYPE.scrap, onHandBefore));
+    const scrap = figures(ofType(TICKET_EVENT_TYPE.scrap, onHandBefore), -1);
     // 新增待查:庫存 → 待查,加上在途中被刪掉變待查的(那幾張的調出在同一天反向算回)
     const lostInTransit = figuresOf(
       outboundGroupsOf(
@@ -216,6 +270,7 @@ export class OperationsInventory {
     );
     const onHandInvestigating = figures(
       ofType(TICKET_EVENT_TYPE.investigate, onHandBefore),
+      -1,
     );
     const newInvestigating = {
       tickets: onHandInvestigating.tickets + lostInTransit.tickets,

@@ -3093,6 +3093,68 @@ describe("輸出報表:營運報表、班次結帳歷史報表(GraphQL 端點 + 
       });
     });
 
+    it("S3d 未拆的本整本待查 → 全部尋回、分到兩家店(嘉南 50 / 雲林 51):待標註只在張數多的雲林扣一次 → 兩店期末合計 100、核對都是 0", async () => {
+      const bookId = await purchase(chianan, taipei("2026-11-16", "09:00"));
+      await apply(
+        { operator: storeOperator(chianan) },
+        await ticketsOf(bookId),
+        {
+          type: "investigate",
+          at: taipei("2026-11-16", "10:00"),
+          patch: { status: "investigating", responsibleOrgId: chianan },
+          refType: "stocktake",
+          refId: new Types.ObjectId(),
+        },
+      );
+      const all = await ticketsOf(bookId);
+      await apply({ operator: storeOperator(chianan) }, all.slice(0, 50), {
+        type: "recover",
+        at: taipei("2026-11-17", "10:00"),
+        patch: {
+          status: "unsold",
+          location: { kind: "stock", cashPointId: null },
+          responsibleOrgId: null,
+        },
+        reasonKey: "found",
+      });
+      await apply(
+        { operator: storeOperator(yunlin), crossStoreTenantId: tenant },
+        await ticketsWhere(
+          bookId,
+          (ticket) => ticket.status === "investigating",
+        ),
+        {
+          type: "recover",
+          at: taipei("2026-11-17", "11:00"),
+          patch: {
+            status: "unsold",
+            location: { kind: "stock", cashPointId: null },
+            responsibleOrgId: null,
+            orgId: yunlin,
+          },
+          reasonKey: "found",
+        },
+      );
+      const a = await inventoryOn("2026-11-17", chianan);
+      const b = await inventoryOn("2026-11-17", yunlin);
+      // 兩店都還有前面情境的本:看這一天的變化(這本 11/17 期初 0:整本待查中)
+      expect({
+        chianan: Number(a.endingTickets) - Number(a.openingTickets),
+        yunlin: Number(b.endingTickets) - Number(b.openingTickets),
+        checkA: a.checkTickets,
+        checkB: b.checkTickets,
+      }).toEqual({ chianan: 50, yunlin: 50, checkA: 0, checkB: 0 });
+      // 隔天的期初也照同一個規則(= 前一天期末)、核對 0
+      const nextA = await inventoryOn("2026-11-18", chianan);
+      const nextB = await inventoryOn("2026-11-18", yunlin);
+      expect([
+        nextA.openingTickets,
+        nextB.openingTickets,
+        nextA.checkTickets,
+        nextB.checkTickets,
+      ]).toEqual([a.endingTickets, b.endingTickets, 0, 0]);
+    });
+
     it("S3c 未拆的本整本待查 → 尋回 3 張 → 其餘 98 張確認遺失:確認遺失 97(待標註一本只扣一次)、期末待查 0、核對 0", async () => {
       const bookId = await purchase(chianan, taipei("2026-11-14", "09:00"));
       await apply(

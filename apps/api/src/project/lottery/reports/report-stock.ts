@@ -18,6 +18,7 @@ import {
 } from "../../database/lottery-inventory/lottery-inventory.repository";
 import { LotteryTransferReceiptsRepository } from "../../database/lottery-transfers/lottery-transfer-receipts.repository";
 import type { BookPendings } from "./report-pending";
+import type { PendingStores } from "./report-pending-store";
 
 /** 在店裡的位置:庫存、檯面(在途不算任何一家店的庫存)。 */
 const ON_HAND_LOCATIONS: ReadonlySet<string> = new Set([
@@ -300,6 +301,7 @@ export class ReportStock {
     held: readonly HeldTicket[],
     pendings: BookPendings,
     at: Date,
+    stores?: { pendingStores: PendingStores; orgId: Types.ObjectId },
   ): StockSnapshot {
     const live = held.filter(
       (ticket) => !pendings.revokedBefore(ticket.bookId, at),
@@ -337,8 +339,28 @@ export class ReportStock {
               },
             ];
       });
+    // 有待標註的本:扣在哪一家店照整本(跨店)那一刻的狀態(`PendingStores`,和本的詳情同一個規則)
+    const onHandGroups = toGroups(onHand);
+    const covered = (group: TicketGroupInput) =>
+      stores?.pendingStores.covers(group.bookId) === true;
+    const onHandFigures = figuresOf(
+      onHandGroups.filter((group) => !covered(group)),
+      pendings,
+    );
+    for (const group of onHandGroups.filter((item) => covered(item))) {
+      const size = group.costs.length;
+      const total = group.costs.reduce((sum, value) => sum + value, 0);
+      const pending =
+        stores?.pendingStores.onHandAdjustment(
+          group.bookId,
+          stores.orgId,
+          at,
+        ) ?? 0;
+      onHandFigures.tickets += size - pending;
+      onHandFigures.cost += total - (pending * total) / size;
+    }
     return {
-      onHand: figuresOf(toGroups(onHand), pendings),
+      onHand: onHandFigures,
       investigating: {
         ...remainderFiguresOf(toGroups(investigating), pendings),
         bookIds: [
