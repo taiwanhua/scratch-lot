@@ -55,7 +55,8 @@ export const PROJECT_TENANT_BOUNDARY_CONTEXT_CALLERS: Readonly<
   "project/lottery/inventory/inventory-view.service.ts": ["反查"],
   // 庫存管理:分店與使用者名稱、組織樹(分店可能不在讀者的可見範圍)
   "project/lottery/inventory/inventory-names.ts": ["反查"],
-  // 尋回:刷到的張可能還在別的分店(先讀狀態;寫入經帳本的跨店寫入)
+  // 尋回、報廢、更正跳號:先以租戶邊界讀張(刷到的張可能還在別的分店;選到別店的張要回
+  // CROSS_STORE_NOT_ALLOWED,不是「已被處理」);寫入經帳本(刷到實體的尋回走跨店寫入)
   "project/lottery/inventory/inventory-actions.service.ts": ["反查"],
   // 看得到帳戶 / 單據 / 交易,就看得到它掛的分店名稱與登記人(使用組織可能是讀者看不到的組織)
   "project/lottery/accounts/account-names.ts": ["反查"],

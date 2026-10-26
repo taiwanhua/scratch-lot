@@ -61,7 +61,16 @@ export const CorrectSkipsDialog = ({
   const isMobile = useBreakpointDown("sm");
   const { book } = detail;
   const required = book.requiredSkipCount;
-  const [selected, setSelected] = useState<string[]>(book.skippedTicketNos);
+  // 別店的跳號不能改:不畫成已選(格子顯示「其他分店」),送出時原樣補回
+  const otherStoreSkips = detail.tickets
+    .filter((ticket) => !ticket.operable && ticket.status === "skipped")
+    .map((ticket) => ticket.ticketNo);
+  const [selected, setSelected] = useState<string[]>(() =>
+    book.skippedTicketNos.filter((no) => !otherStoreSkips.includes(no)),
+  );
+  const ticketNos = [...selected, ...otherStoreSkips].toSorted((a, b) =>
+    a.localeCompare(b),
+  );
   const [reason, setReason] = useState<ReasonValue>(EMPTY_REASON);
   const [invalid, setInvalid] = useState<string[]>([]);
   const correct = useCorrectLotterySkippedTicketsMutation(
@@ -85,7 +94,7 @@ export const CorrectSkipsDialog = ({
   );
   const submit = () => {
     const missing: string[] = missingReasonFields(reason);
-    if (selected.length !== required) {
+    if (ticketNos.length !== required) {
       missing.push("ticketNos");
     }
     setInvalid(missing);
@@ -95,14 +104,14 @@ export const CorrectSkipsDialog = ({
     correct.mutate({
       input: {
         bookId: book.id,
-        ticketNos: selected,
+        ticketNos,
         ...reasonInputOf(reason),
       },
     });
   };
   const changedText = t("correctSkips.changedTo", {
-    ranges: formatTicketRanges(selected) || t("stock.none"),
-    count: selected.length,
+    ranges: formatTicketRanges(ticketNos) || t("stock.none"),
+    count: ticketNos.length,
     required,
   });
 
@@ -146,7 +155,7 @@ export const CorrectSkipsDialog = ({
           <Typography
             variant="body1"
             color={
-              invalid.includes("ticketNos") || selected.length !== required
+              invalid.includes("ticketNos") || ticketNos.length !== required
                 ? "warning"
                 : "success"
             }
@@ -161,7 +170,7 @@ export const CorrectSkipsDialog = ({
           onSelectedChange={setSelected}
           legendItems={skipCorrectionLegendOf(detail.tickets)}
           quickSelect={false}
-          maxSelected={required}
+          maxSelected={required - otherStoreSkips.length}
           summary={false}
         />
         <ReasonFields

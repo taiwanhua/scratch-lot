@@ -7,7 +7,10 @@ import { GraphQLError } from "graphql";
 export const INVENTORY_REASONS = {
   /** 張已被處理(狀態或版本不是呼叫端讀到的、被鎖定、或同一個事件 id 已寫過別的內容) */
   ticketAlreadyProcessed: "TICKET_ALREADY_PROCESSED",
-  /** 跨店寫入只能把張移進操作者看得到的店(調入、尋回) */
+  /**
+   * 跨店:跨店寫入只能把張移進操作者看得到的店(調入、刷到實體的尋回);報廢、從清單選的尋回、
+   * 更正跳號選到所在分店不在操作者可見範圍內的張
+   */
   crossStoreNotAllowed: "CROSS_STORE_NOT_ALLOWED",
   /** 點收分店不在操作者當前組織的租戶 */
   storeOutsideTenant: "STORE_OUTSIDE_TENANT",

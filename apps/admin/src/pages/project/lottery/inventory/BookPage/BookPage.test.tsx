@@ -194,4 +194,49 @@ describe("本的詳情", () => {
     });
     expect(fake.inputs.recover[0]?.orgId).toBeUndefined();
   });
+  it("預先選取的別店張不畫成已選:`?ticket=` 帶來別店的張、更正跳號的別店跳號(送出時原樣補回)", async () => {
+    // #001–040 在別店(含跳號 #037);#064 跳號在自己店
+    const base = sampleBookDetail();
+    const detail = {
+      ...base,
+      tickets: base.tickets.map((ticket) =>
+        Number(ticket.ticketNo) <= 40
+          ? { ...ticket, operable: false, org: inventoryOrgs.storeB }
+          : ticket,
+      ),
+    };
+    const { user, fake } = renderInventory({
+      path: `${BOOK}?ticket=037`,
+      world: { details: [detail] },
+    });
+    await screen.findByRole("heading", { name: "5164 發大財 · 本號 056527" });
+    const linked = within(grid()).getByRole("button", {
+      name: "#037 其他分店",
+    });
+    expect(linked).toHaveAttribute("aria-pressed", "false");
+    expect(screen.queryByText(/^已選 /)).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "更正跳號" }));
+    const dialog = await screen.findByRole("dialog", { name: /更正跳號/ });
+    const dialogGrid = within(dialog).getByRole("group", { name: "張數格子" });
+    expect(
+      within(dialogGrid).getByRole("button", { name: "#037 其他分店" }),
+    ).toHaveAttribute("aria-pressed", "false");
+    expect(
+      within(dialogGrid).getByRole("button", { name: /^#064 / }),
+    ).toHaveAttribute("aria-pressed", "true");
+    await user.click(
+      within(dialogGrid).getByRole("button", { name: /^#064 / }),
+    );
+    await user.click(
+      within(dialogGrid).getByRole("button", { name: /^#066 / }),
+    );
+    await user.click(
+      within(dialog).getByRole("combobox", { name: /更正原因/ }),
+    );
+    await user.click(await screen.findByRole("option", { name: "標註錯誤" }));
+    await user.click(within(dialog).getByRole("button", { name: "更正" }));
+    await waitFor(() => {
+      expect(fake.inputs.correct[0]?.ticketNos).toEqual(["037", "066"]);
+    });
+  });
 });

@@ -89,9 +89,11 @@ export const BookPage = ({ routeParam }: ModulePageProps) => {
   }
 
   const { book, abilities } = detail;
-  const selectedTickets: Ticket[] = detail.tickets.filter((ticket) =>
-    selected.includes(ticket.ticketNo),
+  // 別店的張不能選:`?ticket=` 帶來的別店張不畫成已選(格子顯示「其他分店」)
+  const selectedTickets: Ticket[] = detail.tickets.filter(
+    (ticket) => ticket.operable && selected.includes(ticket.ticketNo),
   );
+  const selectedNos = selectedTickets.map((ticket) => ticket.ticketNo);
   const actions = selectionActionsOf(selectedTickets);
   // [整本尋回] 只算自己能操作的張(別店的張只能看)
   const missingTickets = detail.tickets.filter(isRecoverable);
@@ -144,7 +146,7 @@ export const BookPage = ({ routeParam }: ModulePageProps) => {
           <TicketGrid
             cells={bookCellsOf(detail.tickets)}
             selectableStates={BOOK_SELECTABLE}
-            selected={selected}
+            selected={selectedNos}
             onSelectedChange={setSelected}
             legendItems={bookLegendOf(detail.tickets)}
             summary={false}
