@@ -96,15 +96,18 @@ describe("補印對話框", () => {
       ]);
     });
     expect(screen.queryByRole("dialog", { name: "補印" })).toBeNull();
-    expect(renderImage).toHaveBeenCalledWith({
-      printNo: 3,
-      reason: "lost",
-      reasonLabel: "遺失",
-      note: null,
-      reprintedAt: expect.any(String),
-      reprintedBy: "小華",
-      variant: null,
-    });
+    expect(renderImage).toHaveBeenCalledWith(
+      {
+        printNo: 3,
+        reason: "lost",
+        reasonLabel: "遺失",
+        note: null,
+        reprintedAt: expect.any(String),
+        reprintedBy: "小華",
+        variant: null,
+      },
+      null,
+    );
   });
 
   it("使用處給補印選項(例:補哪一聯)→ 原因上面多一個選單、預設第一個;選的值交給轉圖與單據名稱", async () => {
@@ -144,6 +147,7 @@ describe("補印對話框", () => {
     });
     expect(renderImage).toHaveBeenCalledWith(
       expect.objectContaining({ printNo: 2, variant: "courier" }),
+      "courier",
     );
   });
 
@@ -199,6 +203,63 @@ describe("補印對話框", () => {
       expect(world.created).toHaveLength(1);
     });
     expect(screen.queryByRole("dialog")).toBeNull();
-    expect(renderImage).toHaveBeenCalledWith(null);
+    expect(renderImage).toHaveBeenCalledWith(null, null);
+  });
+});
+
+describe("第一次列印的使用處選項(printVariants)", () => {
+  const variants = {
+    label: "列印哪一聯",
+    options: [
+      { value: "all", label: "兩聯都印" },
+      { value: "store", label: "第 1 聯 · 店鋪留存" },
+    ],
+  };
+
+  it("沒印過 → 按 [列印] 先開選單(預設第一個);選了才送,交給轉圖與單據名稱;不是補印", async () => {
+    const { user, world, renderImage } = renderPrintButton({
+      props: {
+        printVariants: variants,
+        documentName: (reprint, variant) =>
+          `收據 C-0031(${variant ?? ""})${reprint === null ? "" : "補印"}`,
+      },
+    });
+    await user.click(await findPrintButton("列印"));
+    const dialog = await screen.findByRole("dialog", { name: "列印" });
+    const select = within(dialog).getByRole("combobox", {
+      name: /列印哪一聯/,
+    });
+    expect(select).toHaveTextContent("兩聯都印");
+    expect(
+      within(dialog).queryByRole("combobox", { name: /補印原因/ }),
+    ).toBeNull();
+    await user.click(select);
+    await user.click(
+      await screen.findByRole("option", { name: "第 1 聯 · 店鋪留存" }),
+    );
+    await user.click(within(dialog).getByRole("button", { name: "列印" }));
+
+    await waitFor(() => {
+      expect(world.created).toEqual([
+        expect.objectContaining({
+          isReprint: false,
+          documentName: "收據 C-0031(store)",
+        }),
+      ]);
+    });
+    expect(renderImage).toHaveBeenCalledWith(null, "store");
+  });
+
+  it("按 [取消] → 不送(沒給 printVariants 時 [列印] 直接送,見 PrintButton.test 的 Sending)", async () => {
+    const { user, world } = renderPrintButton({
+      props: { printVariants: variants },
+    });
+    await user.click(await findPrintButton("列印"));
+    const dialog = await screen.findByRole("dialog", { name: "列印" });
+    await user.click(within(dialog).getByRole("button", { name: "取消" }));
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).toBeNull();
+    });
+    expect(world.created).toEqual([]);
   });
 });

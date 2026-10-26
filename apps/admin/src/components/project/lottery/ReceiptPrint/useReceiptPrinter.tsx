@@ -5,6 +5,7 @@ import { useTranslations } from "use-intl";
 import { REPRINT_REASON_OTHER } from "@repo/domain/printing";
 import {
   useCreatePrintJobMutation,
+  useDocumentPrintCountQuery,
   usePrintablePrintersQuery,
 } from "@repo/graphql";
 import { Box } from "@repo/ui/box";
@@ -55,7 +56,7 @@ export interface ReceiptPrinter {
    * 沒有 `api.printing.print` → 不印;分店沒有可用的印表機 → 不印。
    * 印表機 = 單據的預設(收銀點的印表機)→ 分店預設 → 第一台。
    * 任何失敗(查印表機、轉圖、建立工作)只記 log,不拋錯、不跳提示,呼叫端照常往下做;
-   * 唯一的例外:接成一張的圖超過高度 / 大小上限(多聯加總、明細很長)→ 不送,跳一則提示請到 [列印] 補印(可分聯補印)。
+   * 唯一的例外:接成一張的圖超過高度 / 大小上限(多聯加總、明細很長)→ 不送,跳一則提示請按 [列印](沒印過)或 [補印](印過)分聯印。
    * 工作有結果時重查那張單據的已印次數(`PrintResultWatch`;呼叫端還掛著 `host` 時),標頭按鈕跟著變 [補印]。
    */
   printReceiptAfterCommit: <Kind extends ReceiptKind>(
@@ -64,12 +65,13 @@ export interface ReceiptPrinter {
   ) => Promise<void>;
   /**
    * 把一張單據轉成 PNG(列印按鈕的 `renderImage`):多聯的單據印全部的聯(接成一張圖、中間切紙);
-   * 補印時帶補印標示,補印對話框選了其中一聯(`reprint.variant`)就只印那一聯。
+   * 補印時帶補印標示;選了其中一聯(`variant`:第一次列印的「列印哪一聯」、補印的「補印哪一聯」)就只印那一聯。
    */
   renderReceipt: <Kind extends ReceiptKind>(
     kind: Kind,
     payload: ReceiptPayloads[Kind],
     reprint: PrintReprintMark | null,
+    variant?: string | null,
   ) => Promise<Blob>;
   /** 轉圖用的畫面外節點:呼叫端要把它放進畫面(轉圖要真的排版) */
   host: ReactNode;
@@ -84,6 +86,7 @@ export const useReceiptPrinter = (): ReceiptPrinter => {
   const tRoot = useTranslations();
   const tReprint = useTranslations(REPRINT_I18N);
   const tReceipts = useTranslations(RECEIPTS_I18N);
+  const tPrintButton = useTranslations("admin.printButton");
   const showSnackbar = useSnackbar();
   const temporalText = useTemporalText();
   const tenantName = useMe().data?.me.currentOrg?.tenantName ?? "";
@@ -126,6 +129,7 @@ export const useReceiptPrinter = (): ReceiptPrinter => {
       kind: Kind,
       payload: ReceiptPayloads[Kind],
       reprint: PrintReprintMark | null,
+      variant: string | null = null,
     ) => {
       const definition = receiptKindOf(kind);
       return renderLayouts(
@@ -134,7 +138,7 @@ export const useReceiptPrinter = (): ReceiptPrinter => {
           payload,
           translatorOf(definition.i18n),
           new Date().toISOString(),
-          reprint?.variant ?? RECEIPT_ALL_COPIES,
+          variant ?? reprint?.variant ?? RECEIPT_ALL_COPIES,
         ),
         reprint,
       );
@@ -184,7 +188,24 @@ export const useReceiptPrinter = (): ReceiptPrinter => {
         if (isPrintImageTooLarge(image)) {
           // api 一定擋(INVALID_IMAGE):不送,告訴使用者這次沒印出、怎麼補
           logReceiptPrintFailure("image too large", { kind, orgId });
-          showSnackbar("warning", tReceipts("tooLong"));
+          // 照按鈕現在的樣子寫:沒印過是 [列印]、印過是 [補印](兩邊都能選聯別)
+          const printed = await queryClient
+            .fetchQuery({
+              queryKey: useDocumentPrintCountQuery.getKey({
+                input: { refType: document.refType, refId: document.refId },
+              }),
+              queryFn: useDocumentPrintCountQuery.fetcher(session.client, {
+                input: { refType: document.refType, refId: document.refId },
+              }),
+            })
+            .then((data) => data.documentPrintCount.printedCount)
+            .catch(() => 0);
+          showSnackbar(
+            "warning",
+            tReceipts("tooLong", {
+              button: tPrintButton(printed > 0 ? "reprint" : "print"),
+            }),
+          );
           return;
         }
         const created = await createPrintJob({
@@ -206,6 +227,7 @@ export const useReceiptPrinter = (): ReceiptPrinter => {
       renderLayouts,
       session.client,
       showSnackbar,
+      tPrintButton,
       tReceipts,
       translatorOf,
     ],

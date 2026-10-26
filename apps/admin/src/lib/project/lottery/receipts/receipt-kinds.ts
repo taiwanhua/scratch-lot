@@ -382,6 +382,33 @@ export const receiptReprintVariantsOf = (
   };
 };
 
+/**
+ * 第一次列印([列印])的「列印哪一聯」:兩聯都印(預設)、第 1 聯、第 2 聯…;一聯的單據 → null([列印] 直接送)。
+ * 只印一聯也是一次列印(一個工作,已印次數 +1);之後再印另一聯就是補印。
+ */
+export const receiptPrintVariantsOf = (
+  kind: ReceiptKind,
+  t: ReceiptTranslator,
+): { label: string; options: { value: string; label: string }[] } | null => {
+  const { copies } = RECEIPT_KINDS[kind];
+  if (copies.length === 0) {
+    return null;
+  }
+  return {
+    label: t("printCopies"),
+    options: [
+      {
+        value: RECEIPT_ALL_COPIES,
+        label: t("printAllCopies", { count: copies.length }),
+      },
+      ...copies.map((copy) => ({
+        value: copy,
+        label: receiptCopyLineOf(kind, t, copy),
+      })),
+    ],
+  };
+};
+
 /** 列印按鈕 / 列印工作要的單據識別:所屬分店、類型、`refType` + `refId`、名稱(一次印全部的聯)、預設印表機。 */
 export const receiptPrintRefOf = <Kind extends ReceiptKind>(
   kind: Kind,

@@ -3434,6 +3434,11 @@
     "choosePrinter": "Choose a printer",
     "defaultPrinter": "{name} (default)",
     "noResultHint": "Check whether the receipt came out before deciding to reprint",
+    "printDialog": {
+      "title": "Print",
+      "submit": "Print",
+      "cancel": "Cancel"
+    },
     "reprintDialog": {
       "title": "Reprint",
       "reason": "Reprint reason",

@@ -39,6 +39,19 @@ const enabledButton = (name: "列印" | "補印") =>
     return found;
   });
 
+/** 標頭 [列印](還沒印過)→「列印哪一聯」選聯別(不選 = 兩聯都印)→ [列印]。 */
+const firstPrint = async (user: Actor, copy: string | null = null) => {
+  await user.click(await enabledButton("列印"));
+  const dialog = await screen.findByRole("dialog", { name: "列印" });
+  const copies = within(dialog).getByRole("combobox", { name: /列印哪一聯/ });
+  expect(copies).toHaveTextContent("兩聯都印");
+  if (copy !== null) {
+    await user.click(copies);
+    await user.click(await screen.findByRole("option", { name: copy }));
+  }
+  await user.click(within(dialog).getByRole("button", { name: "列印" }));
+};
+
 /** 標頭 [補印] → 選聯別(不選 = 兩聯都補)、原因「破損」→ 送出。 */
 const reprint = async (user: Actor, copy: string | null = null) => {
   // 送出中(上一次列印還在等結果)按鈕不能按:等它可以按
@@ -121,7 +134,7 @@ describe("進貨單檢視頁:進貨點收單", () => {
     ).toBe(1);
   });
 
-  it("兩聯接成一張超過高度上限 → 不送列印,提示「單據太長,這次沒有印出,請到 [列印] 補印(可分聯補印)」", async () => {
+  it("兩聯接成一張超過高度上限 → 不送列印,提示「單據太長,這次沒有印出,請按 [列印] 分聯印」(這次點收還沒印過)", async () => {
     receiptPngOf.mockClear();
     // 一張 9,000 點高的圖(簽章 + IHDR;超過 8,000 點的上限)
     const tall = new Uint8Array(33);
@@ -139,9 +152,7 @@ describe("進貨單檢視頁:進貨點收單", () => {
     );
 
     expect(
-      await screen.findByText(
-        "單據太長,這次沒有印出,請到 [列印] 補印(可分聯補印)",
-      ),
+      await screen.findByText("單據太長,這次沒有印出,請按 [列印] 分聯印"),
     ).toBeInTheDocument();
     expect(receiptPngOf).toHaveBeenCalledTimes(1);
     expect(printingFake?.created).toEqual([]);
@@ -269,7 +280,7 @@ describe("進貨單檢視頁:進貨點收單", () => {
       printing: { printOnRead: true },
     });
 
-    await user.click(await enabledButton("列印"));
+    await firstPrint(user);
     await waitFor(() => {
       expect(printingFake?.created).toHaveLength(1);
     });
@@ -297,5 +308,48 @@ describe("進貨單檢視頁:進貨點收單", () => {
     expect(text).toContain("第 2 聯 · 送貨人留存");
     expect(text).toContain("已點收(5 本)");
     expect(text).toContain("尚未到的本(1 本)");
+  });
+
+  it("還沒印過時 [列印] 只印第 1 聯 → 第 1 次(不是補印);之後補印第 2 聯 → 「【補印】第 2 次」;列印紀錄名稱都帶聯別", async () => {
+    receiptPngOf.mockClear();
+    const user = userEvent.setup();
+    const { printingFake } = renderPurchasePage({
+      path: VIEW,
+      printing: { printOnRead: true },
+    });
+
+    await firstPrint(user, "第 1 聯 · 店鋪留存");
+    await waitFor(() => {
+      expect(printingFake?.created).toHaveLength(1);
+    });
+    expect(printingFake?.created[0]).toMatchObject({
+      refId: "doc-p33",
+      documentName: "進貨點收單 P-0033(店鋪留存)",
+      isReprint: false,
+    });
+    const first = printedTexts().at(-1) ?? "";
+    expect(first).toContain("第 1 聯 · 店鋪留存");
+    expect(first).not.toContain("送貨人留存");
+    expect(first).not.toContain("【補印】");
+    expect(cutsOfPrints()).toEqual([0]);
+
+    // 一次 = 一個工作:印出來(已印 1 次)之後按鈕是 [補印],另一聯算補印
+    await waitFor(() => {
+      expect(
+        printingFake?.printedCountOf("lottery-purchase-receiving", "doc-p33"),
+      ).toBe(1);
+    });
+    await reprint(user, "第 2 聯 · 送貨人留存");
+    await waitFor(() => {
+      expect(printingFake?.created).toHaveLength(2);
+    });
+    expect(printingFake?.created[1]).toMatchObject({
+      documentName: "進貨點收單 P-0033(送貨人留存)補印",
+      isReprint: true,
+    });
+    const second = printedTexts().at(-1) ?? "";
+    expect(second).toMatch(/【補印】第 2 次/);
+    expect(second).toContain("第 2 聯 · 送貨人留存");
+    expect(second).not.toContain("店鋪留存");
   });
 });

@@ -3434,6 +3434,11 @@
     "choosePrinter": "選擇印表機",
     "defaultPrinter": "{name}(預設)",
     "noResultHint": "請先確認是否已出紙,再決定要不要補印",
+    "printDialog": {
+      "title": "列印",
+      "submit": "列印",
+      "cancel": "取消"
+    },
     "reprintDialog": {
       "title": "補印",
       "reason": "補印原因",

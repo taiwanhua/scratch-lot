@@ -58,7 +58,7 @@ describe("列印按鈕:六種狀態", () => {
 
     expect(await within(status()).findByText("已送到印表機…")).toBeVisible();
     expect(screen.getByRole("button", { name: "列印" })).toBeDisabled();
-    expect(renderImage).toHaveBeenCalledWith(null);
+    expect(renderImage).toHaveBeenCalledWith(null, null);
     expect(world.created).toEqual([
       expect.objectContaining({
         printerId: "printer-1",

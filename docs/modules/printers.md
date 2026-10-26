@@ -267,6 +267,8 @@ operation 文件:`packages/graphql/src/documents/base/printing.graphql`。
 底座內沒有頁面使用;專案的單據頁放一顆 `<PrintButton>`,傳單據所屬分店 `orgId`、`documentType`、`refType` + `refId`、`documentName?`、`defaultPrinterId?`(專案的預設,如收銀點的印表機)與 `renderImage(reprint)`(把預覽中的 `Receipt58` 交給 `renderReceiptToPng`;補印時帶第幾次、原因、說明、時間、補印人,組 `Receipt58ReprintMark`)。
 
 - `reprintVariants?`(`{ label, options }`):補印對話框在原因上面多一個選單,預設第一個選項(例:多聯單據「補印哪一聯」:全部 / 第 1 聯 / 第 2 聯);選的值放在補印標示資料的 `variant`,交給 `renderImage`。只印在單上、寫在單據名稱裡,不另存欄位。
+- `printVariants?`(同 `reprintVariants` 的形狀):給了的話,沒印過時按 [列印] 先開一個只有這個選單的對話框(預設第一個選項、沒有原因),選了才送;不給 = [列印] 直接送。
+- `renderImage(reprint, variant)` / `documentName(reprint, variant)` 的 `variant`:這一次選的使用處選項(第一次列印 = `printVariants` 選的、補印 = `reprint.variant`,沒有選單 = `null`)。
 - `documentName` 可以給函式 `(reprint) => string | null`:依這一次列印決定名稱(第一次列印是 `null`;例:補印寫補了哪一聯)。
 
 轉圖(`renderReceiptToPng`)以節點的版面寬高(`offsetWidth` / `offsetHeight`)截圖,canvas 恰為 384 點寬,不受螢幕縮放與預覽縮小顯示影響。QR code(`Receipt58Qr`:每模組 6 點、約 0.75mm,內容太長放不下時才縮小,含四個模組的安靜區)不取截圖的結果:二值化後以同一個模組矩陣直接寫進 384 點點陣,每模組都是整數點。測試 `packages/ui/src/Receipt58/Receipt58Qr.test.tsx` 以 QR 解碼器讀回網址。

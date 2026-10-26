@@ -15,6 +15,7 @@ import {
   receiptDocumentNameOf,
   receiptLayoutsOf,
   receiptPrintRefOf,
+  receiptPrintVariantsOf,
   receiptReprintVariantsOf,
 } from "./receipt-kinds";
 import { type ReceiptTranslator, receiptLinesOf } from "./receipt-layout";
@@ -208,6 +209,13 @@ describe("58mm 單據的版面(規格第 12 章;Figma RC-06、RC-07、RC-08、RC
       }),
     ).toBe("進貨點收單 P-0031(兩聯)補印");
     expect(receiptReprintVariantsOf("store-daily-close", t)).toBeNull();
+    // 第一次列印也能選聯(兩聯都印 / 第 1 聯 / 第 2 聯);一聯的單據 [列印] 不跳選單
+    expect(
+      receiptPrintVariantsOf("purchase-receiving", t)?.options.map(
+        (option) => option.label,
+      ),
+    ).toEqual(["兩聯都印", "第 1 聯 · 店鋪留存", "第 2 聯 · 送貨人留存"]);
+    expect(receiptPrintVariantsOf("store-daily-close", t)).toBeNull();
   });
 
   it("進貨點收單:全部到齊時「尚未到的本:無」;沒有點收批次的舊資料 → 列到目前為止已點收的全部本,以進貨單計次數", () => {

@@ -27,6 +27,7 @@ import {
 } from "@/lib/base/print-button";
 
 import { PrintStatus } from "./PrintStatus";
+import { PrintVariantDialog } from "./PrintVariantDialog";
 import {
   type ReprintChoice,
   ReprintDialog,
@@ -61,19 +62,33 @@ export interface PrintButtonProps {
   refId: string;
   /**
    * 單據顯示名稱(列印紀錄、列印失敗通知用);不給時顯示「單據類型 + 編號」。
-   * 給函式時依這一次列印決定(補印帶補印標示資料,例:名稱寫補了哪一聯;第一次列印是 `null`)。
+   * 給函式時依這一次列印決定(補印帶補印標示資料,例:名稱寫補了哪一聯;第一次列印是 `null`;
+   * `variant` = 這一次選的使用處選項,第一次列印見 `printVariants`、補印同 `reprint.variant`,沒有選單 = `null`)。
    */
   documentName?:
-    string | null | ((reprint: PrintReprintMark | null) => string | null);
+    | string
+    | null
+    | ((
+        reprint: PrintReprintMark | null,
+        variant: string | null,
+      ) => string | null);
   /** 使用處提供的預設印表機(專案:收銀點的印表機);沒有或不可選時用分店預設。 */
   defaultPrinterId?: string | null;
   /**
    * 產生要送出的 58mm 黑白 PNG:使用處把預覽中的 `Receipt58` 交給 `renderReceiptToPng`。
-   * 補印時帶補印標示資料(第一次列印是 `null`,不印補印標示)。
+   * 補印時帶補印標示資料(第一次列印是 `null`,不印補印標示);`variant` 同 `documentName`。
    */
-  renderImage: (reprint: PrintReprintMark | null) => Promise<Blob>;
+  renderImage: (
+    reprint: PrintReprintMark | null,
+    variant: string | null,
+  ) => Promise<Blob>;
   /** 補印對話框在原因上面多一個選單(例:多聯單據補哪一聯);選的值放在補印標示資料的 `variant`。 */
   reprintVariants?: ReprintVariants | null;
+  /**
+   * 第一次列印([列印])前先開一個只有這個選單的對話框(例:多聯單據印哪一聯),預設第一個選項;
+   * 不給 = 按 [列印] 直接送(原本的行為)。選的值交給 `renderImage` / `documentName` 的 `variant`。
+   */
+  printVariants?: ReprintVariants | null;
 }
 
 /**
@@ -85,6 +100,7 @@ export interface PrintButtonProps {
  * | Sending | [列印](不能按)+「已送到印表機…」 |
  * | Printed / Failed | ✓ 已印出 / ✗ 失敗:<原因>(聽 `print-result`;2 分鐘沒信號主動查一次) |
  * | Reprint | 印過的單據 [補印] +「已印 N 次」;按下開補印對話框 |
+ * | (使用處選項) | 給了 `printVariants`:沒印過時按 [列印] 先選選項再送 |
  * | Disabled | 分店沒有登記印表機:灰色,提示「本店未設定印表機」;有登記但都停用(或代理程式停用)、清單載入失敗各有一句提示 |
  *
  * - 沒有 `api.printing.print` → 整個不渲染;印過但沒有 `api.printing.reprint` → 不顯示 [補印](進度文字照常)。
@@ -104,6 +120,7 @@ export const PrintButton = ({
   defaultPrinterId = null,
   renderImage,
   reprintVariants = null,
+  printVariants = null,
 }: PrintButtonProps) => {
   const t = useTranslations("admin.printButton");
   const { session } = useSession();
@@ -154,6 +171,7 @@ export const PrintButton = ({
   });
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
   const [reprintPrinterId, setReprintPrinterId] = useState<string | null>(null);
+  const [printPrinterId, setPrintPrinterId] = useState<string | null>(null);
 
   if (!canPrint) {
     return null;
@@ -185,7 +203,11 @@ export const PrintButton = ({
   const isDisabled =
     isSending || disabledHint !== "" || !printers.isSuccess || count.isPending;
 
-  const send = async (printerId: string, choice: ReprintChoice | null) => {
+  const send = async (
+    printerId: string,
+    choice: ReprintChoice | null,
+    printVariant: string | null = null,
+  ) => {
     job.start();
     try {
       const reprint =
@@ -197,7 +219,8 @@ export const PrintButton = ({
               reprintedAt: new Date().toISOString(),
               reprintedBy: me?.name ?? "",
             };
-      const image = await blobToBase64(await renderImage(reprint));
+      const variant = reprint === null ? printVariant : reprint.variant;
+      const image = await blobToBase64(await renderImage(reprint, variant));
       const created = await createJob.mutateAsync({
         input: {
           printerId,
@@ -206,7 +229,7 @@ export const PrintButton = ({
           refId,
           documentName:
             typeof documentName === "function"
-              ? documentName(reprint)
+              ? documentName(reprint, variant)
               : documentName,
           image,
           isReprint: reprint !== null,
@@ -225,6 +248,10 @@ export const PrintButton = ({
     setMenuAnchor(null);
     if (isReprint) {
       setReprintPrinterId(printerId);
+      return;
+    }
+    if (printVariants !== null) {
+      setPrintPrinterId(printerId);
       return;
     }
     void send(printerId, null);
@@ -289,6 +316,18 @@ export const PrintButton = ({
           onSubmit={(choice) => {
             setReprintPrinterId(null);
             void send(reprintPrinterId, choice);
+          }}
+        />
+      )}
+      {printPrinterId === null || printVariants === null ? null : (
+        <PrintVariantDialog
+          variants={printVariants}
+          onCancel={() => {
+            setPrintPrinterId(null);
+          }}
+          onSubmit={(variant) => {
+            setPrintPrinterId(null);
+            void send(printPrinterId, null, variant);
           }}
         />
       )}

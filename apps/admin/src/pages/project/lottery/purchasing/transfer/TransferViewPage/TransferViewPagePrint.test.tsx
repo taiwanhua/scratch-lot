@@ -272,6 +272,9 @@ describe("調貨單檢視頁:調貨出貨單 / 調貨點收單 / 調貨付款收
       expect(within(group).getByRole("button", { name: "列印" })).toBeEnabled();
     });
     await user.click(within(group).getByRole("button", { name: "列印" }));
+    // 兩聯的單據:先選「列印哪一聯」(預設兩聯都印)
+    const dialog = await screen.findByRole("dialog", { name: "列印" });
+    await user.click(within(dialog).getByRole("button", { name: "列印" }));
 
     await waitFor(() => {
       expect(printingFake?.created).toHaveLength(1);

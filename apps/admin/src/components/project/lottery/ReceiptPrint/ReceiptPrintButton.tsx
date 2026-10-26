@@ -13,6 +13,7 @@ import {
   receiptDocumentNameOf,
   receiptKindOf,
   receiptPrintRefOf,
+  receiptPrintVariantsOf,
   receiptReprintVariantsOf,
 } from "@/lib/project/lottery/receipts/receipt-kinds";
 import type { ReceiptTranslator } from "@/lib/project/lottery/receipts/receipt-layout";
@@ -29,7 +30,8 @@ export interface ReceiptPrintButtonProps<Kind extends ReceiptKind> {
 /**
  * 單據頁的 [列印] / [補印](底座 `PrintButton`;已印次數、補印對話框、分店沒有印表機時變灰都是底座的):
  * 單據名稱 + 按鈕;按下時把 `kind` 這張單據排好版、轉圖送出。補印時單據上方印「【補印】第 N 次 · 時間 · 原因 · 補印人」。
- * 多聯的單據:[列印] 印全部的聯(一個工作);補印對話框多一個「補印哪一聯」(全部 / 第 1 聯 / 第 2 聯,預設全部),
+ * 多聯的單據:[列印] 先選「列印哪一聯」(兩聯都印(預設)/ 第 1 聯 / 第 2 聯;一次 = 一個工作),
+ * 補印對話框多一個「補印哪一聯」(兩聯都補(預設)/ 第 1 聯 / 第 2 聯);一聯的單據兩邊都不多選單。
  * 列印紀錄的單據名稱寫印了哪幾聯(例「進貨點收單 P-0001(送貨人留存)補印」)。
  * 沒有 `api.printing.print` 時整個不渲染(連名稱都不出現)。
  */
@@ -63,15 +65,18 @@ export const ReceiptPrintButton = <Kind extends ReceiptKind>({
         documentType={ref.documentType}
         refType={ref.refType}
         refId={ref.refId}
-        documentName={(reprint) =>
+        documentName={(reprint, variant) =>
           receiptDocumentNameOf(kind, payload, t, {
-            which: reprint?.variant ?? RECEIPT_ALL_COPIES,
+            which: variant ?? RECEIPT_ALL_COPIES,
             isReprint: reprint !== null,
           })
         }
         defaultPrinterId={ref.defaultPrinterId}
-        renderImage={(reprint) => printer.renderReceipt(kind, payload, reprint)}
+        renderImage={(reprint, variant) =>
+          printer.renderReceipt(kind, payload, reprint, variant)
+        }
         reprintVariants={receiptReprintVariantsOf(kind, t)}
+        printVariants={receiptPrintVariantsOf(kind, t)}
       />
       {printer.host}
     </Stack>
