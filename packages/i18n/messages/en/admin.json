@@ -3,6 +3,9 @@
     "subtitle": "Admin",
     "loading": "Loading…",
     "apiError": "Cannot reach the API. Make sure the api service is running.",
+    "errors": {
+      "transactionTimeout": "This took too long and was cancelled. Nothing was changed. Please try again later or contact your administrator."
+    },
     "snackbar": {
       "close": "Close"
     }

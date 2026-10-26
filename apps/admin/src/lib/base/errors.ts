@@ -31,6 +31,12 @@ export interface AdminError<
    */
   projectReason?: string;
   /**
+   * 交易逾時(api `TRANSACTION_TIMEOUT`,GQL-04):處理太久、已整個回復。任何一頁都認得,
+   * `code` 照舊是 `UNEXPECTED`(頁面自己的碼表不必登記);`adminErrorText` 據此顯示
+   * `admin.app.errors.transactionTimeout`(已取消、資料沒有變更、請稍後再試)。
+   */
+  timedOut?: true;
+  /**
    * api 回的原始 `message`。**不拿來顯示**(文案一律走 `tErrors(code)`,I18N-01),
    * 只給除錯 / 記錄用。
    */
@@ -74,6 +80,13 @@ const stringsOf = (value: unknown): string[] =>
     ? value.filter((item): item is string => typeof item === "string")
     : [];
 
+/** api 的交易逾時錯誤碼(`apps/api/src/database/transaction.ts` 的 `TRANSACTION_TIMEOUT_CODE`)。 */
+export const TRANSACTION_TIMEOUT_CODE = "TRANSACTION_TIMEOUT";
+
+/** 交易逾時的文案(根層 key;所有頁共用)。 */
+export const TRANSACTION_TIMEOUT_TEXT_KEY =
+  "admin.app.errors.transactionTimeout";
+
 /** 專案錯誤碼的格式(同 api 掛接點守門的檢查)。 */
 const PROJECT_REASON_PATTERN = /^[A-Z][A-Z0-9_]*$/;
 
@@ -88,12 +101,25 @@ const isOneOf = <T extends string>(
   value: unknown,
 ): value is T => typeof value === "string" && list.includes(value as T);
 
-/**
- * 把 graphql-request 的 `ClientError` 讀成 `AdminError`:取 `errors[]` 中**第一個認得的碼**,
- * 認不出來(或根本不是 `ClientError`,如網路錯誤)就是 `{ code: "UNEXPECTED" }`。
- * 各頁的 `<ns>ErrorOf` 只宣告自己的碼表,不再各自解析一次 `extensions`。
- */
-export const parseAdminError = <Code extends string, Reason extends string>(
+/** 交易逾時(任何一頁都認得,不必在頁面的碼表登記);不是 → null。 */
+const timedOutErrorOf = (
+  error: unknown,
+): AdminError<"UNEXPECTED", never> | null => {
+  const item = graphqlErrorsOf(error).find(
+    (candidate) => candidate.extensions?.code === TRANSACTION_TIMEOUT_CODE,
+  );
+  if (item === undefined) {
+    return null;
+  }
+  return {
+    code: "UNEXPECTED",
+    timedOut: true,
+    ...(typeof item.message === "string" && { message: item.message }),
+  };
+};
+
+/** 依這頁宣告的碼表解讀(`parseAdminError` 的主體;交易逾時另由 `timedOutErrorOf` 先判斷)。 */
+const parseDeclaredError = <Code extends string, Reason extends string>(
   error: unknown,
   spec: AdminErrorSpec<Code, Reason>,
 ): AdminError<Code | "UNEXPECTED", Reason> => {
@@ -131,6 +157,18 @@ export const parseAdminError = <Code extends string, Reason extends string>(
   return { code: "UNEXPECTED" };
 };
 
+/**
+ * 把 graphql-request 的 `ClientError` 讀成 `AdminError`:交易逾時(`TRANSACTION_TIMEOUT`)每一頁都認得
+ * (`code: UNEXPECTED` + `timedOut`);其餘取 `errors[]` 中**第一個認得的碼**,
+ * 認不出來(或根本不是 `ClientError`,如網路錯誤)就是 `{ code: "UNEXPECTED" }`。
+ * 各頁的 `<ns>ErrorOf` 只宣告自己的碼表,不再各自解析一次 `extensions`。
+ */
+export const parseAdminError = <Code extends string, Reason extends string>(
+  error: unknown,
+  spec: AdminErrorSpec<Code, Reason>,
+): AdminError<Code | "UNEXPECTED", Reason> =>
+  timedOutErrorOf(error) ?? parseDeclaredError(error, spec);
+
 /** 根層翻譯函式要用到的兩個能力(use-intl 的 `useTranslations()` 回傳值即符合)。 */
 export interface RootTranslator {
   (key: string): string;
@@ -138,14 +176,17 @@ export interface RootTranslator {
 }
 
 /**
- * 錯誤的顯示文案:專案錯誤碼(`projectReason`)在字典裡有 `admin.lifecycle.<碼>` 就用它,
- * 否則照舊 `tErrors(code)`(沒有專案文案的專案錯誤碼 → 通用的「沒有權限」)。
+ * 錯誤的顯示文案:交易逾時(`timedOut`)一律是共用的那一句;專案錯誤碼(`projectReason`)在字典裡有
+ * `admin.lifecycle.<碼>` 就用它,否則照舊 `tErrors(code)`(沒有專案文案的專案錯誤碼 → 通用的「沒有權限」)。
  */
 export const adminErrorText = <Code extends string>(
-  error: Pick<AdminError<Code>, "code" | "projectReason">,
+  error: Pick<AdminError<Code>, "code" | "projectReason" | "timedOut">,
   tErrors: (code: Code) => string,
   t: RootTranslator,
 ): string => {
+  if (error.timedOut === true && t.has(TRANSACTION_TIMEOUT_TEXT_KEY)) {
+    return t(TRANSACTION_TIMEOUT_TEXT_KEY);
+  }
   if (error.projectReason !== undefined) {
     const key = projectReasonKey(error.projectReason);
     if (t.has(key)) {

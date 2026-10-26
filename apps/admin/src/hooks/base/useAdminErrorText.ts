@@ -9,7 +9,9 @@ import { type AdminError, adminErrorText } from "@/lib/base/errors";
  */
 export const useAdminErrorText = (
   namespace: string,
-): ((error: Pick<AdminError, "code" | "projectReason">) => string) => {
+): ((
+  error: Pick<AdminError, "code" | "projectReason" | "timedOut">,
+) => string) => {
   const tErrors = useTranslations(namespace);
   const t = useTranslations();
   return useCallback(

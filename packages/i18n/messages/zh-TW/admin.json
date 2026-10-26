@@ -3,6 +3,9 @@
     "subtitle": "後台管理",
     "loading": "載入中…",
     "apiError": "無法連線到 API,請確認 api 服務已啟動",
+    "errors": {
+      "transactionTimeout": "處理時間過長,已取消,資料沒有變更,請稍後再試或聯絡管理員。"
+    },
     "snackbar": {
       "close": "關閉"
     }
