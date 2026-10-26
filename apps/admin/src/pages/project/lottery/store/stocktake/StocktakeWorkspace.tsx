@@ -24,6 +24,7 @@ import {
   type SheetCashPoint,
   bookKeyOf,
   lostChoicesReady,
+  placeNameOf,
   unhandledOf,
 } from "./stocktake-model";
 import { useStocktakeFlow } from "./useStocktakeFlow";
@@ -86,7 +87,7 @@ export const StocktakeWorkspace = ({
   }
 
   const pointName = (id: string) =>
-    sheet.cashPoints.find((point) => point.id === id)?.name ?? "";
+    placeNameOf(sheet.cashPoints, id, t("stock.name"));
   const counted = books.filter(
     (book) => state.counts[bookKeyOf(book)] !== undefined,
   ).length;

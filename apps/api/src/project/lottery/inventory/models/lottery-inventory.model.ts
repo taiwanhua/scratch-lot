@@ -28,8 +28,8 @@ export class LotteryInventoryHoldingModel {
 }
 
 /**
- * 庫存分頁的一本(以本為單位;規格 7.3)。待標註、剩餘、持有、狀態都即時計算。
- * `state`:`unopened` 未拆 / `on_counter` 檯面中 / `sold_out` 售完。
+ * 庫存分頁的一本(以本為單位;規格 7.3)。剩餘 / 總張數讀本上的張數欄位,`holdings` 是各分店的未售張數。
+ * `state` = 顯示狀態(`BOOK_DISPLAY_STATES`:已撤銷 / 未拆 / 檯面中 / 庫存中 / 在途 / 待查 / 遺失 / 已報廢 / 售完)。
  */
 @ObjectType("LotteryInventoryBook")
 export class LotteryInventoryBookModel {
@@ -114,8 +114,15 @@ export class LotteryInventoryBooksPayload {
   @Field(() => [LotteryInventoryBookModel])
   items!: LotteryInventoryBookModel[];
 
+  /** 符合篩選的總本數(分頁前)。 */
   @Field(() => Int)
   totalCount!: number;
+
+  @Field(() => Int)
+  page!: number;
+
+  @Field(() => Int)
+  pageSize!: number;
 }
 
 /** 本的詳情頁的一張(格子與選張用;`version` 給尋回 / 報廢的條件更新)。 */
@@ -196,6 +203,10 @@ export class LotteryInventoryEventModel {
   /** 張數事件類型(`@repo/domain/project/lottery` 的 `TICKET_EVENT_TYPES`)。 */
   @Field(() => String)
   type!: string;
+
+  /** 「拆本」事件但不是第一次(本的 `firstOpenedAt` 之後):時間軸寫「上檯面」。 */
+  @Field(() => Boolean)
+  reopen!: boolean;
 
   @Field(() => [String])
   ticketNos!: string[];
@@ -513,6 +524,10 @@ export class LotteryStockOverviewRowModel {
 
   @Field(() => Int)
   unopenedBooks!: number;
+
+  /** 庫存(拆過):拆過的本在庫存的未售張數(收回、尋回、調回)。 */
+  @Field(() => Int)
+  openedStockTickets!: number;
 
   @Field(() => Int)
   counterTickets!: number;

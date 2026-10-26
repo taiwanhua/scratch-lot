@@ -2,20 +2,24 @@ import { Injectable } from "@nestjs/common";
 import type { ClientSession, Types } from "mongoose";
 
 import {
-  type BookState,
+  BOOK_COUNT_KEYS,
+  type BookDisplayState,
+  type BookTicketCounts,
   LAST_TICKET_NO_MAX,
   TICKET_EVENT_TYPE,
   TICKET_LOCATION_KIND,
   TICKET_STATUS,
+  bookDisplayStateOf,
   bookKeyOf,
-  bookStateOf,
+  emptyBookCounts,
   formatTicketNo,
   holdingsOf,
   normalizeBookNo,
   pendingSkipCountOf,
-  remainingCountOf,
+  remainingOfCounts,
   ticketEventIdOf,
   ticketKeyOf,
+  totalOfCounts,
 } from "@repo/domain/project/lottery";
 
 import type { Persisted } from "../../../database/base.repository";
@@ -61,14 +65,41 @@ export interface CreateBookInput {
   at?: Date;
 }
 
-/** 本的即時計算(規格 7.1:不存)。 */
+/** 本的張數與狀態(規格 7.1:張數讀本上的欄位,狀態由張數算出)。 */
 export interface BookStats {
   pendingSkipCount: number;
   remainingCount: number;
   totalCount: number;
-  /** 各分店持有張數(不算跳號)。 */
+  /** 各分店持有的未售張數。 */
   holdings: { orgId: string; count: number }[];
-  state: BookState;
+  state: BookDisplayState;
+}
+
+/**
+ * 本上的張數(舊資料沒有某一格 → 0)。逐格讀:讀回的本是 Mongoose 文件時 `ticketCounts` 是子文件,
+ * 不能直接展開。
+ */
+export function countsOfBook(book: {
+  ticketCounts?: Partial<BookTicketCounts> | null;
+}): BookTicketCounts {
+  const counts = emptyBookCounts();
+  for (const key of BOOK_COUNT_KEYS) {
+    counts[key] = book.ticketCounts?.[key] ?? 0;
+  }
+  return counts;
+}
+
+/** 本的待標註張數(迄號 − 標準張數 − 已標跳號)。 */
+export function pendingSkipCountOfBook(book: {
+  lastTicketNo: string;
+  standardTickets: number;
+  skippedTicketNos: readonly string[];
+}): number {
+  return pendingSkipCountOf(
+    Number(book.lastTicketNo),
+    book.standardTickets,
+    book.skippedTicketNos.length,
+  );
 }
 
 /**
@@ -99,7 +130,7 @@ export function withoutPendingSkips(
  *
  * - `createBook`:**只給進貨點收用**,以點收人(操作者)自己的範圍寫。本號補 0、本編號、迄號範圍、起號 001、
  *   一次建立全部的張(跳號待拆本時標註)與每張一筆「進貨」事件(版本 1);在呼叫端的交易裡
- * - `statsOf`:待標註、剩餘、各分店持有、未拆 / 檯面中 / 售完(即時計算)
+ * - `statsOf`:待標註、剩餘、總張數、各分店未售張數、顯示狀態
  */
 @Injectable()
 export class LotteryBooksService {
@@ -198,6 +229,9 @@ export class LotteryBooksService {
         lastTicketNo: formatTicketNo(input.lastTicketNo),
         skippedTicketNos: [],
         lockedTicketCount: 0,
+        // 建本時全部在庫存(之後只經帳本 `$inc`);從沒拆過
+        ticketCounts: { ...emptyBookCounts(), stock: input.lastTicketNo },
+        firstOpenedAt: null,
         status: "normal",
       },
       { session },
@@ -258,8 +292,8 @@ export class LotteryBooksService {
   }
 
   /**
-   * 本的即時計算。本以操作者自己的範圍讀(讀取放行:所在分店或持有任何一張的分店看得到),
-   * 讀得到才以租戶邊界上下文讀這本全部的張(各分店持有要看整本;反查)。讀不到 → `NOT_FOUND`。
+   * 本的張數與狀態。本以操作者自己的範圍讀(讀取放行:所在分店或持有任何一張的分店看得到);剩餘 / 總張數 /
+   * 狀態讀本上的張數欄位,各分店的未售張數才以租戶邊界上下文讀這本未售的張(反查)。讀不到 → `NOT_FOUND`。
    */
   async statsOf(
     operator: OperatorContext,
@@ -274,31 +308,26 @@ export class LotteryBooksService {
       operator,
       book.tenantId,
     );
-    const tickets = await this.tickets.findMany(
+    const unsold = await this.tickets.findMany(
       whole,
-      { bookId: book._id },
+      { bookId: book._id, status: TICKET_STATUS.unsold },
       { select: "status location orgId" },
     );
-    const snapshots = tickets.map((ticket) => ({
-      status: ticket.status,
-      locationKind: ticket.location.kind,
-      storeOrgId: String(ticket.orgId),
-    }));
-    const pendingSkipCount = pendingSkipCountOf(
-      Number(book.lastTicketNo),
-      book.standardTickets,
-      book.skippedTicketNos.length,
-    );
+    const pendingSkipCount = pendingSkipCountOfBook(book);
+    const counts = countsOfBook(book);
     return {
       pendingSkipCount,
-      remainingCount: remainingCountOf(snapshots, pendingSkipCount),
-      totalCount: withoutPendingSkips(
-        snapshots.filter((ticket) => ticket.status !== TICKET_STATUS.skipped)
-          .length,
-        book.standardTickets,
-        pendingSkipCount,
-      ),
-      holdings: [...holdingsOf(snapshots)].map(([orgId, count]) => ({
+      remainingCount: remainingOfCounts(counts, pendingSkipCount),
+      totalCount: totalOfCounts(counts, book.standardTickets, pendingSkipCount),
+      holdings: [
+        ...holdingsOf(
+          unsold.map((ticket) => ({
+            status: ticket.status,
+            locationKind: ticket.location.kind,
+            storeOrgId: String(ticket.orgId),
+          })),
+        ),
+      ].map(([orgId, count]) => ({
         orgId,
         count: withoutPendingSkips(
           count,
@@ -306,7 +335,11 @@ export class LotteryBooksService {
           pendingSkipCount,
         ),
       })),
-      state: bookStateOf(snapshots),
+      state: bookDisplayStateOf({
+        counts,
+        firstOpenedAt: book.firstOpenedAt,
+        revoked: book.status === "revoked",
+      }),
     };
   }
 }

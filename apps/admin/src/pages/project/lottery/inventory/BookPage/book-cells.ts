@@ -28,7 +28,7 @@ const spansStores = (tickets: readonly Ticket[]): boolean =>
 
 /**
  * 本的詳情頁的格子:別店的張(`operable = false`,所在分店不在可見範圍內)用「其他分店」、不能選;
- * 被單據鎖定的未售用「已售 / 不能選」(規格 7.5)。張分在不止一家店時,每格的提示寫所在分店。
+ * 被調貨單鎖住的未售用「調貨中」、不能選(使用者 10/27 定案)。張分在不止一家店時,每格的提示寫所在分店。
  */
 export const bookCellsOf = (tickets: readonly Ticket[]): TicketGridCell[] => {
   const showStore = spansStores(tickets);
@@ -37,7 +37,7 @@ export const bookCellsOf = (tickets: readonly Ticket[]): TicketGridCell[] => {
     if (!ticket.operable) {
       state = "otherStore";
     } else if (ticket.locked && ticket.status === TICKET_STATUS.unsold) {
-      state = "sold";
+      state = "transferring";
     } else {
       state = STATE_OF[ticket.status] ?? "sold";
     }
@@ -58,18 +58,32 @@ const withOtherStore = (
     ? [...items.slice(0, -1), "otherStore", ...items.slice(-1)]
     : items;
 
+/** 有被調貨單鎖住的未售(自己範圍內)才放「調貨中」。 */
+const isTransferring = (ticket: Ticket): boolean =>
+  ticket.operable && ticket.locked && ticket.status === TICKET_STATUS.unsold;
+
 /** 本的詳情頁能選:未售(報廢)、待查·遺失(尋回)。 */
 export const BOOK_SELECTABLE: TicketGridProps["selectableStates"] = [
   "unsold",
   "lost",
 ];
 
-/** 本的詳情頁的圖例(未售 / 已售 / 跳號 / 報廢 / 待查·遺失 /(其他分店)/ 已選)。 */
+/** 本的詳情頁的圖例(未售 / 已售 /(調貨中)/ 跳號 / 報廢 / 待查·遺失 /(其他分店)/ 已選)。 */
 export const bookLegendOf = (
   tickets: readonly Ticket[],
 ): TicketGridProps["legendItems"] =>
   withOtherStore(
-    ["unsold", "sold", "skipped", "scrapped", "lost", "selected"],
+    [
+      "unsold",
+      "sold",
+      ...(tickets.some((ticket) => isTransferring(ticket))
+        ? (["transferring"] as const)
+        : []),
+      "skipped",
+      "scrapped",
+      "lost",
+      "selected",
+    ],
     tickets,
   );
 

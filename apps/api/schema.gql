@@ -2144,6 +2144,8 @@ input LotteryInventoryBooksInput {
   bookNo: String
   gameId: ID
   orgId: ID
+  page: Int = 1
+  pageSize: Int = 50
   purchasedFrom: DateTime
   purchasedTo: DateTime
   state: String
@@ -2151,6 +2153,8 @@ input LotteryInventoryBooksInput {
 
 type LotteryInventoryBooksPayload {
   items: [LotteryInventoryBook!]!
+  page: Int!
+  pageSize: Int!
   totalCount: Int!
 }
 
@@ -2170,6 +2174,7 @@ type LotteryInventoryEvent {
   refId: ID
   refSerialNo: String
   refType: String
+  reopen: Boolean!
   ticketNos: [String!]!
   to: LotteryInventoryPlace!
   type: String!
@@ -2992,6 +2997,7 @@ type LotteryStockOverviewPayload {
 type LotteryStockOverviewRow {
   counterTickets: Int!
   game: LotteryInventoryGame!
+  openedStockTickets: Int!
   org: LotteryInventoryRef!
   soldTickets: Int!
   unopenedBooks: Int!
@@ -3449,6 +3455,7 @@ type LotteryStoreUnopenedBook {
   gameCode: String!
   gameName: String!
   lastTicketNo: String!
+  opened: Boolean!
   pendingSkipCount: Int!
   ticketCount: Int!
   unitPrice: Int!

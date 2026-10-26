@@ -10,8 +10,8 @@ import {
   TICKET_LOCATION_KIND,
   TICKET_STATUS,
   type TicketSoldSource,
-  bookStateOf,
   displayTicketKey,
+  isUnopenedInStore,
   normalizeBookNo,
   parseTicketInput,
   pendingSkipCountOf,
@@ -405,7 +405,7 @@ export class StoreSalesService {
     };
   }
 
-  /** 這本在這家店還沒拆(未售的張全在庫存)。 */
+  /** 這本在這家店還沒拆(從沒拆過,這家店的張全是未售、在庫存;`isUnopenedInStore`)。 */
   private async isUnopened(
     operator: OperatorContext,
     book: BookRecord,
@@ -416,15 +416,12 @@ export class StoreSalesService {
       { bookId: book._id, orgId: store.orgId },
       { select: "status location orgId" },
     );
-    return (
-      tickets.length > 0 &&
-      bookStateOf(
-        tickets.map((item) => ({
-          status: item.status,
-          locationKind: item.location.kind,
-          storeOrgId: String(item.orgId),
-        })),
-      ) === "unopened"
+    return isUnopenedInStore(
+      book.firstOpenedAt ?? null,
+      tickets.map((item) => ({
+        status: item.status,
+        locationKind: item.location.kind,
+      })),
     );
   }
 
@@ -754,15 +751,13 @@ export class StoreSalesService {
       ),
     ]);
     const game = games.get(String(book.gameId));
-    const unopened =
-      usable.length > 0 &&
-      bookStateOf(
-        usable.map((ticket) => ({
-          status: ticket.status,
-          locationKind: ticket.location.kind,
-          storeOrgId: String(ticket.orgId),
-        })),
-      ) === "unopened";
+    const unopened = isUnopenedInStore(
+      book.firstOpenedAt ?? null,
+      usable.map((ticket) => ({
+        status: ticket.status,
+        locationKind: ticket.location.kind,
+      })),
+    );
     return {
       bookId: String(book._id),
       gameCode: book.gameCode,
@@ -771,11 +766,8 @@ export class StoreSalesService {
       bookNo: book.bookNo,
       firstTicketNo: book.firstTicketNo,
       lastTicketNo: book.lastTicketNo,
-      pendingSkipCount: pendingSkipCountOf(
-        Number(book.lastTicketNo),
-        book.standardTickets,
-        book.skippedTicketNos.length,
-      ),
+      // 拆過的本再上檯面不標跳號(第一次拆本一定標完):從沒拆過才回待標註
+      pendingSkipCount: book.firstOpenedAt == null ? pendingSkipOf(book) : 0,
       unopened,
       tickets: usable.map((ticket) => {
         const pointId = ticket.location.cashPointId ?? null;

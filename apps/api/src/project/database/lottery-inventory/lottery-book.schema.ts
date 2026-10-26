@@ -1,6 +1,8 @@
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
 import { Schema as MongooseSchema, type Types } from "mongoose";
 
+import type { BookTicketCounts } from "@repo/domain/project/lottery";
+
 import { baseFieldsPlugin } from "../../../database/plugins/base-fields.plugin";
 import {
   type ShareOrg,
@@ -20,7 +22,9 @@ export type BookStatus = (typeof BOOK_STATUSES)[number];
  *
  * `orgId` = **所在分店**(整本調貨時由帳本服務以底座的搬家入口 `reassignOrg` 改)。持有這本任何一張的
  * 分店也看得到這本(規格「讀取放行」):資料共用的 `sharedByFields: holderOrgIds`。
- * 待標註、剩餘、各分店持有張數、未拆 / 檯面中 / 售完都**即時計算不存**(`@repo/domain/project/lottery`)。
+ * 各狀態張數(`ticketCounts`)與第一次拆本時間(`firstOpenedAt`)**由帳本服務維護**(同一個交易依本 `$inc`);
+ * 顯示狀態(未拆 / 檯面中 / 庫存中 / 在途 / 待查 / 遺失 / 已報廢 / 售完 / 已撤銷)由它們算出
+ * (`bookDisplayStateOf`,`@repo/domain/project/lottery`),不另存。待標註張數由迄號、標準張數、跳號算出。
  */
 @Schema({ collection: LOTTERY_BOOKS_COLLECTION, timestamps: true })
 export class LotteryBook {
@@ -92,6 +96,35 @@ export class LotteryBook {
   @Prop({ type: Number, default: 0 })
   lockedTicketCount!: number;
 
+  /**
+   * 各狀態張數(不算跳號;**只經帳本服務改**:建本時 = 全部在庫存,之後每筆張數事件依本 `$inc`):
+   * - `stock` / `counter` / `inTransit`:未售在庫存 / 檯面 / 在途
+   * - `sold` 已售、`scrapped` 報廢、`investigating` 待查、`lost` 遺失
+   *
+   * 待標註的跳號(拆本前還沒標的)分不出是哪幾張,算在所在的格;剩餘 / 總張數讀取時扣(定案甲)。
+   */
+  @Prop({
+    type: {
+      _id: false,
+      stock: { type: Number, default: 0 },
+      counter: { type: Number, default: 0 },
+      inTransit: { type: Number, default: 0 },
+      sold: { type: Number, default: 0 },
+      scrapped: { type: Number, default: 0 },
+      investigating: { type: Number, default: 0 },
+      lost: { type: Number, default: 0 },
+    },
+    default: () => ({}),
+  })
+  ticketCounts!: BookTicketCounts;
+
+  /**
+   * 第一次拆本時間(帳本寫第一筆「拆本」事件時填,之後不再改);null = 從沒拆過(原封不動)。
+   * 拆過一次就永遠不算未拆:只能選張調貨、再上檯面不標跳號(使用者 10/27 定案 D)。
+   */
+  @Prop({ type: Date, default: null })
+  firstOpenedAt!: Date | null;
+
   /** 正常 / 已撤銷。 */
   @Prop({ type: String, enum: BOOK_STATUSES, default: "normal" })
   status!: BookStatus;
@@ -115,6 +148,13 @@ LotteryBookSchema.index(
 );
 LotteryBookSchema.index({ tenantId: 1, gameId: 1 });
 LotteryBookSchema.index({ orgId: 1, gameId: 1 });
+// 庫存分頁:依狀態篩選、依批購日分頁(狀態條件是張數欄位,跟著前綴縮小範圍)
+LotteryBookSchema.index({
+  tenantId: 1,
+  status: 1,
+  purchasedAt: -1,
+  bookKey: 1,
+});
 // 資料共用的 sharedByFields 要有 { tenantId, <欄位> } 開頭的索引
 LotteryBookSchema.index({ tenantId: 1, holderOrgIds: 1 });
 LotteryBookSchema.plugin(baseFieldsPlugin);

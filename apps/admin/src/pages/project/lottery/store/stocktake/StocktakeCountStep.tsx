@@ -14,6 +14,7 @@ import {
   type StocktakeState,
   bookKeyOf,
   figuresOf,
+  placeNameOf,
 } from "./stocktake-model";
 import type { useStocktakeFlow } from "./useStocktakeFlow";
 
@@ -41,7 +42,7 @@ export const StocktakeCountStep = ({
   const t = useTranslations("admin.lotteryStore.stocktake");
   const { books, current, currentKey } = flow;
   const pointName = (id: string) =>
-    sheet.cashPoints.find((point) => point.id === id)?.name ?? "";
+    placeNameOf(sheet.cashPoints, id, t("stock.name"));
   const index = current === undefined ? -1 : books.indexOf(current);
   const moveTo = (by: number) => {
     const next = books.at(index + by);

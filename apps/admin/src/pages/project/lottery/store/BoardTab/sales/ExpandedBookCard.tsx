@@ -37,9 +37,9 @@ import {
   type CardAction,
   type CardDialog,
   type ExpandedCashPoint,
-  LEGEND,
   actionsOf,
   cellStateOf,
+  legendOf,
   toCounter,
 } from "./card-cells";
 import { useRefreshSales } from "./sales-queries";
@@ -326,7 +326,7 @@ export const ExpandedBookCard = ({
         }
         selected={selected}
         onSelectedChange={setSelected}
-        legendItems={LEGEND}
+        legendItems={legendOf(tickets)}
         quickSelect={false}
         summary={false}
         {...(flash && { flash })}

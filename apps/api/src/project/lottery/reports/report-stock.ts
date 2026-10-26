@@ -105,6 +105,33 @@ export const figuresOf = (
   return { tickets, cost };
 };
 
+/**
+ * 還待查的一組扣掉待標註(`BookPendings.remainderAdjustmentOf`):未拆的本整本待查後只處理了一部分,
+ * 待標註的跳號仍算在還待查的那一組(t11 審查 S1:實測 96 → 95)。
+ */
+export const remainderFiguresOf = (
+  groups: readonly TicketGroupInput[],
+  pendings: BookPendings,
+): StockFigures => {
+  let tickets = 0;
+  let cost = 0;
+  for (const group of groups) {
+    const size = group.costs.length;
+    if (size === 0) {
+      continue;
+    }
+    const total = group.costs.reduce((sum, value) => sum + value, 0);
+    const pending = pendings.remainderAdjustmentOf(
+      group.bookId,
+      group.at,
+      size,
+    );
+    tickets += size - pending;
+    cost += total - (pending * total) / size;
+  }
+  return { tickets, cost };
+};
+
 /** 調入(依點收時間;作廢的在作廢那天反向)的一筆點收。 */
 export interface InboundReceipt {
   bookId: Types.ObjectId;
@@ -313,7 +340,7 @@ export class ReportStock {
     return {
       onHand: figuresOf(toGroups(onHand), pendings),
       investigating: {
-        ...figuresOf(toGroups(investigating), pendings),
+        ...remainderFiguresOf(toGroups(investigating), pendings),
         bookIds: [
           ...new Set(investigating.map((ticket) => String(ticket.bookId))),
         ],

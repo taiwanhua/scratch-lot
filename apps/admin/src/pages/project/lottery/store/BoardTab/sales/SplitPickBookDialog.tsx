@@ -6,7 +6,10 @@ import {
   normalizeBookNo,
   parseTicketInput,
 } from "@repo/domain/project/lottery";
-import { useLotteryStoreUnopenedBooksQuery } from "@repo/graphql";
+import {
+  type LotteryStoreUnopenedBookFieldsFragment,
+  useLotteryStoreUnopenedBooksQuery,
+} from "@repo/graphql";
 import { Button } from "@repo/ui/button";
 import { Dialog } from "@repo/ui/dialog";
 import { FormControlLabel } from "@repo/ui/form-control-label";
@@ -34,8 +37,9 @@ const bookNoOf = (text: string): string | null =>
   parseTicketInput(text)?.bookNo ?? normalizeBookNo(text);
 
 /**
- * 拆本 · 先選要拆的本(Figma ST-37;規格 6.4):列出本店還沒拆的本;刷條碼或輸入本號直接選中那一本
- * (開著時宣告掃描用途 `store-split`,優先於看板的銷售)。[下一步] 進入拆本精靈。
+ * 拆本 / 上檯面 · 先選本(Figma ST-37;規格 6.4):列出本店庫存裡有未售、沒被鎖的張的本(未拆的本標「未拆」,
+ * 拆過的本標「拆過 · 庫存 N 張」);刷條碼或輸入本號直接選中那一本(開著時宣告掃描用途 `store-split`,
+ * 優先於看板的銷售)。[下一步] 進入拆本精靈。
  */
 export const SplitPickBookDialog = ({
   orgId,
@@ -46,6 +50,25 @@ export const SplitPickBookDialog = ({
   const { t } = useSalesText();
   const { session } = useSession();
   const isMobile = useBreakpointDown("sm");
+  const bookMetaOf = (book: LotteryStoreUnopenedBookFieldsFragment) => {
+    if (book.opened) {
+      return t("split.bookMetaOpened", {
+        price: moneyText(book.unitPrice),
+        count: book.ticketCount,
+      });
+    }
+    return book.pendingSkipCount > 0
+      ? t("split.bookMetaSkip", {
+          price: moneyText(book.unitPrice),
+          first: book.firstTicketNo,
+          last: book.lastTicketNo,
+          count: book.pendingSkipCount,
+        })
+      : t("split.bookMeta", {
+          price: moneyText(book.unitPrice),
+          count: book.ticketCount,
+        });
+  };
   const books =
     useLotteryStoreUnopenedBooksQuery(
       session.client,
@@ -131,17 +154,7 @@ export const SplitPickBookDialog = ({
                         })}
                       </Typography>
                       <Typography variant="caption" color="textSecondary">
-                        {book.pendingSkipCount > 0
-                          ? t("split.bookMetaSkip", {
-                              price: moneyText(book.unitPrice),
-                              first: book.firstTicketNo,
-                              last: book.lastTicketNo,
-                              count: book.pendingSkipCount,
-                            })
-                          : t("split.bookMeta", {
-                              price: moneyText(book.unitPrice),
-                              count: book.ticketCount,
-                            })}
+                        {bookMetaOf(book)}
                       </Typography>
                     </Stack>
                   }

@@ -1,6 +1,9 @@
 import { useTranslations } from "use-intl";
 
-import { displayBookNo } from "@repo/domain/project/lottery";
+import {
+  displayBookNo,
+  isStocktakeStockLine,
+} from "@repo/domain/project/lottery";
 import { Box } from "@repo/ui/box";
 import { Button } from "@repo/ui/button";
 import { Card } from "@repo/ui/card";
@@ -16,6 +19,7 @@ import {
   type StocktakeState,
   bookKeyOf,
   figuresOf,
+  placeNameOf,
 } from "./stocktake-model";
 
 export interface StocktakeBookListProps {
@@ -94,6 +98,60 @@ export const StocktakeBookList = ({
     </Stack>
   );
 
+  const bookRow = (book: SheetBook) => {
+    const key = bookKeyOf(book);
+    return (
+      <Box
+        key={key}
+        role="button"
+        tabIndex={0}
+        aria-current={key === selectedKey ? "true" : undefined}
+        onClick={() => {
+          onSelect(key);
+        }}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") {
+            onSelect(key);
+          }
+        }}
+        sx={{
+          px: 1.5,
+          py: 1,
+          borderRadius: 1,
+          cursor: "pointer",
+          bgcolor: key === selectedKey ? "grey.100" : undefined,
+          "&:hover": { bgcolor: "grey.50" },
+        }}
+      >
+        <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
+          <Stack sx={{ flex: 1, minWidth: 0 }}>
+            <Typography variant="body2" sx={{ fontWeight: 600 }}>
+              {`${book.gameCode} ${book.gameName}`}
+            </Typography>
+            <Typography variant="caption" color="textSecondary">
+              {t(
+                isStocktakeStockLine(book.cashPointId)
+                  ? "book.subtitleStock"
+                  : "book.subtitle",
+                {
+                  bookNo: displayBookNo(book.bookNo),
+                  count: book.tickets.filter(
+                    (ticket) => ticket.status === "unsold",
+                  ).length,
+                },
+              )}
+            </Typography>
+          </Stack>
+          {statusOf(book)}
+        </Stack>
+      </Box>
+    );
+  };
+  // 拆過、在庫存的張那一區(收銀點 = `STOCKTAKE_STOCK_LINE`)排在收銀點之後
+  const stockBooks = books.filter((book) =>
+    isStocktakeStockLine(book.cashPointId),
+  );
+
   if (isNarrow) {
     return (
       <Stack spacing={1.5}>
@@ -105,7 +163,7 @@ export const StocktakeBookList = ({
           value={selectedKey ?? ""}
           options={books.map((book) => ({
             value: bookKeyOf(book),
-            label: `${cashPoints.find((point) => point.id === book.cashPointId)?.name ?? ""} · ${book.gameCode} ${book.gameName} · ${displayBookNo(book.bookNo)}`,
+            label: `${placeNameOf(cashPoints, book.cashPointId, t("stock.name"))} · ${book.gameCode} ${book.gameName} · ${displayBookNo(book.bookNo)}`,
           }))}
           onChange={(next: string) => {
             onSelect(next);
@@ -123,56 +181,22 @@ export const StocktakeBookList = ({
             {cashPointHeader(point)}
             {books
               .filter((book) => book.cashPointId === point.id)
-              .map((book) => {
-                const key = bookKeyOf(book);
-                return (
-                  <Box
-                    key={key}
-                    role="button"
-                    tabIndex={0}
-                    aria-current={key === selectedKey ? "true" : undefined}
-                    onClick={() => {
-                      onSelect(key);
-                    }}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter") {
-                        onSelect(key);
-                      }
-                    }}
-                    sx={{
-                      px: 1.5,
-                      py: 1,
-                      borderRadius: 1,
-                      cursor: "pointer",
-                      bgcolor: key === selectedKey ? "grey.100" : undefined,
-                      "&:hover": { bgcolor: "grey.50" },
-                    }}
-                  >
-                    <Stack
-                      direction="row"
-                      spacing={1}
-                      sx={{ alignItems: "center" }}
-                    >
-                      <Stack sx={{ flex: 1, minWidth: 0 }}>
-                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                          {`${book.gameCode} ${book.gameName}`}
-                        </Typography>
-                        <Typography variant="caption" color="textSecondary">
-                          {t("book.subtitle", {
-                            bookNo: displayBookNo(book.bookNo),
-                            count: book.tickets.filter(
-                              (ticket) => ticket.status === "unsold",
-                            ).length,
-                          })}
-                        </Typography>
-                      </Stack>
-                      {statusOf(book)}
-                    </Stack>
-                  </Box>
-                );
-              })}
+              .map((book) => bookRow(book))}
           </Stack>
         ))}
+        {stockBooks.length > 0 ? (
+          <Stack spacing={1}>
+            <Stack spacing={0.5}>
+              <Typography variant="subtitle2" sx={{ color: "primary.dark" }}>
+                {t("stock.title")}
+              </Typography>
+              <Typography variant="body2" color="textSecondary">
+                {t("stock.hint")}
+              </Typography>
+            </Stack>
+            {stockBooks.map((book) => bookRow(book))}
+          </Stack>
+        ) : null}
       </Stack>
     </Card>
   );

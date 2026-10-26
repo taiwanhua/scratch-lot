@@ -50,6 +50,48 @@ interface BookStock {
   sold: number;
 }
 
+/** 一本在一家店是不是原封不動:從沒拆過,而且這家店的張全是未售、在庫存。 */
+const isSealedRow = (row: BookStock, opened: ReadonlySet<string>): boolean =>
+  row.total > 0 &&
+  row.total === row.unsoldStock &&
+  !opened.has(String(row._id.bookId));
+
+/** 一家店 × 一款遊戲的庫存概況合計。 */
+interface StockTotal {
+  orgId: string;
+  gameId: string;
+  unopened: number;
+  openedStock: number;
+  counter: number;
+  sold: number;
+}
+
+/** 依本的列合計成「分店:遊戲」→ 合計(未拆數本、拆過的庫存張、檯面、已售)。 */
+function stockTotalsOf(
+  bookRows: readonly BookStock[],
+  opened: ReadonlySet<string>,
+): Map<string, StockTotal> {
+  const totals = new Map<string, StockTotal>();
+  for (const row of bookRows) {
+    const key = `${String(row._id.orgId)}:${String(row._id.gameId)}`;
+    const total = totals.get(key) ?? {
+      orgId: String(row._id.orgId),
+      gameId: String(row._id.gameId),
+      unopened: 0,
+      openedStock: 0,
+      counter: 0,
+      sold: 0,
+    };
+    const sealed = isSealedRow(row, opened);
+    total.unopened += sealed ? 1 : 0;
+    total.openedStock += sealed ? 0 : row.unsoldStock;
+    total.counter += row.counter;
+    total.sold += row.sold;
+    totals.set(key, total);
+  }
+  return totals;
+}
+
 /**
  * 預計要給本數與庫存概況(專案規格 7.6、5.1、5.2):庫存管理的「預計要給本數」分頁、遊戲詳情的
  * 「庫存概況」「預計要給本數」、乙類詳情的「預計要給本數」「在店庫存」共用同一份資料與權限 ——
@@ -150,9 +192,10 @@ export class InventoryStockService {
   }
 
   /**
-   * 庫存概況:分店 × 遊戲的未拆(本)、檯面(張)、已售(張)。遊戲詳情給 `gameId`(每家看得到的分店一列);
-   * 乙類詳情給 `orgId`(對應分店有庫存的遊戲各一列)。張照操作者自己的範圍讀(只算看得到的分店)。
-   * 未拆 = 這本在這家店的張全部未售且在庫存。
+   * 庫存概況:分店 × 遊戲的未拆(本)、庫存(拆過,張)、檯面(張)、已售(張)。遊戲詳情給 `gameId`(每家看得到
+   * 的分店一列);乙類詳情給 `orgId`(對應分店有庫存的遊戲各一列)。張照操作者自己的範圍讀(只算看得到的分店)。
+   * 未拆 = 這本從沒拆過、在這家店的張全部未售且在庫存;其他在庫存的未售張算「庫存(拆過)」(使用者 10/27 定案:
+   * 拆過收回、尋回、調回的張不再從概況消失)。
    */
   async stockOverview(
     operator: OperatorContext,
@@ -212,30 +255,15 @@ export class InventoryStockService {
         },
       },
     ]);
-    const totals = new Map<
-      string,
-      {
-        orgId: string;
-        gameId: string;
-        unopened: number;
-        counter: number;
-        sold: number;
-      }
-    >();
-    for (const row of rows as unknown as BookStock[]) {
-      const key = `${String(row._id.orgId)}:${String(row._id.gameId)}`;
-      const total = totals.get(key) ?? {
-        orgId: String(row._id.orgId),
-        gameId: String(row._id.gameId),
-        unopened: 0,
-        counter: 0,
-        sold: 0,
-      };
-      total.unopened += row.total > 0 && row.total === row.unsoldStock ? 1 : 0;
-      total.counter += row.counter;
-      total.sold += row.sold;
-      totals.set(key, total);
-    }
+    const bookRows = rows as unknown as BookStock[];
+    const sealedCandidates = bookRows.filter(
+      (row) => row.total > 0 && row.total === row.unsoldStock,
+    );
+    const opened = await this.openedBookIdsOf(
+      operator,
+      sealedCandidates.map((row) => row._id.bookId),
+    );
+    const totals = stockTotalsOf(bookRows, opened);
     const games =
       onlyGame === null
         ? await this.gamesWith(
@@ -261,12 +289,29 @@ export class InventoryStockService {
           org: { id: String(store.id), name: store.name },
           game: { ...game, id: String(game.id) },
           unopenedBooks: total?.unopened ?? 0,
+          openedStockTickets: total?.openedStock ?? 0,
           counterTickets: total?.counter ?? 0,
           soldTickets: total?.sold ?? 0,
         });
       }
     }
     return { items };
+  }
+
+  /** 這些本裡拆過的(`firstOpenedAt` 有值;庫存概況的「未拆」要從沒拆過)。 */
+  private async openedBookIdsOf(
+    operator: OperatorContext,
+    bookIds: readonly Types.ObjectId[],
+  ): Promise<Set<string>> {
+    if (bookIds.length === 0) {
+      return new Set();
+    }
+    const books = await this.books.findMany(
+      operator,
+      { _id: { $in: [...bookIds] }, firstOpenedAt: { $ne: null } },
+      { select: "_id" },
+    );
+    return new Set(books.map((book) => String(book._id)));
   }
 
   /** 篩選的分店:不給 → null;給了要在租戶裡且看得到,否則 `NOT_FOUND`。 */

@@ -206,6 +206,7 @@ const event = (
   __typename: "LotteryInventoryEvent" as const,
   at,
   type,
+  reopen: false,
   ticketNos,
   wholeBook: false,
   from: place(inCounter),

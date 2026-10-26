@@ -466,7 +466,8 @@
         "skipped": "跳號",
         "scrapped": "報廢",
         "lost": "待查·遺失",
-        "otherStore": "其他分店"
+        "otherStore": "其他分店",
+        "transferring": "調貨中"
       },
       "quickSelect": {
         "label": "連號快選",
@@ -525,8 +526,14 @@
       "lost": "遺失"
     },
     "bookStates": {
+      "revoked": "已撤銷",
       "unopened": "未拆",
       "on_counter": "檯面中",
+      "in_stock": "庫存中",
+      "in_transit": "在途",
+      "investigating": "待查",
+      "lost": "遺失",
+      "scrapped": "已報廢",
       "sold_out": "售完",
       "pending_skip": "有待標註"
     },
@@ -552,7 +559,8 @@
       "transfer_in": "調入",
       "investigate": "待查",
       "lose": "遺失",
-      "recover": "尋回"
+      "recover": "尋回",
+      "reopen": "上檯面"
     },
     "sources": {
       "purchase": "進貨單",
@@ -603,15 +611,19 @@
         "game": "遊戲",
         "status": "狀態",
         "responsible": "責任分店",
+        "tickets": "張數",
+        "ticketNos": "張號",
         "source": "來源",
         "at": "日期",
+        "days": "天數",
         "cost": "批購成本"
       },
-      "source": "{serial}({count} 張)",
+      "source": "{serial}",
       "recover": "尋回",
       "listAria": "待查·遺失",
       "empty": "目前沒有待查或遺失的刮刮樂",
-      "loadFailed": "待查·遺失清單載入失敗,請稍後再試"
+      "loadFailed": "待查·遺失清單載入失敗,請稍後再試",
+      "daysValue": "{days} 天"
     },
     "book": {
       "tabLabel": "本 {key}",
@@ -700,6 +712,7 @@
       "store": "分店",
       "game": "遊戲",
       "unopened": "未拆(本)",
+      "openedStock": "庫存(拆過,張)",
       "counter": "檯面(張)",
       "sold": "已售(張)",
       "empty": "沒有庫存"
@@ -3139,7 +3152,7 @@
       "withdraw": "出庫",
       "switchTo": "切換到這個收銀點",
       "recentSales": "最近售出",
-      "split": "拆本",
+      "split": "拆本 / 上檯面",
       "redeem": "兌獎",
       "recentRedemptions": "最近兌獎",
       "checkout": "交班結帳"
@@ -3389,14 +3402,14 @@
       "success": "已收回 {count} 張"
     },
     "split": {
-      "pickTitle": "拆本 · 選要拆的本",
+      "pickTitle": "拆本 / 上檯面 · 選本",
       "pickTo": "放到本機收銀點:{name}",
       "search": "刷條碼或輸入本號",
-      "pickHint": "本店還沒拆的本({count} 本);刷條碼會直接選中那一本。",
+      "pickHint": "本店庫存裡有張的本({count} 本):未拆的本拆本,拆過的本把庫存的張放上檯面;刷條碼會直接選中那一本。",
       "bookLine": "{code} {name} · 本號 {bookNo}",
-      "bookMeta": "{price} 元 · {count} 張",
+      "bookMeta": "{price} 元 · 未拆 · {count} 張",
       "bookMetaSkip": "{price} 元 · 張號 {first}–{last} · 待標註 {count} 張(拆本時要標好)",
-      "none": "本店沒有還沒拆的本。",
+      "none": "本店庫存裡沒有可以拆本或上檯面的本。",
       "next": "下一步",
       "previous": "上一步",
       "title": "拆本 · {code} {name} · 本號 {bookNo}",
@@ -3425,7 +3438,12 @@
       "unassigned": "未分配",
       "remaining": "還有 {count} 張沒分配,全部分配完才能確認拆本。",
       "confirm": "確認拆本",
-      "success": "已拆本"
+      "success": "已拆本",
+      "bookMetaOpened": "{price} 元 · 拆過 · 庫存 {count} 張",
+      "titleReopen": "上檯面 · {code} {name} · 本號 {bookNo}",
+      "reopenHint": "這本拆過了:只放這家店庫存裡的 {count} 張,不用再標跳號。",
+      "confirmReopen": "確認上檯面",
+      "successReopen": "已上檯面"
     },
     "camera": {
       "button": "📷 掃描",
@@ -3443,7 +3461,7 @@
       "MOVE_CONFIRM_REQUIRED": "這張在別的收銀點,請先確認移櫃並售出",
       "MOVE_NOT_ALLOWED": "你沒有移櫃權限,請由那個收銀點售出",
       "UNDO_NOT_ALLOWED": "不符合當下撤銷的條件,請改送撤銷售出申請",
-      "BOOK_ALREADY_OPENED": "這本已經拆過了",
+      "BOOK_ALREADY_OPENED": "這本在本店庫存裡已經沒有可以放上檯面的張",
       "SPLIT_PLAN_INVALID": "跳號還沒點滿,或還有張沒分配",
       "TICKET_NOT_ON_COUNTER": "只有檯面上未售的張能移櫃或收回",
       "CONFLICT": "這幾張已被處理,請重新核對",
@@ -3698,7 +3716,9 @@
         "prev": "上一本",
         "next": "下一本",
         "legendSelected": "在(已點)",
-        "pendingReversal": "撤銷審核中"
+        "pendingReversal": "撤銷審核中",
+        "subtitleStock": "本號 {bookNo} · 庫存 {count} 張",
+        "hintStock": "點出實際還在庫存的張(已選 = 在);系統數字是開始盤這本那一刻的數字。"
       },
       "unopened": {
         "title": "未拆的本(在 / 不在)",
@@ -3789,7 +3809,8 @@
         "alreadyProcessed": "這幾張已被處理,請重新核對",
         "noShift": "這個收銀點從來沒有開過班,沒有班可以記這筆補登售出",
         "backfillDone": "已補登售出 {count} 張 · {amount} 元(立即生效)",
-        "lostNotReady": "待查清單還沒處理完:「找到了」要刷條碼,「確認遺失」要選原因"
+        "lostNotReady": "待查清單還沒處理完:「找到了」要刷條碼,「確認遺失」要選原因",
+        "stockHint": "庫存的張不在:只能待查(庫存的張不能賣,沒有補登售出)。"
       },
       "submit": {
         "title": "送出盤點?",
@@ -3880,6 +3901,11 @@
           "keep": "繼續待查"
         },
         "loadFailed": "讀不到這張盤點單"
+      },
+      "stock": {
+        "title": "庫存(拆過的本)",
+        "name": "庫存",
+        "hint": "拆過的本收回、尋回或調回的庫存張:比照檯面逐張盤,不在的張只能待查。"
       }
     },
     "checkout": {

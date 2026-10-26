@@ -2,7 +2,11 @@ import { useState } from "react";
 import { useNavigate } from "react-router";
 import { useTranslations } from "use-intl";
 
-import { TICKET_STATUS, displayBookNo } from "@repo/domain/project/lottery";
+import {
+  TICKET_STATUS,
+  displayBookNo,
+  formatTicketRanges,
+} from "@repo/domain/project/lottery";
 import {
   type LotteryInvestigationRowFieldsFragment,
   useLotteryInvestigationsQuery,
@@ -17,7 +21,11 @@ import { RecoverTicketDialog } from "@/components/project/lottery/RecoverTicketD
 import { useSession } from "@/hooks/base/useSession";
 import { useTemporalText } from "@/hooks/base/useTemporalText";
 
-import { INVESTIGATIONS_TABLE_MIN_WIDTH, moneyText } from "../inventory-config";
+import {
+  INVESTIGATIONS_TABLE_MIN_WIDTH,
+  daysSince,
+  moneyText,
+} from "../inventory-config";
 import { useInventoryAccess } from "../useInventoryAccess";
 
 type Row = LotteryInvestigationRowFieldsFragment;
@@ -68,12 +76,23 @@ export const InvestigationsTab = () => {
       render: (row) => row.responsibleOrg?.name ?? t("stock.none"),
     },
     {
+      key: "tickets",
+      header: t("investigations.columns.tickets"),
+      align: "right",
+      // 未拆整本:待標註的跳號不算(api 已扣)
+      render: (row) => String(row.ticketCount),
+    },
+    {
+      key: "ticketNos",
+      header: t("investigations.columns.ticketNos"),
+      render: (row) =>
+        formatTicketRanges(row.tickets.map((ticket) => ticket.ticketNo)),
+    },
+    {
       key: "source",
       header: t("investigations.columns.source"),
       render: (row) =>
         t("investigations.source", {
-          // 未拆整本:待標註的跳號不算(api 已扣)
-          count: row.ticketCount,
           serial: row.refSerialNo ?? t("stock.none"),
         }),
     },
@@ -81,6 +100,15 @@ export const InvestigationsTab = () => {
       key: "at",
       header: t("investigations.columns.at"),
       render: (row) => (row.at ? temporal(row.at, "monthDay") : ""),
+    },
+    {
+      key: "days",
+      header: t("investigations.columns.days"),
+      align: "right",
+      render: (row) =>
+        row.at
+          ? t("investigations.daysValue", { days: daysSince(row.at) })
+          : "",
     },
     ...(showCost
       ? [

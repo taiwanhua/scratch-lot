@@ -2,6 +2,7 @@ import { describe, expect, it } from "@jest/globals";
 
 import {
   STOCKTAKE_DIFF_ACTION,
+  STOCKTAKE_STOCK_LINE,
   type StocktakeDraft,
   type StocktakeTicketFacts,
   parseStocktakeDraft,
@@ -278,5 +279,58 @@ describe("盤點內容的序列化", () => {
       lostReview: [{ ticketId: "t", action: "nope" as "lost" }],
     });
     expect(parseStocktakeDraft(JSON.stringify(badAction)).ok).toBe(false);
+  });
+});
+
+const stock = (status: "unsold" | "investigating") => ({
+  status,
+  locationKind: "stock" as const,
+  cashPointId: null,
+});
+
+describe("拆過、在庫存的張那一區(使用者 10/27 要求)", () => {
+  const at = new Date("2026-11-05T13:40:00Z");
+
+  it("庫存那一行比對那一刻在庫存的未售張;檯面的張、被調貨鎖住的張不比對", () => {
+    const factsOf = (
+      current: ReturnType<typeof stock> | ReturnType<typeof counter>,
+      lockRefType: string | null = null,
+    ) =>
+      stocktakeTicketFactsOf(
+        { ticketId: "t1", ticketNo: "001", current, lockRefType },
+        [],
+        STOCKTAKE_STOCK_LINE,
+        at,
+        new Set(),
+      ).atCount;
+    expect(factsOf(stock("unsold"))).toBe("unsold");
+    expect(factsOf(stock("investigating"))).toBe("absent");
+    expect(factsOf(counter("unsold"))).toBe("absent");
+    expect(factsOf(stock("unsold"), "transfer")).toBe("absent");
+  });
+
+  it("庫存的張不在只能待查(沒有補登售出)", () => {
+    const missing = [
+      {
+        ticketId: "t1",
+        ticketNo: "001",
+        kind: "missing" as const,
+        backfilled: false,
+      },
+    ];
+    expect(
+      stocktakeActionProblemsOf(
+        missing,
+        [{ ticketNo: "001", action: STOCKTAKE_DIFF_ACTION.investigate }],
+        STOCKTAKE_STOCK_LINE,
+      ),
+    ).toEqual({ stale: [], unhandled: [] });
+    expect(
+      stocktakeActionProblemsOf(
+        missing,
+        [{ ticketNo: "001", action: STOCKTAKE_DIFF_ACTION.saleBackfill }],
+        STOCKTAKE_STOCK_LINE,
+      ).stale,
+    ).toEqual(["001"]);
   });
 });

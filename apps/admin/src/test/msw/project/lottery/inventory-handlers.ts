@@ -172,7 +172,14 @@ export const inventoryWorld = ({
           (!input.bookNo || book.bookNo.includes(input.bookNo)),
       );
       return HttpResponse.json({
-        data: { lotteryInventoryBooks: { items, totalCount: items.length } },
+        data: {
+          lotteryInventoryBooks: {
+            items,
+            totalCount: items.length,
+            page: 1,
+            pageSize: 50,
+          },
+        },
       });
     }),
     api.query("LotteryInventoryBook", ({ variables }) => {

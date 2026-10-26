@@ -84,11 +84,26 @@ const SkipStep = ({
   );
 };
 
+/** 從沒拆過的本寫「拆本」,拆過的本再上檯面寫「上檯面」(標題、確認按鈕、成功訊息)。 */
+const SPLIT_KEYS = {
+  open: {
+    title: "split.title",
+    confirm: "split.confirm",
+    success: "split.success",
+  },
+  reopen: {
+    title: "split.titleReopen",
+    confirm: "split.confirmReopen",
+    success: "split.successReopen",
+  },
+} as const;
+
 /**
  * 拆本精靈(Figma ST-09a ① 標跳號、09b ② 全部放到本機收銀點、09c ② 分放到多個收銀點;規格 6.4):
- * ① 只有待標註 > 0 才出現(沒有就直接從 ② 開始、不顯示 Stepper),點滿才能 [下一步];② 預設全部放到
- * 本機收銀點,分放時每一張都要分配到一個收銀點才能 [確認拆本]。跳號的張實體不存在,不算庫存。
- * 步驟之間只放在畫面狀態,關掉不留資料。
+ * 只分配這家店庫存裡未售、沒被鎖的張(拆過的本再上檯面:檯面上、已售、待查的張不列)。
+ * ① 只有待標註 > 0 才出現(從沒拆過的本;沒有就直接從 ② 開始、不顯示 Stepper),點滿才能 [下一步];
+ * ② 預設全部放到本機收銀點,分放時每一張都要分配到一個收銀點才能確認。拆過的本標題、按鈕寫「上檯面」。
+ * 跳號的張實體不存在,不算庫存。步驟之間只放在畫面狀態,關掉不留資料。
  */
 export const SplitWizardDialog = ({
   orgId,
@@ -119,10 +134,11 @@ export const SplitWizardDialog = ({
     assigned: {},
     selected: [],
   });
+  const keys = SPLIT_KEYS[card?.unopened === false ? "reopen" : "open"];
   const split = useSplitLotteryBookMutation(
     session.client,
     useMutationFeedback({
-      success: t("split.success"),
+      success: t(keys.success),
       error: errorText,
       onSuccess: () => {
         refresh();
@@ -134,7 +150,14 @@ export const SplitWizardDialog = ({
   if (card === undefined) {
     return null;
   }
-  const ticketNos = card.tickets.map((ticket) => ticket.ticketNo);
+  const ticketNos = card.tickets
+    .filter(
+      (ticket) =>
+        ticket.status === "unsold" &&
+        ticket.locationKind === "stock" &&
+        !ticket.locked,
+    )
+    .map((ticket) => ticket.ticketNo);
   const usable = ticketNos.filter((no) => !skipped.includes(no));
   const effective: SplitPlaceState = {
     ...place,
@@ -190,7 +213,7 @@ export const SplitWizardDialog = ({
           cancel
         )}
         <Button disabled={problem !== null || split.isPending} onClick={submit}>
-          {t("split.confirm")}
+          {t(keys.confirm)}
         </Button>
       </>
     );
@@ -202,7 +225,7 @@ export const SplitWizardDialog = ({
       fullWidth
       fullScreen={isMobile}
       maxWidth="sm"
-      title={t("split.title", {
+      title={t(keys.title, {
         code: card.gameCode,
         name: card.gameName,
         bookNo: displayBookNo(card.bookNo),
@@ -217,6 +240,11 @@ export const SplitWizardDialog = ({
             last: card.lastTicketNo,
           })}
         </Typography>
+        {card.unopened ? null : (
+          <Typography variant="body2">
+            {t("split.reopenHint", { count: ticketNos.length })}
+          </Typography>
+        )}
         {pending > 0 ? (
           <Stepper
             aria-label={t("split.stepsAria")}

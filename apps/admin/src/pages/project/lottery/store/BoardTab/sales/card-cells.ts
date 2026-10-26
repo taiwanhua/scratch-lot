@@ -55,8 +55,17 @@ export const cellStateOf = (
   if (ticket.status === "scrapped") {
     return "scrapped";
   }
-  return ticket.locked ? "sold" : "unsold";
+  // 檯面上未售的張只會被調貨單鎖住(撤銷售出申請鎖的是已售)
+  return ticket.locked ? "transferring" : "unsold";
 };
+
+/** 卡片圖例:有被調貨單鎖住的張才放「調貨中」。 */
+export const legendOf = (
+  tickets: readonly CardTicket[],
+): readonly TicketCellState[] =>
+  tickets.some((ticket) => ticket.status === "unsold" && ticket.locked)
+    ? [...LEGEND.slice(0, 2), "transferring", ...LEGEND.slice(2)]
+    : LEGEND;
 
 /** 選到的狀態 → 能按哪些(選到不同狀態只顯示共同可用的;規格 6.2)。 */
 export const actionsOf = (

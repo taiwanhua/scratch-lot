@@ -78,6 +78,35 @@ export const STOCKTAKE_ACTIONS_OF: Record<
   extra: ["flag"],
 };
 
+/**
+ * 盤點「拆過、在庫存的張」那一區的行用的收銀點 id(一本 × 位置;使用者 10/27 要求:拆過的本收回、尋回、
+ * 調回的庫存張也要盤)。盤點單紀錄存 `cashPointId: null`。
+ */
+export const STOCKTAKE_STOCK_LINE = "stock";
+
+/** 這一行盤的是拆過、在庫存的張(不是收銀點檯面)。 */
+export const isStocktakeStockLine = (cashPointId: string | null): boolean =>
+  cashPointId === null || cashPointId === STOCKTAKE_STOCK_LINE;
+
+/** 庫存的張不在:只能 [待查](庫存的張不能賣,沒有 [補登售出]);庫存不會有已售的張。 */
+export const STOCKTAKE_STOCK_ACTIONS_OF: Record<
+  StocktakeDiffKind,
+  readonly StocktakeDiffAction[]
+> = {
+  missing: ["investigate"],
+  extra: [],
+};
+
+/** 一行的差異可用的處理(檯面 / 庫存)。 */
+export function stocktakeActionsOf(
+  kind: StocktakeDiffKind,
+  cashPointId: string | null,
+): readonly StocktakeDiffAction[] {
+  return isStocktakeStockLine(cashPointId)
+    ? STOCKTAKE_STOCK_ACTIONS_OF[kind]
+    : STOCKTAKE_ACTIONS_OF[kind];
+}
+
 /** 待查清單的處理:找到了(要刷條碼)/ 確認遺失(`store.confirm-lost`,原因必填)/ 繼續待查。 */
 export const STOCKTAKE_LOST_ACTIONS = ["found", "lost", "keep"] as const;
 export type StocktakeLostAction = (typeof STOCKTAKE_LOST_ACTIONS)[number];
@@ -115,7 +144,7 @@ export interface StocktakeDraftDiff {
   eventId?: string | null;
 }
 
-/** 一本 × 收銀點的盤點。 */
+/** 一本 × 收銀點(或庫存 `STOCKTAKE_STOCK_LINE`)的盤點。 */
 export interface StocktakeDraftLine {
   bookId: string;
   cashPointId: string;
@@ -331,6 +360,7 @@ export interface StocktakeTicketFacts {
 /**
  * 由目前的張與盤點之後的事件(依時間)倒推盤點那一刻:之後的第一筆事件的 `from` = 那一刻的狀態;
  * 沒有之後的事件 = 目前的狀態。被調貨單鎖定的張(調貨中)不比對;撤銷售出申請鎖定 = 撤銷審核中。
+ * 庫存那一行(`STOCKTAKE_STOCK_LINE`)比對那一刻在庫存的未售張。
  */
 export function stocktakeTicketFactsOf(
   ticket: {
@@ -355,9 +385,11 @@ export function stocktakeTicketFactsOf(
   const snapshot = first === undefined ? ticket.current : first.from;
   const onCounter =
     snapshot !== null &&
-    snapshot.locationKind === "counter" &&
-    snapshot.cashPointId === cashPointId &&
-    (snapshot.status === "unsold" || snapshot.status === "sold");
+    (isStocktakeStockLine(cashPointId)
+      ? snapshot.locationKind === "stock" && snapshot.status === "unsold"
+      : snapshot.locationKind === "counter" &&
+        snapshot.cashPointId === cashPointId &&
+        (snapshot.status === "unsold" || snapshot.status === "sold"));
   const lockedByTransfer =
     ticket.lockRefType !== null &&
     ticket.lockRefType !== SALE_REVERSAL_LOCK_REF_TYPE;
@@ -425,12 +457,16 @@ export function stocktakeDiffsOf(
   return diffs.toSorted((a, b) => a.ticketNo.localeCompare(b.ticketNo));
 }
 
-/** 這筆差異能不能這樣處理:補登售出要這次盤點真的補登過;其他處理則不能已補登。 */
+/**
+ * 這筆差異能不能這樣處理:補登售出要這次盤點真的補登過;其他處理則不能已補登。`cashPointId` = 這一行的
+ * 收銀點(庫存那一行只能待查)。
+ */
 export function isStocktakeActionValid(
   diff: Pick<StocktakeDiff, "kind" | "backfilled">,
   action: StocktakeDiffAction,
+  cashPointId: string | null = "",
 ): boolean {
-  if (!STOCKTAKE_ACTIONS_OF[diff.kind].includes(action)) {
+  if (!stocktakeActionsOf(diff.kind, cashPointId).includes(action)) {
     return false;
   }
   return (action === "sale_backfill") === diff.backfilled;
@@ -443,13 +479,17 @@ export function isStocktakeActionValid(
 export function stocktakeActionProblemsOf(
   diffs: readonly StocktakeDiff[],
   actions: readonly { ticketNo: string; action: StocktakeDiffAction }[],
+  cashPointId: string | null = "",
 ): { stale: string[]; unhandled: string[] } {
   const byNo = new Map(diffs.map((diff) => [diff.ticketNo, diff]));
   const handled = new Set<string>();
   const stale: string[] = [];
   for (const item of actions) {
     const diff = byNo.get(item.ticketNo);
-    if (diff === undefined || !isStocktakeActionValid(diff, item.action)) {
+    if (
+      diff === undefined ||
+      !isStocktakeActionValid(diff, item.action, cashPointId)
+    ) {
       stale.push(item.ticketNo);
     } else {
       handled.add(item.ticketNo);

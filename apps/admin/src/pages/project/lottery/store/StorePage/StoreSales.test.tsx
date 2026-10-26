@@ -221,9 +221,11 @@ describe("店面管理:銷售", () => {
   it("拆本:待標註 2 張沒點滿 → [下一步] 停用;分放沒分完 → [確認拆本] 停用", async () => {
     const { user, salesFake } = renderStore();
     const counter = await sectionOf("店內櫃台");
-    await user.click(within(counter).getByRole("button", { name: "拆本" }));
+    await user.click(
+      within(counter).getByRole("button", { name: "拆本 / 上檯面" }),
+    );
     const pick = await screen.findByRole("dialog", {
-      name: "拆本 · 選要拆的本",
+      name: "拆本 / 上檯面 · 選本",
     });
     await user.click(
       await within(pick).findByRole("radio", {
@@ -379,7 +381,9 @@ describe("店面管理:銷售", () => {
   it("沒有權限看不到按鈕:拆本、移櫃 / 收回 / 移櫃並售出、標記售出、撤銷售出", async () => {
     const { user } = renderStore({ permissions: [P.view] });
     const counter = await sectionOf("店內櫃台");
-    expect(within(counter).queryByRole("button", { name: "拆本" })).toBeNull();
+    expect(
+      within(counter).queryByRole("button", { name: "拆本 / 上檯面" }),
+    ).toBeNull();
     const panel = await expandCard(
       user,
       "店內櫃台",

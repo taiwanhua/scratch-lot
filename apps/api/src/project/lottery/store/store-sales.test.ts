@@ -155,6 +155,7 @@ const UNOPENED = /* GraphQL */ `
         bookNo
         ticketCount
         pendingSkipCount
+        opened
       }
     }
   }
@@ -1041,7 +1042,7 @@ describe("店面(二):銷售、當下撤銷、拆本、移櫃(GraphQL 端點 + �
   });
 
   describe("拆本(規格 6.4)", () => {
-    it("先選要拆的本:本店還沒拆的本(待標註張數)", async () => {
+    it("先選要拆的本:本店庫存有張的本(未拆的本張數不算待標註;使用者 10/27 定案甲、D)", async () => {
       const { bookId } = await receiveBook(102);
       const data = await ok<{
         lotteryStoreUnopenedBooks: {
@@ -1049,6 +1050,7 @@ describe("店面(二):銷售、當下撤銷、拆本、移櫃(GraphQL 端點 + �
             bookId: string;
             ticketCount: number;
             pendingSkipCount: number;
+            opened: boolean;
           }[];
         };
       }>(lin, UNOPENED, { orgId: String(xinyi) });
@@ -1056,7 +1058,7 @@ describe("店面(二):銷售、當下撤銷、拆本、移櫃(GraphQL 端點 + �
         data.lotteryStoreUnopenedBooks.items.find(
           (item) => item.bookId === String(bookId),
         ),
-      ).toMatchObject({ ticketCount: 102, pendingSkipCount: 2 });
+      ).toMatchObject({ ticketCount: 100, pendingSkipCount: 2, opened: false });
     });
 
     it("跳號沒點滿 / 沒分完 → 擋下;點滿、分放兩個收銀點 → 寫「跳號」「拆本」,跳號不算庫存", async () => {

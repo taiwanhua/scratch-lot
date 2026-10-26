@@ -2,11 +2,12 @@ import { useState } from "react";
 import { useTranslations } from "use-intl";
 
 import {
-  STOCKTAKE_ACTIONS_OF,
   type StocktakeDiffAction,
   type StocktakeDiffKind,
   displayBookNo,
   formatTicketRanges,
+  isStocktakeStockLine,
+  stocktakeActionsOf,
 } from "@repo/domain/project/lottery";
 import { Alert } from "@repo/ui/alert";
 import { Button } from "@repo/ui/button";
@@ -84,6 +85,7 @@ export const StocktakeReviewStep = ({
   canSubmit,
 }: StocktakeReviewStepProps) => {
   const t = useTranslations("admin.lotteryStore.stocktake.review");
+  const tStock = useTranslations("admin.lotteryStore.stocktake.stock");
   const [selected, setSelected] = useState<readonly string[]>([]);
   const lines = review?.lines ?? [];
   const rowsOf = (line: ReviewLine): Row[] =>
@@ -102,9 +104,10 @@ export const StocktakeReviewStep = ({
     (action) =>
       chosen.length > 0 &&
       chosen.every((row) =>
-        STOCKTAKE_ACTIONS_OF[row.diff.kind as StocktakeDiffKind].includes(
-          action,
-        ),
+        stocktakeActionsOf(
+          row.diff.kind as StocktakeDiffKind,
+          row.line.cashPointId,
+        ).includes(action),
       ) &&
       (action !== "sale_backfill" || canBackfill),
   );
@@ -114,6 +117,16 @@ export const StocktakeReviewStep = ({
     );
   };
   const pointOf = (id: string) => cashPoints.find((point) => point.id === id);
+  /** 一行的說明:收銀點的班開著 / 沒開;庫存那一區沒有班,說明只能待查。 */
+  const lineNoteOf = (line: ReviewLine): string => {
+    if (isStocktakeStockLine(line.cashPointId)) {
+      return t("stockHint");
+    }
+    const point = pointOf(line.cashPointId);
+    return point?.shift == null
+      ? t("shiftClosed")
+      : t("shiftOpen", { name: point.shift.ownerName });
+  };
   const apply = (rows: readonly Row[], action: StocktakeDiffAction) => {
     if (action === "sale_backfill") {
       onBackfill(rows.map((row) => ({ line: row.line, diff: row.diff })));
@@ -210,7 +223,10 @@ export const StocktakeReviewStep = ({
           <Tag tone="success" label={t("backfilled")} />
         ) : (
           <Stack direction="row" spacing={1}>
-            {STOCKTAKE_ACTIONS_OF[row.diff.kind as StocktakeDiffKind]
+            {stocktakeActionsOf(
+              row.diff.kind as StocktakeDiffKind,
+              row.line.cashPointId,
+            )
               .filter((action) => action !== "sale_backfill" || canBackfill)
               .map((action) => actionButton(row, action))}
           </Stack>
@@ -287,7 +303,6 @@ export const StocktakeReviewStep = ({
             line.diffs.length > 0 || line.pendingReversalTicketNos.length > 0,
         )
         .map((line) => {
-          const point = pointOf(line.cashPointId);
           return (
             <Card
               key={lineKeyOf(line.bookId, line.cashPointId)}
@@ -301,7 +316,9 @@ export const StocktakeReviewStep = ({
                 >
                   <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
                     {t("lineTitle", {
-                      cashPoint: line.cashPointName,
+                      cashPoint: isStocktakeStockLine(line.cashPointId)
+                        ? tStock("name")
+                        : line.cashPointName,
                       game: `${line.gameCode} ${line.gameName}`,
                       bookNo: displayBookNo(line.bookNo),
                     })}
@@ -311,11 +328,7 @@ export const StocktakeReviewStep = ({
                     color="textSecondary"
                     sx={{ flex: 1 }}
                   >
-                    {`${moneyText(line.unitPrice)} · ${
-                      point?.shift == null
-                        ? t("shiftClosed")
-                        : t("shiftOpen", { name: point.shift.ownerName })
-                    }`}
+                    {`${moneyText(line.unitPrice)} · ${lineNoteOf(line)}`}
                   </Typography>
                   <Button
                     size="small"

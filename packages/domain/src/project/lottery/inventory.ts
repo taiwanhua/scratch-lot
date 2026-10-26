@@ -32,10 +32,18 @@ export const INVENTORY_TABS = {
 /** 查刮刮樂的掃描用途(`useScanner` 宣告,規格 18.3)。 */
 export const INVENTORY_LOOKUP_SCAN_PURPOSE = "inventory-lookup";
 
-/** 庫存分頁的狀態篩選:未拆 / 檯面中 / 售完 / 有待標註。 */
+/**
+ * 庫存分頁的狀態篩選:本的顯示狀態(`bookDisplayStateOf`;已撤銷的本不列,所以沒有這個選項)+ 有待標註。
+ * i18n `bookStates.*` 同一組值。
+ */
 export const INVENTORY_BOOK_FILTER_STATES = [
   "unopened",
   "on_counter",
+  "in_stock",
+  "in_transit",
+  "investigating",
+  "lost",
+  "scrapped",
   "sold_out",
   "pending_skip",
 ] as const;

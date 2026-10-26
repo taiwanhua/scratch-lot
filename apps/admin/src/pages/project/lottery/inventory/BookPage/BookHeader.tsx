@@ -21,8 +21,9 @@ export interface BookHeaderProps {
 }
 
 /**
- * 本的詳情頁首(Figma IN-03):遊戲 · 本號、面額 · 張號、狀態、[更正跳號](`abilities.canCorrectSkips`);
- * 整本都待查 / 遺失時下方加狀態列「這本待查中 … [整本尋回]」(Figma 125:1699)。
+ * 本的詳情頁首(Figma IN-03):遊戲 · 本號、面額 · 張號、顯示狀態(`bookStates.*`,含已撤銷)、
+ * [更正跳號](`abilities.canCorrectSkips`);沒有未售、而且有待查 / 遺失時下方加狀態列
+ * 「這本待查中 … [整本尋回]」(Figma 125:1699)。
  */
 export const BookHeader = ({
   detail,
@@ -60,11 +61,7 @@ export const BookHeader = ({
         <Stack direction="row" sx={{ alignItems: "center", gap: 1 }}>
           <Tag
             tone={investigation == null ? "grey" : "warning"}
-            label={
-              investigation == null
-                ? t(`bookStates.${book.state}`)
-                : t(`ticketStatuses.${investigation.status}`)
-            }
+            label={t(`bookStates.${book.state}`)}
           />
           {abilities.canCorrectSkips ? (
             <Button variant="outlined" onClick={onCorrect}>

@@ -2,8 +2,12 @@ import { Injectable } from "@nestjs/common";
 import type { ClientSession, Types } from "mongoose";
 
 import {
+  BOOK_COUNT_KEYS,
+  type BookCountKey,
+  TICKET_EVENT_TYPE,
   TICKET_STATUS,
   type TicketStatus,
+  bookCountKeyOf,
   ticketEventIdOf,
 } from "@repo/domain/project/lottery";
 
@@ -35,10 +39,33 @@ import type {
 
 type TicketRecord = Persisted<LotteryTicketDocument>;
 
-type MovedBooks = Map<
-  string,
-  { bookId: Types.ObjectId; tenantId: Types.ObjectId | null }
->;
+/**
+ * 一批事件對一本的影響:張數增減(依格)、有沒有張換店或跳號進出(要重算持有分店)、這批最早的「拆本」時間
+ * (第一次拆本時寫進本的 `firstOpenedAt`)。
+ */
+interface BookChange {
+  bookId: Types.ObjectId;
+  tenantId: Types.ObjectId | null;
+  delta: Partial<Record<BookCountKey, number>>;
+  moved: boolean;
+  openedAt: Date | null;
+}
+
+type ChangedBooks = Map<string, BookChange>;
+
+/** 增減不是 0 的格(依固定順序,當分組 key 用)。 */
+function nonZeroDeltaOf(
+  delta: BookChange["delta"],
+): Partial<Record<BookCountKey, number>> {
+  const result: Partial<Record<BookCountKey, number>> = {};
+  for (const key of BOOK_COUNT_KEYS) {
+    const value = delta[key] ?? 0;
+    if (value !== 0) {
+      result[key] = value;
+    }
+  }
+  return result;
+}
 
 function sameId(
   left: Types.ObjectId | null | undefined,
@@ -239,13 +266,13 @@ function eventOf(
   };
 }
 
-/** 一批事件寫到一半的狀態:已知事件、每張目前的樣子、結果、要新增的事件、要重算的本。 */
+/** 一批事件寫到一半的狀態:已知事件、每張目前的樣子、結果、要新增的事件、受影響的本。 */
 interface LedgerBatch {
   known: Map<string, KnownEvent>;
   current: Map<string, TicketRecord>;
   results: TicketEventResult[];
   created: ReturnType<typeof eventOf>[];
-  movedBooks: MovedBooks;
+  books: ChangedBooks;
 }
 
 function uniqueIdsOf(ids: readonly Types.ObjectId[]): Types.ObjectId[] {
@@ -321,6 +348,43 @@ function changesHolders(before: TicketRecord, after: TicketRecord): boolean {
     (before.status === TICKET_STATUS.skipped ||
       after.status === TICKET_STATUS.skipped)
   );
+}
+
+/** 記下一筆寫完的事件對本的影響(張數從哪一格移到哪一格、換店 / 跳號、拆本時間)。 */
+function trackBookChange(
+  books: ChangedBooks,
+  write: PlannedWrite,
+  after: TicketRecord,
+  at: Date,
+): void {
+  const key = String(after.bookId);
+  const change = books.get(key) ?? {
+    bookId: after.bookId,
+    tenantId: after.tenantId,
+    delta: {},
+    moved: false,
+    openedAt: null,
+  };
+  const from = bookCountKeyOf(write.before.status, write.before.location.kind);
+  const to = bookCountKeyOf(after.status, after.location.kind);
+  if (from !== to) {
+    if (from !== null) {
+      change.delta[from] = (change.delta[from] ?? 0) - 1;
+    }
+    if (to !== null) {
+      change.delta[to] = (change.delta[to] ?? 0) + 1;
+    }
+  }
+  if (changesHolders(write.before, after)) {
+    change.moved = true;
+  }
+  if (
+    write.input.type === TICKET_EVENT_TYPE.open &&
+    (change.openedAt === null || at.getTime() < change.openedAt.getTime())
+  ) {
+    change.openedAt = at;
+  }
+  books.set(key, change);
 }
 
 /** 一批鎖定 / 解除的計畫:每張的結果、要改的張(依讀到的版本分組)、本的鎖定張數增減。 */
@@ -400,6 +464,8 @@ function lockPlanOf(
  * - 鎖定的張只有同一個鎖能動;鎖定 / 解除用 `lockTickets` / `unlockTickets`(用掉一個版本、不寫事件)
  * - 換店走底座的批次搬家入口 `reassignOrgMany`;張換店或跳號進出後以租戶邊界上下文重算本的持有分店、
  *   所在分店與跳號清單(`skippedTicketNos`)
+ * - **本上的張數**(`ticketCounts`)依本 `$inc`(張從哪一格移到哪一格;增減相同的本一次 `updateMany`),
+ *   第一筆「拆本」事件寫本的 `firstOpenedAt`(已有就不改);和張的條件更新在同一個交易
  * - **整批寫**(TX-06):一次讀張與既有事件,條件相同的張一次 `updateMany`(寫入筆數不符 → `CONFLICT`),
  *   事件一次 `createMany`;資料庫往返數只隨「同一張在這批裡出現幾次」與條件 / 目標的種類數成長,與張數無關
  *
@@ -444,7 +510,7 @@ export class TicketLedgerService {
         session,
       });
     }
-    await this.refreshBookHolders(resolved, session, batch.movedBooks);
+    await this.refreshBooks(resolved, session, batch.books);
     return batch.results;
   }
 
@@ -553,7 +619,7 @@ export class TicketLedgerService {
       current: new Map(tickets.map((ticket) => [String(ticket._id), ticket])),
       results: [],
       created: [],
-      movedBooks: new Map(),
+      books: new Map(),
     };
   }
 
@@ -585,12 +651,7 @@ export class TicketLedgerService {
       batch.created.push(event);
       batch.known.set(write.eventId, event);
       batch.current.set(ticketId, updated);
-      if (changesHolders(write.before, updated)) {
-        batch.movedBooks.set(String(updated.bookId), {
-          bookId: updated.bookId,
-          tenantId: updated.tenantId,
-        });
-      }
+      trackBookChange(batch.books, write, updated, event.at);
       batch.results[write.index] = {
         ticketId,
         eventId: write.eventId,
@@ -716,41 +777,120 @@ export class TicketLedgerService {
   }
 
   /**
-   * 重算本的持有分店與跳號清單;所有可用(非跳號)的張都在同一家店 → 本搬到那家店(整本調貨)。
-   * 要看整本的張(不只操作者看得到的),所以以這本所在租戶的邊界上下文讀寫(仍記得操作者)。
-   * 同一個租戶的本一次讀完;結果相同的本一次 `updateMany`、搬到同一家店的一次 `reassignOrgMany`。
+   * 更新受影響的本(依租戶,每個租戶建一次租戶邊界上下文:要看整本的張、本可能不在操作者的範圍,仍記得操作者):
+   * 張數 `$inc`、第一次拆本時間,以及張換店 / 跳號進出的本重算持有分店與跳號清單、整本搬家。
    */
-  private async refreshBookHolders(
+  private async refreshBooks(
     ledger: ResolvedLedger,
     session: ClientSession,
-    movedBooks: MovedBooks,
+    books: ChangedBooks,
   ): Promise<void> {
     const byTenant = new Map<
       string,
-      { tenantId: Types.ObjectId | null; bookIds: Types.ObjectId[] }
+      { tenantId: Types.ObjectId | null; changes: BookChange[] }
     >();
-    for (const { bookId, tenantId } of movedBooks.values()) {
-      const key = String(tenantId);
-      const entry = byTenant.get(key) ?? { tenantId, bookIds: [] };
-      entry.bookIds.push(bookId);
+    for (const change of books.values()) {
+      const key = String(change.tenantId);
+      const entry = byTenant.get(key) ?? {
+        tenantId: change.tenantId,
+        changes: [],
+      };
+      entry.changes.push(change);
       byTenant.set(key, entry);
     }
-    for (const { tenantId, bookIds } of byTenant.values()) {
-      await this.refreshTenantBooks(ledger, session, tenantId, bookIds);
+    for (const { tenantId, changes } of byTenant.values()) {
+      const counted = changes.filter(
+        (change) =>
+          Object.keys(nonZeroDeltaOf(change.delta)).length > 0 ||
+          change.openedAt !== null,
+      );
+      const moved = changes.filter((change) => change.moved);
+      if (counted.length === 0 && moved.length === 0) {
+        continue;
+      }
+      // 記得是誰(操作者,或系統寫入代表的人):整本搬家要寫稽核
+      const whole = {
+        ...(await tenantBoundaryContext(this.orgs, ledger.operator, tenantId)),
+        actorId: ledger.context.actorId,
+      };
+      await this.applyBookCounts(whole, session, counted);
+      if (moved.length > 0) {
+        await this.refreshTenantBooks(
+          ledger,
+          whole,
+          session,
+          moved.map((change) => change.bookId),
+        );
+      }
     }
   }
 
+  /**
+   * 本上的張數依增減 `$inc`(增減相同的本一次 `updateMany`;組數隨增減的種類成長,與張數無關,TX-06);
+   * 第一次拆本時間只寫還沒有的本(同一個時間的一次寫)。
+   */
+  private async applyBookCounts(
+    whole: OperatorContext,
+    session: ClientSession,
+    changes: readonly BookChange[],
+  ): Promise<void> {
+    const byDelta = new Map<
+      string,
+      { inc: Record<string, number>; ids: Types.ObjectId[] }
+    >();
+    const byOpenedAt = new Map<number, Types.ObjectId[]>();
+    for (const change of changes) {
+      const delta = nonZeroDeltaOf(change.delta);
+      if (Object.keys(delta).length > 0) {
+        const key = JSON.stringify(delta);
+        const entry = byDelta.get(key) ?? {
+          inc: Object.fromEntries(
+            Object.entries(delta).map(([field, value]) => [
+              `ticketCounts.${field}`,
+              value,
+            ]),
+          ),
+          ids: [],
+        };
+        entry.ids.push(change.bookId);
+        byDelta.set(key, entry);
+      }
+      if (change.openedAt !== null) {
+        const time = change.openedAt.getTime();
+        byOpenedAt.set(time, [...(byOpenedAt.get(time) ?? []), change.bookId]);
+      }
+    }
+    for (const { inc, ids } of byDelta.values()) {
+      const modified = await this.books.updateMany(
+        whole,
+        { _id: { $in: ids } },
+        { $inc: inc },
+        { session },
+      );
+      if (modified !== ids.length) {
+        throw bookConflictError(ids.map(String));
+      }
+    }
+    for (const [time, ids] of byOpenedAt) {
+      await this.books.updateMany(
+        whole,
+        { _id: { $in: ids }, firstOpenedAt: null },
+        { $set: { firstOpenedAt: new Date(time) } },
+        { session },
+      );
+    }
+  }
+
+  /**
+   * 重算本的持有分店與跳號清單;所有可用(非跳號)的張都在同一家店 → 本搬到那家店(整本調貨)。
+   * 同一個租戶的本一次讀完;結果相同的本一次 `updateMany`、搬到同一家店的一次 `reassignOrgMany`。
+   */
   private async refreshTenantBooks(
     ledger: ResolvedLedger,
+    whole: OperatorContext,
     session: ClientSession,
-    tenantId: Types.ObjectId | null,
     bookIds: readonly Types.ObjectId[],
   ): Promise<void> {
-    // 記得是誰(操作者,或系統寫入代表的人):整本搬家要寫稽核
-    const whole = {
-      ...(await tenantBoundaryContext(this.orgs, ledger.operator, tenantId)),
-      actorId: ledger.context.actorId,
-    };
     const tickets = await this.tickets.findMany(
       whole,
       { bookId: { $in: [...bookIds] } },

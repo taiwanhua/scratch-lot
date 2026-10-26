@@ -198,7 +198,10 @@ export class LotteryStoreBookCardPayload {
   item!: LotteryStoreBookCardModel;
 }
 
-/** 拆本「先選要拆的本」的一本(本店還沒拆的本)。 */
+/**
+ * 拆本 / 上檯面「先選本」的一本:本店有未售、在庫存、沒被鎖的張的本(使用者 10/27 定案 D)。
+ * `opened` = 拆過(第一次拆本後):畫面標「拆過 · 庫存 N 張」,精靈不標跳號、只分配庫存的張。
+ */
 @ObjectType("LotteryStoreUnopenedBook")
 export class LotteryStoreUnopenedBookModel {
   @Field(() => ID)
@@ -222,12 +225,17 @@ export class LotteryStoreUnopenedBookModel {
   @Field(() => String)
   lastTicketNo!: string;
 
-  /** 這家店庫存裡的張數(不含跳號)。 */
+  /** 這家店庫存裡未售、沒被鎖的張數(不含跳號;未拆的本扣掉待標註)。 */
   @Field(() => Int)
   ticketCount!: number;
 
+  /** 待標註張數(拆過的本 = 0:第一次拆本已標完)。 */
   @Field(() => Int)
   pendingSkipCount!: number;
+
+  /** 拆過(本的 `firstOpenedAt` 有值)。 */
+  @Field(() => Boolean)
+  opened!: boolean;
 }
 
 @ObjectType()

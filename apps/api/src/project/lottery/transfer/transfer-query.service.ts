@@ -121,7 +121,7 @@ export class TransferQueryService {
             },
             {
               select:
-                "gameId gameCode bookNo rate lastTicketNo standardTickets skippedTicketNos",
+                "gameId gameCode bookNo rate lastTicketNo standardTickets skippedTicketNos firstOpenedAt",
             },
           );
     const allTickets =
@@ -147,11 +147,14 @@ export class TransferQueryService {
             ticket.bookId.equals(book._id) &&
             ticket.status !== TICKET_STATUS.skipped,
         );
-        const isWhole = own.every(
-          (ticket) =>
-            isAvailableIn(ticket, fromId) &&
-            ticket.location.kind === TICKET_LOCATION_KIND.stock,
-        );
+        // 整本 = 從沒拆過(拆過一次就只能選張)、整本在出貨店庫存、沒被鎖
+        const isWhole =
+          (book.firstOpenedAt ?? null) === null &&
+          own.every(
+            (ticket) =>
+              isAvailableIn(ticket, fromId) &&
+              ticket.location.kind === TICKET_LOCATION_KIND.stock,
+          );
         return [
           {
             bookId: String(book._id),
@@ -224,10 +227,12 @@ export class TransferQueryService {
         state = "skipped";
       } else if (!ticket.orgId.equals(fromId)) {
         // 不在出貨店:維持 elsewhere
-      } else if (ticket.lockedBy !== null) {
-        state = "locked";
       } else if (ticket.status === TICKET_STATUS.sold) {
+        // 已售(撤銷審核中鎖住的也是已售)
         state = "sold";
+      } else if (ticket.lockedBy !== null) {
+        // 未售、被其他調貨單鎖住(調貨中)
+        state = "locked";
       } else if (isAvailableIn(ticket, fromId)) {
         state = "available";
       }

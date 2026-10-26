@@ -7,6 +7,9 @@ import {
   type StocktakeDraftLine,
   type StocktakeTicketFacts,
   type StocktakeTicketSnapshot,
+  TICKET_LOCATION_KIND,
+  TICKET_STATUS,
+  isStocktakeStockLine,
   stocktakeActionProblemsOf,
   stocktakeDiffsOf,
   stocktakeTicketFactsOf,
@@ -150,7 +153,10 @@ export class StocktakeFacts {
     tickets: readonly TicketRecord[],
     events: readonly TicketEventRecord[],
   ): LineEvaluation {
-    const cashPointId = idOf(line.cashPointId);
+    // 庫存那一行沒有收銀點(盤點單紀錄存 null)
+    const cashPointId = isStocktakeStockLine(line.cashPointId)
+      ? null
+      : idOf(line.cashPointId);
     const countedAt = new Date(line.countedAt);
     const ids = new Set(tickets.map((ticket) => String(ticket._id)));
     const after = events.filter(
@@ -187,7 +193,11 @@ export class StocktakeFacts {
       ),
     );
     const diffs = stocktakeDiffsOf(facts, line.presentTicketNos);
-    const problems = stocktakeActionProblemsOf(diffs, line.diffs);
+    const problems = stocktakeActionProblemsOf(
+      diffs,
+      line.diffs,
+      line.cashPointId,
+    );
     return {
       line,
       book,
@@ -205,6 +215,99 @@ export class StocktakeFacts {
         tickets.map((ticket) => [String(ticket._id), ticket]),
       ),
     };
+  }
+
+  /**
+   * 本店庫存裡的本分兩區(盤點頁、送出檢查共用,使用者 10/27 定案 D):
+   *
+   * - `unopened`:未拆的本(從沒拆過,這家店的張全是未售、在庫存;`isUnopenedInStore`)→ 盤「在 / 不在」整本
+   * - `stock`:其他有未售、在庫存、沒被調貨單鎖住的張的本(拆過收回、尋回、調回…)→ 比照檯面逐張盤
+   *
+   * 已撤銷的本不列。張依本聚合一次、本一次讀完。
+   */
+  async stockBooksOf(
+    reader: OperatorContext,
+    storeId: Types.ObjectId,
+    options: { session?: ClientSession } = {},
+  ): Promise<{
+    unopened: Map<string, { book: BookRecord; inStock: number }>;
+    stock: Map<string, { book: BookRecord; inStock: number }>;
+  }> {
+    const rows = await this.tickets.aggregate(
+      reader,
+      [
+        { $match: { orgId: storeId, status: { $ne: TICKET_STATUS.skipped } } },
+        {
+          $group: {
+            _id: "$bookId",
+            total: { $sum: 1 },
+            inStock: {
+              $sum: {
+                $cond: [
+                  {
+                    $and: [
+                      { $eq: ["$status", TICKET_STATUS.unsold] },
+                      { $eq: ["$location.kind", TICKET_LOCATION_KIND.stock] },
+                    ],
+                  },
+                  1,
+                  0,
+                ],
+              },
+            },
+            unlockedInStock: {
+              $sum: {
+                $cond: [
+                  {
+                    $and: [
+                      { $eq: ["$status", TICKET_STATUS.unsold] },
+                      { $eq: ["$location.kind", TICKET_LOCATION_KIND.stock] },
+                      { $eq: [{ $ifNull: ["$lockedBy", null] }, null] },
+                    ],
+                  },
+                  1,
+                  0,
+                ],
+              },
+            },
+          },
+        },
+        { $match: { inStock: { $gt: 0 } } },
+      ],
+      options,
+    );
+    const unopened = new Map<string, { book: BookRecord; inStock: number }>();
+    const stock = new Map<string, { book: BookRecord; inStock: number }>();
+    if (rows.length === 0) {
+      return { unopened, stock };
+    }
+    const books = await this.books.findMany(
+      reader,
+      { _id: { $in: rows.map((row) => row._id as Types.ObjectId) } },
+      options,
+    );
+    const bookOf = new Map(books.map((book) => [String(book._id), book]));
+    for (const row of rows) {
+      const book = bookOf.get(String(row._id));
+      if (book?.status !== "normal") {
+        continue;
+      }
+      const sealed =
+        (book.firstOpenedAt ?? null) === null &&
+        Number(row.total) === Number(row.inStock);
+      if (sealed) {
+        unopened.set(String(book._id), {
+          book,
+          inStock: Number(row.inStock),
+        });
+      } else if (Number(row.unlockedInStock) > 0) {
+        stock.set(String(book._id), {
+          book,
+          inStock: Number(row.unlockedInStock),
+        });
+      }
+    }
+    return { unopened, stock };
   }
 
   /** 依事件 id 讀張數事件(補登售出的那幾筆:是不是事後更正)。 */

@@ -126,6 +126,7 @@ export const storeCounterHandlers = ({
                   book.standardTickets,
                   0,
                 ),
+                opened: false,
               })),
           },
         },

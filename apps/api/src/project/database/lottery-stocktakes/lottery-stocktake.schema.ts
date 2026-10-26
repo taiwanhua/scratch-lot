@@ -36,13 +36,13 @@ export interface StocktakeDiffRow {
   amount: number;
 }
 
-/** 一本 × 收銀點。 */
+/** 一本 × 收銀點(`cashPointId: null` = 拆過、在庫存的張那一區)。 */
 export interface StocktakeLine {
   bookId: Types.ObjectId;
   gameCode: string;
   gameName: string;
   bookNo: string;
-  cashPointId: Types.ObjectId;
+  cashPointId: Types.ObjectId | null;
   countedAt: Date;
   method: StocktakeMethod;
   /** 盤到那一刻的系統數字(這個收銀點檯面上未售的張數)。 */
@@ -84,7 +84,8 @@ export interface StocktakeUncountedBook {
   gameCode: string;
   gameName: string;
   bookNo: string;
-  cashPointId: Types.ObjectId;
+  /** null = 拆過、在庫存的張那一區。 */
+  cashPointId: Types.ObjectId | null;
 }
 
 export interface StocktakeSummary {
@@ -118,7 +119,7 @@ const LINE_TYPE = {
   gameCode: { type: String, required: true },
   gameName: { type: String, default: "" },
   bookNo: { type: String, required: true },
-  cashPointId: { type: OBJECT_ID, required: true },
+  cashPointId: { type: OBJECT_ID, default: null },
   countedAt: { type: Date, required: true },
   method: { type: String, enum: STOCKTAKE_METHODS, required: true },
   systemCount: { type: Number, default: 0 },
@@ -154,7 +155,7 @@ const UNCOUNTED_TYPE = {
   gameCode: { type: String, required: true },
   gameName: { type: String, default: "" },
   bookNo: { type: String, required: true },
-  cashPointId: { type: OBJECT_ID, required: true },
+  cashPointId: { type: OBJECT_ID, default: null },
 };
 
 const SUMMARY_TYPE = {

@@ -83,6 +83,7 @@ fragment LotteryInventoryBookDetailFields on LotteryInventoryBookDetail {
   events {
     at
     type
+    reopen
     ticketNos
     wholeBook
     from {
@@ -185,6 +186,8 @@ query LotteryInventoryBooks($input: LotteryInventoryBooksInput!) {
       ...LotteryInventoryBookFields
     }
     totalCount
+    page
+    pageSize
   }
 }
 
@@ -245,6 +248,7 @@ query LotteryStockOverview($input: LotteryStockOverviewInput!) {
         name
       }
       unopenedBooks
+      openedStockTickets
       counterTickets
       soldTickets
     }

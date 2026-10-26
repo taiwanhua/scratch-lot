@@ -16,11 +16,13 @@ import {
   TICKET_STATUS,
   type TicketStatus,
   displayTicketKey,
+  isStocktakeStockLine,
   parseStocktakeDraft,
   pendingSkipCountOf,
 } from "@repo/domain/project/lottery";
 import { LOTTERY_FIELD_CATEGORY_KEYS } from "@repo/domain/project/lottery-fields";
 
+import type { Persisted } from "../../../database/base.repository";
 import {
   FormSubmissionsRepository,
   OrgsRepository,
@@ -31,7 +33,10 @@ import { TransactionService } from "../../../database/transaction";
 import { WorkflowTasksRepository } from "../../../database/workflow-tasks.repository";
 import { FieldOptionsService } from "../../../fields/field-options.service";
 import type { FormGuardResult } from "../../../workflows/workflow-engine/lifecycle/form-lifecycle-registration";
-import { LotteryTicketsRepository } from "../../database/lottery-inventory/lottery-inventory.repository";
+import {
+  type LotteryBookDocument,
+  LotteryTicketsRepository,
+} from "../../database/lottery-inventory/lottery-inventory.repository";
 import type {
   StocktakeDiffRow,
   StocktakeLine,
@@ -48,6 +53,7 @@ import { StoreAccess } from "../store/store-access";
 import { StoreClock } from "../store/store-clock";
 import { type StoreRef, StoreSalesSupport } from "../store/store-sales-support";
 import { ticketRefsOf } from "../store/store-sales.service";
+import { pendingSkipCountOfBook } from "../tickets/books.service";
 import { TicketLedgerService } from "../tickets/ticket-ledger.service";
 import type { TicketEventInput } from "../tickets/ticket-ledger.types";
 import type {
@@ -89,6 +95,8 @@ interface BuiltStocktake {
   stale: string[];
   unhandled: string[];
 }
+
+type BookRecord = Persisted<LotteryBookDocument>;
 
 const REF_TYPE = "stocktake";
 
@@ -770,9 +778,21 @@ export class StocktakeService {
       evaluations,
       options,
     );
+    // 庫存兩區(未拆的本 / 拆過在庫存的張)以現在的張分:對不上的行(例:未拆的本放成庫存行、拆過的本
+    // 放成「未拆的本 · 不在」)→ 已被處理,請重新核對
+    const inStock = await this.facts.stockBooksOf(reader, store.orgId, options);
     for (const item of evaluations) {
-      if (item.book === null || item.cashPointId === null) {
-        stale.push(...item.line.diffs.map((diff) => diff.ticketNo));
+      const isStock = isStocktakeStockLine(item.line.cashPointId);
+      if (
+        item.book === null ||
+        (item.cashPointId === null && !isStock) ||
+        (isStock && !inStock.stock.has(String(item.book._id)))
+      ) {
+        stale.push(
+          ...(item.line.diffs.length > 0
+            ? item.line.diffs.map((diff) => diff.ticketNo)
+            : [item.line.bookId]),
+        );
         continue;
       }
       const game = games.get(String(item.book.gameId));
@@ -822,9 +842,9 @@ export class StocktakeService {
     }
     const unopenedLines = await this.unopenedLinesOf(
       reader,
-      store,
       draft,
-      options,
+      inStock.unopened,
+      stale,
     );
     const lostReviewLines = await this.lostReviewLinesOf(
       reader,
@@ -837,6 +857,7 @@ export class StocktakeService {
       store,
       draft,
       lines,
+      [...inStock.stock.values()].map(({ book }) => book),
       options,
     );
     const all = lines.flatMap((line) => line.diffs);
@@ -877,15 +898,26 @@ export class StocktakeService {
     store: StoreRef,
     draft: StocktakeDraft,
     lines: readonly StocktakeLine[],
+    stockBooks: readonly BookRecord[],
     options: { session?: ClientSession },
   ): Promise<StocktakeUncountedBook[]> {
     const scopeId = parseId(draft.scopeCashPointId ?? "");
+    const counted = new Set(
+      lines.map((line) => `${String(line.bookId)}:${String(line.cashPointId)}`),
+    );
+    // 全店盤點:拆過、在庫存的張那一區沒盤的本也記下(排在收銀點的本之後)
+    const stockUncounted = await this.stockUncountedOf(
+      reader,
+      scopeId === null
+        ? stockBooks.filter((book) => !counted.has(`${String(book._id)}:null`))
+        : [],
+    );
     const allPoints = await this.support.cashPointsOf(reader, store.orgId);
     const points = [...allPoints.values()]
       .filter((point) => scopeId === null || point._id.equals(scopeId))
       .toSorted((a, b) => a.order - b.order);
     if (points.length === 0) {
-      return [];
+      return stockUncounted;
     }
     const rows = await this.tickets.aggregate(
       reader,
@@ -906,9 +938,6 @@ export class StocktakeService {
       ],
       options,
     );
-    const counted = new Set(
-      lines.map((line) => `${String(line.bookId)}:${String(line.cashPointId)}`),
-    );
     const pending = rows.flatMap((row) => {
       const key = row._id as {
         bookId: Types.ObjectId;
@@ -919,7 +948,7 @@ export class StocktakeService {
         : [key];
     });
     if (pending.length === 0) {
-      return [];
+      return stockUncounted;
     }
     const books = await this.facts.booksOf(
       reader,
@@ -933,7 +962,7 @@ export class StocktakeService {
     const order = new Map(
       points.map((point, index) => [String(point._id), index]),
     );
-    return pending
+    const onCounter = pending
       .flatMap((key) => {
         const book = books.get(String(key.bookId));
         return book === undefined
@@ -952,6 +981,34 @@ export class StocktakeService {
         (a, b) =>
           (order.get(String(a.cashPointId)) ?? 0) -
             (order.get(String(b.cashPointId)) ?? 0) ||
+          a.gameCode.localeCompare(b.gameCode) ||
+          a.bookNo.localeCompare(b.bookNo),
+      );
+    return [...onCounter, ...stockUncounted];
+  }
+
+  /** 拆過、在庫存的張那一區沒盤的本(依遊戲、本號排)。 */
+  private async stockUncountedOf(
+    reader: OperatorContext,
+    books: readonly BookRecord[],
+  ): Promise<StocktakeUncountedBook[]> {
+    if (books.length === 0) {
+      return [];
+    }
+    const games = await this.support.gamesOf(
+      reader,
+      books.map((book) => book.gameId),
+    );
+    return books
+      .map((book) => ({
+        bookId: book._id,
+        gameCode: book.gameCode,
+        gameName: games.get(String(book.gameId))?.name ?? "",
+        bookNo: book.bookNo,
+        cashPointId: null,
+      }))
+      .toSorted(
+        (a, b) =>
           a.gameCode.localeCompare(b.gameCode) ||
           a.bookNo.localeCompare(b.bookNo),
       );
@@ -979,66 +1036,40 @@ export class StocktakeService {
     );
   }
 
+  /**
+   * 「未拆的本」的盤點:只收這家店真的未拆的本(從沒拆過、張全是未售在庫存;`StocktakeFacts.stockBooksOf`)。
+   * 不是未拆的本(拆過、或已有張動過)→ 放進 `stale`(已被處理,請重新核對),不會把拆過的本整本變待查。
+   */
   private async unopenedLinesOf(
     reader: OperatorContext,
-    store: StoreRef,
     draft: StocktakeDraft,
-    options: { session?: ClientSession },
+    unopened: ReadonlyMap<string, { book: BookRecord; inStock: number }>,
+    stale: string[],
   ): Promise<StocktakeUnopenedLine[]> {
-    const bookIds = draft.unopened.flatMap((item) => {
-      const bookId = parseId(item.bookId);
-      return bookId === null ? [] : [bookId];
+    const books = draft.unopened.flatMap((item) => {
+      const found = unopened.get(item.bookId);
+      if (found === undefined) {
+        stale.push(item.bookId);
+        return [];
+      }
+      return [{ ...found, present: item.present }];
     });
-    const books = await this.facts.booksOf(reader, bookIds, options);
-    if (books.size === 0) {
+    if (books.length === 0) {
       return [];
-    }
-    // 每本在本店庫存的未售張數:一次讀完再數(不逐本 count)
-    const unsold = await this.tickets.findMany(
-      reader,
-      {
-        bookId: { $in: [...books.values()].map((book) => book._id) },
-        orgId: store.orgId,
-        status: TICKET_STATUS.unsold,
-        "location.kind": TICKET_LOCATION_KIND.stock,
-      },
-      { ...options, select: "bookId" },
-    );
-    const countOf = new Map<string, number>();
-    for (const ticket of unsold) {
-      const key = String(ticket.bookId);
-      countOf.set(key, (countOf.get(key) ?? 0) + 1);
     }
     const games = await this.support.gamesOf(
       reader,
-      [...books.values()].map((book) => book.gameId),
+      books.map(({ book }) => book.gameId),
     );
-    const lines: StocktakeUnopenedLine[] = [];
-    for (const item of draft.unopened) {
-      const bookId = parseId(item.bookId);
-      const book = bookId === null ? undefined : books.get(String(bookId));
-      if (book === undefined) {
-        continue;
-      }
-      lines.push({
-        bookId: book._id,
-        gameCode: book.gameCode,
-        gameName: games.get(String(book.gameId))?.name ?? "",
-        bookNo: book.bookNo,
-        // 待標註的跳號(拆本前還沒標的)實體不存在,不算張數(使用者 10/27 定案甲)
-        ticketCount: Math.max(
-          0,
-          (countOf.get(String(book._id)) ?? 0) -
-            pendingSkipCountOf(
-              Number(book.lastTicketNo),
-              book.standardTickets,
-              book.skippedTicketNos.length,
-            ),
-        ),
-        present: item.present,
-      });
-    }
-    return lines;
+    return books.map(({ book, inStock, present }) => ({
+      bookId: book._id,
+      gameCode: book.gameCode,
+      gameName: games.get(String(book.gameId))?.name ?? "",
+      bookNo: book.bookNo,
+      // 待標註的跳號(拆本前還沒標的)實體不存在,不算張數(使用者 10/27 定案甲)
+      ticketCount: Math.max(0, inStock - pendingSkipCountOfBook(book)),
+      present,
+    }));
   }
 
   /**

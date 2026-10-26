@@ -19,6 +19,8 @@ interface BookMeta {
   skipChanges: { at: Date; delta: number }[];
   /** 進貨作廢的時間(已撤銷的本;沒作廢 = null)。 */
   voidedAt: Date | null;
+  /** 第一次拆本時間(本的 `firstOpenedAt`;從沒拆過 = null)。 */
+  firstOpenedAt: Date | null;
 }
 
 /**
@@ -62,6 +64,31 @@ export class BookPendings {
       : 0;
   }
 
+  /** 這本在 `at` 那一刻還沒拆過(第一次拆本在那之後,或從沒拆過)。 */
+  unopenedAt(bookId: Types.ObjectId | string, at: Date): boolean {
+    const meta = this.meta.get(String(bookId));
+    return (
+      meta !== undefined &&
+      (meta.firstOpenedAt === null || meta.firstOpenedAt > at)
+    );
+  }
+
+  /**
+   * 整本待查的本只處理了一部分(例:2 張確認遺失、3 張尋回)後,剩下還待查的那一組要扣的待標註張數:
+   * 本在那一刻還沒拆過(待標註的跳號沒有實體、不會被逐張處理,算在還沒處理的那一組)→ 待標註張數(不超過這組);
+   * 拆過 → 0(第一次拆本已標完)。
+   */
+  remainderAdjustmentOf(
+    bookId: Types.ObjectId | string,
+    at: Date,
+    groupSize: number,
+  ): number {
+    if (!this.unopenedAt(bookId, at)) {
+      return 0;
+    }
+    return Math.min(groupSize, this.pendingAt(bookId, at));
+  }
+
   /** 這本在 `at` 之前已作廢(作廢那一刻起不算庫存)。 */
   revokedBefore(bookId: Types.ObjectId | string, at: Date): boolean {
     const voidedAt = this.meta.get(String(bookId))?.voidedAt ?? null;
@@ -90,7 +117,10 @@ export async function loadBookPendings(
   const rows = await repositories.books.findMany(
     reader,
     { _id: { $in: unique } },
-    { select: "lastTicketNo standardTickets skippedTicketNos status" },
+    {
+      select:
+        "lastTicketNo standardTickets skippedTicketNos status firstOpenedAt",
+    },
   );
   const meta = new Map<string, BookMeta>();
   for (const row of rows) {
@@ -102,6 +132,7 @@ export async function loadBookPendings(
       skippedNow: (row.skippedTicketNos as string[] | undefined)?.length ?? 0,
       skipChanges: [],
       voidedAt: null,
+      firstOpenedAt: row.firstOpenedAt ?? null,
     });
   }
   const withSurplus = rows

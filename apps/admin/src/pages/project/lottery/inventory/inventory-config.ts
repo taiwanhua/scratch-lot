@@ -14,8 +14,14 @@ export {
 /** 庫存列表的最小寬度(STYLE-11:八欄不折行)。 */
 export const BOOKS_TABLE_MIN_WIDTH = 960;
 
-/** 待查·遺失列表的最小寬度。 */
-export const INVESTIGATIONS_TABLE_MIN_WIDTH = 900;
+/** 待查·遺失列表的最小寬度(STYLE-11:十欄不折行)。 */
+export const INVESTIGATIONS_TABLE_MIN_WIDTH = 1120;
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** 登記到現在過了幾天(待查·遺失的「天數」;不滿一天算 0)。 */
+export const daysSince = (at: string, now: number = Date.now()): number =>
+  Math.max(0, Math.floor((now - new Date(at).getTime()) / DAY_MS));
 
 /** 事件時間軸的最小寬度。 */
 export const TIMELINE_TABLE_MIN_WIDTH = 720;

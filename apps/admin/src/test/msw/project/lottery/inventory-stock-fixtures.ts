@@ -74,6 +74,7 @@ export const sampleStockOverview = () => {
           name: game.name,
         },
         unopenedBooks: unopened,
+        openedStockTickets: 0,
         counterTickets: counter,
         soldTickets: sold,
       };

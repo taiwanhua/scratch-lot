@@ -1,5 +1,9 @@
 import { Field, GraphQLISODateTime, ID, InputType, Int } from "@nestjs/graphql";
 
+/** 庫存分頁每頁本數(預設)與上限(防呆)。 */
+export const INVENTORY_BOOKS_PAGE_SIZE = 50;
+export const INVENTORY_BOOKS_MAX_PAGE_SIZE = 100;
+
 /**
  * 庫存分頁(以本為單位;規格 7.3)。篩選缺席 / null = 不篩(GQL-06)。
  * `orgId` = 分店選擇器(看那個組織與它底下持有任何一張的本);缺席 = 看得到的全部。
@@ -12,9 +16,17 @@ export class LotteryInventoryBooksInput {
   @Field(() => ID, { nullable: true })
   gameId?: string | null;
 
-  /** `unopened` 未拆 / `on_counter` 檯面中 / `sold_out` 售完 / `pending_skip` 有待標註。 */
+  /** 顯示狀態(`INVENTORY_BOOK_FILTER_STATES`:未拆 / 檯面中 / 庫存中 / 在途 / 待查 / 遺失 / 已報廢 / 售完)或 `pending_skip` 有待標註。 */
   @Field(() => String, { nullable: true })
   state?: string | null;
+
+  /** 第幾頁(從 1 開始;資料庫分頁)。 */
+  @Field(() => Int, { nullable: true, defaultValue: 1 })
+  page?: number;
+
+  /** 每頁幾本(上限 `INVENTORY_BOOKS_MAX_PAGE_SIZE`)。 */
+  @Field(() => Int, { nullable: true, defaultValue: INVENTORY_BOOKS_PAGE_SIZE })
+  pageSize?: number;
 
   /** 批購日起(含)。 */
   @Field(() => GraphQLISODateTime, { nullable: true })

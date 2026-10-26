@@ -91,7 +91,10 @@ export const BookTimeline = ({ events }: BookTimelineProps) => {
       key: "type",
       header: t("timeline.columns.type"),
       render: (event) => {
-        const label = t(`eventTypes.${event.type}`);
+        // 拆過的本再放上檯面:同一種「拆本」事件,第一次之後寫「上檯面」
+        const label = event.reopen
+          ? t("eventTypes.reopen")
+          : t(`eventTypes.${event.type}`);
         const reason = reasonLabelOf(event);
         const note = event.reasonNote ? `:${event.reasonNote}` : "";
         // 跨班更正:標「前期更正,屬於 X 班」(撤銷看原售出那一班、事後更正看它指向的班)

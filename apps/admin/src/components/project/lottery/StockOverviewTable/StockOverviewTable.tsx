@@ -52,6 +52,12 @@ export const StockOverviewTable = ({
       render: (row) => countText(row.unopenedBooks),
     },
     {
+      key: "openedStock",
+      header: t("openedStock"),
+      align: "right",
+      render: (row) => countText(row.openedStockTickets),
+    },
+    {
       key: "counter",
       header: t("counter"),
       align: "right",

@@ -1,9 +1,11 @@
 import {
-  STOCKTAKE_ACTIONS_OF,
   type StocktakeDiffAction,
+  type StocktakeDiffKind,
   type StocktakeDraft,
   type StocktakeLostAction,
   type StocktakeMethod,
+  isStocktakeStockLine,
+  stocktakeActionsOf,
 } from "@repo/domain/project/lottery";
 import type {
   LotteryStocktakeReviewQuery,
@@ -20,6 +22,18 @@ export type SheetLostTicket = StocktakeSheet["lostTickets"][number];
 export type StocktakeReview =
   LotteryStocktakeReviewQuery["lotteryStocktakeReview"];
 export type ReviewLine = StocktakeReview["lines"][number];
+
+/**
+ * 一行的位置名稱:收銀點名稱;拆過、在庫存的張那一區(`STOCKTAKE_STOCK_LINE`)= `stockLabel`(「庫存」)。
+ */
+export const placeNameOf = (
+  cashPoints: readonly { id: string; name: string }[],
+  cashPointId: string,
+  stockLabel: string,
+): string =>
+  isStocktakeStockLine(cashPointId)
+    ? stockLabel
+    : (cashPoints.find((point) => point.id === cashPointId)?.name ?? "");
 
 /** 一本 × 收銀點的 key(本清單、盤點內容共用)。 */
 export const lineKeyOf = (bookId: string, cashPointId: string): string =>
@@ -266,9 +280,10 @@ export const unhandledOf = (
           ];
         return (
           choice === undefined ||
-          !STOCKTAKE_ACTIONS_OF[diff.kind as "missing" | "extra"].includes(
-            choice.action,
-          ) ||
+          !stocktakeActionsOf(
+            diff.kind as StocktakeDiffKind,
+            line.cashPointId,
+          ).includes(choice.action) ||
           (choice.action === "sale_backfill") !== diff.backfilled
         );
       }).length,

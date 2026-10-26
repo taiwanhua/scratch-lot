@@ -14,7 +14,7 @@ import {
   type TicketLocationKind,
   type TicketStatus,
   type TransferLineValue,
-  bookStateOf,
+  isUnopenedInStore,
   pendingSkipCountOf,
   transferHeaderOf,
   transferLineAmountOf,
@@ -130,6 +130,8 @@ export interface TransferBook {
   standardTickets: number;
   /** 待標註張數(拆本前還沒標的跳號;實體不存在,整本調貨的張數不算它們) */
   pendingSkipCount: number;
+  /** 第一次拆本時間;null = 從沒拆過。 */
+  firstOpenedAt: Date | null;
 }
 
 /** 遊戲(金額比對用)。 */
@@ -171,7 +173,7 @@ const isSameShipment = (
 /**
  * 一列和它的本相符(規格 8.4 明細):本正常、遊戲相同、批購金額率 0–100 的整數、張數 = 這列的張
  * (整本 = 這本跳號以外的張扣掉待標註 = 標準張數;使用者 10/27 定案甲);
- * 整本要原封不動(沒拆過、沒有張在別家店),選張要拆過、張號都在這本;金額 = 整本金額或面額 × 張數。
+ * 整本要原封不動(從沒拆過、沒有張在別家店),選張要拆過、張號都在這本;金額 = 整本金額或面額 × 張數。
  */
 function isLineValid(
   line: TransferLineValue,
@@ -180,16 +182,16 @@ function isLineValid(
   bookTickets: readonly TransferTicket[],
   rowTickets: readonly TransferTicket[],
 ): boolean {
-  // 拆過 = 不是整本原封不動(有張拆到檯面、賣掉,或已有張調到別家店)
+  // 拆過 = 不是整本原封不動:拆過一次(`firstOpenedAt`,之後全部收回也算拆過;使用者 10/27 定案 D)、
+  // 有張不是未售在庫存(售出、待查…),或已有張調到別家店
   const isOpened =
-    bookStateOf(
+    !isUnopenedInStore(
+      book.firstOpenedAt,
       bookTickets.map((ticket) => ({
         status: ticket.status,
         locationKind: ticket.location.kind,
-        storeOrgId: String(ticket.orgId),
       })),
-    ) !== "unopened" ||
-    new Set(bookTickets.map((ticket) => String(ticket.orgId))).size > 1;
+    ) || new Set(bookTickets.map((ticket) => String(ticket.orgId))).size > 1;
   const isModeValid =
     line.mode === TRANSFER_MODE.whole
       ? !isOpened
@@ -356,7 +358,7 @@ export class TransferRules {
       { _id: { $in: ids } },
       {
         select:
-          "gameId gameCode bookNo status lastTicketNo standardTickets skippedTicketNos",
+          "gameId gameCode bookNo status lastTicketNo standardTickets skippedTicketNos firstOpenedAt",
       },
     );
     return new Map(
@@ -374,6 +376,7 @@ export class TransferRules {
             book.standardTickets,
             book.skippedTicketNos.length,
           ),
+          firstOpenedAt: book.firstOpenedAt ?? null,
         },
       ]),
     );

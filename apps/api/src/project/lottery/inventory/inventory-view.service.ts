@@ -8,12 +8,12 @@ import {
   TICKET_EVENT_TYPE,
   TICKET_STATUS,
   type TicketEventType,
-  bookStateOf,
+  bookDisplayStateOf,
   holdingsOf,
   normalizeBookNo,
-  pendingSkipCountOf,
-  remainingCountOf,
+  remainingOfCounts,
   requiredSkipCountOf,
+  totalOfCounts,
 } from "@repo/domain/project/lottery";
 
 import type { Persisted } from "../../../database/base.repository";
@@ -35,11 +35,18 @@ import {
 import type { TicketStateSnapshot } from "../../database/lottery-inventory/lottery-ticket-event.schema";
 import { LotteryShiftsRepository } from "../../database/lottery-store/lottery-shifts.repository";
 import { parseId } from "../accounts/accounts-util";
-import { withoutPendingSkips } from "../tickets/books.service";
+import {
+  countsOfBook,
+  pendingSkipCountOfBook,
+  withoutPendingSkips,
+} from "../tickets/books.service";
 import { notFoundError } from "../tickets/inventory-error";
-import type {
-  LotteryInventoryBooksInput,
-  LotteryTicketLookupInput,
+import { bookStateConditionsOf } from "./book-state-filter";
+import {
+  INVENTORY_BOOKS_MAX_PAGE_SIZE,
+  INVENTORY_BOOKS_PAGE_SIZE,
+  type LotteryInventoryBooksInput,
+  type LotteryTicketLookupInput,
 } from "./dto/lottery-inventory.input";
 import { InventoryAccess } from "./inventory-access";
 import { InventoryNames } from "./inventory-names";
@@ -67,9 +74,6 @@ const SALE_EVENT_TYPES: ReadonlySet<string> = new Set([
   TICKET_EVENT_TYPE.sale,
   TICKET_EVENT_TYPE.saleStocktake,
 ]);
-
-/** 庫存分頁最多列幾本(超過請縮小篩選)。 */
-const MAX_BOOKS = 500;
 
 /** 待查 / 遺失。 */
 const MISSING_STATUSES = [TICKET_STATUS.investigating, TICKET_STATUS.lost];
@@ -175,21 +179,27 @@ export class InventoryViewService {
         $regex: bookNo.replaceAll(/\D/g, "") || "^$",
       };
     }
-    const records = await this.books.findMany(operator, filter, {
-      sort: { purchasedAt: -1, bookKey: 1 },
-      limit: MAX_BOOKS,
-    });
-    const models = await this.toBookModels(operator, records);
+    // 狀態以本上的張數欄位在資料庫篩(和 `bookDisplayStateOf` 同一套判斷),篩完再分頁
     const state = input.state ?? "";
-    const items =
+    const where =
       state !== "" && isFilterState(state)
-        ? models.filter((book) =>
-            state === "pending_skip"
-              ? book.pendingSkipCount > 0
-              : book.state === state,
-          )
-        : models;
-    return { items, totalCount: items.length };
+        ? { $and: [filter, ...bookStateConditionsOf(state)] }
+        : filter;
+    const page = Math.max(1, input.page ?? 1);
+    const pageSize = Math.min(
+      INVENTORY_BOOKS_MAX_PAGE_SIZE,
+      Math.max(1, input.pageSize ?? INVENTORY_BOOKS_PAGE_SIZE),
+    );
+    const [records, totalCount] = await Promise.all([
+      this.books.findMany(operator, where, {
+        sort: { purchasedAt: -1, bookKey: 1 },
+        skip: (page - 1) * pageSize,
+        limit: pageSize,
+      }),
+      this.books.count(operator, where),
+    ]);
+    const items = await this.toBookModels(operator, records);
+    return { items, totalCount, page, pageSize };
   }
 
   // ---- 本的詳情 ----
@@ -246,7 +256,13 @@ export class InventoryViewService {
         this.ticketModel(operator, ticket, names),
       ),
       locations: this.locationsOf(sortedTickets, names),
-      events: this.timelineOf(events, ticketNos, names, corrections),
+      events: this.timelineOf(
+        events,
+        ticketNos,
+        names,
+        corrections,
+        record.firstOpenedAt ?? null,
+      ),
       sources: this.sourcesOf(events, ticketNos, names),
       cost: grant.canShowCost
         ? {
@@ -442,7 +458,9 @@ export class InventoryViewService {
       }[]
     >();
     const tickets =
-      knownTickets ?? (await this.ticketsOfBooks(operator, records));
+      knownTickets?.filter(
+        (ticket) => ticket.status === TICKET_STATUS.unsold,
+      ) ?? (await this.unsoldTicketsOfBooks(operator, records));
     for (const ticket of tickets) {
       const key = String(ticket.bookId);
       const list = snapshotsOf.get(key) ?? [];
@@ -471,12 +489,9 @@ export class InventoryViewService {
       const snapshots = snapshotsOf.get(String(record._id)) ?? [];
       const game = gameOf.get(String(record.gameId));
       const lastTicketNo = Number(record.lastTicketNo);
-      const pendingSkipCount = pendingSkipCountOf(
-        lastTicketNo,
-        record.standardTickets,
-        record.skippedTicketNos.length,
-      );
-      // 待標註的跳號(拆本前還沒標的)不算持有與總張數(使用者 10/27 定案甲)
+      const pendingSkipCount = pendingSkipCountOfBook(record);
+      const counts = countsOfBook(record);
+      // 所在分店只算未售的張;待標註的跳號(拆本前還沒標的)不算持有與總張數(使用者 10/27 定案甲)
       const holdings = [...holdingsOf(snapshots)]
         .map(([orgId, count]) => ({
           org: { id: orgId, name: orgNames.get(orgId) ?? "" },
@@ -500,10 +515,9 @@ export class InventoryViewService {
         lastTicketNo: record.lastTicketNo,
         org: mustRef(record.orgId, orgNames),
         holdings,
-        remainingCount: remainingCountOf(snapshots, pendingSkipCount),
-        totalCount: withoutPendingSkips(
-          snapshots.filter((ticket) => ticket.status !== TICKET_STATUS.skipped)
-            .length,
+        remainingCount: remainingOfCounts(counts, pendingSkipCount),
+        totalCount: totalOfCounts(
+          counts,
           record.standardTickets,
           pendingSkipCount,
         ),
@@ -513,7 +527,11 @@ export class InventoryViewService {
           record.standardTickets,
         ),
         skippedTicketNos: record.skippedTicketNos,
-        state: bookStateOf(snapshots),
+        state: bookDisplayStateOf({
+          counts,
+          firstOpenedAt: record.firstOpenedAt,
+          revoked: record.status === "revoked",
+        }),
         status: record.status,
         purchasedAt: record.purchasedAt,
         purchaseDealer: ref(record.purchaseDealerId, dealerNames),
@@ -521,8 +539,8 @@ export class InventoryViewService {
     });
   }
 
-  /** 一批本的全部張(每本以它所在租戶的邊界上下文讀;同一租戶只建一次)。 */
-  private async ticketsOfBooks(
+  /** 一批本的未售張(所在分店用;每本以它所在租戶的邊界上下文讀;同一租戶只建一次)。 */
+  private async unsoldTicketsOfBooks(
     operator: OperatorContext,
     records: readonly BookRecord[],
   ): Promise<TicketRecord[]> {
@@ -540,7 +558,10 @@ export class InventoryViewService {
       const whole = await this.wholeBookReader(operator, first);
       const found = await this.tickets.findMany(
         whole,
-        { bookId: { $in: group.map((record) => record._id) } },
+        {
+          bookId: { $in: group.map((record) => record._id) },
+          status: TICKET_STATUS.unsold,
+        },
         { select: "bookId status location orgId" },
       );
       result.push(...found);
@@ -641,7 +662,8 @@ export class InventoryViewService {
     events: readonly EventRecord[],
     ticketNos: ReadonlyMap<string, string>,
     names: Names,
-    corrections: ReadonlyMap<string, string> = new Map(),
+    corrections: ReadonlyMap<string, string>,
+    firstOpenedAt: Date | null,
   ): LotteryInventoryEventModel[] {
     const rows = new Map<string, { event: EventRecord; ticketNos: string[] }>();
     const ticketNoOf = (event: EventRecord) =>
@@ -664,6 +686,10 @@ export class InventoryViewService {
     return [...rows.values()].map(({ event, ticketNos: rowTicketNos }) => ({
       at: event.at,
       type: event.type,
+      reopen:
+        event.type === TICKET_EVENT_TYPE.open &&
+        firstOpenedAt !== null &&
+        event.at.getTime() > firstOpenedAt.getTime(),
       ticketNos: rowTicketNos.toSorted(byTicketNo),
       wholeBook: rowTicketNos.length === ticketNos.size,
       from: event.from === null ? null : this.placeOf(event.from, names),
@@ -759,18 +785,21 @@ export class InventoryViewService {
     return [...sources.values()];
   }
 
-  /** 整本可用的張都待查或遺失 → 狀態列(最近一筆待查 / 遺失事件的時間、單據、責任分店)。 */
+  /**
+   * 這本沒有未售、而且有待查或遺失的張 → 狀態列(最近一筆待查 / 遺失事件的時間、單據、責任分店;使用者 10/27
+   * 定案:例如賣 10 張、其餘 90 張待查也出現)。[整本尋回] 只算待查 / 遺失的張。
+   */
   private investigationOf(
     usable: readonly TicketRecord[],
     events: readonly EventRecord[],
     names: Names,
   ): LotteryInventoryBookDetailModel["investigation"] {
-    const [first] = usable;
+    const first = usable.find((ticket) =>
+      (MISSING_STATUSES as readonly string[]).includes(ticket.status),
+    );
     if (
       !first ||
-      !usable.every((ticket) =>
-        (MISSING_STATUSES as readonly string[]).includes(ticket.status),
-      )
+      usable.some((ticket) => ticket.status === TICKET_STATUS.unsold)
     ) {
       return null;
     }
@@ -818,11 +847,7 @@ function withoutPendingSkipFigures(
   const count = withoutPendingSkips(
     tickets.length,
     book.standardTickets,
-    pendingSkipCountOf(
-      Number(book.lastTicketNo),
-      book.standardTickets,
-      book.skippedTicketNos.length,
-    ),
+    pendingSkipCountOfBook(book),
   );
   return { tickets: count, cost: (total * count) / tickets.length };
 }

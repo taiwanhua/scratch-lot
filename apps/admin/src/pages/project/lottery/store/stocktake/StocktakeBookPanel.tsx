@@ -6,6 +6,7 @@ import {
   type StocktakeMethod,
   displayBookNo,
   formatTicketRanges,
+  isStocktakeStockLine,
 } from "@repo/domain/project/lottery";
 import { Button } from "@repo/ui/button";
 import { Card } from "@repo/ui/card";
@@ -119,7 +120,7 @@ export const StocktakeBookPanel = ({
           />
         </Stack>
         <Typography variant="body2" color="textSecondary">
-          {t("hint")}
+          {isStocktakeStockLine(book.cashPointId) ? t("hintStock") : t("hint")}
         </Typography>
         {method === "scan" ? (
           <TextField

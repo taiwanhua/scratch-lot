@@ -13,6 +13,7 @@ import {
 import { tenantBoundaryContext } from "../../../database/tenant-boundary-context";
 import { LotteryCashPointsRepository } from "../../database/lottery-cash-points/lottery-cash-points.repository";
 import { LotteryDealersRepository } from "../../database/lottery-dealers/lottery-dealers.repository";
+import { LotteryStocktakesRepository } from "../../database/lottery-stocktakes/lottery-stocktakes.repository";
 import { tenantOfOperator } from "../master-data-tenant";
 import { type TenantOrg, isVisibleStore } from "./store-orgs";
 
@@ -33,8 +34,8 @@ const uniqueIds = (ids: readonly unknown[]): Types.ObjectId[] => [
  *
  * - 組織(所在分店、責任分店、持有分店、分店清單):以租戶為邊界讀 —— 看得到本就看得到它在哪幾家店
  *   (可能是讀者看不到的分店;登記在 `TENANT_BOUNDARY_CONTEXT_CALLERS`,用途「反查」)
- * - 使用者名稱(事件的「誰」):同上,可能是別家分店的人
- * - 收銀點、經銷商、單據單號:照操作者自己的範圍讀,看不到的不顯示名稱
+ * - 使用者名稱(事件的「誰」)、收銀點名稱(別店的張在別店的收銀點):同上,可能是別家分店的人 / 收銀點
+ * - 經銷商、單據單號:照操作者自己的範圍讀,看不到的不顯示名稱
  */
 @Injectable()
 export class InventoryNames {
@@ -44,6 +45,7 @@ export class InventoryNames {
     private readonly cashPoints: LotteryCashPointsRepository,
     private readonly dealers: LotteryDealersRepository,
     private readonly submissions: FormSubmissionsRepository,
+    private readonly stocktakes: LotteryStocktakesRepository,
   ) {}
 
   /** 操作者當前組織所在租戶的整棵組織樹(沒有租戶 → 空)。 */
@@ -117,10 +119,12 @@ export class InventoryNames {
     ids: readonly unknown[],
   ): Promise<Map<string, string>> {
     const unique = uniqueIds(ids);
-    if (unique.length === 0) {
+    const tenantId = tenantOfOperator(operator)?.tenantId ?? null;
+    if (unique.length === 0 || tenantId === null) {
       return new Map();
     }
-    const found = await this.cashPoints.findMany(operator, {
+    const reader = await tenantBoundaryContext(this.orgs, operator, tenantId);
+    const found = await this.cashPoints.findMany(reader, {
       _id: { $in: unique },
     });
     return new Map(found.map((point) => [String(point._id), point.name]));
@@ -146,7 +150,10 @@ export class InventoryNames {
     );
   }
 
-  /** 單據單號(進貨單、調貨單、盤點…的表單提交;看不到或還沒有單號的不回)。 */
+  /**
+   * 單據單號(依事件的 `refId`;看不到或還沒有單號的不回):進貨單、調貨單是表單提交本身;盤點寫的事件
+   * (待查、遺失、尋回)`refId` 是盤點單紀錄,單號取它帶的申請(盤點確認申請 / 結帳確認申請)。
+   */
   async serialNos(
     operator: OperatorContext,
     ids: readonly unknown[],
@@ -155,15 +162,30 @@ export class InventoryNames {
     if (unique.length === 0) {
       return new Map();
     }
+    const stocktakes = await this.stocktakes.findMany(
+      operator,
+      { _id: { $in: unique } },
+      { select: "submissionId" },
+    );
+    const submissionOf = new Map(
+      stocktakes.map((record) => [String(record._id), record.submissionId]),
+    );
     const found = await this.submissions.findMany(operator, {
-      _id: { $in: unique },
+      _id: { $in: [...unique, ...submissionOf.values()] },
     });
-    return new Map(
+    const serialOf = new Map(
       found.flatMap((submission) =>
         submission.serialNo
-          ? [[String(submission._id), submission.serialNo]]
+          ? [[String(submission._id), submission.serialNo] as const]
           : [],
       ),
+    );
+    return new Map(
+      unique.flatMap((id) => {
+        const submissionId = submissionOf.get(String(id)) ?? id;
+        const serialNo = serialOf.get(String(submissionId));
+        return serialNo === undefined ? [] : [[String(id), serialNo] as const];
+      }),
     );
   }
 }

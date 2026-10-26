@@ -76,6 +76,7 @@ fragment LotteryStoreUnopenedBookFields on LotteryStoreUnopenedBook {
   lastTicketNo
   ticketCount
   pendingSkipCount
+  opened
 }
 
 query LotteryStoreScan($input: LotteryStoreScanInput!) {

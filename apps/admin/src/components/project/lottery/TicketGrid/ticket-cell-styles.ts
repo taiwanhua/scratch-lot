@@ -1,14 +1,15 @@
 import type { BoxProps } from "@repo/ui/box";
 
 /**
- * 張數格子的十種狀態(專案規格 7.5 的樣式表;Figma `Draft/TicketCell` 64:132 的變體)。
+ * 張數格子的十一種狀態(專案規格 7.5 的樣式表;Figma `Draft/TicketCell` 64:132 的變體)。
  * **顏色和狀態一對一固定**,每種狀態的文字、可不可以選、圖例要顯示哪幾項由使用處決定。
  *
  * | 狀態             | 規格名稱          | 樣式                                         |
  * | ---------------- | ----------------- | -------------------------------------------- |
  * | `unsold`         | 未售 / 未分配     | 白底、分隔線色細框                           |
  * | `selected`       | 已選              | 主色底、字用主色的對比色                     |
- * | `sold`           | 已售 / 不能選     | 停用底、停用字色(被其他單據鎖定也用這個)     |
+ * | `sold`           | 已售 / 不能選     | 停用底、停用字色(撤銷審核中等其他鎖定也用這個) |
+ * | `transferring`   | 調貨中            | 停用底 + 資訊色虛線框(被調貨單鎖住的未售)     |
  * | `soldThisShift`  | 本班售出          | 停用底 + 主色框                              |
  * | `otherCashPoint` | 在別的收銀點      | 淺灰底 + 細斜線底紋、次要文字色虛線框        |
  * | `assigned`       | 已分配            | 主色淺底、次要文字色號碼                     |
@@ -21,6 +22,7 @@ export const TICKET_CELL_STATES = [
   "unsold",
   "selected",
   "sold",
+  "transferring",
   "soldThisShift",
   "otherCashPoint",
   "assigned",
@@ -61,6 +63,12 @@ export const TICKET_CELL_SX: Record<TicketCellState, TicketCellSx> = {
     borderColor: "primary.main",
   },
   sold: { ...DISABLED, border: 1, borderColor: "transparent" },
+  transferring: {
+    ...DISABLED,
+    border: 2,
+    borderStyle: "dashed",
+    borderColor: "info.main",
+  },
   soldThisShift: { ...DISABLED, border: 2, borderColor: "primary.main" },
   otherCashPoint: {
     bgcolor: "grey.100",

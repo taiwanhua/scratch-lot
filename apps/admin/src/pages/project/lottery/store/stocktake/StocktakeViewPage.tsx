@@ -5,6 +5,7 @@ import {
   STORE_KEY,
   displayBookNo,
   formatTicketRanges,
+  isStocktakeStockLine,
 } from "@repo/domain/project/lottery";
 import {
   type LotteryStocktakeQuery,
@@ -93,7 +94,10 @@ export const StocktakeViewPage = ({ routeParam }: ModulePageProps) => {
     {
       key: "cashPoint",
       header: t("columns.cashPoint"),
-      render: (line) => line.cashPointName,
+      render: (line) =>
+        isStocktakeStockLine(line.cashPointId)
+          ? tAll("stock.name")
+          : line.cashPointName,
     },
     {
       key: "method",
@@ -264,7 +268,7 @@ export const StocktakeViewPage = ({ routeParam }: ModulePageProps) => {
                     key={`${book.bookId}:${book.cashPointId}`}
                     variant="body2"
                   >
-                    {`${book.gameCode} ${book.gameName} · ${displayBookNo(book.bookNo)} · ${book.cashPointName}`}
+                    {`${book.gameCode} ${book.gameName} · ${displayBookNo(book.bookNo)} · ${isStocktakeStockLine(book.cashPointId) ? tAll("stock.name") : book.cashPointName}`}
                   </Typography>
                 ))}
               </Stack>

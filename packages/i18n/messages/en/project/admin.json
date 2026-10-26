@@ -466,7 +466,8 @@
         "skipped": "Skipped",
         "scrapped": "Scrapped",
         "lost": "Investigating / lost",
-        "otherStore": "Other branch"
+        "otherStore": "Other branch",
+        "transferring": "In transfer"
       },
       "quickSelect": {
         "label": "Select a run",
@@ -525,8 +526,14 @@
       "lost": "Lost"
     },
     "bookStates": {
+      "revoked": "Revoked",
       "unopened": "Unopened",
       "on_counter": "On counter",
+      "in_stock": "In stock",
+      "in_transit": "In transit",
+      "investigating": "Under investigation",
+      "lost": "Lost",
+      "scrapped": "Scrapped",
       "sold_out": "Sold out",
       "pending_skip": "Skips to mark"
     },
@@ -552,7 +559,8 @@
       "transfer_in": "Transfer in",
       "investigate": "Investigating",
       "lose": "Lost",
-      "recover": "Recover"
+      "recover": "Recover",
+      "reopen": "Put on counter"
     },
     "sources": {
       "purchase": "Purchase order",
@@ -603,15 +611,19 @@
         "game": "Game",
         "status": "Status",
         "responsible": "Responsible branch",
+        "tickets": "Tickets",
+        "ticketNos": "Ticket nos.",
         "source": "Source",
         "at": "Date",
+        "days": "Days",
         "cost": "Cost"
       },
-      "source": "{serial} ({count} tickets)",
+      "source": "{serial}",
       "recover": "Recover",
       "listAria": "Investigating · Lost",
       "empty": "No investigating or lost tickets",
-      "loadFailed": "Could not load investigating and lost tickets. Please try again later."
+      "loadFailed": "Could not load investigating and lost tickets. Please try again later.",
+      "daysValue": "{days} d"
     },
     "book": {
       "tabLabel": "Book {key}",
@@ -700,6 +712,7 @@
       "store": "Branch",
       "game": "Game",
       "unopened": "Unopened (books)",
+      "openedStock": "In stock, opened (tickets)",
       "counter": "Counter (tickets)",
       "sold": "Sold (tickets)",
       "empty": "No stock"
@@ -3139,7 +3152,7 @@
       "withdraw": "Withdraw",
       "switchTo": "Switch to this cash point",
       "recentSales": "Recent sales",
-      "split": "Open book",
+      "split": "Open / put on counter",
       "redeem": "Redeem",
       "recentRedemptions": "Recent redemptions",
       "checkout": "Close shift"
@@ -3389,14 +3402,14 @@
       "success": "{count} tickets recalled"
     },
     "split": {
-      "pickTitle": "Open a book · pick a book",
+      "pickTitle": "Open / put on counter · pick a book",
       "pickTo": "Goes to the local cash point: {name}",
       "search": "Scan or type the book number",
-      "pickHint": "Unopened books in this store ({count}); scanning selects the book.",
+      "pickHint": "Books with tickets in this store's stock ({count}): open sealed books, or put the stock tickets of opened books back on a counter. Scanning selects the book.",
       "bookLine": "{code} {name} · book {bookNo}",
-      "bookMeta": "{price} · {count} tickets",
+      "bookMeta": "{price} · sealed · {count} tickets",
       "bookMetaSkip": "{price} · tickets {first}–{last} · {count} to mark as skipped",
-      "none": "No unopened books in this store.",
+      "none": "No books in this store's stock to open or put on a counter.",
       "next": "Next",
       "previous": "Back",
       "title": "Open a book · {code} {name} · book {bookNo}",
@@ -3425,7 +3438,12 @@
       "unassigned": "Unassigned",
       "remaining": "{count} tickets are not assigned yet; assign all of them to open the book.",
       "confirm": "Open book",
-      "success": "Book opened"
+      "success": "Book opened",
+      "bookMetaOpened": "{price} · opened · {count} in stock",
+      "titleReopen": "Put on counter · {code} {name} · book {bookNo}",
+      "reopenHint": "This book has been opened: only the {count} tickets in this store's stock are placed; no skipped numbers to mark.",
+      "confirmReopen": "Put on counter",
+      "successReopen": "Put on counter"
     },
     "camera": {
       "button": "📷 Scan",
@@ -3443,7 +3461,7 @@
       "MOVE_CONFIRM_REQUIRED": "This ticket is on another cash point; confirm move and sell first",
       "MOVE_NOT_ALLOWED": "You cannot move tickets; sell it at that cash point",
       "UNDO_NOT_ALLOWED": "This sale cannot be undone now; send a sale reversal request",
-      "BOOK_ALREADY_OPENED": "This book has already been opened",
+      "BOOK_ALREADY_OPENED": "This book has no tickets left in this store's stock to put on a counter",
       "SPLIT_PLAN_INVALID": "Skipped tickets are not all marked, or some tickets are not assigned",
       "TICKET_NOT_ON_COUNTER": "Only unsold tickets on a counter can be moved or recalled",
       "CONFLICT": "These tickets have been processed; please check again",
@@ -3698,7 +3716,9 @@
         "prev": "Previous",
         "next": "Next",
         "legendSelected": "Present (counted)",
-        "pendingReversal": "Reversal pending"
+        "pendingReversal": "Reversal pending",
+        "subtitleStock": "Book {bookNo} · {count} in stock",
+        "hintStock": "Tap the tickets still in stock (selected = present); the system figure is as of when you started this book."
       },
       "unopened": {
         "title": "Unopened books (present / missing)",
@@ -3789,7 +3809,8 @@
         "alreadyProcessed": "These tickets were already processed. Please recheck.",
         "noShift": "This cash point has never had a shift, so the sale cannot be backfilled",
         "backfillDone": "Backfilled {count} sales · {amount} (immediate)",
-        "lostNotReady": "Finish the investigation list: found tickets must be scanned and losses need a reason"
+        "lostNotReady": "Finish the investigation list: found tickets must be scanned and losses need a reason",
+        "stockHint": "Missing stock tickets can only be marked for investigation (stock tickets cannot be sold, so there is no backfill)."
       },
       "submit": {
         "title": "Submit stocktake?",
@@ -3880,6 +3901,11 @@
           "keep": "keep investigating"
         },
         "loadFailed": "Could not load this stocktake"
+      },
+      "stock": {
+        "title": "Stock (opened books)",
+        "name": "Stock",
+        "hint": "Stock tickets of opened books (recalled, recovered or transferred back): count them ticket by ticket like a counter; missing tickets can only be marked for investigation."
       }
     },
     "checkout": {

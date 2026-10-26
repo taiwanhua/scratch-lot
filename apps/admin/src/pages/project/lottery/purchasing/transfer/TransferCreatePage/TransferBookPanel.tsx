@@ -24,20 +24,33 @@ const NONE = "none";
 /** 選張能選的狀態(未售)。 */
 const SELECTABLE: readonly TicketCellState[] = ["unsold"];
 
-/** 圖例:未售 / 已售(不能選)/ 已在明細 / 已選。 */
+/** 圖例:未售 / 已售(不能選)/ 調貨中 / 已在明細 / 已選。 */
 const LEGEND: readonly TicketCellState[] = [
   "unsold",
   "sold",
+  "transferring",
   "assigned",
   "selected",
 ];
 
-/** api 的格子狀態 → 格子變體:可以調 = 未售;已售、被鎖定、不在出貨店 = 不能選;跳號。 */
+/**
+ * api 的格子狀態 → 格子變體:可以調 = 未售;被其他調貨單鎖住的未售 = 調貨中;已售、不在出貨店 = 不能選;跳號。
+ */
 const cellStateOf = (state: string): Exclude<TicketCellState, "selected"> => {
-  if (state === "available") {
-    return "unsold";
+  switch (state) {
+    case "available": {
+      return "unsold";
+    }
+    case "locked": {
+      return "transferring";
+    }
+    case "skipped": {
+      return "skipped";
+    }
+    default: {
+      return "sold";
+    }
   }
-  return state === "skipped" ? "skipped" : "sold";
 };
 
 /** 拆過的本:張數格子選張 + [加入選取]。 */

@@ -5,12 +5,12 @@ import {
   INVENTORY_PERMISSIONS,
   STOCKTAKE_REMINDER_HOURS,
   STOCKTAKE_STATUSES,
+  STOCKTAKE_STOCK_LINE,
   STOCKTAKE_TYPES,
   STORE_PERMISSIONS,
   TICKET_EVENT_TYPE,
   TICKET_LOCATION_KIND,
   TICKET_STATUS,
-  pendingSkipCountOf,
   serializeStocktakeDraft,
 } from "@repo/domain/project/lottery";
 
@@ -46,6 +46,7 @@ import {
 import { StoreAccess } from "../store/store-access";
 import { StoreClock } from "../store/store-clock";
 import { StoreSalesSupport } from "../store/store-sales-support";
+import { pendingSkipCountOfBook } from "../tickets/books.service";
 import type { LotteryStocktakesInput } from "./dto/stocktake.input";
 import type {
   LotteryStocktakeCashPointModel,
@@ -57,6 +58,7 @@ import type {
   LotteryStocktakesPayload,
 } from "./models/stocktake.model";
 import { forbiddenError, notFoundError } from "./stocktake-error";
+import { StocktakeFacts } from "./stocktake-facts";
 
 type StocktakeRecord = Persisted<LotteryStocktakeDocument>;
 
@@ -103,7 +105,10 @@ export function draftOfStocktake(record: LotteryStocktake): string {
     startedAt: record.startedAt.toISOString(),
     lines: record.lines.map((line) => ({
       bookId: String(line.bookId),
-      cashPointId: String(line.cashPointId),
+      cashPointId:
+        line.cashPointId === null
+          ? STOCKTAKE_STOCK_LINE
+          : String(line.cashPointId),
       countedAt: line.countedAt.toISOString(),
       method: line.method,
       presentTicketNos: [...line.presentTicketNos],
@@ -129,7 +134,7 @@ export function draftOfStocktake(record: LotteryStocktake): string {
 /**
  * 盤點的讀取(專案規格 6.8、8.6;正本 `docs/modules/project/store.md`「盤點」):
  *
- * - `sheet`:盤點頁(收銀點與應有現金、檯面上的本、未拆的本、待查清單)
+ * - `sheet`:盤點頁(收銀點與應有現金、檯面上的本、拆過在庫存的本、未拆的本、待查清單)
  * - `status`:看板頂部「建議盤點一次」(距離上次送出的盤點超過 24 小時)
  * - `list` / `detail`:盤點紀錄分頁、盤點確認申請檢視頁
  *
@@ -151,6 +156,7 @@ export class StocktakeQueryService {
     private readonly views: StoreShiftViews,
     private readonly access: StoreAccess,
     private readonly clock: StoreClock,
+    private readonly facts: StocktakeFacts,
   ) {}
 
   // ---- 盤點頁 ----
@@ -195,13 +201,46 @@ export class StocktakeQueryService {
     const bookRecords = await this.books.findMany(operator, {
       _id: { $in: bookIds.map((id) => new Types.ObjectId(id)) },
     });
-    const unopened =
-      scopeId === null ? await this.unopenedBooks(operator, store.orgId) : [];
+    // 全店盤點才盤庫存:未拆的本(在 / 不在)與拆過、在庫存的張(逐張,比照檯面)
+    const inStock: Awaited<ReturnType<StocktakeFacts["stockBooksOf"]>> =
+      scopeId === null
+        ? await this.facts.stockBooksOf(operator, store.orgId)
+        : { unopened: new Map(), stock: new Map() };
+    const unopened = [...inStock.unopened.values()]
+      .map(({ book, inStock: count }) => ({
+        _id: book._id,
+        gameId: book.gameId,
+        gameCode: book.gameCode,
+        bookNo: book.bookNo,
+        // 待標註的跳號(拆本前還沒標的)實體不存在,不算張數(使用者 10/27 定案甲)
+        ticketCount: Math.max(0, count - pendingSkipCountOfBook(book)),
+      }))
+      .toSorted(
+        (a, b) =>
+          a.gameCode.localeCompare(b.gameCode) ||
+          a.bookNo.localeCompare(b.bookNo),
+      );
+    const stockBooks = [...inStock.stock.values()].map(({ book }) => book);
+    const stockTickets =
+      stockBooks.length === 0
+        ? []
+        : await this.tickets.findMany(
+            operator,
+            {
+              orgId: store.orgId,
+              bookId: { $in: stockBooks.map((book) => book._id) },
+              status: TICKET_STATUS.unsold,
+              "location.kind": TICKET_LOCATION_KIND.stock,
+              lockedBy: null,
+            },
+            { sort: { ticketNo: 1 } },
+          );
     const lost =
       scopeId === null ? await this.lostTickets(operator, store.orgId) : [];
     const games = await this.support.gamesOf(operator, [
       ...bookRecords.map((book) => book.gameId),
       ...unopened.map((book) => book.gameId),
+      ...stockBooks.map((book) => book.gameId),
     ]);
     const bookById = new Map(
       bookRecords.map((book) => [String(book._id), book]),
@@ -251,12 +290,39 @@ export class StocktakeQueryService {
           a.gameCode.localeCompare(b.gameCode) ||
           a.bookNo.localeCompare(b.bookNo),
       );
+    // 拆過、在庫存的張:一本一行(收銀點 = `STOCKTAKE_STOCK_LINE`),排在收銀點的本之後
+    const stockLines = stockBooks
+      .map((book) => {
+        const game = games.get(String(book.gameId));
+        return {
+          bookId: String(book._id),
+          cashPointId: STOCKTAKE_STOCK_LINE,
+          gameCode: book.gameCode,
+          gameName: game?.name ?? "",
+          unitPrice: game?.unitPrice ?? 0,
+          bookNo: book.bookNo,
+          tickets: stockTickets
+            .filter((ticket) => ticket.bookId.equals(book._id))
+            .map((ticket) => ({
+              ticketId: String(ticket._id),
+              ticketNo: ticket.ticketNo,
+              version: ticket.version,
+              status: ticket.status,
+              pendingReversal: false,
+            })),
+        };
+      })
+      .toSorted(
+        (a, b) =>
+          a.gameCode.localeCompare(b.gameCode) ||
+          a.bookNo.localeCompare(b.bookNo),
+      );
     return {
       orgId: String(store.orgId),
       orgName: org?.name ?? "",
       serverNow: this.clock.now(),
       cashPoints,
-      books,
+      books: [...books, ...stockLines],
       unopenedBooks: unopened.map((book) => ({
         bookId: String(book._id),
         gameCode: book.gameCode,
@@ -318,80 +384,6 @@ export class StocktakeQueryService {
       });
     }
     return models;
-  }
-
-  /** 本店還沒拆的本(未售的張全在庫存、沒有任何一張售出 / 待查…)。 */
-  private async unopenedBooks(
-    operator: OperatorContext,
-    orgId: Types.ObjectId,
-  ): Promise<
-    {
-      _id: Types.ObjectId;
-      gameId: Types.ObjectId;
-      gameCode: string;
-      bookNo: string;
-      ticketCount: number;
-    }[]
-  > {
-    const rows = await this.tickets.aggregate(operator, [
-      { $match: { orgId, status: { $ne: TICKET_STATUS.skipped } } },
-      {
-        $group: {
-          _id: "$bookId",
-          total: { $sum: 1 },
-          inStock: {
-            $sum: {
-              $cond: [
-                {
-                  $and: [
-                    { $eq: ["$status", TICKET_STATUS.unsold] },
-                    { $eq: ["$location.kind", TICKET_LOCATION_KIND.stock] },
-                  ],
-                },
-                1,
-                0,
-              ],
-            },
-          },
-        },
-      },
-    ]);
-    const unopened = rows.filter(
-      (row) =>
-        Number(row.total) > 0 && Number(row.total) === Number(row.inStock),
-    );
-    if (unopened.length === 0) {
-      return [];
-    }
-    const countOf = new Map(
-      unopened.map((row) => [String(row._id), Number(row.inStock)]),
-    );
-    const books = await this.books.findMany(operator, {
-      _id: { $in: unopened.map((row) => row._id as Types.ObjectId) },
-      status: "normal",
-    });
-    return books
-      .map((book) => ({
-        _id: book._id,
-        gameId: book.gameId,
-        gameCode: book.gameCode,
-        bookNo: book.bookNo,
-        // 待標註的跳號(拆本前還沒標的)實體不存在,不算張數(使用者 10/27 定案甲)
-        ticketCount: Math.max(
-          0,
-          (countOf.get(String(book._id)) ?? 0) -
-            pendingSkipCountOf(
-              Number(book.lastTicketNo),
-              book.standardTickets,
-              book.skippedTicketNos.length,
-            ),
-        ),
-      }))
-      .toSorted(
-        (a, b) =>
-          a.gameCode.localeCompare(b.gameCode) ||
-          a.bookNo.localeCompare(b.bookNo),
-      );
   }
 
   /** 待查清單:本店的待查張(含責任分店是本店的),帶變成待查的時間與來源。 */
@@ -592,7 +584,10 @@ export class StocktakeQueryService {
       confirmedAt: record.confirmedAt,
       lines: record.lines.map((line) => ({
         bookId: String(line.bookId),
-        cashPointId: String(line.cashPointId),
+        cashPointId:
+          line.cashPointId === null
+            ? STOCKTAKE_STOCK_LINE
+            : String(line.cashPointId),
         cashPointName: pointName(line.cashPointId),
         gameCode: line.gameCode,
         gameName: line.gameName,
@@ -624,7 +619,10 @@ export class StocktakeQueryService {
       })),
       uncountedBooks: uncountedBooksOf(record).map((book) => ({
         bookId: String(book.bookId),
-        cashPointId: String(book.cashPointId),
+        cashPointId:
+          book.cashPointId === null
+            ? STOCKTAKE_STOCK_LINE
+            : String(book.cashPointId),
         cashPointName: pointName(book.cashPointId),
         gameCode: book.gameCode,
         gameName: book.gameName,

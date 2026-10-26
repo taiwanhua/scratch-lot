@@ -3093,6 +3093,53 @@ describe("輸出報表:營運報表、班次結帳歷史報表(GraphQL 端點 + 
       });
     });
 
+    it("S3b 未拆的本整本待查後只處理一部分(2 張確認遺失、3 張跨店尋回):待標註那張仍算在還待查的那組 → 期末待查 95(t11 審查 S1,看本的 firstOpenedAt)", async () => {
+      const bookId = await purchase(chianan, taipei("2026-11-12", "09:00"));
+      await apply(
+        { operator: storeOperator(chianan) },
+        await ticketsOf(bookId),
+        {
+          type: "investigate",
+          at: taipei("2026-11-12", "10:00"),
+          patch: { status: "investigating", responsibleOrgId: chianan },
+          refType: "stocktake",
+          refId: new Types.ObjectId(),
+        },
+      );
+      const [first, second, ...rest] = await ticketsOf(bookId);
+      if (first === undefined || second === undefined) {
+        throw new Error("沒有張");
+      }
+      await apply({ operator: storeOperator(chianan) }, [first, second], {
+        type: "lose",
+        at: taipei("2026-11-13", "10:00"),
+        patch: { status: "lost" },
+        refType: "stocktake",
+        refId: new Types.ObjectId(),
+      });
+      await apply(
+        { operator: storeOperator(yunlin), crossStoreTenantId: tenant },
+        rest.slice(0, 3),
+        {
+          type: "recover",
+          at: taipei("2026-11-13", "11:00"),
+          patch: {
+            status: "unsold",
+            location: { kind: "stock", cashPointId: null },
+            responsibleOrgId: null,
+            orgId: yunlin,
+          },
+          reasonKey: "found",
+        },
+      );
+      const day = await inventoryOn("2026-11-13", chianan);
+      expect(day).toMatchObject({
+        investigatingTickets: 95,
+        investigatingBooks: 1,
+      });
+      expect(day.investigatingCost).toBeCloseTo(95 * 184, 6);
+    });
+
     it("重跑舊報表數字不變:11/20 做一份報表 → 11/21 撤銷兌獎、送兌、退回結帳、補日結、核准、調走期末的張 → 重跑 11/20 完全相同", async () => {
       const pingtung = await createOrg(connection, {
         name: "屏東店",

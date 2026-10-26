@@ -13,6 +13,7 @@ import {
   useLotteryInventoryBooksQuery,
 } from "@repo/graphql";
 import { Box } from "@repo/ui/box";
+import { Pagination } from "@repo/ui/pagination";
 import { SelectField } from "@repo/ui/select-field";
 import { Stack } from "@repo/ui/stack";
 import { Table, type TableColumn } from "@repo/ui/table";
@@ -39,7 +40,9 @@ import { useInventoryAccess } from "../useInventoryAccess";
 
 type Book = LotteryInventoryBookFieldsFragment;
 
-/** 庫存分頁的篩選放同一個 key(REACT-14):分店、遊戲、狀態、批購日起迄、本號;空字串 = 預設 / 不篩。 */
+/**
+ * 庫存分頁的篩選放同一個 key(REACT-14):分店、遊戲、狀態、批購日起迄、本號、第幾頁;空字串 = 預設 / 不篩。
+ */
 const stockSchema = z
   .object({
     org: z.string().default(""),
@@ -48,8 +51,20 @@ const stockSchema = z
     from: z.string().default(""),
     to: z.string().default(""),
     bookNo: z.string().default(""),
+    page: z.number().int().min(1).default(1),
   })
-  .default({ org: "", game: "", state: "", from: "", to: "", bookNo: "" });
+  .default({
+    org: "",
+    game: "",
+    state: "",
+    from: "",
+    to: "",
+    bookNo: "",
+    page: 1,
+  });
+
+/** 每頁本數(api 分頁;上限 100)。 */
+const STOCK_PAGE_SIZE = 50;
 
 /** 「全部」(不篩)的選項值。 */
 const ALL = "";
@@ -59,7 +74,8 @@ const GAME_OPTIONS_PAGE_SIZE = 100;
 
 /**
  * 庫存分頁(Figma IN-01 91:17;規格 7.3):分店選擇器(看得到的範圍,預設目前組織,記在網址)→
- * 篩選(遊戲、狀態、批購日、本號)→ 以本為單位的列表(拆開的本顯示「台北 70 / 新竹 30」)。點一列進本的詳情。
+ * 篩選(遊戲、狀態、批購日、本號)→ 以本為單位的列表(資料庫分頁;所在分店只算未售,拆開的本顯示
+ * 「台北 70 / 新竹 30」)。點一列進本的詳情。
  */
 export const StockTab = () => {
   const t = useTranslations("admin.lotteryInventory.stock");
@@ -71,8 +87,9 @@ export const StockTab = () => {
   const temporal = useTemporalText();
   const timezone = useTenantTimezone() ?? DEFAULT_TENANT_TIMEZONE;
   const [filters, setFilters] = useUrlState("stock", stockSchema);
+  // 改篩選回到第 1 頁
   const patch = (next: Partial<typeof filters>) => {
-    setFilters((current) => ({ ...current, ...next }));
+    setFilters((current) => ({ ...current, page: 1, ...next }));
   };
   const orgId =
     filters.org === "" ? (me.data?.me.currentOrg?.id ?? "") : filters.org;
@@ -85,6 +102,8 @@ export const StockTab = () => {
     {
       input: {
         orgId,
+        page: filters.page,
+        pageSize: STOCK_PAGE_SIZE,
         ...(filters.game === ALL ? {} : { gameId: filters.game }),
         ...(filters.state === ALL ? {} : { state: filters.state }),
         ...(filters.from === ""
@@ -104,6 +123,7 @@ export const StockTab = () => {
   );
   const rows = query.data?.lotteryInventoryBooks.items ?? [];
   const totalCount = query.data?.lotteryInventoryBooks.totalCount ?? 0;
+  const pageCount = Math.max(1, Math.ceil(totalCount / STOCK_PAGE_SIZE));
 
   const columns: TableColumn<Book>[] = [
     {
@@ -270,9 +290,18 @@ export const StockTab = () => {
           {...rowClick}
         />
       </Box>
-      <Typography variant="body2" sx={{ textAlign: "right" }}>
-        {t("total", { count: totalCount })}
-      </Typography>
+      <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
+        <Typography variant="body2" color="textSecondary" sx={{ flex: 1 }}>
+          {t("total", { count: totalCount })}
+        </Typography>
+        <Pagination
+          count={pageCount}
+          page={filters.page}
+          onChange={(_event, page) => {
+            setFilters((current) => ({ ...current, page }));
+          }}
+        />
+      </Stack>
     </Stack>
   );
 };
