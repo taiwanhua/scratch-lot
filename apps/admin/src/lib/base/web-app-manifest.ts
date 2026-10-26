@@ -1,7 +1,4 @@
-import {
-  type ProjectAdminWebApp,
-  projectPublic,
-} from "@repo/project-config/public";
+import type { ProjectAdminWebApp } from "@repo/project-config/public";
 
 import { LOGIN_PATH } from "./paths";
 
@@ -11,7 +8,7 @@ import { LOGIN_PATH } from "./paths";
  *
  * 只提供「可安裝」,**不註冊 service worker、不做離線**:頁面與資源一律走網路,部署新版後重新整理就是新版。
  * 圖示是專案資產,放 `public/project/`,由 `scripts/app-icons/generate.mjs` 從 SVG 正本產生,
- * 檔名是兩邊共同的約定(`web-app-manifest.test.ts` 檢查檔案在、尺寸對)。
+ * 檔名是兩邊共同的約定;admin build 開始前由 `scripts/web-app-plugin.mjs` 檢查檔案在、是 PNG、尺寸對,不對就 build 失敗。
  */
 
 /** manifest 的網址:固定不改(瀏覽器以它與 `id` 認已安裝的 app,改了可能收不到更新)。 */
@@ -116,7 +113,3 @@ export const webAppHeadTags = (webApp: ProjectAdminWebApp): HeadTag[] => [
     content: webApp.shortName,
   }),
 ];
-
-/** 目前專案的設定;`null` = 專案不提供 manifest(不可安裝)。 */
-export const projectWebApp = (): ProjectAdminWebApp | null =>
-  projectPublic.admin.webApp;

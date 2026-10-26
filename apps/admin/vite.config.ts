@@ -1,19 +1,13 @@
-import { readFileSync } from "node:fs";
-import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import react from "@vitejs/plugin-react";
-import { type Plugin, defineConfig } from "vite";
+import { defineConfig } from "vite";
 
+import { projectPublic } from "@repo/project-config/public";
+
+import { webAppManifestPlugin } from "./scripts/web-app-plugin.mjs";
 import { colorModeInitTag } from "./src/lib/base/color-mode-init";
 import { projectHtmlTransform } from "./src/lib/base/project-html";
-import {
-  WEB_APP_ICONS,
-  WEB_APP_MANIFEST_PATH,
-  projectWebApp,
-  webAppHeadTags,
-  webAppManifestSource,
-} from "./src/lib/base/web-app-manifest";
 
 /** 首幀外觀腳本注入 `<head>`(見 `src/lib/base/color-mode-init.ts`)。 */
 const colorModeInit = {
@@ -28,73 +22,14 @@ const projectHtml = {
 };
 
 /**
- * 可安裝成 app(見 `src/lib/base/web-app-manifest.ts`):build 時輸出 `manifest.webmanifest`、
- * `<head>` 加 manifest / theme-color / apple-touch-icon;dev server 也回同一份 manifest。
- * 專案設定 `admin.webApp` 為 null 時整個不做。只接正式入口,mock 入口不可安裝。
- * build 開始前檢查圖示(專案資產,`scripts/app-icons/generate.mjs` 產生)都在且尺寸對,漏了就讓 build 失敗。
+ * 可安裝成 app(外掛在 `scripts/web-app-plugin.mjs`,內容在 `src/lib/base/web-app-manifest.ts`):
+ * 輸出 manifest、`<head>` 加標籤、build 前檢查圖示。值為專案設定 `admin.webApp`(null = 不做)。
+ * 只接正式入口;mock 入口(`vite.mock.config.ts`)不接,不可安裝。
  */
-const webAppManifest = (): Plugin => {
-  const webApp = projectWebApp();
-  const manifestFile = WEB_APP_MANIFEST_PATH.slice(1);
-  let publicDir = "";
-  return {
-    name: "admin:web-app-manifest",
-    configResolved(config) {
-      ({ publicDir } = config);
-    },
-    buildStart() {
-      if (!webApp) {
-        return;
-      }
-      for (const { src, size } of Object.values(WEB_APP_ICONS)) {
-        const file = path.join(publicDir, src);
-        let png: Buffer;
-        try {
-          png = readFileSync(file);
-        } catch {
-          throw new Error(
-            `可安裝 app 的圖示不存在:${file}(跑 scripts/app-icons/generate.mjs 產生)`,
-          );
-        }
-        // PNG 的寬高在 IHDR,固定位於第 16–23 位元組
-        const width = png.readUInt32BE(16);
-        const height = png.readUInt32BE(20);
-        if (
-          png.subarray(1, 4).toString("ascii") !== "PNG" ||
-          width !== size ||
-          height !== size
-        ) {
-          throw new Error(
-            `可安裝 app 的圖示不是 ${String(size)}×${String(size)} 的 PNG:${file}`,
-          );
-        }
-      }
-    },
-    transformIndexHtml: () => (webApp ? webAppHeadTags(webApp) : []),
-    configureServer(server) {
-      if (!webApp) {
-        return;
-      }
-      server.middlewares.use(WEB_APP_MANIFEST_PATH, (_request, response) => {
-        response.setHeader("Content-Type", "application/manifest+json");
-        response.end(webAppManifestSource(webApp));
-      });
-    },
-    generateBundle() {
-      if (webApp) {
-        // eslint-disable-next-line unicorn/no-this-outside-of-class -- Rollup hook 的 this 是外掛上下文,emitFile 只能從它呼叫
-        this.emitFile({
-          type: "asset",
-          fileName: manifestFile,
-          source: webAppManifestSource(webApp),
-        });
-      }
-    },
-  };
-};
+const webAppManifest = webAppManifestPlugin(projectPublic.admin.webApp);
 
 export default defineConfig({
-  plugins: [react(), projectHtml, colorModeInit, webAppManifest()],
+  plugins: [react(), projectHtml, colorModeInit, webAppManifest],
   resolve: {
     // `@/` = src/(與 tsconfig paths、jest moduleNameMapper 同一份約定,GEN-01)
     alias: { "@": fileURLToPath(new URL("src", import.meta.url)) },

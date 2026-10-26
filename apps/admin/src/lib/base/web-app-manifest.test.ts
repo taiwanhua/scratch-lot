@@ -1,11 +1,8 @@
 import { describe, expect, it } from "@jest/globals";
 
-import { projectPublic } from "@repo/project-config/public";
-
 import { LOGIN_PATH } from "./paths";
 import {
   WEB_APP_ID,
-  projectWebApp,
   webAppHeadTags,
   webAppManifest,
   webAppManifestSource,
@@ -89,9 +86,5 @@ describe("web-app-manifest:可安裝 app 的 manifest 與 <head> 標籤", () => 
         injectTo: "head",
       },
     ]);
-  });
-
-  it("讀的是目前專案設定的 admin.webApp", () => {
-    expect(projectWebApp()).toBe(projectPublic.admin.webApp);
   });
 });

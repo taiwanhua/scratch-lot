@@ -12,8 +12,8 @@
  *   <public>/project/icon-192.png、icon-512.png、icon-maskable-512.png、apple-touch-icon.png(180)
  *   <public>/favicon.ico(16 / 32 / 48)
  *
- * 檔名是固定約定:admin 的 `src/lib/base/web-app-manifest.ts` 照這組名稱寫 manifest 與 `<head>`,
- * 該處的測試檢查檔案在、尺寸對。
+ * 檔名是固定約定:admin 的 `src/lib/base/web-app-manifest.ts` 照這組名稱寫 manifest 與 `<head>`;
+ * admin build 開始前由 `apps/admin/scripts/web-app-plugin.mjs` 檢查檔案在、是 PNG、尺寸對,不對就 build 失敗。
  */
 import { readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
