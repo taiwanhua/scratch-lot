@@ -290,6 +290,8 @@ export const useStoreSaleFlow = ({
               status: step.item.status,
             },
           ]}
+          // 刷到的那家店 = 看板正在看的店(總部在看板操作某家店時,目前組織不是那家店)
+          store={{ id: orgId }}
           onClose={close}
           onRecovered={refresh}
         />

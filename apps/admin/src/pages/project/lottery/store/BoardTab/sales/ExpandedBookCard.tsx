@@ -258,8 +258,10 @@ export const ExpandedBookCard = ({
           version: ticket.version,
           ticketNo: ticket.ticketNo,
           status: ticket.status,
+          orgName: storeName,
         }))}
-        store={{ id: orgId, name: storeName }}
+        // 展開卡片是在格子上點選,不是刷到實體:不換店(檯面上的張本來就在這家店)
+        keepStore
         onClose={() => {
           setDialog(null);
         }}

@@ -4,6 +4,7 @@ import type { Connection, Types } from "mongoose";
 import {
   INVENTORY_MODULE_KEYS,
   INVENTORY_PERMISSIONS as P,
+  STORE_PERMISSIONS,
   TICKET_EVENT_TYPE,
   TICKET_LOCATION_KIND,
   TICKET_STATUS,
@@ -303,7 +304,7 @@ async function seedInventoryAuthorization(connection: Connection) {
     ...baseFields(now),
   });
   await connection.collection("permissions").insertMany(
-    Object.values(P).map((key) => ({
+    [...Object.values(P), STORE_PERMISSIONS.view].map((key) => ({
       key,
       moduleId: listId,
       name: key,
@@ -419,7 +420,7 @@ describe("庫存管理(GraphQL 端點 + 真 MongoDB)", () => {
   }
 
   async function operatorToken(
-    orgId: Types.ObjectId,
+    orgId: Types.ObjectId | Types.ObjectId[],
     permissionKeys: readonly string[],
     withModule = true,
   ): Promise<string> {
@@ -428,7 +429,7 @@ describe("庫存管理(GraphQL 端點 + 真 MongoDB)", () => {
     const userId = await createUser(api.connection, {
       account,
       password: PASSWORD,
-      orgIds: [orgId],
+      orgIds: Array.isArray(orgId) ? orgId : [orgId],
     });
     await createRole(api.app, api.connection, {
       name: `庫存管理角色:${account}`,
@@ -604,7 +605,10 @@ describe("庫存管理(GraphQL 端點 + 真 MongoDB)", () => {
         ...baseFields(now),
       }));
     const manager = [P.markSkipped, P.recover, P.scrap, P.showCost];
-    hq = await operatorToken(tenant, Object.values(P));
+    hq = await operatorToken(tenant, [
+      ...Object.values(P),
+      STORE_PERMISSIONS.view,
+    ]);
     managerA = await operatorToken(storeA, manager);
     managerB = await operatorToken(storeB, manager);
     managerC = await operatorToken(storeC, manager);
@@ -853,6 +857,78 @@ describe("庫存管理(GraphQL 端點 + 真 MongoDB)", () => {
           reasonKey: "mistake",
         },
       });
+    });
+
+    it("刷到實體:目前組織是店 → 只能回到它;同時屬於兩家店的店長尋回到另一家 → RECOVER_TARGET_NOT_OPERATING_STORE", async () => {
+      const bookId = await receiveBook(storeA);
+      await apply(storeA, bookId, ["003"], {
+        type: TICKET_EVENT_TYPE.investigate,
+        patch: {
+          status: TICKET_STATUS.investigating,
+          responsibleOrgId: storeA,
+        },
+      });
+      // 中山店 + 新竹店的店長,目前組織 = 中山店(第一個所屬組織)
+      const twoStores = await operatorToken(
+        [storeA, storeB],
+        [P.recover, P.scrap, P.markSkipped],
+      );
+      const detail = await bookOf(bookId, hq);
+      expect(
+        await errorOf(api, twoStores, RECOVER, {
+          input: {
+            tickets: versionsOf(detail.tickets, ["003"]),
+            orgId: String(storeB),
+            reasonKey: "mistake",
+          },
+        }),
+      ).toMatchObject({
+        code: "FORBIDDEN",
+        reason: "RECOVER_TARGET_NOT_OPERATING_STORE",
+      });
+      const before = await ticketOf(bookId, "003");
+      expect(before?.status).toBe(TICKET_STATUS.investigating);
+      await ok(api, twoStores, RECOVER, {
+        input: {
+          tickets: versionsOf(detail.tickets, ["003"]),
+          orgId: String(storeA),
+          reasonKey: "mistake",
+        },
+      });
+    });
+
+    it("總部(上層組織)在看板操作某家店:有店面權限 store.view 才能尋回到那家店", async () => {
+      const bookId = await receiveBook(storeA);
+      await apply(storeA, bookId, ["004"], {
+        type: TICKET_EVENT_TYPE.investigate,
+        patch: {
+          status: TICKET_STATUS.investigating,
+          responsibleOrgId: storeA,
+        },
+      });
+      const noStore = await operatorToken(tenant, Object.values(P));
+      const detail = await bookOf(bookId, hq);
+      expect(
+        await errorOf(api, noStore, RECOVER, {
+          input: {
+            tickets: versionsOf(detail.tickets, ["004"]),
+            orgId: String(storeB),
+            reasonKey: "mistake",
+          },
+        }),
+      ).toMatchObject({
+        code: "FORBIDDEN",
+        reason: "RECOVER_TARGET_NOT_OPERATING_STORE",
+      });
+      await ok(api, hq, RECOVER, {
+        input: {
+          tickets: versionsOf(detail.tickets, ["004"]),
+          orgId: String(storeB),
+          reasonKey: "mistake",
+        },
+      });
+      const after = await ticketOf(bookId, "004");
+      expect(after?.orgId.equals(storeB)).toBe(true);
     });
 
     it("回到的分店要在自己的可見範圍內", async () => {

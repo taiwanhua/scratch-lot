@@ -4,6 +4,7 @@ import { Types } from "mongoose";
 
 import {
   INVENTORY_PERMISSIONS,
+  STORE_PERMISSIONS,
   TICKET_EVENT_TYPE,
   TICKET_LOCATION_KIND,
   TICKET_STATUS,
@@ -34,6 +35,7 @@ import {
   INVENTORY_REASONS,
   crossStoreForbiddenError,
   notFoundError,
+  recoverTargetForbiddenError,
   ticketConflictError,
   validationError,
 } from "../tickets/inventory-error";
@@ -277,7 +279,15 @@ export class InventoryActionsService {
     return { count: refs.length, lossCost: null };
   }
 
-  /** 刷到實體的尋回要回到的店:看得到、而且是店(沒有下層組織)。 */
+  /**
+   * 刷到實體的尋回要回到的店:看得到、是店(沒有下層組織),而且是操作者**正在操作的店**。
+   * 依據只用 api 驗得到的東西(看板的分店是網址參數,api 沒有看板的狀態):
+   *
+   * - 目前組織(`currentOrgId`,登入 / 切換組織時由 api 決定)是店 → 只能回到它
+   *   (店長不能把張尋回到別家店,即使他同時屬於別家店)
+   * - 目前組織是上層組織(總部、區域)→ 回到他看得到的店,而且要有店面權限 `store.view`
+   *   (在看板操作那家店要的同一條權限)
+   */
   private async recoverTargetOf(
     operator: OperatorContext,
     id: string,
@@ -298,6 +308,24 @@ export class InventoryActionsService {
         ["orgId"],
         INVENTORY_REASONS.recoverTargetNotStore,
       );
+    }
+    const currentId = operator.currentOrgId;
+    const current =
+      currentId === null
+        ? undefined
+        : tenantOrgs.find((org) => org.id.equals(currentId));
+    if (
+      current !== undefined &&
+      isVisibleStore(operator, current, tenantOrgs)
+    ) {
+      if (!current.id.equals(orgId)) {
+        throw recoverTargetForbiddenError("只能尋回到你正在操作的店");
+      }
+      return orgId;
+    }
+    const grant = await this.access.grantOf(operator);
+    if (!grant.has(STORE_PERMISSIONS.view)) {
+      throw recoverTargetForbiddenError("沒有店面權限,不能尋回到這家店");
     }
     return orgId;
   }

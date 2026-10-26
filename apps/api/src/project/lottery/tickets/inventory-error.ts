@@ -28,6 +28,11 @@ export const INVENTORY_REASONS = {
   ticketStatusNotAllowed: "TICKET_STATUS_NOT_ALLOWED",
   /** 尋回:回到的組織不是店(有下層組織,例:最上層組織) */
   recoverTargetNotStore: "RECOVER_TARGET_NOT_STORE",
+  /**
+   * 尋回(刷到實體):回到的店不是操作者正在操作的店 —— 目前組織是店時要回到它;目前組織是上層組織
+   * (總部、區域)時要有店面權限 `store.view`
+   */
+  recoverTargetNotOperatingStore: "RECOVER_TARGET_NOT_OPERATING_STORE",
 } as const;
 
 export type InventoryReason =
@@ -75,6 +80,16 @@ export function bookConflictError(bookIds: readonly string[]): GraphQLError {
       code: "CONFLICT",
       reason: INVENTORY_REASONS.ticketAlreadyProcessed,
       bookIds,
+    },
+  });
+}
+
+/** 刷到實體的尋回:回到的店不是操作者正在操作的店(見 `recoverTargetNotOperatingStore`)。 */
+export function recoverTargetForbiddenError(message: string): GraphQLError {
+  return new GraphQLError(message, {
+    extensions: {
+      code: "FORBIDDEN",
+      reason: INVENTORY_REASONS.recoverTargetNotOperatingStore,
     },
   });
 }

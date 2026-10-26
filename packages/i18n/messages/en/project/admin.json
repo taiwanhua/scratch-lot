@@ -513,7 +513,8 @@
       "SKIP_UNCHANGED": "The skipped tickets did not change",
       "TICKET_STATUS_NOT_ALLOWED": "The selected tickets are not in a status that allows this",
       "UNEXPECTED": "Something went wrong; try again later",
-      "RECOVER_TARGET_NOT_STORE": "Recovered tickets must go back to a branch; pick one"
+      "RECOVER_TARGET_NOT_STORE": "Recovered tickets must go back to a branch; pick one",
+      "RECOVER_TARGET_NOT_OPERATING_STORE": "Tickets can only be recovered into the branch you are working in"
     },
     "ticketStatuses": {
       "unsold": "Unsold",

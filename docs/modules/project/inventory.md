@@ -65,13 +65,16 @@
 
 - 待查 / 遺失的張 → 未售、庫存、清掉責任分店;原因必填(「尋回原因」)。兩種入口,以有沒有給 `orgId` 區分:
 
-| 入口                                                      | `orgId` | 回到哪裡                    | 範圍                                                                                               |
-| --------------------------------------------------------- | ------- | --------------------------- | -------------------------------------------------------------------------------------------------- |
-| 從清單選(本的詳情、待查·遺失分頁;`keepStore`)             | 不給    | **不換店**:張自己的所在分店 | 張的所在分店要在操作者的可見範圍內,否則 `FORBIDDEN` `CROSS_STORE_NOT_ALLOWED`;帳本照操作者的範圍寫 |
-| 刷到實體(店面看板刷到、展開卡片;規格 7.4「刷到的那家店」) | 給      | `orgId` 這家店              | 張可能在別的分店:經帳本的跨店寫入(只能移進操作者看得到的店)                                        |
+| 入口                                                        | `orgId` | 回到哪裡                    | 範圍                                                                                               |
+| ----------------------------------------------------------- | ------- | --------------------------- | -------------------------------------------------------------------------------------------------- |
+| 從清單選(本的詳情、待查·遺失分頁、看板展開卡片;`keepStore`) | 不給    | **不換店**:張自己的所在分店 | 張的所在分店要在操作者的可見範圍內,否則 `FORBIDDEN` `CROSS_STORE_NOT_ALLOWED`;帳本照操作者的範圍寫 |
+| 刷到實體(店面刷到條碼;規格 7.4「刷到的那家店」)             | 給      | `orgId` 這家店              | 張可能在別的分店:經帳本的跨店寫入(只能移進操作者看得到的店)                                        |
 
 - 刷到實體時,回到的要是操作者看得到的店(`store-orgs.ts` 的 `isVisibleStore`:沒有下層組織;與分店清單共用同一個認定),否則 `VALIDATION_FAILED` `RECOVER_TARGET_NOT_STORE`。畫面:呼叫端給了店(刷到的那家店)就用它;沒給時目前組織是店就回到它,不是店(最上層組織、區域)就選「回到哪家店」(`lotteryInventoryStores`)。從清單選時對話框寫「回到 X 庫存」(X = 這幾張的所在分店),不讓人選。
-- 張換店只有調貨單與刷到實體的尋回;總部從本的詳情替中山店尋回 → 回到中山店。
+- 刷到實體時,回到的店還要是操作者**正在操作的店**(`recoverTargetOf`;否則 `FORBIDDEN` `RECOVER_TARGET_NOT_OPERATING_STORE`)。看板的分店是網址參數,api 沒有看板的狀態,所以只用 api 驗得到的依據:
+  - 目前組織(`currentOrgId`,登入 / 切換組織時由 api 決定)是店 → 只能回到它;同時屬於兩家店的人要先切換組織。
+  - 目前組織是上層組織(總部、區域;在看板操作某家店時目前組織不是那家店)→ 回到看得到的店,而且要有店面權限 `store.view`(進看板要的同一條)。畫面送看板正在看的那家店(`useStoreSaleFlow` 給 `store`)。
+- 張換店只有調貨單與刷到實體的尋回;總部從本的詳情替中山店尋回 → 回到中山店;看板展開卡片在格子上點選也不換店。
 
 ### 報廢(IN-04c)
 
@@ -230,21 +233,22 @@
 
 ### 錯誤碼
 
-| code                | reason                              | 什麼時候                                                                                                           |
-| ------------------- | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| `CONFLICT`          | `TICKET_ALREADY_PROCESSED`          | 條件更新沒命中(`extensions.ticketIds` 列出張)                                                                      |
-| `FORBIDDEN`         | `CROSS_STORE_NOT_ALLOWED`           | 跨店寫入不是把張移進自己看得到的店;報廢、從清單選的尋回、更正跳號選到別店的張(`extensions.ticketIds` 列出不合的張) |
-| `VALIDATION_FAILED` | `STORE_OUTSIDE_TENANT`              | 點收分店不在操作者當前組織的租戶                                                                                   |
-| `VALIDATION_FAILED` | `BOOK_KEY_DUPLICATE`                | 同一本點收兩次                                                                                                     |
-| `VALIDATION_FAILED` | `LAST_TICKET_NO_OUT_OF_RANGE`       | 迄號不在標準張數 ~ 999                                                                                             |
-| `NOT_FOUND`         | —                                   | 遊戲、本或分店不存在 / 看不到                                                                                      |
-| `VALIDATION_FAILED` | `NO_SKIPPED_TICKETS`                | 更正跳號:這本沒有跳號                                                                                              |
-| `VALIDATION_FAILED` | `SKIP_COUNT_MISMATCH`               | 更正跳號:改完的張數不等於待標註張數,或張號不在這本                                                                 |
-| `VALIDATION_FAILED` | `SKIP_UNCHANGED`                    | 更正跳號:跟目前的跳號一樣                                                                                          |
-| `VALIDATION_FAILED` | `RECOVER_TARGET_NOT_STORE`          | 尋回:回到的不是店(有下層組織,例:最上層組織)                                                                        |
-| `VALIDATION_FAILED` | `TICKET_STATUS_NOT_ALLOWED`         | 報廢不是未售、尋回不是待查 / 遺失、新標的跳號不是未售(`extensions.ticketIds`)                                      |
-| `VALIDATION_FAILED` | —(`fields: reasonKey / reasonNote`) | 原因沒選、不是啟用中的選項,或選「其他」沒寫說明                                                                    |
-| `FORBIDDEN`         | —                                   | 沒綁庫存管理(讀取)或沒有那條權限(寫入)                                                                             |
+| code                | reason                               | 什麼時候                                                                                                           |
+| ------------------- | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------ |
+| `CONFLICT`          | `TICKET_ALREADY_PROCESSED`           | 條件更新沒命中(`extensions.ticketIds` 列出張)                                                                      |
+| `FORBIDDEN`         | `CROSS_STORE_NOT_ALLOWED`            | 跨店寫入不是把張移進自己看得到的店;報廢、從清單選的尋回、更正跳號選到別店的張(`extensions.ticketIds` 列出不合的張) |
+| `FORBIDDEN`         | `RECOVER_TARGET_NOT_OPERATING_STORE` | 刷到實體的尋回:回到的店不是操作者正在操作的店(見「尋回」)                                                          |
+| `VALIDATION_FAILED` | `STORE_OUTSIDE_TENANT`               | 點收分店不在操作者當前組織的租戶                                                                                   |
+| `VALIDATION_FAILED` | `BOOK_KEY_DUPLICATE`                 | 同一本點收兩次                                                                                                     |
+| `VALIDATION_FAILED` | `LAST_TICKET_NO_OUT_OF_RANGE`        | 迄號不在標準張數 ~ 999                                                                                             |
+| `NOT_FOUND`         | —                                    | 遊戲、本或分店不存在 / 看不到                                                                                      |
+| `VALIDATION_FAILED` | `NO_SKIPPED_TICKETS`                 | 更正跳號:這本沒有跳號                                                                                              |
+| `VALIDATION_FAILED` | `SKIP_COUNT_MISMATCH`                | 更正跳號:改完的張數不等於待標註張數,或張號不在這本                                                                 |
+| `VALIDATION_FAILED` | `SKIP_UNCHANGED`                     | 更正跳號:跟目前的跳號一樣                                                                                          |
+| `VALIDATION_FAILED` | `RECOVER_TARGET_NOT_STORE`           | 尋回:回到的不是店(有下層組織,例:最上層組織)                                                                        |
+| `VALIDATION_FAILED` | `TICKET_STATUS_NOT_ALLOWED`          | 報廢不是未售、尋回不是待查 / 遺失、新標的跳號不是未售(`extensions.ticketIds`)                                      |
+| `VALIDATION_FAILED` | —(`fields: reasonKey / reasonNote`)  | 原因沒選、不是啟用中的選項,或選「其他」沒寫說明                                                                    |
+| `FORBIDDEN`         | —                                    | 沒綁庫存管理(讀取)或沒有那條權限(寫入)                                                                             |
 
 ### 前端共用
 

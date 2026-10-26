@@ -513,7 +513,8 @@
       "SKIP_UNCHANGED": "跳號沒有更動",
       "TICKET_STATUS_NOT_ALLOWED": "選到的張的狀態不能做這件事",
       "UNEXPECTED": "發生錯誤,請稍後再試",
-      "RECOVER_TARGET_NOT_STORE": "尋回要回到一家店,請選擇回到哪家店"
+      "RECOVER_TARGET_NOT_STORE": "尋回要回到一家店,請選擇回到哪家店",
+      "RECOVER_TARGET_NOT_OPERATING_STORE": "只能尋回到你正在操作的店"
     },
     "ticketStatuses": {
       "unsold": "未售",

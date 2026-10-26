@@ -67,10 +67,11 @@ export interface RecoverTicketDialogProps {
    */
   keepStore?: boolean;
   /**
-   * 刷到實體時回到哪家店(刷到的那家店,例:店面看板)。不給 = 目前組織是店就回到它;目前組織不是店
-   * (最上層組織、區域)時讓使用者選「回到哪家店」(只列看得到的店)
+   * 刷到實體時回到哪家店(刷到的那家店 = 店面看板正在看的店;沒給名稱時從看得到的店查)。
+   * 不給 = 目前組織是店就回到它;目前組織不是店(最上層組織、區域)時讓使用者選「回到哪家店」
+   * (只列看得到的店)。api 另外檢查這家店是操作者正在操作的店
    */
-  store?: { id: string; name: string };
+  store?: { id: string; name?: string };
   onClose: () => void;
   /** 尋回成功(對話框已關閉;呼叫端重讀自己的資料) */
   onRecovered?: () => void;
@@ -107,13 +108,24 @@ export const RecoverTicketDialog = ({
   const stores = useLotteryInventoryStoresQuery(
     session.client,
     {},
-    { enabled: !keepStore && store === undefined },
+    { enabled: !keepStore && store?.name === undefined },
   );
   const storeOptions = stores.data?.lotteryInventoryStores.items ?? [];
   const currentOrgId = me.data?.me.currentOrg?.id ?? "";
   /** 目前組織就是一家店 → 直接回到它,不用選。 */
   const currentStore =
     storeOptions.find((option) => option.id === currentOrgId) ?? null;
+  /** 刷到實體時給的店(沒給名稱時從看得到的店查)。 */
+  const givenStore =
+    store === undefined
+      ? null
+      : {
+          id: store.id,
+          name:
+            store.name ??
+            storeOptions.find((option) => option.id === store.id)?.name ??
+            "",
+        };
   const fixedStore = keepStore
     ? {
         id: "",
@@ -121,7 +133,7 @@ export const RecoverTicketDialog = ({
           .filter((name) => name !== "")
           .join("、"),
       }
-    : (store ?? currentStore);
+    : (givenStore ?? currentStore);
   const [pickedStoreId, setPickedStoreId] = useState("");
   const targetId = fixedStore?.id ?? pickedStoreId;
   const [reason, setReason] = useState<ReasonValue>(EMPTY_REASON);

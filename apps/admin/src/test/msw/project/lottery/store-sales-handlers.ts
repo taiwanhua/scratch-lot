@@ -56,6 +56,8 @@ export interface StoreSalesWorldOptions {
   board: StoreBoard;
   /** 下一次售出直接回「已於 hh:mm 售出」(同時兩人賣同一張的失敗方) */
   alreadySoldAt?: string;
+  /** 這幾張是遺失(展開卡片選它 → [尋回]) */
+  lostTicketIds?: readonly string[];
 }
 
 const validation = (reason: string, extra: Record<string, unknown> = {}) =>
@@ -74,8 +76,14 @@ const ref = (id: string, name: string) => ({
 export const storeSalesWorld = ({
   board,
   alreadySoldAt,
+  lostTicketIds = [],
 }: StoreSalesWorldOptions): StoreSalesWorld => {
   const books = booksOf(board);
+  for (const ticket of books.flatMap((book) => book.tickets)) {
+    if (lostTicketIds.includes(ticket.id)) {
+      ticket.status = "lost";
+    }
+  }
   const sales: SaleRecord[] = [];
   const inputs: StoreSalesWorld["inputs"] = {
     sell: [],

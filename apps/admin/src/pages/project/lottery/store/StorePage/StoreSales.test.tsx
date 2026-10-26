@@ -1,10 +1,17 @@
 import { afterEach, beforeEach, describe, expect, it } from "@jest/globals";
 import { act, screen, waitFor, within } from "@testing-library/react";
+import { HttpResponse } from "msw";
 
-import { STORE_PERMISSIONS as P } from "@repo/domain/project/lottery";
+import {
+  INVENTORY_PERMISSIONS,
+  STORE_PERMISSIONS as P,
+} from "@repo/domain/project/lottery";
+import type { RecoverLotteryTicketsMutationVariables } from "@repo/graphql";
 
 import { injectScan } from "@/hooks/project/useScanner/scanner-registry";
 import { writeLocalCashPoint } from "@/lib/project/lottery/local-cash-point";
+import { STORE_ALL_PERMISSIONS } from "@/test/msw/project/lottery/store-fixtures";
+import { api, server } from "@/test/msw/server";
 import { findLatestSnackbar } from "@/test/snackbar";
 
 import { setCameraReaderFactory } from "../BoardTab/sales/camera-reader";
@@ -298,6 +305,53 @@ describe("店面管理:銷售", () => {
         }),
       ]);
     });
+  });
+
+  it("展開卡片:選遺失的張 → [尋回] 不換店(不送 orgId,回到這家店的庫存)", async () => {
+    const recovered: RecoverLotteryTicketsMutationVariables["input"][] = [];
+    const { user } = renderStore({
+      permissions: [...STORE_ALL_PERMISSIONS, INVENTORY_PERMISSIONS.recover],
+      sales: { lostTicketIds: ["b-1-t80"] },
+    });
+    server.use(
+      api.mutation("RecoverLotteryTickets", ({ variables }) => {
+        const { input } = variables as RecoverLotteryTicketsMutationVariables;
+        recovered.push(input);
+        return HttpResponse.json({
+          data: {
+            recoverLotteryTickets: {
+              __typename: "LotteryInventoryActionPayload",
+              count: input.tickets.length,
+              lossCost: null,
+            },
+          },
+        });
+      }),
+    );
+    const panel = await expandCard(
+      user,
+      "店內櫃台",
+      "5164 發大財",
+      "5164 發大財 · 本號 056527",
+    );
+    await user.click(
+      await within(panel).findByRole("button", { name: "#080 待查·遺失" }),
+    );
+    await user.click(within(panel).getByRole("button", { name: "尋回" }));
+    const dialog = await screen.findByRole("dialog", { name: "尋回 1 張" });
+    expect(within(dialog).getByText("中山店 庫存")).toBeInTheDocument();
+    expect(
+      within(dialog).queryByRole("combobox", { name: /回到哪家店/ }),
+    ).not.toBeInTheDocument();
+    await user.click(
+      within(dialog).getByRole("combobox", { name: /尋回原因/ }),
+    );
+    await user.click(await screen.findByRole("option", { name: "店內找到" }));
+    await user.click(within(dialog).getByRole("button", { name: "尋回" }));
+    await waitFor(() => {
+      expect(recovered).toHaveLength(1);
+    });
+    expect(recovered[0]?.orgId).toBeUndefined();
   });
 
   it("展開卡片:其他收銀點選未售 → [移櫃] [移櫃並售出](沒有 [標記售出])", async () => {
