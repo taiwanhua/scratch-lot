@@ -63,6 +63,11 @@ import { settlementDocumentOf } from "../settlement/settlement-registry";
 import { TicketLedgerService } from "../tickets/ticket-ledger.service";
 import type { TicketLockRef } from "../tickets/ticket-ledger.types";
 import { TRANSFER_REASONS } from "./transfer-error";
+import {
+  type RowReceived,
+  isLineReceived,
+  receivedByRow,
+} from "./transfer-received";
 
 /** 「有效」的調貨單:送出之後、還沒駁回 / 作廢(草稿不算;規格 8 共通「草稿」)。 */
 export const TRANSFER_LIVE_STATUSES = [
@@ -171,6 +176,93 @@ const isSameShipment = (
   before.purchaseAmount === after.purchaseAmount;
 
 /**
+ * 已出貨的選張列只移除沒到的張(少張處理,使用者 10/26 定案做法 A):遊戲、本、方式、批購金額率不變;
+ * 張號只能少不能多或換,已點收的張都還在;張數 = 張號數、金額 = 面額 × 張數(面額照原本那一列)。
+ * 拿掉的在途張送出後變待查(`onSubmitted`)。整本的列不能縮(整本只能整列刪)。
+ */
+const isShrunkShipment = (
+  before: TransferLineValue,
+  after: TransferLineValue,
+  receivedNos: ReadonlySet<string>,
+): boolean => {
+  if (
+    before.mode !== TRANSFER_MODE.partial ||
+    after.mode !== TRANSFER_MODE.partial ||
+    before.gameId !== after.gameId ||
+    before.bookId !== after.bookId ||
+    before.rate !== after.rate ||
+    before.tickets <= 0 ||
+    after.ticketNos.length === 0 ||
+    after.tickets !== after.ticketNos.length
+  ) {
+    return false;
+  }
+  const kept = new Set(before.ticketNos);
+  const remaining = new Set(after.ticketNos);
+  return (
+    after.ticketNos.every((no) => kept.has(no)) &&
+    [...receivedNos].every((no) => remaining.has(no)) &&
+    after.amount * before.tickets === before.amount * after.tickets
+  );
+};
+
+/** 部分點收的列剩下還沒點收的張(選張的列;整本的列一次整列點收,原樣回)。 */
+function remainingLineOf(
+  line: TransferLineValue,
+  received: RowReceived,
+): TransferLineValue {
+  return line.mode === TRANSFER_MODE.partial
+    ? {
+        ...line,
+        ticketNos: line.ticketNos.filter((no) => !received.ticketNos.has(no)),
+      }
+    : line;
+}
+
+/** 上一次送出、已出貨(張都在途或已點收)的一列:那一列與已點收的張號。 */
+interface ShippedLine {
+  line: TransferLineValue;
+  receivedNos: ReadonlySet<string>;
+}
+
+/**
+ * 已出貨 / 有點收的列改了什麼(送出前):有點收的列不在上一次的出貨裡 → 已點收的列被改;
+ * 內容沒改、或選張的列只移除沒到的張(還沒到齊)→ 合法;其他 → 擋下。
+ */
+function shippedProblemOf(
+  lines: readonly TransferLineValue[],
+  shipped: ReadonlyMap<string, ShippedLine>,
+  receivedOf: ReadonlyMap<string, RowReceived>,
+): FormGuardResult {
+  for (const line of lines) {
+    const before = shipped.get(line.rowId);
+    const received = receivedOf.get(line.rowId);
+    if (before === undefined) {
+      if (received !== undefined) {
+        return block(
+          TRANSFER_REASONS.receivedRowChanged,
+          "Received rows cannot be changed or removed",
+        );
+      }
+      continue;
+    }
+    const isAllowed =
+      isSameShipment(before.line, line) ||
+      (!isLineReceived(before.line, received) &&
+        isShrunkShipment(before.line, line, before.receivedNos));
+    if (!isAllowed) {
+      return block(
+        received === undefined
+          ? TRANSFER_REASONS.lineInvalid
+          : TRANSFER_REASONS.receivedRowChanged,
+        "Shipped rows can only drop tickets that did not arrive",
+      );
+    }
+  }
+  return null;
+}
+
+/**
  * 一列和它的本相符(規格 8.4 明細):本正常、遊戲相同、批購金額率 0–100 的整數、張數 = 這列的張
  * (整本 = 這本跳號以外的張扣掉待標註 = 標準張數;使用者 10/27 定案甲);
  * 整本要原封不動(從沒拆過、沒有張在別家店),選張要拆過、張號都在這本;金額 = 整本金額或面額 × 張數。
@@ -244,59 +336,6 @@ export class TransferRules {
   /** 租戶的系統身分(反查)。 */
   readerOf(tenantId: Types.ObjectId | null): Promise<OperatorContext> {
     return tenantBoundaryContext(this.orgs, null, tenantId);
-  }
-
-  /**
-   * 已點收的列被改或刪:列不見了、換了本、批購金額不同;和上一次送出的那一列(方式、張數、張號、金額、率)
-   * 不同;整本列的張數不是標準張數(點收紀錄記這本搬走的全部張,含待標註的跳號,所以比標準張數;
-   * 使用者 10/27 定案甲);選張列的張數不是點收紀錄的張數。
-   */
-  private async receivedRowChanged(
-    reader: OperatorContext,
-    submissionId: Types.ObjectId,
-    lines: readonly TransferLineValue[],
-    receipts: readonly {
-      rowId: string;
-      bookId: Types.ObjectId;
-      purchaseAmount: number;
-      tickets: readonly unknown[];
-    }[],
-  ): Promise<boolean> {
-    if (receipts.length === 0) {
-      return false;
-    }
-    const lineOf = new Map(lines.map((line) => [line.rowId, line]));
-    const doc = await this.submissions.findOne(
-      reader,
-      { _id: submissionId },
-      { select: { revisions: { $slice: -1 } } },
-    );
-    const previous = new Map(
-      transferLinesOf(doc?.revisions.at(-1)?.values ?? {}).map((line) => [
-        line.rowId,
-        line,
-      ]),
-    );
-    const books = await this.booksOf(
-      reader,
-      lines.filter((line) => line.mode === TRANSFER_MODE.whole),
-    );
-    return receipts.some((receipt) => {
-      const line = lineOf.get(receipt.rowId);
-      if (
-        line?.bookId !== String(receipt.bookId) ||
-        line.purchaseAmount !== receipt.purchaseAmount
-      ) {
-        return true;
-      }
-      const before = previous.get(receipt.rowId);
-      if (before !== undefined && !isSameShipment(before, line)) {
-        return true;
-      }
-      return line.mode === TRANSFER_MODE.whole
-        ? line.tickets !== books.get(line.bookId)?.standardTickets
-        : line.tickets !== receipt.tickets.length;
-    });
   }
 
   /** 這張單已點收的列。 */
@@ -436,15 +475,16 @@ export class TransferRules {
     return byBook;
   }
 
-  /** 這張單鎖定的張(還沒點收的列)。 */
   /**
-   * 上一次送出的列裡,已出貨、仍在途的(張都在途而且鎖在這張單上):rowId → 上一次的列。
-   * 退回 / 撤回後重送時,這些列保持在途,不再走「在出貨店、原封不動」的送出前檢查。
+   * 上一次送出的列裡,已出貨的(每一張都在途而且鎖在這張單上,或已點收):rowId → 上一次的列與已點收的張號。
+   * 退回 / 撤回後重送時,這些列保持在途,不再走「在出貨店、原封不動」的送出前檢查;選張的列可以移除沒到的張
+   * (`isShrunkShipment`)。
    */
   async shippedLinesOf(
     reader: OperatorContext,
     submissionId: Types.ObjectId,
-  ): Promise<Map<string, TransferLineValue>> {
+    receivedTicketIds: ReadonlySet<string>,
+  ): Promise<Map<string, ShippedLine>> {
     const doc = await this.submissions.findOne(
       reader,
       { _id: submissionId },
@@ -460,10 +500,10 @@ export class TransferRules {
         .filter((ticket) => isInTransit(ticket))
         .map((ticket) => String(ticket._id)),
     );
-    if (inTransit.size === 0) {
+    if (inTransit.size === 0 && receivedTicketIds.size === 0) {
       return new Map();
     }
-    const shipped = new Map<string, TransferLineValue>();
+    const shipped = new Map<string, ShippedLine>();
     const lines = transferLinesOf(last.values);
     const ticketsOf = await this.ticketsOfBooks(
       reader,
@@ -481,11 +521,22 @@ export class TransferRules {
         line,
         ticketsOf.get(String(bookId)) ?? [],
       );
-      if (
+      const isShipped =
         rowTickets.length > 0 &&
-        rowTickets.every((ticket) => inTransit.has(String(ticket._id)))
-      ) {
-        shipped.set(line.rowId, line);
+        rowTickets.every(
+          (ticket) =>
+            inTransit.has(String(ticket._id)) ||
+            receivedTicketIds.has(String(ticket._id)),
+        );
+      if (isShipped) {
+        shipped.set(line.rowId, {
+          line,
+          receivedNos: new Set(
+            rowTickets
+              .filter((ticket) => receivedTicketIds.has(String(ticket._id)))
+              .map((ticket) => ticket.ticketNo),
+          ),
+        });
       }
     }
     return shipped;
@@ -589,30 +640,35 @@ export class TransferRules {
     }
     const reader = await this.readerOf(submission.tenantId);
     const receipts = await this.receiptsOf(reader, submission._id);
-    if (
-      await this.receivedRowChanged(reader, submission._id, lines, receipts)
-    ) {
+    const lineOf = new Map(lines.map((line) => [line.rowId, line]));
+    const receivedOf = receivedByRow(receipts);
+    // 有點收的列不能刪、不能換本
+    const removedReceived = receipts.some(
+      (receipt) => lineOf.get(receipt.rowId)?.bookId !== String(receipt.bookId),
+    );
+    if (removedReceived) {
       return block(
         TRANSFER_REASONS.receivedRowChanged,
         "Received rows cannot be changed or removed",
       );
     }
-    const received = new Set(receipts.map((receipt) => receipt.rowId));
-    // 已出貨、仍在途的列(退回 / 撤回後保持在途,規格 8.4):內容沒改 → 合法,不再檢查「在出貨店、原封不動」;
-    // 改了遊戲 / 本 / 方式 / 張號 → 擋下(在途的張不能換成別的)
-    const shipped = await this.shippedLinesOf(reader, submission._id);
-    const shippedChanged = lines.some((line) => {
-      const before = shipped.get(line.rowId);
-      return before !== undefined && !isSameShipment(before, line);
-    });
-    if (shippedChanged) {
-      return block(
-        TRANSFER_REASONS.lineInvalid,
-        "Shipped rows in transit cannot be changed",
-      );
+    // 已出貨的列(張都在途或已點收;退回 / 撤回後保持在途,規格 8.4):內容沒改 → 合法,不再檢查
+    // 「在出貨店、原封不動」;選張的列只移除沒到的張(已點收的留著)→ 合法,拿掉的張送出後待查;
+    // 其他改法(換遊戲 / 本 / 方式 / 率、加張、拿掉已點收的張)→ 擋下
+    const receivedTicketIds = new Set(
+      [...receivedOf.values()].flatMap((row) => [...row.ticketIds]),
+    );
+    const shipped = await this.shippedLinesOf(
+      reader,
+      submission._id,
+      receivedTicketIds,
+    );
+    const shippedProblem = shippedProblemOf(lines, shipped, receivedOf);
+    if (shippedProblem !== null) {
+      return shippedProblem;
     }
     const pending = lines.filter(
-      (line) => !received.has(line.rowId) && !shipped.has(line.rowId),
+      (line) => !receivedOf.has(line.rowId) && !shipped.has(line.rowId),
     );
     const lineProblem = await this.lineProblemOf(reader, pending, fromId, {
       submissionId: submission._id,
@@ -647,11 +703,14 @@ export class TransferRules {
     }
     const lines = transferLinesOf(submission.values);
     const receipts = await this.receiptsOf(reader, submission._id);
-    const received = new Set(receipts.map((receipt) => receipt.rowId));
-    if (!lines.every((line) => received.has(line.rowId))) {
+    const receivedOf = receivedByRow(receipts);
+    // 每一列的張都要到齊(選張的列逐張點收;少張 → 退回由出貨店移除沒到的張,畫面列出是哪幾張)
+    if (
+      !lines.every((line) => isLineReceived(line, receivedOf.get(line.rowId)))
+    ) {
       return block(
         TRANSFER_REASONS.unreceivedRows,
-        "Some rows are not received",
+        "Some tickets are not received",
       );
     }
     const registration = settlementDocumentOf(TRANSFER_MODULE_KEY);
@@ -774,10 +833,13 @@ export class TransferRules {
       context.submissionId,
       context.session,
     );
-    const received = new Set(receipts.map((receipt) => receipt.rowId));
+    const receivedOf = receivedByRow(receipts);
     const wanted = new Map<string, TransferTicket>();
+    // 全部到齊的列不再鎖;部分點收的列只鎖還沒點收的張(已點收的已是收貨店庫存)
     const pendingLines = transferLinesOf(values).filter(
-      (line) => !received.has(line.rowId) && toObjectId(line.bookId) !== null,
+      (line) =>
+        !isLineReceived(line, receivedOf.get(line.rowId)) &&
+        toObjectId(line.bookId) !== null,
     );
     const ticketsOf = await this.ticketsOfBooks(
       reader,
@@ -789,8 +851,11 @@ export class TransferRules {
     );
     for (const line of pendingLines) {
       const bookTickets = ticketsOf.get(String(toObjectId(line.bookId))) ?? [];
+      const received = receivedOf.get(line.rowId);
       for (const ticket of this.rowTicketsOf(line, bookTickets)) {
-        wanted.set(String(ticket._id), ticket);
+        if (received?.ticketIds.has(String(ticket._id)) !== true) {
+          wanted.set(String(ticket._id), ticket);
+        }
       }
     }
     const locked = await this.lockedTicketsOf(
@@ -1139,14 +1204,24 @@ export class TransferRules {
     const otherReceipts = await this.receipts.findMany(
       reader,
       { submissionId: { $in: others.map((other) => other._id) } },
-      { select: "submissionId rowId" },
+      { select: "submissionId rowId tickets" },
     );
-    const done = new Set(
-      otherReceipts.map((row) => `${String(row.submissionId)}:${row.rowId}`),
+    const receivedOf = receivedByRow(
+      otherReceipts,
+      (row) => `${String(row.submissionId)}:${row.rowId}`,
     );
+    // 別張單還沒到齊的列;部分點收的選張列只看還沒點收的張(已點收的已是收貨店的庫存)
     const otherLines = others.flatMap((other) =>
-      transferLinesOf(other.values as Record<string, unknown>).filter(
-        (line) => !done.has(`${String(other._id)}:${line.rowId}`),
+      transferLinesOf(other.values as Record<string, unknown>).flatMap(
+        (line) => {
+          const received = receivedOf.get(`${String(other._id)}:${line.rowId}`);
+          if (isLineReceived(line, received)) {
+            return [];
+          }
+          return [
+            received === undefined ? line : remainingLineOf(line, received),
+          ];
+        },
       ),
     );
     return lines.some((line) =>

@@ -43,6 +43,7 @@ import type {
   LotteryTransferTicketCellModel,
 } from "./models/transfer.model";
 import { notFoundError } from "./transfer-error";
+import { isLineReceived, receivedByRow } from "./transfer-received";
 import { TransferRules, toObjectId } from "./transfer-rules.service";
 
 /** 讀到的一張(選本 / 格子用)。 */
@@ -267,10 +268,11 @@ export class TransferQueryService {
     const receipts = await this.receipts.findMany(
       reader,
       { submissionId: { $in: submissions.map((row) => row._id) } },
-      { select: "submissionId rowId" },
+      { select: "submissionId rowId tickets" },
     );
-    const received = new Set(
-      receipts.map((row) => `${String(row.submissionId)}:${row.rowId}`),
+    const receivedOf = receivedByRow(
+      receipts,
+      (row) => `${String(row.submissionId)}:${row.rowId}`,
     );
     const transiting = await this.tickets.findMany(
       reader,
@@ -306,8 +308,9 @@ export class TransferQueryService {
         partialTickets: lines
           .filter((line) => line.mode === TRANSFER_MODE.partial)
           .reduce((sum, line) => sum + line.tickets, 0),
+        // 點收進度以本計:一列全部到齊才算 1 本
         receivedCount: lines.filter((line) =>
-          received.has(`${key}:${line.rowId}`),
+          isLineReceived(line, receivedOf.get(`${key}:${line.rowId}`)),
         ).length,
         totalCount: lines.length,
         inTransit: inTransit.has(key),

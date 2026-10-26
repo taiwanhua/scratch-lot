@@ -149,9 +149,15 @@ export class LotteryTransferRowModel {
   @Field(() => Boolean)
   shipped!: boolean;
 
+  /** 這一列全部到齊(已點收張數 = 張數)。 */
   @Field(() => Boolean)
   received!: boolean;
 
+  /** 已點收幾張(整本的列一次整列;選張的列逐張點收,可能只到部分張)。 */
+  @Field(() => Int)
+  receivedTickets!: number;
+
+  /** 最近一次點收的時間;還沒點收 = null。 */
   @Field(() => GraphQLISODateTime, { nullable: true })
   receivedAt!: Date | null;
 
@@ -162,13 +168,24 @@ export class LotteryTransferRowModel {
   @Field(() => GraphQLISODateTime, { nullable: true })
   shippedAt!: Date | null;
 
-  /** 點收批次([完成這次點收] 時給);還沒完成這一次或舊資料 = null。 */
+  /** 點收批次([完成這次點收] 時給;一列分好幾次點收時 = 最近一次);還沒完成這一次或舊資料 = null。 */
   @Field(() => ID, { nullable: true })
   batchId!: string | null;
 
   /** 點收紀錄實際搬進來的張號(3 位,由小到大;調貨點收單照它印號碼);還沒點收 = 空。 */
   @Field(() => [String])
   receivedTicketNos!: string[];
+}
+
+/** 一次點收裡的一列:這一次點收了哪幾張。 */
+@ObjectType("LotteryTransferReceivingBatchRow")
+export class LotteryTransferReceivingBatchRowModel {
+  @Field(() => String)
+  rowId!: string;
+
+  /** 這一次點收的張號(3 位,由小到大)。 */
+  @Field(() => [String])
+  ticketNos!: string[];
 }
 
 /** 一次點收(按一次 [完成這次點收]):調貨點收單照它印、補印照它重排版。 */
@@ -187,6 +204,10 @@ export class LotteryTransferReceivingBatchModel {
   /** 這一次點收的列。 */
   @Field(() => [String])
   rowIds!: string[];
+
+  /** 這一次每一列點收的張(選張的列逐張點收時,一列可能分好幾次)。 */
+  @Field(() => [LotteryTransferReceivingBatchRowModel])
+  rows!: LotteryTransferReceivingBatchRowModel[];
 }
 
 /** 調貨單檢視頁的出貨確認清單與點收區塊(規格 8.4)。 */
@@ -244,11 +265,15 @@ export class CompleteLotteryTransferReceivingInput {
   rowIds!: string[];
 }
 
-/** 點收一本的結果。 */
+/** 點收的結果(刷一張 / 點選格子 / 其餘全部到齊)。 */
 @ObjectType("ReceiveLotteryTransferBookPayload")
 export class ReceiveLotteryTransferBookPayload {
   @Field(() => String)
   rowId!: string;
+
+  /** 這一次點收的張號(整本的列 = 整列;選張的列 = 刷到 / 選到的張)。 */
+  @Field(() => [String])
+  ticketNos!: string[];
 
   @Field(() => LotteryTransferReceivingModel)
   receiving!: LotteryTransferReceivingModel;
@@ -304,4 +329,18 @@ export class ReceiveLotteryTransferBookInput {
    */
   @Field(() => ID, { nullable: true })
   gameId?: string | null;
+}
+
+/** 選張的列在格子上點收(點選格子 [點收選取的 N 張]、[其餘全部到齊…])。 */
+@InputType()
+export class ReceiveLotteryTransferTicketsInput {
+  @Field(() => ID)
+  submissionId!: string;
+
+  @Field(() => String)
+  rowId!: string;
+
+  /** 要點收的張號(3 位;都要在這一列、還沒點收)。 */
+  @Field(() => [String])
+  ticketNos!: string[];
 }

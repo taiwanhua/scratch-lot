@@ -16,6 +16,7 @@ import {
   LotteryTransferTicketCellModel,
   ReceiveLotteryTransferBookInput,
   ReceiveLotteryTransferBookPayload,
+  ReceiveLotteryTransferTicketsInput,
 } from "./models/transfer.model";
 import { notFoundError } from "./transfer-error";
 import { TransferQueryService } from "./transfer-query.service";
@@ -105,6 +106,20 @@ export class TransferResolver {
       input.submissionId,
       input.code,
       input.gameId ?? null,
+    );
+  }
+
+  /** 選張的列在格子上點收(點選格子 / 其餘全部到齊);與刷條碼同一個資格。 */
+  @Mutation(() => ReceiveLotteryTransferBookPayload)
+  receiveLotteryTransferTickets(
+    @Args("input") input: ReceiveLotteryTransferTicketsInput,
+    @CurrentOperator() operator: OperatorContext,
+  ): Promise<ReceiveLotteryTransferBookPayload> {
+    return this.receiving.receiveTickets(
+      operator,
+      input.submissionId,
+      input.rowId,
+      input.ticketNos,
     );
   }
 

@@ -1,10 +1,12 @@
 import { describe, expect, it } from "@jest/globals";
 
 import type { SettlementSideTotals } from "../lottery-accounts/settlement";
+import { purchaseAmountOf } from "./purchase";
 import {
   TRANSFER_FIELD_KEYS as K,
   matchTransferScan,
   parseTicketNos,
+  receivedLineAmountOf,
   receivedTransferAmountOf,
   ticketNosText,
   transferHeaderOf,
@@ -105,9 +107,41 @@ describe("調貨單(規格 8.4)", () => {
       purchaseAmount: 1104,
     });
     expect(transferTotalOf(lines)).toBe(3104);
-    expect(receivedTransferAmountOf(lines, new Set(["r2"]))).toBe(1104);
+    expect(receivedTransferAmountOf(lines, new Map([["r2", 6]]))).toBe(1104);
+    // 部分點收(選張的列逐張點收):面額 × 已點收張數 × 批購金額率,四捨五入到元
+    expect(
+      receivedTransferAmountOf(
+        lines,
+        new Map([
+          ["r1", 100],
+          ["r2", 1],
+        ]),
+      ),
+    ).toBe(2000 + 184);
+    expect(receivedTransferAmountOf(lines, new Map())).toBe(0);
     const partial = lines[1];
     expect(partial && transferUnitCostOf(partial)).toBe(184);
+  });
+
+  it("部分點收的金額 = 縮小後那一列的批購金額(移除沒到的張後結算不差一元)", () => {
+    // 12 張 × 200 元、批購金額率 93%:點收 9 張 → 9 × 200 × 93% = 1,674
+    const line = {
+      mode: "partial" as const,
+      amount: 2400,
+      rate: 93,
+      tickets: 12,
+      purchaseAmount: purchaseAmountOf(2400, 93),
+    };
+    expect(receivedLineAmountOf(line, 9)).toBe(1674);
+    expect(receivedLineAmountOf(line, 12)).toBe(line.purchaseAmount);
+    expect(receivedLineAmountOf(line, 0)).toBe(0);
+    // 縮成 9 張後重算的批購金額相同
+    expect(
+      purchaseAmountOf(
+        transferLineAmountOf("partial", { bookPrice: 0, unitPrice: 200 }, 9),
+        93,
+      ),
+    ).toBe(1674);
   });
 
   it("金額:整本 = 整本金額;選張 = 面額 × 張數", () => {

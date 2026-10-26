@@ -19,7 +19,7 @@ export const TRANSFER_REASONS = {
   receivedRowChanged: "TRANSFER_RECEIVED_ROW_CHANGED",
   /** 叫貨單不是收貨分店的待購買叫貨單:送出擋下 */
   requisitionInvalid: "TRANSFER_REQUISITION_INVALID",
-  /** 還有沒點收的列:核准(點收關卡)擋下 */
+  /** 還有沒點收的張(整本的列沒刷、選張的列沒到齊):核准(點收關卡)擋下 */
   unreceivedRows: "TRANSFER_UNRECEIVED_ROWS",
   /** 核准前:收貨店還沒付夠(收貨店已付 < 調貨金額) */
   receiverUnderpaid: "TRANSFER_RECEIVER_UNDERPAID",
@@ -39,8 +39,10 @@ export const TRANSFER_REASONS = {
   scanInvalid: "TRANSFER_SCAN_INVALID",
   /** 點收:正面的碼對到單上好幾款遊戲同本號、沒選遊戲(`extensions.gameIds` = 對到的遊戲) */
   scanAmbiguousGame: "TRANSFER_SCAN_AMBIGUOUS_GAME",
-  /** 點收:這一列已點收 */
+  /** 點收:這一列 / 這幾張已點收(`extensions.ticketNos` = 已點收的張號,選張的列) */
   alreadyReceived: "TRANSFER_ALREADY_RECEIVED",
+  /** 點收:整本的列不能在格子上逐張點收(刷一張 = 整列) */
+  wholeRowTickets: "TRANSFER_WHOLE_ROW_TICKETS",
   /** 點收:這列還沒出貨(第一關還沒通過) */
   notShipped: "TRANSFER_NOT_SHIPPED",
   /** 點收:這本屬於送往別家分店的調貨單(送錯分店) */

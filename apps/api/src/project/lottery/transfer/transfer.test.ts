@@ -55,6 +55,7 @@ import {
   insertRequisition,
   seedInventoryModule,
 } from "../purchase/test-support/purchase-fixtures";
+import { ReportStock } from "../reports/report-stock";
 import { inTransitBooksOf } from "../requisition/in-transit";
 import { LotteryBooksService } from "../tickets/books.service";
 import { TicketLedgerService } from "../tickets/ticket-ledger.service";
@@ -65,6 +66,7 @@ import {
   seedTransferAuthorization,
   transferDefinition,
 } from "./test-support/transfer-fixtures";
+import { TransferRules } from "./transfer-rules.service";
 
 jest.setTimeout(WORKFLOW_TEST_TIMEOUT_MS);
 
@@ -95,6 +97,33 @@ const RECEIVE = /* GraphQL */ `
   }
 `;
 
+const RECEIVE_TICKETS = /* GraphQL */ `
+  mutation TestTransferReceiveTickets(
+    $input: ReceiveLotteryTransferTicketsInput!
+  ) {
+    receiveLotteryTransferTickets(input: $input) {
+      rowId
+      ticketNos
+    }
+  }
+`;
+
+const COMPLETE_WITH_ROWS = /* GraphQL */ `
+  mutation TestTransferCompleteRows(
+    $input: CompleteLotteryTransferReceivingInput!
+  ) {
+    completeLotteryTransferReceiving(input: $input) {
+      batch {
+        rowIds
+        rows {
+          rowId
+          ticketNos
+        }
+      }
+    }
+  }
+`;
+
 const RECEIVING = /* GraphQL */ `
   query TestTransferReceiving($id: ID!) {
     lotteryTransferReceiving(submissionId: $id) {
@@ -110,6 +139,7 @@ const RECEIVING = /* GraphQL */ `
         ticketNos
         shipped
         received
+        receivedTickets
         shippedAt
         receivedTicketNos
       }
@@ -563,6 +593,80 @@ describe("調貨單(規格 8.4、第 9 章)", () => {
       input: { submissionId, code, ...(gameId === null ? {} : { gameId }) },
     });
     return result.errors ? extensionsOf(result) : {};
+  }
+
+  /** 選張的列在格子上點收(點選格子 / 其餘全部到齊)。 */
+  async function receiveTickets(
+    who: Person,
+    submissionId: string,
+    rowId: string,
+    ticketNos: string[],
+  ): Promise<Record<string, unknown>> {
+    const result = await call(api, who.token, RECEIVE_TICKETS, {
+      input: { submissionId, rowId, ticketNos },
+    });
+    return result.errors ? extensionsOf(result) : {};
+  }
+
+  async function receivingOf(who: Person, id: string) {
+    const data = await ok<{
+      lotteryTransferReceiving: {
+        receivedCount: number;
+        totalCount: number;
+        transferAmount: number;
+        rows: {
+          rowId: string;
+          ticketNos: string[];
+          received: boolean;
+          receivedTickets: number;
+          receivedTicketNos: string[];
+        }[];
+      };
+    }>(api, who.token, RECEIVING, { id });
+    return data.lotteryTransferReceiving;
+  }
+
+  /** 退回後(總部)改明細再送出;擋下回 reason。 */
+  async function resubmit(id: string, lines: Line[]): Promise<string | null> {
+    const row = await current(id);
+    const saved = await call<{
+      saveFormDraft: { submission: { editVersion: number } };
+    }>(api, hq.token, SAVE_SUBMISSION, {
+      input: {
+        id,
+        expectedEditVersion: row.editVersion,
+        values: { ...header(), lines },
+      },
+    });
+    const result = await call(api, hq.token, SUBMIT_SUBMISSION, {
+      input: {
+        id,
+        expectedEditVersion: saved.data?.saveFormDraft.submission.editVersion,
+      },
+    });
+    return result.errors ? reasonOf(extensionsOf(result)) : null;
+  }
+
+  /** 這本在某家店的庫存(未售、在庫存)張數。 */
+  async function stockOf(
+    bookId: Types.ObjectId,
+    orgId: Types.ObjectId,
+  ): Promise<number> {
+    const tickets = await ticketsOf(bookId);
+    return tickets.filter(
+      (ticket) =>
+        ticket.orgId.equals(orgId) &&
+        ticket.status === "unsold" &&
+        ticket.location.kind === "stock",
+    ).length;
+  }
+
+  /** 搬進收貨店(新竹店)的張號。 */
+  async function movedNos(bookId: Types.ObjectId): Promise<string[]> {
+    const tickets = await ticketsOf(bookId);
+    return tickets
+      .filter((ticket) => ticket.orgId.equals(branchB))
+      .map((ticket) => ticket.ticketNo);
   }
 
   async function decideBlocked(
@@ -1205,7 +1309,7 @@ describe("調貨單(規格 8.4、第 9 章)", () => {
       expect(picked.receiveLotteryTransferBook.rowId).toBe(secondLine.rowId);
     });
 
-    it("改為收貨店庫存 + 「調入」事件,單張成本 = 該列批購金額 ÷ 張數;選張只搬選的張", async () => {
+    it("改為收貨店庫存 + 「調入」事件,單張成本 = 該列批購金額 ÷ 張數;選張的列逐張點收(刷一張 / 選格子 / 其餘全部到齊)", async () => {
       const opened = await newBook(branchA);
       await openBook(branchA, opened.bookId);
       const id = await submit(hq, [partial(opened.bookId, 12, 16)]);
@@ -1217,9 +1321,42 @@ describe("調貨單(規格 8.4、第 9 章)", () => {
       expect(
         await receive(managerB, id, codeOf(opened.bookNo, 50)),
       ).toMatchObject({ reason: "TRANSFER_BOOK_NOT_ON_TRANSFER" });
+      // 刷一張:選張的列只點收刷到的那一張
       expect(await receive(managerB, id, codeOf(opened.bookNo, 13))).toEqual(
         {},
       );
+      expect(await movedNos(opened.bookId)).toEqual(["013"]);
+      const partly = await receivingOf(managerB, id);
+      expect(partly.receivedCount).toBe(0);
+      expect(partly.rows[0]).toMatchObject({
+        received: false,
+        receivedTickets: 1,
+        receivedTicketNos: ["013"],
+      });
+      // 同一張再刷 → 這張已經點收
+      expect(
+        await receive(managerB, id, codeOf(opened.bookNo, 13)),
+      ).toMatchObject({
+        reason: "TRANSFER_ALREADY_RECEIVED",
+        ticketNos: ["013"],
+      });
+      const rowId = String(partly.rows[0]?.rowId);
+      // 點選格子 [點收選取的 N 張]:已點收的不能再選
+      expect(
+        await receiveTickets(managerB, id, rowId, ["012", "013"]),
+      ).toMatchObject({
+        reason: "TRANSFER_ALREADY_RECEIVED",
+        ticketNos: ["013"],
+      });
+      // 不在這一列的張
+      expect(await receiveTickets(managerB, id, rowId, ["050"])).toMatchObject({
+        reason: "TRANSFER_BOOK_NOT_ON_TRANSFER",
+      });
+      expect(await receiveTickets(managerB, id, rowId, ["012"])).toEqual({});
+      // [其餘全部到齊…]:剩下的 3 張一次點收(不限先刷過一張)
+      expect(
+        await receiveTickets(managerB, id, rowId, ["014", "015", "016"]),
+      ).toEqual({});
       const tickets = await ticketsOf(opened.bookId);
       const moved = tickets.filter((ticket) => ticket.orgId.equals(branchB));
       expect(moved.map((ticket) => ticket.ticketNo)).toEqual([
@@ -1229,6 +1366,15 @@ describe("調貨單(規格 8.4、第 9 章)", () => {
         "015",
         "016",
       ]);
+      // 三次點收 = 三筆點收紀錄;批購金額合計 = 這一列的批購金額(5 張 × 20 × 92% = 92)
+      const rows = await db()
+        .collection<{ purchaseAmount: number; tickets: unknown[] }>(
+          "lottery_transfer_receipts",
+        )
+        .find({ submissionId: new Types.ObjectId(id) })
+        .toArray();
+      expect(rows.map((row) => row.tickets.length)).toEqual([1, 1, 3]);
+      expect(rows.reduce((sum, row) => sum + row.purchaseAmount, 0)).toBe(92);
       // 5 張 × 20 × 92% = 92 → 單張 18.4
       expect(
         moved.every((ticket) => Math.abs(ticket.unitCost - 18.4) < 1e-9),
@@ -1695,6 +1841,255 @@ describe("調貨單(規格 8.4、第 9 章)", () => {
         reason: "SETTLEMENT_NOTHING_DUE",
       });
       expect(await decideBlocked(managerB, id, "APPROVE")).toBeNull();
+    });
+  });
+
+  describe("少張處理(選張的列逐張點收,使用者 10/26 定案做法 A)", () => {
+    it("調 12 張只到 9 張:核准擋下 → 退回 → 出貨店移除沒到的 3 張(待查、金額重算)→ 重送 → 核准;兩店庫存、結算、報表調入 / 調出", async () => {
+      const opened = await newBook(branchA);
+      await openBook(branchA, opened.bookId);
+      // 045–056 共 12 張 × 20 元 × 92% = 220.8 → 批購金額 221
+      const line = partial(opened.bookId, 45, 56);
+      const id = await submit(hq, [line]);
+      await ship(id);
+      expect(await numbersOf(id)).toEqual({
+        amount: 221,
+        paid: 0,
+        received: 0,
+      });
+      // 報表期間從這裡起(只算這張單的點收)
+      const startedAt = new Date();
+      // 點收 9 張:刷 1 張、選格子 8 張
+      expect(await receive(managerB, id, codeOf(opened.bookNo, 45))).toEqual(
+        {},
+      );
+      expect(
+        await receiveTickets(managerB, id, line.rowId, [
+          "046",
+          "047",
+          "048",
+          "049",
+          "050",
+          "051",
+          "052",
+          "053",
+        ]),
+      ).toEqual({});
+      const partly = await receivingOf(managerB, id);
+      expect(partly.rows[0]).toMatchObject({
+        received: false,
+        receivedTickets: 9,
+      });
+      expect(partly.receivedCount).toBe(0);
+      // 部分點收:收貨店 [付款] 先填 = 9 張 × 20 × 92% = 165.6 → 166
+      expect(await buttonsOf(id)).toMatchObject({ pay: 166 });
+      // 還有 3 張沒點收 → 核准擋下
+      expect(await decideBlocked(managerB, id, "APPROVE")).toBe(
+        "TRANSFER_UNRECEIVED_ROWS",
+      );
+      // 在途:沒到齊的列還算收貨店的在途本數(到齊後少 1)
+      const transitPartly = await inTransitBooksOf({
+        tenantId: tenant,
+        orgId: branchB,
+      });
+      const inTransitPartly = transitPartly.get(String(game)) ?? 0;
+
+      await decideOn(world(), managerB, id, "RETURN");
+      // 拿掉已點收的張 → 擋下;加張 → 擋下
+      expect(
+        await resubmit(id, [
+          { ...line, ticket_nos: "046-053", tickets: 8, amount: 160 },
+        ]),
+      ).toBe("TRANSFER_RECEIVED_ROW_CHANGED");
+      expect(
+        await resubmit(id, [
+          { ...line, ticket_nos: "045-057", tickets: 13, amount: 260 },
+        ]),
+      ).toBe("TRANSFER_RECEIVED_ROW_CHANGED");
+      // 出貨店取消勾選沒到的 054–056 → 重送
+      expect(
+        await resubmit(id, [
+          { ...line, ticket_nos: "045-053", tickets: 9, amount: 180 },
+        ]),
+      ).toBeNull();
+      const tickets = await ticketsOf(opened.bookId);
+      const missing = tickets.filter((ticket) =>
+        ["054", "055", "056"].includes(ticket.ticketNo),
+      );
+      expect(
+        missing.map((ticket) => [
+          ticket.status,
+          String(ticket.orgId),
+          String(ticket.responsibleOrgId),
+          ticket.lockedBy,
+        ]),
+      ).toEqual(
+        Array.from({ length: 3 }, () => [
+          "investigating",
+          String(branchA),
+          String(branchA),
+          null,
+        ]),
+      );
+      // 已點收的 9 張不受影響(仍是收貨店庫存、沒有被鎖)
+      expect(await stockOf(opened.bookId, branchB)).toBe(9);
+      await ship(id);
+      // 這一列全部到齊;調貨金額照剩下的 9 張重算 = 已點收金額
+      const after = await receivingOf(managerB, id);
+      expect(after.rows[0]).toMatchObject({
+        received: true,
+        receivedTickets: 9,
+        ticketNos: [
+          "045",
+          "046",
+          "047",
+          "048",
+          "049",
+          "050",
+          "051",
+          "052",
+          "053",
+        ],
+      });
+      expect(after.receivedCount).toBe(1);
+      const transitAfter = await inTransitBooksOf({
+        tenantId: tenant,
+        orgId: branchB,
+      });
+      expect(transitAfter.get(String(game)) ?? 0).toBe(inTransitPartly - 1);
+      expect(await numbersOf(id)).toEqual({
+        amount: 166,
+        paid: 0,
+        received: 0,
+      });
+      expect(await buttonsOf(id)).toMatchObject({ pay: 166 });
+      await settle(id, 166);
+      expect(await decideBlocked(managerB, id, "APPROVE")).toBeNull();
+      const done = await current(id);
+      expect(done.status).toBe("completed");
+
+      // 兩店庫存:出貨店這本 100 − 檯面 10 − 調走 9 − 待查 3 = 78;收貨店 9
+      expect(await stockOf(opened.bookId, branchA)).toBe(78);
+      expect(await stockOf(opened.bookId, branchB)).toBe(9);
+      // 報表的調入 / 調出(依點收紀錄;調入金額 = 調貨金額)
+      const reader = await api.app.get(TransferRules).readerOf(tenant);
+      const until = new Date(Date.now() + 60_000);
+      const stock = api.app.get(ReportStock);
+      const ofB = await stock.transfersOf(reader, branchB, startedAt, until);
+      const ofA = await stock.transfersOf(reader, branchA, startedAt, until);
+      expect(ofB).toMatchObject({ inTickets: 9, inAmount: 166 });
+      // 出貨店原成本 9 × 20 = 180
+      expect(ofA).toMatchObject({
+        outTickets: 9,
+        outAmount: 166,
+        outCost: 180,
+      });
+      // 收貨店這 9 張的單張成本 = 點收時那一列的批購金額 ÷ 張數(221 ÷ 12,保留點收時的值)
+      const finalTickets = await ticketsOf(opened.bookId);
+      const moved = finalTickets.filter((ticket) =>
+        ticket.orgId.equals(branchB),
+      );
+      expect(
+        Math.abs(
+          moved.reduce((sum, ticket) => sum + ticket.unitCost, 0) - 165.75,
+        ),
+      ).toBeLessThan(1e-9);
+    });
+
+    it("在途的選張列(還沒點收任何一張)也能只移除沒到的張;整本的列不能縮", async () => {
+      const opened = await newBook(branchA);
+      await openBook(branchA, opened.bookId);
+      const book = await newBook(branchA);
+      const partLine = partial(opened.bookId, 20, 24);
+      const wholeLine = whole(book.bookId);
+      const id = await submit(hq, [partLine, wholeLine]);
+      await ship(id);
+      await decideOn(world(), managerB, id, "RETURN");
+      // 整本的列改成選張 → 擋下(在途的整本只能整列刪)
+      expect(
+        await resubmit(id, [
+          partLine,
+          {
+            ...wholeLine,
+            mode: "partial",
+            ticket_nos: "001-050",
+            tickets: 50,
+            amount: 1000,
+          },
+        ]),
+      ).toBe("TRANSFER_LINE_INVALID");
+      expect(
+        await resubmit(id, [
+          { ...partLine, ticket_nos: "020-022", tickets: 3, amount: 60 },
+          wholeLine,
+        ]),
+      ).toBeNull();
+      const tickets = await ticketsOf(opened.bookId);
+      expect(
+        tickets
+          .filter((ticket) => ticket.status === "investigating")
+          .map((ticket) => ticket.ticketNo),
+      ).toEqual(["023", "024"]);
+    });
+
+    it("[完成這次點收] 的點收批次帶這一次每一列點收的張", async () => {
+      const opened = await newBook(branchA);
+      await openBook(branchA, opened.bookId);
+      const line = partial(opened.bookId, 30, 33);
+      const id = await submit(hq, [line]);
+      await ship(id);
+      expect(
+        await receiveTickets(managerB, id, line.rowId, ["030", "031"]),
+      ).toEqual({});
+      expect(await receive(managerB, id, codeOf(opened.bookNo, 32))).toEqual(
+        {},
+      );
+      const first = await ok<{
+        completeLotteryTransferReceiving: {
+          batch: {
+            rowIds: string[];
+            rows: { rowId: string; ticketNos: string[] }[];
+          } | null;
+        };
+      }>(api, managerB.token, COMPLETE_WITH_ROWS, {
+        input: { submissionId: id, rowIds: [line.rowId] },
+      });
+      expect(first.completeLotteryTransferReceiving.batch).toEqual({
+        rowIds: [line.rowId],
+        rows: [{ rowId: line.rowId, ticketNos: ["030", "031", "032"] }],
+      });
+      expect(await receiveTickets(managerB, id, line.rowId, ["033"])).toEqual(
+        {},
+      );
+      const second = await ok<{
+        completeLotteryTransferReceiving: {
+          batch: {
+            rowIds: string[];
+            rows: { rowId: string; ticketNos: string[] }[];
+          } | null;
+        };
+      }>(api, managerB.token, COMPLETE_WITH_ROWS, {
+        input: { submissionId: id, rowIds: [line.rowId] },
+      });
+      expect(second.completeLotteryTransferReceiving.batch).toEqual({
+        rowIds: [line.rowId],
+        rows: [{ rowId: line.rowId, ticketNos: ["033"] }],
+      });
+    });
+
+    it("整本的列不能在格子上逐張點收(刷一張 = 整列)", async () => {
+      const book = await newBook(branchA);
+      const line = whole(book.bookId);
+      const id = await submit(hq, [line]);
+      await ship(id);
+      expect(
+        await receiveTickets(managerB, id, line.rowId, ["001"]),
+      ).toMatchObject({ reason: "TRANSFER_WHOLE_ROW_TICKETS" });
+      expect(await receive(managerB, id, codeOf(book.bookNo, 7))).toEqual({});
+      expect(await stockOf(book.bookId, branchB)).toBe(100);
+      expect(await receive(managerB, id, codeOf(book.bookNo, 8))).toMatchObject(
+        { reason: "TRANSFER_ALREADY_RECEIVED" },
+      );
     });
   });
 

@@ -37,6 +37,11 @@ import {
   registerSettlementDocument,
 } from "../settlement/settlement-registry";
 import {
+  isLineReceived,
+  receivedByRow,
+  receivedCountOf,
+} from "./transfer-received";
+import {
   TRANSFER_LIVE_STATUSES,
   TRANSFER_OPEN_STATUSES,
   labelOf,
@@ -190,9 +195,14 @@ export class TransferRegistrations implements OnModuleInit, OnModuleDestroy {
         submissionId: submission._id,
         ...(asOf === undefined ? {} : { receivedAt: { $lt: asOf } }),
       },
-      { select: "rowId" },
+      { select: "rowId tickets" },
     );
-    const received = new Set(receipts.map((receipt) => receipt.rowId));
+    // 每一列已點收幾張(選張的列逐張點收;部分點收的列照已點收張數算)
+    const received = new Map(
+      [...receivedByRow(receipts).entries()].map(
+        ([rowId, row]) => [rowId, receivedCountOf(row)] as const,
+      ),
+    );
     return {
       amount: transferTotalOf(lines),
       received: receivedTransferAmountOf(lines, received),
@@ -202,7 +212,7 @@ export class TransferRegistrations implements OnModuleInit, OnModuleDestroy {
     };
   }
 
-  /** 送到這家店、已建立還沒點收的列:每個遊戲幾本(一列一本)。 */
+  /** 送到這家店、已建立還沒點收完的列:每個遊戲幾本(一列一本)。 */
   private async inTransitOf(
     tenantId: Types.ObjectId,
     orgId: Types.ObjectId,
@@ -224,17 +234,22 @@ export class TransferRegistrations implements OnModuleInit, OnModuleDestroy {
     const received = await this.receipts.findMany(
       reader,
       { submissionId: { $in: open.map((submission) => submission._id) } },
-      { select: "submissionId rowId" },
+      { select: "submissionId rowId tickets" },
     );
-    const done = new Set(
-      received.map((row) => `${String(row.submissionId)}:${row.rowId}`),
+    const receivedOf = receivedByRow(
+      received,
+      (row) => `${String(row.submissionId)}:${row.rowId}`,
     );
     const books = new Map<string, number>();
     for (const submission of open) {
       for (const line of transferLinesOf(submission.values)) {
+        // 還沒到齊的列都算在途(部分點收的選張列也算,到齊才不算)
         if (
           line.gameId !== null &&
-          !done.has(`${String(submission._id)}:${line.rowId}`)
+          !isLineReceived(
+            line,
+            receivedOf.get(`${String(submission._id)}:${line.rowId}`),
+          )
         ) {
           books.set(line.gameId, (books.get(line.gameId) ?? 0) + 1);
         }

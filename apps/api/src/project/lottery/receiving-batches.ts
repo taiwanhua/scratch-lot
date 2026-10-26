@@ -31,7 +31,10 @@ export function receivingBatchesOf(
       completedAt: receipt.batchedAt ?? new Date(0),
       rowIds: [],
     };
-    batch.rowIds.push(receipt.rowId);
+    // 一列在同一次點收可以有好幾筆紀錄(調貨選張的列逐張點收):列只記一次
+    if (!batch.rowIds.includes(receipt.rowId)) {
+      batch.rowIds.push(receipt.rowId);
+    }
     batches.set(key, batch);
   }
   return [...batches.entries()]

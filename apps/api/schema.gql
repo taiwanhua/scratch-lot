@@ -3552,6 +3552,12 @@ type LotteryTransferReceivingBatch {
   completedAt: DateTime!
   no: Int!
   rowIds: [String!]!
+  rows: [LotteryTransferReceivingBatchRow!]!
+}
+
+type LotteryTransferReceivingBatchRow {
+  rowId: String!
+  ticketNos: [String!]!
 }
 
 type LotteryTransferRequisition {
@@ -3573,6 +3579,7 @@ type LotteryTransferRow {
   received: Boolean!
   receivedAt: DateTime
   receivedTicketNos: [String!]!
+  receivedTickets: Int!
   rowId: String!
   shipped: Boolean!
   shippedAt: DateTime
@@ -3837,6 +3844,7 @@ type Mutation {
   recallLotteryTickets(input: RecallLotteryTicketsInput!): LotteryStoreCounterPayload!
   receiveLotteryPurchaseBook(input: ReceiveLotteryPurchaseBookInput!): ReceiveLotteryPurchaseBookPayload!
   receiveLotteryTransferBook(input: ReceiveLotteryTransferBookInput!): ReceiveLotteryTransferBookPayload!
+  receiveLotteryTransferTickets(input: ReceiveLotteryTransferTicketsInput!): ReceiveLotteryTransferBookPayload!
   recordLotteryBankTransaction(input: RecordLotteryBankTransactionInput!): LotteryBankTransactionPayload!
   recordLotterySettlement(input: RecordLotterySettlementInput!): RecordLotterySettlementPayload!
   recoverLotteryTickets(input: RecoverLotteryTicketsInput!): LotteryInventoryActionPayload!
@@ -4805,6 +4813,13 @@ input ReceiveLotteryTransferBookInput {
 type ReceiveLotteryTransferBookPayload {
   receiving: LotteryTransferReceiving!
   rowId: String!
+  ticketNos: [String!]!
+}
+
+input ReceiveLotteryTransferTicketsInput {
+  rowId: String!
+  submissionId: ID!
+  ticketNos: [String!]!
 }
 
 input RecordLotteryBankTransactionInput {

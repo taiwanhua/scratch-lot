@@ -13,6 +13,7 @@ import {
   type TransferScan,
   displayBookNo,
   matchTransferScan,
+  receivedLineAmountOf,
   transferHeaderOf,
   transferLinesOf,
   transferScanOf,
@@ -50,7 +51,13 @@ import {
   validationError,
 } from "./transfer-error";
 import {
+  isLineReceived,
+  receivedByRow,
+  receivedCountOf,
+} from "./transfer-received";
+import {
   TRANSFER_OPEN_STATUSES,
+  type TransferBook,
   type TransferGame,
   TransferRules,
   labelOf,
@@ -58,22 +65,36 @@ import {
   transferLockOf,
 } from "./transfer-rules.service";
 
-function alreadyReceivedError(rowId: string | null) {
+function alreadyReceivedError(
+  rowId: string | null,
+  ticketNos: readonly string[] = [],
+) {
   return validationError(
-    "Row is already received",
+    "Already received",
     ["code"],
     TRANSFER_REASONS.alreadyReceived,
-    rowId === null ? {} : { rowId },
+    {
+      ...(rowId === null ? {} : { rowId }),
+      ...(ticketNos.length === 0 ? {} : { ticketNos: [...ticketNos] }),
+    },
   );
+}
+
+/** 這一次要點收的:那一列,與張號(整本的列 = null,整列)。 */
+interface ReceivePick {
+  line: TransferLineValue;
+  ticketNos: string[] | null;
 }
 
 /**
  * 調貨點收(專案規格 8.4「點收一本」、送錯分店同進貨單;正本 `docs/modules/project/purchasing.md`「調貨單」):
  *
  * - `receivingOf`:檢視頁的出貨確認清單與點收區塊(每一列出貨了沒、點收了沒)
- * - `receive`:刷這列的任何一張 → 這列的張改成收貨店庫存、寫「調入」事件(單張成本 = 該列批購金額 ÷ 張數)、
- *   解除鎖定、寫 `lottery_transfer_receipts`,同一個交易。單據要在審核中、點收關卡的任務在操作者手上;
- *   這列還沒出貨 → 擋下;單上沒有 → 查是不是送往別家店的調貨單(送錯分店:擋下、不入庫)
+ * - `receive`:刷一張 → 整本的列:這列的張全部;選張的列:**只有刷到的那一張**(逐張點收,使用者 10/26 定案)
+ *   改成收貨店庫存、寫「調入」事件(單張成本 = 該列批購金額 ÷ 張數)、解除鎖定、寫一筆 `lottery_transfer_receipts`,
+ *   同一個交易。單據要在審核中、點收關卡的任務在操作者手上;這列還沒出貨 → 擋下;同一張再刷 → 「已點收」;
+ *   單上沒有 → 查是不是送往別家店的調貨單(送錯分店:擋下、不入庫)
+ * - `receiveTickets`:選張的列在格子上點收(點選格子 [點收選取的 N 張]、[其餘全部到齊…]),寫法同上、一次一筆
  * - `complete`:[完成這次點收] → 「這一次」點收的列標上同一個點收批次(`batchId`;同進貨點收);
  *   「這一次」由畫面記(上次完成或打開頁面之後點收的列),已在別的批次的列不重收。調貨點收單照批次印
  */
@@ -140,14 +161,56 @@ export class TransferReceivingService {
     gameId: string | null = null,
   ): Promise<ReceiveLotteryTransferBookPayload> {
     const submission = await this.access.readable(operator, submissionIdText);
-    const rowId = await this.receiveInTransaction(
+    const received = await this.receiveInTransaction(
       operator,
       submission,
-      code,
-      gameId,
+      (lines, books) => this.pickByScan(submission, lines, books, code, gameId),
     );
     return {
-      rowId,
+      ...received,
+      receiving: await this.toModel(
+        operator,
+        await this.access.readable(operator, submissionIdText),
+      ),
+    };
+  }
+
+  /** 選張的列在格子上點收(點選格子 / 其餘全部到齊):張號都要在這一列;整本的列只能刷一張整列點收。 */
+  async receiveTickets(
+    operator: OperatorContext,
+    submissionIdText: string,
+    rowId: string,
+    ticketNos: readonly string[],
+  ): Promise<ReceiveLotteryTransferBookPayload> {
+    const submission = await this.access.readable(operator, submissionIdText);
+    const received = await this.receiveInTransaction(
+      operator,
+      submission,
+      (lines) => {
+        const line = lines.find((item) => item.rowId === rowId);
+        const wanted = [...new Set(ticketNos)];
+        if (line === undefined) {
+          throw this.notOnTransferError();
+        }
+        if (line.mode !== TRANSFER_MODE.partial) {
+          throw validationError(
+            "Whole rows are received by scanning one ticket",
+            ["rowId"],
+            TRANSFER_REASONS.wholeRowTickets,
+          );
+        }
+        const onLine = new Set(line.ticketNos);
+        if (wanted.length === 0) {
+          throw validationError("No tickets", ["ticketNos"]);
+        }
+        if (!wanted.every((no) => onLine.has(no))) {
+          throw this.notOnTransferError();
+        }
+        return Promise.resolve({ line, ticketNos: wanted });
+      },
+    );
+    return {
+      ...received,
       receiving: await this.toModel(
         operator,
         await this.access.readable(operator, submissionIdText),
@@ -202,13 +265,70 @@ export class TransferReceivingService {
     };
   }
 
-  /** 點收一列的交易;同一列同時刷兩次:後到的是「已點收」(撞唯一索引也一樣)。 */
+  /** 刷到的碼 → 這一次要點收的:整本的列 = 整列;選張的列 = 刷到的那一張。 */
+  private async pickByScan(
+    submission: TransferSubmission,
+    lines: readonly TransferLineValue[],
+    books: ReadonlyMap<string, TransferBook>,
+    code: string,
+    gameId: string | null,
+  ): Promise<ReceivePick> {
+    const scan = transferScanOf(code);
+    if (scan === null) {
+      throw validationError(
+        "Unknown code",
+        ["code"],
+        TRANSFER_REASONS.scanInvalid,
+      );
+    }
+    const matched = matchTransferScan(
+      lines,
+      (bookId) => {
+        const book = books.get(bookId);
+        return book === undefined
+          ? undefined
+          : {
+              gameId: String(book.gameId),
+              gameCode: book.gameCode,
+              bookNo: book.bookNo,
+            };
+      },
+      scan,
+      gameId,
+    );
+    if (matched.kind === "ambiguous_game") {
+      throw validationError(
+        "Several games on this transfer share the book number; scan the back code or pick a game",
+        ["code"],
+        TRANSFER_REASONS.scanAmbiguousGame,
+        { gameIds: matched.gameIds },
+      );
+    }
+    if (matched.kind === "ticket_not_on_transfer") {
+      throw this.notOnTransferError();
+    }
+    if (matched.kind === "not_on_transfer") {
+      throw await this.notOnTransferOrWrongStore(submission, scan);
+    }
+    const { line } = matched;
+    return {
+      line,
+      ticketNos: line.mode === TRANSFER_MODE.whole ? null : [scan.ticketNo],
+    };
+  }
+
+  /**
+   * 點收的交易(刷一張 / 點選格子 / 其餘全部到齊共用):`pick` 決定這一次點收哪一列、哪幾張;
+   * 整本的列點收過、或選到的張已點收 → 「已點收」(同一張同時刷兩次:後到的寫不到,也是「已點收」)。
+   */
   private async receiveInTransaction(
     operator: OperatorContext,
     submission: TransferSubmission,
-    code: string,
-    gameId: string | null,
-  ): Promise<string> {
+    pick: (
+      lines: readonly TransferLineValue[],
+      books: ReadonlyMap<string, TransferBook>,
+    ) => Promise<ReceivePick>,
+  ): Promise<{ rowId: string; ticketNos: string[] }> {
     try {
       return await this.tx.withTransaction(async (session) => {
         if (!(await this.access.canReceive(operator, submission))) {
@@ -217,57 +337,34 @@ export class TransferReceivingService {
             TRANSFER_REASONS.notReceivable,
           );
         }
-        const scan = transferScanOf(code);
-        if (scan === null) {
-          throw validationError(
-            "Unknown code",
-            ["code"],
-            TRANSFER_REASONS.scanInvalid,
-          );
-        }
         const reader = await this.rules.readerOf(submission.tenantId);
         const lines = transferLinesOf(submission.values);
         const books = await this.rules.booksOf(reader, lines);
-        const matched = matchTransferScan(
-          lines,
-          (bookId) => {
-            const book = books.get(bookId);
-            return book === undefined
-              ? undefined
-              : {
-                  gameId: String(book.gameId),
-                  gameCode: book.gameCode,
-                  bookNo: book.bookNo,
-                };
-          },
-          scan,
-          gameId,
-        );
-        if (matched.kind === "ambiguous_game") {
-          throw validationError(
-            "Several games on this transfer share the book number; scan the back code or pick a game",
-            ["code"],
-            TRANSFER_REASONS.scanAmbiguousGame,
-            { gameIds: matched.gameIds },
-          );
-        }
-        if (matched.kind === "ticket_not_on_transfer") {
-          throw this.notOnTransferError();
-        }
-        if (matched.kind === "not_on_transfer") {
-          throw await this.notOnTransferOrWrongStore(submission, scan);
-        }
-        const { line } = matched;
+        const { line, ticketNos } = await pick(lines, books);
         const receipts = await this.rules.receiptsOf(
           reader,
           submission._id,
           session,
         );
-        if (receipts.some((receipt) => receipt.rowId === line.rowId)) {
-          throw alreadyReceivedError(line.rowId);
+        const received = receivedByRow(receipts).get(line.rowId);
+        if (isLineReceived(line, received)) {
+          throw alreadyReceivedError(line.rowId, ticketNos ?? []);
         }
-        await this.receiveRow(operator, session, submission, line);
-        return line.rowId;
+        const already = (ticketNos ?? []).filter(
+          (no) => received?.ticketNos.has(no) === true,
+        );
+        if (already.length > 0) {
+          throw alreadyReceivedError(line.rowId, already);
+        }
+        const moved = await this.receiveRow(
+          operator,
+          session,
+          submission,
+          line,
+          ticketNos,
+          receivedCountOf(received),
+        );
+        return { rowId: line.rowId, ticketNos: moved };
       });
     } catch (error) {
       if (isDuplicateKeyError(error)) {
@@ -277,13 +374,18 @@ export class TransferReceivingService {
     }
   }
 
-  /** 點收一列:在途的張 → 收貨店庫存(調入)、解除鎖定、寫點收紀錄。 */
+  /**
+   * 點收一列的張(`ticketNos` = null → 整列):在途的張 → 收貨店庫存(調入)、解除鎖定、寫一筆點收紀錄
+   * (這一次的張與它們的批購金額 = 點收後 − 點收前的已點收金額)。回這一次搬進來的張號。
+   */
   private async receiveRow(
     operator: OperatorContext,
     session: ClientSession,
     submission: TransferSubmission,
     line: TransferLineValue,
-  ): Promise<void> {
+    ticketNos: readonly string[] | null,
+    receivedBefore: number,
+  ): Promise<string[]> {
     const tenantId = submission.tenantId;
     const header = transferHeaderOf(submission.values);
     const toId = toObjectId(header.toBranchId);
@@ -299,7 +401,7 @@ export class TransferReceivingService {
     }
     const reader = await this.rules.readerOf(tenantId);
     const lock = transferLockOf(submission._id);
-    const wanted = new Set(line.ticketNos);
+    const wanted = new Set(ticketNos ?? line.ticketNos);
     const locked = await this.rules.lockedTicketsOf(
       reader,
       submission._id,
@@ -312,6 +414,7 @@ export class TransferReceivingService {
     );
     const isShipped =
       tickets.length > 0 &&
+      (ticketNos === null || tickets.length === wanted.size) &&
       tickets.every(
         (ticket) => ticket.location.kind === TICKET_LOCATION_KIND.inTransit,
       );
@@ -351,6 +454,7 @@ export class TransferReceivingService {
     if (bookId === null) {
       throw validationError("Transfer line is invalid", ["code"]);
     }
+    const receivedAfter = receivedBefore + tickets.length;
     await this.receipts.create(
       operator,
       {
@@ -359,16 +463,20 @@ export class TransferReceivingService {
         submissionId: submission._id,
         rowId: line.rowId,
         bookId,
-        purchaseAmount: line.purchaseAmount,
+        purchaseAmount:
+          receivedLineAmountOf(line, receivedAfter) -
+          receivedLineAmountOf(line, receivedBefore),
         tickets: tickets.map((ticket) => ({
           ticketId: ticket._id,
           unitCost: ticket.unitCost,
+          ticketNo: ticket.ticketNo,
         })),
         receivedBy: actorId,
         receivedAt: new Date(),
       },
       { session },
     );
+    return tickets.map((ticket) => ticket.ticketNo);
   }
 
   private notOnTransferError() {
@@ -517,16 +625,18 @@ export class TransferReceivingService {
       [...books.values()].map((book) => book.gameId),
     );
     const receipts = await this.rules.receiptsOf(reader, submission._id);
-    const receivedAt = new Map(
-      receipts.map((receipt) => [receipt.rowId, receipt.receivedAt]),
-    );
-    const batchOf = new Map(
-      receipts.flatMap((receipt) =>
-        receipt.batchId == null
-          ? []
-          : [[receipt.rowId, String(receipt.batchId)] as const],
-      ),
-    );
+    // 一列可以有好幾筆點收紀錄(選張的列逐張點收):最近一次的時間 / 點收批次
+    const receivedAt = new Map<string, Date>();
+    const batchOf = new Map<string, string>();
+    for (const receipt of receipts.toSorted(
+      (a, b) => a.receivedAt.getTime() - b.receivedAt.getTime(),
+    )) {
+      receivedAt.set(receipt.rowId, receipt.receivedAt);
+      if (receipt.batchId != null) {
+        batchOf.set(receipt.rowId, String(receipt.batchId));
+      }
+    }
+    const receivedOf = receivedByRow(receipts);
     const shippedAtOfTicket = await this.rules.shippedAtOf(
       reader,
       submission._id,
@@ -535,23 +645,19 @@ export class TransferReceivingService {
       reader,
       [...books.values()].map((book) => book._id),
     );
-    // 點收紀錄實際搬進來的張 → 張號(調貨點收單的號碼照這個印;之後逐張點收時一列可能只到部分張)
+    // 點收紀錄實際搬進來的張 → 張號(調貨點收單的號碼照這個印;選張的列可能只到部分張)
     const ticketNoOf = new Map(
       [...bookTickets.values()]
         .flat()
         .map((ticket) => [String(ticket._id), ticket.ticketNo] as const),
     );
-    const receivedTicketNosOf = new Map(
-      receipts.map((receipt) => [
-        receipt.rowId,
-        receipt.tickets
-          .flatMap((item) => {
-            const no = ticketNoOf.get(String(item.ticketId));
-            return no === undefined ? [] : [no];
-          })
-          .toSorted((a, b) => a.localeCompare(b)),
-      ]),
-    );
+    const ticketNosOfIds = (ids: Iterable<string>): string[] =>
+      [...ids]
+        .flatMap((id) => {
+          const no = ticketNoOf.get(id);
+          return no === undefined ? [] : [no];
+        })
+        .toSorted((a, b) => a.localeCompare(b));
     const rows = lines.map((line) => {
       const book = books.get(line.bookId);
       const game =
@@ -560,7 +666,8 @@ export class TransferReceivingService {
         line,
         bookTickets.get(line.bookId) ?? [],
       );
-      const isReceived = receivedAt.has(line.rowId);
+      const received = receivedOf.get(line.rowId);
+      const isReceived = isLineReceived(line, received);
       const locked = rowTickets.filter(
         (ticket) =>
           ticket.lockedBy?.refType === "transfer" &&
@@ -591,10 +698,35 @@ export class TransferReceivingService {
         purchaseAmount: line.purchaseAmount,
         shipped: isShipped,
         received: isReceived,
+        receivedTickets: receivedCountOf(received),
         receivedAt: receivedAt.get(line.rowId) ?? null,
         shippedAt: isShipped ? latestOf(rowTickets, shippedAtOfTicket) : null,
         batchId: batchOf.get(line.rowId) ?? null,
-        receivedTicketNos: receivedTicketNosOf.get(line.rowId) ?? [],
+        receivedTicketNos: ticketNosOfIds(received?.ticketIds ?? []),
+      };
+    });
+    // 每一次點收:列 + 這一次每一列點收的張(同一列在同一次點收可以有好幾筆紀錄)
+    const batches = receivingBatchesOf(receipts).map((batch) => {
+      const idsOfRow = new Map<string, Set<string>>();
+      for (const receipt of receipts) {
+        if (
+          receipt.batchId == null ||
+          String(receipt.batchId) !== batch.batchId
+        ) {
+          continue;
+        }
+        const ids = idsOfRow.get(receipt.rowId) ?? new Set<string>();
+        for (const ticket of receipt.tickets) {
+          ids.add(String(ticket.ticketId));
+        }
+        idsOfRow.set(receipt.rowId, ids);
+      }
+      return {
+        ...batch,
+        rows: batch.rowIds.map((rowId) => ({
+          rowId,
+          ticketNos: ticketNosOfIds(idsOfRow.get(rowId) ?? []),
+        })),
       };
     });
     return {
@@ -606,7 +738,7 @@ export class TransferReceivingService {
       receivedCount: rows.filter((row) => row.received).length,
       totalCount: rows.length,
       rows,
-      batches: receivingBatchesOf(receipts),
+      batches,
     };
   }
 }

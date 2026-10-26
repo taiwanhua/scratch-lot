@@ -261,13 +261,40 @@ export function transferTotalOf(lines: readonly TransferLineValue[]): number {
   return lines.reduce((sum, line) => sum + line.purchaseAmount, 0);
 }
 
-/** 已點收的批購金額(收貨店 [付款] / [收到退款] 的基準;規格 9 表)。 */
+/**
+ * 一列點收了 `received` 張時的已點收批購金額:全部到齊 = 這列的批購金額;部分點收(選張的列逐張點收)=
+ * 「面額 × 已點收張數」× 批購金額率(四捨五入到元,同列的批購金額算法)。出貨店移除沒到的張、這列縮成
+ * 只剩到的張時,縮小後的批購金額剛好等於縮小前已點收的金額(兩邊同一個算式),結算不會差一元。
+ */
+export function receivedLineAmountOf(
+  line: Pick<
+    TransferLineValue,
+    "mode" | "amount" | "rate" | "tickets" | "purchaseAmount"
+  >,
+  received: number,
+): number {
+  if (received <= 0 || line.tickets <= 0) {
+    return 0;
+  }
+  // 整本的列一次整列點收:點收了就是整列
+  if (line.mode === TRANSFER_MODE.whole || received >= line.tickets) {
+    return line.purchaseAmount;
+  }
+  return purchaseAmountOf((line.amount * received) / line.tickets, line.rate);
+}
+
+/**
+ * 已點收的批購金額(收貨店 [付款] / [收到退款] 的基準;規格 9 表):每列照已點收張數
+ * (`receivedTicketsOf`:rowId → 已點收張數)算 `receivedLineAmountOf` 再加總。
+ */
 export function receivedTransferAmountOf(
   lines: readonly TransferLineValue[],
-  receivedRowIds: ReadonlySet<string>,
+  receivedTicketsOf: ReadonlyMap<string, number>,
 ): number {
-  return transferTotalOf(
-    lines.filter((line) => receivedRowIds.has(line.rowId)),
+  return lines.reduce(
+    (sum, line) =>
+      sum + receivedLineAmountOf(line, receivedTicketsOf.get(line.rowId) ?? 0),
+    0,
   );
 }
 
