@@ -33,6 +33,7 @@ import {
   SCHEDULE_DAY_OFF_CLOSING,
   SCHEDULE_DAY_OFF_OPEN,
   SCHEDULE_DAY_OFF_OVERRIDDEN,
+  SCHEDULE_MY_DAY_OFFS_REF,
 } from "../../notifications";
 import { ScheduleClock } from "../shared/schedule-clock";
 import { dayKeyRange } from "../shared/schedule-dates";
@@ -543,7 +544,13 @@ describe("畫休(GraphQL 端點 + 真 MongoDB)", () => {
   const overriddenOf = (user: ScheduleTestUser) =>
     connection
       .collection("notifications")
-      .find<{ title: string; body: string; orgId: Types.ObjectId }>({
+      .find<{
+        title: string;
+        body: string;
+        orgId: Types.ObjectId;
+        refType: string | null;
+        refId: string | null;
+      }>({
         type: SCHEDULE_DAY_OFF_OVERRIDDEN,
         recipientId: user.userId,
       })
@@ -894,6 +901,9 @@ describe("畫休(GraphQL 端點 + 真 MongoDB)", () => {
         title: "畫休被代改:2027-04-06",
         body: "李店長 在「中山店」替你登記了 2027-04-06 的時段不可排(09:00–12:00、14:00–18:00)。原因:其他(支援活動)",
         orgId: zhongshan,
+        // 點進去 = 我的畫休那天所在的月份
+        refType: SCHEDULE_MY_DAY_OFFS_REF,
+        refId: "2027-04",
       });
 
       // 整天畫休、截止前沒給原因:不寫原因
@@ -923,6 +933,8 @@ describe("畫休(GraphQL 端點 + 真 MongoDB)", () => {
       expect(all.at(-1)).toMatchObject({
         title: "畫休被代改:2027-04-06",
         body: "李店長 在「中山店」刪除了你 2027-04-06 的時段不可排(09:00–12:00)。原因:登記錯誤",
+        refType: SCHEDULE_MY_DAY_OFFS_REF,
+        refId: "2027-04",
       });
     });
 
@@ -1372,13 +1384,23 @@ describe("畫休(GraphQL 端點 + 真 MongoDB)", () => {
       );
       const notification = await connection
         .collection("notifications")
-        .findOne<{ title: string; body: string }>({
+        .findOne<{
+          title: string;
+          body: string;
+          refType: string | null;
+          refId: string | null;
+        }>({
           type: SCHEDULE_DAY_OFF_OPEN,
           orgId: zhongshan,
           recipientId: wang.userId,
         });
       expect(notification?.title).toBe("畫休開放:中山店");
       expect(notification?.body).toContain("2026-11-25");
+      // 點進去 = 我的畫休的目標月
+      expect(notification).toMatchObject({
+        refType: SCHEDULE_MY_DAY_OFFS_REF,
+        refId: "2026-12",
+      });
       expect(await recipientsOf(SCHEDULE_DAY_OFF_CLOSING, zhongshan)).toEqual(
         [],
       );

@@ -13,7 +13,10 @@ import {
   ScheduleEntriesRepository,
   SchedulePeriodsRepository,
 } from "../../database/schedule/roster.repositories";
-import { SCHEDULE_PUBLISHED } from "../../notifications";
+import {
+  SCHEDULE_MY_SCHEDULE_REF,
+  SCHEDULE_PUBLISHED,
+} from "../../notifications";
 import { isAutoRunLocked, lockExpiredBefore } from "../auto-run/period-lock";
 import { RosterPeopleReader } from "../roster/roster-people";
 import { ScheduleClock } from "../shared/schedule-clock";
@@ -190,6 +193,8 @@ export class SchedulePublishService {
       orgId: org.id,
       recipients: { kind: "users", userIds },
       params: { orgName: org.name, month },
+      // 點進去 = 我的班表的那個月
+      ref: { type: SCHEDULE_MY_SCHEDULE_REF, id: month },
       dedupeKey: `${SCHEDULE_PUBLISHED}:${String(org.id)}:${month}`,
     });
     return userIds.length;

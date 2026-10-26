@@ -218,7 +218,7 @@
 - **同時送出**:登記 / 代改 / 刪除把「讀畫休 → 檢查重疊 → 跑規則 → 寫入」放在同一個交易,交易一開始對守門文件(主要分店 × 月份,`schedule_day_off_locks`)`$inc`(整天畫休另碰前後一個月:最多連續休假會跨月;碰不到文件 → 丟錯,不靜默失去保護);同一家店同一個月同時進來的寫入互相衝突、由 `TransactionService` 重跑,同日人數、每月上限、時段重疊不會被同時送出繞過(守門文件在交易外先建好)。
 - **存檔規則**:存檔後限制等級的違反比存檔前多(新的、或超出更多)→ 不存,`VALIDATION_FAILED`(欄位 `date`,`extensions.violations` 列出擋下的違反);提醒照存,回在 `violations`。「每月最少畫休」不擋存檔(登記途中本來就不足,擋刪除會讓人改不掉登記錯的那天),照樣列在違規清單。
 - **開放期間**(規則 `dayOffWindow`,`apps/api/src/project/schedule/day-offs/day-off-window.ts`):目標月的開放期間 = 前一個月的 N 日至 M 日(超過月底用月底);今天(租戶時區,`ScheduleClock`)在期間內 = 開放中。這條規則沒有等級,只看值、不看開關,登記檢查與通知用同一個判斷(`dayOffWindowValueOf`)。**本人**只能在開放中登記 / 刪除那個目標月的畫休,其他時候 → `FORBIDDEN`(`reason: OUTSIDE_DAY_OFF_WINDOW`)。
-- **代改**(`edit-day-offs`):時段不可排一次可以送多段(同本人登記);對象要是選的那家店(要看得到)的排班人員(否則 `NOT_FOUND`);不受開放期間限制;那個月的截止日(對象主要分店的開放期間)已過 → `reason` 必填(欄位管理「代改畫休原因」啟用中的選項),選「其他」`reasonNote` 必填(否則 `VALIDATION_FAILED`,欄位 `reason` / `reasonNote`);截止前原因選填。記代改人 `by`;代改刪除先寫入代改人與原因再軟刪除。代改一樣跑規則。**通知員工本人**(`schedule.day-off-overridden`「畫休被代改」,`day-offs/day-off-override-notices.ts`):代改儲存一次送出 = 一則(列出這次所有段落 / 整天畫休;`dedupeKey` = `schedule.day-off-overridden:<這次第一筆畫休 id>`),代改刪除一筆 = 一則(內容寫刪除;`dedupeKey` = `schedule.day-off-overridden:delete:<畫休 id>`);內文帶分店、日期、時段、代改人與原因(顯示名稱,有說明接在括號裡);代改人就是本人時不送。和寫入在同一個交易(同排班異動:寫入失敗整個回復);交易後的站內 / email 送出盡力而為,失敗只記 log、不影響儲存。沒有連結(同其他排班通知)。
+- **代改**(`edit-day-offs`):時段不可排一次可以送多段(同本人登記);對象要是選的那家店(要看得到)的排班人員(否則 `NOT_FOUND`);不受開放期間限制;那個月的截止日(對象主要分店的開放期間)已過 → `reason` 必填(欄位管理「代改畫休原因」啟用中的選項),選「其他」`reasonNote` 必填(否則 `VALIDATION_FAILED`,欄位 `reason` / `reasonNote`);截止前原因選填。記代改人 `by`;代改刪除先寫入代改人與原因再軟刪除。代改一樣跑規則。**通知員工本人**(`schedule.day-off-overridden`「畫休被代改」,`day-offs/day-off-override-notices.ts`):代改儲存一次送出 = 一則(列出這次所有段落 / 整天畫休;`dedupeKey` = `schedule.day-off-overridden:<這次第一筆畫休 id>`),代改刪除一筆 = 一則(內容寫刪除;`dedupeKey` = `schedule.day-off-overridden:delete:<畫休 id>`);內文帶分店、日期、時段、代改人與原因(顯示名稱,有說明接在括號裡);代改人就是本人時不送。和寫入在同一個交易(同排班異動:寫入失敗整個回復);交易後的站內 / email 送出盡力而為,失敗只記 log、不影響儲存。連結到我的畫休那天所在的月份(`schedule-my-day-offs`,`lottery-notifications.md`「連結」)。
 - **畫休總覽**:候選人(可以排這家店的排班人員)這個月的畫休;同日畫休人數只計 `isPrimary` 的人;「尚未畫休」= 主要分店是這家、這個月還沒畫任何一天的候選人。
 - **給其他功能**:`ScheduleDayOffsService.listUnavailable(operator, orgId, range)`(半開的時點區間 `[from, to)`)回這家店的候選人每人每天的整天畫休 / 時段不可排(`date` 是那天租戶時區 00:00 的時點,`slots` 是 `startAt` / `endAt` 時點;只列有畫休的日子;這家店要在操作者的可見範圍內,否則空清單)。**空清單分不出「沒有畫休」與「看不到這家店」**:呼叫端(排班表、自動排班)要先自己確認看得到這家店(例:`resolveScheduleOrg`,看不到 → `NOT_FOUND`),再呼叫它。
 
@@ -255,6 +255,7 @@
 - 排程 `schedule.day-off-reminders`(每 15 分鐘,`apps/api/src/project/schedule/day-offs/day-off-reminders.service.ts`):逐租戶、逐家有排班人員的分店,依那家店規則「畫休開放期間」的生效值算出開放日 / 截止日,「這個時點該不該寄」用底座 `scheduleHitAt`(租戶時區;漏跑 6 小時內補寄;改了時間不補)。
 - 兩型都是當事人通知,收件人 = 可以排這家店的排班人員(`listScheduleCandidates`);同一人可以排兩家店 → 各一則。`dedupeKey` = `<類型>:<分店>:<目標月>:<時點>`。
 - 可調時間宣告在 `apps/api/src/project/notifications.ts`:畫休開放 = 開放日前 0 天 09:00、畫休即將截止 = 截止日前 1 天 09:00(租戶可在通知設定頁改;收件人唯讀「由事件決定(可以排這家店的排班人員)」)。
+- 連結到我的畫休的目標月(`schedule-my-day-offs`,`refId` = 目標月)。排班發布、排班異動連到我的班表的班表分頁那個月(`schedule-my-schedule`);連結登記見 `lottery-notifications.md`。
 
 ### 我的班表與打卡(規格 14.1 `schedule_attendance_punches`、14.6)
 

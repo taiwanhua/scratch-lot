@@ -568,6 +568,16 @@ const DYNAMIC_KEYS: readonly { key: string; reason: string }[] = [
       "`lib/base/notification-type-name.ts` 的 `t(`types.${type}`)`,type 是 api 回的通知類型 key(`workflow.task-created` 等;沒有文案的類型退回 api 的 `name`)",
   },
   {
+    key: "admin.notifications.recipientNotes.",
+    reason:
+      "`lib/base/notification-type-name.ts` 的 `t(`recipientNotes.${type}`)`,type 是 api 回的通知類型 key(沒有文案退回 api 的 `recipientNote`)",
+  },
+  {
+    key: "admin.notifications.scheduleDateLabels.",
+    reason:
+      "通知設定頁提醒時間摘要 `tNotifications(`scheduleDateLabels.${type}`)`(`NotificationSettingsPage/notification-schedule.ts`),type 是 api 回的通知類型 key(沒有文案退回 api 的 `scheduleDateLabel`)",
+  },
+  {
     key: "admin.approval.timeline.delegated.",
     reason:
       "`ApprovalTimeline` 的 `t(`delegated.${event.kind}`)`,kind 是帶了被代理者的 `task_created` / `approved` / `rejected` / `returned`",

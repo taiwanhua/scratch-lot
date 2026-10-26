@@ -1,12 +1,16 @@
 import { Injectable } from "@nestjs/common";
 import { Types } from "mongoose";
 
+import { localMonthText, parseLocalDate } from "@repo/domain/form";
 import { SCHEDULE_FIELD_CATEGORY_KEYS } from "@repo/domain/project/schedule-fields";
 
 import { UsersRepository } from "../../../database/database.module";
 import type { OperatorContext } from "../../../database/operator-context";
 import { NotificationService } from "../../../notifications/notification.service";
-import { SCHEDULE_DAY_OFF_OVERRIDDEN } from "../../notifications";
+import {
+  SCHEDULE_DAY_OFF_OVERRIDDEN,
+  SCHEDULE_MY_DAY_OFFS_REF,
+} from "../../notifications";
 import { ScheduleFieldOptionsService } from "../field-options/schedule-field-options.service";
 import { clockTextOf } from "../shared/schedule-dates";
 import type { ScheduleOrg } from "../shared/schedule-org";
@@ -30,6 +34,12 @@ export interface DayOffOverrideNotice {
   /** 防重複的依據:新增 = 這次寫入的第一筆畫休 id;刪除 = 刪掉的那筆 */
   dayOffId: Types.ObjectId;
 }
+
+/** 日期鍵 `YYYY-MM-DD` → 月份 `YYYY-MM`(通知連結的 `refId`)。 */
+const monthOf = (localDate: string): string => {
+  const date = parseLocalDate(localDate);
+  return date === null ? "" : localMonthText(date);
+};
 
 /**
  * 代改畫休通知員工本人(`schedule.day-off-overridden`;`docs/modules/project/schedule.md`「代改」):
@@ -89,6 +99,8 @@ export class DayOffOverrideNotices {
         byName,
         reason: await this.reasonText(operator, notice),
       },
+      // 點進去 = 我的畫休那天所在的月份
+      ref: { type: SCHEDULE_MY_DAY_OFFS_REF, id: monthOf(notice.localDate) },
       dedupeKey: `${prefix}:${String(notice.dayOffId)}`,
     });
   }

@@ -4163,5 +4163,41 @@
       "message": "目前在平台層級,請先切換到要管理的機構",
       "hint": "切換當前組織後,就會看到那個機構的資料。"
     }
+  },
+  "notifications": {
+    "types": {
+      "lottery": {
+        "daily-close-overdue": "日結逾期",
+        "transfer-shipped": "調貨出貨通知",
+        "license-expiring": "證照到期",
+        "store-rent-due": "牌租繳費提醒",
+        "period-close-overdue": "關帳逾期",
+        "purchase-wrong-store": "進貨送錯分店",
+        "transfer-wrong-store": "調貨送錯分店"
+      },
+      "schedule": {
+        "day-off-open": "畫休開放",
+        "day-off-closing": "畫休即將截止",
+        "published": "排班發布",
+        "changed": "排班異動",
+        "day-off-overridden": "畫休被代改"
+      }
+    },
+    "recipientNotes": {
+      "schedule": {
+        "day-off-open": "可以排這家店的排班人員",
+        "day-off-closing": "可以排這家店的排班人員"
+      }
+    },
+    "scheduleDateLabels": {
+      "lottery": {
+        "license-expiring": "到期",
+        "store-rent-due": "繳費日"
+      },
+      "schedule": {
+        "day-off-open": "開放日",
+        "day-off-closing": "截止日"
+      }
+    }
   }
 }

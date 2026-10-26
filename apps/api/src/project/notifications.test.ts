@@ -1,11 +1,23 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
+
 import { describe, expect, it } from "@jest/globals";
 
-import { PRINTING_AGENT_OFFLINE } from "../notifications/base-notification-types";
-import type { NotificationOrgScope } from "../notifications/notification-registry";
+import {
+  BASE_NOTIFICATION_LINKS,
+  PRINTING_AGENT_OFFLINE,
+} from "../notifications/base-notification-types";
+import {
+  type NotificationOrgScope,
+  composeNotificationLinks,
+  notificationLinkOf,
+} from "../notifications/notification-registry";
 import { composeAllNotificationTypes } from "../notifications/notification-registry.module";
 import {
   PROJECT_NOTIFICATIONS,
   SCHEDULE_DAY_OFF_OVERRIDDEN,
+  SCHEDULE_MY_DAY_OFFS_REF,
+  SCHEDULE_MY_SCHEDULE_REF,
   STORE_MANAGER_AUDIENCE,
 } from "./notifications";
 
@@ -205,5 +217,120 @@ describe("專案通知類型(專案規格 3.4)", () => {
     ).toBe(
       '李店長 registered a day off for you on 2027-04-06 at "中山店": unavailable hours (09:00–12:00, 14:00–18:00).',
     );
+  });
+});
+
+describe("專案通知連結", () => {
+  const links = composeNotificationLinks(
+    BASE_NOTIFICATION_LINKS,
+    PROJECT_NOTIFICATIONS.links,
+  );
+
+  it("與底座合成不撞、格式合法", () => {
+    expect([...links.keys()]).toEqual(
+      expect.arrayContaining([
+        "lottery-purchase",
+        "lottery-transfer",
+        SCHEDULE_MY_SCHEDULE_REF,
+        SCHEDULE_MY_DAY_OFFS_REF,
+      ]),
+    );
+  });
+
+  it("排班通知點進去 = 我的班表的分頁與月份(refId = 月份)", () => {
+    expect(notificationLinkOf(links, SCHEDULE_MY_SCHEDULE_REF, "2027-05")).toBe(
+      "/schedule/my?tab=schedule&month=2027-05",
+    );
+    expect(notificationLinkOf(links, SCHEDULE_MY_DAY_OFFS_REF, "2026-12")).toBe(
+      "/schedule/my?tab=day-offs&month=2026-12",
+    );
+  });
+});
+
+/** `notifications.<group>.<類型 key 的各段>`;不是字串 → null。 */
+const textOf = (
+  messages: unknown,
+  group: string,
+  typeKey: string,
+): string | null => {
+  let node: unknown = messages;
+  for (const segment of ["notifications", group, ...typeKey.split(".")]) {
+    node =
+      typeof node === "object" && node !== null
+        ? (node as Record<string, unknown>)[segment]
+        : undefined;
+  }
+  return typeof node === "string" && node.trim() !== "" ? node : null;
+};
+
+/** 字典某一組底下所有字串葉的類型 key(巢狀層級以 `.` 接回)。 */
+const messageKeysOf = (node: unknown, prefix: string): string[] =>
+  typeof node === "object" && node !== null
+    ? Object.entries(node).flatMap(([segment, child]) =>
+        messageKeysOf(child, prefix === "" ? segment : `${prefix}.${segment}`),
+      )
+    : [prefix];
+
+/**
+ * 後台介面的類型名稱、收件人說明、日期稱呼走訊息檔 `admin.notifications.<types|recipientNotes|scheduleDateLabels>.<類型 key>`
+ * (`apps/admin/src/lib/base/notification-type-name.ts`;沒有就退回登記的繁中)。專案的寫在
+ * `packages/i18n/messages/<語系>/project/admin.json`:每種登記的類型兩種語系都要有,防新增類型時漏掉、英文介面顯示繁中。
+ */
+describe("專案通知類型的介面文案(兩種語系)", () => {
+  const REPO_ROOT = path.resolve(__dirname, "..", "..", "..", "..");
+  const messagesOf = (locale: string): unknown =>
+    JSON.parse(
+      readFileSync(
+        path.join(
+          REPO_ROOT,
+          "packages/i18n/messages",
+          locale,
+          "project/admin.json",
+        ),
+        "utf8",
+      ),
+    );
+  const LOCALES = { zh: messagesOf("zh-TW"), en: messagesOf("en") };
+
+  it.each(PROJECT_NOTIFICATIONS.types.map((type) => [type.key, type] as const))(
+    "%s:類型名稱有繁中(= 登記的名稱)與英文",
+    (_key, type) => {
+      expect(textOf(LOCALES.zh, "types", type.key)).toBe(type.name);
+      expect(textOf(LOCALES.en, "types", type.key)).not.toBeNull();
+    },
+  );
+
+  it("有收件人說明 / 日期稱呼的類型,兩種語系都有(繁中 = 登記的值)", () => {
+    for (const type of PROJECT_NOTIFICATIONS.types) {
+      if (type.recipientNote !== undefined) {
+        expect(textOf(LOCALES.zh, "recipientNotes", type.key)).toBe(
+          type.recipientNote,
+        );
+        expect(textOf(LOCALES.en, "recipientNotes", type.key)).not.toBeNull();
+      }
+      if (type.schedule?.dateLabel !== undefined) {
+        expect(textOf(LOCALES.zh, "scheduleDateLabels", type.key)).toBe(
+          type.schedule.dateLabel,
+        );
+        expect(
+          textOf(LOCALES.en, "scheduleDateLabels", type.key),
+        ).not.toBeNull();
+      }
+    }
+  });
+
+  it("專案字典沒有登記表以外的類型(改名 / 移除類型時一起刪)", () => {
+    const registered = new Set(
+      PROJECT_NOTIFICATIONS.types.map((type) => type.key),
+    );
+    for (const messages of Object.values(LOCALES)) {
+      const groups = (messages as { notifications?: Record<string, unknown> })
+        .notifications;
+      for (const group of Object.values(groups ?? {})) {
+        for (const key of messageKeysOf(group, "")) {
+          expect(registered.has(key) ? key : `未登記:${key}`).toBe(key);
+        }
+      }
+    }
   });
 });

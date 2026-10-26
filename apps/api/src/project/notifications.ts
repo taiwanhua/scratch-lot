@@ -14,7 +14,8 @@ import type { ProjectNotificationRegistrations } from "../notifications/notifica
  * 自動成為個人偏好的一個開關(`notification_<類型>_<管道>`)。
  *
  * 類型清單、範本參數與觸發的功能見 `docs/modules/project/lottery-notifications.md`(專案規格 3.4)。
- * 宣告了可調時間的類型見各筆的 `schedule`(排程在觸發的功能裡);觸發的功能呼叫 `notify()`。`links`:進貨單詳情(`LOTTERY_PURCHASE_REF`)、調貨單詳情(`LOTTERY_TRANSFER_REF`)。
+ * 宣告了可調時間的類型見各筆的 `schedule`(排程在觸發的功能裡);觸發的功能呼叫 `notify()`。`links`:進貨單詳情(`LOTTERY_PURCHASE_REF`)、調貨單詳情(`LOTTERY_TRANSFER_REF`)、
+ * 我的班表的班表 / 我的畫休分頁(`SCHEDULE_MY_SCHEDULE_REF`、`SCHEDULE_MY_DAY_OFFS_REF`,`refId` = 月份 `YYYY-MM`)。
  */
 
 /** 刮刮樂:有已送出交班結帳的班還沒被日結涵蓋計算(B14,逾期後每天)。 */
@@ -45,6 +46,10 @@ export const SCHEDULE_PUBLISHED = "schedule.published";
 export const SCHEDULE_CHANGED = "schedule.changed";
 /** 排班:別人代改(新增 / 刪除)我的畫休 → 給被代改的那位員工(自己改自己的不送)。 */
 export const SCHEDULE_DAY_OFF_OVERRIDDEN = "schedule.day-off-overridden";
+/** 通知連結:我的班表 → 班表分頁的那個月(`refId` = 月份 `YYYY-MM`;排班發布、排班異動)。 */
+export const SCHEDULE_MY_SCHEDULE_REF = "schedule-my-schedule";
+/** 通知連結:我的班表 → 我的畫休分頁的那個月(`refId` = 月份 `YYYY-MM`;畫休開放 / 即將截止 / 被代改)。 */
+export const SCHEDULE_MY_DAY_OFFS_REF = "schedule-my-day-offs";
 
 const permissionHolders = (permissionKey: string): Audience => ({
   mode: "match",
@@ -378,6 +383,14 @@ export const PROJECT_NOTIFICATIONS: ProjectNotificationRegistrations = {
     {
       refType: LOTTERY_TRANSFER_REF,
       path: "/purchasing/transfer/view-page/{refId}",
+    },
+    {
+      refType: SCHEDULE_MY_SCHEDULE_REF,
+      path: "/schedule/my?tab=schedule&month={refId}",
+    },
+    {
+      refType: SCHEDULE_MY_DAY_OFFS_REF,
+      path: "/schedule/my?tab=day-offs&month={refId}",
     },
   ],
 };

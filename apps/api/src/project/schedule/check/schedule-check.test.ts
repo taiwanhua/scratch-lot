@@ -14,7 +14,11 @@ import { SCHEDULE_CHANGES_COLLECTION } from "../../database/schedule/schedule-ch
 import { SCHEDULE_DAY_OFFS_COLLECTION } from "../../database/schedule/schedule-day-off.schema";
 import { ScheduleEntryLock } from "../../database/schedule/schedule-entry-lock.schema";
 import { ScheduleTaskAssignment } from "../../database/schedule/schedule-task-assignment.schema";
-import { SCHEDULE_CHANGED, SCHEDULE_PUBLISHED } from "../../notifications";
+import {
+  SCHEDULE_CHANGED,
+  SCHEDULE_MY_SCHEDULE_REF,
+  SCHEDULE_PUBLISHED,
+} from "../../notifications";
 import {
   ALL_SCHEDULE_TEST_PERMISSIONS,
   SCHEDULE_TEST_PERMISSIONS as P,
@@ -451,7 +455,12 @@ describe("排班檢核與發布(GraphQL 端點 + 真 MongoDB)", () => {
   const notificationsOf = (type: string, userId: Types.ObjectId) =>
     connection
       .collection("notifications")
-      .find<{ title: string; body: string }>({ type, recipientId: userId })
+      .find<{
+        title: string;
+        body: string;
+        refType: string | null;
+        refId: string | null;
+      }>({ type, recipientId: userId })
       .toArray();
 
   beforeAll(async () => {
@@ -794,6 +803,10 @@ describe("排班檢核與發布(GraphQL 端點 + 真 MongoDB)", () => {
       expect(published.notifiedCount).toBe(1);
       const notes = await notificationsOf(SCHEDULE_PUBLISHED, wang.userId);
       expect(notes.map((note) => note.title)).toEqual(["排班發布:信義店"]);
+      // 點進去 = 我的班表的那個月
+      expect(notes.map(({ refType, refId }) => [refType, refId])).toEqual([
+        [SCHEDULE_MY_SCHEDULE_REF, "2027-05"],
+      ]);
       expect(await notificationsOf(SCHEDULE_PUBLISHED, li.userId)).toHaveLength(
         0,
       );
@@ -904,6 +917,10 @@ describe("排班檢核與發布(GraphQL 端點 + 真 MongoDB)", () => {
       expect(notes.map((note) => note.body)).toEqual([
         "「信義店」2027-08-12 的排班有異動。原因:shift-swap",
         "「信義店」2027-08-10 的排班有異動。原因:other(颱風)",
+      ]);
+      expect(notes.map(({ refType, refId }) => [refType, refId])).toEqual([
+        [SCHEDULE_MY_SCHEDULE_REF, "2027-08"],
+        [SCHEDULE_MY_SCHEDULE_REF, "2027-08"],
       ]);
     });
 

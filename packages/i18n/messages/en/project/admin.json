@@ -4163,5 +4163,41 @@
       "message": "You are at the platform level. Switch to the organization you want to manage first.",
       "hint": "After switching the current organization you will see that organization’s data."
     }
+  },
+  "notifications": {
+    "types": {
+      "lottery": {
+        "daily-close-overdue": "Daily close overdue",
+        "transfer-shipped": "Transfer shipped",
+        "license-expiring": "License expiring",
+        "store-rent-due": "Store rent due",
+        "period-close-overdue": "Period close overdue",
+        "purchase-wrong-store": "Purchase sent to the wrong store",
+        "transfer-wrong-store": "Transfer sent to the wrong store"
+      },
+      "schedule": {
+        "day-off-open": "Day-off requests open",
+        "day-off-closing": "Day-off requests closing",
+        "published": "Schedule published",
+        "changed": "Schedule changed",
+        "day-off-overridden": "Day off changed for you"
+      }
+    },
+    "recipientNotes": {
+      "schedule": {
+        "day-off-open": "Staff who can be scheduled at this store",
+        "day-off-closing": "Staff who can be scheduled at this store"
+      }
+    },
+    "scheduleDateLabels": {
+      "lottery": {
+        "license-expiring": "the expiry date",
+        "store-rent-due": "the due date"
+      },
+      "schedule": {
+        "day-off-open": "the opening date",
+        "day-off-closing": "the closing date"
+      }
+    }
   }
 }

@@ -7,7 +7,10 @@ import { SCHEDULE_FIELD_CATEGORY_KEYS } from "@repo/domain/project/schedule-fiel
 import type { OperatorContext } from "../../../database/operator-context";
 import { NotificationService } from "../../../notifications/notification.service";
 import { ScheduleChangesRepository } from "../../database/schedule/roster.repositories";
-import { SCHEDULE_CHANGED } from "../../notifications";
+import {
+  SCHEDULE_CHANGED,
+  SCHEDULE_MY_SCHEDULE_REF,
+} from "../../notifications";
 import { ScheduleFieldOptionsService } from "../field-options/schedule-field-options.service";
 import { dateKeyOf } from "../shared/schedule-dates";
 import { SCHEDULE_REASONS, validationError } from "../shared/schedule-error";
@@ -124,6 +127,8 @@ export class ScheduleChangesService {
             ? reason.label
             : `${reason.label}(${reason.reasonNote})`,
       },
+      // 點進去 = 我的班表的那個月
+      ref: { type: SCHEDULE_MY_SCHEDULE_REF, id: change.month },
       dedupeKey: `${SCHEDULE_CHANGED}:${String(row._id)}`,
     });
   }

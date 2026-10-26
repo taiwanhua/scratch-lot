@@ -26,6 +26,7 @@ import { ScheduleRelationshipsRepository } from "../../database/schedule/schedul
 import {
   SCHEDULE_DAY_OFF_CLOSING,
   SCHEDULE_DAY_OFF_OPEN,
+  SCHEDULE_MY_DAY_OFFS_REF,
 } from "../../notifications";
 import { ScheduleRulesService } from "../rules/schedule-rules.service";
 import { ScheduleStaffService } from "../staff/schedule-staff.service";
@@ -194,6 +195,8 @@ export class DayOffRemindersService implements OnModuleInit {
         opensOn: found.window.startDate,
         closesOn: found.window.endDate,
       },
+      // 點進去 = 我的畫休的那個月(目標月)
+      ref: { type: SCHEDULE_MY_DAY_OFFS_REF, id: found.window.month },
       dedupeKey: `${type}:${String(at.storeId)}:${found.window.month}:${found.occurrence}`,
     });
   }
