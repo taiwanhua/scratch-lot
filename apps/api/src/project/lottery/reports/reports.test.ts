@@ -3093,6 +3093,50 @@ describe("輸出報表:營運報表、班次結帳歷史報表(GraphQL 端點 + 
       });
     });
 
+    it("S3c 未拆的本整本待查 → 尋回 3 張 → 其餘 98 張確認遺失:確認遺失 97(待標註一本只扣一次)、期末待查 0、核對 0", async () => {
+      const bookId = await purchase(chianan, taipei("2026-11-14", "09:00"));
+      await apply(
+        { operator: storeOperator(chianan) },
+        await ticketsOf(bookId),
+        {
+          type: "investigate",
+          at: taipei("2026-11-14", "10:00"),
+          patch: { status: "investigating", responsibleOrgId: chianan },
+          refType: "stocktake",
+          refId: new Types.ObjectId(),
+        },
+      );
+      const all = await ticketsOf(bookId);
+      await apply({ operator: storeOperator(chianan) }, all.slice(0, 3), {
+        type: "recover",
+        at: taipei("2026-11-15", "10:00"),
+        patch: {
+          status: "unsold",
+          location: { kind: "stock", cashPointId: null },
+          responsibleOrgId: null,
+        },
+        reasonKey: "found",
+      });
+      const rest = await ticketsWhere(
+        bookId,
+        (ticket) => ticket.status === "investigating",
+      );
+      await apply({ operator: storeOperator(chianan) }, rest, {
+        type: "lose",
+        at: taipei("2026-11-15", "11:00"),
+        patch: { status: "lost" },
+        refType: "stocktake",
+        refId: new Types.ObjectId(),
+      });
+      const day = await inventoryOn("2026-11-15", chianan);
+      expect(day).toMatchObject({
+        lostTickets: 97,
+        investigatingTickets: 0,
+        checkTickets: 0,
+      });
+      expect(day.lostCost).toBeCloseTo(97 * 184, 6);
+    });
+
     it("S3b 未拆的本整本待查後只處理一部分(2 張確認遺失、3 張跨店尋回):待標註那張仍算在還待查的那組 → 期末待查 95(還有待標註就扣;使用者 10/27 定案 M1)", async () => {
       const bookId = await purchase(chianan, taipei("2026-11-12", "09:00"));
       await apply(

@@ -14,6 +14,7 @@ import {
   emptyBookCounts,
   formatTicketNo,
   holdingsOf,
+  holdingsWithoutPendingSkips,
   normalizeBookNo,
   pendingSkipCountOf,
   remainingOfCounts,
@@ -108,21 +109,6 @@ export function pendingSkipCountOfBook(book: {
  */
 export function unitCostOf(cost: number, standardTickets: number): number {
   return cost / standardTickets;
-}
-
-/**
- * 待標註的跳號(拆本前還沒標的)實體不存在,不算張數(使用者 10/27 定案甲):整本一起的一組張
- * (張數 = 標準張數 + 待標註,例:未拆的本在某家店的持有、未拆整本待查)扣掉待標註;其他照算。
- * 例:迄號 101、標準 100、未拆 → 101 張紀錄算 100 張。
- */
-export function withoutPendingSkips(
-  count: number,
-  standardTickets: number,
-  pendingSkipCount: number,
-): number {
-  return pendingSkipCount > 0 && count === standardTickets + pendingSkipCount
-    ? count - pendingSkipCount
-    : count;
 }
 
 /**
@@ -320,21 +306,18 @@ export class LotteryBooksService {
       remainingCount: remainingOfCounts(counts, pendingSkipCount),
       totalCount: totalOfCounts(counts, pendingSkipCount),
       holdings: [
-        ...holdingsOf(
-          unsold.map((ticket) => ({
-            status: ticket.status,
-            locationKind: ticket.location.kind,
-            storeOrgId: String(ticket.orgId),
-          })),
-        ),
-      ].map(([orgId, count]) => ({
-        orgId,
-        count: withoutPendingSkips(
-          count,
-          book.standardTickets,
+        ...holdingsWithoutPendingSkips(
+          holdingsOf(
+            unsold.map((ticket) => ({
+              status: ticket.status,
+              locationKind: ticket.location.kind,
+              storeOrgId: String(ticket.orgId),
+            })),
+          ),
+          counts,
           pendingSkipCount,
         ),
-      })),
+      ].map(([orgId, count]) => ({ orgId, count })),
       state: bookDisplayStateOf({
         counts,
         firstOpenedAt: book.firstOpenedAt,

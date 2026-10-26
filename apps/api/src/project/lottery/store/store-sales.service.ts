@@ -11,7 +11,7 @@ import {
   TICKET_STATUS,
   type TicketSoldSource,
   displayTicketKey,
-  isUnopenedInStore,
+  isSealedInStore,
   normalizeBookNo,
   parseTicketInput,
   pendingSkipCountOf,
@@ -36,6 +36,7 @@ import {
 } from "../../database/lottery-inventory/lottery-inventory.repository";
 import { LotteryShiftsRepository } from "../../database/lottery-store/lottery-shifts.repository";
 import { LOTTERY_FIELD_CATEGORIES } from "../field-options/lottery-field-options";
+import { countsOfBook } from "../tickets/books.service";
 import { TicketLedgerService } from "../tickets/ticket-ledger.service";
 import type { TicketEventInput } from "../tickets/ticket-ledger.types";
 import type {
@@ -405,7 +406,7 @@ export class StoreSalesService {
     };
   }
 
-  /** 這本在這家店還沒拆(從沒拆過,這家店的張全是未售、在庫存;`isUnopenedInStore`)。 */
+  /** 這本在這家店還沒拆(整本原封不動而且整本都在這家店;`isSealedInStore`)。 */
   private async isUnopened(
     operator: OperatorContext,
     book: BookRecord,
@@ -416,12 +417,10 @@ export class StoreSalesService {
       { bookId: book._id, orgId: store.orgId },
       { select: "status location orgId" },
     );
-    return isUnopenedInStore(
-      book.firstOpenedAt ?? null,
-      tickets.map((item) => ({
-        status: item.status,
-        locationKind: item.location.kind,
-      })),
+    // 這家店原封不動:整本都在這家店、從沒拆過、張全是未售在庫存
+    return isSealedInStore(
+      { counts: countsOfBook(book), firstOpenedAt: book.firstOpenedAt ?? null },
+      tickets.filter((item) => item.status !== TICKET_STATUS.skipped).length,
     );
   }
 
@@ -751,12 +750,9 @@ export class StoreSalesService {
       ),
     ]);
     const game = games.get(String(book.gameId));
-    const unopened = isUnopenedInStore(
-      book.firstOpenedAt ?? null,
-      usable.map((ticket) => ({
-        status: ticket.status,
-        locationKind: ticket.location.kind,
-      })),
+    const unopened = isSealedInStore(
+      { counts: countsOfBook(book), firstOpenedAt: book.firstOpenedAt ?? null },
+      usable.length,
     );
     return {
       bookId: String(book._id),

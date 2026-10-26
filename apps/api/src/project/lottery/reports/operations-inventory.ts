@@ -13,7 +13,7 @@ import {
   LotteryTicketEventsRepository,
 } from "../../database/lottery-inventory/lottery-inventory.repository";
 import type { LotteryOperationsInventoryModel } from "./models/operations-report.model";
-import { loadBookPendings } from "./report-pending";
+import { type BookPendings, loadBookPendings } from "./report-pending";
 import type { StorePeriod } from "./report-periods";
 import {
   ReportStock,
@@ -63,6 +63,44 @@ function groupsOf(events: readonly InventoryEvent[]): TicketGroupInput[] {
     groups.set(key, group);
   }
   return [...groups.values()];
+}
+
+/**
+ * 確認遺失(依本 × 單據一組):還沒標的跳號(實體不存在、不會被逐張處理)算在還沒確認的那一組,只在這本期間內
+ * 最後一組、而且期末已沒有待查時扣待標註(一本只扣一次;使用者 10/27 定案)。例:整本待查後尋回 3 張、其餘 98 張
+ * 確認遺失 → 97 張。
+ */
+function lostFiguresOf(
+  groups: readonly TicketGroupInput[],
+  pendings: BookPendings,
+  stillInvestigating: ReadonlySet<string>,
+): StockFigures {
+  const lastOf = new Map<string, number>();
+  for (const group of groups) {
+    const key = String(group.bookId);
+    lastOf.set(key, Math.max(lastOf.get(key) ?? 0, group.at.getTime()));
+  }
+  const counted = new Set<string>();
+  let tickets = 0;
+  let cost = 0;
+  for (const group of groups) {
+    const key = String(group.bookId);
+    const size = group.costs.length;
+    const total = group.costs.reduce((sum, value) => sum + value, 0);
+    const isLast =
+      !counted.has(key) &&
+      !stillInvestigating.has(key) &&
+      group.at.getTime() === lastOf.get(key);
+    const pending = isLast
+      ? pendings.remainderAdjustmentOf(group.bookId, group.at, size)
+      : 0;
+    if (isLast) {
+      counted.add(key);
+    }
+    tickets += size - pending;
+    cost += size === 0 ? 0 : total - (pending * total) / size;
+  }
+  return { tickets, cost };
 }
 
 const minus = (left: StockFigures, right: StockFigures): StockFigures => ({
@@ -192,7 +230,12 @@ export class OperationsInventory {
     const lostRecovered = figures(
       recovered.filter((event) => event.from?.status === TICKET_STATUS.lost),
     );
-    const lost = figures(ofType(TICKET_EVENT_TYPE.lose, () => true));
+    // 確認遺失:還沒標的跳號在還沒確認實體的那一組,這本最後一次確認遺失、而且期末已沒有待查時才扣(一本只扣一次)
+    const lost = lostFiguresOf(
+      groupsOf(ofType(TICKET_EVENT_TYPE.lose, () => true)),
+      pendings,
+      new Set(ending.investigating.bookIds),
+    );
 
     const expectedEnding = {
       tickets:

@@ -7,6 +7,9 @@ import {
   STOCKTAKE_CONFIRM_FORM_KEY,
   STOCKTAKE_REASONS,
   type StocktakeDraft,
+  type TicketLocationKind,
+  type TicketStatus,
+  bookCountsOf,
   serializeStocktakeDraft,
 } from "@repo/domain/project/lottery";
 import { LOTTERY_FIELD_CATEGORY_KEYS } from "@repo/domain/project/lottery-fields";
@@ -367,6 +370,32 @@ describe("盤點(GraphQL 端點 + 真 MongoDB)", () => {
     return result.errors?.[0]?.extensions;
   }
 
+  /**
+   * 直接改了張(測試夾具)之後重數本上的張數(本上的張數平常由帳本維護;資料可以由張重數重建)。
+   */
+  async function syncCounts(bookId: Types.ObjectId): Promise<void> {
+    const tickets = await connection
+      .collection<{
+        status: TicketStatus;
+        location: { kind: TicketLocationKind };
+      }>(LOTTERY_TICKETS_COLLECTION)
+      .find({ bookId })
+      .toArray();
+    await connection.collection("lottery_books").updateOne(
+      { _id: bookId },
+      {
+        $set: {
+          ticketCounts: bookCountsOf(
+            tickets.map((ticket) => ({
+              status: ticket.status,
+              locationKind: ticket.location.kind,
+            })),
+          ),
+        },
+      },
+    );
+  }
+
   /** 一本 20 張拆在 `cashPointId` 檯面(未售);`sold` 的張號已售。 */
   /** 一本 20 張(單張 184)在收銀點檯面上;`lastTicketNo` > 20 = 有待標註的跳號(拆本前還沒標的)。 */
   async function counterBook(
@@ -428,6 +457,7 @@ describe("盤點(GraphQL 端點 + 真 MongoDB)", () => {
         };
       }),
     );
+    await syncCounts(bookId);
     return { bookId, bookNo };
   }
 
@@ -1012,6 +1042,7 @@ describe("盤點(GraphQL 端點 + 真 MongoDB)", () => {
         { bookId: unopenedId },
         { $set: { location: { kind: "stock", cashPointId: null } } },
       );
+    await syncCounts(unopenedId);
     const { bookId: missingBook } = await counterBook(counter);
     await connection.collection(LOTTERY_TICKETS_COLLECTION).updateMany(
       { bookId: missingBook, ticketNo: { $in: ["001", "002"] } },
@@ -1023,6 +1054,7 @@ describe("盤點(GraphQL 端點 + 真 MongoDB)", () => {
         },
       },
     );
+    await syncCounts(missingBook);
     const lostTicket = await ticketOf(missingBook, "001");
     const foundTicket = await ticketOf(missingBook, "002");
     const line = lineOf(bookId, counter, "22:00", allNos(["016"]));
@@ -1137,6 +1169,7 @@ describe("盤點(GraphQL 端點 + 真 MongoDB)", () => {
         { bookId: absentId },
         { $set: { location: { kind: "stock", cashPointId: null } } },
       );
+    await syncCounts(absentId);
     const sheet = await ok<{
       lotteryStocktakeSheet: {
         unopenedBooks: { bookId: string; ticketCount: number }[];
@@ -1159,6 +1192,7 @@ describe("盤點(GraphQL 端點 + 真 MongoDB)", () => {
         },
       },
     );
+    await syncCounts(lostId);
     const lostTickets = await connection
       .collection<TicketDoc>(LOTTERY_TICKETS_COLLECTION)
       .find({ bookId: lostId })
@@ -1246,6 +1280,7 @@ describe("盤點(GraphQL 端點 + 真 MongoDB)", () => {
         },
       },
     );
+    await syncCounts(bookId);
     const t011 = await ticketOf(bookId, "011");
     now("23:01");
     const submitted = await submitOk(
@@ -1524,6 +1559,7 @@ describe("盤點(GraphQL 端點 + 真 MongoDB)", () => {
           { bookId: stockBook },
           { $set: { location: { kind: "stock", cashPointId: null } } },
         );
+      await syncCounts(stockBook);
       unopened.push({ bookId: String(stockBook), present: false });
     }
     const draft = draftOf(lines, { unopened });

@@ -97,7 +97,7 @@
 
 ### 庫存概況 / 在店庫存
 
-- 分店 × 遊戲:未拆(本;這本從沒拆過、在這家店的張全部未售且在庫存)、庫存(拆過,張;其他在庫存的未售張:拆過後收回、尋回、調回;還有待標註就扣)、檯面(張;未售且在檯面)、已售(張)。張照操作者的範圍讀。
+- 分店 × 遊戲:未拆(本;這本從沒拆過、在這家店的張全部未售且在庫存)、庫存(拆過,張;其他在庫存的未售張:拆過後收回、尋回、調回;待標註算在未售時只在張數多的那家店扣)、檯面(張;未售且在檯面)、已售(張)。張照操作者的範圍讀。
 
 - **欄位錯誤**(REACT-18):查刮刮樂的編號格式不對寫在輸入欄下;尋回的原因、回到哪家店沒選或被擋下(`RECOVER_TARGET_NOT_STORE`)寫在那一欄下,Snackbar 只放通用句(`RecoverTicketDialog/inventory-field-errors.ts`);原因欄的預設句在 `ReasonFields`。
 
@@ -157,7 +157,7 @@
 | `firstOpenedAt`                                           | 第一次拆本時間;null = 從沒拆過                                                            |
 | `status`                                                  | `normal` / `revoked`(進貨單作廢)                                                          |
 
-**張數由帳本服務維護,狀態由張數算出**(使用者 10/27 定案 B;規則在 `@repo/domain/project/lottery` 的 `book-stats.ts`,api `LotteryBooksService.statsOf`):`ticketCounts` 建本時 = 全部在庫存,之後只經帳本 `$inc`(見「帳本」);`firstOpenedAt` 在帳本寫第一筆「拆本」事件時填。顯示狀態 `bookDisplayStateOf`(已撤銷 / 未拆 / 檯面中 / 庫存中 / 在途 / 待查 / 遺失 / 已報廢 / 售完,依序判斷);「未拆」= 從沒拆過(`isBookSealed`;一家店的未拆 `isUnopenedInStore`),拆過一次就永遠不算未拆。讀取時算:待標註張數、剩餘張數(`remainingOfCounts`:未售 − 待標註;還沒標的跳號實體不存在)、總張數(`totalOfCounts`:紀錄張數 − 待標註,還有待標註就扣,使用者 10/27 定案 M1)、各分店的未售張數(`holdingsOf`,讀這本未售的張)。**待標註的跳號不算張數**(使用者 10/27 定案甲;`withoutPendingSkips`):帳本分不出是哪幾張,`ticketCounts` 存紀錄張數;總張數與持有張數在「整本一起(張數 = 標準張數 + 待標註)」時扣掉待標註,例:迄號 101、標準 100、未拆 → 總張數 / 持有 100;待查·遺失分頁的一列同樣扣(`ticketCount`、成本 = 單張成本合計 × 張數比例),張的清單照列 101 張紀錄。報表、調貨、盤點的口徑見各自文件。
+**張數由帳本服務維護,狀態由張數算出**(使用者 10/27 定案 B;規則在 `@repo/domain/project/lottery` 的 `book-stats.ts`,api `LotteryBooksService.statsOf`):`ticketCounts` 建本時 = 全部在庫存,之後只經帳本 `$inc`(見「帳本」);`firstOpenedAt` 在帳本寫第一筆「拆本」事件時填。顯示狀態 `bookDisplayStateOf`(已撤銷 / 未拆 / 檯面中 / 庫存中 / 在途 / 待查 / 遺失 / 已報廢 / 售完,依序判斷);「未拆」= 從沒拆過(`isBookSealed`;一家店的未拆 `isUnopenedInStore`),拆過一次就永遠不算未拆。讀取時算:待標註張數、剩餘張數(`remainingOfCounts`:未售 − 待標註;還沒標的跳號實體不存在)、總張數(`totalOfCounts`:紀錄張數 − 待標註)。待標註一本只扣一次,扣在還沒確認實體的那一組(`pendingPlacementOf`:有待查 / 遺失 → 那一組,剩餘不扣;沒有 → 未售,剩餘扣、所在分店只扣張數多的那家 `holdingsWithoutPendingSkips`;使用者 10/27 定案)、各分店的未售張數(`holdingsOf`,讀這本未售的張)。**待標註的跳號不算張數**(使用者 10/27 定案甲;`withoutPendingSkips`):帳本分不出是哪幾張,`ticketCounts` 存紀錄張數;總張數與持有張數在「整本一起(張數 = 標準張數 + 待標註)」時扣掉待標註,例:迄號 101、標準 100、未拆 → 總張數 / 持有 100;待查·遺失分頁的一列同樣扣(`ticketCount`、成本 = 單張成本合計 × 張數比例),張的清單照列 101 張紀錄。報表、調貨、盤點的口徑見各自文件。
 
 ### 張 `lottery_tickets`
 

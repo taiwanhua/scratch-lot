@@ -53,7 +53,7 @@ import { StoreAccess } from "../store/store-access";
 import { StoreClock } from "../store/store-clock";
 import { type StoreRef, StoreSalesSupport } from "../store/store-sales-support";
 import { ticketRefsOf } from "../store/store-sales.service";
-import { pendingSkipCountOfBook } from "../tickets/books.service";
+import { countsOfBook, pendingSkipCountOfBook } from "../tickets/books.service";
 import { TicketLedgerService } from "../tickets/ticket-ledger.service";
 import type { TicketEventInput } from "../tickets/ticket-ledger.types";
 import type {
@@ -1073,8 +1073,9 @@ export class StocktakeService {
   }
 
   /**
-   * 確認遺失的張數與成本:這本還有待標註就扣掉待標註那幾張(實體不存在,不算損失;使用者 10/27 定案甲、M1),
-   * 例:整本待查後尋回 3 張、其餘 98 張確認遺失 → 損失 97 張。本一次讀完。
+   * 確認遺失的張數與成本:還沒標的跳號(實體不存在,不算損失)算在還待查的那一組,這次確認了這本剩下的全部
+   * 待查才扣待標註(一本只扣一次;使用者 10/27 定案),例:整本待查後尋回 3 張、其餘 98 張確認遺失 → 損失 97 張。
+   * 本一次讀完。
    */
   private async lostFiguresOf(
     reader: OperatorContext,
@@ -1104,8 +1105,12 @@ export class StocktakeService {
               book.skippedTicketNos.length,
             );
       const total = costs.reduce((sum, value) => sum + value, 0);
-      // 還有待標註就扣(不超過這組張數;使用者 10/27 定案 M1):還沒標的跳號實體不存在,不算損失
-      const extra = Math.min(pending, costs.length);
+      // 還沒標的跳號在「還沒確認實體的那一組」(待查):這次把這本剩下的待查全部確認遺失時才扣,
+      // 一本只扣一次(使用者 10/27 定案;部分確認時留給之後剩下的那一組)
+      const investigating =
+        book === undefined ? 0 : countsOfBook(book).investigating;
+      const extra =
+        costs.length >= investigating ? Math.min(pending, costs.length) : 0;
       tickets += costs.length - extra;
       cost += total - (extra * total) / costs.length;
     }

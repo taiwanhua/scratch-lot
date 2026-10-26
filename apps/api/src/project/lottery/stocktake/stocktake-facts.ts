@@ -9,6 +9,7 @@ import {
   type StocktakeTicketSnapshot,
   TICKET_LOCATION_KIND,
   TICKET_STATUS,
+  isSealedInStore,
   isStocktakeStockLine,
   stocktakeActionProblemsOf,
   stocktakeDiffsOf,
@@ -25,6 +26,7 @@ import {
   LotteryTicketEventsRepository,
   LotteryTicketsRepository,
 } from "../../database/lottery-inventory/lottery-inventory.repository";
+import { countsOfBook } from "../tickets/books.service";
 
 type BookRecord = Persisted<LotteryBookDocument>;
 type TicketRecord = Persisted<LotteryTicketDocument>;
@@ -294,8 +296,14 @@ export class StocktakeFacts {
       }
       // 未拆的本:從沒拆過、這家店的張全是未售在庫存,而且沒被調貨單鎖住(與拆本清單同一個規則)
       const sealed =
-        (book.firstOpenedAt ?? null) === null &&
-        Number(row.total) === Number(row.unlockedInStock);
+        Number(row.total) === Number(row.unlockedInStock) &&
+        isSealedInStore(
+          {
+            counts: countsOfBook(book),
+            firstOpenedAt: book.firstOpenedAt ?? null,
+          },
+          Number(row.total),
+        );
       if (sealed) {
         unopened.set(String(book._id), {
           book,

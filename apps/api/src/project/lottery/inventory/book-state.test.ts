@@ -1430,9 +1430,9 @@ describe("本狀態與再上檯面(GraphQL 端點 + 真 MongoDB)", () => {
       x1.bookId,
       "on_counter",
     );
-    // 剩餘、總張數:還有待標註就扣
+    // 待標註只扣一次:在還待查的那一組,剩餘不扣(3 + 97 = 100)
     expect(detail.book).toMatchObject({
-      remainingCount: 2,
+      remainingCount: 3,
       totalCount: 100,
       pendingSkipCount: 1,
     });
@@ -1537,6 +1537,69 @@ describe("本狀態與再上檯面(GraphQL 端點 + 真 MongoDB)", () => {
         .map((ticket) => ticket.ticketNo),
     ).toEqual(missing);
     await expectState("盤點庫存區 2 張待查", book.bookId, "in_stock");
+  });
+
+  it("待標註一本只扣一次:整本待查後尋回到兩家店(各 3 張)→ 兩店各 3、待查列 94、庫存概況各 3、確認遺失 94", async () => {
+    const y = await newBook(storeA, 101);
+    await investigateUnopened(clerkA, managerA, storeA, y.bookId);
+    await recover(managerA, storeA, y.bookId, nos(1, 3));
+    await recover(managerB, storeB, y.bookId, nos(4, 6));
+    const detail = await expectState("Y 尋回到兩家店", y.bookId, "in_stock");
+    expect(detail.book).toMatchObject({ remainingCount: 6, totalCount: 100 });
+    const listed = await listOf(hq, tenant);
+    expect(
+      listed
+        .find((item) => item.id === String(y.bookId))
+        ?.holdings.map((holding) => holding.count),
+    ).toEqual([3, 3]);
+    const investigations = await must(hq, "LotteryInvestigations", {});
+    expect(
+      (
+        investigations.lotteryInvestigations as {
+          items: { bookId: string; ticketCount: number }[];
+        }
+      ).items.find((item) => item.bookId === String(y.bookId))?.ticketCount,
+    ).toBe(94);
+    for (const [store, who] of [
+      [storeA, managerA],
+      [storeB, managerB],
+    ] as const) {
+      const overview = await must(who, "LotteryStockOverview", {
+        input: { orgId: String(store) },
+      });
+      expect(
+        (
+          overview.lotteryStockOverview as {
+            items: { openedStockTickets: number }[];
+          }
+        ).items[0]?.openedStockTickets,
+      ).toBeGreaterThanOrEqual(3);
+    }
+    const yTickets = await ticketsOf(y.bookId);
+    const missing = yTickets.filter(
+      (ticket) => ticket.status === "investigating",
+    );
+    const startedAt = tick();
+    const review = await must(managerA, "LotteryStocktakeReview", {
+      input: {
+        draft: serializeStocktakeDraft(
+          draftOf(storeA, startedAt, {
+            lostReview: missing.map((ticket) => ({
+              ticketId: String(ticket._id),
+              action: "lost" as const,
+              reasonKey: "not-found",
+            })),
+          }),
+        ),
+      },
+    });
+    expect(
+      (
+        review.lotteryStocktakeReview as {
+          summary: { confirmLost: number };
+        }
+      ).summary.confirmLost,
+    ).toBe(94);
   });
 
   it("本上張數依本整批 $inc:一次賣 4 本(張數相同)比 1 本不多指令(防退化,TX-06)", async () => {

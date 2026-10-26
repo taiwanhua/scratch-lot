@@ -137,14 +137,70 @@ export function unsoldOfCounts(counts: BookTicketCounts): number {
 }
 
 /**
- * 剩餘張數 = 未售的張(庫存、檯面、在途都算)− 待標註張數(還沒標的跳號實體不存在;不會小於 0)。
- * 例:迄號 103、標準 100、還沒標跳號 → 103 張未售 − 3 = 100。
+ * 還沒標的跳號算在哪一組(一本合計只扣一次;使用者 10/27 定案):它們沒有實體、不會被逐張處理,所以在
+ * 「還沒確認實體的那一組」——有待查 / 遺失的張 → 那一組(`missing`;確認遺失、待查列、報表扣);
+ * 沒有 → 未售(`unsold`;剩餘、所在分店、拆本清單扣)。沒有待標註 → null。
+ */
+export type PendingSkipPlacement = "unsold" | "missing";
+
+export function pendingPlacementOf(
+  counts: BookTicketCounts,
+  pendingSkipCount: number,
+): PendingSkipPlacement | null {
+  if (pendingSkipCount <= 0) {
+    return null;
+  }
+  return counts.investigating + counts.lost > 0 ? "missing" : "unsold";
+}
+
+/**
+ * 剩餘張數 = 未售的張(庫存、檯面、在途都算),待標註算在未售時扣掉(還沒標的跳號實體不存在;不會小於 0)。
+ * 例:迄號 103、標準 100、還沒標跳號 → 103 張未售 − 3 = 100;整本待查後尋回 3 張 → 3(待標註在待查那一組)。
  */
 export function remainingOfCounts(
   counts: BookTicketCounts,
   pendingSkipCount: number,
 ): number {
-  return Math.max(0, unsoldOfCounts(counts) - pendingSkipCount);
+  const unsold = unsoldOfCounts(counts);
+  return pendingPlacementOf(counts, pendingSkipCount) === "unsold"
+    ? Math.max(0, unsold - pendingSkipCount)
+    : unsold;
+}
+
+/**
+ * 各分店的未售張數扣掉待標註:待標註算在未售時,只扣一家店(未售最多的那家;同樣多取 id 小的),一本只扣一次。
+ */
+export function holdingsWithoutPendingSkips(
+  holdings: ReadonlyMap<string, number>,
+  counts: BookTicketCounts,
+  pendingSkipCount: number,
+): Map<string, number> {
+  const result = new Map(holdings);
+  if (pendingPlacementOf(counts, pendingSkipCount) !== "unsold") {
+    return result;
+  }
+  const store = pendingStoreOf(holdings);
+  if (store !== null) {
+    result.set(store, Math.max(0, (result.get(store) ?? 0) - pendingSkipCount));
+  }
+  return result;
+}
+
+/** 一本分在幾家店時,待標註扣在哪一家:張數最多的那家,同樣多取 id 小的;沒有 → null。 */
+export function pendingStoreOf(
+  countsByStore: ReadonlyMap<string, number>,
+): string | null {
+  let picked: string | null = null;
+  let most = 0;
+  for (const [store, count] of [...countsByStore].toSorted(([a], [b]) =>
+    a.localeCompare(b),
+  )) {
+    if (count > most) {
+      picked = store;
+      most = count;
+    }
+  }
+  return picked;
 }
 
 /**
@@ -199,6 +255,18 @@ export function isBookSealed(facts: Omit<BookStateFacts, "revoked">): boolean {
     counts.investigating === 0 &&
     counts.lost === 0
   );
+}
+
+/**
+ * 一家店的這本原封不動:整本原封不動(`isBookSealed`),而且整本都在這家店(這家店持有的張數 = 整本庫存張數)。
+ * 只尋回到別家店的幾張、或分在兩家店都不算(使用者 10/27 定案 M1:這家店原封不動才在拆本時標跳號)。
+ * `storeTicketCount` = 這家店持有這本的張數(不算跳號)。
+ */
+export function isSealedInStore(
+  facts: Omit<BookStateFacts, "revoked">,
+  storeTicketCount: number,
+): boolean {
+  return isBookSealed(facts) && storeTicketCount === facts.counts.stock;
 }
 
 export function bookDisplayStateOf(facts: BookStateFacts): BookDisplayState {

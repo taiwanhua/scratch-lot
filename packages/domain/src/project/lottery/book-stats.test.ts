@@ -9,7 +9,9 @@ import {
   bookDisplayStateOf,
   emptyBookCounts,
   holdingsOf,
+  holdingsWithoutPendingSkips,
   isUnopenedInStore,
+  pendingPlacementOf,
   pendingSkipCountOf,
   remainingOfCounts,
   totalOfCounts,
@@ -72,6 +74,40 @@ describe("本上的張數與顯示狀態(使用者 10/27 定案 B)", () => {
         ...tickets(5, { status: "sold", locationKind: "counter" }),
       ]),
     ).toEqual(counts({ stock: 98, sold: 5 }));
+  });
+
+  it("待標註只扣一次:有待查 / 遺失扣那一組,沒有才扣未售", () => {
+    // 整本待查後尋回 3 張:剩餘 3(待標註在待查那一組)
+    expect(pendingPlacementOf(counts({ stock: 3, investigating: 98 }), 1)).toBe(
+      "missing",
+    );
+    expect(remainingOfCounts(counts({ stock: 3, investigating: 98 }), 1)).toBe(
+      3,
+    );
+    expect(pendingPlacementOf(counts({ stock: 101 }), 1)).toBe("unsold");
+    expect(pendingPlacementOf(counts({ stock: 101 }), 0)).toBeNull();
+    // 分在兩家店:只扣張數多的那家
+    expect(
+      Object.fromEntries(
+        holdingsWithoutPendingSkips(
+          new Map([
+            ["a", 50],
+            ["b", 51],
+          ]),
+          counts({ stock: 101 }),
+          1,
+        ),
+      ),
+    ).toEqual({ a: 50, b: 50 });
+    expect(
+      Object.fromEntries(
+        holdingsWithoutPendingSkips(
+          new Map([["a", 3]]),
+          counts({ stock: 3, investigating: 98 }),
+          1,
+        ),
+      ),
+    ).toEqual({ a: 3 });
   });
 
   it("剩餘 / 總張數:還有待標註就扣(不看拆過沒有)", () => {

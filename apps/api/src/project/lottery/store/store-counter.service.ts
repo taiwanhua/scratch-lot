@@ -5,6 +5,7 @@ import {
   TICKET_EVENT_TYPE,
   TICKET_LOCATION_KIND,
   TICKET_STATUS,
+  isSealedInStore,
   splitPlanProblemOf,
 } from "@repo/domain/project/lottery";
 
@@ -14,7 +15,7 @@ import {
   LotteryBooksRepository,
   LotteryTicketsRepository,
 } from "../../database/lottery-inventory/lottery-inventory.repository";
-import { pendingSkipCountOfBook } from "../tickets/books.service";
+import { countsOfBook, pendingSkipCountOfBook } from "../tickets/books.service";
 import { TicketLedgerService } from "../tickets/ticket-ledger.service";
 import type { TicketEventInput } from "../tickets/ticket-ledger.types";
 import type {
@@ -119,7 +120,14 @@ export class StoreCounterService {
         const game = games.get(String(book.gameId));
         const row = rowOf.get(String(book._id)) ?? { total: 0, inStock: 0 };
         const sealed =
-          (book.firstOpenedAt ?? null) === null && row.total === row.inStock;
+          row.total === row.inStock &&
+          isSealedInStore(
+            {
+              counts: countsOfBook(book),
+              firstOpenedAt: book.firstOpenedAt ?? null,
+            },
+            row.total,
+          );
         const pendingSkipCount = sealed ? pendingSkipCountOfBook(book) : 0;
         return {
           bookId: String(book._id),
@@ -189,10 +197,16 @@ export class StoreCounterService {
         throw bookAlreadyOpenedError();
       }
       // 這家店原封不動(從沒拆過、這家店的張全是未售在庫存、沒被鎖)才標跳號
-      const pending =
-        (book.firstOpenedAt ?? null) === null && usable.length === mine.length
-          ? pendingSkipCountOfBook(book)
-          : 0;
+      const sealed =
+        usable.length === mine.length &&
+        isSealedInStore(
+          {
+            counts: countsOfBook(book),
+            firstOpenedAt: book.firstOpenedAt ?? null,
+          },
+          mine.length,
+        );
+      const pending = sealed ? pendingSkipCountOfBook(book) : 0;
       const problem = splitPlanProblemOf(
         usable.map((ticket) => ticket.ticketNo),
         pending,

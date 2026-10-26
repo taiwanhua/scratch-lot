@@ -10,6 +10,7 @@ import {
   type TicketEventType,
   bookDisplayStateOf,
   holdingsOf,
+  holdingsWithoutPendingSkips,
   normalizeBookNo,
   remainingOfCounts,
   requiredSkipCountOf,
@@ -38,11 +39,7 @@ import { LotteryShiftsRepository } from "../../database/lottery-store/lottery-sh
 import { parseId } from "../accounts/accounts-util";
 import { daysSince, localDayOf } from "../dealers/dealer-dates";
 import { tenantOfOperator } from "../master-data-tenant";
-import {
-  countsOfBook,
-  pendingSkipCountOfBook,
-  withoutPendingSkips,
-} from "../tickets/books.service";
+import { countsOfBook, pendingSkipCountOfBook } from "../tickets/books.service";
 import { notFoundError } from "../tickets/inventory-error";
 import { bookStateConditionsOf } from "./book-state-filter";
 import {
@@ -516,14 +513,16 @@ export class InventoryViewService {
       const pendingSkipCount = pendingSkipCountOfBook(record);
       const counts = countsOfBook(record);
       // 所在分店只算未售的張;待標註的跳號(拆本前還沒標的)不算持有與總張數(使用者 10/27 定案甲)
-      const holdings = [...holdingsOf(snapshots)]
+      const holdings = [
+        ...holdingsWithoutPendingSkips(
+          holdingsOf(snapshots),
+          counts,
+          pendingSkipCount,
+        ),
+      ]
         .map(([orgId, count]) => ({
           org: { id: orgId, name: orgNames.get(orgId) ?? "" },
-          count: withoutPendingSkips(
-            count,
-            record.standardTickets,
-            pendingSkipCount,
-          ),
+          count,
         }))
         .toSorted((a, b) => b.count - a.count);
       return {

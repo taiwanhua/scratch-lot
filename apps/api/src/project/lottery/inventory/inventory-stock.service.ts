@@ -5,6 +5,9 @@ import {
   INVENTORY_PERMISSIONS,
   TICKET_LOCATION_KIND,
   TICKET_STATUS,
+  isSealedInStore,
+  pendingPlacementOf,
+  pendingStoreOf,
 } from "@repo/domain/project/lottery";
 
 import {
@@ -18,7 +21,7 @@ import {
 } from "../../database/lottery-inventory/lottery-inventory.repository";
 import { parseId } from "../accounts/accounts-util";
 import { LotteryAllocationsService } from "../tickets/allocations.service";
-import { pendingSkipCountOfBook } from "../tickets/books.service";
+import { countsOfBook, pendingSkipCountOfBook } from "../tickets/books.service";
 import { notFoundError, validationError } from "../tickets/inventory-error";
 import type {
   LotteryAllocationsInput,
@@ -53,13 +56,17 @@ interface BookStock {
 
 /** 庫存概況要的本上事實:拆過沒有、待標註張數。 */
 interface BookFacts {
-  opened: boolean;
-  pendingSkipCount: number;
+  /** 整本原封不動時的庫存張數(整本都在一家店才算那家店未拆);不是 → -1。 */
+  sealedStock: number;
+  /** 待標註算在未售時的張數(其他 = 0;一本只扣一次)。 */
+  unsoldPending: number;
 }
 
 /** 一本在一家店是不是原封不動:從沒拆過,而且這家店的張全是未售、在庫存。 */
 const isSealedRow = (row: BookStock, facts: BookFacts | undefined): boolean =>
-  row.total > 0 && row.total === row.unsoldStock && facts?.opened !== true;
+  row.total > 0 &&
+  row.total === row.unsoldStock &&
+  row.total === facts?.sealedStock;
 
 /** 一家店 × 一款遊戲的庫存概況合計。 */
 interface StockTotal {
@@ -77,6 +84,14 @@ function stockTotalsOf(
   factsOf: ReadonlyMap<string, BookFacts>,
 ): Map<string, StockTotal> {
   const totals = new Map<string, StockTotal>();
+  // 待標註只扣一家店(這本未售張最多的那家)
+  const storesOf = new Map<string, Map<string, number>>();
+  for (const row of bookRows) {
+    const book = String(row._id.bookId);
+    const stores = storesOf.get(book) ?? new Map<string, number>();
+    stores.set(String(row._id.orgId), row.unsoldStock + row.counter);
+    storesOf.set(book, stores);
+  }
   for (const row of bookRows) {
     const key = `${String(row._id.orgId)}:${String(row._id.gameId)}`;
     const total = totals.get(key) ?? {
@@ -90,10 +105,13 @@ function stockTotalsOf(
     const facts = factsOf.get(String(row._id.bookId));
     const sealed = isSealedRow(row, facts);
     total.unopened += sealed ? 1 : 0;
-    // 庫存(拆過):還有待標註就扣(實體不存在;使用者 10/27 定案 M1)
-    total.openedStock += sealed
-      ? 0
-      : Math.max(0, row.unsoldStock - (facts?.pendingSkipCount ?? 0));
+    // 庫存(拆過):待標註算在未售時,只在扣的那一家店扣一次(實體不存在;使用者 10/27 定案)
+    const pending =
+      pendingStoreOf(storesOf.get(String(row._id.bookId)) ?? new Map()) ===
+      String(row._id.orgId)
+        ? (facts?.unsoldPending ?? 0)
+        : 0;
+    total.openedStock += sealed ? 0 : Math.max(0, row.unsoldStock - pending);
     total.counter += row.counter;
     total.sold += row.sold;
     totals.set(key, total);
@@ -318,15 +336,30 @@ export class InventoryStockService {
       operator,
       { _id: { $in: [...bookIds] } },
       {
-        select: "firstOpenedAt lastTicketNo standardTickets skippedTicketNos",
+        select:
+          "firstOpenedAt lastTicketNo standardTickets skippedTicketNos ticketCounts",
       },
     );
     return new Map(
       books.map((book) => [
         String(book._id),
         {
-          opened: (book.firstOpenedAt ?? null) !== null,
-          pendingSkipCount: pendingSkipCountOfBook(book),
+          sealedStock: isSealedInStore(
+            {
+              counts: countsOfBook(book),
+              firstOpenedAt: book.firstOpenedAt ?? null,
+            },
+            countsOfBook(book).stock,
+          )
+            ? countsOfBook(book).stock
+            : -1,
+          unsoldPending:
+            pendingPlacementOf(
+              countsOfBook(book),
+              pendingSkipCountOfBook(book),
+            ) === "unsold"
+              ? pendingSkipCountOfBook(book)
+              : 0,
         },
       ]),
     );
