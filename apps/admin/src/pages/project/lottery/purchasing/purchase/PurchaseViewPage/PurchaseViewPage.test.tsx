@@ -75,6 +75,32 @@ describe("進貨單檢視頁", () => {
     expect(screen.getByRole("textbox", { name: "刷條碼點收" })).toHaveValue("");
   });
 
+  it("選了遊戲但點收失敗 → 再刷別的碼時不帶舊的遊戲,選單收起", async () => {
+    const user = userEvent.setup();
+    const { purchaseFake } = renderPurchasePage({ path: VIEW });
+    const scan = await screen.findByRole("textbox", { name: "刷條碼點收" });
+    await user.type(scan, `${AMBIGUOUS_FRONT_CODE}{Enter}`);
+    await user.click(
+      await screen.findByRole("combobox", { name: "正面條碼的遊戲" }),
+    );
+    await user.click(
+      await screen.findByRole("option", { name: "5201 金好運" }),
+    );
+    expect(await screen.findByText("這本已經點收過了")).toBeInTheDocument();
+    expect(
+      screen.getByRole("combobox", { name: "正面條碼的遊戲" }),
+    ).toBeInTheDocument();
+    const input = screen.getByRole("textbox", { name: "刷條碼點收" });
+    await user.clear(input);
+    await user.type(input, "0099999100{Enter}");
+    await waitFor(() => {
+      expect(purchaseFake.scanGameIds).toEqual([null, "game-5201", null]);
+    });
+    expect(
+      screen.queryByRole("combobox", { name: "正面條碼的遊戲" }),
+    ).toBeNull();
+  });
+
   it("送錯分店:擋下並提示是哪一家店的哪一張單;[通知總部更正] → 通知建立者", async () => {
     const user = userEvent.setup();
     const { purchaseFake } = renderPurchasePage({ path: VIEW });

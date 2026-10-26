@@ -2624,7 +2624,8 @@
         "title": "編輯進貨單",
         "titleWithNo": "編輯進貨單 {serialNo}",
         "lockedHint": "已點收的本不能修改;送出後會回到點收,由進貨分店點收剩下的本",
-        "loadFailed": "讀不到這張進貨單的點收狀態,請重新整理"
+        "loadFailed": "讀不到這張進貨單的點收狀態,請重新整理",
+        "keptLines": "有 {count} 列明細讀不到內容,畫面沒有列出,會照原樣保留"
       }
     },
     "receive": {
@@ -2806,7 +2807,8 @@
         "title": "編輯調貨單",
         "titleWithNo": "編輯調貨單 {serialNo}",
         "lockedHint": "已點收的本不能修改或移除;在途(已出貨)的本不能修改,路上遺失時可以移除,送出後變待查。送出後重新走出貨確認與點收,由收貨店點收剩下的本",
-        "loadFailed": "讀不到這張調貨單的出貨與點收狀態,請重新整理"
+        "loadFailed": "讀不到這張調貨單的出貨與點收狀態,請重新整理",
+        "keptLines": "有 {count} 列明細讀不到內容,畫面沒有列出,會照原樣保留"
       }
     },
     "allocation": {
@@ -2877,7 +2879,8 @@
     "edit": {
       "title": "編輯叫貨單",
       "titleWithNo": "編輯叫貨單 {serialNo}",
-      "notOnSale": "這些遊戲已不在販售中,畫面沒有列出,會照原樣保留:{games}"
+      "notOnSale": "這些遊戲已不在販售中,畫面沒有列出,會照原樣保留:{games}",
+      "loadFailed": "讀不到這家店的遊戲清單,請重新整理"
     }
   },
   "lifecycle": {

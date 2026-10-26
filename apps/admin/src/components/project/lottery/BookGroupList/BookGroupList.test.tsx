@@ -8,6 +8,8 @@ import { defaultLocale, messages } from "@repo/i18n";
 import { AppThemeProvider } from "@repo/ui/app-theme-provider";
 import { defaultBrand } from "@repo/ui/theme";
 
+import { restoreViewportAfterEach, setMobileViewport } from "@/test/viewport";
+
 import { BookScanBar } from "../BookScanBar/BookScanBar";
 import {
   BookGroupList,
@@ -147,6 +149,40 @@ describe("BookGroupList", () => {
     ).toBeInTheDocument();
     // 點收平常不顯示「正面條碼的遊戲」
     expect(screen.queryByRole("combobox")).toBeNull();
+  });
+});
+
+describe("BookGroupList 平板 / 手機(卡片)", () => {
+  restoreViewportAfterEach();
+
+  it("每本一張卡片:鎖住的列只有狀態標籤;沒鎖的列有率輸入框與 [移除];在途可移除的列只有 [移除]", () => {
+    setMobileViewport();
+    renderList("edit", [
+      row("r1", "056527", { isLocked: true, status: "received" }),
+      row("r2", "056528", {
+        isLocked: true,
+        isRemovable: true,
+        status: "inTransit",
+      }),
+      row("r5", "056531"),
+    ]);
+    expect(screen.queryByRole("table")).toBeNull();
+    expect(screen.getByText("已點收")).toBeInTheDocument();
+    expect(screen.getByText("在途")).toBeInTheDocument();
+    expect(
+      screen.getAllByText((_text, node) => node?.textContent === "最後張號 100")
+        .length,
+    ).toBeGreaterThan(0);
+    expect(screen.queryByRole("button", { name: "移除 056527" })).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "移除 056528" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("spinbutton", { name: "本號 056528 的批購金額率" }),
+    ).toBeNull();
+    expect(
+      screen.getByRole("spinbutton", { name: "本號 056531 的批購金額率" }),
+    ).toHaveValue(92);
   });
 });
 

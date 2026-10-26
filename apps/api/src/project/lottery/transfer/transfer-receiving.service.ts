@@ -103,6 +103,25 @@ export class TransferReceivingService {
     private readonly tx: TransactionService,
   ) {}
 
+  /**
+   * 編輯頁的選項帶的 `submissionId`:操作者讀得到這張調貨單(`TransferAccess.readable`)才回它的 id,
+   * 讀不到 / 不是調貨單 → null(當作新增頁,不多列它引用的叫貨單)。
+   */
+  async readableIdOf(
+    operator: OperatorContext,
+    submissionIdText: string | null | undefined,
+  ): Promise<Types.ObjectId | null> {
+    if (submissionIdText === null || submissionIdText === undefined) {
+      return null;
+    }
+    try {
+      const submission = await this.access.readable(operator, submissionIdText);
+      return submission._id;
+    } catch {
+      return null;
+    }
+  }
+
   async receivingOf(
     operator: OperatorContext,
     submissionIdText: string,

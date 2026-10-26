@@ -837,6 +837,33 @@ describe("進貨單(規格 8.2、8.3)", () => {
         await resubmit(purchase.id, [done, { ...pending, rate: 90 }]),
       ).toEqual([]);
     });
+
+    it("已點收的列以點收時的本比對:遊戲的整本金額之後改了,退回修改照樣送得出去(沒點收的列照遊戲現值)", async () => {
+      const done = book(gameHot);
+      const pending = book(gameHot);
+      const purchase = await submit([done, pending]);
+      expect(await receive(managerA, purchase.id, codeOf(done))).toEqual({});
+      await returnToHq(purchase.id);
+      const games = db().collection("lottery_games");
+      await games.updateOne({ _id: gameHot }, { $set: { bookPrice: 30_000 } });
+      try {
+        // 沒點收的列還是舊的整本金額 → 和遊戲不符
+        expect(await resubmit(purchase.id, [done, pending])).toEqual([
+          "PURCHASE_LINE_INVALID",
+        ]);
+        expect(
+          await resubmit(purchase.id, [
+            done,
+            { ...pending, book_price: 30_000 },
+          ]),
+        ).toEqual([]);
+      } finally {
+        await games.updateOne(
+          { _id: gameHot },
+          { $set: { bookPrice: 20_000 } },
+        );
+      }
+    });
   });
 
   describe("送出後(規格 8.2、第 9 章)", () => {
@@ -888,6 +915,8 @@ describe("進貨單(規格 8.2、8.3)", () => {
       };
       expect(await listed(null)).not.toContain("R-9010");
       expect(await listed(purchase.id)).toContain("R-9010");
+      // 不是進貨單(或讀不到)的 id → 當作新增頁
+      expect(await listed(String(requisitionId))).not.toContain("R-9010");
       // 點收區塊顯示「叫貨 2,已刷 0」
       const receiving = await ok<{
         lotteryPurchaseReceiving: {

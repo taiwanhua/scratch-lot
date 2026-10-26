@@ -199,11 +199,17 @@ export class PurchaseRules {
     }
     const reader = await this.readerOf(submission.tenantId);
     const games = await this.gamesOf(reader, lines);
-    const lineProblem = this.lineProblemOf(lines, games);
+    const received = await this.receiptsOf(reader, submission._id);
+    // 已點收的列以點收時建的本比對(`receivedRowsChanged`),不再和遊戲現在的張數 / 整本金額 / 販售狀態比:
+    // 點收後遊戲改過(或停售)時,退回修改沒點收的列照樣送得出去
+    const receivedRowIds = new Set(received.map((receipt) => receipt.rowId));
+    const lineProblem = this.lineProblemOf(
+      lines.filter((line) => !receivedRowIds.has(line.rowId)),
+      games,
+    );
     if (lineProblem !== null) {
       return lineProblem;
     }
-    const received = await this.receiptsOf(reader, submission._id);
     const changed = await this.receivedRowsChanged(
       reader,
       lines,

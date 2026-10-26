@@ -79,6 +79,7 @@ export const TransferCreatePage = () => {
           note: "",
         },
         lines: [],
+        keptLines: [],
       }}
       lockedRows={NO_LOCKED}
       canSaveDraft={form.allowDraft}

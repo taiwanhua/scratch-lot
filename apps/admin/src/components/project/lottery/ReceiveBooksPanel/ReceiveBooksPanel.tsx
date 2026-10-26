@@ -86,8 +86,14 @@ export const ReceiveBooksPanel = ({
     gameId: string | null,
   ): Promise<boolean> => {
     setMessage(null);
+    // 選的遊戲只用在同一個碼上;刷到別的碼就清掉選擇與選單(不把舊遊戲套到不相干的本)
+    const isSameCode = code === lastCode;
+    if (!isSameCode) {
+      setChoices(null);
+      setPickedGameId(null);
+    }
     setLastCode(code);
-    const outcome = await onScan(code, gameId);
+    const outcome = await onScan(code, isSameCode ? gameId : null);
     if (outcome.kind === "received") {
       setChoices(null);
       setPickedGameId(null);

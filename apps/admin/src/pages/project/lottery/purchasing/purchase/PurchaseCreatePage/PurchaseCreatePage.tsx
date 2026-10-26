@@ -95,6 +95,7 @@ export const PurchaseCreatePage = () => {
     },
     books: [],
     redemptions: [],
+    keptLines: [],
   };
 
   return (

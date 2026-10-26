@@ -364,6 +364,25 @@ export class PurchaseReceivingService {
     return true;
   }
 
+  /**
+   * 編輯頁的選項帶的 `submissionId`:操作者讀得到這張進貨單(同 `readable`)才回它的 id,
+   * 讀不到 / 不是進貨單 → null(當作新增頁,不多列它引用的叫貨單)。
+   */
+  async readableIdOf(
+    operator: OperatorContext,
+    submissionIdText: string | null | undefined,
+  ): Promise<Types.ObjectId | null> {
+    if (submissionIdText === null || submissionIdText === undefined) {
+      return null;
+    }
+    try {
+      const submission = await this.readable(operator, submissionIdText);
+      return submission._id;
+    } catch {
+      return null;
+    }
+  }
+
   // ---- 內部 ----
 
   /**

@@ -12,6 +12,7 @@ import {
   requisitionProgressOf,
   setBookRate,
   setGroupRate,
+  storedOnlyForLocked,
   toggleRedemption,
 } from "./purchase-form";
 
@@ -268,6 +269,38 @@ describe("依遊戲分組、批購金額率、叫貨單帶入", () => {
         redemption: { id: "rd-2", label: "5150-042210-083" },
         prize_amount: 2000,
       },
+    ]);
+  });
+});
+
+describe("編輯頁鎖住的列(已點收)", () => {
+  it("張數 / 整本金額照存的,不照遊戲現在的值重算;沒鎖的列照遊戲", () => {
+    const stored = { tickets: 100, bookPrice: 18_000 };
+    const books: ScannedBook[] = storedOnlyForLocked(
+      [
+        {
+          rowId: "a",
+          gameId: "g-5164",
+          bookNo: "0056527",
+          lastTicketNo: 100,
+          rate: 92,
+          stored,
+        },
+        {
+          rowId: "b",
+          gameId: "g-5164",
+          bookNo: "0056528",
+          lastTicketNo: 100,
+          rate: 92,
+          stored,
+        },
+      ],
+      new Set(["a"]),
+    );
+    const [group] = groupBooks(books, GAMES, null);
+    expect(group.rows.map((row) => [row.bookPrice, row.amount])).toEqual([
+      [18_000, 16_560],
+      [20_000, 18_400],
     ]);
   });
 });

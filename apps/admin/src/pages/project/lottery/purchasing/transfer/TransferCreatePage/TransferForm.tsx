@@ -203,7 +203,11 @@ export const TransferForm = ({
   );
 
   const valuesOf = () =>
-    transferValuesOf({ fromBranchId, toBranchId, requisitionNo, note }, lines);
+    transferValuesOf(
+      { fromBranchId, toBranchId, requisitionNo, note },
+      lines,
+      initial.keptLines,
+    );
   const canSubmit =
     !isPending &&
     fromBranchId !== "" &&
@@ -279,6 +283,11 @@ export const TransferForm = ({
                 <>
                   {hasLocked && (
                     <Alert severity="info">{tEdit("lockedHint")}</Alert>
+                  )}
+                  {initial.keptLines.length > 0 && (
+                    <Alert severity="warning">
+                      {tEdit("keptLines", { count: initial.keptLines.length })}
+                    </Alert>
                   )}
                   <AllocationWarnings items={allocationItems} />
                   <LineErrorAlerts

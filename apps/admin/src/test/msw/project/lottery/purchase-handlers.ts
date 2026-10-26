@@ -28,6 +28,8 @@ export interface PurchaseWorld {
   notified: string[];
   /** 刷 `AMBIGUOUS_FRONT_CODE` 時帶的遊戲(null = 沒選) */
   pickedGameIds: (string | null)[];
+  /** 每一次刷碼帶的遊戲(null = 沒選) */
+  scanGameIds: (string | null)[];
 }
 
 const PROGRESS = new Map<
@@ -124,7 +126,7 @@ const wrongStore = () =>
     },
   );
 
-/** 正面條碼:對到單上兩款遊戲同本號(這個假 api 當成要選遊戲;選了配 row-5)。 */
+/** 正面條碼:對到單上兩款遊戲同本號(這個假 api 當成要選遊戲;選 5164 配 row-5,選 5201 回已點收)。 */
 export const AMBIGUOUS_FRONT_CODE = "0056531098";
 
 export interface PurchaseWorldOptions {
@@ -137,12 +139,14 @@ export const purchaseWorld = ({
 }: PurchaseWorldOptions = {}): PurchaseWorld => {
   const scanned: string[] = [];
   const pickedGameIds: (string | null)[] = [];
+  const scanGameIds: (string | null)[] = [];
   const notified: string[] = [];
   let receiving: LotteryPurchaseReceivingFieldsFragment = initial;
   return {
     scanned,
     notified,
     pickedGameIds,
+    scanGameIds,
     handlers: [
       api.query("LotteryPurchaseOptions", () =>
         HttpResponse.json({
@@ -156,6 +160,7 @@ export const purchaseWorld = ({
         const { input } =
           variables as ReceiveLotteryPurchaseBookMutationVariables;
         scanned.push(input.code);
+        scanGameIds.push(input.gameId ?? null);
         if (input.code === WRONG_STORE_CODE) {
           return wrongStore();
         }
@@ -171,6 +176,11 @@ export const purchaseWorld = ({
                 gameIds: ["game-5164", "game-5201"],
               },
             );
+          }
+          if (input.gameId === "game-5201") {
+            return graphqlError("VALIDATION_FAILED", "Already received", {
+              reason: "PURCHASE_ALREADY_RECEIVED",
+            });
           }
         }
         const pending = receiving.groups

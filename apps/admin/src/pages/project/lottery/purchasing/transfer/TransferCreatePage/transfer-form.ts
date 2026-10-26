@@ -205,24 +205,28 @@ export interface TransferHeaderState {
 export const transferValuesOf = (
   header: TransferHeaderState,
   lines: readonly TransferDraftLine[],
+  keptLines: readonly Record<string, unknown>[] = [],
 ): StoredValues => ({
   [K.fromBranch]: header.fromBranchId === "" ? null : header.fromBranchId,
   [K.toBranch]: header.toBranchId === "" ? null : header.toBranchId,
   [K.requisition]: header.requisitionNo,
   [K.note]: header.note.trim() === "" ? null : header.note.trim(),
-  [K.lines]: lines.map((line) => ({
-    rowId: line.rowId,
-    [K.game]: { id: line.book.gameId, label: line.book.gameName },
-    [K.book]: { id: line.book.bookId, label: bookLabelOf(line.book) },
-    [K.mode]: line.mode,
-    [K.ticketNos]:
-      line.mode === TRANSFER_MODE.whole
-        ? wholeRangeOf(line.book)
-        : ticketNosText(line.ticketNos),
-    [K.tickets]: lineTicketsOf(line),
-    [K.amount]: lineAmountOf(line),
-    [K.rate]: line.rate,
-  })),
+  [K.lines]: [
+    ...lines.map((line): Record<string, unknown> => ({
+      rowId: line.rowId,
+      [K.game]: { id: line.book.gameId, label: line.book.gameName },
+      [K.book]: { id: line.book.bookId, label: bookLabelOf(line.book) },
+      [K.mode]: line.mode,
+      [K.ticketNos]:
+        line.mode === TRANSFER_MODE.whole
+          ? wholeRangeOf(line.book)
+          : ticketNosText(line.ticketNos),
+      [K.tickets]: lineTicketsOf(line),
+      [K.amount]: lineAmountOf(line),
+      [K.rate]: line.rate,
+    })),
+    ...keptLines.map((line) => ({ ...line })),
+  ],
 });
 
 /**
@@ -260,6 +264,8 @@ type ReceivingRow = LotteryTransferReceivingFieldsFragment["rows"][number];
 export interface TransferFormState {
   header: TransferHeaderState;
   lines: TransferDraftLine[];
+  /** 讀不到內容的明細列(讀不到本 / 遊戲):畫面列不出來,原樣存回 */
+  keptLines: Record<string, unknown>[];
 }
 
 const labelOf = (value: unknown): string =>
@@ -273,7 +279,7 @@ const labelOf = (value: unknown): string =>
 /**
  * 存值 → 畫面狀態(草稿 / 被退回帶入原內容;`transferValuesOf` 的反向):rowId、方式、張號、批購金額率照舊;
  * 本的事實(遊戲代號、本號)取點收區塊讀到的列(`receivingRows`),金額照存的(整本 = 整本金額、選張 = 面額 × 張數),
- * 所以帶入後金額不變。讀不到本的列略過。
+ * 所以帶入後金額不變。讀不到本 / 遊戲的列放 `keptLines` 原樣存回,不靜默丟掉。
  */
 export const transferFormStateOf = (
   values: StoredValues,
@@ -325,6 +331,38 @@ export const transferFormStateOf = (
     const [, gameCode = "", bookNo = ""] = match;
     return { gameCode, bookNo: `0${bookNo}`, gameName: "" };
   };
+  const lines = transferLinesOf(record).flatMap((line): TransferDraftLine[] => {
+    const row = bookFactsOf(line.rowId);
+    if (row === null || line.gameId === null) {
+      return [];
+    }
+    const isWhole = line.mode === TRANSFER_MODE.whole;
+    return [
+      {
+        rowId: line.rowId,
+        book: {
+          bookId: line.bookId,
+          gameId: line.gameId,
+          gameCode: row.gameCode,
+          gameName:
+            row.gameName === ""
+              ? (gameNameOf.get(line.rowId) ?? "")
+              : row.gameName,
+          bookNo: row.bookNo,
+          unitPrice:
+            line.tickets > 0 ? Math.round(line.amount / line.tickets) : 0,
+          bookPrice: line.amount,
+          rate: line.rate,
+          isWhole,
+          availableCount: line.tickets,
+        },
+        mode: line.mode,
+        ticketNos: isWhole ? [] : line.ticketNos,
+        rate: line.rate,
+      },
+    ];
+  });
+  const lineRowIds = new Set(lines.map((line) => line.rowId));
   return {
     header: {
       fromBranchId: header.fromBranchId ?? "",
@@ -332,36 +370,14 @@ export const transferFormStateOf = (
       requisitionNo: header.requisitionNo,
       note: typeof note === "string" ? note : "",
     },
-    lines: transferLinesOf(record).flatMap((line): TransferDraftLine[] => {
-      const row = bookFactsOf(line.rowId);
-      if (row === null || line.gameId === null) {
-        return [];
-      }
-      const isWhole = line.mode === TRANSFER_MODE.whole;
-      return [
-        {
-          rowId: line.rowId,
-          book: {
-            bookId: line.bookId,
-            gameId: line.gameId,
-            gameCode: row.gameCode,
-            gameName:
-              row.gameName === ""
-                ? (gameNameOf.get(line.rowId) ?? "")
-                : row.gameName,
-            bookNo: row.bookNo,
-            unitPrice:
-              line.tickets > 0 ? Math.round(line.amount / line.tickets) : 0,
-            bookPrice: line.amount,
-            rate: line.rate,
-            isWhole,
-            availableCount: line.tickets,
-          },
-          mode: line.mode,
-          ticketNos: isWhole ? [] : line.ticketNos,
-          rate: line.rate,
-        },
-      ];
-    }),
+    lines,
+    keptLines: rawLines.filter(
+      (row): row is Record<string, unknown> =>
+        typeof row === "object" &&
+        row !== null &&
+        !lineRowIds.has(
+          "rowId" in row && typeof row.rowId === "string" ? row.rowId : "",
+        ),
+    ),
   };
 };

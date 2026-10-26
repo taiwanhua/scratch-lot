@@ -1,6 +1,13 @@
 import { describe, expect, it } from "@jest/globals";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { HttpResponse } from "msw";
+
+import {
+  requisitionFormWorld,
+  requisitionSubmissions,
+} from "@/test/msw/project/lottery/purchasing-fixtures";
+import { api, server } from "@/test/msw/server";
 
 import { renderPurchasingPage } from "../purchasing-test-support";
 
@@ -49,5 +56,63 @@ describe("叫貨單編輯頁", () => {
     await waitFor(() => {
       expect(formsFake.inputs.submitFormSubmission).toHaveLength(1);
     });
+  });
+
+  it("停售遊戲的列畫面上列不出來:提示並原樣存回", async () => {
+    const user = userEvent.setup();
+    const stopped = {
+      rowId: "row-stopped",
+      game: { id: "game-9999", label: "已停售遊戲" },
+      books: 3,
+      note: null,
+    };
+    const { formsFake } = renderPurchasingPage({
+      path: "/purchasing/requisition/edit-page/sub-req-0024",
+      forms: requisitionFormWorld({
+        submissions: requisitionSubmissions().map((item) =>
+          item.id === "sub-req-0024"
+            ? {
+                ...item,
+                values: {
+                  ...item.values,
+                  lines: [
+                    ...(item.values.lines as Record<string, unknown>[]),
+                    stopped,
+                  ],
+                },
+              }
+            : item,
+        ),
+      }),
+    });
+    expect(
+      await screen.findByText(
+        "這些遊戲已不在販售中,畫面沒有列出,會照原樣保留:已停售遊戲",
+      ),
+    ).toBeInTheDocument();
+    await user.click(await screen.findByRole("button", { name: "存草稿" }));
+    await waitFor(() => {
+      expect(formsFake.inputs.saveFormDraft).toHaveLength(1);
+    });
+    expect(formsFake.inputs.saveFormDraft[0]?.values?.lines).toContainEqual({
+      rowId: "row-stopped",
+      game: { id: "game-9999", label: "已停售遊戲" },
+      books: 3,
+      note: null,
+    });
+  });
+
+  it("遊戲清單讀不到 → 顯示讀取失敗,不畫空白表單", async () => {
+    renderPurchasingPage({
+      path: "/purchasing/requisition/edit-page/sub-req-0024",
+    });
+    server.use(
+      api.query("LotteryRequisitionCandidates", () =>
+        HttpResponse.json({ errors: [{ message: "boom" }] }),
+      ),
+    );
+    expect(
+      await screen.findByText("讀不到這家店的遊戲清單,請重新整理"),
+    ).toBeInTheDocument();
   });
 });

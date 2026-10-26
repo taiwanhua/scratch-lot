@@ -22,7 +22,7 @@ const PURCHASE_LOCKED_ABILITIES = {
 
 /**
  * 被退回的進貨單(編輯頁:帶入原內容、已點收的列鎖住;規格 8.2「打錯 → 退回修改沒點收的列」):
- * 5164 兩本(row-1 已點收、row-5 沒點收),沒有叫貨單。點收狀態配 `returnedPurchaseReceiving`。
+ * 5164 兩本(row-1 已點收、row-5 沒點收),引用叫貨單 R-0042、勾了兌獎紀錄 rd-031。點收狀態配 `returnedPurchaseReceiving`。
  */
 export const returnedPurchase = (): MockSubmission =>
   purchaseSubmission("doc-p35", "P-0035", "林大同 #87654321", 36_800, {
@@ -34,7 +34,7 @@ export const returnedPurchase = (): MockSubmission =>
     },
     values: {
       branch: PURCHASE_BRANCH.id,
-      requisition: null,
+      requisition: "R-0042",
       dealer: { id: "dealer-a", label: "林大同 #87654321" },
       self_purchase: true,
       trustee: null,
@@ -61,7 +61,13 @@ export const returnedPurchase = (): MockSubmission =>
           rate: 92,
         },
       ],
-      redemptions: [],
+      redemptions: [
+        {
+          rowId: "rd-row-1",
+          redemption: { id: "rd-031", label: "5164-056527-031" },
+          prize_amount: 500,
+        },
+      ],
     },
   });
 

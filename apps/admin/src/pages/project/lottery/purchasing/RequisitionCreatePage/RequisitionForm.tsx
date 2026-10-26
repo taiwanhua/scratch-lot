@@ -297,7 +297,8 @@ export const RequisitionForm = ({
         {...(canSaveDraft && {
           draft: {
             label: t("saveDraft"),
-            disabled: isPending || branchId === "",
+            // 遊戲清單讀到之前不能存(本數要對到清單上的遊戲才寫入)
+            disabled: isPending || branchId === "" || !candidates.isSuccess,
             onClick: () => {
               onSaveDraft(valuesOf());
             },
@@ -305,7 +306,11 @@ export const RequisitionForm = ({
         })}
         submit={{
           label: t("submit"),
-          disabled: isPending || branchId === "" || totals.books === 0,
+          disabled:
+            isPending ||
+            branchId === "" ||
+            !candidates.isSuccess ||
+            totals.books === 0,
           onClick: () => {
             onSubmit(valuesOf());
           },

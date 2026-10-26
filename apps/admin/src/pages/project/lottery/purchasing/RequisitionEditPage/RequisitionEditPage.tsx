@@ -55,9 +55,12 @@ export const RequisitionEditPage = (props: ModulePageProps) => {
   if (state.kind === "unavailable") {
     return <Alert severity="error">{tErrors(state.code)}</Alert>;
   }
+  if (candidates.isError) {
+    return <Alert severity="error">{tEdit("loadFailed")}</Alert>;
+  }
   if (
     state.kind === "loading" ||
-    (branchId !== "" && candidates.data === undefined && !candidates.isError)
+    (branchId !== "" && candidates.data === undefined)
   ) {
     return <CircularProgress aria-label={t("loading")} />;
   }

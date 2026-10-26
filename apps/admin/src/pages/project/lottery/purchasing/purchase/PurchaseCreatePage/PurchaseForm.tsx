@@ -44,6 +44,7 @@ import {
   purchaseTotalOf,
   purchaseValuesOf,
   requisitionProgressOf,
+  storedOnlyForLocked,
   toggleRedemption,
 } from "./purchase-form";
 import { usePurchaseBooks } from "./usePurchaseBooks";
@@ -106,7 +107,11 @@ export const PurchaseForm = ({
     purchaseDay: localDayTextOf(initial.header.purchaseDate, timezone),
   }));
   const branchId = header.branchId;
-  const purchaseBooks = usePurchaseBooks(initial.books, lockedRowIds);
+  // 張數 / 整本金額照存值只給鎖住的列(已點收);其他列照遊戲現在的值
+  const [initialBooks] = useState(() =>
+    storedOnlyForLocked(initial.books, lockedRowIds),
+  );
+  const purchaseBooks = usePurchaseBooks(initialBooks, lockedRowIds);
   const { books } = purchaseBooks;
   const [fallbackGameId, setFallbackGameId] = useState<string | null>(null);
   const [scanError, setScanError] = useState<string | null>(null);
@@ -268,6 +273,7 @@ export const PurchaseForm = ({
       },
       groups,
       redemptions,
+      initial.keptLines,
     );
 
   return (
@@ -345,6 +351,11 @@ export const PurchaseForm = ({
                 {hasLocked && (
                   <Alert severity="info">{tEdit("lockedHint")}</Alert>
                 )}
+                {initial.keptLines.length > 0 && (
+                  <Alert severity="warning">
+                    {tEdit("keptLines", { count: initial.keptLines.length })}
+                  </Alert>
+                )}
                 <AllocationWarnings items={allocationItems} />
                 <LineErrorAlerts
                   error={error}
@@ -387,7 +398,7 @@ export const PurchaseForm = ({
         {...(canSaveDraft && {
           draft: {
             label: t("saveDraft"),
-            disabled: isPending || branchId === "",
+            disabled: isPending || branchId === "" || data === null,
             onClick: () => {
               onSaveDraft(valuesOf());
             },
@@ -395,7 +406,9 @@ export const PurchaseForm = ({
         })}
         submit={{
           label: t("submit"),
-          disabled: isPending || branchId === "" || books.length === 0,
+          // 選項讀到之前不能存:叫貨單要在選項裡找得到才寫入,太早按會把引用存成空的
+          disabled:
+            isPending || branchId === "" || data === null || books.length === 0,
           onClick: () => {
             onSubmit(valuesOf());
           },

@@ -43,7 +43,7 @@ export class TransferResolver {
 
   @RequirePermission(TRANSFER_PERMISSIONS.create)
   @Query(() => LotteryTransferOptionsModel, { name: "lotteryTransferOptions" })
-  lotteryTransferOptions(
+  async lotteryTransferOptions(
     @Args("fromOrgId", { type: () => ID }) fromOrgId: string,
     @Args("toOrgId", { type: () => ID, nullable: true })
     toOrgId: string | null,
@@ -56,11 +56,7 @@ export class TransferResolver {
       operator,
       orgIdOf(fromOrgId),
       toOrgId === null || toOrgId === "" ? null : orgIdOf(toOrgId),
-      submissionId !== null &&
-        submissionId !== undefined &&
-        Types.ObjectId.isValid(submissionId)
-        ? new Types.ObjectId(submissionId)
-        : null,
+      await this.receiving.readableIdOf(operator, submissionId),
     );
   }
 

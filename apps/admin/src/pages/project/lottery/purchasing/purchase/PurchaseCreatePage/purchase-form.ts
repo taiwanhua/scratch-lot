@@ -27,6 +27,11 @@ export interface ScannedBook {
   lastTicketNo: number;
   /** 批購金額率(整數 %)。 */
   rate: number;
+  /**
+   * 編輯頁鎖住的列(已點收):張數與整本金額照存的,不照遊戲現在的值重算
+   * (api 以點收時建的本比對);沒有 = 照遊戲
+   */
+  stored?: { tickets: number; bookPrice: number };
 }
 
 export type AddBookResult =
@@ -180,9 +185,12 @@ export const groupBooks = (
       .map((book) => ({
         ...book,
         displayBookNo: displayBookNo(book.bookNo),
-        tickets: game.ticketsPerBook,
-        bookPrice: game.bookPrice,
-        amount: purchaseAmountOf(game.bookPrice, book.rate),
+        tickets: book.stored?.tickets ?? game.ticketsPerBook,
+        bookPrice: book.stored?.bookPrice ?? game.bookPrice,
+        amount: purchaseAmountOf(
+          book.stored?.bookPrice ?? game.bookPrice,
+          book.rate,
+        ),
         isRateEdited: book.rate !== game.defaultRate,
       }));
     return [
@@ -257,6 +265,7 @@ export const purchaseValuesOf = (
   header: PurchaseHeaderState,
   groups: readonly BookGroup[],
   redemptions: readonly PickedRedemption[] = [],
+  keptLines: readonly Record<string, unknown>[] = [],
 ): StoredValues => ({
   [K.branch]: header.branchId === "" ? null : header.branchId,
   [K.requisition]: header.requisitionNo,
@@ -266,17 +275,20 @@ export const purchaseValuesOf = (
   [K.purchaseDate]: header.purchaseDate,
   [K.account]: header.accountId,
   [K.note]: header.note.trim() === "" ? null : header.note.trim(),
-  [K.lines]: groups.flatMap((group) =>
-    group.rows.map((row) => ({
-      rowId: row.rowId,
-      [K.game]: { id: group.game.id, label: group.game.name },
-      [K.bookNo]: row.bookNo,
-      [K.lastTicketNo]: row.lastTicketNo,
-      [K.tickets]: row.tickets,
-      [K.bookPrice]: row.bookPrice,
-      [K.rate]: row.rate,
-    })),
-  ),
+  [K.lines]: [
+    ...groups.flatMap((group) =>
+      group.rows.map((row): Record<string, unknown> => ({
+        rowId: row.rowId,
+        [K.game]: { id: group.game.id, label: group.game.name },
+        [K.bookNo]: row.bookNo,
+        [K.lastTicketNo]: row.lastTicketNo,
+        [K.tickets]: row.tickets,
+        [K.bookPrice]: row.bookPrice,
+        [K.rate]: row.rate,
+      })),
+    ),
+    ...keptLines.map((line) => ({ ...line })),
+  ],
   [K.redemptions]: redemptions.map((item) => ({
     rowId: item.rowId,
     [K.redemption]: { id: item.id, label: item.label },
@@ -304,6 +316,8 @@ export interface PurchaseFormState {
   };
   books: ScannedBook[];
   redemptions: PickedRedemption[];
+  /** 讀不到內容的明細列(例 本號格式不對):畫面列不出來,原樣存回 */
+  keptLines: Record<string, unknown>[];
 }
 
 const labelOf = (value: unknown): string =>
@@ -316,7 +330,8 @@ const labelOf = (value: unknown): string =>
 
 /**
  * 存值 → 畫面狀態(草稿 / 被退回帶入原內容;`purchaseValuesOf` 的反向):明細的 rowId 照舊
- * (api 用 rowId 比對已點收的列)、批購金額率照存的;本號格式不對的列略過。
+ * (api 用 rowId 比對已點收的列)、批購金額率、張數與整本金額照存的(`stored`;只有鎖住的列會用);
+ * 讀不到內容的列(沒有 rowId / 遊戲、本號格式不對)放 `keptLines` 原樣存回,不靜默丟掉。
  */
 export const purchaseFormStateOf = (
   values: StoredValues,
@@ -325,6 +340,27 @@ export const purchaseFormStateOf = (
   const header = purchaseHeaderOf(record);
   const note = record[K.note];
   const rows = record[K.redemptions];
+  const rawLines = (
+    Array.isArray(record[K.lines]) ? (record[K.lines] as unknown[]) : []
+  ).filter(
+    (line): line is Record<string, unknown> =>
+      typeof line === "object" && line !== null && !Array.isArray(line),
+  );
+  const books: ScannedBook[] = purchaseLinesOf(record).flatMap((line) =>
+    line.bookNo === null
+      ? []
+      : [
+          {
+            rowId: line.rowId,
+            gameId: line.gameId,
+            bookNo: line.bookNo,
+            lastTicketNo: line.lastTicketNo,
+            rate: line.rate,
+            stored: { tickets: line.tickets, bookPrice: line.bookPrice },
+          },
+        ],
+  );
+  const bookRowIds = new Set(books.map((book) => book.rowId));
   return {
     header: {
       branchId: header.branchId ?? "",
@@ -336,18 +372,10 @@ export const purchaseFormStateOf = (
       accountId: header.accountId,
       note: typeof note === "string" ? note : "",
     },
-    books: purchaseLinesOf(record).flatMap((line) =>
-      line.bookNo === null
-        ? []
-        : [
-            {
-              rowId: line.rowId,
-              gameId: line.gameId,
-              bookNo: line.bookNo,
-              lastTicketNo: line.lastTicketNo,
-              rate: line.rate,
-            },
-          ],
+    books,
+    keptLines: rawLines.filter(
+      (line) =>
+        !bookRowIds.has(typeof line.rowId === "string" ? line.rowId : ""),
     ),
     redemptions: (Array.isArray(rows) ? rows : []).flatMap(
       (row: unknown): PickedRedemption[] => {
@@ -372,3 +400,20 @@ export const purchaseFormStateOf = (
     ),
   };
 };
+
+/** 存的張數 / 整本金額只留給鎖住的列(已點收);其他列照遊戲現在的值重算。 */
+export const storedOnlyForLocked = (
+  books: readonly ScannedBook[],
+  locked: ReadonlySet<string>,
+): ScannedBook[] =>
+  books.map((book) =>
+    locked.has(book.rowId) || book.stored === undefined
+      ? book
+      : {
+          rowId: book.rowId,
+          gameId: book.gameId,
+          bookNo: book.bookNo,
+          lastTicketNo: book.lastTicketNo,
+          rate: book.rate,
+        },
+  );

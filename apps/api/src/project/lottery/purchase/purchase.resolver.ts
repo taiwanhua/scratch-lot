@@ -38,7 +38,7 @@ export class PurchaseResolver {
 
   @RequirePermission(PURCHASE_PERMISSIONS.create)
   @Query(() => LotteryPurchaseOptionsModel, { name: "lotteryPurchaseOptions" })
-  lotteryPurchaseOptions(
+  async lotteryPurchaseOptions(
     @Args("orgId", { type: () => ID }) orgId: string,
     @CurrentOperator() operator: OperatorContext,
     /** 編輯中的那張進貨單(草稿 / 退回):叫貨單清單另含它已引用的那張;新增頁不給 */
@@ -51,11 +51,7 @@ export class PurchaseResolver {
     return this.query.optionsOf(
       operator,
       new Types.ObjectId(orgId),
-      submissionId !== null &&
-        submissionId !== undefined &&
-        Types.ObjectId.isValid(submissionId)
-        ? new Types.ObjectId(submissionId)
-        : null,
+      await this.receiving.readableIdOf(operator, submissionId),
     );
   }
 
