@@ -58,6 +58,8 @@ const PROJECT = [
   // E2E 的測試資產(上傳用的檔案等;specs / fixtures 程式在 src/**/project/)
   /^apps\/e2e\/fixtures\/project\//,
   /^apps\/[^/]+\/public\/favicon\.ico$/,
+  // app 的品牌靜態資產(可安裝 app 的圖示與其 SVG 正本,檔名約定見 scripts/app-icons/)
+  /^apps\/[^/]+\/public\/project\//,
   /^apps\/front\//,
   /^deploy\/project\//,
   /^deploy\/env\//,

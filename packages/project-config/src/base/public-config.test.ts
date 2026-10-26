@@ -9,7 +9,15 @@ import {
 const ALTERNATIVE: ProjectPublicConfig = {
   slug: "acme-portal",
   brand: { name: "Acme Portal", primary: "#2065D1" },
-  admin: { documentTitle: "Acme <Admin> & Co" },
+  admin: {
+    documentTitle: "Acme <Admin> & Co",
+    webApp: {
+      name: "Acme <Portal> & Co",
+      shortName: "Acme",
+      themeColor: "#0B3D91",
+      backgroundColor: "#F4F6F8",
+    },
+  },
   front: {
     metadata: {
       "zh-TW": {
@@ -59,7 +67,9 @@ describe("公開設定的驗證(不默默補回任何專案的值)", () => {
       ),
     ).toThrow(/brand\.name/);
     expect(() =>
-      assertProjectPublicConfig(broken({ admin: { documentTitle: "" } })),
+      assertProjectPublicConfig(
+        broken({ admin: { documentTitle: "", webApp: null } }),
+      ),
     ).toThrow(/admin\.documentTitle/);
     expect(() =>
       assertProjectPublicConfig(broken({ slug: undefined })),
@@ -92,6 +102,38 @@ describe("公開設定的驗證(不默默補回任何專案的值)", () => {
         }),
       ),
     ).toThrow(/front\.metadata\.en\.titleTemplate/);
+  });
+
+  it("webApp 可為 null(不提供 manifest)", () => {
+    const withoutWebApp = broken({
+      admin: { documentTitle: "Acme", webApp: null },
+    });
+
+    expect(assertProjectPublicConfig(withoutWebApp)).toBe(withoutWebApp);
+  });
+
+  it("webApp 缺欄或色碼不對時指出是哪一個欄位", () => {
+    const webApp = ALTERNATIVE.admin.webApp;
+    const withWebApp = (patch: Record<string, unknown>) =>
+      broken({
+        admin: { documentTitle: "Acme", webApp: { ...webApp, ...patch } },
+      });
+
+    expect(() =>
+      assertProjectPublicConfig(broken({ admin: { documentTitle: "Acme" } })),
+    ).toThrow(/admin\.webApp/);
+    expect(() => assertProjectPublicConfig(withWebApp({ name: " " }))).toThrow(
+      /admin\.webApp\.name/,
+    );
+    expect(() =>
+      assertProjectPublicConfig(withWebApp({ shortName: undefined })),
+    ).toThrow(/admin\.webApp\.shortName/);
+    expect(() =>
+      assertProjectPublicConfig(withWebApp({ themeColor: "navy" })),
+    ).toThrow(/admin\.webApp\.themeColor/);
+    expect(() =>
+      assertProjectPublicConfig(withWebApp({ backgroundColor: "#FFF" })),
+    ).toThrow(/admin\.webApp\.backgroundColor/);
   });
 
   it("legacySideNavStorageKey 只接受 null 或非空字串", () => {
