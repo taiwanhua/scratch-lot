@@ -88,3 +88,65 @@ export const returnedTransferReceiving =
     ],
     batches: [],
   });
+
+/**
+ * 少張處理(做法 A):T-0013 一列選張 #045–056(12 張 × 200 元、92%),收貨店只點收了 #045–053 就退回;
+ * 出貨店在編輯頁取消勾選沒到的 #054–056。
+ */
+export const shortTransfer = (): MockSubmission =>
+  transferSubmission("doc-t13", "T-0013", storeA, storeB, 2208, {
+    status: FormSubmissionStatus.Returned,
+    abilities: {
+      ...TRANSFER_LOCKED_ABILITIES,
+      canEdit: true,
+      canSaveDraft: true,
+    },
+    values: {
+      from_branch: { id: storeA.id, label: storeA.name },
+      to_branch: { id: storeB.id, label: storeB.name },
+      requisition: null,
+      transfer_total: "2208",
+      note: null,
+      lines: [
+        {
+          rowId: "t13-1",
+          game: { id: "game-5201", label: "金好運" },
+          book: { id: "book-t13-1", label: "5201-060112" },
+          mode: "partial",
+          ticket_nos: "045-056",
+          tickets: 12,
+          amount: 2400,
+          rate: 92,
+        },
+      ],
+    },
+  });
+
+export const shortTransferReceiving =
+  (): LotteryTransferReceivingFieldsFragment => ({
+    __typename: "LotteryTransferReceiving",
+    submissionId: "doc-t13",
+    fromBranchName: storeA.name,
+    toBranchName: storeB.name,
+    transferAmount: 2208,
+    canReceive: false,
+    receivedCount: 0,
+    totalCount: 1,
+    rows: [
+      transferReceivingRow("t13-1", {
+        gameCode: "5201",
+        gameName: "金好運",
+        bookNo: "0060112",
+        mode: "partial",
+        ticketNos: transferTicketRange(45, 56),
+        tickets: 12,
+        amount: 2400,
+        purchaseAmount: 2208,
+        shipped: true,
+        shippedAt: "2026-10-16T01:10:00.000Z",
+        receivedTickets: 9,
+        receivedTicketNos: transferTicketRange(45, 53),
+      }),
+    ],
+    batches: [],
+  });

@@ -2948,9 +2948,27 @@
       "edit": {
         "title": "Edit transfer",
         "titleWithNo": "Edit transfer {serialNo}",
-        "lockedHint": "Received books cannot be changed or removed; books in transit (shipped) cannot be changed but can be removed when lost on the way, which marks them for investigation after you submit. After you submit, the transfer goes through shipping and receiving again and the receiving branch receives the remaining books",
+        "lockedHint": "Received books cannot be changed or removed. Books in transit cannot be changed; remove them if they were lost on the way. On a picked-tickets line, open the grid and untick the tickets that did not arrive. After submitting, tickets that did not arrive become under investigation and the transfer goes through shipping and receiving again",
         "loadFailed": "Could not load the shipping and receiving status of this transfer; reload the page",
-        "keptLines": "{count} lines could not be read; they are not listed and are kept as they are"
+        "keptLines": "{count} lines could not be read; they are not listed and are kept as they are",
+        "shrink": {
+          "expand": "Remove missing tickets",
+          "collapse": "Hide tickets",
+          "hint": "Untick the tickets that did not arrive; received tickets cannot be removed",
+          "kept": "In transit",
+          "dropped": "Did not arrive",
+          "received": "Received",
+          "summary": "Keep {kept} in transit; {dropped} did not arrive (under investigation after submitting)"
+        },
+        "dropConfirm": {
+          "title": "Missing tickets go under investigation",
+          "body": "{count} tickets {tickets} will go under investigation. Continue?",
+          "item": "{bookNo} {tickets}",
+          "whole": "{bookNo} whole book",
+          "separator": "; ",
+          "confirm": "Submit",
+          "cancel": "Cancel"
+        }
       }
     },
     "allocation": {

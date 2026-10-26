@@ -13,12 +13,14 @@ import type { ModulePageProps } from "@/lib/base/module-tree";
 import { useDocumentEdit } from "../../shared/useDocumentEdit";
 import { TransferForm } from "../TransferCreatePage/TransferForm";
 import { transferFormStateOf } from "../TransferCreatePage/transfer-form";
+import { shippedRowsOf } from "../TransferCreatePage/useShippedLines";
 import { TRANSFER_MODULE_KEY } from "../transfer-keys";
 
 /**
  * 調貨單的替換編輯頁(專案規格 8.4;草稿、被退回、撤回):和新增頁同一個畫面(`TransferForm`),帶入原內容。
  * 被退回時,已出貨(在途)/ 已點收的列鎖住並標示(規格 8.4「退回 / 撤回後:已在途的保持在途」;api 也擋改已出貨 /
- * 已點收的列),沒出貨的列可改可刪、可再加新的本。能不能編輯、存草稿 / 送出沿用表單引擎(`useDocumentEdit`)。
+ * 已點收的列),沒出貨的列可改可刪、可再加新的本。少張處理(使用者 10/26 定案做法 A):選張的列展開格子,
+ * 已點收的張鎖住、還沒點收的可以取消勾選,送出前確認「054、055、056 這 3 張會變成待查」(`useShippedLines`)。能不能編輯、存草稿 / 送出沿用表單引擎(`useDocumentEdit`)。
  */
 export const TransferEditPage = (props: ModulePageProps) => {
   const t = useTranslations("admin.lotteryPurchasing.transfer.create");
@@ -58,10 +60,14 @@ export const TransferEditPage = (props: ModulePageProps) => {
       if (row.received) {
         return [[row.rowId, "received"]];
       }
+      if (row.receivedTickets > 0) {
+        return [[row.rowId, "partial"]];
+      }
       return row.shipped ? [[row.rowId, "inTransit"]] : [];
     }),
   );
   const { submission } = state;
+  const initial = transferFormStateOf(submission.values, data.rows);
 
   return (
     <TransferForm
@@ -73,8 +79,12 @@ export const TransferEditPage = (props: ModulePageProps) => {
           ? tEdit("title")
           : tEdit("titleWithNo", { serialNo: submission.serialNo })
       }
-      initial={transferFormStateOf(submission.values, data.rows)}
+      initial={initial}
       lockedRows={lockedRows}
+      shippedRows={shippedRowsOf(
+        data.rows,
+        new Set(initial.lines.map((line) => line.rowId)),
+      )}
       notice={edit.notice}
       canSaveDraft={edit.canSaveDraft}
       isPending={edit.isPending}

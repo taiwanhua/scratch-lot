@@ -6,6 +6,8 @@ import { TRANSFER_MODE } from "@repo/domain/project/lottery";
 import { useLotteryTransferOptionsQuery } from "@repo/graphql";
 import { Alert } from "@repo/ui/alert";
 import { Box } from "@repo/ui/box";
+import { Button } from "@repo/ui/button";
+import { Dialog } from "@repo/ui/dialog";
 import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
 
@@ -43,6 +45,7 @@ import {
   transferTotalOf,
   transferValuesOf,
 } from "./transfer-form";
+import { type ShippedRowFacts, useShippedLines } from "./useShippedLines";
 import { useTransferLineList } from "./useTransferLineList";
 
 /** 送出時收貨分店讀不到(不在送出的人的可見範圍):改用看得懂的說明。 */
@@ -66,8 +69,10 @@ export interface TransferFormProps {
   submissionId: string | null;
   title: string;
   initial: TransferFormState;
-  /** 鎖住的列與狀態(編輯頁:已點收 / 已出貨在途);不在裡面 = 可改可刪 */
+  /** 鎖住的列與狀態(編輯頁:已點收 / 部分點收 / 已出貨在途);不在裡面 = 可改可刪 */
   lockedRows: ReadonlyMap<string, BookRowStatus>;
+  /** 已出貨、還沒到齊的列(編輯頁;選張的列可以取消勾選沒到的張);新增頁不給 */
+  shippedRows?: ReadonlyMap<string, ShippedRowFacts>;
   notice?: ReactNode;
   canSaveDraft: boolean;
   isPending: boolean;
@@ -90,6 +95,7 @@ export const TransferForm = ({
   title,
   initial,
   lockedRows,
+  shippedRows = new Map(),
   notice,
   canSaveDraft,
   isPending,
@@ -196,7 +202,13 @@ export const TransferForm = ({
     return true;
   };
 
-  const { groups, labels } = useTransferLineList(lines, lockedRows);
+  const shipped = useShippedLines(lines, setLines, shippedRows);
+  const [isConfirmingDrop, setIsConfirmingDrop] = useState(false);
+  const { groups, labels } = useTransferLineList(
+    lines,
+    lockedRows,
+    shipped.rowExtrasOf,
+  );
 
   const valuesOf = () =>
     transferValuesOf(
@@ -311,8 +323,9 @@ export const TransferForm = ({
                 }
               }}
               onRemove={(rowId) => {
-                // 已點收的列不能刪;在途的列可以(路上遺失 → 待查)
-                if (lockedRows.get(rowId) !== "received") {
+                // 已點收(含部分點收)的列不能刪;在途的列可以(路上遺失 → 待查)
+                const status = lockedRows.get(rowId);
+                if (status !== "received" && status !== "partial") {
                   setLines((current) => removeLine(current, rowId));
                 }
               }}
@@ -366,10 +379,49 @@ export const TransferForm = ({
           label: t("submit"),
           disabled: !canSubmit,
           onClick: () => {
-            onSubmit(valuesOf());
+            // 有在途的張會變成待查(取消勾選 / 整列移除)→ 先確認
+            if (shipped.confirmText === null) {
+              onSubmit(valuesOf());
+              return;
+            }
+            setIsConfirmingDrop(true);
           },
         }}
       />
+      {isConfirmingDrop && shipped.confirmText !== null && (
+        <Dialog
+          open
+          onClose={() => {
+            setIsConfirmingDrop(false);
+          }}
+          fullWidth
+          maxWidth="xs"
+          title={tEdit("dropConfirm.title")}
+          actions={
+            <>
+              <Button
+                variant="text"
+                onClick={() => {
+                  setIsConfirmingDrop(false);
+                }}
+              >
+                {tEdit("dropConfirm.cancel")}
+              </Button>
+              <Button
+                disabled={isPending}
+                onClick={() => {
+                  setIsConfirmingDrop(false);
+                  onSubmit(valuesOf());
+                }}
+              >
+                {tEdit("dropConfirm.confirm")}
+              </Button>
+            </>
+          }
+        >
+          <Typography variant="body2">{shipped.confirmText}</Typography>
+        </Dialog>
+      )}
     </Stack>
   );
 };

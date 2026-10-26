@@ -2948,9 +2948,27 @@
       "edit": {
         "title": "編輯調貨單",
         "titleWithNo": "編輯調貨單 {serialNo}",
-        "lockedHint": "已點收的本不能修改或移除;在途(已出貨)的本不能修改,路上遺失時可以移除,送出後變待查。送出後重新走出貨確認與點收,由收貨店點收剩下的本",
+        "lockedHint": "已點收的本不能修改或移除;在途(已出貨)的本不能修改,路上遺失時可以移除;選張的列可以展開格子取消勾選沒到的張。送出後沒到的張變待查,重新走出貨確認,由收貨店點收剩下的本",
         "loadFailed": "讀不到這張調貨單的出貨與點收狀態,請重新整理",
-        "keptLines": "有 {count} 列明細讀不到內容,畫面沒有列出,會照原樣保留"
+        "keptLines": "有 {count} 列明細讀不到內容,畫面沒有列出,會照原樣保留",
+        "shrink": {
+          "expand": "移除沒到的張",
+          "collapse": "收合格子",
+          "hint": "取消勾選沒到的張;已點收的張不能移除",
+          "kept": "在途",
+          "dropped": "沒到",
+          "received": "已點收",
+          "summary": "保留在途 {kept} 張;沒到 {dropped} 張(送出後變待查)"
+        },
+        "dropConfirm": {
+          "title": "沒到的張會變成待查",
+          "body": "{tickets} 這 {count} 張會變成待查,確定?",
+          "item": "{bookNo} {tickets}",
+          "whole": "{bookNo} 整本",
+          "separator": ";",
+          "confirm": "確定送出",
+          "cancel": "取消"
+        }
       }
     },
     "allocation": {

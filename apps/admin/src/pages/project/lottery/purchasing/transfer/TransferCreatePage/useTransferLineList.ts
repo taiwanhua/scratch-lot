@@ -8,6 +8,7 @@ import {
 import type {
   BookListGroup,
   BookListLabels,
+  BookListRow,
   BookRowStatus,
 } from "@/components/project/lottery/BookGroupList/BookGroupList";
 import { groupBooksByGame } from "@/components/project/lottery/BookGroupList/book-groups";
@@ -31,6 +32,10 @@ const displayBookNo = (bookNo: string): string =>
 export const useTransferLineList = (
   lines: readonly TransferDraftLine[],
   lockedRows: ReadonlyMap<string, BookRowStatus>,
+  /** 每列另外加的(例 編輯頁已出貨的選張列:狀態文字、移除沒到的張的格子) */
+  rowExtrasOf: (
+    line: TransferDraftLine,
+  ) => Pick<BookListRow, "statusLabel" | "panel"> = () => ({}),
 ): { groups: BookListGroup[]; labels: BookListLabels } => {
   const t = useTranslations("admin.lotteryPurchasing.transfer.create");
   const tReceive = useTranslations("admin.lotteryPurchasing.receive");
@@ -67,6 +72,7 @@ export const useTransferLineList = (
       // 在途的列:不能改,但可以移除(路上遺失 → 送出後變待查,規格 8.4)
       isRemovable: lockedRows.get(line.rowId) === "inTransit",
       status: lockedRows.get(line.rowId) ?? null,
+      ...rowExtrasOf(line),
     }),
   );
   const labels: BookListLabels = {
