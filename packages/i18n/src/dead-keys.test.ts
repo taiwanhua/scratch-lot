@@ -754,6 +754,18 @@ const DYNAMIC_KEYS: readonly { key: string; reason: string }[] = [
     reason:
       "點收的 `t(`errors.${reason}`)`,reason 由 `PurchaseViewPage/receive-error.ts`(`RECEIVE_REASONS`)、`TransferViewPage/transfer-receive-error.ts`(`TRANSFER_RECEIVE_REASONS`)從 api 的 `extensions.reason` 換算",
   },
+  ...(
+    [
+      "purchaseReceiving",
+      "transferShipment",
+      "transferReceiving",
+      "transferPayment",
+    ] as const
+  ).map((kind) => ({
+    key: `admin.lotteryPurchasing.receipts.${kind}.copies.`,
+    reason:
+      "兩聯單據的聯別名稱 `t(`${copyI18n}.copies.${copy}`)`,copy 取自 `lib/project/lottery/receipts/receipt-kinds.ts` 各單據宣告的 `copies`",
+  })),
   {
     key: "admin.lotteryStore.errors.",
     reason:
