@@ -342,6 +342,7 @@ describe("調貨單(規格 8.4、第 9 章)", () => {
   async function newBook(
     orgId: Types.ObjectId,
     other: { gameId: Types.ObjectId; bookNo: string } | null = null,
+    cost = 2000,
   ): Promise<{
     bookId: Types.ObjectId;
     bookNo: string;
@@ -357,7 +358,7 @@ describe("調貨單(規格 8.4、第 9 章)", () => {
           bookNo,
           lastTicketNo: 100,
           rate: 100,
-          cost: 2000,
+          cost,
         }),
     );
     return { bookId: book._id, bookNo: `0${bookNo}` };
@@ -1795,12 +1796,13 @@ describe("調貨單(規格 8.4、第 9 章)", () => {
 
   /**
    * N 本整本調貨:送出(鎖定)→ 出貨(調出)→ 逐本點收 → 收付記平後核准 → 沖正歸零 → 作廢。
-   * 回送出與作廢這兩個請求各自的指令數。
+   * 回送出、出貨與作廢這三個請求各自的指令數。`costs` 給了就是每本進貨時的成本(各本單張成本不同,
+   * 作廢時各本改回自己的)。
    */
-  async function transferCommandsOf(books: number) {
+  async function transferCommandsOf(books: number, costs?: readonly number[]) {
     const created = [];
     for (let index = 0; index < books; index += 1) {
-      created.push(await newBook(branchA));
+      created.push(await newBook(branchA, null, costs?.[index] ?? 2000));
     }
     const draft = await draftOf(
       hq,
@@ -1868,6 +1870,24 @@ describe("調貨單(規格 8.4、第 9 章)", () => {
         );
         expectDbCommandsAtMost(three[key], limit, `${label} 3 本`);
       }
+    });
+
+    it("每本單張成本不同(作廢時各本改回自己的成本)→ 作廢只多「多出的成本種類數」次", async () => {
+      const same = await transferCommandsOf(3);
+      const varied = await transferCommandsOf(3, [2000, 1900, 1800]);
+      // 確實測到「成本不同」:比同成本多出分組的那幾次
+      expect(varied.voided.total).toBeGreaterThan(same.voided.total);
+      // 3 種成本比 1 種多 2 組,每組多一次 updateMany(TX-06:組數隨值的種類成長)
+      expectDbCommandsAtMost(
+        varied.voided,
+        same.voided.total + 2 + TRANSFER_COMMANDS_PER_EXTRA_BOOKS,
+        `作廢 3 本不同成本(同成本 = ${String(same.voided.total)} 次)`,
+      );
+      expectDbCommandsAtMost(
+        varied.voided,
+        TRANSFER_VOID_COMMANDS_LIMIT,
+        "作廢 3 本不同成本",
+      );
     });
   });
 

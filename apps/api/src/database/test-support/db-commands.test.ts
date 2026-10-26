@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from "@jest/globals";
+import mongoose from "mongoose";
 
 import {
   countDbCommands,
@@ -10,6 +11,11 @@ import {
   type TestDatabase,
   openTestDatabase,
 } from "./mongo-connection";
+
+/** 開發者自己開的 debug(測試結束後要還原成它)。 */
+function developerDebug(): void {
+  /* 開發者自己的 debug */
+}
 
 /** 防退化測試的指令計數(TX-06):逐筆讀與一次讀的差別要數得出來。 */
 describe("countDbCommands", () => {
@@ -66,5 +72,17 @@ describe("countDbCommands", () => {
     expect(() => {
       expectDbCommandsAtMost(counted, 1, "一次讀");
     }).not.toThrow();
+  });
+
+  it("結束時還原原本的 debug 設定(開發者自己開的不被蓋掉)", async () => {
+    mongoose.set("debug", developerDebug);
+    try {
+      await countDbCommands(() =>
+        database.connection.collection("probe_items").findOne({ n: 1 }),
+      );
+      expect(mongoose.get("debug")).toBe(developerDebug);
+    } finally {
+      mongoose.set("debug", false);
+    }
   });
 });

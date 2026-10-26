@@ -171,14 +171,14 @@ describe("交易逾時(TRANSACTION_TIMEOUT)", () => {
   it("任何一頁都認得:code 照舊 UNEXPECTED、帶 timedOut(頁面的碼表不必登記)", () => {
     const error = clientErrorOf([
       {
-        message: "交易超過上限 60000ms,已回復",
+        message: "transaction exceeded 60000ms and was rolled back",
         extensions: { code: "TRANSACTION_TIMEOUT", timeoutMs: 60_000 },
       },
     ]);
     expect(parseAdminError(error, SPEC)).toEqual({
       code: "UNEXPECTED",
       timedOut: true,
-      message: "交易超過上限 60000ms,已回復",
+      message: "transaction exceeded 60000ms and was rolled back",
     });
   });
 

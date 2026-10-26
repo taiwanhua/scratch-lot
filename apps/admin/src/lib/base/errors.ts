@@ -31,9 +31,10 @@ export interface AdminError<
    */
   projectReason?: string;
   /**
-   * 交易逾時(api `TRANSACTION_TIMEOUT`,GQL-04):處理太久、已整個回復。任何一頁都認得,
-   * `code` 照舊是 `UNEXPECTED`(頁面自己的碼表不必登記);`adminErrorText` 據此顯示
-   * `admin.app.errors.transactionTimeout`(已取消、資料沒有變更、請稍後再試)。
+   * 交易逾時(api `TRANSACTION_TIMEOUT`,GQL-04):處理太久、已整個回復。任何一頁的 `parseAdminError`
+   * 都會標上,`code` 照舊是 `UNEXPECTED`(頁面自己的碼表不必登記);**只有經 `adminErrorText` /
+   * `useAdminErrorText` 顯示的頁**據此顯示 `admin.app.errors.transactionTimeout`(已取消、資料沒有變更、
+   * 請稍後再試),直接 `tErrors(code)` 的頁仍顯示該頁的 `UNEXPECTED` 文案。
    */
   timedOut?: true;
   /**

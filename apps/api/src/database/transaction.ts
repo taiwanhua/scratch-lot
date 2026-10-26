@@ -38,7 +38,7 @@ export const TRANSACTION_TIMEOUT_CODE = "TRANSACTION_TIMEOUT";
  */
 export class TransactionTimeoutError extends GraphQLError {
   constructor(readonly timeoutMs: number) {
-    super(`交易超過上限 ${String(timeoutMs)}ms,已回復`, {
+    super(`transaction exceeded ${String(timeoutMs)}ms and was rolled back`, {
       extensions: { code: TRANSACTION_TIMEOUT_CODE, timeoutMs },
     });
     this.name = "TransactionTimeoutError";

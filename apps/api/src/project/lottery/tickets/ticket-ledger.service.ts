@@ -19,6 +19,7 @@ import {
 } from "../../database/lottery-inventory/lottery-inventory.repository";
 import type { TicketStateSnapshot } from "../../database/lottery-inventory/lottery-ticket-event.schema";
 import {
+  bookConflictError,
   crossStoreForbiddenError,
   ticketConflictError,
   validationError,
@@ -563,6 +564,10 @@ export class TicketLedgerService {
     writes: readonly PlannedWrite[],
   ): Promise<void> {
     await this.updateTickets(ledger, session, writes);
+    // 寫後以同一個上下文重讀。前提:換店後的張仍在這個上下文看得到 —— 換店只經跨店寫入
+    // (`crossStoreTenantId` = 租戶邊界上下文,看得到整個租戶),一般範圍的寫入不換店
+    // (`assertCrossStoreMovesIn` 與呼叫端保證)。若將來有「以一般範圍把張搬到看不到的店」的用途,
+    // 這裡會讀不到而誤報 CONFLICT,要改成以租戶邊界上下文重讀。
     const rows = await this.tickets.findMany(
       ledger.context,
       { _id: { $in: writes.map((write) => write.input.ticketId) } },
@@ -813,12 +818,25 @@ export class TicketLedgerService {
         { session },
       );
     }
-    if (ledger.context.actorId === null) {
-      return;
+    if (ledger.context.actorId !== null) {
+      await this.moveWholeBooks(whole, session, moves.values());
     }
-    for (const { holder, ids } of moves.values()) {
-      // 已在那家店的本搬家入口跳過(冪等)
-      await this.books.reassignOrgMany(whole, ids, holder, { session });
+  }
+
+  /** 整本搬到唯一的持有店:同一家店的本一次搬。 */
+  private async moveWholeBooks(
+    whole: OperatorContext,
+    session: ClientSession,
+    moves: Iterable<{ holder: Types.ObjectId; ids: Types.ObjectId[] }>,
+  ): Promise<void> {
+    for (const { holder, ids } of moves) {
+      // 已在那家店的本搬家入口跳過(冪等);全有或全無:有任何一本不符 → 整筆回復,不靜默不搬
+      const moved = await this.books.reassignOrgMany(whole, ids, holder, {
+        session,
+      });
+      if (moved.mismatched.length > 0) {
+        throw bookConflictError(moved.mismatched);
+      }
     }
   }
 

@@ -639,6 +639,209 @@ describe("張數核心(帳本 + 本 + 預計要給本數)", () => {
     });
   });
 
+  describe("整批寫的邊界(TX-06)", () => {
+    it("同一批重複同一張:同內容 → 第二筆是重送(applied: false);內容不同 → CONFLICT、整批回復", async () => {
+      const ticket = await firstTicket(await receiveBook());
+      const clerk = storeOperator(storeA);
+      const same = await transactions.withTransaction((session) =>
+        ledger.applyTicketEvents(session, own(clerk), [
+          saleOf(ticket),
+          saleOf(ticket),
+        ]),
+      );
+      expect(same.map((result) => [result.version, result.applied])).toEqual([
+        [2, true],
+        [2, false],
+      ]);
+      expect(await eventCount(ticket._id)).toBe(2);
+
+      const other = await firstTicket(await receiveBook());
+      const extensions = await extensionsOf(
+        transactions.withTransaction((session) =>
+          ledger.applyTicketEvents(session, own(clerk), [
+            saleOf(other),
+            saleOf(other, { amount: 300 }),
+          ]),
+        ),
+      );
+      expect(extensions).toMatchObject({
+        code: "CONFLICT",
+        ticketIds: [String(other._id)],
+      });
+      expect(await ticketById(other._id)).toMatchObject({
+        status: "unsold",
+        version: 1,
+      });
+      expect(await eventCount(other._id)).toBe(1);
+    });
+
+    it("同一組裡一張不符條件(版本對、但被鎖住)→ CONFLICT 只列那一張;其他張沒寫入、沒有事件(交易回復)", async () => {
+      const bookId = await receiveBook();
+      const all = await ticketsOf(bookId);
+      const tickets = all.slice(0, 5);
+      const locked = tickets[2];
+      if (!locked) {
+        throw new Error("沒有第 3 張");
+      }
+      // 版本不變、直接鎖住:讀取時版本對得上,要到條件更新(沒被鎖定)才不符
+      await api.connection
+        .collection("lottery_tickets")
+        .updateOne(
+          { _id: locked._id },
+          { $set: { lockedBy: { refType: "transfer", refId: newObjectId() } } },
+        );
+      const extensions = await extensionsOf(
+        transactions.withTransaction((session) =>
+          ledger.applyTicketEvents(
+            session,
+            own(storeOperator(storeA)),
+            tickets.map((ticket) => saleOf(ticket)),
+          ),
+        ),
+      );
+      expect(extensions).toMatchObject({
+        code: "CONFLICT",
+        reason: "TICKET_ALREADY_PROCESSED",
+        ticketIds: [String(locked._id)],
+      });
+      for (const ticket of tickets) {
+        expect(await ticketById(ticket._id)).toMatchObject({
+          status: "unsold",
+          version: 1,
+        });
+        expect(await eventCount(ticket._id)).toBe(1);
+      }
+    });
+
+    it("換店與不換店混在同一批:要換的換店(一筆搬家稽核)、不換的只改欄位;結果照輸入順序", async () => {
+      const bookId = await receiveBook();
+      const [moving, staying] = await ticketsOf(bookId);
+      if (!moving || !staying) {
+        throw new Error("沒有張");
+      }
+      const actor = newObjectId();
+      const cashPointId = newObjectId();
+      const results = await transactions.withTransaction((session) =>
+        ledger.applyTicketEvents(
+          session,
+          { operator: null, crossStoreTenantId: tenant, systemActorId: actor },
+          [
+            {
+              ticketId: staying._id,
+              expectedVersion: staying.version,
+              type: TICKET_EVENT_TYPE.open,
+              patch: {
+                location: { kind: TICKET_LOCATION_KIND.counter, cashPointId },
+              },
+            },
+            {
+              ticketId: moving._id,
+              expectedVersion: moving.version,
+              type: TICKET_EVENT_TYPE.transferIn,
+              patch: {
+                orgId: storeB,
+                location: {
+                  kind: TICKET_LOCATION_KIND.stock,
+                  cashPointId: null,
+                },
+              },
+            },
+          ],
+        ),
+      );
+      expect(results.map((result) => result.ticketId)).toEqual([
+        String(staying._id),
+        String(moving._id),
+      ]);
+      expect(results.every((result) => result.applied)).toBe(true);
+      expect(await ticketById(moving._id)).toMatchObject({
+        orgId: storeB,
+        version: 2,
+      });
+      expect(await ticketById(staying._id)).toMatchObject({
+        orgId: storeA,
+        version: 2,
+        location: { kind: "counter", cashPointId },
+      });
+      const audits = await api.connection
+        .collection<{ after: { ids: string[] } }>("audit_logs")
+        .find({
+          action: "data.reassign-org",
+          targetType: "lottery_tickets",
+          actorId: actor,
+        })
+        .toArray();
+      expect(audits.map((audit) => audit.after.ids)).toEqual([
+        [String(moving._id)],
+      ]);
+    });
+
+    it("重送一半:已寫過的回 applied: false、沒寫過的照寫;不重複寫事件", async () => {
+      const bookId = await receiveBook();
+      const [done, fresh] = await ticketsOf(bookId);
+      if (!done || !fresh) {
+        throw new Error("沒有張");
+      }
+      const clerk = storeOperator(storeA);
+      await transactions.withTransaction((session) =>
+        ledger.applyTicketEvents(session, own(clerk), [saleOf(done)]),
+      );
+      const results = await transactions.withTransaction((session) =>
+        ledger.applyTicketEvents(session, own(clerk), [
+          saleOf(done),
+          saleOf(fresh),
+        ]),
+      );
+      expect(
+        results.map((result) => [result.ticketId, result.applied]),
+      ).toEqual([
+        [String(done._id), false],
+        [String(fresh._id), true],
+      ]);
+      expect(await eventCount(done._id)).toBe(2);
+      expect(await eventCount(fresh._id)).toBe(2);
+      expect(await ticketById(fresh._id)).toMatchObject({
+        status: "sold",
+        version: 2,
+      });
+    });
+
+    it("整本要跟著搬、但那本搬不了(已刪除)→ CONFLICT(bookIds),整筆回復、張也不搬", async () => {
+      const bookId = await receiveBook();
+      await api.connection
+        .collection("lottery_books")
+        .updateOne({ _id: bookId }, { $set: { deletedAt: new Date() } });
+      const tickets = await ticketsOf(bookId);
+      const extensions = await extensionsOf(
+        transactions.withTransaction((session) =>
+          ledger.applyTicketEvents(
+            session,
+            { operator: storeOperator(storeB), crossStoreTenantId: tenant },
+            tickets.map((ticket) => ({
+              ticketId: ticket._id,
+              expectedVersion: ticket.version,
+              type: TICKET_EVENT_TYPE.transferIn,
+              patch: {
+                orgId: storeB,
+                location: {
+                  kind: TICKET_LOCATION_KIND.stock,
+                  cashPointId: null,
+                },
+              },
+            })),
+          ),
+        ),
+      );
+      expect(extensions).toMatchObject({
+        code: "CONFLICT",
+        bookIds: [String(bookId)],
+      });
+      const after = await ticketsOf(bookId);
+      expect(after.every((ticket) => ticket.orgId.equals(storeA))).toBe(true);
+      expect(after.every((ticket) => ticket.version === 1)).toBe(true);
+    });
+  });
+
   describe("換店與可見範圍", () => {
     it("調入以搬家入口換店(寫稽核);持有分店跟著改;整本都過去 → 本也搬過去", async () => {
       const bookId = await receiveBook();

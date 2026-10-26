@@ -16,6 +16,8 @@ export async function countDbCommands<T>(
   run: () => Promise<T>,
 ): Promise<DbCommandCount<T>> {
   const byCommand = new Map<string, number>();
+  // 結束時還原原本的設定(開發者自己開的 debug 不被蓋掉)
+  const previous: unknown = mongoose.get("debug");
   mongoose.set("debug", (collection: string, method: string) => {
     const key = `${collection}.${method}`;
     byCommand.set(key, (byCommand.get(key) ?? 0) + 1);
@@ -25,7 +27,10 @@ export async function countDbCommands<T>(
     const total = [...byCommand.values()].reduce((sum, n) => sum + n, 0);
     return { result, total, byCommand };
   } finally {
-    mongoose.set("debug", false);
+    mongoose.set(
+      "debug",
+      previous as Parameters<typeof mongoose.set<"debug">>[1],
+    );
   }
 }
 

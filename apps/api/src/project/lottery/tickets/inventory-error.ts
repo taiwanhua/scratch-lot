@@ -62,6 +62,20 @@ export function ticketConflictError(
   });
 }
 
+/**
+ * 本已被處理:張換店後整本要跟著搬,但這幾本搬不了(讀不到、已刪除或剛被別人改過);整個交易回復,
+ * 不靜默略過(`extensions.bookIds` 列出搬不了的本)。
+ */
+export function bookConflictError(bookIds: readonly string[]): GraphQLError {
+  return new GraphQLError("這幾本已被處理", {
+    extensions: {
+      code: "CONFLICT",
+      reason: INVENTORY_REASONS.ticketAlreadyProcessed,
+      bookIds,
+    },
+  });
+}
+
 /** 跨店寫入不是「把張移進自己看得到的店」(`extensions.ticketIds` 列出不合的張)。 */
 export function crossStoreForbiddenError(
   ticketIds: readonly string[],
