@@ -51,7 +51,10 @@ import {
 } from "../../database/lottery-inventory/lottery-inventory.repository";
 import { LotteryRequisitionLinesRepository } from "../../database/lottery-requisitions/lottery-requisition-lines.repository";
 import { LotteryTransferReceiptsRepository } from "../../database/lottery-transfers/lottery-transfer-receipts.repository";
-import { LOTTERY_TRANSFER_SHIPPED } from "../../notifications";
+import {
+  LOTTERY_TRANSFER_REF,
+  LOTTERY_TRANSFER_SHIPPED,
+} from "../../notifications";
 import { RequisitionReference } from "../requisition/requisition-reference";
 import { SettlementLedger } from "../settlement/settlement-ledger";
 import { settlementDocumentOf } from "../settlement/settlement-registry";
@@ -816,6 +819,8 @@ export class TransferRules {
             subject: submission.serialNo ?? "",
             fromOrgName: labelOf(values.from_branch),
           },
+          // 點進去 = 那張調貨單
+          ref: { type: LOTTERY_TRANSFER_REF, id: String(context.submissionId) },
           dedupeKey: `transfer-shipped:${String(context.submissionId)}:${String(context.revision)}`,
         });
       }

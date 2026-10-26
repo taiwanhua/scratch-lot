@@ -8,6 +8,7 @@ import {
   localMonthText,
   parseLocalDate,
 } from "@repo/domain/form";
+import { ACCOUNTS_TABS } from "@repo/domain/project/lottery-accounts";
 
 import { OrgsRepository } from "../../../database/database.module";
 import { tenantBoundaryContext } from "../../../database/tenant-boundary-context";
@@ -20,7 +21,10 @@ import {
   type ScheduledJobTenant,
 } from "../../../scheduled-jobs/scheduled-job-registry";
 import { LotteryPeriodClosesRepository } from "../../database/lottery-accounts/lottery-accounts.repositories";
-import { LOTTERY_PERIOD_CLOSE_OVERDUE } from "../../notifications";
+import {
+  LOTTERY_ACCOUNTS_TAB_REF,
+  LOTTERY_PERIOD_CLOSE_OVERDUE,
+} from "../../notifications";
 
 /** 排程工作 key(`docs/deployment.md`「Cloud Scheduler」;全域唯一)。 */
 export const PERIOD_CLOSE_OVERDUE_JOB_KEY = "lottery.period-close-overdue";
@@ -115,6 +119,8 @@ export class PeriodCloseRemindersService implements OnModuleInit {
       tenantId,
       orgId: tenantId,
       params: { period: previous },
+      // 點進去 = 帳戶管理的關帳分頁(分頁沒有月份參數,列出全部月份)
+      ref: { type: LOTTERY_ACCOUNTS_TAB_REF, id: ACCOUNTS_TABS.close },
       dedupeKey: `${LOTTERY_PERIOD_CLOSE_OVERDUE}:${String(tenantId)}:${hit.occurrence}`,
     });
   }

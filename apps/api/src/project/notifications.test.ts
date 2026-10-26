@@ -231,9 +231,27 @@ describe("專案通知連結", () => {
       expect.arrayContaining([
         "lottery-purchase",
         "lottery-transfer",
+        "lottery-dealer",
+        "lottery-store-board",
+        "lottery-accounts-tab",
         SCHEDULE_MY_SCHEDULE_REF,
         SCHEDULE_MY_DAY_OFFS_REF,
       ]),
+    );
+  });
+
+  it("負責人提醒點進去:調貨單詳情、經銷商詳情、那家店的看板、帳戶管理的關帳分頁", () => {
+    expect(notificationLinkOf(links, "lottery-transfer", "t1")).toBe(
+      "/purchasing/transfer/view-page/t1",
+    );
+    expect(notificationLinkOf(links, "lottery-dealer", "d1")).toBe(
+      "/dealers/view-page/d1",
+    );
+    expect(notificationLinkOf(links, "lottery-store-board", "o1")).toBe(
+      "/store?tab=board&org=o1",
+    );
+    expect(notificationLinkOf(links, "lottery-accounts-tab", "close")).toBe(
+      "/accounts?tab=close",
     );
   });
 

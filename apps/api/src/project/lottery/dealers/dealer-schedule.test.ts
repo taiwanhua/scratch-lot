@@ -196,6 +196,8 @@ describe("經銷商管理的排程、見簽與側欄計數", () => {
             expiresOn: "2030-12-31",
             daysLeft: "30",
           },
+          // 點進去 = 那位經銷商
+          ref: { type: "lottery-dealer", id: dealer.id },
         }),
       ]);
       expect(first[0]?.dedupeKey).toContain(dealer.id);
@@ -231,7 +233,7 @@ describe("經銷商管理的排程、見簽與側欄計數", () => {
 
     it("牌租(月 / 31 日):2 月在月底那天,前 3 天與當天各一次", async () => {
       const t = await newTenant("牌租月租戶");
-      await t.create("B", {
+      const dealer = await t.create("B", {
         storeName: "好運 2 號店",
         rentFee: 3000,
         rentCycle: "MONTH",
@@ -248,6 +250,7 @@ describe("經銷商管理的排程、見簽與側欄計數", () => {
             dueOn: "2031-02-28",
             amount: "3,000",
           },
+          ref: { type: "lottery-dealer", id: dealer.id },
         }),
       ]);
       expect(await dueOn("2031-02-28")).toBe("2031-02-28");

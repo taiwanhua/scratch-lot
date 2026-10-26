@@ -1,4 +1,5 @@
 import type { Audience } from "@repo/domain/audience";
+import { STORE_TABS } from "@repo/domain/project/lottery";
 
 import {
   EMAIL_CHANNEL,
@@ -15,13 +16,20 @@ import type { ProjectNotificationRegistrations } from "../notifications/notifica
  *
  * 類型清單、範本參數與觸發的功能見 `docs/modules/project/lottery-notifications.md`(專案規格 3.4)。
  * 宣告了可調時間的類型見各筆的 `schedule`(排程在觸發的功能裡);觸發的功能呼叫 `notify()`。`links`:進貨單詳情(`LOTTERY_PURCHASE_REF`)、調貨單詳情(`LOTTERY_TRANSFER_REF`)、
- * 我的班表的班表 / 我的畫休分頁(`SCHEDULE_MY_SCHEDULE_REF`、`SCHEDULE_MY_DAY_OFFS_REF`,`refId` = 月份 `YYYY-MM`)。
+ * 我的班表的班表 / 我的畫休分頁(`SCHEDULE_MY_SCHEDULE_REF`、`SCHEDULE_MY_DAY_OFFS_REF`,`refId` = 月份 `YYYY-MM`)、
+ * 經銷商詳情(`LOTTERY_DEALER_REF`)、店面管理看板的那家店(`LOTTERY_STORE_BOARD_REF`)、帳戶管理的分頁(`LOTTERY_ACCOUNTS_TAB_REF`)。
  */
 
 /** 刮刮樂:有已送出交班結帳的班還沒被日結涵蓋計算(B14,逾期後每天)。 */
 export const LOTTERY_DAILY_CLOSE_OVERDUE = "lottery.daily-close-overdue";
 /** 刮刮樂:調貨單第一關通過(含跳過),通知收貨店。 */
 export const LOTTERY_TRANSFER_SHIPPED = "lottery.transfer-shipped";
+/** 通知連結:經銷商詳情頁(證照到期、牌租繳費提醒點進去是那位經銷商)。 */
+export const LOTTERY_DEALER_REF = "lottery-dealer";
+/** 通知連結:店面管理的看板,`refId` = 分店 id(日結逾期點進去是那家店的看板,頂部有 [日結] 與上次日結)。 */
+export const LOTTERY_STORE_BOARD_REF = "lottery-store-board";
+/** 通知連結:帳戶管理的分頁,`refId` = 分頁 key(關帳逾期 → `close`;關帳分頁沒有月份參數)。 */
+export const LOTTERY_ACCOUNTS_TAB_REF = "lottery-accounts-tab";
 /** 刮刮樂:經銷商證照到期(B14,到期日前 N 天)。 */
 export const LOTTERY_LICENSE_EXPIRING = "lottery.license-expiring";
 /** 刮刮樂:乙類牌租繳費日(B14,繳費日前 N 天)。 */
@@ -383,6 +391,18 @@ export const PROJECT_NOTIFICATIONS: ProjectNotificationRegistrations = {
     {
       refType: LOTTERY_TRANSFER_REF,
       path: "/purchasing/transfer/view-page/{refId}",
+    },
+    {
+      refType: LOTTERY_DEALER_REF,
+      path: "/dealers/view-page/{refId}",
+    },
+    {
+      refType: LOTTERY_STORE_BOARD_REF,
+      path: `/store?tab=${STORE_TABS.board}&org={refId}`,
+    },
+    {
+      refType: LOTTERY_ACCOUNTS_TAB_REF,
+      path: "/accounts?tab={refId}",
     },
     {
       refType: SCHEDULE_MY_SCHEDULE_REF,

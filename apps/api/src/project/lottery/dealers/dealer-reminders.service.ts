@@ -24,6 +24,7 @@ import {
   LotteryRelationshipsRepository,
 } from "../../database/lottery-dealers/lottery-dealers.repository";
 import {
+  LOTTERY_DEALER_REF,
   LOTTERY_LICENSE_EXPIRING,
   LOTTERY_STORE_RENT_DUE,
 } from "../../notifications";
@@ -176,6 +177,8 @@ export class DealerRemindersService implements OnModuleInit {
         expiresOn: expiresText,
         daysLeft: String(hit.daysBefore ?? 0),
       },
+      // 點進去 = 那位經銷商
+      ref: { type: LOTTERY_DEALER_REF, id: String(dealer._id) },
       dedupeKey: `${LOTTERY_LICENSE_EXPIRING}:${String(dealer._id)}:${expiresText}:${hit.occurrence}`,
     });
   }
@@ -206,6 +209,7 @@ export class DealerRemindersService implements OnModuleInit {
             ? null
             : dealer.rentFee.toLocaleString("en-US"),
       },
+      ref: { type: LOTTERY_DEALER_REF, id: String(dealer._id) },
       dedupeKey: `${LOTTERY_STORE_RENT_DUE}:${String(dealer._id)}:${dueText}:${hit.hit.occurrence}`,
     });
   }

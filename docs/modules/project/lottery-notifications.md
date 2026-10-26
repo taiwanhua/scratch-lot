@@ -5,7 +5,7 @@
 - **負責人提醒**的收件人 = 類型宣告的組織範圍 且 符合人員條件;租戶可在通知設定頁改人員條件(組織範圍不能改)。**當事人通知**的收件人由觸發的功能在 `notify()` 指定。
 - 管道:十二種都是站內 + email,收件人可在個人偏好逐一關掉。
 - 下表「提醒時間」欄是規格 3.5 的預設值。已宣告可調時間的:畫休開放、畫休即將截止(排程在班表管理,`docs/modules/project/schedule.md`「畫休開放 / 即將截止通知」);其他類型由各自的提醒功能宣告。通知設定頁列出底座的負責人提醒、本專案的五種負責人提醒,以及宣告了可調時間的當事人通知(畫休開放、畫休即將截止,收件人唯讀「由事件決定」);其他當事人通知(進貨 / 調貨送錯分店、排班發布、排班異動、畫休被代改)不列,只在收件人的個人偏好有開關,開通也不設定它們的收件人。
-- 連結(`links`):`lottery-purchase` → `/purchasing/purchase/view-page/{refId}`(進貨送錯分店的通知點進去是那張進貨單);`lottery-transfer` → `/purchasing/transfer/view-page/{refId}`(調貨送錯分店的通知點進去是那張調貨單);`schedule-my-schedule` → `/schedule/my?tab=schedule&month={refId}`(排班發布、排班異動:我的班表的班表分頁,`refId` = 發布的月份 / 異動那天的月份);`schedule-my-day-offs` → `/schedule/my?tab=day-offs&month={refId}`(畫休開放、畫休即將截止:我的畫休的目標月;畫休被代改:那天所在的月份。我的畫休只採用早於目標月的 `month`,其他值顯示目標月,見 `schedule.md`「我的班表 → 我的畫休」)。負責人提醒(日結逾期、調貨出貨通知、證照到期、牌租繳費提醒、關帳逾期)沒有連結。
+- 連結(`links`):`lottery-purchase` → `/purchasing/purchase/view-page/{refId}`(進貨送錯分店的通知點進去是那張進貨單);`lottery-transfer` → `/purchasing/transfer/view-page/{refId}`(調貨送錯分店、調貨出貨通知點進去是那張調貨單);`lottery-dealer` → `/dealers/view-page/{refId}`(證照到期、牌租繳費提醒點進去是那位經銷商);`lottery-store-board` → `/store?tab=board&org={refId}`(日結逾期:那家店的看板,頂部有上次日結與 [日結];`refId` = 分店 id;沒有直接開日結精靈,因為有班還開著時精靈不能用,看板會說明原因);`lottery-accounts-tab` → `/accounts?tab={refId}`(關帳逾期 → `refId` = `close`,帳戶管理的關帳分頁;分頁沒有月份參數,列出全部月份、[關帳] 只在最早未關帳的月份);`schedule-my-schedule` → `/schedule/my?tab=schedule&month={refId}`(排班發布、排班異動:我的班表的班表分頁,`refId` = 發布的月份 / 異動那天的月份);`schedule-my-day-offs` → `/schedule/my?tab=day-offs&month={refId}`(畫休開放、畫休即將截止:我的畫休的目標月;畫休被代改:那天所在的月份。我的畫休只採用早於目標月的 `month`,其他值顯示目標月,見 `schedule.md`「我的班表 → 我的畫休」)。十二種都有連結;用到的網址參數(`tab`、`org`、`month`)都已登記在 `apps/admin/src/app/project/url-state-inventory.ts`,不用另補。
 - 類型名稱(通知設定頁、個人偏好的開關)、收件人說明、日期稱呼的英文:底座 `useNotificationTypeName` 等依類型 key 讀訊息檔(底座 notification-settings.md「類型名稱的語系」),本專案的寫在 `packages/i18n/messages/<語系>/project/admin.json` 的 `notifications.types` / `recipientNotes` / `scheduleDateLabels`(繁中 = 登記的值)。新增類型時兩種語系一起加,測試會擋。`packages/i18n/src/dead-keys.test.ts` 為此加的 `admin.notifications.recipientNotes.`、`admin.notifications.scheduleDateLabels.` 兩條動態前綴只對得上專案字典(底座字典沒有這兩組鍵,帶回底座會讓「白名單都對得上字典」那一案失敗):**回收底座時不要帶這兩條**。
 
 ## 類型
@@ -48,4 +48,4 @@
 
 ## 測試
 
-`apps/api/src/project/notifications.test.ts`:十二種逐列比對上表的 key、名稱、類別、組織範圍與預設人員條件;與底座合成合法;通知設定頁列出的負責人提醒;範本兩種語系都有、缺參數也不空白;畫休被代改的登記 / 刪除兩種說法;連結登記與排班通知換出的網址;每種類型兩種語系的名稱(與有宣告時的收件人說明、日期稱呼)都在專案字典、字典沒有登記以外的類型。觸發端的測試(含各排班通知的 `refType` / `refId`)見 `docs/modules/project/schedule.md`「測試」。
+`apps/api/src/project/notifications.test.ts`:十二種逐列比對上表的 key、名稱、類別、組織範圍與預設人員條件;與底座合成合法;通知設定頁列出的負責人提醒;範本兩種語系都有、缺參數也不空白;畫休被代改的登記 / 刪除兩種說法;連結登記與排班通知換出的網址;每種類型兩種語系的名稱(與有宣告時的收件人說明、日期稱呼)都在專案字典、字典沒有登記以外的類型。觸發端的測試(含各通知的 `refType` / `refId`:調貨單 `transfer.test.ts`、經銷商 `dealer-schedule.test.ts`、日結 `daily-close.test.ts`、關帳 `period-close.test.ts`、排班見 `schedule.md`)見 `docs/modules/project/schedule.md`「測試」。

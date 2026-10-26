@@ -13,7 +13,10 @@ import {
   ScheduledJobRegistry,
   type ScheduledJobTenant,
 } from "../../../scheduled-jobs/scheduled-job-registry";
-import { LOTTERY_DAILY_CLOSE_OVERDUE } from "../../notifications";
+import {
+  LOTTERY_DAILY_CLOSE_OVERDUE,
+  LOTTERY_STORE_BOARD_REF,
+} from "../../notifications";
 import { DailyCloseLedger } from "./daily-close-ledger";
 import { isDailyCloseOverdue } from "./daily-close-overdue";
 
@@ -105,6 +108,8 @@ export class DailyCloseRemindersService implements OnModuleInit {
         tenantId,
         orgId: org._id,
         params: { orgName: org.name, since: localDateText(since) },
+        // 點進去 = 那家店的看板(頂部 [日結])
+        ref: { type: LOTTERY_STORE_BOARD_REF, id: orgIdText },
         dedupeKey: `${LOTTERY_DAILY_CLOSE_OVERDUE}:${orgIdText}:${hit.occurrence}`,
       });
     }

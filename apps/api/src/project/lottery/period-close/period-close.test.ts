@@ -651,6 +651,8 @@ describe("關帳(GraphQL 端點 + 真 MongoDB)", () => {
         tenantId: tenant,
         orgId: tenant,
         params: { period: "2026-10" },
+        // 點進去 = 帳戶管理的關帳分頁
+        ref: { type: "lottery-accounts-tab", id: "close" },
       }),
     ]);
     // 9 月已關:10/3 不寄

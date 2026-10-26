@@ -77,7 +77,7 @@
 - **主檔與關聯同一個交易**;每一筆關聯的新增 / 解除各寫一筆稽核。
 - **見簽**:每年每季一筆;見簽日不限定落在該季;已過沒登記的季別 `MISSING`(警告色)、本季沒登記 `OPEN`、未到 `NOT_STARTED`(不能登記)。
 - **側欄計數 `dealers`**:操作者可見範圍內、不是解約的經銷商中,證照到期日 ≤ 今天 + 30 天(含已過期),或甲類的最近一次批購日 / 本人批購日距今超過 180 天(都無紀錄的不算);同一位只算一次。「今天」以租戶時區計。新增 / 編輯後對操作者送 `badge:dealers`。
-- **提醒(B14)**:排程工作 `lottery.dealer-reminders`(每 15 分鐘;以 `tenantBoundaryContext` 逐租戶讀)對每個租戶、每位不是解約的經銷商判斷 `scheduleHitAt`:證照到期(預設到期日前 30、7、0 天 09:00;過期後不再寄)、牌租繳費提醒(乙類,預設繳費日前 3、0 天 09:00)。事件組織 = 乙類的對應分店,甲類或沒有對應分店 = 租戶;`dedupeKey` 帶經銷商、目標日與時點。提醒時間由通知設定頁調整(規格 3.5)。
+- **提醒(B14)**:排程工作 `lottery.dealer-reminders`(每 15 分鐘;以 `tenantBoundaryContext` 逐租戶讀)對每個租戶、每位不是解約的經銷商判斷 `scheduleHitAt`:證照到期(預設到期日前 30、7、0 天 09:00;過期後不再寄)、牌租繳費提醒(乙類,預設繳費日前 3、0 天 09:00)。事件組織 = 乙類的對應分店,甲類或沒有對應分店 = 租戶;`dedupeKey` 帶經銷商、目標日與時點;連結到那位經銷商的詳情頁(`lottery-dealer`,`lottery-notifications.md`「連結」)。提醒時間由通知設定頁調整(規格 3.5)。
 
 正本:`apps/api/src/project/lottery/dealers/dealer-links.service.ts`、`dealers.service.ts`、`dealer-reminders.service.ts`、`dealer-badge.ts`
 

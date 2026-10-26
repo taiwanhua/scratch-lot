@@ -668,12 +668,14 @@ describe("調貨單(規格 8.4、第 9 章)", () => {
     ).length;
   }
 
-  /** 對這張單送過幾次「調貨出貨通知」(收貨店、負責人提醒)。 */
+  /** 對這張單送過幾次「調貨出貨通知」(收貨店、負責人提醒;點進去 = 這張調貨單)。 */
   function shippedNotices(id: string): number {
     return notify.mock.calls.filter(
       ([input]) =>
         input.type === "lottery.transfer-shipped" &&
         input.dedupeKey.startsWith(`transfer-shipped:${id}:`) &&
+        input.ref?.type === "lottery-transfer" &&
+        input.ref.id === id &&
         String(input.orgId) === String(branchB),
     ).length;
   }

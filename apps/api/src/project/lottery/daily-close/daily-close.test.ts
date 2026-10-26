@@ -1226,6 +1226,8 @@ describe("日結與存銀行(GraphQL 端點 + 真 MongoDB)", () => {
         type: "lottery.daily-close-overdue",
         tenantId: tenant,
         params: { orgName: "士林店", since: "2026-10-20" },
+        // 點進去 = 那家店的看板
+        ref: { type: "lottery-store-board", id: String(store.orgId) },
       }),
     ]);
     const again = await runAt("21", "09:15");
