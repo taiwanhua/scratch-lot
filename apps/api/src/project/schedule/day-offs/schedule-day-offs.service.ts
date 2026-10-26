@@ -76,6 +76,7 @@ import {
   SchedulePermissions,
 } from "../shared/schedule-permissions";
 import { SchedulePersonLocks } from "../shared/schedule-person-locks";
+import { NAMES_READER } from "../shared/schedule-readers";
 import { compareScheduleNames } from "../shared/schedule-sort";
 import type { ScheduleCandidate } from "../staff/schedule-candidates";
 import { ScheduleStaffService } from "../staff/schedule-staff.service";
@@ -157,17 +158,6 @@ const ORG_STAFF = "org_schedule_staff";
 const AUDIT_TARGET_TYPE = "schedule_day_off";
 const DAY_OFF_WINDOW_KEY = "dayOffWindow";
 const MS_PER_MINUTE = 60_000;
-
-/** 讀使用者名稱用的上下文:`users` 不掛租戶過濾,範圍在此無作用,只為讓 BaseRepository 收得到上下文。 */
-const NAMES_READER: OperatorContext = {
-  actorId: null,
-  currentOrgId: null,
-  visibleOrgIds: [],
-  managedOrgIds: [],
-  memberOrgIds: [],
-  roleIds: [],
-  memberTenants: [],
-};
 
 /** 時段不可排的一段(時點;落在那天、結束晚於開始)。 */
 export interface ScheduleDayOffSpan {

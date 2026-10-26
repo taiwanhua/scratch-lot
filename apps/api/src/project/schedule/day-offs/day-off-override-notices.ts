@@ -10,17 +10,7 @@ import { SCHEDULE_DAY_OFF_OVERRIDDEN } from "../../notifications";
 import { ScheduleFieldOptionsService } from "../field-options/schedule-field-options.service";
 import { clockTextOf } from "../shared/schedule-dates";
 import type { ScheduleOrg } from "../shared/schedule-org";
-
-/** 讀代改人名稱用的上下文:`users` 不掛租戶過濾,範圍在此無作用,只為讓 BaseRepository 收得到上下文。 */
-const NAMES_READER: OperatorContext = {
-  actorId: null,
-  currentOrgId: null,
-  visibleOrgIds: [],
-  managedOrgIds: [],
-  memberOrgIds: [],
-  roleIds: [],
-  memberTenants: [],
-};
+import { NAMES_READER } from "../shared/schedule-readers";
 
 /** 一次代改(一次送出 / 一筆刪除)要通知的內容。 */
 export interface DayOffOverrideNotice {
@@ -81,13 +71,19 @@ export class DayOffOverrideNotices {
         orgName: notice.org.name,
         date: notice.localDate,
         kind: notice.kind,
+        // 依開始時間列(送出的順序不一定是時間順序)
         slots: notice.slots
           .flatMap((slot) =>
             slot.startAt === null || slot.endAt === null
               ? []
-              : [
-                  `${clockTextOf(slot.startAt, notice.timezone)}–${clockTextOf(slot.endAt, notice.timezone)}`,
-                ],
+              : [{ startAt: slot.startAt, endAt: slot.endAt }],
+          )
+          .toSorted(
+            (left, right) => left.startAt.getTime() - right.startAt.getTime(),
+          )
+          .map(
+            (slot) =>
+              `${clockTextOf(slot.startAt, notice.timezone)}–${clockTextOf(slot.endAt, notice.timezone)}`,
           )
           .join(","),
         byName,

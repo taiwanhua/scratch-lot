@@ -146,10 +146,13 @@ export async function createScheduleUser(
   return { userId, account, token };
 }
 
-/** 測試用的排班下拉選項(正式環境由專案 seed 種;api 測試庫只有底座種子)。 */
+/**
+ * 測試用的排班下拉選項(正式環境由專案 seed 種;api 測試庫只有底座種子)。
+ * 第三格是顯示名稱(沒給 = 同 value);代改畫休原因照專案 seed 給中文名稱,通知內文才驗得到「顯示名稱」。
+ */
 const SCHEDULE_TEST_OPTIONS: Record<
   string,
-  [value: string, enabled: boolean][]
+  [value: string, enabled: boolean, label?: string][]
 > = {
   "schedule-position": [
     ["in-store-counter", true],
@@ -162,9 +165,9 @@ const SCHEDULE_TEST_OPTIONS: Record<
     ["store-duties", true],
   ],
   "schedule-day-off-override-reason": [
-    ["staff-late-notice", true],
-    ["entry-error", true],
-    ["other", true],
+    ["staff-late-notice", true, "員工臨時告知"],
+    ["entry-error", true, "登記錯誤"],
+    ["other", true, "其他"],
   ],
   "schedule-change-reason": [
     ["shift-swap", true],
@@ -203,11 +206,11 @@ export async function seedScheduleFieldOptions(
         ...baseFields(now),
       });
     await connection.collection("fields").insertMany(
-      options.map(([value, enabled], index) => ({
+      options.map(([value, enabled, label], index) => ({
         key: `${key}:${value}`,
         categoryId,
         orgId: null,
-        label: value,
+        label: label ?? value,
         value,
         order: index + 1,
         enabled,

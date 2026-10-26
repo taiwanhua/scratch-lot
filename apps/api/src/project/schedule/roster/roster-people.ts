@@ -15,19 +15,9 @@ import {
   type ScheduleEntryDocument,
 } from "../../database/schedule/roster.repositories";
 import { instantRangeFilter } from "../shared/schedule-dates";
+import { NAMES_READER } from "../shared/schedule-readers";
 
 export type EntryRecord = Persisted<ScheduleEntryDocument>;
-
-/** 讀使用者名稱用的上下文:`users` 不掛租戶過濾,範圍在此無作用,只為讓 BaseRepository 收得到上下文。 */
-const NAMES_READER: OperatorContext = {
-  actorId: null,
-  currentOrgId: null,
-  visibleOrgIds: [],
-  managedOrgIds: [],
-  memberOrgIds: [],
-  roleIds: [],
-  memberTenants: [],
-};
 
 /**
  * 排班表「以人為準」的讀取(規格 14.1「一個人同一時間只有一筆排班,跨店也不能重疊」、14.5「跨店與不可排」):

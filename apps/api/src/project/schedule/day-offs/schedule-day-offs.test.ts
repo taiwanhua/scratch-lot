@@ -892,7 +892,7 @@ describe("畫休(GraphQL 端點 + 真 MongoDB)", () => {
       expect(added).toHaveLength(1);
       expect(added[0]).toMatchObject({
         title: "畫休被代改:2027-04-06",
-        body: "李店長 在「中山店」替你登記了 2027-04-06 的時段不可排(09:00–12:00、14:00–18:00)。原因:other(支援活動)",
+        body: "李店長 在「中山店」替你登記了 2027-04-06 的時段不可排(09:00–12:00、14:00–18:00)。原因:其他(支援活動)",
         orgId: zhongshan,
       });
 
@@ -922,8 +922,42 @@ describe("畫休(GraphQL 端點 + 真 MongoDB)", () => {
       expect(all).toHaveLength(3);
       expect(all.at(-1)).toMatchObject({
         title: "畫休被代改:2027-04-06",
-        body: "李店長 在「中山店」刪除了你 2027-04-06 的時段不可排(09:00–12:00)。原因:entry-error",
+        body: "李店長 在「中山店」刪除了你 2027-04-06 的時段不可排(09:00–12:00)。原因:登記錯誤",
       });
+    });
+
+    it("同一人同一天代改兩次 → 兩則(不會被防重複吞掉);段落依開始時間列", async () => {
+      travelTo("2026-11-20");
+      // 先送的段落比較晚:通知照時間順序列
+      dataOf(
+        await onBehalf({
+          userId: String(chen.userId),
+          date: iso("2027-04-10"),
+          kind: "time-range",
+          slots: [
+            slot("2027-04-10", "14:00", "18:00"),
+            slot("2027-04-10", "09:00", "10:00"),
+          ],
+        }),
+        "addScheduleDayOffsOnBehalf",
+      );
+      dataOf(
+        await onBehalf({
+          userId: String(chen.userId),
+          date: iso("2027-04-10"),
+          kind: "time-range",
+          slots: [slot("2027-04-10", "11:00", "12:00")],
+        }),
+        "addScheduleDayOffsOnBehalf",
+      );
+      const received = await overriddenOf(chen);
+      const notes = received.filter(
+        (note) => note.title === "畫休被代改:2027-04-10",
+      );
+      expect(notes.map((note) => note.body)).toEqual([
+        "李店長 在「中山店」替你登記了 2027-04-10 的時段不可排(09:00–10:00、14:00–18:00)。",
+        "李店長 在「中山店」替你登記了 2027-04-10 的時段不可排(11:00–12:00)。",
+      ]);
     });
 
     it("代改自己的畫休(店長也是排班人員)不送", async () => {

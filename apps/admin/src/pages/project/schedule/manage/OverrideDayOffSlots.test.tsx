@@ -1,6 +1,7 @@
 import { describe, expect, it } from "@jest/globals";
 import { screen, waitFor, within } from "@testing-library/react";
 
+import { graphqlError } from "@/test/msw/auth-handlers";
 import {
   DAY_OFF_STAFF,
   dayOff,
@@ -166,5 +167,69 @@ describe("排班作業:代改畫休的時段不可排", () => {
     // 換回總覽的月份:用總覽已載入的資料(12/24 已有 18:00–22:00)
     await typeDate(user, dialog, "2026-12-24");
     expect(within(dialog).getByText("已登記 18:00–22:00")).toBeInTheDocument();
+  });
+
+  it("[代改] 選到已截止月份的日期 → 原因改成必填(看那個月的開放期間);換回開放中的總覽月份就不用", async () => {
+    // 總覽 12 月開放中;11 月已截止
+    const { user, dayOffsFake } = renderSchedulePage({ path: OVERVIEW });
+    await user.click(await screen.findByRole("button", { name: "代改" }));
+    const dialog = await screen.findByRole("dialog", { name: "代改畫休" });
+    await user.click(within(dialog).getByRole("combobox", { name: /人員/ }));
+    await user.click(await screen.findByRole("option", { name: "張小芳" }));
+    await typeDate(user, dialog, "2026-11-10");
+    const save = within(dialog).getByRole("button", { name: "儲存" });
+    await waitFor(() => {
+      expect(save).toBeEnabled();
+    });
+    await user.click(save);
+    expect(
+      await within(dialog).findByText("必填,請選擇原因"),
+    ).toBeInTheDocument();
+    expect(dayOffsFake.inputs.addOnBehalf).toEqual([]);
+
+    await typeDate(user, dialog, "2026-12-18");
+    await user.click(save);
+    await waitFor(() => {
+      expect(dayOffsFake.inputs.addOnBehalf).toEqual([
+        expect.objectContaining({
+          userId: "u-zhang",
+          date: taipeiAt("2026-12-18"),
+          reason: null,
+        }),
+      ]);
+    });
+  });
+
+  it("[代改] 別的月份載入失敗 → 寫一句「載入失敗、儲存時仍會檢查」,照樣可以儲存(由 api 擋)", async () => {
+    const { user, dayOffsFake } = renderSchedulePage({ path: OVERVIEW });
+    server.use(
+      api.query("ScheduleDayOffOverview", ({ variables }) => {
+        const { input } = variables as { input?: { from?: string } };
+        return input?.from === taipeiAt("2027-01-01")
+          ? graphqlError("VALIDATION_FAILED")
+          : undefined;
+      }),
+    );
+    await user.click(await screen.findByRole("button", { name: "代改" }));
+    const dialog = await screen.findByRole("dialog", { name: "代改畫休" });
+    await user.click(within(dialog).getByRole("combobox", { name: /人員/ }));
+    await user.click(await screen.findByRole("option", { name: "張小芳" }));
+    await typeDate(user, dialog, "2027-01-05");
+    expect(
+      await within(dialog).findByText(
+        "這天已登記的時段載入失敗;儲存時仍會檢查。",
+      ),
+    ).toBeInTheDocument();
+    const save = within(dialog).getByRole("button", { name: "儲存" });
+    expect(save).toBeEnabled();
+    await user.click(save);
+    await waitFor(() => {
+      expect(dayOffsFake.inputs.addOnBehalf).toEqual([
+        expect.objectContaining({
+          userId: "u-zhang",
+          date: taipeiAt("2027-01-05"),
+        }),
+      ]);
+    });
   });
 });
