@@ -9,12 +9,12 @@ import {
   fullPathTranslator,
 } from "@/lib/project/reports/report-registry";
 
+import { compareSectionOf } from "./operations-compare";
 import {
   type OperationsStore,
   type T,
   operationsSectionsOf,
 } from "./operations-rows";
-import { compareSectionOf } from "./operations-rows-more";
 import { totalStoreOf } from "./operations-total";
 
 const dayText = (value: string, timezone: string) =>

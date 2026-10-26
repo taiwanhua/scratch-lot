@@ -81,7 +81,7 @@ export interface BankTransactionWrite {
  *
  * - **讀**:先確認帳戶看得到(可見範圍 + 使用組織),再以租戶邊界讀它的交易(登記在
  *   `TENANT_BOUNDARY_CONTEXT_CALLERS`:看得到帳戶就看得到它的交易,交易可能是別家分店登記的)
- * - **登記交易**:`record-bank-transaction`;帳戶要使用中;批貨 / 調貨歸屬分店必填;批貨收入 / 調貨收入
+ * - **登記交易**:`record-bank-transaction`;帳戶要使用中;進貨 / 調貨歸屬分店必填;進貨收入 / 調貨收入
  *   單據必填、只收有待退或待收的單據(那一邊的 [收到退款] / [收款] 預設 > 0)
  * - **沖正**:寫一筆方向相反、同金額的交易,原交易不改;銀行「存入」被沖正 → 連結的「存銀行」流水自動反向
  */
@@ -264,7 +264,7 @@ export class BankTransactionsService {
   }
 
   /**
-   * 選了單據:批貨收入 / 調貨收入記在有待退或待收的那一邊(`settlementSide`,算進單據淨額);
+   * 選了單據:進貨收入 / 調貨收入記在有待退或待收的那一邊(`settlementSide`,算進單據淨額);
    * 兌獎入帳只記單據與修訂號(不算進淨額)。
    */
   private async linkedDocumentOf(
@@ -756,7 +756,7 @@ function parseRecordInput(
     input.refType == null || refId === null
       ? null
       : { moduleKey: input.refType, refId };
-  // 批貨收入 / 調貨收入:單據必填
+  // 進貨收入 / 調貨收入:單據必填
   if (
     typed !== null &&
     documentRequirementOf(typed.type) === "required" &&

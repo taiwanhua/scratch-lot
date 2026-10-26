@@ -200,7 +200,7 @@
   - **② 全店盤點**(ST-23):同交班精靈第 ① 步(`CheckoutStocktakeStep`,範圍全店):沿用 30 分鐘內的**全店**盤點 / 現在盤點全店 / 跳過(`store.skip-stocktake` + 原因)。
   - **③ 小金庫**(ST-24):小金庫應有逐項(期初 = 上次**已完成**日結的清點金額 + 投庫 − 出庫 ± 調貨 ± 現金更正 − 存銀行;每筆可點回即時現金帳)、依面額清點(`DenominationCount`)、差額 = 實點 − 應有,不為 0 時原因必填(欄位管理「結帳差額原因」)。
   - **④ 存入銀行**(ST-25a):金額(0 = 不存;不能超過小金庫實點)、帳戶(`lotteryDailyCloseWizard.bankAccounts`:使用中、使用組織包含這家店;只有一個時自動帶入)、存入後小金庫應有。
-  - **⑤ 確認**(ST-25b):涵蓋計算期間、全店盤點方式、各班差額合計、小金庫差額、存入銀行 → [送出結帳確認申請](類型 = 日結);送出成功後自動印日結單(見「列印」)。
+  - **⑤ 確認**(ST-25b):涵蓋計算期間、全店盤點方式、各班結帳差額、小金庫差額、存入銀行 → [送出結帳確認申請](類型 = 日結);送出成功後自動印日結單(見「列印」)。
 - **結帳確認申請(類型 = 日結)**:同一張受管表單 `checkout_confirm`,值 `type = daily`、`branch`、應有 / 實點 / 差額(小金庫)、`draft` = `serializeDailyCloseDraft`。掛接點 `checkout-lifecycle.ts` **依類型分派**(守門看值;事後動作讀申請的值):日結 → `DailyCloseService`(token `DAILY_CLOSE_SERVICE`),交班 → `CheckoutService`。
   - `beforeSubmit`:有 `store.checkout`;看得到這家店;沒有其他審核中 / 已退回的日結(`DAILY_CLOSE_PENDING_EXISTS`);第一次送出時這家店沒有開著的班(`DAILY_CLOSE_SHIFTS_OPEN`);涵蓋的交班結帳全部已確認(`DAILY_CLOSE_UNAPPROVED`);全店盤點方式合法(同交班,範圍 = 全店);小金庫差額不為 0 要原因(`CHECKOUT_REASON_REQUIRED`);存入銀行(`DAILY_CLOSE_DEPOSIT_INVALID` 金額不是非負整數或超過實點、`DAILY_CLOSE_ACCOUNT_NOT_USABLE` > 0 沒選帳戶或帳戶不能用)
   - `submitted`:同一個交易碰小金庫守門文件(`StoreVaultGuard.serialize`)、**再查一次**開著的班與涵蓋的交班全部已核准(送出時後端再檢查,`CONFLICT` + 同上的 reason)、算小金庫應有各項並快照(`expectedItems` / `expected`)、建立(退回後再送出改寫)結帳單、現在盤點 → `StocktakeService.submitStocktakeDraft(type: "daily")`(沿用 / 跳過照交班的做法)
@@ -316,7 +316,7 @@
 | `lotteryReceiptLinks`                              | `api.printing.print`              | 58mm 單據 QR code 的頁面路由(即時現金帳、店面檢視頁、調貨單檢視頁):依模組樹組,不依操作者權限;模組或祖先停用 = null                                                                                        |
 
 | `lotteryDailyCloseStatus(orgId)` | `store.view` | 看板頂部:上次日結的時間(`lastClosedAt`)與距今天數(`daysSince`)、審核中 / 已退回的日結(`pending`) |
-| `lotteryDailyCloseWizard(orgId, submissionId?)` | `store.checkout` | 日結精靈:涵蓋計算期間、沒有日結的日子、開著的班、另一張審核中的日結、各班結帳列(狀態、等誰、`isMine`、`instanceId`)、各班差額合計、可沿用的全店盤點、小金庫應有逐項、可用的帳戶;`submissionId` = 退回後再送出 |
+| `lotteryDailyCloseWizard(orgId, submissionId?)` | `store.checkout` | 日結精靈:涵蓋計算期間、沒有日結的日子、開著的班、另一張審核中的日結、各班結帳列(狀態、等誰、`isMine`、`instanceId`)、各班結帳差額、可沿用的全店盤點、小金庫應有逐項、可用的帳戶;`submissionId` = 退回後再送出 |
 | `lotteryBankDepositForm(orgId)` | `store.bank-deposit` | 存銀行視窗:小金庫目前應有、這家店可用的帳戶 |
 | `depositLotteryVaultToBank(input)` | `store.bank-deposit` | `{ orgId, amount, accountId, note? }` → `{ vaultExpected, movementId, transactionId }` |
 
@@ -392,10 +392,10 @@
 | `startedAt`、`submittedBy`、`submittedAt`、`confirmedAt`、`confirmedBy` | 開始盤(畫面上記下)、送出、核准完成與核准的人                                                                                       |
 | `submissionId`                                                          | 帶盤點的申請(盤點確認申請 / 結帳確認申請);唯一                                                                                     |
 | `lines[]`                                                               | 每本 × 收銀點:`countedAt`、方式、系統數字、實盤的張號、差異的張與各自的處理(補登售出記事件 id 與是否事後更正、金額)                |
-| `unopenedLines[]`                                                       | 未拆的本:在 / 不在(張數)                                                                                                           |
+| `unopenedLines[]`                                                       | 未拆的本:在 / 不在(張數;待標註的跳號不算 = 標準張數)                                                                               |
 | `lostReviewLines[]`                                                     | 待查清單的處理:找到了 / 確認遺失(原因代碼、名稱快照、說明)/ 繼續待查不記;單張成本                                                  |
 | `uncountedBooks[]`                                                      | 送出時範圍內還沒盤的本 × 收銀點(遊戲代碼、遊戲名稱、本號、收銀點);不比對、不記差異;退回後再送出時重算                              |
-| `summary`                                                               | 本數、補登售出(張 / 金額)、新增待查、標記異常、確認遺失(張 / 批購成本)、未盤本數 `uncountedCount`                                  |
+| `summary`                                                               | 本數、補登售出(張 / 金額)、新增待查、標記異常、確認遺失(張 / 批購成本;未拆整本扣待標註的跳號)、未盤本數 `uncountedCount`           |
 | `version`                                                               | 送出 / 退回 / 駁回 / 完成各 +1(條件更新)                                                                                           |
 
 - 送出時才建立(沒有「盤點中」);盤點送出不影響現金帳與庫存,核准完成時才套用。資料共用 `private`;模組 key `store`;清空示範機構依 `tenantId` 刪(`project/database/tenant-purge.ts`)。

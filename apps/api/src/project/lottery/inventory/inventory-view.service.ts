@@ -369,27 +369,8 @@ export class InventoryViewService {
           continue;
         }
         const ticketIds = new Set(tickets.map((ticket) => String(ticket._id)));
-        // 未拆整本待查 / 遺失:待標註的跳號實體不存在,張數與成本都不算(使用者 10/27 定案甲)
-        const pending =
-          book === undefined
-            ? 0
-            : pendingSkipCountOf(
-                Number(book.lastTicketNo),
-                book.standardTickets,
-                book.skippedTicketNos.length,
-              );
-        const ticketCount =
-          book === undefined
-            ? tickets.length
-            : withoutPendingSkips(
-                tickets.length,
-                book.standardTickets,
-                pending,
-              );
-        const rawCost = tickets.reduce(
-          (sum, ticket) => sum + ticket.unitCost,
-          0,
-        );
+        // 未拆整本待查 / 遺失:待標註的跳號實體不存在,張數與成本都不算
+        const figures = withoutPendingSkipFigures(book, tickets);
         const latest = events.find((event) =>
           ticketIds.has(String(event.ticketId)),
         );
@@ -407,10 +388,8 @@ export class InventoryViewService {
               ? null
               : (names.serials.get(String(latest.refId)) ?? null),
           at: latest?.at ?? null,
-          cost: grant.canShowCost
-            ? Math.round((rawCost * ticketCount) / tickets.length)
-            : null,
-          ticketCount,
+          cost: grant.canShowCost ? Math.round(figures.cost) : null,
+          ticketCount: figures.tickets,
           tickets: tickets.map((ticket) =>
             this.ticketModel(operator, ticket, names),
           ),
@@ -816,4 +795,34 @@ export class InventoryViewService {
       responsibleOrg: ref(first.responsibleOrgId, names.orgs),
     };
   }
+}
+
+/**
+ * 待查·遺失一列的張數與成本:未拆整本(張數 = 標準張數 + 待標註)扣掉待標註的跳號(實體不存在,
+ * 不算張數與成本;使用者 10/27 定案甲),成本扣同樣張數 × 平均單張成本。
+ */
+function withoutPendingSkipFigures(
+  book:
+    | {
+        lastTicketNo: string;
+        standardTickets: number;
+        skippedTicketNos: string[];
+      }
+    | undefined,
+  tickets: readonly { unitCost: number }[],
+): { tickets: number; cost: number } {
+  const total = tickets.reduce((sum, ticket) => sum + ticket.unitCost, 0);
+  if (book === undefined || tickets.length === 0) {
+    return { tickets: tickets.length, cost: total };
+  }
+  const count = withoutPendingSkips(
+    tickets.length,
+    book.standardTickets,
+    pendingSkipCountOf(
+      Number(book.lastTicketNo),
+      book.standardTickets,
+      book.skippedTicketNos.length,
+    ),
+  );
+  return { tickets: count, cost: (total * count) / tickets.length };
 }

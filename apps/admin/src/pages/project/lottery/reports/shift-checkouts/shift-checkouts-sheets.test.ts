@@ -97,7 +97,7 @@ describe("班次結帳歷史報表的工作表", () => {
       leader: "李大華",
       helpers: "陳小美",
       time: "16:00 / 22:10",
-      // 差額照結帳快照;之後的更正同一天同類別合併、關帳後的標前期更正
+      // 差額照結帳快照;事後更正同一天同類別合併、關帳後的標前期更正
       difference: 1800,
       postClose: `lotteryReports.shiftCheckouts.postCloseEntry${JSON.stringify({
         amount: "+1,800",

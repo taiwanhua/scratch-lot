@@ -40,7 +40,7 @@ import type {
  * ```
  */
 
-/** 單據種類:決定寫哪一組交易 / 流水類型(批貨支出 / 收入、調貨支出 / 收入)。 */
+/** 單據種類:決定寫哪一組交易 / 流水類型(進貨支出 / 收入、調貨支出 / 收入)。 */
 export type SettlementKind = "purchase" | "transfer";
 
 /** 登記看得到的提交(`form_submissions` 的那一筆)。 */

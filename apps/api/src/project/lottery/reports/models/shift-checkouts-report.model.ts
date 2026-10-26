@@ -82,11 +82,11 @@ export class LotteryShiftCheckoutRowModel {
   @Field(() => String, { nullable: true })
   diffReason!: string | null;
 
-  /** 之後的更正合計(不加進應有 / 差額;差額照結帳快照) */
+  /** 事後更正合計(不加進應有 / 差額;差額照結帳快照) */
   @Field(() => Float)
   postClose!: number;
 
-  /** 之後的更正逐筆(依記錄時間) */
+  /** 事後更正逐筆(依記錄時間) */
   @Field(() => [LotteryShiftPostCloseEntryModel])
   postCloseEntries!: LotteryShiftPostCloseEntryModel[];
 

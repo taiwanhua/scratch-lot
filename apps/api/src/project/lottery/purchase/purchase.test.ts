@@ -496,7 +496,7 @@ describe("進貨單(規格 8.2、8.3)", () => {
       : [];
   }
 
-  /** 沖正送出時自動記的那一筆「批貨支出」(淨額歸 0)。 */
+  /** 沖正送出時自動記的那一筆「進貨支出」(淨額歸 0)。 */
   async function reverseAutomatic(submissionId: string): Promise<void> {
     const [row] = await bankRowsOf(submissionId);
     await ok(api, hq.token, REVERSE_SETTLEMENT, {
@@ -926,7 +926,7 @@ describe("進貨單(規格 8.2、8.3)", () => {
   });
 
   describe("送出後(規格 8.2、第 9 章)", () => {
-    it("自動記「批貨支出」= 扣款金額(總部、銀行、歸屬分店 = 進貨分店);甲類批購日 max 更新;叫貨單 → 已進貨", async () => {
+    it("自動記「進貨支出」= 扣款金額(總部、銀行、歸屬分店 = 進貨分店);甲類批購日 max 更新;叫貨單 → 已進貨", async () => {
       const requisitionId = await insertRequisition(
         db(),
         tenant,
@@ -988,7 +988,7 @@ describe("進貨單(規格 8.2、8.3)", () => {
       });
     });
 
-    it("扣款金額 0:照記一筆 0 元批貨支出(掛這張單);應付 0 = 已結清", async () => {
+    it("扣款金額 0:照記一筆 0 元進貨支出(掛這張單);應付 0 = 已結清", async () => {
       const purchase = await submit([book(gameHot, { rate: 0 })]);
       const rows = await bankRowsOf(purchase.id);
       expect(rows).toHaveLength(1);
@@ -1021,7 +1021,7 @@ describe("進貨單(規格 8.2、8.3)", () => {
   });
 
   describe("收付(規格 9 進貨單驗算的 5 情境)", () => {
-    it("① 送出記批貨支出、全部點收 → [付款] [收到退款] 都 0", async () => {
+    it("① 送出記進貨支出、全部點收 → [付款] [收到退款] 都 0", async () => {
       const lines = [book(gameHot), book(gameHot)];
       const purchase = await submit(lines);
       await receiveAll(purchase.id, lines);
@@ -1078,7 +1078,7 @@ describe("進貨單(規格 8.2、8.3)", () => {
       });
     });
 
-    it("⑤ 扣款金額 0 → 記 0 元批貨支出、已結清", async () => {
+    it("⑤ 扣款金額 0 → 記 0 元進貨支出、已結清", async () => {
       const purchase = await submit([book(gameGold, { rate: 0 })]);
       expect(await bankRowsOf(purchase.id)).toEqual([
         expect.objectContaining({ amount: 0 }),

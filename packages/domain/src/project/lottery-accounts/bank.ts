@@ -34,7 +34,7 @@ export const BANK_TRANSACTION_TYPE = {
   deposit: "deposit",
   /** 兌獎入帳(收):不算進任何單據的已付 / 已收淨額 */
   redemptionIncome: "redemption_income",
-  /** 批貨收入(收):進貨單收到退款 */
+  /** 進貨收入(收):進貨單收到退款 */
   purchaseIncome: "purchase_income",
   /** 調貨收入(收) */
   transferIncome: "transfer_income",
@@ -42,7 +42,7 @@ export const BANK_TRANSACTION_TYPE = {
   withdrawal: "withdrawal",
   /** 牌租(支) */
   licenseRent: "license_rent",
-  /** 批貨支出(支):進貨單付款 */
+  /** 進貨支出(支):進貨單付款 */
   purchaseExpense: "purchase_expense",
   /** 調貨支出(支) */
   transferExpense: "transfer_expense",
@@ -80,7 +80,7 @@ export function requiresSummary(type: BankTransactionType): boolean {
   return fixedDirectionOf(type) === null;
 }
 
-/** 批貨與調貨:歸屬分店必填(規格 10.1)。 */
+/** 進貨與調貨:歸屬分店必填(規格 10.1)。 */
 const BRANCH_REQUIRED: ReadonlySet<BankTransactionType> = new Set([
   "purchase_income",
   "purchase_expense",
@@ -93,7 +93,7 @@ export function requiresBranch(type: BankTransactionType): boolean {
 }
 
 /**
- * 在銀行 [登記交易] 選了要指定單據的類型(規格 9):批貨收入 / 調貨收入 → 單據必填,
+ * 在銀行 [登記交易] 選了要指定單據的類型(規格 9):進貨收入 / 調貨收入 → 單據必填,
  * 只列有待退或待收的單據;兌獎入帳 → 單據選填(不算進單據淨額)。
  */
 export function documentRequirementOf(

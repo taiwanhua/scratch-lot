@@ -107,7 +107,7 @@ export class LotteryBankTransactionsInput {
 
 /**
  * 登記交易(`accounts.record-bank-transaction`)。`direction` 只有調整 / 其他要給(其他類型給了也照類型);
- * 批貨 / 調貨的 `branchOrgId` 必填;批貨收入 / 調貨收入的單據(`refType` + `refId`)必填、
+ * 進貨 / 調貨的 `branchOrgId` 必填;進貨收入 / 調貨收入的單據(`refType` + `refId`)必填、
  * 只收有待退或待收的單據;兌獎入帳的單據選填(不算進單據淨額)。
  */
 @InputType()

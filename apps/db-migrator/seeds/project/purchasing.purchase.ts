@@ -18,7 +18,7 @@ export const purchasingPurchaseModule: ModuleSeedDeclaration =
     order: 2,
     icon: "receipt",
     description:
-      "進貨單(表單模組,綁定 進貨單):總部向甲類批購、分店店長逐本刷條碼點收、結算批貨款",
+      "進貨單(表單模組,綁定 進貨單):總部向甲類批購、分店店長逐本刷條碼點收、結算進貨款",
     permissions: [
       {
         action: "settle",

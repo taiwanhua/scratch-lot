@@ -735,7 +735,7 @@ describe("帳戶管理(GraphQL 端點 + 真 MongoDB)", () => {
         openingBalance: 1000,
         shareOrgs: [{ orgId: String(storeA) }, { orgId: String(storeB) }],
       });
-      // 新竹店的批貨支出(總部登記)
+      // 新竹店的進貨支出(總部登記)
       await record({
         accountId: shared.id,
         type: "purchase_expense",
@@ -1153,7 +1153,7 @@ describe("帳戶管理(GraphQL 端點 + 真 MongoDB)", () => {
         code: "SETTLEMENT_NOT_CLEARED",
       });
 
-      // 銀行 [登記交易] 選批貨收入:只列有待退的單據;收到退款 2,000 → 已付淨額 = 19,000 − 2,000
+      // 銀行 [登記交易] 選進貨收入:只列有待退的單據;收到退款 2,000 → 已付淨額 = 19,000 − 2,000
       const candidates = await ok<{
         lotterySettlementCandidates: { items: { refId: string }[] };
       }>(api, hq, CANDIDATES, { input: { type: "purchase_income" } });

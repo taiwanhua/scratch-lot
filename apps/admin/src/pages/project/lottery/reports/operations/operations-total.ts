@@ -95,14 +95,15 @@ const totalInventoryOf = (list: readonly Inventory[]): Inventory => {
 };
 
 /** 期末最晚的那家店(銀行期末餘額照它)。 */
-const latestOf = (stores: readonly OperationsStore[]) =>
-  stores.reduce<OperationsStore | undefined>(
-    (latest, store) =>
-      latest === undefined || store.period.to > latest.period.to
-        ? store
-        : latest,
-    undefined,
-  );
+const latestOf = (stores: readonly OperationsStore[]) => {
+  let latest = stores.at(0);
+  for (const store of stores) {
+    if (latest !== undefined && store.period.to > latest.period.to) {
+      latest = store;
+    }
+  }
+  return latest;
+};
 
 /** 全部分店合計(每家店的數字加總;成本是 null 的(沒有 show-cost)維持 null)。 */
 export const totalStoreOf = (
@@ -201,8 +202,9 @@ export const totalStoreOf = (
     ).map((account) => ({
       ...account,
       endingBalance:
-        latest?.bankAccounts.find((item) => item.accountId === account.accountId)
-          ?.endingBalance ?? account.endingBalance,
+        latest?.bankAccounts.find(
+          (item) => item.accountId === account.accountId,
+        )?.endingBalance ?? account.endingBalance,
     })),
     outstanding: {
       items: mergeBy(

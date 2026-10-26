@@ -68,7 +68,7 @@ const withRootOrgGuard = (
 const REGISTRATIONS: readonly FormLifecycleRegistration[] = [
   // 叫貨單:送出前檢查停售、完成時寫副本、作廢補 voidedAt(專案規格 8.1)
   requisitionLifecycle,
-  // 進貨單:送出前檢查、送出後記批貨支出與批購日、點收守門、作廢撤銷本(專案規格 8.2)
+  // 進貨單:送出前檢查、送出後記進貨支出與批購日、點收守門、作廢撤銷本(專案規格 8.2)
   purchaseLifecycle,
   // 調貨單:送出鎖定、第一關通過出貨在途、點收與收付守門、駁回 / 作廢回到出貨店(專案規格 8.4)
   transferLifecycle,

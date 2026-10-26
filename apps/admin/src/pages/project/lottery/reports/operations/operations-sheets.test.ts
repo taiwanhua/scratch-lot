@@ -62,8 +62,8 @@ const sectionOf = (
 };
 
 const rowOf = (section: SheetSection, label: string) => {
-  const found = section.rows.find(
-    (row) => row.item === label || row.game === label || row.type === label,
+  const found = section.rows.find((row) =>
+    [row.item, row.game, row.type].includes(label),
   );
   if (found === undefined) throw new Error(`missing row ${label}`);
   return found;
@@ -164,7 +164,7 @@ describe("營運報表的工作表(Excel 與預覽共用的分段表格)", () =>
         "bank",
         "outstanding",
         "notes",
-      ].map(block),
+      ].map((key) => block(key)),
     );
   });
 
@@ -187,7 +187,7 @@ describe("營運報表的工作表(Excel 與預覽共用的分段表格)", () =>
         "lostRecovered",
         "ending",
         "check",
-      ].map(item),
+      ].map((key) => item(key)),
     );
     expect(rowOf(inventory, item("transferOut"))).toMatchObject({
       tickets: -100,

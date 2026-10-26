@@ -24,8 +24,6 @@ import {
 
 export type { OperationsStore, T } from "./operations-row-base";
 
-const columnsKey = "admin.lotteryReports.operations.columns";
-
 /** 1 銷售:刷條碼、手動(依原因)、補登售出、撤銷(負數)、淨銷售。 */
 const salesSection = (store: OperationsStore, t: T): SheetSection => {
   const { sales } = store;
@@ -33,9 +31,16 @@ const salesSection = (store: OperationsStore, t: T): SheetSection => {
     title: t("admin.lotteryReports.operations.blocks.sales"),
     description: t("admin.lotteryReports.operations.descriptions.sales"),
     columns: [
-      textColumn("item", t(`${columnsKey}.item`)),
-      numberColumn("tickets", t(`${columnsKey}.tickets`)),
-      numberColumn("amount", t(`${columnsKey}.amount`), 14),
+      textColumn("item", t("admin.lotteryReports.operations.columns.item")),
+      numberColumn(
+        "tickets",
+        t("admin.lotteryReports.operations.columns.tickets"),
+      ),
+      numberColumn(
+        "amount",
+        t("admin.lotteryReports.operations.columns.amount"),
+        14,
+      ),
     ],
     rows: [
       line({
@@ -85,8 +90,12 @@ const profitSection = (store: OperationsStore, t: T): SheetSection | null => {
     title: t("admin.lotteryReports.operations.blocks.profit"),
     description: t("admin.lotteryReports.operations.descriptions.profit"),
     columns: [
-      textColumn("item", t(`${columnsKey}.item`)),
-      numberColumn("amount", t(`${columnsKey}.amount`), 14),
+      textColumn("item", t("admin.lotteryReports.operations.columns.item")),
+      numberColumn(
+        "amount",
+        t("admin.lotteryReports.operations.columns.amount"),
+        14,
+      ),
     ],
     rows: [
       line({
@@ -113,10 +122,17 @@ const profitSection = (store: OperationsStore, t: T): SheetSection | null => {
 const redemptionSection = (store: OperationsStore, t: T): SheetSection => {
   const { redemption } = store;
   const columns = [
-    textColumn("item", t(`${columnsKey}.item`)),
-    numberColumn("tickets", t(`${columnsKey}.tickets`)),
-    numberColumn("amount", t(`${columnsKey}.prize`), 14),
-    textColumn("note", t(`${columnsKey}.note`)),
+    textColumn("item", t("admin.lotteryReports.operations.columns.item")),
+    numberColumn(
+      "tickets",
+      t("admin.lotteryReports.operations.columns.tickets"),
+    ),
+    numberColumn(
+      "amount",
+      t("admin.lotteryReports.operations.columns.prize"),
+      14,
+    ),
+    textColumn("note", t("admin.lotteryReports.operations.columns.note")),
   ];
   return {
     title: t("admin.lotteryReports.operations.blocks.redemption"),
@@ -172,21 +188,30 @@ const inventorySection = (store: OperationsStore, t: T): SheetSection => {
   const inv = store.inventory;
   const withCost = hasCost(store);
   const columns = [
-    textColumn("item", t(`${columnsKey}.item`)),
-    numberColumn("tickets", t(`${columnsKey}.tickets`)),
-    ...(withCost ? [numberColumn("cost", t(`${columnsKey}.cost`), 14)] : []),
-    textColumn("note", t(`${columnsKey}.note`)),
+    textColumn("item", t("admin.lotteryReports.operations.columns.item")),
+    numberColumn(
+      "tickets",
+      t("admin.lotteryReports.operations.columns.tickets"),
+    ),
+    ...(withCost
+      ? [
+          numberColumn(
+            "cost",
+            t("admin.lotteryReports.operations.columns.cost"),
+            14,
+          ),
+        ]
+      : []),
+    textColumn("note", t("admin.lotteryReports.operations.columns.note")),
   ];
-  const item = (key: string) =>
-    t(`admin.lotteryReports.operations.items.${key}`);
   const rows: SheetRow[] = [
     line({
-      item: item("opening"),
+      item: t("admin.lotteryReports.operations.items.opening"),
       tickets: inv.openingTickets,
       cost: inv.openingCost,
     }),
     line({
-      item: item("purchase"),
+      item: t("admin.lotteryReports.operations.items.purchase"),
       tickets: inv.purchaseTickets,
       cost: inv.purchaseCost,
       note:
@@ -200,12 +225,12 @@ const inventorySection = (store: OperationsStore, t: T): SheetSection => {
             }),
     }),
     line({
-      item: item("transferIn"),
+      item: t("admin.lotteryReports.operations.items.transferIn"),
       tickets: inv.transferInTickets,
       cost: inv.transferInAmount,
     }),
     line({
-      item: item("transferOut"),
+      item: t("admin.lotteryReports.operations.items.transferOut"),
       tickets: negate(inv.transferOutTickets),
       cost: negate(inv.transferOutCost),
       note:
@@ -216,37 +241,37 @@ const inventorySection = (store: OperationsStore, t: T): SheetSection => {
             }),
     }),
     line({
-      item: item("sales"),
+      item: t("admin.lotteryReports.operations.items.sales"),
       tickets: negate(inv.salesTickets),
       cost: negate(inv.salesCost),
     }),
     line({
-      item: item("scrap"),
+      item: t("admin.lotteryReports.operations.items.scrap"),
       tickets: negate(inv.scrapTickets),
       cost: negate(inv.scrapCost),
     }),
     line({
-      item: item("newInvestigating"),
+      item: t("admin.lotteryReports.operations.items.newInvestigating"),
       tickets: negate(inv.newInvestigatingTickets),
       cost: negate(inv.newInvestigatingCost),
     }),
     line({
-      item: item("investigateRecovered"),
+      item: t("admin.lotteryReports.operations.items.investigateRecovered"),
       tickets: inv.investigateRecoveredTickets,
       cost: inv.investigateRecoveredCost,
     }),
     line({
-      item: item("lostRecovered"),
+      item: t("admin.lotteryReports.operations.items.lostRecovered"),
       tickets: inv.lostRecoveredTickets,
       cost: inv.lostRecoveredCost,
     }),
     totalLine({
-      item: item("ending"),
+      item: t("admin.lotteryReports.operations.items.ending"),
       tickets: inv.endingTickets,
       cost: inv.endingCost,
     }),
     totalLine({
-      item: item("check"),
+      item: t("admin.lotteryReports.operations.items.check"),
       tickets: inv.checkTickets,
       cost: inv.checkCost,
       note: checkNote(store, t),
@@ -264,17 +289,15 @@ const inventorySection = (store: OperationsStore, t: T): SheetSection => {
 const inventoryInfoSection = (store: OperationsStore, t: T): SheetSection => {
   const inv = store.inventory;
   const withCost = hasCost(store);
-  const item = (key: string) =>
-    t(`admin.lotteryReports.operations.items.${key}`);
   const rows: SheetRow[] = [
     line({
-      item: item("inTransit"),
+      item: t("admin.lotteryReports.operations.items.inTransit"),
       tickets: inv.inTransitTickets,
       amount: inv.inTransitAmount,
-      note: item("inTransitNote"),
+      note: t("admin.lotteryReports.operations.items.inTransitNote"),
     }),
     line({
-      item: item("investigating"),
+      item: t("admin.lotteryReports.operations.items.investigating"),
       tickets: inv.investigatingTickets,
       amount: inv.investigatingCost,
       note: t("admin.lotteryReports.operations.items.books", {
@@ -282,23 +305,23 @@ const inventoryInfoSection = (store: OperationsStore, t: T): SheetSection => {
       }),
     }),
     line({
-      item: item("lost"),
+      item: t("admin.lotteryReports.operations.items.lost"),
       tickets: inv.lostTickets,
       amount: inv.lostCost,
-      note: item("lostNote"),
+      note: t("admin.lotteryReports.operations.items.lostNote"),
     }),
     line({
-      item: item("skipped"),
+      item: t("admin.lotteryReports.operations.items.skipped"),
       tickets: inv.skippedTickets,
-      note: item("skippedNote"),
+      note: t("admin.lotteryReports.operations.items.skippedNote"),
     }),
   ];
   if (withCost) {
     rows.push(
       line({
-        item: item("transferGain"),
+        item: t("admin.lotteryReports.operations.items.transferGain"),
         amount: inv.transferGain,
-        note: item("transferGainNote"),
+        note: t("admin.lotteryReports.operations.items.transferGainNote"),
       }),
     );
   }
@@ -308,12 +331,21 @@ const inventoryInfoSection = (store: OperationsStore, t: T): SheetSection => {
       "admin.lotteryReports.operations.descriptions.inventoryInfo",
     ),
     columns: [
-      textColumn("item", t(`${columnsKey}.item`)),
-      numberColumn("tickets", t(`${columnsKey}.tickets`)),
+      textColumn("item", t("admin.lotteryReports.operations.columns.item")),
+      numberColumn(
+        "tickets",
+        t("admin.lotteryReports.operations.columns.tickets"),
+      ),
       ...(withCost
-        ? [numberColumn("amount", t(`${columnsKey}.amount`), 14)]
+        ? [
+            numberColumn(
+              "amount",
+              t("admin.lotteryReports.operations.columns.amount"),
+              14,
+            ),
+          ]
         : []),
-      textColumn("note", t(`${columnsKey}.note`)),
+      textColumn("note", t("admin.lotteryReports.operations.columns.note")),
     ],
     rows,
   };

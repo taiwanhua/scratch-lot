@@ -65,8 +65,8 @@
 
 | 類型                                                                                                 | 方向         |
 | ---------------------------------------------------------------------------------------------------- | ------------ |
-| `deposit` 存入、`redemption_income` 兌獎入帳、`purchase_income` 批貨收入、`transfer_income` 調貨收入 | 收           |
-| `withdrawal` 提領、`license_rent` 牌租、`purchase_expense` 批貨支出、`transfer_expense` 調貨支出     | 支           |
+| `deposit` 存入、`redemption_income` 兌獎入帳、`purchase_income` 進貨收入、`transfer_income` 調貨收入 | 收           |
+| `withdrawal` 提領、`license_rent` 牌租、`purchase_expense` 進貨支出、`transfer_expense` 調貨支出     | 支           |
 | `adjustment` 調整、`other` 其他(說明必填)                                                            | 使用者選     |
 | 沖正(沿用原交易的類型,`reversalOf` 指向原交易)                                                       | 與原交易相反 |
 
@@ -108,8 +108,8 @@
 
 ### 交易
 
-- 方向照類型;調整 / 其他要選方向且說明必填;批貨與調貨歸屬分店必填。
-- 批貨收入 / 調貨收入:單據必填,只收有待退或待收的單據(那一邊 [收到退款] / [收款] 的先填 > 0),交易記在那一邊(`settlementSide`)。兌獎入帳:單據選填、不算進任何單據淨額。
+- 方向照類型;調整 / 其他要選方向且說明必填;進貨與調貨歸屬分店必填。
+- 進貨收入 / 調貨收入:單據必填,只收有待退或待收的單據(那一邊 [收到退款] / [收款] 的先填 > 0),交易記在那一邊(`settlementSide`)。兌獎入帳:單據選填、不算進任何單據淨額。
 - **沖正**:寫一筆同類型、方向相反、同金額的交易(`reversalOf`),原交易不改;已被沖正或本身是沖正 → `ALREADY_REVERSED`;兩人同時沖正由唯一索引擋下後到的。
 - **沖正的權限**:沒掛單據的手動交易只要 `reverse-bank-transaction`;**掛在單據上的交易**(`refType` / `settlementSide` 有值)另要**那一邊的收付權限**、看得到那一邊(與單據結算區的「沖正收付」同一判準,`settlement/settlement-side-access.ts`),沒有 → `FORBIDDEN`。交易清單的 `abilities.canReverse` 依同一判準(只看登記的權限,不讀單據)。現金流水沒有獨立的沖正入口(收付的現金只能從單據結算區沖正,已檢查那一邊;沖正「存入」連動的存銀行流水跟著那筆交易)。
 - **沖正標原交易日期**:交易清單的沖正那一筆回 `reversalOfAt`(原交易的發生時間,以租戶邊界讀),畫面顯示「沖正 · 原交易 9/28」(沖正沒有班)。
@@ -130,9 +130,9 @@
 - 選填 `sideBranchPaths`(**兩邊店的單據**):各邊分店的組織欄位路徑(例 `values.to_branch.id`;調貨單的出貨店、收貨店)。有宣告 = 記帳 / 沖正 / 帳戶選項要**那一邊的分店**在讀者的可見範圍內;沒宣告 = 單據本身要在讀者的可見範圍內(`canSettle`、`canReverse` 同),寫入不放大。結算區塊與待結清款項的**讀取**一律走一般讀取:單據歸屬看不到、但受管表單的依欄位共用指到讀者可見範圍內的組織(進貨單的進貨分店、調貨單的出貨店 / 收貨店;底座 `docs/modules/forms.md`「依欄位共用」)時照樣讀得到,只是不能按。
 - 每一邊兩顆按鈕:`out`(付款 / 退款)、`in`(收到退款 / 收款);先填的金額 ≤ 0 的那一顆停用(`SETTLEMENT_NOTHING_DUE`)。帳一律以實際填的金額為準。預設值的算法在 `@repo/domain/project/lottery-accounts` 的 `payerDefaultAmount` / `payeeDefaultAmount`(規格 9 的驗算表都有測試)。
 - 已付淨額 = 支出 − 收入;已收淨額 = 收入 − 支出;可以分次。沖正以反方向計入。
-- 淨額只算 `settlementSide` 有值的交易 / 流水。**兌獎入帳**(`redemption_income`)可以掛單據(`refType` / `refId` / `refRevision`),但 `settlementSide` 一律是 null:不算進任何一邊的淨額、不出現在收付歷程;`bankTypeOf` 只會回批貨 / 調貨的支出與收入,不會回兌獎入帳(有測試)。
+- 淨額只算 `settlementSide` 有值的交易 / 流水。**兌獎入帳**(`redemption_income`)可以掛單據(`refType` / `refId` / `refRevision`),但 `settlementSide` 一律是 null:不算進任何一邊的淨額、不出現在收付歷程;`bankTypeOf` 只會回進貨 / 調貨的支出與收入,不會回兌獎入帳(有測試)。
 - **沖正收付**(`reverseSettlement`):要看得到單據、有那一邊的權限,且**這一邊的記帳分店在操作者的可見範圍內**(現金 = 流水的分店;銀行 = 歸屬分店,沒有時看登記的組織),銀行另要求看得到那個帳戶;不符合一律 `NOT_FOUND`。現金沖正以操作者自己的上下文寫。同一筆同時沖正只有一個成功(唯一索引,有併發測試)。
-- **自動記帳**(`SettlementService.recordAutomatic(session, { operator, moduleKey, submission, side, button, accountId, amount })`):給單據在交易內記帳用(例:進貨單送出時記第一筆「批貨支出」)。不檢查按鈕權限、不看先填的金額;**金額 0 照記**(進貨單應付 0 也留一筆,淨額不受影響;人工登記仍要正數),負數或不是整數不記(回 null);沿用呼叫端的交易,不在交易內拋 `CashLedgerOutsideTransactionError`;帳戶仍要使用中、使用組織包含這一邊的分店(帳戶以單據的租戶為邊界讀)。
+- **自動記帳**(`SettlementService.recordAutomatic(session, { operator, moduleKey, submission, side, button, accountId, amount })`):給單據在交易內記帳用(例:進貨單送出時記第一筆「進貨支出」)。不檢查按鈕權限、不看先填的金額;**金額 0 照記**(進貨單應付 0 也留一筆,淨額不受影響;人工登記仍要正數),負數或不是整數不記(回 null);沿用呼叫端的交易,不在交易內拋 `CashLedgerOutsideTransactionError`;帳戶仍要使用中、使用組織包含這一邊的分店(帳戶以單據的租戶為邊界讀)。
 - 銀行:帳戶要使用中、使用組織包含這一邊的分店(`BANK_ACCOUNT_NOT_USABLE`)。現金(只有調貨):經手人 / 收款人必填;來源小金庫(**付款**時金額不能超過小金庫應有扣掉審核中日結的存入,`AMOUNT_EXCEEDS_VAULT`,欄位 `amount`;與出庫同一個 `StoreVaultGuard`,同一家店同時動小金庫在同一個守門文件上序列化;剛好等於可以;沖正一筆錢進小金庫的收付也一樣檢查,欄位 `id`),或收銀點抽屜(要有開著的班,`NO_OPEN_SHIFT`;要是這一邊分店的收銀點,`CASH_POINT_NOT_AT_BRANCH`;店面以 `registerOpenShiftResolver` 登記;付款視窗的抽屜選項 = 這一邊的 `cashDrawers`,店面以 `registerOpenDrawersLister` 登記)。
 - 作廢 / 駁回前每一邊淨額都要是 0:單據在自己的 `registerFormLifecycle` 掛 `settlementClearedGuard`(`beforeVoid` / `beforeReject`,`inject: [SettlementLedger]`),擋下時 `FORBIDDEN` + `reason = SETTLEMENT_NOT_CLEARED`。
 - 參與收付的提交狀態:`reviewing` / `returned` / `withdrawn` / `completed`(草稿、作廢、駁回不算)。

@@ -128,7 +128,7 @@ export class LotteryDailyCloseWizardModel {
   @Field(() => [LotteryDailyCloseShiftRowModel])
   shifts!: LotteryDailyCloseShiftRowModel[];
 
-  /** 各班差額合計(第 ⑤ 步) */
+  /** 各班結帳差額(第 ⑤ 步) */
   @Field(() => Int)
   differenceTotal!: number;
 

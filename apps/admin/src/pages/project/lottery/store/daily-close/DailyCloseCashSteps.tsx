@@ -216,7 +216,7 @@ export const DailyCloseBankStep = ({
 };
 
 /**
- * 日結第 ⑤ 步 確認(規格 6.10;Figma ST-25b):涵蓋計算期間、全店盤點方式、各班差額合計、小金庫差額、存入銀行;
+ * 日結第 ⑤ 步 確認(規格 6.10;Figma ST-25b):涵蓋計算期間、全店盤點方式、各班結帳差額、小金庫差額、存入銀行;
  * [送出結帳確認申請](類型 = 日結,店長審核)。「日結單」列印由列印的功能加上。
  */
 export const DailyCloseConfirmStep = ({

@@ -47,7 +47,7 @@ export class LotteryBankTransaction {
   @Prop({ type: Number, required: true })
   amount!: number;
 
-  /** 歸屬分店(批貨與調貨必填)。 */
+  /** 歸屬分店(進貨與調貨必填)。 */
   @Prop({ type: MongooseSchema.Types.ObjectId, default: null })
   branchOrgId!: Types.ObjectId | null;
 

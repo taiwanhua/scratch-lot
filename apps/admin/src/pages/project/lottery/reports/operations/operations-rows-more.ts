@@ -15,8 +15,6 @@ import {
   totalLine,
 } from "./operations-row-base";
 
-const columnsKey = "admin.lotteryReports.operations.columns";
-
 /** 說明欄列出的單號 / 班名最多幾個(api 也只送這麼多)。 */
 const MAX_LISTED = 5;
 
@@ -114,19 +112,47 @@ export const gamesSection = (
     title: t("admin.lotteryReports.operations.blocks.games"),
     description: t("admin.lotteryReports.operations.descriptions.games"),
     columns: [
-      textColumn("game", t(`${columnsKey}.game`), 24),
-      numberColumn("price", t(`${columnsKey}.price`), 8),
-      numberColumn("sold", t(`${columnsKey}.sold`), 8),
-      numberColumn("undone", t(`${columnsKey}.undone`), 8),
-      numberColumn("netTickets", t(`${columnsKey}.netTickets`), 8),
-      numberColumn("netAmount", t(`${columnsKey}.netAmount`), 12),
+      textColumn("game", t("admin.lotteryReports.operations.columns.game"), 24),
+      numberColumn(
+        "price",
+        t("admin.lotteryReports.operations.columns.price"),
+        8,
+      ),
+      numberColumn(
+        "sold",
+        t("admin.lotteryReports.operations.columns.sold"),
+        8,
+      ),
+      numberColumn(
+        "undone",
+        t("admin.lotteryReports.operations.columns.undone"),
+        8,
+      ),
+      numberColumn(
+        "netTickets",
+        t("admin.lotteryReports.operations.columns.netTickets"),
+        8,
+      ),
+      numberColumn(
+        "netAmount",
+        t("admin.lotteryReports.operations.columns.netAmount"),
+        12,
+      ),
       ...(withCost
         ? [
-            numberColumn("soldCost", t(`${columnsKey}.soldCost`), 12),
-            numberColumn("grossProfit", t(`${columnsKey}.grossProfit`), 12),
+            numberColumn(
+              "soldCost",
+              t("admin.lotteryReports.operations.columns.soldCost"),
+              12,
+            ),
+            numberColumn(
+              "grossProfit",
+              t("admin.lotteryReports.operations.columns.grossProfit"),
+              12,
+            ),
             {
               key: "margin",
-              header: t(`${columnsKey}.margin`),
+              header: t("admin.lotteryReports.operations.columns.margin"),
               width: 8,
               numFmt: "0.0%",
               align: "right" as const,
@@ -182,12 +208,16 @@ export const bankSection = (store: OperationsStore, t: T): SheetSection => {
     title: t("admin.lotteryReports.operations.blocks.bank"),
     description: t("admin.lotteryReports.operations.descriptions.bank"),
     columns: [
-      textColumn("account", t(`${columnsKey}.account`), 22),
-      textColumn("type", t(`${columnsKey}.type`), 20),
-      numberColumn("in", t(`${columnsKey}.in`), 12),
-      numberColumn("out", t(`${columnsKey}.out`), 12),
-      numberColumn("net", t(`${columnsKey}.net`), 12),
-      textColumn("note", t(`${columnsKey}.note`), 24),
+      textColumn(
+        "account",
+        t("admin.lotteryReports.operations.columns.account"),
+        22,
+      ),
+      textColumn("type", t("admin.lotteryReports.operations.columns.type"), 20),
+      numberColumn("in", t("admin.lotteryReports.operations.columns.in"), 12),
+      numberColumn("out", t("admin.lotteryReports.operations.columns.out"), 12),
+      numberColumn("net", t("admin.lotteryReports.operations.columns.net"), 12),
+      textColumn("note", t("admin.lotteryReports.operations.columns.note"), 24),
     ],
     rows,
     footnotes: [t("admin.lotteryReports.operations.footnotes.bank")],
@@ -202,10 +232,18 @@ export const outstandingSection = (
   title: t("admin.lotteryReports.operations.blocks.outstanding"),
   description: t("admin.lotteryReports.operations.descriptions.outstanding"),
   columns: [
-    textColumn("item", t(`${columnsKey}.item`)),
-    numberColumn("count", t(`${columnsKey}.documents`), 8),
-    numberColumn("amount", t(`${columnsKey}.amount`), 14),
-    textColumn("note", t(`${columnsKey}.note`), 30),
+    textColumn("item", t("admin.lotteryReports.operations.columns.item")),
+    numberColumn(
+      "count",
+      t("admin.lotteryReports.operations.columns.documents"),
+      8,
+    ),
+    numberColumn(
+      "amount",
+      t("admin.lotteryReports.operations.columns.amount"),
+      14,
+    ),
+    textColumn("note", t("admin.lotteryReports.operations.columns.note"), 30),
   ],
   rows: store.outstanding.items.map((item) =>
     line({
@@ -237,10 +275,18 @@ export const notesSection = (store: OperationsStore, t: T): SheetSection => {
     title: t("admin.lotteryReports.operations.blocks.notes"),
     description: t("admin.lotteryReports.operations.descriptions.notes"),
     columns: [
-      textColumn("item", t(`${columnsKey}.item`)),
-      numberColumn("quantity", t(`${columnsKey}.quantity`), 8),
-      numberColumn("amount", t(`${columnsKey}.amount`), 14),
-      textColumn("note", t(`${columnsKey}.note`), 30),
+      textColumn("item", t("admin.lotteryReports.operations.columns.item")),
+      numberColumn(
+        "quantity",
+        t("admin.lotteryReports.operations.columns.quantity"),
+        8,
+      ),
+      numberColumn(
+        "amount",
+        t("admin.lotteryReports.operations.columns.amount"),
+        14,
+      ),
+      textColumn("note", t("admin.lotteryReports.operations.columns.note"), 30),
     ],
     rows: [
       line({
@@ -295,94 +341,5 @@ export const notesSection = (store: OperationsStore, t: T): SheetSection => {
             : notes.openMonths.join("、"),
       }),
     ],
-  };
-};
-
-/** 分店比較的一列:項目 + 各店的值 + 合計。 */
-interface CompareMetric {
-  label: string;
-  value: (store: OperationsStore) => number | null | undefined;
-  /** 只在有成本權限時列 */
-  cost?: boolean;
-}
-
-const outstandingOf = (store: OperationsStore, kinds: readonly string[]) =>
-  store.outstanding.items
-    .filter((item) => kinds.includes(item.kind))
-    .reduce((sum, item) => sum + item.amount, 0);
-
-/**
- * 分店比較(Excel 另一張工作表;使用者 10/26 定):列 = 重要數字(淨銷售、毛利、兌獎、期末庫存、結帳差額、
- * 待付與待收),欄 = 各分店 + 合計。`total` 是「全部分店合計」那一份(合計欄照它,銀行等去重複的規則一致)。
- */
-export const compareSectionOf = (
-  stores: readonly { name: string; store: OperationsStore }[],
-  total: OperationsStore,
-  t: T,
-): SheetSection => {
-  const withCost = hasCost(total);
-  const item = (key: string) =>
-    t(`admin.lotteryReports.operations.compare.${key}`);
-  const metrics: CompareMetric[] = [
-    { label: item("netSales"), value: (store) => store.sales.net.amount },
-    {
-      label: item("grossProfit"),
-      value: (store) =>
-        store.sales.cost == null
-          ? null
-          : store.sales.net.amount - store.sales.cost,
-      cost: true,
-    },
-    {
-      label: item("redemption"),
-      value: (store) => store.redemption.valid.amount,
-    },
-    {
-      label: item("endingTickets"),
-      value: (store) => store.inventory.endingTickets,
-    },
-    {
-      label: item("endingCost"),
-      value: (store) => store.inventory.endingCost,
-      cost: true,
-    },
-    {
-      label: item("shiftDifference"),
-      value: (store) => store.cash.shiftDifference,
-    },
-    {
-      label: item("toPay"),
-      value: (store) =>
-        outstandingOf(store, ["purchaseToPay", "transferToPay"]),
-    },
-    {
-      label: item("toReceive"),
-      value: (store) => outstandingOf(store, ["transferToReceive"]),
-    },
-  ];
-  return {
-    title: t("admin.lotteryReports.operations.blocks.compare"),
-    description: t("admin.lotteryReports.operations.descriptions.compare"),
-    columns: [
-      textColumn("item", t(`${columnsKey}.item`), 20),
-      ...stores.map((entry, index) =>
-        numberColumn(`store${String(index)}`, entry.name, 12),
-      ),
-      numberColumn("total", t(`${columnsKey}.total`), 14),
-    ],
-    rows: metrics
-      .filter((metric) => withCost || metric.cost !== true)
-      .map((metric) =>
-        line({
-          item: metric.label,
-          ...Object.fromEntries(
-            stores.map((entry, index) => [
-              `store${String(index)}`,
-              metric.value(entry.store) ?? null,
-            ]),
-          ),
-          total: metric.value(total) ?? null,
-        }),
-      ),
   };
 };

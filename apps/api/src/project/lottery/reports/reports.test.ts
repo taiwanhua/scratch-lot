@@ -368,6 +368,23 @@ describe("輸出報表:營運報表、班次結帳歷史報表(GraphQL 端點 + 
     return data.lotteryOperationsReport;
   }
 
+  /** 一家店某一天的營運報表(日)。 */
+  async function storeOn(date: string, orgId: Types.ObjectId): Promise<Store> {
+    const result = await operations(hq, {
+      ...dayOf(date),
+      orgIds: [String(orgId)],
+    });
+    return firstOf(result.stores);
+  }
+
+  const inventoryOn = async (date: string, orgId: Types.ObjectId) => {
+    const store = await storeOn(date, orgId);
+    return store.inventory;
+  };
+
+  const transactions = () => api.app.get(TransactionService);
+  const ledger = () => api.app.get(TicketLedgerService);
+
   const insert = async (
     collection: string,
     doc: Record<string, unknown>,
@@ -1395,7 +1412,7 @@ describe("輸出報表:營運報表、班次結帳歷史報表(GraphQL 端點 + 
         postCloseOf: shiftId,
       });
 
-      // 銀行:共用帳戶,本店存入 1,000、批貨支出 3,000;中山店另有一筆收 500(只算進期末餘額)
+      // 銀行:共用帳戶,本店存入 1,000、進貨支出 3,000;中山店另有一筆收 500(只算進期末餘額)
       const accountId = await insert(LOTTERY_BANK_ACCOUNTS_COLLECTION, {
         orgId: tenant,
         bankCode: "004",
@@ -2178,15 +2195,8 @@ describe("輸出報表:營運報表、班次結帳歷史報表(GraphQL 端點 + 
       receivedAt: taipei("2026-10-20", "10:00"),
       moduleKey: "purchasing.transfer",
     });
-    const dayReport = async (date: string, orgId: Types.ObjectId) => {
-      const result = await operations(hq, {
-        ...dayOf(date),
-        orgIds: [String(orgId)],
-      });
-      return firstOf(result.stores).inventory;
-    };
     // 10/19 出貨:高雄店調出 2 張(原成本 180、調貨金額 240),期末在途 2 張 · 240,核對 0
-    expect(await dayReport("2026-10-19", kaohsiung)).toMatchObject({
+    expect(await inventoryOn("2026-10-19", kaohsiung)).toMatchObject({
       openingTickets: 2,
       transferOutTickets: 2,
       transferOutCost: 180,
@@ -2199,19 +2209,19 @@ describe("輸出報表:營運報表、班次結帳歷史報表(GraphQL 端點 + 
       checkCost: 0,
     });
     // 10/20 點收:高雄店沒有調出(在途結束),中山店調入
-    expect(await dayReport("2026-10-20", kaohsiung)).toMatchObject({
+    expect(await inventoryOn("2026-10-20", kaohsiung)).toMatchObject({
       transferOutTickets: 0,
       inTransitTickets: 0,
       checkTickets: 0,
     });
-    expect(await dayReport("2026-10-20", zhongshan)).toMatchObject({
+    expect(await inventoryOn("2026-10-20", zhongshan)).toMatchObject({
       transferInTickets: 2,
       transferInAmount: 240,
       checkTickets: 0,
       checkCost: 0,
     });
     // 10/21 作廢:高雄店調出反向(原成本用點收記的調入前成本 90)、中山店調入反向
-    expect(await dayReport("2026-10-21", kaohsiung)).toMatchObject({
+    expect(await inventoryOn("2026-10-21", kaohsiung)).toMatchObject({
       transferOutTickets: -2,
       transferOutCost: -180,
       transferOutAmount: -240,
@@ -2221,7 +2231,7 @@ describe("輸出報表:營運報表、班次結帳歷史報表(GraphQL 端點 + 
       checkTickets: 0,
       checkCost: 0,
     });
-    expect(await dayReport("2026-10-21", zhongshan)).toMatchObject({
+    expect(await inventoryOn("2026-10-21", zhongshan)).toMatchObject({
       transferInTickets: -2,
       transferInAmount: -240,
       checkTickets: 0,
@@ -2296,8 +2306,6 @@ describe("輸出報表:營運報表、班次結帳歷史報表(GraphQL 端點 + 
         { tenantId: tenant, memberOrgIds: [orgId], ancestorOrgIds: [tenant] },
       ],
     });
-    const transactions = () => api.app.get(TransactionService);
-    const ledger = () => api.app.get(TicketLedgerService);
 
     interface TicketDoc {
       _id: Types.ObjectId;
@@ -2356,12 +2364,14 @@ describe("輸出報表:營運報表、班次結帳歷史報表(GraphQL 端點 + 
       );
     }
 
-    const inventoryOn = async (date: string, orgId: Types.ObjectId) => {
-      const result = await operations(hq, {
-        ...dayOf(date),
-        orgIds: [String(orgId)],
-      });
-      return firstOf(result.stores).inventory;
+    /** 這本符合條件的張(最多 `limit` 張)。 */
+    const ticketsWhere = async (
+      bookId: Types.ObjectId,
+      predicate: (ticket: TicketDoc) => boolean,
+      limit = Number.POSITIVE_INFINITY,
+    ) => {
+      const tickets = await ticketsOf(bookId);
+      return tickets.filter((ticket) => predicate(ticket)).slice(0, limit);
     };
 
     beforeAll(async () => {
@@ -2403,7 +2413,8 @@ describe("輸出報表:營運報表、班次結帳歷史報表(GraphQL 端點 + 
         patch: { status: "skipped" },
       });
       const cashPointId = new Types.ObjectId();
-      const others = (await ticketsOf(bookId)).filter(
+      const others = await ticketsWhere(
+        bookId,
         (ticket) => ticket.status === "unsold",
       );
       await apply({ operator: storeOperator(chianan) }, others, {
@@ -2411,9 +2422,11 @@ describe("輸出報表:營運報表、班次結帳歷史報表(GraphQL 端點 + 
         at: taipei("2026-11-02", "10:01"),
         patch: { location: { kind: "counter", cashPointId } },
       });
-      const sold = (await ticketsOf(bookId))
-        .filter((ticket) => ticket.status === "unsold")
-        .slice(0, 10);
+      const sold = await ticketsWhere(
+        bookId,
+        (ticket) => ticket.status === "unsold",
+        10,
+      );
       await apply({ operator: storeOperator(chianan) }, sold, {
         type: "sale",
         at: taipei("2026-11-02", "11:00"),
@@ -2442,7 +2455,8 @@ describe("輸出報表:營運報表、班次結帳歷史報表(GraphQL 端點 + 
       expect(await inventoryOn("2026-11-01", chianan)).toEqual(day1);
 
       // S5:撤銷 10 張售出、作廢進貨單(每張寫進貨作廢、本 → 已撤銷)→ 期末排除已撤銷的本
-      const undo = (await ticketsOf(bookId)).filter(
+      const undo = await ticketsWhere(
+        bookId,
         (ticket) => ticket.status === "sold",
       );
       await apply({ operator: storeOperator(chianan) }, undo, {
@@ -2609,7 +2623,7 @@ describe("輸出報表:營運報表、班次結帳歷史報表(GraphQL 端點 + 
       });
       await apply(
         { operator: storeOperator(yunlin) },
-        (await ticketsOf(bookId)).filter((ticket) => ticket.ticketNo === "050"),
+        await ticketsWhere(bookId, (ticket) => ticket.ticketNo === "050"),
         {
           type: "skip",
           at: taipei("2026-11-08", "10:00"),
@@ -2697,12 +2711,14 @@ describe("輸出報表:營運報表、班次結帳歷史報表(GraphQL 端點 + 
       const bookId = await purchase(pingtung, at("09:00"));
       await apply(
         { operator: storeOperator(pingtung) },
-        (await ticketsOf(bookId)).filter((ticket) => ticket.ticketNo === "101"),
+        await ticketsWhere(bookId, (ticket) => ticket.ticketNo === "101"),
         { type: "skip", at: at("09:30"), patch: { status: "skipped" } },
       );
-      const sold = (await ticketsOf(bookId))
-        .filter((ticket) => ticket.status === "unsold")
-        .slice(0, 2);
+      const sold = await ticketsWhere(
+        bookId,
+        (ticket) => ticket.status === "unsold",
+        2,
+      );
       await apply({ operator: storeOperator(pingtung) }, sold, {
         type: "sale",
         at: at("11:00"),
@@ -2846,14 +2862,7 @@ describe("輸出報表:營運報表、班次結帳歷史報表(GraphQL 端點 + 
         settlementSide: "receiver",
       });
 
-      const before = firstOf(
-        (
-          await operations(hq, {
-            ...dayOf(day),
-            orgIds: [String(pingtung)],
-          })
-        ).stores,
-      );
+      const before = await storeOn(day, pingtung);
       expect(before.redemption).toMatchObject({
         valid: { count: 2, amount: 800 },
         inStore: { count: 2, amount: 800 },
@@ -2935,7 +2944,8 @@ describe("輸出報表:營運報表、班次結帳歷史報表(GraphQL 端點 + 
       await dailyClose(pingtung, null, next("10:00"), {
         coveredShiftIds: shiftIds,
       });
-      const moving = (await ticketsOf(bookId)).filter(
+      const moving = await ticketsWhere(
+        bookId,
         (ticket) => ticket.status === "unsold",
       );
       await apply(
@@ -2956,24 +2966,10 @@ describe("輸出報表:營運報表、班次結帳歷史報表(GraphQL 端點 + 
         },
       );
 
-      const after = firstOf(
-        (
-          await operations(hq, {
-            ...dayOf(day),
-            orgIds: [String(pingtung)],
-          })
-        ).stores,
-      );
+      const after = await storeOn(day, pingtung);
       expect(after).toEqual(before);
       // 變化算在發生當天
-      const nextDay = firstOf(
-        (
-          await operations(hq, {
-            ...dayOf("2026-11-21"),
-            orgIds: [String(pingtung)],
-          })
-        ).stores,
-      );
+      const nextDay = await storeOn("2026-11-21", pingtung);
       expect(nextDay.notes).toMatchObject({ uncoveredShifts: 0 });
       expect(nextDay.inventory).toMatchObject({
         openingTickets: 98,

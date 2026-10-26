@@ -28,7 +28,7 @@ describe("銀行交易類型(規格 10.1)", () => {
     expect(requiresSummary("deposit")).toBe(false);
   });
 
-  it("批貨與調貨歸屬分店必填;批貨收入 / 調貨收入單據必填、兌獎入帳選填", () => {
+  it("進貨與調貨歸屬分店必填;進貨收入 / 調貨收入單據必填、兌獎入帳選填", () => {
     expect(requiresBranch("purchase_income")).toBe(true);
     expect(requiresBranch("transfer_expense")).toBe(true);
     expect(requiresBranch("deposit")).toBe(false);
@@ -72,7 +72,7 @@ describe("現金流水(規格 10.2)", () => {
 });
 
 describe("收付機制(規格第 9 章的驗算表)", () => {
-  // 進貨單:送出時已自動記「批貨支出」= 扣款金額
+  // 進貨單:送出時已自動記「進貨支出」= 扣款金額
   it.each([
     // [情境, 應付, 已付, 付款預設, 收到退款預設]
     ["① 全部點收", 17_000, 17_000, 0, 0],

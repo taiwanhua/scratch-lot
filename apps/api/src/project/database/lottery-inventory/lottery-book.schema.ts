@@ -60,7 +60,7 @@ export class LotteryBook {
   @Prop({ type: Date, default: null })
   purchasedAt!: Date | null;
 
-  /** 進貨快照:進貨甲類。 */
+  /** 進貨快照:批購甲類。 */
   @Prop({ type: MongooseSchema.Types.ObjectId, default: null })
   purchaseDealerId!: Types.ObjectId | null;
 

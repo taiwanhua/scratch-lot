@@ -104,7 +104,7 @@ export class LotteryInventoryBookModel {
   @Field(() => GraphQLISODateTime, { nullable: true })
   purchasedAt!: Date | null;
 
-  /** 進貨甲類(名稱 = 「姓名 #證號」)。 */
+  /** 批購甲類(名稱 = 「姓名 #證號」)。 */
   @Field(() => LotteryInventoryRefModel, { nullable: true })
   purchaseDealer!: LotteryInventoryRefModel | null;
 }

@@ -287,7 +287,7 @@ export class SettlementLedger {
   }
 
   /**
-   * 銀行 [登記交易] 選「批貨收入 / 調貨收入」:單據要有某一邊的 [收到退款] / [收款] 預設 > 0
+   * 銀行 [登記交易] 選「進貨收入 / 調貨收入」:單據要有某一邊的 [收到退款] / [收款] 預設 > 0
    * (只列有待退或待收的單據);沒有 → `VALIDATION_FAILED`(`refId`,`SETTLEMENT_NOTHING_DUE`)。
    */
   async inboundEntryOf(

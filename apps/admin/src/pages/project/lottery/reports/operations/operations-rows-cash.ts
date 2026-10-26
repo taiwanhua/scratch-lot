@@ -13,8 +13,6 @@ import {
   totalLine,
 } from "./operations-row-base";
 
-const columnsKey = "admin.lotteryReports.operations.columns";
-
 /** 5a 差額與更正(+ 錢比帳多、− 錢比帳少):各班結帳差額、事後更正 · 類別、日結的小金庫差額。 */
 export const cashDifferenceSection = (
   store: OperationsStore,
@@ -52,10 +50,17 @@ export const cashDifferenceSection = (
       "admin.lotteryReports.operations.descriptions.cashDifference",
     ),
     columns: [
-      textColumn("item", t(`${columnsKey}.item`)),
-      numberColumn("quantity", t(`${columnsKey}.quantity`)),
-      numberColumn("amount", t(`${columnsKey}.amount`), 14),
-      textColumn("note", t(`${columnsKey}.note`)),
+      textColumn("item", t("admin.lotteryReports.operations.columns.item")),
+      numberColumn(
+        "quantity",
+        t("admin.lotteryReports.operations.columns.quantity"),
+      ),
+      numberColumn(
+        "amount",
+        t("admin.lotteryReports.operations.columns.amount"),
+        14,
+      ),
+      textColumn("note", t("admin.lotteryReports.operations.columns.note")),
     ],
     rows: [
       line({
@@ -91,10 +96,21 @@ export const cashMovementSection = (
     title: t("admin.lotteryReports.operations.blocks.cashMovement"),
     description: t("admin.lotteryReports.operations.descriptions.cashMovement"),
     columns: [
-      textColumn("item", t(`${columnsKey}.item`)),
-      numberColumn("count", t(`${columnsKey}.records`)),
-      numberColumn("drawer", t(`${columnsKey}.drawer`), 14),
-      numberColumn("vault", t(`${columnsKey}.vault`), 14),
+      textColumn("item", t("admin.lotteryReports.operations.columns.item")),
+      numberColumn(
+        "count",
+        t("admin.lotteryReports.operations.columns.records"),
+      ),
+      numberColumn(
+        "drawer",
+        t("admin.lotteryReports.operations.columns.drawer"),
+        14,
+      ),
+      numberColumn(
+        "vault",
+        t("admin.lotteryReports.operations.columns.vault"),
+        14,
+      ),
     ],
     rows: [
       ...movements.map((entry) =>
