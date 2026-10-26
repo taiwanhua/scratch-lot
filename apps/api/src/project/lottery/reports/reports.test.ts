@@ -2876,25 +2876,28 @@ describe("輸出報表:營運報表、班次結帳歷史報表(GraphQL 端點 + 
         shiftDifference: -50 + 30,
       });
       expect(before.notes).toMatchObject({ uncoveredShifts: 2 });
-      expect(before.bankAccounts).toEqual([
-        expect.objectContaining({
-          label: "合庫 末 22222",
-          types: [
-            {
-              type: "deposit",
-              inAmount: 1000,
-              outAmount: 1000,
-              reversalCount: 1,
-            },
-            {
-              type: "transfer_expense",
-              inAmount: 0,
-              outAmount: 300,
-              reversalCount: 0,
-            },
-          ],
-        }),
-      ]);
+      // 只看這家店自己的帳戶(租戶共用的帳戶也會列,不在這裡比)
+      expect(before.bankAccounts).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            label: "合庫 末 22222",
+            types: [
+              {
+                type: "deposit",
+                inAmount: 1000,
+                outAmount: 1000,
+                reversalCount: 1,
+              },
+              {
+                type: "transfer_expense",
+                inAmount: 0,
+                outAmount: 300,
+                reversalCount: 0,
+              },
+            ],
+          }),
+        ]),
+      );
       expect(
         (
           before.outstanding as {
