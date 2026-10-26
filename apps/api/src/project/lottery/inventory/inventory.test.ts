@@ -85,6 +85,7 @@ const BOOKS = /* GraphQL */ `
         id
         state
         remainingCount
+        totalCount
         pendingSkipCount
       }
       totalCount
@@ -179,6 +180,7 @@ const INVESTIGATIONS = /* GraphQL */ `
         bookId
         status
         cost
+        ticketCount
         responsibleOrg {
           name
         }
@@ -987,6 +989,62 @@ describe("庫存管理(GraphQL 端點 + 真 MongoDB)", () => {
       expect(row?.tickets).toHaveLength(100);
       expect(list.lotteryInvestigations.canRecover).toBe(true);
     });
+
+    it("待標註的跳號(使用者 10/27 定案甲):迄號 101 的未拆本 → 持有 / 總張數 100;整本待查 → 待查·遺失 100 張 · 18,400", async () => {
+      const bookId = await receiveBook(storeA, 101);
+      const detail = await bookOf(bookId, managerA);
+      expect(detail.book.holdings).toEqual([
+        { org: { name: "中山店" }, count: 100 },
+      ]);
+      const books = await ok<{
+        lotteryInventoryBooks: {
+          items: {
+            id: string;
+            remainingCount: number;
+            totalCount: number;
+            pendingSkipCount: number;
+          }[];
+        };
+      }>(api, managerA, BOOKS, { input: { orgId: String(storeA) } });
+      expect(
+        books.lotteryInventoryBooks.items.find(
+          (item) => item.id === String(bookId),
+        ),
+      ).toMatchObject({
+        remainingCount: 100,
+        totalCount: 100,
+        pendingSkipCount: 1,
+      });
+      const rows = await ticketsOf(bookId);
+      await apply(
+        storeA,
+        bookId,
+        rows.map((ticket) => ticket.ticketNo),
+        {
+          type: TICKET_EVENT_TYPE.investigate,
+          patch: {
+            status: TICKET_STATUS.investigating,
+            responsibleOrgId: storeA,
+          },
+        },
+      );
+      const list = await ok<{
+        lotteryInvestigations: {
+          items: {
+            bookId: string;
+            cost: number | null;
+            ticketCount: number;
+            tickets: { ticketNo: string }[];
+          }[];
+        };
+      }>(api, managerA, INVESTIGATIONS);
+      const row = list.lotteryInvestigations.items.find(
+        (item) => item.bookId === String(bookId),
+      );
+      // 101 張紀錄照列,張數與成本扣掉待標註那張
+      expect(row?.tickets).toHaveLength(101);
+      expect(row).toMatchObject({ ticketCount: 100, cost: 18_400 });
+    });
   });
 
   describe("報廢(規格 7.4)", () => {
@@ -1509,6 +1567,8 @@ describe("庫存管理(GraphQL 端點 + 真 MongoDB)", () => {
         state: "unopened",
         pendingSkipCount: 3,
         remainingCount: 100,
+        // 待標註的跳號不算總張數(使用者 10/27 定案甲)
+        totalCount: 100,
       },
     ]);
   });

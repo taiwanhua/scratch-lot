@@ -411,13 +411,19 @@ describe("張數核心(帳本 + 本 + 預計要給本數)", () => {
         .toArray();
       expect(purchases).toHaveLength(103);
       expect(String(purchases[0]?.by)).toBe(String(operator.actorId));
+      // 進貨事件記成本快照(點收時的單張成本)
+      expect(
+        purchases.every((event) => event.cost === result.book.cost / 100),
+      ).toBe(true);
+      // 待標註的跳號(拆本前)實體不存在:總張數、持有張數都是標準張數(使用者 10/27 定案甲)
       await expect(
         booksService.statsOf(operator, result.book._id),
       ).resolves.toMatchObject({
         pendingSkipCount: 3,
         remainingCount: 100,
+        totalCount: 100,
         state: "unopened",
-        holdings: [{ orgId: String(storeA), count: 103 }],
+        holdings: [{ orgId: String(storeA), count: 100 }],
       });
       // 同一本再點收一次(別的分店也一樣)→ 擋下
       const duplicate = await extensionsOf(

@@ -1227,8 +1227,10 @@ describe("交班結帳(GraphQL 端點 + 真 MongoDB)", () => {
 
     // 接班人退回 → A 改留給下一班 2,500 再送出 → B 的期初跟著更新
     await decideOn(world, clerkB, submitted.id, "RETURN");
+    // 記下退回時間(營運報表「期末那一刻有效的結帳單」用)
     expect(await checkoutOf(submitted.id)).toMatchObject({
       status: "returned",
+      returnedAt: expect.any(Date),
     });
     expect(
       await connection
@@ -1247,6 +1249,7 @@ describe("交班結帳(GraphQL 端點 + 真 MongoDB)", () => {
     expect(await checkoutOf(submitted.id)).toMatchObject({
       status: "pending",
       leftForNext: 2500,
+      returnedAt: null,
     });
     expect(await shiftOf(shiftB)).toMatchObject({ openingFloat: 2500 });
     expect(await expectedOfBoard(shiftB)).toBe(2500);

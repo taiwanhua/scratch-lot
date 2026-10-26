@@ -368,9 +368,11 @@ describe("盤點(GraphQL 端點 + 真 MongoDB)", () => {
   }
 
   /** 一本 20 張拆在 `cashPointId` 檯面(未售);`sold` 的張號已售。 */
+  /** 一本 20 張(單張 184)在收銀點檯面上;`lastTicketNo` > 20 = 有待標註的跳號(拆本前還沒標的)。 */
   async function counterBook(
     cashPointId: Types.ObjectId,
     sold: readonly string[] = [],
+    lastTicketNo = 20,
   ): Promise<{ bookId: Types.ObjectId; bookNo: string }> {
     bookSequence += 1;
     const bookNo = String(bookSequence).padStart(7, "0");
@@ -392,7 +394,7 @@ describe("盤點(GraphQL 端點 + 真 MongoDB)", () => {
         cost: 3680,
         standardTickets: 20,
         firstTicketNo: "001",
-        lastTicketNo: "020",
+        lastTicketNo: String(lastTicketNo).padStart(3, "0"),
         skippedTicketNos: [],
         lockedTicketCount: 0,
         status: "normal",
@@ -401,7 +403,7 @@ describe("盤點(GraphQL 端點 + 真 MongoDB)", () => {
         ...base(),
       });
     await connection.collection(LOTTERY_TICKETS_COLLECTION).insertMany(
-      Array.from({ length: 20 }, (_, index) => {
+      Array.from({ length: lastTicketNo }, (_, index) => {
         const ticketNo = String(index + 1).padStart(3, "0");
         const isSold = sold.includes(ticketNo);
         return {
@@ -1124,6 +1126,67 @@ describe("盤點(GraphQL 端點 + 真 MongoDB)", () => {
       code: "FORBIDDEN",
       reason: STOCKTAKE_REASONS.voidForbidden,
     });
+  });
+
+  it("待標註的跳號(使用者 10/27 定案甲):迄號 021、標準 20 張的未拆本 → 盤點頁 20 張、不在 = 新增待查 20;整本確認遺失 20 張 · 3,680", async () => {
+    now("23:00");
+    const { bookId: absentId } = await counterBook(counter, [], 21);
+    await connection
+      .collection(LOTTERY_TICKETS_COLLECTION)
+      .updateMany(
+        { bookId: absentId },
+        { $set: { location: { kind: "stock", cashPointId: null } } },
+      );
+    const sheet = await ok<{
+      lotteryStocktakeSheet: {
+        unopenedBooks: { bookId: string; ticketCount: number }[];
+      };
+    }>(clerkA, SHEET, { input: { orgId: String(xinyi) } });
+    expect(
+      sheet.lotteryStocktakeSheet.unopenedBooks.find(
+        (book) => book.bookId === String(absentId),
+      ),
+    ).toMatchObject({ ticketCount: 20 });
+    // 另一本未拆的本整本待查中(21 張紀錄)
+    const { bookId: lostId } = await counterBook(counter, [], 21);
+    await connection.collection(LOTTERY_TICKETS_COLLECTION).updateMany(
+      { bookId: lostId },
+      {
+        $set: {
+          status: "investigating",
+          responsibleOrgId: xinyi,
+          location: { kind: "stock", cashPointId: null },
+        },
+      },
+    );
+    const lostTickets = await connection
+      .collection<TicketDoc>(LOTTERY_TICKETS_COLLECTION)
+      .find({ bookId: lostId })
+      .toArray();
+    const submitted = await submitOk(
+      senior,
+      draftOf([], {
+        unopened: [{ bookId: String(absentId), present: false }],
+        lostReview: lostTickets.map((ticket) => ({
+          ticketId: String(ticket._id),
+          action: "lost" as const,
+          reasonKey: "not-found",
+        })),
+      }),
+    );
+    expect(await stocktakeOf(submitted.id)).toMatchObject({
+      summary: { newInvestigate: 20, confirmLost: 20, confirmLostCost: 3680 },
+    });
+    await decideOn(world, manager, submitted.id, "APPROVE");
+    // 套用照樣動整本的 21 張紀錄
+    const absent = await connection
+      .collection<TicketDoc>(LOTTERY_TICKETS_COLLECTION)
+      .find({ bookId: absentId })
+      .toArray();
+    expect(absent).toHaveLength(21);
+    expect(absent.every((ticket) => ticket.status === "investigating")).toBe(
+      true,
+    );
   });
 
   it("舊盤點晚完成不覆蓋新盤點的結果:盤點之後被動過的張略過", async () => {

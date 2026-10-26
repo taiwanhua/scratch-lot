@@ -14,7 +14,9 @@ import {
   startAuthTestApp,
 } from "../../../auth/test-support/auth-app";
 import { createOrg } from "../../../auth/test-support/fixtures";
+import type { OperatorContext } from "../../../database/operator-context";
 import { HOOK_TIMEOUT_MS } from "../../../database/test-support/mongo-connection";
+import { TransactionService } from "../../../database/transaction";
 import {
   type Person,
   WORKFLOW_TEST_TIMEOUT_MS,
@@ -34,6 +36,12 @@ import { LOTTERY_REDEMPTIONS_COLLECTION } from "../../database/lottery-redemptio
 import { LOTTERY_STOCKTAKES_COLLECTION } from "../../database/lottery-stocktakes/lottery-stocktake.schema";
 import { LOTTERY_SHIFTS_COLLECTION } from "../../database/lottery-store/lottery-shift.schema";
 import { LOTTERY_TRANSFER_RECEIPTS_COLLECTION } from "../../database/lottery-transfers/lottery-transfer-receipt.schema";
+import {
+  insertGame,
+  seedInventoryModule,
+} from "../purchase/test-support/purchase-fixtures";
+import { LotteryBooksService } from "../tickets/books.service";
+import { TicketLedgerService } from "../tickets/ticket-ledger.service";
 
 jest.setTimeout(WORKFLOW_TEST_TIMEOUT_MS);
 
@@ -2265,5 +2273,712 @@ describe("輸出報表:營運報表、班次結帳歷史報表(GraphQL 端點 + 
         alignment: "dailyClose",
       }),
     ]);
+  });
+  /**
+   * 待標註的跳號(使用者 10/27 定案甲):一款 200 元、標準 100 張、迄號 101(待標註 1 張)、本成本 18,400
+   * (單張 184)的本,實際存在 100 張。進貨點收用真的 `createBook`,拆本 / 售出 / 撤銷 / 作廢 / 調貨 / 待查 /
+   * 遺失用真的帳本(`TicketLedgerService`,與各功能寫的事件相同);報表每一步都以 100 張 / 18,400 計,核對 0。
+   */
+  describe("真的進貨點收與帳本:待標註的跳號不算庫存(S1–S5)、重跑舊報表數字不變", () => {
+    let chianan: Types.ObjectId;
+    let yunlin: Types.ObjectId;
+    let skipGame: Types.ObjectId;
+    let bookSequence = 0;
+
+    const storeOperator = (orgId: Types.ObjectId): OperatorContext => ({
+      actorId: hq.userId,
+      currentOrgId: orgId,
+      visibleOrgIds: [orgId],
+      managedOrgIds: [],
+      memberOrgIds: [orgId],
+      roleIds: [],
+      memberTenants: [
+        { tenantId: tenant, memberOrgIds: [orgId], ancestorOrgIds: [tenant] },
+      ],
+    });
+    const transactions = () => api.app.get(TransactionService);
+    const ledger = () => api.app.get(TicketLedgerService);
+
+    interface TicketDoc {
+      _id: Types.ObjectId;
+      ticketNo: string;
+      version: number;
+      status: string;
+    }
+    const ticketsOf = (bookId: Types.ObjectId) =>
+      connection
+        .collection<TicketDoc>(LOTTERY_TICKETS_COLLECTION)
+        .find({ bookId })
+        .sort({ ticketNo: 1 })
+        .toArray();
+
+    /** 進貨點收一本(真的 `createBook`):迄號 101、成本 18,400。 */
+    async function purchase(
+      orgId: Types.ObjectId,
+      at: Date,
+    ): Promise<Types.ObjectId> {
+      bookSequence += 1;
+      const { book } = await transactions().withTransaction((session) =>
+        api.app
+          .get(LotteryBooksService)
+          .createBook(session, storeOperator(orgId), {
+            orgId,
+            gameId: skipGame,
+            bookNo: String(700_000 + bookSequence),
+            lastTicketNo: 101,
+            rate: 92,
+            cost: 18_400,
+            at,
+          }),
+      );
+      return book._id;
+    }
+
+    /** 一批張寫同一種事件(真的帳本)。 */
+    async function apply(
+      context: Parameters<TicketLedgerService["applyTicketEvents"]>[1],
+      tickets: readonly TicketDoc[],
+      input: Omit<
+        Parameters<TicketLedgerService["applyTicketEvents"]>[2][number],
+        "ticketId" | "expectedVersion"
+      >,
+    ): Promise<void> {
+      await transactions().withTransaction((session) =>
+        ledger().applyTicketEvents(
+          session,
+          context,
+          tickets.map((ticket) => ({
+            ticketId: ticket._id,
+            expectedVersion: ticket.version,
+            ...input,
+          })),
+        ),
+      );
+    }
+
+    const inventoryOn = async (date: string, orgId: Types.ObjectId) => {
+      const result = await operations(hq, {
+        ...dayOf(date),
+        orgIds: [String(orgId)],
+      });
+      return firstOf(result.stores).inventory;
+    };
+
+    beforeAll(async () => {
+      await seedInventoryModule(connection);
+      chianan = await createOrg(connection, {
+        name: "嘉南店",
+        parentId: tenant,
+      });
+      yunlin = await createOrg(connection, {
+        name: "雲林店",
+        parentId: tenant,
+      });
+      skipGame = await insertGame(connection, tenant, {
+        gameCode: "5301",
+        name: "跳號測試",
+        unitPrice: 200,
+        ticketsPerBook: 100,
+      });
+    });
+
+    it("S1 進貨點收(未拆):進貨 100 張 · 18,400、期末 100 張 · 18,400;S4 隔天拆本標 #050 跳號、賣 10 張 → 期末 90 · 16,560;重跑前一天不變", async () => {
+      const bookId = await purchase(chianan, taipei("2026-11-01", "09:00"));
+      const day1 = await inventoryOn("2026-11-01", chianan);
+      expect(day1).toMatchObject({
+        purchaseBooks: 1,
+        purchaseTickets: 100,
+        purchaseCost: 18_400,
+        endingTickets: 100,
+        endingCost: 18_400,
+        checkTickets: 0,
+        checkCost: 0,
+      });
+      // 拆本:#050 標跳號、其餘移到檯面;賣 10 張
+      const tickets = await ticketsOf(bookId);
+      const skip = tickets.filter((ticket) => ticket.ticketNo === "050");
+      await apply({ operator: storeOperator(chianan) }, skip, {
+        type: "skip",
+        at: taipei("2026-11-02", "10:00"),
+        patch: { status: "skipped" },
+      });
+      const cashPointId = new Types.ObjectId();
+      const others = (await ticketsOf(bookId)).filter(
+        (ticket) => ticket.status === "unsold",
+      );
+      await apply({ operator: storeOperator(chianan) }, others, {
+        type: "open",
+        at: taipei("2026-11-02", "10:01"),
+        patch: { location: { kind: "counter", cashPointId } },
+      });
+      const sold = (await ticketsOf(bookId))
+        .filter((ticket) => ticket.status === "unsold")
+        .slice(0, 10);
+      await apply({ operator: storeOperator(chianan) }, sold, {
+        type: "sale",
+        at: taipei("2026-11-02", "11:00"),
+        amount: 200,
+        cashEffect: "increase",
+        cashPointId,
+        patch: {
+          status: "sold",
+          sold: { at: taipei("2026-11-02", "11:00"), source: "scan" },
+        },
+      });
+      const day2 = await inventoryOn("2026-11-02", chianan);
+      expect(day2).toMatchObject({
+        openingTickets: 100,
+        openingCost: 18_400,
+        salesTickets: 10,
+        salesCost: 1840,
+        // 跳號不在加減裡、不計成本
+        skippedTickets: 1,
+        endingTickets: 90,
+        endingCost: 16_560,
+        checkTickets: 0,
+        checkCost: 0,
+      });
+      // 重跑前一天:拆本之後仍是 100 張 · 18,400
+      expect(await inventoryOn("2026-11-01", chianan)).toEqual(day1);
+
+      // S5:撤銷 10 張售出、作廢進貨單(每張寫進貨作廢、本 → 已撤銷)→ 期末排除已撤銷的本
+      const undo = (await ticketsOf(bookId)).filter(
+        (ticket) => ticket.status === "sold",
+      );
+      await apply({ operator: storeOperator(chianan) }, undo, {
+        type: "sale_undo",
+        at: taipei("2026-11-03", "10:00"),
+        amount: 200,
+        cashEffect: "decrease",
+        patch: { status: "unsold", sold: null },
+      });
+      await apply(
+        { operator: null, crossStoreTenantId: tenant },
+        await ticketsOf(bookId),
+        { type: "purchase_void", at: taipei("2026-11-03", "11:00"), patch: {} },
+      );
+      await connection
+        .collection(LOTTERY_BOOKS_COLLECTION)
+        .updateOne({ _id: bookId }, { $set: { status: "revoked" } });
+      expect(await inventoryOn("2026-11-03", chianan)).toMatchObject({
+        openingTickets: 90,
+        purchaseBooks: -1,
+        purchaseVoidBooks: 1,
+        purchaseTickets: -100,
+        purchaseCost: -18_400,
+        salesTickets: -10,
+        salesCost: -1840,
+        endingTickets: 0,
+        endingCost: 0,
+        checkTickets: 0,
+        checkCost: 0,
+      });
+      // 重跑:作廢前那兩天不變
+      expect(await inventoryOn("2026-11-02", chianan)).toEqual(day2);
+    });
+
+    it("S5 沒動過的未拆本同一天進貨、作廢:進貨 0 本 · 0 張、期末 0", async () => {
+      const bookId = await purchase(chianan, taipei("2026-11-04", "09:00"));
+      await apply(
+        { operator: null, crossStoreTenantId: tenant },
+        await ticketsOf(bookId),
+        { type: "purchase_void", at: taipei("2026-11-04", "15:00"), patch: {} },
+      );
+      await connection
+        .collection(LOTTERY_BOOKS_COLLECTION)
+        .updateOne({ _id: bookId }, { $set: { status: "revoked" } });
+      expect(await inventoryOn("2026-11-04", chianan)).toMatchObject({
+        purchaseBooks: 0,
+        purchaseVoidBooks: 1,
+        purchaseTickets: 0,
+        purchaseCost: 0,
+        endingTickets: 0,
+        endingCost: 0,
+        checkTickets: 0,
+        checkCost: 0,
+      });
+    });
+
+    it("S2 未拆整本調貨(單上 100 張、調貨金額 20,000 → 單張 200):出貨那天調出 100 · 原成本 18,400、損益 1,600、期末在途;收貨店調入 100 · 20,000,拆本後不掉成本", async () => {
+      const bookId = await purchase(chianan, taipei("2026-11-05", "09:00"));
+      const { insertedId: transferId } = await connection
+        .collection("form_submissions")
+        .insertOne({
+          orgId: chianan,
+          tenantId: tenant,
+          moduleKey: "purchasing.transfer",
+          formKey: "transfer",
+          version: 1,
+          values: transferValues(chianan, yunlin, [
+            {
+              rowId: "r1",
+              book: { id: String(bookId) },
+              mode: { id: "whole" },
+              ticket_nos: "001-100",
+              tickets: 100,
+              amount: 20_000,
+              rate: 100,
+            },
+          ]),
+          summary: null,
+          status: "completed",
+          revision: 1,
+          revisions: [],
+          editVersion: 1,
+          touched: [],
+          clientRequestId: String(new Types.ObjectId()),
+          serialNo: "T-0901",
+          submittedAt: taipei("2026-11-06", "09:00"),
+          currentInstanceId: null,
+          blocked: false,
+          ...base(),
+        });
+      const ref = { refType: "transfer", refId: transferId };
+      await apply(
+        { operator: null, crossStoreTenantId: tenant },
+        await ticketsOf(bookId),
+        {
+          type: "transfer_out",
+          at: taipei("2026-11-06", "10:00"),
+          patch: { location: { kind: "in_transit", cashPointId: null } },
+          ...ref,
+        },
+      );
+      const shipped = await inventoryOn("2026-11-06", chianan);
+      expect(shipped).toMatchObject({
+        openingTickets: 100,
+        openingCost: 18_400,
+        transferOutTickets: 100,
+        transferOutCost: 18_400,
+        transferOutAmount: 20_000,
+        transferGain: 1600,
+        endingTickets: 0,
+        inTransitTickets: 100,
+        inTransitAmount: 20_000,
+        checkTickets: 0,
+        checkCost: 0,
+      });
+      // 收貨店點收:每張單張成本 = 20,000 ÷ 100 = 200(點收紀錄記 101 張的調入前成本)
+      const inTransit = await ticketsOf(bookId);
+      await apply(
+        {
+          operator: null,
+          crossStoreTenantId: tenant,
+          systemActorId: hq.userId,
+        },
+        inTransit,
+        {
+          type: "transfer_in",
+          at: taipei("2026-11-07", "10:00"),
+          patch: {
+            orgId: yunlin,
+            location: { kind: "stock", cashPointId: null },
+            unitCost: 200,
+          },
+          ...ref,
+        },
+      );
+      await insert(LOTTERY_TRANSFER_RECEIPTS_COLLECTION, {
+        orgId: yunlin,
+        fromOrgId: chianan,
+        submissionId: transferId,
+        rowId: "r1",
+        bookId,
+        purchaseAmount: 20_000,
+        tickets: inTransit.map((ticket) => ({
+          ticketId: ticket._id,
+          unitCost: 184,
+        })),
+        receivedBy: hq.userId,
+        receivedAt: taipei("2026-11-07", "10:00"),
+        moduleKey: "purchasing.transfer",
+      });
+      expect(await inventoryOn("2026-11-07", yunlin)).toMatchObject({
+        transferInTickets: 100,
+        transferInAmount: 20_000,
+        endingTickets: 100,
+        endingCost: 20_000,
+        checkTickets: 0,
+        checkCost: 0,
+      });
+      // 隔天出貨店那一天的在途已結束;收貨店拆本標 #050 跳號 → 成本不掉
+      expect(await inventoryOn("2026-11-07", chianan)).toMatchObject({
+        transferOutTickets: 0,
+        inTransitTickets: 0,
+        checkTickets: 0,
+      });
+      await apply(
+        { operator: storeOperator(yunlin) },
+        (await ticketsOf(bookId)).filter((ticket) => ticket.ticketNo === "050"),
+        {
+          type: "skip",
+          at: taipei("2026-11-08", "10:00"),
+          patch: { status: "skipped" },
+        },
+      );
+      expect(await inventoryOn("2026-11-08", yunlin)).toMatchObject({
+        openingTickets: 100,
+        openingCost: 20_000,
+        skippedTickets: 1,
+        endingTickets: 100,
+        endingCost: 20_000,
+        checkTickets: 0,
+        checkCost: 0,
+      });
+      // 重跑出貨那天:數字不變
+      expect(await inventoryOn("2026-11-06", chianan)).toEqual(shipped);
+    });
+
+    it("S3 未拆的本盤點找不到 → 新增待查 100 · 18,400;確認遺失 100 · 18,400(不在加減裡)", async () => {
+      const bookId = await purchase(chianan, taipei("2026-11-09", "09:00"));
+      await apply(
+        { operator: storeOperator(chianan) },
+        await ticketsOf(bookId),
+        {
+          type: "investigate",
+          at: taipei("2026-11-10", "10:00"),
+          patch: { status: "investigating", responsibleOrgId: chianan },
+          refType: "stocktake",
+          refId: new Types.ObjectId(),
+        },
+      );
+      expect(await inventoryOn("2026-11-10", chianan)).toMatchObject({
+        openingTickets: 100,
+        newInvestigatingTickets: 100,
+        newInvestigatingCost: 18_400,
+        endingTickets: 0,
+        investigatingTickets: 100,
+        investigatingCost: 18_400,
+        investigatingBooks: 1,
+        checkTickets: 0,
+        checkCost: 0,
+      });
+      await apply(
+        { operator: storeOperator(chianan) },
+        await ticketsOf(bookId),
+        {
+          type: "lose",
+          at: taipei("2026-11-11", "10:00"),
+          patch: { status: "lost" },
+          refType: "stocktake",
+          refId: new Types.ObjectId(),
+        },
+      );
+      expect(await inventoryOn("2026-11-11", chianan)).toMatchObject({
+        lostTickets: 100,
+        lostCost: 18_400,
+        investigatingTickets: 0,
+        endingTickets: 0,
+        checkTickets: 0,
+        checkCost: 0,
+      });
+    });
+
+    it("重跑舊報表數字不變:11/20 做一份報表 → 11/21 撤銷兌獎、送兌、退回結帳、補日結、核准、調走期末的張 → 重跑 11/20 完全相同", async () => {
+      const pingtung = await createOrg(connection, {
+        name: "屏東店",
+        parentId: tenant,
+      });
+      const pingtungCounter = await insert(LOTTERY_CASH_POINTS_COLLECTION, {
+        orgId: pingtung,
+        positionKey: "in-store-counter",
+        name: "屏東櫃台",
+        order: 1,
+        enabled: true,
+        printerId: null,
+        note: null,
+        moduleKey: "master-data",
+      });
+      counters.set(String(pingtung), pingtungCounter);
+      const day = "2026-11-20";
+      const at = (time: string) => taipei(day, time);
+      const next = (time: string) => taipei("2026-11-21", time);
+      // 庫存:進貨 1 本(迄號 101)、拆本標跳號、賣 2 張
+      const bookId = await purchase(pingtung, at("09:00"));
+      await apply(
+        { operator: storeOperator(pingtung) },
+        (await ticketsOf(bookId)).filter((ticket) => ticket.ticketNo === "101"),
+        { type: "skip", at: at("09:30"), patch: { status: "skipped" } },
+      );
+      const sold = (await ticketsOf(bookId))
+        .filter((ticket) => ticket.status === "unsold")
+        .slice(0, 2);
+      await apply({ operator: storeOperator(pingtung) }, sold, {
+        type: "sale",
+        at: at("11:00"),
+        amount: 200,
+        cashEffect: "increase",
+        patch: { status: "sold", sold: { at: at("11:00"), source: "scan" } },
+      });
+      // 兌獎:兩筆店內持有(之後一筆撤銷、一筆送兌)
+      const { shiftId: shiftA } = await shiftOf({
+        orgId: pingtung,
+        openedAt: at("08:00"),
+        closedAt: at("20:00"),
+        openedBy: hq.userId,
+        checkout: { status: "pending", confirmedAt: null, difference: -50 },
+      });
+      const revokeLater = await redemption({
+        orgId: pingtung,
+        shiftId: shiftA,
+        prizeAmount: 500,
+        redeemedAt: at("12:00"),
+        ticketNo: "201",
+      });
+      const sendLater = await redemption({
+        orgId: pingtung,
+        shiftId: shiftA,
+        prizeAmount: 300,
+        redeemedAt: at("12:10"),
+        ticketNo: "202",
+      });
+      // 結帳:B 待審核(之後才退回)、C 期末前已退回(不算)
+      const { checkoutId: checkoutB } = await shiftOf({
+        orgId: pingtung,
+        openedAt: at("12:00"),
+        closedAt: at("21:00"),
+        openedBy: hq.userId,
+        checkout: { status: "pending", confirmedAt: null, difference: 30 },
+      });
+      await shiftOf({
+        orgId: pingtung,
+        openedAt: at("13:00"),
+        closedAt: at("19:00"),
+        openedBy: hq.userId,
+        checkout: {
+          status: "returned",
+          confirmedAt: null,
+          returnedAt: at("22:00"),
+          difference: 999,
+        },
+      });
+      // 銀行:存入 1,000 又沖正 → 同一類型一列,含沖正 1 筆
+      const accountId = await insert(LOTTERY_BANK_ACCOUNTS_COLLECTION, {
+        orgId: pingtung,
+        bankCode: "006",
+        accountNo: "0001111122222",
+        accountName: "合作金庫",
+        label: "合庫 末 22222",
+        openingBalance: 0,
+        openingDate: taipei("2026-11-01"),
+        status: "active",
+        shareOrgs: [{ orgId: pingtung, includeDescendants: false }],
+        moduleKey: "accounts",
+      });
+      const bankRow = (extra: Record<string, unknown>) =>
+        insert(LOTTERY_BANK_TRANSACTIONS_COLLECTION, {
+          orgId: tenant,
+          accountId,
+          occurredAt: at("15:00"),
+          type: "deposit",
+          amount: 1000,
+          branchOrgId: pingtung,
+          refType: null,
+          refId: null,
+          refRevision: null,
+          settlementSide: null,
+          reversalOf: null,
+          summary: null,
+          handler: null,
+          note: null,
+          moduleKey: "accounts",
+          ...extra,
+        });
+      const deposit = await bankRow({ direction: "in" });
+      await bankRow({ direction: "out", reversalOf: deposit });
+      // 未結清:屏東店是收貨店,前一天已點收 240、今天付了 300 → 調貨待退(收貨店多付)60
+      const transferValuesOf = transferValues(hsinchu, pingtung, [
+        {
+          rowId: "r1",
+          book: { id: String(new Types.ObjectId()) },
+          mode: { id: "partial" },
+          ticket_nos: "001-002",
+          tickets: 2,
+          amount: 240,
+          rate: 100,
+        },
+      ]);
+      const { insertedId: transferId } = await connection
+        .collection("form_submissions")
+        .insertOne({
+          orgId: hsinchu,
+          tenantId: tenant,
+          moduleKey: "purchasing.transfer",
+          formKey: "transfer",
+          version: 1,
+          values: transferValuesOf,
+          summary: null,
+          status: "completed",
+          revision: 1,
+          revisions: [
+            revisionOf(1, transferValuesOf, taipei("2026-11-19", "08:30")),
+          ],
+          editVersion: 1,
+          touched: [],
+          clientRequestId: String(new Types.ObjectId()),
+          serialNo: "T-0920",
+          submittedAt: taipei("2026-11-19", "08:30"),
+          currentInstanceId: null,
+          blocked: false,
+          ...base(),
+        });
+      await insert(LOTTERY_TRANSFER_RECEIPTS_COLLECTION, {
+        orgId: pingtung,
+        fromOrgId: hsinchu,
+        submissionId: transferId,
+        rowId: "r1",
+        bookId: new Types.ObjectId(),
+        purchaseAmount: 240,
+        tickets: [],
+        receivedBy: hq.userId,
+        // 前一天點收(不算這天的調入),期末時已點收 240
+        receivedAt: taipei("2026-11-19", "10:00"),
+        moduleKey: "purchasing.transfer",
+      });
+      await bankRow({
+        type: "transfer_expense",
+        direction: "out",
+        amount: 300,
+        occurredAt: at("16:00"),
+        refType: "purchasing.transfer",
+        refId: transferId,
+        refRevision: 1,
+        settlementSide: "receiver",
+      });
+
+      const before = firstOf(
+        (
+          await operations(hq, {
+            ...dayOf(day),
+            orgIds: [String(pingtung)],
+          })
+        ).stores,
+      );
+      expect(before.redemption).toMatchObject({
+        valid: { count: 2, amount: 800 },
+        inStore: { count: 2, amount: 800 },
+        sent: { count: 0, amount: 0 },
+        revoked: { count: 0, amount: 0 },
+      });
+      // 結帳差額只算期末時有效的:A、B(待審核)算,C 期末前已退回不算
+      expect(before.cash).toMatchObject({
+        shiftCount: 2,
+        pendingShiftCount: 2,
+        shiftDifference: -50 + 30,
+      });
+      expect(before.notes).toMatchObject({ uncoveredShifts: 2 });
+      expect(before.bankAccounts).toEqual([
+        expect.objectContaining({
+          label: "合庫 末 22222",
+          types: [
+            {
+              type: "deposit",
+              inAmount: 1000,
+              outAmount: 1000,
+              reversalCount: 1,
+            },
+            {
+              type: "transfer_expense",
+              inAmount: 0,
+              outAmount: 300,
+              reversalCount: 0,
+            },
+          ],
+        }),
+      ]);
+      expect(
+        (
+          before.outstanding as {
+            items: { kind: string; amount: number; serialNos: string[] }[];
+          }
+        ).items.find((item) => item.kind === "transferPayerRefund"),
+      ).toMatchObject({ amount: 60, serialNos: ["T-0920"] });
+      expect(before.inventory).toMatchObject({
+        purchaseTickets: 100,
+        salesTickets: 2,
+        endingTickets: 98,
+        endingCost: 98 * 184,
+        checkTickets: 0,
+        checkCost: 0,
+      });
+
+      // 11/21:撤銷一筆兌獎、送兌另一筆、退回 B、核准 A、補日結涵蓋 A B、把期末的張調走(單張成本改 300)
+      await connection
+        .collection(LOTTERY_REDEMPTIONS_COLLECTION)
+        .updateOne(
+          { _id: revokeLater },
+          { $set: { status: "revoked", revokedAt: next("09:00") } },
+        );
+      await connection
+        .collection(LOTTERY_REDEMPTIONS_COLLECTION)
+        .updateOne(
+          { _id: sendLater },
+          { $set: { status: "sent", sentAt: next("09:10") } },
+        );
+      await connection
+        .collection(LOTTERY_CHECKOUTS_COLLECTION)
+        .updateOne(
+          { _id: checkoutB },
+          { $set: { status: "returned", returnedAt: next("09:20") } },
+        );
+      await connection
+        .collection(LOTTERY_CHECKOUTS_COLLECTION)
+        .updateOne(
+          { shiftId: shiftA },
+          { $set: { status: "confirmed", confirmedAt: next("09:30") } },
+        );
+      const shiftIds = await connection
+        .collection(LOTTERY_CHECKOUTS_COLLECTION)
+        .find({ orgId: pingtung, type: "shift" })
+        .map((row) => row.shiftId as Types.ObjectId)
+        .toArray();
+      await dailyClose(pingtung, null, next("10:00"), {
+        coveredShiftIds: shiftIds,
+      });
+      const moving = (await ticketsOf(bookId)).filter(
+        (ticket) => ticket.status === "unsold",
+      );
+      await apply(
+        {
+          operator: null,
+          crossStoreTenantId: tenant,
+          systemActorId: hq.userId,
+        },
+        moving,
+        {
+          type: "transfer_in",
+          at: next("11:00"),
+          patch: {
+            orgId: hsinchu,
+            location: { kind: "stock", cashPointId: null },
+            unitCost: 300,
+          },
+        },
+      );
+
+      const after = firstOf(
+        (
+          await operations(hq, {
+            ...dayOf(day),
+            orgIds: [String(pingtung)],
+          })
+        ).stores,
+      );
+      expect(after).toEqual(before);
+      // 變化算在發生當天
+      const nextDay = firstOf(
+        (
+          await operations(hq, {
+            ...dayOf("2026-11-21"),
+            orgIds: [String(pingtung)],
+          })
+        ).stores,
+      );
+      expect(nextDay.notes).toMatchObject({ uncoveredShifts: 0 });
+      expect(nextDay.inventory).toMatchObject({
+        openingTickets: 98,
+        endingTickets: 0,
+      });
+    });
   });
 });

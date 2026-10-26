@@ -372,11 +372,15 @@ describe("調貨單(規格 8.4、第 9 章)", () => {
     return { userId, account, token: await login(api, account, PASSWORD) };
   }
 
-  /** 點收一本到某家店(100 張,整本金額 2,000;成本率 100、成本 2,000 → 單張 20)。 */
+  /**
+   * 點收一本到某家店(100 張,整本金額 2,000;成本率 100、成本 2,000 → 單張 20)。
+   * `lastTicketNo` > 100 = 有待標註的跳號(拆本前還沒標的)。
+   */
   async function newBook(
     orgId: Types.ObjectId,
     other: { gameId: Types.ObjectId; bookNo: string } | null = null,
     cost = 2000,
+    lastTicketNo = 100,
   ): Promise<{
     bookId: Types.ObjectId;
     bookNo: string;
@@ -390,7 +394,7 @@ describe("調貨單(規格 8.4、第 9 章)", () => {
           orgId,
           gameId: other?.gameId ?? game,
           bookNo,
-          lastTicketNo: 100,
+          lastTicketNo,
           rate: 100,
           cost,
         }),
@@ -2092,6 +2096,56 @@ describe("調貨單(規格 8.4、第 9 章)", () => {
           settlementAmount: 2000,
         },
       ]);
+    });
+  });
+
+  describe("待標註的跳號(使用者 10/27 定案甲):迄號 101、標準 100 張的未拆本整本調貨", () => {
+    it("可調張數 100;單上 100 張才能送(101 擋下);點收後收貨店單張 = 調貨金額 ÷ 100;退回重送不被當成改了已點收的列;核准", async () => {
+      const book = await newBook(branchA, null, 2000, 101);
+      const data = await ok<{
+        lotteryTransferOptions: {
+          books: { bookId: string; isWhole: boolean; availableCount: number }[];
+        };
+      }>(api, managerA.token, OPTIONS, {
+        from: String(branchA),
+        to: String(branchB),
+      });
+      expect(
+        data.lotteryTransferOptions.books.find(
+          (item) => item.bookId === String(book.bookId),
+        ),
+      ).toMatchObject({ isWhole: true, availableCount: 100 });
+      expect(
+        await blockedOf(hq, [
+          whole(book.bookId, { tickets: 101, ticket_nos: "001-101" }),
+        ]),
+      ).toBe("TRANSFER_LINE_INVALID");
+      const lines = [whole(book.bookId)];
+      const id = await submit(hq, lines);
+      await ship(id);
+      expect(await receive(managerB, id, codeOf(book.bookNo, 1))).toEqual({});
+      const tickets = await ticketsOf(book.bookId);
+      // 101 張紀錄(含待標註那張)整本搬到收貨店;單張 = 2,000 ÷ 100 = 20
+      expect(tickets).toHaveLength(101);
+      expect(
+        tickets.every(
+          (ticket) =>
+            ticket.orgId.equals(branchB) &&
+            Math.abs(ticket.unitCost - 20) < 1e-9,
+        ),
+      ).toBe(true);
+      // 收貨店退回、總部原封不動重送:點收紀錄 101 張 vs 單上 100 張,不算「改了已點收的列」
+      await decideOn(world(), managerB, id, "RETURN");
+      const row = await current(id);
+      const resubmitted = await call(api, hq.token, SUBMIT_SUBMISSION, {
+        input: { id, expectedEditVersion: row.editVersion },
+      });
+      expect(resubmitted.errors).toBeUndefined();
+      await ship(id);
+      await record(managerB, id, "receiver", "out", 2000);
+      await record(managerA, id, "shipper", "in", 2000);
+      expect(await decideBlocked(managerB, id, "APPROVE")).toBeNull();
+      expect(await current(id).then((value) => value.status)).toBe("completed");
     });
   });
 });
