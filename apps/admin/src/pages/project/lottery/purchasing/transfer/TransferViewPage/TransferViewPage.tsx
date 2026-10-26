@@ -277,6 +277,7 @@ export const TransferViewPage = ({ routeParam }: ModulePageProps) => {
                   moduleKey={TRANSFER_MODULE_KEY}
                   id={id}
                   label={submission.serialNo ?? submission.formName ?? id}
+                  status={submission.status}
                   canDelete={submission.abilities.canDelete}
                 />
               )}

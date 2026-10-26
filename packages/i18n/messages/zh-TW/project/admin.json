@@ -3151,7 +3151,9 @@
     "DAILY_CLOSE_PENDING_EXISTS": "這家店已有審核中或已退回的日結",
     "DAILY_CLOSE_DEPOSIT_INVALID": "存入銀行的金額不對(不能超過小金庫實點)",
     "DAILY_CLOSE_ACCOUNT_NOT_USABLE": "存入帳戶要選,而且要使用中、使用組織包含這家店",
-    "PERIOD_CLOSED": "選的班是已關帳月份的班,不能選"
+    "PERIOD_CLOSED": "選的班是已關帳月份的班,不能選",
+    "PURCHASE_NOT_DRAFT": "只有草稿可以刪除;送出過的進貨單請作廢或駁回",
+    "TRANSFER_NOT_DRAFT": "只有草稿可以刪除;送出過的調貨單請作廢或駁回"
   },
   "lotteryStore": {
     "fieldErrors": {

@@ -1987,15 +1987,13 @@ describe("調貨單(規格 8.4、第 9 章)", () => {
         outAmount: 166,
         outCost: 180,
       });
-      // 收貨店這 9 張的單張成本 = 點收時那一列的批購金額 ÷ 張數(221 ÷ 12,保留點收時的值)
+      // 收貨店這 9 張的單張成本 = 縮小後這一列的批購金額 ÷ 張數(166 ÷ 9;使用者 10/27 定案),成本合計 = 調貨金額
       const finalTickets = await ticketsOf(opened.bookId);
       const moved = finalTickets.filter((ticket) =>
         ticket.orgId.equals(branchB),
       );
       expect(
-        Math.abs(
-          moved.reduce((sum, ticket) => sum + ticket.unitCost, 0) - 165.75,
-        ),
+        Math.abs(moved.reduce((sum, ticket) => sum + ticket.unitCost, 0) - 166),
       ).toBeLessThan(1e-9);
     });
 
@@ -2185,16 +2183,28 @@ describe("調貨單(規格 8.4、第 9 章)", () => {
       expect(line?.referencedBy).toBeNull();
     });
 
-    it("刪除前:已有點收 → 擋下", async () => {
+    it("刪除只限草稿:被退回的單(在途、還沒點收)申請人刪 → TRANSFER_NOT_DRAFT,張仍在途鎖定;草稿可以刪", async () => {
       const book = await newBook(branchA);
       const id = await submit(hq, [whole(book.bookId)]);
       await ship(id);
-      await receive(managerB, id, codeOf(book.bookNo));
       await decideOn(world(), managerB, id, "RETURN");
       const result = await call(api, hq.token, DELETE_SUBMISSION_MUTATION, {
         input: { id },
       });
-      expect(extensionsOf(result).reason).toBe("TRANSFER_HAS_RECEIPTS");
+      expect(extensionsOf(result).reason).toBe("TRANSFER_NOT_DRAFT");
+      expect(
+        await everyTicket(
+          book.bookId,
+          (ticket) =>
+            ticket.location.kind === "in_transit" && ticket.lockedBy !== null,
+        ),
+      ).toBe(true);
+      const draftBook = await newBook(branchA);
+      const draft = await draftOf(hq, [whole(draftBook.bookId)]);
+      const deleted = await call(api, hq.token, DELETE_SUBMISSION_MUTATION, {
+        input: { id: draft.id },
+      });
+      expect(deleted.errors).toBeUndefined();
     });
 
     it("作廢前:調入後已售 → 擋下;淨額 ≠ 0 → 擋下;作廢後全部回到出貨店(收貨店調出、出貨店調入)、單張成本改回、叫貨單回到待購買", async () => {

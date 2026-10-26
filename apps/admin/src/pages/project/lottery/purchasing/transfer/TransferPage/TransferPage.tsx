@@ -223,6 +223,7 @@ export const TransferPage = () => {
           moduleKey={TRANSFER_MODULE_KEY}
           id={row.id}
           label={row.serialNo ?? row.formName ?? row.id}
+          status={row.status}
           canDelete={row.abilities.canDelete}
         />
       ),

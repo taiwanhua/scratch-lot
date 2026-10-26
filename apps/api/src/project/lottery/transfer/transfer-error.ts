@@ -31,6 +31,8 @@ export const TRANSFER_REASONS = {
   receiverOverpaid: "TRANSFER_RECEIVER_OVERPAID",
   /** 已有點收:駁回 / 刪除擋下 */
   hasReceipts: "TRANSFER_HAS_RECEIPTS",
+  /** 刪除:只限草稿(送出過的單不能刪,要作廢或駁回) */
+  notDraft: "TRANSFER_NOT_DRAFT",
   /** 調入後已售、再調出或拆本:作廢擋下 */
   booksInUse: "TRANSFER_BOOKS_IN_USE",
   /** 點收:單據不在審核中,或操作者沒有這張單的點收任務(第二關) */

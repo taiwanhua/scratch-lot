@@ -29,6 +29,8 @@ export const PURCHASE_REASONS = {
   unreceivedRows: "PURCHASE_UNRECEIVED_ROWS",
   /** 已有點收:駁回 / 刪除擋下 */
   hasReceipts: "PURCHASE_HAS_RECEIPTS",
+  /** 刪除:只限草稿(送出過的單不能刪,要作廢或駁回) */
+  notDraft: "PURCHASE_NOT_DRAFT",
   /** 有本已售、已調出或已拆本:作廢擋下 */
   booksInUse: "PURCHASE_BOOKS_IN_USE",
   /** 點收:單據不在審核中,或操作者沒有這張單的點收任務 */

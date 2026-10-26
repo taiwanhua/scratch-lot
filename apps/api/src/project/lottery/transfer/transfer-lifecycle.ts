@@ -10,6 +10,7 @@ import {
 } from "../../../workflows/workflow-engine/lifecycle/form-lifecycle-registration";
 import { settlementClearedGuard } from "../settlement/settlement-guard";
 import { SettlementLedger } from "../settlement/settlement-ledger";
+import { TRANSFER_REASONS } from "./transfer-error";
 import type { TransferRules } from "./transfer-rules.service";
 import { TRANSFER_RULES } from "./transfer-rules.token";
 
@@ -20,6 +21,15 @@ function both(first: FormGuard, second: FormGuard): FormGuard {
 
 const rulesOf = (context: Pick<FormEffectContext, "get">): TransferRules =>
   context.get<TransferRules>(TRANSFER_RULES);
+
+/** 刪除只限草稿(使用者 10/26 定案;送出過的單有鎖定 / 收付 / 叫貨單引用,刪了不會釋放)。 */
+const draftOnly: FormGuard = ({ submission }) =>
+  submission.status === "draft"
+    ? null
+    : {
+        code: TRANSFER_REASONS.notDraft,
+        message: "Only drafts can be deleted",
+      };
 
 const withoutReceipts: FormGuard = ({ submission, get }) =>
   rulesOf({ get }).withoutReceipts(submission);
@@ -35,7 +45,8 @@ const withoutReceipts: FormGuard = ({ submission, get }) =>
  * | `stepPassed` | 第一關通過(含跳過):在途 + 「調出」事件 + 調貨出貨通知 |
  * | `beforeApprove` | 點收關卡:全部點收,而且收貨店已付 = 出貨店已收 = 調貨金額 |
  * | `returned` / `withdrawn` | 還沒出貨的解除鎖定;已在途的保持在途 |
- * | `beforeReject` / `beforeDelete` | 已有點收 → 擋下;駁回另要求兩邊淨額 = 0 |
+ * | `beforeDelete` | 只限草稿(否則 `TRANSFER_NOT_DRAFT`);已有點收 → 擋下 |
+ * | `beforeReject` | 已有點收 → 擋下;駁回另要求兩邊淨額 = 0 |
  * | `beforeVoid` | 調入後已售、再調出或拆本 → 擋下;兩邊淨額 = 0 |
  * | `rejected` / `voided` | 全部回到出貨店、寫反向事件;叫貨單回到待購買 |
  */
@@ -49,7 +60,7 @@ export const transferLifecycle = registerFormLifecycle({
     beforeApprove: ({ operator, submission, stepKey, get }) =>
       rulesOf({ get }).beforeApprove(submission, operator, stepKey),
     beforeReject: both(withoutReceipts, settlementClearedGuard),
-    beforeDelete: withoutReceipts,
+    beforeDelete: both(draftOnly, withoutReceipts),
     beforeVoid: both(
       ({ submission, get }) => rulesOf({ get }).beforeVoid(submission),
       settlementClearedGuard,

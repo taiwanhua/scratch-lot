@@ -88,7 +88,8 @@ describe("遷移:調貨點收紀錄一列可以有好幾筆", () => {
     );
     expect(result.stderr).toBe("");
     expect(result.status).toBe(0);
-    const index = (await receipts.indexes()).find(
+    const indexes = await receipts.indexes();
+    const index = indexes.find(
       (item) => JSON.stringify(item.key) === '{"submissionId":1,"rowId":1}',
     );
     expect(index).toBeDefined();

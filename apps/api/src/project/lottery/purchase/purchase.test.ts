@@ -1538,15 +1538,19 @@ describe("進貨單(規格 8.2、8.3)", () => {
       ).toBe("2026-02-01T00:00:00.000Z");
     });
 
-    it("刪除前:已有點收 → 擋下(被退回的單,申請人刪)", async () => {
+    it("刪除只限草稿:被退回的單(申請人刪)→ PURCHASE_NOT_DRAFT;草稿可以刪", async () => {
       const line = book(gameHot);
       const purchase = await submit([line]);
-      await receive(managerA, purchase.id, codeOf(line));
       await returnToHq(purchase.id);
       const result = await call(api, hq.token, DELETE_SUBMISSION_MUTATION, {
         input: { id: purchase.id },
       });
-      expect(extensionsOf(result).reason).toBe("PURCHASE_HAS_RECEIPTS");
+      expect(extensionsOf(result).reason).toBe("PURCHASE_NOT_DRAFT");
+      const draft = await draftOf([book(gameHot)]);
+      const deleted = await call(api, hq.token, DELETE_SUBMISSION_MUTATION, {
+        input: { id: draft.id },
+      });
+      expect(deleted.errors).toBeUndefined();
     });
 
     it("作廢前:有張已售 → 擋下;淨額 ≠ 0 → 擋下;作廢後本 → 已撤銷、寫「進貨作廢」事件、叫貨單回到待購買、批購日重算", async () => {

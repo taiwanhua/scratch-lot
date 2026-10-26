@@ -3151,7 +3151,9 @@
     "DAILY_CLOSE_PENDING_EXISTS": "This store already has a daily close under review or returned.",
     "DAILY_CLOSE_DEPOSIT_INVALID": "The bank deposit amount is invalid (it cannot exceed the counted vault cash).",
     "DAILY_CLOSE_ACCOUNT_NOT_USABLE": "Choose an active bank account used by this store.",
-    "PERIOD_CLOSED": "The selected shift is in a closed month and cannot be chosen."
+    "PERIOD_CLOSED": "The selected shift is in a closed month and cannot be chosen.",
+    "PURCHASE_NOT_DRAFT": "Only drafts can be deleted; void or reject a submitted purchase",
+    "TRANSFER_NOT_DRAFT": "Only drafts can be deleted; void or reject a submitted transfer"
   },
   "lotteryStore": {
     "fieldErrors": {
