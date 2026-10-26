@@ -157,6 +157,32 @@ export class LotteryTransferRowModel {
    */
   @Field(() => GraphQLISODateTime, { nullable: true })
   shippedAt!: Date | null;
+
+  /** 點收批次([完成這次點收] 時給);還沒完成這一次或舊資料 = null。 */
+  @Field(() => ID, { nullable: true })
+  batchId!: string | null;
+
+  /** 點收紀錄實際搬進來的張號(3 位,由小到大;調貨點收單照它印號碼);還沒點收 = 空。 */
+  @Field(() => [String])
+  receivedTicketNos!: string[];
+}
+
+/** 一次點收(按一次 [完成這次點收]):調貨點收單照它印、補印照它重排版。 */
+@ObjectType("LotteryTransferReceivingBatch")
+export class LotteryTransferReceivingBatchModel {
+  @Field(() => ID)
+  batchId!: string;
+
+  /** 第幾次點收(依完成時間,從 1 起)。 */
+  @Field(() => Int)
+  no!: number;
+
+  @Field(() => GraphQLISODateTime)
+  completedAt!: Date;
+
+  /** 這一次點收的列。 */
+  @Field(() => [String])
+  rowIds!: string[];
 }
 
 /** 調貨單檢視頁的出貨確認清單與點收區塊(規格 8.4)。 */
@@ -187,6 +213,31 @@ export class LotteryTransferReceivingModel {
 
   @Field(() => [LotteryTransferRowModel])
   rows!: LotteryTransferRowModel[];
+
+  /** 每一次點收(依完成時間由舊到新)。 */
+  @Field(() => [LotteryTransferReceivingBatchModel])
+  batches!: LotteryTransferReceivingBatchModel[];
+}
+
+/** [完成這次點收] 的結果。 */
+@ObjectType("CompleteLotteryTransferReceivingPayload")
+export class CompleteLotteryTransferReceivingPayload {
+  /** 這一次的點收批次;這一次沒有可以收進批次的列(都已在別的批次)= null,不印 */
+  @Field(() => LotteryTransferReceivingBatchModel, { nullable: true })
+  batch!: LotteryTransferReceivingBatchModel | null;
+
+  @Field(() => LotteryTransferReceivingModel)
+  receiving!: LotteryTransferReceivingModel;
+}
+
+@InputType()
+export class CompleteLotteryTransferReceivingInput {
+  @Field(() => ID)
+  submissionId!: string;
+
+  /** 「這一次」點收的列(畫面記的:上次 [完成這次點收] 或打開頁面之後點收的)。 */
+  @Field(() => [String])
+  rowIds!: string[];
 }
 
 /** 點收一本的結果。 */

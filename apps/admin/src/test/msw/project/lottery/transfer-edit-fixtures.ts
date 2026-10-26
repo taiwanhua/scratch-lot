@@ -86,4 +86,5 @@ export const returnedTransferReceiving =
       returnedRow("t12-2", "0056542", "shipped"),
       returnedRow("t12-3", "0056543", "pending"),
     ],
+    batches: [],
   });

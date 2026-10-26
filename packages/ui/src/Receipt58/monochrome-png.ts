@@ -131,12 +131,32 @@ const zlibDeflate = async (
   return concatBytes(parts);
 };
 
+/**
+ * 中段切紙位置的 `tEXt` keyword:與 `@repo/domain/printing` 的 `PRINT_IMAGE_CUT_ROWS_KEYWORD` 同值
+ * (本套件不依賴 domain;代理程式以那一份讀)。
+ */
+export const RECEIPT58_CUT_ROWS_KEYWORD = "cut-rows";
+
+/** `tEXt` 區塊:keyword + NUL + 文字(只用 ASCII)。 */
+const textChunk = (keyword: string, text: string): Uint8Array =>
+  chunk(
+    "tEXt",
+    Uint8Array.from(`${keyword}\0${text}`, (char) => char.codePointAt(0) ?? 0),
+  );
+
+export interface EncodeMonochromePngOptions {
+  /**
+   * 中段切紙位置(列號;`0 < 列 < 高度`):寫進 `tEXt`「cut-rows」,代理程式印到那一列就切紙。
+   * 沒給或空陣列 → 不寫(只在最後切紙)。
+   */
+  cutRows?: readonly number[];
+}
+
 /** 編成 1-bit 灰階 PNG:灰階值 0 = 黑、1 = 白(每列一個 filter 位元組 + 位元打包)。 */
-export const encodeMonochromePng = async ({
-  width,
-  height,
-  dots,
-}: MonochromeImage): Promise<Uint8Array<ArrayBuffer>> => {
+export const encodeMonochromePng = async (
+  { width, height, dots }: MonochromeImage,
+  { cutRows = [] }: EncodeMonochromePngOptions = {},
+): Promise<Uint8Array<ArrayBuffer>> => {
   const header = new Uint8Array(13);
   const headerView = new DataView(header.buffer);
   headerView.setUint32(0, width);
@@ -161,6 +181,9 @@ export const encodeMonochromePng = async ({
   return concatBytes([
     PNG_SIGNATURE,
     chunk("IHDR", header),
+    ...(cutRows.length === 0
+      ? []
+      : [textChunk(RECEIPT58_CUT_ROWS_KEYWORD, cutRows.join(","))]),
     chunk("IDAT", await zlibDeflate(raw)),
     chunk("IEND", new Uint8Array()),
   ]);

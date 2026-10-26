@@ -19,9 +19,24 @@ export interface ReprintChoice {
   reasonLabel: string;
   /** 說明;沒填是 `null`。 */
   note: string | null;
+  /** 使用處給的補印選項(`ReprintVariants`)選了哪一個;沒有這個選單 = `null`。 */
+  variant: string | null;
+}
+
+/**
+ * 使用處給的補印選項(例:一次印好幾聯的單據要補哪一聯):對話框在原因上面多一個選單,預設第一個選項;
+ * 選的值交回 `renderImage` / `documentName`(只印在單上、寫在單據名稱裡,不另存欄位)。
+ */
+export interface ReprintVariants {
+  /** 選單的名稱(例「補印哪一聯」)。 */
+  label: string;
+  /** 選項;第一個是預設。 */
+  options: readonly { value: string; label: string }[];
 }
 
 export interface ReprintDialogProps {
+  /** 使用處給的補印選項;不給就只有原因與說明 */
+  variants?: ReprintVariants | null;
   onCancel: () => void;
   onSubmit: (choice: ReprintChoice) => void;
 }
@@ -34,11 +49,16 @@ const NOTE_MAX_LENGTH = 200;
  * 啟用選項)必填;選「其他」時說明必填。擋下時標在該欄位上、不呼叫 API。
  * 關閉即卸載(REACT-08),每次開啟都是空白。
  */
-export const ReprintDialog = ({ onCancel, onSubmit }: ReprintDialogProps) => {
+export const ReprintDialog = ({
+  variants = null,
+  onCancel,
+  onSubmit,
+}: ReprintDialogProps) => {
   const t = useTranslations("admin.printButton.reprintDialog");
   const { session } = useSession();
   const reasons = useReprintReasonsQuery(session.client);
   const options = reasons.data?.reprintReasons.items ?? [];
+  const [variant, setVariant] = useState(variants?.options.at(0)?.value ?? "");
   const [reason, setReason] = useState("");
   const [note, setNote] = useState("");
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -61,6 +81,7 @@ export const ReprintDialog = ({ onCancel, onSubmit }: ReprintDialogProps) => {
       reason,
       reasonLabel: option.label,
       note: trimmedNote === "" ? null : trimmedNote,
+      variant: variants === null || variant === "" ? null : variant,
     });
   };
 
@@ -89,6 +110,19 @@ export const ReprintDialog = ({ onCancel, onSubmit }: ReprintDialogProps) => {
       }
     >
       <Stack spacing={2} sx={{ pt: 1 }}>
+        {variants === null ? null : (
+          <SelectField
+            label={variants.label}
+            required
+            fullWidth
+            value={variant}
+            options={variants.options.map((item) => ({
+              value: item.value,
+              label: item.label,
+            }))}
+            onChange={setVariant}
+          />
+        )}
         <SelectField
           label={t("reason")}
           required

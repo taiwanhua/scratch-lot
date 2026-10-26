@@ -202,6 +202,17 @@ describe("列印結果", () => {
     expect(status()).toHaveTextContent("已送到印表機…");
   });
 
+  it("別處送的同一張單據印好(例:交易後自動列印)→ 收到自己的 print-result 就重查已印次數,按鈕變 [補印]", async () => {
+    const { world, emit } = renderPrintButton();
+    await findPrintButton("列印");
+
+    world.printElsewhere();
+    emit(PRINT_SIGNALS.result, "job-auto");
+
+    expect(await findPrintButton("補印")).toBeVisible();
+    expect(status()).toHaveTextContent("已印 1 次");
+  });
+
   it("單據轉圖片失敗 → 不建立工作,回到 [列印],跳失敗提示", async () => {
     const { user, world, renderImage } = renderPrintButton();
     renderImage.mockRejectedValueOnce(new Error("canvas unavailable"));

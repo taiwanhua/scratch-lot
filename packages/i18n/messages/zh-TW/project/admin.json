@@ -2801,6 +2801,7 @@
         },
         "wrongStoreNotified": "已通知這張調貨單的建立者更正",
         "printShipment": "調貨出貨單",
+        "printReceiving": "調貨點收單",
         "printPayment": "調貨付款收據"
       },
       "wrongStore": {
@@ -2825,10 +2826,18 @@
       "qrCaption": "掃描開啟單據",
       "batchSelect": "點收批次",
       "batchOption": "第 {no} 次 · {time}",
+      "copyLine": "第 {no} 聯 · {name}",
+      "allCopies": "{count, plural, =2 {兩聯} other {# 聯}}",
+      "documentNameWithCopies": "{name}({copies})",
+      "documentNameReprint": "{name}補印",
+      "reprintCopies": "補印哪一聯",
+      "reprintAllCopies": "{count, plural, =2 {兩聯都補} other {# 聯都補}}",
       "purchaseReceiving": {
         "title": "進貨點收單",
-        "copyStore": "第 1 張 · 店鋪留存",
-        "copyCourier": "第 2 張 · 送貨人留存",
+        "copies": {
+          "store": "店鋪留存",
+          "courier": "送貨人留存"
+        },
         "branch": "進貨分店",
         "dealer": "甲類",
         "thisTime": "第 {no} 次點收({count} 本)",
@@ -2847,6 +2856,10 @@
       },
       "transferShipment": {
         "title": "調貨出貨單",
+        "copies": {
+          "shipper": "出貨店留存",
+          "courier": "送貨人留存"
+        },
         "route": "出貨店 → 收貨店",
         "routeValue": "{from} → {to}",
         "columns": {
@@ -2859,11 +2872,38 @@
         "ticketCount": "({count} 張)",
         "total": "調貨金額",
         "shipperSign": "出貨人簽名",
-        "courierSign": "送貨人簽名",
-        "receiverSign": "收貨人簽名"
+        "courierSign": "送貨人簽名"
+      },
+      "transferReceiving": {
+        "title": "調貨點收單",
+        "copies": {
+          "receiver": "收貨店留存",
+          "courier": "送貨人留存"
+        },
+        "route": "出貨店 → 收貨店",
+        "routeValue": "{from} → {to}",
+        "thisTime": "第 {no} 次點收({count} 本)",
+        "receivedSoFar": "已點收({count} 本)",
+        "missing": "尚未到的本({count} 本)",
+        "noneMissing": "尚未到的本:無",
+        "columns": {
+          "game": "遊戲",
+          "books": "本數",
+          "progress": "點收"
+        },
+        "progress": "{received} / {total}",
+        "bookNos": "本號:",
+        "ticketNos": "{bookNo} 號碼:",
+        "ticketCount": "({count} 張)",
+        "receiverSign": "點收人簽名",
+        "courierSign": "送貨人簽名"
       },
       "transferPayment": {
         "title": "調貨付款收據",
+        "copies": {
+          "receiver": "收貨店留存",
+          "courier": "送貨人留存"
+        },
         "payer": "付款店",
         "payerValue": "{branch} · {source}",
         "sources": {
@@ -2872,6 +2912,7 @@
         },
         "payee": "收款人",
         "cash": "現金",
+        "payerSign": "付款人簽名",
         "courierSign": "送貨人簽收"
       },
       "reprint": {

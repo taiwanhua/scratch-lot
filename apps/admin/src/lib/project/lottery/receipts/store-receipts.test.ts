@@ -4,7 +4,11 @@ import { createTranslator } from "use-intl";
 import { composeProjectMessages } from "@repo/i18n";
 import { projectPublic } from "@repo/project-config/public";
 
-import { RECEIPT_KINDS, receiptPrintRefOf } from "./receipt-kinds";
+import {
+  RECEIPT_KINDS,
+  receiptLayoutsOf,
+  receiptPrintRefOf,
+} from "./receipt-kinds";
 import { type ReceiptTranslator, receiptLinesOf } from "./receipt-layout";
 import type { SaleRefundReceiptInput } from "./sale-refund-receipt";
 import { STORE_RECEIPTS_I18N } from "./store-receipts";
@@ -54,11 +58,7 @@ describe("店面的 58mm 單據版面:投庫單、出庫單、存款單、退貨
       defaultPrinterId: "printer-counter",
       url: LEDGER,
     };
-    const [layout] = RECEIPT_KINDS["store-vault-deposit"].copiesOf(
-      payload,
-      t,
-      NOW,
-    );
+    const [layout] = receiptLayoutsOf("store-vault-deposit", payload, t, NOW);
 
     expect(layout.time).toBe(NOW);
     expect(receiptLinesOf(layout, HEADER)).toEqual([
@@ -88,7 +88,8 @@ describe("店面的 58mm 單據版面:投庫單、出庫單、存款單、退貨
   });
 
   it("出庫單:分店、方向(小金庫 → 收銀點抽屜)、原因、備註、金額;簽名欄 領取人、見證人", () => {
-    const [layout] = RECEIPT_KINDS["store-vault-withdraw"].copiesOf(
+    const [layout] = receiptLayoutsOf(
+      "store-vault-withdraw",
       {
         movementId: "mv-13",
         branchId: "org-store",
@@ -132,11 +133,7 @@ describe("店面的 58mm 單據版面:投庫單、出庫單、存款單、退貨
       note: "小金庫現金過多",
       url: LEDGER,
     };
-    const [layout] = RECEIPT_KINDS["store-bank-deposit"].copiesOf(
-      payload,
-      t,
-      NOW,
-    );
+    const [layout] = receiptLayoutsOf("store-bank-deposit", payload, t, NOW);
 
     expect(receiptLinesOf(layout, HEADER)).toEqual([
       "好運彩券行",
@@ -159,11 +156,7 @@ describe("店面的 58mm 單據版面:投庫單、出庫單、存款單、退貨
   });
 
   it("退貨退款收據:標「待核准」;退款班次、原因、遊戲 / 張數 / 金額、號碼區段、退款;簽名欄 經手人", () => {
-    const [layout] = RECEIPT_KINDS["store-sale-refund"].copiesOf(
-      refund,
-      t,
-      NOW,
-    );
+    const [layout] = receiptLayoutsOf("store-sale-refund", refund, t, NOW);
 
     expect(receiptLinesOf(layout, HEADER)).toEqual([
       "好運彩券行",

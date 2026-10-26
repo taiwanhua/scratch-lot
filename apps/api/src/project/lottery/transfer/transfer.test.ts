@@ -111,10 +111,44 @@ const RECEIVING = /* GraphQL */ `
         shipped
         received
         shippedAt
+        receivedTicketNos
       }
     }
   }
 `;
+
+const COMPLETE = /* GraphQL */ `
+  mutation TestTransferComplete(
+    $input: CompleteLotteryTransferReceivingInput!
+  ) {
+    completeLotteryTransferReceiving(input: $input) {
+      batch {
+        batchId
+        no
+        rowIds
+      }
+      receiving {
+        rows {
+          rowId
+          batchId
+        }
+        batches {
+          batchId
+          no
+          rowIds
+        }
+      }
+    }
+  }
+`;
+
+interface CompletePayload {
+  batch: { batchId: string; no: number; rowIds: string[] } | null;
+  receiving: {
+    rows: { rowId: string; batchId: string | null }[];
+    batches: { batchId: string; no: number; rowIds: string[] }[];
+  };
+}
 
 const OPTIONS = /* GraphQL */ `
   query TestTransferOptions($from: ID!, $to: ID) {
@@ -1226,6 +1260,8 @@ describe("調貨單(規格 8.4、第 9 章)", () => {
             ticketNos: ["012", "013", "014", "015", "016"],
             shipped: true,
             received: true,
+            // 點收紀錄實際搬進來的張(調貨點收單照它印號碼)
+            receivedTicketNos: ["012", "013", "014", "015", "016"],
           },
         ],
       });
@@ -1272,6 +1308,57 @@ describe("調貨單(規格 8.4、第 9 章)", () => {
         input: { submissionId: toB, code: "0099999010" },
       });
       expect(extensionsOf(missing).code).toBe("NOT_FOUND");
+    });
+  });
+
+  describe("[完成這次點收](調貨點收單照點收批次印;同進貨點收)", () => {
+    it("這一次的列標上點收批次(第 1 次、第 2 次);已在批次的列不重收;不是點收任務的人不能完成", async () => {
+      const first = await newBook(branchA);
+      const second = await newBook(branchA);
+      const firstLine = whole(first.bookId);
+      const secondLine = whole(second.bookId);
+      const id = await submit(hq, [firstLine, secondLine]);
+      await ship(id);
+      const complete = (rowIds: string[]) =>
+        ok<{ completeLotteryTransferReceiving: CompletePayload }>(
+          api,
+          managerB.token,
+          COMPLETE,
+          { input: { submissionId: id, rowIds } },
+        );
+      expect(await receive(managerB, id, codeOf(first.bookNo))).toEqual({});
+      const one = await complete([firstLine.rowId]);
+      expect(one.completeLotteryTransferReceiving.batch).toMatchObject({
+        no: 1,
+        rowIds: [firstLine.rowId],
+      });
+      expect(await receive(managerB, id, codeOf(second.bookNo))).toEqual({});
+      // 帶上已在第 1 次的列也不會搬過來
+      const two = await complete([firstLine.rowId, secondLine.rowId]);
+      const { batch, receiving } = two.completeLotteryTransferReceiving;
+      expect(batch).toMatchObject({ no: 2, rowIds: [secondLine.rowId] });
+      expect(receiving.batches.map((item) => [item.no, item.rowIds])).toEqual([
+        [1, [firstLine.rowId]],
+        [2, [secondLine.rowId]],
+      ]);
+      expect(receiving.rows.map((row) => row.batchId)).toEqual([
+        receiving.batches[0]?.batchId,
+        batch?.batchId,
+      ]);
+      // 都已在批次裡:沒有新批次(不印)
+      const again = await complete([secondLine.rowId]);
+      expect(again.completeLotteryTransferReceiving.batch).toBeNull();
+      // 出貨店的人(不是點收任務的人)
+      const denied = await call(api, managerA.token, COMPLETE, {
+        input: { submissionId: id, rowIds: [secondLine.rowId] },
+      });
+      expect(extensionsOf(denied)).toMatchObject({
+        reason: "TRANSFER_NOT_RECEIVABLE",
+      });
+      const tooMany = await call(api, managerB.token, COMPLETE, {
+        input: { submissionId: id, rowIds: ["a", "b", "c"] },
+      });
+      expect(extensionsOf(tooMany).code).toBe("VALIDATION_FAILED");
     });
   });
 

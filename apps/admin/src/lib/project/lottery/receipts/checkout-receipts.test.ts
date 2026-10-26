@@ -6,7 +6,11 @@ import { composeProjectMessages } from "@repo/i18n";
 import { projectPublic } from "@repo/project-config/public";
 
 import { dailyCloseInputOf } from "./daily-close-receipt";
-import { RECEIPT_KINDS, receiptPrintRefOf } from "./receipt-kinds";
+import {
+  RECEIPT_KINDS,
+  receiptLayoutsOf,
+  receiptPrintRefOf,
+} from "./receipt-kinds";
 import { type ReceiptTranslator, receiptLinesOf } from "./receipt-layout";
 import { shiftCheckoutInputOf } from "./shift-checkout-receipt";
 import { STORE_RECEIPTS_I18N } from "./store-receipts";
@@ -134,11 +138,7 @@ describe("店面的 58mm 單據版面:交班結帳單、日結單(規格第 12 �
       `${VIEW}/sub-ck3`,
       timeText,
     );
-    const [layout] = RECEIPT_KINDS["store-shift-checkout"].copiesOf(
-      payload,
-      t,
-      NOW,
-    );
+    const [layout] = receiptLayoutsOf("store-shift-checkout", payload, t, NOW);
 
     expect(layout.time).toBe("2026-10-16T07:10:00.000Z");
     expect(receiptLinesOf(layout, HEADER)).toEqual([
@@ -206,11 +206,7 @@ describe("店面的 58mm 單據版面:交班結帳單、日結單(規格第 12 �
       `${VIEW}/sub-c43`,
       timeText,
     );
-    const [layout] = RECEIPT_KINDS["store-daily-close"].copiesOf(
-      payload,
-      t,
-      NOW,
-    );
+    const [layout] = receiptLayoutsOf("store-daily-close", payload, t, NOW);
 
     expect(receiptLinesOf(layout, HEADER)).toEqual([
       "好運彩券行",

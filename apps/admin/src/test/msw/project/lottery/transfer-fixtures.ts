@@ -352,6 +352,8 @@ const row = (
   received: false,
   receivedAt: null,
   shippedAt: null,
+  batchId: null,
+  receivedTicketNos: [],
   ...overrides,
 });
 
@@ -381,6 +383,8 @@ export const transferReceiving = (
             shippedAt: "2026-10-16T01:10:00.000Z",
             received: true,
             receivedAt: "2026-10-16T07:20:00.000Z",
+            batchId: "tbatch-1",
+            receivedTicketNos: range(1, 100),
           }),
           row("t10-2", {
             gameCode: "5201",
@@ -393,6 +397,14 @@ export const transferReceiving = (
             shipped: true,
             shippedAt: "2026-10-16T01:10:00.000Z",
           }),
+        ],
+        batches: [
+          {
+            batchId: "tbatch-1",
+            no: 1,
+            completedAt: "2026-10-16T07:25:00.000Z",
+            rowIds: ["t10-1"],
+          },
         ],
       }
     : {
@@ -412,6 +424,7 @@ export const transferReceiving = (
             purchaseAmount: 1840,
           }),
         ],
+        batches: [],
       };
 
 /** 編輯頁的測試資料(`transfer-edit-fixtures.ts`)共用 */

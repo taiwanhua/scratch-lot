@@ -17,9 +17,8 @@ import {
 /** 文案的 namespace(`receipts.purchaseReceiving.*` 與共用的 `receipts.*`)。 */
 export const PURCHASING_RECEIPTS_I18N = "admin.lotteryPurchasing.receipts";
 
-/** 進貨點收單印兩張(規格第 12 章、8.2):第 1 張店鋪留存、第 2 張送貨人留存。 */
+/** 進貨點收單印兩聯(規格第 12 章、8.2):第 1 聯 店鋪留存、第 2 聯 送貨人留存(文案 `purchaseReceiving.copies.*`)。 */
 export const PURCHASE_RECEIVING_COPIES = ["store", "courier"] as const;
-export type PurchaseReceivingCopy = (typeof PURCHASE_RECEIVING_COPIES)[number];
 
 export interface PurchaseReceivingReceiptInput {
   /** 這張進貨單(提交)id:列印紀錄的 `refId` */
@@ -50,7 +49,7 @@ type Row = Group["rows"][number];
 
 const gameText = (group: Group) => `${group.gameCode} ${group.gameName}`;
 
-/** 每個遊戲一列 + 一行本號區段;沒有本的遊戲不列。 */
+/** 每個遊戲一列 + 一行本號區段;沒有本的遊戲不列(調貨點收單另有自己的一份:號碼要分整本 / 選張)。 */
 const bookSectionOf = (
   t: ReceiptTranslator,
   picked: readonly { group: Group; rows: readonly Row[] }[],
@@ -87,12 +86,11 @@ const bookSectionOf = (
 /**
  * 進貨點收單(規格第 12 章、8.2「進貨點收單」;Figma RC-08 `102:23526`):
  * 單號、進貨分店、甲類、這次點收的本(遊戲、本數、點收進度、本號區段)、尚未到的本;簽名欄 點收人、送貨人。
- * 不記送貨人是誰、不標貨運單號(店長自己寫在單上)。`copy` 印在單據名稱下方(店鋪留存 / 送貨人留存)。
+ * 不記送貨人是誰、不標貨運單號(店長自己寫在單上)。兩聯(`PURCHASE_RECEIVING_COPIES`)的聯別由 `receipt-kinds` 填。
  */
 export const purchaseReceivingReceiptOf = (
   input: PurchaseReceivingReceiptInput,
   t: ReceiptTranslator,
-  copy: PurchaseReceivingCopy | null,
   printedAt: string,
 ): ReceiptLayout => {
   const { batch } = input;
@@ -108,21 +106,6 @@ export const purchaseReceivingReceiptOf = (
   const count = (items: typeof received) =>
     items.reduce((sum, item) => sum + item.rows.length, 0);
 
-  const copyBlocks: ReceiptBlock[] =
-    copy === null
-      ? []
-      : [
-          {
-            type: "text",
-            text: t(
-              copy === "store"
-                ? "purchaseReceiving.copyStore"
-                : "purchaseReceiving.copyCourier",
-            ),
-            bold: true,
-            center: true,
-          },
-        ];
   const missingBlocks: ReceiptBlock[] =
     missing.length === 0
       ? [{ type: "text", text: t("purchaseReceiving.noneMissing") }]
@@ -140,7 +123,6 @@ export const purchaseReceivingReceiptOf = (
     documentNo: t("documentNo", { serialNo: input.serialNo ?? "" }),
     time: printedAt,
     blocks: [
-      ...copyBlocks,
       { type: "divider" },
       {
         type: "row",

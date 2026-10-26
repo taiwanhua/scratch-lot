@@ -7,6 +7,9 @@ import {
   receiptMoney,
 } from "./receipt-layout";
 
+/** 調貨付款收據印兩聯(規格第 12 章、8.4):第 1 聯 收貨店留存、第 2 聯 送貨人留存(文案 `transferPayment.copies.*`)。 */
+export const TRANSFER_PAYMENT_COPIES = ["receiver", "courier"] as const;
+
 /** 現金從哪裡付:小金庫,或收銀點抽屜(店面的功能接上後可帶收銀點名稱)。 */
 export type TransferPaymentSource = "vault" | "drawer";
 
@@ -32,7 +35,8 @@ export interface TransferPaymentReceiptInput {
 
 /**
  * 調貨付款收據(規格第 12 章、8.4;Figma RC-07 `102:23493`):收貨店付現金時印,
- * 單號、付款店(分店 · 現金來源)、收款人、現金金額;簽名欄 送貨人簽收。
+ * 單號、付款店(分店 · 現金來源)、收款人、現金金額;簽名欄 付款人、送貨人簽收。
+ * 兩聯(`TRANSFER_PAYMENT_COPIES`)的聯別由 `receipt-kinds` 填。
  */
 export const transferPaymentReceiptOf = (
   input: TransferPaymentReceiptInput,
@@ -65,7 +69,10 @@ export const transferPaymentReceiptOf = (
       { type: "divider" },
     ],
     qr: { value: input.url, caption: t("qrCaption") },
-    signatures: [t("transferPayment.courierSign")],
+    signatures: [
+      t("transferPayment.payerSign"),
+      t("transferPayment.courierSign"),
+    ],
   };
 };
 

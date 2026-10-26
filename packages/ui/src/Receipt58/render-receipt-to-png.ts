@@ -101,9 +101,32 @@ const stampQrSymbols = (node: HTMLElement, image: MonochromeImage): void => {
 };
 
 /**
+ * 節點裡切紙位置(`Receipt58Cut` 的 `data-receipt58-cut`)的下緣換算成列號(四捨五入到整數點):
+ * 只留圖片中段的(`0 < 列 < 高度`);在最下面的那一個(例:測試頁最後一列)本來就會切,不另記。
+ * 節點沒有排版(寬 0,例:jsdom)時沒有。
+ */
+export const receiptCutRowsOf = (
+  node: HTMLElement,
+  image: { width: number; height: number },
+): number[] => {
+  const box = node.getBoundingClientRect();
+  if (box.width <= 0) return [];
+  const dotsPerPx = image.width / box.width;
+  const rows = [...node.querySelectorAll<HTMLElement>("[data-receipt58-cut]")]
+    .map((cut) => cut.getBoundingClientRect())
+    .filter((rect) => rect.width > 0)
+    .map((rect) => Math.round((rect.bottom - box.top) * dotsPerPx))
+    .filter((row) => row > 0 && row < image.height);
+  return [...new Set(rows)].toSorted((a, b) => a - b);
+};
+
+/**
  * 把 58mm 單據轉成寬 384 點的黑白 PNG(瀏覽器端):
  * 預覽中的 `Receipt58` 節點 → 點陣化(384 寬)→ 寬度不符時縮放 → 二值化 → QR code 以整數點覆寫 → 1-bit PNG。
  * 回傳的 Blob 直接作為列印工作的圖片上傳。
+ *
+ * 一次列印好幾聯:把幾張 `Receipt58` 排在同一個節點裡、中間放 `Receipt58Cut`,轉成**一張**圖(一個列印工作);
+ * 切紙位置寫進 PNG(`tEXt`「cut-rows」,`docs/modules/printers.md`「列印工作」),代理程式印到那裡就切紙。
  */
 export const renderReceiptToPng = async (
   node: HTMLElement,
@@ -115,6 +138,8 @@ export const renderReceiptToPng = async (
   const rgba = resizeToWidth(await rasterize(node), RECEIPT58_DOTS);
   const monochrome = toMonochrome(rgba, threshold);
   stampQrSymbols(node, monochrome);
-  const png = await encodeMonochromePng(monochrome);
+  const png = await encodeMonochromePng(monochrome, {
+    cutRows: receiptCutRowsOf(node, monochrome),
+  });
   return new Blob([png], { type: "image/png" });
 };

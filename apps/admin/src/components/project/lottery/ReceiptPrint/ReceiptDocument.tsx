@@ -3,6 +3,7 @@ import type { ReactNode, Ref } from "react";
 import { Box } from "@repo/ui/box";
 import {
   Receipt58,
+  Receipt58Cut,
   Receipt58Divider,
   Receipt58Header,
   Receipt58Qr,
@@ -30,6 +31,8 @@ export interface ReceiptDocumentProps {
   reprint?: Receipt58ReprintMarkProps;
   /** 交給 `renderReceiptToPng` 轉圖的節點 */
   ref?: Ref<HTMLDivElement>;
+  /** 一次列印好幾聯時,這一聯後面接著下一聯:最後印切紙位置(代理程式在這裡切紙) */
+  cutAfter?: boolean;
 }
 
 const Block = ({ block }: { block: ReceiptBlock }) => {
@@ -77,27 +80,38 @@ const Block = ({ block }: { block: ReceiptBlock }) => {
 };
 
 /**
- * 單據名稱;有標示(例「待核准」)時在名稱下方加一個框(Figma RC-09)。
- * 表頭零件的名稱在一個 `<p>` 裡,標示用 inline-block 的 `<span>` 換行接在後面。
+ * 單據名稱;多聯的單據在名稱下方印聯別(例「第 1 聯 · 店鋪留存」);
+ * 有標示(例「待核准」)時在名稱下方加一個框(Figma RC-09)。
+ * 表頭零件的名稱在一個 `<p>` 裡,聯別與標示換行接在後面(標示是 inline-block 的 `<span>`)。
  */
 const titleOf = (layout: ReceiptLayout): ReactNode =>
-  layout.stamp == null ? (
+  layout.stamp == null && layout.copy == null ? (
     layout.title
   ) : (
     <>
       {layout.title}
-      <br />
-      <Box
-        component="span"
-        sx={{
-          display: "inline-block",
-          mt: "4px",
-          px: "8px",
-          border: "2px solid currentColor",
-        }}
-      >
-        {layout.stamp}
-      </Box>
+      {layout.copy == null ? null : (
+        <>
+          <br />
+          {layout.copy}
+        </>
+      )}
+      {layout.stamp == null ? null : (
+        <>
+          <br />
+          <Box
+            component="span"
+            sx={{
+              display: "inline-block",
+              mt: "4px",
+              px: "8px",
+              border: "2px solid currentColor",
+            }}
+          >
+            {layout.stamp}
+          </Box>
+        </>
+      )}
     </>
   );
 
@@ -112,6 +126,7 @@ export const ReceiptDocument = ({
   timeText,
   reprint,
   ref,
+  cutAfter = false,
 }: ReceiptDocumentProps) => (
   <Receipt58 ref={ref}>
     <Receipt58Header
@@ -129,5 +144,7 @@ export const ReceiptDocument = ({
     {layout.signatures.map((signer) => (
       <Receipt58Signature key={signer} signer={signer} />
     ))}
+    {/* 聯與聯之間:不另寫文字(切紙虛線本身就是撕線;舊版代理程式不切時照這條撕) */}
+    {cutAfter && <Receipt58Cut label="" />}
   </Receipt58>
 );

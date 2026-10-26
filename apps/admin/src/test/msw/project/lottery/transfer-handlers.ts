@@ -1,6 +1,7 @@
 import { HttpResponse } from "msw";
 
 import type {
+  CompleteLotteryTransferReceivingMutationVariables,
   LotterySettlementQueryVariables,
   LotteryTransferProgressQueryVariables,
   LotteryTransferReceivingFieldsFragment,
@@ -22,7 +23,8 @@ import { transferSettlement } from "./transfer-settlement-fixtures";
 /**
  * 調貨單的假 api(規則照 `docs/modules/project/purchasing.md`「調貨單」):新增頁選項、張數格子、
  * 檢視頁的出貨確認清單 / 點收區塊、刷條碼點收(單上沒點收的那一列 → 點收;`TRANSFER_WRONG_STORE_CODE` →
- * 送錯分店;其他 → 不在單上)、列表的進度與結算、調貨單的收付(其他單據的收付交給帳戶管理的 world)。
+ * 送錯分店;其他 → 不在單上)、[完成這次點收](這一次已點收、還沒有批次的列 → 新的點收批次 `tbatch-N`)、
+ * 列表的進度與結算、調貨單的收付(其他單據的收付交給帳戶管理的 world)。
  * 調貨單本身走表單執行端的 world(`transferFormWorld`)。
  */
 export const TRANSFER_WRONG_STORE_CODE = "5164-1-077777-010-0-6";
@@ -206,7 +208,9 @@ export const transferWorld = ({
           ...current,
           receivedCount: current.receivedCount + 1,
           rows: current.rows.map((row) =>
-            row.rowId === pending.rowId ? { ...row, received: true } : row,
+            row.rowId === pending.rowId
+              ? { ...row, received: true, receivedTicketNos: row.ticketNos }
+              : row,
           ),
         };
         receivings.set(input.submissionId, next);
@@ -217,6 +221,48 @@ export const transferWorld = ({
               rowId: pending.rowId,
               receiving: next,
             },
+          },
+        });
+      }),
+      api.mutation("CompleteLotteryTransferReceiving", ({ variables }) => {
+        const { input } =
+          variables as CompleteLotteryTransferReceivingMutationVariables;
+        const wanted = new Set(
+          Array.isArray(input.rowIds) ? input.rowIds : [input.rowIds],
+        );
+        const current = receivingOf(input.submissionId);
+        const rowIds = current.rows
+          .filter(
+            (row) =>
+              row.received && row.batchId == null && wanted.has(row.rowId),
+          )
+          .map((row) => row.rowId);
+        const batch =
+          rowIds.length === 0
+            ? null
+            : {
+                __typename: "LotteryTransferReceivingBatch" as const,
+                batchId: `tbatch-${String(current.batches.length + 1)}`,
+                no: current.batches.length + 1,
+                completedAt: new Date().toISOString(),
+                rowIds,
+              };
+        const next =
+          batch === null
+            ? current
+            : {
+                ...current,
+                batches: [...current.batches, batch],
+                rows: current.rows.map((row) =>
+                  rowIds.includes(row.rowId)
+                    ? { ...row, batchId: batch.batchId }
+                    : row,
+                ),
+              };
+        receivings.set(input.submissionId, next);
+        return HttpResponse.json({
+          data: {
+            completeLotteryTransferReceiving: { batch, receiving: next },
           },
         });
       }),

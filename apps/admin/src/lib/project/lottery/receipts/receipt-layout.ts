@@ -7,6 +7,8 @@ import { formatNumberRanges } from "@repo/ui/receipt58";
  *
  * 共通的版面規則:單欄、「標籤:值」、表格最多三欄、號碼以區段表示、底部 QR code(這張單據在後台的連結)、
  * 上方租戶名稱(由畫面填)、補印標示(由畫面依底座補印流程填)。
+ * 要印好幾聯的單據(`receipt-kinds` 的 `copies`):每一聯是一份版面、名稱下方印聯別(`copy`),
+ * 一次列印把各聯接成一張圖、聯與聯之間切紙(一個列印工作,算印一次)。
  */
 
 /** 表格一列最多三欄(`Receipt58Table`)。 */
@@ -41,6 +43,8 @@ export interface ReceiptLayout {
   title: string;
   /** 單據名稱下方加框的標示(例退貨退款收據的「待核准」);沒有就不印 */
   stamp?: string | null;
+  /** 單據名稱下方的聯別(例「第 1 聯 · 店鋪留存」;由 `receipt-kinds` 依 `copies` 填);一聯的單據不印 */
+  copy?: string | null;
   /** 單號那一格(例「單號 P-0031」) */
   documentNo: string;
   /** 單號右邊的時間(ISO 時點;畫面依租戶時區以 `formatTemporal` 顯示) */
@@ -125,6 +129,7 @@ export const receiptLinesOf = (
 ): string[] => [
   header.tenantName,
   layout.title,
+  ...(layout.copy == null ? [] : [`[聯別] ${layout.copy}`]),
   ...(layout.stamp == null ? [] : [`[標示] ${layout.stamp}`]),
   ...(header.reprint === undefined || header.reprint === null
     ? []

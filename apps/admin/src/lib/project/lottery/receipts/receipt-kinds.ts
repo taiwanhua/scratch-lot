@@ -23,10 +23,17 @@ import {
 } from "./shift-checkout-receipt";
 import { STORE_RECEIPTS_I18N } from "./store-receipts";
 import {
+  TRANSFER_PAYMENT_COPIES,
   type TransferPaymentReceiptInput,
   transferPaymentReceiptOf,
 } from "./transfer-payment-receipt";
 import {
+  TRANSFER_RECEIVING_COPIES,
+  type TransferReceivingReceiptInput,
+  transferReceivingReceiptOf,
+} from "./transfer-receiving-receipt";
+import {
+  TRANSFER_SHIPMENT_COPIES,
   type TransferShipmentReceiptInput,
   transferShipmentReceiptOf,
 } from "./transfer-shipment-receipt";
@@ -48,6 +55,8 @@ export interface ReceiptPayloads {
   "purchase-receiving": PurchaseReceivingReceiptInput;
   /** 調貨出貨單(調貨單第一關通過,含跳過) */
   "transfer-shipment": TransferShipmentReceiptInput;
+  /** 調貨點收單(調貨單收貨店 [完成這次點收]) */
+  "transfer-receiving": TransferReceivingReceiptInput;
   /** 調貨付款收據(收貨店付現金) */
   "transfer-payment": TransferPaymentReceiptInput;
   /** 投庫單(看板 [投庫]) */
@@ -81,20 +90,21 @@ export interface ReceiptKindDefinition<Payload> {
   orgIdOf: (payload: Payload) => string;
   /** 使用處的預設印表機(收銀點的印表機);沒有 → 分店預設 */
   defaultPrinterIdOf: (payload: Payload) => string | null;
-  /** 列印失敗通知上的單據名稱(例「進貨點收單 P-0031」) */
+  /** 單據名稱(例「進貨點收單 P-0031」);列印紀錄、失敗通知上的名稱另依聯別加註(`receiptDocumentNameOf`) */
   documentNameOf: (payload: Payload, t: ReceiptTranslator) => string;
-  /** [列印] / [補印] 按鈕印的那一張;`now` = 列印當下(ISO 時點) */
+  /** 一聯的版面(各聯內容相同,聯別由 `receiptLayoutsOf` 填);`now` = 列印當下(ISO 時點) */
   layoutOf: (
     payload: Payload,
     t: ReceiptTranslator,
     now: string,
   ) => ReceiptLayout;
-  /** 交易後自動印的每一張(進貨點收單兩張:店鋪留存、送貨人留存) */
-  copiesOf: (
-    payload: Payload,
-    t: ReceiptTranslator,
-    now: string,
-  ) => ReceiptLayout[];
+  /**
+   * 一次列印印哪幾聯(依序;名稱文案 `<i18n>.<copyI18n>.copies.<聯>`);一聯的單據 = 空陣列。
+   * 一次列印 = 各聯接成一張圖、聯與聯之間切紙 = 一個列印工作(已印 1 次);補印可選全部或其中一聯。
+   */
+  copies: readonly string[];
+  /** 聯別名稱文案在 `i18n` 底下的位置(例 `purchaseReceiving`);一聯的單據不用 */
+  copyI18n?: string;
 }
 
 export const RECEIPT_KINDS: {
@@ -113,12 +123,9 @@ export const RECEIPT_KINDS: {
         title: t("purchaseReceiving.title"),
         serialNo: payload.serialNo ?? "",
       }),
-    layoutOf: (payload, t, now) =>
-      purchaseReceivingReceiptOf(payload, t, null, now),
-    copiesOf: (payload, t, now) =>
-      PURCHASE_RECEIVING_COPIES.map((copy) =>
-        purchaseReceivingReceiptOf(payload, t, copy, now),
-      ),
+    layoutOf: (payload, t, now) => purchaseReceivingReceiptOf(payload, t, now),
+    copies: PURCHASE_RECEIVING_COPIES,
+    copyI18n: "purchaseReceiving",
   },
   "transfer-shipment": {
     documentType: "lottery-transfer-shipment",
@@ -133,7 +140,25 @@ export const RECEIPT_KINDS: {
         serialNo: payload.serialNo ?? "",
       }),
     layoutOf: (payload, t, now) => transferShipmentReceiptOf(payload, t, now),
-    copiesOf: (payload, t, now) => [transferShipmentReceiptOf(payload, t, now)],
+    copies: TRANSFER_SHIPMENT_COPIES,
+    copyI18n: "transferShipment",
+  },
+  "transfer-receiving": {
+    documentType: "lottery-transfer-receiving",
+    refType: "lottery-transfer-receiving",
+    i18n: PURCHASING_RECEIPTS_I18N,
+    // 一次點收一張單據(同進貨點收單);沒有批次的舊資料以調貨單計
+    refIdOf: (payload) => payload.batch?.batchId ?? payload.submissionId,
+    orgIdOf: (payload) => payload.toBranchId,
+    defaultPrinterIdOf: () => null,
+    documentNameOf: (payload, t) =>
+      t("documentName", {
+        title: t("transferReceiving.title"),
+        serialNo: payload.serialNo ?? "",
+      }),
+    layoutOf: (payload, t, now) => transferReceivingReceiptOf(payload, t, now),
+    copies: TRANSFER_RECEIVING_COPIES,
+    copyI18n: "transferReceiving",
   },
   "transfer-payment": {
     documentType: "lottery-transfer-payment",
@@ -148,7 +173,8 @@ export const RECEIPT_KINDS: {
         serialNo: payload.serialNo ?? "",
       }),
     layoutOf: (payload, t) => transferPaymentReceiptOf(payload, t),
-    copiesOf: (payload, t) => [transferPaymentReceiptOf(payload, t)],
+    copies: TRANSFER_PAYMENT_COPIES,
+    copyI18n: "transferPayment",
   },
   // 店面的單據(規格第 12 章):現金流水類(投庫、出庫、存款)沒有單號,一筆流水一張(`refId` = 流水 id)
   "store-vault-deposit": {
@@ -164,7 +190,7 @@ export const RECEIPT_KINDS: {
         branch: payload.branchName,
       }),
     layoutOf: (payload, t, now) => vaultDepositReceiptOf(payload, t, now),
-    copiesOf: (payload, t, now) => [vaultDepositReceiptOf(payload, t, now)],
+    copies: [],
   },
   "store-vault-withdraw": {
     documentType: "lottery-store-vault-withdraw",
@@ -179,7 +205,7 @@ export const RECEIPT_KINDS: {
         branch: payload.branchName,
       }),
     layoutOf: (payload, t, now) => vaultWithdrawReceiptOf(payload, t, now),
-    copiesOf: (payload, t, now) => [vaultWithdrawReceiptOf(payload, t, now)],
+    copies: [],
   },
   "store-bank-deposit": {
     documentType: "lottery-store-bank-deposit",
@@ -194,7 +220,7 @@ export const RECEIPT_KINDS: {
         branch: payload.branchName,
       }),
     layoutOf: (payload, t, now) => bankDepositReceiptOf(payload, t, now),
-    copiesOf: (payload, t, now) => [bankDepositReceiptOf(payload, t, now)],
+    copies: [],
   },
   "store-shift-checkout": {
     documentType: "lottery-store-shift-checkout",
@@ -209,7 +235,7 @@ export const RECEIPT_KINDS: {
         serialNo: payload.serialNo ?? "",
       }),
     layoutOf: (payload, t) => shiftCheckoutReceiptOf(payload, t),
-    copiesOf: (payload, t) => [shiftCheckoutReceiptOf(payload, t)],
+    copies: [],
   },
   "store-daily-close": {
     documentType: "lottery-store-daily-close",
@@ -224,7 +250,7 @@ export const RECEIPT_KINDS: {
         serialNo: payload.serialNo ?? "",
       }),
     layoutOf: (payload, t) => dailyCloseReceiptOf(payload, t),
-    copiesOf: (payload, t) => [dailyCloseReceiptOf(payload, t)],
+    copies: [],
   },
   "store-sale-refund": {
     documentType: "lottery-store-sale-refund",
@@ -239,7 +265,7 @@ export const RECEIPT_KINDS: {
         serialNo: payload.serialNo ?? "",
       }),
     layoutOf: (payload, t, now) => saleRefundReceiptOf(payload, t, now),
-    copiesOf: (payload, t, now) => [saleRefundReceiptOf(payload, t, now)],
+    copies: [],
   },
 };
 
@@ -248,7 +274,115 @@ export const receiptKindOf = <Kind extends ReceiptKind>(
   kind: Kind,
 ): ReceiptKindDefinition<ReceiptPayloads[Kind]> => RECEIPT_KINDS[kind];
 
-/** 列印按鈕 / 列印工作要的單據識別:所屬分店、類型、`refType` + `refId`、名稱、預設印表機。 */
+/** 一次列印印全部的聯(補印對話框的預設選項;`receiptLayoutsOf` 的 `which` 預設)。 */
+export const RECEIPT_ALL_COPIES = "all";
+
+/** 第幾聯(從 1 起)與名稱(例「店鋪留存」);不是這張單據的聯 → null。 */
+const copyOf = (
+  definition: { copies: readonly string[]; copyI18n?: string },
+  t: ReceiptTranslator,
+  copy: string,
+): { no: number; name: string } | null => {
+  const index = definition.copies.indexOf(copy);
+  return index === -1
+    ? null
+    : {
+        no: index + 1,
+        name: t(`${definition.copyI18n ?? ""}.copies.${copy}`),
+      };
+};
+
+/** 聯別那一行(例「第 1 聯 · 店鋪留存」);不是這張單據的聯 → 空字串。 */
+export const receiptCopyLineOf = (
+  kind: ReceiptKind,
+  t: ReceiptTranslator,
+  copy: string,
+): string => {
+  const found = copyOf(RECEIPT_KINDS[kind], t, copy);
+  return found === null ? "" : t("copyLine", found);
+};
+
+/**
+ * 這一次要印的版面(依序;一次列印接成一張圖、聯與聯之間切紙):
+ * 一聯的單據 → 一份;多聯的單據 → `which` = 全部時每一聯一份、指定一聯時只有那一聯,名稱下方印聯別。
+ */
+export const receiptLayoutsOf = <Kind extends ReceiptKind>(
+  kind: Kind,
+  payload: ReceiptPayloads[Kind],
+  t: ReceiptTranslator,
+  now: string,
+  which: string = RECEIPT_ALL_COPIES,
+): ReceiptLayout[] => {
+  const definition = receiptKindOf(kind);
+  const layout = definition.layoutOf(payload, t, now);
+  if (definition.copies.length === 0) {
+    return [layout];
+  }
+  const picked = definition.copies.includes(which)
+    ? [which]
+    : definition.copies;
+  return picked.map((copy) => ({
+    ...layout,
+    copy: receiptCopyLineOf(kind, t, copy),
+  }));
+};
+
+/**
+ * 列印紀錄 / 失敗通知上的單據名稱:多聯的單據寫印了哪幾聯,補印另標「補印」
+ * (例「進貨點收單 P-0001(兩聯)」「進貨點收單 P-0001(送貨人留存)補印」);一聯的單據補印也標「補印」。
+ */
+export const receiptDocumentNameOf = <Kind extends ReceiptKind>(
+  kind: Kind,
+  payload: ReceiptPayloads[Kind],
+  t: ReceiptTranslator,
+  {
+    which = RECEIPT_ALL_COPIES,
+    isReprint = false,
+  }: { which?: string; isReprint?: boolean } = {},
+): string => {
+  const definition = receiptKindOf(kind);
+  const name = definition.documentNameOf(payload, t);
+  const one = copyOf(definition, t, which);
+  const named =
+    definition.copies.length === 0
+      ? name
+      : t("documentNameWithCopies", {
+          name,
+          copies:
+            one === null
+              ? t("allCopies", { count: definition.copies.length })
+              : one.name,
+        });
+  return isReprint ? t("documentNameReprint", { name: named }) : named;
+};
+
+/**
+ * 補印對話框的「補印哪一聯」:全部(預設)、第 1 聯、第 2 聯…;一聯的單據 → null(對話框不多這個選單)。
+ */
+export const receiptReprintVariantsOf = (
+  kind: ReceiptKind,
+  t: ReceiptTranslator,
+): { label: string; options: { value: string; label: string }[] } | null => {
+  const { copies } = RECEIPT_KINDS[kind];
+  if (copies.length === 0) {
+    return null;
+  }
+  return {
+    label: t("reprintCopies"),
+    options: [
+      {
+        value: RECEIPT_ALL_COPIES,
+        label: t("reprintAllCopies", { count: copies.length }),
+      },
+      ...copies.map((copy) => ({
+        value: copy,
+        label: receiptCopyLineOf(kind, t, copy),
+      })),
+    ],
+  };
+};
+
+/** 列印按鈕 / 列印工作要的單據識別:所屬分店、類型、`refType` + `refId`、名稱(一次印全部的聯)、預設印表機。 */
 export const receiptPrintRefOf = <Kind extends ReceiptKind>(
   kind: Kind,
   payload: ReceiptPayloads[Kind],
@@ -260,7 +394,7 @@ export const receiptPrintRefOf = <Kind extends ReceiptKind>(
     documentType: definition.documentType,
     refType: definition.refType,
     refId: definition.refIdOf(payload),
-    documentName: definition.documentNameOf(payload, t),
+    documentName: receiptDocumentNameOf(kind, payload, t),
     defaultPrinterId: definition.defaultPrinterIdOf(payload),
   };
 };

@@ -1,3 +1,5 @@
+import { crc32 } from "node:zlib";
+
 import { describe, expect, it } from "@jest/globals";
 
 import {
@@ -5,6 +7,7 @@ import {
   PRINT_JOB_RESULT_TIMEOUT_MS,
 } from "@repo/domain/printing";
 
+import { FEED_AND_CUT } from "../escpos/commands";
 import {
   FakeAgentApi,
   ManualTimers,
@@ -40,6 +43,17 @@ function tallPng(height: number): Uint8Array {
     height,
   );
   return png;
+}
+
+/** 在 IHDR 後面插一個 `tEXt`「cut-rows」區塊(CRC 要對:pngjs 會驗)。 */
+function withCutRows(png: Uint8Array, rows: string): Uint8Array {
+  const body = Buffer.from(`tEXtcut-rows\0${rows}`, "latin1");
+  const chunk = Buffer.alloc(body.length + 8);
+  chunk.writeUInt32BE(body.length - 4, 0);
+  body.copy(chunk, 4);
+  chunk.writeUInt32BE(crc32(body), body.length + 4);
+  // 簽章 8 + IHDR 25
+  return Buffer.concat([png.subarray(0, 33), chunk, png.subarray(33)]);
 }
 
 async function claim(api: FakeAgentApi, id: string) {
@@ -123,6 +137,21 @@ describe("佇列", () => {
     ]);
   });
 
+  it("圖片帶中段切紙位置(tEXt「cut-rows」,一次印兩聯):印到那一列先切紙,再接著印", async () => {
+    const { api, transport, timers, runner } = setup();
+    api.addJob("copies", withCutRows(pngFromRows(["#", "#", "#", "#"]), "2"));
+    const claimed = await claim(api, "copies");
+    await runner.enqueue(claimed.printer, claimed.job, timers.now());
+    await runner.idle();
+    const cut = [...FEED_AND_CUT].join(",");
+    const cuts = (transport.printed[0]?.chunks ?? []).filter(
+      (chunk) => [...chunk].join(",") === cut,
+    );
+    expect(cuts).toHaveLength(2);
+    expect(api.results).toEqual([
+      { jobId: "copies", body: { status: "printed" } },
+    ]);
+  });
   it("佇列忙時查狀態直接回上次的狀態(不等列印)", async () => {
     const { api, transport, timers, runner } = setup();
     const gate: { release: (() => void) | null } = { release: null };

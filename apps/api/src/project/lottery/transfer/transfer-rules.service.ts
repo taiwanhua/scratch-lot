@@ -267,7 +267,8 @@ export class TransferRules {
       reader,
       { submissionId },
       {
-        select: "rowId bookId tickets purchaseAmount receivedAt receivedBy",
+        select:
+          "rowId bookId tickets purchaseAmount receivedAt receivedBy batchId batchedAt",
         session,
       },
     );

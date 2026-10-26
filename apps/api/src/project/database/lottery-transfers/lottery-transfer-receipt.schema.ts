@@ -31,6 +31,7 @@ const LotteryTransferReceiptTicketSchema = SchemaFactory.createForClass(
  * 第二關逐本刷條碼,一列一筆(唯一 `(submissionId, rowId)`),同一個交易把這列的張改成收貨店庫存、寫「調入」事件。
  * 「已點收的列不能被改或刪」以 `rowId` 比對;核准前要全部點收;有點收就不能駁回 / 刪除;作廢時照 `tickets`
  * 把張搬回出貨店、單張成本改回。
+ * [完成這次點收] 時把「這一次」點收的列標上同一個點收批次(`batchId`),調貨點收單照批次印、補印照批次重排版(同進貨點收)。
  *
  * 資料共用(ADR-0014):歸屬收貨店(`orgId`),出貨店以 `sharedByFields: fromOrgId` 看得到(兩邊店都看得到;寫入不放大)。
  */
@@ -71,6 +72,17 @@ export class LotteryTransferReceipt {
   /** 點收時間。 */
   @Prop({ type: Date, required: true })
   receivedAt!: Date;
+
+  /**
+   * 點收批次:[完成這次點收] 時給「這一次」點收的列同一個 id(調貨點收單的列印紀錄 `refId`)。
+   * 還沒按 [完成這次點收] 的列(以及這個欄位加上之前點收的舊資料)是 null。
+   */
+  @Prop({ type: MongooseSchema.Types.ObjectId, default: null })
+  batchId!: Types.ObjectId | null;
+
+  /** 按 [完成這次點收] 的時間(批次的順序依它);沒有批次 = null。 */
+  @Prop({ type: Date, default: null })
+  batchedAt!: Date | null;
 
   /** 模組 key(plugin 宣告;本表固定 `purchasing.transfer`)。 */
   moduleKey!: string;

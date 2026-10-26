@@ -10,7 +10,13 @@ import {
   PURCHASING_RECEIPTS_I18N,
   type PurchaseReceivingReceiptInput,
 } from "./purchase-receiving-receipt";
-import { RECEIPT_KINDS, receiptPrintRefOf } from "./receipt-kinds";
+import {
+  RECEIPT_KINDS,
+  receiptDocumentNameOf,
+  receiptLayoutsOf,
+  receiptPrintRefOf,
+  receiptReprintVariantsOf,
+} from "./receipt-kinds";
 import { type ReceiptTranslator, receiptLinesOf } from "./receipt-layout";
 import {
   latestTransferPaymentInputOf,
@@ -139,20 +145,16 @@ const settlement = (
   })),
 });
 
-describe("58mm 單據的版面(規格第 12 章;Figma RC-06、RC-07、RC-08)", () => {
-  it("進貨點收單:[完成這次點收] 印兩張(店鋪留存、送貨人留存),列這次點收的本 + 尚未到的本;簽名欄 點收人、送貨人", () => {
-    const copies = RECEIPT_KINDS["purchase-receiving"].copiesOf(
-      purchase,
-      t,
-      NOW,
-    );
+describe("58mm 單據的版面(規格第 12 章;Figma RC-06、RC-07、RC-08、RC-10)", () => {
+  it("進貨點收單:一次列印兩聯(第 1 聯 店鋪留存、第 2 聯 送貨人留存,名稱下方印聯別),列這次點收的本 + 尚未到的本;簽名欄 點收人、送貨人", () => {
+    const copies = receiptLayoutsOf("purchase-receiving", purchase, t, NOW);
 
     expect(copies).toHaveLength(2);
     expect(receiptLinesOf(copies[0], HEADER)).toEqual([
       "好運彩券行",
       "進貨點收單",
+      "[聯別] 第 1 聯 · 店鋪留存",
       "單號 P-0031 | 2026-10-12 14:05",
-      "第 1 張 · 店鋪留存",
       "----",
       "進貨分店 | 中山店",
       "甲類 | 陳志明 12345678",
@@ -171,8 +173,41 @@ describe("58mm 單據的版面(規格第 12 章;Figma RC-06、RC-07、RC-08)", (
       "[簽名] 點收人簽名",
       "[簽名] 送貨人簽名",
     ]);
-    expect(receiptLinesOf(copies[1], HEADER)[3]).toBe("第 2 張 · 送貨人留存");
+    expect(receiptLinesOf(copies[1], HEADER)[2]).toBe(
+      "[聯別] 第 2 聯 · 送貨人留存",
+    );
     expect(copies[0].time).toBe(NOW);
+  });
+
+  it("多聯的單據:補印可選全部(預設)或其中一聯;列印紀錄的名稱寫聯別、補印標「補印」;一聯的單據不多選單", () => {
+    expect(
+      receiptLayoutsOf("purchase-receiving", purchase, t, NOW, "courier").map(
+        (layout) => layout.copy,
+      ),
+    ).toEqual(["第 2 聯 · 送貨人留存"]);
+    expect(receiptReprintVariantsOf("purchase-receiving", t)).toEqual({
+      label: "補印哪一聯",
+      options: [
+        { value: "all", label: "兩聯都補" },
+        { value: "store", label: "第 1 聯 · 店鋪留存" },
+        { value: "courier", label: "第 2 聯 · 送貨人留存" },
+      ],
+    });
+    expect(receiptDocumentNameOf("purchase-receiving", purchase, t)).toBe(
+      "進貨點收單 P-0031(兩聯)",
+    );
+    expect(
+      receiptDocumentNameOf("purchase-receiving", purchase, t, {
+        which: "courier",
+        isReprint: true,
+      }),
+    ).toBe("進貨點收單 P-0031(送貨人留存)補印");
+    expect(
+      receiptDocumentNameOf("purchase-receiving", purchase, t, {
+        isReprint: true,
+      }),
+    ).toBe("進貨點收單 P-0031(兩聯)補印");
+    expect(receiptReprintVariantsOf("store-daily-close", t)).toBeNull();
   });
 
   it("進貨點收單:全部到齊時「尚未到的本:無」;沒有點收批次的舊資料 → 列到目前為止已點收的全部本,以進貨單計次數", () => {
@@ -209,16 +244,18 @@ describe("58mm 單據的版面(規格第 12 章;Figma RC-06、RC-07、RC-08)", (
     );
   });
 
-  it("調貨出貨單:出貨店 → 收貨店、遊戲 / 本、張數、金額、號碼區段與張數、調貨金額;簽名欄 出貨人、送貨人、收貨人", () => {
-    const [layout] = RECEIPT_KINDS["transfer-shipment"].copiesOf(
-      shipment,
-      t,
-      NOW,
-    );
+  it("調貨出貨單:兩聯(出貨店留存、送貨人留存);出貨店 → 收貨店、遊戲 / 本、張數、金額、號碼區段與張數、調貨金額;簽名欄 出貨人、送貨人", () => {
+    const copies = receiptLayoutsOf("transfer-shipment", shipment, t, NOW);
+    const [layout] = copies;
 
+    expect(copies.map((item) => item.copy)).toEqual([
+      "第 1 聯 · 出貨店留存",
+      "第 2 聯 · 送貨人留存",
+    ]);
     expect(receiptLinesOf(layout, HEADER)).toEqual([
       "好運彩券行",
       "調貨出貨單",
+      "[聯別] 第 1 聯 · 出貨店留存",
       "單號 T-0008 | 2026-10-12 14:05",
       "----",
       "出貨店 → 收貨店 | 中山店 → 新竹店",
@@ -232,23 +269,28 @@ describe("58mm 單據的版面(規格第 12 章;Figma RC-06、RC-07、RC-08)", (
       "掃描開啟單據",
       "[簽名] 出貨人簽名",
       "[簽名] 送貨人簽名",
-      "[簽名] 收貨人簽名",
     ]);
   });
 
-  it("調貨付款收據:付款店(分店 · 現金來源)、收款人、現金;簽名欄 送貨人簽收;時間 = 付款時間", () => {
+  it("調貨付款收據:兩聯(收貨店留存、送貨人留存);付款店(分店 · 現金來源)、收款人、現金;簽名欄 付款人、送貨人簽收;時間 = 付款時間", () => {
     const input = transferPaymentInputOf(
       settlement([{}]),
       "rec-1",
       shipment.url,
     );
     if (input === null) throw new Error("應該要印付款收據");
-    const [layout] = RECEIPT_KINDS["transfer-payment"].copiesOf(input, t, NOW);
+    const copies = receiptLayoutsOf("transfer-payment", input, t, NOW);
+    const [layout] = copies;
 
+    expect(copies.map((item) => item.copy)).toEqual([
+      "第 1 聯 · 收貨店留存",
+      "第 2 聯 · 送貨人留存",
+    ]);
     expect(layout.time).toBe("2026-10-16T11:05:00.000Z");
     expect(receiptLinesOf(layout, HEADER)).toEqual([
       "好運彩券行",
       "調貨付款收據",
+      "[聯別] 第 1 聯 · 收貨店留存",
       "單號 T-0008 | 2026-10-12 14:05",
       "----",
       "付款店 | 新竹店 · 收銀點抽屜",
@@ -257,6 +299,7 @@ describe("58mm 單據的版面(規格第 12 章;Figma RC-06、RC-07、RC-08)", (
       "----",
       `[QR] ${shipment.url}`,
       "掃描開啟單據",
+      "[簽名] 付款人簽名",
       "[簽名] 送貨人簽收",
     ]);
     expect(receiptPrintRefOf("transfer-payment", input, t)).toEqual({
@@ -264,7 +307,7 @@ describe("58mm 單據的版面(規格第 12 章;Figma RC-06、RC-07、RC-08)", (
       documentType: "lottery-transfer-payment",
       refType: "lottery-transfer-payment",
       refId: "rec-1",
-      documentName: "調貨付款收據 T-0008",
+      documentName: "調貨付款收據 T-0008(兩聯)",
       defaultPrinterId: null,
     });
   });
@@ -319,14 +362,14 @@ describe("58mm 單據的版面(規格第 12 章;Figma RC-06、RC-07、RC-08)", (
       documentType: "lottery-purchase-receiving",
       refType: "lottery-purchase-receiving",
       refId: "batch-1",
-      documentName: "進貨點收單 P-0031",
+      documentName: "進貨點收單 P-0031(兩聯)",
       defaultPrinterId: null,
     });
     expect(receiptPrintRefOf("transfer-shipment", shipment, t)).toMatchObject({
       orgId: "org-store",
       refType: "lottery-transfer-shipment",
       refId: "doc-t8",
-      documentName: "調貨出貨單 T-0008",
+      documentName: "調貨出貨單 T-0008(兩聯)",
     });
   });
 });

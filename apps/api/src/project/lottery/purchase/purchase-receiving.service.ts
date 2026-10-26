@@ -33,13 +33,13 @@ import {
   LOTTERY_PURCHASE_WRONG_STORE,
 } from "../../notifications";
 import { tenantOfOperator } from "../master-data-tenant";
+import { receivingBatchesOf } from "../receiving-batches";
 import type { LotteryRedemptionModel } from "../redemption/models/redemption.model";
 import { RedemptionViews } from "../redemption/redemption-views";
 import type { StoreGrant } from "../store/store-access";
 import { LotteryBooksService } from "../tickets/books.service";
 import type {
   CompleteLotteryPurchaseReceivingPayload,
-  LotteryPurchaseReceivingBatchModel,
   LotteryPurchaseReceivingGroupModel,
   LotteryPurchaseReceivingModel,
   ReceiveLotteryPurchaseBookPayload,
@@ -77,34 +77,6 @@ function labelOf(value: unknown): string {
     typeof value.label === "string"
     ? value.label
     : "";
-}
-
-/** 點收紀錄 → 每一次點收(依完成時間由舊到新,編號從 1 起)。 */
-function batchesOf(
-  receipts: readonly {
-    rowId: string;
-    batchId?: Types.ObjectId | null;
-    batchedAt?: Date | null;
-  }[],
-): LotteryPurchaseReceivingBatchModel[] {
-  const batches = new Map<string, { completedAt: Date; rowIds: string[] }>();
-  for (const receipt of receipts) {
-    if (receipt.batchId == null) {
-      continue;
-    }
-    const key = String(receipt.batchId);
-    const batch = batches.get(key) ?? {
-      completedAt: receipt.batchedAt ?? new Date(0),
-      rowIds: [],
-    };
-    batch.rowIds.push(receipt.rowId);
-    batches.set(key, batch);
-  }
-  return [...batches.entries()]
-    .toSorted(
-      ([, a], [, b]) => a.completedAt.getTime() - b.completedAt.getTime(),
-    )
-    .map(([batchId, batch], index) => ({ batchId, no: index + 1, ...batch }));
 }
 
 /** 刷到別家店的進貨單上的本(送錯分店)。 */
@@ -623,7 +595,7 @@ export class PurchaseReceivingService {
       receivedCount: lines.filter((line) => receivedAt.has(line.rowId)).length,
       totalCount: lines.length,
       groups,
-      batches: batchesOf(receipts),
+      batches: receivingBatchesOf(receipts),
     };
   }
 

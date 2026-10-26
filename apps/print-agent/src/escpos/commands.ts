@@ -67,18 +67,29 @@ export function rasterBand(
 /**
  * 一張單據的完整指令,分成多段(TCP 依序寫出):初始化 → 各段點陣圖 → 送紙切紙。
  * 空白圖片(高度 0)也照樣切紙。
+ *
+ * `cutRows`(圖片裡的中段切紙位置,`readPngCutRows`;例:一次印兩聯):印到那一列先送紙切紙,再接著印下一段;
+ * 點陣圖在切紙位置一定斷開(那一段不跨過切紙位置)。範圍外的列(`≤ 0`、`≥ 高度`)略過。
  */
 export function buildPrintCommands(
   bitmap: MonoBitmap,
   bandRows = BAND_ROWS,
+  cutRows: readonly number[] = [],
 ): Uint8Array[] {
   const chunks: Uint8Array[] = [INITIALIZE];
-  for (let row = 0; row < bitmap.height; row += bandRows) {
-    chunks.push(
-      rasterBand(bitmap, row, Math.min(bandRows, bitmap.height - row)),
-    );
+  const middle = new Set(
+    cutRows.filter((row) => row > 0 && row < bitmap.height),
+  );
+  const stops = [...[...middle].toSorted((a, b) => a - b), bitmap.height];
+  let row = 0;
+  for (const stop of stops) {
+    while (row < stop) {
+      const rows = Math.min(bandRows, stop - row);
+      chunks.push(rasterBand(bitmap, row, rows));
+      row += rows;
+    }
+    chunks.push(FEED_AND_CUT);
   }
-  chunks.push(FEED_AND_CUT);
   return chunks;
 }
 

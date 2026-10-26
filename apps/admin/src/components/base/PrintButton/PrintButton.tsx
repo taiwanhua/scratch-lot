@@ -1,6 +1,7 @@
 import { type MouseEvent, useState } from "react";
 import { useTranslations } from "use-intl";
 
+import { PRINT_SIGNALS } from "@repo/domain/printing";
 import {
   useCreatePrintJobMutation,
   useDocumentPrintCountQuery,
@@ -14,6 +15,7 @@ import { Tooltip } from "@repo/ui/tooltip";
 import { useMe } from "@/hooks/base/useMe";
 import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
 import { usePermissions } from "@/hooks/base/usePermissions";
+import { useRealtimeSignal } from "@/hooks/base/useRealtime";
 import { useSession } from "@/hooks/base/useSession";
 import {
   PRINT_BUTTON_PERMISSIONS,
@@ -23,7 +25,11 @@ import {
 } from "@/lib/base/print-button";
 
 import { PrintStatus } from "./PrintStatus";
-import { type ReprintChoice, ReprintDialog } from "./ReprintDialog";
+import {
+  type ReprintChoice,
+  ReprintDialog,
+  type ReprintVariants,
+} from "./ReprintDialog";
 import { usePrintJob } from "./usePrintJob";
 
 /** 補印時交給 `renderImage` 的補印標示資料(`Receipt58ReprintMark` 的四段)。 */
@@ -39,6 +45,8 @@ export interface PrintReprintMark {
   reprintedAt: string;
   /** 補印人(登入者姓名)。 */
   reprintedBy: string;
+  /** 補印對話框選的使用處選項(`reprintVariants`);沒有這個選單 = `null`。 */
+  variant: string | null;
 }
 
 export interface PrintButtonProps {
@@ -49,8 +57,12 @@ export interface PrintButtonProps {
   /** 這張單據(`refType` + `refId`):已印次數、補印次數都以它計。 */
   refType: string;
   refId: string;
-  /** 單據顯示名稱(列印失敗通知用);不給時通知顯示「單據類型 + 編號」。 */
-  documentName?: string | null;
+  /**
+   * 單據顯示名稱(列印紀錄、列印失敗通知用);不給時顯示「單據類型 + 編號」。
+   * 給函式時依這一次列印決定(補印帶補印標示資料,例:名稱寫補了哪一聯;第一次列印是 `null`)。
+   */
+  documentName?:
+    string | null | ((reprint: PrintReprintMark | null) => string | null);
   /** 使用處提供的預設印表機(專案:收銀點的印表機);沒有或不可選時用分店預設。 */
   defaultPrinterId?: string | null;
   /**
@@ -58,6 +70,8 @@ export interface PrintButtonProps {
    * 補印時帶補印標示資料(第一次列印是 `null`,不印補印標示)。
    */
   renderImage: (reprint: PrintReprintMark | null) => Promise<Blob>;
+  /** 補印對話框在原因上面多一個選單(例:多聯單據補哪一聯);選的值放在補印標示資料的 `variant`。 */
+  reprintVariants?: ReprintVariants | null;
 }
 
 /**
@@ -75,6 +89,8 @@ export interface PrintButtonProps {
  * - 選印表機:可選的只有一台就直接送;多台時按下先選(預設排序不變,預設那台標「預設」並先選中)。
  *   預設 = `defaultPrinterId` → 分店預設 → 第一台。
  * - 送出的回饋就是按鈕旁的進度文字,成功不另跳提示;送不出去(轉圖片失敗、API 錯誤)跳一則失敗提示(DATA-06)。
+ * - 已印次數:自己送的工作有結果時重查;收到任何一則自己的 `print-result`(例:交易後自動列印的那一張印完)也重查,
+ *   按鈕不會停在印完之前查到的 [列印]。
  */
 export const PrintButton = ({
   orgId,
@@ -84,6 +100,7 @@ export const PrintButton = ({
   documentName = null,
   defaultPrinterId = null,
   renderImage,
+  reprintVariants = null,
 }: PrintButtonProps) => {
   const t = useTranslations("admin.printButton");
   const { session } = useSession();
@@ -102,6 +119,13 @@ export const PrintButton = ({
     { input: { refType, refId } },
     { enabled: canPrint },
   );
+  const { refetch: refetchCount } = count;
+  // 已印次數只算「已印」:別處送的同一張單據(交易後自動列印)印完時,按鈕要跟著變
+  useRealtimeSignal(PRINT_SIGNALS.result, () => {
+    if (canPrint) {
+      void refetchCount();
+    }
+  });
   const createJob = useCreatePrintJobMutation(session.client);
   const feedback = useMutationFeedback({
     // 送出的結果顯示在按鈕旁(已送到印表機 → 已印出 / 失敗),成功不另跳提示
@@ -161,7 +185,10 @@ export const PrintButton = ({
           documentType,
           refType,
           refId,
-          documentName,
+          documentName:
+            typeof documentName === "function"
+              ? documentName(reprint)
+              : documentName,
           image,
           isReprint: reprint !== null,
           reprintReason: reprint?.reason ?? null,
@@ -236,6 +263,7 @@ export const PrintButton = ({
       </Menu>
       {reprintPrinterId === null ? null : (
         <ReprintDialog
+          variants={reprintVariants}
           onCancel={() => {
             setReprintPrinterId(null);
           }}

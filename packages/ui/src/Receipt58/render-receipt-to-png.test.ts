@@ -22,6 +22,10 @@ const fakeRaster =
       ]),
     );
 
+/** 假的版面位置(jsdom 不排版)。 */
+const rectOf = (top: number, height: number) =>
+  ({ top, bottom: top + height, left: 0, width: 384 }) as DOMRect;
+
 describe("renderReceiptToPng", () => {
   it("產出 PNG 寬度恰為 384、只有黑白兩色", async () => {
     const blob = await renderReceiptToPng(document.createElement("div"), {
@@ -45,5 +49,31 @@ describe("renderReceiptToPng", () => {
     const png = decodePng(await readBlob(blob));
     expect(png.width).toBe(384);
     expect(png.height).toBe(200);
+    expect(png.texts).toEqual({});
+  });
+
+  it("好幾聯排在一起:切紙位置(Receipt58Cut 的下緣)寫進 tEXt「cut-rows」;最下面那一個不記", async () => {
+    const node = document.createElement("div");
+    node.getBoundingClientRect = () => rectOf(100, 1000);
+    const cuts = [
+      [500, 20],
+      [800, 20],
+      [1080, 20],
+    ].map(([top = 0, height = 0]) => {
+      const cut = document.createElement("div");
+      cut.dataset.receipt58Cut = "";
+      cut.getBoundingClientRect = () => rectOf(top, height);
+      node.append(cut);
+      return cut;
+    });
+    expect(cuts).toHaveLength(3);
+
+    const blob = await renderReceiptToPng(node, {
+      rasterize: fakeRaster(384, 1000),
+    });
+
+    const png = decodePng(await readBlob(blob));
+    // 520 − 100、820 − 100;1100 − 100 = 1000 = 高度(本來就會切)不記
+    expect(png.texts).toEqual({ "cut-rows": "420,720" });
   });
 });

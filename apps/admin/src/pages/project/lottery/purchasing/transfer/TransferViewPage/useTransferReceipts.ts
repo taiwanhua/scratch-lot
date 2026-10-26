@@ -8,6 +8,10 @@ import {
 
 import { useFormModuleAccess } from "@/components/base/form-engine/FormModulePages/useFormModuleAccess";
 import { latestTransferPaymentInputOf } from "@/lib/project/lottery/receipts/transfer-payment-receipt";
+import {
+  type TransferReceivingReceiptInput,
+  transferReceivingInputOf,
+} from "@/lib/project/lottery/receipts/transfer-receiving-receipt";
 import { transferShipmentInputOf } from "@/lib/project/lottery/receipts/transfer-shipment-receipt";
 
 import { TRANSFER_MODULE_KEY } from "../transfer-keys";
@@ -15,6 +19,8 @@ import { TRANSFER_MODULE_KEY } from "../transfer-keys";
 /**
  * 調貨單檢視頁標頭 [列印] 的資料(規格第 12 章):
  * - `shipment`:調貨出貨單 —— 出貨之前印整張(出貨確認時核對),出貨之後印已出貨的列
+ * - `receiving`:調貨點收單 —— 每一次點收([完成這次點收] 的點收批次)一張;`inputOf(batch)` 排那一次的資料,
+ *   [完成這次點收] 後的自動列印也用它;還沒載到 → null
  * - `payment`:最近一筆收貨店付的現金(調貨付款收據的 [列印] / [補印]);沒有 → null
  *
  * 第一關通過後的自動列印不在這裡:登記成調貨單的審核擴充(`TransferShipmentEffect`),任何畫面通過第一關都會印。
@@ -53,6 +59,28 @@ export const useTransferReceipts = (
         );
   const payment =
     settlement === null ? null : latestTransferPaymentInputOf(settlement, url);
+  const receivingReceipt =
+    receiving === null || submission === null
+      ? null
+      : {
+          batches: receiving.batches,
+          receivedCount: receiving.receivedCount,
+          inputOf: (
+            batch: TransferReceivingReceiptInput["batch"],
+            latest: LotteryTransferReceivingFieldsFragment = receiving,
+          ): TransferReceivingReceiptInput =>
+            transferReceivingInputOf(
+              latest,
+              {
+                submissionId: id,
+                serialNo: submission.serialNo ?? null,
+                toBranchId:
+                  transferHeaderOf(submission.values).toBranchId ?? "",
+                url,
+              },
+              batch,
+            ),
+        };
 
-  return { shipment, payment };
+  return { shipment, receiving: receivingReceipt, payment };
 };

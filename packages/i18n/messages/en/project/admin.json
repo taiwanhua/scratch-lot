@@ -2801,6 +2801,7 @@
         },
         "wrongStoreNotified": "The creator of this transfer has been notified",
         "printShipment": "Shipping slip",
+        "printReceiving": "Receiving slip",
         "printPayment": "Payment receipt"
       },
       "wrongStore": {
@@ -2825,10 +2826,18 @@
       "qrCaption": "Scan to open this document",
       "batchSelect": "Receiving",
       "batchOption": "#{no} · {time}",
+      "copyLine": "Copy {no} · {name}",
+      "allCopies": "{count, plural, =2 {both copies} other {all # copies}}",
+      "documentNameWithCopies": "{name} ({copies})",
+      "documentNameReprint": "{name} reprint",
+      "reprintCopies": "Copy to reprint",
+      "reprintAllCopies": "{count, plural, =2 {Both copies} other {All # copies}}",
       "purchaseReceiving": {
         "title": "Purchase receiving slip",
-        "copyStore": "Copy 1 · Store copy",
-        "copyCourier": "Copy 2 · Courier copy",
+        "copies": {
+          "store": "Store copy",
+          "courier": "Courier copy"
+        },
         "branch": "Receiving store",
         "dealer": "Class A dealer",
         "thisTime": "Receiving #{no} ({count} books)",
@@ -2847,6 +2856,10 @@
       },
       "transferShipment": {
         "title": "Transfer shipping slip",
+        "copies": {
+          "shipper": "Shipping store copy",
+          "courier": "Courier copy"
+        },
         "route": "From → To",
         "routeValue": "{from} → {to}",
         "columns": {
@@ -2859,11 +2872,38 @@
         "ticketCount": " ({count} tickets)",
         "total": "Transfer amount",
         "shipperSign": "Shipped by",
-        "courierSign": "Courier",
-        "receiverSign": "Received by"
+        "courierSign": "Courier"
+      },
+      "transferReceiving": {
+        "title": "Transfer receiving slip",
+        "copies": {
+          "receiver": "Receiving store copy",
+          "courier": "Courier copy"
+        },
+        "route": "From → To",
+        "routeValue": "{from} → {to}",
+        "thisTime": "Receiving #{no} ({count} books)",
+        "receivedSoFar": "Received ({count} books)",
+        "missing": "Not yet arrived ({count} books)",
+        "noneMissing": "Not yet arrived: none",
+        "columns": {
+          "game": "Game",
+          "books": "Books",
+          "progress": "Received"
+        },
+        "progress": "{received} / {total}",
+        "bookNos": "Books: ",
+        "ticketNos": "{bookNo} tickets: ",
+        "ticketCount": " ({count} tickets)",
+        "receiverSign": "Received by",
+        "courierSign": "Courier"
       },
       "transferPayment": {
         "title": "Transfer payment receipt",
+        "copies": {
+          "receiver": "Receiving store copy",
+          "courier": "Courier copy"
+        },
         "payer": "Paid by",
         "payerValue": "{branch} · {source}",
         "sources": {
@@ -2872,6 +2912,7 @@
         },
         "payee": "Paid to",
         "cash": "Cash",
+        "payerSign": "Paid by (signature)",
         "courierSign": "Courier signature"
       },
       "reprint": {

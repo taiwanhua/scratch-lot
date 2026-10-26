@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import type { ClientSession, Types } from "mongoose";
+import { type ClientSession, Types } from "mongoose";
 
 import {
   TICKET_EVENT_TYPE,
@@ -35,8 +35,10 @@ import {
   LOTTERY_TRANSFER_REF,
   LOTTERY_TRANSFER_WRONG_STORE,
 } from "../../notifications";
+import { receivingBatchesOf } from "../receiving-batches";
 import { TicketLedgerService } from "../tickets/ticket-ledger.service";
 import type {
+  CompleteLotteryTransferReceivingPayload,
   LotteryTransferReceivingModel,
   ReceiveLotteryTransferBookPayload,
 } from "./models/transfer.model";
@@ -72,6 +74,8 @@ function alreadyReceivedError(rowId: string | null) {
  * - `receive`:刷這列的任何一張 → 這列的張改成收貨店庫存、寫「調入」事件(單張成本 = 該列批購金額 ÷ 張數)、
  *   解除鎖定、寫 `lottery_transfer_receipts`,同一個交易。單據要在審核中、點收關卡的任務在操作者手上;
  *   這列還沒出貨 → 擋下;單上沒有 → 查是不是送往別家店的調貨單(送錯分店:擋下、不入庫)
+ * - `complete`:[完成這次點收] → 「這一次」點收的列標上同一個點收批次(`batchId`;同進貨點收);
+ *   「這一次」由畫面記(上次完成或打開頁面之後點收的列),已在別的批次的列不重收。調貨點收單照批次印
  */
 /** 這一列的張最近一次調出的時間;都沒有調出事件 = null。 */
 function latestOf(
@@ -148,6 +152,53 @@ export class TransferReceivingService {
         operator,
         await this.access.readable(operator, submissionIdText),
       ),
+    };
+  }
+
+  /**
+   * [完成這次點收]:這一次點收的列(`rowIds` 裡這張單的、自己點收的、還沒有批次的)標上新的點收批次。
+   * 要點收任務在自己手上(跟刷條碼同一個資格);沒有可收進批次的列 → `batch` 為 null。
+   */
+  async complete(
+    operator: OperatorContext,
+    submissionIdText: string,
+    rowIds: readonly string[],
+  ): Promise<CompleteLotteryTransferReceivingPayload> {
+    const submission = await this.access.readable(operator, submissionIdText);
+    if (!(await this.access.canReceive(operator, submission))) {
+      throw forbiddenError(
+        "Transfer is not waiting for your receiving",
+        TRANSFER_REASONS.notReceivable,
+      );
+    }
+    // 只收這張單的列(上限 = 列數;送超過的是壞請求)
+    const lineRowIds = new Set(
+      transferLinesOf(submission.values).map((line) => line.rowId),
+    );
+    if (rowIds.length > lineRowIds.size) {
+      throw validationError("Too many rows", ["rowIds"]);
+    }
+    const batchId = new Types.ObjectId();
+    // 以點收人自己的身分寫(點收紀錄歸收貨店、是他寫的):只收他自己點收的列,更新者記他
+    const updated = await this.receipts.updateMany(
+      operator,
+      {
+        submissionId: submission._id,
+        rowId: { $in: rowIds.filter((rowId) => lineRowIds.has(rowId)) },
+        receivedBy: operator.actorId,
+        batchId: null,
+      },
+      { $set: { batchId, batchedAt: new Date() } },
+    );
+    const receiving = await this.toModel(operator, submission);
+    return {
+      batch:
+        updated === 0
+          ? null
+          : (receiving.batches.find(
+              (batch) => batch.batchId === String(batchId),
+            ) ?? null),
+      receiving,
     };
   }
 
@@ -469,6 +520,13 @@ export class TransferReceivingService {
     const receivedAt = new Map(
       receipts.map((receipt) => [receipt.rowId, receipt.receivedAt]),
     );
+    const batchOf = new Map(
+      receipts.flatMap((receipt) =>
+        receipt.batchId == null
+          ? []
+          : [[receipt.rowId, String(receipt.batchId)] as const],
+      ),
+    );
     const shippedAtOfTicket = await this.rules.shippedAtOf(
       reader,
       submission._id,
@@ -476,6 +534,23 @@ export class TransferReceivingService {
     const bookTickets = await this.rules.ticketsOfBooks(
       reader,
       [...books.values()].map((book) => book._id),
+    );
+    // 點收紀錄實際搬進來的張 → 張號(調貨點收單的號碼照這個印;之後逐張點收時一列可能只到部分張)
+    const ticketNoOf = new Map(
+      [...bookTickets.values()]
+        .flat()
+        .map((ticket) => [String(ticket._id), ticket.ticketNo] as const),
+    );
+    const receivedTicketNosOf = new Map(
+      receipts.map((receipt) => [
+        receipt.rowId,
+        receipt.tickets
+          .flatMap((item) => {
+            const no = ticketNoOf.get(String(item.ticketId));
+            return no === undefined ? [] : [no];
+          })
+          .toSorted((a, b) => a.localeCompare(b)),
+      ]),
     );
     const rows = lines.map((line) => {
       const book = books.get(line.bookId);
@@ -518,6 +593,8 @@ export class TransferReceivingService {
         received: isReceived,
         receivedAt: receivedAt.get(line.rowId) ?? null,
         shippedAt: isShipped ? latestOf(rowTickets, shippedAtOfTicket) : null,
+        batchId: batchOf.get(line.rowId) ?? null,
+        receivedTicketNos: receivedTicketNosOf.get(line.rowId) ?? [],
       };
     });
     return {
@@ -529,6 +606,7 @@ export class TransferReceivingService {
       receivedCount: rows.filter((row) => row.received).length,
       totalCount: rows.length,
       rows,
+      batches: receivingBatchesOf(receipts),
     };
   }
 }

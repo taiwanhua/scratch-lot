@@ -25,6 +25,14 @@ fragment LotteryTransferReceivingFields on LotteryTransferReceiving {
     received
     receivedAt
     shippedAt
+    batchId
+    receivedTicketNos
+  }
+  batches {
+    batchId
+    no
+    completedAt
+    rowIds
   }
 }
 
@@ -92,6 +100,23 @@ query LotteryTransferReceiving($submissionId: ID!) {
 mutation ReceiveLotteryTransferBook($input: ReceiveLotteryTransferBookInput!) {
   receiveLotteryTransferBook(input: $input) {
     rowId
+    receiving {
+      ...LotteryTransferReceivingFields
+    }
+  }
+}
+
+# [完成這次點收]:rowIds = 這一次點收的列(上次完成或打開頁面之後點收的)
+mutation CompleteLotteryTransferReceiving(
+  $input: CompleteLotteryTransferReceivingInput!
+) {
+  completeLotteryTransferReceiving(input: $input) {
+    batch {
+      batchId
+      no
+      completedAt
+      rowIds
+    }
     receiving {
       ...LotteryTransferReceivingFields
     }

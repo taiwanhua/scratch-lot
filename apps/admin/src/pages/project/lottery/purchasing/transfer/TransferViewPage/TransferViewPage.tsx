@@ -11,9 +11,12 @@ import {
   transferSettlementProblemOf,
 } from "@repo/domain/project/lottery";
 import {
+  type CompleteLotteryTransferReceivingMutation,
+  type CompleteLotteryTransferReceivingMutationVariables,
   FormSubmissionStatus,
   type LotterySettlementFieldsFragment,
   type LotteryTransferReceivingFieldsFragment,
+  useCompleteLotteryTransferReceivingMutation,
   useLotterySettlementQuery,
   useLotteryTransferReceivingQuery,
   useNotifyLotteryTransferWrongStoreMutation,
@@ -37,13 +40,17 @@ import {
 } from "@/components/project/lottery/BookGroupList/BookGroupList";
 import { groupBooksByGame } from "@/components/project/lottery/BookGroupList/book-groups";
 import { useBookProgressLabel } from "@/components/project/lottery/BookGroupList/useBookProgressLabel";
+import { useReceiptPrinter } from "@/components/project/lottery/ReceiptPrint/useReceiptPrinter";
 import {
   ReceiveBooksPanel,
   type ReceiveScanOutcome,
 } from "@/components/project/lottery/ReceiveBooksPanel/ReceiveBooksPanel";
 import { SettlementPanel } from "@/components/project/lottery/SettlementPanel/SettlementPanel";
 import { useFormSubmission } from "@/hooks/base/useFormSubmission";
-import { useSnackbar } from "@/hooks/base/useMutationFeedback";
+import {
+  useMutationFeedback,
+  useSnackbar,
+} from "@/hooks/base/useMutationFeedback";
 import { useRouteTabHref } from "@/hooks/base/useRouteTabHref";
 import { useRouteTabItemLabel } from "@/hooks/base/useRouteTabItemLabel";
 import { useSession } from "@/hooks/base/useSession";
@@ -91,7 +98,8 @@ const settlementProblemOf = (settlement: Settlement) => {
  * - 出貨之後:點收區塊(與進貨單共用 `ReceiveBooksPanel`;收貨店店長的點收任務在手上才能刷)
  * - 結算區塊(兩邊店的收付;按鈕依 `pay` / `receive` 與分店)+ 核准前三個數字不相等的提示 + 審核區塊
  * - 送錯分店:擋下、不入庫,彈窗提示這本屬於哪一家店的哪一張調貨單
- * - 列印(規格第 12 章):標頭 [列印](`useTransferReceipts`);第一關通過後的自動列印是調貨單的審核擴充(`TransferShipmentEffect`)
+ * - 列印(規格第 12 章):標頭 [列印](`useTransferReceipts`);第一關通過後的自動列印是調貨單的審核擴充(`TransferShipmentEffect`);
+ *   收貨店 [完成這次點收] 寫入成功後自動印這一次的調貨點收單(兩聯,一個列印工作)
  */
 export const TransferViewPage = ({ routeParam }: ModulePageProps) => {
   const t = useTranslations("admin.lotteryPurchasing.transfer.view");
@@ -246,6 +254,34 @@ export const TransferViewPage = ({ routeParam }: ModulePageProps) => {
       ? values.requisition
       : null;
   const receipts = useTransferReceipts(id, submission, data, settlementItem);
+  const printer = useReceiptPrinter();
+  // [完成這次點收]:這一次的列標上點收批次(寫入成功後才印這一次的調貨點收單兩聯;列印失敗只記 log)
+  const complete = useCompleteLotteryTransferReceivingMutation(
+    session.client,
+    useMutationFeedback<
+      CompleteLotteryTransferReceivingMutation,
+      CompleteLotteryTransferReceivingMutationVariables
+    >({
+      success: (_payload, variables) =>
+        tReceive("completed", { count: variables.input.rowIds.length }),
+      error: (error) =>
+        tReceive(`errors.${transferReceiveErrorOf(error).reason}`),
+      onSuccess: ({ completeLotteryTransferReceiving: result }) => {
+        queryClient.setQueryData(
+          useLotteryTransferReceivingQuery.getKey({ submissionId: id }),
+          { lotteryTransferReceiving: result.receiving },
+        );
+        setThisTime(new Set());
+        const batch = result.batch ?? null;
+        if (receipts.receiving !== null && batch !== null) {
+          void printer.printReceiptAfterCommit(
+            "transfer-receiving",
+            receipts.receiving.inputOf(batch, result.receiving),
+          );
+        }
+      },
+    }),
+  );
 
   return (
     <Box sx={{ flex: 1, minWidth: 0, minHeight: 0, overflow: "auto" }}>
@@ -335,11 +371,9 @@ export const TransferViewPage = ({ routeParam }: ModulePageProps) => {
             gameLabelOf={gameLabelOf}
             thisTimeCount={thisTime.size}
             onComplete={() => {
-              showSnackbar(
-                "success",
-                tReceive("completed", { count: thisTime.size }),
-              );
-              setThisTime(new Set());
+              complete.mutate({
+                input: { submissionId: id, rowIds: [...thisTime] },
+              });
             }}
             isPending={receive.isPending}
             columnLabels={{
@@ -393,6 +427,7 @@ export const TransferViewPage = ({ routeParam }: ModulePageProps) => {
           }}
         />
       )}
+      {printer.host}
     </Box>
   );
 };

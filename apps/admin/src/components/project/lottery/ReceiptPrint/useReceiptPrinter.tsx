@@ -22,9 +22,11 @@ import {
   resolvePrinterId,
 } from "@/lib/base/print-button";
 import {
+  RECEIPT_ALL_COPIES,
   type ReceiptKind,
   type ReceiptPayloads,
   receiptKindOf,
+  receiptLayoutsOf,
   receiptPrintRefOf,
 } from "@/lib/project/lottery/receipts/receipt-kinds";
 import type {
@@ -34,6 +36,7 @@ import type {
 import { logReceiptPrintFailure } from "@/lib/project/lottery/receipts/receipt-log";
 
 import { PendingReceipt, type PendingRender } from "./PendingReceipt";
+import { PrintResultWatch, type WatchedPrintJob } from "./PrintResultWatch";
 
 /** 補印標示的文案(`admin.lotteryPurchasing.receipts.reprint.*`)。 */
 const REPRINT_I18N = "admin.lotteryPurchasing.receipts.reprint";
@@ -46,12 +49,16 @@ export interface ReceiptPrinter {
    * 沒有 `api.printing.print` → 不印;分店沒有可用的印表機 → 不印。
    * 印表機 = 單據的預設(收銀點的印表機)→ 分店預設 → 第一台。
    * 任何失敗(查印表機、轉圖、建立工作)只記 log,不拋錯、不跳提示,呼叫端照常往下做。
+   * 工作有結果時重查那張單據的已印次數(`PrintResultWatch`;呼叫端還掛著 `host` 時),標頭按鈕跟著變 [補印]。
    */
   printReceiptAfterCommit: <Kind extends ReceiptKind>(
     kind: Kind,
     payload: ReceiptPayloads[Kind],
   ) => Promise<void>;
-  /** 把一張單據轉成 PNG(列印按鈕的 `renderImage`;補印時帶補印標示) */
+  /**
+   * 把一張單據轉成 PNG(列印按鈕的 `renderImage`):多聯的單據印全部的聯(接成一張圖、中間切紙);
+   * 補印時帶補印標示,補印對話框選了其中一聯(`reprint.variant`)就只印那一聯。
+   */
   renderReceipt: <Kind extends ReceiptKind>(
     kind: Kind,
     payload: ReceiptPayloads[Kind],
@@ -82,6 +89,7 @@ export const useReceiptPrinter = (): ReceiptPrinter => {
   );
   const { mutateAsync: createPrintJob } = createJob;
   const [pending, setPending] = useState<PendingRender[]>([]);
+  const [watching, setWatching] = useState<WatchedPrintJob[]>([]);
   const nextId = useRef(0);
 
   const translatorOf = useCallback(
@@ -91,14 +99,14 @@ export const useReceiptPrinter = (): ReceiptPrinter => {
     [tRoot],
   );
 
-  const renderLayout = useCallback(
-    (layout: ReceiptLayout, reprint: PrintReprintMark | null) =>
+  const renderLayouts = useCallback(
+    (layouts: readonly ReceiptLayout[], reprint: PrintReprintMark | null) =>
       new Promise<Blob>((resolve, reject) => {
         nextId.current += 1;
         const id = nextId.current;
         setPending((current) => [
           ...current,
-          { id, layout, reprint, resolve, reject },
+          { id, layouts, reprint, resolve, reject },
         ]);
       }),
     [],
@@ -111,16 +119,18 @@ export const useReceiptPrinter = (): ReceiptPrinter => {
       reprint: PrintReprintMark | null,
     ) => {
       const definition = receiptKindOf(kind);
-      return renderLayout(
-        definition.layoutOf(
+      return renderLayouts(
+        receiptLayoutsOf(
+          kind,
           payload,
           translatorOf(definition.i18n),
           new Date().toISOString(),
+          reprint?.variant ?? RECEIPT_ALL_COPIES,
         ),
         reprint,
       );
     },
-    [renderLayout, translatorOf],
+    [renderLayouts, translatorOf],
   );
 
   const printReceiptAfterCommit = useCallback(
@@ -155,15 +165,21 @@ export const useReceiptPrinter = (): ReceiptPrinter => {
           logReceiptPrintFailure("no printer", { kind, orgId });
           return;
         }
-        // 一張一張送(進貨點收單的兩張依序:店鋪留存、送貨人留存)
-        for (const layout of definition.copiesOf(
-          payload,
-          t,
-          new Date().toISOString(),
-        )) {
-          const image = await blobToBase64(await renderLayout(layout, null));
-          await createPrintJob({ input: { printerId, ...document, image } });
-        }
+        // 一次列印 = 一個工作:多聯的單據各聯接成一張圖、中間切紙(已印次數算 1 次)
+        const image = await blobToBase64(
+          await renderLayouts(
+            receiptLayoutsOf(kind, payload, t, new Date().toISOString()),
+            null,
+          ),
+        );
+        const created = await createPrintJob({
+          input: { printerId, ...document, image },
+        });
+        const { job } = created.createPrintJob;
+        setWatching((current) => [
+          ...current,
+          { job, refType: document.refType, refId: document.refId },
+        ]);
       } catch (error) {
         logReceiptPrintFailure("print failed", { kind, orgId, error });
       }
@@ -172,7 +188,7 @@ export const useReceiptPrinter = (): ReceiptPrinter => {
       canPrint,
       createPrintJob,
       queryClient,
-      renderLayout,
+      renderLayouts,
       session.client,
       translatorOf,
     ],
@@ -180,6 +196,9 @@ export const useReceiptPrinter = (): ReceiptPrinter => {
 
   const onDone = useCallback((id: number) => {
     setPending((current) => current.filter((item) => item.id !== id));
+  }, []);
+  const onWatched = useCallback((jobId: string) => {
+    setWatching((current) => current.filter((item) => item.job.id !== jobId));
   }, []);
 
   const reprintMarkOf = (
@@ -208,12 +227,15 @@ export const useReceiptPrinter = (): ReceiptPrinter => {
           key={item.id}
           item={item}
           tenantName={tenantName}
-          timeText={temporalText(item.layout.time, "datetime")}
+          timeTextOf={(time) => temporalText(time, "datetime")}
           reprint={
             item.reprint === null ? undefined : reprintMarkOf(item.reprint)
           }
           onDone={onDone}
         />
+      ))}
+      {watching.map((item) => (
+        <PrintResultWatch key={item.job.id} watched={item} onDone={onWatched} />
       ))}
     </Box>
   );

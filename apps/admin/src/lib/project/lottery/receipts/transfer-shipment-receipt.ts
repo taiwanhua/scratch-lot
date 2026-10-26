@@ -8,6 +8,9 @@ import {
   receiptMoney,
 } from "./receipt-layout";
 
+/** 調貨出貨單印兩聯(規格第 12 章、8.4):第 1 聯 出貨店留存、第 2 聯 送貨人留存(文案 `transferShipment.copies.*`)。 */
+export const TRANSFER_SHIPMENT_COPIES = ["shipper", "courier"] as const;
+
 export interface TransferShipmentReceiptInput {
   /** 這張調貨單(提交)id:列印紀錄的 `refId` */
   submissionId: string;
@@ -31,7 +34,8 @@ export interface TransferShipmentReceiptInput {
 
 /**
  * 調貨出貨單(規格第 12 章、8.4;Figma RC-06 `102:23446`):單號、出貨店 → 收貨店、
- * 每一列(遊戲 / 本、張數、金額 + 張號區段與張數)、調貨金額;簽名欄 出貨人、送貨人、收貨人。
+ * 每一列(遊戲 / 本、張數、金額 + 張號區段與張數)、調貨金額;簽名欄 出貨人、送貨人(收貨店點收時另印調貨點收單)。
+ * 兩聯(`TRANSFER_SHIPMENT_COPIES`)的聯別由 `receipt-kinds` 填。
  */
 export const transferShipmentReceiptOf = (
   input: TransferShipmentReceiptInput,
@@ -101,7 +105,6 @@ export const transferShipmentReceiptOf = (
     signatures: [
       t("transferShipment.shipperSign"),
       t("transferShipment.courierSign"),
-      t("transferShipment.receiverSign"),
     ],
   };
 };

@@ -141,11 +141,18 @@ const approve = async (user: ReturnType<typeof userEvent.setup>) => {
   await user.click(within(dialog).getByRole("button", { name: /核准|確認/ }));
 };
 
+/** 每一次轉圖裡的切紙位置數(兩聯 = 1 個:聯與聯之間)。 */
+const cutsOfPrints = () =>
+  receiptPngOf.mock.calls.map(
+    ([node]) => node.querySelectorAll("[data-receipt58-cut]").length,
+  );
+
 /**
- * 調貨出貨單、調貨付款收據的列印(規格第 12 章、8.4;Figma RC-06、RC-07)。
+ * 調貨出貨單、調貨點收單、調貨付款收據的列印(規格第 12 章、8.4;Figma RC-06、RC-10、RC-07):
+ * 三種都印兩聯 —— 一次列印 = 一個列印工作(兩聯接成一張、中間切紙)。
  */
-describe("調貨單檢視頁:調貨出貨單 / 調貨付款收據", () => {
-  it("第一關出貨確認核准 → 送出一個列印工作(調貨出貨單,印出貨分店的印表機):出貨店 → 收貨店、號碼區段、三個簽名欄", async () => {
+describe("調貨單檢視頁:調貨出貨單 / 調貨點收單 / 調貨付款收據", () => {
+  it("第一關出貨確認核准 → 送出一個列印工作(調貨出貨單兩聯:出貨店留存、送貨人留存,印出貨分店的印表機):出貨店 → 收貨店、號碼區段;簽名欄 出貨人、送貨人", async () => {
     receiptPngOf.mockClear();
     const user = userEvent.setup();
     const { printingFake, workflowFake } = renderTransferPage({
@@ -164,15 +171,18 @@ describe("調貨單檢視頁:調貨出貨單 / 調貨付款收據", () => {
       documentType: "lottery-transfer-shipment",
       refType: "lottery-transfer-shipment",
       refId: "doc-t8",
-      documentName: "調貨出貨單 T-0008",
+      documentName: "調貨出貨單 T-0008(兩聯)",
     });
+    expect(cutsOfPrints()).toEqual([1]);
     const text = receiptPngOf.mock.calls.at(-1)?.[0].textContent ?? "";
     expect(text).toContain("調貨出貨單");
+    expect(text).toContain("第 1 聯 · 出貨店留存");
+    expect(text).toContain("第 2 聯 · 送貨人留存");
     expect(text).toContain("中山店 → 新竹店");
     expect(text).toContain("號碼:#090~099(10 張)");
     expect(text).toContain("出貨人簽名");
     expect(text).toContain("送貨人簽名");
-    expect(text).toContain("收貨人簽名");
+    expect(text).not.toContain("收貨人簽名");
   });
 
   it("多人核准還沒到齊(第一關還沒結束)→ 不印,就算讀到在途的列", async () => {
@@ -240,14 +250,14 @@ describe("調貨單檢視頁:調貨出貨單 / 調貨付款收據", () => {
     expect(printingFake?.created[0]).toMatchObject({
       refType: "lottery-transfer-shipment",
       refId: "doc-t8",
-      documentName: "調貨出貨單 T-0008",
+      documentName: "調貨出貨單 T-0008(兩聯)",
     });
     expect(receiptPngOf.mock.calls.at(-1)?.[0].textContent).toContain(
       "號碼:#090~099(10 張)",
     );
   });
 
-  it("收貨店付過現金 → 標頭有「調貨付款收據」[列印];印的是付款店、收款人、現金與送貨人簽收", async () => {
+  it("收貨店付過現金 → 標頭有「調貨付款收據」[列印];印兩聯(收貨店留存、送貨人留存):付款店、收款人、現金;簽名欄 付款人、送貨人簽收", async () => {
     receiptPngOf.mockClear();
     const user = userEvent.setup();
     const { printingFake } = renderTransferPage({
@@ -269,14 +279,19 @@ describe("調貨單檢視頁:調貨出貨單 / 調貨付款收據", () => {
     expect(printingFake?.created[0]).toMatchObject({
       refType: "lottery-transfer-payment",
       refId: "cash-t10",
-      documentName: "調貨付款收據 T-0010",
+      documentName: "調貨付款收據 T-0010(兩聯)",
     });
+    expect(cutsOfPrints()).toEqual([1]);
     const text = receiptPngOf.mock.calls.at(-1)?.[0].textContent ?? "";
+    expect(text).toContain("第 1 聯 · 收貨店留存");
+    expect(text).toContain("第 2 聯 · 送貨人留存");
     expect(text).toContain("中山店 · 小金庫");
     expect(text).toContain("王小明(送貨人)");
     expect(text).toContain("19,504");
+    expect(text).toContain("付款人簽名");
     expect(text).toContain("送貨人簽收");
     expect(screen.getByText("調貨出貨單")).toBeInTheDocument();
+    expect(screen.getByText("調貨點收單")).toBeInTheDocument();
   });
 
   it("收貨店 [付款] 選現金 → 寫入成功後自動印調貨付款收據;選銀行 → 不印", async () => {
@@ -380,6 +395,7 @@ describe("調貨單檢視頁:調貨出貨單 / 調貨付款收據", () => {
     const text = receiptPngOf.mock.calls.at(-1)?.[0].textContent ?? "";
     expect(text).toContain("中山店 · 小金庫");
     expect(text).toContain("1,000");
+    expect(text).toContain("第 2 聯 · 送貨人留存");
 
     await pay("銀行");
     expect(recorded).toBe(2);

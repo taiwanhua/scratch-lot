@@ -176,6 +176,16 @@ type CompleteLotteryPurchaseReceivingPayload {
   receiving: LotteryPurchaseReceiving!
 }
 
+input CompleteLotteryTransferReceivingInput {
+  rowIds: [String!]!
+  submissionId: ID!
+}
+
+type CompleteLotteryTransferReceivingPayload {
+  batch: LotteryTransferReceivingBatch
+  receiving: LotteryTransferReceiving!
+}
+
 input CopySubmissionToDraftInput {
   clientRequestId: String!
   id: ID!
@@ -3487,6 +3497,7 @@ type LotteryTransferProgress {
 }
 
 type LotteryTransferReceiving {
+  batches: [LotteryTransferReceivingBatch!]!
   canReceive: Boolean!
   fromBranchName: String!
   receivedCount: Int!
@@ -3497,6 +3508,13 @@ type LotteryTransferReceiving {
   transferAmount: Int!
 }
 
+type LotteryTransferReceivingBatch {
+  batchId: ID!
+  completedAt: DateTime!
+  no: Int!
+  rowIds: [String!]!
+}
+
 type LotteryTransferRequisition {
   books: Int!
   id: ID!
@@ -3505,6 +3523,7 @@ type LotteryTransferRequisition {
 
 type LotteryTransferRow {
   amount: Int!
+  batchId: ID
   bookId: ID!
   bookNo: String!
   gameCode: String!
@@ -3514,6 +3533,7 @@ type LotteryTransferRow {
   rate: Int!
   received: Boolean!
   receivedAt: DateTime
+  receivedTicketNos: [String!]!
   rowId: String!
   shipped: Boolean!
   shippedAt: DateTime
@@ -3692,6 +3712,7 @@ type Mutation {
   clearScheduleAutoAssignments(input: ScheduleAutoRunRangeInput!): ClearScheduleAutoAssignmentsPayload!
   closeLotteryPeriod(input: CloseLotteryPeriodInput!): LotteryPeriodClose!
   completeLotteryPurchaseReceiving(input: CompleteLotteryPurchaseReceivingInput!): CompleteLotteryPurchaseReceivingPayload!
+  completeLotteryTransferReceiving(input: CompleteLotteryTransferReceivingInput!): CompleteLotteryTransferReceivingPayload!
   copySubmissionToDraft(input: CopySubmissionToDraftInput!): FormSubmissionPayload!
   copyUserOrgRoles(input: CopyUserOrgRolesInput!): CopyUserOrgRolesPayload!
   correctLotterySkippedTickets(input: CorrectLotterySkippedTicketsInput!): LotteryInventoryActionPayload!

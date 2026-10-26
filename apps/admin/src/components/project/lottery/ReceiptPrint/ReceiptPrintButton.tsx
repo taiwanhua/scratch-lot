@@ -7,11 +7,15 @@ import { PrintButton } from "@/components/base/PrintButton/PrintButton";
 import { usePermissions } from "@/hooks/base/usePermissions";
 import { PRINT_BUTTON_PERMISSIONS } from "@/lib/base/print-button";
 import {
+  RECEIPT_ALL_COPIES,
   type ReceiptKind,
   type ReceiptPayloads,
+  receiptDocumentNameOf,
   receiptKindOf,
   receiptPrintRefOf,
+  receiptReprintVariantsOf,
 } from "@/lib/project/lottery/receipts/receipt-kinds";
+import type { ReceiptTranslator } from "@/lib/project/lottery/receipts/receipt-layout";
 
 import { useReceiptPrinter } from "./useReceiptPrinter";
 
@@ -25,6 +29,8 @@ export interface ReceiptPrintButtonProps<Kind extends ReceiptKind> {
 /**
  * 單據頁的 [列印] / [補印](底座 `PrintButton`;已印次數、補印對話框、分店沒有印表機時變灰都是底座的):
  * 單據名稱 + 按鈕;按下時把 `kind` 這張單據排好版、轉圖送出。補印時單據上方印「【補印】第 N 次 · 時間 · 原因 · 補印人」。
+ * 多聯的單據:[列印] 印全部的聯(一個工作);補印對話框多一個「補印哪一聯」(全部 / 第 1 聯 / 第 2 聯,預設全部),
+ * 列印紀錄的單據名稱寫印了哪幾聯(例「進貨點收單 P-0001(送貨人留存)補印」)。
  * 沒有 `api.printing.print` 時整個不渲染(連名稱都不出現)。
  */
 export const ReceiptPrintButton = <Kind extends ReceiptKind>({
@@ -39,9 +45,8 @@ export const ReceiptPrintButton = <Kind extends ReceiptKind>({
     return null;
   }
   const { i18n } = receiptKindOf(kind);
-  const ref = receiptPrintRefOf(kind, payload, (key, values) =>
-    tRoot(`${i18n}.${key}`, values),
-  );
+  const t: ReceiptTranslator = (key, values) => tRoot(`${i18n}.${key}`, values);
+  const ref = receiptPrintRefOf(kind, payload, t);
   return (
     <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
       {label === null ? null : (
@@ -58,9 +63,15 @@ export const ReceiptPrintButton = <Kind extends ReceiptKind>({
         documentType={ref.documentType}
         refType={ref.refType}
         refId={ref.refId}
-        documentName={ref.documentName}
+        documentName={(reprint) =>
+          receiptDocumentNameOf(kind, payload, t, {
+            which: reprint?.variant ?? RECEIPT_ALL_COPIES,
+            isReprint: reprint !== null,
+          })
+        }
         defaultPrinterId={ref.defaultPrinterId}
         renderImage={(reprint) => printer.renderReceipt(kind, payload, reprint)}
+        reprintVariants={receiptReprintVariantsOf(kind, t)}
       />
       {printer.host}
     </Stack>
