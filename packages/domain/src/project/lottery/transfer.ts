@@ -277,6 +277,23 @@ export function transferUnitCostOf(line: TransferLineValue): number {
 }
 
 /**
+ * 一張的調貨金額(該列批購金額 ÷ 張數):整本列依本、選張列依本 + 張號;不在單上 = 0。出貨時記在「調出」事件上
+ * (營運報表的調出金額 / 在途金額讀事件,之後改單或刪列不影響舊報表)。
+ */
+export function transferTicketAmountOf(
+  lines: readonly TransferLineValue[],
+  bookId: string,
+  ticketNo: string,
+): number {
+  const line = lines.find(
+    (item) =>
+      item.bookId === bookId &&
+      (item.mode === TRANSFER_MODE.whole || item.ticketNos.includes(ticketNo)),
+  );
+  return line === undefined ? 0 : transferUnitCostOf(line);
+}
+
+/**
  * 收貨店(付款方)的先填值:[付款](`out`)= 已點收的批購金額 − 已付淨額;
  * [收到退款](`in`)= 已付淨額 − 已點收的批購金額;最少 0(≤ 0 停用)。
  */

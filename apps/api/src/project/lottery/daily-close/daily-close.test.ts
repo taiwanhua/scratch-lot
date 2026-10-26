@@ -1255,7 +1255,17 @@ describe("日結與存銀行(GraphQL 端點 + 真 MongoDB)", () => {
     now("23", "10:00");
     const id = await submitOk(lead, dailyDraftOf(store.orgId, 0));
     await decideOn(world, manager, id, "RETURN");
-    expect(await checkoutOf(id)).toMatchObject({ status: "returned" });
+    // 第一次送出的時間與那一次的快照(記退回時間;營運報表依期末那一刻有效的那一次算)
+    expect(await checkoutOf(id)).toMatchObject({
+      status: "returned",
+      firstSubmittedAt: taipei("23", "10:00"),
+      attempts: [
+        expect.objectContaining({
+          submittedAt: taipei("23", "10:00"),
+          returnedAt: taipei("23", "10:00"),
+        }),
+      ],
+    });
 
     // 退回期間:有一班送出交班;已退回的日結擋住新的日結
     const later = await closedShift(

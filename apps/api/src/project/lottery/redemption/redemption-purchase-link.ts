@@ -81,7 +81,10 @@ export class RedemptionPurchaseLink {
     return null;
   }
 
-  /** 勾選的 → 已送兌;這張單之前勾、這次沒勾的 → 店內持有。被別人搶先撤銷 / 勾走 → 拋錯(交易回復)。 */
+  /**
+   * 勾選的 → 已送兌(記送兌歷程);這張單之前勾、這次沒勾的 → 店內持有(歷程記回到店內持有的時間)。
+   * 重送時已是這張單送兌的不動(送兌時間不改寫)。被別人搶先撤銷 / 勾走 → 拋錯(交易回復)。
+   */
   async markSent(
     session: ClientSession | undefined,
     ref: RedemptionPurchaseRef,
@@ -92,66 +95,55 @@ export class RedemptionPurchaseLink {
       const id = toId(row.redemptionId);
       return id === null ? [] : [id];
     });
-    await this.redemptions.updateMany(
-      reader,
-      {
-        tenantId: ref.tenantId,
-        purchaseSubmissionId: ref.submissionId,
-        status: REDEMPTION_STATUS.sent,
-        _id: { $nin: ids },
-      },
-      {
-        $set: {
-          status: REDEMPTION_STATUS.inStore,
-          purchaseSubmissionId: null,
-          sentAt: null,
-        },
-        $inc: { version: 1 },
-      },
-      { session },
-    );
+    const now = new Date();
+    await this.releaseWhere(session, reader, now, {
+      tenantId: ref.tenantId,
+      purchaseSubmissionId: ref.submissionId,
+      status: REDEMPTION_STATUS.sent,
+      _id: { $nin: ids },
+    });
     const unique = [...new Map(ids.map((id) => [String(id), id])).values()];
     if (unique.length === 0) {
       return;
     }
-    const sentAt = new Date();
-    // 一次條件更新(店內持有、或已是這張單送兌的);寫到的筆數不符 = 有幾筆被別人搶先撤銷 / 勾走
-    const modified = await this.redemptions.updateMany(
+    // 一次條件更新(店內持有的);已是這張單送兌的不動
+    await this.redemptions.updateMany(
       reader,
       {
         _id: { $in: unique },
         tenantId: ref.tenantId,
-        $or: [
-          { status: REDEMPTION_STATUS.inStore },
-          {
-            status: REDEMPTION_STATUS.sent,
-            purchaseSubmissionId: ref.submissionId,
-          },
-        ],
+        status: REDEMPTION_STATUS.inStore,
       },
       {
         $set: {
           status: REDEMPTION_STATUS.sent,
           purchaseSubmissionId: ref.submissionId,
-          sentAt,
+          sentAt: now,
+        },
+        $push: {
+          sentHistory: {
+            sentAt: now,
+            releasedAt: null,
+            purchaseSubmissionId: ref.submissionId,
+          },
         },
         $inc: { version: 1 },
       },
       { session },
     );
-    if (modified === unique.length) {
-      return;
-    }
+    // 寫完應該全部是這張單送兌的;不是 = 有幾筆被別人搶先撤銷 / 勾走
     const sentRows = await this.redemptions.findMany(
       reader,
       {
         _id: { $in: unique },
         status: REDEMPTION_STATUS.sent,
         purchaseSubmissionId: ref.submissionId,
-        sentAt,
       },
       { select: "_id", session },
     );
+    if (sentRows.length === unique.length) {
+      return;
+    }
     const written = new Set(sentRows.map((row) => String(row._id)));
     const missed = unique.find((id) => !written.has(String(id))) ?? unique[0];
     throw validationError(
@@ -161,28 +153,45 @@ export class RedemptionPurchaseLink {
     );
   }
 
-  /** 這張單勾的全部回到「店內持有」。 */
+  /** 這張單勾的全部回到「店內持有」(送兌歷程記回到店內持有的時間)。 */
   async release(
     session: ClientSession | undefined,
     ref: RedemptionPurchaseRef,
   ): Promise<void> {
     const reader = await this.readerOf(ref.tenantId);
+    await this.releaseWhere(session, reader, new Date(), {
+      tenantId: ref.tenantId,
+      purchaseSubmissionId: ref.submissionId,
+      status: REDEMPTION_STATUS.sent,
+    });
+  }
+
+  private async releaseWhere(
+    session: ClientSession | undefined,
+    reader: OperatorContext,
+    at: Date,
+    filter: Record<string, unknown>,
+  ): Promise<void> {
+    // 舊資料沒有送兌歷程:先補空陣列(陣列篩選要欄位存在)
     await this.redemptions.updateMany(
       reader,
-      {
-        tenantId: ref.tenantId,
-        purchaseSubmissionId: ref.submissionId,
-        status: REDEMPTION_STATUS.sent,
-      },
+      { ...filter, sentHistory: { $exists: false } },
+      { $set: { sentHistory: [] } },
+      { session },
+    );
+    await this.redemptions.updateMany(
+      reader,
+      filter,
       {
         $set: {
           status: REDEMPTION_STATUS.inStore,
           purchaseSubmissionId: null,
           sentAt: null,
+          "sentHistory.$[open].releasedAt": at,
         },
         $inc: { version: 1 },
       },
-      { session },
+      { session, arrayFilters: [{ "open.releasedAt": null }] },
     );
   }
 }

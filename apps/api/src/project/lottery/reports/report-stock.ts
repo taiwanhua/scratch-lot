@@ -5,12 +5,9 @@ import {
   TICKET_EVENT_TYPE,
   TICKET_LOCATION_KIND,
   TICKET_STATUS,
-  TRANSFER_MODE,
   TRANSFER_MODULE_KEY,
   type TicketStatus,
   transferHeaderOf,
-  transferLinesOf,
-  transferUnitCostOf,
 } from "@repo/domain/project/lottery";
 
 import { FormSubmissionsRepository } from "../../../database/database.module";
@@ -124,10 +121,12 @@ export interface OutboundTicket {
   refId: Types.ObjectId;
   at: Date;
   sign: 1 | -1;
-  /** 這張的調貨金額(調貨單那一列的批購金額 ÷ 張數) */
+  /** 這張的調貨金額(出貨當時記在「調出」事件上的快照) */
   amount: number;
   /** 這張調出前的單張成本 */
   cost: number;
+  /** 在途中被刪掉、變待查的(調出反向,同時算新增待查) */
+  lost: boolean;
 }
 
 interface ReceiptRow {
@@ -147,16 +146,15 @@ interface TransferEventRow {
   refId: Types.ObjectId;
   type: string;
   at: Date;
+  amount: number;
   cost: number | null;
   from: StateSnapshot | null;
   to: StateSnapshot;
 }
 
-/** 調貨單:出貨店、每張的調貨金額(整本 = 本;選張 = 本 + 張號)。 */
+/** 調貨單:出貨店。 */
 interface TransferDoc {
   fromBranchId: string | null;
-  wholeUnit: Map<string, number>;
-  partialUnit: Map<string, number>;
 }
 
 const RECEIPT_SELECT =
@@ -365,7 +363,8 @@ export class ReportStock {
 
   /**
    * 調出:這家店是**出貨店**的調貨單,期間內出貨(「調出」事件:庫存 / 檯面 → 在途)的張 +;期間內回到出貨店的
-   * (駁回、作廢:在途或已點收的張寫「調入」回出貨店)−。收貨店作廢時寫的「調出」不算(收貨店的調入會反向算回)。
+   * (駁回、作廢:在途或已點收的張寫「調入」回出貨店)與在途中被刪掉變待查的 −。收貨店作廢時寫的「調出」不算
+   * (收貨店的調入會反向算回)。調貨金額一律用出貨那一筆「調出」事件記的快照(之後改單、刪列不影響舊報表)。
    */
   async outboundOf(
     reader: OperatorContext,
@@ -376,19 +375,23 @@ export class ReportStock {
     const rows = (await this.events.findMany(
       reader,
       {
-        refType: "transfer",
         at: { $gte: from, $lt: to },
+        orgId,
         $or: [
-          { type: TICKET_EVENT_TYPE.transferOut, orgId },
+          { type: TICKET_EVENT_TYPE.transferOut, refType: "transfer" },
           {
             type: TICKET_EVENT_TYPE.transferIn,
-            orgId,
+            refType: "transfer",
+            "from.locationKind": TICKET_LOCATION_KIND.inTransit,
+          },
+          {
+            type: TICKET_EVENT_TYPE.investigate,
             "from.locationKind": TICKET_LOCATION_KIND.inTransit,
           },
         ],
       },
       {
-        select: "ticketId bookId refId type at cost from to",
+        select: "ticketId bookId refId type at amount cost from to",
         sort: { at: 1, _id: 1 },
       },
     )) as unknown as TransferEventRow[];
@@ -397,31 +400,37 @@ export class ReportStock {
         row.type === TICKET_EVENT_TYPE.transferOut &&
         isOnHandAt(row.from, orgId),
     );
-    const returned = rows.filter(
+    const back = rows.filter(
       (row) =>
-        row.type === TICKET_EVENT_TYPE.transferIn && isOnHandAt(row.to, orgId),
+        (row.type === TICKET_EVENT_TYPE.transferIn &&
+          isOnHandAt(row.to, orgId)) ||
+        (row.type === TICKET_EVENT_TYPE.investigate &&
+          row.from?.orgId.equals(orgId) === true),
     );
-    const all = [...shipped, ...returned];
+    const all = [...shipped, ...back];
     if (all.length === 0) {
       return [];
     }
-    const docs = await this.transferDocsOf(
-      reader,
-      all.map((row) => row.refId),
-    );
-    const facts = await this.ticketFactsOf(
-      reader,
-      all.map((row) => row.ticketId),
-    );
-    // 作廢回到出貨店的張:原成本用點收記的調入前成本(在途退回的,事件前就是出貨店的成本)
-    const receiptCost = await this.receiptCostsOf(
-      reader,
-      returned.map((row) => row.refId),
-    );
+    const [docs, ships, receiptCost, facts] = await Promise.all([
+      this.transferDocsOf(
+        reader,
+        all.map((row) => row.refId),
+      ),
+      this.shipsOf(reader, orgId, back),
+      // 作廢回到出貨店的張:原成本用點收記的調入前成本(在途退回的,事件前就是出貨店的成本)
+      this.receiptCostsOf(
+        reader,
+        back.map((row) => row.refId),
+      ),
+      this.ticketFactsOf(
+        reader,
+        all.map((row) => row.ticketId),
+      ),
+    ]);
     const result: OutboundTicket[] = [];
     for (const [sign, list] of [
       [1, shipped],
-      [-1, returned],
+      [-1, back],
     ] as const) {
       for (const row of list) {
         const doc = docs.get(String(row.refId));
@@ -435,24 +444,22 @@ export class ReportStock {
           refId: row.refId,
           at: row.at,
           sign,
-          amount: unitAmountOf(
-            doc,
-            row.bookId,
-            facts.get(String(row.ticketId))?.ticketNo,
-          ),
+          // 反向的那一筆用出貨那一筆記的金額
+          amount: sign === 1 ? row.amount : (ships(row)?.amount ?? 0),
           // 沒有成本快照的舊事件:用張現況的單張成本
           cost:
             (sign === -1 ? receiptCost.get(key) : undefined) ??
             row.cost ??
             facts.get(String(row.ticketId))?.unitCost ??
             0,
+          lost: row.type === TICKET_EVENT_TYPE.investigate,
         });
       }
     }
     return result;
   }
 
-  /** 在途的張的調貨金額:每張取 `at` 以前最後一筆「調出」的調貨單,依那張單的列算;待標註的扣掉。 */
+  /** 在途的張的調貨金額:每張取 `at` 以前最後一筆「調出」事件記的金額;待標註的扣掉。 */
   async inTransitAmountOf(
     reader: OperatorContext,
     groups: readonly InTransitGroup[],
@@ -472,28 +479,14 @@ export class ReportStock {
         },
       },
       { $sort: { at: -1, _id: -1 } },
-      { $group: { _id: "$ticketId", refId: { $first: "$refId" } } },
-    ])) as { _id: Types.ObjectId; refId: Types.ObjectId }[];
-    const refOf = new Map(lasts.map((row) => [String(row._id), row.refId]));
-    const [docs, facts] = await Promise.all([
-      this.transferDocsOf(
-        reader,
-        lasts.map((row) => row.refId),
-      ),
-      this.ticketFactsOf(reader, ticketIds),
-    ]);
+      { $group: { _id: "$ticketId", amount: { $first: "$amount" } } },
+    ])) as { _id: Types.ObjectId; amount: number }[];
+    const amountOf = new Map(lasts.map((row) => [String(row._id), row.amount]));
     let amount = 0;
     for (const group of groups) {
-      const units = group.ticketIds.map((ticketId) => {
-        const doc = docs.get(String(refOf.get(String(ticketId))));
-        return doc === undefined
-          ? 0
-          : unitAmountOf(
-              doc,
-              group.bookId,
-              facts.get(String(ticketId))?.ticketNo,
-            );
-      });
+      const units = group.ticketIds.map(
+        (ticketId) => amountOf.get(String(ticketId)) ?? 0,
+      );
       const total = units.reduce((sum, value) => sum + value, 0);
       amount +=
         units.length === 0 ? 0 : total - (group.pending * total) / units.length;
@@ -521,6 +514,7 @@ export class ReportStock {
     return rows.map((row) => row._id);
   }
 
+  /** 調貨單的出貨店。 */
   private async transferDocsOf(
     reader: OperatorContext,
     ids: readonly Types.ObjectId[],
@@ -535,26 +529,44 @@ export class ReportStock {
       { select: "values" },
     );
     return new Map(
-      rows.map((row) => {
-        const values = row.values as Record<string, unknown>;
-        const doc: TransferDoc = {
-          fromBranchId: transferHeaderOf(values).fromBranchId,
-          wholeUnit: new Map(),
-          partialUnit: new Map(),
-        };
-        for (const line of transferLinesOf(values)) {
-          const unit = transferUnitCostOf(line);
-          if (line.mode === TRANSFER_MODE.whole) {
-            doc.wholeUnit.set(line.bookId, unit);
-          } else {
-            for (const ticketNo of line.ticketNos) {
-              doc.partialUnit.set(`${line.bookId}|${ticketNo}`, unit);
-            }
-          }
-        }
-        return [String(row._id), doc] as const;
-      }),
+      rows.map((row) => [
+        String(row._id),
+        {
+          fromBranchId: transferHeaderOf(row.values as Record<string, unknown>)
+            .fromBranchId,
+        },
+      ]),
     );
+  }
+
+  /**
+   * 反向的那幾張各自對應的出貨(同一張、同一張調貨單、這家店寫的「調出」,在反向之前最後一筆;一次查)。
+   */
+  private async shipsOf(
+    reader: OperatorContext,
+    orgId: Types.ObjectId,
+    back: readonly TransferEventRow[],
+  ): Promise<(row: TransferEventRow) => TransferEventRow | undefined> {
+    const rows =
+      back.length === 0
+        ? []
+        : ((await this.events.findMany(
+            reader,
+            {
+              orgId,
+              type: TICKET_EVENT_TYPE.transferOut,
+              refType: "transfer",
+              ticketId: { $in: back.map((row) => row.ticketId) },
+            },
+            { select: "ticketId refId at amount", sort: { at: 1, _id: 1 } },
+          )) as unknown as TransferEventRow[]);
+    return (row) =>
+      rows.findLast(
+        (ship) =>
+          ship.ticketId.equals(row.ticketId) &&
+          ship.refId.equals(row.refId) &&
+          ship.at <= row.at,
+      );
   }
 
   /** 張號(選張列找調貨金額)與現況的單張成本(舊事件沒有成本快照時用)。 */
@@ -640,22 +652,6 @@ export class ReportStock {
     }
     return costs;
   }
-}
-
-/** 一張的調貨金額:整本列依本;選張列依本 + 張號;找不到 = 0。 */
-function unitAmountOf(
-  doc: TransferDoc,
-  bookId: Types.ObjectId,
-  ticketNo: string | undefined,
-): number {
-  const key = String(bookId);
-  return (
-    doc.wholeUnit.get(key) ??
-    (ticketNo === undefined
-      ? undefined
-      : doc.partialUnit.get(`${key}|${ticketNo}`)) ??
-    0
-  );
 }
 
 /** 調入、調出依「同一本 + 同一張調貨單」分組(整本調貨扣待標註)。 */

@@ -1733,6 +1733,10 @@ describe("進貨單(規格 8.2、8.3)", () => {
           .collection("lottery_redemptions")
           .findOne({ _id: redemptionId });
         expect(sent?.status).toBe("sent");
+        // 送兌歷程(營運報表判斷期末那一刻是否已送兌)
+        expect(sent?.sentHistory).toEqual([
+          expect.objectContaining({ releasedAt: null }),
+        ]);
         await receiveAll(purchase.id, lines);
         await decideOn({ api } as World, managerA, purchase.id, "APPROVE");
         await reverseAutomatic(purchase.id);
@@ -1755,6 +1759,13 @@ describe("進貨單(規格 8.2、8.3)", () => {
           status: "in_store",
           purchaseSubmissionId: null,
           sentAt: null,
+          // 歷程保留那一段送兌,記回到店內持有的時間(舊報表重跑不變)
+          sentHistory: [
+            expect.objectContaining({
+              sentAt: expect.any(Date),
+              releasedAt: expect.any(Date),
+            }),
+          ],
         });
         const voidedBooks = await db()
           .collection("lottery_books")

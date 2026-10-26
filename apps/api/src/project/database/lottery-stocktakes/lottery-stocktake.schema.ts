@@ -208,6 +208,13 @@ export class LotteryStocktake {
   @Prop({ type: Date, default: null })
   confirmedAt!: Date | null;
 
+  /**
+   * 退回 / 駁回的時間(重送時清成 null):營運報表「期末那一刻沒被駁回」用 —— 期末之後才駁回的,
+   * 舊報表重跑照算(重跑不變;使用者 10/27 定案)。
+   */
+  @Prop({ type: Date, default: null })
+  closedAt!: Date | null;
+
   /** 核准的人(最後核准的審核者;申請人是審核者自動通過時 = 申請人)。 */
   @Prop({ type: OBJECT_ID, default: null })
   confirmedBy!: Types.ObjectId | null;

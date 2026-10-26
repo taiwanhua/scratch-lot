@@ -514,6 +514,20 @@ export class CheckoutService {
       successorId: parseId(draft.successorId),
       submittedBy: submission.createdBy ?? null,
       submittedAt: now,
+      // 第一次送出的時間與每一次送出的快照(營運報表依期末那一刻有效的那一次算;重跑不變)
+      firstSubmittedAt:
+        existing?.firstSubmittedAt ?? existing?.submittedAt ?? now,
+      attempts: [
+        ...(existing?.attempts ?? []),
+        {
+          submittedAt: now,
+          returnedAt: null,
+          difference,
+          stocktakeMode: draft.stocktake.mode,
+          skipReason: stocktake.skip?.reasonLabel ?? null,
+          coveredShiftIds: [],
+        },
+      ],
       confirmedAt: null,
       confirmedBy: null,
       returnedAt: null,
@@ -664,14 +678,31 @@ export class CheckoutService {
     submissionId: Types.ObjectId,
   ): Promise<void> {
     const reader = await tenantBoundaryContext(this.orgs, null, tenantId);
+    const now = this.clock.now();
+    // 舊資料沒有送出快照:先補空陣列(陣列篩選要欄位存在)
+    await this.checkouts.updateMany(
+      reader,
+      {
+        submissionId,
+        status: CHECKOUT_STATUS.pending,
+        attempts: { $exists: false },
+      },
+      { $set: { attempts: [] } },
+      { session },
+    );
     const record = await this.checkouts.findOneAndUpdate(
       reader,
       { submissionId, status: CHECKOUT_STATUS.pending },
       {
-        $set: { status: CHECKOUT_STATUS.returned, returnedAt: this.clock.now() },
+        $set: {
+          status: CHECKOUT_STATUS.returned,
+          returnedAt: now,
+          // 這一次送出的快照記下退回時間(營運報表判斷期末那一刻是否有效)
+          "attempts.$[open].returnedAt": now,
+        },
         $inc: { version: 1 },
       },
-      { session },
+      { session, arrayFilters: [{ "open.returnedAt": null }] },
     );
     if (record?.stocktakeMode === "new") {
       await this.stocktakeService.markStatus(

@@ -430,6 +430,20 @@ export class DailyCloseService {
       successorId: null,
       submittedBy: submission.createdBy ?? null,
       submittedAt: now,
+      // 第一次送出的時間與每一次送出的快照(營運報表依期末那一刻有效的那一次算;重跑不變)
+      firstSubmittedAt:
+        existing?.firstSubmittedAt ?? existing?.submittedAt ?? now,
+      attempts: [
+        ...(existing?.attempts ?? []),
+        {
+          submittedAt: now,
+          returnedAt: null,
+          difference,
+          stocktakeMode: draft.stocktake.mode,
+          skipReason: stocktake.skip?.reasonLabel ?? null,
+          coveredShiftIds: covered.shiftIds,
+        },
+      ],
       confirmedAt: null,
       confirmedBy: null,
       returnedAt: null,

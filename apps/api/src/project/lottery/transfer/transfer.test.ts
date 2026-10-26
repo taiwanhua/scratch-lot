@@ -2134,13 +2134,47 @@ describe("調貨單(規格 8.4、第 9 章)", () => {
             Math.abs(ticket.unitCost - 20) < 1e-9,
         ),
       ).toBe(true);
-      // 收貨店退回、總部原封不動重送:點收紀錄 101 張 vs 單上 100 張,不算「改了已點收的列」
+      // 出貨當時的調貨金額快照記在「調出」事件上(2,000 ÷ 100 = 20)
+      const shippedEvents = await db()
+        .collection("lottery_ticket_events")
+        .find({ bookId: book.bookId, type: "transfer_out" })
+        .toArray();
+      expect(shippedEvents).toHaveLength(101);
+      expect(shippedEvents.every((event) => event.amount === 20)).toBe(true);
+      // 收貨店退回;總部改了已點收的整本列 → 擋下(張數改 50 / 改成選張)
       await decideOn(world(), managerB, id, "RETURN");
-      const row = await current(id);
-      const resubmitted = await call(api, hq.token, SUBMIT_SUBMISSION, {
-        input: { id, expectedEditVersion: row.editVersion },
-      });
-      expect(resubmitted.errors).toBeUndefined();
+      const resubmitWith = async (next: Line[]) => {
+        const row = await current(id);
+        const saved = await call<{
+          saveFormDraft: { submission: { editVersion: number } };
+        }>(api, hq.token, SAVE_SUBMISSION, {
+          input: {
+            id,
+            expectedEditVersion: row.editVersion,
+            values: { ...header(), lines: next },
+          },
+        });
+        const result = await call(api, hq.token, SUBMIT_SUBMISSION, {
+          input: {
+            id,
+            expectedEditVersion:
+              saved.data?.saveFormDraft.submission.editVersion,
+          },
+        });
+        return result.errors ? reasonOf(extensionsOf(result)) : null;
+      };
+      const [line] = lines;
+      if (line === undefined) throw new Error("no line");
+      expect(await resubmitWith([{ ...line, tickets: 50 }])).toBe(
+        "TRANSFER_RECEIVED_ROW_CHANGED",
+      );
+      expect(
+        await resubmitWith([
+          { ...line, mode: "partial", ticket_nos: "001-100", amount: 2000 },
+        ]),
+      ).toBe("TRANSFER_RECEIVED_ROW_CHANGED");
+      // 原封不動重送:點收紀錄 101 張 vs 單上 100 張(標準張數),不算「改了已點收的列」
+      expect(await resubmitWith(lines)).toBeNull();
       await ship(id);
       await record(managerB, id, "receiver", "out", 2000);
       await record(managerA, id, "shipper", "in", 2000);

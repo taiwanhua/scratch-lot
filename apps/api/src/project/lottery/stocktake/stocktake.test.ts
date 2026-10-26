@@ -1443,8 +1443,10 @@ describe("盤點(GraphQL 端點 + 真 MongoDB)", () => {
     ]);
     const rejected = await submitOk(clerkA, draft);
     await decideOn(world, manager, rejected.id, "REJECT");
+    // 記下駁回時間(營運報表「期末那一刻沒被駁回」用)
     expect(await stocktakeOf(rejected.id)).toMatchObject({
       status: "rejected",
+      closedAt: expect.any(Date),
     });
     expect(await statusOf(bookId, "005")).toBe("sold");
     expect(await expectedOfCounter()).toBe(5200);

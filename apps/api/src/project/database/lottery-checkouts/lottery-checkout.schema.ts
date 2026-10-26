@@ -52,7 +52,36 @@ export interface CheckoutPendingImpact {
   amount: number;
 }
 
+/**
+ * 一次送出的快照(退回後再送出會改寫結帳單本身,這裡留下每一次的樣子):營運報表依「期末那一刻有效的那一次」
+ * 算差額、盤點方式與涵蓋的班(重跑舊報表數字不變;使用者 10/27 定案)。
+ */
+export interface CheckoutAttempt {
+  submittedAt: Date;
+  /** 這一次被退回 / 撤回的時間;還沒退回 = null。 */
+  returnedAt: Date | null;
+  difference: number;
+  stocktakeMode: CheckoutStocktakeMode;
+  skipReason: string | null;
+  /** 日結:這一次涵蓋計算的班。 */
+  coveredShiftIds: Types.ObjectId[];
+}
+
 const OBJECT_ID = MongooseSchema.Types.ObjectId;
+
+const ATTEMPT_TYPE = {
+  _id: false,
+  submittedAt: { type: Date, required: true },
+  returnedAt: { type: Date, default: null },
+  difference: { type: Number, required: true },
+  stocktakeMode: {
+    type: String,
+    enum: CHECKOUT_STOCKTAKE_MODES,
+    required: true,
+  },
+  skipReason: { type: String, default: null },
+  coveredShiftIds: { type: [OBJECT_ID], default: [] },
+};
 
 const ENTRY_TYPE = {
   _id: false,
@@ -178,6 +207,14 @@ export class LotteryCheckout {
 
   @Prop({ type: Date, required: true })
   submittedAt!: Date;
+
+  /** 第一次送出的時間(退回後再送出不改寫;營運報表依它判斷屬於哪段期間)。 */
+  @Prop({ type: Date, default: null })
+  firstSubmittedAt!: Date | null;
+
+  /** 每一次送出的快照(依時間;最後一筆 = 現在這一次)。 */
+  @Prop({ type: [ATTEMPT_TYPE], default: [] })
+  attempts!: CheckoutAttempt[];
 
   /** 核准完成(已確認)的時間與人。 */
   @Prop({ type: Date, default: null })

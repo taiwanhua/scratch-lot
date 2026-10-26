@@ -428,7 +428,7 @@ export class OperationsReportService {
         orgId: period.orgId,
         redeemedAt: { $gte: period.from, $lt: period.to },
       },
-      { select: "prizeAmount status sentAt revokedAt" },
+      { select: "prizeAmount status sentAt revokedAt sentHistory" },
     );
     const result = {
       valid: qty(),
@@ -443,7 +443,10 @@ export class OperationsReportService {
         continue;
       }
       add(result.valid, row.prizeAmount);
-      add(before(row.sentAt) ? result.sent : result.inStore, row.prizeAmount);
+      add(
+        isSentAt(row, period.to) ? result.sent : result.inStore,
+        row.prizeAmount,
+      );
     }
     return result;
   }
@@ -470,32 +473,45 @@ export class OperationsReportService {
             "type from to amount postCloseOf attributedShiftId occurredAt",
         },
       ),
+      // 依第一次送出的時間歸期間(退回後再送出不改寫;舊資料沒有就用送出時間)
       this.checkouts.findMany(
         reader,
-        { orgId, submittedAt: { $gte: from, $lt: to } },
         {
-          select:
-            "type status shiftId difference stocktakeMode skipReason skipReasonKey confirmedAt returnedAt",
+          orgId,
+          $or: [
+            { firstSubmittedAt: { $gte: from, $lt: to } },
+            { firstSubmittedAt: null, submittedAt: { $gte: from, $lt: to } },
+          ],
         },
+        { select: CHECKOUT_SELECT },
       ),
       this.stocktakes.findMany(
         reader,
         {
           orgId,
           submittedAt: { $gte: from, $lt: to },
-          status: { $ne: STOCKTAKE_STATUS.rejected },
+          // 期末那一刻還沒被駁回(之後才駁回的照算)
+          $or: [
+            { status: { $ne: STOCKTAKE_STATUS.rejected } },
+            { closedAt: { $gte: to } },
+          ],
           "summary.uncountedCount": { $gt: 0 },
         },
         { select: "summary" },
       ),
     ]);
-    // 期末那一刻有效的結帳單:待審核或已核准;期末前已退回、還沒重送的不算
-    const checkouts = submitted.filter((row) => isValidAt(row, to));
+    // 期末那一刻有效的那一次送出:待審核或已核准;期末前已退回、還沒重送的不算
+    const checkouts = submitted.flatMap((row) => {
+      const attempt = attemptAt(row, to);
+      return attempt === null ? [] : [{ row, attempt }];
+    });
     const shiftCheckouts = checkouts.filter(
-      (row) => row.type === CHECKOUT_TYPE.shift && row.shiftId !== null,
+      ({ row }) => row.type === CHECKOUT_TYPE.shift && row.shiftId !== null,
     );
-    const dailies = checkouts.filter((row) => row.type === CHECKOUT_TYPE.daily);
-    const shiftIds = shiftCheckouts.flatMap((row) =>
+    const dailies = checkouts.filter(
+      ({ row }) => row.type === CHECKOUT_TYPE.daily,
+    );
+    const shiftIds = shiftCheckouts.flatMap(({ row }) =>
       row.shiftId === null ? [] : [row.shiftId],
     );
     const [recordedRows, covering] = await Promise.all([
@@ -507,11 +523,12 @@ export class OperationsReportService {
             {
               orgId,
               type: CHECKOUT_TYPE.daily,
-              coveredShiftIds: { $in: shiftIds },
-              // 期末那一刻已送出的日結才算涵蓋(之後才日結的,重跑舊報表仍是沒被涵蓋)
-              submittedAt: { $lt: to },
+              $or: [
+                { coveredShiftIds: { $in: shiftIds } },
+                { "attempts.coveredShiftIds": { $in: shiftIds } },
+              ],
             },
-            { select: "coveredShiftIds status returnedAt" },
+            { select: CHECKOUT_SELECT },
           ),
     ]);
     const shiftInfo = await this.shiftInfoOf(reader, [
@@ -548,16 +565,20 @@ export class OperationsReportService {
       ...(await this.priorBankReversals(scope, period, closedAt)),
     );
 
+    // 期末那一刻已送出、有效的那一次日結涵蓋的班(之後才日結的,重跑舊報表仍是沒被涵蓋)
     const covered = new Set(
-      covering
-        .filter((row) => isValidAt(row, to))
-        .flatMap((row) => row.coveredShiftIds.map(String)),
+      covering.flatMap(
+        (row) =>
+          attemptAt(row as unknown as CheckoutRow, to)?.coveredShiftIds.map(
+            String,
+          ) ?? [],
+      ),
     );
     const uncovered = shiftIds.filter((id) => !covered.has(String(id)));
     const skipped = new Map<string, number>();
-    for (const row of checkouts) {
-      if (row.stocktakeMode === "skip") {
-        const reason = row.skipReason ?? row.skipReasonKey ?? "";
+    for (const { attempt } of checkouts) {
+      if (attempt.stocktakeMode === "skip") {
+        const reason = attempt.skipReason ?? "";
         skipped.set(reason, (skipped.get(reason) ?? 0) + 1);
       }
     }
@@ -565,15 +586,18 @@ export class OperationsReportService {
       cash: {
         shiftCount: shiftCheckouts.length,
         pendingShiftCount: shiftCheckouts.filter(
-          (row) => !(row.confirmedAt !== null && row.confirmedAt < to),
+          ({ row }) => !(row.confirmedAt !== null && row.confirmedAt < to),
         ).length,
         shiftDifference: shiftCheckouts.reduce(
-          (sum, row) => sum + row.difference,
+          (sum, { attempt }) => sum + attempt.difference,
           0,
         ),
         postClose: postCloseByCategory(recordedRows),
         dailyCloseCount: dailies.length,
-        vaultDifference: dailies.reduce((sum, row) => sum + row.difference, 0),
+        vaultDifference: dailies.reduce(
+          (sum, { attempt }) => sum + attempt.difference,
+          0,
+        ),
         movements: movementsOf(movements),
       },
       notes: {
@@ -863,17 +887,87 @@ export class OperationsReportService {
 }
 
 /**
- * 結帳單在 `at` 那一刻有效:待審核或已核准;已退回的,退回時間在那一刻以後才算(那一刻還是待審核)。
- * 退回後重送會改寫送出時間,所以「之後才重送」的不在原本那段期間裡。
+ * 兌獎在 `at` 那一刻已送兌:送兌歷程裡有一段在 `at` 以前送出、`at` 那一刻還沒回到店內持有;
+ * 舊資料沒有歷程 → 現在已送兌而且送兌時間早於 `at`。
  */
-function isValidAt(
-  row: { status: string; returnedAt?: Date | null },
+function isSentAt(
+  row: {
+    status: string;
+    sentAt: Date | null;
+    sentHistory?: { sentAt: Date; releasedAt: Date | null }[];
+  },
   at: Date,
 ): boolean {
-  if (row.status !== CHECKOUT_STATUS.returned) {
-    return true;
+  const history = row.sentHistory ?? [];
+  if (history.length === 0) {
+    return (
+      row.status === REDEMPTION_STATUS.sent &&
+      row.sentAt !== null &&
+      row.sentAt < at
+    );
   }
-  return row.returnedAt != null && row.returnedAt >= at;
+  return history.some(
+    (entry) =>
+      entry.sentAt < at &&
+      (entry.releasedAt === null || entry.releasedAt >= at),
+  );
+}
+
+/** 結帳單讀的欄位(期末那一刻有效的那一次送出)。 */
+const CHECKOUT_SELECT =
+  "type status shiftId difference stocktakeMode skipReason skipReasonKey confirmedAt returnedAt submittedAt firstSubmittedAt attempts coveredShiftIds";
+
+interface CheckoutAttemptRow {
+  submittedAt: Date;
+  returnedAt: Date | null;
+  difference: number;
+  stocktakeMode: string;
+  skipReason: string | null;
+  coveredShiftIds: Types.ObjectId[];
+}
+
+interface CheckoutRow {
+  status: string;
+  submittedAt: Date;
+  returnedAt?: Date | null;
+  difference: number;
+  stocktakeMode: string;
+  skipReason: string | null;
+  skipReasonKey: string | null;
+  coveredShiftIds?: Types.ObjectId[];
+  attempts?: CheckoutAttemptRow[];
+}
+
+/**
+ * 結帳單在 `at` 那一刻有效的那一次送出(使用者 10/27 定案:重跑舊報表數字不變):`at` 以前最後一次送出,
+ * 而且那一次沒在 `at` 以前被退回(待審核或已核准);沒有 = null。差額、盤點方式、日結涵蓋的班都照那一次。
+ * 舊資料沒有送出快照:照現在的欄位(已退回且退回時間早於 `at` → 無效)。
+ */
+function attemptAt(row: CheckoutRow, at: Date): CheckoutAttemptRow | null {
+  const attempts = row.attempts ?? [];
+  if (attempts.length === 0) {
+    const returned =
+      row.status === CHECKOUT_STATUS.returned &&
+      !(row.returnedAt != null && row.returnedAt >= at);
+    return row.submittedAt >= at || returned
+      ? null
+      : {
+          submittedAt: row.submittedAt,
+          returnedAt: row.returnedAt ?? null,
+          difference: row.difference,
+          stocktakeMode: row.stocktakeMode,
+          skipReason: row.skipReason ?? row.skipReasonKey,
+          coveredShiftIds: row.coveredShiftIds ?? [],
+        };
+  }
+  const last = attempts.findLast((attempt) => attempt.submittedAt < at);
+  if (
+    last === undefined ||
+    (last.returnedAt !== null && last.returnedAt < at)
+  ) {
+    return null;
+  }
+  return last;
 }
 
 /**

@@ -89,6 +89,30 @@ export class LotteryRedemption {
   @Prop({ type: Date, default: null })
   sentAt!: Date | null;
 
+  /**
+   * 送兌的歷程(每次勾進進貨單一筆;退回 / 駁回 / 作廢 / 沒勾回到店內持有時記 `releasedAt`):營運報表判斷
+   * 期末那一刻是不是已送兌(重跑舊報表數字不變;使用者 10/27 定案)。重送同一張單不另記。
+   */
+  @Prop({
+    type: [
+      {
+        _id: false,
+        sentAt: { type: Date, required: true },
+        releasedAt: { type: Date, default: null },
+        purchaseSubmissionId: {
+          type: MongooseSchema.Types.ObjectId,
+          required: true,
+        },
+      },
+    ],
+    default: [],
+  })
+  sentHistory!: {
+    sentAt: Date;
+    releasedAt: Date | null;
+    purchaseSubmissionId: Types.ObjectId;
+  }[];
+
   @Prop({ type: Date, default: null })
   revokedAt!: Date | null;
 

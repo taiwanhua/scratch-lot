@@ -167,9 +167,22 @@ export class OperationsInventory {
     );
 
     const scrap = figures(ofType(TICKET_EVENT_TYPE.scrap, onHandBefore));
-    const newInvestigating = figures(
+    // 新增待查:庫存 → 待查,加上在途中被刪掉變待查的(那幾張的調出在同一天反向算回)
+    const lostInTransit = figuresOf(
+      outboundGroupsOf(
+        outbound.filter((row) => row.lost),
+        -1,
+        (row) => row.cost,
+      ),
+      pendings,
+    );
+    const onHandInvestigating = figures(
       ofType(TICKET_EVENT_TYPE.investigate, onHandBefore),
     );
+    const newInvestigating = {
+      tickets: onHandInvestigating.tickets + lostInTransit.tickets,
+      cost: onHandInvestigating.cost + lostInTransit.cost,
+    };
     const recovered = ofType(TICKET_EVENT_TYPE.recover, onHandAfter);
     const investigateRecovered = figures(
       recovered.filter(

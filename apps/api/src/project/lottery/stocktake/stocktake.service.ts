@@ -460,6 +460,7 @@ export class StocktakeService {
       submittedBy: options.submittedBy,
       submittedAt: this.clock.now(),
       confirmedAt: null,
+      closedAt: null,
       confirmedBy: null,
       lines: built.lines,
       unopenedLines: built.unopenedLines,
@@ -530,7 +531,7 @@ export class StocktakeService {
     await this.stocktakes.findOneAndUpdate(
       reader,
       { submissionId, status: STOCKTAKE_STATUS.pending },
-      { $set: { status }, $inc: { version: 1 } },
+      { $set: { status, closedAt: this.clock.now() }, $inc: { version: 1 } },
       { session },
     );
   }

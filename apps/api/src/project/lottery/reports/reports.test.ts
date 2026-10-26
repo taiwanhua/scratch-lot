@@ -1238,7 +1238,8 @@ describe("輸出報表:營運報表、班次結帳歷史報表(GraphQL 端點 + 
           "transfer_out",
           at("13:00"),
           { status: "unsold", locationKind: "in_transit" },
-          transferRef,
+          // 出貨當時的調貨金額快照(一張 120)
+          { ...transferRef, amount: 120 },
         );
         await event(
           id,
@@ -2113,6 +2114,7 @@ describe("輸出報表:營運報表、班次結帳歷史報表(GraphQL 端點 + 
       from: ReturnType<typeof state> | null,
       to: ReturnType<typeof state>,
       cost: number,
+      amount = 0,
     ) => {
       version += 1;
       return insert(LOTTERY_TICKET_EVENTS_COLLECTION, {
@@ -2127,7 +2129,7 @@ describe("輸出報表:營運報表、班次結帳歷史報表(GraphQL 端點 + 
         from,
         to,
         quantity: 1,
-        amount: 0,
+        amount,
         cost,
         cashEffect: "none",
         cashPointId: null,
@@ -2157,6 +2159,8 @@ describe("輸出報表:營運報表、班次結帳歷史報表(GraphQL 端點 + 
         state(kaohsiung, "stock"),
         state(kaohsiung, "in_transit"),
         90,
+        // 出貨當時的調貨金額快照
+        120,
       );
       await transferEvent(
         ticketId,
@@ -2555,6 +2559,8 @@ describe("輸出報表:營運報表、班次結帳歷史報表(GraphQL 端點 + 
           type: "transfer_out",
           at: taipei("2026-11-06", "10:00"),
           patch: { location: { kind: "in_transit", cashPointId: null } },
+          // 出貨當時的調貨金額快照(20,000 ÷ 100)
+          amount: 200,
           ...ref,
         },
       );
@@ -2685,6 +2691,308 @@ describe("輸出報表:營運報表、班次結帳歷史報表(GraphQL 端點 + 
         endingTickets: 0,
         checkTickets: 0,
         checkCost: 0,
+      });
+    });
+
+    it("重跑舊報表數字不變(審查 R1–R6):之後退回重送結帳 / 日結、送兌退回又重送、駁回盤點單、在途列被刪 → 重跑相同", async () => {
+      const penghu = await createOrg(connection, {
+        name: "澎湖店",
+        parentId: tenant,
+      });
+      counters.set(
+        String(penghu),
+        await insert(LOTTERY_CASH_POINTS_COLLECTION, {
+          orgId: penghu,
+          positionKey: "in-store-counter",
+          name: "澎湖櫃台",
+          order: 1,
+          enabled: true,
+          printerId: null,
+          note: null,
+          moduleKey: "master-data",
+        }),
+      );
+      const day = "2026-11-25";
+      const at = (time: string) => taipei(day, time);
+      const later = "2026-11-26";
+      const next = (time: string) => taipei(later, time);
+      const attempt = (
+        submittedAt: Date,
+        difference: number,
+        coveredShiftIds: Types.ObjectId[] = [],
+      ) => ({
+        submittedAt,
+        returnedAt: null,
+        difference,
+        stocktakeMode: "new",
+        skipReason: null,
+        coveredShiftIds,
+      });
+      // R1:交班結帳期末時待審核(差額 −50)
+      const { shiftId, checkoutId } = await shiftOf({
+        orgId: penghu,
+        openedAt: at("08:00"),
+        closedAt: at("20:00"),
+        openedBy: hq.userId,
+        checkout: {
+          status: "pending",
+          confirmedAt: null,
+          difference: -50,
+          firstSubmittedAt: at("20:00"),
+          attempts: [attempt(at("20:00"), -50)],
+        },
+      });
+      // R2:日結期末前送出(小金庫差額 70),涵蓋那一班
+      await dailyClose(penghu, null, at("21:30"), {
+        status: "pending",
+        confirmedAt: null,
+        difference: 70,
+        coveredShiftIds: [shiftId],
+        firstSubmittedAt: at("21:30"),
+        attempts: [attempt(at("21:30"), 70, [shiftId])],
+      });
+      // R3:兌獎期末前已送兌
+      const purchaseRef = new Types.ObjectId();
+      const sentId = await redemption({
+        orgId: penghu,
+        shiftId,
+        prizeAmount: 500,
+        redeemedAt: at("12:00"),
+        status: "sent",
+        ticketNo: "301",
+        extra: {
+          purchaseSubmissionId: purchaseRef,
+          sentAt: at("13:00"),
+          sentHistory: [
+            {
+              sentAt: at("13:00"),
+              releasedAt: null,
+              purchaseSubmissionId: purchaseRef,
+            },
+          ],
+        },
+      });
+      // R5:盤點單期末待審核、2 本未盤
+      const stocktakeId = await insert(LOTTERY_STOCKTAKES_COLLECTION, {
+        orgId: penghu,
+        type: "shift",
+        status: "pending",
+        scopeCashPointId: null,
+        startedAt: at("14:50"),
+        submittedAt: at("15:00"),
+        closedAt: null,
+        submissionId: new Types.ObjectId(),
+        summary: { books: 3, uncountedCount: 2 },
+        moduleKey: "store",
+      });
+      // R6:整本調貨期末在途(出貨事件記調貨金額快照 200 × 100)
+      const bookId = await purchase(penghu, at("09:00"));
+      const lineValues = transferValues(penghu, yunlin, [
+        {
+          rowId: "r1",
+          book: { id: String(bookId) },
+          mode: { id: "whole" },
+          ticket_nos: "001-101",
+          tickets: 100,
+          amount: 20_000,
+          rate: 100,
+        },
+      ]);
+      const { insertedId: transferId } = await connection
+        .collection("form_submissions")
+        .insertOne({
+          orgId: penghu,
+          tenantId: tenant,
+          moduleKey: "purchasing.transfer",
+          formKey: "transfer",
+          version: 1,
+          values: lineValues,
+          summary: null,
+          status: "reviewing",
+          revision: 1,
+          revisions: [revisionOf(1, lineValues, at("10:00"))],
+          editVersion: 1,
+          touched: [],
+          clientRequestId: String(new Types.ObjectId()),
+          serialNo: "T-0925",
+          submittedAt: at("10:00"),
+          currentInstanceId: null,
+          blocked: false,
+          ...base(),
+        });
+      await apply(
+        { operator: null, crossStoreTenantId: tenant },
+        await ticketsOf(bookId),
+        {
+          type: "transfer_out",
+          at: at("11:00"),
+          patch: { location: { kind: "in_transit", cashPointId: null } },
+          amount: 200,
+          refType: "transfer",
+          refId: transferId,
+        },
+      );
+
+      const before = await storeOn(day, penghu);
+      expect(before.cash).toMatchObject({
+        shiftCount: 1,
+        pendingShiftCount: 1,
+        shiftDifference: -50,
+        dailyCloseCount: 1,
+        vaultDifference: 70,
+      });
+      expect(before.redemption).toMatchObject({
+        sent: { count: 1, amount: 500 },
+      });
+      expect(before.notes).toMatchObject({
+        uncoveredShifts: 0,
+        uncountedStocktakes: 1,
+        uncountedBooks: 2,
+      });
+      expect(before.inventory).toMatchObject({
+        transferOutTickets: 100,
+        transferOutAmount: 20_000,
+        transferGain: 1600,
+        inTransitTickets: 100,
+        inTransitAmount: 20_000,
+        checkTickets: 0,
+        checkCost: 0,
+      });
+
+      // 11/26:各項目照那支 service 實際寫的欄位
+      // R1 結帳單退回(`markReturned`)再重送(重送改寫送出時間與差額、加一次送出)
+      const checkouts = connection.collection(LOTTERY_CHECKOUTS_COLLECTION);
+      await checkouts.updateOne(
+        { _id: checkoutId },
+        {
+          $set: {
+            status: "returned",
+            returnedAt: next("09:00"),
+            "attempts.0.returnedAt": next("09:00"),
+          },
+        },
+      );
+      await checkouts.updateOne(
+        { _id: checkoutId },
+        {
+          $set: {
+            status: "pending",
+            submittedAt: next("10:00"),
+            returnedAt: null,
+            difference: 999,
+            attempts: [
+              { ...attempt(at("20:00"), -50), returnedAt: next("09:00") },
+              attempt(next("10:00"), 999),
+            ],
+          },
+        },
+      );
+      // R2 日結退回再重送(涵蓋的班重算成空的、差額 0)
+      await checkouts.updateOne(
+        { orgId: penghu, type: "daily" },
+        {
+          $set: {
+            status: "returned",
+            returnedAt: next("09:00"),
+            "attempts.0.returnedAt": next("09:00"),
+          },
+        },
+      );
+      await checkouts.updateOne(
+        { orgId: penghu, type: "daily" },
+        {
+          $set: {
+            status: "pending",
+            submittedAt: next("10:00"),
+            returnedAt: null,
+            difference: 0,
+            coveredShiftIds: [],
+            attempts: [
+              {
+                ...attempt(at("21:30"), 70, [shiftId]),
+                returnedAt: next("09:00"),
+              },
+              attempt(next("10:00"), 0),
+            ],
+          },
+        },
+      );
+      // R3 進貨單退回(`release`)、R4 重送(`markSent` 再記一段送兌)
+      const redemptions = connection.collection(LOTTERY_REDEMPTIONS_COLLECTION);
+      await redemptions.updateOne(
+        { _id: sentId },
+        {
+          $set: {
+            status: "in_store",
+            purchaseSubmissionId: null,
+            sentAt: null,
+            "sentHistory.0.releasedAt": next("09:00"),
+          },
+        },
+      );
+      await redemptions.updateOne(
+        { _id: sentId },
+        {
+          $set: {
+            status: "sent",
+            purchaseSubmissionId: purchaseRef,
+            sentAt: next("10:00"),
+            sentHistory: [
+              {
+                sentAt: at("13:00"),
+                releasedAt: next("09:00"),
+                purchaseSubmissionId: purchaseRef,
+              },
+              {
+                sentAt: next("10:00"),
+                releasedAt: null,
+                purchaseSubmissionId: purchaseRef,
+              },
+            ],
+          },
+        },
+      );
+      // R5 盤點單駁回(`markStatus`)
+      await connection
+        .collection(LOTTERY_STOCKTAKES_COLLECTION)
+        .updateOne(
+          { _id: stocktakeId },
+          { $set: { status: "rejected", closedAt: next("09:00") } },
+        );
+      // R6 退回重送、把在途那一列刪掉(單上沒有那一列了;那幾張變待查)
+      await connection
+        .collection("form_submissions")
+        .updateOne(
+          { _id: transferId },
+          { $set: { values: transferValues(penghu, yunlin, []) } },
+        );
+      await apply(
+        { operator: null, crossStoreTenantId: tenant },
+        await ticketsOf(bookId),
+        {
+          type: "investigate",
+          at: next("11:00"),
+          patch: { status: "investigating", responsibleOrgId: penghu },
+          refType: "transfer",
+          refId: transferId,
+        },
+      );
+
+      expect(await storeOn(day, penghu)).toEqual(before);
+      // 變化算在發生那天:調出反向、新增待查,核對 0
+      const nextDay = await storeOn(later, penghu);
+      expect(nextDay.inventory).toMatchObject({
+        transferOutTickets: -100,
+        transferOutAmount: -20_000,
+        newInvestigatingTickets: 100,
+        newInvestigatingCost: 18_400,
+        investigatingTickets: 100,
+        checkTickets: 0,
+        checkCost: 0,
+      });
+      expect(nextDay.cash).toMatchObject({
+        shiftCount: 0,
+        dailyCloseCount: 0,
       });
     });
 

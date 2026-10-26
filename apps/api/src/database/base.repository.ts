@@ -534,12 +534,15 @@ export class BaseRepository<TSchema, TDocument extends RepositoryDocument> {
     operator: OperatorContext,
     filter: RepositoryFilter<TSchema>,
     update: RepositoryUpdate<TSchema>,
-    options: SessionOptions = {},
+    options: UpdateOptions = {},
   ): Promise<number> {
     const shared = await this.prepareUpdate(operator, filter, update, options);
     const { modifiedCount } = await scopeQuery(
       this.model.updateMany({ ...shared.filter }, update, {
         runValidators: true,
+        ...(options.arrayFilters === undefined
+          ? {}
+          : { arrayFilters: options.arrayFilters }),
       }),
       { operator },
     )

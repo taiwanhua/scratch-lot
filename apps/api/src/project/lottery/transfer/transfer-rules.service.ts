@@ -20,6 +20,7 @@ import {
   transferLineAmountOf,
   transferLinesOf,
   transferSettlementProblemOf,
+  transferTicketAmountOf,
 } from "@repo/domain/project/lottery";
 
 import {
@@ -125,6 +126,8 @@ export interface TransferBook {
   gameCode: string;
   bookNo: string;
   status: string;
+  /** 標準張數(整本調貨單上的張數 = 它) */
+  standardTickets: number;
   /** 待標註張數(拆本前還沒標的跳號;實體不存在,整本調貨的張數不算它們) */
   pendingSkipCount: number;
 }
@@ -241,6 +244,59 @@ export class TransferRules {
     return tenantBoundaryContext(this.orgs, null, tenantId);
   }
 
+  /**
+   * 已點收的列被改或刪:列不見了、換了本、批購金額不同;和上一次送出的那一列(方式、張數、張號、金額、率)
+   * 不同;整本列的張數不是標準張數(點收紀錄記這本搬走的全部張,含待標註的跳號,所以比標準張數;
+   * 使用者 10/27 定案甲);選張列的張數不是點收紀錄的張數。
+   */
+  private async receivedRowChanged(
+    reader: OperatorContext,
+    submissionId: Types.ObjectId,
+    lines: readonly TransferLineValue[],
+    receipts: readonly {
+      rowId: string;
+      bookId: Types.ObjectId;
+      purchaseAmount: number;
+      tickets: readonly unknown[];
+    }[],
+  ): Promise<boolean> {
+    if (receipts.length === 0) {
+      return false;
+    }
+    const lineOf = new Map(lines.map((line) => [line.rowId, line]));
+    const doc = await this.submissions.findOne(
+      reader,
+      { _id: submissionId },
+      { select: { revisions: { $slice: -1 } } },
+    );
+    const previous = new Map(
+      transferLinesOf(doc?.revisions.at(-1)?.values ?? {}).map((line) => [
+        line.rowId,
+        line,
+      ]),
+    );
+    const books = await this.booksOf(
+      reader,
+      lines.filter((line) => line.mode === TRANSFER_MODE.whole),
+    );
+    return receipts.some((receipt) => {
+      const line = lineOf.get(receipt.rowId);
+      if (
+        line?.bookId !== String(receipt.bookId) ||
+        line.purchaseAmount !== receipt.purchaseAmount
+      ) {
+        return true;
+      }
+      const before = previous.get(receipt.rowId);
+      if (before !== undefined && !isSameShipment(before, line)) {
+        return true;
+      }
+      return line.mode === TRANSFER_MODE.whole
+        ? line.tickets !== books.get(line.bookId)?.standardTickets
+        : line.tickets !== receipt.tickets.length;
+    });
+  }
+
   /** 這張單已點收的列。 */
   /** 這張單每一張的最近一次「調出」時間(張 id → 時間)。 */
   async shippedAtOf(
@@ -312,6 +368,7 @@ export class TransferRules {
           gameCode: book.gameCode,
           bookNo: book.bookNo,
           status: book.status,
+          standardTickets: book.standardTickets,
           pendingSkipCount: pendingSkipCountOf(
             Number(book.lastTicketNo),
             book.standardTickets,
@@ -529,18 +586,9 @@ export class TransferRules {
     }
     const reader = await this.readerOf(submission.tenantId);
     const receipts = await this.receiptsOf(reader, submission._id);
-    const lineOf = new Map(lines.map((line) => [line.rowId, line]));
-    const changed = receipts.some((receipt) => {
-      const line = lineOf.get(receipt.rowId);
-      // 整本:點收紀錄記這本搬走的全部張(含待標註的),張數比對交給本與金額
-      return (
-        line?.bookId !== String(receipt.bookId) ||
-        (line.mode !== TRANSFER_MODE.whole &&
-          line.tickets !== receipt.tickets.length) ||
-        line.purchaseAmount !== receipt.purchaseAmount
-      );
-    });
-    if (changed) {
+    if (
+      await this.receivedRowChanged(reader, submission._id, lines, receipts)
+    ) {
       return block(
         TRANSFER_REASONS.receivedRowChanged,
         "Received rows cannot be changed or removed",
@@ -805,6 +853,9 @@ export class TransferRules {
     );
     const pending = locked.filter((ticket) => !isInTransit(ticket));
     if (pending.length > 0) {
+      const submission = await this.submissionOf(context);
+      const values = submission.values as Record<string, unknown>;
+      const lines = transferLinesOf(values);
       await this.ledger.applyTicketEvents(
         context.session,
         { operator: null, crossStoreTenantId: tenantId },
@@ -819,12 +870,16 @@ export class TransferRules {
               cashPointId: null,
             },
           },
+          // 這張出貨當時的調貨金額快照(營運報表的調出 / 在途金額讀它;之後改單、刪列不影響舊報表)
+          amount: transferTicketAmountOf(
+            lines,
+            String(ticket.bookId),
+            ticket.ticketNo,
+          ),
           refType: "transfer",
           refId: context.submissionId,
         })),
       );
-      const submission = await this.submissionOf(context);
-      const values = submission.values as Record<string, unknown>;
       const toId = toObjectId(transferHeaderOf(values).toBranchId);
       if (toId !== null) {
         await context.notify({
