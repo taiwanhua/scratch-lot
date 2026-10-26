@@ -10,6 +10,7 @@ import {
   TICKET_EVENT_TYPE,
   TICKET_LOCATION_KIND,
   TICKET_STATUS,
+  pendingSkipCountOf,
   serializeStocktakeDraft,
 } from "@repo/domain/project/lottery";
 
@@ -375,7 +376,16 @@ export class StocktakeQueryService {
         gameId: book.gameId,
         gameCode: book.gameCode,
         bookNo: book.bookNo,
-        ticketCount: countOf.get(String(book._id)) ?? 0,
+        // 待標註的跳號(拆本前還沒標的)實體不存在,不算張數(使用者 10/27 定案甲)
+        ticketCount: Math.max(
+          0,
+          (countOf.get(String(book._id)) ?? 0) -
+            pendingSkipCountOf(
+              Number(book.lastTicketNo),
+              book.standardTickets,
+              book.skippedTicketNos.length,
+            ),
+        ),
       }))
       .toSorted(
         (a, b) =>

@@ -164,6 +164,7 @@ export const sampleInvestigations =
       refSerialNo,
       at,
       cost,
+      ticketCount: count,
       tickets: Array.from({ length: count }, (_, index) =>
         inventoryTicket(formatTicketNo(index + 1), status, {
           id: `${bookId}-t-${String(index + 1)}`,

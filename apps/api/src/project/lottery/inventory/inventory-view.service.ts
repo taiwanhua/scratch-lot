@@ -35,6 +35,7 @@ import {
 import type { TicketStateSnapshot } from "../../database/lottery-inventory/lottery-ticket-event.schema";
 import { LotteryShiftsRepository } from "../../database/lottery-store/lottery-shifts.repository";
 import { parseId } from "../accounts/accounts-util";
+import { withoutPendingSkips } from "../tickets/books.service";
 import { notFoundError } from "../tickets/inventory-error";
 import type {
   LotteryInventoryBooksInput,
@@ -368,6 +369,27 @@ export class InventoryViewService {
           continue;
         }
         const ticketIds = new Set(tickets.map((ticket) => String(ticket._id)));
+        // 未拆整本待查 / 遺失:待標註的跳號實體不存在,張數與成本都不算(使用者 10/27 定案甲)
+        const pending =
+          book === undefined
+            ? 0
+            : pendingSkipCountOf(
+                Number(book.lastTicketNo),
+                book.standardTickets,
+                book.skippedTicketNos.length,
+              );
+        const ticketCount =
+          book === undefined
+            ? tickets.length
+            : withoutPendingSkips(
+                tickets.length,
+                book.standardTickets,
+                pending,
+              );
+        const rawCost = tickets.reduce(
+          (sum, ticket) => sum + ticket.unitCost,
+          0,
+        );
         const latest = events.find((event) =>
           ticketIds.has(String(event.ticketId)),
         );
@@ -386,10 +408,9 @@ export class InventoryViewService {
               : (names.serials.get(String(latest.refId)) ?? null),
           at: latest?.at ?? null,
           cost: grant.canShowCost
-            ? Math.round(
-                tickets.reduce((sum, ticket) => sum + ticket.unitCost, 0),
-              )
+            ? Math.round((rawCost * ticketCount) / tickets.length)
             : null,
+          ticketCount,
           tickets: tickets.map((ticket) =>
             this.ticketModel(operator, ticket, names),
           ),
@@ -470,18 +491,23 @@ export class InventoryViewService {
     return records.map((record) => {
       const snapshots = snapshotsOf.get(String(record._id)) ?? [];
       const game = gameOf.get(String(record.gameId));
-      const holdings = [...holdingsOf(snapshots)]
-        .map(([orgId, count]) => ({
-          org: { id: orgId, name: orgNames.get(orgId) ?? "" },
-          count,
-        }))
-        .toSorted((a, b) => b.count - a.count);
       const lastTicketNo = Number(record.lastTicketNo);
       const pendingSkipCount = pendingSkipCountOf(
         lastTicketNo,
         record.standardTickets,
         record.skippedTicketNos.length,
       );
+      // 待標註的跳號(拆本前還沒標的)不算持有與總張數(使用者 10/27 定案甲)
+      const holdings = [...holdingsOf(snapshots)]
+        .map(([orgId, count]) => ({
+          org: { id: orgId, name: orgNames.get(orgId) ?? "" },
+          count: withoutPendingSkips(
+            count,
+            record.standardTickets,
+            pendingSkipCount,
+          ),
+        }))
+        .toSorted((a, b) => b.count - a.count);
       return {
         id: String(record._id),
         bookKey: record.bookKey,
@@ -496,9 +522,12 @@ export class InventoryViewService {
         org: mustRef(record.orgId, orgNames),
         holdings,
         remainingCount: remainingCountOf(snapshots, pendingSkipCount),
-        totalCount: snapshots.filter(
-          (ticket) => ticket.status !== TICKET_STATUS.skipped,
-        ).length,
+        totalCount: withoutPendingSkips(
+          snapshots.filter((ticket) => ticket.status !== TICKET_STATUS.skipped)
+            .length,
+          record.standardTickets,
+          pendingSkipCount,
+        ),
         pendingSkipCount,
         requiredSkipCount: requiredSkipCountOf(
           lastTicketNo,

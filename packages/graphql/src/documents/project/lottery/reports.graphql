@@ -68,40 +68,59 @@ query LotteryOperationsReport($input: LotteryOperationsReportInput!) {
         }
       }
       inventory {
+        openingTickets
+        openingCost
         purchaseBooks
+        purchaseVoidBooks
         purchaseTickets
         purchaseCost
         transferInTickets
         transferInAmount
         transferOutTickets
+        transferOutCost
         transferOutAmount
         transferGain
+        salesTickets
+        salesCost
         scrapTickets
         scrapCost
-        lostTickets
-        lostCost
-        recoveredTickets
-        recoveredCost
-        skippedTickets
+        newInvestigatingTickets
+        newInvestigatingCost
+        investigateRecoveredTickets
+        investigateRecoveredCost
+        lostRecoveredTickets
+        lostRecoveredCost
         endingTickets
         endingCost
+        checkTickets
+        checkCost
+        inTransitTickets
+        inTransitAmount
+        investigatingTickets
+        investigatingCost
         investigatingBooks
+        investigatingBookIds
+        lostTickets
+        lostCost
+        skippedTickets
       }
       cash {
         shiftCount
+        pendingShiftCount
         shiftDifference
         postClose {
           category
           count
           amount
         }
-        refund
-        transferExpense
-        transferIncome
-        deposit
-        bankDeposit
         dailyCloseCount
         vaultDifference
+        movements {
+          type
+          count
+          drawer
+          vault
+        }
       }
       bankAccounts {
         accountId
@@ -109,16 +128,19 @@ query LotteryOperationsReport($input: LotteryOperationsReportInput!) {
         shared
         types {
           type
-          direction
-          amount
+          inAmount
+          outAmount
+          reversalCount
         }
         endingBalance
       }
       outstanding {
-        purchaseToPay
-        purchaseToRefund
-        transferToReceive
-        transferToPay
+        items {
+          kind
+          count
+          amount
+          serialNos
+        }
       }
       notes {
         skippedStocktakes {
@@ -128,6 +150,7 @@ query LotteryOperationsReport($input: LotteryOperationsReportInput!) {
         uncountedStocktakes
         uncountedBooks
         uncoveredShifts
+        uncoveredShiftLabels
         priorPeriodCount
         priorPeriodAmount
         openMonths

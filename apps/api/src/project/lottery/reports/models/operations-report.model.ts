@@ -96,7 +96,7 @@ export class LotteryOperationsSalesModel {
   games!: LotteryOperationsGameSalesModel[];
 }
 
-/** 區塊 3 兌獎:有效的(扣掉已撤銷)與已撤銷另列。 */
+/** 區塊 3 兌獎:期間內登記的,狀態看期末那一刻(有效 = 期末時還沒撤銷;其中店內持有 / 已送兌;已撤銷另列)。 */
 @ObjectType("LotteryOperationsRedemption")
 export class LotteryOperationsRedemptionModel {
   @Field(() => LotteryReportQtyModel)
@@ -112,35 +112,66 @@ export class LotteryOperationsRedemptionModel {
   revoked!: LotteryReportQtyModel;
 }
 
-/** 區塊 4 庫存異動。成本欄沒有 `reports.show-cost` = null。 */
+/**
+ * 區塊 4 庫存異動(期初 + 進貨 + 調入 − 調出 − 淨銷售 − 報廢 − 新增待查 + 待查轉回 + 遺失尋回 = 期末;
+ * 核對 = 左邊 − 期末,應為 0)。待標註的跳號(拆本前)不算張數與成本。成本欄、調入 / 調出 / 在途的調貨金額
+ * 沒有 `reports.show-cost` = null。
+ */
 @ObjectType("LotteryOperationsInventory")
 export class LotteryOperationsInventoryModel {
+  /** 期初庫存(期間起點那一刻:這家店、未售、在庫存或檯面) */
+  @Field(() => Int)
+  openingTickets!: number;
+
+  @Field(() => Float, { nullable: true })
+  openingCost!: number | null;
+
+  /** 進貨本數(進貨 − 作廢) */
   @Field(() => Int)
   purchaseBooks!: number;
 
+  /** 其中作廢的本數(進貨單作廢在作廢那天扣回) */
+  @Field(() => Int)
+  purchaseVoidBooks!: number;
+
+  /** 進貨張數(標準張數;作廢扣回) */
   @Field(() => Int)
   purchaseTickets!: number;
 
+  /** 進貨成本(單張成本合計) */
   @Field(() => Float, { nullable: true })
   purchaseCost!: number | null;
 
+  /** 調入(依點收時間;作廢反向) */
   @Field(() => Int)
   transferInTickets!: number;
 
-  /** 調入的調貨金額 */
-  @Field(() => Float)
-  transferInAmount!: number;
+  /** 調入的成本 = 調貨金額 */
+  @Field(() => Float, { nullable: true })
+  transferInAmount!: number | null;
 
+  /** 調出(依出貨時間;退回 / 駁回 / 作廢回到出貨店的反向) */
   @Field(() => Int)
   transferOutTickets!: number;
 
-  /** 調出的調貨金額 */
-  @Field(() => Float)
-  transferOutAmount!: number;
+  /** 調出的原成本(調出前的單張成本合計) */
+  @Field(() => Float, { nullable: true })
+  transferOutCost!: number | null;
 
-  /** 調貨損益 = 調出的調貨金額 − 原成本 */
+  /** 調出的調貨金額 */
+  @Field(() => Float, { nullable: true })
+  transferOutAmount!: number | null;
+
+  /** 調貨損益 = 調出的調貨金額 − 原成本(跟著出貨時間) */
   @Field(() => Float, { nullable: true })
   transferGain!: number | null;
+
+  /** 淨銷售張數(同區塊 1);成本 = 已售成本 */
+  @Field(() => Int)
+  salesTickets!: number;
+
+  @Field(() => Float, { nullable: true })
+  salesCost!: number | null;
 
   @Field(() => Int)
   scrapTickets!: number;
@@ -148,32 +179,73 @@ export class LotteryOperationsInventoryModel {
   @Field(() => Float, { nullable: true })
   scrapCost!: number | null;
 
+  /** 新增待查(期間內從這家店的庫存變成待查) */
   @Field(() => Int)
-  lostTickets!: number;
+  newInvestigatingTickets!: number;
 
   @Field(() => Float, { nullable: true })
-  lostCost!: number | null;
+  newInvestigatingCost!: number | null;
 
+  /** 待查轉回(待查 → 回到這家店的庫存) */
   @Field(() => Int)
-  recoveredTickets!: number;
+  investigateRecoveredTickets!: number;
 
   @Field(() => Float, { nullable: true })
-  recoveredCost!: number | null;
+  investigateRecoveredCost!: number | null;
 
-  /** 跳號(張,不計成本) */
+  /** 遺失尋回(已確認遺失 → 回到這家店的庫存) */
   @Field(() => Int)
-  skippedTickets!: number;
+  lostRecoveredTickets!: number;
 
-  /** 期末庫存(期間結束那一刻在這家店、未售的張:庫存 + 檯面) */
+  @Field(() => Float, { nullable: true })
+  lostRecoveredCost!: number | null;
+
+  /** 期末庫存(期間終點那一刻) */
   @Field(() => Int)
   endingTickets!: number;
 
   @Field(() => Float, { nullable: true })
   endingCost!: number | null;
 
-  /** 期末待查(本) */
+  /** 核對 = 期初加減各列 − 期末(0 = 對得上) */
+  @Field(() => Int)
+  checkTickets!: number;
+
+  @Field(() => Float, { nullable: true })
+  checkCost!: number | null;
+
+  /** 期末在途(已出貨、期末前還沒點收;不算任何一家店的庫存,列在出貨店) */
+  @Field(() => Int)
+  inTransitTickets!: number;
+
+  /** 期末在途的調貨金額 */
+  @Field(() => Float, { nullable: true })
+  inTransitAmount!: number | null;
+
+  /** 期末待查(張、成本、本數) */
+  @Field(() => Int)
+  investigatingTickets!: number;
+
+  @Field(() => Float, { nullable: true })
+  investigatingCost!: number | null;
+
   @Field(() => Int)
   investigatingBooks!: number;
+
+  /** 期末待查的本(合計工作表依本去重複) */
+  @Field(() => [ID])
+  investigatingBookIds!: string[];
+
+  /** 確認遺失(期間內待查 → 遺失;新增待查時已扣過庫存,不在加減裡) */
+  @Field(() => Int)
+  lostTickets!: number;
+
+  @Field(() => Float, { nullable: true })
+  lostCost!: number | null;
+
+  /** 跳號(拆本標註 − 取消;實際不存在的張號,不在加減裡、不計成本) */
+  @Field(() => Int)
+  skippedTickets!: number;
 }
 
 /** 事後更正的一個原因類別(`redemption` 兌獎 / `stocktake` 盤點補登 / `refund` 退貨退款 / `cashCorrection` 現金更正)。 */
@@ -189,60 +261,72 @@ export class LotteryReportPostCloseModel {
   amount!: number;
 }
 
-/** 區塊 5 現金。 */
+/** 5b 現金移動的一類(抽屜、小金庫各自的增減:+ 流入、− 流出;沖正那一筆兩端對調,自然是反向)。 */
+@ObjectType("LotteryOperationsCashMovement")
+export class LotteryOperationsCashMovementModel {
+  /** `deposit` 投庫 / `withdraw` 出庫 / `bank_deposit` 存銀行 / `refund` 退貨退款 / `transfer_out` 調貨支出 / `transfer_in` 調貨收入 / `correction` 現金更正 */
+  @Field(() => String)
+  type!: string;
+
+  @Field(() => Int)
+  count!: number;
+
+  @Field(() => Float)
+  drawer!: number;
+
+  @Field(() => Float)
+  vault!: number;
+}
+
+/** 區塊 5 現金:5a 差額與更正(+ 錢比帳多、− 錢比帳少)、5b 現金移動。 */
 @ObjectType("LotteryOperationsCash")
 export class LotteryOperationsCashModel {
-  /** 期間內送出交班結帳的班數 */
+  /** 期間內送出、期末那一刻有效(待審核或已核准)的交班結帳班數 */
   @Field(() => Int)
   shiftCount!: number;
 
-  /** 各班結帳差額合計 */
+  /** 其中期末時待審核的班數 */
+  @Field(() => Int)
+  pendingShiftCount!: number;
+
+  /** 各班結帳差額(送出當下的差額) */
   @Field(() => Float)
   shiftDifference!: number;
 
-  /** 這些班的事後更正(依原因類別;指向已關帳月份、關帳後才記的不算,另歸前期更正) */
+  /** 期間內記的事後更正(依原因類別;對那一班抽屜應有的影響) */
   @Field(() => [LotteryReportPostCloseModel])
   postClose!: LotteryReportPostCloseModel[];
 
-  /** 退貨退款(不含事後更正) */
-  @Field(() => Float)
-  refund!: number;
-
-  /** 調貨支出(現金) */
-  @Field(() => Float)
-  transferExpense!: number;
-
-  /** 調貨收入(現金) */
-  @Field(() => Float)
-  transferIncome!: number;
-
-  @Field(() => Float)
-  deposit!: number;
-
-  @Field(() => Float)
-  bankDeposit!: number;
-
-  /** 期間內送出的日結張數 */
+  /** 期間內送出、期末時有效的日結張數 */
   @Field(() => Int)
   dailyCloseCount!: number;
 
-  /** 日結的小金庫差異合計 */
+  /** 日結的小金庫差額 */
   @Field(() => Float)
   vaultDifference!: number;
+
+  /** 5b 現金移動(固定順序;不含事後更正那幾筆) */
+  @Field(() => [LotteryOperationsCashMovementModel])
+  movements!: LotteryOperationsCashMovementModel[];
 }
 
-/** 銀行交易依類型合計的一列。 */
+/** 銀行交易依類型合計的一列(同一類型合一列;沖正算在同一列,說明含沖正 N 筆)。 */
 @ObjectType("LotteryOperationsBankType")
 export class LotteryOperationsBankTypeModel {
   @Field(() => String)
   type!: string;
 
-  /** `in` 收 / `out` 支 */
-  @Field(() => String)
-  direction!: string;
-
+  /** 收的合計 */
   @Field(() => Float)
-  amount!: number;
+  inAmount!: number;
+
+  /** 支的合計 */
+  @Field(() => Float)
+  outAmount!: number;
+
+  /** 其中沖正的筆數 */
+  @Field(() => Int)
+  reversalCount!: number;
 }
 
 /** 區塊 6 銀行:這家店使用的一個帳戶。 */
@@ -267,20 +351,33 @@ export class LotteryOperationsBankAccountModel {
   endingBalance!: number;
 }
 
-/** 區塊 7 未結清(依單據的收付現況)。 */
+/** 區塊 7 未結清的一種(期末那一刻的餘額)。 */
+@ObjectType("LotteryOperationsOutstandingItem")
+export class LotteryOperationsOutstandingItemModel {
+  /**
+   * `purchaseToPay` 待付進貨款 / `purchaseToRefund` 待退進貨款 / `transferToReceive` 待收調貨款 /
+   * `transferToPay` 待付調貨款 / `transferPayerRefund` 調貨待退(收貨店多付)/ `transferPayeeRefund` 調貨該退(出貨店多收)
+   */
+  @Field(() => String)
+  kind!: string;
+
+  /** 單數 */
+  @Field(() => Int)
+  count!: number;
+
+  @Field(() => Float)
+  amount!: number;
+
+  /** 單號(最多 5 張;其他的看 `count`) */
+  @Field(() => [String])
+  serialNos!: string[];
+}
+
+/** 區塊 7 未結清(依單據的收付現況;固定 6 種、固定順序)。 */
 @ObjectType("LotteryOperationsOutstanding")
 export class LotteryOperationsOutstandingModel {
-  @Field(() => Float)
-  purchaseToPay!: number;
-
-  @Field(() => Float)
-  purchaseToRefund!: number;
-
-  @Field(() => Float)
-  transferToReceive!: number;
-
-  @Field(() => Float)
-  transferToPay!: number;
+  @Field(() => [LotteryOperationsOutstandingItemModel])
+  items!: LotteryOperationsOutstandingItemModel[];
 }
 
 /** 跳過盤點:一種原因一列。 */
@@ -299,7 +396,7 @@ export class LotteryOperationsNotesModel {
   @Field(() => [LotteryOperationsSkipReasonModel])
   skippedStocktakes!: LotteryOperationsSkipReasonModel[];
 
-  /** 有沒盤完的本的盤點單張數 */
+  /** 有沒盤完的本的盤點次數(盤點單數) */
   @Field(() => Int)
   uncountedStocktakes!: number;
 
@@ -307,9 +404,13 @@ export class LotteryOperationsNotesModel {
   @Field(() => Int)
   uncountedBooks!: number;
 
-  /** 沒有被日結涵蓋計算的班 */
+  /** 期間內送出交班結帳、到期末那一刻還沒被日結涵蓋計算的班 */
   @Field(() => Int)
   uncoveredShifts!: number;
+
+  /** 那些班的名稱(最多 5 個) */
+  @Field(() => [String])
+  uncoveredShiftLabels!: string[];
 
   /** 前期更正:期間內記的、指向已關帳月份的更正 */
   @Field(() => Int)

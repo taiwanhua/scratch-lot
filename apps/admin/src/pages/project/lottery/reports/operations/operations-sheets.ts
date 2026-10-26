@@ -1,7 +1,7 @@
 import { formatTemporal } from "@repo/domain/form";
 import type { LotteryOperationsReportQuery } from "@repo/graphql";
 
-import type { SheetColumn } from "@/lib/project/reports/excel";
+import type { SheetData, SheetSection } from "@/lib/project/reports/excel";
 import {
   type ReportSheetBody,
   type ReportSheetContext,
@@ -12,46 +12,17 @@ import {
 import {
   type OperationsStore,
   type T,
-  operationsRowsOf,
+  operationsSectionsOf,
 } from "./operations-rows";
+import { compareSectionOf } from "./operations-rows-more";
 import { totalStoreOf } from "./operations-total";
-
-const columnsOf = (t: T): SheetColumn[] => [
-  {
-    key: "block",
-    header: t("admin.lotteryReports.operations.items.columns.block"),
-    width: 14,
-  },
-  {
-    key: "item",
-    header: t("admin.lotteryReports.operations.items.columns.item"),
-    width: 30,
-  },
-  {
-    key: "count",
-    header: t("admin.lotteryReports.operations.items.columns.count"),
-    width: 10,
-    numFmt: "#,##0",
-    align: "right",
-  },
-  {
-    key: "amount",
-    header: t("admin.lotteryReports.operations.items.columns.amount"),
-    width: 14,
-    numFmt: "#,##0",
-    align: "right",
-  },
-  {
-    key: "note",
-    header: t("admin.lotteryReports.operations.items.columns.note"),
-    width: 30,
-  },
-];
 
 const dayText = (value: string, timezone: string) =>
   formatTemporal(value, { type: "monthDay", timezone });
 const timeText = (value: string, timezone: string) =>
   formatTemporal(value, { type: "monthDayTime", timezone });
+const dateTimeText = (value: string | Date, timezone: string) =>
+  formatTemporal(value, { type: "datetime", timezone });
 
 /** 一家店的期間說明(對齊日結:實際期間;當天沒日結:改用整天的標示)。 */
 export const storePeriodNote = (
@@ -76,9 +47,55 @@ export const storePeriodNote = (
   return null;
 };
 
+const KIND_KEYS = {
+  day: "admin.lotteryReports.operations.sheet.kinds.day",
+  week: "admin.lotteryReports.operations.sheet.kinds.week",
+  month: "admin.lotteryReports.operations.sheet.kinds.month",
+} as const;
+
 /**
- * 查詢結果 → 工作表(Excel 與預覽共用):每家店一張 + 全部分店合計。表頭說明放對齊日結的期間 / 改用整天的標示、
- * 已關帳 / 尚未關帳。沒有 `reports.show-cost`(api 回 null)的成本與毛利列不放。
+ * 工作表最上面三列(Excel 凍結、每頁重複;預覽排在表格上方):
+ * ① 報表名稱 · 分店;② 期間 · 日報 / 週報 / 月報 · 對齊日結的說明 · 已關帳 / 尚未關帳;③ 產出時間 · 產出人 · 金額單位
+ */
+const headerNotesOf = (
+  store: OperationsStore,
+  name: string,
+  alignment: readonly (string | null)[],
+  context: ReportSheetContext,
+  t: T,
+): string[] => {
+  const { timezone, input } = context;
+  const closed =
+    store.notes.openMonths.length === 0
+      ? t("admin.lotteryReports.operations.items.monthClosed")
+      : t("admin.lotteryReports.operations.items.monthOpen");
+  return [
+    t("admin.lotteryReports.operations.sheet.title", { store: name }),
+    [
+      t("admin.lotteryReports.operations.sheet.period", {
+        from: dateTimeText(input.from, timezone),
+        to: dateTimeText(input.to, timezone),
+      }),
+      t(KIND_KEYS[input.periodKind]),
+      ...alignment.filter((note): note is string => note !== null),
+      closed,
+    ].join(" · "),
+    t("admin.lotteryReports.operations.sheet.generated", {
+      at: dateTimeText(context.generatedAt, timezone),
+      by: context.generatedBy,
+    }),
+  ];
+};
+
+const bodyOf = (
+  notes: string[],
+  sections: SheetSection[],
+): ReportSheetBody => ({ notes, columns: [], rows: [], sections });
+
+/**
+ * 查詢結果 → 工作表(Excel 與預覽共用;使用者 10/26 定案「預覽和 Excel 同一份表格」):全部分店合計 +
+ * 每家店一張,每張都是分段表格(每區塊一張小表);選兩家以上另加「分店比較」。沒有 `reports.show-cost`
+ * (api 回 null)的成本列與欄不放。
  */
 export const buildOperationsSheets = (
   data: LotteryOperationsReportQuery,
@@ -89,35 +106,63 @@ export const buildOperationsSheets = (
   const report = data.lotteryOperationsReport;
   const nameOf = (orgId: string) =>
     orgs.find((org) => org.id === orgId)?.name ?? orgId;
-  let closedNote: string | null = null;
-  if (context.input.periodKind === "month") {
-    closedNote = report.stores.every(
-      (store) => store.notes.openMonths.length === 0,
-    )
-      ? t("admin.lotteryReports.operations.items.monthClosed")
-      : t("admin.lotteryReports.operations.items.monthOpen");
-  }
-  const columns = columnsOf(t);
-  const sheetOf = (
-    store: OperationsStore,
-    notes: (string | null)[],
-  ): ReportSheetBody => ({
-    columns,
-    notes: notes.filter((note): note is string => note !== null),
-    rows: operationsRowsOf(store, t),
-  });
+  const total = totalStoreOf(report.stores);
+  const totalName = t("admin.lotteryReports.totalSheet");
+  const extras: SheetData[] =
+    report.stores.length > 1
+      ? [
+          {
+            name: t("admin.lotteryReports.operations.sheet.compareName"),
+            ...bodyOf(
+              headerNotesOf(
+                total,
+                t("admin.lotteryReports.operations.sheet.compareName"),
+                [],
+                context,
+                t,
+              ),
+              [
+                compareSectionOf(
+                  report.stores.map((store) => ({
+                    name: nameOf(store.orgId),
+                    store,
+                  })),
+                  total,
+                  t,
+                ),
+              ],
+            ),
+          },
+        ]
+      : [];
   return {
-    total: sheetOf(totalStoreOf(report.stores), [
-      ...report.stores.map((store) =>
-        store.period.alignment === "fullDay"
-          ? storePeriodNote(store, t, timezone, nameOf(store.orgId))
-          : null,
+    total: bodyOf(
+      headerNotesOf(
+        total,
+        totalName,
+        report.stores.map((store) =>
+          store.period.alignment === "fullDay"
+            ? storePeriodNote(store, t, timezone, nameOf(store.orgId))
+            : null,
+        ),
+        context,
+        t,
       ),
-      closedNote,
-    ]),
+      operationsSectionsOf(total, t),
+    ),
     branches: report.stores.map((store) => ({
       orgId: store.orgId,
-      ...sheetOf(store, [storePeriodNote(store, t, timezone), closedNote]),
+      ...bodyOf(
+        headerNotesOf(
+          store,
+          nameOf(store.orgId),
+          [storePeriodNote(store, t, timezone)],
+          context,
+          t,
+        ),
+        operationsSectionsOf(store, t),
+      ),
     })),
+    extras,
   };
 };

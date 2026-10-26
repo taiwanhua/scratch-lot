@@ -7,6 +7,7 @@ import {
   TRANSFER_FORM_KEY,
   TRANSFER_MODE,
   TRANSFER_MODULE_KEY,
+  pendingSkipCountOf,
   transferLinesOf,
 } from "@repo/domain/project/lottery";
 
@@ -118,7 +119,10 @@ export class TransferQueryService {
               _id: { $in: available.map((ticket) => ticket.bookId) },
               status: "normal",
             },
-            { select: "gameId gameCode bookNo rate" },
+            {
+              select:
+                "gameId gameCode bookNo rate lastTicketNo standardTickets skippedTicketNos",
+            },
           );
     const allTickets =
       bookRows.length === 0
@@ -159,7 +163,16 @@ export class TransferQueryService {
             bookPrice: game.bookPrice,
             rate: book.rate,
             isWhole,
-            availableCount: counts.get(String(book._id)) ?? 0,
+            // 待標註的跳號(拆本前還沒標的)實體不存在:整本可調張數 = 標準張數(使用者 10/27 定案甲)
+            availableCount: Math.max(
+              0,
+              (counts.get(String(book._id)) ?? 0) -
+                pendingSkipCountOf(
+                  Number(book.lastTicketNo),
+                  book.standardTickets,
+                  book.skippedTicketNos.length,
+                ),
+            ),
           },
         ];
       })

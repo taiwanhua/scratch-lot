@@ -2247,6 +2247,7 @@ type LotteryInvestigationRow {
   refType: String
   responsibleOrg: LotteryInventoryRef
   status: String!
+  ticketCount: Int!
   tickets: [LotteryInventoryTicket!]!
   unitPrice: Int!
 }
@@ -2282,22 +2283,27 @@ type LotteryOperationsBankAccount {
 }
 
 type LotteryOperationsBankType {
-  amount: Float!
-  direction: String!
+  inAmount: Float!
+  outAmount: Float!
+  reversalCount: Int!
   type: String!
 }
 
 type LotteryOperationsCash {
-  bankDeposit: Float!
   dailyCloseCount: Int!
-  deposit: Float!
+  movements: [LotteryOperationsCashMovement!]!
+  pendingShiftCount: Int!
   postClose: [LotteryReportPostClose!]!
-  refund: Float!
   shiftCount: Int!
   shiftDifference: Float!
-  transferExpense: Float!
-  transferIncome: Float!
   vaultDifference: Float!
+}
+
+type LotteryOperationsCashMovement {
+  count: Int!
+  drawer: Float!
+  type: String!
+  vault: Float!
 }
 
 type LotteryOperationsGameSales {
@@ -2312,23 +2318,40 @@ type LotteryOperationsGameSales {
 }
 
 type LotteryOperationsInventory {
+  checkCost: Float
+  checkTickets: Int!
   endingCost: Float
   endingTickets: Int!
+  inTransitAmount: Float
+  inTransitTickets: Int!
+  investigateRecoveredCost: Float
+  investigateRecoveredTickets: Int!
+  investigatingBookIds: [ID!]!
   investigatingBooks: Int!
+  investigatingCost: Float
+  investigatingTickets: Int!
   lostCost: Float
+  lostRecoveredCost: Float
+  lostRecoveredTickets: Int!
   lostTickets: Int!
+  newInvestigatingCost: Float
+  newInvestigatingTickets: Int!
+  openingCost: Float
+  openingTickets: Int!
   purchaseBooks: Int!
   purchaseCost: Float
   purchaseTickets: Int!
-  recoveredCost: Float
-  recoveredTickets: Int!
+  purchaseVoidBooks: Int!
+  salesCost: Float
+  salesTickets: Int!
   scrapCost: Float
   scrapTickets: Int!
   skippedTickets: Int!
   transferGain: Float
-  transferInAmount: Float!
+  transferInAmount: Float
   transferInTickets: Int!
-  transferOutAmount: Float!
+  transferOutAmount: Float
+  transferOutCost: Float
   transferOutTickets: Int!
 }
 
@@ -2339,14 +2362,19 @@ type LotteryOperationsNotes {
   skippedStocktakes: [LotteryOperationsSkipReason!]!
   uncountedBooks: Int!
   uncountedStocktakes: Int!
+  uncoveredShiftLabels: [String!]!
   uncoveredShifts: Int!
 }
 
 type LotteryOperationsOutstanding {
-  purchaseToPay: Float!
-  purchaseToRefund: Float!
-  transferToPay: Float!
-  transferToReceive: Float!
+  items: [LotteryOperationsOutstandingItem!]!
+}
+
+type LotteryOperationsOutstandingItem {
+  amount: Float!
+  count: Int!
+  kind: String!
+  serialNos: [String!]!
 }
 
 type LotteryOperationsRedemption {

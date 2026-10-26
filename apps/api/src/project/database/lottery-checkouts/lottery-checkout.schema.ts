@@ -186,6 +186,13 @@ export class LotteryCheckout {
   @Prop({ type: OBJECT_ID, default: null })
   confirmedBy!: Types.ObjectId | null;
 
+  /**
+   * 最近一次退回 / 撤回的時間(重送時清成 null)。報表「期末那一刻有效的結帳單」用:
+   * 期末時已退回、還沒重送的不算(`status = returned` 且 `returnedAt` 早於期末)。
+   */
+  @Prop({ type: Date, default: null })
+  returnedAt!: Date | null;
+
   /** 日結:涵蓋計算期間(上一次日結送出 至 這次送出;第一次日結 `coveredFrom = null`)。交班 = null。 */
   @Prop({ type: Date, default: null })
   coveredFrom!: Date | null;

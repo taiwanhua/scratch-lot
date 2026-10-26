@@ -432,6 +432,7 @@ export class DailyCloseService {
       submittedAt: now,
       confirmedAt: null,
       confirmedBy: null,
+      returnedAt: null,
       // 涵蓋計算期間在第一次送出時定下(退回後再送出不變)
       coveredFrom: covered.from,
       coveredTo: covered.to ?? now,

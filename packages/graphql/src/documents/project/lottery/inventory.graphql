@@ -144,6 +144,8 @@ fragment LotteryInvestigationRowFields on LotteryInvestigationRow {
   refSerialNo
   at
   cost
+  # 張數:未拆整本扣掉待標註的跳號(實體不存在)
+  ticketCount
   tickets {
     ...LotteryInventoryTicketFields
   }

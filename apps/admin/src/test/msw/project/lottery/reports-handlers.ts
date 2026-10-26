@@ -22,6 +22,109 @@ const qty = (count: number, amount: number) => ({
   amount,
 });
 
+const movement = (
+  type: string,
+  count: number,
+  drawer: number,
+  vault: number,
+) => ({
+  __typename: "LotteryOperationsCashMovement" as const,
+  type,
+  count,
+  drawer,
+  vault,
+});
+
+const outstandingItem = (
+  kind: string,
+  count: number,
+  amount: number,
+  serialNos: string[],
+) => ({
+  __typename: "LotteryOperationsOutstandingItem" as const,
+  kind,
+  count,
+  amount,
+  serialNos,
+});
+
+/**
+ * 區塊 4 的示範數字:期初加減各列 = 期末(核對 0)。`n` 依第幾家店縮小、`cost` 沒有成本權限時是 null。
+ */
+const inventoryOf = (
+  n: (value: number) => number,
+  cost: (value: number) => number | null,
+): OperationsStore["inventory"] => {
+  const tickets = {
+    opening: n(1200),
+    purchase: n(500),
+    transferIn: n(100),
+    transferOut: n(100),
+    sales: n(211),
+    scrap: 2,
+    newInvestigating: 3,
+    investigateRecovered: 1,
+  };
+  const costs = {
+    opening: n(220_800),
+    purchase: n(92_000),
+    transferIn: n(18_400),
+    transferOut: n(18_400),
+    sales: n(38_824),
+    scrap: 368,
+    newInvestigating: 552,
+    investigateRecovered: 184,
+  };
+  const ending = (values: typeof tickets) =>
+    values.opening +
+    values.purchase +
+    values.transferIn -
+    values.transferOut -
+    values.sales -
+    values.scrap -
+    values.newInvestigating +
+    values.investigateRecovered;
+  const money = (value: number) => (cost(1) === null ? null : value);
+  return {
+    __typename: "LotteryOperationsInventory",
+    openingTickets: tickets.opening,
+    openingCost: money(costs.opening),
+    purchaseBooks: 5,
+    purchaseVoidBooks: 0,
+    purchaseTickets: tickets.purchase,
+    purchaseCost: money(costs.purchase),
+    transferInTickets: tickets.transferIn,
+    transferInAmount: money(costs.transferIn),
+    transferOutTickets: tickets.transferOut,
+    transferOutCost: money(costs.transferOut),
+    transferOutAmount: money(n(19_000)),
+    transferGain: money(n(19_000) - costs.transferOut),
+    salesTickets: tickets.sales,
+    salesCost: money(costs.sales),
+    scrapTickets: tickets.scrap,
+    scrapCost: money(costs.scrap),
+    newInvestigatingTickets: tickets.newInvestigating,
+    newInvestigatingCost: money(costs.newInvestigating),
+    investigateRecoveredTickets: tickets.investigateRecovered,
+    investigateRecoveredCost: money(costs.investigateRecovered),
+    lostRecoveredTickets: 0,
+    lostRecoveredCost: money(0),
+    endingTickets: ending(tickets),
+    endingCost: money(ending(costs)),
+    checkTickets: 0,
+    checkCost: money(0),
+    inTransitTickets: n(100),
+    inTransitAmount: money(n(19_000)),
+    investigatingTickets: 3,
+    investigatingCost: money(552),
+    investigatingBooks: 2,
+    investigatingBookIds: ["book-1", "book-2"],
+    lostTickets: 0,
+    lostCost: money(0),
+    skippedTickets: 1,
+  };
+};
+
 /**
  * 營運報表一家店的示範數字(Figma RE-04 `129:1186` 中山店的那一份):第二家店起把數字縮小一點,合計看得出加總。
  * `withCost = false`(沒有 `reports.show-cost`)時成本欄是 null,與 api 一致。
@@ -94,30 +197,11 @@ export const operationsStore = (
       sent: qty(4, n(8000)),
       revoked: qty(1, 500),
     },
-    inventory: {
-      __typename: "LotteryOperationsInventory",
-      purchaseBooks: 5,
-      purchaseTickets: 450,
-      purchaseCost: cost(78_200),
-      transferInTickets: n(112),
-      transferInAmount: n(19_504),
-      transferOutTickets: 0,
-      transferOutAmount: 0,
-      transferGain: cost(0),
-      scrapTickets: 3,
-      scrapCost: cost(450),
-      lostTickets: 1,
-      lostCost: cost(150),
-      recoveredTickets: 1,
-      recoveredCost: cost(150),
-      skippedTickets: 2,
-      endingTickets: n(1120),
-      endingCost: cost(186_400),
-      investigatingBooks: 1,
-    },
+    inventory: inventoryOf(n, cost),
     cash: {
       __typename: "LotteryOperationsCash",
       shiftCount: 2,
+      pendingShiftCount: index === 0 ? 0 : 1,
       shiftDifference: -100,
       postClose: [
         {
@@ -127,13 +211,17 @@ export const operationsStore = (
           amount: 200,
         },
       ],
-      refund: 0,
-      transferExpense: 0,
-      transferIncome: 0,
-      deposit: n(12_000),
-      bankDeposit: n(20_000),
       dailyCloseCount: 1,
       vaultDifference: 0,
+      movements: [
+        movement("deposit", 3, -n(12_000), n(12_000)),
+        movement("withdraw", 1, n(5000), -n(5000)),
+        movement("bank_deposit", 1, 0, -n(20_000)),
+        movement("refund", 1, -200, 0),
+        movement("transfer_out", 0, 0, 0),
+        movement("transfer_in", 0, 0, 0),
+        movement("correction", 1, 100, 0),
+      ],
     },
     bankAccounts: [
       {
@@ -145,25 +233,31 @@ export const operationsStore = (
           {
             __typename: "LotteryOperationsBankType",
             type: "deposit",
-            direction: "in",
-            amount: n(20_000),
+            inAmount: n(20_000),
+            outAmount: 0,
+            reversalCount: 0,
           },
           {
             __typename: "LotteryOperationsBankType",
             type: "purchase_expense",
-            direction: "out",
-            amount: n(70_200),
+            inAmount: 0,
+            outAmount: n(70_200),
+            reversalCount: index === 0 ? 0 : 1,
           },
         ],
-        endingBalance: 1_204_300,
+        endingBalance: 1_204_300 + index,
       },
     ],
     outstanding: {
       __typename: "LotteryOperationsOutstanding",
-      purchaseToPay: 0,
-      purchaseToRefund: n(9200),
-      transferToReceive: n(19_504),
-      transferToPay: 0,
+      items: [
+        outstandingItem("purchaseToPay", 0, 0, []),
+        outstandingItem("purchaseToRefund", 1, n(9200), ["P-0012"]),
+        outstandingItem("transferToReceive", 1, n(19_504), ["T-0003"]),
+        outstandingItem("transferToPay", 0, 0, []),
+        outstandingItem("transferPayerRefund", 0, 0, []),
+        outstandingItem("transferPayeeRefund", 0, 0, []),
+      ],
     },
     notes: {
       __typename: "LotteryOperationsNotes",
@@ -180,6 +274,7 @@ export const operationsStore = (
       uncountedStocktakes: index === 0 ? 0 : 1,
       uncountedBooks: index === 0 ? 0 : 2,
       uncoveredShifts: index === 0 ? 0 : 3,
+      uncoveredShiftLabels: index === 0 ? [] : ["10/16 晚班"],
       priorPeriodCount: 0,
       priorPeriodAmount: 0,
       openMonths: ["2026-10"],

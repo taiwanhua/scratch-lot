@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common";
 import type { Types } from "mongoose";
 
 import {
+  CHECKOUT_STATUS,
   CHECKOUT_TYPE,
   REDEMPTION_STATUS,
   STOCKTAKE_STATUS,
@@ -22,7 +23,6 @@ import {
 import { LotteryCheckoutsRepository } from "../../database/lottery-checkouts/lottery-checkouts.repository";
 import { LotteryGamesRepository } from "../../database/lottery-games/lottery-games.repository";
 import {
-  LotteryBooksRepository,
   LotteryTicketEventsRepository,
   LotteryTicketsRepository,
 } from "../../database/lottery-inventory/lottery-inventory.repository";
@@ -36,8 +36,8 @@ import type { LotteryOperationsReportInput } from "./dto/reports.input";
 import type {
   LotteryOperationsBankAccountModel,
   LotteryOperationsCashModel,
+  LotteryOperationsCashMovementModel,
   LotteryOperationsGameSalesModel,
-  LotteryOperationsInventoryModel,
   LotteryOperationsNotesModel,
   LotteryOperationsOutstandingModel,
   LotteryOperationsRedemptionModel,
@@ -47,6 +47,10 @@ import type {
   LotteryReportPeriodsModel,
   LotteryReportQtyModel,
 } from "./models/operations-report.model";
+import {
+  INVENTORY_EVENT_TYPES,
+  OperationsInventory,
+} from "./operations-inventory";
 import {
   PostCloseCorrections,
   postCloseByCategory,
@@ -62,20 +66,14 @@ import {
   type ReportScope,
   ReportScopes,
 } from "./report-scope";
-import { ReportStock } from "./report-stock";
+import type { StateSnapshot } from "./report-stock";
 
-/** 營運報表讀的張數事件類型(銷售、進貨、報廢、遺失、尋回、跳號)。 */
+/** 營運報表讀的張數事件類型(銷售 + 區塊 4 的進貨、作廢、報廢、待查、遺失、尋回、跳號)。 */
 const REPORT_EVENT_TYPES: readonly TicketEventType[] = [
   TICKET_EVENT_TYPE.sale,
   TICKET_EVENT_TYPE.saleStocktake,
   TICKET_EVENT_TYPE.saleUndo,
-  TICKET_EVENT_TYPE.purchase,
-  TICKET_EVENT_TYPE.purchaseVoid,
-  TICKET_EVENT_TYPE.scrap,
-  TICKET_EVENT_TYPE.lose,
-  TICKET_EVENT_TYPE.recover,
-  TICKET_EVENT_TYPE.skip,
-  TICKET_EVENT_TYPE.unskip,
+  ...INVENTORY_EVENT_TYPES,
 ];
 
 const SOLD_TYPE_LIST: readonly TicketEventType[] = [
@@ -84,25 +82,41 @@ const SOLD_TYPE_LIST: readonly TicketEventType[] = [
 ];
 const SOLD_TYPES: ReadonlySet<string> = new Set(SOLD_TYPE_LIST);
 
-/** 現金流水的「正常方向」:沖正的那一筆兩端對調,算負的(規格 10.2)。 */
-const NORMAL_ROUTE: Readonly<Record<string, { from?: string; to?: string }>> = {
-  [CASH_MOVEMENT_TYPE.deposit]: { to: "vault" },
-  [CASH_MOVEMENT_TYPE.bankDeposit]: { to: "bank" },
-  [CASH_MOVEMENT_TYPE.transferOut]: { to: "external" },
-  [CASH_MOVEMENT_TYPE.transferIn]: { from: "external" },
-  [CASH_MOVEMENT_TYPE.refund]: { to: "external" },
-};
+/** 5b 現金移動的順序(現金更正的增加 / 減少合成一類)。 */
+const MOVEMENT_ROWS: readonly { type: string; sources: readonly string[] }[] = [
+  { type: "deposit", sources: [CASH_MOVEMENT_TYPE.deposit] },
+  { type: "withdraw", sources: [CASH_MOVEMENT_TYPE.withdraw] },
+  { type: "bank_deposit", sources: [CASH_MOVEMENT_TYPE.bankDeposit] },
+  { type: "refund", sources: [CASH_MOVEMENT_TYPE.refund] },
+  { type: "transfer_out", sources: [CASH_MOVEMENT_TYPE.transferOut] },
+  { type: "transfer_in", sources: [CASH_MOVEMENT_TYPE.transferIn] },
+  {
+    type: "correction",
+    sources: [
+      CASH_MOVEMENT_TYPE.correctionIncrease,
+      CASH_MOVEMENT_TYPE.correctionDecrease,
+    ],
+  },
+];
+
+/** 區塊 7 的說明最多列幾張單號、幾個班名。 */
+const MAX_LISTED = 5;
 
 /** 同時算幾家店。 */
 const STORE_CONCURRENCY = 5;
 
-/** 待結清的「單據種類|待結清種類」→ 區塊 7 的欄位(調貨單收款方的待退不列)。 */
-const OUTSTANDING_FIELDS: Readonly<Record<string, string>> = {
-  "purchase|to_pay": "purchaseToPay",
-  "purchase|to_refund": "purchaseToRefund",
-  "transfer|to_receive": "transferToReceive",
-  "transfer|to_pay": "transferToPay",
-};
+/**
+ * 待結清的「單據種類|待結清種類|哪一邊」→ 區塊 7 的一種(固定順序)。調貨單:收貨店(付款方)多付 = 調貨待退、
+ * 出貨店(收款方)多收 = 調貨該退。
+ */
+const OUTSTANDING_KINDS: readonly { kind: string; key: string }[] = [
+  { kind: "purchaseToPay", key: "purchase|to_pay|payer" },
+  { kind: "purchaseToRefund", key: "purchase|to_refund|payer" },
+  { kind: "transferToReceive", key: "transfer|to_receive|payee" },
+  { kind: "transferToPay", key: "transfer|to_pay|payer" },
+  { kind: "transferPayerRefund", key: "transfer|to_refund|payer" },
+  { kind: "transferPayeeRefund", key: "transfer|to_refund|payee" },
+];
 
 interface EventRow {
   _id: Types.ObjectId;
@@ -111,8 +125,12 @@ interface EventRow {
   gameId: Types.ObjectId;
   type: string;
   amount: number;
-  cost: number | null;
+  /** 事件前的單張成本快照;舊資料沒有時補上現況的單張成本 */
+  cost: number;
   reasonKey: string | null;
+  refId: Types.ObjectId | null;
+  from: StateSnapshot | null;
+  to: StateSnapshot;
   at: Date;
 }
 
@@ -134,6 +152,10 @@ const idsOf = (values: readonly Types.ObjectId[]): Types.ObjectId[] => [
  * 營運報表(專案規格 11.2;正本 `docs/modules/project/reports.md`「營運報表」)。8 個區塊逐店算,
  * 資料一律從紀錄讀(張數事件、現金流水、銀行交易、兌獎、盤點、結帳單、調貨點收、關帳),不另存彙總;
  * 「全部分店合計」由 admin 的工作表加總。沒有 `reports.show-cost` 時成本與毛利相關欄位回 null。
+ *
+ * **每個數字以「期間結束那一刻」的事實為準**(使用者 10/26 定案:重跑舊報表數字不變):兌獎狀態看期末時、
+ * 成本用事件當時的成本快照、結帳單只算期末時有效的、日結涵蓋只算期末以前送出的;之後的變化算在發生當期,
+ * 指向已關帳月份的另列「前期更正」。
  */
 @Injectable()
 export class OperationsReportService {
@@ -143,10 +165,9 @@ export class OperationsReportService {
     private readonly postClose: PostCloseCorrections,
     private readonly events: LotteryTicketEventsRepository,
     private readonly tickets: LotteryTicketsRepository,
-    private readonly books: LotteryBooksRepository,
     private readonly games: LotteryGamesRepository,
     private readonly redemptions: LotteryRedemptionsRepository,
-    private readonly stock: ReportStock,
+    private readonly inventory: OperationsInventory,
     private readonly movements: LotteryCashMovementsRepository,
     private readonly checkouts: LotteryCheckoutsRepository,
     private readonly stocktakes: LotteryStocktakesRepository,
@@ -220,36 +241,22 @@ export class OperationsReportService {
   ): Promise<LotteryOperationsStoreModel> {
     const { reader } = scope;
     const { orgId, from, to } = period;
-    const events = (await this.events.findMany(
-      reader,
-      {
-        orgId,
-        at: { $gte: from, $lt: to },
-        type: { $in: [...REPORT_EVENT_TYPES] },
-      },
-      {
-        select: "ticketId bookId gameId type amount cost reasonKey at",
-        sort: { at: 1, _id: 1 },
-      },
-    )) as unknown as EventRow[];
-    const unitCost = await this.unitCostsOf(
-      reader,
-      events
-        .filter(
-          (event) =>
-            SOLD_TYPES.has(event.type) ||
-            event.type === TICKET_EVENT_TYPE.saleUndo ||
-            event.type === TICKET_EVENT_TYPE.lose ||
-            event.type === TICKET_EVENT_TYPE.recover,
-        )
-        .map((event) => event.ticketId),
-    );
-    const [sales, inventory, redemption, cashAndNotes, bankAccounts] =
+    const events = await this.eventsOf(reader, {
+      $or: [{ orgId }, { "from.orgId": orgId }],
+      at: { $gte: from, $lt: to },
+      type: { $in: [...REPORT_EVENT_TYPES] },
+    });
+    // 這家店的事件(事件後在這家店);「事件前在這家店」的(例:別家店替它尋回)只給區塊 4 判斷
+    const own = events.filter((event) => event.to.orgId.equals(orgId));
+    const sales = await this.salesOf(reader, own, shared.manualReasons);
+    const [inventory, redemption, cashAndNotes, bankAccounts] =
       await Promise.all([
-        this.salesOf(reader, events, unitCost, shared.manualReasons),
-        this.inventoryOf(reader, period, events, unitCost),
+        this.inventory.inventoryOf(reader, period, events, {
+          tickets: sales.net.count,
+          cost: sales.cost ?? 0,
+        }),
         this.redemptionOf(reader, period),
-        this.cashAndNotesOf(scope, period, events, shared.closedAt),
+        this.cashAndNotesOf(scope, period, own, shared.closedAt),
         this.bankOf(shared.operator, scope, period),
       ]);
     return {
@@ -265,12 +272,42 @@ export class OperationsReportService {
     };
   }
 
+  /** 讀事件;沒有成本快照的舊資料補上張現況的單張成本(一次查)。 */
+  private async eventsOf(
+    reader: OperatorContext,
+    filter: Record<string, unknown>,
+  ): Promise<EventRow[]> {
+    const rows = (await this.events.findMany(reader, filter, {
+      select:
+        "ticketId bookId gameId type amount cost reasonKey refId from to at",
+      sort: { at: 1, _id: 1 },
+    })) as unknown as (Omit<EventRow, "cost"> & { cost: number | null })[];
+    const missing = rows
+      .filter((row) => row.cost === null)
+      .map((row) => row.ticketId);
+    const current = await this.unitCostsOf(reader, missing);
+    // 讀出來的是 mongoose 文件(展開會掉欄位):逐欄抄成純物件
+    return rows.map((row) => ({
+      _id: row._id,
+      ticketId: row.ticketId,
+      bookId: row.bookId,
+      gameId: row.gameId,
+      type: row.type,
+      amount: row.amount,
+      cost: row.cost ?? current.get(String(row.ticketId)) ?? 0,
+      reasonKey: row.reasonKey,
+      refId: row.refId,
+      from: row.from,
+      to: row.to,
+      at: row.at,
+    }));
+  }
+
   // ---- 區塊 1、2:銷售、毛利 ----
 
   private async salesOf(
     reader: OperatorContext,
     events: readonly EventRow[],
-    unitCost: ReadonlyMap<string, number>,
     reasonLabels: ReadonlyMap<string, string>,
   ): Promise<LotteryOperationsSalesModel> {
     const scan = qty();
@@ -294,7 +331,8 @@ export class OperationsReportService {
       if (!sold && !undone) {
         continue;
       }
-      const ticketCost = unitCost.get(String(event.ticketId)) ?? 0;
+      // 已售成本:售出當下記下的單張成本;撤銷扣回那張撤銷當下的成本(之後調走、成本變了不影響)
+      const ticketCost = event.cost;
       const game = byGame.get(String(event.gameId)) ?? {
         gameId: event.gameId,
         sold: 0,
@@ -329,11 +367,14 @@ export class OperationsReportService {
       (sum, row) => qty(sum.count + row.count, sum.amount + row.amount),
       qty(),
     );
-    const gameRows = await this.games.findMany(
-      reader,
-      { _id: { $in: [...byGame.values()].map((row) => row.gameId) } },
-      { select: "gameCode name unitPrice" },
-    );
+    const gameRows =
+      byGame.size === 0
+        ? []
+        : await this.games.findMany(
+            reader,
+            { _id: { $in: [...byGame.values()].map((row) => row.gameId) } },
+            { select: "gameCode name unitPrice" },
+          );
     const gameById = new Map(gameRows.map((row) => [String(row._id), row]));
     const games: LotteryOperationsGameSalesModel[] = [...byGame.entries()]
       .map(([id, row]) => {
@@ -373,6 +414,10 @@ export class OperationsReportService {
 
   // ---- 區塊 3:兌獎 ----
 
+  /**
+   * 期間內登記的兌獎,狀態看**期末那一刻**:期末前撤銷(`revokedAt` < 迄)= 已撤銷;其他 = 有效,
+   * 其中期末前已送兌(`sentAt` < 迄)= 已送兌,其餘 = 店內持有。期末之後才撤銷 / 送兌的,算在那天。
+   */
   private async redemptionOf(
     reader: OperatorContext,
     period: StorePeriod,
@@ -383,7 +428,7 @@ export class OperationsReportService {
         orgId: period.orgId,
         redeemedAt: { $gte: period.from, $lt: period.to },
       },
-      { select: "prizeAmount status" },
+      { select: "prizeAmount status sentAt revokedAt" },
     );
     const result = {
       valid: qty(),
@@ -391,86 +436,16 @@ export class OperationsReportService {
       sent: qty(),
       revoked: qty(),
     };
+    const before = (at: Date | null) => at !== null && at < period.to;
     for (const row of rows) {
-      if (row.status === REDEMPTION_STATUS.revoked) {
+      if (row.status === REDEMPTION_STATUS.revoked && before(row.revokedAt)) {
         add(result.revoked, row.prizeAmount);
         continue;
       }
       add(result.valid, row.prizeAmount);
-      add(
-        row.status === REDEMPTION_STATUS.sent ? result.sent : result.inStore,
-        row.prizeAmount,
-      );
+      add(before(row.sentAt) ? result.sent : result.inStore, row.prizeAmount);
     }
     return result;
-  }
-
-  // ---- 區塊 4:庫存異動 ----
-
-  private async inventoryOf(
-    reader: OperatorContext,
-    period: StorePeriod,
-    events: readonly EventRow[],
-    unitCost: ReadonlyMap<string, number>,
-  ): Promise<LotteryOperationsInventoryModel> {
-    const { orgId, from, to } = period;
-    const count = (type: string) =>
-      events.filter((event) => event.type === type).length;
-    const costOf = (type: string) =>
-      events
-        .filter((event) => event.type === type)
-        .reduce(
-          (sum, event) => sum + (unitCost.get(String(event.ticketId)) ?? 0),
-          0,
-        );
-    const booksOf = (type: string) =>
-      idsOf(
-        events
-          .filter((event) => event.type === type)
-          .map((event) => event.bookId),
-      );
-    const purchased = booksOf(TICKET_EVENT_TYPE.purchase);
-    const voided = booksOf(TICKET_EVENT_TYPE.purchaseVoid);
-    const [bookRows, transfers, ending] = await Promise.all([
-      this.books.findMany(
-        reader,
-        { _id: { $in: [...purchased, ...voided] } },
-        { select: "cost" },
-      ),
-      this.stock.transfersOf(reader, orgId, from, to),
-      this.stock.endingOf(reader, orgId, to),
-    ]);
-    const bookCost = new Map(
-      bookRows.map((row) => [String(row._id), row.cost]),
-    );
-    const sumBooks = (ids: readonly Types.ObjectId[]) =>
-      ids.reduce((sum, id) => sum + (bookCost.get(String(id)) ?? 0), 0);
-    return {
-      purchaseBooks: purchased.length - voided.length,
-      purchaseTickets:
-        count(TICKET_EVENT_TYPE.purchase) -
-        count(TICKET_EVENT_TYPE.purchaseVoid),
-      purchaseCost: sumBooks(purchased) - sumBooks(voided),
-      transferInTickets: transfers.inTickets,
-      transferInAmount: transfers.inAmount,
-      transferOutTickets: transfers.outTickets,
-      transferOutAmount: transfers.outAmount,
-      transferGain: transfers.outAmount - transfers.outCost,
-      scrapTickets: count(TICKET_EVENT_TYPE.scrap),
-      // 報廢損失以報廢事件上的成本快照為準(調貨後張的單張成本可能已變)
-      scrapCost: events
-        .filter((event) => event.type === TICKET_EVENT_TYPE.scrap)
-        .reduce((sum, event) => sum + (event.cost ?? 0), 0),
-      lostTickets: count(TICKET_EVENT_TYPE.lose),
-      lostCost: costOf(TICKET_EVENT_TYPE.lose),
-      recoveredTickets: count(TICKET_EVENT_TYPE.recover),
-      recoveredCost: costOf(TICKET_EVENT_TYPE.recover),
-      skippedTickets:
-        count(TICKET_EVENT_TYPE.skip) - count(TICKET_EVENT_TYPE.unskip),
-      endingTickets: ending.tickets,
-      endingCost: ending.cost,
-      investigatingBooks: ending.investigatingBooks,
-    };
   }
 
   // ---- 區塊 5、8:現金、註記 ----
@@ -486,7 +461,7 @@ export class OperationsReportService {
   }> {
     const { reader } = scope;
     const { orgId, from, to } = period;
-    const [movements, checkouts, stocktakes] = await Promise.all([
+    const [movements, submitted, stocktakes] = await Promise.all([
       this.movements.findMany(
         reader,
         { orgId, occurredAt: { $gte: from, $lt: to } },
@@ -500,7 +475,7 @@ export class OperationsReportService {
         { orgId, submittedAt: { $gte: from, $lt: to } },
         {
           select:
-            "type shiftId difference stocktakeMode skipReason skipReasonKey",
+            "type status shiftId difference stocktakeMode skipReason skipReasonKey confirmedAt returnedAt",
         },
       ),
       this.stocktakes.findMany(
@@ -514,6 +489,8 @@ export class OperationsReportService {
         { select: "summary" },
       ),
     ]);
+    // 期末那一刻有效的結帳單:待審核或已核准;期末前已退回、還沒重送的不算
+    const checkouts = submitted.filter((row) => isValidAt(row, to));
     const shiftCheckouts = checkouts.filter(
       (row) => row.type === CHECKOUT_TYPE.shift && row.shiftId !== null,
     );
@@ -531,11 +508,13 @@ export class OperationsReportService {
               orgId,
               type: CHECKOUT_TYPE.daily,
               coveredShiftIds: { $in: shiftIds },
+              // 期末那一刻已送出的日結才算涵蓋(之後才日結的,重跑舊報表仍是沒被涵蓋)
+              submittedAt: { $lt: to },
             },
-            { select: "coveredShiftIds" },
+            { select: "coveredShiftIds status returnedAt" },
           ),
     ]);
-    const shiftOpenedAt = await this.shiftOpenedAt(reader, [
+    const shiftInfo = await this.shiftInfoOf(reader, [
       ...shiftIds,
       ...recordedRows.map((row) => row.shiftId),
       ...movements.flatMap((row) =>
@@ -543,7 +522,7 @@ export class OperationsReportService {
       ),
     ]);
     const isPrior = (shiftId: string, recordedAt: Date) => {
-      const openedAt = shiftOpenedAt.get(shiftId);
+      const openedAt = shiftInfo.get(shiftId)?.openedAt;
       return (
         openedAt !== undefined &&
         isPriorPeriodOf(scope, closedAt, openedAt, recordedAt)
@@ -551,7 +530,6 @@ export class OperationsReportService {
     };
     // 事後更正算在**記錄當期**(使用者 10/12 定案):這家店這段期間記的,依原因類別彙總;
     // 指向已關帳月份的照算,另在「前期更正」標出(與撤銷售出 / 銀行沖正一致)
-    const current = recordedRows;
     const prior: { amount: number }[] = recordedRows.filter((row) =>
       isPrior(row.shiftId, row.recordedAt),
     );
@@ -570,19 +548,12 @@ export class OperationsReportService {
       ...(await this.priorBankReversals(scope, period, closedAt)),
     );
 
-    const net = (type: string) =>
-      movements
-        .filter((row) => row.type === type && row.postCloseOf === null)
-        .reduce((sum, row) => {
-          const route = NORMAL_ROUTE[type] ?? {};
-          const normal =
-            (route.to === undefined || row.to === route.to) &&
-            (route.from === undefined || row.from === route.from);
-          return sum + (normal ? row.amount : -row.amount);
-        }, 0);
     const covered = new Set(
-      covering.flatMap((row) => row.coveredShiftIds.map(String)),
+      covering
+        .filter((row) => isValidAt(row, to))
+        .flatMap((row) => row.coveredShiftIds.map(String)),
     );
+    const uncovered = shiftIds.filter((id) => !covered.has(String(id)));
     const skipped = new Map<string, number>();
     for (const row of checkouts) {
       if (row.stocktakeMode === "skip") {
@@ -593,18 +564,17 @@ export class OperationsReportService {
     return {
       cash: {
         shiftCount: shiftCheckouts.length,
+        pendingShiftCount: shiftCheckouts.filter(
+          (row) => !(row.confirmedAt !== null && row.confirmedAt < to),
+        ).length,
         shiftDifference: shiftCheckouts.reduce(
           (sum, row) => sum + row.difference,
           0,
         ),
-        postClose: postCloseByCategory(current),
-        refund: net(CASH_MOVEMENT_TYPE.refund),
-        transferExpense: net(CASH_MOVEMENT_TYPE.transferOut),
-        transferIncome: net(CASH_MOVEMENT_TYPE.transferIn),
-        deposit: net(CASH_MOVEMENT_TYPE.deposit),
-        bankDeposit: net(CASH_MOVEMENT_TYPE.bankDeposit),
+        postClose: postCloseByCategory(recordedRows),
         dailyCloseCount: dailies.length,
         vaultDifference: dailies.reduce((sum, row) => sum + row.difference, 0),
+        movements: movementsOf(movements),
       },
       notes: {
         skippedStocktakes: [...skipped.entries()]
@@ -615,8 +585,10 @@ export class OperationsReportService {
           (sum, row) => sum + row.summary.uncountedCount,
           0,
         ),
-        uncoveredShifts: shiftIds.filter((id) => !covered.has(String(id)))
-          .length,
+        uncoveredShifts: uncovered.length,
+        uncoveredShiftLabels: uncovered
+          .slice(0, MAX_LISTED)
+          .map((id) => shiftInfo.get(String(id))?.label ?? ""),
         priorPeriodCount: prior.length,
         priorPeriodAmount: prior.reduce((sum, row) => sum + row.amount, 0),
         openMonths: openMonthsOf(scope, from, to),
@@ -704,8 +676,8 @@ export class OperationsReportService {
   // ---- 區塊 6:銀行 ----
 
   /**
-   * 這家店使用的帳戶(使用組織包含它,或期間內有歸屬這家店的交易):只算歸屬這家店的交易、依類型合計;
-   * 期末餘額是整個帳戶的(註明共用)。
+   * 這家店使用的帳戶(使用組織包含它,或期間內有歸屬這家店的交易):只算歸屬這家店的交易、同一類型合一列
+   * (收、支分開加,沖正算在同一列並計筆數);期末餘額是整個帳戶的(註明共用)。
    */
   private async bankOf(
     operator: OperatorContext,
@@ -728,7 +700,7 @@ export class OperationsReportService {
           branchOrgId: period.orgId,
           occurredAt: { $gte: period.from, $lt: period.to },
         },
-        { select: "accountId type direction amount" },
+        { select: "accountId type direction amount reversalOf" },
       ),
       this.orgs.findById(reader, period.orgId, { select: "ancestors" }),
     ]);
@@ -760,14 +732,21 @@ export class OperationsReportService {
         if (!row.accountId.equals(account._id)) {
           continue;
         }
-        const key = `${row.type}|${row.direction}`;
-        const entry = totals.get(key) ?? {
+        const entry = totals.get(row.type) ?? {
           type: row.type,
-          direction: row.direction,
-          amount: 0,
+          inAmount: 0,
+          outAmount: 0,
+          reversalCount: 0,
         };
-        entry.amount += row.amount;
-        totals.set(key, entry);
+        if (row.direction === "in") {
+          entry.inAmount += row.amount;
+        } else {
+          entry.outAmount += row.amount;
+        }
+        if (row.reversalOf !== null) {
+          entry.reversalCount += 1;
+        }
+        totals.set(row.type, entry);
       }
       const opening =
         account.openingDate < period.to ? account.openingBalance : 0;
@@ -786,8 +765,9 @@ export class OperationsReportService {
   // ---- 區塊 7:未結清 ----
 
   /**
-   * 期末時的待付 / 待退批貨款、待收 / 待付調貨款(`SettlementLedger.outstandingAt`:單據當時還有效、
-   * 收付只算期末以前的),依歸屬分店。對齊日結時各店的「迄」不同,同一個「迄」只查一次。
+   * 期末時的待付 / 待退進貨款、待收 / 待付調貨款、調貨待退 / 該退(`SettlementLedger.outstandingAt`:
+   * 單據當時還有效、收付只算期末以前的),依歸屬分店;說明列單號(最多 5 張)。
+   * 對齊日結時各店的「迄」不同,同一個「迄」只查一次。
    */
   private async outstandingOf(
     operator: OperatorContext,
@@ -806,21 +786,27 @@ export class OperationsReportService {
       ),
     );
     return (period) => {
-      const result: LotteryOperationsOutstandingModel = {
-        purchaseToPay: 0,
-        purchaseToRefund: 0,
-        transferToReceive: 0,
-        transferToPay: 0,
-      };
+      const items = OUTSTANDING_KINDS.map(({ kind }) => ({
+        kind,
+        count: 0,
+        amount: 0,
+        serialNos: [] as string[],
+      }));
       for (const row of byEnd.get(period.to.getTime()) ?? []) {
-        const field = OUTSTANDING_FIELDS[
-          `${row.snapshot.registration.kind}|${row.kind}`
-        ] as keyof LotteryOperationsOutstandingModel | undefined;
-        if (field !== undefined && row.branchOrgId.equals(period.orgId)) {
-          result[field] += row.amount;
+        const key = `${row.snapshot.registration.kind}|${row.kind}|${row.side.role}`;
+        const item =
+          items[OUTSTANDING_KINDS.findIndex((entry) => entry.key === key)];
+        if (item === undefined || !row.branchOrgId.equals(period.orgId)) {
+          continue;
+        }
+        item.count += 1;
+        item.amount += row.amount;
+        const serialNo = row.snapshot.submission.serialNo ?? null;
+        if (serialNo !== null && item.serialNos.length < MAX_LISTED) {
+          item.serialNos.push(serialNo);
         }
       }
-      return result;
+      return { items };
     };
   }
 
@@ -841,10 +827,11 @@ export class OperationsReportService {
     return new Map(rows.map((row) => [String(row._id), row.unitCost]));
   }
 
-  private async shiftOpenedAt(
+  /** 班的開班時間(判斷前期更正)與名稱(沒被日結涵蓋的班列名)。 */
+  private async shiftInfoOf(
     reader: OperatorContext,
     ids: readonly (Types.ObjectId | string)[],
-  ): Promise<Map<string, Date>> {
+  ): Promise<Map<string, { openedAt: Date; label: string }>> {
     const unique = [...new Set(ids.map(String))];
     if (unique.length === 0) {
       return new Map();
@@ -852,9 +839,14 @@ export class OperationsReportService {
     const rows = await this.shifts.findMany(
       reader,
       { _id: { $in: unique } },
-      { select: "openedAt" },
+      { select: "openedAt label" },
     );
-    return new Map(rows.map((row) => [String(row._id), row.openedAt]));
+    return new Map(
+      rows.map((row) => [
+        String(row._id),
+        { openedAt: row.openedAt, label: row.label },
+      ]),
+    );
   }
 
   /** 手動標記原因的名稱(欄位管理「手動標記原因」;停用的選項找不到 → 顯示代碼)。 */
@@ -868,6 +860,55 @@ export class OperationsReportService {
     );
     return new Map(options.map((option) => [option.value, option.label]));
   }
+}
+
+/**
+ * 結帳單在 `at` 那一刻有效:待審核或已核准;已退回的,退回時間在那一刻以後才算(那一刻還是待審核)。
+ * 退回後重送會改寫送出時間,所以「之後才重送」的不在原本那段期間裡。
+ */
+function isValidAt(
+  row: { status: string; returnedAt?: Date | null },
+  at: Date,
+): boolean {
+  if (row.status !== CHECKOUT_STATUS.returned) {
+    return true;
+  }
+  return row.returnedAt != null && row.returnedAt >= at;
+}
+
+/**
+ * 5b 現金移動:依類型分列,每一筆對抽屜 / 小金庫的影響(流入 +、流出 −);沖正那一筆兩端對調,自然算反向。
+ * 事後更正那幾筆(補記到已結帳的班)在 5a,不重複列。
+ */
+function movementsOf(
+  rows: readonly {
+    type: string;
+    from: string;
+    to: string;
+    amount: number;
+    postCloseOf: unknown;
+  }[],
+): LotteryOperationsCashMovementModel[] {
+  return MOVEMENT_ROWS.map(({ type, sources }) => {
+    const result = { type, count: 0, drawer: 0, vault: 0 };
+    for (const row of rows) {
+      if (row.postCloseOf !== null || !sources.includes(row.type)) {
+        continue;
+      }
+      result.count += 1;
+      for (const [place, sign] of [
+        [row.from, -1],
+        [row.to, 1],
+      ] as const) {
+        if (place === "drawer") {
+          result.drawer += sign * row.amount;
+        } else if (place === "vault") {
+          result.vault += sign * row.amount;
+        }
+      }
+    }
+    return result;
+  });
 }
 
 const alignOf = (input: LotteryOperationsReportInput): boolean =>
@@ -885,8 +926,8 @@ const signedCorrection = (row: { from: string; to: string; amount: number }) =>
   row.from === "external" ? row.amount : -row.amount;
 
 /**
- * 沒有 `reports.show-cost`:成本與毛利相關欄位一律 null(api 不送出,不只是畫面不顯示)。
- * 直接改這次查詢剛組好的物件(沒有共用)。
+ * 沒有 `reports.show-cost`:成本與毛利相關欄位、調入 / 調出 / 在途的調貨金額一律 null(api 不送出,
+ * 不只是畫面不顯示;調入的調貨金額就是收貨店的成本,使用者 10/26 定案)。直接改這次查詢剛組好的物件(沒有共用)。
  */
 function withoutCost(
   store: LotteryOperationsStoreModel,
@@ -896,12 +937,22 @@ function withoutCost(
     game.cost = null;
   }
   Object.assign(store.inventory, {
+    openingCost: null,
     purchaseCost: null,
+    transferInAmount: null,
+    transferOutCost: null,
+    transferOutAmount: null,
     transferGain: null,
+    salesCost: null,
     scrapCost: null,
-    lostCost: null,
-    recoveredCost: null,
+    newInvestigatingCost: null,
+    investigateRecoveredCost: null,
+    lostRecoveredCost: null,
     endingCost: null,
+    checkCost: null,
+    inTransitAmount: null,
+    investigatingCost: null,
+    lostCost: null,
   });
   return store;
 }

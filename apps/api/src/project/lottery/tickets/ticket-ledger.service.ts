@@ -226,7 +226,8 @@ function eventOf(
     to: snapshotOf(after),
     quantity: 1,
     amount: input.amount ?? 0,
-    cost: input.cost ?? null,
+    // 成本快照:沒給就記這張事件前的單張成本(報表的已售成本、期初 / 期末成本都用它,之後調貨改了單張成本也不變)
+    cost: input.cost ?? write.before.unitCost,
     cashEffect: input.cashEffect ?? "none",
     cashPointId: input.cashPointId ?? null,
     shiftId: input.shiftId ?? null,

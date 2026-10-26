@@ -1,52 +1,65 @@
 import type { LotteryOperationsReportQuery } from "@repo/graphql";
 
-import type { SheetCell } from "@/lib/project/reports/excel";
+import {
+  SHEET_ROW_KEYS,
+  type SheetCell,
+  type SheetColumn,
+  type SheetRow,
+} from "@/lib/project/reports/excel";
 import type { ReportSheetContext } from "@/lib/project/reports/report-registry";
 
 export type OperationsReport =
   LotteryOperationsReportQuery["lotteryOperationsReport"];
 export type OperationsStore = OperationsReport["stores"][number];
 
-/**
- * 營運報表的工作表列:區塊、項目、張數(筆數 / 本數)、金額、說明。`unit` 不是欄位(Excel 不寫),
- * 給預覽卡片顯示「210 張 · 42,000」。
- */
-export type OperationsRow = Readonly<Record<string, SheetCell>> & {
-  block: string;
-  item: string;
-  count: number | null;
-  amount: number | null;
-  note: string | null;
-  unit: string | null;
-  /** 預覽卡片佔整列(依遊戲展開) */
-  wide: number | null;
-};
+export type T = ReportSheetContext["t"];
 
-/** 區塊順序固定(規格 11.2):1–8 + 依遊戲展開。 */
-export const OPERATIONS_BLOCKS = [
-  "sales",
-  "profit",
-  "redemption",
-  "inventory",
-  "cash",
-  "bank",
-  "outstanding",
-  "notes",
-  "games",
-] as const;
-export type OperationsBlock = (typeof OPERATIONS_BLOCKS)[number];
+/** 數字欄的格式:千分位、負數紅字(預覽也是負數紅字)。 */
+export const NUMBER_FORMAT = "#,##0;[Red]-#,##0";
 
-export const BLOCK_KEYS: Readonly<Record<OperationsBlock, string>> = {
-  sales: "admin.lotteryReports.operations.blocks.sales",
-  profit: "admin.lotteryReports.operations.blocks.profit",
-  redemption: "admin.lotteryReports.operations.blocks.redemption",
-  inventory: "admin.lotteryReports.operations.blocks.inventory",
-  cash: "admin.lotteryReports.operations.blocks.cash",
-  bank: "admin.lotteryReports.operations.blocks.bank",
-  outstanding: "admin.lotteryReports.operations.blocks.outstanding",
-  notes: "admin.lotteryReports.operations.blocks.notes",
-  games: "admin.lotteryReports.operations.blocks.games",
-};
+export const numberColumn = (
+  key: string,
+  header: string,
+  width = 12,
+): SheetColumn => ({
+  key,
+  header,
+  width,
+  numFmt: NUMBER_FORMAT,
+  align: "right",
+});
+
+export const textColumn = (
+  key: string,
+  header: string,
+  width = 28,
+): SheetColumn => ({ key, header, width });
+
+/** 一列(值依欄位 key;`undefined` 當空格)。 */
+export const line = (
+  values: Readonly<Record<string, SheetCell | undefined>>,
+): SheetRow =>
+  Object.fromEntries(
+    Object.entries(values).map(([key, value]) => [key, value ?? null]),
+  );
+
+/** 合計列(粗體)。 */
+export const totalLine = (
+  values: Readonly<Record<string, SheetCell | undefined>>,
+): SheetRow => ({ ...line(values), [SHEET_ROW_KEYS.emphasis]: "total" });
+
+/** 比率列(Excel `0.0%`、預覽「8.0%」)。 */
+export const percentLine = (
+  values: Readonly<Record<string, SheetCell | undefined>>,
+): SheetRow => ({ ...line(values), [SHEET_ROW_KEYS.format]: "percent" });
+
+/** 有成本權限(api 沒權限時成本回 null)。 */
+export const hasCost = (store: OperationsStore): boolean =>
+  store.sales.cost != null;
+
+/** 負號(0 不加負號:Excel 不會出現 -0)。 */
+export const negate = (value: number | null | undefined): number | null =>
+  value == null || value === 0 ? (value ?? null) : -value;
 
 export const POST_CLOSE_KEYS: Readonly<Record<string, string>> = {
   redemption: "admin.lotteryReports.operations.postClose.redemption",
@@ -72,16 +85,28 @@ export const BANK_TYPE_KEYS: Readonly<Record<string, string>> = {
   other: "admin.lotteryReports.operations.bankTypes.other",
 };
 
-export const UNIT_KEYS = {
-  tickets: "admin.lotteryReports.operations.units.tickets",
-  records: "admin.lotteryReports.operations.units.records",
-  books: "admin.lotteryReports.operations.units.books",
-  shifts: "admin.lotteryReports.operations.units.shifts",
-  times: "admin.lotteryReports.operations.units.times",
-} as const;
-export type Unit = keyof typeof UNIT_KEYS;
+export const MOVEMENT_KEYS: Readonly<Record<string, string>> = {
+  deposit: "admin.lotteryReports.operations.movements.deposit",
+  withdraw: "admin.lotteryReports.operations.movements.withdraw",
+  bank_deposit: "admin.lotteryReports.operations.movements.bank_deposit",
+  refund: "admin.lotteryReports.operations.movements.refund",
+  transfer_out: "admin.lotteryReports.operations.movements.transfer_out",
+  transfer_in: "admin.lotteryReports.operations.movements.transfer_in",
+  correction: "admin.lotteryReports.operations.movements.correction",
+};
 
-export type T = ReportSheetContext["t"];
+export const OUTSTANDING_KEYS: Readonly<Record<string, string>> = {
+  purchaseToPay: "admin.lotteryReports.operations.outstanding.purchaseToPay",
+  purchaseToRefund:
+    "admin.lotteryReports.operations.outstanding.purchaseToRefund",
+  transferToReceive:
+    "admin.lotteryReports.operations.outstanding.transferToReceive",
+  transferToPay: "admin.lotteryReports.operations.outstanding.transferToPay",
+  transferPayerRefund:
+    "admin.lotteryReports.operations.outstanding.transferPayerRefund",
+  transferPayeeRefund:
+    "admin.lotteryReports.operations.outstanding.transferPayeeRefund",
+};
 
 /** 對照表找訊息 key;不認得的值用 `fallback`(api 新增了類型、admin 還沒跟上時不至於整列壞掉)。 */
 export const keyIn = (
@@ -89,24 +114,3 @@ export const keyIn = (
   value: string,
   fallback: string,
 ): string => (Object.hasOwn(map, value) ? (map[value] ?? fallback) : fallback);
-
-export const row = (
-  block: OperationsBlock,
-  item: string,
-  values: {
-    count?: number | null;
-    amount?: number | null;
-    note?: string | null;
-    unit?: Unit | null;
-    wide?: boolean;
-  },
-  t: T,
-): OperationsRow => ({
-  block: t(BLOCK_KEYS[block]),
-  item,
-  count: values.count ?? null,
-  amount: values.amount ?? null,
-  note: values.note ?? null,
-  unit: values.unit == null ? null : t(UNIT_KEYS[values.unit]),
-  wide: values.wide === true ? 1 : null,
-});

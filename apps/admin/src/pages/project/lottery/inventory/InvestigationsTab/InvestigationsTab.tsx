@@ -72,7 +72,8 @@ export const InvestigationsTab = () => {
       header: t("investigations.columns.source"),
       render: (row) =>
         t("investigations.source", {
-          count: row.tickets.length,
+          // 未拆整本:待標註的跳號不算(api 已扣)
+          count: row.ticketCount,
           serial: row.refSerialNo ?? t("stock.none"),
         }),
     },

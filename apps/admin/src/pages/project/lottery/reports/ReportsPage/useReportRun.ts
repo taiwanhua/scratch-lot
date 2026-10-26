@@ -4,6 +4,7 @@ import { useTranslations } from "use-intl";
 
 import { useTenantOrgTreeQuery } from "@repo/graphql";
 
+import { useMe } from "@/hooks/base/useMe";
 import { usePermissions } from "@/hooks/base/usePermissions";
 import { useSession } from "@/hooks/base/useSession";
 import { flattenOrgs, tenantTreeToOrgNodes } from "@/lib/base/org-tree";
@@ -60,6 +61,7 @@ export const useReportRun = ({
   const { session } = useSession();
   const queryClient = useQueryClient();
   const { hasPermission } = usePermissions();
+  const me = useMe();
   // 分店名稱:與分店選擇器同一份(可見範圍,`scope="visible"`)
   const orgTree = useTenantOrgTreeQuery(session.client);
   const [isExporting, setIsExporting] = useState(false);
@@ -89,7 +91,7 @@ export const useReportRun = ({
     enabled: isPreviewOpen && queryOptions !== null,
   });
 
-  const toSheets = (data: unknown): SheetData[] | null =>
+  const toSheets = (data: unknown, generatedAt: Date): SheetData[] | null =>
     input === null
       ? null
       : reportSheetsOf(
@@ -99,6 +101,8 @@ export const useReportRun = ({
             input,
             orgs,
             canShowCost: hasPermission(REPORTS_PERMISSIONS.showCost),
+            generatedAt,
+            generatedBy: me.data?.me.name ?? "",
           }),
           orgs,
           t("lotteryReports.totalSheet"),
@@ -107,7 +111,7 @@ export const useReportRun = ({
   const sheets =
     query.data === undefined || query.data === null
       ? null
-      : toSheets(query.data);
+      : toSheets(query.data, new Date(query.dataUpdatedAt));
 
   const exportExcel = async () => {
     if (queryOptions === null) return;
@@ -119,7 +123,7 @@ export const useReportRun = ({
         // 預覽開著 = 匯出畫面上那一份(同一個 key 已查過);沒開就重查
         staleTime: isPreviewOpen ? Number.POSITIVE_INFINITY : 0,
       });
-      const exported = toSheets(data);
+      const exported = toSheets(data, new Date());
       if (exported !== null) {
         await downloadWorkbook({
           sheets: exported,

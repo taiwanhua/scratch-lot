@@ -84,6 +84,8 @@ describe("班次結帳歷史報表的工作表", () => {
       },
       orgs,
       canShowCost: false,
+      generatedAt: new Date("2026-10-17T01:12:00.000Z"),
+      generatedBy: "王店長",
     });
     expect(sheets.total.columns[0]?.key).toBe("store");
     expect(sheets.total.rows).toHaveLength(2);

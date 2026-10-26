@@ -12,14 +12,13 @@ import {
 
 import { OperationsConditionsAddon } from "./operations/OperationsConditionsAddon";
 import { OperationsMonthCaption } from "./operations/OperationsMonthCaption";
-import { OperationsSheetBody } from "./operations/OperationsSheetBody";
 import { buildOperationsSheets } from "./operations/operations-sheets";
 import { CashPointConditionField } from "./shift-checkouts/CashPointConditionField";
 import { buildShiftCheckoutsSheets } from "./shift-checkouts/shift-checkouts-sheets";
 
 /**
  * 營運報表(專案規格 11.2;Figma RE-01 / RE-02 / RE-03 / RE-04):分店最多 50 家;日可勾「對齊日結」。
- * 預覽排成區塊卡片(`OperationsSheetBody`),Excel 是同一份工作表。範圍限制與 api
+ * 預覽與 Excel 是同一份分段表格(每區塊一張小表;手機每列一張卡片)。範圍限制與 api
  * `project/lottery/reports/report-scope.ts` 的 `OPERATIONS_RANGE` 同一組值。
  */
 export const operationsReport = registerReport<LotteryOperationsReportQuery>({
@@ -41,7 +40,6 @@ export const operationsReport = registerReport<LotteryOperationsReportQuery>({
   sheets: buildOperationsSheets,
   ConditionsAddon: OperationsConditionsAddon,
   MonthCaption: OperationsMonthCaption,
-  SheetBody: OperationsSheetBody,
 });
 
 /**

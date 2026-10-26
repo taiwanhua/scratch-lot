@@ -66,7 +66,7 @@ describe("營運報表", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("預覽:區塊卡片(同一份工作表);有 show-cost 才有毛利;依遊戲展開", async () => {
+  it("預覽:和 Excel 同一份分段表格(每區塊一張小表);有 show-cost 才有毛利;依遊戲;分店比較", async () => {
     const { user, world } = render(
       ["reports.operations", "reports.show-cost"],
       `?${conditions({
@@ -77,13 +77,24 @@ describe("營運報表", () => {
     );
     await user.click(await screen.findByRole("button", { name: "預覽" }));
     const sales = await screen.findByRole("region", { name: "1 銷售" });
-    expect(within(sales).getByText("刷條碼售出")).toBeInTheDocument();
-    // 全部分店合計:210 + 105 張
-    expect(within(sales).getByText("315 張 · 63,000")).toBeInTheDocument();
+    // 全部分店合計:刷條碼 210 + 105 張、42,000 + 21,000
+    const scan = within(sales).getByRole("row", { name: /刷條碼售出/ });
+    expect(scan).toHaveTextContent("315");
+    expect(scan).toHaveTextContent("63,000");
+    // 撤銷是負數(紅字)
+    expect(within(sales).getByRole("row", { name: /撤銷/ })).toHaveTextContent(
+      "-4",
+    );
     expect(screen.getByRole("region", { name: "2 毛利" })).toBeInTheDocument();
     expect(
-      screen.getByRole("region", { name: "1 銷售 · 依遊戲展開" }),
+      screen.getByRole("region", { name: "1 銷售 · 依遊戲" }),
     ).toBeInTheDocument();
+    const inventory = screen.getByRole("region", { name: "4 庫存異動" });
+    expect(
+      within(inventory).getByRole("row", { name: /核對/ }),
+    ).toHaveTextContent("對得上");
+    // 兩家店以上:最後一個頁籤是分店比較
+    expect(screen.getByRole("tab", { name: "分店比較" })).toBeInTheDocument();
     expect(world.operationsInputs[0]).toMatchObject({
       periodKind: "day",
       orgIds: TWO_BRANCHES,

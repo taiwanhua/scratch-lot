@@ -516,6 +516,7 @@ export class CheckoutService {
       submittedAt: now,
       confirmedAt: null,
       confirmedBy: null,
+      returnedAt: null,
       coveredFrom: null,
       coveredTo: null,
       coveredShiftIds: [],
@@ -666,7 +667,10 @@ export class CheckoutService {
     const record = await this.checkouts.findOneAndUpdate(
       reader,
       { submissionId, status: CHECKOUT_STATUS.pending },
-      { $set: { status: CHECKOUT_STATUS.returned }, $inc: { version: 1 } },
+      {
+        $set: { status: CHECKOUT_STATUS.returned, returnedAt: this.clock.now() },
+        $inc: { version: 1 },
+      },
       { session },
     );
     if (record?.stocktakeMode === "new") {

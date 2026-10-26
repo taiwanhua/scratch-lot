@@ -426,6 +426,10 @@ export class LotteryInvestigationRowModel {
   @Field(() => Int, { nullable: true })
   cost!: number | null;
 
+  /** 張數(未拆整本:待標註的跳號實體不存在,不算) */
+  @Field(() => Int)
+  ticketCount!: number;
+
   @Field(() => [LotteryInventoryTicketModel])
   tickets!: LotteryInventoryTicketModel[];
 }

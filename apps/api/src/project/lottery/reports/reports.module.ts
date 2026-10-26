@@ -5,6 +5,7 @@ import { ScheduleModule } from "../../schedule/schedule.module";
 import { LotteryAccountsModule } from "../accounts/accounts.module";
 import { LotteryFieldOptionsModule } from "../field-options/lottery-field-options.module";
 import { LotteryStoreModule } from "../store/store.module";
+import { OperationsInventory } from "./operations-inventory";
 import { OperationsReportService } from "./operations-report.service";
 import { PostCloseCorrections } from "./post-close-corrections";
 import { ReportPeriods } from "./report-periods";
@@ -32,6 +33,7 @@ import { ShiftCheckoutsReportService } from "./shift-checkouts-report.service";
     ReportPeriods,
     PostCloseCorrections,
     ReportStock,
+    OperationsInventory,
     OperationsReportService,
     ShiftCheckoutsReportService,
     LotteryReportsResolver,

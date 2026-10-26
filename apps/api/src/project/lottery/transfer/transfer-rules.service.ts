@@ -15,6 +15,7 @@ import {
   type TicketStatus,
   type TransferLineValue,
   bookStateOf,
+  pendingSkipCountOf,
   transferHeaderOf,
   transferLineAmountOf,
   transferLinesOf,
@@ -124,6 +125,8 @@ export interface TransferBook {
   gameCode: string;
   bookNo: string;
   status: string;
+  /** 待標註張數(拆本前還沒標的跳號;實體不存在,整本調貨的張數不算它們) */
+  pendingSkipCount: number;
 }
 
 /** 遊戲(金額比對用)。 */
@@ -163,7 +166,8 @@ const isSameShipment = (
   before.purchaseAmount === after.purchaseAmount;
 
 /**
- * 一列和它的本相符(規格 8.4 明細):本正常、遊戲相同、批購金額率 0–100 的整數、張數 = 這列的張;
+ * 一列和它的本相符(規格 8.4 明細):本正常、遊戲相同、批購金額率 0–100 的整數、張數 = 這列的張
+ * (整本 = 這本跳號以外的張扣掉待標註 = 標準張數;使用者 10/27 定案甲);
  * 整本要原封不動(沒拆過、沒有張在別家店),選張要拆過、張號都在這本;金額 = 整本金額或面額 × 張數。
  */
 function isLineValid(
@@ -194,7 +198,9 @@ function isLineValid(
     line.rate >= 0 &&
     line.rate <= 100 &&
     rowTickets.length > 0 &&
-    line.tickets === rowTickets.length &&
+    line.tickets ===
+      rowTickets.length -
+        (line.mode === TRANSFER_MODE.whole ? book.pendingSkipCount : 0) &&
     isModeValid &&
     line.amount === transferLineAmountOf(line.mode, game, line.tickets)
   );
@@ -292,7 +298,10 @@ export class TransferRules {
     const rows = await this.books.findMany(
       reader,
       { _id: { $in: ids } },
-      { select: "gameId gameCode bookNo status" },
+      {
+        select:
+          "gameId gameCode bookNo status lastTicketNo standardTickets skippedTicketNos",
+      },
     );
     return new Map(
       rows.map((book) => [
@@ -303,6 +312,11 @@ export class TransferRules {
           gameCode: book.gameCode,
           bookNo: book.bookNo,
           status: book.status,
+          pendingSkipCount: pendingSkipCountOf(
+            Number(book.lastTicketNo),
+            book.standardTickets,
+            book.skippedTicketNos.length,
+          ),
         },
       ]),
     );
@@ -518,9 +532,11 @@ export class TransferRules {
     const lineOf = new Map(lines.map((line) => [line.rowId, line]));
     const changed = receipts.some((receipt) => {
       const line = lineOf.get(receipt.rowId);
+      // 整本:點收紀錄記這本搬走的全部張(含待標註的),張數比對交給本與金額
       return (
         line?.bookId !== String(receipt.bookId) ||
-        line.tickets !== receipt.tickets.length ||
+        (line.mode !== TRANSFER_MODE.whole &&
+          line.tickets !== receipt.tickets.length) ||
         line.purchaseAmount !== receipt.purchaseAmount
       );
     });

@@ -80,6 +80,21 @@ export function unitCostOf(cost: number, standardTickets: number): number {
 }
 
 /**
+ * 待標註的跳號(拆本前還沒標的)實體不存在,不算張數(使用者 10/27 定案甲):整本一起的一組張
+ * (張數 = 標準張數 + 待標註,例:未拆的本在某家店的持有、未拆整本待查)扣掉待標註;其他照算。
+ * 例:迄號 101、標準 100、未拆 → 101 張紀錄算 100 張。
+ */
+export function withoutPendingSkips(
+  count: number,
+  standardTickets: number,
+  pendingSkipCount: number,
+): number {
+  return pendingSkipCount > 0 && count === standardTickets + pendingSkipCount
+    ? count - pendingSkipCount
+    : count;
+}
+
+/**
  * 本(專案規格 7.1;正本 `docs/modules/project/inventory.md`「資料與帳本」)。
  *
  * - `createBook`:**只給進貨點收用**,以點收人(操作者)自己的範圍寫。本號補 0、本編號、迄號範圍、起號 001、
@@ -225,6 +240,7 @@ export class LotteryBooksService {
         to: snapshotOf(ticket),
         quantity: 1,
         amount: 0,
+        cost: unitCost,
         cashEffect: "none" as const,
         refType: input.purchaseSubmissionId ? "purchase" : null,
         refId: input.purchaseSubmissionId ?? null,
@@ -276,12 +292,19 @@ export class LotteryBooksService {
     return {
       pendingSkipCount,
       remainingCount: remainingCountOf(snapshots, pendingSkipCount),
-      totalCount: snapshots.filter(
-        (ticket) => ticket.status !== TICKET_STATUS.skipped,
-      ).length,
+      totalCount: withoutPendingSkips(
+        snapshots.filter((ticket) => ticket.status !== TICKET_STATUS.skipped)
+          .length,
+        book.standardTickets,
+        pendingSkipCount,
+      ),
       holdings: [...holdingsOf(snapshots)].map(([orgId, count]) => ({
         orgId,
-        count,
+        count: withoutPendingSkips(
+          count,
+          book.standardTickets,
+          pendingSkipCount,
+        ),
       })),
       state: bookStateOf(snapshots),
     };

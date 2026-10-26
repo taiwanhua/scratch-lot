@@ -132,6 +132,10 @@ export interface ReportSheetContext {
   orgs: readonly ReportOrg[];
   /** 操作者有沒有 `reports.show-cost`:沒有時成本與毛利欄不要放進工作表 */
   canShowCost: boolean;
+  /** 產出時間(預覽 = 查到資料的時間;匯出 = 按下匯出、資料取回的時間) */
+  generatedAt: Date;
+  /** 產出人(登入者名稱) */
+  generatedBy: string;
 }
 
 /**
@@ -146,11 +150,13 @@ export const fullPathTranslator =
 /** 一個不含名稱的工作表(名稱由外框決定:合計固定一個名稱、分店用分店名)。 */
 export type ReportSheetBody = Omit<SheetData, "name">;
 
-/** 報表的工作表:全部分店合計 + 每家分店一張。 */
+/** 報表的工作表:全部分店合計 + 每家分店一張(+ 報表自己的其他工作表)。 */
 export interface ReportSheetSet {
   total: ReportSheetBody;
   /** 每家分店一張,`orgId` 對應 `context.orgs` */
   branches: readonly (ReportSheetBody & { orgId: string })[];
+  /** 排在分店後面的其他工作表(例:分店比較;名稱由報表自己給) */
+  extras?: readonly SheetData[];
 }
 
 /** 條件卡片裡、其他條件下方的報表專屬區塊拿到的東西。 */
@@ -252,7 +258,8 @@ export const registerReport = <TData>(
 };
 
 /**
- * 工作表組合 → 交給 Excel / 預覽的工作表清單:合計在最前面(預覽預設顯示它),分店照選擇器的順序。
+ * 工作表組合 → 交給 Excel / 預覽的工作表清單:合計在最前面(預覽預設顯示它),分店照選擇器的順序,
+ * 其他工作表(`extras`)排最後。
  * `totalName` 是「全部分店合計」(已翻譯);分店名找不到時用 id。
  */
 export const reportSheetsOf = (
@@ -274,6 +281,7 @@ export const reportSheetsOf = (
       ...body,
       name: nameOf.get(orgId) ?? orgId,
     })),
+    ...(set.extras ?? []),
   ];
 };
 

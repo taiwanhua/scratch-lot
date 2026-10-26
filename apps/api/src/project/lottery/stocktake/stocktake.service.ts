@@ -17,6 +17,7 @@ import {
   type TicketStatus,
   displayTicketKey,
   parseStocktakeDraft,
+  pendingSkipCountOf,
 } from "@repo/domain/project/lottery";
 import { LOTTERY_FIELD_CATEGORY_KEYS } from "@repo/domain/project/lottery-fields";
 
@@ -806,6 +807,7 @@ export class StocktakeService {
     const all = lines.flatMap((line) => line.diffs);
     const backfilled = all.filter((diff) => diff.action === "sale_backfill");
     const lostLines = lostReviewLines.filter((line) => line.action === "lost");
+    const lost = await this.lostFiguresOf(reader, lostLines, options);
     return {
       lines,
       unopenedLines,
@@ -824,10 +826,8 @@ export class StocktakeService {
             .filter((line) => !line.present)
             .reduce((sum, line) => sum + line.ticketCount, 0),
         flagged: all.filter((diff) => diff.action === "flag").length,
-        confirmLost: lostLines.length,
-        confirmLostCost: Math.round(
-          lostLines.reduce((sum, line) => sum + line.unitCost, 0),
-        ),
+        confirmLost: lost.tickets,
+        confirmLostCost: Math.round(lost.cost),
       },
     };
   }
@@ -990,11 +990,64 @@ export class StocktakeService {
         gameCode: book.gameCode,
         gameName: games.get(String(book.gameId))?.name ?? "",
         bookNo: book.bookNo,
-        ticketCount: countOf.get(String(book._id)) ?? 0,
+        // 待標註的跳號(拆本前還沒標的)實體不存在,不算張數(使用者 10/27 定案甲)
+        ticketCount: Math.max(
+          0,
+          (countOf.get(String(book._id)) ?? 0) -
+            pendingSkipCountOf(
+              Number(book.lastTicketNo),
+              book.standardTickets,
+              book.skippedTicketNos.length,
+            ),
+        ),
         present: item.present,
       });
     }
     return lines;
+  }
+
+  /**
+   * 確認遺失的張數與成本:整本未拆的本(張數 = 標準張數 + 待標註)扣掉待標註那幾張(實體不存在,
+   * 不算損失;使用者 10/27 定案甲)。本一次讀完。
+   */
+  private async lostFiguresOf(
+    reader: OperatorContext,
+    lines: readonly StocktakeLostReviewLine[],
+    options: { session?: ClientSession },
+  ): Promise<{ tickets: number; cost: number }> {
+    const books = await this.facts.booksOf(
+      reader,
+      lines.map((line) => line.bookId),
+      options,
+    );
+    const byBook = new Map<string, number[]>();
+    for (const line of lines) {
+      const key = String(line.bookId);
+      byBook.set(key, [...(byBook.get(key) ?? []), line.unitCost]);
+    }
+    let tickets = 0;
+    let cost = 0;
+    for (const [bookId, costs] of byBook) {
+      const book = books.get(bookId);
+      const pending =
+        book === undefined
+          ? 0
+          : pendingSkipCountOf(
+              Number(book.lastTicketNo),
+              book.standardTickets,
+              book.skippedTicketNos.length,
+            );
+      const total = costs.reduce((sum, value) => sum + value, 0);
+      const extra =
+        book !== undefined &&
+        pending > 0 &&
+        costs.length === book.standardTickets + pending
+          ? pending
+          : 0;
+      tickets += costs.length - extra;
+      cost += total - (extra * total) / costs.length;
+    }
+    return { tickets, cost };
   }
 
   private async lostReviewLinesOf(
