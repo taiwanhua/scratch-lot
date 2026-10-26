@@ -15,12 +15,12 @@ const VIEW = "/purchasing/purchase/view-page/doc-p33";
  * 進貨單的替換檢視頁(規格 8.2;Figma PU-06、PU-07、PU-11):點收區塊、送錯分店、結算區塊。
  */
 describe("進貨單檢視頁", () => {
-  it("點收區塊:依遊戲分組、組標題「已點收 4 / 5」;刷到單上的本 → 已點收,[完成這次點收] 可以按", async () => {
+  it("點收區塊:依遊戲分組、組標題「叫貨 5,已刷 5,已點收 4 / 5」;刷到單上的本 → 已點收,[完成這次點收] 可以按", async () => {
     const user = userEvent.setup();
     const { purchaseFake } = renderPurchasePage({ path: VIEW });
     expect(
       await screen.findByRole("heading", {
-        name: /5164 發大財 · 200 元.*已點收 4 \/ 5/,
+        name: /5164 發大財 · 200 元.*叫貨 5,已刷 5,已點收 4 \/ 5/,
       }),
     ).toBeInTheDocument();
     expect(
@@ -34,7 +34,7 @@ describe("進貨單檢視頁", () => {
     await waitFor(() => {
       expect(
         screen.getByRole("heading", {
-          name: /5164 發大財 · 200 元.*已點收 5 \/ 5/,
+          name: /5164 發大財 · 200 元.*叫貨 5,已刷 5,已點收 5 \/ 5/,
         }),
       ).toBeInTheDocument();
     });

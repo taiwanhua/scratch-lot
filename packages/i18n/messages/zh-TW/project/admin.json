@@ -2567,7 +2567,6 @@
         },
         "rateOf": "本號 {bookNo} 的批購金額率",
         "groupTitle": "{code} {name} · {price} 元({books} 本)小計 {subtotal}",
-        "requested": "叫貨 {requested},已刷 {scanned}",
         "groupRate": "整組批購金額率",
         "groupRateOf": "{code} 整組的批購金額率",
         "cardFacts": "最後張號 {lastTicketNo} · 批購 {amount}",
@@ -2674,9 +2673,14 @@
         "notified": "已通知這張進貨單的建立者更正"
       },
       "inTransit": "在途",
-      "receivedOf": "已點收 {received} / {total}",
       "pickGame": "正面條碼的遊戲",
-      "pickGameNone": "請選遊戲"
+      "pickGameNone": "請選遊戲",
+      "progress": {
+        "requested": "叫貨 {count}",
+        "scanned": "已刷 {count}",
+        "received": "已點收 {received} / {total}",
+        "separator": ","
+      }
     },
     "transfer": {
       "badgeDescription": "點收關卡(第二關)在你手上的調貨單",

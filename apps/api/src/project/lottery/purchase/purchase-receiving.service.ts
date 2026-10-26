@@ -117,7 +117,7 @@ interface WrongStoreHit {
 /**
  * 進貨點收(專案規格 8.2「點收一本」「錯誤情境」、8.3;正本 `docs/modules/project/purchasing.md`「進貨單」):
  *
- * - `receivingOf`:檢視頁的點收區塊(依遊戲分組、「叫貨 N,已刷 M」、每本點收了沒)
+ * - `receivingOf`:檢視頁的點收區塊(依遊戲分組、每組叫貨本數(`requestedBooks`;畫面組標題「叫貨 N,已刷 M,已點收 X / M」)、每本點收了沒)
  * - `receive`:刷一本 → 寫 `lottery_purchase_receipts` + `createBook`(本、張、「進貨」事件),同一個交易。
  *   單據要在審核中、點收任務在操作者手上;最後張號不同 → 擋下「請退回更正」;單上沒有 → 查是不是別家店的
  *   進貨單(送錯分店:擋下、不入庫,錯誤帶那張單的分店與單號)

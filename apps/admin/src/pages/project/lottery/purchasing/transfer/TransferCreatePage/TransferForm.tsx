@@ -196,11 +196,7 @@ export const TransferForm = ({
     return true;
   };
 
-  const { groups, labels } = useTransferLineList(
-    lines,
-    lockedRows,
-    mode === "edit",
-  );
+  const { groups, labels } = useTransferLineList(lines, lockedRows);
 
   const valuesOf = () =>
     transferValuesOf(

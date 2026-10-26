@@ -9,6 +9,7 @@ import {
   type BookListLabels,
   type BookListRow,
 } from "../BookGroupList/BookGroupList";
+import { useBookProgressLabel } from "../BookGroupList/useBookProgressLabel";
 import { BookScanBar } from "../BookScanBar/BookScanBar";
 
 /** 點收區塊的一組(同一個遊戲);每本的 `status` 由呼叫端給(已點收 / 未點收 / 在途)。 */
@@ -16,6 +17,8 @@ export interface ReceiveBookGroup {
   key: string;
   /** 組標題(例「5164 發大財 · 200 元」) */
   title: string;
+  /** 從叫貨單帶入時叫了幾本;沒有 = null */
+  requestedBooks: number | null;
   rows: BookListRow[];
 }
 
@@ -55,7 +58,7 @@ const money = (value: number): string => value.toLocaleString("en-US");
 
 /**
  * 點收區塊(專案規格 8.2「點收一本」、8.4;Figma PU-06 電腦 69:651、平板 127:26619、手機 127:26898):
- * 依遊戲分組的本清單(`BookGroupList` 的點收 / 檢視模式;組標題「已點收 X / N」)+ 刷條碼列(`BookScanBar`,
+ * 依遊戲分組的本清單(`BookGroupList` 的點收 / 檢視模式;組標題「叫貨 N,已刷 M,已點收 X / M」)+ 刷條碼列(`BookScanBar`,
  * 逐本刷條碼點收)+ [完成這次點收](「這一次」還沒刷任何一本時停用)。
  * 「正面條碼的遊戲」平常不顯示;正面的碼對到單上好幾款遊戲同本號時才出現,選了遊戲就照所選的遊戲再確認一次,
  * 刷成功就收起來。進貨單與調貨單共用;資料與寫入由呼叫端給。
@@ -71,6 +74,7 @@ export const ReceiveBooksPanel = ({
   columnLabels,
 }: ReceiveBooksPanelProps) => {
   const t = useTranslations("admin.lotteryPurchasing.receive");
+  const progress = useBookProgressLabel();
   const header = (column: BookListColumn): string =>
     columnLabels?.[column] ?? t(`columns.${column}`);
   const [message, setMessage] = useState<string | null>(null);
@@ -124,6 +128,7 @@ export const ReceiveBooksPanel = ({
     },
     remove: "",
     rateOf: () => "",
+    progress,
     cardFacts: (row) =>
       t("cardFacts", {
         ticketLabel: header("ticket"),
@@ -141,11 +146,7 @@ export const ReceiveBooksPanel = ({
       groups={groups.map((group) => ({
         key: group.key,
         title: group.title,
-        caption: t("receivedOf", {
-          received: group.rows.filter((row) => row.status === "received")
-            .length,
-          total: group.rows.length,
-        }),
+        requestedBooks: group.requestedBooks,
         rows: group.rows,
       }))}
       scanBar={

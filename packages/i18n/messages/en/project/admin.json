@@ -2567,7 +2567,6 @@
         },
         "rateOf": "Purchase rate of book {bookNo}",
         "groupTitle": "{code} {name} · {price} ({books} books) subtotal {subtotal}",
-        "requested": "requested {requested}, scanned {scanned}",
         "groupRate": "Rate for all",
         "groupRateOf": "Purchase rate for all {code}",
         "cardFacts": "Last ticket {lastTicketNo} · {amount}",
@@ -2674,9 +2673,14 @@
         "notified": "The creator of that purchase has been notified"
       },
       "inTransit": "In transit",
-      "receivedOf": "Received {received} / {total}",
       "pickGame": "Game for front barcodes",
-      "pickGameNone": "Pick a game"
+      "pickGameNone": "Pick a game",
+      "progress": {
+        "requested": "requested {count}",
+        "scanned": "scanned {count}",
+        "received": "received {received} / {total}",
+        "separator": ", "
+      }
     },
     "transfer": {
       "badgeDescription": "Transfers waiting for your receiving (second step)",

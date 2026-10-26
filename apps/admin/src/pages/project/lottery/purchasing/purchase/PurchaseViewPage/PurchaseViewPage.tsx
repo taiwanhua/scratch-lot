@@ -164,6 +164,7 @@ export const PurchaseViewPage = ({ routeParam }: ModulePageProps) => {
       name: group.gameName,
       price: group.unitPrice,
     }),
+    requestedBooks: group.requestedBooks ?? null,
     rows: group.rows.map((row) => ({
       rowId: row.rowId,
       bookNo: row.bookNo.startsWith("0") ? row.bookNo.slice(1) : row.bookNo,

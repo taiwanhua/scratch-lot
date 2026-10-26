@@ -11,6 +11,7 @@ import type {
   BookRowStatus,
 } from "@/components/project/lottery/BookGroupList/BookGroupList";
 import { groupBooksByGame } from "@/components/project/lottery/BookGroupList/book-groups";
+import { useBookProgressLabel } from "@/components/project/lottery/BookGroupList/useBookProgressLabel";
 
 import { formatMoney } from "../transfer-keys";
 import {
@@ -25,15 +26,15 @@ const displayBookNo = (bookNo: string): string =>
 
 /**
  * 調貨明細 → 依遊戲分組的本清單(`BookGroupList`)的組與詞:每列一本(或一本的選張;方式寫在本號下面)、
- * 張號區段、張數、金額、批購金額率、批購金額;編輯頁鎖住的列帶狀態,組標題加「已點收 X / N」。
+ * 張號區段、張數、金額、批購金額率、批購金額;編輯頁鎖住的列帶狀態,組標題的進度照 `BookGroupList` 的規則。
  */
 export const useTransferLineList = (
   lines: readonly TransferDraftLine[],
   lockedRows: ReadonlyMap<string, BookRowStatus>,
-  isEdit: boolean,
 ): { groups: BookListGroup[]; labels: BookListLabels } => {
   const t = useTranslations("admin.lotteryPurchasing.transfer.create");
   const tReceive = useTranslations("admin.lotteryPurchasing.receive");
+  const progress = useBookProgressLabel();
   const modeText = (line: TransferDraftLine) =>
     line.mode === TRANSFER_MODE.whole ? t("modes.whole") : t("modes.partial");
   const ticketsText = (line: TransferDraftLine) =>
@@ -60,18 +61,7 @@ export const useTransferLineList = (
       isRemovable: lockedRows.get(line.rowId) === "inTransit",
       status: lockedRows.get(line.rowId) ?? null,
     }),
-  ).map((group) => {
-    const received = group.rows.filter(
-      (row) => row.status === "received",
-    ).length;
-    return {
-      ...group,
-      caption:
-        isEdit && received > 0
-          ? tReceive("receivedOf", { received, total: group.rows.length })
-          : null,
-    };
-  });
+  );
   const labels: BookListLabels = {
     columns: {
       bookNo: t("columns.book"),
@@ -97,6 +87,7 @@ export const useTransferLineList = (
         purchase: formatMoney(row.amount),
       }),
     empty: t("noLines"),
+    progress,
     tableAria: (group) => t("linesAria", { game: group.title }),
   };
 

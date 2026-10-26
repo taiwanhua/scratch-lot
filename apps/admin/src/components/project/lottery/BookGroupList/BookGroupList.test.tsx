@@ -38,6 +38,16 @@ const LABELS: BookListLabels = {
   remove: "移除",
   rateOf: (row) => `本號 ${row.bookNo} 的批購金額率`,
   cardFacts: (row) => `最後張號 ${row.ticketText}`,
+  progress: ({ requested, scanned, received }) =>
+    [
+      requested === null ? null : `叫貨 ${String(requested)}`,
+      `已刷 ${String(scanned)}`,
+      received === null
+        ? null
+        : `已點收 ${String(received.count)} / ${String(received.total)}`,
+    ]
+      .filter((part) => part !== null)
+      .join(","),
 };
 
 const row = (
@@ -72,7 +82,7 @@ const renderList = (
           {
             key: "game-5164",
             title: "5164 發大財",
-            caption: "已點收 1 / 2",
+            requestedBooks: 5,
             rows,
           },
         ]}
@@ -99,6 +109,7 @@ describe("BookGroupList", () => {
     expect(
       within(table).queryByRole("columnheader", { name: "狀態" }),
     ).toBeNull();
+    expect(screen.getByText("叫貨 5,已刷 1")).toBeInTheDocument();
     await user.click(
       within(table).getByRole("button", { name: "移除 056527" }),
     );
@@ -120,7 +131,8 @@ describe("BookGroupList", () => {
     expect(
       within(open).getByRole("button", { name: "移除 056531" }),
     ).toBeInTheDocument();
-    expect(screen.getByText("已點收 1 / 2")).toBeInTheDocument();
+    // 組標題進度:叫貨 → 已刷(單上本數)→ 編輯有已點收才加「已點收 X / M」
+    expect(screen.getByText("叫貨 5,已刷 2,已點收 1 / 2")).toBeInTheDocument();
   });
 
   it("點收 / 檢視:唯讀,每本顯示狀態;刷條碼列由使用處給(檢視不給)", () => {
@@ -144,6 +156,7 @@ describe("BookGroupList", () => {
     expect(within(table).queryByRole("spinbutton")).toBeNull();
     expect(within(table).queryByRole("button")).toBeNull();
     expect(within(table).getByText("未點收")).toBeInTheDocument();
+    expect(screen.getByText("叫貨 5,已刷 2,已點收 1 / 2")).toBeInTheDocument();
     expect(
       screen.getByRole("textbox", { name: "刷條碼點收" }),
     ).toBeInTheDocument();

@@ -63,8 +63,8 @@ export interface BookListGroup {
   key: string;
   /** 組標題(例「5164 發大財 · 200 元(2 本)小計 36,800」) */
   title: string;
-  /** 組標題旁的進度(例「叫貨 5,已刷 4」「已點收 1 / 2」);null = 不顯示 */
-  caption?: string | null;
+  /** 從叫貨單帶入時這個遊戲叫了幾本;沒有叫貨單(或不知道)= null / 不給 */
+  requestedBooks?: number | null;
   rows: readonly BookListRow[];
   /** 整組的批購金額率(新增 / 編輯);不給 = 不顯示 */
   groupRate?: {
@@ -76,6 +76,16 @@ export interface BookListGroup {
 
 export type BookListColumn =
   "bookNo" | "ticket" | "tickets" | "bookPrice" | "rate" | "amount" | "status";
+
+/**
+ * 組標題旁的進度(四種模式同一條規則,只給適用的部分):有叫貨單 →「叫貨 N」;一律「已刷 M」(單上本數);
+ * 有點收資訊時(點收 / 檢視的列帶點收狀態、編輯有已點收的列)→「已點收 X / M」。
+ */
+export interface BookGroupProgress {
+  requested: number | null;
+  scanned: number;
+  received: { count: number; total: number } | null;
+}
 
 /** 使用處的詞(欄名、狀態、按鈕;先盤點所有使用處,不在元件裡寫死)。 */
 export interface BookListLabels {
@@ -89,6 +99,8 @@ export interface BookListLabels {
   groupRate?: string;
   /** 手機卡片的第二行 */
   cardFacts: (row: BookListRow) => string;
+  /** 組標題的進度文字(`useBookProgressLabel`) */
+  progress: (progress: BookGroupProgress) => string;
   /** 一本都沒有時 */
   empty?: string;
   /** 表格的無障礙名稱(組標題以外再補;不給 = 組標題) */
@@ -140,6 +152,25 @@ export const BookGroupList = ({
     group.rows.some((row) => row.status !== null && row.status !== undefined),
   );
   const isEmpty = groups.every((group) => group.rows.length === 0);
+  const progressOf = (group: BookListGroup): string => {
+    const received = group.rows.filter(
+      (row) => row.status === "received",
+    ).length;
+    const hasReceiving =
+      mode === "edit"
+        ? received > 0
+        : mode !== "create" &&
+          group.rows.some(
+            (row) => row.status === "received" || row.status === "notReceived",
+          );
+    return labels.progress({
+      requested: group.requestedBooks ?? null,
+      scanned: group.rows.length,
+      received: hasReceiving
+        ? { count: received, total: group.rows.length }
+        : null,
+    });
+  };
 
   const statusTag = (row: BookListRow) =>
     row.status === null || row.status === undefined ? null : (
@@ -274,16 +305,14 @@ export const BookGroupList = ({
                 sx={{ flex: 1, minWidth: 200 }}
               >
                 {group.title}
-                {group.caption !== null && group.caption !== undefined && (
-                  <Typography
-                    component="span"
-                    variant="body2"
-                    color="textSecondary"
-                    sx={{ ml: 1 }}
-                  >
-                    {group.caption}
-                  </Typography>
-                )}
+                <Typography
+                  component="span"
+                  variant="body2"
+                  color="textSecondary"
+                  sx={{ ml: 1 }}
+                >
+                  {progressOf(group)}
+                </Typography>
               </Typography>
               {isFillable &&
                 group.groupRate !== undefined &&

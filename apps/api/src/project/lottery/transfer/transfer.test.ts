@@ -1434,6 +1434,33 @@ describe("調貨單(規格 8.4、第 9 章)", () => {
         reason: "TRANSFER_LINE_INVALID",
       });
     });
+
+    it("退回後改在途那一列的批購金額率 → 擋下 TRANSFER_LINE_INVALID(在途的列不能改,只能刪)", async () => {
+      const shippedBook = await newBook(branchA);
+      const line = whole(shippedBook.bookId);
+      const id = await submit(hq, [line]);
+      await ship(id);
+      await decideOn(world(), managerB, id, "RETURN");
+      const row = await current(id);
+      const saved = await call<{
+        saveFormDraft: { submission: { editVersion: number } };
+      }>(api, hq.token, SAVE_SUBMISSION, {
+        input: {
+          id,
+          expectedEditVersion: row.editVersion,
+          values: { ...header(), lines: [{ ...line, rate: 90 }] },
+        },
+      });
+      const result = await call(api, hq.token, SUBMIT_SUBMISSION, {
+        input: {
+          id,
+          expectedEditVersion: saved.data?.saveFormDraft.submission.editVersion,
+        },
+      });
+      expect(extensionsOf(result)).toMatchObject({
+        reason: "TRANSFER_LINE_INVALID",
+      });
+    });
   });
 
   describe("在途的列被刪除", () => {

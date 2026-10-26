@@ -36,6 +36,7 @@ import {
   type BookListRow,
 } from "@/components/project/lottery/BookGroupList/BookGroupList";
 import { groupBooksByGame } from "@/components/project/lottery/BookGroupList/book-groups";
+import { useBookProgressLabel } from "@/components/project/lottery/BookGroupList/useBookProgressLabel";
 import {
   ReceiveBooksPanel,
   type ReceiveScanOutcome,
@@ -199,6 +200,7 @@ export const TransferViewPage = ({ routeParam }: ModulePageProps) => {
   );
   const gameLabelOf = (gameId: string): string =>
     groups.find((group) => group.key === gameId)?.title ?? gameId;
+  const progress = useBookProgressLabel();
   const shipLabels: BookListLabels = {
     columns: {
       bookNo: t("columns.book"),
@@ -212,6 +214,7 @@ export const TransferViewPage = ({ routeParam }: ModulePageProps) => {
     status: { received: "", notReceived: "", inTransit: "" },
     remove: "",
     rateOf: () => "",
+    progress,
     cardFacts: (row) =>
       t("cardFacts", {
         tickets: row.ticketText,
@@ -326,7 +329,7 @@ export const TransferViewPage = ({ routeParam }: ModulePageProps) => {
         )}
         {data !== null && rows.length > 0 && isShipped && (
           <ReceiveBooksPanel
-            groups={groups}
+            groups={groups.map((group) => ({ ...group, requestedBooks: null }))}
             canReceive={data.canReceive}
             onScan={onScan}
             gameLabelOf={gameLabelOf}

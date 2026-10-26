@@ -17,6 +17,7 @@ import {
   type BookListGroup,
   type BookListLabels,
 } from "@/components/project/lottery/BookGroupList/BookGroupList";
+import { useBookProgressLabel } from "@/components/project/lottery/BookGroupList/useBookProgressLabel";
 import { BookScanBar } from "@/components/project/lottery/BookScanBar/BookScanBar";
 import { useAdminErrorText } from "@/hooks/base/useAdminErrorText";
 import { useSession } from "@/hooks/base/useSession";
@@ -99,6 +100,7 @@ export const PurchaseForm = ({
   const t = useTranslations("admin.lotteryPurchasing.purchase.create");
   const tEdit = useTranslations("admin.lotteryPurchasing.purchase.edit");
   const tReceive = useTranslations("admin.lotteryPurchasing.receive");
+  const progressLabel = useBookProgressLabel();
   const errorText = useAdminErrorText("admin.formEngine.errors");
   const { session } = useSession();
   const timezone = useTenantTimezone() ?? DEFAULT_TENANT_TIMEZONE;
@@ -184,20 +186,6 @@ export const PurchaseForm = ({
   };
 
   const listGroups: BookListGroup[] = groups.map((group) => {
-    const received = group.rows.filter((row) =>
-      lockedRowIds.has(row.rowId),
-    ).length;
-    const captions = [
-      group.requestedBooks === null
-        ? null
-        : t("requested", {
-            requested: group.requestedBooks,
-            scanned: group.rows.length,
-          }),
-      mode === "edit" && received > 0
-        ? tReceive("receivedOf", { received, total: group.rows.length })
-        : null,
-    ].filter((item) => item !== null);
     return {
       key: group.game.id,
       title: t("groupTitle", {
@@ -207,7 +195,7 @@ export const PurchaseForm = ({
         books: group.rows.length,
         subtotal: formatMoney(group.subtotal),
       }),
-      caption: captions.length === 0 ? null : captions.join(" · "),
+      requestedBooks: group.requestedBooks,
       rows: group.rows.map((row) => {
         const isLocked = lockedRowIds.has(row.rowId);
         return {
@@ -251,6 +239,7 @@ export const PurchaseForm = ({
     remove: t("remove"),
     rateOf: (row) => t("rateOf", { bookNo: row.bookNo }),
     groupRate: t("groupRate"),
+    progress: progressLabel,
     cardFacts: (row) =>
       t("cardFacts", {
         lastTicketNo: row.ticketText,

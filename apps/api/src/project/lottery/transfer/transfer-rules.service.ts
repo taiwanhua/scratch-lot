@@ -142,7 +142,10 @@ function isLockedBy(ticket: TransferTicket, submissionId: Types.ObjectId) {
 const isInTransit = (ticket: TransferTicket): boolean =>
   ticket.location.kind === TICKET_LOCATION_KIND.inTransit;
 
-/** 在途的列內容沒變:遊戲、本、方式、張號、張數都一樣(批購金額率等金額欄可以改)。 */
+/**
+ * 在途的列內容沒變:遊戲、本、方式、張號、張數,以及金額、批購金額率、批購金額都一樣
+ * (在途的列不能改,只能整列刪掉 → 待查;使用者 10/26 定案)。
+ */
 const isSameShipment = (
   before: TransferLineValue,
   after: TransferLineValue,
@@ -151,7 +154,10 @@ const isSameShipment = (
   before.bookId === after.bookId &&
   before.mode === after.mode &&
   before.tickets === after.tickets &&
-  before.ticketNos.join(",") === after.ticketNos.join(",");
+  before.ticketNos.join(",") === after.ticketNos.join(",") &&
+  before.amount === after.amount &&
+  before.rate === after.rate &&
+  before.purchaseAmount === after.purchaseAmount;
 
 /**
  * 一列和它的本相符(規格 8.4 明細):本正常、遊戲相同、批購金額率 0–100 的整數、張數 = 這列的張;
