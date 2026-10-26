@@ -7,6 +7,10 @@ import {
 } from "../../../auth/test-support/auth-app";
 import { createOrg, createUser } from "../../../auth/test-support/fixtures";
 import type { OperatorContext } from "../../../database/operator-context";
+import {
+  countDbCommands,
+  expectDbCommandsAtMost,
+} from "../../../database/test-support/db-commands";
 import { HOOK_TIMEOUT_MS } from "../../../database/test-support/mongo-connection";
 import { TransactionService } from "../../../database/transaction";
 import {
@@ -66,6 +70,17 @@ jest.setTimeout(WORKFLOW_TEST_TIMEOUT_MS);
 
 const FORM = "transfer";
 const MODULE = "purchasing.transfer";
+
+/**
+ * 多本調貨單的資料庫指令數上限(防退化,TX-06):整個請求的總數,與本數無關。
+ * 批次寫入後實測送出約 110、出貨約 135、作廢約 80 次;逐張寫帳本時作廢 1 本(100 張)約 1,500 次、
+ * 送出鎖定每張 3 次。
+ */
+const TRANSFER_SUBMIT_COMMANDS_LIMIT = 160;
+const TRANSFER_SHIP_COMMANDS_LIMIT = 180;
+const TRANSFER_VOID_COMMANDS_LIMIT = 130;
+/** 3 本比 1 本可以多的指令數(只容許少量與本數無關的差異)。 */
+const TRANSFER_COMMANDS_PER_EXTRA_BOOKS = 5;
 
 const RECEIVE = /* GraphQL */ `
   mutation TestTransferReceive($input: ReceiveLotteryTransferBookInput!) {
@@ -1775,6 +1790,84 @@ describe("調貨單(規格 8.4、第 9 章)", () => {
         .collection("lottery_requisition_lines")
         .findOne({ requisitionId });
       expect(line?.referencedBy).toBeNull();
+    });
+  });
+
+  /**
+   * N 本整本調貨:送出(鎖定)→ 出貨(調出)→ 逐本點收 → 收付記平後核准 → 沖正歸零 → 作廢。
+   * 回送出與作廢這兩個請求各自的指令數。
+   */
+  async function transferCommandsOf(books: number) {
+    const created = [];
+    for (let index = 0; index < books; index += 1) {
+      created.push(await newBook(branchA));
+    }
+    const draft = await draftOf(
+      hq,
+      created.map((book) => whole(book.bookId)),
+    );
+    const submitted = await countDbCommands(() =>
+      call(api, hq.token, SUBMIT_SUBMISSION, {
+        input: { id: draft.id, expectedEditVersion: draft.editVersion },
+      }),
+    );
+    expect(submitted.result.errors).toBeUndefined();
+    for (const book of created) {
+      expect(
+        await everyTicket(book.bookId, (ticket) => ticket.lockedBy !== null),
+      ).toBe(true);
+    }
+    const shipped = await countDbCommands(() => ship(draft.id));
+    for (const book of created) {
+      expect(await receive(managerB, draft.id, codeOf(book.bookNo))).toEqual(
+        {},
+      );
+    }
+    await settle(draft.id, 2000 * books);
+    await decideOn(world(), managerB, draft.id, "APPROVE");
+    await reverseAll(draft.id);
+    const fresh = await current(draft.id);
+    const voided = await countDbCommands(() =>
+      call(api, hq.token, FORM_VOID, {
+        input: {
+          id: draft.id,
+          expectedEditVersion: fresh.editVersion,
+          reasonNote: "輸入錯誤",
+        },
+      }),
+    );
+    expect(voided.result.errors).toBeUndefined();
+    // 作廢後每一本都回到出貨店庫存(收貨店調出、出貨店調入)
+    for (const book of created) {
+      expect(
+        await everyTicket(
+          book.bookId,
+          (ticket) =>
+            ticket.orgId.equals(branchA) &&
+            ticket.location.kind === "stock" &&
+            ticket.lockedBy === null,
+        ),
+      ).toBe(true);
+    }
+    return { submitted, shipped, voided };
+  }
+
+  describe("多本調貨單的資料庫指令數(防退化,TX-06)", () => {
+    it("送出(鎖定)、出貨(調出)、作廢的指令數與本數無關", async () => {
+      const one = await transferCommandsOf(1);
+      const three = await transferCommandsOf(3);
+      for (const [label, key, limit] of [
+        ["送出鎖定", "submitted", TRANSFER_SUBMIT_COMMANDS_LIMIT],
+        ["出貨調出", "shipped", TRANSFER_SHIP_COMMANDS_LIMIT],
+        ["作廢", "voided", TRANSFER_VOID_COMMANDS_LIMIT],
+      ] as const) {
+        expectDbCommandsAtMost(
+          three[key],
+          one[key].total + TRANSFER_COMMANDS_PER_EXTRA_BOOKS,
+          `${label} 3 本(1 本 = ${String(one[key].total)} 次)`,
+        );
+        expectDbCommandsAtMost(three[key], limit, `${label} 3 本`);
+      }
     });
   });
 

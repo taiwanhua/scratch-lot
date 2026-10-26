@@ -517,7 +517,7 @@ describe("張數核心(帳本 + 本 + 預計要給本數)", () => {
       const ticket = await firstTicket(await receiveBook());
       const events = api.app.get(LotteryTicketEventsRepository);
       const spy = jest
-        .spyOn(events, "create")
+        .spyOn(events, "createMany")
         .mockRejectedValueOnce(new Error("注入的事件寫入失敗"));
       try {
         await expect(
@@ -647,12 +647,22 @@ describe("張數核心(帳本 + 本 + 預計要給本數)", () => {
       expect(
         tickets.filter((ticket) => ticket.orgId.equals(storeB)),
       ).toHaveLength(30);
+      // 批次搬家:一批一筆稽核,列出搬了哪幾張
+      const audits = await api.connection
+        .collection<{ after: { ids: string[]; count: number } }>("audit_logs")
+        .find({ action: "data.reassign-org", targetType: "lottery_tickets" })
+        .toArray();
+      expect(audits.map((audit) => audit.after.count)).toContain(30);
       expect(
-        await api.connection.collection("audit_logs").countDocuments({
-          action: "data.reassign-org",
-          targetType: "lottery_tickets",
-        }),
-      ).toBeGreaterThanOrEqual(30);
+        audits
+          .find((audit) => audit.after.count === 30)
+          ?.after.ids.toSorted(byText),
+      ).toEqual(
+        tickets
+          .filter((ticket) => ticket.orgId.equals(storeB))
+          .map((ticket) => String(ticket._id))
+          .toSorted(byText),
+      );
       const book = await api.connection
         .collection<{ holderOrgIds: Types.ObjectId[]; orgId: Types.ObjectId }>(
           "lottery_books",

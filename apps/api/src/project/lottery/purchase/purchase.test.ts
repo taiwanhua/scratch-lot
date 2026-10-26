@@ -11,6 +11,10 @@ import {
   startAuthTestApp,
 } from "../../../auth/test-support/auth-app";
 import { createOrg } from "../../../auth/test-support/fixtures";
+import {
+  countDbCommands,
+  expectDbCommandsAtMost,
+} from "../../../database/test-support/db-commands";
 import { HOOK_TIMEOUT_MS } from "../../../database/test-support/mongo-connection";
 import {
   ASSIGN,
@@ -67,6 +71,14 @@ jest.setTimeout(WORKFLOW_TEST_TIMEOUT_MS);
 
 const FORM = "purchase";
 const MODULE = "purchasing.purchase";
+
+/**
+ * 進貨單作廢的資料庫指令數上限(防退化,TX-06):整個作廢請求(守門、狀態、事後動作、稽核)的總數,
+ * 與多出的本數無關(批次寫入後實測約 75 次)。逐張寫帳本時每本約 500 次,1 本就超過。
+ */
+const VOID_COMMANDS_LIMIT = 120;
+/** 4 本比 1 本可以多的指令數(只容許少量與本數無關的差異)。 */
+const VOID_COMMANDS_PER_EXTRA_BOOKS = 5;
 
 const RECEIVE = /* GraphQL */ `
   mutation TestReceive($input: ReceiveLotteryPurchaseBookInput!) {
@@ -513,6 +525,53 @@ describe("進貨單(規格 8.2、8.3)", () => {
       (sum, item) => sum + item.unopenedBooks,
       0,
     );
+  }
+
+  /** 建一本、點收、核准、淨額歸 0,動一下這本(`tamper`)再作廢:回擋下的 reason(沒擋 → undefined)。 */
+  async function voidBlockedBy(
+    tamper: (bookId: Types.ObjectId) => Promise<void>,
+  ): Promise<unknown> {
+    const line = book(gameHot);
+    const purchase = await submit([line]);
+    await receiveAll(purchase.id, [line]);
+    await decideOn({ api } as World, managerA, purchase.id, "APPROVE");
+    await reverseAutomatic(purchase.id);
+    const received = await db()
+      .collection("lottery_books")
+      .findOne({ bookNo: line.book_no });
+    await tamper(received?._id as Types.ObjectId);
+    const row = await current(purchase.id);
+    const result = await call(api, hq.token, FORM_VOID, {
+      input: {
+        id: purchase.id,
+        expectedEditVersion: row.editVersion,
+        reasonNote: "輸入錯誤",
+      },
+    });
+    return extensionsOf(result).reason;
+  }
+
+  /** 在這本的第一張補一筆 `type` 張數事件(點收後被動過)。 */
+  function eventOn(type: string) {
+    return async (bookId: Types.ObjectId): Promise<void> => {
+      const ticket = await db()
+        .collection("lottery_tickets")
+        .findOne({ bookId });
+      await db()
+        .collection("lottery_ticket_events")
+        .insertOne({
+          eventId: `${type}-${String(bookId)}`,
+          bookId,
+          ticketId: ticket?._id,
+          gameId: gameHot,
+          orgId: branchA,
+          tenantId: tenant,
+          at: new Date(),
+          type,
+          moduleKey: "inventory",
+          deletedAt: null,
+        });
+    };
   }
 
   async function badgeOf(who: Person): Promise<number> {
@@ -1580,6 +1639,147 @@ describe("進貨單(規格 8.2、8.3)", () => {
       const voidedDates = await dealerDates(voidDealer);
       expect(voidedDates.lastPurchaseDate).toBeNull();
       expect(voidedDates.updatedBy).toBe(String(hq.userId));
+    });
+
+    it("作廢前:有張已調出、已拆本,或被調貨單鎖定(調貨中)→ 擋下", async () => {
+      // 已調出(調貨單的「調出」事件)
+      expect(await voidBlockedBy(eventOn("transfer_out"))).toBe(
+        "PURCHASE_BOOKS_IN_USE",
+      );
+      // 已拆本(「拆本」事件)
+      expect(await voidBlockedBy(eventOn("open"))).toBe(
+        "PURCHASE_BOOKS_IN_USE",
+      );
+      // 調貨中:張被調貨單鎖定(還沒出貨,沒有任何事件)
+      expect(
+        await voidBlockedBy(async (bookId) => {
+          await db()
+            .collection("lottery_tickets")
+            .updateOne(
+              { bookId },
+              {
+                $set: {
+                  lockedBy: {
+                    refType: "transfer",
+                    refId: new Types.ObjectId(),
+                  },
+                },
+              },
+            );
+        }),
+      ).toBe("PURCHASE_BOOKS_IN_USE");
+    });
+
+    it("作廢後勾選的兌獎紀錄回到「店內持有」;多本作廢的資料庫指令數不隨本數成長(防退化)", async () => {
+      /** 一筆店內持有的兌獎紀錄(分店 A)。 */
+      let redemptionNo = 0;
+      const inStoreRedemption = async (prizeAmount: number) => {
+        redemptionNo += 1;
+        const ticketNo = String(redemptionNo).padStart(3, "0");
+        const now = new Date();
+        const { insertedId } = await db()
+          .collection("lottery_redemptions")
+          .insertOne({
+            orgId: branchA,
+            tenantId: tenant,
+            shiftId: new Types.ObjectId(),
+            cashPointId: new Types.ObjectId(),
+            redeemedAt: now,
+            redeemedBy: managerA.userId,
+            gameCode: "5164",
+            bookNo: "0056527",
+            ticketNo,
+            ticketLabel: `5164-056527-${ticketNo}`,
+            rawInput: `5164-1-056527-${ticketNo}-0-6`,
+            ticketId: null,
+            gameId: gameHot,
+            prizeAmount,
+            status: "in_store",
+            purchaseSubmissionId: null,
+            sentAt: null,
+            revokedAt: null,
+            revokedBy: null,
+            revokeReasonKey: null,
+            revokeReason: null,
+            revokeNote: null,
+            replacesId: null,
+            postCloseOf: null,
+            revokePostCloseOf: null,
+            note: null,
+            version: 0,
+            moduleKey: "store",
+            createdAt: now,
+            updatedAt: now,
+            createdBy: null,
+            updatedBy: null,
+            deletedAt: null,
+          });
+        return insertedId;
+      };
+      /** 建單 N 本(勾一筆兌獎)→ 全部點收 → 核准 → 淨額歸 0 → 作廢,回作廢這一次的指令數。 */
+      const voidCommandsOf = async (books: number) => {
+        const redemptionId = await inStoreRedemption(500);
+        const lines = Array.from({ length: books }, () => book(gameHot));
+        const purchase = await submit(lines, branchA, {
+          redemptions: [
+            {
+              rowId: `00000000-0000-4000-8888-${String(books).padStart(12, "0")}`,
+              redemption: String(redemptionId),
+              prize_amount: 500,
+            },
+          ],
+        });
+        const sent = await db()
+          .collection("lottery_redemptions")
+          .findOne({ _id: redemptionId });
+        expect(sent?.status).toBe("sent");
+        await receiveAll(purchase.id, lines);
+        await decideOn({ api } as World, managerA, purchase.id, "APPROVE");
+        await reverseAutomatic(purchase.id);
+        const fresh = await current(purchase.id);
+        const counted = await countDbCommands(() =>
+          call(api, hq.token, FORM_VOID, {
+            input: {
+              id: purchase.id,
+              expectedEditVersion: fresh.editVersion,
+              reasonNote: "輸入錯誤",
+            },
+          }),
+        );
+        expect(counted.result.errors).toBeUndefined();
+        // 作廢後:勾選的兌獎回到店內持有(規格 8.2「兌獎」)
+        const released = await db()
+          .collection("lottery_redemptions")
+          .findOne({ _id: redemptionId });
+        expect(released).toMatchObject({
+          status: "in_store",
+          purchaseSubmissionId: null,
+          sentAt: null,
+        });
+        const voidedBooks = await db()
+          .collection("lottery_books")
+          .find({ bookNo: { $in: lines.map((line) => line.book_no) } })
+          .toArray();
+        const bookIds = voidedBooks.map((row) => row._id);
+        expect(
+          await db()
+            .collection("lottery_ticket_events")
+            .countDocuments({
+              bookId: { $in: bookIds },
+              type: "purchase_void",
+            }),
+        ).toBe(books * 100);
+        return counted;
+      };
+      const one = await voidCommandsOf(1);
+      const four = await voidCommandsOf(4);
+      // 逐張寫帳本時每本約 500 次;批次寫入後只差幾次(與本數 / 張數無關)
+      expectDbCommandsAtMost(
+        four,
+        one.total + VOID_COMMANDS_PER_EXTRA_BOOKS,
+        `作廢 4 本(1 本 = ${String(one.total)} 次)`,
+      );
+      expectDbCommandsAtMost(four, VOID_COMMANDS_LIMIT, "作廢 4 本");
     });
 
     it("撤回、退回不擋", async () => {

@@ -20,6 +20,10 @@ import {
 import { createOrg } from "../../../auth/test-support/fixtures";
 import { OrgsRepository } from "../../../database/database.module";
 import { tenantBoundaryContext } from "../../../database/tenant-boundary-context";
+import {
+  countDbCommands,
+  expectDbCommandsAtMost,
+} from "../../../database/test-support/db-commands";
 import { HOOK_TIMEOUT_MS } from "../../../database/test-support/mongo-connection";
 import { TransactionService } from "../../../database/transaction";
 import {
@@ -279,6 +283,15 @@ const base = () => {
     deletedAt: null,
   };
 };
+
+/**
+ * 多本盤點的資料庫指令數上限(防退化,TX-06):整個請求的總數,與本數無關
+ * (批次寫入後實測送出約 120、核准完成約 110 次)。
+ */
+const STOCKTAKE_SUBMIT_COMMANDS_LIMIT = 170;
+const STOCKTAKE_COMPLETE_COMMANDS_LIMIT = 160;
+/** 3 + 3 本比 1 + 1 本可以多的指令數(只容許少量與本數無關的差異)。 */
+const STOCKTAKE_COMMANDS_PER_EXTRA_BOOKS = 5;
 
 const taipei = (time: string) => new Date(`2026-11-05T${time}:00+08:00`);
 
@@ -1411,6 +1424,71 @@ describe("盤點(GraphQL 端點 + 真 MongoDB)", () => {
     expect(await firstDiffsOf(submitted.id)).toMatchObject([
       { action: "sale_backfill", postClose: true, amount: 200 },
     ]);
+  });
+
+  /** N 本檯面上的本各有 2 張差異 [待查] + N 本未拆的本不在;回送出與核准完成這兩個請求的指令數。 */
+  async function stocktakeCommandsOf(books: number) {
+    const lines: StocktakeDraft["lines"] = [];
+    const unopened: StocktakeDraft["unopened"] = [];
+    for (let index = 0; index < books; index += 1) {
+      const { bookId } = await counterBook(counter);
+      lines.push(
+        lineOf(bookId, counter, "22:00", allNos(["016", "017"]), [
+          { ticketNo: "016", action: "investigate" },
+          { ticketNo: "017", action: "investigate" },
+        ]),
+      );
+      const { bookId: stockBook } = await counterBook(counter);
+      await connection
+        .collection(LOTTERY_TICKETS_COLLECTION)
+        .updateMany(
+          { bookId: stockBook },
+          { $set: { location: { kind: "stock", cashPointId: null } } },
+        );
+      unopened.push({ bookId: String(stockBook), present: false });
+    }
+    const draft = draftOf(lines, { unopened });
+    const submitted = await countDbCommands(() => submit(senior, draft));
+    expect(submitted.result.errors).toBeUndefined();
+    const { id } = (
+      submitted.result.data as {
+        createAndSubmitFormSubmission: { submission: { id: string } };
+      }
+    ).createAndSubmitFormSubmission.submission;
+    const completed = await countDbCommands(() =>
+      decideOn(world, manager, id, "APPROVE"),
+    );
+    expect(await stocktakeOf(id)).toMatchObject({ status: "confirmed" });
+    for (const line of lines) {
+      const bookId = new Types.ObjectId(line.bookId);
+      expect(await statusOf(bookId, "016")).toBe("investigating");
+      expect(await statusOf(bookId, "017")).toBe("investigating");
+    }
+    for (const item of unopened) {
+      const tickets = await connection
+        .collection<TicketDoc>(LOTTERY_TICKETS_COLLECTION)
+        .find({ bookId: new Types.ObjectId(item.bookId) })
+        .toArray();
+      expect(tickets.every((t) => t.status === "investigating")).toBe(true);
+    }
+    return { submitted, completed };
+  }
+
+  it("多本盤點的資料庫指令數與本數無關(防退化,TX-06):送出(比對每一行)、核准完成(套用待查、未拆的本不在)", async () => {
+    now("22:00");
+    const one = await stocktakeCommandsOf(1);
+    const three = await stocktakeCommandsOf(3);
+    for (const [label, key, limit] of [
+      ["送出", "submitted", STOCKTAKE_SUBMIT_COMMANDS_LIMIT],
+      ["核准完成", "completed", STOCKTAKE_COMPLETE_COMMANDS_LIMIT],
+    ] as const) {
+      expectDbCommandsAtMost(
+        three[key],
+        one[key].total + STOCKTAKE_COMMANDS_PER_EXTRA_BOOKS,
+        `盤點${label} 3 + 3 本(1 + 1 本 = ${String(one[key].total)} 次)`,
+      );
+      expectDbCommandsAtMost(three[key], limit, `盤點${label} 3 + 3 本`);
+    }
   });
 
   it("看板頂部:距離上次送出的盤點超過 24 小時 → 建議盤點一次", async () => {

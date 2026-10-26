@@ -171,13 +171,15 @@ export class StoreFormsRules {
     }
     const reader = await this.readerOf(submission.tenantId);
     const own = saleReversalLockOf(submission._id);
+    const facts = await this.lineFactsOf(reader, parsed.lines);
     let total = 0;
     for (const line of parsed.lines) {
-      const checked = await this.lineAmountOf(reader, branchId, own, line);
-      if (typeof checked !== "number") {
-        return checked;
+      const lineProblem = this.lineProblemOf(facts, branchId, own, line);
+      if (lineProblem !== null) {
+        return lineProblem;
       }
-      total += checked;
+      // 合格的列:金額已核對 = 面額 × 張數
+      total += line.amount;
     }
     if (parsed.refundAmount !== total) {
       return block(STORE_FORM_BLOCKS.amountMismatch, "refund_amount");
@@ -194,34 +196,72 @@ export class StoreFormsRules {
     return null;
   }
 
+  /** 撤銷售出申請各列要的本、遊戲面額與張:一次讀完(不逐列讀)。 */
+  private async lineFactsOf(
+    reader: OperatorContext,
+    lines: readonly SaleReversalLine[],
+  ): Promise<{
+    gameOfBook: Map<string, Types.ObjectId>;
+    unitPriceOfGame: Map<string, number>;
+    ticketsOfBook: Map<string, ReversalTicket[]>;
+  }> {
+    const bookIds = lines.flatMap((line) => {
+      const bookId = toObjectId(line.bookId);
+      return bookId === null ? [] : [bookId];
+    });
+    const books =
+      bookIds.length === 0
+        ? []
+        : await this.books.findMany(
+            reader,
+            { _id: { $in: bookIds } },
+            { select: "gameId" },
+          );
+    const gameIds = books.map((book) => book.gameId);
+    const games =
+      gameIds.length === 0
+        ? []
+        : await this.games.findMany(
+            reader,
+            { _id: { $in: gameIds } },
+            { select: "unitPrice" },
+          );
+    return {
+      gameOfBook: new Map(books.map((book) => [String(book._id), book.gameId])),
+      unitPriceOfGame: new Map(
+        games.map((game) => [String(game._id), game.unitPrice]),
+      ),
+      ticketsOfBook: await this.ticketsOfLines(reader, lines),
+    };
+  }
+
   /**
    * 撤銷售出申請的一列(一本):每張是本店已售、沒被別的單鎖定(這張單自己的鎖可以,重送時);金額 = 面額 × 張數。
-   * 合格回這一列的金額,不合回擋下的結果。
+   * 合格回 null,不合回擋下的結果。
    */
-  private async lineAmountOf(
-    reader: OperatorContext,
+  private lineProblemOf(
+    facts: Awaited<ReturnType<StoreFormsRules["lineFactsOf"]>>,
     branchId: Types.ObjectId,
     own: TicketLockRef,
     line: SaleReversalLine,
-  ): Promise<number | FormGuardBlock> {
+  ): FormGuardBlock | null {
     const bookId = toObjectId(line.bookId);
-    const book =
-      bookId === null
-        ? null
-        : await this.books.findById(reader, bookId, { select: "gameId" });
-    const game =
-      book === null
-        ? null
-        : await this.games.findById(reader, book.gameId, {
-            select: "unitPrice",
-          });
-    if (bookId === null || game === null) {
+    const gameId =
+      bookId === null ? undefined : facts.gameOfBook.get(String(bookId));
+    const unitPrice =
+      gameId === undefined
+        ? undefined
+        : facts.unitPriceOfGame.get(String(gameId));
+    if (bookId === null || unitPrice === undefined) {
       return {
         code: STORE_FORM_BLOCKS.ticketNotReversible,
         message: line.bookId,
       };
     }
-    const rows = await this.ticketsOf(reader, bookId, line.ticketNos);
+    const wanted = new Set(line.ticketNos);
+    const rows = (facts.ticketsOfBook.get(String(bookId)) ?? []).filter(
+      (ticket) => wanted.has(ticket.ticketNo),
+    );
     const reversible = rows.filter(
       (ticket) =>
         ticket.orgId.equals(branchId) &&
@@ -236,9 +276,8 @@ export class StoreFormsRules {
         message: `book ${line.bookId}`,
       };
     }
-    const amount = game.unitPrice * line.ticketNos.length;
-    return line.amount === amount
-      ? amount
+    return line.amount === unitPrice * line.ticketNos.length
+      ? null
       : {
           code: STORE_FORM_BLOCKS.amountMismatch,
           message: `book ${line.bookId}`,
@@ -261,19 +300,23 @@ export class StoreFormsRules {
     const submission = await this.submissionOf(reader, context);
     const parsed = saleReversalValuesOf(submission.values);
     const lock = saleReversalLockOf(context.submissionId);
+    const ticketsOfBook = await this.ticketsOfLines(
+      reader,
+      parsed.lines,
+      context.session,
+    );
     const wanted: Types.ObjectId[] = [];
     for (const line of parsed.lines) {
       const bookId = toObjectId(line.bookId);
       if (bookId === null) {
         continue;
       }
-      const rows = await this.ticketsOf(
-        reader,
-        bookId,
-        line.ticketNos,
-        context.session,
+      const ticketNos = new Set(line.ticketNos);
+      wanted.push(
+        ...(ticketsOfBook.get(String(bookId)) ?? [])
+          .filter((ticket) => ticketNos.has(ticket.ticketNo))
+          .map((ticket) => ticket._id),
       );
-      wanted.push(...rows.map((ticket) => ticket._id));
     }
     const locked = await this.lockedTicketsOf(
       reader,
@@ -594,20 +637,32 @@ export class StoreFormsRules {
     });
   }
 
-  private async ticketsOf(
+  /** 各列(本 + 張號)的張:一次讀完,本 id → 張(依張號排序)。 */
+  private async ticketsOfLines(
     reader: OperatorContext,
-    bookId: Types.ObjectId,
-    ticketNos: readonly string[],
+    lines: readonly SaleReversalLine[],
     session?: ClientSession,
-  ): Promise<ReversalTicket[]> {
-    if (ticketNos.length === 0) {
-      return [];
+  ): Promise<Map<string, ReversalTicket[]>> {
+    const wanted = lines.flatMap((line) => {
+      const bookId = toObjectId(line.bookId);
+      return bookId === null || line.ticketNos.length === 0
+        ? []
+        : [{ bookId, ticketNo: { $in: [...line.ticketNos] } }];
+    });
+    const byBook = new Map<string, ReversalTicket[]>();
+    if (wanted.length === 0) {
+      return byBook;
     }
-    return this.tickets.findMany(
+    const rows: ReversalTicket[] = await this.tickets.findMany(
       reader,
-      { bookId, ticketNo: { $in: [...ticketNos] } },
-      { select: TICKET_SELECT, sort: { ticketNo: 1 }, session },
+      { $or: wanted },
+      { select: TICKET_SELECT, sort: { bookId: 1, ticketNo: 1 }, session },
     );
+    for (const ticket of rows) {
+      const key = String(ticket.bookId);
+      byBook.set(key, [...(byBook.get(key) ?? []), ticket]);
+    }
+    return byBook;
   }
 
   private async lockedTicketsOf(

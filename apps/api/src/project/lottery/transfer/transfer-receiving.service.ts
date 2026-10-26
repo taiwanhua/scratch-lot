@@ -51,7 +51,6 @@ import {
   TRANSFER_OPEN_STATUSES,
   type TransferGame,
   TransferRules,
-  type TransferTicket,
   labelOf,
   toObjectId,
   transferLockOf,
@@ -474,13 +473,10 @@ export class TransferReceivingService {
       reader,
       submission._id,
     );
-    const bookTickets = new Map<string, TransferTicket[]>();
-    for (const book of books.values()) {
-      bookTickets.set(
-        String(book._id),
-        await this.rules.ticketsOfBook(reader, book._id),
-      );
-    }
+    const bookTickets = await this.rules.ticketsOfBooks(
+      reader,
+      [...books.values()].map((book) => book._id),
+    );
     const rows = lines.map((line) => {
       const book = books.get(line.bookId);
       const game =

@@ -366,15 +366,22 @@ export class StocktakeService {
     if (lost.length > 0 && !grant.has(STORE_PERMISSIONS.confirmLost)) {
       return block(STOCKTAKE_REASONS.forbidden, "missing store.confirm-lost");
     }
-    for (const item of lost) {
+    // 同一組原因只檢查一次(遺失清單常整批同一個原因;不逐張讀選項)
+    const reasons = new Map(
+      lost.map((item) => {
+        const reason = {
+          reasonKey: item.reasonKey ?? null,
+          reasonNote: item.reasonNote ?? null,
+        };
+        return [JSON.stringify(reason), reason] as const;
+      }),
+    );
+    for (const reason of reasons.values()) {
       try {
         await this.fieldOptions.assertReason(
           operator,
           LOTTERY_FIELD_CATEGORY_KEYS.lostReason,
-          {
-            reasonKey: item.reasonKey ?? null,
-            reasonNote: item.reasonNote ?? null,
-          },
+          reason,
           LOTTERY_FIELD_CATEGORIES,
         );
       } catch {
@@ -943,33 +950,47 @@ export class StocktakeService {
     draft: StocktakeDraft,
     options: { session?: ClientSession },
   ): Promise<StocktakeUnopenedLine[]> {
+    const bookIds = draft.unopened.flatMap((item) => {
+      const bookId = parseId(item.bookId);
+      return bookId === null ? [] : [bookId];
+    });
+    const books = await this.facts.booksOf(reader, bookIds, options);
+    if (books.size === 0) {
+      return [];
+    }
+    // 每本在本店庫存的未售張數:一次讀完再數(不逐本 count)
+    const unsold = await this.tickets.findMany(
+      reader,
+      {
+        bookId: { $in: [...books.values()].map((book) => book._id) },
+        orgId: store.orgId,
+        status: TICKET_STATUS.unsold,
+        "location.kind": TICKET_LOCATION_KIND.stock,
+      },
+      { ...options, select: "bookId" },
+    );
+    const countOf = new Map<string, number>();
+    for (const ticket of unsold) {
+      const key = String(ticket.bookId);
+      countOf.set(key, (countOf.get(key) ?? 0) + 1);
+    }
+    const games = await this.support.gamesOf(
+      reader,
+      [...books.values()].map((book) => book.gameId),
+    );
     const lines: StocktakeUnopenedLine[] = [];
     for (const item of draft.unopened) {
       const bookId = parseId(item.bookId);
-      const book =
-        bookId === null
-          ? null
-          : await this.facts.bookOf(reader, bookId, options);
-      if (book === null) {
+      const book = bookId === null ? undefined : books.get(String(bookId));
+      if (book === undefined) {
         continue;
       }
-      const count = await this.tickets.count(
-        reader,
-        {
-          bookId: book._id,
-          orgId: store.orgId,
-          status: TICKET_STATUS.unsold,
-          "location.kind": TICKET_LOCATION_KIND.stock,
-        },
-        options,
-      );
-      const games = await this.support.gamesOf(reader, [book.gameId]);
       lines.push({
         bookId: book._id,
         gameCode: book.gameCode,
         gameName: games.get(String(book.gameId))?.name ?? "",
         bookNo: book.bookNo,
-        ticketCount: count,
+        ticketCount: countOf.get(String(book._id)) ?? 0,
         present: item.present,
       });
     }

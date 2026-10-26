@@ -17,7 +17,7 @@
 ```
 
 - 已在交易內的 service 再呼叫 `withTransaction` 會直接在同一個交易裡執行,**沒有獨立的回復點**:內層拋錯若被外層 `catch` 後繼續,內層已做的寫入會隨外層一起提交。要回復就讓錯誤往外拋,不要在外層吞掉。
-- 預設上限 60 秒(`timeoutMs` 可改);動作應在毫秒級,長批次(db-migrator 的大批次遷移)改成每批一個交易 + 檢查點續跑。上限由 `withTransaction` 自己計時:每次嘗試開始前與 `fn` 結束後(提交前)各檢查一次,超過就拋 `TransactionTimeoutError`、整個回復且不再重試;單一操作卡住時由伺服器的 `transactionLifetimeLimitSeconds`(預設 60 秒)中止交易。**不要把 `timeoutMS` 交給 driver 的 `withTransaction`**:mongodb 7.x 會讓交易內游標的 getMore 帶上 `maxTimeMS`、被 server 拒絕,交易內讀超過一批(101 筆)就失敗。連線字串與 MongoClient 也不要設 `timeoutMS`(session 會繼承,交易就會再啟用同一套逾時)。
+- 預設上限 60 秒(`timeoutMs` 可改);動作應在毫秒級,長批次(db-migrator 的大批次遷移)改成每批一個交易 + 檢查點續跑。上限由 `withTransaction` 自己計時:每次嘗試開始前與 `fn` 結束後(提交前)各檢查一次,超過就拋 `TransactionTimeoutError`(`GraphQLError`,`extensions.code = TRANSACTION_TIMEOUT`,前端顯示「處理時間過長、已取消、資料沒有變更」)、整個回復且不再重試;單一操作卡住時由伺服器的 `transactionLifetimeLimitSeconds`(預設 60 秒)中止交易。**不要把 `timeoutMS` 交給 driver 的 `withTransaction`**:mongodb 7.x 會讓交易內游標的 getMore 帶上 `maxTimeMS`、被 server 拒絕,交易內讀超過一批(101 筆)就失敗。連線字串與 MongoClient 也不要設 `timeoutMS`(session 會繼承,交易就會再啟用同一套逾時)。
 
 ## TX-02 讀寫預設帶目前交易的 session;原生 collection 自己帶;交易內不平行讀寫
 
@@ -72,5 +72,30 @@ await this.transactions.withTransaction(async (session) => {
 ## TX-05 交易不取代樂觀鎖
 
 `editVersion` / `version` 的條件更新照舊:它防的是兩個人先後編輯、後存蓋掉先存,讀與寫之間隔著使用者的編輯時間,不在同一個交易裡。
+
+## TX-06 交易內對多筆資料的讀寫要整批做,不逐筆來回
+
+交易內每一次讀寫都是一次資料庫往返,而且依序 `await`(TX-02)。逐筆讀寫時往返數隨筆數成長:本機往返幾乎是 0 毫秒看不出來,雲端每次幾十毫秒,幾百筆就超過 60 秒上限(TX-01),整個動作逾時回復。
+
+```ts
+❌ for (const item of items) {
+     const row = await this.rows.findOne(operator, { _id: item.id });
+     await this.rows.findOneAndUpdate(operator, { _id: item.id, version: row.version }, update);
+   }
+✅ const rows = await this.rows.findMany(operator, { _id: { $in: ids } });
+   const modified = await this.rows.updateMany(
+     operator,
+     { _id: { $in: ids }, version },
+     update,
+   );
+   if (modified !== ids.length) throw conflictError(); // 筆數不符 = 有幾筆已被別人改
+```
+
+- **讀**:一次 `findMany({ _id: { $in } })`(或 `$or` 多組條件),在記憶體裡分組;不在迴圈裡 `findOne` / `count`。
+- **條件更新**:條件與要改的欄位都相同的一組一次 `updateMany`,樂觀鎖(TX-05)照樣帶在條件裡;**寫入筆數與這組筆數不符 → 拋衝突**,整個交易回復(不吞掉,TX-04)。每筆要改的值不同時依值分組,組數只隨「值的種類」成長。
+- **新增**:`createMany`(同組織的租戶推導只查一次);**搬家**:`reassignOrgMany`(全有或全無、一筆稽核)。
+- **同一筆在同一批出現多次**(先 A 再 B 兩個變動):依出現順序分輪,每輪每筆最多一次,往返數只隨輪數成長。
+- 迴圈裡呼叫的若是會讀寫資料庫的 service 方法(守門、原因檢查),先依輸入去重,同樣的輸入只呼叫一次。
+- **防退化測試數資料庫指令次數,不計時**:`apps/api/src/database/test-support/db-commands.ts` 的 `countDbCommands` 數一段動作送出的指令,`expectDbCommandsAtMost` 斷言上限;上限與筆數無關,同一個動作做 1 筆與多筆,多筆不得比 1 筆多出幾次以上。計時在 CI 上不穩定,本機往返又近乎 0,抓不到逐筆讀寫。
 
 正本:`apps/api/src/database/transaction.ts`、`apps/api/src/database/transaction.test.ts`、`apps/api/src/database/base.repository.ts`

@@ -110,39 +110,55 @@ export class RedemptionPurchaseLink {
       },
       { session },
     );
+    const unique = [...new Map(ids.map((id) => [String(id), id])).values()];
+    if (unique.length === 0) {
+      return;
+    }
     const sentAt = new Date();
-    for (const id of ids) {
-      const next = await this.redemptions.findOneAndUpdate(
-        reader,
-        {
-          _id: id,
-          tenantId: ref.tenantId,
-          $or: [
-            { status: REDEMPTION_STATUS.inStore },
-            {
-              status: REDEMPTION_STATUS.sent,
-              purchaseSubmissionId: ref.submissionId,
-            },
-          ],
-        },
-        {
-          $set: {
+    // 一次條件更新(店內持有、或已是這張單送兌的);寫到的筆數不符 = 有幾筆被別人搶先撤銷 / 勾走
+    const modified = await this.redemptions.updateMany(
+      reader,
+      {
+        _id: { $in: unique },
+        tenantId: ref.tenantId,
+        $or: [
+          { status: REDEMPTION_STATUS.inStore },
+          {
             status: REDEMPTION_STATUS.sent,
             purchaseSubmissionId: ref.submissionId,
-            sentAt,
           },
-          $inc: { version: 1 },
+        ],
+      },
+      {
+        $set: {
+          status: REDEMPTION_STATUS.sent,
+          purchaseSubmissionId: ref.submissionId,
+          sentAt,
         },
-        { session },
-      );
-      if (next === null) {
-        throw validationError(
-          `redemption ${String(id)} is no longer held in store`,
-          ["redemptions"],
-          REDEMPTION_REASONS.purchaseRedemptionInvalid,
-        );
-      }
+        $inc: { version: 1 },
+      },
+      { session },
+    );
+    if (modified === unique.length) {
+      return;
     }
+    const sentRows = await this.redemptions.findMany(
+      reader,
+      {
+        _id: { $in: unique },
+        status: REDEMPTION_STATUS.sent,
+        purchaseSubmissionId: ref.submissionId,
+        sentAt,
+      },
+      { select: "_id", session },
+    );
+    const written = new Set(sentRows.map((row) => String(row._id)));
+    const missed = unique.find((id) => !written.has(String(id))) ?? unique[0];
+    throw validationError(
+      `redemption ${String(missed)} is no longer held in store`,
+      ["redemptions"],
+      REDEMPTION_REASONS.purchaseRedemptionInvalid,
+    );
   }
 
   /** 這張單勾的全部回到「店內持有」。 */

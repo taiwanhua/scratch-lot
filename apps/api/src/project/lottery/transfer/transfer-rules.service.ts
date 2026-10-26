@@ -330,17 +330,32 @@ export class TransferRules {
     );
   }
 
-  /** 一本的張(整本);`ticketNos` 給了就只取那幾張。 */
-  async ticketsOfBook(
+  /**
+   * 幾本的張(整本,依張號排序):本 id → 張;一次讀完(不逐本讀)。沒有張的本不在回傳裡,
+   * 呼叫端以 `?? []` 取。
+   */
+  async ticketsOfBooks(
     reader: OperatorContext,
-    bookId: Types.ObjectId,
+    bookIds: readonly Types.ObjectId[],
     session?: ClientSession,
-  ): Promise<TransferTicket[]> {
-    return this.tickets.findMany(
+  ): Promise<Map<string, TransferTicket[]>> {
+    const unique = [...new Map(bookIds.map((id) => [String(id), id])).values()];
+    const byBook = new Map<string, TransferTicket[]>();
+    if (unique.length === 0) {
+      return byBook;
+    }
+    const rows: TransferTicket[] = await this.tickets.findMany(
       reader,
-      { bookId },
-      { select: TICKET_SELECT, sort: { ticketNo: 1 }, session },
+      { bookId: { $in: unique } },
+      { select: TICKET_SELECT, sort: { bookId: 1, ticketNo: 1 }, session },
     );
+    for (const ticket of rows) {
+      const key = String(ticket.bookId);
+      const list = byBook.get(key) ?? [];
+      list.push(ticket);
+      byBook.set(key, list);
+    }
+    return byBook;
   }
 
   /** 這張單鎖定的張(還沒點收的列)。 */
@@ -371,17 +386,23 @@ export class TransferRules {
       return new Map();
     }
     const shipped = new Map<string, TransferLineValue>();
-    const ticketsOf = new Map<string, TransferTicket[]>();
-    for (const line of transferLinesOf(last.values)) {
+    const lines = transferLinesOf(last.values);
+    const ticketsOf = await this.ticketsOfBooks(
+      reader,
+      lines.flatMap((line) => {
+        const bookId = toObjectId(line.bookId);
+        return bookId === null ? [] : [bookId];
+      }),
+    );
+    for (const line of lines) {
       const bookId = toObjectId(line.bookId);
       if (bookId === null) {
         continue;
       }
-      const bookTickets =
-        ticketsOf.get(line.bookId) ??
-        (await this.ticketsOfBook(reader, bookId));
-      ticketsOf.set(line.bookId, bookTickets);
-      const rowTickets = this.rowTicketsOf(line, bookTickets);
+      const rowTickets = this.rowTicketsOf(
+        line,
+        ticketsOf.get(String(bookId)) ?? [],
+      );
       if (
         rowTickets.length > 0 &&
         rowTickets.every((ticket) => inTransit.has(String(ticket._id)))
@@ -684,16 +705,19 @@ export class TransferRules {
     );
     const received = new Set(receipts.map((receipt) => receipt.rowId));
     const wanted = new Map<string, TransferTicket>();
-    for (const line of transferLinesOf(values)) {
-      const bookId = toObjectId(line.bookId);
-      if (received.has(line.rowId) || bookId === null) {
-        continue;
-      }
-      const bookTickets = await this.ticketsOfBook(
-        reader,
-        bookId,
-        context.session,
-      );
+    const pendingLines = transferLinesOf(values).filter(
+      (line) => !received.has(line.rowId) && toObjectId(line.bookId) !== null,
+    );
+    const ticketsOf = await this.ticketsOfBooks(
+      reader,
+      pendingLines.flatMap((line) => {
+        const bookId = toObjectId(line.bookId);
+        return bookId === null ? [] : [bookId];
+      }),
+      context.session,
+    );
+    for (const line of pendingLines) {
+      const bookTickets = ticketsOf.get(String(toObjectId(line.bookId))) ?? [];
       for (const ticket of this.rowTicketsOf(line, bookTickets)) {
         wanted.set(String(ticket._id), ticket);
       }
@@ -959,13 +983,17 @@ export class TransferRules {
       reader,
       [...books.values()].map((book) => book.gameId),
     );
+    const ticketsOf = await this.ticketsOfBooks(
+      reader,
+      [...books.values()].map((book) => book._id),
+    );
     const seen = new Set<string>();
     for (const line of lines) {
       const book = books.get(line.bookId);
       const game =
         book === undefined ? undefined : games.get(String(book.gameId));
       const bookTickets =
-        book === undefined ? [] : await this.ticketsOfBook(reader, book._id);
+        book === undefined ? [] : (ticketsOf.get(String(book._id)) ?? []);
       const rowTickets = this.rowTicketsOf(line, bookTickets);
       const keys = rowTickets.map((ticket) => String(ticket._id));
       if (

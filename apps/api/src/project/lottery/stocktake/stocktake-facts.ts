@@ -18,12 +18,14 @@ import {
   type LotteryBookDocument,
   LotteryBooksRepository,
   type LotteryTicketDocument,
+  type LotteryTicketEventDocument,
   LotteryTicketEventsRepository,
   LotteryTicketsRepository,
 } from "../../database/lottery-inventory/lottery-inventory.repository";
 
 type BookRecord = Persisted<LotteryBookDocument>;
 type TicketRecord = Persisted<LotteryTicketDocument>;
+type TicketEventRecord = Persisted<LotteryTicketEventDocument>;
 
 const idOf = (text: string): Types.ObjectId | null =>
   Types.ObjectId.isValid(text) ? new Types.ObjectId(text) : null;
@@ -78,6 +80,10 @@ export class StocktakeFacts {
     private readonly events: LotteryTicketEventsRepository,
   ) {}
 
+  /**
+   * 盤點內容的每一行(本 × 收銀點)與資料庫比對。本、這家店的張、那之後的張數事件各一次讀完
+   * (事件從最早的 `countedAt` 讀起,每行再以自己的 `countedAt` 篩)。
+   */
   async evaluate(
     reader: OperatorContext,
     storeId: Types.ObjectId,
@@ -85,46 +91,73 @@ export class StocktakeFacts {
     session?: ClientSession,
   ): Promise<LineEvaluation[]> {
     const options = session === undefined ? {} : { session };
-    const results: LineEvaluation[] = [];
-    // TX-02:交易內依序 await
-    for (const line of draft.lines) {
-      results.push(await this.evaluateLine(reader, storeId, line, options));
-    }
-    return results;
-  }
-
-  private async evaluateLine(
-    reader: OperatorContext,
-    storeId: Types.ObjectId,
-    line: StocktakeDraftLine,
-    options: { session?: ClientSession },
-  ): Promise<LineEvaluation> {
-    const bookId = idOf(line.bookId);
-    const cashPointId = idOf(line.cashPointId);
-    const book =
-      bookId === null
-        ? null
-        : await this.books.findOne(reader, { _id: bookId }, options);
+    const bookIds = draft.lines.flatMap((line) => {
+      const bookId = idOf(line.bookId);
+      return bookId === null ? [] : [bookId];
+    });
+    const books = await this.booksOf(reader, bookIds, options);
     const tickets =
-      book === null
+      books.size === 0
         ? []
         : await this.tickets.findMany(
             reader,
-            { bookId: book._id, orgId: storeId },
+            {
+              bookId: { $in: [...books.values()].map((book) => book._id) },
+              orgId: storeId,
+            },
             options,
           );
-    const countedAt = new Date(line.countedAt);
+    const ticketsOf = new Map<string, TicketRecord[]>();
+    for (const ticket of tickets) {
+      const key = String(ticket.bookId);
+      const list = ticketsOf.get(key) ?? [];
+      list.push(ticket);
+      ticketsOf.set(key, list);
+    }
+    const bookOf = (line: StocktakeDraftLine): BookRecord | null => {
+      const bookId = idOf(line.bookId);
+      return bookId === null ? null : (books.get(String(bookId)) ?? null);
+    };
+    const countedTimes = draft.lines
+      .filter((line) => bookOf(line) !== null)
+      .map((line) => new Date(line.countedAt).getTime())
+      .filter((time) => Number.isFinite(time));
     const after =
-      tickets.length === 0
+      tickets.length === 0 || countedTimes.length === 0
         ? []
         : await this.events.findMany(
             reader,
             {
               ticketId: { $in: tickets.map((ticket) => ticket._id) },
-              at: { $gt: countedAt },
+              at: { $gt: new Date(Math.min(...countedTimes)) },
             },
             { ...options, sort: { at: 1, _id: 1 } },
           );
+    return draft.lines.map((line) => {
+      const book = bookOf(line);
+      return this.evaluateLine(
+        line,
+        book,
+        book === null ? [] : (ticketsOf.get(String(book._id)) ?? []),
+        after,
+      );
+    });
+  }
+
+  private evaluateLine(
+    line: StocktakeDraftLine,
+    book: BookRecord | null,
+    tickets: readonly TicketRecord[],
+    events: readonly TicketEventRecord[],
+  ): LineEvaluation {
+    const cashPointId = idOf(line.cashPointId);
+    const countedAt = new Date(line.countedAt);
+    const ids = new Set(tickets.map((ticket) => String(ticket._id)));
+    const after = events.filter(
+      (event) =>
+        ids.has(String(event.ticketId)) &&
+        event.at.getTime() > countedAt.getTime(),
+    );
     const eventsOf = new Map<string, typeof after>();
     for (const event of after) {
       const key = String(event.ticketId);
