@@ -1,7 +1,6 @@
 import { describe, expect, it } from "@jest/globals";
 
-import { daysSince } from "../inventory-config";
-import { bookCellsOf, bookLegendOf } from "./book-cells";
+import { bookCellsOf, bookLegendOf, markSkipCellsOf } from "./book-cells";
 
 const ticket = (
   ticketNo: string,
@@ -44,10 +43,21 @@ describe("本的詳情頁格子(使用者 10/27 定案:調貨中格子)", () => 
   });
 });
 
-describe("待查·遺失的天數", () => {
-  it("登記到現在過了幾天(不滿一天 = 0)", () => {
-    const now = Date.parse("2026-11-10T12:00:00Z");
-    expect(daysSince("2026-11-05T12:00:00Z", now)).toBe(5);
-    expect(daysSince("2026-11-10T01:00:00Z", now)).toBe(0);
+describe("標跳號的格子(使用者 10/27 定案 M1)", () => {
+  it("只能選自己範圍內、沒被鎖的未售張;已標的跳號是跳號", () => {
+    const tickets = [
+      ticket("001"),
+      ticket("002", { locked: true }),
+      ticket("003", { status: "skipped" }),
+      ticket("004", { status: "investigating" }),
+      ticket("005", { operable: false }),
+    ];
+    expect(markSkipCellsOf(tickets).map((cell) => cell.state)).toEqual([
+      "unsold",
+      "sold",
+      "skipped",
+      "sold",
+      "otherStore",
+    ]);
   });
 });

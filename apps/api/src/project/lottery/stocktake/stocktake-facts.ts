@@ -220,7 +220,7 @@ export class StocktakeFacts {
   /**
    * 本店庫存裡的本分兩區(盤點頁、送出檢查共用,使用者 10/27 定案 D):
    *
-   * - `unopened`:未拆的本(從沒拆過,這家店的張全是未售、在庫存;`isUnopenedInStore`)→ 盤「在 / 不在」整本
+   * - `unopened`:未拆的本(從沒拆過,這家店的張全是未售、在庫存、沒被調貨單鎖住)→ 盤「在 / 不在」整本
    * - `stock`:其他有未售、在庫存、沒被調貨單鎖住的張的本(拆過收回、尋回、調回…)→ 比照檯面逐張盤
    *
    * 已撤銷的本不列。張依本聚合一次、本一次讀完。
@@ -292,9 +292,10 @@ export class StocktakeFacts {
       if (book?.status !== "normal") {
         continue;
       }
+      // 未拆的本:從沒拆過、這家店的張全是未售在庫存,而且沒被調貨單鎖住(與拆本清單同一個規則)
       const sealed =
         (book.firstOpenedAt ?? null) === null &&
-        Number(row.total) === Number(row.inStock);
+        Number(row.total) === Number(row.unlockedInStock);
       if (sealed) {
         unopened.set(String(book._id), {
           book,

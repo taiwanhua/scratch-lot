@@ -755,6 +755,7 @@ describe("本狀態與再上檯面(GraphQL 端點 + 真 MongoDB)", () => {
       [LOTTERY_FIELD_CATEGORY_KEYS.lostReason, [["not-found", "找不到"]]],
       [LOTTERY_FIELD_CATEGORY_KEYS.recoverReason, [["found", "找到了"]]],
       [LOTTERY_FIELD_CATEGORY_KEYS.scrapReason, [["damp", "受潮"]]],
+      [LOTTERY_FIELD_CATEGORY_KEYS.skipCorrectionReason, [["wrong", "標錯"]]],
       [
         LOTTERY_FIELD_CATEGORY_KEYS.saleReversalReason,
         [["customer-return", "客人退貨"]],
@@ -1093,7 +1094,7 @@ describe("本狀態與再上檯面(GraphQL 端點 + 真 MongoDB)", () => {
     bookId: string;
     ticketCount: number;
     pendingSkipCount: number;
-    opened: boolean;
+    sealed: boolean;
   }
 
   async function splitListItem(
@@ -1101,12 +1102,12 @@ describe("本狀態與再上檯面(GraphQL 端點 + 真 MongoDB)", () => {
     orgId: Types.ObjectId,
     bookId: Types.ObjectId,
   ): Promise<SplitItem | undefined> {
-    const data = await must(who, "LotteryStoreUnopenedBooks", {
+    const data = await must(who, "LotteryStoreStockBooks", {
       orgId: String(orgId),
     });
-    return (
-      data.lotteryStoreUnopenedBooks as { items: SplitItem[] }
-    ).items.find((item) => item.bookId === String(bookId));
+    return (data.lotteryStoreStockBooks as { items: SplitItem[] }).items.find(
+      (item) => item.bookId === String(bookId),
+    );
   }
 
   async function transferOption(
@@ -1160,6 +1161,13 @@ describe("本狀態與再上檯面(GraphQL 端點 + 真 MongoDB)", () => {
     await expect(
       splitListItem(clerkA, storeA, c02.bookId),
     ).resolves.toBeUndefined();
+    // 盤點「未拆的本」也排除被調貨單鎖住的本(審查 S1)
+    const lockedSheet = await sheetOf(clerkA, storeA);
+    expect(
+      lockedSheet.unopenedBooks.some(
+        (item) => item.bookId === String(c02.bookId),
+      ),
+    ).toBe(false);
     await ship(transferId);
     await expectState("C02 整本在途", c02.bookId, "in_transit");
     await receive(transferId, c02.bookNo, "100");
@@ -1319,7 +1327,7 @@ describe("本狀態與再上檯面(GraphQL 端點 + 真 MongoDB)", () => {
       bookId: String(q1.bookId),
       ticketCount: 100,
       pendingSkipCount: 0,
-      opened: true,
+      sealed: false,
     });
     await expect(
       transferOption(hq, storeA, storeB, q1.bookId),
@@ -1344,7 +1352,7 @@ describe("本狀態與再上檯面(GraphQL 端點 + 真 MongoDB)", () => {
       bookId: String(q2.bookId),
       ticketCount: 90,
       pendingSkipCount: 0,
-      opened: true,
+      sealed: false,
     });
     // 刷到庫存的張:維持擋下(in_stock)
     const scanned = await must(clerkA, "LotteryStoreScan", {
@@ -1385,7 +1393,7 @@ describe("本狀態與再上檯面(GraphQL 端點 + 真 MongoDB)", () => {
       bookId: String(q3.bookId),
       ticketCount: 3,
       pendingSkipCount: 0,
-      opened: false,
+      sealed: false,
     });
     await split(clerkA, storeA, pointA, q3.bookId, [], true);
     await expectState("題3 尋回 3 張上檯面", q3.bookId, "on_counter");
@@ -1397,6 +1405,82 @@ describe("本狀態與再上檯面(GraphQL 端點 + 真 MongoDB)", () => {
     await expect(
       transferOption(hq, storeA, storeB, q3b.bookId),
     ).resolves.toMatchObject({ isWhole: true });
+  });
+
+  it("M1:迄號 101 整本待查、尋回 #001–003 → 不標跳號直接上檯面 3 張;待標註保留,確認遺失 98 張損失 97 張;本的詳情 [標跳號] 補標", async () => {
+    const x1 = await newBook(storeA, 101);
+    await investigateUnopened(clerkA, managerA, storeA, x1.bookId);
+    await recover(managerA, storeA, x1.bookId, nos(1, 3));
+    // 拆本清單與盤點庫存區都是 3 張,不要求標跳號
+    await expect(
+      splitListItem(clerkA, storeA, x1.bookId),
+    ).resolves.toMatchObject({
+      ticketCount: 3,
+      pendingSkipCount: 0,
+      sealed: false,
+    });
+    const sheet = await sheetOf(clerkA, storeA);
+    expect(
+      sheet.books.find((item) => item.bookId === String(x1.bookId))?.tickets,
+    ).toHaveLength(3);
+    const placed = await split(clerkA, storeA, pointA, x1.bookId, [], true);
+    expect(placed).toBe(3);
+    const detail = await expectState(
+      "X1 尋回 3 張上檯面",
+      x1.bookId,
+      "on_counter",
+    );
+    // 剩餘、總張數:還有待標註就扣
+    expect(detail.book).toMatchObject({
+      remainingCount: 2,
+      totalCount: 100,
+      pendingSkipCount: 1,
+    });
+    // 其餘 98 張確認遺失:損失 = 97 × 單張成本 20
+    const x1Tickets = await ticketsOf(x1.bookId);
+    const missing = x1Tickets.filter(
+      (ticket) => ticket.status === "investigating",
+    );
+    expect(missing).toHaveLength(98);
+    const startedAt = tick();
+    const review = await must(managerA, "LotteryStocktakeReview", {
+      input: {
+        draft: serializeStocktakeDraft(
+          draftOf(storeA, startedAt, {
+            lostReview: missing.map((ticket) => ({
+              ticketId: String(ticket._id),
+              action: "lost" as const,
+              reasonKey: "not-found",
+            })),
+          }),
+        ),
+      },
+    });
+    expect(
+      (
+        review.lotteryStocktakeReview as {
+          summary: { confirmLost: number; confirmLostCost: number | null };
+        }
+      ).summary,
+    ).toMatchObject({ confirmLost: 97, confirmLostCost: 97 * 20 });
+    // 本的詳情 [標跳號]:把 #003 標成跳號 → 待標註 0
+    const abilities = (await detailOf(managerA, x1.bookId)) as unknown as {
+      abilities: { canMarkSkips: boolean };
+    };
+    expect(abilities.abilities.canMarkSkips).toBe(true);
+    await must(managerA, "MarkLotterySkippedTickets", {
+      input: {
+        bookId: String(x1.bookId),
+        tickets: await refs(x1.bookId, ["003"]),
+        reasonKey: "wrong",
+      },
+    });
+    const marked = await expectState("X1 標跳號 #003", x1.bookId, "on_counter");
+    expect(marked.book).toMatchObject({
+      remainingCount: 2,
+      totalCount: 100,
+      pendingSkipCount: 0,
+    });
   });
 
   it("盤點頁列出拆過、在庫存的張並能盤出待查;「未拆的本 · 不在」只收真的未拆的本", async () => {

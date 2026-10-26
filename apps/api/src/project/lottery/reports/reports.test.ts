@@ -3093,7 +3093,7 @@ describe("輸出報表:營運報表、班次結帳歷史報表(GraphQL 端點 + 
       });
     });
 
-    it("S3b 未拆的本整本待查後只處理一部分(2 張確認遺失、3 張跨店尋回):待標註那張仍算在還待查的那組 → 期末待查 95(t11 審查 S1,看本的 firstOpenedAt)", async () => {
+    it("S3b 未拆的本整本待查後只處理一部分(2 張確認遺失、3 張跨店尋回):待標註那張仍算在還待查的那組 → 期末待查 95(還有待標註就扣;使用者 10/27 定案 M1)", async () => {
       const bookId = await purchase(chianan, taipei("2026-11-12", "09:00"));
       await apply(
         { operator: storeOperator(chianan) },

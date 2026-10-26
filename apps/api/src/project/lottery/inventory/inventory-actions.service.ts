@@ -31,6 +31,7 @@ import {
 import { parseId } from "../accounts/accounts-util";
 import { LOTTERY_FIELD_CATEGORIES } from "../field-options/lottery-field-options";
 import { tenantOfOperator } from "../master-data-tenant";
+import { pendingSkipCountOfBook } from "../tickets/books.service";
 import {
   INVENTORY_REASONS,
   crossStoreForbiddenError,
@@ -43,6 +44,7 @@ import { TicketLedgerService } from "../tickets/ticket-ledger.service";
 import type {
   CorrectLotterySkippedTicketsInput,
   LotteryTicketVersionInput,
+  MarkLotterySkippedTicketsInput,
   RecoverLotteryTicketsInput,
   ScrapLotteryTicketsInput,
 } from "./dto/lottery-inventory.input";
@@ -204,6 +206,70 @@ export class InventoryActionsService {
       ]);
     });
     return { count: diff.skip.length + diff.unskip.length, lossCost: null };
+  }
+
+  /**
+   * 標跳號(`inventory.mark-skipped`;使用者 10/27 定案 M1):這本還有待標註時,把選的未售張標成跳號
+   * (1 ~ 待標註張數;拆本時沒標的,例:整本待查後只尋回幾張就上檯面)。只能標自己範圍內、沒被鎖的未售張;
+   * 經帳本整批寫「跳號」事件(條件更新,原因必填,同更正跳號)。
+   */
+  async markSkips(
+    operator: OperatorContext,
+    input: MarkLotterySkippedTicketsInput,
+  ): Promise<LotteryInventoryActionPayload> {
+    const book = await this.view.mustBook(operator, input.bookId);
+    const pending = pendingSkipCountOfBook(book);
+    if (pending === 0) {
+      throw validationError(
+        "這本沒有待標註的跳號",
+        ["tickets"],
+        INVENTORY_REASONS.noPendingSkips,
+      );
+    }
+    const refs = ticketRefsOf(input.tickets);
+    if (refs.length === 0 || refs.length > pending) {
+      throw validationError(
+        `標跳號要 1 到 ${String(pending)} 張`,
+        ["tickets"],
+        INVENTORY_REASONS.skipCountMismatch,
+      );
+    }
+    const reason = await this.fieldOptions.assertReason(
+      operator,
+      LOTTERY_FIELD_CATEGORY_KEYS.skipCorrectionReason,
+      input,
+      LOTTERY_FIELD_CATEGORIES,
+    );
+    const whole = await this.view.wholeBookReader(operator, book);
+    await this.transactions.withTransaction(async (session) => {
+      const found = await this.tickets.findMany(
+        whole,
+        { _id: { $in: refs.map((item) => item.id) }, bookId: book._id },
+        { session },
+      );
+      this.assertFound(refs, found);
+      this.assertOperable(operator, found);
+      this.assertStatuses(
+        found,
+        [TICKET_STATUS.unsold],
+        "只能把未售的張標成跳號",
+      );
+      const at = new Date();
+      await this.ledger.applyTicketEvents(
+        session,
+        { operator },
+        refs.map((item) => ({
+          ticketId: item.id,
+          expectedVersion: item.version,
+          expectedStatuses: [TICKET_STATUS.unsold],
+          type: TICKET_EVENT_TYPE.skip,
+          at,
+          patch: { status: TICKET_STATUS.skipped },
+          ...reason,
+        })),
+      );
+    });
+    return { count: refs.length, lossCost: null };
   }
 
   /**

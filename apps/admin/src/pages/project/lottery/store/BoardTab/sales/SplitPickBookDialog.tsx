@@ -7,8 +7,8 @@ import {
   parseTicketInput,
 } from "@repo/domain/project/lottery";
 import {
-  type LotteryStoreUnopenedBookFieldsFragment,
-  useLotteryStoreUnopenedBooksQuery,
+  type LotteryStoreStockBookFieldsFragment,
+  useLotteryStoreStockBooksQuery,
 } from "@repo/graphql";
 import { Button } from "@repo/ui/button";
 import { Dialog } from "@repo/ui/dialog";
@@ -50,8 +50,8 @@ export const SplitPickBookDialog = ({
   const { t } = useSalesText();
   const { session } = useSession();
   const isMobile = useBreakpointDown("sm");
-  const bookMetaOf = (book: LotteryStoreUnopenedBookFieldsFragment) => {
-    if (book.opened) {
+  const bookMetaOf = (book: LotteryStoreStockBookFieldsFragment) => {
+    if (!book.sealed) {
       return t("split.bookMetaOpened", {
         price: moneyText(book.unitPrice),
         count: book.ticketCount,
@@ -70,11 +70,8 @@ export const SplitPickBookDialog = ({
         });
   };
   const books =
-    useLotteryStoreUnopenedBooksQuery(
-      session.client,
-      { orgId },
-      { staleTime: 0 },
-    ).data?.lotteryStoreUnopenedBooks.items ?? [];
+    useLotteryStoreStockBooksQuery(session.client, { orgId }, { staleTime: 0 })
+      .data?.lotteryStoreStockBooks.items ?? [];
   const [text, setText] = useState("");
   const [picked, setPicked] = useState("");
   const pickByCode = (code: string) => {

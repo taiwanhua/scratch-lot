@@ -16,7 +16,7 @@ const SALES_REFRESH_KEYS: readonly QueryKey[] = [
   STORE_BOOK_CARD_QUERY_KEY,
   STORE_RECENT_SALES_QUERY_KEY,
   ["LotteryStoreSale"],
-  ["LotteryStoreUnopenedBooks"],
+  ["LotteryStoreStockBooks"],
 ];
 
 export const useRefreshSales = () => {

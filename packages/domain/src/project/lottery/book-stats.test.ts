@@ -74,10 +74,12 @@ describe("本上的張數與顯示狀態(使用者 10/27 定案 B)", () => {
     ).toEqual(counts({ stock: 98, sold: 5 }));
   });
 
-  it("剩餘 / 總張數:未拆整本(紀錄 = 標準 + 待標註)扣待標註", () => {
+  it("剩餘 / 總張數:還有待標註就扣(不看拆過沒有)", () => {
     expect(remainingOfCounts(counts({ stock: 103 }), 3)).toBe(100);
-    expect(totalOfCounts(counts({ stock: 103 }), 100, 3)).toBe(100);
-    expect(totalOfCounts(counts({ stock: 90, sold: 10 }), 100, 0)).toBe(100);
+    expect(totalOfCounts(counts({ stock: 103 }), 3)).toBe(100);
+    // 整本待查後尋回 3 張:還沒標的跳號在待查那一組,總張數照扣
+    expect(totalOfCounts(counts({ stock: 3, investigating: 98 }), 1)).toBe(100);
+    expect(totalOfCounts(counts({ stock: 90, sold: 10 }), 0)).toBe(100);
   });
 
   it("九種顯示狀態依序判斷(實測表 C01–C16)", () => {

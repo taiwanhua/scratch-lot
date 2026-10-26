@@ -318,7 +318,7 @@ export class LotteryBooksService {
     return {
       pendingSkipCount,
       remainingCount: remainingOfCounts(counts, pendingSkipCount),
-      totalCount: totalOfCounts(counts, book.standardTickets, pendingSkipCount),
+      totalCount: totalOfCounts(counts, pendingSkipCount),
       holdings: [
         ...holdingsOf(
           unsold.map((ticket) => ({

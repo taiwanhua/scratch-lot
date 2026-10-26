@@ -199,11 +199,11 @@ export class LotteryStoreBookCardPayload {
 }
 
 /**
- * 拆本 / 上檯面「先選本」的一本:本店有未售、在庫存、沒被鎖的張的本(使用者 10/27 定案 D)。
- * `opened` = 拆過(第一次拆本後):畫面標「拆過 · 庫存 N 張」,精靈不標跳號、只分配庫存的張。
+ * 拆本 / 上檯面「先選本」的一本:本店有未售、在庫存、沒被鎖的張的本(使用者 10/27 定案 D、M1)。
+ * `sealed` = 這家店原封不動(標「未拆」、要標跳號);其他標「拆過 · 庫存 N 張」,不標跳號、只分配庫存的張。
  */
-@ObjectType("LotteryStoreUnopenedBook")
-export class LotteryStoreUnopenedBookModel {
+@ObjectType("LotteryStoreStockBook")
+export class LotteryStoreStockBookModel {
   @Field(() => ID)
   bookId!: string;
 
@@ -225,23 +225,23 @@ export class LotteryStoreUnopenedBookModel {
   @Field(() => String)
   lastTicketNo!: string;
 
-  /** 這家店庫存裡未售、沒被鎖的張數(不含跳號;未拆的本扣掉待標註)。 */
+  /** 這家店庫存裡未售、沒被鎖的張數(不含跳號;原封不動的本扣掉待標註)。 */
   @Field(() => Int)
   ticketCount!: number;
 
-  /** 待標註張數(拆過的本 = 0:第一次拆本已標完)。 */
+  /** 這次拆本要標的跳號張數(只有原封不動的本;其他 = 0,待標註之後在本的詳情補標)。 */
   @Field(() => Int)
   pendingSkipCount!: number;
 
-  /** 拆過(本的 `firstOpenedAt` 有值)。 */
+  /** 這家店原封不動:從沒拆過、這家店的張全是未售在庫存。 */
   @Field(() => Boolean)
-  opened!: boolean;
+  sealed!: boolean;
 }
 
 @ObjectType()
-export class LotteryStoreUnopenedBooksPayload {
-  @Field(() => [LotteryStoreUnopenedBookModel])
-  items!: LotteryStoreUnopenedBookModel[];
+export class LotteryStoreStockBooksPayload {
+  @Field(() => [LotteryStoreStockBookModel])
+  items!: LotteryStoreStockBookModel[];
 }
 
 /** 拆本、移櫃、收回寫了幾張。 */

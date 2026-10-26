@@ -22,7 +22,7 @@ import type {
   RecallLotteryTicketsInput,
   SplitLotteryBookInput,
 } from "./dto/lottery-store-sales.input";
-import type { LotteryStoreUnopenedBookModel } from "./models/lottery-store-sales.model";
+import type { LotteryStoreStockBookModel } from "./models/lottery-store-sales.model";
 import { parseId } from "./shift-views";
 import { StoreAccess } from "./store-access";
 import { StoreClock } from "./store-clock";
@@ -60,31 +60,51 @@ export class StoreCounterService {
 
   /**
    * 拆本 / 上檯面「先選本」:本店有未售、在庫存、沒被鎖的張的本(使用者 10/27 定案 D:拆本 = 把本店庫存的張
-   * 放上檯面;被調貨單鎖住的張不算,全部鎖住的本不列),依遊戲代號、本號排序。從沒拆過的標「未拆」,
-   * 拆過的標「拆過 · 庫存 N 張」(`opened`)。
+   * 放上檯面;被調貨單鎖住的張不算,全部鎖住的本不列),依遊戲代號、本號排序。`sealed` = 這家店原封不動
+   * (從沒拆過、這家店的張全是未售在庫存;標「未拆」,要標跳號、張數扣待標註);其他標「拆過 · 庫存 N 張」,
+   * 不標跳號、張數照庫存的張(待標註保留,之後在本的詳情 [標跳號] 補標)。
    */
-  async unopenedBooks(
+  async stockBooks(
     operator: OperatorContext,
     orgIdText: string,
-  ): Promise<LotteryStoreUnopenedBookModel[]> {
+  ): Promise<LotteryStoreStockBookModel[]> {
     await this.access.assertView(operator);
     const store = await this.support.mustStore(operator, orgIdText);
     const rows = await this.tickets.aggregate(operator, [
       {
-        $match: {
-          orgId: store.orgId,
-          status: TICKET_STATUS.unsold,
-          "location.kind": TICKET_LOCATION_KIND.stock,
-          lockedBy: null,
+        $match: { orgId: store.orgId, status: { $ne: TICKET_STATUS.skipped } },
+      },
+      {
+        $group: {
+          _id: "$bookId",
+          total: { $sum: 1 },
+          inStock: {
+            $sum: {
+              $cond: [
+                {
+                  $and: [
+                    { $eq: ["$status", TICKET_STATUS.unsold] },
+                    { $eq: ["$location.kind", TICKET_LOCATION_KIND.stock] },
+                    { $eq: [{ $ifNull: ["$lockedBy", null] }, null] },
+                  ],
+                },
+                1,
+                0,
+              ],
+            },
+          },
         },
       },
-      { $group: { _id: "$bookId", inStock: { $sum: 1 } } },
+      { $match: { inStock: { $gt: 0 } } },
     ]);
     if (rows.length === 0) {
       return [];
     }
-    const countOf = new Map(
-      rows.map((row) => [String(row._id), Number(row.inStock)]),
+    const rowOf = new Map(
+      rows.map((row) => [
+        String(row._id),
+        { total: Number(row.total), inStock: Number(row.inStock) },
+      ]),
     );
     const books = await this.books.findMany(operator, {
       _id: { $in: rows.map((row) => row._id as Types.ObjectId) },
@@ -97,8 +117,10 @@ export class StoreCounterService {
     return books
       .map((book) => {
         const game = games.get(String(book.gameId));
-        const opened = (book.firstOpenedAt ?? null) !== null;
-        const pendingSkipCount = opened ? 0 : pendingSkipCountOfBook(book);
+        const row = rowOf.get(String(book._id)) ?? { total: 0, inStock: 0 };
+        const sealed =
+          (book.firstOpenedAt ?? null) === null && row.total === row.inStock;
+        const pendingSkipCount = sealed ? pendingSkipCountOfBook(book) : 0;
         return {
           bookId: String(book._id),
           gameCode: book.gameCode,
@@ -107,13 +129,10 @@ export class StoreCounterService {
           bookNo: book.bookNo,
           firstTicketNo: book.firstTicketNo,
           lastTicketNo: book.lastTicketNo,
-          // 待標註的跳號(拆本前還沒標的)實體不存在,不算張數(使用者 10/27 定案甲)
-          ticketCount: Math.max(
-            0,
-            (countOf.get(String(book._id)) ?? 0) - pendingSkipCount,
-          ),
+          // 未拆的本:待標註的跳號(拆本前還沒標的)實體不存在,不算張數(使用者 10/27 定案甲)
+          ticketCount: Math.max(0, row.inStock - pendingSkipCount),
           pendingSkipCount,
-          opened,
+          sealed,
         };
       })
       .toSorted(
@@ -125,7 +144,8 @@ export class StoreCounterService {
 
   /**
    * 拆本 / 上檯面:把這本在本店庫存、未售、沒被鎖的張放到收銀點檯面(寫「拆本」事件;帳本在第一次寫
-   * `firstOpenedAt`)。從沒拆過的本照原流程先標跳號(剛好待標註張數);拆過的本不標跳號(第一次已標完)。
+   * `firstOpenedAt`)。這家店原封不動的本照原流程先標跳號(剛好待標註張數);其他(拆過、只尋回幾張…)
+   * 不標跳號,待標註保留(使用者 10/27 定案 M1)。
    * 本店沒有可放的庫存張 → `BOOK_ALREADY_OPENED`(清單已過時)。
    */
   async split(
@@ -150,23 +170,27 @@ export class StoreCounterService {
       pointIds.set(assignment.cashPointId, point._id);
     }
     return this.transactions.withTransaction(async (session) => {
-      const usable = await this.tickets.findMany(
+      const mine = await this.tickets.findMany(
         operator,
         {
           bookId: book._id,
           orgId: store.orgId,
-          status: TICKET_STATUS.unsold,
-          "location.kind": TICKET_LOCATION_KIND.stock,
-          lockedBy: null,
+          status: { $ne: TICKET_STATUS.skipped },
         },
         { session },
+      );
+      const usable = mine.filter(
+        (ticket) =>
+          ticket.status === TICKET_STATUS.unsold &&
+          ticket.location.kind === TICKET_LOCATION_KIND.stock &&
+          ticket.lockedBy === null,
       );
       if (usable.length === 0 || book.status !== "normal") {
         throw bookAlreadyOpenedError();
       }
-      // 拆過的本再上檯面不標跳號:第一次拆本一定標完待標註
+      // 這家店原封不動(從沒拆過、這家店的張全是未售在庫存、沒被鎖)才標跳號
       const pending =
-        (book.firstOpenedAt ?? null) === null
+        (book.firstOpenedAt ?? null) === null && usable.length === mine.length
           ? pendingSkipCountOfBook(book)
           : 0;
       const problem = splitPlanProblemOf(

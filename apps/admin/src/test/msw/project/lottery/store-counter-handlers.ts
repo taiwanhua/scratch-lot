@@ -100,10 +100,10 @@ export const storeCounterHandlers = ({
         },
       });
     }),
-    api.query("LotteryStoreUnopenedBooks", () =>
+    api.query("LotteryStoreStockBooks", () =>
       HttpResponse.json({
         data: {
-          lotteryStoreUnopenedBooks: {
+          lotteryStoreStockBooks: {
             items: books
               .filter((book) =>
                 book.tickets.every(
@@ -112,7 +112,7 @@ export const storeCounterHandlers = ({
                 ),
               )
               .map((book) => ({
-                __typename: "LotteryStoreUnopenedBook" as const,
+                __typename: "LotteryStoreStockBook" as const,
                 bookId: book.bookId,
                 gameCode: book.gameCode,
                 gameName: book.gameName,
@@ -126,7 +126,7 @@ export const storeCounterHandlers = ({
                   book.standardTickets,
                   0,
                 ),
-                opened: false,
+                sealed: true,
               })),
           },
         },

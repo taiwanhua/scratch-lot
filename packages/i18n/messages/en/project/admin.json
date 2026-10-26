@@ -515,7 +515,8 @@
       "TICKET_STATUS_NOT_ALLOWED": "The selected tickets are not in a status that allows this",
       "UNEXPECTED": "Something went wrong; try again later",
       "RECOVER_TARGET_NOT_STORE": "Recovered tickets must go back to a branch; pick one",
-      "RECOVER_TARGET_NOT_OPERATING_STORE": "Tickets can only be recovered into the branch you are working in"
+      "RECOVER_TARGET_NOT_OPERATING_STORE": "Tickets can only be recovered into the branch you are working in",
+      "NO_PENDING_SKIPS": "This book has no skipped numbers left to mark"
     },
     "ticketStatuses": {
       "unsold": "Unsold",
@@ -646,7 +647,8 @@
       "scrap": "Scrap",
       "recover": "Recover",
       "clearSelection": "Clear selection",
-      "timeline": "Event timeline"
+      "timeline": "Event timeline",
+      "markSkips": "Mark skipped"
     },
     "timeline": {
       "columns": {
@@ -719,6 +721,14 @@
     },
     "detailTabs": {
       "noStore": "This class B dealer has no branch yet."
+    },
+    "markSkips": {
+      "title": "Mark skipped tickets",
+      "hint": "This book still has {count} skipped numbers to mark (not marked when opened). Tap the numbers that don't exist:",
+      "selected": "Selected {count} / {total}: {ranges}",
+      "reason": "Reason",
+      "submit": "Mark skipped",
+      "success": "Skipped tickets marked"
     }
   },
   "lotteryReports": {

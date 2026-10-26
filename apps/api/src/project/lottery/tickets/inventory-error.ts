@@ -22,6 +22,8 @@ export const INVENTORY_REASONS = {
   noSkippedTickets: "NO_SKIPPED_TICKETS",
   /** 更正跳號:改完的張數不等於待標註張數,或張號不在這本 */
   skipCountMismatch: "SKIP_COUNT_MISMATCH",
+  /** 標跳號:這本沒有待標註(跳號都標完了) */
+  noPendingSkips: "NO_PENDING_SKIPS",
   /** 更正跳號:跟目前的跳號一樣 */
   skipUnchanged: "SKIP_UNCHANGED",
   /** 這個狀態的張不能做這件事(例:報廢只能報未售、尋回只能尋待查 / 遺失、新標的跳號要是未售) */

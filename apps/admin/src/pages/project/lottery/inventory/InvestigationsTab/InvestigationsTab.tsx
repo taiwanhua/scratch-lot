@@ -21,11 +21,7 @@ import { RecoverTicketDialog } from "@/components/project/lottery/RecoverTicketD
 import { useSession } from "@/hooks/base/useSession";
 import { useTemporalText } from "@/hooks/base/useTemporalText";
 
-import {
-  INVESTIGATIONS_TABLE_MIN_WIDTH,
-  daysSince,
-  moneyText,
-} from "../inventory-config";
+import { INVESTIGATIONS_TABLE_MIN_WIDTH, moneyText } from "../inventory-config";
 import { useInventoryAccess } from "../useInventoryAccess";
 
 type Row = LotteryInvestigationRowFieldsFragment;
@@ -106,9 +102,9 @@ export const InvestigationsTab = () => {
       header: t("investigations.columns.days"),
       align: "right",
       render: (row) =>
-        row.at
-          ? t("investigations.daysValue", { days: daysSince(row.at) })
-          : "",
+        row.days == null
+          ? ""
+          : t("investigations.daysValue", { days: row.days }),
     },
     ...(showCost
       ? [

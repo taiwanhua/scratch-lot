@@ -66,7 +66,7 @@ fragment LotteryStoreBookCardFields on LotteryStoreBookCard {
   }
 }
 
-fragment LotteryStoreUnopenedBookFields on LotteryStoreUnopenedBook {
+fragment LotteryStoreStockBookFields on LotteryStoreStockBook {
   bookId
   gameCode
   gameName
@@ -76,7 +76,7 @@ fragment LotteryStoreUnopenedBookFields on LotteryStoreUnopenedBook {
   lastTicketNo
   ticketCount
   pendingSkipCount
-  opened
+  sealed
 }
 
 query LotteryStoreScan($input: LotteryStoreScanInput!) {
@@ -127,10 +127,10 @@ query LotteryStoreBookCard($orgId: ID!, $bookId: ID!) {
   }
 }
 
-query LotteryStoreUnopenedBooks($orgId: ID!) {
-  lotteryStoreUnopenedBooks(orgId: $orgId) {
+query LotteryStoreStockBooks($orgId: ID!) {
+  lotteryStoreStockBooks(orgId: $orgId) {
     items {
-      ...LotteryStoreUnopenedBookFields
+      ...LotteryStoreStockBookFields
     }
   }
 }

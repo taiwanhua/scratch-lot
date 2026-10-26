@@ -124,6 +124,13 @@ export const inventoryWorld = ({
           (ticket) =>
             ticket.operable && ticket.status === "unsold" && !ticket.locked,
         ),
+      canMarkSkips:
+        has(PERMISSIONS.markSkipped) &&
+        detail.book.pendingSkipCount > 0 &&
+        detail.tickets.some(
+          (ticket) =>
+            ticket.operable && ticket.status === "unsold" && !ticket.locked,
+        ),
       canRecover: has(PERMISSIONS.recover),
       canScrap: has(PERMISSIONS.scrap),
       canShowCost: has(PERMISSIONS.showCost),

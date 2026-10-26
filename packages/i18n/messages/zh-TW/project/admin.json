@@ -515,7 +515,8 @@
       "TICKET_STATUS_NOT_ALLOWED": "選到的張的狀態不能做這件事",
       "UNEXPECTED": "發生錯誤,請稍後再試",
       "RECOVER_TARGET_NOT_STORE": "尋回要回到一家店,請選擇回到哪家店",
-      "RECOVER_TARGET_NOT_OPERATING_STORE": "只能尋回到你正在操作的店"
+      "RECOVER_TARGET_NOT_OPERATING_STORE": "只能尋回到你正在操作的店",
+      "NO_PENDING_SKIPS": "這本沒有待標註的跳號"
     },
     "ticketStatuses": {
       "unsold": "未售",
@@ -646,7 +647,8 @@
       "scrap": "報廢",
       "recover": "尋回",
       "clearSelection": "取消選取",
-      "timeline": "事件時間軸"
+      "timeline": "事件時間軸",
+      "markSkips": "標跳號"
     },
     "timeline": {
       "columns": {
@@ -719,6 +721,14 @@
     },
     "detailTabs": {
       "noStore": "這位乙類還沒有對應分店。"
+    },
+    "markSkips": {
+      "title": "標跳號",
+      "hint": "這本還有 {count} 張待標註的跳號(拆本時沒標)。點出不存在的號碼:",
+      "selected": "已選 {count} / {total}:{ranges}",
+      "reason": "原因",
+      "submit": "確認標跳號",
+      "success": "已標跳號"
     }
   },
   "lotteryReports": {

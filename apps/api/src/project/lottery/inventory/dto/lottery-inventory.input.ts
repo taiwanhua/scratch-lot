@@ -84,6 +84,26 @@ export class CorrectLotterySkippedTicketsInput {
 }
 
 /**
+ * 標跳號(`inventory.mark-skipped`):還有待標註時,把幾張未售的張標成跳號(拆本時沒標的,例:整本待查後只尋回
+ * 幾張就上檯面);張數 1 ~ 待標註張數。
+ */
+@InputType()
+export class MarkLotterySkippedTicketsInput {
+  @Field(() => ID)
+  bookId!: string;
+
+  @Field(() => [LotteryTicketVersionInput])
+  tickets!: LotteryTicketVersionInput[];
+
+  /** 欄位管理「更正跳號原因」;選「其他」要填說明。 */
+  @Field(() => String)
+  reasonKey!: string;
+
+  @Field(() => String, { nullable: true })
+  reasonNote?: string | null;
+}
+
+/**
  * 尋回(`inventory.recover`):待查 / 遺失的張回到庫存。給 `orgId` = 刷到實體(回到刷到的那家店,
  * 可跨店);不給 = 從清單選(本的詳情、待查·遺失分頁:不換店,只能尋回自己範圍內的張)。
  */

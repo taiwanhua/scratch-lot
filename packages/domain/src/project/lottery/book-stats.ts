@@ -148,17 +148,15 @@ export function remainingOfCounts(
 }
 
 /**
- * 總張數(不算跳號):整本的紀錄張數剛好 = 標準張數 + 待標註時扣掉待標註(還沒標的跳號實體不存在)。
+ * 總張數(不算跳號)= 紀錄張數 − 待標註:還沒標的跳號一定還是紀錄裡的張(未售、待查…),實體不存在
+ * (使用者 10/27 定案:還有待標註就扣,不看拆過沒有)。
  */
 export function totalOfCounts(
   counts: BookTicketCounts,
-  standardTickets: number,
   pendingSkipCount: number,
 ): number {
   const total = BOOK_COUNT_KEYS.reduce((sum, key) => sum + counts[key], 0);
-  return pendingSkipCount > 0 && total === standardTickets + pendingSkipCount
-    ? total - pendingSkipCount
-    : total;
+  return Math.max(0, total - pendingSkipCount);
 }
 
 /**

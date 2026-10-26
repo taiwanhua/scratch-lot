@@ -315,6 +315,7 @@ export const sampleBookDetail =
       abilities: {
         __typename: "LotteryInventoryBookAbilities",
         canCorrectSkips: true,
+        canMarkSkips: false,
         canRecover: true,
         canScrap: true,
         canShowCost: true,

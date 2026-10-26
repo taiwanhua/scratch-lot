@@ -10,6 +10,7 @@ import {
   LotteryInventoryBooksInput,
   LotteryStockOverviewInput,
   LotteryTicketLookupInput,
+  MarkLotterySkippedTicketsInput,
   RecoverLotteryTicketsInput,
   ScrapLotteryTicketsInput,
   SetLotteryAllocationInput,
@@ -118,6 +119,15 @@ export class LotteryInventoryResolver {
     @CurrentOperator() operator: OperatorContext,
   ): Promise<LotteryInventoryActionPayload> {
     return this.actions.correctSkips(operator, input);
+  }
+
+  @RequirePermission("inventory.mark-skipped")
+  @Mutation(() => LotteryInventoryActionPayload)
+  markLotterySkippedTickets(
+    @Args("input") input: MarkLotterySkippedTicketsInput,
+    @CurrentOperator() operator: OperatorContext,
+  ): Promise<LotteryInventoryActionPayload> {
+    return this.actions.markSkips(operator, input);
   }
 
   @RequirePermission("inventory.recover")

@@ -766,8 +766,8 @@ export class StoreSalesService {
       bookNo: book.bookNo,
       firstTicketNo: book.firstTicketNo,
       lastTicketNo: book.lastTicketNo,
-      // 拆過的本再上檯面不標跳號(第一次拆本一定標完):從沒拆過才回待標註
-      pendingSkipCount: book.firstOpenedAt == null ? pendingSkipOf(book) : 0,
+      // 這家店原封不動才在拆本時標跳號;其他(拆過、只尋回幾張…)不標,待標註保留(使用者 10/27 定案 M1)
+      pendingSkipCount: unopened ? pendingSkipOf(book) : 0,
       unopened,
       tickets: usable.map((ticket) => {
         const pointId = ticket.location.cashPointId ?? null;

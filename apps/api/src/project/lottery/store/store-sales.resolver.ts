@@ -19,7 +19,7 @@ import {
   LotteryStoreSalesPayload,
   LotteryStoreScanItemModel,
   LotteryStoreScanPayload,
-  LotteryStoreUnopenedBooksPayload,
+  LotteryStoreStockBooksPayload,
 } from "./models/lottery-store-sales.model";
 import { StoreCounterService } from "./store-counter.service";
 import { StoreSalesService } from "./store-sales.service";
@@ -87,14 +87,14 @@ export class LotteryStoreSalesResolver {
     return { item: await this.sales.bookCard(operator, orgId, bookId) };
   }
 
-  @Query(() => LotteryStoreUnopenedBooksPayload, {
-    name: "lotteryStoreUnopenedBooks",
+  @Query(() => LotteryStoreStockBooksPayload, {
+    name: "lotteryStoreStockBooks",
   })
-  async lotteryStoreUnopenedBooks(
+  async lotteryStoreStockBooks(
     @Args("orgId", { type: () => ID }) orgId: string,
     @CurrentOperator() operator: OperatorContext,
-  ): Promise<LotteryStoreUnopenedBooksPayload> {
-    return { items: await this.counter.unopenedBooks(operator, orgId) };
+  ): Promise<LotteryStoreStockBooksPayload> {
+    return { items: await this.counter.stockBooks(operator, orgId) };
   }
 
   @RequirePermission("store.split")

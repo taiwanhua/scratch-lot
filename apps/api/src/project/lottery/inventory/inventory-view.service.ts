@@ -23,6 +23,7 @@ import {
   isOrgVisible,
 } from "../../../database/operator-context";
 import { tenantBoundaryContext } from "../../../database/tenant-boundary-context";
+import { tenantTimezoneOf } from "../../../database/tenant-timezone";
 import { LotteryGamesRepository } from "../../database/lottery-games/lottery-games.repository";
 import {
   type LotteryBookDocument,
@@ -35,6 +36,8 @@ import {
 import type { TicketStateSnapshot } from "../../database/lottery-inventory/lottery-ticket-event.schema";
 import { LotteryShiftsRepository } from "../../database/lottery-store/lottery-shifts.repository";
 import { parseId } from "../accounts/accounts-util";
+import { daysSince, localDayOf } from "../dealers/dealer-dates";
+import { tenantOfOperator } from "../master-data-tenant";
 import {
   countsOfBook,
   pendingSkipCountOfBook,
@@ -275,6 +278,16 @@ export class InventoryViewService {
       abilities: {
         canCorrectSkips:
           grant.has(INVENTORY_PERMISSIONS.markSkipped) && canCorrectSkips,
+        // 拆本時沒標的待標註(只尋回幾張就上檯面…)之後在這裡補標
+        canMarkSkips:
+          grant.has(INVENTORY_PERMISSIONS.markSkipped) &&
+          pendingSkipCountOfBook(record) > 0 &&
+          sortedTickets.some(
+            (ticket) =>
+              ticket.status === TICKET_STATUS.unsold &&
+              ticket.lockedBy === null &&
+              operable(ticket),
+          ),
         canRecover: grant.has(INVENTORY_PERMISSIONS.recover),
         canScrap: grant.has(INVENTORY_PERMISSIONS.scrap),
         canShowCost: grant.canShowCost,
@@ -370,9 +383,18 @@ export class InventoryViewService {
     const gameOf = new Map(games.map((game) => [String(game._id), game]));
     const bookOf = new Map(bookRecords.map((book) => [String(book._id), book]));
     const names = await this.namesOf(operator, missing, events);
+    // 天數:租戶時區的日曆天差(同經銷商的距今天數;日期只有一種做法)
+    const timezone = await tenantTimezoneOf(
+      this.orgs,
+      operator,
+      tenantOfOperator(operator)?.tenantId ?? null,
+    );
+    const today = localDayOf(new Date(), timezone);
     const rows: LotteryInvestigationRowModel[] = [];
     for (const bookId of bookIds) {
       const book = bookOf.get(bookId);
+      // 還沒標的跳號在還沒處理的那一組(先待查、再遺失),一本只扣一次
+      let pendingLeft = book === undefined ? 0 : pendingSkipCountOfBook(book);
       for (const status of MISSING_STATUSES) {
         const tickets = missing
           .filter(
@@ -385,8 +407,9 @@ export class InventoryViewService {
           continue;
         }
         const ticketIds = new Set(tickets.map((ticket) => String(ticket._id)));
-        // 未拆整本待查 / 遺失:待標註的跳號實體不存在,張數與成本都不算
-        const figures = withoutPendingSkipFigures(book, tickets);
+        // 待標註的跳號實體不存在,張數與成本都不算(還有待標註就扣;使用者 10/27 定案)
+        const figures = withoutPendingSkipFigures(tickets, pendingLeft);
+        pendingLeft -= tickets.length - figures.tickets;
         const latest = events.find((event) =>
           ticketIds.has(String(event.ticketId)),
         );
@@ -404,6 +427,7 @@ export class InventoryViewService {
               ? null
               : (names.serials.get(String(latest.refId)) ?? null),
           at: latest?.at ?? null,
+          days: daysSince(latest?.at ?? null, today, timezone),
           cost: grant.canShowCost ? Math.round(figures.cost) : null,
           ticketCount: figures.tickets,
           tickets: tickets.map((ticket) =>
@@ -516,11 +540,7 @@ export class InventoryViewService {
         org: mustRef(record.orgId, orgNames),
         holdings,
         remainingCount: remainingOfCounts(counts, pendingSkipCount),
-        totalCount: totalOfCounts(
-          counts,
-          record.standardTickets,
-          pendingSkipCount,
-        ),
+        totalCount: totalOfCounts(counts, pendingSkipCount),
         pendingSkipCount,
         requiredSkipCount: requiredSkipCountOf(
           lastTicketNo,
@@ -827,27 +847,18 @@ export class InventoryViewService {
 }
 
 /**
- * 待查·遺失一列的張數與成本:未拆整本(張數 = 標準張數 + 待標註)扣掉待標註的跳號(實體不存在,
- * 不算張數與成本;使用者 10/27 定案甲),成本扣同樣張數 × 平均單張成本。
+ * 待查·遺失一列的張數與成本:扣掉還沒標的跳號(實體不存在;不超過這一列的張數),成本扣同樣張數 ×
+ * 這一列的平均單張成本。
  */
 function withoutPendingSkipFigures(
-  book:
-    | {
-        lastTicketNo: string;
-        standardTickets: number;
-        skippedTicketNos: string[];
-      }
-    | undefined,
   tickets: readonly { unitCost: number }[],
+  pendingSkipCount: number,
 ): { tickets: number; cost: number } {
   const total = tickets.reduce((sum, ticket) => sum + ticket.unitCost, 0);
-  if (book === undefined || tickets.length === 0) {
+  const deducted = Math.min(pendingSkipCount, tickets.length);
+  if (deducted <= 0) {
     return { tickets: tickets.length, cost: total };
   }
-  const count = withoutPendingSkips(
-    tickets.length,
-    book.standardTickets,
-    pendingSkipCountOfBook(book),
-  );
+  const count = tickets.length - deducted;
   return { tickets: count, cost: (total * count) / tickets.length };
 }

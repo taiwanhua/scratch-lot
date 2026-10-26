@@ -26,6 +26,7 @@ import { BookHeader } from "./BookHeader";
 import { BookInfoCards } from "./BookInfoCards";
 import { BookTimeline } from "./BookTimeline";
 import { CorrectSkipsDialog } from "./CorrectSkipsDialog";
+import { MarkSkipsDialog } from "./MarkSkipsDialog";
 import { ScrapTicketsDialog } from "./ScrapTicketsDialog";
 import { SelectionBar } from "./SelectionBar";
 import {
@@ -58,7 +59,7 @@ export const BookPage = ({ routeParam }: ModulePageProps) => {
     ticketParam === "" ? [] : [ticketParam],
   );
   const [dialog, setDialog] = useState<
-    "correct" | "scrap" | "recover" | "recoverAll" | null
+    "correct" | "markSkips" | "scrap" | "recover" | "recoverAll" | null
   >(null);
   const query = useLotteryInventoryBookQuery(
     session.client,
@@ -120,6 +121,9 @@ export const BookPage = ({ routeParam }: ModulePageProps) => {
         onCorrect={() => {
           setDialog("correct");
         }}
+        onMarkSkips={() => {
+          setDialog("markSkips");
+        }}
         onRecoverAll={() => {
           setDialog("recoverAll");
         }}
@@ -161,6 +165,14 @@ export const BookPage = ({ routeParam }: ModulePageProps) => {
         <BookTimeline events={detail.events} />
       </Card>
 
+      {dialog === "markSkips" ? (
+        <MarkSkipsDialog
+          detail={detail}
+          onClose={() => {
+            setDialog(null);
+          }}
+        />
+      ) : null}
       {dialog === "correct" ? (
         <CorrectSkipsDialog
           detail={detail}

@@ -17,6 +17,8 @@ export interface BookHeaderProps {
   /** 顯示 [整本尋回](有 `recover`、而且有自己能操作的待查 / 遺失張) */
   canRecoverAll: boolean;
   onCorrect: () => void;
+  /** [標跳號](`abilities.canMarkSkips`:還有待標註) */
+  onMarkSkips: () => void;
   onRecoverAll: () => void;
 }
 
@@ -29,6 +31,7 @@ export const BookHeader = ({
   detail,
   canRecoverAll,
   onCorrect,
+  onMarkSkips,
   onRecoverAll,
 }: BookHeaderProps) => {
   const t = useTranslations("admin.lotteryInventory");
@@ -63,6 +66,11 @@ export const BookHeader = ({
             tone={investigation == null ? "grey" : "warning"}
             label={t(`bookStates.${book.state}`)}
           />
+          {abilities.canMarkSkips ? (
+            <Button variant="outlined" onClick={onMarkSkips}>
+              {t("book.markSkips")}
+            </Button>
+          ) : null}
           {abilities.canCorrectSkips ? (
             <Button variant="outlined" onClick={onCorrect}>
               {t("book.correctSkips")}

@@ -1073,8 +1073,8 @@ export class StocktakeService {
   }
 
   /**
-   * 確認遺失的張數與成本:整本未拆的本(張數 = 標準張數 + 待標註)扣掉待標註那幾張(實體不存在,
-   * 不算損失;使用者 10/27 定案甲)。本一次讀完。
+   * 確認遺失的張數與成本:這本還有待標註就扣掉待標註那幾張(實體不存在,不算損失;使用者 10/27 定案甲、M1),
+   * 例:整本待查後尋回 3 張、其餘 98 張確認遺失 → 損失 97 張。本一次讀完。
    */
   private async lostFiguresOf(
     reader: OperatorContext,
@@ -1104,12 +1104,8 @@ export class StocktakeService {
               book.skippedTicketNos.length,
             );
       const total = costs.reduce((sum, value) => sum + value, 0);
-      const extra =
-        book !== undefined &&
-        pending > 0 &&
-        costs.length === book.standardTickets + pending
-          ? pending
-          : 0;
+      // 還有待標註就扣(不超過這組張數;使用者 10/27 定案 M1):還沒標的跳號實體不存在,不算損失
+      const extra = Math.min(pending, costs.length);
       tickets += costs.length - extra;
       cost += total - (extra * total) / costs.length;
     }

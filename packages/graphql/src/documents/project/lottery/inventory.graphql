@@ -125,6 +125,7 @@ fragment LotteryInventoryBookDetailFields on LotteryInventoryBookDetail {
   }
   abilities {
     canCorrectSkips
+    canMarkSkips
     canRecover
     canScrap
     canShowCost
@@ -144,8 +145,9 @@ fragment LotteryInvestigationRowFields on LotteryInvestigationRow {
   refType
   refSerialNo
   at
+  days
   cost
-  # 張數:未拆整本扣掉待標註的跳號(實體不存在)
+  # 張數:還有待標註就扣掉(實體不存在)
   ticketCount
   tickets {
     ...LotteryInventoryTicketFields
@@ -275,6 +277,13 @@ mutation SetLotteryAllocation($input: SetLotteryAllocationInput!) {
 }
 
 # CorrectLotterySkippedTicketsInput: { bookId, ticketNos, reasonKey, reasonNote? }
+mutation MarkLotterySkippedTickets($input: MarkLotterySkippedTicketsInput!) {
+  markLotterySkippedTickets(input: $input) {
+    count
+    lossCost
+  }
+}
+
 mutation CorrectLotterySkippedTickets(
   $input: CorrectLotterySkippedTicketsInput!
 ) {

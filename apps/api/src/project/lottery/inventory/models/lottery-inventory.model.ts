@@ -309,6 +309,10 @@ export class LotteryInventoryBookAbilitiesModel {
   @Field(() => Boolean)
   canCorrectSkips!: boolean;
 
+  /** [標跳號]:有 `inventory.mark-skipped`、還有待標註、有自己範圍內沒被鎖的未售張。 */
+  @Field(() => Boolean)
+  canMarkSkips!: boolean;
+
   @Field(() => Boolean)
   canRecover!: boolean;
 
@@ -432,6 +436,10 @@ export class LotteryInvestigationRowModel {
 
   @Field(() => GraphQLISODateTime, { nullable: true })
   at!: Date | null;
+
+  /** 登記到今天幾天(租戶時區的日曆天差,同經銷商的「距今天數」);沒有日期 → null。 */
+  @Field(() => Int, { nullable: true })
+  days!: number | null;
 
   /** 這幾張的單張成本加總(四捨五入到元);沒有 `inventory.show-cost` → null。 */
   @Field(() => Int, { nullable: true })

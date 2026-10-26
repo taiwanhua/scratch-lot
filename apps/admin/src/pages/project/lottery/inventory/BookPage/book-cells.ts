@@ -113,6 +113,31 @@ export const skipCorrectionCellsOf = (
   });
 };
 
+/**
+ * 標跳號的格子(使用者 10/27 定案 M1):自己範圍內、沒被鎖的未售張能選,別店的張是「其他分店」、
+ * 已標的跳號是「跳號」,其他都是「不能選」。
+ */
+export const markSkipCellsOf = (
+  tickets: readonly Ticket[],
+): TicketGridCell[] => {
+  const showStore = spansStores(tickets);
+  return tickets.map((ticket) => {
+    let state: CellState = "sold";
+    if (!ticket.operable) {
+      state = "otherStore";
+    } else if (ticket.status === TICKET_STATUS.skipped) {
+      state = "skipped";
+    } else if (ticket.status === TICKET_STATUS.unsold && !ticket.locked) {
+      state = "unsold";
+    }
+    return {
+      ticketNo: ticket.ticketNo,
+      state,
+      ...(showStore && { tooltip: ticket.org.name }),
+    };
+  });
+};
+
 export const skipCorrectionLegendOf = (
   tickets: readonly Ticket[],
 ): TicketGridProps["legendItems"] =>

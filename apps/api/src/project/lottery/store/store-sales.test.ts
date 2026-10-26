@@ -148,14 +148,14 @@ const CARD = /* GraphQL */ `
 `;
 
 const UNOPENED = /* GraphQL */ `
-  query Unopened($orgId: ID!) {
-    lotteryStoreUnopenedBooks(orgId: $orgId) {
+  query StockBooks($orgId: ID!) {
+    lotteryStoreStockBooks(orgId: $orgId) {
       items {
         bookId
         bookNo
         ticketCount
         pendingSkipCount
-        opened
+        sealed
       }
     }
   }
@@ -1045,20 +1045,20 @@ describe("店面(二):銷售、當下撤銷、拆本、移櫃(GraphQL 端點 + �
     it("先選要拆的本:本店庫存有張的本(未拆的本張數不算待標註;使用者 10/27 定案甲、D)", async () => {
       const { bookId } = await receiveBook(102);
       const data = await ok<{
-        lotteryStoreUnopenedBooks: {
+        lotteryStoreStockBooks: {
           items: {
             bookId: string;
             ticketCount: number;
             pendingSkipCount: number;
-            opened: boolean;
+            sealed: boolean;
           }[];
         };
       }>(lin, UNOPENED, { orgId: String(xinyi) });
       expect(
-        data.lotteryStoreUnopenedBooks.items.find(
+        data.lotteryStoreStockBooks.items.find(
           (item) => item.bookId === String(bookId),
         ),
-      ).toMatchObject({ ticketCount: 100, pendingSkipCount: 2, opened: false });
+      ).toMatchObject({ ticketCount: 100, pendingSkipCount: 2, sealed: true });
     });
 
     it("跳號沒點滿 / 沒分完 → 擋下;點滿、分放兩個收銀點 → 寫「跳號」「拆本」,跳號不算庫存", async () => {
