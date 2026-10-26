@@ -229,6 +229,9 @@ importers:
       '@repo/eslint-config':
         specifier: workspace:*
         version: link:../../packages/config-eslint
+      '@repo/i18n':
+        specifier: workspace:*
+        version: link:../../packages/i18n
       '@repo/jest-presets':
         specifier: workspace:*
         version: link:../../packages/jest-presets
