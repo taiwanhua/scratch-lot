@@ -58,9 +58,12 @@ export const transferTotalOf = (lines: readonly TransferDraftLine[]): number =>
 export const bookLabelOf = (book: TransferBookOption): string =>
   displayBookKey(book.gameCode, book.bookNo);
 
-/** 整本的張號區段(顯示用,例 `001-100`)。 */
-const wholeRangeOf = (book: TransferBookOption): string =>
-  `001-${String(book.availableCount).padStart(3, "0")}`;
+/**
+ * 整本的張號區段(存值,例 `001-100`):到迄號(還沒標的跳號在拆本前還在區段裡;使用者 10/27 定案
+ * 「001–101(100 張)」,張數另存)。
+ */
+export const wholeRangeOf = (book: TransferBookOption): string =>
+  `001-${String(book.lastTicketNo).padStart(3, "0")}`;
 
 export type AddLineResult =
   | { kind: "added"; lines: TransferDraftLine[] }
@@ -302,6 +305,19 @@ export const transferFormStateOf = (
     ),
   );
   const rowOf = new Map(receivingRows.map((row) => [row.rowId, row]));
+  /** 整本列存值的區段迄號(`001-101` → 101)。 */
+  const wholeLastOf = new Map(
+    rawLines.flatMap((row): [string, number][] => {
+      if (typeof row !== "object" || row === null || !("rowId" in row)) {
+        return [];
+      }
+      const text = (row as Record<string, unknown>)[K.ticketNos];
+      const match = typeof text === "string" ? /-(\d{3})$/.exec(text) : null;
+      return typeof row.rowId === "string" && match?.[1] !== undefined
+        ? [[row.rowId, Number(match[1])]]
+        : [];
+    }),
+  );
   const bookLabelOfRow = new Map(
     rawLines.flatMap((row): [string, string][] =>
       typeof row === "object" &&
@@ -355,6 +371,9 @@ export const transferFormStateOf = (
           rate: line.rate,
           isWhole,
           availableCount: line.tickets,
+          lastTicketNo: isWhole
+            ? (wholeLastOf.get(line.rowId) ?? line.tickets)
+            : line.tickets,
         },
         mode: line.mode,
         ticketNos: isWhole ? [] : line.ticketNos,

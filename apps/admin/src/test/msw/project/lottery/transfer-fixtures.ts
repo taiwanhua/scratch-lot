@@ -272,6 +272,7 @@ const book = (
   unitPrice: number,
   isWhole: boolean,
   availableCount = 100,
+  lastTicketNo = availableCount,
 ) => ({
   __typename: "LotteryTransferBook" as const,
   bookId,
@@ -284,6 +285,7 @@ const book = (
   rate: 92,
   isWhole,
   availableCount,
+  lastTicketNo,
 });
 
 /** 新增頁的選項(出貨分店不論是哪一家都回同一份)。 */

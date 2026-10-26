@@ -163,6 +163,7 @@ export class TransferQueryService {
             bookPrice: game.bookPrice,
             rate: book.rate,
             isWhole,
+            lastTicketNo: Number(book.lastTicketNo),
             // 待標註的跳號(拆本前還沒標的)實體不存在:整本可調張數 = 標準張數(使用者 10/27 定案甲)
             availableCount: Math.max(
               0,

@@ -2858,7 +2858,8 @@
         "submitted": "Transfer submitted",
         "toBranchHint": "Cannot find the to store? Headquarters opens transfers, or ask an admin to add you to the to store",
         "toBranchUnavailable": "You cannot pick this to store: headquarters opens transfers, or ask an admin to add you to the to store",
-        "scanAmbiguousGame": "Several games share this book number; scan the back code or pick the game for front barcodes first"
+        "scanAmbiguousGame": "Several games share this book number; scan the back code or pick the game for front barcodes first",
+        "wholeRangeWithCount": "{range} ({count} tickets)"
       },
       "view": {
         "title": "Transfer",

@@ -15,6 +15,10 @@ import {
 } from "../../../auth/test-support/auth-app";
 import { createOrg } from "../../../auth/test-support/fixtures";
 import type { OperatorContext } from "../../../database/operator-context";
+import {
+  countDbCommands,
+  expectDbCommandsAtMost,
+} from "../../../database/test-support/db-commands";
 import { HOOK_TIMEOUT_MS } from "../../../database/test-support/mongo-connection";
 import { TransactionService } from "../../../database/transaction";
 import {
@@ -44,6 +48,12 @@ import { LotteryBooksService } from "../tickets/books.service";
 import { TicketLedgerService } from "../tickets/ticket-ledger.service";
 
 jest.setTimeout(WORKFLOW_TEST_TIMEOUT_MS);
+
+/**
+ * 一家店一份營運報表的資料庫指令數上限(防退化,TX-06 延伸到交易外 N+1):整個請求的總數(含登入檢查),
+ * 與本數、張數無關(實測一家店一份約 53 次)。
+ */
+const OPERATIONS_REPORT_COMMANDS_LIMIT = 80;
 
 const OPERATIONS = /* GraphQL */ `
   query Operations($input: LotteryOperationsReportInput!) {
@@ -759,7 +769,7 @@ describe("輸出報表:營運報表、班次結帳歷史報表(GraphQL 端點 + 
         difference: 1800,
         diffReason: "其他(兌獎金額待查)",
         postClose: 1800,
-        // 原班的結帳快照不變;之後的更正逐筆另列(記錄當時、類別)
+        // 原班的結帳快照不變;之後才記的更正逐筆另列(記錄當時、類別)
         postCloseEntries: [
           {
             category: "redemption",
@@ -2692,6 +2702,56 @@ describe("輸出報表:營運報表、班次結帳歷史報表(GraphQL 端點 + 
         checkTickets: 0,
         checkCost: 0,
       });
+    });
+
+    it("一份報表的資料庫指令數與本數無關(防退化,TX-06 延伸到交易外):1 本與 6 本(進貨、售出、待查)相同", async () => {
+      const kinmen = await createOrg(connection, {
+        name: "金門店",
+        parentId: tenant,
+      });
+      const day = "2026-11-28";
+      const setUp = async (books: number) => {
+        for (let index = 0; index < books; index += 1) {
+          const bookId = await purchase(kinmen, taipei(day, "09:00"));
+          // 先拆本標跳號(待標註的跳號只算到拆本前;部分處理未拆本見文件「S1」)
+          await apply(
+            { operator: storeOperator(kinmen) },
+            await ticketsWhere(bookId, (ticket) => ticket.ticketNo === "101"),
+            {
+              type: "skip",
+              at: taipei(day, "10:00"),
+              patch: { status: "skipped" },
+            },
+          );
+          const sold = await ticketsWhere(
+            bookId,
+            (ticket) => ticket.status === "unsold",
+            2,
+          );
+          await apply({ operator: storeOperator(kinmen) }, sold, {
+            type: "investigate",
+            at: taipei(day, "12:00"),
+            patch: { status: "investigating", responsibleOrgId: kinmen },
+          });
+        }
+      };
+      const countOf = async () => {
+        const counted = await countDbCommands(() => storeOn(day, kinmen));
+        return counted;
+      };
+      await setUp(1);
+      // 第一次查詢會讀一些之後有快取的東西(登入、欄位選項),先暖身
+      await storeOn(day, kinmen);
+      const one = await countOf();
+      await setUp(5);
+      const six = await countOf();
+      expect(six.result.inventory).toMatchObject({
+        purchaseTickets: 600,
+        newInvestigatingTickets: 12,
+        checkTickets: 0,
+      });
+      expect(six.total).toBe(one.total);
+      expectDbCommandsAtMost(six, OPERATIONS_REPORT_COMMANDS_LIMIT, "營運報表");
     });
 
     it("重跑舊報表數字不變(審查 R1–R6):之後退回重送結帳 / 日結、送兌退回又重送、駁回盤點單、在途列被刪 → 重跑相同", async () => {

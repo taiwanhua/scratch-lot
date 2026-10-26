@@ -37,10 +37,17 @@ export const useTransferLineList = (
   const progress = useBookProgressLabel();
   const modeText = (line: TransferDraftLine) =>
     line.mode === TRANSFER_MODE.whole ? t("modes.whole") : t("modes.partial");
-  const ticketsText = (line: TransferDraftLine) =>
-    line.mode === TRANSFER_MODE.whole
-      ? `#001–${String(lineTicketsOf(line)).padStart(3, "0")}`
-      : formatTicketRanges(line.ticketNos);
+  // 整本:張號到迄號;有待標註的跳號(迄號 ≠ 張數)時後面寫張數,例「#001–101(100 張)」
+  const ticketsText = (line: TransferDraftLine) => {
+    if (line.mode !== TRANSFER_MODE.whole) {
+      return formatTicketRanges(line.ticketNos);
+    }
+    const range = `#001–${String(line.book.lastTicketNo).padStart(3, "0")}`;
+    const count = lineTicketsOf(line);
+    return line.book.lastTicketNo === count
+      ? range
+      : t("wholeRangeWithCount", { range, count });
+  };
   const groups = groupBooksByGame(
     lines,
     (line) => ({

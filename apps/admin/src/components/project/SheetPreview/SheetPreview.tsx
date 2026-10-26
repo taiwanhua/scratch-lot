@@ -43,7 +43,7 @@ const Cell = ({ row, column }: { row: SheetRow; column: SheetColumn }) => {
       color={typeof value === "number" && value < 0 ? "error" : "textPrimary"}
       sx={{ fontWeight: isTotalRow(row) ? 600 : undefined }}
     >
-      {sheetCellText(value, isPercentRow(row))}
+      {sheetCellText(value, isPercentRow(row), column.numFmt)}
     </Typography>
   );
 };

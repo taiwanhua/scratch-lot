@@ -973,13 +973,13 @@
         "alignedPeriod": "本店期間 {from} ~ {to}(對齊日結)",
         "fullDayNote": "{store} {date} 未日結,期間改用整天,小金庫和盤點未核對",
         "thisStore": "本店",
-        "monthClosed": "已關帳:數字固定;之後的更正列在報表的「前期更正」",
+        "monthClosed": "已關帳:數字固定;之後才記的更正列在報表的「前期更正」",
         "monthOpen": "尚未關帳:數字可能還會變動"
       },
       "closing": {
         "closed": "已關帳",
         "open": "尚未關帳",
-        "closedHint": "{month} 月已關帳:數字固定;之後的更正列在報表的「前期更正」。"
+        "closedHint": "{month} 月已關帳:數字固定;之後才記的更正列在報表的「前期更正」。"
       },
       "alignment": {
         "warning": "不要把多天的日報加總當成週報或月報;要看一週請選「週」。",
@@ -2858,7 +2858,8 @@
         "submitted": "已送出調貨單",
         "toBranchHint": "看不到收貨分店時:調貨由總部開單,或請管理員把你加入收貨分店",
         "toBranchUnavailable": "你選不到這家收貨分店:調貨由總部開單,或請管理員把你加入收貨分店",
-        "scanAmbiguousGame": "這個本號有多款遊戲,請刷背面編號或先選「正面條碼的遊戲」"
+        "scanAmbiguousGame": "這個本號有多款遊戲,請刷背面編號或先選「正面條碼的遊戲」",
+        "wholeRangeWithCount": "{range}({count} 張)"
       },
       "view": {
         "title": "調貨單",

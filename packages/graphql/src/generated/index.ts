@@ -3835,6 +3835,7 @@ export type LotteryTransferBook = {
   gameId: Scalars['ID']['output'];
   gameName: Scalars['String']['output'];
   isWhole: Scalars['Boolean']['output'];
+  lastTicketNo: Scalars['Int']['output'];
   rate: Scalars['Int']['output'];
   unitPrice: Scalars['Int']['output'];
 };
@@ -11254,7 +11255,7 @@ export type LotteryTransferOptionsQueryVariables = Exact<{
 }>;
 
 
-export type LotteryTransferOptionsQuery = { __typename?: 'Query', lotteryTransferOptions: { __typename?: 'LotteryTransferOptions', books: Array<{ __typename?: 'LotteryTransferBook', bookId: string, gameId: string, gameCode: string, gameName: string, bookNo: string, unitPrice: number, bookPrice: number, rate: number, isWhole: boolean, availableCount: number }>, requisitions: Array<{ __typename?: 'LotteryTransferRequisition', id: string, serialNo?: string | null, books: number }>, allocations: Array<{ __typename?: 'LotteryTransferAllocation', gameId: string, plannedBooks?: number | null, givenBooks: number, inTransitBooks: number }> } };
+export type LotteryTransferOptionsQuery = { __typename?: 'Query', lotteryTransferOptions: { __typename?: 'LotteryTransferOptions', books: Array<{ __typename?: 'LotteryTransferBook', bookId: string, gameId: string, gameCode: string, gameName: string, bookNo: string, unitPrice: number, bookPrice: number, rate: number, isWhole: boolean, availableCount: number, lastTicketNo: number }>, requisitions: Array<{ __typename?: 'LotteryTransferRequisition', id: string, serialNo?: string | null, books: number }>, allocations: Array<{ __typename?: 'LotteryTransferAllocation', gameId: string, plannedBooks?: number | null, givenBooks: number, inTransitBooks: number }> } };
 
 export type LotteryTransferBookTicketsQueryVariables = Exact<{
   fromOrgId: Scalars['ID']['input'];
@@ -24655,6 +24656,7 @@ export const LotteryTransferOptionsDocument = `
       rate
       isWhole
       availableCount
+      lastTicketNo
     }
     requisitions {
       id

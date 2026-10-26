@@ -29,6 +29,7 @@ const book = (
   rate: 92,
   isWhole,
   availableCount: 100,
+  lastTicketNo: 100,
   ...overrides,
 });
 
@@ -132,6 +133,27 @@ describe("調貨單新增頁的純函式(規格 8.4)", () => {
           amount: 600,
           book: { id: "b2", label: "5164-056528" },
         },
+      ],
+    });
+  });
+});
+
+describe("整本列有待標註的跳號(使用者 10/27 定案:「001–101(100 張)」)", () => {
+  it("迄號 101、可調 100 張:存值的張號區段到迄號、張數 100、金額照整本", () => {
+    const added = addWhole(
+      [],
+      book("b101", true, { availableCount: 100, lastTicketNo: 101 }),
+      nextId,
+    );
+    const lines = added.kind === "added" ? added.lines : [];
+    expect(
+      transferValuesOf(
+        { fromBranchId: "A", toBranchId: "B", requisitionNo: null, note: "" },
+        lines,
+      ),
+    ).toMatchObject({
+      lines: [
+        { mode: "whole", ticket_nos: "001-101", tickets: 100, amount: 20_000 },
       ],
     });
   });

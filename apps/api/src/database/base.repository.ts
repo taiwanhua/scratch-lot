@@ -422,11 +422,14 @@ export class BaseRepository<TSchema, TDocument extends RepositoryDocument> {
    * aggregate:plugin 在 pipeline 最前面放同一套讀取條件(可見範圍 + 共用 + 資料範圍規則 + 軟刪除)。
    * 會讀別張表或寫出的階段(`$lookup` / `$unionWith` / `$graphLookup` / `$out` / `$merge`)一律拒收 ——
    * 那些表的範圍不歸這支 repository 管。
+   * `allowDiskUse`:排序 / 分組的資料量可能超過記憶體上限時讓 Mongo 用暫存檔(例:報表從現況往回推)。
    */
   async aggregate(
     operator: OperatorContext,
     pipeline: readonly Record<string, unknown>[],
-    options: Pick<FindOptions, "includeDeleted" | "session"> = {},
+    options: Pick<FindOptions, "includeDeleted" | "session"> & {
+      allowDiskUse?: boolean;
+    } = {},
   ): Promise<Record<string, unknown>[]> {
     const forbidden = forbiddenStageIn(pipeline);
     if (forbidden !== undefined) {
@@ -434,14 +437,16 @@ export class BaseRepository<TSchema, TDocument extends RepositoryDocument> {
         `${this.model.modelName}:aggregate 不得使用 ${forbidden}(會讀寫範圍外的表)`,
       );
     }
-    return scopeAggregate(
+    const query = scopeAggregate(
       this.model.aggregate<Record<string, unknown>>(
         pipeline as unknown as PipelineStage[],
       ),
       { operator, includeDeleted: options.includeDeleted },
-    )
-      .session(sessionOf(options))
-      .exec();
+    ).session(sessionOf(options));
+    if (options.allowDiskUse === true) {
+      query.allowDiskUse(true);
+    }
+    return query.exec();
   }
 
   /**

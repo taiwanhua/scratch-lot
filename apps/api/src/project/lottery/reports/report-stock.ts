@@ -185,21 +185,29 @@ export class ReportStock {
     orgId: Types.ObjectId,
     at: Date,
   ): Promise<HeldTicket[]> {
-    // 那一刻之後碰過這家店的張,各取之後第一筆碰到這家店的事件的「變動前」與成本快照(資料庫端彙總,一張一列)
-    const firsts = (await this.events.aggregate(reader, [
-      {
-        $match: { at: { $gte: at }, $or: [{ orgId }, { "from.orgId": orgId }] },
-      },
-      { $sort: { at: 1, _id: 1 } },
-      {
-        $group: {
-          _id: "$ticketId",
-          bookId: { $first: "$bookId" },
-          from: { $first: "$from" },
-          cost: { $first: "$cost" },
+    // 那一刻之後碰過這家店的張,各取之後第一筆碰到這家店的事件的「變動前」與成本快照(資料庫端彙總,一張一列;
+    // 選的時間點越早資料越多,排序 / 分組允許用暫存檔)
+    const firsts = (await this.events.aggregate(
+      reader,
+      [
+        {
+          $match: {
+            at: { $gte: at },
+            $or: [{ orgId }, { "from.orgId": orgId }],
+          },
         },
-      },
-    ])) as {
+        { $sort: { at: 1, _id: 1 } },
+        {
+          $group: {
+            _id: "$ticketId",
+            bookId: { $first: "$bookId" },
+            from: { $first: "$from" },
+            cost: { $first: "$cost" },
+          },
+        },
+      ],
+      { allowDiskUse: true },
+    )) as {
       _id: Types.ObjectId;
       bookId: Types.ObjectId;
       from: StateSnapshot | null;

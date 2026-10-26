@@ -3503,6 +3503,7 @@ type LotteryTransferBook {
   gameId: ID!
   gameName: String!
   isWhole: Boolean!
+  lastTicketNo: Int!
   rate: Int!
   unitPrice: Int!
 }

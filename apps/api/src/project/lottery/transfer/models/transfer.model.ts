@@ -43,6 +43,10 @@ export class LotteryTransferBookModel {
   /** 出貨店裡可以調的張數(未售、沒被鎖定)。 */
   @Field(() => Int)
   availableCount!: number;
+
+  /** 迄號(整本的張號區段顯示「001–101(100 張)」用;待標註的跳號在拆本前還在區段裡) */
+  @Field(() => Int)
+  lastTicketNo!: number;
 }
 
 /** 叫貨單(收貨分店、待購買)。 */

@@ -5,6 +5,7 @@ import {
   type SheetData,
   buildWorkbook,
   sectionPageBreaksOf,
+  sheetCellText,
   sheetNamesOf,
 } from "./excel";
 
@@ -192,6 +193,17 @@ describe("分段表格(sections)", () => {
     // 一頁 10 列:第一段 6 列、第二段 5 列(加空一列放不下)→ 第二段換頁;第三段 12 列比一頁長 → 不換頁硬塞
     expect(sectionPageBreaksOf([6, 5, 12], 10)).toEqual([false, true, false]);
     expect(sectionPageBreaksOf([3, 3, 3], 10)).toEqual([false, false, true]);
+  });
+});
+
+describe("sheetCellText(預覽和 Excel 同一個格式)", () => {
+  it("整數千分位的欄位只顯示到整數(值不改);比率顯示 0.0%;沒有格式照千分位", () => {
+    expect(sheetCellText(19_801.98, false, "#,##0;[Red]-#,##0")).toBe("19,802");
+    expect(sheetCellText(-1234.4, false, "#,##0")).toBe("-1,234");
+    expect(sheetCellText(0.084, true)).toBe("8.4%");
+    expect(sheetCellText(0.084, false, "0.0%")).toBe("8.4%");
+    expect(sheetCellText(1234.5)).toBe("1,234.5");
+    expect(sheetCellText(null)).toBe("");
   });
 });
 

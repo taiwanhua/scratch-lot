@@ -54,6 +54,7 @@ query LotteryTransferOptions($fromOrgId: ID!, $toOrgId: ID, $submissionId: ID) {
       rate
       isWhole
       availableCount
+      lastTicketNo
     }
     requisitions {
       id

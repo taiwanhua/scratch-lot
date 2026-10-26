@@ -117,14 +117,26 @@ export const isTotalRow = (row: SheetRow): boolean =>
 export const isPercentRow = (row: SheetRow): boolean =>
   row[SHEET_ROW_KEYS.format] === "percent";
 
-/** 儲存格的顯示文字(預覽用):數字千分位;比率列 `8.0%`;空格 = 空字串。 */
+/** 整數千分位的格式(`#,##0`、`#,##0;[Red]-#,##0`):預覽照 Excel 只顯示到整數。 */
+const INTEGER_FORMAT = /^#,##0(?:;|$)/;
+
+/**
+ * 儲存格的顯示文字(預覽用;和 Excel 同一個格式):比率(列是比率列或欄位格式有 `%`)→ `8.0%`;
+ * 欄位格式是整數千分位 → 四捨五入到整數顯示(值本身不改);其他 → 千分位;空格 = 空字串。
+ */
 export const sheetCellText = (
   value: SheetCell | undefined,
   percent = false,
+  numFmt?: string,
 ): string => {
   if (value === null || value === undefined) return "";
   if (typeof value !== "number") return value;
-  return percent ? `${(value * 100).toFixed(1)}%` : value.toLocaleString();
+  if (percent || numFmt?.includes("%") === true) {
+    return `${(value * 100).toFixed(1)}%`;
+  }
+  return numFmt !== undefined && INTEGER_FORMAT.test(numFmt)
+    ? Math.round(value).toLocaleString()
+    : value.toLocaleString();
 };
 
 type ExcelModule = typeof import("exceljs");
