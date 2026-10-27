@@ -88,13 +88,13 @@ function definition(staffId: string): FormDefinition {
   );
 }
 
-/**
- * 表單提交:真 GraphQL + 真 MongoDB(TEST-07)。
- */
 interface ListData {
   formSubmissions: { items: SubmissionRow[]; totalCount: number };
 }
 
+/**
+ * 表單提交:真 GraphQL + 真 MongoDB(TEST-07)。
+ */
 describe("表單提交:草稿 / 送出 / 修訂、四種寫入行為、樂觀鎖與冪等", () => {
   let api: AuthTestApp;
   let connection: Connection;

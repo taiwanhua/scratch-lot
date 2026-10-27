@@ -371,7 +371,7 @@ Provider 內找不到模組設定時使用預設模板 `{{title}}`;缺少 Provid
 - **提示**:全站 Snackbar,資訊色「系統已更新」+ [重新整理](<`location.reload()`>),不自動消失、不擋畫面;同時只有一則,按 ✕ 關掉後下一次觸發再顯示。被後來的 3 則提示擠掉時同理。
 - 掛在組裝根 `App.tsx` 的 router 裡(`AppUpdateNotice`),登入頁也偵測得到;`vite dev` 與 mock 模式沒有版本,不啟動。
 
-正本:`apps/admin/src/hooks/base/useAppUpdateNotice.ts`、`apps/admin/src/app/AdminShell/PageErrorBoundary.tsx`、`apps/admin/src/lib/base/app-version.ts`、`apps/admin/scripts/app-version-plugin.mjs`;快取與部署見 `docs/deployment.md`「admin 的靜態檔快取」
+正本:`apps/admin/src/hooks/base/useAppUpdateNotice.ts`、`apps/admin/src/app/PageErrorBoundary.tsx`、`apps/admin/src/lib/base/app-version.ts`、`apps/admin/scripts/app-version-plugin.mjs`;快取與部署見 `docs/deployment.md`「admin 的靜態檔快取」
 
 ## 快取規則
 

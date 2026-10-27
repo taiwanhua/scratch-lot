@@ -114,4 +114,19 @@ describe("58mm 單據 QR code 的頁面路由(依模組樹,不依印單的人的
       transferView: null,
     });
   });
+
+  it("寫入之後帶回的路由:讀模組出錯 → 不丟錯,回全部 null(單據照印、不印 QR)", async () => {
+    const failing = {
+      findMany: () => Promise.reject(new Error("modules unavailable")),
+    } as unknown as ModulesRepository;
+    const service = new ReceiptLinksService(failing);
+
+    await expect(service.routes(clerk)).rejects.toThrow("modules unavailable");
+    expect(await service.routesAfterWrite(clerk)).toEqual({
+      cashLedger: null,
+      storeView: null,
+      purchaseView: null,
+      transferView: null,
+    });
+  });
 });

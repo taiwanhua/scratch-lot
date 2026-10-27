@@ -17,8 +17,8 @@ import {
 import { withShellRoutes } from "@/lib/base/shell-routes";
 import { useSideNavStore } from "@/stores/base/useSideNavStore";
 
+import { PageErrorBoundary } from "../PageErrorBoundary";
 import { AppBar } from "./AppBar/AppBar";
-import { PageErrorBoundary } from "./PageErrorBoundary";
 import { RouteTabs } from "./RouteTabs/RouteTabs";
 import { useRouteTabs } from "./RouteTabs/useRouteTabs";
 import { MobileNavFooter } from "./SideNav/MobileNavFooter";

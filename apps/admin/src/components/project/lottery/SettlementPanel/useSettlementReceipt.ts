@@ -30,7 +30,7 @@ export const useSettlementReceipt = () => {
         }
       };
       print().catch((error: unknown) => {
-        logReceiptPrintFailure("links failed", {
+        logReceiptPrintFailure("print failed", {
           kind: "transfer-payment",
           error,
         });

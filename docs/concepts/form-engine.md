@@ -167,13 +167,13 @@ options 由 `lib/base/form-engine/form-module-options.ts` 的 `composeFormModule
 | `renderValue(ctx)`                                      | 語意型別 → 畫面(REACT-13 簽章)                                                  |
 | widget 登錄表                                           | `widget.kind` → 元件;擴充一個 widget = domain 型別登錄 + admin 元件登錄各加一筆 |
 
-預設列表頁 `FormListPage` 收選填的 `excludeFormKeys`:組裝頁另外呈現的表單(自己的分頁或入口)不出現在列表、表單篩選選項與 [+ 新增];排除條件經 `FormSubmissionList` 送到 api 的 `formSubmissions`,總筆數與分頁照排除後算。不給 = 模組內全部表單。
-
 | `mode`            | 條件 / 計算                                  | 權限           | 值     |
 | ----------------- | -------------------------------------------- | -------------- | ------ |
 | `design`          | 不跑,只標示(顯示條件、計算、受保護…)         | 不套           | 不輸入 |
 | `preview`         | 跑(前端即時,另可以後端 `previewFormVersion`) | 不套           | 測試值 |
 | `create` / `edit` | 跑                                           | 套             | 真實值 |
 | `readonly`        | 只重算顯示 / 唯讀條件(用該修訂的 `ctx`)      | 套(現在的讀者) | 存值   |
+
+預設列表頁 `FormListPage` 收選填的 `excludeFormKeys`:組裝頁另外呈現的表單(自己的分頁或入口)不出現在列表、表單篩選選項與 [+ 新增];排除條件經 `FormSubmissionList` 送到 api 的 `formSubmissions`,總筆數與分頁照排除後算。不給 = 模組內全部表單。
 
 正本:`apps/admin/src/components/base/form-engine/`、`apps/admin/src/lib/base/form-engine/`、`apps/admin/src/hooks/base/useModuleForms.ts`、`useFormDraft.ts`、`useFormSubmission.ts`

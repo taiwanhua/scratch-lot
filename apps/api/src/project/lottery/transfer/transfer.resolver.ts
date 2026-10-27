@@ -136,10 +136,11 @@ export class TransferResolver {
       input.submissionId,
       input.rowIds,
     );
-    // 寫入成功就一定帶得回 QR 的路由(和寫入同一次請求;交易後的自動列印不另查)
+    // 寫入成功就一定帶得回 QR 的路由(和寫入同一次請求;交易後的自動列印不另查)。讀路由出錯 → 全部 null
+    // (點收已完成,不回錯;單據照印、不印 QR)
     return {
       ...result,
-      receiptLinks: await this.receiptLinks.routes(operator),
+      receiptLinks: await this.receiptLinks.routesAfterWrite(operator),
     };
   }
 

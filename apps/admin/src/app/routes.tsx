@@ -13,7 +13,7 @@ import { LoginPage } from "../pages/base/auth/LoginPage/LoginPage";
 import { SetPasswordPage } from "../pages/base/auth/SetPasswordPage/SetPasswordPage";
 import { PersonalSettingsPage } from "../pages/base/personal-settings/PersonalSettingsPage/PersonalSettingsPage";
 import { AdminShell } from "./AdminShell/AdminShell";
-import { RouteErrorBoundary } from "./AdminShell/PageErrorBoundary";
+import { RouteErrorBoundary } from "./PageErrorBoundary";
 import { ModuleRoute } from "./guards/ModuleRoute/ModuleRoute";
 import { RequireAuth } from "./guards/RequireAuth";
 import { modulePageMinWidths, modulePages } from "./module-pages";

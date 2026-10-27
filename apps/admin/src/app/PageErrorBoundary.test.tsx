@@ -17,12 +17,12 @@ import { defaultBrand } from "@repo/ui/theme";
 
 import { useAppUpdateNotice } from "@/hooks/base/useAppUpdateNotice";
 
-import { SnackbarProvider } from "../providers/SnackbarProvider";
 import {
   PageErrorBoundary,
   PageErrorFallback,
   RouteErrorBoundary,
 } from "./PageErrorBoundary";
+import { SnackbarProvider } from "./providers/SnackbarProvider";
 
 const text = messages[defaultLocale].admin;
 const NOTICE = text.app.update.message;

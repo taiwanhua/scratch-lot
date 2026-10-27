@@ -75,7 +75,7 @@ export const BoardDialogs = (props: BoardDialogsProps) => {
     };
     // 列印是交易後的附帶動作:出錯只記 log(讀不到 QR 的路由不會到這裡,`fetchLinks` 照印、不印 QR)
     print().catch((error: unknown) => {
-      logReceiptPrintFailure("links failed", { kind: done.kind, error });
+      logReceiptPrintFailure("print failed", { kind: done.kind, error });
     });
   };
   const printOpeningFloat = (
