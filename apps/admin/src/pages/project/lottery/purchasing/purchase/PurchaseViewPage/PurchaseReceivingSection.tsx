@@ -13,7 +13,7 @@ import {
   useReceiveLotteryPurchaseBookMutation,
 } from "@repo/graphql";
 
-import { useFormModuleAccess } from "@/components/base/form-engine/FormModulePages/useFormModuleAccess";
+import { useReceiptLinks } from "@/components/project/lottery/ReceiptPrint/useReceiptLinks";
 import { useReceiptPrinter } from "@/components/project/lottery/ReceiptPrint/useReceiptPrinter";
 import {
   type ReceiveBookGroup,
@@ -26,8 +26,8 @@ import {
 } from "@/hooks/base/useMutationFeedback";
 import { useSession } from "@/hooks/base/useSession";
 import { purchaseReceivingInputOf } from "@/lib/project/lottery/receipts/purchase-receiving-receipt";
+import { logReceiptPrintFailure } from "@/lib/project/lottery/receipts/receipt-log";
 
-import { PURCHASE_MODULE_KEY } from "../purchase-keys";
 import { WrongStoreDialog } from "./WrongStoreDialog";
 import { type WrongStoreInfo, receiveErrorOf } from "./receive-error";
 import { usePurchaseReceiving } from "./usePurchaseReceiving";
@@ -51,7 +51,6 @@ export const PurchaseReceivingSection = ({
   const showSnackbar = useSnackbar();
   const queryClient = useQueryClient();
   const { session } = useSession();
-  const access = useFormModuleAccess(PURCHASE_MODULE_KEY);
   const id = submission.id;
   const data = usePurchaseReceiving(id);
   const [thisTime, setThisTime] = useState<ReadonlySet<string>>(new Set());
@@ -62,7 +61,7 @@ export const PurchaseReceivingSection = ({
 
   const receive = useReceiveLotteryPurchaseBookMutation(session.client);
   const printer = useReceiptPrinter();
-  const documentUrl = `${globalThis.location.origin}${access.viewRoute ?? ""}/${id}`;
+  const { fetchLinks } = useReceiptLinks();
   const notify = useNotifyLotteryPurchaseWrongStoreMutation(session.client);
   const receivingKey = useLotteryPurchaseReceivingQuery.getKey({
     submissionId: id,
@@ -83,15 +82,26 @@ export const PurchaseReceivingSection = ({
         setThisTime(new Set());
         const batch = result.batch ?? null;
         if (batch !== null) {
-          void printer.printReceiptAfterCommit(
-            "purchase-receiving",
-            purchaseReceivingInputOf(
-              submission,
-              result.receiving,
-              batch,
-              documentUrl,
-            ),
-          );
+          // QR 連到進貨單檢視頁:路由依模組樹(`lotteryReceiptLinks`),不依點收人自己的頁面權限
+          void fetchLinks()
+            .then((links) =>
+              printer.printReceiptAfterCommit(
+                "purchase-receiving",
+                purchaseReceivingInputOf(
+                  submission,
+                  result.receiving,
+                  batch,
+                  links.purchaseViewUrl(id),
+                ),
+              ),
+            )
+            .catch((error: unknown) => {
+              // 讀不到 QR 的路由:不印,只記 log
+              logReceiptPrintFailure("links failed", {
+                kind: "purchase-receiving",
+                error,
+              });
+            });
         }
       },
     }),

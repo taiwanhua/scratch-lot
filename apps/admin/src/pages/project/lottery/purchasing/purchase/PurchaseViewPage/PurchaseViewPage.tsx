@@ -12,6 +12,7 @@ import { useFormModuleAccess } from "@/components/base/form-engine/FormModulePag
 import { FormSubmissionDetail } from "@/components/base/form-engine/FormSubmissionDetail/FormSubmissionDetail";
 import { ApprovalSection } from "@/components/base/workflow/ApprovalSection/ApprovalSection";
 import { SubmissionStatusTag } from "@/components/base/workflow/SubmissionStatusTag";
+import { useReceiptLinks } from "@/components/project/lottery/ReceiptPrint/useReceiptLinks";
 import { SettlementPanel } from "@/components/project/lottery/SettlementPanel/SettlementPanel";
 import { useFormSubmission } from "@/hooks/base/useFormSubmission";
 import { useRouteTabHref } from "@/hooks/base/useRouteTabHref";
@@ -50,7 +51,8 @@ export const PurchaseViewPage = ({ routeParam }: ModulePageProps) => {
   const serialNo = submission?.serialNo ?? null;
   useRouteTabItemLabel(serialNo);
   const data = usePurchaseReceiving(id);
-  const documentUrl = `${globalThis.location.origin}${access.viewRoute ?? ""}/${id}`;
+  // 單據 QR 連到檢視頁:路由依模組樹(`lotteryReceiptLinks`),不依操作者自己的頁面權限;讀到之前不顯示 [列印]
+  const { links } = useReceiptLinks();
   const isSubmitted =
     submission !== null && submission.status !== FormSubmissionStatus.Draft;
   // 結算區塊要讀得到收付才顯示(駁回 / 作廢的單不參與收付,api 回錯 → 不顯示)
@@ -80,13 +82,16 @@ export const PurchaseViewPage = ({ routeParam }: ModulePageProps) => {
             {tPages("backToList")}
           </Button>
           <Box sx={{ flex: 1 }} />
-          {submission !== null && data !== null && isSubmitted && (
-            <PurchaseReceiptPrint
-              submission={submission}
-              receiving={data}
-              url={documentUrl}
-            />
-          )}
+          {submission !== null &&
+            data !== null &&
+            links !== null &&
+            isSubmitted && (
+              <PurchaseReceiptPrint
+                submission={submission}
+                receiving={data}
+                url={links.purchaseViewUrl(id)}
+              />
+            )}
           {submission !== null && (
             <SubmissionDeleteButton
               moduleKey={PURCHASE_MODULE_KEY}

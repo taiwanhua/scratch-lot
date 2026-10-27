@@ -42,6 +42,8 @@ export interface RenderTransferOptions {
   workflow?: WorkflowRuntimeWorldOptions;
   /** 另外給的模組(例:申請中心) */
   extraModules?: readonly TestModule[];
+  /** false = 操作者沒有這個模組(只從申請中心進來的人;單據 QR 的路由仍依模組樹) */
+  withModule?: boolean;
 }
 
 /**
@@ -56,6 +58,7 @@ export const renderTransferPage = ({
   forms,
   workflow,
   extraModules = [],
+  withModule = true,
 }: RenderTransferOptions) => {
   const transferFake = transferWorld();
   const formsFake = formRuntimeWorld(transferFormWorld(forms));
@@ -79,7 +82,7 @@ export const renderTransferPage = ({
       currentOrgTenantId: masterDataOrgs.tenant.id,
       modules: [
         ...purchasingModules(),
-        ...transferModules(omit),
+        ...(withModule ? transferModules(omit) : []),
         ...extraModules,
         ...(printing === undefined
           ? []

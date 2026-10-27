@@ -49,6 +49,7 @@ export class ReceiptLinksService {
     return {
       cashLedger: routeOf(RECEIPT_LINK_MODULE_KEYS.cashLedger),
       storeView: routeOf(RECEIPT_LINK_MODULE_KEYS.storeView),
+      purchaseView: routeOf(RECEIPT_LINK_MODULE_KEYS.purchaseView),
       transferView: routeOf(RECEIPT_LINK_MODULE_KEYS.transferView),
     };
   }

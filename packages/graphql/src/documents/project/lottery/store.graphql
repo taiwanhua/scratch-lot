@@ -177,6 +177,7 @@ query LotteryReceiptLinks {
   lotteryReceiptLinks {
     cashLedger
     storeView
+    purchaseView
     transferView
   }
 }

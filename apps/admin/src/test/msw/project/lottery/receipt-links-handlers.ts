@@ -6,6 +6,7 @@ import { api, type server } from "../../server";
 export const RECEIPT_LINK_ROUTES = {
   cashLedger: "/accounts",
   storeView: "/store/view-page",
+  purchaseView: "/purchasing/purchase/view-page",
   transferView: "/purchasing/transfer/view-page",
 } as const;
 

@@ -28,6 +28,13 @@ const {
 
 const APPLY_VIEW = "/apply-center/view-page/inst-p33";
 
+/** 最後一張單據的 QR code 內容(`Receipt58Qr` 的 aria-label)。 */
+const printedQr = () =>
+  receiptPngOf.mock.calls
+    .at(-1)?.[0]
+    .querySelector("svg[role='img']")
+    ?.getAttribute("aria-label") ?? "";
+
 /** P-0033 掛著點收關的審核實例,任務在登入者(中山店店長)手上;只有申請中心(通知連結)進來。 */
 const receiveStage = () => ({
   forms: {
@@ -129,6 +136,28 @@ describe("申請中心詳情頁:進貨單點收", () => {
     expect(workflowFake?.inputs.decide[0]).toMatchObject({
       taskId: "task-receive",
     });
+  });
+
+  it("點收人沒有進貨單模組(只從申請中心進來)→ 進貨點收單的 QR 仍連到完整的進貨單檢視頁(路由依模組樹)", async () => {
+    receiptPngOf.mockClear();
+    const user = userEvent.setup();
+    const { printingFake } = renderPurchasePage({
+      path: APPLY_VIEW,
+      printing: {},
+      withModule: false,
+      ...receiveStage(),
+    });
+    const scan = await screen.findByRole("textbox", { name: "刷條碼點收" });
+    await user.type(scan, "0056531099{Enter}");
+    await user.click(
+      await screen.findByRole("button", { name: "完成這次點收(1 本)" }),
+    );
+    await waitFor(() => {
+      expect(printingFake?.created).toHaveLength(1);
+    });
+    expect(printedQr()).toBe(
+      `${globalThis.location.origin}/purchasing/purchase/view-page/doc-p33`,
+    );
   });
 
   it("送錯分店:擋下並彈窗提示;[通知總部更正] → 通知建立者", async () => {

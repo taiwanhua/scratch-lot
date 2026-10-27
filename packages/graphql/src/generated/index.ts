@@ -2916,6 +2916,7 @@ export type LotteryPurchaseTrustee = {
 export type LotteryReceiptLinks = {
   __typename?: 'LotteryReceiptLinks';
   cashLedger?: Maybe<Scalars['String']['output']>;
+  purchaseView?: Maybe<Scalars['String']['output']>;
   storeView?: Maybe<Scalars['String']['output']>;
   transferView?: Maybe<Scalars['String']['output']>;
 };
@@ -11295,7 +11296,7 @@ export type WithdrawLotteryShiftCashMutation = { __typename?: 'Mutation', withdr
 export type LotteryReceiptLinksQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type LotteryReceiptLinksQuery = { __typename?: 'Query', lotteryReceiptLinks: { __typename?: 'LotteryReceiptLinks', cashLedger?: string | null, storeView?: string | null, transferView?: string | null } };
+export type LotteryReceiptLinksQuery = { __typename?: 'Query', lotteryReceiptLinks: { __typename?: 'LotteryReceiptLinks', cashLedger?: string | null, storeView?: string | null, purchaseView?: string | null, transferView?: string | null } };
 
 export type LotteryTransferReceivingFieldsFragment = { __typename?: 'LotteryTransferReceiving', submissionId: string, fromBranchName: string, toBranchName: string, transferAmount: number, canReceive: boolean, receivedCount: number, totalCount: number, rows: Array<{ __typename?: 'LotteryTransferRow', rowId: string, bookId: string, gameCode: string, gameName: string, bookNo: string, mode: string, ticketNos: Array<string>, tickets: number, amount: number, rate: number, purchaseAmount: number, shipped: boolean, received: boolean, receivedTickets: number, receivedAt?: string | null, shippedAt?: string | null, batchId?: string | null, receivedTicketNos: Array<string> }>, batches: Array<{ __typename?: 'LotteryTransferReceivingBatch', batchId: string, no: number, completedAt: string, rowIds: Array<string>, rows: Array<{ __typename?: 'LotteryTransferReceivingBatchRow', rowId: string, ticketNos: Array<string> }> }> };
 
@@ -24709,6 +24710,7 @@ export const LotteryReceiptLinksDocument = `
   lotteryReceiptLinks {
     cashLedger
     storeView
+    purchaseView
     transferView
   }
 }

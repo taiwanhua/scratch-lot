@@ -17,6 +17,8 @@ export interface ReceiptLinks {
   cashLedgerUrl: (movementId: string) => string;
   /** 店面管理的申請(結帳確認申請、撤銷售出申請)→ 檢視頁 */
   storeViewUrl: (submissionId: string) => string;
+  /** 進貨單 → 檢視頁 */
+  purchaseViewUrl: (submissionId: string) => string;
   /** 調貨單 → 檢視頁 */
   transferViewUrl: (submissionId: string) => string;
 }
@@ -30,6 +32,8 @@ const linksOf = (
       `${origin}${routes.cashLedger ?? ""}?tab=${ACCOUNTS_TABS.cash}&movementId=${movementId}`,
     storeViewUrl: (submissionId) =>
       `${origin}${routes.storeView ?? ""}/${submissionId}`,
+    purchaseViewUrl: (submissionId) =>
+      `${origin}${routes.purchaseView ?? ""}/${submissionId}`,
     transferViewUrl: (submissionId) =>
       `${origin}${routes.transferView ?? ""}/${submissionId}`,
   };
@@ -38,6 +42,7 @@ const linksOf = (
 const NO_ROUTES: LotteryReceiptLinksQuery["lotteryReceiptLinks"] = {
   cashLedger: null,
   storeView: null,
+  purchaseView: null,
   transferView: null,
 };
 

@@ -13,6 +13,7 @@ import {
 } from "@repo/graphql";
 import { Alert } from "@repo/ui/alert";
 
+import { useReceiptLinks } from "@/components/project/lottery/ReceiptPrint/useReceiptLinks";
 import { useReceiptPrinter } from "@/components/project/lottery/ReceiptPrint/useReceiptPrinter";
 import { ReceiveBooksPanel } from "@/components/project/lottery/ReceiveBooksPanel/ReceiveBooksPanel";
 import {
@@ -20,6 +21,7 @@ import {
   useSnackbar,
 } from "@/hooks/base/useMutationFeedback";
 import { useSession } from "@/hooks/base/useSession";
+import { logReceiptPrintFailure } from "@/lib/project/lottery/receipts/receipt-log";
 
 import { TransferWrongStoreDialog } from "./TransferWrongStoreDialog";
 import {
@@ -79,6 +81,7 @@ export const TransferReceivingSection = ({
 
   const receipts = useTransferReceipts(id, submission, data, null);
   const printer = useReceiptPrinter();
+  const { fetchLinks } = useReceiptLinks();
   // [完成這次點收]:這一次的列標上點收批次(寫入成功後才印這一次的調貨點收單兩聯;列印失敗只記 log)
   const complete = useCompleteLotteryTransferReceivingMutation(
     session.client,
@@ -98,11 +101,23 @@ export const TransferReceivingSection = ({
         receiving$.resetThisTime();
         const batch = result.batch ?? null;
         // 印不印只看 api 回的結果:有這一次的點收批次才印(資料也用 api 回的點收區塊)
-        if (batch !== null && receipts.receivingInputOf !== null) {
-          void printer.printReceiptAfterCommit(
-            "transfer-receiving",
-            receipts.receivingInputOf(result.receiving, batch),
-          );
+        const inputOf = receipts.receivingInputOf;
+        if (batch !== null && inputOf !== null) {
+          // QR 連到調貨單檢視頁:路由依模組樹(`lotteryReceiptLinks`),不依點收人自己的頁面權限
+          void fetchLinks()
+            .then((links) =>
+              printer.printReceiptAfterCommit(
+                "transfer-receiving",
+                inputOf(result.receiving, batch, links.transferViewUrl(id)),
+              ),
+            )
+            .catch((error: unknown) => {
+              // 讀不到 QR 的路由:不印,只記 log
+              logReceiptPrintFailure("links failed", {
+                kind: "transfer-receiving",
+                error,
+              });
+            });
         }
       },
     }),
