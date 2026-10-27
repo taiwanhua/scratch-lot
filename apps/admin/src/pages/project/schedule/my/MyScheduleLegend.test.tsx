@@ -14,7 +14,7 @@ const SCHEDULE = "/schedule/my?tab=schedule";
 /** 圖例項目的文字(i18n `admin.schedule.legend.items.*`)。 */
 const ITEM = {
   leader: "負責人(名字或範本簡稱套綠底)",
-  temp: "沒有套用範本的人力需求",
+  temp: "沒有套用範本的班",
   punchTimes: "上班 / 下班打卡",
   breakMinutes: "休息(分鐘)",
   dayOff: "畫休(斜線)",

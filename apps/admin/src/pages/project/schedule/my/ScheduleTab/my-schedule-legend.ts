@@ -6,10 +6,10 @@ import type { ScheduleLegendItem } from "@/components/project/schedule/ScheduleL
  * `MyScheduleLegend.test.tsx` 逐項對照畫面。
  */
 export const MY_SCHEDULE_LEGEND_ITEMS = {
-  /** 月曆(電腦 / 平板):簡稱(負責人綠底、「臨」)、打卡時間、畫休斜線、缺卡紅點、有異動金點、特殊日底色 */
+  /** 月曆(電腦 / 平板):簡稱(負責人綠底、「臨」= 沒有套用範本的班)、打卡時間、畫休斜線、缺卡紅點、有異動金點、特殊日底色 */
   calendar: [
     "leader",
-    "temp",
+    "tempEntry",
     "punchTimes",
     "dayOff",
     "missingDot",
@@ -19,12 +19,12 @@ export const MY_SCHEDULE_LEGEND_ITEMS = {
   /** 月曆(手機):只放簡稱,沒有打卡時間 */
   calendarMobile: [
     "leader",
-    "temp",
+    "tempEntry",
     "dayOff",
     "missingDot",
     "changedDot",
     "special",
   ],
   /** 條列:「臨」、打卡時間、休息、畫休斜線 */
-  list: ["temp", "punchTimes", "breakMinutes", "dayOff"],
+  list: ["tempEntry", "punchTimes", "breakMinutes", "dayOff"],
 } as const satisfies Record<string, readonly ScheduleLegendItem[]>;

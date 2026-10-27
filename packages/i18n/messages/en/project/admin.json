@@ -1563,6 +1563,7 @@
         "leader": "Lead (name or template short name on green)",
         "entry": "Scheduled shift",
         "temp": "Staffing need without a template",
+        "tempEntry": "Shift without a template",
         "auto": "Auto-assigned (cleared after a manual change)",
         "breakMinutes": "Break (minutes)",
         "unavailable": "Scheduled at another branch / unavailable hours",
