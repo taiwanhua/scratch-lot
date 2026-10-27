@@ -44,9 +44,7 @@ const GAME_FORMAT_TEXTS: Record<string, [string, Record<string, string>?]> = {
     "fieldErrors.integerRange",
     range(DEFAULT_RATE_MIN, DEFAULT_RATE_MAX),
   ],
-  launchedAt: ["fieldErrors.date"],
-  discontinuedAt: ["fieldErrors.date"],
-  claimDeadline: ["fieldErrors.date"],
+  claimDeadline: ["fieldErrors.required"],
   color: ["fieldErrors.choose"],
   note: ["fieldErrors.maxLength", max(MASTER_DATA_NOTE_MAX_LENGTH)],
 };

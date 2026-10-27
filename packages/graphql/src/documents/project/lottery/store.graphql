@@ -173,10 +173,16 @@ mutation WithdrawLotteryShiftCash($input: WithdrawLotteryShiftCashInput!) {
   }
 }
 
+# 58mm 單據 QR code 的頁面路由(依模組樹);[完成這次點收] 的回傳也帶同一份
+fragment LotteryReceiptLinksFields on LotteryReceiptLinks {
+  cashLedger
+  storeView
+  purchaseView
+  transferView
+}
+
 query LotteryReceiptLinks {
   lotteryReceiptLinks {
-    cashLedger
-    storeView
-    transferView
+    ...LotteryReceiptLinksFields
   }
 }

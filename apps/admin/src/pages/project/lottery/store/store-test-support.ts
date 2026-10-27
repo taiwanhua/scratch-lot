@@ -95,8 +95,11 @@ export const renderStore = ({
    * 不給 = 沒有收據機的租戶,不自動列印、沒有 [列印]
    */
   printing?: PrintButtonWorldOptions & { permissions?: string[] };
-  /** 表單執行端的覆寫(送出失敗、送出後的狀態) */
-  formRuntime?: Pick<FormRuntimeWorldOptions, "failures" | "submitAs">;
+  /** 表單執行端的覆寫(送出失敗、送出後的狀態);表單 / 版本 / 提交是附加在內建四張之後(租戶自己綁的表單) */
+  formRuntime?: Pick<
+    FormRuntimeWorldOptions,
+    "failures" | "submitAs" | "moduleForms" | "versions" | "submissions"
+  >;
 } = {}) => {
   const printingFake =
     printing === undefined ? null : printButtonWorld(printing);
@@ -113,16 +116,19 @@ export const renderStore = ({
       ...(formsFake.runtime.moduleForms ?? []),
       ...(stocktakeForms.moduleForms ?? []),
       ...(checkoutForms.moduleForms ?? []),
+      ...(formRuntime.moduleForms ?? []),
     ],
     versions: {
       ...formsFake.runtime.versions,
       ...stocktakeForms.versions,
       ...checkoutForms.versions,
+      ...formRuntime.versions,
     },
     submissions: [
       ...(formsFake.runtime.submissions ?? []),
       ...(stocktakeForms.submissions ?? []),
       ...(checkoutForms.submissions ?? []),
+      ...(formRuntime.submissions ?? []),
     ],
   });
   const stocktakeFlow = stocktakeWorkflowWorld();

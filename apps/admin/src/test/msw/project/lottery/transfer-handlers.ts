@@ -14,6 +14,10 @@ import type {
 import { graphqlError } from "../../auth-handlers";
 import { api, type server } from "../../server";
 import { sampleOutstanding, settlementOf } from "./accounts-fixtures";
+import {
+  NO_RECEIPT_LINK_ROUTES,
+  receiptLinksPayload,
+} from "./receipt-links-handlers";
 import { transferReceiving } from "./transfer-fixtures";
 import {
   transferBookTickets,
@@ -114,6 +118,8 @@ export interface TransferWorldOptions {
    * 只能有一個 handler,帳戶管理那一個要拿掉,見 `withoutSettlementHandler`)。
    */
   settlement?: "own" | "all";
+  /** [完成這次點收] 帶回的 QR 路由:`none` = 模組停用 / 沒有 route(都是 null);預設有路由 */
+  receiptRoutes?: "default" | "none";
 }
 
 /** 調貨單自己的收付(兩邊);其他單據:`all` 照帳戶管理夾具,`own` 不回(落到下一個 handler)。 */
@@ -152,6 +158,7 @@ export const withoutSettlementHandler = (
 
 export const transferWorld = ({
   settlement = "own",
+  receiptRoutes = "default",
 }: TransferWorldOptions = {}): TransferWorld => {
   const scanned: string[] = [];
   const notified: string[] = [];
@@ -325,7 +332,14 @@ export const transferWorld = ({
         receivings.set(input.submissionId, next);
         return HttpResponse.json({
           data: {
-            completeLotteryTransferReceiving: { batch, receiving: next },
+            completeLotteryTransferReceiving: {
+              batch,
+              receiving: next,
+              receiptLinks:
+                receiptRoutes === "none"
+                  ? receiptLinksPayload(NO_RECEIPT_LINK_ROUTES)
+                  : receiptLinksPayload(),
+            },
           },
         });
       }),

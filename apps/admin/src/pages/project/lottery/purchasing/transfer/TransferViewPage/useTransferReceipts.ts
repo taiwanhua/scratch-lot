@@ -6,15 +6,13 @@ import {
   type LotteryTransferReceivingFieldsFragment,
 } from "@repo/graphql";
 
-import { useFormModuleAccess } from "@/components/base/form-engine/FormModulePages/useFormModuleAccess";
+import { useReceiptLinks } from "@/components/project/lottery/ReceiptPrint/useReceiptLinks";
 import { latestTransferPaymentInputOf } from "@/lib/project/lottery/receipts/transfer-payment-receipt";
 import {
   type TransferReceivingReceiptInput,
   transferReceivingInputOf,
 } from "@/lib/project/lottery/receipts/transfer-receiving-receipt";
 import { transferShipmentInputOf } from "@/lib/project/lottery/receipts/transfer-shipment-receipt";
-
-import { TRANSFER_MODULE_KEY } from "../transfer-keys";
 
 /**
  * 調貨單檢視頁標頭 [列印] 的資料(規格第 12 章):
@@ -24,7 +22,8 @@ import { TRANSFER_MODULE_KEY } from "../transfer-keys";
  * - `payment`:最近一筆收貨店付的現金(調貨付款收據的 [列印] / [補印]);沒有 → null
  *
  * 第一關通過後的自動列印不在這裡:登記成調貨單的審核擴充(`TransferShipmentEffect`),任何畫面通過第一關都會印。
- * 草稿不印(還沒送出)。
+ * 草稿不印(還沒送出)。QR 連到調貨單檢視頁:路由依模組樹(`lotteryReceiptLinks`),不依操作者自己的頁面權限;
+ * 讀到之前也能按 [列印](沒有連結 → 照印、不印 QR)。
  */
 export const useTransferReceipts = (
   /** 調貨單(提交)id */
@@ -34,8 +33,8 @@ export const useTransferReceipts = (
   data: LotteryTransferReceivingFieldsFragment | null,
   settlement: LotterySettlementFieldsFragment | null,
 ) => {
-  const { viewRoute } = useFormModuleAccess(TRANSFER_MODULE_KEY);
-  const url = `${globalThis.location.origin}${viewRoute ?? ""}/${id}`;
+  const { links } = useReceiptLinks();
+  const url = links.transferViewUrl(id);
   const receiving =
     submission === null || submission.status === FormSubmissionStatus.Draft
       ? null
@@ -59,13 +58,17 @@ export const useTransferReceipts = (
         );
   const payment =
     settlement === null ? null : latestTransferPaymentInputOf(settlement, url);
-  /** 調貨點收單的資料:`latest` = 這次要印的點收區塊(完成點收後用 api 回的那一份);還沒載到調貨單 → null */
+  /**
+   * 調貨點收單的資料:`latest` = 這次要印的點收區塊(完成點收後用 api 回的那一份)、`link` = QR 的完整網址
+   * (交易後的自動列印用 `fetchLinks` 讀);還沒載到調貨單 → null
+   */
   const receivingInputOf =
     submission === null
       ? null
       : (
           latest: LotteryTransferReceivingFieldsFragment,
           batch: TransferReceivingReceiptInput["batch"],
+          link: string | null,
         ): TransferReceivingReceiptInput =>
           transferReceivingInputOf(
             latest,
@@ -73,7 +76,7 @@ export const useTransferReceipts = (
               submissionId: id,
               serialNo: submission.serialNo ?? null,
               toBranchId: transferHeaderOf(submission.values).toBranchId ?? "",
-              url,
+              url: link,
             },
             batch,
           );
@@ -84,7 +87,7 @@ export const useTransferReceipts = (
           batches: receiving.batches,
           receivedCount: receiving.receivedCount,
           inputOf: (batch: TransferReceivingReceiptInput["batch"]) =>
-            receivingInputOf(receiving, batch),
+            receivingInputOf(receiving, batch, url),
         };
 
   return { shipment, receiving: receivingReceipt, receivingInputOf, payment };

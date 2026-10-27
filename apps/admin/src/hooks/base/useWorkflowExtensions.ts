@@ -1,18 +1,21 @@
 import { type ComponentType, createContext, useContext } from "react";
 
 import type {
+  FormSubmissionFieldsFragment,
   WorkflowDecision,
   WorkflowInstanceFieldsFragment,
   WorkflowTaskFieldsFragment,
 } from "@repo/graphql";
 
 /**
- * 依模組登記的審核擴充(`docs/modules/workflows.md`「依模組登記的審核擴充」)。一份登記兩種用途:
+ * 依模組登記的審核擴充(`docs/modules/workflows.md`「依模組登記的審核擴充」)。一份登記三種用途:
  *
  * - `Effect`:寫入成功之後的動作(審核決定被接受、表單送出成功),例:單據在某一關通過後自動列印
  * - `Review`:審核畫面的擴充 —— 我的任務上方顯示警告、停用 [核准],例:審核的資料引用的東西已被刪除
+ * - `Section`:申請中心詳情頁的表單專屬區塊(快照下方、審核區塊上方),例:審核這一關要在畫面上操作的東西
  *
- * 不論審核區塊(`ApprovalSection`)出現在申請中心或模組自己的頁面、送出是在新增頁或引擎的編輯頁,都會生效。
+ * `Effect`、`Review` 不論審核區塊(`ApprovalSection`)出現在申請中心或模組自己的頁面、送出是在新增頁或
+ * 引擎的編輯頁,都會生效;`Section` 只畫在申請中心詳情頁(模組自己的頁面自己畫)。
  */
 
 /**
@@ -57,11 +60,22 @@ export interface ApprovalReviewProps {
   onStateChange: (state: ApprovalReviewState) => void;
 }
 
-/** 一個模組的審核擴充;兩種都是選填,同一個模組可以有多筆登記。 */
+/**
+ * `Section` 元件:申請中心詳情頁在審核實例是單據目前的實例時掛一份(看舊修訂的實例不畫),
+ * 畫在快照下方、審核區塊上方。
+ */
+export interface ApplyCenterSectionProps {
+  instance: WorkflowInstanceFieldsFragment;
+  /** 單據目前的內容(= 這個實例審的修訂) */
+  submission: FormSubmissionFieldsFragment;
+}
+
+/** 一個模組的審核擴充;三種都是選填,同一個模組可以有多筆登記。 */
 export interface WorkflowExtensionRegistration {
   moduleKey: string;
   Effect?: ComponentType<WorkflowEffectProps>;
   Review?: ComponentType<ApprovalReviewProps>;
+  Section?: ComponentType<ApplyCenterSectionProps>;
 }
 
 export interface WorkflowExtensionsValue {
@@ -71,6 +85,10 @@ export interface WorkflowExtensionsValue {
   reviewsOf: (
     moduleKey: string,
   ) => readonly ComponentType<ApprovalReviewProps>[];
+  /** 這個模組登記的 `Section` 元件(申請中心詳情頁) */
+  sectionsOf: (
+    moduleKey: string,
+  ) => readonly ComponentType<ApplyCenterSectionProps>[];
 }
 
 /**
@@ -83,6 +101,7 @@ export const WorkflowExtensionsContext = createContext<WorkflowExtensionsValue>(
       // 殼外(測試單獨掛元件、登入前)沒有動作要做
     },
     reviewsOf: () => [],
+    sectionsOf: () => [],
   },
 );
 

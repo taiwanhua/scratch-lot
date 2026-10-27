@@ -156,7 +156,7 @@ export const useDailyCloseEntry = (
                   }),
                 )
                 .catch((error: unknown) => {
-                  logReceiptPrintFailure("links failed", { error });
+                  logReceiptPrintFailure("print failed", { error });
                 });
             }}
           />

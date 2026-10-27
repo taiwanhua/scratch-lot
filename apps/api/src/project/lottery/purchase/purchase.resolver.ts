@@ -8,6 +8,7 @@ import type { OperatorContext } from "../../../database/operator-context";
 import { RequirePermission } from "../../../permission/require-permission.decorator";
 import { RequireTenant } from "../../tenant-scope/require-tenant.decorator";
 import { LotteryRedemptionModel } from "../redemption/models/redemption.model";
+import { ReceiptLinksService } from "../store/receipt-links.service";
 import {
   CompleteLotteryPurchaseReceivingInput,
   CompleteLotteryPurchaseReceivingPayload,
@@ -34,6 +35,7 @@ export class PurchaseResolver {
   constructor(
     private readonly query: PurchaseQueryService,
     private readonly receiving: PurchaseReceivingService,
+    private readonly receiptLinks: ReceiptLinksService,
   ) {}
 
   @RequirePermission(PURCHASE_PERMISSIONS.create)
@@ -112,11 +114,21 @@ export class PurchaseResolver {
   }
 
   @Mutation(() => CompleteLotteryPurchaseReceivingPayload)
-  completeLotteryPurchaseReceiving(
+  async completeLotteryPurchaseReceiving(
     @Args("input") input: CompleteLotteryPurchaseReceivingInput,
     @CurrentOperator() operator: OperatorContext,
   ): Promise<CompleteLotteryPurchaseReceivingPayload> {
-    return this.receiving.complete(operator, input.submissionId, input.rowIds);
+    const result = await this.receiving.complete(
+      operator,
+      input.submissionId,
+      input.rowIds,
+    );
+    // 寫入成功就一定帶得回 QR 的路由(和寫入同一次請求;交易後的自動列印不另查)。讀路由出錯 → 全部 null
+    // (點收已完成,不回錯;單據照印、不印 QR)
+    return {
+      ...result,
+      receiptLinks: await this.receiptLinks.routesAfterWrite(operator),
+    };
   }
 
   @Mutation(() => Boolean)

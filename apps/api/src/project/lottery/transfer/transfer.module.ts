@@ -6,6 +6,7 @@ import { RealtimeModule } from "../../../realtime/realtime.module";
 import { SidebarBadgesModule } from "../../../sidebar-badges/sidebar-badges.module";
 import { LotteryAccountsModule } from "../accounts/accounts.module";
 import { LotteryRequisitionModule } from "../requisition/requisition.module";
+import { ReceiptLinksService } from "../store/receipt-links.service";
 import { LotteryTicketsModule } from "../tickets/tickets.module";
 import { TransferAccess } from "./transfer-access";
 import { TransferQueryService } from "./transfer-query.service";
@@ -38,6 +39,8 @@ import { TransferResolver } from "./transfer.resolver";
     TransferRegistrations,
     TransferQueryService,
     TransferReceivingService,
+    // [完成這次點收] 的回傳帶單據 QR 的路由(依模組樹;只讀模組種子資料,沒有狀態)
+    ReceiptLinksService,
     TransferResolver,
   ],
 })

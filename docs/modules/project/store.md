@@ -17,7 +17,7 @@
 
 - 側欄順序 `order: 10`、圖示 `store`;沒有側欄數字。
 - **開啟 B9b**(`perFormCreate`):每張表單發布時自動建 `store.create-<formKey>`(新增資格看它,不看模組 `create`)。
-- 分頁登記在 `apps/admin/src/pages/project/lottery/store/store-tabs.ts`,各功能依規格 6.1 的順序追加自己那一列;目前有 看板(`store.view`)、班次結帳歷史紀錄(`store.view`,交班結帳的功能)、盤點紀錄(`store.view`,盤點的功能)、撤銷售出、現金更正(`store.view`)、兌獎紀錄(`store.view`,兌獎的功能)與 其他申請(表單引擎的預設列表 `FormListPage`)。
+- 分頁登記在 `apps/admin/src/pages/project/lottery/store/store-tabs.ts`,各功能依規格 6.1 的順序追加自己那一列;目前有 看板(`store.view`)、班次結帳歷史紀錄(`store.view`,交班結帳的功能)、盤點紀錄(`store.view`,盤點的功能)、撤銷售出、現金更正(`store.view`)、兌獎紀錄(`store.view`,兌獎的功能)與 其他申請(表單引擎的預設列表 `FormListPage`,只列租戶自己綁到店面管理的表單:內建的撤銷售出申請、現金更正單、盤點確認申請、結帳確認申請以 `excludeFormKeys` 排除,列表、表單篩選與 [+ 新增] 都不出現;它們各有自己的分頁或從看板進,結帳確認申請的新增頁要帶班次 `?shift=`)。
 - 新增頁 `store.create-page` 換成 `StoreCreatePage`:撤銷售出申請(`/store/create-page/sale_reversal`)用替換新增頁、盤點確認申請(`/store/create-page/stocktake_confirm`)是盤點頁、結帳確認申請(`/store/create-page/checkout_confirm?shift=`)是交班精靈,其他表單(現金更正單、租戶自己綁的表單)沿用表單引擎的新增頁。
 - 檢視頁 `store.view-page`、編輯頁 `store.edit-page` 換成 `StoreViewPage` / `StoreEditPage`(`forms/StoreSubmissionPages/`):讀到那一筆的表單代號後分派 —— 盤點確認申請 → 盤點單明細 + 審核 / 退回後打開盤點頁(帶入原內容);結帳確認申請 → 結帳單明細 + 審核 / 退回後打開交班精靈(帶入原內容);其他表單沿用表單引擎。之後的表單在同一處追加。
 - 網址狀態:`?tab=`、看板 / 撤銷售出 / 現金更正 / 兌獎紀錄的分店 `?org=`(切分頁不換店)、其他申請的篩選 `?list=`、兌獎紀錄的篩選與頁碼 `?redemptions=`、盤點紀錄的篩選與頁碼 `?stocktakes=`、班次結帳歷史紀錄的篩選與頁碼 `?checkouts=`;撤銷售出申請新增頁的帶入值 `?org=`、`?ticket=`;臨時盤點的分店 `?org=` 與範圍 `?scope=`(收銀點 id,空 = 全店);交班結帳帶入的那一班 `?shift=`(`app/project/url-state-inventory.ts`)。
@@ -263,7 +263,8 @@
 - **單號**:交班結帳單、日結單、退貨退款收據 = 那張申請的單號。投庫單、出庫單、存款單是現金流水,沒有單號也沒有詳情頁,表頭只印時間(印的當下),QR 連到即時現金帳 `?movementId=<流水 id>`(打開時標亮那一筆,規格 10.2)。
 - **已印次數與補印**:`refType` 每種單據各一個(`lottery-store-vault-deposit` / `-vault-withdraw` / `-bank-deposit` 的 `refId` = 現金流水 id;`lottery-store-shift-checkout` / `-daily-close` / `-sale-refund` 的 `refId` = 申請的提交 id)。補印只有結帳確認申請檢視頁的 [列印](與自動印同一份版面:`checkout/useCheckoutReceipt.ts`)。
 - **自動列印只在寫入成功之後**:投庫 / 出庫 / 開班 / 存銀行由對話框的成功回呼交給看板(`BoardDialogs`、`useDailyCloseEntry`;轉圖節點放在看板,對話框一成功就關);結帳確認申請登記成店面管理的送出後動作 `checkout/CheckoutReceiptEffect.tsx`(`app/project/workflow-extensions.ts`;讀到的提交不是結帳確認申請就不印);撤銷售出申請在新增頁送出成功後印。寫入失敗都不印;列印本身失敗只記 log。
-- **QR 連結不依印單的人的權限**:頁面路由由 api 依模組樹組(`lotteryReceiptLinks`:即時現金帳、店面檢視頁、調貨單檢視頁;`ReceiptLinksService`,與 `me.modules[].route` 同一個組法但不經權限過濾),畫面用 `components/project/lottery/ReceiptPrint/useReceiptLinks.ts`。店員沒有帳戶管理,印的投庫單 QR 仍是 `<網址>/accounts?tab=cash&movementId=…`;調貨付款收據、調貨出貨單同樣改用它。
+- **QR 連結不依印單的人的權限**:頁面路由由 api 依模組樹組(`lotteryReceiptLinks`:即時現金帳、店面檢視頁、進貨單檢視頁、調貨單檢視頁;`ReceiptLinksService`,與 `me.modules[].route` 同一個組法但不經權限過濾),畫面用 `components/project/lottery/ReceiptPrint/useReceiptLinks.ts`。店員沒有帳戶管理,印的投庫單 QR 仍是 `<網址>/accounts?tab=cash&movementId=…`;進貨點收單、調貨付款收據、調貨出貨單、調貨點收單同樣用它。
+- **自動列印怎樣都要印得出來**:路由是 null(模組停用、沒有 route)、還沒讀到或讀不到 → 單據照印、**不印 QR**(版面的 `qr` = null,`ReceiptDocument` 不畫)。進貨 / 調貨的 [完成這次點收] 由寫入 mutation 同一次請求帶回 `receiptLinks`(`ReceiptLinksService`),交易後的自動列印不另查;其他交易後的自動列印用 `fetchLinks`(讀不到 → 不印 QR,只記 log)。標頭 [列印] / [補印] 不等路由,讀到之前按 = 不印 QR。
 - **撤銷售出申請新增頁**:送出成功到列印完成之間按鈕維持停用,印完才離開。
 - **api 提供的列印資料**:`openLotteryShift` / `depositLotteryShiftCash` / `withdrawLotteryShiftCash` 的回傳多 `movementId`(這次寫的流水;開班沒領零用金 = null)與 `cashPointPrinterId`;`lotteryCheckout` 多 `cashPointPrinterId`、`shiftOpenedAt` / `shiftClosedAt`(交班的班次)與 `coveredShifts[].difference`(日結單依收銀點彙總);`lotteryStoreShiftOptions` 多 `cashPointPrinterId`(退貨退款收據的印表機)。
 - 版面純函式在 `apps/admin/src/lib/project/lottery/receipts/`(`vault-deposit-receipt.ts`、`vault-withdraw-receipt.ts`、`bank-deposit-receipt.ts`、`shift-checkout-receipt.ts`、`daily-close-receipt.ts`、`sale-refund-receipt.ts`,文案 `admin.lotteryStore.receipts`),種類登記 `receipt-kinds.ts`;QR 連結 `components/project/lottery/ReceiptPrint/useReceiptLinks.ts`(模組 key 正本 `@repo/domain/project/lottery` 的 `RECEIPT_LINK_MODULE_KEYS`)。
@@ -314,7 +315,7 @@
 | `lotteryCheckoutWizard(shiftId)`                   | `store.checkout`                  | 交班精靈:這一班(收銀點、負責人、開班時間、是否已結束)、`canSubmit`(負責人或店長)、`canSkipStocktake`、可沿用的盤點、這一班的兌獎與合計、應有現金逐項(含明細)與合計、審核中的單據、接班人候選、`serverNow` |
 | `lotteryCheckouts(input)`                          | `store.view`                      | `{ orgId, from?, to?, cashPointId?, type?, status?, offset?, limit? }`(最多 100;`status` = 申請的狀態)→ `{ items, total }`,送出時間新到舊                                                                 |
 | `lotteryCheckout(submissionId)`                    | `store.view`                      | 結帳確認申請檢視頁:結帳單(應有逐項、面額、差額與原因、審核中的單據快照、留給下一班 / 接班人)、盤點方式與盤點單、結帳內容(`draft`,退回後帶入)                                                              |
-| `lotteryReceiptLinks`                              | `api.printing.print`              | 58mm 單據 QR code 的頁面路由(即時現金帳、店面檢視頁、調貨單檢視頁):依模組樹組,不依操作者權限;模組或祖先停用 = null                                                                                        |
+| `lotteryReceiptLinks`                              | `api.printing.print`              | 58mm 單據 QR code 的頁面路由(即時現金帳、店面檢視頁、進貨單檢視頁、調貨單檢視頁):依模組樹組,不依操作者權限;模組或祖先停用 = null                                                                          |
 
 | `lotteryDailyCloseStatus(orgId)` | `store.view` | 看板頂部:上次日結的時間(`lastClosedAt`)與距今天數(`daysSince`)、審核中 / 已退回的日結(`pending`) |
 | `lotteryDailyCloseWizard(orgId, submissionId?)` | `store.checkout` | 日結精靈:涵蓋計算期間、沒有日結的日子、開著的班、另一張審核中的日結、各班結帳列(狀態、等誰、`isMine`、`instanceId`)、各班結帳差額、可沿用的全店盤點、小金庫應有逐項、可用的帳戶;`submissionId` = 退回後再送出 |

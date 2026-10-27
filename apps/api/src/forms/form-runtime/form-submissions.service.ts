@@ -204,6 +204,21 @@ export function touchedKeysOf(
   return [...new Set(touched)].filter((key) => inputs.has(key));
 }
 
+/**
+ * 列表的表單條件:`formKey` 只列那一張、`excludeFormKeys` 不列那些;兩者都給且那一張被排除 = 空清單。
+ * 條件放在查詢裡(不是撈完再濾),總筆數與分頁才對得上。
+ */
+function formKeyFilterOf(
+  formKey: string | null | undefined,
+  excludeFormKeys: readonly string[] | null | undefined,
+): Record<string, unknown> {
+  const excluded = excludeFormKeys ?? [];
+  if (formKey) {
+    return { formKey: excluded.includes(formKey) ? { $in: [] } : formKey };
+  }
+  return excluded.length > 0 ? { formKey: { $nin: [...excluded] } } : {};
+}
+
 /** 版本定義快取的鍵。 */
 function versionKeyOf(formKey: string, version: number): string {
   return `${formKey}@${String(version)}`;
@@ -463,7 +478,7 @@ export class FormSubmissionsService {
     const keyword = input.keyword?.trim();
     const filter: Record<string, unknown> = {
       moduleKey: input.moduleKey,
-      ...(input.formKey ? { formKey: input.formKey } : {}),
+      ...formKeyFilterOf(input.formKey, input.excludeFormKeys),
       ...(input.status ? { status: input.status } : {}),
       ...(keyword
         ? { "summary.title": { $regex: escapeRegex(keyword), $options: "i" } }

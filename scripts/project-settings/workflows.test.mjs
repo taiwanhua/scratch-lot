@@ -128,7 +128,7 @@ function originalDeployCommands(environment) {
     describe(`cookhome-api${suffix}`),
     `docker build -f apps/api/Dockerfile -t ${REGISTRY}/api:${tag} .`,
     `docker push ${REGISTRY}/api:${tag}`,
-    `docker build -f apps/admin/Dockerfile -t ${REGISTRY}/admin:${tag} --build-arg VITE_GRAPHQL_ENDPOINT=${api}/graphql .`,
+    `docker build -f apps/admin/Dockerfile -t ${REGISTRY}/admin:${tag} --build-arg VITE_GRAPHQL_ENDPOINT=${api}/graphql --build-arg APP_VERSION=${HEAD} .`,
     `docker push ${REGISTRY}/admin:${tag}`,
     `gcloud run deploy cookhome-api${suffix} --region=asia-east1 --image=${REGISTRY}/api:${tag} --port=5001 --allow-unauthenticated --min-instances=0 --max-instances=2 --env-vars-file=deploy/env/${environment}.yaml --set-secrets=MONGODB_URI=mongodb-uri${suffix}:latest,FIELD_ENCRYPTION_KEY=field-encryption-key${suffix}:latest,JWT_SECRET=jwt-secret${suffix}:latest,RESEND_API_KEY=resend-api-key${suffix}:latest --quiet`,
     `gcloud run deploy cookhome-admin${suffix} --region=asia-east1 --image=${REGISTRY}/admin:${tag} --port=8080 --allow-unauthenticated --min-instances=0 --max-instances=2 --quiet`,
@@ -144,6 +144,7 @@ function originalDeployCommands(environment) {
 const deployEnv = (overrides = {}) => ({
   FAKE_HEAD: HEAD,
   FAKE_SHORT_HEAD: "abc1234",
+  GITHUB_SHA: HEAD,
   GITHUB_RUN_ID: RUN_ID,
   GITHUB_RUN_ATTEMPT: "1",
   FAKE_BASE_IN_HISTORY: "1",
@@ -686,7 +687,7 @@ test("只改 API URL(無程式變更):admin 被選中,且 build 的 endpoint 是
   );
   assert.match(
     builds[0],
-    /--build-arg VITE_GRAPHQL_ENDPOINT=https:\/\/api-next\.widgets\.example\/graphql \.$/,
+    /--build-arg VITE_GRAPHQL_ENDPOINT=https:\/\/api-next\.widgets\.example\/graphql --build-arg APP_VERSION=[0-9a-f]{40} \.$/,
   );
   assert.doesNotMatch(builds.join("\n"), /api-dev\.widgets\.example/);
 });

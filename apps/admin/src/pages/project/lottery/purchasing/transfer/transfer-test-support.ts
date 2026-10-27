@@ -17,7 +17,10 @@ import {
   transferFormWorld,
   transferModules,
 } from "@/test/msw/project/lottery/transfer-fixtures";
-import { transferWorld } from "@/test/msw/project/lottery/transfer-handlers";
+import {
+  type TransferWorldOptions,
+  transferWorld,
+} from "@/test/msw/project/lottery/transfer-handlers";
 import { server } from "@/test/msw/server";
 import {
   type WorkflowRuntimeWorldOptions,
@@ -42,6 +45,10 @@ export interface RenderTransferOptions {
   workflow?: WorkflowRuntimeWorldOptions;
   /** 另外給的模組(例:申請中心) */
   extraModules?: readonly TestModule[];
+  /** 調貨單假 api 的選項(例:[完成這次點收] 帶回的 QR 路由) */
+  transfer?: TransferWorldOptions;
+  /** false = 操作者沒有這個模組(只從申請中心進來的人;單據 QR 的路由仍依模組樹) */
+  withModule?: boolean;
 }
 
 /**
@@ -56,8 +63,10 @@ export const renderTransferPage = ({
   forms,
   workflow,
   extraModules = [],
+  withModule = true,
+  transfer,
 }: RenderTransferOptions) => {
-  const transferFake = transferWorld();
+  const transferFake = transferWorld(transfer);
   const formsFake = formRuntimeWorld(transferFormWorld(forms));
   const workflowFake =
     workflow === undefined ? null : workflowRuntimeWorld(workflow);
@@ -79,7 +88,7 @@ export const renderTransferPage = ({
       currentOrgTenantId: masterDataOrgs.tenant.id,
       modules: [
         ...purchasingModules(),
-        ...transferModules(omit),
+        ...(withModule ? transferModules(omit) : []),
         ...extraModules,
         ...(printing === undefined
           ? []

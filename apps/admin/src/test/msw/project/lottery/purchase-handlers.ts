@@ -11,6 +11,10 @@ import type {
 import { graphqlError } from "../../auth-handlers";
 import { api, type server } from "../../server";
 import { purchaseOptions, purchaseReceiving } from "./purchase-fixtures";
+import {
+  NO_RECEIPT_LINK_ROUTES,
+  receiptLinksPayload,
+} from "./receipt-links-handlers";
 
 /**
  * 進貨單的假 api(規則照 `docs/modules/project/purchasing.md`「進貨單」):新增頁選項、點收區塊、
@@ -132,10 +136,13 @@ export const AMBIGUOUS_FRONT_CODE = "0056531098";
 export interface PurchaseWorldOptions {
   /** 點收區塊的起始資料(預設 Figma PU-06 那一筆) */
   receiving?: LotteryPurchaseReceivingFieldsFragment;
+  /** [完成這次點收] 帶回的 QR 路由:`none` = 模組停用 / 沒有 route(都是 null);預設有路由 */
+  receiptRoutes?: "default" | "none";
 }
 
 export const purchaseWorld = ({
   receiving: initial = purchaseReceiving(),
+  receiptRoutes = "default",
 }: PurchaseWorldOptions = {}): PurchaseWorld => {
   const scanned: string[] = [];
   const pickedGameIds: (string | null)[] = [];
@@ -258,7 +265,16 @@ export const purchaseWorld = ({
           };
         }
         return HttpResponse.json({
-          data: { completeLotteryPurchaseReceiving: { batch, receiving } },
+          data: {
+            completeLotteryPurchaseReceiving: {
+              batch,
+              receiving,
+              receiptLinks:
+                receiptRoutes === "none"
+                  ? receiptLinksPayload(NO_RECEIPT_LINK_ROUTES)
+                  : receiptLinksPayload(),
+            },
+          },
         });
       }),
       api.mutation("NotifyLotteryPurchaseWrongStore", ({ variables }) => {

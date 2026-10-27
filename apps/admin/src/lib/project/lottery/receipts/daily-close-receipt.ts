@@ -4,6 +4,7 @@ import {
   type ReceiptBlock,
   type ReceiptLayout,
   type ReceiptTranslator,
+  qrOf,
   receiptMoney,
 } from "./receipt-layout";
 import {
@@ -37,7 +38,7 @@ export interface DailyCloseReceiptInput {
   bankDepositAmount: number;
   bankAccountName: string | null;
   submittedAt: string;
-  url: string;
+  url: string | null;
 }
 
 /** 涵蓋的班依收銀點彙總(順序 = 第一次出現的順序):班數、差額合計。 */
@@ -137,7 +138,7 @@ export const dailyCloseReceiptOf = (
       },
       { type: "divider" },
     ],
-    qr: { value: input.url, caption: t("qrCaption") },
+    qr: qrOf(input.url, t("qrCaption")),
     signatures: [t("dailyClose.managerSign")],
   };
 };
@@ -146,7 +147,7 @@ export const dailyCloseReceiptOf = (
 export const dailyCloseInputOf = (
   detail: CheckoutDetail,
   serialNo: string | null,
-  url: string,
+  url: string | null,
   timeText: ReceiptTimeText,
 ): DailyCloseReceiptInput => ({
   submissionId: detail.submissionId,

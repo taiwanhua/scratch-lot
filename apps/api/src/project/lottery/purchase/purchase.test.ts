@@ -138,12 +138,16 @@ const COMPLETE = /* GraphQL */ `
           }
         }
       }
+      receiptLinks {
+        purchaseView
+      }
     }
   }
 `;
 
 interface CompletePayload {
   batch: { batchId: string; no: number; rowIds: string[] } | null;
+  receiptLinks: { purchaseView: string | null };
   receiving: {
     batches: { batchId: string; no: number; rowIds: string[] }[];
     groups: { rows: { rowId: string; batchId: string | null }[] }[];
@@ -1234,6 +1238,11 @@ describe("進貨單(規格 8.2、8.3)", () => {
       expect(one.completeLotteryPurchaseReceiving.batch).toMatchObject({
         no: 1,
         rowIds: [first.rowId, second.rowId],
+      });
+      // 同一次請求帶回單據 QR 的路由(依模組樹;交易後的自動列印不另查)。這個測試庫沒有種模組樹 →
+      // 路由是 null,寫入照樣成功(畫面照印、不印 QR);組路由的規則見 `receipt-links.service.test.ts`
+      expect(one.completeLotteryPurchaseReceiving.receiptLinks).toEqual({
+        purchaseView: null,
       });
       // 第二次:另一本;帶上已在第 1 次的列也不會搬過來
       await receiveAll(purchase.id, [third]);

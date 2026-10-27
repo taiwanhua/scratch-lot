@@ -16,12 +16,21 @@ const { default: userEvent } = await import("@testing-library/user-event");
 const { renderPurchasePage } = await import("../purchase-test-support");
 const { purchaseReceiving } =
   await import("@/test/msw/project/lottery/purchase-fixtures");
+const { HttpResponse } = await import("msw");
+const { api, server } = await import("@/test/msw/server");
 
 const VIEW = "/purchasing/purchase/view-page/doc-p33";
 
 /** 轉圖的那幾次列印的文字(依序;一次列印 = 一張圖,兩聯都在裡面)。 */
 const printedTexts = () =>
   receiptPngOf.mock.calls.map(([node]) => node.textContent);
+
+/** 最後一張單據的 QR code 內容(`Receipt58Qr` 的 aria-label;沒有 QR = 空字串)。 */
+const printedQr = () =>
+  receiptPngOf.mock.calls
+    .at(-1)?.[0]
+    .querySelector("svg[role='img']")
+    ?.getAttribute("aria-label") ?? "";
 
 /** 每一次轉圖裡的切紙位置數(兩聯 = 1 個:聯與聯之間)。 */
 const cutsOfPrints = () =>
@@ -351,5 +360,26 @@ describe("進貨單檢視頁:進貨點收單", () => {
     expect(second).toMatch(/【補印】第 2 次/);
     expect(second).toContain("第 2 聯 · 送貨人留存");
     expect(second).not.toContain("店鋪留存");
+  });
+
+  it("讀不到 QR 的路由(`lotteryReceiptLinks` 失敗)→ 標頭 [列印] 照樣能按、照樣印,不印 QR", async () => {
+    receiptPngOf.mockClear();
+    const user = userEvent.setup();
+    const { printingFake } = renderPurchasePage({ path: VIEW, printing: {} });
+    server.use(
+      api.query("LotteryReceiptLinks", () =>
+        HttpResponse.json({ errors: [{ message: "boom" }] }),
+      ),
+    );
+
+    await firstPrint(user);
+    await waitFor(() => {
+      expect(printingFake?.created).toHaveLength(1);
+    });
+    expect(printingFake?.created[0]).toMatchObject({
+      refId: "doc-p33",
+      documentName: "進貨點收單 P-0033(兩聯)",
+    });
+    expect(printedQr()).toBe("");
   });
 });

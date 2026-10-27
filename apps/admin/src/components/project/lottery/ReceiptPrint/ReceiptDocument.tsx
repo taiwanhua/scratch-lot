@@ -140,7 +140,10 @@ export const ReceiptDocument = ({
       // 單據是一次性的快照,區塊沒有穩定 id;順序即身分
       <Block key={index} block={block} />
     ))}
-    <Receipt58Qr value={layout.qr.value} caption={layout.qr.caption} />
+    {/* 沒有連結 → 照印、不印 QR */}
+    {layout.qr !== null && (
+      <Receipt58Qr value={layout.qr.value} caption={layout.qr.caption} />
+    )}
     {layout.signatures.map((signer) => (
       <Receipt58Signature key={signer} signer={signer} />
     ))}

@@ -45,7 +45,7 @@ const CheckoutPrintButton = ({
 }) => {
   const receiptOf = useCheckoutReceipt();
   const { links } = useReceiptLinks();
-  if (detail === null || links === null) {
+  if (detail === null) {
     return null;
   }
   const receipt = receiptOf(detail, serialNo, links);

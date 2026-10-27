@@ -11,10 +11,12 @@ import {
 
 import { AuditService } from "../../../audit/audit.service";
 import type { Persisted } from "../../../database/base.repository";
+import { OrgsRepository } from "../../../database/database.module";
 import {
   type OperatorContext,
   isOrgVisible,
 } from "../../../database/operator-context";
+import { tenantTimezoneOf } from "../../../database/tenant-timezone";
 import {
   type LotteryGameDocument,
   LotteryGamesRepository,
@@ -35,6 +37,7 @@ import type {
 } from "./dto/lottery-game.input";
 import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from "./dto/lottery-game.input";
 import { isSameValue, requestedGameValues, snapshotOf } from "./game-changes";
+import { type GameDateValues, gameDateValuesOf } from "./game-dates";
 import { isGameInUse } from "./game-usage";
 import {
   GameFieldErrors,
@@ -88,6 +91,7 @@ function escapeRegex(value: string): string {
  *   查詢另釘在當前組織的租戶;別租戶的遊戲回 `NOT_FOUND`
  * - **讀取**:要綁 `master-data.games`(遊戲分頁);寫入另由 resolver 守 create / edit / delete
  * - **有庫存**(`isGameInUse`,P15 / P17 / P18 登記)後:代號、面額、張數不能改,不能刪除
+ * - **日期**:兌獎截止日必填;上市日、停售日不收,存檔時由兌獎截止日推算並存(`gameDateValuesOf`,租戶時區)
  */
 @Injectable()
 export class LotteryGamesService {
@@ -95,6 +99,7 @@ export class LotteryGamesService {
     private readonly games: LotteryGamesRepository,
     private readonly access: MasterDataAccess,
     private readonly audit: AuditService,
+    private readonly orgs: OrgsRepository,
   ) {}
 
   // ---- 讀 ----
@@ -172,8 +177,10 @@ export class LotteryGamesService {
     const color = checkColor(input.color ?? null, errors);
     const status = checkStatus(input.status ?? GAME_STATUS.onSale, errors);
     const note = checkNote(input.note ?? null, errors);
+    const claimDeadline = input.claimDeadline ?? errors.add("claimDeadline");
     if (
       errors.fields.length > 0 ||
+      claimDeadline === null ||
       gameCode === null ||
       name === null ||
       unitPrice === null ||
@@ -192,9 +199,7 @@ export class LotteryGamesService {
       defaultRate,
       color,
       status,
-      launchedAt: input.launchedAt ?? null,
-      discontinuedAt: input.discontinuedAt ?? null,
-      claimDeadline: input.claimDeadline ?? null,
+      ...(await this.dateValuesOf(operator, tenant, claimDeadline)),
       note,
     };
     // 歸當前組織(BaseRepository 寫入);共用清單固定為全部分店(schema 宣告)
@@ -217,8 +222,18 @@ export class LotteryGamesService {
     const { game, tenant } = await this.mustFind(operator, input.id);
     const errors = new GameFieldErrors();
     const next = requestedGameValues(input, errors);
+    // 兌獎截止日必填:還沒有值(舊資料)又沒送 → 擋下;送了就重算上市日 / 停售日
+    if (next.claimDeadline === undefined && !game.claimDeadline) {
+      errors.add("claimDeadline");
+    }
     if (errors.fields.length > 0) {
       throw validationError("lottery game input is invalid", errors.fields);
+    }
+    if (next.claimDeadline instanceof Date) {
+      Object.assign(
+        next,
+        await this.dateValuesOf(operator, tenant, next.claimDeadline),
+      );
     }
     const current = snapshotOf(game);
     const changed = Object.keys(next).filter(
@@ -320,6 +335,20 @@ export class LotteryGamesService {
         MASTER_DATA_REASONS.gameCodeDuplicate,
       );
     }
+  }
+
+  /** 兌獎截止日 → 要存的三個日期(租戶時區的日曆日)。 */
+  private async dateValuesOf(
+    operator: OperatorContext,
+    tenant: OperatorTenant,
+    claimDeadline: Date,
+  ): Promise<GameDateValues> {
+    const timezone = await tenantTimezoneOf(
+      this.orgs,
+      operator,
+      tenant.tenantId,
+    );
+    return gameDateValuesOf(claimDeadline, timezone);
   }
 
   /** 操作者所在的租戶:沒有當前組織 → `NOT_FOUND`;站在根組織 → `FORBIDDEN` + `TENANT_ONLY`(根組織沒有遊戲)。 */

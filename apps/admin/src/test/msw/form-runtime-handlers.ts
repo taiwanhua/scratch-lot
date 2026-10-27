@@ -34,6 +34,7 @@ import { formCreateHandlers } from "./form-create-handlers";
 import type { MockSubmission } from "./form-fixtures";
 import { submissionActionHandlers } from "./form-submission-action-handlers";
 import { fragmentOf, revisionsOf } from "./form-submission-revisions";
+import { matchesSubmissionsInput } from "./form-submissions-filter";
 import { api } from "./server";
 
 export type FormRuntimeOperation =
@@ -210,13 +211,8 @@ export const formRuntimeWorld = (
     api.query("FormSubmissions", ({ variables }) => {
       const { input } = variables as FormSubmissionsQueryVariables;
       inputs.formSubmissions.push(input);
-      const keyword = input.keyword?.trim() ?? "";
-      const items = state.filter(
-        (item) =>
-          item.moduleKey === input.moduleKey &&
-          (input.formKey == null || item.formKey === input.formKey) &&
-          (input.status == null || item.status === input.status) &&
-          (keyword === "" || (item.summary?.title ?? "").includes(keyword)),
+      const items = state.filter((item) =>
+        matchesSubmissionsInput(item, input),
       );
       return HttpResponse.json({
         data: {

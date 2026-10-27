@@ -36,7 +36,7 @@ const renderMyTask = (reviews: ReturnType<typeof reviewOf>[]) => {
     path: "/overview",
     extra: createElement(
       WorkflowExtensionsContext.Provider,
-      { value: { notify: jest.fn(), reviewsOf } },
+      { value: { notify: jest.fn(), reviewsOf, sectionsOf: () => [] } },
       createElement(MyTask, {
         instance: instanceFragment(),
         task: taskFragment(),

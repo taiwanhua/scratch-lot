@@ -35,6 +35,9 @@ const GAME_FIELDS = /* GraphQL */ `
     defaultRate
     color
     status
+    launchedAt
+    discontinuedAt
+    claimDeadline
     note
     inUse
     abilities {
@@ -108,6 +111,9 @@ interface GameRow {
   defaultRate: number;
   color: string | null;
   status: string;
+  launchedAt: string | null;
+  discontinuedAt: string | null;
+  claimDeadline: string | null;
   note: string | null;
   inUse: boolean;
   abilities: { canEdit: boolean; canDelete: boolean };
@@ -145,6 +151,8 @@ function gameInput(overrides: Record<string, unknown> = {}) {
     unitPrice: 100,
     ticketsPerBook: 100,
     defaultRate: 92,
+    // 租戶時區(預設 Asia/Taipei)2026-12-15 00:00
+    claimDeadline: "2026-12-14T16:00:00.000Z",
     ...overrides,
   };
 }
@@ -374,6 +382,73 @@ describe("檔案管理 → 遊戲(GraphQL 端點 + 真 MongoDB)", () => {
       color: "red",
     });
     expect(game).toMatchObject({ ticketsPerBook: 999, color: "red" });
+  });
+
+  describe("上市日 / 停售日由兌獎截止日推算(租戶時區的日曆日)", () => {
+    it("新增:存推算值(停售 −3 個月、上市 −9 個月,月底取該月最後一天);兌獎截止日收斂成當天 00:00", async () => {
+      // Asia/Taipei 2026-05-31 09:30 → 當天 00:00
+      const game = await createGame(managerA, {
+        claimDeadline: "2026-05-31T01:30:00.000Z",
+      });
+      expect(game).toMatchObject({
+        claimDeadline: "2026-05-30T16:00:00.000Z",
+        discontinuedAt: "2026-02-27T16:00:00.000Z",
+        launchedAt: "2025-08-30T16:00:00.000Z",
+      });
+    });
+
+    it("新增缺兌獎截止日 → VALIDATION_FAILED(claimDeadline)", async () => {
+      for (const claimDeadline of [undefined, null]) {
+        expect(
+          await errorOf(api, managerA, CREATE, {
+            input: gameInput({ claimDeadline }),
+          }),
+        ).toMatchObject({
+          code: "VALIDATION_FAILED",
+          fields: ["claimDeadline"],
+        });
+      }
+    });
+
+    it("編輯:改兌獎截止日就重算;沒送或送 null = 不動", async () => {
+      const game = await createGame(managerA);
+      expect(game).toMatchObject({
+        discontinuedAt: "2026-09-14T16:00:00.000Z",
+        launchedAt: "2026-03-14T16:00:00.000Z",
+      });
+      const renamed = await ok<UpdateData>(api, managerA, UPDATE, {
+        input: { id: game.id, name: "改名", claimDeadline: null },
+      });
+      expect(renamed.updateLotteryGame.item).toMatchObject({
+        claimDeadline: game.claimDeadline,
+        discontinuedAt: game.discontinuedAt,
+        launchedAt: game.launchedAt,
+      });
+      // 跨年 + 閏年:2028-11-30 → 停售 2028-08-30、上市 2028-02-29
+      const moved = await ok<UpdateData>(api, managerA, UPDATE, {
+        input: { id: game.id, claimDeadline: "2028-11-29T16:00:00.000Z" },
+      });
+      expect(moved.updateLotteryGame.item).toMatchObject({
+        claimDeadline: "2028-11-29T16:00:00.000Z",
+        discontinuedAt: "2028-08-29T16:00:00.000Z",
+        launchedAt: "2028-02-28T16:00:00.000Z",
+      });
+    });
+
+    it("編輯沒有兌獎截止日的舊資料:沒補兌獎截止日 → VALIDATION_FAILED(claimDeadline)", async () => {
+      const game = await createGame(managerA);
+      await api.connection
+        .collection(LOTTERY_GAMES_COLLECTION)
+        .updateOne(
+          { _id: new Types.ObjectId(game.id) },
+          { $set: { claimDeadline: null } },
+        );
+      expect(
+        await errorOf(api, managerA, UPDATE, {
+          input: { id: game.id, name: "改名" },
+        }),
+      ).toMatchObject({ code: "VALIDATION_FAILED", fields: ["claimDeadline"] });
+    });
   });
 
   describe("範圍:遊戲是整個租戶共用的", () => {

@@ -1,6 +1,7 @@
 import {
   type ReceiptLayout,
   type ReceiptTranslator,
+  qrOf,
   receiptMoney,
 } from "./receipt-layout";
 import { type CashMovementReceiptBase, noteBlocks } from "./store-receipts";
@@ -42,6 +43,6 @@ export const vaultWithdrawReceiptOf = (
     },
     { type: "divider" },
   ],
-  qr: { value: input.url, caption: t("qrCaption") },
+  qr: qrOf(input.url, t("qrCaption")),
   signatures: [t("vaultWithdraw.receiverSign"), t("witnessSign")],
 });

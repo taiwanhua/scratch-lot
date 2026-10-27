@@ -4,6 +4,7 @@ import {
   type ReceiptBlock,
   type ReceiptLayout,
   type ReceiptTranslator,
+  qrOf,
   receiptMoney,
 } from "./receipt-layout";
 import { receiptSignedMoney } from "./store-receipts";
@@ -45,7 +46,7 @@ export interface ShiftCheckoutReceiptInput {
   leftForNext: number;
   /** 送出時間(ISO 時點) */
   submittedAt: string;
-  url: string;
+  url: string | null;
 }
 
 /** 「標籤:值」一列一個區塊。 */
@@ -123,7 +124,7 @@ export const shiftCheckoutReceiptOf = (
       },
       { type: "divider" },
     ],
-    qr: { value: input.url, caption: t("qrCaption") },
+    qr: qrOf(input.url, t("qrCaption")),
     signatures: [
       t("shiftCheckout.handedSign"),
       t("shiftCheckout.successorSign"),
@@ -151,7 +152,7 @@ export const receiptStocktakeOf = (
 export const shiftCheckoutInputOf = (
   detail: CheckoutDetail,
   serialNo: string | null,
-  url: string,
+  url: string | null,
   timeText: ReceiptTimeText,
 ): ShiftCheckoutReceiptInput => ({
   submissionId: detail.submissionId,

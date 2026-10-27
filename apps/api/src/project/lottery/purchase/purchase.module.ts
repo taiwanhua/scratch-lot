@@ -8,6 +8,7 @@ import { LotteryAccountsModule } from "../accounts/accounts.module";
 import { LotteryDealersModule } from "../dealers/dealers.module";
 import { LotteryRedemptionModule } from "../redemption/redemption.module";
 import { LotteryRequisitionModule } from "../requisition/requisition.module";
+import { ReceiptLinksService } from "../store/receipt-links.service";
 import { LotteryTicketsModule } from "../tickets/tickets.module";
 import { PurchaseQueryService } from "./purchase-query.service";
 import { PurchaseReceivingService } from "./purchase-receiving.service";
@@ -40,6 +41,8 @@ import { PurchaseResolver } from "./purchase.resolver";
     PurchaseRegistrations,
     PurchaseQueryService,
     PurchaseReceivingService,
+    // [完成這次點收] 的回傳帶單據 QR 的路由(依模組樹;只讀模組種子資料,沒有狀態)
+    ReceiptLinksService,
     PurchaseResolver,
   ],
 })

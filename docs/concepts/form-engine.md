@@ -174,4 +174,6 @@ options 由 `lib/base/form-engine/form-module-options.ts` 的 `composeFormModule
 | `create` / `edit` | 跑                                           | 套             | 真實值 |
 | `readonly`        | 只重算顯示 / 唯讀條件(用該修訂的 `ctx`)      | 套(現在的讀者) | 存值   |
 
+預設列表頁 `FormListPage` 收選填的 `excludeFormKeys`:組裝頁另外呈現的表單(自己的分頁或入口)不出現在列表、表單篩選選項與 [+ 新增];排除條件經 `FormSubmissionList` 送到 api 的 `formSubmissions`,總筆數與分頁照排除後算。不給 = 模組內全部表單。
+
 正本:`apps/admin/src/components/base/form-engine/`、`apps/admin/src/lib/base/form-engine/`、`apps/admin/src/hooks/base/useModuleForms.ts`、`useFormDraft.ts`、`useFormSubmission.ts`

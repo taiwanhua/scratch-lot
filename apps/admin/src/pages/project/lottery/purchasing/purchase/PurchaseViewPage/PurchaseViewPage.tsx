@@ -1,19 +1,7 @@
-import { useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
 import { useNavigate } from "react-router";
 import { useTranslations } from "use-intl";
 
-import {
-  type CompleteLotteryPurchaseReceivingMutation,
-  type CompleteLotteryPurchaseReceivingMutationVariables,
-  FormSubmissionStatus,
-  useCompleteLotteryPurchaseReceivingMutation,
-  useLotteryPurchaseReceivingQuery,
-  useLotterySettlementQuery,
-  useNotifyLotteryPurchaseWrongStoreMutation,
-  useReceiveLotteryPurchaseBookMutation,
-} from "@repo/graphql";
-import { Alert } from "@repo/ui/alert";
+import { FormSubmissionStatus, useLotterySettlementQuery } from "@repo/graphql";
 import { Box } from "@repo/ui/box";
 import { Button } from "@repo/ui/button";
 import { Card } from "@repo/ui/card";
@@ -24,30 +12,21 @@ import { useFormModuleAccess } from "@/components/base/form-engine/FormModulePag
 import { FormSubmissionDetail } from "@/components/base/form-engine/FormSubmissionDetail/FormSubmissionDetail";
 import { ApprovalSection } from "@/components/base/workflow/ApprovalSection/ApprovalSection";
 import { SubmissionStatusTag } from "@/components/base/workflow/SubmissionStatusTag";
-import { useReceiptPrinter } from "@/components/project/lottery/ReceiptPrint/useReceiptPrinter";
-import {
-  type ReceiveBookGroup,
-  ReceiveBooksPanel,
-  type ReceiveScanOutcome,
-} from "@/components/project/lottery/ReceiveBooksPanel/ReceiveBooksPanel";
+import { useReceiptLinks } from "@/components/project/lottery/ReceiptPrint/useReceiptLinks";
 import { SettlementPanel } from "@/components/project/lottery/SettlementPanel/SettlementPanel";
 import { useFormSubmission } from "@/hooks/base/useFormSubmission";
-import {
-  useMutationFeedback,
-  useSnackbar,
-} from "@/hooks/base/useMutationFeedback";
 import { useRouteTabHref } from "@/hooks/base/useRouteTabHref";
 import { useRouteTabItemLabel } from "@/hooks/base/useRouteTabItemLabel";
 import { useSession } from "@/hooks/base/useSession";
 import type { ModulePageProps } from "@/lib/base/module-tree";
-import { purchaseReceivingInputOf } from "@/lib/project/lottery/receipts/purchase-receiving-receipt";
 
 import { SubmissionDeleteButton } from "../../shared/SubmissionDeleteButton";
 import { PURCHASE_MODULE_KEY } from "../purchase-keys";
 import { PurchaseReceiptPrint } from "./PurchaseReceiptPrint";
+import { PurchaseReceiveHint } from "./PurchaseReceiveHint";
+import { PurchaseReceivingSection } from "./PurchaseReceivingSection";
 import { PurchaseRedemptionRecords } from "./PurchaseRedemptionRecords";
-import { WrongStoreDialog } from "./WrongStoreDialog";
-import { type WrongStoreInfo, receiveErrorOf } from "./receive-error";
+import { usePurchaseReceiving } from "./usePurchaseReceiving";
 
 /**
  * 進貨單的替換檢視頁(專案規格 8.2「頁面」;Figma PU-06 69:651 / 127:26619 / 127:26898、
@@ -55,134 +34,25 @@ import { type WrongStoreInfo, receiveErrorOf } from "./receive-error";
  * 引擎零件(唯讀)+ 點收區塊 + 勾選的兌獎紀錄(`PurchaseRedemptionRecords`,點一列開兌獎紀錄詳情)+
  * `SettlementPanel` + 審核區塊。
  *
- * - 點收:店長(點收任務在自己手上)逐本刷條碼;「這一次」= 上次 [完成這次點收](或打開這頁)之後點收的本。
- *   [完成這次點收] 結束這一次,自動印進貨點收單兩張(店鋪留存、送貨人留存;規格第 12 章)
+ * - 點收:`PurchaseReceivingSection`(申請中心詳情頁也登記同一個區塊,`PurchaseApplyCenterSection`):
+ *   店長(點收任務在自己手上)逐本刷條碼、[完成這次點收] 自動印進貨點收單兩張、送錯分店彈窗
  * - 標題列 [列印] / [補印]:進貨點收單(到目前為止已點收的本 + 尚未到的本;補印走底座補印對話框)
- * - 送錯分店:擋下、不入庫,彈窗提示;[知道了] 不記錄,[通知總部更正] 通知那張單的建立者
  * - 結算:送出之後才有(草稿不參與收付);按鈕要 `purchasing.purchase.settle`(api 回的 `canSettle`)
  */
 export const PurchaseViewPage = ({ routeParam }: ModulePageProps) => {
   const t = useTranslations("admin.lotteryPurchasing.purchase.view");
-  const tReceive = useTranslations("admin.lotteryPurchasing.receive");
   const tPages = useTranslations("admin.formEngine.pages");
   const navigate = useNavigate();
   const tabHref = useRouteTabHref();
-  const showSnackbar = useSnackbar();
-  const queryClient = useQueryClient();
   const { session } = useSession();
   const access = useFormModuleAccess(PURCHASE_MODULE_KEY);
   const id = routeParam ?? "";
   const { submission } = useFormSubmission(id);
   const serialNo = submission?.serialNo ?? null;
   useRouteTabItemLabel(serialNo);
-
-  const receiving = useLotteryPurchaseReceivingQuery(
-    session.client,
-    { submissionId: id },
-    { enabled: id !== "" },
-  );
-  const data = receiving.data?.lotteryPurchaseReceiving ?? null;
-  const [thisTime, setThisTime] = useState<ReadonlySet<string>>(new Set());
-  const [wrongStore, setWrongStore] = useState<{
-    code: string;
-    info: WrongStoreInfo;
-  } | null>(null);
-
-  const receive = useReceiveLotteryPurchaseBookMutation(session.client);
-  const printer = useReceiptPrinter();
-  const documentUrl = `${globalThis.location.origin}${access.viewRoute ?? ""}/${id}`;
-  const notify = useNotifyLotteryPurchaseWrongStoreMutation(session.client);
-  // [完成這次點收]:這一次的列標上點收批次(寫入成功後才印這一次的進貨點收單兩張;列印失敗只記 log)
-  const complete = useCompleteLotteryPurchaseReceivingMutation(
-    session.client,
-    useMutationFeedback<
-      CompleteLotteryPurchaseReceivingMutation,
-      CompleteLotteryPurchaseReceivingMutationVariables
-    >({
-      success: (_payload, variables) =>
-        tReceive("completed", { count: variables.input.rowIds.length }),
-      error: (error) => tReceive(`errors.${receiveErrorOf(error).reason}`),
-      onSuccess: ({ completeLotteryPurchaseReceiving: result }) => {
-        queryClient.setQueryData(
-          useLotteryPurchaseReceivingQuery.getKey({ submissionId: id }),
-          { lotteryPurchaseReceiving: result.receiving },
-        );
-        setThisTime(new Set());
-        const batch = result.batch ?? null;
-        if (submission !== null && batch !== null) {
-          void printer.printReceiptAfterCommit(
-            "purchase-receiving",
-            purchaseReceivingInputOf(
-              submission,
-              result.receiving,
-              batch,
-              documentUrl,
-            ),
-          );
-        }
-      },
-    }),
-  );
-
-  const onScan = async (
-    code: string,
-    gameId: string | null,
-  ): Promise<ReceiveScanOutcome> => {
-    try {
-      const result = await receive.mutateAsync({
-        input: { submissionId: id, code, gameId },
-      });
-      const { rowId } = result.receiveLotteryPurchaseBook;
-      setThisTime((current) => new Set([...current, rowId]));
-      queryClient.setQueryData(
-        useLotteryPurchaseReceivingQuery.getKey({ submissionId: id }),
-        {
-          lotteryPurchaseReceiving: result.receiveLotteryPurchaseBook.receiving,
-        },
-      );
-      return { kind: "received" };
-    } catch (error) {
-      const parsed = receiveErrorOf(error);
-      if (parsed.wrongStore !== null) {
-        setWrongStore({ code, info: parsed.wrongStore });
-        return { kind: "failed", message: null };
-      }
-      const message = tReceive(`errors.${parsed.reason}`);
-      return parsed.gameIds.length > 0
-        ? { kind: "ambiguous_game", gameIds: parsed.gameIds, message }
-        : { kind: "failed", message };
-    }
-  };
-
-  const completeReceiving = () => {
-    complete.mutate({ input: { submissionId: id, rowIds: [...thisTime] } });
-  };
-
-  const groups: ReceiveBookGroup[] = (data?.groups ?? []).map((group) => ({
-    key: group.gameId,
-    title: tReceive("groupTitle", {
-      code: group.gameCode,
-      name: group.gameName,
-      price: group.unitPrice,
-    }),
-    requestedBooks: group.requestedBooks ?? null,
-    rows: group.rows.map((row) => ({
-      rowId: row.rowId,
-      bookNo: row.bookNo.startsWith("0") ? row.bookNo.slice(1) : row.bookNo,
-      ticketText: String(row.lastTicketNo).padStart(3, "0"),
-      tickets: row.tickets,
-      bookPrice: row.bookPrice,
-      rate: row.rate,
-      amount: row.amount,
-      status: row.received ? "received" : "notReceived",
-    })),
-  }));
-  const gameLabelOf = (gameId: string): string => {
-    const group = data?.groups.find((item) => item.gameId === gameId);
-    return group === undefined ? gameId : `${group.gameCode} ${group.gameName}`;
-  };
-  const remaining =
-    data === null ? 0 : Math.max(0, data.totalCount - data.receivedCount);
+  const data = usePurchaseReceiving(id);
+  // 單據 QR 連到檢視頁:路由依模組樹(`lotteryReceiptLinks`),不依操作者自己的頁面權限;讀到之前也能印(不印 QR)
+  const { links } = useReceiptLinks();
   const isSubmitted =
     submission !== null && submission.status !== FormSubmissionStatus.Draft;
   // 結算區塊要讀得到收付才顯示(駁回 / 作廢的單不參與收付,api 回錯 → 不顯示)
@@ -216,7 +86,7 @@ export const PurchaseViewPage = ({ routeParam }: ModulePageProps) => {
             <PurchaseReceiptPrint
               submission={submission}
               receiving={data}
-              url={documentUrl}
+              url={links.purchaseViewUrl(id)}
             />
           )}
           {submission !== null && (
@@ -250,20 +120,10 @@ export const PurchaseViewPage = ({ routeParam }: ModulePageProps) => {
             />
           )}
         </Stack>
-        {data?.canReceive === true && remaining > 0 && (
-          <Alert severity="info">{t("receiveHint", { remaining })}</Alert>
-        )}
+        <PurchaseReceiveHint submissionId={id} />
         <FormSubmissionDetail id={id} />
-        {data !== null && data.totalCount > 0 && isSubmitted && (
-          <ReceiveBooksPanel
-            groups={groups}
-            canReceive={data.canReceive}
-            onScan={onScan}
-            gameLabelOf={gameLabelOf}
-            thisTimeCount={thisTime.size}
-            onComplete={completeReceiving}
-            isPending={receive.isPending}
-          />
+        {submission !== null && (
+          <PurchaseReceivingSection submission={submission} />
         )}
         {isSubmitted && <PurchaseRedemptionRecords submissionId={id} />}
         {settlement.data !== undefined && (
@@ -282,29 +142,6 @@ export const PurchaseViewPage = ({ routeParam }: ModulePageProps) => {
             />
           )}
       </Stack>
-      {printer.host}
-      {wrongStore !== null && (
-        <WrongStoreDialog
-          info={wrongStore.info}
-          isNotifying={notify.isPending}
-          onClose={() => {
-            setWrongStore(null);
-          }}
-          onNotify={() => {
-            void notify
-              .mutateAsync({
-                input: { submissionId: id, code: wrongStore.code },
-              })
-              .then(() => {
-                showSnackbar("success", tReceive("wrongStore.notified"));
-                setWrongStore(null);
-              })
-              .catch(() => {
-                showSnackbar("error", tReceive("errors.UNEXPECTED"));
-              });
-          }}
-        />
-      )}
     </Card>
   );
 };
