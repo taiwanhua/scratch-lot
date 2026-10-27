@@ -13,8 +13,6 @@ export const PROJECT_TENANT_BOUNDARY_CALLERS: readonly string[] = [
   "project/lottery/dealers/dealer-view.service.ts",
   "project/lottery/dealers/dealers.service.ts",
   "project/lottery/games/games.service.ts",
-  // 庫存管理的批購甲類名稱(甲類建在租戶層,分店看得到本就看得到它的名稱)
-  "project/lottery/inventory/inventory-names.ts",
   // 遊戲是否有本引用(整個租戶有沒有)、本編號租戶內唯一
   "project/lottery/tickets/book-game-usage.ts",
   "project/lottery/tickets/books.service.ts",
