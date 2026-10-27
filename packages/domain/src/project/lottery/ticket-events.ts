@@ -67,6 +67,7 @@ export const TICKET_EVENT_TYPES = [
   "investigate",
   "lose",
   "recover",
+  "cost_adjust",
 ] as const;
 export type TicketEventType = (typeof TICKET_EVENT_TYPES)[number];
 
@@ -105,6 +106,11 @@ export const TICKET_EVENT_TYPE = {
   lose: "lose",
   /** 尋回(規格 7.4) */
   recover: "recover",
+  /**
+   * 成本調整:只改單張成本(狀態、位置、分店不變)。調貨單少張處理後,已點收張的單張成本改成縮小後那一列的
+   * 批購金額 ÷ 張數(使用者 10/27 定案);事件的成本快照 = 調整前的成本,舊報表重跑不變
+   */
+  costAdjust: "cost_adjust",
 } as const satisfies Record<string, TicketEventType>;
 
 /** 事件對應有現金的影響:不影響 / 增加 / 減少(金額一律正數,方向看這裡)。 */

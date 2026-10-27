@@ -1,6 +1,11 @@
 import { afterAll, beforeAll, describe, expect, it, jest } from "@jest/globals";
 import { Types } from "mongoose";
 
+import {
+  type TicketLocationKind,
+  type TicketStatus,
+  bookCountsOf,
+} from "@repo/domain/project/lottery";
 import { LOTTERY_FIELD_CATEGORY_KEYS } from "@repo/domain/project/lottery-fields";
 
 import {
@@ -662,6 +667,22 @@ describe("調貨單(規格 8.4、第 9 章)", () => {
         ticket.status === "unsold" &&
         ticket.location.kind === "stock",
     ).length;
+  }
+
+  /** 本上的張數(帳本維護的 `ticketCounts`)= 依張重數(`bookCountsOf`)。 */
+  async function expectCountsMatch(bookId: Types.ObjectId): Promise<void> {
+    const tickets = await ticketsOf(bookId);
+    const book = await db()
+      .collection<{ ticketCounts: Record<string, number> }>("lottery_books")
+      .findOne({ _id: bookId });
+    expect(book?.ticketCounts).toEqual(
+      bookCountsOf(
+        tickets.map((ticket) => ({
+          status: ticket.status as TicketStatus,
+          locationKind: ticket.location.kind as TicketLocationKind,
+        })),
+      ),
+    );
   }
 
   /** 搬進收貨店(新竹店)的張號。 */
@@ -1377,6 +1398,8 @@ describe("調貨單(規格 8.4、第 9 章)", () => {
         .find({ submissionId: new Types.ObjectId(id) })
         .toArray();
       expect(rows.map((row) => row.tickets.length)).toEqual([1, 1, 3]);
+      // 逐張點收(在途 → 庫存)後,本上張數 = 重數
+      await expectCountsMatch(opened.bookId);
       expect(rows.reduce((sum, row) => sum + row.purchaseAmount, 0)).toBe(92);
       // 5 張 × 20 × 92% = 92 → 單張 18.4
       expect(
@@ -1853,6 +1876,8 @@ describe("調貨單(規格 8.4、第 9 章)", () => {
       await openBook(branchA, opened.bookId);
       // 045–056 共 12 張 × 20 元 × 92% = 220.8 → 批購金額 221
       const line = partial(opened.bookId, 45, 56);
+      // 出貨店的調出從出貨那一刻算
+      const shipFrom = new Date();
       const id = await submit(hq, [line]);
       await ship(id);
       expect(await numbersOf(id)).toEqual({
@@ -1897,7 +1922,28 @@ describe("調貨單(規格 8.4、第 9 章)", () => {
       });
       const inTransitPartly = transitPartly.get(String(game)) ?? 0;
 
+      // 「點收那天」的期末(點收後、退回重送前):收貨店持有這本的張與成本(之後重送改了成本也要一樣)
+      const reader = await api.app.get(TransferRules).readerOf(tenant);
+      const stock = api.app.get(ReportStock);
+      const receivedDayEnd = new Date();
+      const heldCostOf = async (at: Date) => {
+        const held = await stock.heldAt(reader, branchB, at);
+        const mine = held.filter((ticket) =>
+          ticket.bookId.equals(opened.bookId),
+        );
+        return {
+          tickets: mine.length,
+          cost: mine.reduce((sum, ticket) => sum + ticket.cost, 0),
+        };
+      };
+      const heldOnReceivedDay = await heldCostOf(receivedDayEnd);
+      expect(heldOnReceivedDay.tickets).toBe(9);
+      // 點收時的單張成本 = 221 ÷ 12 → 9 張 165.75
+      expect(Math.abs(heldOnReceivedDay.cost - 165.75)).toBeLessThan(1e-9);
       await decideOn(world(), managerB, id, "RETURN");
+      // 「重送前一天」的期末(退回後、重送前)
+      const beforeResubmit = new Date();
+      const heldBeforeResubmit = await heldCostOf(beforeResubmit);
       // 拿掉已點收的張 → 擋下;加張 → 擋下
       expect(
         await resubmit(id, [
@@ -1974,19 +2020,52 @@ describe("調貨單(規格 8.4、第 9 章)", () => {
       // 兩店庫存:出貨店這本 100 − 檯面 10 − 調走 9 − 待查 3 = 78;收貨店 9
       expect(await stockOf(opened.bookId, branchA)).toBe(78);
       expect(await stockOf(opened.bookId, branchB)).toBe(9);
-      // 報表的調入 / 調出(依點收紀錄;調入金額 = 調貨金額)
-      const reader = await api.app.get(TransferRules).readerOf(tenant);
+      // 報表的調入(依點收紀錄;調入金額 = 調貨金額)
       const until = new Date(Date.now() + 60_000);
-      const stock = api.app.get(ReportStock);
-      const ofB = await stock.transfersOf(reader, branchB, startedAt, until);
-      const ofA = await stock.transfersOf(reader, branchA, startedAt, until);
-      expect(ofB).toMatchObject({ inTickets: 9, inAmount: 166 });
-      // 出貨店原成本 9 × 20 = 180
-      expect(ofA).toMatchObject({
-        outTickets: 9,
-        outAmount: 166,
-        outCost: 180,
-      });
+      const inbound = (
+        await stock.inboundOf(reader, branchB, startedAt, until)
+      ).filter((row) => row.bookId.equals(opened.bookId));
+      expect({
+        tickets: inbound.reduce((sum, row) => sum + row.sign * row.tickets, 0),
+        amount: inbound.reduce((sum, row) => sum + row.sign * row.amount, 0),
+      }).toEqual({ tickets: 9, amount: 166 });
+      // 調出(出貨那一筆「調出」事件的金額快照;移除的 3 張在變待查那一刻算調出反向 + 新增待查)
+      const outbound = (
+        await stock.outboundOf(reader, branchA, shipFrom, until)
+      ).filter((row) => row.bookId.equals(opened.bookId));
+      const outTickets = outbound.reduce((sum, row) => sum + row.sign, 0);
+      const outAmount = outbound.reduce(
+        (sum, row) => sum + row.sign * row.amount,
+        0,
+      );
+      const outCost = outbound.reduce(
+        (sum, row) => sum + row.sign * row.cost,
+        0,
+      );
+      expect(outTickets).toBe(9);
+      expect(outbound.filter((row) => row.lost)).toHaveLength(3);
+      // 出貨時 12 張 × 221 ÷ 12,扣掉 3 張 → 165.75;原成本 9 × 20 = 180
+      expect(Math.abs(outAmount - 165.75)).toBeLessThan(1e-9);
+      expect(Math.abs(outCost - 180)).toBeLessThan(1e-9);
+      // 重跑「點收那天」與「重送前一天」的期末:成本調整前的值不變
+      expect(await heldCostOf(receivedDayEnd)).toEqual(heldOnReceivedDay);
+      expect(await heldCostOf(beforeResubmit)).toEqual(heldBeforeResubmit);
+      expect(heldBeforeResubmit).toEqual(heldOnReceivedDay);
+      // 現在(重送之後):9 張 · 166
+      const heldNow = await heldCostOf(new Date());
+      expect(heldNow.tickets).toBe(9);
+      expect(Math.abs(heldNow.cost - 166)).toBeLessThan(1e-9);
+      // 成本調整經帳本:每張一筆「成本調整」事件,成本快照 = 調整前(221 ÷ 12)
+      const adjusts = await db()
+        .collection<{ cost: number }>("lottery_ticket_events")
+        .find({ bookId: opened.bookId, type: "cost_adjust" })
+        .toArray();
+      expect(adjusts).toHaveLength(9);
+      expect(adjusts.every((row) => Math.abs(row.cost - 221 / 12) < 1e-9)).toBe(
+        true,
+      );
+      // 本上張數(帳本維護的欄位)= 依張重數
+      await expectCountsMatch(opened.bookId);
       // 收貨店這 9 張的單張成本 = 縮小後這一列的批購金額 ÷ 張數(166 ÷ 9;使用者 10/27 定案),成本合計 = 調貨金額
       const finalTickets = await ticketsOf(opened.bookId);
       const moved = finalTickets.filter((ticket) =>
@@ -2597,6 +2676,8 @@ describe("調貨單(規格 8.4、第 9 章)", () => {
         ["transfer_in", String(branchB)],
         ["skip", String(branchB)],
       ]);
+      // 本上張數 = 重數(對調一張換一張)
+      await expectCountsMatch(opened.bookId);
       // 新竹店報表的跳號(跳號 − 取消跳號,依事件的分店)淨額 0;中山店不受影響
       const skipNetOf = async (orgId: Types.ObjectId) => {
         const rows = await db()

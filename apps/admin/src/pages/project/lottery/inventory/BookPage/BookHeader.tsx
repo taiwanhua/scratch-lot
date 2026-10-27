@@ -34,7 +34,7 @@ export const BookHeader = ({
 }: BookHeaderProps) => {
   const t = useTranslations("admin.lotteryInventory");
   const temporal = useTemporalText();
-  const { book, investigation } = detail;
+  const { book, abilities, investigation } = detail;
   return (
     <>
       <Stack

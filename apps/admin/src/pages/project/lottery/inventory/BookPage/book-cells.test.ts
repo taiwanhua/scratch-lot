@@ -14,6 +14,7 @@ const ticket = (
   status: "unsold",
   locked: false,
   operable: true,
+  locationKind: "stock",
   org: { id: "a", name: "中山店" },
   ...overrides,
 });

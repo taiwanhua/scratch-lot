@@ -559,7 +559,8 @@
       "investigate": "待查",
       "lose": "遺失",
       "recover": "尋回",
-      "reopen": "上檯面"
+      "reopen": "上檯面",
+      "cost_adjust": "成本調整"
     },
     "sources": {
       "purchase": "進貨單",

@@ -859,7 +859,14 @@ export class TransferRules {
         }
       }
     }
-    await this.repriceReceived(reader, values, receivedOf, context.session);
+    await this.repriceReceived(
+      reader,
+      tenantId,
+      values,
+      receivedOf,
+      context.session,
+      context.submissionId,
+    );
     const locked = await this.lockedTicketsOf(
       reader,
       context.submissionId,
@@ -1086,34 +1093,56 @@ export class TransferRules {
 
   /**
    * 少張處理後重算已點收張的單張成本(使用者 10/27 定案):選張的列移除沒到的張、縮小以後,已點收那幾張的
-   * 單張成本改成「重算後這一列的批購金額 ÷ 張數」,這一列調入的成本合計 = 調貨金額。沒縮小的列值不變(不寫)。
+   * 單張成本改成「重算後這一列的批購金額 ÷ 張數」,這一列調入的成本合計 = 調貨金額。經帳本寫「成本調整」事件
+   * (時間 = 重送那一刻;事件的成本快照 = 調整前的成本,舊報表重跑不變),整批寫;沒縮小的列成本相同,不寫。
    */
   private async repriceReceived(
     reader: OperatorContext,
+    tenantId: Types.ObjectId,
     values: Record<string, unknown>,
     receivedOf: ReadonlyMap<string, RowReceived>,
     session: ClientSession,
+    submissionId: Types.ObjectId,
   ): Promise<void> {
-    // 同一個成本的張一次寫(TX-06;依成本分組,與列數無關的往返只多「成本種類數」次)
-    const idsOfCost = new Map<number, Types.ObjectId[]>();
+    const costOf = new Map<string, number>();
     for (const line of transferLinesOf(values)) {
       const received = receivedOf.get(line.rowId);
       if (line.mode !== TRANSFER_MODE.partial || received === undefined) {
         continue;
       }
       const unitCost = transferUnitCostOf(line);
-      const ids = idsOfCost.get(unitCost) ?? [];
-      ids.push(...[...received.ticketIds].map((id) => new Types.ObjectId(id)));
-      idsOfCost.set(unitCost, ids);
+      for (const id of received.ticketIds) {
+        costOf.set(id, unitCost);
+      }
     }
-    for (const [unitCost, ids] of idsOfCost) {
-      await this.tickets.updateMany(
-        reader,
-        { _id: { $in: ids }, unitCost: { $ne: unitCost } },
-        { $set: { unitCost }, $inc: { version: 1 } },
-        { session },
-      );
+    if (costOf.size === 0) {
+      return;
     }
+    const tickets = (await this.tickets.findMany(
+      reader,
+      { _id: { $in: [...costOf.keys()].map((id) => new Types.ObjectId(id)) } },
+      { select: TICKET_SELECT, session },
+    )) as unknown as TransferTicket[];
+    const changed = tickets.filter(
+      (ticket) => costOf.get(String(ticket._id)) !== ticket.unitCost,
+    );
+    if (changed.length === 0) {
+      return;
+    }
+    const at = new Date();
+    await this.ledger.applyTicketEvents(
+      session,
+      { operator: null, crossStoreTenantId: tenantId },
+      changed.map((ticket) => ({
+        ticketId: ticket._id,
+        expectedVersion: ticket.version,
+        type: TICKET_EVENT_TYPE.costAdjust,
+        at,
+        patch: { unitCost: costOf.get(String(ticket._id)) ?? ticket.unitCost },
+        refType: "transfer",
+        refId: submissionId,
+      })),
+    );
   }
 
   /** 點收關卡任務結束(核准):對審核者送側欄信號。 */

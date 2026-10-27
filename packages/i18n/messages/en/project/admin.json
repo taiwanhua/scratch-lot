@@ -559,7 +559,8 @@
       "investigate": "Investigating",
       "lose": "Lost",
       "recover": "Recover",
-      "reopen": "Put on counter"
+      "reopen": "Put on counter",
+      "cost_adjust": "Cost adjusted"
     },
     "sources": {
       "purchase": "Purchase order",

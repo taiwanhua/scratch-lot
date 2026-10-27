@@ -147,11 +147,6 @@ export const markSkipCellsOf = (
   });
 };
 
-export const skipCorrectionLegendOf = (
-  tickets: readonly Ticket[],
-): TicketGridProps["legendItems"] =>
-  withOtherStore(["unsold", "selected"], tickets);
-
 /** 待查 / 遺失、而且操作者能操作(所在分店在可見範圍內)的張:[尋回] / [整本尋回] 的對象。 */
 export const isRecoverable = (ticket: Ticket): boolean =>
   ticket.operable &&
