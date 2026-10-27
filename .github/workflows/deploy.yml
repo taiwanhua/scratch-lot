@@ -146,7 +146,8 @@ jobs:
         run: |
           docker build -f apps/admin/Dockerfile \
             -t "$REGISTRY/admin:$IMAGE_TAG" \
-            --build-arg "VITE_GRAPHQL_ENDPOINT=$API_URL/graphql" \n            --build-arg "APP_VERSION=$GITHUB_SHA" .
+            --build-arg "VITE_GRAPHQL_ENDPOINT=$API_URL/graphql" \
+            --build-arg "APP_VERSION=$GITHUB_SHA" .
           docker push "$REGISTRY/admin:$IMAGE_TAG"
 
       # api 的環境變數兩個來源(docs/deployment.md「四、環境變數管理」):

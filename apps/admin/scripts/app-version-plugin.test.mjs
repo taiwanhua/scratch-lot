@@ -69,6 +69,29 @@ describe("部署設定的防回歸", () => {
     expect(block?.[1]).toContain('add_header Cache-Control "no-cache" always;');
   });
 
+  it("deploy.yml 的 admin docker build 帶兩個獨立的 --build-arg(VITE_GRAPHQL_ENDPOINT、APP_VERSION=$GITHUB_SHA)", () => {
+    const workflow = readFileSync(
+      join(adminDir, "..", "..", ".github", "workflows", "deploy.yml"),
+      "utf8",
+    );
+    // 依 shell 規則接回行尾 `\` 續行,取出 admin 那一條 docker build 指令
+    const command = workflow
+      .replaceAll(/\\\r?\n\s*/g, " ")
+      .split(/\r?\n/)
+      .find((line) => line.includes("docker build -f apps/admin/Dockerfile"));
+    expect(command).toBeDefined();
+    const tokens = command.trim().split(/\s+/);
+    // 續行寫壞(字面 `\n`)時會留下含反斜線的 token,兩個參數擠在同一個 shell 字
+    expect(tokens.some((token) => token.includes("\\"))).toBe(false);
+    const buildArgs = tokens.flatMap((token, index) =>
+      token === "--build-arg" ? [tokens[index + 1]] : [],
+    );
+    expect(buildArgs).toEqual([
+      '"VITE_GRAPHQL_ENDPOINT=$API_URL/graphql"',
+      '"APP_VERSION=$GITHUB_SHA"',
+    ]);
+  });
+
   it("Dockerfile 在 build 後確認 dist/version.json 存在,並接收 APP_VERSION", () => {
     const dockerfile = read("Dockerfile");
     expect(dockerfile).toContain("ARG APP_VERSION");
