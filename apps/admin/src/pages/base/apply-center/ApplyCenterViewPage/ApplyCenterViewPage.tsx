@@ -22,6 +22,7 @@ import { useModuleRoutes } from "@/hooks/base/useModuleRoutes";
 import { useRouteTabHref } from "@/hooks/base/useRouteTabHref";
 import { useRouteTabItemLabel } from "@/hooks/base/useRouteTabItemLabel";
 import { useSession } from "@/hooks/base/useSession";
+import { useWorkflowExtensions } from "@/hooks/base/useWorkflowExtensions";
 import { revisionContextOf } from "@/lib/base/form-engine/expression-context";
 import { permissionsOfSubmission } from "@/lib/base/form-engine/field-permissions";
 import type { ModulePageProps } from "@/lib/base/module-tree";
@@ -37,8 +38,9 @@ import {
  * `/apply-center/view-page/<實例 id>`(與通知信的連結同形狀)。**不經業務模組的頁面權限**:
  * 沒有該模組權限的審核者也從這裡看。
  *
- * 內容 = 該實例**那個修訂**的快照唯讀渲染(條件用那次送出的 `ctx`、不重算存值)+ 審核區塊(分支進度、
- * 我的任務動作、時間軸)。讀取授權在 api(`canReadSubmissionRevision`):任務持有者只讀得到他審的那個修訂。
+ * 內容 = 該實例**那個修訂**的快照唯讀渲染(條件用那次送出的 `ctx`、不重算存值)+ 表單專屬區塊(模組登記的
+ * 審核擴充 `Section`;實例是單據目前的實例時才畫)+ 審核區塊(分支進度、我的任務動作、時間軸)。
+ * 讀取授權在 api(`canReadSubmissionRevision`):任務持有者只讀得到他審的那個修訂。
  */
 export const ApplyCenterViewPage = ({ routeParam }: ModulePageProps) => {
   const t = useTranslations("admin.applyCenter.view");
@@ -47,6 +49,7 @@ export const ApplyCenterViewPage = ({ routeParam }: ModulePageProps) => {
   const tabHref = useRouteTabHref();
   const routeOf = useModuleRoutes();
   const { session } = useSession();
+  const { sectionsOf } = useWorkflowExtensions();
   const instanceId = routeParam ?? "";
   const instanceQuery = useWorkflowInstanceQuery(
     session.client,
@@ -111,6 +114,7 @@ export const ApplyCenterViewPage = ({ routeParam }: ModulePageProps) => {
   const editRoute = routeOf(formModulePageKey(instance.moduleKey, "edit-page"));
   const isCurrent =
     submission !== null && submission.currentInstanceId === instance.id;
+  const sections = isCurrent ? sectionsOf(instance.moduleKey) : [];
 
   return (
     <Card sx={{ flex: 1, minHeight: 0, overflow: "auto", px: 3, py: 2.5 }}>
@@ -172,6 +176,11 @@ export const ApplyCenterViewPage = ({ routeParam }: ModulePageProps) => {
             displayValues={submission.displayValues}
           />
         )}
+        {isCurrent &&
+          sections.map((Section, index) => (
+            // 登記順序固定(組裝好的清單),以位置當 key
+            <Section key={index} instance={instance} submission={submission} />
+          ))}
         <ApprovalSection
           instanceId={instance.id}
           submission={isCurrent ? submission : null}

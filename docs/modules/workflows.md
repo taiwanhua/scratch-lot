@@ -419,12 +419,12 @@ admin 端(`hooks/base/useApplyCenterCounts.ts`):
 
 `apps/admin/src/pages/base/apply-center/`。頁籤依序「我的申請」(預設)、「待我審核」,頁籤右側是 badge 數字(見「計數」)。
 
-| 畫面                              | 做什麼                                                                                                                                                                                                                        |
-| --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 我的申請(頁籤)                    | `DataTable`:模組、表單、標題槽、狀態 chip(七值,阻擋時「審核中(待處理)」)、目前關卡(所有進行中的關卡名稱)、送出時間;篩選模組 / 表單 / 狀態;走過流程的列有「檢視」→ 詳情頁,草稿 / 已退回 / 已撤回有「繼續編輯」→ 該模組的編輯頁 |
-| 待我審核(頁籤)                    | `DataTable`:模組、表單、實例快照的標題槽、申請人、關卡、任務狀態、建立時間;篩選模組 / 表單 / 待處理 · 已處理;待處理的列「審核」、其餘「檢視」→ 詳情頁。「待處理」開列勾選(批次核准,見下)                                      |
-| 新申請(右上)                      | 選模組 → 選表單(`applicableForms`)→ 進該模組的新增頁 `/<模組>/create-page/<表單 key>`;沒有可選的表單時按鈕停用                                                                                                                |
-| 詳情頁(隱藏頁 `view-page`,懶載入) | 網址 `/apply-center/view-page/<實例 id>`,與通知信的連結同形狀;該實例那個修訂的快照唯讀渲染(`formSubmission(id, revision)` + `FormRenderer` 的 `readonly` 模式)+ 審核區塊;不經業務模組的頁面權限                               |
+| 畫面                              | 做什麼                                                                                                                                                                                                                                                        |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 我的申請(頁籤)                    | `DataTable`:模組、表單、標題槽、狀態 chip(七值,阻擋時「審核中(待處理)」)、目前關卡(所有進行中的關卡名稱)、送出時間;篩選模組 / 表單 / 狀態;走過流程的列有「檢視」→ 詳情頁,草稿 / 已退回 / 已撤回有「繼續編輯」→ 該模組的編輯頁                                 |
+| 待我審核(頁籤)                    | `DataTable`:模組、表單、實例快照的標題槽、申請人、關卡、任務狀態、建立時間;篩選模組 / 表單 / 待處理 · 已處理;待處理的列「審核」、其餘「檢視」→ 詳情頁。「待處理」開列勾選(批次核准,見下)                                                                      |
+| 新申請(右上)                      | 選模組 → 選表單(`applicableForms`)→ 進該模組的新增頁 `/<模組>/create-page/<表單 key>`;沒有可選的表單時按鈕停用                                                                                                                                                |
+| 詳情頁(隱藏頁 `view-page`,懶載入) | 網址 `/apply-center/view-page/<實例 id>`,與通知信的連結同形狀;該實例那個修訂的快照唯讀渲染(`formSubmission(id, revision)` + `FormRenderer` 的 `readonly` 模式)+ 模組登記的表單專屬區塊(`Section`,見「依模組登記的審核擴充」)+ 審核區塊;不經業務模組的頁面權限 |
 
 模組 / 表單篩選的選項取自「新申請」的清單。零件:`hooks/base/useMyApplications.ts`、`useMyTasks.ts`、`useApplicableForms.ts`、`useApplyCenterCounts.ts`。
 
@@ -446,20 +446,22 @@ admin 端(`hooks/base/useApplyCenterCounts.ts`):
 
 ### 依模組登記的審核擴充
 
-業務模組要在「審核決定之後 / 送出之後」做事,或在審核畫面加警告、停用 [核准] 時,不改審核區塊、也不必替換申請中心:依模組 key 登記一筆擴充。登記在任何畫面都生效 —— 審核區塊不論掛在模組自己的詳情頁或申請中心詳情頁、核准是單筆或申請中心的批次核准、送出是新增頁或引擎的編輯頁。
+業務模組要在「審核決定之後 / 送出之後」做事、在審核畫面加警告、停用 [核准],或在申請中心詳情頁加自己的區塊(審核這一關要在畫面上操作的東西)時,不改審核區塊、也不必替換申請中心:依模組 key 登記一筆擴充。`Effect`、`Review` 在任何畫面都生效 —— 審核區塊不論掛在模組自己的詳情頁或申請中心詳情頁、核准是單筆或申請中心的批次核准、送出是新增頁或引擎的編輯頁;`Section` 只畫在申請中心詳情頁(模組自己的詳情頁自己畫)。
 
-| 用途             | 欄位     | 什麼時候                                                                                                                                                                                            | 元件拿到的 props                                                                                          |
-| ---------------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| 寫入成功後的動作 | `Effect` | 我的任務決定被接受(`decided`:審核區塊的核准 / 駁回 / 退回,申請中心批次核准成功的每一筆;「此關已結束」不算)、表單送出成功(`submitted`:`useFormDraft` / `useFormSubmission` 的送出)。寫入失敗不會通知 | `event`(`kind`、`moduleKey`、`submissionId`、`instanceId`;`decided` 另有 `stepKey`、`decision`)、`onDone` |
-| 審核畫面的擴充   | `Review` | 審核區塊替「我的任務」每一筆掛一份,畫在那筆任務的動作鈕上方                                                                                                                                         | `instance`、`task`、`onStateChange({ approveDisabled })`                                                  |
+| 用途             | 欄位      | 什麼時候                                                                                                                                                                                            | 元件拿到的 props                                                                                          |
+| ---------------- | --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| 寫入成功後的動作 | `Effect`  | 我的任務決定被接受(`decided`:審核區塊的核准 / 駁回 / 退回,申請中心批次核准成功的每一筆;「此關已結束」不算)、表單送出成功(`submitted`:`useFormDraft` / `useFormSubmission` 的送出)。寫入失敗不會通知 | `event`(`kind`、`moduleKey`、`submissionId`、`instanceId`;`decided` 另有 `stepKey`、`decision`)、`onDone` |
+| 審核畫面的擴充   | `Review`  | 審核區塊替「我的任務」每一筆掛一份,畫在那筆任務的動作鈕上方                                                                                                                                         | `instance`、`task`、`onStateChange({ approveDisabled })`                                                  |
+| 表單專屬區塊     | `Section` | 申請中心詳情頁在實例是單據目前的實例時(`submission.currentInstanceId` = 這個實例)掛一份,畫在快照下方、審核區塊上方;看舊修訂的實例不畫。沒有登記 = 原本的畫面                                        | `instance`、`submission`(單據目前的內容 = 這個實例審的修訂)                                               |
 
-- **登記**:專案在 `app/project/workflow-extensions.ts`、底座在 `app/base/workflow-extensions.ts`,各是 `WorkflowExtensionRegistration[]`(`{ moduleKey, Effect?, Review? }`,型別在 `hooks/base/useWorkflowExtensions.ts`);`app/module-pages.tsx` 合成後交給殼層的 `WorkflowExtensionsProvider`。同一個模組可以登記多筆,各做各的。
+- **登記**:專案在 `app/project/workflow-extensions.ts`、底座在 `app/base/workflow-extensions.ts`,各是 `WorkflowExtensionRegistration[]`(`{ moduleKey, Effect?, Review?, Section? }`,型別在 `hooks/base/useWorkflowExtensions.ts`);`app/module-pages.tsx` 合成後交給殼層的 `WorkflowExtensionsProvider`。同一個模組可以登記多筆,各做各的。
 - **`Effect` 掛在殼層**:收到事件就替那個模組的每個 `Effect` 各掛一份元件,做完(成功或失敗都要)呼叫 `onDone` 卸載;換頁、關彈窗都不會打斷。要畫面外的節點(例:列印轉圖)就畫在自己的元件裡。事件只帶識別,要的資料自己向 api 讀(審核者只讀得到他審的那個修訂:用 `instance.revision` 讀提交)。
 - **`Review`**:警告文字由元件自己畫(租戶看得到的字放該模組的字典);`onStateChange({ approveDisabled: true })` → 那筆任務的 [核准] 停用(`TaskActions` 的 `approveDisabled`),駁回 / 退回照常。沒回報 = 不停用。畫面停用只是提示,擋下仍要靠 api 的守門(掛接點)。
 - **批次核准不套用 `Review`**:申請中心的批次核准不畫審核畫面,`Review` 回報的停用在那裡不生效;該擋的一律由 api 的掛接點守門(`beforeApprove` 等)擋下,批次結果逐筆顯示被擋的原因。
-- 例:某個模組的單據在第一關通過後要自動列印 → 登記 `Effect`;某個模組的審核要先看關聯資料是否還在 → 登記 `Review` 顯示警告、停用 [核准]。
+- **`Section`**:要的資料自己向 api 讀(能不能操作由 api 回,例:任務在不在自己手上);寫入後更新自己讀的快取。和模組詳情頁共用同一個元件,兩邊不各寫一份。
+- 例:某個模組的單據在第一關通過後要自動列印 → 登記 `Effect`;某個模組的審核要先看關聯資料是否還在 → 登記 `Review` 顯示警告、停用 [核准];審核者從通知進申請中心、要在審核頁操作單據上的東西 → 登記 `Section`。
 
-正本:`apps/admin/src/hooks/base/useWorkflowExtensions.ts`、`apps/admin/src/app/providers/WorkflowExtensionsProvider.tsx`、`apps/admin/src/components/base/workflow/ApprovalSection/MyTask.tsx`;測試 `ApprovalSection/MyTask.test.tsx`
+正本:`apps/admin/src/hooks/base/useWorkflowExtensions.ts`、`apps/admin/src/app/providers/WorkflowExtensionsProvider.tsx`、`apps/admin/src/components/base/workflow/ApprovalSection/MyTask.tsx`、`apps/admin/src/pages/base/apply-center/ApplyCenterViewPage/ApplyCenterViewPage.tsx`;測試 `ApprovalSection/MyTask.test.tsx`、`ApplyCenterViewPage/ApplyCenterViewPageSections.test.tsx`
 
 ### 表單管理的流程綁定欄、組織管理的主管欄
 
