@@ -122,3 +122,14 @@ export const isGraphqlValidationFailed = (error: unknown): boolean => {
     )
   );
 };
+
+/**
+ * 動態 import(lazy chunk)載入失敗的錯誤訊息:Chromium / Firefox / Safari 的原生訊息與 Vite 預載 CSS 失敗。
+ * 部署後舊分頁要的 chunk 檔名已不在伺服器上,`React.lazy` 會在 render 時拋出這類錯誤。
+ */
+const CHUNK_LOAD_ERROR_PATTERN =
+  /failed to fetch dynamically imported module|importing a module script failed|error loading dynamically imported module|unable to preload css/i;
+
+/** 頁面區 error boundary 接到的錯誤是不是 chunk 載入失敗(是 → 也當作「這個分頁跑的是舊版」)。 */
+export const isChunkLoadError = (error: unknown): boolean =>
+  error instanceof Error && CHUNK_LOAD_ERROR_PATTERN.test(error.message);

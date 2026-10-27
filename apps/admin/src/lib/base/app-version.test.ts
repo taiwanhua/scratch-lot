@@ -6,6 +6,7 @@ import {
   createVersionChecker,
   deployedVersionOf,
   fetchDeployedVersion,
+  isChunkLoadError,
   isGraphqlValidationFailed,
 } from "./app-version";
 
@@ -137,5 +138,25 @@ describe("isGraphqlValidationFailed", () => {
     expect(isGraphqlValidationFailed(new Error("x"))).toBe(false);
     expect(isGraphqlValidationFailed({ response: {} })).toBe(false);
     expect(isGraphqlValidationFailed(null)).toBe(false);
+  });
+});
+
+describe("isChunkLoadError", () => {
+  it("各瀏覽器的動態 import 失敗訊息 → true", () => {
+    for (const message of [
+      "Failed to fetch dynamically imported module: /assets/a.js",
+      "Importing a module script failed.",
+      "error loading dynamically imported module: /assets/a.js",
+      "Unable to preload CSS for /assets/a.css",
+    ]) {
+      expect(isChunkLoadError(new TypeError(message))).toBe(true);
+    }
+  });
+
+  it("其他錯誤、非 Error → false", () => {
+    expect(isChunkLoadError(new Error("boom"))).toBe(false);
+    expect(
+      isChunkLoadError("Failed to fetch dynamically imported module"),
+    ).toBe(false);
   });
 });

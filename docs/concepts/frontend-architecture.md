@@ -367,10 +367,11 @@ Provider 內找不到模組設定時使用預設模板 `{{title}}`;缺少 Provid
 - **版本**:build 時烘進 bundle(`import.meta.env.APP_VERSION`,部署的 commit SHA,沒有就是 build 時間),同值輸出 `/version.json`。
 - **檢查時機**:分頁回到前景一律抓;換路由時距上次檢查滿 1 分鐘才抓。不定時輪詢。
 - **不比版本、直接提示**:lazy chunk 載入失敗(`vite:preloadError`)、api 回 `GRAPHQL_VALIDATION_FAILED`(組裝根的 QueryClient 以 `queryCache` / `mutationCache` 的 `onError` 交給 `reportAppUpdateError`)。
+- **頁面區 error boundary**:殼的 `<Outlet>` 外包 `PageErrorBoundary`。頁面 render 拋錯(含 lazy chunk 載入失敗 —— Vite 照樣拋出,沒有 boundary 時整棵樹卸載、提示也跟著消失)只換掉頁面區,顯示「頁面載入失敗」+ [重新整理];側欄、AppBar、頁籤列與全站提示都留著。錯誤是 chunk 載入失敗(`isChunkLoadError`)時同時跳「系統已更新」提示;換路由(路徑改變)就重置,換到別頁即恢復。殼外(登入頁等)沒有這層。
 - **提示**:全站 Snackbar,資訊色「系統已更新」+ [重新整理](<`location.reload()`>),不自動消失、不擋畫面;同時只有一則,按 ✕ 關掉後下一次觸發再顯示。被後來的 3 則提示擠掉時同理。
 - 掛在組裝根 `App.tsx` 的 router 裡(`AppUpdateNotice`),登入頁也偵測得到;`vite dev` 與 mock 模式沒有版本,不啟動。
 
-正本:`apps/admin/src/hooks/base/useAppUpdateNotice.ts`、`apps/admin/src/lib/base/app-version.ts`、`apps/admin/scripts/app-version-plugin.mjs`;快取與部署見 `docs/deployment.md`「admin 的靜態檔快取」
+正本:`apps/admin/src/hooks/base/useAppUpdateNotice.ts`、`apps/admin/src/app/AdminShell/PageErrorBoundary.tsx`、`apps/admin/src/lib/base/app-version.ts`、`apps/admin/scripts/app-version-plugin.mjs`;快取與部署見 `docs/deployment.md`「admin 的靜態檔快取」
 
 ## 快取規則
 

@@ -18,6 +18,7 @@ import { withShellRoutes } from "@/lib/base/shell-routes";
 import { useSideNavStore } from "@/stores/base/useSideNavStore";
 
 import { AppBar } from "./AppBar/AppBar";
+import { PageErrorBoundary } from "./PageErrorBoundary";
 import { RouteTabs } from "./RouteTabs/RouteTabs";
 import { useRouteTabs } from "./RouteTabs/useRouteTabs";
 import { MobileNavFooter } from "./SideNav/MobileNavFooter";
@@ -160,7 +161,10 @@ export const ShellLayout = ({ me, pageMinWidths = {} }: ShellLayoutProps) => {
               },
             })}
           >
-            <Outlet />
+            {/* 頁面區出錯只換掉這一格(側欄、AppBar、頁籤列留著);換路由就重置 */}
+            <PageErrorBoundary resetKey={pathname}>
+              <Outlet />
+            </PageErrorBoundary>
           </Box>
         </Box>
       </Box>

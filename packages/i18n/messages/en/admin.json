@@ -130,6 +130,11 @@
         "closeOthers": "Close all other tabs"
       }
     },
+    "pageError": {
+      "title": "This page failed to load",
+      "body": "Please reload the page. If this keeps happening, contact your administrator.",
+      "reload": "Reload"
+    },
     "forbidden": {
       "title": "You do not have access to this page",
       "body": "Your current role does not include this page. Contact the system administrator if you need it.",
