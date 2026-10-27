@@ -35,7 +35,9 @@ const uniqueIds = (ids: readonly unknown[]): Types.ObjectId[] => [
  * - 組織(所在分店、責任分店、持有分店、分店清單):以租戶為邊界讀 —— 看得到本就看得到它在哪幾家店
  *   (可能是讀者看不到的分店;登記在 `TENANT_BOUNDARY_CONTEXT_CALLERS`,用途「反查」)
  * - 使用者名稱(事件的「誰」)、收銀點名稱(別店的張在別店的收銀點):同上,可能是別家分店的人 / 收銀點
- * - 經銷商、單據單號:照操作者自己的範圍讀,看不到的不顯示名稱
+ * - 經銷商名稱(批購甲類):經租戶內引用名稱出口(`findRefsInTenant`)讀 —— 甲類建在租戶層、不共用給分店,
+ *   分店看得到本就看得到它的批購甲類名稱;只回名稱類欄位,經銷商本身照舊看不到
+ * - 單據單號:照操作者自己的範圍讀,看不到的不顯示名稱
  */
 @Injectable()
 export class InventoryNames {
@@ -130,22 +132,25 @@ export class InventoryNames {
     return new Map(found.map((point) => [String(point._id), point.name]));
   }
 
-  /** 經銷商顯示名稱「姓名 #證號」(看不到的不回)。 */
+  /** 經銷商顯示名稱「姓名 #證號」(租戶內引用名稱;不在操作者租戶的不回)。 */
   async dealerNames(
     operator: OperatorContext,
     ids: readonly unknown[],
   ): Promise<Map<string, string>> {
     const unique = uniqueIds(ids);
-    if (unique.length === 0) {
+    const tenantId = tenantOfOperator(operator)?.tenantId ?? null;
+    if (unique.length === 0 || tenantId === null) {
       return new Map();
     }
-    const found = await this.dealers.findMany(operator, {
-      _id: { $in: unique },
-    });
+    const found = await this.dealers.findRefsInTenant(
+      operator,
+      tenantId,
+      unique,
+    );
     return new Map(
       found.map((dealer) => [
         String(dealer._id),
-        `${dealer.name} #${dealer.licenseNo}`,
+        `${String(dealer.name)} #${String(dealer.licenseNo)}`,
       ]),
     );
   }

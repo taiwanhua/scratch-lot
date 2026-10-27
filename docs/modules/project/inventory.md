@@ -121,7 +121,7 @@
 | `scrapLotteryTickets(input)`       | `inventory.scrap`            | `{ tickets: [{ ticketId, version }], reasonKey, reasonNote? }` → `lossCost`(`show-cost`)                  |
 
 - 讀取範圍:**本**照操作者自己的範圍(所在分店或持有任何一張的分店,資料共用 `holderOrgIds`);讀得到本,就以租戶邊界上下文讀它全部的張與事件(反查,`inventory-view.service.ts`)。每張的 `operable` = 張的所在分店在操作者的可見範圍內(`isOrgVisible`);報廢、尋回(從清單選)、對調跳號的未售那張用同一個判斷擋下別店的張(跳號那張記在哪家店都可以)。
-- 組織、使用者名稱以租戶邊界讀(`inventory-names.ts`);收銀點、經銷商、單號照操作者的範圍讀(看不到的不顯示)。
+- 組織、使用者、收銀點名稱以租戶邊界讀(`inventory-names.ts`);批購甲類名稱經租戶內引用名稱出口讀(`findRefsInTenant`:甲類建在租戶層、不共用給分店,分店看得到本就看得到它的名稱,經銷商本身照舊看不到);單號照操作者的範圍讀(看不到的不顯示)。
 - 原因檢查:底座 `FieldOptionsService.assertReason`(`apps/api/src/fields/field-options.service.ts`;類別白名單 `LOTTERY_FIELD_CATEGORIES`,`apps/api/src/project/lottery/field-options/lottery-field-options.ts`;要是該類別啟用中的選項,「其他」說明必填)。下拉 `lotteryFieldOptions` 用同一支的 `optionsOf`。
 
 正本:`apps/api/src/project/lottery/inventory/`、`packages/graphql/src/documents/project/lottery/inventory.graphql`
@@ -234,7 +234,7 @@
 | 登記檔(`apps/api/src/project/database/`) | 檔案與用途                                                                                                                                                                                                                                       |
 | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `org-reassign-callers.ts`                | `ticket-ledger.service.ts`:張換店、整本調貨                                                                                                                                                                                                      |
-| `tenant-boundary-callers.ts`(邊界出口)   | `books.service.ts`(本編號租戶內唯一)、`book-game-usage.ts`(遊戲是否有本)                                                                                                                                                                         |
+| `tenant-boundary-callers.ts`(邊界出口)   | `books.service.ts`(本編號租戶內唯一)、`book-game-usage.ts`(遊戲是否有本)、`inventory/inventory-names.ts`(批購甲類名稱)                                                                                                                           |
 | `tenant-boundary-callers.ts`(邊界上下文) | `ticket-ledger.service.ts`(例外寫入、系統重算)、`books.service.ts` / `allocations.service.ts`(反查)、`book-game-usage.ts`(系統重算);庫存管理的 `inventory/inventory-view.service.ts`、`inventory-names.ts`、`inventory-actions.service.ts`(反查) |
 
 ### 錯誤碼
