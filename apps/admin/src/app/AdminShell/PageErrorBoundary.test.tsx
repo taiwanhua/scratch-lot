@@ -18,7 +18,11 @@ import { defaultBrand } from "@repo/ui/theme";
 import { useAppUpdateNotice } from "@/hooks/base/useAppUpdateNotice";
 
 import { SnackbarProvider } from "../providers/SnackbarProvider";
-import { PageErrorBoundary, PageErrorFallback } from "./PageErrorBoundary";
+import {
+  PageErrorBoundary,
+  PageErrorFallback,
+  RouteErrorBoundary,
+} from "./PageErrorBoundary";
 
 const text = messages[defaultLocale].admin;
 const NOTICE = text.app.update.message;
@@ -42,10 +46,6 @@ const ThrowingPage = () => {
 const ShellStandIn = () => {
   const { pathname } = useLocation();
   const navigate = useNavigate();
-  useAppUpdateNotice({
-    currentVersion: "v1",
-    fetchVersion: () => Promise.resolve("v1"),
-  });
   return (
     <>
       <nav aria-label="側欄">
@@ -69,19 +69,56 @@ const ShellStandIn = () => {
   );
 };
 
+/** 提示的掛載點替身(同 `AppUpdateNotice`:在路由旁、Snackbar 之內) */
+const NoticeHost = () => {
+  useAppUpdateNotice({
+    currentVersion: "v1",
+    fetchVersion: () => Promise.resolve("v1"),
+  });
+  return null;
+};
+
+/** 路由表替身:與 `AppRoutes` 同樣在整張路由表外包 `RouteErrorBoundary`;殼內那層先接住 */
+const RoutesStandIn = () => (
+  <RouteErrorBoundary>
+    <Suspense fallback="載入中">
+      <Routes>
+        <Route path="/login" element={<BrokenPage />} />
+        <Route path="/forgot" element={<p>忘記密碼頁</p>} />
+        <Route element={<ShellStandIn />}>
+          <Route path="/broken" element={<BrokenPage />} />
+          <Route path="/throwing" element={<ThrowingPage />} />
+          <Route path="/ok" element={<p>正常內容</p>} />
+        </Route>
+      </Routes>
+    </Suspense>
+  </RouteErrorBoundary>
+);
+
+/** 路由表外的導頁按鈕(殼外頁面出錯時,替代畫面以外仍能換路由的替身) */
+const OutsideLink = () => {
+  const navigate = useNavigate();
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        void navigate("/forgot");
+      }}
+    >
+      忘記密碼
+    </button>
+  );
+};
+
 const renderAt = (path: string) =>
   render(
     <IntlProvider locale={defaultLocale} messages={messages[defaultLocale]}>
       <AppThemeProvider brand={defaultBrand}>
         <SnackbarProvider>
           <MemoryRouter initialEntries={[path]}>
-            <Routes>
-              <Route element={<ShellStandIn />}>
-                <Route path="/broken" element={<BrokenPage />} />
-                <Route path="/throwing" element={<ThrowingPage />} />
-                <Route path="/ok" element={<p>正常內容</p>} />
-              </Route>
-            </Routes>
+            <NoticeHost />
+            <OutsideLink />
+            <RoutesStandIn />
           </MemoryRouter>
         </SnackbarProvider>
       </AppThemeProvider>
@@ -120,6 +157,24 @@ describe("PageErrorBoundary:頁面區出錯只換掉頁面區", () => {
       await screen.findByRole("heading", { name: FALLBACK }),
     ).toBeInTheDocument();
     expect(screen.queryByText(NOTICE)).toBeNull();
+    spy.mockRestore();
+  });
+});
+
+describe("PageErrorBoundary:殼外的路由(整張路由表那層)", () => {
+  it("登入頁 lazy 載入失敗 → 替代畫面 +「系統已更新」提示;換路由後恢復", async () => {
+    const spy = silenceConsoleError();
+    renderAt("/login");
+    expect(
+      await screen.findByRole("heading", { name: FALLBACK }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(NOTICE)).toBeInTheDocument();
+
+    act(() => {
+      fireEvent.click(screen.getByRole("button", { name: "忘記密碼" }));
+    });
+    expect(await screen.findByText("忘記密碼頁")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: FALLBACK })).toBeNull();
     spy.mockRestore();
   });
 });

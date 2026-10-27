@@ -1,4 +1,5 @@
 import { Component, type ReactNode } from "react";
+import { useLocation } from "react-router";
 import { useTranslations } from "use-intl";
 
 import { Button } from "@repo/ui/button";
@@ -45,8 +46,8 @@ interface PageErrorBoundaryState {
 }
 
 /**
- * 殼的頁面區 error boundary(包在 `ShellLayout` 的 `<Outlet>` 外):頁面 render 拋錯時只換掉頁面區,
- * 側欄、AppBar、頁籤列與全站提示都留著。錯誤是 lazy chunk 載入失敗(部署後舊分頁)時,
+ * 頁面的 error boundary,掛兩層:殼的頁面區(`ShellLayout` 的 `<Outlet>` 外,先接住 —— 側欄、AppBar、
+ * 頁籤列與全站提示都留著)與整張路由表(`app/routes.tsx` 的 `AppRoutes`,接殼外的登入頁等)。錯誤是 lazy chunk 載入失敗(部署後舊分頁)時,
  * 同時回報舊版 → `useAppUpdateNotice` 跳「系統已更新」提示。
  * error boundary 只能用 class 元件寫(React 沒有對應的 hook)。
  */
@@ -76,3 +77,16 @@ export class PageErrorBoundary extends Component<
     return this.state.hasError ? <PageErrorFallback /> : this.props.children;
   }
 }
+
+export interface RouteErrorBoundaryProps {
+  children: ReactNode;
+}
+
+/**
+ * 以目前路徑為重置鍵的 `PageErrorBoundary`(整張路由表那層用:`app/routes.tsx` 的 `AppRoutes`)。
+ * 讀路徑放在這個元件裡,`AppRoutes` 本身維持不呼叫 hook 的純路由表。
+ */
+export const RouteErrorBoundary = ({ children }: RouteErrorBoundaryProps) => {
+  const { pathname } = useLocation();
+  return <PageErrorBoundary resetKey={pathname}>{children}</PageErrorBoundary>;
+};
