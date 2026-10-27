@@ -13,7 +13,11 @@ export type RealtimeTopicKind = (typeof REALTIME_TOPIC_KINDS)[number];
 export const REALTIME_FIELD_MAX_LENGTH = 128;
 
 const TOPIC_PATTERN = /^(user|print-agent|board):[\w-]+$/;
-const SIGNAL_TYPE_PATTERN = /^[a-z][a-z0-9-]*(?::[\w-]+)?$/;
+/**
+ * 信號類型:`<種類>` 或 `<種類>:<子類型>`;子類型可以是以 `.` 分段的 key(模組 key 如 `group.module`),
+ * 每段是英數、底線、連字號,不能以 `.` 開頭、結尾或連續兩個 `.`。
+ */
+const SIGNAL_TYPE_PATTERN = /^[a-z][a-z0-9-]*(?::[\w-]+(?:\.[\w-]+)*)?$/;
 const ID_PATTERN = /^[\w-]+$/;
 
 /** 租戶、使用者、代理程式與信號編號共用的識別格式(英數、底線、連字號,長度上限同上)。 */
@@ -46,7 +50,7 @@ export function isRealtimeTopic(value: unknown): value is string {
 }
 
 /**
- * 信號:只有類型(如 `notification`、`badge:<模組 key>`、`print-job`)與可選的編號。
+ * 信號:只有類型(如 `notification`、`badge:<模組 key>`(模組 key 可帶 `.`)、`print-job`)與可選的編號。
  * 刻意沒有資料欄位 —— 資料一律向 API 拿,權限與可見範圍由 API 判斷。
  */
 export interface RealtimeSignal {

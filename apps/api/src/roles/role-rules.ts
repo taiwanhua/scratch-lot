@@ -110,7 +110,8 @@ export function roleAbilitiesOf(
     canEdit: !isSeed,
     canEditMatrix: !isSeed,
     canToggleEnabled: canToggleEnabled(role, facts),
-    // 刪除前置三項(role-manager.md 權限表):無授予 + 非種子 + 非預設角色
+    // canDelete 只看授予與角色種類,不含人員條件引用(引用要送出刪除後由 api 檢查,
+    // 清單每列都掃一次太貴;role-manager.md 權限表「刪除」)
     canDelete: kind === RoleKind.CUSTOM && !facts.hasGrants,
   };
 }

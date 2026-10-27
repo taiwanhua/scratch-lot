@@ -99,7 +99,7 @@ export const ApprovalTimeline = ({ instance }: ApprovalTimelineProps) => {
             >
               <Typography
                 variant="caption"
-                color="text.secondary"
+                color="textSecondary"
                 sx={{ minWidth: 132 }}
               >
                 {temporalText(event.at, "datetime")}
@@ -122,7 +122,7 @@ export const ApprovalTimeline = ({ instance }: ApprovalTimelineProps) => {
               {event.comment !== null &&
                 event.comment !== undefined &&
                 event.comment !== "" && (
-                  <Typography variant="body2" color="text.secondary">
+                  <Typography variant="body2" color="textSecondary">
                     {t("comment", { comment: event.comment })}
                   </Typography>
                 )}

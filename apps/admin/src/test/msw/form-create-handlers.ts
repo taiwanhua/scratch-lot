@@ -26,6 +26,8 @@ export interface FormCreateContext {
   };
   /** 送出後的狀態(undefined = 已完成;綁流程 = 審核中並連上實例) */
   submitAs: { status: FormSubmissionStatus; instanceId?: string } | undefined;
+  /** 表單代號 → 綁定的模組 key 的對照(`moduleForms`;找不到 = 夾具預設) */
+  moduleForms?: readonly { key: string; moduleKey: string }[];
 }
 
 /**
@@ -65,8 +67,12 @@ export const formCreateHandlers = (ctx: FormCreateContext) => [
       return failure;
     }
     const values = input.values ?? {};
+    const moduleKey = ctx.moduleForms?.find(
+      (form) => form.key === input.formKey,
+    )?.moduleKey;
     const submission = submissionFragment({
       id: ctx.nextId(),
+      ...(moduleKey !== undefined && { moduleKey }),
       formKey: input.formKey,
       status: ctx.submitAs?.status ?? FormSubmissionStatus.Completed,
       currentInstanceId: ctx.submitAs?.instanceId ?? null,

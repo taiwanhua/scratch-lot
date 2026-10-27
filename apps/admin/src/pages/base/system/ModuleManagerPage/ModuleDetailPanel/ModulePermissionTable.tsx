@@ -51,7 +51,7 @@ export const ModulePermissionTable = ({
       key: "key",
       header: t("key"),
       render: (permission) => (
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" color="textSecondary">
           {permission.key}
         </Typography>
       ),
@@ -60,7 +60,7 @@ export const ModulePermissionTable = ({
       key: "description",
       header: t("description"),
       render: (permission) => (
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" color="textSecondary">
           {permission.description ?? t("none")}
         </Typography>
       ),
@@ -101,7 +101,7 @@ export const ModulePermissionTable = ({
       <Typography variant="subtitle2" sx={{ pt: 2, pb: 0.5 }}>
         {t("title")}
       </Typography>
-      <Typography variant="caption" color="text.secondary" sx={{ pb: 1 }}>
+      <Typography variant="caption" color="textSecondary" sx={{ pb: 1 }}>
         {t("killSwitchHint")}
       </Typography>
       <Table

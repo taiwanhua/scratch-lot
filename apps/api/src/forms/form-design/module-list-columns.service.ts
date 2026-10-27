@@ -19,7 +19,11 @@ import {
   FormAccessService,
   type FormOperatorFacts,
 } from "../form-access.service";
-import { forbiddenError, validationError } from "../forms-error";
+import {
+  FORM_VALIDATION_REASONS,
+  forbiddenError,
+  validationError,
+} from "../forms-error";
 import {
   LIST_SLOT_KEYS,
   MAX_COLUMN_WIDTH,
@@ -96,7 +100,11 @@ export class ModuleListColumnsService {
       const path = `columns.${String(index)}`;
       const identity = `${column.kind}:${column.formKey ?? ""}:${column.key}`;
       if (seen.has(identity)) {
-        throw validationError(`Duplicate list column ${identity}`, [path]);
+        throw validationError(
+          `Duplicate list column ${identity}`,
+          [path],
+          FORM_VALIDATION_REASONS.listColumnDuplicate,
+        );
       }
       seen.add(identity);
       if (
@@ -111,7 +119,11 @@ export class ModuleListColumnsService {
       }
       if (column.kind === ModuleListColumnKind.SLOT) {
         if (!(LIST_SLOT_KEYS as readonly string[]).includes(column.key)) {
-          throw validationError(`Unknown summary slot ${column.key}`, [path]);
+          throw validationError(
+            `Unknown summary slot ${column.key}`,
+            [path],
+            FORM_VALIDATION_REASONS.listColumnUnavailable,
+          );
         }
         return {
           kind: "slot",
@@ -203,12 +215,14 @@ export class ModuleListColumnsService {
       throw validationError(
         `Field ${key} is not in the current version of any form of this module`,
         [path],
+        FORM_VALIDATION_REASONS.listColumnUnavailable,
       );
     }
     if (declaring.some((fields) => fields.get(key) === true)) {
       throw validationError(
         `Field ${key} is protected and cannot be a list column`,
         [path],
+        FORM_VALIDATION_REASONS.listColumnProtected,
       );
     }
   }

@@ -51,6 +51,7 @@ export const SampleOneCategoryField = ({
       getOptionLabel={(option) => option.label}
       getOptionKey={(option) => option.value}
       label={tFields("category")}
+      size="small"
       error={hasError("category")}
       helperText={helperText("category")}
       sx={{ width: 240 }}

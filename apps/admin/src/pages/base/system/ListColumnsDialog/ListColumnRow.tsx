@@ -6,6 +6,7 @@ import { SelectField } from "@repo/ui/select-field";
 import { Stack } from "@repo/ui/stack";
 import { TextField } from "@repo/ui/text-field";
 
+import { useFieldErrorText } from "@/components/base/FieldErrorText/useFieldErrorText";
 import {
   LIST_COLUMN_WIDTH,
   type ListColumnSpec,
@@ -19,7 +20,8 @@ export interface ListColumnRowProps {
   index: number;
   count: number;
   candidates: readonly FieldCandidate[];
-  hasError: boolean;
+  /** 這一列被 api 擋下的原因(REACT-18;寫在這一列正下方);undefined = 沒錯 */
+  errorText: string | undefined;
   onChange: (row: ListColumnSpec) => void;
   onMove: (offset: number) => void;
   onRemove: () => void;
@@ -34,13 +36,16 @@ export const ListColumnRow = ({
   index,
   count,
   candidates,
-  hasError,
+  errorText,
   onChange,
   onMove,
   onRemove,
 }: ListColumnRowProps) => {
   const t = useTranslations("admin.moduleManager.listColumns");
   const isSlot = row.kind === ModuleListColumnKind.Slot;
+  const hasError = errorText !== undefined;
+  // 這一列被擋下的原因寫在列正下方,並連到這一列的群組(REACT-18)
+  const rowError = useFieldErrorText(errorText);
   const current = candidateId(row.formKey, row.key);
   const fieldOptions = candidates.map((candidate) => ({
     value: candidateId(candidate.formKey, candidate.key),
@@ -55,83 +60,90 @@ export const ListColumnRow = ({
   }
 
   return (
-    <Stack
-      direction="row"
-      spacing={1}
-      role="group"
-      aria-label={t("row", { index: index + 1 })}
-      sx={{ alignItems: "center" }}
-    >
-      {isSlot ? (
-        <SelectField<string>
-          label={t("slot")}
-          value={row.key}
-          options={SUMMARY_SLOTS.map((slot) => ({
-            value: slot,
-            label: t(`slots.${slot}`),
-          }))}
-          onChange={(key) => {
-            onChange({ ...row, key });
-          }}
-          error={hasError}
-          size="small"
-          sx={{ minWidth: 200 }}
-        />
-      ) : (
-        <SelectField<string>
-          label={t("field")}
-          value={current}
-          options={fieldOptions}
-          onChange={(value) => {
-            const picked = candidates.find(
-              (candidate) =>
-                candidateId(candidate.formKey, candidate.key) === value,
-            );
-            if (picked !== undefined) {
-              onChange({ ...row, key: picked.key, formKey: picked.formKey });
-            }
-          }}
-          error={hasError}
-          size="small"
-          sx={{ minWidth: 260 }}
-        />
-      )}
-      <TextField
-        label={t("width")}
-        type="number"
-        size="small"
-        value={String(row.width)}
-        slotProps={{
-          htmlInput: { min: LIST_COLUMN_WIDTH.min, max: LIST_COLUMN_WIDTH.max },
-        }}
-        onChange={(event) => {
-          onChange({ ...row, width: Number(event.target.value) });
-        }}
-        sx={{ width: 110 }}
-      />
-      <Button
-        variant="text"
-        size="small"
-        disabled={index === 0}
-        onClick={() => {
-          onMove(-1);
-        }}
+    <Stack spacing={0.5}>
+      <Stack
+        direction="row"
+        spacing={1}
+        role="group"
+        aria-label={t("row", { index: index + 1 })}
+        aria-describedby={rowError.describedBy}
+        sx={{ alignItems: "center" }}
       >
-        {t("up")}
-      </Button>
-      <Button
-        variant="text"
-        size="small"
-        disabled={index === count - 1}
-        onClick={() => {
-          onMove(1);
-        }}
-      >
-        {t("down")}
-      </Button>
-      <Button variant="text" size="small" color="error" onClick={onRemove}>
-        {t("remove")}
-      </Button>
+        {isSlot ? (
+          <SelectField<string>
+            label={t("slot")}
+            value={row.key}
+            options={SUMMARY_SLOTS.map((slot) => ({
+              value: slot,
+              label: t(`slots.${slot}`),
+            }))}
+            onChange={(key) => {
+              onChange({ ...row, key });
+            }}
+            error={hasError}
+            size="small"
+            sx={{ minWidth: 200 }}
+          />
+        ) : (
+          <SelectField<string>
+            label={t("field")}
+            value={current}
+            options={fieldOptions}
+            onChange={(value) => {
+              const picked = candidates.find(
+                (candidate) =>
+                  candidateId(candidate.formKey, candidate.key) === value,
+              );
+              if (picked !== undefined) {
+                onChange({ ...row, key: picked.key, formKey: picked.formKey });
+              }
+            }}
+            error={hasError}
+            size="small"
+            sx={{ minWidth: 260 }}
+          />
+        )}
+        <TextField
+          label={t("width")}
+          type="number"
+          size="small"
+          value={String(row.width)}
+          slotProps={{
+            htmlInput: {
+              min: LIST_COLUMN_WIDTH.min,
+              max: LIST_COLUMN_WIDTH.max,
+            },
+          }}
+          onChange={(event) => {
+            onChange({ ...row, width: Number(event.target.value) });
+          }}
+          sx={{ width: 110 }}
+        />
+        <Button
+          variant="text"
+          size="small"
+          disabled={index === 0}
+          onClick={() => {
+            onMove(-1);
+          }}
+        >
+          {t("up")}
+        </Button>
+        <Button
+          variant="text"
+          size="small"
+          disabled={index === count - 1}
+          onClick={() => {
+            onMove(1);
+          }}
+        >
+          {t("down")}
+        </Button>
+        <Button variant="text" size="small" color="error" onClick={onRemove}>
+          {t("remove")}
+        </Button>
+      </Stack>
+      {rowError.errorText}
     </Stack>
   );
 };

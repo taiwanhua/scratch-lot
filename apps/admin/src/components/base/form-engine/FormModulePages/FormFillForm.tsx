@@ -11,6 +11,7 @@ import { Button } from "@repo/ui/button";
 import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
 
+import { FormActions } from "@/components/base/FormActions/FormActions";
 import { useAdminErrorText } from "@/hooks/base/useAdminErrorText";
 import { useFillValues } from "@/hooks/base/useFillValues";
 import { useRouteTabItemLabel } from "@/hooks/base/useRouteTabItemLabel";
@@ -159,43 +160,38 @@ export const FormFillForm = ({
         ) : (
           <Alert severity="error">{errorText(error)}</Alert>
         ))}
-      <Stack direction="row" spacing={1} sx={{ justifyContent: "flex-end" }}>
-        <Button variant="text" onClick={onCancel}>
-          {t("cancel")}
-        </Button>
-        {isCompleted ? (
-          <Button
-            disabled={isPending}
-            onClick={() => {
-              onSaveDraft(values, fill.touched);
-            }}
-          >
-            {t("saveChanges")}
-          </Button>
-        ) : (
-          <>
-            {canSaveDraft && (
-              <Button
-                variant="outlined"
-                disabled={isPending}
-                onClick={() => {
+      <FormActions
+        // FormCreatePage / FormEditPage 的捲動卡片是 `px: 3`
+        gutter={3}
+        cancel={{ label: t("cancel"), onClick: onCancel }}
+        {...(!isCompleted &&
+          canSaveDraft && {
+            draft: {
+              label: t("saveDraft"),
+              disabled: isPending,
+              onClick: () => {
+                onSaveDraft(values, fill.touched);
+              },
+            },
+          })}
+        submit={
+          isCompleted
+            ? {
+                label: t("saveChanges"),
+                disabled: isPending,
+                onClick: () => {
                   onSaveDraft(values, fill.touched);
-                }}
-              >
-                {t("saveDraft")}
-              </Button>
-            )}
-            <Button
-              disabled={isPending}
-              onClick={() => {
-                onSubmit(values, fill.touched);
-              }}
-            >
-              {t("submit")}
-            </Button>
-          </>
-        )}
-      </Stack>
+                },
+              }
+            : {
+                label: t("submit"),
+                disabled: isPending,
+                onClick: () => {
+                  onSubmit(values, fill.touched);
+                },
+              }
+        }
+      />
       {isPrefilling && (
         <LookupDialog
           definition={definition}

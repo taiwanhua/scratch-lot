@@ -115,7 +115,7 @@ export const OrgTreeSelectPanel = ({
       />
       {isError && <Alert severity="error">{t("loadFailed")}</Alert>}
       {isShowingEmpty && (
-        <Typography variant="body2" color="text.secondary" sx={{ py: 2 }}>
+        <Typography variant="body2" color="textSecondary" sx={{ py: 2 }}>
           {emptyText}
         </Typography>
       )}
@@ -135,7 +135,7 @@ export const OrgTreeSelectPanel = ({
         />
       )}
       {isMultiSelect && maxCount !== undefined && (
-        <Typography variant="caption" color="text.secondary" role="status">
+        <Typography variant="caption" color="textSecondary" role="status">
           {isAtLimit
             ? t("limitReached", { max: maxCount })
             : t("limitCount", { count: value.length, max: maxCount })}

@@ -351,6 +351,8 @@ gcloud() {
     "secrets versions")
       case "$5" in
         "--secret=$MONGODB_SECRET_NAME") printf '%s\n' "$FAKE_MONGODB_URI" ;;
+        "--secret=$DEMO_PASSWORD_SECRET_NAME") printf '%s\n' "fake-demo-password" ;;
+        "--secret=$DEMO_EMAIL_BASE_SECRET_NAME") printf '%s\n' "fake-base@example.test" ;;
         *) printf '%s\n' "fake-secret-value" ;;
       esac ;;
   esac
@@ -362,6 +364,13 @@ pnpm() {
   for name in MONGODB_URI ROOT_ADMIN_PASSWORD ROOT_ADMIN_ACCOUNT ROOT_ADMIN_EMAIL RESET_ALLOW_ENV; do
     record env "$name=$(printenv "$name" || true)"
   done
+  # demo 相關的變數只在有 export 時記(沒有的步驟維持原本的紀錄);示範密碼與基底信箱應該不在這裡
+  for name in DEMO_ALLOW_ENV DEMO_PASSWORD DEMO_EMAIL_BASE; do
+    if printenv "$name" > /dev/null; then record env "$name=$(printenv "$name")"; fi
+  done
+  # 經管線送進標準輸入的內容(demo 的機密)
+  stdin_text=$(cat)
+  if [ -n "$stdin_text" ]; then record stdin "$(printf '%s' "$stdin_text" | tr '\n' '|')"; fi
 }
 git() {
   case "$1" in

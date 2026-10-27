@@ -48,7 +48,7 @@ export const ReviewStepNode = ({
         {data.issueCount > 0 && <Tag tone="error" label={data.issueLabel} />}
       </Stack>
       {data.lines.map((line) => (
-        <Typography key={line} variant="caption" color="text.secondary" noWrap>
+        <Typography key={line} variant="caption" color="textSecondary" noWrap>
           {line}
         </Typography>
       ))}

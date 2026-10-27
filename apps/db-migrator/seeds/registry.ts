@@ -1,3 +1,4 @@
+import type { DemoSource } from "../src/demo/demo-source";
 import {
   SeedCompositionError,
   composeSeedRegistry,
@@ -11,7 +12,7 @@ import {
   type SeedSource,
   assertProjectSeedSettings,
 } from "./base/seed-source";
-import { projectSeedSource } from "./project/registry";
+import { projectDemoSource, projectSeedSource } from "./project/registry";
 import { projectSeedSettings } from "./project/settings";
 
 /**
@@ -34,20 +35,23 @@ export function assembleSeedRegistry(
     [...base.moduleDeclarations, ...project.moduleDeclarations],
     moduleInitialValues,
   );
-  const registry = composeSeedRegistry([
-    { origin: "base", seeds: base.seeds },
-    {
-      origin: "模組宣告推導",
-      isDerived: true,
-      seeds: [
-        moduleSeeds.modules,
-        moduleSeeds.permissions,
-        moduleSeeds.dataScopeTargets,
-        moduleSeeds.tenantAdminBindings,
-      ],
-    },
-    { origin: "project", seeds: project.seeds },
-  ]);
+  const registry = composeSeedRegistry(
+    [
+      { origin: "base", seeds: base.seeds },
+      {
+        origin: "模組宣告推導",
+        isDerived: true,
+        seeds: [
+          moduleSeeds.modules,
+          moduleSeeds.permissions,
+          moduleSeeds.dataScopeTargets,
+          moduleSeeds.tenantAdminBindings,
+        ],
+      },
+      { origin: "project", seeds: project.seeds },
+    ],
+    { lookupProviders: project.portableLookupProviders },
+  );
   const violations = findSeedKeyViolations(registry);
   if (violations.length > 0) {
     throw new SeedCompositionError(violations);
@@ -60,3 +64,16 @@ export const seedRegistry: SeedRegistry = assembleSeedRegistry(
   projectSeedSettings,
   projectSeedSource,
 );
+
+/**
+ * demo 指令要灌的示範資料(專案登記;沒有登記為 null)。示範資料是業務資料,不進上面的 registry:
+ * demo 指令以 api 建立示範機構後交給它(`src/demo/command.ts`)。
+ */
+export const demoSource: DemoSource | null = projectDemoSource;
+
+/**
+ * 專案宣告的可攜 lookup 來源:seed / reset / update 載入 registry 檔時一起讀(`src/cli.ts` 的
+ * `loadLookupProviders`),預檢同一份 registry 時明確傳入(`SeedCompositionOptions.lookupProviders`)。
+ */
+export const seedLookupProviders =
+  projectSeedSource.portableLookupProviders ?? {};

@@ -20,7 +20,7 @@ export interface ReasonDialogProps {
 }
 
 /**
- * 申請人的撤回 / 作廢確認跳窗。作廢的理由必填,撤回不需要理由。
+ * 申請人的撤回確認跳窗(撤回不需要理由;`requiresReason` 給需要自由文字理由的確認用)。作廢改用 `VoidDialog`(依表單設定是自由填寫或作廢原因下拉)。
  */
 export const ReasonDialog = ({
   namespace,

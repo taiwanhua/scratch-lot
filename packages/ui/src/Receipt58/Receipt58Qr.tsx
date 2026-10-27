@@ -4,7 +4,12 @@ import Box from "@mui/material/Box";
 import type { ReactNode } from "react";
 import { useMemo } from "react";
 
-import { dots, receiptTextSx } from "./receipt58-tokens";
+import {
+  RECEIPT58_CONTENT_WIDTH,
+  RECEIPT58_QR_QUIET_ZONE,
+  dots,
+  receiptTextSx,
+} from "./receipt58-tokens";
 import { moduleDots, qrModules } from "./symbol-modules";
 
 export interface Receipt58QrProps {
@@ -12,29 +17,32 @@ export interface Receipt58QrProps {
   value: string;
   /** QR code 下方的說明(例「掃描開啟單據」)。 */
   caption?: ReactNode;
-  /** QR code 最大邊長(點);預設 160,實際取整數模組寬。 */
-  size?: number;
 }
 
-const DEFAULT_SIZE = 160;
-/** QR 規範要求的四個模組安靜區(白邊;紙張本身是白底,只留位置不畫)。 */
-const QUIET_ZONE = 4;
+/**
+ * 每個模組 6 點:58mm 收據機 203 dpi 下約 0.75mm,熱感暈開後白縫仍在,手機掃得到;
+ * 內容太長、6 點放不進可用寬時才縮小(仍是整數點)。
+ */
+const MAX_MODULE_DOTS = 6;
 
-/** 單據底部的 QR code(Figma `Draft/Receipt58QR`)。 */
-export const Receipt58Qr = ({
-  value,
-  caption,
-  size = DEFAULT_SIZE,
-}: Receipt58QrProps) => {
+/**
+ * 單據底部的 QR code(Figma `Draft/Receipt58QR`):每模組整數點,含四個模組的安靜區(白邊)。
+ * 轉 PNG 時 `renderReceiptToPng` 以 `data-receipt58-qr` 找到它,依同一個模組矩陣直接寫進 384 點點陣
+ * (不經截圖縮放),所以螢幕縮放、截圖寬度都不會讓模組變得不均。
+ */
+export const Receipt58Qr = ({ value, caption }: Receipt58QrProps) => {
   const matrix = useMemo(() => qrModules(value), [value]);
-  const count = matrix.length + QUIET_ZONE * 2;
-  const unit = moduleDots(count, size);
+  const count = matrix.length + RECEIPT58_QR_QUIET_ZONE * 2;
+  const unit = Math.min(
+    MAX_MODULE_DOTS,
+    moduleDots(count, RECEIPT58_CONTENT_WIDTH),
+  );
   const side = count * unit;
   const cells = matrix
     .flatMap((row, y) =>
       row.map((isDark, x) =>
         isDark
-          ? `M${String((x + QUIET_ZONE) * unit)} ${String((y + QUIET_ZONE) * unit)}h${String(unit)}v${String(unit)}h-${String(unit)}z`
+          ? `M${String((x + RECEIPT58_QR_QUIET_ZONE) * unit)} ${String((y + RECEIPT58_QR_QUIET_ZONE) * unit)}h${String(unit)}v${String(unit)}h-${String(unit)}z`
           : "",
       ),
     )
@@ -56,6 +64,8 @@ export const Receipt58Qr = ({
         viewBox={`0 0 ${String(side)} ${String(side)}`}
         shapeRendering="crispEdges"
         data-modules={matrix.length}
+        data-receipt58-qr={value}
+        data-module-dots={unit}
       >
         <path d={cells} fill="currentColor" />
       </svg>

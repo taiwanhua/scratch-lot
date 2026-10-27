@@ -17,6 +17,7 @@ export function asAccount(userId: Types.ObjectId): OperatorContext {
     // 密碼流程走不到資料範圍規則(ADR-0008);明寫空集合而非省略
     memberOrgIds: [],
     roleIds: [],
+    memberTenants: [],
   };
 }
 
@@ -28,4 +29,5 @@ export const LOOKUP: OperatorContext = {
   managedOrgIds: "all",
   memberOrgIds: [],
   roleIds: [],
+  memberTenants: [],
 };

@@ -63,14 +63,14 @@ export const RoleListRow = ({
           )}
           {!role.enabled && <Tag tone="error" label={t("status.disabled")} />}
         </Stack>
-        <Typography variant="caption" color="text.secondary" component="p">
+        <Typography variant="caption" color="textSecondary" component="p">
           {t("rowSummary", {
             org: role.ownerOrg?.name ?? t("none"),
             count: role.userCount,
           })}
         </Typography>
         {role.description !== null && role.description !== "" && (
-          <Typography variant="caption" color="text.secondary" component="p">
+          <Typography variant="caption" color="textSecondary" component="p">
             {role.description}
           </Typography>
         )}

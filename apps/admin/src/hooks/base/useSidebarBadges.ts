@@ -1,26 +1,47 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useMemo } from "react";
+import { useTranslations } from "use-intl";
 
 import { type SidebarBadgesQuery, useSidebarBadgesQuery } from "@repo/graphql";
 
 import { useSession } from "./useSession";
 
+/** 側欄一個模組的數字與「數什麼」的說明(登記了 `descriptionKey` 且訊息檔有那個 key 才有)。 */
+export interface NavBadge {
+  readonly count: number;
+  readonly description?: string;
+}
+
+/** 模組 key → 那一列的數字與說明。 */
+export type NavBadges = Readonly<Record<string, NavBadge>>;
+
 /**
  * 側欄計數:`sidebarBadges` 一次回傳使用者看得到的所有模組的數字,轉成
- * 「模組 key → 數字」給 `SideNav`。api 只回有 `<模組 key>.view` 的模組,所以不必在前端看權限。
+ * 「模組 key → 數字 + 說明」給 `SideNav`。api 只回看得到的模組,所以不必在前端看權限。
+ * 說明是登記的 `descriptionKey` 翻成的文字(與通知設定頁「數什麼」同一份),側欄數字的提示用;
+ * key 沒給或訊息檔沒有 → 不提示。
  * 進站取一次;之後靠 `badge:<模組 key>` 信號重抓(`app/base/realtime-signals.ts` 的 `badge:*`),
  * 即時通道斷線時跟 `RealtimeProvider` 每 60 秒重抓,不另外輪詢。
  */
-export const useSidebarBadges = (): Readonly<Record<string, number>> => {
+export const useSidebarBadges = (): NavBadges => {
   const { session } = useSession();
+  const tMessages = useTranslations();
   const query = useSidebarBadgesQuery(session.client);
   const badges = query.data?.sidebarBadges;
   return useMemo(
     () =>
       Object.fromEntries(
-        (badges ?? []).map((badge) => [badge.moduleKey, badge.count]),
+        (badges ?? []).map((badge): [string, NavBadge] => [
+          badge.moduleKey,
+          badge.descriptionKey && tMessages.has(badge.descriptionKey)
+            ? {
+                count: badge.count,
+                description: tMessages(badge.descriptionKey),
+              }
+            : { count: badge.count },
+        ]),
       ),
-    [badges],
+    [badges, tMessages],
   );
 };
 

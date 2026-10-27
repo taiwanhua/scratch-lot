@@ -60,7 +60,7 @@ export const PeopleCcSection = ({
         checkFormFields={checkFormFields}
         isDisabled={isReadonly}
       />
-      <Typography variant="caption" color="text.secondary">
+      <Typography variant="caption" color="textSecondary">
         {hint}
       </Typography>
     </Stack>

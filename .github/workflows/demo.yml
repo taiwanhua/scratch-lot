@@ -1,0 +1,140 @@
+name: Demo
+
+# 示範資料(正本:docs/deployment.md「示範資料(demo)」)。一律手動觸發:
+#   UI :GitHub → Actions → Demo → Run workflow → 選 environment 與 mode、輸入 confirmation
+#   CLI:gh workflow run Demo --ref <分支> -f environment=dev -f mode=create -f confirmation=demo:dev:<資料庫名>:create
+#
+# 三個環境(含 production)共用同一套確認:操作者要親手輸入 demo:<environment>:<資料庫名>:<mode>。
+# 本檔不替操作者組確認字串 —— 輸入的值經 step 的 env 原樣傳給指令,由指令比對該環境 api 自己回報的資料庫名
+# (apps/db-migrator/src/demo/demo-safety.ts),缺值或任何一段不符就一筆都不寫。指令不連資料庫,不讀連線字串。
+#
+# 指令全程走該環境 api 的 GraphQL(權限照常檢查、操作紀錄照常寫):root 帳號建立示範機構,
+# 再以示範機構的首任租戶管理員跑專案的 populate;purge 以 root 清空標「示範」的機構(rebuild = purge + create)。
+# 示範密碼與基底信箱經標準輸入(管線)交給指令,不放進環境變數(purge 不讀);
+# 讀出的機密一律 ::add-mask::,輸出只有環境、資料庫名、模式與各步驟的結果。
+#
+# 雲端目標、Secret 名稱與 root 帳號不寫在本檔:與 deploy.yml 同一份正本(deploy/project/cloud.json),
+# 由「專案設定」步驟讀取並驗證;設定值一律經 step 的 env 傳給腳本,不內插進 run 的程式文本。
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "目標環境(決定讀哪個環境的專案設定、Secret 與 api)"
+        required: true
+        type: choice
+        options: [dev, staging, production]
+      mode:
+        description: "create=建立 / 補齊示範機構(冪等,重跑只補缺的);purge=清空示範機構;rebuild=purge + create"
+        required: true
+        type: choice
+        options: [create, purge, rebuild]
+      confirmation:
+        description: "人工確認,完整輸入:demo:<environment>:<資料庫名>:<mode>(例:demo:dev:wowgo-base-dev:create)"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  id-token: write # Workload Identity Federation 免金鑰認證
+
+jobs:
+  demo:
+    runs-on: ubuntu-latest
+    # 用 GitHub environment 包起來,日後要加人工審核直接在該 environment 上設 required reviewers
+    environment: ${{ inputs.environment }}
+    steps:
+      # 讀設定、認證、讀 Secret 之前先擋掉不完整的輸入;確認字串對不對由指令端比對實際的資料庫名
+      - name: 輸入防呆(環境、模式與人工確認都要有)
+        env:
+          ENVIRONMENT: ${{ inputs.environment }}
+          MODE: ${{ inputs.mode }}
+          CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          case "$ENVIRONMENT" in
+            dev | staging | production) ;;
+            *)
+              echo "::error::environment 必須是 dev / staging / production"
+              exit 1
+              ;;
+          esac
+          case "$MODE" in
+            create | purge | rebuild) ;;
+            *)
+              echo "::error::mode 必須是 create / purge / rebuild"
+              exit 1
+              ;;
+          esac
+          if [ -z "$CONFIRMATION" ]; then
+            echo "::error::confirmation 必填:請完整輸入 demo:<environment>:<資料庫名>:<mode>"
+            exit 1
+          fi
+
+      - uses: actions/checkout@v4
+
+      # 與 deploy.yml 同一個讀取器:repository 與設定檔的 expectedRepository 不符或缺值時在這裡失敗,不會進到雲端認證
+      - name: 專案設定(核對 repo 與環境)
+        id: cfg
+        env:
+          ENVIRONMENT: ${{ inputs.environment }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          node scripts/project-settings/read-config.mjs --scope cloud --environment "$ENVIRONMENT" --repository "$REPOSITORY" > "$RUNNER_TEMP/project-cloud.json"
+          node scripts/project-settings/write-github-output.mjs --scope cloud < "$RUNNER_TEMP/project-cloud.json"
+
+      # 沒有設定示範資料的 Secret 名稱就停在這裡(還沒認證、沒讀任何 Secret)
+      - name: 示範資料的 Secret 有沒有設定
+        env:
+          DEMO_PASSWORD_SECRET_NAME: ${{ steps.cfg.outputs.demo_password_secret }}
+          DEMO_EMAIL_BASE_SECRET_NAME: ${{ steps.cfg.outputs.demo_email_base_secret }}
+        run: |
+          if [ -z "$DEMO_PASSWORD_SECRET_NAME" ] || [ -z "$DEMO_EMAIL_BASE_SECRET_NAME" ]; then
+            echo "::error::這個環境沒有設定示範資料的 Secret:deploy/project/cloud.json 的 secrets.demoPassword / secrets.demoEmailBase"
+            exit 1
+          fi
+
+      - uses: google-github-actions/auth@v2
+        with:
+          project_id: ${{ steps.cfg.outputs.gcp_project_id }}
+          workload_identity_provider: ${{ steps.cfg.outputs.wif_provider }}
+          service_account: ${{ steps.cfg.outputs.deployer_sa }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - uses: pnpm/action-setup@v4 # 版本讀 package.json 的 packageManager 欄位
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      # demo 只呼叫 api(HTTP),不需要建置 api;只裝 db-migrator 與它的 workspace 依賴、建置共用套件。
+      # MONGOMS_DISABLE_POSTINSTALL 避免下載測試用的 mongod 二進位檔。
+      - name: 安裝 db-migrator 的依賴
+        run: |
+          pnpm install --frozen-lockfile --filter "@repo/db-migrator..."
+          pnpm --filter "@repo/db-migrator^..." run build
+        env:
+          MONGOMS_DISABLE_POSTINSTALL: "1"
+
+      # --confirm 是操作者輸入的原值:這裡不替他組確認字串;資料庫名由指令向 api 讀取後比對。
+      # 允許清單只放這次選的環境;示範密碼與基底信箱以管線送進標準輸入(依序一行一個),不 export
+      - name: demo
+        env:
+          ROOT_ADMIN_ACCOUNT: ${{ steps.cfg.outputs.root_account }}
+          DEMO_ALLOW_ENV: ${{ inputs.environment }}
+          ENVIRONMENT: ${{ inputs.environment }}
+          MODE: ${{ inputs.mode }}
+          CONFIRMATION: ${{ inputs.confirmation }}
+          API_URL: ${{ steps.cfg.outputs.api_url }}
+          ROOT_SECRET_NAME: ${{ steps.cfg.outputs.root_secret }}
+          DEMO_PASSWORD_SECRET_NAME: ${{ steps.cfg.outputs.demo_password_secret }}
+          DEMO_EMAIL_BASE_SECRET_NAME: ${{ steps.cfg.outputs.demo_email_base_secret }}
+        run: |
+          ROOT_ADMIN_PASSWORD=$(gcloud secrets versions access latest --secret="$ROOT_SECRET_NAME")
+          DEMO_PASSWORD=$(gcloud secrets versions access latest --secret="$DEMO_PASSWORD_SECRET_NAME")
+          DEMO_EMAIL_BASE=$(gcloud secrets versions access latest --secret="$DEMO_EMAIL_BASE_SECRET_NAME")
+          echo "::add-mask::$ROOT_ADMIN_PASSWORD"
+          echo "::add-mask::$DEMO_PASSWORD"
+          echo "::add-mask::$DEMO_EMAIL_BASE"
+          export ROOT_ADMIN_PASSWORD
+          printf '%s\n%s\n' "$DEMO_PASSWORD" "$DEMO_EMAIL_BASE" | pnpm --filter @repo/db-migrator demo --environment="$ENVIRONMENT" --mode="$MODE" --confirm="$CONFIRMATION" --api-url="$API_URL"

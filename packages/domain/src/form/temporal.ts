@@ -186,7 +186,7 @@ const sameDate = (left: LocalDate, right: LocalDate): boolean =>
 
 /**
  * 某時區的牆上時間 → 時點。重複的時刻(夏令時間結束)取較早的一個;不存在的時刻(夏令時間開始)
- * 往後推到切換後的第一個時點。時區不合法 → 丟 `RangeError`。
+ * 把跳過的時間平移過去(例如跳過 02:00–03:00 時,02:30 → 03:30)。時區不合法 → 丟 `RangeError`。
  */
 function instantOfLocal(wall: LocalDateTime, timezone: string): number {
   const target = wallMs(wall);
@@ -225,8 +225,8 @@ export function startOfLocalDay(date: LocalDate, timezone: string): number {
 
 /**
  * 當地日期的某個牆上時刻(時、分)在某時區的時點(ms),例如租戶當地「今天 08:00」。
- * 重複的時刻(夏令時間結束)取較早的一個;不存在的時刻(夏令時間開始)往後推到切換後的第一個時點。
- * 時區不合法 → 丟 `RangeError`。
+ * 重複的時刻(夏令時間結束)取較早的一個;不存在的時刻(夏令時間開始)把跳過的時間平移過去
+ * (例如跳過 02:00–03:00 時,02:30 → 03:30)。時區不合法 → 丟 `RangeError`。
  */
 export function instantOfLocalTime(
   date: LocalDate,
@@ -383,14 +383,20 @@ export function startOfLocalDayOf(instant: number, timezone: string): number {
   return startOfLocalDay(localDateOf(instant, timezone), timezone);
 }
 
+/**
+ * 顯示格式:欄位型別(`date` / `datetime`),或省略年份的短格式 `monthDay`(`M/D`,不補零)/
+ * `monthDayTime`(`M/D HH:mm`;行事曆格、卡片這類同年份內的密集顯示)。
+ */
+export type FormatTemporalType = TemporalType | "monthDay" | "monthDayTime";
+
 export interface FormatTemporalOptions {
-  type: TemporalType;
+  type: FormatTemporalType;
   timezone: string;
 }
 
 /**
  * 日期 / 日期時間的顯示文字:時點換成 `timezone` 的當地時間,`date` 印 `YYYY-MM-DD`、
- * `datetime` 印 `YYYY-MM-DD HH:mm`。空值 → 空字串;不是時點的字串原樣回(不讓舊資料整格消失);
+ * `datetime` 印 `YYYY-MM-DD HH:mm`、`monthDay` 印 `M/D`、`monthDayTime` 印 `M/D HH:mm`(月日不補零,時分補零)。空值 → 空字串;不是時點的字串原樣回(不讓舊資料整格消失);
  * 時區不合法 → 以 UTC 顯示。admin 顯示與 api(信件、lookup label)共用。
  */
 export function formatTemporal(
@@ -403,8 +409,193 @@ export function formatTemporal(
   }
   const timezone = isValidTimezone(options.timezone) ? options.timezone : "UTC";
   const wall = localDateTimeOf(instant, timezone);
-  const date = localDateText(wall);
-  return options.type === "date"
-    ? date
-    : `${date} ${pad(wall.hour)}:${pad(wall.minute)}`;
+  const time = `${pad(wall.hour)}:${pad(wall.minute)}`;
+  const monthDay = `${String(wall.month)}/${String(wall.day)}`;
+  switch (options.type) {
+    case "date": {
+      return localDateText(wall);
+    }
+    case "datetime": {
+      return `${localDateText(wall)} ${time}`;
+    }
+    case "monthDay": {
+      return monthDay;
+    }
+    case "monthDayTime": {
+      return `${monthDay} ${time}`;
+    }
+  }
+}
+
+// ---- 時刻(`HH:mm`)----
+
+/** `HH:mm`(00:00–23:59,到分鐘;24 小時制、補零,字串比較就是先後順序)。 */
+const HH_MM = /^(?:[01]\d|2[0-3]):[0-5]\d$/u;
+
+/** 是不是合法的 `HH:mm`(兩位數小時、兩位數分鐘;`24:00`、`8:00` 都不是)。 */
+export function isHhMm(value: unknown): value is string {
+  return typeof value === "string" && HH_MM.test(value);
+}
+
+/** `HH:mm` → 從 00:00 起算的分鐘數;不合法回 `null`。 */
+export function minutesOfHhMm(value: string): number | null {
+  if (!isHhMm(value)) {
+    return null;
+  }
+  const [hours = "0", minutes = "0"] = value.split(":");
+  return Number(hours) * 60 + Number(minutes);
+}
+
+/**
+ * 當地日期 + `HH:mm` 在某時區的時點(ms),例如「那天 09:00」;`HH:mm` 不合法 → null。
+ * 夏令時間照 `instantOfLocalTime`:重複的時刻取較早的一個,不存在的時刻把跳過的時間平移過去(02:30 → 03:30)。
+ * 時區不合法 → 丟 `RangeError`。
+ */
+export function instantOfLocalHhMm(
+  date: LocalDate,
+  time: string,
+  timezone: string,
+): number | null {
+  const minutes = minutesOfHhMm(time);
+  return minutes === null
+    ? null
+    : instantOfLocalTime(
+        date,
+        Math.floor(minutes / 60),
+        minutes % 60,
+        timezone,
+      );
+}
+
+// ---- 純日曆(不看時區;日期鍵 `YYYY-MM-DD`、月份鍵 `YYYY-MM` 先 parse 再算)----
+
+/** 當地月份(月份 1–12)。 */
+export interface LocalMonth {
+  year: number;
+  month: number;
+}
+
+/** 當地月份 → `YYYY-MM`。 */
+export function localMonthText(month: LocalMonth): string {
+  return `${pad(month.year, 4)}-${pad(month.month)}`;
+}
+
+/** `YYYY-MM` → 當地月份;格式不對或月份不在 01–12 → null。 */
+export function parseLocalMonth(text: unknown): LocalMonth | null {
+  if (typeof text !== "string") {
+    return null;
+  }
+  const match = /^(\d{4})-(\d{2})$/.exec(text);
+  if (!match) {
+    return null;
+  }
+  const month = { year: Number(match[1]), month: Number(match[2]) };
+  return month.month >= 1 && month.month <= 12 ? month : null;
+}
+
+/** 那個月有幾天。 */
+export function daysInLocalMonth(month: LocalMonth): number {
+  return daysInMonth(month.year, month.month);
+}
+
+/** 牆上日期的日序數(只拿來做差與加減)。 */
+const dayNumberOf = (date: LocalDate): number => wallMs(date) / MS_PER_DAY;
+
+const dateOfDayNumber = (dayNumber: number): LocalDate => {
+  const value = new Date(dayNumber * MS_PER_DAY);
+  return {
+    year: value.getUTCFullYear(),
+    month: value.getUTCMonth() + 1,
+    day: value.getUTCDate(),
+  };
+};
+
+/** 當地日期加減天數(`days` 負數 = 往前,小數捨去);跨月、跨年照日曆進位。 */
+export function addLocalDays(date: LocalDate, days: number): LocalDate {
+  return dateOfDayNumber(dayNumberOf(date) + Math.trunc(days));
+}
+
+/** `to − from` 的日曆日數(同一天 = 0)。 */
+export function localDateDiff(from: LocalDate, to: LocalDate): number {
+  return Math.round(dayNumberOf(to) - dayNumberOf(from));
+}
+
+/** 星期幾:0 = 星期日 … 6 = 星期六。 */
+export function weekdayOfLocalDate(date: LocalDate): number {
+  return new Date(wallMs(date)).getUTCDay();
+}
+
+/** 當地月份加減月數(`amount` 負數 = 往前,小數捨去;`2026-01` − 1 = `2025-12`)。 */
+export function addLocalMonths(month: LocalMonth, amount: number): LocalMonth {
+  const index = month.year * 12 + (month.month - 1) + Math.trunc(amount);
+  const year = Math.floor(index / 12);
+  return { year, month: index - year * 12 + 1 };
+}
+
+/** 兩個月份相差幾個月(`to − from`;同月 = 0、`2025-12` → `2026-01` = 1)。 */
+export function localMonthDiff(from: LocalMonth, to: LocalMonth): number {
+  return to.year * 12 + to.month - (from.year * 12 + from.month);
+}
+
+/**
+ * 那個月的第 `day` 日,超過月底就用月底(「每月 N 日」:31 日 → 2 月 28 / 29 日、4 月 30 日);
+ * 小於 1 → 1 日,小數捨去。
+ */
+export function clampedDateOfMonth(month: LocalMonth, day: number): LocalDate {
+  const last = daysInLocalMonth(month);
+  return {
+    year: month.year,
+    month: month.month,
+    day: Math.min(Math.max(Math.trunc(day), 1), last),
+  };
+}
+
+/** 那個月的每一天(1 日到月底,由早到晚)。 */
+export function datesOfLocalMonth(month: LocalMonth): LocalDate[] {
+  return Array.from({ length: daysInLocalMonth(month) }, (_, index) => ({
+    year: month.year,
+    month: month.month,
+    day: index + 1,
+  }));
+}
+
+/** 時點在某時區屬於哪個月份;時區不合法 → 丟 `RangeError`。 */
+export function localMonthOf(instant: number, timezone: string): LocalMonth {
+  const { year, month } = localDateOf(instant, timezone);
+  return { year, month };
+}
+
+// ---- 期間 → 時點區間 ----
+
+/** 半開的時點區間 `[from, to)`(ms);查詢寫成 `$gte from, $lt to`。 */
+export interface InstantRange {
+  from: number;
+  to: number;
+}
+
+/**
+ * 當地日期期間(`from`–`to`,含頭尾)在某時區的時點區間 `[from 00:00, to 隔天 00:00)`。
+ * 邊界用 `startOfLocalDay` 算(夏令時間在午夜切換的時區也對);`from` 晚於 `to` 不檢查(回的 `to` ≤ `from`,呼叫端先驗)。時區不合法 → 丟 `RangeError`。
+ */
+export function localDayRange(
+  from: LocalDate,
+  to: LocalDate,
+  timezone: string,
+): InstantRange {
+  return {
+    from: startOfLocalDay(from, timezone),
+    to: startOfLocalDay(addLocalDays(to, 1), timezone),
+  };
+}
+
+/** 當地月份在某時區的時點區間 `[月初 00:00, 下月初 00:00)`。時區不合法 → 丟 `RangeError`。 */
+export function localMonthRange(
+  month: LocalMonth,
+  timezone: string,
+): InstantRange {
+  const next = addLocalMonths(month, 1);
+  return {
+    from: startOfLocalDay({ ...month, day: 1 }, timezone),
+    to: startOfLocalDay({ ...next, day: 1 }, timezone),
+  };
 }

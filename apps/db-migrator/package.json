@@ -10,6 +10,8 @@
     "migrate:status": "tsx src/update/run.ts --alias=migrate:status --status",
     "seed": "tsx src/seed/run.ts",
     "reset": "tsx src/reset/run.ts",
+    "demo": "tsx src/demo/run.ts",
+    "onboard": "tsx seeds/project/onboarding/run.ts",
     "lint": "eslint src/ seeds/ test/ --max-warnings 0",
     "check-types": "tsc --noEmit",
     "test": "jest --runInBand"

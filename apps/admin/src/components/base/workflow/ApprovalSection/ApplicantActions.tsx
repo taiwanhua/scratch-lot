@@ -8,6 +8,7 @@ import { Stack } from "@repo/ui/stack";
 
 import { useSubmissionActions } from "../useSubmissionActions";
 import { ReasonDialog } from "./ReasonDialog";
+import { VoidDialog } from "./VoidDialog";
 
 export interface ApplicantActionsProps {
   submission: FormSubmissionFieldsFragment;
@@ -19,8 +20,27 @@ export interface ApplicantActionsProps {
 type OpenDialog = "withdraw" | "void" | null;
 
 /**
+ * 已作廢單的原因文字:有選項 → 「作廢原因:選項名稱(說明)」;沒選項(自由填寫)→ 「作廢理由:…」;
+ * 都沒有 → null。
+ */
+const voidedReasonText = (
+  submission: FormSubmissionFieldsFragment,
+  t: ReturnType<typeof useTranslations<"admin.approval.applicant">>,
+): string | null => {
+  const label = submission.voidReasonLabel ?? null;
+  const note = submission.voidReason ?? null;
+  if (label !== null) {
+    return note === null
+      ? t("voidedReasonOption", { option: label })
+      : t("voidedReasonOptionNote", { option: label, note });
+  }
+  return note === null ? null : t("voidedReason", { reason: note });
+};
+
+/**
  * 申請人的撤回 / 作廢 / 複製為新單:撤回要在還沒有任何審核意見前;
- * 作廢只對已核准的單(申請人自己可作廢,不需主管同意),理由必填;作廢後可「複製為新單」重送。
+ * 作廢只對已核准的單(申請人自己可作廢,不需主管同意),原因必填(`VoidDialog`);作廢後可「複製為新單」重送。
+ * 已作廢的單顯示作廢原因(選項名稱 + 說明;沒有其他可做的動作時也顯示)。
  */
 export const ApplicantActions = ({
   submission,
@@ -32,8 +52,15 @@ export const ApplicantActions = ({
   const [dialog, setDialog] = useState<OpenDialog>(null);
   const [clearedFields, setClearedFields] = useState<readonly string[]>([]);
   const { canVoid, canCopy } = submission.abilities;
+  const voidedReason = voidedReasonText(submission, t);
 
-  if (!canWithdraw && !canVoid && !canCopy && clearedFields.length === 0) {
+  if (
+    !canWithdraw &&
+    !canVoid &&
+    !canCopy &&
+    clearedFields.length === 0 &&
+    voidedReason === null
+  ) {
     return null;
   }
 
@@ -81,12 +108,7 @@ export const ApplicantActions = ({
           </Button>
         )}
       </Stack>
-      {submission.voidReason !== null &&
-        submission.voidReason !== undefined && (
-          <Alert severity="info">
-            {t("voidedReason", { reason: submission.voidReason })}
-          </Alert>
-        )}
+      {voidedReason !== null && <Alert severity="info">{voidedReason}</Alert>}
       {clearedFields.length > 0 && (
         <Alert severity="warning">
           {t("clearedFields", { fields: clearedFields.join("、") })}
@@ -111,9 +133,8 @@ export const ApplicantActions = ({
         />
       )}
       {dialog === "void" && (
-        <ReasonDialog
-          namespace="admin.approval.void"
-          requiresReason
+        <VoidDialog
+          formKey={submission.formKey}
           isSubmitting={actions.isPending}
           errorMessage={actions.errorMessage}
           onCancel={() => {

@@ -75,11 +75,11 @@ export const AgentDownloadPanel = () => {
             ? t("title")
             : t("titleWithVersion", { version: latestVersion })}
         </Typography>
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" color="textSecondary">
           {t("description")}
         </Typography>
         {release.isSuccess && latestVersion === null && (
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" color="textSecondary">
             {t("notPublished")}
           </Typography>
         )}

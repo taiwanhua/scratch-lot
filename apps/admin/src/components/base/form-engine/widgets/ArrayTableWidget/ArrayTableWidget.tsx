@@ -185,7 +185,7 @@ export const ArrayTableWidget = ({
           </Button>
         )}
         {canEdit && isFull && (
-          <Typography variant="caption" color="text.secondary">
+          <Typography variant="caption" color="textSecondary">
             {t("maxReached", { max })}
           </Typography>
         )}
@@ -201,7 +201,7 @@ export const ArrayTableWidget = ({
         </Typography>
       ))}
       {helperText !== undefined && (
-        <Typography variant="caption" color="text.secondary">
+        <Typography variant="caption" color="textSecondary">
           {helperText}
         </Typography>
       )}

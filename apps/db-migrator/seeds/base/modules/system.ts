@@ -35,7 +35,8 @@ export const systemModules: ModuleSeedDeclaration = {
       name: "系統管理",
       sidebarType: "group",
       parentKey: null,
-      order: 1,
+      // 頂層排在申請中心之後、隱藏的 api 模組(99)之前(docs/modules/module-manager.md「側欄順序」)
+      order: 95,
       route: "system",
       icon: "settings",
       description:
@@ -265,6 +266,13 @@ export const systemModules: ModuleSeedDeclaration = {
         "「撤銷開通」按鈕 + API:反向抹掉開通建出的租戶頂層、擁有者帳號、租戶管理員副本(僅限租戶底下沒有其他資料時)",
     },
     {
+      key: permissionKey(TENANT_OPS_KEY, "purge-demo"),
+      moduleKey: TENANT_OPS_KEY,
+      name: "清空示範機構",
+      description:
+        "demo 指令 purge / rebuild 用的 API:硬刪一個標「示範」的機構的全部資料(沒有「示範」標記一律拒絕)",
+    },
+    {
       key: permissionKey(TENANT_OPS_KEY, "transfer-owner"),
       moduleKey: TENANT_OPS_KEY,
       name: "轉移擁有者",
@@ -366,7 +374,8 @@ export const systemModules: ModuleSeedDeclaration = {
       key: permissionKey(ROLE_MANAGER_KEY, "delete"),
       moduleKey: ROLE_MANAGER_KEY,
       name: "刪除",
-      description: "刪除角色 + API(前置:無授予、非種子角色、非租戶副本;軟刪除)",
+      description:
+        "刪除角色 + API(前置:無授予、非種子角色、非租戶副本、沒被人員條件引用;軟刪除)",
     },
     // 模組與權限(docs/modules/module-manager.md 權限表;模組本身 isRootOnly)
     {
@@ -553,14 +562,14 @@ export const systemModules: ModuleSeedDeclaration = {
       key: permissionKey(NOTIFICATION_SETTINGS_KEY, "view"),
       moduleKey: NOTIFICATION_SETTINGS_KEY,
       name: "檢視",
-      description: "看負責人提醒類型、組織範圍與目前的收件人條件",
+      description: "看通知類型、組織範圍、目前的收件人條件與提醒時間",
     },
     {
       key: permissionKey(NOTIFICATION_SETTINGS_KEY, "edit"),
       moduleKey: NOTIFICATION_SETTINGS_KEY,
       name: "編輯",
       description:
-        "編輯收件人條件、還原預設 + API(人員條件不能選所有人;使用者 / 角色須屬本租戶)",
+        "編輯收件人條件與提醒時間、還原預設 + API(人員條件不能選所有人;使用者 / 角色須屬本租戶;提醒時間照範圍)",
     },
   ],
 };

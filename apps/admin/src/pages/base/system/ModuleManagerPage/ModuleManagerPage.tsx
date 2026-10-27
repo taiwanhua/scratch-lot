@@ -10,13 +10,16 @@ import {
   useSetPermissionEnabledMutation,
 } from "@repo/graphql";
 import { Alert } from "@repo/ui/alert";
+import { Box } from "@repo/ui/box";
 import { Button } from "@repo/ui/button";
 import type { ModuleIconKey } from "@repo/ui/icons";
+import { useBreakpointDown } from "@repo/ui/media-query";
 import { Stack } from "@repo/ui/stack";
 
 import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
 import { usePermissions } from "@/hooks/base/usePermissions";
 import { useSession } from "@/hooks/base/useSession";
+import { useUrlSelectedId } from "@/hooks/base/useUrlSelectedId";
 import { useUrlState } from "@/hooks/base/useUrlState";
 
 import { DisableModuleDialog } from "./DisableModuleDialog";
@@ -49,11 +52,17 @@ const dialogSchema = z.enum(["none", "retired"]).default("none");
  *
  * 「非根組織不能進來」不在這裡判:本模組 `isRootOnly`,租戶的 `me.modules` 裡根本沒有它,
  * 路由層就擋掉了(ADR-0011);api 也各自再守一次。前端不重複第三份判斷。
+ *
+ * **手機寬(< `sm`)一次只顯示一邊**:網址沒有選取(`?detail=`)時模組樹滿版;點一個模組 → 詳情滿版,
+ * 頂部 [← 返回] 清掉選取回到樹(樹藏起來不卸載,展開與捲動都留著)。
  */
 export const ModuleManagerPage = () => {
   const { session } = useSession();
   const t = useTranslations("admin.moduleManager");
   const data = useModuleManagerData();
+  const isMobile = useBreakpointDown("sm");
+  const [urlPickedModuleId] = useUrlSelectedId();
+  const isDetailShown = urlPickedModuleId !== null;
   const { hasPermission } = usePermissions();
   const [isListColumnsOpen, setIsListColumnsOpen] = useState(false);
   // 退役權限清單是唯讀的檢視彈窗:開著的狀態記在網址 `?dialog=retired`(REACT-14),重新整理還開著
@@ -185,29 +194,77 @@ export const ModuleManagerPage = () => {
         <Alert severity="error">{t(`errors.${pageError}`)}</Alert>
       )}
 
-      <Stack direction="row" spacing={3} sx={{ flex: 1, minHeight: 0 }}>
-        <ModuleTreePanel
-          nodes={data.nodes}
-          isLoading={data.isLoading}
-          selectedModuleId={data.selectedModuleId}
-          onSelectModule={data.selectModule}
-        />
-        <ModuleDetailPanel
-          module={data.selectedModule}
-          isLoading={data.isLoading}
-          canToggleEnabled={data.canToggleEnabled}
-          canSetIcon={data.canSetIcon}
-          isModulePending={setModuleEnabled.isPending}
-          isIconPending={setModuleIcon.isPending}
-          pendingPermissionId={pendingPermissionId}
-          onToggleModule={handleToggleModule}
-          onChangeIcon={handleChangeIcon}
-          onTogglePermission={handleTogglePermission}
-          canEditListColumns={hasPermission(LIST_COLUMNS_PERMISSION)}
-          onEditListColumns={() => {
-            setIsListColumnsOpen(true);
-          }}
-        />
+      <Stack
+        direction="row"
+        spacing={{ xs: 0, sm: 3 }}
+        sx={{ flex: 1, minHeight: 0 }}
+      >
+        {/* sm 以上這層不參與排版(contents,仍標 minHeight: 0 守 STYLE-08 高度鏈);手機寬依選取只顯示一邊,另一邊藏起來但不卸載 */}
+        <Box
+          sx={
+            isMobile
+              ? {
+                  display: isDetailShown ? "none" : "flex",
+                  flex: 1,
+                  minWidth: 0,
+                  minHeight: 0,
+                }
+              : { display: "contents", minHeight: 0 }
+          }
+        >
+          <ModuleTreePanel
+            nodes={data.nodes}
+            isLoading={data.isLoading}
+            selectedModuleId={
+              isMobile ? urlPickedModuleId : data.selectedModuleId
+            }
+            onSelectModule={data.selectModule}
+          />
+        </Box>
+        <Box
+          sx={
+            isMobile
+              ? {
+                  display: isDetailShown ? "flex" : "none",
+                  flexDirection: "column",
+                  gap: 1,
+                  flex: 1,
+                  minWidth: 0,
+                  minHeight: 0,
+                }
+              : { display: "contents", minHeight: 0 }
+          }
+        >
+          {isMobile && (
+            <Box>
+              <Button
+                variant="text"
+                size="small"
+                onClick={() => {
+                  data.selectModule(null);
+                }}
+              >
+                {t("mobileBack")}
+              </Button>
+            </Box>
+          )}
+          <ModuleDetailPanel
+            module={data.selectedModule}
+            isLoading={data.isLoading}
+            canToggleEnabled={data.canToggleEnabled}
+            canSetIcon={data.canSetIcon}
+            isModulePending={setModuleEnabled.isPending}
+            isIconPending={setModuleIcon.isPending}
+            pendingPermissionId={pendingPermissionId}
+            onToggleModule={handleToggleModule}
+            onChangeIcon={handleChangeIcon}
+            onTogglePermission={handleTogglePermission}
+            canEditListColumns={hasPermission(LIST_COLUMNS_PERMISSION)}
+            onEditListColumns={() => {
+              setIsListColumnsOpen(true);
+            }}
+          />
+        </Box>
       </Stack>
 
       {isListColumnsOpen && data.selectedModule !== null && (

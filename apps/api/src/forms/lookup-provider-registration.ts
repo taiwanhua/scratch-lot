@@ -1,6 +1,7 @@
 import type { InjectionToken } from "@nestjs/common";
 
 import type { FieldType } from "@repo/domain/form";
+import type { PortableLookupProvider } from "@repo/domain/seed";
 
 import {
   BaseRepository,
@@ -54,6 +55,21 @@ export interface ProjectLookupDeclaration extends LookupProviderDeclaration {
   permission: string | null;
   /** 關鍵字比對的欄位(不分大小寫的包含比對);不給 = 只比 `labelField`(`id` 時不比)。 */
   keywordFields?: readonly string[];
+  /**
+   * **依表單欄位換值的共用篩選**(ADR-0014):`filter` 裡這個鍵的值是一個組織 id(通常以連動篩選
+   * `{ var: <表單的組織欄位> }` 換值),只列「給那個組織看得到」的資料 —— 歸屬是它、它沿用的上層,
+   * 或共用給它(`shareOrgs` / `sharedByFields`)。例:付款帳戶只列共用給這張單「申請分店」的。
+   *
+   * 鍵必須列在 `filterFields`、不能同時是 `fields` 的欄位;資料表要宣告資料共用(不是 `private`)。
+   * 條件仍與操作者自己的讀取範圍 `$and`,放寬不了;值不是合法 id 或讀不到那個組織 → 查無。
+   */
+  sharedToFilter?: string;
+  /**
+   * 可以跟著受管表單交付(選填;`@repo/domain/seed` 的 `PortableLookupProvider`):允許的固定條件與值。
+   * 宣告了,匯出 seed 時這個來源進可攜性目錄(`SeedExportCatalogService`),種子組裝那邊要宣告同一份
+   * (db-migrator 的 `SeedSource.portableLookupProviders`;兩邊讀同一個 domain 常數)。條件 key 必須列在 `filterFields`。
+   */
+  portable?: PortableLookupProvider;
 }
 
 /** 固定入口 `project/lookup-providers.ts` 的一筆。 */
@@ -139,12 +155,34 @@ function checkDeclaration(
     checkFieldName(key, "關鍵字欄位", name);
     checkKnownField(declaration, "關鍵字欄位", name);
   }
+  const sharedTo = declaration.sharedToFilter;
+  if (sharedTo !== undefined) {
+    if (!declaration.filterFields.includes(sharedTo)) {
+      fail(key, `共用篩選 ${sharedTo} 必須列在 filterFields`);
+    }
+    if (Object.hasOwn(declaration.fields, sharedTo)) {
+      fail(key, `共用篩選 ${sharedTo} 不能同時是可回的欄位`);
+    }
+  }
+  checkPortable(key, declaration);
   checkKnownField(declaration, "顯示欄", declaration.labelField);
   const valueField = declaration.valueField ?? "id";
   checkKnownField(declaration, "值欄", valueField);
   // 依值取回以字串比對:非 id 的值欄只能是文字欄位(同檢查器的規則)
   if (valueField !== "id" && declaration.fields[valueField]?.type !== "text") {
     fail(key, `值欄 ${valueField} 必須是 id 或文字欄位`);
+  }
+}
+
+/** `portable` 的固定條件 key 必須是宣告的篩選欄位。 */
+function checkPortable(
+  key: string,
+  declaration: ProjectLookupDeclaration,
+): void {
+  for (const name of Object.keys(declaration.portable?.filters ?? {})) {
+    if (!declaration.filterFields.includes(name)) {
+      fail(key, `可攜的固定條件 ${name} 必須列在 filterFields`);
+    }
   }
 }
 
@@ -157,6 +195,15 @@ function checkRepository(
     fail(declaration.key, "repositoryToken 必須指向 BaseRepository");
   }
   const typed = repository as BaseRepository<unknown, RepositoryDocument>;
+  if (
+    declaration.sharedToFilter !== undefined &&
+    (typed.tenantScope?.sharing.mode ?? "private") === "private"
+  ) {
+    fail(
+      declaration.key,
+      `資料表 ${typed.collectionName} 沒有宣告資料共用,不能設共用篩選`,
+    );
+  }
   const tablePrefix = prefixOf(typed.collectionName);
   if (prefixOf(declaration.key) !== tablePrefix) {
     fail(

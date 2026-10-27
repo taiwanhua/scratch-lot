@@ -8,6 +8,9 @@ import {
   useSetRoleEnabledMutation,
 } from "@repo/graphql";
 import { Alert } from "@repo/ui/alert";
+import { Box } from "@repo/ui/box";
+import { Button } from "@repo/ui/button";
+import { useBreakpointDown } from "@repo/ui/media-query";
 import { Stack } from "@repo/ui/stack";
 
 import { DiscardChangesDialog } from "@/components/base/DiscardChangesDialog";
@@ -19,6 +22,7 @@ import {
   useUrlEdit,
   useUrlEditGuard,
 } from "@/hooks/base/useUrlEdit";
+import { useUrlSelectedId } from "@/hooks/base/useUrlSelectedId";
 import { useUrlState } from "@/hooks/base/useUrlState";
 
 import { DeleteRoleDialog } from "./DeleteRoleDialog";
@@ -41,12 +45,17 @@ import { useRoleMatrix } from "./useRoleMatrix";
 
 /** 未儲存時被攔下的動作:確認放棄後才執行。 */
 type PendingNav =
-  { kind: "tab"; tab: RoleDetailTab } | { kind: "role"; roleId: string };
+  | { kind: "tab"; tab: RoleDetailTab }
+  /** `roleId` null = 手機寬按 [← 返回] 回清單 */
+  | { kind: "role"; roleId: string | null };
 
 /**
  * 角色管理(模組 key `system.role-manager`,正本 `docs/modules/role-manager.md`;
  * Figma「Screen / Admin 角色管理」44:44)。
  * 左清單選角色 → 右兩個頁籤(權限矩陣、分配使用者);動作都是彈窗,顯示與否依權限(ADR-0011)。
+ *
+ * **手機寬(< `sm`)一次只顯示一邊**:網址沒有選取(`?detail=`)時清單滿版;點一個角色 → 詳情滿版,
+ * 頂部 [← 返回] 清掉選取回到清單(矩陣有未存變更時一樣先問)。清單藏起來不卸載,篩選與捲動都留著。
  */
 export const RoleManagerPage = () => {
   const t = useTranslations("admin.roleManager");
@@ -152,48 +161,89 @@ export const RoleManagerPage = () => {
     data.selectRole(nav.roleId);
   };
 
+  const isMobile = useBreakpointDown("sm");
+  const [urlPickedRoleId] = useUrlSelectedId();
+  const isDetailShown = urlPickedRoleId !== null;
+
   if (!data.ability.canView) {
     return <Alert severity="info">{t("noViewPermission")}</Alert>;
   }
 
   return (
     // 撐滿殼給的內容區高度(STYLE-08 / Figma 44:188:左右兩塊等高、各自內部捲動)
-    <Stack direction="row" spacing={3} sx={{ flex: 1, minHeight: 0 }}>
-      <RoleListPanel
-        rows={data.rows}
-        isLoading={data.isLoading}
-        totalCount={data.totalCount}
-        keyword={data.keyword}
-        onKeywordChange={data.setKeyword}
-        ownerOrgId={data.ownerOrgId}
-        onOwnerOrgChange={data.setOwnerOrgId}
-        ownerOrgOptions={data.ownerOrgOptions}
-        page={data.page}
-        onPageChange={data.setPage}
-        selectedRoleId={data.selectedRole?.id ?? null}
-        onSelectRole={(roleId) => {
-          guard({ kind: "role", roleId });
-        }}
-        ability={data.ability}
-        onCreate={() => {
-          setActionError(null);
-          setIsCreating(true);
-        }}
-        onEdit={(role) => {
-          setActionError(null);
-          edit.open(role.id);
-        }}
-        onToggleEnabled={(role) => {
-          setActionError(null);
-          setToggleRole(role);
-        }}
-        onDelete={(role) => {
-          setActionError(null);
-          setDeleteRole(role);
-        }}
-      />
+    // 手機寬不釘高(STYLE-08):主從兩塊依內容長高、交給 <main> 捲;sm 起才撐滿殼高、各自內部捲動
+    <Stack
+      direction="row"
+      spacing={{ xs: 0, sm: 3 }}
+      sx={{ flex: { xs: "1 0 auto", sm: 1 }, minHeight: 0 }}
+    >
+      {/* sm 以上這層不參與排版(contents,仍標 minHeight: 0 守 STYLE-08 高度鏈);手機寬依選取只顯示一邊,另一邊藏起來但不卸載 */}
+      <Box
+        sx={
+          isMobile
+            ? { display: isDetailShown ? "none" : "flex", flex: 1, minWidth: 0 }
+            : { display: "contents", minHeight: 0 }
+        }
+      >
+        <RoleListPanel
+          rows={data.rows}
+          isLoading={data.isLoading}
+          totalCount={data.totalCount}
+          keyword={data.keyword}
+          onKeywordChange={data.setKeyword}
+          ownerOrgId={data.ownerOrgId}
+          onOwnerOrgChange={data.setOwnerOrgId}
+          ownerOrgOptions={data.ownerOrgOptions}
+          page={data.page}
+          onPageChange={data.setPage}
+          selectedRoleId={
+            isMobile ? urlPickedRoleId : (data.selectedRole?.id ?? null)
+          }
+          onSelectRole={(roleId) => {
+            guard({ kind: "role", roleId });
+          }}
+          ability={data.ability}
+          onCreate={() => {
+            setActionError(null);
+            setIsCreating(true);
+          }}
+          onEdit={(role) => {
+            setActionError(null);
+            edit.open(role.id);
+          }}
+          onToggleEnabled={(role) => {
+            setActionError(null);
+            setToggleRole(role);
+          }}
+          onDelete={(role) => {
+            setActionError(null);
+            setDeleteRole(role);
+          }}
+        />
+      </Box>
 
-      <Stack spacing={1.5} sx={{ flex: 1, minWidth: 0, minHeight: 0 }}>
+      <Stack
+        spacing={1.5}
+        sx={{
+          flex: 1,
+          minWidth: 0,
+          minHeight: 0,
+          display: isMobile && !isDetailShown ? "none" : "flex",
+        }}
+      >
+        {isMobile && (
+          <Box>
+            <Button
+              variant="text"
+              size="small"
+              onClick={() => {
+                guard({ kind: "role", roleId: null });
+              }}
+            >
+              {t("mobileBack")}
+            </Button>
+          </Box>
+        )}
         {actionError !== null &&
           toggleRole === null &&
           deleteRole === null &&
@@ -256,6 +306,7 @@ export const RoleManagerPage = () => {
           isSubmitting={removeRole.isPending}
           errorCode={actionError?.code ?? null}
           reasons={actionError?.reasons ?? []}
+          references={actionError?.references ?? []}
           onCancel={() => {
             setActionError(null);
             setDeleteRole(null);

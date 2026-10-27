@@ -4,6 +4,9 @@ import type { ExpressionContext, FieldDef, StoredValues } from "../form/types";
 import { previousStepKeys } from "./graph";
 import { evaluationOf } from "./projection";
 import {
+  APPLICANT_REVIEW,
+  type ApplicantAsReviewer,
+  type AutoApproveDef,
   type AutoApproveReason,
   type InstanceSnapshot,
   type PlanItem,
@@ -18,6 +21,20 @@ import {
  * 審核者的**解析**要查資料庫(角色成員、主管、使用者狀態),由 api 做;
  * 這裡只負責「拿到名單之後」的純規則:去重、剔除申請人、編 `taskKey`。
  */
+
+/**
+ * 「申請人也是這一關的審核者時」的處理(`AutoApproveDef.applicant` 換算):
+ * `true` → `auto`、`"review"` → `review`、其他(省略 / `false` / `null` 設定)→ `exclude`(預設)。
+ */
+export function applicantAsReviewerOf(
+  autoApprove: AutoApproveDef | null | undefined,
+): ApplicantAsReviewer {
+  const value = autoApprove?.applicant;
+  if (value === true) {
+    return "auto";
+  }
+  return value === APPLICANT_REVIEW ? "review" : "exclude";
+}
 
 /** 送出的那份表單內容(跳過條件的求值對象;同一實例內固定)。 */
 export interface SkipEvaluationInput {
@@ -155,7 +172,7 @@ export function autoApprovalCandidates(
   step: Pick<ReviewStepDef, "key" | "autoApprove">,
   assigneeIds: readonly string[],
 ): AutoApproval[] {
-  const isApplicantAuto = step.autoApprove?.applicant === true;
+  const isApplicantAuto = applicantAsReviewerOf(step.autoApprove) === "auto";
   const isPriorAuto = step.autoApprove?.priorApprover === true;
   if (!isApplicantAuto && !isPriorAuto) {
     return [];
@@ -175,8 +192,9 @@ export function autoApprovalCandidates(
 }
 
 /**
- * 派任計畫:解析到的審核者去重、剔除申請人(不能自審),每人一項,`taskKey` 依序編。
- * `keepApplicant`(申請人的自動通過**成立**,已過守門)時申請人留在計畫裡。
+ * 派任計畫:解析到的審核者去重、剔除申請人(預設),每人一項,`taskKey` 依序編。
+ * `keepApplicant` 時申請人留在計畫裡:這一關設了「照常審核」(`applicant: "review"`),或申請人的自動通過
+ * **成立**(已過守門);由呼叫端(`advance` 列 5)依兩者決定。
  * `delegatorOf`(代理人;代理人 id → 原審核者 id 們)有記的那一項帶 `delegatorIds`。
  * 剔除後為空 → 空陣列(呼叫端依來源決定:`manager` 往上一層在解析時就做完了,其餘阻擋)。
  */

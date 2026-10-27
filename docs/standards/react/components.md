@@ -157,7 +157,7 @@ MUI X 的 `RichTreeView`、DataGrid 這類元件收的是**元件本身**,不是
 - `onChange` 收到的是**選項的 `value` 本身**(以 `options` 查表),`Value` 可以是 enum / 字面量聯集,呼叫端不再 `event.target.value as X`。
 - 多選用 `multiple`(選項自帶勾選框、`onChange` 依點選先後回整個陣列),收合摘要不合用時給 `renderValue`。
 - 需要搜尋、分組、次文字或 chip 時改用 `@repo/ui/autocomplete`(STYLE-05 的分工:選項少於十個、不需搜尋 → `SelectField`)。
-- 殼的當前組織切換器也是 `SelectField`(標籤「當前組織」)。**不適用**:幾個互斥選項、切了立刻生效的設定(頭像選單的外觀、語言)用 `@repo/ui/segmented-control`;選單式動作(登出)用 `@repo/ui/menu`。
+- 殼的當前組織切換器也是 `SelectField`(標籤「當前組織」);**手機寬(< `sm`)例外**:頂部列放不下 180 寬的下拉,精簡版是當前組織名稱首字的小按鈕 + `@repo/ui/menu` 的組織清單(當前組織選中),選項與切換流程與下拉同一份(`OrgSwitcher` 的 `isCompact`)。**不適用**:幾個互斥選項、切了立刻生效的設定(頭像選單的外觀、語言)用 `@repo/ui/segmented-control`;選單式動作(登出)用 `@repo/ui/menu`。
 
 ## REACT-12 彈窗開著時,提示也要念得到:live region 不能是彈窗開啟前就在 body 裡的節點
 
@@ -246,3 +246,81 @@ interface CellRenderContext<Row> {
 
 - **key 慣例**:列表一包 `list`;主從版面選中的那一筆 `detail`(`hooks/base/useUrlSelectedId`);頁內分頁 `tab`;唯讀的檢視彈窗 `dialog`(值是彈窗名);編輯彈窗 `edit`(值是那一筆的 id)。不用 `view`:mock 開發模式以 `?view=tenant` 切視角。
 - **新頁面要登記進入口清單**:底座頁登記在 `apps/admin/src/app/base/url-state-inventory.ts`、專案頁在 `app/project/url-state-inventory.ts`,寫明這一頁放進網址的 key(`app/url-state-inventory.test.ts` 比對)。`useUrlState` 以外直接 import `useSearchParams` 或 nuqs 由 ESLint(`no-restricted-imports`)擋下。各頁的盤點見 `docs/concepts/frontend-architecture.md`「既有頁面改用的盤點」。
+
+## REACT-15 選組織一律照「組織選擇器」用法表
+
+選組織的地方(切換、治理樹、治理設定、業務欄位、頁面篩選、共用)一律照 `docs/concepts/frontend-architecture.md`「組織選擇器」的用法表挑元件與 `scope`,不自己查組織樹、不另做清單。
+
+```tsx
+✅ <OrgTreeSelect scope="visible" label="分店" value={…} onChange={…} />   // 業務欄位 / 頁面篩選
+✅ <OrgTreeSelect label="所屬組織" value={…} onChange={…} />              // 治理設定(managed)
+❌ const tree = useOrgTreeQuery(…); <Select options={flatten(tree)} />      // 業務頁自己查管理範圍
+```
+
+- 業務頁一律明寫 `scope="visible"`:候選是可見範圍,不是管理範圍(店長通常沒有組織管理的權限)。
+- 不能選的反灰並寫原因(選擇器內建「不在你的可見範圍內」;業務規則的原因用 `disabledReasons` 疊加),不要把節點藏起來讓樹斷掉。
+- 表上沒有的用途先補用法表(同一份 PR),再實作。
+
+正本:`docs/concepts/frontend-architecture.md`「組織選擇器」、`apps/admin/src/components/base/OrgTreeSelect/OrgTreeSelect.tsx`
+
+## REACT-16 admin 頁面動作按鈕的位置與順序
+
+正本:`apps/admin/src/components/base/FormActions/FormActions.tsx`(新增 / 編輯頁)、`components/base/form-engine/FormModulePages/FormViewPage.tsx`(檢視頁頂部列)、`FormListToolbar.tsx`(列表頁)、`packages/ui/src/Dialog/Dialog.tsx`(對話框)
+
+四類頁面的按鈕一律照下表放;主要動作(contained)永遠在該列最右,破壞性動作用 error 色。
+
+| 類別          | 位置                                 | 順序(左 → 右)                                                                                                    |
+| ------------- | ------------------------------------ | ---------------------------------------------------------------------------------------------------------------- |
+| 列表頁        | 標題 / 篩選列,篩選靠左、新增鈕最右   | 篩選 … [+ 新增<名詞>](contained;文字一律「+ 新增<名詞>」,名詞照詞彙表)                                           |
+| 新增 / 編輯頁 | 表單底部,`FormActions`,按鈕靠右      | [取消](text)→[存草稿](outlined)→[送出 / 儲存](contained)                                                         |
+| 檢視頁        | 內容上方一列                         | 左 [← 返回列表](text, small);右 次要(text / outlined)→[刪除 / 作廢 / 停用](text, error)→[編輯 / 主要](contained) |
+| 對話框        | `@repo/ui/dialog` 的 `actions`(靠右) | [取消](text)→[主要](contained;破壞性用 error)                                                                    |
+
+- **新增 / 編輯頁一律用 `FormActions`**,不自己排 `Stack` + `Button`:它固定順序與 variant(呼叫端只給文字、點擊、停用),合計文字、編輯頁的 [刪除] 這類不屬於送出流程的內容放 `start`(在左側)。
+- **手機與平板(lg 以下)動作列黏在可視範圍底部**(RW-02):`FormActions` 在 lg 以下是 `position: sticky; bottom: 0`,並補背景(paper)、上邊框與 `zIndex: mobileStepper` —— 少了 z-index,輸入框的浮動標籤會捲到按鈕列上面。sticky 的參照是最近的捲動容器,所以 `FormActions` 放在表單的捲動區裡;頁面把動作列放在捲動區外(內容自己捲)時,它本來就固定在底部。電腦(lg 起)是一般位置。
+- **捲動容器有左右內距時給 `gutter`**(例:表單頁 Card 的 `px: 3` → `gutter={3}`,依斷點不同就給物件):黏底時以負 margin 撐滿內距、再用同值內距把按鈕放回原位,白底蓋滿卡片寬,捲過的欄位不會從兩側留白透出來。
+- **檢視頁不把動作鈕塞進標題卡**:標題卡只放名稱、狀態與摘要;返回、編輯、停用 / 刪除都在頂部列。設定卡這類頁內區塊只留自己的 [儲存]。
+- **審核區塊**(`ApprovalSection` 的我的任務):[退回修改]→[駁回]→[核准](contained),核准在最右。
+- **例外**:精靈(`Stepper`)的 [上一步] [下一步] 與標題列的 [取消精靈] 照精靈自己的版型;資訊型對話框(只有 [關閉] 加一個進下一步的入口)入口可用 outlined;表單引擎的通用列表(一個模組多張表單,`FormListToolbar`)沒有單一名詞,新增鈕用「+ 新增」。
+- 測試以 `apps/admin/src/test/button-order.ts` 的 `expectButtonOrder([...])` 斷言順序,主要鈕再驗 `MuiButton-contained`。設計稿照同一套位置(FIGMA-18)。
+
+## REACT-17 admin 主從頁在手機寬一次只顯示一邊
+
+正本:`apps/admin/src/pages/base/system/OrgManagerPage/OrgManagerPage.tsx`(其餘主從頁同一套行為,各頁自己寫)
+
+左清單 / 樹、右詳情的主從頁,手機寬(< `sm`)兩欄並排放不下,行為一律如下;`sm` 以上維持兩欄。這條只規定行為,不規定畫面,**也不抽共用版面元件** —— 各頁的清單、詳情、離開前攔截(未存變更)都不同,各頁自己實作才改得動。
+
+- **網址決定顯示哪一邊**:網址上有選取(`?detail=`,或該頁本來就放選取的 key,例:使用者管理 `?list=` 的 `org`)→ 詳情滿版;沒有 → 清單滿版。`?edit=` 只在**編輯從詳情那一邊開**的頁算選取(組織、表單、流程:編的就是詳情那一筆;使用者管理:編輯從右邊的使用者清單開);編輯從清單列開的頁(角色)不算,彈窗蓋在清單上。不另開「手機檢視」的狀態,重新整理、分享網址停在同一筆(REACT-14)。
+- **詳情頂部 [← 返回]**(text、small):清掉選取回清單;頁面有未存變更的攔截時,返回跟換一筆走同一個攔截,放棄後確實丟掉草稿(返回後選取可能退回同一筆預設,不能只靠換 key 重掛)。點**同一筆**不經過攔截(沒有要離開),網址還沒有選取時只把它寫進網址。
+- **另一邊藏起來、不卸載**(`display: none`):清單的捲動位置、樹的展開、篩選與輸入都留著;`sm` 以上那層包裝用 `display: contents`,不影響原本兩欄的排版。
+- 手機寬判斷用 `useBreakpointDown("sm")`(`@repo/ui/media-query`);清單面板的寬在手機寬改成 `100%`。
+- 詳情的按鈕照 REACT-16(`FormActions` 在 lg 以下黏底)。
+- **需要寬畫面才能操作的詳情**(表單設計器、流程設計器):手機寬不掛載,改顯示唯讀的基本資料與設定摘要,並提示到平板或電腦設計、編輯。例外是設計器**有未存的變更**時縮到手機寬:設計器藏起來、不卸載(草稿與「有未存的變更」都留著),摘要上方提示回到平板或電腦處理;換一筆與 [← 返回] 照樣經過未存攔截(返回後選取會退回預設那一筆,不攔的話正在改的那一筆會被重掛、草稿就沒了)。
+
+**平板設計器**(表單設計器、流程設計器;`sm` ≤ 視窗 < `lg`,`pages/base/system/designer-layout.ts` 的 `DESIGNER_TABLET_BELOW`):
+
+- **左清單一進來就收起**,只留一條 [展開](外框圖示鈕、`aria-expanded` / `aria-controls`);展開後清單標頭有 [收起],在清單裡選一筆、真的換過去時也會再收起(被未存攔截擋下、選擇留下時不收起,焦點不動)。收起時清單藏起來、不卸載。收起與否是暫時性介面狀態,不放網址,離開平板寬就重設;使用者按的收起 / 展開把焦點移到另一顆鈕,自動收起不搶焦點(`useDesignerListCollapse`)。
+- **屬性面板改成右側滑出的非遮罩抽屜**(`DesignerPropertyPanel`,外框是 `@repo/ui/drawer` 的 `isModal={false}`):平常不佔畫布寬度;點欄位 / 關卡、新增欄位、點檢查結果、按 [表單設定] / [整個流程設定] 時打開。抽屜從頂部列與頁籤列下面開始,不蓋通知、頭像與頁籤列的「⋯」;是以標題命名的 region。開著時畫布照樣看得到、點得到(換選直接換內容),**整張詳情卡片**讓出抽屜寬(工具列的 [存草稿]、檢查結果、未存標示都露在外面,不用關抽屜也能存),選中的欄位捲進可視範圍、選中的節點跑出流程圖可視範圍就平移回來。抽屜就地渲染(Tab 順序跟著頁面位置;設計器所在的頁籤或區塊藏起來時抽屜跟著藏)。在抽屜裡按 Esc 或按關閉鈕收回,關閉 = 取消選取;焦點打開時移進抽屜、關閉時還給打開前的元素。唯讀版本檢視同一套。
+- `lg` 以上維持原本的三欄(清單、設計器、固定寬的屬性面板)。
+
+理由:主從兩欄在 390 寬硬塞會變成左右捲或兩欄都窄到不能用;以網址為準讓返回、重新整理、分享都一致,又不必多一份狀態。平板寬時殼的內容區不設最小寬度(≥ `lg` 才套用),左清單 320 加屬性面板 300 會把畫布擠到幾乎沒有(768 只剩約 90px、1024 約 30px);設計時畫布優先,清單與屬性要用時再叫出來。界線取 `lg` 與篩選抽屜(`FilterDrawer`)、`FormActions` 黏底同一條。屬性抽屜不蓋遮罩,因為改屬性時要邊看畫布上的效果、邊換選別的欄位。
+
+## REACT-18 欄位錯了,原因寫在欄位正下方;頁面提示只放通用句
+
+正本:`apps/admin/src/lib/base/field-errors.ts`(欄位 → 原因文案的對照)、`components/base/FieldErrorGroup/FieldErrorGroup.tsx` 與 `components/base/FieldErrorText/useFieldErrorText.tsx`(沒有 `helperText` 的欄位);先例 `pages/base/system/PrintersPage/PrinterFormDialog/PrinterFormDialog.tsx`
+
+固定欄位的表單、對話框(表單引擎另有自己的逐欄訊息,見 `FormFieldCell`),欄位錯了一律**標紅 + 在那一欄正下方寫原因**,讓使用者不必猜:
+
+| 錯誤從哪來                                        | 欄位下寫什麼                                                                            |
+| ------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| 送出前的檢查沒過                                  | 那一欄的**格式要求**(「代號要 4 碼數字」「必填,最多 10 個字」「要填大於 0 的整數」)     |
+| api `VALIDATION_FAILED` 只指了欄位、沒有 `reason` | 同上(沒有原因 = 格式錯或必填;前端知道每一欄的規則,同一句寫在模組的 `*-field-errors.ts`) |
+| api 帶了 `reason`(重複、被占用、重疊、狀態不合…)  | **原因的文案**,寫在 `fields` 指到的每一欄下(「這個代號已被使用」)                       |
+
+- **頁面提示(表單底部 / 對話框上方的 `Alert`、Snackbar)只放通用句**(`errors.VALIDATION_FAILED`,例「資料未通過驗證,請檢查標示的欄位」);錯誤沒有對到畫面上任何一欄(`fields` 是 `id`、畫面上沒有的欄位,或根本沒帶)時,原因才寫在提示裡。判斷交給 `formErrorSummary`;錯誤解讀「依 `reason` 細分成本頁的碼」的頁面用 `fieldErrorsByCodeOf`。
+- 狀態存「欄位 → 原因」(`FieldErrorTexts<Field>`),不再只存「哪幾欄錯」;使用者改了那一欄就清掉那一欄(`withoutFieldError`)。原本的說明文字(`helperText` 的提示)在欄位沒錯時照常顯示,錯了換成原因。
+- 單選群組、勾選群組、色票、可增減的清單這類沒有 `helperText` 的欄位,原因放在群組正下方(字級、顏色同 helperText),**並以 `aria-describedby` 連到那一組**,報讀軟體才讀得到:多個控制項組成的欄位包一層 `FieldErrorGroup`(`role="group"` + 名稱 + 描述);本身就是群組或單一控制項的(`RadioGroup`、開關、兩格數字)用 `useFieldErrorText(text)`,`describedBy` 放在那一層、`errorText` 畫在下方。測試以 `toHaveAccessibleDescription` 驗「原因在那一組下」。多個畫面共用的欄位元件收 `errorTexts` / `errorText`,呼叫端沒給時元件寫自己的預設格式要求。
+- 格式要求的數字(長度上限、範圍)從 `@repo/domain` 的常數帶進 ICU 參數,不在文案裡寫死,和 api 的檢查同一個來源。
+- **api 那邊**:會擋的情形若不是格式錯(重複、被占用、重疊、狀態不合),`VALIDATION_FAILED` 一定帶 `reason`(GQL-04「`VALIDATION_FAILED` 的 `reason`」),前端才寫得出原因;沒有原因的一律當成格式錯。
+
+理由:只標紅、原因只在頁面底部時,使用者看不出是哪一欄、為什麼錯(實例:代號少一碼與代號重複,畫面上都只剩「資料未通過驗證」)。原因貼著欄位,看一眼就知道要改什麼;頁面提示只負責「這次沒存成」(DATA-06)。

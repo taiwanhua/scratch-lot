@@ -14,6 +14,8 @@ import {
 import { server } from "@/test/msw/server";
 import { renderApp } from "@/test/render";
 
+import { NOTIFICATION_SETTINGS_MODULE_KEY } from "../NotificationSettingsPage/notification-settings-permissions";
+import { WORKFLOWS_MODULE_KEY } from "../workflows-permissions";
 import {
   ORG_MANAGER_VIEW_PERMISSION,
   ROLE_MANAGER_PERMISSIONS,
@@ -84,6 +86,36 @@ const modulesWith = (permissions: readonly string[]): TestModule[] => [
     route: "/system/role-manager",
     permissions: permissions.filter((key) => key.startsWith(ROLE_PREFIX)),
   },
+  // 刪除被擋時的處置連結要去的兩頁:給了它們的權限才出現在模組清單
+  ...[
+    {
+      id: "m-workflows",
+      key: WORKFLOWS_MODULE_KEY,
+      name: "流程管理",
+      order: 4,
+      route: "/system/workflows",
+    },
+    {
+      id: "m-notification-settings",
+      key: NOTIFICATION_SETTINGS_MODULE_KEY,
+      name: "通知設定",
+      order: 5,
+      route: "/system/notification-settings",
+    },
+  ].flatMap((module) => {
+    const own = permissions.filter((key) => key.startsWith(`${module.key}.`));
+    return own.length === 0
+      ? []
+      : [
+          {
+            ...module,
+            parentId: "m-system",
+            sidebarType: ModuleSidebarType.Link,
+            engine: ModuleEngine.Fixed,
+            permissions: own,
+          },
+        ];
+  }),
 ];
 
 export interface RenderRolePageOptions {

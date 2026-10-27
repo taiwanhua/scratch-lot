@@ -16,7 +16,7 @@ import {
 
 /** 列尾的 key(同權限矩陣:12px、text.disabled);只影響呈現,不進無障礙名稱。 */
 const keySuffix = (key: string) => (
-  <Typography variant="caption" color="text.disabled">
+  <Typography variant="caption" color="textDisabled">
     {key}
   </Typography>
 );
@@ -88,7 +88,7 @@ export const PermissionTreePanel = ({
       />
       {isError && <Alert severity="error">{t("permissionLoadFailed")}</Alert>}
       {!isError && !isLoading && items.length === 0 && (
-        <Typography variant="body2" color="text.secondary" sx={{ py: 2 }}>
+        <Typography variant="body2" color="textSecondary" sx={{ py: 2 }}>
           {t("permissionEmpty")}
         </Typography>
       )}

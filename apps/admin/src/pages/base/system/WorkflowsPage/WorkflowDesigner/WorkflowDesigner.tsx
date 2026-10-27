@@ -98,7 +98,7 @@ export const WorkflowDesigner = ({
 
   if (!canEdit) {
     return currentDefinition === null ? (
-      <Typography variant="body2" color="text.secondary">
+      <Typography variant="body2" color="textSecondary">
         {t("readonlyEmpty")}
       </Typography>
     ) : (
@@ -119,7 +119,7 @@ export const WorkflowDesigner = ({
   if (!workflow.hasDraft) {
     return (
       <Stack spacing={1.5} sx={{ alignItems: "flex-start" }}>
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" color="textSecondary">
           {t("noDraft")}
         </Typography>
         <Button

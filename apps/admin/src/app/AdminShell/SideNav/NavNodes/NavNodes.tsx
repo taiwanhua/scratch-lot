@@ -1,6 +1,7 @@
 import { ModuleSidebarType } from "@repo/graphql";
 import { List } from "@repo/ui/list";
 
+import type { NavBadges } from "@/hooks/base/useSidebarBadges";
 import type { NavNode } from "@/lib/base/module-tree";
 
 import { NavGroupItem } from "./NavItems/NavGroupItem";
@@ -12,8 +13,8 @@ export interface NavNodesProps {
   currentPath: string;
   /** 點到任一個模組連結時額外要做的事(收合態的群組 flyout 用來收起自己) */
   onNavigate?: () => void;
-  /** 模組 key → 該列右側的待辦數(申請中心的待審數) */
-  badges?: Readonly<Record<string, number>>;
+  /** 模組 key → 該列右側的待辦數與說明(說明是數字的提示) */
+  badges?: NavBadges;
 }
 
 /**

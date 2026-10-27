@@ -1,24 +1,10 @@
 import { describe, expect, it } from "@jest/globals";
 
-import { decodePng, makeRgba } from "./png-test-support";
+import { decodePng, makeRgba, readBlob } from "./png-test-support";
 import {
   type ReceiptRasterizer,
   renderReceiptToPng,
 } from "./render-receipt-to-png";
-
-/** jsdom 的 Blob 沒有 `arrayBuffer()`,用 FileReader 讀回位元組。 */
-const readBlob = (blob: Blob): Promise<Uint8Array> =>
-  new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.addEventListener("load", () => {
-      resolve(new Uint8Array(reader.result as ArrayBuffer));
-    });
-    reader.addEventListener("error", () => {
-      reject(reader.error ?? new Error("read failed"));
-    });
-    // eslint-disable-next-line unicorn/prefer-blob-reading-methods -- jsdom 的 Blob 沒有 arrayBuffer()
-    reader.readAsArrayBuffer(blob);
-  });
 
 /**
  * 模擬瀏覽器把節點畫出來的結果(jsdom 沒有 canvas):灰階漸層 + 彩色 + 半透明,寬度可指定。
@@ -35,6 +21,10 @@ const fakeRaster =
         (x * 3) % 256,
       ]),
     );
+
+/** 假的版面位置(jsdom 不排版)。 */
+const rectOf = (top: number, height: number) =>
+  ({ top, bottom: top + height, left: 0, width: 384 }) as DOMRect;
 
 describe("renderReceiptToPng", () => {
   it("產出 PNG 寬度恰為 384、只有黑白兩色", async () => {
@@ -59,5 +49,31 @@ describe("renderReceiptToPng", () => {
     const png = decodePng(await readBlob(blob));
     expect(png.width).toBe(384);
     expect(png.height).toBe(200);
+    expect(png.texts).toEqual({});
+  });
+
+  it("好幾聯排在一起:切紙位置(Receipt58Cut 的下緣)寫進 tEXt「cut-rows」;最下面那一個不記", async () => {
+    const node = document.createElement("div");
+    node.getBoundingClientRect = () => rectOf(100, 1000);
+    const cuts = [
+      [500, 20],
+      [800, 20],
+      [1080, 20],
+    ].map(([top = 0, height = 0]) => {
+      const cut = document.createElement("div");
+      cut.dataset.receipt58Cut = "";
+      cut.getBoundingClientRect = () => rectOf(top, height);
+      node.append(cut);
+      return cut;
+    });
+    expect(cuts).toHaveLength(3);
+
+    const blob = await renderReceiptToPng(node, {
+      rasterize: fakeRaster(384, 1000),
+    });
+
+    const png = decodePng(await readBlob(blob));
+    // 520 − 100、820 − 100;1100 − 100 = 1000 = 高度(本來就會切)不記
+    expect(png.texts).toEqual({ "cut-rows": "420,720" });
   });
 });

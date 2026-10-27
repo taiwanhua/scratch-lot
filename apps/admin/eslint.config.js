@@ -2,7 +2,10 @@ import {
   frontendStyle,
   projectOwnership,
 } from "@repo/eslint-config/frontend-style";
-import { designSystemWall } from "@repo/eslint-config/react";
+import {
+  designSystemWall,
+  typographyColorRestriction,
+} from "@repo/eslint-config/react";
 import { config } from "@repo/eslint-config/vite";
 
 /** 設計系統之牆的 patterns(STYLE-05);同一條規則後寫的 options 會整個取代先寫的,所以下面要帶著它一起寫。 */
@@ -62,6 +65,35 @@ const restrictedImports = ({ paths, patterns = [] }) => ({
   ],
 });
 
+/**
+ * 同一層並排的表單欄位 `size` 要一致(STYLE-10):每種欄位不給 `size` 都是 medium(`@repo/ui` 的契約,
+ * `packages/ui/src/test/field-size.test.tsx` 鎖著),所以隔壁寫了 `size="small"`、自己沒寫的那格會高一截
+ * (組織欄、日期欄沒寫 size 就是這樣比同列高)。只看同一個父元素底下直接並排的欄位;包在條件式或 helper 裡的看不到,靠 review。
+ */
+const FIELD = `JSXOpeningElement[name.name=/^(TextField|SelectField|Autocomplete|DatePicker|DateTimePicker|TimePicker|OrgTreeSelect|ShareOrgsField|ModuleIconPicker)$/]`;
+const SMALL_FIELD = `JSXElement:has(> ${FIELD}:has(> JSXAttribute[name.name="size"][value.value="small"]))`;
+/**
+ * 沒寫 size 或明寫 medium。spread 單純識別字(`{...SMALL}`、`{...fieldProps}`)的可能帶著 size,看不出來就不判;
+ * 函式呼叫、條件式等其他 spread(`{...fieldErrorProps(...)}` 只帶錯誤訊息)照判。
+ */
+const MEDIUM_FIELD = [
+  `JSXElement:has(> ${FIELD}:not(:has(> JSXAttribute[name.name="size"])):not(:has(> JSXSpreadAttribute[argument.type="Identifier"])))`,
+  `JSXElement:has(> ${FIELD}:has(> JSXAttribute[name.name="size"][value.value="medium"]))`,
+];
+const FIELD_SIZE_MESSAGE =
+  '同一層並排的表單欄位 size 要一致(STYLE-10):不給 size 是 medium,隔壁是 size="small" 就一起明寫 small';
+const fieldSizeSiblings = {
+  "no-restricted-syntax": [
+    "error",
+    ...MEDIUM_FIELD.flatMap((medium) => [
+      `${SMALL_FIELD} ~ ${medium}`,
+      `${medium} ~ ${SMALL_FIELD}`,
+    ]).map((selector) => ({ selector, message: FIELD_SIZE_MESSAGE })),
+    // 同一條規則後寫的 options 會整個取代先寫的:帶上共用設定的 Typography color 規則(STYLE-12)
+    typographyColorRestriction,
+  ],
+};
+
 /** @type {import("eslint").Linter.Config[]} */
 export default [
   ...config,
@@ -85,5 +117,9 @@ export default [
   {
     files: URL_STATE_OWNERS,
     rules: restrictedImports({ paths: [sectionPath] }),
+  },
+  {
+    files: ["src/**/*.tsx"],
+    rules: fieldSizeSiblings,
   },
 ];

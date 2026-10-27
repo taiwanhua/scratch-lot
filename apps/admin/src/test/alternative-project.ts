@@ -12,7 +12,15 @@ export { createAdminStorageKeys } from "../../node_modules/@repo/project-config/
 export const projectPublic = {
   slug: "acme-portal",
   brand: { name: "Acme Portal", primary: "#2065D1" },
-  admin: { documentTitle: "Acme <Admin> & Co" },
+  admin: {
+    documentTitle: "Acme <Admin> & Co",
+    webApp: {
+      name: "Acme <Portal> & Co",
+      shortName: "Acme",
+      themeColor: "#0B3D91",
+      backgroundColor: "#F4F6F8",
+    },
+  },
   front: {
     metadata: {
       "zh-TW": {

@@ -164,6 +164,43 @@ describe("阻擋清單", () => {
     });
   });
 
+  it("這一關設「照常審核」(allowsApplicantAssignee)→ 新增審核者可以選申請人自己", async () => {
+    const instances = blockedInstances().map((instance) =>
+      instance.id === "inst-2"
+        ? {
+            ...instance,
+            steps: instance.steps.map((step) =>
+              step.stepKey === "hr"
+                ? { ...step, allowsApplicantAssignee: true }
+                : step,
+            ),
+          }
+        : instance,
+    );
+    const { user, world } = renderBlocked({ instances });
+    const table = await screen.findByRole("table", { name: "阻擋清單" });
+    await within(table).findByText("「人資」找不到審核者");
+
+    await user.click(within(table).getByRole("button", { name: "新增審核者" }));
+    const dialog = await screen.findByRole("dialog", {
+      name: "「人資」新增審核者",
+    });
+    await user.click(within(dialog).getByRole("combobox", { name: "審核者" }));
+    await screen.findAllByRole("option");
+    expect(autocompleteOption("小明")).not.toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
+    await user.click(autocompleteOption("小明"));
+    await user.click(within(dialog).getByRole("button", { name: "確定" }));
+
+    await waitFor(() => {
+      expect(world.inputs.addAssignee).toEqual([
+        { instanceId: "inst-2", stepKey: "hr", userId: APPLICANT.id },
+      ]);
+    });
+  });
+
   it("「需要推進」篩選:查詢帶 NEEDS_ADVANCE;候選太多時提示只檢查了一批;重試推進", async () => {
     const { user, world } = renderBlocked({
       blocked: { needsAdvance: ["inst-1"], truncated: true },

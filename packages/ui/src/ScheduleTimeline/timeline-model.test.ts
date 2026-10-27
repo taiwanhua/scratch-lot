@@ -11,7 +11,10 @@ import {
 import {
   DEFAULT_SCROLL_MINUTE,
   clipToDay,
+  dayStartMs,
+  formatClock,
   formatMinute,
+  formatTimeRange,
   initialScrollMinute,
   pointAt,
 } from "./timeline-time";
@@ -182,5 +185,60 @@ describe("不能操作的時間與回呼的點", () => {
     expect(point.time).toBe("14:00");
     expect(point.at.getTime()).toBe(at(D1, 14));
     expect(formatMinute(24 * 60)).toBe("24:00");
+  });
+});
+
+describe("時區:一天以 timezone 的 00:00 起算", () => {
+  // 2026-11-04 10:00–14:00 東京時間(UTC+9)= 01:00–05:00 UTC
+  const start = Date.UTC(2026, 10, 4, 1);
+  const end = Date.UTC(2026, 10, 4, 5);
+
+  it("長條落在時區當地的那一天、那幾點", () => {
+    expect(clipToDay(start, end, D1, "Asia/Tokyo")).toEqual({
+      startMinute: 10 * 60,
+      endMinute: 14 * 60,
+      fromPrevDay: false,
+      toNextDay: false,
+    });
+    // 同一段時間在 UTC 是 01:00–05:00
+    expect(clipToDay(start, end, D1, "UTC")).toMatchObject({
+      startMinute: 60,
+      endMinute: 5 * 60,
+    });
+  });
+
+  it("點到的時點與時間文字用同一個時區", () => {
+    const point = pointAt(D1, 10 * 60 + 20, "Asia/Tokyo");
+
+    expect(point).toEqual({ date: D1, time: "10:00", at: new Date(start) });
+    expect(formatTimeRange(start, end, "Asia/Tokyo")).toBe("10:00–14:00");
+    expect(formatClock(start, "UTC")).toBe("01:00");
+  });
+
+  it("夏令時間開始那天只有 23 小時:位置以當天 00:00 起經過的時間算,整天的範圍畫到 23:00 為止(切換後的長條比牆上時間早一格,已知限制)", () => {
+    const day = "2026-03-08";
+    const dayStart = dayStartMs(day, "America/New_York");
+    const nextStart = dayStartMs("2026-03-09", "America/New_York");
+
+    expect(dayStart).toBe(Date.UTC(2026, 2, 8, 5));
+    expect(nextStart).toBe(Date.UTC(2026, 2, 9, 4));
+    expect(clipToDay(dayStart, nextStart, day, "America/New_York")).toEqual({
+      startMinute: 0,
+      endMinute: 23 * 60,
+      fromPrevDay: false,
+      toNextDay: false,
+    });
+  });
+
+  it("容器、不能操作的範圍也照時區裁切", () => {
+    const tokyo = group("t", D1, 0, 1, "東京場", "東", [], { start, end });
+
+    expect(groupsOfDay([tokyo], D1, "Asia/Tokyo")[0]?.span).toMatchObject({
+      startMinute: 10 * 60,
+      endMinute: 14 * 60,
+    });
+    expect(disabledRangesOfDay([{ start, end }], D1, "Asia/Tokyo")).toEqual([
+      { start: 10 * 60, end: 14 * 60, label: undefined },
+    ]);
   });
 });

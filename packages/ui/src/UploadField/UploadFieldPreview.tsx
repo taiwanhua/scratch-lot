@@ -2,7 +2,8 @@
 
 import MuiBox from "@mui/material/Box";
 import MuiStack from "@mui/material/Stack";
-import MuiTypography from "@mui/material/Typography";
+
+import { Typography } from "../Typography/Typography";
 
 export interface UploadFieldPreviewProps {
   /** 這次選的檔案(檔名與大小取自它);顯示既有圖片時為 null */
@@ -41,13 +42,13 @@ export const UploadFieldPreview = ({
       }}
     />
     <MuiStack spacing={0.25} sx={{ minWidth: 0 }}>
-      <MuiTypography variant="body2" noWrap>
+      <Typography variant="body2" noWrap>
         {file === null ? fallbackLabel : file.name}
-      </MuiTypography>
+      </Typography>
       {file !== null && (
-        <MuiTypography variant="caption" sx={{ color: "text.secondary" }}>
+        <Typography variant="caption" color="textSecondary">
           {formatSize(file.size)}
-        </MuiTypography>
+        </Typography>
       )}
     </MuiStack>
   </MuiStack>

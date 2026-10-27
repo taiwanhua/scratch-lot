@@ -1,0 +1,55 @@
+# 排班作業 → 排班表的檢核與發布(規格 14.5「檢核面板」「發布」;正本 docs/modules/project/schedule.md「檢核與發布」)。
+# 檢核要 schedule.manage.view;發布要 schedule.manage.publish(沒有取消發布)。
+
+fragment ScheduleCheckItemFields on ScheduleCheckItem {
+  key
+  level
+  message
+  userId
+  userName
+  date
+  entryIds
+  actual
+  limit
+  from
+  to
+  startAt
+  endAt
+  isOtherStore
+  orgName
+  understaffed {
+    demandId
+    role
+    missing
+    available
+    dayOff
+    timeRange
+    occupied
+    cannotLead
+  }
+}
+
+# 用最新的生效設定檢查這家店這個月(限制在前、各自依規則排序)
+query ScheduleCheck($input: ScheduleRosterInput!) {
+  scheduleCheck(input: $input) {
+    orgId
+    month
+    limitCount
+    reminderCount
+    items {
+      ...ScheduleCheckItemFields
+    }
+  }
+}
+
+# 發布:用發布當下的設定重新檢查整月,有違反限制 → VALIDATION_FAILED(reason HAS_LIMIT_VIOLATIONS)
+mutation PublishSchedule($input: PublishScheduleInput!) {
+  publishSchedule(input: $input) {
+    period {
+      status
+      publishedAt
+      publishedByName
+    }
+    notifiedCount
+  }
+}

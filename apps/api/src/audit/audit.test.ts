@@ -27,6 +27,7 @@ const inOrgA: OperatorContext = {
   managedOrgIds: [orgA, orgB],
   memberOrgIds: [orgA],
   roleIds: [],
+  memberTenants: [],
 };
 
 /**
@@ -105,6 +106,7 @@ describe("AuditService(ADR-0004:模組層寫稽核、只增不改;對真 MongoDB
             managedOrgIds: [orgA],
             memberOrgIds: [orgA],
             roleIds: [],
+            memberTenants: [],
           },
           { action: "org.provision" },
         ),
@@ -125,6 +127,7 @@ describe("AuditService(ADR-0004:模組層寫稽核、只增不改;對真 MongoDB
         managedOrgIds: [orgB],
         memberOrgIds: [orgB],
         roleIds: [],
+        memberTenants: [],
       };
       expect(await auditLogs.findMany(asOrgB, { action: "org.move" })).toEqual(
         [],

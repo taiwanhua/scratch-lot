@@ -355,12 +355,13 @@ describe("模組與權限(moduleTree / setModuleEnabled / setModuleIcon / setPer
     it("回全樹:含側欄看不到的 hidden 節點、隱藏的 api 權限樹與根組織專屬模組;子節點掛在 children 上", async () => {
       const tree = await fetchTree();
 
+      // 頂層依 order:總覽 0、示範 2 / 3、申請中心 90、系統管理 95、api 99(專案模組不在這個測試的種子裡)
       expect(tree.map((node) => node.key)).toEqual([
         "overview",
-        "system",
         "demo",
         "demo-form",
         "apply-center",
+        "system",
         "api",
       ]);
       const system = byKey(tree, "system");

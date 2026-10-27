@@ -52,7 +52,7 @@ export const PrefillMappingTable = ({
         </Button>
       </Stack>
       {rows.length === 0 ? (
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" color="textSecondary">
           {t("noMapping")}
         </Typography>
       ) : (
@@ -75,11 +75,7 @@ export const PrefillMappingTable = ({
                 })}
               />
               {row.willOverwrite && (
-                <Typography
-                  variant="caption"
-                  color="warning.main"
-                  sx={{ pl: 4 }}
-                >
+                <Typography variant="caption" color="warning" sx={{ pl: 4 }}>
                   {t("willOverwrite")}
                 </Typography>
               )}

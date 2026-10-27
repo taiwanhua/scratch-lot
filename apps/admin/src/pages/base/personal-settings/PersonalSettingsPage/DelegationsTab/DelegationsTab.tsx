@@ -119,6 +119,7 @@ export const DelegationsTab = () => {
       <Alert severity="info">{t("hint")}</Alert>
       <Box sx={{ flex: 1, minHeight: 0 }}>
         <Table
+          minWidth={1070}
           columns={columns}
           rows={list.data?.myDelegations.items ?? []}
           getRowKey={(row) => row.id}
@@ -129,7 +130,7 @@ export const DelegationsTab = () => {
         />
       </Box>
       <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
-        <Typography variant="body2" color="text.secondary" sx={{ flex: 1 }}>
+        <Typography variant="body2" color="textSecondary" sx={{ flex: 1 }}>
           {t("total", { total: totalCount })}
         </Typography>
         <Pagination

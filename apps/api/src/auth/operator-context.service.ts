@@ -13,6 +13,7 @@ import type {
   OperatorOrgScope,
 } from "../database/operator-context";
 import { RelationService } from "../database/relation.service";
+import { tenantIdOfOrg } from "../database/tenant-id";
 import { SUPER_ADMIN_ROLE_KEY } from "../permission/permission-resolver";
 
 /** 租戶頂層 `orgs.settings.visibility` 的值(ADR-0005;未設視為 "own")。 */
@@ -31,10 +32,77 @@ function systemOperator(actorId: Types.ObjectId | null): OperatorContext {
     // 這份上下文就是在「算出 memberOrgIds / roleIds」的過程中用的,當下還沒有值
     memberOrgIds: [],
     roleIds: [],
+    memberTenants: [],
   };
 }
 
 type RoleRecord = Persisted<RoleDocument>;
+
+/**
+ * 資料共用(ADR-0014)的比對來源:所屬組織依**租戶**分組,每組帶所屬組織與其上層鏈
+ * (`ancestors` 去掉根組織,不含自己),以及這個租戶裡的可見範圍(`visibleOrgs`:所屬組織 + 開關展開的下層)。
+ * 根組織成員不屬於任何租戶,不列。
+ */
+function sharingAudienceOf(
+  memberOrgs: readonly Pick<OrgDocument, "_id" | "ancestors">[],
+  visibleOrgs: readonly Pick<OrgDocument, "_id" | "ancestors">[],
+): Pick<OperatorContext, "memberTenants"> {
+  const byTenant = new Map<
+    string,
+    {
+      tenantId: Types.ObjectId;
+      members: Map<string, Types.ObjectId>;
+      ancestors: Map<string, Types.ObjectId>;
+    }
+  >();
+  for (const org of memberOrgs) {
+    const tenantId = tenantIdOfOrg(org);
+    if (tenantId === null) {
+      continue;
+    }
+    const group = byTenant.get(String(tenantId)) ?? {
+      tenantId,
+      members: new Map<string, Types.ObjectId>(),
+      ancestors: new Map<string, Types.ObjectId>(),
+    };
+    group.members.set(String(org._id), org._id);
+    for (const ancestor of org.ancestors.slice(1)) {
+      group.ancestors.set(String(ancestor), ancestor);
+    }
+    byTenant.set(String(tenantId), group);
+  }
+  const visibleByTenant = new Map<string, Map<string, Types.ObjectId>>();
+  for (const org of visibleOrgs) {
+    const tenantId = tenantIdOfOrg(org);
+    if (tenantId === null) {
+      continue;
+    }
+    const visible =
+      visibleByTenant.get(String(tenantId)) ??
+      new Map<string, Types.ObjectId>();
+    visible.set(String(org._id), org._id);
+    visibleByTenant.set(String(tenantId), visible);
+  }
+  return {
+    memberTenants: [...byTenant.values()].map((group) => ({
+      tenantId: group.tenantId,
+      memberOrgIds: [...group.members.values()],
+      ancestorOrgIds: [...group.ancestors.values()],
+      visibleOrgIds: [
+        ...(
+          visibleByTenant.get(String(group.tenantId)) ?? group.members
+        ).values(),
+      ],
+    })),
+  };
+}
+
+/** 可見範圍的組織 → 上下文的 `visibleOrgIds`。 */
+function scopeOfVisible(
+  visibleOrgs: readonly Pick<OrgDocument, "_id">[] | "all",
+): OperatorOrgScope {
+  return visibleOrgs === "all" ? "all" : visibleOrgs.map((org) => org._id);
+}
 
 export interface MemberOrg {
   id: Types.ObjectId;
@@ -99,10 +167,8 @@ export class OperatorContextService {
         : (memberOrgs[0]?.id ?? null);
 
     // 依序讀(TX-02):自動通過在推進的交易內以審核者本人的身分跑守門,也走這裡
-    const visibleOrgIds = await this.visibleOrgIdsOf(
-      reader,
-      memberOrgDocuments,
-    );
+    const visibleOrgs = await this.visibleOrgsOf(reader, memberOrgDocuments);
+    const visibleOrgIds = scopeOfVisible(visibleOrgs);
     const enabledRoles = await this.enabledRolesOf(reader, userId);
     const managedOrgIds = await this.managedOrgIdsOf(reader, enabledRoles);
     return {
@@ -114,6 +180,11 @@ export class OperatorContextService {
         // 資料範圍規則的比對來源(ADR-0008):所屬組織是 org_user 的直接關聯,不含開關展開的下層
         memberOrgIds: memberOrgs.map((org) => org.id),
         roleIds: enabledRoles.map((role) => role._id),
+        // 資料共用的比對來源(ADR-0014):所屬組織的上層鏈與租戶頂層,同樣不隨當前組織切換
+        ...sharingAudienceOf(
+          memberOrgDocuments,
+          visibleOrgs === "all" ? [] : visibleOrgs,
+        ),
       },
       memberOrgs,
     };
@@ -127,14 +198,19 @@ export class OperatorContextService {
   async systemOperatorOfOrg(orgId: Types.ObjectId): Promise<OperatorContext> {
     const reader = systemOperator(null);
     const org = await this.orgs.findById(reader, orgId);
+    const visibleOrgs =
+      org === null ? [] : await this.visibleOrgsOf(reader, [org]);
     return {
       actorId: null,
       currentOrgId: orgId,
-      visibleOrgIds:
-        org === null ? [orgId] : await this.visibleOrgIdsOf(reader, [org]),
+      visibleOrgIds: org === null ? [orgId] : scopeOfVisible(visibleOrgs),
       managedOrgIds: [],
       memberOrgIds: [orgId],
       roleIds: [],
+      ...sharingAudienceOf(
+        org === null ? [] : [org],
+        visibleOrgs === "all" ? [] : visibleOrgs,
+      ),
     };
   }
 
@@ -170,22 +246,23 @@ export class OperatorContextService {
     });
   }
 
-  private async visibleOrgIdsOf(
+  /** 可見範圍的組織(所屬組織 + 租戶開了「含下層」時的整棵下層);屬根組織 → `"all"`。 */
+  private async visibleOrgsOf(
     reader: OperatorContext,
     memberOrgs: OrgDocument[],
-  ): Promise<OperatorOrgScope> {
+  ): Promise<OrgDocument[] | "all"> {
     if (memberOrgs.some((org) => org.parentId === null)) {
       return "all";
     }
-    const visible = new Map<string, Types.ObjectId>();
+    const visible = new Map<string, OrgDocument>();
     for (const org of memberOrgs) {
-      visible.set(String(org._id), org._id);
+      visible.set(String(org._id), org);
       if (await this.isSubtreeVisible(reader, org)) {
         const descendants = await this.orgs.findMany(reader, {
           ancestors: org._id,
         });
         for (const descendant of descendants) {
-          visible.set(String(descendant._id), descendant._id);
+          visible.set(String(descendant._id), descendant);
         }
       }
     }

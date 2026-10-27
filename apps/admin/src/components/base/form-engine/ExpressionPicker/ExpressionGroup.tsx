@@ -29,7 +29,7 @@ export const ExpressionGroup = ({ title, children }: ExpressionGroupProps) => (
   >
     <Typography
       variant="caption"
-      color="text.secondary"
+      color="textSecondary"
       component="div"
       sx={{ mb: 1 }}
     >

@@ -39,7 +39,7 @@
 
 ## 資料
 
-**`demo_items_two`**:`name`、`note`、`enabled` + 基礎欄位(ADR-0007)。不宣告 `dataScopeTarget`。
+**`demo_items_two`**:`name`、`note`、`enabled`、`shareOrgs`(共用給)+ 基礎欄位(ADR-0007)。不宣告 `dataScopeTarget`。資料共用宣告為「可共用、預設不共用、可編輯」(`sharing: { mode: "shareable", defaultShareOrgs: "none", editable: true }`,ADR-0014),是權限劇本 30–35 的示範表。
 
 **Seed 與環境**:模組與權限同示範模組1(全環境灌、`enabled` 是初始 seed 值欄位、納入租戶管理員模板)。
 
@@ -55,6 +55,7 @@
 ## 規則
 
 - **範圍只有可見範圍保底**:`demo_items_two` 掛 `tenantScopePlugin`,但沒有資料範圍目標,所以資料範圍規則永遠不介入(劇本 3 的對照)。可見範圍外與已軟刪除都回 `NOT_FOUND`。
+- **共用給**(ADR-0014):讀取另看得到「共用給我所屬組織(或其上層且含下層)」的項目;共用進來的只能看 —— 編輯 / 停用 / 刪除一律 `NOT_FOUND`,`abilities` 兩個都是 `false`、`isShared = true`。新增時給非空清單要有 `.edit`(沒有 → `FORBIDDEN`);清單的組織要與項目同租戶(可以是自己看不到的組織),否則 `VALIDATION_FAILED`(`fields: ["shareOrgs"]`)。
 - **停用 / 啟用守 `.edit` 而不是自己的 `toggle-enabled`**:對照組的權限表只有四筆,切啟用狀態就是「改這一筆」。治理模組(角色管理、欄位管理)另有 `toggle-enabled`,是因為那裡的停用會影響**別人的權限**、要能單獨授予 —— 業務資料沒有這個需求。六個端點只用到四個 key,本身就是「權限與端點不必一一對應」的示範。
 - **停用不套自鎖**:理由同示範模組1(業務資料停用隨時可以開回來)。
 - **`enabled` 為 `false` 的項目照樣列出來**,只是標示為停用;真正消失的是刪除(軟刪除)。
@@ -75,20 +76,24 @@
 | `setDemoItemTwoEnabled(input)`              | `.edit`                | 回 `DemoItemTwoPayload`                      |
 | `deleteDemoItemTwo(input)`                  | `.delete`              | 軟刪除;回 `DeleteDemoItemTwoPayload`         |
 
-**回傳欄位的語意**(GQL-07 的正本):`DemoItemTwo` 有 `id`、`name`、`note`、`enabled`、`createdBy`、`createdAt`、`updatedAt`、`abilities`。
+**回傳欄位的語意**(GQL-07 的正本):`DemoItemTwo` 有 `id`、`name`、`note`、`enabled`、`createdBy`、`createdAt`、`updatedAt`、`abilities`、`shareOrgs`、`isShared`。
 
 - **`createdBy`**(`{ id, name }`,可為 `null`):建立者。**查不到使用者時整個欄位為 `null`** —— seed 的示範資料建立者是假 id(見「資料」),已刪除的帳號同理。前端要能顯示「—」,不可假設一定有值。
-- **`abilities`**(`{ canEdit, canDelete }`):這位操作者對這一筆能做什麼,**api 依權限算好、前端只讀不重算**。示範模組2 沒有種類規則也沒有欄位級權限,所以它等於「操作者有沒有 `.edit` / `.delete`」;前端顯示按鈕的條件就是 `item.abilities.canEdit`,不再與 `usePermissions` 相乘(與角色管理的 `Role.abilities` 同型,但那邊是兩者相乘 —— 差別在這裡的 abilities 已經**含**權限判斷)。
+- **`abilities`**(`{ canEdit, canDelete }`):這位操作者對這一筆能做什麼,**api 依權限算好、前端只讀不重算**。示範模組2 沒有種類規則也沒有欄位級權限,所以它等於「操作者有沒有 `.edit` / `.delete`」;前端顯示按鈕的條件就是 `item.abilities.canEdit`,不再與 `usePermissions` 相乘(與角色管理的 `Role.abilities` 同型,但那邊是兩者相乘 —— 差別在這裡的 abilities 已經**含**權限判斷)。**共用進來的項目兩個都是 `false`**(寫入不放大)。
+- **`shareOrgs`**(`[ShareOrg!]!`,`{ orgId, includeDescendants }`):共用給;空 = 不共用,`[{ 最上層組織, true }]` = 全部分店。
+- **`isShared`**:這一筆是共用進來的(歸屬組織不在操作者的可見範圍內)。
 
 **缺席 / `null` 的語意**(GQL-06):
 
-| input 欄位                    | 缺席         | `null`           |
-| ----------------------------- | ------------ | ---------------- |
-| `DemoItemsTwoInput.keyword`   | 不篩         | 不篩             |
-| `DemoItemsTwoInput.enabled`   | 啟用停用都列 | 啟用停用都列     |
-| `CreateDemoItemTwoInput.note` | 沒有備註     | 沒有備註(同缺席) |
-| `UpdateDemoItemTwoInput.name` | 不動         | 型別上不允許     |
-| `UpdateDemoItemTwoInput.note` | **不動**     | **清空**         |
+| input 欄位                         | 缺席         | `null`                                 |
+| ---------------------------------- | ------------ | -------------------------------------- |
+| `DemoItemsTwoInput.keyword`        | 不篩         | 不篩                                   |
+| `DemoItemsTwoInput.enabled`        | 啟用停用都列 | 啟用停用都列                           |
+| `CreateDemoItemTwoInput.note`      | 沒有備註     | 沒有備註(同缺席)                       |
+| `UpdateDemoItemTwoInput.name`      | 不動         | 型別上不允許                           |
+| `UpdateDemoItemTwoInput.note`      | **不動**     | **清空**                               |
+| `CreateDemoItemTwoInput.shareOrgs` | 預設(不共用) | 預設(同缺席)                           |
+| `UpdateDemoItemTwoInput.shareOrgs` | 不動         | `VALIDATION_FAILED`(要不共用請送 `[]`) |
 
 `keyword` 比對 `name` 與 `note`(不分大小寫的部分比對,regex 特殊字元當字面值);分頁 `page` 1 起算、`pageSize` 預設 20 上限 100;排序固定 `createdAt` 由新到舊。
 
@@ -147,7 +152,7 @@
 
 ## 測試
 
-- api:`apps/api/src/demo-items-two/demo-items-two.test.ts`;夾具 `test-support/fixtures.ts`。
+- api:`apps/api/src/demo-items-two/demo-items-two.test.ts`(含「共用給」);夾具 `test-support/fixtures.ts`。資料共用機制本身的表格測試在 `apps/api/src/database/data-sharing.test.ts`。
 - admin:`apps/admin/src/pages/base/demo/SampleTwoPage/SampleTwoPage.test.tsx`、`SampleTwoViewPage.test.tsx`、`SampleTwoFormPage.test.tsx`、`apps/admin/src/pages/base/demo/SampleTwoRoutes.test.tsx`;msw handler `apps/admin/src/test/msw/demo-sample-two-handlers.ts`、夾具 `demo-two-fixtures.ts`。
 - 劇本 E2E:`apps/e2e/src/specs/scenario-03-undeclared-target.spec.ts`(未宣告資料範圍目標的對照);劇本本文見 [permission-scenarios](../testing/permission-scenarios.md)。
 

@@ -82,7 +82,7 @@ export const ModuleDetailPanel = ({
           {isLoading ? (
             <CircularProgress aria-label={t("loading")} />
           ) : (
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="body2" color="textSecondary">
               {t("empty")}
             </Typography>
           )}
@@ -111,7 +111,7 @@ export const ModuleDetailPanel = ({
           </Typography>
           {canToggleEnabled ? (
             <>
-              <Typography variant="body2" color="text.secondary">
+              <Typography variant="body2" color="textSecondary">
                 {t("enabled")}
               </Typography>
               {/* 停用的開關收不到 hover,包 span 的事情交給 Tooltip 自己處理 */}
@@ -146,7 +146,7 @@ export const ModuleDetailPanel = ({
             /* 權限容器沒有畫面,只講「隱藏」不夠 —— 同一列補上它存在的理由 */
             <Stack spacing={0.25}>
               <Typography variant="body2">{t("sidebarContainer")}</Typography>
-              <Typography variant="caption" color="text.secondary">
+              <Typography variant="caption" color="textSecondary">
                 {t("sidebarContainerHint")}
               </Typography>
             </Stack>

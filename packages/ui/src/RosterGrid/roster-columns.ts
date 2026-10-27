@@ -27,8 +27,8 @@ const disabledLayerSx = {
   },
 };
 
-/** 收合窄欄的寬度 */
-const COLLAPSED_GROUP_WIDTH = 88;
+/** 收合窄欄的寬度(預設) */
+export const COLLAPSED_GROUP_WIDTH = 88;
 
 export interface BuildRosterColumnsOptions<Person> {
   leadingColumns: readonly DataTableColumn<Person>[];
@@ -41,6 +41,8 @@ export interface BuildRosterColumnsOptions<Person> {
   /** 欄位顯示狀態:被隱藏的欄不當群組的第一欄 */
   columnVisibility: Readonly<Record<string, boolean>> | undefined;
   onToggleGroup: (groupId: string) => void;
+  /** 收合窄欄的寬度;比預設窄時表頭左右留白也縮小(手機) */
+  collapsedGroupWidth?: number;
 }
 
 /** 欄位群組展開時,收合鈕(只有 ▾,名稱是群組名)疊在該組第一欄的表頭前面,不多佔欄寬。 */
@@ -68,6 +70,7 @@ const collapsedGroupColumn = <Person>(
   group: RosterColumnGroup,
   pinned: DataTableColumn<Person>["pinned"],
   onToggle: () => void,
+  width: number,
 ): DataTableColumn<Person> => ({
   key: `${COLLAPSED_GROUP_KEY_PREFIX}${group.id}`,
   header: createElement(RosterGroupToggle, {
@@ -76,8 +79,11 @@ const collapsedGroupColumn = <Person>(
     iconPosition: "end",
     onToggle,
   }),
-  width: COLLAPSED_GROUP_WIDTH,
-  minWidth: COLLAPSED_GROUP_WIDTH,
+  width,
+  minWidth: width,
+  ...(width < COLLAPSED_GROUP_WIDTH
+    ? { headerSx: { px: 0.5 }, cellSx: { px: 0.5 } }
+    : {}),
   pinned,
 });
 
@@ -91,6 +97,7 @@ const applyGroups = <Person>(
   collapsed: ReadonlySet<string>,
   isVisible: (columnKey: string) => boolean,
   onToggleGroup: (groupId: string) => void,
+  collapsedWidth: number,
 ): DataTableColumn<Person>[] =>
   columns.flatMap((column) => {
     const group = groups.find((g) => g.columnKeys.includes(column.key));
@@ -103,7 +110,7 @@ const applyGroups = <Person>(
     };
     if (collapsed.has(group.id)) {
       return isFirst === column.key
-        ? [collapsedGroupColumn(group, column.pinned, toggle)]
+        ? [collapsedGroupColumn(group, column.pinned, toggle, collapsedWidth)]
         : [];
     }
     return isFirst === column.key
@@ -125,6 +132,7 @@ export const buildRosterColumns = <Person extends RowData>({
   collapsedColumnGroups,
   columnVisibility,
   onToggleGroup,
+  collapsedGroupWidth = COLLAPSED_GROUP_WIDTH,
 }: BuildRosterColumnsOptions<Person>): DataTableColumn<Person>[] => {
   const collapsed = new Set(collapsedColumnGroups);
   const leading = leadingColumns.map((c) => ({
@@ -159,5 +167,6 @@ export const buildRosterColumns = <Person extends RowData>({
     collapsed,
     (key) => columnVisibility?.[key] !== false,
     onToggleGroup,
+    collapsedGroupWidth,
   );
 };

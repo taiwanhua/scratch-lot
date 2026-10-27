@@ -60,6 +60,8 @@ export interface RosterGridProps<Person extends RowData> {
   /** 收合中的群組 id(受控)。使用的模組存在瀏覽器 */
   collapsedColumnGroups?: readonly string[];
   onCollapsedColumnGroupsChange?: (groupIds: string[]) => void;
+  /** 收合窄欄([統計 ▸])的寬度(px);預設 88。手機一次要看到兩天時給窄一點,表頭左右留白跟著縮小 */
+  collapsedGroupWidth?: number;
   /** 頂部固定群組(選用) */
   topGroup?: RosterTopGroup;
   /** 日期格的無障礙名稱;預設「<人員 key> <日期>」 */
@@ -93,6 +95,7 @@ export const RosterGrid = <Person extends RowData>({
   columnGroups = NO_COLUMNS,
   collapsedColumnGroups = NO_GROUP_IDS,
   onCollapsedColumnGroupsChange,
+  collapsedGroupWidth,
   topGroup,
   formatCellLabel = (person, date) => `${getPersonKey(person)} ${date}`,
   formatEmptyGroupCellLabel = (date) =>
@@ -150,6 +153,7 @@ export const RosterGrid = <Person extends RowData>({
     collapsedColumnGroups,
     columnVisibility,
     onToggleGroup: toggleGroup,
+    ...(collapsedGroupWidth === undefined ? {} : { collapsedGroupWidth }),
   });
 
   const labelColumnKey = leadingColumns.find(

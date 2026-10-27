@@ -59,6 +59,16 @@ export interface LifecycleSubmission {
   readonly values: StoredValues;
 }
 
+/** 作廢原因(`beforeVoid` 守門與 `voided` 事後動作才有;規則見 `docs/modules/forms.md`「作廢原因」)。 */
+export interface FormVoidReason {
+  /** 選項值;表單沒設作廢原因類別 = null。 */
+  readonly reasonKey: string | null;
+  /** 選項名稱(作廢當下);沒設類別 = null。 */
+  readonly reasonLabel: string | null;
+  /** 說明(去空白);沒填 = null。沒設類別時就是自由文字理由(必填,一定有)。 */
+  readonly reasonNote: string | null;
+}
+
 /**
  * 取這筆登記在 `inject` 宣告過的 repository / service;沒宣告的 token → 拋錯
  * (實例在啟動時解析好,見 `resolveLifecycleInjections`)。
@@ -75,6 +85,8 @@ export interface FormGuardContext {
   readonly values: StoredValues;
   /** 關卡 key(核准 / 駁回 / 退回);其他守門為 null。 */
   readonly stepKey: string | null;
+  /** 作廢原因:只有 `beforeVoid` 有。 */
+  readonly voidReason?: FormVoidReason;
   /** 動作所在交易的 session(唯讀用;repository 不帶 session 時也會自動用它)。 */
   readonly session: ClientSession;
   readonly get: LifecycleResolver;
@@ -112,11 +124,20 @@ export interface FormEffectContext {
   readonly stepKey: string | null;
   /** `stepPassed` 是跳過的(其他事件一律 false)。 */
   readonly skipped: boolean;
+  /** 作廢原因:只有 `voided` 有。 */
+  readonly voidReason?: FormVoidReason;
   /**
    * 系統身分:沒有操作者、不帶任何角色,可見範圍 = 單據的組織(租戶頂層開了「含下層」時含其下層),
    * 不使用按下按鈕那個人的權限。專案寫入以它當 operator。
    */
   readonly operator: OperatorContext;
+  /**
+   * 造成這個事件的人(只給「誰讓資料變了」的記錄用,例:基礎欄位的修改者;**不是**權限來源):
+   * `submitted` = 送出的人(沒走流程直接完成的單,接著的 `completed` 也是送出的人)、`voided` = 作廢的人、
+   * `rejected` / `returned` = 做這個決定的審核者、`withdrawn` = 撤回的人(申請人)。
+   * 只有系統推進的事件(排程、自動通過、重試)是 null:`stepPassed` 與走流程的 `completed`。
+   */
+  readonly actorId: Types.ObjectId | null;
   readonly session: ClientSession;
   readonly get: LifecycleResolver;
   readonly notify: LifecycleNotify;

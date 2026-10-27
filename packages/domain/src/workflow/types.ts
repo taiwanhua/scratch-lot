@@ -51,15 +51,28 @@ export interface SkipOrgsDef {
   includeDescendants: boolean;
 }
 
+/** `AutoApproveDef.applicant` 的「照常審核」:申請人留在審核者名單,自己再按一次核准。 */
+export const APPLICANT_REVIEW = "review";
+
 /**
- * 自動通過(兩項各自開關,省略 = 照常審核):
- * - `applicant`:申請人是這一關的審核者 → 記成申請人核准(預設照常 = 剔除申請人)
- * - `priorApprover`:審核者已在**這一輪**(同一實例)更早的關卡親自核准過 → 記成他核准
+ * 申請人也是這一關的審核者時怎麼處理(`AutoApproveDef.applicant` 的三種值;`applicantAsReviewerOf` 換算):
+ * - `exclude`:剔除申請人(預設;省略 / `false`)—— 名單只剩其他人,沒人就阻擋
+ * - `auto`:自動通過(`true`)—— 記成申請人核准(過了 `beforeApprove` 才算;擋下照 `exclude`)
+ * - `review`:照常審核(`"review"`)—— 申請人留在名單,和其他審核者一樣拿一張待審任務
+ */
+export type ApplicantAsReviewer = "exclude" | "auto" | "review";
+
+/**
+ * 自動通過(兩項各自設定,省略 = 預設):
+ * - `applicant`:申請人是這一關的審核者時 —— 省略 / `false` = 剔除申請人(預設)、`true` = 自動通過、
+ *   `"review"`(`APPLICANT_REVIEW`)= 照常審核(申請人留在名單自己審)
+ * - `priorApprover`:審核者已在**這一輪**(同一實例)更早的關卡親自核准過 → 記成他核准(省略 = 照常審核)
  *
- * 兩種都照樣經 `beforeApprove`;被擋下就留給他照常審核。
+ * 自動通過都照樣經 `beforeApprove`;被擋下:申請人回到 `applicant` 的非自動處理(剔除或照常審核)、
+ * 其他人留給他照常審核。
  */
 export interface AutoApproveDef {
-  applicant?: boolean;
+  applicant?: boolean | typeof APPLICANT_REVIEW;
   priorApprover?: boolean;
 }
 
@@ -111,7 +124,7 @@ export interface ReviewStepDef {
   skipWhen?: Expression | null;
   /** 申請人屬於這些組織就跳過(畫面上的「申請人屬於這些組織」);沒設 → 不看組織。 */
   skipOrgs?: SkipOrgsDef | null;
-  /** 自動通過;沒設 = 兩項都照常審核。 */
+  /** 自動通過與申請人也是審核者時的處理;沒設 = 剔除申請人、已核准過的照常審核。 */
   autoApprove?: AutoApproveDef | null;
   /** 審核者可否「退回修改」;省略 = true。 */
   allowReturn?: boolean;

@@ -13,11 +13,26 @@ import { renderApp } from "@/test/render";
 const LG = 1200;
 const XL = 1536;
 
-/** 非手機版面(`@media (min-width:600px)`)那條的 `min-width`(jsdom 不套 @media,讀宣告)。 */
+/** `lg` 起(`@media (min-width:1200px)`)那條的 `min-width`(jsdom 不套 @media,讀宣告)。 */
 const contentMinWidth = (): string =>
-  mediaRulesOf(screen.getByTestId("shell-content"), 600);
+  mediaRulesOf(screen.getByTestId("shell-content"), LG);
 
-describe("殼的內容區最小寬度(主題斷點;視窗更窄時由內容區水平捲動)", () => {
+describe("殼的內容區最小寬度(lg 以上才套;視窗更窄時由內容區水平捲動)", () => {
+  it("平板以下(< lg)不設最小寬度:sm / md 斷點沒有 min-width 宣告,xs 是 0", async () => {
+    server.use(
+      ...authWorld({ hasRefreshCookie: true, modules: superAdminModules })
+        .handlers,
+    );
+    renderApp({ path: "/overview" });
+    await screen.findByRole("navigation", { name: "主選單" });
+
+    const content = screen.getByTestId("shell-content");
+    expect(mediaRulesOf(content, 0)).toContain("min-width: 0");
+    expect(mediaRulesOf(content, 600)).not.toContain("min-width");
+    expect(mediaRulesOf(content, 900)).not.toContain("min-width");
+    expect(contentMinWidth()).toContain("min-width");
+  });
+
   it("殼層預設以 lg 為準,收合側欄後重算;水平捲動只在 <main>,外框不捲", async () => {
     server.use(
       ...authWorld({ hasRefreshCookie: true, modules: superAdminModules })
@@ -79,6 +94,24 @@ describe("殼的內容區最小寬度(主題斷點;視窗更窄時由內容區�
     await screen.findByRole("navigation", { name: "主選單" });
     expect(contentMinWidth()).toContain(`${String(LG)}px`);
     expect(contentMinWidth()).not.toContain(`${String(XL)}px`);
+  });
+});
+
+describe("殼的垂直捲動(STYLE-08:內容頁不釘高,交給 <main> 捲)", () => {
+  it("<main> 垂直可捲;內容區那一層不裁切(沒有 overflow: hidden)", async () => {
+    server.use(
+      ...authWorld({ hasRefreshCookie: true, modules: superAdminModules })
+        .handlers,
+    );
+    renderApp({ path: "/overview" });
+    await screen.findByRole("navigation", { name: "主選單" });
+    // jsdom 不展開 overflow 簡寫:宣告 overflow: auto 或 overflow-y: auto 都算
+    const mainStyle = globalThis.getComputedStyle(screen.getByRole("main"));
+    expect([mainStyle.overflow, mainStyle.overflowY]).toContain("auto");
+    const content = globalThis.getComputedStyle(
+      screen.getByTestId("shell-content"),
+    );
+    expect([content.overflow, content.overflowY]).not.toContain("hidden");
   });
 });
 

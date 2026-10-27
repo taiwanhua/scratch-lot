@@ -20,7 +20,11 @@ export interface ListColumnSpec {
   order: number;
 }
 
-export const SUMMARY_SLOTS = ["title", "date", "amount"] as const;
+/**
+ * 「摘要槽」欄可選的值:三個摘要槽(`form_submissions.summary`)加**單號**(`serialNo`,表單設了單號格式、
+ * 第一次送出時給;沒有號的那一格顯示「—」)。
+ */
+export const SUMMARY_SLOTS = ["title", "date", "amount", "serialNo"] as const;
 
 export type SummarySlotKey = (typeof SUMMARY_SLOTS)[number];
 
@@ -49,6 +53,8 @@ export interface ListRowLike {
   formKey: string;
   version: number;
   values: Record<string, unknown>;
+  /** 單號(沒給 / 沒設格式為 null) */
+  serialNo?: string | null;
   summary?: {
     title?: string | null;
     date?: string | null;
@@ -74,7 +80,11 @@ export const resolveListCell = (
   ) => readonly FieldDef[] | undefined,
 ): ListCell => {
   if (column.kind === ModuleListColumnKind.Slot) {
-    const value = row.summary?.[column.key as SummarySlotKey] ?? null;
+    const value =
+      column.key === "serialNo"
+        ? (row.serialNo ?? null)
+        : (row.summary?.[column.key as Exclude<SummarySlotKey, "serialNo">] ??
+          null);
     return { kind: "slot", value };
   }
   if (

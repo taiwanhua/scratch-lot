@@ -30,7 +30,7 @@ export const UpgradeResultStep = ({ result }: UpgradeResultStepProps) => {
       <Stack component="section" spacing={0.5} aria-label={t("resultUpgraded")}>
         <Typography variant="subtitle2">{t("resultUpgraded")}</Typography>
         {result.upgraded.length === 0 ? (
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" color="textSecondary">
             {t("resultNoneUpgraded")}
           </Typography>
         ) : (

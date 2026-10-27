@@ -270,6 +270,10 @@ export class FormSubmissionModel {
   @Field(() => FormUserRef, { nullable: true })
   createdBy!: FormUserRef | null;
 
+  /** 單號(表單設了單號格式、第一次送出時給);null = 還沒給 / 表單沒設格式。 */
+  @Field(() => String, { nullable: true })
+  serialNo!: string | null;
+
   @Field(() => GraphQLISODateTime, { nullable: true })
   submittedAt!: Date | null;
 
@@ -290,8 +294,17 @@ export class FormSubmissionModel {
   @Field(() => GraphQLISODateTime, { nullable: true })
   voidedAt!: Date | null;
 
+  /** 作廢說明(沒設作廢原因類別時 = 自由文字理由)。 */
   @Field(() => String, { nullable: true })
   voidReason!: string | null;
+
+  /** 作廢原因的選項值(表單設了作廢原因類別時)。 */
+  @Field(() => String, { nullable: true })
+  voidReasonKey!: string | null;
+
+  /** 作廢原因的選項名稱(作廢當下的名稱)。 */
+  @Field(() => String, { nullable: true })
+  voidReasonLabel!: string | null;
 
   /** 「複製為新單」建出的那筆。 */
   @Field(() => ID, { nullable: true })
@@ -402,6 +415,18 @@ export class FormFieldOption {
 
   @Field(() => String)
   label!: string;
+}
+
+/** 作廢原因的選項(`formVoidReasonOptions`)。 */
+@ObjectType()
+export class FormVoidReasonOptionsPayload {
+  /** 表單設定的作廢原因類別;null = 沒設(作廢原因自由填寫,`items` 為空)。 */
+  @Field(() => String, { nullable: true })
+  categoryKey!: string | null;
+
+  /** 該類別啟用中的選項(可見範圍同欄位管理;依排序值)。 */
+  @Field(() => [FormFieldOption])
+  items!: FormFieldOption[];
 }
 
 @ObjectType()

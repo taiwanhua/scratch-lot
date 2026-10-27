@@ -11,6 +11,7 @@ import type { GraphqlContext } from "./auth/request-context";
 import { composeApiFeatures } from "./base/api-feature-registration";
 import { BASE_API_MODULES } from "./base/api-modules";
 import { MONGODB_URI_ENV, requireMongoDbUri } from "./database/mongodb-uri";
+import { applyStrictDateTimeInput } from "./graphql-date-time";
 import { notificationPreferenceDefinitions } from "./notifications/notification-registry";
 import {
   NotificationRegistryModule,
@@ -33,6 +34,9 @@ const BASE_FEATURE_MODULES = composeApiFeatures(
 const NOTIFICATION_PREFERENCES = notificationPreferenceDefinitions(
   composeAllNotificationTypes(PROJECT_NOTIFICATIONS),
 );
+
+// DateTime 輸入只收完整時點(帶時間與時區),見 graphql-date-time.ts
+applyStrictDateTimeInput();
 
 // GraphQL Sandbox 開關:本地開發(NODE_ENV 非 production)預設開;
 // 雲端預設關(不讓外人窺探 schema),dev/staging 環境以 GRAPHQL_SANDBOX=true 明確打開

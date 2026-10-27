@@ -2,7 +2,12 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 
 import { type ShellModule, matchModuleRoute } from "@/lib/base/module-tree";
-import { type RouteTab, entryHref, resolveTabs } from "@/lib/base/route-tabs";
+import {
+  type BatchCloseKind,
+  type RouteTab,
+  entryHref,
+  resolveTabs,
+} from "@/lib/base/route-tabs";
 import { useRouteTabsStore } from "@/stores/base/useRouteTabsStore";
 
 export interface UseRouteTabsOptions {
@@ -25,6 +30,8 @@ export interface RouteTabsState {
   activeRoute: string | null;
   select: (route: string) => void;
   close: (route: string) => void;
+  /** 批次關閉 `route` 左側 / 右側 / 以外的頁籤;目前頁被關掉時切到 `route` 那一頁 */
+  closeBatch: (kind: BatchCloseKind, route: string) => void;
   move: (fromRoute: string, toRoute: string) => void;
 }
 
@@ -42,6 +49,7 @@ export const useRouteTabs = ({
   const bind = useRouteTabsStore((state) => state.bind);
   const sync = useRouteTabsStore((state) => state.sync);
   const closeTab = useRouteTabsStore((state) => state.close);
+  const closeTabs = useRouteTabsStore((state) => state.closeBatch);
   const moveTab = useRouteTabsStore((state) => state.move);
 
   // 殼 mount 時綁定登入者的 key 並對齊目前路徑:放在 useState 初始化器(只跑一次)而不是 effect,
@@ -80,6 +88,16 @@ export const useRouteTabs = ({
     [closeTab, activeRoute, navigate],
   );
 
+  const closeBatch = useCallback(
+    (kind: BatchCloseKind, route: string) => {
+      const target = closeTabs(kind, route, activeRoute);
+      if (target !== null) {
+        void navigate(target);
+      }
+    },
+    [closeTabs, activeRoute, navigate],
+  );
+
   const move = useCallback(
     (fromRoute: string, toRoute: string) => {
       moveTab(fromRoute, toRoute);
@@ -87,5 +105,5 @@ export const useRouteTabs = ({
     [moveTab],
   );
 
-  return { tabs, activeRoute, select, close, move };
+  return { tabs, activeRoute, select, close, closeBatch, move };
 };

@@ -22,7 +22,7 @@ export const OverviewPage = () => {
       <Typography variant="h5" component="h1">
         {t("greeting", { name })}
       </Typography>
-      <Typography color="text.secondary">
+      <Typography color="textSecondary">
         {currentOrg ? t("currentOrg", { org: currentOrg.name }) : t("noOrg")}
       </Typography>
     </Stack>

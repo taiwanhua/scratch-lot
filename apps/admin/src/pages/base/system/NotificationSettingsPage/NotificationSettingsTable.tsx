@@ -8,12 +8,16 @@ import { Tag } from "@repo/ui/tag";
 import { Typography } from "@repo/ui/typography";
 
 import { useAudienceSummary } from "@/components/base/AudiencePicker/useAudienceSummary";
-import { useNotificationTypeName } from "@/lib/base/notification-type-name";
+import {
+  useNotificationRecipientNote,
+  useNotificationTypeName,
+} from "@/lib/base/notification-type-name";
 
 import {
   NOTIFICATION_AUDIENCE_FIELDS,
   NOTIFICATION_AUDIENCE_ORG_SOURCES,
 } from "./notification-audience";
+import { useScheduleSummary } from "./notification-schedule";
 import { useOrgScopeText } from "./useOrgScopeText";
 
 export interface NotificationSettingsTableProps {
@@ -26,8 +30,9 @@ export interface NotificationSettingsTableProps {
 }
 
 /**
- * 負責人提醒類型清單:通知類型 / 組織範圍(唯讀)/ 收件人(人員條件摘要)/ 操作。
- * 收件人沒調整過的標「預設」;[還原預設] 只在調整過的那幾列可按。
+ * 通知類型清單(所有負責人提醒 + 宣告了可調時間的當事人通知):
+ * 通知類型 / 組織範圍(唯讀)/ 收件人(人員條件摘要;當事人通知唯讀「由事件決定」)/ 提醒時間 / 操作。
+ * 收件人、提醒時間沒調整過的各標「預設」;[還原預設] 只在有任何一塊調整過的列可按。
  */
 export const NotificationSettingsTable = ({
   rows,
@@ -43,6 +48,29 @@ export const NotificationSettingsTable = ({
     NOTIFICATION_AUDIENCE_FIELDS,
     NOTIFICATION_AUDIENCE_ORG_SOURCES,
   );
+  const scheduleOf = useScheduleSummary();
+  const recipientNoteOf = useNotificationRecipientNote();
+
+  const recipientsOf = (row: NotificationSettingItemFragment) => {
+    if (row.category !== "responsible" || row.audience == null) {
+      const note = recipientNoteOf(row.type, row.recipientNote);
+      return (
+        <Typography variant="body2" component="span" color="textSecondary">
+          {note === null
+            ? t("partyRecipients")
+            : t("partyRecipientsWithNote", { note })}
+        </Typography>
+      );
+    }
+    return (
+      <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
+        <Typography variant="body2" component="span">
+          {summaryOf(row.audience)}
+        </Typography>
+        {row.isDefault && <Tag label={t("defaultTag")} />}
+      </Stack>
+    );
+  };
 
   const columns: TableColumn<NotificationSettingItemFragment>[] = [
     {
@@ -54,17 +82,29 @@ export const NotificationSettingsTable = ({
     {
       key: "orgScope",
       header: t("columns.orgScope"),
-      render: (row) => orgScopeText(row.orgScope),
+      render: (row) =>
+        row.orgScope ? orgScopeText(row.orgScope) : t("orgScopeByEvent"),
     },
     {
       key: "audience",
       header: t("columns.audience"),
+      render: recipientsOf,
+    },
+    {
+      key: "schedule",
+      header: t("columns.schedule"),
       render: (row) => (
         <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
-          <Typography variant="body2" component="span">
-            {summaryOf(row.audience)}
+          <Typography
+            variant="body2"
+            component="span"
+            color={row.schedule ? undefined : "textSecondary"}
+          >
+            {scheduleOf(row.type, row.schedule, row.scheduleDateLabel)}
           </Typography>
-          {row.isDefault && <Tag label={t("defaultTag")} />}
+          {row.schedule && row.isScheduleDefault && (
+            <Tag label={t("defaultTag")} />
+          )}
         </Stack>
       ),
     },
@@ -87,7 +127,7 @@ export const NotificationSettingsTable = ({
                 <Button
                   variant="text"
                   size="small"
-                  disabled={row.isDefault}
+                  disabled={row.isDefault && row.isScheduleDefault}
                   onClick={() => {
                     onReset(row);
                   }}
@@ -109,8 +149,10 @@ export const NotificationSettingsTable = ({
       isLoading={isLoading}
       emptyMessage={t("empty")}
       size="small"
-      minWidth={760}
+      minWidth={960}
       aria-label={t("tableLabel")}
+      // 頁面不釘高(STYLE-08):表格依內容長高,交給 <main> 捲;預設的 height: 100% 會解析成卡片高度
+      containerSx={{ height: "auto" }}
     />
   );
 };

@@ -17,6 +17,7 @@ import {
   defaultValueOf,
   isEmptyValue,
   lookupLabelFieldsOf,
+  normalizeSerialFormat,
   referencedFieldKeys,
   temporalIsoOf,
   upgradeValues,
@@ -32,16 +33,25 @@ import {
   FormVersionsRepository,
   FormsRepository,
 } from "../../database/database.module";
-import type { OperatorContext } from "../../database/operator-context";
+import {
+  type OperatorContext,
+  isOrgVisible,
+} from "../../database/operator-context";
 import {
   type FormRevision,
   type FormSubmissionStatus,
   revisionVersionOf,
 } from "../../database/schemas/form-submission.schema";
-import { allowsDraft } from "../../database/schemas/form.schema";
+import {
+  allowsDraft,
+  voidReasonCategoryOf,
+} from "../../database/schemas/form.schema";
 import { TransactionService, afterCommit } from "../../database/transaction";
+import { FieldOptionsService } from "../../fields/field-options.service";
+import { SerialService } from "../../serials/serial.service";
 import { StorageService } from "../../storage/storage.service";
 import { InstanceWithdrawService } from "../../workflows/workflow-engine/instance-withdraw.service";
+import type { FormVoidReason } from "../../workflows/workflow-engine/lifecycle/form-lifecycle-registration";
 import {
   type EffectSubject,
   FormLifecycleService,
@@ -66,6 +76,7 @@ import {
 } from "../form-mapper";
 import { formModulePermission } from "../form-permission-keys";
 import { fieldStatesOf, projectValues } from "../form-values/field-states";
+import { sharedOrgIdsFor } from "../form-values/shared-org-ids";
 import { SubmissionValuesService } from "../form-values/submission-values.service";
 import { storedSummaryOf } from "../form-values/temporal-values";
 import {
@@ -304,6 +315,8 @@ function workflowFieldsOf(
     blocked: boolean;
     voidedAt: Date | null;
     voidReason: string | null;
+    voidReasonKey?: string | null;
+    voidReasonLabel?: string | null;
     replacedById: Types.ObjectId | null;
     copiedFrom: Types.ObjectId | null;
   },
@@ -314,6 +327,8 @@ function workflowFieldsOf(
   | "blocked"
   | "voidedAt"
   | "voidReason"
+  | "voidReasonKey"
+  | "voidReasonLabel"
   | "replacedById"
   | "copiedFrom"
 > {
@@ -323,6 +338,8 @@ function workflowFieldsOf(
       blocked: false,
       voidedAt: null,
       voidReason: null,
+      voidReasonKey: null,
+      voidReasonLabel: null,
       replacedById: null,
       copiedFrom: null,
     };
@@ -334,6 +351,8 @@ function workflowFieldsOf(
     blocked: record.blocked,
     voidedAt: record.voidedAt,
     voidReason: record.voidReason,
+    voidReasonKey: record.voidReasonKey ?? null,
+    voidReasonLabel: record.voidReasonLabel ?? null,
     replacedById: record.replacedById ? String(record.replacedById) : null,
     copiedFrom: record.copiedFrom ? String(record.copiedFrom) : null,
   };
@@ -364,6 +383,8 @@ export class FormSubmissionsService {
     private readonly transactions: TransactionService,
     private readonly lifecycle: FormLifecycleService,
     private readonly cc: WorkflowCcService,
+    private readonly serials: SerialService,
+    private readonly fieldOptions: FieldOptionsService,
   ) {}
 
   // ---- 讀 ----
@@ -751,6 +772,8 @@ export class FormSubmissionsService {
       submittedAt: null,
       copiedFrom,
       touched,
+      // 草稿不共用(`sharedOrgIdsFor`);送出時才算
+      sharedOrgIds: [],
     });
     // 直接送出:這筆在同一個交易內就送出了,稽核只記送出(`direct: true`)
     if (options.skipAudit !== true) {
@@ -814,6 +837,12 @@ export class FormSubmissionsService {
         {
           $set: {
             values,
+            sharedOrgIds: await this.sharedOrgIdsOf(
+              facts,
+              record.formKey,
+              values,
+              record.status,
+            ),
             ...(input.touched === null || input.touched === undefined
               ? {}
               : { touched: touchedKeysOf(version.fields, input.touched) }),
@@ -910,6 +939,13 @@ export class FormSubmissionsService {
         submittedAt: (record.submittedAt ?? at).toISOString(),
       }),
     );
+    // 送出後不再是草稿:不論走不走流程都算
+    const sharedOrgIds = await this.sharedOrgIdsOf(
+      facts,
+      record.formKey,
+      values,
+      "completed",
+    );
     const route = await this.workflowSubmit.route(record);
     // 容量上限:走流程 = 修訂 +1 並 push 快照;不走流程 = 第一次送出,修訂只剩這一筆
     assertSubmissionCapacity(
@@ -941,11 +977,21 @@ export class FormSubmissionsService {
       values,
     });
     if (route.kind === "workflow") {
+      // 單號在驗證與守門都過了之後、送審寫入之前才取,與送審同一次寫入:
+      // `submitted` 事後動作讀得到,持有計數器寫鎖的時間也最短
+      const serialNo = await this.serialNoToGive(facts, record, at);
       await this.workflowSubmit.submit(
         facts.operator,
         record,
         expectedEditVersion,
-        { values, summary, ctx, at },
+        {
+          values,
+          summary,
+          ctx,
+          at,
+          sharedOrgIds,
+          ...(serialNo === null ? {} : { serialNo }),
+        },
         route,
       );
       await this.audit.record(facts.operator, {
@@ -963,7 +1009,9 @@ export class FormSubmissionsService {
       });
       return this.reloadOwn(facts, record);
     }
-    // 不走流程:完成、修訂、事後動作與稽核在同一個交易(走流程的寫入由 WorkflowSubmitService 負責)
+    // 不走流程:完成、修訂、事後動作與稽核在同一個交易(走流程的寫入由 WorkflowSubmitService 負責)。
+    // 單號在寫入前最後一步才取,與完成同一次寫入(持有計數器寫鎖的時間最短)
+    const serialNo = await this.serialNoToGive(facts, record, at);
     const updated = await this.submissions.findOwnAndUpdate(
       facts.operator,
       {
@@ -975,10 +1023,12 @@ export class FormSubmissionsService {
         $set: {
           values,
           summary,
+          sharedOrgIds,
           status: "completed",
           revision: 1,
           revisions: [{ revision: 1, version: record.version, values, ctx }],
           submittedAt: at,
+          ...(serialNo === null ? {} : { serialNo }),
         },
         $inc: { editVersion: 1 },
       },
@@ -991,8 +1041,9 @@ export class FormSubmissionsService {
     }
     // 沒走流程的單直接完成:先 submitted 再 completed(掛接點)
     const subject = effectSubjectOf(updated);
-    await this.lifecycle.emit("submitted", subject);
-    await this.lifecycle.emit("completed", subject);
+    const actor = { actorId: facts.operator.actorId };
+    await this.lifecycle.emit("submitted", subject, actor);
+    await this.lifecycle.emit("completed", subject, actor);
     await this.audit.record(facts.operator, {
       action: SUBMISSION_AUDIT.submit,
       targetType: SUBMISSION_TARGET,
@@ -1028,6 +1079,7 @@ export class FormSubmissionsService {
         throw notFoundError(`Form submission not found: ${input.id}`);
       }
       this.access.assertModulePermission(facts, record.moduleKey, "edit");
+      this.assertInWriteScope(facts, record);
       this.assertEditVersion(record, input.expectedEditVersion);
       if (record.revision !== input.expectedRevision) {
         throw conflictError(
@@ -1078,7 +1130,17 @@ export class FormSubmissionsService {
           revision: input.expectedRevision,
         },
         {
-          $set: { values, summary, revision },
+          $set: {
+            values,
+            summary,
+            revision,
+            sharedOrgIds: await this.sharedOrgIdsOf(
+              facts,
+              record.formKey,
+              values,
+              record.status,
+            ),
+          },
           $push: {
             revisions: { revision, version: record.version, values, ctx },
           },
@@ -1140,6 +1202,7 @@ export class FormSubmissionsService {
           );
         }
         this.access.assertModulePermission(facts, record.moduleKey, "delete");
+        this.assertInWriteScope(facts, record);
         await this.lifecycle.guard("beforeDelete", {
           operator: facts.operator,
           submission: record,
@@ -1221,8 +1284,9 @@ export class FormSubmissionsService {
   }
 
   /**
-   * 作廢(綁流程且已核准;申請人本人或有該模組 `edit` 者;理由必填;不需審核):提交 → `voided`,內容凍結。
-   * 一個交易(提交更新與稽核;ADR-0013)。
+   * 作廢(綁流程且已核准;申請人本人或有該模組 `edit` 者;原因必填;不需審核):提交 → `voided`,內容凍結。
+   * 原因:表單沒設作廢原因類別 → 自由文字(`reasonNote` 必填);設了 → `reasonKey` 必填且是該類別啟用中的選項、
+   * 選「其他」時 `reasonNote` 必填(`voidReasonOf`)。一個交易(提交更新與稽核;ADR-0013)。
    */
   async voidSubmission(
     facts: FormOperatorFacts,
@@ -1238,10 +1302,6 @@ export class FormSubmissionsService {
     facts: FormOperatorFacts,
     input: VoidSubmissionInput,
   ): Promise<SubmissionRecord> {
-    const reason = input.reason.trim();
-    if (reason === "") {
-      throw validationError("reason is required", ["reason"]);
-    }
     const id = toObjectId(input.id, "id");
     const own = await this.submissions.findOwnById(facts.operator, id);
     const record = own ?? (await this.submissions.findById(facts.operator, id));
@@ -1250,6 +1310,7 @@ export class FormSubmissionsService {
     }
     if (own === null) {
       this.access.assertModulePermission(facts, record.moduleKey, "edit");
+      this.assertInWriteScope(facts, record);
     }
     if (record.status !== "completed" || record.currentInstanceId === null) {
       throw conflictError(
@@ -1258,9 +1319,11 @@ export class FormSubmissionsService {
       );
     }
     this.assertEditVersion(record, input.expectedEditVersion);
+    const voidReason = await this.voidReasonOf(facts, record.formKey, input);
     await this.lifecycle.guard("beforeVoid", {
       operator: facts.operator,
       submission: record,
+      voidReason,
     });
     const filter = {
       _id: id,
@@ -1273,7 +1336,9 @@ export class FormSubmissionsService {
         status: "voided",
         voidedAt: new Date(),
         voidedBy: facts.operator.actorId,
-        voidReason: reason,
+        voidReason: voidReason.reasonNote,
+        voidReasonKey: voidReason.reasonKey,
+        voidReasonLabel: voidReason.reasonLabel,
       },
       $inc: { editVersion: 1 },
     };
@@ -1295,7 +1360,10 @@ export class FormSubmissionsService {
         "EDIT_VERSION_MISMATCH",
       );
     }
-    await this.lifecycle.emit("voided", effectSubjectOf(updated));
+    await this.lifecycle.emit("voided", effectSubjectOf(updated), {
+      voidReason,
+      actorId: facts.operator.actorId,
+    });
     // 知會:單據被作廢 → 整個流程的知會對象(同一個交易)
     await this.cc.voided(record.currentInstanceId);
     await this.audit.record(facts.operator, {
@@ -1303,9 +1371,49 @@ export class FormSubmissionsService {
       targetType: SUBMISSION_TARGET,
       targetId: record._id,
       before: { status: record.status, revision: record.revision },
-      after: { status: "voided", reason },
+      after: {
+        status: "voided",
+        reason: voidReason.reasonNote,
+        ...(voidReason.reasonKey === null
+          ? {}
+          : { reasonKey: voidReason.reasonKey }),
+      },
     });
     return updated;
+  }
+
+  /**
+   * 作廢原因的驗證與整形:表單(`voidReasonCategoryKey`)沒設類別 → 自由文字,`reasonNote` 必填、不可帶
+   * `reasonKey`;設了 → 底座原因檢查 `FieldOptionsService.assertReason`(`reasonKey` 必填且是該類別在操作者
+   * 合併範圍內啟用中的選項;類別不存在 = 沒有選項;選「其他」時 `reasonNote` 必填)。
+   * 不合 → `VALIDATION_FAILED`(`fields` 指到 `reasonKey` / `reasonNote`)。
+   */
+  private async voidReasonOf(
+    facts: FormOperatorFacts,
+    formKey: string,
+    input: VoidSubmissionInput,
+  ): Promise<FormVoidReason> {
+    const form = await this.access.findForm(facts.operator, formKey);
+    const categoryKey = form === null ? null : voidReasonCategoryOf(form);
+    if (categoryKey !== null) {
+      // 白名單只有這張表單設定的那一個類別
+      return this.fieldOptions.assertReason(
+        facts.operator,
+        categoryKey,
+        input,
+        [categoryKey],
+      );
+    }
+    if ((input.reasonKey?.trim() ?? "") !== "") {
+      throw validationError(`Form ${formKey} has no void reason options`, [
+        "reasonKey",
+      ]);
+    }
+    const note = input.reasonNote.trim();
+    if (note === "") {
+      throw validationError("reasonNote is required", ["reasonNote"]);
+    }
+    return { reasonKey: null, reasonLabel: null, reasonNote: note };
   }
 
   /**
@@ -1377,6 +1485,12 @@ export class FormSubmissionsService {
     );
     if (retried) {
       return { record: retried, cleared: null };
+    }
+    if (
+      facts.operator.actorId === null ||
+      source.createdBy?.equals(facts.operator.actorId) !== true
+    ) {
+      this.assertInWriteScope(facts, source);
     }
     if (source.replacedById !== null) {
       throw conflictError(
@@ -1714,6 +1828,8 @@ export class FormSubmissionsService {
    * - 改:申請人改草稿 / 退回 / 撤回(`create`);不綁流程的已完成(`edit`);綁流程的已完成鎖定
    * - 刪:草稿 / 被退回 / 撤回 = 申請人本人(`create`);不綁流程的已完成 / 已駁回(`delete`)
    * - 撤回:申請人、審核中;作廢:綁流程的已完成、申請人或 `edit`;複製為新單:已作廢 + `create`
+   * - **共用進來的**(歸屬組織不在可見範圍內、靠依欄位共用讀到的,ADR-0014):只能看 —— 已完成單的改 / 刪只看
+   *   可見範圍(同端點的 `assertInWriteScope`);作廢、複製為新單的申請人本人走自己的路徑,不受限
    */
   private abilitiesOf(
     facts: FormOperatorFacts,
@@ -1736,23 +1852,32 @@ export class FormSubmissionsService {
       record.formKey,
     );
     const isBound = record.currentInstanceId !== null;
+    // 共用只放寬讀:歸屬組織在可見範圍內才寫得動(同端點的 `assertInWriteScope`);
+    // 作廢與複製為新單的申請人本人走自己的路徑,不受限
+    const inVisibleScope = isOrgVisible(facts.operator, record.orgId);
+    const inWriteScope = isOwner || inVisibleScope;
     const isApplicantEditable =
       isOwner && APPLICANT_EDITABLE.includes(record.status) && canCreate;
     const canEdit =
       isApplicantEditable ||
-      (record.status === "completed" && !isBound && can("edit"));
+      (inVisibleScope &&
+        record.status === "completed" &&
+        !isBound &&
+        can("edit"));
     const canDelete =
       APPLICANT_EDITABLE.includes(record.status) && isOwner
         ? isApplicantEditable
-        : isDeletableRecord(record) && can("delete");
+        : inVisibleScope && isDeletableRecord(record) && can("delete");
     return {
       canEdit,
       canSaveDraft: isApplicantEditable && allowDraft,
       canDelete,
       canWithdraw: isOwner && record.status === "reviewing",
       canVoid:
-        record.status === "completed" && isBound && (isOwner || can("edit")),
-      canCopy: record.status === "voided" && canCreate,
+        record.status === "completed" &&
+        isBound &&
+        (isOwner || (inVisibleScope && can("edit"))),
+      canCopy: record.status === "voided" && canCreate && inWriteScope,
     };
   }
 
@@ -1989,6 +2114,64 @@ export class FormSubmissionsService {
     return version;
   }
 
+  /**
+   * **單號**:表單設了單號格式、這筆還沒有號 → 第一次送出時給號(`SerialService`,`form:<formKey>`,
+   * 依提交歸屬組織的租戶計數、送出時點以租戶時區切期間);已經有號(退回 / 撤回後再送)或表單沒設格式 → null。
+   * 在送出的交易內、**其他驗證與守門都通過之後**、這次送出的寫入之前才呼叫(取號會持有計數器的寫鎖到交易結束),
+   * 號碼與送出 / 送審同一次寫入,`submitted` 事後動作讀得到;送出失敗,號碼一起回復。
+   */
+  private async serialNoToGive(
+    facts: FormOperatorFacts,
+    record: SubmissionRecord,
+    at: Date,
+  ): Promise<string | null> {
+    if ((record.serialNo ?? null) !== null) {
+      return null;
+    }
+    const form = await this.forms.findOne(facts.operator, {
+      key: record.formKey,
+    });
+    const format = normalizeSerialFormat(form?.serial ?? null);
+    if (format === null) {
+      return null;
+    }
+    return this.serials.next(facts.operator, `form:${record.formKey}`, format, {
+      at,
+      orgId: record.orgId,
+    });
+  }
+
+  /**
+   * 共用進來的(歸屬組織不在可見範圍內、靠依欄位共用讀到的)只能看(ADR-0014「讀和寫分開」):改 / 刪 / 作廢 /
+   * 複製為新單 → `FORBIDDEN`(`SHARED_READ_ONLY`)。寫入中介層本來就只照可見範圍,這裡先擋,錯誤才講得清楚
+   * (不會變成「被別人更新了」)。申請人本人走自己的路徑,不經這裡。
+   */
+  private assertInWriteScope(
+    facts: FormOperatorFacts,
+    record: Pick<SubmissionRecord, "_id" | "orgId">,
+  ): void {
+    if (!isOrgVisible(facts.operator, record.orgId)) {
+      throw forbiddenError(
+        `Submission ${String(record._id)} is shared with the operator read-only`,
+        "SHARED_READ_ONLY",
+      );
+    }
+  }
+
+  /** 這次要寫的存值算出的 `sharedOrgIds`(表單設定「依欄位共用」;見 `sharedOrgIdsFor`)。 */
+  private async sharedOrgIdsOf(
+    facts: FormOperatorFacts,
+    formKey: string,
+    values: StoredValues,
+    status: SubmissionRecord["status"],
+  ): Promise<Types.ObjectId[]> {
+    if (status === "draft") {
+      return [];
+    }
+    const form = await this.forms.findOne(facts.operator, { key: formKey });
+    return sharedOrgIdsFor(form, values, status);
+  }
+
   /** 這張表單允不允許存草稿(表單設定;缺席 = 開)。 */
   private async formAllowsDraft(
     facts: FormOperatorFacts,
@@ -2215,6 +2398,7 @@ export class FormSubmissionsService {
         editVersion: record.editVersion,
         orgId: String(record.orgId),
         createdBy: userRefOf(record.createdBy, names),
+        serialNo: record.serialNo ?? null,
         submittedAt: record.submittedAt,
         touched: record.touched,
         createdAt: record.createdAt,

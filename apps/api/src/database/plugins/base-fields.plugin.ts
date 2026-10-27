@@ -102,6 +102,14 @@ export function baseFieldsPlugin(schema: Schema): void {
     fillUpdatedBy(this);
   });
 
+  // aggregate(只經 BaseRepository.aggregate):軟刪除排除放在 pipeline 最前面的 `$match`
+  schema.pre("aggregate", function () {
+    if (getQueryScope(this)?.includeDeleted) {
+      return;
+    }
+    this.pipeline().unshift({ $match: { deletedAt: null } });
+  });
+
   installedSchemas.add(schema);
 }
 

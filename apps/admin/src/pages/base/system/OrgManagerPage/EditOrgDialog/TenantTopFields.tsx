@@ -103,7 +103,7 @@ export const TenantTopFields = ({
             }
             label={t("visibility")}
           />
-          <Typography variant="caption" color="text.secondary">
+          <Typography variant="caption" color="textSecondary">
             {t("visibilityHint")}
           </Typography>
         </Stack>

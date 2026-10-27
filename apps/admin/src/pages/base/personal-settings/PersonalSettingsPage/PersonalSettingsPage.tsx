@@ -48,7 +48,18 @@ export const PersonalSettingsPage = () => {
   ];
 
   return (
-    <Card sx={{ px: 3, py: 2 }}>
+    // 頁內分頁殼(STYLE-08):內容少時撐滿、多時跟著長,交給 <main> 捲;不釘高也不可被壓扁
+    // (Card 預設 overflow: hidden,預設的 flex-shrink: 1 會把它壓到殼高、裁掉偏好清單與代理人表格的下半)
+    <Card
+      sx={{
+        flexGrow: 1,
+        flexShrink: 0,
+        display: "flex",
+        flexDirection: "column",
+        px: 3,
+        py: 2,
+      }}
+    >
       <PageTabs
         aria-label={t("tabs")}
         items={items}

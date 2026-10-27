@@ -82,6 +82,13 @@ function events(): string[] {
   });
 }
 
+/** 每個事後動作拿到的 `actorId`(造成事件的人;沒有 = null)。 */
+function actors(): (string | null)[] {
+  return lifecycleProbe.effectContexts.map((context) =>
+    context.actorId === null ? null : String(context.actorId),
+  );
+}
+
 function expectBlocked(result: {
   errors?: { extensions?: Record<string, unknown> }[];
 }): void {
@@ -204,6 +211,9 @@ describe("表單 / 流程的掛接點", () => {
       ]);
       const operator = lifecycleProbe.effectContexts[0]?.operator;
       expect(operator?.actorId).toBeNull();
+      // 權限仍是系統身分;`actorId` 另外記送出的人
+      const applicant = String(world.applicant.userId);
+      expect(actors()).toEqual([applicant, applicant]);
       expect(operator?.roleIds).toEqual([]);
       expect(operator?.currentOrgId?.equals(world.kitchen)).toBe(true);
       expect(
@@ -415,6 +425,7 @@ describe("表單 / 流程的掛接點", () => {
       const submitted = await submitLeave(world, { title: "三天", days: 3 });
       expect(events()).toEqual(["submitted"]);
       expect(lifecycleProbe.effects[0]?.revision).toBe(1);
+      expect(actors()).toEqual([String(world.applicant.userId)]);
       resetLifecycleProbe();
       await decideOn(world, staff(0), submitted.id, "APPROVE");
       expect(lifecycleProbe.guards.map((one) => one.guard)).toEqual([
@@ -425,19 +436,22 @@ describe("表單 / 流程的掛接點", () => {
       resetLifecycleProbe();
       await decideOn(world, staff(1), submitted.id, "APPROVE");
       expect(events()).toEqual(["stepPassed:second", "completed"]);
+      // 關卡通過、完成不帶造成的人
+      expect(actors()).toEqual([null, null]);
       resetLifecycleProbe();
       const approved = await submission(world, world.applicant, submitted.id);
       await ok(api, world.applicant.token, VOID, {
         input: {
           id: submitted.id,
           expectedEditVersion: approved.editVersion,
-          reason: "重來",
+          reasonNote: "重來",
         },
       });
       expect(lifecycleProbe.guards.map((one) => one.guard)).toEqual([
         "beforeVoid",
       ]);
       expect(events()).toEqual(["voided"]);
+      expect(actors()).toEqual([String(world.applicant.userId)]);
     });
 
     it("第一關被既有跳過條件跳過 → stepPassed(skipped: true)", async () => {
@@ -539,7 +553,7 @@ describe("表單 / 流程的掛接點", () => {
         input: {
           id: approved.id,
           expectedEditVersion: approved.editVersion,
-          reason: "作廢",
+          reasonNote: "作廢",
         },
       });
       expectBlocked(result);
@@ -553,10 +567,13 @@ describe("表單 / 流程的掛接點", () => {
       const rejected = await atFirstStep();
       await decideOn(world, staff(0), rejected.id, "REJECT");
       expect(events()).toEqual(["rejected:first"]);
+      // 造成的人 = 做這個決定的審核者
+      expect(actors()).toEqual([String(staff(0).userId)]);
 
       const returned = await atFirstStep();
       await decideOn(world, staff(0), returned.id, "RETURN");
       expect(events()).toEqual(["returned:first"]);
+      expect(actors()).toEqual([String(staff(0).userId)]);
 
       const withdrawn = await atFirstStep();
       await ok(api, world.applicant.token, WITHDRAW, {
@@ -566,6 +583,8 @@ describe("表單 / 流程的掛接點", () => {
         "beforeWithdraw",
       ]);
       expect(events()).toEqual(["withdrawn"]);
+      // 造成的人 = 撤回的人(申請人)
+      expect(actors()).toEqual([String(world.applicant.userId)]);
     });
 
     it("事後動作拋錯 → 狀態、任務、實例、專案寫入全部回復", async () => {

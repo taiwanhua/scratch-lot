@@ -20,6 +20,7 @@ export function systemContext(
     managedOrgIds: "all",
     memberOrgIds: [],
     roleIds: [],
+    memberTenants: [],
   };
 }
 

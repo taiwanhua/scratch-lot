@@ -42,7 +42,8 @@ export const DemoTextField = <Detail, Values>({
       disabled={mode === "readonly"}
       error={hasError(field.key)}
       helperText={helperText(field.key)}
-      sx={{ width: field.width ?? 360 }}
+      // 窄螢幕不超出卡片:寬度是上限,不夠時縮到欄寬
+      sx={{ width: field.width ?? 360, maxWidth: "100%" }}
       onChange={(event) => {
         setValue(field.key as keyof Values, event.target.value as never);
       }}

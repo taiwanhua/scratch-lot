@@ -187,7 +187,7 @@ export const EditFormDialog = ({
           size="small"
         />
         <Stack spacing={0.25} role="list" aria-label={t("placeholders")}>
-          <Typography variant="caption" color="text.secondary">
+          <Typography variant="caption" color="textSecondary">
             {t("placeholders")}
           </Typography>
           {[...TAB_LABEL_PLACEHOLDERS, "value" as const].map((placeholder) => (
@@ -195,7 +195,7 @@ export const EditFormDialog = ({
               key={placeholder}
               role="listitem"
               variant="caption"
-              color="text.secondary"
+              color="textSecondary"
             >
               {t("placeholderItem", {
                 token:
@@ -209,7 +209,7 @@ export const EditFormDialog = ({
         </Stack>
         <Typography
           variant="body2"
-          color="text.secondary"
+          color="textSecondary"
           role="status"
           aria-label={t("previewLabel")}
         >

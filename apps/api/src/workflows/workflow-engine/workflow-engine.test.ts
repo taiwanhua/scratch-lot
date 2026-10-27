@@ -797,7 +797,7 @@ describe("審核流程引擎", () => {
         input: {
           id: submitted.id,
           expectedEditVersion: approved.editVersion,
-          reason: "日期填錯",
+          reasonNote: "日期填錯",
         },
       });
       const instance = await currentInstance(world, submitted.id);

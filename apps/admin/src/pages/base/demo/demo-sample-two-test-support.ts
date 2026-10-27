@@ -1,4 +1,5 @@
 import { screen } from "@testing-library/react";
+import { HttpResponse } from "msw";
 import type { ReactNode } from "react";
 
 import { ModuleEngine, ModuleSidebarType } from "@repo/graphql";
@@ -9,7 +10,8 @@ import {
   demoTwoWorld,
 } from "@/test/msw/demo-sample-two-handlers";
 import { demoTwoItems } from "@/test/msw/demo-two-fixtures";
-import { server } from "@/test/msw/server";
+import { api, server } from "@/test/msw/server";
+import { toTenantTree } from "@/test/msw/tenant-org-tree";
 import { renderApp } from "@/test/render";
 
 import { SAMPLE_TWO_MODULE_KEYS } from "./demo-sample-two-config";
@@ -176,6 +178,23 @@ export const renderSampleTwo = ({
   const fake = demoTwoWorld({ items: demoTwoItems, ...world });
   server.use(
     ...fake.handlers,
+    // 「共用給」欄位(OrgTreeSelect 的 tenant 模式)查的整棵租戶樹
+    api.query("TenantOrgTree", () =>
+      HttpResponse.json({
+        data: {
+          tenantOrgTree: toTenantTree([
+            {
+              id: "org-tenant",
+              name: "總部",
+              children: [
+                { id: "org-store-a", name: "中山店", parentId: "org-tenant" },
+                { id: "org-store-b", name: "新竹店", parentId: "org-tenant" },
+              ],
+            },
+          ]),
+        },
+      }),
+    ),
     ...authWorld({
       hasRefreshCookie: true,
       modules: sampleTwoModulesWith(permissions, pages),

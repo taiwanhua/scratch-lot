@@ -107,7 +107,7 @@ const ControlledWidthsDemo = (props: DemoProps) => {
         onColumnWidthsChange={setWidths}
         containerSx={{ height: "auto", maxHeight: 400 }}
       />
-      <Typography variant="caption" color="text.secondary">
+      <Typography variant="caption" color="textSecondary">
         columnWidths = {JSON.stringify(widths)}
       </Typography>
     </>
@@ -128,7 +128,7 @@ const ControlledSortDemo = (props: DemoProps) => {
         onSortChange={setSort}
         containerSx={{ height: "auto", maxHeight: 400 }}
       />
-      <Typography variant="caption" color="text.secondary">
+      <Typography variant="caption" color="textSecondary">
         sort = {JSON.stringify(sort)}
       </Typography>
     </>

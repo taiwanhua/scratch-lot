@@ -9,7 +9,13 @@ import { Stack } from "@repo/ui/stack";
 import { Tabs } from "@repo/ui/tabs";
 import { Typography } from "@repo/ui/typography";
 
-import { detailHeaderActionsSx, detailHeaderTitleSx } from "../designer-layout";
+import { useDesignerDrawerStore } from "@/stores/base/useDesignerDrawerStore";
+
+import {
+  designerDrawerReserve,
+  detailHeaderActionsSx,
+  detailHeaderTitleSx,
+} from "../designer-layout";
 import { FlowVersionViewer } from "./WorkflowDesigner/FlowVersionViewer";
 import { WorkflowDesigner } from "./WorkflowDesigner/WorkflowDesigner";
 import { AssignWorkflowDialog } from "./WorkflowDialogs/AssignWorkflowDialog";
@@ -52,6 +58,16 @@ export const WorkflowDetailPanel = ({
   const [tab, setTab] = useState<DetailTab>("design");
   /** 版本面板「檢視 vN」:設計頁籤換成唯讀檢視,草稿的設計器照樣掛著(未存變更不丟) */
   const [viewing, setViewing] = useState<number | null>(null);
+  /** 平板寬:設計器 / 唯讀版本檢視的屬性抽屜開著(卡片讓出抽屜寬;只看目前顯示的那一個) */
+  const isDesignerDrawerOpen = useDesignerDrawerStore(
+    (state) => state.open.designer,
+  );
+  const isViewerDrawerOpen = useDesignerDrawerStore(
+    (state) => state.open.viewer,
+  );
+  const isDrawerShown =
+    tab === "design" &&
+    (viewing === null ? isDesignerDrawerOpen : isViewerDrawerOpen);
   const [dialog, setDialog] = useState<OpenDialog>(() =>
     isForkRequested && workflow.abilities.canFork ? "fork" : null,
   );
@@ -60,7 +76,17 @@ export const WorkflowDetailPanel = ({
     <Card
       component="section"
       aria-label={t("region")}
-      sx={{ flex: 1, minWidth: 0, minHeight: 0, overflow: "auto", p: 3 }}
+      sx={{
+        flex: 1,
+        minWidth: 0,
+        minHeight: 0,
+        overflow: "auto",
+        p: 3,
+        // 平板寬屬性抽屜開著:整張卡片(含工具列的 [存草稿])縮到抽屜左邊
+        ...(isDrawerShown && {
+          pr: (theme) => designerDrawerReserve(theme.spacing),
+        }),
+      }}
     >
       <Stack spacing={2}>
         <Stack
@@ -73,7 +99,7 @@ export const WorkflowDetailPanel = ({
             <Typography variant="h6" component="h1">
               {workflow.name}
             </Typography>
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="body2" color="textSecondary">
               {t("meta", {
                 key: workflow.key,
                 kind: workflow.isShared ? t("shared") : t("custom"),
@@ -81,7 +107,7 @@ export const WorkflowDetailPanel = ({
             </Typography>
             {workflow.forkedFrom !== null &&
               workflow.forkedFrom !== undefined && (
-                <Typography variant="body2" color="text.secondary">
+                <Typography variant="body2" color="textSecondary">
                   {t("forkedFrom", {
                     key: workflow.forkedFrom.workflowKey,
                     version: workflow.forkedFrom.version,
@@ -123,7 +149,7 @@ export const WorkflowDetailPanel = ({
           </Stack>
         </Stack>
         {workflow.assignments.length > 0 && (
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" color="textSecondary">
             {t("assignedTo", {
               tenants: workflow.assignments
                 .map((item) => item.tenantName ?? item.tenantOrgId)
@@ -132,7 +158,7 @@ export const WorkflowDetailPanel = ({
           </Typography>
         )}
         {workflow.boundForms.length > 0 && (
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" color="textSecondary">
             {t("boundForms", {
               forms: workflow.boundForms
                 .map((form) => form.formName ?? form.formKey)

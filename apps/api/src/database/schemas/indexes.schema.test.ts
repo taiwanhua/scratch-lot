@@ -40,6 +40,10 @@ import { Org, OrgSchema } from "./org.schema";
 import { Permission, PermissionSchema } from "./permission.schema";
 import { RefreshToken, RefreshTokenSchema } from "./refresh-token.schema";
 import { Role, RoleSchema } from "./role.schema";
+import {
+  SidebarBadgeSetting,
+  SidebarBadgeSettingSchema,
+} from "./sidebar-badge-setting.schema";
 import { UserDelegation, UserDelegationSchema } from "./user-delegation.schema";
 import { UserPreference, UserPreferenceSchema } from "./user-preference.schema";
 import { User, UserSchema } from "./user.schema";
@@ -75,6 +79,7 @@ const REGISTRY: { name: string; schema: Schema }[] = [
   { name: UserDelegation.name, schema: UserDelegationSchema },
   { name: Notification.name, schema: NotificationSchema },
   { name: NotificationSetting.name, schema: NotificationSettingSchema },
+  { name: SidebarBadgeSetting.name, schema: SidebarBadgeSettingSchema },
 ];
 
 async function readIndexes(
@@ -122,7 +127,7 @@ describe("底座 collection 索引就位(對真 MongoDB 驗證)", () => {
   }, HOOK_TIMEOUT_MS);
 
   it("全部 collection 皆已建模並可建立索引", () => {
-    expect(indexesByModel.size).toBe(21);
+    expect(indexesByModel.size).toBe(22);
   });
 
   it("orgs:unique(key sparse)+ unique(slug sparse)+(parentId)+(ancestors)", () => {
@@ -277,5 +282,12 @@ describe("底座 collection 索引就位(對真 MongoDB 驗證)", () => {
   it("notification_settings:(tenantId, type) 唯一", () => {
     const indexes = indexesOf(NotificationSetting.name);
     expect(findIndex(indexes, { tenantId: 1, type: 1 })?.unique).toBe(true);
+  });
+
+  it("sidebar_badge_settings:(tenantId, moduleKey) 唯一", () => {
+    const indexes = indexesOf(SidebarBadgeSetting.name);
+    expect(findIndex(indexes, { tenantId: 1, moduleKey: 1 })?.unique).toBe(
+      true,
+    );
   });
 });

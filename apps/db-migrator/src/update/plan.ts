@@ -8,6 +8,7 @@
 import {
   type DefinitionSeedHashes,
   type DefinitionSeedSet,
+  type PortableLookupProvider,
   type SeedRegistry,
   type SeedSet,
   definitionSeedFileName,
@@ -18,6 +19,7 @@ import {
 import { isValidMigrationFilename } from "../migration-filename";
 import {
   SeedCompositionError,
+  type SeedCompositionOptions,
   planSeedRegistry,
 } from "../seed/seed-composition";
 import {
@@ -98,12 +100,16 @@ export interface UpdatePlan {
   orphaned: AppliedMigration[];
   /** 目前的 registry(migration 都完成後才套用)。 */
   registry: SeedRegistry;
+  /** 專案宣告的可攜 lookup 來源(套用 registry 前的預檢再用一次)。 */
+  lookupProviders: Readonly<Record<string, PortableLookupProvider>>;
   /** 目前有效的定義,依引用排好。 */
   definitions: DefinitionSeedSet[];
 }
 
 export interface UpdatePlanInput {
   current: SeedRegistry;
+  /** 專案宣告的可攜 lookup 來源;目前 registry 與 migration 快照的預檢都用它。 */
+  lookupProviders?: Readonly<Record<string, PortableLookupProvider>>;
   snapshots: readonly SeedSnapshot[];
   migrations: readonly MigrationSource[];
   applied: readonly AppliedMigration[];
@@ -346,6 +352,7 @@ function definitionOrderProblems(
 function closureProblems(
   label: string,
   dependencies: readonly PlannedSnapshot[],
+  options: SeedCompositionOptions,
 ): string[] {
   const seeds = dependencies
     .map(({ seed }) => seed)
@@ -355,7 +362,7 @@ function closureProblems(
   }
   let problems: readonly string[];
   try {
-    const sorted = planSeedRegistry([{ origin: label, seeds }]);
+    const sorted = planSeedRegistry([{ origin: label, seeds }], options);
     problems = definitionOrderProblems(
       seeds.filter((seed) => isDefinitionSeedSet(seed)),
       sorted.filter((seed) => isDefinitionSeedSet(seed)),
@@ -417,6 +424,7 @@ function planHashOf(
  */
 export function buildUpdatePlan({
   current,
+  lookupProviders = {},
   snapshots,
   migrations,
   applied,
@@ -437,7 +445,9 @@ export function buildUpdatePlan({
 
   let registry: SeedRegistry = [];
   try {
-    registry = planSeedRegistry([{ origin: "registry", seeds: current }]);
+    registry = planSeedRegistry([{ origin: "registry", seeds: current }], {
+      lookupProviders,
+    });
   } catch (error) {
     if (!(error instanceof SeedCompositionError)) {
       throw error;
@@ -463,7 +473,7 @@ export function buildUpdatePlan({
       byPath,
       problems,
     );
-    problems.push(...closureProblems(label, dependencies));
+    problems.push(...closureProblems(label, dependencies, { lookupProviders }));
     planned.push({ source, dependencies });
   }
   if (problems.length > 0) {
@@ -477,6 +487,7 @@ export function buildUpdatePlan({
     applied: applied.filter(({ fileName }) => sourceNames.has(fileName)),
     orphaned: applied.filter(({ fileName }) => !sourceNames.has(fileName)),
     registry: current,
+    lookupProviders,
     definitions,
   };
 }

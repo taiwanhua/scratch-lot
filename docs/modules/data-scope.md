@@ -79,6 +79,22 @@ BaseRepository 查詢時套用;GQL-07 的語意正本在此。
 - 單筆 / 更新 / 刪除 / lookup 都走同一條路徑(同一組查詢中介層)。
 - 記憶體快取以 collection 為外層、`moduleKey` 為內層;`saveDataScopeRule` 儲存時作廢整個 collection。
 
+### 與資料共用的先後
+
+**先放寬、再縮小**(ADR-0014):讀取條件 = `(可見範圍 或 共用分支)` 再 `$and` 規則 —— 共用進來的資料一樣被規則縮小,規則也放不寬共用。
+
+```js
+{
+  $and: [
+    { $or: [{ orgId: { $in: 可見範圍 } }, 共用分支…] }, // 讀取才有共用分支;寫入只有可見範圍
+    規則條件, // 上面依模組拼出的 $or
+  ];
+}
+```
+
+- 寫入(更新 / 刪除)沒有共用分支,所以規則照舊只作用在自己可見範圍內的資料。
+- 兩個租戶邊界出口(`existsInTenant`、`findRefsInTenant`)與 `existsAny` 一樣略過規則。
+
 **條件樹**:條件列 = 欄位(依目錄)→ 運算子(依型別)→ 值(依值來源,含動態值【操作者本人】【操作者的所屬組織】);群組任意深、每層與頂層各有 AND / OR 切換。
 
 正本:`apps/api/src/data-scope/data-scope.service.ts`、`apps/api/src/database/plugins/data-scope-provider.ts`、`apps/api/src/database/plugins/tenant-scope.plugin.ts`、`apps/api/src/database/base.repository.ts`

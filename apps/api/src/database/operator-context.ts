@@ -1,4 +1,4 @@
-import type { Query, Types } from "mongoose";
+import type { Aggregate, Query, Types } from "mongoose";
 
 /**
  * 操作者上下文(詞彙見 CONTEXT.md:操作者 / 當前組織 / 可見範圍 / 管理範圍)。
@@ -47,6 +47,29 @@ export interface OperatorContext {
    * 與 `managedOrgIds` 同一批角色(停用的不算,ADR-0011 步驟 2);同樣**必填**,語意同上。
    */
   roleIds: Types.ObjectId[];
+  /**
+   * 資料共用(`docs/adr/0014-data-sharing.md`)的比對來源:**依租戶分組**的所屬組織與其上層鏈
+   * (根組織成員不算)。plugin 每個租戶各產生一組共用分支 `{ tenantId: T, … ∈ T 的所屬組織 / 上層鏈 }`,
+   * 同時屬於兩個租戶的人不會用乙租戶的身分看到甲租戶的資料。與 `memberOrgIds` 一樣**不隨當前組織切換**。
+   * 沒有經登入線解析的內部上下文一律明寫 `[]`(共用分支命中不到任何資料,fail-closed)。
+   */
+  memberTenants: MemberTenant[];
+}
+
+/** 操作者在某一個租戶裡的所屬組織(資料共用用;`OperatorContext.memberTenants` 的元素)。 */
+export interface MemberTenant {
+  /** 租戶頂層 id。 */
+  tenantId: Types.ObjectId;
+  /** 在這個租戶裡的所屬組織(直接關聯)。 */
+  memberOrgIds: Types.ObjectId[];
+  /** 這些所屬組織的上層鏈聯集(不含根組織、不含所屬組織本身)。 */
+  ancestorOrgIds: Types.ObjectId[];
+  /**
+   * 這個租戶裡的**可見範圍**(所屬組織 + 租戶開了「含下層」時各自的整棵下層;登入線計算)。
+   * 只給比對可見範圍的共用欄位用(`SharedByField.match: "visible"`,表單提交的依欄位共用);
+   * 缺席(內部上下文、測試)= 只有所屬組織。
+   */
+  visibleOrgIds?: Types.ObjectId[];
 }
 
 /** 掛在單一 Query 上的範圍資訊,供 plugin 的查詢中介層讀取。 */
@@ -65,6 +88,11 @@ export interface QueryScope {
    * 只能經 BaseRepository 的存在性檢查方法設定(條件只能是歸屬欄、只回有無)。
    */
   existenceCheck?: boolean;
+  /**
+   * **租戶邊界出口**(`BaseRepository.existsInTenant` / `findRefsInTenant`):可見範圍與共用不套,
+   * 改成 `tenantId = 這個值`;資料範圍規則不套。只能經那兩個方法設定(ADR-0005「例外出口」)。
+   */
+  tenantBoundary?: Types.ObjectId;
 }
 
 /** Document `$locals` 上存放操作者上下文的鍵(save 中介層讀取)。 */
@@ -82,6 +110,15 @@ export function scopeQuery<TQuery extends Query<unknown, unknown>>(
 ): TQuery {
   queryScopes.set(query, scope);
   return query;
+}
+
+/** 同 `scopeQuery`,掛在 aggregate 上(plugin 的 aggregate 中介層以 `$match` 起點套同一套條件)。 */
+export function scopeAggregate<TAggregate extends Aggregate<unknown>>(
+  aggregate: TAggregate,
+  scope: QueryScope,
+): TAggregate {
+  queryScopes.set(aggregate, scope);
+  return aggregate;
 }
 
 export function getQueryScope(query: object): QueryScope | undefined {

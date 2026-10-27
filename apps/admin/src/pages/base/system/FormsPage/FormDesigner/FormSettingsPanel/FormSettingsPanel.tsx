@@ -41,7 +41,7 @@ export const FormSettingsPanel = ({
   return (
     <Stack spacing={2}>
       <Typography variant="subtitle2">{t("title")}</Typography>
-      <Typography variant="body2" color="text.secondary">
+      <Typography variant="body2" color="textSecondary">
         {t("summaryHint")}
       </Typography>
       {SLOTS.map((slot) => (

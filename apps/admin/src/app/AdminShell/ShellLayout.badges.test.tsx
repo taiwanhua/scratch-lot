@@ -56,8 +56,14 @@ const latestSocket = async (): Promise<FakeSocket> => {
   return socket;
 };
 
-/** 登入者看得到申請中心與示範表單(群組內);`counts` 是假 api 此刻的數字(可在測試中改)。 */
-const renderShell = (counts: Record<string, number>) => {
+/**
+ * 登入者看得到申請中心與示範表單(群組內);`counts` 是假 api 此刻的數字(可在測試中改),
+ * `descriptionKeys` 是各模組登記的「數什麼」訊息 key(沒給 = null)。
+ */
+const renderShell = (
+  counts: Record<string, number>,
+  descriptionKeys: Record<string, string> = {},
+) => {
   let calls = 0;
   // MSW 先列的先贏:發憑證的 RealtimeTicket 要排在 authWorld(回 null)前面
   server.use(
@@ -80,6 +86,7 @@ const renderShell = (counts: Record<string, number>) => {
           sidebarBadges: Object.entries(counts).map(([moduleKey, count]) => ({
             moduleKey,
             count,
+            descriptionKey: descriptionKeys[moduleKey] ?? null,
           })),
         },
       });
@@ -148,6 +155,33 @@ describe("側欄計數登記制(sidebarBadges + badge:<模組 key>)", () => {
       }),
     ).toBeInTheDocument();
     expect(within(nav).getByRole("link", { name: "申請中心" })).toBeVisible();
+  });
+
+  it("滑鼠移到數字上 → 提示登記的「數什麼」;沒登記說明的數字不提示", async () => {
+    const { user } = renderShell(
+      { "apply-center": 2, "demo.form": 4 },
+      {
+        "apply-center": "admin.sidebarBadgeSettings.descriptions.apply-center",
+      },
+    );
+    const nav = await findSideNav();
+
+    await user.hover(await within(nav).findByLabelText("2 筆待處理"));
+    expect(await screen.findByRole("tooltip")).toHaveTextContent(
+      "待你處理的審核件數",
+    );
+    expect(
+      within(nav).getByLabelText("2 筆待處理"),
+    ).toHaveAccessibleDescription("待你處理的審核件數");
+    await user.unhover(within(nav).getByLabelText("2 筆待處理"));
+    await waitFor(() => {
+      expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
+    });
+
+    await user.hover(within(nav).getByLabelText("4 筆待處理"));
+    // 沒有說明:不出現提示(給一點時間讓 MUI 的進場延遲跑完)
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
   });
 
   it("不是 badge: 的信號不重抓側欄計數", async () => {

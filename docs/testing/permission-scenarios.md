@@ -1,6 +1,6 @@
 # 權限測試劇本(以示範模組驗證)
 
-驗證對象:權限模型(ADR-0004)、查詢與判斷流程(ADR-0011)、資料範圍規則(ADR-0008)、移除所屬組織(ADR-0003)、管理範圍與可見範圍的分工(ADR-0005)、檔案儲存(ADR-0010)、表單引擎(`docs/concepts/form-engine.md`)、審核流程(`docs/modules/workflows.md`)。模組與資料定義見 [示範模組1](../modules/demo.sub.sample-one.md)、[示範模組2](../modules/demo.sample-two.md)、[示範表單](../modules/demo-form.md)。
+驗證對象:權限模型(ADR-0004)、資料共用(ADR-0014)、查詢與判斷流程(ADR-0011)、資料範圍規則(ADR-0008)、移除所屬組織(ADR-0003)、管理範圍與可見範圍的分工(ADR-0005)、檔案儲存(ADR-0010)、表單引擎(`docs/concepts/form-engine.md`)、審核流程(`docs/modules/workflows.md`)。模組與資料定義見 [示範模組1](../modules/demo.sub.sample-one.md)、[示範模組2](../modules/demo.sample-two.md)、[示範表單](../modules/demo-form.md)。
 
 1. **wildcard 涵蓋未來(同層)**:角色勾示範模組1 的 `demo.sub.sample-one.*`(存單筆);下一版 seed 對示範模組1 新增權限 → 不改角色即擁有;對其編輯頁(`…edit-page`)新增的權限**不**自動擁有(子模組由自己的 `*` 代表)。
 2. **資料範圍規則**:建規則「套用對象=客服角色 → 建立者 = 【操作者本人】」→ 客服查示範項目僅見自建;刪規則 → 恢復可見範圍。
@@ -38,12 +38,18 @@
 27. **批次核准**:待我審核勾多筆一次核准,每一筆各自處理;已不在你手上的那一筆失敗、其他筆照常,結果對話框列出成功數與失敗原因。
 28. **指定組織跳過與自動通過**:申請人屬於指定組織的關卡直接跳過(不含下層時看的是申請人自己的所屬組織);申請人是審核者、或審核者已在前關核准過,開了自動通過的關卡記成他核准。
 29. **通知中心**:流程動作產生站內通知 → 通知鈴的未讀數與清單看得到 → 點一則標已讀並開連結、全部標已讀;同一事件不重複通知。
+30. **全部分店共用**(ADR-0014):租戶頂層建一筆示範模組2、「共用給」= 最上層組織含下層 → 南港店、內湖店的人都看得到,標示為共用進來、沒有編輯 / 刪除。
+31. **指定分店(含 / 不含下層)**:南港店的一筆共用給內湖店(不含下層)→ 內湖店的人看得到、內湖店底下的人看不到;改成含下層 → 下層也看得到;改回空清單 → 都看不到。
+32. **依欄位共用**:「對應分店」這類欄位指到哪個組織,那個組織的人就看得到;欄位改了,看得到的人跟著變(不需改共用清單)。
+33. **目前組織切換**:同時屬總部與南港店的人,切換當前組織,看得到的共用資料不變(判斷看全部所屬組織)。
+34. **別租戶絕對看不到**:「共用給」選不到別租戶的組織(硬送 → `VALIDATION_FAILED`);別租戶的人透過列表、單筆、lookup 都看不到。
+35. **資料範圍與共用的先後**:先放寬、再縮小 —— 對示範模組設一條規則後,共用進來的資料一樣被規則濾掉;共用也放不寬規則。
 
 ---
 
 # 怎麼驗:每條劇本用哪一頁、哪個帳號、什麼步驟
 
-示範模組、三個示範表單與申請中心都有真頁面,29 條劇本**全部可以在畫面上跑完**(唯一的例外是劇本 1 的跨版本那半條,見該節)。
+示範模組、三個示範表單與申請中心都有真頁面,劇本 1–29 **全部可以在畫面上跑完**(唯一的例外是劇本 1 的跨版本那半條,見該節)。劇本 30–35(資料共用)目前以 api 驗:示範模組2 的「共用給」欄位等 `OrgTreeSelect` 的多選與「含下層」上畫面後,改在畫面上跑。
 
 **寫或改一條劇本的前置 / 預期之前,先對一次規則正本**:劇本 8 / 9 / 12 / 14 / 17 最容易寫成「照字面做驗不出來」,要對齊的規則是 —— 可見範圍是**所有**所屬組織的聯集(ADR-0005)、最後一個所屬組織不可移除(`LAST_ORG`)且檢查在擁有者保護之前、管理範圍算**全部**啟用中角色、授予要過資格檢查(ADR-0003)。E2E 的 spec 開頭註解與本文件的前置一致;**畫面文案一律從 zh-TW 字典(`packages/i18n/messages/zh-TW/admin.json`)原樣複製**,不要憑印象寫(「保留所有角色授予」不是「全部保留」)。
 
@@ -525,43 +531,127 @@
 
 **預期**:步驟 1 鈴的名稱「通知,1 則未讀」、那一則有未讀圓點、內文「您有一筆待審核的申請「…」(關卡:主管審核)。」;點了之後打開申請中心詳情頁、鈴變回「通知」(api 端已讀);步驟 2 鈴「通知,1 則未讀」、「未讀」裡看得到「申請已核准:…」,全部標已讀後圓點消失、鈴變回「通知」(「未讀」清單當下留著那一則,下次重抓才拿掉),重新整理後「未讀」顯示「沒有未讀的通知」、「全部」裡仍有那一則;步驟 3 回 `STEP_CLOSED`(任務已不是待處理,不是錯誤),申請人的結果通知與主管的待審核通知仍各只有一則。**同一個 `dedupeKey` 第二次寫入被略過**這件事在畫面上造不出來(引擎另有歷程標記擋在前面),由 api 測試(`notifications.test.ts`)覆蓋;捲動分頁、99+、多則合併提示、90 天 TTL 由元件測試與 api 測試覆蓋。
 
+### 劇本 30–35 的共同前置(資料共用,走 api)
+
+- 示範模組2 宣告「可共用、預設不共用、可編輯」(`docs/modules/demo.sample-two.md`「規則」);項目的 `shareOrgs` / `isShared` / `abilities` 由 `demoItemsTwo` / `demoItemTwo` 回。
+- +tenant 在租戶A 底下建「南港店」「內湖店」,再在內湖店底下建「內湖廚房」;建 **店長甲**(所屬 = 南港店)、**店長乙**(所屬 = 內湖店)、**廚房丙**(所屬 = 內湖廚房),都給「客服」角色(示範模組2 的 `view` / `create` / `edit` / `delete`)。租戶A 的可見性開關維持 `own`。
+- 另一個租戶B 與它的使用者 **乙租戶丁**(同樣有示範模組2)。
+- 機制本身的完整表格(三種宣告 × 七種人 × 五種資料歸屬)由 `apps/api/src/database/data-sharing.test.ts` 覆蓋;lookup 的搜尋 / 依值取回 / 送出重驗由 `apps/api/src/test-support/project-fixture/project-fixture-sharing.test.ts` 覆蓋。
+
+### 劇本 30 — 全部分店共用
+
+- **帳號**:+tenant(當前組織 = 租戶頂層)、店長甲、廚房丙
+- **E2E**:尚未
+
+1. +tenant `createDemoItemTwo`(`shareOrgs: [{ orgId: 租戶A, includeDescendants: true }]`,名稱「頂層-全部分店」)。
+2. 店長甲、廚房丙各查 `demoItemsTwo`。
+3. 店長甲對那一筆送 `updateDemoItemTwo` 與 `deleteDemoItemTwo`。
+
+**預期**:步驟 2 兩人都看得到,`isShared = true`、`abilities` 兩個 `false`;步驟 3 都回 `NOT_FOUND`(共用進來的只能看)。
+
+### 劇本 31 — 指定分店(含 / 不含下層)
+
+- **帳號**:店長甲、店長乙、廚房丙
+- **E2E**:尚未
+
+1. 店長甲新增「南港-給內湖」,`shareOrgs: [{ orgId: 內湖店 }]`(不含下層)。
+2. 店長乙、廚房丙各查單筆。
+3. 店長甲 `updateDemoItemTwo` 改成 `[{ orgId: 內湖店, includeDescendants: true }]`,廚房丙再查。
+4. 店長甲改成 `shareOrgs: []`,店長乙再查。
+
+**預期**:步驟 2 店長乙看得到、廚房丙 `NOT_FOUND`;步驟 3 廚房丙看得到;步驟 4 店長乙 `NOT_FOUND`。店長甲一路都看得到、改得到(歸屬在自己的可見範圍)。
+
+### 劇本 32 — 依欄位共用
+
+- **帳號**:api 測試
+- **E2E**:尚未(示範模組2 沒有「對應分店」這類欄位;由 `data-sharing.test.ts` 的「sharedByFields」與 `project-fixture-sharing.test.ts` 覆蓋)
+
+**預期**:`sharedByFields` 任一欄位指到我的所屬組織就看得到;欄位改掉,原本看得到的人就看不到、新指到的組織的人看得到;欄位宣告含下層時,被指到的組織的下層也看得到。
+
+### 劇本 33 — 目前組織切換
+
+- **帳號**:+tenant(所屬 = 租戶頂層 + 南港店,沿用「組織與角色的前置」第 3 步)
+- **E2E**:尚未
+
+1. 店長乙新增「內湖-給南港」,共用給南港店(不含下層)。
+2. +tenant 當前組織 = 租戶頂層時查 `demoItemsTwo`;切到南港店再查一次。
+
+**預期**:兩次都看得到「內湖-給南港」(判斷看全部所屬組織,不看當前組織);總數相同。
+
+### 劇本 34 — 別租戶絕對看不到
+
+- **帳號**:店長甲、乙租戶丁
+- **E2E**:尚未
+
+1. 店長甲新增時 `shareOrgs: [{ orgId: 租戶B }]`;再對自己的一筆 `updateDemoItemTwo` 送同樣的清單。
+2. 乙租戶丁查 `demoItemsTwo`、以 id 查 `demoItemTwo`(劇本 30 那一筆)。
+
+**預期**:步驟 1 兩次都是 `VALIDATION_FAILED`(`fields: ["shareOrgs"]`);步驟 2 列表沒有租戶A 的任何一筆、單筆 `NOT_FOUND`。
+
+### 劇本 35 — 資料範圍與共用的先後
+
+- **帳號**:api 測試
+- **E2E**:尚未(示範模組2 是不宣告資料範圍目標的對照組,畫面上設不了它的規則)
+
+**預期**:同一張表的資料範圍規則把某一筆濾掉時,那一筆就算共用給我也看不到;規則不會讓共用分支多看到東西(`data-sharing.test.ts`「資料範圍規則仍會縮小共用資料」)。
+
+### 劇本 36 — 搬家(搬出看得到 / 搬入看不到 / 別租戶擋下)
+
+- **帳號**:api 測試(搬家是給功能呼叫的資料層方法,`BaseRepository.reassignOrg`;目前沒有畫面)
+- **E2E**:尚未(之後有搬家的畫面時改在畫面上跑)
+- **前置**:租戶甲底下分店一、分店二;**店長一**(所屬 = 分店一,只看得到分店一)、**店長二**(所屬 = 分店二);租戶乙底下乙一店與 **乙店長**。
+
+1. 店長一在分店一建一筆,把它搬到分店二(店長一看不到分店二)。
+2. 店長一、店長二各以 id 查那一筆。
+3. 店長一把分店一的另一筆搬到乙一店、租戶乙頂層、根組織。
+4. 店長一對店長二的資料(分店二)呼叫搬家;乙店長對租戶甲的資料呼叫搬家。
+
+**預期**:步驟 1 成功,`tenantId` 不變,稽核多一筆 `data.reassign-org`(誰、哪張表哪一筆、從分店一搬到分店二);步驟 2 店長一 `NOT_FOUND`、店長二看得到;步驟 3 都是 `VALIDATION_FAILED`(`fields: ["orgId"]`),資料不動、沒有稽核;步驟 4 都回「沒有符合」(可見範圍外的資料搬不了)。由 `apps/api/src/database/org-reassign-create-many.test.ts` 覆蓋;未登記的檔案呼叫搬家由 `exists-any-callers.test.ts` 擋下。
+
 ---
 
 ## 一頁看完:劇本 → 頁面 → 帳號
 
 「E2E」欄 = `apps/e2e/src/specs/` 底下對應的 spec 檔名,「尚未」= 還是人工驗收。
 
-| 劇本                       | 主要頁面                                    | 操作帳號 / 被測帳號  | E2E                                              |
-| -------------------------- | ------------------------------------------- | -------------------- | ------------------------------------------------ |
-| 1 wildcard                 | 角色管理 → 權限矩陣                         | +tenant              | `scenario-01-wildcard.spec.ts`                   |
-| 2 資料範圍規則             | 資料範圍頁 + 示範模組1 列表 / 詳情          | root / +user         | `scenario-02-data-scope-rule.spec.ts`            |
-| 3 未宣告對照               | 資料範圍頁左清單 + 示範模組2 列表           | root / +user         | `scenario-03-undeclared-target.spec.ts`          |
-| 4 頂層合成 OR / AND        | 資料範圍頁 + 示範模組1 列表                 | root / +user         | `scenario-04-combine-op.spec.ts`                 |
-| 5 欄位級權限               | 示範模組1 詳情頁 + 編輯頁                   | +tenant / +user      | `scenario-05-field-permission.spec.ts`           |
-| 6 頁面自有權限             | 示範模組1 新增頁 + 編輯頁                   | +tenant / +user      | `scenario-06-page-permission.spec.ts`            |
-| 7 路由防守                 | 示範模組1 列表 + 直接打網址                 | +tenant / +user      | `scenario-07-route-guard.spec.ts`                |
-| 8 組織外                   | 使用者管理 / 角色管理 / 示範模組1 列表      | +tenant / +user      | `scenario-08-out-of-scope.spec.ts`               |
-| 9 移除三檔                 | 使用者管理 → 移除所屬組織彈窗               | +tenant / 多組織帳號 | `scenario-09-org-removal-policy.spec.ts`         |
-| 10 防越權                  | 角色管理 → 權限矩陣                         | +tenant              | `scenario-10-out-of-reach.spec.ts`               |
-| 11 儲存雙路                | 示範模組1 表單 + 詳情頁                     | +user                | `scenario-11-storage-two-paths.spec.ts`          |
-| 12 可見性開關              | 組織管理(開關)+ 示範模組1 列表 + 三治理頁   | +tenant / +user      | `scenario-12-visibility-toggle.spec.ts`          |
-| 13 總覽也是模組            | 角色管理 → 權限矩陣 + 登入落點              | +tenant / +user      | `scenario-13-overview-module.spec.ts`            |
-| 14 管理範圍 vs 可見範圍    | 角色管理 + 三治理頁 + 示範模組1 列表        | +tenant / +user      | `scenario-14-management-scope.spec.ts`           |
-| 15 側欄商標繼承            | 組織管理 → 商標 + 側欄                      | +tenant / +user      | `scenario-15-sidebar-logo.spec.ts`               |
-| 16 租戶視角                | 組織管理 → 開通租戶 + 租戶側欄              | root / +tenant       | `scenario-16-tenant-perspective.spec.ts`         |
-| 17 擁有者保護              | 使用者管理 / 角色管理 / 組織管理            | +tenant / root       | `scenario-17-owner-protection.spec.ts`           |
-| 18 表單生命週期            | 表單管理 + 示範表單(頂層)列表 / 新增 / 詳情 | root / +user         | `scenario-18-form-lifecycle.spec.ts`             |
-| 19 客製副本與退役          | 表單管理 + 示範表單(頂層)新增               | +tenant / +user      | `scenario-19-form-fork-retire.spec.ts`           |
-| 20 兩級核准與主管解析      | 申請中心(待我審核 / 詳情 / 我的申請)        | 主管 / 人資 / 申請人 | `scenario-20-workflow-two-level.spec.ts`         |
-| 21 退回 → 再送 → 駁回      | 申請中心詳情 + 示範表單(群組內)編輯頁       | 主管 / 申請人        | `scenario-21-workflow-return-reject.spec.ts`     |
-| 22 停用 → 阻擋 → 改派      | 流程管理 → 阻擋清單                         | +tenant / 副理       | `scenario-22-workflow-blocked-reassign.spec.ts`  |
-| 23 作廢 → 複製為新單       | 示範表單(群組內)列表 / 詳情 / 編輯頁        | 申請人               | `scenario-23-workflow-void-copy.spec.ts`         |
-| 24 三部門平行              | 阻擋清單 + 申請中心詳情                     | +tenant / 原部門主任 | `scenario-24-workflow-parallel.spec.ts`          |
-| 25 代理人                  | 個人設定「代理人」+ 申請中心待我審核 / 詳情 | 店長甲 / 代理人丙    | `scenario-25-workflow-delegation.spec.ts`        |
-| 26 知會                    | 申請中心詳情 + 通知鈴                       | 主管 / 知會對象      | `scenario-26-workflow-cc.spec.ts`                |
-| 27 批次核准                | 申請中心待我審核(列勾選)                    | 主管                 | `scenario-27-workflow-batch-approve.spec.ts`     |
-| 28 指定組織跳過 / 自動通過 | 申請中心詳情(關卡進度、審核歷程)            | 申請人 / 主管        | `scenario-28-workflow-skip-auto-approve.spec.ts` |
-| 29 通知中心                | 頂端列通知鈴                                | 主管 / 申請人        | `scenario-29-notification-center.spec.ts`        |
+| 劇本                       | 主要頁面                                    | 操作帳號 / 被測帳號       | E2E                                              |
+| -------------------------- | ------------------------------------------- | ------------------------- | ------------------------------------------------ |
+| 1 wildcard                 | 角色管理 → 權限矩陣                         | +tenant                   | `scenario-01-wildcard.spec.ts`                   |
+| 2 資料範圍規則             | 資料範圍頁 + 示範模組1 列表 / 詳情          | root / +user              | `scenario-02-data-scope-rule.spec.ts`            |
+| 3 未宣告對照               | 資料範圍頁左清單 + 示範模組2 列表           | root / +user              | `scenario-03-undeclared-target.spec.ts`          |
+| 4 頂層合成 OR / AND        | 資料範圍頁 + 示範模組1 列表                 | root / +user              | `scenario-04-combine-op.spec.ts`                 |
+| 5 欄位級權限               | 示範模組1 詳情頁 + 編輯頁                   | +tenant / +user           | `scenario-05-field-permission.spec.ts`           |
+| 6 頁面自有權限             | 示範模組1 新增頁 + 編輯頁                   | +tenant / +user           | `scenario-06-page-permission.spec.ts`            |
+| 7 路由防守                 | 示範模組1 列表 + 直接打網址                 | +tenant / +user           | `scenario-07-route-guard.spec.ts`                |
+| 8 組織外                   | 使用者管理 / 角色管理 / 示範模組1 列表      | +tenant / +user           | `scenario-08-out-of-scope.spec.ts`               |
+| 9 移除三檔                 | 使用者管理 → 移除所屬組織彈窗               | +tenant / 多組織帳號      | `scenario-09-org-removal-policy.spec.ts`         |
+| 10 防越權                  | 角色管理 → 權限矩陣                         | +tenant                   | `scenario-10-out-of-reach.spec.ts`               |
+| 11 儲存雙路                | 示範模組1 表單 + 詳情頁                     | +user                     | `scenario-11-storage-two-paths.spec.ts`          |
+| 12 可見性開關              | 組織管理(開關)+ 示範模組1 列表 + 三治理頁   | +tenant / +user           | `scenario-12-visibility-toggle.spec.ts`          |
+| 13 總覽也是模組            | 角色管理 → 權限矩陣 + 登入落點              | +tenant / +user           | `scenario-13-overview-module.spec.ts`            |
+| 14 管理範圍 vs 可見範圍    | 角色管理 + 三治理頁 + 示範模組1 列表        | +tenant / +user           | `scenario-14-management-scope.spec.ts`           |
+| 15 側欄商標繼承            | 組織管理 → 商標 + 側欄                      | +tenant / +user           | `scenario-15-sidebar-logo.spec.ts`               |
+| 16 租戶視角                | 組織管理 → 開通租戶 + 租戶側欄              | root / +tenant            | `scenario-16-tenant-perspective.spec.ts`         |
+| 17 擁有者保護              | 使用者管理 / 角色管理 / 組織管理            | +tenant / root            | `scenario-17-owner-protection.spec.ts`           |
+| 18 表單生命週期            | 表單管理 + 示範表單(頂層)列表 / 新增 / 詳情 | root / +user              | `scenario-18-form-lifecycle.spec.ts`             |
+| 19 客製副本與退役          | 表單管理 + 示範表單(頂層)新增               | +tenant / +user           | `scenario-19-form-fork-retire.spec.ts`           |
+| 20 兩級核准與主管解析      | 申請中心(待我審核 / 詳情 / 我的申請)        | 主管 / 人資 / 申請人      | `scenario-20-workflow-two-level.spec.ts`         |
+| 21 退回 → 再送 → 駁回      | 申請中心詳情 + 示範表單(群組內)編輯頁       | 主管 / 申請人             | `scenario-21-workflow-return-reject.spec.ts`     |
+| 22 停用 → 阻擋 → 改派      | 流程管理 → 阻擋清單                         | +tenant / 副理            | `scenario-22-workflow-blocked-reassign.spec.ts`  |
+| 23 作廢 → 複製為新單       | 示範表單(群組內)列表 / 詳情 / 編輯頁        | 申請人                    | `scenario-23-workflow-void-copy.spec.ts`         |
+| 24 三部門平行              | 阻擋清單 + 申請中心詳情                     | +tenant / 原部門主任      | `scenario-24-workflow-parallel.spec.ts`          |
+| 25 代理人                  | 個人設定「代理人」+ 申請中心待我審核 / 詳情 | 店長甲 / 代理人丙         | `scenario-25-workflow-delegation.spec.ts`        |
+| 26 知會                    | 申請中心詳情 + 通知鈴                       | 主管 / 知會對象           | `scenario-26-workflow-cc.spec.ts`                |
+| 27 批次核准                | 申請中心待我審核(列勾選)                    | 主管                      | `scenario-27-workflow-batch-approve.spec.ts`     |
+| 28 指定組織跳過 / 自動通過 | 申請中心詳情(關卡進度、審核歷程)            | 申請人 / 主管             | `scenario-28-workflow-skip-auto-approve.spec.ts` |
+| 29 通知中心                | 頂端列通知鈴                                | 主管 / 申請人             | `scenario-29-notification-center.spec.ts`        |
+| 30 全部分店共用            | api(示範模組2)                              | +tenant / 店長甲 / 廚房丙 | 尚未                                             |
+| 31 指定分店(含 / 不含下層) | api(示範模組2)                              | 店長甲 / 店長乙 / 廚房丙  | 尚未                                             |
+| 32 依欄位共用              | api 測試                                    | —                         | 尚未                                             |
+| 33 目前組織切換            | api(示範模組2)                              | +tenant / 店長乙          | 尚未                                             |
+| 34 別租戶絕對看不到        | api(示範模組2)                              | 店長甲 / 乙租戶丁         | 尚未                                             |
+| 35 資料範圍與共用的先後    | api 測試                                    | —                         | 尚未                                             |
+| 36 搬家                    | api 測試                                    | —                         | 尚未                                             |
 
 **唯一在畫面上驗不到的**:劇本 1 的「下一版 seed 新增權限即擁有」(跨版本),由 api 測試覆蓋。
 
@@ -580,4 +670,4 @@ Windows 上用 PowerShell 設變數:`$env:E2E_GREP="劇本 7"; pnpm e2e`(Bash �
 harness、前置資料與寫法見 `apps/e2e/README.md` 與 `docs/standards/testing/testing.md` 的 TEST-11。
 新增劇本而還沒有 spec 時,「一頁看完」表的 E2E 欄寫「尚未」,照本文件人工驗收;補上 spec 時同時改掉這一欄。
 
-**額外一條(不在 29 條內)**:模組與權限頁 —— root 停用「示範模組2」→ +tenant 的側欄少一項;重新啟用只開這一個節點(停用父模組時整棵子樹視同停用)。
+**額外一條(不在 35 條內)**:模組與權限頁 —— root 停用「示範模組2」→ +tenant 的側欄少一項;重新啟用只開這一個節點(停用父模組時整棵子樹視同停用)。

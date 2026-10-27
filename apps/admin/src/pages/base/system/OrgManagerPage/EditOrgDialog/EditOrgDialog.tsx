@@ -271,7 +271,7 @@ export const EditOrgDialog = ({
           />
         )}
         {ability.canMove && isTenantTopProtected && (
-          <Typography variant="caption" color="text.secondary">
+          <Typography variant="caption" color="textSecondary">
             {tActions("tenantTopHint")}
           </Typography>
         )}

@@ -73,6 +73,8 @@ fragment WorkflowInstanceFields on WorkflowInstanceModel {
     mode
     # 這一關可否退回修改(匯合節點 false):審核區塊依它出不出現「退回修改」
     allowReturn
+    # 改派 / 新增審核者可否選申請人(這一關「申請人也是審核者時」= 照常審核)
+    allowsApplicantAssignee
     status
     blocked
     plan {
@@ -257,7 +259,7 @@ mutation WithdrawSubmission($input: WithdrawSubmissionInput!) {
   }
 }
 
-# VoidSubmissionInput: { id, expectedEditVersion, reason }
+# VoidSubmissionInput: { id, expectedEditVersion, reasonKey?, reasonNote };表單設了作廢原因類別時 reasonKey 必填、選 other 時 reasonNote 必填;沒設時 reasonNote = 理由(必填)
 mutation VoidSubmission($input: VoidSubmissionInput!) {
   voidSubmission(input: $input) {
     submission {

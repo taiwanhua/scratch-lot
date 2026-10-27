@@ -24,15 +24,15 @@ concurrency:
 
 # job 圖(牆鐘最短優先;各 job 各一台 runner,不再搶同一台的 CPU):
 #
-#   project-settings             專案部署設定、讀取器與底座同步 CLI(不看受影響清單,每次都跑)
-#   figma-sync                   Figma 品牌同步工具(root scripts,不看受影響清單,每次都跑)
-#   prepare ─┬─ format-codegen   格式檢查 + codegen 產物一致(GQL-05)
-#            ├─ lint-typecheck   turbo lint / check-types
-#            ├─ test-api-1 / 2   api 的 jest 分兩片(--shard)
-#            ├─ test-admin-1 / 2 admin 的 jest 分兩片(--shard)
-#            ├─ test-others      api / admin 以外的 turbo test
-#            └─ build            turbo build(front 的 ISR 預渲染要活的 api;Mongo 以 docker run 起單一成員 replica set)
-#   以上全部 ─→ verify           總結;PR 的必要檢查名稱就是它
+#   project-settings               專案部署設定、讀取器與底座同步 CLI(不看受影響清單,每次都跑)
+#   figma-sync                     Figma 品牌同步工具(root scripts,不看受影響清單,每次都跑)
+#   prepare ─┬─ format-codegen     格式檢查 + codegen 產物一致(GQL-05)
+#            ├─ lint-typecheck     turbo lint / check-types
+#            ├─ test-api-1 / 2 / 3 api 的 jest 分三片(--shard)
+#            ├─ test-admin-1 / 2   admin 的 jest 分兩片(--shard)
+#            ├─ test-others        api / admin 以外的 turbo test
+#            └─ build              turbo build(front 的 ISR 預渲染要活的 api;Mongo 以 docker run 起單一成員 replica set)
+#   以上全部 ─→ verify             總結;PR 的必要檢查名稱就是它
 #
 # turbo 本機快取(.turbo/cache)用 actions/cache 在 run 之間保存:每個跑 turbo 的 job 各一把 key
 #(job 名 + commit),restore 退回同 lockfile 的最近一份,沒改到的 package 直接 cache hit。
@@ -85,7 +85,7 @@ jobs:
       # base:PR 對 base 分支比;push 對推送前的分支 HEAD 比(等於這次合進來的內容)。
       # 改到 .github/** 或 base 拿不到(首推、force push)時退回全跑。
       # 清單轉成明確的 `--filter=<pkg>` 字串往下傳(下游 job 不必再算 diff);
-      # others-filter 是同一份清單去掉 @repo/api 與 @repo/admin(這兩個的測試最久,各由兩個 shard job 跑)。
+      # others-filter 是同一份清單去掉 @repo/api 與 @repo/admin(這兩個的測試最久,各由 shard job 跑:api 三片、admin 兩片)。
       - name: 受影響的 package
         id: affected
         env:
@@ -176,6 +176,9 @@ jobs:
 
       - name: Figma 稽核腳本測試
         run: node --test scripts/figma-audit/*.test.mjs
+
+      - name: app 圖示產生工具測試
+        run: node --test scripts/app-icons/*.test.mjs
 
       # 以本 repo 的身分實際解析正式設定:三個環境與看板各一次(只印非機密設定與 Secret 名稱)
       - name: 正式設定 dry-run
@@ -330,7 +333,7 @@ jobs:
       - name: 修剪 turbo 快取
         run: find .turbo/cache -type f -mtime +7 -delete 2>/dev/null || true
 
-  # api 的測試最久(整合測試對真 MongoDB),用 jest 的 --shard 分兩台並行。
+  # api 的測試最久(整合測試對真 MongoDB),用 jest 的 --shard 分三台並行。
   # MongoDB:jest globalSetup 自起單一成員 replica set(MongoMemoryReplSet,交易需要;與本機同一套)。
   # 不用 service container:GitHub 的 service container 不能自訂啟動參數(--replSet),起不了 replica set;
   # mongod 二進位由 pnpm install 的 postinstall 下載(所以這裡不加 MONGOMS_DISABLE_POSTINSTALL)。
@@ -346,7 +349,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2]
+        shard: [1, 2, 3]
 
     steps:
       - uses: actions/checkout@v4
@@ -372,8 +375,8 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       # `--forceExit`:測試全過但有殘留 handle 時仍會退出,並把偵測到的 handle 印進 log(--detectOpenHandles)
-      - name: test(api 第 ${{ matrix.shard }} / 2 片)
-        run: pnpm --filter @repo/api exec jest --passWithNoTests --detectOpenHandles --forceExit --shard=${{ matrix.shard }}/2
+      - name: test(api 第 ${{ matrix.shard }} / 3 片)
+        run: pnpm --filter @repo/api exec jest --passWithNoTests --detectOpenHandles --forceExit --shard=${{ matrix.shard }}/3
 
   # admin 的測試(約 600 案、單跑 5 分多)同樣用 jest 的 --shard 分兩台。
   # admin 的 jest 吃依賴的 dist(與 turbo 的 test dependsOn ^build 一致),先用 turbo build 依賴(`^...` = 不含 admin 本身),

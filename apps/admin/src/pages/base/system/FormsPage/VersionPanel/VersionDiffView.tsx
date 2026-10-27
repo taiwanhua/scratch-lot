@@ -22,7 +22,7 @@ export const VersionDiffView = ({ diff }: VersionDiffViewProps) => {
     diff.changed.length === 0
   ) {
     return (
-      <Typography variant="body2" color="text.secondary">
+      <Typography variant="body2" color="textSecondary">
         {t("diffNone")}
       </Typography>
     );

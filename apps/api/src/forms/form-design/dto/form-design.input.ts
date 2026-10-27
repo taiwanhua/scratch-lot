@@ -43,9 +43,28 @@ export class CreateFormInput {
   name!: string;
 }
 
+/** 單號格式(形狀與檢查正本 `@repo/domain/form` 的 `SerialFormat` / `serialFormatIssues`)。 */
+@InputType()
+export class FormSerialFormatInput {
+  @Field(() => String)
+  prefix!: string;
+
+  /** `none` / `year` / `month`。 */
+  @Field(() => String)
+  period!: string;
+
+  @Field(() => Int)
+  digits!: number;
+
+  /** 缺席 / null = 預設 `-`。 */
+  @Field(() => String, { nullable: true })
+  separator?: string | null;
+}
+
 /**
- * 改表單的名稱 / 頁籤模板 / 允許存草稿;缺席 = 不動,`tabLabelTemplate: null` = 清空(改回模組層模板),
- * `allowDraft: null` = 不動。
+ * 改表單的名稱 / 頁籤模板 / 允許存草稿 / 單號格式;缺席 = 不動,`tabLabelTemplate: null` = 清空(改回模組層模板),
+ * `allowDraft: null` = 不動,`serial: null` = 不給號(已給出的號碼不收回),
+ * `voidReasonCategoryKey: null` / 空白 = 清空(作廢原因改回自由填寫),`sharedByFieldKeys: null` / `[]` = 不依欄位共用。
  */
 @InputType()
 export class UpdateFormInput {
@@ -60,6 +79,20 @@ export class UpdateFormInput {
 
   @Field(() => Boolean, { nullable: true })
   allowDraft?: boolean | null;
+
+  @Field(() => FormSerialFormatInput, { nullable: true })
+  serial?: FormSerialFormatInput | null;
+
+  /** 作廢原因的欄位管理類別 key;要是存在的類別(`VALIDATION_FAILED`,`fields: ["voidReasonCategoryKey"]`)。 */
+  @Field(() => String, { nullable: true })
+  voidReasonCategoryKey?: string | null;
+
+  /**
+   * 依欄位共用:表單層組織引用欄的 key(對照目前發布版;沒有發布版對照草稿);`null` / 空陣列 = 不共用。
+   * 不合 → `VALIDATION_FAILED`(`fields: ["sharedByFieldKeys"]`)。
+   */
+  @Field(() => [String], { nullable: true })
+  sharedByFieldKeys?: string[] | null;
 }
 
 /** 以某表單的某一版為基底建新表單(客製副本 + 一份草稿,同模組)。 */

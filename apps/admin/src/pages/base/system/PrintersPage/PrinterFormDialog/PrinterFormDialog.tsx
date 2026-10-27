@@ -179,7 +179,7 @@ export const PrinterFormDialog = ({
             />
           )}
         </Stack>
-        <Typography variant="caption" color="text.secondary">
+        <Typography variant="caption" color="textSecondary">
           {t("fixedIpHint")}
         </Typography>
       </Stack>

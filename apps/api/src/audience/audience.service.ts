@@ -48,6 +48,7 @@ const DIRECTORY_READER: OperatorContext = {
   managedOrgIds: "all",
   memberOrgIds: [],
   roleIds: [],
+  memberTenants: [],
 };
 
 /** 一次請求內、同一位操作者的事實(用到才查,查過就留著)。 */

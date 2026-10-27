@@ -222,6 +222,21 @@ describe("印表機管理:代理程式分頁", () => {
 
     expect(await within(dialog).findByText("8K3M-Q7PZ")).toBeInTheDocument();
     expect(printing.inputs.resetPairing).toEqual(["agent-counter"]);
+
+    // 主要做法是「重新配對.bat」;手動指令收合在下方,按了才展開
+    expect(within(dialog).getByText(/「重新配對\.bat」按右鍵/)).toBeVisible();
+    const manualToggle = within(dialog).getByRole("button", {
+      name: /顯示手動指令/,
+    });
+    expect(manualToggle).toHaveAttribute("aria-expanded", "false");
+    expect(within(dialog).getByText(/--force/)).not.toBeVisible();
+    await user.click(manualToggle);
+    expect(
+      within(dialog).getByRole("button", { name: "收合手動指令" }),
+    ).toHaveAttribute("aria-expanded", "true");
+    await waitFor(() => {
+      expect(within(dialog).getByText(/--force/)).toBeVisible();
+    });
   });
 
   it("[停用]:確認後停用,預設清單不再列出", async () => {

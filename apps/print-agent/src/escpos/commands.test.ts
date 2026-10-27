@@ -62,6 +62,29 @@ describe("ESC/POS 指令位元組", () => {
     );
   });
 
+  it("中段切紙位置(一次印兩聯):點陣圖在那一列斷開、先送紙切紙再接著印;範圍外與重複的略過", () => {
+    const bitmap: MonoBitmap = {
+      width: 384,
+      height: 300,
+      bytesPerRow: 48,
+      data: new Uint8Array(48 * 300),
+    };
+    const chunks = buildPrintCommands(bitmap, 128, [200, 0, 300, 200]);
+    const shape = chunks.map((chunk) =>
+      chunk[0] === 0x1d && chunk[1] === 0x76
+        ? `band ${String((chunk[6] ?? 0) + (chunk[7] ?? 0) * 256)}`
+        : bytes(chunk).join(","),
+    );
+    expect(shape).toEqual([
+      bytes(INITIALIZE).join(","),
+      "band 128",
+      "band 72",
+      bytes(FEED_AND_CUT).join(","),
+      "band 100",
+      bytes(FEED_AND_CUT).join(","),
+    ]);
+  });
+
   it("空白圖片(高度 0)只有初始化與切紙", () => {
     const chunks = buildPrintCommands({
       width: 0,

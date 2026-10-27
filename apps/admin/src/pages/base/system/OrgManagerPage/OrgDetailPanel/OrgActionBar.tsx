@@ -47,7 +47,7 @@ export const OrgActionBar = ({
   const lockedHint = org.isSystem ? t("systemOrgHint") : t("tenantTopHint");
 
   return (
-    <Stack direction="row" spacing={1}>
+    <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap" }}>
       {ability.canEdit && (
         <Button size="small" variant="outlined" onClick={onEdit}>
           {t("edit")}

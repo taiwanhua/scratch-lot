@@ -37,7 +37,7 @@ export const ArrayRowCards = ({
 
   if (rows.length === 0) {
     return (
-      <Typography variant="body2" color="text.secondary">
+      <Typography variant="body2" color="textSecondary">
         {isDesign ? t("designPlaceholder") : t("noRows")}
       </Typography>
     );

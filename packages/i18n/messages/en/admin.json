@@ -3,6 +3,9 @@
     "subtitle": "Admin",
     "loading": "Loading…",
     "apiError": "Cannot reach the API. Make sure the api service is running.",
+    "errors": {
+      "transactionTimeout": "This took too long and was cancelled. Nothing was changed. Please try again later or contact your administrator."
+    },
     "snackbar": {
       "close": "Close"
     }
@@ -93,7 +96,10 @@
     "navBadge": "{count} pending",
     "collapseNav": "Collapse sidebar",
     "expandNav": "Expand sidebar",
+    "openNav": "Open main menu",
     "currentOrg": "Current organization",
+    "currentOrgNamed": "Current organization: {name}",
+    "currentOrgNone": "Current organization: none selected",
     "placeholder": {
       "pending": "This page is not built yet"
     },
@@ -106,12 +112,19 @@
     "tabs": {
       "label": "Route tabs",
       "close": "Close {label}",
-      "keyboardHint": "Use the left and right arrow keys to move focus and Enter to open a tab; hold Shift with an arrow key to reorder; press Delete to close the focused tab. Tabs can also be reordered by dragging.",
+      "keyboardHint": "Use the left and right arrow keys to move focus and Enter to open a tab; hold Shift with an arrow key to reorder; press Delete to close the focused tab; press the Menu key or Shift+F10 to open the tab menu. Tabs can also be reordered by dragging.",
       "dragStart": "Picked up \"{label}\"",
       "dragOver": "\"{label}\" was moved to the position of \"{over}\"",
       "dragEnd": "\"{label}\" was dropped at the position of \"{over}\"",
       "dragEndNoTarget": "\"{label}\" was returned to its original position",
-      "dragCancel": "Dragging \"{label}\" was cancelled"
+      "dragCancel": "Dragging \"{label}\" was cancelled",
+      "menu": {
+        "open": "Tab menu",
+        "label": "Tab menu — {label}",
+        "closeLeft": "Close all tabs to the left",
+        "closeRight": "Close all tabs to the right",
+        "closeOthers": "Close all other tabs"
+      }
     },
     "forbidden": {
       "title": "You do not have access to this page",
@@ -301,7 +314,8 @@
       "UPLOAD_REJECTED": "The logo file was rejected (PNG / JPG / WebP only, up to 2MB).",
       "FORBIDDEN": "You do not have permission to perform this action.",
       "UNEXPECTED": "The action failed; please try again later."
-    }
+    },
+    "mobileBack": "← Back"
   },
   "userManager": {
     "orgTree": {
@@ -502,7 +516,8 @@
       },
       "confirm": "Copy",
       "cancel": "Cancel"
-    }
+    },
+    "mobileBack": "← Back"
   },
   "moduleManager": {
     "seedNotice": "Modules and permissions are maintained by the system. This page is for viewing and toggling enabled / disabled only.",
@@ -574,6 +589,12 @@
       "UNEXPECTED": "The action failed. Please try again later."
     },
     "listColumns": {
+      "errors": {
+        "width": "Width must be a whole number from {min} to {max}",
+        "LIST_COLUMN_DUPLICATE": "This column is listed twice; remove one",
+        "LIST_COLUMN_UNAVAILABLE": "This field is no longer in the current form version; pick another",
+        "LIST_COLUMN_PROTECTED": "Protected fields can't be list columns"
+      },
       "title": "List columns — {name}",
       "loading": "Loading configuration",
       "moduleWide": "This setting affects the whole module's list: every form in the module shares the same list columns.",
@@ -584,7 +605,8 @@
       "slots": {
         "title": "Title",
         "date": "Date",
-        "amount": "Amount"
+        "amount": "Amount",
+        "serialNo": "Serial no."
       },
       "field": "Form field",
       "missingField": "{key} (no longer in the current version)",
@@ -626,7 +648,8 @@
       "failed": "Delete failed. Please try again later.",
       "cancel": "Cancel",
       "close": "Close"
-    }
+    },
+    "mobileBack": "← Back"
   },
   "moduleIcons": {
     "dashboard": "Dashboard",
@@ -760,7 +783,29 @@
       "reasons": {
         "HAS_GRANTS": "Users still hold this role; remove them first.",
         "SYSTEM_ROLE": "This is a built-in role.",
-        "TEMPLATE_COPY": "This role was prepared for you during setup."
+        "TEMPLATE_COPY": "This role was prepared for you during setup.",
+        "REFERENCED_BY_AUDIENCE": "The people conditions of these settings still use this role; handle each one as described before deleting:"
+      },
+      "references": {
+        "notification-setting": "The recipients of the notification setting “{name}” use this role → go to <link>Notification settings</link> and switch the recipients to another role.",
+        "workflow-approver": {
+          "edit": "In the {source, select, draft {draft} other {current version}} of workflow “{name}”, the reviewers of step “{step}” use this role → go to <link>Workflows</link>, change this step and publish.",
+          "inUse": "{count, plural, one {# in-progress request uses} other {# in-progress requests use}} a version of workflow “{name}” whose step “{step}” has this role as reviewers → wait until they finish, or withdraw / void them, then delete."
+        },
+        "workflow-step-cc": {
+          "edit": "In the {source, select, draft {draft} other {current version}} of workflow “{name}”, the CC recipients of step “{step}” use this role → go to <link>Workflows</link>, change this step and publish.",
+          "inUse": "{count, plural, one {# in-progress request uses} other {# in-progress requests use}} a version of workflow “{name}” whose step “{step}” has this role as CC recipients → wait until they finish, or withdraw / void them, then delete."
+        },
+        "workflow-overdue": {
+          "edit": "In the {source, select, draft {draft} other {current version}} of workflow “{name}”, the overdue reminder recipients of step “{step}” use this role → go to <link>Workflows</link>, change this step and publish.",
+          "inUse": "{count, plural, one {# in-progress request uses} other {# in-progress requests use}} a version of workflow “{name}” whose step “{step}” has this role as overdue reminder recipients → wait until they finish, or withdraw / void them, then delete."
+        },
+        "workflow-cc": {
+          "edit": "In the {source, select, draft {draft} other {current version}} of workflow “{name}”, the whole flow's CC recipients use this role → go to <link>Workflows</link>, change it and publish.",
+          "inUse": "{count, plural, one {# in-progress request uses} other {# in-progress requests use}} a version of workflow “{name}” whose whole flow's CC recipients use this role → wait until they finish, or withdraw / void them, then delete."
+        },
+        "data-scope": "The data scope “{name}” is set by the system administrator and its “Applies to” uses this role → please contact the system administrator to change it.",
+        "sidebar-badge": "Who sees the sidebar count of “{name}” uses this role → go to <link>Notification settings</link>, “Sidebar counts”, and switch it to another role."
       },
       "useDisableInstead": "When it cannot be deleted you can disable it instead: holders lose it immediately and you can enable it again at any time.",
       "confirm": "Delete",
@@ -800,7 +845,8 @@
       "FORBIDDEN": "You do not have permission for this action.",
       "VALIDATION_FAILED": "The data did not pass validation, please check and submit again.",
       "UNEXPECTED": "The action failed, please try again later."
-    }
+    },
+    "mobileBack": "← Back"
   },
   "dataScope": {
     "targets": {
@@ -872,7 +918,8 @@
       "NOT_FOUND": "That data target does not exist.",
       "FORBIDDEN": "You do not have permission for this action (this page is root-org only).",
       "UNEXPECTED": "The action failed, please try again later."
-    }
+    },
+    "mobileBack": "← Back"
   },
   "fieldManager": {
     "categories": {
@@ -1087,6 +1134,7 @@
     }
   },
   "demoSampleTwo": {
+    "sharedIn": "Shared with you (view only)",
     "emptyValue": "—",
     "emptyList": "No demo items yet",
     "loading": "Loading",
@@ -1106,7 +1154,8 @@
       "name": "Name",
       "note": "Note",
       "enabled": "Enabled",
-      "createdBy": "Created by"
+      "createdBy": "Created by",
+      "shareOrgs": "Share with"
     },
     "toolbar": {
       "search": "Search",
@@ -1227,7 +1276,8 @@
       "slots": {
         "title": "Title",
         "date": "Date",
-        "amount": "Amount"
+        "amount": "Amount",
+        "serialNo": "Serial no."
       }
     },
     "detail": {
@@ -1288,7 +1338,8 @@
         "edit": "Edit",
         "create": "New"
       },
-      "tabLabelWithAction": "{action} · {label}"
+      "tabLabelWithAction": "{action} · {label}",
+      "serialNo": "Serial no.: {serialNo}"
     },
     "fill": {
       "loading": "Loading",
@@ -1350,6 +1401,7 @@
     "loading": "Loading",
     "empty": "Select a form to see its design and versions",
     "errors": {
+      "FORM_KEY_DUPLICATE": "This key is already used by a form; choose another",
       "CONFLICT": "This was updated by someone else. Please reload.",
       "FIELD_FORBIDDEN": "You are not allowed to change one of the fields; nothing was saved.",
       "FORM_NOT_AVAILABLE": "This form is not available right now.",
@@ -1378,9 +1430,12 @@
       "disabled": "Disabled",
       "hasDraft": "Draft",
       "workflow": "Workflow: {name}",
-      "workflowInvalid": "Bound workflow is invalid"
+      "workflowInvalid": "Bound workflow is invalid",
+      "collapse": "Collapse form list",
+      "expand": "Expand form list"
     },
     "detail": {
+      "serialDigitsError": "Digits must be a whole number from {min} to {max}",
       "region": "Form settings",
       "meta": "key: {key} · module: {module}",
       "forkedFrom": "Based on: {key} v{version}",
@@ -1394,11 +1449,42 @@
       "allowDraftHint": "When off, the create and edit pages hide [Save draft]; entries can only be submitted directly.",
       "allowDraftOn": "Drafts are now allowed.",
       "allowDraftOff": "Drafts are turned off; entries can only be submitted directly.",
+      "voidReasonCategory": "Void reason",
+      "voidReasonCategoryHint": "With a Field manager category set, voiding requires picking a reason from its options (\"Other\" needs a note). Not set = free-text reason.",
+      "voidReasonCategoryUnset": "Not set (free text)",
+      "voidReasonCategorySaved": "Void reason setting updated.",
+      "sharedByFields": "Share by fields",
+      "sharedByFieldsHint": "Organizations picked in the checked organization fields can also see this form's submissions (view only, no editing or deleting). None checked = only people who can see the submission's organization.",
+      "sharedByFieldsSaved": "Share-by-fields setting updated.",
       "enabledOff": "Form disabled in this organization.",
       "assignedTo": "Assigned: {tenants}",
       "tabs": "Form settings tabs",
       "tabDesign": "Form design",
-      "tabVersions": "Form versions"
+      "tabVersions": "Form versions",
+      "serial": "Serial number",
+      "serialEnabled": "Give a serial number on first submit",
+      "serialHint": "Drafts get no number; a given number is kept (return, withdraw and void keep it). Each top-level org counts separately and restarts per period.",
+      "serialPrefix": "Prefix",
+      "serialPrefixHint": "0–10 letters or digits; may be empty",
+      "serialPeriod": "Restart numbering",
+      "serialPeriods": {
+        "none": "Never",
+        "year": "Every year",
+        "month": "Every month"
+      },
+      "serialDigits": "Digits",
+      "serialSeparator": "Separator",
+      "serialSeparators": {
+        "dash": "-",
+        "underscore": "_",
+        "slash": "/",
+        "dot": ".",
+        "none": "None"
+      },
+      "serialPreview": "Example: {example}",
+      "serialSave": "Save serial format",
+      "serialSaved": "Serial format saved.",
+      "serialCleared": "Serial numbers turned off; given numbers are kept."
     },
     "create": {
       "title": "New form",
@@ -1587,7 +1673,9 @@
       "regexUnavailable": "Pattern safety can't be checked right now; it will be checked when you save the draft.",
       "newColumn": "Item",
       "sectionSettings": "Section settings",
-      "sectionSettingsOf": "Section settings for “{title}”"
+      "sectionSettingsOf": "Section settings for “{title}”",
+      "openSettings": "Form settings",
+      "closeProperties": "Close properties"
     },
     "preview": {
       "region": "Preview",
@@ -2069,7 +2157,16 @@
       "summaryFields": "Fields shown in the header when collapsed",
       "addSummaryField": "+ Field",
       "summaryNeedsCollapsible": "Turn on “Collapsible” first."
-    }
+    },
+    "mobile": {
+      "region": "Form summary",
+      "hint": "Use a tablet or computer to design and edit.",
+      "version": "Published version",
+      "yes": "Yes",
+      "no": "No",
+      "unsaved": "This form has unsaved changes, still kept in the designer. Switch to a tablet or computer width to save or discard them."
+    },
+    "mobileBack": "← Back"
   },
   "approval": {
     "nameSeparator": ", ",
@@ -2211,6 +2308,8 @@
       "void": "Void",
       "copy": "Copy as new",
       "voidedReason": "Void reason: {reason}",
+      "voidedReasonOption": "Void reason: {option}",
+      "voidedReasonOptionNote": "Void reason: {option} ({note})",
       "clearedFields": "New submission created; these fields were cleared because their sources are no longer valid: {fields}"
     },
     "dialog": {
@@ -2225,6 +2324,11 @@
       "title": "Void this submission",
       "body": "A voided submission is no longer in effect and cannot be edited. You can \"Copy as new\" and submit again.",
       "reason": "Void reason",
+      "reasonOption": "Void reason",
+      "note": "Note",
+      "noteRequired": "A note is required when \"Other\" is selected",
+      "noOptions": "No void reasons are available. Ask an administrator to add options in Field manager",
+      "optionsUnavailable": "Couldn't load void reasons. Please try again later",
       "confirm": "Void"
     },
     "retry": {
@@ -2375,7 +2479,9 @@
       "version": "Version {version}",
       "assigned": "Assigned to {count}",
       "hasDraft": "Has draft",
-      "boundForms": "Bound forms: {forms}"
+      "boundForms": "Bound forms: {forms}",
+      "collapse": "Collapse workflow list",
+      "expand": "Expand workflow list"
     },
     "detail": {
       "region": "Workflow",
@@ -2517,7 +2623,9 @@
       "viewingCanvas": "Flow chart of v{version}",
       "viewingProperties": "Properties (read-only)",
       "closeViewing": "Close",
-      "saveBlockedOverdue": "Overdue reminder hours are invalid; fix them before saving the draft."
+      "saveBlockedOverdue": "Overdue reminder hours are invalid; fix them before saving the draft.",
+      "openFlowSettings": "Whole-flow settings",
+      "closeProperties": "Close properties"
     },
     "opErrors": {
       "FORK_NEEDS_SOURCE": "A fork needs a review step before it: delete or move the whole fork first.",
@@ -2580,9 +2688,10 @@
         "title": "Auto-approve",
         "applicant": "When the applicant is a reviewer of this step",
         "priorApprover": "When the reviewer already approved an earlier step",
+        "exclude": "Exclude the applicant",
         "normal": "Review as usual",
         "auto": "Auto-approve",
-        "hint": "Auto-approve records an approval by that person (only their vote in multi-reviewer steps) and still runs the pre-approval check; if it fails, they review as usual."
+        "hint": "Exclude the applicant: this step is not assigned to the applicant, and it waits for someone to handle it if no other reviewer is left. Review as usual: the applicant also gets a pending task and approves it again. Auto-approve records an approval by that person (only their vote in multi-reviewer steps) and still runs the pre-approval check; if it fails, they are excluded or review as usual."
       },
       "overdue": {
         "title": "Overdue reminders",
@@ -2740,7 +2849,14 @@
       "ccHint": "Notified when the document is completed, rejected or voided (no review needed; they can view the document read-only). Step CC recipients are only notified when that step passes or is skipped; returning for changes and withdrawing notify no one.",
       "issues": "Whole-flow issues",
       "backToFlow": "Back to whole-flow settings"
-    }
+    },
+    "mobile": {
+      "region": "Workflow summary",
+      "hint": "Use a tablet or computer to design and edit.",
+      "version": "Published version",
+      "unsaved": "This workflow has unsaved changes, still kept in the designer. Switch to a tablet or computer width to save or discard them."
+    },
+    "mobileBack": "← Back"
   },
   "userPicker": {
     "option": "{name} ({account})",
@@ -2750,6 +2866,14 @@
     "loadFailed": "Could not load the list of people. Please try again later",
     "disabled": "Disabled"
   },
+  "filterDrawer": {
+    "button": "Filter",
+    "buttonCount": "Filter ({count})",
+    "title": "Filter",
+    "clear": "Clear",
+    "apply": "Apply",
+    "close": "Close"
+  },
   "orgTreeSelect": {
     "search": "Search organizations",
     "empty": "No organizations to choose from",
@@ -2757,9 +2881,19 @@
     "limitCount": "{count} selected / up to {max}",
     "limitReached": "You can choose up to {max}",
     "outOfScope": "Outside your management scope",
+    "outOfVisibleScope": "Outside your visible scope",
     "disabledOrg": "Disabled",
     "loadFailed": "Couldn't load organizations. Please try again later.",
     "confirm": "Done"
+  },
+  "shareOrgsField": {
+    "rootNotSharable": "The root org cannot be shared with",
+    "rootDisabled": "Records of the root org cannot be shared",
+    "helper": "Shared orgs can view this record but cannot change it. Any org in the tree can be chosen.",
+    "includeDescendants": "Include orgs under {name}",
+    "withDescendants": "{name} (and below)",
+    "none": "Not shared",
+    "unknownOrg": "(An org no longer in the tree)"
   },
   "seedExport": {
     "action": "Export project settings",
@@ -2939,8 +3073,8 @@
     }
   },
   "notificationSettings": {
-    "intro": "Recipients of these reminders can be set by user, role and permission. Notifications such as reviews awaiting you or application results go straight to the people involved and are not set here.",
-    "rootReadOnly": "The current organization is not under any top-level organization: default recipients are shown here and cannot be changed. Switch to the organization you want to set up first.",
+    "intro": "Recipients of these notifications can be set by user, role and permission; for those with a reminder time you can also set how many days ahead and when they are sent. Notifications such as reviews awaiting you or application results go straight to the people involved and are not set here.",
+    "rootReadOnly": "The current organization is not under any top-level organization: defaults are shown here and cannot be changed. Switch to the organization you want to set up first.",
     "search": "Search notification types",
     "searchPlaceholder": "Name",
     "tableLabel": "Notification types",
@@ -2951,38 +3085,128 @@
       "type": "Notification type",
       "orgScope": "Organization scope",
       "audience": "Recipients",
+      "schedule": "Reminder time",
       "actions": "Actions"
     },
     "orgScope": "{origin, select, tenant {Top-level organization} other {Organization of the event}}{range, select, descendants { and its children} ancestors { and its parents} other {}}",
+    "orgScopeByEvent": "—",
+    "partyRecipients": "Decided by the event",
+    "partyRecipientsWithNote": "Decided by the event ({note})",
     "defaultTag": "Default",
+    "scheduleSummary": {
+      "onEvent": "— (when it happens)",
+      "daysBefore": "{days} days before {label}, {time}",
+      "daysBeforeAndToday": "{days} days before and on {label}, {time}",
+      "today": "On {label}, {time}",
+      "dailyOverdue": "Daily from the next day, {time}",
+      "monthly": "Day {day} of each month, {time}",
+      "defaultDateLabel": "the date",
+      "separator": ", "
+    },
+    "scheduleEditor": {
+      "daysBeforeHint": "Days ahead: 0 = on the day; 0–365, up to 5, no duplicates. The date itself comes from each record.",
+      "daysBefore": "Days ahead {index}",
+      "removeDay": "Remove days ahead {index}",
+      "addDay": "+ Add one",
+      "dailyOverdueHint": "From the day after it becomes overdue, sent every day at this time until it is no longer overdue.",
+      "dayOfMonth": "Day of the month",
+      "dayOfMonthHint": "1–31; months without that day send on the last day",
+      "time": "Send time",
+      "timeHint": "In the top-level organization's time zone; usually sent within 15 minutes after the time",
+      "issues": {
+        "daysRange": "Enter a whole number from 0 to 365",
+        "daysDuplicate": "Days cannot repeat",
+        "daysEmpty": "Add at least one day",
+        "dayOfMonthRange": "Enter a whole number from 1 to 31",
+        "timeStep": "Pick a time on a 15-minute step (e.g. 09:00, 09:15)",
+        "invalid": "Out of the allowed range"
+      }
+    },
     "actions": {
       "edit": "Edit",
       "reset": "Restore default"
     },
     "edit": {
-      "title": "Edit recipients: {name}",
+      "title": "{part, select, schedule {Edit reminder time} both {Edit notification settings} other {Edit recipients}}: {name}",
       "scopeHint": "Organization scope: {scope} (set by the notification type, cannot be changed). Recipients = people within the scope who also match the conditions below.",
       "audienceTitle": "Recipients",
+      "scheduleTitle": "Reminder time",
+      "resetPart": "Restore default",
       "cancel": "Cancel",
       "save": "Save"
     },
     "reset": {
       "title": "Restore default: {name}",
-      "body": "Recipients go back to the default: {audience}. Your current changes will be removed.",
+      "audienceLine": "Recipients go back to the default: {audience}.",
+      "scheduleLine": "Reminder time goes back to the default: {schedule}.",
+      "body": "Your current changes will be removed.",
       "cancel": "Cancel",
       "confirm": "Restore default"
     },
     "feedback": {
-      "saveSuccess": "Recipients updated",
-      "resetSuccess": "Default recipients restored"
+      "saveSuccess": "Notification settings updated",
+      "resetSuccess": "Defaults restored"
     },
     "errors": {
       "AUDIENCE_INVALID": "This condition cannot be used. Check it and save again.",
       "OUT_OF_TENANT": "This person or role is not in your organization",
       "UNKNOWN_TYPE": "This notification type no longer exists. Refresh and try again.",
-      "TENANT_ONLY": "Recipients cannot be changed here. Switch to the organization you want to set up first.",
+      "AUDIENCE_NOT_ADJUSTABLE": "Recipients of this notification are decided by the event and cannot be changed",
+      "SCHEDULE_NOT_ADJUSTABLE": "This notification is sent when the event happens and has no reminder time",
+      "SCHEDULE_INVALID": "The reminder time is out of the allowed range. Check it and save again.",
+      "NOTHING_TO_UPDATE": "There are no changes to save",
+      "TENANT_ONLY": "Notification settings cannot be changed here. Switch to the organization you want to set up first.",
       "FORBIDDEN": "You do not have permission to change notification settings",
       "UNEXPECTED": "Something went wrong. Please try again later."
+    }
+  },
+  "sidebarBadgeSettings": {
+    "title": "Sidebar counts",
+    "intro": "The number next to a module name in the sidebar (for example, items waiting for you). Only people who can open that module see it; once adjusted, they must also match the conditions here. What is counted is set by the system and cannot be added here.",
+    "tableLabel": "Sidebar counts",
+    "empty": "There are no sidebar counts to set",
+    "loadFailed": "Sidebar count settings failed to load. Refresh and try again.",
+    "columns": {
+      "module": "Module",
+      "description": "What it counts",
+      "audience": "Who sees it",
+      "actions": "Actions"
+    },
+    "noDescription": "—",
+    "defaultAudience": "People who can open this module",
+    "conditionAudience": "People who can open this module and match “{condition}”",
+    "actions": {
+      "edit": "Change",
+      "reset": "Restore default"
+    },
+    "edit": {
+      "title": "Change who sees it: {name}",
+      "hint": "Only people who can open “{name}” see the count; of them, people matching the conditions below see it.",
+      "audienceTitle": "Who sees it",
+      "cancel": "Cancel",
+      "save": "Save"
+    },
+    "reset": {
+      "title": "Restore default: {name}",
+      "line": "Who sees it goes back to the default: {audience}.",
+      "body": "Your current changes will be removed.",
+      "cancel": "Cancel",
+      "confirm": "Restore default"
+    },
+    "feedback": {
+      "saveSuccess": "Sidebar count settings updated",
+      "resetSuccess": "Defaults restored"
+    },
+    "errors": {
+      "AUDIENCE_INVALID": "This condition cannot be used. Check it and save again.",
+      "OUT_OF_TENANT": "This person or role is not in your organization",
+      "UNKNOWN_BADGE": "This sidebar count no longer exists. Refresh and try again.",
+      "TENANT_ONLY": "Sidebar counts cannot be changed here. Switch to the organization you want to set up first.",
+      "FORBIDDEN": "You do not have permission to change sidebar counts",
+      "UNEXPECTED": "Something went wrong. Please try again later."
+    },
+    "descriptions": {
+      "apply-center": "Reviews waiting for you"
     }
   },
   "printers": {
@@ -3163,7 +3387,7 @@
       "copyOf": "Copy {label}",
       "copied": "{label} copied",
       "copyFailed": "Couldn't copy. Please select the text and copy it manually",
-      "hint": "Valid for 10 minutes (until {expiresAt}). Run the installer on the store computer and paste the server URL and pairing code."
+      "validUntil": "Valid for 10 minutes (until {expiresAt})."
     },
     "createAgent": {
       "title": "New print agent",
@@ -3174,12 +3398,16 @@
       "cancel": "Cancel",
       "submit": "Create",
       "done": "Done",
-      "success": "Print agent added"
+      "success": "Print agent added",
+      "pairingHint": "Run the installer on the store computer and paste the server URL and pairing code."
     },
     "resetPairing": {
       "title": "Pair \"{name}\" again",
       "body": "The old key stops working immediately and this computer must pair again with a new pairing code. Printer settings are kept.",
-      "doneBody": "New computer, or the code expired before setup finished: run the installer on that computer and paste the server URL and the new pairing code. Same computer that is already set up: as an administrator, run print-agent pair --server (server URL) --code (new code) --force, then restart the print agent service (see \"Pair again\" in this page help).",
+      "doneBody": "On the computer, right-click \"重新配對.bat\" (Pair again) in the installer folder, choose \"Run as administrator\", and paste the server URL and pairing code below. New computer, or the code expired before setup finished: run the installer on that computer instead and paste the same two values.",
+      "manualShow": "Show manual command (Linux, Mac, or no \"重新配對.bat\")",
+      "manualHide": "Hide manual command",
+      "manual": "As an administrator, run print-agent pair --server (server URL) --code (new code) --force, then restart the print agent service (see \"Pair again\" in this page help).",
       "confirm": "Pair again",
       "cancel": "Cancel",
       "done": "Done",
@@ -3206,6 +3434,11 @@
     "choosePrinter": "Choose a printer",
     "defaultPrinter": "{name} (default)",
     "noResultHint": "Check whether the receipt came out before deciding to reprint",
+    "printDialog": {
+      "title": "Print",
+      "submit": "Print",
+      "cancel": "Cancel"
+    },
     "reprintDialog": {
       "title": "Reprint",
       "reason": "Reprint reason",

@@ -114,6 +114,17 @@ test("根目錄的值行檔是 mixed,其他根層 md 不自動歸類", () => {
   assert.equal(classifyPath("NOTES.md", "A"), "unknown");
 });
 
+test("app 的 favicon 與 public/project/ 判為 project,public 其餘是 common", () => {
+  for (const file of [
+    "apps/admin/public/favicon.ico",
+    "apps/admin/public/project/icon.svg",
+    "apps/admin/public/project/icon-192.png",
+  ]) {
+    assert.equal(classifyPath(file, "M"), "project", file);
+  }
+  assert.equal(classifyPath("apps/admin/public/robots.txt", "A"), "common");
+});
+
 test("根目錄的 .nvmrc 判為 common,其他位置的不因此改變", () => {
   assert.equal(classifyPath(".nvmrc", "A"), "common");
   assert.equal(classifyPath(".nvmrc", "M"), "common");

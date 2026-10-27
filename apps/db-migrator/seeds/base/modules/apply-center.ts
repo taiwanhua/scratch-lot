@@ -20,7 +20,8 @@ export const applyCenterModule: ModuleSeedDeclaration = {
       name: "申請中心",
       sidebarType: "link",
       parentKey: null,
-      order: 4,
+      // 頂層排在業務模組之後、系統管理之前(業務模組用 10–80,見 docs/modules/module-manager.md「側欄順序」)
+      order: 90,
       route: "apply-center",
       icon: "mail",
       description: "我的申請與待我審核(跨模組),以及新申請入口",

@@ -50,7 +50,7 @@ export const AttachmentField = ({
     <Stack direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
       <Typography variant="body2">{attachmentNameOf(attachment)}</Typography>
       {size !== null && (
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" color="textSecondary">
           {formatFileSize(size)}
         </Typography>
       )}
@@ -70,7 +70,7 @@ export const AttachmentField = ({
           {t("open")}
         </Link>
       )}
-      <Typography variant="caption" color="text.secondary">
+      <Typography variant="caption" color="textSecondary">
         {t("hint")}
       </Typography>
     </Stack>

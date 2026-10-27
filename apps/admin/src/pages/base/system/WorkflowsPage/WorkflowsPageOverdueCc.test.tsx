@@ -87,6 +87,14 @@ describe("流程管理:關卡面板的逾時提醒與知會、整個流程的知
         "時數要是正整數,而且通知「通知對象」的時數要大於通知審核者的時數。",
       ),
     ).toBeInTheDocument();
+    // REACT-18:原因以 aria-describedby 連到兩格時數
+    expect(
+      within(propertiesPanel()).getByRole("spinbutton", {
+        name: "通知審核者的時數",
+      }),
+    ).toHaveAccessibleDescription(
+      "時數要是正整數,而且通知「通知對象」的時數要大於通知審核者的時數。",
+    );
     expect(screen.getByText(BLOCKED)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "存草稿" })).toBeDisabled();
   });

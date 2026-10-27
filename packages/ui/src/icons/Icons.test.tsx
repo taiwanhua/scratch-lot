@@ -3,6 +3,7 @@ import { render } from "@testing-library/react";
 
 import { AddIcon } from "./AddIcon";
 import { ArrowDownIcon } from "./ArrowDownIcon";
+import { ArrowDropDownIcon } from "./ArrowDropDownIcon";
 import { ArrowUpIcon } from "./ArrowUpIcon";
 import { CheckCircleIcon } from "./CheckCircleIcon";
 import { CheckIcon } from "./CheckIcon";
@@ -21,6 +22,8 @@ import { ErrorCircleIcon } from "./ErrorCircleIcon";
 import { HelpIcon } from "./HelpIcon";
 import { LightModeIcon } from "./LightModeIcon";
 import { LogoutIcon } from "./LogoutIcon";
+import { MenuIcon } from "./MenuIcon";
+import { MoreHorizIcon } from "./MoreHorizIcon";
 import { NotificationsIcon } from "./NotificationsIcon";
 import { SettingsIcon } from "./SettingsIcon";
 import { SystemModeIcon } from "./SystemModeIcon";
@@ -50,6 +53,7 @@ const actionIcons = [
   { name: "AddIcon", Icon: AddIcon },
   { name: "ArrowUpIcon", Icon: ArrowUpIcon },
   { name: "ArrowDownIcon", Icon: ArrowDownIcon },
+  { name: "ArrowDropDownIcon", Icon: ArrowDropDownIcon },
   { name: "ChevronDoubleLeftIcon", Icon: ChevronDoubleLeftIcon },
   { name: "ChevronDoubleRightIcon", Icon: ChevronDoubleRightIcon },
   { name: "SystemModeIcon", Icon: SystemModeIcon },
@@ -60,6 +64,8 @@ const actionIcons = [
   { name: "NotificationsIcon", Icon: NotificationsIcon },
   { name: "CheckCircleIcon", Icon: CheckCircleIcon },
   { name: "ErrorCircleIcon", Icon: ErrorCircleIcon },
+  { name: "MenuIcon", Icon: MenuIcon },
+  { name: "MoreHorizIcon", Icon: MoreHorizIcon },
 ] as const;
 
 describe("icons", () => {

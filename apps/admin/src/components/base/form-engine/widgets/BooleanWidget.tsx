@@ -70,7 +70,7 @@ export const BooleanWidget = ({
       {helperText !== undefined && (
         <Typography
           variant="caption"
-          color={hasError ? "error" : "text.secondary"}
+          color={hasError ? "error" : "textSecondary"}
         >
           {helperText}
         </Typography>

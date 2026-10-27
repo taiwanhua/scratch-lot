@@ -289,6 +289,16 @@
         "default": "./dist/cjs/dialog.js"
       }
     },
+    "./drawer": {
+      "import": {
+        "types": "./dist/es/drawer.d.mts",
+        "default": "./dist/es/drawer.mjs"
+      },
+      "require": {
+        "types": "./dist/cjs/drawer.d.ts",
+        "default": "./dist/cjs/drawer.js"
+      }
+    },
     "./form-control-label": {
       "import": {
         "types": "./dist/es/form-control-label.d.mts",
@@ -347,6 +357,16 @@
       "require": {
         "types": "./dist/cjs/date-time-picker.d.ts",
         "default": "./dist/cjs/date-time-picker.js"
+      }
+    },
+    "./time-picker": {
+      "import": {
+        "types": "./dist/es/time-picker.d.mts",
+        "default": "./dist/es/time-picker.mjs"
+      },
+      "require": {
+        "types": "./dist/cjs/time-picker.d.ts",
+        "default": "./dist/cjs/time-picker.js"
       }
     },
     "./tooltip": {
@@ -535,6 +555,7 @@
     "@types/qrcode": "^1.5.6",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
+    "@zxing/library": "^0.23.0",
     "bunchee": "^6.4.0",
     "eslint": "^9.39.0",
     "jest": "^30.5.2",

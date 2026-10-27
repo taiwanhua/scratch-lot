@@ -31,14 +31,14 @@ export const PrintStatus = ({ phase, printedCount }: PrintStatusProps) => {
   return (
     <Box role="status">
       {phase.kind === "sending" ? (
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" color="textSecondary">
           {t("sending")}
         </Typography>
       ) : null}
       {phase.kind === "printed" ? (
         <Box sx={LINE_SX}>
           <CheckCircleIcon fontSize="small" sx={{ color: "success.main" }} />
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" color="textSecondary">
             {t("printed")}
           </Typography>
         </Box>
@@ -52,14 +52,14 @@ export const PrintStatus = ({ phase, printedCount }: PrintStatusProps) => {
             </Typography>
           </Box>
           {error === PrintJobError.NoResult ? (
-            <Typography variant="caption" color="text.secondary">
+            <Typography variant="caption" color="textSecondary">
               {t("noResultHint")}
             </Typography>
           ) : null}
         </>
       )}
       {phase.kind === "idle" && printedCount > 0 ? (
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" color="textSecondary">
           {t("printedCount", { count: printedCount })}
         </Typography>
       ) : null}

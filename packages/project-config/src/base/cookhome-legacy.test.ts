@@ -15,7 +15,8 @@ import {
 const COOKHOME_PUBLIC: ProjectPublicConfig = {
   slug: "cookhome",
   brand: { name: "CookHome", primary: "#FB7B10" },
-  admin: { documentTitle: "CookHome 後台管理" },
+  // 抽設定前沒有 manifest(不可安裝)
+  admin: { documentTitle: "CookHome 後台管理", webApp: null },
   front: {
     metadata: {
       "zh-TW": {

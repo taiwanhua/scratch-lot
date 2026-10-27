@@ -2,7 +2,6 @@ import { GraphQLHandler } from "msw";
 
 import {
   FormSubmissionStatus,
-  FormVersionStatus,
   WorkflowInstanceStatus,
   WorkflowStepStatus,
 } from "@repo/graphql";
@@ -26,12 +25,9 @@ import { formDesignWorld } from "@/test/msw/form-design-handlers";
 import {
   SHOPPING_FORM_KEY,
   field,
-  formFragment,
   shoppingDefinition,
   submissionFragment,
-  versionFragment,
 } from "@/test/msw/form-fixtures";
-import { formRuntimeWorld } from "@/test/msw/form-runtime-handlers";
 import { formUpgradeWorld } from "@/test/msw/form-upgrade-handlers";
 import { moduleAdminTree } from "@/test/msw/module-admin-fixtures";
 import { moduleAdminWorld } from "@/test/msw/module-manager-handlers";
@@ -78,7 +74,6 @@ import {
   autoApproveBlockedEvent,
   historyEvent,
 } from "@/test/msw/workflow-history-fixtures";
-import { workflowRuntimeWorld } from "@/test/msw/workflow-runtime-handlers";
 
 import {
   mockRoles,
@@ -86,9 +81,12 @@ import {
   modulesForView,
   orgsForView,
 } from "./mock-fixtures";
+import { mockFormDesign } from "./mock-form-design";
+import { MOCK_FORM_RUNTIME_SETTINGS } from "./mock-form-runtime-settings";
 import { mockNotificationSettings } from "./mock-notification-settings";
 import { mockWorkflowDesign } from "./mock-workflow-design";
 import type { MockHandler, MockWorldOptions } from "./mock-world-source";
+import { projectForms, projectWorkflows } from "./project-form-worlds";
 import { projectMockWorld } from "./project/mock-world";
 
 /**
@@ -131,6 +129,12 @@ const withoutOperations = (
     );
   });
 
+/** 該視角側欄看得到的模組:底座 + 專案(`authWorld` 的 `me.modules`;殼內頁面的通用測試也從這裡取頁面清單)。 */
+export const mockModules = (view: MockWorldOptions["view"]) => [
+  ...modulesForView(view),
+  ...projectMockWorld.modules(view),
+];
+
 export const mockHandlers = ({
   view,
   authenticated,
@@ -140,10 +144,12 @@ export const mockHandlers = ({
   // 個人偏好先放好通知管道開關的 key(`UpdateMyPreferences` 只收已有的 key),通知假 api 讀同一份
   const auth = authWorld({
     hasRefreshCookie: authenticated,
-    modules: [...modulesForView(view), ...projectMockWorld.modules(view)],
+    modules: mockModules(view),
     orgs: orgsForView(view),
-    // 根組織視角站在根組織(`tenantId: null`);租戶視角站在租戶 A(切換組織後沿用,mock 不重算)
-    currentOrgTenantId: view === "root" ? null : "org-tenant-a",
+    // 根組織視角預設站在根組織(`tenantId: null`),切到租戶 A 就是租戶 A;租戶視角的組織都屬租戶 A。
+    // 專案頁在根組織只顯示「請先切換到要管理的機構」(`app/project/module-pages.ts` 的 `gateTenant`)
+    currentOrgTenantId: (orgId) =>
+      orgId === "org-root" ? null : "org-tenant-a",
     preferences: notificationPreferenceDefaults(),
   });
 
@@ -219,23 +225,9 @@ export const mockHandlers = ({
     ...demoTwoWorld({ items: demoTwoItems }).handlers,
     // 表單引擎:表單管理(一張共用表單,已發布 v1 + 一份草稿)與示範表單(頂層)(兩筆提交);
     // 設計器「類別」下拉的 `FieldCategories` 讓給欄位管理(共用端點,正本只留一份)
-    ...withoutOperations(
-      formDesignWorld({
-        forms: [formFragment()],
-        versions: {
-          [SHOPPING_FORM_KEY]: [
-            versionFragment(shoppingDefinition(), { baseVersion: 1 }),
-            versionFragment(shoppingDefinition(), {
-              id: `ver-${SHOPPING_FORM_KEY}-1`,
-              version: 1,
-              status: FormVersionStatus.Published,
-              changelog: "第一版",
-            }),
-          ],
-        },
-      }).handlers,
-      ["FieldCategories"],
-    ),
+    ...withoutOperations(formDesignWorld(mockFormDesign()).handlers, [
+      "FieldCategories",
+    ]),
     // 版本面板「將舊版資料升級到此版」:計畫給兩個補值欄位(單選 / 日期),看得到補值依型別呈現
     ...formUpgradeWorld({
       plan: {
@@ -256,7 +248,7 @@ export const mockHandlers = ({
         ] as unknown as Record<string, unknown>[],
       },
     }).handlers,
-    ...formRuntimeWorld({
+    ...projectForms(projectMockWorld, {
       moduleForms: [
         {
           key: SHOPPING_FORM_KEY,
@@ -281,10 +273,12 @@ export const mockHandlers = ({
         [`${SHOPPING_FORM_KEY}@1`]: shoppingDefinition(),
         [`${LEAVE_FORM_KEY}@1`]: leaveDefinition(),
       },
+      ...MOCK_FORM_RUNTIME_SETTINGS,
       submissions: [
-        submissionFragment(),
+        submissionFragment({ serialNo: "PU-202610-0001" }),
         submissionFragment({
           id: "sub-2",
+          serialNo: "PU-202610-0002",
           summary: { title: "牛奶", date: null, amount: "120" },
           values: { item: "牛奶", qty: "3", unit_price: "40", total: "120" },
         }),
@@ -293,7 +287,7 @@ export const mockHandlers = ({
     }).handlers,
     // 審核流程:流程管理(假資料在 `mock-workflow-design.ts`)、申請中心與詳情、阻擋清單
     ...workflowDesignWorld(mockWorkflowDesign()).handlers,
-    ...workflowRuntimeWorld(mockWorkflowRuntime()).handlers,
+    ...projectWorkflows(projectMockWorld, mockWorkflowRuntime()).handlers,
     // 印表機管理:兩台代理程式 / 印表機、三筆列印紀錄;測試列印一律印成功。
     // 組織樹由 orgWorld 提供(printingWorld 本來就不含 `OrgTree`)
     ...printingWorld().handlers,

@@ -11,6 +11,21 @@ export interface ProjectFrontMetadata {
   description: string;
 }
 
+/**
+ * admin 可安裝成 app(web app manifest)的專案值。manifest 的其餘內容(`id`、`start_url` = 登入頁、
+ * `display`、圖示檔名)由底座固定,見 admin 的 `src/lib/base/web-app-manifest.ts`。
+ */
+export interface ProjectAdminWebApp {
+  /** 安裝時與 app 清單顯示的名稱 */
+  name: string;
+  /** 主畫面 / 工作列空間不足時用的短名稱 */
+  shortName: string;
+  /** 獨立視窗標題列與 `<meta name="theme-color">`:`#` 加六位十六進位 */
+  themeColor: string;
+  /** 啟動畫面的底色:`#` 加六位十六進位 */
+  backgroundColor: string;
+}
+
 export interface ProjectPublicConfig {
   /** 建立專案時指定的穩定識別(小寫 kebab-case);品牌更名不跟著改,瀏覽器儲存鍵由它生成 */
   slug: string;
@@ -23,6 +38,11 @@ export interface ProjectPublicConfig {
   admin: {
     /** admin 的 HTML title(純文字,寫進 HTML 時由讀取端跳脫) */
     documentTitle: string;
+    /**
+     * 可安裝成 app 的名稱與顏色;`null` = 不提供 manifest(不可安裝)。圖示是專案資產,
+     * 放 `apps/admin/public/project/`(檔名由底座固定,`scripts/app-icons/` 由 SVG 產生)。
+     */
+    webApp: ProjectAdminWebApp | null;
   };
   front: {
     /** 以語系為 key;是否覆蓋全部支援語系由 `@repo/i18n` 的 `composeProjectMessages` 檢查 */
@@ -35,7 +55,8 @@ export interface ProjectPublicConfig {
 }
 
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-const PRIMARY_PATTERN = /^#[0-9A-Fa-f]{6}$/;
+/** 色碼:`#` 加六位十六進位(主色與 app 顏色共用) */
+const HEX_COLOR_PATTERN = /^#[0-9A-Fa-f]{6}$/;
 const TITLE_PLACEHOLDER = "%s";
 const METADATA_FIELDS = ["title", "titleTemplate", "description"] as const;
 
@@ -55,6 +76,27 @@ const fail = (field: string, expectation: string): never => {
 
 const fieldOf = (record: unknown, key: string): unknown =>
   isRecord(record) ? record[key] : undefined;
+
+const assertAdminWebApp = (webApp: unknown): void => {
+  if (webApp === null) {
+    return;
+  }
+  if (!isRecord(webApp)) {
+    fail("admin.webApp", "必須是 null 或物件");
+    return;
+  }
+  for (const field of ["name", "shortName"] as const) {
+    if (!isNonEmptyString(webApp[field])) {
+      fail(`admin.webApp.${field}`, "必須是非空字串");
+    }
+  }
+  for (const field of ["themeColor", "backgroundColor"] as const) {
+    const color = webApp[field];
+    if (typeof color !== "string" || !HEX_COLOR_PATTERN.test(color)) {
+      fail(`admin.webApp.${field}`, "必須是 # 加六位十六進位色碼");
+    }
+  }
+};
 
 const assertFrontMetadata = (metadata: unknown): void => {
   if (!isRecord(metadata) || Object.keys(metadata).length === 0) {
@@ -91,12 +133,13 @@ export const assertProjectPublicConfig = <T extends ProjectPublicConfig>(
     fail("brand.name", "必須是非空字串");
   }
   const primary = fieldOf(brand, "primary");
-  if (typeof primary !== "string" || !PRIMARY_PATTERN.test(primary)) {
+  if (typeof primary !== "string" || !HEX_COLOR_PATTERN.test(primary)) {
     fail("brand.primary", "必須是 # 加六位十六進位色碼");
   }
   if (!isNonEmptyString(fieldOf(fieldOf(config, "admin"), "documentTitle"))) {
     fail("admin.documentTitle", "必須是非空字串");
   }
+  assertAdminWebApp(fieldOf(fieldOf(config, "admin"), "webApp"));
   assertFrontMetadata(fieldOf(fieldOf(config, "front"), "metadata"));
   const legacy = fieldOf(
     fieldOf(config, "compatibility"),

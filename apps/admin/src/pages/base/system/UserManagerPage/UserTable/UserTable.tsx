@@ -58,7 +58,7 @@ export const UserTable = ({
       key: "email",
       header: t("columns.email"),
       render: (row) => (
-        <Typography variant="body2" color="text.secondary" component="span">
+        <Typography variant="body2" color="textSecondary" component="span">
           {row.email}
         </Typography>
       ),

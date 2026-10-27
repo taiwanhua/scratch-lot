@@ -372,7 +372,7 @@ describe("validateWorkflowDefinition:指定組織跳過與自動通過", () => {
     expect(codesOf(withOrgs(null))).toEqual([]);
   });
 
-  it("自動通過只能是布林;不認得的值 → AUTO_APPROVE_INVALID", () => {
+  it('自動通過:布林,申請人另可 "review"(照常審核);不認得的值 → AUTO_APPROVE_INVALID', () => {
     expect(
       codesOf({
         steps: [
@@ -384,7 +384,19 @@ describe("validateWorkflowDefinition:指定組織跳過與自動通過", () => {
     ).toEqual([]);
     expect(
       codesOf({
+        steps: [review("hr", { autoApprove: { applicant: "review" } })],
+      }),
+    ).toEqual([]);
+    expect(
+      codesOf({
         steps: [review("hr", { autoApprove: { applicant: "yes" } as never })],
+      }),
+    ).toEqual(["AUTO_APPROVE_INVALID"]);
+    expect(
+      codesOf({
+        steps: [
+          review("hr", { autoApprove: { priorApprover: "review" } as never }),
+        ],
       }),
     ).toEqual(["AUTO_APPROVE_INVALID"]);
   });

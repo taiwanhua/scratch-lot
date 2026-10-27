@@ -273,7 +273,7 @@ export const FieldPropertyPanel = ({
             />
           }
         />
-        <Typography variant="caption" color="text.secondary">
+        <Typography variant="caption" color="textSecondary">
           {t("permissionHint")}
         </Typography>
       </Stack>

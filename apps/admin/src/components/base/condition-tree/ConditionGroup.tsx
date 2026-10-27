@@ -114,7 +114,7 @@ export const ConditionGroup = <L extends ConditionLeaf>({
           }}
         />
         {!isRoot && (
-          <Typography variant="caption" color="text.secondary">
+          <Typography variant="caption" color="textSecondary">
             {t("nestedHint")}
           </Typography>
         )}
@@ -158,7 +158,7 @@ export const ConditionGroup = <L extends ConditionLeaf>({
       )}
 
       {error !== undefined && (
-        <Typography variant="caption" color="error.main">
+        <Typography variant="caption" color="error">
           {error}
         </Typography>
       )}

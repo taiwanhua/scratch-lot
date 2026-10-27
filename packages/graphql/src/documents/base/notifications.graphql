@@ -62,9 +62,17 @@ query MyNotificationPreferences {
   }
 }
 
+fragment NotificationScheduleFields on NotificationSchedule {
+  kind
+  daysBefore
+  dayOfMonth
+  time
+}
+
 fragment NotificationSettingItem on NotificationSetting {
   type
   name
+  category
   orgScope {
     ref
     range
@@ -72,11 +80,20 @@ fragment NotificationSettingItem on NotificationSetting {
   audience
   isDefault
   defaultAudience
+  recipientNote
+  schedule {
+    ...NotificationScheduleFields
+  }
+  defaultSchedule {
+    ...NotificationScheduleFields
+  }
+  isScheduleDefault
+  scheduleDateLabel
   updatedAt
   updatedBy
 }
 
-# NotificationSettingsInput: { keyword?, page?, pageSize? }(只列負責人提醒類型)
+# NotificationSettingsInput: { keyword?, page?, pageSize? }(所有負責人提醒 + 宣告了可調時間的當事人通知)
 query NotificationSettings($input: NotificationSettingsInput!) {
   notificationSettings(input: $input) {
     items {
@@ -88,7 +105,7 @@ query NotificationSettings($input: NotificationSettingsInput!) {
   }
 }
 
-# UpdateNotificationSettingInput: { type, audience }(audience 不能「所有人」、不含所屬組織欄;
+# UpdateNotificationSettingInput: { type, audience?, schedule?: { kind, daysBefore?, dayOfMonth?, time } }(audience 不能「所有人」、不含所屬組織欄;
 # 使用者 / 角色須屬本租戶,否則 VALIDATION_FAILED reason OUT_OF_TENANT;站在根組織 → FORBIDDEN reason TENANT_ONLY)
 mutation UpdateNotificationSetting($input: UpdateNotificationSettingInput!) {
   updateNotificationSetting(input: $input) {
@@ -98,7 +115,7 @@ mutation UpdateNotificationSetting($input: UpdateNotificationSettingInput!) {
   }
 }
 
-# ResetNotificationSettingInput: { type }(還原成類型宣告的預設人員條件)
+# ResetNotificationSettingInput: { type, part?: AUDIENCE | SCHEDULE }(還原成類型宣告的預設)
 mutation ResetNotificationSetting($input: ResetNotificationSettingInput!) {
   resetNotificationSetting(input: $input) {
     setting {

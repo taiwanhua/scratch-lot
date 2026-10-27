@@ -7,8 +7,10 @@ import {
   MarkerType,
   type NodeChange,
   ReactFlow,
+  useReactFlow,
+  useStore,
 } from "@xyflow/react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import type { WorkflowDefinition } from "@repo/domain/workflow";
 import { Box } from "@repo/ui/box";
@@ -37,8 +39,56 @@ export interface FlowCanvasProps {
   /** 可編輯時才能拖審核關卡改順序 / 換分支 */
   isEditable: boolean;
   onMove?: (stepKey: string, target: DropTarget) => void;
+  /** 平板寬(屬性在抽屜裡):流程圖變窄或換選後,選中的節點跑出可視範圍就平移回來 */
+  shouldKeepSelectedInView?: boolean;
   "aria-label": string;
 }
+
+/** 把選中節點捲回來時的動畫長度(ms) */
+const PAN_DURATION = 200;
+
+/**
+ * 流程圖變窄(平板寬打開屬性抽屜)或換選節點後,選中的節點若跑出可視範圍,平移把它放回中間(縮放不變)。
+ * 必須放在 `<ReactFlow>` 裡面才拿得到它的實例;jsdom 量不到寬度(0)時不動。
+ */
+const KeepSelectedInView = ({
+  selectedKey,
+}: {
+  selectedKey: string | null;
+}) => {
+  const { getInternalNode, getViewport, setCenter } = useReactFlow();
+  const width = useStore((store) => store.width);
+  const height = useStore((store) => store.height);
+
+  useEffect(() => {
+    if (selectedKey === null || width === 0 || height === 0) {
+      return;
+    }
+    const node = getInternalNode(selectedKey);
+    if (node === undefined) {
+      return;
+    }
+    const { x, y, zoom } = getViewport();
+    const position = node.internals.positionAbsolute;
+    const nodeWidth = node.measured.width ?? node.width ?? 0;
+    const nodeHeight = node.measured.height ?? node.height ?? 0;
+    const left = position.x * zoom + x;
+    const top = position.y * zoom + y;
+    const isInView =
+      left >= 0 &&
+      top >= 0 &&
+      left + nodeWidth * zoom <= width &&
+      top + nodeHeight * zoom <= height;
+    if (!isInView) {
+      void setCenter(position.x + nodeWidth / 2, position.y + nodeHeight / 2, {
+        zoom,
+        duration: PAN_DURATION,
+      });
+    }
+  }, [selectedKey, width, height, getInternalNode, getViewport, setCenter]);
+
+  return null;
+};
 
 interface Dragging {
   key: string;
@@ -58,6 +108,7 @@ export const FlowCanvas = ({
   onSelect,
   isEditable,
   onMove,
+  shouldKeepSelectedInView = false,
   "aria-label": ariaLabel,
 }: FlowCanvasProps) => {
   const layout = useMemo(() => layoutDefinition(definition), [definition]);
@@ -163,6 +214,9 @@ export const FlowCanvas = ({
       >
         <Background />
         <Controls showInteractive={false} />
+        {shouldKeepSelectedInView && (
+          <KeepSelectedInView selectedKey={selectedKey} />
+        )}
       </ReactFlow>
     </Box>
   );

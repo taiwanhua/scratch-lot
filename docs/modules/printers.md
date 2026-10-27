@@ -100,10 +100,11 @@
 
 ### 列印工作
 
-- `documentName`(選填):單據的顯示名稱,只用在列印失敗通知;沒給時通知顯示「單據類型 + 編號」。測試頁不存,通知依收件人語言顯示「測試頁 <印表機名稱>」。
+- `documentName`(選填):單據的顯示名稱,列印紀錄與列印失敗通知用;沒給時顯示「單據類型 + 編號」。測試頁不存,通知依收件人語言顯示「測試頁 <印表機名稱>」。
 
 - 圖片:PNG、寬度 = 紙寬點數(58mm = 384 點)、高度 1–8000 點(`PRINT_IMAGE_MAX_HEIGHT_DOTS`,約 1 公尺紙長;代理程式開印前也檢查)、上限 512KB(`PRINT_IMAGE_MAX_BYTES`);base64 放在 GraphQL input(可帶 `data:image/png;base64,` 前綴)。api 的 JSON body 上限因此調為 1MB(`apps/api/src/main.ts`)。
-- `printNo` = 建立當下這張單據(`refType` + `refId`)**已印**的次數 + 1;失敗、等待中不算。
+- **中段切紙**(一次印好幾聯):好幾份版面排在同一個節點、中間放 `Receipt58Cut`,轉成**一張**圖 = **一個工作**;`renderReceiptToPng` 把每個 `Receipt58Cut` 的下緣換算成列號,寫進 PNG 的 `tEXt` 區塊(keyword `cut-rows`,內容逗號分隔,例 `812,1650`;常數 `PRINT_IMAGE_CUT_ROWS_KEYWORD`)。代理程式讀出來(`readPngCutRows`,只留 `0 < 列 < 高度` 的),點陣圖在那一列斷開,先送紙切紙(`GS V 66 0`)再接著印,最後照常切紙。api 不解讀這個區塊,圖片照原樣存、照原樣給。讀不懂的舊版代理程式忽略它,整張印完才切(聯與聯之間留著切紙虛線,由人撕開)。高度上限算整張圖(各聯加總)。
+- `printNo` = 建立當下這張單據(`refType` + `refId`)**已印**的次數 + 1;失敗、等待中不算。一次列印好幾聯是一個工作,只算一次。
 - 補印:`reprintReason` 必填且須是 `reprint-reason` 類別裡看得到的啟用選項;選 `other` 時 `reprintNote` 必填。非補印時兩欄一律寫 null(送了也忽略)。
 - 測試列印(`printPrinterTestPage`):`documentType = printer-test-page`、`refType = printer`、`refId` = 印表機 id;守 `system.printers.edit`,不要 `api.printing.print`。
 
@@ -230,7 +231,8 @@ operation 文件:`packages/graphql/src/documents/base/printing.graphql`。
 ## 測試
 
 - api:`apps/api/src/printing/print-agent.test.ts`(配對、認領競爭、分店隔離、撤銷、離線 / 逾時 / 重新配對 / 停用表每列一個)、`print-jobs.test.ts`(建立權限、補印表的 API 列、補印原因選項、權限表的 API 列、預設印表機、下載);夾具 `test-support/printing-fixtures.ts`。
-- admin:`components/base/PrintButton/PrintButton.test.tsx`(六種狀態、權限、`print-result`、灰掉的原因、選印表機)、`PrintButtonTiming.test.tsx`(等列印結果的節奏、信號比建立回應先到)、`PrintButtonReprint.test.tsx`(補印表的畫面列);假伺服器 `test/msw/print-button-handlers.ts`。
+- admin:`components/base/PrintButton/PrintButton.test.tsx`(六種狀態、權限、`print-result`、別處送的同一張單據印好就重查、灰掉的原因、選印表機)、`PrintButtonTiming.test.tsx`(等列印結果的節奏、信號比建立回應先到)、`PrintButtonReprint.test.tsx`(補印表的畫面列、使用處的補印選項與單據名稱);假伺服器 `test/msw/print-button-handlers.ts`(已印次數依 `refType` + `refId` 照已印的工作計,`printOnRead` = 工作被查到就印好了)。
+- 中段切紙:`packages/ui/src/Receipt58/render-receipt-to-png.test.ts`(切紙位置寫進 `tEXt`)、`packages/domain/src/printing/printing.test.ts`(`readPngCutRows`)、`apps/print-agent/src/escpos/commands.test.ts` / `job-runner/job-runner.test.ts`(在那一列斷開、先切紙再接著印)。
 - 共用契約:`packages/domain/src/printing/printing.test.ts`;代理程式訂閱憑證:`apps/api/src/realtime/realtime-ticket.service.test.ts`。
 
 ## admin 頁面
@@ -245,7 +247,7 @@ operation 文件:`packages/graphql/src/documents/base/printing.graphql`。
 
 - **權限**:按鈕依 `usePermissions` 判斷(本模組不回 `abilities`)。`create` → 右上 [新增印表機] / [新增代理程式]、下載區;`edit` → 列上動作。
 - **狀態顯示**:印表機 = 停用 → 已停用;代理程式離線 → 離線;其餘照回報的 `status`(正常 / 缺紙 / 連不上;還沒回報 → 未回報)。代理程式 = 停用 → 已停用;`paired = false` → 等待配對;其餘已連線 / 離線。
-- **新增代理程式**:選組織(`orgTree` 管理範圍)+ 名稱 → 同一個對話框顯示伺服器網址(`AuthSession.endpoint` 的 origin)與配對碼(顯示成 `XXXX-XXXX`,複製的是 8 碼本身),各附 [複製]。[重新配對] 先確認,成功後同樣顯示。配對碼只在這個對話框出現,不進網址、不進快取以外的地方。
+- **新增代理程式**:選組織(`orgTree` 管理範圍)+ 名稱 → 同一個對話框顯示伺服器網址(`AuthSession.endpoint` 的 origin)與配對碼(顯示成 `XXXX-XXXX`,複製的是 8 碼本身),各附 [複製]。[重新配對] 先確認,成功後同樣顯示,上方說明改成在已安裝的 Windows 電腦以系統管理員執行安裝包的 `重新配對.bat`(安裝程式偵測到舊設定會保留舊金鑰),手動 `pair --force` 指令收合在下方給 Linux / macOS(`PairingInfo` 的 `hint` 由使用處傳入:新增顯示「執行安裝程式」,重新配對不另加;代理程式端見 [README「重新配對」](../../apps/print-agent/README.md))。配對碼只在這個對話框出現,不進網址、不進快取以外的地方。
 - **新增 / 編輯印表機**:「所屬組織」只列有啟用中代理程式的組織,選了才列該組織的代理程式(印表機的分店 = 代理程式的分店);編輯不能換組織、紙寬只有 58mm。編輯時「啟用」開關有變再接 `setPrinterEnabled`,整段算一次儲存(一則提示)。新增的一律啟用。
 - **下載**:平台建議由 `lib/base/print-agent-platform.ts` 依瀏覽器判斷(Windows / macOS / Linux x64 / Linux arm64;手機與認不出來的不建議)。按下才查 `printAgentDownloadUrl`(不吃快取),以連結點擊開始下載;失敗跳提示。
 - **測試列印**(`TestPrintDialog/`):開窗即送 —— 畫面外掛 `@repo/ui/receipt58` 的 `PrinterTestPage`(表頭 = 最上層組織名稱 `me.currentOrg.tenantName`(不印分店名稱)、印表機名稱與 IP、開窗時間;QR code = 本頁網址),`renderReceiptToPng` 轉 384 點 PNG → `printPrinterTestPage`。等結果見下方「等列印結果」。結果:成功、缺紙(warning)、代理程式離線(附最後連線時間)、其他失敗原因、api 擋下;失敗與擋下有 [重試]。結果就顯示在對話框裡,mutation 不另跳提示(DATA-06「結果就地顯示在開著的彈窗裡等候」)。
@@ -264,18 +266,25 @@ operation 文件:`packages/graphql/src/documents/base/printing.graphql`。
 
 底座內沒有頁面使用;專案的單據頁放一顆 `<PrintButton>`,傳單據所屬分店 `orgId`、`documentType`、`refType` + `refId`、`documentName?`、`defaultPrinterId?`(專案的預設,如收銀點的印表機)與 `renderImage(reprint)`(把預覽中的 `Receipt58` 交給 `renderReceiptToPng`;補印時帶第幾次、原因、說明、時間、補印人,組 `Receipt58ReprintMark`)。
 
-| 狀態(Figma `Draft/PrintButton`) | 畫面                                                                                                                           |
-| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| Default                         | [列印]                                                                                                                         |
-| Sending                         | [列印] 不能按 +「已送到印表機…」                                                                                               |
-| Printed                         | ✓ 已印出(按鈕變 [補印])                                                                                                        |
-| Failed                          | ✗ 失敗:<原因>;原因文案與列印紀錄共用 `admin.printers.jobError`;「未收到列印結果」另提示「請先確認是否已出紙,再決定要不要補印」 |
-| Reprint                         | 印過的單據 [補印] +「已印 N 次」;按下開補印對話框(原因必填、「其他」說明必填;沒有可選的原因時提示「尚未設定補印原因」)         |
-| Disabled                        | 灰色並提示原因:沒登記印表機「本店未設定印表機」、有登記但都停用(或代理程式停用)「本店的印表機都已停用」、清單載入失敗另有提示  |
+- `reprintVariants?`(`{ label, options }`):補印對話框在原因上面多一個選單,預設第一個選項(例:多聯單據「補印哪一聯」:全部 / 第 1 聯 / 第 2 聯);選的值放在補印標示資料的 `variant`,交給 `renderImage`。只印在單上、寫在單據名稱裡,不另存欄位。
+- `printVariants?`(同 `reprintVariants` 的形狀):給了的話,沒印過時按 [列印] 先開一個只有這個選單的對話框(預設第一個選項、沒有原因),選了才送;不給 = [列印] 直接送。
+- `renderImage(reprint, variant)` / `documentName(reprint, variant)` 的 `variant`:這一次選的使用處選項(第一次列印 = `printVariants` 選的、補印 = `reprint.variant`,沒有選單 = `null`)。
+- `documentName` 可以給函式 `(reprint) => string | null`:依這一次列印決定名稱(第一次列印是 `null`;例:補印寫補了哪一聯)。
+
+轉圖(`renderReceiptToPng`)以節點的版面寬高(`offsetWidth` / `offsetHeight`)截圖,canvas 恰為 384 點寬,不受螢幕縮放與預覽縮小顯示影響。QR code(`Receipt58Qr`:每模組 6 點、約 0.75mm,內容太長放不下時才縮小,含四個模組的安靜區)不取截圖的結果:二值化後以同一個模組矩陣直接寫進 384 點點陣,每模組都是整數點。測試 `packages/ui/src/Receipt58/Receipt58Qr.test.tsx` 以 QR 解碼器讀回網址。
+
+| 狀態(Figma `Draft/PrintButton`) | 畫面                                                                                                                                                       |
+| ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Default                         | [列印]                                                                                                                                                     |
+| Sending                         | [列印] 不能按 +「已送到印表機…」                                                                                                                           |
+| Printed                         | ✓ 已印出(按鈕變 [補印])                                                                                                                                    |
+| Failed                          | ✗ 失敗:<原因>;原因文案與列印紀錄共用 `admin.printers.jobError`;「未收到列印結果」另提示「請先確認是否已出紙,再決定要不要補印」                             |
+| Reprint                         | 印過的單據 [補印] +「已印 N 次」;按下開補印對話框(使用處給 `reprintVariants` 時先選它;原因必填、「其他」說明必填;沒有可選的原因時提示「尚未設定補印原因」) |
+| Disabled                        | 灰色並提示原因:沒登記印表機「本店未設定印表機」、有登記但都停用(或代理程式停用)「本店的印表機都已停用」、清單載入失敗另有提示                              |
 
 - 沒有 `api.printing.print` 不渲染;印過但沒有 `api.printing.reprint` 不顯示 「補印」(「已印 N 次」照顯示)。
 - 選印表機:可選的只有一台直接送;多台時按下先選,預設(`defaultPrinterId` → 分店預設 → 第一台)標「預設」並先選中。
-- 結果:見下方「等列印結果」;有結果後重抓 `documentPrintCount`;已印次數查不到時當作沒印過。等待期間按鈕不能按,最長約 4 分鐘(等待中快到 2 分鐘才被認領,再等 2 分鐘的回報逾時;第二次補查才拿到結果)。
+- 結果:見下方「等列印結果」;有結果後重抓 `documentPrintCount`;另外收到別張工作的 `print-result`(例:使用處在交易後自動送的那一張印完)時查那張工作(`printJob`,同頁好幾顆按鈕合併成一次),是這張單據(`refType` + `refId`)的才重抓,按鈕不會停在送出當下查到的 [列印];自己正在送的那張不另查;已印次數查不到時當作沒印過。等待期間按鈕不能按,最長約 4 分鐘(等待中快到 2 分鐘才被認領,再等 2 分鐘的回報逾時;第二次補查才拿到結果)。
 - 送出的回饋是按鈕旁的進度文字,成功不另跳提示;送不出去(轉圖片失敗、API 錯誤)跳一則失敗提示。
 
 ### 等列印結果(`hooks/base/usePrintJobResult.ts`)

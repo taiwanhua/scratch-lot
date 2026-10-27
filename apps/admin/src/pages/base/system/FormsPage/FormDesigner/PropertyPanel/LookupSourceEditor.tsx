@@ -245,7 +245,7 @@ export const LookupSourceEditor = ({
                 />
               }
             />
-            <Typography variant="caption" color="text.secondary">
+            <Typography variant="caption" color="textSecondary">
               {t("fixedFilterHint")}
             </Typography>
           </Stack>

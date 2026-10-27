@@ -2,6 +2,7 @@ import { screen, within } from "@testing-library/react";
 
 import { ModuleEngine, ModuleSidebarType } from "@repo/graphql";
 
+import { FIELD_MANAGER_PERMISSIONS } from "@/components/base/FieldManager/field-manager-permissions";
 import {
   type TestModule,
   type TestOrg,
@@ -20,8 +21,6 @@ import {
 } from "@/test/msw/field-manager-handlers";
 import { server } from "@/test/msw/server";
 import { renderApp } from "@/test/render";
-
-import { FIELD_MANAGER_PERMISSIONS } from "./field-manager-permissions";
 
 /**
  * 欄位管理頁測試的共用場景(`FieldManagerPage.test.tsx`、`FieldManagerSeed.test.tsx`

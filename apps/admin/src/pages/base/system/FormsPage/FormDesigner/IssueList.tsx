@@ -43,7 +43,7 @@ export const IssueList = ({
         })}
       </Typography>
       {regexStatus === "checking" && (
-        <Typography variant="caption" color="text.secondary">
+        <Typography variant="caption" color="textSecondary">
           {t("regexChecking")}
         </Typography>
       )}

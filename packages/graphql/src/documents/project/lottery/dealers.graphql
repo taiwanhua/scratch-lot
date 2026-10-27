@@ -1,0 +1,276 @@
+# 經銷商管理(模組 dealers,正本 docs/modules/project/dealers.md)。
+# 欄位語意(缺席 / null、欄位級權限回 null、abilities 含權限)以模組文件「api 介面」為正本。
+
+fragment LotteryDealerRefFields on LotteryDealerRef {
+  id
+  type
+  licenseNo
+  name
+  storeName
+  status
+}
+
+fragment LotteryDealerContactRefFields on LotteryDealerContactRef {
+  id
+  name
+  status
+}
+
+fragment LotteryDealerFields on LotteryDealer {
+  id
+  type
+  licenseNo
+  name
+  status
+  licenseApprovedAt
+  licenseExpiresAt
+  licenseState
+  coSalesDealer {
+    ...LotteryDealerRefFields
+  }
+  agents {
+    ...LotteryDealerContactRefFields
+  }
+  trustees {
+    ...LotteryDealerContactRefFields
+  }
+  introducers {
+    ...LotteryDealerContactRefFields
+  }
+  lastPurchaseBaseDate
+  lastSelfPurchaseBaseDate
+  lastPurchaseDate
+  lastSelfPurchaseDate
+  daysSinceLastPurchase
+  daysSinceLastSelfPurchase
+  currentQuarterSigned
+  storeOrg {
+    id
+    name
+  }
+  storeName
+  businessAddress
+  storePhone
+  terminalNo
+  coSellerCount
+  rentFee
+  rentCycle
+  rentStartMonth
+  rentDueDay
+  nextRentDueAt
+  nationalId
+  birthday
+  phone
+  mobile
+  email
+  mailingAddress
+  residentialAddress
+  residentialSameAsMailing
+  note
+  createdBy {
+    id
+    name
+  }
+  createdAt
+  updatedAt
+  updatedBy {
+    id
+    name
+  }
+  ownerOrgName
+  abilities {
+    canEdit
+    canEditLastPurchaseBaseDate
+    canEditLastSelfPurchaseBaseDate
+  }
+  # 共用給(資料共用,ADR-0014);isShared = 共用進來的(含對應分店看到的),只能看
+  shareOrgs {
+    orgId
+    includeDescendants
+  }
+  isShared
+}
+
+fragment LotteryDealerContactFields on LotteryDealerContact {
+  id
+  name
+  roles
+  nationalId
+  birthday
+  phone
+  mobile
+  email
+  mailingAddress
+  residentialAddress
+  residentialSameAsMailing
+  status
+  note
+  dealerCount
+  links {
+    role
+    dealer {
+      ...LotteryDealerRefFields
+    }
+  }
+  createdBy {
+    id
+    name
+  }
+  createdAt
+  updatedAt
+  updatedBy {
+    id
+    name
+  }
+  ownerOrgName
+  abilities {
+    canEdit
+  }
+}
+
+# LotteryDealersInput: { type, keyword?, status?, selectable?, purchaseOverDays?, currentQuarterSigned?, licenseState?, page?, pageSize? }
+query LotteryDealers($input: LotteryDealersInput!) {
+  lotteryDealers(input: $input) {
+    items {
+      ...LotteryDealerFields
+    }
+    totalCount
+    page
+    pageSize
+  }
+}
+
+query LotteryDealer($id: ID!) {
+  lotteryDealer(id: $id) {
+    item {
+      ...LotteryDealerFields
+    }
+  }
+}
+
+# 某年四季的見簽(一定四筆)
+query LotteryDealerSignins($dealerId: ID!, $year: Int!) {
+  lotteryDealerSignins(dealerId: $dealerId, year: $year) {
+    items {
+      id
+      year
+      quarter
+      signedAt
+      note
+      state
+    }
+    totalCount
+  }
+}
+
+# 乙類的共同銷售人(整個租戶)
+query LotteryDealerCoSellers($dealerId: ID!) {
+  lotteryDealerCoSellers(dealerId: $dealerId) {
+    items {
+      dealer {
+        ...LotteryDealerRefFields
+      }
+      registeredAt
+    }
+    totalCount
+  }
+}
+
+# 已對應乙類的分店(對應分店的樹上停用並註明原因)
+query LotteryOccupiedStores {
+  lotteryOccupiedStores {
+    items {
+      orgId
+      dealer {
+        ...LotteryDealerRefFields
+      }
+    }
+    totalCount
+  }
+}
+
+# CreateLotteryDealerInput: { type, licenseNo, name, status?, licenseApprovedAt, licenseExpiresAt, 關聯 (coSalesDealerId, agentIds, trusteeIds, introducerIds, storeOrgId), 店面 / 牌租 / 基本資訊…, note? }
+mutation CreateLotteryDealer($input: CreateLotteryDealerInput!) {
+  createLotteryDealer(input: $input) {
+    item {
+      ...LotteryDealerFields
+    }
+  }
+}
+
+# UpdateLotteryDealerInput: { id, …(同新增,沒有 type), releaseAgents? };缺席 = 不動、null = 清空
+mutation UpdateLotteryDealer($input: UpdateLotteryDealerInput!) {
+  updateLotteryDealer(input: $input) {
+    item {
+      ...LotteryDealerFields
+    }
+  }
+}
+
+# RegisterLotteryDealerSigninInput: { dealerId, year, quarter, signedAt, note? }
+mutation RegisterLotteryDealerSignin(
+  $input: RegisterLotteryDealerSigninInput!
+) {
+  registerLotteryDealerSignin(input: $input) {
+    item {
+      id
+      year
+      quarter
+      signedAt
+      note
+      state
+    }
+  }
+}
+
+# UpdateLotteryDealerSigninInput: { id, signedAt?, note? }
+mutation UpdateLotteryDealerSignin($input: UpdateLotteryDealerSigninInput!) {
+  updateLotteryDealerSignin(input: $input) {
+    item {
+      id
+      year
+      quarter
+      signedAt
+      note
+      state
+    }
+  }
+}
+
+# LotteryDealerContactsInput: { keyword?, role?, status?, page?, pageSize? }
+query LotteryDealerContacts($input: LotteryDealerContactsInput!) {
+  lotteryDealerContacts(input: $input) {
+    items {
+      ...LotteryDealerContactFields
+    }
+    totalCount
+    page
+    pageSize
+  }
+}
+
+query LotteryDealerContact($id: ID!) {
+  lotteryDealerContact(id: $id) {
+    item {
+      ...LotteryDealerContactFields
+    }
+  }
+}
+
+# CreateLotteryDealerContactInput: { name, roles, nationalId, birthday?, phone?, mobile?, email?, mailingAddress?, residentialAddress?, residentialSameAsMailing?, status?, note? }
+mutation CreateLotteryDealerContact($input: CreateLotteryDealerContactInput!) {
+  createLotteryDealerContact(input: $input) {
+    item {
+      ...LotteryDealerContactFields
+    }
+  }
+}
+
+# UpdateLotteryDealerContactInput: { id, …(同新增), releaseRelationships? }
+mutation UpdateLotteryDealerContact($input: UpdateLotteryDealerContactInput!) {
+  updateLotteryDealerContact(input: $input) {
+    item {
+      ...LotteryDealerContactFields
+    }
+  }
+}

@@ -1,6 +1,7 @@
 import { ModuleSidebarType } from "@repo/graphql";
 import { List } from "@repo/ui/list";
 
+import type { NavBadges } from "@/hooks/base/useSidebarBadges";
 import { type NavNode, findNavNode } from "@/lib/base/module-tree";
 
 import { NavRailGroupItem } from "./NavRailGroupItem";
@@ -9,8 +10,8 @@ import { NavRailLinkItem } from "./NavRailLinkItem";
 export interface NavRailProps {
   nodes: NavNode[];
   currentPath: string;
-  /** 模組 key → 待辦數(收合態畫成小圓點;群組 flyout 裡的子列照展開態畫數字) */
-  badges?: Readonly<Record<string, number>>;
+  /** 模組 key → 待辦數與說明(收合態畫成小圓點;群組 flyout 裡的子列照展開態畫數字) */
+  badges?: NavBadges;
 }
 
 /**

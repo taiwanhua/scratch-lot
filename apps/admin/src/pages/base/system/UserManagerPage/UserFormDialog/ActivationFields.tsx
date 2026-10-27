@@ -43,7 +43,7 @@ export const ActivationFields = ({
 
   return (
     <Stack spacing={1}>
-      <Typography variant="subtitle2" color="text.secondary">
+      <Typography variant="subtitle2" color="textSecondary">
         {t("activation.legend")}
       </Typography>
       <RadioGroup
@@ -99,7 +99,7 @@ export const ActivationFields = ({
           }}
         />
       )}
-      <Typography variant="caption" color="text.secondary">
+      <Typography variant="caption" color="textSecondary">
         {t("activation.note")}
       </Typography>
     </Stack>
