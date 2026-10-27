@@ -32,6 +32,7 @@ interface Running {
  * - `notify`:替那個模組登記的每個 `Effect` 各掛一份元件,做完呼叫 `onDone` 就卸載。掛在殼層而不是頁面裡:
  *   送出後換頁、審核後關掉彈窗都不會打斷動作
  * - `reviewsOf`:審核區塊查這個模組登記的 `Review` 元件
+ * - `sectionsOf`:申請中心詳情頁查這個模組登記的 `Section` 元件
  */
 export const WorkflowExtensionsProvider = ({
   extensions,
@@ -70,7 +71,19 @@ export const WorkflowExtensionsProvider = ({
       ),
     [extensions],
   );
-  const value = useMemo(() => ({ notify, reviewsOf }), [notify, reviewsOf]);
+  const sectionsOf = useCallback(
+    (moduleKey: string) =>
+      extensions.flatMap((extension) =>
+        extension.moduleKey === moduleKey && extension.Section !== undefined
+          ? [extension.Section]
+          : [],
+      ),
+    [extensions],
+  );
+  const value = useMemo(
+    () => ({ notify, reviewsOf, sectionsOf }),
+    [notify, reviewsOf, sectionsOf],
+  );
   const done = useCallback((seq: number) => {
     setRunning((current) => current.filter((item) => item.seq !== seq));
   }, []);

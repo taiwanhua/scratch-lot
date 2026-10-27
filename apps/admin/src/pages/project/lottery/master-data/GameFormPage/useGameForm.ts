@@ -2,9 +2,14 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslations } from "use-intl";
 
-import { DEFAULT_TENANT_TIMEZONE } from "@repo/domain/form";
+import {
+  DEFAULT_TENANT_TIMEZONE,
+  localDateText,
+  parseLocalDate,
+} from "@repo/domain/form";
 import {
   type GameStatus,
+  gameDatesOf,
   isGameStatus,
   standardTicketsPerBook,
 } from "@repo/domain/project/lottery-master-data";
@@ -44,8 +49,6 @@ export type GameFormField =
   | "unitPrice"
   | "ticketsPerBook"
   | "defaultRate"
-  | "launchedAt"
-  | "discontinuedAt"
   | "claimDeadline"
   | "color"
   | "note";
@@ -58,9 +61,7 @@ export interface GameFormValues {
   unitPrice: string;
   ticketsPerBook: string;
   defaultRate: string;
-  /** `YYYY-MM-DD`(租戶時區);null = 沒填 */
-  launchedAt: string | null;
-  discontinuedAt: string | null;
+  /** `YYYY-MM-DD`(租戶時區);null = 沒填(必填) */
   claimDeadline: string | null;
   color: TagPaletteKey | null;
   note: string;
@@ -73,14 +74,16 @@ const FIELDS: readonly GameFormField[] = [
   "unitPrice",
   "ticketsPerBook",
   "defaultRate",
-  "launchedAt",
-  "discontinuedAt",
   "claimDeadline",
   "color",
   "note",
 ];
 
-const DATE_FIELDS = ["launchedAt", "discontinuedAt", "claimDeadline"] as const;
+/** 上市日、停售日(唯讀,`YYYY-MM-DD`;null = 還沒有兌獎截止日)。 */
+export interface GameDerivedDateTexts {
+  launchedAt: string | null;
+  discontinuedAt: string | null;
+}
 const INTEGER_FIELDS = ["unitPrice", "ticketsPerBook", "defaultRate"] as const;
 
 const integerOf = (raw: string): number | null => {
@@ -100,8 +103,6 @@ const valuesOf = (
         unitPrice: "",
         ticketsPerBook: "",
         defaultRate: "",
-        launchedAt: null,
-        discontinuedAt: null,
         claimDeadline: null,
         color: null,
         note: "",
@@ -113,12 +114,25 @@ const valuesOf = (
         unitPrice: String(game.unitPrice),
         ticketsPerBook: String(game.ticketsPerBook),
         defaultRate: String(game.defaultRate),
-        launchedAt: localDayTextOf(game.launchedAt, timezone),
-        discontinuedAt: localDayTextOf(game.discontinuedAt, timezone),
         claimDeadline: localDayTextOf(game.claimDeadline, timezone),
         color: isTagPaletteKey(game.color) ? game.color : null,
         note: game.note ?? "",
       };
+
+/** 兌獎截止日(`YYYY-MM-DD`)→ 推算的上市日 / 停售日(與 api 同一份 `gameDatesOf`)。 */
+const derivedDateTextsOf = (
+  claimDeadline: string | null,
+): GameDerivedDateTexts => {
+  const deadline = parseLocalDate(claimDeadline);
+  if (deadline === null) {
+    return { launchedAt: null, discontinuedAt: null };
+  }
+  const { launchedAt, discontinuedAt } = gameDatesOf(deadline);
+  return {
+    launchedAt: localDateText(launchedAt),
+    discontinuedAt: localDateText(discontinuedAt),
+  };
+};
 
 /** 送出前的檢查:必填與整數(範圍、格式、唯一由 api 判,錯誤標回欄位)。 */
 const invalidFieldsOf = (values: GameFormValues): GameFormField[] => {
@@ -128,12 +142,17 @@ const invalidFieldsOf = (values: GameFormValues): GameFormField[] => {
   for (const field of INTEGER_FIELDS) {
     if (integerOf(values[field]) === null) invalid.push(field);
   }
+  if (parseLocalDate(values.claimDeadline) === null) {
+    invalid.push("claimDeadline");
+  }
   return invalid;
 };
 
 /**
  * 遊戲新增 / 編輯頁的表單狀態與送出(初始值只取一次,REACT-08)。
  * 選預設面額自動帶入張數(`@repo/domain` 的對照表);編輯只送改過的欄位(GQL-06,清空送 null)。
+ * 上市日 / 停售日不送(api 由兌獎截止日推算並存):選了兌獎截止日就即時預覽;編輯頁沒改兌獎截止日時
+ * 顯示 api 回傳的值。
  */
 export const useGameForm = (
   game: LotteryGameFieldsFragment | null,
@@ -145,6 +164,14 @@ export const useGameForm = (
   const timezone = useTenantTimezone() ?? DEFAULT_TENANT_TIMEZONE;
   const [initial] = useState(() => valuesOf(game, timezone));
   const [values, setValues] = useState(initial);
+  const [savedDates] = useState<GameDerivedDateTexts>(() => ({
+    launchedAt: localDayTextOf(game?.launchedAt, timezone),
+    discontinuedAt: localDayTextOf(game?.discontinuedAt, timezone),
+  }));
+  const derivedDates =
+    game !== null && values.claimDeadline === initial.claimDeadline
+      ? savedDates
+      : derivedDateTextsOf(values.claimDeadline);
   // 欄位錯了就在欄位正下方寫原因(REACT-18);頁面提示只放通用句
   const [fieldErrors, setFieldErrors] = useState<
     FieldErrorTexts<GameFormField>
@@ -219,12 +246,7 @@ export const useGameForm = (
       defaultRate: integerOf(values.defaultRate) ?? 0,
       color: values.color,
       note: values.note.trim() === "" ? null : values.note.trim(),
-      ...Object.fromEntries(
-        DATE_FIELDS.map((field) => [
-          field,
-          localDayInstantOf(values[field], timezone),
-        ]),
-      ),
+      claimDeadline: localDayInstantOf(values.claimDeadline, timezone),
     };
     if (game === null) {
       return all;
@@ -262,6 +284,7 @@ export const useGameForm = (
 
   return {
     values,
+    derivedDates,
     change,
     fieldErrors,
     errorText,

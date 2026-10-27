@@ -12,6 +12,7 @@ import {
   type ReceiptLayout,
   type ReceiptTranslator,
   bookNumbersOf,
+  qrOf,
 } from "./receipt-layout";
 
 /** 文案的 namespace(`receipts.purchaseReceiving.*` 與共用的 `receipts.*`)。 */
@@ -41,7 +42,7 @@ export interface PurchaseReceivingReceiptInput {
    */
   batch: { batchId: string; no: number; rowIds: readonly string[] } | null;
   /** 這張單據在後台的連結(QR code) */
-  url: string;
+  url: string | null;
 }
 
 type Group = PurchaseReceivingReceiptInput["groups"][number];
@@ -164,7 +165,7 @@ export const purchaseReceivingReceiptOf = (
       ...missingBlocks,
       { type: "divider" },
     ],
-    qr: { value: input.url, caption: t("qrCaption") },
+    qr: qrOf(input.url, t("qrCaption")),
     signatures: [
       t("purchaseReceiving.receiverSign"),
       t("purchaseReceiving.courierSign"),
@@ -200,7 +201,7 @@ export const purchaseReceivingInputOf = (
   >,
   receiving: LotteryPurchaseReceivingFieldsFragment,
   batch: PurchaseReceivingReceiptInput["batch"],
-  url: string,
+  url: string | null,
 ): PurchaseReceivingReceiptInput => {
   return {
     submissionId: submission.id,

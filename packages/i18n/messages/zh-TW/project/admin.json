@@ -34,8 +34,7 @@
       "maxLength": "最多 {max} 個字",
       "positiveInteger": "要填大於 0 的整數",
       "integerRange": "要填 {min}–{max} 的整數",
-      "order": "要填 0 以上的整數",
-      "date": "日期不正確"
+      "order": "要填 0 以上的整數"
     },
     "tabs": {
       "aria": "檔案管理分頁",
@@ -91,6 +90,7 @@
         "claimDeadline": "兌獎截止日",
         "note": "備註"
       },
+      "derivedDateHint": "由兌獎截止日推算",
       "colorHint": "顏色(看板卡片使用,只能從色票選)",
       "gameCodeHint": "4 碼數字",
       "nonStandard": "非標準組合:面額 {unitPrice} 的標準張數是 {standard} 張",
@@ -578,6 +578,7 @@
       },
       "remaining": "{remaining} / {total}",
       "none": "—",
+      "hiddenName": "(看不到)",
       "filters": {
         "all": "全部",
         "org": "分店",

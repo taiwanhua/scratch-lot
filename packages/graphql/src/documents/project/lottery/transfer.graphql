@@ -144,6 +144,9 @@ mutation CompleteLotteryTransferReceiving(
     receiving {
       ...LotteryTransferReceivingFields
     }
+    receiptLinks {
+      ...LotteryReceiptLinksFields
+    }
   }
 }
 

@@ -352,13 +352,26 @@ Provider 內找不到模組設定時使用預設模板 `{{title}}`;缺少 Provid
 - 狀態在 `stores/base/useSnackbarStore`;`AppProviders` 裡的 `SnackbarProvider` 是全站唯一出口。
 - 位置:電腦 / 平板右下角距邊 24;手機底部左右 16 滿寬(有底部導覽時放在它上面)。
 - 堆疊:所有提示(操作結果、可撤銷、新通知)一律往上疊,新的在下面;最多 3 則,第 4 則出現時最舊的那則消失。
-- 時間:一般 4 秒、有動作(例 [撤銷])8 秒自動消失;滑鼠移上去或鍵盤焦點在卡片內時暫停,移開(焦點離開)後重新計時;點畫面其他地方不關。
+- 時間:一般 4 秒、有動作(例 [撤銷])8 秒自動消失;滑鼠移上去或鍵盤焦點在卡片內時暫停,移開(焦點離開)後重新計時;點畫面其他地方不關。唯一的例外是新版本提示(不自動消失,見下一節),由 `show` 的 `autoHideDuration: null` 指定。
 - 可撤銷與新通知提示經 `useSnackbar()` 的 `show(severity, message, { title, action })`,各模組不另寫提示元件。
 - 一次操作只跳一則;多步流程自己在最後呼叫一次。
 - 成功文案 key:`<ns>.feedback.<action>Success`。失敗文案用該頁的錯誤解讀(回 `AdminError`)。
 - 彈窗開著時提示被 `aria-hidden`,由 `SnackbarAnnouncer` 以 `role="status"` 補念最新一則。
 
 正本:`apps/admin/src/hooks/base/useMutationFeedback.ts`、`apps/admin/src/app/providers/SnackbarProvider.tsx`、`@repo/ui/snackbar`、`apps/admin/src/lib/base/errors.ts`、`docs/standards/react/data-fetching.md` DATA-06
+
+## 新版本提示
+
+部署後已開著的分頁(含安裝成 app 的視窗)仍跑舊 bundle;偵測到就提示使用者重新整理。
+
+- **版本**:build 時烘進 bundle(`import.meta.env.APP_VERSION`,部署的 commit SHA,沒有就是 build 時間),同值輸出 `/version.json`。
+- **檢查時機**:分頁回到前景一律抓;換路由時距上次檢查滿 1 分鐘才抓。不定時輪詢。
+- **不比版本、直接提示**:lazy chunk 載入失敗(`vite:preloadError`)、api 回 `GRAPHQL_VALIDATION_FAILED`(組裝根的 QueryClient 以 `queryCache` / `mutationCache` 的 `onError` 交給 `reportAppUpdateError`)。
+- **頁面 error boundary**:殼的 `<Outlet>` 外包 `PageErrorBoundary`。頁面 render 拋錯(含 lazy chunk 載入失敗 —— Vite 照樣拋出,沒有 boundary 時整棵樹卸載、提示也跟著消失)只換掉頁面區,顯示「頁面載入失敗」+ [重新整理];側欄、AppBar、頁籤列與全站提示都留著。錯誤是 chunk 載入失敗(`isChunkLoadError`)時同時跳「系統已更新」提示;換路由(路徑改變)就重置,換到別頁即恢復。整張路由表(`AppRoutes`)外另包一層,接殼外的登入頁、忘記密碼等(出錯時整頁換成替代畫面,提示照出);殼內那層先接住。
+- **提示**:全站 Snackbar,資訊色「系統已更新」+ [重新整理](<`location.reload()`>),不自動消失、不擋畫面;同時只有一則,按 ✕ 關掉後下一次觸發再顯示。被後來的 3 則提示擠掉時同理。
+- 掛在組裝根 `App.tsx` 的 router 裡(`AppUpdateNotice`),登入頁也偵測得到;`vite dev` 與 mock 模式沒有版本,不啟動。
+
+正本:`apps/admin/src/hooks/base/useAppUpdateNotice.ts`、`apps/admin/src/app/PageErrorBoundary.tsx`、`apps/admin/src/lib/base/app-version.ts`、`apps/admin/scripts/app-version-plugin.mjs`;快取與部署見 `docs/deployment.md`「admin 的靜態檔快取」
 
 ## 快取規則
 

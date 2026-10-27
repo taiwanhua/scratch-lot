@@ -52,13 +52,19 @@ const clerk = {
 } as unknown as OperatorContext;
 
 describe("58mm 單據 QR code 的頁面路由(依模組樹,不依印單的人的權限)", () => {
-  it("店員印的單據:即時現金帳、店面檢視頁、調貨單檢視頁都組出完整路徑(祖先 route 段累加)", async () => {
+  it("店員印的單據:即時現金帳、店面檢視頁、進貨單 / 調貨單檢視頁都組出完整路徑(祖先 route 段累加)", async () => {
     const accounts = row(RECEIPT_LINK_MODULE_KEYS.cashLedger, "accounts");
     const store = row("store", "store");
     const storeView = row(RECEIPT_LINK_MODULE_KEYS.storeView, "view-page", [
       store,
     ]);
     const purchasing = row("purchasing", "purchasing");
+    const purchase = row("purchasing.purchase", "purchase", [purchasing]);
+    const purchaseView = row(
+      RECEIPT_LINK_MODULE_KEYS.purchaseView,
+      "view-page",
+      [purchasing, purchase],
+    );
     const transfer = row("purchasing.transfer", "transfer", [purchasing]);
     const transferView = row(
       RECEIPT_LINK_MODULE_KEYS.transferView,
@@ -71,6 +77,8 @@ describe("58mm 單據 QR code 的頁面路由(依模組樹,不依印單的人的
         store,
         storeView,
         purchasing,
+        purchase,
+        purchaseView,
         transfer,
         transferView,
       ]),
@@ -79,6 +87,7 @@ describe("58mm 單據 QR code 的頁面路由(依模組樹,不依印單的人的
     expect(await service.routes(clerk)).toEqual({
       cashLedger: "/accounts",
       storeView: "/store/view-page",
+      purchaseView: "/purchasing/purchase/view-page",
       transferView: "/purchasing/transfer/view-page",
     });
   });
@@ -101,6 +110,22 @@ describe("58mm 單據 QR code 的頁面路由(依模組樹,不依印單的人的
     expect(await service.routes(clerk)).toEqual({
       cashLedger: null,
       storeView: null,
+      purchaseView: null,
+      transferView: null,
+    });
+  });
+
+  it("寫入之後帶回的路由:讀模組出錯 → 不丟錯,回全部 null(單據照印、不印 QR)", async () => {
+    const failing = {
+      findMany: () => Promise.reject(new Error("modules unavailable")),
+    } as unknown as ModulesRepository;
+    const service = new ReceiptLinksService(failing);
+
+    await expect(service.routes(clerk)).rejects.toThrow("modules unavailable");
+    expect(await service.routesAfterWrite(clerk)).toEqual({
+      cashLedger: null,
+      storeView: null,
+      purchaseView: null,
       transferView: null,
     });
   });

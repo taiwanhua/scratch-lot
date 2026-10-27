@@ -60,8 +60,8 @@ export const useSaleRefundPrint = () => {
         url: links.storeViewUrl(submitted.id),
       });
     } catch (error) {
-      // 讀不到 QR 的路由:不印,只記 log
-      logReceiptPrintFailure("links failed", {
+      // 列印出錯只記 log(讀不到 QR 的路由不會到這裡,`fetchLinks` 照印、不印 QR)
+      logReceiptPrintFailure("print failed", {
         kind: "store-sale-refund",
         error,
       });

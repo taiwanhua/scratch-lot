@@ -14,10 +14,16 @@ import { TextField } from "@repo/ui/text-field";
 
 import type { FieldErrorTexts } from "@/lib/base/field-errors";
 
-import type { GameFormField, GameFormValues } from "./useGameForm";
+import type {
+  GameDerivedDateTexts,
+  GameFormField,
+  GameFormValues,
+} from "./useGameForm";
 
 export interface GameInfoFieldsProps {
   values: GameFormValues;
+  /** 上市日 / 停售日(唯讀,由兌獎截止日推算) */
+  derivedDates: GameDerivedDateTexts;
   change: <Key extends keyof GameFormValues>(
     key: Key,
     value: GameFormValues[Key],
@@ -46,11 +52,12 @@ const integerOrNull = (raw: string): number | null => {
 
 /**
  * 「遊戲資訊」區塊的欄位(Figma MD-02 97:456):代號 / 名稱 / 狀態、單張金額 / 整本張數 / 整本金額(唯讀,
- * 即時算)、預設批購金額率 / 上市日 / 停售日、兌獎截止日。單張金額是可輸入的下拉(預設面額 + 自填)。
- * 非標準組合只提示,不擋。
+ * 即時算)、預設批購金額率 / 上市日 / 停售日(唯讀,由兌獎截止日即時推算)、兌獎截止日(必填)。
+ * 單張金額是可輸入的下拉(預設面額 + 自填)。非標準組合只提示,不擋。
  */
 export const GameInfoFields = ({
   values,
+  derivedDates,
   change,
   fieldErrors,
   isLocked,
@@ -81,18 +88,13 @@ export const GameInfoFields = ({
       ? ""
       : bookPriceOf(unitPrice, tickets).toLocaleString("en-US");
 
-  const dateField = (
-    field: "launchedAt" | "discontinuedAt" | "claimDeadline",
-  ) => (
+  const derivedDateField = (field: keyof GameDerivedDateTexts) => (
     <DatePicker
       label={t(`fields.${field}`)}
-      value={values[field]}
-      error={isInvalid(field)}
-      helperText={errorText(field)}
+      value={derivedDates[field]}
+      helperText={t("derivedDateHint")}
+      disabled
       fullWidth
-      onChange={(value) => {
-        change(field, value);
-      }}
     />
   );
 
@@ -181,9 +183,19 @@ export const GameInfoFields = ({
           change("defaultRate", event.target.value);
         }}
       />
-      {dateField("launchedAt")}
-      {dateField("discontinuedAt")}
-      {dateField("claimDeadline")}
+      {derivedDateField("launchedAt")}
+      {derivedDateField("discontinuedAt")}
+      <DatePicker
+        label={t("fields.claimDeadline")}
+        value={values.claimDeadline}
+        required
+        error={isInvalid("claimDeadline")}
+        helperText={errorText("claimDeadline")}
+        fullWidth
+        onChange={(value) => {
+          change("claimDeadline", value);
+        }}
+      />
     </Box>
   );
 };

@@ -13,6 +13,7 @@ import { LoginPage } from "../pages/base/auth/LoginPage/LoginPage";
 import { SetPasswordPage } from "../pages/base/auth/SetPasswordPage/SetPasswordPage";
 import { PersonalSettingsPage } from "../pages/base/personal-settings/PersonalSettingsPage/PersonalSettingsPage";
 import { AdminShell } from "./AdminShell/AdminShell";
+import { RouteErrorBoundary } from "./PageErrorBoundary";
 import { ModuleRoute } from "./guards/ModuleRoute/ModuleRoute";
 import { RequireAuth } from "./guards/RequireAuth";
 import { modulePageMinWidths, modulePages } from "./module-pages";
@@ -24,31 +25,39 @@ import { modulePageMinWidths, modulePages } from "./module-pages";
  * - 受保護:殼(`AdminShell`)包住 `/` 與所有模組路由;路由由 `me.modules` 決定(ADR-0011「路由與導向規則」):
  *   `/` 轉到側欄第一個能進的頁、模組路由顯示該模組頁面(`module-pages.tsx` 登記,否則佔位頁)、其餘無權限頁
  * - 殼層路由 `/settings/personal`(個人設定):不是模組、不看權限,所有登入者都能開
+ *
+ * 整張路由表外包一層 `RouteErrorBoundary`(= 以路徑重置的 `PageErrorBoundary`)(殼外的登入頁等 render 拋錯 / chunk 載入失敗時出替代畫面,
+ * 提示照出);殼內的頁面區另有一層、先接住,側欄與 AppBar 因此留著。換路徑就重置。
  */
 export const AppRoutes = () => (
-  <Routes>
-    <Route path={LOGIN_PATH} element={<LoginPage />} />
-    <Route path={FORGOT_PASSWORD_PATH} element={<ForgotPasswordPage />} />
-    <Route path={SET_PASSWORD_PATH} element={<SetPasswordPage />} />
-    <Route
-      path={CHANGE_PASSWORD_PATH}
-      element={
-        <RequireAuth>
-          <ChangePasswordPage />
-        </RequireAuth>
-      }
-    />
-    <Route
-      path="/"
-      element={
-        <RequireAuth>
-          <AdminShell pageMinWidths={modulePageMinWidths} />
-        </RequireAuth>
-      }
-    >
-      <Route index element={<ModuleRoute pages={modulePages} />} />
-      <Route path={PERSONAL_SETTINGS_PATH} element={<PersonalSettingsPage />} />
-      <Route path="*" element={<ModuleRoute pages={modulePages} />} />
-    </Route>
-  </Routes>
+  <RouteErrorBoundary>
+    <Routes>
+      <Route path={LOGIN_PATH} element={<LoginPage />} />
+      <Route path={FORGOT_PASSWORD_PATH} element={<ForgotPasswordPage />} />
+      <Route path={SET_PASSWORD_PATH} element={<SetPasswordPage />} />
+      <Route
+        path={CHANGE_PASSWORD_PATH}
+        element={
+          <RequireAuth>
+            <ChangePasswordPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/"
+        element={
+          <RequireAuth>
+            <AdminShell pageMinWidths={modulePageMinWidths} />
+          </RequireAuth>
+        }
+      >
+        <Route index element={<ModuleRoute pages={modulePages} />} />
+        <Route
+          path={PERSONAL_SETTINGS_PATH}
+          element={<PersonalSettingsPage />}
+        />
+        <Route path="*" element={<ModuleRoute pages={modulePages} />} />
+      </Route>
+    </Routes>
+  </RouteErrorBoundary>
 );

@@ -1,4 +1,4 @@
-import { authWorld } from "@/test/msw/auth-handlers";
+import { type TestModule, authWorld } from "@/test/msw/auth-handlers";
 import {
   type FormRuntimeWorldOptions,
   formRuntimeWorld,
@@ -23,6 +23,10 @@ import { purchasingModules } from "@/test/msw/project/lottery/purchasing-fixture
 import { receiptLinksHandlers } from "@/test/msw/project/lottery/receipt-links-handlers";
 import { redemptionWorld } from "@/test/msw/project/lottery/redemption-handlers";
 import { server } from "@/test/msw/server";
+import {
+  type WorkflowRuntimeWorldOptions,
+  workflowRuntimeWorld,
+} from "@/test/msw/workflow-runtime-handlers";
 import { renderApp } from "@/test/render";
 
 export interface RenderPurchaseOptions {
@@ -40,6 +44,12 @@ export interface RenderPurchaseOptions {
   purchase?: PurchaseWorldOptions;
   /** 表單執行端假 api 的覆寫(例:送出失敗的 `failures`) */
   forms?: Partial<FormRuntimeWorldOptions>;
+  /** 審核實例與任務(審核區塊、申請中心詳情頁);不給 = 沒有審核的假 api */
+  workflow?: WorkflowRuntimeWorldOptions;
+  /** 另外給的模組(例:申請中心) */
+  extraModules?: readonly TestModule[];
+  /** false = 操作者沒有這個模組(只從申請中心進來的人;單據 QR 的路由仍依模組樹) */
+  withModule?: boolean;
 }
 
 /**
@@ -53,9 +63,14 @@ export const renderPurchasePage = ({
   printing,
   purchase,
   forms,
+  workflow,
+  extraModules = [],
+  withModule = true,
 }: RenderPurchaseOptions) => {
   const purchaseFake = purchaseWorld(purchase);
   const formsFake = formRuntimeWorld(purchaseFormWorld(forms));
+  const workflowFake =
+    workflow === undefined ? null : workflowRuntimeWorld(workflow);
   const accountsFake = accountsWorld();
   const org = masterDataOrgs[currentOrg];
   const printingFake =
@@ -63,6 +78,7 @@ export const renderPurchasePage = ({
   server.use(
     ...(printingFake?.handlers ?? []),
     ...(printing === undefined ? [] : receiptLinksHandlers()),
+    ...(workflowFake?.handlers ?? []),
     ...purchaseFake.handlers,
     // 新增頁的兌獎區(店內持有的兌獎紀錄)
     ...redemptionWorld().handlers,
@@ -75,7 +91,8 @@ export const renderPurchasePage = ({
       currentOrgTenantId: masterDataOrgs.tenant.id,
       modules: [
         ...purchasingModules(),
-        ...purchaseModules(omit),
+        ...(withModule ? purchaseModules(omit) : []),
+        ...extraModules,
         ...(printing === undefined
           ? []
           : [
@@ -92,6 +109,7 @@ export const renderPurchasePage = ({
   return {
     ...renderApp({ path }),
     printingFake,
+    workflowFake,
     purchaseFake,
     formsFake,
     accountsFake,

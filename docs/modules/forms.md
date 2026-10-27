@@ -526,7 +526,7 @@ GraphQL 文件:`packages/graphql/src/documents/base/forms.graphql`(設計、升�
 **提交狀態**:`FormSubmissionStatus` 七值(`DRAFT` / `REVIEWING` / `RETURNED` / `WITHDRAWN` / `COMPLETED` / `REJECTED` / `VOIDED`)。
 
 - 綁流程的表單送出不經 `COMPLETED`、直接 `REVIEWING`(送出時檢查擋下回 `FORBIDDEN` + reason);`RETURNED` / `WITHDRAWN` 由申請人以 `submitFormSubmission` 直接帶 `values` 改內容並再送出(修訂 +1;允許存草稿時也可先 `saveFormDraft`)。
-- `formSubmissions` 列出草稿以外的所有狀態(草稿只給建立者)。
+- `formSubmissions` 列出草稿以外的所有狀態(草稿只給建立者)。表單條件:`formKey` 只列那一張、`excludeFormKeys` 不列那些(兩者都給且那一張被排除 = 空清單);條件在查詢裡,總筆數與分頁照排除後算。
 - `updateFormSubmission` 只收**沒走過流程**的 `COMPLETED`(走過流程的核准後鎖定、只能作廢 → `CONFLICT` `STATUS_MISMATCH`)。
 - `deleteFormSubmission` 可刪草稿 / `RETURNED` / `WITHDRAWN`(建立者本人,`create`)、沒走過流程的 `COMPLETED` 與 `REJECTED`(`delete`),其他狀態 → `CONFLICT` `STATUS_MISMATCH`。
 - 掛接點(專案登記的守門與事後動作,`docs/concepts/workflow-engine.md`「掛接點:守門與事後動作」):`submitFormSubmission` 與 `createAndSubmitFormSubmission` 呼叫 `beforeSubmit`、`updateFormSubmission` 呼叫 `beforeEditCompleted`、`deleteFormSubmission` 呼叫 `beforeDelete`、`withdrawSubmission` 呼叫 `beforeWithdraw`、`voidSubmission` 呼叫 `beforeVoid`,都在交易內、寫入之前;擋下 → `FORBIDDEN` + `reason` = 專案錯誤碼,沒有任何寫入。沒走流程的送出在寫入後依序觸發 `submitted`、`completed`,作廢觸發 `voided`;事後動作拋錯 → 整個動作回復(回傳該錯誤)。

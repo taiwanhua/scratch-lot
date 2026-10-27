@@ -6,6 +6,10 @@
     "errors": {
       "transactionTimeout": "處理時間過長,已取消,資料沒有變更,請稍後再試或聯絡管理員。"
     },
+    "update": {
+      "message": "系統已更新",
+      "reload": "重新整理"
+    },
     "snackbar": {
       "close": "關閉"
     }
@@ -125,6 +129,11 @@
         "closeRight": "關閉右側所有分頁",
         "closeOthers": "關閉其他所有分頁"
       }
+    },
+    "pageError": {
+      "title": "頁面載入失敗",
+      "body": "請重新整理頁面;若持續發生,請聯絡系統管理員。",
+      "reload": "重新整理"
     },
     "forbidden": {
       "title": "沒有權限進入此頁面",

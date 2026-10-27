@@ -1,4 +1,5 @@
 import { ACCOUNTS_MODULE_KEYS } from "../lottery-accounts/keys";
+import { PURCHASE_MODULE_KEY } from "./purchase";
 import { STORE_MODULE_KEYS } from "./store";
 import { TRANSFER_MODULE_KEY } from "./transfer";
 
@@ -12,7 +13,9 @@ export const RECEIPT_LINK_MODULE_KEYS = {
   cashLedger: ACCOUNTS_MODULE_KEYS.list,
   /** 店面管理的檢視頁:交班結帳單、日結單、退貨退款收據 */
   storeView: STORE_MODULE_KEYS.viewPage,
-  /** 調貨單的檢視頁:調貨出貨單、調貨付款收據 */
+  /** 進貨單的檢視頁:進貨點收單 */
+  purchaseView: `${PURCHASE_MODULE_KEY}.view-page`,
+  /** 調貨單的檢視頁:調貨出貨單、調貨點收單、調貨付款收據 */
   transferView: `${TRANSFER_MODULE_KEY}.view-page`,
 } as const;
 

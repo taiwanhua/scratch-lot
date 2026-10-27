@@ -4,6 +4,7 @@ import type { LotterySettlementFieldsFragment } from "@repo/graphql";
 import {
   type ReceiptLayout,
   type ReceiptTranslator,
+  qrOf,
   receiptMoney,
 } from "./receipt-layout";
 
@@ -30,7 +31,7 @@ export interface TransferPaymentReceiptInput {
   occurredAt: string;
   /** 印表機:收銀點的印表機;沒有就用分店預設 */
   defaultPrinterId?: string | null;
-  url: string;
+  url: string | null;
 }
 
 /**
@@ -68,7 +69,7 @@ export const transferPaymentReceiptOf = (
       },
       { type: "divider" },
     ],
-    qr: { value: input.url, caption: t("qrCaption") },
+    qr: qrOf(input.url, t("qrCaption")),
     signatures: [
       t("transferPayment.payerSign"),
       t("transferPayment.courierSign"),
@@ -93,7 +94,7 @@ const isReceiverCashPayment = (record: SettlementRecord): boolean =>
 export const transferPaymentInputOf = (
   settlement: Settlement,
   recordId: string,
-  url: string,
+  url: string | null,
 ): TransferPaymentReceiptInput | null => {
   const record = settlement.records.find((item) => item.id === recordId);
   const side = settlement.sides.find(
@@ -126,7 +127,7 @@ export const transferPaymentInputOf = (
 /** 檢視頁的 [列印](補印)印最近一筆收貨店付的現金;沒有 → `null`(不出現按鈕)。 */
 export const latestTransferPaymentInputOf = (
   settlement: Settlement,
-  url: string,
+  url: string | null,
 ): TransferPaymentReceiptInput | null => {
   const latest = settlement.records.findLast((record) =>
     isReceiverCashPayment(record),
