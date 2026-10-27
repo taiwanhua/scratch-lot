@@ -2,16 +2,10 @@ import { useNavigate } from "react-router";
 import { useTranslations } from "use-intl";
 
 import {
-  TRANSFER_SETTLEMENT_SIDE,
-  transferSettlementProblemOf,
-} from "@repo/domain/project/lottery";
-import {
   FormSubmissionStatus,
-  type LotterySettlementFieldsFragment,
   useLotterySettlementQuery,
   useLotteryTransferReceivingQuery,
 } from "@repo/graphql";
-import { Alert } from "@repo/ui/alert";
 import { Box } from "@repo/ui/box";
 import { Button } from "@repo/ui/button";
 import { Card } from "@repo/ui/card";
@@ -27,7 +21,6 @@ import {
   type BookListLabels,
 } from "@/components/project/lottery/BookGroupList/BookGroupList";
 import { useBookProgressLabel } from "@/components/project/lottery/BookGroupList/useBookProgressLabel";
-import { SettlementPanel } from "@/components/project/lottery/SettlementPanel/SettlementPanel";
 import { useFormSubmission } from "@/hooks/base/useFormSubmission";
 import { useRouteTabHref } from "@/hooks/base/useRouteTabHref";
 import { useRouteTabItemLabel } from "@/hooks/base/useRouteTabItemLabel";
@@ -38,26 +31,12 @@ import { SubmissionDeleteButton } from "../../shared/SubmissionDeleteButton";
 import { TRANSFER_MODULE_KEY, formatMoney } from "../transfer-keys";
 import { TransferPrintButtons } from "./TransferPrintButtons";
 import { TransferReceivingSection } from "./TransferReceivingSection";
+import { TransferSettlementSection } from "./TransferSettlementSection";
 import { useTransferBookGroups } from "./useTransferBookGroups";
 import { useTransferReceipts } from "./useTransferReceipts";
 
-type Settlement = LotterySettlementFieldsFragment;
-
 /** 標頭第一列(返回、列印、編輯):窄螢幕時換行。 */
 const HEADER_ROW_SX = { alignItems: "center", flexWrap: "wrap", rowGap: 1 };
-
-/** 核准前三個數字不相等時,提示哪一邊還沒記(規格 8.4「核准前」;api 也擋)。 */
-const settlementProblemOf = (settlement: Settlement) => {
-  const totalsOf = (side: string) => {
-    const found = settlement.sides.find((item) => item.side === side);
-    return { out: found?.totalOut ?? 0, in: found?.totalIn ?? 0 };
-  };
-  return transferSettlementProblemOf(
-    settlement.payable,
-    totalsOf(TRANSFER_SETTLEMENT_SIDE.receiver),
-    totalsOf(TRANSFER_SETTLEMENT_SIDE.shipper),
-  );
-};
 
 /**
  * 調貨單的替換檢視頁(專案規格 8.4「頁面」;Figma PU-10a 出貨確認 92:2768 / 573:111230 / 573:111385、
@@ -69,7 +48,8 @@ const settlementProblemOf = (settlement: Settlement) => {
  *   區塊,`TransferApplyCenterSection`)。整本的列刷一張整列點收;選張的列逐張點收(刷背面編號 → 那一列展開、
  *   捲到並閃一下;展開格子點選 → [點收選取的 N 張];[其餘全部到齊…] 確認後點收剩下的張;`TransferRowTickets`)。
  *   列顯示「未點收 0 / 10」「部分點收 9 / 12」「已點收」,點收過一部分還有張沒到時提示哪幾張
- * - 結算區塊(兩邊店的收付;按鈕依 `pay` / `receive` 與分店)+ 核准前三個數字不相等的提示 + 審核區塊
+ * - 結算區塊 `TransferSettlementSection`(兩邊店的收付;按鈕依 `pay` / `receive` 與分店)+ 核准前三個數字不相等的提示
+ *   (申請中心詳情頁也登記同一個區塊)+ 審核區塊
  * - 送錯分店:擋下、不入庫,彈窗提示這本屬於哪一家店的哪一張調貨單(點收區塊裡)
  * - 列印(規格第 12 章):標頭 [列印](`useTransferReceipts`);第一關通過後的自動列印是調貨單的審核擴充(`TransferShipmentEffect`);
  *   收貨店 [完成這次點收] 寫入成功後自動印這一次的調貨點收單(兩聯,一個列印工作)
@@ -131,14 +111,6 @@ export const TransferViewPage = ({ routeParam }: ModulePageProps) => {
   };
 
   const settlementItem = settlement.data?.lotterySettlement.item ?? null;
-  const allReceived =
-    data !== null &&
-    data.totalCount > 0 &&
-    data.receivedCount === data.totalCount;
-  const problem =
-    isReviewing && allReceived && settlementItem !== null
-      ? settlementProblemOf(settlementItem)
-      : null;
 
   let stage: string | null = null;
   if (isReviewing) {
@@ -244,15 +216,8 @@ export const TransferViewPage = ({ routeParam }: ModulePageProps) => {
         {submission !== null && (
           <TransferReceivingSection submission={submission} />
         )}
-        {settlementItem !== null && (
-          <SettlementPanel moduleKey={TRANSFER_MODULE_KEY} refId={id} />
-        )}
-        {problem !== null && (
-          <Alert severity="warning">
-            {t(`problems.${problem.kind}`, {
-              amount: formatMoney(problem.amount),
-            })}
-          </Alert>
+        {submission !== null && (
+          <TransferSettlementSection submission={submission} />
         )}
         {submission?.currentInstanceId !== null &&
           submission?.currentInstanceId !== undefined && (

@@ -55,7 +55,7 @@
 
 點收不另要權限:點收關卡的任務在自己手上(店長從申請中心進來)才能刷(`lotteryPurchaseReceiving` / `receiveLotteryPurchaseBook` 只看讀不讀得到單據與任務)。
 
-**申請中心詳情頁的點收區塊**:進貨單、調貨單各登記一筆審核擴充 `Section`(`app/project/workflow-extensions.ts`;底座 `docs/modules/workflows.md`「依模組登記的審核擴充」),通知連結進來的申請中心詳情頁在審核區塊上方畫和檢視頁**同一個**點收區塊:進貨單 `PurchaseApplyCenterSection` = 點收提示 `PurchaseReceiveHint` + `PurchaseReceivingSection`;調貨單 `TransferApplyCenterSection` = `TransferReceivingSection`(出貨之後才出現)。刷條碼、逐張點收、[完成這次點收] 自動列印、送錯分店彈窗都在區塊裡;點收結果換上 api 回的點收區塊(`lotteryPurchaseReceiving` / `lotteryTransferReceiving` 的快取,調貨另重查結算)。結算區塊不在申請中心畫。
+**申請中心詳情頁的點收區塊**:進貨單、調貨單各登記一筆審核擴充 `Section`(`app/project/workflow-extensions.ts`;底座 `docs/modules/workflows.md`「依模組登記的審核擴充」),通知連結進來的申請中心詳情頁在審核區塊上方畫和檢視頁**同一個**點收區塊:進貨單 `PurchaseApplyCenterSection` = 點收提示 `PurchaseReceiveHint` + `PurchaseReceivingSection`;調貨單 `TransferApplyCenterSection` = `TransferReceivingSection`(出貨之後才出現)+ `TransferSettlementSection`(結算區塊 + 核准前三個數字不相等的提示;核准前收貨店已付 = 出貨店已收 = 調貨金額,收貨店在這裡就能付款)。刷條碼、逐張點收、[完成這次點收] 自動列印、送錯分店彈窗都在區塊裡;點收結果換上 api 回的點收區塊(`lotteryPurchaseReceiving` / `lotteryTransferReceiving` 的快取,調貨另重查結算);收付寫入後 `SettlementPanel` 重查結算,提示跟著變。進貨單的結算不在申請中心畫(核准前只檢查點收)。
 
 調貨單的點收同樣不另要權限:點收關卡(流程實例的最後一關)的任務在自己手上才能刷(`lotteryTransferReceiving` / `receiveLotteryTransferBook`;讀得到 = 一般讀取(可見範圍,或依欄位共用:出貨 / 收貨分店在自己的可見範圍內)、建立者、任務持有者)。
 
