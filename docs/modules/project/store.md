@@ -17,7 +17,7 @@
 
 - 側欄順序 `order: 10`、圖示 `store`;沒有側欄數字。
 - **開啟 B9b**(`perFormCreate`):每張表單發布時自動建 `store.create-<formKey>`(新增資格看它,不看模組 `create`)。
-- 分頁登記在 `apps/admin/src/pages/project/lottery/store/store-tabs.ts`,各功能依規格 6.1 的順序追加自己那一列;目前有 看板(`store.view`)、班次結帳歷史紀錄(`store.view`,交班結帳的功能)、盤點紀錄(`store.view`,盤點的功能)、撤銷售出、現金更正(`store.view`)、兌獎紀錄(`store.view`,兌獎的功能)與 其他申請(表單引擎的預設列表 `FormListPage`)。
+- 分頁登記在 `apps/admin/src/pages/project/lottery/store/store-tabs.ts`,各功能依規格 6.1 的順序追加自己那一列;目前有 看板(`store.view`)、班次結帳歷史紀錄(`store.view`,交班結帳的功能)、盤點紀錄(`store.view`,盤點的功能)、撤銷售出、現金更正(`store.view`)、兌獎紀錄(`store.view`,兌獎的功能)與 其他申請(表單引擎的預設列表 `FormListPage`,只列租戶自己綁到店面管理的表單:內建的撤銷售出申請、現金更正單、盤點確認申請、結帳確認申請以 `excludeFormKeys` 排除,列表、表單篩選與 [+ 新增] 都不出現;它們各有自己的分頁或從看板進,結帳確認申請的新增頁要帶班次 `?shift=`)。
 - 新增頁 `store.create-page` 換成 `StoreCreatePage`:撤銷售出申請(`/store/create-page/sale_reversal`)用替換新增頁、盤點確認申請(`/store/create-page/stocktake_confirm`)是盤點頁、結帳確認申請(`/store/create-page/checkout_confirm?shift=`)是交班精靈,其他表單(現金更正單、租戶自己綁的表單)沿用表單引擎的新增頁。
 - 檢視頁 `store.view-page`、編輯頁 `store.edit-page` 換成 `StoreViewPage` / `StoreEditPage`(`forms/StoreSubmissionPages/`):讀到那一筆的表單代號後分派 —— 盤點確認申請 → 盤點單明細 + 審核 / 退回後打開盤點頁(帶入原內容);結帳確認申請 → 結帳單明細 + 審核 / 退回後打開交班精靈(帶入原內容);其他表單沿用表單引擎。之後的表單在同一處追加。
 - 網址狀態:`?tab=`、看板 / 撤銷售出 / 現金更正 / 兌獎紀錄的分店 `?org=`(切分頁不換店)、其他申請的篩選 `?list=`、兌獎紀錄的篩選與頁碼 `?redemptions=`、盤點紀錄的篩選與頁碼 `?stocktakes=`、班次結帳歷史紀錄的篩選與頁碼 `?checkouts=`;撤銷售出申請新增頁的帶入值 `?org=`、`?ticket=`;臨時盤點的分店 `?org=` 與範圍 `?scope=`(收銀點 id,空 = 全店);交班結帳帶入的那一班 `?shift=`(`app/project/url-state-inventory.ts`)。

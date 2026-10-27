@@ -47,6 +47,8 @@ export interface FormSubmissionListFilters {
 export interface FormSubmissionListProps {
   moduleKey: string;
   filters: FormSubmissionListFilters;
+  /** 不列這些表單的提交(api 查詢條件,總筆數照排除後算);不給 = 不排除 */
+  excludeFormKeys?: readonly string[];
   onPageChange: (page: number) => void;
   /** 自訂欄;不給 = 模組的列表欄位配置(沒設定過 = 預設的標題 + 日期) */
   columns?: readonly ListColumnSpec[];
@@ -72,6 +74,7 @@ const DEFAULT_PAGE_SIZE = 20;
 export const FormSubmissionList = ({
   moduleKey,
   filters,
+  excludeFormKeys,
   onPageChange,
   columns,
   builtin,
@@ -120,6 +123,10 @@ export const FormSubmissionList = ({
       pageSize,
       ...(filters.formKey !== null && { formKey: filters.formKey }),
       ...(filters.status !== null && { status: filters.status }),
+      ...(excludeFormKeys !== undefined &&
+        excludeFormKeys.length > 0 && {
+          excludeFormKeys: [...excludeFormKeys],
+        }),
     },
   });
   const rows = query.data?.formSubmissions.items ?? [];

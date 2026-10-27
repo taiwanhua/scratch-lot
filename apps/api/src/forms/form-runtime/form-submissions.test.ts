@@ -91,6 +91,10 @@ function definition(staffId: string): FormDefinition {
 /**
  * 表單提交:真 GraphQL + 真 MongoDB(TEST-07)。
  */
+interface ListData {
+  formSubmissions: { items: SubmissionRow[]; totalCount: number };
+}
+
 describe("表單提交:草稿 / 送出 / 修訂、四種寫入行為、樂觀鎖與冪等", () => {
   let api: AuthTestApp;
   let connection: Connection;
@@ -494,6 +498,53 @@ describe("表單提交:草稿 / 送出 / 修訂、四種寫入行為、樂觀鎖
     });
     const deletedRaw = await rawSubmission(connection, completed.id);
     expect(deletedRaw?.deletedAt).toBeInstanceOf(Date);
+  });
+
+  it("列表 `excludeFormKeys`:不列那些表單,總筆數同步;指定的那一張被排除 = 空清單", async () => {
+    await createSubmitted(api, staff.token, FORM, {
+      title: "要排除的那張",
+      qty: 1,
+      unit_price: "1",
+    });
+    const OTHER = "list_other";
+    await publishNewForm(
+      api,
+      root,
+      OTHER,
+      definitionOf([field("title", "text")]),
+    );
+    await assignForm(api, root, OTHER, [tenant]);
+    await createSubmitted(api, staff.token, OTHER, { title: "留下" });
+    const list = (input: Record<string, unknown>) =>
+      ok<ListData>(api, staff.token, FORM_SUBMISSIONS, {
+        input: { moduleKey: MODULE_KEY, pageSize: 100, ...input },
+      });
+    const all = await list({});
+    const others = await list({ formKey: OTHER });
+    const excluded = await list({ excludeFormKeys: [FORM] });
+    expect(all.formSubmissions.items.map((item) => item.formKey)).toContain(
+      FORM,
+    );
+    expect(
+      new Set(excluded.formSubmissions.items.map((item) => item.formKey)),
+    ).toEqual(new Set([OTHER]));
+    expect(excluded.formSubmissions.totalCount).toBe(
+      others.formSubmissions.totalCount,
+    );
+    // 分頁:每頁 1 筆時總筆數仍是排除後的數
+    const paged = await list({ excludeFormKeys: [FORM], pageSize: 1 });
+    expect(paged.formSubmissions.totalCount).toBe(
+      others.formSubmissions.totalCount,
+    );
+    const conflict = await list({ formKey: FORM, excludeFormKeys: [FORM] });
+    expect(conflict.formSubmissions).toMatchObject({
+      items: [],
+      totalCount: 0,
+    });
+    const other = await list({ formKey: OTHER, excludeFormKeys: [FORM] });
+    expect(other.formSubmissions.totalCount).toBe(
+      others.formSubmissions.totalCount,
+    );
   });
 
   it("退役目前版本後既有草稿仍可送出(寬鬆),但不能新增", async () => {

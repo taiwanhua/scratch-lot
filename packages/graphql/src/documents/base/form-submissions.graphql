@@ -123,7 +123,7 @@ query FormRuntimeVersion($formKey: ID!, $version: Int!) {
   }
 }
 
-# FormSubmissionsInput: { moduleKey, formKey?, status?, keyword?, sort?, page?, pageSize? }
+# FormSubmissionsInput: { moduleKey, formKey?, excludeFormKeys?, status?, keyword?, sort?, page?, pageSize? }
 # 範圍(可見範圍 + 資料範圍規則)由 api 套;別人的草稿不列;keyword 只比對摘要標題
 query FormSubmissions($input: FormSubmissionsInput!) {
   formSubmissions(input: $input) {

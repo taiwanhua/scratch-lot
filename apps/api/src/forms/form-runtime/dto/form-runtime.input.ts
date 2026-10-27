@@ -22,6 +22,10 @@ export class FormSubmissionsInput {
   @Field(() => ID, { nullable: true })
   formKey?: string;
 
+  /** 不列這些表單的提交(同時給 `formKey` 且它在這裡 = 空清單);缺席 = 不排除。 */
+  @Field(() => [ID], { nullable: true })
+  excludeFormKeys?: string[];
+
   @Field(() => FormSubmissionStatusEnum, { nullable: true })
   status?: FormSubmissionStatusEnum;
 

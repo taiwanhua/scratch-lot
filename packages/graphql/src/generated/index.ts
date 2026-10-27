@@ -1339,6 +1339,7 @@ export type FormSubmissionSummary = {
 };
 
 export type FormSubmissionsInput = {
+  excludeFormKeys?: InputMaybe<Array<Scalars['ID']['input']>>;
   formKey?: InputMaybe<Scalars['ID']['input']>;
   keyword?: InputMaybe<Scalars['String']['input']>;
   moduleKey: Scalars['String']['input'];
