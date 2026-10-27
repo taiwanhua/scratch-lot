@@ -30,7 +30,6 @@ import {
   monthDayOf,
   weekdayOf,
 } from "@/lib/project/schedule-roster";
-import { isTagPaletteKey } from "@/lib/project/tag-palettes";
 
 import { ROSTER_CONTENT_SELECTOR } from "../check-panel/RosterCheckLayout";
 import { useRosterCheckPanelOpen } from "../check-panel/roster-check-context";
@@ -42,6 +41,7 @@ import {
   useRoster,
 } from "../roster-context";
 import { RosterPersonCell } from "./RosterPersonCell";
+import { calendarMarkOf } from "./calendar-mark";
 import { ROSTER_LEGEND_ITEMS } from "./roster-legend";
 import { useRosterGridColumns } from "./useRosterGridColumns";
 
@@ -114,7 +114,7 @@ export const RosterGridView = () => {
       : (templateById.get(templateId)?.shortName ?? null);
   const countLabels = { leader: t("count.leader"), helper: t("count.helper") };
   const isClosed = (date: string) =>
-    calendarByDate.get(date)?.type === "closed";
+    calendarMarkOf(calendarByDate.get(date)).kind === "closed";
 
   const entriesOf = (userId: string, date: string): RosterEntry[] =>
     data.entries.filter(
@@ -130,12 +130,8 @@ export const RosterGridView = () => {
     );
 
   const rosterDates: RosterDate[] = dates.map((date) => {
-    const day = calendarByDate.get(date);
-    const closed = day?.type === "closed";
-    const special =
-      day?.type === "special" && isTagPaletteKey(day.paletteKey)
-        ? day.paletteKey
-        : null;
+    const mark = calendarMarkOf(calendarByDate.get(date));
+    const closed = mark.kind === "closed";
     return {
       date,
       disabled: closed,
@@ -160,8 +156,11 @@ export const RosterGridView = () => {
                 {t("cell.closed")}
               </Typography>
             )}
-            {special !== null && (
-              <TagPaletteChip paletteKey={special} label={day?.name ?? ""} />
+            {mark.kind === "special" && (
+              <TagPaletteChip
+                paletteKey={mark.paletteKey}
+                label={mark.name ?? ""}
+              />
             )}
           </Box>
           {canEdit && !closed && (

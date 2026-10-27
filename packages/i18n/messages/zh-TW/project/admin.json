@@ -2044,7 +2044,8 @@
         "todaySuffix": "今天",
         "empty": "這個月沒有班",
         "changed": "有異動",
-        "punches": "上班 {in} · 下班 {out}"
+        "punches": "上班 {in} · 下班 {out}",
+        "break": "☕ {minutes}"
       },
       "detail": {
         "title": "{date}當天詳情",

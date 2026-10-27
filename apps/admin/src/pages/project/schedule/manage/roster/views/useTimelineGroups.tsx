@@ -33,7 +33,6 @@ import {
   weekFullTitle,
   weekShortTitle,
 } from "@/lib/project/schedule-roster-views";
-import { isTagPaletteKey } from "@/lib/project/tag-palettes";
 
 import {
   type EntryPreset,
@@ -43,6 +42,7 @@ import {
   useRoster,
 } from "../roster-context";
 import { UnmatchedPunchMark } from "./UnmatchedPunchMark";
+import { calendarMarkOf } from "./calendar-mark";
 
 /** 時間軸上一個容器的資料(群組 + 它對應的人力需求)。 */
 export interface RosterTimelineGroup extends ScheduleTimelineGroup {
@@ -303,27 +303,23 @@ export const useTimelineGroups = (
   // 未對應排班的打卡:那天的日期旁顯示時鐘圖示 + 張數(規格 14.5)
   const punchCounts = unmatchedCountsByDate(data.unmatchedPunches);
   const timelineDates = shownDates.map((date): ScheduleTimelineDate => {
-    const day = calendarByDate.get(date);
-    const special =
-      day?.type === "special" && isTagPaletteKey(day.paletteKey)
-        ? day.paletteKey
-        : null;
+    const mark = calendarMarkOf(calendarByDate.get(date));
     return {
       date,
       label: (
         <Box component="span" data-roster-cell={rosterCellKey({ date })}>
           {/* 表頭的日期由時間軸畫,這裡只寫星期與特殊日名稱 */}
           {tCalendar(`weekdays.${String(weekdayOf(date))}`)}
-          {special !== null && day?.name ? ` ${day.name}` : ""}
+          {mark.kind === "special" && mark.name !== null ? ` ${mark.name}` : ""}
           <UnmatchedPunchMark
             count={punchCounts.get(date) ?? 0}
             placement={{ ml: 0.5 }}
           />
         </Box>
       ),
-      ...(special === null
-        ? {}
-        : { background: tagPaletteBackground(special) }),
+      ...(mark.kind === "special"
+        ? { background: tagPaletteBackground(mark.paletteKey) }
+        : {}),
     };
   });
 
@@ -331,7 +327,8 @@ export const useTimelineGroups = (
   const disabledRanges = shownDates.flatMap(
     (date): ScheduleTimelineDisabledRange[] => {
       const whole = dayRangeOf(date, date, timezone);
-      return calendarByDate.get(date)?.type === "closed" && whole !== null
+      return calendarMarkOf(calendarByDate.get(date)).kind === "closed" &&
+        whole !== null
         ? [
             {
               start: Date.parse(whole.from),

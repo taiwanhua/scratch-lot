@@ -5,10 +5,7 @@ import { Stack } from "@repo/ui/stack";
 import { Tag } from "@repo/ui/tag";
 import { Typography } from "@repo/ui/typography";
 
-import {
-  tagPaletteBackground,
-  tagPaletteBackgroundVarsSx,
-} from "@/components/project/TagPaletteChip/tag-palette-background";
+import { tagPaletteBackgroundVarsSx } from "@/components/project/TagPaletteChip/tag-palette-background";
 import { ScheduleLegend } from "@/components/project/schedule/ScheduleLegend/ScheduleLegend";
 import { unmatchedCountsByDate } from "@/lib/project/schedule-attendance";
 import {
@@ -20,27 +17,13 @@ import {
   filledTotalText,
   weekListLine,
 } from "@/lib/project/schedule-roster-views";
-import {
-  type TagPaletteKey,
-  isTagPaletteKey,
-} from "@/lib/project/tag-palettes";
 
 import { rosterCellKey, useRoster } from "../roster-context";
 import { UnmatchedPunchMark } from "./UnmatchedPunchMark";
+import { calendarMarkBackground, calendarMarkOf } from "./calendar-mark";
 import { ROSTER_LEGEND_ITEMS } from "./roster-legend";
 import { useShowDay } from "./useRosterDate";
 import { useTimelineGroups } from "./useTimelineGroups";
-
-/** 一天那一列的底色:特殊日用它的顏色、店休停用色、其他白底。 */
-const rowBackground = (
-  special: TagPaletteKey | null,
-  closed: boolean,
-): string => {
-  if (special !== null) {
-    return tagPaletteBackground(special);
-  }
-  return closed ? "action.disabledBackground" : "background.paper";
-};
 
 export interface WeekMobileListProps {
   /** 那一週的 7 天 */
@@ -67,12 +50,7 @@ export const WeekMobileList = ({ dates }: WeekMobileListProps) => {
     <Stack spacing={1.5} sx={tagPaletteBackgroundVarsSx}>
       <Stack spacing={1}>
         {dates.map((date) => {
-          const day = calendarByDate.get(date);
-          const special =
-            day?.type === "special" && isTagPaletteKey(day.paletteKey)
-              ? day.paletteKey
-              : null;
-          const closed = day?.type === "closed";
+          const mark = calendarMarkOf(calendarByDate.get(date));
           const items = timeline.plansOf(date).map((plan) => ({
             plan,
             wording: {
@@ -105,7 +83,7 @@ export const WeekMobileList = ({ dates }: WeekMobileListProps) => {
                 border: 1,
                 borderColor: "divider",
                 borderRadius: 1.5,
-                bgcolor: rowBackground(special, closed),
+                bgcolor: calendarMarkBackground(mark),
                 color: "text.primary",
                 textAlign: "left",
                 cursor: "pointer",
@@ -113,7 +91,7 @@ export const WeekMobileList = ({ dates }: WeekMobileListProps) => {
             >
               <Typography variant="subtitle2" sx={{ flex: "none" }}>
                 {title}
-                {special !== null && day?.name ? day.name : ""}
+                {mark.kind === "special" && mark.name !== null ? mark.name : ""}
                 <UnmatchedPunchMark
                   count={punchCounts.get(date) ?? 0}
                   placement={{ ml: 0.5 }}
@@ -125,7 +103,7 @@ export const WeekMobileList = ({ dates }: WeekMobileListProps) => {
                 useFlexGap
                 sx={{ flex: 1, flexWrap: "wrap", minWidth: 0 }}
               >
-                {closed && (
+                {mark.kind === "closed" && (
                   <Typography variant="caption" color="textSecondary">
                     {t("cell.closed")}
                   </Typography>

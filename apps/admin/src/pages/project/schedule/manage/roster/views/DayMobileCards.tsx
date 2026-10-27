@@ -6,6 +6,7 @@ import { Stack } from "@repo/ui/stack";
 import { Tag } from "@repo/ui/tag";
 import { Typography } from "@repo/ui/typography";
 
+import { tagPaletteBackgroundVarsSx } from "@/components/project/TagPaletteChip/tag-palette-background";
 import { ScheduleLegend } from "@/components/project/schedule/ScheduleLegend/ScheduleLegend";
 import { unmatchedCountsByDate } from "@/lib/project/schedule-attendance";
 import { demandToneOf } from "@/lib/project/schedule-roster";
@@ -18,6 +19,7 @@ import { rosterCellKey, useRoster } from "../roster-context";
 import { DayCardPerson } from "./DayCardPerson";
 import { DayCardVacancy } from "./DayCardVacancy";
 import { UnmatchedPunchMark } from "./UnmatchedPunchMark";
+import { calendarMarkBackground, calendarMarkOf } from "./calendar-mark";
 import { ROSTER_LEGEND_ITEMS } from "./roster-legend";
 import { type RosterTimeline, slotIdOf } from "./useTimelineGroups";
 
@@ -41,6 +43,8 @@ const pressableSx = {
  * 手機日檢視(SC-45 手機;規格 14.5 日):人力需求卡片清單,依開始時間排序;卡片標題「班名 時間」、
  * 副標「崗位 · 負責 x/y · 協同 x/y」、右上已填 / 總筆數(有缺時加「缺 N」);每個人一列(負責人套綠底,
  * 上下班和需求不同時加註),缺人用虛線空位;那天有未對應排班的打卡時上方顯示「⏲ N」。點標題 → 人力需求對話框、點人 → 排班對話框、點缺額 → 新增排班。
+ * 店休 / 特殊日(同電腦版日期表頭與手機週清單,判斷用 `calendarMarkOf`):卡片清單上方一列,店休停用底色寫「店休」、
+ * 特殊日用它的顏色當底並寫名稱,「⏲ N」放在同一列。
  */
 export const DayMobileCards = ({ date, timeline }: DayMobileCardsProps) => {
   const t = useTranslations("admin.schedule.roster");
@@ -51,13 +55,42 @@ export const DayMobileCards = ({ date, timeline }: DayMobileCardsProps) => {
   const groups = timeline.groups.toSorted((left, right) =>
     compareGroupPlans(left.plan, right.plan),
   );
+  const mark = calendarMarkOf(
+    data.calendarDays.find((day) => day.date === date),
+  );
 
   return (
-    <Stack spacing={1.5} data-roster-cell={rosterCellKey({ date })}>
-      <UnmatchedPunchMark
-        count={punchCount}
-        placement={{ alignSelf: "flex-start" }}
-      />
+    <Stack
+      spacing={1.5}
+      data-roster-cell={rosterCellKey({ date })}
+      sx={tagPaletteBackgroundVarsSx}
+    >
+      {mark.kind === "none" ? (
+        <UnmatchedPunchMark
+          count={punchCount}
+          placement={{ alignSelf: "flex-start" }}
+        />
+      ) : (
+        <Stack
+          direction="row"
+          spacing={0.5}
+          data-calendar-mark={mark.kind}
+          sx={{
+            alignItems: "center",
+            p: 1.5,
+            border: 1,
+            borderColor: "divider",
+            borderRadius: 1.5,
+            bgcolor: calendarMarkBackground(mark),
+            color: mark.kind === "closed" ? "text.secondary" : "text.primary",
+          }}
+        >
+          <Typography variant="subtitle2">
+            {mark.kind === "closed" ? t("cell.closed") : (mark.name ?? "")}
+          </Typography>
+          <UnmatchedPunchMark count={punchCount} />
+        </Stack>
+      )}
       {groups.length === 0 && (
         <Typography variant="body2" color="textSecondary">
           {t("timeline.noDemand")}

@@ -2044,7 +2044,8 @@
         "todaySuffix": "Today",
         "empty": "No shifts this month",
         "changed": "Changed",
-        "punches": "In {in} · Out {out}"
+        "punches": "In {in} · Out {out}",
+        "break": "☕ {minutes}"
       },
       "detail": {
         "title": "{date} details",

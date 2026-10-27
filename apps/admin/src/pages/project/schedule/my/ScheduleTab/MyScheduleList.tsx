@@ -6,6 +6,7 @@ import { Stack } from "@repo/ui/stack";
 import { Tag } from "@repo/ui/tag";
 import { Typography } from "@repo/ui/typography";
 
+import { dayOffHatchSx } from "@/components/project/schedule/DayOffs/day-off-styles";
 import { groupByDate, listDatesOf } from "@/lib/project/schedule-my";
 
 import { type MyEntry, useMyEntryText } from "./useMyEntryText";
@@ -59,7 +60,7 @@ const EntryRow = ({ entry }: { entry: MyEntry }) => {
             color="textSecondary"
             aria-label={t("punch.breakAria", { minutes: entry.breakMinutes })}
           >
-            ☕{entry.breakMinutes}
+            {t("list.break", { minutes: entry.breakMinutes })}
           </Typography>
         )}
         <Tag
@@ -74,7 +75,7 @@ const EntryRow = ({ entry }: { entry: MyEntry }) => {
 
 /**
  * 條列檢視(SC-40;規格 14.6「`[月曆 | 條列]`」):依日期列出這個月的班與打卡;畫休、店休也列一行;
- * 今天標「今天」、有異動的日子寫「有異動」。點一列 → 當天詳情。
+ * 今天標「今天」、有異動的日子寫「有異動」;畫休用灰色斜線底、休息寫「☕ 30」(同圖例)。點一列 → 當天詳情。
  */
 export const MyScheduleList = ({
   page,
@@ -140,7 +141,21 @@ export const MyScheduleList = ({
                 <Typography variant="body2">{t("calendar.closed")}</Typography>
               )}
               {dayOffs.has(date) && (
-                <Typography variant="body2">{t("calendar.dayOff")}</Typography>
+                // 畫休一律灰色斜線底(同月曆、圖例「畫休(斜線)」)
+                <Box
+                  sx={{
+                    position: "relative",
+                    alignSelf: "flex-start",
+                    px: 0.75,
+                    borderRadius: 0.5,
+                    overflow: "hidden",
+                  }}
+                >
+                  <Box aria-hidden data-day-off-hatch sx={dayOffHatchSx} />
+                  <Typography variant="body2">
+                    {t("calendar.dayOff")}
+                  </Typography>
+                </Box>
               )}
               {entries.map((entry) => (
                 <EntryRow key={entry.id} entry={entry} />

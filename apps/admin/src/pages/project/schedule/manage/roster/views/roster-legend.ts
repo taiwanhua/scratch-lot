@@ -39,7 +39,7 @@ export const ROSTER_LEGEND_ITEMS = {
     "vacancyLeader",
     "vacancyHelper",
   ],
-  /** 日(手機):卡片(標題「臨」、右上人數標籤三色)、人、缺額;那天的 ⏲ */
+  /** 日(手機):卡片(標題「臨」、右上人數標籤三色)、人、缺額;上方那天的店休 / 特殊日與 ⏲ */
   dayMobile: [
     "leader",
     "temp",
@@ -49,6 +49,8 @@ export const ROSTER_LEGEND_ITEMS = {
     "missingLeader",
     "missingHelper",
     "full",
+    "special",
+    "closed",
     "unmatchedPunch",
     "vacancyLeader",
     "vacancyHelper",

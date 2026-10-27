@@ -142,10 +142,66 @@ describe("排班表:每個檢視畫出的記號都在圖例裡", () => {
     expect(within(legend()).getByText("晚 ×2")).toBeInTheDocument();
   });
 
+  it.each([
+    ["3 日店休", "2026-11-03", "closed", "店休"],
+    ["9 日特殊日", "2026-11-09", "special", "店慶"],
+  ])(
+    "日(手機)%s:卡片清單上方標示那天(同電腦版),那天的 ⏲ 放同一列;圖例有這一項",
+    async (_name, date, kind, text) => {
+      setViewportWidth(390);
+      renderSchedulePage({
+        path: rosterPath(`view=day&date=${date}`),
+        roster: { calendarMarks: true },
+      });
+      const bar = await waitFor(() => {
+        const found = document.querySelector<HTMLElement>(
+          `[data-calendar-mark="${CSS.escape(kind)}"]`,
+        );
+        if (found === null) {
+          throw new Error(`找不到 ${kind}`);
+        }
+        return found;
+      });
+      expect(within(bar).getByText(text)).toBeInTheDocument();
+      if (kind === "closed") {
+        expect(
+          within(bar).getByLabelText("1 張未對應排班的打卡"),
+        ).toHaveTextContent("⏲ 1");
+      }
+      expect(
+        within(legend()).getByText(
+          kind === "closed" ? LEGEND_TEXT.closed : "特殊日(行事曆設定的顏色)",
+        ),
+      ).toBeInTheDocument();
+    },
+  );
+
+  it("班表:店休的格子有未對應排班的打卡時照樣顯示時鐘圖示(只標示、不能點)", async () => {
+    setViewportWidth(1440);
+    renderSchedulePage({
+      path: rosterPath("view=roster"),
+      roster: { calendarMarks: true },
+    });
+    await screen.findByLabelText("3 張未對應排班的打卡");
+    const cell = document.querySelector<HTMLElement>(
+      '[data-roster-cell="u-lin|2026-11-03"]',
+    );
+    if (cell === null) {
+      throw new Error("找不到林美麗 3 日的格子");
+    }
+    const scope = within(cell);
+    expect(scope.getByText("店休")).toBeInTheDocument();
+    expect(scope.getByLabelText("1 張未對應排班的打卡")).toHaveTextContent(
+      "⏲ 1",
+    );
+    expect(scope.queryByRole("button")).toBeNull();
+  });
+
   it("特殊日:會畫特殊日的檢視都列進圖例(夾具沒有特殊日,照清單核對)", () => {
     for (const view of [
       "week",
       "day",
+      "dayMobile",
       "weekMobile",
       "month",
       "monthMobile",

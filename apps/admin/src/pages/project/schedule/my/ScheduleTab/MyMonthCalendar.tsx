@@ -12,6 +12,7 @@ import {
 import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
 
+import { dayOffHatchSx } from "@/components/project/schedule/DayOffs/day-off-styles";
 import { leaderMarkSx } from "@/components/project/schedule/ScheduleLegend/schedule-legend-styles";
 import { useTenantTimezone } from "@/hooks/base/useTenantTimezone";
 import { groupByDate } from "@/lib/project/schedule-my";
@@ -105,7 +106,8 @@ export interface MyMonthCalendarProps {
 /**
  * 月曆(SC-01;規格 14.6「月曆」):底座 `MonthCalendar`。每天顯示自己的排班(範本簡稱、時間;負責人綠底)與
  * 打卡紀錄(上班 / 下班);已結束的班缺卡在右上角紅點、有異動的日子金點(同一天兩者都有時並排,紅點在前);
- * 店休寫在日期下方;特殊日整格底色 = 行事曆選的顏色(底座 `MonthCalendar` 的 `background`,沒選顏色退回 `tone`)並寫名稱;整天畫休寫「畫休」。手機只放簡稱。點一天 → 當天詳情。
+ * 店休寫在日期下方;特殊日整格底色 = 行事曆選的顏色(底座 `MonthCalendar` 的 `background`,沒選顏色退回 `tone`)並寫名稱;整天畫休整格灰色斜線底並寫「畫休」。手機只放簡稱。點一天 → 當天詳情。
+ * 圖例項目見 `my-schedule-legend.ts`。
  */
 export const MyMonthCalendar = ({
   page,
@@ -152,7 +154,11 @@ export const MyMonthCalendar = ({
       content: (
         <Stack spacing={0.5} data-my-day={date}>
           {dayOffs.has(date) && (
-            <Typography variant="caption">{t("dayOff")}</Typography>
+            <>
+              {/* 整天畫休:整格灰色斜線底(同我的畫休月曆、圖例「畫休(斜線)」) */}
+              <Box aria-hidden data-day-off-hatch sx={dayOffHatchSx} />
+              <Typography variant="caption">{t("dayOff")}</Typography>
+            </>
           )}
           {entries.map((entry) => (
             <EntryLines key={entry.id} entry={entry} compact={isMobile} />

@@ -355,3 +355,26 @@ export const sampleUnmatchedPunches = (
     unmatchedPunch("p-lin-2", "u-lin", day(1), "15:10", "out"),
   ];
 };
+
+/**
+ * 行事曆標示的追加夾具(`scheduleRosterWorld({ calendarMarks: true })`):9 日特殊日「店慶」(cyan);
+ * 3 日店休那天林美麗打了一張未對應排班的上班卡。
+ */
+export const sampleCalendarMarks = (
+  month: string,
+): Pick<Roster, "calendarDays" | "unmatchedPunches"> => {
+  const day = (n: number) => `${month}-${String(n).padStart(2, "0")}`;
+  return {
+    calendarDays: [
+      {
+        date: dayAt(day(9)),
+        type: "special",
+        name: "店慶",
+        paletteKey: "cyan",
+      },
+    ],
+    unmatchedPunches: [
+      unmatchedPunch("p-lin-closed", "u-lin", day(3), "10:05", "in"),
+    ],
+  };
+};

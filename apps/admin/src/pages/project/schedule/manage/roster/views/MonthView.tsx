@@ -20,10 +20,10 @@ import {
   weekdayOf,
 } from "@/lib/project/schedule-roster";
 import type { CountLabels } from "@/lib/project/schedule-roster-views";
-import { isTagPaletteKey } from "@/lib/project/tag-palettes";
 
 import { type RosterData, useRoster } from "../roster-context";
 import { MonthDayContent, type MonthDayItem } from "./MonthDayContent";
+import { calendarMarkOf } from "./calendar-mark";
 import { ROSTER_LEGEND_ITEMS } from "./roster-legend";
 import { useUnmatchedPunchCounts } from "./unmatched-punches";
 import { useShowDay } from "./useRosterDate";
@@ -40,13 +40,14 @@ const calendarInfoOf = (
   day: RosterData["calendarDays"][number] | undefined,
   closedLabel: string,
 ): MonthCalendarDayInfo => {
-  if (day?.type === "closed") {
+  const mark = calendarMarkOf(day);
+  if (mark.kind === "closed") {
     return { disabled: true, disabledReason: closedLabel, note: closedLabel };
   }
-  if (day?.type === "special" && isTagPaletteKey(day.paletteKey)) {
+  if (mark.kind === "special") {
     return {
       note: (
-        <TagPaletteChip paletteKey={day.paletteKey} label={day.name ?? ""} />
+        <TagPaletteChip paletteKey={mark.paletteKey} label={mark.name ?? ""} />
       ),
     };
   }

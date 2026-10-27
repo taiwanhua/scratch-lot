@@ -27,6 +27,7 @@ import {
   type TestRosterDemand,
   type TestRosterEntry,
   dayAt,
+  sampleCalendarMarks,
   sampleRoster,
   sampleRosterExtras,
   sampleUnmatchedPunches,
@@ -47,6 +48,8 @@ export interface ScheduleRosterWorldOptions extends AutoRunWorldOptions {
   canUsePunchTime?: boolean;
   /** 沒有未對應排班的打卡(預設有 `sampleUnmatchedPunches`) */
   noUnmatchedPunches?: boolean;
+  /** 追加特殊日與店休那天的未對應打卡(`sampleCalendarMarks`) */
+  calendarMarks?: boolean;
 }
 
 const nameOf = (userId: string) =>
@@ -80,12 +83,17 @@ export const scheduleRosterWorld = (
   } = options;
   /** 已經被排班對話框對應走的卡(不再列為未對應) */
   const matchedPunchIds = new Set<string>();
+  const marksOf = (month: string) =>
+    options.calendarMarks === true
+      ? sampleCalendarMarks(month)
+      : { calendarDays: [], unmatchedPunches: [] };
   const unmatchedPunchesOf = (month: string) =>
     options.noUnmatchedPunches === true
       ? []
-      : sampleUnmatchedPunches(month).filter(
-          (punch) => !matchedPunchIds.has(punch.id),
-        );
+      : [
+          ...sampleUnmatchedPunches(month),
+          ...marksOf(month).unmatchedPunches,
+        ].filter((punch) => !matchedPunchIds.has(punch.id));
   let checkScenario: CheckScenario = options.check ?? "limits";
   let period: {
     status: string;
@@ -222,6 +230,10 @@ export const scheduleRosterWorld = (
             demands: demands.map((demand) => demandOf(demand)),
             entries: entries.map((entry) => entryOf(entry)),
             ...sampleRosterExtras(input.month),
+            calendarDays: [
+              ...sampleRosterExtras(input.month).calendarDays,
+              ...marksOf(input.month).calendarDays,
+            ],
             templates: ROSTER_TEMPLATES,
             unmatchedPunches: unmatchedPunchesOf(input.month),
           },
