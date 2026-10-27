@@ -51,7 +51,7 @@ export const PurchaseViewPage = ({ routeParam }: ModulePageProps) => {
   const serialNo = submission?.serialNo ?? null;
   useRouteTabItemLabel(serialNo);
   const data = usePurchaseReceiving(id);
-  // 單據 QR 連到檢視頁:路由依模組樹(`lotteryReceiptLinks`),不依操作者自己的頁面權限;讀到之前不顯示 [列印]
+  // 單據 QR 連到檢視頁:路由依模組樹(`lotteryReceiptLinks`),不依操作者自己的頁面權限;讀到之前也能印(不印 QR)
   const { links } = useReceiptLinks();
   const isSubmitted =
     submission !== null && submission.status !== FormSubmissionStatus.Draft;
@@ -82,16 +82,13 @@ export const PurchaseViewPage = ({ routeParam }: ModulePageProps) => {
             {tPages("backToList")}
           </Button>
           <Box sx={{ flex: 1 }} />
-          {submission !== null &&
-            data !== null &&
-            links !== null &&
-            isSubmitted && (
-              <PurchaseReceiptPrint
-                submission={submission}
-                receiving={data}
-                url={links.purchaseViewUrl(id)}
-              />
-            )}
+          {submission !== null && data !== null && isSubmitted && (
+            <PurchaseReceiptPrint
+              submission={submission}
+              receiving={data}
+              url={links.purchaseViewUrl(id)}
+            />
+          )}
           {submission !== null && (
             <SubmissionDeleteButton
               moduleKey={PURCHASE_MODULE_KEY}

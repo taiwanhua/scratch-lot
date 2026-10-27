@@ -226,7 +226,7 @@ export class TransferReceivingService {
     operator: OperatorContext,
     submissionIdText: string,
     rowIds: readonly string[],
-  ): Promise<CompleteLotteryTransferReceivingPayload> {
+  ): Promise<Omit<CompleteLotteryTransferReceivingPayload, "receiptLinks">> {
     const submission = await this.access.readable(operator, submissionIdText);
     if (!(await this.access.canReceive(operator, submission))) {
       throw forbiddenError(

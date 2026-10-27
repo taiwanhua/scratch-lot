@@ -266,7 +266,7 @@ export class PurchaseReceivingService {
     operator: OperatorContext,
     submissionIdText: string,
     rowIds: readonly string[],
-  ): Promise<CompleteLotteryPurchaseReceivingPayload> {
+  ): Promise<Omit<CompleteLotteryPurchaseReceivingPayload, "receiptLinks">> {
     const submission = await this.readable(operator, submissionIdText);
     if (!(await this.canReceive(operator, submission))) {
       throw forbiddenError(

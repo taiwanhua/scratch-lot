@@ -10,7 +10,8 @@ export interface PurchaseReceiptPrintProps {
   submission: FormSubmissionFieldsFragment;
   receiving: LotteryPurchaseReceivingFieldsFragment;
   /** 這張進貨單在後台的連結(QR code) */
-  url: string;
+  /** QR 的連結;沒有 = 照印、不印 QR */
+  url: string | null;
 }
 
 /**

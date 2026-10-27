@@ -173,6 +173,7 @@ input CompleteLotteryPurchaseReceivingInput {
 
 type CompleteLotteryPurchaseReceivingPayload {
   batch: LotteryPurchaseReceivingBatch
+  receiptLinks: LotteryReceiptLinks!
   receiving: LotteryPurchaseReceiving!
 }
 
@@ -183,6 +184,7 @@ input CompleteLotteryTransferReceivingInput {
 
 type CompleteLotteryTransferReceivingPayload {
   batch: LotteryTransferReceivingBatch
+  receiptLinks: LotteryReceiptLinks!
   receiving: LotteryTransferReceiving!
 }
 

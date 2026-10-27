@@ -4,6 +4,7 @@ import {
   type ReceiptBlock,
   type ReceiptLayout,
   type ReceiptTranslator,
+  qrOf,
   receiptBookNo,
   receiptMoney,
 } from "./receipt-layout";
@@ -29,7 +30,7 @@ export interface TransferShipmentReceiptInput {
   }[];
   /** 調貨金額(批購金額合計) */
   transferAmount: number;
-  url: string;
+  url: string | null;
 }
 
 /**
@@ -101,7 +102,7 @@ export const transferShipmentReceiptOf = (
       },
       { type: "divider" },
     ],
-    qr: { value: input.url, caption: t("qrCaption") },
+    qr: qrOf(input.url, t("qrCaption")),
     signatures: [
       t("transferShipment.shipperSign"),
       t("transferShipment.courierSign"),
@@ -120,7 +121,7 @@ export const transferShipmentInputOf = (
     submissionId: string;
     serialNo: string | null;
     fromBranchId: string;
-    url: string;
+    url: string | null;
   },
   rows: readonly ReceivingRow[],
 ): TransferShipmentReceiptInput => ({

@@ -266,6 +266,35 @@ describe("申請中心詳情頁:調貨單點收", () => {
     );
   });
 
+  it("模組停用 / 沒有 route(api 回的路由是 null)→ [完成這次點收] 照樣印調貨點收單,不印 QR", async () => {
+    receiptPngOf.mockClear();
+    const user = userEvent.setup();
+    const { printingFake } = renderTransferPage({
+      path: APPLY_VIEW,
+      printing: {},
+      transfer: { receiptRoutes: "none" },
+      ...receiveStage(),
+    });
+    const scan = await screen.findByRole("textbox", { name: "刷條碼點收" });
+    await user.type(scan, "0060112045{Enter}");
+    await user.click(
+      await screen.findByRole("button", { name: "其餘全部到齊…" }),
+    );
+    await user.click(
+      await screen.findByRole("button", { name: "都到了,點收" }),
+    );
+    await user.click(
+      await screen.findByRole("button", { name: "完成這次點收(1 本)" }),
+    );
+    await waitFor(() => {
+      expect(printingFake?.created).toHaveLength(1);
+    });
+    expect(printingFake?.created[0]).toMatchObject({
+      documentType: "lottery-transfer-receiving",
+    });
+    expect(printedQr()).toBe("");
+  });
+
   it("送錯分店:擋下並彈窗提示是哪一家店的哪一張調貨單", async () => {
     const user = userEvent.setup();
     renderTransferPage({ path: APPLY_VIEW, ...receiveStage() });

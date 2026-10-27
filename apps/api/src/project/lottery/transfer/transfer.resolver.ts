@@ -7,6 +7,7 @@ import { CurrentOperator } from "../../../auth/decorators";
 import type { OperatorContext } from "../../../database/operator-context";
 import { RequirePermission } from "../../../permission/require-permission.decorator";
 import { RequireTenant } from "../../tenant-scope/require-tenant.decorator";
+import { ReceiptLinksService } from "../store/receipt-links.service";
 import {
   CompleteLotteryTransferReceivingInput,
   CompleteLotteryTransferReceivingPayload,
@@ -42,6 +43,7 @@ export class TransferResolver {
   constructor(
     private readonly query: TransferQueryService,
     private readonly receiving: TransferReceivingService,
+    private readonly receiptLinks: ReceiptLinksService,
   ) {}
 
   @RequirePermission(TRANSFER_PERMISSIONS.create)
@@ -125,11 +127,20 @@ export class TransferResolver {
 
   /** [完成這次點收]:這一次點收的列標上點收批次(調貨點收單照批次印)。 */
   @Mutation(() => CompleteLotteryTransferReceivingPayload)
-  completeLotteryTransferReceiving(
+  async completeLotteryTransferReceiving(
     @Args("input") input: CompleteLotteryTransferReceivingInput,
     @CurrentOperator() operator: OperatorContext,
   ): Promise<CompleteLotteryTransferReceivingPayload> {
-    return this.receiving.complete(operator, input.submissionId, input.rowIds);
+    const result = await this.receiving.complete(
+      operator,
+      input.submissionId,
+      input.rowIds,
+    );
+    // 寫入成功就一定帶得回 QR 的路由(和寫入同一次請求;交易後的自動列印不另查)
+    return {
+      ...result,
+      receiptLinks: await this.receiptLinks.routes(operator),
+    };
   }
 
   /** 送錯分店的 [通知總部更正]:通知那張(送往別家分店的)調貨單的建立者。 */

@@ -23,7 +23,7 @@ import { transferShipmentInputOf } from "@/lib/project/lottery/receipts/transfer
  *
  * 第一關通過後的自動列印不在這裡:登記成調貨單的審核擴充(`TransferShipmentEffect`),任何畫面通過第一關都會印。
  * 草稿不印(還沒送出)。QR 連到調貨單檢視頁:路由依模組樹(`lotteryReceiptLinks`),不依操作者自己的頁面權限;
- * 讀到之前標頭不顯示 [列印]。
+ * 讀到之前也能按 [列印](沒有連結 → 照印、不印 QR)。
  */
 export const useTransferReceipts = (
   /** 調貨單(提交)id */
@@ -34,7 +34,7 @@ export const useTransferReceipts = (
   settlement: LotterySettlementFieldsFragment | null,
 ) => {
   const { links } = useReceiptLinks();
-  const url = links === null ? null : links.transferViewUrl(id);
+  const url = links.transferViewUrl(id);
   const receiving =
     submission === null || submission.status === FormSubmissionStatus.Draft
       ? null
@@ -43,10 +43,7 @@ export const useTransferReceipts = (
   const shippedRows = rows.filter((row) => row.shipped);
   const printedRows = shippedRows.length > 0 ? shippedRows : rows;
   const shipment =
-    receiving === null ||
-    submission === null ||
-    url === null ||
-    rows.length === 0
+    receiving === null || submission === null || rows.length === 0
       ? null
       : transferShipmentInputOf(
           receiving,
@@ -60,9 +57,7 @@ export const useTransferReceipts = (
           printedRows,
         );
   const payment =
-    settlement === null || url === null
-      ? null
-      : latestTransferPaymentInputOf(settlement, url);
+    settlement === null ? null : latestTransferPaymentInputOf(settlement, url);
   /**
    * 調貨點收單的資料:`latest` = 這次要印的點收區塊(完成點收後用 api 回的那一份)、`link` = QR 的完整網址
    * (交易後的自動列印用 `fetchLinks` 讀);還沒載到調貨單 → null
@@ -73,7 +68,7 @@ export const useTransferReceipts = (
       : (
           latest: LotteryTransferReceivingFieldsFragment,
           batch: TransferReceivingReceiptInput["batch"],
-          link: string,
+          link: string | null,
         ): TransferReceivingReceiptInput =>
           transferReceivingInputOf(
             latest,
@@ -86,7 +81,7 @@ export const useTransferReceipts = (
             batch,
           );
   const receivingReceipt =
-    receiving === null || receivingInputOf === null || url === null
+    receiving === null || receivingInputOf === null
       ? null
       : {
           batches: receiving.batches,

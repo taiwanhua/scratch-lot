@@ -50,8 +50,11 @@ export interface ReceiptLayout {
   /** 單號右邊的時間(ISO 時點;畫面依租戶時區以 `formatTemporal` 顯示) */
   time: string;
   blocks: readonly ReceiptBlock[];
-  /** 底部 QR code:內容 = 這張單據在後台的連結 */
-  qr: { value: string; caption: string };
+  /**
+   * 底部 QR code:內容 = 這張單據在後台的連結;沒有連結(模組停用、沒有 route、讀不到路由)= null,
+   * 單據照印、不印 QR(自動列印怎樣都要印得出來)
+   */
+  qr: { value: string; caption: string } | null;
   /** 簽名欄(由上而下) */
   signatures: readonly string[];
 }
@@ -136,7 +139,12 @@ export const receiptLinesOf = (
     : [header.reprint]),
   `${layout.documentNo} | ${header.time}`,
   ...layout.blocks.flatMap((block) => blockLinesOf(block)),
-  `[QR] ${layout.qr.value}`,
-  layout.qr.caption,
+  ...(layout.qr === null ? [] : [`[QR] ${layout.qr.value}`, layout.qr.caption]),
   ...layout.signatures.map((signer) => `[簽名] ${signer}`),
 ];
+
+/** 底部 QR code:有連結才印(沒有 = null,單據照印、不印 QR)。 */
+export const qrOf = (
+  url: string | null,
+  caption: string,
+): ReceiptLayout["qr"] => (url === null ? null : { value: url, caption });

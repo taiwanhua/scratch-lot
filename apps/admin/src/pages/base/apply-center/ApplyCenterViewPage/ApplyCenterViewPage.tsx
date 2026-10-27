@@ -114,7 +114,12 @@ export const ApplyCenterViewPage = ({ routeParam }: ModulePageProps) => {
   const editRoute = routeOf(formModulePageKey(instance.moduleKey, "edit-page"));
   const isCurrent =
     submission !== null && submission.currentInstanceId === instance.id;
-  const sections = isCurrent ? sectionsOf(instance.moduleKey) : [];
+  // 表單專屬區塊:實例是單據目前的實例才畫(看舊修訂的實例不畫);登記順序固定(組裝好的清單),以位置當 key
+  const sections = isCurrent
+    ? sectionsOf(instance.moduleKey).map((Section, index) => (
+        <Section key={index} instance={instance} submission={submission} />
+      ))
+    : [];
 
   return (
     <Card sx={{ flex: 1, minHeight: 0, overflow: "auto", px: 3, py: 2.5 }}>
@@ -176,11 +181,7 @@ export const ApplyCenterViewPage = ({ routeParam }: ModulePageProps) => {
             displayValues={submission.displayValues}
           />
         )}
-        {isCurrent &&
-          sections.map((Section, index) => (
-            // 登記順序固定(組裝好的清單),以位置當 key
-            <Section key={index} instance={instance} submission={submission} />
-          ))}
+        {sections}
         <ApprovalSection
           instanceId={instance.id}
           submission={isCurrent ? submission : null}

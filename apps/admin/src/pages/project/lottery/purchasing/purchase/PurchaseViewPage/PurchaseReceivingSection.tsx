@@ -13,7 +13,7 @@ import {
   useReceiveLotteryPurchaseBookMutation,
 } from "@repo/graphql";
 
-import { useReceiptLinks } from "@/components/project/lottery/ReceiptPrint/useReceiptLinks";
+import { receiptLinksOf } from "@/components/project/lottery/ReceiptPrint/useReceiptLinks";
 import { useReceiptPrinter } from "@/components/project/lottery/ReceiptPrint/useReceiptPrinter";
 import {
   type ReceiveBookGroup,
@@ -26,7 +26,6 @@ import {
 } from "@/hooks/base/useMutationFeedback";
 import { useSession } from "@/hooks/base/useSession";
 import { purchaseReceivingInputOf } from "@/lib/project/lottery/receipts/purchase-receiving-receipt";
-import { logReceiptPrintFailure } from "@/lib/project/lottery/receipts/receipt-log";
 
 import { WrongStoreDialog } from "./WrongStoreDialog";
 import { type WrongStoreInfo, receiveErrorOf } from "./receive-error";
@@ -61,7 +60,6 @@ export const PurchaseReceivingSection = ({
 
   const receive = useReceiveLotteryPurchaseBookMutation(session.client);
   const printer = useReceiptPrinter();
-  const { fetchLinks } = useReceiptLinks();
   const notify = useNotifyLotteryPurchaseWrongStoreMutation(session.client);
   const receivingKey = useLotteryPurchaseReceivingQuery.getKey({
     submissionId: id,
@@ -82,26 +80,17 @@ export const PurchaseReceivingSection = ({
         setThisTime(new Set());
         const batch = result.batch ?? null;
         if (batch !== null) {
-          // QR 連到進貨單檢視頁:路由依模組樹(`lotteryReceiptLinks`),不依點收人自己的頁面權限
-          void fetchLinks()
-            .then((links) =>
-              printer.printReceiptAfterCommit(
-                "purchase-receiving",
-                purchaseReceivingInputOf(
-                  submission,
-                  result.receiving,
-                  batch,
-                  links.purchaseViewUrl(id),
-                ),
-              ),
-            )
-            .catch((error: unknown) => {
-              // 讀不到 QR 的路由:不印,只記 log
-              logReceiptPrintFailure("links failed", {
-                kind: "purchase-receiving",
-                error,
-              });
-            });
+          // QR 連到進貨單檢視頁:路由和寫入同一次請求帶回(依模組樹,不依點收人自己的頁面權限;
+          // 沒有路由 → 照印、不印 QR)
+          void printer.printReceiptAfterCommit(
+            "purchase-receiving",
+            purchaseReceivingInputOf(
+              submission,
+              result.receiving,
+              batch,
+              receiptLinksOf(result.receiptLinks).purchaseViewUrl(id),
+            ),
+          );
         }
       },
     }),

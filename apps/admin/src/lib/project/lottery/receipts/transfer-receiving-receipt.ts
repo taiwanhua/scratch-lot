@@ -6,6 +6,7 @@ import {
   type ReceiptLayout,
   type ReceiptTranslator,
   bookNumbersOf,
+  qrOf,
   receiptBookNo,
 } from "./receipt-layout";
 
@@ -52,7 +53,7 @@ export interface TransferReceivingReceiptInput {
     rows?: readonly { rowId: string; ticketNos: readonly string[] }[];
   } | null;
   /** 這張調貨單在後台的連結(QR code) */
-  url: string;
+  url: string | null;
 }
 
 type Group = TransferReceivingReceiptInput["groups"][number];
@@ -237,7 +238,7 @@ export const transferReceivingReceiptOf = (
       ...missingBlocks,
       { type: "divider" },
     ],
-    qr: { value: input.url, caption: t("qrCaption") },
+    qr: qrOf(input.url, t("qrCaption")),
     signatures: [
       t("transferReceiving.receiverSign"),
       t("transferReceiving.courierSign"),
@@ -252,7 +253,7 @@ export const transferReceivingInputOf = (
     submissionId: string;
     serialNo: string | null;
     toBranchId: string;
-    url: string;
+    url: string | null;
   },
   batch: TransferReceivingReceiptInput["batch"],
 ): TransferReceivingReceiptInput => {

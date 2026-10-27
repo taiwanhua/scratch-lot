@@ -7,6 +7,8 @@ import {
   ObjectType,
 } from "@nestjs/graphql";
 
+import { LotteryReceiptLinksModel } from "../../store/models/lottery-store.model";
+
 /** 選項(id + 顯示名)。 */
 @ObjectType("LotteryPurchaseOption")
 export class LotteryPurchaseOptionModel {
@@ -309,6 +311,13 @@ export class CompleteLotteryPurchaseReceivingPayload {
 
   @Field(() => LotteryPurchaseReceivingModel)
   receiving!: LotteryPurchaseReceivingModel;
+
+  /**
+   * 單據 QR code 的頁面路由(依模組樹,同 `lotteryReceiptLinks`):和寫入同一次請求帶回,
+   * 交易後的自動列印不必再查一次;路由是 null(模組停用、沒有 route)→ 照樣印,不印 QR
+   */
+  @Field(() => LotteryReceiptLinksModel)
+  receiptLinks!: LotteryReceiptLinksModel;
 }
 
 @InputType()

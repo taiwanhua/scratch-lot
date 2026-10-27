@@ -2,6 +2,7 @@ import {
   type ReceiptBlock,
   type ReceiptLayout,
   type ReceiptTranslator,
+  qrOf,
   receiptMoney,
 } from "./receipt-layout";
 
@@ -27,7 +28,7 @@ export interface SaleRefundReceiptInput {
   reasonLabel: string;
   groups: readonly SaleRefundReceiptGroup[];
   refundAmount: number;
-  url: string;
+  url: string | null;
 }
 
 /**
@@ -91,6 +92,6 @@ export const saleRefundReceiptOf = (
     },
     { type: "divider" },
   ],
-  qr: { value: input.url, caption: t("qrCaption") },
+  qr: qrOf(input.url, t("qrCaption")),
   signatures: [t("handlerSign")],
 });

@@ -25,7 +25,7 @@ export interface CashMovementReceiptBase {
   /** 印表機:收銀點的印表機;沒有就用分店預設 */
   defaultPrinterId?: string | null;
   /** 即時現金帳那一筆的連結 */
-  url: string;
+  url: string | null;
 }
 
 /** 備註:有填才印。 */
