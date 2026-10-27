@@ -340,15 +340,6 @@ export const inventoryWorld = ({
         item === detail
           ? {
               ...item,
-              book: {
-                ...item.book,
-                skippedTicketNos: [
-                  ...item.book.skippedTicketNos.filter(
-                    (no) => no !== skipped.ticketNo,
-                  ),
-                  unsold.ticketNo,
-                ].toSorted((a, b) => a.localeCompare(b)),
-              },
               tickets: item.tickets.map((ticket) => {
                 if (ticket.id === skipped.id) {
                   // 改回未售:接手配對那張的分店與位置
