@@ -425,9 +425,7 @@ export type CreateLotteryGameInput = {
   claimDeadline?: InputMaybe<Scalars['DateTime']['input']>;
   color?: InputMaybe<Scalars['String']['input']>;
   defaultRate: Scalars['Int']['input'];
-  discontinuedAt?: InputMaybe<Scalars['DateTime']['input']>;
   gameCode: Scalars['String']['input'];
-  launchedAt?: InputMaybe<Scalars['DateTime']['input']>;
   name: Scalars['String']['input'];
   note?: InputMaybe<Scalars['String']['input']>;
   status?: InputMaybe<Scalars['String']['input']>;
@@ -8460,10 +8458,8 @@ export type UpdateLotteryGameInput = {
   claimDeadline?: InputMaybe<Scalars['DateTime']['input']>;
   color?: InputMaybe<Scalars['String']['input']>;
   defaultRate?: InputMaybe<Scalars['Int']['input']>;
-  discontinuedAt?: InputMaybe<Scalars['DateTime']['input']>;
   gameCode?: InputMaybe<Scalars['String']['input']>;
   id: Scalars['ID']['input'];
-  launchedAt?: InputMaybe<Scalars['DateTime']['input']>;
   name?: InputMaybe<Scalars['String']['input']>;
   note?: InputMaybe<Scalars['String']['input']>;
   status?: InputMaybe<Scalars['String']['input']>;

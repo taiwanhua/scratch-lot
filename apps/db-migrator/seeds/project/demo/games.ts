@@ -1,3 +1,8 @@
+import {
+  DEFAULT_TENANT_TIMEZONE,
+  addLocalCalendar,
+  toIso,
+} from "@repo/domain/form";
 import type { TagPaletteKey } from "@repo/domain/project/tag-palette";
 
 import type { OnboardingStep } from "../onboarding/context";
@@ -12,6 +17,11 @@ export interface DemoGame {
   /** 預設批購金額率(整數 %) */
   defaultRate: number;
   color: TagPaletteKey | null;
+  /**
+   * 兌獎截止日 = 跑示範指令當下往後幾個月(api 收斂成租戶時區那一天,並推算上市日 −9 個月、停售日 −3 個月);
+   * 9 = 今天上市(看板標【新】)。
+   */
+  claimDeadlineMonthsAhead: number;
 }
 
 /** 示範遊戲(檔案管理,規格 5.1):六種預設面額裡挑幾種,顏色從標籤色票選。 */
@@ -23,6 +33,7 @@ export const DEMO_GAMES: readonly DemoGame[] = [
     ticketsPerBook: 100,
     defaultRate: 92,
     color: "yellow",
+    claimDeadlineMonthsAhead: 9,
   },
   {
     gameCode: "5164",
@@ -31,6 +42,7 @@ export const DEMO_GAMES: readonly DemoGame[] = [
     ticketsPerBook: 100,
     defaultRate: 92,
     color: "red",
+    claimDeadlineMonthsAhead: 8,
   },
   {
     gameCode: "5198",
@@ -39,6 +51,7 @@ export const DEMO_GAMES: readonly DemoGame[] = [
     ticketsPerBook: 100,
     defaultRate: 92,
     color: "blue",
+    claimDeadlineMonthsAhead: 7,
   },
   {
     gameCode: "5150",
@@ -47,6 +60,7 @@ export const DEMO_GAMES: readonly DemoGame[] = [
     ticketsPerBook: 50,
     defaultRate: 92,
     color: "green",
+    claimDeadlineMonthsAhead: 6,
   },
   {
     gameCode: "5133",
@@ -55,6 +69,7 @@ export const DEMO_GAMES: readonly DemoGame[] = [
     ticketsPerBook: 25,
     defaultRate: 92,
     color: "purple",
+    claimDeadlineMonthsAhead: 5,
   },
 ];
 
@@ -97,7 +112,16 @@ export const demoGamesStep: OnboardingStep = {
         lines.push(`「${game.gameCode} ${game.name}」已存在`);
         continue;
       }
-      await client.request(CREATE_GAME, { input: { ...game } });
+      const { claimDeadlineMonthsAhead, ...input } = game;
+      const claimDeadline = toIso(
+        addLocalCalendar(
+          Date.now(),
+          claimDeadlineMonthsAhead,
+          "months",
+          DEFAULT_TENANT_TIMEZONE,
+        ),
+      );
+      await client.request(CREATE_GAME, { input: { ...input, claimDeadline } });
       lines.push(`建立「${game.gameCode} ${game.name}」`);
     }
     return lines;

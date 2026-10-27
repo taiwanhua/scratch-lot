@@ -34,8 +34,7 @@
       "maxLength": "Up to {max} characters",
       "positiveInteger": "Enter a whole number greater than 0",
       "integerRange": "Enter a whole number from {min} to {max}",
-      "order": "Enter a whole number of 0 or more",
-      "date": "Invalid date"
+      "order": "Enter a whole number of 0 or more"
     },
     "tabs": {
       "aria": "Master data tabs",
@@ -91,6 +90,7 @@
         "claimDeadline": "Claim deadline",
         "note": "Note"
       },
+      "derivedDateHint": "Calculated from the claim deadline",
       "colorHint": "Color (used on board cards; palette only)",
       "gameCodeHint": "4 digits",
       "nonStandard": "Non-standard: price {unitPrice} normally has {standard} tickets",

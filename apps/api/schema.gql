@@ -382,9 +382,7 @@ input CreateLotteryGameInput {
   claimDeadline: DateTime
   color: String
   defaultRate: Int!
-  discontinuedAt: DateTime
   gameCode: String!
-  launchedAt: DateTime
   name: String!
   note: String
   status: String
@@ -6312,10 +6310,8 @@ input UpdateLotteryGameInput {
   claimDeadline: DateTime
   color: String
   defaultRate: Int
-  discontinuedAt: DateTime
   gameCode: String
   id: ID!
-  launchedAt: DateTime
   name: String
   note: String
   status: String

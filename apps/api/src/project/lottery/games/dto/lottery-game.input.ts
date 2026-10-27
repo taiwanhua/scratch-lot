@@ -30,7 +30,8 @@ export class LotteryGamesInput {
 
 /**
  * 新增遊戲(`master-data.games.create`)。選填欄位缺席或 null = 不設定;`status` 缺席 = 販售中。
- * 整本金額不收,由 api 計算。
+ * 整本金額、上市日、停售日不收,由 api 計算(上市日 / 停售日由兌獎截止日推算)。
+ * `claimDeadline` 必填:宣告成 nullable 是為了缺值時回 `VALIDATION_FAILED`(欄位 `claimDeadline`)。
  */
 @InputType()
 export class CreateLotteryGameInput {
@@ -56,12 +57,6 @@ export class CreateLotteryGameInput {
   status?: string | null;
 
   @Field(() => GraphQLISODateTime, { nullable: true })
-  launchedAt?: Date | null;
-
-  @Field(() => GraphQLISODateTime, { nullable: true })
-  discontinuedAt?: Date | null;
-
-  @Field(() => GraphQLISODateTime, { nullable: true })
   claimDeadline?: Date | null;
 
   @Field(() => String, { nullable: true })
@@ -69,8 +64,9 @@ export class CreateLotteryGameInput {
 }
 
 /**
- * 編輯遊戲(`master-data.games.edit`)。**缺席 = 不動**;必填欄位不可送 null(送了視同缺席);
- * `color` / 三個日期 / `note` 送 null = 清空。有庫存後 `gameCode` / `unitPrice` / `ticketsPerBook`
+ * 編輯遊戲(`master-data.games.edit`)。**缺席 = 不動**;必填欄位(含 `claimDeadline`)不可送 null
+ * (送了視同缺席);`color` / `note` 送 null = 清空。改了兌獎截止日,api 重算上市日與停售日(兩者不收)。
+ * 有庫存後 `gameCode` / `unitPrice` / `ticketsPerBook`
  * 只能送原值(改了 → `VALIDATION_FAILED`,`reason = GAME_IN_USE`)。
  */
 @InputType()
@@ -98,12 +94,6 @@ export class UpdateLotteryGameInput {
 
   @Field(() => String, { nullable: true })
   status?: string | null;
-
-  @Field(() => GraphQLISODateTime, { nullable: true })
-  launchedAt?: Date | null;
-
-  @Field(() => GraphQLISODateTime, { nullable: true })
-  discontinuedAt?: Date | null;
 
   @Field(() => GraphQLISODateTime, { nullable: true })
   claimDeadline?: Date | null;

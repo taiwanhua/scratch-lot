@@ -44,7 +44,7 @@ query LotteryGame($id: ID!) {
   }
 }
 
-# CreateLotteryGameInput: { gameCode, name, unitPrice, ticketsPerBook, defaultRate, color?, status?, launchedAt?, discontinuedAt?, claimDeadline?, note? }
+# CreateLotteryGameInput: { gameCode, name, unitPrice, ticketsPerBook, defaultRate, claimDeadline, color?, status?, note? }(上市日 / 停售日由 api 依兌獎截止日推算)
 mutation CreateLotteryGame($input: CreateLotteryGameInput!) {
   createLotteryGame(input: $input) {
     item {

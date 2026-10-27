@@ -1,8 +1,16 @@
 import { HttpResponse } from "msw";
 
 import {
+  DEFAULT_TENANT_TIMEZONE,
+  localDateOf,
+  startOfLocalDay,
+  toInstant,
+  toIso,
+} from "@repo/domain/form";
+import {
   MASTER_DATA_PERMISSIONS as PERMISSIONS,
   bookPriceOf,
+  gameDatesOf,
 } from "@repo/domain/project/lottery-master-data";
 import {
   type CreateLotteryCashPointMutationVariables,
@@ -34,6 +42,7 @@ import {
  * 檔案管理(遊戲、收銀點)的假 api(夾具在 `master-data-fixtures.ts`;規則照 `docs/modules/project/master-data.md`):
  * 有狀態 —— 新增 / 編輯 / 刪除後重查看得到;遊戲代號重複 → `GAME_CODE_DUPLICATE`;
  * 有庫存(`inUse`)改鎖定欄位或刪除 → `GAME_IN_USE`;收銀點同分店同崗位 / 同名 → 對應原因。
+ * 遊戲的上市日 / 停售日同 api 由兌獎截止日推算(租戶時區用預設時區);新增缺兌獎截止日 → `VALIDATION_FAILED`。
  * `abilities` 由這裡依「給的權限」算好(api 的職責),元件只讀。
  * 元件測試與 mock 模式共用(`mock/project/mock-world.ts`)。
  */
@@ -57,6 +66,22 @@ export interface MasterDataWorld {
 
 const validation = (reason: string, fields: string[]) =>
   graphqlError("VALIDATION_FAILED", reason, { reason, fields });
+
+/** 兌獎截止日 → 三個日期(同 api `gameDateValuesOf`);不是時點 → null。 */
+const gameDateValuesOf = (claimDeadline: unknown) => {
+  const instant = toInstant(claimDeadline);
+  if (instant === null) {
+    return null;
+  }
+  const timezone = DEFAULT_TENANT_TIMEZONE;
+  const deadline = localDateOf(instant, timezone);
+  const { launchedAt, discontinuedAt } = gameDatesOf(deadline);
+  return {
+    claimDeadline: toIso(startOfLocalDay(deadline, timezone)),
+    launchedAt: toIso(startOfLocalDay(launchedAt, timezone)),
+    discontinuedAt: toIso(startOfLocalDay(discontinuedAt, timezone)),
+  };
+};
 
 export const masterDataWorld = ({
   games = sampleGames(),
@@ -124,6 +149,16 @@ export const masterDataWorld = ({
       if (gameState.some((row) => row.gameCode === input.gameCode)) {
         return validation("GAME_CODE_DUPLICATE", ["gameCode"]);
       }
+      const dates = gameDateValuesOf(input.claimDeadline);
+      if (dates === null) {
+        return graphqlError(
+          "VALIDATION_FAILED",
+          "lottery game input is invalid",
+          {
+            fields: ["claimDeadline"],
+          },
+        );
+      }
       const item = withGameAbilities(
         game({
           id: `g-new-${String(gameState.length)}`,
@@ -135,6 +170,7 @@ export const masterDataWorld = ({
           color: input.color ?? null,
           status: input.status ?? "on_sale",
           note: input.note ?? null,
+          ...dates,
         }),
       );
       gameState = [...gameState, item];
@@ -158,13 +194,7 @@ export const masterDataWorld = ({
       const changes: Omit<typeof input, "id"> & { id?: string } = { ...input };
       delete changes.id;
       // 必填欄位送 null 視同缺席(GQL-06);選填欄位 null = 清空
-      const nullable = new Set([
-        "color",
-        "note",
-        "launchedAt",
-        "discontinuedAt",
-        "claimDeadline",
-      ]);
+      const nullable = new Set(["color", "note"]);
       const merged = {
         ...current,
         ...Object.fromEntries(
@@ -175,6 +205,9 @@ export const masterDataWorld = ({
       } as LotteryGameFieldsFragment;
       const item = withGameAbilities({
         ...merged,
+        ...(input.claimDeadline == null
+          ? {}
+          : gameDateValuesOf(input.claimDeadline)),
         bookPrice: bookPriceOf(merged.unitPrice, merged.ticketsPerBook),
       });
       gameState = gameState.map((row) => (row.id === item.id ? item : row));

@@ -7,7 +7,7 @@ const GENERIC = "有欄位不正確,請檢查標示的欄位";
 
 /** REACT-18:檔案管理的遊戲頁與收銀點對話框,欄位錯了原因寫在欄位正下方,提示只放通用句。 */
 describe("檔案管理:欄位下寫原因", () => {
-  it("新增遊戲:沒填就送出 → 代號、名稱、預設批購金額率各自寫格式要求", async () => {
+  it("新增遊戲:沒填就送出 → 代號、名稱、預設批購金額率、兌獎截止日各自寫格式要求", async () => {
     const { user } = renderMasterData({
       path: "/master-data/game-create-page",
     });
@@ -21,6 +21,12 @@ describe("檔案管理:欄位下寫原因", () => {
     expect(
       screen.getByRole("textbox", { name: /預設批購金額率/ }),
     ).toHaveAccessibleDescription("要填 0–100 的整數");
+    const claimDeadline = screen
+      .getByRole("group", { name: /兌獎截止日/ })
+      .closest(".MuiFormControl-root");
+    expect(
+      within(claimDeadline as HTMLElement).getByText("必填"),
+    ).toBeInTheDocument();
   });
 
   it("新增遊戲:代號重複(api 帶 reason)→ 代號欄下寫原因,頁面提示只放通用句", async () => {
@@ -35,6 +41,13 @@ describe("檔案管理:欄位下寫原因", () => {
       screen.getByRole("textbox", { name: /預設批購金額率/ }),
       "90",
     );
+    await user.click(
+      within(screen.getByRole("group", { name: /兌獎截止日/ })).getByRole(
+        "spinbutton",
+        { name: "Year" },
+      ),
+    );
+    await user.keyboard("20270701");
     await user.click(screen.getByRole("button", { name: "儲存" }));
 
     expect(await screen.findByText("遊戲代號已被使用")).toBeInTheDocument();

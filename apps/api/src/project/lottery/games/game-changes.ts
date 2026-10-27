@@ -70,14 +70,9 @@ export function requestedGameValues(
   if (input.note !== undefined) {
     next.note = checkNote(input.note, errors);
   }
-  for (const key of [
-    "launchedAt",
-    "discontinuedAt",
-    "claimDeadline",
-  ] as const) {
-    if (input[key] !== undefined) {
-      next[key] = input[key];
-    }
+  // 兌獎截止日必填:null 視同缺席;上市日 / 停售日由呼叫端依它推算後補進來
+  if (input.claimDeadline != null) {
+    next.claimDeadline = input.claimDeadline;
   }
   return next;
 }

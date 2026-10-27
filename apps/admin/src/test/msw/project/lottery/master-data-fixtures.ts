@@ -39,9 +39,10 @@ export const game = (
     defaultRate: 92,
     color: null,
     status: "on_sale",
+    // 兌獎截止日 2027-07-01(租戶時區)→ 上市 2026-10-01、停售 2027-04-01(api 推算)
     launchedAt: "2026-09-30T16:00:00.000Z",
-    discontinuedAt: null,
-    claimDeadline: null,
+    discontinuedAt: "2027-03-31T16:00:00.000Z",
+    claimDeadline: "2027-06-30T16:00:00.000Z",
     note: null,
     inUse: false,
     createdAt: now,

@@ -85,6 +85,7 @@ export const GameForm = ({ game, access }: GameFormProps) => {
         >
           <GameInfoFields
             values={form.values}
+            derivedDates={form.derivedDates}
             change={form.change}
             fieldErrors={form.fieldErrors}
             isLocked={isLocked}

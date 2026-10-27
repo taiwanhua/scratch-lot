@@ -66,15 +66,15 @@ export class LotteryGame {
   })
   status!: GameStatus;
 
-  /** 上市日(時點;admin 以租戶時區的當天 00:00 送)。 */
+  /** 上市日(時點 = 租戶時區那一天 00:00):api 由兌獎截止日推算(− 9 個月)後存;驅動【新】標記。 */
   @Prop({ type: Date, default: null })
   launchedAt!: Date | null;
 
-  /** 停售日。 */
+  /** 停售日:api 由兌獎截止日推算(− 3 個月)後存;只是記錄,不自動改狀態。 */
   @Prop({ type: Date, default: null })
   discontinuedAt!: Date | null;
 
-  /** 兌獎截止日。 */
+  /** 兌獎截止日(新增 / 編輯必填;時點 = 租戶時區那一天 00:00)。舊資料可能是 null(不寫遷移)。 */
   @Prop({ type: Date, default: null })
   claimDeadline!: Date | null;
 

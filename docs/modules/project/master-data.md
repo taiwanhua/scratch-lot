@@ -56,18 +56,19 @@
 
 **`lottery_games`**(模組資料,`moduleKey = master-data`):
 
-| 欄位                                              | 規則                                                                                                                            |
-| ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| `gameCode`                                        | `^\d{4}$`;**租戶內唯一**(service 先查;部分唯一索引 `(tenantId, gameCode)` 只算未刪除的,同時送出撞索引回同一個錯誤);有庫存後鎖定 |
-| `name`                                            | 必填,30 字內                                                                                                                    |
-| `unitPrice`                                       | 正整數;預設面額 100 / 200 / 300 / 500 / 1,000 / 2,000,也可自填;有庫存後鎖定                                                     |
-| `ticketsPerBook`                                  | 1–999;選預設面額自動帶入 100 / 100 / 100 / 50 / 25 / 18(對照表 `denominations.ts`,只有一份);非標準只提示                        |
-| `bookPrice`                                       | `unitPrice × ticketsPerBook`,api 計算後存(input 不收)                                                                           |
-| `defaultRate`                                     | 整數 0–100(%)                                                                                                                   |
-| `color`                                           | 標籤色票代號(`@repo/domain/project/tag-palette`)或 null                                                                         |
-| `status`                                          | `on_sale`(預設)/ `discontinued`                                                                                                 |
-| `launchedAt` / `discontinuedAt` / `claimDeadline` | 時點或 null(admin 以租戶時區的當天 00:00 送)                                                                                    |
-| `note`                                            | 1000 字內                                                                                                                       |
+| 欄位                            | 規則                                                                                                                                                                                                                                |
+| ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `gameCode`                      | `^\d{4}$`;**租戶內唯一**(service 先查;部分唯一索引 `(tenantId, gameCode)` 只算未刪除的,同時送出撞索引回同一個錯誤);有庫存後鎖定                                                                                                     |
+| `name`                          | 必填,30 字內                                                                                                                                                                                                                        |
+| `unitPrice`                     | 正整數;預設面額 100 / 200 / 300 / 500 / 1,000 / 2,000,也可自填;有庫存後鎖定                                                                                                                                                         |
+| `ticketsPerBook`                | 1–999;選預設面額自動帶入 100 / 100 / 100 / 50 / 25 / 18(對照表 `denominations.ts`,只有一份);非標準只提示                                                                                                                            |
+| `bookPrice`                     | `unitPrice × ticketsPerBook`,api 計算後存(input 不收)                                                                                                                                                                               |
+| `defaultRate`                   | 整數 0–100(%)                                                                                                                                                                                                                       |
+| `color`                         | 標籤色票代號(`@repo/domain/project/tag-palette`)或 null                                                                                                                                                                             |
+| `status`                        | `on_sale`(預設)/ `discontinued`                                                                                                                                                                                                     |
+| `claimDeadline`                 | **必填**;時點(admin 以租戶時區的當天 00:00 送,api 也收斂成租戶時區那一天 00:00);缺 → `VALIDATION_FAILED`(`claimDeadline`)                                                                                                           |
+| `launchedAt` / `discontinuedAt` | api 存檔時由兌獎截止日推算後存(input 不收):上市日 = −9 個月、停售日 = −3 個月,目標月份沒有那一天取月底(`gameDatesOf`,`@repo/domain/project/lottery-master-data`;以租戶時區的日曆日算)。停售日只是記錄,不改狀態;上市日驅動看板【新】 |
+| `note`                          | 1000 字內                                                                                                                                                                                                                           |
 
 - **遊戲是租戶共用的主檔**:資料共用宣告「可共用、預設全部分店、清單固定」(ADR-0014)—— 建立歸**當前組織**,`shareOrgs` 一律是 `[{ 最上層組織, 含下層 }]`,整個租戶的分店都看得到(含 lookup);修改 / 刪除只限歸屬組織在自己可見範圍內的(共用進來的 `abilities` 都是 false,寫入 `NOT_FOUND`)。代號整個租戶唯一以 `existsInTenant` 檢查(含看不到的分店建的);查詢另釘當前組織的租戶(`lottery/master-data-tenant.ts` 由 `memberTenants` 算,不讀資料庫)。
 - 刪除是軟刪除(ADR-0007)。
@@ -140,8 +141,8 @@ registerGameUsageChecker(name, (tenantId, gameId) => Promise<boolean>): () => vo
 
 **缺席與 null**(GQL-06):
 
-- `updateLotteryGame`:缺席 = 不動;必填欄位(`gameCode` / `name` / `unitPrice` / `ticketsPerBook` / `defaultRate` / `status`)送 null 視同缺席;`color` / `launchedAt` / `discontinuedAt` / `claimDeadline` / `note` 送 null = 清空(`$set: null`)。
-- `createLotteryGame`:選填欄位缺席或 null = 不設定(null)。
+- `updateLotteryGame`:缺席 = 不動;必填欄位(`gameCode` / `name` / `unitPrice` / `ticketsPerBook` / `defaultRate` / `status` / `claimDeadline`)送 null 視同缺席;`color` / `note` 送 null = 清空(`$set: null`)。改了 `claimDeadline` → 一併重算 `launchedAt` / `discontinuedAt`;遊戲還沒有兌獎截止日(舊資料)又沒送 → `VALIDATION_FAILED`(`claimDeadline`)。
+- `createLotteryGame`:`claimDeadline` 缺席或 null → `VALIDATION_FAILED`(`claimDeadline`);選填欄位缺席或 null = 不設定(null)。
 - `updateLotteryCashPoint`:缺席 = 不動;`positionKey` / `name` / `order` / `enabled` 送 null 視同缺席;`printerId` / `note` 送 null = 清空(印表機改回用分店預設)。分店不能改(沒有這個欄位)。
 - `createLotteryCashPoint`:`order` 缺席 = 0;`printerId` / `note` 缺席或 null = 不設定。
 
