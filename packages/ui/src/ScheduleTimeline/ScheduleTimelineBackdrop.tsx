@@ -61,6 +61,7 @@ export const ScheduleTimelineBackdrop = ({
                 selected: undefined,
                 date,
                 range: { start: hour * 60, end: (hour + 1) * 60 },
+                timezone: actions.timezone,
                 onActivate: onEmptyClick,
               });
               return (

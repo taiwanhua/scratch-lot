@@ -226,3 +226,19 @@ describe("印表機管理:側欄", () => {
     expect(positions.toSorted((a, b) => a - b)).toEqual(positions);
   });
 });
+
+describe("印表機管理:時間以租戶時區顯示", () => {
+  it("列印紀錄的時間換成租戶時區(Asia/Taipei),不是 UTC", async () => {
+    const { user } = renderPrinters();
+
+    await user.click(await screen.findByRole("tab", { name: "列印紀錄" }));
+    const jobs = await screen.findByRole("table", { name: "列印紀錄" });
+    // 13:58Z = 台北 21:58
+    expect(
+      await within(jobs).findByText("2026-10-16 21:58"),
+    ).toBeInTheDocument();
+    expect(
+      within(jobs).queryByText("2026-10-16 13:58"),
+    ).not.toBeInTheDocument();
+  });
+});

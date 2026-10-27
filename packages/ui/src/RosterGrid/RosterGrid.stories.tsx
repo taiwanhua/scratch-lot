@@ -26,7 +26,7 @@ const personColumn: DataTableColumn<DemoStaff> = {
   render: ({ row }) => (
     <Box>
       <Typography variant="subtitle2">{row.name}</Typography>
-      <Typography variant="caption" color="text.secondary">
+      <Typography variant="caption" color="textSecondary">
         {row.role}
       </Typography>
     </Box>
@@ -170,7 +170,7 @@ const ControlledRoster = ({
             : undefined
         }
       />
-      <Typography variant="caption" color="text.secondary">
+      <Typography variant="caption" color="textSecondary">
         selected = {JSON.stringify(selected)} {lastAction}
       </Typography>
     </Box>

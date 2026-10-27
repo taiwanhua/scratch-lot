@@ -1,10 +1,12 @@
 import { randomBytes } from "node:crypto";
 
 import { Injectable, Logger } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
 import { hash } from "@node-rs/argon2";
 import { type ClientSession, Types } from "mongoose";
 
 import { AuditService } from "../audit/audit.service";
+import { assertPasswordRule } from "../auth/password/password-error";
 import { PasswordService } from "../auth/password/password.service";
 import type { Persisted } from "../database/base.repository";
 import {
@@ -16,6 +18,7 @@ import {
   RolesRepository,
   UsersRepository,
 } from "../database/database.module";
+import { MONGODB_URI_ENV, requireMongoDbUri } from "../database/mongodb-uri";
 import type { OperatorContext } from "../database/operator-context";
 import {
   type RelationLink,
@@ -30,6 +33,7 @@ import type { TransferOrgOwnerInput } from "./dto/transfer-org-owner.input";
 import type { Org } from "./models/org.model";
 import type {
   ModuleOption,
+  ProvisionTarget,
   ProvisionTenantPayload,
   RevokeTenantProvisionPayload,
 } from "./models/tenant-ops.model";
@@ -46,6 +50,7 @@ import {
   TEMPLATE_KEY_SETTING,
   TENANT_ADMIN_ROLE_KEY,
 } from "./owner-protection.service";
+import { findTenantAdminCopy } from "./tenant-admin-copy";
 
 type ModuleRecord = Persisted<ModuleDocument>;
 type RoleRecord = Persisted<RoleDocument>;
@@ -91,6 +96,32 @@ function ownedLogoPath(value: string | null | undefined): string | undefined {
     );
   }
   return trimmed;
+}
+
+/**
+ * 示範機構的開通參數(`demo` + `adminInitialPassword`,兩者成對):一般租戶回 null。
+ * 只給密碼不給 `demo`、或 `demo` 卻沒給密碼 → `VALIDATION_FAILED`;密碼規則同 `createUser`。
+ */
+function demoProvisionOf(
+  input: ProvisionTenantInput,
+): { adminPassword: string } | null {
+  const password = input.adminInitialPassword ?? "";
+  if (input.demo !== true) {
+    if (password !== "") {
+      throw validationError(
+        "adminInitialPassword is only accepted when provisioning a demo org",
+        ["adminInitialPassword"],
+      );
+    }
+    return null;
+  }
+  if (password === "") {
+    throw validationError("A demo org requires adminInitialPassword", [
+      "adminInitialPassword",
+    ]);
+  }
+  assertPasswordRule(password);
+  return { adminPassword: password };
 }
 
 /** 模組文件 → 勾選選項;上層不在選項內時 `parentId` 為 null(該節點自成一棵根)。 */
@@ -185,7 +216,21 @@ export class TenantOpsService {
     private readonly ownerProtection: OwnerProtectionService,
     private readonly orgsService: OrgsService,
     private readonly transactions: TransactionService,
+    private readonly config: ConfigService,
   ) {}
+
+  /**
+   * 開通的寫入目標:這個 api 連到的資料庫名(取自連線字串的路徑,與 db-migrator 取資料庫名同一個規則)。
+   * 只給根組織:demo 指令以它比對確認字串,讓確認字串綁到實際寫入的資料庫。不回連線字串的其他部分。
+   */
+  async provisionTarget(operator: OperatorContext): Promise<ProvisionTarget> {
+    await this.assertRootOperator(operator, "provisionTarget");
+    const uri = requireMongoDbUri(this.config.get<string>(MONGODB_URI_ENV));
+    const databaseName = decodeURIComponent(
+      new URL(uri).pathname.replace(/^\//, ""),
+    );
+    return { databaseName };
+  }
 
   /**
    * 開通彈窗的模組勾選清單 = 租戶管理員模板綁的模組(`tenant-ops.model.ts` 說明判準),
@@ -205,6 +250,9 @@ export class TenantOpsService {
    * 稽核一起提交;任一步失敗全部回復,不留任何東西,同一組帳號可以直接重新開通。
    * 啟用信是外部副作用,排在交易成功之後(`afterCommit`):寄不出去只記 log、開通照樣成立,
    * 首任管理員以「忘記密碼」自助取得設定連結(與啟用逾期同一條路,ADR-0009「Token 效期」)。
+   *
+   * **示範機構**(`demo: true`,只有示範指令會送):組織加 `isDemo` 標記;首任管理員用 `adminInitialPassword`
+   * (只存雜湊)、首登不強改、不寄啟用信 —— 示範指令接著就以這位管理員登入跑開通腳本。
    */
   async provision(
     operator: OperatorContext,
@@ -216,6 +264,7 @@ export class TenantOpsService {
     const account = requireText(input.adminAccount, "adminAccount");
     const email = requireText(input.adminEmail, "adminEmail");
     const logoPath = ownedLogoPath(input.logoPath);
+    const demo = demoProvisionOf(input);
     await assertSlugFree(this.orgs, operator, slug);
     await this.assertAccountAndEmailFree(operator, account, email);
 
@@ -230,8 +279,11 @@ export class TenantOpsService {
       selected,
     );
     const rootOrg = await this.rootOrg(operator);
-    // 不設可用密碼(隨機值雜湊,驗不過),由啟用信自行設定;雜湊在交易外先算好,交易只做寫入
-    const passwordHash = await hash(randomBytes(32).toString("hex"));
+    // 一般租戶不設可用密碼(隨機值雜湊,驗不過),由啟用信自行設定;示範機構用示範指令給的密碼。
+    // 雜湊在交易外先算好,交易只做寫入
+    const passwordHash = await hash(
+      demo === null ? randomBytes(32).toString("hex") : demo.adminPassword,
+    );
     const mail = { sent: false };
 
     try {
@@ -249,6 +301,7 @@ export class TenantOpsService {
               isSystem: false,
               settings: {},
               ...(logoPath === undefined ? {} : { logoPath }),
+              ...(demo === null ? {} : { isDemo: true }),
             },
             { session },
           );
@@ -320,12 +373,18 @@ export class TenantOpsService {
               roleId: String(role._id),
               moduleKeys: selected.map((module) => module.key),
               ...(logoPath === undefined ? {} : { logoPath }),
+              // 示範機構只記標記;密碼不進稽核
+              ...(demo === null ? {} : { isDemo: true }),
             },
           });
 
           // 5. 啟用信(7 天;逾期走忘記密碼自助,不重寄):交易成功之後才寄
-          // 寄不出去只記 log、開通照樣成立;回傳 `activationMailSent: false` 讓畫面提示走「忘記密碼」
+          // 寄不出去只記 log、開通照樣成立;回傳 `activationMailSent: false` 讓畫面提示走「忘記密碼」。
+          // 示範機構的首任管理員已有密碼,不寄
           afterCommit(async () => {
+            if (demo !== null) {
+              return;
+            }
             try {
               await this.passwords.sendActivationEmail(user._id);
               mail.sent = true;
@@ -621,29 +680,15 @@ export class TenantOpsService {
     }
   }
 
-  /**
-   * 這個租戶頂層底下的「租戶管理員副本」(`org_role` 擁有、`settings.templateKey` 標記;
-   * 判準與擁有者保護同一條,ADR-0009 第 2 步)。找不到副本回 null —
-   * 撤銷照樣走得下去,只是少抹一樣(該租戶的副本可能早被刪掉)。
-   *
-   * 副本不只一份時取第一份:多出來的那幾份不在豁免名單內,前置檢查會以 `OWNS_ROLES` 擋下,
-   * 不會被悄悄留下成為孤兒。
-   */
-  private async tenantAdminCopyOf(
+  /** 這個租戶頂層底下的「租戶管理員副本」(`findTenantAdminCopy`);找不到回 null,撤銷照樣走得下去,只是少抹一樣。 */
+  private tenantAdminCopyOf(
     operator: OperatorContext,
     org: OrgRecord,
   ): Promise<RoleRecord | null> {
-    const ownedRoleIds = await this.relations.listRoleIdsOfOrg(org._id);
-    if (ownedRoleIds.length === 0) {
-      return null;
-    }
-    const owned = await this.roles.findMany(operator, {
-      _id: { $in: ownedRoleIds },
-    });
-    return (
-      owned.find(
-        (role) => role.settings[TEMPLATE_KEY_SETTING] === TENANT_ADMIN_ROLE_KEY,
-      ) ?? null
+    return findTenantAdminCopy(
+      { relations: this.relations, roles: this.roles },
+      operator,
+      org._id,
     );
   }
 

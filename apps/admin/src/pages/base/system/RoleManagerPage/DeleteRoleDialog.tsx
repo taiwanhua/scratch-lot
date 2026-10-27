@@ -6,9 +6,11 @@ import { Dialog } from "@repo/ui/dialog";
 import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
 
+import { RoleReferenceLine } from "./RoleReferenceLine";
 import type {
   RoleManagerErrorCode,
   RoleNotDeletableReason,
+  RoleReference,
 } from "./role-manager-error";
 import type { RoleRow } from "./role-manager-types";
 
@@ -18,19 +20,23 @@ export interface DeleteRoleDialogProps {
   errorCode: RoleManagerErrorCode | null;
   /** `ROLE_NOT_DELETABLE` 時 api 逐項回報為什麼不能刪 */
   reasons: readonly RoleNotDeletableReason[];
+  /** `REFERENCED_BY_AUDIENCE` 時 api 帶回的引用處,列在該原因底下 */
+  references: readonly RoleReference[];
   onCancel: () => void;
   onConfirm: () => void;
 }
 
 /**
- * 刪除確認(Figma 57:720)。三個前置檢查(無授予 / 非種子角色 / 非租戶副本)在 api,
- * 前端不預判 — 送出後收到 `ROLE_NOT_DELETABLE` 才把 `reasons` 攤成清單並提示改用停用。
+ * 刪除確認(Figma 57:720)。四個前置檢查(無授予 / 非種子角色 / 非租戶副本 / 沒被人員條件引用)在 api,
+ * 前端不預判 — 送出後收到 `ROLE_NOT_DELETABLE` 才把 `reasons` 攤成清單並提示改用停用;
+ * 被人員條件引用時,引用處(`references`)逐項列在那個原因底下,每一項說明為什麼與怎麼處置。
  */
 export const DeleteRoleDialog = ({
   role,
   isSubmitting,
   errorCode,
   reasons,
+  references,
   onCancel,
   onConfirm,
 }: DeleteRoleDialogProps) => {
@@ -67,6 +73,24 @@ export const DeleteRoleDialog = ({
               {reasons.map((reason) => (
                 <Typography key={reason} component="li" variant="body2">
                   {t(`reasons.${reason}`)}
+                  {reason === "REFERENCED_BY_AUDIENCE" &&
+                    references.length > 0 && (
+                      <Stack
+                        component="ul"
+                        spacing={0.25}
+                        sx={{ mt: 0.5, mb: 0, pl: 2.5 }}
+                      >
+                        {references.map((reference) => (
+                          <Typography
+                            key={`${reference.kind}:${reference.name}:${reference.stepName ?? ""}:${reference.source ?? ""}`}
+                            component="li"
+                            variant="body2"
+                          >
+                            <RoleReferenceLine reference={reference} />
+                          </Typography>
+                        ))}
+                      </Stack>
+                    )}
                 </Typography>
               ))}
             </Stack>

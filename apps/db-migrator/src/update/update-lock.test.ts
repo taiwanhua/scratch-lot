@@ -14,6 +14,7 @@ import {
   collectionNames,
   journalOf,
   lockOf,
+  migrationFileNames,
   runUpdate,
   runUpdateWithFault,
   startEntry,
@@ -21,13 +22,15 @@ import {
 
 /**
  * 整批互斥與 down 的保護(`docs/deployment.md`「設定與資料更新」),
- * 以正式來源(九支歷史 migration 與正式 registry)對真的拋棄式 MongoDB。
+ * 以正式來源(全部 migration 與正式 registry)對真的拋棄式 MongoDB。
  */
 
 const FIRST = "20260913120000_schema_changelog-filename-unique-index.js";
 const SECOND = "20260925120000_data_module-data-fields.js";
-const LAST = "20260929120000_data_data-scope-date-instants.js";
-const MIGRATION_COUNT = 9;
+/** 最後一支(含 base/、project/ 子目錄;down 一次退的就是它)。 */
+const MIGRATIONS = migrationFileNames();
+const LAST = MIGRATIONS.at(-1) ?? "";
+const MIGRATION_COUNT = MIGRATIONS.length;
 
 const mongo = new TestMongo("db-migrator-lock");
 

@@ -5,10 +5,11 @@ import {
   type PrintAgentPrinter,
   type PrintAgentResultRequest,
   type PrinterStatus,
+  readPngCutRows,
 } from "@repo/domain/printing";
 
 import type { AgentApi } from "../api-client/api-client";
-import { buildPrintCommands } from "../escpos/commands";
+import { BAND_ROWS, buildPrintCommands } from "../escpos/commands";
 import { decodePrintImage } from "../escpos/png";
 import { JOB_TIMEOUT_MS } from "../escpos/tcp-printer";
 import type { PrintOutcome, PrinterTransport } from "../escpos/transport";
@@ -166,7 +167,12 @@ export class JobRunner {
     let chunks: Uint8Array[];
     try {
       const maxWidth = PRINT_IMAGE_WIDTH_DOTS[printer.paperWidth];
-      chunks = buildPrintCommands(decodePrintImage(image, maxWidth));
+      // 中段切紙位置(例:一次印兩聯)跟著圖片來;舊版瀏覽器端沒寫就只在最後切
+      chunks = buildPrintCommands(
+        decodePrintImage(image, maxWidth),
+        BAND_ROWS,
+        readPngCutRows(image),
+      );
     } catch (error) {
       return { ok: false, error: "other", detail: errorText(error) };
     }

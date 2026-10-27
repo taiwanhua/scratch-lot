@@ -1,9 +1,15 @@
 import { Injectable } from "@nestjs/common";
+import type { Types } from "mongoose";
 
+import {
+  type AudienceReference,
+  AudienceReferencesService,
+} from "../audience/audience-references.service";
 import { AuditService } from "../audit/audit.service";
-import { RolesRepository } from "../database/database.module";
+import { OrgsRepository, RolesRepository } from "../database/database.module";
 import type { OperatorContext } from "../database/operator-context";
 import { RelationService } from "../database/relation.service";
+import { tenantIdOfOrg } from "../database/tenant-id";
 import type { DeletePayload } from "../orgs/models/org-payloads.model";
 import type { CreateRoleInput } from "./dto/create-role.input";
 import type { DeleteRoleInput } from "./dto/delete-role.input";
@@ -72,6 +78,8 @@ export class RolesService {
     private readonly relations: RelationService,
     private readonly audit: AuditService,
     private readonly scope: RoleScopeService,
+    private readonly orgs: OrgsRepository,
+    private readonly audienceReferences: AudienceReferencesService,
   ) {}
 
   // ---- 讀 ----
@@ -266,7 +274,7 @@ export class RolesService {
   }
 
   /**
-   * 刪除:前置三項(無授予 / 非種子角色 / 非租戶副本)全過才可;
+   * 刪除:前置四項(無授予 / 非種子角色 / 非租戶副本 / 沒被人員條件引用)全過才可;
    * 任一不過回 `ROLE_NOT_DELETABLE` 附 reasons,前端提示改用停用。刪除 = 軟刪除(ADR-0007)。
    *
    * 軟刪除只動 `roles` 文件:`org_role` / `role_module` / `role_permission` 留著 —
@@ -278,9 +286,12 @@ export class RolesService {
     input: DeleteRoleInput,
   ): Promise<DeletePayload> {
     const role = await this.scope.loadManagedRole(operator, input.id);
-    const reasons = await this.notDeletableReasons(role);
+    const { reasons, references } = await this.notDeletableReasons(
+      operator,
+      role,
+    );
     if (reasons.length > 0) {
-      throw roleNotDeletableError(reasons);
+      throw roleNotDeletableError(reasons, references);
     }
     await this.roles.softDeleteById(operator, role._id);
     await this.audit.record(operator, {
@@ -294,8 +305,12 @@ export class RolesService {
 
   /** 刪除前置(role-manager.md 權限表「刪除」);逐項列出,前端一次顯示全部。 */
   private async notDeletableReasons(
+    operator: OperatorContext,
     role: RoleRecord,
-  ): Promise<RoleNotDeletableReason[]> {
+  ): Promise<{
+    reasons: RoleNotDeletableReason[];
+    references: AudienceReference[];
+  }> {
     const reasons: RoleNotDeletableReason[] = [];
     const grantedUserIds = await this.relations.listUserIdsOfRole(role._id);
     if (grantedUserIds.length > 0) {
@@ -307,7 +322,35 @@ export class RolesService {
     if (isTemplateCopy(role)) {
       reasons.push("TEMPLATE_COPY");
     }
-    return reasons;
+    const references = await this.audienceReferences.referencesToRole(
+      await this.tenantIdOfRole(operator, role),
+      role._id,
+    );
+    if (references.length > 0) {
+      reasons.push("REFERENCED_BY_AUDIENCE");
+    }
+    return { reasons, references };
+  }
+
+  /**
+   * 角色所屬的租戶 = 擁有組織所屬的租戶(根組織的角色 = `null`)。找不到擁有組織是資料損毀
+   * (`loadManagedRole` 已先擋過),直接丟錯,不退成根組織 —— 退了會少掃租戶的引用。
+   */
+  private async tenantIdOfRole(
+    operator: OperatorContext,
+    role: RoleRecord,
+  ): Promise<Types.ObjectId | null> {
+    const ownerOrgId = await this.scope.ownerOrgIdOf(role);
+    const org =
+      ownerOrgId === null
+        ? null
+        : await this.orgs.findById(operator, ownerOrgId);
+    if (org === null) {
+      throw new Error(
+        `Role ${String(role._id)} has no owner org; cannot resolve its tenant`,
+      );
+    }
+    return tenantIdOfOrg({ _id: org._id, ancestors: org.ancestors });
   }
 
   /**

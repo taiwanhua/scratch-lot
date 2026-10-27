@@ -19,6 +19,7 @@ import {
 import { useCapacityErrorSnackbar } from "./useCapacityErrorSnackbar";
 import { useFormSubmissionCache } from "./useFormSubmissionCache";
 import { useSession } from "./useSession";
+import { useWorkflowExtensions } from "./useWorkflowExtensions";
 
 /**
  * 以草稿方式存(`saveFormDraft`)的三種狀態:草稿,以及被退回 / 撤回後申請人改內容再送
@@ -71,6 +72,7 @@ export const useFormSubmission = (
   const [error, setError] = useState<FormError | null>(null);
   const [isPending, setIsPending] = useState(false);
   const announceCapacity = useCapacityErrorSnackbar();
+  const { notify } = useWorkflowExtensions();
 
   const query = useFormSubmissionQuery(
     session.client,
@@ -158,6 +160,13 @@ export const useFormSubmission = (
       });
       const submitted = payload.submitFormSubmission.submission;
       updateCache(submitted);
+      // 送出成功:通知該模組登記的送出後動作(引擎編輯頁重新送出也算;`useWorkflowExtensions`)
+      notify({
+        kind: "submitted",
+        moduleKey: submitted.moduleKey,
+        submissionId: submitted.id,
+        instanceId: submitted.currentInstanceId ?? null,
+      });
       return submitted;
     });
 

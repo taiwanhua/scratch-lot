@@ -379,6 +379,7 @@ class ResetRun {
 function emptyDatabasePlan(sources: UpdateSources): UpdatePlan {
   return buildUpdatePlan({
     current: sources.registry,
+    lookupProviders: sources.lookupProviders,
     snapshots: sources.snapshots,
     migrations: sources.migrations,
     applied: [],
@@ -462,6 +463,7 @@ export async function runResetCommand(
   const sources = await loadUpdateSources(args.sourceRoot, args.registryPath);
   prepareSeedRun(sources.registry, {
     env,
+    lookupProviders: sources.lookupProviders,
     definitionHandler: () => Promise.resolve([]),
   });
   const { account } = readRootAdminInput(env);

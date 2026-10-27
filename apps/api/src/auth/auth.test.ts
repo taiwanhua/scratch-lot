@@ -712,6 +712,8 @@ describe("登入線1:login / refresh / logout / switchOrg / me(GraphQL 端點,�
         // 資料範圍規則的比對來源(ADR-0008):所屬組織是 org_user 的直接關聯
         memberOrgIds: [rootOrgId],
         roleIds: [],
+        // 資料共用的比對來源(ADR-0014):根組織沒有上層、不屬於任何租戶
+        memberTenants: [],
       });
 
       const asTenant = await service.resolve(tenantMember, null);
@@ -733,6 +735,27 @@ describe("登入線1:login / refresh / logout / switchOrg / me(GraphQL 端點,�
       expect(visible).not.toContain(String(subtreeTenant));
       // 管理範圍由角色決定,與所屬組織無關:這個人沒有角色 → 空
       expect(asTenant.operator.managedOrgIds).toEqual([]);
+      // 資料共用(ADR-0014):所屬組織依租戶分組,各帶上層鏈(去掉根組織、不含自己),不隨可見性開關展開
+      const tenants = asTenant.operator.memberTenants.map((tenant) => ({
+        tenantId: String(tenant.tenantId),
+        memberOrgIds: tenant.memberOrgIds.map(String),
+        ancestorOrgIds: tenant.ancestorOrgIds.map(String),
+      }));
+      expect(tenants).toHaveLength(2);
+      expect(tenants).toEqual(
+        expect.arrayContaining([
+          {
+            tenantId: String(ownTenant),
+            memberOrgIds: [String(ownTenant)],
+            ancestorOrgIds: [],
+          },
+          {
+            tenantId: String(subtreeTenant),
+            memberOrgIds: [String(subtreeChild)],
+            ancestorOrgIds: [String(subtreeTenant)],
+          },
+        ]),
+      );
     });
 
     it("管理範圍:持有的啟用中角色之擁有組織子樹的聯集;與所屬組織、可見性開關都無關(ADR-0003)", async () => {

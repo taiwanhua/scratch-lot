@@ -17,6 +17,16 @@ describe("信號只有類型與編號", () => {
     expect(isRealtimeSignal({ type: "badge:orders", id: "o1" })).toBe(true);
   });
 
+  it("類型的子類型可以是以 . 分段的模組 key(`badge:<模組 key>`)", () => {
+    expect(isRealtimeSignal({ type: "badge:group.module" })).toBe(true);
+    expect(isRealtimeSignal({ type: "badge:a.b-c.d_e" })).toBe(true);
+    expect(isRealtimeSignal({ type: "badge:.module" })).toBe(false);
+    expect(isRealtimeSignal({ type: "badge:group." })).toBe(false);
+    expect(isRealtimeSignal({ type: "badge:group..module" })).toBe(false);
+    expect(isRealtimeSignal({ type: "badge.group" })).toBe(false);
+    expect(isRealtimeSignal({ type: "badge:group:module" })).toBe(false);
+  });
+
   it("夾帶任何其他欄位(資料)→ 不是信號", () => {
     expect(
       isRealtimeSignal({ type: "badge:apply-center", data: { count: 3 } }),

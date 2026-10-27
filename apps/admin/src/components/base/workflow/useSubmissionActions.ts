@@ -16,13 +16,19 @@ import { workflowErrorOf } from "@/lib/base/workflow/workflow-errors";
 
 import { useWorkflowCache } from "./useWorkflowCache";
 
+/** 作廢原因:表單設了作廢原因類別時 `reasonKey` = 選的選項值,否則 null(`reasonNote` = 自由文字理由)。 */
+export interface VoidReasonChoice {
+  reasonKey: string | null;
+  reasonNote: string;
+}
+
 export interface SubmissionActions {
   /** 撤回(申請人、還沒有任何被接受的審核意見);成功回 true */
   withdraw: (submission: FormSubmissionFieldsFragment) => Promise<boolean>;
-  /** 作廢(綁流程且已核准;理由必填、不需審核) */
+  /** 作廢(綁流程且已核准;原因必填、不需審核) */
   voidIt: (
     submission: FormSubmissionFieldsFragment,
-    reason: string,
+    reason: VoidReasonChoice,
   ) => Promise<boolean>;
   /** 複製為新單(只收已作廢的);成功回新草稿 */
   copy: (
@@ -104,7 +110,10 @@ export const useSubmissionActions = (): SubmissionActions => {
           input: {
             id: submission.id,
             expectedEditVersion: submission.editVersion,
-            reason,
+            reasonNote: reason.reasonNote,
+            ...(reason.reasonKey === null
+              ? {}
+              : { reasonKey: reason.reasonKey }),
           },
         });
         afterWrite(submission, payload.voidSubmission.submission);

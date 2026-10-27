@@ -151,7 +151,7 @@ export const LookupDialog = ({
               ))}
             </List>
             {!lookup.isLoading && records.length === 0 && (
-              <Typography variant="body2" color="text.secondary">
+              <Typography variant="body2" color="textSecondary">
                 {t("noResults")}
               </Typography>
             )}

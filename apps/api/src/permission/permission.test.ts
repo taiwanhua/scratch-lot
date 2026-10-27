@@ -460,6 +460,7 @@ describe("登入線2:me.modules(PermissionResolver,ADR-0011 七步)+ @RequirePer
         "system.org-manager.tenant-ops.*",
         "system.org-manager.tenant-ops.provision",
         "system.org-manager.tenant-ops.revoke-provision",
+        "system.org-manager.tenant-ops.purge-demo",
         "system.org-manager.tenant-ops.transfer-owner",
       ]);
       expect(byKey(modules, "system.org-manager").permissions).toContain(

@@ -22,6 +22,8 @@ const item = (
   createdAt: "2026-09-01T01:05:00.000Z",
   updatedAt: "2026-09-10T06:22:00.000Z",
   abilities: { canEdit: true, canDelete: true },
+  shareOrgs: [],
+  isShared: false,
   ...overrides,
 });
 

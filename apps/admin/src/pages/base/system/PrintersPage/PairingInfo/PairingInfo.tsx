@@ -23,6 +23,8 @@ export interface PairingInfoProps {
   pairingCode: string;
   /** 配對碼到期時間(ISO) */
   expiresAt: string;
+  /** 接在有效期限後面的操作說明(新增與重新配對的做法不同,由使用處傳入) */
+  hint?: string;
 }
 
 /**
@@ -30,7 +32,11 @@ export interface PairingInfoProps {
  * 伺服器網址 = 後台自己打的 API origin(與 GraphQL 同一台,不另設環境變數;docs/modules/printers.md「配對」)。
  * 配對碼只在產生時回一次,關掉就看不到了,要再拿得 [重新配對]。
  */
-export const PairingInfo = ({ pairingCode, expiresAt }: PairingInfoProps) => {
+export const PairingInfo = ({
+  pairingCode,
+  expiresAt,
+  hint,
+}: PairingInfoProps) => {
   const t = useTranslations("admin.printers.pairing");
   const { session } = useSession();
   const show = useSnackbar();
@@ -58,11 +64,7 @@ export const PairingInfo = ({ pairingCode, expiresAt }: PairingInfoProps) => {
     isCode = false,
   ) => (
     <Stack direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
-      <Typography
-        variant="caption"
-        color="text.secondary"
-        sx={{ minWidth: 64 }}
-      >
+      <Typography variant="caption" color="textSecondary" sx={{ minWidth: 64 }}>
         {label}
       </Typography>
       <Typography
@@ -89,9 +91,14 @@ export const PairingInfo = ({ pairingCode, expiresAt }: PairingInfoProps) => {
       <Stack spacing={1}>
         {row(t("serverUrl"), serverUrl, serverUrl)}
         {row(t("code"), formatPairingCode(pairingCode), pairingCode, true)}
-        <Typography variant="caption" color="text.secondary">
-          {t("hint", { expiresAt: temporalText(expiresAt, "datetime") })}
+        <Typography variant="caption" color="textSecondary">
+          {t("validUntil", { expiresAt: temporalText(expiresAt, "datetime") })}
         </Typography>
+        {hint === undefined ? null : (
+          <Typography variant="caption" color="textSecondary">
+            {hint}
+          </Typography>
+        )}
       </Stack>
     </Box>
   );

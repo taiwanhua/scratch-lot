@@ -38,7 +38,7 @@ export const UpgradeConfirmStep = ({
       </Typography>
       <Typography variant="subtitle2">{t("confirmFillsTitle")}</Typography>
       {filled.length === 0 ? (
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" color="textSecondary">
           {t("confirmNoFills")}
         </Typography>
       ) : (

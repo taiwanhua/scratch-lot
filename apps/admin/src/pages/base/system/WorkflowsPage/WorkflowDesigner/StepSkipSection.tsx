@@ -161,7 +161,7 @@ export const StepSkipSection = ({
               }
             />
           </Stack>
-          <Typography variant="caption" color="text.secondary">
+          <Typography variant="caption" color="textSecondary">
             {isShared ? t("skip.sharedOrgsHint") : t("skip.orgsHint")}
           </Typography>
         </Stack>
@@ -189,7 +189,7 @@ export const StepSkipSection = ({
           ) : (
             <>
               {checkFormKey === null && (
-                <Typography variant="caption" color="text.secondary">
+                <Typography variant="caption" color="textSecondary">
                   {t("skipNeedsCheckForm")}
                 </Typography>
               )}

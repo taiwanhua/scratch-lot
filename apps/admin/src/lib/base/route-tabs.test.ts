@@ -11,6 +11,9 @@ import {
   type RouteTabEntry,
   closeEntry,
   closeItemEntries,
+  closeLeftOf,
+  closeOthers,
+  closeRightOf,
   moveEntry,
   readStoredEntries,
   resolveTabs,
@@ -151,6 +154,67 @@ describe("closeEntry(關閉當前 tab 切到相鄰)", () => {
   it("關閉不存在的 tab:不動", () => {
     const result = closeEntry(entriesOf(ORG), USER, ORG);
     expect(routesOf(result.entries)).toEqual([ORG]);
+    expect(result.navigateTo).toBeNull();
+  });
+});
+
+const three = () => entriesOf(OVERVIEW, ORG, USER);
+
+describe("批次關閉(關閉左側 / 右側 / 其他所有分頁)", () => {
+  it("關閉左側:只留目標與它右邊的;目前頁沒被關 → 畫面不動", () => {
+    const result = closeLeftOf(three(), ORG, USER);
+    expect(routesOf(result.entries)).toEqual([ORG, USER]);
+    expect(result.navigateTo).toBeNull();
+  });
+
+  it("關閉右側:只留目標與它左邊的;目前頁沒被關 → 畫面不動", () => {
+    const result = closeRightOf(three(), ORG, OVERVIEW);
+    expect(routesOf(result.entries)).toEqual([OVERVIEW, ORG]);
+    expect(result.navigateTo).toBeNull();
+  });
+
+  it("關閉其他:只留目標;目前頁就是目標 → 畫面不動", () => {
+    const result = closeOthers(three(), ORG, ORG);
+    expect(routesOf(result.entries)).toEqual([ORG]);
+    expect(result.navigateTo).toBeNull();
+  });
+
+  it("目前頁被關掉 → 切到作用的那一頁(帶回它記下的網址參數)", () => {
+    const entries: RouteTabEntry[] = [
+      { route: OVERVIEW },
+      { route: ORG, search: "?q=a" },
+      { route: USER },
+    ];
+    expect(closeLeftOf(entries, ORG, OVERVIEW).navigateTo).toBe(`${ORG}?q=a`);
+    expect(closeRightOf(entries, ORG, USER).navigateTo).toBe(`${ORG}?q=a`);
+    expect(closeOthers(entries, ORG, USER).navigateTo).toBe(`${ORG}?q=a`);
+  });
+
+  it("網址不是模組路由(沒有目前頁籤)→ 只關,不轉向", () => {
+    const result = closeOthers(three(), ORG, null);
+    expect(routesOf(result.entries)).toEqual([ORG]);
+    expect(result.navigateTo).toBeNull();
+  });
+
+  it("沒有可關的(最左的關左側、最右的關右側、只剩一個關其他)→ 內容不變", () => {
+    expect(routesOf(closeLeftOf(three(), OVERVIEW, ORG).entries)).toEqual([
+      OVERVIEW,
+      ORG,
+      USER,
+    ]);
+    expect(routesOf(closeRightOf(three(), USER, ORG).entries)).toEqual([
+      OVERVIEW,
+      ORG,
+      USER,
+    ]);
+    expect(routesOf(closeOthers(entriesOf(ORG), ORG, ORG).entries)).toEqual([
+      ORG,
+    ]);
+  });
+
+  it("目標不存在 → 不動", () => {
+    const result = closeOthers(three(), "/nope", ORG);
+    expect(routesOf(result.entries)).toEqual([OVERVIEW, ORG, USER]);
     expect(result.navigateTo).toBeNull();
   });
 });

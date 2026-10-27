@@ -238,9 +238,18 @@ export class VoidSubmissionInput {
   @Field(() => Int)
   expectedEditVersion!: number;
 
-  /** 必填(去空白後不可為空)。 */
+  /**
+   * 作廢原因的選項值:表單設了作廢原因類別時必填,且要是該類別啟用中的選項(否則 `VALIDATION_FAILED`,
+   * `fields: ["reasonKey"]`);沒設類別時不可給。
+   */
+  @Field(() => String, { nullable: true })
+  reasonKey?: string | null;
+
+  /**
+   * 說明:沒設作廢原因類別時 = 理由,必填(去空白後不可為空);設了類別時選「其他」(`other`)必填、其他選項可空。
+   */
   @Field(() => String)
-  reason!: string;
+  reasonNote!: string;
 }
 
 /** 複製為新單(來源 = 已作廢的提交;同表單目前可新增的版本)。 */

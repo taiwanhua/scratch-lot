@@ -48,7 +48,7 @@ export const AudienceSourceSummary = ({
       role="group"
       aria-label={t(`purposes.${purpose}.audienceRegion`)}
     >
-      <Typography variant="caption" color="text.secondary" component="p">
+      <Typography variant="caption" color="textSecondary" component="p">
         {t(`purposes.${purpose}.audienceTitle`)}
       </Typography>
       <Typography variant="body2" sx={{ my: 0.75 }}>

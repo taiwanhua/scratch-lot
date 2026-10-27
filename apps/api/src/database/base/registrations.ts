@@ -96,6 +96,16 @@ import {
 } from "../schemas/seed-definition-installation.schema";
 import { SeedLock, SeedLockSchema } from "../schemas/seed-lock.schema";
 import {
+  SERIAL_COUNTERS_COLLECTION,
+  SerialCounter,
+  SerialCounterSchema,
+} from "../schemas/serial-counter.schema";
+import {
+  SIDEBAR_BADGE_SETTINGS_COLLECTION,
+  SidebarBadgeSetting,
+  SidebarBadgeSettingSchema,
+} from "../schemas/sidebar-badge-setting.schema";
+import {
   USER_DELEGATIONS_COLLECTION,
   UserDelegation,
   UserDelegationSchema,
@@ -126,6 +136,7 @@ import {
   WorkflowSchema,
 } from "../schemas/workflow.schema";
 import { SeedLockReader } from "../seed-lock.reader";
+import { SerialCountersStore } from "../serial-counters.store";
 import { WorkflowSubmissionStore } from "../workflow-submission-store";
 import { WorkflowTasksRepository } from "../workflow-tasks.repository";
 import { WorkflowsRepository } from "../workflows.repository";
@@ -153,6 +164,7 @@ import {
   RefreshTokensRepository,
   RolesRepository,
   SeedDefinitionInstallationsRepository,
+  SidebarBadgeSettingsRepository,
   UserDelegationsRepository,
   UserPreferencesRepository,
   UsersRepository,
@@ -514,6 +526,29 @@ export const BASE_DATABASE_REGISTRATIONS: readonly DatabaseRegistration[] = [
     orgDataChecks: [],
   },
   {
+    // 單號計數器(每個租戶、每種單號、每個期間一筆;沒有組織歸屬):只經專用的 store 讀寫
+    key: "serials",
+    models: [
+      {
+        name: SerialCounter.name,
+        collection: SERIAL_COUNTERS_COLLECTION,
+        schema: SerialCounterSchema,
+      },
+    ],
+    repositories: [
+      {
+        modelName: SerialCounter.name,
+        provider: {
+          provide: SerialCountersStore,
+          inject: [getModelToken(SerialCounter.name)],
+          useFactory: (model: Model<SerialCounter>) =>
+            new SerialCountersStore(model),
+        },
+      },
+    ],
+    orgDataChecks: [],
+  },
+  {
     // 個人偏好(每個使用者一筆;屬帳號、沒有組織歸屬,同 refresh_tokens)
     key: "user-preferences",
     models: [
@@ -563,6 +598,24 @@ export const BASE_DATABASE_REGISTRATIONS: readonly DatabaseRegistration[] = [
       {
         modelName: NotificationSetting.name,
         provider: NotificationSettingsRepository,
+      },
+    ],
+    orgDataChecks: [],
+  },
+  {
+    // 側欄數字設定:誰看得到某模組的側欄數字(以 tenantId 為邊界的租戶設定,同通知設定)
+    key: "sidebar-badges",
+    models: [
+      {
+        name: SidebarBadgeSetting.name,
+        collection: SIDEBAR_BADGE_SETTINGS_COLLECTION,
+        schema: SidebarBadgeSettingSchema,
+      },
+    ],
+    repositories: [
+      {
+        modelName: SidebarBadgeSetting.name,
+        provider: SidebarBadgeSettingsRepository,
       },
     ],
     orgDataChecks: [],

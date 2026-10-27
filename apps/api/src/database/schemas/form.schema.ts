@@ -1,6 +1,8 @@
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
 import { Schema as MongooseSchema, Types } from "mongoose";
 
+import type { SerialFormat } from "@repo/domain/form";
+
 import { baseFieldsPlugin } from "../plugins/base-fields.plugin";
 
 /** collection 名(退役權限清理的跨租戶計數等處共用)。 */
@@ -63,6 +65,43 @@ export class Form {
    */
   @Prop({ type: Boolean, default: true })
   allowDraft?: boolean;
+
+  /**
+   * 單號格式(表單設定;`docs/modules/forms.md`「單號」):有值 = 第一次送出時給號(存在提交的 `serialNo`),
+   * null / 缺席 = 不給號。格式形狀正本 `@repo/domain/form` 的 `SerialFormat`。
+   */
+  @Prop({ type: MongooseSchema.Types.Mixed, default: null })
+  serial?: SerialFormat | null;
+
+  /**
+   * 作廢原因的欄位管理類別 key(表單設定;`docs/modules/forms.md`「作廢原因」):有值 = 作廢時原因從該類別的
+   * 啟用選項下拉挑(選項值 `other` = 「其他」,說明必填);null / 缺席 = 作廢原因自由填寫。
+   */
+  @Prop({ type: String, default: null })
+  voidReasonCategoryKey?: string | null;
+
+  /**
+   * 依欄位共用(表單設定;`docs/modules/forms.md`「依欄位共用」):表單層組織引用欄的 key。提交也給這幾欄
+   * 指到的組織看(唯讀;引擎每次寫入存值時算出提交的 `sharedOrgIds`,ADR-0014)。空陣列 / 缺席 = 不共用;
+   * 一律用 `sharedByFieldKeysOf()` 讀。
+   */
+  @Prop({ type: [String], default: [] })
+  sharedByFieldKeys?: string[];
+}
+
+/** 表單的依欄位共用欄位:缺席(舊資料)= 不共用。 */
+export function sharedByFieldKeysOf(form: {
+  sharedByFieldKeys?: readonly string[] | null;
+}): string[] {
+  return [...(form.sharedByFieldKeys ?? [])];
+}
+
+/** 表單的作廢原因類別:缺席(舊資料)/ 空白 = 沒設(自由填寫)。 */
+export function voidReasonCategoryOf(form: {
+  voidReasonCategoryKey?: string | null;
+}): string | null {
+  const key = form.voidReasonCategoryKey?.trim() ?? "";
+  return key === "" ? null : key;
 }
 
 /** 表單允不允許存草稿:缺席(舊資料)視為開。 */

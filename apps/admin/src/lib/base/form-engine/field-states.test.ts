@@ -131,3 +131,34 @@ describe("resolveFormState:FormRenderer 五種 mode 的語意", () => {
     expect(states.get("price")?.visible).toBe(false);
   });
 });
+
+describe("唯讀時不顯示的欄位(widget.hideWhenReadonly)", () => {
+  const withHidden: FieldDef[] = [
+    field("entry", {
+      type: "text",
+      widget: { kind: "textField", hideWhenReadonly: true },
+    }),
+    field("entry_label", { type: "text", widget: { kind: "textField" } }),
+  ];
+
+  it("唯讀檢視不渲染、值照留;填寫時照常顯示", () => {
+    const readonly = resolveFormState({
+      definition: { fields: withHidden },
+      values: { entry: "e-1", entry_label: "早 08:30–14:30" },
+      ctx: ctxAt("2026-09-01T00:00:00Z"),
+      mode: "readonly",
+      permissions: OPEN_PERMISSIONS,
+    });
+    expect(readonly.states.get("entry")?.visible).toBe(false);
+    expect(readonly.states.get("entry_label")?.visible).toBe(true);
+    expect(readonly.values.entry).toBe("e-1");
+    const filling = resolveFormState({
+      definition: { fields: withHidden },
+      values: {},
+      ctx: ctxAt("2026-09-01T00:00:00Z"),
+      mode: "create",
+      permissions: OPEN_PERMISSIONS,
+    });
+    expect(filling.states.get("entry")?.visible).toBe(true);
+  });
+});

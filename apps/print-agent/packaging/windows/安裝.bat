@@ -16,10 +16,10 @@ set "TARGET=%ProgramFiles%\print-agent"
 set "CONFIG=%ProgramData%\print-agent"
 set "SERVICE=%TARGET%\print-agent-service.exe"
 
-rem 已安裝過:先停服務才能覆蓋執行檔
+rem 已安裝過:先停服務才能覆蓋執行檔(stopwait 等到真的停了;stop 只送出停止就返回)
 sc query print-agent >nul 2>&1
 if not errorlevel 1 (
-  "%SERVICE%" stop >nul 2>&1
+  "%SERVICE%" stopwait >nul 2>&1
 )
 
 if not exist "%TARGET%" mkdir "%TARGET%"
@@ -34,6 +34,7 @@ icacls "%CONFIG%" /inheritance:r /grant:r "*S-1-5-18:(OI)(CI)F" "*S-1-5-32-544:(
 
 if exist "%CONFIG%\config.json" (
   echo 偵測到既有設定:保留代理程式金鑰,不必重新配對。
+  echo 後台按了 [重新配對] 要換新配對碼時,請改執行「重新配對.bat」。
 ) else (
   call :pair || goto :fail
 )
@@ -58,8 +59,9 @@ set "CODE="
 set /p "SERVER=伺服器網址:"
 set /p "CODE=配對碼:"
 "%TARGET%\print-agent.exe" pair --server "%SERVER%" --code "%CODE%"
+rem 區塊內的半形括號要寫成 ^( ^),否則 cmd 會把 ) 當成區塊結束而整支中斷
 if errorlevel 1 (
-  echo 配對失敗,請確認後再輸入一次(按 Ctrl+C 結束)。
+  echo 配對失敗,請確認後再輸入一次^(按 Ctrl+C 結束^)。
   goto :pair
 )
 exit /b 0

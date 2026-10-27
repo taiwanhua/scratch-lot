@@ -509,6 +509,82 @@ describe("受管表單:安裝、重跑、採納、改版與衝突", () => {
       ).toMatchObject({ allowDraft: true });
     });
 
+    it("單號格式:宣告 → 安裝出來的表單帶格式,快照記下;重跑未變;現場清掉 → METADATA_DRIFT", async () => {
+      const serial = { prefix: "SD", period: "year", digits: 5 } as const;
+      const r1 = formSeed("seed_serial", "r1", { serial });
+      const created = await runSeed(app, r1);
+
+      expect(created).toMatchObject({ outcome: "created", conflict: null });
+      expect(
+        await definitionDoc(connection, FORM, "seed_serial"),
+      ).toMatchObject({ serial });
+      const installation = await installationOf(connection, r1);
+      expect(installation?.metadata).toMatchObject({ serial });
+      const rerun = await runSeed(app, r1);
+      expect(rerun.conflict).toBeNull();
+
+      await ok(api, app.root, UPDATE_FORM, {
+        input: { key: "seed_serial", serial: null },
+      });
+      const drifted = await runSeeds(app, [r1]);
+      expect(drifted.results[0]?.conflict?.code).toBe("METADATA_DRIFT");
+    });
+
+    it("作廢原因類別:宣告 → 安裝出來的表單帶類別,快照記下;重跑未變;現場清掉 → METADATA_DRIFT", async () => {
+      const voidReasonCategoryKey = "reprint-reason";
+      const r1 = formSeed("seed_void_reason", "r1", { voidReasonCategoryKey });
+      const created = await runSeed(app, r1);
+
+      expect(created).toMatchObject({ outcome: "created", conflict: null });
+      expect(
+        await definitionDoc(connection, FORM, "seed_void_reason"),
+      ).toMatchObject({ voidReasonCategoryKey });
+      const installation = await installationOf(connection, r1);
+      expect(installation?.metadata).toMatchObject({ voidReasonCategoryKey });
+      const rerun = await runSeed(app, r1);
+      expect(rerun.conflict).toBeNull();
+
+      await ok(api, app.root, UPDATE_FORM, {
+        input: { key: "seed_void_reason", voidReasonCategoryKey: null },
+      });
+      const drifted = await runSeeds(app, [r1]);
+      expect(drifted.results[0]?.conflict?.code).toBe("METADATA_DRIFT");
+    });
+
+    it("依欄位共用:改版加上 → 表單帶設定、快照記下;重跑未變;現場清掉 → METADATA_DRIFT", async () => {
+      const fields = [
+        ...SEED_FIELDS,
+        field("branch", "reference", {
+          source: { provider: "org", labelField: "name" },
+        }),
+      ];
+      const r1 = formSeed("seed_shared_by", "r1", { fields });
+      await runSeeds(app, [r1]);
+      expect(
+        await definitionDoc(connection, FORM, "seed_shared_by"),
+      ).toMatchObject({ sharedByFieldKeys: [] });
+      const sharedByFieldKeys = ["branch"];
+      const r2 = formSeed("seed_shared_by", "r2", {
+        fields,
+        sharedByFieldKeys,
+      });
+      const upgraded = await runSeed(app, r2);
+      expect(upgraded.conflict).toBeNull();
+      expect(
+        await definitionDoc(connection, FORM, "seed_shared_by"),
+      ).toMatchObject({ sharedByFieldKeys });
+      const installation = await installationOf(connection, r2);
+      expect(installation?.metadata).toMatchObject({ sharedByFieldKeys });
+      const rerun = await runSeed(app, r2);
+      expect(rerun.conflict).toBeNull();
+
+      await ok(api, app.root, UPDATE_FORM, {
+        input: { key: "seed_shared_by", sharedByFieldKeys: null },
+      });
+      const drifted = await runSeeds(app, [r2]);
+      expect(drifted.results[0]?.conflict?.code).toBe("METADATA_DRIFT");
+    });
+
     it("允許存草稿沒變:改版的 metadata 更新不帶它(舊表單不寫進顯式 true,稽核不記)", async () => {
       const r1 = formSeed("seed_allow_draft_same", "r1");
       await runSeeds(app, [r1]);

@@ -1,6 +1,7 @@
 /* eslint-disable sonarjs/no-os-command-from-path -- 預期值取同一個 checkout 的 `git rev-parse HEAD`:git 的安裝位置因機器而異,只能靠 PATH;不經 shell、參數固定;到期條件:無 */
 import { execFileSync } from "node:child_process";
 import {
+  existsSync,
   mkdirSync,
   mkdtempSync,
   readdirSync,
@@ -317,9 +318,26 @@ describe("sourceCommit 的來源證明", () => {
 describe("--json 的輸出(對真 MongoDB)", () => {
   it("空資料庫(migrate:status 別名):全部 pending、沒有執行紀錄與鎖;sourceCommit 是 checkout 的 SHA,不沿用 GITHUB_SHA;不建立 collection", async () => {
     const databaseUri = mongo.uri("empty");
-    const legacyNames = readdirSync(path.join(PACKAGE_ROOT, "migrations"))
-      .filter((fileName) => fileName.endsWith(".js"))
-      .toSorted((left, right) => left.localeCompare(right, "zh-Hant"));
+    const migrationsIn = (origin: "legacy" | "base" | "project") => {
+      const directory = path.join(
+        PACKAGE_ROOT,
+        "migrations",
+        ...(origin === "legacy" ? [] : [origin]),
+      );
+      return existsSync(directory)
+        ? readdirSync(directory)
+            .filter((fileName) => fileName.endsWith(".js"))
+            .map((fileName) => ({ fileName, origin }))
+        : [];
+    };
+    // 根目錄的歷史檔 + 之後新增的 base / project migration(檔名全域唯一,依檔名排)
+    const pending = [
+      ...migrationsIn("legacy"),
+      ...migrationsIn("base"),
+      ...migrationsIn("project"),
+    ].toSorted((left, right) =>
+      left.fileName.localeCompare(right.fileName, "zh-Hant"),
+    );
     const head = gitIn(PACKAGE_ROOT, "rev-parse", "HEAD");
 
     const result = await runUpdate(
@@ -344,10 +362,7 @@ describe("--json 的輸出(對真 MongoDB)", () => {
       subsequentRuns: null,
       migrations: {
         applied: [],
-        pending: legacyNames.map((fileName) => ({
-          fileName,
-          origin: "legacy",
-        })),
+        pending,
         orphaned: [],
         open: [],
       },

@@ -33,7 +33,7 @@ export const Default: Story = {
       >
         <Typography
           variant="caption"
-          color="text.secondary"
+          color="textSecondary"
           sx={{ fontWeight: 600 }}
         >
           標題

@@ -12,6 +12,7 @@ import { appendFileSync, readFileSync } from "node:fs";
 
 import {
   CLOUD_OUTPUT_KEYS,
+  DEMO_SECRET_OUTPUT_KEYS,
   GITHUB_OUTPUT_KEYS,
   REALTIME_OUTPUT_KEYS,
   STATUS_OPTION_KEYS,
@@ -64,9 +65,10 @@ function cloudLines(config) {
   if (config.realtime !== "true" && config.realtime !== "false") {
     fail("realtime 必須是 true 或 false");
   }
-  // 可以是空值的只有:Resend 未啟用的 resend_secret、即時通道停用時的四個 realtime 輸出
+  // 可以是空值的只有:Resend 未啟用的 resend_secret、沒設示範資料 Secret 的兩個 demo 輸出、即時通道停用時的四個 realtime 輸出
   const mayBeEmpty = (key) =>
     key === "resend_secret" ||
+    DEMO_SECRET_OUTPUT_KEYS.includes(key) ||
     (config.realtime === "false" && REALTIME_OUTPUT_KEYS.includes(key));
   return CLOUD_OUTPUT_KEYS.map((key) =>
     mayBeEmpty(key) && config[key] === ""

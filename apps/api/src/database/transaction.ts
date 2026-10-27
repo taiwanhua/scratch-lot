@@ -2,6 +2,7 @@ import { AsyncLocalStorage } from "node:async_hooks";
 
 import { Injectable, Logger } from "@nestjs/common";
 import { InjectConnection } from "@nestjs/mongoose";
+import { GraphQLError } from "graphql";
 import mongoose, { type ClientSession, type Connection } from "mongoose";
 
 /**
@@ -25,10 +26,21 @@ mongoose.set("transactionAsyncLocalStorage", true);
  */
 export const TRANSACTION_TIMEOUT_MS = 60_000;
 
-/** 交易超過上限:這次嘗試已回復,不再重試。 */
-export class TransactionTimeoutError extends Error {
+/**
+ * 交易逾時的錯誤碼(GQL-04):請求在 GraphQL 回 `extensions.code = TRANSACTION_TIMEOUT`,前端顯示
+ * 「處理時間過長、已取消、資料沒有變更,請稍後再試」,不當成一般的未預期錯誤。
+ */
+export const TRANSACTION_TIMEOUT_CODE = "TRANSACTION_TIMEOUT";
+
+/**
+ * 交易超過上限:這次嘗試已回復,不再重試。是 `GraphQLError`(帶 `TRANSACTION_TIMEOUT_CODE`),
+ * 從 resolver 拋出時前端分得出「逾時已回復」;排程、遷移等非 GraphQL 呼叫端照一般錯誤處理。
+ */
+export class TransactionTimeoutError extends GraphQLError {
   constructor(readonly timeoutMs: number) {
-    super(`交易超過上限 ${String(timeoutMs)}ms,已回復`);
+    super(`transaction exceeded ${String(timeoutMs)}ms and was rolled back`, {
+      extensions: { code: TRANSACTION_TIMEOUT_CODE, timeoutMs },
+    });
     this.name = "TransactionTimeoutError";
   }
 }

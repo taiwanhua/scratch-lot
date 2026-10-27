@@ -1,5 +1,7 @@
 import { Field, InputType } from "@nestjs/graphql";
 
+import { ShareOrgInput } from "../../sharing/share-org.model";
+
 /**
  * 新增示範項目(權限 `demo.sample-two.create`)。
  *
@@ -15,4 +17,11 @@ export class CreateDemoItemTwoInput {
   /** 備註;缺席 / null 都是「沒有備註」(建立時兩者無差別,GQL-06)。 */
   @Field(() => String, { nullable: true })
   note?: string | null;
+
+  /**
+   * 共用給(ADR-0014);缺席 / null = 用預設(不共用)。要有 `demo.sample-two.edit` 才能給非空清單
+   * (沒有 → `FORBIDDEN`);組織不在同租戶 → `VALIDATION_FAILED`(fields: ["shareOrgs"])。
+   */
+  @Field(() => [ShareOrgInput], { nullable: true })
+  shareOrgs?: ShareOrgInput[] | null;
 }

@@ -91,6 +91,53 @@ describe("表單模組列表頁(預設組裝)", () => {
     );
   });
 
+  it("列表欄位配置選「單號」:表頭「單號」,有號的那一筆顯示號碼、沒號的顯示「—」", async () => {
+    renderShopping({
+      path: DEMO_FORM_ROUTES.list,
+      world: {
+        ...defaultRuntimeOptions(),
+        submissions: [
+          submissionFragment({ serialNo: "PU-202610-0001" }),
+          submissionFragment({
+            id: "sub-2",
+            serialNo: null,
+            summary: { title: "牛奶", date: null, amount: null },
+          }),
+        ],
+        listColumns: {
+          [DEMO_FORM_KEY]: [
+            {
+              kind: ModuleListColumnKind.Slot,
+              key: "title",
+              formKey: null,
+              width: 200,
+              order: 0,
+            },
+            {
+              kind: ModuleListColumnKind.Slot,
+              key: "serialNo",
+              formKey: null,
+              width: 160,
+              order: 1,
+            },
+          ],
+        },
+      },
+    });
+
+    const grid = await table();
+    expect(
+      await within(grid).findByRole("columnheader", { name: /單號/ }),
+    ).toBeInTheDocument();
+    const egg = await within(grid).findByText("雞蛋");
+    const withSerial = egg.closest("tr");
+    expect(
+      within(withSerial as HTMLElement).getByText("PU-202610-0001"),
+    ).toBeInTheDocument();
+    const without = within(grid).getByText("牛奶").closest("tr");
+    expect(within(without as HTMLElement).getByText("—")).toBeInTheDocument();
+  });
+
   it("沒有資料列時表頭仍是欄位名(讀表單目前版本);內建欄關掉的不顯示", async () => {
     renderShopping({
       path: DEMO_FORM_ROUTES.list,

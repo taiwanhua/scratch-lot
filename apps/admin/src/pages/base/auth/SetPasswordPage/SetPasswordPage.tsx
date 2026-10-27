@@ -75,7 +75,7 @@ export const SetPasswordPage = () => {
   if (isLinkInvalid) {
     return (
       <AuthCard subtitle={t("subtitle")}>
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" color="textSecondary">
           {t("invalid.description")}
         </Typography>
         <Button
@@ -98,7 +98,7 @@ export const SetPasswordPage = () => {
     <AuthCard subtitle={t("subtitle")}>
       <Box component="form" onSubmit={handleSubmit}>
         <Stack spacing={2.5}>
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" color="textSecondary">
             {t("description", { min: PASSWORD_MIN_LENGTH })}
           </Typography>
 

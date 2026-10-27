@@ -8,6 +8,8 @@ export interface DecodedPng {
   colorType: number;
   /** 每點的灰階值(1-bit:0 = 黑、1 = 白)。 */
   pixels: number[];
+  /** `tEXt` 區塊:keyword → 文字。 */
+  texts: Record<string, string>;
 }
 
 const PNG_SIGNATURE = [137, 80, 78, 71, 13, 10, 26, 10];
@@ -33,6 +35,7 @@ export const decodePng = (bytes: Uint8Array): DecodedPng => {
   let bitDepth = 0;
   let colorType = 0;
   const idat: Uint8Array[] = [];
+  const texts: Record<string, string> = {};
   while (offset < bytes.length) {
     const length = view.getUint32(offset);
     const type = String.fromCodePoint(
@@ -46,6 +49,12 @@ export const decodePng = (bytes: Uint8Array): DecodedPng => {
       colorType = data[9] ?? 0;
     }
     if (type === "IDAT") idat.push(data);
+    if (type === "tEXt") {
+      const [keyword = "", text = ""] = String.fromCodePoint(...data).split(
+        "\0",
+      );
+      texts[keyword] = text;
+    }
     offset += 12 + length;
   }
   const raw = inflateSync(concat(idat));
@@ -59,7 +68,7 @@ export const decodePng = (bytes: Uint8Array): DecodedPng => {
       pixels.push((byte >> (7 - (x & 7))) & 1);
     }
   }
-  return { width, height, bitDepth, colorType, pixels };
+  return { width, height, bitDepth, colorType, pixels, texts };
 };
 
 type Rgba = readonly [number, number, number, number];
@@ -78,3 +87,17 @@ export const makeRgba = (
   }
   return { width, height, data };
 };
+
+/** jsdom 的 Blob 沒有 `arrayBuffer()`,用 FileReader 讀回位元組。 */
+export const readBlob = (blob: Blob): Promise<Uint8Array> =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.addEventListener("load", () => {
+      resolve(new Uint8Array(reader.result as ArrayBuffer));
+    });
+    reader.addEventListener("error", () => {
+      reject(reader.error ?? new Error("read failed"));
+    });
+    // eslint-disable-next-line unicorn/prefer-blob-reading-methods -- jsdom 的 Blob 沒有 arrayBuffer()
+    reader.readAsArrayBuffer(blob);
+  });

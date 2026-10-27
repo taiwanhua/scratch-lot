@@ -54,7 +54,9 @@ export class FormSubmissionUsageCounter {
       return usage;
     }
     const asked = [...versions];
-    const rows = await this.model
+    // 原生驅動(同審核流程的提交存取層):不經 Mongoose 的 aggregate 中介層 ——
+    // tenantScopePlugin 對沒帶上下文的 aggregate 一律拋錯,而這裡刻意不套任何範圍
+    const rows = await this.model.collection
       .aggregate<UsageRow>([
         {
           $match: {
@@ -91,7 +93,7 @@ export class FormSubmissionUsageCounter {
           },
         },
       ])
-      .exec();
+      .toArray();
     const drafts = new Set<number>();
     const completed = new Set<number>();
     for (const row of rows) {

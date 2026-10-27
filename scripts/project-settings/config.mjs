@@ -41,6 +41,8 @@ export const CLOUD_OUTPUT_KEYS = [
   "root_secret",
   "jwt_secret",
   "resend_secret",
+  "demo_password_secret",
+  "demo_email_base_secret",
   "root_account",
   "root_email",
   "realtime",
@@ -288,6 +290,15 @@ function validateRealtime(env, at) {
   };
 }
 
+/** 示範資料用的兩把 Secret(`docs/deployment.md`「示範資料(demo)」;可省略,省略時輸出空字串)。 */
+const DEMO_SECRET_KEYS = ["demoPassword", "demoEmailBase"];
+
+/** 這兩個輸出可以是空字串(環境沒有設定示範資料的 Secret)。 */
+export const DEMO_SECRET_OUTPUT_KEYS = [
+  "demo_password_secret",
+  "demo_email_base_secret",
+];
+
 const ENVIRONMENT_KEYS = [
   "apiService",
   "adminService",
@@ -316,6 +327,16 @@ function validateEnvironment(environments, name) {
     ["account", "email"],
     `${at}.rootAdmin`,
   );
+  // 示範資料(demo 指令)的兩把 Secret 可省略(省略 = 這個環境不跑 Demo);要給就兩把一起給
+  const rawSecrets = isPlainObject(env.secrets) ? env.secrets : {};
+  const demoKeys = DEMO_SECRET_KEYS.filter((key) =>
+    Object.hasOwn(rawSecrets, key),
+  );
+  if (demoKeys.length === 1) {
+    fail(
+      `${CLOUD_FILE} 的 ${at}.secrets 的 ${DEMO_SECRET_KEYS.join(" 與 ")} 要一起設定(只有 ${demoKeys[0]})`,
+    );
+  }
   const secrets = section(
     CLOUD_FILE,
     env,
@@ -326,11 +347,14 @@ function validateEnvironment(environments, name) {
       "rootAdminPassword",
       "jwtSecret",
       "resendApiKey",
+      ...demoKeys,
     ],
     `${at}.secrets`,
   );
   const secret = (key) =>
     text(CLOUD_FILE, `${at}.secrets.${key}`, secrets[key], PATTERNS.secretName);
+  const optionalSecret = (key) =>
+    Object.hasOwn(secrets, key) ? secret(key) : "";
   return {
     api_service: text(
       CLOUD_FILE,
@@ -351,6 +375,8 @@ function validateEnvironment(environments, name) {
     jwt_secret: secret("jwtSecret"),
     // null means this project has not enabled transactional email yet.
     resend_secret: secrets.resendApiKey === null ? "" : secret("resendApiKey"),
+    demo_password_secret: optionalSecret("demoPassword"),
+    demo_email_base_secret: optionalSecret("demoEmailBase"),
     // 帳號是自由文字(只擋控制字元);workflow 以 env 傳遞,不進 shell 程式文本
     root_account: text(
       CLOUD_FILE,

@@ -4,6 +4,7 @@ name: Reset DB
 # 一律手動觸發:
 #   UI :GitHub → Actions → Reset DB → Run workflow → 選 environment 與 mode、輸入 confirmation
 #   CLI:gh workflow run "Reset DB" --ref dev -f environment=dev -f mode=data -f confirmation=reset:dev:<資料庫名>:data
+#   重建後灌示範資料:再加 -f seed_demo=true(預設不勾;勾了就在 reset 成功後跑 demo --mode=create)
 #
 # 三個環境共用同一套確認:操作者要親手輸入 reset:<environment>:<資料庫名>:<mode>。
 # 本檔**不會**從連線字串替操作者組出確認字串 —— 輸入的值經 step 的 env 原樣傳給指令,由指令比對
@@ -29,6 +30,11 @@ on:
         description: "人工確認,完整輸入:reset:<environment>:<資料庫名>:<mode>(例:reset:dev:wowgo-base-dev:data)"
         required: true
         type: string
+      seed_demo:
+        description: "重建後灌示範資料(reset 成功後跑 demo --mode=create;確認字串由上面的 reset 確認字串換成 demo:<environment>:<資料庫名>:create,不另外輸入)"
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -126,3 +132,41 @@ jobs:
           echo "::add-mask::$ROOT_ADMIN_PASSWORD"
           export MONGODB_URI ROOT_ADMIN_PASSWORD
           pnpm --filter @repo/db-migrator reset --environment="$ENVIRONMENT" --mode="$MODE" --confirm="$CONFIRMATION"
+
+      # 勾了「重建後灌示範資料」才做(docs/deployment.md「示範資料(demo)」);沒勾就只有 reset,和以前一樣。
+      # 確認字串:上一步的 reset 已核對過 reset:<environment>:<資料庫名>:<mode> 與實際資料庫相符,
+      # 這裡只把開頭換成 demo、結尾換成 create(不解析連線字串);指令端再以該環境 api 回報的資料庫名比對一次。
+      # 建置範圍:demo 只需要 db-migrator 的 workspace 依賴(@repo/domain),前面「建置 api 的受管定義 CLI」
+      # 的 `@repo/api...` 已涵蓋;demo 不需要 api 的建置產物,只打該環境的 api
+      - name: 灌示範資料
+        env:
+          SEED_DEMO: ${{ inputs.seed_demo }}
+          ROOT_ADMIN_ACCOUNT: ${{ steps.cfg.outputs.root_account }}
+          DEMO_ALLOW_ENV: ${{ inputs.environment }}
+          ENVIRONMENT: ${{ inputs.environment }}
+          MODE: ${{ inputs.mode }}
+          CONFIRMATION: ${{ inputs.confirmation }}
+          API_URL: ${{ steps.cfg.outputs.api_url }}
+          ROOT_SECRET_NAME: ${{ steps.cfg.outputs.root_secret }}
+          DEMO_PASSWORD_SECRET_NAME: ${{ steps.cfg.outputs.demo_password_secret }}
+          DEMO_EMAIL_BASE_SECRET_NAME: ${{ steps.cfg.outputs.demo_email_base_secret }}
+        run: |
+          if [ "$SEED_DEMO" != "true" ]; then
+            echo "沒有勾「重建後灌示範資料」:不灌示範資料"
+            exit 0
+          fi
+          if [ -z "$DEMO_PASSWORD_SECRET_NAME" ] || [ -z "$DEMO_EMAIL_BASE_SECRET_NAME" ]; then
+            echo "::error::這個環境沒有設定示範資料的 Secret:deploy/project/cloud.json 的 secrets.demoPassword / secrets.demoEmailBase"
+            exit 1
+          fi
+          DATABASE_SEGMENT="${CONFIRMATION#"reset:$ENVIRONMENT:"}"
+          DATABASE_SEGMENT="${DATABASE_SEGMENT%":$MODE"}"
+          DEMO_CONFIRMATION="demo:$ENVIRONMENT:$DATABASE_SEGMENT:create"
+          ROOT_ADMIN_PASSWORD=$(gcloud secrets versions access latest --secret="$ROOT_SECRET_NAME")
+          DEMO_PASSWORD=$(gcloud secrets versions access latest --secret="$DEMO_PASSWORD_SECRET_NAME")
+          DEMO_EMAIL_BASE=$(gcloud secrets versions access latest --secret="$DEMO_EMAIL_BASE_SECRET_NAME")
+          echo "::add-mask::$ROOT_ADMIN_PASSWORD"
+          echo "::add-mask::$DEMO_PASSWORD"
+          echo "::add-mask::$DEMO_EMAIL_BASE"
+          export ROOT_ADMIN_PASSWORD
+          printf '%s\n%s\n' "$DEMO_PASSWORD" "$DEMO_EMAIL_BASE" | pnpm --filter @repo/db-migrator demo --environment="$ENVIRONMENT" --mode=create --confirm="$DEMO_CONFIRMATION" --api-url="$API_URL"

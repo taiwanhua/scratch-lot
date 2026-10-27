@@ -115,7 +115,7 @@ export const CreateChildOrgDialog = ({
             setDescription(event.target.value);
           }}
         />
-        <Typography variant="caption" color="text.secondary">
+        <Typography variant="caption" color="textSecondary">
           {t("hint")}
         </Typography>
         {errorCode !== null && (

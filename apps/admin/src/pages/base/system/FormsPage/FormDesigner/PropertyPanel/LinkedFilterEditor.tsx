@@ -81,7 +81,7 @@ export const LinkedFilterEditor = ({
     <Stack spacing={1} role="group" aria-label={t("linkedFilter")}>
       <Stack spacing={0.25}>
         <Typography variant="body2">{t("linkedFilter")}</Typography>
-        <Typography variant="caption" color="text.secondary">
+        <Typography variant="caption" color="textSecondary">
           {t("linkedFilterHint")}
         </Typography>
       </Stack>

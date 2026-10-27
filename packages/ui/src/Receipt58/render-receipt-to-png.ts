@@ -1,11 +1,13 @@
 import {
   DEFAULT_THRESHOLD,
+  type MonochromeImage,
   type RgbaImage,
   encodeMonochromePng,
   resizeToWidth,
   toMonochrome,
 } from "./monochrome-png";
-import { RECEIPT58_DOTS } from "./receipt58-tokens";
+import { RECEIPT58_DOTS, RECEIPT58_QR_QUIET_ZONE } from "./receipt58-tokens";
+import { qrModules } from "./symbol-modules";
 
 /** 把畫面上的節點畫成 RGBA 點陣;預設用 `modern-screenshot`,測試可注入替身。 */
 export type ReceiptRasterizer = (node: HTMLElement) => Promise<RgbaImage>;
@@ -18,16 +20,26 @@ export interface RenderReceiptToPngOptions {
 }
 
 /**
- * 預設點陣化:把節點(`Receipt58`,寬 384 CSS px)以 1:1 畫到 canvas。
- * 節點寬度不是 384 時以 `scale` 換算,canvas 寬仍是 384 點。
+ * 截圖的尺寸:以版面寬高(`offsetWidth` / `offsetHeight`,不受祖先 transform 與螢幕縮放影響)
+ * 明確指定給 `modern-screenshot`,canvas 寬 = 版面寬 × scale = 恰好 384 點。
+ * 不指定時套件改用 `getBoundingClientRect()`:預覽被縮小顯示時寬度不是 384,之後的縮放會讓模組粗細不均。
+ */
+export const screenshotSizeOf = (
+  node: HTMLElement,
+): { width: number; height: number; scale: number } => {
+  const width = node.offsetWidth || RECEIPT58_DOTS;
+  const height = node.offsetHeight || 1;
+  return { width, height, scale: RECEIPT58_DOTS / width };
+};
+
+/**
+ * 預設點陣化:把節點(`Receipt58`,寬 384 CSS px)畫到寬 384 點的 canvas。
  * 套件在第一次列印時才載入,不進後台的首屏 bundle。
  */
 const rasterizeWithCanvas: ReceiptRasterizer = async (node) => {
   const { domToCanvas } = await import("modern-screenshot");
-  // offsetWidth 是版面寬(不受祖先 transform 縮放影響),預覽被縮小顯示時仍以實際 384 計算
-  const cssWidth = node.offsetWidth || RECEIPT58_DOTS;
   const canvas = await domToCanvas(node, {
-    scale: RECEIPT58_DOTS / cssWidth,
+    ...screenshotSizeOf(node),
     // 底色不是品牌色:熱感紙的白,轉圖時把透明處補白
     backgroundColor: "white",
   });
@@ -38,10 +50,83 @@ const rasterizeWithCanvas: ReceiptRasterizer = async (node) => {
   return context.getImageData(0, 0, canvas.width, canvas.height);
 };
 
+/** 把 QR 模組矩陣(含安靜區)以每模組 `unit` 點寫進點陣的 (left, top);超出點陣的部分略過。 */
+const paintQr = (
+  image: MonochromeImage,
+  matrix: readonly (readonly boolean[])[],
+  unit: number,
+  { left, top }: { left: number; top: number },
+): void => {
+  const side = (matrix.length + RECEIPT58_QR_QUIET_ZONE * 2) * unit;
+  const fromY = Math.max(0, top);
+  const toY = Math.min(image.height, top + side);
+  const fromX = Math.max(0, left);
+  const toX = Math.min(image.width, left + side);
+  for (let row = fromY; row < toY; row += 1) {
+    const cells =
+      matrix[Math.floor((row - top) / unit) - RECEIPT58_QR_QUIET_ZONE];
+    for (let column = fromX; column < toX; column += 1) {
+      const isDark =
+        cells?.[Math.floor((column - left) / unit) - RECEIPT58_QR_QUIET_ZONE] ??
+        false;
+      image.dots[row * image.width + column] = isDark ? 1 : 0;
+    }
+  }
+};
+
+/**
+ * 把節點裡的 QR code(`Receipt58Qr` 的 `data-receipt58-qr`)以模組矩陣直接寫進黑白點陣:
+ * 每模組恰好 `data-module-dots` 點、含安靜區先整塊清白,不經截圖與縮放 ——
+ * 截圖在 QR 位置的灰邊、半點偏移一律被蓋掉。位置以畫面上的相對位置換算成點(四捨五入到整數點)。
+ * 節點或 QR 沒有排版(寬 0,例:jsdom、display: none)時不動。
+ */
+const stampQrSymbols = (node: HTMLElement, image: MonochromeImage): void => {
+  const box = node.getBoundingClientRect();
+  if (box.width <= 0) return;
+  const dotsPerPx = image.width / box.width;
+  for (const symbol of node.querySelectorAll<SVGSVGElement>(
+    "svg[data-receipt58-qr]",
+  )) {
+    const value = symbol.dataset.receipt58Qr ?? "";
+    const unit = Number(symbol.dataset.moduleDots);
+    if (value === "" || !Number.isInteger(unit) || unit < 1) continue;
+    const rect = symbol.getBoundingClientRect();
+    // 沒有排版的 QR(例:被 display: none 藏起來)位置全是 0,寫進去會落在錯的地方
+    if (rect.width <= 0) continue;
+    paintQr(image, qrModules(value), unit, {
+      left: Math.round((rect.left - box.left) * dotsPerPx),
+      top: Math.round((rect.top - box.top) * dotsPerPx),
+    });
+  }
+};
+
+/**
+ * 節點裡切紙位置(`Receipt58Cut` 的 `data-receipt58-cut`)的下緣換算成列號(四捨五入到整數點):
+ * 只留圖片中段的(`0 < 列 < 高度`);在最下面的那一個(例:測試頁最後一列)本來就會切,不另記。
+ * 節點沒有排版(寬 0,例:jsdom)時沒有。
+ */
+export const receiptCutRowsOf = (
+  node: HTMLElement,
+  image: { width: number; height: number },
+): number[] => {
+  const box = node.getBoundingClientRect();
+  if (box.width <= 0) return [];
+  const dotsPerPx = image.width / box.width;
+  const rows = [...node.querySelectorAll<HTMLElement>("[data-receipt58-cut]")]
+    .map((cut) => cut.getBoundingClientRect())
+    .filter((rect) => rect.width > 0)
+    .map((rect) => Math.round((rect.bottom - box.top) * dotsPerPx))
+    .filter((row) => row > 0 && row < image.height);
+  return [...new Set(rows)].toSorted((a, b) => a - b);
+};
+
 /**
  * 把 58mm 單據轉成寬 384 點的黑白 PNG(瀏覽器端):
- * 預覽中的 `Receipt58` 節點 → 點陣化 → 縮放到 384 寬 → 二值化 → 1-bit PNG。
+ * 預覽中的 `Receipt58` 節點 → 點陣化(384 寬)→ 寬度不符時縮放 → 二值化 → QR code 以整數點覆寫 → 1-bit PNG。
  * 回傳的 Blob 直接作為列印工作的圖片上傳。
+ *
+ * 一次列印好幾聯:把幾張 `Receipt58` 排在同一個節點裡、中間放 `Receipt58Cut`,轉成**一張**圖(一個列印工作);
+ * 切紙位置寫進 PNG(`tEXt`「cut-rows」,`docs/modules/printers.md`「列印工作」),代理程式印到那裡就切紙。
  */
 export const renderReceiptToPng = async (
   node: HTMLElement,
@@ -51,6 +136,10 @@ export const renderReceiptToPng = async (
   }: RenderReceiptToPngOptions = {},
 ): Promise<Blob> => {
   const rgba = resizeToWidth(await rasterize(node), RECEIPT58_DOTS);
-  const png = await encodeMonochromePng(toMonochrome(rgba, threshold));
+  const monochrome = toMonochrome(rgba, threshold);
+  stampQrSymbols(node, monochrome);
+  const png = await encodeMonochromePng(monochrome, {
+    cutRows: receiptCutRowsOf(node, monochrome),
+  });
   return new Blob([png], { type: "image/png" });
 };

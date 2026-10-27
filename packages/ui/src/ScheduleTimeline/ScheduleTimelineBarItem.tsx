@@ -161,16 +161,24 @@ export const ScheduleTimelineBarItem = ({
     const buttonProps =
       interactive && isPrimary
         ? activationProps({
-            label: bar.ariaLabel ?? formatTimeRange(bar.start, bar.end),
+            label:
+              bar.ariaLabel ??
+              formatTimeRange(bar.start, bar.end, actions.timezone),
             selected: pressedOf(actions, selected),
             date,
             range,
+            timezone: actions.timezone,
             onActivate,
           })
         : {};
     const clickProps =
       interactive && !isPrimary
-        ? pointerOnlyProps({ date, range, onActivate })
+        ? pointerOnlyProps({
+            date,
+            range,
+            timezone: actions.timezone,
+            onActivate,
+          })
         : {};
     const element = (
       <Box

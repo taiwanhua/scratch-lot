@@ -28,11 +28,13 @@ export interface DesignerToolbarProps {
   onCheckFormKeyChange: (formKey: string | null) => void;
   onCheck: () => void;
   isChecking: boolean;
+  /** 平板寬才給:[整個流程設定] 打開屬性抽屜(電腦寬整個流程設定常駐在屬性面板,不需要這顆) */
+  onOpenFlowSettings?: () => void;
 }
 
 /**
  * 設計器頂列:「檢查用表單」與「檢查」鈕(`CheckFormField`)、草稿修訂號、未存標示、
- * 在最後加一關、存草稿(設計器擋下時停用並說明原因)。存草稿遇到 `CONFLICT`(別人先存過)→ 提示並提供「重新載入」。
+ * 在最後加一關、存草稿(設計器擋下時停用並說明原因);平板寬多一顆 [整個流程設定](屬性面板收在抽屜裡,沒選關卡時要有入口)。存草稿遇到 `CONFLICT`(別人先存過)→ 提示並提供「重新載入」。
  */
 export const DesignerToolbar = ({
   revision,
@@ -49,6 +51,7 @@ export const DesignerToolbar = ({
   onCheckFormKeyChange,
   onCheck,
   isChecking,
+  onOpenFlowSettings,
 }: DesignerToolbarProps) => {
   const t = useTranslations("admin.workflows.designer");
   const tErrors = useTranslations("admin.workflows.errors");
@@ -70,11 +73,16 @@ export const DesignerToolbar = ({
         spacing={1.5}
         sx={{ alignItems: "center", flexWrap: "wrap", rowGap: 1 }}
       >
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" color="textSecondary">
           {t("revision", { revision })}
         </Typography>
         {isDirty && <Tag tone="warning" label={t("dirty")} />}
         <Box sx={{ flex: 1 }} />
+        {onOpenFlowSettings !== undefined && (
+          <Button variant="outlined" onClick={onOpenFlowSettings}>
+            {t("openFlowSettings")}
+          </Button>
+        )}
         {isEditable && (
           <Button variant="outlined" onClick={onAppendStep}>
             {t("appendStep")}

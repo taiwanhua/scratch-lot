@@ -27,6 +27,7 @@ import { OrgSchema } from "./org.schema";
 import { PermissionSchema } from "./permission.schema";
 import { RefreshTokenSchema } from "./refresh-token.schema";
 import { RoleSchema } from "./role.schema";
+import { SidebarBadgeSettingSchema } from "./sidebar-badge-setting.schema";
 import { UserDelegationSchema } from "./user-delegation.schema";
 import { UserPreferenceSchema } from "./user-preference.schema";
 import { UserSchema } from "./user.schema";
@@ -35,7 +36,7 @@ import { WorkflowTaskSchema } from "./workflow-task.schema";
 import { WorkflowVersionSchema } from "./workflow-version.schema";
 import { WorkflowSchema } from "./workflow.schema";
 
-/** 全部底座 collection(docs/data-model.md「Collection 一覽」,28 張)。 */
+/** 全部底座 collection(docs/data-model.md「Collection 一覽」,29 張)。 */
 const ALL_SCHEMAS: Record<string, Schema> = {
   orgs: OrgSchema,
   users: UserSchema,
@@ -65,6 +66,7 @@ const ALL_SCHEMAS: Record<string, Schema> = {
   user_delegations: UserDelegationSchema,
   notifications: NotificationSchema,
   notification_settings: NotificationSettingSchema,
+  sidebar_badge_settings: SidebarBadgeSettingSchema,
 };
 
 /**
@@ -75,54 +77,86 @@ const ALL_SCHEMAS: Record<string, Schema> = {
  * **只有 `orgs` 是治理類**(吃 `managedOrgIds`),其餘都是業務類(吃 `visibleOrgIds`)—
  * 這張表就是那條分界線的正本,新 collection 加進來時要在這裡決定自己屬哪一類。
  */
+/** 預設的共用宣告(不可共用)。 */
+const PRIVATE = { mode: "private" } as const;
+
 const TENANT_SCOPED: Record<string, TenantScope> = {
   orgs: {
     path: "_id",
     allowGlobal: false,
     kind: "governance",
     moduleData: false,
+    sharing: PRIVATE,
+    refFields: [],
   },
   customers: {
     path: "orgId",
     allowGlobal: false,
     kind: "business",
     moduleData: false,
+    sharing: PRIVATE,
+    refFields: [],
   },
   fields: {
     path: "orgId",
     allowGlobal: true,
     kind: "business",
     moduleData: false,
+    sharing: PRIVATE,
+    refFields: [],
   },
   demo_items_one: {
     path: "orgId",
     allowGlobal: false,
     kind: "business",
     moduleData: true,
+    sharing: PRIVATE,
+    refFields: [],
   },
   demo_items_two: {
     path: "orgId",
     allowGlobal: false,
     kind: "business",
     moduleData: true,
+    sharing: {
+      mode: "shareable",
+      defaultShareOrgs: "none",
+      editable: true,
+      sharedByFields: [],
+    },
+    refFields: [],
   },
+  // 依欄位共用(表單設定 sharedByFieldKeys → sharedOrgIds;共用清單固定空)
   form_submissions: {
     path: "orgId",
     allowGlobal: false,
     kind: "business",
     moduleData: true,
+    sharing: {
+      mode: "shareable",
+      defaultShareOrgs: "none",
+      editable: false,
+      sharedByFields: [
+        { path: "sharedOrgIds", includeDescendants: false, match: "visible" },
+      ],
+    },
+    refFields: [],
   },
   workflow_instances: {
     path: "orgId",
     allowGlobal: false,
     kind: "business",
     moduleData: true,
+    sharing: PRIVATE,
+    refFields: [],
   },
   audit_logs: {
     path: "orgId",
     allowGlobal: false,
     kind: "business",
     moduleData: false,
+    sharing: PRIVATE,
+    refFields: [],
   },
 };
 
@@ -135,8 +169,8 @@ const MODULE_DATA_COLLECTIONS = new Set([
 ]);
 
 describe("底座 schema 的 plugin 掛載(ADR-0005 / ADR-0007)", () => {
-  it("全部 28 張 collection 都掛 baseFields:timestamps + createdBy / updatedBy / deletedAt", () => {
-    expect(Object.keys(ALL_SCHEMAS)).toHaveLength(28);
+  it("全部 29 張 collection 都掛 baseFields:timestamps + createdBy / updatedBy / deletedAt", () => {
+    expect(Object.keys(ALL_SCHEMAS)).toHaveLength(29);
     for (const [name, schema] of Object.entries(ALL_SCHEMAS)) {
       expect({ name, timestamps: schema.get("timestamps") }).toEqual({
         name,

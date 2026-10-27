@@ -146,6 +146,11 @@ export const demoTwoWorld = (
         createdAt: "2026-09-22T00:00:00.000Z",
         updatedAt: "2026-09-22T00:00:00.000Z",
         abilities: { canEdit: true, canDelete: true },
+        shareOrgs: (input.shareOrgs ?? []).map((entry) => ({
+          orgId: entry.orgId,
+          includeDescendants: entry.includeDescendants === true,
+        })),
+        isShared: false,
       };
       state.push(item);
       return HttpResponse.json({ data: { createDemoItemTwo: { item } } });
@@ -163,6 +168,12 @@ export const demoTwoWorld = (
       }
       // 缺席 = 不動、null = 清空(GQL-06);`name` 送 null 視同缺席(型別上也不允許)
       target.name = input.name ?? target.name;
+      if (input.shareOrgs !== undefined && input.shareOrgs !== null) {
+        target.shareOrgs = input.shareOrgs.map((entry) => ({
+          orgId: entry.orgId,
+          includeDescendants: entry.includeDescendants === true,
+        }));
+      }
       if ("note" in input) {
         target.note = input.note ?? null;
       }

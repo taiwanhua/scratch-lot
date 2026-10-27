@@ -1,8 +1,13 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from "use-intl";
 
 import type { FormDefinition } from "@repo/domain/form";
-import { useSaveFormVersionDraftMutation } from "@repo/graphql";
+import {
+  type FormVersionsQuery,
+  useFormVersionsQuery,
+  useSaveFormVersionDraftMutation,
+} from "@repo/graphql";
 
 import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
 import { useSession } from "@/hooks/base/useSession";
@@ -33,6 +38,10 @@ export interface DesignerSave {
 /**
  * 設計器的「存草稿」,並把「有沒有未存的變更 + 怎麼存」回報給 `useDesignerDraftStore`:
  * 換表單時的攔截、發布跳窗的「先存草稿」都走同一支 `save`(REACT-06:store action 在 effect 內呼叫)。
+ *
+ * 存成功當下就把新的草稿(含新的 `draftRevision`)寫進版本清單的快取(`formVersions`),不等 `onSaved` 觸發的重查:
+ * 版本面板的「發布」帶的 `expectedDraftRevision` 取自那份清單,存完馬上去發布時重查還沒回來,
+ * 會帶舊的修訂號被 api 以 `CONFLICT` 擋下(「已被別人更新」)。
  */
 export const useDesignerSave = ({
   formKey,
@@ -45,6 +54,7 @@ export const useDesignerSave = ({
   const t = useTranslations("admin.forms.designer");
   const tErrors = useTranslations("admin.forms.errors");
   const { session } = useSession();
+  const queryClient = useQueryClient();
   const [revision, setRevision] = useState(initialRevision);
   const [error, setError] = useState<FormError | null>(null);
   const mutation = useSaveFormVersionDraftMutation(session.client);
@@ -66,8 +76,26 @@ export const useDesignerSave = ({
           ...rawOf(snapshot),
         },
       });
-      const next = payload.saveFormVersionDraft.formVersion.draftRevision;
+      const savedVersion = payload.saveFormVersionDraft.formVersion;
+      const next = savedVersion.draftRevision;
       setRevision(next);
+      queryClient.setQueryData<FormVersionsQuery>(
+        useFormVersionsQuery.getKey({ formKey }),
+        (current) =>
+          current === undefined
+            ? current
+            : {
+                ...current,
+                formVersions: {
+                  ...current.formVersions,
+                  items: current.formVersions.items.map((item) =>
+                    item.id === savedVersion.id
+                      ? { ...item, ...savedVersion }
+                      : item,
+                  ),
+                },
+              },
+      );
       markSaved(snapshot);
       feedback.onSuccess(payload);
       onSaved();

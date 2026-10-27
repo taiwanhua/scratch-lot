@@ -171,6 +171,7 @@ const FORM_FIELDS = /* GraphQL */ `
     }
     currentVersion
     tabLabelTemplate
+    voidReasonCategoryKey
     hasDraft
     tenantEnabled
     assignments {

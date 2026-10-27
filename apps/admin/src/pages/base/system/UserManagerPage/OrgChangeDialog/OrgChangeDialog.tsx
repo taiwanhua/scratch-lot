@@ -140,10 +140,10 @@ export const OrgChangeDialog = ({
               sx={{ alignItems: "flex-start", mb: 1 }}
               label={
                 <Stack spacing={0.25} sx={{ pt: 1 }}>
-                  <Typography variant="body2" color="text.primary">
+                  <Typography variant="body2" color="textPrimary">
                     {option.label}
                   </Typography>
-                  <Typography variant="caption" color="text.secondary">
+                  <Typography variant="caption" color="textSecondary">
                     {option.hint}
                   </Typography>
                 </Stack>

@@ -1,0 +1,84 @@
+fragment LotteryPeriodSnapshotFields on LotteryPeriodSnapshot {
+  bankAccounts {
+    accountId
+    label
+    balance
+  }
+  stores {
+    orgId
+    name
+    vault
+    drawerTotal
+    drawers {
+      cashPointId
+      name
+      amount
+      spanningShiftLabel
+    }
+    uncoveredShifts {
+      shiftId
+      label
+    }
+  }
+}
+
+query LotteryPeriodCloses {
+  lotteryPeriodCloses {
+    items {
+      month
+      status
+      closedAt
+      closedBy {
+        ...LotteryAccountsRefFields
+      }
+      canClose
+    }
+    closableMonth
+  }
+}
+
+query LotteryPeriodCloseCheck($month: String!) {
+  lotteryPeriodCloseCheck(month: $month) {
+    month
+    openShifts {
+      shiftId
+      orgName
+      label
+    }
+    pendingDocuments {
+      kind
+      submissionId
+      serialNo
+      orgName
+      shiftLabel
+      at
+    }
+    snapshot {
+      ...LotteryPeriodSnapshotFields
+    }
+    canClose
+  }
+}
+
+query LotteryPeriodClose($month: String!) {
+  lotteryPeriodClose(month: $month) {
+    id
+    month
+    closedAt
+    closedBy {
+      ...LotteryAccountsRefFields
+    }
+    note
+    snapshot {
+      ...LotteryPeriodSnapshotFields
+    }
+  }
+}
+
+mutation CloseLotteryPeriod($input: CloseLotteryPeriodInput!) {
+  closeLotteryPeriod(input: $input) {
+    id
+    month
+    closedAt
+  }
+}

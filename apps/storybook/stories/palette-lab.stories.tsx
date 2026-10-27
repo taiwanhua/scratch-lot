@@ -4,7 +4,6 @@ import Chip from "@mui/material/Chip";
 import Slider from "@mui/material/Slider";
 import Stack from "@mui/material/Stack";
 import Switch from "@mui/material/Switch";
-import Typography from "@mui/material/Typography";
 import { ThemeProvider } from "@mui/material/styles";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
@@ -14,6 +13,7 @@ import { Button } from "@repo/ui/button";
 import { Card } from "@repo/ui/card";
 import { TextField } from "@repo/ui/text-field";
 import { createAppTheme, createBrandFromPrimary } from "@repo/ui/theme";
+import { Typography } from "@repo/ui/typography";
 
 const HEX_PATTERN = /^#[0-9A-Fa-f]{6}$/;
 /** 起始色 = 專案目前的主色(與 preview.tsx 整個目錄用的同一份),從它開始調 */
@@ -73,7 +73,7 @@ function PaletteLab() {
                     borderColor: "divider",
                   }}
                 />
-                <Typography variant="caption" color="text.secondary">
+                <Typography variant="caption" color="textSecondary">
                   {label}
                 </Typography>
               </Stack>
@@ -127,7 +127,7 @@ function PaletteLab() {
                   boxShadow: shadow,
                 }}
               />
-              <Typography variant="caption" color="text.secondary">
+              <Typography variant="caption" color="textSecondary">
                 {label}
               </Typography>
             </Stack>
@@ -137,7 +137,7 @@ function PaletteLab() {
         <Card sx={{ maxWidth: 360 }}>
           <CardContent>
             <Typography variant="h6">番茄炒蛋</Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
               十分鐘上桌的家常經典,滑嫩蛋香配上酸甜茄汁。
             </Typography>
             <Button size="small">查看食譜</Button>

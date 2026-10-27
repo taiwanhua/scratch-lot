@@ -1,5 +1,7 @@
 import { Args, Mutation, Query, Resolver } from "@nestjs/graphql";
 
+import type { NotificationSchedule } from "@repo/domain/notification-schedule";
+
 import { CurrentOperator } from "../auth/decorators";
 import type { OperatorContext } from "../database/operator-context";
 import { RequirePermission } from "../permission/require-permission.decorator";
@@ -9,6 +11,8 @@ import {
   UpdateNotificationSettingInput,
 } from "./dto/notifications.input";
 import {
+  type NotificationScheduleKindEnum,
+  type NotificationScheduleModel,
   type NotificationSettingModel,
   NotificationSettingPayload,
   NotificationSettingsPayload,
@@ -22,8 +26,26 @@ import {
 function toModel(item: NotificationSettingItem): NotificationSettingModel {
   return {
     ...item,
-    audience: { ...item.audience },
-    defaultAudience: { ...item.defaultAudience },
+    audience: item.audience === null ? null : { ...item.audience },
+    defaultAudience:
+      item.defaultAudience === null ? null : { ...item.defaultAudience },
+    schedule: toScheduleModel(item.schedule),
+    defaultSchedule: toScheduleModel(item.defaultSchedule),
+  };
+}
+
+function toScheduleModel(
+  schedule: NotificationSchedule | null,
+): NotificationScheduleModel | null {
+  if (schedule === null) {
+    return null;
+  }
+  return {
+    kind: schedule.kind as NotificationScheduleKindEnum,
+    daysBefore:
+      schedule.kind === "days-before" ? [...schedule.daysBefore] : null,
+    dayOfMonth: schedule.kind === "monthly" ? schedule.dayOfMonth : null,
+    time: schedule.time,
   };
 }
 

@@ -25,14 +25,17 @@ export interface TaskActionsProps {
   task: WorkflowTaskFieldsFragment;
   /** 這一關可否退回修改(實例關卡的 `allowReturn`);不行就不出現「退回修改」 */
   allowReturn: boolean;
-  /** 決定被接受(false)或此關已結束(true):重載實例、任務與提交 */
-  onDecided: (isStepClosed: boolean) => void;
+  /** 停用「核准」(駁回 / 退回照常):`ApprovalSection` 的 `approveDisabled`,或模組登記的審核畫面擴充回報 */
+  approveDisabled?: boolean;
+  /** 決定被接受(false)或此關已結束(true):重載實例、任務與提交;`decision` = 這次送出的決定 */
+  onDecided: (isStepClosed: boolean, decision: WorkflowDecision) => void;
 }
 
+/** 按鈕順序:主要的「核准」在最右(REACT-16),前面依序是退回修改、駁回。 */
 const DECISIONS = [
-  WorkflowDecision.Approve,
-  WorkflowDecision.Reject,
   WorkflowDecision.Return,
+  WorkflowDecision.Reject,
+  WorkflowDecision.Approve,
 ] as const;
 
 /**
@@ -43,6 +46,7 @@ const DECISIONS = [
 export const TaskActions = ({
   task,
   allowReturn,
+  approveDisabled = false,
   onDecided,
 }: TaskActionsProps) => {
   const t = useTranslations("admin.approval.decide");
@@ -59,10 +63,11 @@ export const TaskActions = ({
           ? t("stepClosed")
           : t(`feedback.${variables.input.decision}`),
       error: (failure) => errorText(workflowErrorOf(failure)),
-      onSuccess: (payload) => {
+      onSuccess: (payload, variables) => {
         setDecision(null);
         onDecided(
           payload.decideTask.result === WorkflowDecideResult.StepClosed,
+          variables.input.decision,
         );
       },
       onError: (failure) => {
@@ -94,7 +99,10 @@ export const TaskActions = ({
               item === WorkflowDecision.Approve ? "contained" : "outlined"
             }
             color={item === WorkflowDecision.Reject ? "error" : "primary"}
-            disabled={decide.isPending}
+            disabled={
+              decide.isPending ||
+              (approveDisabled && item === WorkflowDecision.Approve)
+            }
             onClick={() => {
               setErrorMessage(null);
               setDecision(item);

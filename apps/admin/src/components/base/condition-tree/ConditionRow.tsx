@@ -25,7 +25,7 @@ export interface ConditionRowProps<F extends string> {
 
 /**
  * 條件樹的一條條件列(資料範圍的條件組合與 AudiencePicker 共用):欄位 → 使用處的控制項 → 刪除,
- * 錯誤文字在列下方。兩棵樹只差欄位清單與欄位之後長什麼樣。
+ * 錯誤文字在列下方。兩棵樹只差欄位清單與欄位之後長什麼樣。寬度不夠時控制項換行(手機)。
  */
 export const ConditionRow = <F extends string>({
   fieldOptions,
@@ -41,7 +41,12 @@ export const ConditionRow = <F extends string>({
 
   return (
     <Stack spacing={0.5}>
-      <Stack direction="row" spacing={1.25} sx={{ alignItems: "flex-start" }}>
+      {/* 窄螢幕(手機全螢幕彈窗)放不下一整列時換行,不讓控制項互相擠壓重疊 */}
+      <Stack
+        direction="row"
+        spacing={1.25}
+        sx={{ alignItems: "flex-start", flexWrap: "wrap" }}
+      >
         <SelectField<F>
           size="small"
           label={t("field")}
@@ -61,7 +66,7 @@ export const ConditionRow = <F extends string>({
         )}
       </Stack>
       {error !== undefined && (
-        <Typography variant="caption" color="error.main">
+        <Typography variant="caption" color="error">
           {error}
         </Typography>
       )}

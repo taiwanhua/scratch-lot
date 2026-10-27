@@ -14,6 +14,21 @@ import {
   waitForRows,
 } from "./notification-settings-test-support";
 
+/** 把第一列條件改成「角色 屬於 客服」(儲存只送碰過的那一塊,沒改就不會送出)。 */
+const chooseSupportRole = async (
+  user: ReturnType<typeof renderPage>["user"],
+  dialog: HTMLElement,
+) => {
+  await user.click(within(dialog).getByRole("combobox", { name: "欄位" }));
+  await user.click(screen.getByRole("option", { name: "角色" }));
+  await user.click(within(dialog).getByRole("combobox", { name: "值" }));
+  const roleOptions = await screen.findAllByRole("option");
+  const support = roleOptions.find((option) =>
+    option.textContent.startsWith("客服"),
+  );
+  await user.click(support as Element);
+};
+
 /**
  * 通知設定頁:
  * 清單、唯讀、編輯收件人、還原預設、網址上的編輯彈窗、錯誤標回條件列、類型名稱的語系。
@@ -121,6 +136,7 @@ describe("通知設定頁", () => {
       within(rowOf("列印代理程式離線")).getByRole("button", { name: "編輯" }),
     );
     const dialog = await screen.findByRole("dialog");
+    await chooseSupportRole(user, dialog);
     await user.click(within(dialog).getByRole("button", { name: "儲存" }));
 
     expect(
@@ -146,11 +162,12 @@ describe("通知設定頁", () => {
       within(rowOf("列印代理程式離線")).getByRole("button", { name: "編輯" }),
     );
     const dialog = await screen.findByRole("dialog");
+    await chooseSupportRole(user, dialog);
     await user.click(within(dialog).getByRole("button", { name: "儲存" }));
 
     expect(
       await within(dialog).findByText(
-        "這裡不能調整收件人,請先切換到要設定的組織",
+        "這裡不能調整通知設定,請先切換到要設定的組織",
       ),
     ).toBeVisible();
     // 錯誤已就地顯示在對話框裡,不再跳提示(同一句不出現兩次)
@@ -264,7 +281,7 @@ describe("通知設定頁", () => {
 
     expect(
       await within(dialog).findByText(
-        "這裡不能調整收件人,請先切換到要設定的組織",
+        "這裡不能調整通知設定,請先切換到要設定的組織",
       ),
     ).toBeVisible();
     expect(querySnackbar()).toBeNull();

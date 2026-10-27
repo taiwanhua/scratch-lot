@@ -1,0 +1,58 @@
+fragment LotteryStoreShiftOptionFields on LotteryStoreShiftOption {
+  id
+  label
+  openedAt
+  open
+  mine
+  cashPointPrinterId
+}
+
+fragment LotteryStoreSaleReversalRowFields on LotteryStoreSaleReversalRow {
+  id
+  serialNo
+  status
+  ticketGroups
+  ticketCount
+  reasonLabel
+  refund
+  refundAmount
+  refundShiftLabel
+  submittedAt
+}
+
+fragment LotteryStoreCashCorrectionRowFields on LotteryStoreCashCorrectionRow {
+  id
+  serialNo
+  status
+  direction
+  amount
+  place
+  placeShiftLabel
+  attributedShiftLabel
+  reasonLabel
+  submittedAt
+}
+
+query LotteryStoreShiftOptions($orgId: ID!) {
+  lotteryStoreShiftOptions(orgId: $orgId) {
+    items {
+      ...LotteryStoreShiftOptionFields
+    }
+  }
+}
+
+query LotteryStoreSaleReversals($orgId: ID!) {
+  lotteryStoreSaleReversals(orgId: $orgId) {
+    items {
+      ...LotteryStoreSaleReversalRowFields
+    }
+  }
+}
+
+query LotteryStoreCashCorrections($orgId: ID!) {
+  lotteryStoreCashCorrections(orgId: $orgId) {
+    items {
+      ...LotteryStoreCashCorrectionRowFields
+    }
+  }
+}

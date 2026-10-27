@@ -21,6 +21,7 @@ import { useSession } from "@/hooks/base/useSession";
 import {
   type FormError,
   formErrorOf,
+  formKeyErrorOf,
 } from "@/lib/base/form-engine/form-errors";
 
 export interface ForkFormDialogProps {
@@ -62,6 +63,11 @@ export const ForkFormDialog = ({
   const [name, setName] = useState(source.name);
   const [error, setError] = useState<FormError | null>(null);
   const isKeyValid = isValidFormKey(key);
+  // key 被擋下的原因寫在 key 欄下,下方提示只放通用句(REACT-18)
+  const keyError = formKeyErrorOf(error, {
+    duplicate: tErrors("FORM_KEY_DUPLICATE"),
+    format: t("keyHint"),
+  });
 
   const fork = useForkFormMutation(
     session.client,
@@ -132,9 +138,10 @@ export const ForkFormDialog = ({
           value={key}
           onChange={(event) => {
             setKey(event.target.value);
+            setError(null);
           }}
-          error={!isKeyValid}
-          helperText={t("keyHint")}
+          error={!isKeyValid || keyError !== undefined}
+          helperText={keyError ?? t("keyHint")}
           size="small"
           required
         />
@@ -148,7 +155,11 @@ export const ForkFormDialog = ({
           required
         />
         {error !== null && (
-          <Alert severity="error">{tErrors(error.code)}</Alert>
+          <Alert severity="error">
+            {keyError === undefined
+              ? tErrors(error.code)
+              : tErrors("VALIDATION_FAILED")}
+          </Alert>
         )}
       </Stack>
     </Dialog>

@@ -35,7 +35,8 @@ export const OrgTreePanel = ({
     <Card
       sx={{
         p: 2,
-        width: 280,
+        // 手機寬(主從一次只顯示一邊)清單滿版
+        width: { xs: "100%", sm: 280 },
         flexShrink: 0,
         display: "flex",
         flexDirection: "column",
@@ -44,7 +45,7 @@ export const OrgTreePanel = ({
     >
       <Stack spacing={1} sx={{ flex: 1, minHeight: 0 }}>
         <Typography variant="subtitle1">{t("title")}</Typography>
-        <Typography variant="caption" color="text.secondary">
+        <Typography variant="caption" color="textSecondary">
           {isAvailable ? t("hint") : t("all")}
         </Typography>
         {isAvailable ? (

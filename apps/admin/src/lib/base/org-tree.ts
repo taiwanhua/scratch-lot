@@ -140,3 +140,30 @@ export const filterOrgTree = (
     return [{ ...node, children: isHit ? node.children : children }];
   });
 };
+
+/** 整棵租戶樹(`tenantOrgTree`)的節點:名稱與可見旗標。 */
+export interface TenantOrgNodeLike {
+  id: string;
+  name: string;
+  parentId?: string | null;
+  enabled: boolean;
+  isVisible: boolean;
+  children?: readonly TenantOrgNodeLike[];
+}
+
+/**
+ * 整棵租戶樹 → 一般的組織樹節點;`onlyVisible` 時可見範圍外的標成範圍外(選擇器反灰 + 原因),
+ * 否則全部可選(`OrgTreeSelect` 的 `visible` / `tenant` 模式)。
+ */
+export const tenantTreeToOrgNodes = (
+  nodes: readonly TenantOrgNodeLike[],
+  onlyVisible: boolean,
+): OrgNodeLike[] =>
+  nodes.map((node) => ({
+    id: node.id,
+    name: node.name,
+    parentId: node.parentId ?? null,
+    enabled: node.enabled,
+    outOfScope: onlyVisible && !node.isVisible,
+    children: tenantTreeToOrgNodes(node.children ?? [], onlyVisible),
+  }));

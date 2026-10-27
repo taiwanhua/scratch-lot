@@ -125,11 +125,11 @@
 
 新 checkout 或依賴有改動時,先執行[建置前置步驟](#pnpm--turbo建置測試格式)的「讓 `@repo/*` 型別與出口解得開」指令,再直接啟動 admin 或 mock。Vite 設定載入時就會讀取 `@repo/project-config/public`;`dev:mock` 會先建置 project-config 再啟動 Vite,但不經 Turbo,其他 workspace 依賴仍須先建置。
 
-| 情境                      | 指令                                                              | 提醒                                                                                      |
-| ------------------------- | ----------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| 起 admin 的 mock 模式     | `pnpm --filter @repo/admin dev:mock --port <自選埠> --strictPort` | **不要在 `--port` 前加 `--`**(加了 vite 會忽略,照樣從 3002 靜默跳埠);網址以 `Local:` 為準 |
-| 換租戶管理員視角 / 登入頁 | 網址加 `?view=tenant` / `?auth=off`                               | 預設自動登入 root、各頁都有假資料                                                         |
-| PR 截圖                   | 見 issue-tracker「admin 票的交付要求」                            | 截圖前確認畫面裡看得到自己的改動                                                          |
+| 情境                      | 指令                                                              | 提醒                                                                                                                   |
+| ------------------------- | ----------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| 起 admin 的 mock 模式     | `pnpm --filter @repo/admin dev:mock --port <自選埠> --strictPort` | **不要在 `--port` 前加 `--`**(加了 vite 會忽略,照樣從 3002 靜默跳埠);網址以 `Local:` 為準                              |
+| 換租戶管理員視角 / 登入頁 | 網址加 `?view=tenant` / `?auth=off`                               | 預設自動登入 root、各頁都有假資料;**專案頁在根組織視角只顯示切換提示**,截圖 / 驗收專案頁請加 `?view=tenant` 或切到機構 |
+| PR 截圖                   | 見 issue-tracker「admin 票的交付要求」                            | 截圖前確認畫面裡看得到自己的改動                                                                                       |
 
 正本:`apps/admin/package.json`(`dev:mock`)、`apps/admin/vite.mock.config.ts`、`docs/standards/testing/testing.md`(TEST-08「mock 開發模式」)
 

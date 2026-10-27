@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- 專案 app 圖示正本(暫用):銀色刮層上刮出金色的 S。改圖後跑 scripts/app-icons/generate.mjs -->
+  <rect width="512" height="512" rx="104" fill="#1B2440"/>
+  <rect x="96" y="96" width="320" height="320" rx="40" fill="#C9CED8"/>
+  <g fill="#9AA2B1" opacity="0.55">
+    <circle cx="140" cy="140" r="6"/>
+    <circle cx="372" cy="150" r="5"/>
+    <circle cx="380" cy="372" r="6"/>
+    <circle cx="132" cy="378" r="5"/>
+  </g>
+  <path d="M344 168 C 316 136 196 126 184 196 C 172 262 344 238 334 316 C 324 390 196 380 166 344" fill="none" stroke="#FFD700" stroke-width="54" stroke-linecap="round"/>
+</svg>

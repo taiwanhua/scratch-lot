@@ -32,7 +32,7 @@ export const ModuleCheckList = ({
 
   return (
     <Stack spacing={0.5}>
-      <Typography variant="caption" color="text.secondary">
+      <Typography variant="caption" color="textSecondary">
         {t("modules")}
       </Typography>
       {rows.map(({ option, depth }) => (
@@ -58,7 +58,7 @@ export const ModuleCheckList = ({
           />
         </Box>
       ))}
-      <Typography variant="caption" color="text.secondary">
+      <Typography variant="caption" color="textSecondary">
         {t("modulesHint")}
       </Typography>
     </Stack>

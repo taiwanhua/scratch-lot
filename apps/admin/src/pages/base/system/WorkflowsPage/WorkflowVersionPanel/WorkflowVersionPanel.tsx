@@ -214,6 +214,7 @@ export const WorkflowVersionPanel = ({
   return (
     <Stack spacing={2}>
       <Table<VersionRow>
+        minWidth={720}
         aria-label={t("tableAria")}
         size="small"
         rows={items}

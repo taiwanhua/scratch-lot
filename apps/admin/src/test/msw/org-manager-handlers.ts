@@ -32,6 +32,7 @@ import {
 } from "./org-managers-handlers";
 import { orgTenantTopWorld } from "./org-tenant-top-handlers";
 import { api } from "./server";
+import { toTenantTree } from "./tenant-org-tree";
 
 export type TestOrgNode = OrgTreeQuery["orgTree"][number];
 export type TestOrg = OrgQuery["org"];
@@ -176,6 +177,10 @@ export const orgWorld = (options: OrgWorldOptions = {}): OrgWorld => {
 
   const handlers = [
     api.query("OrgTree", () => HttpResponse.json({ data: { orgTree } })),
+    // 業務頁的組織選擇器(`OrgTreeSelect` 的 visible / tenant 模式):假資料沿用同一棵樹、全部可見
+    api.query("TenantOrgTree", () =>
+      HttpResponse.json({ data: { tenantOrgTree: toTenantTree(orgTree) } }),
+    ),
     api.query("Org", ({ variables }) => {
       const { id } = variables as OrgQueryVariables;
       const org = orgOf(id);

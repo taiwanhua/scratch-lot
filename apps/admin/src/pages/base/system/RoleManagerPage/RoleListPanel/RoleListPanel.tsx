@@ -78,7 +78,8 @@ export const RoleListPanel = ({
   return (
     <Card
       sx={{
-        width: 320,
+        // 手機寬(主從一次只顯示一邊)清單滿版
+        width: { xs: "100%", sm: 320 },
         flexShrink: 0,
         display: "flex",
         flexDirection: "column",
@@ -130,7 +131,7 @@ export const RoleListPanel = ({
           </Stack>
         )}
         {!isLoading && rows.length === 0 && (
-          <Typography variant="body2" color="text.secondary" sx={{ p: 2 }}>
+          <Typography variant="body2" color="textSecondary" sx={{ p: 2 }}>
             {t("empty")}
           </Typography>
         )}
@@ -141,7 +142,7 @@ export const RoleListPanel = ({
                 {group.name !== null && (
                   <Typography
                     variant="overline"
-                    color="text.secondary"
+                    color="textSecondary"
                     component="p"
                     sx={{ px: 1, pt: 1 }}
                   >
@@ -170,7 +171,7 @@ export const RoleListPanel = ({
         </List>
       </Box>
       <Stack spacing={1} sx={{ alignItems: "center", pt: 1 }}>
-        <Typography variant="caption" color="text.secondary">
+        <Typography variant="caption" color="textSecondary">
           {t("total", { total: totalCount, pageSize: ROLES_PAGE_SIZE })}
         </Typography>
         <Pagination

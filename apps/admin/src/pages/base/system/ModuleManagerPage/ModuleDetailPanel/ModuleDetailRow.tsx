@@ -22,7 +22,7 @@ export const ModuleDetailRow = ({ label, children }: ModuleDetailRowProps) => (
   >
     <Typography
       variant="subtitle2"
-      color="text.secondary"
+      color="textSecondary"
       sx={{ width: 100, flexShrink: 0 }}
     >
       {label}

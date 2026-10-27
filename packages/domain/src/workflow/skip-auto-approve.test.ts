@@ -2,7 +2,9 @@ import { describe, expect, it } from "@jest/globals";
 
 import { advance } from "./advance";
 import {
+  applicantAsReviewerOf,
   autoApprovalCandidates,
+  buildPlan,
   isApplicantInSkipOrgs,
   priorApproverIds,
 } from "./plan";
@@ -12,6 +14,7 @@ import {
   APPLICANT,
   NOW,
   decide,
+  decideIn,
   entered,
   newInstance,
   review,
@@ -471,5 +474,204 @@ describe("自動通過:進關一次寫入核准", () => {
         (event) => event.kind === "auto_approve_blocked",
       ),
     ).toMatchObject({ userId: "u1", reason: "auto_prior_approver" });
+  });
+});
+
+describe("申請人也是審核者時:剔除 / 自動通過 / 照常審核", () => {
+  it('applicantAsReviewerOf:省略 / false → 剔除;true → 自動通過;"review" → 照常審核', () => {
+    expect(applicantAsReviewerOf(null)).toBe("exclude");
+    expect(applicantAsReviewerOf({})).toBe("exclude");
+    expect(applicantAsReviewerOf({ applicant: false })).toBe("exclude");
+    expect(applicantAsReviewerOf({ priorApprover: true })).toBe("exclude");
+    expect(applicantAsReviewerOf({ applicant: true })).toBe("auto");
+    expect(applicantAsReviewerOf({ applicant: "review" })).toBe("review");
+  });
+
+  it("buildPlan:keepApplicant 時申請人留在計畫,順序同名單", () => {
+    expect(
+      buildPlan("boss", ["u1", APPLICANT, "u1"], APPLICANT, {
+        keepApplicant: true,
+      }).map((item) => [item.taskKey, item.assigneeId]),
+    ).toEqual([
+      ["boss-1", "u1"],
+      ["boss-2", APPLICANT],
+    ]);
+  });
+
+  it("照常審核不是自動通過的候選;開了「已核准過」時申請人照樣可以是 auto_prior_approver", () => {
+    const autoApprove = { applicant: "review", priorApprover: true } as const;
+    const step = review("third", { autoApprove });
+    const definition = linear({ autoApprove });
+    const fresh = newInstance(definition);
+    expect(
+      autoApprovalCandidates(
+        definition,
+        fresh,
+        review("first", { autoApprove: { applicant: "review" } }),
+        [APPLICANT, "u1"],
+      ),
+    ).toEqual([]);
+    const instance = atThird(definition, [
+      { stepKey: "first", userId: APPLICANT },
+    ]);
+    expect(
+      autoApprovalCandidates(definition, instance, step, [APPLICANT, "u1"]),
+    ).toEqual([{ assigneeId: APPLICANT, reason: "auto_prior_approver" }]);
+  });
+
+  it("預設(剔除):名單只有申請人 → 剔除後沒人,該關阻擋", () => {
+    const definition: WorkflowDefinition = { steps: [review("boss")] };
+    const world = worldOf(definition);
+    runAdvance(world, { boss: { kind: "assign", assigneeIds: [APPLICANT] } });
+    const boss = world.instance.steps.find((step) => step.stepKey === "boss");
+    expect(boss?.plan).toEqual([]);
+    expect(world.instance.status).toBe("blocked");
+  });
+
+  it("照常審核:名單只有申請人 → 派給申請人一張待審任務(寄「有新任務」),他核准後該關完成", () => {
+    const definition: WorkflowDefinition = {
+      steps: [review("boss", { autoApprove: { applicant: "review" } })],
+    };
+    const world = worldOf(definition);
+    runAdvance(world, { boss: { kind: "assign", assigneeIds: [APPLICANT] } });
+    const boss = world.instance.steps.find((step) => step.stepKey === "boss");
+    expect(boss?.status).toBe("active");
+    expect(boss?.plan.map((item) => item.assigneeId)).toEqual([APPLICANT]);
+    expect(boss?.decisions).toEqual([]);
+    expect(taskStatusOf(world, "boss-1")).toBe("pending");
+    expect(world.mails).toEqual([`task:boss-1:${APPLICANT}`]);
+
+    decideIn(world, "boss-1", "approved");
+    runAdvance(world);
+    expect(world.instance.status).toBe("approved");
+    const approved = world.instance.steps.find(
+      (step) => step.stepKey === "boss",
+    )?.decisions;
+    expect(approved?.map((one) => one.userId)).toEqual([APPLICANT]);
+    // 申請人自己按的核准,不是自動通過
+    expect(
+      world.instance.history.some(
+        (event) => event.kind === "approved" && event.reason != null,
+      ),
+    ).toBe(false);
+  });
+
+  it("照常審核 + any:申請人與其他審核者各一張,任一人核准即過,另一張取消", () => {
+    const definition: WorkflowDefinition = {
+      steps: [review("boss", { autoApprove: { applicant: "review" } })],
+    };
+    const world = worldOf(definition);
+    runAdvance(world, {
+      boss: { kind: "assign", assigneeIds: ["u1", APPLICANT] },
+    });
+    expect(taskStatusOf(world, "boss-1")).toBe("pending");
+    expect(taskStatusOf(world, "boss-2")).toBe("pending");
+
+    decideIn(world, "boss-1", "approved");
+    runAdvance(world);
+    expect(world.instance.status).toBe("approved");
+    expect(taskStatusOf(world, "boss-2")).toBe("cancelled");
+  });
+
+  it("照常審核 + 會簽(all):申請人只算一票,其他人也要核准才過", () => {
+    const definition: WorkflowDefinition = {
+      steps: [
+        review("boss", { mode: "all", autoApprove: { applicant: "review" } }),
+      ],
+    };
+    const world = worldOf(definition);
+    runAdvance(world, {
+      boss: { kind: "assign", assigneeIds: [APPLICANT, "u1"] },
+    });
+    decideIn(world, "boss-1", "approved");
+    runAdvance(world);
+    const boss = () =>
+      world.instance.steps.find((step) => step.stepKey === "boss");
+    expect(boss()?.status).toBe("active");
+    expect(taskStatusOf(world, "boss-1")).toBe("approved");
+    expect(taskStatusOf(world, "boss-2")).toBe("pending");
+
+    decideIn(world, "boss-2", "approved");
+    runAdvance(world);
+    expect(boss()?.status).toBe("completed");
+    expect(world.instance.status).toBe("approved");
+  });
+
+  it("照常審核 + 「已核准過」成立 → 申請人那一票自動記上(auto_prior_approver)", () => {
+    const definition: WorkflowDefinition = {
+      steps: [
+        review("boss", {
+          autoApprove: { applicant: "review", priorApprover: true },
+        }),
+      ],
+    };
+    const world = worldOf(definition);
+    runAdvance(world, {
+      boss: {
+        kind: "assign",
+        assigneeIds: [APPLICANT],
+        autoApprovals: [
+          { assigneeId: APPLICANT, reason: "auto_prior_approver" },
+        ],
+      },
+    });
+    expect(world.instance.status).toBe("approved");
+    expect(taskStatusOf(world, "boss-1")).toBe("approved");
+  });
+
+  it("照常審核 + 「已核准過」被守門擋下 → 申請人仍留在名單、拿一張待審任務(不剔除、不阻擋)", () => {
+    const definition: WorkflowDefinition = {
+      steps: [
+        review("boss", {
+          autoApprove: { applicant: "review", priorApprover: true },
+        }),
+      ],
+    };
+    const world = worldOf(definition);
+    runAdvance(world, {
+      boss: {
+        kind: "assign",
+        assigneeIds: [APPLICANT],
+        autoApprovals: [],
+        blockedAutoApprovals: [
+          {
+            assigneeId: APPLICANT,
+            reason: "auto_prior_approver",
+            code: "NOT_READY",
+          },
+        ],
+      },
+    });
+    const boss = world.instance.steps.find((step) => step.stepKey === "boss");
+    expect(boss?.plan.map((item) => item.assigneeId)).toEqual([APPLICANT]);
+    expect(boss?.blocked).not.toBe(true);
+    expect(world.instance.status).not.toBe("blocked");
+    expect(taskStatusOf(world, "boss-1")).toBe("pending");
+    expect(
+      world.instance.history.find(
+        (event) => event.kind === "auto_approve_blocked",
+      ),
+    ).toMatchObject({ userId: APPLICANT, reason: "auto_prior_approver" });
+  });
+
+  it("照常審核 + 代理人:計畫照 delegatorOf 記被代理者,申請人自己那一項不帶", () => {
+    const definition: WorkflowDefinition = {
+      steps: [review("boss", { autoApprove: { applicant: "review" } })],
+    };
+    const world = worldOf(definition);
+    runAdvance(world, {
+      boss: {
+        kind: "assign",
+        assigneeIds: [APPLICANT, "deputy"],
+        delegatorOf: { deputy: ["owner"] },
+      },
+    });
+    const boss = world.instance.steps.find((step) => step.stepKey === "boss");
+    expect(
+      boss?.plan.map((item) => [item.assigneeId, item.delegatorIds ?? []]),
+    ).toEqual([
+      [APPLICANT, []],
+      ["deputy", ["owner"]],
+    ]);
   });
 });

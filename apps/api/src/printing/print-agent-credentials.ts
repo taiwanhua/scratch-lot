@@ -48,6 +48,7 @@ export function internalReader(): OperatorContext {
     managedOrgIds: "all",
     memberOrgIds: [],
     roleIds: [],
+    memberTenants: [],
   };
 }
 
@@ -63,6 +64,7 @@ export function agentOperator(orgId: Types.ObjectId): OperatorContext {
     managedOrgIds: [],
     memberOrgIds: [],
     roleIds: [],
+    memberTenants: [],
   };
 }
 

@@ -81,7 +81,7 @@ export const MembersTab = ({ orgId, orgName, canAdd }: MembersTabProps) => {
           <Typography variant="subtitle1">
             {t("title", { name: orgName })}
           </Typography>
-          <Typography variant="caption" color="text.secondary" component="p">
+          <Typography variant="caption" color="textSecondary" component="p">
             {t("hint")}
           </Typography>
         </Box>
@@ -116,7 +116,7 @@ export const MembersTab = ({ orgId, orgName, canAdd }: MembersTabProps) => {
       </Box>
 
       <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
-        <Typography variant="body2" color="text.secondary" sx={{ flex: 1 }}>
+        <Typography variant="body2" color="textSecondary" sx={{ flex: 1 }}>
           {t("total", {
             total: data.totalCount,
             pageSize: ORG_MEMBERS_PAGE_SIZE,

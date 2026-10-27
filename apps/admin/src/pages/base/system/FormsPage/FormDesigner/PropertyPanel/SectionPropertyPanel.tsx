@@ -103,7 +103,7 @@ export const SectionPropertyPanel = ({
       <Stack spacing={1}>
         <Typography
           variant="body2"
-          color={settings.collapsible ? "text.secondary" : "text.disabled"}
+          color={settings.collapsible ? "textSecondary" : "textDisabled"}
         >
           {t("summaryFields")}
         </Typography>
@@ -139,7 +139,7 @@ export const SectionPropertyPanel = ({
           </Button>
         </Stack>
         {!settings.collapsible && (
-          <Typography variant="caption" color="text.secondary">
+          <Typography variant="caption" color="textSecondary">
             {t("summaryNeedsCollapsible")}
           </Typography>
         )}

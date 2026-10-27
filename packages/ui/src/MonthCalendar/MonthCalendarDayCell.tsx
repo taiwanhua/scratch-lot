@@ -1,14 +1,25 @@
 "use client";
 
+import { type Theme, alpha } from "@mui/material/styles";
 import type { KeyboardEvent, ReactNode } from "react";
 
 import { Box } from "../Box/Box";
 import { Tooltip } from "../Tooltip/Tooltip";
 import { stateLayerSx } from "../theme/state-layer";
 import { todayMarkSx } from "../theme/today-mark";
-import { MonthCalendarCornerMark } from "./MonthCalendarCornerMark";
+import { MonthCalendarCornerMarks } from "./MonthCalendarCornerMark";
 import type { CalendarDay } from "./month-calendar-grid";
-import type { MonthCalendarDayInfo } from "./month-calendar-types";
+import type {
+  MonthCalendarCorner,
+  MonthCalendarDayInfo,
+  MonthCalendarDayTone,
+} from "./month-calendar-types";
+
+/** 底色語意 → 主題 token(色碼由主題決定,深色模式跟著換)。 */
+const TONE_BACKGROUND: Record<MonthCalendarDayTone, string> = {
+  special: "info.lighter",
+  closed: "action.hover",
+};
 
 export interface MonthCalendarDayCellProps {
   day: CalendarDay;
@@ -23,6 +34,41 @@ export interface MonthCalendarDayCellProps {
   label: string;
   onSelect: (date: string) => void;
 }
+
+/**
+ * 格子底色:停用色 > 資料帶來的顏色(以主題的 `selectedOpacity` 淡化,文字對比照舊)> 語意底色 > 紙色。
+ */
+const backgroundOf = (
+  theme: Theme,
+  {
+    disabled,
+    tone,
+    source,
+  }: {
+    disabled: boolean;
+    tone: MonthCalendarDayTone | undefined;
+    source: string | undefined;
+  },
+): string => {
+  if (disabled) {
+    return "action.disabledBackground";
+  }
+  if (source !== undefined) {
+    // 資料帶來的是一般色碼(例 `#006064`):用獨立的 `alpha`(`theme.alpha` 在 CSS 變數主題下只收色彩通道)
+    return alpha(source, theme.palette.action.selectedOpacity);
+  }
+  return tone === undefined ? "background.paper" : TONE_BACKGROUND[tone];
+};
+
+/** 這一天的角標:`corners` 優先;只給舊的單一 `corner` 時當成一個。 */
+const cornersOf = (
+  info: MonthCalendarDayInfo,
+): readonly MonthCalendarCorner[] => {
+  if (info.corners !== undefined) {
+    return info.corners;
+  }
+  return info.corner === undefined ? [] : [info.corner];
+};
 
 const isActivationKey = (event: KeyboardEvent) =>
   event.key === "Enter" || event.key === " ";
@@ -40,6 +86,8 @@ export const MonthCalendarDayCell = ({
 }: MonthCalendarDayCellProps) => {
   const disabled = day.inMonth && info?.disabled === true;
   const muted = !day.inMonth || disabled;
+  const tone = day.inMonth ? info?.tone : undefined;
+  const source = day.inMonth ? info?.background : undefined;
   const select = () => {
     if (selectable) onSelect(day.date);
   };
@@ -50,6 +98,8 @@ export const MonthCalendarDayCell = ({
       aria-selected={selectionEnabled ? selected : undefined}
       aria-disabled={muted || undefined}
       data-date={day.date}
+      data-tone={tone}
+      data-background={source}
       tabIndex={selectable ? 0 : undefined}
       onClick={select}
       onKeyDown={(event: KeyboardEvent) => {
@@ -66,7 +116,7 @@ export const MonthCalendarDayCell = ({
         display: "flex",
         flexDirection: "column",
         gap: 0.5,
-        bgcolor: disabled ? "action.disabledBackground" : "background.paper",
+        bgcolor: backgroundOf(theme, { disabled, tone, source }),
         color: muted ? "text.disabled" : "text.primary",
         borderRight: 1,
         borderBottom: 1,
@@ -88,8 +138,8 @@ export const MonthCalendarDayCell = ({
       >
         {day.day}
       </Box>
-      {day.inMonth && info?.corner ? (
-        <MonthCalendarCornerMark corner={info.corner} />
+      {day.inMonth && info !== undefined ? (
+        <MonthCalendarCornerMarks corners={cornersOf(info)} />
       ) : null}
       {day.inMonth && info?.note ? (
         <Box

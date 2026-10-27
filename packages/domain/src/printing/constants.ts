@@ -69,6 +69,57 @@ export function readPngDimensions(
   return { width: view.getUint32(16), height: view.getUint32(20) };
 }
 
+/**
+ * 列印影像的「中段切紙位置」:放在 PNG 的 `tEXt` 區塊(keyword 是這個,內容是逗號分隔的列號,例 `812,1650`),
+ * 由瀏覽器轉圖時寫入(`@repo/ui/receipt58` 的 `renderReceiptToPng`,依版面上 `Receipt58Cut` 的下緣),
+ * 代理程式印到那一列就切紙、再接著印。一次列印印好幾聯(例:兩聯單據)仍是一個工作、算印一次。
+ * 讀不懂這個區塊的舊代理程式照常整張印完才切(聯與聯之間留著切紙虛線,由人撕開)。
+ * `@repo/ui` 不依賴本套件,寫入端另有一份同值的常數(`RECEIPT58_CUT_ROWS_KEYWORD`),兩邊的測試都以字面值對照。
+ */
+export const PRINT_IMAGE_CUT_ROWS_KEYWORD = "cut-rows";
+
+/**
+ * 讀 PNG 裡的中段切紙位置(`PRINT_IMAGE_CUT_ROWS_KEYWORD`):由小到大、去重,只留 `0 < 列 < 高度` 的;
+ * 沒有這個區塊、不是 PNG、內容讀不懂 → 空陣列(照常只在最後切紙)。
+ */
+export function readPngCutRows(bytes: Uint8Array): number[] {
+  const size = readPngDimensions(bytes);
+  if (size === null) {
+    return [];
+  }
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const prefix = `${PRINT_IMAGE_CUT_ROWS_KEYWORD}\0`;
+  let offset = PNG_SIGNATURE.length;
+  while (offset + 8 <= bytes.length) {
+    const length = view.getUint32(offset);
+    const type = String.fromCodePoint(
+      ...bytes.subarray(offset + 4, offset + 8),
+    );
+    const dataStart = offset + 8;
+    if (type === "IEND" || dataStart + length > bytes.length) {
+      return [];
+    }
+    if (type === "tEXt") {
+      const text = String.fromCodePoint(
+        ...bytes.subarray(dataStart, dataStart + length),
+      );
+      if (text.startsWith(prefix)) {
+        const rows = text
+          .slice(prefix.length)
+          .split(",")
+          .map((part) => Number(part.trim()))
+          .filter(
+            (row) => Number.isInteger(row) && row > 0 && row < size.height,
+          );
+        return [...new Set(rows)].toSorted((a, b) => a - b);
+      }
+    }
+    // 長度 4 + 類型 4 + 資料 + CRC 4
+    offset = dataStart + length + 4;
+  }
+  return [];
+}
+
 /** 工作狀態:等待中 → 已送出(代理程式認領)→ 已印 / 失敗。 */
 export const PRINT_JOB_STATUSES = [
   "pending",

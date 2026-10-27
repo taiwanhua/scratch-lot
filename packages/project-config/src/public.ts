@@ -4,6 +4,7 @@ import { projectPublic as projectPublicValues } from "./project/public";
 export { createAdminStorageKeys } from "./base/admin-storage-keys";
 export type { AdminStorageKeys } from "./base/admin-storage-keys";
 export type {
+  ProjectAdminWebApp,
   ProjectFrontMetadata,
   ProjectPublicConfig,
 } from "./base/public-config";

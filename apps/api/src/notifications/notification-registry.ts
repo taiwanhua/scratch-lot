@@ -5,6 +5,11 @@ import {
   type AudienceOrgRange,
   validateAudience,
 } from "@repo/domain/audience";
+import {
+  NOTIFICATION_SCHEDULE_KINDS,
+  type NotificationSchedule,
+  validateSchedule,
+} from "@repo/domain/notification-schedule";
 
 import type { UserPreferenceDefinition } from "../user-preferences/user-preference-registry";
 
@@ -61,6 +66,19 @@ export interface NotificationOrgScope {
   range: AudienceOrgRange;
 }
 
+/**
+ * 類型的「可調時間」宣告(選填;沒宣告 = 一發生就寄):寫法與預設值由 `default` 決定,
+ * 租戶只能改值、不能換寫法。
+ */
+export interface NotificationScheduleDeclaration {
+  readonly default: NotificationSchedule;
+  /**
+   * `days-before` 才能給:日期的稱呼(例「到期」「截止日」),通知設定頁的摘要寫成
+   * 「到期前 30、7 天及當天 09:00」;沒給 = 「日期前 …」。
+   */
+  readonly dateLabel?: string;
+}
+
 export interface NotificationTypeDefinition {
   /** 例 `workflow.task-created`:`<領域>.<名稱>`,小寫英數與 `-`,以 `.` 分段(至少兩段) */
   readonly key: string;
@@ -77,6 +95,10 @@ export interface NotificationTypeDefinition {
   readonly orgScope?: NotificationOrgScope;
   /** 負責人提醒才有(且必填):預設人員條件(只能用使用者、角色、權限;組織範圍由 `orgScope` 決定) */
   readonly defaultAudience?: Audience;
+  /** 當事人通知才能給:收件人說明(通知設定頁顯示「由事件決定(<說明>)」),例「處理這件事的人員」 */
+  readonly recipientNote?: string;
+  /** 選填:可調時間(三種寫法之一與預設值);當事人通知也可以宣告 */
+  readonly schedule?: NotificationScheduleDeclaration;
 }
 
 /**
@@ -228,16 +250,55 @@ function assertTypeDefinition(
     );
   }
   assertCategory(label, type);
+  assertSchedule(label, type);
+}
+
+function assertSchedule(label: string, type: NotificationTypeDefinition): void {
+  const declaration = type.schedule;
+  if (declaration === undefined) {
+    return;
+  }
+  if (!NOTIFICATION_SCHEDULE_KINDS.includes(declaration.default.kind)) {
+    throw new NotificationRegistryError(
+      `${label} 的 schedule.default.kind 不認得(只收 ${NOTIFICATION_SCHEDULE_KINDS.join("、")})`,
+    );
+  }
+  const validation = validateSchedule(
+    declaration.default,
+    declaration.default.kind,
+  );
+  if (!validation.ok) {
+    throw new NotificationRegistryError(
+      `${label} 的 schedule.default 不合法(${validation.issue.path}):${validation.issue.message}`,
+    );
+  }
+  if (
+    declaration.dateLabel !== undefined &&
+    (declaration.default.kind !== "days-before" ||
+      declaration.dateLabel.trim() === "")
+  ) {
+    throw new NotificationRegistryError(
+      `${label} 的 schedule.dateLabel 只能給 days-before,且不可空白`,
+    );
+  }
 }
 
 function assertCategory(label: string, type: NotificationTypeDefinition): void {
   if (type.category === "party") {
+    if (type.recipientNote?.trim() === "") {
+      throw new NotificationRegistryError(`${label} 的 recipientNote 不可空白`);
+    }
     if (type.orgScope !== undefined || type.defaultAudience !== undefined) {
       throw new NotificationRegistryError(
         `${label} 是當事人通知,不能宣告 orgScope / defaultAudience`,
       );
     }
     return;
+  }
+  if (type.recipientNote !== undefined) {
+    throw new NotificationRegistryError(
+      `${label} 是負責人提醒,收件人由人員條件決定,不能宣告 recipientNote`,
+    );
   }
   const { orgScope, defaultAudience } = type;
   if (orgScope === undefined || defaultAudience === undefined) {

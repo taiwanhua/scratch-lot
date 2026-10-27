@@ -1,7 +1,7 @@
 import type { KeyboardEvent, MouseEvent, ReactNode } from "react";
 
 import { Box } from "@repo/ui/box";
-import { ChevronDownIcon } from "@repo/ui/icons";
+import { ArrowDropDownIcon } from "@repo/ui/icons";
 import { Tag } from "@repo/ui/tag";
 import { TextField } from "@repo/ui/text-field";
 
@@ -36,7 +36,7 @@ const OPEN_KEYS = new Set(["Enter", " ", "ArrowDown"]);
 
 /**
  * 樹狀選擇器收合時的欄位(`OrgTreeSelect`、人員條件的 `PermissionTreeSelect` 共用):
- * 外觀同 SelectField(浮動標籤 + 外框 + 右側箭頭)。單選顯示名稱;多選以 `Tag` 列出已選項目,
+ * 外觀同 SelectField(浮動標籤 + 外框 + 右側實心三角箭頭,打開時轉 180°、停用時灰)。單選顯示名稱;多選以 `Tag` 列出已選項目,
  * 每個標籤可 × 取消(停用 / 樹上找不到的也能取消)。欄位本身唯讀,點擊或 Enter / 空白 / ↓ 打開面板。
  */
 export const TreeSelectField = ({
@@ -110,7 +110,16 @@ export const TreeSelectField = ({
           readOnly: true,
           startAdornment: tags,
           endAdornment: (
-            <ChevronDownIcon fontSize="small" sx={{ color: "action.active" }} />
+            <ArrowDropDownIcon
+              sx={{
+                // 位置、顏色、展開時翻轉都照 MUI Select 的箭頭(`MuiSelect-icon` / `iconOpen`):
+                // Select 的箭頭離外框右緣 7px,這裡是 endAdornment(外框右內距 14px),往右挪 7px 才對齊
+                mr: "-7px",
+                pointerEvents: "none",
+                color: disabled ? "action.disabled" : "action.active",
+                transform: isOpen ? "rotate(180deg)" : undefined,
+              }}
+            />
           ),
           sx: { cursor: disabled ? undefined : "pointer" },
         },

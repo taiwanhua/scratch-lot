@@ -22,7 +22,7 @@ export const OrgDetailRow = ({ label, children }: OrgDetailRowProps) => (
   >
     <Typography
       variant="subtitle2"
-      color="text.secondary"
+      color="textSecondary"
       sx={{ width: 120, flexShrink: 0 }}
     >
       {label}

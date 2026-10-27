@@ -44,7 +44,7 @@ export const AuthCard = ({ subtitle, children }: AuthCardProps) => {
             <Typography variant="h4" color="primary">
               {tCommon("brand")}
             </Typography>
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="body2" color="textSecondary">
               {subtitle}
             </Typography>
           </Stack>
@@ -52,7 +52,7 @@ export const AuthCard = ({ subtitle, children }: AuthCardProps) => {
         </Stack>
       </Card>
 
-      <Typography variant="caption" color="text.disabled">
+      <Typography variant="caption" color="textDisabled">
         {tLogin("footer", {
           year: new Date().getFullYear(),
           brand: tCommon("brand"),

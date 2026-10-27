@@ -39,7 +39,11 @@ import {
   WORKFLOW_TASK_CREATED,
 } from "./base-notification-types";
 import { EmailChannelAdapter } from "./notification-channels";
-import { notificationPreferenceKey } from "./notification-registry";
+import {
+  type NotificationTypeDefinition,
+  notificationPreferenceKey,
+} from "./notification-registry";
+import { NOTIFICATION_TYPES } from "./notification-registry.module";
 import { NotificationService, type NotifyInput } from "./notification.service";
 
 jest.setTimeout(120_000);
@@ -127,6 +131,10 @@ const NOTIFICATION_SETTINGS = /* GraphQL */ `
         audience
         isDefault
         defaultAudience
+        schedule {
+          kind
+        }
+        isScheduleDefault
       }
       totalCount
     }
@@ -723,15 +731,31 @@ describe("通知 notify() / 通知清單 / 通知設定", () => {
           totalCount: number;
         };
       }>(api, admin.token, NOTIFICATION_SETTINGS, { input: {} });
-      expect(notificationSettings.totalCount).toBe(1);
-      expect(notificationSettings.items[0]).toMatchObject({
+      // 清單 = 底座 + 專案登記的負責人提醒 + 宣告了可調時間的當事人通知(數量從 app 實際組裝的登記推出,專案加了類型這裡照樣綠)
+      expect(notificationSettings.totalCount).toBe(
+        [
+          ...api.app
+            .get<ReadonlyMap<string, NotificationTypeDefinition>>(
+              NOTIFICATION_TYPES,
+              { strict: false },
+            )
+            .values(),
+        ].filter(
+          (type) =>
+            type.category === "responsible" || type.schedule !== undefined,
+        ).length,
+      );
+      const offline = notificationSettings.items.find(
+        (item) => item.type === PRINTING_AGENT_OFFLINE,
+      );
+      expect(offline).toMatchObject({
         type: PRINTING_AGENT_OFFLINE,
         isDefault: true,
         orgScope: { ref: "event-org", range: "ancestors" },
+        schedule: null,
+        isScheduleDefault: true,
       });
-      expect(notificationSettings.items[0]?.audience).toEqual(
-        notificationSettings.items[0]?.defaultAudience,
-      );
+      expect(offline?.audience).toEqual(offline?.defaultAudience);
     });
 
     it("租戶調整人員條件後,下一次觸發依新條件(且只在類型宣告的組織範圍內);還原預設後回到類型宣告", async () => {

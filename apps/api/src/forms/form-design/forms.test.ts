@@ -302,10 +302,12 @@ describe("表單:副本、分派 / 啟用 / 收回的交集、租戶邊界", () 
     });
     expect(codeOf(duplicated)).toBe("VALIDATION_FAILED");
     expect(extensionsOf(duplicated).fields).toEqual(["key"]);
+    expect(extensionsOf(duplicated).reason).toBe("FORM_KEY_DUPLICATE");
     const badFormat = await call(api, root, CREATE_FORM, {
       input: { key: "Bad-Key", moduleKey: MODULE_KEY, name: "格式錯" },
     });
     expect(extensionsOf(badFormat).fields).toEqual(["key"]);
+    expect(extensionsOf(badFormat).reason).toBeUndefined();
     const notFormModule = await call(api, root, CREATE_FORM, {
       input: { key: "wrong_module", moduleKey: "demo.sample-two", name: "x" },
     });

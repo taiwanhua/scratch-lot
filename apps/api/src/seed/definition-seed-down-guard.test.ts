@@ -1,3 +1,6 @@
+import { existsSync, readdirSync } from "node:fs";
+import path from "node:path";
+
 import {
   afterAll,
   afterEach,
@@ -23,7 +26,26 @@ import {
 
 jest.setTimeout(FORM_TEST_TIMEOUT_MS * 4);
 
-const LAST_MIGRATION = "20260929120000_data_data-scope-date-instants.js";
+/** db-migrator 的 migration 目錄(根目錄的歷史檔 + `base/`、`project/`)。 */
+const MIGRATIONS_ROOT = path.resolve(
+  __dirname,
+  "..",
+  "..",
+  "..",
+  "db-migrator",
+  "migrations",
+);
+
+/** 依檔名排序的最後一支(檔名全域唯一;`migrate:down` 一次退的就是它)。 */
+const LAST_MIGRATION =
+  ["", "base", "project"]
+    .map((segment) => path.join(MIGRATIONS_ROOT, segment))
+    .filter((directory) => existsSync(directory))
+    .flatMap((directory) =>
+      readdirSync(directory).filter((fileName) => fileName.endsWith(".js")),
+    )
+    .toSorted((left, right) => Number(left > right) - Number(left < right))
+    .at(-1) ?? "";
 
 /**
  * 中斷的受管定義安裝不會被 `migrate:down` 越過(`docs/deployment.md`「設定與資料更新」:

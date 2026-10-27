@@ -166,3 +166,35 @@ describe("專案錯誤碼(projectReason / adminErrorText)", () => {
     );
   });
 });
+
+describe("交易逾時(TRANSACTION_TIMEOUT)", () => {
+  it("任何一頁都認得:code 照舊 UNEXPECTED、帶 timedOut(頁面的碼表不必登記)", () => {
+    const error = clientErrorOf([
+      {
+        message: "transaction exceeded 60000ms and was rolled back",
+        extensions: { code: "TRANSACTION_TIMEOUT", timeoutMs: 60_000 },
+      },
+    ]);
+    expect(parseAdminError(error, SPEC)).toEqual({
+      code: "UNEXPECTED",
+      timedOut: true,
+      message: "transaction exceeded 60000ms and was rolled back",
+    });
+  });
+
+  it("adminErrorText 顯示共用的逾時文案(已取消、資料沒有變更);字典沒有就退回 <ns>.errors.UNEXPECTED", () => {
+    const t = translator({
+      "admin.app.errors.transactionTimeout": "處理時間過長,已取消",
+    });
+    expect(
+      adminErrorText({ code: "UNEXPECTED", timedOut: true }, tErrors, t),
+    ).toBe("處理時間過長,已取消");
+    expect(
+      adminErrorText(
+        { code: "UNEXPECTED", timedOut: true },
+        tErrors,
+        translator({}),
+      ),
+    ).toBe("errors.UNEXPECTED");
+  });
+});

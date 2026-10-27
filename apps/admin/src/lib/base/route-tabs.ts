@@ -198,6 +198,70 @@ export const closeEntry = (
   };
 };
 
+/**
+ * 批次關閉的共用做法:`keep(index, targetIndex)` 決定留哪些。目標頁(按右鍵 / 長按 / 「⋯」作用的那一頁)永遠留下;
+ * 目前頁沒被關 → 畫面不動(`navigateTo` null);目前頁被關 → 切到目標頁(帶回它記下的網址參數)。
+ * 目標不存在或沒有可關的 → 回原內容。
+ */
+const closeAround = (
+  entries: readonly RouteTabEntry[],
+  route: string,
+  activeRoute: string | null,
+  keep: (index: number, targetIndex: number) => boolean,
+): CloseResult => {
+  const targetIndex = entries.findIndex((entry) => entry.route === route);
+  if (targetIndex === -1) {
+    return { entries: [...entries], navigateTo: null };
+  }
+  const remaining = entries.filter((_, index) => keep(index, targetIndex));
+  const isActiveClosed =
+    activeRoute !== null &&
+    entries.some((entry) => entry.route === activeRoute) &&
+    !remaining.some((entry) => entry.route === activeRoute);
+  return {
+    entries: remaining.length === entries.length ? [...entries] : remaining,
+    navigateTo: isActiveClosed ? entryHref(entries[targetIndex]) : null,
+  };
+};
+
+/** 關閉 `route` 左側所有分頁(規則見 `closeAround`)。 */
+export const closeLeftOf = (
+  entries: readonly RouteTabEntry[],
+  route: string,
+  activeRoute: string | null,
+): CloseResult =>
+  closeAround(entries, route, activeRoute, (index, target) => index >= target);
+
+/** 關閉 `route` 右側所有分頁(規則見 `closeAround`)。 */
+export const closeRightOf = (
+  entries: readonly RouteTabEntry[],
+  route: string,
+  activeRoute: string | null,
+): CloseResult =>
+  closeAround(entries, route, activeRoute, (index, target) => index <= target);
+
+/** 關閉 `route` 以外的所有分頁(規則見 `closeAround`)。 */
+export const closeOthers = (
+  entries: readonly RouteTabEntry[],
+  route: string,
+  activeRoute: string | null,
+): CloseResult =>
+  closeAround(entries, route, activeRoute, (index, target) => index === target);
+
+/** 批次關閉的三種(頁籤選單的三個選項)。 */
+export type BatchCloseKind = "left" | "right" | "others";
+
+export const BATCH_CLOSE: Readonly<
+  Record<
+    BatchCloseKind,
+    (
+      entries: readonly RouteTabEntry[],
+      route: string,
+      activeRoute: string | null,
+    ) => CloseResult
+  >
+> = { left: closeLeftOf, right: closeRightOf, others: closeOthers };
+
 /** 網址是不是這一筆的子頁籤:等於前綴,或前綴後面再接一段以上(`/…/view-page/<id>`、`/…/view-page/<id>/…`)。 */
 const isUnderRoute = (route: string, prefix: string): boolean =>
   route === prefix || route.startsWith(`${prefix}/`);

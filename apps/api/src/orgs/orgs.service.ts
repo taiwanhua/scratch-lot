@@ -8,9 +8,11 @@ import { OrgsRepository, RolesRepository } from "../database/database.module";
 import {
   type OperatorContext,
   isOrgManaged,
+  isOrgVisible,
 } from "../database/operator-context";
 import { OrgBusinessDataReader } from "../database/org-business-data.reader";
 import { RelationService } from "../database/relation.service";
+import { tenantIdOfOrg } from "../database/tenant-id";
 import { StorageService, isOwnedUploadPath } from "../storage/storage.service";
 import type { CreateChildOrgInput } from "./dto/create-child-org.input";
 import type { DeleteOrgInput } from "./dto/delete-org.input";
@@ -20,7 +22,7 @@ import type { SetOrgTimezoneInput } from "./dto/set-org-timezone.input";
 import type { SetOrgVisibilityInput } from "./dto/set-org-visibility.input";
 import type { UpdateOrgInput } from "./dto/update-org.input";
 import type { DeletePayload } from "./models/org-payloads.model";
-import { type Org, OrgNode } from "./models/org.model";
+import { type Org, OrgNode, type TenantOrgNode } from "./models/org.model";
 import {
   type OrgNotDeletableReason,
   orgError,
@@ -213,9 +215,9 @@ function byName(documents: OrgRecord[]): OrgRecord[] {
  * 那件事由 `org(樹根).isSystem` 回答(`useOrgManagerData.ts`)。
  */
 function buildForest(
-  operator: OperatorContext,
   documents: OrgRecord[],
   rootIds: Types.ObjectId[],
+  isInScope: (id: Types.ObjectId) => boolean,
 ): OrgNode[] {
   const rootKeys = new Set(rootIds.map(String));
   const childrenByParent = new Map<string, OrgRecord[]>();
@@ -241,7 +243,7 @@ function buildForest(
       document.ownerUserId === undefined ? null : String(document.ownerUserId),
     // 管理範圍外的節點根本不會出現在樹上,這個欄位因此恆為 false;
     // 保留是為了與使用者列的 `roles[].outOfScope` 命名一致、且不必同步改前端(GQL-05 相容)
-    outOfScope: !isOrgManaged(operator, document._id),
+    outOfScope: !isInScope(document._id),
     children: byName(childrenByParent.get(String(document._id)) ?? []).map(
       (child) => toNode(child),
     ),
@@ -285,7 +287,68 @@ export class OrgsService {
     const documents = await this.orgs.findMany(subtreeContext(operator), {
       $or: [{ _id: { $in: rootIds } }, { ancestors: { $in: rootIds } }],
     });
-    return buildForest(operator, documents, rootIds);
+    return buildForest(documents, rootIds, (id) => isOrgManaged(operator, id));
+  }
+
+  /**
+   * **整棵租戶樹**(組織選擇器的 `visible` / `tenant` 模式;`tenantOrgTree`):當前組織所屬租戶的整棵樹
+   * (租戶頂層與全部下層),每個節點帶「在可見範圍內」「在管理範圍內」兩個旗標,由前端依模式決定哪些能選;
+   * 名稱以外不多給。**釘在當前組織的租戶**:別的租戶不會出現。根組織成員(可見範圍 `"all"`)= 從根組織起的整棵樹。
+   * 只要登入,不要求治理權限。
+   */
+  async tenantTree(operator: OperatorContext): Promise<TenantOrgNode[]> {
+    const reader = subtreeContext(operator);
+    let topId: Types.ObjectId;
+    if (operator.visibleOrgIds === "all") {
+      const root = await this.orgs.findOne(reader, { parentId: null });
+      if (root === null) {
+        return [];
+      }
+      topId = root._id;
+    } else {
+      if (operator.currentOrgId === null) {
+        return [];
+      }
+      const current = await this.orgs.findById(reader, operator.currentOrgId);
+      const tenantId = current === null ? null : tenantIdOfOrg(current);
+      if (tenantId === null) {
+        return [];
+      }
+      topId = tenantId;
+    }
+    const documents = await this.orgs.findMany(reader, {
+      $or: [{ _id: topId }, { ancestors: topId }],
+    });
+    const childrenByParent = new Map<string, OrgRecord[]>();
+    for (const document of documents) {
+      if (
+        String(document._id) === String(topId) ||
+        document.parentId === null
+      ) {
+        continue;
+      }
+      const key = String(document.parentId);
+      childrenByParent.set(key, [
+        ...(childrenByParent.get(key) ?? []),
+        document,
+      ]);
+    }
+    const toNode = (document: OrgRecord, isTop: boolean): TenantOrgNode => ({
+      id: String(document._id),
+      name: document.name,
+      parentId:
+        isTop || document.parentId === null ? null : String(document.parentId),
+      enabled: document.enabled,
+      isVisible: isOrgVisible(operator, document._id),
+      isManaged: isOrgManaged(operator, document._id),
+      children: byName(childrenByParent.get(String(document._id)) ?? []).map(
+        (child) => toNode(child, false),
+      ),
+    });
+    const top = documents.find(
+      (document) => String(document._id) === String(topId),
+    );
+    return top === undefined ? [] : [toNode(top, true)];
   }
 
   /** 單一組織:管理範圍外視為不存在(不透露差別)。 */

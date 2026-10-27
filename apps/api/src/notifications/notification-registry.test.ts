@@ -114,6 +114,113 @@ describe("通知類型登記表", () => {
   });
 });
 
+describe("可調時間的宣告", () => {
+  const EXPIRY_SCHEDULE = {
+    default: {
+      kind: "days-before",
+      daysBefore: [30, 7, 0],
+      time: "09:00",
+    },
+    dateLabel: "到期",
+  } as const;
+
+  it("負責人提醒與當事人通知都可以宣告;當事人通知可加收件人說明", () => {
+    const responsible: NotificationTypeDefinition = {
+      ...PARTY,
+      key: "demo.expiry-reminder",
+      category: "responsible",
+      orgScope: { ref: "event-org", range: "ancestors" },
+      defaultAudience: {
+        mode: "match",
+        filter: {
+          field: "permission",
+          cond: "in",
+          value: { kind: "static", values: ["demo.edit"] },
+        },
+      },
+      schedule: EXPIRY_SCHEDULE,
+    };
+    const party: NotificationTypeDefinition = {
+      ...PARTY,
+      key: "demo.deadline-notice",
+      recipientNote: "表單的填寫人",
+      schedule: {
+        default: { kind: "days-before", daysBefore: [0], time: "09:00" },
+      },
+    };
+    const monthly: NotificationTypeDefinition = {
+      ...PARTY,
+      key: "demo.monthly-report",
+      schedule: { default: { kind: "monthly", dayOfMonth: 3, time: "09:00" } },
+    };
+    const registry = composeNotificationTypes(
+      [],
+      [responsible, party, monthly],
+    );
+    expect(registry.get("demo.expiry-reminder")?.schedule).toBe(
+      EXPIRY_SCHEDULE,
+    );
+    expect(registry.get("demo.deadline-notice")?.recipientNote).toBe(
+      "表單的填寫人",
+    );
+  });
+
+  it("底座本輪的類型都沒有宣告可調時間", () => {
+    const registry = composeNotificationTypes(BASE_NOTIFICATION_TYPES, []);
+    expect(
+      [...registry.values()].filter((type) => type.schedule !== undefined),
+    ).toEqual([]);
+  });
+
+  it.each([
+    [
+      "預設提前天數超出範圍",
+      { default: { kind: "days-before", daysBefore: [366], time: "09:00" } },
+    ],
+    [
+      "預設提前天數重複",
+      { default: { kind: "days-before", daysBefore: [7, 7], time: "09:00" } },
+    ],
+    [
+      "預設時間不在 15 分鐘格子",
+      { default: { kind: "daily-overdue", time: "09:10" } },
+    ],
+    [
+      "預設每月第 32 天",
+      { default: { kind: "monthly", dayOfMonth: 32, time: "09:00" } },
+    ],
+    ["不認得的寫法", { default: { kind: "weekly", time: "09:00" } }],
+    [
+      "dateLabel 給了非 days-before",
+      { default: { kind: "daily-overdue", time: "09:00" }, dateLabel: "到期" },
+    ],
+  ])("%s → 起不來", (_label, schedule) => {
+    expect(
+      compose({ ...PARTY, schedule } as unknown as NotificationTypeDefinition),
+    ).toThrow("schedule");
+  });
+
+  it("負責人提醒不能宣告收件人說明;當事人通知的說明不可空白", () => {
+    expect(
+      compose({
+        ...PARTY,
+        category: "responsible",
+        orgScope: { ref: "tenant", range: "self" },
+        defaultAudience: {
+          mode: "match",
+          filter: {
+            field: "permission",
+            cond: "in",
+            value: { kind: "static", values: ["demo.edit"] },
+          },
+        },
+        recipientNote: "店長",
+      }),
+    ).toThrow("recipientNote");
+    expect(compose({ ...PARTY, recipientNote: " " })).toThrow("recipientNote");
+  });
+});
+
 describe("通知管道開關的偏好 key", () => {
   it("編碼:notification_<類型的 . 換成 _>_<管道>,符合偏好 key 的格式", () => {
     expect(notificationPreferenceKey(WORKFLOW_TASK_CREATED, "in-app")).toBe(

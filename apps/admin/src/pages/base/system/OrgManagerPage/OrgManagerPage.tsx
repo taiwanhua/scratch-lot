@@ -7,11 +7,15 @@ import {
   useRevokeTenantProvisionMutation,
   useSetOrgEnabledMutation,
 } from "@repo/graphql";
+import { Box } from "@repo/ui/box";
+import { Button } from "@repo/ui/button";
+import { useBreakpointDown } from "@repo/ui/media-query";
 import { Stack } from "@repo/ui/stack";
 
 import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
 import { useSession } from "@/hooks/base/useSession";
 import { useUrlEdit, useUrlEditGuard } from "@/hooks/base/useUrlEdit";
+import { useUrlSelectedId } from "@/hooks/base/useUrlSelectedId";
 import { orgTrail } from "@/lib/base/org-tree";
 
 import { CreateChildOrgDialog } from "./CreateChildOrgDialog";
@@ -46,6 +50,9 @@ type OpenDialog =
  * 左樹選組織 → 右側顯示該組織的資料與可用動作;所有動作都是這一頁上的彈窗。
  * **兩種視角不是兩套頁**:樹根是誰(根組織 / 租戶頂層)與手上有沒有 `tenant-ops` 那三筆權限,
  * 已經足以決定畫面,不需要「我是不是超級管理員」這種旗標。
+ *
+ * **手機寬(< `sm`)一次只顯示一邊**:網址沒有選取(`?detail=` / `?edit=`)時組織樹滿版;點一個組織 → 詳情滿版,
+ * 頂部 [← 返回] 清掉選取回到樹。樹只是藏起來、不卸載,展開狀態與捲動位置都留著;重新整理 / 分享網址停在同一個組織。
  */
 export const OrgManagerPage = () => {
   const t = useTranslations("admin.orgManager");
@@ -81,6 +88,9 @@ export const OrgManagerPage = () => {
     edit.close();
     setActionError(null);
   };
+  const isMobile = useBreakpointDown("sm");
+  const [urlPickedOrgId] = useUrlSelectedId();
+  const isDetailShown = urlPickedOrgId !== null || edit.requestedId !== null;
   const owner = useTenantOwner(data.org);
   const moveTargets = useMoveTargets({
     nodes: data.orgNodes,
@@ -163,55 +173,101 @@ export const OrgManagerPage = () => {
 
   return (
     // 撐滿殼給的內容區高度(Figma 87:214:左右兩塊等高、各自內部捲動)
-    <Stack direction="row" spacing={3} sx={{ flex: 1, minHeight: 0 }}>
-      <OrgTreePanel
-        nodes={data.orgNodes}
-        isLoading={data.isOrgTreeLoading}
-        isRootPerspective={data.isRootPerspective}
-        selectedOrgId={data.selectedOrgId}
-        onSelectOrg={data.selectOrg}
-        canProvision={data.ability.canProvision}
-        canCreateChild={data.ability.canCreateChild}
-        isCreateChildEnabled={isSelectionActionable}
-        onProvision={() => {
-          setOpenDialog("provision");
-        }}
-        onCreateChild={() => {
-          setOpenDialog("createChild");
-        }}
-      />
-
-      <OrgDetailPanel
-        org={data.org}
-        isLoading={data.isOrgLoading}
-        parentName={parentName}
-        ownerName={owner.ownerName}
-        hasOwner={isTenantTop(data.org)}
-        ability={data.ability}
-        isTenantTopProtected={isTenantTopProtected}
-        onEdit={() => {
-          if (data.org !== undefined) {
-            edit.open(data.org.id);
-          }
-        }}
-        onToggleEnabled={() => {
-          setActionError(null);
-          setOpenDialog("toggleEnabled");
-        }}
-        onDelete={() => {
-          setActionError(null);
-          setOpenDialog("delete");
-        }}
-        canRevokeProvision={
-          data.ability.canRevokeProvision &&
-          data.isRootPerspective &&
-          isTenantTop(data.org)
+    <Stack
+      direction="row"
+      spacing={{ xs: 0, sm: 3 }}
+      sx={{ flex: 1, minHeight: 0 }}
+    >
+      {/* sm 以上這層不參與排版(contents,仍標 minHeight: 0 守 STYLE-08 高度鏈);手機寬依選取只顯示一邊,另一邊藏起來但不卸載 */}
+      <Box
+        sx={
+          isMobile
+            ? {
+                display: isDetailShown ? "none" : "flex",
+                flex: 1,
+                minWidth: 0,
+                minHeight: 0,
+              }
+            : { display: "contents", minHeight: 0 }
         }
-        onRevokeProvision={() => {
-          setActionError(null);
-          setOpenDialog("revokeProvision");
-        }}
-      />
+      >
+        <OrgTreePanel
+          nodes={data.orgNodes}
+          isLoading={data.isOrgTreeLoading}
+          isRootPerspective={data.isRootPerspective}
+          selectedOrgId={isMobile ? urlPickedOrgId : data.selectedOrgId}
+          onSelectOrg={data.selectOrg}
+          canProvision={data.ability.canProvision}
+          canCreateChild={data.ability.canCreateChild}
+          isCreateChildEnabled={isSelectionActionable}
+          onProvision={() => {
+            setOpenDialog("provision");
+          }}
+          onCreateChild={() => {
+            setOpenDialog("createChild");
+          }}
+        />
+      </Box>
+
+      <Box
+        sx={
+          isMobile
+            ? {
+                display: isDetailShown ? "flex" : "none",
+                flexDirection: "column",
+                gap: 1,
+                flex: 1,
+                minWidth: 0,
+                minHeight: 0,
+              }
+            : { display: "contents", minHeight: 0 }
+        }
+      >
+        {isMobile && (
+          <Box>
+            <Button
+              variant="text"
+              size="small"
+              onClick={() => {
+                data.selectOrg(null);
+              }}
+            >
+              {t("mobileBack")}
+            </Button>
+          </Box>
+        )}
+        <OrgDetailPanel
+          org={data.org}
+          isLoading={data.isOrgLoading}
+          parentName={parentName}
+          ownerName={owner.ownerName}
+          hasOwner={isTenantTop(data.org)}
+          ability={data.ability}
+          isTenantTopProtected={isTenantTopProtected}
+          onEdit={() => {
+            if (data.org !== undefined) {
+              edit.open(data.org.id);
+            }
+          }}
+          onToggleEnabled={() => {
+            setActionError(null);
+            setOpenDialog("toggleEnabled");
+          }}
+          onDelete={() => {
+            setActionError(null);
+            setOpenDialog("delete");
+          }}
+          canRevokeProvision={
+            data.ability.canRevokeProvision &&
+            data.isRootPerspective &&
+            isTenantTop(data.org)
+          }
+          onRevokeProvision={() => {
+            setActionError(null);
+            setOpenDialog("revokeProvision");
+          }}
+        />
+      </Box>
 
       {openDialog === "createChild" && data.selectedOrgId !== null && (
         <CreateChildOrgDialog

@@ -1,0 +1,182 @@
+fragment LotteryStoreShiftFields on LotteryStoreShift {
+  id
+  cashPoint {
+    ...LotteryAccountsRefFields
+  }
+  openedBy {
+    ...LotteryAccountsRefFields
+  }
+  openedAt
+  isMine
+  openingFloat
+  expectedCash
+  soldCount
+  soldAmount
+  unmatchedEntry
+}
+
+fragment LotteryStoreBoardBookFields on LotteryStoreBoardBook {
+  bookId
+  gameCode
+  gameName
+  color
+  unitPrice
+  bookNo
+  remaining
+  total
+  soldToday
+  isLowStock
+}
+
+fragment LotteryStoreEntryOptionFields on LotteryStoreEntryOption {
+  id
+  startAt
+  endAt
+  shortName
+  tasks {
+    role
+    taskKey
+    positionKey
+  }
+  snapshot {
+    role
+    taskKey
+    positionKey
+  }
+  hasStartPunch
+}
+
+fragment LotteryShiftInfoFields on LotteryShiftInfo {
+  id
+  cashPoint {
+    ...LotteryAccountsRefFields
+  }
+  openedBy {
+    ...LotteryAccountsRefFields
+  }
+  openedAt
+  openingFloat
+  openingFloatSource
+  entry {
+    ...LotteryStoreEntryOptionFields
+  }
+  taskSnapshot {
+    role
+    taskKey
+    positionKey
+  }
+  positionMismatch
+  closed
+  canReassign
+  entryOptions {
+    ...LotteryStoreEntryOptionFields
+  }
+}
+
+query LotteryStoreBoard($orgId: ID!) {
+  lotteryStoreBoard(orgId: $orgId) {
+    item {
+      org {
+        ...LotteryAccountsRefFields
+      }
+      cashPoints {
+        id
+        name
+        positionKey
+        shift {
+          ...LotteryStoreShiftFields
+        }
+        books {
+          ...LotteryStoreBoardBookFields
+        }
+      }
+      myOpenShifts {
+        ...LotteryStoreShiftFields
+      }
+      vaultExpected
+    }
+  }
+}
+
+query LotteryStoreOpenShiftForm($cashPointId: ID!) {
+  lotteryStoreOpenShiftForm(cashPointId: $cashPointId) {
+    item {
+      cashPoint {
+        ...LotteryAccountsRefFields
+      }
+      positionKey
+      plan
+      handoverAmount
+      previousOpenedBy {
+        ...LotteryAccountsRefFields
+      }
+      previousClosedAt
+      canTakeFloat
+      suggestedEntryId
+      entries {
+        ...LotteryStoreEntryOptionFields
+      }
+    }
+  }
+}
+
+mutation OpenLotteryShift($input: OpenLotteryShiftInput!) {
+  openLotteryShift(input: $input) {
+    item {
+      ...LotteryStoreShiftFields
+    }
+    movementId
+    cashPointPrinterId
+  }
+}
+
+mutation PunchLotteryShiftStart($entryId: ID!) {
+  punchLotteryShiftStart(entryId: $entryId) {
+    entryId
+    at
+  }
+}
+
+query LotteryShiftInfo($id: ID!) {
+  lotteryShiftInfo(id: $id) {
+    item {
+      ...LotteryShiftInfoFields
+    }
+  }
+}
+
+mutation ReassignLotteryShiftEntry($input: ReassignLotteryShiftEntryInput!) {
+  reassignLotteryShiftEntry(input: $input) {
+    item {
+      ...LotteryShiftInfoFields
+    }
+  }
+}
+
+mutation DepositLotteryShiftCash($input: DepositLotteryShiftCashInput!) {
+  depositLotteryShiftCash(input: $input) {
+    item {
+      ...LotteryStoreShiftFields
+    }
+    movementId
+    cashPointPrinterId
+  }
+}
+
+mutation WithdrawLotteryShiftCash($input: WithdrawLotteryShiftCashInput!) {
+  withdrawLotteryShiftCash(input: $input) {
+    item {
+      ...LotteryStoreShiftFields
+    }
+    movementId
+    cashPointPrinterId
+  }
+}
+
+query LotteryReceiptLinks {
+  lotteryReceiptLinks {
+    cashLedger
+    storeView
+    transferView
+  }
+}

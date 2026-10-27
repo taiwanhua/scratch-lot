@@ -9,6 +9,7 @@ import { SelectField } from "@repo/ui/select-field";
 import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
 
+import { FormActions } from "@/components/base/FormActions/FormActions";
 import type { OrgOption } from "@/lib/base/org-tree";
 
 import type {
@@ -80,7 +81,7 @@ export const RuleEditorPanel = ({
               collection: target.collection,
             })}
           </Typography>
-          <Typography variant="caption" color="text.secondary">
+          <Typography variant="caption" color="textSecondary">
             {target.description ?? ""}
           </Typography>
         </Stack>
@@ -93,7 +94,7 @@ export const RuleEditorPanel = ({
             py: 1.25,
           }}
         >
-          <Typography variant="caption" color="text.secondary">
+          <Typography variant="caption" color="textSecondary">
             {t("defaultHint")}
           </Typography>
         </Box>
@@ -111,7 +112,7 @@ export const RuleEditorPanel = ({
             ]}
             onChange={editor.setCombineOp}
           />
-          <Typography variant="caption" color="text.secondary">
+          <Typography variant="caption" color="textSecondary">
             {t("combineOpHint")}
           </Typography>
           <Box sx={{ flex: 1 }} />
@@ -149,19 +150,17 @@ export const RuleEditorPanel = ({
           <Alert severity="error">{tErrors(editor.error.code)}</Alert>
         )}
 
+        {/* REACT-16:[放棄變更](text)→[儲存](contained);手機與平板黏在可視範圍底部 */}
         {canEdit && (
-          <Stack
-            direction="row"
-            spacing={1.5}
-            sx={{ justifyContent: "flex-end" }}
-          >
-            <Button variant="text" size="small" onClick={editor.discard}>
-              {t("discard")}
-            </Button>
-            <Button disabled={editor.isSaving} onClick={editor.submit}>
-              {t("save")}
-            </Button>
-          </Stack>
+          <FormActions
+            gutter={2.5}
+            cancel={{ label: t("discard"), onClick: editor.discard }}
+            submit={{
+              label: t("save"),
+              onClick: editor.submit,
+              disabled: editor.isSaving,
+            }}
+          />
         )}
       </Stack>
     </Card>

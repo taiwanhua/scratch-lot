@@ -2,12 +2,12 @@
 
 import MuiBox from "@mui/material/Box";
 import MuiStack from "@mui/material/Stack";
-import MuiTypography from "@mui/material/Typography";
 import { type SxProps, type Theme, styled } from "@mui/material/styles";
 import type { ChangeEvent, DragEvent, ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 
 import { Button } from "../Button/Button";
+import { Typography } from "../Typography/Typography";
 import { UploadFieldPreview } from "./UploadFieldPreview";
 
 export type UploadFieldErrorCode = "INVALID_TYPE" | "FILE_TOO_LARGE";
@@ -204,9 +204,9 @@ export const UploadField = ({
   return (
     <UploadFieldRoot spacing={0.75} sx={sx} aria-disabled={isDisabled}>
       {label !== undefined && (
-        <MuiTypography variant="caption" sx={{ color: "text.secondary" }}>
+        <Typography variant="caption" color="textSecondary">
           {label}
-        </MuiTypography>
+        </Typography>
       )}
       <MuiBox
         onDrop={handleDrop}
@@ -249,14 +249,11 @@ export const UploadField = ({
           />
           {file === null && !isShowingInitial ? (
             <MuiStack spacing={0.5} sx={{ alignItems: "center" }}>
-              <MuiTypography variant="body2">點擊或拖曳圖片至此</MuiTypography>
+              <Typography variant="body2">點擊或拖曳圖片至此</Typography>
               {hint !== undefined && (
-                <MuiTypography
-                  variant="caption"
-                  sx={{ color: "text.secondary" }}
-                >
+                <Typography variant="caption" color="textSecondary">
                   {hint}
-                </MuiTypography>
+                </Typography>
               )}
             </MuiStack>
           ) : (
@@ -280,13 +277,9 @@ export const UploadField = ({
         )}
       </MuiBox>
       {errorMessage !== null && (
-        <MuiTypography
-          variant="caption"
-          sx={{ color: "error.main" }}
-          role="alert"
-        >
+        <Typography variant="caption" color="error" role="alert">
           {errorMessage}
-        </MuiTypography>
+        </Typography>
       )}
     </UploadFieldRoot>
   );

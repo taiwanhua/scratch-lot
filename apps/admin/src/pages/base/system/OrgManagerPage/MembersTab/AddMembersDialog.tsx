@@ -123,7 +123,7 @@ export const AddMembersDialog = ({
           onInputChange={setKeyword}
           onChange={setPicked}
         />
-        <Typography variant="caption" color="text.secondary">
+        <Typography variant="caption" color="textSecondary">
           {t("hint")}
         </Typography>
         <Typography variant="body2">

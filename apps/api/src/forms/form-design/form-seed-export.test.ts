@@ -611,6 +611,34 @@ describe("exportFormSeed:把共用表單的已發布版本匯出成專案設定"
     });
   });
 
+  describe("表單設定:依欄位共用", () => {
+    it("有設才輸出 sharedByFieldKeys(沒設的匯出檔沒有這個鍵)", async () => {
+      const key = "exp_shared_by";
+      await publishNewForm(
+        api,
+        app.root,
+        key,
+        definitionOf([
+          field("title", "text"),
+          field("branch", "reference", {
+            source: { provider: "org", labelField: "name" },
+          }),
+        ]),
+      );
+      const before = await exportOk(app.root, inputOf(key, 1));
+      const plain = evaluateSeedSource(before.source) as FormDefinitionSeedSet;
+      expect(plain).not.toHaveProperty("sharedByFieldKeys");
+
+      await ok(api, app.root, UPDATE_FORM, {
+        input: { key, sharedByFieldKeys: ["branch"] },
+      });
+      const file = await exportOk(app.root, inputOf(key, 1));
+      expect(typeCheckSeedSource(file.source)).toEqual([]);
+      const exported = evaluateSeedSource(file.source) as FormDefinitionSeedSet;
+      expect(exported.sharedByFieldKeys).toEqual(["branch"]);
+    });
+  });
+
   describe("匯出 → 型別檢查 → 專案 registry → 真發布", () => {
     it("匯出檔原樣通過 SeedSet 型別檢查與 registry 組裝;來源環境採納原版本,空的環境發布出同樣的內容(含關掉的允許存草稿)", async () => {
       const key = "exp_roundtrip";
@@ -623,7 +651,12 @@ describe("exportFormSeed:把共用表單的已發布版本匯出成專案設定"
       );
       await publishDefinition(api, app.root, key, fullDefinition(), 1);
       await ok(api, app.root, UPDATE_FORM, {
-        input: { key, tabLabelTemplate: "{{title}}", allowDraft: false },
+        input: {
+          key,
+          tabLabelTemplate: "{{title}}",
+          allowDraft: false,
+          voidReasonCategoryKey: "reprint-reason",
+        },
       });
 
       const file = await exportOk(
@@ -635,6 +668,8 @@ describe("exportFormSeed:把共用表單的已發布版本匯出成專案設定"
       const exported = evaluateSeedSource(file.source) as FormDefinitionSeedSet;
       // 允許存草稿關著:匯出檔保留這個設定
       expect(exported.allowDraft).toBe(false);
+      // 作廢原因類別有設:匯出檔保留
+      expect(exported.voidReasonCategoryKey).toBe("reprint-reason");
       // 登記進專案 registry(與底座的模組、欄位類別一起組裝)後仍是同一份宣告
       const registered = registerExportedSeeds([file]);
       expect(registered).toEqual([exported]);
@@ -683,6 +718,7 @@ describe("exportFormSeed:把共用表單的已發布版本匯出成專案設定"
         ownerOrgId: null,
         tabLabelTemplate: "{{title}}",
         allowDraft: false,
+        voidReasonCategoryKey: "reprint-reason",
         currentVersion: 1,
       });
       const targetVersions = await versionDocs(connection, FORM, key);

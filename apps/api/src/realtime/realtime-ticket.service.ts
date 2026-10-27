@@ -49,6 +49,7 @@ function orgReader(operator: OperatorContext): OperatorContext {
     managedOrgIds: "all",
     memberOrgIds: [],
     roleIds: [],
+    memberTenants: [],
   };
 }
 

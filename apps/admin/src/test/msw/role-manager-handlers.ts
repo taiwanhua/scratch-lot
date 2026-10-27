@@ -51,6 +51,8 @@ export interface RoleFailure {
   code: RoleErrorCode;
   /** `ROLE_NOT_DELETABLE` 的前置檢查項(extensions.reasons) */
   reasons?: string[];
+  /** `REFERENCED_BY_AUDIENCE` 的引用處(extensions.references) */
+  references?: { kind: string; name: string; stepName?: string }[];
 }
 
 export interface RoleWorldOptions {
@@ -133,11 +135,12 @@ export const roleWorld = (options: RoleWorldOptions = {}): RoleWorld => {
     if (failure === undefined) {
       return null;
     }
-    return graphqlError(
-      failure.code as AuthErrorCode,
-      failure.code,
-      failure.reasons === undefined ? {} : { reasons: failure.reasons },
-    );
+    return graphqlError(failure.code as AuthErrorCode, failure.code, {
+      ...(failure.reasons === undefined ? {} : { reasons: failure.reasons }),
+      ...(failure.references === undefined
+        ? {}
+        : { references: failure.references }),
+    });
   };
 
   const roleOf = (id: string): TestRole =>

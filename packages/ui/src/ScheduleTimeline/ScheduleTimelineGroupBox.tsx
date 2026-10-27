@@ -71,7 +71,7 @@ export const ScheduleTimelineGroupBox = ({
   const fallbackLabel =
     typeof group.title === "string"
       ? group.title
-      : formatTimeRange(group.start, group.end);
+      : formatTimeRange(group.start, group.end, actions.timezone);
 
   return (
     <Tooltip title={group.tooltip}>
@@ -85,6 +85,7 @@ export const ScheduleTimelineGroupBox = ({
               selected: pressedOf(actions, selected),
               date,
               range: { start: span.startMinute, end: span.endMinute },
+              timezone: actions.timezone,
               onActivate: (point) => {
                 onGroupClick(group, point);
               },

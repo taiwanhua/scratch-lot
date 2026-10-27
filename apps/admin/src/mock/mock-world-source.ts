@@ -1,6 +1,8 @@
 import type { RequestHandler, WebSocketHandler } from "msw";
 
 import type { TestModule } from "@/test/msw/auth-handlers";
+import type { FormRuntimeWorldOptions } from "@/test/msw/form-runtime-handlers";
+import type { WorkflowRuntimeWorldOptions } from "@/test/msw/workflow-runtime-handlers";
 
 import type { MockView } from "./mock-fixtures";
 
@@ -29,4 +31,22 @@ export interface ProjectMockWorld {
    * GraphQL 操作名不可與底座重複(`mock-world.test.ts` 守),要換掉底座的端點不在這裡撞名。
    */
   handlers: (options: MockWorldOptions) => MockHandler[];
+  /**
+   * 專案表單模組的表單執行端假資料(選填)。表單執行端的端點(`ModuleForms` / `FormSubmissions` …)是共用端點,
+   * 底座只建一份 world:專案的表單、版本、提交與選項併進那一份(`project-form-worlds.ts`),不另登記同名 handler。
+   */
+  formRuntime?: () => Pick<
+    FormRuntimeWorldOptions,
+    | "moduleForms"
+    | "versions"
+    | "submissions"
+    | "fieldOptions"
+    | "listColumns"
+    | "listBuiltin"
+  >;
+  /** 同上:審核流程(申請中心、審核區塊)的實例與任務併進底座那一份 world(選填)。 */
+  workflowRuntime?: () => Pick<
+    WorkflowRuntimeWorldOptions,
+    "instances" | "tasks"
+  >;
 }

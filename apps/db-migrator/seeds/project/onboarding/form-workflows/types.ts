@@ -1,0 +1,65 @@
+import { APPLICANT_REVIEW } from "@repo/domain/workflow";
+
+import type { OnboardingContext } from "../context";
+
+/** 流程定義的一關(`StepDef` 的 JSON;形狀正本 `@repo/domain/workflow` 的 `ReviewStepDef`)。 */
+export type WorkflowStepJson = Record<string, unknown>;
+
+/**
+ * 一張表單開通時建立的流程(規格 2.1;開通清單「表單代號與流程」)。表單票各自匯出一份,
+ * 在 `./index.ts` 的清單加一行;建流程、發布、綁定由共用的一步(`../steps/form-workflows.ts`)做。
+ *
+ * 流程是**租戶客製流程**(共用流程不能用角色條件),key 全域唯一,所以帶租戶短碼:
+ * `<租戶短碼>_<formKey>`(短碼最多 20 字;本輪最長的 formKey `stocktake_confirm` 17 字,合計 38 字,在 key 的 40 字上限內)。
+ */
+export interface FormWorkflowSpec {
+  /** 綁定的表單(受管表單的 key)。 */
+  formKey: string;
+  /** 表單的中文名稱(輸出給操作者看)。 */
+  formName: string;
+  /** 流程名稱(流程管理顯示)。 */
+  workflowName: string;
+  /** 關卡(依開通時建立的角色組出;角色 id 從 `context.state` 取)。 */
+  steps: (context: OnboardingContext) => WorkflowStepJson[];
+}
+
+/** 這個租戶的流程 key:`<租戶短碼>_<formKey>`(全域唯一;建立後不可改)。 */
+export function workflowKeyOf(tenantSlug: string, formKey: string): string {
+  return `${tenantSlug}_${formKey}`;
+}
+
+/** 人員條件(條件列全部 AND;`@repo/domain/audience`)。 */
+export function audienceSource(
+  ...rows: Record<string, unknown>[]
+): Record<string, unknown> {
+  return {
+    kind: "audience",
+    audience: { mode: "match", filter: { op: "AND", children: rows } },
+  };
+}
+
+/**
+ * 這一關「申請人也是審核者時」設成**照常審核**(`autoApprove.applicant = "review"`):申請人留在名單、
+ * 自己再按一次核准。每家分店只有一位店長,店長自己送出的單照底座預設剔除申請人就找不到審核者而卡住;
+ * 申請人可能同時是審核者、又沒有設自動通過的關卡都套它(規格 2.1)。
+ */
+export function applicantReviews(step: WorkflowStepJson): WorkflowStepJson {
+  return { ...step, autoApprove: { applicant: APPLICANT_REVIEW } };
+}
+
+/** 一般審核關卡:任一人核准即通過、可退回、沒有跳過與自動通過(申請人照底座預設剔除)。 */
+export function reviewStep(
+  key: string,
+  name: string,
+  assignee: Record<string, unknown>,
+): WorkflowStepJson {
+  return {
+    key,
+    name,
+    kind: "review",
+    assignee,
+    mode: "any",
+    skipWhen: null,
+    allowReturn: true,
+  };
+}

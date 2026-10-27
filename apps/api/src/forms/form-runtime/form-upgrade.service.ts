@@ -32,6 +32,7 @@ import {
   type FormRecord,
 } from "../form-access.service";
 import type { FormVersionRecord } from "../form-mapper";
+import { sharedOrgIdsFor } from "../form-values/shared-org-ids";
 import { SubmissionValuesService } from "../form-values/submission-values.service";
 import { storedSummaryOf } from "../form-values/temporal-values";
 import {
@@ -493,6 +494,8 @@ export class FormUpgradeService {
           },
         }
       : { $push: { revisions: entry } };
+    // 依欄位共用跟著升級後的值重算(目標版沒有那一欄 = 不再共用)
+    const sharedOrgIds = sharedOrgIdsFor(upgrade.form, values, record.status);
     const updated = await this.submissions.findOneAndUpdate(
       facts.operator,
       filter,
@@ -504,6 +507,7 @@ export class FormUpgradeService {
               summary,
               revision,
               version: upgrade.targetVersion,
+              sharedOrgIds,
               ...("$set" in revisionsUpdate ? revisionsUpdate.$set : {}),
             },
             $inc: { editVersion: 1 },
@@ -512,6 +516,7 @@ export class FormUpgradeService {
             $set: {
               values,
               version: upgrade.targetVersion,
+              sharedOrgIds,
               touched: touchedKeysOf(target.fields, record.touched),
             },
             $inc: { editVersion: 1 },

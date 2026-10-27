@@ -26,6 +26,7 @@ import { Printer } from "../schemas/printer.schema";
 import { RefreshToken } from "../schemas/refresh-token.schema";
 import { Role } from "../schemas/role.schema";
 import { SeedDefinitionInstallation } from "../schemas/seed-definition-installation.schema";
+import { SidebarBadgeSetting } from "../schemas/sidebar-badge-setting.schema";
 import { UserDelegation } from "../schemas/user-delegation.schema";
 import { UserPreference } from "../schemas/user-preference.schema";
 import { User } from "../schemas/user.schema";
@@ -65,6 +66,7 @@ export type UserPreferenceDocument = HydratedDocument<UserPreference>;
 export type UserDelegationDocument = HydratedDocument<UserDelegation>;
 export type NotificationDocument = HydratedDocument<Notification>;
 export type NotificationSettingDocument = HydratedDocument<NotificationSetting>;
+export type SidebarBadgeSettingDocument = HydratedDocument<SidebarBadgeSetting>;
 export type PrintAgentDocument = HydratedDocument<PrintAgent>;
 export type PrinterDocument = HydratedDocument<Printer>;
 export type PrintJobDocument = HydratedDocument<PrintJob>;
@@ -405,6 +407,20 @@ export class NotificationSettingsRepository extends BaseRepository<
   constructor(
     @InjectModel(NotificationSetting.name)
     model: RepositoryModel<NotificationSetting, NotificationSettingDocument>,
+  ) {
+    super(model);
+  }
+}
+
+/** sidebar_badge_settings(誰看得到側欄數字的租戶調整;以 tenantId 為邊界的租戶設定)。 */
+@Injectable()
+export class SidebarBadgeSettingsRepository extends BaseRepository<
+  SidebarBadgeSetting,
+  SidebarBadgeSettingDocument
+> {
+  constructor(
+    @InjectModel(SidebarBadgeSetting.name)
+    model: RepositoryModel<SidebarBadgeSetting, SidebarBadgeSettingDocument>,
   ) {
     super(model);
   }

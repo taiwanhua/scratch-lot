@@ -31,6 +31,7 @@ import {
   fixtureSourceRoot,
   journalOf,
   lockOf,
+  migrationFileNames,
   runUpdate,
   startEntry,
   withDatabase,
@@ -412,8 +413,10 @@ describe("seed 別名(src/seed/run.ts)也走完整更新並發布定義", () => 
     expect(formAt).toBeGreaterThan(-1);
     expect(workflowAt).toBeGreaterThan(formAt);
     expect(first.stdout).toMatch(/seed 完成:新增 [1-9]\d* \//);
-    // 正式來源的九支歷史 migration 也在同一次執行裡跑完
-    expect(await changelogOf(databaseUri)).toHaveLength(9);
+    // 正式來源的全部 migration 也在同一次執行裡跑完
+    expect(await changelogOf(databaseUri)).toHaveLength(
+      migrationFileNames().length,
+    );
     expect(await formOf(databaseUri, "project_request")).toMatchObject({
       currentVersion: 1,
     });

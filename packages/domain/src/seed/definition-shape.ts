@@ -3,7 +3,10 @@
  * 來源可能是跨程序的 JSON 或手改的匯出檔,型別保證不了,所以輸入是 `unknown`。
  * 業務內容(欄位、關卡)的檢查在可攜性檢查與既有定義檢查器。
  */
-import { FORM_KEY_PATTERN } from "../form/keys";
+import { FORM_KEY_PATTERN, isValidFieldCategoryKey } from "../form/keys";
+import { serialFormatIssues } from "../form/serial";
+import { sharedByFieldIssues } from "../form/shared-by-fields";
+import type { FieldDef } from "../form/types";
 import {
   SeedSerializationError,
   assertPureSeedData,
@@ -41,6 +44,9 @@ const TOP_LEVEL_KEYS: Readonly<
     "moduleKey",
     "tabLabelTemplate",
     "allowDraft",
+    "serial",
+    "voidReasonCategoryKey",
+    "sharedByFieldKeys",
   ],
   "workflow-definition": [...COMMON_KEYS, "checkFormKey"],
 };
@@ -119,6 +125,60 @@ function nullableStringIssues(
     : [{ path: key, detail: `${key} 必填;要清空請明寫 null` }];
 }
 
+/** 作廢原因類別:缺席合格;有寫就要是欄位管理類別 key。 */
+function voidReasonCategoryIssues(value: unknown): DefinitionSeedShapeIssue[] {
+  return value === undefined ||
+    (typeof value === "string" && isValidFieldCategoryKey(value))
+    ? []
+    : [
+        {
+          path: "voidReasonCategoryKey",
+          detail:
+            "voidReasonCategoryKey 必須是欄位管理類別 key(小寫英數與連字號);缺席 = 作廢原因自由填寫",
+        },
+      ];
+}
+
+const SHARED_BY_FIELD_DETAIL: Record<
+  ReturnType<typeof sharedByFieldIssues>[number]["reason"],
+  string
+> = {
+  notFound: "不是 definition.fields 裡的欄位",
+  notOrgReference: "不是引用組織的欄位(type reference、source.provider org)",
+  duplicate: "重複",
+};
+
+/** 依欄位共用:缺席合格;有寫就要是非空陣列、每個都是表單層的組織引用欄(不重複)。 */
+function sharedByFieldKeysIssues(
+  value: unknown,
+  definition: unknown,
+): DefinitionSeedShapeIssue[] {
+  if (value === undefined) {
+    return [];
+  }
+  if (
+    !Array.isArray(value) ||
+    value.length === 0 ||
+    value.some((key) => typeof key !== "string")
+  ) {
+    return [
+      {
+        path: "sharedByFieldKeys",
+        detail:
+          "sharedByFieldKeys 必須是非空的欄位 key 陣列;缺席 = 不依欄位共用",
+      },
+    ];
+  }
+  const fields =
+    isPlainRecord(definition) && Array.isArray(definition.fields)
+      ? (definition.fields as FieldDef[])
+      : [];
+  return sharedByFieldIssues(fields, value as string[]).map((issue) => ({
+    path: "sharedByFieldKeys",
+    detail: `${issue.key}:${SHARED_BY_FIELD_DETAIL[issue.reason]}`,
+  }));
+}
+
 function formIssues(seed: Record<string, unknown>): DefinitionSeedShapeIssue[] {
   const issues = nullableStringIssues(seed, "tabLabelTemplate");
   if (seed.allowDraft !== undefined && typeof seed.allowDraft !== "boolean") {
@@ -127,6 +187,18 @@ function formIssues(seed: Record<string, unknown>): DefinitionSeedShapeIssue[] {
       detail: "allowDraft 只能是 true / false;缺席 = 允許存草稿",
     });
   }
+  if (seed.serial !== undefined) {
+    for (const issue of serialFormatIssues(seed.serial)) {
+      issues.push({
+        path: issue.path === "" ? "serial" : `serial.${issue.path}`,
+        detail: `${issue.detail};缺席 = 不給單號`,
+      });
+    }
+  }
+  issues.push(
+    ...voidReasonCategoryIssues(seed.voidReasonCategoryKey),
+    ...sharedByFieldKeysIssues(seed.sharedByFieldKeys, seed.definition),
+  );
   if (!isNonBlankString(seed.moduleKey)) {
     issues.push({ path: "moduleKey", detail: "moduleKey 必填" });
   }

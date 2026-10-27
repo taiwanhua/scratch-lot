@@ -38,6 +38,7 @@ function asAccount(userId: Types.ObjectId): OperatorContext {
     // 這條路徑只碰帳號表,走不到資料範圍規則(ADR-0008);明寫空集合而非省略
     memberOrgIds: [],
     roleIds: [],
+    memberTenants: [],
   };
 }
 
@@ -57,6 +58,7 @@ const LOOKUP: OperatorContext = {
   managedOrgIds: "all",
   memberOrgIds: [],
   roleIds: [],
+  memberTenants: [],
 };
 
 @Injectable()

@@ -19,7 +19,7 @@ export interface FormUpdateState {
 }
 
 /**
- * `updateForm` 的假 api(表單設計端 world 掛一支,狀態由 world 傳進來):名稱 / 頁籤模板 / 允許存草稿,
+ * `updateForm` 的假 api(表單設計端 world 掛一支,狀態由 world 傳進來):名稱 / 頁籤模板 / 允許存草稿 / 單號格式,
  * 缺席或 null = 不動、`tabLabelTemplate` 空字串 = 清空(與 api 同)。寫回 world 的那張表單並回傳它。
  */
 export const formUpdateHandler = (state: FormUpdateState) =>
@@ -43,6 +43,19 @@ export const formUpdateHandler = (state: FormUpdateState) =>
     }
     if (input.allowDraft != null) {
       form.allowDraft = input.allowDraft;
+    }
+    if (input.voidReasonCategoryKey !== undefined) {
+      form.voidReasonCategoryKey =
+        input.voidReasonCategoryKey === "" ? null : input.voidReasonCategoryKey;
+    }
+    if (input.sharedByFieldKeys !== undefined) {
+      form.sharedByFieldKeys = [...(input.sharedByFieldKeys ?? [])];
+    }
+    if (input.serial !== undefined) {
+      form.serial =
+        input.serial === null
+          ? null
+          : { ...input.serial, separator: input.serial.separator ?? null };
     }
     return HttpResponse.json({ data: { updateForm: { form } } });
   });

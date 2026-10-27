@@ -32,7 +32,7 @@ export const CopyDiffPreview = ({
 
   if (!hasTarget) {
     return (
-      <Typography variant="body2" color="text.secondary">
+      <Typography variant="body2" color="textSecondary">
         {t("pickTarget")}
       </Typography>
     );
@@ -42,7 +42,7 @@ export const CopyDiffPreview = ({
   }
   if (isLoading || result === null) {
     return (
-      <Typography variant="body2" color="text.secondary">
+      <Typography variant="body2" color="textSecondary">
         {t("loading")}
       </Typography>
     );
@@ -93,18 +93,18 @@ export const CopyDiffPreview = ({
       {hasCopyChanges(result) ? (
         sections.map((section) => (
           <Stack key={section.key} spacing={0.25}>
-            <Typography variant="body2" color="text.primary">
+            <Typography variant="body2" color="textPrimary">
               {section.title}
             </Typography>
             {section.rows.map(([kind, text]) => (
-              <Typography key={kind} variant="caption" color="text.secondary">
+              <Typography key={kind} variant="caption" color="textSecondary">
                 {t(kind, { items: text })}
               </Typography>
             ))}
           </Stack>
         ))
       ) : (
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" color="textSecondary">
           {t("noChanges")}
         </Typography>
       )}

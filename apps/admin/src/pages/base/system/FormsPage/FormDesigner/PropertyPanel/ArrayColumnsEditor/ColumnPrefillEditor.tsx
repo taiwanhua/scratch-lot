@@ -52,7 +52,7 @@ export const ColumnPrefillEditor = ({
     <Stack spacing={1} role="group" aria-label={t("prefill")}>
       <Stack spacing={0.25}>
         <Typography variant="body2">{t("prefill")}</Typography>
-        <Typography variant="caption" color="text.secondary">
+        <Typography variant="caption" color="textSecondary">
           {t("prefillHint")}
         </Typography>
       </Stack>

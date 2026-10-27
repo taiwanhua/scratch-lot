@@ -244,7 +244,7 @@ describe("申請中心與讀取授權", () => {
       input: {
         id: submitted.id,
         expectedEditVersion: approved.editVersion,
-        reason: "重開",
+        reasonNote: "重開",
       },
     });
     if (nextColumns !== null) {
@@ -646,7 +646,7 @@ describe("申請中心與讀取授權", () => {
         input: {
           id: submitted.id,
           expectedEditVersion: approved.editVersion,
-          reason: "不是我的",
+          reasonNote: "不是我的",
         },
       });
       expect(denied.errors).toBeDefined();
@@ -656,7 +656,7 @@ describe("申請中心與讀取授權", () => {
         input: {
           id: submitted.id,
           expectedEditVersion: approved.editVersion,
-          reason: "日期填錯",
+          reasonNote: "日期填錯",
         },
       });
       expect(voided.voidSubmission.submission).toMatchObject({
@@ -881,7 +881,7 @@ describe("申請中心與讀取授權", () => {
         input: {
           id: submitted.id,
           expectedEditVersion: approved.editVersion,
-          reason: "重來",
+          reasonNote: "重來",
         },
       });
       const storage = api.app.get(StorageService);
@@ -1094,6 +1094,90 @@ describe("申請中心與讀取授權", () => {
       expect(instance.status).toBe("RUNNING");
       await decideOn(world, staff(1), submitted.id, "APPROVE");
       expect(await submissionStatus(world, submitted.id)).toBe("COMPLETED");
+    });
+
+    it("新增審核者指定給申請人:只有這一關「申請人也是審核者時」= 照常審核才行;剔除申請人 / 自動通過 → ASSIGNEE_NOT_ELIGIBLE", async () => {
+      const emptyRole = await createRole(api.app, world.connection, {
+        name: nextKey("空角色自審"),
+        ownerOrgId: world.tenant,
+      });
+      const cases = [
+        { autoApprove: null, isAllowed: false },
+        { autoApprove: { applicant: true }, isAllowed: false },
+        { autoApprove: { applicant: "review" }, isAllowed: true },
+      ];
+      for (const { autoApprove, isAllowed } of cases) {
+        await useWorkflow(world, nextKey("add_applicant"), {
+          steps: [
+            reviewStep("nobody", roleSource(emptyRole), {
+              ...(autoApprove !== null && { autoApprove }),
+            }),
+          ],
+        });
+        const submitted = await submitLeave(world);
+        const instance = await currentInstance(world, submitted.id);
+        expect(instance.status).toBe("BLOCKED");
+        const input = {
+          input: {
+            instanceId: instance.id,
+            stepKey: "nobody",
+            userId: String(world.applicant.userId),
+          },
+        };
+        if (!isAllowed) {
+          const refused = await call(
+            api,
+            world.admin.token,
+            ADD_ASSIGNEE,
+            input,
+          );
+          expect(errorReason(refused)).toBe("ASSIGNEE_NOT_ELIGIBLE");
+          continue;
+        }
+        await ok(api, world.admin.token, ADD_ASSIGNEE, input);
+        const resumed = await currentInstance(world, submitted.id);
+        expect(resumed.status).toBe("RUNNING");
+        await decideOn(world, world.applicant, submitted.id, "APPROVE");
+        expect(await submissionStatus(world, submitted.id)).toBe("COMPLETED");
+      }
+    });
+
+    it("改派指定給申請人:只有這一關「申請人也是審核者時」= 照常審核才行;剔除申請人 / 自動通過 → ASSIGNEE_NOT_ELIGIBLE", async () => {
+      const cases = [
+        { autoApprove: null, isAllowed: false },
+        { autoApprove: { applicant: true }, isAllowed: false },
+        { autoApprove: { applicant: "review" }, isAllowed: true },
+      ];
+      for (const { autoApprove, isAllowed } of cases) {
+        await useWorkflow(world, nextKey("reassign_applicant"), {
+          steps: [
+            usersStep("one", [staff(2)], {
+              ...(autoApprove !== null && { autoApprove }),
+            }),
+          ],
+        });
+        const submitted = await submitLeave(world);
+        const instance = await currentInstance(world, submitted.id);
+        const [task] = await rawTasks(world.connection, instance.id);
+        const input = {
+          input: {
+            taskId: String(task?._id),
+            toUserId: String(world.applicant.userId),
+          },
+        };
+        if (!isAllowed) {
+          const refused = await call(api, world.admin.token, REASSIGN, input);
+          expect(errorReason(refused)).toBe("ASSIGNEE_NOT_ELIGIBLE");
+          continue;
+        }
+        await ok(api, world.admin.token, REASSIGN, input);
+        const after = await rawTasks(world.connection, instance.id);
+        expect(after.map((one) => String(one.assigneeId))).toEqual([
+          String(world.applicant.userId),
+        ]);
+        await decideOn(world, world.applicant, submitted.id, "APPROVE");
+        expect(await submissionStatus(world, submitted.id)).toBe("COMPLETED");
+      }
     });
 
     it("新增審核者與審核者失效並發(失效先提交、寫同一份實例)→ 新增審核者的交易寫入衝突、重跑後照常加入;兩邊的變更都在", async () => {

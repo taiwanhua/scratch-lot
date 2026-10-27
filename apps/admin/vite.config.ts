@@ -3,6 +3,9 @@ import { fileURLToPath } from "node:url";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
+import { projectPublic } from "@repo/project-config/public";
+
+import { webAppManifestPlugin } from "./scripts/web-app-plugin.mjs";
 import { colorModeInitTag } from "./src/lib/base/color-mode-init";
 import { projectHtmlTransform } from "./src/lib/base/project-html";
 
@@ -18,8 +21,15 @@ const projectHtml = {
   transformIndexHtml: projectHtmlTransform("app"),
 };
 
+/**
+ * 可安裝成 app(外掛在 `scripts/web-app-plugin.mjs`,內容在 `src/lib/base/web-app-manifest.ts`):
+ * 輸出 manifest、`<head>` 加標籤、build 前檢查圖示。值為專案設定 `admin.webApp`(null = 不做)。
+ * 只接正式入口;mock 入口(`vite.mock.config.ts`)不接,不可安裝。
+ */
+const webAppManifest = webAppManifestPlugin(projectPublic.admin.webApp);
+
 export default defineConfig({
-  plugins: [react(), projectHtml, colorModeInit],
+  plugins: [react(), projectHtml, colorModeInit, webAppManifest],
   resolve: {
     // `@/` = src/(與 tsconfig paths、jest moduleNameMapper 同一份約定,GEN-01)
     alias: { "@": fileURLToPath(new URL("src", import.meta.url)) },

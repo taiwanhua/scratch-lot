@@ -1,5 +1,13 @@
 import { describe, expect, it } from "@jest/globals";
-import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
+
+import { SelectField } from "@repo/ui/select-field";
 
 import { tenantTree } from "@/test/msw/org-fixtures";
 import type { TestOrgNode } from "@/test/msw/org-manager-handlers";
@@ -18,6 +26,17 @@ import {
 } from "./org-tree-select-test-support";
 
 restoreViewportAfterEach();
+
+/** 欄位右側的下拉箭頭(MUI 圖示自帶 `data-testid`) */
+const arrow = (): SVGElement => {
+  const icon = fieldRoot().querySelector<SVGElement>(
+    "[data-testid=ArrowDropDownIcon]",
+  );
+  if (icon === null) {
+    throw new Error("找不到下拉箭頭");
+  }
+  return icon;
+};
 
 describe("OrgTreeSelect", () => {
   it("點欄位:打開欄位下方的浮動面板,搜尋框取得焦點", async () => {
@@ -195,5 +214,44 @@ describe("OrgTreeSelect", () => {
     const tree = screen.getByRole("tree");
     expect(within(tree).queryByText("平台根組織")).toBeNull();
     expect(within(tree).queryByText("租戶 B")).toBeNull();
+  });
+  it('高度跟 TextField 同一組 size:不給是 medium,size="small" 單選、多選都是 small,外框只有一層 InputBase', () => {
+    const { unmount } = renderSelect();
+    expect(fieldRoot()).not.toHaveClass("MuiInputBase-sizeSmall");
+    unmount();
+
+    const single = renderSelect({ size: "small" });
+    expect(fieldRoot()).toHaveClass("MuiInputBase-sizeSmall");
+    single.unmount();
+
+    renderSelect({ size: "small", isMultiSelect: true });
+    expect(fieldRoot()).toHaveClass("MuiInputBase-sizeSmall");
+    // 欄位就是一個 TextField:外框裡不再套第二層 InputBase(多一層就多一份上下內距)
+    expect(fieldRoot().querySelectorAll(".MuiInputBase-root")).toHaveLength(0);
+  });
+  it("下拉箭頭同 SelectField:同一個實心三角形,打開時轉 180°", async () => {
+    const select = render(
+      <SelectField
+        label="對照"
+        value="a"
+        options={[{ value: "a", label: "A" }]}
+        onChange={() => {
+          // 只比對箭頭外觀
+        }}
+      />,
+    );
+    const selectArrowPath = select.container
+      .querySelector(".MuiSelect-icon path")
+      ?.getAttribute("d");
+    select.unmount();
+
+    const { user } = renderSelect();
+    expect(arrow().querySelector("path")?.getAttribute("d")).toBe(
+      selectArrowPath,
+    );
+    expect(getComputedStyle(arrow()).transform).not.toBe("rotate(180deg)");
+
+    await openPanel(user);
+    expect(getComputedStyle(arrow()).transform).toBe("rotate(180deg)");
   });
 });

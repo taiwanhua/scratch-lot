@@ -119,6 +119,11 @@ export const FormViewPage = ({ module, routeParam }: ModulePageProps) => {
             {title}
           </Typography>
         )}
+        {(submission?.serialNo ?? null) !== null && (
+          <Typography variant="body2" color="textSecondary">
+            {t("serialNo", { serialNo: submission?.serialNo ?? "" })}
+          </Typography>
+        )}
         <FormSubmissionDetail
           id={id}
           isHistoryOpen={isHistoryOpen}

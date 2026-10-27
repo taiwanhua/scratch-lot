@@ -2,6 +2,10 @@ import { ModuleEngine, ModuleSidebarType } from "@repo/graphql";
 import { projectPublic } from "@repo/project-config/public";
 
 import {
+  FIELD_MANAGER_MODULE_KEY,
+  FIELD_MANAGER_PERMISSIONS,
+} from "@/components/base/FieldManager/field-manager-permissions";
+import {
   SAMPLE_ONE_MODULE_KEYS,
   SAMPLE_ONE_PERMISSIONS,
 } from "@/pages/base/demo/demo-sample-one-config";
@@ -13,10 +17,6 @@ import {
   DATA_SCOPE_MODULE_KEY,
   DATA_SCOPE_PERMISSIONS,
 } from "@/pages/base/system/DataScopePage/data-scope-permissions";
-import {
-  FIELD_MANAGER_MODULE_KEY,
-  FIELD_MANAGER_PERMISSIONS,
-} from "@/pages/base/system/FieldManagerPage/field-manager-permissions";
 import {
   MODULE_MANAGER_MODULE_KEY,
   MODULE_MANAGER_PERMISSIONS,

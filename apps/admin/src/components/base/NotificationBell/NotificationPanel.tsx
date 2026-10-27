@@ -83,7 +83,7 @@ export const NotificationPanel = ({
       return (
         <Stack spacing={1} sx={{ alignItems: "center", py: 5 }}>
           <NotificationsIcon sx={{ color: "text.secondary" }} />
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" color="textSecondary">
             {filter === "unread" ? t("emptyUnread") : t("empty")}
           </Typography>
         </Stack>

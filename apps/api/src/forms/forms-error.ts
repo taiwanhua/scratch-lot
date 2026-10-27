@@ -60,6 +60,8 @@ export const FORM_FORBIDDEN_REASONS = [
   "ROOT_ONLY",
   /** 表單關了「允許存草稿」:不能建草稿、不能存狀態為草稿的單(只能直接送出)。 */
   "DRAFT_DISABLED",
+  /** 依欄位共用進來的提交(歸屬組織不在可見範圍內):只能看,不能改 / 刪 / 作廢 / 複製為新單(ADR-0014)。 */
+  "SHARED_READ_ONLY",
 ] as const;
 
 export type FormForbiddenReason = (typeof FORM_FORBIDDEN_REASONS)[number];
@@ -107,13 +109,36 @@ export function notFoundError(message: string): GraphQLError {
   return new GraphQLError(message, { extensions: { code: "NOT_FOUND" } });
 }
 
-/** 一般輸入錯誤(GQL-04 `VALIDATION_FAILED`),`fields` 標在哪幾個 input 欄位上。 */
+/**
+ * `VALIDATION_FAILED` 的細分原因(`extensions.reason`;格式對但不能存的情形,前端寫在欄位下,REACT-18)。
+ * 沒有原因 = 格式錯。
+ */
+export const FORM_VALIDATION_REASONS = {
+  /** 表單 key 已被用過(含別的租戶的客製表單;唯一索引) */
+  formKeyDuplicate: "FORM_KEY_DUPLICATE",
+  /** 列表欄位:同一欄列了兩次 */
+  listColumnDuplicate: "LIST_COLUMN_DUPLICATE",
+  /** 列表欄位:摘要槽不存在,或欄位不在這個模組任何表單的目前版本 */
+  listColumnUnavailable: "LIST_COLUMN_UNAVAILABLE",
+  /** 列表欄位:受欄位級權限保護的欄位不能當列表欄 */
+  listColumnProtected: "LIST_COLUMN_PROTECTED",
+} as const;
+
+export type FormValidationReason =
+  (typeof FORM_VALIDATION_REASONS)[keyof typeof FORM_VALIDATION_REASONS];
+
+/** 一般輸入錯誤(GQL-04 `VALIDATION_FAILED`),`fields` 標在哪幾個 input 欄位上;`reason` 選填(格式對但不能存才有)。 */
 export function validationError(
   message: string,
   fields: string[],
+  reason?: FormValidationReason,
 ): GraphQLError {
   return new GraphQLError(message, {
-    extensions: { code: "VALIDATION_FAILED", fields },
+    extensions: {
+      code: "VALIDATION_FAILED",
+      fields,
+      ...(reason === undefined ? {} : { reason }),
+    },
   });
 }
 

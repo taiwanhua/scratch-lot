@@ -7,6 +7,7 @@ import {
   normalizePairingCode,
   parsePrintAgentManifest,
   printAgentReleaseObjectPath,
+  readPngCutRows,
   readPngDimensions,
 } from "./index";
 
@@ -33,6 +34,36 @@ describe("readPngDimensions", () => {
     const broken = ihdr(1, 1);
     broken[12] = 0x41;
     expect(readPngDimensions(broken)).toBeNull();
+  });
+});
+
+/** IHDR(高 `height`)+ 一個 `tEXt` 區塊 + IEND(CRC 不檢查,填 0)。 */
+const withText = (height: number, text: string) => {
+  const head = ihdr(384, height);
+  const data = Uint8Array.from(text, (char) => char.codePointAt(0) ?? 0);
+  const chunk = new Uint8Array(12 + data.length);
+  new DataView(chunk.buffer).setUint32(0, data.length);
+  chunk.set([0x74, 0x45, 0x58, 0x74], 4);
+  chunk.set(data, 8);
+  const end = Uint8Array.of(0, 0, 0, 0, 0x49, 0x45, 0x4e, 0x44, 0, 0, 0, 0);
+  const out = new Uint8Array(head.length + chunk.length + end.length);
+  out.set(head, 0);
+  out.set(chunk, head.length);
+  out.set(end, head.length + chunk.length);
+  return out;
+};
+
+describe("readPngCutRows", () => {
+  it("讀 tEXt「cut-rows」:由小到大、去重,只留圖片範圍內(0 < 列 < 高度)的", () => {
+    expect(
+      readPngCutRows(withText(2000, "cut-rows\u0000900,300,300,0,2000,x")),
+    ).toEqual([300, 900]);
+  });
+
+  it("沒有這個區塊、別的 keyword、不是 PNG → 空陣列", () => {
+    expect(readPngCutRows(ihdr(384, 100))).toEqual([]);
+    expect(readPngCutRows(withText(100, "Comment\u000050"))).toEqual([]);
+    expect(readPngCutRows(Uint8Array.of(1, 2, 3))).toEqual([]);
   });
 });
 

@@ -12,6 +12,8 @@ import { Switch } from "@repo/ui/switch";
 import { TextField } from "@repo/ui/text-field";
 import { Typography } from "@repo/ui/typography";
 
+import { useFieldErrorText } from "@/components/base/FieldErrorText/useFieldErrorText";
+
 import { AudienceSourceSummary } from "./AudienceSourceSummary";
 import { useApproverAudienceSetup } from "./useApproverAudienceSetup";
 
@@ -60,6 +62,10 @@ export const StepOverdueSection = ({
   const t = useTranslations("admin.workflows.step.overdue");
   const setup = useApproverAudienceSetup(isShared, checkFormFields);
   const overdue = step.overdue ?? null;
+  // 時數錯了的原因寫在兩格下方,並連到兩格(REACT-18)
+  const hoursError = useFieldErrorText(
+    hasHoursError ? t("invalid") : undefined,
+  );
   const setOverdue = (next: OverdueReminderDef | null) => {
     onChange({ ...step, overdue: next });
   };
@@ -99,6 +105,7 @@ export const StepOverdueSection = ({
                   min: 1,
                   step: 1,
                   "aria-label": t("reviewerHours"),
+                  "aria-describedby": hoursError.describedBy,
                 },
               }}
               onChange={(event) => {
@@ -126,6 +133,7 @@ export const StepOverdueSection = ({
                   min: 1,
                   step: 1,
                   "aria-label": t("audienceHours"),
+                  "aria-describedby": hoursError.describedBy,
                 },
               }}
               onChange={(event) => {
@@ -137,11 +145,7 @@ export const StepOverdueSection = ({
             />
             <Typography variant="body2">{t("audienceSuffix")}</Typography>
           </Stack>
-          {hasHoursError && (
-            <Typography variant="caption" color="error">
-              {t("invalid")}
-            </Typography>
-          )}
+          {hoursError.errorText}
           <AudienceSourceSummary
             purpose="overdue"
             audience={overdue.audience}
@@ -153,7 +157,7 @@ export const StepOverdueSection = ({
               setOverdue({ ...overdue, audience });
             }}
           />
-          <Typography variant="caption" color="text.secondary">
+          <Typography variant="caption" color="textSecondary">
             {t("hint")}
           </Typography>
         </>

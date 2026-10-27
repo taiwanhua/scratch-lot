@@ -23,9 +23,10 @@ import {
   type FormError,
   formErrorOf,
 } from "@/lib/base/form-engine/form-errors";
+import { LIST_PAGE_SHELL_SX } from "@/lib/base/list-page-layout";
 import type { ModulePageProps } from "@/lib/base/module-tree";
 
-import { ReasonDialog } from "../../workflow/ApprovalSection/ReasonDialog";
+import { VoidDialog } from "../../workflow/ApprovalSection/VoidDialog";
 import { useSubmissionActions } from "../../workflow/useSubmissionActions";
 import { FormPicker } from "../FormPicker";
 import {
@@ -175,7 +176,8 @@ export const FormListPage = ({ module }: ModulePageProps) => {
   );
 
   return (
-    <Stack spacing={2} sx={{ flex: 1, minHeight: 0 }}>
+    // 列表頁殼(STYLE-08):平板以上且視窗夠高時釘高、表格在卡片裡捲(表頭固定);手機寬與矮視窗不釘高,整頁捲
+    <Stack spacing={2} sx={LIST_PAGE_SHELL_SX}>
       <FormListToolbar
         keyword={keyword}
         onKeywordChange={(value) => {
@@ -220,9 +222,8 @@ export const FormListPage = ({ module }: ModulePageProps) => {
         />
       )}
       {voidTarget !== null && (
-        <ReasonDialog
-          namespace="admin.approval.void"
-          requiresReason
+        <VoidDialog
+          formKey={voidTarget.formKey}
           isSubmitting={submissionActions.isPending}
           errorMessage={submissionActions.errorMessage}
           onCancel={() => {

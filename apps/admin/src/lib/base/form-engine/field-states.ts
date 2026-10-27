@@ -34,7 +34,7 @@ export type FormRendererMode = (typeof FORM_RENDERER_MODES)[number];
 
 /**
  * 一欄在畫面上的狀態 —— 欄位級三態(看不到 / 唯讀 / 可填)再加上條件:
- * - `visible` false:不渲染(`visibleWhen` 算出 false,或讀者沒有 show)
+ * - `visible` false:不渲染(`visibleWhen` 算出 false,或讀者沒有 show,或唯讀時不顯示的欄位)
  * - `readonly`:顯示但不能改(計算 / 固定值、沒有欄位級 edit、`readonlyWhen` 成立、唯讀模式)
  */
 export interface FieldUiState {
@@ -52,6 +52,15 @@ export interface FieldPermissionFacts {
   /** 權限層面改得動這欄嗎(api 的 `abilities.canEditField`,或新增前由權限推得) */
   canEdit: (fieldKey: string) => boolean;
 }
+
+/**
+ * 唯讀檢視時不顯示的欄位:`widget.hideWhenReadonly: true`(只管長相的設定;值照存、照驗)。
+ * 給業務頁自己填的系統欄位用(例:補打卡申請的「對應排班」存排班 id,詳情 / 申請中心改看它的顯示文字欄)。
+ */
+const isHiddenWhenReadonly = (
+  field: FieldDef,
+  mode: FormRendererMode,
+): boolean => mode === "readonly" && field.widget.hideWhenReadonly === true;
 
 /** 不套權限的模式(設計、預覽)用:全部看得到、改得動。 */
 export const OPEN_PERMISSIONS: FieldPermissionFacts = {
@@ -174,6 +183,7 @@ export const resolveFormState = ({
     const server = serverStates.get(field.key);
     const visible =
       !redacted &&
+      !isHiddenWhenReadonly(field, mode) &&
       (server?.visible ??
         safeCondition(field.visibleWhen, conditionInput, true));
     const byCondition =

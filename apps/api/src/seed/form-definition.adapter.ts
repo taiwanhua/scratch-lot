@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import type { Types } from "mongoose";
 
+import { normalizeSerialFormat } from "@repo/domain/form";
 import type {
   DefinitionSeedOperation,
   FormDefinitionSeedSet,
@@ -10,7 +11,11 @@ import {
   FormVersionsRepository,
   PermissionsRepository,
 } from "../database/database.module";
-import { allowsDraft } from "../database/schemas/form.schema";
+import {
+  allowsDraft,
+  sharedByFieldKeysOf,
+  voidReasonCategoryOf,
+} from "../database/schemas/form.schema";
 import type { SeedInstallationMetadata } from "../database/schemas/seed-definition-installation.schema";
 import {
   FormAccessService,
@@ -68,6 +73,9 @@ export class FormDefinitionAdapter implements DefinitionAdapter<FormDefinitionSe
       name: seed.name,
       tabLabelTemplate: seed.tabLabelTemplate,
       allowDraft: seed.allowDraft ?? true,
+      ...serialMetadataOf(seed.serial),
+      ...voidReasonMetadataOf(seed.voidReasonCategoryKey),
+      ...sharedByMetadataOf(seed.sharedByFieldKeys),
     };
   }
 
@@ -83,6 +91,13 @@ export class FormDefinitionAdapter implements DefinitionAdapter<FormDefinitionSe
       moduleKey: seed.moduleKey,
       tabLabelTemplate: seed.tabLabelTemplate,
       allowDraft: seed.allowDraft ?? true,
+      ...(seed.serial === undefined ? {} : { serial: seed.serial }),
+      ...(seed.voidReasonCategoryKey === undefined
+        ? {}
+        : { voidReasonCategoryKey: seed.voidReasonCategoryKey }),
+      ...(seed.sharedByFieldKeys === undefined
+        ? {}
+        : { sharedByFieldKeys: [...seed.sharedByFieldKeys] }),
     };
   }
 
@@ -102,6 +117,9 @@ export class FormDefinitionAdapter implements DefinitionAdapter<FormDefinitionSe
             name: form.name,
             tabLabelTemplate: form.tabLabelTemplate,
             allowDraft: allowsDraft(form),
+            ...serialMetadataOf(form.serial),
+            ...voidReasonMetadataOf(voidReasonCategoryOf(form)),
+            ...sharedByMetadataOf(sharedByFieldKeysOf(form)),
           },
         };
   }
@@ -188,6 +206,23 @@ export class FormDefinitionAdapter implements DefinitionAdapter<FormDefinitionSe
         ...((seed.allowDraft ?? true) === (expected.metadata.allowDraft ?? true)
           ? {}
           : { allowDraft: seed.allowDraft ?? true }),
+        // 單號格式同理:只在和現場不同時才帶
+        ...(JSON.stringify(normalizeSerialFormat(seed.serial ?? null)) ===
+        JSON.stringify(normalizeSerialFormat(expected.metadata.serial ?? null))
+          ? {}
+          : { serial: seed.serial ?? null }),
+        // 作廢原因類別同理
+        ...((seed.voidReasonCategoryKey ?? null) ===
+        (expected.metadata.voidReasonCategoryKey ?? null)
+          ? {}
+          : { voidReasonCategoryKey: seed.voidReasonCategoryKey ?? null }),
+        // 依欄位共用同理
+        ...(sameSharedByFields(
+          seed.sharedByFieldKeys,
+          expected.metadata.sharedByFieldKeys,
+        )
+          ? {}
+          : { sharedByFieldKeys: [...(seed.sharedByFieldKeys ?? [])] }),
       },
       {
         expected: {
@@ -196,6 +231,10 @@ export class FormDefinitionAdapter implements DefinitionAdapter<FormDefinitionSe
           name: expected.metadata.name,
           tabLabelTemplate: expected.metadata.tabLabelTemplate ?? null,
           allowDraft: expected.metadata.allowDraft ?? true,
+          serial: expected.metadata.serial ?? null,
+          voidReasonCategoryKey:
+            expected.metadata.voidReasonCategoryKey ?? null,
+          sharedByFieldKeys: expected.metadata.sharedByFieldKeys ?? [],
         },
       },
     );
@@ -326,6 +365,9 @@ function toSnapshot(
           name: metadata.name,
           tabLabelTemplate: metadata.tabLabelTemplate ?? null,
           allowDraft: metadata.allowDraft ?? true,
+          serial: metadata.serial ?? null,
+          voidReasonCategoryKey: metadata.voidReasonCategoryKey ?? null,
+          sharedByFieldKeys: metadata.sharedByFieldKeys ?? [],
         },
         {
           fields: record.fields,
@@ -335,4 +377,36 @@ function toSnapshot(
         },
       ),
   };
+}
+
+/** 身分快照的作廢原因類別:沒設不帶這個鍵(這個欄位之前的快照與現在的比對結果相同)。 */
+function voidReasonMetadataOf(
+  key: string | null | undefined,
+): Pick<IdentityMetadata, "voidReasonCategoryKey"> {
+  return key === null || key === undefined
+    ? {}
+    : { voidReasonCategoryKey: key };
+}
+
+/** 身分快照的依欄位共用:沒設(空)不帶這個鍵(這個欄位之前的快照與現在的比對結果相同)。 */
+function sharedByMetadataOf(
+  keys: readonly string[] | undefined,
+): Pick<IdentityMetadata, "sharedByFieldKeys"> {
+  return keys === undefined || keys.length === 0
+    ? {}
+    : { sharedByFieldKeys: [...keys] };
+}
+
+/** 兩份依欄位共用是否相同(缺席 = 空;順序算)。 */
+function sameSharedByFields(
+  left: readonly string[] | undefined,
+  right: readonly string[] | undefined,
+): boolean {
+  return JSON.stringify(left ?? []) === JSON.stringify(right ?? []);
+}
+
+/** 身分快照的單號格式:沒設不帶這個鍵(這個欄位之前的快照與現在的比對結果相同)。 */
+function serialMetadataOf(stored: unknown): Pick<IdentityMetadata, "serial"> {
+  const format = normalizeSerialFormat(stored ?? null);
+  return format === null ? {} : { serial: format };
 }

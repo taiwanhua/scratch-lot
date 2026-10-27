@@ -334,7 +334,7 @@ const InteractiveTimeline = (args: Story["args"]) => {
           setLog(`+N · ${date} · ${collapsed.map((g) => g.id).join(", ")}`);
         }}
       />
-      <Typography variant="body2" color="text.secondary">
+      <Typography variant="body2" color="textSecondary">
         {log}
       </Typography>
     </Box>

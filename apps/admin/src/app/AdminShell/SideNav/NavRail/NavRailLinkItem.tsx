@@ -6,6 +6,8 @@ import { moduleIconOf } from "@repo/ui/icons";
 import { ListItemButton } from "@repo/ui/list";
 import { Tooltip } from "@repo/ui/tooltip";
 
+import type { NavBadge } from "@/hooks/base/useSidebarBadges";
+
 import { useNavLinkHref } from "../useNavLinkHref";
 import { railItemSx } from "./nav-rail-styles";
 
@@ -15,8 +17,8 @@ export interface NavRailLinkItemProps {
   /** `me.modules[].icon`(白名單 key);認不得或沒設定時 `moduleIconOf` 退回預設圖示 */
   icon?: string | null;
   isSelected: boolean;
-  /** 待辦數;收合態放不下數字,大於 0 時在圖示右上畫小圓點 */
-  badge?: number;
+  /** 待辦數;收合態放不下數字,大於 0 時在圖示右上畫小圓點(提示仍是模組名稱,說明在展開態 / flyout 的數字上) */
+  badge?: NavBadge;
 }
 
 /**
@@ -48,7 +50,7 @@ export const NavRailLinkItem = ({
         <Badge
           variant="dot"
           color="primary"
-          invisible={badge === undefined || badge <= 0}
+          invisible={badge === undefined || badge.count <= 0}
         >
           {createElement(moduleIconOf(icon), { fontSize: "small" })}
         </Badge>

@@ -1,4 +1,25 @@
+import { STORE_BOARD_SIGNAL } from "@repo/domain/project/lottery";
+
 import type { RealtimeSignalRegistration } from "@/lib/base/realtime/signal-registry";
+import { STORE_BOARD_QUERY_KEY } from "@/pages/project/lottery/store/BoardTab/board-query";
+import {
+  STORE_BOOK_CARD_QUERY_KEY,
+  STORE_RECENT_SALES_QUERY_KEY,
+} from "@/pages/project/lottery/store/BoardTab/sales/sales-queries";
+import {
+  STORE_CHECKOUTS_QUERY_KEY,
+  STORE_CHECKOUT_WIZARD_QUERY_KEY,
+} from "@/pages/project/lottery/store/checkout/checkout-keys";
+import {
+  STORE_BANK_DEPOSIT_FORM_QUERY_KEY,
+  STORE_DAILY_CLOSE_STATUS_QUERY_KEY,
+  STORE_DAILY_CLOSE_WIZARD_QUERY_KEY,
+} from "@/pages/project/lottery/store/daily-close/daily-close-keys";
+import {
+  STORE_RECENT_REDEMPTIONS_QUERY_KEY,
+  STORE_REDEMPTIONS_QUERY_KEY,
+} from "@/pages/project/lottery/store/redemption/redemption-shared";
+import { STOCKTAKE_QUERY_KEYS } from "@/pages/project/lottery/store/stocktake/stocktake-queries";
 
 /**
  * 專案的信號類型登記(組裝在 `app/module-pages.tsx`;類型不可與底座重複)。
@@ -9,4 +30,25 @@ import type { RealtimeSignalRegistration } from "@/lib/base/realtime/signal-regi
  * { type: "badge:dealers", queryKeys: [useDealerOverdueListQuery.getKey()] }
  * ```
  */
-export const projectRealtimeSignals: readonly RealtimeSignalRegistration[] = [];
+export const projectRealtimeSignals: readonly RealtimeSignalRegistration[] = [
+  // 店面管理的看板(`board:<分店>` 頻道,規格 6.1):重抓看板、展開的卡片、[最近售出]、[最近兌獎] 與兌獎紀錄分頁
+  {
+    type: STORE_BOARD_SIGNAL,
+    queryKeys: [
+      STORE_BOARD_QUERY_KEY,
+      STORE_BOOK_CARD_QUERY_KEY,
+      STORE_RECENT_SALES_QUERY_KEY,
+      STORE_RECENT_REDEMPTIONS_QUERY_KEY,
+      STORE_REDEMPTIONS_QUERY_KEY,
+      // 盤點頁的應有現金、「建議盤點一次」、盤點紀錄
+      ...STOCKTAKE_QUERY_KEYS,
+      // 交班精靈(補登兌獎後的應有現金與兌獎清單)、班次結帳歷史紀錄
+      STORE_CHECKOUT_WIZARD_QUERY_KEY,
+      STORE_CHECKOUTS_QUERY_KEY,
+      // 上次日結 / 審核中的日結、日結精靈(各班結帳的審核狀態)、存銀行視窗的小金庫應有
+      STORE_DAILY_CLOSE_STATUS_QUERY_KEY,
+      STORE_DAILY_CLOSE_WIZARD_QUERY_KEY,
+      STORE_BANK_DEPOSIT_FORM_QUERY_KEY,
+    ],
+  },
+];

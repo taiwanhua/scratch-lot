@@ -197,7 +197,7 @@ export const FormSubmissionDetail = ({
               spacing={1}
               sx={{ alignItems: "center", flexWrap: "wrap" }}
             >
-              <Typography variant="body2" color="text.secondary">
+              <Typography variant="body2" color="textSecondary">
                 {t("formLine", {
                   form: base.formName ?? base.formKey,
                   version: base.version,
@@ -207,7 +207,7 @@ export const FormSubmissionDetail = ({
                 status={base.status}
                 blocked={base.blocked}
               />
-              <Typography variant="body2" color="text.secondary">
+              <Typography variant="body2" color="textSecondary">
                 {t("createdBy", { name: base.createdBy?.name ?? "—" })}
               </Typography>
             </Stack>

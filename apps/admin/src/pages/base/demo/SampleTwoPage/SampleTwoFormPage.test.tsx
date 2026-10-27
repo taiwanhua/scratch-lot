@@ -1,7 +1,8 @@
 import { describe, expect, it } from "@jest/globals";
-import { screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { delay } from "msw";
 
+import { checkboxOf } from "@/components/base/OrgTreeSelect/org-tree-select-test-support";
 import { api, server } from "@/test/msw/server";
 
 import {
@@ -35,6 +36,30 @@ describe("示範模組2 的新增 / 編輯(共版型)", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("共用給:有編輯權限才出現;勾「含下層」一起送出(資料共用)", async () => {
+    const { user: actor, fake } = renderSampleTwo({
+      path: SAMPLE_TWO_ROUTES.createPage,
+    });
+    await screen.findByRole("heading", { name: "新增示範項目" });
+    await actor.type(screen.getByLabelText("名稱 *"), "共用的項目");
+    await actor.click(screen.getByRole("combobox", { name: "共用給" }));
+    await screen.findByText("中山店");
+    // 多選:勾節點左側的勾選框(面板不關),再按 Escape 關掉面板
+    fireEvent.click(checkboxOf("中山店"));
+    await actor.keyboard("{Escape}");
+    await actor.click(await screen.findByLabelText("中山店 含下層組織"));
+    await actor.click(screen.getByRole("button", { name: "儲存" }));
+    await waitFor(() => {
+      expect(fake.inputs.createDemoItemTwo).toEqual([
+        {
+          name: "共用的項目",
+          note: null,
+          shareOrgs: [{ orgId: "org-store-a", includeDescendants: true }],
+        },
+      ]);
+    });
+  });
+
   it("新增:送出的 input 只有名稱與備註,沒填的備註送 null", async () => {
     const { user: actor, fake } = renderSampleTwo({
       path: SAMPLE_TWO_ROUTES.createPage,
@@ -46,7 +71,8 @@ describe("示範模組2 的新增 / 編輯(共版型)", () => {
 
     await waitFor(() => {
       expect(fake.inputs.createDemoItemTwo).toEqual([
-        { name: "對照組新項目", note: null },
+        // 「共用給」沒選 = 空清單(不共用)
+        { name: "對照組新項目", note: null, shareOrgs: [] },
       ]);
     });
     // 儲存成功後回列表
@@ -89,6 +115,7 @@ describe("示範模組2 的新增 / 編輯(共版型)", () => {
       id: "demo-two-1",
       name: "對照組項目A(改)",
       note: "沒有分類、沒有狀態的對照資料",
+      shareOrgs: [],
     });
   });
 

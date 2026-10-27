@@ -42,6 +42,7 @@ import {
   FormSubmissionRevisionMeta,
   FormSubmissionsPayload,
   FormSummary,
+  FormVoidReasonOptionsPayload,
 } from "./models/form-submission.model";
 
 /**
@@ -279,6 +280,18 @@ export class FormSubmissionsResolver {
     return this.fieldOptions.options(
       await this.access.factsOf(operator),
       input,
+    );
+  }
+
+  /** 作廢對話框的原因選項(表單設定的作廢原因類別);不需要欄位管理的權限。 */
+  @Query(() => FormVoidReasonOptionsPayload, { name: "formVoidReasonOptions" })
+  async formVoidReasonOptions(
+    @Args("formKey", { type: () => ID }) formKey: string,
+    @CurrentOperator() operator: OperatorContext,
+  ): Promise<FormVoidReasonOptionsPayload> {
+    return this.fieldOptions.voidReasonOptions(
+      await this.access.factsOf(operator),
+      formKey,
     );
   }
 

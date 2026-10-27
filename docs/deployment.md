@@ -173,21 +173,21 @@ exit 0 只表示報告已生成,**不是部署核准**。報告的 issues 仍可
 **job 圖**:拆成多個 job,各佔一台 runner 並行,牆鐘最短優先。
 
 ```
-project-settings             專案設定、發布前核對與底座同步 CLI 測試 + 三環境解析(每次都跑)
-figma-sync                   建置 UI / project-config + Figma 同步離線測試(每次都跑,不碰 Figma)
-prepare ─┬─ format-codegen   prettier --check(每次都跑)+ codegen 產物與 schema 一致(GQL-05)
-         ├─ lint-typecheck   turbo run lint check-types
-         ├─ test-api-1 / 2   api 的 jest 以 --shard=1/2、2/2 分兩片,各自由 jest globalSetup 起單一成員 replica set
-         ├─ test-admin-1 / 2 admin 的 jest 同樣分兩片(先 turbo build admin 的依賴)
-         ├─ test-others      api / admin 以外的 turbo run test(domain / ui / i18n / logger / db-migrator …)
-         └─ build            turbo run build(front 受影響時先 build 並啟動 api,給 ISR 預渲染打;Mongo 以 docker run 起單一成員 replica set)
-以上全部 ─→ verify           總結:任一 job failure / cancelled 就紅,skipped 算過
+project-settings               專案設定、發布前核對與底座同步 CLI 測試 + 三環境解析(每次都跑)
+figma-sync                     建置 UI / project-config + Figma 同步離線測試(每次都跑,不碰 Figma)
+prepare ─┬─ format-codegen     prettier --check(每次都跑)+ codegen 產物與 schema 一致(GQL-05)
+         ├─ lint-typecheck     turbo run lint check-types
+         ├─ test-api-1 / 2 / 3 api 的 jest 以 --shard=1/3、2/3、3/3 分三片,各自由 jest globalSetup 起單一成員 replica set
+         ├─ test-admin-1 / 2   admin 的 jest 分兩片(先 turbo build admin 的依賴)
+         ├─ test-others        api / admin 以外的 turbo run test(domain / ui / i18n / logger / db-migrator …)
+         └─ build              turbo run build(front 受影響時先 build 並啟動 api,給 ISR 預渲染打;Mongo 以 docker run 起單一成員 replica set)
+以上全部 ─→ verify             總結:任一 job failure / cancelled 就紅,skipped 算過
 ```
 
 - **PR 的必要檢查只看 `verify`**;紅的時候看是哪一個 job 紅,job 名稱就是壞的類別。
-- **受影響過濾**:`prepare` 用 `turbo ls --affected` 算出「改到的 package + 依賴它們的 package」,轉成 `--filter=<pkg>` 清單交給下游 job。api / admin 不在清單就跳過各自的兩個 shard;清單空就跳過 lint / test / build。改到 `.github/**` 或拿不到 base(首推、force push)時退回全跑。codegen 一致性檢查只在 api 或 `@repo/graphql` 受影響時跑;prettier 不看清單,每次都跑。
+- **受影響過濾**:`prepare` 用 `turbo ls --affected` 算出「改到的 package + 依賴它們的 package」,轉成 `--filter=<pkg>` 清單交給下游 job。api / admin 不在清單就跳過各自的 shard(api 三片、admin 兩片);清單空就跳過 lint / test / build。改到 `.github/**` 或拿不到 base(首推、force push)時退回全跑。codegen 一致性檢查只在 api 或 `@repo/graphql` 受影響時跑;prettier 不看清單,每次都跑。
 - **turbo 快取**:`.turbo/cache` 用 `actions/cache` 在 run 之間保存,每個跑 turbo 的 job 各一把 key(lockfile hash + job 名 + commit),找不到時退回同 lockfile 的最近一份;沒改到的 package 的 lint / typecheck / build 直接 `cache hit`。存回前刪掉 7 天前的項目,快取才不會無限長大;lockfile 一變就從頭累積。api 的 shard 不走 turbo(jest 直接吃 `@repo/domain` 原始碼),沒有快取。
-- **本機重現某一片**:api 是 `pnpm --filter @repo/api exec jest --shard=1/2`;admin 是 `pnpm --filter @repo/admin exec node --experimental-vm-modules node_modules/jest/bin/jest.js --shard=1/2`(要先有依賴的 dist)。不能寫成 `pnpm run test -- --shard=1/2`,參數會被 jest 當成路徑 pattern。
+- **本機重現某一片**:api 是 `pnpm --filter @repo/api exec jest --shard=1/3`;admin 是 `pnpm --filter @repo/admin exec node --experimental-vm-modules node_modules/jest/bin/jest.js --shard=1/2`(要先有依賴的 dist)。不能寫成 `pnpm run test -- --shard=1/2`,參數會被 jest 當成路徑 pattern。
 - **跨程序建置依賴**:api 有變時也驗 db-migrator;它的測試透過 Turbo 先建置同一 checkout 的 API CLI 與依賴。migration 與種子快照的不可變檢查在 `prepare` 對照 Git 基線執行。
 - **Figma 同步**:`figma-sync` 獨立於 `prepare`,先建置 `@repo/ui` 與 `@repo/project-config`,再跑本機外掛與舊工具的離線測試(`scripts/figma-local/*.test.mjs`、`scripts/figma-sync/*.test.mjs`);結果納入 `verify`。CI 不讀 Figma token、不操作設計檔;離線通過不代表 Library 已發布或專案已接受更新。實際操作見 [toolbox](agents/toolbox.md#figma-品牌同步)。
 - **逾時**:`prepare` 10 分、`project-settings` / `verify` 5 分、`figma-sync` 15 分、`test-others` 30 分,其餘 20 分。
@@ -248,6 +248,7 @@ deploy / reset 的雲端目標與看板識別不寫在 workflow 裡,正本是兩
 | workflow                                           | 觸發                                             | 做什麼                                                                                                                                                              |
 | -------------------------------------------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Reset DB**(`reset-db.yml`)                       | 只能手動;三環境皆須明確確認                      | 資料庫還原(`data` / `full`);操作見三、「資料庫還原」,規則正本是 ADR-0002「還原(reset)」                                                                             |
+| **Demo**(`demo.yml`)                               | 只能手動;三環境皆須明確確認                      | 建立 / 補齊示範機構(`create`;`purge` / `rebuild` 尚未提供);操作見三、「示範資料(demo)」                                                                             |
 | **E2E**(`e2e.yml`)                                 | 只能手動,不在 ci.yml 內                          | 權限劇本 E2E(`gh workflow run e2e.yml --ref <分支>`,可加 `-f grep="劇本 7"`);資料庫由 harness 自起單一成員 replica set(拋棄式),不碰任何環境與 Secret;時機見 TEST-05 |
 | **Docs**(`docs.yml`)                               | PR 與三分支 push,只在改到 `docs/**` 或任何 md 時 | `pnpm run format:check`                                                                                                                                             |
 | **Project Status**(`project-status.yml`)           | issue / PR 事件                                  | 自動移看板卡,規則見 `docs/agents/issue-tracker.md`「看板」                                                                                                          |
@@ -293,6 +294,7 @@ feat 一律從 `main` 切,而 `dev` / `staging` 各自往前走一條線;同一�
 
 - **Docker build context 排除 `.md`,但 admin 的 help.md 是程式資產**:根目錄 `.dockerignore` 有 `**/*.md`(文件不進 image),而 `apps/admin/src/md/module-help/**/*.help.md` 是 Vite 在 build 時以 `import.meta.glob` 內嵌進 bundle 的程式資產。被排除時本機 `pnpm build` 照樣正常,CI 建出來的 image 卻讓每頁的「?」全部 disabled,而且沒有任何一步會失敗。例外寫在 `.dockerignore`(`!apps/admin/src/md/**/*.md`,必須排在 `**/*.md` 之後才生效);防回歸檢查在 `apps/admin/Dockerfile` 的 builder stage:build 之後 `RUN pnpm --filter @repo/admin check:help-bundle`(腳本 `apps/admin/scripts/check-help-bundle.mjs`,比對每份說明的內容是否出現在 `dist/assets/*.js`;掃不到說明檔也算失敗)。**再有這類「跟著 build 烘進產物的非程式檔」**(i18n 字典、範本、憑證…),一律同時做兩件事:在 `.dockerignore` 補例外 + 在 Dockerfile 加一條驗產物的檢查。
 - **admin 的靜態檔快取:`index.html` = `no-cache`、`/assets/` = `immutable` 一年**(`apps/admin/nginx.conf`)。`index.html` 是唯一指向「這次部署的 bundle 檔名」的入口,一旦被快取,部署後重新整理仍會載入上一版 HTML 與它指向的 `assets/index-<hash>.js`;`/assets/` 底下的檔名帶 content hash,內容一變檔名就變,可以永久快取。`no-cache` 是「每次都先向伺服器驗證」(ETag 命中回 304,只花一個 round trip),所以**部署後使用者正常重新整理就拿到新版**,不需要 Ctrl+F5。沒有這個標頭時瀏覽器會依 `Last-Modified` 自行推算效期,就會出現「部署成功但畫面沒變」。nginx 的 `add_header` 不會繼承到自己也有 `add_header` 的子 block,所以 `location /`(SPA fallback)與 `location = /index.html`(`try_files` 的內部轉址會重新比對 location)各寫一份。改了 `nginx.conf` 之後,驗收方式是 `curl -I https://erp-<環境>.project.example.invalid/` 看 `Cache-Control`。
+- **admin 可安裝成 app,但不做離線**(`apps/admin/src/lib/base/web-app-manifest.ts`,值在專案設定 `admin.webApp`;null = 不提供):build 輸出 `manifest.webmanifest` 並在 `index.html` 加 manifest / `theme-color` / `apple-touch-icon`;起始頁是登入頁(已登入會被導回首頁),`id` 固定為 `/`、與起始頁脫鉤,之後改起始頁不會變成另一個 app。**沒有 service worker**:依 [Chrome 的安裝條件公告](https://developer.chrome.com/blog/update-install-criteria),Chrome 桌面 112 / Android 108 起從選單安裝不再要求 service worker;[Edge 文件](https://learn.microsoft.com/en-us/microsoft-edge/progressive-web-apps/how-to/)也寫 service worker 是選配(本專案以 Chromium 153 / Edge 155 實測可安裝、無安裝錯誤)。所以頁面一律走網路,部署後重新整理就是新版,沒有「卡在舊版」這回事;代價是 Chrome 的自動安裝提示可能不出現(同一篇公告:提示仍以 fetch handler 為條件之一),使用者從選單或網址列安裝。manifest 與 `public/` 的圖示檔名固定、不帶 hash,nginx 對它們與 `index.html` 一樣給 `no-cache`(manifest 另指定 `application/manifest+json`,nginx 內建對照表沒有),不可搬進 `/assets/`。**已安裝的 app 換名稱 / 圖示**(以下依官方文件,未實測,版本行為以瀏覽器實際為準):Chrome / Edge 桌面在 app 開啟時檢查 manifest(24 小時最多一次),其餘欄位關掉所有視窗後自動套用([web.dev](https://web.dev/articles/manifest-updates));Chrome 144 起名稱與圖示要使用者從選單「Review app update」確認,圖示差異小於 10% 自動套用([Chrome 部落格](https://developer.chrome.com/blog/improvements-to-web-app-updates));Android 在關閉 app、充電且連 Wi-Fi 時重產 WebAPK,一般一兩天內([web.dev](https://web.dev/articles/manifest-updates))。iOS 找不到 Apple / WebKit 的官方說明、也未實機測試;一般經驗是主畫面的名稱與圖示在加入時就固定,要刪掉重新加入。manifest 網址與 `id` 不可改,否則已安裝的 app 收不到更新。驗收:`curl -I https://<admin 網址>/manifest.webmanifest` 看 `Content-Type` 與 `Cache-Control`,Chrome DevTools「Application → Manifest」無錯誤。
 - **改了 `.dockerignore` / Dockerfile 之後要用 `-f force=true` 部署**:這兩個檔不屬於任何 package,`turbo ls --affected` 看不到,不加 force 會整個 build 步驟被跳過。
 - **新增「會被烘進前端產物」的環境變數時,同步登記進該 package `turbo.json` 的 `tasks.build.env`**(規則正本 STRUCT-08):`VITE_*` / `NEXT_PUBLIC_*` 是 build 的輸入,沒登記就不在 build 的快取鍵裡,換一個值重 build 會直接 `cache hit`,部署出去的 image 裡烘的還是前一個值,而且沒有任何一步會失敗。admin 每環境各建一顆 image,正是最容易吃到這個坑的形狀。三處一起動:`turbo.json` 的 `env`、`docs/env-registry.md`、該環境的 build 參數(deploy.yml 的 `--build-arg` 或 Vercel dashboard)。
 - **Vercel 的 `Deployment rate limited` 是帳號層級的額度**:front 在免費方案上短時間內推太多次就會碰到,等額度回復再推即可,不要為此改 workflow 或重試設定;它不影響 api / admin 的 Cloud Run 部署。
@@ -416,8 +418,82 @@ RESET_ALLOW_ENV=dev MONGODB_URI="mongodb://127.0.0.1:27017/project-dev?directCon
 - 只處理資料庫,不部署 Cloud Run、不清除 GCS 物件。流程引擎每次依資料庫讀取版本,重建同 key/版號後不會沿用程序中的舊定義。
 - `data` 保留根初始帳號與密碼;`full` 重建帳號,密碼使用該環境 Secret 的當前值。
 - job 掛在所選 GitHub environment 下,沿用該環境的審核設定。
+- **重建後灌示範資料**(勾選項 `seed_demo`,預設不勾):勾了就在 reset 成功後接著跑 `demo --mode=create`(見下一節)。確認字串不另外輸入:由這次 reset 的確認字串換頭尾得出 `demo:<environment>:<資料庫名>:create`(reset 已核對過資料庫名,workflow 仍不解析 URI),指令端再以 api 回報的資料庫名比對一次。不勾時和以前一樣,只有底座基本資料(最上層組織、租戶管理員、欄位類別)。CLI:再加 `-f seed_demo=true`。`data` 模式保留 root 的現有密碼:與該環境 `root-admin-password*` 的值不同時,灌示範資料會停在 root 登入那一步(reset 本身已完成);先把 root 密碼與 Secret 對齊,再跑 Demo workflow 補上示範資料。
 
 正本:`.github/workflows/reset-db.yml`、`deploy/project/cloud.json`、`apps/db-migrator/src/reset/`、ADR-0002「還原(reset)」。
+
+### 示範資料(demo)
+
+demo 指令在指定環境建立一個標「示範」的機構(租戶頂層)與整套示範資料,給測試與展示用。示範資料是業務資料,不進一般 seed(ADR-0002);內容由專案登記(專案來源 `seeds/project/registry.ts` 匯出 `projectDemoSource`,經固定入口 `seeds/registry.ts` 交給指令;沒有登記的專案執行時直接停下)。dev、staging、production 都可執行,安全規則同 reset。
+
+| mode      | 結果                                                                           |
+| --------- | ------------------------------------------------------------------------------ |
+| `create`  | 建立 / 補齊示範機構;冪等,重跑只補缺的帳號與資料,不會把已改過的密碼或資料改回去 |
+| `purge`   | 清空示範機構(見下方「示範機構清空 / 重建」)                                    |
+| `rebuild` | `purge` + `create`                                                             |
+
+**全程走 api**:指令不連資料庫,只呼叫 `--api-url` 那個 api 的 GraphQL,權限照常檢查、操作紀錄照常寫:
+
+1. 以平台管理員(`ROOT_ADMIN_ACCOUNT`,密碼見下)登入,讀 api **自己回報**的資料庫名(`provisionTarget`,根組織專屬、只回資料庫名)並比對確認字串。到這裡還沒有任何寫入
+2. 以 `provisionTenant`(`demo: true`)建立示範機構與首任租戶管理員 `<基底信箱>+<別名>@…`(密碼 = 示範密碼,只存雜湊;不寄啟用信、首登不強改)。以**租戶短碼 + 「示範」標記**找回:同短碼且標「示範」的機構就沿用;同短碼卻沒有「示範」標記 → 拒絕,一筆都不寫
+3. 以那位首任租戶管理員登入,交給專案的 `populate` 建出其餘內容(內容與步驟見專案的開通文件)
+
+`purge` 只做第 1 步與清空;`rebuild` 在第 1 步之後先讀齊示範密碼與基底信箱(缺值就停在一筆都沒刪的時候),再清空、再做第 2、3 步。
+
+「示範」標記(`orgs.isDemo`)只在開通時設定,之後沒有端點改得了它,真實租戶不會被當成示範機構。
+
+在 Actions → **Demo** 選擇執行版本、`environment`、`mode`,並手動填入 `confirmation`:
+
+```text
+demo:<environment>:<實際資料庫名>:<create|purge|rebuild>
+```
+
+CLI 範例:
+
+```bash
+gh workflow run Demo --ref dev -f environment=dev -f mode=create -f confirmation="demo:dev:project-dev:create"
+```
+
+- **確認字串綁實際寫入的資料庫**:環境與模式兩段先比對(還沒呼叫 api);資料庫名段比對的是 api 回報的名稱,所以確認字串正確、`--api-url` 卻指到別的環境時,資料庫名段不符,不執行。打錯一個字就不執行。`DEMO_ALLOW_ENV` 必須包含所選環境,未設即拒絕(workflow 只放這次選的環境)。示範機構名稱固定,不放進確認字串。不需要 `MONGODB_URI`
+- **機密**:示範密碼與基底信箱在 Secret Manager `demo-password*`、`demo-email-base*`(與 `root-admin-password*` 同一處,三環境各一把),名稱登記在 `deploy/project/cloud.json` 各環境的 `secrets.demoPassword` / `secrets.demoEmailBase`(可省略;省略的環境跑 Demo 會在認證前停下,Reset DB 勾選灌示範資料時也是)。Secret 由使用者照[新增一個 Secret Manager 機密的標準步驟](#新增一個-secret-manager-機密的標準步驟)在自己的終端機建立,授權讀取者是部署 SA(`gcp.deployServiceAccount`)。workflow 讀出後 `::add-mask::`,經標準輸入以管線交給指令,不放進環境變數
+- **root 密碼**:`ROOT_ADMIN_PASSWORD` 有設就用(workflow 由 Secret 帶入);沒設就從標準輸入讀(本機在終端機輸入,不回顯)
+- **信箱**:示範帳號的信箱一律由基底信箱加 `+` 別名產生,帳號同信箱;repo 不寫任何真實信箱或密碼。輸出不印信箱(只印別名)
+- `--api-url` 必填:該環境的 api origin(workflow 帶 `cloud.json` 的 `apiUrl`)
+
+本機執行:機密都在終端機輸入(依序:平台管理員密碼、示範帳號密碼、基底信箱;不回顯),不放進指令列或環境變數:
+
+```bash
+DEMO_ALLOW_ENV=dev ROOT_ADMIN_ACCOUNT=<root 帳號> \
+  pnpm --filter @repo/db-migrator demo --environment=dev --mode=create --confirm=demo:dev:project-dev:create --api-url=https://api-dev.example.com
+```
+
+- 一般部署與 `update` 不跑示範資料。
+- 示範機構的首任租戶管理員密碼若已被改過,`create` 在以他登入那一步停下;由平台管理員重設成示範密碼後重跑。
+- 新建的示範帳號照一般使用者規則:首登要改密碼。改過的密碼重跑不會改回去。
+
+#### 示範機構清空 / 重建
+
+`--mode=purge` 以平台管理員呼叫 api 的 `purgeDemoTenant`(根組織專屬,權限 `system.org-manager.tenant-ops.purge-demo`),把示範機構整個抹掉,讓 `rebuild` 從頭建一份乾淨的:
+
+- **只接受標「示範」的機構**:以專案示範資料固定的租戶短碼找根組織底下的租戶頂層。找不到 → 什麼都不做;找到卻沒有「示範」標記 → `FORBIDDEN`,一筆都不刪。確認字串與 `create` 同一套規則(`demo:<environment>:<資料庫名>:purge`,資料庫名段比對 api 回報的名稱)
+- **刪除範圍**:所有帶這個租戶 id 的資料,**包括只能新增的帳本**(稽核紀錄、流水、事件;清空 = 當作沒發生過);依組織或使用者歸屬的資料(欄位、客製表單與它的版本、會員、token、個人偏好);租戶頂層與它所有下層組織;它擁有的角色;**只屬於這個機構的使用者**硬刪(同一組帳號之後能重新建立),**也屬於其他組織的使用者只移除**在這個機構的所屬與角色;資料裡引用的檔案(商標、附件等本 API 簽出的物件路徑)在交易提交後刪掉,個別失敗只記 log
+- **一個交易**:刪除與稽核 `org.purge-demo`(記在根組織,不在刪除範圍)同一個交易,中途失敗全部回復
+- 不刪全平台共用的定義與紀錄(模組、權限、欄位類別、資料範圍設定、受管定義的安裝紀錄、排程紀錄);根組織做的開通紀錄也留著
+
+**刪除範圍用登記制**:資料層登記的每一張 collection 都要宣告刪法 —— 底座的在 `apps/api/src/database/base/tenant-purge.ts`,專案的在 `apps/api/src/project/database/tenant-purge.ts`,規則與驗證在 `apps/api/src/database/tenant-purge.ts`:
+
+| 刪法        | 用在                                                                                        |
+| ----------- | ------------------------------------------------------------------------------------------- |
+| `tenantId`  | 帶 `tenantId` 欄的表(**一律用這種**,不能改用別的)                                           |
+| `match`     | 依欄位歸屬:值是這個租戶的組織、會被刪的使用者,或另一張表這次刪掉的文件(例:表單版本跟著表單) |
+| `dedicated` | 只給組織、使用者、角色、核心關聯,由清空服務自己算範圍                                       |
+| `keep`      | 不是租戶資料,不刪;要寫理由                                                                  |
+
+會存上傳物件路徑的欄位(寫入端用 `UploadPurpose` / `isOwnedUploadPath` 驗的欄位,例:表單提交的 `values` / `revisions`)在登記加 `files`:刪除前只讀這些欄位(與後面步驟要對的值)找檔案,沒宣告的表不讀;組織的商標由清空服務自己處理。
+
+新增資料表時同 PR 加一筆登記;沒登記、或帶 `tenantId` 卻不是依 `tenantId` 刪,`apps/api/src/database/tenant-purge.test.ts` 的完整性測試就失敗,執行時也會在刪任何東西之前停下。
+
+正本:`.github/workflows/demo.yml`、`.github/workflows/reset-db.yml`(勾選項)、`apps/db-migrator/src/demo/`、`apps/api/src/orgs/demo-tenant-purge.service.ts`、`apps/api/src/database/tenant-purge.ts`;示範資料放專案的 `apps/db-migrator/seeds/project/demo/`(STRUCT-12)。
 
 ### 觀測與維運
 

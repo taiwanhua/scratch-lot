@@ -189,7 +189,7 @@ const ScalarDefault = (props: PartProps) => {
         />
       )}
       {current?.kind === "constant" && <ConstantInput {...props} />}
-      <Typography variant="caption" color="text.secondary">
+      <Typography variant="caption" color="textSecondary">
         {t("defaultHint")}
       </Typography>
     </Stack>

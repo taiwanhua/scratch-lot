@@ -2,11 +2,11 @@
 
 import ButtonBase, { buttonBaseClasses } from "@mui/material/ButtonBase";
 import MuiCollapse from "@mui/material/Collapse";
-import MuiTypography from "@mui/material/Typography";
 import type { SxProps, Theme } from "@mui/material/styles";
 import { styled } from "@mui/material/styles";
 import { type ReactNode, useId, useState } from "react";
 
+import { Typography } from "../Typography/Typography";
 import { ChevronDownIcon } from "../icons/ChevronDownIcon";
 import { mergeSx } from "../theme/sx";
 import { radius } from "../theme/tokens";
@@ -122,14 +122,14 @@ export const Section = ({
   };
 
   const heading = (
-    <MuiTypography
+    <Typography
       id={titleId}
       variant="subtitle1"
       component="h2"
       sx={{ fontWeight: 600, flexShrink: 0 }}
     >
       {title}
-    </MuiTypography>
+    </Typography>
   );
 
   return (
@@ -142,14 +142,14 @@ export const Section = ({
         >
           {heading}
           {isCollapsed && summary !== undefined && (
-            <MuiTypography
+            <Typography
               variant="body2"
-              color="text.secondary"
+              color="textSecondary"
               noWrap
               sx={{ minWidth: 0 }}
             >
               {summary}
-            </MuiTypography>
+            </Typography>
           )}
           <Chevron aria-hidden isCollapsed={isCollapsed} />
         </HeaderButton>

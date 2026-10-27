@@ -51,6 +51,18 @@ describe("目前的專案設定符合公開契約", () => {
     expect(projectPublic.admin.documentTitle.trim()).not.toBe("");
   });
 
+  it("可安裝 app 的設定是 null,或名稱非空、顏色是 # 加六位十六進位", () => {
+    const { webApp } = projectPublic.admin as ProjectPublicConfig["admin"];
+
+    expect(
+      webApp === null ||
+        (webApp.name.trim() !== "" &&
+          webApp.shortName.trim() !== "" &&
+          /^#[0-9A-Fa-f]{6}$/.test(webApp.themeColor) &&
+          /^#[0-9A-Fa-f]{6}$/.test(webApp.backgroundColor)),
+    ).toBe(true);
+  });
+
   it("每個語系的前台 metadata 三欄非空,title template 保留 `%s`", () => {
     const entries = Object.entries(projectPublic.front.metadata);
 

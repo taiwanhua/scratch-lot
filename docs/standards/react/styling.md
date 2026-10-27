@@ -22,7 +22,8 @@ review 最友善;Minimal Dashboard 級的統一感靠 theme 工程達成。
 ## STYLE-03 響應式只用 theme 斷點
 
 用 `sx` 的斷點物件語法(`{ xs: ..., md: ... }`)或 `theme.breakpoints`;不手寫
-`@media` 查詢。
+`@media` 查詢。theme 沒有高度斷點:要看視窗高度時,寬度一樣取 `theme.breakpoints.up(...)`,
+再接上 `and (min-height:…)`,而且條件寫成具名常數 / 函式只留一個正本(目前只有列表頁殼,見 STYLE-08 的 `listPagePinMediaQuery`)。
 
 ## STYLE-04 深色模式只透過 palette
 
@@ -82,12 +83,15 @@ return createElement(moduleIconOf(module.icon), { fontSize: "small" });
 | `SegmentedControl`                                        | `@repo/ui/segmented-control`                         | 幾個互斥選項的分段按鈕(頭像選單的外觀、語言)   |
 | `Badge`                                                   | `@repo/ui/badge`                                     | 數字 / 小圓點提示(側欄待辦數)                  |
 | `DatePicker` / `DateTimePicker`                           | `@repo/ui/date-picker` / `@repo/ui/date-time-picker` | 日期、日期時間欄位                             |
+| `TimePicker`                                              | `@repo/ui/time-picker`                               | 時間欄位(`HH:mm`,24 小時制)                    |
 | `Table` / `DataTable`                                     | `@repo/ui/table` / `@repo/ui/data-table`             | 小表 / 大量資料列表(REACT-13、STYLE-11)        |
 | `Tag`                                                     | `@repo/ui/tag`                                       | 狀態標籤(tone)                                 |
 | `Snackbar`                                                | `@repo/ui/snackbar`                                  | 只由 `SnackbarProvider` 渲染(DATA-06)          |
 | `useColorMode` / `AppThemeProvider`                       | `@repo/ui/app-theme-provider`                        | 外觀切換(STYLE-04)                             |
 | `useBreakpointDown`                                       | `@repo/ui/media-query`                               | JS 端需要知道斷點時(版面仍用 STYLE-03)         |
 | `EditIcon` / `DeleteIcon` / `ChevronDoubleLeftIcon` / `…` | `@repo/ui/icons`                                     | 介面圖示(見上方圖示規則)                       |
+
+**日期、時間欄位一律用上表的 picker,不用原生 `input`**:時間欄位一律用 `@repo/ui/time-picker`,不用 `TextField type="time"`;日期欄位同理不用 `type="date"` / `datetime-local`。原生欄位的外觀與格式隨瀏覽器和語系變(12 / 24 小時制、`yyyy/mm/dd`),也接不上 picker 共用的草稿行為(打到一半不往外送值,`onChange` 第二參數 `isIncomplete`)。
 
 **「停用的選項」不能靠 Tooltip 說明原因**:MUI 對 `aria-disabled` 的
 Autocomplete 選項下 `pointer-events: none`,hover 根本不會觸發;把它改回 `auto` 又會讓停用的
@@ -139,6 +143,56 @@ expect(chain.slice(1, -1).filter((l) => l.scrolls)).toEqual([]); // 只有最內
 
 實際的視覺滿版仍以 dev(或 mock 模式,TEST-08)目視為準;這個測試守的是「不再退回去」。
 
+**釘高(`flex: 1` + `minHeight: 0`)只給「子樹有一層 `overflow: auto` 能吃掉全部超出量」的版面**:主從版面
+(左樹 / 右表各自捲)、列表頁與列表分頁。其餘 —— 表單、設定、看板這類內容頁與內容分頁、卡片包表單、
+表格下面還有別的區塊且不照下面「表格旁的其他區塊」寫法的版面、只有卡片清單(沒有表格)的分頁 —— 一律 `flexGrow: 1; flexShrink: 0`(`CONTENT_PAGE_SHELL_SX`):
+內容少時撐滿、多時跟著長,交給 `<main>` 捲。
+
+**列表頁與列表分頁:寬 ≥ `md` 且視窗高 ≥ 720px 時在卡片裡捲、表頭固定;其餘(`md` 以下、或寬但矮)整頁捲**
+(`lib/base/list-page-layout.ts` 的 `LIST_PAGE_SHELL_SX`:`flex: 1 0 auto` + `minHeight: 0`,在 `listPagePinMediaQuery` 成立時換成 `flex: 1`)。
+列表頁 = 工具列 + 一張長表格 + 分頁器,夠大的視窗裡工具列與分頁器一直看得到、只有表格那一層捲;手機寬螢幕矮,
+寬但矮的視窗(例:1024×600 的平板橫放,扣掉頁首、工具列、分頁器後表格只剩約 94px)也一樣,整頁捲比卡片裡再捲一層好用,表頭跟著捲。
+
+- **釘高的條件只有一個正本**:`listPagePinMediaQuery(theme)`(寬度取 theme 斷點 `md`,再接上 `LIST_PAGE_PIN_MIN_HEIGHT` 的高度條件;
+  高度不是 theme 斷點能表達的,STYLE-03 的例外只限這一處)。要跟頁殼同步釘高 / 開捲動的樣式一律用它,不另寫 `@media`。
+- `LIST_PAGE_SHELL_SX` 是 theme 函式(媒體查詢要讀 theme 斷點),不能用 `...` 展開:呼叫端用 `sx` 陣列疊加,
+  `sx={[LIST_PAGE_SHELL_SX, { display: "flex", px: 3 }]}`(`usePageTabsShellSx` 回傳值同樣用陣列疊)。
+
+- 整頁都是列表分頁的頁殼直接用 `LIST_PAGE_SHELL_SX`;分頁混著列表與內容的頁殼用 `usePageTabsShellSx(items)`,
+  列表分頁在 `PageTabItem` 標 `isList: true`(分頁登記表照樣帶這個欄位),選到它時才換成列表頁殼。
+- 列表分頁的內容:最外層 `flex: 1; minHeight: 0`,表格(連同手機卡片清單)外面再包一層 `flex: 1; minHeight: 0`、只放清單,
+  工具列、說明、分頁器放在那一層外面;表格用預設的 `height: 100%`(不傳 `containerSx={{ height: "auto" }}`)。
+- 列表分頁裡表格旁還有其他區塊(例:表格以外的摘要清單)時,那區塊放在**表格上方**、套 `LIST_PAGE_ASIDE_SX`
+  (`flexShrink: 0`;釘高成立時限高 `LIST_PAGE_ASIDE_MAX_HEIGHT`、自己 `overflow: auto`),表格那一層照樣 `flex: 1; minHeight: 0`
+  吃剩下的高度、表頭固定。釘高不成立(手機寬、寬但矮)時整頁捲,區塊不限高。不要把區塊放在表格下面:
+  釘高時它會先把表格壓到 0,再被分頁殼卡片(`overflow: hidden`)裁掉。
+- 一個分頁裡有兩張以上的表:由分頁最外層 `overflow: auto` 整塊捲,每張表傳 `containerSx={{ height: "auto" }}` 依內容長高。
+- 卡片清單在 `md` 以上也會出現時(例:`lg` 以下改卡片):清單自己 `height: 100%; overflow: auto`、每張卡片 `flexShrink: 0`,
+  釘高時由它在卡片裡捲;只在 `sm` 以下出現的卡片清單不必(那個寬度不釘高)。
+- `@repo/ui/table` 一律 `stickyHeader`(同 DataTable):容器自己捲時表頭固定,交給 `<main>` 整頁捲時沒有作用。
+
+**MUI `Card` / `Paper` 預設 `overflow: hidden`**:釘了高的卡片,內容超出的部分直接被裁掉,`<main>` 也沒東西可捲
+(通知設定等頁都這樣被回報過)。連帶:
+
+- 主從版面在手機寬(xs)不釘高(`flex: { xs: "1 0 auto", sm: 1 }`):兩塊依內容長高、交給 `<main>` 捲;sm 起才各自捲。
+- 直排(xs `column`)時不給 `flex: 2` 之類的比例:flex-basis 0 會把 `overflow: hidden` 的卡片壓矮;比例只在並排的斷點給(`flex: { md: 2 }`)。
+- 不釘高的卡片裡放 `@repo/ui/table`,傳 `containerSx={{ height: "auto" }}`:預設的 `height: 100%` 在 flex 欄裡會解析成卡片高度,少掉標題那段。
+  傳不了 `containerSx` 的清單(包了表格與手機卡片、兩者都 `height: 100%` 的清單元件)改成外面包一層 `flex: 1; minHeight: 0`、只放清單,
+  說明文字放在那一層外面。
+- 頁面根是 `Card` / `Paper`(會裁切)時一定要宣告 `flexShrink: 0`(或依上面的條件釘高):沒寫就是預設的 `flex-shrink: 1`,
+  裁切元素的 `min-height: auto` 又算成 0,內容一長卡片就被壓到殼高、下半直接消失(個人設定頁、表單卡片都這樣被回報過)。
+- 內層捲動區塊(要 sticky 表頭、看得到橫向捲軸的寬表格 / 時間軸)不寫 `calc(100vh - 320px)` 這種依工具列高度的魔術數字:
+  量 `<main>` 剩下的空間給上限,空間不足時不設上限(只由 `<main>` 捲),任何尺寸都只有一層垂直捲動
+  (`hooks/base/useFitMainHeight.ts`;量測邊界傳**只含內容、不含並排側欄**的那一欄,含了比內容高的側欄,上限會來回跳)。
+- 測試:頁殼卡片斷言 `flex-shrink: 0`;殼本身斷言 `<main>` 可捲、`shell-content` 不裁切(先例 `app/AdminShell/ShellLayout.test.tsx`);量測 hook 見 `hooks/base/useFitMainHeight.test.tsx`
+  (它觀察 `<main>`、邊界與邊界往上到 `<main>` 的每一層:上方工具列在資料載入後換行長高時,只有外層會變尺寸)。
+  **通用守門** `app/PageRootHeight.test.tsx`:用 mock 假世界(TEST-08)渲染每個有模組的列表頁、新增頁與個人設定,逐一點開每個分頁,
+  以 `test/height-chain.ts` 讀頁面根在手機寬(390)、平板寬(1024×768)與寬但矮(1024×600)的宣告
+  (jsdom 不套 `@media`,讀宣告原文;`test/media-rules.ts` 的 `mediaRulesAt` 依視窗寬高判斷 `min/max-width`、`min/max-height` 條件):
+  `squeezedPageRootProblem` —— 會裁切的根要 `flex-shrink: 0`,或釘高且子樹有一層經 `min-height: 0` 接上來的捲動容器,
+  分頁殼在手機寬與寬但矮的視窗不得釘高;`isListPageShell` 對照列表頁 / 列表分頁清單(這份清單就是決定本身:底座的寫在該測試,專案的在 `test/project/list-page-shells.ts`);
+  列表頁 / 列表分頁另驗 1024×600 不釘高、1024×768 釘高,並在平板寬驗表格那一層的高度鏈接到 `<main>`、沒有多開的捲動層、表頭 `stickyHeader`。新頁只要在假世界有模組就自動納入。
+
 **同一條鏈只標一次 `overflow: auto`**:父子兩層各標一次時,平常看不出來 ——
 兩層都是「高度跟著內容長」就不會有人捲;等到內層拿到確定高度(或內容給了 `minWidth`),
 就會冒出兩條捲軸,而且橫向那條貼在最後一列下方、卡在版面中間。決定**哪一層負責捲**,
@@ -157,6 +211,8 @@ expect(chain.slice(1, -1).filter((l) => l.scrolls)).toEqual([]); // 只有最內
 ## STYLE-10 從呼叫端看 `sx`:只疊加、不覆蓋幾何
 
 app 端給 `@repo/ui` 元件傳 `sx` 時,只放與版面位置有關的值(`cursor`、`mt`、`flex`…);元件自己的幾何(高度、圓角、tone 色)由元件內的 `styled()` / theme `components` 決定(STYLE-07),呼叫端不要重設。需要不同尺寸或 tone 用元件的 props(`size`、`tone`),沒有就到 ui 加,不在呼叫端用 `sx` 硬改。
+
+**表單欄位的 `size`**:`TextField`、`SelectField`、`Autocomplete`、`DatePicker`、`DateTimePicker`、`TimePicker`、`ModuleIconPicker`、`OrgTreeSelect`、`ShareOrgsField` 不給 `size` 一律是 medium(`packages/ui/src/test/field-size.test.tsx` 鎖著),要 small 就明寫。同一張表單 / 同一列的欄位給同一個 `size`;隔壁寫了 `size="small"`、自己沒寫的那格會高一截。admin 的 ESLint(`no-restricted-syntax`)擋同一層直接並排的欄位 `size` 不一致(明寫 `medium` 與沒寫同算 medium;spread 的值是單純識別字(`{...SMALL}`、`{...fieldProps}`)又沒寫 size 的看不出來,不判;函式呼叫等其他 spread(如 `{...fieldErrorProps(...)}`)照判)。包在條件式或 helper 裡的、每格各包一層 `Grid` / `Box` 的版面,規則都抓不到,review 時對照。
 
 **目前記錄在案的例外:沒有。**(`IconButton` 的外框與 32 / 40 / 48 正方形由 `variant="outlined"` 提供,
 `SideNavToggle` 這類外框圖示鈕照用即可,不要再用 `sx` 給幾何。)
@@ -184,3 +240,21 @@ app 端給 `@repo/ui` 元件傳 `sx` 時,只放與版面位置有關的值(`curs
 要限制高度或在彈窗裡用,傳 `containerSx` 覆寫(如 `{ height: "auto", maxHeight: 320 }`,
 命名慣例見 STYLE-07);父層高度不確定時 `height: 100%` 自然退回 auto,詳情面板那種
 整塊捲動的版面不受影響。
+
+## STYLE-12 Typography 的 `color` 用 MUI 正式值;指定色階用 `sx`
+
+`Typography` 的 `color` 只寫 MUI 認得的值:色票名 `primary` / `secondary` / `success` / `error` / `info` / `warning`,
+文字色 `textPrimary` / `textSecondary` / `textDisabled`。要指定色階(`warning.dark`、`primary.darker`)才改用
+`sx={{ color: "warning.dark" }}`,`sx` 裡照常寫 theme 路徑。
+
+```tsx
+<Typography color="textSecondary">說明文字</Typography>
+<Typography color={row.balance < 0 ? "warning" : "textPrimary"}>{amount}</Typography>
+<Typography sx={{ color: "warning.dark" }}>尚未排班</Typography>
+```
+
+- **為什麼**:MUI 的 Typography 依 `color` 值比對 variants 上色,`text.secondary`、`warning.main` 這類帶點的寫法比對不到,
+  會被忽略、畫成一般字色;MUI 的型別放寬成 `string & {}`,寫錯也不會報錯。
+- **怎麼擋**:`@repo/ui/typography` 的 `color` 型別只收上列正式值(`TypographyColor`),寫錯就 check-types 失敗;
+  算顏色的 helper 回傳型別寫 `TypographyColor`。`@repo/eslint-config/react` 的 `no-restricted-syntax` 另擋
+  `Typography` / `MuiTypography` 的 `color` 裡出現帶點字串(含三元式的兩支),`packages/ui` 內部直接用 MUI 的地方也照樣檢查。

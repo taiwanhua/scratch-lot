@@ -1,8 +1,50 @@
 # 側欄計數:一次回傳使用者看得到的所有模組的數字(各模組以 registerBadge 登記);
-# 收到任何 badge:<模組 key> 信號都重抓這一支
+# 收到任何 badge:<模組 key> 信號都重抓這一支;descriptionKey = 「數什麼」的訊息 key(側欄數字的提示,沒登記 = null)
 query SidebarBadges {
   sidebarBadges {
     moduleKey
     count
+    descriptionKey
+  }
+}
+
+# 側欄數字「誰看得到」的租戶設定(通知設定頁「側欄數字」區塊;system.notification-settings.view / edit)
+fragment SidebarBadgeSettingItem on SidebarBadgeSetting {
+  moduleKey
+  moduleName
+  descriptionKey
+  requires
+  audience
+  isDefault
+  updatedAt
+  updatedBy
+}
+
+# 程式有登記、這個租戶有開通的側欄數字(依登記順序,不分頁)
+query SidebarBadgeSettings {
+  sidebarBadgeSettings {
+    items {
+      ...SidebarBadgeSettingItem
+    }
+    totalCount
+  }
+}
+
+# UpdateSidebarBadgeSettingInput: { moduleKey, audience }(audience 不能「所有人」、只有使用者 / 角色 / 權限;
+# 使用者 / 角色須屬本租戶,否則 VALIDATION_FAILED reason OUT_OF_TENANT;站在根組織 → FORBIDDEN reason TENANT_ONLY)
+mutation UpdateSidebarBadgeSetting($input: UpdateSidebarBadgeSettingInput!) {
+  updateSidebarBadgeSetting(input: $input) {
+    setting {
+      ...SidebarBadgeSettingItem
+    }
+  }
+}
+
+# ResetSidebarBadgeSettingInput: { moduleKey }(還原成程式登記的預設)
+mutation ResetSidebarBadgeSetting($input: ResetSidebarBadgeSettingInput!) {
+  resetSidebarBadgeSetting(input: $input) {
+    setting {
+      ...SidebarBadgeSettingItem
+    }
   }
 }

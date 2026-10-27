@@ -5,6 +5,7 @@ import { temporalIsoOf } from "@repo/domain/form";
 import {
   type WorkflowDefinition,
   allowsReturn,
+  applicantAsReviewerOf,
   isJoinStep,
   stepOf,
 } from "@repo/domain/workflow";
@@ -169,6 +170,9 @@ export class WorkflowPresenter {
           kind: isJoinStep(node) ? "join" : "review",
           mode: isJoinStep(node) ? null : node.mode,
           allowReturn: allowsReturn(node),
+          allowsApplicantAssignee:
+            !isJoinStep(node) &&
+            applicantAsReviewerOf(node.autoApprove) === "review",
           status: (state?.status ?? "pending") as WorkflowStepStatusEnum,
           blocked: state?.blocked ?? false,
           plan: (state?.plan ?? []).map((item) => ({

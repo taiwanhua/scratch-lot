@@ -1,11 +1,11 @@
 "use client";
 
 import ButtonBase, { buttonBaseClasses } from "@mui/material/ButtonBase";
-import MuiTypography from "@mui/material/Typography";
 import type { SxProps, Theme } from "@mui/material/styles";
 import { styled } from "@mui/material/styles";
 import type { ReactNode } from "react";
 
+import { Typography, type TypographyColor } from "../Typography/Typography";
 import { CheckIcon } from "../icons/CheckIcon";
 import { mergeSx } from "../theme/sx";
 import { useBreakpointDown } from "../useBreakpointDown/useBreakpointDown";
@@ -167,16 +167,16 @@ export const isStepClickable = (
 ): boolean =>
   step.status === "done" || (step.status === "error" && index < active);
 
-const labelColor = (status: StepStatus): string => {
+const labelColor = (status: StepStatus): TypographyColor => {
   switch (status) {
     case "error": {
-      return "error.main";
+      return "error";
     }
     case "todo": {
-      return "text.secondary";
+      return "textSecondary";
     }
     default: {
-      return "text.primary";
+      return "textPrimary";
     }
   }
 };
@@ -214,29 +214,29 @@ export const Stepper = ({
   if (isNarrow) {
     const step = steps.at(active);
     return (
-      <MuiTypography
+      <Typography
         component="nav"
         aria-label={ariaLabel}
         sx={mergeSx({ display: "flex", flexDirection: "column", gap: 1 }, sx)}
       >
-        <MuiTypography variant="subtitle2" component="span">
+        <Typography variant="subtitle2" component="span">
           {progressText({
             current: active + 1,
             total: steps.length,
             label: step?.label,
           })}
-        </MuiTypography>
+        </Typography>
         <Bar aria-hidden>
           {steps.map((item, index) => (
             <Segment key={item.key} tone={segmentToneOf(item, index, active)} />
           ))}
         </Bar>
-      </MuiTypography>
+      </Typography>
     );
   }
 
   return (
-    <MuiTypography
+    <Typography
       component="ol"
       aria-label={ariaLabel}
       sx={mergeSx(
@@ -261,18 +261,18 @@ export const Stepper = ({
               {(step.status === "current" || step.status === "todo") &&
                 String(index + 1)}
             </Dot>
-            <MuiTypography
+            <Typography
               variant="subtitle2"
               component="span"
               color={labelColor(step.status)}
               sx={{ whiteSpace: "nowrap" }}
             >
               {step.label}
-            </MuiTypography>
+            </Typography>
           </>
         );
         return (
-          <MuiTypography
+          <Typography
             key={step.key}
             component="li"
             aria-current={index === active ? "step" : undefined}
@@ -293,9 +293,9 @@ export const Stepper = ({
             ) : (
               <StepBody>{content}</StepBody>
             )}
-          </MuiTypography>
+          </Typography>
         );
       })}
-    </MuiTypography>
+    </Typography>
   );
 };

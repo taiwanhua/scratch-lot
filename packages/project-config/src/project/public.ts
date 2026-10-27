@@ -12,6 +12,13 @@ export const projectPublic = {
   },
   admin: {
     documentTitle: "scratch-lot 後台管理",
+    webApp: {
+      name: "ScratchLot",
+      shortName: "ScratchLot",
+      // 與圖示底色同一個深藍(圖示正本 apps/admin/public/project/icon.svg)
+      themeColor: "#1B2440",
+      backgroundColor: "#1B2440",
+    },
   },
   front: {
     metadata: {

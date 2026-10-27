@@ -92,7 +92,7 @@ export const RevisionDiff = ({
 
   if (changes.length === 0) {
     return (
-      <Typography variant="body2" color="text.secondary">
+      <Typography variant="body2" color="textSecondary">
         {t("noChanges")}
       </Typography>
     );

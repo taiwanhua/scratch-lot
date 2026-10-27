@@ -18,6 +18,7 @@ import {
   openTestDatabase,
 } from "./test-support/mongo-connection";
 import {
+  TRANSACTION_TIMEOUT_CODE,
   TransactionService,
   TransactionTimeoutError,
   afterCommit,
@@ -33,6 +34,7 @@ function operatorOf(orgId: Types.ObjectId): OperatorContext {
     managedOrgIds: [orgId],
     memberOrgIds: [],
     roleIds: [],
+    memberTenants: [],
   };
 }
 
@@ -555,6 +557,19 @@ describe("TransactionService.withTransaction(對真 MongoDB replica set)", () =>
         ),
       ).rejects.toBeInstanceOf(TransactionTimeoutError);
       expect(await namesInDatabase()).toEqual(before);
+    });
+
+    it("逾時錯誤帶 GraphQL 錯誤碼 TRANSACTION_TIMEOUT(前端顯示「處理時間過長、已取消、資料沒有變更」)", async () => {
+      await expect(
+        transactions.withTransaction(
+          async () => {
+            await new Promise((resolve) => setTimeout(resolve, 150));
+          },
+          { timeoutMs: 50 },
+        ),
+      ).rejects.toMatchObject({
+        extensions: { code: TRANSACTION_TIMEOUT_CODE, timeoutMs: 50 },
+      });
     });
 
     it("寫入衝突重試時已超過上限 → 不再重跑 fn", async () => {

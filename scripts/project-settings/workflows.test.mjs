@@ -34,7 +34,12 @@ const legacyRoot = makeLegacyCookhomeRoot();
 const REGISTRY = "asia-east1-docker.pkg.dev/cookhome-online/cookhome";
 const HEAD = `abc1234${"0".repeat(33)}`;
 const RUN_ID = "123456789";
-const WORKFLOWS = ["deploy.yml", "reset-db.yml", "project-status.yml"];
+const WORKFLOWS = [
+  "deploy.yml",
+  "reset-db.yml",
+  "project-status.yml",
+  "demo.yml",
+];
 
 const isAuth = (entry) =>
   (entry.uses ?? "").startsWith("google-github-actions/auth@");
@@ -1016,7 +1021,248 @@ test("reset:受管定義 CLI 在讀 Secret 與 reset 之前建置並確認可啟
   );
   assert.deepEqual(
     secretSteps.map((candidate) => candidate.name),
-    ["reset"],
+    ["reset", "灌示範資料"],
+  );
+  assert.ok(order("reset") < order("灌示範資料"));
+});
+
+// ------------------------------------------------- 示範資料(demo.yml、Reset DB 勾選項)
+
+/** 有設定示範資料兩把 Secret 的替代專案(三個環境都有)。 */
+function demoRoot({ withDemoSecrets = true } = {}) {
+  const cloud = sampleCloud();
+  if (withDemoSecrets) {
+    for (const [environment, suffix] of [
+      ["dev", "-dev"],
+      ["staging", "-staging"],
+      ["production", ""],
+    ]) {
+      Object.assign(cloud.environments[environment].secrets, {
+        demoPassword: `demo-pass${suffix}`,
+        demoEmailBase: `demo-base${suffix}`,
+      });
+    }
+  }
+  return installScripts(makeProjectRoot({ cloud }));
+}
+
+const DEMO_REPOSITORY = "acme/widgets";
+const DEMO_DATABASES = {
+  dev: "widgets-dev",
+  staging: "widgets-staging",
+  production: "widgets",
+};
+const DEMO_STDIN = "fake-demo-password|fake-base@example.test";
+const stdinOf = (calls) =>
+  calls.filter((call) => call[0] === "stdin").map((call) => call[1]);
+const demoText = readWorkflow("demo.yml");
+
+const runDemo = (
+  environment,
+  mode,
+  { cwd = demoRoot(), confirmation, repository = DEMO_REPOSITORY } = {},
+) =>
+  runJob("demo.yml", {
+    inputs: {
+      environment,
+      mode,
+      confirmation:
+        confirmation ??
+        `demo:${environment}:${DEMO_DATABASES[environment]}:${mode}`,
+    },
+    github: { repository },
+    env: deployEnv({
+      FAKE_MONGODB_URI: `mongodb://fake-host/${DEMO_DATABASES[environment]}`,
+    }),
+    cwd,
+  });
+
+test("demo:只能手動、三個環境與三種 mode 可選、人工確認是必填的文字輸入,包在 GitHub environment 裡", () => {
+  assert.match(demoText, /^on:\n {2}workflow_dispatch:\n/m);
+  assert.doesNotMatch(
+    demoText,
+    /^ {2}(push|pull_request|schedule|workflow_run):/m,
+  );
+  assert.match(demoText, /options: \[dev, staging, production\]\n/);
+  assert.match(demoText, /options: \[create, purge, rebuild\]\n/);
+  assert.match(
+    demoText,
+    /^ {6}confirmation:\n {8}description: .*\n {8}required: true\n {8}type: string$/m,
+  );
+  assert.match(demoText, /^ {4}environment: \$\{\{ inputs\.environment \}\}$/m);
+  assert.match(
+    demoText,
+    /^permissions:\n {2}contents: read\n {2}id-token: write/m,
+  );
+});
+
+for (const [environment, mode, suffix] of [
+  ["dev", "create", "-dev"],
+  ["staging", "create", "-staging"],
+  ["production", "create", ""],
+  ["production", "rebuild", ""],
+]) {
+  test(`demo ${environment} / ${mode}:讀該環境的三把 Secret(不讀連線字串),示範密碼與基底信箱走標準輸入,人工確認原樣傳給指令`, async () => {
+    const job = await runDemo(environment, mode);
+    assert.equal(job.failed, null, job.failed?.stderr);
+    assert.deepEqual(commands(job.calls, "gcloud", "docker", "pnpm"), [
+      "pnpm install --frozen-lockfile --filter @repo/db-migrator...",
+      "pnpm --filter @repo/db-migrator^... run build",
+      `gcloud secrets versions access latest --secret=owner-password${suffix}`,
+      `gcloud secrets versions access latest --secret=demo-pass${suffix}`,
+      `gcloud secrets versions access latest --secret=demo-base${suffix}`,
+      `pnpm --filter @repo/db-migrator demo --environment=${environment} --mode=${mode} --confirm=demo:${environment}:${DEMO_DATABASES[environment]}:${mode} --api-url=https://api${suffix}.widgets.example`,
+    ]);
+    // 示範密碼與基底信箱不 export:只經標準輸入(依序一行一個)
+    const lastEnv = exported(job.calls);
+    assert.equal(lastEnv.DEMO_ALLOW_ENV, environment);
+    assert.equal(lastEnv.ROOT_ADMIN_ACCOUNT, "owner");
+    assert.equal(lastEnv.ROOT_ADMIN_PASSWORD, "fake-secret-value");
+    assert.equal("DEMO_PASSWORD" in lastEnv, false);
+    assert.equal("DEMO_EMAIL_BASE" in lastEnv, false);
+    // 資料庫名由指令向 api 讀取:不需要連線字串
+    assert.equal(lastEnv.MONGODB_URI, "");
+    assert.deepEqual(stdinOf(job.calls), [DEMO_STDIN]);
+    // 三把讀出來的機密都遮罩
+    const step = job.trace.find((entry) => entry.label === "demo");
+    assert.equal((step.stdout.match(/::add-mask::/g) ?? []).length, 3);
+  });
+}
+
+test("demo:未知的環境、未知的模式或沒有人工確認,在第一步就被拒絕,不讀設定、不認證、不讀 Secret", async () => {
+  const cwd = demoRoot();
+  for (const [environment, mode, confirmation] of [
+    ["prod", "create", "demo:prod:widgets:create"],
+    ["dev", "wipe", "demo:dev:widgets-dev:wipe"],
+    ["dev", "create", ""],
+    ["production", "purge", ""],
+  ]) {
+    const job = await runJob("demo.yml", {
+      inputs: { environment, mode, confirmation },
+      github: { repository: DEMO_REPOSITORY },
+      env: deployEnv(),
+      cwd,
+    });
+    const label = `${environment} / ${mode} / ${confirmation}`;
+    assert.equal(job.trace.length, 1, label);
+    assert.equal(
+      job.failed?.label,
+      "輸入防呆(環境、模式與人工確認都要有)",
+      label,
+    );
+    assert.deepEqual(job.calls, [], label);
+  }
+});
+
+test("demo:環境沒有設定示範資料的 Secret → 在認證與讀任何 Secret 之前停下", async () => {
+  const job = await runDemo("dev", "create", {
+    cwd: demoRoot({ withDemoSecrets: false }),
+  });
+  assert.equal(job.failed?.label, "示範資料的 Secret 有沒有設定");
+  assert.match(job.failed.stdout, /secrets\.demoPassword/);
+  assert.equal(job.trace.some(isAuth), false);
+  assert.deepEqual(job.calls, []);
+});
+
+test("demo:確認字串是操作者輸入的原值(不解析連線字串、不替他組);DEMO_ALLOW_ENV 只等於所選環境", async () => {
+  const demoSteps = parseSteps(demoText);
+  const { step } = findStep(
+    demoSteps,
+    (candidate) => candidate.name === "demo",
+  );
+  assert.equal(step.env.DEMO_ALLOW_ENV, "${{ inputs.environment }}");
+  assert.equal(step.env.CONFIRMATION, "${{ inputs.confirmation }}");
+  for (const candidate of demoSteps) {
+    assert.doesNotMatch(
+      candidate.run ?? "",
+      /new URL|pathname|DB_NAME|node -[ep]/,
+      candidate.name,
+    );
+  }
+  const wrong = await runDemo("production", "create", {
+    confirmation: "demo:production:widgets-dev:create",
+  });
+  assert.equal(
+    commands(wrong.calls, "pnpm").at(-1),
+    "pnpm --filter @repo/db-migrator demo --environment=production --mode=create --confirm=demo:production:widgets-dev:create --api-url=https://api.widgets.example",
+  );
+});
+
+const runResetWithDemo = (environment, mode, seedDemo) =>
+  runJob("reset-db.yml", {
+    inputs: {
+      environment,
+      mode,
+      confirmation: `reset:${environment}:${DEMO_DATABASES[environment]}:${mode}`,
+      ...(seedDemo === undefined ? {} : { seed_demo: seedDemo }),
+    },
+    github: { repository: DEMO_REPOSITORY },
+    env: deployEnv({
+      FAKE_MONGODB_URI: `mongodb://fake-host/${DEMO_DATABASES[environment]}`,
+    }),
+    cwd: demoRoot(),
+  });
+
+test("Reset DB「重建後灌示範資料」是預設不勾的勾選項", () => {
+  assert.match(
+    resetText,
+    /^ {6}seed_demo:\n {8}description: .*\n {8}required: false\n {8}type: boolean\n {8}default: false$/m,
+  );
+});
+
+for (const [environment, mode] of [
+  ["dev", "full"],
+  ["production", "data"],
+]) {
+  test(`Reset DB ${environment} / ${mode} 勾「重建後灌示範資料」:reset 完接著跑 demo --mode=create,確認字串由 reset 的確認換頭尾組出`, async () => {
+    const job = await runResetWithDemo(environment, mode, true);
+    assert.equal(job.failed, null, job.failed?.stderr);
+    const pnpmCalls = commands(job.calls, "pnpm");
+    assert.equal(
+      pnpmCalls.at(-2),
+      `pnpm --filter @repo/db-migrator reset --environment=${environment} --mode=${mode} --confirm=reset:${environment}:${DEMO_DATABASES[environment]}:${mode}`,
+    );
+    const suffix = environment === "production" ? "" : `-${environment}`;
+    assert.equal(
+      pnpmCalls.at(-1),
+      `pnpm --filter @repo/db-migrator demo --environment=${environment} --mode=create --confirm=demo:${environment}:${DEMO_DATABASES[environment]}:create --api-url=https://api${suffix}.widgets.example`,
+    );
+    assert.deepEqual(stdinOf(job.calls), [DEMO_STDIN]);
+    assert.equal("DEMO_PASSWORD" in exported(job.calls), false);
+    // 灌示範資料那一步不讀連線字串(只有 reset 那一步讀)
+    assert.equal(
+      commands(job.calls, "gcloud").filter((call) => call.includes("db-uri"))
+        .length,
+      1,
+    );
+  });
+}
+
+test("Reset DB 不勾:和現在一樣,只有 reset,不跑 demo、不讀示範資料的 Secret", async () => {
+  for (const seedDemo of [undefined, false]) {
+    const job = await runResetWithDemo("dev", "data", seedDemo);
+    assert.equal(job.failed, null, job.failed?.stderr);
+    const all = commands(job.calls, "gcloud", "pnpm");
+    assert.equal(
+      all.some((call) => call.includes(" demo ")),
+      false,
+      String(seedDemo),
+    );
+    assert.equal(
+      all.some((call) => call.includes("demo-pass")),
+      false,
+      String(seedDemo),
+    );
+    assert.deepEqual(stdinOf(job.calls), []);
+  }
+});
+
+test("一般部署不跑示範資料:deploy.yml 沒有任何 demo 呼叫,也不讀示範資料的 Secret", () => {
+  const deployText = readWorkflow("deploy.yml");
+  assert.doesNotMatch(deployText, /db-migrator[^\n]*\bdemo\b/);
+  assert.doesNotMatch(
+    deployText,
+    /demo_password_secret|demo_email_base_secret/,
   );
 });
 

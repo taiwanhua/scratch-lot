@@ -11,8 +11,10 @@ import type { NotificationSettingsErrorCode } from "./notification-settings-erro
 export interface ResetDefaultDialogProps {
   /** 已換成目前語系的類型名稱 */
   typeName: string;
-  /** 還原後會套用的預設收件人(類型宣告的人員條件摘要) */
-  defaultSummary: string;
+  /** 還原後會套用的預設收件人(類型宣告的人員條件摘要);當事人通知沒有 = null */
+  defaultAudienceSummary: string | null;
+  /** 還原後會套用的預設提醒時間(摘要);沒宣告可調時間 = null */
+  defaultScheduleSummary: string | null;
   isSubmitting: boolean;
   errorCode: NotificationSettingsErrorCode | null;
   onCancel: () => void;
@@ -20,11 +22,13 @@ export interface ResetDefaultDialogProps {
 }
 
 /**
- * 還原預設的確認(確認類彈窗,不進網址;REACT-14):調整過的收件人會被丟掉、改回類型宣告的預設條件。
+ * 還原預設的確認(確認類彈窗,不進網址;REACT-14):這個類型可調的部分(收件人、提醒時間)全部改回
+ * 類型宣告的預設,逐行寫出還原後的值。只還原其中一塊在編輯框裡各自的 [還原預設]。
  */
 export const ResetDefaultDialog = ({
   typeName,
-  defaultSummary,
+  defaultAudienceSummary,
+  defaultScheduleSummary,
   isSubmitting,
   errorCode,
   onCancel,
@@ -52,8 +56,18 @@ export const ResetDefaultDialog = ({
       }
     >
       <Stack spacing={2}>
-        <Typography variant="body2">
-          {t("body", { audience: defaultSummary })}
+        {defaultAudienceSummary !== null && (
+          <Typography variant="body2">
+            {t("audienceLine", { audience: defaultAudienceSummary })}
+          </Typography>
+        )}
+        {defaultScheduleSummary !== null && (
+          <Typography variant="body2">
+            {t("scheduleLine", { schedule: defaultScheduleSummary })}
+          </Typography>
+        )}
+        <Typography variant="body2" color="textSecondary">
+          {t("body")}
         </Typography>
         {errorCode !== null && (
           <Alert severity="error">{tErrors(errorCode)}</Alert>
