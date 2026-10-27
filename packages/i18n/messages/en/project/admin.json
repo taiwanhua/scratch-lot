@@ -493,7 +493,6 @@
       "cancel": "Cancel",
       "save": "Save",
       "unitPrice": "NT${price}",
-      "tickets": "{count} tickets",
       "amount": "NT${amount}"
     },
     "reason": {

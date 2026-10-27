@@ -2022,17 +2022,29 @@ describe("調貨單(規格 8.4、第 9 章)", () => {
       expect(await stockOf(opened.bookId, branchB)).toBe(9);
       // 報表的調入(依點收紀錄;調入金額 = 調貨金額)
       const until = new Date(Date.now() + 60_000);
-      const inbound = (
-        await stock.inboundOf(reader, branchB, startedAt, until)
-      ).filter((row) => row.bookId.equals(opened.bookId));
+      const inboundAll = await stock.inboundOf(
+        reader,
+        branchB,
+        startedAt,
+        until,
+      );
+      const inbound = inboundAll.filter((row) =>
+        row.bookId.equals(opened.bookId),
+      );
       expect({
         tickets: inbound.reduce((sum, row) => sum + row.sign * row.tickets, 0),
         amount: inbound.reduce((sum, row) => sum + row.sign * row.amount, 0),
       }).toEqual({ tickets: 9, amount: 166 });
       // 調出(出貨那一筆「調出」事件的金額快照;移除的 3 張在變待查那一刻算調出反向 + 新增待查)
-      const outbound = (
-        await stock.outboundOf(reader, branchA, shipFrom, until)
-      ).filter((row) => row.bookId.equals(opened.bookId));
+      const outboundAll = await stock.outboundOf(
+        reader,
+        branchA,
+        shipFrom,
+        until,
+      );
+      const outbound = outboundAll.filter((row) =>
+        row.bookId.equals(opened.bookId),
+      );
       const outTickets = outbound.reduce((sum, row) => sum + row.sign, 0);
       const outAmount = outbound.reduce(
         (sum, row) => sum + row.sign * row.amount,

@@ -101,6 +101,14 @@ const RECEIVE = /* GraphQL */ `
   }
 `;
 
+const RECEIVE_TICKETS = /* GraphQL */ `
+  mutation VReceiveTickets($input: ReceiveLotteryTransferTicketsInput!) {
+    receiveLotteryTransferTickets(input: $input) {
+      rowId
+    }
+  }
+`;
+
 interface TicketRow {
   _id: Types.ObjectId;
   orgId: Types.ObjectId;
@@ -434,13 +442,34 @@ describe("本狀態與再上檯面(GraphQL 端點 + 真 MongoDB)", () => {
     await decideOn(world, managerA, id, "APPROVE");
   }
 
-  async function receive(id: string, bookNo: string, ticketNo: string) {
+  /**
+   * 點收:刷 `ticketNo`(整本的列 = 整列);選張的列逐張點收,`rest` = 同一列其餘到齊的張
+   * ([其餘全部到齊…])。
+   */
+  async function receive(
+    id: string,
+    bookNo: string,
+    ticketNo: string,
+    rest: readonly string[] = [],
+  ) {
     tick();
-    const result = await call(api, managerB.token, RECEIVE, {
+    const result = await call<{
+      receiveLotteryTransferBook: { rowId: string };
+    }>(api, managerB.token, RECEIVE, {
       input: { submissionId: id, code: `${bookNo}${ticketNo}` },
     });
     if (result.errors) {
       throw new Error(`點收失敗:${JSON.stringify(extensionsOf(result))}`);
+    }
+    const rowId = result.data?.receiveLotteryTransferBook.rowId;
+    if (rest.length === 0 || rowId === undefined) {
+      return;
+    }
+    const others = await call(api, managerB.token, RECEIVE_TICKETS, {
+      input: { submissionId: id, rowId, ticketNos: [...rest] },
+    });
+    if (others.errors) {
+      throw new Error(`點收失敗:${JSON.stringify(extensionsOf(others))}`);
     }
   }
 
@@ -1263,7 +1292,7 @@ describe("本狀態與再上檯面(GraphQL 端點 + 真 MongoDB)", () => {
     const partial = await submitTransfer([partialLine(c13.bookId, 81, 100)]);
     await ship(partial);
     await expectState("C13a 檯面 80、在途 20", c13.bookId, "on_counter");
-    await receive(partial, c13.bookNo, "081");
+    await receive(partial, c13.bookNo, "081", nos(82, 100));
     await expectState("C13b B 點收 20", c13.bookId, "on_counter");
     await split(clerkB, storeB, pointB, c13.bookId, [], true);
     await expectState("C13c B 上檯面 20", c13.bookId, "on_counter");

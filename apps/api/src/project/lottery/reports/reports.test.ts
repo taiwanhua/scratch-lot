@@ -3403,7 +3403,12 @@ describe("輸出報表:營運報表、班次結帳歷史報表(GraphQL 端點 + 
         rowId: "r1",
         bookId: new Types.ObjectId(),
         purchaseAmount: 240,
-        tickets: [],
+        // 選張的列逐張點收:點收紀錄記搬進來的張(已點收張數照它算)
+        tickets: ["001", "002"].map((ticketNo) => ({
+          ticketId: new Types.ObjectId(),
+          unitCost: 100,
+          ticketNo,
+        })),
         receivedBy: hq.userId,
         // 前一天點收(不算這天的調入),期末時已點收 240
         receivedAt: taipei("2026-11-19", "10:00"),

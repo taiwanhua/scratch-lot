@@ -493,7 +493,6 @@
       "cancel": "取消",
       "save": "儲存",
       "unitPrice": "{price} 元",
-      "tickets": "{count} 張",
       "amount": "{amount} 元"
     },
     "reason": {
