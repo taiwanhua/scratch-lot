@@ -6,6 +6,10 @@
     "errors": {
       "transactionTimeout": "This took too long and was cancelled. Nothing was changed. Please try again later or contact your administrator."
     },
+    "update": {
+      "message": "The system has been updated",
+      "reload": "Reload"
+    },
     "snackbar": {
       "close": "Close"
     }

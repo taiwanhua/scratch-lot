@@ -22,11 +22,16 @@ COPY --from=pruner /app/out/full/ .
 # Vite 的環境變數在 build 時烘進靜態產物 —— 不同環境要用不同 build-arg 各建一次
 ARG VITE_GRAPHQL_ENDPOINT=http://localhost:5001/graphql
 ENV VITE_GRAPHQL_ENDPOINT=$VITE_GRAPHQL_ENDPOINT
+# 版本號(deploy.yml 傳這次的 commit SHA;不傳 = build 時間),烘進 bundle 並輸出 dist/version.json
+ARG APP_VERSION=
+ENV APP_VERSION=$APP_VERSION
 RUN pnpm exec turbo run build --filter=@repo/admin
 # 防回歸:模組說明 src/md/module-help/ 底下的 *.help.md(底座與專案的來源)是被 Vite 內嵌進 bundle 的程式資產。
 # 根目錄 .dockerignore 的 `**/*.md` 曾把它們整包擋在 build context 外,本機 build 卻正常 ——
 # 這一步讓那種情況在建 image 時就失敗,而不是部署後才發現每頁的「?」都打不開。
 RUN pnpm --filter @repo/admin check:help-bundle
+# 防回歸:新版本提示靠 dist/version.json(scripts/app-version-plugin.mjs 輸出),外掛沒接上就沒有它
+RUN test -s apps/admin/dist/version.json
 
 # ---- runner:nginx 服務靜態檔 ----
 FROM nginx:1.29-alpine AS runner

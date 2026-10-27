@@ -7,10 +7,15 @@ import {
   enqueueSnackbar,
 } from "@repo/ui/snackbar";
 
-/** 一則提示的選填內容:標題、動作按鈕(例 [撤銷])。 */
+/** 一則提示的選填內容:標題、動作按鈕(例 [撤銷])、停留時間。 */
 export interface SnackbarOptions {
   title?: ReactNode;
   action?: SnackbarAction;
+  /**
+   * 自動關閉的毫秒數;不給 = 系統預設(一般 4 秒、有動作 8 秒),`null` = 不自動關。
+   * 只有特例才給(例:新版本提示要留到使用者處理)。
+   */
+  autoHideDuration?: number | null;
 }
 
 /** 佇列上的一則提示。`id` 讓堆疊知道關的是哪一則,也讓每則有自己的進場動畫與計時。 */
@@ -32,7 +37,7 @@ export interface SnackbarState {
     severity: SnackbarSeverity,
     message: ReactNode,
     options?: SnackbarOptions,
-  ) => void;
+  ) => number;
   /** 關掉某一則(自動逾時、按 ✕ 或按動作按鈕) */
   dismiss: (id: number) => void;
   /** 測試用:把 store 歸零(`src/test/setup.ts` 每個測試後呼叫) */
@@ -61,6 +66,7 @@ export const useSnackbarStore = create<SnackbarState>()((set) => ({
       items: enqueueSnackbar(state.items, item),
       latest: item,
     }));
+    return item.id;
   },
   dismiss: (id) => {
     set((state) => ({
