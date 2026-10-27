@@ -66,7 +66,8 @@ export const BookInfoCards = ({
           {
             key: "dealer",
             label: t("book.dealer"),
-            value: book.purchaseDealer.name,
+            // 甲類沒有共用給讀者的分店時 api 回空名稱
+            value: book.purchaseDealer.name || t("stock.hiddenName"),
           },
         ]
       : []),

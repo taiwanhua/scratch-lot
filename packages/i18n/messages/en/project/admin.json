@@ -578,6 +578,7 @@
       },
       "remaining": "{remaining} / {total}",
       "none": "—",
+      "hiddenName": "(Not visible)",
       "filters": {
         "all": "All",
         "org": "Branch",

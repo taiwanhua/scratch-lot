@@ -578,6 +578,7 @@
       },
       "remaining": "{remaining} / {total}",
       "none": "—",
+      "hiddenName": "(看不到)",
       "filters": {
         "all": "全部",
         "org": "分店",

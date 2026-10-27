@@ -178,7 +178,11 @@ export const StockTab = () => {
     {
       key: "dealer",
       header: t("columns.dealer"),
-      render: (row) => row.purchaseDealer?.name ?? t("none"),
+      // 甲類沒有共用給讀者的分店時 api 回空名稱
+      render: (row) =>
+        row.purchaseDealer
+          ? row.purchaseDealer.name || t("hiddenName")
+          : t("none"),
     },
   ];
 
