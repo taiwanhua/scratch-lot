@@ -16,7 +16,11 @@ import { Tag } from "@repo/ui/tag";
 import { Typography } from "@repo/ui/typography";
 
 import { TagPaletteChip } from "@/components/project/TagPaletteChip/TagPaletteChip";
-import { calendarMarkOf } from "@/components/project/schedule/CalendarMark/calendar-mark";
+import { tagPaletteBackgroundVarsSx } from "@/components/project/TagPaletteChip/tag-palette-background";
+import {
+  calendarMarkBackground,
+  calendarMarkOf,
+} from "@/components/project/schedule/CalendarMark/calendar-mark";
 import { ScheduleLegend } from "@/components/project/schedule/ScheduleLegend/ScheduleLegend";
 import { useFitMainHeight } from "@/hooks/base/useFitMainHeight";
 import { useSectionCollapse } from "@/hooks/base/useSectionCollapse";
@@ -132,9 +136,14 @@ export const RosterGridView = () => {
   const rosterDates: RosterDate[] = dates.map((date) => {
     const mark = calendarMarkOf(calendarByDate.get(date));
     const closed = mark.kind === "closed";
+    // 特殊日整欄(表頭與每格)鋪它的顏色;店休由底座的 `disabled` 整欄停用色畫
+    const background = calendarMarkBackground(mark, {
+      closedByComponent: true,
+    });
     return {
       date,
       disabled: closed,
+      ...(background === undefined ? {} : { background }),
       header: (
         <Stack
           direction="row"
@@ -297,7 +306,8 @@ export const RosterGridView = () => {
 
   return (
     <Stack spacing={1.5}>
-      <Box ref={setFitTarget}>
+      {/* 特殊日整欄底色用色票底色變數(`tagPaletteBackground`) */}
+      <Box ref={setFitTarget} sx={tagPaletteBackgroundVarsSx}>
         <RosterGrid
           aria-label={t("gridLabel")}
           people={data.people}

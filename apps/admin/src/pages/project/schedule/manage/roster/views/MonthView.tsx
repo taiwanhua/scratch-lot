@@ -9,7 +9,10 @@ import {
 import { Stack } from "@repo/ui/stack";
 
 import { TagPaletteChip } from "@/components/project/TagPaletteChip/TagPaletteChip";
-import { calendarMarkOf } from "@/components/project/schedule/CalendarMark/calendar-mark";
+import {
+  calendarMarkMonthBackground,
+  calendarMarkOf,
+} from "@/components/project/schedule/CalendarMark/calendar-mark";
 import { ScheduleLegend } from "@/components/project/schedule/ScheduleLegend/ScheduleLegend";
 import { useTenantToday } from "@/hooks/base/useTenantToday";
 import { useScheduleFieldOptions } from "@/hooks/project/schedule/useScheduleFieldOptions/useScheduleFieldOptions";
@@ -35,7 +38,7 @@ const deviceOf = (isMobile: boolean, isNarrow: boolean) => {
   return isNarrow ? ("tablet" as const) : ("desktop" as const);
 };
 
-/** 行事曆:店休停用並寫「店休」;特殊日寫名稱(它的顏色)。 */
+/** 行事曆:店休停用並寫「店休」;特殊日整格鋪它的顏色(底座淡化,`calendarMarkMonthBackground`)並寫名稱標籤。 */
 const calendarInfoOf = (
   day: RosterData["calendarDays"][number] | undefined,
   closedLabel: string,
@@ -46,6 +49,7 @@ const calendarInfoOf = (
   }
   if (mark.kind === "special") {
     return {
+      background: calendarMarkMonthBackground(mark),
       note: (
         <TagPaletteChip paletteKey={mark.paletteKey} label={mark.name ?? ""} />
       ),
