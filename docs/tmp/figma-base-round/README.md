@@ -47,7 +47,7 @@
    - 全部跑完後跑 `Base-layout.js`(`PAGE_ID` 設成草稿頁):元件區在上、畫面區在下,同類一列、固定間距、彼此不重疊;新元件或新畫面要加進它的 `ROWS`(沒列進的會排到最後的「其他」列)。`audit.js` 的 `canvasOverlap` 要是 0。
    - 第七、八輪核對過:Base Draft 上的文字(數字除外)都能在底座腳本裡找到(上面的註解卡除外),示範文字是中性內容。
    - `base` 模式:變數 / 樣式依同一個 key 找本檔 local;底座既有元件依 `K.comp[*].baseNode`(FIGMA-09 節點 id)。`K.comp` 裡還沒填 `baseNode` 的元件(Draft/Select、Draft/SelectField、TextField、Draft/Checkbox、Link、Draft/Radio、Draft/Snackbar、Draft/Popover、Draft/AdminRouteTabs、Draft/ConfirmDialog),重建前要先在底座檔查到節點 id 補上。
-2. **ActionIcon+ 併入 Draft/ActionIcon**:在底座檔把 `Draft/ActionIcon+` 的 17 個變體移進既有 set `Draft/ActionIcon`(2001:68)成為新的 `key=` 變體,刪除空的 ActionIcon+ set;重建其他元件前把腳本裡的 `draft('Draft/ActionIcon+')` 改為 `comp('Draft/ActionIcon')`(兩者變體名相同)。
+2. **ActionIcon+ 併入 Draft/ActionIcon**:在底座檔把 `Draft/ActionIcon+` 的 19 個變體移進既有 set `Draft/ActionIcon`(2001:68)成為新的 `key=` 變體,刪除空的 ActionIcon+ set;重建其他元件前把腳本裡的 `draft('Draft/ActionIcon+')` 改為 `comp('Draft/ActionIcon')`(兩者變體名相同)。
 3. 底座 Library 依 `docs/deployment.md` 的 Release 步驟發布(Library 版本與 Git tag 互相指向)。
 4. **底座既有元件與畫面的修改**(scratch-lot 不能改底座元件,所以留到這一步在底座檔直接改):
    - `Draft/AdminAppBar`(2001:1248)加 BOOLEAN `Notifications`,右側放 `Draft/NotificationBell` 實例(使用者已同意)。重建後,參考畫面上以絕對定位疊加的鈴(圖層名 `notification-bell(待 AppBar 加槽)`)改用這個屬性並刪除疊加層;(鈴只疊在 BS-08,說明寫在它的框外註解。)
@@ -121,23 +121,23 @@
 
 ## 屬性名(換實例時要對得上)
 
-| 元件                     | 變體 / 屬性                                                                        |
-| ------------------------ | ---------------------------------------------------------------------------------- |
-| Draft/ActionIcon+        | `key=<name>`(17 個)                                                                |
-| Draft/Section            | State=Expanded / Collapsed;Title、Summary(TEXT)                                    |
-| Draft/AudiencePicker     | AllowEveryone=True / False × Value=Everyone / Conditions                           |
-| Draft/DataScopeRuleCard  | Title(TEXT)                                                                        |
-| Draft/OrgTreeSelect      | State=Closed / Open × Mode=Single / Multiple                                       |
-| Draft/MonthCalendarCell  | State=Default / Today / Selected / Outside;Day(TEXT)、Show tag、Show slot(BOOLEAN) |
-| Draft/RosterCell         | State=Empty / Filled / Selected                                                    |
-| Draft/NotificationBell   | Unread=True / False                                                                |
-| Draft/NotificationItem   | Read=False / True;Title、Body、Time(TEXT)                                          |
-| Draft/NotificationPanel  | State=List / Empty                                                                 |
-| Draft/NotificationToast  | Title、Body(TEXT)                                                                  |
-| Draft/PrintButton        | State=Default / Sending / Printed / Failed / Reprint / Disabled                    |
-| Draft/Receipt58Row       | Label、Value(TEXT)                                                                 |
-| Draft/Receipt58Signature | Role(TEXT)                                                                         |
-| Draft/Receipt58          | Org、Title(TEXT)、Reprint(BOOLEAN)                                                 |
+| 元件                     | 變體 / 屬性                                                                          |
+| ------------------------ | ------------------------------------------------------------------------------------ |
+| Draft/ActionIcon+        | `key=<name>`(19 個,含 menu、more-horiz)                                              |
+| Draft/Section            | State=Expanded / Collapsed;Title、Summary(TEXT)                                      |
+| Draft/AudiencePicker     | AllowEveryone=True / False × Value=Everyone / Conditions                             |
+| Draft/DataScopeRuleCard  | Title(TEXT)                                                                          |
+| Draft/OrgTreeSelect      | State=Closed / Open × Mode=Single / Multiple                                         |
+| Draft/MonthCalendarCell  | State=Default / Today / Selected / Outside;Day(TEXT)、Show tag、Show slot(BOOLEAN)   |
+| Draft/RosterCell         | State=Empty / Filled / Selected;`Corner#719:0`(BOOLEAN)、`CornerContent#719:6`(SLOT) |
+| Draft/NotificationBell   | Unread=True / False                                                                  |
+| Draft/NotificationItem   | Read=False / True;Title、Body、Time(TEXT)                                            |
+| Draft/NotificationPanel  | State=List / Empty                                                                   |
+| Draft/NotificationToast  | Title、Body(TEXT)                                                                    |
+| Draft/PrintButton        | State=Default / Sending / Printed / Failed / Reprint / Disabled                      |
+| Draft/Receipt58Row       | Label、Value(TEXT)                                                                   |
+| Draft/Receipt58Signature | Role(TEXT)                                                                           |
+| Draft/Receipt58          | Org、Title(TEXT)、Reprint(BOOLEAN)                                                   |
 
 ## 解析函式兩種模式(`_resolve.js`)
 
