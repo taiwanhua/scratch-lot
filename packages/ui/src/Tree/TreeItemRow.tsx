@@ -36,7 +36,14 @@ export const TreeItemRow = (props: TreeItemProps) => {
     ) : (
       <MuiBox
         component="span"
-        sx={{ display: "flex", alignItems: "center", gap: 1, width: "100%" }}
+        // 放不下時 labelSuffix 換到下一行,標籤本身不被擠成一字一行(窄螢幕)
+        sx={{
+          display: "flex",
+          flexWrap: "wrap",
+          alignItems: "center",
+          columnGap: 1,
+          width: "100%",
+        }}
       >
         {props.label}
         {labelSuffix}
