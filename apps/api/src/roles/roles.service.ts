@@ -33,6 +33,7 @@ import {
 } from "./role-rules";
 import { RoleScopeService, toObjectId } from "./role-scope.service";
 import {
+  ROLE_NOT_DELETABLE_REASONS,
   type RoleNotDeletableReason,
   forbiddenError,
   roleNotDeletableError,
@@ -288,19 +289,29 @@ export class RolesService {
    * 軟刪除只動 `roles` 文件:`org_role` / `role_module` / `role_permission` 留著 —
    * 關聯是「有/沒有」的事實(RelationService 的硬刪除註解),角色一旦查不到,
    * PermissionResolver 與清單都不再看得到它,復原時綁定也還在。
+   *
+   * 前置檢查在交易外做完(交易只留寫入,TX-01);交易內再核對會被並發改變的兩項
+   * (授予、人員條件引用),檢查後才被授予 / 引用的仍擋下。種子與副本身分不會在檢查後改變。
    */
   async remove(
     operator: OperatorContext,
     input: DeleteRoleInput,
   ): Promise<DeletePayload> {
+    const role = await this.scope.loadManagedRole(operator, input.id);
+    const tenantId = await this.tenantIdOfRole(operator, role);
+    const fixed = fixedNotDeletableReasons(role);
+    const changing = await this.changingNotDeletableReasons(role, tenantId);
+    const reasons = [...changing.reasons, ...fixed];
+    if (reasons.length > 0) {
+      throw roleNotDeletableError(orderedReasons(reasons), changing.references);
+    }
     return this.transactions.withTransaction(async () => {
-      const role = await this.scope.loadManagedRole(operator, input.id);
-      const { reasons, references } = await this.notDeletableReasons(
-        operator,
-        role,
-      );
-      if (reasons.length > 0) {
-        throw roleNotDeletableError(reasons, references);
+      const recheck = await this.changingNotDeletableReasons(role, tenantId);
+      if (recheck.reasons.length > 0) {
+        throw roleNotDeletableError(
+          orderedReasons(recheck.reasons),
+          recheck.references,
+        );
       }
       await this.roles.softDeleteById(operator, role._id);
       await this.audit.record(operator, {
@@ -313,10 +324,13 @@ export class RolesService {
     });
   }
 
-  /** 刪除前置(role-manager.md 權限表「刪除」);逐項列出,前端一次顯示全部。 */
-  private async notDeletableReasons(
-    operator: OperatorContext,
+  /**
+   * 刪除前置中會被並發改變的兩項(role-manager.md 權限表「刪除」):授予、人員條件引用。
+   * 交易外先查一次,交易內再核對一次。
+   */
+  private async changingNotDeletableReasons(
     role: RoleRecord,
+    tenantId: Types.ObjectId | null,
   ): Promise<{
     reasons: RoleNotDeletableReason[];
     references: AudienceReference[];
@@ -326,14 +340,8 @@ export class RolesService {
     if (grantedUserIds.length > 0) {
       reasons.push("HAS_GRANTS");
     }
-    if (isSeedRole(role)) {
-      reasons.push("SYSTEM_ROLE");
-    }
-    if (isTemplateCopy(role)) {
-      reasons.push("TEMPLATE_COPY");
-    }
     const references = await this.audienceReferences.referencesToRole(
-      await this.tenantIdOfRole(operator, role),
+      tenantId,
       role._id,
     );
     if (references.length > 0) {
@@ -394,4 +402,21 @@ export class RolesService {
       "SELF_LOCK",
     );
   }
+}
+
+/** 依 `ROLE_NOT_DELETABLE_REASONS` 的順序列出(前端逐項顯示)。 */
+function orderedReasons(
+  reasons: readonly RoleNotDeletableReason[],
+): RoleNotDeletableReason[] {
+  return ROLE_NOT_DELETABLE_REASONS.filter((reason) =>
+    reasons.includes(reason),
+  );
+}
+
+/** 刪除前置中角色本身的身分(種子、租戶副本);檢查後不會被並發改變。 */
+function fixedNotDeletableReasons(role: RoleRecord): RoleNotDeletableReason[] {
+  return [
+    ...(isSeedRole(role) ? (["SYSTEM_ROLE"] as const) : []),
+    ...(isTemplateCopy(role) ? (["TEMPLATE_COPY"] as const) : []),
+  ];
 }
