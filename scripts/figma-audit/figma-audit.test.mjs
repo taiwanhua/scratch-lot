@@ -365,6 +365,18 @@ test("audit-legend:例外頁的「圖例樣本畫面沒用到」照列理由、�
   assert.match(r.exemptedSample[0], /圖例「資訊」/);
 });
 
+test("audit-legend:設定沒有 legend.exempt 時照常稽核、不出錯", async () => {
+  const { figma, page } = legendScene();
+  const config = testConfig();
+  delete config.legend.exempt;
+  const r = await runAudit("audit-legend.js", figma, config, {
+    PAGE_ID: page.id,
+  });
+  assert.equal(r.legendMismatch, 1);
+  assert.equal(r.legendExempted, 0);
+  assert.equal(r.exemptReason, null);
+});
+
 // ---- audit ----
 
 test("audit:草稿元件、非底座綁定、草稿色票、參考畫面、開發文字、畫布重疊", async () => {

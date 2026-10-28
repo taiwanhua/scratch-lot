@@ -18,7 +18,7 @@ if (typeof AUDIT_CONFIG === "undefined")
 if (!PAGE_ID) throw new Error("PAGE_ID 未填");
 const MARK = AUDIT_CONFIG.legend.mark;
 const MARKERS = AUDIT_CONFIG.legend.markers;
-const EXEMPT_REASON = AUDIT_CONFIG.legend.exempt[PAGE_ID];
+const EXEMPT_REASON = (AUDIT_CONFIG.legend.exempt ?? {})[PAGE_ID];
 figma.skipInvisibleInstanceChildren = true;
 const page = await figma.getNodeByIdAsync(PAGE_ID);
 await figma.setCurrentPageAsync(page);
