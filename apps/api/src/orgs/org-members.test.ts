@@ -495,6 +495,41 @@ describe("組織管理:成員頁籤(GraphQL 端點 + 真 MongoDB)", () => {
       expect(data?.addedUserIds).toEqual([String(outsiderUserId)]);
     });
 
+    it("錯誤順序與逐人檢查相同:不合法 id 之前的人先查(NOT_FOUND 優先),之後的不查(VALIDATION_FAILED)", async () => {
+      const missing = new Types.ObjectId();
+      const before = await orgIdsOfUser(memberSubId);
+
+      const missingThenInvalid = await api.graphql<AddData>(
+        ADD_ORG_MEMBERS,
+        {
+          input: {
+            orgId: String(deptOneId),
+            userIds: [String(missing), "not-an-id"],
+          },
+        },
+        { accessToken: adminToken },
+      );
+      const invalidThenMissing = await api.graphql<AddData>(
+        ADD_ORG_MEMBERS,
+        {
+          input: {
+            orgId: String(deptOneId),
+            userIds: [String(memberSubId), "not-an-id", String(missing)],
+          },
+        },
+        { accessToken: adminToken },
+      );
+
+      expect(missingThenInvalid.errors?.[0]?.extensions?.code).toBe(
+        "NOT_FOUND",
+      );
+      expect(invalidThenMissing.errors?.[0]?.extensions?.code).toBe(
+        "VALIDATION_FAILED",
+      );
+      // 驗不過整批不寫:前面合格的那位也沒被加進去
+      expect(await orgIdsOfUser(memberSubId)).toEqual(before);
+    });
+
     it("指令數與人數無關(TX-06):加 1 人與加 20 人送出的資料庫指令一樣多", async () => {
       const singleOrgId = await createOrg(api.connection, {
         name: "成員 A 批次一人",

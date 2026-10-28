@@ -649,6 +649,79 @@ describe("角色管理:分配使用者(GraphQL 端點 + 真 MongoDB)", () => {
       expect(await holderIdsOf(manyRoleId)).toEqual([]);
     });
 
+    it("清單的擁有者保護走完整條判斷時,指令數也與人數無關(TX-07)", async () => {
+      const tenant = await createOrg(connection, {
+        name: nextAccount("批次保護租戶"),
+        settings: { visibility: "subtree" },
+      });
+      const tenantManager = await createManager(world, {
+        orgIds: [tenant],
+        ownerOrgId: tenant,
+      });
+      /** 一個「租戶管理員副本」:擁有組織是 owner 擁有的組織,owner 持有它(會被標 ownerProtected) */
+      async function protectedCopy(label: string) {
+        const ownedOrgId = await createOrg(connection, {
+          name: nextAccount(label),
+          parentId: tenant,
+        });
+        const ownerId = await createMember(world, [ownedOrgId], "batch-owner");
+        await connection
+          .collection("orgs")
+          .updateOne({ _id: ownedOrgId }, { $set: { ownerUserId: ownerId } });
+        const roleId = await createRole(world.api.app, connection, {
+          name: "租戶管理員",
+          ownerOrgId: ownedOrgId,
+          assignTo: [ownerId],
+        });
+        await connection
+          .collection("roles")
+          .updateOne(
+            { _id: roleId },
+            { $set: { "settings.templateKey": "tenant-admin" } },
+          );
+        return { ownedOrgId, ownerId, roleId };
+      }
+      const single = await protectedCopy("批次保護一人");
+      const many = await protectedCopy("批次保護多人");
+      // 其餘 20 位也各自擁有一個組織:不會因為「沒人是擁有者」提早結束
+      const others: Types.ObjectId[] = [];
+      for (let index = 0; index < 20; index += 1) {
+        const member = await createMember(world, [many.ownedOrgId], "batch");
+        const owned = await createOrg(connection, {
+          name: nextAccount("批次保護其他"),
+          parentId: tenant,
+        });
+        await connection
+          .collection("orgs")
+          .updateOne({ _id: owned }, { $set: { ownerUserId: member } });
+        others.push(member);
+      }
+      await connection.collection("core_relationships").insertMany(
+        others.map((userId) => ({
+          type: "user_role",
+          firstId: userId,
+          secondId: many.roleId,
+          thirdId: null,
+        })),
+      );
+
+      const listOne = await countDbCommands(() =>
+        listUsers(single.roleId, {}, tenantManager.token),
+      );
+      const listMany = await countDbCommands(() =>
+        listUsers(many.roleId, { pageSize: 50 }, tenantManager.token),
+      );
+
+      expect(listOne.result.items[0]?.ownerProtected).toBe(true);
+      expect(listMany.result.items).toHaveLength(21);
+      expect(
+        listMany.result.items
+          .filter((row) => row.ownerProtected)
+          .map((row) => row.id),
+      ).toEqual([String(many.ownerId)]);
+      expectDbCommandsAtMost(listMany, listOne.total, "清單 21 人(含擁有者)");
+    });
+
     it("缺 assign-users 權限 → FORBIDDEN", async () => {
       const viewer = await createManager(world, {
         orgIds: [world.tenantA],

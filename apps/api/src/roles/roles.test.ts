@@ -650,6 +650,11 @@ describe("角色管理:清單與 CRUD(GraphQL 端點 + 真 MongoDB)", () => {
     });
 
     it("createRole:角色與擁有組織關聯都不留下", async () => {
+      const ownerLinks = () =>
+        connection
+          .collection("core_relationships")
+          .countDocuments({ type: "org_role", firstId: world.deptOne });
+      const linksBefore = await ownerLinks();
       const audit = failNextAudit();
       const { code } = await createRoleAs(manager.token, {
         name: "回復用的新角色",
@@ -663,6 +668,7 @@ describe("角色管理:清單與 CRUD(GraphQL 端點 + 真 MongoDB)", () => {
           .collection("roles")
           .countDocuments({ name: "回復用的新角色" }),
       ).resolves.toBe(0);
+      await expect(ownerLinks()).resolves.toBe(linksBefore);
     });
 
     it("updateRole / setRoleEnabled / deleteRole:角色維持原樣", async () => {

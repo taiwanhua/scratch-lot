@@ -86,6 +86,20 @@
 | **M-09** | **收斂與 subset 比對的基準是全樹**,不是裁成操作者權限集的顯示樹(ADR-0004「儲存」;細節見 api 介面的「矩陣的兩棵樹」)                                                                                                                                                                                                                                                                                                                     |
 | **M-10** | **樹上沒有 `*` 列的模組就是沒有 `*`**:矩陣只替「這一層列得出權限」的模組推導 `<模組>.*`;整層一筆權限都沒有時,整組全選不寫 `*`、群組列的勾選狀態也不要求它,硬送進來的 `<模組>.*` 依 M-01 的「樹外 key 一律丟棄」處理。顯示樹會把操作者搆不到的 `*` 列剪掉,生出來的那一筆使用者**看不到也取消不掉**,送出只會換來 `ROLE_OUT_OF_REACH`。**`expandGrant`(展開給 UI 顯示)同規則**:這一層列不出權限時,角色即使持有 `<模組>.*` 也不展開、不輸出 |
 
+### 交易
+
+ADR-0013、TX-01:每個寫入動作是**一個交易** —— 讀取驗證與寫入(含稽核)都在 `TransactionService.withTransaction` 內,任一步失敗整個動作回復,不留半套角色、關聯或稽核:
+
+| 動作                                                    | 交易內                                                                      |
+| ------------------------------------------------------- | --------------------------------------------------------------------------- |
+| 新增角色(`createRole`)                                  | 建角色 → 擁有組織關聯(`org_role`)→ `role.create`                            |
+| 編輯 / 停用 / 啟用(`updateRole` / `setRoleEnabled`)     | 欄位更新 → `role.edit` / `role.toggle-enabled`                              |
+| 刪除(`deleteRole`)                                      | 刪除前置 → 軟刪除 → `role.delete`                                           |
+| 權限矩陣(`saveRoleMatrix`)                              | 模組 / 權限綁定的新增與解除 → `role.edit-matrix`                            |
+| 加入 / 移除使用者(`grantRoleUsers` / `revokeRoleUsers`) | 資格 / 擁有者保護檢查 → 授予或解除 → `role.grant-user` / `role.revoke-user` |
+
+回傳的清單在提交後才讀。擁有者保護(加入 / 移除使用者、清單的 `ownerProtected`)整批判斷,指令數與人數無關(`OwnerProtectionService.protectedHoldersOf`)。
+
 正本:`apps/api/src/roles/role-rules.ts`、`apps/api/src/roles/roles.service.ts`、`apps/api/src/roles/role-matrix.service.ts`、`packages/domain/src/permission/matrix.ts`、`docs/adr/0004-permission-model.md`
 
 ## api 介面
