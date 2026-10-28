@@ -92,6 +92,7 @@ export const inventoryOf = (
     investigateRecoveredCost: money(costs.investigateRecovered),
     lostRecoveredTickets: 0,
     lostRecoveredCost: money(0),
+    costAdjustCost: money(0),
     endingTickets: ending(tickets),
     endingCost: money(ending(costs)),
     checkTickets: 0,

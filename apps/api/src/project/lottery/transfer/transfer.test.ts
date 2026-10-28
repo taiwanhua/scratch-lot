@@ -2067,15 +2067,18 @@ describe("調貨單(規格 8.4、第 9 章)", () => {
       const heldNow = await heldCostOf(new Date());
       expect(heldNow.tickets).toBe(9);
       expect(Math.abs(heldNow.cost - 166)).toBeLessThan(1e-9);
-      // 成本調整經帳本:每張一筆「成本調整」事件,成本快照 = 調整前(221 ÷ 12)
+      // 成本調整經帳本:每張一筆「成本調整」事件,成本快照 = 調整前(221 ÷ 12)、金額 = 調整後(166 ÷ 9)
       const adjusts = await db()
-        .collection<{ cost: number }>("lottery_ticket_events")
+        .collection<{ cost: number; amount: number }>("lottery_ticket_events")
         .find({ bookId: opened.bookId, type: "cost_adjust" })
         .toArray();
       expect(adjusts).toHaveLength(9);
       expect(adjusts.every((row) => Math.abs(row.cost - 221 / 12) < 1e-9)).toBe(
         true,
       );
+      expect(
+        adjusts.every((row) => Math.abs(row.amount - 166 / 9) < 1e-9),
+      ).toBe(true);
       // 本上張數(帳本維護的欄位)= 依張重數
       await expectCountsMatch(opened.bookId);
       // 收貨店這 9 張的單張成本 = 縮小後這一列的批購金額 ÷ 張數(166 ÷ 9;使用者 10/27 定案),成本合計 = 調貨金額

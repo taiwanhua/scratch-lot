@@ -2321,6 +2321,7 @@ type LotteryOperationsGameSales {
 type LotteryOperationsInventory {
   checkCost: Float
   checkTickets: Int!
+  costAdjustCost: Float
   endingCost: Float
   endingTickets: Int!
   inTransitAmount: Float

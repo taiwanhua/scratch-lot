@@ -90,6 +90,7 @@ query LotteryOperationsReport($input: LotteryOperationsReportInput!) {
         investigateRecoveredCost
         lostRecoveredTickets
         lostRecoveredCost
+        costAdjustCost
         endingTickets
         endingCost
         checkTickets

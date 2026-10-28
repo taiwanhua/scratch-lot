@@ -200,6 +200,10 @@ export class LotteryOperationsInventoryModel {
   @Field(() => Float, { nullable: true })
   lostRecoveredCost!: number | null;
 
+  /** 成本調整(張數不變,只改單張成本:調貨單少張處理後重算已點收張的成本;調整時在這家店庫存的張) */
+  @Field(() => Float, { nullable: true })
+  costAdjustCost!: number | null;
+
   /** 期末庫存(期間終點那一刻) */
   @Field(() => Int)
   endingTickets!: number;

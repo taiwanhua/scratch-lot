@@ -75,6 +75,7 @@ const totalInventoryOf = (list: readonly Inventory[]): Inventory => {
     "newInvestigatingCost",
     "investigateRecoveredCost",
     "lostRecoveredCost",
+    "costAdjustCost",
     "endingCost",
     "checkCost",
     "inTransitAmount",

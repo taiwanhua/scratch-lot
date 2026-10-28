@@ -182,7 +182,7 @@ const checkNote = (store: OperationsStore, t: T): string => {
 
 /**
  * 4 庫存異動:由上往下加減(− 的列顯示負數),期末庫存之後是核對(0 = 對得上)。
- * 沒有成本權限時沒有成本欄,調出的調貨金額也不寫。
+ * 沒有成本權限時沒有成本欄,調出的調貨金額與成本調整列也不寫。
  */
 const inventorySection = (store: OperationsStore, t: T): SheetSection => {
   const inv = store.inventory;
@@ -265,6 +265,16 @@ const inventorySection = (store: OperationsStore, t: T): SheetSection => {
       tickets: inv.lostRecoveredTickets,
       cost: inv.lostRecoveredCost,
     }),
+    // 成本調整只改成本、張數不變:沒有成本權限時整列不顯示
+    ...(withCost
+      ? [
+          line({
+            item: t("admin.lotteryReports.operations.items.costAdjust"),
+            cost: inv.costAdjustCost,
+            note: t("admin.lotteryReports.operations.items.costAdjustNote"),
+          }),
+        ]
+      : []),
     totalLine({
       item: t("admin.lotteryReports.operations.items.ending"),
       tickets: inv.endingTickets,

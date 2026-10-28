@@ -960,6 +960,8 @@
         "newInvestigating": "− 新增待查",
         "investigateRecovered": "+ 待查轉回",
         "lostRecovered": "+ 遺失尋回",
+        "costAdjust": "± 成本調整",
+        "costAdjustNote": "調貨單少張重送後,已點收張的成本改成縮小後的批購金額;張數不變",
         "ending": "= 期末庫存",
         "check": "核對",
         "checkOk": "對得上",
