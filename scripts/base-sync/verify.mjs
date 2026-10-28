@@ -111,11 +111,12 @@ const CONVENTIONAL_EXPORTS = new Set([
 const SHARED_PACKAGE = /^packages\//;
 /** 測試輔助檔(檔名或目錄含 `test-support` / `fixtures`)。 */
 const TEST_HELPER_FILE = /(?:^|[/.-])(?:test-support|fixtures)(?:[/.-]|$)/;
-/** 底座的測試輔助:測試輔助檔、`src/test/` 下的共用測試工具與測試檔本身。 */
+/**
+ * 底座的測試輔助:各測試各備一份的測試輔助檔與測試檔本身。`src/test/` 下是給人 import 的共用測試工具,
+ * 專案另寫同名的一份是重複,不算在內(照列)。
+ */
 const isBaseTestHelper = (file) =>
-  TEST_HELPER_FILE.test(file) ||
-  /(?:^|\/)test\//.test(file) ||
-  isTestFile(file);
+  TEST_HELPER_FILE.test(file) || isTestFile(file);
 /** 各模組自己的錯誤組裝檔(`<feature>-error.ts`,見 module scaffold)與其中的 `…Error` helper。 */
 const ERROR_MODULE = /-error$/;
 const ERROR_HELPER = /Error$/;

@@ -537,7 +537,7 @@ test("不乾淨 4b:慣例檔名、各模組錯誤 helper、底座帶空版的固
   ]);
 });
 
-test("不乾淨 4c:模組慣例常數與測試輔助檔對底座測試輔助的同名匯出不算;底座共用套件的常數、測試輔助撞正式程式碼的名稱、非測試輔助檔照列", async () => {
+test("不乾淨 4c:模組慣例常數與測試輔助檔對底座測試輔助檔的同名匯出不算;底座共用測試工具(src/test/)、底座共用套件的常數、測試輔助撞正式程式碼的名稱、非測試輔助檔照列", async () => {
   const result = await verifyScenario("name-module-conventions", {
     // 模組慣例常數:底座各模組各一份,不算
     "apps/api/src/project/widgets/dto/widgets.input.ts":
@@ -545,9 +545,10 @@ test("不乾淨 4c:模組慣例常數與測試輔助檔對底座測試輔助的�
     // AUDIT_ACTIONS 不算;REDACTED 底座在 packages/ 匯出(共用的那份):照列
     "apps/api/src/project/widgets/widget-keys.ts":
       "export const AUDIT_ACTIONS = {};\nexport const REDACTED = '***';\n",
-    // 測試輔助檔對底座測試輔助(test-support、src/test/)同名:不算;撞底座正式程式碼的名稱:照列
+    // 測試輔助檔對底座測試輔助檔同名:不算;撞底座正式程式碼的名稱:照列
     "apps/api/src/project/widgets/test-support/widgets-fixtures.ts":
       "export const PASSWORD = 'pw';\nexport const P = {};\nexport const parseError = () => 3;\n",
+    // 底座 src/test/ 是給人 import 的共用測試工具:測試輔助檔另寫同名的一份照列
     "apps/admin/src/pages/project/widgets/widgets-test-support.ts":
       "export const setViewportWidth = () => {};\n",
     // 不是測試輔助檔卻匯出底座測試輔助的名稱:照列
@@ -555,6 +556,7 @@ test("不乾淨 4c:模組慣例常數與測試輔助檔對底座測試輔助的�
       "export const PASSWORD = 'pw';\n",
   });
   assert.deepEqual(assertOnlySection(result, 4), [
+    "- `apps/admin/src/pages/project/widgets/widgets-test-support.ts`:同匯出 `setViewportWidth`(`apps/admin/src/test/viewport.ts`)",
     "- `apps/api/src/project/widgets/test-support/widgets-fixtures.ts`:同匯出 `parseError`(`apps/api/src/lib/parse.ts`)",
     "- `apps/api/src/project/widgets/widget-auth.ts`:同匯出 `PASSWORD`(`apps/api/src/gizmos/test-support/fixtures.ts`)",
     "- `apps/api/src/project/widgets/widget-keys.ts`:同匯出 `REDACTED`(`packages/domain/src/redaction.ts`)",
