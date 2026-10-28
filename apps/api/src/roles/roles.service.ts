@@ -36,6 +36,7 @@ import {
   ROLE_NOT_DELETABLE_REASONS,
   type RoleNotDeletableReason,
   forbiddenError,
+  notFoundError,
   roleNotDeletableError,
   validationError,
 } from "./roles-error";
@@ -313,7 +314,11 @@ export class RolesService {
           recheck.references,
         );
       }
-      await this.roles.softDeleteById(operator, role._id);
+      // 同時有人刪了同一個角色(或交易重跑時已刪):查不到 = 不存在,不再寫稽核
+      const deleted = await this.roles.softDeleteById(operator, role._id);
+      if (deleted === null) {
+        throw notFoundError(`Role ${String(role._id)} not found`);
+      }
       await this.audit.record(operator, {
         action: AUDIT_ACTIONS.delete,
         targetType: AUDIT_TARGET_TYPE,

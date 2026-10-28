@@ -598,6 +598,27 @@ describe("角色管理:清單與 CRUD(GraphQL 端點 + 真 MongoDB)", () => {
       await expect(roleRow(roleId)).resolves.toMatchObject({ deletedAt: null });
     });
 
+    it("兩人同時刪同一個角色:一個成功,另一個 NOT_FOUND,稽核只有一筆", async () => {
+      const roleId = await createRole(world.api.app, connection, {
+        name: "同時刪除的角色",
+        ownerOrgId: world.deptTwo,
+      });
+      const results = await Promise.all([
+        deleteAs(manager.token, roleId),
+        deleteAs(manager.token, roleId),
+      ]);
+      expect(
+        results
+          .map((result) => result.code ?? "OK")
+          .toSorted((left, right) => left.localeCompare(right)),
+      ).toEqual(["NOT_FOUND", "OK"]);
+      await expect(
+        connection
+          .collection("audit_logs")
+          .countDocuments({ action: "role.delete", targetId: roleId }),
+      ).resolves.toBe(1);
+    });
+
     it("多項不過時 reasons 逐項列出", async () => {
       const holderId = await createMember(world, [world.deptOne]);
       const roleId = await createRole(world.api.app, connection, {
