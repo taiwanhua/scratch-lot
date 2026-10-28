@@ -1,6 +1,7 @@
-import { afterAll, beforeAll, describe, expect, it } from "@jest/globals";
+import { afterAll, beforeAll, describe, expect, it, jest } from "@jest/globals";
 import { type Connection, Types } from "mongoose";
 
+import { AuditService } from "../audit/audit.service";
 import { HOOK_TIMEOUT_MS } from "../database/test-support/mongo-connection";
 import {
   createRole,
@@ -509,5 +510,29 @@ describe("角色管理:權限矩陣(GraphQL 端點 + 真 MongoDB)", () => {
       const { code } = await save(roleId, [], [], viewer.token);
       expect(code).toBe("FORBIDDEN");
     });
+  });
+
+  it("交易(TX-01):稽核寫入失敗 → 模組與權限綁定的增減整個回復", async () => {
+    const roleId = await newRole("回復用的矩陣");
+    await save(roleId, ["demo", "demo.sample-two"], ["demo.sample-two.view"]);
+    const modulesBefore = await storedModuleKeys(world, roleId);
+    const permissionsBefore = await storedPermissionKeys(world, roleId);
+
+    const audit = jest
+      .spyOn(world.api.app.get(AuditService), "record")
+      .mockRejectedValueOnce(new Error("模擬稽核寫入失敗"));
+    try {
+      const { code } = await save(roleId, ["demo"], []);
+
+      expect(code).toBeDefined();
+      expect(audit).toHaveBeenCalledTimes(1);
+    } finally {
+      audit.mockRestore();
+    }
+    expectSameMembers(await storedModuleKeys(world, roleId), modulesBefore);
+    expectSameMembers(
+      await storedPermissionKeys(world, roleId),
+      permissionsBefore,
+    );
   });
 });

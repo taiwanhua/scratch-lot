@@ -1,6 +1,7 @@
-import { afterAll, beforeAll, describe, expect, it } from "@jest/globals";
+import { afterAll, beforeAll, describe, expect, it, jest } from "@jest/globals";
 import { type Connection, Types } from "mongoose";
 
+import { AuditService } from "../audit/audit.service";
 import { createOrg, createUser } from "../auth/test-support/fixtures";
 import {
   countDbCommands,
@@ -663,5 +664,30 @@ describe("角色管理:分配使用者(GraphQL 端點 + 真 MongoDB)", () => {
       const { code } = await grant(roleId, [member], viewer.token);
       expect(code).toBe("FORBIDDEN");
     });
+  });
+
+  it("交易(TX-01):稽核寫入失敗 → 加入與移除的授予整個回復", async () => {
+    const roleId = await createRole(world.api.app, connection, {
+      name: "回復用的角色",
+      ownerOrgId: world.deptOne,
+    });
+    const kept = await createMember(world, [world.deptOne]);
+    const added = await createMember(world, [world.deptOne]);
+    await grant(roleId, [kept]);
+
+    const audit = jest
+      .spyOn(world.api.app.get(AuditService), "record")
+      .mockRejectedValue(new Error("模擬稽核寫入失敗"));
+    try {
+      const granted = await grant(roleId, [added]);
+      const revoked = await revoke(roleId, [kept]);
+
+      expect(granted.code).toBeDefined();
+      expect(revoked.code).toBeDefined();
+      expect(audit).toHaveBeenCalledTimes(2);
+    } finally {
+      audit.mockRestore();
+    }
+    expect(await holderIdsOf(roleId)).toEqual([String(kept)]);
   });
 });
