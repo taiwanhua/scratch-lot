@@ -103,7 +103,7 @@
 | `audit`                                     | audit         | 開發用文字樣式、參考畫面名稱與寬度、註解字、app bar 名稱                       |
 | `crossView`                                 | crossview     | 跨畫面比對規則(名稱 → 規則)                                                    |
 
-`legend.exempt` 是「頁 id → 理由」;`legend.exemptMarks` 是「畫面名稱開頭|變數名稱 → 理由」(例:圖例刻意不列的標示,文字本身就說明),兩者都可省略。`sync.sizes` 的代號固定用 `D` / `T` / `M`(電腦 / 平板 / 手機),`D` 是電腦尺寸。`sync.sharedBlocks` 依序比對框名,第一條符合(且頁面符合 `pages`)的規則生效:`why` 表示框本身就是手畫;`children` 表示框的每個非實例子節點都算;`contains` 是 `[元件名稱, 理由]`,框裡找不到該實例才算。
+`legend.exempt` 是「頁 id → 理由」;`legend.exemptMarks` 是「畫面名稱開頭|變數名稱 → 理由」(例:圖例刻意不列的標示,文字本身就說明;用 `startsWith` 比對,畫面名稱開頭要寫到不會誤中別的畫面;key 必須含 `|`),兩者都可省略。`sync.sizes` 的代號固定用 `D` / `T` / `M`(電腦 / 平板 / 手機),`D` 是電腦尺寸。`sync.sharedBlocks` 依序比對框名,第一條符合(且頁面符合 `pages`)的規則生效:`why` 表示框本身就是手畫;`children` 表示框的每個非實例子節點都算;`contains` 是 `[元件名稱, 理由]`,框裡找不到該實例才算。
 
 ## 離線測試
 

@@ -80,7 +80,7 @@ const EntryLines = ({
 };
 
 /**
- * 行事曆(判斷見 `calendarMarkOf`,條列與排班表同一套):店休寫「店休」(整格店休灰見 `ClosedLayer`);特殊日整格底色 = 行事曆選的顏色(底座淡化,`calendarMarkMonthBackground`)並寫名稱。
+ * 行事曆(判斷見 `calendarMarkOf`,條列與排班表同一套):店休寫「店休」(整格店休灰見 `CalendarClosedLayer`);特殊日整格底色 = 行事曆選的顏色(底座淡化,`calendarMarkMonthBackground`)並寫名稱。
  */
 const calendarInfoOf = (
   day: Page["calendarDays"][number] | undefined,
