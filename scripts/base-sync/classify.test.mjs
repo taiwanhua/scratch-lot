@@ -206,10 +206,11 @@ test("根目錄設定:可被專案擴充的判 mixed,底座固定的判 common",
   assert.equal(classifyPath("tools/.gitignore", "A"), "unknown");
 });
 
-test("專案的後台文案、domain 純邏輯、E2E 資產與 mock world 判為 project", () => {
+test("專案的後台文案與 i18n 登記、domain 純邏輯、E2E 資產與 mock world 判為 project", () => {
   for (const file of [
     "packages/i18n/messages/zh-TW/project/admin.json",
     "packages/i18n/messages/en/project/admin.replacements.json",
+    "packages/i18n/src/project/dynamic-keys.ts",
     "packages/domain/src/project/report-period/index.ts",
     "apps/e2e/fixtures/project/receipt.png",
     "apps/e2e/src/specs/project/store.spec.ts",
@@ -220,6 +221,10 @@ test("專案的後台文案、domain 純邏輯、E2E 資產與 mock world 判為
   assert.equal(
     classifyPath("packages/i18n/messages/zh-TW/admin.json", "M"),
     "mixed",
+  );
+  assert.equal(
+    classifyPath("packages/i18n/src/dead-keys.test.ts", "M"),
+    "common",
   );
   assert.equal(
     classifyPath("packages/domain/src/permission/keys.ts", "M"),

@@ -247,7 +247,7 @@ grep -rnE "20[0-9]{2}-[0-9]{2}-[0-9]{2}|第 [0-9一二三四五六] 段|#[0-9]{2
 專案內容一律放所在目錄的 `project/` 子目錄,與程式同一個形狀;底座同步工具只看路徑分類(`scripts/base-sync/classify.mjs`,規則與 verify 的檢查見 [deployment](../../deployment.md#共用改良回收))。
 
 - **文件**:專案模組文件 `docs/modules/project/<key>.md`、專案 ADR `docs/adr/project/`、專案劇本 `docs/testing/project/`;docs 根層單檔的專案版放 `docs/project/<同名>.md`(品牌值、資料表地圖、環境變數、設計稿節點),入口 `docs/project/README.md`。底座文件(`docs/**` 其餘、`CONTEXT.md`)不寫專案內容,底座模組在專案裡的補充也寫進 `docs/modules/project/`。`docs/tmp/` 除底座的 `dis.md` 外都是專案的。
-- **後台文案**:`packages/i18n/messages/<locale>/project/`(新增與替換,I18N-06);專案不改 `admin.json`。
+- **後台文案**:`packages/i18n/messages/<locale>/project/`(新增與替換,I18N-06);專案不改 `admin.json`。專案文案的動態 key 白名單在 `packages/i18n/src/project/dynamic-keys.ts`(底座帶空版,死鍵測試 `dead-keys.test.ts` 是固定入口)。
 - **E2E**:`apps/e2e/src/**/project/` 與 `apps/e2e/fixtures/project/`(TEST-05)。
 - **示範資料**:`apps/db-migrator/seeds/project/demo/`。示範資料是業務資料,不登記進正式 seed(ADR-0002);載入它的指令與 reset 選項是底座機制。
 - **skill**:Claude Code 與 Codex 只掃 `skills/<名稱>/` 一層,不能放進 `project/`;專案 skill 改以名稱區分,放 `.claude/skills/<slug>-<名稱>/` 與 `.agents/skills/<slug>-<名稱>/`(slug = `projectPublic.slug`,兩邊成對)。底座 skill 只有 `module-scaffold`、`project-bootstrap` 與底座 `skills-lock.json` 的外部 skill。
