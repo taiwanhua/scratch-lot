@@ -12,11 +12,13 @@ import {
 import { Alert } from "@repo/ui/alert";
 import { Box } from "@repo/ui/box";
 import { Card } from "@repo/ui/card";
+import { useBreakpointDown } from "@repo/ui/media-query";
 import { SelectField } from "@repo/ui/select-field";
 import { Stack } from "@repo/ui/stack";
 import type { TableColumn } from "@repo/ui/table";
 import { Typography } from "@repo/ui/typography";
 
+import { FilterDrawer } from "@/components/base/FilterDrawer/FilterDrawer";
 import { OrgTreeSelect } from "@/components/base/OrgTreeSelect/OrgTreeSelect";
 import { DateFilterPicker } from "@/components/project/DateFilterPicker/DateFilterPicker";
 import { useMe } from "@/hooks/base/useMe";
@@ -46,8 +48,13 @@ const cashSchema = z
   })
   .default({ org: "", date: "", type: "", cashPoint: "" });
 
+type CashFilters = z.infer<typeof cashSchema>;
+
 /** 全部(不篩)的選項值。 */
 const ALL = "";
+
+/** [清除] 後的篩選(分店不在抽屜裡,不動):類型、收銀點全部,日期回到今天。 */
+const EMPTY_FILTERS = { date: "", type: ALL, cashPoint: ALL } as const;
 
 /**
  * 即時現金帳分頁(只能查看;Figma AC-04 93:834,規格 10.2):
@@ -59,6 +66,7 @@ export const CashLedgerTab = () => {
   const { session } = useSession();
   const me = useMe();
   const timezone = useTenantTimezone() ?? DEFAULT_TENANT_TIMEZONE;
+  const isMobile = useBreakpointDown("sm");
   const [filters, setFilters] = useUrlState("cash", cashSchema);
   const [movementId] = useUrlState("movementId", textSchema);
   const { org: orgParam, date: dateParam, type, cashPoint } = filters;
@@ -84,8 +92,10 @@ export const CashLedgerTab = () => {
   }, [targetItem, setFilters, timezone]);
 
   const orgId = orgParam === "" ? (me.data?.me.currentOrg?.id ?? "") : orgParam;
-  const date =
-    dateParam === "" ? (localDayTextOf(new Date(), timezone) ?? "") : dateParam;
+  /** 網址的日期(空 = 預設今天)→ 畫面與查詢用的日期。 */
+  const dateOf = (value: string) =>
+    value === "" ? (localDayTextOf(new Date(), timezone) ?? "") : value;
+  const date = dateOf(dateParam);
   const from = localDayInstantOf(date, timezone);
   const to = localDayInstantOf(nextDayText(date), timezone);
   const query = useLotteryCashLedgerQuery(
@@ -205,21 +215,82 @@ export const CashLedgerTab = () => {
     },
   ];
 
-  const baselineAt = ledger?.vault.baselineAt ?? null;
-  return (
-    <Stack spacing={2} sx={{ flex: 1, minHeight: 0 }}>
-      <Box sx={{ maxWidth: 240 }}>
-        <OrgTreeSelect
-          scope="visible"
-          label={t("cash.org")}
-          value={orgId === "" ? [] : [orgId]}
+  /**
+   * 類型、收銀點、日期三個欄位:平板以上攤在流水清單上方(改了立刻套用);手機在抽屜裡(改草稿,按 [套用] 才寫回)。
+   */
+  const renderFilterFields = (
+    value: CashFilters,
+    change: (next: CashFilters) => void,
+  ) => (
+    <>
+      <SelectField
+        label={t("cash.filters.type")}
+        value={value.type}
+        size="small"
+        displayEmpty
+        options={typeOptions}
+        onChange={(next: string) => {
+          change({ ...value, type: next });
+        }}
+        sx={{ minWidth: 160 }}
+      />
+      <SelectField
+        label={t("cash.filters.cashPoint")}
+        value={value.cashPoint}
+        size="small"
+        displayEmpty
+        options={cashPointOptions}
+        onChange={(next: string) => {
+          change({ ...value, cashPoint: next });
+        }}
+        sx={{ minWidth: 160 }}
+      />
+      <Box sx={{ maxWidth: { sm: 200 } }}>
+        <DateFilterPicker
+          label={t("cash.filters.date")}
+          value={dateOf(value.date)}
           size="small"
-          fullWidth
-          onChange={(ids) => {
-            patch({ org: ids.at(0) ?? "", cashPoint: ALL });
+          onChange={(next) => {
+            change({ ...value, date: next ?? "" });
           }}
         />
       </Box>
+    </>
+  );
+
+  const orgPicker = (
+    <OrgTreeSelect
+      scope="visible"
+      label={t("cash.org")}
+      value={orgId === "" ? [] : [orgId]}
+      size="small"
+      fullWidth
+      onChange={(ids) => {
+        patch({ org: ids.at(0) ?? "", cashPoint: ALL });
+      }}
+    />
+  );
+
+  const baselineAt = ledger?.vault.baselineAt ?? null;
+  return (
+    <Stack spacing={2} sx={{ flex: 1, minHeight: 0 }}>
+      {isMobile ? (
+        // 手機(規格 16.0;Figma AC-04b 739:2078):分店選擇器撐滿 + [篩選] 同一列,類型 / 收銀點 / 日期收進底部抽屜
+        <FilterDrawer
+          value={filters}
+          emptyValue={{ ...filters, ...EMPTY_FILTERS }}
+          activeCount={
+            (type === ALL ? 0 : 1) +
+            (cashPoint === ALL ? 0 : 1) +
+            (dateParam === "" ? 0 : 1)
+          }
+          onApply={setFilters}
+          renderFields={renderFilterFields}
+          search={<Box sx={{ flex: 1, minWidth: 0 }}>{orgPicker}</Box>}
+        />
+      ) : (
+        <Box sx={{ maxWidth: 240 }}>{orgPicker}</Box>
+      )}
       {query.isError ? (
         <Alert severity="error">{t("cash.loadFailed")}</Alert>
       ) : null}
@@ -264,44 +335,11 @@ export const CashLedgerTab = () => {
           </Card>
         ))}
       </Box>
-      <Stack
-        direction={{ xs: "column", sm: "row" }}
-        spacing={2}
-        sx={{ alignItems: { sm: "center" } }}
-      >
-        <SelectField
-          label={t("cash.filters.type")}
-          value={type}
-          size="small"
-          displayEmpty
-          options={typeOptions}
-          onChange={(value: string) => {
-            patch({ type: value });
-          }}
-          sx={{ minWidth: 160 }}
-        />
-        <SelectField
-          label={t("cash.filters.cashPoint")}
-          value={cashPoint}
-          size="small"
-          displayEmpty
-          options={cashPointOptions}
-          onChange={(value: string) => {
-            patch({ cashPoint: value });
-          }}
-          sx={{ minWidth: 160 }}
-        />
-        <Box sx={{ maxWidth: 200 }}>
-          <DateFilterPicker
-            label={t("cash.filters.date")}
-            value={date}
-            size="small"
-            onChange={(value) => {
-              patch({ date: value ?? "" });
-            }}
-          />
-        </Box>
-      </Stack>
+      {isMobile ? null : (
+        <Stack direction="row" spacing={2} sx={{ alignItems: "center" }}>
+          {renderFilterFields(filters, setFilters)}
+        </Stack>
+      )}
       <Box sx={{ flex: 1, minHeight: 0 }}>
         <AccountsList
           aria-label={t("cash.listAria")}

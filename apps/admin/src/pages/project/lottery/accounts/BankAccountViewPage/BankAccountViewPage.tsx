@@ -4,7 +4,6 @@ import { useTranslations } from "use-intl";
 import { z } from "zod";
 
 import { DEFAULT_TENANT_TIMEZONE, formatTemporal } from "@repo/domain/form";
-import { BANK_TRANSACTION_TYPES } from "@repo/domain/project/lottery-accounts";
 import {
   type LotteryBankTransactionFieldsFragment,
   useLotteryBankAccountQuery,
@@ -15,13 +14,11 @@ import { Box } from "@repo/ui/box";
 import { Button } from "@repo/ui/button";
 import { Card } from "@repo/ui/card";
 import { CircularProgress } from "@repo/ui/circular-progress";
-import { SelectField } from "@repo/ui/select-field";
 import { Stack } from "@repo/ui/stack";
 import type { TableColumn } from "@repo/ui/table";
 import { Tag } from "@repo/ui/tag";
 import { Typography } from "@repo/ui/typography";
 
-import { DateFilterPicker } from "@/components/project/DateFilterPicker/DateFilterPicker";
 import { useRouteTabHref } from "@/hooks/base/useRouteTabHref";
 import { useRouteTabItemLabel } from "@/hooks/base/useRouteTabItemLabel";
 import { useSession } from "@/hooks/base/useSession";
@@ -43,7 +40,9 @@ import { AccountSettingsCard } from "./AccountSettingsCard";
 import { AccountStatusActions } from "./AccountStatusActions";
 import { RecordTransactionDialog } from "./RecordTransactionDialog";
 import { ReverseTransactionDialog } from "./ReverseTransactionDialog";
+import { TransactionFiltersBar } from "./TransactionFiltersBar";
 import { UsageOrgsDialog } from "./UsageOrgsDialog";
+import { periodFromOf, periodToOf } from "./transaction-period";
 
 type Transaction = LotteryBankTransactionFieldsFragment;
 
@@ -55,10 +54,6 @@ const transactionsSchema = z
     type: z.string().default(""),
   })
   .default({ from: "", to: "", type: "" });
-
-/** 本月 1 日的 `YYYY-MM-DD`(期間篩選的預設起日)。 */
-const monthStartOf = (today: string | null): string =>
-  today === null ? "" : `${today.slice(0, 8)}01`;
 
 const StatCard = ({
   label,
@@ -99,13 +94,10 @@ export const BankAccountViewPage = ({ routeParam }: ModulePageProps) => {
   const today = localDayTextOf(new Date(), timezone);
   const [filters, setFilters] = useUrlState("transactions", transactionsSchema);
   const { from: fromParam, to: toParam, type } = filters;
-  const patch = (next: Partial<typeof filters>) => {
-    setFilters((current) => ({ ...current, ...next }));
-  };
   const [dialog, setDialog] = useState<"record" | "usage" | null>(null);
   const [reversing, setReversing] = useState<Transaction | null>(null);
-  const from = fromParam === "" ? monthStartOf(today) : fromParam;
-  const to = toParam === "" ? (today ?? "") : toParam;
+  const from = periodFromOf(fromParam, today);
+  const to = periodToOf(toParam, today);
 
   const query = useLotteryBankAccountQuery(
     session.client,
@@ -140,13 +132,6 @@ export const BankAccountViewPage = ({ routeParam }: ModulePageProps) => {
     );
   }
 
-  const typeOptions: { value: string; label: string }[] = [
-    { value: "", label: t("accountView.filters.all") },
-    ...BANK_TRANSACTION_TYPES.map((value) => ({
-      value,
-      label: t(`transactionTypes.${value}`),
-    })),
-  ];
   const list = transactions.data?.lotteryBankTransactions;
   const rows = list?.items ?? [];
   const usage = usageText(account, t);
@@ -342,39 +327,11 @@ export const BankAccountViewPage = ({ routeParam }: ModulePageProps) => {
       </Stack>
       <Card sx={{ px: { xs: 2, sm: 3 }, py: 2 }}>
         <Stack spacing={2}>
-          <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-            <Box sx={{ maxWidth: { sm: 180 } }}>
-              <DateFilterPicker
-                label={t("accountView.filters.from")}
-                value={from}
-                size="small"
-                onChange={(value) => {
-                  patch({ from: value ?? "" });
-                }}
-              />
-            </Box>
-            <Box sx={{ maxWidth: { sm: 180 } }}>
-              <DateFilterPicker
-                label={t("accountView.filters.to")}
-                value={to}
-                size="small"
-                onChange={(value) => {
-                  patch({ to: value ?? "" });
-                }}
-              />
-            </Box>
-            <SelectField
-              label={t("accountView.filters.type")}
-              value={type}
-              size="small"
-              displayEmpty
-              options={typeOptions}
-              onChange={(value: string) => {
-                patch({ type: value });
-              }}
-              sx={{ minWidth: 160 }}
-            />
-          </Stack>
+          <TransactionFiltersBar
+            value={filters}
+            today={today}
+            onChange={setFilters}
+          />
           <AccountsList
             aria-label={t("accountView.listAria")}
             card={{ title: ["occurredAt", "type"], actions: "actions" }}
