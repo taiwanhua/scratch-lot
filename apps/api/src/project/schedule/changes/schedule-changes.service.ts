@@ -97,39 +97,116 @@ export class ScheduleChangesService {
     reason: ChangeReason,
     change: ScheduleChangeRecord,
   ): Promise<void> {
-    const { org } = scope;
-    const userIds = [...new Set(change.userIds.map(String))];
-    const row = await this.changes.create(operator, {
-      orgId: org.id,
-      month: change.month,
-      date: change.date,
-      action: change.action,
-      targetId: change.targetId,
-      userIds: userIds.map((id) => new Types.ObjectId(id)),
-      before: change.before,
-      after: change.after,
-      reasonKey: reason.reasonKey,
-      reasonNote: reason.reasonNote,
-    });
-    if (userIds.length === 0) {
+    await this.recordMany(operator, scope, reason, [change]);
+  }
+
+  /**
+   * 一次寫多列異動(同一個原因)並通知牽涉的人(TX-06;必須在呼叫端的交易內):異動一次 `createMany`,
+   * 每列仍是一列、每位牽涉的人每列仍收到一則通知(內容與逐列 `record` 相同)。
+   * 通知依「內容相同」(同一天、同一個月份連結)合併成一次 `notify`:同一組裡一個人有幾列就分幾輪,
+   * 每輪每人最多一次(`dedupeKey` 是同一個人只通知一次,同一輪不能有同一人兩列)。
+   * 每輪的 `dedupeKey` 取那一輪第一列的 id(第二輪起再帶輪次),只有一列時與 `record` 相同。
+   */
+  async recordMany(
+    operator: OperatorContext,
+    scope: { org: ScheduleOrg; timezone: string },
+    reason: ChangeReason,
+    changes: readonly ScheduleChangeRecord[],
+  ): Promise<void> {
+    if (changes.length === 0) {
       return;
     }
-    await this.notifications.notify({
-      type: SCHEDULE_CHANGED,
-      tenantId: org.tenantId,
-      orgId: org.id,
-      recipients: { kind: "users", userIds },
-      params: {
-        orgName: org.name,
-        date: dateKeyOf(change.date, scope.timezone),
-        reason:
-          reason.reasonNote === null
-            ? reason.label
-            : `${reason.label}(${reason.reasonNote})`,
-      },
-      // 點進去 = 我的班表的那個月
-      ref: { type: SCHEDULE_MY_SCHEDULE_REF, id: change.month },
-      dedupeKey: `${SCHEDULE_CHANGED}:${String(row._id)}`,
-    });
+    const { org } = scope;
+    const userIdsOf = changes.map((change) => [
+      ...new Set(change.userIds.map(String)),
+    ]);
+    const rows = await this.changes.createMany(
+      operator,
+      changes.map((change, index) => ({
+        orgId: org.id,
+        month: change.month,
+        date: change.date,
+        action: change.action,
+        targetId: change.targetId,
+        userIds: (userIdsOf[index] ?? []).map((id) => new Types.ObjectId(id)),
+        before: change.before,
+        after: change.after,
+        reasonKey: reason.reasonKey,
+        reasonNote: reason.reasonNote,
+      })),
+    );
+    const reasonText =
+      reason.reasonNote === null
+        ? reason.label
+        : `${reason.label}(${reason.reasonNote})`;
+    for (const batch of notificationRounds(changes, userIdsOf, rows, scope)) {
+      await this.notifications.notify({
+        type: SCHEDULE_CHANGED,
+        tenantId: org.tenantId,
+        orgId: org.id,
+        recipients: { kind: "users", userIds: batch.userIds },
+        params: { orgName: org.name, date: batch.date, reason: reasonText },
+        // 點進去 = 我的班表的那個月
+        ref: { type: SCHEDULE_MY_SCHEDULE_REF, id: batch.month },
+        dedupeKey: batch.dedupeKey,
+      });
+    }
   }
+}
+
+/** 一次 `notify`:同一天、同一個月份連結,每人最多一次。 */
+interface NotificationRound {
+  date: string;
+  month: string;
+  userIds: string[];
+  dedupeKey: string;
+}
+
+/** 依通知內容(那天、月份)分組,組內依同一人出現的次數分輪(TX-06「同一筆在同一批出現多次」)。 */
+function notificationRounds(
+  changes: readonly ScheduleChangeRecord[],
+  userIdsOf: readonly string[][],
+  rows: readonly { _id: Types.ObjectId }[],
+  scope: { timezone: string },
+): NotificationRound[] {
+  const groups = new Map<
+    string,
+    {
+      date: string;
+      month: string;
+      rounds: { rowId: string; users: string[] }[];
+    }
+  >();
+  for (const [index, change] of changes.entries()) {
+    const userIds = userIdsOf[index] ?? [];
+    const rowId = rows[index]?._id;
+    if (userIds.length === 0 || rowId === undefined) {
+      continue;
+    }
+    const date = dateKeyOf(change.date, scope.timezone);
+    const key = `${date}|${change.month}`;
+    const group = groups.get(key) ?? { date, month: change.month, rounds: [] };
+    groups.set(key, group);
+    for (const userId of userIds) {
+      const round =
+        group.rounds.find((item) => !item.users.includes(userId)) ??
+        (() => {
+          const created = { rowId: String(rowId), users: [] as string[] };
+          group.rounds.push(created);
+          return created;
+        })();
+      round.users.push(userId);
+    }
+  }
+  return [...groups.values()].flatMap((group) =>
+    group.rounds.map((round, index) => ({
+      date: group.date,
+      month: group.month,
+      userIds: round.users,
+      dedupeKey:
+        index === 0
+          ? `${SCHEDULE_CHANGED}:${round.rowId}`
+          : `${SCHEDULE_CHANGED}:${round.rowId}:${String(index)}`,
+    })),
+  );
 }

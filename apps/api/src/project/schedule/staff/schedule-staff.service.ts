@@ -178,21 +178,25 @@ export class ScheduleStaffService {
     await savingUnique(
       () =>
         this.transactions.withTransaction(async () => {
-          for (const user of picked) {
-            // 排班檔案歸當前組織(不共用;跨店支援由支援需求單把人加進那家店)
-            const created = await this.staff.create(operator, {
+          // 排班檔案歸當前組織(不共用;跨店支援由支援需求單把人加進那家店);一次寫入、稽核每人一筆(TX-06)
+          const created = await this.staff.createMany(
+            operator,
+            picked.map((user) => ({
               userId: user._id,
               employmentType: "full-time",
               enabled: true,
               note: null,
-            });
-            await this.audit.record(operator, {
+            })),
+          );
+          await this.audit.recordMany(
+            operator,
+            created.map((record) => ({
               action: "schedule-staff.create",
               targetType: AUDIT_TARGET_TYPE,
-              targetId: created._id,
-              after: { userId: user._id },
-            });
-          }
+              targetId: record._id,
+              after: { userId: record.userId },
+            })),
+          );
         }),
       "already joined (concurrent add)",
       ["userIds"],

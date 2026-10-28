@@ -8,12 +8,26 @@ import {
   startAuthTestApp,
 } from "../../../auth/test-support/auth-app";
 import { createOrg } from "../../../auth/test-support/fixtures";
+import type { OperatorContext } from "../../../database/operator-context";
+import {
+  type DbCommandCount,
+  countDbCommands,
+  expectDbCommandsAtMost,
+} from "../../../database/test-support/db-commands";
 import { HOOK_TIMEOUT_MS } from "../../../database/test-support/mongo-connection";
+import { TransactionService } from "../../../database/transaction";
+import { ScheduleEntryLocksRepository } from "../../database/schedule/roster.repositories";
 import { SCHEDULE_AUTO_RUNS_COLLECTION } from "../../database/schedule/schedule-auto-run.schema";
-import { ScheduleEntryLock } from "../../database/schedule/schedule-entry-lock.schema";
+import { SCHEDULE_CHANGES_COLLECTION } from "../../database/schedule/schedule-change.schema";
+import {
+  SCHEDULE_ENTRY_LOCKS_COLLECTION,
+  ScheduleEntryLock,
+} from "../../database/schedule/schedule-entry-lock.schema";
 import { SCHEDULE_PERIODS_COLLECTION } from "../../database/schedule/schedule-period.schema";
 import { ScheduleTaskAssignment } from "../../database/schedule/schedule-task-assignment.schema";
+import { SCHEDULE_CHANGED } from "../../notifications";
 import { ScheduleClock } from "../shared/schedule-clock";
+import { SchedulePersonLocks } from "../shared/schedule-person-locks";
 import {
   ALL_SCHEDULE_TEST_PERMISSIONS,
   SCHEDULE_TEST_PERMISSIONS as P,
@@ -114,6 +128,15 @@ const CLEAR = /* GraphQL */ `
     clearScheduleAutoAssignments(input: $input) {
       removedCount
       deletedEntryIds
+    }
+  }
+`;
+
+const REMOVE_DAY = /* GraphQL */ `
+  mutation RemoveScheduleDayEntries($input: RemoveScheduleDayEntriesInput!) {
+    removeScheduleDayEntries(input: $input) {
+      deletedIds
+      skippedIds
     }
   }
 `;
@@ -248,6 +271,17 @@ interface ApplyRow {
   skippedSlots: number;
   filledDays: number;
   skippedDays: number;
+}
+
+/** 不算通知入口內每位收件人各自的讀寫(`notifications.*`;那部分由通知入口自己的防退化測試管)。 */
+function withoutNotifications(
+  counted: DbCommandCount<GraphqlResult>,
+): Pick<DbCommandCount<GraphqlResult>, "total" | "byCommand"> {
+  const byCommand = new Map(
+    [...counted.byCommand].filter(([key]) => !key.startsWith("notifications.")),
+  );
+  const total = [...byCommand.values()].reduce((sum, n) => sum + n, 0);
+  return { total, byCommand };
 }
 
 function errorOf(result: GraphqlResult): Record<string, unknown> | undefined {
@@ -1163,6 +1197,44 @@ describe("套用範本與自動排班(GraphQL 端點 + 真 MongoDB)", () => {
       ).toMatchObject({ lockedAt: stolenAt, lockedBy: hq.userId });
     });
 
+    it("計算期間鎖逾時、別人寫了這個月(version 多了)→ 不寫入,回 AUTO_RUN_IN_PROGRESS", async () => {
+      await demandOn("2028-10-09", "09:00", "13:00", ["leader"]);
+      const service = api.app.get(ScheduleAutoRunService);
+      const target = service as unknown as {
+        prepareRun: (...args: unknown[]) => Promise<unknown>;
+      };
+      const original = target.prepareRun.bind(service);
+      const spy = jest
+        .spyOn(target, "prepareRun")
+        .mockImplementation(async (...args: unknown[]) => {
+          const prepared = await original(...args);
+          // 計算期間:鎖逾時沒被別人重新標記,但別人的寫入碰過這個月
+          await periods().updateOne(
+            { orgId: daan, month: "2028-10" },
+            { $inc: { version: 1 } },
+          );
+          return prepared;
+        });
+      try {
+        expect(
+          errorOf(await gql(runner, RUN, runInput("2028-10"))),
+        ).toMatchObject({ reason: "AUTO_RUN_IN_PROGRESS" });
+      } finally {
+        spy.mockRestore();
+      }
+      const { entries } = await roster("2028-10");
+      expect(entries).toEqual([]);
+      expect(
+        await connection
+          .collection(SCHEDULE_AUTO_RUNS_COLLECTION)
+          .countDocuments({ orgId: daan, month: "2028-10" }),
+      ).toBe(0);
+      // 自己標的鎖照樣解除
+      expect(
+        await periods().findOne({ orgId: daan, month: "2028-10" }),
+      ).toMatchObject({ lockedAt: null });
+    });
+
     it("執行紀錄記下這次實際用的整組條件與順序(沒送的補在後面、不勾)與延續延長前的時間", async () => {
       const first = await demandOn("2028-03-06", "08:00", "12:00", ["leader"]);
       await demandOn("2028-03-06", "12:00", "14:00", ["leader"]);
@@ -1280,6 +1352,445 @@ describe("套用範本與自動排班(GraphQL 端點 + 真 MongoDB)", () => {
         startAt: taipei("2028-04-03", "08:00"),
         endAt: taipei("2028-04-03", "14:00"),
       });
+    });
+  });
+
+  /**
+   * 整批寫入的防退化(TX-06):同一個動作做 1 筆與多筆,指令數只多常數次。另開一家「信義店」(8 位排班人員),
+   * 不和上面大安店的情境共用月份。`counts` 是實測數字(回報用)。
+   */
+  describe("整批寫入的指令數(TX-06)", () => {
+    let xinyi: Types.ObjectId;
+    const people: ScheduleTestUser[] = [];
+    const counts: Record<string, number> = {};
+
+    const SWAP = { reasonKey: "shift-swap" };
+
+    async function demandAt(
+      date: string,
+      start: string,
+      end: string,
+      roles: ("leader" | "helper")[],
+    ): Promise<{ id: string; tasks: { taskId: string; role: string }[] }> {
+      return dataOf(
+        await gql(hq, SAVE_DEMAND, {
+          input: {
+            orgId: String(xinyi),
+            positionKey: COUNTER,
+            startAt: taipei(date, start),
+            endAt: taipei(date, end),
+            tasks: roles.map((role) => ({
+              role,
+              taskKey: role === "leader" ? LEAD : DUTY,
+            })),
+          },
+        }),
+        "saveScheduleDemand",
+      ).item;
+    }
+
+    /** 這個月的狀態文件先建好(清除一次:沒有可清的),再直接標成已發布。 */
+    async function publishDirectly(month: string): Promise<void> {
+      const created = await gql(hq, CLEAR, {
+        input: {
+          orgId: String(xinyi),
+          month,
+          ...rangeOf(`${month}-01`, `${month}-01`),
+        },
+      });
+      expect(created.errors).toBeUndefined();
+      await periods().updateOne(
+        { orgId: xinyi, month },
+        { $set: { status: "published" } },
+      );
+    }
+
+    async function measured(
+      label: string,
+      query: string,
+      variables: Record<string, unknown>,
+    ): Promise<DbCommandCount<GraphqlResult>> {
+      const counted = await countDbCommands(async () => {
+        const result = await gql(hq, query, variables);
+        expect(result.errors).toBeUndefined();
+        return result;
+      });
+      counts[label] = counted.total;
+      return counted;
+    }
+
+    function addStaff(label: string, users: ScheduleTestUser[]) {
+      return measured(label, ADD_STAFF, {
+        input: { userIds: users.map((user) => String(user.userId)) },
+      });
+    }
+
+    function runAt(
+      label: string,
+      month: string,
+      extra: Record<string, unknown>,
+    ) {
+      return measured(label, RUN, runInput(month, extra, xinyi));
+    }
+
+    function clearAt(
+      label: string,
+      month: string,
+      range: Record<string, unknown>,
+    ) {
+      return measured(label, CLEAR, {
+        input: { orgId: String(xinyi), month, ...range },
+      });
+    }
+
+    beforeAll(async () => {
+      xinyi = await createOrg(connection, { name: "信義店", parentId: tenant });
+      for (let index = 0; index < 8; index += 1) {
+        people.push(
+          await createScheduleUser(
+            api,
+            connection,
+            [xinyi],
+            [],
+            `信義${String(index)}`,
+          ),
+        );
+      }
+    }, HOOK_TIMEOUT_MS);
+
+    afterAll(() => {
+      // 實測數字(回報前後對照用)
+      process.stdout.write(`TX-06 指令數 ${JSON.stringify(counts)}\n`);
+    });
+
+    it("加入排班人員:1 人與 7 人指令數相同", async () => {
+      const one = await addStaff("addStaff1", people.slice(0, 1));
+      const seven = await addStaff("addStaff7", people.slice(1));
+      expectDbCommandsAtMost(seven, one.total + 2, "加入 7 位排班人員");
+      const added = [
+        ...dataOf(one.result, "addScheduleStaff").items,
+        ...dataOf(seven.result, "addScheduleStaff").items,
+      ];
+      expect(added).toHaveLength(8);
+      for (const item of added) {
+        const updated = await gql(hq, UPDATE_STAFF, {
+          input: {
+            staffId: item.staff.id,
+            orgs: [{ orgId: String(xinyi), isPrimary: true, canLead: true }],
+          },
+        });
+        expect(updated.errors).toBeUndefined();
+      }
+    });
+
+    it("人的守門文件 ensureMany / touchMany:同時建同一批不重複、撞到的重讀後只建還沒有的;缺文件的 touch 丟錯", async () => {
+      const locks = api.app.get(SchedulePersonLocks);
+      const root: OperatorContext = {
+        actorId: hq.userId,
+        currentOrgId: null,
+        visibleOrgIds: "all",
+        managedOrgIds: "all",
+        memberOrgIds: [],
+        roleIds: [],
+        memberTenants: [],
+      };
+      const ids = Array.from({ length: 4 }, () => new Types.ObjectId());
+      await Promise.all([
+        locks.ensureMany(root, tenant, ids.slice(0, 3)),
+        locks.ensureMany(root, tenant, ids.slice(1)),
+        locks.ensureMany(root, tenant, ids.slice(2, 3)),
+      ]);
+      const stored = connection.collection(SCHEDULE_ENTRY_LOCKS_COLLECTION);
+      expect(
+        await stored.countDocuments({ orgId: tenant, userId: { $in: ids } }),
+      ).toBe(4);
+      // 都已建好:只讀一次、不寫
+      const again = await countDbCommands(() =>
+        locks.ensureMany(root, tenant, ids),
+      );
+      expect(
+        again.byCommand.get(`${SCHEDULE_ENTRY_LOCKS_COLLECTION}.find`),
+      ).toBe(1);
+      expect(
+        again.byCommand.get(`${SCHEDULE_ENTRY_LOCKS_COLLECTION}.insertMany`),
+      ).toBeUndefined();
+      const transactions = api.app.get(TransactionService);
+      await transactions.withTransaction(() =>
+        locks.touchMany(root, tenant, ids),
+      );
+      expect(
+        await stored.countDocuments({ userId: { $in: ids }, version: 1 }),
+      ).toBe(4);
+      await expect(
+        transactions.withTransaction(() =>
+          locks.touchMany(root, tenant, [...ids, new Types.ObjectId()]),
+        ),
+      ).rejects.toThrow("schedule person locks missing");
+      // 交易內呼叫 ensureMany → 直接丟錯
+      await expect(
+        transactions.withTransaction(() =>
+          locks.ensureMany(root, tenant, [new Types.ObjectId()]),
+        ),
+      ).rejects.toThrow("只能在交易外呼叫");
+
+      // 讀與建之間別人先建了其中一筆 → 整批撞唯一索引、交易回復,重讀後只建剩下的
+      const raced = Array.from({ length: 3 }, () => new Types.ObjectId());
+      const repository = api.app.get(ScheduleEntryLocksRepository);
+      const originalFind = repository.findMany.bind(repository);
+      let calls = 0;
+      const spy = jest
+        .spyOn(repository, "findMany")
+        .mockImplementation(async (...args) => {
+          calls += 1;
+          const found = await originalFind(...args);
+          if (calls === 1) {
+            await locks.ensureMany(root, tenant, raced.slice(0, 1));
+          }
+          return found;
+        });
+      try {
+        await locks.ensureMany(root, tenant, raced);
+      } finally {
+        spy.mockRestore();
+      }
+      // 第 1 次讀(過期)、別人那次的讀、撞到後重讀
+      expect(calls).toBe(3);
+      expect(await stored.countDocuments({ userId: { $in: raced } })).toBe(3);
+    });
+
+    it("大店整月自動排班 / 重排 / 清除:和只排一天的指令數相同", async () => {
+      const customized = await gql(hq, CUSTOMIZE_RULE, {
+        input: {
+          orgId: String(xinyi),
+          key: "autoDemandWeekTemplateId",
+          value: { weekTemplateId },
+        },
+      });
+      expect(customized.errors).toBeUndefined();
+      const monthRange = rangeOf("2028-03-01", "2028-03-28");
+      const dayRange = rangeOf("2028-04-03", "2028-04-03");
+      const fillMonth = await runAt("runFillMonth", "2028-03", {
+        ...monthRange,
+        fillWeekTemplate: true,
+      });
+      const fillDay = await runAt("runFillDay", "2028-04", {
+        ...dayRange,
+        fillWeekTemplate: true,
+      });
+      expect(
+        dataOf(fillMonth.result, "runScheduleAutoRun").addedDemandCount,
+      ).toBeGreaterThan(40);
+      expectDbCommandsAtMost(fillMonth, fillDay.total + 10, "整月首次自動排班");
+
+      const redoMonth = await runAt("runRedoMonth", "2028-03", {
+        ...monthRange,
+        mode: "redo-all",
+      });
+      const redoDay = await runAt("runRedoDay", "2028-04", {
+        ...dayRange,
+        mode: "redo-all",
+      });
+      expect(
+        dataOf(redoMonth.result, "runScheduleAutoRun").filledCount,
+      ).toBeGreaterThan(60);
+      expectDbCommandsAtMost(redoMonth, redoDay.total + 4, "整月重排");
+      // 人的守門文件:8 位候選人也只各一次(建好的查一次、交易內一次 $inc)
+      const lockCommands = [...redoMonth.byCommand.entries()]
+        .filter(([key]) => key.startsWith(SCHEDULE_ENTRY_LOCKS_COLLECTION))
+        .reduce((sum, [, count]) => sum + count, 0);
+      expect(lockCommands).toBeLessThanOrEqual(2);
+
+      const clearMonth = await clearAt("clearMonth", "2028-03", monthRange);
+      const clearDay = await clearAt("clearDay", "2028-04", dayRange);
+      expect(
+        dataOf(clearMonth.result, "clearScheduleAutoAssignments").removedCount,
+      ).toBeGreaterThan(60);
+      expectDbCommandsAtMost(clearMonth, clearDay.total + 4, "整月清除");
+    });
+
+    it("延續延長與清除時縮回:6 天與 1 天的指令數相同", async () => {
+      const setup = async (dates: string[]) => {
+        for (const [index, date] of dates.entries()) {
+          const first = await demandAt(date, "08:00", "12:00", ["leader"]);
+          await demandAt(date, "12:00", "14:00", ["leader"]);
+          const saved = await gql(hq, SAVE_ENTRY, {
+            input: {
+              orgId: String(xinyi),
+              userId: String(people[index % people.length]?.userId),
+              startAt: taipei(date, "08:00"),
+              endAt: taipei(date, "12:00"),
+              breakMinutes: 0,
+              assignments: [
+                { demandId: first.id, taskId: first.tasks[0]?.taskId },
+              ],
+            },
+          });
+          expect(saved.errors).toBeUndefined();
+        }
+      };
+      await setup([
+        "2028-05-08",
+        "2028-05-09",
+        "2028-05-10",
+        "2028-05-11",
+        "2028-05-12",
+        "2028-05-15",
+      ]);
+      await setup(["2028-06-05"]);
+      const extend = (label: string, month: string) =>
+        measured(label, RUN, {
+          input: {
+            orgId: String(xinyi),
+            month,
+            ...rangeOf(`${month}-01`, `${month}-28`),
+            mode: "fill-empty",
+            conditions: [{ key: "continuePreviousEntry", enabled: true }],
+          },
+        });
+      const many = await extend("extendMany", "2028-05");
+      const one = await extend("extendOne", "2028-06");
+      const record = await connection
+        .collection(SCHEDULE_AUTO_RUNS_COLLECTION)
+        .findOne({ orgId: xinyi, month: "2028-05" });
+      expect(record?.stats).toMatchObject({ extendedEntryCount: 6 });
+      expectDbCommandsAtMost(many, one.total + 2, "延長 6 筆排班");
+
+      const shrink = (label: string, month: string) =>
+        measured(label, CLEAR, {
+          input: {
+            orgId: String(xinyi),
+            month,
+            ...rangeOf(`${month}-01`, `${month}-28`),
+          },
+        });
+      const shrinkMany = await shrink("shrinkMany", "2028-05");
+      const shrinkOne = await shrink("shrinkOne", "2028-06");
+      expectDbCommandsAtMost(shrinkMany, shrinkOne.total + 2, "縮回 6 筆排班");
+      const { entries } = await roster("2028-05", xinyi);
+      expect(entries).toHaveLength(6);
+      for (const entry of entries) {
+        expect(Date.parse(entry.endAt) - Date.parse(entry.startAt)).toBe(
+          4 * 3_600_000,
+        );
+      }
+    });
+
+    it("已發布的月份套用週範本:整月與一天的指令數相同(每筆一列異動)", async () => {
+      await publishDirectly("2028-07");
+      await publishDirectly("2028-08");
+      const apply = (label: string, month: string, dates: string[]) =>
+        measured(
+          label,
+          APPLY,
+          applyInput(
+            month,
+            {
+              kind: "week-template",
+              weekTemplateId,
+              dates: dates.map((date) => day(date)),
+              changeReason: SWAP,
+            },
+            xinyi,
+          ),
+        );
+      const monthDates = Array.from(
+        { length: 28 },
+        (_, index) => `2028-07-${String(index + 1).padStart(2, "0")}`,
+      );
+      const many = await apply("applyPublishedMonth", "2028-07", monthDates);
+      const one = await apply("applyPublishedDay", "2028-08", ["2028-08-07"]);
+      const created = dataOf(many.result, "applyScheduleTemplates");
+      expect(created.createdCount).toBeGreaterThan(40);
+      expect(
+        await connection
+          .collection(SCHEDULE_CHANGES_COLLECTION)
+          .countDocuments({ orgId: xinyi, month: "2028-07" }),
+      ).toBe(created.createdCount);
+      expectDbCommandsAtMost(many, one.total + 2, "已發布的月份套用週範本");
+    });
+
+    it("已發布的月份移除這天所有排班:6 個排班與 1 個的指令數相同(每人一則通知)", async () => {
+      await demandAt("2028-09-04", "08:00", "14:00", [
+        "leader",
+        "helper",
+        "helper",
+        "helper",
+        "helper",
+        "helper",
+      ]);
+      await demandAt("2028-09-05", "08:00", "14:00", ["leader"]);
+      // 同一人同一天兩個排班(移除時合併通知分兩輪,照樣收到兩則,和逐列記異動時相同)
+      const person = people[0];
+      for (const [start, end] of [
+        ["06:00", "07:00"],
+        ["20:00", "21:00"],
+      ] as const) {
+        const demand = await demandAt("2028-09-06", start, end, ["leader"]);
+        const saved = await gql(hq, SAVE_ENTRY, {
+          input: {
+            orgId: String(xinyi),
+            userId: String(person?.userId),
+            startAt: taipei("2028-09-06", start),
+            endAt: taipei("2028-09-06", end),
+            breakMinutes: 0,
+            assignments: [
+              { demandId: demand.id, taskId: demand.tasks[0]?.taskId },
+            ],
+          },
+        });
+        expect(saved.errors).toBeUndefined();
+      }
+      const filled = await gql(hq, RUN, {
+        input: {
+          orgId: String(xinyi),
+          month: "2028-09",
+          ...rangeOf("2028-09-01", "2028-09-28"),
+          mode: "fill-empty",
+          conditions: [],
+        },
+      });
+      expect(filled.errors).toBeUndefined();
+      await periods().updateOne(
+        { orgId: xinyi, month: "2028-09" },
+        { $set: { status: "published" } },
+      );
+      const remove = (label: string, date: string) =>
+        measured(label, REMOVE_DAY, {
+          input: {
+            orgId: String(xinyi),
+            date: day(date),
+            changeReason: SWAP,
+          },
+        });
+      const many = await remove("removeDay6", "2028-09-04");
+      const one = await remove("removeDay1", "2028-09-05");
+      expect(
+        (many.result.data?.removeScheduleDayEntries as { deletedIds: string[] })
+          .deletedIds,
+      ).toHaveLength(6);
+      const notified = await connection
+        .collection("notifications")
+        .countDocuments({
+          type: SCHEDULE_CHANGED,
+          recipientId: { $in: people.map((person) => person.userId) },
+          body: { $regex: "2028-09-04" },
+        });
+      expect(notified).toBe(6);
+      expectDbCommandsAtMost(
+        withoutNotifications(many),
+        withoutNotifications(one).total + 2,
+        "移除這天 6 個排班",
+      );
+
+      const noticesOf = () =>
+        connection.collection("notifications").countDocuments({
+          type: SCHEDULE_CHANGED,
+          recipientId: person?.userId,
+          body: { $regex: "2028-09-06" },
+        });
+      const before = await noticesOf();
+      await remove("removeDaySamePerson", "2028-09-06");
+      expect(await noticesOf()).toBe(before + 2);
     });
   });
 });
