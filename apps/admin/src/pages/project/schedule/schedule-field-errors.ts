@@ -35,6 +35,7 @@ const FORMAT_TEXTS: Record<string, [string, Record<string, string>?]> = {
   ],
   date: ["fieldErrors.date"],
   category: ["fieldErrors.required"],
+  paletteKey: ["fieldErrors.required"],
   userId: ["fieldErrors.required"],
   entryId: ["fieldErrors.choose"],
   orgId: ["fieldErrors.required"],
