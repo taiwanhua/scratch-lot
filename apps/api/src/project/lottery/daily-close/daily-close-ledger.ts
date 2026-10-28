@@ -110,20 +110,43 @@ export class DailyCloseLedger {
   }
 
   /** 這家店最近一張**已確認**的日結(小金庫起算點);`before` 給了 = 那個時點以前送出的。 */
-  lastConfirmedDaily(
+  /**
+   * 一批分店各自最近一張已完成的日結(清點金額與送出時間;小金庫起算點):一次 aggregate 依分店取第一筆
+   * (TX-07)。`before` 給了 = 只看那之前送出的;沒有日結的分店不在裡面。
+   */
+  async lastConfirmedDailies(
     reader: OperatorContext,
-    orgId: Types.ObjectId,
+    orgIds: readonly Types.ObjectId[],
     before?: Date,
-  ): Promise<CheckoutRecord | null> {
-    return this.checkouts.findOne(
-      reader,
+  ): Promise<Map<string, { counted: number; submittedAt: Date }>> {
+    if (orgIds.length === 0) {
+      return new Map();
+    }
+    const rows = await this.checkouts.aggregate(reader, [
       {
-        orgId,
-        type: CHECKOUT_TYPE.daily,
-        status: CHECKOUT_STATUS.confirmed,
-        ...(before === undefined ? {} : { submittedAt: { $lt: before } }),
+        $match: {
+          orgId: { $in: [...orgIds] },
+          type: CHECKOUT_TYPE.daily,
+          status: CHECKOUT_STATUS.confirmed,
+          ...(before === undefined ? {} : { submittedAt: { $lt: before } }),
+        },
       },
-      { sort: { coveredTo: -1, _id: -1 } },
+      { $sort: { orgId: 1, coveredTo: -1, _id: -1 } },
+      {
+        $group: {
+          _id: "$orgId",
+          counted: { $first: "$counted" },
+          submittedAt: { $first: "$submittedAt" },
+        },
+      },
+    ]);
+    return new Map(
+      (
+        rows as { _id: unknown; counted: number | null; submittedAt: Date }[]
+      ).map((row) => [
+        String(row._id),
+        { counted: row.counted ?? 0, submittedAt: row.submittedAt },
+      ]),
     );
   }
 

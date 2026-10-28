@@ -2202,6 +2202,26 @@ describe("輸出報表:營運報表、班次結帳歷史報表(GraphQL 端點 + 
       await completedTransfer(null);
     }
     const four = await countDbCommands(serialNosAt);
+    // 好幾個期末一次算(各店的「迄」不同):指令數與時點數無關,結果與逐個時點算相同
+    const ends = [taipei("2026-12-01", "09:30"), asOf, taipei("2026-12-03")];
+    const serialNosOf = (
+      rows: Awaited<ReturnType<typeof settlement.outstandingAt>>,
+    ) =>
+      rows
+        .filter((row) => row.branchOrgId.equals(west))
+        .map((row) => row.snapshot.submission.serialNo);
+    const single = await countDbCommands(() =>
+      settlement.outstandingAtMany(operator, [asOf]),
+    );
+    const many = await countDbCommands(() =>
+      settlement.outstandingAtMany(operator, ends),
+    );
+    expect(many.total).toBe(single.total);
+    for (const [index, end] of ends.entries()) {
+      expect(serialNosOf(many.result[index] ?? [])).toEqual(
+        serialNosOf(await settlement.outstandingAt(operator, end)),
+      );
+    }
     expect(four.result).toEqual([
       "T-PERF-0",
       "T-PERF-2",

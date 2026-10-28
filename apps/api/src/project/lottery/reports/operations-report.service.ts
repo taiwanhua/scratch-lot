@@ -791,23 +791,20 @@ export class OperationsReportService {
   /**
    * 期末時的待付 / 待退進貨款、待收 / 待付調貨款、調貨待退 / 該退(`SettlementLedger.outstandingAt`:
    * 單據當時還有效、收付只算期末以前的),依歸屬分店;說明列單號(最多 5 張)。
-   * 對齊日結時各店的「迄」不同,同一個「迄」只查一次。
+   * 對齊日結時各店的「迄」不同:所有「迄」一次算(`outstandingAtMany`)。
    */
   private async outstandingOf(
     operator: OperatorContext,
     periods: readonly StorePeriod[],
   ): Promise<(period: StorePeriod) => LotteryOperationsOutstandingModel> {
     const ends = [...new Set(periods.map((period) => period.to.getTime()))];
+    // 各店的「迄」一次算(單據、收付各讀一次,在記憶體依各時點挑;TX-07)
+    const rowsAt = await this.settlement.outstandingAtMany(
+      operator,
+      ends.map((end) => new Date(end)),
+    );
     const byEnd = new Map(
-      await Promise.all(
-        ends.map(
-          async (end) =>
-            [
-              end,
-              await this.settlement.outstandingAt(operator, new Date(end)),
-            ] as const,
-        ),
-      ),
+      ends.map((end, index) => [end, rowsAt[index] ?? []] as const),
     );
     return (period) => {
       const items = OUTSTANDING_KINDS.map(({ kind }) => ({

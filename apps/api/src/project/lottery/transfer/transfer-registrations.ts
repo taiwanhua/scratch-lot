@@ -89,10 +89,10 @@ export class TransferRegistrations implements OnModuleInit, OnModuleDestroy {
         label: "調貨單",
         kind: "transfer",
         payable: async (submission, asOf) => {
-          const [payable] = await this.payablesOf([submission], asOf);
+          const [payable] = await this.payablesOf([{ submission, asOf }]);
           return payable ?? null;
         },
-        payables: (submissions, asOf) => this.payablesOf(submissions, asOf),
+        payables: (items) => this.payablesOf(items),
         sideBranchPaths: [FROM_PATH, TO_PATH],
         sides: [
           {
@@ -182,58 +182,61 @@ export class TransferRegistrations implements OnModuleInit, OnModuleDestroy {
   /**
    * 收付:調貨金額 = 批購金額合計;收貨店的先填值照已點收的批購金額。草稿、駁回、作廢 → 不參與(null)。
    * 給了 `asOf` = 已點收只算那個時點以前的點收(輸出報表的期末未結清)。
-   * 一批一次讀點收(每個租戶一次;TX-07),順序同 `submissions`。
+   * 一批一次讀點收(每個租戶一次,最晚的時點以前;TX-07),在記憶體依各項的時點算,順序同 `items`。
    */
   private async payablesOf(
-    submissions: readonly SettlementSubmission[],
-    asOf?: Date,
+    items: readonly { submission: SettlementSubmission; asOf?: Date }[],
   ): Promise<(SettlementPayable | null)[]> {
-    const live = submissions.filter((submission) =>
-      (TRANSFER_LIVE_STATUSES as readonly string[]).includes(submission.status),
-    );
-    const byTenant = new Map<string, SettlementSubmission[]>();
-    for (const submission of live) {
-      const key = String(submission.tenantId);
-      byTenant.set(key, [...(byTenant.get(key) ?? []), submission]);
+    const isLive = (submission: SettlementSubmission) =>
+      (TRANSFER_LIVE_STATUSES as readonly string[]).includes(submission.status);
+    const byTenant = new Map<string, (typeof items)[number][]>();
+    for (const item of items.filter((entry) => isLive(entry.submission))) {
+      const key = String(item.submission.tenantId);
+      byTenant.set(key, [...(byTenant.get(key) ?? []), item]);
     }
-    const receiptsOf = new Map<string, TransferReceiptTickets[]>();
+    const receiptsOf = new Map<
+      string,
+      (TransferReceiptTickets & { receivedAt: Date })[]
+    >();
     for (const group of byTenant.values()) {
       const reader = await tenantBoundaryContext(
         this.orgs,
         null,
-        group[0]?.tenantId ?? null,
+        group[0]?.submission.tenantId ?? null,
       );
+      const latest = group.some((item) => item.asOf === undefined)
+        ? null
+        : Math.max(...group.map((item) => item.asOf?.getTime() ?? 0));
       const receipts = await this.receipts.findMany(
         reader,
         {
-          submissionId: { $in: group.map((submission) => submission._id) },
-          ...(asOf === undefined ? {} : { receivedAt: { $lt: asOf } }),
+          submissionId: {
+            $in: group.map((item) => item.submission._id),
+          },
+          ...(latest === null ? {} : { receivedAt: { $lt: new Date(latest) } }),
         },
-        { select: "submissionId rowId tickets" },
+        { select: "submissionId rowId tickets receivedAt" },
       );
       for (const receipt of receipts) {
         const key = String(receipt.submissionId);
         receiptsOf.set(key, [...(receiptsOf.get(key) ?? []), receipt]);
       }
     }
-    return submissions.map((submission) => {
-      if (
-        !(TRANSFER_LIVE_STATUSES as readonly string[]).includes(
-          submission.status,
-        )
-      ) {
+    return items.map(({ submission, asOf }) => {
+      if (!isLive(submission)) {
         return null;
       }
       const values = submission.values as Record<string, unknown>;
       const header = transferHeaderOf(values);
       const lines = transferLinesOf(values);
+      const receipts = (receiptsOf.get(String(submission._id)) ?? []).filter(
+        (receipt) => asOf === undefined || receipt.receivedAt < asOf,
+      );
       // 每一列已點收幾張(選張的列逐張點收;部分點收的列照已點收張數算)
       const received = new Map(
-        [
-          ...receivedByRow(
-            receiptsOf.get(String(submission._id)) ?? [],
-          ).entries(),
-        ].map(([rowId, row]) => [rowId, receivedCountOf(row)] as const),
+        [...receivedByRow(receipts).entries()].map(
+          ([rowId, row]) => [rowId, receivedCountOf(row)] as const,
+        ),
       );
       return {
         amount: transferTotalOf(lines),

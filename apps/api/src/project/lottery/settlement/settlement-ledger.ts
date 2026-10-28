@@ -90,23 +90,60 @@ interface EvaluatedDocument {
   latestAt: Date;
 }
 
-/** 一批提交的應付(順序同 `submissions`):登記有 `payables` 就一批算,沒有就逐張(不讀資料庫的登記)。 */
+/** 要算的一項:哪一組(時點)、單據當時的樣子、收付只算哪個時點以前(沒給 = 全部)。 */
+interface EvaluationItem {
+  key: number;
+  submission: SettlementSubmission;
+  before?: Date;
+}
+
+/** 一項的各邊合計與最後一筆收付的發生時間。 */
+interface ItemTotals {
+  sides: Record<string, SettlementSideTotals>;
+  latestAt: Date;
+}
+
+/** 讀出來的一筆收付(銀行交易或現金流水)。 */
+interface LedgerRow {
+  refId: Types.ObjectId;
+  side: string;
+  direction: "in" | "out";
+  amount: number;
+  occurredAt: Date;
+}
+
+/** 一批的應付(順序同 `items`):登記有 `payables` 就一批算,沒有就逐張(不讀資料庫的登記)。 */
 async function payablesOf(
   registration: SettlementDocumentRegistration,
-  submissions: readonly SettlementSubmission[],
-  before?: Date,
+  items: readonly EvaluationItem[],
 ): Promise<readonly (SettlementPayable | null)[]> {
-  if (submissions.length === 0) {
+  if (items.length === 0) {
     return [];
   }
   if (registration.payables !== undefined) {
-    return registration.payables(submissions, before);
+    return registration.payables(
+      items.map((item) => ({ submission: item.submission, asOf: item.before })),
+    );
   }
   const payables: (SettlementPayable | null)[] = [];
-  for (const submission of submissions) {
-    payables.push(await registration.payable(submission, before));
+  for (const item of items) {
+    payables.push(await registration.payable(item.submission, item.before));
   }
   return payables;
+}
+
+/** 收付讀成一筆一列(`direction` = 這一邊支出 / 收入的算法)。 */
+function ledgerProjection(direction: unknown) {
+  return {
+    $project: {
+      _id: 0,
+      refId: 1,
+      side: "$settlementSide",
+      direction,
+      amount: 1,
+      occurredAt: 1,
+    },
+  };
 }
 
 /** 收付登記過的單據模組 key。 */
@@ -218,10 +255,10 @@ export class SettlementLedger {
     if (registration === undefined) {
       return true;
     }
-    const { totals } = await this.totalsOf(operator, submission.tenantId, [
-      submission._id,
+    const [totals] = await this.totalsOf(operator, submission.tenantId, [
+      { refId: submission._id },
     ]);
-    const bySide = totals.get(String(submission._id)) ?? {};
+    const bySide = totals?.sides ?? {};
     return Object.values(bySide).every((side) => paidNetOf(side) === 0);
   }
 
@@ -246,19 +283,23 @@ export class SettlementLedger {
           : [{ _id: { $in: pending.map((mark) => mark.refId) } }]),
       ],
     };
-    const { rows, evaluated } = await this.outstandingWhere(operator, filter);
-    const closable = evaluated.flatMap(({ submission, open, latestAt }) => {
-      const mark = markOf.get(String(submission._id));
-      // 還有待結清的不寫;未來日期的收付還沒到也先不寫(某個時點的待結清只略過 `closedAsOf` 早於它的)
-      return mark === undefined ||
-        (submission.status === "completed" && (open || latestAt > now))
-        ? []
-        : [mark];
-    });
+    const [result] = await this.outstandingWhere(operator, filter, 1, (row) => [
+      { key: 0, submission: row },
+    ]);
+    const closable = (result?.evaluated ?? []).flatMap(
+      ({ submission, open, latestAt }) => {
+        const mark = markOf.get(String(submission._id));
+        // 還有待結清的不寫;未來日期的收付還沒到也先不寫(某個時點的待結清只略過 `closedAsOf` 早於它的)
+        return mark === undefined ||
+          (submission.status === "completed" && (open || latestAt > now))
+          ? []
+          : [mark];
+      },
+    );
     if (reader !== null) {
       await this.marks.close(reader, closable, now);
     }
-    return rows;
+    return result?.rows ?? [];
   }
 
   /**
@@ -266,57 +307,117 @@ export class SettlementLedger {
    *
    * - 單據:那個時點以前送出(`submittedAt` 是第一次送出的時間,退回後重送不改寫)、當時還有效 —— 現在有效的,
    *   或之後才作廢(`voidedAt`)/ 駁回(流程實例結束的時間 `finishedAt`)的(作廢的當時是已完成、駁回的當時是審核中)
+   * - 已完成的:那個時點以前就已結清(結清標記的 `closedAsOf` 早於它)的不用算
    * - 收付:只算那個時點以前發生的銀行交易與現金流水(`occurredAt`;沖正照它自己的時間)
    * - 應付照那個時點的內容:取 `ctx.at` 早於那個時點的最後一筆修訂(完整值快照)來算;沒有更早的修訂 = 當時還沒送出,不算
-   * - 調貨單的已點收金額只算那個時點以前的點收(`payable(submission, asOf)`)
+   * - 調貨單的已點收金額只算那個時點以前的點收(`payables` 的 `asOf`)
    */
   async outstandingAt(
     operator: OperatorContext,
     asOf: Date,
   ): Promise<OutstandingRow[]> {
+    const [rows] = await this.outstandingAtMany(operator, [asOf]);
+    return rows ?? [];
+  }
+
+  /**
+   * 好幾個時點的待結清(順序同 `asOfs`;報表各店期末不同時一次算):單據、標記、駁回時間、應付、收付各讀一次,
+   * 在記憶體依各時點挑(TX-07;指令數與時點數、張數無關)。規則同 `outstandingAt`。
+   */
+  async outstandingAtMany(
+    operator: OperatorContext,
+    asOfs: readonly Date[],
+  ): Promise<OutstandingRow[][]> {
+    if (asOfs.length === 0) {
+      return [];
+    }
+    const times = asOfs.map((asOf) => asOf.getTime());
+    const earliest = new Date(Math.min(...times));
+    const latest = new Date(Math.max(...times));
     const reader = await this.marks.readerOf(operator);
-    const [rejectedLater, pending] = await Promise.all([
-      this.rejectedAfter(operator, asOf),
+    const [rejectedAt, pending] = await Promise.all([
+      this.rejectedAfter(operator, earliest, latest),
       reader === null
         ? []
-        : this.marks.pending(reader, settlementModuleKeys(), asOf),
+        : this.marks.pending(reader, settlementModuleKeys(), earliest),
     ]);
+    const closedAsOfOf = new Map(
+      pending.map((mark) => [String(mark.refId), mark.closedAsOf]),
+    );
     const filter = {
-      submittedAt: { $lt: asOf },
+      submittedAt: { $lt: latest },
       $or: [
         { status: { $in: SETTLEMENT_OPEN_STATUSES } },
-        // 已完成的:那個時點以前就已結清(`closedAsOf` 早於它)的不用算
         {
           status: "completed",
           _id: { $in: pending.map((mark) => mark.refId) },
         },
-        { status: "voided", voidedAt: { $gte: asOf } },
-        { status: "rejected", _id: { $in: rejectedLater } },
+        { status: "voided", voidedAt: { $gte: earliest } },
+        {
+          status: "rejected",
+          _id: {
+            $in: [...rejectedAt.keys()].map((id) => new Types.ObjectId(id)),
+          },
+        },
       ],
     };
-    const { rows } = await this.outstandingWhere(
+    /** 這張單在這個時點要不要算(DB 條件取各時點的聯集,這裡逐個時點挑)。 */
+    const countsAt = (row: SettlementSubmission, asOf: Date): boolean => {
+      if (row.submittedAt === null || row.submittedAt >= asOf) {
+        return false;
+      }
+      const key = String(row._id);
+      switch (row.status) {
+        case "completed": {
+          const closedAsOf = closedAsOfOf.get(key);
+          return (
+            closedAsOf !== undefined &&
+            (closedAsOf === null || closedAsOf >= asOf)
+          );
+        }
+        case "voided": {
+          const voidedAt = (row as { voidedAt?: Date | null }).voidedAt ?? null;
+          return voidedAt !== null && voidedAt >= asOf;
+        }
+        case "rejected": {
+          const finishedAt = rejectedAt.get(key);
+          return finishedAt !== undefined && finishedAt >= asOf;
+        }
+        default: {
+          return (SETTLEMENT_OPEN_STATUSES as readonly string[]).includes(
+            row.status,
+          );
+        }
+      }
+    };
+    const results = await this.outstandingWhere(
       operator,
       filter,
-      asOf,
-      (submission) => submissionAt(submission, asOf),
+      asOfs.length,
+      (row) =>
+        asOfs.flatMap((asOf, key) => {
+          const then = countsAt(row, asOf) ? submissionAt(row, asOf) : null;
+          return then === null ? [] : [{ key, submission: then, before: asOf }];
+        }),
     );
-    return rows;
+    return results.map((result) => result.rows);
   }
 
   /**
-   * 這個時點以前送出、之後才被駁回的單據(駁回時間 = 流程實例結束的時間;單據上沒有駁回時間欄位)。
-   * 實例以單據的租戶為邊界讀(審核流程不靠可見範圍)。
+   * 時點區間內(`submittedAt` 早於最晚的時點)送出、在最早的時點以後才被駁回的單據 → 駁回時間
+   * (= 流程實例結束的時間;單據上沒有駁回時間欄位)。實例以單據的租戶為邊界讀(審核流程不靠可見範圍)。
    */
   private async rejectedAfter(
     operator: OperatorContext,
-    asOf: Date,
-  ): Promise<Types.ObjectId[]> {
+    earliest: Date,
+    latest: Date,
+  ): Promise<Map<string, Date>> {
     const rejected = await this.submissions.findMany(
       operator,
       {
-        moduleKey: { $in: settlementDocuments().map((row) => row.moduleKey) },
+        moduleKey: { $in: settlementModuleKeys() },
         status: "rejected",
-        submittedAt: { $lt: asOf },
+        submittedAt: { $lt: latest },
       },
       { select: "_id tenantId currentInstanceId" },
     );
@@ -325,71 +426,72 @@ export class SettlementLedger {
     );
     const tenantId = withInstance[0]?.tenantId ?? null;
     if (withInstance.length === 0 || tenantId === null) {
-      return [];
+      return new Map();
     }
     const reader = await tenantBoundaryContext(this.orgs, operator, tenantId);
     const instances = await this.instances.findMany(
       reader,
       {
         _id: { $in: withInstance.map((row) => row.currentInstanceId) },
-        finishedAt: { $gte: asOf },
+        finishedAt: { $gte: earliest },
       },
-      { select: "_id" },
+      { select: "_id finishedAt" },
     );
-    const later = new Set(instances.map((row) => String(row._id)));
-    return withInstance
-      .filter((row) => later.has(String(row.currentInstanceId)))
-      .map((row) => row._id);
+    const finishedOf = new Map(
+      instances.map((row) => [String(row._id), row.finishedAt]),
+    );
+    const result = new Map<string, Date>();
+    for (const row of withInstance) {
+      const finishedAt = finishedOf.get(String(row.currentInstanceId));
+      if (finishedAt instanceof Date) {
+        result.set(String(row._id), finishedAt);
+      }
+    }
+    return result;
   }
 
   /**
-   * 各登記的單據裡符合條件的待結清;`evaluated` = 算過的每一張(有沒有待結清、最後一筆收付的發生時間;
-   * 寫結清標記用)。
+   * 各登記的單據裡符合條件的待結清,分成 `groups` 組(`expand` 把一張單展開成要算的那幾組:組別、
+   * 當時的樣子、收付只算哪個時點以前);每組的 `evaluated` = 算過的每一張(有沒有待結清、最後一筆收付的
+   * 發生時間;寫結清標記用)。
    */
   private async outstandingWhere(
     operator: OperatorContext,
     filter: Record<string, unknown>,
-    before?: Date,
-    asThen: (
-      submission: SettlementSubmission,
-    ) => SettlementSubmission | null = (submission) => submission,
-  ): Promise<{ rows: OutstandingRow[]; evaluated: EvaluatedDocument[] }> {
-    const rows: OutstandingRow[] = [];
-    const evaluated: EvaluatedDocument[] = [];
+    groups: number,
+    expand: (row: SettlementSubmission) => EvaluationItem[],
+  ): Promise<{ rows: OutstandingRow[]; evaluated: EvaluatedDocument[] }[]> {
+    const results = Array.from({ length: groups }, () => ({
+      rows: [] as OutstandingRow[],
+      evaluated: [] as EvaluatedDocument[],
+    }));
     for (const registration of settlementDocuments()) {
       const visible = (await this.submissions.findMany(
         operator,
         { moduleKey: registration.moduleKey, ...filter },
         { sort: { submittedAt: 1, _id: 1 } },
       )) as unknown as SettlementSubmission[];
-      const submissions = visible.flatMap((row) => {
-        const then = asThen(row);
-        return then === null ? [] : [then];
-      });
-      const { snapshots, latestAt } = await this.evaluate(
-        operator,
-        registration,
-        submissions,
-        before,
-      );
-      const openIds = new Set<string>();
-      for (const snapshot of snapshots) {
-        const due = outstandingOf(snapshot);
-        if (due.length > 0) {
-          openIds.add(String(snapshot.submission._id));
+      const items = visible.flatMap((row) => expand(row));
+      const evaluations = await this.evaluate(operator, registration, items);
+      for (const [index, item] of items.entries()) {
+        const result = results[item.key];
+        const evaluation = evaluations[index];
+        if (result === undefined || evaluation === undefined) {
+          continue;
         }
-        rows.push(...due);
-      }
-      for (const submission of submissions) {
-        const key = String(submission._id);
-        evaluated.push({
-          submission,
-          open: openIds.has(key),
-          latestAt: latestAt.get(key) ?? new Date(0),
+        const due =
+          evaluation.snapshot === null
+            ? []
+            : outstandingOf(evaluation.snapshot);
+        result.rows.push(...due);
+        result.evaluated.push({
+          submission: item.submission,
+          open: due.length > 0,
+          latestAt: evaluation.latestAt,
         });
       }
     }
-    return { rows, evaluated };
+    return results;
   }
 
   /**
@@ -435,141 +537,140 @@ export class SettlementLedger {
     submissions: readonly SettlementSubmission[],
     before?: Date,
   ): Promise<SettlementSnapshot[]> {
-    const { snapshots } = await this.evaluate(
+    const evaluations = await this.evaluate(
       operator,
       registration,
-      submissions,
-      before,
+      submissions.map((submission) => ({ key: 0, submission, before })),
     );
-    return snapshots;
+    return evaluations.flatMap((evaluation) =>
+      evaluation.snapshot === null ? [] : [evaluation.snapshot],
+    );
   }
 
   /**
-   * 一批提交的現況 + 每張最後一筆收付的發生時間(`latestAt`;沒有收付的不在裡面)。
-   * 指令數不隨張數成長(TX-07):應付一批算(`payables`)、收付合計每個租戶一次。
+   * 一批要算的單據(同一張可以在不同時點各算一次)的現況與最後一筆收付的發生時間,順序同 `items`;
+   * 不參與收付的 `snapshot` 是 null。指令數不隨張數、時點數成長(TX-07):應付一批算(`payables`)、
+   * 收付每個租戶讀一次。
    */
   private async evaluate(
     operator: OperatorContext,
     registration: SettlementDocumentRegistration,
-    submissions: readonly SettlementSubmission[],
-    before?: Date,
-  ): Promise<{
-    snapshots: SettlementSnapshot[];
-    latestAt: Map<string, Date>;
-  }> {
-    const payables = await payablesOf(registration, submissions, before);
-    const withPayable = submissions.flatMap((submission, index) => {
-      const payable = payables[index] ?? null;
-      return payable === null ? [] : [{ submission, payable }];
-    });
-    const latestAt = new Map<string, Date>();
-    if (withPayable.length === 0) {
-      return { snapshots: [], latestAt };
+    items: readonly EvaluationItem[],
+  ): Promise<{ snapshot: SettlementSnapshot | null; latestAt: Date }[]> {
+    const payables = await payablesOf(registration, items);
+    const byTenant = new Map<string, number[]>();
+    for (const [index, item] of items.entries()) {
+      if (payables[index] != null) {
+        const key = String(item.submission.tenantId);
+        byTenant.set(key, [...(byTenant.get(key) ?? []), index]);
+      }
     }
-    const byTenant = new Map<string, SettlementSubmission[]>();
-    for (const { submission } of withPayable) {
-      const key = String(submission.tenantId);
-      byTenant.set(key, [...(byTenant.get(key) ?? []), submission]);
-    }
-    const totals = new Map<string, Record<string, SettlementSideTotals>>();
-    for (const group of byTenant.values()) {
-      const tenantId = group[0]?.tenantId ?? null;
+    const totals = new Map<number, ItemTotals>();
+    for (const indexes of byTenant.values()) {
+      const group = indexes.flatMap((index) => {
+        const item = items[index];
+        return item === undefined ? [] : [item];
+      });
       const result = await this.totalsOf(
         operator,
-        tenantId,
-        group.map((submission) => submission._id),
-        before,
+        group[0]?.submission.tenantId ?? null,
+        group.map((item) => ({
+          refId: item.submission._id,
+          before: item.before,
+        })),
       );
-      for (const [key, value] of result.totals) {
-        totals.set(key, value);
-      }
-      for (const [key, value] of result.latestAt) {
-        latestAt.set(key, value);
+      for (const [position, index] of indexes.entries()) {
+        const value = result[position];
+        if (value !== undefined) {
+          totals.set(index, value);
+        }
       }
     }
-    const snapshots = withPayable.map(({ submission, payable }) => ({
-      registration,
-      submission,
-      payable,
-      state: {
-        payable: payable.amount,
-        ...(payable.received === undefined
-          ? {}
-          : { received: payable.received }),
-        sides: totals.get(String(submission._id)) ?? {},
-      },
-    }));
-    return { snapshots, latestAt };
+    return items.map((item, index) => {
+      const payable = payables[index] ?? null;
+      const itemTotals = totals.get(index);
+      return {
+        latestAt: itemTotals?.latestAt ?? new Date(0),
+        snapshot:
+          payable === null
+            ? null
+            : {
+                registration,
+                submission: item.submission,
+                payable,
+                state: {
+                  payable: payable.amount,
+                  ...(payable.received === undefined
+                    ? {}
+                    : { received: payable.received }),
+                  sides: itemTotals?.sides ?? {},
+                },
+              },
+      };
+    });
   }
 
-  /** 單據 id → 邊 → 支出 / 收入合計(銀行交易 + 現金流水),與每張最後一筆的發生時間。 */
+  /**
+   * 每一項(單據 + 只算哪個時點以前)的邊 → 支出 / 收入合計(銀行交易 + 現金流水)與最後一筆的發生時間,
+   * 順序同 `items`。收付以租戶邊界讀,一次讀這批單據的收付(最晚的時點以前),在記憶體依各項的時點加總。
+   */
   private async totalsOf(
     operator: OperatorContext,
     tenantId: Types.ObjectId | null,
-    refIds: readonly Types.ObjectId[],
-    before?: Date,
-  ): Promise<{
-    totals: Map<string, Record<string, SettlementSideTotals>>;
-    latestAt: Map<string, Date>;
-  }> {
+    items: readonly { refId: Types.ObjectId; before?: Date }[],
+  ): Promise<ItemTotals[]> {
     const reader = await tenantBoundaryContext(this.orgs, operator, tenantId);
+    const unbounded = items.some((item) => item.before === undefined);
+    const latestBefore = unbounded
+      ? null
+      : Math.max(...items.map((item) => item.before?.getTime() ?? 0));
     const match = {
-      refId: { $in: [...refIds] },
+      refId: {
+        $in: [
+          ...new Map(
+            items.map((item) => [String(item.refId), item.refId]),
+          ).values(),
+        ],
+      },
       settlementSide: { $ne: null },
-      ...(before === undefined ? {} : { occurredAt: { $lt: before } }),
+      ...(latestBefore === null
+        ? {}
+        : { occurredAt: { $lt: new Date(latestBefore) } }),
     };
     const [bankRows, cashRows] = await Promise.all([
       this.bank.aggregate(reader, [
         { $match: match },
-        {
-          $group: {
-            _id: {
-              refId: "$refId",
-              side: "$settlementSide",
-              direction: "$direction",
-            },
-            amount: { $sum: "$amount" },
-            latestAt: { $max: "$occurredAt" },
-          },
-        },
+        ledgerProjection("$direction"),
       ]),
       this.cash.aggregate(reader, [
         { $match: match },
-        {
-          $group: {
-            _id: {
-              refId: "$refId",
-              side: "$settlementSide",
-              // 現金流出到外部 = 這一邊支出;從外部流入 = 收入
-              direction: {
-                $cond: [{ $eq: ["$to", "external"] }, "out", "in"],
-              },
-            },
-            amount: { $sum: "$amount" },
-            latestAt: { $max: "$occurredAt" },
-          },
-        },
+        // 現金流出到外部 = 這一邊支出;從外部流入 = 收入
+        ledgerProjection({
+          $cond: [{ $eq: ["$to", "external"] }, "out", "in"],
+        }),
       ]),
     ]);
-    const result = new Map<string, Record<string, SettlementSideTotals>>();
-    const latestAt = new Map<string, Date>();
-    for (const row of [...bankRows, ...cashRows] as {
-      _id: { refId: unknown; side: string; direction: "in" | "out" };
-      amount: number;
-      latestAt: Date;
-    }[]) {
-      const key = String(row._id.refId);
-      const sides = result.get(key) ?? {};
-      const totals = sides[row._id.side] ?? { out: 0, in: 0 };
-      totals[row._id.direction] += row.amount;
-      sides[row._id.side] = totals;
-      result.set(key, sides);
-      const latest = latestAt.get(key);
-      if (latest === undefined || row.latestAt > latest) {
-        latestAt.set(key, row.latestAt);
-      }
+    const rowsOf = new Map<string, LedgerRow[]>();
+    for (const row of [...bankRows, ...cashRows] as unknown as LedgerRow[]) {
+      const key = String(row.refId);
+      rowsOf.set(key, [...(rowsOf.get(key) ?? []), row]);
     }
-    return { totals: result, latestAt };
+    return items.map((item) => {
+      const sides: Record<string, SettlementSideTotals> = {};
+      let latestAt = new Date(0);
+      for (const row of rowsOf.get(String(item.refId)) ?? []) {
+        if (item.before !== undefined && row.occurredAt >= item.before) {
+          continue;
+        }
+        const totals = sides[row.side] ?? { out: 0, in: 0 };
+        totals[row.direction] += row.amount;
+        sides[row.side] = totals;
+        if (row.occurredAt > latestAt) {
+          latestAt = row.occurredAt;
+        }
+      }
+      return { sides, latestAt };
+    });
   }
 }
 

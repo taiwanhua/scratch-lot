@@ -600,23 +600,20 @@ export class PeriodCloseService {
       this.uncoveredShiftsOf(period),
       this.drawersOf(period, points),
     ]);
-    const stores = await Promise.all(
-      storeIds.map(async (orgId) => {
-        const vault = await this.ledger.vaultExpected(
-          period.reader,
-          period.tenantId,
-          orgId,
-          period.end,
-        );
-        return {
-          orgId,
-          name: names.get(String(orgId)) ?? "",
-          vault: vault.amount,
-          drawers: drawers.get(String(orgId)) ?? [],
-          uncoveredShifts: uncovered.get(String(orgId)) ?? [],
-        };
-      }),
+    // 各店月底小金庫一次算(TX-07)
+    const vaults = await this.ledger.vaultExpectedMany(
+      period.reader,
+      period.tenantId,
+      storeIds,
+      period.end,
     );
+    const stores = storeIds.map((orgId) => ({
+      orgId,
+      name: names.get(String(orgId)) ?? "",
+      vault: vaults.get(String(orgId))?.amount ?? 0,
+      drawers: drawers.get(String(orgId)) ?? [],
+      uncoveredShifts: uncovered.get(String(orgId)) ?? [],
+    }));
     return stores.toSorted((a, b) => a.name.localeCompare(b.name, "zh-Hant"));
   }
 

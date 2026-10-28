@@ -12,6 +12,7 @@ export interface PendingMark {
   refType: string;
   refId: Types.ObjectId;
   rev: number;
+  closedAsOf: Date | null;
 }
 
 /**
@@ -108,12 +109,13 @@ export class SettlementMarks {
           ? { closedAsOf: null }
           : { $or: [{ closedAsOf: null }, { closedAsOf: { $gte: asOf } }] }),
       },
-      { select: "refType refId rev" },
+      { select: "refType refId rev closedAsOf" },
     );
     return rows.map((row) => ({
       refType: row.refType,
       refId: row.refId,
       rev: row.rev,
+      closedAsOf: row.closedAsOf,
     }));
   }
 

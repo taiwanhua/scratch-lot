@@ -1104,6 +1104,31 @@ describe("關帳(GraphQL 端點 + 真 MongoDB)", () => {
     expect(after.total).toBe(before.total);
   });
 
+  it("月結各店小金庫的資料庫指令數與店數無關(TX-07):多 3 家有收銀點的店,關帳檢查的指令數相同", async () => {
+    await check("2026-12");
+    const before = await countDbCommands(() => check("2026-12"));
+    for (const name of ["信義店", "大同店", "萬華店"]) {
+      const orgId = await createOrg(connection, { name, parentId: tenant });
+      await connection.collection(LOTTERY_CASH_POINTS_COLLECTION).insertOne({
+        orgId,
+        tenantId: tenant,
+        positionKey: "in-store-counter",
+        name: "店內櫃台",
+        order: 1,
+        enabled: true,
+        printerId: null,
+        note: null,
+        moduleKey: "master-data",
+        ...base(),
+      });
+    }
+    const after = await countDbCommands(() => check("2026-12"));
+    expect(after.result.snapshot.stores).toHaveLength(
+      before.result.snapshot.stores.length + 3,
+    );
+    expect(after.total).toBe(before.total);
+  });
+
   it("只新增:關帳紀錄、銀行交易、現金流水的修改 / 刪除一律拋 AppendOnlyLedgerError(不能重新開帳)", () => {
     for (const repository of [
       api.app.get(LotteryPeriodClosesRepository),
