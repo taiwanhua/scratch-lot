@@ -19,6 +19,7 @@ import {
 import type { MonthCalendarDayInfo } from "./month-calendar-types";
 
 export type * from "./month-calendar-types";
+export { MONTH_CALENDAR_TONE_BACKGROUND } from "./month-calendar-tone";
 
 /** 選取模式:不選 / 單選 / 多選(整週勾選框只在 `multiple` 出現)。 */
 export type MonthCalendarSelectionMode = "none" | "single" | "multiple";

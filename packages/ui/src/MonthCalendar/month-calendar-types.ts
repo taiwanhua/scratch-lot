@@ -14,8 +14,8 @@ export type MonthCalendarCorner =
   | { variant: "badge"; content: ReactNode };
 
 /**
- * 日期格的底色(顏色由主題 token 提供,使用處只給語意):
- * - `special`:特殊日(例:店慶)——淡藍底(`info.lighter`)
+ * 日期格的底色(顏色由主題 token 提供,使用處只給語意;對照見 `MONTH_CALENDAR_TONE_BACKGROUND`):
+ * - `special`:特殊日(例:店慶)——中性灰底(`action.selected`)
  * - `closed`:休息日但仍可點(例:店休)——淡灰底(`action.hover`);不能點的日子用 `disabled`
  */
 export type MonthCalendarDayTone = "special" | "closed";
@@ -42,7 +42,8 @@ export interface MonthCalendarDayInfo {
   corners?: readonly MonthCalendarCorner[];
   /**
    * 格子內的自訂內容(標籤、時段…),由使用處決定。內容裡 `position: absolute` 鋪滿整格的裝飾(底紋等)
-   * 畫在日期數字、註記與角標底下;內容自己的文字要疊在裝飾上,文字那層給 `position: relative`
+   * 畫在日期數字、註記與角標底下;內容自己的文字要疊在裝飾上,文字那層給 `position: relative`。
+   * 內容裡貼右上角的絕對定位元素(按鈕、圖示)會被角標蓋住,同一格有 `corners` 時不要放在右上角
    */
   content?: ReactNode;
 }

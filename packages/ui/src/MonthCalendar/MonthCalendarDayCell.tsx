@@ -9,17 +9,12 @@ import { stateLayerSx } from "../theme/state-layer";
 import { todayMarkSx } from "../theme/today-mark";
 import { MonthCalendarCornerMarks } from "./MonthCalendarCornerMark";
 import type { CalendarDay } from "./month-calendar-grid";
+import { MONTH_CALENDAR_TONE_BACKGROUND } from "./month-calendar-tone";
 import type {
   MonthCalendarCorner,
   MonthCalendarDayInfo,
   MonthCalendarDayTone,
 } from "./month-calendar-types";
-
-/** 底色語意 → 主題 token(色碼由主題決定,深色模式跟著換)。 */
-const TONE_BACKGROUND: Record<MonthCalendarDayTone, string> = {
-  special: "info.lighter",
-  closed: "action.hover",
-};
 
 export interface MonthCalendarDayCellProps {
   day: CalendarDay;
@@ -57,7 +52,9 @@ const backgroundOf = (
     // 資料帶來的是一般色碼(例 `#006064`):用獨立的 `alpha`(`theme.alpha` 在 CSS 變數主題下只收色彩通道)
     return alpha(source, theme.palette.action.selectedOpacity);
   }
-  return tone === undefined ? "background.paper" : TONE_BACKGROUND[tone];
+  return tone === undefined
+    ? "background.paper"
+    : MONTH_CALENDAR_TONE_BACKGROUND[tone];
 };
 
 /** 這一天的角標:`corners` 優先;只給舊的單一 `corner` 時當成一個。 */
