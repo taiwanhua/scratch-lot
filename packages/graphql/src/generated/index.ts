@@ -7531,6 +7531,14 @@ export type ScheduleAutoRunSummary = {
   unfilledCount: Scalars['Int']['output'];
 };
 
+export type ScheduleCalendarClosedConflict = {
+  __typename?: 'ScheduleCalendarClosedConflict';
+  demandCount: Scalars['Int']['output'];
+  entryCount: Scalars['Int']['output'];
+  orgId: Scalars['ID']['output'];
+  orgName: Scalars['String']['output'];
+};
+
 export type ScheduleCalendarDay = {
   __typename?: 'ScheduleCalendarDay';
   canEdit: Scalars['Boolean']['output'];
@@ -7546,6 +7554,7 @@ export type ScheduleCalendarDay = {
 
 export type ScheduleCalendarDayPayload = {
   __typename?: 'ScheduleCalendarDayPayload';
+  closedConflicts: Array<ScheduleCalendarClosedConflict>;
   item: ScheduleCalendarDay;
 };
 
@@ -11726,7 +11735,7 @@ export type SaveScheduleCalendarDayMutationVariables = Exact<{
 }>;
 
 
-export type SaveScheduleCalendarDayMutation = { __typename?: 'Mutation', saveScheduleCalendarDay: { __typename?: 'ScheduleCalendarDayPayload', item: { __typename?: 'ScheduleCalendarDay', id: string, date: string, type: string, category?: string | null, name?: string | null, note?: string | null, paletteKey?: string | null, canEdit: boolean, ownerOrg: { __typename?: 'ScheduleOwnerOrg', id: string, name: string } } } };
+export type SaveScheduleCalendarDayMutation = { __typename?: 'Mutation', saveScheduleCalendarDay: { __typename?: 'ScheduleCalendarDayPayload', item: { __typename?: 'ScheduleCalendarDay', id: string, date: string, type: string, category?: string | null, name?: string | null, note?: string | null, paletteKey?: string | null, canEdit: boolean, ownerOrg: { __typename?: 'ScheduleOwnerOrg', id: string, name: string } }, closedConflicts: Array<{ __typename?: 'ScheduleCalendarClosedConflict', orgId: string, orgName: string, demandCount: number, entryCount: number }> } };
 
 export type DeleteScheduleCalendarDayMutationVariables = Exact<{
   input: DeleteScheduleCalendarDayInput;
@@ -26664,6 +26673,12 @@ export const SaveScheduleCalendarDayDocument = `
   saveScheduleCalendarDay(input: $input) {
     item {
       ...ScheduleCalendarDayFields
+    }
+    closedConflicts {
+      orgId
+      orgName
+      demandCount
+      entryCount
     }
   }
 }

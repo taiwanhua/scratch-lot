@@ -179,6 +179,8 @@ export class ScheduleRosterWritesService {
     const existing = isCreate
       ? null
       : await this.mustFindDemand(operator, scope, String(input.id));
+    // 店休那天不能建人力需求(跨午夜連隔天);店休日既有的那筆也不能原地改,只能刪除
+    await this.assertOpen(operator, scope, span, "demand");
     const templateId =
       isCreate && input.templateId !== undefined && input.templateId !== null
         ? await this.visibleTemplateId(operator, scope, input.templateId)
@@ -394,18 +396,7 @@ export class ScheduleRosterWritesService {
       );
     }
     // 店休那天不能排;跨午夜的班連隔天一起看(同畫休)
-    const calendarDays = await this.calendar.effectiveDays(
-      operator,
-      scope.org.id,
-      this.daysOfSpan(scope, span),
-    );
-    if (calendarDays.some((day) => day.type === "closed")) {
-      throw validationError(
-        "store is closed on a day of this entry",
-        ["startAt"],
-        SCHEDULE_REASONS.storeClosed,
-      );
-    }
+    await this.assertOpen(operator, scope, span, "entry");
 
     const months = [
       ...new Set([
@@ -666,6 +657,30 @@ export class ScheduleRosterWritesService {
    * 有整天畫休、或和時段不可排重疊(頭尾相接不算)→ `VALIDATION_FAILED`(欄位 `startAt`)。
    * 以租戶 + 人查(`unavailableOfPerson`,不經這家店的候選人):修改舊排班時那個人已經不能排這家店,一樣要擋。
    */
+  /**
+   * 店休那天不能排班、也不能建人力需求:碰到的日子(跨午夜含隔天)以這家店的生效行事曆為準
+   * (上層設的店休往下沿用)→ 欄位 `startAt`、`STORE_CLOSED`。
+   */
+  private async assertOpen(
+    operator: OperatorContext,
+    scope: RosterScope,
+    span: { startAt: Date; endAt: Date },
+    target: "entry" | "demand",
+  ): Promise<void> {
+    const calendarDays = await this.calendar.effectiveDays(
+      operator,
+      scope.org.id,
+      this.daysOfSpan(scope, span),
+    );
+    if (calendarDays.some((day) => day.type === "closed")) {
+      throw validationError(
+        `store is closed on a day of this ${target}`,
+        ["startAt"],
+        SCHEDULE_REASONS.storeClosed,
+      );
+    }
+  }
+
   private async assertAvailable(
     operator: OperatorContext,
     scope: RosterScope,

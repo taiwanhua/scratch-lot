@@ -170,6 +170,12 @@ const SAVE_CALENDAR_DAY = /* GraphQL */ `
       item {
         id
       }
+      closedConflicts {
+        orgId
+        orgName
+        demandCount
+        entryCount
+      }
     }
   }
 `;
@@ -275,6 +281,15 @@ interface Payloads {
   deleteScheduleEntry: { id: string };
   removeScheduleDayEntries: { deletedIds: string[]; skippedIds: string[] };
   addScheduleStaff: { items: { staff: { id: string } }[] };
+  saveScheduleCalendarDay: {
+    item: { id: string };
+    closedConflicts: {
+      orgId: string;
+      orgName: string;
+      demandCount: number;
+      entryCount: number;
+    }[];
+  };
 }
 
 function dataOf<Key extends keyof Payloads>(
@@ -394,6 +409,26 @@ describe("排班表(GraphQL 端點 + 真 MongoDB)", () => {
     ).item;
   }
 
+  /** 某一層某天設店休 / 特殊日,回存檔結果 */
+  async function setDay(
+    orgId: Types.ObjectId,
+    date: string,
+    type: "closed" | "special" = "closed",
+  ) {
+    return dataOf(
+      await gql(hq, SAVE_CALENDAR_DAY, {
+        input: {
+          orgId: String(orgId),
+          date: taipei(date, "00:00"),
+          type,
+          ...(type === "special"
+            ? { category: "event-day", name: "店慶" }
+            : {}),
+        },
+      }),
+      "saveScheduleCalendarDay",
+    );
+  }
   function saveEntry(
     user: ScheduleTestUser,
     input: Record<string, unknown>,
@@ -465,8 +500,12 @@ describe("排班表(GraphQL 端點 + 真 MongoDB)", () => {
   }
 
   /** 李小華在中山店一筆跨午夜的排班(那天新建一筆同時段的人力需求,填協同)。 */
-  async function overnightEntry(date: string, nextDate: string, end: string) {
-    const demand = dataOf(
+  async function overnightDemand(
+    date: string,
+    nextDate: string,
+    end: string,
+  ): Promise<DemandRow> {
+    return dataOf(
       await saveDemand(hq, {
         startAt: taipei(date, "22:00"),
         endAt: taipei(nextDate, end),
@@ -474,6 +513,16 @@ describe("排班表(GraphQL 端點 + 真 MongoDB)", () => {
       }),
       "saveScheduleDemand",
     ).item;
+  }
+
+  /** 跨午夜的人力需求與排班(人力需求可以先建好再傳進來,例:先建、後設店休)。 */
+  async function overnightEntry(
+    date: string,
+    nextDate: string,
+    end: string,
+    existing?: DemandRow,
+  ) {
+    const demand = existing ?? (await overnightDemand(date, nextDate, end));
     return saveEntry(hq, {
       userId: String(li.userId),
       startAt: taipei(date, "22:00"),
@@ -721,6 +770,121 @@ describe("排班表(GraphQL 端點 + 真 MongoDB)", () => {
     });
   });
 
+  describe("店休日不能建人力需求", () => {
+    const closedError = {
+      code: "VALIDATION_FAILED",
+      fields: ["startAt"],
+      reason: "STORE_CLOSED",
+    };
+
+    it("新增:這天店休、跨午夜做進隔天店休 → STORE_CLOSED;結束剛好 00:00 不算隔天;上層設的店休往下沿用", async () => {
+      await setDay(zhongshan, "2027-02-03");
+      const sameDay = await saveDemand(hq, {
+        startAt: taipei("2027-02-03", "08:00"),
+        endAt: taipei("2027-02-03", "12:00"),
+        tasks: [{ role: "helper", taskKey: DUTY }],
+      });
+      expect(errorOf(sameDay)).toMatchObject(closedError);
+      const overnight = await saveDemand(hq, {
+        startAt: taipei("2027-02-02", "22:00"),
+        endAt: taipei("2027-02-03", "02:00"),
+        tasks: [{ role: "helper", taskKey: DUTY }],
+      });
+      expect(errorOf(overnight)).toMatchObject(closedError);
+      // 前一天做到 00:00(頭尾相接)照常可以建
+      dataOf(
+        await saveDemand(hq, {
+          startAt: taipei("2027-02-02", "18:00"),
+          endAt: taipei("2027-02-03", "00:00"),
+          tasks: [{ role: "helper", taskKey: DUTY }],
+        }),
+        "saveScheduleDemand",
+      );
+      // 最上層組織設店休:中山店那天也店休
+      await setDay(tenantA, "2027-02-05");
+      const inherited = await saveDemand(hq, {
+        startAt: taipei("2027-02-05", "08:00"),
+        endAt: taipei("2027-02-05", "12:00"),
+        tasks: [],
+      });
+      expect(errorOf(inherited)).toMatchObject(closedError);
+    });
+
+    it("修改:改日期到店休日擋下;先有、後設店休的那筆不能原地改,只能刪除(連帶解除填入的排班)", async () => {
+      const moving = await demandOn("2027-02-08", "08:00", "12:00");
+      const kept = await demandOn("2027-02-09", "08:00", "12:00");
+      const entry = await entryFor(wang, "2027-02-09", "08:00", "12:00", [
+        { demandId: kept.id, taskId: taskOf(kept, "leader") },
+      ]);
+      await setDay(zhongshan, "2027-02-10");
+      const moved = await saveDemand(hq, {
+        id: moving.id,
+        startAt: taipei("2027-02-10", "08:00"),
+        endAt: taipei("2027-02-10", "12:00"),
+        tasks: moving.tasks.map(({ taskId, role, taskKey }) => ({
+          taskId,
+          role,
+          taskKey,
+        })),
+      });
+      expect(errorOf(moved)).toMatchObject(closedError);
+
+      const conflicts = await setDay(zhongshan, "2027-02-09");
+      expect(conflicts.closedConflicts).toEqual([
+        {
+          orgId: String(zhongshan),
+          orgName: "中山店",
+          demandCount: 1,
+          entryCount: 1,
+        },
+      ]);
+      const edited = await saveDemand(hq, {
+        id: kept.id,
+        startAt: taipei("2027-02-09", "08:00"),
+        endAt: taipei("2027-02-09", "13:00"),
+        tasks: kept.tasks.map(({ taskId, role, taskKey }) => ({
+          taskId,
+          role,
+          taskKey,
+        })),
+      });
+      expect(errorOf(edited)).toMatchObject(closedError);
+      const deleted = dataOf(
+        await gql(hq, DELETE_DEMAND, {
+          input: { orgId: String(zhongshan), id: kept.id },
+        }),
+        "deleteScheduleDemand",
+      );
+      expect(deleted.deletedEntryIds).toEqual([entry.id]);
+    });
+
+    it("設店休的回應:上層設的算進沿用那天的下層各店(下層另設那天的不算)、前一天跨午夜做進來的也算;特殊日回空陣列", async () => {
+      await demandOn("2027-02-15", "08:00", "12:00", 1, zhongshan);
+      await demandOn("2027-02-15", "08:00", "12:00", 1, hsinchu);
+      // 中山店前一天跨午夜做進 2/15
+      dataOf(
+        await saveDemand(hq, {
+          startAt: taipei("2027-02-14", "22:00"),
+          endAt: taipei("2027-02-15", "02:00"),
+          tasks: [{ role: "helper", taskKey: DUTY }],
+        }),
+        "saveScheduleDemand",
+      );
+      // 新竹店那天自己設特殊日 → 沿用不到最上層的店休
+      const special = await setDay(hsinchu, "2027-02-15", "special");
+      expect(special.closedConflicts).toEqual([]);
+      const result = await setDay(tenantA, "2027-02-15");
+      expect(result.closedConflicts).toEqual([
+        {
+          orgId: String(zhongshan),
+          orgName: "中山店",
+          demandCount: 2,
+          entryCount: 0,
+        },
+      ]);
+    });
+  });
+
   describe("排班:填進執行任務", () => {
     it("一筆執行任務第二個人填 → 擋下", async () => {
       const demand = await demandOn("2026-11-03", "08:30", "14:30");
@@ -883,6 +1047,8 @@ describe("排班表(GraphQL 端點 + 真 MongoDB)", () => {
         errorOf(await overnightEntry("2026-12-12", "2026-12-13", "06:00")),
       ).toMatchObject({ code: "VALIDATION_FAILED", fields: ["startAt"] });
 
+      // 人力需求先建好(店休日不能建人力需求),之後才設隔天店休
+      const before = await overnightDemand("2026-12-14", "2026-12-15", "02:00");
       const closed = await gql(hq, SAVE_CALENDAR_DAY, {
         input: {
           orgId: String(zhongshan),
@@ -892,7 +1058,9 @@ describe("排班表(GraphQL 端點 + 真 MongoDB)", () => {
       });
       expect(closed.errors).toBeUndefined();
       expect(
-        errorOf(await overnightEntry("2026-12-14", "2026-12-15", "02:00")),
+        errorOf(
+          await overnightEntry("2026-12-14", "2026-12-15", "02:00", before),
+        ),
       ).toMatchObject({ code: "VALIDATION_FAILED", fields: ["startAt"] });
     });
 
@@ -1017,7 +1185,8 @@ describe("排班表(GraphQL 端點 + 真 MongoDB)", () => {
       });
     });
 
-    it("店休那天不能排", async () => {
+    it("店休那天不能排(先有人力需求、後設店休)", async () => {
+      const demand = await demandOn("2026-11-10", "08:30", "14:30");
       dataOf(
         await gql(hq, SAVE_CALENDAR_DAY, {
           input: {
@@ -1026,9 +1195,8 @@ describe("排班表(GraphQL 端點 + 真 MongoDB)", () => {
             type: "closed",
           },
         }),
-        "saveScheduleCalendarDay" as keyof Payloads,
+        "saveScheduleCalendarDay",
       );
-      const demand = await demandOn("2026-11-10", "08:30", "14:30");
       const result = await saveEntry(hq, {
         userId: String(li.userId),
         startAt: taipei("2026-11-10", "08:30"),

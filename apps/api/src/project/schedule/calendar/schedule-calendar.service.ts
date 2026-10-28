@@ -18,11 +18,19 @@ import {
 } from "../../../database/operator-context";
 import { tenantTimezoneOf } from "../../../database/tenant-timezone";
 import {
+  ScheduleDemandsRepository,
+  ScheduleEntriesRepository,
+} from "../../database/schedule/roster.repositories";
+import {
   type ScheduleCalendarDayDocument,
   ScheduleCalendarDaysRepository,
 } from "../../database/schedule/schedule.repositories";
 import { ScheduleFieldOptionsService } from "../field-options/schedule-field-options.service";
-import { dateKeyOf, instantRangeFilter } from "../shared/schedule-dates";
+import {
+  dateKeyOf,
+  dayKeyRange,
+  instantRangeFilter,
+} from "../shared/schedule-dates";
 import {
   SCHEDULE_REASONS,
   forbiddenError,
@@ -47,7 +55,9 @@ import type {
   SaveScheduleCalendarDayInput,
 } from "./dto/schedule-calendar.input";
 import type {
+  ScheduleCalendarClosedConflictModel,
   ScheduleCalendarDayModel,
+  ScheduleCalendarDayPayload,
   ScheduleCalendarPayload,
 } from "./models/schedule-calendar.model";
 
@@ -94,6 +104,7 @@ function blankToNull(value: string | null | undefined): string | null {
  *   (沿用上層的那一天在本店看得到、改不了 → `FORBIDDEN` / `NOT_OWNER`)
  * - 同一層同一天只有一筆(店休與特殊日擇一;唯一索引兜底同時寫入)
  * - 特殊日類別要是欄位管理「特殊日類別」啟用中的選項
+ * - 先有資料、後設店休:照樣存,回應附那天已經有人力需求 / 排班的店(`closedConflicts`),畫面提醒去刪
  */
 @Injectable()
 export class ScheduleCalendarService {
@@ -103,6 +114,8 @@ export class ScheduleCalendarService {
     private readonly permissions: SchedulePermissions,
     private readonly audit: AuditService,
     private readonly fieldOptions: ScheduleFieldOptionsService,
+    private readonly demands: ScheduleDemandsRepository,
+    private readonly entries: ScheduleEntriesRepository,
   ) {}
 
   async range(
@@ -131,7 +144,7 @@ export class ScheduleCalendarService {
   async save(
     operator: OperatorContext,
     input: SaveScheduleCalendarDayInput,
-  ): Promise<ScheduleCalendarDayModel> {
+  ): Promise<ScheduleCalendarDayPayload> {
     const org = await resolveScheduleOrg(operator, this.orgs, input.orgId);
     const timezone = await tenantTimezoneOf(this.orgs, operator, org.tenantId);
     const data = validatedDay(input, timezone);
@@ -184,7 +197,13 @@ export class ScheduleCalendarService {
       after: auditOf(saved),
     });
     const names = await loadOrgNames(operator, this.orgs, org.chain);
-    return dayModelOf(saved, org, names, true);
+    return {
+      item: dayModelOf(saved, org, names, true),
+      closedConflicts:
+        saved.type === "closed"
+          ? await this.closedConflictsOf(operator, org, saved.date, timezone)
+          : [],
+    };
   }
 
   async remove(
@@ -244,6 +263,60 @@ export class ScheduleCalendarService {
     return holds(SCHEDULE_PERMISSIONS.editCalendar);
   }
 
+  /**
+   * 這一層設成店休的那天,已經有人力需求 / 排班的店:這一層與看得到的下層各店中,那天沿用這一筆的
+   * (自己或中間某一層另設了那天 → 不算);那天 = 租戶時區 00:00 到隔天 00:00,前一天跨午夜做進來的也算。
+   */
+  private async closedConflictsOf(
+    operator: OperatorContext,
+    org: ScheduleOrg,
+    date: Date,
+    timezone: string,
+  ): Promise<ScheduleCalendarClosedConflictModel[]> {
+    const found = await this.orgs.findMany(scheduleOrgReader(operator), {
+      ancestors: org.id,
+    });
+    const descendants = found.filter((item) =>
+      isOrgVisible(operator, item._id),
+    );
+    const subtree = [org.id, ...descendants.map((item) => item._id)];
+    const ownDays = await this.days.findMany(operator, {
+      orgId: { $in: descendants.map((item) => item._id) },
+      date,
+    });
+    const affected = [
+      org.id,
+      ...inheritingOrgIds(
+        org.id,
+        descendants,
+        new Set(ownDays.map((day) => String(day.orgId))),
+      ),
+    ];
+    const key = dateKeyOf(date, timezone);
+    const whole = dayKeyRange(key, key, timezone);
+    const overlap = {
+      orgId: { $in: affected },
+      startAt: { $lt: new Date(whole.to) },
+      endAt: { $gt: new Date(whole.from) },
+    };
+    const [demands, entries] = await Promise.all([
+      this.demands.findMany(operator, overlap, { select: { orgId: 1 } }),
+      this.entries.findMany(operator, overlap, { select: { orgId: 1 } }),
+    ]);
+    const demandCounts = countsByOrg(demands);
+    const entryCounts = countsByOrg(entries);
+    const ids = subtree.filter(
+      (id) => demandCounts.has(String(id)) || entryCounts.has(String(id)),
+    );
+    const names = await loadOrgNames(operator, this.orgs, ids);
+    return ids.map((id) => ({
+      orgId: String(id),
+      orgName: names.get(String(id)) ?? "",
+      demandCount: demandCounts.get(String(id)) ?? 0,
+      entryCount: entryCounts.get(String(id)) ?? 0,
+    }));
+  }
+
   /** 看得到(鏈上設的)→ 否則 `NOT_FOUND`;不是這一層設的 → `FORBIDDEN`。 */
   private async mustOwnDay(
     operator: OperatorContext,
@@ -265,6 +338,37 @@ export class ScheduleCalendarService {
     }
     return record;
   }
+}
+
+/** 每家店的筆數。 */
+function countsByOrg(
+  records: readonly { orgId: Types.ObjectId }[],
+): Map<string, number> {
+  const counts = new Map<string, number>();
+  for (const record of records) {
+    const id = String(record.orgId);
+    counts.set(id, (counts.get(id) ?? 0) + 1);
+  }
+  return counts;
+}
+
+/**
+ * 下層各店中,那天沿用 `top` 那一層設定的:它自己或它和 `top` 之間的任何一層另設了那天 → 不算
+ * (同 `pickEffectiveDays` 的「最接近的那一層為準」)。
+ */
+function inheritingOrgIds(
+  top: Types.ObjectId,
+  descendants: readonly { _id: Types.ObjectId; ancestors: Types.ObjectId[] }[],
+  ownDayOrgIds: ReadonlySet<string>,
+): Types.ObjectId[] {
+  return descendants
+    .filter((item) => {
+      const at = item.ancestors.findIndex((id) => String(id) === String(top));
+      return ![...item.ancestors.slice(at + 1), item._id].some((id) =>
+        ownDayOrgIds.has(String(id)),
+      );
+    })
+    .map((item) => item._id);
 }
 
 function validatedDay(

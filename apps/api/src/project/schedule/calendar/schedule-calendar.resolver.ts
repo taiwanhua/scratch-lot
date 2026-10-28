@@ -41,7 +41,7 @@ export class ScheduleCalendarResolver {
     @Args("input") input: SaveScheduleCalendarDayInput,
     @CurrentOperator() operator: OperatorContext,
   ): Promise<ScheduleCalendarDayPayload> {
-    return { item: await this.service.save(operator, input) };
+    return this.service.save(operator, input);
   }
 
   @RequirePermission("schedule.manage.edit-calendar")
