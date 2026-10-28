@@ -86,7 +86,7 @@ export const WeekMobileList = ({ dates }: WeekMobileListProps) => {
                 border: 1,
                 borderColor: "divider",
                 borderRadius: 1.5,
-                bgcolor: calendarMarkBackground(mark),
+                bgcolor: calendarMarkBackground(mark) ?? "background.paper",
                 color: "text.primary",
                 textAlign: "left",
                 cursor: "pointer",

@@ -2,6 +2,7 @@ import { tagPaletteBackground } from "@/components/project/TagPaletteChip/tag-pa
 import {
   type TagPaletteKey,
   isTagPaletteKey,
+  tagPaletteColorOf,
 } from "@/lib/project/tag-palettes";
 
 /** 行事曆的一天(排班表、我的班表的查詢都帶這三個欄位)。 */
@@ -38,14 +39,40 @@ export const calendarMarkOf = (
   return { kind: "none" };
 };
 
+export interface CalendarMarkBackgroundOptions {
+  /**
+   * 店休由底座元件自己的停用畫(班表 `RosterDate.disabled`、時間軸 `disabledRanges`、月檢視 `MonthCalendar` 的
+   * `disabled`;都是 `action.disabledBackground`):這裡店休回空,不重複疊一層
+   */
+  closedByComponent?: boolean;
+}
+
 /**
- * 清單那一天的底色:特殊日用它的顏色(標籤色票底色;祖先要有 `tagPaletteBackgroundVarsSx`)、店休停用底色(同 `closedBlockSx`)、其他白底。
+ * 行事曆標示 → 那天的底色(規格 14.5「行事曆標示」、14.6;各檢視只做轉接,不各自判斷顏色):
+ * - 店休:店休灰 `action.disabledBackground`(同 `closedBlockSx`、班表停用欄、時間軸停用區;半透明,疊在紙色上)
+ * - 特殊日:行事曆選的色票淡化底色(`tagPaletteBackground`;祖先要有 `tagPaletteBackgroundVarsSx`)
+ * - 其他:空(用原本的底色)
+ *
+ * 只收「自己淡化的來源色」的底座 `MonthCalendar` 用 `calendarMarkMonthBackground`。
  */
-export const calendarMarkBackground = (mark: CalendarMark): string => {
+export const calendarMarkBackground = (
+  mark: CalendarMark,
+  { closedByComponent = false }: CalendarMarkBackgroundOptions = {},
+): string | undefined => {
   if (mark.kind === "special") {
     return tagPaletteBackground(mark.paletteKey);
   }
-  return mark.kind === "closed"
+  return mark.kind === "closed" && !closedByComponent
     ? "action.disabledBackground"
-    : "background.paper";
+    : undefined;
 };
+
+/**
+ * 底座 `MonthCalendar` 每日資訊的 `background`:它只收**來源色**、自己以主題 alpha 淡化,收不下色票底色變數,
+ * 所以特殊日給色票代表色(`tagPaletteColorOf`);店休不從這裡給(排班表月檢視用 `disabled`;
+ * 我的班表月曆要可點,用 `calendarMarkBackground` 鋪在 `content` 底層)。
+ */
+export const calendarMarkMonthBackground = (
+  mark: CalendarMark,
+): string | undefined =>
+  mark.kind === "special" ? tagPaletteColorOf(mark.paletteKey) : undefined;

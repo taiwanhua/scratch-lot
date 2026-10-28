@@ -9,8 +9,10 @@ import type {
   ScheduleTimelineSlot,
 } from "@repo/ui/schedule-timeline";
 
-import { tagPaletteBackground } from "@/components/project/TagPaletteChip/tag-palette-background";
-import { calendarMarkOf } from "@/components/project/schedule/CalendarMark/calendar-mark";
+import {
+  calendarMarkBackground,
+  calendarMarkOf,
+} from "@/components/project/schedule/CalendarMark/calendar-mark";
 import {
   autoMarkSx,
   leaderMarkSx,
@@ -304,6 +306,10 @@ export const useTimelineGroups = (
   const punchCounts = unmatchedCountsByDate(data.unmatchedPunches);
   const timelineDates = shownDates.map((date): ScheduleTimelineDate => {
     const mark = calendarMarkOf(calendarByDate.get(date));
+    // 特殊日整欄色票底;店休由時間軸的 `disabledRanges` 畫(下方)
+    const background = calendarMarkBackground(mark, {
+      closedByComponent: true,
+    });
     return {
       date,
       label: (
@@ -317,9 +323,7 @@ export const useTimelineGroups = (
           />
         </Box>
       ),
-      ...(mark.kind === "special"
-        ? { background: tagPaletteBackground(mark.paletteKey) }
-        : {}),
+      ...(background === undefined ? {} : { background }),
     };
   });
 
