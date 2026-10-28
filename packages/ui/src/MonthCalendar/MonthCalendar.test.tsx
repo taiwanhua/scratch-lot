@@ -284,6 +284,38 @@ describe("MonthCalendar 註記、角標與自訂內容", () => {
     );
   });
 
+  it("自訂內容裡鋪滿整格的裝飾畫在日期數字、註記與角標底下", () => {
+    renderCalendar({
+      days: {
+        "2026-10-11": {
+          note: "店慶",
+          corners: [{ variant: "dot", color: "error", label: "缺卡" }],
+          content: (
+            <span
+              data-testid="backdrop"
+              style={{ position: "absolute", inset: 0 }}
+            />
+          ),
+        },
+      },
+    });
+
+    const cell = day("2026-10-11");
+    // 格子自成一層:裡面的層級不會蓋到格子外的浮層
+    expect(cell).toHaveStyle({ isolation: "isolate" });
+    const number = cell.querySelector("[data-day-number]");
+    const note = cell.querySelector("[data-day-note]");
+    const corners = cell.querySelector("[data-corners]");
+    for (const layer of [number, note, corners]) {
+      expect(layer).toHaveStyle({ zIndex: "1" });
+    }
+    expect(number).toHaveStyle({ position: "relative" });
+    expect(note).toHaveStyle({ position: "relative" });
+    expect(within(cell).getByTestId("backdrop")).not.toHaveStyle({
+      zIndex: "1",
+    });
+  });
+
   it("前後補的日子不畫註記與角標", () => {
     renderCalendar({
       days: {

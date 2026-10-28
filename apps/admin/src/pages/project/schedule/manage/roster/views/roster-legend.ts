@@ -39,7 +39,7 @@ export const ROSTER_LEGEND_ITEMS = {
     "vacancyLeader",
     "vacancyHelper",
   ],
-  /** 日(手機):卡片(標題「臨」、右上人數標籤三色)、人、缺額;那天的 ⏲ */
+  /** 日(手機):卡片(標題「臨」、右上人數標籤三色)、人、缺額;上方那天的店休 / 特殊日與 ⏲ */
   dayMobile: [
     "leader",
     "temp",
@@ -49,6 +49,8 @@ export const ROSTER_LEGEND_ITEMS = {
     "missingLeader",
     "missingHelper",
     "full",
+    "special",
+    "closed",
     "unmatchedPunch",
     "vacancyLeader",
     "vacancyHelper",
@@ -86,7 +88,7 @@ export const ROSTER_LEGEND_ITEMS = {
   dayPicker: ["dotMissingLeader", "dotMissingHelper", "closed", "special"],
   /**
    * 班表:人員格子(已排的班、負責人、「臨」、「晚 ×2」、自動排入、休息、畫休斜線、不可排灰塊、店休停用底色、
-   * 時鐘圖示)、人力需求區的人數標籤三色、表頭的特殊日
+   * 時鐘圖示)、人力需求區的人數標籤三色、特殊日整欄底色
    */
   grid: [
     "leader",

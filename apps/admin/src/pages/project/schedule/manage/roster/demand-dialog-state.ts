@@ -1,9 +1,10 @@
 import type { ScheduleTaskRole } from "@repo/domain/project/schedule-settings";
 
 import type { FieldErrorTexts } from "@/lib/base/field-errors";
-import { localPartsOf } from "@/lib/project/schedule-roster";
+import { localPartsOf, spanOf } from "@/lib/project/schedule-roster";
 
 import { scheduleErrorTextsOf } from "../../schedule-field-errors";
+import { touchesClosedDay } from "./entry-dialog-state";
 import type {
   DemandPreset,
   RosterDemand,
@@ -138,14 +139,53 @@ export const missingDemandFields = (values: DemandValues): DemandField[] => {
   return required.filter(([, isMissing]) => isMissing).map(([key]) => key);
 };
 
+type Translate = (key: string, values?: Record<string, string>) => string;
+
+/**
+ * 人力需求對話框換掉的原因文案:店休和排班同一個 api 碼 `STORE_CLOSED`,這裡寫「不能建人力需求」。
+ * 送出前的檢查(`demandClosedText`)與 api 擋下時同一句(REACT-18)。
+ */
+const DEMAND_REASON_KEYS: Readonly<Record<string, string>> = {
+  "errors.reasons.STORE_CLOSED": "errors.demandReasons.STORE_CLOSED",
+};
+
+const demandTranslate =
+  (t: Translate): Translate =>
+  (key, values) =>
+    t(DEMAND_REASON_KEYS[key] ?? key, values);
+
+/**
+ * 店休日(這天或跨午夜的隔天)不能建人力需求:送出前就在開始時間欄下寫原因(api 標回的優先)、
+ * `isClosed` 時 [新增] / [儲存] 停用(同排班對話框 `entryCheckReasonsOf`)。
+ */
+export const withClosedReason = (
+  values: DemandValues,
+  fieldErrors: DemandFieldErrors,
+  context: {
+    calendarDays: readonly { date: string; type: string }[];
+    timezone: string;
+  },
+  t: Translate,
+): { isClosed: boolean; shownErrors: DemandFieldErrors } => {
+  const isClosed = touchesClosedDay(
+    values.date,
+    spanOf(values.date, values.startTime, values.endTime, context.timezone),
+    context,
+  );
+  return {
+    isClosed,
+    shownErrors:
+      isClosed && fieldErrors.startTime === undefined
+        ? { ...fieldErrors, startTime: t("errors.demandReasons.STORE_CLOSED") }
+        : fieldErrors,
+  };
+};
+
 /** api 錯誤 → 對話框欄位下的原因與提示(REACT-18;api 的 `startAt` / `endAt` 對到開始 / 結束時間)。 */
-export const demandErrorTextsOf = (
-  error: unknown,
-  t: (key: string, values?: Record<string, string>) => string,
-) =>
+export const demandErrorTextsOf = (error: unknown, t: Translate) =>
   scheduleErrorTextsOf(
     error,
     DEMAND_FIELDS,
-    t,
+    demandTranslate(t),
     (field) => DEMAND_API_FIELDS[field],
   );

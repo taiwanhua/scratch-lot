@@ -27,6 +27,7 @@ import {
   type TestRosterDemand,
   type TestRosterEntry,
   dayAt,
+  sampleCalendarMarks,
   sampleRoster,
   sampleRosterExtras,
   sampleUnmatchedPunches,
@@ -47,6 +48,10 @@ export interface ScheduleRosterWorldOptions extends AutoRunWorldOptions {
   canUsePunchTime?: boolean;
   /** 沒有未對應排班的打卡(預設有 `sampleUnmatchedPunches`) */
   noUnmatchedPunches?: boolean;
+  /** 追加特殊日與店休那天的未對應打卡(`sampleCalendarMarks`) */
+  calendarMarks?: boolean;
+  /** 存人力需求時 api 回店休(`STORE_CLOSED`)的日子(台北的日期鍵;前端讀到的行事曆不知道,例:剛被設成店休) */
+  closedDemandDates?: string[];
 }
 
 const nameOf = (userId: string) =>
@@ -80,12 +85,17 @@ export const scheduleRosterWorld = (
   } = options;
   /** 已經被排班對話框對應走的卡(不再列為未對應) */
   const matchedPunchIds = new Set<string>();
+  const marksOf = (month: string) =>
+    options.calendarMarks === true
+      ? sampleCalendarMarks(month)
+      : { calendarDays: [], unmatchedPunches: [] };
   const unmatchedPunchesOf = (month: string) =>
     options.noUnmatchedPunches === true
       ? []
-      : sampleUnmatchedPunches(month).filter(
-          (punch) => !matchedPunchIds.has(punch.id),
-        );
+      : [
+          ...sampleUnmatchedPunches(month),
+          ...marksOf(month).unmatchedPunches,
+        ].filter((punch) => !matchedPunchIds.has(punch.id));
   let checkScenario: CheckScenario = options.check ?? "limits";
   let period: {
     status: string;
@@ -222,6 +232,10 @@ export const scheduleRosterWorld = (
             demands: demands.map((demand) => demandOf(demand)),
             entries: entries.map((entry) => entryOf(entry)),
             ...sampleRosterExtras(input.month),
+            calendarDays: [
+              ...sampleRosterExtras(input.month).calendarDays,
+              ...marksOf(input.month).calendarDays,
+            ],
             templates: ROSTER_TEMPLATES,
             unmatchedPunches: unmatchedPunchesOf(input.month),
           },
@@ -231,6 +245,22 @@ export const scheduleRosterWorld = (
     api.mutation("SaveScheduleDemand", ({ variables }) => {
       const { input } = variables as SaveScheduleDemandMutationVariables;
       inputs.demands.push(input);
+      if (
+        options.closedDemandDates?.includes(localDate(input.startAt)) === true
+      ) {
+        return HttpResponse.json({
+          errors: [
+            {
+              message: "store is closed on a day of this demand",
+              extensions: {
+                code: "VALIDATION_FAILED",
+                fields: ["startAt"],
+                reason: "STORE_CLOSED",
+              },
+            },
+          ],
+        });
+      }
       const id = input.id ?? nextId("d");
       const existing = demands.find((demand) => demand.id === id);
       const tasks = input.tasks.map((task) => ({

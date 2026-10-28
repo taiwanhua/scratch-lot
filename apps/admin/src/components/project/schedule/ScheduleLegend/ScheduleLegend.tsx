@@ -31,6 +31,7 @@ export type ScheduleLegendItem =
   | "leader"
   | "entry"
   | "temp"
+  | "tempEntry"
   | "auto"
   | "breakMinutes"
   | "unavailable"
@@ -81,6 +82,8 @@ export const ScheduleLegend = ({ items }: ScheduleLegendProps) => {
     leader: mark(t("sampleName"), leaderMarkSx),
     entry: swatch(null, { bgcolor: "primary.lighter", border: 0 }),
     temp: mark(t("tempMark"), { fontWeight: 600 }),
+    // 我的班表:「臨」指的是沒有套用範本的班(同一個記號,文字不同)
+    tempEntry: mark(t("tempMark"), { fontWeight: 600 }),
     auto: (
       <Box
         component="span"

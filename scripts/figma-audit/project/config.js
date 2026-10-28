@@ -104,6 +104,18 @@ const AUDIT_CONFIG = {
         "ST-36|開班|M":
           "手機的卡片展開是底部面板,蓋住下面其他收銀點的標題列(電腦 / 平板原地展開,看得到)",
       };
+      // 看板 StoreTopBar 的 [📷 掃描](Camera 屬性)只在平板 / 手機打開
+      for (const code of [
+        "ST-01",
+        "ST-02",
+        "ST-20",
+        "ST-34",
+        "ST-35",
+        "ST-36",
+        "ST-38",
+      ])
+        out[`${code}|📷 掃描|D`] =
+          "掃描按鈕只在有相機的手機 / 平板看板顯示,電腦不畫(ST-43)";
       for (const b of [
         "+ 人力需求",
         "+ 新增排班",
@@ -177,6 +189,11 @@ const AUDIT_CONFIG = {
     // 圖例項目元件與它的文字屬性
     legendItem: "Draft/LegendItem",
     legendLabelProp: "Label#289:0",
+    // 圖例照程式清單的頁 → 理由:「圖例樣本畫面沒用到」不算錯(列在 legendExempted)
+    exempt: {
+      "70:14":
+        "班表管理的圖例照程式 roster-legend.ts / my-schedule-legend.ts 列各檢視「可能出現」的記號(規格 14.5「圖例」),示範畫面沒畫到的記號不補示範資料",
+    },
   },
 
   // audit.js

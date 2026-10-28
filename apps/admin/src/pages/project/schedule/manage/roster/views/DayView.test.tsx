@@ -232,4 +232,18 @@ describe("排班表:日檢視", () => {
       within(dialog).getByRole("group", { name: /日期/ }),
     ).toHaveTextContent("2026-11-01");
   });
+
+  it("手機:店休那天沒有 [+ 人力需求](店休日不能建人力需求)", async () => {
+    setViewportWidth(390);
+    renderSchedulePage({ path: dayPath("2026-11-03") });
+    const mark = await waitFor(() => {
+      const found = document.querySelector('[data-calendar-mark="closed"]');
+      expect(found).not.toBeNull();
+      return found;
+    });
+    expect(mark).toHaveTextContent("店休");
+    expect(
+      screen.queryByRole("button", { name: "+ 人力需求" }),
+    ).not.toBeInTheDocument();
+  });
 });

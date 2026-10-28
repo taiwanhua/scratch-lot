@@ -5,6 +5,7 @@ import { useTranslations } from "use-intl";
 import { DEFAULT_TENANT_TIMEZONE } from "@repo/domain/form";
 import { SCHEDULE_FIELD_CATEGORY_KEYS } from "@repo/domain/project/schedule-fields";
 import {
+  type SaveScheduleCalendarDayMutation,
   type ScheduleCalendarDayFieldsFragment,
   useDeleteScheduleCalendarDayMutation,
   useSaveScheduleCalendarDayMutation,
@@ -20,18 +21,21 @@ import { Stack } from "@repo/ui/stack";
 import { TextField } from "@repo/ui/text-field";
 import { Typography } from "@repo/ui/typography";
 
+import { FieldErrorGroup } from "@/components/base/FieldErrorGroup/FieldErrorGroup";
 import { TagPaletteSelect } from "@/components/project/TagPaletteSelect/TagPaletteSelect";
 import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
 import { useSession } from "@/hooks/base/useSession";
 import { useTemporalText } from "@/hooks/base/useTemporalText";
 import { useTenantTimezone } from "@/hooks/base/useTenantTimezone";
+import { useClosedDayConflictNotice } from "@/hooks/project/schedule/useClosedDayConflictNotice/useClosedDayConflictNotice";
 import { useScheduleFieldOptions } from "@/hooks/project/schedule/useScheduleFieldOptions/useScheduleFieldOptions";
 import type { FieldErrorTexts } from "@/lib/base/field-errors";
 import { localDayInstantOf } from "@/lib/base/form-engine/local-day";
 import { dayKeyOf } from "@/lib/project/schedule-day-offs";
 import {
+  SPECIAL_DAY_PALETTE_KEYS,
   type TagPaletteKey,
-  isTagPaletteKey,
+  isSpecialDayPaletteKey,
 } from "@/lib/project/tag-palettes";
 
 import { ConfirmDeleteDialog } from "../../ConfirmDeleteDialog";
@@ -46,9 +50,9 @@ type Day = ScheduleCalendarDayFieldsFragment;
 const SCHEDULE_CALENDAR_QUERY_KEY = "ScheduleCalendar";
 type DayType = "closed" | "special";
 /** 會標回對話框的欄位(api `fields`)。 */
-const FIELD_LIST = ["date", "category", "name"] as const;
+const FIELD_LIST = ["date", "category", "name", "paletteKey"] as const;
 
-type Field = "date" | "category" | "name";
+type Field = (typeof FIELD_LIST)[number];
 
 export interface CalendarDayDialogProps {
   /** 寫在哪一層(行事曆頁選的分店) */
@@ -94,8 +98,9 @@ export const CalendarDayDialog = ({
   const [category, setCategory] = useState(day?.category ?? "");
   const [name, setName] = useState(day?.name ?? "");
   const [note, setNote] = useState(day?.note ?? "");
+  // 特殊日顏色必選、不含灰色(規格 14.1);舊資料不是可選的色票時當作還沒選
   const [paletteKey, setPaletteKey] = useState<TagPaletteKey | null>(
-    isTagPaletteKey(day?.paletteKey) ? day.paletteKey : null,
+    isSpecialDayPaletteKey(day?.paletteKey) ? day.paletteKey : null,
   );
   // 欄位錯了就在欄位正下方寫原因(REACT-18);提示只放通用句
   const [fieldErrors, setFieldErrors] = useState<FieldErrorTexts<Field>>({});
@@ -111,12 +116,17 @@ export const CalendarDayDialog = ({
   };
   const errorOf = (error: unknown) =>
     scheduleErrorTextsOf(error, FIELD_LIST, tSchedule).summary;
+  const noticeClosedConflicts = useClosedDayConflictNotice();
   const save = useSaveScheduleCalendarDayMutation(
     session.client,
-    useMutationFeedback({
+    useMutationFeedback<SaveScheduleCalendarDayMutation>({
       success: tCalendar("feedback.saveSuccess"),
       error: errorOf,
-      onSuccess: done,
+      onSuccess: (result) => {
+        // 先有人力需求 / 排班、後設店休:照樣存,提醒去排班表刪除
+        noticeClosedConflicts(result.saveScheduleCalendarDay.closedConflicts);
+        done();
+      },
       onError: (error) => {
         setFieldErrors(
           scheduleErrorTextsOf(error, FIELD_LIST, tSchedule).texts,
@@ -141,6 +151,7 @@ export const CalendarDayDialog = ({
     if (instant === null) missing.push("date");
     if (isSpecial && category === "") missing.push("category");
     if (isSpecial && name.trim() === "") missing.push("name");
+    if (isSpecial && paletteKey === null) missing.push("paletteKey");
     setFieldErrors(scheduleFormatErrorsOf(missing, tSchedule));
     if (missing.length > 0 || instant === null) {
       return;
@@ -279,15 +290,26 @@ export const CalendarDayDialog = ({
           }}
         />
         {isSpecial && (
-          <Stack direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
-            <Typography variant="subtitle2">{t("color")}</Typography>
-            <TagPaletteSelect
-              value={paletteKey}
-              label={t("colorAria")}
-              disabled={!canEdit}
-              onChange={setPaletteKey}
-            />
-          </Stack>
+          <FieldErrorGroup
+            label={t("color")}
+            errorText={fieldErrors.paletteKey}
+          >
+            <Stack direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
+              {/* 必填:同其他必填欄位在標籤後加「*」 */}
+              <Typography variant="subtitle2">{`${t("color")} *`}</Typography>
+              <TagPaletteSelect
+                value={paletteKey}
+                label={t("colorAria")}
+                disabled={!canEdit}
+                keys={SPECIAL_DAY_PALETTE_KEYS}
+                allowNone={false}
+                onChange={(next) => {
+                  setPaletteKey(next);
+                  setFieldErrors({});
+                }}
+              />
+            </Stack>
+          </FieldErrorGroup>
         )}
       </Stack>
       {isConfirmingDelete && day !== null && (

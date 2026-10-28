@@ -9,9 +9,10 @@ export interface MonthCalendarCornerMarkProps {
   corner: MonthCalendarCorner;
 }
 
-/** 貼右上角;手機小格(約 48px)縮小留白。 */
+/** 貼右上角;手機小格(約 48px)縮小留白;疊在 `content` 的鋪滿裝飾之上(見 `MonthCalendarDayCell`)。 */
 const cornerPosition = (theme: Theme) => ({
   position: "absolute",
+  zIndex: 1,
   top: { xs: theme.spacing(0.5), md: theme.spacing(1) },
   right: { xs: theme.spacing(0.5), md: theme.spacing(1) },
 });

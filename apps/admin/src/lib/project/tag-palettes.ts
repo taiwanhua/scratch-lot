@@ -1,8 +1,10 @@
 import type { TagPaletteKey } from "@repo/domain/project/tag-palette";
 
 export {
+  SPECIAL_DAY_PALETTE_KEYS,
   TAG_PALETTE_KEYS,
   type TagPaletteKey,
+  isSpecialDayPaletteKey,
   isTagPaletteKey,
 } from "@repo/domain/project/tag-palette";
 

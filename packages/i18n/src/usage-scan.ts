@@ -34,9 +34,16 @@ import * as ts from "typescript";
  * ## 掃不到的(交給白名單)
  *
  * **鍵由執行期的值組出來**的一律掃不到:`` t(`errors.${code}`) ``、`tConditions(cond)`、
- * 圖示短詞 `tIcons(key)`。這類在 `dead-keys.test.ts` 的 `DYNAMIC_KEYS` 逐條列出並寫理由;
+ * 圖示短詞 `tIcons(key)`。這類逐條列進白名單並寫理由(底座的在 `dead-keys.test.ts`,
+ * 專案的在 `project/dynamic-keys.ts`,兩份合成 `DYNAMIC_KEYS`);
  * 白名單本身也會被檢查(每一條至少要對得上一個鍵,鍵刪光了白名單就要跟著刪)。
  */
+
+/** 動態 key 白名單的一條:`key` 以 `.` 結尾是前綴,其餘是單一個鍵;`reason` 寫值從哪裡來。 */
+export interface DynamicKey {
+  key: string;
+  reason: string;
+}
 
 const TRANSLATION_FACTORIES = new Set(["useTranslations", "getTranslations"]);
 

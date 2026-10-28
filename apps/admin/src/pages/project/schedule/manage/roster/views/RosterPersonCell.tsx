@@ -18,6 +18,7 @@ import {
 import { entryChipOf, localPartsOf } from "@/lib/project/schedule-roster";
 
 import type { RosterData, RosterDemand, RosterEntry } from "../roster-context";
+import { UnmatchedPunchMark } from "./UnmatchedPunchMark";
 
 export interface RosterPersonCellProps {
   entries: readonly RosterEntry[];
@@ -41,7 +42,8 @@ export interface RosterPersonCellProps {
  * 班表檢視的人員格子(規格 14.5 班表):已排的班(範本簡稱、時間、☕ 休息;負責人簡稱套負責人底色、
  * 未套用範本寫「臨」、同一段時間兩筆寫「晚 ×2」、自動排入右上角圖示);店休(停用底色);別家店的班(灰色區塊,
  * 看不到那家店寫「已排於其他分店」);整天畫休(灰色斜線底「畫休」);時段不可排(灰色區塊);
- * 未對應排班的打卡在右上角顯示時鐘圖示 + 張數(規格 14.5),點了打開排班對話框(有班)或新增排班(沒班)。
+ * 未對應排班的打卡在右上角顯示時鐘圖示 + 張數(規格 14.5),點了打開排班對話框(有班)或新增排班(沒班);
+ * 店休的格子也顯示時鐘圖示,但只標示、不能點。
  */
 export const RosterPersonCell = ({
   entries,
@@ -60,18 +62,29 @@ export const RosterPersonCell = ({
   const tTimeline = useTranslations("admin.schedule.roster.timeline");
   const time = (iso: string) => localPartsOf(iso, timezone).time;
   if (isClosed) {
-    // 店休整天不能排:同時間軸的停用區、圖例「店休」的停用底色
+    // 店休整天不能排:同時間軸的停用區、圖例「店休」的停用底色。那天有未對應排班的打卡照樣顯示時鐘圖示
+    // (同週 / 日 / 月檢視的 ⏲ 只標示、不能點:店休不能排班,沒有排班對話框可開)
     return (
-      <Box
+      <Stack
+        direction="row"
+        spacing={0.5}
         sx={[
           closedBlockSx,
-          { minHeight: 40, borderRadius: 1, px: 0.75, py: 0.5 },
+          {
+            minHeight: 40,
+            borderRadius: 1,
+            px: 0.75,
+            py: 0.5,
+            alignItems: "flex-start",
+            justifyContent: "space-between",
+          },
         ]}
       >
         <Typography variant="caption" sx={{ fontWeight: 600 }}>
           {t("closed")}
         </Typography>
-      </Box>
+        <UnmatchedPunchMark count={punchCount} />
+      </Stack>
     );
   }
   const fullDay = unavailability?.fullDay === true;

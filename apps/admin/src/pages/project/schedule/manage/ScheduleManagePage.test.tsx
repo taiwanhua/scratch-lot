@@ -51,6 +51,78 @@ describe("排班作業:行事曆", () => {
     });
   });
 
+  it("[新增] 特殊日:顏色必選(沒選 → 顏色下寫「必填」);面板沒有灰色與「不設定」", async () => {
+    const { user, calendarFake } = renderSchedulePage({ path: CALENDAR });
+    await user.click(
+      await screen.findByRole("button", { name: "+ 新增店休 / 特殊日" }),
+    );
+    const dialog = await screen.findByRole("dialog", {
+      name: "新增店休 / 特殊日",
+    });
+    await typeDate(user, dialog, "2026-11-21");
+    await user.click(within(dialog).getByRole("combobox", { name: /類別/ }));
+    await user.click(await screen.findByRole("option", { name: "活動日" }));
+    await user.type(
+      within(dialog).getByRole("textbox", { name: /名稱/ }),
+      "活動",
+    );
+    await user.click(within(dialog).getByRole("button", { name: "新增" }));
+    expect(
+      within(dialog).getByRole("group", { name: "顏色" }),
+    ).toHaveAccessibleDescription("必填");
+    expect(calendarFake.inputs).toEqual([]);
+
+    await user.click(
+      within(dialog).getByRole("button", { name: "特殊日的顏色" }),
+    );
+    const panel = await screen.findByRole("dialog", { name: "選擇顏色" });
+    expect(within(panel).queryByRole("button", { name: "灰" })).toBeNull();
+    expect(within(panel).queryByRole("button", { name: "不設定" })).toBeNull();
+    await user.click(within(panel).getByRole("button", { name: "藍" }));
+    await user.click(within(dialog).getByRole("button", { name: "新增" }));
+    await waitFor(() => {
+      expect(calendarFake.inputs).toEqual([
+        expect.objectContaining({ type: "special", paletteKey: "blue" }),
+      ]);
+    });
+  });
+
+  it("[新增] 店休:那天已經有人力需求 / 排班 → 照樣存,存檔後提醒到排班表刪除(上層設的列出下層各店)", async () => {
+    const { user } = renderSchedulePage({
+      path: CALENDAR,
+      calendar: {
+        closedConflicts: [
+          {
+            orgId: "org-store",
+            orgName: "中山店",
+            demandCount: 2,
+            entryCount: 1,
+          },
+          {
+            orgId: "org-other",
+            orgName: "新竹店",
+            demandCount: 1,
+            entryCount: 0,
+          },
+        ],
+      },
+    });
+    await user.click(
+      await screen.findByRole("button", { name: "+ 新增店休 / 特殊日" }),
+    );
+    const dialog = await screen.findByRole("dialog", {
+      name: "新增店休 / 特殊日",
+    });
+    await user.click(within(dialog).getByLabelText("店休"));
+    await typeDate(user, dialog, "2026-11-21");
+    await user.click(within(dialog).getByRole("button", { name: "新增" }));
+    expect(
+      await screen.findByText(
+        "這天已經有人力需求或排班(中山店 人力需求 2 筆、排班 1 筆;新竹店 人力需求 1 筆、排班 0 筆),店休那天不能排,請到排班表的週 / 日檢視刪除",
+      ),
+    ).toBeInTheDocument();
+  });
+
   it("沒有 edit-calendar:看不到 [新增]", async () => {
     renderSchedulePage({
       path: CALENDAR,

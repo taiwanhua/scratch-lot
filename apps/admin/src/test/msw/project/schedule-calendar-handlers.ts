@@ -2,6 +2,7 @@ import { HttpResponse } from "msw";
 
 import type {
   DeleteScheduleCalendarDayMutationVariables,
+  SaveScheduleCalendarDayMutation,
   SaveScheduleCalendarDayMutationVariables,
   ScheduleCalendarDayFieldsFragment,
   ScheduleCalendarQueryVariables,
@@ -21,6 +22,8 @@ export interface ScheduleCalendarWorldOptions {
   /** 行事曆預設看的組織(當前組織);預設分店 */
   currentOrg?: { id: string; name: string };
   calendarDays?: TestCalendarDay[];
+  /** 存成店休時回的「那天已經有人力需求 / 排班的店」(預設沒有) */
+  closedConflicts?: SaveScheduleCalendarDayMutation["saveScheduleCalendarDay"]["closedConflicts"];
 }
 
 const ORG_NAMES: Record<string, string> = {
@@ -123,7 +126,13 @@ export const scheduleCalendarWorld = (
       };
       calendarDays = [...calendarDays.filter((item) => item.id !== id), day];
       return HttpResponse.json({
-        data: { saveScheduleCalendarDay: { item: withoutOrgId(day) } },
+        data: {
+          saveScheduleCalendarDay: {
+            item: withoutOrgId(day),
+            closedConflicts:
+              day.type === "closed" ? (options.closedConflicts ?? []) : [],
+          },
+        },
       });
     }),
     api.mutation("DeleteScheduleCalendarDay", ({ variables }) => {

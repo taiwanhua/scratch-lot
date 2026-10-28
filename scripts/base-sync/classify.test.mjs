@@ -62,6 +62,19 @@ test("五支固定組裝入口判為 common:專案不改入口,與底座不同�
   }
 });
 
+test("db-migrator 的專案 migration 測試放 src/project/ → project;根目錄的底座 migration 測試是 common", () => {
+  for (const file of [
+    "apps/db-migrator/src/project/transfer-receipts-per-ticket-migration.test.ts",
+    "apps/db-migrator/src/project/form-submission-shared-org-ids-migration.test.ts",
+  ]) {
+    assert.equal(classifyPath(file, "A"), "project", file);
+  }
+  assert.equal(
+    classifyPath("apps/db-migrator/src/form-temporal-migration.test.ts", "M"),
+    "common",
+  );
+});
+
 test("realtime / print-agent 判為 common", () => {
   assert.equal(classifyPath("apps/realtime/src/index.ts", "A"), "common");
   assert.equal(classifyPath("apps/print-agent/src/main.ts", "M"), "common");
@@ -193,10 +206,11 @@ test("根目錄設定:可被專案擴充的判 mixed,底座固定的判 common",
   assert.equal(classifyPath("tools/.gitignore", "A"), "unknown");
 });
 
-test("專案的後台文案、domain 純邏輯、E2E 資產與 mock world 判為 project", () => {
+test("專案的後台文案與 i18n 登記、domain 純邏輯、E2E 資產與 mock world 判為 project", () => {
   for (const file of [
     "packages/i18n/messages/zh-TW/project/admin.json",
     "packages/i18n/messages/en/project/admin.replacements.json",
+    "packages/i18n/src/project/dynamic-keys.ts",
     "packages/domain/src/project/report-period/index.ts",
     "apps/e2e/fixtures/project/receipt.png",
     "apps/e2e/src/specs/project/store.spec.ts",
@@ -207,6 +221,10 @@ test("專案的後台文案、domain 純邏輯、E2E 資產與 mock world 判為
   assert.equal(
     classifyPath("packages/i18n/messages/zh-TW/admin.json", "M"),
     "mixed",
+  );
+  assert.equal(
+    classifyPath("packages/i18n/src/dead-keys.test.ts", "M"),
+    "common",
   );
   assert.equal(
     classifyPath("packages/domain/src/permission/keys.ts", "M"),

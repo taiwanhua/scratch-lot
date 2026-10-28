@@ -1585,7 +1585,7 @@ describe("排班設定(GraphQL 端點 + 真 MongoDB)", () => {
       });
     });
 
-    it("同一層同一天只能有一筆;特殊日要類別與名稱", async () => {
+    it("同一層同一天只能有一筆;特殊日要類別、名稱與顏色", async () => {
       const duplicate = await gql(manager, SAVE_CALENDAR_DAY, {
         input: {
           orgId: String(zhongshan),
@@ -1607,9 +1607,29 @@ describe("排班設定(GraphQL 端點 + 真 MongoDB)", () => {
       });
       expect(errorOf(missing)).toMatchObject({
         code: "VALIDATION_FAILED",
-        fields: ["category", "name"],
+        fields: ["category", "name", "paletteKey"],
       });
     });
+
+    it.each([[null], ["grey"], ["#ffcc00"]])(
+      "特殊日顏色 %j → VALIDATION_FAILED(paletteKey;必選、不能選灰色)",
+      async (paletteKey) => {
+        const result = await gql(manager, SAVE_CALENDAR_DAY, {
+          input: {
+            orgId: String(zhongshan),
+            date: taipeiDay("2026-11-30"),
+            type: "special",
+            category: "event-day",
+            name: "活動",
+            paletteKey,
+          },
+        });
+        expect(errorOf(result)).toMatchObject({
+          code: "VALIDATION_FAILED",
+          fields: ["paletteKey"],
+        });
+      },
+    );
 
     it("特殊日類別要是「特殊日類別」啟用中的選項", async () => {
       const result = await gql(manager, SAVE_CALENDAR_DAY, {
@@ -1619,6 +1639,7 @@ describe("排班設定(GraphQL 端點 + 真 MongoDB)", () => {
           type: "special",
           category: "no-such-category",
           name: "活動",
+          paletteKey: "blue",
         },
       });
       expect(errorOf(result)).toMatchObject({

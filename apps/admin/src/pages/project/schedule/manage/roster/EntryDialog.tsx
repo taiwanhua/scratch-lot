@@ -63,7 +63,7 @@ export interface EntryDialogProps {
  *
  * - [新增一筆人力需求]:疊開人力需求對話框(日期鎖定、時間帶入這筆排班);新增成功 → 自動加一列
  *   (依規則填第一個空的任務);取消 → 不變;之後排班按取消,人力需求保留(它已經獨立存檔)
- * - 至少要填進一筆才能存:移除最後一列時 [儲存] 停用並提示;日期欄的店休日反灰
+ * - 至少要填進一筆才能存:移除最後一列時 [儲存] 停用並提示;日期欄的店休日反灰;店休日 [新增一筆人力需求] 也停用
  * - 前端已經知道的規則(店休、畫休、不能擔任負責人;`entryCheckReasonsOf`)送出前就寫在欄位下、
  *   [儲存] 停用,每個入口(工具列、班表空白格、缺額、編輯、疊開新增人力需求)同一套
  * - [刪除這筆排班]:已被收銀班次綁定的擋下(「已經有開班紀錄,不能刪除」)。這個人那天在這家店有未對應排班的打卡:多一個區塊(`UnmatchedPunchesBlock`,SC-04d / SC-04e ①),
@@ -371,6 +371,7 @@ export const EntryDialog = ({
                 setTimes(time, form.endTime);
               }
             }}
+            isAddDemandDisabled={checkReasons.startTime === "STORE_CLOSED"}
             onAddDemand={() => {
               if (form.date !== "") {
                 setIsAddingDemand(true);

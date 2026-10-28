@@ -21,11 +21,11 @@ import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
 
 import { TagPaletteChip } from "@/components/project/TagPaletteChip/TagPaletteChip";
+import { calendarMarkOf } from "@/components/project/schedule/CalendarMark/calendar-mark";
 import { ScheduleLegend } from "@/components/project/schedule/ScheduleLegend/ScheduleLegend";
 import { useSession } from "@/hooks/base/useSession";
 import { useTenantTimezone } from "@/hooks/base/useTenantTimezone";
 import { dayWorstTones } from "@/lib/project/schedule-roster-views";
-import { isTagPaletteKey } from "@/lib/project/tag-palettes";
 
 import { type RosterData, rosterDataOf } from "../roster-context";
 import { ROSTER_LEGEND_ITEMS } from "./roster-legend";
@@ -90,17 +90,21 @@ export const DayPicker = ({
     };
   }
   for (const day of shown?.calendarDays ?? []) {
-    if (day.type === "closed") {
+    const mark = calendarMarkOf(day);
+    if (mark.kind === "closed") {
       days[day.date] = {
         ...days[day.date],
         disabled: true,
         note: tCalendar("closed"),
       };
-    } else if (isTagPaletteKey(day.paletteKey)) {
+    } else if (mark.kind === "special") {
       days[day.date] = {
         ...days[day.date],
         note: (
-          <TagPaletteChip paletteKey={day.paletteKey} label={day.name ?? ""} />
+          <TagPaletteChip
+            paletteKey={mark.paletteKey}
+            label={mark.name ?? ""}
+          />
         ),
       };
     }

@@ -98,6 +98,25 @@ describe("套用人力需求範本(規格 14.4)", () => {
       { role: "leader", taskKey: "lead" },
     ]);
   });
+
+  it("隔天店休:跨午夜做進隔天的範本不產生(同排班);結束 00:00 的不碰隔天、照常產生", () => {
+    const plan = planTemplateApply({
+      request: {
+        kind: "template",
+        templates: [
+          MORNING,
+          template("night", "22:00", "06:00"),
+          template("late", "18:00", "00:00"),
+        ],
+      },
+      dates: ["2026-11-02"],
+      existing: [],
+      closedDates: new Set(["2026-11-03"]),
+      spanOf,
+    });
+    expect(plan.created.map((item) => item.templateId)).toEqual(["am", "late"]);
+    expect(plan.skippedSlots).toBe(0);
+  });
 });
 
 describe("套用人力需求週範本(規格 14.4)", () => {

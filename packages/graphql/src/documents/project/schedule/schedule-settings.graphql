@@ -251,6 +251,12 @@ mutation SaveScheduleCalendarDay($input: SaveScheduleCalendarDayInput!) {
     item {
       ...ScheduleCalendarDayFields
     }
+    closedConflicts {
+      orgId
+      orgName
+      demandCount
+      entryCount
+    }
   }
 }
 
