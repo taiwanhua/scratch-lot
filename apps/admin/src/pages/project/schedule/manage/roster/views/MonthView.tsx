@@ -8,7 +8,8 @@ import {
 } from "@repo/ui/month-calendar";
 import { Stack } from "@repo/ui/stack";
 
-import { TagPaletteChip } from "@/components/project/TagPaletteChip/TagPaletteChip";
+import { CalendarMarkChip } from "@/components/project/schedule/CalendarMark/CalendarMarkChip";
+import { calendarMarkOf } from "@/components/project/schedule/CalendarMark/calendar-mark";
 import { ScheduleLegend } from "@/components/project/schedule/ScheduleLegend/ScheduleLegend";
 import { useTenantToday } from "@/hooks/base/useTenantToday";
 import { useScheduleFieldOptions } from "@/hooks/project/schedule/useScheduleFieldOptions/useScheduleFieldOptions";
@@ -23,7 +24,6 @@ import type { CountLabels } from "@/lib/project/schedule-roster-views";
 
 import { type RosterData, useRoster } from "../roster-context";
 import { MonthDayContent, type MonthDayItem } from "./MonthDayContent";
-import { calendarMarkOf } from "./calendar-mark";
 import { ROSTER_LEGEND_ITEMS } from "./roster-legend";
 import { useUnmatchedPunchCounts } from "./unmatched-punches";
 import { useShowDay } from "./useRosterDate";
@@ -46,9 +46,7 @@ const calendarInfoOf = (
   }
   if (mark.kind === "special") {
     return {
-      note: (
-        <TagPaletteChip paletteKey={mark.paletteKey} label={mark.name ?? ""} />
-      ),
+      note: <CalendarMarkChip paletteKey={mark.paletteKey} name={mark.name} />,
     };
   }
   return {};

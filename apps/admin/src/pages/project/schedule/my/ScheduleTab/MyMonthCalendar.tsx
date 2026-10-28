@@ -12,13 +12,13 @@ import {
 import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
 
+import { calendarMarkOf } from "@/components/project/schedule/CalendarMark/calendar-mark";
 import { dayOffHatchSx } from "@/components/project/schedule/DayOffs/day-off-styles";
 import { leaderMarkSx } from "@/components/project/schedule/ScheduleLegend/schedule-legend-styles";
 import { useTenantTimezone } from "@/hooks/base/useTenantTimezone";
 import { groupByDate } from "@/lib/project/schedule-my";
 import { tagPaletteColorOf } from "@/lib/project/tag-palettes";
 
-import { myCalendarMarkOf } from "./my-calendar-mark";
 import { type MyEntry, useMyEntryText } from "./useMyEntryText";
 
 type Page = MyScheduleQuery["mySchedule"];
@@ -77,14 +77,14 @@ const EntryLines = ({
 };
 
 /**
- * 行事曆(判斷見 `myCalendarMarkOf`,條列同一套):店休寫「店休」;特殊日整格底色 = 行事曆選的顏色(底座淡化),
+ * 行事曆(判斷見 `calendarMarkOf`,條列與排班表同一套):店休寫「店休」;特殊日整格底色 = 行事曆選的顏色(底座淡化),
  * 沒選顏色退回 `tone: special`,並寫名稱。
  */
 const calendarInfoOf = (
   day: Page["calendarDays"][number] | undefined,
   closedLabel: string,
 ): Pick<MonthCalendarDayInfo, "note" | "tone" | "background"> => {
-  const mark = myCalendarMarkOf(day);
+  const mark = calendarMarkOf(day);
   if (mark.kind === "closed") {
     return { note: closedLabel };
   }

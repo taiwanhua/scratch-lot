@@ -7,10 +7,13 @@ import { Tag } from "@repo/ui/tag";
 import { Typography } from "@repo/ui/typography";
 
 import { tagPaletteBackgroundVarsSx } from "@/components/project/TagPaletteChip/tag-palette-background";
+import {
+  calendarMarkBackground,
+  calendarMarkOf,
+} from "@/components/project/schedule/CalendarMark/calendar-mark";
 import { dayOffHatchSx } from "@/components/project/schedule/DayOffs/day-off-styles";
 import { groupByDate, listDatesOf } from "@/lib/project/schedule-my";
 
-import { myCalendarMarkOf, myListBackgroundOf } from "./my-calendar-mark";
 import { type MyEntry, useMyEntryText } from "./useMyEntryText";
 
 type Page = MyScheduleQuery["mySchedule"];
@@ -77,7 +80,7 @@ const EntryRow = ({ entry }: { entry: MyEntry }) => {
 
 /**
  * 條列檢視(SC-40;規格 14.6「`[月曆 | 條列]`」):依日期列出這個月的班與打卡;畫休、店休也列一行;
- * 今天標「今天」、有異動的日子寫「有異動」;特殊日整行底色 = 行事曆選的顏色並寫名稱(判斷同月曆,`myCalendarMarkOf`);
+ * 今天標「今天」、有異動的日子寫「有異動」;特殊日整行底色 = 行事曆選的顏色並寫名稱(判斷同月曆與排班表,`calendarMarkOf`);
  * 畫休用灰色斜線底、休息寫「☕ 30」(同圖例)。點一列 → 當天詳情。
  */
 export const MyScheduleList = ({
@@ -89,7 +92,7 @@ export const MyScheduleList = ({
   const text = useMyEntryText();
   const byDate = groupByDate(page.entries);
   const marks = new Map(
-    page.calendarDays.map((day) => [day.date, myCalendarMarkOf(day)]),
+    page.calendarDays.map((day) => [day.date, calendarMarkOf(day)]),
   );
   const closed = new Set(
     [...marks].filter(([, mark]) => mark.kind === "closed").map(([d]) => d),
@@ -118,7 +121,8 @@ export const MyScheduleList = ({
         const entries = byDate.get(date) ?? [];
         const isToday = date === page.today;
         const mark = marks.get(date) ?? { kind: "none" };
-        const background = myListBackgroundOf(mark);
+        const background =
+          mark.kind === "special" ? calendarMarkBackground(mark) : undefined;
         return (
           <Box
             component="li"

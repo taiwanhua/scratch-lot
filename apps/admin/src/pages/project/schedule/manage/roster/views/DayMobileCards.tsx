@@ -7,6 +7,10 @@ import { Tag } from "@repo/ui/tag";
 import { Typography } from "@repo/ui/typography";
 
 import { tagPaletteBackgroundVarsSx } from "@/components/project/TagPaletteChip/tag-palette-background";
+import {
+  calendarMarkBackground,
+  calendarMarkOf,
+} from "@/components/project/schedule/CalendarMark/calendar-mark";
 import { ScheduleLegend } from "@/components/project/schedule/ScheduleLegend/ScheduleLegend";
 import { unmatchedCountsByDate } from "@/lib/project/schedule-attendance";
 import { demandToneOf } from "@/lib/project/schedule-roster";
@@ -19,7 +23,6 @@ import { rosterCellKey, useRoster } from "../roster-context";
 import { DayCardPerson } from "./DayCardPerson";
 import { DayCardVacancy } from "./DayCardVacancy";
 import { UnmatchedPunchMark } from "./UnmatchedPunchMark";
-import { calendarMarkBackground, calendarMarkOf } from "./calendar-mark";
 import { ROSTER_LEGEND_ITEMS } from "./roster-legend";
 import { type RosterTimeline, slotIdOf } from "./useTimelineGroups";
 

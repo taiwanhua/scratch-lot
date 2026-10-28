@@ -15,7 +15,8 @@ import { Stack } from "@repo/ui/stack";
 import { Tag } from "@repo/ui/tag";
 import { Typography } from "@repo/ui/typography";
 
-import { TagPaletteChip } from "@/components/project/TagPaletteChip/TagPaletteChip";
+import { CalendarMarkChip } from "@/components/project/schedule/CalendarMark/CalendarMarkChip";
+import { calendarMarkOf } from "@/components/project/schedule/CalendarMark/calendar-mark";
 import { ScheduleLegend } from "@/components/project/schedule/ScheduleLegend/ScheduleLegend";
 import { useFitMainHeight } from "@/hooks/base/useFitMainHeight";
 import { useSectionCollapse } from "@/hooks/base/useSectionCollapse";
@@ -41,7 +42,6 @@ import {
   useRoster,
 } from "../roster-context";
 import { RosterPersonCell } from "./RosterPersonCell";
-import { calendarMarkOf } from "./calendar-mark";
 import { ROSTER_LEGEND_ITEMS } from "./roster-legend";
 import { useRosterGridColumns } from "./useRosterGridColumns";
 
@@ -157,10 +157,7 @@ export const RosterGridView = () => {
               </Typography>
             )}
             {mark.kind === "special" && (
-              <TagPaletteChip
-                paletteKey={mark.paletteKey}
-                label={mark.name ?? ""}
-              />
+              <CalendarMarkChip paletteKey={mark.paletteKey} name={mark.name} />
             )}
           </Box>
           {canEdit && !closed && (

@@ -9,7 +9,10 @@ import type {
   ScheduleTimelineSlot,
 } from "@repo/ui/schedule-timeline";
 
-import { tagPaletteBackground } from "@/components/project/TagPaletteChip/tag-palette-background";
+import {
+  calendarMarkOf,
+  specialDayBackground,
+} from "@/components/project/schedule/CalendarMark/calendar-mark";
 import {
   autoMarkSx,
   leaderMarkSx,
@@ -42,7 +45,6 @@ import {
   useRoster,
 } from "../roster-context";
 import { UnmatchedPunchMark } from "./UnmatchedPunchMark";
-import { calendarMarkOf } from "./calendar-mark";
 
 /** 時間軸上一個容器的資料(群組 + 它對應的人力需求)。 */
 export interface RosterTimelineGroup extends ScheduleTimelineGroup {
@@ -318,7 +320,7 @@ export const useTimelineGroups = (
         </Box>
       ),
       ...(mark.kind === "special"
-        ? { background: tagPaletteBackground(mark.paletteKey) }
+        ? { background: specialDayBackground(mark.paletteKey) }
         : {}),
     };
   });
