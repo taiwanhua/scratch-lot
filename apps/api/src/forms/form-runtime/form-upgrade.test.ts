@@ -482,13 +482,12 @@ describe("舊版資料升級到新版", () => {
         // 6 筆各自一批:寫回 6 次;aggregate = 分組計數 1 + 每批取候選 6(最後一批沒切、不滿 50 筆就結束)
         expect(counted.byCommand.get("form_submissions.bulkWrite")).toBe(6);
         expect(counted.byCommand.get("form_submissions.aggregate")).toBe(7);
-        const sizes = (
-          await Promise.all(
-            aggregate.mock.results.map(
-              (result) => result.value as Promise<Record<string, unknown>[]>,
-            ),
-          )
-        )
+        const returned = await Promise.all(
+          aggregate.mock.results.map(
+            (result) => result.value as Promise<Record<string, unknown>[]>,
+          ),
+        );
+        const sizes = returned
           .flat()
           .filter((row) => "size" in row)
           .map((row) => row.size);
