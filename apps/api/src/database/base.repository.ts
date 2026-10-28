@@ -32,6 +32,7 @@ import {
   TenantScopeError,
   getTenantScope,
   hasTenantIdPath,
+  writeScopeConditionsOf,
 } from "./plugins/tenant-scope.plugin";
 import { AuditLog } from "./schemas/audit-log.schema";
 import { BUSINESS_RELATIONSHIPS_COLLECTION } from "./schemas/business-relationship.schema";
@@ -48,6 +49,7 @@ import {
 import { assertTenantBoundary } from "./tenant-boundary";
 import { tenantIdOfOrg } from "./tenant-id";
 import { currentSession } from "./transaction";
+import { writeCountConflictError } from "./write-conflict";
 
 /** Model 型別參數固定為預設值(無 query helpers / instance methods / virtuals),只讓 hydrated 文件型別可推導。 */
 type NoExtras = Record<never, never>;
@@ -135,6 +137,15 @@ export interface ReassignOrgManyOptions<TSchema> extends SessionOptions {
   update?: RepositoryUpdate<TSchema>;
 }
 
+/** `bulkUpdateByIds` 的一筆:哪一筆、怎麼改、這一筆自己的條件。 */
+export interface BulkUpdateByIdItem<TSchema> {
+  id: Types.ObjectId | string;
+  /** 只收 `$set` / `$unset` / `$inc`(見 `bulkUpdateByIds`)。 */
+  update: RepositoryUpdate<TSchema>;
+  /** 這一筆自己的條件(例:樂觀鎖版本 `{ editVersion: 3 }`、狀態);沒給 = 只看 id 與範圍。 */
+  filter?: RepositoryFilter<TSchema>;
+}
+
 /** 批次搬家的結果:`mismatched` 非空 = **整批沒有寫入**(`moved` / `skipped` 為空)。 */
 export interface ReassignOrgManyResult {
   /** 這次搬過去的 id。 */
@@ -149,7 +160,7 @@ export interface ReassignOrgManyResult {
  * 所有資料存取的共用層(ADR-0005 / ADR-0007 / ADR-0011):
  * 每個公開方法都以操作者上下文開頭 — 租戶過濾、軟刪除排除、基礎欄位填寫全由 plugin 依此自動完成,
  * 個別功能不自己寫、也繞不過(api 內裸 `Model.xxx()` 由 ESLint 規則 `@repo/no-raw-model-query` 擋下)。
- * 刪除一律走 `softDeleteById`(ADR-0007);硬刪除只有 `hardDeleteById`(撤銷開通、退役權限清理)與
+ * 刪除一律走 `softDeleteById` / `softDeleteMany`(ADR-0007);硬刪除只有 `hardDeleteById`(撤銷開通、退役權限清理)與
  * `hardDeleteDraft`(從未對外生效的版本草稿,見該方法)。
  */
 export class BaseRepository<TSchema, TDocument extends RepositoryDocument> {
@@ -571,6 +582,120 @@ export class BaseRepository<TSchema, TDocument extends RepositoryDocument> {
   }
 
   /**
+   * **一次軟刪多筆**(TX-06):一次 `updateMany` 寫入 `deletedAt`,範圍與 `softDeleteById` 相同(租戶過濾、
+   * 資料範圍規則、已刪除的視為不存在都由中介層套上)。重複的 id 只算一次。
+   *
+   * 刪到的筆數與 id 數不符(有幾筆不存在 / 已刪除 / 範圍外)→ 拋 `CONFLICT`(`writeCountConflictError`),
+   * 交易回復已刪的那幾筆(TX-04 / TX-06)。所以**必須在交易內**(不在交易內 → `TenantScopeError`);
+   * 空清單不送指令。
+   */
+  async softDeleteMany(
+    operator: OperatorContext,
+    ids: readonly (Types.ObjectId | string)[],
+    options: SessionOptions = {},
+  ): Promise<void> {
+    assertInTransaction(this.model.modelName, "softDeleteMany", options);
+    const unique = [...new Set(ids.map(String))];
+    if (unique.length === 0) {
+      return;
+    }
+    const deleted = await this.updateMany(
+      operator,
+      { _id: { $in: unique } },
+      { $set: { deletedAt: new Date() } },
+      options,
+    );
+    if (deleted !== unique.length) {
+      throw writeCountConflictError(
+        `${this.model.modelName}:要刪 ${String(unique.length)} 筆,只刪到 ${String(deleted)} 筆`,
+      );
+    }
+  }
+
+  /**
+   * **依 id 一次更新多筆、每筆的值不同**(TX-06「每筆要改的值不同」):底層一次 ordered `bulkWrite`,
+   * 每筆一個 `updateOne`。值都相同的一組用 `updateMany`;這個出口給依值分組會變成一筆一組的情形
+   * (例:每筆各自的時間、各自的版本)。
+   *
+   * - 範圍與 `updateById` 相同:每筆條件都釘上 `_id`、`deletedAt: null`、寫入範圍(可見範圍 + 資料範圍規則,
+   *   與寫入中介層同一份判斷 `writeScopeConditionsOf`;`bulkWrite` 不經查詢中介層,所以在這裡自己帶),
+   *   另可帶這一筆自己的條件 `filter`(樂觀鎖版本、狀態,TX-05)。`updatedBy` 由這裡填,`updatedAt` 由 timestamps 填
+   * - 欄位保護與 `updateById` 相同(不得碰 `orgId` / 建立資訊 / 模組資料表的 `moduleKey`、`tenantId`);
+   *   另外只收 `$set` / `$unset` / `$inc` / `$push`(`$push` 只收單一元素或 `$each`),不收 `shareOrgs`
+   *   (共用清單改用 `updateById` / `updateMany`)、不收 pipeline、位置運算子、`arrayFilters`、`$pull`。
+   *   `$set` / `$unset` / `$push` 的值照 schema 驗證(`bulkWrite` 不跑 `runValidators`,在這裡先驗)
+   * - 同一個 id 在同一批出現兩次 → `TenantScopeError`(依出現順序分輪,TX-06)
+   * - 每一筆都要命中(以 `matchedCount` 判,值沒變的列也算命中,不會被誤判成衝突);有不符 → 拋 `CONFLICT`
+   *   (同 `softDeleteMany`),交易回復已寫的那幾筆;所以**必須在交易內**
+   * - `audit_logs` 不能用(只增不改的守門掛在查詢中介層上,`bulkWrite` 會繞過)
+   */
+  async bulkUpdateByIds(
+    operator: OperatorContext,
+    items: readonly BulkUpdateByIdItem<TSchema>[],
+    options: SessionOptions = {},
+  ): Promise<void> {
+    assertInTransaction(this.model.modelName, "bulkUpdateByIds", options);
+    if (this.model.modelName === AuditLog.name) {
+      throw new TenantScopeError(
+        `${this.model.modelName}:稽核紀錄只增不改,不能經 bulkUpdateByIds`,
+      );
+    }
+    if (items.length === 0) {
+      return;
+    }
+    const seen = new Set<string>();
+    const protectedPaths = this.protectedUpdatePaths();
+    for (const item of items) {
+      const key = String(item.id);
+      if (seen.has(key)) {
+        throw new TenantScopeError(
+          `${this.model.modelName}:bulkUpdateByIds 同一批不得重複同一個 id(${key});依出現順序分輪`,
+        );
+      }
+      seen.add(key);
+      assertBulkUpdateShape(this.model.modelName, item.update);
+      assertUpdateLeavesProtectedPaths(this.model.modelName, item.update, [
+        ...protectedPaths,
+        SHARE_ORGS_PATH,
+      ]);
+      await this.validateUpdateValues(item.update);
+    }
+    const conditions = await writeScopeConditionsOf(this.model.schema, {
+      operator,
+    });
+    const operations = items.map((item) => ({
+      updateOne: {
+        filter: {
+          $and: [
+            { _id: item.id },
+            { ...item.filter },
+            { deletedAt: null },
+            ...conditions,
+          ],
+        },
+        update: {
+          ...item.update,
+          $set: {
+            ...item.update.$set,
+            updatedBy: operator.actorId,
+          },
+        },
+      },
+    }));
+    const { matchedCount } = await this.model.bulkWrite(
+      operations as unknown as Parameters<
+        RepositoryModel<TSchema, TDocument>["bulkWrite"]
+      >[0],
+      { ordered: true, session: sessionOf(options) ?? undefined },
+    );
+    if (matchedCount !== items.length) {
+      throw writeCountConflictError(
+        `${this.model.modelName}:要改 ${String(items.length)} 筆,只命中 ${String(matchedCount)} 筆`,
+      );
+    }
+  }
+
+  /**
    * **硬刪除**:把一筆文件從資料庫抹掉,回傳是否真的刪到(ADR-0007 軟刪除的例外)。
    *
    * 為什麼需要它:撤銷開通(ADR-0009)要把開通建出的組織、角色副本、首任管理員「當作沒發生過」——
@@ -987,6 +1112,53 @@ export class BaseRepository<TSchema, TDocument extends RepositoryDocument> {
     };
   }
 
+  /**
+   * `bulkUpdateByIds` 的值驗證(代替 `runValidators`;`bulkWrite` 不跑它):只驗這次寫到的路徑,照 schema 的
+   * 型別與驗證器,不合 → Mongoose `ValidationError`(與 `updateById` 撞到驗證器時同一種錯)。
+   * - `$set`:驗寫入的值
+   * - `$unset`:路徑當成沒有值來驗 —— 必填欄位會被擋下(同 `runValidators` 對 `$unset` 的 required 檢查)
+   * - `$push`:把要加的元素(或 `$each` 的元素)當成那個陣列的值來驗
+   * - `$inc`:不驗(同 `runValidators`,它本來就不驗 `$inc`)
+   *
+   * 已知限制(與 `runValidators` 的差異):以 `Model.validate` 驗一個只含這些路徑的物件,所以
+   * 需要拿 `this` 當 Query 的自訂驗證器(update validator context)拿不到 Query;
+   * 陣列索引路徑(`items.0.x`)可能沒有驗到。用到這兩種的更新改走 `updateById`。
+   */
+  private async validateUpdateValues(
+    update: RepositoryUpdate<TSchema>,
+  ): Promise<void> {
+    const values = new Map<string, unknown>();
+    for (const [path, value] of Object.entries(update.$set ?? {})) {
+      values.set(path, value);
+    }
+    for (const path of Object.keys(update.$unset ?? {})) {
+      values.set(path, undefined);
+    }
+    for (const [path, value] of Object.entries(update.$push ?? {})) {
+      values.set(path, pushedElementsOf(value));
+    }
+    if (values.size === 0) {
+      return;
+    }
+    const expanded: Record<string, unknown> = {};
+    for (const [path, value] of values) {
+      if (value === undefined) {
+        continue;
+      }
+      const pieces = path.split(".");
+      let holder = expanded;
+      for (const piece of pieces.slice(0, -1)) {
+        const next = holder[piece];
+        if (next === null || typeof next !== "object") {
+          holder[piece] = {};
+        }
+        holder = holder[piece] as Record<string, unknown>;
+      }
+      holder[pieces.at(-1) ?? path] = value;
+    }
+    await this.model.validate(expanded, [...values.keys()]);
+  }
+
   /** 批次搬家的核對讀取:可見範圍內符合條件的那幾筆,只取指定欄位(lean)。 */
   private async leanIds<TRow>(
     operator: OperatorContext,
@@ -1323,6 +1495,99 @@ function sessionOf(options: SessionOptions): ClientSession | null {
   return options.session === undefined
     ? (currentSession() ?? null)
     : options.session;
+}
+
+/**
+ * 批次寫入出口的前置:筆數不符時要靠交易回復已寫的部分,不在交易內 → `TenantScopeError`
+ * (同 `createMany`)。
+ */
+function assertInTransaction(
+  modelName: string,
+  method: string,
+  options: SessionOptions,
+): void {
+  if (sessionOf(options)?.inTransaction() !== true) {
+    throw new TenantScopeError(
+      `${modelName}:${method} 必須在交易內(筆數不符時整批回復)`,
+    );
+  }
+}
+
+/** `bulkUpdateByIds` 收的運算子;其餘(頂層欄位、pipeline、`$pull`…)一律拒收。 */
+const BULK_UPDATE_OPERATORS: ReadonlySet<string> = new Set([
+  "$set",
+  "$unset",
+  "$inc",
+  "$push",
+]);
+
+/**
+ * `bulkUpdateByIds` 的更新形狀:只收 `$set` / `$unset` / `$inc` / `$push` 物件,路徑不得含位置運算子;
+ * `$push` 的值是單一元素或只含 `$each` 的物件(`$position` / `$slice` / `$sort` 不收)。
+ */
+function assertBulkUpdateShape(modelName: string, update: unknown): void {
+  if (update === null || typeof update !== "object" || Array.isArray(update)) {
+    throw new TenantScopeError(
+      `${modelName}:bulkUpdateByIds 的更新要是運算子物件(不收 pipeline)`,
+    );
+  }
+  for (const [key, value] of Object.entries(
+    update as Record<string, unknown>,
+  )) {
+    if (!BULK_UPDATE_OPERATORS.has(key)) {
+      throw new TenantScopeError(
+        `${modelName}:bulkUpdateByIds 只收 $set / $unset / $inc / $push(拿到 ${key})`,
+      );
+    }
+    if (value === null || typeof value !== "object") {
+      throw new TenantScopeError(
+        `${modelName}:bulkUpdateByIds 的 ${key} 要是物件`,
+      );
+    }
+    const positional = Object.keys(value).find((path) => path.includes("$"));
+    if (positional !== undefined) {
+      throw new TenantScopeError(
+        `${modelName}:bulkUpdateByIds 不收位置運算子(${positional})`,
+      );
+    }
+    if (key === "$push") {
+      for (const pushed of Object.values(value as Record<string, unknown>)) {
+        assertPushValue(modelName, pushed);
+      }
+    }
+  }
+}
+
+/** `$push` 的值:單一元素,或只含 `$each`(陣列)的修飾物件。 */
+function assertPushValue(modelName: string, pushed: unknown): void {
+  if (pushed === null || typeof pushed !== "object" || Array.isArray(pushed)) {
+    return;
+  }
+  const modifiers = Object.keys(pushed).filter((key) => key.startsWith("$"));
+  if (modifiers.length === 0) {
+    return;
+  }
+  if (
+    modifiers.some((key) => key !== "$each") ||
+    !Array.isArray((pushed as { $each?: unknown }).$each)
+  ) {
+    throw new TenantScopeError(
+      `${modelName}:bulkUpdateByIds 的 $push 只收單一元素或 $each 陣列(拿到 ${modifiers.join(", ")})`,
+    );
+  }
+}
+
+/** `$push` 要加進陣列的元素(驗證用):`$each` 的元素,或單一元素。 */
+function pushedElementsOf(pushed: unknown): unknown[] {
+  if (
+    pushed !== null &&
+    typeof pushed === "object" &&
+    !Array.isArray(pushed) &&
+    "$each" in pushed
+  ) {
+    return [...(pushed as { $each: unknown[] }).$each];
+  }
+  return [pushed];
 }
 
 /**

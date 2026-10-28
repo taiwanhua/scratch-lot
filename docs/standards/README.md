@@ -26,7 +26,7 @@
 | 文字顏色(`Typography` 的 `color`)                       | `react/styling.md` STYLE-12                                                                                                         |
 | 前端資料存取(query / mutation)                          | `react/data-fetching.md`                                                                                                            |
 | api 的 GraphQL schema(resolver / model / input)         | `api/graphql-schema.md`                                                                                                             |
-| api 的多步驟寫入 / 對外 adapter(寄信、GCS、HTTP)        | `api/transactions.md`(TX-01~06;交易內多筆讀寫整批做見 TX-06);決策見 ADR-0013                                                        |
+| api 的多步驟寫入 / 對外 adapter(寄信、GCS、HTTP)        | `api/transactions.md`(TX-01~07;交易內多筆讀寫整批做見 TX-06,交易外列表 / 頁面讀取的 N+1 見 TX-07);決策見 ADR-0013                   |
 | api 的資料層(Mongoose 連線、model、原生 collection)     | `api/data-layer.md`(DATA-01)                                                                                                        |
 | 測試                                                    | `testing/testing.md`(api 整合測試 TEST-07、admin 元件測試與 mock 開發模式 TEST-08、ui 元件測試 TEST-09、劇本 E2E TEST-05 / TEST-11) |
 | 新增 workspace 套件(`packages/<name>`)                  | `general/structure.md` STRUCT-07 / STRUCT-08                                                                                        |

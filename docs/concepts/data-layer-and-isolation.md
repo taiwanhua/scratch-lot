@@ -98,6 +98,7 @@ service 呼叫 BaseRepository.xxx(operator, …)
 - 條件以 `$and` 追加,呼叫端自己的條件只能再收窄。
 - 範圍是 `"all"`(根組織)時不加租戶條件。
 - `create` 自動寫入當前組織;寫到範圍外 → 拋錯。`createMany(operator, docs, { session })` 一次寫多筆:每筆照 `create` 同一條檢查(`withTenantOrg` → `withModuleTenant` → `withShareOrgs`;同一個組織的租戶推導、同一份共用清單只查一次),一筆不過整批不寫,底層 ordered `insertMany`,**必須在交易內**;`insertMany` 不跑 save 中介層,schema 自訂了 `pre("save")` 的表不要用。
+- 一次改多筆(TX-06):`softDeleteMany(operator, ids)` 一次 `updateMany` 軟刪,範圍照中介層;`bulkUpdateByIds(operator, [{ id, update, filter? }])` 給每筆值不同的條件更新,底層一次 ordered `bulkWrite`。`bulkWrite` 不經查詢中介層,所以每筆條件由 BaseRepository 自己釘上 `_id`、`deletedAt: null` 與寫入範圍(`writeScopeConditionsOf`,與寫入中介層同一份判斷:可見範圍 + 資料範圍規則),自己補 `updatedBy`、先照 schema 驗 `$set` / `$unset` / `$push`;只收 `$set` / `$unset` / `$inc` / `$push`(單一元素或 `$each`;不收位置運算子、`arrayFilters`、`$pull`),`$unset` 必填欄位擋下,欄位保護同 `updateById`,不收 `shareOrgs`,`audit_logs` 不能用。兩者都**必須在交易內**,每一筆都要命中(`bulkUpdateByIds` 以 `matchedCount` 判,值沒變的也算),筆數不符 → 拋 `CONFLICT`(`writeCountConflictError`,`EDIT_VERSION_MISMATCH`),交易回復、沒有部分提交。加密欄位經 schema setter 照樣加密。
 - 一般更新不准改 `orgId`;改歸屬組織只有搬家 `reassignOrg`(見下方例外出口)。
 - api 內裸 `Model.find` 由 ESLint 規則 `@repo/no-raw-model-query` 擋下。
 - 已知限制:`populate()` 的子查詢不帶上下文,關聯資料分兩次查。
