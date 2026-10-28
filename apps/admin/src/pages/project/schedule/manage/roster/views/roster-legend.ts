@@ -88,7 +88,7 @@ export const ROSTER_LEGEND_ITEMS = {
   dayPicker: ["dotMissingLeader", "dotMissingHelper", "closed", "special"],
   /**
    * 班表:人員格子(已排的班、負責人、「臨」、「晚 ×2」、自動排入、休息、畫休斜線、不可排灰塊、店休停用底色、
-   * 時鐘圖示)、人力需求區的人數標籤三色、表頭的特殊日
+   * 時鐘圖示)、人力需求區的人數標籤三色、特殊日整欄底色
    */
   grid: [
     "leader",

@@ -154,6 +154,9 @@ describe("我的班表 → 班表", () => {
     const closed = await findLabelled("2026-11-03");
     expect(closed.querySelector("[data-closed-layer]")).not.toBeNull();
     expect(closed).not.toHaveAttribute("aria-disabled");
+    await user.click(closed);
+    expect(await findDialog("11/3(二)當天詳情")).toBeInTheDocument();
+    await user.keyboard("{Escape}");
     await user.click(nov2);
     const dialog = await findDialog("11/2(一)當天詳情");
     expect(within(dialog).getByText("07:56")).toBeInTheDocument();
