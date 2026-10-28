@@ -17,6 +17,10 @@ import {
   UsersRepository,
 } from "../database/database.module";
 import { RelationService } from "../database/relation.service";
+import {
+  countDbCommands,
+  expectDbCommandsAtMost,
+} from "../database/test-support/db-commands";
 import { HOOK_TIMEOUT_MS } from "../database/test-support/mongo-connection";
 import { TransactionService } from "../database/transaction";
 import {
@@ -266,6 +270,15 @@ describe("通知 notify() / 通知清單 / 通知設定", () => {
       id: new Types.ObjectId().toHexString(),
     },
     dedupeKey,
+  });
+
+  /** 收件人只給 id(大量收件人的測試用,不必每位都建成可登入的操作者)。 */
+  const toUsers = (
+    userIds: Types.ObjectId[],
+    dedupeKey: string,
+  ): NotifyInput => ({
+    ...partyInput(WORKFLOW_RESULT, [], dedupeKey),
+    recipients: { kind: "users", userIds },
   });
 
   const rowsOf = (dedupeKey: string) =>
@@ -625,6 +638,52 @@ describe("通知 notify() / 通知清單 / 通知設定", () => {
       } finally {
         spy.mockRestore();
       }
+    });
+
+    it("TX-06 / TX-07:1 位與 50 位收件人的指令數相同(去重、寫入、寄信前查收件人都整批);已通知過的只略過那幾位", async () => {
+      const now = new Date();
+      const prefix = `bulk-${String(Date.now())}`;
+      const { insertedIds } = await api.connection
+        .collection("users")
+        .insertMany(
+          Array.from({ length: 50 }, (_, index) => ({
+            name: `${prefix}-${String(index)}`,
+            account: `${prefix}-${String(index)}`,
+            email: `${prefix}-${String(index)}@example.com`,
+            enabled: true,
+            settings: {},
+            createdAt: now,
+            updatedAt: now,
+            createdBy: null,
+            updatedBy: null,
+            deletedAt: null,
+          })),
+        );
+      const userIds = Object.values(insertedIds);
+      const fromMails = mail.sent.length;
+
+      const one = await countDbCommands(() =>
+        service.notify(partyInput(WORKFLOW_RESULT, [alice], nextKey("one"))),
+      );
+      const fiftyKey = nextKey("fifty");
+      const fifty = await countDbCommands(() =>
+        service.notify(toUsers(userIds, fiftyKey)),
+      );
+      expectDbCommandsAtMost(fifty, one.total, "notify 50 位收件人");
+      expect(await rowsOf(fiftyKey)).toHaveLength(50);
+      expect(
+        mailsSince(fromMails).filter((message) =>
+          message.to.startsWith(prefix),
+        ),
+      ).toHaveLength(50);
+
+      // 前 25 位已通知過:同一 dedupeKey 再送給 50 位 → 只寫、只寄另外 25 位
+      const partialKey = nextKey("partial");
+      await service.notify(toUsers(userIds.slice(0, 25), partialKey));
+      const fromPartial = mail.sent.length;
+      await service.notify(toUsers(userIds, partialKey));
+      expect(await rowsOf(partialKey)).toHaveLength(50);
+      expect(mailsSince(fromPartial)).toHaveLength(25);
     });
   });
 
