@@ -361,6 +361,7 @@ pnpm --filter @repo/db-migrator demo --environment=<env> --mode=<create|purge|re
 | `lottery_cash_movements`                              | 現金流水(只新增)                            | 10.2 |
 | `lottery_bank_accounts` / `lottery_bank_transactions` | 銀行帳戶 / 交易(只新增)                     | 10.1 |
 | `lottery_period_closes`                               | 關帳                                        | 10.4 |
+| `lottery_settlement_marks`                            | 已完成單據的結清標記(待結清只掃還沒結清的)  | 9    |
 | `schedule_*`(含打卡 `schedule_attendance_punches`)    | 排班與出勤                                  | 14   |
 | `project_field_option_colors`                         | 欄位選項顏色(S2 專案臨時表,第 0 章前綴例外) | 18.5 |
 | 表單提交(底座 `form_submissions`)                     | 所有單據                                    | 8    |

@@ -128,11 +128,19 @@ export class SettlementMarks {
     if (marks.length === 0) {
       return;
     }
+    // 依 rev 分組(`{ rev, refId: { $in } }`):上線補的標記幾乎都是 rev 0,子句數收斂成幾組
+    const byRev = new Map<number, Types.ObjectId[]>();
+    for (const mark of marks) {
+      byRev.set(mark.rev, [...(byRev.get(mark.rev) ?? []), mark.refId]);
+    }
     await this.marks.updateMany(
       reader,
       {
         closedAsOf: null,
-        $or: marks.map((mark) => ({ refId: mark.refId, rev: mark.rev })),
+        $or: [...byRev].map(([rev, refIds]) => ({
+          rev,
+          refId: { $in: refIds },
+        })),
       },
       { $set: { closedAsOf } },
     );

@@ -254,6 +254,7 @@ describe("關帳(GraphQL 端點 + 真 MongoDB)", () => {
     closedAt: Date | null,
     status: "pending" | "confirmed" | "returned" = "confirmed",
     leftForNext = 0,
+    cashPointId: Types.ObjectId = counter,
   ): Promise<{ shiftId: Types.ObjectId; submissionId: Types.ObjectId }> {
     const submissionId = new Types.ObjectId();
     const { insertedId: shiftId } = await connection
@@ -261,7 +262,7 @@ describe("關帳(GraphQL 端點 + 真 MongoDB)", () => {
       .insertOne({
         orgId: store,
         tenantId: tenant,
-        cashPointId: counter,
+        cashPointId,
         openedBy: closer.userId,
         openedAt,
         openingFloat: 0,
@@ -1082,18 +1083,31 @@ describe("關帳(GraphQL 端點 + 真 MongoDB)", () => {
     await check("2026-12");
     const before = await countDbCommands(() => check("2026-12"));
     for (const order of [2, 3, 4]) {
-      await connection.collection(LOTTERY_CASH_POINTS_COLLECTION).insertOne({
-        orgId: store,
-        tenantId: tenant,
-        positionKey: `counter-${String(order)}`,
-        name: `櫃台 ${String(order)}`,
-        order,
-        enabled: true,
-        printerId: null,
-        note: null,
-        moduleKey: "master-data",
-        ...base(),
-      });
+      const { insertedId: pointId } = await connection
+        .collection(LOTTERY_CASH_POINTS_COLLECTION)
+        .insertOne({
+          orgId: store,
+          tenantId: tenant,
+          positionKey: `counter-${String(order)}`,
+          name: `櫃台 ${String(order)}`,
+          order,
+          enabled: true,
+          printerId: null,
+          note: null,
+          moduleKey: "master-data",
+          ...base(),
+        });
+      // 每個收銀點最後一班不同天、留給下一班的金額不同(走到讀結帳單那一支);第 4 個沒開過班
+      if (order < 4) {
+        await shiftOf(
+          `櫃台 ${String(order)} · 12/${String(order)}`,
+          taipei(`2026-12-0${String(order)}`, "08:00:00"),
+          taipei(`2026-12-0${String(order)}`, "16:00:00"),
+          "confirmed",
+          order * 100,
+          pointId,
+        );
+      }
     }
     const after = await countDbCommands(() => check("2026-12"));
     const drawersOf = (result: typeof before.result) =>
@@ -1101,6 +1115,11 @@ describe("關帳(GraphQL 端點 + 真 MongoDB)", () => {
     expect(drawersOf(after.result)).toHaveLength(
       drawersOf(before.result).length + 3,
     );
+    expect(
+      drawersOf(after.result)
+        .filter((row) => row.name.startsWith("櫃台 "))
+        .map((row) => row.amount),
+    ).toEqual([200, 300, 0]);
     expect(after.total).toBe(before.total);
   });
 

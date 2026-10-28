@@ -641,7 +641,8 @@ export class PeriodCloseService {
           openedAt: { $lt: period.end },
         },
       },
-      { $sort: { cashPointId: 1, openedAt: -1, _id: -1 } },
+      // 排序與索引 `(cashPointId, openedAt)` 相同(不加 `_id`),用索引排序、不在記憶體排
+      { $sort: { cashPointId: 1, openedAt: -1 } },
       {
         $group: {
           _id: "$cashPointId",

@@ -883,8 +883,12 @@ describe("店面(二):銷售、當下撤銷、拆本、移櫃(GraphQL 端點 + �
       // 第一次查詢會讀一些之後有快取的東西(登入),先暖身
       await recent();
       const one = await countDbCommands(recent);
-      for (const ticketNo of ["041", "042", "043"]) {
-        await sell(wang, await ticketOf(bookId, ticketNo));
+      // 另外 3 筆分散在不同的本(一批讀本、事件,不是同一本)
+      await sell(wang, await ticketOf(bookId, "041"));
+      for (const ticketNo of ["010", "020"]) {
+        const other = await receiveBook();
+        await openTo(other.bookId, counter);
+        await sell(wang, await ticketOf(other.bookId, ticketNo));
       }
       const four = await countDbCommands(recent);
       expect(four.result.lotteryStoreRecentSales.items).toHaveLength(

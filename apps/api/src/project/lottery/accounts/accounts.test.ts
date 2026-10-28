@@ -34,7 +34,10 @@ import {
   CashLedgerService,
   type CashMovementInput,
 } from "../cash/cash-ledger.service";
-import { settlementClearedGuard } from "../settlement/settlement-guard";
+import {
+  settlementClearedGuard,
+  settlementMarkReopenGuard,
+} from "../settlement/settlement-guard";
 import { SettlementLedger } from "../settlement/settlement-ledger";
 import { SettlementMarks } from "../settlement/settlement-marks";
 import {
@@ -1294,6 +1297,88 @@ describe("帳戶管理(GraphQL 端點 + 真 MongoDB)", () => {
         rev: (closed?.rev as number) + 1,
       });
       expect(docNosOf(await ledger.outstanding(operator))).toContain("P-0091");
+
+      // 不走流程的已完成單據被修改(應付 300 → 500):已結清 → 守門 `beforeEditCompleted` 把標記改回待確認 → 又出現
+      const edited = await completed("P-0095");
+      await ok(api, hq, RECORD_SETTLEMENT, {
+        input: {
+          moduleKey: TEST_PURCHASE,
+          refId: String(edited),
+          side: "hq",
+          button: "out",
+          method: "bank",
+          accountId: account.id,
+          amount: 300,
+        },
+      });
+      expect(docNosOf(await ledger.outstanding(operator))).not.toContain(
+        "P-0095",
+      );
+      const closedEdited = await markOf(edited);
+      expect(closedEdited?.closedAsOf).toBeInstanceOf(Date);
+      // 修改的交易:守門在寫入之前跑(這裡只驗守門;修改本身直接寫存值)
+      await api.app.get(TransactionService).withTransaction(async (session) => {
+        expect(
+          await settlementMarkReopenGuard({
+            ...guardContext(api, operator, tenantA, edited),
+            guard: "beforeEditCompleted",
+            session,
+          }),
+        ).toBeNull();
+      });
+      await api.connection
+        .collection("form_submissions")
+        .updateOne({ _id: edited }, { $set: { "values.payable": 500 } });
+      const afterEdit = await ledger.outstanding(operator);
+      expect(
+        afterEdit.find((row) => row.snapshot.payable.docNo === "P-0095"),
+      ).toMatchObject({ amount: 200, kind: "to_pay" });
+    });
+
+    it("每個收付寫入口都會把結清標記改回待確認:現金流水、現金沖正(銀行登記與沖正見上一則)", async () => {
+      const operator = await operatorOf(api, tenantA);
+      const id = await insertTestSubmission(api.connection, {
+        orgId: storeA,
+        tenantId: tenantA,
+        moduleKey: TEST_PURCHASE,
+        status: "completed",
+        values: { payable: 100, store: String(storeA), docNo: "P-0096" },
+      });
+      await api.app.get(TransactionService).withTransaction((session) =>
+        api.app.get(SettlementMarks).completed(session, {
+          _id: id,
+          orgId: storeA,
+          tenantId: tenantA,
+          moduleKey: TEST_PURCHASE,
+        }),
+      );
+      const marks = api.connection.collection(
+        LOTTERY_SETTLEMENT_MARKS_COLLECTION,
+      );
+      const close = () =>
+        marks.updateOne({ refId: id }, { $set: { closedAsOf: new Date() } });
+      await close();
+      const movement = await recordCash({
+        operator,
+        orgId: storeA,
+        type: "correction_increase",
+        from: "external",
+        to: "vault",
+        amount: 100,
+        refType: TEST_PURCHASE,
+        refId: id,
+        settlementSide: "hq",
+      });
+      expect(await marks.findOne({ refId: id })).toMatchObject({
+        closedAsOf: null,
+        rev: 1,
+      });
+      await close();
+      await reverseCash(movement._id, { operator });
+      expect(await marks.findOne({ refId: id })).toMatchObject({
+        closedAsOf: null,
+        rev: 2,
+      });
     });
 
     it("收付的權限沿用單據那一邊:沒有 → FORBIDDEN;帳戶的使用組織不含這家分店 → BANK_ACCOUNT_NOT_USABLE", async () => {

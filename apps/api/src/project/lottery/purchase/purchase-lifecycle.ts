@@ -8,7 +8,11 @@ import {
   type FormGuard,
   registerFormLifecycle,
 } from "../../../workflows/workflow-engine/lifecycle/form-lifecycle-registration";
-import { settlementClearedGuard } from "../settlement/settlement-guard";
+import {
+  settlementClearedGuard,
+  settlementMarkCompleted,
+  settlementMarkReopenGuard,
+} from "../settlement/settlement-guard";
 import { SettlementLedger } from "../settlement/settlement-ledger";
 import { SettlementMarks } from "../settlement/settlement-marks";
 import { PURCHASE_REASONS } from "./purchase-error";
@@ -62,6 +66,8 @@ export const purchaseLifecycle = registerFormLifecycle({
       rulesOf({ get }).beforeApprove(submission),
     beforeReject: both(withoutReceipts, settlementClearedGuard),
     beforeDelete: both(draftOnly, withoutReceipts),
+    // 不走流程時可以修改已完成的單據(應付可能變):結清標記改回待確認,不擋
+    beforeEditCompleted: settlementMarkReopenGuard,
     beforeVoid: both(
       ({ submission, get }) => rulesOf({ get }).beforeVoid(submission),
       settlementClearedGuard,
@@ -73,14 +79,7 @@ export const purchaseLifecycle = registerFormLifecycle({
     voided: (context) => rulesOf(context).onVoided(context),
     completed: async (context) => {
       // 已完成的單據改由結清標記挑出還要算的(待結清只掃還沒結清的)
-      await context
-        .get<SettlementMarks>(SettlementMarks)
-        .completed(context.session, {
-          _id: context.submissionId,
-          orgId: context.orgId,
-          tenantId: context.tenantId,
-          moduleKey: context.moduleKey,
-        });
+      await settlementMarkCompleted(context);
       rulesOf(context).onTaskEnded(context);
     },
     returned: (context) => rulesOf(context).onReleased(context),

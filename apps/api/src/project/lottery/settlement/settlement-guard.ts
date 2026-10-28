@@ -1,6 +1,10 @@
-import type { FormGuard } from "../../../workflows/workflow-engine/lifecycle/form-lifecycle-registration";
+import type {
+  FormEffect,
+  FormGuard,
+} from "../../../workflows/workflow-engine/lifecycle/form-lifecycle-registration";
 import { ACCOUNTS_REASONS } from "../accounts/accounts-error";
 import { SettlementLedger } from "./settlement-ledger";
+import { SettlementMarks } from "./settlement-marks";
 
 /**
  * 作廢 / 駁回前的收付檢查(規格 9「已有結算紀錄的單據作廢 / 駁回前淨額必須 = 0」)。
@@ -39,4 +43,35 @@ export const settlementClearedGuard: FormGuard = async ({
         code: ACCOUNTS_REASONS.settlementNotCleared,
         message: `settlement net amount is not zero: ${String(submission._id)}`,
       };
+};
+
+/**
+ * 結清標記的兩個掛接點(待結清只掃還沒結清的;正本 `docs/modules/project/accounts.md`「待結清款項與側欄數字」)。
+ * 登記了收付的單據在自己的 `registerFormLifecycle` 一定要兩個都掛(`inject` 要有 `SettlementMarks`;
+ * `settlement-marks-wiring.test.ts` 鎖定):
+ *
+ * - `settlementMarkCompleted`(事後動作 `completed`):單據完成 → 建一筆待確認的標記
+ * - `settlementMarkReopenGuard`(守門 `beforeEditCompleted`,不擋):不走流程的已完成單據被修改,應付可能跟著變
+ *   → 標記改回待確認。守門在修改的交易內、寫入之前跑,修改失敗一起回復
+ */
+export const settlementMarkCompleted: FormEffect = async (context) => {
+  await context.get(SettlementMarks).completed(context.session, {
+    _id: context.submissionId,
+    orgId: context.orgId,
+    tenantId: context.tenantId,
+    moduleKey: context.moduleKey,
+  });
+};
+
+export const settlementMarkReopenGuard: FormGuard = async ({
+  submission,
+  session,
+  get,
+}) => {
+  await get(SettlementMarks).touch(
+    submission.tenantId,
+    submission._id,
+    session,
+  );
+  return null;
 };

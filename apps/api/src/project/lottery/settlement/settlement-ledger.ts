@@ -133,17 +133,42 @@ async function payablesOf(
 }
 
 /** 收付讀成一筆一列(`direction` = 這一邊支出 / 收入的算法)。 */
-function ledgerProjection(direction: unknown) {
-  return {
-    $project: {
-      _id: 0,
-      refId: 1,
-      side: "$settlementSide",
-      direction,
-      amount: 1,
-      occurredAt: 1,
+function ledgerProjection(direction: unknown): Record<string, unknown>[] {
+  return [
+    {
+      $project: {
+        _id: 0,
+        refId: 1,
+        side: "$settlementSide",
+        direction,
+        amount: 1,
+        occurredAt: 1,
+      },
     },
-  };
+  ];
+}
+
+/** 收付依單據 / 邊 / 方向加總成一列(`occurredAt` = 最後一筆的發生時間),欄位同 `ledgerProjection`。 */
+function ledgerGrouping(direction: unknown): Record<string, unknown>[] {
+  return [
+    {
+      $group: {
+        _id: { refId: "$refId", side: "$settlementSide", direction },
+        amount: { $sum: "$amount" },
+        occurredAt: { $max: "$occurredAt" },
+      },
+    },
+    {
+      $project: {
+        _id: 0,
+        refId: "$_id.refId",
+        side: "$_id.side",
+        direction: "$_id.direction",
+        amount: 1,
+        occurredAt: 1,
+      },
+    },
+  ];
 }
 
 /** 收付登記過的單據模組 key。 */
@@ -637,17 +662,18 @@ export class SettlementLedger {
         ? {}
         : { occurredAt: { $lt: new Date(latestBefore) } }),
     };
+    // 各項的時點都一樣(待結清現況、單一時點)→ 在 DB 依單據 / 邊 / 方向加總;時點不同(報表各店的期末)→ 逐筆帶回,
+    // 在記憶體依各項的時點加總
+    const first = items[0]?.before?.getTime();
+    const shape = items.every((item) => item.before?.getTime() === first)
+      ? ledgerGrouping
+      : ledgerProjection;
     const [bankRows, cashRows] = await Promise.all([
-      this.bank.aggregate(reader, [
-        { $match: match },
-        ledgerProjection("$direction"),
-      ]),
+      this.bank.aggregate(reader, [{ $match: match }, ...shape("$direction")]),
       this.cash.aggregate(reader, [
         { $match: match },
         // 現金流出到外部 = 這一邊支出;從外部流入 = 收入
-        ledgerProjection({
-          $cond: [{ $eq: ["$to", "external"] }, "out", "in"],
-        }),
+        ...shape({ $cond: [{ $eq: ["$to", "external"] }, "out", "in"] }),
       ]),
     ]);
     const rowsOf = new Map<string, LedgerRow[]>();
