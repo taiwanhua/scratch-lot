@@ -40,6 +40,9 @@ export interface MonthCalendarDayInfo {
   corner?: MonthCalendarCorner;
   /** 右上角多個角標,依陣列順序由左到右並排;給了就取代 `corner` */
   corners?: readonly MonthCalendarCorner[];
-  /** 格子內的自訂內容(標籤、時段…),由使用處決定 */
+  /**
+   * 格子內的自訂內容(標籤、時段…),由使用處決定。內容裡 `position: absolute` 鋪滿整格的裝飾(底紋等)
+   * 畫在日期數字、註記與角標底下;內容自己的文字要疊在裝飾上,文字那層給 `position: relative`
+   */
   content?: ReactNode;
 }
