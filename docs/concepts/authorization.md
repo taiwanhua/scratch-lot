@@ -187,7 +187,7 @@ token → userId
 ## 稽核
 
 - 寫入 `audit_logs`:誰、何時、動作、對象、前後值(只放有變的欄位)。
-- 由執行動作的模組層寫(`AuditService.record`);RelationService 與 BaseRepository 不記。
+- 由執行動作的模組層寫(`AuditService.record`;一次多筆用 `recordMany`,每筆同形狀、底層一次 `createMany`,必須在交易內);RelationService 與 BaseRepository 不記。
 - 治理模組的授權變更與 CRUD、示範模組的新增 / 編輯 / 停用 / 刪除都有記。action 名見各 `docs/modules/<key>.md`「審計」。
 - 只增不改。個資與欄位級權限欄只記「有變」,值記 `"[redacted]"`。
 

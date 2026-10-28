@@ -81,6 +81,14 @@ export class LotteryBankTransactionsRepository extends BaseRepository<
   override hardDeleteById(): never {
     throw new AppendOnlyLedgerError(this.collectionName);
   }
+
+  override softDeleteMany(): never {
+    throw new AppendOnlyLedgerError(this.collectionName);
+  }
+
+  override bulkUpdateByIds(): never {
+    throw new AppendOnlyLedgerError(this.collectionName);
+  }
 }
 
 /** lottery_cash_movements(現金流水,只新增;寫入唯一入口 `CashLedgerService`)。 */
@@ -117,6 +125,14 @@ export class LotteryCashMovementsRepository extends BaseRepository<
   }
 
   override hardDeleteById(): never {
+    throw new AppendOnlyLedgerError(this.collectionName);
+  }
+
+  override softDeleteMany(): never {
+    throw new AppendOnlyLedgerError(this.collectionName);
+  }
+
+  override bulkUpdateByIds(): never {
     throw new AppendOnlyLedgerError(this.collectionName);
   }
 }
@@ -158,6 +174,14 @@ export class LotteryPeriodClosesRepository extends BaseRepository<
   }
 
   override hardDeleteById(): never {
+    throw new AppendOnlyLedgerError(this.collectionName);
+  }
+
+  override softDeleteMany(): never {
+    throw new AppendOnlyLedgerError(this.collectionName);
+  }
+
+  override bulkUpdateByIds(): never {
     throw new AppendOnlyLedgerError(this.collectionName);
   }
 }
