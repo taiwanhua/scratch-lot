@@ -4,7 +4,10 @@ import type { Types } from "mongoose";
 import { OrgsRepository } from "../../../database/database.module";
 import type { OperatorContext } from "../../../database/operator-context";
 import { tenantBoundaryContext } from "../../../database/tenant-boundary-context";
-import { TransactionService } from "../../../database/transaction";
+import {
+  TransactionService,
+  currentSession,
+} from "../../../database/transaction";
 import { ScheduleEntryLocksRepository } from "../../database/schedule/roster.repositories";
 import { isDuplicateKeyError } from "./schedule-error";
 
@@ -74,12 +77,20 @@ export class SchedulePersonLocks {
    * 多人一次建好(交易外呼叫):一次讀出已有的,缺的在自己的小交易裡一次 `createMany`
    * (`createMany` 必須在交易內)。別的請求同時建了其中幾筆 → 唯一索引讓整批失敗、交易回復,
    * 重讀後只建還沒有的(最多 `ENSURE_MANY_ATTEMPTS` 次)。
+   *
+   * **只能在交易外呼叫**:在交易內,小交易會併進外層交易,撞到唯一索引時外層交易已中止,
+   * 重讀與重試都會失敗;所以交易內呼叫直接丟錯。
    */
   async ensureMany(
     operator: OperatorContext,
     tenantId: Types.ObjectId,
     userIds: readonly Types.ObjectId[],
   ): Promise<void> {
+    if (currentSession() !== undefined) {
+      throw new Error(
+        "SchedulePersonLocks.ensureMany 只能在交易外呼叫(撞到唯一索引時要重讀重試)",
+      );
+    }
     const unique = uniqueIds(userIds);
     if (unique.length === 0) {
       return;

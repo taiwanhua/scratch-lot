@@ -16,6 +16,7 @@ import {
 } from "../../../database/test-support/db-commands";
 import { HOOK_TIMEOUT_MS } from "../../../database/test-support/mongo-connection";
 import { TransactionService } from "../../../database/transaction";
+import { ScheduleEntryLocksRepository } from "../../database/schedule/roster.repositories";
 import { SCHEDULE_AUTO_RUNS_COLLECTION } from "../../database/schedule/schedule-auto-run.schema";
 import { SCHEDULE_CHANGES_COLLECTION } from "../../database/schedule/schedule-change.schema";
 import {
@@ -1196,6 +1197,44 @@ describe("套用範本與自動排班(GraphQL 端點 + 真 MongoDB)", () => {
       ).toMatchObject({ lockedAt: stolenAt, lockedBy: hq.userId });
     });
 
+    it("計算期間鎖逾時、別人寫了這個月(version 多了)→ 不寫入,回 AUTO_RUN_IN_PROGRESS", async () => {
+      await demandOn("2028-10-09", "09:00", "13:00", ["leader"]);
+      const service = api.app.get(ScheduleAutoRunService);
+      const target = service as unknown as {
+        prepareRun: (...args: unknown[]) => Promise<unknown>;
+      };
+      const original = target.prepareRun.bind(service);
+      const spy = jest
+        .spyOn(target, "prepareRun")
+        .mockImplementation(async (...args: unknown[]) => {
+          const prepared = await original(...args);
+          // 計算期間:鎖逾時沒被別人重新標記,但別人的寫入碰過這個月
+          await periods().updateOne(
+            { orgId: daan, month: "2028-10" },
+            { $inc: { version: 1 } },
+          );
+          return prepared;
+        });
+      try {
+        expect(
+          errorOf(await gql(runner, RUN, runInput("2028-10"))),
+        ).toMatchObject({ reason: "AUTO_RUN_IN_PROGRESS" });
+      } finally {
+        spy.mockRestore();
+      }
+      const { entries } = await roster("2028-10");
+      expect(entries).toEqual([]);
+      expect(
+        await connection
+          .collection(SCHEDULE_AUTO_RUNS_COLLECTION)
+          .countDocuments({ orgId: daan, month: "2028-10" }),
+      ).toBe(0);
+      // 自己標的鎖照樣解除
+      expect(
+        await periods().findOne({ orgId: daan, month: "2028-10" }),
+      ).toMatchObject({ lockedAt: null });
+    });
+
     it("執行紀錄記下這次實際用的整組條件與順序(沒送的補在後面、不勾)與延續延長前的時間", async () => {
       const first = await demandOn("2028-03-06", "08:00", "12:00", ["leader"]);
       await demandOn("2028-03-06", "12:00", "14:00", ["leader"]);
@@ -1487,6 +1526,36 @@ describe("套用範本與自動排班(GraphQL 端點 + 真 MongoDB)", () => {
           locks.touchMany(root, tenant, [...ids, new Types.ObjectId()]),
         ),
       ).rejects.toThrow("schedule person locks missing");
+      // 交易內呼叫 ensureMany → 直接丟錯
+      await expect(
+        transactions.withTransaction(() =>
+          locks.ensureMany(root, tenant, [new Types.ObjectId()]),
+        ),
+      ).rejects.toThrow("只能在交易外呼叫");
+
+      // 讀與建之間別人先建了其中一筆 → 整批撞唯一索引、交易回復,重讀後只建剩下的
+      const raced = Array.from({ length: 3 }, () => new Types.ObjectId());
+      const repository = api.app.get(ScheduleEntryLocksRepository);
+      const originalFind = repository.findMany.bind(repository);
+      let calls = 0;
+      const spy = jest
+        .spyOn(repository, "findMany")
+        .mockImplementation(async (...args) => {
+          calls += 1;
+          const found = await originalFind(...args);
+          if (calls === 1) {
+            await locks.ensureMany(root, tenant, raced.slice(0, 1));
+          }
+          return found;
+        });
+      try {
+        await locks.ensureMany(root, tenant, raced);
+      } finally {
+        spy.mockRestore();
+      }
+      // 第 1 次讀(過期)、別人那次的讀、撞到後重讀
+      expect(calls).toBe(3);
+      expect(await stored.countDocuments({ userId: { $in: raced } })).toBe(3);
     });
 
     it("大店整月自動排班 / 重排 / 清除:和只排一天的指令數相同", async () => {

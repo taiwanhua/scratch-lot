@@ -527,17 +527,20 @@ export class ScheduleRosterWritesService {
     input: DeleteScheduleEntryInput,
   ): Promise<string> {
     const scope = await this.scopeOf(operator, input.orgId);
-    const existing = await this.mustFindEntry(operator, scope, input.id);
+    // 交易外先讀一次:要知道月份(先建狀態文件)與是否被收銀班次綁定
+    const found = await this.mustFindEntry(operator, scope, input.id);
     const blocked = await blockedEntryIdsOf(String(scope.org.tenantId), [
-      String(existing._id),
+      String(found._id),
     ]);
     if (blocked.size > 0) {
       throw entriesLockedError([...blocked], ["id"]);
     }
-    const months = [this.monthOf(scope, existing.date)];
+    const months = [this.monthOf(scope, found.date)];
     await this.ensurePeriods(operator, scope, months);
     await this.transactions.withTransaction(async () => {
       const published = await this.touchPeriods(operator, scope, months);
+      // 碰過狀態文件後再讀一次:同時刪同一筆時,後到的一方讀不到 → NOT_FOUND(不重複記稽核 / 異動)
+      const existing = await this.mustFindEntry(operator, scope, input.id);
       const reason = await this.reasonIfPublished(
         operator,
         published,
@@ -548,7 +551,7 @@ export class ScheduleRosterWritesService {
         await this.recordEntryDeletions(operator, scope, reason, [existing]);
       }
     });
-    return String(existing._id);
+    return String(found._id);
   }
 
   /** 移除這天所有排班(颱風停班等):已被開班綁定的略過並列出。 */
@@ -968,7 +971,12 @@ export class ScheduleRosterWritesService {
     const filledOf = new Map<string, typeof filled>();
     for (const item of filled) {
       const key = String(item.entryId);
-      filledOf.set(key, [...(filledOf.get(key) ?? []), item]);
+      const list = filledOf.get(key);
+      if (list === undefined) {
+        filledOf.set(key, [item]);
+      } else {
+        list.push(item);
+      }
     }
     await this.assignments.softDeleteMany(
       operator,

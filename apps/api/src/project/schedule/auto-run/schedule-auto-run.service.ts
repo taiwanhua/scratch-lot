@@ -335,7 +335,8 @@ export class ScheduleAutoRunService {
     const scope = await this.scopeOf(operator, input.orgId, input.month);
     const plan = validatedRunPlan(input, scope.timezone);
     await this.ensurePeriod(operator, scope, input.month);
-    const lockedAt = await this.acquireLock(operator, scope, input.month);
+    const lock = await this.acquireLock(operator, scope, input.month);
+    const { lockedAt } = lock;
     try {
       // 已持有月鎖:讀資料與計算放在交易外(不讓長時間的計算撐住交易);交易內只寫入
       const prepared = await this.prepareRun(
@@ -353,10 +354,10 @@ export class ScheduleAutoRunService {
         candidateIds,
       );
       const record = await this.transactions.withTransaction(async () => {
-        // 重核鎖仍是自己的:計算期間逾時被別人搶走 → 不寫入
+        // 重核鎖仍是自己的、計算期間沒有別的寫入:逾時被別人搶走,或逾時期間別人寫了這個月 → 不寫入
         await this.touchPeriod(operator, scope, input.month, {
           allowPublished: false,
-          ownLock: lockedAt,
+          ownLock: lock,
         });
         // 碰每位候選人的「人」守門文件:同時在別家店手動排同一人會衝突重跑(一次 updateMany)
         await this.personLocks.touchMany(
@@ -1202,7 +1203,11 @@ export class ScheduleAutoRunService {
     operator: OperatorContext,
     scope: Scope,
     month: string,
-    options: { allowPublished: boolean; ownLock?: Date },
+    options: {
+      allowPublished: boolean;
+      /** 自動排班:自己標的鎖(時點)與標記後的 `version`(這次 $inc 後要剛好多 1) */
+      ownLock?: { lockedAt: Date; version: number };
+    },
   ): Promise<boolean> {
     const touched = await this.periods.findOneAndUpdate(
       operator,
@@ -1218,8 +1223,12 @@ export class ScheduleAutoRunService {
       if (isAutoRunLocked(touched, this.clock.now())) {
         throw autoRunBlockedError("AUTO_RUN_IN_PROGRESS");
       }
-    } else if (touched.lockedAt?.getTime() !== options.ownLock.getTime()) {
-      // 自己的鎖已經不在(計算期間逾時、被別人重新標記)→ 不寫入
+    } else if (
+      touched.lockedAt?.getTime() !== options.ownLock.lockedAt.getTime() ||
+      touched.version !== options.ownLock.version + 1
+    ) {
+      // 自己的鎖已經不在(計算期間逾時、被別人重新標記),或鎖逾時期間別人寫了這個月
+      // (version 多了,交易外算好的計畫已過期)→ 不寫入
       throw autoRunBlockedError("AUTO_RUN_IN_PROGRESS");
     }
     const published = touched.status === "published";
@@ -1229,12 +1238,15 @@ export class ScheduleAutoRunService {
     return published;
   }
 
-  /** 條件更新標記鎖定(未發布、沒鎖或已逾時);拿不到 → 依狀況回已發布 / 執行中。 */
+  /**
+   * 條件更新標記鎖定(未發布、沒鎖或已逾時),回標記的時點與當時的 `version`;
+   * 拿不到 → 依狀況回已發布 / 執行中。
+   */
   private async acquireLock(
     operator: OperatorContext,
     scope: Scope,
     month: string,
-  ): Promise<Date> {
+  ): Promise<{ lockedAt: Date; version: number }> {
     const now = this.clock.now();
     const locked = await this.periods.findOneAndUpdate(
       operator,
@@ -1250,7 +1262,7 @@ export class ScheduleAutoRunService {
       { $set: { lockedAt: now, lockedBy: operator.actorId } },
     );
     if (locked !== null) {
-      return now;
+      return { lockedAt: now, version: locked.version };
     }
     const period = await this.periods.findOne(operator, {
       orgId: scope.org.id,
