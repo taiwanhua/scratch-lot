@@ -16,7 +16,9 @@ import {
   startAuthTestApp,
 } from "../../../auth/test-support/auth-app";
 import { createOrg } from "../../../auth/test-support/fixtures";
+import { OrgsRepository } from "../../../database/database.module";
 import type { OperatorContext } from "../../../database/operator-context";
+import { tenantBoundaryContext } from "../../../database/tenant-boundary-context";
 import {
   countDbCommands,
   expectDbCommandsAtMost,
@@ -32,6 +34,7 @@ import { LOTTERY_BANK_ACCOUNTS_COLLECTION } from "../../database/lottery-account
 import { LOTTERY_BANK_TRANSACTIONS_COLLECTION } from "../../database/lottery-accounts/lottery-bank-transaction.schema";
 import { LOTTERY_CASH_MOVEMENTS_COLLECTION } from "../../database/lottery-accounts/lottery-cash-movement.schema";
 import { LOTTERY_PERIOD_CLOSES_COLLECTION } from "../../database/lottery-accounts/lottery-period-close.schema";
+import { LOTTERY_SETTLEMENT_MARKS_COLLECTION } from "../../database/lottery-accounts/lottery-settlement-mark.schema";
 import { LOTTERY_CASH_POINTS_COLLECTION } from "../../database/lottery-cash-points/lottery-cash-point.schema";
 import { LOTTERY_CHECKOUTS_COLLECTION } from "../../database/lottery-checkouts/lottery-checkout.schema";
 import { LOTTERY_GAMES_COLLECTION } from "../../database/lottery-games/lottery-game.schema";
@@ -46,8 +49,10 @@ import {
   insertGame,
   seedInventoryModule,
 } from "../purchase/test-support/purchase-fixtures";
+import { SettlementLedger } from "../settlement/settlement-ledger";
 import { LotteryBooksService } from "../tickets/books.service";
 import { TicketLedgerService } from "../tickets/ticket-ledger.service";
+import { OPERATIONS_RANGE, ReportScopes } from "./report-scope";
 
 jest.setTimeout(WORKFLOW_TEST_TIMEOUT_MS);
 
@@ -2103,6 +2108,155 @@ describe("輸出報表:營運報表、班次結帳歷史報表(GraphQL 端點 + 
     expect(await toPayOn("2026-10-21")).toBe(9500);
   });
 
+  it("未結清的資料庫指令數與調貨單張數無關(TX-07):期末 1 張與 4 張已完成的調貨單相同;期末以前就結清的不讀", async () => {
+    const east = await createOrg(connection, {
+      name: "宜蘭店",
+      parentId: tenant,
+    });
+    const west = await createOrg(connection, {
+      name: "花蓮店",
+      parentId: tenant,
+    });
+    const submittedAt = taipei("2026-12-01", "09:00");
+    const asOf = taipei("2026-12-02");
+    let insertedCount = 0;
+    /** 已完成的調貨單(已點收 1 張 120、還沒付 → 待收 / 待付),完成時建了結清標記。 */
+    const completedTransfer = async (closedAsOf: Date | null) => {
+      const values = transferValues(east, west, [
+        {
+          rowId: "r1",
+          book: { id: String(new Types.ObjectId()) },
+          mode: { id: "partial" },
+          ticket_nos: "001-001",
+          tickets: 1,
+          amount: 120,
+          rate: 100,
+        },
+      ]);
+      const { insertedId } = await connection
+        .collection("form_submissions")
+        .insertOne({
+          orgId: east,
+          tenantId: tenant,
+          moduleKey: "purchasing.transfer",
+          formKey: "transfer",
+          version: 1,
+          values,
+          summary: null,
+          status: "completed",
+          revision: 1,
+          revisions: [revisionOf(1, values, submittedAt)],
+          editVersion: 1,
+          touched: [],
+          clientRequestId: String(new Types.ObjectId()),
+          serialNo: `T-PERF-${String(insertedCount++)}`,
+          submittedAt,
+          currentInstanceId: null,
+          blocked: false,
+          ...base(),
+        });
+      await insert(LOTTERY_TRANSFER_RECEIPTS_COLLECTION, {
+        orgId: west,
+        fromOrgId: east,
+        submissionId: insertedId,
+        rowId: "r1",
+        bookId: new Types.ObjectId(),
+        purchaseAmount: 120,
+        tickets: [
+          { ticketId: new Types.ObjectId(), unitCost: 100, ticketNo: "001" },
+        ],
+        receivedBy: hq.userId,
+        receivedAt: taipei("2026-12-01", "10:00"),
+        moduleKey: "purchasing.transfer",
+      });
+      await insert(LOTTERY_SETTLEMENT_MARKS_COLLECTION, {
+        orgId: east,
+        refType: "purchasing.transfer",
+        refId: insertedId,
+        closedAsOf,
+        rev: 0,
+        moduleKey: "accounts",
+      });
+      return insertedId;
+    };
+    const reader = await tenantBoundaryContext(
+      api.app.get(OrgsRepository),
+      null,
+      tenant,
+    );
+    const operator = { ...reader, actorId: hq.userId };
+    const settlement = api.app.get(SettlementLedger);
+    const serialNosAt = async () => {
+      const rows = await settlement.outstandingAt(operator, asOf);
+      return rows
+        .filter((row) => row.branchOrgId.equals(west))
+        .map((row) => row.snapshot.submission.serialNo);
+    };
+    await completedTransfer(null);
+    // 期末以前就已結清(`closedAsOf` 早於期末)→ 不讀
+    await completedTransfer(taipei("2026-12-01", "12:00"));
+    await settlement.outstandingAt(operator, asOf);
+    const one = await countDbCommands(serialNosAt);
+    expect(one.result).toEqual(["T-PERF-0"]);
+    for (let index = 0; index < 3; index += 1) {
+      await completedTransfer(null);
+    }
+    const four = await countDbCommands(serialNosAt);
+    // 好幾個期末一次算(各店的「迄」不同):指令數與時點數無關,結果與逐個時點算相同
+    const ends = [taipei("2026-12-01", "09:30"), asOf, taipei("2026-12-03")];
+    const serialNosOf = (
+      rows: Awaited<ReturnType<typeof settlement.outstandingAt>>,
+    ) =>
+      rows
+        .filter((row) => row.branchOrgId.equals(west))
+        .map((row) => row.snapshot.submission.serialNo);
+    const single = await countDbCommands(() =>
+      settlement.outstandingAtMany(operator, [asOf]),
+    );
+    const many = await countDbCommands(() =>
+      settlement.outstandingAtMany(operator, ends),
+    );
+    expect(many.total).toBe(single.total);
+    for (const [index, end] of ends.entries()) {
+      expect(serialNosOf(many.result[index] ?? [])).toEqual(
+        serialNosOf(await settlement.outstandingAt(operator, end)),
+      );
+    }
+    expect(four.result).toEqual([
+      "T-PERF-0",
+      "T-PERF-2",
+      "T-PERF-3",
+      "T-PERF-4",
+    ]);
+    expect(four.total).toBe(one.total);
+  });
+
+  it("選店的資料庫指令數與分店數無關(TX-07):1 家與 4 家相同", async () => {
+    const stores = await Promise.all(
+      ["一", "二", "三", "四"].map((name) =>
+        createOrg(connection, { name: `選店${name}`, parentId: tenant }),
+      ),
+    );
+    const reader = await tenantBoundaryContext(
+      api.app.get(OrgsRepository),
+      null,
+      tenant,
+    );
+    const operator = { ...reader, actorId: hq.userId };
+    const scopes = api.app.get(ReportScopes);
+    const scopeOf = (orgIds: readonly Types.ObjectId[]) => () =>
+      scopes.scopeOf(
+        operator,
+        { ...dayOf("2026-12-03"), orgIds: orgIds.map(String) },
+        OPERATIONS_RANGE,
+      );
+    await scopeOf(stores.slice(0, 1))();
+    const one = await countDbCommands(scopeOf(stores.slice(0, 1)));
+    const four = await countDbCommands(scopeOf(stores));
+    expect(four.result.storeIds).toEqual(stores);
+    expect(four.total).toBe(one.total);
+  });
+
   it("同一個租戶、看不到的分店 → NOT_FOUND", async () => {
     const storeOnly = await person(api, connection, zhongshan, tenant, {
       moduleKeys: ["reports"],
@@ -3460,6 +3614,15 @@ describe("輸出報表:營運報表、班次結帳歷史報表(GraphQL 端點 + 
           blocked: false,
           ...base(),
         });
+      // 已完成的單據有結清標記(完成時建;待結清只掃還沒結清的)
+      await insert(LOTTERY_SETTLEMENT_MARKS_COLLECTION, {
+        orgId: hsinchu,
+        refType: "purchasing.transfer",
+        refId: transferId,
+        closedAsOf: null,
+        rev: 0,
+        moduleKey: "accounts",
+      });
       await insert(LOTTERY_TRANSFER_RECEIPTS_COLLECTION, {
         orgId: pingtung,
         fromOrgId: hsinchu,

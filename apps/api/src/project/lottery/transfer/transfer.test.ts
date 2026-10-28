@@ -56,6 +56,7 @@ import {
   reviewStep,
 } from "../../../workflows/test-support/workflow-fixtures";
 import { LOTTERY_CASH_MOVEMENTS_COLLECTION } from "../../database/lottery-accounts/lottery-cash-movement.schema";
+import { LOTTERY_SETTLEMENT_MARKS_COLLECTION } from "../../database/lottery-accounts/lottery-settlement-mark.schema";
 import { InventoryActionsService } from "../inventory/inventory-actions.service";
 import {
   insertBankAccount,
@@ -1569,6 +1570,12 @@ describe("調貨單(規格 8.4、第 9 章)", () => {
       await record(managerB, id, "receiver", "in", 1000);
       expect(await decideBlocked(managerB, id, "APPROVE")).toBeNull();
       expect(await current(id).then((value) => value.status)).toBe("completed");
+      // 完成時建結清標記(待確認;待結清只掃還沒結清的)
+      expect(
+        await db()
+          .collection(LOTTERY_SETTLEMENT_MARKS_COLLECTION)
+          .findOne({ refId: new Types.ObjectId(id) }),
+      ).toMatchObject({ refType: "purchasing.transfer", closedAsOf: null });
     });
   });
 

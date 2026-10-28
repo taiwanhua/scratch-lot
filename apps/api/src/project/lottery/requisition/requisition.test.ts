@@ -10,6 +10,7 @@ import {
   startAuthTestApp,
 } from "../../../auth/test-support/auth-app";
 import { createOrg } from "../../../auth/test-support/fixtures";
+import { countDbCommands } from "../../../database/test-support/db-commands";
 import { HOOK_TIMEOUT_MS } from "../../../database/test-support/mongo-connection";
 import { TransactionService } from "../../../database/transaction";
 import {
@@ -741,6 +742,34 @@ describe("叫貨單(規格 8.1)", () => {
       ).rejects.toMatchObject({
         extensions: { reason: "REQUISITION_NOT_PENDING" },
       });
+    });
+
+    it("一張單引用好幾張叫貨單:解除引用一次寫完(TX-06),1 張與 3 張指令數相同", async () => {
+      const purchaseId = new Types.ObjectId();
+      const referenced = [];
+      for (let index = 0; index < 4; index += 1) {
+        const row = await submitAs(hq, branchB, [line(gameOld, 1)]);
+        const requisitionId = new Types.ObjectId(row.id);
+        await transactions.withTransaction((session) =>
+          reference.markRequisitionReferenced(session, {
+            tenantId: tenant,
+            requisitionId,
+            type: "purchase",
+            submissionId: purchaseId,
+          }),
+        );
+        referenced.push(requisitionId);
+      }
+      const unmark = (ids: readonly Types.ObjectId[]) => () =>
+        transactions.withTransaction((session) =>
+          reference.unmarkRequisitionsReferenced(session, tenant, ids),
+        );
+      const one = await countDbCommands(unmark(referenced.slice(0, 1)));
+      const three = await countDbCommands(unmark(referenced.slice(1)));
+      expect(three.total).toBe(one.total);
+      for (const id of referenced) {
+        expect(await stateOf(String(id))).toBe("pending");
+      }
     });
   });
 

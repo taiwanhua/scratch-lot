@@ -20,6 +20,7 @@ import {
 } from "../../../auth/test-support/auth-app";
 import { createOrg, createUser } from "../../../auth/test-support/fixtures";
 import type { OperatorContext } from "../../../database/operator-context";
+import { countDbCommands } from "../../../database/test-support/db-commands";
 import { HOOK_TIMEOUT_MS } from "../../../database/test-support/mongo-connection";
 import {
   TransactionService,
@@ -870,6 +871,30 @@ describe("店面(二):銷售、當下撤銷、拆本、移櫃(GraphQL 端點 + �
           (row) => row.ticketId === String(ticket._id),
         ),
       ).toMatchObject({ undone: true });
+    });
+
+    it("[最近售出] 的資料庫指令數與筆數無關(TX-07):1 筆與 4 筆相同", async () => {
+      const recent = () =>
+        ok<{ lotteryStoreRecentSales: { items: SaleRow[] } }>(wang, RECENT, {
+          shiftId: String(counterShift),
+        });
+      now("18:00");
+      await sell(wang, await ticketOf(bookId, "040"));
+      // 第一次查詢會讀一些之後有快取的東西(登入),先暖身
+      await recent();
+      const one = await countDbCommands(recent);
+      // 另外 3 筆分散在不同的本(一批讀本、事件,不是同一本)
+      await sell(wang, await ticketOf(bookId, "041"));
+      for (const ticketNo of ["010", "020"]) {
+        const other = await receiveBook();
+        await openTo(other.bookId, counter);
+        await sell(wang, await ticketOf(other.bookId, ticketNo));
+      }
+      const four = await countDbCommands(recent);
+      expect(four.result.lotteryStoreRecentSales.items).toHaveLength(
+        one.result.lotteryStoreRecentSales.items.length + 3,
+      );
+      expect(four.total).toBe(one.total);
     });
 
     it("同一張 賣出 → 撤銷 → 再賣出:當下撤銷看的是最新那次售出(可以再撤銷一次)", async () => {

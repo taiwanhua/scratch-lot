@@ -10,12 +10,15 @@ import { LotteryBankAccount } from "./lottery-bank-account.schema";
 import { LotteryBankTransaction } from "./lottery-bank-transaction.schema";
 import { LotteryCashMovement } from "./lottery-cash-movement.schema";
 import { LotteryPeriodClose } from "./lottery-period-close.schema";
+import { LotterySettlementMark } from "./lottery-settlement-mark.schema";
 
 export type LotteryBankAccountDocument = HydratedDocument<LotteryBankAccount>;
 export type LotteryBankTransactionDocument =
   HydratedDocument<LotteryBankTransaction>;
 export type LotteryCashMovementDocument = HydratedDocument<LotteryCashMovement>;
 export type LotteryPeriodCloseDocument = HydratedDocument<LotteryPeriodClose>;
+export type LotterySettlementMarkDocument =
+  HydratedDocument<LotterySettlementMark>;
 
 /** 只新增的帳本被要求修改 / 刪除(程式錯誤:記錯一律沖正)。 */
 export class AppendOnlyLedgerError extends Error {
@@ -183,5 +186,22 @@ export class LotteryPeriodClosesRepository extends BaseRepository<
 
   override bulkUpdateByIds(): never {
     throw new AppendOnlyLedgerError(this.collectionName);
+  }
+}
+
+/** lottery_settlement_marks(已完成單據的結清標記;寫入只經 `SettlementMarks`)。 */
+@Injectable()
+export class LotterySettlementMarksRepository extends BaseRepository<
+  LotterySettlementMark,
+  LotterySettlementMarkDocument
+> {
+  constructor(
+    @InjectModel(LotterySettlementMark.name)
+    model: RepositoryModel<
+      LotterySettlementMark,
+      LotterySettlementMarkDocument
+    >,
+  ) {
+    super(model);
   }
 }

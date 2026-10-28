@@ -66,6 +66,12 @@ export const PROJECT_TENANT_BOUNDARY_CONTEXT_CALLERS: Readonly<
   "project/lottery/accounts/bank-transactions.service.ts": ["反查", "例外寫入"],
   // 看得到單據就看得到它的收付(另一邊可能是別家分店記的)
   "project/lottery/settlement/settlement-ledger.ts": ["反查"],
+  // 結清標記:單據完成 / 寫收付時記(系統身分,同一個交易);讀待結清時以讀者的租戶讀寫(兩邊店的單據歸屬其中一家)
+  "project/lottery/settlement/settlement-marks.ts": [
+    "反查",
+    "例外寫入",
+    "系統重算",
+  ],
   // 收付歷程、帳戶名稱、付款帳戶的使用組織比對分店的上層、自動記帳讀單據租戶的帳戶(只讀;寫入一律照可見範圍)
   "project/lottery/settlement/settlement.service.ts": ["反查"],
   // 一個人在整個租戶的排班:跨店不能重疊、別家店的班顯示灰色區塊

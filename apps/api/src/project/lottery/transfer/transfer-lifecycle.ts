@@ -8,8 +8,13 @@ import {
   type FormGuard,
   registerFormLifecycle,
 } from "../../../workflows/workflow-engine/lifecycle/form-lifecycle-registration";
-import { settlementClearedGuard } from "../settlement/settlement-guard";
+import {
+  settlementClearedGuard,
+  settlementMarkCompleted,
+  settlementMarkReopenGuard,
+} from "../settlement/settlement-guard";
 import { SettlementLedger } from "../settlement/settlement-ledger";
+import { SettlementMarks } from "../settlement/settlement-marks";
 import { TRANSFER_REASONS } from "./transfer-error";
 import type { TransferRules } from "./transfer-rules.service";
 import { TRANSFER_RULES } from "./transfer-rules.token";
@@ -53,7 +58,7 @@ const withoutReceipts: FormGuard = ({ submission, get }) =>
 export const transferLifecycle = registerFormLifecycle({
   moduleKey: TRANSFER_MODULE_KEY,
   formKey: TRANSFER_FORM_KEY,
-  inject: [TRANSFER_RULES, SettlementLedger],
+  inject: [TRANSFER_RULES, SettlementLedger, SettlementMarks],
   guards: {
     beforeSubmit: ({ operator, submission, values, get }) =>
       rulesOf({ get }).beforeSubmit(operator, submission, values),
@@ -61,6 +66,8 @@ export const transferLifecycle = registerFormLifecycle({
       rulesOf({ get }).beforeApprove(submission, operator, stepKey),
     beforeReject: both(withoutReceipts, settlementClearedGuard),
     beforeDelete: both(draftOnly, withoutReceipts),
+    // 不走流程時可以修改已完成的單據(應付可能變):結清標記改回待確認,不擋
+    beforeEditCompleted: settlementMarkReopenGuard,
     beforeVoid: both(
       ({ submission, get }) => rulesOf({ get }).beforeVoid(submission),
       settlementClearedGuard,
@@ -73,7 +80,9 @@ export const transferLifecycle = registerFormLifecycle({
     withdrawn: (context) => rulesOf(context).onReleased(context),
     rejected: (context) => rulesOf(context).onRejected(context),
     voided: (context) => rulesOf(context).onVoided(context),
-    completed: (context) => {
+    completed: async (context) => {
+      // 已完成的單據改由結清標記挑出還要算的(待結清只掃還沒結清的)
+      await settlementMarkCompleted(context);
       rulesOf(context).onTaskEnded(context);
     },
   },

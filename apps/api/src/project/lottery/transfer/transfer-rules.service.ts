@@ -1437,15 +1437,13 @@ export class TransferRules {
     const ids = new Map(
       referenced.map((row) => [String(row.requisitionId), row.requisitionId]),
     );
-    for (const requisitionId of ids.values()) {
-      if (keep?.equals(requisitionId) === true) {
-        continue;
-      }
-      await this.requisitions.unmarkRequisitionReferenced(context.session, {
-        tenantId,
-        requisitionId,
-      });
-    }
+    await this.requisitions.unmarkRequisitionsReferenced(
+      context.session,
+      tenantId,
+      [...ids.values()].filter(
+        (requisitionId) => keep?.equals(requisitionId) !== true,
+      ),
+    );
   }
 
   /**

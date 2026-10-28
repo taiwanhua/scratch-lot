@@ -81,6 +81,8 @@
 | `refund` 退貨退款                                          | 抽屜 → 外部                 |
 | `correction_increase` / `correction_decrease` 現金更正     | 外部 ↔ 抽屜或小金庫         |
 
+**`lottery_settlement_marks`**(已完成單據的結清標記;待結清只掃還沒結清的,見「待結清款項與側欄數字」):`orgId`(= 單據的 `orgId`)、`refType`(單據的模組 key)、`refId`(單據)、`closedAsOf`(從這個時點起沒有待結清;null = 還要算)、`rev`(每次改回 null +1);唯一 `refId`、索引 `(tenantId, refType, closedAsOf)`。寫入只經 `SettlementMarks`,讀寫以單據的租戶為邊界。上線前完成的單據由 migration `20261028130000_data_settlement-marks-completed-documents` 補待確認的標記。
+
 **`lottery_period_closes`**(關帳;只新增,repository 的修改 / 刪除一律拋 `AppendOnlyLedgerError`):`orgId`(租戶頂層)、`month`(`YYYY-MM`)、`periodStart` / `periodEnd`(租戶時區 1 日 00:00 至 下月 1 日 00:00,不含)、`closedAt`、`closedBy`、`note`、`snapshot`;唯一 `(tenantId, month)`。
 
 | 快照                      | 內容                                                                                                                                                                                                                         |
@@ -126,7 +128,7 @@
 ### 收付機制
 
 - 單據以 `registerSettlementDocument({ moduleKey, label, kind, payable(submission), sides })` 登記(`apps/api/src/project/lottery/settlement/settlement-registry.ts`);`sides[]`:`side`、`label`(總部 / 收貨店 / 出貨店)、`role`(`payer` 付款方 / `payee` 收款方)、`permission`、`methods`(`bank` / `cash`)、`defaultAmount(button, state)`、選填 `branchOf`。
-- `payable(submission)` 可以是非同步(調貨單要讀點收紀錄);回的 `received`(選填)是付款方先填值的基準,和應付不同時才給,進 `SettlementState.received`(調貨單:已點收的批購金額)。
+- `payable(submission)` 可以是非同步(調貨單要讀點收紀錄);回的 `received`(選填)是付款方先填值的基準,和應付不同時才給,進 `SettlementState.received`(調貨單:已點收的批購金額)。要讀資料庫的登記另給 `payables(items)`(`items` = `{ submission, asOf? }[]`,同一張可以在不同時點各算一次;一批一次讀,順序同 `items`):待結清、列表、報表一次算很多張、很多個期末時用它(TX-07;調貨單一批讀一次點收紀錄,再依各項的時點過濾)。
 - 選填 `sideBranchPaths`(**兩邊店的單據**):各邊分店的組織欄位路徑(例 `values.to_branch.id`;調貨單的出貨店、收貨店)。有宣告 = 記帳 / 沖正 / 帳戶選項要**那一邊的分店**在讀者的可見範圍內;沒宣告 = 單據本身要在讀者的可見範圍內(`canSettle`、`canReverse` 同),寫入不放大。結算區塊與待結清款項的**讀取**一律走一般讀取:單據歸屬看不到、但受管表單的依欄位共用指到讀者可見範圍內的組織(進貨單的進貨分店、調貨單的出貨店 / 收貨店;底座 `docs/modules/forms.md`「依欄位共用」)時照樣讀得到,只是不能按。
 - 每一邊兩顆按鈕:`out`(付款 / 退款)、`in`(收到退款 / 收款);先填的金額 ≤ 0 的那一顆停用(`SETTLEMENT_NOTHING_DUE`)。帳一律以實際填的金額為準。預設值的算法在 `@repo/domain/project/lottery-accounts` 的 `payerDefaultAmount` / `payeeDefaultAmount`(規格 9 的驗算表都有測試)。
 - 已付淨額 = 支出 − 收入;已收淨額 = 收入 − 支出;可以分次。沖正以反方向計入。
@@ -140,6 +142,11 @@
 ### 待結清款項與側欄數字
 
 - 一張單據的一邊一列(付款方:待付 / 待退;收款方:待收 / 待退),依操作者的可見範圍讀單據;收付以租戶邊界讀(另一邊可能是別家分店記的)。
+- **只掃還沒結清的**(已完成的單據會一直累積;使用者 10/28 定案):還沒完成的有效單據(審核中 / 退回 / 撤回)照狀態全部算;已完成的只算**結清標記**(`lottery_settlement_marks`)還在待確認的。
+  - 單據完成(事後動作 `completed` 掛 `settlementMarkCompleted`,進貨單、調貨單)→ 建一筆待確認的標記;不走流程時修改已完成的單據(守門 `beforeEditCompleted` 掛 `settlementMarkReopenGuard`,不擋)→ 改回待確認;之後這張單每寫一筆收付(銀行交易 / 現金流水,含沖正;`BankTransactionsService.write` / `reverseRecord`、`CashLedgerService` 兩個寫入口,同一個交易)→ 標記改回待確認、`rev + 1`
+  - 讀待結清時,算完沒有待結清的(或已不是有效單據的)寫上 `closedAsOf` = 算的當下,之後不再讀;寫入帶 `rev` 條件,算的途中有新收付就不寫,下次再算。最後一筆收付的發生時間晚於當下(未來日期)的先不寫
+  - **某個時點的待結清**(輸出報表營運報表區塊 7「期末時」,`outstandingAt`):已完成的只算 `closedAsOf` 為 null 或不早於那個時點的(早於那個時點 = 那時以前的收付、點收、修訂都已算進去,而且當時就沒有待結清)
+- 讀取的指令數與張數、時點數無關(TX-07):應付一批算(`payables`,一項 = 單據 + 時點)、收付每個租戶讀一次、標記一次讀 / 一次寫;好幾個時點(營運報表各店的期末不同)用 `outstandingAtMany` 一次算。
 - 側欄數字 = 待結清的列數;沒有 `view-outstanding` = 0。收付寫入後對操作者送 `badge:accounts`。
 
 ### 關帳
@@ -263,7 +270,7 @@ targetType `lottery_bank_account` / `lottery_bank_transaction` / `lottery_cash_m
 ## 測試
 
 - `packages/domain/src/project/lottery-accounts/lottery-accounts.test.ts`:類型與方向、從 → 到、規格 9 的進貨單 ①–⑤ 驗算、調貨單例、分次付款例、待結清種類。
-- `apps/api/src/project/lottery/accounts/accounts.test.ts`(TEST-07):期初鎖定 / 刪除 / 停用、可見範圍(列表與單筆 `NOT_FOUND`、共用進來的只能看)、權限、交易方向與餘額、沖正(原交易不改、不能沖兩次;掛在單據上的要那一邊的收付權限)、沖正存入連動存銀行流水、小金庫只由流水算 + schema 與 repository 檢查、收付(分次付款、待結清、候選、作廢 / 駁回守門、帳戶使用組織、現金來源、從小金庫付現超過應有擋下 / 剛好等於可以)。收付用兩種測試單據登記驗。
+- `apps/api/src/project/lottery/accounts/accounts.test.ts`(TEST-07):期初鎖定 / 刪除 / 停用、可見範圍(列表與單筆 `NOT_FOUND`、共用進來的只能看)、權限、交易方向與餘額、沖正(原交易不改、不能沖兩次;掛在單據上的要那一邊的收付權限)、沖正存入連動存銀行流水、小金庫只由流水算 + schema 與 repository 檢查、收付(分次付款、待結清、候選、作廢 / 駁回守門、帳戶使用組織、現金來源、從小金庫付現超過應有擋下 / 剛好等於可以)、結清標記(結清後不再讀、沖正回到待確認、某個時點照樣算、指令數與張數無關)。收付用兩種測試單據登記驗。
 - `apps/db-migrator/seeds/project/accounts.test.ts`:模組宣告與開通角色配方。
 - `packages/domain/src/project/lottery-accounts/period-close.test.ts`:月份期間(10/31 23:59:59.999 算 10 月)、依序、月份列表。
 - `apps/api/src/project/lottery/period-close/period-close.test.ts`(TEST-07):沒有 `close-period` → `FORBIDDEN`;跳過 9 月關 10 月、關本月、重關、確認月份不同 → 擋下;沒結帳的班 → 擋;三種單據審核中落在那個月 → 擋(11 月的不擋);沒被日結涵蓋的班 → 警告並記快照;月底餘額 / 小金庫只算到 10/31 23:59:59.999;`assertPeriodOpen` 的邊界;關帳逾期(3 號、上月未關 → 提醒;2 號不寄;已關不寄)。退款班次 / 現金更正位置 / 開班選排班的擋下在店面的 `store-forms.test.ts`、`store.test.ts`。
