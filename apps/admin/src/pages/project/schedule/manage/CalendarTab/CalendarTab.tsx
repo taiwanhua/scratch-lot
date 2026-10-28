@@ -23,12 +23,16 @@ import { Typography } from "@repo/ui/typography";
 
 import { OrgTreeSelect } from "@/components/base/OrgTreeSelect/OrgTreeSelect";
 import { TagPaletteChip } from "@/components/project/TagPaletteChip/TagPaletteChip";
+import { CalendarClosedLayer } from "@/components/project/schedule/CalendarMark/CalendarClosedLayer";
+import {
+  calendarMarkMonthBackground,
+  calendarMarkOf,
+} from "@/components/project/schedule/CalendarMark/calendar-mark";
 import { useSession } from "@/hooks/base/useSession";
 import { useTenantTimezone } from "@/hooks/base/useTenantTimezone";
 import { useTenantToday } from "@/hooks/base/useTenantToday";
 import { useUrlState } from "@/hooks/base/useUrlState";
 import { dayKeyOf, monthRangeOf } from "@/lib/project/schedule-day-offs";
-import { isTagPaletteKey } from "@/lib/project/tag-palettes";
 
 import { CalendarDayDialog } from "./CalendarDayDialog";
 
@@ -43,6 +47,8 @@ type Editing = { mode: "create"; date: string } | { mode: "day"; day: Day };
 
 /**
  * 排班作業 → 行事曆(SC-07;規格 14.5「行事曆」):月曆標出店休(灰)與特殊日(行事曆設定的顏色、顯示名稱)。
+ * 判斷與底色同排班表月檢視、我的班表月曆(`calendarMarkOf`):店休整格店休灰(`CalendarClosedLayer`,格子仍可點)、
+ * 特殊日整格鋪色票淡化底色(`calendarMarkMonthBackground`);標籤保留。
  * 上層組織設的往下沿用,本店自設的以本店為準(最接近的那一層)。
  *
  * - 分店選擇器、月份放網址參數
@@ -80,17 +86,32 @@ export const CalendarTab = () => {
   };
 
   const dayInfo: Record<string, MonthCalendarDayInfo> = Object.fromEntries(
-    days.map((day) => [
-      dayKeyOf(day.date, timezone),
-      {
-        content:
-          day.type === "special" && isTagPaletteKey(day.paletteKey) ? (
-            <TagPaletteChip paletteKey={day.paletteKey} label={labelOf(day)} />
-          ) : (
-            <Tag label={labelOf(day)} />
+    days.map((day) => {
+      const mark = calendarMarkOf(day);
+      const background = calendarMarkMonthBackground(mark);
+      return [
+        dayKeyOf(day.date, timezone),
+        {
+          ...(background === undefined ? {} : { background }),
+          content: (
+            <>
+              {mark.kind === "closed" && <CalendarClosedLayer />}
+              {/* 標籤疊在店休灰之上(`position: relative`) */}
+              <Stack sx={{ position: "relative", alignItems: "flex-start" }}>
+                {mark.kind === "special" ? (
+                  <TagPaletteChip
+                    paletteKey={mark.paletteKey}
+                    label={labelOf(day)}
+                  />
+                ) : (
+                  <Tag label={labelOf(day)} />
+                )}
+              </Stack>
+            </>
           ),
-      },
-    ]),
+        },
+      ];
+    }),
   );
 
   const openDate = (date: string) => {

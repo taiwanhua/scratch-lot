@@ -365,10 +365,30 @@ test("audit-legend:例外頁的「圖例樣本畫面沒用到」照列理由、�
   assert.match(r.exemptedSample[0], /圖例「資訊」/);
 });
 
-test("audit-legend:設定沒有 legend.exempt 時照常稽核、不出錯", async () => {
+test("audit-legend:legend.exemptMarks 列的畫面 + 標示色沒樣本改列例外(附理由);其他畫面照算", async () => {
+  const { figma, page } = legendScene({ withWarningSample: false });
+  const config = testConfig();
+  config.legend.exemptMarks = { "AA-01|warning/main": "文字本身就說明" };
+  const r = await runAudit("audit-legend.js", figma, config, {
+    PAGE_ID: page.id,
+  });
+  assert.equal(r.legendMismatch, 1);
+  assert.match(r.mismatchSample[0], /圖例「資訊」/);
+  assert.equal(r.legendExempted, 1);
+  assert.match(r.exemptedSample[0], /warning\/main.*文字本身就說明/);
+  config.legend.exemptMarks = { "AA-02|warning/main": "別的畫面" };
+  const other = await runAudit("audit-legend.js", figma, config, {
+    PAGE_ID: page.id,
+  });
+  assert.equal(other.legendMismatch, 2);
+  assert.equal(other.legendExempted, 0);
+});
+
+test("audit-legend:設定沒有 legend.exempt / exemptMarks 時照常稽核、不出錯", async () => {
   const { figma, page } = legendScene();
   const config = testConfig();
   delete config.legend.exempt;
+  delete config.legend.exemptMarks;
   const r = await runAudit("audit-legend.js", figma, config, {
     PAGE_ID: page.id,
   });
