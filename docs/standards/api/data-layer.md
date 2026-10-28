@@ -4,7 +4,7 @@
 
 ## DATA-01 Mongoose 連線與 model 只在資料層取用
 
-`InjectConnection`、`InjectModel`、`MongooseModule`、`getModelToken`、`getConnectionToken` 只能出現在 `src/database/**`、`src/project/database/**`(與 `app.module.ts`)。功能模組(`orgs/`、`forms/`、`project/lottery/` 等)一律注入資料登記導出的出口:repository、專屬 store(例:`SerialCountersStore`、`TenantPurgeStore`)或 `TransactionService`。
+`InjectConnection`、`InjectModel`、`MongooseModule`、`getModelToken`、`getConnectionToken` 只能出現在 `src/database/**`、`src/project/database/**`(與 `app.module.ts`)。功能模組(`orgs/`、`forms/`、`project/<模組>/` 等)一律注入資料登記導出的出口:repository、專屬 store(例:`SerialCountersStore`、`TenantPurgeStore`)或 `TransactionService`。
 
 ```ts
 ✅ // orgs/demo-tenant-purge.service.ts
