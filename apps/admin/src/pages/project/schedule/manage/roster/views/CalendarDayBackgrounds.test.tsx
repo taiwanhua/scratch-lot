@@ -2,10 +2,14 @@ import { describe, expect, it } from "@jest/globals";
 import { screen, waitFor, within } from "@testing-library/react";
 
 import { tagPaletteColorOf } from "@/lib/project/tag-palettes";
-import { restoreViewportAfterEach, setupFakeViewport } from "@/test/viewport";
+import {
+  restoreViewportAfterEach,
+  setViewportWidth,
+  setupFakeViewport,
+} from "@/test/viewport";
 
 import { renderSchedulePage } from "../../../schedule-test-support";
-import { rosterPath, setViewportWidth } from "./roster-views-test-support";
+import { rosterPath } from "./roster-views-test-support";
 
 setupFakeViewport();
 restoreViewportAfterEach();
