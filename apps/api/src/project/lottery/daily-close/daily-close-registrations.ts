@@ -29,19 +29,22 @@ export class DailyCloseRegistrations implements OnModuleInit, OnModuleDestroy {
 
   onModuleInit(): void {
     this.unregister.push(
-      registerVaultBaselineProvider(async (tenantId, orgId, before) => {
+      registerVaultBaselineProvider(async (tenantId, orgIds, before) => {
         if (tenantId === null) {
-          return null;
+          return new Map();
         }
         const reader = await tenantBoundaryContext(this.orgs, null, tenantId);
-        const last = await this.dailyLedger.lastConfirmedDaily(
+        const lasts = await this.dailyLedger.lastConfirmedDailies(
           reader,
-          orgId,
+          orgIds,
           before,
         );
-        return last === null
-          ? null
-          : { amount: last.counted, since: last.submittedAt };
+        return new Map(
+          [...lasts].map(([orgId, last]) => [
+            orgId,
+            { amount: last.counted, since: last.submittedAt },
+          ]),
+        );
       }),
       registerDailyCloseCoverage(async (tenantId, shiftId) => {
         if (tenantId === null) {

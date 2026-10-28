@@ -33,10 +33,12 @@ import { LotteryTransferReceiptsRepository } from "../../database/lottery-transf
 import { tenantOfOperator } from "../master-data-tenant";
 import { registerInTransitSource } from "../requisition/in-transit";
 import {
+  type SettlementPayable,
   type SettlementSubmission,
   registerSettlementDocument,
 } from "../settlement/settlement-registry";
 import {
+  type TransferReceiptTickets,
   isLineReceived,
   receivedByRow,
   receivedCountOf,
@@ -86,7 +88,11 @@ export class TransferRegistrations implements OnModuleInit, OnModuleDestroy {
         moduleKey: TRANSFER_MODULE_KEY,
         label: "調貨單",
         kind: "transfer",
-        payable: (submission, asOf) => this.payableOf(submission, asOf),
+        payable: async (submission, asOf) => {
+          const [payable] = await this.payablesOf([{ submission, asOf }]);
+          return payable ?? null;
+        },
+        payables: (items) => this.payablesOf(items),
         sideBranchPaths: [FROM_PATH, TO_PATH],
         sides: [
           {
@@ -173,43 +179,73 @@ export class TransferRegistrations implements OnModuleInit, OnModuleDestroy {
     ).length;
   }
 
-  /** 收付:調貨金額 = 批購金額合計;收貨店的先填值照已點收的批購金額。草稿、駁回、作廢 → 不參與。 */
-  /** 調貨金額與已點收金額;給了 `asOf` = 已點收只算那個時點以前的點收(輸出報表的期末未結清)。 */
-  private async payableOf(submission: SettlementSubmission, asOf?: Date) {
-    if (
-      !(TRANSFER_LIVE_STATUSES as readonly string[]).includes(submission.status)
-    ) {
-      return null;
+  /**
+   * 收付:調貨金額 = 批購金額合計;收貨店的先填值照已點收的批購金額。草稿、駁回、作廢 → 不參與(null)。
+   * 給了 `asOf` = 已點收只算那個時點以前的點收(輸出報表的期末未結清)。
+   * 一批一次讀點收(每個租戶一次,最晚的時點以前;TX-07),在記憶體依各項的時點算,順序同 `items`。
+   */
+  private async payablesOf(
+    items: readonly { submission: SettlementSubmission; asOf?: Date }[],
+  ): Promise<(SettlementPayable | null)[]> {
+    const isLive = (submission: SettlementSubmission) =>
+      (TRANSFER_LIVE_STATUSES as readonly string[]).includes(submission.status);
+    const byTenant = new Map<string, (typeof items)[number][]>();
+    for (const item of items.filter((entry) => isLive(entry.submission))) {
+      const key = String(item.submission.tenantId);
+      byTenant.set(key, [...(byTenant.get(key) ?? []), item]);
     }
-    const values = submission.values as Record<string, unknown>;
-    const header = transferHeaderOf(values);
-    const lines = transferLinesOf(values);
-    const reader = await tenantBoundaryContext(
-      this.orgs,
-      null,
-      submission.tenantId,
-    );
-    const receipts = await this.receipts.findMany(
-      reader,
-      {
-        submissionId: submission._id,
-        ...(asOf === undefined ? {} : { receivedAt: { $lt: asOf } }),
-      },
-      { select: "rowId tickets" },
-    );
-    // 每一列已點收幾張(選張的列逐張點收;部分點收的列照已點收張數算)
-    const received = new Map(
-      [...receivedByRow(receipts).entries()].map(
-        ([rowId, row]) => [rowId, receivedCountOf(row)] as const,
-      ),
-    );
-    return {
-      amount: transferTotalOf(lines),
-      received: receivedTransferAmountOf(lines, received),
-      branchOrgId: toObjectId(header.toBranchId) ?? submission.orgId,
-      docNo: submission.serialNo ?? "",
-      counterparty: `${labelOf(values[TRANSFER_FIELD_KEYS.fromBranch])} → ${labelOf(values[TRANSFER_FIELD_KEYS.toBranch])}`,
-    };
+    const receiptsOf = new Map<
+      string,
+      (TransferReceiptTickets & { receivedAt: Date })[]
+    >();
+    for (const group of byTenant.values()) {
+      const reader = await tenantBoundaryContext(
+        this.orgs,
+        null,
+        group[0]?.submission.tenantId ?? null,
+      );
+      const latest = group.some((item) => item.asOf === undefined)
+        ? null
+        : Math.max(...group.map((item) => item.asOf?.getTime() ?? 0));
+      const receipts = await this.receipts.findMany(
+        reader,
+        {
+          submissionId: {
+            $in: group.map((item) => item.submission._id),
+          },
+          ...(latest === null ? {} : { receivedAt: { $lt: new Date(latest) } }),
+        },
+        { select: "submissionId rowId tickets receivedAt" },
+      );
+      for (const receipt of receipts) {
+        const key = String(receipt.submissionId);
+        receiptsOf.set(key, [...(receiptsOf.get(key) ?? []), receipt]);
+      }
+    }
+    return items.map(({ submission, asOf }) => {
+      if (!isLive(submission)) {
+        return null;
+      }
+      const values = submission.values as Record<string, unknown>;
+      const header = transferHeaderOf(values);
+      const lines = transferLinesOf(values);
+      const receipts = (receiptsOf.get(String(submission._id)) ?? []).filter(
+        (receipt) => asOf === undefined || receipt.receivedAt < asOf,
+      );
+      // 每一列已點收幾張(選張的列逐張點收;部分點收的列照已點收張數算)
+      const received = new Map(
+        [...receivedByRow(receipts).entries()].map(
+          ([rowId, row]) => [rowId, receivedCountOf(row)] as const,
+        ),
+      );
+      return {
+        amount: transferTotalOf(lines),
+        received: receivedTransferAmountOf(lines, received),
+        branchOrgId: toObjectId(header.toBranchId) ?? submission.orgId,
+        docNo: submission.serialNo ?? "",
+        counterparty: `${labelOf(values[TRANSFER_FIELD_KEYS.fromBranch])} → ${labelOf(values[TRANSFER_FIELD_KEYS.toBranch])}`,
+      };
+    });
   }
 
   /** 送到這家店、已建立還沒點收完的列:每個遊戲幾本(一列一本)。 */

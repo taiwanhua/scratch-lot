@@ -21,6 +21,7 @@ import {
   newObjectId,
 } from "../../../auth/test-support/fixtures";
 import type { OperatorContext } from "../../../database/operator-context";
+import { countDbCommands } from "../../../database/test-support/db-commands";
 import { HOOK_TIMEOUT_MS } from "../../../database/test-support/mongo-connection";
 import { TransactionService } from "../../../database/transaction";
 import { login } from "../../../demo-items-two/test-support/fixtures";
@@ -1477,6 +1478,34 @@ describe("庫存管理(GraphQL 端點 + 真 MongoDB)", () => {
           soldTickets: 1,
         },
       ]);
+    });
+
+    it("資料庫指令數與有待標註的本數無關(防退化,TX-07):1 本與 6 本相同", async () => {
+      const store = await createOrg(api.connection, {
+        name: "屏東店",
+        parentId: tenant,
+      });
+      // 拆過、還有待標註(迄號 101)的本:要看整本跨店的未售決定扣在哪家店
+      const openPending = async () => {
+        const bookId = await receiveBook(store, 101);
+        await apply(store, bookId, ["001", "002"], {
+          type: TICKET_EVENT_TYPE.open,
+          patch: {
+            location: { kind: TICKET_LOCATION_KIND.counter, cashPointId: null },
+          },
+        });
+      };
+      const overview = () =>
+        countDbCommands(() =>
+          ok(api, hq, STOCK, { input: { orgId: String(store) } }),
+        );
+      await openPending();
+      const one = await overview();
+      for (let index = 0; index < 5; index += 1) {
+        await openPending();
+      }
+      const six = await overview();
+      expect(six.total).toBe(one.total);
     });
   });
 

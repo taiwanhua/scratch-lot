@@ -1,6 +1,7 @@
-import { afterAll, beforeAll, describe, expect, it } from "@jest/globals";
+import { afterAll, beforeAll, describe, expect, it, jest } from "@jest/globals";
 import type { Types } from "mongoose";
 
+import { AuditService } from "../audit/audit.service";
 import {
   type AuthTestApp,
   ROOT_ADMIN,
@@ -358,5 +359,34 @@ describe("組織主管(setOrgManagers / org.managers / resolveManagers)", () => 
         resolveManagersOf(api, tenantAId, mingId, tenantBId, 1),
       ).resolves.toEqual([]);
     });
+  });
+
+  it("交易(TX-01):稽核寫入失敗 → 主管名單的增減整個回復", async () => {
+    const orgId = await createOrg(api.connection, {
+      name: "回復用的部門",
+      parentId: tenantAId,
+    });
+    await setManagersOk(orgId, [bossId]);
+    const audit = jest
+      .spyOn(api.app.get(AuditService), "record")
+      .mockRejectedValueOnce(new Error("模擬稽核寫入失敗"));
+    try {
+      const result = await setManagers(orgId, [mingId]);
+
+      expect(result.errors).toBeDefined();
+      expect(audit).toHaveBeenCalledTimes(1);
+    } finally {
+      audit.mockRestore();
+    }
+    const links = await api.connection
+      .collection("core_relationships")
+      .find<{ secondId: Types.ObjectId }>({
+        type: "org_manager",
+        firstId: orgId,
+      })
+      .toArray();
+    expect(links.map((link) => String(link.secondId))).toEqual([
+      String(bossId),
+    ]);
   });
 });

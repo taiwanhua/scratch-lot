@@ -71,6 +71,8 @@ import {
 
 type TicketRecord = Persisted<LotteryTicketDocument>;
 type EventRecord = Persisted<LotteryTicketEventDocument>;
+/** 撤銷限制要看的事件欄位。 */
+type LaterEvent = Pick<EventRecord, "_id" | "type" | "eventId">;
 
 const SALE_SOURCES: readonly TicketSoldSource[] = ["scan", "manual"];
 
@@ -659,14 +661,14 @@ export class StoreSalesService {
     const ticketById = new Map(
       tickets.map((ticket) => [String(ticket._id), ticket]),
     );
-    const rows: LotteryStoreSaleModel[] = [];
-    for (const sale of sales) {
-      const ticket = ticketById.get(String(sale.ticketId));
-      if (ticket !== undefined) {
-        rows.push(await this.saleModel(operator, ticket, sale));
-      }
-    }
-    return rows;
+    return this.saleModels(
+      operator,
+      sales.flatMap((sale) => {
+        const ticket = ticketById.get(String(sale.ticketId));
+        return ticket === undefined ? [] : [{ ticket, sale }];
+      }),
+      [shift],
+    );
   }
 
   async undo(
@@ -815,31 +817,87 @@ export class StoreSalesService {
     ticket: TicketRecord,
     sale: EventRecord,
   ): Promise<SaleUndoBlock | null> {
-    const later = await this.events.findMany(
-      operator,
-      { ticketId: ticket._id, _id: { $ne: sale._id } },
-      { select: "type eventId" },
-    );
+    const [later, shifts] = await Promise.all([
+      this.laterEventsOf(operator, [ticket._id]),
+      this.shiftsOf(operator, [sale]),
+    ]);
+    return this.blockOf(operator, sale, later, shifts);
+  }
+
+  /** 撤銷限制(`later` = 這幾張的事件,依張分組;`shifts` = 售出算進的班)。 */
+  private blockOf(
+    operator: OperatorContext,
+    sale: EventRecord,
+    later: ReadonlyMap<string, readonly LaterEvent[]>,
+    shifts: ReadonlyMap<string, { closedAt: Date | null }>,
+  ): SaleUndoBlock | null {
     const saleVersion = versionOfEvent(sale.eventId);
-    const after = later.filter(
-      (event) => versionOfEvent(event.eventId) > saleVersion,
+    const after = (later.get(String(sale.ticketId)) ?? []).filter(
+      (event) =>
+        !event._id.equals(sale._id) &&
+        versionOfEvent(event.eventId) > saleVersion,
     );
     const undone = after.some(
       (event) => event.type === TICKET_EVENT_TYPE.saleUndo,
     );
     const shift =
-      sale.shiftId === null
-        ? null
-        : await this.shifts.findById(operator, sale.shiftId);
+      sale.shiftId === null ? undefined : shifts.get(String(sale.shiftId));
     return saleUndoBlockOf({
       soldByMe:
         operator.actorId !== null && sale.by?.equals(operator.actorId) === true,
       soldAt: sale.at,
       now: this.clock.now(),
-      shiftOpen: shift !== null && shift.closedAt === null,
+      shiftOpen: shift?.closedAt === null,
       changedAfterSale: after.length > 0,
       undone,
     });
+  }
+
+  /** 這幾張的事件(撤銷限制用),依張分組。 */
+  private async laterEventsOf(
+    operator: OperatorContext,
+    ticketIds: readonly Types.ObjectId[],
+  ): Promise<Map<string, LaterEvent[]>> {
+    const events = await this.events.findMany(
+      operator,
+      { ticketId: { $in: [...ticketIds] } },
+      { select: "ticketId type eventId" },
+    );
+    const byTicket = new Map<string, LaterEvent[]>();
+    for (const event of events) {
+      const key = String(event.ticketId);
+      byTicket.set(key, [...(byTicket.get(key) ?? []), event]);
+    }
+    return byTicket;
+  }
+
+  /** 售出算進的班(`known` = 已讀到的班,不再讀)。 */
+  private async shiftsOf(
+    operator: OperatorContext,
+    sales: readonly EventRecord[],
+    known: readonly ShiftRecord[] = [],
+  ): Promise<Map<string, { closedAt: Date | null }>> {
+    const result = new Map<string, { closedAt: Date | null }>(
+      known.map((shift) => [String(shift._id), shift]),
+    );
+    const missing = [
+      ...new Set(
+        sales.flatMap((sale) =>
+          sale.shiftId === null ? [] : [String(sale.shiftId)],
+        ),
+      ),
+    ].filter((id) => !result.has(id));
+    if (missing.length > 0) {
+      const shifts = await this.shifts.findMany(
+        operator,
+        { _id: { $in: missing.map((id) => new Types.ObjectId(id)) } },
+        { select: "closedAt" },
+      );
+      for (const shift of shifts) {
+        result.set(String(shift._id), shift);
+      }
+    }
+    return result;
   }
 
   private async saleModel(
@@ -847,30 +905,72 @@ export class StoreSalesService {
     ticket: TicketRecord,
     sale: EventRecord,
   ): Promise<LotteryStoreSaleModel> {
-    const [book, block, points] = await Promise.all([
-      this.books.findById(operator, ticket.bookId),
-      this.undoBlockOf(operator, ticket, sale),
-      this.support.cashPointsOf(operator, ticket.orgId),
+    const [model] = await this.saleModels(operator, [{ ticket, sale }]);
+    if (model === undefined) {
+      throw notFoundError(`sale not found: ${String(ticket._id)}`);
+    }
+    return model;
+  }
+
+  /**
+   * 一批售出的畫面資料(順序照給的):本、收銀點、撤銷限制(之後的事件、售出算進的班)一批各讀一次
+   * (最近售出一次幾十上百筆;TX-07)。`knownShifts` = 已讀到的班。
+   */
+  private async saleModels(
+    operator: OperatorContext,
+    pairs: readonly { ticket: TicketRecord; sale: EventRecord }[],
+    knownShifts: readonly ShiftRecord[] = [],
+  ): Promise<LotteryStoreSaleModel[]> {
+    if (pairs.length === 0) {
+      return [];
+    }
+    const unique = (ids: readonly Types.ObjectId[]) => [
+      ...new Map(ids.map((id) => [String(id), id])).values(),
+    ];
+    const tickets = pairs.map(({ ticket }) => ticket);
+    const [books, later, shifts, points] = await Promise.all([
+      this.books.findMany(
+        operator,
+        { _id: { $in: unique(tickets.map((ticket) => ticket.bookId)) } },
+        { select: "gameCode" },
+      ),
+      this.laterEventsOf(operator, unique(tickets.map((ticket) => ticket._id))),
+      this.shiftsOf(
+        operator,
+        pairs.map(({ sale }) => sale),
+        knownShifts,
+      ),
+      this.support.cashPointsOf(
+        operator,
+        unique(tickets.map((ticket) => ticket.orgId)),
+      ),
     ]);
-    const pointId = sale.cashPointId ?? null;
-    return {
-      ticketId: String(ticket._id),
-      version: ticket.version,
-      ticketKey: displayTicketKey(
-        book?.gameCode ?? "",
-        ticket.bookNo,
-        ticket.ticketNo,
-      ),
-      amount: sale.amount,
-      soldAt: sale.at,
-      cashPoint: ref(
-        pointId ?? new Types.ObjectId(),
-        pointId === null ? "" : (points.get(String(pointId))?.name ?? ""),
-      ),
-      shiftId: String(sale.shiftId ?? ""),
-      undone: block === "already_undone",
-      undoBlock: block,
-    };
+    const bookOf = new Map(books.map((book) => [String(book._id), book]));
+    return pairs.map(({ ticket, sale }) => {
+      const book = bookOf.get(String(ticket.bookId));
+      const block = this.blockOf(operator, sale, later, shifts);
+      const pointId = sale.cashPointId ?? null;
+      // 收銀點只認這張現在所在分店的(同改寫前逐張讀 `cashPointsOf(ticket.orgId)`)
+      const point = pointId === null ? undefined : points.get(String(pointId));
+      return {
+        ticketId: String(ticket._id),
+        version: ticket.version,
+        ticketKey: displayTicketKey(
+          book?.gameCode ?? "",
+          ticket.bookNo,
+          ticket.ticketNo,
+        ),
+        amount: sale.amount,
+        soldAt: sale.at,
+        cashPoint: ref(
+          pointId ?? new Types.ObjectId(),
+          point?.orgId.equals(ticket.orgId) ? point.name : "",
+        ),
+        shiftId: String(sale.shiftId ?? ""),
+        undone: block === "already_undone",
+        undoBlock: block,
+      };
+    });
   }
 
   /** 已售的張最近一次售出算進的班。 */

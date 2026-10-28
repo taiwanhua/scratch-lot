@@ -32,8 +32,8 @@
       "gameCode": "Game code must be 4 digits",
       "requiredText": "Required, up to {max} characters",
       "maxLength": "Up to {max} characters",
-      "positiveInteger": "Enter a whole number greater than 0",
       "integerRange": "Enter a whole number from {min} to {max}",
+      "unitPrice": "Enter a multiple of {step} (a whole number greater than 0)",
       "order": "Enter a whole number of 0 or more"
     },
     "tabs": {
@@ -960,6 +960,8 @@
         "newInvestigating": "− New under investigation",
         "investigateRecovered": "+ Back from investigation",
         "lostRecovered": "+ Lost then recovered",
+        "pendingAdjust": "± Unmarked skip adjustment",
+        "pendingAdjustNote": "Unmarked skipped tickets now counted at another store or under investigation, or skipped tickets marked at this store",
         "ending": "= Ending stock",
         "check": "Check",
         "checkOk": "Balanced",

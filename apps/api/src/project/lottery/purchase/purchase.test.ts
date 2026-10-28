@@ -51,6 +51,7 @@ import {
   publishWorkflow,
   reviewStep,
 } from "../../../workflows/test-support/workflow-fixtures";
+import { LOTTERY_SETTLEMENT_MARKS_COLLECTION } from "../../database/lottery-accounts/lottery-settlement-mark.schema";
 import { isGameInUse } from "../games/game-usage";
 import { inTransitBooksOf } from "../requisition/in-transit";
 import { PURCHASE_REASONS } from "./purchase-error";
@@ -1473,6 +1474,12 @@ describe("進貨單(規格 8.2、8.3)", () => {
         "completed",
       );
       expect(await bankRowsOf(purchase.id)).toHaveLength(1);
+      // 完成時建結清標記(待確認;待結清只掃還沒結清的)
+      expect(
+        await api.connection
+          .collection(LOTTERY_SETTLEMENT_MARKS_COLLECTION)
+          .findOne({ refId: new Types.ObjectId(purchase.id) }),
+      ).toMatchObject({ refType: "purchasing.purchase", closedAsOf: null });
     });
 
     it("駁回前:已有點收 → 擋下;沒點收但淨額 ≠ 0 → 擋下;淨額 = 0 才能駁回,駁回後叫貨單回到待購買、批購日重算", async () => {

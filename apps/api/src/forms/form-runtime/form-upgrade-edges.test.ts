@@ -9,6 +9,7 @@ import {
 } from "../../auth/test-support/auth-app";
 import { createOrg } from "../../auth/test-support/fixtures";
 import { dataScopeTargetIdOf } from "../../data-scope/test-support/fixtures";
+import { FormSubmissionsRepository } from "../../database/database.module";
 import { HOOK_TIMEOUT_MS } from "../../database/test-support/mongo-connection";
 import {
   FORM_TEST_TIMEOUT_MS,
@@ -44,6 +45,17 @@ const UPGRADE = /* GraphQL */ `
       }
       skipped {
         reason
+        count
+      }
+    }
+  }
+`;
+
+const PLAN = /* GraphQL */ `
+  query Plan($formKey: ID!, $targetVersion: Int!) {
+    formUpgradePlan(formKey: $formKey, targetVersion: $targetVersion) {
+      groups {
+        fromVersion
         count
       }
     }
@@ -523,5 +535,59 @@ describe("舊版資料升級的邊界", () => {
       const insideAfter = await raw(inside.id);
       expect([outsideAfter.version, insideAfter.version]).toEqual([1, 2]);
     });
+  });
+
+  it("別組織依欄位共用過來的提交(唯讀)不進計畫、不升級,也不讓整批改走逐筆", async () => {
+    const branch = await createOrg(connection, {
+      name: "共用分店",
+      parentId: tenant,
+    });
+    const clerk = await createOperator(api, connection, {
+      orgId: branch,
+      permissionKeys: [M.view, M.create, M.edit],
+    });
+    formSequence += 1;
+    const formKey = `edge_${String(formSequence)}`;
+    await publishNewForm(api, root, formKey, V1);
+    await assignForm(api, root, formKey, [tenant]);
+    const own = await createSubmitted(api, clerk.token, formKey, {
+      title: "分店自己的單",
+    });
+    const shared = await createSubmitted(api, staff.token, formKey, {
+      title: "總店共用過來的單",
+    });
+    await publishDefinition(api, root, formKey, V2, 1);
+    // 總店的單依欄位共用給分店:分店讀得到、寫不到
+    await connection
+      .collection("form_submissions")
+      .updateOne(
+        { _id: new Types.ObjectId(shared.id) },
+        { $set: { sharedOrgIds: [branch] } },
+      );
+    const repository = api.app.get(FormSubmissionsRepository);
+    const single = jest.spyOn(repository, "findOneAndUpdate");
+
+    try {
+      const plan = await ok<{
+        formUpgradePlan: { groups: { fromVersion: number; count: number }[] };
+      }>(api, clerk.token, PLAN, { formKey, targetVersion: 2 });
+      const result = await upgrade(formKey, 2, nextRequestId(), clerk.token);
+
+      expect(plan.formUpgradePlan.groups).toEqual([
+        { fromVersion: 1, count: 1 },
+      ]);
+      expect(result.data?.upgradeFormSubmissions).toEqual({
+        upgraded: [{ fromVersion: 1, count: 1 }],
+        skipped: [],
+      });
+      expect(single).not.toHaveBeenCalled();
+    } finally {
+      single.mockRestore();
+    }
+    const [ownAfter, sharedAfter] = await Promise.all([
+      raw(own.id),
+      raw(shared.id),
+    ]);
+    expect([ownAfter.version, sharedAfter.version]).toEqual([2, 1]);
   });
 });

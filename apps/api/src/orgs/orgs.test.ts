@@ -1,6 +1,15 @@
-import { afterAll, beforeAll, describe, expect, it, jest } from "@jest/globals";
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  describe,
+  expect,
+  it,
+  jest,
+} from "@jest/globals";
 import { Types } from "mongoose";
 
+import { AuditService } from "../audit/audit.service";
 import {
   type AuthTestApp,
   MIGRATOR_TIMEOUT_MS,
@@ -16,6 +25,10 @@ import {
   SAMPLE_ONE_MODULE_KEY,
   dataScopeTargetIdOf,
 } from "../data-scope/test-support/fixtures";
+import {
+  countDbCommands,
+  expectDbCommandsAtMost,
+} from "../database/test-support/db-commands";
 import { HOOK_TIMEOUT_MS } from "../database/test-support/mongo-connection";
 import {
   createRole,
@@ -1416,6 +1429,55 @@ describe("組織管理(樹查詢 / 新增子組織 / 編輯 / 停用連動 / 搬
       );
       expect(rootMove.errors?.[0]?.extensions?.code).toBe("VALIDATION_FAILED");
     });
+
+    it("子樹重算一次寫完(TX-06):1 個與 12 個下層組織送出的資料庫指令一樣多", async () => {
+      const smallId = await newOrgUnderTenantA("批次搬小");
+      await createOrg(api.connection, {
+        name: "批次搬小子",
+        parentId: smallId,
+      });
+      const bigId = await newOrgUnderTenantA("批次搬大");
+      // 三層:4 個子組織,每個再各 2 個孫組織 = 12 個下層
+      const grandchildIds: Types.ObjectId[] = [];
+      for (let index = 0; index < 4; index += 1) {
+        const childId = await createOrg(api.connection, {
+          name: `批次搬大子${String(index)}`,
+          parentId: bigId,
+        });
+        for (let leaf = 0; leaf < 2; leaf += 1) {
+          grandchildIds.push(
+            await createOrg(api.connection, {
+              name: `批次搬大孫${String(index)}-${String(leaf)}`,
+              parentId: childId,
+            }),
+          );
+        }
+      }
+      const move = (id: Types.ObjectId) =>
+        api.graphql(
+          MOVE_ORG,
+          { input: { id: String(id), newParentId: String(deptTwoId) } },
+          { accessToken: tenantAdminToken },
+        );
+
+      const small = await countDbCommands(() => move(smallId));
+      const big = await countDbCommands(() => move(bigId));
+
+      expect(small.result.errors).toBeUndefined();
+      expect(big.result.errors).toBeUndefined();
+      expectDbCommandsAtMost(big, small.total, "搬移 12 個下層組織");
+      const [grandchildId] = grandchildIds;
+      const grandchild = grandchildId ? await orgRow(grandchildId) : null;
+      expect(grandchild?.ancestors.map(String).slice(0, 4)).toEqual([
+        String(rootOrgId),
+        String(tenantAId),
+        String(deptTwoId),
+        String(bigId),
+      ]);
+      expect(grandchild?.ancestors).toHaveLength(5);
+      const audits = await auditRows("org.move", bigId);
+      expect(audits[0]).toMatchObject({ after: { movedDescendants: 12 } });
+    });
   });
 
   describe("setOrgVisibility:權限搬到組織管理層、範圍由管理範圍決定(ADR-0005)", () => {
@@ -2038,6 +2100,150 @@ describe("組織管理(樹查詢 / 新增子組織 / 編輯 / 停用連動 / 搬
         .findOne<{ _id: Types.ObjectId }>({ account: "orgs-tenant-admin" });
       expect(String(audit?.actorId)).toBe(String(actor?._id));
       expect(String(audit?.orgId)).toBe(String(tenantAId));
+    });
+  });
+
+  /** 讓下一次稽核寫入失敗(稽核是每個動作的最後一步,前面的寫入都已送出)。 */
+  function failNextAudit() {
+    return jest
+      .spyOn(api.app.get(AuditService), "record")
+      .mockRejectedValueOnce(new Error("模擬稽核寫入失敗"));
+  }
+
+  function mutate(
+    query: string,
+    input: Record<string, unknown>,
+    accessToken = tenantAdminToken,
+  ) {
+    return api.graphql(query, { input }, { accessToken });
+  }
+
+  describe("交易(TX-01):最後一步稽核寫入失敗,前面的寫入整個回復", () => {
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
+    it("createChildOrg:不留下新組織", async () => {
+      const audit = failNextAudit();
+      const result = await mutate(CREATE_CHILD_ORG, {
+        parentId: String(tenantAId),
+        name: "回復用的新組織",
+      });
+
+      expect(result.errors).toBeDefined();
+      expect(audit).toHaveBeenCalledTimes(1);
+      await expect(
+        api.connection
+          .collection("orgs")
+          .countDocuments({ name: "回復用的新組織" }),
+      ).resolves.toBe(0);
+    });
+
+    it("updateOrg:名稱與商標都不變,舊商標也不會在交易後被刪", async () => {
+      const orgId = await newOrgUnderTenantA("回復用的編輯");
+      const first = "org-logos/9f1c2d3e-4b5a-4c6d-8e7f-0a1b2c3d4e5f.png";
+      const second = "org-logos/0e1d2c3b-4a59-4687-9a6b-5c4d3e2f1a0b.png";
+      await setLogo(orgId, first);
+
+      const audit = failNextAudit();
+      const result = await mutate(UPDATE_ORG, {
+        id: String(orgId),
+        name: "改過的名稱",
+        logoPath: second,
+      });
+
+      expect(result.errors).toBeDefined();
+      expect(audit).toHaveBeenCalledTimes(1);
+      const row = await orgRow(orgId);
+      expect(row?.name).toBe("回復用的編輯");
+      expect(row?.logoPath).toBe(first);
+      expect(recordingStorage().deleted).not.toContain(first);
+    });
+
+    it("setOrgEnabled:自己與子樹都維持啟用", async () => {
+      const orgId = await newOrgUnderTenantA("回復用的停用");
+      const childId = await createOrg(api.connection, {
+        name: "回復用的停用子",
+        parentId: orgId,
+      });
+
+      const audit = failNextAudit();
+      const result = await mutate(SET_ORG_ENABLED, {
+        id: String(orgId),
+        enabled: false,
+      });
+
+      expect(result.errors).toBeDefined();
+      expect(audit).toHaveBeenCalledTimes(1);
+      expect(await enabledOf(orgId)).toBe(true);
+      expect(await enabledOf(childId)).toBe(true);
+    });
+
+    it("deleteOrg:組織沒被刪,主管關聯也還在", async () => {
+      const orgId = await newOrgUnderTenantA("回復用的刪除");
+      await api.connection.collection("core_relationships").insertOne({
+        type: "org_manager",
+        firstId: orgId,
+        secondId: tenantAdminId,
+        thirdId: null,
+      });
+
+      const audit = failNextAudit();
+      const result = await mutate(DELETE_ORG, { id: String(orgId) });
+
+      expect(result.errors).toBeDefined();
+      expect(audit).toHaveBeenCalledTimes(1);
+      expect(await deletedAtOf(orgId)).toBeNull();
+      await expect(
+        api.connection
+          .collection("core_relationships")
+          .countDocuments({ type: "org_manager", firstId: orgId }),
+      ).resolves.toBe(1);
+    });
+
+    it("setOrgVisibility / setOrgTimezone:設定不變", async () => {
+      const beforeRow = await orgRow(tenantAId);
+      const before = beforeRow?.settings;
+
+      const audit = failNextAudit();
+      const visibility = await mutate(SET_ORG_VISIBILITY, {
+        orgId: String(tenantAId),
+        visibility: before?.visibility === "own" ? "SUBTREE" : "OWN",
+      });
+      failNextAudit();
+      const timezone = await mutate(SET_ORG_TIMEZONE, {
+        orgId: String(tenantAId),
+        timezone:
+          before?.timezone === "Asia/Tokyo" ? "Europe/Paris" : "Asia/Tokyo",
+      });
+
+      expect(visibility.errors).toBeDefined();
+      expect(timezone.errors).toBeDefined();
+      expect(audit).toHaveBeenCalledTimes(2);
+      const afterRow = await orgRow(tenantAId);
+      expect(afterRow?.settings).toEqual(before);
+    });
+
+    it("moveOrg:自己與子樹的位置都不變", async () => {
+      const orgId = await newOrgUnderTenantA("回復用的搬移");
+      const childId = await createOrg(api.connection, {
+        name: "回復用的搬移子",
+        parentId: orgId,
+      });
+      const childBeforeRow = await orgRow(childId);
+      const childBefore = childBeforeRow?.ancestors.map(String);
+
+      const audit = failNextAudit();
+      const result = await mutate(MOVE_ORG, {
+        id: String(orgId),
+        newParentId: String(deptTwoId),
+      });
+
+      expect(result.errors).toBeDefined();
+      expect(audit).toHaveBeenCalledTimes(1);
+      expect(await parentIdOf(orgId)).toBe(String(tenantAId));
+      const childAfterRow = await orgRow(childId);
+      expect(childAfterRow?.ancestors.map(String)).toEqual(childBefore);
     });
   });
 });

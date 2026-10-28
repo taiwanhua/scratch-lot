@@ -6,6 +6,8 @@ import {
   PURCHASE_FORM_KEY,
   PURCHASE_MODULE_KEY,
   PURCHASE_SETTLEMENT_SIDE,
+  purchaseAmountOf,
+  receivedLineAmountOf,
 } from "@repo/domain/project/lottery";
 
 import {
@@ -14,7 +16,9 @@ import {
   startAuthTestApp,
 } from "../../../auth/test-support/auth-app";
 import { createOrg } from "../../../auth/test-support/fixtures";
+import { OrgsRepository } from "../../../database/database.module";
 import type { OperatorContext } from "../../../database/operator-context";
+import { tenantBoundaryContext } from "../../../database/tenant-boundary-context";
 import {
   countDbCommands,
   expectDbCommandsAtMost,
@@ -30,6 +34,7 @@ import { LOTTERY_BANK_ACCOUNTS_COLLECTION } from "../../database/lottery-account
 import { LOTTERY_BANK_TRANSACTIONS_COLLECTION } from "../../database/lottery-accounts/lottery-bank-transaction.schema";
 import { LOTTERY_CASH_MOVEMENTS_COLLECTION } from "../../database/lottery-accounts/lottery-cash-movement.schema";
 import { LOTTERY_PERIOD_CLOSES_COLLECTION } from "../../database/lottery-accounts/lottery-period-close.schema";
+import { LOTTERY_SETTLEMENT_MARKS_COLLECTION } from "../../database/lottery-accounts/lottery-settlement-mark.schema";
 import { LOTTERY_CASH_POINTS_COLLECTION } from "../../database/lottery-cash-points/lottery-cash-point.schema";
 import { LOTTERY_CHECKOUTS_COLLECTION } from "../../database/lottery-checkouts/lottery-checkout.schema";
 import { LOTTERY_GAMES_COLLECTION } from "../../database/lottery-games/lottery-game.schema";
@@ -44,8 +49,10 @@ import {
   insertGame,
   seedInventoryModule,
 } from "../purchase/test-support/purchase-fixtures";
+import { SettlementLedger } from "../settlement/settlement-ledger";
 import { LotteryBooksService } from "../tickets/books.service";
 import { TicketLedgerService } from "../tickets/ticket-ledger.service";
+import { OPERATIONS_RANGE, ReportScopes } from "./report-scope";
 
 jest.setTimeout(WORKFLOW_TEST_TIMEOUT_MS);
 
@@ -139,6 +146,8 @@ const OPERATIONS = /* GraphQL */ `
           investigateRecoveredCost
           lostRecoveredTickets
           lostRecoveredCost
+          pendingAdjustTickets
+          pendingAdjustCost
           endingTickets
           endingCost
           checkTickets
@@ -311,6 +320,66 @@ function nth<Item>(list: readonly Item[], index: number): Item {
 }
 
 const firstOf = <Item>(list: readonly Item[]): Item => nth(list, 0);
+
+const ACTUAL_BOOK = /* GraphQL */ `
+  query ActualBook($id: ID!) {
+    lotteryInventoryBook(id: $id) {
+      item {
+        book {
+          pendingSkipCount
+          remainingCount
+          totalCount
+          holdings {
+            org {
+              name
+            }
+            count
+          }
+        }
+      }
+    }
+  }
+`;
+
+const ACTUAL_STOCK = /* GraphQL */ `
+  query ActualStock($input: LotteryStockOverviewInput!) {
+    lotteryStockOverview(input: $input) {
+      items {
+        org {
+          name
+        }
+        game {
+          gameCode
+        }
+        unopenedBooks
+        openedStockTickets
+        counterTickets
+      }
+    }
+  }
+`;
+
+/** 已知限制 a / b / c 的實測:區塊 4 要看的列。 */
+const pickInventory = (report: Record<string, unknown>) => ({
+  opening: report.openingTickets,
+  openingCost: report.openingCost,
+  in: report.transferInTickets,
+  inAmount: report.transferInAmount,
+  out: report.transferOutTickets,
+  outCost: report.transferOutCost,
+  sales: report.salesTickets,
+  newInvestigating: report.newInvestigatingTickets,
+  investigating: report.investigatingTickets,
+  pendingAdjust: report.pendingAdjustTickets,
+  pendingAdjustCost: report.pendingAdjustCost,
+  ending: report.endingTickets,
+  endingCost: report.endingCost,
+  checkTickets: report.checkTickets,
+  checkCost: report.checkCost,
+});
+
+const idSetOf = (list: readonly { _id: Types.ObjectId }[]) =>
+  new Set(list.map((item) => String(item._id)));
 
 /** 調貨單的存值(單頭 + 明細;明細照表單存值的形狀)。 */
 const transferValues = (
@@ -2039,6 +2108,155 @@ describe("輸出報表:營運報表、班次結帳歷史報表(GraphQL 端點 + 
     expect(await toPayOn("2026-10-21")).toBe(9500);
   });
 
+  it("未結清的資料庫指令數與調貨單張數無關(TX-07):期末 1 張與 4 張已完成的調貨單相同;期末以前就結清的不讀", async () => {
+    const east = await createOrg(connection, {
+      name: "宜蘭店",
+      parentId: tenant,
+    });
+    const west = await createOrg(connection, {
+      name: "花蓮店",
+      parentId: tenant,
+    });
+    const submittedAt = taipei("2026-12-01", "09:00");
+    const asOf = taipei("2026-12-02");
+    let insertedCount = 0;
+    /** 已完成的調貨單(已點收 1 張 120、還沒付 → 待收 / 待付),完成時建了結清標記。 */
+    const completedTransfer = async (closedAsOf: Date | null) => {
+      const values = transferValues(east, west, [
+        {
+          rowId: "r1",
+          book: { id: String(new Types.ObjectId()) },
+          mode: { id: "partial" },
+          ticket_nos: "001-001",
+          tickets: 1,
+          amount: 120,
+          rate: 100,
+        },
+      ]);
+      const { insertedId } = await connection
+        .collection("form_submissions")
+        .insertOne({
+          orgId: east,
+          tenantId: tenant,
+          moduleKey: "purchasing.transfer",
+          formKey: "transfer",
+          version: 1,
+          values,
+          summary: null,
+          status: "completed",
+          revision: 1,
+          revisions: [revisionOf(1, values, submittedAt)],
+          editVersion: 1,
+          touched: [],
+          clientRequestId: String(new Types.ObjectId()),
+          serialNo: `T-PERF-${String(insertedCount++)}`,
+          submittedAt,
+          currentInstanceId: null,
+          blocked: false,
+          ...base(),
+        });
+      await insert(LOTTERY_TRANSFER_RECEIPTS_COLLECTION, {
+        orgId: west,
+        fromOrgId: east,
+        submissionId: insertedId,
+        rowId: "r1",
+        bookId: new Types.ObjectId(),
+        purchaseAmount: 120,
+        tickets: [
+          { ticketId: new Types.ObjectId(), unitCost: 100, ticketNo: "001" },
+        ],
+        receivedBy: hq.userId,
+        receivedAt: taipei("2026-12-01", "10:00"),
+        moduleKey: "purchasing.transfer",
+      });
+      await insert(LOTTERY_SETTLEMENT_MARKS_COLLECTION, {
+        orgId: east,
+        refType: "purchasing.transfer",
+        refId: insertedId,
+        closedAsOf,
+        rev: 0,
+        moduleKey: "accounts",
+      });
+      return insertedId;
+    };
+    const reader = await tenantBoundaryContext(
+      api.app.get(OrgsRepository),
+      null,
+      tenant,
+    );
+    const operator = { ...reader, actorId: hq.userId };
+    const settlement = api.app.get(SettlementLedger);
+    const serialNosAt = async () => {
+      const rows = await settlement.outstandingAt(operator, asOf);
+      return rows
+        .filter((row) => row.branchOrgId.equals(west))
+        .map((row) => row.snapshot.submission.serialNo);
+    };
+    await completedTransfer(null);
+    // 期末以前就已結清(`closedAsOf` 早於期末)→ 不讀
+    await completedTransfer(taipei("2026-12-01", "12:00"));
+    await settlement.outstandingAt(operator, asOf);
+    const one = await countDbCommands(serialNosAt);
+    expect(one.result).toEqual(["T-PERF-0"]);
+    for (let index = 0; index < 3; index += 1) {
+      await completedTransfer(null);
+    }
+    const four = await countDbCommands(serialNosAt);
+    // 好幾個期末一次算(各店的「迄」不同):指令數與時點數無關,結果與逐個時點算相同
+    const ends = [taipei("2026-12-01", "09:30"), asOf, taipei("2026-12-03")];
+    const serialNosOf = (
+      rows: Awaited<ReturnType<typeof settlement.outstandingAt>>,
+    ) =>
+      rows
+        .filter((row) => row.branchOrgId.equals(west))
+        .map((row) => row.snapshot.submission.serialNo);
+    const single = await countDbCommands(() =>
+      settlement.outstandingAtMany(operator, [asOf]),
+    );
+    const many = await countDbCommands(() =>
+      settlement.outstandingAtMany(operator, ends),
+    );
+    expect(many.total).toBe(single.total);
+    for (const [index, end] of ends.entries()) {
+      expect(serialNosOf(many.result[index] ?? [])).toEqual(
+        serialNosOf(await settlement.outstandingAt(operator, end)),
+      );
+    }
+    expect(four.result).toEqual([
+      "T-PERF-0",
+      "T-PERF-2",
+      "T-PERF-3",
+      "T-PERF-4",
+    ]);
+    expect(four.total).toBe(one.total);
+  });
+
+  it("選店的資料庫指令數與分店數無關(TX-07):1 家與 4 家相同", async () => {
+    const stores = await Promise.all(
+      ["一", "二", "三", "四"].map((name) =>
+        createOrg(connection, { name: `選店${name}`, parentId: tenant }),
+      ),
+    );
+    const reader = await tenantBoundaryContext(
+      api.app.get(OrgsRepository),
+      null,
+      tenant,
+    );
+    const operator = { ...reader, actorId: hq.userId };
+    const scopes = api.app.get(ReportScopes);
+    const scopeOf = (orgIds: readonly Types.ObjectId[]) => () =>
+      scopes.scopeOf(
+        operator,
+        { ...dayOf("2026-12-03"), orgIds: orgIds.map(String) },
+        OPERATIONS_RANGE,
+      );
+    await scopeOf(stores.slice(0, 1))();
+    const one = await countDbCommands(scopeOf(stores.slice(0, 1)));
+    const four = await countDbCommands(scopeOf(stores));
+    expect(four.result.storeIds).toEqual(stores);
+    expect(four.total).toBe(one.total);
+  });
+
   it("同一個租戶、看不到的分店 → NOT_FOUND", async () => {
     const storeOnly = await person(api, connection, zhongshan, tenant, {
       moduleKeys: ["reports"],
@@ -3396,6 +3614,15 @@ describe("輸出報表:營運報表、班次結帳歷史報表(GraphQL 端點 + 
           blocked: false,
           ...base(),
         });
+      // 已完成的單據有結清標記(完成時建;待結清只掃還沒結清的)
+      await insert(LOTTERY_SETTLEMENT_MARKS_COLLECTION, {
+        orgId: hsinchu,
+        refType: "purchasing.transfer",
+        refId: transferId,
+        closedAsOf: null,
+        rev: 0,
+        moduleKey: "accounts",
+      });
       await insert(LOTTERY_TRANSFER_RECEIPTS_COLLECTION, {
         orgId: pingtung,
         fromOrgId: hsinchu,
@@ -3540,6 +3767,675 @@ describe("輸出報表:營運報表、班次結帳歷史報表(GraphQL 端點 + 
       expect(nextDay.inventory).toMatchObject({
         openingTickets: 98,
         endingTickets: 0,
+      });
+    });
+
+    describe("已知限制 a / b / c(規格第 20 章):實測重現與回歸", () => {
+      let east: Types.ObjectId;
+      let west: Types.ObjectId;
+      /** 單張金額 100(使用者 10/28 定案:一定是 100 的倍數)、批購金額率 93 → 單張成本 93 */
+      let game100: Types.ObjectId;
+      const cashPointId = new Types.ObjectId();
+
+      /** 一張調貨單(選張的列;出貨 east → 收貨 west)。 */
+      async function transferOf(
+        bookId: Types.ObjectId,
+        line: {
+          ticketNos: string;
+          tickets: number;
+          amount: number;
+          rate: number;
+        },
+        submittedAt: Date,
+        route?: { from: Types.ObjectId; to: Types.ObjectId },
+      ): Promise<Types.ObjectId> {
+        const { from, to } = route ?? { from: east, to: west };
+        const { insertedId } = await connection
+          .collection("form_submissions")
+          .insertOne({
+            orgId: from,
+            tenantId: tenant,
+            moduleKey: "purchasing.transfer",
+            formKey: "transfer",
+            version: 1,
+            values: transferValues(from, to, [
+              {
+                rowId: "r1",
+                book: { id: String(bookId) },
+                mode: { id: "partial" },
+                ticket_nos: line.ticketNos,
+                tickets: line.tickets,
+                amount: line.amount,
+                rate: line.rate,
+              },
+            ]),
+            summary: null,
+            status: "completed",
+            revision: 1,
+            revisions: [],
+            editVersion: 1,
+            touched: [],
+            clientRequestId: String(new Types.ObjectId()),
+            serialNo: `T-K1-${String(bookId)}`,
+            submittedAt,
+            currentInstanceId: null,
+            blocked: false,
+            ...base(),
+          });
+        return insertedId;
+      }
+
+      /** 出貨(庫存 / 檯面 → 在途,記調貨金額快照)。 */
+      async function ship(
+        tickets: readonly TicketDoc[],
+        transferId: Types.ObjectId,
+        at: Date,
+        amount: number,
+      ): Promise<void> {
+        await apply({ operator: null, crossStoreTenantId: tenant }, tickets, {
+          type: "transfer_out",
+          at,
+          patch: { location: { kind: "in_transit", cashPointId: null } },
+          amount,
+          refType: "transfer",
+          refId: transferId,
+        });
+      }
+
+      /** 收貨店點收(調入 + 點收紀錄記調入前成本;同 transfer-receiving 的寫法)。 */
+      async function receive(
+        bookId: Types.ObjectId,
+        tickets: readonly TicketDoc[],
+        transferId: Types.ObjectId,
+        at: Date,
+        unitCost: number,
+        purchaseAmount: number,
+      ): Promise<void> {
+        const before = await connection
+          .collection<{ _id: Types.ObjectId; unitCost: number }>(
+            LOTTERY_TICKETS_COLLECTION,
+          )
+          .find({ _id: { $in: tickets.map((ticket) => ticket._id) } })
+          .toArray();
+        await apply(
+          {
+            operator: null,
+            crossStoreTenantId: tenant,
+            systemActorId: hq.userId,
+          },
+          tickets,
+          {
+            type: "transfer_in",
+            at,
+            patch: {
+              orgId: west,
+              location: { kind: "stock", cashPointId: null },
+              unitCost,
+            },
+            refType: "transfer",
+            refId: transferId,
+          },
+        );
+        await insert(LOTTERY_TRANSFER_RECEIPTS_COLLECTION, {
+          orgId: west,
+          fromOrgId: east,
+          submissionId: transferId,
+          rowId: "r1",
+          bookId,
+          purchaseAmount,
+          tickets: before.map((ticket) => ({
+            ticketId: ticket._id,
+            unitCost: ticket.unitCost,
+          })),
+          receivedBy: hq.userId,
+          receivedAt: at,
+          moduleKey: "purchasing.transfer",
+        });
+      }
+
+      beforeAll(async () => {
+        east = await createOrg(connection, {
+          name: "東店",
+          parentId: tenant,
+        });
+        west = await createOrg(connection, {
+          name: "西店",
+          parentId: tenant,
+        });
+        game100 = await insertGame(connection, tenant, {
+          gameCode: "5302",
+          name: "已知限制",
+          unitPrice: 100,
+          ticketsPerBook: 100,
+          defaultRate: 93,
+        });
+        // 本的詳情、庫存概況(讀取只看模組有沒有綁)
+        const inventoryModule = await connection
+          .collection<{ _id: Types.ObjectId }>("modules")
+          .findOne({ key: "inventory" });
+        await connection.collection("modules").insertOne({
+          key: "inventory.book-page",
+          name: "本的詳情",
+          parentId: inventoryModule?._id ?? null,
+          ancestors: inventoryModule === null ? [] : [inventoryModule._id],
+          route: "book-page",
+          sidebarType: "hidden",
+          order: 1,
+          enabled: true,
+          isSystem: false,
+          icon: null,
+          settings: {},
+          engine: "fixed",
+          ...base(),
+        });
+        inventoryReader = await person(api, connection, tenant, tenant, {
+          moduleKeys: ["inventory", "inventory.book-page"],
+          permissionKeys: [],
+        });
+      });
+
+      let inventoryReader: Person;
+
+      /** 實物與帳本(報表以外):直接查張、本的詳情、庫存概況。 */
+      async function actualOf(bookIds: Record<string, Types.ObjectId>) {
+        const onHandOf = async (orgId: Types.ObjectId) =>
+          connection.collection(LOTTERY_TICKETS_COLLECTION).countDocuments({
+            orgId,
+            status: "unsold",
+            "location.kind": { $in: ["stock", "counter"] },
+          });
+        const books: Record<string, unknown> = {};
+        for (const [label, bookId] of Object.entries(bookIds)) {
+          const data = await ok<{
+            lotteryInventoryBook: {
+              item: {
+                book: {
+                  pendingSkipCount: number;
+                  remainingCount: number;
+                  totalCount: number;
+                  holdings: { org: { name: string }; count: number }[];
+                };
+              };
+            };
+          }>(inventoryReader, ACTUAL_BOOK, { id: String(bookId) });
+          const { book } = data.lotteryInventoryBook.item;
+          books[label] = {
+            pending: book.pendingSkipCount,
+            remaining: book.remainingCount,
+            total: book.totalCount,
+            holdings: Object.fromEntries(
+              book.holdings.map((row) => [row.org.name, row.count]),
+            ),
+          };
+        }
+        const overview = await ok<{
+          lotteryStockOverview: {
+            items: {
+              org: { name: string };
+              game: { gameCode: string };
+              unopenedBooks: number;
+              openedStockTickets: number;
+              counterTickets: number;
+            }[];
+          };
+        }>(inventoryReader, ACTUAL_STOCK, { input: {} });
+        return {
+          onHand: { east: await onHandOf(east), west: await onHandOf(west) },
+          books,
+          overview: Object.fromEntries(
+            overview.lotteryStockOverview.items
+              .filter((row) => row.game.gameCode === "5302")
+              .map((row) => [
+                row.org.name,
+                {
+                  unopened: row.unopenedBooks,
+                  stock: row.openedStockTickets,
+                  counter: row.counterTickets,
+                },
+              ]),
+          ),
+        };
+      }
+
+      /** 進貨點收一本(真的 `createBook`):單張 100、批購金額率 93、成本 9,300(單張 93);迄號預設 101(待標註 1)。 */
+      async function purchase100(
+        orgId: Types.ObjectId,
+        at: Date,
+        lastTicketNo = 101,
+      ): Promise<Types.ObjectId> {
+        bookSequence += 1;
+        const { book } = await transactions().withTransaction((session) =>
+          api.app
+            .get(LotteryBooksService)
+            .createBook(session, storeOperator(orgId), {
+              orgId,
+              gameId: game100,
+              bookNo: String(700_000 + bookSequence),
+              lastTicketNo,
+              rate: 93,
+              cost: 9300,
+              at,
+            }),
+        );
+        return book._id;
+      }
+
+      it("已知限制 a / a2 / a3 / b / c(單張 100、批購金額率 93):各店核對 0、待標註調整、實物與帳本一致", async () => {
+        const log: Record<string, unknown> = {};
+        // ---- a:拆過、還有 1 張待標註(迄號 101)的本,選張調 60 張給西店 ----
+        const bookA = await purchase100(east, taipei("2026-12-01", "09:00"));
+        await apply({ operator: storeOperator(east) }, await ticketsOf(bookA), {
+          type: "open",
+          at: taipei("2026-12-01", "10:00"),
+          patch: { location: { kind: "counter", cashPointId } },
+        });
+        const transferA = await transferOf(
+          bookA,
+          { ticketNos: "001-060", tickets: 60, amount: 6000, rate: 93 },
+          taipei("2026-12-02", "09:00"),
+        );
+        const bookATickets = await ticketsOf(bookA);
+        const sixty = bookATickets.slice(0, 60);
+        const sixtyIds = idSetOf(sixty);
+        await ship(sixty, transferA, taipei("2026-12-02", "10:00"), 93);
+        await receive(
+          bookA,
+          await ticketsWhere(bookA, (ticket) =>
+            sixtyIds.has(String(ticket._id)),
+          ),
+          transferA,
+          taipei("2026-12-03", "10:00"),
+          93,
+          5580,
+        );
+        log.a = {
+          east1201: pickInventory(await inventoryOn("2026-12-01", east)),
+          east1202: pickInventory(await inventoryOn("2026-12-02", east)),
+          east1203: pickInventory(await inventoryOn("2026-12-03", east)),
+          west1203: pickInventory(await inventoryOn("2026-12-03", west)),
+        };
+        const actual: Record<string, unknown> = {
+          a: await actualOf({ bookA }),
+        };
+        // ---- a2:西店賣 20 張(西 40 < 東 41)→ 待標註扣回東店,東店沒有任何事件 ----
+        const westSold = await ticketsWhere(
+          bookA,
+          (ticket) =>
+            ticket.status === "unsold" && sixtyIds.has(String(ticket._id)),
+          20,
+        );
+        await apply({ operator: storeOperator(west) }, westSold, {
+          type: "sale",
+          at: taipei("2026-12-04", "11:00"),
+          amount: 100,
+          cashEffect: "increase",
+          cashPointId,
+          patch: {
+            status: "sold",
+            sold: { at: taipei("2026-12-04", "11:00"), source: "scan" },
+          },
+        });
+        log.a2 = {
+          east1204: pickInventory(await inventoryOn("2026-12-04", east)),
+          west1204: pickInventory(await inventoryOn("2026-12-04", west)),
+        };
+        actual.a2 = await actualOf({ bookA });
+        // ---- b1:待標註扣在東店(東 41 > 西 40),西店 [標跳號] 標掉自己一張實際存在的 ----
+        const westOne = await ticketsWhere(
+          bookA,
+          (ticket) =>
+            ticket.status === "unsold" && sixtyIds.has(String(ticket._id)),
+          1,
+        );
+        await apply({ operator: storeOperator(west) }, westOne, {
+          type: "skip",
+          at: taipei("2026-12-05", "10:00"),
+          patch: { status: "skipped" },
+          reasonKey: "other",
+        });
+        log.b1 = {
+          east1205: pickInventory(await inventoryOn("2026-12-05", east)),
+          west1205: pickInventory(await inventoryOn("2026-12-05", west)),
+        };
+        actual.b1 = await actualOf({ bookA });
+        // ---- b2:只在一家店的本(拆過、待標註 1),標掉一張實際存在的 ----
+        const bookB = await purchase100(east, taipei("2026-12-06", "09:00"));
+        await apply({ operator: storeOperator(east) }, await ticketsOf(bookB), {
+          type: "open",
+          at: taipei("2026-12-06", "10:00"),
+          patch: { location: { kind: "counter", cashPointId } },
+        });
+        await apply(
+          { operator: storeOperator(east) },
+          await ticketsWhere(bookB, (ticket) => ticket.ticketNo === "033"),
+          {
+            type: "skip",
+            at: taipei("2026-12-07", "10:00"),
+            patch: { status: "skipped" },
+            reasonKey: "other",
+          },
+        );
+        log.b2 = {
+          east1207: pickInventory(await inventoryOn("2026-12-07", east)),
+        };
+        actual.b2 = await actualOf({ bookB });
+        // ---- b3:待標註扣在待查那一組(整本待查 → 尋回 10 張),標掉一張尋回的 ----
+        const bookB3 = await purchase100(east, taipei("2026-12-08", "09:00"));
+        await apply(
+          { operator: storeOperator(east) },
+          await ticketsOf(bookB3),
+          {
+            type: "investigate",
+            at: taipei("2026-12-08", "10:00"),
+            patch: { status: "investigating", responsibleOrgId: east },
+            refType: "stocktake",
+            refId: new Types.ObjectId(),
+          },
+        );
+        const bookB3Tickets = await ticketsOf(bookB3);
+        await apply(
+          { operator: storeOperator(east) },
+          bookB3Tickets.slice(0, 10),
+          {
+            type: "recover",
+            at: taipei("2026-12-08", "11:00"),
+            patch: {
+              status: "unsold",
+              location: { kind: "stock", cashPointId: null },
+              responsibleOrgId: null,
+            },
+            reasonKey: "found",
+          },
+        );
+        await apply(
+          { operator: storeOperator(east) },
+          await ticketsWhere(bookB3, (ticket) => ticket.ticketNo === "005"),
+          {
+            type: "skip",
+            at: taipei("2026-12-09", "10:00"),
+            patch: { status: "skipped" },
+            reasonKey: "other",
+          },
+        );
+        log.b3 = {
+          east1208: pickInventory(await inventoryOn("2026-12-08", east)),
+          east1209: pickInventory(await inventoryOn("2026-12-09", east)),
+        };
+        actual.b3 = await actualOf({ bookB3 });
+        // ---- c:選張 12 張(單張 100、批購金額率 93 → 單張成本 93)跨兩期:12/11 點收 9 張、12/12 少張重送 ----
+        const halfId = await purchase100(
+          east,
+          taipei("2026-12-10", "09:00"),
+          100,
+        );
+        const half = { _id: halfId };
+        const line = { tickets: 12, amount: 1200, rate: 93 };
+        const lineValue = {
+          mode: "partial" as const,
+          ...line,
+          purchaseAmount: purchaseAmountOf(line.amount, line.rate),
+        };
+        const transferC = await transferOf(
+          half._id,
+          { ticketNos: "001-012", ...line },
+          taipei("2026-12-10", "09:30"),
+        );
+        const halfTickets = await ticketsOf(half._id);
+        const twelve = halfTickets.slice(0, 12);
+        const unit = lineValue.purchaseAmount / line.tickets;
+        await ship(twelve, transferC, taipei("2026-12-10", "10:00"), unit);
+        const nineIds = idSetOf(twelve.slice(0, 9));
+        const missingIds = idSetOf(twelve.slice(9));
+        await receive(
+          half._id,
+          await ticketsWhere(half._id, (ticket) =>
+            nineIds.has(String(ticket._id)),
+          ),
+          transferC,
+          taipei("2026-12-11", "10:00"),
+          unit,
+          receivedLineAmountOf(lineValue, 9),
+        );
+        // 12/12 少張重送:沒到的 3 張在途 → 待查
+        await apply(
+          { operator: null, crossStoreTenantId: tenant },
+          await ticketsWhere(half._id, (ticket) =>
+            missingIds.has(String(ticket._id)),
+          ),
+          {
+            type: "investigate",
+            at: taipei("2026-12-12", "10:00"),
+            patch: { status: "investigating", responsibleOrgId: east },
+            refType: "transfer",
+            refId: transferC,
+          },
+        );
+        const shrunk = purchaseAmountOf(
+          (line.amount * 9) / line.tickets,
+          line.rate,
+        );
+        // 縮小後的單張成本 = 837 ÷ 9 = 93,和點收時相同 → `repriceReceived` 不寫成本調整
+        const west1212 = pickInventory(await inventoryOn("2026-12-12", west));
+        log.c = {
+          west1211: pickInventory(await inventoryOn("2026-12-11", west)),
+          west1212,
+          east1212: pickInventory(await inventoryOn("2026-12-12", east)),
+        };
+        // ---- a3:新的一本(待標註 1)東店 101 張上檯面 → 選張 60 張調給西店並點收 → 西店再選張 30 張調回東店(在途中)----
+        const bookA3 = await purchase100(east, taipei("2026-12-13", "08:00"));
+        await apply(
+          { operator: storeOperator(east) },
+          await ticketsOf(bookA3),
+          {
+            type: "open",
+            at: taipei("2026-12-13", "08:10"),
+            patch: { location: { kind: "counter", cashPointId } },
+          },
+        );
+        const a3Tickets = await ticketsOf(bookA3);
+        const a3Sixty = a3Tickets.slice(0, 60);
+        const a3Out = await transferOf(
+          bookA3,
+          { ticketNos: "001-060", tickets: 60, amount: 6000, rate: 93 },
+          taipei("2026-12-13", "08:20"),
+        );
+        await ship(a3Sixty, a3Out, taipei("2026-12-13", "08:30"), 93);
+        const a3SixtyIds = idSetOf(a3Sixty);
+        await receive(
+          bookA3,
+          await ticketsWhere(bookA3, (ticket) =>
+            a3SixtyIds.has(String(ticket._id)),
+          ),
+          a3Out,
+          taipei("2026-12-13", "09:00"),
+          93,
+          5580,
+        );
+        const a3Received = await ticketsWhere(bookA3, (ticket) =>
+          a3SixtyIds.has(String(ticket._id)),
+        );
+        const a3Back = a3Received.slice(0, 30);
+        const a3BackId = await transferOf(
+          bookA3,
+          { ticketNos: "001-030", tickets: 30, amount: 3000, rate: 93 },
+          taipei("2026-12-13", "09:30"),
+          { from: west, to: east },
+        );
+        await apply({ operator: null, crossStoreTenantId: tenant }, a3Back, {
+          type: "transfer_out",
+          at: taipei("2026-12-13", "10:00"),
+          patch: { location: { kind: "in_transit", cashPointId: null } },
+          amount: 93,
+          refType: "transfer",
+          refId: a3BackId,
+        });
+        log.a3 = {
+          east1213: pickInventory(await inventoryOn("2026-12-13", east)),
+          west1213: pickInventory(await inventoryOn("2026-12-13", west)),
+        };
+        actual.a3 = await actualOf({ bookA3 });
+        // 單張成本 93 是整數:點收 9 張的調貨金額 = 9 × 93,重送後縮小的列也一樣 → 不寫成本調整、不會有零頭
+        expect([receivedLineAmountOf(lineValue, 9), shrunk, unit]).toEqual([
+          837, 837, 93,
+        ]);
+
+        // 各店各天的核對(張 / 元):全部 0(待標註換店 / 標跳號記在「待標註調整」,規格第 20 章方案 A)
+        const checks = Object.fromEntries(
+          Object.entries(log).flatMap(([scenario, days]) =>
+            Object.entries(days as Record<string, Record<string, unknown>>).map(
+              ([day, report]) => [
+                `${scenario}.${day}`,
+                [report.checkTickets, report.checkCost],
+              ],
+            ),
+          ),
+        );
+        expect(checks).toEqual(
+          Object.fromEntries(Object.keys(checks).map((key) => [key, [0, 0]])),
+        );
+        expect(Object.keys(checks)).toHaveLength(16);
+        // 待標註調整:扣的位置換了(張 / 元)
+        const adjusts = Object.fromEntries(
+          Object.entries(log).flatMap(([scenario, days]) =>
+            Object.entries(days as Record<string, Record<string, unknown>>)
+              .filter(([, report]) => report.pendingAdjust !== 0)
+              .map(([day, report]) => [
+                `${scenario}.${day}`,
+                [report.pendingAdjust, report.pendingAdjustCost],
+              ]),
+          ),
+        );
+        expect(adjusts).toEqual({
+          // a:點收那一刻西店未售 60 > 東店 41 → 待標註改扣西店
+          "a.east1203": [1, 93],
+          "a.west1203": [-1, -93],
+          // a2:西店賣掉 20 張(40 < 41)→ 扣回東店
+          "a2.east1204": [-1, -93],
+          "a2.west1204": [1, 93],
+          // b1:待標註扣在東店時,西店標掉自己一張 → 待標註沒了
+          "b1.east1205": [1, 93],
+          "b1.west1205": [-1, -93],
+          // b3:待標註扣在待查那一組時,標掉一張尋回的(期末待查 +1 另列)
+          "b3.east1209": [-1, -93],
+          // a3:西店選張調回東店、在途中(西店未售含在途 60 > 東店 41)
+          "a3.east1213": [1, 93],
+          "a3.west1213": [-1, -93],
+        });
+
+        // 實物與帳本(報表以外):直接查張的庫存張數、本的詳情(待標註、所在分店)、庫存概況(規格 7.1)
+        expect(actual).toEqual({
+          a: {
+            onHand: { east: 41, west: 60 },
+            books: {
+              bookA: {
+                pending: 1,
+                remaining: 100,
+                total: 100,
+                holdings: { 西店: 59, 東店: 41 },
+              },
+            },
+            overview: {
+              西店: { unopened: 0, stock: 59, counter: 0 },
+              東店: { unopened: 0, stock: 0, counter: 41 },
+            },
+          },
+          a2: {
+            onHand: { east: 41, west: 40 },
+            books: {
+              bookA: {
+                pending: 1,
+                remaining: 80,
+                total: 100,
+                holdings: { 西店: 40, 東店: 40 },
+              },
+            },
+            // 扣在東店:東店的張全在檯面 → 從檯面扣
+            overview: {
+              西店: { unopened: 0, stock: 40, counter: 0 },
+              東店: { unopened: 0, stock: 0, counter: 40 },
+            },
+          },
+          b1: {
+            onHand: { east: 41, west: 39 },
+            books: {
+              bookA: {
+                pending: 0,
+                remaining: 80,
+                total: 100,
+                holdings: { 東店: 41, 西店: 39 },
+              },
+            },
+            overview: {
+              西店: { unopened: 0, stock: 39, counter: 0 },
+              東店: { unopened: 0, stock: 0, counter: 41 },
+            },
+          },
+          b2: {
+            onHand: { east: 141, west: 39 },
+            books: {
+              bookB: {
+                pending: 0,
+                remaining: 100,
+                total: 100,
+                holdings: { 東店: 100 },
+              },
+            },
+            overview: {
+              西店: { unopened: 0, stock: 39, counter: 0 },
+              東店: { unopened: 0, stock: 0, counter: 141 },
+            },
+          },
+          b3: {
+            onHand: { east: 150, west: 39 },
+            books: {
+              bookB3: {
+                pending: 0,
+                remaining: 9,
+                total: 100,
+                holdings: { 東店: 9 },
+              },
+            },
+            overview: {
+              西店: { unopened: 0, stock: 39, counter: 0 },
+              東店: { unopened: 0, stock: 9, counter: 141 },
+            },
+          },
+          // 西店 30 張在途(還在西店名下):扣在西店(未售含在途 60),庫存 78 − 1 = 77
+          a3: {
+            onHand: { east: 279, west: 78 },
+            books: {
+              bookA3: {
+                pending: 1,
+                remaining: 100,
+                total: 100,
+                holdings: { 西店: 59, 東店: 41 },
+              },
+            },
+            overview: {
+              西店: { unopened: 0, stock: 77, counter: 0 },
+              東店: { unopened: 0, stock: 97, counter: 182 },
+            },
+          },
+        });
+        // 報表的期末 = 直接查張的庫存張數 − 扣在這家店的待標註(和本的詳情一致)
+        const endingOf = (scenario: string, day: string) =>
+          (log[scenario] as Record<string, Record<string, unknown>>)[day]
+            ?.ending;
+        expect({
+          a: [endingOf("a", "east1203"), endingOf("a", "west1203")],
+          a2: [endingOf("a2", "east1204"), endingOf("a2", "west1204")],
+          b1: [endingOf("b1", "east1205"), endingOf("b1", "west1205")],
+          b2: [endingOf("b2", "east1207")],
+          b3: [endingOf("b3", "east1209")],
+          a3: [endingOf("a3", "east1213"), endingOf("a3", "west1213")],
+        }).toEqual({
+          a: [41, 60 - 1],
+          a2: [41 - 1, 40],
+          b1: [41, 39],
+          b2: [141],
+          b3: [150],
+          a3: [279, 78 - 1],
+        });
       });
     });
   });

@@ -92,8 +92,9 @@ export const ValueEditor = ({
         ),
       });
     };
+    // 區間兩格放不下時換行(手機寬詳情只剩約 250px),不撐出橫向捲動
     return (
-      <Stack direction="row" spacing={1}>
+      <Stack direction="row" useFlexGap spacing={1} sx={{ flexWrap: "wrap" }}>
         <DatePicker
           label={isRange ? t("valueFrom") : t("value")}
           value={localDayTextOf(values[0], timezone)}

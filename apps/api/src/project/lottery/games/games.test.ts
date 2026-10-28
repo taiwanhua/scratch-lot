@@ -240,7 +240,7 @@ describe("檔案管理 → 遊戲(GraphQL 端點 + 真 MongoDB)", () => {
       [500, 50, 25_000],
       [1000, 25, 25_000],
       [2000, 18, 36_000],
-      [150, 40, 6000],
+      [400, 40, 16_000],
     ])(
       "單張 %i × %i 張 → 整本 %i",
       async (unitPrice, ticketsPerBook, bookPrice) => {
@@ -358,6 +358,16 @@ describe("檔案管理 → 遊戲(GraphQL 端點 + 真 MongoDB)", () => {
       const again = await createGame(managerA, { gameCode: game.gameCode });
       expect(again.gameCode).toBe(game.gameCode);
     });
+  });
+
+  it("單張金額要是 100 的倍數(使用者 10/28 定案):150、-100 → VALIDATION_FAILED unitPrice", async () => {
+    for (const unitPrice of [150, -100]) {
+      expect(
+        await errorOf(api, managerA, CREATE, {
+          input: gameInput({ unitPrice }),
+        }),
+      ).toMatchObject({ code: "VALIDATION_FAILED", fields: ["unitPrice"] });
+    }
   });
 
   it("其他欄位的邊界:名稱 30 字、張數 1–999、批購金額率 0–100 整數、顏色只收色票", async () => {

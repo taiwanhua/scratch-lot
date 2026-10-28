@@ -191,7 +191,7 @@
 - **寫入**(domain `advance` 列 5):進關的同一次 CAS 寫計畫與自動通過的決定(`decisions` 整份 + 每筆 `approved` 事件帶 `reason`:`auto_applicant` / `auto_prior_approver`),接著建那幾位的任務(投影 = `approved`,不寄「有新任務」)。之後照判斷表:`any` 下一輪列 4 完成、`all` 等其他人。
 - 申請人留不留在計畫(`buildPlan` 的 `keepApplicant`,`advance` 列 5 算):`applicant: "review"` → 一律留著(沒有自動通過成立就拿一張待審任務,任務照常寄「有新任務」);其他設定 → **只有在自動通過成立(過了守門)時**才留著,被擋下就剔除,剔除後沒人 → 列 5 的阻擋。其他人被擋下照常留待審任務。每位被擋下的在同一次 CAS 記一筆 `auto_approve_blocked`(`userId`、`reason` = `auto_applicant` / `auto_prior_approver`、`code` = 專案錯誤碼;GraphQL `WorkflowHistoryEventModel.code`),時間軸以 `admin.approval.timeline.autoApproveBlocked.*` + `admin.lifecycle.<碼>`(沒有就用通用句)顯示。
 - 「已在前關核准過」= `priorApproverIds`:同一實例、這一關**上游**(沿入線往回)的關卡裡,`evaluateStep` 算數的核准決定的 `userId`(自動通過記的也算;晚於結果的不算;不同分支不算)。退回後重送是新實例,自然從頭算。
-- 「需要推進」的識別(`blockedInstances` 的 `needsAdvance`,`planOf`)不跑自動通過的守門。
+- 「需要推進」的識別(`blockedInstances` 的 `needsAdvance`,`WorkflowEngineService.needingAdvance`)不跑自動通過的守門。
 - 修訂 `ctx` 快照另存 `orgIds`、`tenantId`(`revisionContext`;GraphQL `FormSubmissionContext.orgIds` / `tenantId`),對應表達式的 `ctx.user.orgIds`、`ctx.tenant.id`;填寫中的前端從 `me.orgs` 與 `me.currentOrg.tenantId` 取。
 - admin 時間軸(`ApprovalTimeline`)依 `history[].reason` 顯示 `admin.approval.timeline.reasons.*`。設計器的關卡面板見下方 admin 的「屬性面板」。
 
@@ -364,7 +364,7 @@ admin 端(`hooks/base/useApplyCenterCounts.ts`):
 `workflow-engine/blocked-instances.service.ts`(`blockedInstances`,以操作者的租戶為邊界):
 
 - `BLOCKED`:實例 `status = blocked`。
-- `NEEDS_ADVANCE`:候選 = 進行中 + 終局未收尾(`finishedAt` 空)+ 任務仍待處理 / 阻擋的實例,依最久沒動排序取最多 200 筆,對它們跑一次判斷表(`WorkflowEngineService.planOf`,不寫入),還有動作 = 需要推進 —— 對應判斷表的列 2 / 4 / 4b / 4c / 5 / 5b / 6 / 7 / 8 / 8b 與資料矛盾。候選超過 200 筆回 `truncated: true`(處理完這批再查)。
+- `NEEDS_ADVANCE`:候選 = 進行中 + 終局未收尾(`finishedAt` 空)+ 任務仍待處理 / 阻擋的實例,依最久沒動排序取最多 200 筆,對它們跑一次判斷表(`WorkflowEngineService.needingAdvance`,不寫入:定義 / 任務 / 提交整批一次讀;列 5 不解析進關結果,進關本身就算有動作),還有動作 = 需要推進 —— 對應判斷表的列 2 / 4 / 4b / 4c / 5 / 5b / 6 / 7 / 8 / 8b 與資料矛盾。候選超過 200 筆回 `truncated: true`(處理完這批再查)。
 - 清單與處置回傳(改派 / 新增審核者 / 重試推進)的摘要**只給標題**(`date` / `amount` 為 null):流程管理者不一定讀得到提交內容。
 
 ## admin 頁面

@@ -22,6 +22,7 @@ import {
   startAuthTestApp,
 } from "../../../auth/test-support/auth-app";
 import { createOrg } from "../../../auth/test-support/fixtures";
+import { countDbCommands } from "../../../database/test-support/db-commands";
 import { HOOK_TIMEOUT_MS } from "../../../database/test-support/mongo-connection";
 import {
   NotificationService,
@@ -253,6 +254,7 @@ describe("關帳(GraphQL 端點 + 真 MongoDB)", () => {
     closedAt: Date | null,
     status: "pending" | "confirmed" | "returned" = "confirmed",
     leftForNext = 0,
+    cashPointId: Types.ObjectId = counter,
   ): Promise<{ shiftId: Types.ObjectId; submissionId: Types.ObjectId }> {
     const submissionId = new Types.ObjectId();
     const { insertedId: shiftId } = await connection
@@ -260,7 +262,7 @@ describe("關帳(GraphQL 端點 + 真 MongoDB)", () => {
       .insertOne({
         orgId: store,
         tenantId: tenant,
-        cashPointId: counter,
+        cashPointId,
         openedBy: closer.userId,
         openedAt,
         openingFloat: 0,
@@ -943,6 +945,75 @@ describe("關帳(GraphQL 端點 + 真 MongoDB)", () => {
     ).toBe(1);
   });
 
+  it("月結抽屜的資料庫指令數與收銀點數無關(TX-07):多 3 個收銀點,關帳檢查的指令數相同", async () => {
+    await check("2026-12");
+    const before = await countDbCommands(() => check("2026-12"));
+    for (const order of [2, 3, 4]) {
+      const { insertedId: pointId } = await connection
+        .collection(LOTTERY_CASH_POINTS_COLLECTION)
+        .insertOne({
+          orgId: store,
+          tenantId: tenant,
+          positionKey: `counter-${String(order)}`,
+          name: `櫃台 ${String(order)}`,
+          order,
+          enabled: true,
+          printerId: null,
+          note: null,
+          moduleKey: "master-data",
+          ...base(),
+        });
+      // 每個收銀點最後一班不同天、留給下一班的金額不同(走到讀結帳單那一支);第 4 個沒開過班
+      if (order < 4) {
+        await shiftOf(
+          `櫃台 ${String(order)} · 12/${String(order)}`,
+          taipei(`2026-12-0${String(order)}`, "08:00:00"),
+          taipei(`2026-12-0${String(order)}`, "16:00:00"),
+          "confirmed",
+          order * 100,
+          pointId,
+        );
+      }
+    }
+    const after = await countDbCommands(() => check("2026-12"));
+    const drawersOf = (result: typeof before.result) =>
+      result.snapshot.stores.flatMap((row) => row.drawers);
+    expect(drawersOf(after.result)).toHaveLength(
+      drawersOf(before.result).length + 3,
+    );
+    expect(
+      drawersOf(after.result)
+        .filter((row) => row.name.startsWith("櫃台 "))
+        .map((row) => row.amount),
+    ).toEqual([200, 300, 0]);
+    expect(after.total).toBe(before.total);
+  });
+
+  it("月結各店小金庫的資料庫指令數與店數無關(TX-07):多 3 家有收銀點的店,關帳檢查的指令數相同", async () => {
+    await check("2026-12");
+    const before = await countDbCommands(() => check("2026-12"));
+    for (const name of ["信義店", "大同店", "萬華店"]) {
+      const orgId = await createOrg(connection, { name, parentId: tenant });
+      await connection.collection(LOTTERY_CASH_POINTS_COLLECTION).insertOne({
+        orgId,
+        tenantId: tenant,
+        positionKey: "in-store-counter",
+        name: "店內櫃台",
+        order: 1,
+        enabled: true,
+        printerId: null,
+        note: null,
+        moduleKey: "master-data",
+        ...base(),
+      });
+    }
+    const after = await countDbCommands(() => check("2026-12"));
+    expect(after.result.snapshot.stores).toHaveLength(
+      before.result.snapshot.stores.length + 3,
+    );
+    expect(after.total).toBe(before.total);
+  });
+
   it("跨班更正的標示:現金流水回「屬於哪一班」(歸屬班次 / 事後更正指向的班),銀行沖正回原交易的時間", async () => {
     const viewer = await person(api, connection, tenant, tenant, {
       moduleKeys: ["accounts"],
@@ -1077,7 +1148,7 @@ describe("關帳(GraphQL 端點 + 真 MongoDB)", () => {
     });
   });
 
-  it("只新增:關帳紀錄、銀行交易、現金流水的修改 / 刪除一律拋 AppendOnlyLedgerError(不能重新開帳)", () => {
+  it("只新增:關帳紀錄、銀行交易、現金流水的修改 / 刪除(含批次出口)一律拋 AppendOnlyLedgerError(不能重新開帳)", () => {
     for (const repository of [
       api.app.get(LotteryPeriodClosesRepository),
       api.app.get(LotteryBankTransactionsRepository),
@@ -1093,6 +1164,8 @@ describe("關帳(GraphQL 端點 + 真 MongoDB)", () => {
         AppendOnlyLedgerError,
       );
       expect(() => repository.hardDeleteById()).toThrow(AppendOnlyLedgerError);
+      expect(() => repository.softDeleteMany()).toThrow(AppendOnlyLedgerError);
+      expect(() => repository.bulkUpdateByIds()).toThrow(AppendOnlyLedgerError);
     }
   });
 });

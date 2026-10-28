@@ -18,6 +18,7 @@ import {
 } from "../../database/lottery-inventory/lottery-inventory.repository";
 import { LotteryTransferReceiptsRepository } from "../../database/lottery-transfers/lottery-transfer-receipts.repository";
 import type { BookPendings } from "./report-pending";
+import type { PendingFlow } from "./report-pending-adjustment";
 import type { PendingStores } from "./report-pending-store";
 
 /** 在店裡的位置:庫存、檯面(在途不算任何一家店的庫存)。 */
@@ -75,6 +76,8 @@ export interface InTransitGroup {
 /** 某一刻這家店的張:庫存、待查、在途。 */
 export interface StockSnapshot {
   onHand: StockFigures;
+  /** 庫存扣掉的待標註(張數 / 成本;待標註調整用) */
+  onHandPending: StockFigures;
   investigating: StockFigures & { bookIds: string[] };
   inTransit: InTransitGroup[];
 }
@@ -86,13 +89,14 @@ export interface TicketGroupInput {
   costs: readonly number[];
 }
 
-/** 整本的一組扣掉待標註(`BookPendings.adjustmentOf`)後的張數與成本。 */
+/** 整本的一組扣掉待標註(`BookPendings.adjustmentOf`)後的張數與成本,帶扣掉的待標註。 */
 export const figuresOf = (
   groups: readonly TicketGroupInput[],
   pendings: BookPendings,
-): StockFigures => {
+): PendingFlow => {
   let tickets = 0;
   let cost = 0;
+  const deducted = { tickets: 0, cost: 0 };
   for (const group of groups) {
     const size = group.costs.length;
     if (size === 0) {
@@ -102,8 +106,10 @@ export const figuresOf = (
     const pending = pendings.adjustmentOf(group.bookId, group.at, size);
     tickets += size - pending;
     cost += total - (pending * total) / size;
+    deducted.tickets += pending;
+    deducted.cost += (pending * total) / size;
   }
-  return { tickets, cost };
+  return { tickets, cost, pending: deducted };
 };
 
 /**
@@ -347,6 +353,7 @@ export class ReportStock {
       onHandGroups.filter((group) => !covered(group)),
       pendings,
     );
+    const onHandPending = { ...onHandFigures.pending };
     for (const group of onHandGroups.filter((item) => covered(item))) {
       const size = group.costs.length;
       const total = group.costs.reduce((sum, value) => sum + value, 0);
@@ -358,9 +365,12 @@ export class ReportStock {
         ) ?? 0;
       onHandFigures.tickets += size - pending;
       onHandFigures.cost += total - (pending * total) / size;
+      onHandPending.tickets += pending;
+      onHandPending.cost += (pending * total) / size;
     }
     return {
-      onHand: onHandFigures,
+      onHand: { tickets: onHandFigures.tickets, cost: onHandFigures.cost },
+      onHandPending,
       investigating: {
         ...remainderFiguresOf(toGroups(investigating), pendings),
         bookIds: [

@@ -335,7 +335,8 @@ export class ScheduleAutoRunService {
     const scope = await this.scopeOf(operator, input.orgId, input.month);
     const plan = validatedRunPlan(input, scope.timezone);
     await this.ensurePeriod(operator, scope, input.month);
-    const lockedAt = await this.acquireLock(operator, scope, input.month);
+    const lock = await this.acquireLock(operator, scope, input.month);
+    const { lockedAt } = lock;
     try {
       // 已持有月鎖:讀資料與計算放在交易外(不讓長時間的計算撐住交易);交易內只寫入
       const prepared = await this.prepareRun(
@@ -344,27 +345,26 @@ export class ScheduleAutoRunService {
         input.month,
         plan,
       );
-      for (const userId of prepared.candidateIds) {
-        await this.personLocks.ensure(
-          operator,
-          scope.org.tenantId,
-          new Types.ObjectId(userId),
-        );
-      }
+      const candidateIds = prepared.candidateIds.map(
+        (userId) => new Types.ObjectId(userId),
+      );
+      await this.personLocks.ensureMany(
+        operator,
+        scope.org.tenantId,
+        candidateIds,
+      );
       const record = await this.transactions.withTransaction(async () => {
-        // 重核鎖仍是自己的:計算期間逾時被別人搶走 → 不寫入
+        // 重核鎖仍是自己的、計算期間沒有別的寫入:逾時被別人搶走,或逾時期間別人寫了這個月 → 不寫入
         await this.touchPeriod(operator, scope, input.month, {
           allowPublished: false,
-          ownLock: lockedAt,
+          ownLock: lock,
         });
-        // 碰每位候選人的「人」守門文件:同時在別家店手動排同一人會衝突重跑
-        for (const userId of prepared.candidateIds) {
-          await this.personLocks.touch(
-            operator,
-            scope.org.tenantId,
-            new Types.ObjectId(userId),
-          );
-        }
+        // 碰每位候選人的「人」守門文件:同時在別家店手動排同一人會衝突重跑(一次 updateMany)
+        await this.personLocks.touchMany(
+          operator,
+          scope.org.tenantId,
+          candidateIds,
+        );
         return this.writeRun(operator, scope, input.month, plan, prepared);
       });
       return await this.summaryOf(record);
@@ -560,15 +560,20 @@ export class ScheduleAutoRunService {
         created[index]?._id ?? null,
       ]),
     );
-    for (const changed of result.changedEntries) {
-      await this.entries.updateById(operator, changed.entryId, {
-        $set: {
-          startAt: changed.startAt,
-          endAt: changed.endAt,
-          breakMinutes: changed.breakMinutes,
+    // 每筆延長後的時間都不同:一次 bulkWrite(TX-06)
+    await this.entries.bulkUpdateByIds(
+      operator,
+      result.changedEntries.map((changed) => ({
+        id: changed.entryId,
+        update: {
+          $set: {
+            startAt: changed.startAt,
+            endAt: changed.endAt,
+            breakMinutes: changed.breakMinutes,
+          },
         },
-      });
-    }
+      })),
+    );
     await this.assignments.createMany(
       operator,
       result.fills.map((fill) => ({
@@ -840,7 +845,12 @@ export class ScheduleAutoRunService {
     const records = await this.entries.findMany(operator, {
       _id: { $in: ids },
     });
-    const shrunk: string[] = [];
+    const restored: {
+      id: Types.ObjectId;
+      startAt: number;
+      endAt: number;
+      breakMinutes: number;
+    }[] = [];
     for (const record of records) {
       const current = {
         startAt: record.startAt.getTime(),
@@ -868,30 +878,36 @@ export class ScheduleAutoRunService {
         changed = true;
       }
       if (changed) {
-        await this.entries.updateById(operator, record._id, {
-          $set: {
-            startAt: new Date(current.startAt),
-            endAt: new Date(current.endAt),
-            breakMinutes: current.breakMinutes,
-          },
-        });
-        shrunk.push(String(record._id));
+        restored.push({ id: record._id, ...current });
       }
     }
-    return shrunk;
+    // 每筆縮回的時間都不同:一次 bulkWrite(TX-06)
+    await this.entries.bulkUpdateByIds(
+      operator,
+      restored.map((item) => ({
+        id: item.id,
+        update: {
+          $set: {
+            startAt: new Date(item.startAt),
+            endAt: new Date(item.endAt),
+            breakMinutes: item.breakMinutes,
+          },
+        },
+      })),
+    );
+    return restored.map((item) => String(item.id));
   }
 
-  /** 軟刪除要清的填進紀錄與一起刪的排班。 */
+  /**
+   * 軟刪除要清的填進紀錄與一起刪的排班(各一次 updateMany,TX-06);筆數不符(規劃後被別人刪了)
+   * → `CONFLICT`,整個交易回復。
+   */
   private async applyClear(
     operator: OperatorContext,
     cleared: ClearPlan,
   ): Promise<void> {
-    for (const id of cleared.assignmentIds) {
-      await this.assignments.softDeleteById(operator, id);
-    }
-    for (const id of cleared.entryIds) {
-      await this.entries.softDeleteById(operator, new Types.ObjectId(id));
-    }
+    await this.assignments.softDeleteMany(operator, cleared.assignmentIds);
+    await this.entries.softDeleteMany(operator, cleared.entryIds);
   }
 
   // ---- 套用範本(內部) ----
@@ -956,7 +972,6 @@ export class ScheduleAutoRunService {
     return { weekTemplate, plan };
   }
 
-  /** 依規劃建立人力需求(複製執行任務、產生新的 taskId);已發布的月份每筆記一筆異動。 */
   /** 規劃 → 要建立的人力需求(先產生 id 與每筆執行任務的新 taskId,自動排班計算時就能引用)。 */
   private demandDocsOf(
     scope: Scope,
@@ -980,6 +995,7 @@ export class ScheduleAutoRunService {
     }));
   }
 
+  /** 依規劃建立人力需求(複製執行任務、產生新的 taskId);已發布的月份每筆記一筆異動。 */
   private async createDemands(
     operator: OperatorContext,
     scope: Scope,
@@ -1005,8 +1021,12 @@ export class ScheduleAutoRunService {
     if (reason === null) {
       return;
     }
-    for (const record of created) {
-      await this.changes.record(operator, scope, reason, {
+    // 每筆需求一列異動,一次寫入(TX-06)
+    await this.changes.recordMany(
+      operator,
+      scope,
+      reason,
+      created.map((record) => ({
         month: monthKeyOf(dateKeyOf(record.date, scope.timezone)),
         date: record.date,
         action: "demand.create",
@@ -1020,8 +1040,8 @@ export class ScheduleAutoRunService {
           positionKey: record.positionKey,
           tasks: record.tasks.map((task) => `${task.role}:${task.taskKey}`),
         },
-      });
-    }
+      })),
+    );
   }
 
   /** 這家店組織鏈上看得到的範本與啟用中的週範本(已刪除的範本不列)。 */
@@ -1183,7 +1203,11 @@ export class ScheduleAutoRunService {
     operator: OperatorContext,
     scope: Scope,
     month: string,
-    options: { allowPublished: boolean; ownLock?: Date },
+    options: {
+      allowPublished: boolean;
+      /** 自動排班:自己標的鎖(時點)與標記後的 `version`(這次 $inc 後要剛好多 1) */
+      ownLock?: { lockedAt: Date; version: number };
+    },
   ): Promise<boolean> {
     const touched = await this.periods.findOneAndUpdate(
       operator,
@@ -1199,8 +1223,12 @@ export class ScheduleAutoRunService {
       if (isAutoRunLocked(touched, this.clock.now())) {
         throw autoRunBlockedError("AUTO_RUN_IN_PROGRESS");
       }
-    } else if (touched.lockedAt?.getTime() !== options.ownLock.getTime()) {
-      // 自己的鎖已經不在(計算期間逾時、被別人重新標記)→ 不寫入
+    } else if (
+      touched.lockedAt?.getTime() !== options.ownLock.lockedAt.getTime() ||
+      touched.version !== options.ownLock.version + 1
+    ) {
+      // 自己的鎖已經不在(計算期間逾時、被別人重新標記),或鎖逾時期間別人寫了這個月
+      // (version 多了,交易外算好的計畫已過期)→ 不寫入
       throw autoRunBlockedError("AUTO_RUN_IN_PROGRESS");
     }
     const published = touched.status === "published";
@@ -1210,12 +1238,15 @@ export class ScheduleAutoRunService {
     return published;
   }
 
-  /** 條件更新標記鎖定(未發布、沒鎖或已逾時);拿不到 → 依狀況回已發布 / 執行中。 */
+  /**
+   * 條件更新標記鎖定(未發布、沒鎖或已逾時),回標記的時點與當時的 `version`;
+   * 拿不到 → 依狀況回已發布 / 執行中。
+   */
   private async acquireLock(
     operator: OperatorContext,
     scope: Scope,
     month: string,
-  ): Promise<Date> {
+  ): Promise<{ lockedAt: Date; version: number }> {
     const now = this.clock.now();
     const locked = await this.periods.findOneAndUpdate(
       operator,
@@ -1231,7 +1262,7 @@ export class ScheduleAutoRunService {
       { $set: { lockedAt: now, lockedBy: operator.actorId } },
     );
     if (locked !== null) {
-      return now;
+      return { lockedAt: now, version: locked.version };
     }
     const period = await this.periods.findOne(operator, {
       orgId: scope.org.id,

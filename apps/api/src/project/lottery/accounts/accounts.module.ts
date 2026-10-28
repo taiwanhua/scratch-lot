@@ -7,6 +7,7 @@ import { CashLedgerViewService } from "../cash/cash-ledger-view.service";
 import { LotteryCashLedgerResolver } from "../cash/cash-ledger.resolver";
 import { CashLedgerService } from "../cash/cash-ledger.service";
 import { SettlementLedger } from "../settlement/settlement-ledger";
+import { SettlementMarks } from "../settlement/settlement-marks";
 import { LotterySettlementResolver } from "../settlement/settlement.resolver";
 import { SettlementService } from "../settlement/settlement.service";
 import { StoreVaultGuard } from "../store/store-vault-guard";
@@ -36,6 +37,7 @@ import { PeriodLock } from "./period-lock";
     CashLedgerService,
     CashLedgerViewService,
     SettlementLedger,
+    SettlementMarks,
     StoreVaultGuard,
     BankTransactionsService,
     BankAccountsService,
@@ -51,6 +53,7 @@ import { PeriodLock } from "./period-lock";
     PeriodLock,
     CashLedgerService,
     SettlementLedger,
+    SettlementMarks,
     SettlementService,
     BankTransactionsService,
     StoreVaultGuard,

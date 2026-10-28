@@ -138,8 +138,8 @@ notify({ type, tenantId, orgId, recipients?, params?, ref?, dedupeKey })
 
 1. 解析收件人(去重、只留啟用中的使用者)。負責人提醒 = `listAudience`(類型的組織範圍 AND 人員條件);人員條件每次觸發都重讀通知設定,所以調整後的下一次就依新條件。事件在根組織(`tenantId = null`)的負責人提醒沒有收件人(記 log)。
 2. 讀收件人的偏好:每個 `defaultChannels` 是否開著(`canDisable` 為否的一律開);全部關掉的人不送。
-3. **交易內**依序寫 `notifications`(`(recipientId, dedupeKey)` 已有就整個略過)。呼叫端已在交易內就併進去(動作回復 → 沒有通知、沒有信號、沒有信);不在交易內就自己開一個。
-4. 交易提交後依管道交給轉接器:站內 = 一次 `/publish` 帶所有收件人的 `user:<id>`(信號 `{ type: "notification" }`,不合併);email = 逐封寄出。
+3. **交易內**寫 `notifications`(`(recipientId, dedupeKey)` 已有就整個略過;去重一次查、新的一次寫,收件人多寡不影響指令數,TX-06)。呼叫端已在交易內就併進去(動作回復 → 沒有通知、沒有信號、沒有信);不在交易內就自己開一個。
+4. 交易提交後依管道交給轉接器:站內 = 一次 `/publish` 帶所有收件人的 `user:<id>`(信號 `{ type: "notification" }`,不合併);email = 先一次讀所有收件人的信箱(讀取失敗這批不寄、只記 log),再逐封寄出。
 
 **email 總開關** `WORKFLOW_MAIL_ENABLED`(`docs/env-registry.md`):不是 `"true"` 時所有通知類型的 email 只寫 log、不寄,站內通知照常(啟用信、重設密碼信不受它管);每次寄送時讀。收件人再經 `MailService` 的 `MAIL_ALLOWLIST`。寄信失敗只記 log,不影響觸發它的動作。
 

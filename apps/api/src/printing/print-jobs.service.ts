@@ -555,9 +555,23 @@ export class PrintJobsService implements OnModuleInit {
     if (pending.length === 0) {
       return;
     }
+    // 一次條件更新、一次讀回(TX-06):條件同逐筆的 `markFailed`(仍是等待中 / 已送出),
+    // 與認領、回報同時發生時只有一方成功;沒標到的不通知。通知仍逐張(每張各自的 dedupeKey 與參數)
+    const ids = pending.map((job) => job._id);
+    await this.jobs.updateMany(
+      operator,
+      { _id: { $in: ids }, status: { $in: ["pending", "sent"] } },
+      { $set: { status: "failed", error: "agent-disabled" } },
+    );
+    const marked = await this.jobs.findMany(operator, {
+      _id: { $in: ids },
+      status: "failed",
+      error: "agent-disabled",
+    });
+    const markedOf = new Map(marked.map((job) => [String(job._id), job]));
     for (const job of pending) {
-      const failed = await this.markFailed(operator, job, "agent-disabled");
-      if (failed !== null) {
+      const failed = markedOf.get(String(job._id));
+      if (failed !== undefined) {
         await this.notifier.jobFailed(failed);
         this.publishResultAfterCommit(failed);
       }

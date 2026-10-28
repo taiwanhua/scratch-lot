@@ -8,8 +8,13 @@ import {
   type FormGuard,
   registerFormLifecycle,
 } from "../../../workflows/workflow-engine/lifecycle/form-lifecycle-registration";
-import { settlementClearedGuard } from "../settlement/settlement-guard";
+import {
+  settlementClearedGuard,
+  settlementMarkCompleted,
+  settlementMarkReopenGuard,
+} from "../settlement/settlement-guard";
 import { SettlementLedger } from "../settlement/settlement-ledger";
+import { SettlementMarks } from "../settlement/settlement-marks";
 import { PURCHASE_REASONS } from "./purchase-error";
 import type { PurchaseRules } from "./purchase-rules.service";
 import { PURCHASE_RULES } from "./purchase-rules.token";
@@ -53,7 +58,7 @@ const withoutReceipts: FormGuard = ({ submission, get }) =>
 export const purchaseLifecycle = registerFormLifecycle({
   moduleKey: PURCHASE_MODULE_KEY,
   formKey: PURCHASE_FORM_KEY,
-  inject: [PURCHASE_RULES, SettlementLedger],
+  inject: [PURCHASE_RULES, SettlementLedger, SettlementMarks],
   guards: {
     beforeSubmit: ({ operator, submission, values, get }) =>
       rulesOf({ get }).beforeSubmit(operator, submission, values),
@@ -61,6 +66,8 @@ export const purchaseLifecycle = registerFormLifecycle({
       rulesOf({ get }).beforeApprove(submission),
     beforeReject: both(withoutReceipts, settlementClearedGuard),
     beforeDelete: both(draftOnly, withoutReceipts),
+    // 不走流程時可以修改已完成的單據(應付可能變):結清標記改回待確認,不擋
+    beforeEditCompleted: settlementMarkReopenGuard,
     beforeVoid: both(
       ({ submission, get }) => rulesOf({ get }).beforeVoid(submission),
       settlementClearedGuard,
@@ -70,7 +77,9 @@ export const purchaseLifecycle = registerFormLifecycle({
     submitted: (context) => rulesOf(context).onSubmitted(context),
     rejected: (context) => rulesOf(context).onRejected(context),
     voided: (context) => rulesOf(context).onVoided(context),
-    completed: (context) => {
+    completed: async (context) => {
+      // 已完成的單據改由結清標記挑出還要算的(待結清只掃還沒結清的)
+      await settlementMarkCompleted(context);
       rulesOf(context).onTaskEnded(context);
     },
     returned: (context) => rulesOf(context).onReleased(context),

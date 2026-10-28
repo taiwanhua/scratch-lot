@@ -13,6 +13,7 @@ import {
 import { OrgBusinessDataReader } from "../database/org-business-data.reader";
 import { RelationService } from "../database/relation.service";
 import { tenantIdOfOrg } from "../database/tenant-id";
+import { TransactionService, afterCommit } from "../database/transaction";
 import { StorageService, isOwnedUploadPath } from "../storage/storage.service";
 import type { CreateChildOrgInput } from "./dto/create-child-org.input";
 import type { DeleteOrgInput } from "./dto/delete-org.input";
@@ -269,6 +270,7 @@ export class OrgsService {
     private readonly roles: RolesRepository,
     private readonly protection: OwnerProtectionService,
     private readonly storage: StorageService,
+    private readonly transactions: TransactionService,
   ) {}
 
   private readonly logger = new Logger(OrgsService.name);
@@ -360,29 +362,31 @@ export class OrgsService {
     operator: OperatorContext,
     input: CreateChildOrgInput,
   ): Promise<Org> {
-    const name = requireName(input.name);
-    const description = optionalText(input.description);
-    const parent = await this.requireManaged(operator, input.parentId);
-    const created = await this.orgs.create(operator, {
-      name,
-      parentId: parent._id,
-      ancestors: [...parent.ancestors, parent._id],
-      enabled: true,
-      isSystem: false,
-      settings: {},
-      ...(description === undefined ? {} : { description }),
-    });
-    await this.audit.record(operator, {
-      action: AUDIT_ACTIONS.createChild,
-      targetType: AUDIT_TARGET_TYPE,
-      targetId: created._id,
-      after: {
+    return this.transactions.withTransaction(async () => {
+      const name = requireName(input.name);
+      const description = optionalText(input.description);
+      const parent = await this.requireManaged(operator, input.parentId);
+      const created = await this.orgs.create(operator, {
         name,
-        parentId: String(parent._id),
+        parentId: parent._id,
+        ancestors: [...parent.ancestors, parent._id],
+        enabled: true,
+        isSystem: false,
+        settings: {},
         ...(description === undefined ? {} : { description }),
-      },
+      });
+      await this.audit.record(operator, {
+        action: AUDIT_ACTIONS.createChild,
+        targetType: AUDIT_TARGET_TYPE,
+        targetId: created._id,
+        after: {
+          name,
+          parentId: String(parent._id),
+          ...(description === undefined ? {} : { description }),
+        },
+      });
+      return toOrg(created);
     });
-    return toOrg(created);
   }
 
   /**
@@ -390,34 +394,37 @@ export class OrgsService {
    * (審計的 before / after 只放有變的欄位,空紀錄是雜訊)。
    */
   async update(operator: OperatorContext, input: UpdateOrgInput): Promise<Org> {
-    const current = await this.requireManaged(operator, input.id);
-    const slugChange = await this.slugChangeOf(operator, input, current);
-    const changes = [
-      ...editChangesOf(input, current),
-      ...(slugChange ? [slugChange] : []),
-    ];
-    if (changes.length === 0) {
-      return toOrg(current);
-    }
-    const updated = await this.orgs
-      .updateById(
-        operator,
-        current._id,
-        updateOf(changes, nullOnClearPathsOf(current)),
-      )
-      .catch((error: unknown) => {
-        // 短碼事前查過沒人用,同時有別的請求搶先寫入時由唯一索引擋下
-        throw slugConflictOr(error);
+    return this.transactions.withTransaction(async () => {
+      const current = await this.requireManaged(operator, input.id);
+      const slugChange = await this.slugChangeOf(operator, input, current);
+      const changes = [
+        ...editChangesOf(input, current),
+        ...(slugChange ? [slugChange] : []),
+      ];
+      if (changes.length === 0) {
+        return toOrg(current);
+      }
+      const updated = await this.orgs
+        .updateById(
+          operator,
+          current._id,
+          updateOf(changes, nullOnClearPathsOf(current)),
+        )
+        .catch((error: unknown) => {
+          // 短碼事前查過沒人用,同時有別的請求搶先寫入時由唯一索引擋下
+          throw slugConflictOr(error);
+        });
+      await this.audit.record(operator, {
+        action: AUDIT_ACTIONS.edit,
+        targetType: AUDIT_TARGET_TYPE,
+        targetId: current._id,
+        before: auditSideOf(changes, "previous"),
+        after: auditSideOf(changes, "value"),
       });
-    await this.audit.record(operator, {
-      action: AUDIT_ACTIONS.edit,
-      targetType: AUDIT_TARGET_TYPE,
-      targetId: current._id,
-      before: auditSideOf(changes, "previous"),
-      after: auditSideOf(changes, "value"),
+      // 刪舊商標是外部副作用(TX-03):交易提交後才做,回復時不會先把圖刪掉
+      afterCommit(() => this.discardReplacedLogo(changes));
+      return toOrg(updated ?? current);
     });
-    await this.discardReplacedLogo(changes);
-    return toOrg(updated ?? current);
   }
 
   /**
@@ -479,85 +486,90 @@ export class OrgsService {
     operator: OperatorContext,
     input: SetOrgEnabledInput,
   ): Promise<Org> {
-    const current = await this.requireManaged(operator, input.id);
-    if (current.isSystem && !input.enabled) {
-      throw orgError("VALIDATION_FAILED", "System org cannot be disabled");
-    }
-    // 租戶頂層只有根組織能停用 / 啟用(ADR-0009);租戶內的人只能動子組織
-    await this.protection.assertTenantTopOperableBy(
-      operator,
-      current,
-      "set-enabled",
-    );
-    const updated = await this.orgs.updateById(operator, current._id, {
-      $set: { enabled: input.enabled },
+    return this.transactions.withTransaction(async () => {
+      const current = await this.requireManaged(operator, input.id);
+      if (current.isSystem && !input.enabled) {
+        throw orgError("VALIDATION_FAILED", "System org cannot be disabled");
+      }
+      // 租戶頂層只有根組織能停用 / 啟用(ADR-0009);租戶內的人只能動子組織
+      await this.protection.assertTenantTopOperableBy(
+        operator,
+        current,
+        "set-enabled",
+      );
+      const updated = await this.orgs.updateById(operator, current._id, {
+        $set: { enabled: input.enabled },
+      });
+      const cascaded = input.enabled
+        ? 0
+        : await this.orgs.updateMany(
+            subtreeContext(operator),
+            { ancestors: current._id },
+            { $set: { enabled: false } },
+          );
+      await this.audit.record(operator, {
+        action: AUDIT_ACTIONS.toggleEnabled,
+        targetType: AUDIT_TARGET_TYPE,
+        targetId: current._id,
+        before: { enabled: current.enabled },
+        after: {
+          enabled: input.enabled,
+          ...(input.enabled ? {} : { cascadedDescendants: cascaded }),
+        },
+      });
+      return toOrg(updated ?? current);
     });
-    const cascaded = input.enabled
-      ? 0
-      : await this.orgs.updateMany(
-          subtreeContext(operator),
-          { ancestors: current._id },
-          { $set: { enabled: false } },
-        );
-    await this.audit.record(operator, {
-      action: AUDIT_ACTIONS.toggleEnabled,
-      targetType: AUDIT_TARGET_TYPE,
-      targetId: current._id,
-      before: { enabled: current.enabled },
-      after: {
-        enabled: input.enabled,
-        ...(input.enabled ? {} : { cascadedDescendants: cascaded }),
-      },
-    });
-    return toOrg(updated ?? current);
   }
 
   /**
    * 搬移:候選 = **管理範圍內、同租戶、不在自己這棵子樹裡**(docs/modules/org-manager.md)。
    * 範圍外 `NOT_FOUND`、跨租戶 `CROSS_TENANT`、搬進自己的子樹 `CYCLIC_MOVE`、
    * 租戶頂層本身 `FORBIDDEN`;成功後整棵子樹的 `ancestors` 重算(物化路徑,ADR-0005)。
+   * 讀取驗證、自己與子樹的更新、稽核一個交易(TX-01):子樹重算一半失敗不會留下斷掉的路徑。
    */
   async move(operator: OperatorContext, input: MoveOrgInput): Promise<Org> {
-    const org = await this.requireManaged(operator, input.id);
-    if (org.parentId === null || org.isSystem) {
-      throw orgError("VALIDATION_FAILED", "System org cannot be moved");
-    }
-    // 租戶頂層只有根組織能搬(跨租戶的檢查在下面另外擋,ADR-0009)
-    await this.protection.assertTenantTopOperableBy(operator, org, "move");
-    // 新上層也必須在管理範圍內(治理類過濾自動套用:範圍外即 NOT_FOUND)
-    const newParent = await this.requireManaged(operator, input.newParentId);
-    if (
-      newParent._id.equals(org._id) ||
-      newParent.ancestors.some((ancestor) => ancestor.equals(org._id))
-    ) {
-      throw orgError(
-        "CYCLIC_MOVE",
-        `Org ${input.id} cannot be moved under itself or its own descendant`,
-      );
-    }
-    if (!tenantTopIdOf(org).equals(tenantTopIdOf(newParent))) {
-      throw orgError(
-        "CROSS_TENANT",
-        `Org ${input.id} and new parent ${input.newParentId} belong to different tenants`,
-      );
-    }
-    if (org.parentId.equals(newParent._id)) {
-      return toOrg(org);
-    }
+    return this.transactions.withTransaction(async () => {
+      const org = await this.requireManaged(operator, input.id);
+      if (org.parentId === null || org.isSystem) {
+        throw orgError("VALIDATION_FAILED", "System org cannot be moved");
+      }
+      // 租戶頂層只有根組織能搬(跨租戶的檢查在下面另外擋,ADR-0009)
+      await this.protection.assertTenantTopOperableBy(operator, org, "move");
+      // 新上層也必須在管理範圍內(治理類過濾自動套用:範圍外即 NOT_FOUND)
+      const newParent = await this.requireManaged(operator, input.newParentId);
+      if (
+        newParent._id.equals(org._id) ||
+        newParent.ancestors.some((ancestor) => ancestor.equals(org._id))
+      ) {
+        throw orgError(
+          "CYCLIC_MOVE",
+          `Org ${input.id} cannot be moved under itself or its own descendant`,
+        );
+      }
+      if (!tenantTopIdOf(org).equals(tenantTopIdOf(newParent))) {
+        throw orgError(
+          "CROSS_TENANT",
+          `Org ${input.id} and new parent ${input.newParentId} belong to different tenants`,
+        );
+      }
+      if (org.parentId.equals(newParent._id)) {
+        return toOrg(org);
+      }
 
-    const ancestors = [...newParent.ancestors, newParent._id];
-    const updated = await this.orgs.updateById(operator, org._id, {
-      $set: { parentId: newParent._id, ancestors },
+      const ancestors = [...newParent.ancestors, newParent._id];
+      const updated = await this.orgs.updateById(operator, org._id, {
+        $set: { parentId: newParent._id, ancestors },
+      });
+      const moved = await this.reparentDescendants(operator, org, ancestors);
+      await this.audit.record(operator, {
+        action: AUDIT_ACTIONS.move,
+        targetType: AUDIT_TARGET_TYPE,
+        targetId: org._id,
+        before: { parentId: String(org.parentId) },
+        after: { parentId: String(newParent._id), movedDescendants: moved },
+      });
+      return toOrg(updated ?? org);
     });
-    const moved = await this.reparentDescendants(operator, org, ancestors);
-    await this.audit.record(operator, {
-      action: AUDIT_ACTIONS.move,
-      targetType: AUDIT_TARGET_TYPE,
-      targetId: org._id,
-      before: { parentId: String(org.parentId) },
-      after: { parentId: String(newParent._id), movedDescendants: moved },
-    });
-    return toOrg(updated ?? org);
   }
 
   /**
@@ -569,41 +581,45 @@ export class OrgsService {
     operator: OperatorContext,
     input: DeleteOrgInput,
   ): Promise<DeletePayload> {
-    const org = await this.requireManaged(operator, input.id);
-    // 租戶頂層只有根組織能刪(ADR-0009);先於前置四項判斷,不透露租戶內部狀態
-    await this.protection.assertTenantTopOperableBy(operator, org, "delete");
-    const reasons = await this.orgContentReasons(operator, org);
-    if (reasons.length > 0) {
-      throw orgNotDeletableError(reasons);
-    }
-    await this.orgs.softDeleteById(operator, org._id);
-    // 主管是組織的職位:組織不在了職位也不在(關聯只存現況、硬刪,ADR-0001);
-    // 留著的話,審核流程的主管解析不會走到被刪的組織,但名單會變成指向死組織的殭屍
-    const managerLinks = await this.relations.listLinks("org_manager", {
-      firstIds: [org._id],
+    return this.transactions.withTransaction(async () => {
+      const org = await this.requireManaged(operator, input.id);
+      // 租戶頂層只有根組織能刪(ADR-0009);先於前置四項判斷,不透露租戶內部狀態
+      await this.protection.assertTenantTopOperableBy(operator, org, "delete");
+      const reasons = await this.orgContentReasons(operator, org);
+      if (reasons.length > 0) {
+        throw orgNotDeletableError(reasons);
+      }
+      await this.orgs.softDeleteById(operator, org._id);
+      // 主管是組織的職位:組織不在了職位也不在(關聯只存現況、硬刪,ADR-0001);
+      // 留著的話,審核流程的主管解析不會走到被刪的組織,但名單會變成指向死組織的殭屍
+      const managerLinks = await this.relations.listLinks("org_manager", {
+        firstIds: [org._id],
+      });
+      const removedManagerIds = managerLinks.map((link) =>
+        String(link.secondId),
+      );
+      await this.relations.unlinkMany(
+        operator,
+        managerLinks.map((link) => ({
+          type: "org_manager" as const,
+          firstId: link.firstId,
+          secondId: link.secondId,
+        })),
+      );
+      await this.audit.record(operator, {
+        action: AUDIT_ACTIONS.delete,
+        targetType: AUDIT_TARGET_TYPE,
+        targetId: org._id,
+        before: {
+          name: org.name,
+          parentId: org.parentId === null ? null : String(org.parentId),
+          ...(removedManagerIds.length === 0
+            ? {}
+            : { managerIds: removedManagerIds }),
+        },
+      });
+      return { success: true, deletedId: String(org._id) };
     });
-    const removedManagerIds = managerLinks.map((link) => String(link.secondId));
-    await this.relations.unlinkMany(
-      operator,
-      managerLinks.map((link) => ({
-        type: "org_manager" as const,
-        firstId: link.firstId,
-        secondId: link.secondId,
-      })),
-    );
-    await this.audit.record(operator, {
-      action: AUDIT_ACTIONS.delete,
-      targetType: AUDIT_TARGET_TYPE,
-      targetId: org._id,
-      before: {
-        name: org.name,
-        parentId: org.parentId === null ? null : String(org.parentId),
-        ...(removedManagerIds.length === 0
-          ? {}
-          : { managerIds: removedManagerIds }),
-      },
-    });
-    return { success: true, deletedId: String(org._id) };
   }
 
   /**
@@ -619,34 +635,36 @@ export class OrgsService {
     operator: OperatorContext,
     input: SetOrgVisibilityInput,
   ): Promise<Org> {
-    const org = await this.requireManaged(operator, input.orgId);
-    if (!isTenantTop(org)) {
-      const error = orgError(
-        "VALIDATION_FAILED",
-        `Org ${input.orgId} is not a tenant top-level org; the visibility switch only exists there`,
-      );
-      (error.extensions as Record<string, unknown>).fields = ["orgId"];
-      throw error;
-    }
-    const previous = visibilityOf(org);
-    if (previous === input.visibility) {
-      return toOrg(org);
-    }
-    const updated = await this.orgs.updateById(operator, org._id, {
-      $set: {
-        [`settings.${VISIBILITY_SETTING}`]: visibilitySettingOf(
-          input.visibility,
-        ),
-      },
+    return this.transactions.withTransaction(async () => {
+      const org = await this.requireManaged(operator, input.orgId);
+      if (!isTenantTop(org)) {
+        const error = orgError(
+          "VALIDATION_FAILED",
+          `Org ${input.orgId} is not a tenant top-level org; the visibility switch only exists there`,
+        );
+        (error.extensions as Record<string, unknown>).fields = ["orgId"];
+        throw error;
+      }
+      const previous = visibilityOf(org);
+      if (previous === input.visibility) {
+        return toOrg(org);
+      }
+      const updated = await this.orgs.updateById(operator, org._id, {
+        $set: {
+          [`settings.${VISIBILITY_SETTING}`]: visibilitySettingOf(
+            input.visibility,
+          ),
+        },
+      });
+      await this.audit.record(operator, {
+        action: AUDIT_ACTIONS.setVisibility,
+        targetType: AUDIT_TARGET_TYPE,
+        targetId: org._id,
+        before: { visibility: previous },
+        after: { visibility: input.visibility },
+      });
+      return toOrg(updated ?? org);
     });
-    await this.audit.record(operator, {
-      action: AUDIT_ACTIONS.setVisibility,
-      targetType: AUDIT_TARGET_TYPE,
-      targetId: org._id,
-      before: { visibility: previous },
-      after: { visibility: input.visibility },
-    });
-    return toOrg(updated ?? org);
   }
 
   /**
@@ -660,38 +678,41 @@ export class OrgsService {
     operator: OperatorContext,
     input: SetOrgTimezoneInput,
   ): Promise<Org> {
-    const org = await this.requireManaged(operator, input.orgId);
-    if (!hasOwnTimezone(org)) {
-      throw orgValidationError(
-        `Org ${input.orgId} is neither the root org nor a tenant top-level org; the timezone setting only exists there`,
-        ["orgId"],
+    return this.transactions.withTransaction(async () => {
+      const org = await this.requireManaged(operator, input.orgId);
+      if (!hasOwnTimezone(org)) {
+        throw orgValidationError(
+          `Org ${input.orgId} is neither the root org nor a tenant top-level org; the timezone setting only exists there`,
+          ["orgId"],
+        );
+      }
+      if (input.timezone !== null && !isValidTimezone(input.timezone)) {
+        throw orgValidationError(
+          "timezone is not an IANA name Intl recognizes",
+          ["timezone"],
+        );
+      }
+      // 比對存的原值(不合法的舊值也要能被清掉),稽核的 before 則記對外看到的值
+      if ((org.settings[TIMEZONE_SETTING] ?? null) === input.timezone) {
+        return toOrg(org);
+      }
+      const previous = timezoneOf(org);
+      const updated = await this.orgs.updateById(
+        operator,
+        org._id,
+        input.timezone === null
+          ? { $unset: { [`settings.${TIMEZONE_SETTING}`]: "" } }
+          : { $set: { [`settings.${TIMEZONE_SETTING}`]: input.timezone } },
       );
-    }
-    if (input.timezone !== null && !isValidTimezone(input.timezone)) {
-      throw orgValidationError("timezone is not an IANA name Intl recognizes", [
-        "timezone",
-      ]);
-    }
-    // 比對存的原值(不合法的舊值也要能被清掉),稽核的 before 則記對外看到的值
-    if ((org.settings[TIMEZONE_SETTING] ?? null) === input.timezone) {
-      return toOrg(org);
-    }
-    const previous = timezoneOf(org);
-    const updated = await this.orgs.updateById(
-      operator,
-      org._id,
-      input.timezone === null
-        ? { $unset: { [`settings.${TIMEZONE_SETTING}`]: "" } }
-        : { $set: { [`settings.${TIMEZONE_SETTING}`]: input.timezone } },
-    );
-    await this.audit.record(operator, {
-      action: AUDIT_ACTIONS.setTimezone,
-      targetType: AUDIT_TARGET_TYPE,
-      targetId: org._id,
-      before: { timezone: previous },
-      after: { timezone: input.timezone },
+      await this.audit.record(operator, {
+        action: AUDIT_ACTIONS.setTimezone,
+        targetType: AUDIT_TARGET_TYPE,
+        targetId: org._id,
+        before: { timezone: previous },
+        after: { timezone: input.timezone },
+      });
+      return toOrg(updated ?? org);
     });
-    return toOrg(updated ?? org);
   }
 
   /**
@@ -745,15 +766,21 @@ export class OrgsService {
     const descendants = await this.orgs.findMany(subtree, {
       ancestors: org._id,
     });
-    for (const descendant of descendants) {
-      const index = descendant.ancestors.findIndex((ancestor) =>
-        ancestor.equals(org._id),
-      );
-      const tail = index === -1 ? [org._id] : descendant.ancestors.slice(index);
-      await this.orgs.updateById(subtree, descendant._id, {
-        $set: { ancestors: [...ancestors, ...tail] },
-      });
-    }
+    // 每個組織的新路徑都不同:一次 bulkWrite(TX-06),與子樹大小無關;有一筆沒命中 → CONFLICT、整個搬移回復
+    await this.orgs.bulkUpdateByIds(
+      subtree,
+      descendants.map((descendant) => {
+        const index = descendant.ancestors.findIndex((ancestor) =>
+          ancestor.equals(org._id),
+        );
+        const tail =
+          index === -1 ? [org._id] : descendant.ancestors.slice(index);
+        return {
+          id: descendant._id,
+          update: { $set: { ancestors: [...ancestors, ...tail] } },
+        };
+      }),
+    );
     return descendants.length;
   }
 

@@ -6,6 +6,7 @@ import {
   MASTER_DATA_NOTE_MAX_LENGTH,
   TICKETS_PER_BOOK_MAX,
   TICKETS_PER_BOOK_MIN,
+  UNIT_PRICE_STEP,
 } from "@repo/domain/project/lottery-master-data";
 
 import {
@@ -35,7 +36,7 @@ const GAME_FORMAT_TEXTS: Record<string, [string, Record<string, string>?]> = {
   gameCode: ["fieldErrors.gameCode"],
   name: ["fieldErrors.requiredText", max(GAME_NAME_MAX_LENGTH)],
   status: ["fieldErrors.choose"],
-  unitPrice: ["fieldErrors.positiveInteger"],
+  unitPrice: ["fieldErrors.unitPrice", { step: String(UNIT_PRICE_STEP) }],
   ticketsPerBook: [
     "fieldErrors.integerRange",
     range(TICKETS_PER_BOOK_MIN, TICKETS_PER_BOOK_MAX),

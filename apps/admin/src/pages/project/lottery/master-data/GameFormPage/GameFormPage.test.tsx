@@ -5,6 +5,7 @@ import type { UserEvent } from "@testing-library/user-event";
 import { MASTER_DATA_PERMISSIONS as P } from "@repo/domain/project/lottery-master-data";
 
 import { expectButtonOrder } from "@/test/button-order";
+import { sampleGames } from "@/test/msw/project/lottery/master-data-fixtures";
 
 import { renderMasterData } from "../master-data-test-support";
 
@@ -68,6 +69,31 @@ describe("遊戲頁", () => {
         "500 元 × 40 張 · 整本 20,000 · 預設批購金額率 92%",
       ),
     ).toBeInTheDocument();
+  });
+
+  it("單張金額不是 100 的倍數:邊打邊在欄位下提示,送出前擋下", async () => {
+    const { user, fake } = renderMasterData({
+      path: "/master-data/game-create-page",
+    });
+    await user.type(
+      await screen.findByRole("textbox", { name: /遊戲代號/ }),
+      "5301",
+    );
+    await user.type(field(/遊戲名稱/), "小吉利");
+    await user.type(price(), "150");
+    expect(
+      screen.getByText("要填 100 的倍數(大於 0 的整數)"),
+    ).toBeInTheDocument();
+    await user.type(field(/整本張數/), "40");
+    await user.type(field(/預設批購金額率/), "92");
+    await typeDate(user, /兌獎截止日/, "2027-07-01");
+    await user.click(screen.getByRole("button", { name: "儲存" }));
+    expect(fake.inputs.createGame).toHaveLength(0);
+    await user.clear(price());
+    await user.type(price(), "400");
+    expect(
+      screen.queryByText("要填 100 的倍數(大於 0 的整數)"),
+    ).not.toBeInTheDocument();
   });
 
   it("兌獎截止日必填;上市日 / 停售日唯讀,選了兌獎截止日就即時推算(月底取該月最後一天)", async () => {
@@ -147,6 +173,28 @@ describe("遊戲頁", () => {
     expect(
       screen.queryByRole("button", { name: "刪除" }),
     ).not.toBeInTheDocument();
+  });
+
+  it("舊遊戲單張金額不是 100 的倍數、已鎖定:不提示、不擋,其他欄位照常儲存", async () => {
+    const games = sampleGames().map((item) =>
+      item.id === "g-5164" ? { ...item, unitPrice: 150 } : item,
+    );
+    const { user, fake } = renderMasterData({
+      path: "/master-data/game-edit-page/g-5164",
+      world: { games },
+    });
+    expect(await screen.findByDisplayValue("150")).toBeDisabled();
+    expect(
+      screen.queryByText("要填 100 的倍數(大於 0 的整數)"),
+    ).not.toBeInTheDocument();
+    await user.clear(field(/遊戲名稱/));
+    await user.type(field(/遊戲名稱/), "發大財二");
+    await user.click(screen.getByRole("button", { name: "儲存" }));
+    await waitFor(() => {
+      expect(fake.inputs.updateGame).toHaveLength(1);
+    });
+    expect(fake.inputs.updateGame[0]).toMatchObject({ name: "發大財二" });
+    expect(fake.inputs.updateGame[0]).not.toHaveProperty("unitPrice");
   });
 
   it("沒有庫存:有 games.delete 才有 [刪除];確認後刪除", async () => {

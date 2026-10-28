@@ -404,7 +404,7 @@ describe("本狀態與再上檯面(GraphQL 端點 + 真 MongoDB)", () => {
       mode: "whole",
       ticket_nos: "001-100",
       tickets: 100,
-      amount: 2000,
+      amount: 10_000,
       rate: 100,
     };
   }
@@ -416,7 +416,7 @@ describe("本狀態與再上檯面(GraphQL 端點 + 真 MongoDB)", () => {
       mode: "partial",
       ticket_nos: `${String(from).padStart(3, "0")}-${String(to).padStart(3, "0")}`,
       tickets: count,
-      amount: 20 * count,
+      amount: 100 * count,
       rate: 92,
     };
   }
@@ -639,7 +639,7 @@ describe("本狀態與再上檯面(GraphQL 端點 + 真 MongoDB)", () => {
           book: String(bookId),
           ticket_nos: `${ticketNos[0] ?? ""}-${ticketNos.at(-1) ?? ""}`,
           tickets: ticketNos.length,
-          amount: 20 * ticketNos.length,
+          amount: 100 * ticketNos.length,
         },
       ],
       reason: "customer-return",
@@ -831,7 +831,7 @@ describe("本狀態與再上檯面(GraphQL 端點 + 真 MongoDB)", () => {
     game = await insertGame(connection, tenant, {
       gameCode: "5164",
       name: "發大財",
-      unitPrice: 20,
+      unitPrice: 100,
       ticketsPerBook: 100,
     });
 

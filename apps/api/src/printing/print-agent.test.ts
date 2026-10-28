@@ -9,6 +9,7 @@ import {
 } from "@repo/domain/printing";
 
 import { startAuthTestApp } from "../auth/test-support/auth-app";
+import { countDbCommands } from "../database/test-support/db-commands";
 import { HOOK_TIMEOUT_MS } from "../database/test-support/mongo-connection";
 import { internalReader } from "./print-agent-credentials";
 import { PrintJobsService } from "./print-jobs.service";
@@ -79,6 +80,33 @@ describe("列印代理程式 API", () => {
       throw new Error(`沒有代理程式 ${id}`);
     }
     return found;
+  }
+
+  /** 停用一個有 jobCount 張等待中工作的代理程式,回 print_jobs 的指令數。 */
+  async function printJobCommandsOf(jobCount: number): Promise<number> {
+    const agent = await pairedAgent(
+      world,
+      world.storeA,
+      `批次停用 ${String(jobCount)}`,
+    );
+    const target = await addPrinter(world, agent.agent.id, {
+      name: `批次停用印表機 ${String(jobCount)}`,
+    });
+    const jobs: JobRow[] = [];
+    for (let index = 0; index < jobCount; index += 1) {
+      jobs.push(await createJob(target.id));
+    }
+    const counted = await countDbCommands(() =>
+      ok(world, world.admin, DOCS.disableAgent, {
+        input: { id: agent.agent.id },
+      }),
+    );
+    for (const job of jobs) {
+      await expectFailedNotice(world, job.id, "代理程式已停用");
+    }
+    return [...counted.byCommand]
+      .filter(([key]) => key.startsWith("print_jobs."))
+      .reduce((sum, [, count]) => sum + count, 0);
   }
 
   beforeAll(async () => {
@@ -894,6 +922,11 @@ describe("列印代理程式 API", () => {
         status: "FAILED",
         error: "AGENT_DISABLED",
       });
+    });
+
+    it("停用代理程式:工作標失敗是一次條件更新 + 一次讀回,print_jobs 的指令數不隨工作數成長(TX-06)", async () => {
+      const one = await printJobCommandsOf(1);
+      expect(await printJobCommandsOf(4)).toBe(one);
     });
   });
 
