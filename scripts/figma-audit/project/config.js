@@ -194,6 +194,15 @@ const AUDIT_CONFIG = {
       "70:14":
         "班表管理的圖例照程式 roster-legend.ts / my-schedule-legend.ts 列各檢視「可能出現」的記號(規格 14.5「圖例」),示範畫面沒畫到的記號不補示範資料",
     },
+    // 「畫面名稱開頭|變數名稱」→ 理由:那些畫面用了這個標示色、圖例刻意不列樣本(改列 legendExempted)
+    exemptMarks: (() => {
+      const why =
+        "我的班表條列的「負責 / 協同」「缺下班卡」標籤文字本身就說明,圖例不列(my-schedule-legend.ts;規格 14.6「圖例」)";
+      return {
+        "SC-40|success/lighter": why,
+        "SC-40|error/main": why,
+      };
+    })(),
   },
 
   // audit.js
