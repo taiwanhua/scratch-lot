@@ -10,6 +10,7 @@ import mongoose, { type ClientSession, type Connection, Types } from "mongoose";
 import { TenantScopeError } from "./plugins/tenant-scope.plugin";
 import { ORGS_COLLECTION } from "./schemas/org.schema";
 import { tenantIdOfOrg } from "./tenant-id";
+import { writeCountConflictError } from "./write-conflict";
 
 /** 搬家的稽核動作名(`audit_logs.action`)。 */
 export const ORG_REASSIGN_AUDIT_ACTION = "data.reassign-org";
@@ -26,9 +27,7 @@ export function orgReassignValidationError(message: string): GraphQLError {
  * 與其他樂觀鎖同一個 reason;前端照「已被別人更新」處理)。呼叫端的交易因此整個回復。
  */
 export function orgReassignConflictError(message: string): GraphQLError {
-  return new GraphQLError(message, {
-    extensions: { code: "CONFLICT", reason: "EDIT_VERSION_MISMATCH" },
-  });
+  return writeCountConflictError(message);
 }
 
 /** 組織的租戶(`tenantIdOfOrg`);組織不存在 / 已刪除 → null。 */

@@ -98,20 +98,20 @@ await this.transactions.withTransaction(async (session) => {
   - 值的種類幾乎和筆數一樣多(例:每筆各自的開始時間)時,改用 `bulkUpdateByIds`:一次 `bulkWrite`,每筆帶自己的值與條件。
 - **批次出口**(都在 `BaseRepository` / `AuditService`,**都必須在交易內**,空清單不送指令):
 
-  | 出口                                                   | 用途                                   | 回傳 / 筆數不符時                                                                                                                               |
-  | ------------------------------------------------------ | -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-  | `createMany(operator, docs)`                           | 新增多筆(同組織的租戶推導只查一次)     | 一筆沒過整批不寫                                                                                                                                |
-  | `softDeleteMany(operator, ids)`                        | 軟刪多筆(一次 `updateMany`)            | `false` = 有不存在 / 已刪除 / 範圍外的 → 呼叫端照 `softDeleteById` 回 null 時的做法拋自己的錯,交易回復                                          |
-  | `bulkUpdateByIds(operator, [{ id, update, filter? }])` | 每筆值不同的條件更新(一次 `bulkWrite`) | 同上;以 `matchedCount` 判,值沒變的列也算命中(不必為了判衝突加 `$inc`)。只收 `$set` / `$unset` / `$inc`,欄位保護同 `updateById`,同批重複 id 拋錯 |
-  | `reassignOrgMany(operator, ids, newOrgId)`             | 搬家(全有或全無、一筆稽核)             | 回 `mismatched`                                                                                                                                 |
-  | `AuditService.recordMany(operator, inputs)`            | 稽核多筆(一次 `createMany`)            | 每筆與 `record` 同形狀;粒度不變,原本逐筆幾筆就給幾筆                                                                                            |
+  | 出口                                                   | 用途                                   | 回傳 / 筆數不符時                                                                                                                                                |
+  | ------------------------------------------------------ | -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+  | `createMany(operator, docs)`                           | 新增多筆(同組織的租戶推導只查一次)     | 一筆沒過整批不寫                                                                                                                                                 |
+  | `softDeleteMany(operator, ids)`                        | 軟刪多筆(一次 `updateMany`)            | 有不存在 / 已刪除 / 範圍外的 → 底座直接拋 `CONFLICT`(`writeCountConflictError`,`EDIT_VERSION_MISMATCH`),交易回復、沒有部分提交                                   |
+  | `bulkUpdateByIds(operator, [{ id, update, filter? }])` | 每筆值不同的條件更新(一次 `bulkWrite`) | 同上(以 `matchedCount` 判,值沒變的列也算命中,不必為了判衝突加 `$inc`)。只收 `$set` / `$unset` / `$inc`,欄位保護同 `updateById`,加密欄位照樣加密,同批重複 id 拋錯 |
+  | `reassignOrgMany(operator, ids, newOrgId)`             | 搬家(全有或全無、一筆稽核)             | 回 `mismatched`                                                                                                                                                  |
+  | `AuditService.recordMany(operator, inputs)`            | 稽核多筆(一次 `createMany`)            | 每筆與 `record` 同形狀;粒度不變,原本逐筆幾筆就給幾筆                                                                                                             |
 
   ```ts
   ❌ for (const entry of entries) {
        await this.entries.softDeleteById(operator, entry._id);
        await this.audit.record(operator, { action: "x.delete", targetId: entry._id });
      }
-  ✅ if (!(await this.entries.softDeleteMany(operator, ids))) throw conflictError();
+  ✅ await this.entries.softDeleteMany(operator, ids); // 筆數不符 → 拋 CONFLICT,整個交易回復
      await this.audit.recordMany(operator, ids.map((targetId) => ({ action: "x.delete", targetId })));
   ```
 

@@ -49,6 +49,7 @@ import {
 import { assertTenantBoundary } from "./tenant-boundary";
 import { tenantIdOfOrg } from "./tenant-id";
 import { currentSession } from "./transaction";
+import { writeCountConflictError } from "./write-conflict";
 
 /** Model 型別參數固定為預設值(無 query helpers / instance methods / virtuals),只讓 hydrated 文件型別可推導。 */
 type NoExtras = Record<never, never>;
@@ -582,21 +583,21 @@ export class BaseRepository<TSchema, TDocument extends RepositoryDocument> {
 
   /**
    * **一次軟刪多筆**(TX-06):一次 `updateMany` 寫入 `deletedAt`,範圍與 `softDeleteById` 相同(租戶過濾、
-   * 資料範圍規則、已刪除的視為不存在都由中介層套上)。回傳是否**每一筆**都刪到(重複的 id 只算一次)。
+   * 資料範圍規則、已刪除的視為不存在都由中介層套上)。重複的 id 只算一次。
    *
-   * 與 `softDeleteById` 回 null 同一種處理:回 `false` = 有幾筆不存在 / 已刪除 / 範圍外,**呼叫端照逐筆版
-   * 拋自己的錯**(NOT_FOUND / CONFLICT),交易回復已刪的那幾筆(TX-04,不吞)。所以**必須在交易內**
-   * (不在交易內 → `TenantScopeError`);空清單不送指令、回 `true`。
+   * 刪到的筆數與 id 數不符(有幾筆不存在 / 已刪除 / 範圍外)→ 拋 `CONFLICT`(`writeCountConflictError`),
+   * 交易回復已刪的那幾筆(TX-04 / TX-06)。所以**必須在交易內**(不在交易內 → `TenantScopeError`);
+   * 空清單不送指令。
    */
   async softDeleteMany(
     operator: OperatorContext,
     ids: readonly (Types.ObjectId | string)[],
     options: SessionOptions = {},
-  ): Promise<boolean> {
+  ): Promise<void> {
     assertInTransaction(this.model.modelName, "softDeleteMany", options);
     const unique = [...new Set(ids.map(String))];
     if (unique.length === 0) {
-      return true;
+      return;
     }
     const deleted = await this.updateMany(
       operator,
@@ -604,7 +605,11 @@ export class BaseRepository<TSchema, TDocument extends RepositoryDocument> {
       { $set: { deletedAt: new Date() } },
       options,
     );
-    return deleted === unique.length;
+    if (deleted !== unique.length) {
+      throw writeCountConflictError(
+        `${this.model.modelName}:要刪 ${String(unique.length)} 筆,只刪到 ${String(deleted)} 筆`,
+      );
+    }
   }
 
   /**
@@ -619,15 +624,15 @@ export class BaseRepository<TSchema, TDocument extends RepositoryDocument> {
    *   另外只收 `$set` / `$unset` / `$inc`,不收 `shareOrgs`(共用清單改用 `updateById` / `updateMany`)、
    *   不收 pipeline 與位置運算子。`$set` 的值照 schema 驗證(`bulkWrite` 不跑 `runValidators`,在這裡先驗)
    * - 同一個 id 在同一批出現兩次 → `TenantScopeError`(依出現順序分輪,TX-06)
-   * - 回傳是否**每一筆**都命中(以 `matchedCount` 判,值沒變的列也算命中,不會被誤判成衝突)。回 `false` 的處理
-   *   同 `softDeleteMany`:呼叫端拋自己的錯,交易回復已寫的那幾筆;所以**必須在交易內**
+   * - 每一筆都要命中(以 `matchedCount` 判,值沒變的列也算命中,不會被誤判成衝突);有不符 → 拋 `CONFLICT`
+   *   (同 `softDeleteMany`),交易回復已寫的那幾筆;所以**必須在交易內**
    * - `audit_logs` 不能用(只增不改的守門掛在查詢中介層上,`bulkWrite` 會繞過)
    */
   async bulkUpdateByIds(
     operator: OperatorContext,
     items: readonly BulkUpdateByIdItem<TSchema>[],
     options: SessionOptions = {},
-  ): Promise<boolean> {
+  ): Promise<void> {
     assertInTransaction(this.model.modelName, "bulkUpdateByIds", options);
     if (this.model.modelName === AuditLog.name) {
       throw new TenantScopeError(
@@ -635,7 +640,7 @@ export class BaseRepository<TSchema, TDocument extends RepositoryDocument> {
       );
     }
     if (items.length === 0) {
-      return true;
+      return;
     }
     const seen = new Set<string>();
     const protectedPaths = this.protectedUpdatePaths();
@@ -682,7 +687,11 @@ export class BaseRepository<TSchema, TDocument extends RepositoryDocument> {
       >[0],
       { ordered: true, session: sessionOf(options) ?? undefined },
     );
-    return matchedCount === items.length;
+    if (matchedCount !== items.length) {
+      throw writeCountConflictError(
+        `${this.model.modelName}:要改 ${String(items.length)} 筆,只命中 ${String(matchedCount)} 筆`,
+      );
+    }
   }
 
   /**

@@ -1,4 +1,7 @@
+import { randomBytes } from "node:crypto";
+
 import { afterAll, beforeAll, describe, expect, it } from "@jest/globals";
+import { GraphQLError } from "graphql";
 import { type HydratedDocument, Schema, Types } from "mongoose";
 
 import { AuditActorMissingError, AuditService } from "../audit/audit.service";
@@ -6,6 +9,7 @@ import { BaseRepository } from "./base.repository";
 import { AuditLogsRepository } from "./database.module";
 import type { OperatorContext } from "./operator-context";
 import { baseFieldsPlugin } from "./plugins/base-fields.plugin";
+import { fieldEncryptionPlugin } from "./plugins/field-encryption.plugin";
 import {
   TenantScopeError,
   tenantScopePlugin,
@@ -34,6 +38,7 @@ interface Row {
   startsAt: Date | null;
   editVersion: number;
   nested?: { note?: string };
+  secret?: string;
 }
 
 type Repo = BaseRepository<Row, HydratedDocument<Row>>;
@@ -61,6 +66,19 @@ const asB: OperatorContext = {
   memberOrgIds: [orgB],
 };
 
+/** 筆數不符的錯誤:`CONFLICT`(`EDIT_VERSION_MISMATCH`)。 */
+async function expectConflict(run: Promise<unknown>): Promise<void> {
+  const error = await run.then(
+    () => null,
+    (error_: unknown) => error_,
+  );
+  expect(error).toBeInstanceOf(GraphQLError);
+  expect((error as GraphQLError).extensions).toMatchObject({
+    code: "CONFLICT",
+    reason: "EDIT_VERSION_MISMATCH",
+  });
+}
+
 /** 清單的第一筆;空清單 → 拋錯(測試資料沒建起來)。 */
 function only(ids: readonly Types.ObjectId[]): Types.ObjectId {
   const [id] = ids;
@@ -77,6 +95,7 @@ describe("批次寫入出口(TX-06;對真 MongoDB replica set)", () => {
   let audit: AuditService;
   let transactions: TransactionService;
   let serial = 0;
+  let previousKey: string | undefined;
 
   beforeAll(async () => {
     database = await openTestDatabase("cookhome-test-batch-writes");
@@ -88,9 +107,14 @@ describe("批次寫入出口(TX-06;對真 MongoDB replica set)", () => {
         startsAt: { type: Date, default: null },
         editVersion: { type: Number, default: 0 },
         nested: { note: { type: String, maxlength: 5 } },
+        secret: { type: String },
       },
       { collection: "batch_write_rows", timestamps: true },
     );
+    // 加密欄位(同 users / customers 的 fieldEncryptionPlugin):bulkWrite 的更新也要經 setter 加密
+    previousKey = process.env.FIELD_ENCRYPTION_KEY;
+    process.env.FIELD_ENCRYPTION_KEY = randomBytes(32).toString("base64");
+    schema.plugin(fieldEncryptionPlugin, { fields: ["secret"] });
     schema.plugin(baseFieldsPlugin);
     schema.plugin(tenantScopePlugin);
     const rowModel = database.connection.model<Row>("BatchWriteRow", schema);
@@ -107,6 +131,11 @@ describe("批次寫入出口(TX-06;對真 MongoDB replica set)", () => {
   }, HOOK_TIMEOUT_MS);
 
   afterAll(async () => {
+    if (previousKey === undefined) {
+      delete process.env.FIELD_ENCRYPTION_KEY;
+    } else {
+      process.env.FIELD_ENCRYPTION_KEY = previousKey;
+    }
     await database.close();
   }, HOOK_TIMEOUT_MS);
 
@@ -136,8 +165,6 @@ describe("批次寫入出口(TX-06;對真 MongoDB replica set)", () => {
       .find({ _id: { $in: [...ids] } })
       .toArray();
   }
-
-  class Rollback extends Error {}
 
   /** 同一個動作的三個出口各數一次指令(刪 `count` 筆、改 `count` 筆、寫 `count` 筆稽核)。 */
   async function commandTotals(count: number) {
@@ -177,12 +204,11 @@ describe("批次寫入出口(TX-06;對真 MongoDB replica set)", () => {
       );
     });
 
-    it("全部刪到 → true;寫 deletedAt 與 updatedBy,之後預設查詢看不到;重複 id 只算一次", async () => {
+    it("全部刪到;寫 deletedAt 與 updatedBy,之後預設查詢看不到;重複 id 只算一次", async () => {
       const ids = await seed(3);
-      const done = await transactions.withTransaction(() =>
+      await transactions.withTransaction(() =>
         rows.softDeleteMany(asA, [...ids, String(ids[0])]),
       );
-      expect(done).toBe(true);
       expect(await rows.count(asA, { _id: { $in: ids } })).toBe(0);
       for (const raw of await rawOf(ids)) {
         expect(raw.deletedAt).toBeInstanceOf(Date);
@@ -190,7 +216,7 @@ describe("批次寫入出口(TX-06;對真 MongoDB replica set)", () => {
       }
     });
 
-    it("有範圍外 / 已刪除的 → false;呼叫端拋錯時交易回復已刪的", async () => {
+    it("有範圍外 / 已刪除的 → CONFLICT,交易回復已刪的(沒有部分提交)", async () => {
       const mine = await seed(2);
       const theirs = only(await seed(1, asB));
       const gone = only(await seed(1));
@@ -199,23 +225,20 @@ describe("批次寫入出口(TX-06;對真 MongoDB replica set)", () => {
       );
 
       for (const extra of [theirs, gone]) {
-        await expect(
-          transactions.withTransaction(async () => {
-            const done = await rows.softDeleteMany(asA, [...mine, extra]);
-            expect(done).toBe(false);
-            throw new Rollback();
-          }),
-        ).rejects.toThrow(Rollback);
+        await expectConflict(
+          transactions.withTransaction(() =>
+            rows.softDeleteMany(asA, [...mine, extra]),
+          ),
+        );
       }
       expect(await rows.count(asA, { _id: { $in: mine } })).toBe(2);
       expect(await rows.count(asB, { _id: theirs })).toBe(1);
     });
 
-    it("空清單不送指令、回 true", async () => {
+    it("空清單不送指令", async () => {
       const counted = await countDbCommands(() =>
         transactions.withTransaction(() => rows.softDeleteMany(asA, [])),
       );
-      expect(counted.result).toBe(true);
       expect(
         counted.byCommand.get("batch_write_rows.updateMany"),
       ).toBeUndefined();
@@ -236,7 +259,7 @@ describe("批次寫入出口(TX-06;對真 MongoDB replica set)", () => {
       const times = ids.map(
         (_, index) => new Date(Date.UTC(2026, 0, index + 1)),
       );
-      const done = await transactions.withTransaction(() =>
+      await transactions.withTransaction(() =>
         rows.bulkUpdateByIds(asA, [
           ...ids.slice(0, 2).map((id, index) => ({
             id,
@@ -249,7 +272,6 @@ describe("批次寫入出口(TX-06;對真 MongoDB replica set)", () => {
           { id: String(ids[2]), update: { $set: { status: "open" } } },
         ]),
       );
-      expect(done).toBe(true);
       const after = await rawOf(ids);
       for (const [index, id] of ids.slice(0, 2).entries()) {
         const row = after.find((item) => item._id.equals(id));
@@ -265,7 +287,7 @@ describe("批次寫入出口(TX-06;對真 MongoDB replica set)", () => {
       }
     });
 
-    it("每筆自己的條件(樂觀鎖)不符 / 範圍外 / 已刪除 → false;呼叫端拋錯時交易回復", async () => {
+    it("每筆自己的條件(樂觀鎖)不符 / 範圍外 / 已刪除 → CONFLICT,交易回復(沒有部分提交)", async () => {
       const mine = await seed(2);
       const theirs = only(await seed(1, asB));
       const gone = only(await seed(1));
@@ -280,19 +302,38 @@ describe("批次寫入出口(TX-06;對真 MongoDB replica set)", () => {
         { id: gone },
       ];
       for (const extra of cases) {
-        await expect(
-          transactions.withTransaction(async () => {
-            const done = await rows.bulkUpdateByIds(asA, [
+        await expectConflict(
+          transactions.withTransaction(() =>
+            rows.bulkUpdateByIds(asA, [
               { id: first, update: { $set: { name: "改了" } } },
               { ...extra, update: { $set: { name: "改了" } } },
-            ]);
-            expect(done).toBe(false);
-            throw new Rollback();
-          }),
-        ).rejects.toThrow(Rollback);
+            ]),
+          ),
+        );
       }
       expect(await rows.count(asA, { name: "改了" })).toBe(0);
       expect(await rows.count(asB, { name: "改了" })).toBe(0);
+    });
+
+    it("加密欄位:DB 內是密文,讀回解密後值正確", async () => {
+      const ids = await seed(2);
+      await transactions.withTransaction(() =>
+        rows.bulkUpdateByIds(
+          asA,
+          ids.map((id, index) => ({
+            id,
+            update: { $set: { secret: `機密-${String(index)}` } },
+          })),
+        ),
+      );
+      for (const raw of await rawOf(ids)) {
+        expect(raw.secret?.startsWith("enc:v1:")).toBe(true);
+        expect(raw.secret).not.toContain("機密");
+      }
+      for (const [index, id] of ids.entries()) {
+        const read = await rows.findById(asA, id, { select: "+secret" });
+        expect(read?.secret).toBe(`機密-${String(index)}`);
+      }
     });
 
     it("欄位保護、形狀、重複 id、schema 驗證、audit_logs 都擋下", async () => {
@@ -390,10 +431,6 @@ describe("批次寫入出口(TX-06;對真 MongoDB replica set)", () => {
     it("softDeleteMany / bulkUpdateByIds / recordMany", async () => {
       const one = await commandTotals(1);
       const many = await commandTotals(50);
-      expect(one.softDelete.result).toBe(true);
-      expect(many.softDelete.result).toBe(true);
-      expect(one.bulk.result).toBe(true);
-      expect(many.bulk.result).toBe(true);
       for (const key of ["softDelete", "bulk", "records"] as const) {
         expectDbCommandsAtMost(many[key], one[key].total, `${key} 50 筆`);
         // 交易本身不經 Mongoose debug,數到的只有那一次寫入
