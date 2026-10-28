@@ -83,7 +83,7 @@ interface OptionContext {
   categories: Map<string, Promise<CategoryOptions>>;
   /**
    * lookup 選項已查過的現名:來源簽章 → 值 → 顯示名(`undefined` = 查過、不在可選清單內)。
-   * 明細子欄 / 多選的值先整批 `prefetchLookupLabels` 一次查回,`currentLabelOf` 命中就不再查(TX-06)。
+   * 多選的值先整批 `prefetchLookupLabels` 一次查回,`currentLabelOf` 命中就不再查(TX-06)。
    */
   lookupLabels: Map<string, Map<string, string | null | undefined>>;
   issues: ValueIssue[];
@@ -542,22 +542,6 @@ export class SubmissionValuesService {
           previousFilterValueOf,
         );
       }
-    }
-    // lookup 選項子欄:要重查的格先依子欄把值去重、一次查回(同引用子欄),不逐列查
-    for (const column of choiceColumns) {
-      await this.prefetchLookupLabels(
-        column,
-        rows.flatMap((row) => {
-          const cell = row[column.key];
-          const before = previousRows.get(row.rowId)?.[column.key];
-          return cell === null ||
-            cell === undefined ||
-            (before !== undefined && isSameStoredValue(column, cell, before))
-            ? []
-            : [cell];
-        }),
-        context,
-      );
     }
     for (const row of rows) {
       for (const column of choiceColumns) {

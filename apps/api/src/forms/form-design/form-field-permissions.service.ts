@@ -130,9 +130,12 @@ export class FormFieldPermissionsService {
       throw new Error(`表單模組 ${form.moduleKey} 不存在(seed 未跑?)`);
     }
     const desired = desiredPermissionsOf(form, fields);
-    const existing = await this.permissions.findMany(operator, {
-      key: { $regex: this.formKeyPattern(form) },
+    // 欄位級權限與依表單新增權限一次讀回(TX-06)
+    const createKey = formCreatePermissionKey(form.moduleKey, form.key);
+    const found = await this.permissions.findMany(operator, {
+      $or: [{ key: { $regex: this.formKeyPattern(form) } }, { key: createKey }],
     });
+    const existing = found.filter((record) => record.key !== createKey);
     const byKey = new Map(existing.map((record) => [record.key, record]));
 
     await this.declareMany(
@@ -167,7 +170,12 @@ export class FormFieldPermissionsService {
       }
     }
     return module.perFormCreate
-      ? this.syncCreatePermission(operator, module._id, form)
+      ? this.syncCreatePermission(
+          operator,
+          module._id,
+          form,
+          found.find((record) => record.key === createKey),
+        )
       : null;
   }
 
@@ -179,12 +187,12 @@ export class FormFieldPermissionsService {
     operator: OperatorContext,
     moduleId: Types.ObjectId,
     form: FormRecord,
+    current: PermissionRecord | undefined,
   ): Promise<CreatedFormCreatePermission | null> {
     const key = formCreatePermissionKey(form.moduleKey, form.key);
     const name = formCreatePermissionName(form.name);
-    const current = await this.permissions.findOne(operator, { key });
     const created = await this.declareMany(operator, moduleId, [
-      { key, name, current: current ?? undefined },
+      { key, name, current },
     ]);
     return created.has(key) ? { key, name } : null;
   }
