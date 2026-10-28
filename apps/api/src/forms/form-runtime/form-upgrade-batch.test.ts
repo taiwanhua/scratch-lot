@@ -36,6 +36,14 @@ describe("upgradeBatchLength(每批同時限筆數與總大小)", () => {
     ).toBe(4);
   });
 
+  it("大小不是正數(讀不出來)直接丟錯,不當 0 吞掉", () => {
+    for (const size of [Number.NaN, 0, -1, null as unknown as number]) {
+      expect(() => upgradeBatchLength(sized(10, size), 50, 100)).toThrow(
+        "文件大小不合法",
+      );
+    }
+  });
+
   it("沒有候選:0", () => {
     expect(upgradeBatchLength([])).toBe(0);
   });

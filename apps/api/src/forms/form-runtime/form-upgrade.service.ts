@@ -88,6 +88,10 @@ export function upgradeBatchLength(
   let total = 0;
   let taken = 0;
   for (const candidate of candidates) {
+    // 大小讀不出來(例:aggregate 寫錯)時不能當 0 吞掉,否則大小上限形同虛設
+    if (!Number.isFinite(candidate.size) || candidate.size <= 0) {
+      throw new Error(`升級切批:文件大小不合法(${String(candidate.size)})`);
+    }
     if (taken >= maxCount || (taken > 0 && total + candidate.size > maxBytes)) {
       break;
     }
@@ -157,6 +161,9 @@ function isWriteCountConflict(error: unknown): boolean {
  */
 @Injectable()
 export class FormUpgradeService {
+  /** 一批的完整文件合計上限(位元組);預設 `UPGRADE_BATCH_BYTES`,整合測試調小以觸發提早切批。 */
+  batchBytes = UPGRADE_BATCH_BYTES;
+
   constructor(
     private readonly submissions: FormSubmissionsRepository,
     private readonly versions: FormVersionsRepository,
@@ -219,7 +226,10 @@ export class FormUpgradeService {
     let lastId: Types.ObjectId | null = null;
     for (;;) {
       const candidates = await this.batchCandidates(facts, upgrade, lastId);
-      const batch = candidates.slice(0, upgradeBatchLength(candidates));
+      const batch = candidates.slice(
+        0,
+        upgradeBatchLength(candidates, UPGRADE_BATCH_SIZE, this.batchBytes),
+      );
       // 計數在交易提交後才累加:寫入衝突時整批自動重跑,不能把丟掉的那一輪算進去
       const outcomes = await this.upgradeIds(
         facts,
@@ -340,7 +350,7 @@ export class FormUpgradeService {
       },
       { $sort: { _id: 1 } },
       { $limit: UPGRADE_BATCH_SIZE },
-      { $project: { _id: 1, size: { $bsonSize: "$ROOT" } } },
+      { $project: { _id: 1, size: { $bsonSize: "$$ROOT" } } },
     ]);
     return rows.map((row) => ({
       _id: row._id as Types.ObjectId,
