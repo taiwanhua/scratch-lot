@@ -13,7 +13,12 @@ import {
 } from "@repo/domain/form";
 
 import { AuditService } from "../../audit/audit.service";
-import type { Persisted } from "../../database/base.repository";
+import type {
+  BulkUpdateByIdItem,
+  Persisted,
+  RepositoryFilter,
+  RepositoryUpdate,
+} from "../../database/base.repository";
 import {
   AuditLogsRepository,
   type FormSubmissionDocument,
@@ -22,6 +27,7 @@ import {
 } from "../../database/database.module";
 import {
   type FormRevision,
+  type FormSubmission,
   revisionVersionOf,
 } from "../../database/schemas/form-submission.schema";
 import { TransactionService } from "../../database/transaction";
@@ -57,8 +63,11 @@ import { assertSubmissionCapacity } from "./revision-limits";
 
 type SubmissionRecord = Persisted<FormSubmissionDocument>;
 
-/** 一批處理幾筆(每批先取 id,再在一個交易裡逐筆讀完整文件、條件更新)。 */
+/** 一批處理幾筆(每批先取 id,再在一個交易裡整批讀完整文件、整批條件更新)。 */
 export const UPGRADE_BATCH_SIZE = 200;
+
+/** 整批寫回最多試幾次(筆數不符 = 有一筆被人同時改了,重讀再試);仍不符就改逐筆。 */
+const BATCH_ATTEMPTS = 2;
 
 const MAX_CLIENT_REQUEST_ID_LENGTH = 100;
 
@@ -77,6 +86,25 @@ type UpgradeOutcome =
   | { kind: "upgraded"; fromVersion: number }
   | { kind: "skipped"; reason: FormUpgradeSkipReason };
 
+/** 一筆算好的升級:跳過(原因),或要寫回的條件與更新。 */
+type PlannedUpgrade =
+  | { kind: "skipped"; reason: FormUpgradeSkipReason }
+  | {
+      kind: "write";
+      fromVersion: number;
+      filter: RepositoryFilter<FormSubmission>;
+      update: RepositoryUpdate<FormSubmission>;
+    };
+
+/** 整批寫回筆數不符(`bulkUpdateByIds` 的 `CONFLICT` / `EDIT_VERSION_MISMATCH`)。 */
+function isWriteCountConflict(error: unknown): boolean {
+  return (
+    error instanceof GraphQLError &&
+    error.extensions.code === "CONFLICT" &&
+    error.extensions.reason === "EDIT_VERSION_MISMATCH"
+  );
+}
+
 /**
  * 舊版資料升級到新版(只限沒綁流程的表單,`docs/modules/forms.md`「舊版資料升級」):
  * **改綁版本 + 補值 + 重算,不驗證**。
@@ -84,11 +112,14 @@ type UpgradeOutcome =
  * - 守門:表單讀得到(設計端)→ 模組 `edit` → 目標版已發布 → 本租戶沒綁流程(`FORM_HAS_WORKFLOW`)
  * - 範圍:操作者看得到(可見範圍 + 資料範圍)、本租戶(root 在根組織 = 根組織自己的資料)、
  *   狀態草稿 / 不綁流程的已完成、版本不是目標版
- * - 逐筆:`upgradeValues`(與複製為新單共用搬值)→ 現有的 settle(計算欄位、隱藏當 null)→ 已完成重算摘要、
+ * - 每一筆:`upgradeValues`(與複製為新單共用搬值)→ 現有的 settle(計算欄位、隱藏當 null)→ 已完成重算摘要、
  *   修訂 +1(`version` = 目標版、`ctx` 沿用上一筆修訂、`kind: "upgrade"`,誰與何時升級記在 `upgradedBy` / `upgradedAt`)→ 改綁;草稿只改綁與重算(草稿沒有修訂)
  * - 條件更新帶讀到的 `editVersion` 與 `version`:被人同時改的、超過容量的跳過並計數;已是目標版的不在範圍內(冪等)
  * - **每批一個交易**(ADR-0013):一批裡的改綁一起提交或一起回復;中途失敗時已提交的批次留著
  *   (已是目標版、不在範圍內),再送一次只處理剩下的
+ * - **整批讀寫**(TX-06):一批一次 `findMany` 讀完整文件、缺的版本定義一次讀、一次 `bulkUpdateByIds` 寫回;
+ *   算值(`evaluate` 草稿模式)不讀資料庫。整批寫回筆數不符(有一筆被人改了)→ 整批回復、重讀這批再跑一次;
+ *   仍不符 → 這批改逐筆升級,衝突的那一筆跳過(`EDIT_CONFLICT`)、其他照升
  * - 同 `(操作者, clientRequestId)` 重送回第一次的結果(記在稽核 `submission.upgrade` 那一筆)
  */
 @Injectable()
@@ -163,15 +194,13 @@ export class FormUpgradeService {
         { select: "_id", sort: { _id: 1 }, limit: UPGRADE_BATCH_SIZE },
       );
       // 計數在交易提交後才累加:寫入衝突時整批自動重跑,不能把丟掉的那一輪算進去
-      const outcomes = await this.transactions.withTransaction(async () => {
-        const results: (UpgradeOutcome | null)[] = [];
-        for (const { _id } of batch) {
-          results.push(
-            await this.upgradeOne(facts, upgrade, _id, fills, sources),
-          );
-        }
-        return results;
-      });
+      const outcomes = await this.upgradeIds(
+        facts,
+        upgrade,
+        batch.map(({ _id }) => _id),
+        fills,
+        sources,
+      );
       for (const outcome of outcomes) {
         if (outcome?.kind === "upgraded") {
           upgraded.set(
@@ -392,7 +421,85 @@ export class FormUpgradeService {
     return { upgraded: after.upgraded ?? [], skipped: after.skipped ?? [] };
   }
 
-  /** 一筆:讀完整文件 → 搬值 + 補值 → 重算 → 條件更新;已不在範圍內(剛被改綁 / 刪)回 null。 */
+  /**
+   * 一批 id 升級,一個交易:先整批讀寫;整批寫回筆數不符 → 重讀這批再試一次;仍不符 → 改逐筆
+   * (一筆衝突跳過、其他照升,與整批之前的語意相同)。已不在範圍內(剛被改綁 / 刪)的回 null。
+   */
+  private async upgradeIds(
+    facts: FormOperatorFacts,
+    upgrade: UpgradeTarget,
+    ids: readonly Types.ObjectId[],
+    fills: StoredValues,
+    sources: Map<number, FormVersionRecord>,
+  ): Promise<(UpgradeOutcome | null)[]> {
+    for (let attempt = 0; attempt < BATCH_ATTEMPTS; attempt += 1) {
+      try {
+        return await this.transactions.withTransaction(() =>
+          this.upgradeBatch(facts, upgrade, ids, fills, sources),
+        );
+      } catch (error) {
+        if (!isWriteCountConflict(error)) {
+          throw error;
+        }
+      }
+    }
+    return this.transactions.withTransaction(async () => {
+      const results: (UpgradeOutcome | null)[] = [];
+      for (const id of ids) {
+        results.push(await this.upgradeOne(facts, upgrade, id, fills, sources));
+      }
+      return results;
+    });
+  }
+
+  /**
+   * 整批:一次讀完整文件 → 缺的版本定義一次讀 → 逐筆算(不讀資料庫)→ 一次 `bulkUpdateByIds`
+   * (筆數不符整批拋 `CONFLICT`、交易回復)。
+   */
+  private async upgradeBatch(
+    facts: FormOperatorFacts,
+    upgrade: UpgradeTarget,
+    ids: readonly Types.ObjectId[],
+    fills: StoredValues,
+    sources: Map<number, FormVersionRecord>,
+  ): Promise<(UpgradeOutcome | null)[]> {
+    const records = await this.submissions.findMany(facts.operator, {
+      ...this.scopeOf(facts, upgrade),
+      _id: { $in: ids },
+    });
+    await this.loadSources(facts, upgrade, records, sources);
+    const byId = new Map(records.map((record) => [String(record._id), record]));
+    const outcomes: (UpgradeOutcome | null)[] = [];
+    const items: BulkUpdateByIdItem<FormSubmission>[] = [];
+    for (const id of ids) {
+      const record = byId.get(String(id));
+      if (!record) {
+        outcomes.push(null);
+        continue;
+      }
+      const planned = await this.planOne(
+        facts,
+        upgrade,
+        record,
+        fills,
+        this.sourceOf(record, sources),
+      );
+      if (planned.kind === "skipped") {
+        outcomes.push(planned);
+        continue;
+      }
+      items.push({
+        id: record._id,
+        filter: planned.filter,
+        update: planned.update,
+      });
+      outcomes.push({ kind: "upgraded", fromVersion: planned.fromVersion });
+    }
+    await this.submissions.bulkUpdateByIds(facts.operator, items);
+    return outcomes;
+  }
+
+  /** 逐筆(整批衝突後的退路):讀完整文件 → 算 → 條件更新;沒命中 = 被人同時改了,跳過。 */
   private async upgradeOne(
     facts: FormOperatorFacts,
     upgrade: UpgradeTarget,
@@ -407,13 +514,43 @@ export class FormUpgradeService {
     if (!record) {
       return null;
     }
-    const source = await this.sourceOf(facts, record, sources);
+    await this.loadSources(facts, upgrade, [record], sources);
+    const planned = await this.planOne(
+      facts,
+      upgrade,
+      record,
+      fills,
+      this.sourceOf(record, sources),
+    );
+    if (planned.kind === "skipped") {
+      return planned;
+    }
+    const updated = await this.submissions.findOneAndUpdate(
+      facts.operator,
+      { ...planned.filter, _id: record._id },
+      planned.update,
+    );
+    if (!updated) {
+      return { kind: "skipped", reason: "EDIT_CONFLICT" };
+    }
+    return { kind: "upgraded", fromVersion: planned.fromVersion };
+  }
+
+  /** 一筆:搬值 + 補值 → 重算 → 容量檢查 → 寫回的條件與更新(不讀寫資料庫)。 */
+  private async planOne(
+    facts: FormOperatorFacts,
+    upgrade: UpgradeTarget,
+    record: SubmissionRecord,
+    fills: StoredValues,
+    source: FormVersionRecord,
+  ): Promise<PlannedUpgrade> {
     const at = new Date();
     // 重算用這筆資料自己的上下文(不是操作者此刻):`ctx.now` / `ctx.user` 的計算欄位與條件升級後不變
     const ctx = this.contextOf(facts, record);
     const target = upgrade.target;
     let values: StoredValues;
     try {
+      // 草稿模式不讀資料庫:類別 / lookup 的快照只在 `complete` 模式重取
       ({ values } = await this.values.evaluate({
         facts,
         moduleKey: record.moduleKey,
@@ -471,8 +608,7 @@ export class FormUpgradeService {
       }
       throw error;
     }
-    const filter = {
-      _id: record._id,
+    const filter: RepositoryFilter<FormSubmission> = {
       status: record.status,
       version: record.version,
       editVersion: record.editVersion,
@@ -496,36 +632,29 @@ export class FormUpgradeService {
       : { $push: { revisions: entry } };
     // 依欄位共用跟著升級後的值重算(目標版沒有那一欄 = 不再共用)
     const sharedOrgIds = sharedOrgIdsFor(upgrade.form, values, record.status);
-    const updated = await this.submissions.findOneAndUpdate(
-      facts.operator,
-      filter,
-      isCompleted
-        ? {
-            ...revisionsUpdate,
-            $set: {
-              values,
-              summary,
-              revision,
-              version: upgrade.targetVersion,
-              sharedOrgIds,
-              ...("$set" in revisionsUpdate ? revisionsUpdate.$set : {}),
-            },
-            $inc: { editVersion: 1 },
-          }
-        : {
-            $set: {
-              values,
-              version: upgrade.targetVersion,
-              sharedOrgIds,
-              touched: touchedKeysOf(target.fields, record.touched),
-            },
-            $inc: { editVersion: 1 },
+    const update: RepositoryUpdate<FormSubmission> = isCompleted
+      ? {
+          ...revisionsUpdate,
+          $set: {
+            values,
+            summary,
+            revision,
+            version: upgrade.targetVersion,
+            sharedOrgIds,
+            ...("$set" in revisionsUpdate ? revisionsUpdate.$set : {}),
           },
-    );
-    if (!updated) {
-      return { kind: "skipped", reason: "EDIT_CONFLICT" };
-    }
-    return { kind: "upgraded", fromVersion: record.version };
+          $inc: { editVersion: 1 },
+        }
+      : {
+          $set: {
+            values,
+            version: upgrade.targetVersion,
+            sharedOrgIds,
+            touched: touchedKeysOf(target.fields, record.touched),
+          },
+          $inc: { editVersion: 1 },
+        };
+    return { kind: "write", fromVersion: record.version, filter, update };
   }
 
   /**
@@ -548,26 +677,45 @@ export class FormUpgradeService {
     };
   }
 
-  /** 這筆目前綁的版本定義(同一次升級內快取)。 */
-  private async sourceOf(
+  /** 這些資料綁的版本定義,快取裡沒有的一次讀進來(同一次升級內快取)。 */
+  private async loadSources(
     facts: FormOperatorFacts,
-    record: SubmissionRecord,
+    upgrade: UpgradeTarget,
+    records: readonly SubmissionRecord[],
     sources: Map<number, FormVersionRecord>,
-  ): Promise<FormVersionRecord> {
-    const cached = sources.get(record.version);
-    if (cached) {
-      return cached;
+  ): Promise<void> {
+    const missing = [
+      ...new Set(
+        records
+          .map((record) => record.version)
+          .filter((version) => !sources.has(version)),
+      ),
+    ];
+    if (missing.length === 0) {
+      return;
     }
-    const source = await this.versions.findOne(facts.operator, {
-      formKey: record.formKey,
-      version: record.version,
+    const found = await this.versions.findMany(facts.operator, {
+      formKey: upgrade.form.key,
+      version: { $in: missing },
     });
+    for (const source of found) {
+      if (source.version !== null) {
+        sources.set(source.version, source);
+      }
+    }
+  }
+
+  /** 這筆目前綁的版本定義(`loadSources` 讀過的)。 */
+  private sourceOf(
+    record: SubmissionRecord,
+    sources: ReadonlyMap<number, FormVersionRecord>,
+  ): FormVersionRecord {
+    const source = sources.get(record.version);
     if (!source) {
       throw new Error(
         `提交 ${String(record._id)} 綁的版本 ${record.formKey}@${String(record.version)} 不存在`,
       );
     }
-    sources.set(record.version, source);
     return source;
   }
 }

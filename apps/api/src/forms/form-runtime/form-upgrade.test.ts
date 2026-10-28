@@ -9,7 +9,12 @@ import {
 } from "../../auth/test-support/auth-app";
 import { createOrg } from "../../auth/test-support/fixtures";
 import { FormSubmissionsRepository } from "../../database/database.module";
+import {
+  countDbCommands,
+  expectDbCommandsAtMost,
+} from "../../database/test-support/db-commands";
 import { HOOK_TIMEOUT_MS } from "../../database/test-support/mongo-connection";
+import { writeCountConflictError } from "../../database/write-conflict";
 import { SubmissionValuesService } from "../form-values/submission-values.service";
 import {
   FORM_SUBMISSIONS,
@@ -150,8 +155,11 @@ describe("舊版資料升級到新版", () => {
   let staff: FormOperator;
   let formSequence = 0;
 
-  /** 一張表單:第 1 版的已完成(標題、數量、備註)與草稿(只有數量),再發布第 2 版。 */
-  async function prepare(): Promise<{
+  /**
+   * 一張表單:第 1 版的已完成(標題、數量、備註)與草稿(只有數量),再發布第 2 版。
+   * `extraPairs` = 另外多建幾組已完成 + 草稿(整批讀寫的指令數測試用)。
+   */
+  async function prepare(extraPairs = 0): Promise<{
     formKey: string;
     completedId: string;
     draftId: string;
@@ -166,6 +174,13 @@ describe("舊版資料升級到新版", () => {
       dropped: "舊備註",
     });
     const draft = await createDraft(api, staff.token, formKey, { amount: 5 });
+    for (let index = 0; index < extraPairs; index += 1) {
+      await createSubmitted(api, staff.token, formKey, {
+        title: `第 ${String(index)} 張`,
+        amount: index,
+      });
+      await createDraft(api, staff.token, formKey, { amount: index });
+    }
     await publishDefinition(api, root, formKey, V2, 1);
     return { formKey, completedId: completed.id, draftId: draft.id };
   }
@@ -415,6 +430,93 @@ describe("舊版資料升級到新版", () => {
       { revision: 1, version: 1, kind: null },
       { revision: 2, version: 2, kind: "upgrade" },
     ]);
+  });
+
+  describe("整批讀寫(TX-06)", () => {
+    it("一批 2 筆與 20 筆的資料庫指令數相同(整批讀、整批寫回)", async () => {
+      const small = await prepare();
+      const large = await prepare(9);
+
+      const few = await countDbCommands(() =>
+        upgrade(staff.token, small.formKey),
+      );
+      const many = await countDbCommands(() =>
+        upgrade(staff.token, large.formKey),
+      );
+
+      expect(few.result.data?.upgradeFormSubmissions.upgraded).toEqual([
+        { fromVersion: 1, count: 2 },
+      ]);
+      expect(many.result.data?.upgradeFormSubmissions.upgraded).toEqual([
+        { fromVersion: 1, count: 20 },
+      ]);
+      expectDbCommandsAtMost(many, few.total, "升級 20 筆");
+      expect(many.byCommand.get("form_submissions.bulkWrite")).toBe(1);
+      expect(
+        many.byCommand.get("form_submissions.findOneAndUpdate"),
+      ).toBeUndefined();
+    });
+
+    it("整批寫回筆數不符一次:重讀這批再跑一次就升級,不改逐筆", async () => {
+      const { formKey, completedId, draftId } = await prepare();
+      const repository = api.app.get(FormSubmissionsRepository);
+      const bulk = jest
+        .spyOn(repository, "bulkUpdateByIds")
+        .mockRejectedValueOnce(writeCountConflictError("模擬筆數不符"));
+      const single = jest.spyOn(repository, "findOneAndUpdate");
+
+      try {
+        const result = await upgrade(staff.token, formKey);
+
+        expect(result.data?.upgradeFormSubmissions).toEqual({
+          upgraded: [{ fromVersion: 1, count: 2 }],
+          skipped: [],
+        });
+        expect(bulk).toHaveBeenCalledTimes(2);
+        expect(single).not.toHaveBeenCalled();
+      } finally {
+        bulk.mockRestore();
+        single.mockRestore();
+      }
+      const [completed, draft] = await Promise.all([
+        raw(completedId),
+        raw(draftId),
+      ]);
+      expect(completed.version).toBe(2);
+      expect(draft.version).toBe(2);
+    });
+
+    it("整批一直不符:改逐筆,衝突的那一筆跳過(EDIT_CONFLICT)、其他照升", async () => {
+      const { formKey, completedId, draftId } = await prepare();
+      const repository = api.app.get(FormSubmissionsRepository);
+      const bulk = jest
+        .spyOn(repository, "bulkUpdateByIds")
+        .mockRejectedValue(writeCountConflictError("模擬筆數不符"));
+      // 逐筆時第一筆(已完成,id 較小)的條件更新沒命中 = 被人同時改了
+      const single = jest
+        .spyOn(repository, "findOneAndUpdate")
+        .mockResolvedValueOnce(null);
+
+      try {
+        const result = await upgrade(staff.token, formKey);
+
+        expect(result.data?.upgradeFormSubmissions).toEqual({
+          upgraded: [{ fromVersion: 1, count: 1 }],
+          skipped: [{ reason: "EDIT_CONFLICT", count: 1 }],
+        });
+        expect(bulk).toHaveBeenCalledTimes(2);
+        expect(single).toHaveBeenCalledTimes(2);
+      } finally {
+        bulk.mockRestore();
+        single.mockRestore();
+      }
+      const [completed, draft] = await Promise.all([
+        raw(completedId),
+        raw(draftId),
+      ]);
+      expect(completed.version).toBe(1);
+      expect(draft.version).toBe(2);
+    });
   });
 
   describe("列表與詳情不載入全部修訂", () => {
