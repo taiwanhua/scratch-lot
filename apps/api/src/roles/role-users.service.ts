@@ -10,6 +10,7 @@ import {
 } from "../database/database.module";
 import type { OperatorContext } from "../database/operator-context";
 import { RelationService } from "../database/relation.service";
+import { TransactionService } from "../database/transaction";
 import { OwnerProtectionService } from "../orgs/owner-protection.service";
 import { OrgQualificationService } from "../users/org-qualification.service";
 import type { GrantRoleUsersInput } from "./dto/grant-role-users.input";
@@ -72,6 +73,7 @@ export class RoleUsersService {
     private readonly scope: RoleScopeService,
     private readonly qualification: OrgQualificationService,
     private readonly ownerProtection: OwnerProtectionService,
+    private readonly transactions: TransactionService,
   ) {}
 
   /** 被授予這個角色的使用者(分頁);每筆附「組織外」與擁有者保護標記。 */
@@ -142,71 +144,79 @@ export class RoleUsersService {
   /**
    * 加入使用者(增量):候選 = 所屬組織在角色擁有組織子樹內,否則 `USER_NOT_ELIGIBLE`。
    * 已持有者重送不報錯(冪等),不計入稽核。
+   * 讀取驗證、授予與稽核一個交易(TX-01);回傳的清單在提交後讀。
    */
   async grant(
     operator: OperatorContext,
     input: GrantRoleUsersInput,
   ): Promise<RoleUsersPayload> {
-    const role = await this.scope.loadManagedRole(operator, input.roleId);
-    const ownerOrgId = await this.scope.ownerOrgIdOf(role);
-    const userIds = uniqueIds(input.userIds).map((id) =>
-      toObjectId(id, "userIds"),
-    );
-    const holderIds = await this.relations.listUserIdsOfRole(role._id);
-    const holders = new Set(holderIds.map(String));
-    const toAdd = userIds.filter((userId) => !holders.has(String(userId)));
-    if (toAdd.length > 0) {
-      await this.assertEligible(operator, toAdd, role._id, ownerOrgId);
-      await this.relations.linkMany(
-        operator,
-        toAdd.map((userId) => ({
-          type: "user_role" as const,
-          firstId: userId,
-          secondId: role._id,
-        })),
+    const role = await this.transactions.withTransaction(async () => {
+      const managed = await this.scope.loadManagedRole(operator, input.roleId);
+      const ownerOrgId = await this.scope.ownerOrgIdOf(managed);
+      const userIds = uniqueIds(input.userIds).map((id) =>
+        toObjectId(id, "userIds"),
       );
-      await this.audit.record(operator, {
-        action: AUDIT_ACTIONS.grantUser,
-        targetType: AUDIT_TARGET_TYPE,
-        targetId: role._id,
-        after: { userIds: toAdd.map(String) },
-      });
-    }
+      const holderIds = await this.relations.listUserIdsOfRole(managed._id);
+      const holders = new Set(holderIds.map(String));
+      const toAdd = userIds.filter((userId) => !holders.has(String(userId)));
+      if (toAdd.length > 0) {
+        await this.assertEligible(operator, toAdd, managed._id, ownerOrgId);
+        await this.relations.linkMany(
+          operator,
+          toAdd.map((userId) => ({
+            type: "user_role" as const,
+            firstId: userId,
+            secondId: managed._id,
+          })),
+        );
+        await this.audit.record(operator, {
+          action: AUDIT_ACTIONS.grantUser,
+          targetType: AUDIT_TARGET_TYPE,
+          targetId: managed._id,
+          after: { userIds: toAdd.map(String) },
+        });
+      }
+      return managed;
+    });
     return this.payload(operator, role, {});
   }
 
   /**
    * 移除授予:擁有者保護(ADR-0009)擋下租戶擁有者的「租戶管理員」授予;
    * 沒有這筆授予的人重送不報錯(冪等)。
+   * 讀取驗證、解除與稽核一個交易(TX-01);回傳的清單在提交後讀。
    */
   async revoke(
     operator: OperatorContext,
     input: RevokeRoleUsersInput,
   ): Promise<RoleUsersPayload> {
-    const role = await this.scope.loadManagedRole(operator, input.roleId);
-    const userIds = uniqueIds(input.userIds).map((id) =>
-      toObjectId(id, "userIds"),
-    );
-    const holderIds = await this.relations.listUserIdsOfRole(role._id);
-    const holders = new Set(holderIds.map(String));
-    const toRemove = userIds.filter((userId) => holders.has(String(userId)));
-    if (toRemove.length > 0) {
-      await this.assertNotOwnerProtected(operator, toRemove, role._id);
-      await this.relations.unlinkMany(
-        operator,
-        toRemove.map((userId) => ({
-          type: "user_role" as const,
-          firstId: userId,
-          secondId: role._id,
-        })),
+    const role = await this.transactions.withTransaction(async () => {
+      const managed = await this.scope.loadManagedRole(operator, input.roleId);
+      const userIds = uniqueIds(input.userIds).map((id) =>
+        toObjectId(id, "userIds"),
       );
-      await this.audit.record(operator, {
-        action: AUDIT_ACTIONS.revokeUser,
-        targetType: AUDIT_TARGET_TYPE,
-        targetId: role._id,
-        after: { userIds: toRemove.map(String) },
-      });
-    }
+      const holderIds = await this.relations.listUserIdsOfRole(managed._id);
+      const holders = new Set(holderIds.map(String));
+      const toRemove = userIds.filter((userId) => holders.has(String(userId)));
+      if (toRemove.length > 0) {
+        await this.assertNotOwnerProtected(operator, toRemove, managed._id);
+        await this.relations.unlinkMany(
+          operator,
+          toRemove.map((userId) => ({
+            type: "user_role" as const,
+            firstId: userId,
+            secondId: managed._id,
+          })),
+        );
+        await this.audit.record(operator, {
+          action: AUDIT_ACTIONS.revokeUser,
+          targetType: AUDIT_TARGET_TYPE,
+          targetId: managed._id,
+          after: { userIds: toRemove.map(String) },
+        });
+      }
+      return managed;
+    });
     return this.payload(operator, role, {});
   }
 
@@ -389,17 +399,12 @@ export class RoleUsersService {
     if (await this.ownerProtection.isRootOperator(operator)) {
       return new Set();
     }
-    const flagged = new Set<string>();
-    for (const user of documents) {
-      const protectedRoleIds = await this.ownerProtection.protectedRoleIdsOf(
-        operator,
-        user._id,
-      );
-      if (protectedRoleIds.has(String(roleId))) {
-        flagged.add(String(user._id));
-      }
-    }
-    return flagged;
+    // 整頁一次判斷(TX-07),不逐人查
+    return this.ownerProtection.protectedHoldersOf(
+      operator,
+      documents.map((user) => user._id),
+      roleId,
+    );
   }
 
   /**
@@ -436,17 +441,17 @@ export class RoleUsersService {
     if (await this.ownerProtection.isRootOperator(operator)) {
       return;
     }
-    for (const userId of userIds) {
-      const protectedRoleIds = await this.ownerProtection.protectedRoleIdsOf(
-        operator,
-        userId,
+    // 一次判斷整批(TX-06),不逐人查;錯誤訊息不帶使用者,哪一位先擋都一樣
+    const protectedIds = await this.ownerProtection.protectedHoldersOf(
+      operator,
+      userIds,
+      roleId,
+    );
+    if (protectedIds.size > 0) {
+      throw roleError(
+        "OWNER_PROTECTED",
+        `Role ${String(roleId)} is the tenant owner's tenant-admin grant and cannot be revoked outside the root org`,
       );
-      if (protectedRoleIds.has(String(roleId))) {
-        throw roleError(
-          "OWNER_PROTECTED",
-          `Role ${String(roleId)} is the tenant owner's tenant-admin grant and cannot be revoked outside the root org`,
-        );
-      }
     }
   }
 }

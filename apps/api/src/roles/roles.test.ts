@@ -1,6 +1,15 @@
-import { afterAll, beforeAll, describe, expect, it } from "@jest/globals";
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  describe,
+  expect,
+  it,
+  jest,
+} from "@jest/globals";
 import { type Connection, Types } from "mongoose";
 
+import { AuditService } from "../audit/audit.service";
 import { HOOK_TIMEOUT_MS } from "../database/test-support/mongo-connection";
 import { createRole } from "../permission/test-support/fixtures";
 import {
@@ -614,6 +623,82 @@ describe("角色管理:清單與 CRUD(GraphQL 端點 + 真 MongoDB)", () => {
         { accessToken: outsider.token },
       );
       expect(result.errors?.[0]?.extensions?.code).toBe("FORBIDDEN");
+    });
+  });
+
+  function failNextAudit() {
+    return jest
+      .spyOn(world.api.app.get(AuditService), "record")
+      .mockRejectedValueOnce(new Error("模擬稽核寫入失敗"));
+  }
+
+  function mutate(query: string, input: Record<string, unknown>) {
+    return world.api.graphql(query, { input }, { accessToken: manager.token });
+  }
+
+  async function roleRow(roleId: Types.ObjectId) {
+    return connection
+      .collection("roles")
+      .findOne<{ name: string; enabled: boolean; deletedAt: Date | null }>({
+        _id: roleId,
+      });
+  }
+
+  describe("交易(TX-01):最後一步稽核寫入失敗,前面的寫入整個回復", () => {
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
+    it("createRole:角色與擁有組織關聯都不留下", async () => {
+      const ownerLinks = () =>
+        connection
+          .collection("core_relationships")
+          .countDocuments({ type: "org_role", firstId: world.deptOne });
+      const linksBefore = await ownerLinks();
+      const audit = failNextAudit();
+      const { code } = await createRoleAs(manager.token, {
+        name: "回復用的新角色",
+        ownerOrgId: String(world.deptOne),
+      });
+
+      expect(code).toBeDefined();
+      expect(audit).toHaveBeenCalledTimes(1);
+      await expect(
+        connection
+          .collection("roles")
+          .countDocuments({ name: "回復用的新角色" }),
+      ).resolves.toBe(0);
+      await expect(ownerLinks()).resolves.toBe(linksBefore);
+    });
+
+    it("updateRole / setRoleEnabled / deleteRole:角色維持原樣", async () => {
+      const roleId = await createRole(world.api.app, connection, {
+        name: "回復用的角色",
+        ownerOrgId: world.deptOne,
+      });
+
+      const audit = failNextAudit();
+      const updated = await mutate(UPDATE_ROLE, {
+        id: String(roleId),
+        name: "改過的名稱",
+      });
+      failNextAudit();
+      const disabled = await mutate(SET_ROLE_ENABLED, {
+        id: String(roleId),
+        enabled: false,
+      });
+      failNextAudit();
+      const removed = await mutate(DELETE_ROLE, { id: String(roleId) });
+
+      expect(updated.errors).toBeDefined();
+      expect(disabled.errors).toBeDefined();
+      expect(removed.errors).toBeDefined();
+      expect(audit).toHaveBeenCalledTimes(3);
+      await expect(roleRow(roleId)).resolves.toMatchObject({
+        name: "回復用的角色",
+        enabled: true,
+        deletedAt: null,
+      });
     });
   });
 });
