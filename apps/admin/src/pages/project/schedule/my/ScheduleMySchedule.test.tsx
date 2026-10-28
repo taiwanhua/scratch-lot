@@ -150,6 +150,10 @@ describe("我的班表 → 班表", () => {
       tagPaletteColorOf("cyan"),
     );
     expect(within(special).getByText("店慶")).toBeInTheDocument();
+    // 店休整格店休灰(鋪在內容底層),格子仍可點
+    const closed = await findLabelled("2026-11-03");
+    expect(closed.querySelector("[data-closed-layer]")).not.toBeNull();
+    expect(closed).not.toHaveAttribute("aria-disabled");
     await user.click(nov2);
     const dialog = await findDialog("11/2(一)當天詳情");
     expect(within(dialog).getByText("07:56")).toBeInTheDocument();
@@ -199,7 +203,7 @@ describe("我的班表 → 班表", () => {
     expect(support?.textContent).toContain("B 分店");
   });
 
-  it("條列:特殊日整行底色並寫名稱(同月曆的判斷);店休不套底色", async () => {
+  it("條列:特殊日整行底色並寫名稱(同月曆的判斷);店休整行店休灰", async () => {
     renderSchedulePage({ path: `${SCHEDULE}&view=list` });
     await screen.findByText("11/5(四)今天");
     const special = document.querySelector('[data-my-list-day="2026-11-11"]');
@@ -208,6 +212,12 @@ describe("我的班表 → 班表", () => {
     expect(special?.textContent).toContain("店慶");
     expect(closed).not.toHaveAttribute("data-special");
     expect(closed?.textContent).toContain("店休");
+    expect(special).toHaveStyle({
+      backgroundColor: "var(--tag-palette-bg-cyan)",
+    });
+    expect(closed).toHaveStyle({
+      backgroundColor: "var(--mui-palette-action-disabledBackground)",
+    });
   });
 
   it("換月:網址記月份,沒有已發布的班就是空的", async () => {

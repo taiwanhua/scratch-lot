@@ -21,6 +21,7 @@ const ITEM = {
   missingDot: "缺卡",
   changedDot: "有異動",
   special: "特殊日(行事曆設定的顏色)",
+  closed: "店休",
 } as const;
 
 const legendTexts = async (): Promise<string[]> => {
@@ -43,7 +44,7 @@ const dayCell = (selector: string): HTMLElement => {
  * 夾具:11/6、11/22 畫休;11/2 缺卡;11/8、11/12 有異動;11/11 特殊日「店慶」。
  */
 describe("我的班表 → 班表:圖例和畫面一致", () => {
-  it("月曆(電腦):畫休整格斜線底;圖例 = 簡稱、臨、打卡時間、畫休、缺卡、有異動、特殊日", async () => {
+  it("月曆(電腦):畫休整格斜線底;圖例 = 簡稱、臨、打卡時間、畫休、缺卡、有異動、特殊日、店休", async () => {
     setViewportWidth(1440);
     renderSchedulePage({ path: `${SCHEDULE}&month=2026-11` });
     await screen.findAllByText("缺卡", { exact: false });
@@ -66,6 +67,7 @@ describe("我的班表 → 班表:圖例和畫面一致", () => {
       ITEM.missingDot,
       ITEM.changedDot,
       ITEM.special,
+      ITEM.closed,
     ]);
   });
 
@@ -76,9 +78,10 @@ describe("我的班表 → 班表:圖例和畫面一致", () => {
     const texts = await legendTexts();
     expect(texts).not.toContain(ITEM.punchTimes);
     expect(texts).toContain(ITEM.dayOff);
+    expect(texts).toContain(ITEM.closed);
   });
 
-  it("條列:畫休斜線底、休息「☕ 30」、特殊日底色;圖例列臨、打卡時間、休息、畫休、特殊日(沒有點)", async () => {
+  it("條列:畫休斜線底、休息「☕ 30」、特殊日底色;圖例列臨、打卡時間、休息、畫休、特殊日、店休(沒有點)", async () => {
     setViewportWidth(1440);
     renderSchedulePage({ path: `${SCHEDULE}&month=2026-11&view=list` });
     await screen.findAllByText("☕ 30");
@@ -95,6 +98,7 @@ describe("我的班表 → 班表:圖例和畫面一致", () => {
       ITEM.breakMinutes,
       ITEM.dayOff,
       ITEM.special,
+      ITEM.closed,
     ]);
   });
 });

@@ -121,14 +121,12 @@ export const MyScheduleList = ({
         const entries = byDate.get(date) ?? [];
         const isToday = date === page.today;
         const mark = marks.get(date) ?? { kind: "none" };
-        const background =
-          mark.kind === "special" ? calendarMarkBackground(mark) : undefined;
         return (
           <Box
             component="li"
             key={date}
             data-my-list-day={date}
-            // 特殊日:行事曆選的色票
+            // 店休整行店休灰、特殊日整行色票底(`calendarMarkBackground`);特殊日:行事曆選的色票
             data-special={mark.kind === "special" ? mark.paletteKey : undefined}
             onClick={() => {
               onOpenDay(date);
@@ -138,7 +136,7 @@ export const MyScheduleList = ({
               gap: 2,
               py: 1.25,
               px: 1,
-              bgcolor: background,
+              bgcolor: calendarMarkBackground(mark),
               borderBottom: 1,
               borderColor: "divider",
               cursor: "pointer",
