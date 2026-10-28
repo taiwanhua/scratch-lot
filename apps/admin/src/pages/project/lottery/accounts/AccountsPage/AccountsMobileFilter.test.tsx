@@ -7,7 +7,11 @@ import type {
 } from "@repo/graphql";
 
 import { api, server } from "@/test/msw/server";
-import { restoreViewportAfterEach, setMobileViewport } from "@/test/viewport";
+import {
+  restoreViewportAfterEach,
+  setMobileViewport,
+  setViewportWidth,
+} from "@/test/viewport";
 
 import { renderAccounts } from "../accounts-test-support";
 
@@ -100,12 +104,54 @@ describe("帳戶管理:手機篩選抽屜", () => {
     ).toBeInTheDocument();
   });
 
-  it("電腦:篩選欄位攤在外面,沒有 [篩選] 按鈕", async () => {
-    const { user } = renderAccounts();
-    await user.click(await screen.findByRole("tab", { name: "即時現金帳" }));
-    expect(
-      await screen.findByRole("combobox", { name: "類型" }),
-    ).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /^篩選/ })).toBeNull();
+  it("即時現金帳(手機):[清除] 只清抽屜裡的欄位,分店保留", async () => {
+    setMobileViewport();
+    const inputs: LotteryCashLedgerQueryVariables["input"][] = [];
+    const cash = encodeURIComponent(
+      JSON.stringify({ org: "org-store-b", type: "deposit" }),
+    );
+    const { user } = renderAccounts({
+      path: `/accounts?tab=cash&cash=${cash}`,
+    });
+    server.use(
+      api.query("LotteryCashLedger", ({ variables }) => {
+        inputs.push((variables as LotteryCashLedgerQueryVariables).input);
+      }),
+    );
+    const drawer = await openDrawer(user, "篩選 (1)");
+    await user.click(within(drawer).getByRole("button", { name: "清除" }));
+    await user.click(within(drawer).getByRole("button", { name: "套用" }));
+    await waitFor(() => {
+      expect(inputs.at(-1)?.type).toBeUndefined();
+    });
+    expect(inputs.at(-1)?.orgId).toBe("org-store-b");
   });
+
+  it.each([
+    ["平板", 768],
+    ["電腦", 1440],
+  ])(
+    "%s:兩個清單的篩選欄位都攤在外面,沒有 [篩選] 按鈕",
+    async (_label, width) => {
+      setViewportWidth(width);
+      const { user } = renderAccounts({ path: "/accounts/view-page/ba-1" });
+      expect(
+        await screen.findByRole("group", { name: "期間起" }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("combobox", { name: "類型" }),
+      ).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /^篩選/ })).toBeNull();
+
+      await user.click(
+        await screen.findByRole("button", { name: "← 返回列表" }),
+      );
+      await user.click(await screen.findByRole("tab", { name: "即時現金帳" }));
+      expect(
+        await screen.findByRole("combobox", { name: "收銀點" }),
+      ).toBeInTheDocument();
+      expect(screen.getByRole("group", { name: "日期" })).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /^篩選/ })).toBeNull();
+    },
+  );
 });

@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { useTranslations } from "use-intl";
-import { z } from "zod";
 
 import { DEFAULT_TENANT_TIMEZONE, formatTemporal } from "@repo/domain/form";
 import {
@@ -42,18 +41,13 @@ import { RecordTransactionDialog } from "./RecordTransactionDialog";
 import { ReverseTransactionDialog } from "./ReverseTransactionDialog";
 import { TransactionFiltersBar } from "./TransactionFiltersBar";
 import { UsageOrgsDialog } from "./UsageOrgsDialog";
-import { periodFromOf, periodToOf } from "./transaction-period";
+import {
+  periodFromOf,
+  periodToOf,
+  transactionsSchema,
+} from "./transaction-period";
 
 type Transaction = LotteryBankTransactionFieldsFragment;
-
-/** 交易清單的篩選放同一個 key(REACT-14):期間起迄(`YYYY-MM-DD`)、類型;空字串 = 預設(本月)/ 不篩。 */
-const transactionsSchema = z
-  .object({
-    from: z.string().default(""),
-    to: z.string().default(""),
-    type: z.string().default(""),
-  })
-  .default({ from: "", to: "", type: "" });
 
 const StatCard = ({
   label,
