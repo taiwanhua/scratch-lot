@@ -571,7 +571,7 @@ describe("角色刪除前置:被人員條件引用(REFERENCED_BY_AUDIENCE)", () 
     ]);
   });
 
-  it("進行中單據:blocked 也算;多個舊版本同一關合成一筆、張數相加;已結束的單據不算", async () => {
+  it("進行中單據:blocked 也算;多個舊版本同一關合成一筆、單據數相加;已結束的單據不算", async () => {
     const roleId = await newRole("多版本進行中的角色");
     const step = {
       ...reviewStep("複核"),

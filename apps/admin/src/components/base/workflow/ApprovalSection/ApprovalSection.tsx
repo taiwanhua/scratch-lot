@@ -44,7 +44,7 @@ export interface ApprovalSectionProps {
   /** 複製為新單成功:呼叫端決定去哪(該模組的編輯頁) */
   onCopied?: (submissionId: string) => void;
   /**
-   * 停用「核准」(駁回 / 退回照常):業務頁知道這張單現在不能核准時用(例:補打卡申請選的排班已被刪除);
+   * 停用「核准」(駁回 / 退回照常):業務頁知道這張單現在不能核准時用(例:申請單引用的業務資料已被刪除);
    * 只是畫面提示,api 的掛接點守門照樣擋。預設 false。模組登記的審核畫面擴充(`Review`)也能停用
    */
   approveDisabled?: boolean;

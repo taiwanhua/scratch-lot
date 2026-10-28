@@ -55,7 +55,7 @@ export interface FieldPermissionFacts {
 
 /**
  * 唯讀檢視時不顯示的欄位:`widget.hideWhenReadonly: true`(只管長相的設定;值照存、照驗)。
- * 給業務頁自己填的系統欄位用(例:補打卡申請的「對應排班」存排班 id,詳情 / 申請中心改看它的顯示文字欄)。
+ * 給業務頁自己填的系統欄位用(例:存業務資料 id 的系統欄位,詳情 / 申請中心改看它的顯示文字欄)。
  */
 const isHiddenWhenReadonly = (
   field: FieldDef,
