@@ -1072,6 +1072,7 @@ function withoutCost(
     newInvestigatingCost: null,
     investigateRecoveredCost: null,
     lostRecoveredCost: null,
+    pendingAdjustCost: null,
     endingCost: null,
     checkCost: null,
     inTransitAmount: null,

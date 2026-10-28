@@ -961,6 +961,8 @@
         "newInvestigating": "− 新增待查",
         "investigateRecovered": "+ 待查轉回",
         "lostRecovered": "+ 遺失尋回",
+        "pendingAdjust": "± 待標註調整",
+        "pendingAdjustNote": "還沒標的跳號改扣在別家店或待查,或在這家店標了跳號",
         "ending": "= 期末庫存",
         "check": "核對",
         "checkOk": "對得上",

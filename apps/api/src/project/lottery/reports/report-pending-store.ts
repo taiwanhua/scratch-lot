@@ -6,8 +6,7 @@ import {
   type TicketLocationKind,
   type TicketStatus,
   bookCountsOf,
-  pendingPlacementOf,
-  pendingStoreOf,
+  holdingsWithoutPendingSkips,
 } from "@repo/domain/project/lottery";
 
 import type { OperatorContext } from "../../../database/operator-context";
@@ -37,8 +36,8 @@ const isOnHand = (state: TicketState): boolean =>
     state.locationKind === TICKET_LOCATION_KIND.counter);
 
 /**
- * 報表的「待標註扣在哪一家店的庫存」(使用者 10/27 定案;和本的詳情同一個規則 `pendingPlacementOf` /
- * `pendingStoreOf`):待標註一本只扣一次,算在還沒確認實體的那一組 —— 有待查 / 遺失 → 那一組(庫存不扣);
+ * 報表的「待標註扣在哪一家店的庫存」(使用者 10/27 定案;和本的詳情、庫存概況同一個共用函式
+ * `holdingsWithoutPendingSkips`):待標註一本只扣一次,算在還沒確認實體的那一組 —— 有待查 / 遺失 → 那一組(庫存不扣);
  * 沒有 → 未售張數最多的那家店的庫存。要看整本(跨店)那一刻的狀態:有待標註的本一次讀張、一次讀那之後的事件,
  * 在記憶體裡倒推(不逐本查)。
  */
@@ -78,10 +77,7 @@ export class PendingStores {
     const existing = states.filter(
       (state): state is TicketState => state !== null,
     );
-    const counts = bookCountsOf(existing);
-    if (pendingPlacementOf(counts, pending) !== "unsold") {
-      return 0;
-    }
+    // 各分店的未售(含在途)→ 扣掉待標註(和本的詳情「所在分店」、庫存概況同一個共用函式)
     const unsoldByStore = new Map<string, number>();
     for (const state of existing) {
       if (state.status === TICKET_STATUS.unsold) {
@@ -91,13 +87,22 @@ export class PendingStores {
         );
       }
     }
-    if (pendingStoreOf(unsoldByStore) !== String(orgId)) {
+    const store = String(orgId);
+    const held = unsoldByStore.get(store) ?? 0;
+    const deducted =
+      held -
+      (holdingsWithoutPendingSkips(
+        unsoldByStore,
+        bookCountsOf(existing),
+        pending,
+      ).get(store) ?? held);
+    if (deducted <= 0) {
       return 0;
     }
     const onHand = existing.filter(
-      (state) => state.orgId === String(orgId) && isOnHand(state),
+      (state) => state.orgId === store && isOnHand(state),
     ).length;
-    return Math.min(pending, onHand);
+    return Math.min(deducted, onHand);
   }
 
   /** 一組事件(那一刻)讓這家店的庫存要扣的待標註張數變了多少(事件後 − 事件前)。 */

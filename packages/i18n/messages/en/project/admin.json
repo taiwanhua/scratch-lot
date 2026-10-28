@@ -961,6 +961,8 @@
         "newInvestigating": "− New under investigation",
         "investigateRecovered": "+ Back from investigation",
         "lostRecovered": "+ Lost then recovered",
+        "pendingAdjust": "± Unmarked skip adjustment",
+        "pendingAdjustNote": "Unmarked skipped tickets now counted at another store or under investigation, or skipped tickets marked at this store",
         "ending": "= Ending stock",
         "check": "Check",
         "checkOk": "Balanced",
