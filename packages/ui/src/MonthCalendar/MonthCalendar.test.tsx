@@ -2,11 +2,7 @@ import { describe, expect, it, jest } from "@jest/globals";
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
-import {
-  MONTH_CALENDAR_TONE_BACKGROUND,
-  MonthCalendar,
-  type MonthCalendarProps,
-} from "./MonthCalendar";
+import { MonthCalendar, type MonthCalendarProps } from "./MonthCalendar";
 
 /** 2026-10:10/1 是星期四;第 1 週 9/27–10/3、第 2 週 10/4–10/10 … 第 5 週 10/25–10/31。 */
 const MONTH = "2026-10";
@@ -236,11 +232,6 @@ describe("MonthCalendar 註記、角標與自訂內容", () => {
     });
 
     expect(day("2026-10-11")).toHaveAttribute("data-tone", "special");
-    // 特殊日是中性灰底(不用狀態色),和休息日深淺分開
-    expect(MONTH_CALENDAR_TONE_BACKGROUND).toEqual({
-      special: "action.selected",
-      closed: "action.hover",
-    });
     expect(day("2026-10-12")).toHaveAttribute("data-tone", "closed");
     expect(day("2026-09-30")).not.toHaveAttribute("data-tone");
     expect(day("2026-10-14")).not.toHaveAttribute("data-tone");

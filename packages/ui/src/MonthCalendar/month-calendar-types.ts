@@ -14,8 +14,8 @@ export type MonthCalendarCorner =
   | { variant: "badge"; content: ReactNode };
 
 /**
- * 日期格的底色(顏色由主題 token 提供,使用處只給語意;對照見 `MONTH_CALENDAR_TONE_BACKGROUND`):
- * - `special`:特殊日(例:店慶)——中性灰底(`action.selected`)
+ * 日期格的底色(顏色由主題 token 提供,使用處只給語意):
+ * - `special`:特殊日(例:店慶)——淡藍底(`info.lighter`)
  * - `closed`:休息日但仍可點(例:店休)——淡灰底(`action.hover`);不能點的日子用 `disabled`
  */
 export type MonthCalendarDayTone = "special" | "closed";
