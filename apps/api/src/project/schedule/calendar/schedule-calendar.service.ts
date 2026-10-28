@@ -30,6 +30,7 @@ import {
   dateKeyOf,
   dayKeyRange,
   instantRangeFilter,
+  shiftDateKey,
 } from "../shared/schedule-dates";
 import {
   SCHEDULE_REASONS,
@@ -294,8 +295,11 @@ export class ScheduleCalendarService {
     ];
     const key = dateKeyOf(date, timezone);
     const whole = dayKeyRange(key, key, timezone);
+    // 歸屬日 = 前一天(跨午夜做進來)或當天:先用 {orgId, date} 縮到兩天,再看時間有沒有碰到
+    const twoDays = dayKeyRange(shiftDateKey(key, -1), key, timezone);
     const overlap = {
       orgId: { $in: affected },
+      date: { $gte: new Date(twoDays.from), $lt: new Date(twoDays.to) },
       startAt: { $lt: new Date(whole.to) },
       endAt: { $gt: new Date(whole.from) },
     };

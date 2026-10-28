@@ -883,6 +883,72 @@ describe("排班表(GraphQL 端點 + 真 MongoDB)", () => {
         },
       ]);
     });
+    it("設店休的回應:三層組織 —— 中間層另設那天,它底下的店也不算(最接近的那一層為準)", async () => {
+      const region = await createOrg(connection, {
+        name: "北區",
+        parentId: tenantA,
+      });
+      const branch = await createOrg(connection, {
+        name: "北區一店",
+        parentId: region,
+      });
+      await demandOn("2027-02-17", "08:00", "12:00", 1, branch);
+      await demandOn("2027-02-17", "08:00", "12:00", 1, zhongshan);
+      await setDay(region, "2027-02-17", "special");
+      const result = await setDay(tenantA, "2027-02-17");
+      expect(result.closedConflicts).toEqual([
+        {
+          orgId: String(zhongshan),
+          orgName: "中山店",
+          demandCount: 1,
+          entryCount: 0,
+        },
+      ]);
+    });
+
+    it("設店休的回應:看不到的下層店不列入", async () => {
+      // 可見範圍「只有自己」的租戶:最上層組織的人看不到底下的分店
+      const tenantB = await createOrg(connection, { name: "租戶乙" });
+      const storeB = await createOrg(connection, {
+        name: "乙一店",
+        parentId: tenantB,
+      });
+      const top = await createScheduleUser(
+        api,
+        connection,
+        [tenantB],
+        ALL_SCHEDULE_TEST_PERMISSIONS,
+      );
+      const storeManager = await createScheduleUser(
+        api,
+        connection,
+        [storeB],
+        ALL_SCHEDULE_TEST_PERMISSIONS,
+      );
+      dataOf(
+        await gql(storeManager, SAVE_DEMAND, {
+          input: {
+            orgId: String(storeB),
+            positionKey: COUNTER,
+            startAt: taipei("2027-02-18", "08:00"),
+            endAt: taipei("2027-02-18", "12:00"),
+            tasks: [{ role: "helper", taskKey: DUTY }],
+          },
+        }),
+        "saveScheduleDemand",
+      );
+      const result = dataOf(
+        await gql(top, SAVE_CALENDAR_DAY, {
+          input: {
+            orgId: String(tenantB),
+            date: taipei("2027-02-18", "00:00"),
+            type: "closed",
+          },
+        }),
+        "saveScheduleCalendarDay",
+      );
+      expect(result.closedConflicts).toEqual([]);
+    });
   });
 
   describe("排班:填進執行任務", () => {

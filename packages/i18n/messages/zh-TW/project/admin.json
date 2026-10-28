@@ -1410,7 +1410,8 @@
       },
       "feedback": {
         "saveSuccess": "已儲存行事曆",
-        "closedConflict": "這天已經有人力需求或排班({list}),店休那天不能排,請到排班表刪除",
+        "closedConflict": "這天已經有人力需求或排班({list}),店休那天不能排,請到排班表的週 / 日檢視刪除",
+        "closedConflictSeparator": ";",
         "closedConflictItem": "{org} 人力需求 {demands} 筆、排班 {entries} 筆",
         "deleteSuccess": "已刪除"
       },

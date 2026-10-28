@@ -1419,7 +1419,8 @@
       },
       "feedback": {
         "saveSuccess": "Calendar saved",
-        "closedConflict": "This day already has staffing needs or shifts ({list}); nothing can be scheduled on a closed day, so delete them from the roster",
+        "closedConflict": "This day already has staffing needs or shifts ({list}); nothing can be scheduled on a closed day, so delete them in the roster week / day view",
+        "closedConflictSeparator": "; ",
         "closedConflictItem": "{org}: {demands} staffing needs, {entries} shifts",
         "deleteSuccess": "Deleted"
       }

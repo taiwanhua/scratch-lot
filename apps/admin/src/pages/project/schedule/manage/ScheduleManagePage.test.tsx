@@ -118,7 +118,7 @@ describe("排班作業:行事曆", () => {
     await user.click(within(dialog).getByRole("button", { name: "新增" }));
     expect(
       await screen.findByText(
-        "這天已經有人力需求或排班(中山店 人力需求 2 筆、排班 1 筆;新竹店 人力需求 1 筆、排班 0 筆),店休那天不能排,請到排班表刪除",
+        "這天已經有人力需求或排班(中山店 人力需求 2 筆、排班 1 筆;新竹店 人力需求 1 筆、排班 0 筆),店休那天不能排,請到排班表的週 / 日檢視刪除",
       ),
     ).toBeInTheDocument();
   });

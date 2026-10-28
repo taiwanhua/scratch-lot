@@ -307,6 +307,28 @@ describe("排班對話框:各入口一致", () => {
     expect(createButton()).toBeEnabled();
   });
 
+  it("人力需求對話框:api 回店休(STORE_CLOSED,前端還不知道那天店休)→ 開始時間欄下寫「不能建人力需求」那句", async () => {
+    renderSchedulePage({
+      path: ROSTER,
+      roster: { closedDemandDates: ["2026-11-06"] },
+    });
+    const user = fastUser();
+    await user.click(await findButton("+ 人力需求"));
+    const dialog = await findDialog("新增人力需求");
+    await user.click(within(dialog).getByRole("group", { name: /日期/ }));
+    await user.keyboard("20261106");
+    await typeTimeIn(user, dialog, /開始/, "09:00");
+    await typeTimeIn(user, dialog, /結束/, "13:00");
+    await user.click(within(dialog).getByRole("combobox", { name: /崗位/ }));
+    await user.click(await findOption("店外攤位"));
+    await user.click(within(dialog).getByRole("button", { name: "新增" }));
+    await waitFor(() => {
+      expect(timeField(dialog, /開始/)).toHaveAccessibleDescription(
+        DEMAND_CLOSED,
+      );
+    });
+  });
+
   it("日期欄的店休日反灰(排班對話框與人力需求對話框同一套;店休日不能建人力需求)", async () => {
     const { user } = renderRoster(ROSTER);
     /** 打開對話框裡日期欄的月曆,回 11/3(店休)與 11/4 兩格 */

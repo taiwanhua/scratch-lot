@@ -50,6 +50,8 @@ export interface ScheduleRosterWorldOptions extends AutoRunWorldOptions {
   noUnmatchedPunches?: boolean;
   /** 追加特殊日與店休那天的未對應打卡(`sampleCalendarMarks`) */
   calendarMarks?: boolean;
+  /** 存人力需求時 api 回店休(`STORE_CLOSED`)的日子(台北的日期鍵;前端讀到的行事曆不知道,例:剛被設成店休) */
+  closedDemandDates?: string[];
 }
 
 const nameOf = (userId: string) =>
@@ -243,6 +245,22 @@ export const scheduleRosterWorld = (
     api.mutation("SaveScheduleDemand", ({ variables }) => {
       const { input } = variables as SaveScheduleDemandMutationVariables;
       inputs.demands.push(input);
+      if (
+        options.closedDemandDates?.includes(localDate(input.startAt)) === true
+      ) {
+        return HttpResponse.json({
+          errors: [
+            {
+              message: "store is closed on a day of this demand",
+              extensions: {
+                code: "VALIDATION_FAILED",
+                fields: ["startAt"],
+                reason: "STORE_CLOSED",
+              },
+            },
+          ],
+        });
+      }
       const id = input.id ?? nextId("d");
       const existing = demands.find((demand) => demand.id === id);
       const tasks = input.tasks.map((task) => ({

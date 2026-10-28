@@ -653,11 +653,6 @@ export class ScheduleRosterWritesService {
   }
 
   /**
-   * 畫休那段時間不能排(規格 14.5「可排 = 那段時間沒有畫休」;做法同店休):排班碰到的日子(跨午夜含隔天)
-   * 有整天畫休、或和時段不可排重疊(頭尾相接不算)→ `VALIDATION_FAILED`(欄位 `startAt`)。
-   * 以租戶 + 人查(`unavailableOfPerson`,不經這家店的候選人):修改舊排班時那個人已經不能排這家店,一樣要擋。
-   */
-  /**
    * 店休那天不能排班、也不能建人力需求:碰到的日子(跨午夜含隔天)以這家店的生效行事曆為準
    * (上層設的店休往下沿用)→ 欄位 `startAt`、`STORE_CLOSED`。
    */
@@ -681,6 +676,11 @@ export class ScheduleRosterWritesService {
     }
   }
 
+  /**
+   * 畫休那段時間不能排(規格 14.5「可排 = 那段時間沒有畫休」;做法同店休):排班碰到的日子(跨午夜含隔天)
+   * 有整天畫休、或和時段不可排重疊(頭尾相接不算)→ `VALIDATION_FAILED`(欄位 `startAt`)。
+   * 以租戶 + 人查(`unavailableOfPerson`,不經這家店的候選人):修改舊排班時那個人已經不能排這家店,一樣要擋。
+   */
   private async assertAvailable(
     operator: OperatorContext,
     scope: RosterScope,
