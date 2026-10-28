@@ -89,7 +89,8 @@ interface PlannedDelivery {
  * 通知的單一入口:業務程式碼(流程引擎、專案)只呼叫 `notify()`。
  *
  * 1. 查類型登記表 → 2. 解析收件人 → 3. 查收件人偏好(每種類型 × 每個管道的開關;`canDisable` 為否的管道一律開)
- * → 4. 在**交易內**寫 `notifications`(同一位收件人、同一個 `dedupeKey` 已有就整個略過:不寫、不送信號、不寄信)
+ * → 4. 在**交易內**寫 `notifications`(同一位收件人、同一個 `dedupeKey` 已有就整個略過:不寫、不送信號、不寄信;
+ *    去重一次查、新的一次 `createMany`,TX-06)
  * → 5. 交易提交後依管道交給轉接器:站內 = 一次送出 `notification` 信號,email = 寄信。
  *
  * 呼叫端已在交易內時就併進呼叫端的交易(動作回復 → 沒有通知、沒有信號、沒有信);不在交易內時自己開一個。
@@ -128,17 +129,28 @@ export class NotificationService {
         input.ref?.type ?? null,
         input.ref?.id ?? null,
       );
-      // 交易內依序寫(TX-02:同一個 session 不平行讀寫)
-      for (const item of planned) {
-        const existing = await this.notifications.findOne(
-          NOTIFICATION_SYSTEM,
-          { recipientId: item.recipientId, dedupeKey: input.dedupeKey },
-          { includeDeleted: true },
-        );
-        if (existing !== null) {
-          continue;
-        }
-        const created = await this.notifications.create(NOTIFICATION_SYSTEM, {
+      if (planned.length === 0) {
+        return;
+      }
+      // 去重一次查、新的一次寫,收件人多寡不影響指令數(TX-06;交易內依序,TX-02)
+      const existing = await this.notifications.findMany(
+        NOTIFICATION_SYSTEM,
+        {
+          recipientId: { $in: planned.map((item) => item.recipientId) },
+          dedupeKey: input.dedupeKey,
+        },
+        { includeDeleted: true, select: "recipientId" },
+      );
+      const notified = new Set(existing.map((row) => String(row.recipientId)));
+      const fresh = planned.filter(
+        (item) => !notified.has(String(item.recipientId)),
+      );
+      if (fresh.length === 0) {
+        return;
+      }
+      const created = await this.notifications.createMany(
+        NOTIFICATION_SYSTEM,
+        fresh.map((item) => ({
           tenantId: input.tenantId,
           orgId: input.orgId,
           recipientId: item.recipientId,
@@ -150,17 +162,22 @@ export class NotificationService {
           dedupeKey: input.dedupeKey,
           channels: item.channels,
           readAt: null,
-        });
-        for (const channel of item.channels) {
+        })),
+      );
+      const localeOf = new Map(
+        fresh.map((item) => [String(item.recipientId), item.locale]),
+      );
+      for (const row of created) {
+        for (const channel of row.channels) {
           const list = deliveries.get(channel) ?? [];
           list.push({
-            notificationId: created._id,
+            notificationId: row._id,
             type: type.key,
-            recipientId: item.recipientId,
-            title: item.title,
-            body: item.body,
+            recipientId: row.recipientId,
+            title: row.title,
+            body: row.body,
             path,
-            locale: item.locale,
+            locale: localeOf.get(String(row.recipientId)) ?? null,
           });
           deliveries.set(channel, list);
         }
