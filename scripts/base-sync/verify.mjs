@@ -23,13 +23,15 @@
  *      `${常數}` 樣板、`permissionKey()`,以及 formModuleDeclaration() 依 helper 本身宣告推導的頁面 / 權限 key;
  *      常數可來自 import(相對路徑與 `@repo/<套件>/<子路徑>`,含別名與 `export * from`)。其他寫法在專案端另列
  *      「無法解析的 key」(不算撞 key、不計入結果)、底座端只計數。測試檔(`*.test.*`)不是宣告,不掃。
+ *      key 是查不到值的 PascalCase 單一名稱時當型別註記略過(全大寫常數照列)。
  *      collection 由 nodes / permissions 陣列、formModuleDeclaration() 或所在 set
  *      的 collection 判定,讀不出時只比 key(可能誤報)。推導出的 wildcard 權限與 data_scope_targets 不另比
  *      (由模組 key 涵蓋);未被 import 的 revisions 快照不算目前宣告(漏報其中的 key)
  *   4. 只比 project/ 路徑的程式檔(不含成對固定來源:STRUCT-12 列的、底座 tag 在 project/ 路徑帶的檔與它們的測試;
  *      專案值與 seed / migration)與底座 common 程式檔的檔名(不含 index)與具名匯出(不含 default、不含字串裡的範例)。
  *      慣例檔名(CONVENTIONAL_STEMS)只在底座同名檔位於對應路徑(去掉 project/ 或換成 base/)時才列;
- *      `*-error.ts` 匯出的 `…Error` 錯誤 helper 與底座各模組 `*-error.ts` 同名不列。常見名稱仍可能誤報,
+ *      `*-error.ts` 匯出的 `…Error` 錯誤 helper 與底座各模組 `*-error.ts` 同名不列;模組慣例常數(CONVENTIONAL_EXPORTS,
+ *      底座在 packages/ 匯出同名時照列)與測試輔助檔(`*test-support*` / `*fixtures*`)對底座測試輔助的同名匯出不列。常見名稱仍可能誤報,
  *      改名後的重複會漏報
  *   5. 生成產物(GENERATED_PATHS)不掃,改由產物的來源命中(產物與來源一致由 CI 的 GQL-05 重產比對把關);
  *      依賴宣告(package.json)的 exports / typesVersions 裡子路徑與目標都在 project/ 的項目不掃(只略過整行
@@ -96,6 +98,24 @@ const NOT_CODE_DUPLICATES = [
  * 專案照同一慣例另開一份不是重複。只有底座同名檔正好在專案檔的對應路徑(去掉 `project/` 或換成 `base/`)才列。
  */
 const CONVENTIONAL_STEMS = new Set(["registration", "keys", "fixtures"]);
+/**
+ * 第 4 節的模組慣例常數:底座各模組各自宣告一份(分頁大小、稽核動作、遮罩字樣),專案模組照慣例另宣告不是重複。
+ * 底座在共用套件(`packages/`)匯出同名時才是該共用的那份,照列。
+ */
+const CONVENTIONAL_EXPORTS = new Set([
+  "DEFAULT_PAGE_SIZE",
+  "MAX_PAGE_SIZE",
+  "AUDIT_ACTIONS",
+  "REDACTED",
+]);
+const SHARED_PACKAGE = /^packages\//;
+/** 測試輔助檔(檔名或目錄含 `test-support` / `fixtures`)。 */
+const TEST_HELPER_FILE = /(?:^|[/.-])(?:test-support|fixtures)(?:[/.-]|$)/;
+/** 底座的測試輔助:測試輔助檔、`src/test/` 下的共用測試工具與測試檔本身。 */
+const isBaseTestHelper = (file) =>
+  TEST_HELPER_FILE.test(file) ||
+  /(?:^|\/)test\//.test(file) ||
+  isTestFile(file);
 /** 各模組自己的錯誤組裝檔(`<feature>-error.ts`,見 module scaffold)與其中的 `…Error` helper。 */
 const ERROR_MODULE = /-error$/;
 const ERROR_HELPER = /Error$/;
@@ -395,6 +415,11 @@ function customizationItems(headFiles, headBlobs) {
 
 /** 型別註記(`key: string;`)不是宣告。 */
 const TYPE_KEYWORDS = new Set(["string", "number", "unknown", "never", "any"]);
+/**
+ * 型別名稱(PascalCase、含小寫字母;`key: OnboardingRoleKey` 這種介面欄位的型別註記)。
+ * 只在常數表查不到值時當型別略過;全大寫的 `SOME_KEY` 是常數慣例,查不到照列為無法解析。
+ */
+const TYPE_NAME = /^[A-Z][A-Za-z0-9]*[a-z][A-Za-z0-9]*$/;
 const IDENTIFIER = /^[A-Za-z_$][\w$]*$/;
 /** 常數物件的成員存取(`KEYS.viewPage`、`A.b.c`);常數表以攤平的路徑當名稱。 */
 const MEMBER_PATH = /^[A-Za-z_$][\w$]*(?:\s*\.\s*[A-Za-z_$][\w$]*)+$/;
@@ -830,6 +855,7 @@ export function seedKeys(text, constants) {
     }
     const collection = collectionOf(skeleton, stripped, objectOpen, constants);
     const key = resolveKeyExpression(expression, constants);
+    if (key === null && TYPE_NAME.test(expression)) continue;
     if (key === null) {
       unresolved.push({
         collection,
@@ -1106,6 +1132,15 @@ const isErrorHelperPair = (file, name, baseFiles) =>
   ERROR_HELPER.test(name) &&
   baseFiles.every((base) => ERROR_MODULE.test(stemOf(base)));
 
+/** 模組慣例常數:底座匯出的都不在共用套件(各模組各一份)。 */
+const isConventionalExport = (name, baseFiles) =>
+  CONVENTIONAL_EXPORTS.has(name) &&
+  baseFiles.every((base) => !SHARED_PACKAGE.test(base));
+
+/** 測試輔助檔的匯出與底座測試輔助同名(`P`、`PASSWORD`、`FULL_PERMISSIONS`):各測試各備一份夾具。 */
+const isTestHelperPair = (file, baseFiles) =>
+  TEST_HELPER_FILE.test(file) && baseFiles.every(isBaseTestHelper);
+
 function nameDuplicates(projectFiles, headBlobs, baseFiles, baseBlobs) {
   const byStem = new Map();
   const byExport = new Map();
@@ -1127,7 +1162,9 @@ function nameDuplicates(projectFiles, headBlobs, baseFiles, baseBlobs) {
       .filter(
         (name) =>
           byExport.has(name) &&
-          !isErrorHelperPair(file, name, byExport.get(name)),
+          !isErrorHelperPair(file, name, byExport.get(name)) &&
+          !isConventionalExport(name, byExport.get(name)) &&
+          !isTestHelperPair(file, byExport.get(name)),
       )
       .sort()
       .map((name) => ({ name, base: byExport.get(name) }));
@@ -1534,8 +1571,8 @@ function section(title, items, render, { hasNotes = false } = {}) {
 const LIMITATIONS = [
   "限制:第 1 節不列專案與混合路徑(混合路徑以 inspect 的 mixed 清單逐段核對)。",
   "第 2 節只認 page-replacements、help project/replacements/ 與專案 forms 的 options / pageOverrides;讀不懂的寫法照列為無法解析。",
-  "第 3 節是靜態掃描:只認字串、常數(含 import 進來的與常數物件的成員)、${常數} 樣板、permissionKey() 與 formModuleDeclaration() 推導的 key,其他寫法在專案端另列為無法解析(不算撞 key、不計入結果)、底座端只計數;測試檔不掃;推導出的 wildcard 與 data_scope_targets 不另比(由模組 key 涵蓋);未被 import 的 revisions 快照不算;讀不出 collection 時只比 key;讀不到的 import 與 spread 帶進來的成員不猜值。",
-  "第 4 節只比專案 project/ 路徑的程式檔(不含成對固定來源與底座在 project/ 路徑帶的檔)與底座 common 程式檔的檔名(不含 index)與具名匯出(不含 default);registration / keys / fixtures 只在對應路徑才算同名,*-error.ts 的 …Error helper 互不算;內容相同但名稱不同的重複抓不到。",
+  "第 3 節是靜態掃描:只認字串、常數(含 import 進來的與常數物件的成員)、${常數} 樣板、permissionKey() 與 formModuleDeclaration() 推導的 key,其他寫法在專案端另列為無法解析(不算撞 key、不計入結果)、底座端只計數;測試檔不掃;推導出的 wildcard 與 data_scope_targets 不另比(由模組 key 涵蓋);未被 import 的 revisions 快照不算;讀不出 collection 時只比 key;讀不到的 import 與 spread 帶進來的成員不猜值;查不到值的 PascalCase 單一名稱當型別註記略過。",
+  "第 4 節只比專案 project/ 路徑的程式檔(不含成對固定來源與底座在 project/ 路徑帶的檔)與底座 common 程式檔的檔名(不含 index)與具名匯出(不含 default);registration / keys / fixtures 只在對應路徑才算同名,*-error.ts 的 …Error helper、模組慣例常數(分頁大小、稽核動作、遮罩字樣;底座共用套件匯出的照列)與測試輔助檔對底座測試輔助的同名匯出互不算;內容相同但名稱不同的重複抓不到。",
   "第 5 節只比對新增行與詞表(slug、品牌名一定列入;Figma 稽核 projectTerms、專案模組 key、collection 前綴在底座已出現就不列),不分大小寫;生成產物與 package.json 裡 project/ 子路徑的出口不掃;詞表沒有的業務用語抓不到。",
   "第 6 節只核對列出的值行檔(根 package.json、.env.example、CLAUDE.md / AGENTS.md 標題、README 開頭、docker-compose);其他混合檔仍以 inspect 逐段核對。",
   "第 7 節只看判為 project 的 skill 目錄,專案 skills-lock.json 登記的外部 skill 不檢查。",
