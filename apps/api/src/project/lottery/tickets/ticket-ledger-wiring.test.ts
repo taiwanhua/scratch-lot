@@ -79,6 +79,18 @@ function methodBody(text: string, name: string): string {
   return end < 0 ? rest : rest.slice(0, end);
 }
 
+/** 這一行只是 import 或型別註記(欄位 / 參數)。 */
+const typedOrImported = (line: string): boolean => {
+  const trimmed = line
+    .trim()
+    .replace(/^(?:(?:private|protected|public|readonly) )+/u, "");
+  return (
+    trimmed.startsWith("import ") ||
+    /^LotteryTicket(?:Event)?sRepository,$/u.test(trimmed) ||
+    /^\w+\??: LotteryTicket(?:Event)?sRepository[;,)]?$/u.test(trimmed)
+  );
+};
+
 const count = (text: string, pattern: RegExp): number =>
   [...text.matchAll(pattern)].length;
 
@@ -105,6 +117,47 @@ describe("張的寫入只經帳本服務(靜態檢查)", () => {
       "project/lottery/tickets/ticket-ledger.service.ts": 3,
       "project/lottery/tickets/books.service.ts": 1,
     });
+  });
+
+  it("繞過 repository 型別的取得方式(model 名稱、collection 名稱、不經型別註記取 repository)只在允許清單", () => {
+    // 上面以 `欄位: LotteryTicketsRepository` 找寫入;沒有型別註記的取得方式(`moduleRef.get(…)`、
+    // `@InjectModel(LotteryTicket.name)`、`collection(LOTTERY_TICKETS_COLLECTION)`)會漏掉,這裡擋住
+    const DATABASE = "project/database/lottery-inventory/";
+    const allowed = new Set([
+      `${DATABASE}lottery-ticket.schema.ts`,
+      `${DATABASE}lottery-ticket-event.schema.ts`,
+      `${DATABASE}lottery-inventory.repository.ts`,
+      `${DATABASE}registration.ts`,
+      "project/database/tenant-purge.ts",
+    ]);
+    const direct =
+      /\bLotteryTicket(?:Event)?\.name\b|\bLOTTERY_TICKET(?:_EVENT)?S_COLLECTION\b|["'`]lottery_ticket(?:_event)?s["'`]/u;
+    // repository 類別本身:只准 import 與型別註記(欄位 / 參數),寫入由上面兩條檢查
+    const repositoryUse = /\bLotteryTicket(?:Event)?sRepository\b/u;
+    const offendersOf = (file: string, text: string): string[] =>
+      text.split("\n").flatMap((line, index) => {
+        const where = `${file}:${String(index + 1)}`;
+        if (direct.test(line)) return [where];
+        if (repositoryUse.test(line) && !typedOrImported(line)) return [where];
+        return [];
+      });
+    const offenders = files.flatMap(({ file, text }) =>
+      allowed.has(file) ? [] : offendersOf(file, text),
+    );
+    // 反例:這幾種寫法會被抓到
+    expect(
+      offendersOf(
+        "x.ts",
+        [
+          "const repo = this.moduleRef.get(LotteryTicketsRepository);",
+          "@InjectModel(LotteryTicket.name) model: Model<LotteryTicket>,",
+          "this.connection.collection(LOTTERY_TICKET_EVENTS_COLLECTION);",
+          'db.collection("lottery_tickets");',
+          "    private readonly tickets: LotteryTicketsRepository,",
+        ].join("\n"),
+      ),
+    ).toEqual(["x.ts:1", "x.ts:2", "x.ts:3", "x.ts:4"]);
+    expect(offenders).toEqual([]);
   });
 
   it("張數事件只新增(沒有任何更新 / 刪除),也只由帳本服務與建本寫", () => {
