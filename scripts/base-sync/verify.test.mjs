@@ -327,7 +327,7 @@ test("不乾淨 3:專案 seed 宣告了底座已有的 collection + key,第 3 �
   ]);
   // 專案無法解析的 key 另列一類(不算撞 key);底座的只計數,都不計入結果
   assert.deepEqual(unresolvedLines(result.stdout), [
-    `  - 無法解析的 key \`makeKey('x')\`(${modules})`,
+    `  - 無法解析的 key \`makeKey('x')\`(${modules} 第 7 行)`,
   ]);
   assert.match(
     result.stdout,
@@ -382,7 +382,7 @@ test("不乾淨 3b:常數物件的成員與 import 進來的常數(套件子路�
     `- modules \`demo.history-page\`:底座 ${demo};專案 ${widgets}`,
   ]);
   assert.deepEqual(unresolvedLines(result.stdout), [
-    `  - 無法解析的 key \`KEYS.missing\`(${widgets})`,
+    `  - 無法解析的 key \`KEYS.missing\`(${widgets} 第 8 行)`,
   ]);
 });
 
@@ -394,7 +394,64 @@ test("不乾淨 3c:只有無法解析的 key 時第 3 節為 0、不計入結果
   assert.equal(result.exitCode, 0, result.stdout);
   assert.deepEqual(sectionLines(result.stdout, 3), []);
   assert.deepEqual(unresolvedLines(result.stdout), [
-    "  - 無法解析的 key `makeKey('x')`(`apps/db-migrator/seeds/project/dynamic.ts`)",
+    "  - 無法解析的 key `makeKey('x')`(`apps/db-migrator/seeds/project/dynamic.ts` 第 1 行)",
+  ]);
+  // 摘要點出待判讀的件數;第 3 節不寫「無。」
+  assert.ok(
+    result.stdout.includes("另有 1 個無法解析的 seed key 待判讀(不計入"),
+    result.stdout,
+  );
+  assert.doesNotMatch(
+    result.stdout.slice(
+      result.stdout.indexOf("## 3."),
+      result.stdout.indexOf("## 4."),
+    ),
+    /無。/,
+  );
+});
+
+test("不乾淨 3d:讀不到的 import、spread 帶進來的成員與沒匯出的常數不從別檔同名常數取值,列為無法解析", async () => {
+  const result = await verifyScenario("seed-no-borrow", {
+    // import 讀不到(例:別名路徑);別檔剛好有同名常數物件
+    "apps/db-migrator/seeds/project/a.ts": [
+      'import { KEYS } from "~/unresolvable/keys";',
+      "export const a = { nodes: [{ key: KEYS.viewPage, name: 'a' }] };",
+      "",
+    ].join("\n"),
+    "apps/db-migrator/seeds/project/b.ts": [
+      "const KEYS = { viewPage: 'other.view-page' };",
+      "const PAGES = { viewPage: 'other.view-page' };",
+      "export const b = { nodes: [] };",
+      "",
+    ].join("\n"),
+    // spread 進來的成員不攤平:不可由 b.ts 的同名物件補上
+    "apps/db-migrator/seeds/project/pages-src.ts": [
+      "const BASE_PAGES = { viewPage: 'demo.view-page' };",
+      "export const PAGES = { ...BASE_PAGES, extra: 'p.extra' };",
+      "",
+    ].join("\n"),
+    "apps/db-migrator/seeds/project/c.ts": [
+      'import { PAGES } from "./pages-src";',
+      "export const c = { nodes: [{ key: PAGES.viewPage, name: 'c' }] };",
+      "",
+    ].join("\n"),
+    // export * 只轉出有 export 的常數
+    "apps/db-migrator/seeds/project/shared/index.ts":
+      'export * from "./internal";\n',
+    "apps/db-migrator/seeds/project/shared/internal.ts":
+      'const HIDDEN = "demo";\nexport const SHOWN = "own.shown";\n',
+    "apps/db-migrator/seeds/project/d.ts": [
+      'import { HIDDEN, SHOWN } from "./shared";',
+      "export const d = { nodes: [{ key: HIDDEN, name: 'd' }, { key: SHOWN, name: 'e' }] };",
+      "",
+    ].join("\n"),
+  });
+  assert.equal(result.exitCode, 0, result.stdout);
+  assert.deepEqual(sectionLines(result.stdout, 3), []);
+  assert.deepEqual(unresolvedLines(result.stdout), [
+    "  - 無法解析的 key `KEYS.viewPage`(`apps/db-migrator/seeds/project/a.ts` 第 2 行)",
+    "  - 無法解析的 key `PAGES.viewPage`(`apps/db-migrator/seeds/project/c.ts` 第 2 行)",
+    "  - 無法解析的 key `HIDDEN`(`apps/db-migrator/seeds/project/d.ts` 第 2 行)",
   ]);
 });
 
@@ -677,7 +734,7 @@ test("掃描工具:去註解保留字串;key 解析常數、樣板與 permission
     ),
     {
       declared: [{ collection: "roles", key: "system" }],
-      unresolved: [{ collection: "?", expression: "unknownValue" }],
+      unresolved: [{ collection: "?", expression: "unknownValue", line: 4 }],
       helperCalls: [],
     },
   );
@@ -690,14 +747,54 @@ test("掃描工具:去註解保留字串;key 解析常數、樣板與 permission
           "export type Props = {};",
           "export { a as renamed, type B, default as Named, c as default };",
           "// export const commented = 1;",
-          'const sample = "export function inString() {}";',
         ].join("\n"),
       ),
     ].sort(),
     ["B", "Named", "Props", "load", "renamed"].sort(),
   );
+  // 一般檔不挖空字串:regex 與 JSX 文字裡的引號不會吃掉後面的匯出;測試檔的夾具字串不算匯出
+  assert.deepEqual(
+    [
+      ...exportNames(
+        "const re = /'/;\nexport function afterRegex() {}\nexport const A = () => <p>Don't</p>;\nexport function afterJsx() {}\n",
+      ),
+    ],
+    ["afterRegex", "A", "afterJsx"],
+  );
+  assert.deepEqual(
+    [
+      ...exportNames(
+        'const sample = "export function inString() {}";\nexport const real = 1;\n',
+        { isTest: true },
+      ),
+    ],
+    ["real"],
+  );
   // 讀不懂的 package.json 照掃(不略過任何行)
   assert.deepEqual([...projectExportLines("{ not json")], []);
+  // 與別的項目同一行就照掃(只略過整行都屬於專案出口的行)
+  assert.deepEqual(
+    [
+      ...projectExportLines(
+        '{"exports":{"./project/a":"./src/project/a.ts","./gadgets":"./src/gadgets.ts"}}\n',
+      ),
+    ],
+    [],
+  );
+  assert.deepEqual(
+    [
+      ...projectExportLines(
+        [
+          "{",
+          '  "exports": {',
+          '    "./project/a": "./src/project/a.ts", "./gadgets": "./src/gadgets.ts"',
+          "  }",
+          "}",
+        ].join("\n"),
+      ),
+    ],
+    [],
+  );
   assert.deepEqual(
     [
       ...projectExportLines(

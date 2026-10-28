@@ -31,8 +31,9 @@
  *      慣例檔名(CONVENTIONAL_STEMS)只在底座同名檔位於對應路徑(去掉 project/ 或換成 base/)時才列;
  *      `*-error.ts` 匯出的 `…Error` 錯誤 helper 與底座各模組 `*-error.ts` 同名不列。常見名稱仍可能誤報,
  *      改名後的重複會漏報
- *   5. 生成產物(GENERATED_PATHS)不掃,改由產物的來源命中;依賴宣告(package.json)的 exports 裡 key 與目標都在
- *      project/ 的段落不掃,其餘行照掃
+ *   5. 生成產物(GENERATED_PATHS)不掃,改由產物的來源命中(產物與來源一致由 CI 的 GQL-05 重產比對把關);
+ *      依賴宣告(package.json)的 exports / typesVersions 裡子路徑與目標都在 project/ 的項目不掃(只略過整行
+ *      都屬於該項目的行,與別的項目同一行就照掃),其餘行照掃
  * Figma 稽核與 CI 不在本指令內。
  */
 import { spawnSync } from "node:child_process";
@@ -459,7 +460,8 @@ function enclosingOpen(skeleton, index) {
 
 /**
  * key 運算式 → 值:字串字面值、常數、`${常數}` 樣板、`permissionKey(模組, 動作)`(與 @repo/domain 同規則,以「.」相接)。
- * 其他寫法(函式參數、成員存取、外部套件的值、其他函式呼叫)回 null。
+ * 常數物件的成員(`KEYS.viewPage`)以攤平的路徑查表。其他寫法(函式參數、表裡沒有的成員、外部套件的值、
+ * 其他函式呼叫)回 null。
  */
 export function resolveKeyExpression(expression, constants) {
   const raw = expression.trim().replace(/\s+as\s+const$/, "");
@@ -495,7 +497,10 @@ export function resolveKeyExpression(expression, constants) {
 const OBJECT_PROPERTY =
   /^(?:([A-Za-z_$][\w$]*)|(["'])([^"']*)\2)\s*:\s*([\s\S]*)$/;
 
-/** 物件字面值攤平成 `NAME.prop`(巢狀照接);簡寫屬性 `{ list }` 視為 `list: list`,spread 與方法略過。 */
+/**
+ * 物件字面值攤平成 `NAME.prop`(巢狀照接);簡寫屬性 `{ list }` 視為 `list: list`,spread 與方法略過
+ * (spread 帶進來的成員不攤平,查不到就是無法解析;scopeOf 不讓別檔同名物件補上)。
+ */
 function flattenConstant(name, expression, out) {
   const raw = expression.trim().replace(/\s+as\s+const$/, "");
   if (!raw.startsWith("{") || matchingClose(raw, 0) !== raw.length - 1) {
@@ -559,6 +564,40 @@ const constantTable = (texts) =>
 
 const IMPORT_LIST =
   /\bimport\s+(type\s+)?\{([^}]*)\}\s*from\s*(["'])([^"']+)\3/g;
+/** 任何形式的 import 子句(default、`* as ns`、`{ … }`、type),只用來找本檔佔用的名稱。 */
+const IMPORT_CLAUSE = /\bimport\s+([^'";]*?)\s+from\s*["']/g;
+/** 本檔匯出的常數:`export const X`、`export { a, b as c }`(不帶 from)。 */
+const EXPORTED_CONSTANT =
+  /\bexport\s+(?:declare\s+)?(?:const|let|var)\s+([A-Za-z_$][\w$]*)/g;
+const LOCAL_EXPORT_LIST = /\bexport\s+(type\s+)?\{([^}]*)\}(?!\s*from\b)/g;
+
+const rootOf = (name) => name.split(".")[0];
+
+/** 本檔以 import(讀不讀得到都算)或本地宣告佔用的根名稱:這些名稱不可從跨檔常數表取值。 */
+function ownedRoots(text) {
+  const roots = new Set();
+  for (const match of text.matchAll(IMPORT_CLAUSE)) {
+    const clause = match[1].replace(/^type\s+/, "");
+    const braces = /\{([^}]*)\}/.exec(clause);
+    if (braces) {
+      for (const [, local] of bindingsOf(
+        braces[1].replaceAll(/\btype\s+/g, ""),
+      )) {
+        roots.add(local);
+      }
+    }
+    for (const name of clause
+      .replace(/\{[^}]*\}/, "")
+      .split(/[\s,*]+/)
+      .filter((part) => IDENTIFIER.test(part) && part !== "as")) {
+      roots.add(name);
+    }
+  }
+  for (const match of skeletonOf(text).matchAll(CONSTANT_DECLARATION)) {
+    roots.add(match[1]);
+  }
+  return roots;
+}
 const REEXPORT_ALL = /\bexport\s+\*\s+from\s*(["'])([^"']+)\1/g;
 const REEXPORT_LIST =
   /\bexport\s+(type\s+)?\{([^}]*)\}\s*from\s*(["'])([^"']+)\3/g;
@@ -654,18 +693,25 @@ export function createModuleScope({ files, read }) {
     return values;
   };
   const exportCache = new Map();
-  /** 檔案提供的常數:自己宣告的(攤平)、`export * from` 與 `export { a as b } from` 轉出的。 */
+  /**
+   * 檔案匯出的常數(攤平):`export const` 與 `export { a as b }` 的本地常數、`export { a as b } from` 轉出的,
+   * 以及 `export * from` 轉出的。多個 `export *` 給同一個名稱不同值時視為歧義、不轉出(與 TypeScript 一致)。
+   */
   function exportsOf(file) {
     if (exportCache.has(file)) return exportCache.get(file);
     exportCache.set(file, new Map()); // 循環 import:先給空表
     const text = stripComments(read(file) ?? "");
     const values = new Map();
+    const ambiguous = new Set();
     for (const match of text.matchAll(REEXPORT_ALL)) {
       const target = resolveSpecifier(file, match[2]);
-      if (target !== null) {
-        for (const [name, value] of exportsOf(target)) values.set(name, value);
+      if (target === null) continue;
+      for (const [name, value] of exportsOf(target)) {
+        if (values.has(name) && values.get(name) !== value) ambiguous.add(name);
+        values.set(name, value);
       }
     }
+    for (const name of ambiguous) values.delete(name);
     for (const match of text.matchAll(REEXPORT_LIST)) {
       if (match[1]) continue;
       const target = resolveSpecifier(file, match[4]);
@@ -674,18 +720,47 @@ export function createModuleScope({ files, read }) {
         bind(target, imported, local, values);
       }
     }
+    const imported = importedOf(file, text);
     const local = resolveConstants(
       constantExpressions(text),
-      new Map([...importedOf(file, text), ...values]),
+      new Map([...imported, ...values]),
     );
-    for (const [name, value] of local) values.set(name, value);
+    const visible = new Map([...imported, ...local]);
+    const exported = new Map(
+      [...text.matchAll(EXPORTED_CONSTANT)].map((match) => [
+        match[1],
+        match[1],
+      ]),
+    );
+    for (const match of skeletonOf(text).matchAll(LOCAL_EXPORT_LIST)) {
+      if (match[1]) continue;
+      for (const [name, as] of bindingsOf(match[2])) {
+        exported.set(as, name);
+      }
+    }
+    for (const [as, name] of exported) {
+      for (const [key, value] of visible) {
+        if (key === name) values.set(as, value);
+        else if (key.startsWith(`${name}.`)) {
+          values.set(`${as}${key.slice(name.length)}`, value);
+        }
+      }
+    }
     exportCache.set(file, values);
     return values;
   }
-  /** `file` 裡看得到的常數:`fallback`(跨檔常數表)< import 進來的 < 檔案自己宣告的。 */
+  /**
+   * `file` 裡看得到的常數:`fallback`(跨檔常數表)< import 進來的 < 檔案自己宣告的。
+   * 本檔以 import 或宣告佔用的根名稱(與其成員)不從 fallback 取:讀不到的 import、spread 缺的成員照列為無法解析,
+   * 不讓別檔的同名物件補值。
+   */
   const scopeOf = (file, fallback) => {
     const text = stripComments(read(file) ?? "");
-    const known = new Map([...fallback, ...importedOf(file, text)]);
+    const owned = ownedRoots(text);
+    const known = new Map([
+      ...[...fallback].filter(([name]) => !owned.has(rootOf(name))),
+      ...importedOf(file, text),
+    ]);
     return new Map([
       ...known,
       ...resolveConstants(constantExpressions(text), known),
@@ -756,7 +831,11 @@ export function seedKeys(text, constants) {
     const collection = collectionOf(skeleton, stripped, objectOpen, constants);
     const key = resolveKeyExpression(expression, constants);
     if (key === null) {
-      unresolved.push({ collection, expression: oneLine(expression) });
+      unresolved.push({
+        collection,
+        expression: oneLine(expression),
+        line: stripped.slice(0, match.index).split("\n").length,
+      });
       continue;
     }
     declared.push({ collection, key });
@@ -907,9 +986,10 @@ function seedKeyFindings(baseBlobs, headBlobs, scopes) {
     }
   }
   const unresolved = project.flatMap(({ file, unresolved: expressions }) =>
-    expressions.map(({ expression }) => ({
+    expressions.map(({ expression, line }) => ({
       kind: "unresolved",
       expression,
+      line,
       path: file,
     })),
   );
@@ -920,7 +1000,7 @@ function seedKeyFindings(baseBlobs, headBlobs, scopes) {
       byOrder((item) => `${item.key}\0${item.collection}`),
     ),
     unresolved: unresolved.sort(
-      byOrder((item) => `${item.path}\0${item.expression}`),
+      byOrder((item) => `${item.path}\0${String(item.line).padStart(6, "0")}`),
     ),
     baseUnresolved: base.reduce(
       (sum, entry) =>
@@ -947,10 +1027,12 @@ const EXPORT_LIST = /\bexport\s+(?:type\s+)?\{([^}]*)\}/g;
  * 檔案的具名匯出。default 匯出一律不列(`export default function Page`、`export { x as default }`):
  * 頁面元件多半以 default 匯出,名稱與底座撞名不代表重複,列了只會誤報。
  * `export { default as X }` 是具名匯出 X,照列。
+ * `isTest` 時字串內容先挖空:測試裡當夾具的程式碼字串(`"export function x() {}"`)不是匯出。
+ * 一般檔不挖空:字串掃描不認 regex 字面值與 JSX 文字,`/'/`、`Don't` 會把後面的匯出一起挖掉。
  */
-export function exportNames(text) {
-  // 字串內容挖空:測試裡當夾具的程式碼字串(`"export function x() {}"`)不是匯出
-  const stripped = skeletonOf(stripComments(text));
+export function exportNames(text, { isTest = false } = {}) {
+  const withoutComments = stripComments(text);
+  const stripped = isTest ? skeletonOf(withoutComments) : withoutComments;
   const names = new Set();
   for (const match of stripped.matchAll(EXPORT_DECLARATION)) {
     names.add(match[1]);
@@ -1030,14 +1112,18 @@ function nameDuplicates(projectFiles, headBlobs, baseFiles, baseBlobs) {
   for (const file of baseFiles) {
     const stem = stemOf(file);
     if (stem !== "index") byStem.set(stem, [...(byStem.get(stem) ?? []), file]);
-    for (const name of exportNames(baseBlobs.get(file) ?? "")) {
+    for (const name of exportNames(baseBlobs.get(file) ?? "", {
+      isTest: isTestFile(file),
+    })) {
       byExport.set(name, [...(byExport.get(name) ?? []), file]);
     }
   }
   const items = [];
   for (const file of projectFiles) {
     const sameName = sameNameFiles(file, byStem.get(stemOf(file)) ?? []);
-    const sameExports = [...exportNames(headBlobs.get(file) ?? "")]
+    const sameExports = [
+      ...exportNames(headBlobs.get(file) ?? "", { isTest: isTestFile(file) }),
+    ]
       .filter(
         (name) =>
           byExport.has(name) &&
@@ -1248,6 +1334,17 @@ export function projectExportLines(text) {
       }
       const member = jsonMember(text, subpath, range.value, range.end);
       if (member === null) continue;
+      // 只略過整行都屬於這一項的行(prettier 排版一項一行);與別的項目同一行就照掃
+      const lineStart = text.lastIndexOf("\n", member.start) + 1;
+      const lineEnd = text.indexOf("\n", member.end);
+      if (
+        text.slice(lineStart, member.start).trim() !== "" ||
+        !/^\s*,?\s*$/.test(
+          text.slice(member.end + 1, lineEnd === -1 ? text.length : lineEnd),
+        )
+      ) {
+        continue;
+      }
       for (
         let line = lineOf(member.start);
         line <= lineOf(member.end);
@@ -1423,11 +1520,12 @@ const code = (text) =>
   text.includes("`") ? `\`\` ${text} \`\`` : `\`${text}\``;
 const codeList = (files) => files.map(code).join("、");
 
-function section(title, items, render) {
+/** `hasNotes`:本節另附不計入的項目時,沒有計入項目也不寫「無。」(免得看成沒有待辦)。 */
+function section(title, items, render, { hasNotes = false } = {}) {
   return [
     `## ${title}(${String(items.length)})`,
     "",
-    ...(items.length === 0 ? ["無。"] : items.map(render)),
+    ...(items.length > 0 ? items.map(render) : hasNotes ? [] : ["無。"]),
     "",
   ];
 }
@@ -1436,7 +1534,7 @@ function section(title, items, render) {
 const LIMITATIONS = [
   "限制:第 1 節不列專案與混合路徑(混合路徑以 inspect 的 mixed 清單逐段核對)。",
   "第 2 節只認 page-replacements、help project/replacements/ 與專案 forms 的 options / pageOverrides;讀不懂的寫法照列為無法解析。",
-  "第 3 節是靜態掃描:只認字串、常數(含 import 進來的與常數物件的成員)、${常數} 樣板、permissionKey() 與 formModuleDeclaration() 推導的 key,其他寫法在專案端另列為無法解析(不算撞 key、不計入結果)、底座端只計數;測試檔不掃;推導出的 wildcard 與 data_scope_targets 不另比(由模組 key 涵蓋);未被 import 的 revisions 快照不算;讀不出 collection 時只比 key。",
+  "第 3 節是靜態掃描:只認字串、常數(含 import 進來的與常數物件的成員)、${常數} 樣板、permissionKey() 與 formModuleDeclaration() 推導的 key,其他寫法在專案端另列為無法解析(不算撞 key、不計入結果)、底座端只計數;測試檔不掃;推導出的 wildcard 與 data_scope_targets 不另比(由模組 key 涵蓋);未被 import 的 revisions 快照不算;讀不出 collection 時只比 key;讀不到的 import 與 spread 帶進來的成員不猜值。",
   "第 4 節只比專案 project/ 路徑的程式檔(不含成對固定來源與底座在 project/ 路徑帶的檔)與底座 common 程式檔的檔名(不含 index)與具名匯出(不含 default);registration / keys / fixtures 只在對應路徑才算同名,*-error.ts 的 …Error helper 互不算;內容相同但名稱不同的重複抓不到。",
   "第 5 節只比對新增行與詞表(slug、品牌名一定列入;Figma 稽核 projectTerms、專案模組 key、collection 前綴在底座已出現就不列),不分大小寫;生成產物與 package.json 裡 project/ 子路徑的出口不掃;詞表沒有的業務用語抓不到。",
   "第 6 節只核對列出的值行檔(根 package.json、.env.example、CLAUDE.md / AGENTS.md 標題、README 開頭、docker-compose);其他混合檔仍以 inspect 逐段核對。",
@@ -1468,6 +1566,10 @@ function renderReport(report) {
       total === 0
         ? "已去除重複(七節皆為 0)"
         : `尚有 ${String(total)} 項待判讀;逐項說明是真正的專案客製或要回收 / 刪除`
+    }${
+      unresolvedSeedKeys.length === 0
+        ? ""
+        : `;另有 ${String(unresolvedSeedKeys.length)} 個無法解析的 seed key 待判讀(不計入,見第 3 節)`
     }`,
     `- 未歸類路徑(unknown,全樹;與底座不同的另列第 1 節):${String(unknownFiles.length)}${
       unknownFiles.length === 0 ? "" : `:${codeList(unknownFiles)}`
@@ -1489,6 +1591,7 @@ function renderReport(report) {
       sections.seedKeys,
       (item) =>
         `- ${item.collection} ${code(item.key)}:底座 ${codeList(item.base)};專案 ${codeList(item.project)}`,
+      { hasNotes: unresolvedSeedKeys.length > 0 },
     ).toSpliced(
       -1,
       0,
@@ -1499,7 +1602,7 @@ function renderReport(report) {
             "",
             ...unresolvedSeedKeys.map(
               (item) =>
-                `  - 無法解析的 key ${code(item.expression)}(${code(item.path)})`,
+                `  - 無法解析的 key ${code(item.expression)}(${code(item.path)} 第 ${String(item.line)} 行)`,
             ),
           ]
         : []),
