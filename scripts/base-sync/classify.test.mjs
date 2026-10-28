@@ -62,6 +62,19 @@ test("五支固定組裝入口判為 common:專案不改入口,與底座不同�
   }
 });
 
+test("db-migrator 的專案 migration 測試放 src/project/ → project;根目錄的底座 migration 測試是 common", () => {
+  for (const file of [
+    "apps/db-migrator/src/project/transfer-receipts-per-ticket-migration.test.ts",
+    "apps/db-migrator/src/project/form-submission-shared-org-ids-migration.test.ts",
+  ]) {
+    assert.equal(classifyPath(file, "A"), "project", file);
+  }
+  assert.equal(
+    classifyPath("apps/db-migrator/src/form-temporal-migration.test.ts", "M"),
+    "common",
+  );
+});
+
 test("realtime / print-agent 判為 common", () => {
   assert.equal(classifyPath("apps/realtime/src/index.ts", "A"), "common");
   assert.equal(classifyPath("apps/print-agent/src/main.ts", "M"), "common");

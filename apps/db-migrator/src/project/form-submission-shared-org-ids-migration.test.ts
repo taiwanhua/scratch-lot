@@ -4,9 +4,9 @@ import { afterAll, beforeAll, describe, expect, it } from "@jest/globals";
 import { type Db, MongoClient, ObjectId } from "mongodb";
 import { MongoMemoryReplSet } from "mongodb-memory-server";
 
-import { runNode } from "../test/support/update-harness";
+import { runNode } from "../../test/support/update-harness";
 
-const PACKAGE_ROOT = path.resolve(__dirname, "..");
+const PACKAGE_ROOT = path.resolve(__dirname, "..", "..");
 const MIGRATION = path.join(
   PACKAGE_ROOT,
   "migrations",
