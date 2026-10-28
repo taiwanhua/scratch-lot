@@ -76,14 +76,21 @@ const PROJECT = [
   PROJECT_SKILL,
 ];
 
+/**
+ * 聚合底座與專案 API / 文件的生成產物(GQL-05):由來源重產,不直接回收。
+ * 內容全由來源推導,verify 第 5 節改掃來源(共用來源照掃、專案來源本來就在 project/),不掃產物。
+ */
+export const GENERATED_PATHS = [
+  /^apps\/api\/schema\.gql$/,
+  /^packages\/graphql\/src\/generated\//,
+];
+
 const MIXED = [
   /^package\.json$/,
   /^pnpm-lock\.yaml$/,
   /^pnpm-workspace\.yaml$/,
   /^(?:apps|packages)\/[^/]+\/package\.json$/,
-  // 聚合底座與專案 API / 文件的生成產物(GQL-05):由來源重產,不直接回收
-  /^apps\/api\/schema\.gql$/,
-  /^packages\/graphql\/src\/generated\//,
+  ...GENERATED_PATHS,
   // admin / common 語系(專案文案另放 messages/<locale>/project/;這兩份目前仍可能含專案品牌字串)
   /^packages\/i18n\/messages\//,
   /^\.github\//,
