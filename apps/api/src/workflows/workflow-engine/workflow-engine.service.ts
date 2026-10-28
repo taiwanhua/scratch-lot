@@ -18,8 +18,14 @@ import {
   WorkflowVersionsRepository,
 } from "../../database/database.module";
 import { TransactionService, afterCommit } from "../../database/transaction";
-import { WorkflowSubmissionStore } from "../../database/workflow-submission-store";
-import { WorkflowTasksRepository } from "../../database/workflow-tasks.repository";
+import {
+  type SubmissionSnapshotRecord,
+  WorkflowSubmissionStore,
+} from "../../database/workflow-submission-store";
+import {
+  type WorkflowTaskRecord,
+  WorkflowTasksRepository,
+} from "../../database/workflow-tasks.repository";
 import { RealtimePublisher } from "../../realtime/realtime-publisher.service";
 import { systemContext } from "../tenant-directory.service";
 import { definitionOfVersion } from "../workflow-definition-input";
@@ -179,11 +185,55 @@ export class WorkflowEngineService {
       version: instance.workflowVersion,
     });
     if (!version) {
-      throw new Error(
-        `流程版本 ${instance.workflowKey}@${String(instance.workflowVersion)} 不存在`,
-      );
+      throw missingVersionError(instance);
     }
     return definitionOfVersion(version);
+  }
+
+  /**
+   * 一批實例走的流程定義(列表 / 識別用,TX-07):依 `key@version` 去重後一次讀,回以
+   * `definitionKeyOf` 為鍵的對照;不跨請求快取的理由同 `definitionOf`,有一版不存在也同樣拋錯。
+   */
+  async definitionsOf(
+    instances: readonly { workflowKey: string; workflowVersion: number }[],
+  ): Promise<ReadonlyMap<string, WorkflowDefinition>> {
+    const wanted = new Map(
+      instances.map((instance) => [definitionKeyOf(instance), instance]),
+    );
+    if (wanted.size === 0) {
+      return new Map();
+    }
+    const versions = await this.versions.findMany(systemContext(), {
+      $or: [...wanted.values()].map((instance) => ({
+        workflowKey: instance.workflowKey,
+        version: instance.workflowVersion,
+      })),
+    });
+    const definitions = new Map<string, WorkflowDefinition>();
+    for (const version of versions) {
+      const key = `${version.workflowKey}@${String(version.version)}`;
+      if (!definitions.has(key)) {
+        definitions.set(key, definitionOfVersion(version));
+      }
+    }
+    for (const [key, instance] of wanted) {
+      if (!definitions.has(key)) {
+        throw missingVersionError(instance);
+      }
+    }
+    return definitions;
+  }
+
+  /** 一批實例(依 id 一次讀,TX-07);不存在的不在結果裡。 */
+  async findInstances(
+    instanceIds: readonly Types.ObjectId[],
+  ): Promise<InstanceRecord[]> {
+    if (instanceIds.length === 0) {
+      return [];
+    }
+    return this.instances.findMany(systemContext(), {
+      _id: { $in: [...new Set(instanceIds.map(String))] },
+    });
   }
 
   async findInstance(
@@ -240,12 +290,14 @@ export class WorkflowEngineService {
   private async runRounds(
     instanceId: Types.ObjectId,
   ): Promise<InstanceRecord | null> {
+    // 實例走的版本(key@version)建立後不變:同一次推進的各輪共用第一輪讀到的定義(每輪只重讀實例與任務)
+    let definition: WorkflowDefinition | null = null;
     for (let round = 0; round < MAX_ROUNDS; round += 1) {
       const instance = await this.findInstance(instanceId);
       if (instance === null) {
         return null;
       }
-      const definition = await this.definitionOf(instance);
+      definition ??= await this.definitionOf(instance);
       const plan = await this.roundPlanOf(instance, definition, {
         runApproveGuards: true,
       });
@@ -264,14 +316,53 @@ export class WorkflowEngineService {
   }
 
   /**
-   * 這一輪的判斷(不寫入);給「需要推進」的識別用。不跑自動通過的守門(識別可能不在交易內;
-   * 列 5 一定有動作,守門結果不影響「需不需要推進」)。
+   * 一批實例裡「還有動作 = 需要推進」的那些(順序同輸入;阻擋清單的識別,不寫入、不在交易內)。
+   * 定義、任務、提交整批一次讀(TX-07),每筆在記憶體跑判斷表(同 `roundPlanOf` 的第一次判斷):
+   * 列 5 的進關解析(`resolveStepEntry`)本身就是動作,解析後也一定有動作(跳過 / 阻擋 / 建計畫),
+   * 所以不必真的去解析進關結果,也不跑自動通過的守門(守門結果不影響「需不需要推進」)。
    */
-  planOf(
-    instance: InstanceRecord,
-    definition: WorkflowDefinition,
-  ): Promise<AdvancePlan> {
-    return this.roundPlanOf(instance, definition, { runApproveGuards: false });
+  async needingAdvance(
+    instances: readonly InstanceRecord[],
+  ): Promise<InstanceRecord[]> {
+    const definitions = await this.definitionsOf(instances);
+    const tasksOf = new Map<string, WorkflowTaskRecord[]>();
+    const submissionOf = new Map<string, SubmissionSnapshotRecord>();
+    for (const group of groupByTenant(instances)) {
+      const tenantId = group.tenantId;
+      const tasks = await this.tasks.findMany(tenantId, {
+        instanceId: { $in: group.instances.map((instance) => instance._id) },
+      });
+      for (const task of tasks) {
+        const key = String(task.instanceId);
+        tasksOf.set(key, [...(tasksOf.get(key) ?? []), task]);
+      }
+      const submissions = await this.submissions.findMany(tenantId, {
+        _id: { $in: group.instances.map((instance) => instance.submissionId) },
+      });
+      for (const submission of submissions) {
+        submissionOf.set(String(submission._id), submission);
+      }
+    }
+    const now = new Date();
+    return instances.filter((instance) => {
+      const definition = definitions.get(definitionKeyOf(instance));
+      if (definition === undefined) {
+        throw missingVersionError(instance);
+      }
+      // 沒有租戶的實例:同 `roundPlanOf`,不讀任務與提交
+      const plan = advance({
+        definition,
+        instance: toInstanceSnapshot(instance),
+        tasks: (tasksOf.get(String(instance._id)) ?? []).map((task) =>
+          toTaskSnapshot(task),
+        ),
+        submission: toSubmissionSnapshot(
+          submissionOf.get(String(instance.submissionId)) ?? null,
+        ),
+        now,
+      });
+      return plan.actions.length > 0;
+    });
   }
 
   private async roundPlanOf(
@@ -557,6 +648,42 @@ export class WorkflowEngineService {
       },
     });
   }
+}
+
+/** 一版流程定義的鍵(`definitionsOf` 的對照用):`key@version`。 */
+export function definitionKeyOf(instance: {
+  workflowKey: string;
+  workflowVersion: number;
+}): string {
+  return `${instance.workflowKey}@${String(instance.workflowVersion)}`;
+}
+
+function missingVersionError(instance: {
+  workflowKey: string;
+  workflowVersion: number;
+}): Error {
+  return new Error(`流程版本 ${definitionKeyOf(instance)} 不存在`);
+}
+
+/** 依租戶分組(任務、提交、客製流程以租戶為邊界讀);沒有租戶的實例不分組(同 `roundPlanOf` 不讀)。 */
+export function groupByTenant(
+  instances: readonly InstanceRecord[],
+): { tenantId: Types.ObjectId; instances: InstanceRecord[] }[] {
+  const groups = new Map<
+    string,
+    { tenantId: Types.ObjectId; instances: InstanceRecord[] }
+  >();
+  for (const instance of instances) {
+    const tenantId = instance.tenantId;
+    if (tenantId === null) {
+      continue;
+    }
+    const key = String(tenantId);
+    const group = groups.get(key) ?? { tenantId, instances: [] };
+    group.instances.push(instance);
+    groups.set(key, group);
+  }
+  return [...groups.values()];
 }
 
 /** 事後動作的單據資訊:實例抄自提交(修訂號 = 實例的修訂號)。 */
