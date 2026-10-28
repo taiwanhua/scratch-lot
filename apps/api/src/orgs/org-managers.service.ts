@@ -12,6 +12,7 @@ import {
 } from "../database/database.module";
 import type { OperatorContext } from "../database/operator-context";
 import { RelationService } from "../database/relation.service";
+import { TransactionService } from "../database/transaction";
 import type { SetOrgManagersInput } from "./dto/set-org-managers.input";
 import type { Org } from "./models/org.model";
 import type { UserSummary } from "./models/user-summary.model";
@@ -94,6 +95,7 @@ export class OrgManagersService {
     private readonly users: UsersRepository,
     private readonly relations: RelationService,
     private readonly audit: AuditService,
+    private readonly transactions: TransactionService,
   ) {}
 
   /** 組織目前的主管(含停用的,讓管理者看得到、移得掉);依建立順序。 */
@@ -123,53 +125,57 @@ export class OrgManagersService {
     operator: OperatorContext,
     input: SetOrgManagersInput,
   ): Promise<Org> {
-    const org = await this.requireManaged(operator, input.orgId);
-    if (org.ancestors.length === 0) {
-      throw orgValidationError("The root org cannot have managers", ["orgId"]);
-    }
-    const wanted = toObjectIds(input.userIds);
-    const tenantId = tenantTopIdOf(org);
-    const memberIds = await this.tenantMemberIds(tenantId);
-    const members = new Set(memberIds.map(String));
-    const outsiders = wanted.filter((id) => !members.has(String(id)));
-    if (outsiders.length > 0) {
-      throw orgValidationError(
-        `Managers must be users of the same tenant: ${outsiders.join(", ")}`,
-        ["userIds"],
+    return this.transactions.withTransaction(async () => {
+      const org = await this.requireManaged(operator, input.orgId);
+      if (org.ancestors.length === 0) {
+        throw orgValidationError("The root org cannot have managers", [
+          "orgId",
+        ]);
+      }
+      const wanted = toObjectIds(input.userIds);
+      const tenantId = tenantTopIdOf(org);
+      const memberIds = await this.tenantMemberIds(tenantId);
+      const members = new Set(memberIds.map(String));
+      const outsiders = wanted.filter((id) => !members.has(String(id)));
+      if (outsiders.length > 0) {
+        throw orgValidationError(
+          `Managers must be users of the same tenant: ${outsiders.join(", ")}`,
+          ["userIds"],
+        );
+      }
+      const current = await this.managerIdsOf(org._id);
+      const currentKeys = new Set(current.map(String));
+      const wantedKeys = new Set(wanted.map(String));
+      const toAdd = wanted.filter((id) => !currentKeys.has(String(id)));
+      const toRemove = current.filter((id) => !wantedKeys.has(String(id)));
+      if (toAdd.length === 0 && toRemove.length === 0) {
+        return toOrg(org);
+      }
+      await this.relations.unlinkMany(
+        operator,
+        toRemove.map((userId) => ({
+          type: "org_manager" as const,
+          firstId: org._id,
+          secondId: userId,
+        })),
       );
-    }
-    const current = await this.managerIdsOf(org._id);
-    const currentKeys = new Set(current.map(String));
-    const wantedKeys = new Set(wanted.map(String));
-    const toAdd = wanted.filter((id) => !currentKeys.has(String(id)));
-    const toRemove = current.filter((id) => !wantedKeys.has(String(id)));
-    if (toAdd.length === 0 && toRemove.length === 0) {
+      await this.relations.linkMany(
+        operator,
+        toAdd.map((userId) => ({
+          type: "org_manager" as const,
+          firstId: org._id,
+          secondId: userId,
+        })),
+      );
+      await this.audit.record(operator, {
+        action: AUDIT_SET_MANAGERS,
+        targetType: "org",
+        targetId: org._id,
+        before: { managerIds: current.map(String) },
+        after: { managerIds: wanted.map(String) },
+      });
       return toOrg(org);
-    }
-    await this.relations.unlinkMany(
-      operator,
-      toRemove.map((userId) => ({
-        type: "org_manager" as const,
-        firstId: org._id,
-        secondId: userId,
-      })),
-    );
-    await this.relations.linkMany(
-      operator,
-      toAdd.map((userId) => ({
-        type: "org_manager" as const,
-        firstId: org._id,
-        secondId: userId,
-      })),
-    );
-    await this.audit.record(operator, {
-      action: AUDIT_SET_MANAGERS,
-      targetType: "org",
-      targetId: org._id,
-      before: { managerIds: current.map(String) },
-      after: { managerIds: wanted.map(String) },
     });
-    return toOrg(org);
   }
 
   /** 主管候選人:該組織所屬租戶裡**啟用中**的使用者(關鍵字比對姓名 / 帳號,最多 50 位)。 */

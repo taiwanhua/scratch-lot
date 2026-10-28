@@ -89,6 +89,7 @@ export const GameForm = ({ game, access }: GameFormProps) => {
             change={form.change}
             fieldErrors={form.fieldErrors}
             isLocked={isLocked}
+            checksUnitPrice={form.checksUnitPrice}
           />
         </Section>
         <Section

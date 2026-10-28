@@ -32,8 +32,8 @@
       "gameCode": "遊戲代號要 4 碼數字",
       "requiredText": "必填,最多 {max} 個字",
       "maxLength": "最多 {max} 個字",
-      "positiveInteger": "要填大於 0 的整數",
       "integerRange": "要填 {min}–{max} 的整數",
+      "unitPrice": "要填 {step} 的倍數(大於 0 的整數)",
       "order": "要填 0 以上的整數"
     },
     "tabs": {
@@ -960,6 +960,8 @@
         "newInvestigating": "− 新增待查",
         "investigateRecovered": "+ 待查轉回",
         "lostRecovered": "+ 遺失尋回",
+        "pendingAdjust": "± 待標註調整",
+        "pendingAdjustNote": "還沒標的跳號改扣在別家店或待查,或在這家店標了跳號",
         "ending": "= 期末庫存",
         "check": "核對",
         "checkOk": "對得上",

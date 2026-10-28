@@ -185,6 +185,7 @@ describe("營運報表的工作表(Excel 與預覽共用的分段表格)", () =>
         "newInvestigating",
         "investigateRecovered",
         "lostRecovered",
+        "pendingAdjust",
         "ending",
         "check",
       ].map((key) => item(key)),

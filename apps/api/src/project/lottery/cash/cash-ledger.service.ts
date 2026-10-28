@@ -22,6 +22,7 @@ import {
   notFoundError,
   validationError,
 } from "../accounts/accounts-error";
+import { SettlementMarks } from "../settlement/settlement-marks";
 
 export type CashMovementRecord = Persisted<LotteryCashMovementDocument>;
 
@@ -64,14 +65,14 @@ export interface VaultBaseline {
 }
 
 /**
- * 日結(P27)登記的起算點來源;回 null = 這家分店還沒有日結。`before` 給了 = 那個時點以前的起算點
- * (關帳快照的月底小金庫:只看那之前送出的已完成日結)。
+ * 日結(P27)登記的起算點來源:一批分店一次讀(TX-07),回分店 id → 起算點;不在裡面 = 這家分店還沒有日結。
+ * `before` 給了 = 那個時點以前的起算點(關帳快照的月底小金庫:只看那之前送出的已完成日結)。
  */
 export type VaultBaselineProvider = (
   tenantId: Types.ObjectId | null,
-  orgId: Types.ObjectId,
+  orgIds: readonly Types.ObjectId[],
   before?: Date,
-) => Promise<VaultBaseline | null>;
+) => Promise<ReadonlyMap<string, VaultBaseline>>;
 
 let baselineProvider: VaultBaselineProvider | null = null;
 
@@ -104,7 +105,10 @@ const ZERO_BASELINE: VaultBaseline = { amount: 0, since: null };
  */
 @Injectable()
 export class CashLedgerService {
-  constructor(private readonly movements: LotteryCashMovementsRepository) {}
+  constructor(
+    private readonly movements: LotteryCashMovementsRepository,
+    private readonly settlementMarks: SettlementMarks,
+  ) {}
 
   async recordCashMovement(
     session: ClientSession | undefined,
@@ -112,7 +116,7 @@ export class CashLedgerService {
   ): Promise<CashMovementRecord> {
     const active = activeSessionOf(session);
     checkMovement(input);
-    return this.movements.create(
+    const row = await this.movements.create(
       input.operator,
       {
         orgId: input.orgId,
@@ -137,6 +141,18 @@ export class CashLedgerService {
       },
       { session: active },
     );
+    await this.touchSettlement(row, active);
+    return row;
+  }
+
+  /** 掛在單據某一邊的收付(含沖正):單據的結清標記改回待確認(待結清只掃還沒結清的)。 */
+  private async touchSettlement(
+    row: CashMovementRecord,
+    session: ClientSession,
+  ): Promise<void> {
+    if (row.refId !== null && row.settlementSide !== null) {
+      await this.settlementMarks.touch(row.tenantId, row.refId, session);
+    }
   }
 
   /**
@@ -167,8 +183,9 @@ export class CashLedgerService {
     if (reversed) {
       throw alreadyReversed();
     }
+    let reversal: CashMovementRecord;
     try {
-      return await this.movements.create(
+      reversal = await this.movements.create(
         by.operator,
         {
           orgId: original.orgId,
@@ -199,6 +216,8 @@ export class CashLedgerService {
       }
       throw error;
     }
+    await this.touchSettlement(reversal, active);
+    return reversal;
   }
 
   /** 小金庫的起算點(日結登記前一律從 0 起算);`before` 給了 = 那個時點以前的起算點。 */
@@ -207,11 +226,20 @@ export class CashLedgerService {
     orgId: Types.ObjectId,
     before?: Date,
   ): Promise<VaultBaseline> {
-    return (
-      (await baselineProvider?.(tenantId, orgId, before)) ?? {
-        ...ZERO_BASELINE,
-      }
-    );
+    const baselines = await this.vaultBaselines(tenantId, [orgId], before);
+    return baselines.get(String(orgId)) ?? { ...ZERO_BASELINE };
+  }
+
+  /** 一批分店的起算點(一次讀);沒有日結的分店不在裡面(= 從 0 起算)。 */
+  private async vaultBaselines(
+    tenantId: Types.ObjectId | null,
+    orgIds: readonly Types.ObjectId[],
+    before?: Date,
+  ): Promise<ReadonlyMap<string, VaultBaseline>> {
+    if (orgIds.length === 0 || baselineProvider === null) {
+      return new Map();
+    }
+    return baselineProvider(tenantId, orgIds, before);
   }
 
   /**
@@ -224,16 +252,60 @@ export class CashLedgerService {
     orgId: Types.ObjectId,
     before?: Date,
   ): Promise<{ amount: number; baseline: VaultBaseline }> {
-    const baseline = await this.vaultBaseline(tenantId, orgId, before);
-    const occurredAt = {
-      ...(baseline.since === null ? {} : { $gt: baseline.since }),
-      ...(before === undefined ? {} : { $lt: before }),
-    };
-    const sum = await this.sumPlace(operator, "vault", {
-      orgId,
-      ...(Object.keys(occurredAt).length === 0 ? {} : { occurredAt }),
+    const expected = await this.vaultExpectedMany(
+      operator,
+      tenantId,
+      [orgId],
+      before,
+    );
+    return (
+      expected.get(String(orgId)) ?? {
+        amount: 0,
+        baseline: { ...ZERO_BASELINE },
+      }
+    );
+  }
+
+  /**
+   * 一批分店的小金庫應有(分店 id → 應有;關帳快照一次算整個租戶):起算點一次讀、流水一次 aggregate
+   * (各店起算時間不同 → `$or`;TX-07,指令數與店數無關)。
+   */
+  async vaultExpectedMany(
+    operator: OperatorContext,
+    tenantId: Types.ObjectId | null,
+    orgIds: readonly Types.ObjectId[],
+    before?: Date,
+  ): Promise<Map<string, { amount: number; baseline: VaultBaseline }>> {
+    const result = new Map<
+      string,
+      { amount: number; baseline: VaultBaseline }
+    >();
+    if (orgIds.length === 0) {
+      return result;
+    }
+    const baselines = await this.vaultBaselines(tenantId, orgIds, before);
+    const baselineOf = (orgId: Types.ObjectId): VaultBaseline =>
+      baselines.get(String(orgId)) ?? { ...ZERO_BASELINE };
+    const branches = orgIds.map((orgId) => {
+      const { since } = baselineOf(orgId);
+      const occurredAt = {
+        ...(since === null ? {} : { $gt: since }),
+        ...(before === undefined ? {} : { $lt: before }),
+      };
+      return {
+        orgId,
+        ...(Object.keys(occurredAt).length === 0 ? {} : { occurredAt }),
+      };
     });
-    return { amount: baseline.amount + sum, baseline };
+    const sums = await this.sumPlaceByOrg(operator, "vault", { $or: branches });
+    for (const orgId of orgIds) {
+      const baseline = baselineOf(orgId);
+      result.set(String(orgId), {
+        amount: baseline.amount + (sums.get(String(orgId)) ?? 0),
+        baseline,
+      });
+    }
+    return result;
   }
 
   /**
@@ -256,6 +328,34 @@ export class CashLedgerService {
     shiftId: Types.ObjectId,
   ): Promise<number> {
     return this.sumPlace(operator, "drawer", { postCloseOf: shiftId });
+  }
+
+  /** 流水對某個地方(抽屜 / 小金庫)的淨額,依分店分組。 */
+  private async sumPlaceByOrg(
+    operator: OperatorContext,
+    place: CashPlace,
+    match: Record<string, unknown>,
+  ): Promise<Map<string, number>> {
+    const rows = await this.movements.aggregate(operator, [
+      { $match: { $and: [match, { $or: [{ from: place }, { to: place }] }] } },
+      {
+        $group: {
+          _id: "$orgId",
+          into: {
+            $sum: { $cond: [{ $eq: ["$to", place] }, "$amount", 0] },
+          },
+          out: {
+            $sum: { $cond: [{ $eq: ["$from", place] }, "$amount", 0] },
+          },
+        },
+      },
+    ]);
+    return new Map(
+      (rows as { _id: unknown; into?: number; out?: number }[]).map((row) => [
+        String(row._id),
+        (row.into ?? 0) - (row.out ?? 0),
+      ]),
+    );
   }
 
   private async sumPlace(

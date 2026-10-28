@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common";
 import type { Types } from "mongoose";
 
 import { temporalIsoOf } from "@repo/domain/form";
-import { stepOf } from "@repo/domain/workflow";
+import { type WorkflowDefinition, stepOf } from "@repo/domain/workflow";
 
 import { BusinessRelationshipsRepository } from "../../database/business-relationships.repository";
 import {
@@ -27,8 +27,12 @@ import type {
   WorkflowTasksPayload,
 } from "../models/workflow-instance.model";
 import { systemContext } from "../tenant-directory.service";
+import type { InstanceRecord } from "../workflow-engine/instance-writes";
 import { SubmissionReadAccess } from "../workflow-engine/submission-read-access.service";
-import { WorkflowEngineService } from "../workflow-engine/workflow-engine.service";
+import {
+  WorkflowEngineService,
+  definitionKeyOf,
+} from "../workflow-engine/workflow-engine.service";
 import { WorkflowPresenter } from "../workflow-engine/workflow-presenter.service";
 import { WORKFLOW_REASSIGN_PERMISSION } from "../workflow-keys";
 import { workflowNotFoundError } from "../workflows-error";
@@ -152,11 +156,12 @@ export class ApplyCenterService {
         limit: pageSize,
       }),
     ]);
-    const items: ApplicationItem[] = [];
-    for (const record of records) {
-      items.push(await this.applicationOf(record));
-    }
-    return { items, totalCount, page, pageSize };
+    return {
+      items: await this.applicationsOf(records),
+      totalCount,
+      page,
+      pageSize,
+    };
   }
 
   /** 新申請:我有新增資格(`canCreateWithForm`)且可新增、而且本租戶綁了流程的表單,依模組分組。 */
@@ -313,19 +318,53 @@ export class ApplyCenterService {
     return new Set(forms.map((form) => form.key));
   }
 
-  private async applicationOf(
-    record: SubmissionSnapshotRecord,
-  ): Promise<ApplicationItem> {
-    const [form, module, instance] = await Promise.all([
-      this.forms.findOne(systemContext(), { key: record.formKey }),
-      this.modules.findOne(systemContext(), { key: record.moduleKey }),
-      record.currentInstanceId === null
-        ? null
-        : this.engine.findInstance(record.currentInstanceId),
+  /** 一頁提交 → 「我的申請」的列(表單、模組、實例、定義依整頁一次讀,TX-07;順序同輸入)。 */
+  private async applicationsOf(
+    records: readonly SubmissionSnapshotRecord[],
+  ): Promise<ApplicationItem[]> {
+    if (records.length === 0) {
+      return [];
+    }
+    const formKeys = [...new Set(records.map((record) => record.formKey))];
+    const moduleKeys = [...new Set(records.map((record) => record.moduleKey))];
+    const instanceIds = records
+      .map((record) => record.currentInstanceId)
+      .filter((id): id is Types.ObjectId => id !== null);
+    const [forms, modules, instances] = await Promise.all([
+      this.forms.findMany(systemContext(), { key: { $in: formKeys } }),
+      this.modules.findMany(systemContext(), { key: { $in: moduleKeys } }),
+      this.engine.findInstances(instanceIds),
     ]);
-    const definition = instance
-      ? await this.engine.definitionOf(instance)
-      : null;
+    const formOf = new Map(forms.map((form) => [form.key, form]));
+    const moduleOf = new Map(modules.map((module) => [module.key, module]));
+    const instanceOf = new Map(
+      instances.map((instance) => [String(instance._id), instance]),
+    );
+    const definitions = await this.engine.definitionsOf(instances);
+    return records.map((record) => {
+      const form = formOf.get(record.formKey);
+      const module = moduleOf.get(record.moduleKey);
+      const instance =
+        record.currentInstanceId === null
+          ? undefined
+          : instanceOf.get(String(record.currentInstanceId));
+      const definition = instance
+        ? definitions.get(definitionKeyOf(instance))
+        : undefined;
+      return this.applicationOf(record, { form, module, instance, definition });
+    });
+  }
+
+  private applicationOf(
+    record: SubmissionSnapshotRecord,
+    loaded: {
+      form: { name: string } | undefined;
+      module: { name: string } | undefined;
+      instance: InstanceRecord | undefined;
+      definition: WorkflowDefinition | undefined;
+    },
+  ): ApplicationItem {
+    const { form, module, instance, definition } = loaded;
     return {
       id: String(record._id),
       moduleKey: record.moduleKey,

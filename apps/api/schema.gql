@@ -2339,6 +2339,8 @@ type LotteryOperationsInventory {
   newInvestigatingTickets: Int!
   openingCost: Float
   openingTickets: Int!
+  pendingAdjustCost: Float
+  pendingAdjustTickets: Int!
   purchaseBooks: Int!
   purchaseCost: Float
   purchaseTickets: Int!

@@ -9,6 +9,7 @@ import {
   TICKETS_PER_BOOK_MAX,
   TICKETS_PER_BOOK_MIN,
   isGameStatus,
+  isValidUnitPrice,
 } from "@repo/domain/project/lottery-master-data";
 import { isTagPaletteKey } from "@repo/domain/project/tag-palette";
 
@@ -57,12 +58,12 @@ function checkInteger(
     : errors.add(field);
 }
 
-/** 單張金額:正整數(可輸入的下拉,也可自填)。 */
+/** 單張金額:正整數、100 的倍數(可輸入的下拉,也可自填;使用者 10/28 定案)。 */
 export function checkUnitPrice(
   value: number,
   errors: GameFieldErrors,
 ): number | null {
-  return checkInteger(value, 1, Number.MAX_SAFE_INTEGER, "unitPrice", errors);
+  return isValidUnitPrice(value) ? value : errors.add("unitPrice");
 }
 
 export function checkTicketsPerBook(

@@ -764,15 +764,13 @@ export class PurchaseRules {
     const ids = new Map(
       referenced.map((row) => [String(row.requisitionId), row.requisitionId]),
     );
-    for (const requisitionId of ids.values()) {
-      if (keep?.equals(requisitionId) === true) {
-        continue;
-      }
-      await this.requisitions.unmarkRequisitionReferenced(context.session, {
-        tenantId,
-        requisitionId,
-      });
-    }
+    await this.requisitions.unmarkRequisitionsReferenced(
+      context.session,
+      tenantId,
+      [...ids.values()].filter(
+        (requisitionId) => keep?.equals(requisitionId) !== true,
+      ),
+    );
   }
 
   /** 這張單勾的兌獎紀錄回到「店內持有」(撤回 / 退回 / 駁回 / 作廢)。 */

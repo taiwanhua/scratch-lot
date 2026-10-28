@@ -1,7 +1,12 @@
-import { afterAll, beforeAll, describe, expect, it } from "@jest/globals";
+import { afterAll, beforeAll, describe, expect, it, jest } from "@jest/globals";
 import { type Connection, Types } from "mongoose";
 
+import { AuditService } from "../audit/audit.service";
 import { createOrg, createUser } from "../auth/test-support/fixtures";
+import {
+  countDbCommands,
+  expectDbCommandsAtMost,
+} from "../database/test-support/db-commands";
 import { HOOK_TIMEOUT_MS } from "../database/test-support/mongo-connection";
 import { createRole } from "../permission/test-support/fixtures";
 import {
@@ -589,6 +594,134 @@ describe("角色管理:分配使用者(GraphQL 端點 + 真 MongoDB)", () => {
       expect(await holderIdsOf(copyRoleId)).toEqual([]);
     });
 
+    it("指令數與人數無關(TX-06 / TX-07):加入、清單、移除 1 人與 20 人一樣多", async () => {
+      const singleRoleId = await createRole(world.api.app, connection, {
+        name: "批次一人的角色",
+        ownerOrgId: world.deptOne,
+      });
+      const manyRoleId = await createRole(world.api.app, connection, {
+        name: "批次多人的角色",
+        ownerOrgId: world.deptOne,
+      });
+      // 每位都是某個組織的擁有者:擁有者保護的判斷要走完整條路,逐人查才看得出來
+      const members: Types.ObjectId[] = [];
+      for (let index = 0; index < 21; index += 1) {
+        const member = await createMember(world, [world.deptOne], "batch");
+        const owned = await createOrg(connection, {
+          name: nextAccount("批次擁有的組織"),
+          parentId: world.deptOne,
+        });
+        await connection
+          .collection("orgs")
+          .updateOne({ _id: owned }, { $set: { ownerUserId: member } });
+        members.push(member);
+      }
+      const [first, ...rest] = members;
+      if (!first) {
+        throw new Error("沒有建出測試使用者");
+      }
+
+      const grantOne = await countDbCommands(() =>
+        grant(singleRoleId, [first]),
+      );
+      const grantMany = await countDbCommands(() => grant(manyRoleId, rest));
+      expect(grantOne.result.code).toBeUndefined();
+      expect(grantMany.result.code).toBeUndefined();
+      expectDbCommandsAtMost(grantMany, grantOne.total, "加入 20 人");
+
+      const listOne = await countDbCommands(() => listUsers(singleRoleId));
+      const listMany = await countDbCommands(() =>
+        listUsers(manyRoleId, { pageSize: 50 }),
+      );
+      expect(listMany.result.items).toHaveLength(20);
+      expect(listMany.result.items.some((row) => row.ownerProtected)).toBe(
+        false,
+      );
+      expectDbCommandsAtMost(listMany, listOne.total, "清單 20 人");
+
+      const revokeOne = await countDbCommands(() =>
+        revoke(singleRoleId, [first]),
+      );
+      const revokeMany = await countDbCommands(() => revoke(manyRoleId, rest));
+      expect(revokeOne.result.code).toBeUndefined();
+      expect(revokeMany.result.code).toBeUndefined();
+      expectDbCommandsAtMost(revokeMany, revokeOne.total, "移除 20 人");
+      expect(await holderIdsOf(manyRoleId)).toEqual([]);
+    });
+
+    it("清單的擁有者保護走完整條判斷時,指令數也與人數無關(TX-07)", async () => {
+      const tenant = await createOrg(connection, {
+        name: nextAccount("批次保護租戶"),
+        settings: { visibility: "subtree" },
+      });
+      const tenantManager = await createManager(world, {
+        orgIds: [tenant],
+        ownerOrgId: tenant,
+      });
+      /** 一個「租戶管理員副本」:擁有組織是 owner 擁有的組織,owner 持有它(會被標 ownerProtected) */
+      async function protectedCopy(label: string) {
+        const ownedOrgId = await createOrg(connection, {
+          name: nextAccount(label),
+          parentId: tenant,
+        });
+        const ownerId = await createMember(world, [ownedOrgId], "batch-owner");
+        await connection
+          .collection("orgs")
+          .updateOne({ _id: ownedOrgId }, { $set: { ownerUserId: ownerId } });
+        const roleId = await createRole(world.api.app, connection, {
+          name: "租戶管理員",
+          ownerOrgId: ownedOrgId,
+          assignTo: [ownerId],
+        });
+        await connection
+          .collection("roles")
+          .updateOne(
+            { _id: roleId },
+            { $set: { "settings.templateKey": "tenant-admin" } },
+          );
+        return { ownedOrgId, ownerId, roleId };
+      }
+      const single = await protectedCopy("批次保護一人");
+      const many = await protectedCopy("批次保護多人");
+      // 其餘 20 位也各自擁有一個組織:不會因為「沒人是擁有者」提早結束
+      const others: Types.ObjectId[] = [];
+      for (let index = 0; index < 20; index += 1) {
+        const member = await createMember(world, [many.ownedOrgId], "batch");
+        const owned = await createOrg(connection, {
+          name: nextAccount("批次保護其他"),
+          parentId: tenant,
+        });
+        await connection
+          .collection("orgs")
+          .updateOne({ _id: owned }, { $set: { ownerUserId: member } });
+        others.push(member);
+      }
+      await connection.collection("core_relationships").insertMany(
+        others.map((userId) => ({
+          type: "user_role",
+          firstId: userId,
+          secondId: many.roleId,
+          thirdId: null,
+        })),
+      );
+
+      const listOne = await countDbCommands(() =>
+        listUsers(single.roleId, {}, tenantManager.token),
+      );
+      const listMany = await countDbCommands(() =>
+        listUsers(many.roleId, { pageSize: 50 }, tenantManager.token),
+      );
+
+      expect(listOne.result.items[0]?.ownerProtected).toBe(true);
+      expect(listMany.result.items).toHaveLength(21);
+      expect(
+        listMany.result.items
+          .filter((row) => row.ownerProtected)
+          .map((row) => row.id),
+      ).toEqual([String(many.ownerId)]);
+      expectDbCommandsAtMost(listMany, listOne.total, "清單 21 人(含擁有者)");
+    });
+
     it("缺 assign-users 權限 → FORBIDDEN", async () => {
       const viewer = await createManager(world, {
         orgIds: [world.tenantA],
@@ -604,5 +737,30 @@ describe("角色管理:分配使用者(GraphQL 端點 + 真 MongoDB)", () => {
       const { code } = await grant(roleId, [member], viewer.token);
       expect(code).toBe("FORBIDDEN");
     });
+  });
+
+  it("交易(TX-01):稽核寫入失敗 → 加入與移除的授予整個回復", async () => {
+    const roleId = await createRole(world.api.app, connection, {
+      name: "回復用的角色",
+      ownerOrgId: world.deptOne,
+    });
+    const kept = await createMember(world, [world.deptOne]);
+    const added = await createMember(world, [world.deptOne]);
+    await grant(roleId, [kept]);
+
+    const audit = jest
+      .spyOn(world.api.app.get(AuditService), "record")
+      .mockRejectedValue(new Error("模擬稽核寫入失敗"));
+    try {
+      const granted = await grant(roleId, [added]);
+      const revoked = await revoke(roleId, [kept]);
+
+      expect(granted.code).toBeDefined();
+      expect(revoked.code).toBeDefined();
+      expect(audit).toHaveBeenCalledTimes(2);
+    } finally {
+      audit.mockRestore();
+    }
+    expect(await holderIdsOf(roleId)).toEqual([String(kept)]);
   });
 });

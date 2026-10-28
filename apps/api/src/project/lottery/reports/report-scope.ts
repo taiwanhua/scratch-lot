@@ -80,14 +80,30 @@ export class ReportScopes {
   ): Promise<ReportScope> {
     assertReportRange(input, rule);
     const ids = [...new Set(input.orgIds)];
+    const parsed = ids.map((text) => ({
+      text,
+      id: Types.ObjectId.isValid(text) ? new Types.ObjectId(text) : null,
+    }));
+    // 選到的分店一次讀(TX-07);看不到的不讀(照輸入順序回第一個不合格的)
+    const visibleIds = parsed.flatMap(({ id }) =>
+      id !== null && isOrgVisible(operator, id) ? [id] : [],
+    );
+    const found =
+      visibleIds.length === 0
+        ? []
+        : await this.orgs.findMany(
+            operator,
+            { _id: { $in: visibleIds } },
+            { select: "ancestors" },
+          );
+    const orgOf = new Map(found.map((org) => [String(org._id), org]));
     const storeIds: Types.ObjectId[] = [];
     let tenantId: Types.ObjectId | null = null;
-    for (const text of ids) {
-      const id = Types.ObjectId.isValid(text) ? new Types.ObjectId(text) : null;
+    for (const { text, id } of parsed) {
       const org =
         id === null || !isOrgVisible(operator, id)
           ? null
-          : await this.orgs.findById(operator, id, { select: "ancestors" });
+          : (orgOf.get(String(id)) ?? null);
       const orgTenant =
         org === null
           ? null

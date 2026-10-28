@@ -566,11 +566,8 @@ export class UsersService {
       if (userIds.length === 0) {
         return { addedUserIds: [], skippedUserIds: [] };
       }
-      // 交易內依序讀(TX-02)
-      const users: UserRecord[] = [];
-      for (const id of userIds) {
-        users.push(await this.loadManagedUser(operator, id));
-      }
+      // 整批讀(TX-06):使用者、所屬組織、管理範圍各一次,與人數無關
+      const users = await this.loadManagedUsers(operator, userIds);
       const existing = await this.relations.listLinks("org_user", {
         firstIds: [orgId],
         secondIds: users.map((user) => user._id),
@@ -585,15 +582,16 @@ export class UsersService {
           secondId: user._id,
         })),
       );
-      // 稽核逐人一筆(targetId = 被加入的那位使用者),與使用者管理的「加入所屬組織」同形
-      for (const user of toAdd) {
-        await this.audit.record(operator, {
+      // 稽核逐人一筆(targetId = 被加入的那位使用者),與使用者管理的「加入所屬組織」同形;一次寫入(TX-06)
+      await this.audit.recordMany(
+        operator,
+        toAdd.map((user) => ({
           action: "user.add-org",
           targetType: "user",
           targetId: user._id,
           after: { orgIds: [String(orgId)] },
-        });
-      }
+        })),
+      );
       return {
         addedUserIds: toAdd.map((user) => String(user._id)),
         skippedUserIds: users
@@ -1083,6 +1081,55 @@ export class UsersService {
       throw notFoundError(`User ${id} not found`);
     }
     return user;
+  }
+
+  /**
+   * `loadManagedUser` 的整批版(TX-06):使用者一次 `findMany`、所屬組織一次 `listLinks`、
+   * 管理範圍一次 `findMany`,指令數與人數無關。判斷與錯誤和逐一呼叫 `loadManagedUser` 相同:
+   * 依輸入順序,第一位不合格的拋錯(不合法 id → `validationError`;不存在或不在管理範圍 → `notFoundError`)。
+   */
+  private async loadManagedUsers(
+    operator: OperatorContext,
+    ids: readonly string[],
+  ): Promise<UserRecord[]> {
+    // 逐一呼叫時,不合法 id 之前的那幾位會先查庫;只批次讀這一段,錯誤的先後才一致
+    const invalidAt = ids.findIndex((id) => !Types.ObjectId.isValid(id));
+    const valid = invalidAt === -1 ? ids : ids.slice(0, invalidAt);
+    const found =
+      valid.length === 0
+        ? []
+        : await this.users.findMany(operator, {
+            _id: { $in: valid.map((id) => toObjectId(id, "id")) },
+          });
+    const userById = new Map(found.map((user) => [String(user._id), user]));
+    // null = 管理範圍是全部,不必再看所屬組織
+    let managedUserIds: Set<string> | null = null;
+    if (operator.managedOrgIds !== "all" && found.length > 0) {
+      const links = await this.relations.listLinks("org_user", {
+        secondIds: found.map((user) => user._id),
+      });
+      const managed = await this.orgs.findMany(operator, {
+        _id: { $in: uniqueObjectIds(links.map((link) => link.firstId)) },
+      });
+      const managedOrgIds = new Set(managed.map((org) => String(org._id)));
+      managedUserIds = new Set(
+        links
+          .filter((link) => managedOrgIds.has(String(link.firstId)))
+          .map((link) => String(link.secondId)),
+      );
+    }
+    const users: UserRecord[] = [];
+    for (const id of valid) {
+      const user = userById.get(String(new Types.ObjectId(id)));
+      if (!user || (managedUserIds && !managedUserIds.has(String(user._id)))) {
+        throw notFoundError(`User ${id} not found`);
+      }
+      users.push(user);
+    }
+    if (invalidAt !== -1) {
+      toObjectId(ids[invalidAt] ?? "", "id");
+    }
+    return users;
   }
 
   /** 把使用者文件組成 GraphQL 形狀:所屬組織(只列管理範圍內的)+ 角色授予(含「組織外」標記)。 */

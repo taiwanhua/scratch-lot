@@ -23,6 +23,7 @@ import {
 } from "../database/database.module";
 import type { OperatorContext } from "../database/operator-context";
 import { RelationService } from "../database/relation.service";
+import { TransactionService } from "../database/transaction";
 import { parseFormPermissionKey } from "../forms/form-permission-keys";
 import { TENANT_ADMIN_ROLE_KEY } from "../orgs/owner-protection.service";
 import { ForeignFormPermissions } from "../permission/foreign-form-permissions";
@@ -95,6 +96,7 @@ export class RoleMatrixService {
     private readonly scope: RoleScopeService,
     private readonly resolver: PermissionResolver,
     private readonly foreignForms: ForeignFormPermissions,
+    private readonly transactions: TransactionService,
   ) {}
 
   /** 矩陣的讀取:顯示樹 + 這個角色在顯示樹內的綁定。 */
@@ -137,76 +139,81 @@ export class RoleMatrixService {
     operator: OperatorContext,
     input: SaveRoleMatrixInput,
   ): Promise<RoleMatrixPayload> {
-    const role = await this.scope.loadManagedRole(operator, input.roleId);
-    await this.assertNoForeignFieldPermissions(operator, input.permissionKeys);
-    // 種子角色的矩陣唯讀(規則表):內容隨底座版本更新,改了會被下一次 seed 蓋回去
-    if (isSeedRole(role)) {
-      throw forbiddenError(
-        `Role ${input.roleId} is a seed role; its permission matrix is read-only`,
-        "SYSTEM_ROLE",
+    return this.transactions.withTransaction(async () => {
+      const role = await this.scope.loadManagedRole(operator, input.roleId);
+      await this.assertNoForeignFieldPermissions(
+        operator,
+        input.permissionKeys,
       );
-    }
-    const facts = await this.scope.factsOf(operator, role);
-    const view = await this.buildView(operator);
-    const currentRaw = await this.currentGrant(role._id, view);
-    const desired = normalizeGrant(view.fullTree, {
-      moduleKeys: input.moduleKeys,
-      permissionKeys: input.permissionKeys,
-    });
-
-    // 防越權(ADR-0004「操作者只能授出自身有效權限集的子集」);模組勾選同理
-    if (!isSubsetOf(desired, view.holder)) {
-      throw roleError(
-        "ROLE_OUT_OF_REACH",
-        "The submitted matrix is not a subset of the operator's effective modules and permissions",
-      );
-    }
-    // 預設角色的天花板:矩陣上限 = 內建「租戶管理員」模板角色目前的授予
-    // (seed:所有非根組織專屬模組各一筆 `*`)。root 在此範圍內放寬與收窄,
-    // **連 root 也開不出模板沒有的東西** —— 租戶作業 / 模組與權限 / 資料範圍是根組織專屬。
-    const ceiling = await this.ceilingOf(operator, role, view);
-    if (ceiling !== null && !isSubsetOf(desired, ceiling)) {
-      throw roleError(
-        "ROLE_OUT_OF_REACH",
-        "A tenant-admin copy cannot exceed the built-in tenant-admin template's grant",
-        "TEMPLATE_CEILING",
-      );
-    }
-    // 預設角色(租戶副本)對**非根組織**的操作者只能縮不能擴(ADR-0009;root 不受此限):
-    // 平台方本來就該能替租戶開新模組,租戶自己只能收窄
-    if (
-      isShrinkOnly(role, facts) &&
-      !isSubsetOf(desired, normalizeGrant(view.fullTree, currentRaw))
-    ) {
-      throw roleError(
-        "ROLE_OUT_OF_REACH",
-        "A tenant-admin copy can only be narrowed outside the root org; the submitted matrix adds modules or permissions",
-      );
-    }
-
-    const changed = await this.apply(
-      operator,
-      role._id,
-      view,
-      currentRaw,
-      desired,
-    );
-    if (changed) {
-      await this.audit.record(operator, {
-        action: AUDIT_ACTIONS.editMatrix,
-        targetType: AUDIT_TARGET_TYPE,
-        targetId: role._id,
-        before: {
-          moduleKeys: [...currentRaw.moduleKeys],
-          permissionKeys: [...currentRaw.permissionKeys],
-        },
-        after: {
-          moduleKeys: [...desired.moduleKeys],
-          permissionKeys: [...desired.permissionKeys],
-        },
+      // 種子角色的矩陣唯讀(規則表):內容隨底座版本更新,改了會被下一次 seed 蓋回去
+      if (isSeedRole(role)) {
+        throw forbiddenError(
+          `Role ${input.roleId} is a seed role; its permission matrix is read-only`,
+          "SYSTEM_ROLE",
+        );
+      }
+      const facts = await this.scope.factsOf(operator, role);
+      const view = await this.buildView(operator);
+      const currentRaw = await this.currentGrant(role._id, view);
+      const desired = normalizeGrant(view.fullTree, {
+        moduleKeys: input.moduleKeys,
+        permissionKeys: input.permissionKeys,
       });
-    }
-    return this.payload(operator, role, view, facts, ceiling);
+
+      // 防越權(ADR-0004「操作者只能授出自身有效權限集的子集」);模組勾選同理
+      if (!isSubsetOf(desired, view.holder)) {
+        throw roleError(
+          "ROLE_OUT_OF_REACH",
+          "The submitted matrix is not a subset of the operator's effective modules and permissions",
+        );
+      }
+      // 預設角色的天花板:矩陣上限 = 內建「租戶管理員」模板角色目前的授予
+      // (seed:所有非根組織專屬模組各一筆 `*`)。root 在此範圍內放寬與收窄,
+      // **連 root 也開不出模板沒有的東西** —— 租戶作業 / 模組與權限 / 資料範圍是根組織專屬。
+      const ceiling = await this.ceilingOf(operator, role, view);
+      if (ceiling !== null && !isSubsetOf(desired, ceiling)) {
+        throw roleError(
+          "ROLE_OUT_OF_REACH",
+          "A tenant-admin copy cannot exceed the built-in tenant-admin template's grant",
+          "TEMPLATE_CEILING",
+        );
+      }
+      // 預設角色(租戶副本)對**非根組織**的操作者只能縮不能擴(ADR-0009;root 不受此限):
+      // 平台方本來就該能替租戶開新模組,租戶自己只能收窄
+      if (
+        isShrinkOnly(role, facts) &&
+        !isSubsetOf(desired, normalizeGrant(view.fullTree, currentRaw))
+      ) {
+        throw roleError(
+          "ROLE_OUT_OF_REACH",
+          "A tenant-admin copy can only be narrowed outside the root org; the submitted matrix adds modules or permissions",
+        );
+      }
+
+      const changed = await this.apply(
+        operator,
+        role._id,
+        view,
+        currentRaw,
+        desired,
+      );
+      if (changed) {
+        await this.audit.record(operator, {
+          action: AUDIT_ACTIONS.editMatrix,
+          targetType: AUDIT_TARGET_TYPE,
+          targetId: role._id,
+          before: {
+            moduleKeys: [...currentRaw.moduleKeys],
+            permissionKeys: [...currentRaw.permissionKeys],
+          },
+          after: {
+            moduleKeys: [...desired.moduleKeys],
+            permissionKeys: [...desired.permissionKeys],
+          },
+        });
+      }
+      return this.payload(operator, role, view, facts, ceiling);
+    });
   }
 
   // ---- 內部 ----

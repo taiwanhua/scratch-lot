@@ -111,6 +111,21 @@
 
 **Nest 模組依賴方向 `users → orgs` 單向鎖死**:`UsersModule` import `OrgsModule`(擁有者保護、組織樹、管理範圍住 `orgs/`),**`OrgsModule` 不可以反過來 import `UsersModule`**,否則就是循環依賴。任何「組織這邊要用到使用者那邊的寫入」一律開一個**薄模組**掛在 `AppModule` 上,由它同時 import 兩邊(先例 `OrgMembersModule`,`apps/api/src/orgs/org-members.module.ts`)—— 不要為了省一個檔案把邊反過來接。判斷依據是**規則住在哪裡**。
 
+**交易**(ADR-0013、TX-01):每個寫入動作是**一個交易** —— 讀取驗證與寫入(含稽核)都在 `TransactionService.withTransaction` 內,任一步失敗整個動作回復,不留半套組織、關聯或稽核:
+
+| 動作                                                   | 交易內                                                                                              |
+| ------------------------------------------------------ | --------------------------------------------------------------------------------------------------- |
+| 新增子組織(`createChildOrg`)                           | 建組織 → `org.create-child`                                                                         |
+| 編輯(`updateOrg`)                                      | 欄位更新(短碼被搶先佔用 → `VALIDATION_FAILED`)→ `org.edit`                                          |
+| 停用 / 啟用(`setOrgEnabled`)                           | 自己 → 停用時連動整棵子樹 → `org.toggle-enabled`                                                    |
+| 搬移(`moveOrg`)                                        | 自己的上層與 `ancestors` → 子樹 `ancestors` 重算(一次 `bulkUpdateByIds`,與子樹大小無關)→ `org.move` |
+| 刪除(`deleteOrg`)                                      | 前置檢查 → 軟刪除 → 移除主管關聯 → `org.delete`                                                     |
+| 可見範圍 / 時區(`setOrgVisibility` / `setOrgTimezone`) | 設定 → `org.set-visibility` / `org.set-timezone`                                                    |
+| 主管(`setOrgManagers`)                                 | 解除 → 新增主管關聯 → `org.set-managers`                                                            |
+| 加入成員(`addOrgMembers`)                              | 見 `docs/modules/user-manager.md`「交易」的 `addOrgs`                                               |
+
+搬移時子樹有一筆沒寫到(同時被別人改掉)→ `CONFLICT`,整個搬移回復,不留斷掉的路徑。交易外只有:回傳形狀的組裝,以及**換商標後刪舊物件**(`afterCommit`,提交後才刪;交易回復時舊圖不會先被刪掉)。開通與撤銷開通見上方「開通租戶」。
+
 正本:`apps/api/src/orgs/orgs.service.ts`、`apps/api/src/orgs/tenant-ops.service.ts`、`apps/api/src/orgs/owner-protection.service.ts`、`apps/api/src/orgs/org-members.service.ts`、`apps/api/src/users/users.service.ts`、`apps/db-migrator/seeds/base/role-bindings.ts`
 
 ## api 介面

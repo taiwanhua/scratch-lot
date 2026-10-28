@@ -29,7 +29,7 @@ export const NEEDS_ADVANCE_CANDIDATE_LIMIT = 200;
  * 阻擋清單(流程管理 → 阻擋;「需要推進」的識別):以操作者的租戶為邊界。
  *
  * - `blocked`:實例 `status = blocked`
- * - `needsAdvance`:對候選實例跑一次判斷表(**不寫入**,`WorkflowEngineService.planOf`),還有動作 = 需要推進
+ * - `needsAdvance`:對候選實例跑一次判斷表(**不寫入**,`WorkflowEngineService.needingAdvance`),還有動作 = 需要推進
  *   ——直接對應判斷表的列 2 / 4 / 4b / 4c / 5 / 5b / 6 / 7 / 8(含 8b 與資料矛盾的 `invalid`)。
  *   候選 = 進行中的實例 + 終局未收尾(`finishedAt` 空)+ 任務仍待處理 / 阻擋的終局實例
  */
@@ -74,19 +74,16 @@ export class BlockedInstancesService {
       canManage: true,
       titleOnly: true,
     };
-    const items = [];
-    for (const instance of matched.slice(
-      (page - 1) * pageSize,
-      page * pageSize,
-    )) {
-      items.push(await this.presenter.instanceModel(instance, viewer));
-    }
+    const items = await this.presenter.instanceModels(
+      matched.slice((page - 1) * pageSize, page * pageSize),
+      viewer,
+    );
     return { items, totalCount: matched.length, page, pageSize, truncated };
   }
 
   /**
    * 先以狀態預篩候選(進行中 / 終局未收尾 / 任務仍待處理或阻擋),依最久沒動的排序、
-   * 取上限筆數,再逐筆 dry-run 判斷表。候選超過上限 → `truncated: true`。
+   * 取上限筆數,再整批 dry-run 判斷表(定義、任務、提交整批一次讀,TX-07)。候選超過上限 → `truncated: true`。
    */
   private async needingAdvance(
     tenantId: Types.ObjectId,
@@ -114,14 +111,11 @@ export class BlockedInstancesService {
       },
     );
     const truncated = candidates.length > NEEDS_ADVANCE_CANDIDATE_LIMIT;
-    const result: InstanceRecord[] = [];
-    for (const instance of candidates.slice(0, NEEDS_ADVANCE_CANDIDATE_LIMIT)) {
-      const definition = await this.engine.definitionOf(instance);
-      const plan = await this.engine.planOf(instance, definition);
-      if (plan.actions.length > 0) {
-        result.push(instance);
-      }
-    }
-    return { matched: result, truncated };
+    return {
+      matched: await this.engine.needingAdvance(
+        candidates.slice(0, NEEDS_ADVANCE_CANDIDATE_LIMIT),
+      ),
+      truncated,
+    };
   }
 }

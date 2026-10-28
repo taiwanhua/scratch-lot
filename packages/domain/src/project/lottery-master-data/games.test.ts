@@ -1,7 +1,7 @@
 import { describe, expect, it } from "@jest/globals";
 
 import { localDateText, parseLocalDate } from "../../form/temporal";
-import { gameDatesOf } from "./games";
+import { gameDatesOf, isValidUnitPrice } from "./games";
 
 const datesOf = (claimDeadline: string) => {
   const date = parseLocalDate(claimDeadline);
@@ -26,5 +26,19 @@ describe("上市日 / 停售日由兌獎截止日推算(規格 5.1)", () => {
     ["2028-11-30", "2028-02-29", "2028-08-30"],
   ])("兌獎截止 %s → 上市 %s、停售 %s", (deadline, launched, discontinued) => {
     expect(datesOf(deadline)).toEqual([launched, discontinued]);
+  });
+});
+
+describe("單張金額一定是 100 的倍數(使用者 10/28 定案)", () => {
+  it.each([
+    [100, true],
+    [400, true],
+    [2000, true],
+    [0, false],
+    [-100, false],
+    [150, false],
+    [99.5, false],
+  ])("%d → %s", (unitPrice, valid) => {
+    expect(isValidUnitPrice(unitPrice)).toBe(valid);
   });
 });

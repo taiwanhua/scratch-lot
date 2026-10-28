@@ -106,6 +106,13 @@ export interface SettlementDocumentRegistration {
     asOf?: Date,
   ) => SettlementPayable | null | Promise<SettlementPayable | null>;
   /**
+   * 一批的應付(選填;順序同 `items`,同一張可以在不同時點各算一次):`payable` 要讀資料庫的登記給這一支,
+   * 一批一次讀(待結清、列表、報表一次算很多張、很多個期末;TX-07)。沒給 = 逐張呼叫 `payable`(不讀資料庫的才可以不給)。
+   */
+  payables?: (
+    items: readonly { submission: SettlementSubmission; asOf?: Date }[],
+  ) => Promise<readonly (SettlementPayable | null)[]>;
+  /**
    * **兩邊店的單據**:單據存值裡各邊分店的組織欄位路徑(例 `values.to_branch.id`,存組織 id 字串;調貨單的出貨店、
    * 收貨店)。有宣告 = 每一邊只能由「這一邊的分店在可見範圍內」的人操作;沒宣告 = 單據本身要在可見範圍內才能操作。
    * **讀取不靠它**:兩邊店看得到單據是受管表單的「依欄位共用」(`sharedByFieldKeys` → `sharedOrgIds`,ADR-0014),

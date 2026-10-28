@@ -68,10 +68,10 @@ export class StoreSalesSupport {
   /** 這家店啟用中的收銀點(依 id)。 */
   async cashPointsOf(
     operator: OperatorContext,
-    orgId: Types.ObjectId,
+    orgId: Types.ObjectId | readonly Types.ObjectId[],
   ): Promise<Map<string, CashPointRecord>> {
     const points = await this.cashPoints.findMany(operator, {
-      orgId,
+      orgId: isOrgList(orgId) ? { $in: [...orgId] } : orgId,
       enabled: true,
     });
     return new Map(points.map((point) => [String(point._id), point]));
@@ -143,4 +143,10 @@ export class StoreSalesSupport {
   publish(store: StoreRef): Promise<void> {
     return publishStoreBoard(this.realtime, store.tenantId, store.orgId);
   }
+}
+
+function isOrgList(
+  value: Types.ObjectId | readonly Types.ObjectId[],
+): value is readonly Types.ObjectId[] {
+  return Array.isArray(value);
 }
