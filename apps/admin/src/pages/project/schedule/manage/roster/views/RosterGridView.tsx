@@ -15,7 +15,6 @@ import { Stack } from "@repo/ui/stack";
 import { Tag } from "@repo/ui/tag";
 import { Typography } from "@repo/ui/typography";
 
-import { TagPaletteChip } from "@/components/project/TagPaletteChip/TagPaletteChip";
 import { tagPaletteBackgroundVarsSx } from "@/components/project/TagPaletteChip/tag-palette-background";
 import {
   calendarMarkBackground,
@@ -149,7 +148,8 @@ export const RosterGridView = () => {
           direction="row"
           sx={{ alignItems: "flex-start", justifyContent: "space-between" }}
         >
-          <Box>
+          {/* 店休 / 特殊日名稱各占一行、可換行,不擠到 [⋯](特殊日的顏色由整欄底色表示) */}
+          <Box sx={{ minWidth: 0, overflowWrap: "anywhere" }}>
             <Typography variant="caption" sx={{ fontWeight: 600 }}>
               {t("dateHeader", {
                 date: monthDayOf(date, timezone),
@@ -165,11 +165,10 @@ export const RosterGridView = () => {
                 {t("cell.closed")}
               </Typography>
             )}
-            {mark.kind === "special" && (
-              <TagPaletteChip
-                paletteKey={mark.paletteKey}
-                label={mark.name ?? ""}
-              />
+            {mark.kind === "special" && mark.name !== null && (
+              <Typography variant="caption" component="div">
+                {mark.name}
+              </Typography>
             )}
           </Box>
           {canEdit && !closed && (

@@ -40,6 +40,10 @@ describe("排班表:特殊日整欄 / 整格底色", () => {
     });
     const header = tableCellOf(screen.getAllByText("店慶")[0] ?? null);
     expect(header.tagName).toBe("TH");
+    // 名稱比照「店休」單獨一行文字(不是標籤),不擠到 [⋯]
+    expect(
+      screen.getAllByText("店慶")[0]?.closest("[data-palette]"),
+    ).toBeNull();
     expect(header).toHaveStyle({
       backgroundColor: "var(--tag-palette-bg-cyan)",
     });
