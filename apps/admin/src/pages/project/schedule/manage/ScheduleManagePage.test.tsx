@@ -1,6 +1,8 @@
 import { describe, expect, it } from "@jest/globals";
 import { screen, waitFor, within } from "@testing-library/react";
 
+import { tagPaletteColorOf } from "@/lib/project/tag-palettes";
+
 import { renderSchedulePage, typeDate } from "../schedule-test-support";
 
 const CALENDAR = "/schedule/manage?tab=calendar&month=2026-11";
@@ -13,6 +15,26 @@ describe("排班作業:行事曆", () => {
     renderSchedulePage({ path: CALENDAR });
     expect(await screen.findByText("店休 · 盤點日")).toBeInTheDocument();
     expect(screen.getByText("特殊日 · 店慶")).toBeInTheDocument();
+  });
+
+  it("店休整格店休灰(格子仍可點)、特殊日整格鋪色票底色(底座淡化);標籤保留", async () => {
+    const { user } = renderSchedulePage({ path: CALENDAR });
+    const closedTag = await screen.findByText("店休 · 盤點日");
+    const closed = closedTag.closest<HTMLElement>("[data-date]");
+    expect(closed).toHaveAttribute("data-date", "2026-11-03");
+    expect(closed?.querySelector("[data-closed-layer]")).not.toBeNull();
+    expect(closed).not.toHaveAttribute("data-background");
+    const special = screen
+      .getByText("特殊日 · 店慶")
+      .closest<HTMLElement>("[data-date]");
+    expect(special).toHaveAttribute("data-date", "2026-11-11");
+    expect(special).toHaveAttribute(
+      "data-background",
+      tagPaletteColorOf("cyan"),
+    );
+    expect(special?.querySelector("[data-closed-layer]")).toBeNull();
+    await user.click(closedTag);
+    expect(await screen.findByRole("dialog")).toBeInTheDocument();
   });
 
   it("點上層設的那天:唯讀說明,沒有 [儲存]", async () => {

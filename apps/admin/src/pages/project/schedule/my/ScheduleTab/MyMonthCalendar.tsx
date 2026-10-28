@@ -12,8 +12,8 @@ import {
 import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
 
+import { CalendarClosedLayer } from "@/components/project/schedule/CalendarMark/CalendarClosedLayer";
 import {
-  calendarMarkBackground,
   calendarMarkMonthBackground,
   calendarMarkOf,
 } from "@/components/project/schedule/CalendarMark/calendar-mark";
@@ -161,18 +161,7 @@ export const MyMonthCalendar = ({
       content: (
         <>
           {/* 店休:整格店休灰(同排班表的店休;底座 `disabled` 會讓格子不能點,這裡要可點看當天,所以鋪在內容底層) */}
-          {closedDates.has(date) && (
-            <Box
-              aria-hidden
-              data-closed-layer
-              sx={{
-                position: "absolute",
-                inset: 0,
-                pointerEvents: "none",
-                bgcolor: calendarMarkBackground({ kind: "closed" }),
-              }}
-            />
-          )}
+          {closedDates.has(date) && <CalendarClosedLayer />}
           {/* 整天畫休:整格灰色斜線底(同我的畫休月曆、圖例「畫休(斜線)」);日期、角標、店休 / 特殊日名稱由底座疊在上面 */}
           {dayOffs.has(date) && (
             <Box aria-hidden data-day-off-hatch sx={dayOffHatchSx} />
