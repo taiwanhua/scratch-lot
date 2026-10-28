@@ -13,6 +13,19 @@ export const GAME_CODE_PATTERN = /^\d{4}$/;
 /** 遊戲名稱長度上限。 */
 export const GAME_NAME_MAX_LENGTH = 30;
 
+/**
+ * 單張金額一定是這個數的倍數(使用者 10/28 定案):批購金額率是整數 %,所以單張成本(單張金額 × 批購金額率)
+ * 一定是整數元,點收、調貨的成本不會有零頭。
+ */
+export const UNIT_PRICE_STEP = 100;
+
+/** 單張金額:正整數、而且是 `UNIT_PRICE_STEP` 的倍數(api 驗證與 admin 表單共用)。 */
+export function isValidUnitPrice(value: number): boolean {
+  return (
+    Number.isSafeInteger(value) && value > 0 && value % UNIT_PRICE_STEP === 0
+  );
+}
+
 /** 整本張數的範圍(含兩端)。 */
 export const TICKETS_PER_BOOK_MIN = 1;
 export const TICKETS_PER_BOOK_MAX = 999;

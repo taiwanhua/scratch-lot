@@ -53,6 +53,8 @@ export const PROJECT_TENANT_BOUNDARY_CONTEXT_CALLERS: Readonly<
   "project/lottery/tickets/book-game-usage.ts": ["系統重算"],
   // 庫存管理:看得到本就看得到它全部的張與事件(格子、時間軸、各分店持有)
   "project/lottery/inventory/inventory-view.service.ts": ["反查"],
+  // 庫存概況:待標註扣在哪家店要看整本跨店的未售張數(只回扣的張數)
+  "project/lottery/inventory/inventory-stock.service.ts": ["反查"],
   // 庫存管理:分店與使用者名稱、組織樹(分店可能不在讀者的可見範圍)
   "project/lottery/inventory/inventory-names.ts": ["反查"],
   // 尋回、報廢、更正跳號:先以租戶邊界讀張(刷到的張可能還在別的分店;選到別店的張要回

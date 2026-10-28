@@ -15,6 +15,11 @@ import {
 } from "../../database/lottery-inventory/lottery-inventory.repository";
 import type { LotteryOperationsInventoryModel } from "./models/operations-report.model";
 import { type BookPendings, loadBookPendings } from "./report-pending";
+import {
+  type AttributedFlow,
+  type PendingFlow,
+  pendingAdjustmentOf,
+} from "./report-pending-adjustment";
 import { type PendingStores, loadPendingStores } from "./report-pending-store";
 import type { StorePeriod } from "./report-periods";
 import {
@@ -115,9 +120,10 @@ function flowFiguresOf(
   pendingStores: PendingStores | null,
   orgId: Types.ObjectId,
   direction: 1 | -1,
-): StockFigures {
+): PendingFlow {
   let tickets = 0;
   let cost = 0;
+  const deducted = { tickets: 0, cost: 0 };
   for (const group of groups) {
     const size = group.costs.length;
     if (size === 0) {
@@ -131,8 +137,10 @@ function flowFiguresOf(
         : pendings.adjustmentOf(group.bookId, group.at, size);
     tickets += size - pending;
     cost += total - (pending * total) / size;
+    deducted.tickets += pending;
+    deducted.cost += (pending * total) / size;
   }
-  return { tickets, cost };
+  return { tickets, cost, pending: deducted };
 }
 
 const minus = (left: StockFigures, right: StockFigures): StockFigures => ({
@@ -140,16 +148,23 @@ const minus = (left: StockFigures, right: StockFigures): StockFigures => ({
   cost: left.cost - right.cost,
 });
 
+/** 進(+1)/ 出(−1)的一列,帶它已扣的待標註(待標註調整用)。 */
+const flowOf = (direction: 1 | -1, flow: PendingFlow): AttributedFlow => ({
+  direction,
+  flow,
+});
+
 /**
  * 營運報表區塊 4 庫存異動(規格 11.2;正本 `docs/modules/project/reports.md`「營運報表」):由上往下加減,
  * 最後一列核對要是 0。
  *
- * `期初 + 進貨 + 調入 − 調出 − 淨銷售 − 報廢 − 新增待查 + 待查轉回 + 遺失尋回 = 期末`
+ * `期初 + 進貨 + 調入 − 調出 − 淨銷售 − 報廢 − 新增待查 + 待查轉回 + 遺失尋回 ± 待標註調整 = 期末`
  *
  * - 每一列只算「進出這家店庫存(未售、在庫存或檯面)」的那一步:新增待查 = 庫存 → 待查;待查轉回 / 遺失尋回 =
  *   待查 / 遺失 → 這家店的庫存;確認遺失(待查 → 遺失)、跳號、期末在途、期末待查另列,不在加減裡
  * - 成本一律用事件的成本快照(那一刻的單張成本),期初 / 期末用那一刻的單張成本(`ReportStock`)
  * - 待標註的跳號(拆本前)不算張數與成本(使用者 10/27 定案甲);作廢的本從作廢那一刻起不算庫存
+ * - 待標註改扣在別家店 / 待查那一組、或這家店標跳號:「待標註調整」(`report-pending-adjustment.ts`)
  */
 @Injectable()
 export class OperationsInventory {
@@ -192,6 +207,8 @@ export class OperationsInventory {
         ...openingHeld.map((ticket) => ticket.bookId),
         ...endingHeld.map((ticket) => ticket.bookId),
         ...events.map((event) => event.bookId),
+        ...inbound.map((row) => row.bookId),
+        ...outbound.map((row) => row.bookId),
       ],
       from,
       to,
@@ -214,11 +231,10 @@ export class OperationsInventory {
     const purchasedEvents = ofType(TICKET_EVENT_TYPE.purchase, onHandAfter);
     // 進貨作廢:張的狀態不變、本改已撤銷 → 作廢那一刻起不算庫存(只算作廢時還在這家店庫存的張)
     const voidedEvents = ofType(TICKET_EVENT_TYPE.purchaseVoid, onHandBefore);
-    const purchase = minus(
-      figures(purchasedEvents),
-      // 作廢不改張的狀態(本改已撤銷),照整本規則
-      figures(voidedEvents, -1, null),
-    );
+    const purchased = figures(purchasedEvents);
+    // 作廢不改張的狀態(本改已撤銷),照整本規則
+    const voided = figures(voidedEvents, -1, null);
+    const purchase = minus(purchased, voided);
     const booksOf = (list: readonly InventoryEvent[]) =>
       new Set(list.map((event) => String(event.bookId))).size;
     const voidBooks = booksOf(voidedEvents);
@@ -230,23 +246,29 @@ export class OperationsInventory {
           row.receivedAt,
           row.tickets,
         );
+        // 調貨金額是單上的張數(已不含待標註);扣掉的待標註成本 = 待標註 × 這一筆的單張成本
+        const unit =
+          row.tickets - pending > 0 ? row.amount / (row.tickets - pending) : 0;
         return {
           tickets: sum.tickets + row.sign * (row.tickets - pending),
           amount: sum.amount + row.sign * row.amount,
+          pending: {
+            tickets: sum.pending.tickets + row.sign * pending,
+            cost: sum.pending.cost + row.sign * pending * unit,
+          },
         };
       },
-      { tickets: 0, amount: 0 },
+      { tickets: 0, amount: 0, pending: { tickets: 0, cost: 0 } },
     );
-    const outCost = minus(
-      figuresOf(
-        outboundGroupsOf(outbound, 1, (row) => row.cost),
-        pendings,
-      ),
-      figuresOf(
-        outboundGroupsOf(outbound, -1, (row) => row.cost),
-        pendings,
-      ),
+    const shippedCost = figuresOf(
+      outboundGroupsOf(outbound, 1, (row) => row.cost),
+      pendings,
     );
+    const returnedCost = figuresOf(
+      outboundGroupsOf(outbound, -1, (row) => row.cost),
+      pendings,
+    );
+    const outCost = minus(shippedCost, returnedCost);
     const outAmount = minus(
       figuresOf(
         outboundGroupsOf(outbound, 1, (row) => row.amount),
@@ -258,7 +280,11 @@ export class OperationsInventory {
       ),
     );
 
-    const scrap = figures(ofType(TICKET_EVENT_TYPE.scrap, onHandBefore), -1);
+    const scrapFlow = figures(
+      ofType(TICKET_EVENT_TYPE.scrap, onHandBefore),
+      -1,
+    );
+    const scrap = { tickets: scrapFlow.tickets, cost: scrapFlow.cost };
     // 新增待查:庫存 → 待查,加上在途中被刪掉變待查的(那幾張的調出在同一天反向算回)
     const lostInTransit = figuresOf(
       outboundGroupsOf(
@@ -285,6 +311,33 @@ export class OperationsInventory {
     const lostRecovered = figures(
       recovered.filter((event) => event.from?.status === TICKET_STATUS.lost),
     );
+    // 待標註調整:扣的位置換了(別家店點收 / 售出、標跳號、待查)或這家店標跳號,沒有對應的進出列
+    const pendingAdjust = pendingAdjustmentOf({
+      orgId,
+      openingPending: opening.onHandPending,
+      endingPending: ending.onHandPending,
+      flows: [
+        flowOf(1, purchased),
+        flowOf(-1, voided),
+        flowOf(1, {
+          tickets: transferIn.tickets,
+          cost: transferIn.amount,
+          pending: transferIn.pending,
+        }),
+        flowOf(-1, shippedCost),
+        flowOf(1, returnedCost),
+        flowOf(-1, scrapFlow),
+        flowOf(-1, onHandInvestigating),
+        flowOf(-1, lostInTransit),
+        flowOf(1, investigateRecovered),
+        flowOf(1, lostRecovered),
+      ],
+      skips: events.filter(
+        (event) =>
+          event.type === TICKET_EVENT_TYPE.skip ||
+          event.type === TICKET_EVENT_TYPE.unskip,
+      ),
+    });
     // 確認遺失:還沒標的跳號在還沒確認實體的那一組,這本最後一次確認遺失、而且期末已沒有待查時才扣(一本只扣一次)
     const lost = lostFiguresOf(
       groupsOf(ofType(TICKET_EVENT_TYPE.lose, () => true)),
@@ -302,7 +355,8 @@ export class OperationsInventory {
         scrap.tickets -
         newInvestigating.tickets +
         investigateRecovered.tickets +
-        lostRecovered.tickets,
+        lostRecovered.tickets +
+        pendingAdjust.tickets,
       cost:
         opening.onHand.cost +
         purchase.cost +
@@ -312,7 +366,8 @@ export class OperationsInventory {
         scrap.cost -
         newInvestigating.cost +
         investigateRecovered.cost +
-        lostRecovered.cost,
+        lostRecovered.cost +
+        pendingAdjust.cost,
     };
     const inTransitAmount = await this.stock.inTransitAmountOf(
       reader,
@@ -342,6 +397,8 @@ export class OperationsInventory {
       investigateRecoveredCost: investigateRecovered.cost,
       lostRecoveredTickets: lostRecovered.tickets,
       lostRecoveredCost: lostRecovered.cost,
+      pendingAdjustTickets: pendingAdjust.tickets,
+      pendingAdjustCost: pendingAdjust.cost,
       endingTickets: ending.onHand.tickets,
       endingCost: ending.onHand.cost,
       checkTickets: expectedEnding.tickets - ending.onHand.tickets,

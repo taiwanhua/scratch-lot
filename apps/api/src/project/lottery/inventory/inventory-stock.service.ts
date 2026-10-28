@@ -1,25 +1,28 @@
 import { Injectable } from "@nestjs/common";
-import type { Types } from "mongoose";
+import { Types } from "mongoose";
 
 import {
+  type BookTicketCounts,
   INVENTORY_PERMISSIONS,
   TICKET_LOCATION_KIND,
   TICKET_STATUS,
+  holdingsWithoutPendingSkips,
   isSealedInStore,
-  pendingPlacementOf,
-  pendingStoreOf,
 } from "@repo/domain/project/lottery";
 
+import { OrgsRepository } from "../../../database/database.module";
 import {
   type OperatorContext,
   isOrgVisible,
 } from "../../../database/operator-context";
+import { tenantBoundaryContext } from "../../../database/tenant-boundary-context";
 import { LotteryGamesRepository } from "../../database/lottery-games/lottery-games.repository";
 import {
   LotteryBooksRepository,
   LotteryTicketsRepository,
 } from "../../database/lottery-inventory/lottery-inventory.repository";
 import { parseId } from "../accounts/accounts-util";
+import { tenantOfOperator } from "../master-data-tenant";
 import { LotteryAllocationsService } from "../tickets/allocations.service";
 import { countsOfBook, pendingSkipCountOfBook } from "../tickets/books.service";
 import { notFoundError, validationError } from "../tickets/inventory-error";
@@ -58,9 +61,13 @@ interface BookStock {
 interface BookFacts {
   /** 整本原封不動時的庫存張數(整本都在一家店才算那家店未拆);不是 → -1。 */
   sealedStock: number;
-  /** 待標註算在未售時的張數(其他 = 0;一本只扣一次)。 */
-  unsoldPending: number;
+  /** 本上的各狀態張數與待標註張數(扣在哪家店用 `holdingsWithoutPendingSkips`) */
+  counts: BookTicketCounts;
+  pending: number;
 }
+
+/** 本 → 分店 → 這家店要扣的待標註張數(規格 7.1;和本的詳情「所在分店」同一個共用函式)。 */
+type PendingDeductions = ReadonlyMap<string, ReadonlyMap<string, number>>;
 
 /** 一本在一家店是不是原封不動:從沒拆過,而且這家店的張全是未售、在庫存。 */
 const isSealedRow = (row: BookStock, facts: BookFacts | undefined): boolean =>
@@ -82,16 +89,9 @@ interface StockTotal {
 function stockTotalsOf(
   bookRows: readonly BookStock[],
   factsOf: ReadonlyMap<string, BookFacts>,
+  deductions: PendingDeductions,
 ): Map<string, StockTotal> {
   const totals = new Map<string, StockTotal>();
-  // 待標註只扣一家店(這本未售張最多的那家)
-  const storesOf = new Map<string, Map<string, number>>();
-  for (const row of bookRows) {
-    const book = String(row._id.bookId);
-    const stores = storesOf.get(book) ?? new Map<string, number>();
-    stores.set(String(row._id.orgId), row.unsoldStock + row.counter);
-    storesOf.set(book, stores);
-  }
   for (const row of bookRows) {
     const key = `${String(row._id.orgId)}:${String(row._id.gameId)}`;
     const total = totals.get(key) ?? {
@@ -105,14 +105,14 @@ function stockTotalsOf(
     const facts = factsOf.get(String(row._id.bookId));
     const sealed = isSealedRow(row, facts);
     total.unopened += sealed ? 1 : 0;
-    // 庫存(拆過):待標註算在未售時,只在扣的那一家店扣一次(實體不存在;使用者 10/27 定案)
-    const pending =
-      pendingStoreOf(storesOf.get(String(row._id.bookId)) ?? new Map()) ===
-      String(row._id.orgId)
-        ? (facts?.unsoldPending ?? 0)
-        : 0;
-    total.openedStock += sealed ? 0 : Math.max(0, row.unsoldStock - pending);
-    total.counter += row.counter;
+    // 待標註算在未售時,只在扣的那一家店扣一次(實體不存在;規格 7.1):先扣庫存(拆過),不夠再扣檯面
+    const pending = sealed
+      ? 0
+      : (deductions.get(String(row._id.bookId))?.get(String(row._id.orgId)) ??
+        0);
+    const fromStock = Math.min(pending, row.unsoldStock);
+    total.openedStock += sealed ? 0 : row.unsoldStock - fromStock;
+    total.counter += Math.max(0, row.counter - (pending - fromStock));
     total.sold += row.sold;
     totals.set(key, total);
   }
@@ -134,6 +134,7 @@ export class InventoryStockService {
     private readonly allocations: LotteryAllocationsService,
     private readonly names: InventoryNames,
     private readonly access: InventoryAccess,
+    private readonly orgs: OrgsRepository,
   ) {}
 
   async allocationsOf(
@@ -286,10 +287,11 @@ export class InventoryStockService {
     const factsOf = await this.bookFactsOf(
       operator,
       bookRows
-        .filter((row) => row.unsoldStock > 0)
+        .filter((row) => row.unsoldStock + row.counter > 0)
         .map((row) => row._id.bookId),
     );
-    const totals = stockTotalsOf(bookRows, factsOf);
+    const deductions = await this.pendingDeductionsOf(operator, factsOf);
+    const totals = stockTotalsOf(bookRows, factsOf, deductions);
     const games =
       onlyGame === null
         ? await this.gamesWith(
@@ -353,16 +355,74 @@ export class InventoryStockService {
           )
             ? countsOfBook(book).stock
             : -1,
-          unsoldPending:
-            pendingPlacementOf(
-              countsOfBook(book),
-              pendingSkipCountOfBook(book),
-            ) === "unsold"
-              ? pendingSkipCountOfBook(book)
-              : 0,
+          counts: countsOfBook(book),
+          pending: pendingSkipCountOfBook(book),
         },
       ]),
     );
+  }
+
+  /**
+   * 有待標註的本,各分店要扣幾張(規格 7.1;`holdingsWithoutPendingSkips`,和本的詳情「所在分店」同一個):
+   * 各分店的未售張數(含在途)要看整本、跨店,所以以租戶邊界讀(一次彙總,不逐本查;只篩了一家店時也照整本判斷)。
+   */
+  private async pendingDeductionsOf(
+    operator: OperatorContext,
+    factsOf: ReadonlyMap<string, BookFacts>,
+  ): Promise<PendingDeductions> {
+    const pendingBooks = [...factsOf]
+      .filter(([, facts]) => facts.pending > 0)
+      .map(([id]) => id);
+    const tenantId = tenantOfOperator(operator)?.tenantId ?? null;
+    if (pendingBooks.length === 0 || tenantId === null) {
+      return new Map();
+    }
+    const whole = await tenantBoundaryContext(this.orgs, operator, tenantId);
+    const rows = (await this.tickets.aggregate(whole, [
+      {
+        $match: {
+          bookId: { $in: pendingBooks.map((id) => new Types.ObjectId(id)) },
+          status: TICKET_STATUS.unsold,
+        },
+      },
+      {
+        $group: {
+          _id: { bookId: "$bookId", orgId: "$orgId" },
+          count: { $sum: 1 },
+        },
+      },
+    ])) as {
+      _id: { bookId: Types.ObjectId; orgId: Types.ObjectId };
+      count: number;
+    }[];
+    const holdingsOf = new Map<string, Map<string, number>>();
+    for (const row of rows) {
+      const key = String(row._id.bookId);
+      const holdings = holdingsOf.get(key) ?? new Map<string, number>();
+      holdings.set(String(row._id.orgId), row.count);
+      holdingsOf.set(key, holdings);
+    }
+    const result = new Map<string, Map<string, number>>();
+    for (const [bookId, holdings] of holdingsOf) {
+      const facts = factsOf.get(bookId);
+      if (facts === undefined) {
+        continue;
+      }
+      const after = holdingsWithoutPendingSkips(
+        holdings,
+        facts.counts,
+        facts.pending,
+      );
+      const deducted = new Map<string, number>();
+      for (const [orgId, count] of holdings) {
+        const less = count - (after.get(orgId) ?? count);
+        if (less > 0) {
+          deducted.set(orgId, less);
+        }
+      }
+      result.set(bookId, deducted);
+    }
+    return result;
   }
 
   /** 篩選的分店:不給 → null;給了要在租戶裡且看得到,否則 `NOT_FOUND`。 */

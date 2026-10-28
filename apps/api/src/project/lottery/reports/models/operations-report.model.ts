@@ -200,6 +200,16 @@ export class LotteryOperationsInventoryModel {
   @Field(() => Float, { nullable: true })
   lostRecoveredCost!: number | null;
 
+  /**
+   * 待標註調整(規格 11.2、第 20 章方案 A):這家店庫存要扣的待標註變了、但不是自己進出列造成的(待標註改扣在
+   * 別家店 / 待查那一組),加上這家店標跳號 / 取消跳號的張(`report-pending-adjustment.ts`)
+   */
+  @Field(() => Int)
+  pendingAdjustTickets!: number;
+
+  @Field(() => Float, { nullable: true })
+  pendingAdjustCost!: number | null;
+
   /** 期末庫存(期間終點那一刻) */
   @Field(() => Int)
   endingTickets!: number;

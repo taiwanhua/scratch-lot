@@ -3,8 +3,10 @@ import { useTranslations } from "use-intl";
 
 import {
   STANDARD_UNIT_PRICES,
+  UNIT_PRICE_STEP,
   bookPriceOf,
   isStandardCombination,
+  isValidUnitPrice,
   standardTicketsPerBook,
 } from "@repo/domain/project/lottery-master-data";
 import { Box } from "@repo/ui/box";
@@ -32,6 +34,8 @@ export interface GameInfoFieldsProps {
   fieldErrors: FieldErrorTexts<GameFormField>;
   /** 有庫存:代號、單張金額、整本張數唯讀 */
   isLocked: boolean;
+  /** 要不要檢查單張金額是 100 的倍數:新增、或編輯時改了單張金額(舊遊戲沒改就不擋、不亮) */
+  checksUnitPrice: boolean;
 }
 
 /** 三欄格線(電腦);平板兩欄、手機單欄(RW-02)。 */
@@ -61,15 +65,24 @@ export const GameInfoFields = ({
   change,
   fieldErrors,
   isLocked,
+  checksUnitPrice,
 }: GameInfoFieldsProps) => {
   const t = useTranslations("admin.lotteryMasterData.gameForm");
   const tStatus = useTranslations("admin.lotteryMasterData.status");
+  const tErrors = useTranslations("admin.lotteryMasterData.fieldErrors");
   const priceListId = useId();
   const errorText = (field: GameFormField) => fieldErrors[field];
   const isInvalid = (field: GameFormField) => errorText(field) !== undefined;
 
   const unitPrice = integerOrNull(values.unitPrice);
   const tickets = integerOrNull(values.ticketsPerBook);
+  // 單張金額邊打邊提示:有填、但不是 100 的倍數的正整數(送出前檢查也擋)
+  const unitPriceHint =
+    checksUnitPrice &&
+    values.unitPrice.trim() !== "" &&
+    (unitPrice === null || !isValidUnitPrice(unitPrice))
+      ? tErrors("unitPrice", { step: String(UNIT_PRICE_STEP) })
+      : undefined;
   const standard =
     unitPrice === null ? null : standardTicketsPerBook(unitPrice);
   let ticketsHint: string | undefined;
@@ -143,8 +156,8 @@ export const GameInfoFields = ({
           required
           fullWidth
           disabled={isLocked}
-          error={isInvalid("unitPrice")}
-          helperText={errorText("unitPrice")}
+          error={isInvalid("unitPrice") || unitPriceHint !== undefined}
+          helperText={errorText("unitPrice") ?? unitPriceHint}
           slotProps={{
             htmlInput: { inputMode: "numeric", list: priceListId },
           }}

@@ -265,6 +265,12 @@ const inventorySection = (store: OperationsStore, t: T): SheetSection => {
       tickets: inv.lostRecoveredTickets,
       cost: inv.lostRecoveredCost,
     }),
+    line({
+      item: t("admin.lotteryReports.operations.items.pendingAdjust"),
+      tickets: inv.pendingAdjustTickets,
+      cost: inv.pendingAdjustCost,
+      note: t("admin.lotteryReports.operations.items.pendingAdjustNote"),
+    }),
     totalLine({
       item: t("admin.lotteryReports.operations.items.ending"),
       tickets: inv.endingTickets,
