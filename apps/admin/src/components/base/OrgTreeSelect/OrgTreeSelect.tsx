@@ -23,7 +23,7 @@ import { OrgTreeSelectPanel } from "./OrgTreeSelectPanel";
  * 選組織的模式(用法表正本:`docs/concepts/frontend-architecture.md`「組織選擇器」):
  * - `managed`(預設):**管理範圍**(`orgTree`,要組織管理 / 使用者管理的檢視權限)—— 底座治理用途
  *   (人員條件 / `AudiencePicker` 的所屬組織、資料範圍的套用對象、流程的跳過組織),行為維持原樣。
- * - `visible`:**可見範圍** —— 業務頁選分店(收銀點、報表、行事曆、規則…)。樹列**整棵租戶樹**
+ * - `visible`:**可見範圍** —— 業務頁選組織(業務資料的所屬組織、報表的篩選…)。樹列**整棵租戶樹**
  *   (`tenantOrgTree`),只有可見範圍內的能選,其他反灰並註明「不在你的可見範圍內」。
  * - `tenant`:**整個租戶**都能選(之後的資料共用用途);同樣列整棵租戶樹。
  */
@@ -72,8 +72,8 @@ const EMPTY_REASONS: Readonly<Partial<Record<string, string>>> = {};
  *   sm 以上是欄位下方的浮動面板(寬度跟著欄位);< sm 改開全螢幕對話框
  *   (標題 + 搜尋 + 樹 + [確定])。兩者的選取都是即時生效,[確定] 只負責關閉。
  * - 內部沿用 `OrgTreePicker` 與 `lib/base/org-tree.ts`(STRUCT-13)。底座用在人員條件
- *   (`AudiencePicker` 的所屬組織,資料範圍的套用對象,`managed`);專案的業務頁面(收銀點的分店、
- *   報表的分店多選等)用 `scope="visible"`。
+ *   (`AudiencePicker` 的所屬組織,資料範圍的套用對象,`managed`);專案的業務頁面(業務資料的所屬組織、
+ *   報表的組織多選等)用 `scope="visible"`。
  */
 export const OrgTreeSelect = ({
   scope = "managed",

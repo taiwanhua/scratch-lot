@@ -28,7 +28,7 @@ import {
 
 import { REQUISITION_FIELD_KEYS, formatCount } from "../purchasing-keys";
 import { LineErrorAlerts } from "../shared/LineErrorAlerts";
-import { fieldErrorProps } from "../shared/field-errors";
+import { fieldErrorProps } from "../shared/purchasing-field-errors";
 import { CandidateCards } from "./CandidateCards";
 import { CandidateTable } from "./CandidateTable";
 import {

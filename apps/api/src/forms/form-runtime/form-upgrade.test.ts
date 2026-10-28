@@ -39,6 +39,10 @@ import {
   rawSubmission,
   rootToken,
 } from "../test-support/form-fixtures";
+import {
+  FormUpgradeService,
+  UPGRADE_BATCH_BYTES,
+} from "./form-upgrade.service";
 
 jest.setTimeout(FORM_TEST_TIMEOUT_MS);
 
@@ -452,9 +456,50 @@ describe("舊版資料升級到新版", () => {
       ]);
       expectDbCommandsAtMost(many, few.total, "升級 20 筆");
       expect(many.byCommand.get("form_submissions.bulkWrite")).toBe(1);
+      // 分組計數一次 + 取這批 id 與大小一次(不再另用 find 取 id)
+      expect(many.byCommand.get("form_submissions.aggregate")).toBe(2);
       expect(
         many.byCommand.get("form_submissions.findOneAndUpdate"),
       ).toBeUndefined();
+    });
+
+    it("每批也限總大小:aggregate 讀到的大小是正數,上限調小時大文件提早切批、每筆自成一批照樣全部升級", async () => {
+      const { formKey } = await prepare(2);
+      const service = api.app.get(FormUpgradeService);
+      const aggregate = jest.spyOn(
+        api.app.get(FormSubmissionsRepository),
+        "aggregate",
+      );
+      // 任何一筆文件都超過 1 位元組:每批只收第一筆
+      service.batchBytes = 1;
+      try {
+        const counted = await countDbCommands(() =>
+          upgrade(staff.token, formKey),
+        );
+        expect(counted.result.data?.upgradeFormSubmissions.upgraded).toEqual([
+          { fromVersion: 1, count: 6 },
+        ]);
+        // 6 筆各自一批:寫回 6 次;aggregate = 分組計數 1 + 每批取候選 6(最後一批沒切、不滿 50 筆就結束)
+        expect(counted.byCommand.get("form_submissions.bulkWrite")).toBe(6);
+        expect(counted.byCommand.get("form_submissions.aggregate")).toBe(7);
+        const returned = await Promise.all(
+          aggregate.mock.results.map(
+            (result) => result.value as Promise<Record<string, unknown>[]>,
+          ),
+        );
+        const sizes = returned
+          .flat()
+          .filter((row) => "size" in row)
+          .map((row) => row.size);
+        expect(sizes).toHaveLength(6 + 5 + 4 + 3 + 2 + 1);
+        for (const size of sizes) {
+          expect(typeof size).toBe("number");
+          expect(size as number).toBeGreaterThan(0);
+        }
+      } finally {
+        service.batchBytes = UPGRADE_BATCH_BYTES;
+        aggregate.mockRestore();
+      }
     });
 
     it("升級計畫:多個舊版本的筆數一次分組計數,不逐版本 count", async () => {

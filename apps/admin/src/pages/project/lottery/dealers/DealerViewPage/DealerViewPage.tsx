@@ -23,7 +23,7 @@ import { useTemporalText } from "@/hooks/base/useTemporalText";
 import type { ModulePageProps } from "@/lib/base/module-tree";
 
 import { FieldGrid } from "../DealerFormPage/DealerFormSections";
-import { ReadOnlyField } from "../ReadOnlyField";
+import { DealerInfoField } from "../DealerInfoField";
 import { SystemInfoFields } from "../SystemInfoFields";
 import {
   DEALER_STATUS_LABELS,
@@ -181,55 +181,55 @@ const DealerView = ({ dealer }: { dealer: LotteryDealerFieldsFragment }) => {
           defaultCollapsed
         >
           <FieldGrid>
-            <ReadOnlyField label={t("fields.licenseNo")}>
+            <DealerInfoField label={t("fields.licenseNo")}>
               {dealer.licenseNo}
-            </ReadOnlyField>
-            <ReadOnlyField label={t("fields.name")}>
+            </DealerInfoField>
+            <DealerInfoField label={t("fields.name")}>
               {dealer.name}
-            </ReadOnlyField>
-            <ReadOnlyField label={t("fields.status")}>
+            </DealerInfoField>
+            <DealerInfoField label={t("fields.status")}>
               {t(DEALER_STATUS_LABELS[dealer.status])}
-            </ReadOnlyField>
-            <ReadOnlyField label={t("fields.licenseApprovedAt")}>
+            </DealerInfoField>
+            <DealerInfoField label={t("fields.licenseApprovedAt")}>
               {date(dealer.licenseApprovedAt)}
-            </ReadOnlyField>
-            <ReadOnlyField label={t("fields.licenseExpiresAt")}>
+            </DealerInfoField>
+            <DealerInfoField label={t("fields.licenseExpiresAt")}>
               <Box>
                 <Tag
                   tone={LICENSE_TONES[dealer.licenseState]}
                   label={date(dealer.licenseExpiresAt)}
                 />
               </Box>
-            </ReadOnlyField>
+            </DealerInfoField>
             {isClassA && (
-              <ReadOnlyField label={t("fields.coSalesDealerId")}>
+              <DealerInfoField label={t("fields.coSalesDealerId")}>
                 {dealer.coSalesDealer?.storeName ??
                   dealer.coSalesDealer?.name ??
                   none}
-              </ReadOnlyField>
+              </DealerInfoField>
             )}
-            <ReadOnlyField label={t("fields.agentIds")}>
+            <DealerInfoField label={t("fields.agentIds")}>
               {names(dealer.agents)}
-            </ReadOnlyField>
+            </DealerInfoField>
             {isClassA && (
-              <ReadOnlyField label={t("fields.trusteeIds")}>
+              <DealerInfoField label={t("fields.trusteeIds")}>
                 {names(dealer.trustees)}
-              </ReadOnlyField>
+              </DealerInfoField>
             )}
-            <ReadOnlyField label={t("fields.introducerIds")}>
+            <DealerInfoField label={t("fields.introducerIds")}>
               {names(dealer.introducers)}
-            </ReadOnlyField>
+            </DealerInfoField>
             {isClassA &&
               access.has(DEALERS_PERMISSIONS.showLastPurchaseBaseDate) && (
-                <ReadOnlyField label={t("fields.lastPurchaseBaseDate")}>
+                <DealerInfoField label={t("fields.lastPurchaseBaseDate")}>
                   {date(dealer.lastPurchaseBaseDate)}
-                </ReadOnlyField>
+                </DealerInfoField>
               )}
             {isClassA &&
               access.has(DEALERS_PERMISSIONS.showLastSelfPurchaseBaseDate) && (
-                <ReadOnlyField label={t("fields.lastSelfPurchaseBaseDate")}>
+                <DealerInfoField label={t("fields.lastSelfPurchaseBaseDate")}>
                   {date(dealer.lastSelfPurchaseBaseDate)}
-                </ReadOnlyField>
+                </DealerInfoField>
               )}
           </FieldGrid>
         </Section>
@@ -241,21 +241,21 @@ const DealerView = ({ dealer }: { dealer: LotteryDealerFieldsFragment }) => {
             title={t("sections.store")}
           >
             <FieldGrid>
-              <ReadOnlyField label={t("fields.storeOrgId")}>
+              <DealerInfoField label={t("fields.storeOrgId")}>
                 {dealer.storeOrg?.name ?? t("summary.notSelected")}
-              </ReadOnlyField>
-              <ReadOnlyField label={t("fields.storeName")}>
+              </DealerInfoField>
+              <DealerInfoField label={t("fields.storeName")}>
                 {dealer.storeName ?? none}
-              </ReadOnlyField>
-              <ReadOnlyField label={t("fields.terminalNo")}>
+              </DealerInfoField>
+              <DealerInfoField label={t("fields.terminalNo")}>
                 {dealer.terminalNo ?? none}
-              </ReadOnlyField>
-              <ReadOnlyField label={t("fields.businessAddress")}>
+              </DealerInfoField>
+              <DealerInfoField label={t("fields.businessAddress")}>
                 {dealer.businessAddress ?? none}
-              </ReadOnlyField>
-              <ReadOnlyField label={t("fields.storePhone")}>
+              </DealerInfoField>
+              <DealerInfoField label={t("fields.storePhone")}>
                 {dealer.storePhone ?? none}
-              </ReadOnlyField>
+              </DealerInfoField>
             </FieldGrid>
           </Section>
         )}
@@ -280,30 +280,30 @@ const DealerView = ({ dealer }: { dealer: LotteryDealerFieldsFragment }) => {
           defaultCollapsed
         >
           <FieldGrid>
-            <ReadOnlyField label={t("fields.nationalId")}>
+            <DealerInfoField label={t("fields.nationalId")}>
               {dealer.nationalId}
-            </ReadOnlyField>
-            <ReadOnlyField label={t("fields.birthday")}>
+            </DealerInfoField>
+            <DealerInfoField label={t("fields.birthday")}>
               {date(dealer.birthday)}
-            </ReadOnlyField>
-            <ReadOnlyField label={t("fields.mobile")}>
+            </DealerInfoField>
+            <DealerInfoField label={t("fields.mobile")}>
               {dealer.mobile ?? none}
-            </ReadOnlyField>
-            <ReadOnlyField label={t("fields.phone")}>
+            </DealerInfoField>
+            <DealerInfoField label={t("fields.phone")}>
               {dealer.phone ?? none}
-            </ReadOnlyField>
-            <ReadOnlyField label={t("fields.email")}>
+            </DealerInfoField>
+            <DealerInfoField label={t("fields.email")}>
               {dealer.email ?? none}
-            </ReadOnlyField>
-            <ReadOnlyField label={t("fields.mailingAddress")}>
+            </DealerInfoField>
+            <DealerInfoField label={t("fields.mailingAddress")}>
               {dealer.mailingAddress ?? none}
-            </ReadOnlyField>
-            <ReadOnlyField label={t("fields.residentialAddress")}>
+            </DealerInfoField>
+            <DealerInfoField label={t("fields.residentialAddress")}>
               {dealer.residentialAddress ?? none}
-            </ReadOnlyField>
-            <ReadOnlyField label={t("fields.note")}>
+            </DealerInfoField>
+            <DealerInfoField label={t("fields.note")}>
               {dealer.note ?? none}
-            </ReadOnlyField>
+            </DealerInfoField>
           </FieldGrid>
         </Section>
 

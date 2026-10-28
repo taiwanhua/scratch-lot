@@ -58,7 +58,7 @@ export const ROLE_REFERENCE_SOURCES = ["draft", "current", "in-use"] as const;
 
 export type RoleReferenceSource = (typeof ROLE_REFERENCE_SOURCES)[number];
 
-/** 一個引用處:哪一種設定、它的名稱(流程關卡另帶關卡名稱;流程另帶出處與進行中張數)。 */
+/** 一個引用處:哪一種設定、它的名稱(流程關卡另帶關卡名稱;流程另帶出處與進行中單據數)。 */
 export interface RoleReference {
   kind: RoleReferenceKind;
   name: string;

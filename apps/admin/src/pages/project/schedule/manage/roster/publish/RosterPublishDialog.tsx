@@ -25,7 +25,7 @@ import {
 } from "../check-panel/roster-check-context";
 import { ROSTER_QUERY_ROOT } from "../roster-context";
 
-export interface PublishDialogProps {
+export interface RosterPublishDialogProps {
   onClose: () => void;
 }
 
@@ -38,7 +38,7 @@ export interface PublishDialogProps {
  *
  * 發布成功 → 已發布(SC-15b),工具列的 [自動排班] [發布] 不再顯示;api 通知被排到的人。
  */
-export const PublishDialog = ({ onClose }: PublishDialogProps) => {
+export const RosterPublishDialog = ({ onClose }: RosterPublishDialogProps) => {
   const t = useTranslations("admin.schedule.roster.publish");
   const tErrors = useTranslations("admin.schedule.errors");
   const { session } = useSession();

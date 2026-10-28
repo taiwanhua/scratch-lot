@@ -5,7 +5,7 @@ import { packIco } from "./ico.mjs";
 
 const fakePng = (length, fill) => Buffer.alloc(length, fill);
 
-test("標頭與目錄:張數、尺寸、長度與位移對得上內嵌的 PNG", () => {
+test("標頭與目錄:圖數、尺寸、長度與位移對得上內嵌的 PNG", () => {
   const small = fakePng(10, 1);
   const large = fakePng(20, 2);
   const ico = packIco([

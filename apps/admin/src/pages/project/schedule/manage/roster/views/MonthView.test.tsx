@@ -1,14 +1,14 @@
 import { describe, expect, it } from "@jest/globals";
 import { screen, waitFor, within } from "@testing-library/react";
 
-import { restoreViewportAfterEach, setupFakeViewport } from "@/test/viewport";
+import {
+  restoreViewportAfterEach,
+  setViewportWidth,
+  setupFakeViewport,
+} from "@/test/viewport";
 
 import { renderSchedulePage } from "../../../schedule-test-support";
-import {
-  rosterPath,
-  searchParam,
-  setViewportWidth,
-} from "./roster-views-test-support";
+import { rosterPath, searchParam } from "./roster-views-test-support";
 
 setupFakeViewport();
 restoreViewportAfterEach();

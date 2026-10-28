@@ -3,7 +3,7 @@ import { useTranslations } from "use-intl";
 import { useTemporalText } from "@/hooks/base/useTemporalText";
 
 import { FieldGrid } from "./DealerFormPage/DealerFormSections";
-import { ReadOnlyField } from "./ReadOnlyField";
+import { DealerInfoField } from "./DealerInfoField";
 
 export interface SystemInfoFieldsProps {
   record: {
@@ -25,21 +25,21 @@ export const SystemInfoFields = ({ record }: SystemInfoFieldsProps) => {
   const none = t("common.none");
   return (
     <FieldGrid>
-      <ReadOnlyField label={t("fields.ownerOrg")}>
+      <DealerInfoField label={t("fields.ownerOrg")}>
         {record.ownerOrgName ?? none}
-      </ReadOnlyField>
-      <ReadOnlyField label={t("fields.createdAt")}>
+      </DealerInfoField>
+      <DealerInfoField label={t("fields.createdAt")}>
         {temporal(record.createdAt, "datetime")}
-      </ReadOnlyField>
-      <ReadOnlyField label={t("fields.createdBy")}>
+      </DealerInfoField>
+      <DealerInfoField label={t("fields.createdBy")}>
         {record.createdBy?.name ?? none}
-      </ReadOnlyField>
-      <ReadOnlyField label={t("fields.updatedAt")}>
+      </DealerInfoField>
+      <DealerInfoField label={t("fields.updatedAt")}>
         {temporal(record.updatedAt, "datetime")}
-      </ReadOnlyField>
-      <ReadOnlyField label={t("fields.updatedBy")}>
+      </DealerInfoField>
+      <DealerInfoField label={t("fields.updatedBy")}>
         {record.updatedBy?.name ?? none}
-      </ReadOnlyField>
+      </DealerInfoField>
     </FieldGrid>
   );
 };

@@ -27,7 +27,7 @@ import { useInventoryAccess } from "../useInventoryAccess";
 
 type Item = LotteryTicketLookupItemFieldsFragment;
 
-export interface LookupDialogProps {
+export interface InventoryLookupDialogProps {
   onClose: () => void;
 }
 
@@ -36,7 +36,9 @@ export interface LookupDialogProps {
  * (也收正面編號、正面條碼)。對到的張顯示在下方(同一個本號對到多款遊戲時每款一張卡片);
  * [查詢] 或點卡片跳到那一本並標亮那一張(`?ticket=`)。開著時宣告掃描用途 `inventory-lookup`。
  */
-export const LookupDialog = ({ onClose }: LookupDialogProps) => {
+export const InventoryLookupDialog = ({
+  onClose,
+}: InventoryLookupDialogProps) => {
   const t = useTranslations("admin.lotteryInventory");
   const { session } = useSession();
   const navigate = useNavigate();

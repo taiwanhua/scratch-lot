@@ -73,7 +73,7 @@ export interface AudienceReference {
   stepName?: string;
   /** 流程引用出自哪裡(只有流程的四種有) */
   source?: AudienceReferenceSource;
-  /** `source = in-use` 時:用到這個引用的進行中單據張數 */
+  /** `source = in-use` 時:用到這個引用的進行中單據數 */
   inUseCount?: number;
 }
 
@@ -133,7 +133,7 @@ function hitsIn(version: VersionLike, roleId: string): WorkflowHit[] {
 
 /**
  * 合併重複的引用處:鍵 = kind + 名稱 + 關卡 + source。同一關出現在多個進行中版本時合成一筆、
- * 張數相加;草稿與目前版本的處置相同但說法不同,各留一筆。
+ * 單據數相加;草稿與目前版本的處置相同但說法不同,各留一筆。
  */
 function merge(references: AudienceReference[]): AudienceReference[] {
   const byKey = new Map<string, AudienceReference>();
@@ -247,7 +247,7 @@ export class AudienceReferencesService {
     }));
   }
 
-  /** 進行中單據用到的版本與張數:`workflowKey` → (版號 → 張數)。 */
+  /** 進行中單據用到的版本與單據數:`workflowKey` → (版號 → 單據數)。 */
   private async liveVersionCounts(
     keys: readonly string[],
   ): Promise<Map<string, Map<number, number>>> {
