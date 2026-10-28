@@ -452,6 +452,8 @@ describe("舊版資料升級到新版", () => {
       ]);
       expectDbCommandsAtMost(many, few.total, "升級 20 筆");
       expect(many.byCommand.get("form_submissions.bulkWrite")).toBe(1);
+      // 分組計數一次 + 取這批 id 與大小一次(不再另用 find 取 id)
+      expect(many.byCommand.get("form_submissions.aggregate")).toBe(2);
       expect(
         many.byCommand.get("form_submissions.findOneAndUpdate"),
       ).toBeUndefined();
