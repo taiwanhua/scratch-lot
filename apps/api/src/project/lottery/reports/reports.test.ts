@@ -141,7 +141,6 @@ const OPERATIONS = /* GraphQL */ `
           investigateRecoveredCost
           lostRecoveredTickets
           lostRecoveredCost
-          costAdjustCost
           endingTickets
           endingCost
           checkTickets
@@ -326,7 +325,6 @@ const pickInventory = (report: Record<string, unknown>) => ({
   sales: report.salesTickets,
   newInvestigating: report.newInvestigatingTickets,
   investigating: report.investigatingTickets,
-  costAdjust: report.costAdjustCost,
   ending: report.endingTickets,
   endingCost: report.endingCost,
   checkTickets: report.checkTickets,
@@ -3570,7 +3568,8 @@ describe("輸出報表:營運報表、班次結帳歷史報表(GraphQL 端點 + 
     describe("已知限制 a / b / c(規格第 20 章):實測重現與回歸", () => {
       let east: Types.ObjectId;
       let west: Types.ObjectId;
-      let halfGame: Types.ObjectId;
+      /** 單張金額 100(使用者 10/28 定案:一定是 100 的倍數)、批購金額率 93 → 單張成本 93 */
+      let game100: Types.ObjectId;
       const cashPointId = new Types.ObjectId();
 
       /** 一張調貨單(選張的列;出貨 east → 收貨 west)。 */
@@ -3696,18 +3695,42 @@ describe("輸出報表:營運報表、班次結帳歷史報表(GraphQL 端點 + 
           name: "西店",
           parentId: tenant,
         });
-        halfGame = await insertGame(connection, tenant, {
+        game100 = await insertGame(connection, tenant, {
           gameCode: "5302",
-          name: "零頭測試",
-          unitPrice: 50,
+          name: "已知限制",
+          unitPrice: 100,
           ticketsPerBook: 100,
+          defaultRate: 93,
         });
       });
 
-      it("a / b / c 依序重現:c 重送那期有成本調整列、核對 0;其餘列出已知的核對差額", async () => {
+      /** 進貨點收一本(真的 `createBook`):單張 100、批購金額率 93、成本 9,300(單張 93);迄號預設 101(待標註 1)。 */
+      async function purchase100(
+        orgId: Types.ObjectId,
+        at: Date,
+        lastTicketNo = 101,
+      ): Promise<Types.ObjectId> {
+        bookSequence += 1;
+        const { book } = await transactions().withTransaction((session) =>
+          api.app
+            .get(LotteryBooksService)
+            .createBook(session, storeOperator(orgId), {
+              orgId,
+              gameId: game100,
+              bookNo: String(700_000 + bookSequence),
+              lastTicketNo,
+              rate: 93,
+              cost: 9300,
+              at,
+            }),
+        );
+        return book._id;
+      }
+
+      it("a / b / c 依序重現(單張 100、批購金額率 93):c 兩期核對 0;a / b 列出已知的核對差額", async () => {
         const log: Record<string, unknown> = {};
         // ---- a:拆過、還有 1 張待標註(迄號 101)的本,選張調 60 張給西店 ----
-        const bookA = await purchase(east, taipei("2026-12-01", "09:00"));
+        const bookA = await purchase100(east, taipei("2026-12-01", "09:00"));
         await apply({ operator: storeOperator(east) }, await ticketsOf(bookA), {
           type: "open",
           at: taipei("2026-12-01", "10:00"),
@@ -3715,13 +3738,13 @@ describe("輸出報表:營運報表、班次結帳歷史報表(GraphQL 端點 + 
         });
         const transferA = await transferOf(
           bookA,
-          { ticketNos: "001-060", tickets: 60, amount: 12_000, rate: 100 },
+          { ticketNos: "001-060", tickets: 60, amount: 6000, rate: 93 },
           taipei("2026-12-02", "09:00"),
         );
         const bookATickets = await ticketsOf(bookA);
         const sixty = bookATickets.slice(0, 60);
         const sixtyIds = idSetOf(sixty);
-        await ship(sixty, transferA, taipei("2026-12-02", "10:00"), 200);
+        await ship(sixty, transferA, taipei("2026-12-02", "10:00"), 93);
         await receive(
           bookA,
           await ticketsWhere(bookA, (ticket) =>
@@ -3729,8 +3752,8 @@ describe("輸出報表:營運報表、班次結帳歷史報表(GraphQL 端點 + 
           ),
           transferA,
           taipei("2026-12-03", "10:00"),
-          200,
-          12_000,
+          93,
+          5580,
         );
         log.a = {
           east1201: pickInventory(await inventoryOn("2026-12-01", east)),
@@ -3748,7 +3771,7 @@ describe("輸出報表:營運報表、班次結帳歷史報表(GraphQL 端點 + 
         await apply({ operator: storeOperator(west) }, westSold, {
           type: "sale",
           at: taipei("2026-12-04", "11:00"),
-          amount: 200,
+          amount: 100,
           cashEffect: "increase",
           cashPointId,
           patch: {
@@ -3778,7 +3801,7 @@ describe("輸出報表:營運報表、班次結帳歷史報表(GraphQL 端點 + 
           west1205: pickInventory(await inventoryOn("2026-12-05", west)),
         };
         // ---- b2:只在一家店的本(拆過、待標註 1),標掉一張實際存在的 ----
-        const bookB = await purchase(east, taipei("2026-12-06", "09:00"));
+        const bookB = await purchase100(east, taipei("2026-12-06", "09:00"));
         await apply({ operator: storeOperator(east) }, await ticketsOf(bookB), {
           type: "open",
           at: taipei("2026-12-06", "10:00"),
@@ -3798,7 +3821,7 @@ describe("輸出報表:營運報表、班次結帳歷史報表(GraphQL 端點 + 
           east1207: pickInventory(await inventoryOn("2026-12-07", east)),
         };
         // ---- b3:待標註扣在待查那一組(整本待查 → 尋回 10 張),標掉一張尋回的 ----
-        const bookB3 = await purchase(east, taipei("2026-12-08", "09:00"));
+        const bookB3 = await purchase100(east, taipei("2026-12-08", "09:00"));
         await apply(
           { operator: storeOperator(east) },
           await ticketsOf(bookB3),
@@ -3839,22 +3862,14 @@ describe("輸出報表:營運報表、班次結帳歷史報表(GraphQL 端點 + 
           east1208: pickInventory(await inventoryOn("2026-12-08", east)),
           east1209: pickInventory(await inventoryOn("2026-12-09", east)),
         };
-        // ---- c:選張 12 張(面額 50、批購金額率 93 → 單張 46.5)跨兩期:12/11 點收 9 張、12/12 少張重送 ----
-        bookSequence += 1;
-        const { book: half } = await transactions().withTransaction((session) =>
-          api.app
-            .get(LotteryBooksService)
-            .createBook(session, storeOperator(east), {
-              orgId: east,
-              gameId: halfGame,
-              bookNo: String(700_000 + bookSequence),
-              lastTicketNo: 100,
-              rate: 92,
-              cost: 4600,
-              at: taipei("2026-12-10", "09:00"),
-            }),
+        // ---- c:選張 12 張(單張 100、批購金額率 93 → 單張成本 93)跨兩期:12/11 點收 9 張、12/12 少張重送 ----
+        const halfId = await purchase100(
+          east,
+          taipei("2026-12-10", "09:00"),
+          100,
         );
-        const line = { tickets: 12, amount: 600, rate: 93 };
+        const half = { _id: halfId };
+        const line = { tickets: 12, amount: 1200, rate: 93 };
         const lineValue = {
           mode: "partial" as const,
           ...line,
@@ -3881,7 +3896,7 @@ describe("輸出報表:營運報表、班次結帳歷史報表(GraphQL 端點 + 
           unit,
           receivedLineAmountOf(lineValue, 9),
         );
-        // 12/12 少張重送:沒到的 3 張在途 → 待查;已點收 9 張成本調整 = 縮小後的批購金額 ÷ 9
+        // 12/12 少張重送:沒到的 3 張在途 → 待查
         await apply(
           { operator: null, crossStoreTenantId: tenant },
           await ticketsWhere(half._id, (ticket) =>
@@ -3899,31 +3914,17 @@ describe("輸出報表:營運報表、班次結帳歷史報表(GraphQL 端點 + 
           (line.amount * 9) / line.tickets,
           line.rate,
         );
-        await apply(
-          { operator: null, crossStoreTenantId: tenant },
-          await ticketsWhere(half._id, (ticket) =>
-            nineIds.has(String(ticket._id)),
-          ),
-          {
-            type: "cost_adjust",
-            at: taipei("2026-12-12", "10:00"),
-            patch: { unitCost: shrunk / 9 },
-            amount: shrunk / 9,
-            refType: "transfer",
-            refId: transferC,
-          },
-        );
+        // 縮小後的單張成本 = 837 ÷ 9 = 93,和點收時相同 → `repriceReceived` 不寫成本調整
         const west1212 = pickInventory(await inventoryOn("2026-12-12", west));
         log.c = {
           west1211: pickInventory(await inventoryOn("2026-12-11", west)),
           west1212,
           east1212: pickInventory(await inventoryOn("2026-12-12", east)),
         };
-        // 點收 9 張的調貨金額 419(四捨五入)、單張成本 46.5 × 9 = 418.5;重送後縮小的列 419 → 成本調整 +0.5
-        expect([receivedLineAmountOf(lineValue, 9), shrunk]).toEqual([
-          419, 419,
+        // 單張成本 93 是整數:點收 9 張的調貨金額 = 9 × 93,重送後縮小的列也一樣 → 不寫成本調整、不會有零頭
+        expect([receivedLineAmountOf(lineValue, 9), shrunk, unit]).toEqual([
+          837, 837, 93,
         ]);
-        expect(Number(west1212.costAdjust)).toBeCloseTo(0.5, 9);
 
         // 各店各天的核對(張 / 元)。0 以外的都是第 20 章列的已知限制(待決定修法;修好後改成 0)
         const checks = Object.fromEntries(
@@ -3940,21 +3941,21 @@ describe("輸出報表:營運報表、班次結帳歷史報表(GraphQL 端點 + 
           "a.east1201": [0, 0],
           "a.east1202": [0, 0],
           // a:點收那一刻西店未售 60 > 東店 41 → 待標註改扣西店,兩店都沒有對應的列
-          "a.east1203": [-1, -184],
-          "a.west1203": [1, 200],
+          "a.east1203": [-1, -93],
+          "a.west1203": [1, 93],
           // a2:西店賣掉 20 張(40 < 41)→ 待標註扣回東店,東店當天沒有任何事件
-          "a2.east1204": [1, 184],
-          "a2.west1204": [-1, -200],
+          "a2.east1204": [1, 93],
+          "a2.west1204": [-1, -93],
           // b1:待標註扣在東店時,西店把自己一張標成跳號 → 待標註沒了,東店 −1、西店 +1
-          "b1.east1205": [-1, -184],
-          "b1.west1205": [1, 200],
+          "b1.east1205": [-1, -93],
+          "b1.west1205": [1, 93],
           // b2:只在一家店的本:標掉一張 = 待標註少一張,庫存不變、核對 0(不是限制)
           "b2.east1207": [0, 0],
           // b3:待標註扣在待查那一組時,標掉一張尋回的 → 庫存 −1、期末待查 +1,沒有對應的列
           "b3.east1208": [0, 0],
-          "b3.east1209": [1, 184],
-          // c:點收那一期(調入 = 調貨金額 419,單張成本合計 418.5)還有 +0.5 零頭(待決定);重送那一期有成本調整列 → 0
-          "c.west1211": [0, 0.5],
+          "b3.east1209": [1, 93],
+          // c:單張金額是 100 的倍數 → 點收那期、重送那期都對得上
+          "c.west1211": [0, 0],
           "c.west1212": [0, 0],
           "c.east1212": [0, 0],
         });

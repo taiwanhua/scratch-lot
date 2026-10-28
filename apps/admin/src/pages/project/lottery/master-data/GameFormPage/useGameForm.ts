@@ -11,6 +11,7 @@ import {
   type GameStatus,
   gameDatesOf,
   isGameStatus,
+  isValidUnitPrice,
   standardTicketsPerBook,
 } from "@repo/domain/project/lottery-master-data";
 import {
@@ -134,13 +135,17 @@ const derivedDateTextsOf = (
   };
 };
 
-/** 送出前的檢查:必填與整數(範圍、格式、唯一由 api 判,錯誤標回欄位)。 */
+/** 送出前的檢查:必填、整數、單張金額 100 的倍數(範圍、格式、唯一由 api 判,錯誤標回欄位)。 */
 const invalidFieldsOf = (values: GameFormValues): GameFormField[] => {
   const invalid: GameFormField[] = [];
   if (values.gameCode.trim() === "") invalid.push("gameCode");
   if (values.name.trim() === "") invalid.push("name");
   for (const field of INTEGER_FIELDS) {
     if (integerOf(values[field]) === null) invalid.push(field);
+  }
+  const unitPrice = integerOf(values.unitPrice);
+  if (unitPrice !== null && !isValidUnitPrice(unitPrice)) {
+    invalid.push("unitPrice");
   }
   if (parseLocalDate(values.claimDeadline) === null) {
     invalid.push("claimDeadline");

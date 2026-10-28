@@ -34,6 +34,7 @@
       "maxLength": "Up to {max} characters",
       "positiveInteger": "Enter a whole number greater than 0",
       "integerRange": "Enter a whole number from {min} to {max}",
+      "unitPrice": "Enter a multiple of {step} (a whole number greater than 0)",
       "order": "Enter a whole number of 0 or more"
     },
     "tabs": {
@@ -960,8 +961,6 @@
         "newInvestigating": "− New under investigation",
         "investigateRecovered": "+ Back from investigation",
         "lostRecovered": "+ Lost then recovered",
-        "costAdjust": "± Cost adjustment",
-        "costAdjustNote": "After a short transfer is resubmitted, received tickets are repriced to the reduced purchase amount; ticket count unchanged",
         "ending": "= Ending stock",
         "check": "Check",
         "checkOk": "Balanced",

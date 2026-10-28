@@ -34,6 +34,7 @@
       "maxLength": "最多 {max} 個字",
       "positiveInteger": "要填大於 0 的整數",
       "integerRange": "要填 {min}–{max} 的整數",
+      "unitPrice": "要填 {step} 的倍數(大於 0 的整數)",
       "order": "要填 0 以上的整數"
     },
     "tabs": {
@@ -960,8 +961,6 @@
         "newInvestigating": "− 新增待查",
         "investigateRecovered": "+ 待查轉回",
         "lostRecovered": "+ 遺失尋回",
-        "costAdjust": "± 成本調整",
-        "costAdjustNote": "調貨單少張重送後,已點收張的成本改成縮小後的批購金額;張數不變",
         "ending": "= 期末庫存",
         "check": "核對",
         "checkOk": "對得上",

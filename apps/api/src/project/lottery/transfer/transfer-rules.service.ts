@@ -1094,8 +1094,7 @@ export class TransferRules {
   /**
    * 少張處理後重算已點收張的單張成本(使用者 10/27 定案):選張的列移除沒到的張、縮小以後,已點收那幾張的
    * 單張成本改成「重算後這一列的批購金額 ÷ 張數」,這一列調入的成本合計 = 調貨金額。經帳本寫「成本調整」事件
-   * (時間 = 重送那一刻;事件的成本快照 = 調整前的成本、金額 = 調整後的單張成本,舊報表重跑不變),整批寫;
-   * 沒縮小的列成本相同,不寫。
+   * (時間 = 重送那一刻;事件的成本快照 = 調整前的成本,舊報表重跑不變),整批寫;沒縮小的列成本相同,不寫。
    */
   private async repriceReceived(
     reader: OperatorContext,
@@ -1140,8 +1139,6 @@ export class TransferRules {
         type: TICKET_EVENT_TYPE.costAdjust,
         at,
         patch: { unitCost: costOf.get(String(ticket._id)) ?? ticket.unitCost },
-        // 調整後的單張成本(營運報表的「成本調整」= 調整後 − 事件的成本快照)
-        amount: costOf.get(String(ticket._id)) ?? ticket.unitCost,
         refType: "transfer",
         refId: submissionId,
       })),

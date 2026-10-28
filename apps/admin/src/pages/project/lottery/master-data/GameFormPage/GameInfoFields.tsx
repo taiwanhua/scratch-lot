@@ -3,8 +3,10 @@ import { useTranslations } from "use-intl";
 
 import {
   STANDARD_UNIT_PRICES,
+  UNIT_PRICE_STEP,
   bookPriceOf,
   isStandardCombination,
+  isValidUnitPrice,
   standardTicketsPerBook,
 } from "@repo/domain/project/lottery-master-data";
 import { Box } from "@repo/ui/box";
@@ -64,12 +66,19 @@ export const GameInfoFields = ({
 }: GameInfoFieldsProps) => {
   const t = useTranslations("admin.lotteryMasterData.gameForm");
   const tStatus = useTranslations("admin.lotteryMasterData.status");
+  const tErrors = useTranslations("admin.lotteryMasterData.fieldErrors");
   const priceListId = useId();
   const errorText = (field: GameFormField) => fieldErrors[field];
   const isInvalid = (field: GameFormField) => errorText(field) !== undefined;
 
   const unitPrice = integerOrNull(values.unitPrice);
   const tickets = integerOrNull(values.ticketsPerBook);
+  // 單張金額邊打邊提示:有填、但不是 100 的倍數的正整數(送出前檢查也擋)
+  const unitPriceHint =
+    values.unitPrice.trim() !== "" &&
+    (unitPrice === null || !isValidUnitPrice(unitPrice))
+      ? tErrors("unitPrice", { step: String(UNIT_PRICE_STEP) })
+      : undefined;
   const standard =
     unitPrice === null ? null : standardTicketsPerBook(unitPrice);
   let ticketsHint: string | undefined;
@@ -143,8 +152,8 @@ export const GameInfoFields = ({
           required
           fullWidth
           disabled={isLocked}
-          error={isInvalid("unitPrice")}
-          helperText={errorText("unitPrice")}
+          error={isInvalid("unitPrice") || unitPriceHint !== undefined}
+          helperText={errorText("unitPrice") ?? unitPriceHint}
           slotProps={{
             htmlInput: { inputMode: "numeric", list: priceListId },
           }}

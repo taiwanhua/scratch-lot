@@ -30,7 +30,6 @@ import {
 /** 區塊 4 讀的張數事件(調貨另外讀;售出 / 撤銷由區塊 1 帶進來)。 */
 export const INVENTORY_EVENT_TYPES: readonly TicketEventType[] = [
   TICKET_EVENT_TYPE.purchase,
-  TICKET_EVENT_TYPE.costAdjust,
   TICKET_EVENT_TYPE.purchaseVoid,
   TICKET_EVENT_TYPE.scrap,
   TICKET_EVENT_TYPE.investigate,
@@ -48,8 +47,6 @@ export interface InventoryEvent {
   at: Date;
   cost: number;
   refId: Types.ObjectId | null;
-  /** 金額(成本調整 = 調整後的單張成本;舊資料沒記 = 0) */
-  amount: number;
   from: StateSnapshot | null;
   to: StateSnapshot;
 }
@@ -138,36 +135,6 @@ function flowFiguresOf(
   return { tickets, cost };
 }
 
-/**
- * 成本調整(調貨單少張處理後,已點收張的單張成本改成縮小後那一列的批購金額 ÷ 張數;規格 7.2):只算調整時在這家店
- * 庫存的張,成本 = Σ(調整後 − 調整前)。調整後的單張成本讀事件的金額;舊資料沒記時用張現況的單張成本。
- */
-async function costAdjustOf(
-  reader: OperatorContext,
-  tickets: LotteryTicketsRepository,
-  events: readonly InventoryEvent[],
-): Promise<number> {
-  const missing = events
-    .filter((event) => event.amount <= 0)
-    .map((event) => event.ticketId);
-  const rows =
-    missing.length === 0
-      ? []
-      : await tickets.findMany(
-          reader,
-          { _id: { $in: missing } },
-          { select: "unitCost" },
-        );
-  const current = new Map(rows.map((row) => [String(row._id), row.unitCost]));
-  return events.reduce((sum, event) => {
-    const after =
-      event.amount > 0
-        ? event.amount
-        : (current.get(String(event.ticketId)) ?? event.cost);
-    return sum + after - event.cost;
-  }, 0);
-}
-
 const minus = (left: StockFigures, right: StockFigures): StockFigures => ({
   tickets: left.tickets - right.tickets,
   cost: left.cost - right.cost,
@@ -177,7 +144,7 @@ const minus = (left: StockFigures, right: StockFigures): StockFigures => ({
  * 營運報表區塊 4 庫存異動(規格 11.2;正本 `docs/modules/project/reports.md`「營運報表」):由上往下加減,
  * 最後一列核對要是 0。
  *
- * `期初 + 進貨 + 調入 − 調出 − 淨銷售 − 報廢 − 新增待查 + 待查轉回 + 遺失尋回 ± 成本調整 = 期末`
+ * `期初 + 進貨 + 調入 − 調出 − 淨銷售 − 報廢 − 新增待查 + 待查轉回 + 遺失尋回 = 期末`
  *
  * - 每一列只算「進出這家店庫存(未售、在庫存或檯面)」的那一步:新增待查 = 庫存 → 待查;待查轉回 / 遺失尋回 =
  *   待查 / 遺失 → 這家店的庫存;確認遺失(待查 → 遺失)、跳號、期末在途、期末待查另列,不在加減裡
@@ -325,13 +292,6 @@ export class OperationsInventory {
       new Set(ending.investigating.bookIds),
     );
 
-    // 成本調整:只改成本(張數不變),少張重送跨期時兩期才都對得上(規格第 20 章 c)
-    const costAdjust = await costAdjustOf(
-      reader,
-      this.tickets,
-      ofType(TICKET_EVENT_TYPE.costAdjust, onHandAfter),
-    );
-
     const expectedEnding = {
       tickets:
         opening.onHand.tickets +
@@ -352,8 +312,7 @@ export class OperationsInventory {
         scrap.cost -
         newInvestigating.cost +
         investigateRecovered.cost +
-        lostRecovered.cost +
-        costAdjust,
+        lostRecovered.cost,
     };
     const inTransitAmount = await this.stock.inTransitAmountOf(
       reader,
@@ -383,7 +342,6 @@ export class OperationsInventory {
       investigateRecoveredCost: investigateRecovered.cost,
       lostRecoveredTickets: lostRecovered.tickets,
       lostRecoveredCost: lostRecovered.cost,
-      costAdjustCost: costAdjust,
       endingTickets: ending.onHand.tickets,
       endingCost: ending.onHand.cost,
       checkTickets: expectedEnding.tickets - ending.onHand.tickets,

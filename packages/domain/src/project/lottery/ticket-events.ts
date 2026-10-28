@@ -108,8 +108,7 @@ export const TICKET_EVENT_TYPE = {
   recover: "recover",
   /**
    * 成本調整:只改單張成本(狀態、位置、分店不變)。調貨單少張處理後,已點收張的單張成本改成縮小後那一列的
-   * 批購金額 ÷ 張數(使用者 10/27 定案);事件的成本快照 = 調整前的成本(舊報表重跑不變)、金額 = 調整後的單張成本
-   * (營運報表區塊 4 的「成本調整」列)
+   * 批購金額 ÷ 張數(使用者 10/27 定案);事件的成本快照 = 調整前的成本,舊報表重跑不變
    */
   costAdjust: "cost_adjust",
 } as const satisfies Record<string, TicketEventType>;
