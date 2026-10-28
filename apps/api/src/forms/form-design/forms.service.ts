@@ -11,7 +11,10 @@ import {
 } from "@repo/domain/form";
 
 import { AuditService } from "../../audit/audit.service";
-import { BusinessRelationshipsRepository } from "../../database/business-relationships.repository";
+import {
+  type BusinessRelationshipRecord,
+  BusinessRelationshipsRepository,
+} from "../../database/business-relationships.repository";
 import {
   FormVersionsRepository,
   FormsRepository,
@@ -269,11 +272,12 @@ export class FormsService {
         limit: pageSize,
       }),
     ]);
-    const items: FormModel[] = [];
-    for (const record of records) {
-      items.push(await this.toModel(facts, record));
-    }
-    return { items, totalCount, page, pageSize };
+    return {
+      items: await this.toModels(facts, records),
+      totalCount,
+      page,
+      pageSize,
+    };
   }
 
   async get(facts: FormOperatorFacts, key: string): Promise<FormModel> {
@@ -647,35 +651,97 @@ export class FormsService {
     facts: FormOperatorFacts,
     form: FormRecord,
   ): Promise<FormModel> {
+    const [model] = await this.toModels(facts, [form]);
+    if (model === undefined) {
+      throw new Error(`表單 ${form.key} 沒有產生對外形狀`);
+    }
+    return model;
+  }
+
+  /**
+   * 一頁表單 → 對外形狀(順序同輸入)。模組、擁有者、草稿、本租戶的 `org_form` 依整頁一次讀;
+   * root 視角的分派依租戶各一次(TX-07:指令數不隨列數成長)。
+   */
+  private async toModels(
+    facts: FormOperatorFacts,
+    forms: readonly FormRecord[],
+  ): Promise<FormModel[]> {
+    if (forms.length === 0) {
+      return [];
+    }
     const operator = facts.operator;
-    const [module, owner, draft] = await Promise.all([
-      this.modules.findOne(operator, { key: form.moduleKey }),
-      form.ownerOrgId
-        ? this.orgs.findById(orgReader(operator), form.ownerOrgId)
-        : null,
-      this.versions.findOne(operator, { formKey: form.key, status: "draft" }),
+    const ownerIds = forms
+      .map((form) => form.ownerOrgId)
+      .filter((id): id is Types.ObjectId => id !== null);
+    const [modules, owners, drafts] = await Promise.all([
+      this.modules.findMany(operator, {
+        key: { $in: [...new Set(forms.map((form) => form.moduleKey))] },
+      }),
+      ownerIds.length === 0
+        ? []
+        : this.orgs.findMany(orgReader(operator), { _id: { $in: ownerIds } }),
+      this.versions.findMany(operator, {
+        formKey: { $in: forms.map((form) => form.key) },
+        status: "draft",
+      }),
     ]);
-    const tenantLink =
+    const moduleNameOf = new Map(
+      modules.map((module) => [module.key, module.name]),
+    );
+    const ownerNameOf = new Map(
+      owners.map((owner) => [String(owner._id), owner.name]),
+    );
+    const draftKeys = new Set(drafts.map((draft) => draft.formKey));
+    const tenantLinkOf =
       facts.tenantId === null
-        ? null
-        : await this.relations.findOne(facts.tenantId, {
-            type: "org_form",
-            secondId: form._id,
-          });
-    const assignments =
-      facts.isRoot && form.ownerOrgId === null
-        ? await this.assignmentsOf(operator, form)
-        : [];
+        ? new Map<string, BusinessRelationshipRecord>()
+        : firstLinkBySecondId(
+            await this.relations.findMany(facts.tenantId, {
+              type: "org_form",
+              secondId: { $in: forms.map((form) => form._id) },
+            }),
+          );
+    const assignmentsOf = facts.isRoot
+      ? await this.assignmentsOf(
+          operator,
+          forms.filter((form) => form.ownerOrgId === null),
+        )
+      : new Map<string, FormAssignment[]>();
+    return forms.map((form) =>
+      this.modelOf(facts, form, {
+        moduleName: moduleNameOf.get(form.moduleKey) ?? null,
+        ownerOrgName: form.ownerOrgId
+          ? (ownerNameOf.get(String(form.ownerOrgId)) ?? null)
+          : null,
+        hasDraft: draftKeys.has(form.key),
+        tenantLink: tenantLinkOf.get(String(form._id)) ?? null,
+        assignments: assignmentsOf.get(String(form._id)) ?? [],
+      }),
+    );
+  }
+
+  private modelOf(
+    facts: FormOperatorFacts,
+    form: FormRecord,
+    loaded: {
+      moduleName: string | null;
+      ownerOrgName: string | null;
+      hasDraft: boolean;
+      tenantLink: BusinessRelationshipRecord | null;
+      assignments: FormAssignment[];
+    },
+  ): FormModel {
+    const { tenantLink, assignments } = loaded;
     const canWrite = this.access.canWriteDesign(facts, form);
     return {
       id: String(form._id),
       key: form.key,
       moduleKey: form.moduleKey,
-      moduleName: module?.name ?? null,
+      moduleName: loaded.moduleName,
       name: form.name,
       isShared: form.ownerOrgId === null,
       ownerOrgId: form.ownerOrgId ? String(form.ownerOrgId) : null,
-      ownerOrgName: owner?.name ?? null,
+      ownerOrgName: loaded.ownerOrgName,
       forkedFrom: form.forkedFrom,
       currentVersion: form.currentVersion,
       tabLabelTemplate: form.tabLabelTemplate,
@@ -683,7 +749,7 @@ export class FormsService {
       serial: serialModelOf(form.serial),
       voidReasonCategoryKey: voidReasonCategoryOf(form),
       sharedByFieldKeys: sharedByFieldKeysOf(form),
-      hasDraft: draft !== null,
+      hasDraft: loaded.hasDraft,
       tenantEnabled:
         tenantLink === null ? null : tenantLink.meta?.enabled === true,
       assignments,
@@ -703,29 +769,54 @@ export class FormsService {
     };
   }
 
-  /** root 視角:共用表單分派到哪些租戶(`org_form` 以各租戶為邊界各讀一次)。 */
+  /**
+   * root 視角:這些共用表單各分派到哪些租戶(以表單 id 為鍵)。`org_form` 以租戶為邊界,
+   * 所以依租戶各讀一次、一次涵蓋整頁的表單(指令數 = 租戶數 + 1,不隨列數成長)。
+   */
   private async assignmentsOf(
     operator: OperatorContext,
-    form: FormRecord,
-  ): Promise<FormAssignment[]> {
+    forms: readonly FormRecord[],
+  ): Promise<Map<string, FormAssignment[]>> {
+    const assignments = new Map<string, FormAssignment[]>();
+    if (forms.length === 0) {
+      return assignments;
+    }
     const tenants = await this.orgs.findMany(orgReader(operator), {
       "ancestors.0": { $exists: true },
       "ancestors.1": { $exists: false },
     });
-    const assignments: FormAssignment[] = [];
     for (const tenant of tenants) {
-      const link = await this.relations.findOne(tenant._id, {
-        type: "org_form",
-        secondId: form._id,
-      });
-      if (link) {
-        assignments.push({
-          tenantOrgId: String(tenant._id),
-          tenantName: tenant.name,
-          enabled: link.meta?.enabled === true,
-        });
+      const links = firstLinkBySecondId(
+        await this.relations.findMany(tenant._id, {
+          type: "org_form",
+          secondId: { $in: forms.map((form) => form._id) },
+        }),
+      );
+      for (const [formId, link] of links) {
+        assignments.set(formId, [
+          ...(assignments.get(formId) ?? []),
+          {
+            tenantOrgId: String(tenant._id),
+            tenantName: tenant.name,
+            enabled: link.meta?.enabled === true,
+          },
+        ]);
       }
     }
     return assignments;
   }
+}
+
+/** 關聯依 `secondId` 對照(同一個 `secondId` 有多筆時取第一筆,同逐筆時的 `findOne`)。 */
+function firstLinkBySecondId(
+  links: readonly BusinessRelationshipRecord[],
+): Map<string, BusinessRelationshipRecord> {
+  const bySecondId = new Map<string, BusinessRelationshipRecord>();
+  for (const link of links) {
+    const key = String(link.secondId);
+    if (!bySecondId.has(key)) {
+      bySecondId.set(key, link);
+    }
+  }
+  return bySecondId;
 }

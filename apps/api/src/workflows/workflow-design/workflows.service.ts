@@ -129,13 +129,10 @@ export class WorkflowsService {
           pattern.test(workflow.name.toLowerCase()),
       )
       .toSorted((left, right) => left.key.localeCompare(right.key));
-    const items: WorkflowModel[] = [];
-    for (const workflow of visible.slice(
-      (page - 1) * pageSize,
-      page * pageSize,
-    )) {
-      items.push(await this.toModel(facts, workflow));
-    }
+    const items = await this.toModels(
+      facts,
+      visible.slice((page - 1) * pageSize, page * pageSize),
+    );
     return { items, totalCount: visible.length, page, pageSize };
   }
 
@@ -375,16 +372,70 @@ export class WorkflowsService {
     facts: FormOperatorFacts,
     workflow: WorkflowRecord,
   ): Promise<WorkflowModel> {
+    const [model] = await this.toModels(facts, [workflow]);
+    if (model === undefined) {
+      throw new Error(`流程 ${workflow.key} 沒有產生對外形狀`);
+    }
+    return model;
+  }
+
+  /**
+   * 一頁流程 → 對外形狀(順序同輸入)。擁有者、草稿、綁定的表單依整頁一次讀;root 視角的分派
+   * 依租戶各一次(TX-07:指令數不隨列數成長)。
+   */
+  private async toModels(
+    facts: FormOperatorFacts,
+    workflows: readonly WorkflowRecord[],
+  ): Promise<WorkflowModel[]> {
+    if (workflows.length === 0) {
+      return [];
+    }
     const operator = facts.operator;
-    const [owner, draft] = await Promise.all([
-      workflow.ownerOrgId
-        ? this.orgs.findById(orgReader(operator), workflow.ownerOrgId)
-        : null,
-      this.versions.findOne(operator, {
-        workflowKey: workflow.key,
+    const ownerIds = workflows
+      .map((workflow) => workflow.ownerOrgId)
+      .filter((id): id is Types.ObjectId => id !== null);
+    const [owners, drafts] = await Promise.all([
+      ownerIds.length === 0
+        ? []
+        : this.orgs.findMany(orgReader(operator), { _id: { $in: ownerIds } }),
+      this.versions.findMany(operator, {
+        workflowKey: { $in: workflows.map((workflow) => workflow.key) },
         status: "draft",
       }),
     ]);
+    const ownerNameOf = new Map(
+      owners.map((owner) => [String(owner._id), owner.name]),
+    );
+    const draftKeys = new Set(drafts.map((draft) => draft.workflowKey));
+    const assignmentsOf = facts.isRoot
+      ? await this.assignmentsOf(
+          operator,
+          workflows.filter((workflow) => workflow.tenantId === null),
+        )
+      : new Map<string, WorkflowAssignment[]>();
+    const boundFormsOf = await this.boundFormsOf(facts, workflows);
+    return workflows.map((workflow) =>
+      this.modelOf(facts, workflow, {
+        ownerOrgName: workflow.ownerOrgId
+          ? (ownerNameOf.get(String(workflow.ownerOrgId)) ?? null)
+          : null,
+        hasDraft: draftKeys.has(workflow.key),
+        assignments: assignmentsOf.get(String(workflow._id)) ?? [],
+        boundForms: boundFormsOf.get(String(workflow._id)) ?? [],
+      }),
+    );
+  }
+
+  private modelOf(
+    facts: FormOperatorFacts,
+    workflow: WorkflowRecord,
+    loaded: {
+      ownerOrgName: string | null;
+      hasDraft: boolean;
+      assignments: WorkflowAssignment[];
+      boundForms: WorkflowBoundForm[];
+    },
+  ): WorkflowModel {
     const canWrite = this.access.canWrite(facts, workflow);
     return {
       id: String(workflow._id),
@@ -392,15 +443,12 @@ export class WorkflowsService {
       name: workflow.name,
       isShared: workflow.tenantId === null,
       ownerOrgId: workflow.ownerOrgId ? String(workflow.ownerOrgId) : null,
-      ownerOrgName: owner?.name ?? null,
+      ownerOrgName: loaded.ownerOrgName,
       forkedFrom: workflow.forkedFrom,
       currentVersion: workflow.currentVersion,
-      hasDraft: draft !== null,
-      assignments:
-        facts.isRoot && workflow.tenantId === null
-          ? await this.assignmentsOf(operator, workflow)
-          : [],
-      boundForms: await this.boundFormsOf(facts, workflow),
+      hasDraft: loaded.hasDraft,
+      assignments: loaded.assignments,
+      boundForms: loaded.boundForms,
       abilities: {
         canEdit: canWrite && this.access.has(facts, WORKFLOWS_PERMISSIONS.edit),
         canPublish:
@@ -416,56 +464,82 @@ export class WorkflowsService {
     };
   }
 
-  /** root 視角:共用流程分派到哪些租戶(`org_workflow` 以各租戶為邊界各讀一次)。 */
+  /**
+   * root 視角:這些共用流程各分派到哪些租戶(以流程 id 為鍵)。`org_workflow` 以租戶為邊界,
+   * 所以依租戶各讀一次、一次涵蓋整頁的流程(指令數 = 租戶數 + 1,不隨列數成長)。
+   */
   private async assignmentsOf(
     operator: OperatorContext,
-    workflow: WorkflowRecord,
-  ): Promise<WorkflowAssignment[]> {
+    workflows: readonly WorkflowRecord[],
+  ): Promise<Map<string, WorkflowAssignment[]>> {
+    const assignments = new Map<string, WorkflowAssignment[]>();
+    if (workflows.length === 0) {
+      return assignments;
+    }
     const tenants = await this.orgs.findMany(orgReader(operator), {
       "ancestors.0": { $exists: true },
       "ancestors.1": { $exists: false },
     });
-    const assignments: WorkflowAssignment[] = [];
     for (const tenant of tenants) {
-      const link = await this.relations.findOne(tenant._id, {
+      const links = await this.relations.findMany(tenant._id, {
         type: "org_workflow",
-        secondId: workflow._id,
+        secondId: { $in: workflows.map((workflow) => workflow._id) },
       });
-      if (link) {
-        assignments.push({
-          tenantOrgId: String(tenant._id),
-          tenantName: tenant.name,
-        });
+      // 同一個流程有多筆時只算一次(同逐筆時的 `findOne`)
+      for (const workflowId of new Set(
+        links.map((link) => String(link.secondId)),
+      )) {
+        assignments.set(workflowId, [
+          ...(assignments.get(workflowId) ?? []),
+          { tenantOrgId: String(tenant._id), tenantName: tenant.name },
+        ]);
       }
     }
     return assignments;
   }
 
-  /** 租戶視角:本租戶哪些表單綁了這個流程(反查 `org_form_workflow.thirdId`)。 */
+  /**
+   * 租戶視角:本租戶哪些表單綁了這些流程(反查 `org_form_workflow.thirdId`;以流程 id 為鍵,
+   * 表單依 key 排序)。整頁一次讀關聯、一次讀表單。
+   */
   private async boundFormsOf(
     facts: FormOperatorFacts,
-    workflow: WorkflowRecord,
-  ): Promise<WorkflowBoundForm[]> {
+    workflows: readonly WorkflowRecord[],
+  ): Promise<Map<string, WorkflowBoundForm[]>> {
+    const bound = new Map<string, WorkflowBoundForm[]>();
     if (facts.tenantId === null) {
-      return [];
+      return bound;
     }
     const links = await this.relations.findMany(facts.tenantId, {
       type: "org_form_workflow",
-      thirdId: workflow._id,
+      thirdId: { $in: workflows.map((workflow) => workflow._id) },
     });
     if (links.length === 0) {
-      return [];
+      return bound;
     }
     const forms = await this.forms.findMany(
       facts.operator,
       { _id: { $in: links.map((link) => link.secondId) } },
       { sort: { key: 1 } },
     );
-    return forms.map((form) => ({
-      formKey: form.key,
-      formName: form.name,
-      moduleKey: form.moduleKey,
-    }));
+    for (const workflow of workflows) {
+      const formIds = new Set(
+        links
+          .filter((link) => String(link.thirdId) === String(workflow._id))
+          .map((link) => String(link.secondId)),
+      );
+      bound.set(
+        String(workflow._id),
+        forms
+          .filter((form) => formIds.has(String(form._id)))
+          .map((form) => ({
+            formKey: form.key,
+            formName: form.name,
+            moduleKey: form.moduleKey,
+          })),
+      );
+    }
+    return bound;
   }
 }
 
