@@ -13,6 +13,7 @@ import {
 import { OrgBusinessDataReader } from "../database/org-business-data.reader";
 import { RelationService } from "../database/relation.service";
 import { tenantIdOfOrg } from "../database/tenant-id";
+import { TransactionService } from "../database/transaction";
 import { StorageService, isOwnedUploadPath } from "../storage/storage.service";
 import type { CreateChildOrgInput } from "./dto/create-child-org.input";
 import type { DeleteOrgInput } from "./dto/delete-org.input";
@@ -269,6 +270,7 @@ export class OrgsService {
     private readonly roles: RolesRepository,
     private readonly protection: OwnerProtectionService,
     private readonly storage: StorageService,
+    private readonly transactions: TransactionService,
   ) {}
 
   private readonly logger = new Logger(OrgsService.name);
@@ -516,48 +518,51 @@ export class OrgsService {
    * 搬移:候選 = **管理範圍內、同租戶、不在自己這棵子樹裡**(docs/modules/org-manager.md)。
    * 範圍外 `NOT_FOUND`、跨租戶 `CROSS_TENANT`、搬進自己的子樹 `CYCLIC_MOVE`、
    * 租戶頂層本身 `FORBIDDEN`;成功後整棵子樹的 `ancestors` 重算(物化路徑,ADR-0005)。
+   * 讀取驗證、自己與子樹的更新、稽核一個交易(TX-01):子樹重算一半失敗不會留下斷掉的路徑。
    */
   async move(operator: OperatorContext, input: MoveOrgInput): Promise<Org> {
-    const org = await this.requireManaged(operator, input.id);
-    if (org.parentId === null || org.isSystem) {
-      throw orgError("VALIDATION_FAILED", "System org cannot be moved");
-    }
-    // 租戶頂層只有根組織能搬(跨租戶的檢查在下面另外擋,ADR-0009)
-    await this.protection.assertTenantTopOperableBy(operator, org, "move");
-    // 新上層也必須在管理範圍內(治理類過濾自動套用:範圍外即 NOT_FOUND)
-    const newParent = await this.requireManaged(operator, input.newParentId);
-    if (
-      newParent._id.equals(org._id) ||
-      newParent.ancestors.some((ancestor) => ancestor.equals(org._id))
-    ) {
-      throw orgError(
-        "CYCLIC_MOVE",
-        `Org ${input.id} cannot be moved under itself or its own descendant`,
-      );
-    }
-    if (!tenantTopIdOf(org).equals(tenantTopIdOf(newParent))) {
-      throw orgError(
-        "CROSS_TENANT",
-        `Org ${input.id} and new parent ${input.newParentId} belong to different tenants`,
-      );
-    }
-    if (org.parentId.equals(newParent._id)) {
-      return toOrg(org);
-    }
+    return this.transactions.withTransaction(async () => {
+      const org = await this.requireManaged(operator, input.id);
+      if (org.parentId === null || org.isSystem) {
+        throw orgError("VALIDATION_FAILED", "System org cannot be moved");
+      }
+      // 租戶頂層只有根組織能搬(跨租戶的檢查在下面另外擋,ADR-0009)
+      await this.protection.assertTenantTopOperableBy(operator, org, "move");
+      // 新上層也必須在管理範圍內(治理類過濾自動套用:範圍外即 NOT_FOUND)
+      const newParent = await this.requireManaged(operator, input.newParentId);
+      if (
+        newParent._id.equals(org._id) ||
+        newParent.ancestors.some((ancestor) => ancestor.equals(org._id))
+      ) {
+        throw orgError(
+          "CYCLIC_MOVE",
+          `Org ${input.id} cannot be moved under itself or its own descendant`,
+        );
+      }
+      if (!tenantTopIdOf(org).equals(tenantTopIdOf(newParent))) {
+        throw orgError(
+          "CROSS_TENANT",
+          `Org ${input.id} and new parent ${input.newParentId} belong to different tenants`,
+        );
+      }
+      if (org.parentId.equals(newParent._id)) {
+        return toOrg(org);
+      }
 
-    const ancestors = [...newParent.ancestors, newParent._id];
-    const updated = await this.orgs.updateById(operator, org._id, {
-      $set: { parentId: newParent._id, ancestors },
+      const ancestors = [...newParent.ancestors, newParent._id];
+      const updated = await this.orgs.updateById(operator, org._id, {
+        $set: { parentId: newParent._id, ancestors },
+      });
+      const moved = await this.reparentDescendants(operator, org, ancestors);
+      await this.audit.record(operator, {
+        action: AUDIT_ACTIONS.move,
+        targetType: AUDIT_TARGET_TYPE,
+        targetId: org._id,
+        before: { parentId: String(org.parentId) },
+        after: { parentId: String(newParent._id), movedDescendants: moved },
+      });
+      return toOrg(updated ?? org);
     });
-    const moved = await this.reparentDescendants(operator, org, ancestors);
-    await this.audit.record(operator, {
-      action: AUDIT_ACTIONS.move,
-      targetType: AUDIT_TARGET_TYPE,
-      targetId: org._id,
-      before: { parentId: String(org.parentId) },
-      after: { parentId: String(newParent._id), movedDescendants: moved },
-    });
-    return toOrg(updated ?? org);
   }
 
   /**
@@ -745,15 +750,21 @@ export class OrgsService {
     const descendants = await this.orgs.findMany(subtree, {
       ancestors: org._id,
     });
-    for (const descendant of descendants) {
-      const index = descendant.ancestors.findIndex((ancestor) =>
-        ancestor.equals(org._id),
-      );
-      const tail = index === -1 ? [org._id] : descendant.ancestors.slice(index);
-      await this.orgs.updateById(subtree, descendant._id, {
-        $set: { ancestors: [...ancestors, ...tail] },
-      });
-    }
+    // 每個組織的新路徑都不同:一次 bulkWrite(TX-06),與子樹大小無關;有一筆沒命中 → CONFLICT、整個搬移回復
+    await this.orgs.bulkUpdateByIds(
+      subtree,
+      descendants.map((descendant) => {
+        const index = descendant.ancestors.findIndex((ancestor) =>
+          ancestor.equals(org._id),
+        );
+        const tail =
+          index === -1 ? [org._id] : descendant.ancestors.slice(index);
+        return {
+          id: descendant._id,
+          update: { $set: { ancestors: [...ancestors, ...tail] } },
+        };
+      }),
+    );
     return descendants.length;
   }
 

@@ -16,6 +16,10 @@ import {
   SAMPLE_ONE_MODULE_KEY,
   dataScopeTargetIdOf,
 } from "../data-scope/test-support/fixtures";
+import {
+  countDbCommands,
+  expectDbCommandsAtMost,
+} from "../database/test-support/db-commands";
 import { HOOK_TIMEOUT_MS } from "../database/test-support/mongo-connection";
 import {
   createRole,
@@ -1415,6 +1419,55 @@ describe("組織管理(樹查詢 / 新增子組織 / 編輯 / 停用連動 / 搬
         { accessToken: rootToken },
       );
       expect(rootMove.errors?.[0]?.extensions?.code).toBe("VALIDATION_FAILED");
+    });
+
+    it("子樹重算一次寫完(TX-06):1 個與 12 個下層組織送出的資料庫指令一樣多", async () => {
+      const smallId = await newOrgUnderTenantA("批次搬小");
+      await createOrg(api.connection, {
+        name: "批次搬小子",
+        parentId: smallId,
+      });
+      const bigId = await newOrgUnderTenantA("批次搬大");
+      // 三層:4 個子組織,每個再各 2 個孫組織 = 12 個下層
+      const grandchildIds: Types.ObjectId[] = [];
+      for (let index = 0; index < 4; index += 1) {
+        const childId = await createOrg(api.connection, {
+          name: `批次搬大子${String(index)}`,
+          parentId: bigId,
+        });
+        for (let leaf = 0; leaf < 2; leaf += 1) {
+          grandchildIds.push(
+            await createOrg(api.connection, {
+              name: `批次搬大孫${String(index)}-${String(leaf)}`,
+              parentId: childId,
+            }),
+          );
+        }
+      }
+      const move = (id: Types.ObjectId) =>
+        api.graphql(
+          MOVE_ORG,
+          { input: { id: String(id), newParentId: String(deptTwoId) } },
+          { accessToken: tenantAdminToken },
+        );
+
+      const small = await countDbCommands(() => move(smallId));
+      const big = await countDbCommands(() => move(bigId));
+
+      expect(small.result.errors).toBeUndefined();
+      expect(big.result.errors).toBeUndefined();
+      expectDbCommandsAtMost(big, small.total, "搬移 12 個下層組織");
+      const [grandchildId] = grandchildIds;
+      const grandchild = grandchildId ? await orgRow(grandchildId) : null;
+      expect(grandchild?.ancestors.map(String).slice(0, 4)).toEqual([
+        String(rootOrgId),
+        String(tenantAId),
+        String(deptTwoId),
+        String(bigId),
+      ]);
+      expect(grandchild?.ancestors).toHaveLength(5);
+      const audits = await auditRows("org.move", bigId);
+      expect(audits[0]).toMatchObject({ after: { movedDescendants: 12 } });
     });
   });
 

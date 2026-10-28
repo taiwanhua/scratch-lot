@@ -155,6 +155,51 @@ export class OwnerProtectionService {
   }
 
   /**
+   * `protectedRoleIdsOf` 的整批版(TX-07):這群使用者裡,誰持有的 `roleId` 授予受擁有者保護。
+   * 判斷與逐人呼叫 `protectedRoleIdsOf(…).has(roleId)` 相同,指令數與人數無關(最多 4 次;
+   * 沒有人是組織擁有者時只有 1 次)。
+   */
+  async protectedHoldersOf(
+    operator: OperatorContext,
+    userIds: readonly Types.ObjectId[],
+    roleId: Types.ObjectId,
+  ): Promise<Set<string>> {
+    if (userIds.length === 0) {
+      return new Set();
+    }
+    const reader = protectionReader(operator);
+    const owned = await this.orgs.findMany(reader, {
+      ownerUserId: { $in: [...userIds] },
+    });
+    if (owned.length === 0) {
+      return new Set();
+    }
+    const [ownerLink] = await this.relations.listLinks("org_role", {
+      secondIds: [roleId],
+    });
+    const ownerOrgKey = ownerLink ? String(ownerLink.firstId) : null;
+    // 角色的擁有組織必須是該使用者擁有的組織
+    const owners = new Set(
+      owned
+        .filter((org) => String(org._id) === ownerOrgKey)
+        .map((org) => String(org.ownerUserId)),
+    );
+    if (owners.size === 0) {
+      return new Set();
+    }
+    const [role] = await this.roles.findMany(reader, { _id: roleId });
+    if (!role || !isTenantAdminRole(role.key, role.settings)) {
+      return new Set();
+    }
+    // 只算真的持有這筆授予的人
+    const grants = await this.relations.listLinks("user_role", {
+      firstIds: userIds.filter((userId) => owners.has(String(userId))),
+      secondIds: [roleId],
+    });
+    return new Set(grants.map((link) => String(link.firstId)));
+  }
+
+  /**
    * 「這個使用者受擁有者保護嗎」的單一判斷點(停用 / 移出租戶皆用它)。
    * 根組織的操作者放行;其餘只要目標是任一組織的擁有者即拒。
    */

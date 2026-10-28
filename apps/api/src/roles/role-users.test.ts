@@ -2,6 +2,10 @@ import { afterAll, beforeAll, describe, expect, it } from "@jest/globals";
 import { type Connection, Types } from "mongoose";
 
 import { createOrg, createUser } from "../auth/test-support/fixtures";
+import {
+  countDbCommands,
+  expectDbCommandsAtMost,
+} from "../database/test-support/db-commands";
 import { HOOK_TIMEOUT_MS } from "../database/test-support/mongo-connection";
 import { createRole } from "../permission/test-support/fixtures";
 import {
@@ -587,6 +591,61 @@ describe("角色管理:分配使用者(GraphQL 端點 + 真 MongoDB)", () => {
       const { code } = await revoke(copyRoleId, [ownerId], rootToken);
       expect(code).toBeUndefined();
       expect(await holderIdsOf(copyRoleId)).toEqual([]);
+    });
+
+    it("指令數與人數無關(TX-06 / TX-07):加入、清單、移除 1 人與 20 人一樣多", async () => {
+      const singleRoleId = await createRole(world.api.app, connection, {
+        name: "批次一人的角色",
+        ownerOrgId: world.deptOne,
+      });
+      const manyRoleId = await createRole(world.api.app, connection, {
+        name: "批次多人的角色",
+        ownerOrgId: world.deptOne,
+      });
+      // 每位都是某個組織的擁有者:擁有者保護的判斷要走完整條路,逐人查才看得出來
+      const members: Types.ObjectId[] = [];
+      for (let index = 0; index < 21; index += 1) {
+        const member = await createMember(world, [world.deptOne], "batch");
+        const owned = await createOrg(connection, {
+          name: nextAccount("批次擁有的組織"),
+          parentId: world.deptOne,
+        });
+        await connection
+          .collection("orgs")
+          .updateOne({ _id: owned }, { $set: { ownerUserId: member } });
+        members.push(member);
+      }
+      const [first, ...rest] = members;
+      if (!first) {
+        throw new Error("沒有建出測試使用者");
+      }
+
+      const grantOne = await countDbCommands(() =>
+        grant(singleRoleId, [first]),
+      );
+      const grantMany = await countDbCommands(() => grant(manyRoleId, rest));
+      expect(grantOne.result.code).toBeUndefined();
+      expect(grantMany.result.code).toBeUndefined();
+      expectDbCommandsAtMost(grantMany, grantOne.total, "加入 20 人");
+
+      const listOne = await countDbCommands(() => listUsers(singleRoleId));
+      const listMany = await countDbCommands(() =>
+        listUsers(manyRoleId, { pageSize: 50 }),
+      );
+      expect(listMany.result.items).toHaveLength(20);
+      expect(listMany.result.items.some((row) => row.ownerProtected)).toBe(
+        false,
+      );
+      expectDbCommandsAtMost(listMany, listOne.total, "清單 20 人");
+
+      const revokeOne = await countDbCommands(() =>
+        revoke(singleRoleId, [first]),
+      );
+      const revokeMany = await countDbCommands(() => revoke(manyRoleId, rest));
+      expect(revokeOne.result.code).toBeUndefined();
+      expect(revokeMany.result.code).toBeUndefined();
+      expectDbCommandsAtMost(revokeMany, revokeOne.total, "移除 20 人");
+      expect(await holderIdsOf(manyRoleId)).toEqual([]);
     });
 
     it("缺 assign-users 權限 → FORBIDDEN", async () => {
