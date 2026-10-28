@@ -422,7 +422,7 @@ describe("排班表(GraphQL 端點 + 真 MongoDB)", () => {
           date: taipei(date, "00:00"),
           type,
           ...(type === "special"
-            ? { category: "event-day", name: "店慶" }
+            ? { category: "event-day", name: "店慶", paletteKey: "blue" }
             : {}),
         },
       }),
