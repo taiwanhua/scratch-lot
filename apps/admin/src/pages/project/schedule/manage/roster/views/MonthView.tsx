@@ -8,7 +8,7 @@ import {
 } from "@repo/ui/month-calendar";
 import { Stack } from "@repo/ui/stack";
 
-import { CalendarMarkChip } from "@/components/project/schedule/CalendarMark/CalendarMarkChip";
+import { TagPaletteChip } from "@/components/project/TagPaletteChip/TagPaletteChip";
 import { calendarMarkOf } from "@/components/project/schedule/CalendarMark/calendar-mark";
 import { ScheduleLegend } from "@/components/project/schedule/ScheduleLegend/ScheduleLegend";
 import { useTenantToday } from "@/hooks/base/useTenantToday";
@@ -46,7 +46,9 @@ const calendarInfoOf = (
   }
   if (mark.kind === "special") {
     return {
-      note: <CalendarMarkChip paletteKey={mark.paletteKey} name={mark.name} />,
+      note: (
+        <TagPaletteChip paletteKey={mark.paletteKey} label={mark.name ?? ""} />
+      ),
     };
   }
   return {};

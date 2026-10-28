@@ -128,10 +128,8 @@ export const MyScheduleList = ({
             component="li"
             key={date}
             data-my-list-day={date}
-            // 特殊日:行事曆選的色票(沒選顏色寫 none)
-            data-special={
-              mark.kind === "special" ? (mark.paletteKey ?? "none") : undefined
-            }
+            // 特殊日:行事曆選的色票
+            data-special={mark.kind === "special" ? mark.paletteKey : undefined}
             onClick={() => {
               onOpenDay(date);
             }}

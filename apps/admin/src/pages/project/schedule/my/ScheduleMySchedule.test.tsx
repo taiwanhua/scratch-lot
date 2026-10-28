@@ -188,25 +188,6 @@ describe("我的班表 → 班表", () => {
     ).toEqual(["缺卡", "有異動"]);
   });
 
-  it("特殊日沒選顏色:退回底座的特殊日底色", async () => {
-    renderSchedulePage({
-      path: `${SCHEDULE}&view=calendar`,
-      my: {
-        calendarDays: [
-          {
-            date: "2026-11-11",
-            type: "special",
-            name: "店慶",
-            paletteKey: null,
-          },
-        ],
-      },
-    });
-    const special = await findLabelled("2026-11-11");
-    expect(special).toHaveAttribute("data-tone", "special");
-    expect(special).not.toHaveAttribute("data-background");
-  });
-
   it("條列:依日期列出班、店休、畫休,今天標「今天」", async () => {
     renderSchedulePage({ path: `${SCHEDULE}&view=list` });
     expect(await screen.findByText("11/5(四)今天")).toBeInTheDocument();
@@ -218,35 +199,13 @@ describe("我的班表 → 班表", () => {
     expect(support?.textContent).toContain("B 分店");
   });
 
-  it("條列:特殊日整行底色並寫名稱(同月曆的判斷;沒選顏色也標)", async () => {
-    renderSchedulePage({
-      path: `${SCHEDULE}&view=list`,
-      my: {
-        calendarDays: [
-          { date: "2026-11-03", type: "closed", name: null, paletteKey: null },
-          {
-            date: "2026-11-10",
-            type: "special",
-            name: "颱風",
-            paletteKey: null,
-          },
-          {
-            date: "2026-11-11",
-            type: "special",
-            name: "店慶",
-            paletteKey: "cyan",
-          },
-        ],
-      },
-    });
+  it("條列:特殊日整行底色並寫名稱(同月曆的判斷);店休不套底色", async () => {
+    renderSchedulePage({ path: `${SCHEDULE}&view=list` });
     await screen.findByText("11/5(四)今天");
     const special = document.querySelector('[data-my-list-day="2026-11-11"]');
-    const noColor = document.querySelector('[data-my-list-day="2026-11-10"]');
     const closed = document.querySelector('[data-my-list-day="2026-11-03"]');
     expect(special).toHaveAttribute("data-special", "cyan");
     expect(special?.textContent).toContain("店慶");
-    expect(noColor).toHaveAttribute("data-special", "none");
-    expect(noColor?.textContent).toContain("颱風");
     expect(closed).not.toHaveAttribute("data-special");
     expect(closed?.textContent).toContain("店休");
   });

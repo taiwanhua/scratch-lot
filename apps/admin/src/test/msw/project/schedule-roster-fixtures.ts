@@ -357,8 +357,7 @@ export const sampleUnmatchedPunches = (
 };
 
 /**
- * 行事曆標示的追加夾具(`scheduleRosterWorld({ calendarMarks: true })`):9 日特殊日「店慶」(cyan)、
- * 10 日特殊日「颱風」(沒選顏色);
+ * 行事曆標示的追加夾具(`scheduleRosterWorld({ calendarMarks: true })`):9 日特殊日「店慶」(cyan);
  * 3 日店休那天林美麗打了一張未對應排班的上班卡。
  */
 export const sampleCalendarMarks = (
@@ -372,12 +371,6 @@ export const sampleCalendarMarks = (
         type: "special",
         name: "店慶",
         paletteKey: "cyan",
-      },
-      {
-        date: dayAt(day(10)),
-        type: "special",
-        name: "颱風",
-        paletteKey: null,
       },
     ],
     unmatchedPunches: [

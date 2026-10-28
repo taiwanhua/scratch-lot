@@ -15,7 +15,7 @@ import { Stack } from "@repo/ui/stack";
 import { Tag } from "@repo/ui/tag";
 import { Typography } from "@repo/ui/typography";
 
-import { CalendarMarkChip } from "@/components/project/schedule/CalendarMark/CalendarMarkChip";
+import { TagPaletteChip } from "@/components/project/TagPaletteChip/TagPaletteChip";
 import { calendarMarkOf } from "@/components/project/schedule/CalendarMark/calendar-mark";
 import { ScheduleLegend } from "@/components/project/schedule/ScheduleLegend/ScheduleLegend";
 import { useFitMainHeight } from "@/hooks/base/useFitMainHeight";
@@ -157,7 +157,10 @@ export const RosterGridView = () => {
               </Typography>
             )}
             {mark.kind === "special" && (
-              <CalendarMarkChip paletteKey={mark.paletteKey} name={mark.name} />
+              <TagPaletteChip
+                paletteKey={mark.paletteKey}
+                label={mark.name ?? ""}
+              />
             )}
           </Box>
           {canEdit && !closed && (

@@ -9,10 +9,8 @@ import type {
   ScheduleTimelineSlot,
 } from "@repo/ui/schedule-timeline";
 
-import {
-  calendarMarkOf,
-  specialDayBackground,
-} from "@/components/project/schedule/CalendarMark/calendar-mark";
+import { tagPaletteBackground } from "@/components/project/TagPaletteChip/tag-palette-background";
+import { calendarMarkOf } from "@/components/project/schedule/CalendarMark/calendar-mark";
 import {
   autoMarkSx,
   leaderMarkSx,
@@ -320,7 +318,7 @@ export const useTimelineGroups = (
         </Box>
       ),
       ...(mark.kind === "special"
-        ? { background: specialDayBackground(mark.paletteKey) }
+        ? { background: tagPaletteBackground(mark.paletteKey) }
         : {}),
     };
   });

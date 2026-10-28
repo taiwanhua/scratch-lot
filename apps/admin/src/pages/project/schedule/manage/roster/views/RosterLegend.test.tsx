@@ -145,7 +145,6 @@ describe("排班表:每個檢視畫出的記號都在圖例裡", () => {
   it.each([
     ["3 日店休", "2026-11-03", "closed", "店休"],
     ["9 日特殊日", "2026-11-09", "special", "店慶"],
-    ["10 日特殊日(沒選顏色)", "2026-11-10", "special", "颱風"],
   ])(
     "日(手機)%s:卡片清單上方標示那天(同電腦版),那天的 ⏲ 放同一列;圖例有這一項",
     async (_name, date, kind, text) => {
@@ -176,23 +175,6 @@ describe("排班表:每個檢視畫出的記號都在圖例裡", () => {
       ).toBeInTheDocument();
     },
   );
-
-  it("月:特殊日沒選顏色也標名稱(中性的特殊日底色),有選顏色用色票標籤", async () => {
-    setViewportWidth(1440);
-    renderSchedulePage({
-      path: rosterPath("view=month"),
-      roster: { calendarMarks: true },
-    });
-    const typhoon = await screen.findByText("颱風");
-    expect(typhoon.closest("[data-palette]")).toHaveAttribute(
-      "data-palette",
-      "none",
-    );
-    expect(screen.getByText("店慶").closest("[data-palette]")).toHaveAttribute(
-      "data-palette",
-      "cyan",
-    );
-  });
 
   it("班表:店休的格子有未對應排班的打卡時照樣顯示時鐘圖示(只標示、不能點)", async () => {
     setViewportWidth(1440);

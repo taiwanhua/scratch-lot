@@ -20,7 +20,7 @@ import { Popover } from "@repo/ui/popover";
 import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
 
-import { CalendarMarkChip } from "@/components/project/schedule/CalendarMark/CalendarMarkChip";
+import { TagPaletteChip } from "@/components/project/TagPaletteChip/TagPaletteChip";
 import { calendarMarkOf } from "@/components/project/schedule/CalendarMark/calendar-mark";
 import { ScheduleLegend } from "@/components/project/schedule/ScheduleLegend/ScheduleLegend";
 import { useSession } from "@/hooks/base/useSession";
@@ -101,7 +101,10 @@ export const DayPicker = ({
       days[day.date] = {
         ...days[day.date],
         note: (
-          <CalendarMarkChip paletteKey={mark.paletteKey} name={mark.name} />
+          <TagPaletteChip
+            paletteKey={mark.paletteKey}
+            label={mark.name ?? ""}
+          />
         ),
       };
     }

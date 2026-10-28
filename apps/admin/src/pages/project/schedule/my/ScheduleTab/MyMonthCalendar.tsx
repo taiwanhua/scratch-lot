@@ -77,13 +77,12 @@ const EntryLines = ({
 };
 
 /**
- * 行事曆(判斷見 `calendarMarkOf`,條列與排班表同一套):店休寫「店休」;特殊日整格底色 = 行事曆選的顏色(底座淡化),
- * 沒選顏色退回 `tone: special`,並寫名稱。
+ * 行事曆(判斷見 `calendarMarkOf`,條列與排班表同一套):店休寫「店休」;特殊日整格底色 = 行事曆選的顏色(底座淡化)並寫名稱。
  */
 const calendarInfoOf = (
   day: Page["calendarDays"][number] | undefined,
   closedLabel: string,
-): Pick<MonthCalendarDayInfo, "note" | "tone" | "background"> => {
+): Pick<MonthCalendarDayInfo, "note" | "background"> => {
   const mark = calendarMarkOf(day);
   if (mark.kind === "closed") {
     return { note: closedLabel };
@@ -93,9 +92,7 @@ const calendarInfoOf = (
   }
   return {
     ...(mark.name === null ? {} : { note: mark.name }),
-    ...(mark.paletteKey === null
-      ? { tone: "special" as const }
-      : { background: tagPaletteColorOf(mark.paletteKey) }),
+    background: tagPaletteColorOf(mark.paletteKey),
   };
 };
 
@@ -108,7 +105,7 @@ export interface MyMonthCalendarProps {
 /**
  * 月曆(SC-01;規格 14.6「月曆」):底座 `MonthCalendar`。每天顯示自己的排班(範本簡稱、時間;負責人綠底)與
  * 打卡紀錄(上班 / 下班);已結束的班缺卡在右上角紅點、有異動的日子金點(同一天兩者都有時並排,紅點在前);
- * 店休寫在日期下方;特殊日整格底色 = 行事曆選的顏色(底座 `MonthCalendar` 的 `background`,沒選顏色退回 `tone`)並寫名稱;整天畫休整格灰色斜線底並寫「畫休」。手機只放簡稱。點一天 → 當天詳情。
+ * 店休寫在日期下方;特殊日整格底色 = 行事曆選的顏色(底座 `MonthCalendar` 的 `background`)並寫名稱;整天畫休整格灰色斜線底並寫「畫休」。手機只放簡稱。點一天 → 當天詳情。
  * 圖例項目見 `my-schedule-legend.ts`。
  */
 export const MyMonthCalendar = ({
