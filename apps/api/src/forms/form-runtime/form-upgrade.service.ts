@@ -64,7 +64,8 @@ import { assertSubmissionCapacity } from "./revision-limits";
 type SubmissionRecord = Persisted<FormSubmissionDocument>;
 
 /** 一批處理幾筆(每批先取 id,再在一個交易裡整批讀完整文件、整批條件更新)。 */
-export const UPGRADE_BATCH_SIZE = 200;
+// 一批的完整文件會同時留在記憶體裡,取保守的 50(每批仍是 3 次往返)
+export const UPGRADE_BATCH_SIZE = 50;
 
 /** 整批寫回最多試幾次(筆數不符 = 有一筆被人同時改了,重讀再試);仍不符就改逐筆。 */
 const BATCH_ATTEMPTS = 2;
@@ -285,7 +286,7 @@ export class FormUpgradeService {
     };
   }
 
-  /** 各舊版本的筆數(版本小的在前;0 筆的不列)。 */
+  /** 各舊版本的筆數(版本小的在前;0 筆的不列)。一次 aggregate 分組計數,不逐版本 count(TX-07)。 */
   private async groupsOf(
     facts: FormOperatorFacts,
     upgrade: UpgradeTarget,
@@ -299,20 +300,28 @@ export class FormUpgradeService {
       },
       { select: "version", sort: { version: 1 } },
     );
-    const groups: FormUpgradeGroup[] = [];
-    for (const other of others) {
-      if (other.version === null) {
-        continue;
-      }
-      const count = await this.submissions.count(facts.operator, {
-        ...this.scopeOf(facts, upgrade),
-        version: other.version,
-      });
-      if (count > 0) {
-        groups.push({ fromVersion: other.version, count });
-      }
+    const versions = others
+      .map((other) => other.version)
+      .filter((version): version is number => version !== null);
+    if (versions.length === 0) {
+      return [];
     }
-    return groups;
+    const rows = await this.submissions.aggregate(facts.operator, [
+      {
+        $match: {
+          ...this.scopeOf(facts, upgrade),
+          version: { $in: versions },
+        },
+      },
+      { $group: { _id: "$version", count: { $sum: 1 } } },
+    ]);
+    const countOf = new Map(
+      rows.map((row) => [row._id as number, row.count as number]),
+    );
+    return versions.flatMap((fromVersion) => {
+      const count = countOf.get(fromVersion) ?? 0;
+      return count > 0 ? [{ fromVersion, count }] : [];
+    });
   }
 
   /** 補值欄位:`upgradeFillTargets` 再篩操作者改得動的欄位。 */

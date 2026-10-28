@@ -457,6 +457,27 @@ describe("舊版資料升級到新版", () => {
       ).toBeUndefined();
     });
 
+    it("升級計畫:多個舊版本的筆數一次分組計數,不逐版本 count", async () => {
+      const { formKey } = await prepare();
+      await createDraft(api, staff.token, formKey, { amount: 7 });
+      await publishDefinition(api, root, formKey, V2, 2);
+
+      const counted = await countDbCommands(() =>
+        ok<{
+          formUpgradePlan: { groups: { fromVersion: number; count: number }[] };
+        }>(api, staff.token, PLAN, { formKey, targetVersion: 3 }),
+      );
+
+      expect(counted.result.formUpgradePlan.groups).toEqual([
+        { fromVersion: 1, count: 2 },
+        { fromVersion: 2, count: 1 },
+      ]);
+      expect(counted.byCommand.get("form_submissions.aggregate")).toBe(1);
+      expect(
+        counted.byCommand.get("form_submissions.countDocuments"),
+      ).toBeUndefined();
+    });
+
     it("整批寫回筆數不符一次:重讀這批再跑一次就升級,不改逐筆", async () => {
       const { formKey, completedId, draftId } = await prepare();
       const repository = api.app.get(FormSubmissionsRepository);
