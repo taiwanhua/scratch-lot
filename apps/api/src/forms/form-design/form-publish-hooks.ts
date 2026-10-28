@@ -2,8 +2,8 @@ import { Injectable } from "@nestjs/common";
 
 /**
  * 發布步驟 3 / 4 裡每一筆寫入前的檢查點名稱(依寫入順序)。
- * - `permission`:建 / 復活 / 改名一筆欄位級權限(每筆各過一次)
- * - `retire-permission`:把不再宣告的權限標 `retiredAt`(每筆各過一次)
+ * - `permission`:建 / 復活 / 改名欄位級權限(整批寫入,TX-06:新建一批、復活與改名一批,每批各過一次)
+ * - `retire-permission`:把不再宣告的權限標 `retiredAt`(一批過一次)
  * - `publish-version`:這一版 `publishing → published`
  * - `retire-previous`:前一個 `published → retired`
  * - `current-version`:`forms.currentVersion` 指向新版(步驟 4 的最後一筆)

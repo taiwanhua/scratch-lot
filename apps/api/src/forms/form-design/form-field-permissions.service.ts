@@ -18,6 +18,7 @@ import {
 } from "../../database/form-submission-usage";
 import type { OperatorContext } from "../../database/operator-context";
 import { RelationService } from "../../database/relation.service";
+import { writeCountConflictError } from "../../database/write-conflict";
 import { type FormRecord, escapeRegex } from "../form-access.service";
 import {
   type FieldPermissionAction,
@@ -73,6 +74,25 @@ export interface CreatedFormCreatePermission {
 /** 一筆宣告權限這次的寫入結果。 */
 type DeclareOutcome = "created" | "updated" | "unchanged";
 
+/** 一筆這一版宣告的權限與它現在的資料(同一個交易裡先查的;沒有 = 要建)。 */
+interface DeclaredPermission {
+  key: string;
+  name: string;
+  current: PermissionRecord | undefined;
+}
+
+/** 缺的建、退役的復活、`name` 不同的改;已是目標狀態就跳過。 */
+function outcomeOf({ name, current }: DeclaredPermission): DeclareOutcome {
+  // 形狀上撞到手寫的 seed 權限(不該發生):不碰 seed 的資料
+  if (current?.source === "seed") {
+    return "unchanged";
+  }
+  if (current?.retiredAt === null && current.name === name) {
+    return "unchanged";
+  }
+  return current ? "updated" : "created";
+}
+
 /**
  * 表單動態權限(`permissions.source = "dynamic"`):
  * - 發布步驟 3 的同步(`syncForVersion`):欄位級權限缺的建、有 `retiredAt` 的復活、不再宣告的退役、`name` 隨 label;
@@ -115,25 +135,35 @@ export class FormFieldPermissionsService {
     });
     const byKey = new Map(existing.map((record) => [record.key, record]));
 
-    for (const [key, name] of desired) {
-      await this.ensureDeclared(
-        operator,
-        module._id,
+    await this.declareMany(
+      operator,
+      module._id,
+      [...desired].map(([key, name]) => ({
         key,
         name,
-        byKey.get(key),
+        current: byKey.get(key),
+      })),
+    );
+    const retiring = existing
+      .filter(
+        (record) =>
+          record.source === "dynamic" &&
+          !desired.has(record.key) &&
+          record.retiredAt === null,
+      )
+      .map((record) => record._id);
+    if (retiring.length > 0) {
+      await this.hooks.reached("retire-permission");
+      // 條件帶 `retiredAt: null`、值一定會變:筆數不符 = 同一交易裡先查的那幾筆已被改(TX-06)
+      const retired = await this.permissions.updateMany(
+        operator,
+        { _id: { $in: retiring }, retiredAt: null },
+        { $set: { retiredAt: new Date() } },
       );
-    }
-    for (const record of existing) {
-      if (
-        record.source === "dynamic" &&
-        !desired.has(record.key) &&
-        record.retiredAt === null
-      ) {
-        await this.hooks.reached("retire-permission");
-        await this.permissions.updateById(operator, record._id, {
-          $set: { retiredAt: new Date() },
-        });
+      if (retired !== retiring.length) {
+        throw writeCountConflictError(
+          `permissions:要退役 ${String(retiring.length)} 筆,只退役 ${String(retired)} 筆`,
+        );
       }
     }
     return module.perFormCreate
@@ -153,51 +183,61 @@ export class FormFieldPermissionsService {
     const key = formCreatePermissionKey(form.moduleKey, form.key);
     const name = formCreatePermissionName(form.name);
     const current = await this.permissions.findOne(operator, { key });
-    const outcome = await this.ensureDeclared(
-      operator,
-      moduleId,
-      key,
-      name,
-      current ?? undefined,
-    );
-    return outcome === "created" ? { key, name } : null;
+    const created = await this.declareMany(operator, moduleId, [
+      { key, name, current: current ?? undefined },
+    ]);
+    return created.has(key) ? { key, name } : null;
   }
 
-  /** 一筆這一版宣告的權限:缺的建、退役的復活、`name` 不同的改;已是目標狀態就跳過。 */
-  private async ensureDeclared(
+  /**
+   * 這一版宣告的權限,整批寫(TX-06):缺的一次 `createMany`、退役的復活與 `name` 不同的一次 `bulkUpdateByIds`
+   * (每筆名稱不同);已是目標狀態的跳過。回傳這次新建的 key。
+   * 每一批寫入前各過一次 `permission` 檢查點(先建、後改)。
+   */
+  private async declareMany(
     operator: OperatorContext,
     moduleId: Types.ObjectId,
-    key: string,
-    name: string,
-    current: PermissionRecord | undefined,
-  ): Promise<DeclareOutcome> {
-    // 形狀上撞到手寫的 seed 權限(不該發生):不碰 seed 的資料
-    if (current?.source === "seed") {
-      return "unchanged";
+    declared: readonly DeclaredPermission[],
+  ): Promise<Set<string>> {
+    const creates: DeclaredPermission[] = [];
+    const updates: { record: PermissionRecord; name: string }[] = [];
+    for (const item of declared) {
+      const outcome = outcomeOf(item);
+      if (outcome === "created") {
+        creates.push(item);
+      } else if (outcome === "updated" && item.current) {
+        updates.push({ record: item.current, name: item.name });
+      }
     }
-    if (current?.retiredAt === null && current.name === name) {
-      return "unchanged";
+    if (creates.length > 0) {
+      await this.hooks.reached("permission");
+      // `current` 是同一個交易裡先查的結果(發布是一個交易,TX-04):沒有才建;
+      // 同時有別的發布建了同一筆 → 唯一索引擋下,錯誤往外拋、整個發布回復
+      await this.permissions.createMany(
+        operator,
+        creates.map(({ key, name }) => ({
+          key,
+          moduleId,
+          name,
+          enabled: true,
+          isSystem: false,
+          settings: {},
+          source: "dynamic" as const,
+          retiredAt: null,
+        })),
+      );
     }
-    await this.hooks.reached("permission");
-    if (current) {
-      await this.permissions.updateById(operator, current._id, {
-        $set: { retiredAt: null, name },
-      });
-      return "updated";
+    if (updates.length > 0) {
+      await this.hooks.reached("permission");
+      await this.permissions.bulkUpdateByIds(
+        operator,
+        updates.map(({ record, name }) => ({
+          id: record._id,
+          update: { $set: { retiredAt: null, name } },
+        })),
+      );
     }
-    // `current` 是同一個交易裡先查的結果(發布是一個交易,TX-04):沒有才建;
-    // 同時有別的發布建了同一筆 → 唯一索引擋下,錯誤往外拋、整個發布回復
-    await this.permissions.create(operator, {
-      key,
-      moduleId,
-      name,
-      enabled: true,
-      isSystem: false,
-      settings: {},
-      source: "dynamic",
-      retiredAt: null,
-    });
-    return "created";
+    return new Set(creates.map(({ key }) => key));
   }
 
   /** 這張表單兩種動作的 key 前綴(formKey 不含 `-`,前綴不會誤中別張表單)。 */
