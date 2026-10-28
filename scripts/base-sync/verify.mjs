@@ -416,7 +416,7 @@ function customizationItems(headFiles, headBlobs) {
 /** 型別註記(`key: string;`)不是宣告。 */
 const TYPE_KEYWORDS = new Set(["string", "number", "unknown", "never", "any"]);
 /**
- * 型別名稱(PascalCase、含小寫字母;`key: OnboardingRoleKey` 這種介面欄位的型別註記)。
+ * 型別名稱(PascalCase、含小寫字母;`key: RoleKey` 這種介面欄位的型別註記)。
  * 只在常數表查不到值時當型別略過;全大寫的 `SOME_KEY` 是常數慣例,查不到照列為無法解析。
  */
 const TYPE_NAME = /^[A-Z][A-Za-z0-9]*[a-z][A-Za-z0-9]*$/;
