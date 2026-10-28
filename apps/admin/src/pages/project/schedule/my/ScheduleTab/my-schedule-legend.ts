@@ -25,6 +25,6 @@ export const MY_SCHEDULE_LEGEND_ITEMS = {
     "changedDot",
     "special",
   ],
-  /** 條列:「臨」、打卡時間、休息、畫休斜線 */
-  list: ["tempEntry", "punchTimes", "breakMinutes", "dayOff"],
+  /** 條列:「臨」、打卡時間、休息、畫休斜線、特殊日底色 */
+  list: ["tempEntry", "punchTimes", "breakMinutes", "dayOff", "special"],
 } as const satisfies Record<string, readonly ScheduleLegendItem[]>;

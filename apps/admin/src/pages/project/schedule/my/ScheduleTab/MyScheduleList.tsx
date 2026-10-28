@@ -6,9 +6,11 @@ import { Stack } from "@repo/ui/stack";
 import { Tag } from "@repo/ui/tag";
 import { Typography } from "@repo/ui/typography";
 
+import { tagPaletteBackgroundVarsSx } from "@/components/project/TagPaletteChip/tag-palette-background";
 import { dayOffHatchSx } from "@/components/project/schedule/DayOffs/day-off-styles";
 import { groupByDate, listDatesOf } from "@/lib/project/schedule-my";
 
+import { myCalendarMarkOf, myListBackgroundOf } from "./my-calendar-mark";
 import { type MyEntry, useMyEntryText } from "./useMyEntryText";
 
 type Page = MyScheduleQuery["mySchedule"];
@@ -75,7 +77,8 @@ const EntryRow = ({ entry }: { entry: MyEntry }) => {
 
 /**
  * 條列檢視(SC-40;規格 14.6「`[月曆 | 條列]`」):依日期列出這個月的班與打卡;畫休、店休也列一行;
- * 今天標「今天」、有異動的日子寫「有異動」;畫休用灰色斜線底、休息寫「☕ 30」(同圖例)。點一列 → 當天詳情。
+ * 今天標「今天」、有異動的日子寫「有異動」;特殊日整行底色 = 行事曆選的顏色並寫名稱(判斷同月曆,`myCalendarMarkOf`);
+ * 畫休用灰色斜線底、休息寫「☕ 30」(同圖例)。點一列 → 當天詳情。
  */
 export const MyScheduleList = ({
   page,
@@ -85,10 +88,11 @@ export const MyScheduleList = ({
   const t = useTranslations("admin.schedule.mySchedule");
   const text = useMyEntryText();
   const byDate = groupByDate(page.entries);
+  const marks = new Map(
+    page.calendarDays.map((day) => [day.date, myCalendarMarkOf(day)]),
+  );
   const closed = new Set(
-    page.calendarDays
-      .filter((day) => day.type === "closed")
-      .map((day) => day.date),
+    [...marks].filter(([, mark]) => mark.kind === "closed").map(([d]) => d),
   );
   const dayOffs = new Set(page.dayOffDates);
   const dates = listDatesOf({
@@ -106,15 +110,24 @@ export const MyScheduleList = ({
     );
   }
   return (
-    <Stack component="ul" sx={{ listStyle: "none", m: 0, p: 0 }}>
+    <Stack
+      component="ul"
+      sx={[{ listStyle: "none", m: 0, p: 0 }, tagPaletteBackgroundVarsSx]}
+    >
       {dates.map((date) => {
         const entries = byDate.get(date) ?? [];
         const isToday = date === page.today;
+        const mark = marks.get(date) ?? { kind: "none" };
+        const background = myListBackgroundOf(mark);
         return (
           <Box
             component="li"
             key={date}
             data-my-list-day={date}
+            // 特殊日:行事曆選的色票(沒選顏色寫 none)
+            data-special={
+              mark.kind === "special" ? (mark.paletteKey ?? "none") : undefined
+            }
             onClick={() => {
               onOpenDay(date);
             }}
@@ -122,6 +135,8 @@ export const MyScheduleList = ({
               display: "flex",
               gap: 2,
               py: 1.25,
+              px: 1,
+              bgcolor: background,
               borderBottom: 1,
               borderColor: "divider",
               cursor: "pointer",
@@ -137,8 +152,11 @@ export const MyScheduleList = ({
                 : text.dateTitle(date)}
             </Typography>
             <Stack spacing={1} sx={{ flex: 1, minWidth: 0 }}>
-              {closed.has(date) && (
+              {mark.kind === "closed" && (
                 <Typography variant="body2">{t("calendar.closed")}</Typography>
+              )}
+              {mark.kind === "special" && mark.name !== null && (
+                <Typography variant="body2">{mark.name}</Typography>
               )}
               {dayOffs.has(date) && (
                 // 畫休一律灰色斜線底(同月曆、圖例「畫休(斜線)」)

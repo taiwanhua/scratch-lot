@@ -70,18 +70,23 @@ describe("我的班表 → 班表:圖例和畫面一致", () => {
     expect(texts).toContain(ITEM.dayOff);
   });
 
-  it("條列:畫休斜線底、休息「☕ 30」;圖例只列臨、打卡時間、休息、畫休(沒有點和特殊日底色)", async () => {
+  it("條列:畫休斜線底、休息「☕ 30」、特殊日底色;圖例列臨、打卡時間、休息、畫休、特殊日(沒有點)", async () => {
     setViewportWidth(1440);
     renderSchedulePage({ path: `${SCHEDULE}&month=2026-11&view=list` });
     await screen.findAllByText("☕ 30");
     const row = dayCell('[data-my-list-day="2026-11-06"]');
     expect(within(row).getByText("畫休")).toBeInTheDocument();
     expect(row.querySelector("[data-day-off-hatch]")).not.toBeNull();
+    expect(dayCell('[data-my-list-day="2026-11-11"]')).toHaveAttribute(
+      "data-special",
+      "cyan",
+    );
     expect(await legendTexts()).toEqual([
       ITEM.temp,
       ITEM.punchTimes,
       ITEM.breakMinutes,
       ITEM.dayOff,
+      ITEM.special,
     ]);
   });
 });

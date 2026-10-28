@@ -218,6 +218,39 @@ describe("我的班表 → 班表", () => {
     expect(support?.textContent).toContain("B 分店");
   });
 
+  it("條列:特殊日整行底色並寫名稱(同月曆的判斷;沒選顏色也標)", async () => {
+    renderSchedulePage({
+      path: `${SCHEDULE}&view=list`,
+      my: {
+        calendarDays: [
+          { date: "2026-11-03", type: "closed", name: null, paletteKey: null },
+          {
+            date: "2026-11-10",
+            type: "special",
+            name: "颱風",
+            paletteKey: null,
+          },
+          {
+            date: "2026-11-11",
+            type: "special",
+            name: "店慶",
+            paletteKey: "cyan",
+          },
+        ],
+      },
+    });
+    await screen.findByText("11/5(四)今天");
+    const special = document.querySelector('[data-my-list-day="2026-11-11"]');
+    const noColor = document.querySelector('[data-my-list-day="2026-11-10"]');
+    const closed = document.querySelector('[data-my-list-day="2026-11-03"]');
+    expect(special).toHaveAttribute("data-special", "cyan");
+    expect(special?.textContent).toContain("店慶");
+    expect(noColor).toHaveAttribute("data-special", "none");
+    expect(noColor?.textContent).toContain("颱風");
+    expect(closed).not.toHaveAttribute("data-special");
+    expect(closed?.textContent).toContain("店休");
+  });
+
   it("換月:網址記月份,沒有已發布的班就是空的", async () => {
     const user = fastUser();
     renderSchedulePage({ path: `${SCHEDULE}&view=list` });

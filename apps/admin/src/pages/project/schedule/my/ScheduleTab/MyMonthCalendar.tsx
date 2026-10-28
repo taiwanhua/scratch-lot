@@ -16,8 +16,9 @@ import { dayOffHatchSx } from "@/components/project/schedule/DayOffs/day-off-sty
 import { leaderMarkSx } from "@/components/project/schedule/ScheduleLegend/schedule-legend-styles";
 import { useTenantTimezone } from "@/hooks/base/useTenantTimezone";
 import { groupByDate } from "@/lib/project/schedule-my";
-import { isTagPaletteKey, tagPaletteColorOf } from "@/lib/project/tag-palettes";
+import { tagPaletteColorOf } from "@/lib/project/tag-palettes";
 
+import { myCalendarMarkOf } from "./my-calendar-mark";
 import { type MyEntry, useMyEntryText } from "./useMyEntryText";
 
 type Page = MyScheduleQuery["mySchedule"];
@@ -76,24 +77,25 @@ const EntryLines = ({
 };
 
 /**
- * 行事曆:店休寫「店休」;特殊日整格底色 = 行事曆選的顏色(底座淡化),沒選顏色退回 `tone: special`,並寫名稱。
+ * 行事曆(判斷見 `myCalendarMarkOf`,條列同一套):店休寫「店休」;特殊日整格底色 = 行事曆選的顏色(底座淡化),
+ * 沒選顏色退回 `tone: special`,並寫名稱。
  */
 const calendarInfoOf = (
   day: Page["calendarDays"][number] | undefined,
   closedLabel: string,
 ): Pick<MonthCalendarDayInfo, "note" | "tone" | "background"> => {
-  if (day?.type === "closed") {
+  const mark = myCalendarMarkOf(day);
+  if (mark.kind === "closed") {
     return { note: closedLabel };
   }
-  if (day?.type !== "special") {
+  if (mark.kind === "none") {
     return {};
   }
-  const note = day.name ?? undefined;
   return {
-    ...(note === undefined ? {} : { note }),
-    ...(isTagPaletteKey(day.paletteKey)
-      ? { background: tagPaletteColorOf(day.paletteKey) }
-      : { tone: "special" as const }),
+    ...(mark.name === null ? {} : { note: mark.name }),
+    ...(mark.paletteKey === null
+      ? { tone: "special" as const }
+      : { background: tagPaletteColorOf(mark.paletteKey) }),
   };
 };
 
