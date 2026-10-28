@@ -7,7 +7,7 @@ import {
   SCHEDULE_CALENDAR_DAY_TYPES,
   type ScheduleCalendarDayType,
 } from "@repo/domain/project/schedule-settings";
-import { isTagPaletteKey } from "@repo/domain/project/tag-palette";
+import { isSpecialDayPaletteKey } from "@repo/domain/project/tag-palette";
 
 import { AuditService } from "../../../audit/audit.service";
 import type { Persisted } from "../../../database/base.repository";
@@ -296,7 +296,8 @@ function validatedDay(
   if (isSpecial && name === null) {
     errors.push("name");
   }
-  if (paletteKey !== null && !isTagPaletteKey(paletteKey)) {
+  // 特殊日顏色必選、不能選灰色(灰色是店休 / 不能排的顏色);店休一律存 null
+  if (isSpecial && !isSpecialDayPaletteKey(paletteKey)) {
     errors.push("paletteKey");
   }
   if (errors.length > 0) {
