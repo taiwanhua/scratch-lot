@@ -63,9 +63,43 @@ import { assertSubmissionCapacity } from "./revision-limits";
 
 type SubmissionRecord = Persisted<FormSubmissionDocument>;
 
-/** 一批處理幾筆(每批先取 id,再在一個交易裡整批讀完整文件、整批條件更新)。 */
+/** 一批最多幾筆(每批先取 id 與大小,再在一個交易裡整批讀完整文件、整批條件更新)。 */
 // 一批的完整文件會同時留在記憶體裡,取保守的 50(每批仍是 3 次往返)
 export const UPGRADE_BATCH_SIZE = 50;
+
+/** 一批的完整文件合計最多幾位元組(BSON);單筆就超過時自成一批。與筆數上限先到先切。 */
+export const UPGRADE_BATCH_BYTES = 32 * 1024 * 1024;
+
+/** 取 id 那次讀到的一筆:id 與存放的 BSON 大小。 */
+export interface UpgradeBatchCandidate {
+  _id: Types.ObjectId;
+  size: number;
+}
+
+/**
+ * 依序累加大小切出這一批:滿 `maxCount` 筆或再加一筆會超過 `maxBytes` 就停;
+ * 第一筆一定收(單筆超過也自成一批,不會卡住)。回傳收進這批的筆數。
+ */
+export function upgradeBatchLength(
+  candidates: readonly Pick<UpgradeBatchCandidate, "size">[],
+  maxCount: number = UPGRADE_BATCH_SIZE,
+  maxBytes: number = UPGRADE_BATCH_BYTES,
+): number {
+  let total = 0;
+  let taken = 0;
+  for (const candidate of candidates) {
+    // 大小讀不出來(例:aggregate 寫錯)時不能當 0 吞掉,否則大小上限形同虛設
+    if (!Number.isFinite(candidate.size) || candidate.size <= 0) {
+      throw new Error(`升級切批:文件大小不合法(${String(candidate.size)})`);
+    }
+    if (taken >= maxCount || (taken > 0 && total + candidate.size > maxBytes)) {
+      break;
+    }
+    total += candidate.size;
+    taken += 1;
+  }
+  return taken;
+}
 
 /** 整批寫回最多試幾次(筆數不符 = 有一筆被人同時改了,重讀再試);仍不符就改逐筆。 */
 const BATCH_ATTEMPTS = 2;
@@ -127,6 +161,9 @@ function isWriteCountConflict(error: unknown): boolean {
  */
 @Injectable()
 export class FormUpgradeService {
+  /** 一批的完整文件合計上限(位元組);預設 `UPGRADE_BATCH_BYTES`,整合測試調小以觸發提早切批。 */
+  batchBytes = UPGRADE_BATCH_BYTES;
+
   constructor(
     private readonly submissions: FormSubmissionsRepository,
     private readonly versions: FormVersionsRepository,
@@ -188,13 +225,10 @@ export class FormUpgradeService {
     const sources = new Map<number, FormVersionRecord>();
     let lastId: Types.ObjectId | null = null;
     for (;;) {
-      const batch: SubmissionRecord[] = await this.submissions.findMany(
-        facts.operator,
-        {
-          ...this.scopeOf(facts, upgrade),
-          ...(lastId === null ? {} : { _id: { $gt: lastId } }),
-        },
-        { select: "_id", sort: { _id: 1 }, limit: UPGRADE_BATCH_SIZE },
+      const candidates = await this.batchCandidates(facts, upgrade, lastId);
+      const batch = candidates.slice(
+        0,
+        upgradeBatchLength(candidates, UPGRADE_BATCH_SIZE, this.batchBytes),
       );
       // 計數在交易提交後才累加:寫入衝突時整批自動重跑,不能把丟掉的那一輪算進去
       const outcomes = await this.upgradeIds(
@@ -215,7 +249,12 @@ export class FormUpgradeService {
         }
       }
       const last = batch.at(-1);
-      if (last === undefined || batch.length < UPGRADE_BATCH_SIZE) {
+      // 因大小提早切批時後面還有;沒切而且不滿筆數上限 = 已讀到尾
+      if (
+        last === undefined ||
+        (batch.length === candidates.length &&
+          candidates.length < UPGRADE_BATCH_SIZE)
+      ) {
         break;
       }
       lastId = last._id;
@@ -291,6 +330,32 @@ export class FormUpgradeService {
       status: { $in: UPGRADABLE_STATUSES },
       currentInstanceId: null,
     };
+  }
+
+  /**
+   * 下一批的候選:id 與存放的 BSON 大小(`$bsonSize`,MongoDB 4.4+),最多 `UPGRADE_BATCH_SIZE` 筆。
+   * 一次 aggregate 取回,不讀完整文件;切批由 `upgradeBatchLength` 依大小決定。
+   */
+  private async batchCandidates(
+    facts: FormOperatorFacts,
+    upgrade: UpgradeTarget,
+    lastId: Types.ObjectId | null,
+  ): Promise<UpgradeBatchCandidate[]> {
+    const rows = await this.submissions.aggregate(facts.operator, [
+      {
+        $match: {
+          ...this.scopeOf(facts, upgrade),
+          ...(lastId === null ? {} : { _id: { $gt: lastId } }),
+        },
+      },
+      { $sort: { _id: 1 } },
+      { $limit: UPGRADE_BATCH_SIZE },
+      { $project: { _id: 1, size: { $bsonSize: "$$ROOT" } } },
+    ]);
+    return rows.map((row) => ({
+      _id: row._id as Types.ObjectId,
+      size: row.size as number,
+    }));
   }
 
   /** 各舊版本的筆數(版本小的在前;0 筆的不列)。一次 aggregate 分組計數,不逐版本 count(TX-07)。 */

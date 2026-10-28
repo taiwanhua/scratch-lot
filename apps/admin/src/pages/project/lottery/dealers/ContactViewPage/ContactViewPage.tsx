@@ -22,7 +22,7 @@ import { useTemporalText } from "@/hooks/base/useTemporalText";
 import type { ModulePageProps } from "@/lib/base/module-tree";
 
 import { FieldGrid } from "../DealerFormPage/DealerFormSections";
-import { ReadOnlyField } from "../ReadOnlyField";
+import { DealerInfoField } from "../DealerInfoField";
 import { SystemInfoFields } from "../SystemInfoFields";
 import {
   CONTACT_ROLE_LABELS,
@@ -124,22 +124,22 @@ const ContactView = ({
           title={t("sections.contactBasic")}
         >
           <FieldGrid>
-            <ReadOnlyField label={t("fields.name")}>
+            <DealerInfoField label={t("fields.name")}>
               {contact.name}
-            </ReadOnlyField>
-            <ReadOnlyField label={t("fields.nationalId")}>
+            </DealerInfoField>
+            <DealerInfoField label={t("fields.nationalId")}>
               {contact.nationalId}
-            </ReadOnlyField>
-            <ReadOnlyField label={t("fields.birthday")}>
+            </DealerInfoField>
+            <DealerInfoField label={t("fields.birthday")}>
               {date(contact.birthday)}
-            </ReadOnlyField>
-            <ReadOnlyField label={t("fields.roles")}>
+            </DealerInfoField>
+            <DealerInfoField label={t("fields.roles")}>
               <Stack direction="row" sx={{ gap: 0.5, flexWrap: "wrap" }}>
                 {contact.roles.map((role) => (
                   <Tag key={role} label={t(CONTACT_ROLE_LABELS[role])} />
                 ))}
               </Stack>
-            </ReadOnlyField>
+            </DealerInfoField>
           </FieldGrid>
         </Section>
 
@@ -149,21 +149,21 @@ const ContactView = ({
           title={t("sections.contactInfo")}
         >
           <FieldGrid>
-            <ReadOnlyField label={t("fields.phone")}>
+            <DealerInfoField label={t("fields.phone")}>
               {contact.phone ?? none}
-            </ReadOnlyField>
-            <ReadOnlyField label={t("fields.mobile")}>
+            </DealerInfoField>
+            <DealerInfoField label={t("fields.mobile")}>
               {contact.mobile ?? none}
-            </ReadOnlyField>
-            <ReadOnlyField label={t("fields.email")}>
+            </DealerInfoField>
+            <DealerInfoField label={t("fields.email")}>
               {contact.email ?? none}
-            </ReadOnlyField>
-            <ReadOnlyField label={t("fields.mailingAddress")}>
+            </DealerInfoField>
+            <DealerInfoField label={t("fields.mailingAddress")}>
               {contact.mailingAddress ?? none}
-            </ReadOnlyField>
-            <ReadOnlyField label={t("fields.residentialAddress")}>
+            </DealerInfoField>
+            <DealerInfoField label={t("fields.residentialAddress")}>
               {contact.residentialAddress ?? none}
-            </ReadOnlyField>
+            </DealerInfoField>
           </FieldGrid>
         </Section>
 

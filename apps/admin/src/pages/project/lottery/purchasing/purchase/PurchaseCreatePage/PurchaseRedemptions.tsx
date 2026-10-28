@@ -18,7 +18,7 @@ import { useTemporalText } from "@/hooks/base/useTemporalText";
 
 import { RedemptionDetailDialog } from "../../../store/redemption/RedemptionDetailDialog";
 import { LineErrorAlerts } from "../../shared/LineErrorAlerts";
-import type { FieldErrorSource } from "../../shared/field-errors";
+import type { FieldErrorSource } from "../../shared/purchasing-field-errors";
 import { PURCHASE_FIELD_KEYS, formatMoney } from "../purchase-keys";
 
 type Row = LotteryRedemptionFieldsFragment;

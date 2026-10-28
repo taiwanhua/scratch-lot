@@ -25,8 +25,5 @@ export const MASTER_DATA_TABS = {
   cashPoints: "cash-points",
 } as const;
 
-/** 收銀點選單底部的「找不到?到欄位管理新增」連到的模組。 */
-export const FIELD_MANAGER_MODULE_KEY = "system.field-manager";
-
 /** 收銀點的印表機選單要的權限(底座 `printablePrinters`)。 */
 export const PRINT_PERMISSION = "api.printing.print";

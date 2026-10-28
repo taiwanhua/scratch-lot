@@ -100,6 +100,17 @@ const BASE_V3_CHANGES = {
   "apps/api/src/forms/forms-error.ts":
     "export const notFoundError = () => 1;\nexport const sharedHelper = () => 2;\n",
   "apps/api/src/lib/parse.ts": "export const parseError = () => 3;\n",
+  // 第 4 節的模組慣例常數與測試輔助:底座各模組 / 各測試各有一份
+  "apps/api/src/gizmos/dto/gizmos.input.ts":
+    "export const DEFAULT_PAGE_SIZE = 20;\nexport const MAX_PAGE_SIZE = 100;\n",
+  "apps/api/src/gizmos/gizmo-mapper.ts":
+    "export const AUDIT_ACTIONS = { create: 'gizmo.create' };\n",
+  // 共用套件匯出的同名常數:專案該用這一份
+  "packages/domain/src/redaction.ts": "export const REDACTED = '***';\n",
+  "apps/api/src/gizmos/test-support/fixtures.ts":
+    "export const PASSWORD = 'pw';\nexport const P = {};\n",
+  "apps/admin/src/test/viewport.ts":
+    "export const setViewportWidth = () => {};\n",
   // 底座在 project/ 路徑帶空版的固定來源(專案填內容);對應的底座檔同名
   "apps/api/src/project/database/tenant-purge.ts":
     "export const PROJECT_TENANT_PURGE = [];\n",
@@ -526,6 +537,32 @@ test("不乾淨 4b:慣例檔名、各模組錯誤 helper、底座帶空版的固
   ]);
 });
 
+test("不乾淨 4c:模組慣例常數與測試輔助檔對底座測試輔助檔的同名匯出不算;底座共用測試工具(src/test/)、底座共用套件的常數、測試輔助撞正式程式碼的名稱、非測試輔助檔照列", async () => {
+  const result = await verifyScenario("name-module-conventions", {
+    // 模組慣例常數:底座各模組各一份,不算
+    "apps/api/src/project/widgets/dto/widgets.input.ts":
+      "export const DEFAULT_PAGE_SIZE = 20;\nexport const MAX_PAGE_SIZE = 50;\n",
+    // AUDIT_ACTIONS 不算;REDACTED 底座在 packages/ 匯出(共用的那份):照列
+    "apps/api/src/project/widgets/widget-keys.ts":
+      "export const AUDIT_ACTIONS = {};\nexport const REDACTED = '***';\n",
+    // 測試輔助檔對底座測試輔助檔同名:不算;撞底座正式程式碼的名稱:照列
+    "apps/api/src/project/widgets/test-support/widgets-fixtures.ts":
+      "export const PASSWORD = 'pw';\nexport const P = {};\nexport const parseError = () => 3;\n",
+    // 底座 src/test/ 是給人 import 的共用測試工具:測試輔助檔另寫同名的一份照列
+    "apps/admin/src/pages/project/widgets/widgets-test-support.ts":
+      "export const setViewportWidth = () => {};\n",
+    // 不是測試輔助檔卻匯出底座測試輔助的名稱:照列
+    "apps/api/src/project/widgets/widget-auth.ts":
+      "export const PASSWORD = 'pw';\n",
+  });
+  assert.deepEqual(assertOnlySection(result, 4), [
+    "- `apps/admin/src/pages/project/widgets/widgets-test-support.ts`:同匯出 `setViewportWidth`(`apps/admin/src/test/viewport.ts`)",
+    "- `apps/api/src/project/widgets/test-support/widgets-fixtures.ts`:同匯出 `parseError`(`apps/api/src/lib/parse.ts`)",
+    "- `apps/api/src/project/widgets/widget-auth.ts`:同匯出 `PASSWORD`(`apps/api/src/gizmos/test-support/fixtures.ts`)",
+    "- `apps/api/src/project/widgets/widget-keys.ts`:同匯出 `REDACTED`(`packages/domain/src/redaction.ts`)",
+  ]);
+});
+
 const GADGETS_PUBLIC = {
   "packages/project-config/src/project/public.ts":
     'export const projectPublic = { slug: "gadgets", brand: { name: "Gadgets Co" } };\n',
@@ -729,12 +766,21 @@ test("掃描工具:去註解保留字串;key 解析常數、樣板與 permission
         "export const a = { collection: COLLECTION, entries: [{ key: GROUP }] };",
         "export const b = { first: { collection: 'orgs', key: 'root' } };",
         "export const c = { entries: [{ key: unknownValue }] };",
+        // 查不到值的 PascalCase 名稱 = 型別註記,略過;全大寫常數查不到照列;查得到值的照常解析
+        "interface Role { key: RoleKey; name: string; }",
+        "export const d = { entries: [{ key: MISSING_KEY }, { key: Known }] };",
       ].join("\n"),
-      new Map([...constants, ["COLLECTION", "roles"]]),
+      new Map([...constants, ["COLLECTION", "roles"], ["Known", "known"]]),
     ),
     {
-      declared: [{ collection: "roles", key: "system" }],
-      unresolved: [{ collection: "?", expression: "unknownValue", line: 4 }],
+      declared: [
+        { collection: "roles", key: "system" },
+        { collection: "?", key: "known" },
+      ],
+      unresolved: [
+        { collection: "?", expression: "unknownValue", line: 4 },
+        { collection: "?", expression: "MISSING_KEY", line: 6 },
+      ],
       helperCalls: [],
     },
   );
