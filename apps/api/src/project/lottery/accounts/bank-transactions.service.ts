@@ -32,6 +32,7 @@ import {
 } from "../../database/lottery-accounts/lottery-accounts.repositories";
 import { CashLedgerService } from "../cash/cash-ledger.service";
 import { SettlementLedger } from "../settlement/settlement-ledger";
+import { SettlementMarks } from "../settlement/settlement-marks";
 import {
   assertSideReversible,
   canReverseSide,
@@ -93,6 +94,7 @@ export class BankTransactionsService {
     private readonly movements: LotteryCashMovementsRepository,
     private readonly cashLedger: CashLedgerService,
     private readonly ledger: SettlementLedger,
+    private readonly settlementMarks: SettlementMarks,
     private readonly orgs: OrgsRepository,
     private readonly names: AccountNames,
     private readonly access: AccountsAccess,
@@ -368,7 +370,7 @@ export class BankTransactionsService {
     if (!allowInactiveAccount) {
       assertActive(data.account);
     }
-    return this.transactions.create(
+    const row = await this.transactions.create(
       operator,
       {
         accountId: data.account._id,
@@ -388,6 +390,18 @@ export class BankTransactionsService {
       },
       createOptions,
     );
+    await this.touchSettlement(row, createOptions.session);
+    return row;
+  }
+
+  /** 掛在單據某一邊的收付(含沖正):單據的結清標記改回待確認(待結清只掃還沒結清的)。 */
+  private async touchSettlement(
+    row: BankTransactionRecord,
+    session?: ClientSession | null,
+  ): Promise<void> {
+    if (row.refId !== null && row.settlementSide !== null) {
+      await this.settlementMarks.touch(row.tenantId, row.refId, session);
+    }
   }
 
   /**
@@ -434,6 +448,7 @@ export class BankTransactionsService {
       }
       throw error;
     }
+    await this.touchSettlement(reversal);
     if (original.type === "deposit") {
       // 存銀行的流水在分店;沖正存入的人不一定看得到那家分店的現金(例外寫入,租戶邊界)
       const linked = await this.movements.findMany(reader, {

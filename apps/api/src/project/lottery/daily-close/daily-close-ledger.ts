@@ -216,25 +216,32 @@ export class DailyCloseLedger {
         { $group: { _id: "$orgId", last: { $max: "$closedAt" } } },
       ]),
     ]);
-    const result = new Map<string, Date>();
-    for (const row of closed) {
+    // 有還沒涵蓋的班的店:各店「涵蓋到」之後最早的一班,一次 aggregate(各店條件不同 → `$or`;TX-07)
+    const branches = closed.flatMap((row) => {
       const orgId = row._id as Types.ObjectId;
       const covered = lastDaily.get(String(orgId)) ?? null;
       const latest = row.last as Date;
       if (covered !== null && latest <= covered) {
-        continue;
+        return [];
       }
-      // 只要最早的一班(索引 `(orgId, closedAt)`)
-      const [first] = await this.coveredShifts(
-        reader,
-        orgId,
-        covered,
-        null,
-        undefined,
-        1,
-      );
-      if (first?.closedAt != null) {
-        result.set(String(orgId), first.closedAt);
+      return [
+        {
+          orgId,
+          closedAt: covered === null ? { $ne: null } : { $gt: covered },
+        },
+      ];
+    });
+    const result = new Map<string, Date>();
+    if (branches.length === 0) {
+      return result;
+    }
+    const earliest = await this.shifts.aggregate(reader, [
+      { $match: { $or: branches } },
+      { $group: { _id: "$orgId", first: { $min: "$closedAt" } } },
+    ]);
+    for (const row of earliest) {
+      if (row.first instanceof Date) {
+        result.set(String(row._id), row.first);
       }
     }
     return result;

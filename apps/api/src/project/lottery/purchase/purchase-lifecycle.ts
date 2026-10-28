@@ -10,6 +10,7 @@ import {
 } from "../../../workflows/workflow-engine/lifecycle/form-lifecycle-registration";
 import { settlementClearedGuard } from "../settlement/settlement-guard";
 import { SettlementLedger } from "../settlement/settlement-ledger";
+import { SettlementMarks } from "../settlement/settlement-marks";
 import { PURCHASE_REASONS } from "./purchase-error";
 import type { PurchaseRules } from "./purchase-rules.service";
 import { PURCHASE_RULES } from "./purchase-rules.token";
@@ -53,7 +54,7 @@ const withoutReceipts: FormGuard = ({ submission, get }) =>
 export const purchaseLifecycle = registerFormLifecycle({
   moduleKey: PURCHASE_MODULE_KEY,
   formKey: PURCHASE_FORM_KEY,
-  inject: [PURCHASE_RULES, SettlementLedger],
+  inject: [PURCHASE_RULES, SettlementLedger, SettlementMarks],
   guards: {
     beforeSubmit: ({ operator, submission, values, get }) =>
       rulesOf({ get }).beforeSubmit(operator, submission, values),
@@ -70,7 +71,16 @@ export const purchaseLifecycle = registerFormLifecycle({
     submitted: (context) => rulesOf(context).onSubmitted(context),
     rejected: (context) => rulesOf(context).onRejected(context),
     voided: (context) => rulesOf(context).onVoided(context),
-    completed: (context) => {
+    completed: async (context) => {
+      // 已完成的單據改由結清標記挑出還要算的(待結清只掃還沒結清的)
+      await context
+        .get<SettlementMarks>(SettlementMarks)
+        .completed(context.session, {
+          _id: context.submissionId,
+          orgId: context.orgId,
+          tenantId: context.tenantId,
+          moduleKey: context.moduleKey,
+        });
       rulesOf(context).onTaskEnded(context);
     },
     returned: (context) => rulesOf(context).onReleased(context),

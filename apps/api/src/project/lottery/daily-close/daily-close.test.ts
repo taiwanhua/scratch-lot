@@ -29,6 +29,7 @@ import {
   startAuthTestApp,
 } from "../../../auth/test-support/auth-app";
 import { createOrg } from "../../../auth/test-support/fixtures";
+import { countDbCommands } from "../../../database/test-support/db-commands";
 import { HOOK_TIMEOUT_MS } from "../../../database/test-support/mongo-connection";
 import {
   ASSIGN,
@@ -1245,6 +1246,23 @@ describe("日結與存銀行(GraphQL 端點 + 真 MongoDB)", () => {
     expect(await runAt("22", "09:00")).toEqual([]);
     expect(await storeBadge()).toBe(baseline);
   });
+  it("日結逾期 / 側欄計數的資料庫指令數與店數無關(TX-07):多 3 家有沒涵蓋的班的店,指令數相同", async () => {
+    now("25", "10:00");
+    const first = await newStore("內湖店");
+    await closedShift(first.orgId, first.counter, taipei("24", "08:00"));
+    const baseline = await storeBadge();
+    const one = await countDbCommands(storeBadge);
+    for (const name of ["南港店", "松山店", "大安店"]) {
+      const store = await newStore(name);
+      await closedShift(store.orgId, store.counter, taipei("24", "09:00"));
+      // 各店「涵蓋到」不同:日結涵蓋到更早的時間,之後的班仍沒涵蓋
+      await pastDaily(store.orgId, taipei("24", "08:30"), 0);
+    }
+    const four = await countDbCommands(storeBadge);
+    expect(four.result).toBe(baseline + 3);
+    expect(four.total).toBe(one.total);
+  });
+
   it("退回後再送出:涵蓋計算期間與涵蓋的班照第一次送出;自己不算另一張審核中;退回期間新交班的班不納入;已退回的日結擋住新的日結", async () => {
     const store = await newStore("北投店");
     const first = await closedShift(

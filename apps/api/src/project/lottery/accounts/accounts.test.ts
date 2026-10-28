@@ -17,6 +17,7 @@ import { createOrg } from "../../../auth/test-support/fixtures";
 import { OrgsRepository } from "../../../database/database.module";
 import type { OperatorContext } from "../../../database/operator-context";
 import { tenantBoundaryContext } from "../../../database/tenant-boundary-context";
+import { countDbCommands } from "../../../database/test-support/db-commands";
 import { HOOK_TIMEOUT_MS } from "../../../database/test-support/mongo-connection";
 import { TransactionService } from "../../../database/transaction";
 import type { FormGuardContext } from "../../../workflows/workflow-engine/lifecycle/form-lifecycle-registration";
@@ -26,6 +27,7 @@ import {
   LotteryCashMovementsRepository,
 } from "../../database/lottery-accounts/lottery-accounts.repositories";
 import { LotteryCashMovementSchema } from "../../database/lottery-accounts/lottery-cash-movement.schema";
+import { LOTTERY_SETTLEMENT_MARKS_COLLECTION } from "../../database/lottery-accounts/lottery-settlement-mark.schema";
 import { LOTTERY_SHIFTS_COLLECTION } from "../../database/lottery-store/lottery-shift.schema";
 import {
   CashLedgerOutsideTransactionError,
@@ -33,6 +35,8 @@ import {
   type CashMovementInput,
 } from "../cash/cash-ledger.service";
 import { settlementClearedGuard } from "../settlement/settlement-guard";
+import { SettlementLedger } from "../settlement/settlement-ledger";
+import { SettlementMarks } from "../settlement/settlement-marks";
 import {
   type SettlementSubmission,
   registerSettlementDocument,
@@ -1206,6 +1210,92 @@ describe("帳戶管理(GraphQL 端點 + 真 MongoDB)", () => {
       expect(await guard()).toBeNull();
     });
 
+    it("待結清只掃還沒結清的(結清標記):已完成的單據結清後不再讀、再有收付才回來;某個時點的照樣算;指令數與張數無關", async () => {
+      const account = await create({
+        accountNo: "0005-00091",
+        openingBalance: 0,
+        shareOrgs: [{ orgId: String(tenantA), includeDescendants: true }],
+      });
+      const operator = await operatorOf(api, tenantA);
+      const ledger = api.app.get(SettlementLedger);
+      /** 已完成的單據:完成時建結清標記(同掛接點 `completed`)。 */
+      const completed = async (docNo: string) => {
+        const id = await insertTestSubmission(api.connection, {
+          orgId: storeA,
+          tenantId: tenantA,
+          moduleKey: TEST_PURCHASE,
+          status: "completed",
+          values: { payable: 300, store: String(storeA), docNo },
+        });
+        await api.app.get(TransactionService).withTransaction((session) =>
+          api.app.get(SettlementMarks).completed(session, {
+            _id: id,
+            orgId: storeA,
+            tenantId: tenantA,
+            moduleKey: TEST_PURCHASE,
+          }),
+        );
+        return id;
+      };
+      const markOf = (id: Types.ObjectId) =>
+        api.connection
+          .collection(LOTTERY_SETTLEMENT_MARKS_COLLECTION)
+          .findOne({ refId: id });
+      const first = await completed("P-0091");
+      await ledger.outstanding(operator);
+      const one = await countDbCommands(() => ledger.outstanding(operator));
+      for (const docNo of ["P-0092", "P-0093", "P-0094"]) {
+        await completed(docNo);
+      }
+      const four = await countDbCommands(() => ledger.outstanding(operator));
+      expect(docNosOf(four.result)).toEqual(
+        expect.arrayContaining(["P-0091", "P-0092", "P-0093", "P-0094"]),
+      );
+      expect(four.total).toBe(one.total);
+
+      // 付清 → 讀待結清時寫上 closedAsOf,之後不再讀這張
+      const beforePay = new Date();
+      await ok(api, hq, RECORD_SETTLEMENT, {
+        input: {
+          moduleKey: TEST_PURCHASE,
+          refId: String(first),
+          side: "hq",
+          button: "out",
+          method: "bank",
+          accountId: account.id,
+          amount: 300,
+        },
+      });
+      expect(docNosOf(await ledger.outstanding(operator))).not.toContain(
+        "P-0091",
+      );
+      const closed = await markOf(first);
+      expect(closed?.closedAsOf).toBeInstanceOf(Date);
+      // 某個時點的待結清(輸出報表的期末):付清以前的時點照樣要算(closedAsOf 不早於它),之後的不用
+      const marks = api.app.get(SettlementMarks);
+      const pendingAt = async (asOf: Date) => {
+        const pending = await marks.pending(operator, [TEST_PURCHASE], asOf);
+        return pending.map((mark) => String(mark.refId));
+      };
+      expect(await pendingAt(beforePay)).toContain(String(first));
+      expect(await pendingAt(new Date(Date.now() + 60_000))).not.toContain(
+        String(first),
+      );
+
+      // 沖正 → 標記回到待確認(rev + 1),又出現在待結清
+      const paid = await settlement(TEST_PURCHASE, first);
+      const record = paid.records.find((item) => item.canReverse);
+      await ok(api, hq, REVERSE_SETTLEMENT, {
+        input: { method: record?.method, id: record?.id, reason: "記錯" },
+      });
+      const reopened = await markOf(first);
+      expect(reopened).toMatchObject({
+        closedAsOf: null,
+        rev: (closed?.rev as number) + 1,
+      });
+      expect(docNosOf(await ledger.outstanding(operator))).toContain("P-0091");
+    });
+
     it("收付的權限沿用單據那一邊:沒有 → FORBIDDEN;帳戶的使用組織不含這家分店 → BANK_ACCOUNT_NOT_USABLE", async () => {
       const onlyB = await create({
         accountNo: "0005-00002",
@@ -1966,6 +2056,13 @@ async function operatorOf(
     tenantId,
   );
   return { ...reader, actorId: new Types.ObjectId() };
+}
+
+/** 待結清列的單號。 */
+function docNosOf(
+  rows: readonly { snapshot: { payable: { docNo: string } } }[],
+): string[] {
+  return rows.map((row) => row.snapshot.payable.docNo);
 }
 
 /** 守門的呼叫上下文(只用到 operator、submission、get)。 */

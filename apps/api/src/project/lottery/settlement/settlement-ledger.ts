@@ -28,6 +28,7 @@ import {
   notFoundError,
   validationError,
 } from "../accounts/accounts-error";
+import { SettlementMarks } from "./settlement-marks";
 import {
   type SettlementDocumentRegistration,
   type SettlementPayable,
@@ -44,6 +45,14 @@ export const SETTLEMENT_LIVE_STATUSES = [
   "withdrawn",
   "completed",
 ] as const;
+
+/**
+ * 還沒完成的有效狀態:待結清照狀態全部算(筆數有限);已完成的會一直累積,改由結清標記挑出還要算的
+ * (`SettlementMarks`)。
+ */
+const SETTLEMENT_OPEN_STATUSES = SETTLEMENT_LIVE_STATUSES.filter(
+  (status) => status !== "completed",
+);
 
 /** 一張單據的收付現況(登記 + 提交 + 應付 + 各邊合計)。 */
 export interface SettlementSnapshot {
@@ -70,6 +79,39 @@ export interface InboundEntry {
   side: string;
   revision: number;
   branchOrgId: Types.ObjectId;
+}
+
+/** 算過的一張單據(寫結清標記用)。 */
+interface EvaluatedDocument {
+  submission: SettlementSubmission;
+  /** 有沒有待結清 */
+  open: boolean;
+  /** 最後一筆收付的發生時間;沒有收付 = 1970 */
+  latestAt: Date;
+}
+
+/** 一批提交的應付(順序同 `submissions`):登記有 `payables` 就一批算,沒有就逐張(不讀資料庫的登記)。 */
+async function payablesOf(
+  registration: SettlementDocumentRegistration,
+  submissions: readonly SettlementSubmission[],
+  before?: Date,
+): Promise<readonly (SettlementPayable | null)[]> {
+  if (submissions.length === 0) {
+    return [];
+  }
+  if (registration.payables !== undefined) {
+    return registration.payables(submissions, before);
+  }
+  const payables: (SettlementPayable | null)[] = [];
+  for (const submission of submissions) {
+    payables.push(await registration.payable(submission, before));
+  }
+  return payables;
+}
+
+/** 收付登記過的單據模組 key。 */
+function settlementModuleKeys(): string[] {
+  return settlementDocuments().map((row) => row.moduleKey);
 }
 
 function parseId(value: string): Types.ObjectId | null {
@@ -103,6 +145,7 @@ export class SettlementLedger {
     private readonly cash: LotteryCashMovementsRepository,
     private readonly orgs: OrgsRepository,
     private readonly instances: WorkflowInstancesRepository,
+    private readonly marks: SettlementMarks,
   ) {}
 
   /** 一張單據的收付現況;沒登記 / 看不到 / 不參與收付 → 錯誤。 */
@@ -175,17 +218,47 @@ export class SettlementLedger {
     if (registration === undefined) {
       return true;
     }
-    const totals = await this.totalsOf(operator, submission.tenantId, [
+    const { totals } = await this.totalsOf(operator, submission.tenantId, [
       submission._id,
     ]);
     const bySide = totals.get(String(submission._id)) ?? {};
     return Object.values(bySide).every((side) => paidNetOf(side) === 0);
   }
 
-  /** 看得到的單據裡有待付 / 待退 / 待收的每一邊(依可見範圍 + 依欄位共用,同一般讀取)。 */
+  /**
+   * 看得到的單據裡有待付 / 待退 / 待收的每一邊(依可見範圍 + 依欄位共用,同一般讀取)。
+   * 只掃還沒結清的:還沒完成的單據照狀態全部算;已完成的只算結清標記還在待確認的,算完沒有待結清的
+   * (或已不是有效單據的)寫上 `closedAsOf`,之後不再掃,直到它又有一筆收付。
+   */
   async outstanding(operator: OperatorContext): Promise<OutstandingRow[]> {
-    const live = { status: { $in: [...SETTLEMENT_LIVE_STATUSES] } };
-    return this.outstandingWhere(operator, live);
+    const now = new Date();
+    const reader = await this.marks.readerOf(operator);
+    const pending =
+      reader === null
+        ? []
+        : await this.marks.pending(reader, settlementModuleKeys());
+    const markOf = new Map(pending.map((mark) => [String(mark.refId), mark]));
+    const filter = {
+      $or: [
+        { status: { $in: SETTLEMENT_OPEN_STATUSES } },
+        ...(pending.length === 0
+          ? []
+          : [{ _id: { $in: pending.map((mark) => mark.refId) } }]),
+      ],
+    };
+    const { rows, evaluated } = await this.outstandingWhere(operator, filter);
+    const closable = evaluated.flatMap(({ submission, open, latestAt }) => {
+      const mark = markOf.get(String(submission._id));
+      // 還有待結清的不寫;未來日期的收付還沒到也先不寫(某個時點的待結清只略過 `closedAsOf` 早於它的)
+      return mark === undefined ||
+        (submission.status === "completed" && (open || latestAt > now))
+        ? []
+        : [mark];
+    });
+    if (reader !== null) {
+      await this.marks.close(reader, closable, now);
+    }
+    return rows;
   }
 
   /**
@@ -201,18 +274,33 @@ export class SettlementLedger {
     operator: OperatorContext,
     asOf: Date,
   ): Promise<OutstandingRow[]> {
-    const rejectedLater = await this.rejectedAfter(operator, asOf);
+    const reader = await this.marks.readerOf(operator);
+    const [rejectedLater, pending] = await Promise.all([
+      this.rejectedAfter(operator, asOf),
+      reader === null
+        ? []
+        : this.marks.pending(reader, settlementModuleKeys(), asOf),
+    ]);
     const filter = {
       submittedAt: { $lt: asOf },
       $or: [
-        { status: { $in: [...SETTLEMENT_LIVE_STATUSES] } },
+        { status: { $in: SETTLEMENT_OPEN_STATUSES } },
+        // 已完成的:那個時點以前就已結清(`closedAsOf` 早於它)的不用算
+        {
+          status: "completed",
+          _id: { $in: pending.map((mark) => mark.refId) },
+        },
         { status: "voided", voidedAt: { $gte: asOf } },
         { status: "rejected", _id: { $in: rejectedLater } },
       ],
     };
-    return this.outstandingWhere(operator, filter, asOf, (submission) =>
-      submissionAt(submission, asOf),
+    const { rows } = await this.outstandingWhere(
+      operator,
+      filter,
+      asOf,
+      (submission) => submissionAt(submission, asOf),
     );
+    return rows;
   }
 
   /**
@@ -254,6 +342,10 @@ export class SettlementLedger {
       .map((row) => row._id);
   }
 
+  /**
+   * 各登記的單據裡符合條件的待結清;`evaluated` = 算過的每一張(有沒有待結清、最後一筆收付的發生時間;
+   * 寫結清標記用)。
+   */
   private async outstandingWhere(
     operator: OperatorContext,
     filter: Record<string, unknown>,
@@ -261,8 +353,9 @@ export class SettlementLedger {
     asThen: (
       submission: SettlementSubmission,
     ) => SettlementSubmission | null = (submission) => submission,
-  ): Promise<OutstandingRow[]> {
+  ): Promise<{ rows: OutstandingRow[]; evaluated: EvaluatedDocument[] }> {
     const rows: OutstandingRow[] = [];
+    const evaluated: EvaluatedDocument[] = [];
     for (const registration of settlementDocuments()) {
       const visible = (await this.submissions.findMany(
         operator,
@@ -273,17 +366,30 @@ export class SettlementLedger {
         const then = asThen(row);
         return then === null ? [] : [then];
       });
-      const snapshots = await this.snapshotsOf(
+      const { snapshots, latestAt } = await this.evaluate(
         operator,
         registration,
         submissions,
         before,
       );
+      const openIds = new Set<string>();
       for (const snapshot of snapshots) {
-        rows.push(...outstandingOf(snapshot));
+        const due = outstandingOf(snapshot);
+        if (due.length > 0) {
+          openIds.add(String(snapshot.submission._id));
+        }
+        rows.push(...due);
+      }
+      for (const submission of submissions) {
+        const key = String(submission._id);
+        evaluated.push({
+          submission,
+          open: openIds.has(key),
+          latestAt: latestAt.get(key) ?? new Date(0),
+        });
       }
     }
-    return rows;
+    return { rows, evaluated };
   }
 
   /**
@@ -329,18 +435,36 @@ export class SettlementLedger {
     submissions: readonly SettlementSubmission[],
     before?: Date,
   ): Promise<SettlementSnapshot[]> {
-    const withPayable: {
-      submission: SettlementSubmission;
-      payable: SettlementPayable;
-    }[] = [];
-    for (const submission of submissions) {
-      const payable = await registration.payable(submission, before);
-      if (payable !== null) {
-        withPayable.push({ submission, payable });
-      }
-    }
+    const { snapshots } = await this.evaluate(
+      operator,
+      registration,
+      submissions,
+      before,
+    );
+    return snapshots;
+  }
+
+  /**
+   * 一批提交的現況 + 每張最後一筆收付的發生時間(`latestAt`;沒有收付的不在裡面)。
+   * 指令數不隨張數成長(TX-07):應付一批算(`payables`)、收付合計每個租戶一次。
+   */
+  private async evaluate(
+    operator: OperatorContext,
+    registration: SettlementDocumentRegistration,
+    submissions: readonly SettlementSubmission[],
+    before?: Date,
+  ): Promise<{
+    snapshots: SettlementSnapshot[];
+    latestAt: Map<string, Date>;
+  }> {
+    const payables = await payablesOf(registration, submissions, before);
+    const withPayable = submissions.flatMap((submission, index) => {
+      const payable = payables[index] ?? null;
+      return payable === null ? [] : [{ submission, payable }];
+    });
+    const latestAt = new Map<string, Date>();
     if (withPayable.length === 0) {
-      return [];
+      return { snapshots: [], latestAt };
     }
     const byTenant = new Map<string, SettlementSubmission[]>();
     for (const { submission } of withPayable) {
@@ -350,16 +474,20 @@ export class SettlementLedger {
     const totals = new Map<string, Record<string, SettlementSideTotals>>();
     for (const group of byTenant.values()) {
       const tenantId = group[0]?.tenantId ?? null;
-      for (const [key, value] of await this.totalsOf(
+      const result = await this.totalsOf(
         operator,
         tenantId,
         group.map((submission) => submission._id),
         before,
-      )) {
+      );
+      for (const [key, value] of result.totals) {
         totals.set(key, value);
       }
+      for (const [key, value] of result.latestAt) {
+        latestAt.set(key, value);
+      }
     }
-    return withPayable.map(({ submission, payable }) => ({
+    const snapshots = withPayable.map(({ submission, payable }) => ({
       registration,
       submission,
       payable,
@@ -371,15 +499,19 @@ export class SettlementLedger {
         sides: totals.get(String(submission._id)) ?? {},
       },
     }));
+    return { snapshots, latestAt };
   }
 
-  /** 單據 id → 邊 → 支出 / 收入合計(銀行交易 + 現金流水)。 */
+  /** 單據 id → 邊 → 支出 / 收入合計(銀行交易 + 現金流水),與每張最後一筆的發生時間。 */
   private async totalsOf(
     operator: OperatorContext,
     tenantId: Types.ObjectId | null,
     refIds: readonly Types.ObjectId[],
     before?: Date,
-  ): Promise<Map<string, Record<string, SettlementSideTotals>>> {
+  ): Promise<{
+    totals: Map<string, Record<string, SettlementSideTotals>>;
+    latestAt: Map<string, Date>;
+  }> {
     const reader = await tenantBoundaryContext(this.orgs, operator, tenantId);
     const match = {
       refId: { $in: [...refIds] },
@@ -397,6 +529,7 @@ export class SettlementLedger {
               direction: "$direction",
             },
             amount: { $sum: "$amount" },
+            latestAt: { $max: "$occurredAt" },
           },
         },
       ]),
@@ -413,14 +546,17 @@ export class SettlementLedger {
               },
             },
             amount: { $sum: "$amount" },
+            latestAt: { $max: "$occurredAt" },
           },
         },
       ]),
     ]);
     const result = new Map<string, Record<string, SettlementSideTotals>>();
+    const latestAt = new Map<string, Date>();
     for (const row of [...bankRows, ...cashRows] as {
       _id: { refId: unknown; side: string; direction: "in" | "out" };
       amount: number;
+      latestAt: Date;
     }[]) {
       const key = String(row._id.refId);
       const sides = result.get(key) ?? {};
@@ -428,8 +564,12 @@ export class SettlementLedger {
       totals[row._id.direction] += row.amount;
       sides[row._id.side] = totals;
       result.set(key, sides);
+      const latest = latestAt.get(key);
+      if (latest === undefined || row.latestAt > latest) {
+        latestAt.set(key, row.latestAt);
+      }
     }
-    return result;
+    return { totals: result, latestAt };
   }
 }
 

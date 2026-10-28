@@ -22,6 +22,7 @@ import {
   startAuthTestApp,
 } from "../../../auth/test-support/auth-app";
 import { createOrg } from "../../../auth/test-support/fixtures";
+import { countDbCommands } from "../../../database/test-support/db-commands";
 import { HOOK_TIMEOUT_MS } from "../../../database/test-support/mongo-connection";
 import {
   NotificationService,
@@ -1075,6 +1076,32 @@ describe("關帳(GraphQL 端點 + 真 MongoDB)", () => {
       reversalOf: String(original),
       reversalOfAt: taipei("2026-12-01", "14:00").toISOString(),
     });
+  });
+
+  it("月結抽屜的資料庫指令數與收銀點數無關(TX-07):多 3 個收銀點,關帳檢查的指令數相同", async () => {
+    await check("2026-12");
+    const before = await countDbCommands(() => check("2026-12"));
+    for (const order of [2, 3, 4]) {
+      await connection.collection(LOTTERY_CASH_POINTS_COLLECTION).insertOne({
+        orgId: store,
+        tenantId: tenant,
+        positionKey: `counter-${String(order)}`,
+        name: `櫃台 ${String(order)}`,
+        order,
+        enabled: true,
+        printerId: null,
+        note: null,
+        moduleKey: "master-data",
+        ...base(),
+      });
+    }
+    const after = await countDbCommands(() => check("2026-12"));
+    const drawersOf = (result: typeof before.result) =>
+      result.snapshot.stores.flatMap((row) => row.drawers);
+    expect(drawersOf(after.result)).toHaveLength(
+      drawersOf(before.result).length + 3,
+    );
+    expect(after.total).toBe(before.total);
   });
 
   it("只新增:關帳紀錄、銀行交易、現金流水的修改 / 刪除一律拋 AppendOnlyLedgerError(不能重新開帳)", () => {

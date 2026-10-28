@@ -22,6 +22,7 @@ import {
   notFoundError,
   validationError,
 } from "../accounts/accounts-error";
+import { SettlementMarks } from "../settlement/settlement-marks";
 
 export type CashMovementRecord = Persisted<LotteryCashMovementDocument>;
 
@@ -104,7 +105,10 @@ const ZERO_BASELINE: VaultBaseline = { amount: 0, since: null };
  */
 @Injectable()
 export class CashLedgerService {
-  constructor(private readonly movements: LotteryCashMovementsRepository) {}
+  constructor(
+    private readonly movements: LotteryCashMovementsRepository,
+    private readonly settlementMarks: SettlementMarks,
+  ) {}
 
   async recordCashMovement(
     session: ClientSession | undefined,
@@ -112,7 +116,7 @@ export class CashLedgerService {
   ): Promise<CashMovementRecord> {
     const active = activeSessionOf(session);
     checkMovement(input);
-    return this.movements.create(
+    const row = await this.movements.create(
       input.operator,
       {
         orgId: input.orgId,
@@ -137,6 +141,18 @@ export class CashLedgerService {
       },
       { session: active },
     );
+    await this.touchSettlement(row, active);
+    return row;
+  }
+
+  /** 掛在單據某一邊的收付(含沖正):單據的結清標記改回待確認(待結清只掃還沒結清的)。 */
+  private async touchSettlement(
+    row: CashMovementRecord,
+    session: ClientSession,
+  ): Promise<void> {
+    if (row.refId !== null && row.settlementSide !== null) {
+      await this.settlementMarks.touch(row.tenantId, row.refId, session);
+    }
   }
 
   /**
@@ -167,8 +183,9 @@ export class CashLedgerService {
     if (reversed) {
       throw alreadyReversed();
     }
+    let reversal: CashMovementRecord;
     try {
-      return await this.movements.create(
+      reversal = await this.movements.create(
         by.operator,
         {
           orgId: original.orgId,
@@ -199,6 +216,8 @@ export class CashLedgerService {
       }
       throw error;
     }
+    await this.touchSettlement(reversal, active);
+    return reversal;
   }
 
   /** 小金庫的起算點(日結登記前一律從 0 起算);`before` 給了 = 那個時點以前的起算點。 */

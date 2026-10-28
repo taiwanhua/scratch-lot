@@ -633,12 +633,56 @@ export class PeriodCloseService {
     }[],
   ): Promise<Map<string, PeriodCloseStoreSnapshot["drawers"]>> {
     const result = new Map<string, PeriodCloseStoreSnapshot["drawers"]>();
+    if (points.length === 0) {
+      return result;
+    }
+    // 每個收銀點期末以前開的最後一班:一次 aggregate 依收銀點取第一筆(索引 `(cashPointId, openedAt)`;TX-07)
+    const lastRows = await this.shifts.aggregate(period.reader, [
+      {
+        $match: {
+          cashPointId: { $in: points.map((point) => point._id) },
+          openedAt: { $lt: period.end },
+        },
+      },
+      { $sort: { cashPointId: 1, openedAt: -1, _id: -1 } },
+      {
+        $group: {
+          _id: "$cashPointId",
+          label: { $first: "$label" },
+          closedAt: { $first: "$closedAt" },
+          checkoutId: { $first: "$checkoutId" },
+        },
+      },
+    ]);
+    const lastOf = new Map(
+      lastRows.map((row) => [
+        String(row._id),
+        row as {
+          label: string;
+          closedAt: Date | null;
+          checkoutId: Types.ObjectId | null;
+        },
+      ]),
+    );
+    const closedBefore = [...lastOf.values()].filter(
+      (last) => last.closedAt !== null && last.closedAt < period.end,
+    );
+    const checkoutIds = closedBefore.flatMap((last) =>
+      last.checkoutId === null ? [] : [last.checkoutId],
+    );
+    const checkouts =
+      checkoutIds.length === 0
+        ? []
+        : await this.checkouts.findMany(
+            period.reader,
+            { _id: { $in: checkoutIds } },
+            { select: "leftForNext" },
+          );
+    const leftOf = new Map(
+      checkouts.map((checkout) => [String(checkout._id), checkout.leftForNext]),
+    );
     for (const point of points) {
-      const [last]: ShiftRow[] = await this.shifts.findMany(
-        period.reader,
-        { cashPointId: point._id, openedAt: { $lt: period.end } },
-        { select: SHIFT_SELECT, sort: { openedAt: -1, _id: -1 }, limit: 1 },
-      );
+      const last = lastOf.get(String(point._id));
       let amount: number | null = 0;
       let spanningShiftLabel: string | null = null;
       if (last !== undefined) {
@@ -646,12 +690,7 @@ export class PeriodCloseService {
           amount = null;
           spanningShiftLabel = last.label;
         } else if (last.checkoutId !== null) {
-          const checkout = await this.checkouts.findById(
-            period.reader,
-            last.checkoutId,
-            { select: "leftForNext" },
-          );
-          amount = checkout?.leftForNext ?? 0;
+          amount = leftOf.get(String(last.checkoutId)) ?? 0;
         }
       }
       const list = result.get(String(point.orgId)) ?? [];
