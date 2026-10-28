@@ -1077,7 +1077,7 @@ describe("關帳(GraphQL 端點 + 真 MongoDB)", () => {
     });
   });
 
-  it("只新增:關帳紀錄、銀行交易、現金流水的修改 / 刪除一律拋 AppendOnlyLedgerError(不能重新開帳)", () => {
+  it("只新增:關帳紀錄、銀行交易、現金流水的修改 / 刪除(含批次出口)一律拋 AppendOnlyLedgerError(不能重新開帳)", () => {
     for (const repository of [
       api.app.get(LotteryPeriodClosesRepository),
       api.app.get(LotteryBankTransactionsRepository),
@@ -1093,6 +1093,8 @@ describe("關帳(GraphQL 端點 + 真 MongoDB)", () => {
         AppendOnlyLedgerError,
       );
       expect(() => repository.hardDeleteById()).toThrow(AppendOnlyLedgerError);
+      expect(() => repository.softDeleteMany()).toThrow(AppendOnlyLedgerError);
+      expect(() => repository.bulkUpdateByIds()).toThrow(AppendOnlyLedgerError);
     }
   });
 });

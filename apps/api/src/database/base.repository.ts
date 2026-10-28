@@ -621,8 +621,9 @@ export class BaseRepository<TSchema, TDocument extends RepositoryDocument> {
    *   與寫入中介層同一份判斷 `writeScopeConditionsOf`;`bulkWrite` 不經查詢中介層,所以在這裡自己帶),
    *   另可帶這一筆自己的條件 `filter`(樂觀鎖版本、狀態,TX-05)。`updatedBy` 由這裡填,`updatedAt` 由 timestamps 填
    * - 欄位保護與 `updateById` 相同(不得碰 `orgId` / 建立資訊 / 模組資料表的 `moduleKey`、`tenantId`);
-   *   另外只收 `$set` / `$unset` / `$inc`,不收 `shareOrgs`(共用清單改用 `updateById` / `updateMany`)、
-   *   不收 pipeline 與位置運算子。`$set` 的值照 schema 驗證(`bulkWrite` 不跑 `runValidators`,在這裡先驗)
+   *   另外只收 `$set` / `$unset` / `$inc` / `$push`(`$push` 只收單一元素或 `$each`),不收 `shareOrgs`
+   *   (共用清單改用 `updateById` / `updateMany`)、不收 pipeline、位置運算子、`arrayFilters`、`$pull`。
+   *   `$set` / `$unset` / `$push` 的值照 schema 驗證(`bulkWrite` 不跑 `runValidators`,在這裡先驗)
    * - 同一個 id 在同一批出現兩次 → `TenantScopeError`(依出現順序分輪,TX-06)
    * - 每一筆都要命中(以 `matchedCount` 判,值沒變的列也算命中,不會被誤判成衝突);有不符 → 拋 `CONFLICT`
    *   (同 `softDeleteMany`),交易回復已寫的那幾筆;所以**必須在交易內**
@@ -657,7 +658,7 @@ export class BaseRepository<TSchema, TDocument extends RepositoryDocument> {
         ...protectedPaths,
         SHARE_ORGS_PATH,
       ]);
-      await this.validateSetValues(item.update);
+      await this.validateUpdateValues(item.update);
     }
     const conditions = await writeScopeConditionsOf(this.model.schema, {
       operator,
@@ -1112,22 +1113,38 @@ export class BaseRepository<TSchema, TDocument extends RepositoryDocument> {
   }
 
   /**
-   * `bulkUpdateByIds` 的 `$set` 驗證(代替 `runValidators`):只驗這次寫到的路徑,照 schema 的型別與驗證器;
-   * 不合 → Mongoose `ValidationError`(與 `updateById` 撞到驗證器時同一種錯)。
+   * `bulkUpdateByIds` 的值驗證(代替 `runValidators`;`bulkWrite` 不跑它):只驗這次寫到的路徑,照 schema 的
+   * 型別與驗證器,不合 → Mongoose `ValidationError`(與 `updateById` 撞到驗證器時同一種錯)。
+   * - `$set`:驗寫入的值
+   * - `$unset`:路徑當成沒有值來驗 —— 必填欄位會被擋下(同 `runValidators` 對 `$unset` 的 required 檢查)
+   * - `$push`:把要加的元素(或 `$each` 的元素)當成那個陣列的值來驗
+   * - `$inc`:不驗(同 `runValidators`,它本來就不驗 `$inc`)
+   *
+   * 已知限制(與 `runValidators` 的差異):以 `Model.validate` 驗一個只含這些路徑的物件,所以
+   * 需要拿 `this` 當 Query 的自訂驗證器(update validator context)拿不到 Query;
+   * 陣列索引路徑(`items.0.x`)可能沒有驗到。用到這兩種的更新改走 `updateById`。
    */
-  private async validateSetValues(
+  private async validateUpdateValues(
     update: RepositoryUpdate<TSchema>,
   ): Promise<void> {
-    const set: Record<string, unknown> | undefined = update.$set;
-    if (set === undefined) {
-      return;
+    const values = new Map<string, unknown>();
+    for (const [path, value] of Object.entries(update.$set ?? {})) {
+      values.set(path, value);
     }
-    const paths = Object.keys(set);
-    if (paths.length === 0) {
+    for (const path of Object.keys(update.$unset ?? {})) {
+      values.set(path, undefined);
+    }
+    for (const [path, value] of Object.entries(update.$push ?? {})) {
+      values.set(path, pushedElementsOf(value));
+    }
+    if (values.size === 0) {
       return;
     }
     const expanded: Record<string, unknown> = {};
-    for (const path of paths) {
+    for (const [path, value] of values) {
+      if (value === undefined) {
+        continue;
+      }
       const pieces = path.split(".");
       let holder = expanded;
       for (const piece of pieces.slice(0, -1)) {
@@ -1137,9 +1154,9 @@ export class BaseRepository<TSchema, TDocument extends RepositoryDocument> {
         }
         holder = holder[piece] as Record<string, unknown>;
       }
-      holder[pieces.at(-1) ?? path] = set[path];
+      holder[pieces.at(-1) ?? path] = value;
     }
-    await this.model.validate(expanded, paths);
+    await this.model.validate(expanded, [...values.keys()]);
   }
 
   /** 批次搬家的核對讀取:可見範圍內符合條件的那幾筆,只取指定欄位(lean)。 */
@@ -1496,14 +1513,18 @@ function assertInTransaction(
   }
 }
 
-/** `bulkUpdateByIds` 收的運算子;其餘(頂層欄位、pipeline、`$push`…)一律拒收。 */
+/** `bulkUpdateByIds` 收的運算子;其餘(頂層欄位、pipeline、`$pull`…)一律拒收。 */
 const BULK_UPDATE_OPERATORS: ReadonlySet<string> = new Set([
   "$set",
   "$unset",
   "$inc",
+  "$push",
 ]);
 
-/** `bulkUpdateByIds` 的更新形狀:只收 `$set` / `$unset` / `$inc` 物件,路徑不得含位置運算子。 */
+/**
+ * `bulkUpdateByIds` 的更新形狀:只收 `$set` / `$unset` / `$inc` / `$push` 物件,路徑不得含位置運算子;
+ * `$push` 的值是單一元素或只含 `$each` 的物件(`$position` / `$slice` / `$sort` 不收)。
+ */
 function assertBulkUpdateShape(modelName: string, update: unknown): void {
   if (update === null || typeof update !== "object" || Array.isArray(update)) {
     throw new TenantScopeError(
@@ -1515,7 +1536,7 @@ function assertBulkUpdateShape(modelName: string, update: unknown): void {
   )) {
     if (!BULK_UPDATE_OPERATORS.has(key)) {
       throw new TenantScopeError(
-        `${modelName}:bulkUpdateByIds 只收 $set / $unset / $inc(拿到 ${key})`,
+        `${modelName}:bulkUpdateByIds 只收 $set / $unset / $inc / $push(拿到 ${key})`,
       );
     }
     if (value === null || typeof value !== "object") {
@@ -1529,7 +1550,44 @@ function assertBulkUpdateShape(modelName: string, update: unknown): void {
         `${modelName}:bulkUpdateByIds 不收位置運算子(${positional})`,
       );
     }
+    if (key === "$push") {
+      for (const pushed of Object.values(value as Record<string, unknown>)) {
+        assertPushValue(modelName, pushed);
+      }
+    }
   }
+}
+
+/** `$push` 的值:單一元素,或只含 `$each`(陣列)的修飾物件。 */
+function assertPushValue(modelName: string, pushed: unknown): void {
+  if (pushed === null || typeof pushed !== "object" || Array.isArray(pushed)) {
+    return;
+  }
+  const modifiers = Object.keys(pushed).filter((key) => key.startsWith("$"));
+  if (modifiers.length === 0) {
+    return;
+  }
+  if (
+    modifiers.some((key) => key !== "$each") ||
+    !Array.isArray((pushed as { $each?: unknown }).$each)
+  ) {
+    throw new TenantScopeError(
+      `${modelName}:bulkUpdateByIds 的 $push 只收單一元素或 $each 陣列(拿到 ${modifiers.join(", ")})`,
+    );
+  }
+}
+
+/** `$push` 要加進陣列的元素(驗證用):`$each` 的元素,或單一元素。 */
+function pushedElementsOf(pushed: unknown): unknown[] {
+  if (
+    pushed !== null &&
+    typeof pushed === "object" &&
+    !Array.isArray(pushed) &&
+    "$each" in pushed
+  ) {
+    return [...(pushed as { $each: unknown[] }).$each];
+  }
+  return [pushed];
 }
 
 /**

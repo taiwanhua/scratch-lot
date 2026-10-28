@@ -9,6 +9,7 @@ import { BaseRepository } from "./base.repository";
 import { AuditLogsRepository } from "./database.module";
 import type { OperatorContext } from "./operator-context";
 import { baseFieldsPlugin } from "./plugins/base-fields.plugin";
+import { setDataScopeRuleProvider } from "./plugins/data-scope-provider";
 import { fieldEncryptionPlugin } from "./plugins/field-encryption.plugin";
 import {
   TenantScopeError,
@@ -39,10 +40,21 @@ interface Row {
   editVersion: number;
   nested?: { note?: string };
   secret?: string;
+  tags?: string[];
+  history?: { label: string }[];
+}
+
+/** 模組資料表(有 moduleKey / tenantId、可共用):資料範圍規則與鎖住欄位的測試用。 */
+interface ModuleRow {
+  orgId: Types.ObjectId;
+  name: string;
+  moduleKey: string;
+  tenantId: Types.ObjectId | null;
 }
 
 type Repo = BaseRepository<Row, HydratedDocument<Row>>;
 
+const root = new Types.ObjectId();
 const orgA = new Types.ObjectId();
 const orgB = new Types.ObjectId();
 
@@ -91,6 +103,7 @@ function only(ids: readonly Types.ObjectId[]): Types.ObjectId {
 describe("批次寫入出口(TX-06;對真 MongoDB replica set)", () => {
   let database: TestDatabase;
   let rows: Repo;
+  let moduleRows: BaseRepository<ModuleRow, HydratedDocument<ModuleRow>>;
   let auditLogs: AuditLogsRepository;
   let audit: AuditService;
   let transactions: TransactionService;
@@ -108,6 +121,8 @@ describe("批次寫入出口(TX-06;對真 MongoDB replica set)", () => {
         editVersion: { type: Number, default: 0 },
         nested: { note: { type: String, maxlength: 5 } },
         secret: { type: String },
+        tags: [{ type: String, enum: ["a", "b"] }],
+        history: [{ label: { type: String, required: true } }],
       },
       { collection: "batch_write_rows", timestamps: true },
     );
@@ -118,13 +133,41 @@ describe("批次寫入出口(TX-06;對真 MongoDB replica set)", () => {
     schema.plugin(baseFieldsPlugin);
     schema.plugin(tenantScopePlugin);
     const rowModel = database.connection.model<Row>("BatchWriteRow", schema);
+    const moduleSchema = new Schema<ModuleRow>(
+      {
+        orgId: { type: Schema.Types.ObjectId, required: true },
+        name: { type: String, required: true },
+      },
+      { collection: "batch_write_module_rows", timestamps: true },
+    );
+    moduleSchema.plugin(baseFieldsPlugin);
+    moduleSchema.plugin(tenantScopePlugin, {
+      moduleData: true,
+      sharing: { mode: "shareable", defaultShareOrgs: "none", editable: true },
+    });
+    moduleSchema.path("moduleKey").default("batch-test");
+    const moduleModel = database.connection.model<ModuleRow>(
+      "BatchWriteModuleRow",
+      moduleSchema,
+    );
+    // 模組資料表建立時依 orgId 的祖先推導 tenantId:orgA / orgB 都是根下的租戶頂層
+    await database.connection.collection("orgs").insertMany(
+      [orgA, orgB].map((_id) => ({
+        _id,
+        ancestors: [root],
+        parentId: root,
+        name: String(_id),
+        deletedAt: null,
+      })),
+    );
     const auditModel = database.connection.model<AuditLog>(
       AuditLog.name,
       AuditLogSchema,
     );
     // 交易內不能隱式建 collection:先建好
-    await Promise.all([rowModel.init(), auditModel.init()]);
+    await Promise.all([rowModel.init(), moduleModel.init(), auditModel.init()]);
     rows = new BaseRepository(rowModel);
+    moduleRows = new BaseRepository(moduleModel);
     auditLogs = new AuditLogsRepository(auditModel);
     audit = new AuditService(auditLogs);
     transactions = new TransactionService(database.connection);
@@ -255,7 +298,12 @@ describe("批次寫入出口(TX-06;對真 MongoDB replica set)", () => {
 
     it("每筆各自的值;補 updatedBy / updatedAt;值沒變的也算命中", async () => {
       const ids = await seed(3);
-      const before = await rawOf(ids);
+      // 先把 updatedAt 推回很久以前:沒套 timestamps 的話,寫入後還會是這個值
+      const longAgo = new Date(Date.UTC(2000, 0, 1));
+      await database.connection
+        .collection("batch_write_rows")
+        .updateMany({ _id: { $in: ids } }, { $set: { updatedAt: longAgo } });
+      const startedAt = Date.now();
       const times = ids.map(
         (_, index) => new Date(Date.UTC(2026, 0, index + 1)),
       );
@@ -279,11 +327,9 @@ describe("批次寫入出口(TX-06;對真 MongoDB replica set)", () => {
         expect(row?.editVersion).toBe(1);
         expect(row?.nested?.note).toBe("ok");
         expect(String(row?.updatedBy)).toBe(String(asA.actorId));
-        const old = before.find((item) => item._id.equals(id)) as
-          { updatedAt: Date } | undefined;
         expect(
           (row as unknown as { updatedAt: Date }).updatedAt.getTime(),
-        ).toBeGreaterThanOrEqual(old?.updatedAt.getTime() ?? 0);
+        ).toBeGreaterThanOrEqual(startedAt);
       }
     });
 
@@ -349,9 +395,24 @@ describe("批次寫入出口(TX-06;對真 MongoDB replica set)", () => {
         TenantScopeError,
       );
       await expect(run({ name: "頂層" })).rejects.toThrow(TenantScopeError);
-      await expect(run({ $push: { tags: "x" } })).rejects.toThrow(
+      await expect(run({ $pull: { tags: "a" } })).rejects.toThrow(
         TenantScopeError,
       );
+      await expect(
+        run({ $push: { tags: { $each: ["a"], $position: 0 } } }),
+      ).rejects.toThrow(TenantScopeError);
+      await expect(run({ $push: { "history.$.label": "x" } })).rejects.toThrow(
+        TenantScopeError,
+      );
+      // 必填欄位不能 $unset(同 updateById 的 runValidators);非必填的可以
+      await expect(run({ $unset: { name: 1 } })).rejects.toThrow(
+        /`name` is required/,
+      );
+      // $push 的值照 schema 驗:enum 不符、子文件缺必填
+      await expect(run({ $push: { tags: "z" } })).rejects.toThrow(/tags/);
+      await expect(
+        run({ $push: { history: { $each: [{ label: "ok" }, {}] } } }),
+      ).rejects.toThrow(/`label` is required/);
       await expect(run({ $set: { "items.$.name": "x" } })).rejects.toThrow(
         TenantScopeError,
       );
@@ -378,6 +439,99 @@ describe("批次寫入出口(TX-06;對真 MongoDB replica set)", () => {
       ).rejects.toThrow(TenantScopeError);
       const [row] = await rawOf([id]);
       expect(row?.status).toBe("open");
+      expect(row?.name).toBeDefined();
+      expect(row?.tags ?? []).toEqual([]);
+    });
+
+    it("$push(單一元素 / $each)與非必填欄位的 $unset 照寫", async () => {
+      const ids = await seed(2);
+      await transactions.withTransaction(() =>
+        rows.bulkUpdateByIds(asA, [
+          {
+            id: only(ids),
+            update: {
+              $push: { tags: "a", history: { label: "第一次" } },
+              $unset: { "nested.note": 1 },
+            },
+          },
+          {
+            id: only(ids.slice(1)),
+            update: {
+              $push: { history: { $each: [{ label: "一" }, { label: "二" }] } },
+            },
+          },
+        ]),
+      );
+      const after = await rawOf(ids);
+      const first = after.find((item) => item._id.equals(only(ids)));
+      const second = after.find((item) => item._id.equals(only(ids.slice(1))));
+      expect(first?.tags).toEqual(["a"]);
+      expect(first?.history?.map((entry) => entry.label)).toEqual(["第一次"]);
+      expect(second?.history?.map((entry) => entry.label)).toEqual([
+        "一",
+        "二",
+      ]);
+    });
+
+    it("模組資料表:moduleKey / tenantId / shareOrgs 拒收;資料範圍規則收窄(規則外的 → CONFLICT、回復)", async () => {
+      const created = await transactions.withTransaction(() =>
+        moduleRows.createMany(asA, [
+          { name: "allowed-1" },
+          { name: "blocked-1" },
+        ]),
+      );
+      const allowed = only(
+        created.filter((row) => row.name === "allowed-1").map((row) => row._id),
+      );
+      const blocked = only(
+        created.filter((row) => row.name === "blocked-1").map((row) => row._id),
+      );
+      for (const update of [
+        { $set: { moduleKey: "other" } },
+        { $set: { tenantId: orgB } },
+        { $set: { shareOrgs: [] } },
+      ]) {
+        await expect(
+          transactions.withTransaction(() =>
+            moduleRows.bulkUpdateByIds(asA, [{ id: allowed, update }]),
+          ),
+        ).rejects.toThrow(TenantScopeError);
+      }
+
+      setDataScopeRuleProvider({
+        conditionFor: (collection) =>
+          Promise.resolve(
+            collection === "batch_write_module_rows"
+              ? { name: /^allowed/ }
+              : null,
+          ),
+      });
+      try {
+        await expectConflict(
+          transactions.withTransaction(() =>
+            moduleRows.bulkUpdateByIds(asA, [
+              { id: allowed, update: { $set: { name: "allowed-2" } } },
+              { id: blocked, update: { $set: { name: "allowed-3" } } },
+            ]),
+          ),
+        );
+        await transactions.withTransaction(() =>
+          moduleRows.bulkUpdateByIds(asA, [
+            { id: allowed, update: { $set: { name: "allowed-4" } } },
+          ]),
+        );
+      } finally {
+        setDataScopeRuleProvider(undefined);
+      }
+      const names = await database.connection
+        .collection<ModuleRow>("batch_write_module_rows")
+        .find({ _id: { $in: [allowed, blocked] } })
+        .toArray();
+      expect(
+        names
+          .map((row) => row.name)
+          .toSorted((left, right) => left.localeCompare(right)),
+      ).toEqual(["allowed-4", "blocked-1"]);
     });
   });
 

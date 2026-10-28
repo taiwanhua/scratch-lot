@@ -58,6 +58,8 @@ export class AuditService {
    * 底層一次 `createMany`(ordered `insertMany`)。與 `createMany` 同一條規則:**必須在交易內**
    * (不在交易內 → `TenantScopeError`),一筆沒過整批不寫;空清單不送指令。
    * 粒度不變:原本逐筆 `record` 幾筆,這裡就給幾筆,只是合成一次往返。
+   * 注意與 `record` 不同:`record` 在交易外也能寫,`recordMany` 不行。
+   * `audit_logs` 有自訂 `pre("save")`,但它只擋「非新建」的存檔;`insertMany` 略過它不影響只增不改。
    */
   async recordMany(
     operator: OperatorContext,
