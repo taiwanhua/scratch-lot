@@ -47,9 +47,17 @@ describe("我的班表 → 班表:圖例和畫面一致", () => {
     setViewportWidth(1440);
     renderSchedulePage({ path: `${SCHEDULE}&month=2026-11` });
     await screen.findAllByText("缺卡", { exact: false });
-    const cell = dayCell('[data-my-day="2026-11-06"]');
-    expect(within(cell).getByText("畫休")).toBeInTheDocument();
-    expect(cell.querySelector("[data-day-off-hatch]")).not.toBeNull();
+    const content = dayCell('[data-my-day="2026-11-06"]');
+    expect(within(content).getByText("畫休")).toBeInTheDocument();
+    // 斜線鋪滿整格、在最底下:日期數字與角標(底座疊上去)、文字(position: relative)都在斜線之上
+    const cell = content.closest<HTMLElement>('[role="gridcell"]');
+    const hatch = cell?.querySelector("[data-day-off-hatch]");
+    expect(hatch).not.toBeNull();
+    expect(hatch?.contains(content)).toBe(false);
+    expect(content).toHaveStyle({ position: "relative" });
+    expect(cell?.querySelector("[data-day-number]")).toHaveStyle({
+      zIndex: "1",
+    });
     expect(await legendTexts()).toEqual([
       ITEM.leader,
       ITEM.temp,

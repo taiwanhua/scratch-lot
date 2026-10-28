@@ -154,18 +154,21 @@ export const MyMonthCalendar = ({
       ...calendarInfoOf(calendarByDate.get(date), t("closed")),
       ...(corners.length === 0 ? {} : { corners }),
       content: (
-        <Stack spacing={0.5} data-my-day={date}>
+        <>
+          {/* 整天畫休:整格灰色斜線底(同我的畫休月曆、圖例「畫休(斜線)」);日期、角標、店休 / 特殊日名稱由底座疊在上面 */}
           {dayOffs.has(date) && (
-            <>
-              {/* 整天畫休:整格灰色斜線底(同我的畫休月曆、圖例「畫休(斜線)」) */}
-              <Box aria-hidden data-day-off-hatch sx={dayOffHatchSx} />
-              <Typography variant="caption">{t("dayOff")}</Typography>
-            </>
+            <Box aria-hidden data-day-off-hatch sx={dayOffHatchSx} />
           )}
-          {entries.map((entry) => (
-            <EntryLines key={entry.id} entry={entry} compact={isMobile} />
-          ))}
-        </Stack>
+          {/* 文字疊在斜線之上(`position: relative`,同 `DayOffCellContent`) */}
+          <Stack spacing={0.5} data-my-day={date} sx={{ position: "relative" }}>
+            {dayOffs.has(date) && (
+              <Typography variant="caption">{t("dayOff")}</Typography>
+            )}
+            {entries.map((entry) => (
+              <EntryLines key={entry.id} entry={entry} compact={isMobile} />
+            ))}
+          </Stack>
+        </>
       ),
     };
   }
