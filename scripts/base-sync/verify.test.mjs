@@ -21,6 +21,7 @@ import {
 } from "./test-support.mjs";
 import {
   exportNames,
+  projectExportLines,
   resolveKeyExpression,
   seedKeys,
   stripComments,
@@ -92,6 +93,21 @@ const BASE_V3_CHANGES = {
   // 與專案固定來源 `project/notifications.ts` 同名的底座檔:固定來源不算重名
   "apps/api/src/notifications/notifications.ts":
     "export const BASE_NOTIFICATION_TYPES = [];\n",
+  // 第 4 節的慣例檔名與錯誤 helper:底座各模組各有一份
+  "apps/api/src/database/registration.ts":
+    "export const defineRegistration = (x) => x;\n",
+  "packages/domain/src/form/keys.ts": 'export const FORM_KEY = "form";\n',
+  "apps/api/src/forms/forms-error.ts":
+    "export const notFoundError = () => 1;\nexport const sharedHelper = () => 2;\n",
+  "apps/api/src/lib/parse.ts": "export const parseError = () => 3;\n",
+  // 底座在 project/ 路徑帶空版的固定來源(專案填內容);對應的底座檔同名
+  "apps/api/src/project/database/tenant-purge.ts":
+    "export const PROJECT_TENANT_PURGE = [];\n",
+  "apps/api/src/database/tenant-purge.ts":
+    "export const purgeTenant = () => 0;\n",
+  // 測試裡當夾具的程式碼字串不是匯出
+  "scripts/tools/sample.test.mjs":
+    'const fixture = "export function useWidget() {}";\n',
   "apps/admin/src/app/project/page-replacements.ts": [
     "// 範例:{ target: 'commented', Page: X } 不算登記",
     "export const projectPageReplacements: readonly ModulePageReplacement[] = [];",
@@ -163,6 +179,10 @@ function sectionLines(markdown, number) {
     line.startsWith("- "),
   );
 }
+
+/** 第 3 節後另列的「無法解析的 key」(縮排項目,不計入結果)。 */
+const unresolvedLines = (markdown) =>
+  markdown.split("\n").filter((line) => line.startsWith("  - 無法解析的 key"));
 
 /** 只有 `number` 那一節有項目,其餘各節為 0。 */
 function assertOnlySection(result, number) {
@@ -260,7 +280,7 @@ test("不乾淨 2:頁面替換、help 替換與表單 options / pageOverrides �
   ]);
 });
 
-test("不乾淨 3:專案 seed 宣告了底座已有的 collection + key,第 3 節列出;無法解析的 key 也列;引用、別的 collection 與歷史快照不算", async () => {
+test("不乾淨 3:專案 seed 宣告了底座已有的 collection + key,第 3 節列出;無法解析的 key 另列、不計入;引用、別的 collection 與歷史快照不算", async () => {
   const result = await verifyScenario("seeds", {
     "apps/db-migrator/seeds/project/modules.ts": [
       'import { DEMO_MODULE_KEY } from "../base/modules/demo";',
@@ -304,10 +324,78 @@ test("不乾淨 3:專案 seed 宣告了底座已有的 collection + key,第 3 �
     `- permissions \`demo.draw\`:底座 ${demo};專案 ${modules}`,
     `- modules \`demo.history-page\`:底座 ${demo};專案 ${modules}`,
     `- permissions \`requests.view\`:底座 \`apps/db-migrator/seeds/base/modules/requests.ts\`;專案 ${modules}`,
-    `- 無法解析的 key \`makeKey('x')\`(${modules})`,
   ]);
-  // 底座無法解析的 key 只計數,不計入結果
+  // 專案無法解析的 key 另列一類(不算撞 key);底座的只計數,都不計入結果
+  assert.deepEqual(unresolvedLines(result.stdout), [
+    `  - 無法解析的 key \`makeKey('x')\`(${modules})`,
+  ]);
+  assert.match(
+    result.stdout,
+    /專案 seed 另有 1 個 key 無法靜態解析,不算撞 key/,
+  );
   assert.match(result.stdout, /底座 seed 另有 1 個 key 無法靜態解析/);
+  assert.match(result.stdout, /尚有 5 項待判讀/);
+});
+
+test("不乾淨 3b:常數物件的成員與 import 進來的常數(套件子路徑、別名、export *)照樣解析成 key 比對;只有無法解析的不計入", async () => {
+  const result = await verifyScenario("seed-imports", {
+    "packages/domain/package.json": `${JSON.stringify({ name: "@repo/domain" })}\n`,
+    "packages/domain/src/project/widgets/index.ts": 'export * from "./keys";\n',
+    "packages/domain/src/project/widgets/keys.ts": [
+      'import { DEMO_MODULE_KEY as BASE_DEMO } from "../../../../../apps/db-migrator/seeds/base/modules/demo";',
+      "export const WIDGETS_KEY = BASE_DEMO;",
+      "export const WIDGETS_KEYS = {",
+      "  history: `${WIDGETS_KEY}.history-page`,",
+      "  nested: { own: 'widgets.own' },",
+      "} as const;",
+      "",
+    ].join("\n"),
+    "apps/db-migrator/seeds/project/widgets.ts": [
+      'import { WIDGETS_KEY, WIDGETS_KEYS as KEYS } from "@repo/domain/project/widgets";',
+      "const LOCAL = { draw: permissionKey(WIDGETS_KEY, 'draw') } as const;",
+      "export const widgetsModule = {",
+      "  nodes: [",
+      "    { key: WIDGETS_KEY, name: '撞底座的模組 key' },",
+      "    { key: KEYS.history, name: '撞底座的頁面 key' },",
+      "    { key: KEYS.nested.own, name: '專案自己的' },",
+      "    { key: KEYS.missing, name: '物件沒有這個成員' },",
+      "  ],",
+      "  permissions: [{ key: LOCAL.draw }],",
+      "};",
+      "",
+    ].join("\n"),
+    // 同名別名在另一個檔指向別的物件:各檔各自解析,不互相污染
+    "apps/db-migrator/seeds/project/others.ts": [
+      "const KEYS = { history: 'others.history' };",
+      "export const othersModule = { nodes: [{ key: KEYS.history, name: '別的' }] };",
+      "",
+    ].join("\n"),
+    // 測試檔不是 seed 宣告
+    "apps/db-migrator/seeds/project/widgets.test.ts":
+      "const expected = { nodes: [{ key: 'demo' }] };\n",
+  });
+  const demo = "`apps/db-migrator/seeds/base/modules/demo.ts`";
+  const widgets = "`apps/db-migrator/seeds/project/widgets.ts`";
+  assert.deepEqual(assertOnlySection(result, 3), [
+    `- modules \`demo\`:底座 ${demo};專案 ${widgets}`,
+    `- permissions \`demo.draw\`:底座 ${demo};專案 ${widgets}`,
+    `- modules \`demo.history-page\`:底座 ${demo};專案 ${widgets}`,
+  ]);
+  assert.deepEqual(unresolvedLines(result.stdout), [
+    `  - 無法解析的 key \`KEYS.missing\`(${widgets})`,
+  ]);
+});
+
+test("不乾淨 3c:只有無法解析的 key 時第 3 節為 0、不計入結果", async () => {
+  const result = await verifyScenario("seed-unresolved-only", {
+    "apps/db-migrator/seeds/project/dynamic.ts":
+      "export const m = { nodes: [{ key: makeKey('x'), name: '讀不懂' }] };\n",
+  });
+  assert.equal(result.exitCode, 0, result.stdout);
+  assert.deepEqual(sectionLines(result.stdout, 3), []);
+  assert.deepEqual(unresolvedLines(result.stdout), [
+    "  - 無法解析的 key `makeKey('x')`(`apps/db-migrator/seeds/project/dynamic.ts`)",
+  ]);
 });
 
 test("不乾淨 4:專案路徑的檔案與底座同名或同匯出名稱,第 4 節列出;固定來源與專案值不算", async () => {
@@ -333,6 +421,51 @@ test("不乾淨 4:專案路徑的檔案與底座同名或同匯出名稱,第 4 �
   assert.deepEqual(assertOnlySection(result, 4), [
     "- `apps/admin/src/hooks/project/useScanner.ts`:同名 `apps/admin/src/hooks/base/useScanner.ts`",
     "- `apps/admin/src/lib/project/period.ts`:同匯出 `reportPeriod`(`apps/admin/src/lib/base/report-period.ts`)",
+  ]);
+});
+
+test("不乾淨 4b:慣例檔名、各模組錯誤 helper、底座帶空版的固定來源與字串裡的範例不算;放在對應路徑或別種匯出照列", async () => {
+  const result = await verifyScenario("name-conventions", {
+    // 慣例檔名在模組自己的路徑:不算
+    "apps/api/src/project/database/widgets/registration.ts":
+      "export const widgetsRegistration = 1;\n",
+    "packages/domain/src/project/widgets/keys.ts":
+      'export const WIDGETS_KEY = "widgets";\n',
+    "apps/api/src/project/widgets/test-support/fixtures.ts":
+      "export const widgetFixture = 1;\n",
+    // 慣例檔名但正好在底座那份的對應路徑(去掉 project/):照列
+    "apps/api/src/project/database/registration.ts":
+      "export const projectRegistration = 1;\n",
+    "packages/domain/src/project/form/keys.ts":
+      'export const PROJECT_FORM_KEY = "x";\n',
+    // 模組自己的錯誤組裝檔:`…Error` helper 與底座 *-error.ts 同名不算;其他匯出照列
+    "apps/api/src/project/widgets/widgets-error.ts": [
+      "export const notFoundError = () => 1;",
+      "export const sharedHelper = () => 2;",
+      "export const parseError = () => 3;",
+      "",
+    ].join("\n"),
+    // 不是錯誤組裝檔卻匯出同名 helper:照列
+    "apps/api/src/project/widgets/widget-utils.ts":
+      "export const notFoundError = () => 1;\n",
+    // 底座在 project/ 路徑帶空版的固定來源與它的測試:不算
+    "apps/api/src/project/database/tenant-purge.ts":
+      "export const PROJECT_TENANT_PURGE = ['widgets'];\n",
+    "apps/api/src/project/database/tenant-purge.test.ts":
+      "export const purgeCase = 1;\n",
+    // 同名但不在固定來源的位置(例:升格後沒刪的那份):照列
+    "apps/api/src/project/widgets/tenant-purge.ts":
+      "export const purgeTenant = () => 0;\n",
+    // 底座只在測試字串裡寫過 useWidget:不是匯出
+    "apps/admin/src/hooks/project/useWidget.ts":
+      "export function useWidget() {\n  return 1;\n}\n",
+  });
+  assert.deepEqual(assertOnlySection(result, 4), [
+    "- `apps/api/src/project/database/registration.ts`:同名 `apps/api/src/database/registration.ts`",
+    "- `apps/api/src/project/widgets/tenant-purge.ts`:同名 `apps/api/src/database/tenant-purge.ts`;同匯出 `purgeTenant`(`apps/api/src/database/tenant-purge.ts`)",
+    "- `apps/api/src/project/widgets/widget-utils.ts`:同匯出 `notFoundError`(`apps/api/src/forms/forms-error.ts`)",
+    "- `apps/api/src/project/widgets/widgets-error.ts`:同匯出 `parseError`(`apps/api/src/lib/parse.ts`);同匯出 `sharedHelper`(`apps/api/src/forms/forms-error.ts`)",
+    "- `packages/domain/src/project/form/keys.ts`:同名 `packages/domain/src/form/keys.ts`",
   ]);
 });
 
@@ -384,6 +517,51 @@ test("不乾淨 5:共用與混合路徑新增了專案字樣,第 5 節逐行列�
       `第 ${number} 節`,
     );
   }
+});
+
+test("不乾淨 5b:生成產物與依賴宣告裡的專案出口不掃;產物的共用來源、其他出口與依賴照列", async () => {
+  const result = await verifyScenario("terms-generated", {
+    ...GADGETS_PUBLIC,
+    // 生成產物:由來源重產,不掃
+    "apps/api/schema.gql":
+      "type Query { ok: Boolean }\ntype GadgetsThing { id: ID }\n",
+    "packages/graphql/src/generated/graphql.ts":
+      "export type Query = {};\nexport type GadgetsThing = {};\n",
+    // 產物的共用來源照掃(也是第 1 節的共用差異)
+    "apps/api/src/orgs/thing.resolver.ts":
+      "export const name = 'GadgetsThing';\n",
+    "packages/domain/package.json": `${JSON.stringify(
+      {
+        name: "@repo/domain",
+        exports: {
+          "./project/gadgets": {
+            import: "./dist/es/project/gadgets.js",
+            require: "./dist/cjs/project/gadgets.cjs",
+          },
+          "./gadgets": "./dist/es/gadgets.js",
+          "./project/promo": "./dist/es/gadgets-promo.js",
+        },
+        typesVersions: {
+          "*": {
+            "project/gadgets": ["./dist/es/project/gadgets.d.ts"],
+            gadgets: ["./dist/es/gadgets.d.ts"],
+          },
+        },
+        dependencies: { "gadgets-sdk": "1.0.0" },
+      },
+      null,
+      2,
+    )}\n`,
+  });
+  assert.equal(result.exitCode, 1, result.stdout);
+  assert.deepEqual(sectionLines(result.stdout, 5), [
+    "- `apps/api/src/orgs/thing.resolver.ts` 第 1 行:`gadgets`",
+    "- `packages/domain/package.json` 第 8 行:`gadgets`",
+    "- `packages/domain/package.json` 第 9 行:`gadgets`",
+    "- `packages/domain/package.json` 第 16 行:`gadgets`",
+    "- `packages/domain/package.json` 第 17 行:`gadgets`",
+    "- `packages/domain/package.json` 第 22 行:`gadgets`",
+  ]);
 });
 
 test("不乾淨 6:值行檔在值行以外與底座不同,第 6 節列出;範本值、標題與 README 開頭不算", async () => {
@@ -479,6 +657,14 @@ test("掃描工具:去註解保留字串;key 解析常數、樣板與 permission
   );
   assert.equal(resolveKeyExpression("`${missing}.x`", constants), null);
   assert.equal(resolveKeyExpression("node.key", constants), null);
+  // 常數物件的成員以攤平的路徑查表
+  assert.equal(
+    resolveKeyExpression(
+      "KEYS . viewPage",
+      new Map([["KEYS.viewPage", "system.users.view-page"]]),
+    ),
+    "system.users.view-page",
+  );
   assert.deepEqual(
     seedKeys(
       [
@@ -504,9 +690,26 @@ test("掃描工具:去註解保留字串;key 解析常數、樣板與 permission
           "export type Props = {};",
           "export { a as renamed, type B, default as Named, c as default };",
           "// export const commented = 1;",
+          'const sample = "export function inString() {}";',
         ].join("\n"),
       ),
     ].sort(),
     ["B", "Named", "Props", "load", "renamed"].sort(),
+  );
+  // 讀不懂的 package.json 照掃(不略過任何行)
+  assert.deepEqual([...projectExportLines("{ not json")], []);
+  assert.deepEqual(
+    [
+      ...projectExportLines(
+        `${JSON.stringify(
+          {
+            exports: { "./project/a": "./dist/project/a.js", "./b": "./b.js" },
+          },
+          null,
+          2,
+        )}\n`,
+      ),
+    ],
+    [3],
   );
 });
