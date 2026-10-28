@@ -138,6 +138,7 @@ export class WorkflowPresenter {
         (instance) => myTasksOf.get(String(instance._id)) ?? [],
       ),
       viewer.titleOnly === true,
+      { instances, definitions },
     )) {
       myTaskModelsOf.set(model.instanceId, [
         ...(myTaskModelsOf.get(model.instanceId) ?? []),
@@ -318,17 +319,40 @@ export class WorkflowPresenter {
   async taskModels(
     tasks: readonly WorkflowTaskRecord[],
     titleOnly = false,
+    loaded?: {
+      instances: readonly InstanceRecord[];
+      definitions: ReadonlyMap<string, WorkflowDefinition>;
+    },
   ): Promise<WorkflowTaskModel[]> {
     if (tasks.length === 0) {
       return [];
     }
-    const found = await this.engine.findInstances(
-      tasks.map((task) => task.instanceId),
+    // 呼叫端已讀好的實例與定義(`instanceModels`)直接用,只補讀沒有的
+    const known = new Map(
+      (loaded?.instances ?? []).map((instance) => [
+        String(instance._id),
+        instance,
+      ]),
     );
-    const instances = new Map(
-      found.map((instance) => [String(instance._id), instance]),
+    const fetched = await this.engine.findInstances(
+      tasks
+        .map((task) => task.instanceId)
+        .filter((id) => !known.has(String(id))),
     );
-    const definitions = await this.engine.definitionsOf(found);
+    const definitions = new Map([
+      ...(loaded?.definitions ?? []),
+      ...(await this.engine.definitionsOf(fetched)),
+    ]);
+    const instances = new Map(known);
+    for (const instance of fetched) {
+      instances.set(String(instance._id), instance);
+    }
+    const found = [
+      ...new Set(tasks.map((task) => String(task.instanceId))),
+    ].flatMap((id) => {
+      const instance = instances.get(id);
+      return instance ? [instance] : [];
+    });
     const names = await this.userNames.load(systemContext(), [
       ...tasks.map((task) => task.assigneeId),
       ...found.map((instance) => instance.createdBy),

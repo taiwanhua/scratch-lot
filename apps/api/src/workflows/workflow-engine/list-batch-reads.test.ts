@@ -51,9 +51,10 @@ const BATCH_APPROVE = /* GraphQL */ `
 
 /**
  * 批次核准每張的指令數上限(每張各自一個交易:讀任務 / 實例 / 提交 / 定義、守門、寫決定、稽核、
- * 推進各輪重讀實例與任務、通知)。量測時每張 32 次;逐列多出來的讀取會讓它超過。
+ * 推進各輪重讀實例與任務、通知)。量測時每張 32 次,留 3 次餘裕給正常的小改動;
+ * 逐列 N+1(例:每輪重讀定義、每張重建上下文)會超過。
  */
-const BATCH_APPROVE_COMMANDS_PER_TASK = 32;
+const BATCH_APPROVE_COMMANDS_PER_TASK = 35;
 
 /** 1 列與一整頁的指令數要相同;不同時把兩邊的分項列出來(找出逐列查的那個集合)。 */
 function sameCommandsProblem(
@@ -275,5 +276,24 @@ describe("列表整頁批次讀(TX-07)", () => {
         ),
       ].filter((problem) => problem !== null),
     ).toEqual([]);
+  });
+
+  it("需要推進:審核關卡仍待處理(進關前中斷,判斷表列 5)也列進來", async () => {
+    const submitted = await submitLeave(world);
+    const instance = await currentInstance(world, submitted.id);
+    // 進關前中斷:關卡還在 activeStepKeys,但仍是 pending、還沒有計畫
+    await world.connection
+      .collection("workflow_instances")
+      .updateOne(
+        { _id: new Types.ObjectId(instance.id) },
+        { $set: { "steps.$[one].status": "pending", "steps.$[one].plan": [] } },
+        { arrayFilters: [{ "one.stepKey": "one" }] },
+      );
+    const listed = await needsAdvance();
+    expect(
+      listed.result.blockedInstances.items.map(
+        (item) => (item as { id: string }).id,
+      ),
+    ).toContain(instance.id);
   });
 });

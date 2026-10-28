@@ -437,7 +437,7 @@ export class WorkflowEngineService {
   ): Promise<RoundResult> {
     switch (action.kind) {
       case "resolveStepEntry": {
-        // 兩段式已在 planOf 處理;走到這裡代表第二次呼叫仍要求解析,當作資料錯誤
+        // 兩段式已在 roundPlanOf 處理;走到這裡代表第二次呼叫仍要求解析,當作資料錯誤
         this.logger.error(
           `實例 ${String(instance._id)} 的關卡 ${action.stepKey} 解析後仍要求進關解析`,
         );
