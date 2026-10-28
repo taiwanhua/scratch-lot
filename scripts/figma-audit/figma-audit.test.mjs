@@ -351,6 +351,32 @@ test("audit-legend:畫面的標示色在圖例找不到樣本", async () => {
   assert.ok(r.mismatchSample.some((x) => /warning\/main/.test(x)));
 });
 
+test("audit-legend:例外頁的「圖例樣本畫面沒用到」照列理由、不算錯;標示色沒樣本照算", async () => {
+  const { figma, page } = legendScene({ withWarningSample: false });
+  const config = testConfig();
+  config.legend.exempt = { [page.id]: "圖例照程式清單" };
+  const r = await runAudit("audit-legend.js", figma, config, {
+    PAGE_ID: page.id,
+  });
+  assert.equal(r.legendMismatch, 1);
+  assert.match(r.mismatchSample[0], /warning\/main/);
+  assert.equal(r.legendExempted, 1);
+  assert.equal(r.exemptReason, "圖例照程式清單");
+  assert.match(r.exemptedSample[0], /圖例「資訊」/);
+});
+
+test("audit-legend:設定沒有 legend.exempt 時照常稽核、不出錯", async () => {
+  const { figma, page } = legendScene();
+  const config = testConfig();
+  delete config.legend.exempt;
+  const r = await runAudit("audit-legend.js", figma, config, {
+    PAGE_ID: page.id,
+  });
+  assert.equal(r.legendMismatch, 1);
+  assert.equal(r.legendExempted, 0);
+  assert.equal(r.exemptReason, null);
+});
+
 // ---- audit ----
 
 test("audit:草稿元件、非底座綁定、草稿色票、參考畫面、開發文字、畫布重疊", async () => {

@@ -12,10 +12,15 @@ import {
 import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
 
+import {
+  calendarMarkBackground,
+  calendarMarkMonthBackground,
+  calendarMarkOf,
+} from "@/components/project/schedule/CalendarMark/calendar-mark";
+import { dayOffHatchSx } from "@/components/project/schedule/DayOffs/day-off-styles";
 import { leaderMarkSx } from "@/components/project/schedule/ScheduleLegend/schedule-legend-styles";
 import { useTenantTimezone } from "@/hooks/base/useTenantTimezone";
 import { groupByDate } from "@/lib/project/schedule-my";
-import { isTagPaletteKey, tagPaletteColorOf } from "@/lib/project/tag-palettes";
 
 import { type MyEntry, useMyEntryText } from "./useMyEntryText";
 
@@ -75,24 +80,22 @@ const EntryLines = ({
 };
 
 /**
- * 行事曆:店休寫「店休」;特殊日整格底色 = 行事曆選的顏色(底座淡化),沒選顏色退回 `tone: special`,並寫名稱。
+ * 行事曆(判斷見 `calendarMarkOf`,條列與排班表同一套):店休寫「店休」(整格店休灰見 `ClosedLayer`);特殊日整格底色 = 行事曆選的顏色(底座淡化,`calendarMarkMonthBackground`)並寫名稱。
  */
 const calendarInfoOf = (
   day: Page["calendarDays"][number] | undefined,
   closedLabel: string,
-): Pick<MonthCalendarDayInfo, "note" | "tone" | "background"> => {
-  if (day?.type === "closed") {
+): Pick<MonthCalendarDayInfo, "note" | "background"> => {
+  const mark = calendarMarkOf(day);
+  if (mark.kind === "closed") {
     return { note: closedLabel };
   }
-  if (day?.type !== "special") {
+  if (mark.kind === "none") {
     return {};
   }
-  const note = day.name ?? undefined;
   return {
-    ...(note === undefined ? {} : { note }),
-    ...(isTagPaletteKey(day.paletteKey)
-      ? { background: tagPaletteColorOf(day.paletteKey) }
-      : { tone: "special" as const }),
+    ...(mark.name === null ? {} : { note: mark.name }),
+    background: calendarMarkMonthBackground(mark),
   };
 };
 
@@ -105,7 +108,8 @@ export interface MyMonthCalendarProps {
 /**
  * 月曆(SC-01;規格 14.6「月曆」):底座 `MonthCalendar`。每天顯示自己的排班(範本簡稱、時間;負責人綠底)與
  * 打卡紀錄(上班 / 下班);已結束的班缺卡在右上角紅點、有異動的日子金點(同一天兩者都有時並排,紅點在前);
- * 店休寫在日期下方;特殊日整格底色 = 行事曆選的顏色(底座 `MonthCalendar` 的 `background`,沒選顏色退回 `tone`)並寫名稱;整天畫休寫「畫休」。手機只放簡稱。點一天 → 當天詳情。
+ * 店休整格店休灰(仍可點)並寫在日期下方;特殊日整格底色 = 行事曆選的顏色(底座 `MonthCalendar` 的 `background`)並寫名稱;整天畫休整格灰色斜線底並寫「畫休」。手機只放簡稱。點一天 → 當天詳情。
+ * 圖例項目見 `my-schedule-legend.ts`。
  */
 export const MyMonthCalendar = ({
   page,
@@ -121,6 +125,11 @@ export const MyMonthCalendar = ({
     page.calendarDays.map((day) => [day.date, day]),
   );
   const dayOffs = new Set(page.dayOffDates);
+  const closedDates = new Set(
+    page.calendarDays
+      .filter((day) => calendarMarkOf(day).kind === "closed")
+      .map((day) => day.date),
+  );
   const dates = new Set([
     ...byDate.keys(),
     ...calendarByDate.keys(),
@@ -150,14 +159,34 @@ export const MyMonthCalendar = ({
       ...calendarInfoOf(calendarByDate.get(date), t("closed")),
       ...(corners.length === 0 ? {} : { corners }),
       content: (
-        <Stack spacing={0.5} data-my-day={date}>
-          {dayOffs.has(date) && (
-            <Typography variant="caption">{t("dayOff")}</Typography>
+        <>
+          {/* 店休:整格店休灰(同排班表的店休;底座 `disabled` 會讓格子不能點,這裡要可點看當天,所以鋪在內容底層) */}
+          {closedDates.has(date) && (
+            <Box
+              aria-hidden
+              data-closed-layer
+              sx={{
+                position: "absolute",
+                inset: 0,
+                pointerEvents: "none",
+                bgcolor: calendarMarkBackground({ kind: "closed" }),
+              }}
+            />
           )}
-          {entries.map((entry) => (
-            <EntryLines key={entry.id} entry={entry} compact={isMobile} />
-          ))}
-        </Stack>
+          {/* 整天畫休:整格灰色斜線底(同我的畫休月曆、圖例「畫休(斜線)」);日期、角標、店休 / 特殊日名稱由底座疊在上面 */}
+          {dayOffs.has(date) && (
+            <Box aria-hidden data-day-off-hatch sx={dayOffHatchSx} />
+          )}
+          {/* 文字疊在斜線之上(`position: relative`,同 `DayOffCellContent`) */}
+          <Stack spacing={0.5} data-my-day={date} sx={{ position: "relative" }}>
+            {dayOffs.has(date) && (
+              <Typography variant="caption">{t("dayOff")}</Typography>
+            )}
+            {entries.map((entry) => (
+              <EntryLines key={entry.id} entry={entry} compact={isMobile} />
+            ))}
+          </Stack>
+        </>
       ),
     };
   }

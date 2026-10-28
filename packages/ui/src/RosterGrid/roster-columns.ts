@@ -148,14 +148,19 @@ export const buildRosterColumns = <Person extends RowData>({
     header: rosterDate.header,
     width: dateColumnWidth,
     minWidth: dateColumnWidth,
-    headerSx: rosterDate.disabled ? disabledLayerSx : undefined,
+    headerSx: {
+      ...(rosterDate.background === undefined
+        ? {}
+        : { bgcolor: rosterDate.background }),
+      ...(rosterDate.disabled ? disabledLayerSx : {}),
+    },
     cellSx: {
       p: 0,
       // `height: 1px` 讓格子裡的 `height: 100%` 撐滿整列(表格格子的高度由列決定)
       height: "1px",
       verticalAlign: "top",
       whiteSpace: "normal",
-      bgcolor: "background.paper",
+      bgcolor: rosterDate.background ?? "background.paper",
       ...(rosterDate.disabled ? disabledLayerSx : {}),
     },
     render: ({ row, index }) =>

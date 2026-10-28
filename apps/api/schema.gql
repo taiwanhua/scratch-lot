@@ -5436,6 +5436,13 @@ type ScheduleAutoRunSummary {
   unfilledCount: Int!
 }
 
+type ScheduleCalendarClosedConflict {
+  demandCount: Int!
+  entryCount: Int!
+  orgId: ID!
+  orgName: String!
+}
+
 type ScheduleCalendarDay {
   canEdit: Boolean!
   category: String
@@ -5449,6 +5456,7 @@ type ScheduleCalendarDay {
 }
 
 type ScheduleCalendarDayPayload {
+  closedConflicts: [ScheduleCalendarClosedConflict!]!
   item: ScheduleCalendarDay!
 }
 

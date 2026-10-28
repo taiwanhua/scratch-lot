@@ -16,7 +16,7 @@ export interface UnmatchedPunchMarkProps {
 
 /**
  * 未對應排班的打卡「⏲ N」(規格 14.5「未對應排班的打卡」;外觀同圖例 `unmatchedPunch`):週 / 日檢視的日期旁、
- * 手機日檢視與手機週清單那天、月檢視那天格子共用。張數由呼叫端從排班表的 `unmatchedPunches` 算
+ * 手機日檢視與手機週清單那天、月檢視那天格子、班表店休的格子(只標示、不能點)共用。張數由呼叫端從排班表的 `unmatchedPunches` 算
  * (`unmatchedCountsByDate`)。班表格子的時鐘圖示可以點,另外在 `RosterPersonCell` 畫。
  */
 export const UnmatchedPunchMark = ({

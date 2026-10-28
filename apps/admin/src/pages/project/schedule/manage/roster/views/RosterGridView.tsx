@@ -15,7 +15,11 @@ import { Stack } from "@repo/ui/stack";
 import { Tag } from "@repo/ui/tag";
 import { Typography } from "@repo/ui/typography";
 
-import { TagPaletteChip } from "@/components/project/TagPaletteChip/TagPaletteChip";
+import { tagPaletteBackgroundVarsSx } from "@/components/project/TagPaletteChip/tag-palette-background";
+import {
+  calendarMarkBackground,
+  calendarMarkOf,
+} from "@/components/project/schedule/CalendarMark/calendar-mark";
 import { ScheduleLegend } from "@/components/project/schedule/ScheduleLegend/ScheduleLegend";
 import { useFitMainHeight } from "@/hooks/base/useFitMainHeight";
 import { useSectionCollapse } from "@/hooks/base/useSectionCollapse";
@@ -30,7 +34,6 @@ import {
   monthDayOf,
   weekdayOf,
 } from "@/lib/project/schedule-roster";
-import { isTagPaletteKey } from "@/lib/project/tag-palettes";
 
 import { ROSTER_CONTENT_SELECTOR } from "../check-panel/RosterCheckLayout";
 import { useRosterCheckPanelOpen } from "../check-panel/roster-check-context";
@@ -114,7 +117,7 @@ export const RosterGridView = () => {
       : (templateById.get(templateId)?.shortName ?? null);
   const countLabels = { leader: t("count.leader"), helper: t("count.helper") };
   const isClosed = (date: string) =>
-    calendarByDate.get(date)?.type === "closed";
+    calendarMarkOf(calendarByDate.get(date)).kind === "closed";
 
   const entriesOf = (userId: string, date: string): RosterEntry[] =>
     data.entries.filter(
@@ -130,21 +133,23 @@ export const RosterGridView = () => {
     );
 
   const rosterDates: RosterDate[] = dates.map((date) => {
-    const day = calendarByDate.get(date);
-    const closed = day?.type === "closed";
-    const special =
-      day?.type === "special" && isTagPaletteKey(day.paletteKey)
-        ? day.paletteKey
-        : null;
+    const mark = calendarMarkOf(calendarByDate.get(date));
+    const closed = mark.kind === "closed";
+    // 特殊日整欄(表頭與每格)鋪它的顏色;店休由底座的 `disabled` 整欄停用色畫
+    const background = calendarMarkBackground(mark, {
+      closedByComponent: true,
+    });
     return {
       date,
       disabled: closed,
+      ...(background === undefined ? {} : { background }),
       header: (
         <Stack
           direction="row"
           sx={{ alignItems: "flex-start", justifyContent: "space-between" }}
         >
-          <Box>
+          {/* 店休 / 特殊日名稱各占一行、可換行,不擠到 [⋯](特殊日的顏色由整欄底色表示) */}
+          <Box sx={{ minWidth: 0, overflowWrap: "anywhere" }}>
             <Typography variant="caption" sx={{ fontWeight: 600 }}>
               {t("dateHeader", {
                 date: monthDayOf(date, timezone),
@@ -160,8 +165,10 @@ export const RosterGridView = () => {
                 {t("cell.closed")}
               </Typography>
             )}
-            {special !== null && (
-              <TagPaletteChip paletteKey={special} label={day?.name ?? ""} />
+            {mark.kind === "special" && mark.name !== null && (
+              <Typography variant="caption" component="div">
+                {mark.name}
+              </Typography>
             )}
           </Box>
           {canEdit && !closed && (
@@ -298,7 +305,8 @@ export const RosterGridView = () => {
 
   return (
     <Stack spacing={1.5}>
-      <Box ref={setFitTarget}>
+      {/* 特殊日整欄底色用色票底色變數(`tagPaletteBackground`) */}
+      <Box ref={setFitTarget} sx={tagPaletteBackgroundVarsSx}>
         <RosterGrid
           aria-label={t("gridLabel")}
           people={data.people}

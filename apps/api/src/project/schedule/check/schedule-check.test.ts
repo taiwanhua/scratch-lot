@@ -661,7 +661,9 @@ describe("排班檢核與發布(GraphQL 端點 + 真 MongoDB)", () => {
             "saveScheduleEntry",
           );
         }
-        // 8/10 店休(洛杉磯那天 00:00):那天的人力需求不列人力不足;8/11 照列
+        // 8/10 先有人力需求、後設店休(洛杉磯那天 00:00):那天的人力需求不列人力不足;8/11 照列
+        await demandAt("2028-08-10");
+        await demandAt("2028-08-11");
         const closed = await gql(hq, SAVE_CALENDAR_DAY, {
           input: {
             orgId: String(xinyi),
@@ -670,8 +672,6 @@ describe("排班檢核與發布(GraphQL 端點 + 真 MongoDB)", () => {
           },
         });
         expect(closed.errors).toBeUndefined();
-        await demandAt("2028-08-10");
-        await demandAt("2028-08-11");
 
         const { items } = await check("2028-08");
         expect(

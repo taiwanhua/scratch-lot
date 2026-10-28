@@ -18,8 +18,10 @@ const FIRST_WEEKDAY = 4;
 
 /** 示範的公休日(每週二) */
 export const DEMO_CLOSED_DAYS: readonly number[] = [6, 13, 20, 27];
+/** 示範的特殊日(整欄背景色) */
+const DEMO_SPECIAL_DAY = 10;
 
-/** 2026-10 起連續 `count` 天;`closed` 裡的日子是公休(停用)。 */
+/** 2026-10 起連續 `count` 天;`closed` 裡的日子是公休(停用);10 號是特殊日(整欄淡藍底)。 */
 export const demoDates = (
   count: number,
   closed: readonly number[] = DEMO_CLOSED_DAYS,
@@ -29,10 +31,12 @@ export const demoDates = (
     const date = `2026-10-${String(day).padStart(2, "0")}`;
     const weekday = WEEKDAYS[(index + FIRST_WEEKDAY) % 7] ?? "";
     const disabled = closed.includes(day);
+    const special = day === DEMO_SPECIAL_DAY;
     return {
       date,
-      header: `10/${String(day)} ${weekday}${disabled ? " · 公休" : ""}`,
+      header: `10/${String(day)} ${weekday}${disabled ? " · 公休" : ""}${special ? " · 特殊日" : ""}`,
       disabled,
+      ...(special ? { background: "info.lighter" } : {}),
     };
   });
 

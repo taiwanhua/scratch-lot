@@ -372,8 +372,12 @@ describe("套件內部的依賴方向", () => {
       "utf8",
     );
     expect(manifest).not.toContain("@repo/project-config");
-    for (const file of readdirSync(SRC_DIR)) {
-      if (file.endsWith(".test.ts")) {
+    // 含子目錄(專案登記 `project/`)
+    for (const file of readdirSync(SRC_DIR, {
+      recursive: true,
+      encoding: "utf8",
+    })) {
+      if (!/\.(m?ts|tsx)$/.test(file) || /\.test\.(m?ts|tsx)$/.test(file)) {
         continue;
       }
       expect({

@@ -1127,6 +1127,9 @@
         "PUNCH_NOT_ALLOWED": "這筆排班現在不能打這種卡",
         "CONCURRENT_EDIT": "別人剛好也在修改,請重新整理後再試"
       },
+      "demandReasons": {
+        "STORE_CLOSED": "這段時間有店休,不能建人力需求"
+      },
       "FORBIDDEN": "你沒有這個操作的權限",
       "NOT_FOUND": "找不到這筆資料,可能已被刪除或你看不到它",
       "VALIDATION_FAILED": "有欄位不正確,請檢查標示的欄位",
@@ -1388,7 +1391,7 @@
       "closed": "店休",
       "special": "特殊日",
       "dayLabel": "{type} · {name}",
-      "legendClosed": "店休(不能排班)",
+      "legendClosed": "店休(不能排班、不能建人力需求)",
       "legendSpecial": "特殊日(照常可以排,顏色可以選)",
       "legendInherit": "↓ 上層組織設的會往下沿用",
       "dialog": {
@@ -1407,6 +1410,9 @@
       },
       "feedback": {
         "saveSuccess": "已儲存行事曆",
+        "closedConflict": "這天已經有人力需求或排班({list}),店休那天不能排,請到排班表的週 / 日檢視刪除",
+        "closedConflictSeparator": ";",
+        "closedConflictItem": "{org} 人力需求 {demands} 筆、排班 {entries} 筆",
         "deleteSuccess": "已刪除"
       },
       "weekdays": {
@@ -1563,6 +1569,7 @@
         "leader": "負責人(名字或範本簡稱套綠底)",
         "entry": "已排的班",
         "temp": "沒有套用範本的人力需求",
+        "tempEntry": "沒有套用範本的班",
         "auto": "自動排入(手動改過就消失)",
         "breakMinutes": "休息(分鐘)",
         "unavailable": "已排在其他分店 / 時段不可排",
@@ -2044,7 +2051,8 @@
         "todaySuffix": "今天",
         "empty": "這個月沒有班",
         "changed": "有異動",
-        "punches": "上班 {in} · 下班 {out}"
+        "punches": "上班 {in} · 下班 {out}",
+        "break": "☕ {minutes}"
       },
       "detail": {
         "title": "{date}當天詳情",

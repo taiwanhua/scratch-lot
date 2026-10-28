@@ -150,6 +150,13 @@ describe("我的班表 → 班表", () => {
       tagPaletteColorOf("cyan"),
     );
     expect(within(special).getByText("店慶")).toBeInTheDocument();
+    // 店休整格店休灰(鋪在內容底層),格子仍可點
+    const closed = await findLabelled("2026-11-03");
+    expect(closed.querySelector("[data-closed-layer]")).not.toBeNull();
+    expect(closed).not.toHaveAttribute("aria-disabled");
+    await user.click(closed);
+    expect(await findDialog("11/3(二)當天詳情")).toBeInTheDocument();
+    await user.keyboard("{Escape}");
     await user.click(nov2);
     const dialog = await findDialog("11/2(一)當天詳情");
     expect(within(dialog).getByText("07:56")).toBeInTheDocument();
@@ -188,25 +195,6 @@ describe("我的班表 → 班表", () => {
     ).toEqual(["缺卡", "有異動"]);
   });
 
-  it("特殊日沒選顏色:退回底座的特殊日底色", async () => {
-    renderSchedulePage({
-      path: `${SCHEDULE}&view=calendar`,
-      my: {
-        calendarDays: [
-          {
-            date: "2026-11-11",
-            type: "special",
-            name: "店慶",
-            paletteKey: null,
-          },
-        ],
-      },
-    });
-    const special = await findLabelled("2026-11-11");
-    expect(special).toHaveAttribute("data-tone", "special");
-    expect(special).not.toHaveAttribute("data-background");
-  });
-
   it("條列:依日期列出班、店休、畫休,今天標「今天」", async () => {
     renderSchedulePage({ path: `${SCHEDULE}&view=list` });
     expect(await screen.findByText("11/5(四)今天")).toBeInTheDocument();
@@ -216,6 +204,23 @@ describe("我的班表 → 班表", () => {
     expect(dayOff?.textContent).toContain("畫休");
     const support = document.querySelector('[data-my-list-day="2026-11-10"]');
     expect(support?.textContent).toContain("B 分店");
+  });
+
+  it("條列:特殊日整行底色並寫名稱(同月曆的判斷);店休整行店休灰", async () => {
+    renderSchedulePage({ path: `${SCHEDULE}&view=list` });
+    await screen.findByText("11/5(四)今天");
+    const special = document.querySelector('[data-my-list-day="2026-11-11"]');
+    const closed = document.querySelector('[data-my-list-day="2026-11-03"]');
+    expect(special).toHaveAttribute("data-special", "cyan");
+    expect(special?.textContent).toContain("店慶");
+    expect(closed).not.toHaveAttribute("data-special");
+    expect(closed?.textContent).toContain("店休");
+    expect(special).toHaveStyle({
+      backgroundColor: "var(--tag-palette-bg-cyan)",
+    });
+    expect(closed).toHaveStyle({
+      backgroundColor: "var(--mui-palette-action-disabledBackground)",
+    });
   });
 
   it("換月:網址記月份,沒有已發布的班就是空的", async () => {

@@ -20,27 +20,35 @@ export interface TagPaletteSelectProps {
   /** 觸發標籤的無障礙名稱(例「「補貨」的顏色」);省略 = 「顏色」 */
   label?: string;
   disabled?: boolean;
+  /** 面板列哪些色票(依這個順序);省略 = 十組全部(例:行事曆特殊日不列灰色) */
+  keys?: readonly TagPaletteKey[];
+  /** 面板下方有沒有「不設定」;必填的顏色給 false */
+  allowNone?: boolean;
 }
 
 /** 面板一列幾個標籤(Figma 289:88006:兩列各 5 個)。 */
 const PER_ROW = 5;
 
-const PALETTE_ROWS: readonly (readonly TagPaletteKey[])[] = Array.from(
-  { length: Math.ceil(TAG_PALETTE_KEYS.length / PER_ROW) },
-  (_, index) => TAG_PALETTE_KEYS.slice(index * PER_ROW, (index + 1) * PER_ROW),
-);
+const rowsOf = (
+  keys: readonly TagPaletteKey[],
+): readonly (readonly TagPaletteKey[])[] =>
+  Array.from({ length: Math.ceil(keys.length / PER_ROW) }, (_, index) =>
+    keys.slice(index * PER_ROW, (index + 1) * PER_ROW),
+  );
 
 /**
  * 色票選擇(規格 18.5:**只能從色票選,不能輸入色碼**;Figma BS-13 289:87534 / 色票面板 289:88006)。
  *
- * - 觸發:目前的色票標籤本身(沒有外框、沒有箭頭);沒有顏色時是文字按鈕「不設定」
- * - 面板:`@repo/ui` 的 Popover,標題「選擇顏色」、十組色票兩列各 5 個、下方「不設定」;選了就關
+ * - 觸發:目前的色票標籤本身(沒有外框、沒有箭頭);沒有顏色時是文字按鈕「不設定」(必填時「選擇顏色」)
+ * - 面板:`@repo/ui` 的 Popover,標題「選擇顏色」、色票每列 5 個(預設十組)、下方「不設定」(必填時不放);選了就關
  */
 export const TagPaletteSelect = ({
   value,
   onChange,
   label,
   disabled = false,
+  keys = TAG_PALETTE_KEYS,
+  allowNone = true,
 }: TagPaletteSelectProps) => {
   const t = useTranslations("admin.tagPalettes.select");
   const titleId = useId();
@@ -72,7 +80,8 @@ export const TagPaletteSelect = ({
           }}
           {...triggerAria}
         >
-          {t("none")}
+          {/* 必填(沒有「不設定」)還沒選時寫「選擇顏色」 */}
+          {allowNone ? t("none") : t("title")}
         </Button>
       ) : (
         <TagPaletteChip
@@ -100,7 +109,7 @@ export const TagPaletteSelect = ({
               {t("title")}
             </Typography>
             <Stack spacing={1}>
-              {PALETTE_ROWS.map((row) => (
+              {rowsOf(keys).map((row) => (
                 <Stack key={row.join("-")} direction="row" spacing={1}>
                   {row.map((key) => (
                     <TagPaletteChip
@@ -115,17 +124,19 @@ export const TagPaletteSelect = ({
                 </Stack>
               ))}
             </Stack>
-            <Box>
-              <Button
-                variant="text"
-                size="small"
-                onClick={() => {
-                  choose(null);
-                }}
-              >
-                {t("none")}
-              </Button>
-            </Box>
+            {allowNone && (
+              <Box>
+                <Button
+                  variant="text"
+                  size="small"
+                  onClick={() => {
+                    choose(null);
+                  }}
+                >
+                  {t("none")}
+                </Button>
+              </Box>
+            )}
           </Stack>
         </Box>
       </Popover>

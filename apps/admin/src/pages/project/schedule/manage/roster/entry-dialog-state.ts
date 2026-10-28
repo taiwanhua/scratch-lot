@@ -31,6 +31,33 @@ export const closedDatePredicateOf = (
   return (date) => closed.has(date);
 };
 
+/**
+ * 這段時間碰到讀到的店休日:那天或跨午夜的隔天(結束剛好 00:00 不算隔天;時間還沒填完只看那天)。
+ * 排班與人力需求同一個判斷(api 一樣會擋,`STORE_CLOSED`)。
+ */
+export const touchesClosedDay = (
+  date: string,
+  span: { endAt: string } | null,
+  context: {
+    calendarDays: readonly { date: string; type: string }[];
+    timezone: string;
+  },
+): boolean => {
+  if (date === "") {
+    return false;
+  }
+  const lastDay =
+    span === null
+      ? date
+      : localPartsOf(
+          new Date(Date.parse(span.endAt) - 1).toISOString(),
+          context.timezone,
+        ).date;
+  return context.calendarDays.some(
+    (day) => day.type === "closed" && day.date >= date && day.date <= lastDay,
+  );
+};
+
 /** 會標回排班對話框的欄位。 */
 export type EntryField =
   "userId" | "date" | "startTime" | "endTime" | "breakMinutes" | "assignments";
@@ -321,21 +348,8 @@ export const entryCheckReasonsOf = (
     form.endTime,
     context.timezone,
   );
-  if (form.date !== "") {
-    const lastDay =
-      span === null
-        ? form.date
-        : localPartsOf(
-            new Date(Date.parse(span.endAt) - 1).toISOString(),
-            context.timezone,
-          ).date;
-    const isClosed = context.calendarDays.some(
-      (day) =>
-        day.type === "closed" && day.date >= form.date && day.date <= lastDay,
-    );
-    if (isClosed) {
-      reasons.startTime = "STORE_CLOSED";
-    }
+  if (touchesClosedDay(form.date, span, context)) {
+    reasons.startTime = "STORE_CLOSED";
   }
   if (span !== null && reasons.startTime === undefined) {
     const isDayOff = context.unavailability.some((day) => {

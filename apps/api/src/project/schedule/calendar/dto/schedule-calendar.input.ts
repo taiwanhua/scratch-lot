@@ -18,7 +18,7 @@ export class ScheduleCalendarInput {
 
 /**
  * 新增 / 修改一天的店休或特殊日(整份送;修改時帶 `id`)。寫在 `orgId` 那一層(缺席 = 當前組織)。
- * 特殊日:`category`、`name` 必填,`paletteKey` 選填;店休:`category`、`paletteKey` 一律存 null。
+ * 特殊日:`category`、`name`、`paletteKey`(灰色以外的色票)必填;店休:`category`、`paletteKey` 一律存 null。
  */
 @InputType()
 export class SaveScheduleCalendarDayInput {

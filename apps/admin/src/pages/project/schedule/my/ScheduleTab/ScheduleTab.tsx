@@ -31,6 +31,7 @@ import { IncompletePunchAlert } from "./IncompletePunchAlert";
 import { MyMonthCalendar } from "./MyMonthCalendar";
 import { MyScheduleList } from "./MyScheduleList";
 import { PunchArea } from "./PunchArea";
+import { MY_SCHEDULE_LEGEND_ITEMS } from "./my-schedule-legend";
 
 /** `?month=YYYY-MM`:顯示的月份;空字串 = 今天所在的月份。 */
 const MONTH_SCHEMA = z.string().default("");
@@ -120,6 +121,9 @@ export const ScheduleTab = () => {
 
   const deviceView: View = isMobile ? "list" : "calendar";
   const view: View = viewParam === "" ? deviceView : viewParam;
+  // 圖例只列這個檢視畫得出來的記號(手機月曆只放簡稱)
+  const calendarLegendKey = isMobile ? "calendarMobile" : "calendar";
+  const legendKey = view === "list" ? "list" : calendarLegendKey;
   const { year, month } = parseLocalMonth(page.month) ?? { year: 0, month: 0 };
   const changedDates = new Set(
     page.changes
@@ -199,17 +203,7 @@ export const ScheduleTab = () => {
                 onOpenDay={setOpenedDay}
               />
             )}
-            <ScheduleLegend
-              items={[
-                "leader",
-                "temp",
-                "dayOff",
-                "punchTimes",
-                "changedDot",
-                "missingDot",
-                "special",
-              ]}
-            />
+            <ScheduleLegend items={MY_SCHEDULE_LEGEND_ITEMS[legendKey]} />
           </Stack>
         </Card>
       </Stack>

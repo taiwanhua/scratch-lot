@@ -85,6 +85,7 @@ export const testConfig = () => ({
     markers: /^Marker$/,
     legendItem: "LegendItem",
     legendLabelProp: "Label",
+    exempt: {},
   },
   audit: {
     devText: [/\bAA-\d{2}\b/, /規格/],

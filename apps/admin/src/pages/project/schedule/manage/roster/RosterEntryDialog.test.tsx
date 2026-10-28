@@ -21,6 +21,7 @@ setupFakeViewport();
 const ROSTER = "/schedule/manage?tab=roster&month=2026-11";
 const WEEK = `${ROSTER}&view=week&date=2026-11-04`;
 const CLOSED = "這段時間有店休,不能排班";
+const DEMAND_CLOSED = "這段時間有店休,不能建人力需求";
 const DAY_OFF = "和這個人的畫休重疊";
 const CANNOT_LEAD = "這個人不能擔任負責人";
 
@@ -259,7 +260,7 @@ describe("排班對話框:各入口一致", () => {
     ).toHaveTextContent(CANNOT_LEAD);
   });
 
-  it("店休:工具列選店休那天 → 上班欄下寫原因、[儲存] 停用(人力需求照樣可以新增)", async () => {
+  it("店休:工具列選店休那天 → 上班欄下寫原因、[儲存] 與 [新增一筆人力需求] 停用(店休日不能建人力需求)", async () => {
     const { user } = renderRoster(ROSTER);
     const dialog = await openFromToolbar(
       user,
@@ -270,10 +271,65 @@ describe("排班對話框:各入口一致", () => {
     expect(saveButton(dialog)).toBeDisabled();
     expect(
       within(dialog).getByRole("button", { name: "新增一筆人力需求" }),
-    ).toBeEnabled();
+    ).toBeDisabled();
   });
 
-  it("日期欄的店休日反灰(只有排班對話框;人力需求的日期欄不反灰,店休日可以建人力需求)", async () => {
+  it("人力需求對話框:日期選店休那天、或跨午夜做進隔天店休 → 開始時間欄下寫原因、[新增] 停用;結束剛好 00:00 不算隔天", async () => {
+    const { user } = renderRoster(ROSTER);
+    await user.click(await findButton("+ 人力需求"));
+    const dialog = await findDialog("新增人力需求");
+    const createButton = () =>
+      within(dialog).getByRole("button", { name: "新增" });
+    await user.click(within(dialog).getByRole("group", { name: /日期/ }));
+    await user.keyboard("20261103");
+    await waitFor(() => {
+      expect(timeField(dialog, /開始/)).toHaveAccessibleDescription(
+        DEMAND_CLOSED,
+      );
+    });
+    expect(createButton()).toBeDisabled();
+
+    // 11/2 22:00–02:00 做進 11/3 店休
+    await user.click(within(dialog).getByRole("group", { name: /日期/ }));
+    await user.keyboard("20261102");
+    await typeTimeIn(user, dialog, /開始/, "22:00");
+    await typeTimeIn(user, dialog, /結束/, "02:00");
+    expect(timeField(dialog, /開始/)).toHaveAccessibleDescription(
+      DEMAND_CLOSED,
+    );
+    expect(createButton()).toBeDisabled();
+
+    // 做到 11/3 00:00 剛好結束:不碰店休
+    await typeTimeIn(user, dialog, /結束/, "00:00");
+    expect(timeField(dialog, /開始/)).not.toHaveAccessibleDescription(
+      DEMAND_CLOSED,
+    );
+    expect(createButton()).toBeEnabled();
+  });
+
+  it("人力需求對話框:api 回店休(STORE_CLOSED,前端還不知道那天店休)→ 開始時間欄下寫「不能建人力需求」那句", async () => {
+    renderSchedulePage({
+      path: ROSTER,
+      roster: { closedDemandDates: ["2026-11-06"] },
+    });
+    const user = fastUser();
+    await user.click(await findButton("+ 人力需求"));
+    const dialog = await findDialog("新增人力需求");
+    await user.click(within(dialog).getByRole("group", { name: /日期/ }));
+    await user.keyboard("20261106");
+    await typeTimeIn(user, dialog, /開始/, "09:00");
+    await typeTimeIn(user, dialog, /結束/, "13:00");
+    await user.click(within(dialog).getByRole("combobox", { name: /崗位/ }));
+    await user.click(await findOption("店外攤位"));
+    await user.click(within(dialog).getByRole("button", { name: "新增" }));
+    await waitFor(() => {
+      expect(timeField(dialog, /開始/)).toHaveAccessibleDescription(
+        DEMAND_CLOSED,
+      );
+    });
+  });
+
+  it("日期欄的店休日反灰(排班對話框與人力需求對話框同一套;店休日不能建人力需求)", async () => {
     const { user } = renderRoster(ROSTER);
     /** 打開對話框裡日期欄的月曆,回 11/3(店休)與 11/4 兩格 */
     const daysIn = async (dialog: HTMLElement) => {
@@ -309,7 +365,8 @@ describe("排班對話框:各入口一致", () => {
     await user.click(within(demandDialog).getByRole("group", { name: /日期/ }));
     await user.keyboard("20261104");
     const demandDays = await daysIn(demandDialog);
-    expect(demandDays.closed).toBeEnabled();
+    expect(demandDays.closed).toBeDisabled();
+    expect(demandDays.open).toBeEnabled();
   });
 
   it("編輯既有的負責人排班:原本就填著的負責任務不擋", async () => {

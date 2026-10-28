@@ -73,6 +73,12 @@ const cornersOf = (
 const isActivationKey = (event: KeyboardEvent) =>
   event.key === "Enter" || event.key === " ";
 
+/**
+ * 日期數字與註記疊在 `content` 的鋪滿裝飾(`position: absolute` 的底紋等)之上;
+ * 格子自成一層(`isolation: isolate`),這個層級不會蓋到格子外的浮層。
+ */
+const aboveContentSx = { position: "relative", zIndex: 1 } as const;
+
 /** 月曆的一格(Figma Draft/MonthCalendarCell):日期數字、角標、註記、自訂內容。 */
 export const MonthCalendarDayCell = ({
   day,
@@ -109,6 +115,7 @@ export const MonthCalendarDayCell = ({
       }}
       sx={(theme) => ({
         position: "relative",
+        isolation: "isolate",
         minWidth: 0,
         // 電腦大格、手機約 48px;寬度由容器七等分
         minHeight: { xs: theme.spacing(6), md: theme.spacing(12) },
@@ -131,7 +138,9 @@ export const MonthCalendarDayCell = ({
     >
       <Box
         component="span"
+        data-day-number
         sx={(theme) => ({
+          ...aboveContentSx,
           typography: "body2",
           ...todayMarkSx(theme, { isToday, shape: "circle" }),
         })}
@@ -144,7 +153,9 @@ export const MonthCalendarDayCell = ({
       {day.inMonth && info?.note ? (
         <Box
           component="span"
+          data-day-note
           sx={{
+            ...aboveContentSx,
             typography: "caption",
             color: "text.secondary",
             overflow: "hidden",

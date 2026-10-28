@@ -38,7 +38,9 @@ import {
   initialDemandValues,
   missingDemandFields,
   nextTaskKey,
+  withClosedReason,
 } from "./demand-dialog-state";
+import { closedDatePredicateOf } from "./entry-dialog-state";
 import { useChangeReason } from "./publish/useChangeReason";
 import {
   type DemandPreset,
@@ -70,6 +72,8 @@ export interface DemandDialogProps {
  *   被收銀班次綁定的擋下並列出
  * - 「同時存成人力需求範本」:只在新增、有 `edit-templates` 時出現
  * - 已經有人填的人力需求不能改日期(要搬日期先解除)
+ * - 店休那天(或跨午夜做進隔天店休)不能建人力需求:日期欄的店休日反灰;送出前就在開始時間欄下寫原因、
+ *   [新增] / [儲存] 停用(同排班對話框);店休日既有的那筆只能 [刪除人力需求]
  * - 沒有 `edit`:欄位停用、只剩 [關閉]。電腦 / 平板置中、手機全螢幕
  */
 export const DemandDialog = ({
@@ -82,6 +86,7 @@ export const DemandDialog = ({
   const t = useTranslations("admin.schedule.roster.demandDialog");
   const tRoster = useTranslations("admin.schedule.roster");
   const tCommon = useTranslations("admin.schedule.common");
+  const tSchedule = useTranslations("admin.schedule");
   const { session } = useSession();
   const queryClient = useQueryClient();
   const isMobile = useBreakpointDown("sm");
@@ -187,6 +192,13 @@ export const DemandDialog = ({
     demandRemovalImpact(demand?.id ?? "", tasks, data.entries);
   const hasFilledTask =
     demand?.tasks.some((task) => typeof task.entryId === "string") === true;
+  // 店休那天(或跨午夜做進隔天店休)不能建人力需求;店休日既有的那筆不能改、只能刪(api 一樣會擋)
+  const { isClosed, shownErrors } = withClosedReason(
+    values,
+    fieldErrors,
+    { calendarDays: data.calendarDays, timezone },
+    tSchedule,
+  );
 
   const submit = (confirmed: boolean) => {
     const missing = missingDemandFields(values);
@@ -291,7 +303,7 @@ export const DemandDialog = ({
               {tCommon("cancel")}
             </Button>
             <Button
-              disabled={save.isPending}
+              disabled={save.isPending || isClosed}
               onClick={() => {
                 submit(false);
               }}
@@ -322,10 +334,13 @@ export const DemandDialog = ({
             required
             fullWidth
             disabled={!canEdit || isDateLocked || hasFilledTask}
+            shouldDisableDate={closedDatePredicateOf(data.calendarDays)}
             error={invalid.includes("date")}
             helperText={fieldErrors.date}
             onChange={(next) => {
               change("date", next ?? "");
+              // 店休(開始時間欄)跟著日期
+              errors.clear("startTime");
             }}
           />
           <SelectField
@@ -351,8 +366,8 @@ export const DemandDialog = ({
               required
               fullWidth
               disabled={!canEdit}
-              error={invalid.includes(field)}
-              helperText={fieldErrors[field]}
+              error={shownErrors[field] !== undefined}
+              helperText={shownErrors[field]}
               onChange={(next) => {
                 change(field, next ?? "");
               }}

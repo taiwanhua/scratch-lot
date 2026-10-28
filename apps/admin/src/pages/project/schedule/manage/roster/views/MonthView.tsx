@@ -9,6 +9,10 @@ import {
 import { Stack } from "@repo/ui/stack";
 
 import { TagPaletteChip } from "@/components/project/TagPaletteChip/TagPaletteChip";
+import {
+  calendarMarkMonthBackground,
+  calendarMarkOf,
+} from "@/components/project/schedule/CalendarMark/calendar-mark";
 import { ScheduleLegend } from "@/components/project/schedule/ScheduleLegend/ScheduleLegend";
 import { useTenantToday } from "@/hooks/base/useTenantToday";
 import { useScheduleFieldOptions } from "@/hooks/project/schedule/useScheduleFieldOptions/useScheduleFieldOptions";
@@ -20,7 +24,6 @@ import {
   weekdayOf,
 } from "@/lib/project/schedule-roster";
 import type { CountLabels } from "@/lib/project/schedule-roster-views";
-import { isTagPaletteKey } from "@/lib/project/tag-palettes";
 
 import { type RosterData, useRoster } from "../roster-context";
 import { MonthDayContent, type MonthDayItem } from "./MonthDayContent";
@@ -35,18 +38,20 @@ const deviceOf = (isMobile: boolean, isNarrow: boolean) => {
   return isNarrow ? ("tablet" as const) : ("desktop" as const);
 };
 
-/** 行事曆:店休停用並寫「店休」;特殊日寫名稱(它的顏色)。 */
+/** 行事曆:店休停用並寫「店休」;特殊日整格鋪它的顏色(底座淡化,`calendarMarkMonthBackground`)並寫名稱標籤。 */
 const calendarInfoOf = (
   day: RosterData["calendarDays"][number] | undefined,
   closedLabel: string,
 ): MonthCalendarDayInfo => {
-  if (day?.type === "closed") {
+  const mark = calendarMarkOf(day);
+  if (mark.kind === "closed") {
     return { disabled: true, disabledReason: closedLabel, note: closedLabel };
   }
-  if (day?.type === "special" && isTagPaletteKey(day.paletteKey)) {
+  if (mark.kind === "special") {
     return {
+      background: calendarMarkMonthBackground(mark),
       note: (
-        <TagPaletteChip paletteKey={day.paletteKey} label={day.name ?? ""} />
+        <TagPaletteChip paletteKey={mark.paletteKey} label={mark.name ?? ""} />
       ),
     };
   }

@@ -9,7 +9,10 @@ import type {
   ScheduleTimelineSlot,
 } from "@repo/ui/schedule-timeline";
 
-import { tagPaletteBackground } from "@/components/project/TagPaletteChip/tag-palette-background";
+import {
+  calendarMarkBackground,
+  calendarMarkOf,
+} from "@/components/project/schedule/CalendarMark/calendar-mark";
 import {
   autoMarkSx,
   leaderMarkSx,
@@ -33,7 +36,6 @@ import {
   weekFullTitle,
   weekShortTitle,
 } from "@/lib/project/schedule-roster-views";
-import { isTagPaletteKey } from "@/lib/project/tag-palettes";
 
 import {
   type EntryPreset,
@@ -303,27 +305,25 @@ export const useTimelineGroups = (
   // 未對應排班的打卡:那天的日期旁顯示時鐘圖示 + 張數(規格 14.5)
   const punchCounts = unmatchedCountsByDate(data.unmatchedPunches);
   const timelineDates = shownDates.map((date): ScheduleTimelineDate => {
-    const day = calendarByDate.get(date);
-    const special =
-      day?.type === "special" && isTagPaletteKey(day.paletteKey)
-        ? day.paletteKey
-        : null;
+    const mark = calendarMarkOf(calendarByDate.get(date));
+    // 特殊日整欄色票底;店休由時間軸的 `disabledRanges` 畫(下方)
+    const background = calendarMarkBackground(mark, {
+      closedByComponent: true,
+    });
     return {
       date,
       label: (
         <Box component="span" data-roster-cell={rosterCellKey({ date })}>
           {/* 表頭的日期由時間軸畫,這裡只寫星期與特殊日名稱 */}
           {tCalendar(`weekdays.${String(weekdayOf(date))}`)}
-          {special !== null && day?.name ? ` ${day.name}` : ""}
+          {mark.kind === "special" && mark.name !== null ? ` ${mark.name}` : ""}
           <UnmatchedPunchMark
             count={punchCounts.get(date) ?? 0}
             placement={{ ml: 0.5 }}
           />
         </Box>
       ),
-      ...(special === null
-        ? {}
-        : { background: tagPaletteBackground(special) }),
+      ...(background === undefined ? {} : { background }),
     };
   });
 
@@ -331,7 +331,8 @@ export const useTimelineGroups = (
   const disabledRanges = shownDates.flatMap(
     (date): ScheduleTimelineDisabledRange[] => {
       const whole = dayRangeOf(date, date, timezone);
-      return calendarByDate.get(date)?.type === "closed" && whole !== null
+      return calendarMarkOf(calendarByDate.get(date)).kind === "closed" &&
+        whole !== null
         ? [
             {
               start: Date.parse(whole.from),

@@ -10,12 +10,15 @@
 //                      以及標示用元件(設定 legend.markers)的實例內部;一般元件(按鈕、標籤、提示)本身的顏色不算。
 //                  顏色以「解析後的實際色值」比對(同名 primary/lighter 在底座與品牌 Library 是不同顏色,不能只比名稱);
 //                  mark 以變數名稱判斷是不是標示用顏色。
+//                  例外:設定 legend.exempt 列的頁(值是理由),圖例照程式清單固定列出「可能出現」的記號,
+//                  (1) 不算錯、改列在 legendExempted(回報時照列理由);(2) 照查。
 const PAGE_ID = ""; // 要稽核的頁 id(必填)
 if (typeof AUDIT_CONFIG === "undefined")
   throw new Error("先貼 project/config.js 再貼本檔");
 if (!PAGE_ID) throw new Error("PAGE_ID 未填");
 const MARK = AUDIT_CONFIG.legend.mark;
 const MARKERS = AUDIT_CONFIG.legend.markers;
+const EXEMPT_REASON = (AUDIT_CONFIG.legend.exempt ?? {})[PAGE_ID];
 figma.skipInvisibleInstanceChildren = true;
 const page = await figma.getNodeByIdAsync(PAGE_ID);
 await figma.setCurrentPageAsync(page);
@@ -81,6 +84,7 @@ async function paintsOf(n, out, props = ["fills", "strokes"], pairs) {
 let unbound = 0;
 const unboundSample = [];
 const mismatch = [];
+const exempted = [];
 for (const s of screens) {
   // (a) 沒綁變數的顏色
   const walk = async (n, inInstance) => {
@@ -160,7 +164,7 @@ for (const s of screens) {
   for (const k of s.children) await visit(k, null);
   for (const [c, labels] of sample)
     if (!used.has(c))
-      mismatch.push(
+      (EXEMPT_REASON ? exempted : mismatch).push(
         `${s.name.slice(0, 28)}:圖例「${labels[0]}」的 ${c} 畫面沒用到`,
       );
   for (const x of marked) {
@@ -173,6 +177,9 @@ return {
   page: page.name,
   unboundColors: unbound,
   legendMismatch: mismatch.length,
+  legendExempted: exempted.length,
+  exemptReason: EXEMPT_REASON || null,
   unboundSample,
   mismatchSample: mismatch.slice(0, 40),
+  exemptedSample: exempted.slice(0, 10),
 };

@@ -1,4 +1,10 @@
-import { Field, GraphQLISODateTime, ID, ObjectType } from "@nestjs/graphql";
+import {
+  Field,
+  GraphQLISODateTime,
+  ID,
+  Int,
+  ObjectType,
+} from "@nestjs/graphql";
 
 import { ScheduleOwnerOrgModel } from "../../templates/models/schedule-template.model";
 
@@ -63,10 +69,35 @@ export class ScheduleCalendarPayload {
   days!: ScheduleCalendarDayModel[];
 }
 
+/** 設成店休那天已經有人力需求 / 排班的一家店(先有資料、後設店休:照樣存,提醒去刪)。 */
+@ObjectType("ScheduleCalendarClosedConflict")
+export class ScheduleCalendarClosedConflictModel {
+  @Field(() => ID)
+  orgId!: string;
+
+  @Field(() => String)
+  orgName!: string;
+
+  /** 那天的人力需求筆數 */
+  @Field(() => Int)
+  demandCount!: number;
+
+  /** 那天的排班筆數 */
+  @Field(() => Int)
+  entryCount!: number;
+}
+
 @ObjectType("ScheduleCalendarDayPayload")
 export class ScheduleCalendarDayPayload {
   @Field(() => ScheduleCalendarDayModel)
   item!: ScheduleCalendarDayModel;
+
+  /**
+   * 存成店休時,那天(含前一天跨午夜做進來的)已經有人力需求 / 排班的店(這一層與沿用這一天的下層各店;
+   * 下層自己另設那天的不算);照樣存,畫面提醒去刪。特殊日一律空陣列。
+   */
+  @Field(() => [ScheduleCalendarClosedConflictModel])
+  closedConflicts!: ScheduleCalendarClosedConflictModel[];
 }
 
 @ObjectType("DeleteScheduleCalendarDayPayload")

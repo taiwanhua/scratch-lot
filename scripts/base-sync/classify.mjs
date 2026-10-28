@@ -50,6 +50,8 @@ const PROJECT = [
   /^packages\/i18n\/messages\/[^/]+\/front\.json$/,
   // 專案後台文案(新增 / 替換底座字串,I18N-06);須排在 MIXED 的 messages/ 之前
   /^packages\/i18n\/messages\/[^/]+\/project\//,
+  // 專案的 i18n 登記(死鍵檢查的動態 key 白名單;底座帶空版);須排在 COMMON 的 packages/ 之前
+  /^packages\/i18n\/src\/project\//,
   // 前後端共用的專案純邏輯(STRUCT-07);須排在 COMMON 的 packages/ 之前
   /^packages\/domain\/src\/project\//,
   /^apps\/db-migrator\/seeds\/project\//,
