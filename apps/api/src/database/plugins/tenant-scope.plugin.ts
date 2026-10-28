@@ -375,6 +375,30 @@ export function getTenantScope(schema: Schema): TenantScope | undefined {
 type AnyQuery = Query<unknown, unknown, unknown, Record<string, unknown>>;
 type Filter = QueryFilter<Record<string, unknown>>;
 
+/**
+ * **寫入中介層會加上的條件**(可見範圍 + 資料範圍規則),給不經查詢中介層的寫入(`bulkWrite`)自己釘在
+ * 每一筆的條件上 —— 與 `SCOPED_WRITE_MIDDLEWARE` 同一套判斷,不另寫一份。未掛本 plugin 的 schema 回 `[]`。
+ * 只給 `BaseRepository` 用(其他寫入一律經查詢中介層)。
+ */
+export async function writeScopeConditionsOf(
+  schema: Schema,
+  queryScope: QueryScope,
+): Promise<Filter[]> {
+  const scope = tenantScopes.get(schema);
+  if (scope === undefined) {
+    return [];
+  }
+  const conditions = [
+    writeConditionOf(queryScope, scope),
+    await dataScopeConditionOf(
+      queryScope,
+      scope,
+      installedCollections.get(schema),
+    ),
+  ];
+  return conditions.filter((condition) => condition !== null);
+}
+
 function applyTenantScope(
   query: AnyQuery,
   scope: TenantScope,
