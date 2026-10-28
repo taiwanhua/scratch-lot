@@ -8,7 +8,7 @@ import type { RosterToolbarActionProps } from "../roster-toolbar";
 
 /**
  * 工具列的 [發布](規格 14.5;要 `schedule.manage.publish`,權限由工具列依登記過濾):
- * 已發布的月份不顯示(沒有取消發布)。點了打開發布確認視窗(`PublishDialog`,由 `RosterCheckProvider` 畫,
+ * 已發布的月份不顯示(沒有取消發布)。點了打開發布確認視窗(`RosterPublishDialog`,由 `RosterCheckProvider` 畫,
  * 手機 [⋯] 選單關掉後照樣開著)。
  */
 export const PublishAction = ({

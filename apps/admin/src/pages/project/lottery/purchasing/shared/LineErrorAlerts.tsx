@@ -1,6 +1,9 @@
 import { Alert } from "@repo/ui/alert";
 
-import { type FieldErrorSource, lineErrorMessagesOf } from "./field-errors";
+import {
+  type FieldErrorSource,
+  lineErrorMessagesOf,
+} from "./purchasing-field-errors";
 
 export interface LineErrorAlertsProps {
   /** 送出 / 存草稿失敗的錯誤(`useFormDraft().error`) */

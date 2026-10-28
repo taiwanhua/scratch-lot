@@ -9,7 +9,7 @@ export interface ReadOnlyFieldProps {
 }
 
 /** 詳情頁的一個唯讀欄位(上方小標、下方值;放在 `FieldGrid` 的格子裡)。 */
-export const ReadOnlyField = ({ label, children }: ReadOnlyFieldProps) => (
+export const DealerInfoField = ({ label, children }: ReadOnlyFieldProps) => (
   <Stack spacing={0.25} sx={{ minWidth: 0 }}>
     <Typography variant="caption" color="textSecondary">
       {label}

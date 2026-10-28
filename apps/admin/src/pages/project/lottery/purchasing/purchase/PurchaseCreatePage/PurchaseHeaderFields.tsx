@@ -11,7 +11,7 @@ import { OrgTreeSelect } from "@/components/base/OrgTreeSelect/OrgTreeSelect";
 import {
   type FieldErrorSource,
   fieldErrorProps,
-} from "../../shared/field-errors";
+} from "../../shared/purchasing-field-errors";
 import { PURCHASE_FIELD_KEYS as K } from "../purchase-keys";
 import type { PurchaseOptions } from "./purchase-form";
 

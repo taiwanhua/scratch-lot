@@ -11,8 +11,8 @@ import {
 import { AllocationsTable } from "@/components/project/lottery/AllocationsTable/AllocationsTable";
 import { LIST_PAGE_SHELL_SX } from "@/lib/base/list-page-layout";
 
+import { InventoryLookupDialog } from "../InventoryLookupDialog/InventoryLookupDialog";
 import { InvestigationsTab } from "../InvestigationsTab/InvestigationsTab";
-import { LookupDialog } from "../LookupDialog/LookupDialog";
 import { StockTab } from "../StockTab/StockTab";
 import { INVENTORY_TABS } from "../inventory-config";
 
@@ -71,7 +71,7 @@ export const InventoryPage = () => {
         }
       />
       {isLookingUp ? (
-        <LookupDialog
+        <InventoryLookupDialog
           onClose={() => {
             setLookingUp(false);
           }}
