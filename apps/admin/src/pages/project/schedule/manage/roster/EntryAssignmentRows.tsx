@@ -37,10 +37,12 @@ export interface EntryAssignmentRowsProps {
   /** 改上下班時間([往後延長到] / [往前延長到]) */
   onExtend: (edge: "start" | "end", time: string) => void;
   onAddDemand: () => void;
+  /** 這天(或跨午夜的隔天)店休:[新增一筆人力需求] 停用(原因已寫在上班欄下) */
+  isAddDemandDisabled?: boolean;
 }
 
 /**
- * 排班對話框的「加入這天的人力需求」(規格 14.5):標題列右邊 [新增一筆人力需求](疊開人力需求對話框);
+ * 排班對話框的「加入這天的人力需求」(規格 14.5):標題列右邊 [新增一筆人力需求](疊開人力需求對話框;店休日停用);
  * 每列 = 人力需求 + 職責 · 執行任務 + [移除];清單最下面 [+ 加入人力需求] 從這天已有的加一列;
  * 這天沒有人力需求時寫「這天沒有合適的人力需求」。負責人沒涵蓋那筆人力需求 → 提示與延長按鈕。
  * 不能選的任務反灰,原因寫在選項的次文字(STYLE-05「停用的選項」):別人填了 → 誰填的;
@@ -55,6 +57,7 @@ export const EntryAssignmentRows = ({
   span,
   onExtend,
   onAddDemand,
+  isAddDemandDisabled = false,
 }: EntryAssignmentRowsProps) => {
   const t = useTranslations("admin.schedule.roster.entryDialog");
   const tRoster = useTranslations("admin.schedule.roster");
@@ -197,6 +200,7 @@ export const EntryAssignmentRows = ({
             variant="text"
             size="small"
             sx={{ ml: "auto" }}
+            disabled={isAddDemandDisabled}
             onClick={onAddDemand}
           >
             {t("addNewDemand")}

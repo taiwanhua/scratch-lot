@@ -1127,6 +1127,9 @@
         "PUNCH_NOT_ALLOWED": "This entry can't take this punch now",
         "CONCURRENT_EDIT": "Someone else changed this at the same time; refresh and try again"
       },
+      "demandReasons": {
+        "STORE_CLOSED": "The store is closed during this time; staffing needs cannot be added"
+      },
       "FORBIDDEN": "You don't have permission to do this",
       "NOT_FOUND": "This item was not found; it may have been deleted or you can't see it",
       "VALIDATION_FAILED": "Some fields are invalid; please check the highlighted fields",
@@ -1388,7 +1391,7 @@
       "closed": "Closed",
       "special": "Special day",
       "dayLabel": "{type} · {name}",
-      "legendClosed": "Closed (no scheduling)",
+      "legendClosed": "Closed (no scheduling or staffing needs)",
       "legendSpecial": "Special day (scheduling as usual; color selectable)",
       "legendInherit": "↓ Days set by an upper org apply below",
       "weekdays": {
@@ -1416,6 +1419,8 @@
       },
       "feedback": {
         "saveSuccess": "Calendar saved",
+        "closedConflict": "This day already has staffing needs or shifts ({list}); nothing can be scheduled on a closed day, so delete them from the roster",
+        "closedConflictItem": "{org}: {demands} staffing needs, {entries} shifts",
         "deleteSuccess": "Deleted"
       }
     },

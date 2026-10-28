@@ -5,6 +5,7 @@ import { useTranslations } from "use-intl";
 import { DEFAULT_TENANT_TIMEZONE } from "@repo/domain/form";
 import { SCHEDULE_FIELD_CATEGORY_KEYS } from "@repo/domain/project/schedule-fields";
 import {
+  type SaveScheduleCalendarDayMutation,
   type ScheduleCalendarDayFieldsFragment,
   useDeleteScheduleCalendarDayMutation,
   useSaveScheduleCalendarDayMutation,
@@ -26,6 +27,7 @@ import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
 import { useSession } from "@/hooks/base/useSession";
 import { useTemporalText } from "@/hooks/base/useTemporalText";
 import { useTenantTimezone } from "@/hooks/base/useTenantTimezone";
+import { useClosedDayConflictNotice } from "@/hooks/project/schedule/useClosedDayConflictNotice/useClosedDayConflictNotice";
 import { useScheduleFieldOptions } from "@/hooks/project/schedule/useScheduleFieldOptions/useScheduleFieldOptions";
 import type { FieldErrorTexts } from "@/lib/base/field-errors";
 import { localDayInstantOf } from "@/lib/base/form-engine/local-day";
@@ -114,12 +116,17 @@ export const CalendarDayDialog = ({
   };
   const errorOf = (error: unknown) =>
     scheduleErrorTextsOf(error, FIELD_LIST, tSchedule).summary;
+  const noticeClosedConflicts = useClosedDayConflictNotice();
   const save = useSaveScheduleCalendarDayMutation(
     session.client,
-    useMutationFeedback({
+    useMutationFeedback<SaveScheduleCalendarDayMutation>({
       success: tCalendar("feedback.saveSuccess"),
       error: errorOf,
-      onSuccess: done,
+      onSuccess: (result) => {
+        // 先有人力需求 / 排班、後設店休:照樣存,提醒去排班表刪除
+        noticeClosedConflicts(result.saveScheduleCalendarDay.closedConflicts);
+        done();
+      },
       onError: (error) => {
         setFieldErrors(
           scheduleErrorTextsOf(error, FIELD_LIST, tSchedule).texts,
