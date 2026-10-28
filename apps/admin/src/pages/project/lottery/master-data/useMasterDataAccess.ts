@@ -1,8 +1,9 @@
+// 收銀點選單底部的「找不到?到欄位管理新增」連到底座的欄位管理模組
+import { FIELD_MANAGER_MODULE_KEY } from "@/components/base/FieldManager/field-manager-permissions";
 import { useMe } from "@/hooks/base/useMe";
 import { usePermissions } from "@/hooks/base/usePermissions";
 
 import {
-  FIELD_MANAGER_MODULE_KEY,
   MASTER_DATA_MODULE_KEYS as KEYS,
   MASTER_DATA_PERMISSIONS as PERMISSIONS,
   PRINT_PERMISSION,
