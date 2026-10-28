@@ -8,7 +8,12 @@ import {
   startAuthTestApp,
 } from "../../auth/test-support/auth-app";
 import { createOrg, createUser } from "../../auth/test-support/fixtures";
+import {
+  countDbCommands,
+  expectDbCommandsAtMost,
+} from "../../database/test-support/db-commands";
 import { HOOK_TIMEOUT_MS } from "../../database/test-support/mongo-connection";
+import { LookupProvidersService } from "../lookup-providers";
 import {
   CREATE_DRAFT,
   CREATE_FORM,
@@ -968,6 +973,86 @@ describe("表單的值:語意值、引用快照、現名 / 快照、lookup 以�
       who: "colleague",
     });
     expect(byRoot.values.who).toMatchObject({ value: "colleague" });
+  });
+
+  it("lookup 多選送出:各項的值去重後一次查回現名(TX-06),1 項與 10 項的資料庫指令數相同;讀不到的照樣擋下", async () => {
+    await publishNewForm(
+      api,
+      root,
+      "user_multi",
+      definitionOf([
+        field("title", "text"),
+        field("people", "multiSelect", {
+          widget: { kind: "multiDropdown" },
+          options: {
+            kind: "lookup",
+            source: { provider: "user", labelField: "name" },
+          },
+        }),
+      ]),
+    );
+    await assignForm(api, root, "user_multi", [tenant]);
+    const people = [colleague];
+    for (let index = 1; index < 10; index += 1) {
+      people.push(
+        await createUser(connection, {
+          account: `multi_${String(index)}`,
+          password: PASSWORD,
+          orgIds: [tenant],
+        }),
+      );
+    }
+    const lookups = api.app.get(LookupProvidersService);
+    async function submitCommands(ids: readonly Types.ObjectId[]) {
+      const draft = await createDraft(api, staff.token, "user_multi", {
+        title: `多選 ${String(ids.length)} 人`,
+        people: ids.map(String),
+      });
+      const spy = jest.spyOn(lookups, "findByValues");
+      try {
+        const counted = await countDbCommands(() =>
+          ok<{
+            submitFormSubmission: {
+              submission: { values: Record<string, unknown> };
+            };
+          }>(api, staff.token, SUBMIT, {
+            input: { id: draft.id, expectedEditVersion: draft.editVersion },
+          }),
+        );
+        // 寫快照的查詢(`publicOnly`);回應的現名解析是另一條(讀者權限),不算在內
+        const snapshotCalls = spy.mock.calls.filter(
+          (args) => args[1].provider === "user" && args[5]?.publicOnly === true,
+        );
+        return { counted, snapshotCalls };
+      } finally {
+        spy.mockRestore();
+      }
+    }
+    const one = await submitCommands(people.slice(0, 1));
+    const many = await submitCommands(people);
+    expect(one.snapshotCalls).toHaveLength(1);
+    expect(many.snapshotCalls).toHaveLength(1);
+    expect(many.snapshotCalls[0]?.[3]).toHaveLength(10);
+    expectDbCommandsAtMost(
+      many.counted,
+      one.counted.total,
+      "lookup 多選 10 項",
+    );
+    const stored = many.counted.result.submitFormSubmission.submission.values
+      .people as { value: string; label: string }[];
+    expect(stored.map((item) => item.value)).toEqual(people.map(String));
+    expect(stored.every((item) => typeof item.label === "string")).toBe(true);
+
+    const draft = await createDraft(api, staff.token, "user_multi", {
+      title: "有別租戶的",
+      people: [String(colleague), String(outsider)],
+    });
+    const result = await call(api, staff.token, SUBMIT, {
+      input: { id: draft.id, expectedEditVersion: draft.editVersion },
+    });
+    expect(extensionsOf(result).fieldErrors).toContainEqual(
+      expect.objectContaining({ fieldKey: "people", code: "OPTION_INVALID" }),
+    );
   });
 
   describe("列表欄位配置(modules.settings.list)", () => {

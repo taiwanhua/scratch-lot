@@ -14,6 +14,10 @@ import {
   type AuthTestApp,
   startAuthTestApp,
 } from "../../auth/test-support/auth-app";
+import {
+  countDbCommands,
+  expectDbCommandsAtMost,
+} from "../../database/test-support/db-commands";
 import { HOOK_TIMEOUT_MS } from "../../database/test-support/mongo-connection";
 import {
   CREATE_DRAFT,
@@ -415,7 +419,7 @@ describe("表單發布(四步一個交易)與退役", () => {
 
     const cases: [string, PublishCheckpoint | "audit", number][] = [
       ["步驟 2:搶鎖配版號之後(寫稽核時)失敗", "audit", 1],
-      ["步驟 3:建第二筆權限時失敗", "permission", 2],
+      ["步驟 3:新建之後、復活 / 改名那一批權限寫入時失敗", "permission", 2],
       ["步驟 3:退役權限時失敗", "retire-permission", 1],
       ["步驟 4:這一版改 published 時失敗", "publish-version", 1],
       ["步驟 4:切換前一版為退役時失敗", "retire-previous", 1],
@@ -652,5 +656,85 @@ describe("表單發布(四步一個交易)與退役", () => {
       currentVersion: null,
     });
     expect(await retireAuditsOf("pub_retire_tx")).toBe(1);
+  });
+
+  it("步驟 3 整批寫權限(TX-06):1 個欄位與 20 個欄位,發布的資料庫指令數相同", async () => {
+    const both = { permission: { show: true, edit: true } };
+    /** 第一版 n 個要建的、n 個之後退役的;第二版 n 個改名、n 個新建、n 個退役(各動作都有) */
+    async function publishCommands(n: number) {
+      const formKey = `pub_batch_${String(n)}`;
+      const keys = (prefix: string) =>
+        Array.from({ length: n }, (_, index) => `${prefix}${String(index)}`);
+      const v1 = definitionOf([
+        field("title", "text"),
+        ...keys("kept").map((key) => field(key, "text", both)),
+        ...keys("gone").map((key) => field(key, "text", both)),
+      ]);
+      const v2 = definitionOf([
+        field("title", "text"),
+        ...keys("kept").map((key) =>
+          field(key, "text", { ...both, label: `${key} 改名` }),
+        ),
+        ...keys("added").map((key) => field(key, "text", both)),
+      ]);
+      await ok(api, token, CREATE_FORM, {
+        input: { key: formKey, moduleKey: MODULE_KEY, name: `整批 ${formKey}` },
+      });
+      const counts: Awaited<ReturnType<typeof countDbCommands>>[] = [];
+      for (const [definition, baseVersion] of [
+        [v1, null],
+        [v2, 1],
+      ] as const) {
+        const draft = await ok<{
+          createFormVersionDraft: { formVersion: VersionRow };
+        }>(api, token, CREATE_DRAFT, { input: { formKey, baseVersion } });
+        const saved = await saveDefinition(
+          api,
+          token,
+          formKey,
+          definition,
+          draft.createFormVersionDraft.formVersion.draftRevision,
+        );
+        const counted = await countDbCommands(() =>
+          ok(api, token, PUBLISH, {
+            input: {
+              formKey,
+              expectedDraftRevision: saved.draftRevision,
+              changelog: "整批",
+            },
+          }),
+        );
+        counts.push(counted);
+      }
+      const permissions = await connection
+        .collection("permissions")
+        .find<PermissionDoc>({ key: { $regex: `-${formKey}-` } })
+        .toArray();
+      return { counts, permissions };
+    }
+    const one = await publishCommands(1);
+    const many = await publishCommands(20);
+    for (const [index, counted] of many.counts.entries()) {
+      expectDbCommandsAtMost(
+        counted,
+        one.counts[index]?.total ?? 0,
+        `發布第 ${String(index + 1)} 版(20 組欄位)`,
+      );
+    }
+    // 結果與逐筆寫相同:改名的照新 label、退役的有 retiredAt、新建的都在
+    expect(many.permissions).toHaveLength(20 * 3 * 2);
+    expect(
+      many.permissions.filter((record) => record.retiredAt !== null),
+    ).toHaveLength(20 * 2);
+    expect(
+      many.permissions
+        .filter((record) => record.key.endsWith("-kept0"))
+        .map((record) => record.name),
+    ).toEqual(
+      expect.arrayContaining([
+        "整批 pub_batch_20 / kept0 改名 可改",
+        "整批 pub_batch_20 / kept0 改名 可見",
+      ]),
+    );
   });
 });

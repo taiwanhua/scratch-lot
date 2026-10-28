@@ -41,6 +41,7 @@ import {
   LookupProvidersService,
   type LookupRecord,
   lookupDisplayLabelOf,
+  lookupValueOf,
 } from "../lookup-providers";
 import { REDACTED, isSameStoredValue, semanticOf } from "./stored-values";
 import { withStoredTemporals } from "./temporal-values";
@@ -76,10 +77,15 @@ export interface SubmissionWriteInput {
   gate?: FieldGate;
 }
 
-/** 重取選項 label 時共用的東西(類別選項一次請求只查一次)。 */
+/** 重取選項 label 時共用的東西(類別選項一次請求只查一次;lookup 選項同一來源的值合併查)。 */
 interface OptionContext {
   facts: FormOperatorFacts;
   categories: Map<string, Promise<CategoryOptions>>;
+  /**
+   * lookup 選項已查過的現名:來源簽章 → 值 → 顯示名(`undefined` = 查過、不在可選清單內)。
+   * 多選的值先整批 `prefetchLookupLabels` 一次查回,`currentLabelOf` 命中就不再查(TX-06)。
+   */
+  lookupLabels: Map<string, Map<string, string | null | undefined>>;
   issues: ValueIssue[];
   /** 連動篩選引用的表單層欄位此刻的值(這次會存下的最終值)。 */
   filterValueOf: (fieldKey: string) => LookupFilterScalar | null;
@@ -118,6 +124,18 @@ const NO_REFERENCES: ReferenceLookup = {
   found: new Map(),
   mismatched: new Set(),
 };
+
+/** lookup 選項的來源簽章:同來源(含值欄)的值合併查、共用已查過的現名。 */
+function lookupOptionSignature(source: LookupSourceDescriptor): string {
+  return JSON.stringify([source, source.valueField ?? "id"]);
+}
+
+/** 選項格要查現況的值(與 `resolveOption` 會查的同一組:字串值、不是自訂值);其餘回 null。 */
+function lookupCandidateOf(item: unknown): string | null {
+  const value = isRecord(item) ? item.value : item;
+  const isCustom = isRecord(item) && item.custom === true;
+  return typeof value === "string" && !isCustom ? value : null;
+}
 
 /** 一欄落在「不能填的四種原因」的哪一種。 */
 type FieldClass = "hidden" | "computed" | "kept" | "readonly" | "input";
@@ -173,6 +191,7 @@ export class SubmissionValuesService {
     const context: OptionContext = {
       facts,
       categories: new Map(),
+      lookupLabels: new Map(),
       issues: [],
       filterValueOf: filterValuesFrom(fields, values),
     };
@@ -446,6 +465,7 @@ export class SubmissionValuesService {
     const context: OptionContext = {
       facts: input.facts,
       categories: new Map(),
+      lookupLabels: new Map(),
       issues,
       filterValueOf: filterValuesFrom(input.fields, final),
     };
@@ -660,6 +680,7 @@ export class SubmissionValuesService {
       return this.resolveOption(field, value, context);
     }
     if (field.type === "multiSelect" && Array.isArray(value)) {
+      await this.prefetchLookupLabels(field, value, context);
       const items: unknown[] = [];
       for (const item of value) {
         items.push(await this.resolveOption(field, item, context));
@@ -752,6 +773,10 @@ export class SubmissionValuesService {
     }
     if (options?.kind === "lookup") {
       const source: LookupSourceDescriptor = options.source;
+      const known = this.knownLookupLabels(context, source);
+      if (known.has(value)) {
+        return known.get(value);
+      }
       const valueField = source.valueField ?? "id";
       const [record] = await this.lookups.findByValues(
         context.facts,
@@ -761,9 +786,84 @@ export class SubmissionValuesService {
         [...lookupLabelFieldsOf(source), valueField],
         { publicOnly: true },
       );
-      return record ? lookupDisplayLabelOf(record, source) : undefined;
+      const label = record ? lookupDisplayLabelOf(record, source) : undefined;
+      known.set(value, label);
+      return label;
     }
     return undefined;
+  }
+
+  /** 這個 lookup 來源已查過的現名(沒有就建一份空的掛上 `context`)。 */
+  private knownLookupLabels(
+    context: OptionContext,
+    source: LookupSourceDescriptor,
+  ): Map<string, string | null | undefined> {
+    const signature = lookupOptionSignature(source);
+    let known = context.lookupLabels.get(signature);
+    if (!known) {
+      known = new Map();
+      context.lookupLabels.set(signature, known);
+    }
+    return known;
+  }
+
+  /**
+   * lookup 選項的一組值**一次** `findByValues` 查回現名(TX-06;已查過的值不再查),之後逐格的
+   * `currentLabelOf` 直接命中。條件與逐格查相同(`publicOnly`、同一組欄位;同值多筆取第一筆)。
+   * 回來的值對不回送去的值(值欄被省略、型別不同)時不記「查無」,留給逐格的單筆查詢判定,結果與逐格查一致。
+   * 不是 lookup 選項的欄 → 什麼都不做。
+   */
+  private async prefetchLookupLabels(
+    field: FieldDef,
+    items: readonly unknown[],
+    context: OptionContext,
+  ): Promise<void> {
+    const options = field.options;
+    if (options?.kind !== "lookup") {
+      return;
+    }
+    const source: LookupSourceDescriptor = options.source;
+    const known = this.knownLookupLabels(context, source);
+    const values = [
+      ...new Set(
+        items.flatMap((item) => {
+          const value = lookupCandidateOf(item);
+          return value === null || known.has(value) ? [] : [value];
+        }),
+      ),
+    ];
+    if (values.length === 0) {
+      return;
+    }
+    const valueField = source.valueField ?? "id";
+    const records = await this.lookups.findByValues(
+      context.facts,
+      source,
+      valueField,
+      values,
+      [...lookupLabelFieldsOf(source), valueField],
+      { publicOnly: true },
+    );
+    const requested = new Set(values);
+    let matchesRequested = true;
+    for (const record of records) {
+      // 值欄只能是 id 或文字欄位(定義檢查器);不是字串 = 對不回,交給逐格查
+      const value = lookupValueOf(record, valueField);
+      if (typeof value !== "string" || !requested.has(value)) {
+        matchesRequested = false;
+        continue;
+      }
+      if (!known.has(value)) {
+        known.set(value, lookupDisplayLabelOf(record, source));
+      }
+    }
+    if (matchesRequested) {
+      for (const value of values) {
+        if (!known.has(value)) {
+          known.set(value, undefined);
+        }
+      }
+    }
   }
 
   /**

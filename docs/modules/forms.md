@@ -179,7 +179,7 @@
 3. 欄位級權限:這一版要的缺的建、有 `retiredAt` 的清掉、不再宣告的標 `retiredAt`、`name` 隨表單名與欄位 label 更新(「<表單名> / <欄位 label> 可見 / 可改」)。同 key 欄位沿用同一筆權限(`_id` 不變,角色的授予跟著留下)。模組宣告了 `perFormCreate` 時再確保 `<moduleKey>.create-<formKey>`:缺的建、`name` 隨表單名(「<表單名> 新增」);不退役、不授予任何角色。這次新建的回在 `publishFormVersion` 的 `createdPermission`(其餘為 null),表單管理的發布成功畫面據此提示到角色管理授予並附連結。
 4. 切換三筆:這一版 `publishing → published` → 其餘 `published → retired` → `forms.currentVersion` 指向新版(條件更新,讀到之後被改過 → `CONFLICT`)。對外(填寫、新增資格、版本面板的「目前版本」)一律以 `forms.currentVersion` 為準。
 
-**沒有發布中斷**:交易外看不到 `publishing` 或切換到一半的版本,所以沒有「發布中斷」狀態與重試發布。交易化之前的舊版留下的中斷資料(不清庫的升級才會有)由 db-migrator 的 update / reset 預檢擋下,依 [deployment](../deployment.md#舊版留下的發布--退役中斷)手動補完。步驟 3 / 4 每筆寫入前有一個檢查點(`form-design/form-publish-hooks.ts`),測試在那裡注入失敗來驗「任一步失敗 → 全部回到發布前」。
+**沒有發布中斷**:交易外看不到 `publishing` 或切換到一半的版本,所以沒有「發布中斷」狀態與重試發布。交易化之前的舊版留下的中斷資料(不清庫的升級才會有)由 db-migrator 的 update / reset 預檢擋下,依 [deployment](../deployment.md#舊版留下的發布--退役中斷)手動補完。步驟 3 每一批寫入前有一個檢查點(新建一批、復活 / 改名一批、退役一批;權限整批寫,TX-06),步驟 4 每筆寫入前一個(`form-design/form-publish-hooks.ts`),測試在那裡注入失敗來驗「任一步失敗 → 全部回到發布前」。
 
 ### 退役目前版本
 
@@ -243,7 +243,7 @@
 
 ### 快照與上傳
 
-- 送出與已完成修改時,類別 / lookup 選項與引用**重取 label 寫快照**(引用重驗來源可讀);快照的 label **只取來源的非受保護欄位**(不看送出的人有沒有 show:快照存在非受保護的欄位裡,來源欄位之後改成受保護時,不能把值帶進來)。與上一個已完成修訂相同的值保留原快照(來源停用或刪除不擋整筆修改)。label 重取後再算一次計算欄位,`optionLabel` 看到的是新快照。
+- 送出與已完成修改時,類別 / lookup 選項與引用**重取 label 寫快照**(引用重驗來源可讀);快照的 label **只取來源的非受保護欄位**(不看送出的人有沒有 show:快照存在非受保護的欄位裡,來源欄位之後改成受保護時,不能把值帶進來)。與上一個已完成修訂相同的值保留原快照(來源停用或刪除不擋整筆修改)。label 重取後再算一次計算欄位,`optionLabel` 看到的是新快照。lookup 多選同一來源的值去重後合併成一次查詢(不逐項查)。
 - 上傳欄只收本 API 簽出來的 `form/` 路徑(`FORM_ATTACHMENT` 用途,私有 bucket;檔型與大小同示範模組的附件),宣稱的 `contentType` 要與路徑副檔名一致(路徑副檔名由 api 依申報檔型決定),再套**欄位自己的**上限 `rules.accept` / `rules.maxSizeMb`(只能收窄平台上限;平台清單的正本在 api `storage/upload-rules.ts`,`@repo/domain/form` 的 `FORM_UPLOAD_CONTENT_TYPES` / `FORM_UPLOAD_MAX_SIZE_MB` 是它的鏡像,api 測試釘住兩邊一致)。存草稿驗這次換上的新檔;送出 / 已完成修改驗「與上一個已完成修訂不同」的檔(草稿時存下、送出前版本改窄上限的也擋得到;已完成修改時沒換的舊檔不擋)。不符 → `VALIDATION_FAILED` `UPLOAD_INVALID`。欄位上限**只在存草稿與送出兩處驗,不在上傳完成那一步**;大小是前端申報的值,api 不另驗實際檔案大小。
 
 ### 預設值與 `touched[]`
