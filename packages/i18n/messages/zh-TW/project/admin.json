@@ -32,7 +32,6 @@
       "gameCode": "遊戲代號要 4 碼數字",
       "requiredText": "必填,最多 {max} 個字",
       "maxLength": "最多 {max} 個字",
-      "positiveInteger": "要填大於 0 的整數",
       "integerRange": "要填 {min}–{max} 的整數",
       "unitPrice": "要填 {step} 的倍數(大於 0 的整數)",
       "order": "要填 0 以上的整數"

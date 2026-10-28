@@ -32,7 +32,6 @@
       "gameCode": "Game code must be 4 digits",
       "requiredText": "Required, up to {max} characters",
       "maxLength": "Up to {max} characters",
-      "positiveInteger": "Enter a whole number greater than 0",
       "integerRange": "Enter a whole number from {min} to {max}",
       "unitPrice": "Enter a multiple of {step} (a whole number greater than 0)",
       "order": "Enter a whole number of 0 or more"
