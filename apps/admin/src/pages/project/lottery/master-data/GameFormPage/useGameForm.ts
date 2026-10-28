@@ -136,7 +136,10 @@ const derivedDateTextsOf = (
 };
 
 /** 送出前的檢查:必填、整數、單張金額 100 的倍數(範圍、格式、唯一由 api 判,錯誤標回欄位)。 */
-const invalidFieldsOf = (values: GameFormValues): GameFormField[] => {
+const invalidFieldsOf = (
+  values: GameFormValues,
+  checksUnitPrice: boolean,
+): GameFormField[] => {
   const invalid: GameFormField[] = [];
   if (values.gameCode.trim() === "") invalid.push("gameCode");
   if (values.name.trim() === "") invalid.push("name");
@@ -144,7 +147,7 @@ const invalidFieldsOf = (values: GameFormValues): GameFormField[] => {
     if (integerOf(values[field]) === null) invalid.push(field);
   }
   const unitPrice = integerOf(values.unitPrice);
-  if (unitPrice !== null && !isValidUnitPrice(unitPrice)) {
+  if (checksUnitPrice && unitPrice !== null && !isValidUnitPrice(unitPrice)) {
     invalid.push("unitPrice");
   }
   if (parseLocalDate(values.claimDeadline) === null) {
@@ -266,8 +269,12 @@ export const useGameForm = (
     );
   };
 
+  // 新增、或編輯時改了單張金額才檢查 100 的倍數(舊遊戲有庫存鎖定時改不了,不擋其他欄位的儲存)
+  const checksUnitPrice =
+    game === null || values.unitPrice !== initial.unitPrice;
+
   const submit = () => {
-    const invalid = invalidFieldsOf(values);
+    const invalid = invalidFieldsOf(values, checksUnitPrice);
     setFieldErrors(masterDataFormatErrorsOf("game", invalid, t));
     setErrorText(null);
     if (invalid.length > 0) {
@@ -294,6 +301,7 @@ export const useGameForm = (
     fieldErrors,
     errorText,
     isDirty,
+    checksUnitPrice,
     isSubmitting: create.isPending || update.isPending,
     submit,
   };

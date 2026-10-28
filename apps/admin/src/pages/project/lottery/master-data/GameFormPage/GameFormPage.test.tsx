@@ -5,6 +5,7 @@ import type { UserEvent } from "@testing-library/user-event";
 import { MASTER_DATA_PERMISSIONS as P } from "@repo/domain/project/lottery-master-data";
 
 import { expectButtonOrder } from "@/test/button-order";
+import { sampleGames } from "@/test/msw/project/lottery/master-data-fixtures";
 
 import { renderMasterData } from "../master-data-test-support";
 
@@ -172,6 +173,28 @@ describe("遊戲頁", () => {
     expect(
       screen.queryByRole("button", { name: "刪除" }),
     ).not.toBeInTheDocument();
+  });
+
+  it("舊遊戲單張金額不是 100 的倍數、已鎖定:不提示、不擋,其他欄位照常儲存", async () => {
+    const games = sampleGames().map((item) =>
+      item.id === "g-5164" ? { ...item, unitPrice: 150 } : item,
+    );
+    const { user, fake } = renderMasterData({
+      path: "/master-data/game-edit-page/g-5164",
+      world: { games },
+    });
+    expect(await screen.findByDisplayValue("150")).toBeDisabled();
+    expect(
+      screen.queryByText("要填 100 的倍數(大於 0 的整數)"),
+    ).not.toBeInTheDocument();
+    await user.clear(field(/遊戲名稱/));
+    await user.type(field(/遊戲名稱/), "發大財二");
+    await user.click(screen.getByRole("button", { name: "儲存" }));
+    await waitFor(() => {
+      expect(fake.inputs.updateGame).toHaveLength(1);
+    });
+    expect(fake.inputs.updateGame[0]).toMatchObject({ name: "發大財二" });
+    expect(fake.inputs.updateGame[0]).not.toHaveProperty("unitPrice");
   });
 
   it("沒有庫存:有 games.delete 才有 [刪除];確認後刪除", async () => {

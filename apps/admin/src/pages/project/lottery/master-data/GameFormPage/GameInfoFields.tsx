@@ -34,6 +34,8 @@ export interface GameInfoFieldsProps {
   fieldErrors: FieldErrorTexts<GameFormField>;
   /** 有庫存:代號、單張金額、整本張數唯讀 */
   isLocked: boolean;
+  /** 要不要檢查單張金額是 100 的倍數:新增、或編輯時改了單張金額(舊遊戲沒改就不擋、不亮) */
+  checksUnitPrice: boolean;
 }
 
 /** 三欄格線(電腦);平板兩欄、手機單欄(RW-02)。 */
@@ -63,6 +65,7 @@ export const GameInfoFields = ({
   change,
   fieldErrors,
   isLocked,
+  checksUnitPrice,
 }: GameInfoFieldsProps) => {
   const t = useTranslations("admin.lotteryMasterData.gameForm");
   const tStatus = useTranslations("admin.lotteryMasterData.status");
@@ -75,6 +78,7 @@ export const GameInfoFields = ({
   const tickets = integerOrNull(values.ticketsPerBook);
   // 單張金額邊打邊提示:有填、但不是 100 的倍數的正整數(送出前檢查也擋)
   const unitPriceHint =
+    checksUnitPrice &&
     values.unitPrice.trim() !== "" &&
     (unitPrice === null || !isValidUnitPrice(unitPrice))
       ? tErrors("unitPrice", { step: String(UNIT_PRICE_STEP) })
