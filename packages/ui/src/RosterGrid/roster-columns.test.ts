@@ -41,3 +41,44 @@ describe("收合窄欄的寬度", () => {
     expect(column?.headerSx).toEqual({ px: 0.5 });
   });
 });
+
+const dateColumn = (date: { background?: string; disabled?: boolean }) =>
+  buildRosterColumns<Person>({
+    leadingColumns: [{ key: "person", header: "人員" }],
+    trailingColumns: [],
+    dates: [{ date: "2026-11-01", header: "11/1", ...date }],
+    dateColumnWidth: 96,
+    renderDateCell: () => null,
+    columnGroups: [],
+    collapsedColumnGroups: [],
+    columnVisibility: undefined,
+    onToggleGroup: () => {
+      // 不測切換
+    },
+  }).find((column) => column.key === "2026-11-01");
+
+describe("日期欄的背景色", () => {
+  it("沒給:格子紙色、表頭不改", () => {
+    const column = dateColumn({});
+    expect(column?.cellSx).toMatchObject({ bgcolor: "background.paper" });
+    expect(column?.headerSx).toEqual({});
+  });
+
+  it("給了:表頭與格子都鋪這個顏色", () => {
+    const column = dateColumn({ background: "info.lighter" });
+    expect(column?.cellSx).toMatchObject({ bgcolor: "info.lighter" });
+    expect(column?.headerSx).toEqual({ bgcolor: "info.lighter" });
+  });
+
+  it("同時停用:停用色疊在背景色上", () => {
+    const column = dateColumn({ background: "info.lighter", disabled: true });
+    expect(column?.cellSx).toMatchObject({
+      bgcolor: "info.lighter",
+      backgroundImage: expect.any(Function),
+    });
+    expect(column?.headerSx).toMatchObject({
+      bgcolor: "info.lighter",
+      backgroundImage: expect.any(Function),
+    });
+  });
+});

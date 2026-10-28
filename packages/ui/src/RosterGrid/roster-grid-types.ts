@@ -10,6 +10,12 @@ export interface RosterDate {
   header: ReactNode;
   /** 不能操作的日子(例:公休):整欄停用色、格子不能點 */
   disabled?: boolean;
+  /**
+   * 整欄背景色(表頭、頂部群組與每格鋪滿;例:特殊日;主題色票如 `info.lighter`,或資料帶來的顏色),
+   * 同 `ScheduleTimeline` 日期的 `background`。要不透明:表頭固定在上方時捲過去的人員列才不會透出來。
+   * 格子仍可點;同時 `disabled` 時停用色疊在上面
+   */
+  background?: string;
 }
 
 /** 日期格的渲染參數。 */
