@@ -250,7 +250,7 @@ app 端給 `@repo/ui` 元件傳 `sx` 時,只放與版面位置有關的值(`curs
 ```tsx
 <Typography color="textSecondary">說明文字</Typography>
 <Typography color={row.balance < 0 ? "warning" : "textPrimary"}>{amount}</Typography>
-<Typography sx={{ color: "warning.dark" }}>尚未排班</Typography>
+<Typography sx={{ color: "warning.dark" }}>尚未設定</Typography>
 ```
 
 - **為什麼**:MUI 的 Typography 依 `color` 值比對 variants 上色,`text.secondary`、`warning.main` 這類帶點的寫法比對不到,

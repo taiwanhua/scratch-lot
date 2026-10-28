@@ -243,12 +243,6 @@ describe("固定組裝入口:正式 registry(專案來源由引用專案登記,�
       }),
     ).toEqual(seedRegistry);
   });
-
-  it("預檢沒帶專案宣告的可攜 lookup 來源:引用專案來源的受管表單判為不可攜(沒有隱含的全域狀態)", () => {
-    expect(problemsOf(() => plan(...seedRegistry)).join(" ")).toMatch(
-      /lookup 來源 lottery_game 不在可攜範圍.*LOOKUP_PROVIDER_UNSUPPORTED/,
-    );
-  });
 });
 
 describe("固定組裝入口:底座 + 非空的專案來源", () => {

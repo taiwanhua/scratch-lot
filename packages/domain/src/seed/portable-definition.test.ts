@@ -514,8 +514,8 @@ describe("validatePortableDefinition:lookup 來源與固定值", () => {
   });
 
   it("專案宣告的可攜 lookup 來源:只收宣告過的固定條件與值;沒宣告的照舊拒絕", () => {
-    const game = (filter?: Record<string, unknown>) =>
-      field("game", "reference", {
+    const item = (filter?: Record<string, unknown>) =>
+      field("item", "reference", {
         source: {
           provider: "catalog_item",
           labelField: "name",
@@ -524,17 +524,17 @@ describe("validatePortableDefinition:lookup 來源與固定值", () => {
       });
     const seed = formSeed([
       field("title", "text"),
-      game({ status: "on_sale" }),
-      game(),
-      game({ status: "discontinued" }),
-      game({ orgId: HEX_24 }),
-      field("dealer", "reference", {
+      item({ status: "active" }),
+      item(),
+      item({ status: "retired" }),
+      item({ orgId: HEX_24 }),
+      field("supplier", "reference", {
         source: { provider: "vendor", labelField: "name" },
       }),
     ]);
     const catalog = catalogOf({
       lookupProviders: new Map([
-        ["catalog_item", { filters: { status: ["on_sale"] } }],
+        ["catalog_item", { filters: { status: ["active"] } }],
       ]),
     });
     expect(codesAt(errorsOf(seed, catalog))).toEqual([
@@ -544,7 +544,7 @@ describe("validatePortableDefinition:lookup 來源與固定值", () => {
     ]);
     // 目錄沒宣告 → 專案來源一律不可攜
     expect(
-      codesAt(errorsOf(formSeed([field("title", "text"), game()]))),
+      codesAt(errorsOf(formSeed([field("title", "text"), item()]))),
     ).toEqual([
       ["LOOKUP_PROVIDER_UNSUPPORTED", "definition.fields.1.source.provider"],
     ]);
