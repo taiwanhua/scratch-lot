@@ -9,7 +9,7 @@ import { OrgTreeSelect } from "@/components/base/OrgTreeSelect/OrgTreeSelect";
 import {
   type FieldErrorSource,
   fieldErrorProps,
-} from "../../shared/field-errors";
+} from "../../shared/purchasing-field-errors";
 import { TRANSFER_FIELD_KEYS as K } from "../transfer-keys";
 import type { TransferOptions } from "./transfer-form";
 

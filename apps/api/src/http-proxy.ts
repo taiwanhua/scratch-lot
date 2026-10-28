@@ -9,7 +9,7 @@ import type { NestExpressApplication } from "@nestjs/platform-express";
  * 客戶端自己塞在前面的假值不會被採用。之後若在 Cloud Run 前面再加一層(外部 HTTPS 負載平衡器等),
  * 這裡要跟著加 1。本機沒有代理時,客戶端可以自帶 `X-Forwarded-For` 改寫 `req.ip`——只影響本機開發。
  *
- * 用到 `req.ip` 的地方:打卡記錄的 IP(`project/schedule/my/my-schedule.resolver.ts` 的 `punchMetaOf`)。
+ * 需要記錄來源 IP 的功能一律讀 `req.ip`(經這裡的 trust proxy 設定換算),不要自己解析 `X-Forwarded-For`。
  */
 export const TRUST_PROXY_HOPS = 1;
 

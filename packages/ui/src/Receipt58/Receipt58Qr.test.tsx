@@ -19,7 +19,7 @@ import {
 import { qrModules } from "./symbol-modules";
 
 /** 使用者實測掃不出來的測試頁網址。 */
-const URL_VALUE = "https://erp-dev.scratch-lot.com/system/printers";
+const URL_VALUE = "https://admin.example.com/system/printers";
 /** 單據版面高(CSS px)與 QR 在單據裡的位置(CSS px)。 */
 const PAPER_HEIGHT = 400;
 const QR_TOP = 40;

@@ -102,7 +102,7 @@ describe("tenantOrgTree:整棵租戶樹 + 可見 / 可管理旗標", () => {
   }
 
   beforeAll(async () => {
-    api = await startAuthTestApp("scratch-lot-test-tenant-org-tree");
+    api = await startAuthTestApp("cookhome-test-tenant-org-tree");
     tenantA = await createOrg(api.connection, {
       name: "租戶甲",
       settings: { visibility: "subtree" },

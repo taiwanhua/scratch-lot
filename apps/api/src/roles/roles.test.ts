@@ -10,6 +10,7 @@ import {
 import { type Connection, Types } from "mongoose";
 
 import { AuditService } from "../audit/audit.service";
+import { RelationService } from "../database/relation.service";
 import { HOOK_TIMEOUT_MS } from "../database/test-support/mongo-connection";
 import { createRole } from "../permission/test-support/fixtures";
 import {
@@ -573,6 +574,49 @@ describe("角色管理:清單與 CRUD(GraphQL 端點 + 真 MongoDB)", () => {
       const { code, reasons } = await deleteAs(manager.token, copyId);
       expect(code).toBe("ROLE_NOT_DELETABLE");
       expect(reasons).toEqual(["TEMPLATE_COPY"]);
+    });
+
+    it("交易外檢查後才被授予:交易內再核對仍擋下(HAS_GRANTS),角色不刪", async () => {
+      const holderId = await createMember(world, [world.deptOne]);
+      const roleId = await createRole(world.api.app, connection, {
+        name: "檢查後才被授予的角色",
+        ownerOrgId: world.deptOne,
+        assignTo: [holderId],
+      });
+      // 第一次(交易外)看不到授予 = 模擬檢查完才有人被授予
+      const spy = jest
+        .spyOn(world.api.app.get(RelationService), "listUserIdsOfRole")
+        .mockResolvedValueOnce([]);
+      try {
+        const { code, reasons } = await deleteAs(manager.token, roleId);
+        expect(code).toBe("ROLE_NOT_DELETABLE");
+        expect(reasons).toEqual(["HAS_GRANTS"]);
+        expect(spy).toHaveBeenCalledTimes(2);
+      } finally {
+        spy.mockRestore();
+      }
+      await expect(roleRow(roleId)).resolves.toMatchObject({ deletedAt: null });
+    });
+
+    it("兩人同時刪同一個角色:一個成功,另一個 NOT_FOUND,稽核只有一筆", async () => {
+      const roleId = await createRole(world.api.app, connection, {
+        name: "同時刪除的角色",
+        ownerOrgId: world.deptTwo,
+      });
+      const results = await Promise.all([
+        deleteAs(manager.token, roleId),
+        deleteAs(manager.token, roleId),
+      ]);
+      expect(
+        results
+          .map((result) => result.code ?? "OK")
+          .toSorted((left, right) => left.localeCompare(right)),
+      ).toEqual(["NOT_FOUND", "OK"]);
+      await expect(
+        connection
+          .collection("audit_logs")
+          .countDocuments({ action: "role.delete", targetId: roleId }),
+      ).resolves.toBe(1);
     });
 
     it("多項不過時 reasons 逐項列出", async () => {

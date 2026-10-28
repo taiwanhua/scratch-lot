@@ -11,6 +11,9 @@ import { fileURLToPath } from "node:url";
 
 import { afterEach, describe, expect, it } from "@jest/globals";
 
+import { projectPublic } from "@repo/project-config/public";
+
+import { WEB_APP_ICONS } from "../src/lib/base/web-app-manifest.ts";
 import {
   pngSizeOf,
   webAppIconProblems,
@@ -59,6 +62,17 @@ const publicDirWith = (files) => {
   }
   return dir;
 };
+
+/** 預設清單的圖示都齊全、尺寸正確的暫存 public 目錄(不依賴專案有沒有提交圖示)。 */
+const completePublicDir = () =>
+  publicDirWith(
+    Object.fromEntries(
+      Object.values(WEB_APP_ICONS).map(({ src, size }) => [
+        src.slice(src.lastIndexOf("/") + 1),
+        fakePng(size, size),
+      ]),
+    ),
+  );
 
 afterEach(() => {
   for (const dir of temporaryDirs.splice(0)) {
@@ -126,8 +140,13 @@ describe("webAppIconProblems:逐檔指出問題", () => {
     ]);
   });
 
-  it("正式的 public/ 目錄:專案提交的圖示齊全(預設清單)", () => {
-    expect(webAppIconProblems(join(adminDir, "public"))).toEqual([]);
+  // 底座的 `admin.webApp` 是 null(不可安裝、不帶圖示):沒有圖示要檢查
+  it("正式的 public/ 目錄:webApp 有值時專案提交的圖示齊全(預設清單)", () => {
+    const problems =
+      projectPublic.admin.webApp === null
+        ? []
+        : webAppIconProblems(join(adminDir, "public"));
+    expect(problems).toEqual([]);
   });
 });
 
@@ -144,7 +163,7 @@ describe("webAppManifestPlugin", () => {
   it("有值:輸出 manifest.webmanifest 並加 <head> 標籤", () => {
     const { emitted, tags } = runBuild(
       webAppManifestPlugin(SAMPLE),
-      join(adminDir, "public"),
+      completePublicDir(),
     );
 
     expect(emitted).toHaveLength(1);

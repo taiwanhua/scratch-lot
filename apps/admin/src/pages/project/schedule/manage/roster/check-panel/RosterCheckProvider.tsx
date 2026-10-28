@@ -5,7 +5,7 @@ import { useBreakpointDown } from "@repo/ui/media-query";
 
 import { useSession } from "@/hooks/base/useSession";
 
-import { PublishDialog } from "../publish/PublishDialog";
+import { RosterPublishDialog } from "../publish/RosterPublishDialog";
 import {
   ROSTER_QUERY_ROOT,
   type RosterCellTarget,
@@ -89,7 +89,7 @@ export const RosterCheckProvider = ({
     <RosterCheckContext value={value}>
       {children}
       {isPublishing && data !== undefined && (
-        <PublishDialog
+        <RosterPublishDialog
           onClose={() => {
             setPublishing(false);
           }}
