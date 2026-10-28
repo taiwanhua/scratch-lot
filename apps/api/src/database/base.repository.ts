@@ -613,6 +613,22 @@ export class BaseRepository<TSchema, TDocument extends RepositoryDocument> {
   }
 
   /**
+   * **寫入範圍的條件**(可見範圍 + 資料範圍規則,不含共用分支;與寫入中介層同一份判斷 `writeScopeConditionsOf`),
+   * 給「先讀再整批寫回」的呼叫端併進讀取條件:讀到的就是寫得到的,唯讀共用過來的那幾筆不會讀進來,
+   * 也不會讓整批寫回因筆數不符而失敗。只能把讀取收窄,不會放寬(讀取中介層的條件照樣套)。
+   */
+  async writableFilterOf(
+    operator: OperatorContext,
+  ): Promise<RepositoryFilter<TSchema>> {
+    const conditions = await writeScopeConditionsOf(this.model.schema, {
+      operator,
+    });
+    return (
+      conditions.length === 0 ? {} : { $and: conditions }
+    ) as RepositoryFilter<TSchema>;
+  }
+
+  /**
    * **依 id 一次更新多筆、每筆的值不同**(TX-06「每筆要改的值不同」):底層一次 ordered `bulkWrite`,
    * 每筆一個 `updateOne`。值都相同的一組用 `updateMany`;這個出口給依值分組會變成一筆一組的情形
    * (例:每筆各自的時間、各自的版本)。
