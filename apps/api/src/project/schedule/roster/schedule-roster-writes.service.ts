@@ -306,12 +306,15 @@ export class ScheduleRosterWritesService {
     input: DeleteScheduleDemandInput,
   ): Promise<DeleteScheduleDemandPayload> {
     const scope = await this.scopeOf(operator, input.orgId);
-    const existing = await this.mustFindDemand(operator, scope, input.id);
-    const months = [this.monthOf(scope, existing.date)];
+    // 交易外先讀一次:要知道月份(先建狀態文件)
+    const found = await this.mustFindDemand(operator, scope, input.id);
+    const months = [this.monthOf(scope, found.date)];
     await this.ensurePeriods(operator, scope, months);
     const deletedEntryIds = await this.transactions.withTransaction(
       async () => {
         const published = await this.touchPeriods(operator, scope, months);
+        // 碰過狀態文件後再讀一次:同時刪同一筆時,後到的一方讀不到 → NOT_FOUND(不重複記稽核 / 異動 / 通知)
+        const existing = await this.mustFindDemand(operator, scope, input.id);
         const reason = await this.reasonIfPublished(
           operator,
           published,
@@ -346,7 +349,7 @@ export class ScheduleRosterWritesService {
         return released;
       },
     );
-    return { id: String(existing._id), deletedEntryIds };
+    return { id: String(found._id), deletedEntryIds };
   }
 
   // ---- 排班 ----

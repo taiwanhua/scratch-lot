@@ -438,6 +438,10 @@ describe("排班表(GraphQL 端點 + 真 MongoDB)", () => {
     });
   }
 
+  function deleteDemandOf(id: string): Promise<GraphqlResult> {
+    return gql(hq, DELETE_DEMAND, { input: { orgId: String(zhongshan), id } });
+  }
+
   function deleteEntryOf(id: string): Promise<GraphqlResult> {
     return gql(hq, DELETE_ENTRY, { input: { orgId: String(zhongshan), id } });
   }
@@ -1376,6 +1380,34 @@ describe("排班表(GraphQL 端點 + 真 MongoDB)", () => {
         "deleteScheduleDemand",
       );
       expect(deleted.deletedEntryIds).toEqual([entry.id]);
+    });
+
+    it("同一筆人力需求刪兩次:第二次 NOT_FOUND;同時刪也只有一個成功、只記一筆稽核", async () => {
+      const once = await demandOn("2026-11-18", "08:30", "14:30", 1);
+      const first = await deleteDemandOf(once.id);
+      expect(first.errors).toBeUndefined();
+      expect(errorOf(await deleteDemandOf(once.id))).toMatchObject({
+        code: "NOT_FOUND",
+      });
+      const raced = await demandOn("2026-11-18", "15:00", "18:00", 1);
+      const results = await Promise.all([
+        deleteDemandOf(raced.id),
+        deleteDemandOf(raced.id),
+      ]);
+      expect(
+        results.filter((result) => result.errors === undefined),
+      ).toHaveLength(1);
+      expect(
+        results.flatMap((result) =>
+          result.errors === undefined ? [] : [errorOf(result)?.code],
+        ),
+      ).toEqual(["NOT_FOUND"]);
+      expect(
+        await connection.collection("audit_logs").countDocuments({
+          action: "schedule-demand.delete",
+          targetId: new Types.ObjectId(raced.id),
+        }),
+      ).toBe(1);
     });
 
     it("同一筆排班刪兩次:第二次 NOT_FOUND;同時刪也只有一個成功、另一個 NOT_FOUND", async () => {
