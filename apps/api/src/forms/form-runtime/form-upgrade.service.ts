@@ -80,6 +80,8 @@ interface UpgradeTarget {
   form: FormRecord;
   target: FormVersionRecord;
   targetVersion: number;
+  /** 寫入範圍(可見範圍 + 資料範圍,不含共用分支):升級範圍只含寫得到的。 */
+  writable: RepositoryFilter<FormSubmission>;
 }
 
 /** 一筆的結果:升級了(從哪一版)或跳過(原因)。 */
@@ -111,7 +113,7 @@ function isWriteCountConflict(error: unknown): boolean {
  * **改綁版本 + 補值 + 重算,不驗證**。
  *
  * - 守門:表單讀得到(設計端)→ 模組 `edit` → 目標版已發布 → 本租戶沒綁流程(`FORM_HAS_WORKFLOW`)
- * - 範圍:操作者看得到(可見範圍 + 資料範圍)、本租戶(root 在根組織 = 根組織自己的資料)、
+ * - 範圍:操作者寫得到(可見範圍 + 資料範圍;依欄位共用過來的唯讀資料不含)、本租戶(root 在根組織 = 根組織自己的資料)、
  *   狀態草稿 / 不綁流程的已完成、版本不是目標版
  * - 每一筆:`upgradeValues`(與複製為新單共用搬值)→ 現有的 settle(計算欄位、隱藏當 null)→ 已完成重算摘要、
  *   修訂 +1(`version` = 目標版、`ctx` 沿用上一筆修訂、`kind: "upgrade"`,誰與何時升級記在 `upgradedBy` / `upgradedAt`)→ 改綁;草稿只改綁與重算(草稿沒有修訂)
@@ -268,15 +270,20 @@ export class FormUpgradeService {
         "FORM_HAS_WORKFLOW",
       );
     }
-    return { form, target, targetVersion };
+    const writable = await this.submissions.writableFilterOf(facts.operator);
+    return { form, target, targetVersion, writable };
   }
 
-  /** 升級範圍(`findMany` / `count` 再疊上可見範圍與資料範圍)。 */
+  /**
+   * 升級範圍:讀取中介層照套,再收窄到寫入範圍(可見範圍 + 資料範圍)—— 別組織依欄位共用過來的
+   * 唯讀資料不在範圍內(不算進計畫筆數,也不會讓整批寫回筆數不符)。
+   */
   private scopeOf(
     facts: FormOperatorFacts,
     upgrade: UpgradeTarget,
   ): Record<string, unknown> {
     return {
+      ...upgrade.writable,
       formKey: upgrade.form.key,
       // 只動本租戶的資料:root 在根組織 = 根組織自己的(租戶 = null)
       tenantId: facts.tenantId,

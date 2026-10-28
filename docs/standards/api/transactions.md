@@ -115,6 +115,7 @@ await this.transactions.withTransaction(async (session) => {
      await this.audit.recordMany(operator, ids.map((targetId) => ({ action: "x.delete", targetId })));
   ```
 
+- **先讀再整批寫回**時,讀取條件併上 `BaseRepository.writableFilterOf(operator)`(寫入範圍:可見範圍 + 資料範圍,不含共用分支):讀得到、寫不到的唯讀共用資料不會讀進來,整批寫回也不會因此筆數不符。
 - **同一筆在同一批出現多次**(先 A 再 B 兩個變動):依出現順序分輪,每輪每筆最多一次,往返數只隨輪數成長。
 - 迴圈裡呼叫的若是會讀寫資料庫的 service 方法(守門、原因檢查),先依輸入去重,同樣的輸入只呼叫一次。
 - **防退化測試數資料庫指令次數,不計時**:`apps/api/src/database/test-support/db-commands.ts` 的 `countDbCommands` 數一段動作送出的指令,`expectDbCommandsAtMost` 斷言上限;上限與筆數無關,同一個動作做 1 筆與多筆,多筆不得比 1 筆多出幾次以上。計時在 CI 上不穩定,本機往返又近乎 0,抓不到逐筆讀寫。

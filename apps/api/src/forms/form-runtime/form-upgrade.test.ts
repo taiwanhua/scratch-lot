@@ -478,6 +478,46 @@ describe("舊版資料升級到新版", () => {
       ).toBeUndefined();
     });
 
+    it("同一批兩個來源版本:版本定義一次讀齊,兩版都升級", async () => {
+      const { formKey, completedId } = await prepare();
+      const second = await createDraft(api, staff.token, formKey, {
+        amount: 7,
+      });
+      await publishDefinition(api, root, formKey, V2, 2);
+
+      const counted = await countDbCommands(() =>
+        call<{ upgradeFormSubmissions: UpgradeResult }>(
+          api,
+          staff.token,
+          UPGRADE,
+          {
+            input: {
+              formKey,
+              targetVersion: 3,
+              fills: {},
+              clientRequestId: nextRequestId(),
+            },
+          },
+        ),
+      );
+
+      expect(counted.result.data?.upgradeFormSubmissions).toEqual({
+        upgraded: [
+          { fromVersion: 1, count: 2 },
+          { fromVersion: 2, count: 1 },
+        ],
+        skipped: [],
+      });
+      // 讀版本定義:舊版本清單、補值欄位、整批的來源版本各一次(兩個來源版本一起讀)
+      expect(counted.byCommand.get("form_versions.find")).toBe(3);
+      expect(counted.byCommand.get("form_submissions.bulkWrite")).toBe(1);
+      const [fromFirst, fromSecond] = await Promise.all([
+        raw(completedId),
+        raw(second.id),
+      ]);
+      expect([fromFirst.version, fromSecond.version]).toEqual([3, 3]);
+    });
+
     it("整批寫回筆數不符一次:重讀這批再跑一次就升級,不改逐筆", async () => {
       const { formKey, completedId, draftId } = await prepare();
       const repository = api.app.get(FormSubmissionsRepository);
