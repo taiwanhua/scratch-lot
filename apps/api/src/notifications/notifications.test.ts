@@ -660,30 +660,69 @@ describe("通知 notify() / 通知清單 / 通知設定", () => {
           })),
         );
       const userIds = Object.values(insertedIds);
-      const fromMails = mail.sent.length;
+      try {
+        const fromMails = mail.sent.length;
 
-      const one = await countDbCommands(() =>
-        service.notify(partyInput(WORKFLOW_RESULT, [alice], nextKey("one"))),
-      );
-      const fiftyKey = nextKey("fifty");
-      const fifty = await countDbCommands(() =>
-        service.notify(toUsers(userIds, fiftyKey)),
-      );
-      expectDbCommandsAtMost(fifty, one.total, "notify 50 位收件人");
-      expect(await rowsOf(fiftyKey)).toHaveLength(50);
-      expect(
-        mailsSince(fromMails).filter((message) =>
-          message.to.startsWith(prefix),
-        ),
-      ).toHaveLength(50);
+        const one = await countDbCommands(() =>
+          service.notify(partyInput(WORKFLOW_RESULT, [alice], nextKey("one"))),
+        );
+        const fiftyKey = nextKey("fifty");
+        const fifty = await countDbCommands(() =>
+          service.notify(toUsers(userIds, fiftyKey)),
+        );
+        expectDbCommandsAtMost(fifty, one.total, "notify 50 位收件人");
+        expect(await rowsOf(fiftyKey)).toHaveLength(50);
+        expect(
+          mailsSince(fromMails).filter((message) =>
+            message.to.startsWith(prefix),
+          ),
+        ).toHaveLength(50);
 
-      // 前 25 位已通知過:同一 dedupeKey 再送給 50 位 → 只寫、只寄另外 25 位
-      const partialKey = nextKey("partial");
-      await service.notify(toUsers(userIds.slice(0, 25), partialKey));
-      const fromPartial = mail.sent.length;
-      await service.notify(toUsers(userIds, partialKey));
-      expect(await rowsOf(partialKey)).toHaveLength(50);
-      expect(mailsSince(fromPartial)).toHaveLength(25);
+        // 前 25 位已通知過:同一 dedupeKey 再送給 50 位 → 只寫、只寄另外 25 位
+        const partialKey = nextKey("partial");
+        await service.notify(toUsers(userIds.slice(0, 25), partialKey));
+        const fromPartial = mail.sent.length;
+        await service.notify(toUsers(userIds, partialKey));
+        expect(await rowsOf(partialKey)).toHaveLength(50);
+        expect(mailsSince(fromPartial)).toHaveLength(25);
+      } finally {
+        // 這 50 位不屬任何組織、只為本案而建:清掉,免得之後「全部使用者」類的人員條件多出人
+        await api.connection
+          .collection("users")
+          .deleteMany({ _id: { $in: userIds } });
+        await api.connection
+          .collection("notifications")
+          .deleteMany({ recipientId: { $in: userIds } });
+      }
+    });
+
+    it("寄信前讀收件人失敗:這批信不寄、只記 log;交易照常提交、站內通知照常送", async () => {
+      const users = api.app.get(UsersRepository, { strict: false });
+      const original = users.findMany.bind(users);
+      // 只讓寄信那一次(交易提交後、取信箱)失敗;解析收件人的那一次照常
+      const spy = jest
+        .spyOn(users, "findMany")
+        .mockImplementation((operator, filter, options) =>
+          options?.select === "email name"
+            ? Promise.reject(new Error("模擬讀收件人失敗"))
+            : original(operator, filter, options),
+        );
+      try {
+        const dedupeKey = nextKey("mail-lookup-fail");
+        const fromSignals = signals.length;
+        const fromMails = mail.sent.length;
+        await service.notify(partyInput(WORKFLOW_RESULT, [alice], dedupeKey));
+        expect(await rowsOf(dedupeKey)).toHaveLength(1);
+        expect(notificationSignalsSince(fromSignals)).toEqual([
+          [topicOf(alice)],
+        ]);
+        expect(mailsSince(fromMails)).toEqual([]);
+        expect(
+          spy.mock.calls.some((args) => args[2]?.select === "email name"),
+        ).toBe(true);
+      } finally {
+        spy.mockRestore();
+      }
     });
   });
 
