@@ -167,6 +167,18 @@ test/       測試支援
 
 正本:`apps/admin/src/app/module-pages.tsx`、`apps/admin/src/app/AdminShell/AdminShell.tsx`
 
+### 條碼槍掃描(useScanner)
+
+條碼槍是鍵盤輸入:字元間隔不超過 `SCANNER_KEY_INTERVAL_MS`(30ms)、長度至少 `SCANNER_MIN_LENGTH`、以 Enter 結尾,就視為一次掃描。門檻是程式常數,不放租戶設定或個人偏好。
+
+- 頁面以 `useScanner(purpose, handler)` 宣告掃描用途;掛上期間讀到的碼交給它,同時有多頁宣告時最後掛上的優先。
+- 沒有頁面宣告時,交給 `registerDefaultScanHandler(handler)` 登記的預設處理(只有一個,再登記換掉前一個;通常由[殼上的常駐元件](#殼上的常駐元件)登記)。
+- 游標在一般輸入框時也攔截,確認是掃描後輸入框還原成原值;標記 `data-scanner-field`(自己或祖先)的輸入框自己處理掃描,不攔。輸入法組字中不判斷。
+- `injectScan(code)` 走同一條分派(測試、相機掃描用);沒有任何處理者時回 `false`。
+- 有登記時才在 `globalThis` 掛一個 capture 階段的 keydown 監聽,全部撤銷後拆掉。
+
+正本:`apps/admin/src/hooks/base/useScanner/`
+
 ### 表單設定的注入
 
 `ModulePageSource.forms` 同時供應預設四頁與模組 options,不另外維護 key 清單。純函式 `lib/base/form-engine/form-module-options.ts` 的 `composeFormModuleOptions` 產生唯讀設定表;`formModulePages(moduleKey)` 只產生四個懶載入預設元件,不在載入時修改全域 Map。替換底座表單頁會保留原模組 options。

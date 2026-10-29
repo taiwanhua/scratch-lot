@@ -1,10 +1,10 @@
 import { ScannerDetector } from "./scanner-detector";
 
 /**
- * B10 全域掃描監聽的登記與分派(專案規格 18.3「攔截」「用途」「測試」):
+ * 全域掃描監聽的登記與分派:
  *
  * - 頁面用 `useScanner(purpose, handler)` 宣告;**目前打開的頁面優先**(最後掛上的頁面在最上面)
- * - 沒有頁面宣告時,交給專案登記的**預設處理**(`registerDefaultScanHandler`;刮刮樂登記「快速銷售」)
+ * - 沒有頁面宣告時,交給登記的**預設處理**(`registerDefaultScanHandler`;通常由殼上的常駐元件登記)
  * - 游標在一般輸入框時也攔截(讀到的碼不留在輸入框);只有標記 `data-scanner-field` 的輸入框交給輸入框處理
  * - 測試與相機掃描可以用 `injectScan(code)` 直接送一次掃描(和條碼槍走同一條分派)
  *
@@ -15,7 +15,7 @@ import { ScannerDetector } from "./scanner-detector";
 export type ScanSource = "keyboard" | "injected";
 
 export interface ScanEvent {
-  /** 讀到的碼(原樣;解析由處理者做,刮刮樂用 `parseTicketInput`)。 */
+  /** 讀到的碼(原樣;解析由處理者做)。 */
   code: string;
   source: ScanSource;
   /** 處理它的頁面宣告的用途;交給預設處理時為 null。 */
@@ -142,7 +142,7 @@ export const registerPageScanHandler = (
 };
 
 /**
- * 專案登記的預設處理(沒有頁面宣告用途時;刮刮樂的快速銷售由店面票登記)。
+ * 登記預設處理(沒有頁面宣告用途時使用;通常由殼上的常駐元件登記)。
  * 只有一個:再登記會換掉前一個。回撤銷函式。
  */
 export const registerDefaultScanHandler = (

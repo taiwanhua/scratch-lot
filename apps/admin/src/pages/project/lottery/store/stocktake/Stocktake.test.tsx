@@ -6,7 +6,7 @@ import {
   parseStocktakeDraft,
 } from "@repo/domain/project/lottery";
 
-import { injectScan } from "@/hooks/project/useScanner/scanner-registry";
+import { injectScan } from "@/hooks/base/useScanner/scanner-registry";
 import { STORE_ALL_PERMISSIONS } from "@/test/msw/project/lottery/store-fixtures";
 
 import { fastUser } from "../../../schedule/manage/roster/roster-test-queries";

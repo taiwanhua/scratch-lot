@@ -20,9 +20,9 @@ import type { CashPointHeaderAction } from "@/components/project/lottery/CashPoi
 import { useMe } from "@/hooks/base/useMe";
 import { usePermissions } from "@/hooks/base/usePermissions";
 import { useRealtimeBoard } from "@/hooks/base/useRealtime";
+import { useScanner } from "@/hooks/base/useScanner/useScanner";
 import { useSession } from "@/hooks/base/useSession";
 import { useUrlState } from "@/hooks/base/useUrlState";
-import { useScanner } from "@/hooks/project/useScanner/useScanner";
 import {
   readLocalCashPoint,
   writeLocalCashPoint,

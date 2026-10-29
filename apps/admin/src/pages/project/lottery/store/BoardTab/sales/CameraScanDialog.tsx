@@ -7,7 +7,7 @@ import { Dialog } from "@repo/ui/dialog";
 import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
 
-import { injectScan } from "@/hooks/project/useScanner/scanner-registry";
+import { injectScan } from "@/hooks/base/useScanner/scanner-registry";
 
 import { REPEAT_WINDOW_MS, cameraReaderFactory } from "./camera-reader";
 import { useSalesText } from "./useSalesText";

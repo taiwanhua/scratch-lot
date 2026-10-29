@@ -67,7 +67,6 @@
 | 項目                           | 本專案位置                                                                                                                      |
 | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------- |
 | 報表登記(含 seed 所有權轉移)   | `apps/admin/src/lib/project/reports/report-registry.ts`                                                                         |
-| `useScanner`                   | `apps/admin/src/hooks/project/useScanner/` → `hooks/base`                                                                       |
 | TicketGrid 閃爍提示            | `components/project/lottery/TicketGrid/`                                                                                        |
 | 交易後列印 `useReceiptPrinter` | `components/project/lottery/ReceiptPrint/useReceiptPrinter.tsx`;一併讓 admin 接 `@repo/logger`(`receipt-log.ts` 暫用 console)   |
 | 共用作廢原因類別 `void-reason` | `apps/db-migrator/seeds/project/field-categories.ts`(進 `SHARED_FIELD_CATEGORY_KEYS`)                                           |

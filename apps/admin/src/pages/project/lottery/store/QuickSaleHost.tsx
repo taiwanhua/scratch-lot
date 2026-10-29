@@ -5,7 +5,7 @@ import { STORE_PERMISSIONS } from "@repo/domain/project/lottery";
 
 import { useMe } from "@/hooks/base/useMe";
 import { usePermissions } from "@/hooks/base/usePermissions";
-import { registerDefaultScanHandler } from "@/hooks/project/useScanner/scanner-registry";
+import { registerDefaultScanHandler } from "@/hooks/base/useScanner/scanner-registry";
 import { readLocalCashPoint } from "@/lib/project/lottery/local-cash-point";
 
 import { useStoreSaleFlow } from "./BoardTab/sales/useStoreSaleFlow";

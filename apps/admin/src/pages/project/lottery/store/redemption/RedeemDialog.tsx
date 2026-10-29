@@ -25,10 +25,10 @@ import {
   type ReasonValue,
   reasonInputOf,
 } from "@/components/project/lottery/ReasonFields/reason-value";
+import { SCANNER_FIELD_ATTRIBUTE } from "@/hooks/base/useScanner/scanner-registry";
+import { useScanner } from "@/hooks/base/useScanner/useScanner";
 import { useSession } from "@/hooks/base/useSession";
 import { useTemporalText } from "@/hooks/base/useTemporalText";
-import { SCANNER_FIELD_ATTRIBUTE } from "@/hooks/project/useScanner/scanner-registry";
-import { useScanner } from "@/hooks/project/useScanner/useScanner";
 
 import { moneyText } from "../store-text";
 import {

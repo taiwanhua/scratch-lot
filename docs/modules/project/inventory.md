@@ -258,7 +258,7 @@
 
 - 編號解析 `parseTicketInput`(`@repo/domain/project/lottery`):背面編號 `5164-1-056527-099-0-6`(第 5、6 段不驗證)、正面編號 `056527-099` / `056527099`、正面條碼 `0056527099`,回 `{ format, gameCode?, printVersion?, bookNo(7 位), ticketNo(3 位) }`;沒有遊戲代號時由呼叫端依本店對到的遊戲決定。
 - 張數格子 `apps/admin/src/components/project/lottery/TicketGrid/`(`TicketGrid`、`TicketCell` 十種狀態(含別店的張「其他分店」)、`TicketGridLegend`):狀態與顏色固定;可選的狀態、每種狀態的文字、圖例項目由使用處傳入。
-- 條碼槍 `apps/admin/src/hooks/project/useScanner/`:`useScanner(purpose, handler)`、`registerDefaultScanHandler(handler)`、`injectScan(code)`;判斷門檻 `SCANNER_KEY_INTERVAL_MS = 30`(程式常數;字元間隔不超過 30ms)。
+- 條碼槍 `apps/admin/src/hooks/base/useScanner/`:`useScanner(purpose, handler)`、`registerDefaultScanHandler(handler)`、`injectScan(code)`;判斷門檻 `SCANNER_KEY_INTERVAL_MS = 30`(程式常數;字元間隔不超過 30ms)。
 
 ### 測試
 

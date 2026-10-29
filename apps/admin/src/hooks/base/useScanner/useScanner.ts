@@ -3,12 +3,12 @@ import { useEffect, useEffectEvent } from "react";
 import { type ScanHandler, registerPageScanHandler } from "./scanner-registry";
 
 /**
- * 頁面宣告掃描用途(專案規格 18.3「用途」;B10 全域掃描監聽):掛上期間,條碼槍讀到的碼交給 `handler`,
- * 優先於專案登記的預設處理;同時有兩個頁面宣告時,最後掛上的(目前打開的頁面)優先。
+ * 頁面宣告掃描用途(全域掃描監聽):掛上期間,條碼槍讀到的碼交給 `handler`,
+ * 優先於登記的預設處理;同時有兩個頁面宣告時,最後掛上的(目前打開的頁面)優先。
  *
  * ```tsx
- * useScanner("sell", ({ code }) => {
- *   const parsed = parseTicketInput(code);
+ * useScanner("item-lookup", ({ code }) => {
+ *   const parsed = parseItemCode(code);
  *   …
  * });
  * ```

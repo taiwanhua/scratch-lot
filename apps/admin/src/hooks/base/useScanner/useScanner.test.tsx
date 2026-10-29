@@ -71,7 +71,7 @@ const ScannerPage = ({ onScan }: ScannerPageProps) => {
   );
 };
 
-describe("useScanner(規格 18.3 B10 全域掃描監聽)", () => {
+describe("useScanner(全域掃描監聽)", () => {
   beforeEach(() => {
     jest.spyOn(Date, "now").mockImplementation(() => clock);
   });
