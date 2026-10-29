@@ -19,8 +19,8 @@ Figma 頁面:Base Draft 41:5914、刮刮樂元件 64:14、店面管理 65:14、�
 ## 2. 實作怎麼進行(使用者 2026-10-13 定)
 
 1. **底座先做**(已完成):底座的票都做在整合分支 `feat/base-round`,已 release 並回收成 wowgo-base v0.4.0;規則已寫進正式文件。
-2. **專案後做**:底座 release、在 scratch-lot 測完後,從新的 main 開 `feat/lottery-round` 做專案規格的票。
-3. **同步回底座**:`base-sync contribute` 回收到 `C:\project\wowgo-base` → release 新底座版本 → scratch-lot、cookhome 升級(去掉重複功能)。驗收準則:子專案修的底座問題能回到底座;底座新版升級能去掉重複功能並同步成功;整套用同步工具跑完。
+2. **專案後做**(已完成):整合分支 `feat/lottery-round` 做完專案規格的票(P01–P39),已 release。
+3. **同步回底座**(已跑過多輪,底座到 v0.4.4;還沒回收的見本檔第 6 節):`base-sync contribute` 回收到 `C:\project\wowgo-base` → release 新底座版本 → scratch-lot、cookhome 升級(去掉重複功能)。驗收準則:子專案修的底座問題能回到底座;底座新版升級能去掉重複功能並同步成功;整套用同步工具跑完。
 
 **一條整合分支的做法**
 
@@ -46,11 +46,26 @@ Figma 頁面:Base Draft 41:5914、刮刮樂元件 64:14、店面管理 65:14、�
 
 在 Figma MCP `use_figma`(先載入 figma-use skill)貼上整份腳本、改檔頭的 `PAGE_ID`;每項要是 0,例外寫在各腳本檔頭。順序:`audit-layout` → `audit-legend` → `audit-sync` → `audit-roster`(班表頁)→ `audit.js`。如果 `use_figma` 連最簡單的 `return "ok"` 都回 `truncated to 20kb`,是 Figma 外掛卡住,請使用者重新載入檔案。
 
-## 5. 目前進度(2026-10-19)
+## 5. 目前進度(2026-10-29)
 
-- 底座階段完成:票 #16–#61(Spec #15)與後續修正都已 release;共用改良回收成 wowgo-base v0.4.0,scratch-lot 已升級。底座規格已退場,規則在正式文件。
-- 下一步:專案階段(`docs/tmp/spec-project-lottery.md`)。
-- 10/19 開票前定案(規格第 19 章對照):34 張票(原 31 張 + P32、P33、P34);M1 + M2 合一次進 dev 給使用者測、M3 一次,staging / main 最後一次 release;欄位選項顏色先存專案臨時表 `project_field_option_colors`;示範指令 `pnpm --filter @repo/db-migrator demo --environment --mode=create|purge|rebuild --confirm`(形狀同 reset、三環境都要確認字串、production 可用;workflow「Demo」與 Reset DB 勾選項);開通清單正本 `docs/modules/project/lottery-onboarding.md` + 專案 skill `scratch-lot-onboarding`;底座改動「通知提醒時間可設定」(規格第 3.5 節)本輪最後與 S2 升格一起回收。
-- 底座 / 專案路徑分離在 `chore/project-split` 做(專案文件 `docs/modules/project/`、`docs/project/`,專案文案 `messages/<語系>/project/`,專案 skill `scratch-lot-*`…,位置見規格第 0 章),合進 main 後才開專案票。
-- 待確認 Q1–Q11(規格第 15 章)要在對應的票開出前定。
-- Figma 回收待辦(還沒做):Draft 元件搬進 Library、`Draft/tagPalettes` 改綁 Library、Snackbar+ 取代 Snackbar、15 頁 Overlay 背景、spare-5;做法見 `docs/tmp/figma-base-round/README.md`「搬回底座的方法」。設計稿與現況的差異見 `docs/tmp/project-dis.md`「Figma 待修清單」。
+- **三個 repo 都在底座 v0.4.4,production 已部署**:wowgo-base main `2b400322`、scratch-lot main `bdb0f0a3`、cookhome main `8b7c1e60`;三個 repo 的 dev / staging 都已 reset 對齊 main。
+- 專案階段的票(P01–P39)全部完成並 release;使用者已在 production 驗收最後一批(待標註調整列、庫存概況、單張金額下拉、手機帳戶篩選抽屜)。
+- 本輪的共用改良已分五次回收成 wowgo-base v0.4.0–v0.4.4(base-sync contribute → 底座 release → 各專案 base-sync upgrade)。
+- 沒有進行中的分支、PR 或工作樹。
+- 開通租戶照 skill `scratch-lot-onboarding`(正本 `docs/modules/project/lottery-onboarding.md`);示範機構用 `demo` 指令(見同一份正本)。
+
+## 6. 接下來可以做的
+
+每一項的細節與現況放在待辦正本,這裡只列入口;做完就從正本刪掉。
+
+| 類別                 | 在哪                                                                | 摘要                                                                                                            |
+| -------------------- | ------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| 還沒回收到底座的改良 | `docs/tmp/project-dis.md`「本輪要回收到底座的項目」                 | 只在本專案的元件與機制 9 項;兩邊都沒做的底座功能與修正約 20 項(含使用者點名的列表組合欄、lookup 動態預設值)     |
+| Figma 回收與待修     | `docs/tmp/project-dis.md`「Figma 待修清單」                         | 本專案底座參考畫面 A1–A8、底座檔 B1–B11,全部未做;做法見 `docs/tmp/figma-base-round/README.md`「搬回底座的方法」 |
+| 實機測試             | `docs/tmp/project-dis.md`「收據機實機測試清單」「條碼實機測試清單」 | 等收據機、條碼槍到貨                                                                                            |
+| 上線前提醒           | `docs/tmp/project-dis.md`「上線前提醒」                             | 每月最少畫休預設 4 天,上線前請使用者查法規再決定                                                                |
+| 開著的 issue         | GitHub Issues                                                       | #83 structure.md 一句被中性化切斷;#66 Figma 品牌同步改用本機外掛                                                |
+| 底座待討論(含 skill) | `docs/tmp/dis.md`                                                   | 例:自訂 `/to-figma` skill、module-scaffold 入口與設計流程整合、AI 自動 PR review 的時機                         |
+| GitHub 上的舊分支    | `git branch -r`                                                     | 約 187 條已合併的舊分支,要不要清由使用者決定                                                                    |
+
+換帳號、換電腦時的接手方式見 `docs/agents/collaboration.md`「交付與換手」;使用者的協作偏好正本見 `docs/agents/working-preferences.md`(兩者隨底座 v0.4.5 同步進來)。
