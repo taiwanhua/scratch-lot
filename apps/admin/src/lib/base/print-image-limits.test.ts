@@ -5,7 +5,7 @@ import {
   PRINT_IMAGE_MAX_HEIGHT_DOTS,
 } from "@repo/domain/printing";
 
-import { isPrintImageTooLarge } from "./receipt-image-limits";
+import { isPrintImageTooLarge } from "./print-image-limits";
 
 /** 只有簽章 + IHDR 的 PNG(高 `height`)。 */
 const pngBase64 = (height: number) => {

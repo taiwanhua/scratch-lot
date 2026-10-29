@@ -62,6 +62,9 @@ importers:
       '@repo/i18n':
         specifier: workspace:*
         version: link:../../packages/i18n
+      '@repo/logger':
+        specifier: workspace:*
+        version: link:../../packages/logger
       '@repo/project-config':
         specifier: workspace:*
         version: link:../../packages/project-config

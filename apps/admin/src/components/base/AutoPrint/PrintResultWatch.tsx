@@ -11,7 +11,7 @@ import {
   usePrintJobResult,
 } from "@/hooks/base/usePrintJobResult";
 
-/** 一張交易後自動送出的列印工作(`useReceiptPrinter` 等它的結果)。 */
+/** 一張自動送出的列印工作(`useAutoPrint` 等它的結果)。 */
 export interface WatchedPrintJob {
   job: PrintJobFieldsFragment;
   refType: string;

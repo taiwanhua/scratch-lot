@@ -20,7 +20,7 @@ import { useMe } from "@/hooks/base/useMe";
 import { usePermissions } from "@/hooks/base/usePermissions";
 import { useSession } from "@/hooks/base/useSession";
 import { useTemporalText } from "@/hooks/base/useTemporalText";
-import { logReceiptPrintFailure } from "@/lib/project/lottery/receipts/receipt-log";
+import { logPrintFailure } from "@/lib/base/print-log";
 
 import { storeFormCreateHref } from "../forms/store-forms-keys";
 import { BankDepositDialog } from "./BankDepositDialog";
@@ -156,7 +156,7 @@ export const useDailyCloseEntry = (
                   }),
                 )
                 .catch((error: unknown) => {
-                  logReceiptPrintFailure("print failed", { error });
+                  logPrintFailure("print failed", { error });
                 });
             }}
           />
