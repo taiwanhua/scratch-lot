@@ -106,3 +106,24 @@ export const MultipleGrouped: MultiStory = {
     getOptionDisabledReason: () => "使用者不在此角色的擁有組織之下",
   },
 };
+
+type FreeSoloStory = StoryObj<typeof Autocomplete<string, false, true>>;
+
+/**
+ * 可自填(`freeSolo`):選項只是建議,打的字本身就是值。
+ * 呼叫端用 `inputValue` + `onInputChange` 受控,打字即值。
+ */
+export const FreeSolo: FreeSoloStory = {
+  args: {
+    freeSolo: true,
+    label: "金額",
+    options: ["100", "200", "500", "1000"],
+    value: "250",
+    inputValue: "250",
+    inputMode: "numeric",
+    getOptionLabel: (price: string) => price,
+    getOptionKey: undefined,
+    getOptionSecondaryText: undefined,
+    noOptionsText: undefined,
+  },
+};

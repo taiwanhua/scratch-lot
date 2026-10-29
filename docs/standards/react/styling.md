@@ -46,6 +46,12 @@ front/admin 只從 `@repo/ui` 拿元件;`@mui/*`、`@emotion/*` 由
 與 admin 其他勾選框一致(MUI 內建的那顆長得不一樣)。
 `as unknown as` 硬轉只是把錯誤推到執行期,而且下一版庫改型別就再撞一次。
 
+**包裝層缺 MUI 已有的功能,就在包裝層補上轉發,不要在 app 端繞過**:包裝層只開目前用得到的 props,
+用到時才補 —— 以 **MUI 原名、原型別**轉發(型別直接借 MUI 的,同上不 `as`),並在該元件的測試補案例
+(先例 `packages/ui/src/Autocomplete/` 的 `freeSolo` / `inputValue`)。app 端**不得**改用瀏覽器原生元件
+(`<datalist>`、原生 `<select>`、`<input type="date">` 之類)或自己另做一套來取得同樣效果:外觀與鍵盤操作會和
+其他欄位不一致,也讓「這個功能系統裡有沒有」散在各頁。review 時檢查 app 端有沒有這類繞過。
+
 **MUI 圖示只在 `packages/ui` 以單檔路徑 import**:`@mui/icons-material` 有上萬個圖示,
 `import { X } from "@mui/icons-material"` 或 app 直接相依都會把整包拖進 bundle。`@mui/icons-material`
 只列在 `packages/ui` 的 dependencies,apps 拿不到;ui 內一律寫**單檔路徑**
