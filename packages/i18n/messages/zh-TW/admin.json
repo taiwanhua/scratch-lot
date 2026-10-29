@@ -2694,7 +2694,7 @@
       "field": "表單欄位:{form} · {field}",
       "manager": "主管第 {level} 層",
       "unset": "未設定",
-      "skipWhen": "有跳過條件",
+      "skipWhen": "可能跳過",
       "noReturn": "不可退回",
       "join": "匯合:{name}",
       "issues": "{count} 個問題"
@@ -2737,7 +2737,7 @@
         "includeDescendants": "包含下層",
         "orgsHint": "看申請人所屬的組織(全部),不是只看目前組織。",
         "sharedOrgsHint": "共用流程只能選最上層組織。",
-        "condition": "符合條件"
+        "condition": "符合跳過條件"
       },
       "autoApprove": {
         "title": "自動通過",
@@ -2768,7 +2768,7 @@
     "join": {
       "region": "匯合節點「{name}」",
       "title": "匯合節點",
-      "body": "系統節點:{count} 條分支都通過(或依條件跳過)後自動完成,不設審核者、不能設跳過條件。",
+      "body": "系統節點:{count} 條分支都通過(或依條件跳過)後自動完成,不設審核者、不能設定「跳過這一關」。",
       "name": "名稱",
       "addBranch": "加一條分支",
       "insertAfter": "在匯合後加一關",

@@ -2694,7 +2694,7 @@
       "field": "Form field: {form} · {field}",
       "manager": "Manager level {level}",
       "unset": "Not set",
-      "skipWhen": "Has skip condition",
+      "skipWhen": "May be skipped",
       "noReturn": "No return",
       "join": "Join: {name}",
       "issues": "{count} issues"
@@ -2737,7 +2737,7 @@
         "includeDescendants": "Include sub-organizations",
         "orgsHint": "Checks all organizations the applicant belongs to, not just the current one.",
         "sharedOrgsHint": "Shared workflows can only choose the top-level organization.",
-        "condition": "Matches condition"
+        "condition": "Matches skip condition"
       },
       "autoApprove": {
         "title": "Auto-approve",
@@ -2768,7 +2768,7 @@
     "join": {
       "region": "Join node \"{name}\"",
       "title": "Join node",
-      "body": "System node: completes automatically when all {count} branches pass (or are skipped). No reviewers, no skip condition.",
+      "body": "System node: completes automatically when all {count} branches pass (or are skipped). No reviewers, and \"Skip this step\" cannot be set.",
       "name": "Name",
       "addBranch": "Add a branch",
       "insertAfter": "Add a step after the join",

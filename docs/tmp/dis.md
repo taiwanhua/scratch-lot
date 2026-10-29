@@ -172,12 +172,6 @@ lookup 的動態條件目前只有「依另一欄位篩選」;加其他動態條
 
 現況:未開票。
 
-### 流程設計器「符合條件」一詞兩用
-
-「符合條件」同時是關卡面板「跳過這一關」的公式那一項(`admin.workflows.step.skip.condition`),也是人員條件頂層模式的名稱(「所有人 / 符合條件」,`AudiencePicker`);另外 `admin.workflows.step.skipNeedsCheckForm` 仍寫「跳過條件的欄位來自它」,與區塊改名後的用詞不一致(流程設計器關卡面板審查時發現)。之後評估統一用詞(一個東西一個名詞),連同 help 與 `docs/modules/workflows.md` 的關卡面板段落。
-
-現況:未開票。
-
 ## 外部條件觸發(追蹤中)
 
 ### unicorn 升級

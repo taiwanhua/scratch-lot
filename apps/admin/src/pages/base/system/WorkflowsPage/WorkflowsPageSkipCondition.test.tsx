@@ -39,10 +39,10 @@ describe("流程管理:跳過條件的型別導向選擇器", () => {
 
     clickNode(canvas, "人資");
     await user.click(
-      within(propertiesPanel()).getByRole("checkbox", { name: "符合條件" }),
+      within(propertiesPanel()).getByRole("checkbox", { name: "符合跳過條件" }),
     );
     const skip = within(propertiesPanel()).getByRole("group", {
-      name: "符合條件",
+      name: "符合跳過條件",
     });
     await waitFor(() => {
       expect(within(skip).getByRole("button", { name: "設定" })).toBeEnabled();

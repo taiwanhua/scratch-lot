@@ -55,7 +55,7 @@ export interface StepEntryOptions {
  * - **跳過**(任一項成立就跳過,依序判斷、記第一個成立的原因):
  *   1. 「申請人屬於這些組織」(`skipOrgs`):比對**該實例修訂**送出當時的所屬組織(`ctx.orgIds` 快照),
  *      「包含下層」看組織的 `ancestors`
- *   2. 「符合條件」(`skipWhen`):拿該修訂的表單內容與送出當時的上下文算(同一實例內容固定,不重算公式)
+ *   2. 「符合跳過條件」(`skipWhen`):拿該修訂的表單內容與送出當時的上下文算(同一實例內容固定,不重算公式)
  * - 審核者三種來源由 `AudienceSourceService.resolveAudienceSource` 算(只算啟用中、仍在本租戶的人);
  *   申請人留不留(這一關「申請人也是審核者時」剔除 / 自動通過 / 照常審核)由 domain 的 `advance` 列 5 與
  *   `buildPlan` 決定,這裡交出的名單含申請人
@@ -238,7 +238,7 @@ export class StepEntryService {
     );
   }
 
-  /** 「符合條件」:沒設 → 不成立;算不出來(資料損毀)→ 不成立(照常派人,保守)。 */
+  /** 「符合跳過條件」:沒設 → 不成立;算不出來(資料損毀)→ 不成立(照常派人,保守)。 */
   private async isConditionMet(
     instance: InstanceRecord,
     step: ReviewStepDef,
