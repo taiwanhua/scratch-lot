@@ -55,25 +55,18 @@
 
 ### 本輪要回收到底座的項目
 
-這一輪實作中記下、要回收到底座的改良,2026-10-29 逐條核對 wowgo-base v0.4.4 後還沒進底座的(v0.4.5 只帶文件,清單不變)。做法照 `docs/deployment.md`「底座首次接軌與版本升級」:在本專案實作 → base-sync contribute → 底座 release → 各專案 upgrade。回收前跑 verify:第 1 節只剩預期差異、第 5 節 0、第 6 節只剩值行。
+2026-10-29 這一輪在本專案的底座路徑做完、等 `base-sync contribute` 送進 wowgo-base 的改良(做法照 `docs/deployment.md`「底座首次接軌與版本升級」;回收前跑 verify:第 1 節只剩預期差異、第 5 節 0、第 6 節只剩值行)。清單以 `claude/project-thread-6tw0t5` 合併進 main 的 commit 為準,回收完成後刪掉本節。
 
-**使用者點名要做的底座功能**
+- 名稱排序 `@repo/domain/collation`(STRUCT-10)、假 api 錯誤碼型別、`MonthCalendar` `size` / `maxCorners`、文件(`summary` 保留字、`TRUST_PROXY_HOPS`)。
+- 殼層最小寬度 `md`(預設)與 Drawer `width`。
+- 表單模組列表的組合欄(`TEMPLATE`)、表單列表組織 / 日期篩選、拖拉排序共用設定 `useSortableItem`。
+- 欄位選項顏色 `fields.color` + `@repo/domain/tag-palette` + `@repo/ui` 色票(含 migration)。
+- 表單事後動作 `decidedBy`;lookup 來源宣告的依操作者預設值(`{ kind: "provider" }`)。
+- 升格:報表登記與外框、`useScanner`、閃爍提示、自動列印(`@repo/logger`)、作廢原因類別、`RootOrgNotice`、`useFormEntry`、`DateFilterPicker`。
+- 表單引擎類別選項併進 `FieldOptionsService`;「預設不共用 + 清單固定」不再有 `shareOrgs`(附底座 migration `migrations/base/20261029140000_cleanup_form-submissions-share-orgs.js`),共用讀取分支拆兩支走得到索引。
 
-| 項目 | 要做什麼 | 現況 |
-| ---- | -------- | ---- |
+### 暫不做
 
-**只在本專案、要升格進底座的元件與機制**
+- org lookup「整個租戶」範圍:底座 `org` 來源只列可見範圍(`forms/lookup-providers.ts`),前端 `OrgTreeSelect` 已有 `scope="tenant"`。本專案目前沒有表單需要(調貨單的收貨分店照規格由總部開單,`docs/modules/project/purchasing.md`「收貨分店選不到時」)。要做的話是表單引擎的設計取捨:引用來源加範圍選項(定義型別、定義檢查、設計器、可攜性、送出重驗都要跟著改),並決定租戶內組織名稱給所有填寫者查。
 
-| 項目                           | 本專案位置                                                                                                                      |
-| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------- |
-
-**已在本專案的底座路徑改好、待 contribute**
-
-- 表單引擎的類別選項併進 `FieldOptionsService`(`optionMapOf` / `categoryKeys`;刪 `forms/field-category-options.service.ts`)。
-- 共用宣告「預設不共用 + 清單固定」不再有 `shareOrgs` 欄位 / 索引 / 讀取分支(`hasShareList`),附底座 migration `migrations/base/20261029140000_cleanup_form-submissions-share-orgs.js`;共用清單的讀取分支拆成兩支走得到索引。
-
-**要先評估再決定**
-
-- org lookup「整個租戶」範圍:底座 `org` 來源只列可見範圍(`forms/lookup-providers.ts`),前端 `OrgTreeSelect` 已有 `scope="tenant"`。本專案目前沒有表單需要(調貨單的收貨分店照規格由總部開單,`docs/modules/project/purchasing.md`「收貨分店選不到時」)。要做的話是表單引擎的設計取捨:引用來源加範圍選項(定義型別、定義檢查、設計器、可攜性、送出重驗都要跟著改),並決定租戶內組織名稱給所有填寫者查。等有表單真的要選可見範圍外的組織再開票。
-
-現況:未開票;依上面分組,建議先做「使用者點名」與「小修正」,再做升格(欄位選項顏色最大,單獨一張)。
+現況:等有表單真的要選可見範圍外的組織再開票。

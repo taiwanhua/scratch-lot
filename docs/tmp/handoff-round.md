@@ -61,7 +61,7 @@ Figma 頁面:Base Draft 41:5914、刮刮樂元件 64:14、店面管理 65:14、�
 
 | 類別                 | 在哪                                                | 摘要                                                                                                                          |
 | -------------------- | --------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| 還沒回收到底座的改良 | `docs/tmp/project-dis.md`「本輪要回收到底座的項目」 | 只在本專案的元件與機制 9 項;兩邊都沒做的底座功能與修正約 20 項(含使用者點名的列表組合欄、lookup 動態預設值)                   |
+| 還沒回收到底座的改良 | `docs/tmp/project-dis.md`「本輪要回收到底座的項目」 | 2026-10-29 這輪在本專案底座路徑做完的改良,等 PR 進 main 後 base-sync contribute(本機 thread 負責)                             |
 | Figma 回收與待修     | `docs/tmp/project-dis.md`「Figma 待修清單」         | 本專案底座參考畫面 A1–A8、底座檔 B1–B11,全部未做;做法見 `docs/tmp/figma-base-round/README.md`「搬回底座的方法」               |
 | 開著的 issue         | wowgo-base 的 GitHub Issues                         | 「structure.md 一句被中性化切斷」「Figma 品牌同步改用本機外掛」是 wowgo-base 的 issue(scratch-lot 的 #83、#66 是別的、已關閉) |
 | 底座待討論(含 skill) | `docs/tmp/dis.md`                                   | 例:自訂 `/to-figma` skill、module-scaffold 入口與設計流程整合、AI 自動 PR review 的時機                                       |
