@@ -13,6 +13,7 @@ import type {
   MonthCalendarCorner,
   MonthCalendarDayInfo,
   MonthCalendarDayTone,
+  MonthCalendarSize,
 } from "./month-calendar-types";
 
 /** 底色語意 → 主題 token(色碼由主題決定,深色模式跟著換)。 */
@@ -33,6 +34,11 @@ export interface MonthCalendarDayCellProps {
   /** 格子的無障礙名稱 */
   label: string;
   onSelect: (date: string) => void;
+  size: MonthCalendarSize;
+  /** 角標最多顯示幾個(含「+N」) */
+  maxCorners: number;
+  /** 「+N」的無障礙名稱 */
+  formatMoreCornersLabel: (hidden: readonly MonthCalendarCorner[]) => string;
 }
 
 /**
@@ -89,6 +95,9 @@ export const MonthCalendarDayCell = ({
   isToday,
   label,
   onSelect,
+  size,
+  maxCorners,
+  formatMoreCornersLabel,
 }: MonthCalendarDayCellProps) => {
   const disabled = day.inMonth && info?.disabled === true;
   const muted = !day.inMonth || disabled;
@@ -106,6 +115,7 @@ export const MonthCalendarDayCell = ({
       data-date={day.date}
       data-tone={tone}
       data-background={source}
+      data-size={size}
       tabIndex={selectable ? 0 : undefined}
       onClick={select}
       onKeyDown={(event: KeyboardEvent) => {
@@ -117,9 +127,12 @@ export const MonthCalendarDayCell = ({
         position: "relative",
         isolation: "isolate",
         minWidth: 0,
-        // 電腦大格、手機約 48px;寬度由容器七等分
-        minHeight: { xs: theme.spacing(6), md: theme.spacing(12) },
-        p: { xs: 0.5, md: 1 },
+        // medium:電腦大格、手機約 48px;small:一律約 40px。寬度由容器七等分
+        minHeight:
+          size === "small"
+            ? theme.spacing(5)
+            : { xs: theme.spacing(6), md: theme.spacing(12) },
+        p: size === "small" ? 0.5 : { xs: 0.5, md: 1 },
         display: "flex",
         flexDirection: "column",
         gap: 0.5,
@@ -148,7 +161,12 @@ export const MonthCalendarDayCell = ({
         {day.day}
       </Box>
       {day.inMonth && info !== undefined ? (
-        <MonthCalendarCornerMarks corners={cornersOf(info)} />
+        <MonthCalendarCornerMarks
+          corners={cornersOf(info)}
+          size={size}
+          max={maxCorners}
+          formatMoreLabel={formatMoreCornersLabel}
+        />
       ) : null}
       {day.inMonth && info?.note ? (
         <Box

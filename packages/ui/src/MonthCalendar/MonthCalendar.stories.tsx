@@ -108,6 +108,74 @@ export const CornerMarks: Story = {
   },
 };
 
+/**
+ * 一格多個角標:依陣列順序由左到右並排;超過 `maxCorners`(`medium` 預設 3、`small` 預設 2)時
+ * 前面的照畫、其餘收成「+N」(同 MUI `AvatarGroup` 的 `max`),「+N」報讀被收起來的角標。
+ */
+export const MultipleCornerMarks: Story = {
+  args: {
+    days: {
+      "2026-10-05": {
+        corners: [
+          { variant: "dot", color: "error", label: "缺卡" },
+          { variant: "dot", color: "warning", label: "有異動" },
+        ],
+      },
+      "2026-10-07": {
+        corners: [
+          { variant: "dot", color: "error", label: "缺卡" },
+          { variant: "dot", color: "warning", label: "有異動" },
+          { variant: "dot", color: "info", label: "有備註" },
+        ],
+      },
+      "2026-10-09": {
+        corners: [
+          { variant: "dot", color: "error", label: "缺卡" },
+          { variant: "dot", color: "warning", label: "有異動" },
+          { variant: "dot", color: "info", label: "有備註" },
+          { variant: "badge", content: "資料待補" },
+        ],
+      },
+    },
+  },
+};
+
+/**
+ * 小尺寸(`size="small"`):任何寬度都用約 40px 的小格與小留白,給選日期的浮層、側欄這類窄容器;
+ * 角標預設最多 2 個,第三個起收成「+N」。
+ */
+export const Small: Story = {
+  args: {
+    size: "small",
+    selectionMode: "single",
+    selectedDates: ["2026-10-20"],
+    days: {
+      ...closedDays,
+      "2026-10-11": { note: "特殊日" },
+      "2026-10-15": {
+        corners: [
+          { variant: "dot", color: "error", label: "缺卡" },
+          { variant: "dot", color: "warning", label: "有異動" },
+        ],
+      },
+      "2026-10-22": {
+        corners: [
+          { variant: "dot", color: "error", label: "缺卡" },
+          { variant: "dot", color: "warning", label: "有異動" },
+          { variant: "dot", color: "info", label: "有備註" },
+        ],
+      },
+    },
+  },
+  decorators: [
+    (Story) => (
+      <Box sx={{ width: 320 }}>
+        <Story />
+      </Box>
+    ),
+  ],
+};
+
 /** 窄寬(手機 390 扣掉左右留白):格子約 48px,依容器寬度七等分。 */
 export const Narrow: Story = {
   args: {
