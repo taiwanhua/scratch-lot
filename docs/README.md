@@ -84,6 +84,7 @@ concepts 的順序:`accounts-and-tenants` → `authorization` → `data-layer-an
 | `docs/testing/handover-quiz.md`                                                             | 接手自測題                                                                                      | 讀完文件後自我檢查         |
 | `docs/agents/toolbox.md`                                                                    | agent 的工具與環境須知                                                                          | AI agent 開工前            |
 | `docs/agents/collaboration.md`                                                              | Claude、Codex 與人員共用的分工、工作樹與接手規則                                                | 派工、恢復或換手           |
+| `docs/agents/working-preferences.md`                                                        | repo 擁有者的協作偏好(正本;本機與 Claude 專案指引是副本)                                        | 開工、換帳號或換電腦       |
 | `docs/agents/issue-tracker.md`                                                              | issue、看板、PR 的流程                                                                          | 開票、接票、交件           |
 | `docs/agents/pitfalls.md`                                                                   | 指令與流程的已知坑                                                                              | 指令跑出怪現象時           |
 | `docs/agents/module-scaffold.md`                                                            | 新增 CRUD 模組的檔案清單與步驟                                                                  | 新增模組                   |
