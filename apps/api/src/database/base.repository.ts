@@ -31,6 +31,7 @@ import {
   type TenantScope,
   TenantScopeError,
   getTenantScope,
+  hasShareList,
   hasTenantIdPath,
   writeScopeConditionsOf,
 } from "./plugins/tenant-scope.plugin";
@@ -784,8 +785,8 @@ export class BaseRepository<TSchema, TDocument extends RepositoryDocument> {
     if (data.length === 0) {
       return [];
     }
-    const shareable =
-      getTenantScope(this.model.schema)?.sharing.mode === "shareable";
+    const sharing = getTenantScope(this.model.schema)?.sharing;
+    const shareable = sharing !== undefined && hasShareList(sharing);
     const tenants = new Map<string, Promise<Partial<TSchema>>>();
     const shares = new Map<string, Promise<Partial<TSchema>>>();
     const prepared: Partial<TSchema>[] = [];
@@ -1365,7 +1366,7 @@ export class BaseRepository<TSchema, TDocument extends RepositoryDocument> {
     session: ClientSession | null,
   ): Promise<Partial<TSchema>> {
     const scope = getTenantScope(this.model.schema);
-    if (scope?.sharing.mode !== "shareable") {
+    if (scope?.sharing.mode !== "shareable" || !hasShareList(scope.sharing)) {
       return data;
     }
     const tenantId =
