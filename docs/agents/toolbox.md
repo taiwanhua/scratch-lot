@@ -247,10 +247,19 @@ GraphQL 文件登記負例用 `pnpm --filter @repo/graphql test:documents`,CI �
 - commit 訊息結尾照 session 提供的 attribution 行。
 - PR base dev,內文含 Closes #<票號>,內文先寫成檔再 --body-file;看板票卡移 In Review。
 - 不 merge、不動 main / dev / staging;不處理任何密碼 / 金鑰。
+- 結束前關掉自己啟動的開發伺服器、jest、mongodb-memory-server。
+
+## 效率
+- 找精準入口(grep 關鍵字、指定段落)再讀,不整份掃。
+- 開發中只跑改到範圍的測試;交件前跑一次完整檢查。
+- 多個情境併進同一支測試,不為每個情境各開一份 harness。
+- 回報精簡,只寫交件報告要的幾節。
 
 ## 交件報告
 PR 連結、改動檔案清單、測試結果(與基準比較)、截圖或 E2E 建議、文件與程式不合處、規則回饋、CI 狀態、接手體驗(找不到 / 矛盾 / 用猜的)。
 ```
+
+主流程每批合併後,檢查並關掉沒人在用的 node 程序(開發伺服器、jest worker);jest 一律維持上方「單檔測試」的 `--maxWorkers=2`。
 
 正本:[issue-tracker.md](./issue-tracker.md)「實作一張票」與「交件報告格式」
 

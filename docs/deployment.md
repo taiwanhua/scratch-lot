@@ -83,6 +83,7 @@ release 後:dev / staging reset 對齊 main;進行中的 feat 分支 rebase 到�
 - **feat 對齊只用 rebase**:release 後 rebase 到最新 `origin/main`;疊票的前一張被改寫(review 修改、或已 release 進 `main`)時,用 `git rebase --onto <新基底> <前票原本的尾端>` 把本票的 commit 搬過去。**絕不把 `main` / `dev` / `staging` merge 進 feat**:merge commit 會把別票的內容帶進本票的 PR,之後每一條線的 diff 都對不準。
 - **共通修正先單獨 release**:CI、測試工具這類每張票都受益的修正,開自己的分支、單獨走一次 release 進 `main`,不等功能批。已經開工的疊票鏈缺這個修正時,把那個 commit `cherry-pick` 到鏈的底部分支,不 merge `dev`。
 - `dev` / `staging` 只由 PR 合入,與 `main` 對齊只用 reset(見下面 Release 步驟第 4 點)。
+- **`staging` 的 PR head 一律是 feat 分支**(趕時的整合分支例外見 Release 步驟第 1 點):不開 `dev → staging` 的 PR,也不拿 `dev` 當 head。`dev` 上可能有別批還沒要上線、或已被汙染的內容,整支帶進 `staging` 就分不出這批 release 了什麼。
 
 ### 底座首次接軌與版本升級
 
@@ -256,15 +257,18 @@ deploy / reset 的雲端目標與看板識別不寫在 workflow 裡,正本是兩
 
 ### Release 步驟
 
-雲端啟用的引用專案依下列步驟部署及驗收。底座或明確停用雲端的專案,仍走逐票 dev / staging PR 與同批 main release,但以 CI、本機應用與資料驗收代替未啟用的部署,在 PR 清楚記錄。停用的 Deploy 不算部署成功。底座程式發布另建立不可移動的 annotated tag 與 GitHub Release,記錄完整 commit;引用專案從該版本初始化或升級。
+雲端啟用的引用專案依下列步驟部署及驗收。底座或明確停用雲端的專案,仍走逐票 dev / staging PR 與同批 main release,但以 CI、本機應用與資料驗收代替未啟用的部署,在 PR 清楚記錄。停用的 Deploy 不算部署成功。底座程式發布另建立不可移動的 annotated tag 與 GitHub Release,記錄完整 commit(指令見下方「底座發版」);引用專案從該版本初始化或升級。
 
 涉及 Figma 的正式版本,Git Release 與 Library 發布描述互相指向,記錄完整 commit、fileKey、可核對的 Figma 版本連結、變更資產與實際接受範圍。資產身分見[品牌註冊表](branding.md),實際操作結果記在初始化或升級 PR,新流程不產生 receipt 或另建發布帳本。component key 是來源身分,不是版本鎖;發布內容再變時須重核實際狀態,不能以 Git tag 單獨證明已接受或可回退任意歷史 Library。
 
-**release 一批一次**:同一批票各自 PR 合進 `dev`、各自 PR 合進 `staging`,累積成一批之後才走一次 release(一個 `staging → main` 的 PR + 一次 production 部署)。`dev` 的部署也等該批最後一張合完才觸發,不要一張一部署。例外只有**產物依賴**:後面的票要拿前面的票已上線的產物才做得下去時,前面那張單獨先 release。
+**release 一批一次**:同一批票各自 PR 合進 `dev`、各自 PR 合進 `staging`,累積成一批之後才走一次 release(一個 `staging → main` 的 PR + 一次 production 部署)。`dev` 的部署也等該批最後一張合完才觸發,不要一張一部署:一批最後一張合進 `dev` 就是部署時點。請人驗收任何環境前,先用 `gh run list --workflow Deploy --limit 3 --json headBranch,headSha,conclusion` 對照該分支 tip(`git rev-parse origin/<分支>`),不同就先部署再請人測,否則測到的是舊版。例外只有**產物依賴**:後面的票要拿前面的票已上線的產物才做得下去時,前面那張單獨先 release。
 
 每個環境部署前先依[發布前核對](#發布前環境與資料核對)讀取該環境到欲部署 commit 的累積差異與資料風險。每次照這五步(票的看板狀態見 `docs/agents/issue-tracker.md`):
 
 1. dev 的 CI 綠 → 要上線的 feat 分支**逐一** PR 合進 `staging`(PR 內文帶 `Refs #<票號>`,看板自動化才找得到票)。這批就是 `dev` 上的全部時,合完 `git diff --stat origin/dev origin/staging` 應為空。
+
+   例外:使用者明示要趕時,已在 `dev` 驗過的多張票可改走一支整合分支。從 `origin/main` 切出,依序 `git merge --no-ff origin/<各 feat>`;確認 `git diff origin/dev` 無差異(這批就是 `dev` 上的全部時)後,一次 PR 進 `staging`。平常仍逐票合。
+
 2. `gh workflow run Deploy --ref staging -f environment=staging` → 對 `api-staging` 打一個 smoke(例:登入 mutation 帶錯帳密,回 `INVALID_CREDENTIALS`)。
 3. PR `staging → main`、合併 → `gh workflow run Deploy --ref main -f environment=production` → 同樣 smoke。
 4. **release PR 一合進 `main`,立刻把 `dev` 與 `staging` reset 到 `main`(force push)**。本點是全 repo 的正本:其他文件提到分支對齊時一律指回這裡,CLAUDE.md 只留一行摘要,不一致時以本點為準。由主流程做;它也是 `dev` 被汙染時的救援手段。**對齊只有 reset 這一種做法**:不把 `main` merge 回 `dev` / `staging`,也不用空合併,那只會讓兩條線各自長出 merge commit、歷史繼續分岔。先做前置檢查再推:
@@ -281,6 +285,17 @@ deploy / reset 的雲端目標與看板識別不寫在 workflow 裡,正本是兩
    兩個 `git diff --stat` 為**空**,代表該批已全部進 `main`、reset 不會丟東西。`dev` 的 diff 不空時,對照 `gh pr list` 與 diff 內容,確認多出來的只是「已合進 `dev` 但不在這批 release 裡」的 feat:是的話**照樣 reset**,reset 後替那些 feat 重新開 PR 合進 `dev`(原 PR 已是 merged,不能再 merge);有說不出來源的差異就先停下來查,不要推。reset 之後,從 `main` 切出來的分支對 `dev` / `staging` 都只剩一個 merge base。它不需要切分支,也不動本地工作目錄。
 
 5. 關票(`gh issue close <n> --comment "<release PR>"`)→ 自動化移到 Released;刪已合併的遠端分支;進行中的 feat 分支 rebase 到最新 `main`。
+
+**底座發版**:底座的 release PR 合進 `main` 後,先建 annotated tag 並 push,確認型別是 `tag`,再建 GitHub Release:
+
+```
+git tag -a vX.Y.Z <main 的 merge commit 完整 SHA> -m "vX.Y.Z"
+git push origin vX.Y.Z
+git cat-file -t vX.Y.Z
+gh release create vX.Y.Z --verify-tag --notes-file <檔>
+```
+
+`git cat-file -t` 必須印出 `tag`。不要用 `gh release create --target` 讓 gh 代建 tag:那會建出 lightweight tag,`base-sync upgrade` 核對正式版本時會拒絕。
 
 ### 交叉 merge base
 
