@@ -3,7 +3,7 @@ import { useTranslations } from "use-intl";
 
 import { Button } from "@repo/ui/button";
 
-import { useFormModuleAccess } from "@/components/base/form-engine/FormModulePages/useFormModuleAccess";
+import { useFormEntry } from "@/components/base/form-engine/FormModulePages/useFormEntry";
 import { usePermissions } from "@/hooks/base/usePermissions";
 
 import type { PendingRequisition } from "../PurchaseListTab/purchase-list-actions";
@@ -26,7 +26,8 @@ export const CreatePurchaseAction = ({
   const t = useTranslations("admin.lotteryPurchasing.purchase");
   const navigate = useNavigate();
   const { hasPermission } = usePermissions();
-  const access = useFormModuleAccess(PURCHASE_MODULE_KEY);
+  const entry = useFormEntry(PURCHASE_MODULE_KEY, PURCHASE_FORM_KEY);
+  const { access } = entry;
   const serialNo = requisition.serialNo ?? null;
   if (
     access.createRoute === null ||
@@ -44,9 +45,7 @@ export const CreatePurchaseAction = ({
       variant="outlined"
       size="small"
       onClick={() => {
-        void navigate(
-          `${access.createRoute ?? ""}/${PURCHASE_FORM_KEY}?${params.toString()}`,
-        );
+        void navigate(entry.createHref(params) ?? "");
       }}
     >
       {t("createFromRequisition")}

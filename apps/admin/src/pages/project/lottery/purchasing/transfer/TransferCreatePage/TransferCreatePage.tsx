@@ -5,11 +5,10 @@ import { z } from "zod";
 import { Alert } from "@repo/ui/alert";
 import { CircularProgress } from "@repo/ui/circular-progress";
 
-import { useFormModuleAccess } from "@/components/base/form-engine/FormModulePages/useFormModuleAccess";
+import { useFormEntry } from "@/components/base/form-engine/FormModulePages/useFormEntry";
 import type { BookRowStatus } from "@/components/project/lottery/BookGroupList/BookGroupList";
 import { useFormDraft } from "@/hooks/base/useFormDraft";
 import { useMe } from "@/hooks/base/useMe";
-import { useModuleForms } from "@/hooks/base/useModuleForms";
 import { useSnackbar } from "@/hooks/base/useMutationFeedback";
 import { useRouteTabHref } from "@/hooks/base/useRouteTabHref";
 import { useRouteTabItemLabel } from "@/hooks/base/useRouteTabItemLabel";
@@ -38,10 +37,11 @@ export const TransferCreatePage = () => {
   const tabHref = useRouteTabHref();
   const showSnackbar = useSnackbar();
   const me = useMe();
-  const access = useFormModuleAccess(TRANSFER_MODULE_KEY);
-  const { creatableForms, isLoading: isFormsLoading } =
-    useModuleForms(TRANSFER_MODULE_KEY);
-  const form = creatableForms.find((item) => item.key === TRANSFER_FORM_KEY);
+  const {
+    access,
+    form,
+    isLoading: isFormsLoading,
+  } = useFormEntry(TRANSFER_MODULE_KEY, TRANSFER_FORM_KEY);
   const draft = useFormDraft(TRANSFER_FORM_KEY);
   useRouteTabItemLabel(t("tabLabel"));
 

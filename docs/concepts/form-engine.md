@@ -157,19 +157,22 @@ export const projectModulePages: ModulePageSource = {
 
 `ModulePageSource` 型別在 `app/module-page-registry.ts`。`pageOverrides` 的四個 slot 是 `list`、`viewPage`、`createPage`、`editPage`,每個收 `{ Page, minWidth? }`;省略就用預設頁。四頁都自行組裝也可在同一筆 `forms` 宣告四個 slot,仍保留 options 的單一來源。組裝器用純函式 `formModulePages(moduleKey)` 取得四個懶載入預設元件,不靠 spread 覆寫或載入時修改共享狀態。
 
+客製的列表 / 新增頁只服務模組裡**指定的一張表單**時(預設頁讓使用者挑表單),四頁都用 `useFormEntry(moduleKey, formKey)`(`components/base/form-engine/FormModulePages/useFormEntry.ts`)判斷能不能新增與組新增頁網址,不各自比對 `creatableForms` 或手拼路由。
+
 要客製的是**底座既有表單頁**時,改在 `app/project/page-replacements.ts` 寫明目標,不把相同 moduleKey 再加進專案 `forms`。底座原版與 options 保留,移除替換即可還原頁面。登記或換 Page 都不改 `me.modules` 的路由與授權;碰撞與替換規則見[前端架構](frontend-architecture.md#頁面登記與客製替換)。
 
 options 由 `lib/base/form-engine/form-module-options.ts` 的 `composeFormModuleOptions` 合成唯讀表,再由 `app/providers/RootProviders.tsx` 經 `FormModuleOptionsProvider` 注入。context 與 hook 在 `hooks/base/useFormModuleOptions.ts`,Provider 在 `app/providers/FormModuleOptionsProvider.tsx`;components 向下讀 hook,不 import app。`useTabLabelRenderer` 用這份設定,表單自身模板仍優先於模組模板,未設定時用 `{{title}}`;有 Provider 但未登記該 key 時亦用預設,缺 Provider 則報接線錯誤。不同組裝不會互相污染。
 
-| 零件                                                    | 做什麼                                                                                                 |
-| ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| `FormRenderer`(`version` / `values` / `mode`)           | 依版本畫表單;`mode` = `create` / `edit` / `readonly` / `design` / `preview`                            |
-| `FormSubmissionList`                                    | 提交列表(`DataTable`),欄來自列表欄位配置(摘要槽 / 表單欄位 / 組合欄);引用那一筆版本沒有的欄位顯示「—」 |
-| `FormSubmissionDetail`                                  | 詳情:唯讀渲染、現名 / 快照、附件下載、修訂紀錄與差異                                                   |
-| `FormPicker` / `LookupDialog` / `ReferenceField`        | 選表單 / 帶入資料跳窗 / 引用欄位的搜尋選擇器                                                           |
-| `useModuleForms` / `useFormDraft` / `useFormSubmission` | 可新增的表單 / 建草稿與送出 / 讀寫既有提交                                                             |
-| `renderValue(ctx)`                                      | 語意型別 → 畫面(REACT-13 簽章)                                                                         |
-| widget 登錄表                                           | `widget.kind` → 元件;擴充一個 widget = domain 型別登錄 + admin 元件登錄各加一筆                        |
+| 零件                                                    | 做什麼                                                                                                                                                   |
+| ------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `FormRenderer`(`version` / `values` / `mode`)           | 依版本畫表單;`mode` = `create` / `edit` / `readonly` / `design` / `preview`                                                                              |
+| `FormSubmissionList`                                    | 提交列表(`DataTable`),欄來自列表欄位配置(摘要槽 / 表單欄位 / 組合欄);引用那一筆版本沒有的欄位顯示「—」                                                   |
+| `FormSubmissionDetail`                                  | 詳情:唯讀渲染、現名 / 快照、附件下載、修訂紀錄與差異                                                                                                     |
+| `FormPicker` / `LookupDialog` / `ReferenceField`        | 選表單 / 帶入資料跳窗 / 引用欄位的搜尋選擇器                                                                                                             |
+| `useModuleForms` / `useFormDraft` / `useFormSubmission` | 可新增的表單 / 建草稿與送出 / 讀寫既有提交                                                                                                               |
+| `useFormEntry(moduleKey, formKey)`                      | 客製頁綁定一張表單時的入口:這張表單可不可新增(`form`、`canCreate`)、新增頁網址 `createHref(search?)` = `<新增頁路由>/<表單代號>`、模組四頁路由(`access`) |
+| `renderValue(ctx)`                                      | 語意型別 → 畫面(REACT-13 簽章)                                                                                                                           |
+| widget 登錄表                                           | `widget.kind` → 元件;擴充一個 widget = domain 型別登錄 + admin 元件登錄各加一筆                                                                          |
 
 | `mode`            | 條件 / 計算                                  | 權限           | 值     |
 | ----------------- | -------------------------------------------- | -------------- | ------ |

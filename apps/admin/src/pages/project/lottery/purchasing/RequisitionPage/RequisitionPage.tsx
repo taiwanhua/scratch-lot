@@ -10,8 +10,7 @@ import {
   type PageTabItem,
   PageTabs,
 } from "@/components/base/PageTabs/PageTabs";
-import { useFormModuleAccess } from "@/components/base/form-engine/FormModulePages/useFormModuleAccess";
-import { useModuleForms } from "@/hooks/base/useModuleForms";
+import { useFormEntry } from "@/components/base/form-engine/FormModulePages/useFormEntry";
 import { useSnackbar } from "@/hooks/base/useMutationFeedback";
 import { usePermissions } from "@/hooks/base/usePermissions";
 import { useUrlState } from "@/hooks/base/useUrlState";
@@ -62,12 +61,9 @@ export const RequisitionPage = () => {
   const t = useTranslations("admin.lotteryPurchasing");
   const navigate = useNavigate();
   const { hasPermission } = usePermissions();
-  const access = useFormModuleAccess(REQUISITION_MODULE_KEY);
-  const { creatableForms } = useModuleForms(REQUISITION_MODULE_KEY);
+  const entry = useFormEntry(REQUISITION_MODULE_KEY, REQUISITION_FORM_KEY);
+  const { canCreate } = entry;
   const [tab] = useUrlState("tab", tabSchema);
-  const canCreate =
-    access.createRoute !== null &&
-    creatableForms.some((form) => form.key === REQUISITION_FORM_KEY);
 
   const items: PageTabItem[] = [
     {
@@ -94,7 +90,7 @@ export const RequisitionPage = () => {
     action = (
       <Button
         onClick={() => {
-          void navigate(`${access.createRoute ?? ""}/${REQUISITION_FORM_KEY}`);
+          void navigate(entry.createHref() ?? "");
         }}
       >
         {t("requisitions.create")}

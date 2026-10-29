@@ -15,8 +15,7 @@ import { Table, type TableColumn } from "@repo/ui/table";
 import { Typography } from "@repo/ui/typography";
 
 import { FilterDrawer } from "@/components/base/FilterDrawer/FilterDrawer";
-import { useFormModuleAccess } from "@/components/base/form-engine/FormModulePages/useFormModuleAccess";
-import { useModuleForms } from "@/hooks/base/useModuleForms";
+import { useFormEntry } from "@/components/base/form-engine/FormModulePages/useFormEntry";
 import { useSession } from "@/hooks/base/useSession";
 import { useUrlSelectedId } from "@/hooks/base/useUrlSelectedId";
 import { useUrlState } from "@/hooks/base/useUrlState";
@@ -54,14 +53,12 @@ export const SupportRequestsTab = () => {
   const { session } = useSession();
   const isNarrow = useBreakpointDown("lg");
   const isMobile = useBreakpointDown("sm");
-  const access = useFormModuleAccess(SCHEDULE_MANAGE_MODULE_KEY);
-  const { creatableForms, isLoading: isFormsLoading } = useModuleForms(
+  const entry = useFormEntry(
     SCHEDULE_MANAGE_MODULE_KEY,
+    SUPPORT_REQUEST_FORM_KEY,
   );
-  const canCreate =
-    !isFormsLoading &&
-    access.createRoute !== null &&
-    creatableForms.some((form) => form.key === SUPPORT_REQUEST_FORM_KEY);
+  const { access } = entry;
+  const canCreate = !entry.isLoading && entry.canCreate;
   const [filters, setFilters] = useUrlState(
     SUPPORT_LIST_KEY,
     supportListSchema,
@@ -163,9 +160,7 @@ export const SupportRequestsTab = () => {
         {canCreate && (
           <Button
             onClick={() => {
-              void navigate(
-                `${access.createRoute ?? ""}/${SUPPORT_REQUEST_FORM_KEY}`,
-              );
+              void navigate(entry.createHref() ?? "");
             }}
           >
             {t("create")}
