@@ -74,6 +74,7 @@ export const DesignerPreview = ({
       user: user?.name ?? null,
       org: user?.currentOrg?.name ?? null,
     },
+    lookup: { formKey, version },
   });
   const values: StoredValues = fill.values;
 

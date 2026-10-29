@@ -49,6 +49,10 @@ export class FormLookupProvider {
   /** 可回的欄位(`id` 一律可回,不列);`form_submission` 依所選表單而定,這裡為空。 */
   @Field(() => [FormLookupProviderField])
   fields!: FormLookupProviderField[];
+
+  /** 有依操作者的預設值:引用這個來源的欄位,預設值可以選「來源提供的預設」。 */
+  @Field(() => Boolean)
+  operatorDefault!: boolean;
 }
 
 @ObjectType()

@@ -1804,6 +1804,9 @@
         "user": "填寫者",
         "org": "填寫者的組織"
       },
+      "defaultProvider": "來源提供的預設",
+      "defaultProviderFilter": "預設值的條件(選填)",
+      "defaultProviderFilterHint": "來源依這些欄位目前的值找出填寫者自己的那一筆(例:那個組織裡自己的);欄位改值時跟著重新帶入,填寫的人改過就不再變。",
       "defaultBoolean": {
         "true": "是",
         "false": "否"

@@ -1009,6 +1009,13 @@ type FormForkSourceModel {
   version: Int!
 }
 
+input FormLookupDefaultInput {
+  fieldKey: String!
+  filterValues: JSONObject
+  formKey: ID!
+  version: Int
+}
+
 input FormLookupInput {
   filterValues: JSONObject
   formKey: ID!
@@ -1033,6 +1040,7 @@ type FormLookupProvider {
   key: String!
   labelField: String!
   name: String!
+  operatorDefault: Boolean!
   valueField: String!
 }
 
@@ -4573,6 +4581,7 @@ type Query {
   form(key: ID!): FormPayload!
   formFieldOptions(input: FormFieldOptionsInput!): FormFieldOptionsPayload!
   formLookup(input: FormLookupInput!): FormLookupPayload!
+  formLookupDefault(input: FormLookupDefaultInput!): FormLookupRecordPayload!
   formLookupProviders: FormLookupProvidersPayload!
   formLookupRecord(input: FormLookupRecordInput!): FormLookupRecordPayload!
   formRuntimeVersion(formKey: ID!, version: Int!): FormVersionPayload!

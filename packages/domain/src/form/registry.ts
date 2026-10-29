@@ -37,6 +37,8 @@ export interface LookupProviderSpec {
    * 不給 = 不檢查連動篩選的篩選欄位。
    */
   filterFields?: Readonly<Record<string, FieldType | null>>;
+  /** 來源有沒有提供依操作者的預設值(引用欄的預設值能不能選「來源提供的預設」);不給 = 沒有。 */
+  operatorDefault?: boolean;
 }
 
 export type LookupProviderRegistry = Readonly<

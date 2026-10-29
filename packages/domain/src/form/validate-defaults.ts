@@ -1,4 +1,5 @@
 import type { IssueCollector } from "./issues";
+import type { LookupProviderRegistry } from "./registry";
 import type { FieldDef, FieldType } from "./types";
 import { normalizeFieldValue } from "./values";
 
@@ -7,7 +8,9 @@ import { normalizeFieldValue } from "./values";
  *
  * - 只有「使用者填」的欄位能設;`upload` 沒有預設值
  * - 各型別能用的種類:文字 / 多行 / 數字 / 日期 / 日期時間 = 固定或公式;單選 / 多選 = 從選項挑(固定);
- *   是 / 否 = 固定;引用 = 只能系統值「填寫者 / 填寫者的組織」
+ *   是 / 否 = 固定;引用 = 系統值「填寫者 / 填寫者的組織」,或「來源提供的預設」(`provider`:來源登記時
+ *   宣告了依操作者的預設值才能選,登錄表沒給就不驗 → `DEFAULT_PROVIDER_UNSUPPORTED`;條件的形狀與引用
+ *   由連動篩選段 `validate-lookup-filters.ts` 驗)
  * - 固定值要是該型別的合法值;靜態選項的值必須在選項清單內
  * - 值來源「固定值」(`valueSource.value`)同一套判準(`CONSTANT_VALUE_INVALID`):計算時照型別正規化,
  *   型別不對會變成 null,所以在檢查器就擋
@@ -16,7 +19,7 @@ import { normalizeFieldValue } from "./values";
  * `validate-expression-types.ts`)以 `default.expr` 槽檢查。
  */
 
-type DefaultKind = "constant" | "expression";
+type DefaultKind = "constant" | "expression" | "provider";
 
 const DEFAULT_KINDS: Readonly<Record<FieldType, readonly DefaultKind[]>> = {
   text: ["constant", "expression"],
@@ -28,7 +31,7 @@ const DEFAULT_KINDS: Readonly<Record<FieldType, readonly DefaultKind[]>> = {
   multiSelect: ["constant"],
   boolean: ["constant"],
   upload: [],
-  reference: ["expression"],
+  reference: ["expression", "provider"],
   // 明細列第一版沒有預設值(整欄與子欄都沒有)
   array: [],
 };
@@ -71,11 +74,12 @@ function optionValueOf(item: unknown): unknown {
 export function validateDefaults(
   fields: readonly FieldDef[],
   collector: IssueCollector,
+  providers?: LookupProviderRegistry,
 ): void {
   for (const field of fields) {
     const fallback: unknown = field.default;
     if (fallback !== undefined && fallback !== null) {
-      validateDefault(field, fallback, collector);
+      validateDefault(field, fallback, collector, providers);
     }
     if (field.valueSource.kind === "constant") {
       validateFixedValue(field, field.valueSource.value, collector);
@@ -130,6 +134,7 @@ function validateDefault(
   field: FieldDef,
   fallback: unknown,
   collector: IssueCollector,
+  providers: LookupProviderRegistry | undefined,
 ): void {
   const location = { fieldKey: field.key, property: "default" };
   if (field.valueSource.kind !== "input" || field.type === "upload") {
@@ -150,6 +155,19 @@ function validateDefault(
       `「${field.label}」的預設值不能用這種設定`,
       location,
     );
+    return;
+  }
+  if (kind === "provider") {
+    const provider = field.source?.provider;
+    const spec = provider === undefined ? undefined : providers?.[provider];
+    // 來源不存在由引用欄的來源檢查報(`LOOKUP_UNKNOWN_PROVIDER` / `REFERENCE_SOURCE_MISSING`)
+    if (spec !== undefined && spec.operatorDefault !== true) {
+      collector.error(
+        "DEFAULT_PROVIDER_UNSUPPORTED",
+        `引用欄位「${field.label}」的來源沒有提供預設值`,
+        location,
+      );
+    }
     return;
   }
   if (kind === "constant") {

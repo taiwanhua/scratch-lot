@@ -7,7 +7,7 @@
  * | 位置 | 允許 | 拒絕 |
  * | --- | --- | --- |
  * | lookup provider / filter | `user`、`org`:沒有 filter 或只有 boolean 的 `enabled`;`form_submission`:沒有 filter,`formKey` 指向可解析的共用定義;專案宣告的可攜來源(`catalog.lookupProviders`):只有宣告過的固定條件與值 | 未知 provider、未知 filter、本地 id 條件 |
- * | reference / upload 固定值 | 缺席、null、空集合;reference 的 `ctx.user.id` / `ctx.user.orgId` 預設表達式 | 非空的 constant / default |
+ * | reference / upload 固定值 | 缺席、null、空集合;reference 的 `ctx.user.id` / `ctx.user.orgId` 預設表達式;reference 的「來源提供的預設」(條件只引用欄位) | 非空的 constant / default |
  * | lookup 選項的固定預設 | 缺席、null、空集合(選項在執行期查) | 任何非空固定值(改用 account / slug 當值也一樣),多選逐項驗 |
  * | 靜態選項 / 欄位類別 | 靜態 values;受管類別 key 與它的種子選項 | 不在同一計畫的類別或選項 |
  * | 共用流程 assignee | `manager`、可解析的 `formKey` / `fieldKey`、只用權限與非指定組織來源的人員條件 | 人員條件的使用者 / 角色 / 指定組織、指向租戶客製表單 |
@@ -1006,6 +1006,40 @@ function checkColumn(
   }
 }
 
+/** `{ var: "<欄位 key>" }`(只有這一個鍵)。 */
+function isFieldVar(value: unknown): boolean {
+  return (
+    isPlainRecord(value) &&
+    Object.keys(value).length === 1 &&
+    typeof value.var === "string"
+  );
+}
+
+/**
+ * 引用欄「來源提供的預設」:值在執行期依操作者查,本身不夾帶環境值;條件只能引用表單欄位
+ * (`{ var: "<欄位 key>" }`),其他形狀判不了可攜性 → `FIELD_UNSUPPORTED`。
+ */
+function checkProviderDefault(
+  fallback: Record<string, unknown>,
+  path: string,
+  context: FormCheckContext,
+): void {
+  const filter = fallback.filter;
+  if (filter === undefined || filter === null) {
+    return;
+  }
+  if (
+    !isPlainRecord(filter) ||
+    !Object.values(filter).every((value) => isFieldVar(value))
+  ) {
+    context.collector.error(
+      "FIELD_UNSUPPORTED",
+      path,
+      "來源提供的預設的條件只能引用表單欄位({ var: <欄位 key> }),無法判定可攜性",
+    );
+  }
+}
+
 function checkField(
   raw: unknown,
   path: string,
@@ -1052,6 +1086,13 @@ function checkField(
       field,
       fallback.value,
       joinSeedPath(path, "default.value"),
+      context,
+    );
+  }
+  if (fallback?.kind === "provider") {
+    checkProviderDefault(
+      fallback,
+      joinSeedPath(path, "default.filter"),
       context,
     );
   }

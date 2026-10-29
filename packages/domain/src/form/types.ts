@@ -147,12 +147,23 @@ export interface FieldPermission {
  * 欄位預設值:只有 `valueSource.kind = "input"` 的欄位有。
  * - `constant`:固定值(存值形狀同該型別;單選 / 多選 = 選項值,靜態選項存 `value`、類別 / lookup 存 `{ value, label }`)
  * - `expression`:公式,根節點型別 = 欄位型別;`reference` 只能 `ctx.user.id` / `ctx.user.orgId`
+ * - `provider`:來源提供的預設(只有 `reference`,且來源登記時宣告了「依操作者的預設值」):由 api 依操作者
+ *   查出一筆(例:操作者自己目前開著的那一筆)。`filter` 是交給來源的連動條件(鍵 = 來源的篩選欄位、
+ *   值 = `{ var: "<欄位 key>" }`,同引用欄的連動篩選);被引用的欄位就是這個預設值的依賴
  *
  * 新增草稿時算一次;使用者沒碰過(`touched[]` 沒有它)前,依賴的欄位變了前端會重算。
  */
 export type FieldDefault =
   | { kind: "constant"; value: unknown }
-  | { kind: "expression"; expr: Expression };
+  | { kind: "expression"; expr: Expression }
+  | ProviderFieldDefault;
+
+/** 來源提供的預設(`FieldDefault` 的 `provider`)。 */
+export interface ProviderFieldDefault {
+  kind: "provider";
+  /** 交給來源的連動條件:鍵 = 來源的篩選欄位、值 = `{ var: "<表單層欄位 key>" }`;不給 = 沒有條件。 */
+  filter?: Readonly<Record<string, { var: string }>>;
+}
 
 /** 明細列子欄可用的型別(白名單;不支援巢狀 `array`、多行、多選、上傳)。 */
 export const ARRAY_COLUMN_TYPES = [

@@ -107,12 +107,12 @@
 
 正本:`packages/domain/src/project/lottery/store-forms.ts`(表單代號、欄位 key、存值解析、送出前的值檢查);掛接點規則 `apps/api/src/project/lottery/store/store-forms-rules.service.ts`。
 
-兩張都是**受管表單**(`seeds/project/revisions/sale_reversal.r3.seed.ts`、`cash_correction.r2.seed.ts`):綁 `store`、**沒有草稿**(`allowDraft: false`)、單號 `SR-0001` / `X-0001`、作廢原因用共用「作廢原因」(`void-reason`)。流程不 seed,由開通腳本建(`onboarding/form-workflows/store-forms.ts`)。
+兩張都是**受管表單**(`seeds/project/revisions/sale_reversal.r3.seed.ts`、`cash_correction.r3.seed.ts`):綁 `store`、**沒有草稿**(`allowDraft: false`)、單號 `SR-0001` / `X-0001`、作廢原因用共用「作廢原因」(`void-reason`)。流程不 seed,由開通腳本建(`onboarding/form-workflows/store-forms.ts`)。
 
-| 表單         | formKey           | 欄位                                                                                                                                                                                                                                                                                                  | 新增頁           |
-| ------------ | ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------- |
-| 撤銷售出申請 | `sale_reversal`   | 分店 `branch`、張數 `lines[{ book, ticket_nos, tickets, amount }]`(每本一列)、原因 `reason`(欄位管理「撤銷售出原因」`lottery-sale-reversal-reason`)、退款給客人 `refund`(是 / 否)、退款班次 `refund_shift`(`lottery_shift`,退款 = 是才顯示)、說明 `note`、退款金額 `refund_amount`(明細金額合計,計算) | 替換(ST-31b)     |
-| 現金更正單   | `cash_correction` | 分店、方向 `direction`(現金增加 / 減少)、金額 `amount`(正整數)、位置 `place`(某一班的抽屜 / 小金庫)、班次 `shift`(位置 = 抽屜才顯示)、歸屬班次 `attributed_shift`(選填)、原因類別 `reason`(欄位管理「現金更正原因」`lottery-cash-correction-reason`)、說明 `note`(必填)                               | 表單引擎(不替換) |
+| 表單         | formKey           | 欄位                                                                                                                                                                                                                                                                                                                                                                    | 新增頁           |
+| ------------ | ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------- |
+| 撤銷售出申請 | `sale_reversal`   | 分店 `branch`、張數 `lines[{ book, ticket_nos, tickets, amount }]`(每本一列)、原因 `reason`(欄位管理「撤銷售出原因」`lottery-sale-reversal-reason`)、退款給客人 `refund`(是 / 否)、退款班次 `refund_shift`(`lottery_shift`,退款 = 是才顯示)、說明 `note`、退款金額 `refund_amount`(明細金額合計,計算)                                                                   | 替換(ST-31b)     |
+| 現金更正單   | `cash_correction` | 分店、方向 `direction`(現金增加 / 減少)、金額 `amount`(正整數)、位置 `place`(某一班的抽屜 / 小金庫)、班次 `shift`(位置 = 抽屜才顯示;預設 = 填寫者自己在這家分店開著的班,沒有就空:引用欄預設值「來源提供的預設」,條件 `orgId = 分店`)、歸屬班次 `attributed_shift`(選填)、原因類別 `reason`(欄位管理「現金更正原因」`lottery-cash-correction-reason`)、說明 `note`(必填) | 表單引擎(不替換) |
 
 **建議流程設定**(開通腳本建的那一份,規格 2.1):兩張都是一關「店長審核」,人員條件「角色 店長 且 所屬組織屬於表單欄位『分店』(本身)」,**B5 申請人是審核者時自動通過**(`autoApprove.applicant`;店長自己送的單直接完成)。租戶要改審核者,自己改流程。
 
@@ -322,7 +322,7 @@
 | `lotteryBankDepositForm(orgId)` | `store.bank-deposit` | 存銀行視窗:小金庫目前應有、這家店可用的帳戶 |
 | `depositLotteryVaultToBank(input)` | `store.bank-deposit` | `{ orgId, amount, accountId, note? }` → `{ vaultExpected, movementId, transactionId }` |
 
-- 撤銷售出申請、現金更正單的寫入一律經表單引擎(送出 / 審核 / 掛接點,見上方「撤銷售出申請與現金更正單」);lookup 來源 `lottery_shift`(`project/lookup-providers.ts`,顯示欄 `label`,讀取要 `store.view`;可攜、沒有固定條件)。
+- 撤銷售出申請、現金更正單的寫入一律經表單引擎(送出 / 審核 / 掛接點,見上方「撤銷售出申請與現金更正單」);lookup 來源 `lottery_shift`(`project/lookup-providers.ts`,顯示欄 `label`,讀取要 `store.view`;可攜、沒有固定條件;依操作者的預設值 `defaultForOperator` = 操作者開的(`openedBy`)、還沒結帳(`closedAt: null`)、最新開班的那一班,與看板「我的班」同一個判準)。
 - 排班只經 `ScheduleModule` 匯出的 `ScheduleEntryLookup` 讀(`findEntryForShift` / `listEntriesOfDay` / `taskSnapshotFor` / `punchStart` / `hasStartPunch`;依賴方向刮刮樂 → 排班)。
 - 現金流水經 `CashLedgerService.recordCashMovement`(交易內)。出庫原因的欄位管理選項對到流水的原因代碼:「開班零用金」→ `opening_float`、「補零錢」→ `change`、其他(含租戶自己加的選項)→ `other`,選項名稱與說明寫進流水備註(`store-cash.service.ts` 的 `withdrawReasonOf`)。
 - 讀取照操作者的可見範圍;負責人名稱以租戶邊界讀(`shift-views.ts`,反查)。刷到時的張以租戶邊界反查(`store-sales.service.ts`:待查 / 遺失的張可能在別家店、不是本店的也要說得出來);寫入一律照操作者的範圍經帳本。

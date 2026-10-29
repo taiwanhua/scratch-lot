@@ -13,7 +13,7 @@ import { purchasingModuleDeclarations } from "./purchasing";
 import { purchasingPurchaseModule } from "./purchasing.purchase";
 import { purchasingTransferModule } from "./purchasing.transfer";
 import { reportsModule } from "./reports";
-import { seed as cashCorrectionForm } from "./revisions/cash_correction.r2.seed";
+import { seed as cashCorrectionForm } from "./revisions/cash_correction.r3.seed";
 import { seed as checkoutConfirmForm } from "./revisions/checkout_confirm.r2.seed";
 import { seed as makeupPunchForm } from "./revisions/makeup_punch.r4.seed";
 import { seed as purchaseForm } from "./revisions/purchase.r5.seed";

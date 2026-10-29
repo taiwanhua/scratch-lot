@@ -107,6 +107,7 @@ export const FormFillForm = ({
     recomputeDefaults,
     fillOnMount: fillDefaultsOnMount,
     ...(systemLabels !== undefined && { systemLabels }),
+    lookup: { formKey, version },
   });
   const { values } = fill;
   useRouteTabItemLabel(tabLabelOf?.(values));

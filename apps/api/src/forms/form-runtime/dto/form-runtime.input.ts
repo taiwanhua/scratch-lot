@@ -223,6 +223,24 @@ export class FormLookupRecordInput {
   id!: string;
 }
 
+/** `formLookupDefault`:引用欄「來源提供的預設」此刻的值(只收表單層引用欄)。 */
+@InputType()
+export class FormLookupDefaultInput {
+  @Field(() => ID)
+  formKey!: string;
+
+  /** 省略 = 草稿(設計器預覽)。 */
+  @Field(() => Int, { nullable: true })
+  version?: number | null;
+
+  @Field(() => String)
+  fieldKey!: string;
+
+  /** 預設值條件與連動篩選引用的欄位目前的值(同 `FormLookupInput.filterValues`)。 */
+  @Field(() => GraphQLJSONObject, { nullable: true })
+  filterValues?: Record<string, unknown> | null;
+}
+
 /** 撤回(申請人本人;審核中、還沒有任何被接受的審核意見)。 */
 @InputType()
 export class WithdrawSubmissionInput {

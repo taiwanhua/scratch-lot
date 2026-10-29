@@ -8,17 +8,22 @@ import {
   type ExpressionContext,
   type FieldDef,
   type FormDefinition,
+  type LookupSourceDescriptor,
   type StoredValues,
   type SubmissionSummary,
   arrayColumnsOf,
   arrayRowsOf,
   computeSummary,
+  defaultDependenciesOf,
   defaultOrder,
   defaultValueOf,
+  filterScalarForField,
+  filterVarValueOf,
   isEmptyValue,
+  isProviderDefault,
   lookupLabelFieldsOf,
   normalizeSerialFormat,
-  referencedFieldKeys,
+  providerDefaultSourceOf,
   temporalIsoOf,
   upgradeValues,
   uploadLimitIssue,
@@ -1598,6 +1603,7 @@ export class FormSubmissionsService {
    * 新草稿的預設值(只含這次要填的欄位):使用者沒碰過、送來的值是空的、操作者改得動的「使用者填」欄位。
    * 公式引用到操作者讀不到的欄位(含依賴鏈)→ 不算、留空(引用受保護欄位的規則同計算欄位)。
    * 引用欄的預設值(填寫者 / 填寫者的組織)在這裡重驗來源可讀並取 label;讀不到就留空。
+   * 「來源提供的預設」依操作者向來源查(條件換成目前的值),查到的再照來源的可見範圍與篩選取回;沒有就留空。
    */
   private async defaultsOf(
     facts: FormOperatorFacts,
@@ -1619,23 +1625,43 @@ export class FormSubmissionsService {
       ) {
         continue;
       }
-      const refs =
-        field.default?.kind === "expression"
-          ? referencedFieldKeys(field.default.expr)
-          : [];
-      if (refs.some((key) => !gate.canShow(fields, key))) {
+      if (
+        defaultDependenciesOf(field).some((key) => !gate.canShow(fields, key))
+      ) {
         continue;
       }
-      let value: unknown = defaultValueOf(field, fields, working, ctx) ?? null;
-      if (field.type === "reference" && value !== null) {
-        value = await this.referenceDefaultOf(facts, field, value);
-      }
+      const value = await this.defaultOf(facts, field, fields, working, ctx);
       if (value !== null) {
         defaults[field.key] = value;
         working[field.key] = value;
       }
     }
     return defaults;
+  }
+
+  /** 一欄的預設值(`working` = 目前的值,含排在前面的預設值);沒有回 null。 */
+  private async defaultOf(
+    facts: FormOperatorFacts,
+    field: FieldDef,
+    fields: readonly FieldDef[],
+    working: StoredValues,
+    ctx: ExpressionContext,
+  ): Promise<unknown> {
+    if (isProviderDefault(field)) {
+      // 送來的引用值可能還是字串 id(寫入時才正規化成 `{ id, label }`):兩種都當 id
+      const source = providerDefaultSourceOf(field, (key) => {
+        const target = fields.find((candidate) => candidate.key === key);
+        const raw = working[key];
+        return target?.type === "reference" && typeof raw === "string"
+          ? filterScalarForField(target, raw)
+          : filterVarValueOf(target, raw);
+      });
+      return source === null ? null : this.providerDefaultOf(facts, source);
+    }
+    const value = defaultValueOf(field, fields, working, ctx) ?? null;
+    return field.type === "reference" && value !== null
+      ? this.referenceDefaultOf(facts, field, value)
+      : value;
   }
 
   /** 引用欄預設值 `{ id }` → 重驗來源可讀並補 label;讀不到回 null。 */
@@ -1653,6 +1679,29 @@ export class FormSubmissionsService {
     const [record] = await this.lookups.findByValues(
       facts,
       withoutLookupFilterVars(source),
+      "id",
+      [id],
+      lookupLabelFieldsOf(source),
+      { publicOnly: true },
+    );
+    return record ? { id, label: lookupDisplayLabelOf(record, source) } : null;
+  }
+
+  /**
+   * 來源提供的預設:依操作者向來源查一筆,再以依值取回照**可見範圍與篩選**驗一次並取 label
+   * (`source` 的篩選與預設值條件已換成目前的值);查無或讀不到回 null。
+   */
+  private async providerDefaultOf(
+    facts: FormOperatorFacts,
+    source: LookupSourceDescriptor,
+  ): Promise<unknown> {
+    const id = await this.lookups.operatorDefaultId(facts, source);
+    if (id === null) {
+      return null;
+    }
+    const [record] = await this.lookups.findByValues(
+      facts,
+      source,
       "id",
       [id],
       lookupLabelFieldsOf(source),

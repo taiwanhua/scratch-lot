@@ -10,6 +10,7 @@ import {
   type CreateFormDraftMutationVariables,
   type FormFieldOptionsQuery,
   type FormFieldOptionsQueryVariables,
+  type FormLookupDefaultQueryVariables,
   type FormLookupQuery,
   type FormLookupQueryVariables,
   type FormRuntimeVersionQueryVariables,
@@ -32,6 +33,7 @@ import { rawOf } from "@/lib/base/form-engine/definition";
 import { type GraphqlErrorCode, graphqlError } from "./auth-handlers";
 import { formCreateHandlers } from "./form-create-handlers";
 import type { MockSubmission } from "./form-fixtures";
+import { formLookupHandlers } from "./form-lookup-handlers";
 import { submissionActionHandlers } from "./form-submission-action-handlers";
 import { fragmentOf, revisionsOf } from "./form-submission-revisions";
 import { matchesSubmissionsInput } from "./form-submissions-filter";
@@ -65,6 +67,13 @@ export interface FormRuntimeWorldOptions {
   /** 模組 key → 內建欄開關(沒給 = 全開) */
   listBuiltin?: Record<string, ListBuiltinColumns>;
   lookupRecords?: FormLookupQuery["formLookup"]["items"];
+  /**
+   * 引用欄「來源提供的預設」(`formLookupDefault`):依欄位 key 與條件值回一筆(沒給 = 一律 null)。
+   * 回 `lookupRecords` 裡的 id;找不到就當 null
+   */
+  lookupDefault?: (
+    input: FormLookupDefaultQueryVariables["input"],
+  ) => string | null;
   /** 欄位 key → `formFieldOptions` 回的類別選項(沒給 = 空清單) */
   fieldOptions?: Record<
     string,
@@ -100,6 +109,7 @@ export interface FormRuntimeWorld {
     copySubmissionToDraft: { id: string; clientRequestId: string }[];
     formSubmissions: FormSubmissionsQueryVariables["input"][];
     formLookup: FormLookupQueryVariables["input"][];
+    formLookupDefault: FormLookupDefaultQueryVariables["input"][];
     formFieldOptions: FormFieldOptionsQueryVariables["input"][];
   };
 }
@@ -140,6 +150,7 @@ export const formRuntimeWorld = (
     copySubmissionToDraft: [],
     formSubmissions: [],
     formLookup: [],
+    formLookupDefault: [],
     formFieldOptions: [],
   };
   let created = 0;
@@ -261,19 +272,10 @@ export const formRuntimeWorld = (
         },
       });
     }),
-    api.query("FormLookup", ({ variables }) => {
-      const { input } = variables as FormLookupQueryVariables;
-      inputs.formLookup.push(input);
-      return HttpResponse.json({
-        data: {
-          formLookup: {
-            items: lookupRecords,
-            totalCount: lookupRecords.length,
-            page: 1,
-            pageSize: 20,
-          },
-        },
-      });
+    ...formLookupHandlers({
+      records: lookupRecords,
+      lookupDefault: options.lookupDefault,
+      inputs,
     }),
     api.query("FormFieldOptions", ({ variables }) => {
       const { input } = variables as FormFieldOptionsQueryVariables;

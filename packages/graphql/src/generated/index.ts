@@ -1095,6 +1095,13 @@ export type FormForkSourceModel = {
   version: Scalars['Int']['output'];
 };
 
+export type FormLookupDefaultInput = {
+  fieldKey: Scalars['String']['input'];
+  filterValues?: InputMaybe<Scalars['JSONObject']['input']>;
+  formKey: Scalars['ID']['input'];
+  version?: InputMaybe<Scalars['Int']['input']>;
+};
+
 export type FormLookupInput = {
   filterValues?: InputMaybe<Scalars['JSONObject']['input']>;
   formKey: Scalars['ID']['input'];
@@ -1121,6 +1128,7 @@ export type FormLookupProvider = {
   key: Scalars['String']['output'];
   labelField: Scalars['String']['output'];
   name: Scalars['String']['output'];
+  operatorDefault: Scalars['Boolean']['output'];
   valueField: Scalars['String']['output'];
 };
 
@@ -5858,6 +5866,7 @@ export type Query = {
   form: FormPayload;
   formFieldOptions: FormFieldOptionsPayload;
   formLookup: FormLookupPayload;
+  formLookupDefault: FormLookupRecordPayload;
   formLookupProviders: FormLookupProvidersPayload;
   formLookupRecord: FormLookupRecordPayload;
   formRuntimeVersion: FormVersionPayload;
@@ -6094,6 +6103,11 @@ export type QueryFormFieldOptionsArgs = {
 
 export type QueryFormLookupArgs = {
   input: FormLookupInput;
+};
+
+
+export type QueryFormLookupDefaultArgs = {
+  input: FormLookupDefaultInput;
 };
 
 
@@ -9467,6 +9481,13 @@ export type FormVoidReasonOptionsQueryVariables = Exact<{
 
 export type FormVoidReasonOptionsQuery = { __typename?: 'Query', formVoidReasonOptions: { __typename?: 'FormVoidReasonOptionsPayload', categoryKey?: string | null, items: Array<{ __typename?: 'FormFieldOption', value: string, label: string }> } };
 
+export type FormLookupDefaultQueryVariables = Exact<{
+  input: FormLookupDefaultInput;
+}>;
+
+
+export type FormLookupDefaultQuery = { __typename?: 'Query', formLookupDefault: { __typename?: 'FormLookupRecordPayload', record?: { __typename?: 'FormLookupRecord', id: string, value?: string | null, label?: string | null, values: Record<string, unknown> } | null } };
+
 export type FormLookupRecordQueryVariables = Exact<{
   input: FormLookupRecordInput;
 }>;
@@ -9518,7 +9539,7 @@ export type ForkFormMutation = { __typename?: 'Mutation', forkForm: { __typename
 export type FormLookupProvidersQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type FormLookupProvidersQuery = { __typename?: 'Query', formLookupProviders: { __typename?: 'FormLookupProvidersPayload', totalCount: number, items: Array<{ __typename?: 'FormLookupProvider', key: string, name: string, isBase: boolean, labelField: string, valueField: string, filterFields: Array<string>, fields: Array<{ __typename?: 'FormLookupProviderField', key: string, type: string, label?: string | null }> }> } };
+export type FormLookupProvidersQuery = { __typename?: 'Query', formLookupProviders: { __typename?: 'FormLookupProvidersPayload', totalCount: number, items: Array<{ __typename?: 'FormLookupProvider', key: string, name: string, isBase: boolean, labelField: string, valueField: string, filterFields: Array<string>, operatorDefault: boolean, fields: Array<{ __typename?: 'FormLookupProviderField', key: string, type: string, label?: string | null }> }> } };
 
 export type FormVersionQueryVariables = Exact<{
   formKey: Scalars['ID']['input'];
@@ -15871,6 +15892,39 @@ useFormVoidReasonOptionsQuery.getKey = (variables: FormVoidReasonOptionsQueryVar
 
 useFormVoidReasonOptionsQuery.fetcher = (client: GraphQLClient, variables: FormVoidReasonOptionsQueryVariables, headers?: RequestInit['headers']) => fetcher<FormVoidReasonOptionsQuery, FormVoidReasonOptionsQueryVariables>(client, FormVoidReasonOptionsDocument, variables, headers);
 
+export const FormLookupDefaultDocument = `
+    query FormLookupDefault($input: FormLookupDefaultInput!) {
+  formLookupDefault(input: $input) {
+    record {
+      ...FormLookupRecordFields
+    }
+  }
+}
+    ${FormLookupRecordFieldsFragmentDoc}`;
+
+export const useFormLookupDefaultQuery = <
+      TData = FormLookupDefaultQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: FormLookupDefaultQueryVariables,
+      options?: Omit<UseQueryOptions<FormLookupDefaultQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<FormLookupDefaultQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<FormLookupDefaultQuery, TError, TData>(
+      {
+    queryKey: ['FormLookupDefault', variables],
+    queryFn: fetcher<FormLookupDefaultQuery, FormLookupDefaultQueryVariables>(client, FormLookupDefaultDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useFormLookupDefaultQuery.getKey = (variables: FormLookupDefaultQueryVariables) => ['FormLookupDefault', variables];
+
+
+useFormLookupDefaultQuery.fetcher = (client: GraphQLClient, variables: FormLookupDefaultQueryVariables, headers?: RequestInit['headers']) => fetcher<FormLookupDefaultQuery, FormLookupDefaultQueryVariables>(client, FormLookupDefaultDocument, variables, headers);
+
 export const FormLookupRecordDocument = `
     query FormLookupRecord($input: FormLookupRecordInput!) {
   formLookupRecord(input: $input) {
@@ -16073,6 +16127,7 @@ export const FormLookupProvidersDocument = `
       labelField
       valueField
       filterFields
+      operatorDefault
       fields {
         key
         type

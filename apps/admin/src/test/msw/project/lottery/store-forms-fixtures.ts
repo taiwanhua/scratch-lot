@@ -20,7 +20,7 @@ import { api, type server } from "../../server";
 
 /**
  * 店面管理兩張表單(撤銷售出申請、現金更正單;規格 8.5、8.8)的夾具:定義與受管表單同形
- * (正本 `apps/db-migrator/seeds/project/revisions/sale_reversal.r3.seed.ts`、`cash_correction.r2.seed.ts`)、
+ * (正本 `apps/db-migrator/seeds/project/revisions/sale_reversal.r3.seed.ts`、`cash_correction.r3.seed.ts`)、
  * Figma ST-31a / ST-32a 的列表列、退款班次的選項。元件測試、假 api 與 mock 模式共用。
  */
 
@@ -127,6 +127,8 @@ export const cashCorrectionDefinition = (): FormDefinition => ({
     }),
     {
       ...shiftRef("shift", "班次"),
+      // 來源提供的預設:填寫者自己在「分店」那家店開著的班
+      default: { kind: "provider", filter: { orgId: { var: "branch" } } },
       visibleWhen: { "==": [{ var: "place" }, "drawer"] },
       rules: { required: true },
     },

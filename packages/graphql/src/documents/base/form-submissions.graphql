@@ -283,6 +283,16 @@ query FormVoidReasonOptions($formKey: ID!) {
   }
 }
 
+# FormLookupDefaultInput: { formKey, version?, fieldKey, filterValues? }
+# 引用欄「來源提供的預設」此刻的值(填寫頁顯示用);沒有預設 / 條件沒填齊 / 讀不到為 null
+query FormLookupDefault($input: FormLookupDefaultInput!) {
+  formLookupDefault(input: $input) {
+    record {
+      ...FormLookupRecordFields
+    }
+  }
+}
+
 # FormLookupRecordInput: { formKey, version?, target, id };讀不到為 null
 query FormLookupRecord($input: FormLookupRecordInput!) {
   formLookupRecord(input: $input) {

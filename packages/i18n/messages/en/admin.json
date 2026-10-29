@@ -1804,6 +1804,9 @@
         "user": "Filler",
         "org": "Filler's organization"
       },
+      "defaultProvider": "Default from the source",
+      "defaultProviderFilter": "Default conditions (optional)",
+      "defaultProviderFilterHint": "The source uses the current values of these fields to find the filler's own record (e.g. their own one in that organization); it is refilled when those fields change, until the filler edits this field.",
       "defaultBoolean": {
         "true": "Yes",
         "false": "No"

@@ -156,6 +156,7 @@ query FormLookupProviders {
       labelField
       valueField
       filterFields
+      operatorDefault
       fields {
         key
         type
