@@ -154,12 +154,6 @@ lookup 的動態條件目前只有「依另一欄位篩選」;加其他動態條
 
 ## 小任務
 
-### Claude hook 在 git worktree 誤報
-
-`scripts/claude-hooks/post-edit-check.mjs` 以 `process.cwd()` 當 repo 根跑檢查:session 在 worktree 內啟動時正常;若 session 在主 checkout、卻編輯 worktree 裡新增的 workspace,turbo / 套件查找會落在主 repo,可能誤報「No package found」。修法:以「被編輯檔案向上找到的 repo 根」為工作目錄。
-
-現況:未開票;worktree 內啟動的 agent 未再回報,主 checkout 編輯 worktree 檔的情形未驗證。
-
 ### Figma「流程版本(發布中斷)」參考畫面退場
 
 發布與退役改成交易後,「發布中斷」與「重試發布」已整套退場;`docs/standards/general/figma.md` 第 174 行登記的參考畫面「Admin 流程管理 — 流程版本(發布中斷)」(2022:5789)已無對應功能,要和設計稿一起處理(刪除或改畫一般的版本頁籤),並同步登記表。

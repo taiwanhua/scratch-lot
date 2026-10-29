@@ -4,6 +4,9 @@
  * (CI 也守這一關),ts/tsx 再多跑 ESLint 與該檔所屬套件的 typecheck。
  * 失敗時以 exit code 2 把錯誤回饋給 AI 當場修正 — 三層約束第一層的閉環。
  *
+ * 工作目錄是被編輯檔案往上找到的 repo / worktree 根(`repo-root.mjs`),不是 session 的 `process.cwd()`:
+ * session 在主 checkout 啟動、編輯 git worktree 裡的檔案時,檢查與 typecheck 開關都以那個 worktree 為準。
+ *
  * 速度(2026-09-19 調整):
  * - ESLint 開 `--cache`(cache 放套件的 node_modules/.cache,不入版控),第二次起只重算改過的檔
  * - typecheck 直接跑 `tsc --noEmit --incremental`(buildinfo 同樣放 node_modules/.cache),不經 turbo:
@@ -15,6 +18,8 @@
 import { execSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import path from "node:path";
+
+import { findRepoRoot } from "./repo-root.mjs";
 
 let filePath = "";
 try {
@@ -36,7 +41,10 @@ if (
   process.exit(0);
 }
 
-const repoRoot = process.cwd();
+// 以被編輯檔案所屬的 repo / worktree 根為工作目錄(session 可能在主 checkout 啟動、卻編輯 worktree 裡的檔);
+// 之後的指令一律用絕對路徑,不受工作目錄影響
+const repoRoot = findRepoRoot(filePath, process.cwd());
+filePath = path.resolve(process.cwd(), filePath);
 
 const run = (command, cwd) => {
   try {
@@ -65,7 +73,7 @@ if (formatError !== null) {
 if (!/\.(ts|tsx)$/.test(filePath)) process.exit(0);
 
 // 往上找檔案所屬的 workspace 套件
-let pkgDir = path.dirname(path.resolve(filePath));
+let pkgDir = path.dirname(filePath);
 while (pkgDir !== repoRoot && !existsSync(path.join(pkgDir, "package.json"))) {
   const parent = path.dirname(pkgDir);
   if (parent === pkgDir) process.exit(0); // 走出檔案系統頂端,跳過
