@@ -2,12 +2,9 @@ import {
   type Announcements,
   DndContext,
   type DragEndEvent,
-  PointerSensor,
   type ScreenReaderInstructions,
   type UniqueIdentifier,
   closestCenter,
-  useSensor,
-  useSensors,
 } from "@dnd-kit/core";
 import {
   SortableContext,
@@ -20,6 +17,7 @@ import { Box } from "@repo/ui/box";
 import { IconButton } from "@repo/ui/icon-button";
 import { MoreHorizIcon } from "@repo/ui/icons";
 
+import { usePointerDragSensors } from "@/hooks/base/useSortableItem";
 import type { BatchCloseKind, RouteTab } from "@/lib/base/route-tabs";
 import { ROUTE_TABS_HEIGHT } from "@/lib/base/shell-header-geometry";
 
@@ -29,9 +27,6 @@ import {
   type RouteTabMenuTarget,
 } from "./RouteTabMenu";
 import { SortableTab } from "./SortableTab";
-
-/** 指標移動超過這個距離才算拖曳(px;之內是點擊 → 切換頁籤) */
-const DRAG_START_DISTANCE = 6;
 
 export interface RouteTabsProps {
   tabs: RouteTab[];
@@ -72,11 +67,8 @@ export const RouteTabs = ({
     setMenuTarget({ route, anchor, isFromMoreButton });
   };
   const isMoreMenuOpen = menuTarget?.isFromMoreButton === true;
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: { distance: DRAG_START_DISTANCE },
-    }),
-  );
+  // 指標移動超過拖曳門檻才算拖曳(之內是點擊 → 切換頁籤)
+  const sensors = usePointerDragSensors();
 
   const labelOf = (id: UniqueIdentifier) =>
     tabs.find((tab) => tab.route === id)?.label ?? String(id);
@@ -233,7 +225,6 @@ export const RouteTabs = ({
                   isActive={isActive}
                   tabIndex={isTabStop ? 0 : -1}
                   closeLabel={t("close", { label: tab.label })}
-                  dragStartDistance={DRAG_START_DISTANCE}
                   onSelect={() => {
                     onSelect(tab.route);
                   }}

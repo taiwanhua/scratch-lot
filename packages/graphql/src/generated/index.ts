@@ -1330,10 +1330,13 @@ export type FormSubmissionSummary = {
 };
 
 export type FormSubmissionsInput = {
+  dateFrom?: InputMaybe<Scalars['String']['input']>;
+  dateTo?: InputMaybe<Scalars['String']['input']>;
   excludeFormKeys?: InputMaybe<Array<Scalars['ID']['input']>>;
   formKey?: InputMaybe<Scalars['ID']['input']>;
   keyword?: InputMaybe<Scalars['String']['input']>;
   moduleKey: Scalars['String']['input'];
+  orgId?: InputMaybe<Scalars['ID']['input']>;
   page?: InputMaybe<Scalars['Int']['input']>;
   /** 每頁筆數,上限 100 */
   pageSize?: InputMaybe<Scalars['Int']['input']>;

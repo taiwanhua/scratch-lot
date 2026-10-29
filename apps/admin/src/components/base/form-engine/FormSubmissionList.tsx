@@ -42,6 +42,11 @@ export interface FormSubmissionListFilters {
   keyword: string;
   formKey: string | null;
   status: FormSubmissionStatus | null;
+  /** 歸屬組織(含下層);不給 / null = 不篩 */
+  orgId?: string | null;
+  /** 摘要槽「日期」的區間(當地日期 `YYYY-MM-DD`,含頭尾,以租戶時區切日);不給 / null = 那一邊不限 */
+  dateFrom?: string | null;
+  dateTo?: string | null;
   page: number;
 }
 
@@ -125,6 +130,9 @@ export const FormSubmissionList = ({
       pageSize,
       ...(filters.formKey !== null && { formKey: filters.formKey }),
       ...(filters.status !== null && { status: filters.status }),
+      ...(filters.orgId != null && { orgId: filters.orgId }),
+      ...(filters.dateFrom != null && { dateFrom: filters.dateFrom }),
+      ...(filters.dateTo != null && { dateTo: filters.dateTo }),
       ...(excludeFormKeys !== undefined &&
         excludeFormKeys.length > 0 && {
           excludeFormKeys: [...excludeFormKeys],

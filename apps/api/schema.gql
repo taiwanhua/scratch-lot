@@ -1227,10 +1227,13 @@ type FormSubmissionSummary {
 }
 
 input FormSubmissionsInput {
+  dateFrom: String
+  dateTo: String
   excludeFormKeys: [ID!]
   formKey: ID
   keyword: String
   moduleKey: String!
+  orgId: ID
   page: Int = 1
 
   """每頁筆數,上限 100"""

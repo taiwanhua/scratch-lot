@@ -1,4 +1,3 @@
-import { useSortable } from "@dnd-kit/sortable";
 import type { ReactNode } from "react";
 import { useTranslations } from "use-intl";
 
@@ -7,6 +6,7 @@ import { Box } from "@repo/ui/box";
 import { Stack } from "@repo/ui/stack";
 import { Tag } from "@repo/ui/tag";
 
+import { useSortableItem } from "@/hooks/base/useSortableItem";
 import { designFieldId } from "@/lib/base/form-engine/design-ids";
 
 export interface DesignFieldCellProps {
@@ -35,14 +35,9 @@ export const DesignFieldCell = ({
   children,
 }: DesignFieldCellProps) => {
   const t = useTranslations("admin.formEngine.design");
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: designFieldId(cellId) });
+  const { attributes, listeners, setNodeRef, dragSx } = useSortableItem(
+    designFieldId(cellId),
+  );
 
   const badges: string[] = [];
   if (field.visibleWhen !== undefined && field.visibleWhen !== null) {
@@ -92,15 +87,8 @@ export const DesignFieldCell = ({
         border: "1px dashed",
         borderColor: isSelected ? "primary.main" : "divider",
         bgcolor: isSelected ? "primary.lighter" : "background.paper",
-        cursor: isDragging ? "grabbing" : "pointer",
-        touchAction: "none",
-        position: "relative",
-        zIndex: isDragging ? 1 : "auto",
-        // 拖曳中的位移是執行期幾何值(STYLE-01 例外,同 RouteTabs 的 SortableTab)
-        transform: transform
-          ? `translate3d(${String(Math.round(transform.x))}px, ${String(Math.round(transform.y))}px, 0)`
-          : undefined,
-        transition,
+        // 拖曳中的位移、過場、抓取游標(共用 `useSortableItem`,同路由頁籤)
+        ...dragSx,
       }}
     >
       <Stack spacing={1}>

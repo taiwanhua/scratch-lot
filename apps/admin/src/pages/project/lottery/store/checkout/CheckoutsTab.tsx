@@ -24,9 +24,9 @@ import { Table, type TableColumn } from "@repo/ui/table";
 import { Tag } from "@repo/ui/tag";
 import { Typography } from "@repo/ui/typography";
 
+import { DateFilterPicker } from "@/components/base/DateFilterPicker/DateFilterPicker";
 import { FilterDrawer } from "@/components/base/FilterDrawer/FilterDrawer";
 import { useFormModuleAccess } from "@/components/base/form-engine/FormModulePages/useFormModuleAccess";
-import { DateFilterPicker } from "@/components/project/DateFilterPicker/DateFilterPicker";
 import { useMe } from "@/hooks/base/useMe";
 import { useSession } from "@/hooks/base/useSession";
 import { useTenantTimezone } from "@/hooks/base/useTenantTimezone";

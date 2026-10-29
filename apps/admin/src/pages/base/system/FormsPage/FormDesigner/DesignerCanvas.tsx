@@ -1,11 +1,4 @@
-import {
-  DndContext,
-  type DragEndEvent,
-  PointerSensor,
-  closestCenter,
-  useSensor,
-  useSensors,
-} from "@dnd-kit/core";
+import { DndContext, type DragEndEvent, closestCenter } from "@dnd-kit/core";
 import { useTranslations } from "use-intl";
 
 import type { FieldType } from "@repo/domain/form";
@@ -16,6 +9,7 @@ import { TextField } from "@repo/ui/text-field";
 import { Tooltip } from "@repo/ui/tooltip";
 
 import { FormRenderer } from "@/components/base/form-engine/FormRenderer/FormRenderer";
+import { usePointerDragSensors } from "@/hooks/base/useSortableItem";
 import type {
   DesignDefinition,
   DesignSection,
@@ -31,9 +25,6 @@ import {
 } from "@/lib/base/form-engine/expression-context";
 
 import { UnplacedFields } from "./UnplacedFields";
-
-/** 拖超過這個距離才算拖拉(否則是點擊選取)。 */
-const DRAG_START_DISTANCE = 6;
 
 export interface DesignerCanvasProps {
   formKey: string;
@@ -71,11 +62,8 @@ export const DesignerCanvas = ({
   onRemoveSection,
 }: DesignerCanvasProps) => {
   const t = useTranslations("admin.forms.designer");
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: { distance: DRAG_START_DISTANCE },
-    }),
-  );
+  // 拖超過門檻才算拖拉(否則是點擊選取;共用 `usePointerDragSensors`,同路由頁籤)
+  const sensors = usePointerDragSensors();
 
   const targetOf = (overId: string): PlaceTarget | null => {
     const over = parseDesignId(overId);

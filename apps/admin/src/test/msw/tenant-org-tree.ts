@@ -1,4 +1,8 @@
+import { HttpResponse } from "msw";
+
 import type { TenantOrgTreeQuery } from "@repo/graphql";
+
+import { api } from "./server";
 
 export type TestTenantOrgNode = TenantOrgTreeQuery["tenantOrgTree"][number];
 
@@ -35,3 +39,20 @@ export const toTenantTree = (
     isManaged: flags.managedIds?.includes(node.id) ?? true,
     children: toTenantTree(node.children ?? [], flags) as never,
   }));
+
+/** `tenantOrgTree` 回固定的樹(組織選擇器 `visible` / `tenant` 模式的假 api);沒給 = 只有 `org-1`。 */
+export const tenantOrgTreeHandler = (
+  nodes: readonly TestTenantOrgNode[] = toTenantTree([
+    { id: "org-1", name: "總部" },
+  ]),
+) =>
+  api.query("TenantOrgTree", () =>
+    HttpResponse.json({ data: { tenantOrgTree: nodes } }),
+  );
+
+/** world 的租戶樹選項:`null` = 不攔。 */
+export type OrgTreeOption = readonly TestTenantOrgNode[] | null;
+
+/** 給 world 用:`null` = 不攔(由別的 world 提供),沒給 = 預設的樹。 */
+export const orgTreeHandlers = (nodes?: OrgTreeOption) =>
+  nodes === null ? [] : [tenantOrgTreeHandler(nodes)];

@@ -74,11 +74,6 @@
 | `RootOrgNotice` / 需要租戶的頁 | `components/project/RootOrgNotice/{RootOrgNotice,WithTenantRequired}.tsx`(底座通知設定、側欄數字、流程綁定各有一份 TENANT_ONLY) |
 | 表單代號分派四頁共用機制       | `pages/project/lottery/purchasing/*-keys.ts`                                                                                    |
 
-**底座小修正(兩邊都沒做)**
-
-- 表單列表支援「組織欄 / 日期區間」篩選(`FormListPage.tsx` 只有關鍵字、表單、狀態)。
-- 拖拉排序共用元件(RouteTabs 與表單設計器各用一份 dnd-kit)。
-
 **已在本專案的底座路徑改好、待 contribute**
 
 - 表單引擎的類別選項併進 `FieldOptionsService`(`optionMapOf` / `categoryKeys`;刪 `forms/field-category-options.service.ts`)。

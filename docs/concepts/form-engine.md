@@ -178,6 +178,8 @@ options 由 `lib/base/form-engine/form-module-options.ts` 的 `composeFormModule
 | `create` / `edit` | 跑                                           | 套             | 真實值 |
 | `readonly`        | 只重算顯示 / 唯讀條件(用該修訂的 `ctx`)      | 套(現在的讀者) | 存值   |
 
+預設列表頁 `FormListPage` 的篩選:搜尋(摘要標題)、表單、狀態、組織(`OrgTreeSelect` `scope="visible"` 單選,含下層)、日期起迄(摘要槽「日期」,含頭尾),全部存在網址 `?list=`(`useUrlState`),換條件回到第一頁。篩選列走 `FilterDrawer`:電腦攤在列上、改了立刻套用;平板 / 手機收進 [篩選 (N)] 抽屜,按 [套用] 才查。條件的語意見 `docs/modules/forms.md`「`formSubmissions` 的組織與日期條件」。`FormSubmissionList` 的 `filters` 也收 `orgId` / `dateFrom` / `dateTo`(選填),自組列表的頁面可以直接帶。
+
 預設列表頁 `FormListPage` 收選填的 `excludeFormKeys`:組裝頁另外呈現的表單(自己的分頁或入口)不出現在列表、表單篩選選項與 [+ 新增];排除條件經 `FormSubmissionList` 送到 api 的 `formSubmissions`,總筆數與分頁照排除後算。不給 = 模組內全部表單。
 
 正本:`apps/admin/src/components/base/form-engine/`、`apps/admin/src/lib/base/form-engine/`、`apps/admin/src/hooks/base/useModuleForms.ts`、`useFormDraft.ts`、`useFormSubmission.ts`

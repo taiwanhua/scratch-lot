@@ -205,6 +205,7 @@ Provider 內找不到模組設定時使用預設模板 `{{title}}`;缺少 Provid
 
 - **路由頁籤記住網址參數**:頁面以 `useUrlState` 寫進網址的篩選、頁碼、頁內分頁,由殼的同步(`syncEntries`)記到目前頁籤上(`search`,與路徑存在同一筆、同一把 sessionStorage key)。切回頁籤、從側欄點已開著的那一頁,都回到它記下的參數(側欄連結的網址由 `SideNav/useNavLinkHref` 帶上);頁籤關掉後再從側欄打開是預設條件。頁面內的「返回列表 / 取消 / 存完離開」同樣帶回列表頁籤記下的參數(`hooks/base/useRouteTabHref`,與關閉頁籤、刪除後回列表同一個規則)。用帶參數的網址打開時以網址為準:頁籤已開著就換掉原本的條件,沒開就開新的;參數被 `useUrlState` 清掉(格式錯誤)時頁籤記下的也跟著清。
 - **批次關閉選單**(`RouteTabs/RouteTabMenu.tsx`):關閉左側 / 右側 / 其他所有分頁,沒有可關的那一項停用。叫出方式共用同一份選單:右鍵;觸控長按約 0.5 秒(按住不動才算,移動超過拖曳門檻 6px 就交給拖曳,長按放開後不切換頁籤);頁籤列最右的「⋯」(作用在目前頁籤,沒有目前頁籤時停用);焦點在頁籤時按選單鍵或 Shift+F10。目前頁沒被關 → 畫面不動;目前頁被關 → 切到按右鍵 / 長按的那一頁(帶回它記下的網址參數;用「⋯」時作用頁就是目前頁,不會被關)。單一關閉照舊切相鄰。狀態規則是 `lib/base/route-tabs.ts` 的 `closeLeftOf` / `closeRightOf` / `closeOthers`(回 `{ entries, navigateTo }`,同 `closeEntry`),store 的 `closeBatch` 呼叫它們。
+- **拖拉排序的共用設定**(`hooks/base/useSortableItem.ts`;路由頁籤與表單設計器共用):`usePointerDragSensors` 只有 dnd-kit 的指標感應器(滑鼠、觸控、筆),移動超過 `DRAG_START_DISTANCE`(6px)才算拖曳,之內是點擊;`useSortableItem(id)` = `useSortable` + 拖曳中的樣式 `dragSx`(位移、過場、浮到上層、抓取游標、`touchAction: none`),元件面板這種只拖不排的用 `dragTranslateOf`。鍵盤不走 dnd-kit(頁籤以 Shift+方向鍵搬,設計器以點擊與屬性面板操作)。`DndContext` / `SortableContext`(碰撞偵測、排序策略、無障礙播報)仍由各處自己包:頁籤列是一條橫列加播報,設計器是多分區網格加外部拖入,兩者差在這一層,硬抽成一個元件反而要開一堆開關。測試以 `test/dnd-kit-double.tsx` 換掉整個 dnd-kit 模組(共用 hook 也跟著吃替身)。
 - 帶識別碼的詳情 / 編輯頁是**詳情子頁籤**:每筆一個,標籤「所屬模組名 — 項目名」。項目名由頁面拿到資料後經 `useRouteTabItemLabel` 提供,殼不查業務資料。
 - 項目名最前面接頁面種類(「檢視・項目名」「編輯・項目名」),同一筆的詳情與編輯分得出來。組法是字典 `admin.formEngine.pages.tabLabelWithAction`,文字是 `admin.formEngine.pages.actions`:
   - 固定欄位模組:頁面把頁面種類傳給 `useRouteTabItemLabel` 的第二個參數(`"view"` / `"edit"`),由它組。
@@ -276,23 +277,25 @@ Provider 內找不到模組設定時使用預設模板 `{{title}}`;缺少 Provid
 
 選組織一律照下表挑元件與設定(規範 REACT-15);不在表上的用途先補進這張表再做。
 
-| #   | 用途           | 元件                                                                               | 設定                                                                                                                                                     | 例子                                                   |
-| --- | -------------- | ---------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
-| ①   | 切換目前組織   | `OrgSwitcher`(`components/base/OrgSwitcher/`;殼的頂列,< `md` 是精簡版 `isCompact`) | 列操作者的所屬組織;切換後整個 app 換當前組織                                                                                                             | 頂列「當前組織」                                       |
-| ②   | 治理頁的組織樹 | `OrgTreePicker`                                                                    | 管理範圍(`orgTree`),樹本身就是頁面主體                                                                                                                   | 組織管理、使用者管理的左側樹                           |
-| ③   | 治理設定挑組織 | `OrgTreeSelect`,`scope="managed"`(預設)                                            | 只列管理範圍(`orgTree`,要組織 / 使用者管理的檢視權),單選或多選                                                                                           | 人員條件的所屬組織、資料範圍的套用對象、流程的跳過組織 |
-| ④   | 業務表單欄位   | `OrgTreeSelect`,`scope="visible"`                                                  | 列**整棵租戶樹**(`tenantOrgTree`),只有可見範圍內的能選,其他反灰並註明「不在你的可見範圍內」;單選;呼叫端的 `disabledReasons` 疊加(例「已由 王小明 對應」) | 業務資料的所屬組織、人員可負責的組織                   |
-| ⑤   | 頁面篩選       | `OrgTreeSelect`,`scope="visible"`                                                  | 同 ④;預設目前組織(值放網址),單選,或多選加 `maxCount` 上限                                                                                                | 報表的組織(多選、上限)、依組織設定的規則 / 行事曆      |
-| ⑥   | 共用給其他組織 | `OrgTreeSelect`,`scope="tenant"`                                                   | 整棵租戶樹都能選;多選、「含下層」選項(之後由資料共用的票做)                                                                                              | (之後)資料共用                                         |
+| #   | 用途           | 元件                                                                               | 設定                                                                                                                                                     | 例子                                                                                |
+| --- | -------------- | ---------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| ①   | 切換目前組織   | `OrgSwitcher`(`components/base/OrgSwitcher/`;殼的頂列,< `md` 是精簡版 `isCompact`) | 列操作者的所屬組織;切換後整個 app 換當前組織                                                                                                             | 頂列「當前組織」                                                                    |
+| ②   | 治理頁的組織樹 | `OrgTreePicker`                                                                    | 管理範圍(`orgTree`),樹本身就是頁面主體                                                                                                                   | 組織管理、使用者管理的左側樹                                                        |
+| ③   | 治理設定挑組織 | `OrgTreeSelect`,`scope="managed"`(預設)                                            | 只列管理範圍(`orgTree`,要組織 / 使用者管理的檢視權),單選或多選                                                                                           | 人員條件的所屬組織、資料範圍的套用對象、流程的跳過組織                              |
+| ④   | 業務表單欄位   | `OrgTreeSelect`,`scope="visible"`                                                  | 列**整棵租戶樹**(`tenantOrgTree`),只有可見範圍內的能選,其他反灰並註明「不在你的可見範圍內」;單選;呼叫端的 `disabledReasons` 疊加(例「已由 王小明 對應」) | 業務資料的所屬組織、人員可負責的組織                                                |
+| ⑤   | 頁面篩選       | `OrgTreeSelect`,`scope="visible"`                                                  | 同 ④;預設目前組織(值放網址),單選,或多選加 `maxCount` 上限                                                                                                | 報表的組織(多選、上限)、依組織設定的規則 / 行事曆;表單列表的組織(單選、不給 = 全部) |
+| ⑥   | 共用給其他組織 | `OrgTreeSelect`,`scope="tenant"`                                                   | 整棵租戶樹都能選;多選、「含下層」選項(之後由資料共用的票做)                                                                                              | (之後)資料共用                                                                      |
 
 - `tenantOrgTree`:當前組織所屬租戶的整棵樹,每個節點只帶名稱、上層、停用狀態與「可見 / 可管理」兩個旗標;釘在當前組織的租戶(別的租戶不出現),根組織成員從根組織起整棵樹。只要登入。
 - 已選但樹上沒有的組織(別的租戶、範圍外)欄位顯示「不在你的管理範圍內」(`managed`)/「不在你的可見範圍內」(`visible` / `tenant`),可以取消。
 
 正本:`apps/admin/src/components/base/OrgTreeSelect/OrgTreeSelect.tsx`、`apps/admin/src/lib/base/org-tree.ts`(`tenantTreeToOrgNodes`)、`docs/modules/org-manager.md`「api 介面」
 
-**列表篩選 `FilterDrawer`**(`components/base/FilterDrawer/`;規格 RW-01 / RW-01b):電腦(≥ `lg`)把篩選欄位攤在列表上方、改了立刻套用;平板(`sm`–`lg`)[篩選 (N)] 從右側滑出抽屜、手機(< `sm`)從底部升起。抽屜裡是同一組欄位(`renderFields(value, change)`,呼叫端只寫一份)+ [清除] [套用]:改的是草稿,[套用] 才寫回(通常是 `useUrlState` 的篩選),關掉不套用;關鍵字搜尋框(`search`)一直留在外面。抽屜外框是 `@repo/ui/drawer`。先例:檔案管理的遊戲列表。
+**列表篩選 `FilterDrawer`**(`components/base/FilterDrawer/`;規格 RW-01 / RW-01b):電腦(≥ `lg`)把篩選欄位攤在列表上方、改了立刻套用;平板(`sm`–`lg`)[篩選 (N)] 從右側滑出抽屜、手機(< `sm`)從底部升起。抽屜裡是同一組欄位(`renderFields(value, change)`,呼叫端只寫一份)+ [清除] [套用]:改的是草稿,[套用] 才寫回(通常是 `useUrlState` 的篩選),關掉不套用;關鍵字搜尋框(`search`)一直留在外面。抽屜外框是 `@repo/ui/drawer`。先例:表單模組的預設列表(`FormListPage` 的 `FormListToolbar`)。
 
-正本:`apps/admin/src/components/base/FilterDrawer/FilterDrawer.tsx`、`packages/ui/src/Drawer/Drawer.tsx`
+**日期篩選欄 `DateFilterPicker`**(`components/base/DateFilterPicker/`):篩選列(含抽屜)的日期欄一律用它,不直接用 `@repo/ui/date-picker`。鍵盤打到一半(年份沒打滿、只填部分區段、2/31)畫面保留打的字、查詢不動,打完或清空才回呼;打到一半就離開欄位,畫面還原成套用中的值。值是當地日期 `YYYY-MM-DD`,沒條件是 `null`。
+
+正本:`apps/admin/src/components/base/FilterDrawer/FilterDrawer.tsx`、`apps/admin/src/components/base/DateFilterPicker/DateFilterPicker.tsx`、`packages/ui/src/Drawer/Drawer.tsx`
 
 `Drawer` 另有**非遮罩**模式(`isModal={false}`,MUI `persistent`,就地渲染、不開 portal):不蓋遮罩、不鎖焦點,抽屜外照樣能看、能點,給「邊看邊改」的用途;元件自己補上打開時焦點移進抽屜、抽屜裡按 Esc 關閉、關閉時焦點還給打開前的元素,內容是以標題命名的 region;`topOffset` 讓紙面從殼的頂部兩列下面開始(admin 給 `lib/base/shell-header-geometry.ts` 的 `SHELL_HEADER_HEIGHT` = 頂部列 + 頁籤列,不蓋通知、頭像與頁籤列的「⋯」);右側抽屜寬預設 `DRAWER_SIDE_WIDTH`(360,匯出讓呼叫端算要讓出多寬),內容放不下時以 `width` 改(例:要並排月曆的抽屜給 460),非遮罩抽屜的呼叫端讓出空間時要用同一個值。就地渲染的好處是 Tab 順序跟著頁面位置、祖先藏起來時抽屜跟著藏;代價是祖先不能有 `transform` / `filter`(紙面是 `position: fixed`)。先例:兩個設計器在平板寬的屬性面板(`pages/base/system/DesignerPropertyPanel.tsx`,REACT-17「平板設計器」)。
 

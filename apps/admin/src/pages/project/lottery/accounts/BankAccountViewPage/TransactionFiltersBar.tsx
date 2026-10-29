@@ -6,8 +6,8 @@ import { useBreakpointDown } from "@repo/ui/media-query";
 import { SelectField } from "@repo/ui/select-field";
 import { Stack } from "@repo/ui/stack";
 
+import { DateFilterPicker } from "@/components/base/DateFilterPicker/DateFilterPicker";
 import { FilterDrawer } from "@/components/base/FilterDrawer/FilterDrawer";
-import { DateFilterPicker } from "@/components/project/DateFilterPicker/DateFilterPicker";
 
 import {
   EMPTY_TRANSACTION_FILTERS,

@@ -33,6 +33,23 @@ export class FormSubmissionsInput {
   @Field(() => String, { nullable: true })
   keyword?: string;
 
+  /**
+   * 只列歸屬這個組織**與它的下層**的提交(`orgId` = 建立者建立當時的當前組織);缺席 = 不篩。
+   * 只收窄、不放寬:可見範圍外的組織照樣看不到(選了範圍外的 = 空清單)。
+   */
+  @Field(() => ID, { nullable: true })
+  orgId?: string;
+
+  /**
+   * 日期區間(`YYYY-MM-DD`,含頭尾,以讀者的租戶時區切日):比對摘要槽「日期」(`summary.date`;
+   * 摘要沒對日期欄 = 送出時間)。缺一邊 = 那一邊不限;摘要沒有日期的(還沒送出、日期欄空白的草稿)在有日期條件時不列。
+   */
+  @Field(() => String, { nullable: true })
+  dateFrom?: string;
+
+  @Field(() => String, { nullable: true })
+  dateTo?: string;
+
   @Field(() => FormSubmissionSort, {
     nullable: true,
     defaultValue: FormSubmissionSort.SUBMITTED_AT_DESC,

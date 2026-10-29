@@ -3,7 +3,7 @@ import { useTranslations } from "use-intl";
 import { parseLocalDate } from "@repo/domain/form";
 import { Stack } from "@repo/ui/stack";
 
-import { DateFilterPicker } from "@/components/project/DateFilterPicker/DateFilterPicker";
+import { DateFilterPicker } from "@/components/base/DateFilterPicker/DateFilterPicker";
 import { shiftPeriod } from "@/lib/project/reports/report-period";
 
 import { PeriodShortcut } from "./PeriodShortcut";

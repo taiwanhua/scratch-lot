@@ -3,6 +3,7 @@ import { useDraggable } from "@dnd-kit/core";
 import type { FieldType } from "@repo/domain/form";
 import { Button } from "@repo/ui/button";
 
+import { dragTranslateOf } from "@/hooks/base/useSortableItem";
 import { paletteId } from "@/lib/base/form-engine/design-ids";
 
 export interface PaletteItemProps {
@@ -40,10 +41,8 @@ export const PaletteItem = ({
       sx={{
         justifyContent: "flex-start",
         touchAction: "none",
-        // 拖曳中的位移是執行期幾何值(STYLE-01 例外,同 RouteTabs 的 SortableTab)
-        transform: transform
-          ? `translate3d(${String(Math.round(transform.x))}px, ${String(Math.round(transform.y))}px, 0)`
-          : undefined,
+        // 拖曳中的位移(共用 `dragTranslateOf`,STYLE-01 例外)
+        transform: dragTranslateOf(transform),
       }}
     >
       {label}

@@ -112,6 +112,7 @@ import {
   type VoidSubmissionInput,
   type WithdrawSubmissionInput,
 } from "./dto/form-runtime.input";
+import { orgIdInputOf, summaryDateFilterOf } from "./form-list-filters";
 import {
   type DeleteFormSubmissionPayload,
   type FormSubmissionModel,
@@ -481,6 +482,13 @@ export class FormSubmissionsService {
       Math.max(1, input.pageSize ?? DEFAULT_PAGE_SIZE),
     );
     const keyword = input.keyword?.trim();
+    // 組織含下層:只收窄,可見範圍照插件套(選了範圍外的組織 = 空清單)
+    const orgIds = input.orgId
+      ? await this.access.orgSubtreeIds(
+          facts.operator,
+          orgIdInputOf(input.orgId),
+        )
+      : null;
     const filter: Record<string, unknown> = {
       moduleKey: input.moduleKey,
       ...formKeyFilterOf(input.formKey, input.excludeFormKeys),
@@ -488,6 +496,8 @@ export class FormSubmissionsService {
       ...(keyword
         ? { "summary.title": { $regex: escapeRegex(keyword), $options: "i" } }
         : {}),
+      ...(orgIds === null ? {} : { orgId: { $in: orgIds } }),
+      ...summaryDateFilterOf(input.dateFrom, input.dateTo, facts.timezone),
       // 草稿只給建立者本人;其餘狀態(審核中 / 退回 / 撤回 / 完成 / 駁回 / 作廢)照可見範圍與資料範圍
       $or: [
         { status: { $ne: "draft" } },

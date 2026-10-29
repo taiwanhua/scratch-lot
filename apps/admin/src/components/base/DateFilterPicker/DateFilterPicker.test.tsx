@@ -10,13 +10,13 @@ import { DateFilterPicker } from "./DateFilterPicker";
 
 interface HarnessProps {
   initial: string;
-  /** 沒有條件(`""`)時畫面改顯示的預設值;不給 = 沒條件就空白(庫存、結帳清單那種) */
+  /** 沒有條件(`""`)時畫面改顯示的預設值;不給 = 沒條件就空白 */
   fallback?: string;
 }
 
 /**
  * 篩選列的寫法:套用中的條件存在 state(實際頁面是網址),`""` 代表沒條件,
- * 有預設值的頁面(帳戶詳情的月初、現金帳的今天)把 `""` 換成預設值再傳給欄位。
+ * 有預設值的頁面(例:預設月初或今天的期間篩選)把 `""` 換成預設值再傳給欄位。
  * 套用中的值印在 `output`,代表「查詢用的條件」。
  */
 const Harness = ({ initial, fallback }: HarnessProps) => {

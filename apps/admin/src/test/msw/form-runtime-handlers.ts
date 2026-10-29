@@ -38,6 +38,7 @@ import { submissionActionHandlers } from "./form-submission-action-handlers";
 import { fragmentOf, revisionsOf } from "./form-submission-revisions";
 import { matchesSubmissionsInput } from "./form-submissions-filter";
 import { api } from "./server";
+import { type OrgTreeOption, orgTreeHandlers } from "./tenant-org-tree";
 
 export type FormRuntimeOperation =
   | "FormFieldOptions"
@@ -89,6 +90,8 @@ export interface FormRuntimeWorldOptions {
   submitAs?: { status: FormSubmissionStatus; instanceId?: string };
   /** `copySubmissionToDraft` 回報被清空的欄位(引用來源失效) */
   copyClearedFields?: string[];
+  /** 列表組織篩選查的整棵租戶樹;沒給 = 只有 `org-1`;`null` = 不攔(mock 模式由 `orgWorld` 提供) */
+  tenantOrgTree?: OrgTreeOption;
   /** 表單 key → 作廢原因的類別與選項(`formVoidReasonOptions`;沒給 = 沒設類別、自由填寫) */
   voidReasonOptions?: Record<
     string,
@@ -215,6 +218,7 @@ export const formRuntimeWorld = (
             },
           });
     }),
+    ...orgTreeHandlers(options.tenantOrgTree),
     api.query("FormSubmissions", ({ variables }) => {
       const { input } = variables as FormSubmissionsQueryVariables;
       inputs.formSubmissions.push(input);
