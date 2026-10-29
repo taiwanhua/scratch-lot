@@ -13,6 +13,7 @@ import { TextField } from "@repo/ui/text-field";
 import { Typography } from "@repo/ui/typography";
 
 import { useAudienceSummary } from "@/components/base/AudiencePicker/useAudienceSummary";
+import { RootOrgNotice } from "@/components/base/RootOrgNotice/RootOrgNotice";
 import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
 import { useSession } from "@/hooks/base/useSession";
 import { useUrlEdit, useUrlEditGuard } from "@/hooks/base/useUrlEdit";
@@ -110,9 +111,7 @@ export const NotificationSettingsPage = () => {
         {t("intro")}
       </Typography>
       {data.isAtRoot && (
-        <Typography variant="body2" color="textSecondary">
-          {t("rootReadOnly")}
-        </Typography>
+        <RootOrgNotice variant="inline" message={t("rootReadOnly")} />
       )}
       <TextField
         label={t("search")}

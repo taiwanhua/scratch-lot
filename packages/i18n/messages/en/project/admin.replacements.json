@@ -1,1 +1,8 @@
-{}
+{
+  "shell": {
+    "rootOrgNotice": {
+      "message": "You are at the platform level. Switch to the organization you want to manage first.",
+      "hint": "After switching the current organization you will see that organization’s data."
+    }
+  }
+}

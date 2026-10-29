@@ -104,6 +104,10 @@
     "currentOrg": "當前組織",
     "currentOrgNamed": "當前組織:{name}",
     "currentOrgNone": "當前組織:尚未選擇",
+    "rootOrgNotice": {
+      "message": "目前所在的組織不屬於任何最上層組織,請先切換到要管理的組織",
+      "hint": "切換當前組織後,就會看到那個組織的資料。"
+    },
     "placeholder": {
       "pending": "此頁面尚未建置"
     },

@@ -198,7 +198,7 @@ pnpm --filter @repo/db-migrator demo --environment=<env> --mode=<create|purge|re
 頁內分頁用底座 `PageTabs`(與網址同步、依權限隱藏;只剩一個分頁時不顯示分頁籤);分店選擇器用 `OrgTreeSelect` 的 `scope="visible"`(列整棵租戶樹,只有可見範圍內的能選,其他反灰並註明原因;底座 `docs/concepts/frontend-architecture.md` 的用法表);條件放網址參數(`useUrlState`)。
 
 - **側欄順序**:專案模組依上面的順序 ×10(店面管理 10、庫存管理 20、叫貨與進貨 30、帳戶管理 40、輸出報表 50、經銷商管理 60、檔案管理 70、班表管理 80);底座的申請中心 90、系統管理 95,排在專案模組之後。
-- **站在根組織(平台層級)**:專案模組的頁面一律顯示「目前在平台層級,請先切換到要管理的機構」+ 切換當前組織的入口(`components/project/RootOrgNotice`),不顯示空的列表或錯誤。
+- **站在根組織(平台層級)**:專案模組的頁面一律顯示「目前在平台層級,請先切換到要管理的機構」+ 切換當前組織的入口(`components/base/RootOrgNotice`),不顯示空的列表或錯誤。
 
 **側欄計數「待點收」**(依底座 10.4 登記制,2026-10-16 定):進貨單登記 `purchasing.purchase`、調貨單登記 `purchasing.transfer`;計數 = 點收關卡在操作者手上的審核任務數(進貨單:唯一一關;調貨單:第二關「收貨分店」)。信號由專案在對應的事後動作裡呼叫底座 `publishBadge(moduleKey, userIds)`(交易後送出)。
 

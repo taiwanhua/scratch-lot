@@ -66,12 +66,6 @@
 
 | 項目                           | 本專案位置                                                                                                                      |
 | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------- |
-| 報表登記(含 seed 所有權轉移)   | `apps/admin/src/lib/project/reports/report-registry.ts`                                                                         |
-| TicketGrid 閃爍提示            | `components/project/lottery/TicketGrid/`                                                                                        |
-| 交易後列印 `useReceiptPrinter` | `components/project/lottery/ReceiptPrint/useReceiptPrinter.tsx`;一併讓 admin 接 `@repo/logger`(`receipt-log.ts` 暫用 console)   |
-| 共用作廢原因類別 `void-reason` | `apps/db-migrator/seeds/project/field-categories.ts`(進 `SHARED_FIELD_CATEGORY_KEYS`)                                           |
-| `RootOrgNotice` / 需要租戶的頁 | `components/project/RootOrgNotice/{RootOrgNotice,WithTenantRequired}.tsx`(底座通知設定、側欄數字、流程綁定各有一份 TENANT_ONLY) |
-| 表單代號分派四頁共用機制       | `pages/project/lottery/purchasing/*-keys.ts`                                                                                    |
 
 **已在本專案的底座路徑改好、待 contribute**
 

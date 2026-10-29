@@ -104,6 +104,10 @@
     "currentOrg": "Current organization",
     "currentOrgNamed": "Current organization: {name}",
     "currentOrgNone": "Current organization: none selected",
+    "rootOrgNotice": {
+      "message": "The current organization is not under any top-level organization. Switch to the organization you want to manage first.",
+      "hint": "After switching the current organization you will see that organization’s data."
+    },
     "placeholder": {
       "pending": "This page is not built yet"
     },

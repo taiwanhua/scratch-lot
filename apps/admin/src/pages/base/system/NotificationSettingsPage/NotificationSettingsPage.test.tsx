@@ -170,6 +170,10 @@ describe("通知設定頁", () => {
         "這裡不能調整通知設定,請先切換到要設定的組織",
       ),
     ).toBeVisible();
+    // 提示裡附當前組織切換器(`RootOrgNotice`),可以直接切回組織
+    expect(
+      within(dialog).getByRole("combobox", { name: "當前組織" }),
+    ).toBeVisible();
     // 錯誤已就地顯示在對話框裡,不再跳提示(同一句不出現兩次)
     expect(querySnackbar()).toBeNull();
   });
@@ -283,6 +287,9 @@ describe("通知設定頁", () => {
       await within(dialog).findByText(
         "這裡不能調整通知設定,請先切換到要設定的組織",
       ),
+    ).toBeVisible();
+    expect(
+      within(dialog).getByRole("combobox", { name: "當前組織" }),
     ).toBeVisible();
     expect(querySnackbar()).toBeNull();
   });

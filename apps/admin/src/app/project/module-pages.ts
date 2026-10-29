@@ -1,8 +1,8 @@
+import { withTenantRequired } from "@/components/base/RootOrgNotice/WithTenantRequired";
 import {
   formModulePageKeys,
   formModulePages,
 } from "@/components/base/form-engine/FormModulePages/form-module-pages";
-import { withTenantRequired } from "@/components/project/RootOrgNotice/WithTenantRequired";
 import { AccountsPage } from "@/pages/project/lottery/accounts/AccountsPage/AccountsPage";
 import { BankAccountViewPage } from "@/pages/project/lottery/accounts/BankAccountViewPage/BankAccountViewPage";
 import { ACCOUNTS_MODULE_KEYS } from "@/pages/project/lottery/accounts/accounts-config";

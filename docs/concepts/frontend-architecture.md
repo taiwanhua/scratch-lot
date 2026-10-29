@@ -152,6 +152,21 @@ test/       測試支援
 
 頁面登記只選 renderer。網址、名稱、permissions 與 engine 仍以 `me.modules` 為準,客製頁照樣經過 `RequireAuth`、`ModuleRoute` 與頁籤守門。專案自有表單的單頁客製寫在 `pageOverrides`(四個 slot:`list`、`viewPage`、`createPage`、`editPage`),不重複登記相同 key;詳見[表單引擎](form-engine.md#前端引擎零件與預設組裝)。
 
+### 站在根組織時的提示(RootOrgNotice / withTenantRequired)
+
+根組織不屬於任何最上層組織,只在最上層組織底下有意義的功能(租戶自己的設定、業務資料)站在根組織時,api 回 `FORBIDDEN` + reason `TENANT_ONLY`。前端統一用 `components/base/RootOrgNotice/` 先講清楚,並附當前組織切換器(與 AppBar 同一個 `OrgSwitcher`),切換後原處換成那個組織的內容。
+
+| 用法                                             | 何時用                                                      | 例                                                                       |
+| ------------------------------------------------ | ----------------------------------------------------------- | ------------------------------------------------------------------------ |
+| `withTenantRequired(Page)`                       | 整頁都只對最上層組織底下有意義:登記頁面時套上               | 站在根組織 → 只顯示提示卡片,不掛頁面本身(不發頁面的查詢);`me` 未載入照常 |
+| `<RootOrgNotice variant="inline" message={…} />` | 頁面在根組織仍可看(例如只讀預設值),只有部分操作要切到組織裡 | 通知設定頁的根組織唯讀說明                                               |
+| 同上,放在錯誤位置                                | api 回 `TENANT_ONLY`(例如別的分頁剛切到根組織)              | 通知設定 / 側欄數字的編輯與還原預設、表單管理的流程綁定                  |
+
+- 不給 `message` / `hint` 用預設字串 `admin.shell.rootOrgNotice.*`;專案要換說法寫進 `project/admin.replacements.json`(I18N-06),不另做一份元件。
+- 這只是提示,守門仍在 api;要不要顯示租戶專屬 / 根組織專屬的按鈕看 `useIsAtRootOrg()`。
+
+正本:`apps/admin/src/components/base/RootOrgNotice/`、`apps/admin/src/hooks/base/useIsAtRootOrg.ts`
+
 ### 殼上的常駐元件
 
 登入後一直存在、不屬於任何頁面的元件(例:全域的鍵盤或掃描監聽、跟著它開的小視窗),登記成殼上的常駐元件,不掛在某一頁。

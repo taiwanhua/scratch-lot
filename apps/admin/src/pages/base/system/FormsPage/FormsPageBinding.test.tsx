@@ -10,7 +10,10 @@ import {
 } from "@/test/msw/form-fixtures";
 import { formRuntimeWorld } from "@/test/msw/form-runtime-handlers";
 import { server } from "@/test/msw/server";
-import { workflowDesignWorld } from "@/test/msw/workflow-design-handlers";
+import {
+  type WorkflowDesignWorldOptions,
+  workflowDesignWorld,
+} from "@/test/msw/workflow-design-handlers";
 import {
   workflowFragment,
   workflowsModules,
@@ -65,11 +68,15 @@ const bindingOptions = () => ({
 });
 
 /** 表單管理 + 流程管理(「建客製流程」捷徑要連得到流程管理頁)。 */
-const renderBinding = (form = tenantForm()) => {
+const renderBinding = (
+  form = tenantForm(),
+  failures: WorkflowDesignWorldOptions["failures"] = {},
+) => {
   const workflows = workflowDesignWorld({
     workflows: [workflowFragment()],
     forms: [form],
     bindingOptions: bindingOptions(),
+    failures,
   });
   server.use(
     ...authWorld({
@@ -104,6 +111,28 @@ describe("表單管理:流程綁定欄", () => {
         { formKey: "shopping_list", workflowKey: "leave_review" },
       ]);
     });
+  });
+
+  it("api 回 TENANT_ONLY(例如別的分頁剛切到根組織)→ 欄位下顯示要先切換組織與當前組織切換器", async () => {
+    const { user } = renderBinding(tenantForm(), {
+      BindFormWorkflow: {
+        code: "FORBIDDEN",
+        extensions: { reason: "TENANT_ONLY" },
+      },
+    });
+
+    const group = await screen.findByRole("group", { name: "流程綁定" });
+    await user.click(
+      within(group).getByRole("combobox", { name: "送出後走的審核流程" }),
+    );
+    await user.click(await screen.findByRole("option", { name: "病假審核" }));
+
+    expect(
+      await within(group).findByText("流程綁定要在組織內設定。"),
+    ).toBeVisible();
+    expect(
+      within(group).getByRole("combobox", { name: "當前組織" }),
+    ).toBeVisible();
   });
 
   it("不能直接綁的流程列出原因;共用流程附「建客製流程」捷徑", async () => {
