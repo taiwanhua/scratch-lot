@@ -16,11 +16,7 @@ import {
   useMyNotificationsQuery,
 } from "@repo/graphql";
 
-import {
-  NOTIFICATION_PAGE_SIZE,
-  mergeNotificationPages,
-  nextNotificationPage,
-} from "@/lib/base/notification-pages";
+import { NOTIFICATION_PAGE_SIZE } from "@/lib/base/notification-pages";
 
 import { useMutationFeedback } from "./useMutationFeedback";
 import { useSession } from "./useSession";
@@ -28,7 +24,8 @@ import { useSession } from "./useSession";
 export type NotificationItem =
   MyNotificationsQuery["myNotifications"]["items"][number];
 
-type NotificationPages = InfiniteData<MyNotificationsQuery, number>;
+/** 每一批的 pageParam 是游標(`after`);第一批 = null。 */
+type NotificationPages = InfiniteData<MyNotificationsQuery, string | null>;
 
 /**
  * 通知清單(捲到底載入下一批)的 query key 前綴。`app/base/realtime-signals.ts` 的 `notification`
@@ -54,11 +51,8 @@ export const useNotificationUnreadCount = (): number => {
 
 /**
  * 通知清單:依時間新到舊、一次 20 則,`loadMore` 載入下一批;沒有更多時 `hasNextPage` 為 false。
- * 清單只在通知鈴打開時掛上(`enabled`)。各頁以通知 id 去重(offset 分頁途中有新通知時下一頁會重複一筆)。
- *
- * **「未讀」清單點過通知後不接續 offset**:伺服器端的未讀清單已少了那幾則,接著拿第 N+1 頁會跳過
- * 等量的通知(漏資料)。所以已載入的項目裡有被標成已讀的,下一次載入改成從第 1 頁重抓已載入的各頁
- * (TanStack 的 infinite refetch 依新資料重算頁碼),之後再照常往下接。
+ * 清單只在通知鈴打開時掛上(`enabled`)。api 以游標分頁(`after` = 上一批的 `nextCursor`):
+ * 下一批從上一批最後一則往下接,載入途中來了新通知不會重複,「未讀」清單點過的通知也不會讓下一批漏掉。
  */
 export const useNotificationList = (unreadOnly: boolean, enabled: boolean) => {
   const { session } = useSession();
@@ -68,18 +62,17 @@ export const useNotificationList = (unreadOnly: boolean, enabled: boolean) => {
       useMyNotificationsQuery.fetcher(session.client, {
         input: {
           unreadOnly,
-          page: pageParam,
+          after: pageParam,
           pageSize: NOTIFICATION_PAGE_SIZE,
         },
       })(),
-    initialPageParam: 1,
-    getNextPageParam: (last) => nextNotificationPage(last.myNotifications),
+    initialPageParam: null as string | null,
+    getNextPageParam: (last) => last.myNotifications.nextCursor ?? undefined,
     enabled,
   });
   const pages = query.data?.pages;
   const items = useMemo(
-    () =>
-      mergeNotificationPages((pages ?? []).map((page) => page.myNotifications)),
+    () => (pages ?? []).flatMap((page) => page.myNotifications.items),
     [pages],
   );
   return {
@@ -87,12 +80,8 @@ export const useNotificationList = (unreadOnly: boolean, enabled: boolean) => {
     isPending: query.isPending,
     isError: query.isError,
     hasNextPage: query.hasNextPage,
-    isFetchingNextPage: query.isFetchingNextPage || query.isRefetching,
+    isFetchingNextPage: query.isFetchingNextPage,
     loadMore: async () => {
-      if (unreadOnly && items.some((item) => item.readAt !== null)) {
-        await query.refetch();
-        return;
-      }
       await query.fetchNextPage();
     },
   };

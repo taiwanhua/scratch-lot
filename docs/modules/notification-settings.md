@@ -151,7 +151,7 @@ notify({ type, tenantId, orgId, recipients?, params?, ref?, dedupeKey })
 
 ```graphql
 # 我的通知(所有登入者;只讀寫自己的、只列站內通知,與目前組織無關)
-myNotifications(input: MyNotificationsInput!): MyNotificationsPayload!   # { items, page, pageSize, totalCount, unreadCount },新到舊
+myNotifications(input: MyNotificationsInput!): MyNotificationsPayload!   # { items, pageSize, nextCursor, totalCount, unreadCount },新到舊、游標分頁
 myNotificationUnreadCount: MyNotificationUnreadCountPayload!            # { count }
 myNotificationPreferences: MyNotificationPreferencesPayload!            # { items: [NotificationTypePreference!]! }
 markNotificationsRead(input: MarkNotificationsReadInput!): MarkNotificationsReadPayload!   # { unreadCount }
@@ -164,8 +164,16 @@ resetNotificationSetting(input: ResetNotificationSettingInput!): NotificationSet
 
 input MyNotificationsInput {
   unreadOnly: Boolean # 缺席 / null / false = 全部;true = 只列未讀
-  page: Int = 1
+  after: String # 上一批的 nextCursor;缺席 / null = 從最新的開始
   pageSize: Int = 20 # 上限 100
+}
+
+type MyNotificationsPayload {
+  items: [Notification!]!
+  pageSize: Int!
+  nextCursor: String # 下一批的游標(原樣送回 after);沒有更多 = null
+  totalCount: Int! # 符合篩選的總數(不受游標影響)
+  unreadCount: Int!
 }
 
 type Notification {
@@ -263,7 +271,7 @@ input ResetNotificationSettingInput {
 頂端列的 🔔(`components/base/NotificationBell/`)所有登入者都有,不看權限;只讀寫自己的通知。
 
 - **未讀數**:0 不顯示,超過 99 顯示 `99+`。
-- **清單**:依時間新到舊,一次 20 則(`hooks/base/useNotifications.ts`),捲到底載入下一批,沒有更多時不再載入;可切「全部 / 未讀」,另有「全部標為已讀」。
+- **清單**:依時間新到舊,一次 20 則(`hooks/base/useNotifications.ts`),捲到底載入下一批,沒有更多時不再載入;可切「全部 / 未讀」,另有「全部標為已讀」。下一批帶上一批的 `nextCursor`,從上一批最後一則往下接:載入途中來了新通知不會重複;「未讀」清單點過的通知留在畫面上(下次重抓才拿掉),下一批也不會因它離開篩選而漏掉。
 - **點一則**:未讀的先標已讀,有連結就打開(api 依連結登記表換好的站內路徑),沒有連結只標已讀。連結頁面沒有權限或資料已不在 → 照常標已讀,由頁面顯示既有的無權限 / 找不到狀態。
 - **新通知提示**(`hooks/base/useNotificationAlerts.ts`):收到 `notification` 信號 → 一則統一的 Snackbar(Severity=Info、有標題、沒有動作)。1 秒內陸續到的信號算同時收到:只到 1 則時標題、內容取最新一則未讀通知(拿不到退回「你有 1 則新通知」);多則只跳一則「你有 N 則新通知」。送出端不合併信號,所以合併在這裡做。
 - 未讀數與開著的清單由信號登記表重抓(`docs/concepts/frontend-architecture.md`),提示只管跳出。
@@ -348,6 +356,7 @@ input ResetSidebarBadgeSettingInput {
 | 人員條件格式不對(含所有人、所屬組織欄)                     | `VALIDATION_FAILED`,`reason: AUDIENCE_INVALID`,`path` 指到出錯的條件列                           |
 | 條件裡的使用者 / 角色不屬本租戶                            | `VALIDATION_FAILED`,`reason: OUT_OF_TENANT`,`path` 指到那個值                                    |
 | 個人偏好關掉 `canDisable = false` 的管道                   | `VALIDATION_FAILED`,`reason: INVALID_VALUE`,`key`(個人偏好的既有錯誤)                            |
+| 我的通知清單的 `after` 解不開(不是上一批的 `nextCursor`)   | `VALIDATION_FAILED`,`reason: INVALID_CURSOR`                                                     |
 
 `extensions.type` 帶出錯的類型 key。
 

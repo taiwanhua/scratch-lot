@@ -7,15 +7,22 @@ import { NotificationScheduleKindEnum } from "../models/notifications.model";
 const DEFAULT_PAGE_SIZE = 20;
 const MAX_PAGE_SIZE = 100;
 
-/** 我的通知清單:依時間新到舊;`unreadOnly` = 只列未讀(「全部 / 未讀」切換)。 */
+/**
+ * 我的通知清單:依時間新到舊;`unreadOnly` = 只列未讀(「全部 / 未讀」切換)。
+ * 以游標分頁(GQL-03 的例外):`after` 帶上一批回傳的 `nextCursor`,接著列比它舊的。
+ */
 @InputType()
 export class MyNotificationsInput {
   /** 缺席 / null / false = 全部;true = 只列未讀 */
   @Field(() => Boolean, { nullable: true })
   unreadOnly?: boolean | null;
 
-  @Field(() => Int, { nullable: true, defaultValue: 1 })
-  page?: number;
+  @Field(() => String, {
+    nullable: true,
+    description:
+      "上一批回傳的 nextCursor;缺席 / null = 從最新的開始。格式不對 → VALIDATION_FAILED(reason INVALID_CURSOR)",
+  })
+  after?: string | null;
 
   @Field(() => Int, {
     nullable: true,

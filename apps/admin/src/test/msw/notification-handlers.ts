@@ -152,7 +152,8 @@ export interface NotificationWorldOptions {
 
 /**
  * 「我的通知」的假 api(有狀態;形狀對照 api `notifications.test.ts`):
- * - MyNotifications:依陣列順序(新到舊)以 `page` / `pageSize` offset 分頁,`unreadOnly` 只列未讀
+ * - MyNotifications:依陣列順序(新到舊)以游標分頁(同 api:游標記「上一批最後一則」的位置,
+ *   `after` 之後接著列;夾具的游標是那一則的 id),`unreadOnly` 只列未讀
  * - MyNotificationUnreadCount / MarkNotificationsRead / MarkAllNotificationsRead:改陣列裡的 `readAt`,回動作後的未讀數
  * - MyNotificationPreferences:類型 × 管道,`enabled` 讀 `preferences`(沒有 = 開)
  *
@@ -162,7 +163,9 @@ export const notificationWorld = (options: NotificationWorldOptions = {}) => {
   const notifications = [...(options.notifications ?? [])];
   const types = options.types ?? baseNotificationTypes;
   const preferences = options.preferences ?? {};
-  const calls = { list: [] as { unreadOnly: boolean; page: number }[] };
+  const calls = {
+    list: [] as { unreadOnly: boolean; after: string | null }[],
+  };
   const markedRead: string[] = [];
 
   const unreadCount = () =>
@@ -172,19 +175,26 @@ export const notificationWorld = (options: NotificationWorldOptions = {}) => {
     api.query("MyNotifications", ({ variables }) => {
       const { input } = variables as MyNotificationsQueryVariables;
       const unreadOnly = input.unreadOnly === true;
-      const page = input.page ?? 1;
+      const after = input.after ?? null;
       const pageSize = input.pageSize ?? 20;
-      calls.list.push({ unreadOnly, page });
-      const matched = unreadOnly
-        ? notifications.filter((item) => item.readAt === null)
-        : notifications;
+      calls.list.push({ unreadOnly, after });
+      const matches = (item: TestNotification) =>
+        !unreadOnly || item.readAt === null;
+      // 游標是位置:從全部通知裡那一則的下一則開始(那一則已讀、離開「未讀」篩選也照樣定位)
+      const start =
+        after === null
+          ? 0
+          : notifications.findIndex((item) => item.id === after) + 1;
+      const rest = notifications.slice(start).filter((item) => matches(item));
+      const items = rest.slice(0, pageSize);
       return HttpResponse.json({
         data: {
           myNotifications: {
-            items: matched.slice((page - 1) * pageSize, page * pageSize),
-            page,
+            items,
             pageSize,
-            totalCount: matched.length,
+            nextCursor:
+              rest.length > pageSize ? (items.at(-1)?.id ?? null) : null,
+            totalCount: notifications.filter((item) => matches(item)).length,
             unreadCount: unreadCount(),
           },
         },

@@ -5237,7 +5237,8 @@ export type MyNotificationUnreadCountPayload = {
 };
 
 export type MyNotificationsInput = {
-  page?: InputMaybe<Scalars['Int']['input']>;
+  /** 上一批回傳的 nextCursor;缺席 / null = 從最新的開始。格式不對 → VALIDATION_FAILED(reason INVALID_CURSOR) */
+  after?: InputMaybe<Scalars['String']['input']>;
   /** 每頁筆數,上限 100 */
   pageSize?: InputMaybe<Scalars['Int']['input']>;
   unreadOnly?: InputMaybe<Scalars['Boolean']['input']>;
@@ -5246,7 +5247,7 @@ export type MyNotificationsInput = {
 export type MyNotificationsPayload = {
   __typename?: 'MyNotificationsPayload';
   items: Array<Notification>;
-  page: Scalars['Int']['output'];
+  nextCursor?: Maybe<Scalars['String']['output']>;
   pageSize: Scalars['Int']['output'];
   totalCount: Scalars['Int']['output'];
   unreadCount: Scalars['Int']['output'];
@@ -9717,7 +9718,7 @@ export type MyNotificationsQueryVariables = Exact<{
 }>;
 
 
-export type MyNotificationsQuery = { __typename?: 'Query', myNotifications: { __typename?: 'MyNotificationsPayload', page: number, pageSize: number, totalCount: number, unreadCount: number, items: Array<{ __typename?: 'Notification', id: string, type: string, title: string, body: string, refType?: string | null, refId?: string | null, link?: string | null, readAt?: string | null, createdAt: string }> } };
+export type MyNotificationsQuery = { __typename?: 'Query', myNotifications: { __typename?: 'MyNotificationsPayload', pageSize: number, nextCursor?: string | null, totalCount: number, unreadCount: number, items: Array<{ __typename?: 'Notification', id: string, type: string, title: string, body: string, refType?: string | null, refId?: string | null, link?: string | null, readAt?: string | null, createdAt: string }> } };
 
 export type MyNotificationUnreadCountQueryVariables = Exact<{ [key: string]: never; }>;
 
@@ -17032,8 +17033,8 @@ export const MyNotificationsDocument = `
     items {
       ...NotificationItem
     }
-    page
     pageSize
+    nextCursor
     totalCount
     unreadCount
   }

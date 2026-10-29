@@ -59,7 +59,26 @@ type UsersPayload {
 - **同形的兩個清單共用一組 input / payload**:「已經在裡面的」與「還沒在裡面的」兩支 query 的列完全同形時,再宣告一組只是多兩個名字(先例 `OrgMembersInput` / `OrgMembersPayload` 同時服務 `orgMembers` 與 `orgMemberCandidates`)。形狀真的分岔時才拆。
 - **不分頁的清單**(一次全取的字典型資料,如 `fields(categoryId: ID!)`)仍回 `{ items, totalCount }`,不硬塞 `page` / `pageSize`;會長大的清單一律分頁。同一類的還有**天生有上限、畫面要一次看全**的清單:表單的版本(`formVersions(formKey)`,版本面板要列全部版本)與退役欄位級權限(`retiredFormPermissions`,清理頁一次列完)。
 
-(專案規模不需要 Relay cursor connection;若未來需要無限捲動再開討論、記 ADR。)
+**例外:捲到底載入下一批、資料會從前面插進來的清單用游標分頁**。offset 分頁在這類清單有兩個破口:載入途中前面多一筆,下一頁會重複一筆;清單篩選依賴可變狀態(例「未讀」)時,已載入的項目離開篩選,下一頁會漏掉等量的項目。改成游標後前端不必去重或從第 1 頁重抓。形狀(先例 `myNotifications`):
+
+```graphql
+input MyNotificationsInput {
+  unreadOnly: Boolean # 篩選照常放 input
+  after: String # 上一批的 nextCursor;缺席 / null = 從頭
+  pageSize: Int = 20 # 上限 100,同上
+}
+
+type MyNotificationsPayload {
+  items: [Notification!]!
+  pageSize: Int!
+  nextCursor: String # 沒有更多 = null
+  totalCount: Int! # 符合篩選的總數(不受游標影響)
+}
+```
+
+- 游標記**排序鍵的值**(例 `createdAt` + `_id`,base64url 編碼、對前端不透明),不記筆數也不只記 id:游標指到的那一筆被刪或離開篩選也定得了位。排序鍵必須唯一(時間相同時以 `_id` 決勝)。
+- 解不開的游標 → `VALIDATION_FAILED` + 模組自己的 `reason`(先例 `INVALID_CURSOR`)。
+- 有頁碼、要跳頁的表格清單仍用 `page` / `pageSize`;不採 Relay connection(`edges` / `pageInfo`)。
 
 ## GQL-04 錯誤:business error 用 `GraphQLError` + `extensions.code`
 

@@ -13,14 +13,15 @@ fragment NotificationItem on Notification {
   createdAt
 }
 
-# MyNotificationsInput: { unreadOnly?, page?, pageSize? }(依時間新到舊;unreadOnly = 只列未讀)
+# MyNotificationsInput: { unreadOnly?, after?, pageSize? }(依時間新到舊;unreadOnly = 只列未讀;
+# 游標分頁:after 送上一批的 nextCursor,nextCursor = null 表示沒有更多)
 query MyNotifications($input: MyNotificationsInput!) {
   myNotifications(input: $input) {
     items {
       ...NotificationItem
     }
-    page
     pageSize
+    nextCursor
     totalCount
     unreadCount
   }

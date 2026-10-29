@@ -166,12 +166,6 @@ lookup 的動態條件目前只有「依另一欄位篩選」;加其他動態條
 
 現況:未開票。
 
-### 通知清單改 cursor 分頁
-
-`myNotifications` 用 `page` / `pageSize`(offset)分頁:載入下一批的途中有新通知時下一頁會重複一筆(前端以 id 去重),「未讀」清單點過通知後接續 offset 會漏(前端改成從第 1 頁重抓已載入的頁)。評估改成以 `createdAt` + `_id` 為游標的 cursor 分頁,前端就不必再做這兩個補救。
-
-現況:未開票。
-
 ### 通知設定用英文名稱搜尋
 
 通知設定頁的搜尋送 `notificationSettings(keyword)`,api 只比對類型登記的繁中 `name` 與類型 key;英文介面顯示的是訊息檔的英文名稱(`admin.notifications.types.<key>`),用英文名稱搜不到。要支援時,改由 api 依操作者語言比對,或前端把顯示名稱也算進比對(通知設定頁開發時發現)。

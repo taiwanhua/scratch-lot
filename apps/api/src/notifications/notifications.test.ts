@@ -65,8 +65,8 @@ const MY_NOTIFICATIONS = /* GraphQL */ `
         link
         readAt
       }
-      page
       pageSize
+      nextCursor
       totalCount
       unreadCount
     }
@@ -184,8 +184,8 @@ interface NotificationRow {
 interface MyNotificationsData {
   myNotifications: {
     items: NotificationRow[];
-    page: number;
     pageSize: number;
+    nextCursor: string | null;
     totalCount: number;
     unreadCount: number;
   };
@@ -751,8 +751,8 @@ describe("通知 notify() / 通知清單 / 通知設定", () => {
       });
     });
 
-    it("依時間新到舊、分頁;每則帶連結登記表換成的路徑", async () => {
-      const first = await listOf(reader, { page: 1, pageSize: 3 });
+    it("依時間新到舊、游標分頁;每則帶連結登記表換成的路徑", async () => {
+      const first = await listOf(reader, { pageSize: 3 });
       expect(first.totalCount).toBe(4);
       expect(first.unreadCount).toBe(4);
       expect(first.items).toHaveLength(3);
@@ -762,11 +762,94 @@ describe("通知 notify() / 通知清單 / 通知設定", () => {
       expect(first.items[1]?.link).toBe(
         `/apply-center/view-page/${first.items[1]?.refId ?? ""}`,
       );
-      const second = await listOf(reader, { page: 2, pageSize: 3 });
+      expect(first.nextCursor).not.toBeNull();
+      const second = await listOf(reader, {
+        after: first.nextCursor,
+        pageSize: 3,
+      });
       expect(second.items.map((item) => item.title)).toEqual([
         "申請已核准:第 0 張",
       ]);
+      expect(second.nextCursor).toBeNull();
       ids.push(...first.items.map((item) => item.id));
+    });
+
+    it("游標解不開 → VALIDATION_FAILED(INVALID_CURSOR)", async () => {
+      for (const after of [
+        "not-a-cursor",
+        Buffer.from("x_y").toString("base64url"),
+      ]) {
+        const rejected = await call(api, reader.token, MY_NOTIFICATIONS, {
+          input: { after },
+        });
+        expect(codeOf(rejected)).toBe("VALIDATION_FAILED");
+        expect(extensionsOf(rejected)).toMatchObject({
+          reason: "INVALID_CURSOR",
+        });
+      }
+    });
+
+    it("載入下一批的途中來了新通知:下一批接著游標往下,不重複、不漏", async () => {
+      const watcher = await createOperator(api, api.connection, {
+        orgId: store,
+        ownerOrgId: tenant,
+        moduleKeys: [],
+        permissionKeys: [],
+      });
+      const notifyWatcher = (subject: string) =>
+        service.notify({
+          ...partyInput(WORKFLOW_RESULT, [watcher], nextKey("cursor")),
+          params: { subject, result: "approved" },
+        });
+      for (const subject of ["A", "B", "C", "D"]) {
+        await notifyWatcher(subject);
+      }
+      const first = await listOf(watcher, { pageSize: 2 });
+      expect(first.items.map((item) => item.title)).toEqual([
+        "申請已核准:D",
+        "申請已核准:C",
+      ]);
+      await notifyWatcher("E");
+      const second = await listOf(watcher, {
+        after: first.nextCursor,
+        pageSize: 2,
+      });
+      expect(second.items.map((item) => item.title)).toEqual([
+        "申請已核准:B",
+        "申請已核准:A",
+      ]);
+      expect(second.nextCursor).toBeNull();
+      expect(second.totalCount).toBe(5);
+    });
+
+    it("「未讀」清單點過已載入的通知:下一批接著游標往下,不漏", async () => {
+      const clicker = await createOperator(api, api.connection, {
+        orgId: store,
+        ownerOrgId: tenant,
+        moduleKeys: [],
+        permissionKeys: [],
+      });
+      for (const subject of ["A", "B", "C", "D"]) {
+        await service.notify({
+          ...partyInput(WORKFLOW_RESULT, [clicker], nextKey("unread")),
+          params: { subject, result: "approved" },
+        });
+      }
+      const first = await listOf(clicker, { unreadOnly: true, pageSize: 2 });
+      // 點了第一批的兩則(標已讀,離開「未讀」篩選)
+      await ok(api, clicker.token, MARK_READ, {
+        input: { ids: first.items.map((item) => item.id) },
+      });
+      const second = await listOf(clicker, {
+        unreadOnly: true,
+        after: first.nextCursor,
+        pageSize: 2,
+      });
+      expect(second.items.map((item) => item.title)).toEqual([
+        "申請已核准:B",
+        "申請已核准:A",
+      ]);
+      expect(second.nextCursor).toBeNull();
     });
 
     it("標已讀 → 未讀數減少;「未讀」只列未讀;別人的通知標不到", async () => {

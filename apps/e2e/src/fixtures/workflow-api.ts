@@ -582,7 +582,7 @@ export async function myNotifications(
 ): Promise<{ items: NotificationEntry[]; unreadCount: number }> {
   const data = await graphqlOk<{
     myNotifications: { items: NotificationEntry[]; unreadCount: number };
-  }>(MY_NOTIFICATIONS, { input: { page: 1, pageSize: 100 } }, accessToken);
+  }>(MY_NOTIFICATIONS, { input: { pageSize: 100 } }, accessToken);
   return data.myNotifications;
 }
 
