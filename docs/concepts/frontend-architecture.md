@@ -194,6 +194,16 @@ test/       測試支援
 
 正本:`apps/admin/src/hooks/base/useScanner/`
 
+### 閃爍提示(useFlashTarget)
+
+掃到某一筆、剛加進清單的那一列等「告訴使用者剛才動到哪裡」的提示,統一用一次性的外框主色光暈淡出,不另做動畫。
+
+- `useFlashTarget<T>()` 回 `{ target, flash, clear }`:`flash(目標)` 記下要閃的目標並給遞增的 `nonce`,同一個目標連續觸發也會換序號。
+- 畫面上的元件比對 `target` 決定自己要不要閃:要閃的套 `FLASH_HIGHLIGHT_SX`(`lib/base/flash-highlight.ts`),並以 `target.nonce` 當 `key` 讓元件重掛,動畫才會重播;另標 `data-flash="true"` 給測試確認。
+- 要捲到目標旁邊由使用處自己在 `target` 變了時做(`scrollIntoView`),hook 不碰 DOM。
+
+正本:`apps/admin/src/hooks/base/useFlashTarget.ts`、`apps/admin/src/lib/base/flash-highlight.ts`
+
 ### 表單設定的注入
 
 `ModulePageSource.forms` 同時供應預設四頁與模組 options,不另外維護 key 清單。純函式 `lib/base/form-engine/form-module-options.ts` 的 `composeFormModuleOptions` 產生唯讀設定表;`formModulePages(moduleKey)` 只產生四個懶載入預設元件,不在載入時修改全域 Map。替換底座表單頁會保留原模組 options。

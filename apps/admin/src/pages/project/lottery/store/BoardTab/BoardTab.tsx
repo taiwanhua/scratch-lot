@@ -17,6 +17,7 @@ import { Typography } from "@repo/ui/typography";
 
 import { useFormModuleAccess } from "@/components/base/form-engine/FormModulePages/useFormModuleAccess";
 import type { CashPointHeaderAction } from "@/components/project/lottery/CashPointHeader/CashPointHeader";
+import { useFlashTarget } from "@/hooks/base/useFlashTarget";
 import { useMe } from "@/hooks/base/useMe";
 import { usePermissions } from "@/hooks/base/usePermissions";
 import { useRealtimeBoard } from "@/hooks/base/useRealtime";
@@ -83,11 +84,10 @@ export const BoardTab = () => {
     pointId: string;
     bookId: string;
   } | null>(null);
-  const [flash, setFlash] = useState<{
+  const { target: flash, flash: flashTicket } = useFlashTarget<{
     bookId: string;
     ticketNo: string;
-    nonce: number;
-  } | null>(null);
+  }>();
   const [salesDialog, setSalesDialog] = useState<SalesDialog | null>(null);
   const localOpen = local?.shift == null ? null : local;
   const flow = useStoreSaleFlow({
@@ -96,11 +96,7 @@ export const BoardTab = () => {
       localOpen === null ? null : { id: localOpen.id, name: localOpen.name },
     mode: "board",
     onScanned: (item) => {
-      setFlash((current) => ({
-        bookId: item.bookId,
-        ticketNo: item.ticketNo,
-        nonce: (current?.nonce ?? 0) + 1,
-      }));
+      flashTicket({ bookId: item.bookId, ticketNo: item.ticketNo });
     },
   });
   useScanner(STORE_SALE_SCAN_PURPOSE, ({ code }) => {
