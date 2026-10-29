@@ -10,7 +10,7 @@ import { sampleGames } from "@/test/msw/project/lottery/master-data-fixtures";
 import { renderMasterData } from "../master-data-test-support";
 
 const field = (name: RegExp) => screen.getByRole("textbox", { name });
-/** 單張金額是可輸入的下拉(datalist),角色是 combobox。 */
+/** 單張金額是可輸入的下拉(`@repo/ui/autocomplete` 的 freeSolo),角色是 combobox。 */
 const price = () => screen.getByRole("combobox", { name: /單張金額/ });
 /** 日期選擇器(`@repo/ui/date-picker`)是區段組:名稱 = 欄位標籤。 */
 const datePicker = (name: RegExp) => screen.getByRole("group", { name });
@@ -69,6 +69,28 @@ describe("遊戲頁", () => {
         "500 元 × 40 張 · 整本 20,000 · 預設批購金額率 92%",
       ),
     ).toBeInTheDocument();
+  });
+
+  it("單張金額從下拉選預設面額:帶入張數;也能自填不在選項裡的金額", async () => {
+    const { user } = renderMasterData({
+      path: "/master-data/game-create-page",
+    });
+    await screen.findByRole("textbox", { name: /遊戲代號/ });
+    expect(price()).toHaveAttribute("inputmode", "numeric");
+    await user.click(price());
+    expect(
+      screen.getAllByRole("option").map((option) => option.textContent),
+    ).toEqual(["100", "200", "300", "500", "1000", "2000"]);
+    await user.click(screen.getByRole("option", { name: "1000" }));
+    expect(price()).toHaveValue("1000");
+    expect(field(/整本張數/)).toHaveValue("25");
+
+    await user.clear(price());
+    await user.type(price(), "400");
+    expect(price()).toHaveValue("400");
+    expect(
+      screen.queryByText("要填 100 的倍數(大於 0 的整數)"),
+    ).not.toBeInTheDocument();
   });
 
   it("單張金額不是 100 的倍數:邊打邊在欄位下提示,送出前擋下", async () => {

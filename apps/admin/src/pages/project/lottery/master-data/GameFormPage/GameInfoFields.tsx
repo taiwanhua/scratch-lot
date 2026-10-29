@@ -1,4 +1,3 @@
-import { useId } from "react";
 import { useTranslations } from "use-intl";
 
 import {
@@ -9,6 +8,7 @@ import {
   isValidUnitPrice,
   standardTicketsPerBook,
 } from "@repo/domain/project/lottery-master-data";
+import { Autocomplete } from "@repo/ui/autocomplete";
 import { Box } from "@repo/ui/box";
 import { DatePicker } from "@repo/ui/date-picker";
 import { SelectField } from "@repo/ui/select-field";
@@ -49,6 +49,9 @@ const GRID_SX = {
   },
 } as const;
 
+/** 單張金額的建議選項(預設面額);值存字串,選項也用字串 */
+const UNIT_PRICE_OPTIONS: readonly string[] = STANDARD_UNIT_PRICES.map(String);
+
 const integerOrNull = (raw: string): number | null => {
   const value = Number(raw);
   return raw.trim() !== "" && Number.isInteger(value) ? value : null;
@@ -57,7 +60,7 @@ const integerOrNull = (raw: string): number | null => {
 /**
  * 「遊戲資訊」區塊的欄位(Figma MD-02 97:456):代號 / 名稱 / 狀態、單張金額 / 整本張數 / 整本金額(唯讀,
  * 即時算)、預設批購金額率 / 上市日 / 停售日(唯讀,由兌獎截止日即時推算)、兌獎截止日(必填)。
- * 單張金額是可輸入的下拉(預設面額 + 自填)。非標準組合只提示,不擋。
+ * 單張金額是可輸入的下拉(`Autocomplete` 的 `freeSolo`:預設面額 + 自填,打的字就是值)。非標準組合只提示,不擋。
  */
 export const GameInfoFields = ({
   values,
@@ -70,7 +73,6 @@ export const GameInfoFields = ({
   const t = useTranslations("admin.lotteryMasterData.gameForm");
   const tStatus = useTranslations("admin.lotteryMasterData.status");
   const tErrors = useTranslations("admin.lotteryMasterData.fieldErrors");
-  const priceListId = useId();
   const errorText = (field: GameFormField) => fieldErrors[field];
   const isInvalid = (field: GameFormField) => errorText(field) !== undefined;
 
@@ -149,29 +151,26 @@ export const GameInfoFields = ({
           change("status", value);
         }}
       />
-      <Box>
-        <TextField
-          label={t("fields.unitPrice")}
-          value={values.unitPrice}
-          required
-          fullWidth
-          disabled={isLocked}
-          error={isInvalid("unitPrice") || unitPriceHint !== undefined}
-          helperText={errorText("unitPrice") ?? unitPriceHint}
-          slotProps={{
-            htmlInput: { inputMode: "numeric", list: priceListId },
-          }}
-          onChange={(event) => {
-            change("unitPrice", event.target.value);
-          }}
-        />
-        {/* 可輸入的下拉:預設面額 + 自填(原生 datalist) */}
-        <datalist id={priceListId}>
-          {STANDARD_UNIT_PRICES.map((price) => (
-            <option key={price} value={price} />
-          ))}
-        </datalist>
-      </Box>
+      <Autocomplete
+        freeSolo
+        label={t("fields.unitPrice")}
+        options={UNIT_PRICE_OPTIONS}
+        value={values.unitPrice === "" ? null : values.unitPrice}
+        inputValue={values.unitPrice}
+        getOptionLabel={(price) => price}
+        inputMode="numeric"
+        required
+        fullWidth
+        disabled={isLocked}
+        error={isInvalid("unitPrice") || unitPriceHint !== undefined}
+        helperText={errorText("unitPrice") ?? unitPriceHint}
+        onInputChange={(text) => {
+          change("unitPrice", text);
+        }}
+        onChange={(price) => {
+          change("unitPrice", price ?? "");
+        }}
+      />
       <TextField
         label={t("fields.ticketsPerBook")}
         value={values.ticketsPerBook}

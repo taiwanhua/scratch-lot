@@ -3,8 +3,11 @@
 import MuiAutocomplete from "@mui/material/Autocomplete";
 import type { SxProps, Theme } from "@mui/material/styles";
 import { styled } from "@mui/material/styles";
-import type { AutocompleteValue as MuiAutocompleteValue } from "@mui/material/useAutocomplete";
-import type { ReactNode } from "react";
+import type {
+  AutocompleteValueOrFreeSoloValueMapping,
+  AutocompleteValue as MuiAutocompleteValue,
+} from "@mui/material/useAutocomplete";
+import type { HTMLAttributes, ReactNode } from "react";
 
 import { Stack } from "../Stack/Stack";
 import { TextField } from "../TextField/TextField";
@@ -17,29 +20,44 @@ import { CloseIcon } from "../icons/CloseIcon";
  * 泛型還沒解析時就得在包裝層裡 `as` 硬轉。借同一個型別則完全不必轉。
  *
  * `Multiple` 為 `true` → `Option[]`;其餘(`false` / 沒給)→ `Option | null`。
+ * `FreeSolo` 為 `true` 時,值另外可以是使用者打的字串(同 MUI)。
  */
 export type AutocompleteValue<
   Option,
   Multiple extends boolean | undefined,
-> = MuiAutocompleteValue<Option, Multiple, false, false>;
+  FreeSolo extends boolean | undefined = undefined,
+> = MuiAutocompleteValue<Option, Multiple, false, FreeSolo>;
+
+/**
+ * 選項,或 `freeSolo` 時使用者打的字串。直接借 MUI 的型別(`getOptionLabel` 的參數型別),
+ * 理由同上:自寫的等價型別 TypeScript 證明不了相等。
+ */
+type OptionOrFreeText<
+  Option,
+  FreeSolo extends boolean | undefined,
+> = AutocompleteValueOrFreeSoloValueMapping<Option, FreeSolo>;
 
 export interface AutocompleteProps<
   Option,
   Multiple extends boolean | undefined = undefined,
+  FreeSolo extends boolean | undefined = undefined,
 > {
   options: readonly Option[];
-  /** 受控值;`multiple` 時是陣列,否則是單一選項或 `null` */
-  value: AutocompleteValue<Option, Multiple>;
-  onChange: (value: AutocompleteValue<Option, Multiple>) => void;
+  /** 受控值;`multiple` 時是陣列,否則是單一選項或 `null`;`freeSolo` 時也可以是字串 */
+  value: AutocompleteValue<Option, Multiple, FreeSolo>;
+  onChange: (value: AutocompleteValue<Option, Multiple, FreeSolo>) => void;
   /** 多選:選中的項目變成可移除的 chip(Figma 253:3 的 chip) */
   multiple?: Multiple;
-  /** 每個選項的主文字,同時是**內建搜尋**比對的對象 */
-  getOptionLabel: (option: Option) => string;
+  /**
+   * 每個選項的主文字,同時是**內建搜尋**比對的對象。
+   * `freeSolo` 時也會收到使用者打的字串(同 MUI)。
+   */
+  getOptionLabel: (option: OptionOrFreeText<Option, FreeSolo>) => string;
   /**
    * 選項的穩定識別。不給時用 `getOptionLabel` —— 同名選項(每個租戶都有「租戶管理員」)
-   * 一定要給,否則兩列會被當成同一個。
+   * 一定要給,否則兩列會被當成同一個。`freeSolo` 時也會收到字串。
    */
-  getOptionKey?: (option: Option) => string;
+  getOptionKey?: (option: OptionOrFreeText<Option, FreeSolo>) => string;
   /** 選項的次文字(Figma 253:24:主文字下方的小字,如擁有組織) */
   getOptionSecondaryText?: (option: Option) => ReactNode;
   /** 這個選項能不能選;灰掉的列用 `getOptionDisabledReason` 就地說明原因 */
@@ -66,8 +84,19 @@ export interface AutocompleteProps<
   /**
    * 輸入框的字變了。**給了它就等於接手過濾**(用在 keyword 丟回 api 查的情境),
    * 內建的前端過濾會關掉,`options` 原樣顯示。
+   * `freeSolo` 時例外:打的字就是值、不是搜尋 keyword,內建過濾照開。
    */
   onInputChange?: (keyword: string) => void;
+  /* 以下照 MUI 原名、原型別轉發(STYLE-05:用到時才開) */
+  /**
+   * 可自填:輸入框的字本身就是值,`options` 只是建議。要「打字即值」時搭配
+   * `inputValue` + `onInputChange` 受控(MUI 的 freeSolo 只在 Enter / 選項時才觸發 `onChange`)。
+   */
+  freeSolo?: FreeSolo;
+  /** 受控的輸入框文字(MUI `inputValue`);不給時由 MUI 自管 */
+  inputValue?: string;
+  /** 輸入框的 `inputmode`(HTML 原名),例如數字欄位給 `numeric` 叫出數字鍵盤 */
+  inputMode?: NonNullable<HTMLAttributes<HTMLInputElement>["inputMode"]>;
   /** 選項還在路上:列出一列 `loadingText` 而不是「沒有符合的項目」 */
   loading?: boolean;
   loadingText?: ReactNode;
@@ -137,6 +166,7 @@ const StyledAutocomplete = styled(MuiAutocomplete)(({ theme }) => ({
 export const Autocomplete = <
   Option,
   Multiple extends boolean | undefined = undefined,
+  FreeSolo extends boolean | undefined = undefined,
 >({
   options,
   value,
@@ -152,6 +182,9 @@ export const Autocomplete = <
   hiddenLabel = false,
   placeholder,
   onInputChange,
+  freeSolo,
+  inputValue,
+  inputMode,
   loading,
   loadingText,
   noOptionsText,
@@ -164,15 +197,17 @@ export const Autocomplete = <
   fullWidth,
   name,
   sx,
-}: AutocompleteProps<Option, Multiple>) => {
-  const keyOf = (option: Option) =>
+}: AutocompleteProps<Option, Multiple, FreeSolo>) => {
+  const keyOf = (option: OptionOrFreeText<Option, FreeSolo>) =>
     getOptionKey === undefined ? getOptionLabel(option) : getOptionKey(option);
 
   return (
-    <StyledAutocomplete<Option, Multiple>
+    <StyledAutocomplete<Option, Multiple, false, FreeSolo>
       options={options}
       value={value}
       multiple={multiple}
+      freeSolo={freeSolo}
+      inputValue={inputValue}
       groupBy={groupBy}
       disabled={disabled}
       loading={loading}
@@ -194,9 +229,11 @@ export const Autocomplete = <
         },
       })}
       isOptionEqualToValue={(option, other) => keyOf(option) === keyOf(other)}
-      // 呼叫端自己拿 keyword 去查(`onInputChange`)時,前端不要再過濾一次
+      // 呼叫端自己拿 keyword 去查(`onInputChange`)時,前端不要再過濾一次;freeSolo 的字是值,照常過濾
       filterOptions={
-        onInputChange === undefined ? undefined : (all) => [...all]
+        onInputChange === undefined || (freeSolo ?? false)
+          ? undefined
+          : (all) => [...all]
       }
       onChange={(_event, next) => {
         onChange(next);
@@ -233,16 +270,18 @@ export const Autocomplete = <
         <TextField
           {...params}
           label={hiddenLabel ? undefined : label}
-          {...(hiddenLabel &&
-            typeof label === "string" && {
-              slotProps: {
-                ...params.slotProps,
-                htmlInput: {
-                  ...params.slotProps.htmlInput,
-                  "aria-label": label,
-                },
+          {...((inputMode !== undefined ||
+            (hiddenLabel && typeof label === "string")) && {
+            slotProps: {
+              ...params.slotProps,
+              htmlInput: {
+                ...params.slotProps.htmlInput,
+                ...(inputMode !== undefined && { inputMode }),
+                ...(hiddenLabel &&
+                  typeof label === "string" && { "aria-label": label }),
               },
-            })}
+            },
+          })}
           placeholder={placeholder}
           required={required}
           error={error}
