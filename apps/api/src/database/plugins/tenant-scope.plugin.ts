@@ -526,17 +526,20 @@ function tenantBranchesOf(scope: TenantScope, tenant: MemberTenant): Filter[] {
   }
   const branches: Filter[] = [];
   if (hasShareList(sharing)) {
+    // 「共用給所屬組織」與「共用給上層鏈且含下層」拆成兩個分支(語意同 `$elemMatch` 裡放 `$or`):
+    // `$elemMatch` 內有 `$or` 時索引 `{ tenantId, shareOrgs.orgId }` 只用得到 `tenantId`,要掃過整個租戶
     branches.push({
       tenantId: tenant.tenantId,
-      [SHARE_ORGS_PATH]: {
-        $elemMatch: {
-          $or: [
-            { orgId: { $in: members } },
-            { orgId: { $in: ancestors }, includeDescendants: true },
-          ],
-        },
-      },
+      [SHARE_ORGS_PATH]: { $elemMatch: { orgId: { $in: members } } },
     });
+    if (ancestors.length > 0) {
+      branches.push({
+        tenantId: tenant.tenantId,
+        [SHARE_ORGS_PATH]: {
+          $elemMatch: { orgId: { $in: ancestors }, includeDescendants: true },
+        },
+      });
+    }
   }
   for (const field of sharing.sharedByFields) {
     branches.push({

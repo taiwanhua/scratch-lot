@@ -3,7 +3,11 @@ import { type HydratedDocument, type Model, Schema, Types } from "mongoose";
 
 import { BaseRepository } from "./base.repository";
 import { OrgsRepository } from "./base/repositories";
-import type { MemberTenant, OperatorContext } from "./operator-context";
+import {
+  type MemberTenant,
+  type OperatorContext,
+  scopeQuery,
+} from "./operator-context";
 import { baseFieldsPlugin } from "./plugins/base-fields.plugin";
 import { setDataScopeRuleProvider } from "./plugins/data-scope-provider";
 import {
@@ -691,6 +695,37 @@ describe("資料共用(ADR-0014):三種宣告 × 人 × 資料歸屬", () => {
         created._id,
       ),
     ).resolves.toBeNull();
+  });
+
+  it("共用清單的分支用得到 { tenantId, shareOrgs.orgId } 索引的 orgId 範圍(不掃整個租戶)", async () => {
+    const model = database.connection.model<Item>("ShareableItem");
+    await model.createIndexes();
+    // 可見範圍那一支也要有索引,整個 `$or` 才會走索引(正式表有 `{ orgId, ... }` 開頭的索引)
+    await model.collection.createIndex({ orgId: 1 });
+    const raw: unknown = await scopeQuery(model.find({}), {
+      operator: PEOPLE.單一分店人員,
+    }).explain("queryPlanner");
+    const bounds: unknown[] = [];
+    const collect = (node: unknown): void => {
+      if (typeof node !== "object" || node === null) {
+        return;
+      }
+      const record = node as Record<string, unknown>;
+      if (record.indexName === "tenantId_1_shareOrgs.orgId_1") {
+        bounds.push(
+          (record.indexBounds as Record<string, unknown>)["shareOrgs.orgId"],
+        );
+      }
+      for (const value of Object.values(record)) {
+        collect(value);
+      }
+    };
+    collect(raw);
+    // 兩個分支(共用給所屬組織 / 共用給上層鏈且含下層)各自走索引,orgId 都有明確範圍
+    expect(bounds.length).toBeGreaterThanOrEqual(2);
+    for (const bound of bounds) {
+      expect(bound).not.toEqual(["[MinKey, MaxKey]"]);
+    }
   });
 
   it("清單永遠是空的(預設不共用 + editable: false):不宣告 shareOrgs 欄位與索引、讀取沒有清單分支,只靠欄位", async () => {

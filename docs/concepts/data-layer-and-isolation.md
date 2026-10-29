@@ -185,6 +185,7 @@ BaseRepository 資料操作方法的第一個參數。每個集合各有用途,�
 
 - `shareable` 由 plugin 加 `shareOrgs: [{ orgId, includeDescendants }]` 與索引 `{ tenantId, "shareOrgs.orgId" }`;`defaultShareOrgs`(`none` / `wholeTenant` = 全部分店)是新增時的預設,`editable: false` 時清單固定(受保護欄位)。只給模組資料表。`defaultShareOrgs: none` + `editable: false` 的清單永遠是空的:plugin 不加 `shareOrgs` 欄位與索引、讀取不加清單分支、寫入不寫這個欄位,只靠 `sharedByFields`(沒有 `sharedByFields` 時掛 plugin 就拋錯,請宣告 `private`)。
 - `sharedByFields` 的欄位與 `{ tenantId, <欄位> }` 索引由表自己建,掛 plugin 時驗證。
+- 索引怎麼被用:讀取條件的 `$or` 每個分支各走自己的索引(可見範圍走 `{ orgId, … }` / `{ moduleKey, orgId }`,共用清單分成「給所屬組織」「給上層鏈且含下層」兩支走 `{ tenantId, "shareOrgs.orgId" }`,欄位走 `{ tenantId, <欄位> }`),掃的量 = 讀者看得到的筆數。列表的排序在記憶體裡做(`SORT`,只留一頁);同一頁的 `totalCount` 本來就要掃過全部看得到的筆數,所以不為排序另建索引。新表的可見範圍那一支一定要有 `orgId` 開頭的索引(模組資料表由 plugin 建 `{ moduleKey, orgId }`),少了整個 `$or` 會變成全表掃描。
 - `form_submissions` 是 `shareable`(預設不共用、清單固定,所以沒有 `shareOrgs`)+ `sharedByFields: sharedOrgIds`:哪幾個組織欄位算數是表單設定「依欄位共用」(`forms.sharedByFieldKeys`),引擎寫入存值時算出 `sharedOrgIds`,比對讀者的**可見範圍**(`match: visible`;與資料表比所屬組織不同,理由見 ADR-0014),草稿一律空(`docs/modules/forms.md`「依欄位共用」)。
 - 判斷看全部所屬組織(依租戶分組:同時屬於兩個租戶的人,乙租戶的組織命中不了甲租戶的資料),不隨當前組織切換;不受可見性開關展開(`match: visible` 的欄位例外:比對該租戶的可見範圍,見上一條)。可見範圍是 `"all"`(根組織、提升上下文)時不加任何條件。
 - `shareOrgs` 的寫入由 `BaseRepository` 檢查:每個組織都要存在且與資料同租戶(可以是分享者看不到的組織),否則 `VALIDATION_FAILED`;只能整份替換。
