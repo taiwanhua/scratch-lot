@@ -59,14 +59,12 @@ Figma 頁面:Base Draft 41:5914、刮刮樂元件 64:14、店面管理 65:14、�
 
 每一項的細節與現況放在待辦正本,這裡只列入口;做完就從正本刪掉。
 
-| 類別                 | 在哪                                                                | 摘要                                                                                                                          |
-| -------------------- | ------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| 還沒回收到底座的改良 | `docs/tmp/project-dis.md`「本輪要回收到底座的項目」                 | 只在本專案的元件與機制 9 項;兩邊都沒做的底座功能與修正約 20 項(含使用者點名的列表組合欄、lookup 動態預設值)                   |
-| Figma 回收與待修     | `docs/tmp/project-dis.md`「Figma 待修清單」                         | 本專案底座參考畫面 A1–A8、底座檔 B1–B11,全部未做;做法見 `docs/tmp/figma-base-round/README.md`「搬回底座的方法」               |
-| 實機測試             | `docs/tmp/project-dis.md`「收據機實機測試清單」「條碼實機測試清單」 | 等收據機、條碼槍到貨                                                                                                          |
-| 上線前提醒           | `docs/tmp/project-dis.md`「上線前提醒」                             | 每月最少畫休預設 4 天,上線前請使用者查法規再決定                                                                              |
-| 開著的 issue         | wowgo-base 的 GitHub Issues                                         | 「structure.md 一句被中性化切斷」「Figma 品牌同步改用本機外掛」是 wowgo-base 的 issue(scratch-lot 的 #83、#66 是別的、已關閉) |
-| 底座待討論(含 skill) | `docs/tmp/dis.md`                                                   | 例:自訂 `/to-figma` skill、module-scaffold 入口與設計流程整合、AI 自動 PR review 的時機                                       |
-| GitHub 上的舊分支    | `git branch -r`                                                     | 約 187 條已合併的舊分支,要不要清由使用者決定                                                                                  |
+| 類別                 | 在哪                                                | 摘要                                                                                                                          |
+| -------------------- | --------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| 還沒回收到底座的改良 | `docs/tmp/project-dis.md`「本輪要回收到底座的項目」 | 只在本專案的元件與機制 9 項;兩邊都沒做的底座功能與修正約 20 項(含使用者點名的列表組合欄、lookup 動態預設值)                   |
+| Figma 回收與待修     | `docs/tmp/project-dis.md`「Figma 待修清單」         | 本專案底座參考畫面 A1–A8、底座檔 B1–B11,全部未做;做法見 `docs/tmp/figma-base-round/README.md`「搬回底座的方法」               |
+| 開著的 issue         | wowgo-base 的 GitHub Issues                         | 「structure.md 一句被中性化切斷」「Figma 品牌同步改用本機外掛」是 wowgo-base 的 issue(scratch-lot 的 #83、#66 是別的、已關閉) |
+| 底座待討論(含 skill) | `docs/tmp/dis.md`                                   | 例:自訂 `/to-figma` skill、module-scaffold 入口與設計流程整合、AI 自動 PR review 的時機                                       |
+| GitHub 上的舊分支    | `git branch -r`                                     | 約 187 條已合併的舊分支,要不要清由使用者決定                                                                                  |
 
 換帳號、換電腦時的接手方式見 `docs/agents/collaboration.md`「交付與換手」;使用者的協作偏好正本見 `docs/agents/working-preferences.md`(兩者隨底座 v0.4.5 同步進來)。
