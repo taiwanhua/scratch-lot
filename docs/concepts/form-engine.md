@@ -131,6 +131,9 @@
 
 - **lookup 的顯示模板**(`labelTemplate`,來源描述的選填欄位):選資料、引用與 lookup 選項的顯示名由 api 以模板組好(`{{name}}({{email}})`);模板引用的欄位只要有一個讀者讀不到,整串退回顯示欄 `labelField`。佔位符見 `docs/modules/forms.md`「lookup 登錄表」。
 - **頁籤 / 標題模板**:表單的 `tabLabelTemplate` 有值用它,否則用模組層模板(預設 `{{title}}`)。前端從那筆資料的值即時算(草稿也算得出來),可用摘要槽、欄位值 `{{value.<key>}}`、建立者、表單名、模組名與頁面種類;沒寫 `{{action}}` 時自動加在最前面(「檢視・病假申請」)。佔位符見 `docs/modules/forms.md`「頁籤 / 標題模板」。
+- **列表的組合欄**:列表欄位配置的一種欄(`kind: TEMPLATE`),root 以模板把摘要槽、單號與欄位值組成一格(`{{value.start_at}}–{{value.end_at}}`),表頭是設定的欄名。存檔時 api 驗佔位符(欄位照表單欄位欄的規則,受保護欄位不收);前端依每一筆已套欄位級權限的值組字串,格式化同表單欄位欄,讀不到的佔位符空白,不能排序。規則見 `docs/modules/forms.md`「組合欄」。
+
+三種模板共用 `@repo/domain/form` 的 `{{名稱}}` 解析(`template.ts`);各自可用的佔位符不同,設定畫面的「插入欄位」下拉(`TemplatePlaceholderInput`)只列合用的。
 
 ## 前端:引擎零件與預設組裝
 
@@ -157,15 +160,15 @@ export const projectModulePages: ModulePageSource = {
 
 options 由 `lib/base/form-engine/form-module-options.ts` 的 `composeFormModuleOptions` 合成唯讀表,再由 `app/providers/RootProviders.tsx` 經 `FormModuleOptionsProvider` 注入。context 與 hook 在 `hooks/base/useFormModuleOptions.ts`,Provider 在 `app/providers/FormModuleOptionsProvider.tsx`;components 向下讀 hook,不 import app。`useTabLabelRenderer` 用這份設定,表單自身模板仍優先於模組模板,未設定時用 `{{title}}`;有 Provider 但未登記該 key 時亦用預設,缺 Provider 則報接線錯誤。不同組裝不會互相污染。
 
-| 零件                                                    | 做什麼                                                                          |
-| ------------------------------------------------------- | ------------------------------------------------------------------------------- |
-| `FormRenderer`(`version` / `values` / `mode`)           | 依版本畫表單;`mode` = `create` / `edit` / `readonly` / `design` / `preview`     |
-| `FormSubmissionList`                                    | 提交列表(`DataTable`),欄來自列表欄位配置;引用那一筆版本沒有的欄位顯示「—」      |
-| `FormSubmissionDetail`                                  | 詳情:唯讀渲染、現名 / 快照、附件下載、修訂紀錄與差異                            |
-| `FormPicker` / `LookupDialog` / `ReferenceField`        | 選表單 / 帶入資料跳窗 / 引用欄位的搜尋選擇器                                    |
-| `useModuleForms` / `useFormDraft` / `useFormSubmission` | 可新增的表單 / 建草稿與送出 / 讀寫既有提交                                      |
-| `renderValue(ctx)`                                      | 語意型別 → 畫面(REACT-13 簽章)                                                  |
-| widget 登錄表                                           | `widget.kind` → 元件;擴充一個 widget = domain 型別登錄 + admin 元件登錄各加一筆 |
+| 零件                                                    | 做什麼                                                                                                 |
+| ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `FormRenderer`(`version` / `values` / `mode`)           | 依版本畫表單;`mode` = `create` / `edit` / `readonly` / `design` / `preview`                            |
+| `FormSubmissionList`                                    | 提交列表(`DataTable`),欄來自列表欄位配置(摘要槽 / 表單欄位 / 組合欄);引用那一筆版本沒有的欄位顯示「—」 |
+| `FormSubmissionDetail`                                  | 詳情:唯讀渲染、現名 / 快照、附件下載、修訂紀錄與差異                                                   |
+| `FormPicker` / `LookupDialog` / `ReferenceField`        | 選表單 / 帶入資料跳窗 / 引用欄位的搜尋選擇器                                                           |
+| `useModuleForms` / `useFormDraft` / `useFormSubmission` | 可新增的表單 / 建草稿與送出 / 讀寫既有提交                                                             |
+| `renderValue(ctx)`                                      | 語意型別 → 畫面(REACT-13 簽章)                                                                         |
+| widget 登錄表                                           | `widget.kind` → 元件;擴充一個 widget = domain 型別登錄 + admin 元件登錄各加一筆                        |
 
 | `mode`            | 條件 / 計算                                  | 權限           | 值     |
 | ----------------- | -------------------------------------------- | -------------- | ------ |
