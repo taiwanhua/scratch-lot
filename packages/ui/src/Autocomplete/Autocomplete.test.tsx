@@ -1,6 +1,7 @@
 import { describe, expect, it, jest } from "@jest/globals";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useState } from "react";
 
 import { Autocomplete } from "./Autocomplete";
 
@@ -332,6 +333,72 @@ describe("Autocomplete", () => {
       "\u200B",
     );
     expect(screen.getByLabelText("角色")).toHaveRole("combobox");
+  });
+});
+
+/** freeSolo 的典型用法:打的字就是值(`inputValue` + `onInputChange` 受控),選項只是建議。 */
+const FreeSoloPrice = ({ onValue }: { onValue: (value: string) => void }) => {
+  const [text, setText] = useState("");
+  const commit = (next: string) => {
+    setText(next);
+    onValue(next);
+  };
+  return (
+    <Autocomplete
+      freeSolo
+      label="單價"
+      options={["100", "200", "500"]}
+      value={text === "" ? null : text}
+      inputValue={text}
+      inputMode="numeric"
+      getOptionLabel={(price) => price}
+      onInputChange={commit}
+      onChange={(price) => {
+        commit(price ?? "");
+      }}
+    />
+  );
+};
+
+describe("Autocomplete freeSolo", () => {
+  it("打的字就是值:不在選項裡也收,選單照打的字過濾", async () => {
+    const user = userEvent.setup();
+    const onValue = jest.fn<(value: string) => void>();
+    render(<FreeSoloPrice onValue={onValue} />);
+
+    const input = screen.getByRole("combobox", { name: "單價" });
+    expect(input).toHaveAttribute("inputmode", "numeric");
+    await user.type(input, "2");
+    expect(labels()).toEqual(["200"]);
+
+    await user.type(input, "50");
+    expect(input).toHaveValue("250");
+    expect(onValue).toHaveBeenLastCalledWith("250");
+  });
+
+  it("選預設項:值變成那個選項", async () => {
+    const user = userEvent.setup();
+    const onValue = jest.fn<(value: string) => void>();
+    render(<FreeSoloPrice onValue={onValue} />);
+
+    await user.click(screen.getByRole("combobox", { name: "單價" }));
+    await user.click(screen.getByRole("option", { name: "500" }));
+
+    expect(screen.getByRole("combobox", { name: "單價" })).toHaveValue("500");
+    expect(onValue).toHaveBeenLastCalledWith("500");
+  });
+
+  it("清空:值回到空字串", async () => {
+    const user = userEvent.setup();
+    const onValue = jest.fn<(value: string) => void>();
+    render(<FreeSoloPrice onValue={onValue} />);
+
+    const input = screen.getByRole("combobox", { name: "單價" });
+    await user.type(input, "300");
+    await user.clear(input);
+
+    expect(input).toHaveValue("");
+    expect(onValue).toHaveBeenLastCalledWith("");
   });
 });
 
