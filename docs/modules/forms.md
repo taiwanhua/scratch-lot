@@ -193,6 +193,8 @@
 
 檢查器的錯草稿可以先存(隨 payload 的 `validation` 回),發布才擋;只有正則不合法 / 可能造成 ReDoS 的不收(存草稿與發布都驗過 ReDoS 才收)。檢查器除了結構與欄位規則,還包含:
 
+- **欄位 key 的格式與保留字**(`keys.ts` 的 `checkFieldKey`):格式不符 `KEY_FORMAT`;用了保留字 `KEY_RESERVED`(保留字先判,`createdBy` 這類同時不合格式的也報保留字)。保留字 = `RESERVED_FIELD_KEYS`:`ctx`、`row`、`id`、`status`、`summary`、`revision`、`createdBy`、`orgId`、`tenantId`、`moduleKey`、`formKey`、`version`;其中 `summary` 是提交的列表摘要快照(依 `summaryMap` 算,見[表單引擎](../concepts/form-engine.md#表單的身分與可新增的交集))。明細子欄同一套,報 `ARRAY_COLUMN_KEY`。
+
 - **表達式型別檢查**(`validate-expression-types.ts`,與設計器選擇器同一張型別表 `expression-types.ts`):公式 / 預設值公式的根 = 欄位型別、條件 / 自訂驗證的根 = 是 / 否、每個參數位置型別相符(`EXPR_TYPE_MISMATCH`);比較運算子兩邊同型,日期與日期時間可混比;兩邊都沒選(`{ "==": [null, null] }`,選擇器新建條件的預設)是錯誤(`EXPR_COMPARISON_EMPTY`,一邊有值的 `x == null` 判空合法)。
 - **日期運算的參數**:`dateDiff` 單位只能 `days` / `hours` / `minutes`(`EXPR_DATE_DIFF_UNIT`);`dateAdd` 方向只能 `before` / `after`、單位只能 `days` / `weeks` / `months` / `years`(`EXPR_DATE_ADD_ARG`)。
 - **選項欄(單選 / 多選)公式的根型別是「選項」**(`option` / `optionList`):根與 `if` 的然後 / 否則只收 `if`、同選項來源的欄位(`options` 深比較相等)、選項常數;`concat` / `optionLabel` / 文字欄 / 文字常數不收;靜態選項的常數要在清單內(`EXPR_OPTION_UNKNOWN`,類別 / lookup 選項只驗是字串)。

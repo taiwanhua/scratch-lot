@@ -22,6 +22,7 @@
 - **共用表單**(`ownerOrgId = null`):只有站在根組織的人能建、改、分派。
 - **客製表單**:租戶以分派來的(或自己的)某一版為基底建的(`forkedFrom`),只有該租戶看得到(平台也看不到);建立時自動在本租戶啟用。
 - 表單 key 全域唯一、**建立後不可改**(格式 `^[a-z][a-z0-9_]{0,39}$`,不准 `.` 與 `-`,欄位級權限 key 才能唯一拆回)。客製表單的 key 建議 `<來源 key>_<租戶短碼>`。
+- 欄位 key(含明細子欄)格式同表單 key,另有**保留字**不能用:表達式上下文 `ctx`、`row`,以及提交本身的系統欄位 `id`、`status`、`summary`、`revision`、`createdBy`、`orgId`、`tenantId`、`moduleKey`、`formKey`、`version`。用了會和它們混淆 —— 例如 `summary` 是提交依版本 `summaryMap` 算出的列表摘要快照(列表、關鍵字搜尋、引用來源的候選都讀它),欄位也叫 `summary` 就分不清讀的是哪個。清單正本 `packages/domain/src/form/keys.ts` 的 `RESERVED_FIELD_KEYS`;表單結構檢查器擋(欄位 `KEY_RESERVED`、明細子欄 `ARRAY_COLUMN_KEY`),設計器改 key 時當場擋。
 
 某租戶在模組 M **此刻能新增**的表單 = 本租戶 `org_form` 啟用中 ∩ 掛在 M ∩ 有發布版本(`moduleForms`)。一張 → 新增直接進;多張 → 先選。
 

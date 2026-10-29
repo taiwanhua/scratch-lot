@@ -77,12 +77,8 @@
 
 **底座小修正(兩邊都沒做)**
 
-- 姓名 / 名稱排序明寫 `zh-Hant`(`apps/api/src/orgs/orgs.service.ts:207` 等;CI Linux 與本機語系不同)。
-- `MonthCalendar` 小尺寸 `size` prop;一格多個角標並排。
 - 表單列表支援「組織欄 / 日期區間」篩選(`FormListPage.tsx` 只有關鍵字、表單、狀態)。
 - 拖拉排序共用元件(RouteTabs 與表單設計器各用一份 dnd-kit)。
-- 假 api 的 `graphqlError` 共用 CONFLICT / NOT_FOUND。
-- 文件補:FormField key `summary` 是保留字;api 信任代理 `TRUST_PROXY_HOPS`(加外部 LB 要 +1)寫進 deployment / architecture。
 
 **要先評估再決定**
 

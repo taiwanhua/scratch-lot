@@ -52,6 +52,8 @@
         (TanStack Query + graphql-request hooks 來自 @repo/graphql)
 ```
 
+**客戶端 IP**:api 在 Cloud Run 上一律經過 Google Front End 一層代理,`apps/api/src/http-proxy.ts` 的 `TRUST_PROXY_HOPS`(目前 1)設定 Express `trust proxy`,`req.ip` 因此是 `X-Forwarded-For` 由右數第一個(代理附上的客戶端 IP)。需要來源 IP 的功能(稽核記錄、依 IP 限速)一律讀 `req.ip`,不自己解析 `X-Forwarded-For`。前面多一層代理(外部負載平衡器等)時層數要 +1,否則拿到的是代理的 IP;操作見[部署](deployment.md#api-前面的代理層數trust_proxy_hops)。
+
 ## 型別打通流程(codegen)
 
 1. `api` 使用 code-first,由真 AppModule 組裝底座與專案;GraphQLModule 在啟動時輸出 `apps/api/schema.gql`(`NODE_ENV=test` 除外)。只重產不開服務用 `pnpm --filter @repo/api schema:generate`;新工作樹先依 [toolbox](agents/toolbox.md#pnpm--turbo建置測試格式)建置依賴
