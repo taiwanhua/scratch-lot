@@ -4,6 +4,8 @@ import { useTranslations } from "use-intl";
 
 import {
   LIST_BUILTIN_COLUMNS,
+  LIST_TEMPLATE_LABEL_MAX_LENGTH,
+  LIST_TEMPLATE_MAX_LENGTH,
   type ListBuiltinColumns,
 } from "@repo/domain/form";
 import {
@@ -41,6 +43,13 @@ const ROW_REASON_KEYS: Partial<Record<string, string>> = {
   LIST_COLUMN_PROTECTED: "errors.LIST_COLUMN_PROTECTED",
 };
 
+/** 組合欄被擋的原因(引用的是模板裡的欄位,文案另寫)。 */
+const TEMPLATE_REASON_KEYS: Partial<Record<string, string>> = {
+  LIST_COLUMN_DUPLICATE: "errors.LIST_COLUMN_DUPLICATE",
+  LIST_COLUMN_UNAVAILABLE: "errors.templateUnavailable",
+  LIST_COLUMN_PROTECTED: "errors.templateProtected",
+};
+
 export interface ListColumnsEditorProps {
   moduleKey: string;
   initial: readonly ListColumnSpec[];
@@ -50,7 +59,7 @@ export interface ListColumnsEditorProps {
 }
 
 /**
- * 列表欄位配置的編輯(`modules.settings.list`,root 整份覆蓋):摘要槽或表單欄位、順序、寬度,
+ * 列表欄位配置的編輯(`modules.settings.list`,root 整份覆蓋):摘要槽、表單欄位或組合欄(欄名 + 模板)、順序、寬度,
  * 加內建欄「表單 / 狀態 / 建立者」各一個顯示開關。
  * 表單欄位只列共用表單目前版本的非受保護欄位;清空 = 回到預設欄(標題 + 日期)。
  * 表單改版後配置引用到那一筆版本沒有的欄位不自動清,列表那一格顯示「—」。
@@ -65,7 +74,7 @@ export const ListColumnsEditor = ({
   const tErrors = useTranslations("admin.formEngine.errors");
   const { session } = useSession();
   const queryClient = useQueryClient();
-  const { candidates } = useListColumnCandidates(moduleKey);
+  const { candidates, sharedForms } = useListColumnCandidates(moduleKey);
   const [rows, setRows] = useState<ListColumnSpec[]>(() =>
     initial.toSorted((a, b) => a.order - b.order).map((row) => ({ ...row })),
   );
@@ -110,13 +119,32 @@ export const ListColumnsEditor = ({
     if (error?.fields?.includes(`columns.${String(index)}`) !== true) {
       return undefined;
     }
-    const reasonKey = ROW_REASON_KEYS[error.reason ?? ""];
+    const reasonKeys =
+      rows[index]?.kind === ModuleListColumnKind.Template
+        ? TEMPLATE_REASON_KEYS
+        : ROW_REASON_KEYS;
+    const reasonKey = reasonKeys[error.reason ?? ""];
     return reasonKey === undefined
       ? t("errors.width", {
           min: String(LIST_COLUMN_WIDTH.min),
           max: String(LIST_COLUMN_WIDTH.max),
         })
       : t(reasonKey);
+  };
+
+  /** 組合欄的欄名 / 模板格式錯(api 定位到 `columns.<i>.label` / `.template`,沒有 reason)。 */
+  const partErrorText = (
+    index: number,
+    part: "label" | "template",
+  ): string | undefined => {
+    if (error?.fields?.includes(`columns.${String(index)}.${part}`) !== true) {
+      return undefined;
+    }
+    return part === "label"
+      ? t("errors.templateLabel", {
+          max: String(LIST_TEMPLATE_LABEL_MAX_LENGTH),
+        })
+      : t("errors.templateText", { max: String(LIST_TEMPLATE_MAX_LENGTH) });
   };
 
   return (
@@ -134,7 +162,10 @@ export const ListColumnsEditor = ({
           index={index}
           count={rows.length}
           candidates={candidates}
+          forms={sharedForms}
           errorText={rowErrorText(index)}
+          labelErrorText={partErrorText(index, "label")}
+          templateErrorText={partErrorText(index, "template")}
           onChange={(next) => {
             setRows(rows.map((item, at) => (at === index ? next : item)));
           }}
@@ -146,7 +177,7 @@ export const ListColumnsEditor = ({
           }}
         />
       ))}
-      <Stack direction="row" spacing={1}>
+      <Stack direction="row" spacing={1} useFlexGap sx={{ flexWrap: "wrap" }}>
         <Button
           variant="text"
           size="small"
@@ -183,6 +214,25 @@ export const ListColumnsEditor = ({
           }}
         >
           {t("addField")}
+        </Button>
+        <Button
+          variant="text"
+          size="small"
+          onClick={() => {
+            setRows([
+              ...rows,
+              {
+                kind: ModuleListColumnKind.Template,
+                key: "",
+                formKey: null,
+                label: "",
+                width: LIST_COLUMN_WIDTH.default,
+                order: rows.length,
+              },
+            ]);
+          }}
+        >
+          {t("addTemplate")}
         </Button>
       </Stack>
       <Stack spacing={0.25} role="group" aria-label={t("builtin")}>
@@ -224,6 +274,9 @@ export const ListColumnsEditor = ({
                   key: row.key,
                   ...(row.formKey !== null &&
                     row.formKey !== undefined && { formKey: row.formKey }),
+                  ...(row.kind === ModuleListColumnKind.Template && {
+                    label: row.label ?? "",
+                  }),
                   width: row.width,
                   order,
                 })),

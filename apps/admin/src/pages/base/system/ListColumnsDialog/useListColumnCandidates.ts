@@ -13,7 +13,8 @@ export interface FieldCandidate {
 
 /**
  * 列表欄位配置可選的表單欄位(api 的寫入規則,docs/modules/forms.md「列表欄位配置」):
- * 該模組**共用表單**目前版本裡、**不是受保護欄位**(含只因依賴而受保護的計算欄位)的欄位。
+ * 該模組**共用表單**目前版本裡、**不是受保護欄位**(含只因依賴而受保護的計算欄位)的欄位;
+ * 組合欄模板可插入的欄位也是這一份。
  */
 export const useListColumnCandidates = (moduleKey: string) => {
   const { session } = useSession();
@@ -55,5 +56,11 @@ export const useListColumnCandidates = (moduleKey: string) => {
     );
   });
 
-  return { candidates, isLoading: forms.isLoading };
+  /** 共用表單(有目前版本的;組合欄「限定表單」的選項) */
+  const sharedForms = shared.map((form) => ({
+    key: form.key,
+    name: form.name,
+  }));
+
+  return { candidates, sharedForms, isLoading: forms.isLoading };
 };

@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "use-intl";
 
-import type { FieldType } from "@repo/domain/form";
+import { type FieldType, listTemplateFieldKeysOf } from "@repo/domain/form";
 import {
   type FormFieldsFragment,
   type FormVersionFieldsFragment,
+  ModuleListColumnKind,
   useModuleListColumnsQuery,
 } from "@repo/graphql";
 import { Stack } from "@repo/ui/stack";
@@ -95,7 +96,12 @@ export const DesignerWorkspace = ({
     listColumns.data?.moduleListColumns.columns ?? []
   )
     .filter((column) => [null, undefined, form.key].includes(column.formKey))
-    .map((column) => column.key);
+    // 組合欄引用的是模板裡的欄位(刪欄位時一併提示)
+    .flatMap((column) =>
+      column.kind === ModuleListColumnKind.Template
+        ? listTemplateFieldKeysOf(column.key)
+        : [column.key],
+    );
   const selected = fieldById(definition, state.selectedFieldId) ?? null;
   const selectedSectionIndex = definition.layout.sections.findIndex(
     (section) => section.key === state.selectedSectionKey,

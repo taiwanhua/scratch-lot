@@ -4043,6 +4043,7 @@ export type ModuleListColumn = {
   formKey?: Maybe<Scalars['ID']['output']>;
   key: Scalars['String']['output'];
   kind: ModuleListColumnKind;
+  label?: Maybe<Scalars['String']['output']>;
   order: Scalars['Int']['output'];
   width: Scalars['Int']['output'];
 };
@@ -4051,14 +4052,16 @@ export type ModuleListColumnInput = {
   formKey?: InputMaybe<Scalars['ID']['input']>;
   key: Scalars['String']['input'];
   kind: ModuleListColumnKind;
+  label?: InputMaybe<Scalars['String']['input']>;
   order: Scalars['Int']['input'];
   width: Scalars['Int']['input'];
 };
 
-/** 列表欄位的種類:摘要槽 / 表單欄位 */
+/** 列表欄位的種類:摘要槽 / 表單欄位 / 組合欄 */
 export enum ModuleListColumnKind {
   Field = 'FIELD',
-  Slot = 'SLOT'
+  Slot = 'SLOT',
+  Template = 'TEMPLATE'
 }
 
 export type ModuleListColumnsPayload = {
@@ -9657,14 +9660,14 @@ export type ModuleListColumnsQueryVariables = Exact<{
 }>;
 
 
-export type ModuleListColumnsQuery = { __typename?: 'Query', moduleListColumns: { __typename?: 'ModuleListColumnsPayload', moduleKey: string, columns: Array<{ __typename?: 'ModuleListColumn', kind: ModuleListColumnKind, key: string, formKey?: string | null, width: number, order: number }>, builtin: { __typename?: 'ModuleListBuiltinColumns', form: boolean, status: boolean, createdBy: boolean } } };
+export type ModuleListColumnsQuery = { __typename?: 'Query', moduleListColumns: { __typename?: 'ModuleListColumnsPayload', moduleKey: string, columns: Array<{ __typename?: 'ModuleListColumn', kind: ModuleListColumnKind, key: string, formKey?: string | null, label?: string | null, width: number, order: number }>, builtin: { __typename?: 'ModuleListBuiltinColumns', form: boolean, status: boolean, createdBy: boolean } } };
 
 export type SetModuleListColumnsMutationVariables = Exact<{
   input: SetModuleListColumnsInput;
 }>;
 
 
-export type SetModuleListColumnsMutation = { __typename?: 'Mutation', setModuleListColumns: { __typename?: 'ModuleListColumnsPayload', moduleKey: string, columns: Array<{ __typename?: 'ModuleListColumn', kind: ModuleListColumnKind, key: string, formKey?: string | null, width: number, order: number }>, builtin: { __typename?: 'ModuleListBuiltinColumns', form: boolean, status: boolean, createdBy: boolean } } };
+export type SetModuleListColumnsMutation = { __typename?: 'Mutation', setModuleListColumns: { __typename?: 'ModuleListColumnsPayload', moduleKey: string, columns: Array<{ __typename?: 'ModuleListColumn', kind: ModuleListColumnKind, key: string, formKey?: string | null, label?: string | null, width: number, order: number }>, builtin: { __typename?: 'ModuleListBuiltinColumns', form: boolean, status: boolean, createdBy: boolean } } };
 
 export type FormEngineModulesQueryVariables = Exact<{ [key: string]: never; }>;
 
@@ -16705,6 +16708,7 @@ export const ModuleListColumnsDocument = `
       kind
       key
       formKey
+      label
       width
       order
     }
@@ -16748,6 +16752,7 @@ export const SetModuleListColumnsDocument = `
       kind
       key
       formKey
+      label
       width
       order
     }

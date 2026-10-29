@@ -3694,6 +3694,7 @@ type ModuleListColumn {
   formKey: ID
   key: String!
   kind: ModuleListColumnKind!
+  label: String
   order: Int!
   width: Int!
 }
@@ -3702,14 +3703,16 @@ input ModuleListColumnInput {
   formKey: ID
   key: String!
   kind: ModuleListColumnKind!
+  label: String
   order: Int!
   width: Int!
 }
 
-"""列表欄位的種類:摘要槽 / 表單欄位"""
+"""列表欄位的種類:摘要槽 / 表單欄位 / 組合欄"""
 enum ModuleListColumnKind {
   FIELD
   SLOT
+  TEMPLATE
 }
 
 type ModuleListColumnsPayload {

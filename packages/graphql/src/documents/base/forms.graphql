@@ -388,6 +388,7 @@ query ModuleListColumns($moduleKey: String!) {
       kind
       key
       formKey
+      label
       width
       order
     }
@@ -399,8 +400,9 @@ query ModuleListColumns($moduleKey: String!) {
   }
 }
 
-# SetModuleListColumnsInput: { moduleKey, columns: [{ kind, key, formKey?, width, order }], builtin?: { form, status, createdBy } }
-# root 整份覆蓋;欄位要在共用表單目前版本且不是受保護欄位,否則 VALIDATION_FAILED(fields: ["columns.N"])
+# SetModuleListColumnsInput: { moduleKey, columns: [{ kind, key, formKey?, label?, width, order }], builtin?: { form, status, createdBy } }
+# root 整份覆蓋;欄位(含組合欄模板引用的)要在共用表單目前版本且不是受保護欄位,否則 VALIDATION_FAILED(fields: ["columns.N"]);
+# 組合欄 kind TEMPLATE 的 key 是模板、label 是欄名,格式錯定位到 columns.N.label / columns.N.template
 mutation SetModuleListColumns($input: SetModuleListColumnsInput!) {
   setModuleListColumns(input: $input) {
     moduleKey
@@ -408,6 +410,7 @@ mutation SetModuleListColumns($input: SetModuleListColumnsInput!) {
       kind
       key
       formKey
+      label
       width
       order
     }
