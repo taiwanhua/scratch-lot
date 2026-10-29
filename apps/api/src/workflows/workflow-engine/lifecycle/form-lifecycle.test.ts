@@ -8,7 +8,7 @@ import {
   jest,
 } from "@jest/globals";
 import { getConnectionToken } from "@nestjs/mongoose";
-import { type Connection, Types } from "mongoose";
+import { type Connection, Types, mongo } from "mongoose";
 
 import {
   type AuthTestApp,
@@ -320,6 +320,40 @@ describe("表單 / 流程的掛接點", () => {
       });
       expect(await projectWrites(draft.id)).toBe(0);
       expect(await auditCount(draft.id, "submission.submit")).toBe(0);
+    });
+
+    it("交易遇暫時性錯誤自動重試 → 整個動作重跑一次,探針只算最後一次嘗試(不重複)", async () => {
+      const draft = await createDraft(api, world.applicant.token, FORM_KEY, {
+        title: "自動重試",
+        days: 1,
+      });
+      let attempts = 0;
+      lifecycleProbe.onEffect = (context) => {
+        if (context.event !== "completed") {
+          return Promise.resolve();
+        }
+        attempts += 1;
+        if (attempts > 1) {
+          return Promise.resolve();
+        }
+        // 帶 TransientTransactionError 標籤的錯誤 = 寫入衝突等暫時性錯誤,driver 會回復並重跑整個交易
+        const error = new mongo.MongoError("injected transient error");
+        error.addErrorLabel("TransientTransactionError");
+        return Promise.reject(error);
+      };
+      const result = await call(api, world.applicant.token, SUBMIT, {
+        input: { id: draft.id, expectedEditVersion: draft.editVersion },
+      });
+      expect(result.errors).toBeUndefined();
+      expect(attempts).toBe(2);
+      expect(lifecycleProbe.guards.map((one) => one.guard)).toEqual([
+        "beforeSubmit",
+      ]);
+      expect(events()).toEqual(["submitted", "completed"]);
+      expect(await rawSubmissionDoc(api.connection, draft.id)).toMatchObject({
+        status: "completed",
+        revision: 1,
+      });
     });
 
     it("事後動作內 notify() 寫入通知;之後的事後動作拋錯 → 整個動作回復,那筆通知也一起消失", async () => {
