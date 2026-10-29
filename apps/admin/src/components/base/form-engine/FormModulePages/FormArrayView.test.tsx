@@ -164,4 +164,30 @@ describe("明細列(錯誤 / 唯讀 / 手機)", () => {
     ).toEqual(["第 1 列", "第 2 列"]);
     expect(screen.queryByRole("table", { name: "明細" })).toBeNull();
   });
+
+  it("手機寬:卡片標題「第 N 列」不換行,列動作靠右、放不下時整組換行而不擠出卡片", async () => {
+    setMobileViewport();
+    renderEdit([]);
+
+    const cards = await screen.findByRole("list", { name: "明細" });
+    const card = within(cards).getByRole("listitem", { name: "第 1 列" });
+    const title = within(card).getByText("第 1 列");
+    expect(getComputedStyle(title).whiteSpace).toBe("nowrap");
+    expect(getComputedStyle(title).flexShrink).toBe("0");
+
+    const header = title.parentElement;
+    if (header === null) {
+      throw new Error("卡片標題沒有外層標題列");
+    }
+    expect(getComputedStyle(header).flexWrap).toBe("wrap");
+
+    const remove = within(card).getByRole("button", { name: "刪除第 1 列" });
+    expect(header).toContainElement(remove);
+    // 動作整組靠右:包住動作的那一層 margin-left: auto
+    const actions = header.lastElementChild as HTMLElement;
+    expect(actions).toContainElement(remove);
+    expect(getComputedStyle(actions).marginLeft).toBe("auto");
+    // 卡片的文字鈕不留 MUI 預設的 64px 最小寬,窄卡片才放得進同一行
+    expect(getComputedStyle(remove).minWidth).toBe("0");
+  });
 });
