@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import type { ClientSession, Types } from "mongoose";
 
+import { COLLATION_LOCALE } from "@repo/domain/collation";
 import {
   BOOK_COUNT_KEYS,
   type BookCountKey,
@@ -934,7 +935,7 @@ export class TicketLedgerService {
       const set = {
         holderOrgIds,
         skippedTicketNos: book.skippedTicketNos.toSorted((a, b) =>
-          a.localeCompare(b),
+          a.localeCompare(b, COLLATION_LOCALE),
         ),
       };
       const key = JSON.stringify(set);

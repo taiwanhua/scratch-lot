@@ -61,7 +61,7 @@ type Repo = BaseRepository<Item, HydratedDocument<Item>>;
 
 /** 依字串排序(比對用)。 */
 const byText = (left: string, right: string): number =>
-  left.localeCompare(right);
+  left.localeCompare(right, "zh-Hant");
 
 const sorted = (names: string[]): string[] => names.toSorted(byText);
 

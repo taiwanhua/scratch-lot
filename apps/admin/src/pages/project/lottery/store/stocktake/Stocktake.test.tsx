@@ -286,7 +286,7 @@ describe("店面管理:盤點", () => {
       draft?.lostReview
         .filter((item) => item.action === "found")
         .map((item) => item.ticketId)
-        .toSorted((a, b) => a.localeCompare(b)),
+        .toSorted((a, b) => a.localeCompare(b, "zh-Hant")),
     ).toEqual(["b-l1-001", "b-l1-002", "b-l1-003", "b-l2-023"]);
   });
 });

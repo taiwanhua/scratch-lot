@@ -1,3 +1,4 @@
+import { COLLATION_LOCALE } from "@repo/domain/collation";
 import {
   type LocalDate,
   addLocalDays,
@@ -73,7 +74,7 @@ export function dayOffDates(
         .filter((dayOff) => dayOff.userId === userId)
         .map((dayOff) => dayOff.date),
     ),
-  ].toSorted((left, right) => left.localeCompare(right));
+  ].toSorted((left, right) => left.localeCompare(right, COLLATION_LOCALE));
 }
 
 /** 這個人的整天畫休日(最多連續休假只算這種),依日期排序。 */
@@ -241,7 +242,7 @@ export const maxDailyDayOffStaffEvaluator = ({
   const limit = amountOf(setting);
   return [...dayOffStaffCounts(data.dayOffs)]
     .filter(([date, count]) => inMonth(date, data.month) && count > limit)
-    .toSorted(([left], [right]) => left.localeCompare(right))
+    .toSorted(([left], [right]) => left.localeCompare(right, COLLATION_LOCALE))
     .map(([date, count]) => ({
       key: setting.key,
       level: levelOf(setting),

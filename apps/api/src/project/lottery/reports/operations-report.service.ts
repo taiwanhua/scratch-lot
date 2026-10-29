@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import type { Types } from "mongoose";
 
+import { compareDisplayName } from "@repo/domain/collation";
 import {
   CHECKOUT_STATUS,
   CHECKOUT_TYPE,
@@ -400,7 +401,7 @@ export class OperationsReportService {
           count: row.count,
           amount: row.amount,
         }))
-        .toSorted((a, b) => a.reason.localeCompare(b.reason, "zh-Hant")),
+        .toSorted((a, b) => compareDisplayName(a.reason, b.reason)),
       stocktake,
       undo,
       net: qty(

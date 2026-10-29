@@ -1,3 +1,4 @@
+import { COLLATION_LOCALE } from "@repo/domain/collation";
 import type { StoredValues } from "@repo/domain/form";
 import {
   SALE_REVERSAL_FIELD_KEYS as F,
@@ -26,7 +27,9 @@ export interface SaleReversalState {
 }
 
 const sortNos = (nos: Iterable<string>): string[] =>
-  [...new Set(nos)].toSorted((left, right) => left.localeCompare(right));
+  [...new Set(nos)].toSorted((left, right) =>
+    left.localeCompare(right, COLLATION_LOCALE),
+  );
 
 /** 加一張:這本已有一組就併進去,沒有就在最後加一組。 */
 export const addTicket = (

@@ -139,6 +139,16 @@
         "default": "./dist/cjs/tag-palette.cjs"
       }
     },
+    "./collation": {
+      "import": {
+        "types": "./dist/es/collation.d.ts",
+        "default": "./dist/es/collation.js"
+      },
+      "require": {
+        "types": "./dist/cjs/collation.d.cts",
+        "default": "./dist/cjs/collation.cjs"
+      }
+    },
     "./project/reason-note": {
       "import": {
         "types": "./dist/es/project/reason-note.d.ts",
@@ -250,6 +260,9 @@
       ],
       "tag-palette": [
         "./dist/es/tag-palette.d.ts"
+      ],
+      "collation": [
+        "./dist/es/collation.d.ts"
       ],
       "project/reason-note": [
         "./dist/es/project/reason-note.d.ts"

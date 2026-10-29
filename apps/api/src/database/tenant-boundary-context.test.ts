@@ -45,11 +45,11 @@ function filesImporting(root: string, moduleName: string): string[] {
   return sourceFiles(root)
     .filter((file) => pattern.test(readFileSync(file, "utf8")))
     .map((file) => path.relative(root, file).split(path.sep).join("/"))
-    .toSorted((left, right) => left.localeCompare(right));
+    .toSorted((left, right) => left.localeCompare(right, "zh-Hant"));
 }
 
 const byPath = (left: string, right: string): number =>
-  left.localeCompare(right);
+  left.localeCompare(right, "zh-Hant");
 
 /**
  * 租戶邊界上下文(ADR-0005「例外出口」)的呼叫端登記:每個檔附用途(反查 / 以人為準的資料 / 例外寫入 /

@@ -65,7 +65,8 @@ async function tenantAdminRoleId(tenant: ScenarioTenant): Promise<string> {
   return role.id;
 }
 
-const byId = (left: string, right: string) => left.localeCompare(right);
+const byId = (left: string, right: string) =>
+  left.localeCompare(right, "zh-Hant");
 
 /** 前置:擁有者的所屬組織 = 租戶頂層 + 南港店(見檔頭)。 */
 async function expectOwnerHasSecondOrg(tenant: ScenarioTenant): Promise<void> {

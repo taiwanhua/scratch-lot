@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { Types } from "mongoose";
 
+import { COLLATION_LOCALE, compareDisplayName } from "@repo/domain/collation";
 import { requiresReasonNote } from "@repo/domain/project/reason-note";
 import { SCHEDULE_FIELD_CATEGORY_KEYS } from "@repo/domain/project/schedule-fields";
 import {
@@ -56,7 +57,6 @@ import {
   SchedulePermissions,
 } from "../shared/schedule-permissions";
 import { SchedulePersonLocks } from "../shared/schedule-person-locks";
-import { compareScheduleNames } from "../shared/schedule-sort";
 import { ScheduleStaffService } from "../staff/schedule-staff.service";
 import type {
   ReassignSchedulePunchInput,
@@ -194,7 +194,7 @@ export class ScheduleAttendanceService {
           userId: item.userId,
           name: item.name === "" ? (names.get(item.userId) ?? "") : item.name,
         }))
-        .toSorted((left, right) => compareScheduleNames(left.name, right.name)),
+        .toSorted((left, right) => compareDisplayName(left.name, right.name)),
       rows: built.rows,
       unmatched: built.unmatched,
       abilities,
@@ -300,7 +300,7 @@ export class ScheduleAttendanceService {
           rows: list,
         }))
         .toSorted((left, right) =>
-          left.orgName.localeCompare(right.orgName, "zh-Hant"),
+          compareDisplayName(left.orgName, right.orgName),
         ),
     };
   }
@@ -583,7 +583,7 @@ export class ScheduleAttendanceService {
     const keyOf = (date: Date) => dateKeyOf(date, scope.timezone);
     const dates = entries
       .map((entry) => keyOf(entry.date))
-      .toSorted((left, right) => left.localeCompare(right));
+      .toSorted((left, right) => left.localeCompare(right, COLLATION_LOCALE));
     const [details, orgNames, names, categories] = await Promise.all([
       this.published.detailsOf(scope.reader, scope.tenantId, entries),
       loadOrgNames(scope.reader, this.orgs, orgIds),

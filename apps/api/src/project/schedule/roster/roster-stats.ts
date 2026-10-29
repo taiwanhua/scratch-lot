@@ -1,3 +1,5 @@
+import { COLLATION_LOCALE } from "@repo/domain/collation";
+
 import {
   type DayOffLike,
   consecutiveRuns,
@@ -82,7 +84,7 @@ export function rosterStatsOf(input: {
         .map((slot) => ({ startAt: slot.startAt, endAt: slot.endAt })),
     }));
   const workDates = [...new Set(input.allWorkDates)].toSorted((left, right) =>
-    left.localeCompare(right),
+    left.localeCompare(right, COLLATION_LOCALE),
   );
   return {
     shiftCount: entries.length,

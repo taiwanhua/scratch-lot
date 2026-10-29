@@ -93,7 +93,7 @@ describe("SerialService(單號)", () => {
       ),
     );
     expect(new Set(results).size).toBe(20);
-    expect(results.toSorted((a, b) => a.localeCompare(b))).toEqual(
+    expect(results.toSorted((a, b) => a.localeCompare(b, "zh-Hant"))).toEqual(
       Array.from(
         { length: 20 },
         (_unused, index) => `PU-202610-${String(index + 1).padStart(4, "0")}`,

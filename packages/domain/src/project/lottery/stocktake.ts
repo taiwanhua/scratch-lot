@@ -1,3 +1,4 @@
+import { COLLATION_LOCALE } from "../../collation/compare-display-name";
 import { SALE_REVERSAL_LOCK_REF_TYPE } from "./store-forms";
 import type { TicketLocationKind, TicketStatus } from "./ticket-events";
 
@@ -260,7 +261,7 @@ function parseLine(value: unknown): StocktakeDraftLine | null {
     countedAt: value.countedAt,
     method: value.method,
     presentTicketNos: [...new Set(value.presentTicketNos)].toSorted((a, b) =>
-      a.localeCompare(b),
+      a.localeCompare(b, COLLATION_LOCALE),
     ),
     diffs,
   };
@@ -454,7 +455,9 @@ export function stocktakeDiffsOf(
       });
     }
   }
-  return diffs.toSorted((a, b) => a.ticketNo.localeCompare(b.ticketNo));
+  return diffs.toSorted((a, b) =>
+    a.ticketNo.localeCompare(b.ticketNo, COLLATION_LOCALE),
+  );
 }
 
 /**
@@ -496,7 +499,7 @@ export function stocktakeActionProblemsOf(
     }
   }
   return {
-    stale: stale.toSorted((a, b) => a.localeCompare(b)),
+    stale: stale.toSorted((a, b) => a.localeCompare(b, COLLATION_LOCALE)),
     unhandled: diffs
       .filter((diff) => !handled.has(diff.ticketNo))
       .map((diff) => diff.ticketNo),

@@ -47,7 +47,7 @@ describe("結清標記的掛接(靜態檢查)", () => {
       .map((file) => relative(file))
       // 登記介面本身(註解裡有範例)
       .filter((file) => !file.endsWith("settlement/settlement-registry.ts"))
-      .toSorted((left, right) => left.localeCompare(right));
+      .toSorted((left, right) => left.localeCompare(right, "zh-Hant"));
     expect(registering).toEqual([
       "project/lottery/purchase/purchase-registrations.ts",
       "project/lottery/transfer/transfer-registrations.ts",

@@ -69,7 +69,7 @@ const pastWindowOf = (month: string) => {
 /** 有畫休的日子:同日畫休人數只算主要分店是這家的人。 */
 const daysOf = (dayOffs: readonly ScheduleDayOffFieldsFragment[]) =>
   [...new Set(dayOffs.map((item) => keyOf(item.date)))]
-    .toSorted((left, right) => left.localeCompare(right))
+    .toSorted((left, right) => left.localeCompare(right, "zh-Hant"))
     .map((date) => {
       const onDate = dayOffs.filter((item) => keyOf(item.date) === date);
       return {

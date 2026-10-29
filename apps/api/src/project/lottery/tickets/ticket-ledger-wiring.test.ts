@@ -168,7 +168,9 @@ describe("張的寫入只經帳本服務(靜態檢查)", () => {
       }),
     );
     expect(
-      Object.keys(writers).toSorted((left, right) => left.localeCompare(right)),
+      Object.keys(writers).toSorted((left, right) =>
+        left.localeCompare(right, "zh-Hant"),
+      ),
     ).toEqual([
       "project/lottery/tickets/books.service.ts",
       "project/lottery/tickets/ticket-ledger.service.ts",

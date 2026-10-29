@@ -372,7 +372,7 @@ describe("表單發布(四步一個交易)與退役", () => {
     ]);
     const codes = results
       .map((result) => codeOf(result) ?? "OK")
-      .toSorted((a, b) => a.localeCompare(b));
+      .toSorted((a, b) => a.localeCompare(b, "zh-Hant"));
     expect(codes).toEqual(["CONFLICT", "OK"]);
     const versions = await versionsOf("pub_race");
     expect(versions.map((version) => version.version)).toEqual([1]);
@@ -528,7 +528,7 @@ describe("表單發布(四步一個交易)與退役", () => {
     expect(
       versions
         .map((version) => version.status)
-        .toSorted((left, right) => left.localeCompare(right)),
+        .toSorted((left, right) => left.localeCompare(right, "zh-Hant")),
     ).toEqual(["DRAFT", "PUBLISHED"]);
   });
 

@@ -140,7 +140,9 @@ describe("專案通知類型(專案規格 3.4)", () => {
   it("每種類型都有繁中與英文範本,參數缺漏時也產生非空的標題與內容", () => {
     for (const type of PROJECT_NOTIFICATIONS.types) {
       expect(
-        Object.keys(type.template).toSorted((a, b) => a.localeCompare(b)),
+        Object.keys(type.template).toSorted((a, b) =>
+          a.localeCompare(b, "zh-Hant"),
+        ),
       ).toEqual(["en", "zh-TW"]);
       for (const template of Object.values(type.template)) {
         const content = template({});

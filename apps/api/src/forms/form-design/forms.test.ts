@@ -142,7 +142,7 @@ describe("表單:副本、分派 / 啟用 / 收回的交集、租戶邊界", () 
     );
     return data.moduleForms
       .map((form) => form.key)
-      .toSorted((a, b) => a.localeCompare(b));
+      .toSorted((a, b) => a.localeCompare(b, "zh-Hant"));
   }
 
   /** 以 `baseVersion` 開一份草稿,回它的 draftRevision。 */
@@ -163,7 +163,7 @@ describe("表單:副本、分派 / 啟用 / 收回的交集、租戶邊界", () 
     });
     return data.forms.items
       .map((form) => form.key)
-      .toSorted((a, b) => a.localeCompare(b));
+      .toSorted((a, b) => a.localeCompare(b, "zh-Hant"));
   }
 
   /** 某位操作者 `me.modules` 裡的全部權限 key。 */

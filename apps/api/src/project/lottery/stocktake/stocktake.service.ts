@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common";
 import { GraphQLError } from "graphql";
 import { type ClientSession, Types } from "mongoose";
 
+import { COLLATION_LOCALE } from "@repo/domain/collation";
 import type { StoredValues } from "@repo/domain/form";
 import {
   INVENTORY_PERMISSIONS,
@@ -970,8 +971,8 @@ export class StocktakeService {
         (a, b) =>
           (order.get(String(a.cashPointId)) ?? 0) -
             (order.get(String(b.cashPointId)) ?? 0) ||
-          a.gameCode.localeCompare(b.gameCode) ||
-          a.bookNo.localeCompare(b.bookNo),
+          a.gameCode.localeCompare(b.gameCode, COLLATION_LOCALE) ||
+          a.bookNo.localeCompare(b.bookNo, COLLATION_LOCALE),
       );
     return [...onCounter, ...stockUncounted];
   }
@@ -998,8 +999,8 @@ export class StocktakeService {
       }))
       .toSorted(
         (a, b) =>
-          a.gameCode.localeCompare(b.gameCode) ||
-          a.bookNo.localeCompare(b.bookNo),
+          a.gameCode.localeCompare(b.gameCode, COLLATION_LOCALE) ||
+          a.bookNo.localeCompare(b.bookNo, COLLATION_LOCALE),
       );
   }
 

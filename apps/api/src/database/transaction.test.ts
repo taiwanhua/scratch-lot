@@ -92,7 +92,7 @@ describe("TransactionService.withTransaction(對真 MongoDB replica set)", () =>
       .toArray();
     return documents
       .map((document) => document.name)
-      .toSorted((a, b) => a.localeCompare(b));
+      .toSorted((a, b) => a.localeCompare(b, "zh-Hant"));
   }
 
   it("成功:交易內的所有寫入一起生效,回傳 fn 的結果", async () => {
@@ -154,7 +154,9 @@ describe("TransactionService.withTransaction(對真 MongoDB replica set)", () =>
 
         // 只剩交易前就存在的那筆,而且沒被改名、沒被軟刪除
         expect(await namesInDatabase()).toEqual(
-          [...before, `${prefix}-既有`].toSorted((a, b) => a.localeCompare(b)),
+          [...before, `${prefix}-既有`].toSorted((a, b) =>
+            a.localeCompare(b, "zh-Hant"),
+          ),
         );
         await expect(items.findById(asA, existing._id)).resolves.toMatchObject({
           name: `${prefix}-既有`,

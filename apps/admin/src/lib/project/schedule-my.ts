@@ -1,3 +1,5 @@
+import { COLLATION_LOCALE } from "@repo/domain/collation";
+
 import { localPartsOf } from "./schedule-roster";
 
 /**
@@ -84,7 +86,7 @@ export const listDatesOf = (input: {
   ]);
   return [...dates]
     .filter((date) => date.startsWith(`${input.month}-`))
-    .toSorted((left, right) => left.localeCompare(right));
+    .toSorted((left, right) => left.localeCompare(right, COLLATION_LOCALE));
 };
 
 /** 「上次打開這一頁」存在瀏覽器的 key(以使用者區分;同一台電腦換人登入不互相影響)。 */

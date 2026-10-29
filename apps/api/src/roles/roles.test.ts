@@ -610,7 +610,7 @@ describe("角色管理:清單與 CRUD(GraphQL 端點 + 真 MongoDB)", () => {
       expect(
         results
           .map((result) => result.code ?? "OK")
-          .toSorted((left, right) => left.localeCompare(right)),
+          .toSorted((left, right) => left.localeCompare(right, "zh-Hant")),
       ).toEqual(["NOT_FOUND", "OK"]);
       await expect(
         connection

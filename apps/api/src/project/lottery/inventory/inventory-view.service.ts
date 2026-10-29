@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import type { Types } from "mongoose";
 
+import { COLLATION_LOCALE } from "@repo/domain/collation";
 import {
   INVENTORY_BOOK_FILTER_STATES,
   INVENTORY_PERMISSIONS,
@@ -102,7 +103,8 @@ const mustRef = (
 const isFilterState = (value: string): value is InventoryBookFilterState =>
   (INVENTORY_BOOK_FILTER_STATES as readonly string[]).includes(value);
 
-const byTicketNo = (a: string, b: string): number => a.localeCompare(b);
+const byTicketNo = (a: string, b: string): number =>
+  a.localeCompare(b, COLLATION_LOCALE);
 
 /** 時間軸合併同一列用的地方 key。 */
 const placeKey = (place: TicketStateSnapshot | null): string =>

@@ -200,7 +200,7 @@ export const scheduleAutoRunHandlers = (
     // 套用到的日子是那天台北 00:00 的時點 → 日期鍵
     for (const date of input.dates
       .map((iso) => taipeiDate(iso))
-      .toSorted((left, right) => left.localeCompare(right))) {
+      .toSorted((left, right) => left.localeCompare(right, "zh-Hant"))) {
       if (isWeek && existing.some((demand) => demand.date === dayAt(date))) {
         plan.skippedDays += 1;
         continue;

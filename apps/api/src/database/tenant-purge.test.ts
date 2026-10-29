@@ -51,11 +51,11 @@ describe("清空租戶的刪除登記:完整性(底座 + 專案,正式內容)", 
     const withTenantId = TENANT_PURGE.models
       .filter((entry) => hasPath(entry.schema, "tenantId"))
       .map((entry) => entry.collection)
-      .toSorted((left, right) => left.localeCompare(right));
+      .toSorted((left, right) => left.localeCompare(right, "zh-Hant"));
     const byTenantId = plan.steps
       .filter((step) => step.by === "tenantId")
       .map((step) => step.collection)
-      .toSorted((left, right) => left.localeCompare(right));
+      .toSorted((left, right) => left.localeCompare(right, "zh-Hant"));
     expect(withTenantId.length).toBeGreaterThan(0);
     expect(byTenantId).toEqual(withTenantId);
   });
@@ -173,7 +173,7 @@ describe("清空租戶的刪除登記:規則", () => {
       plan.steps
         .filter((step) => step.files.length > 0)
         .map((step) => step.collection)
-        .toSorted((left, right) => left.localeCompare(right)),
+        .toSorted((left, right) => left.localeCompare(right, "zh-Hant")),
     ).toEqual(["demo_items_one", "form_submissions"]);
   });
 

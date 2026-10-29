@@ -5,6 +5,7 @@ import {
 } from "@nestjs/common";
 import { Types } from "mongoose";
 
+import { compareDisplayName } from "@repo/domain/collation";
 import {
   TICKET_LOCATION_KIND,
   TICKET_STATUS,
@@ -221,7 +222,7 @@ export class StoreRegistrations implements OnModuleInit, OnModuleDestroy {
       .toSorted(
         (a, b) =>
           a.order - b.order ||
-          a.cashPointName.localeCompare(b.cashPointName, "zh-Hant"),
+          compareDisplayName(a.cashPointName, b.cashPointName),
       )
       .map((drawer) => ({
         cashPointId: drawer.cashPointId,

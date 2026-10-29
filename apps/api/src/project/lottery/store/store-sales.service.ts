@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common";
 import { GraphQLError } from "graphql";
 import { type ClientSession, Types } from "mongoose";
 
+import { COLLATION_LOCALE } from "@repo/domain/collation";
 import {
   STORE_PERMISSIONS,
   type SaleUndoBlock,
@@ -345,7 +346,9 @@ export class StoreSalesService {
         );
       }
     }
-    return items.toSorted((a, b) => a.gameCode.localeCompare(b.gameCode));
+    return items.toSorted((a, b) =>
+      a.gameCode.localeCompare(b.gameCode, COLLATION_LOCALE),
+    );
   }
 
   private async scanItemOf(

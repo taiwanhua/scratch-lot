@@ -2,6 +2,7 @@ import { Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import type { Types } from "mongoose";
 
+import { COLLATION_LOCALE } from "@repo/domain/collation";
 import { userTopic } from "@repo/domain/realtime";
 
 import { UsersRepository } from "../database/database.module";
@@ -57,9 +58,9 @@ export function assertChannelAdapters(
 ): readonly NotificationChannelAdapter[] {
   const channels = adapters
     .map((adapter) => adapter.channel)
-    .toSorted((a, b) => a.localeCompare(b));
+    .toSorted((a, b) => a.localeCompare(b, COLLATION_LOCALE));
   const expected = [...NOTIFICATION_CHANNELS].toSorted((a, b) =>
-    a.localeCompare(b),
+    a.localeCompare(b, COLLATION_LOCALE),
   );
   if (channels.join(",") !== expected.join(",")) {
     throw new Error(

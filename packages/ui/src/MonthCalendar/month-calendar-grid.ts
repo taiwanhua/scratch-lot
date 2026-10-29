@@ -7,7 +7,7 @@ const DATE_FORMAT = "YYYY-MM-DD";
 const DAYS_IN_WEEK = 7;
 
 /** `YYYY-MM-DD` 字串依字典序即依日期序。 */
-const byDate = (a: string, b: string) => a.localeCompare(b);
+const byDate = (a: string, b: string) => a.localeCompare(b, "zh-Hant");
 
 /** 月曆上的一格。`inMonth = false` 是本月前後補齊整週的上 / 下個月日期(只顯示、不能選)。 */
 export interface CalendarDay {

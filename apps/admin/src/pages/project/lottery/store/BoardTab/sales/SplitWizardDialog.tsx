@@ -1,5 +1,6 @@
 import { useState } from "react";
 
+import { COLLATION_LOCALE } from "@repo/domain/collation";
 import {
   displayBookNo,
   splitPlanProblemOf,
@@ -74,7 +75,7 @@ const SkipStep = ({
             count: skipped.length,
             total: pending,
             nos: skipped
-              .toSorted((a, b) => a.localeCompare(b))
+              .toSorted((a, b) => a.localeCompare(b, COLLATION_LOCALE))
               .map((no) => `#${no}`)
               .join("、"),
           })}

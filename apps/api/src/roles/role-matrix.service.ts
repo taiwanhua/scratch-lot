@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import type { Types } from "mongoose";
 
+import { COLLATION_LOCALE } from "@repo/domain/collation";
 import {
   type MatrixModuleNode,
   type PermissionGrant,
@@ -585,11 +586,11 @@ function buildMatrixTree(
 }
 
 function compareModules(a: ModuleRecord, b: ModuleRecord): number {
-  return a.order - b.order || a.key.localeCompare(b.key);
+  return a.order - b.order || a.key.localeCompare(b.key, COLLATION_LOCALE);
 }
 
 function comparePermissions(a: PermissionRecord, b: PermissionRecord): number {
   const wildcardFirst =
     Number(isWildcardKey(b.key)) - Number(isWildcardKey(a.key));
-  return wildcardFirst || a.key.localeCompare(b.key);
+  return wildcardFirst || a.key.localeCompare(b.key, COLLATION_LOCALE);
 }

@@ -323,7 +323,7 @@ describe("通知 notify() / 通知清單 / 通知設定", () => {
     const rows = await rowsOf(dedupeKey);
     return rows
       .map((row) => String(row.recipientId))
-      .toSorted((a, b) => a.localeCompare(b));
+      .toSorted((a, b) => a.localeCompare(b, "zh-Hant"));
   };
 
   beforeAll(async () => {
@@ -978,7 +978,7 @@ describe("通知 notify() / 通知清單 / 通知設定", () => {
       expect(maxInFlight).toBe(1);
       expect(await recipientsOf(dedupeKey)).toEqual(
         [String(printerAdmin.userId), String(bob.userId)].toSorted((a, b) =>
-          a.localeCompare(b),
+          a.localeCompare(b, "zh-Hant"),
         ),
       );
       await ok(api, admin.token, RESET_SETTING, {

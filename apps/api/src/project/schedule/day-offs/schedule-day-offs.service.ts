@@ -1,6 +1,7 @@
 import { Injectable, type OnModuleInit } from "@nestjs/common";
 import { Types } from "mongoose";
 
+import { COLLATION_LOCALE, compareDisplayName } from "@repo/domain/collation";
 import {
   type InstantRange,
   addLocalMonths,
@@ -77,7 +78,6 @@ import {
 } from "../shared/schedule-permissions";
 import { SchedulePersonLocks } from "../shared/schedule-person-locks";
 import { NAMES_READER } from "../shared/schedule-readers";
-import { compareScheduleNames } from "../shared/schedule-sort";
 import type { ScheduleCandidate } from "../staff/schedule-candidates";
 import { ScheduleStaffService } from "../staff/schedule-staff.service";
 import { DayOffOverrideNotices } from "./day-off-override-notices";
@@ -323,9 +323,9 @@ const byTime = (
   left: { localDate: string; startAt: Date | null; name?: string },
   right: { localDate: string; startAt: Date | null; name?: string },
 ) =>
-  left.localDate.localeCompare(right.localDate) ||
+  left.localDate.localeCompare(right.localDate, COLLATION_LOCALE) ||
   (left.startAt?.getTime() ?? 0) - (right.startAt?.getTime() ?? 0) ||
-  compareScheduleNames(left.name ?? "", right.name ?? "");
+  compareDisplayName(left.name ?? "", right.name ?? "");
 
 /**
  * 畫休(規格 14.1 `schedule_day_offs`、14.2 畫休規則、14.5 畫休總覽、14.6 我的畫休;
@@ -1423,7 +1423,7 @@ function daysOf(
     ]);
   }
   return [...byDate.keys()]
-    .toSorted((left, right) => left.localeCompare(right))
+    .toSorted((left, right) => left.localeCompare(right, COLLATION_LOCALE))
     .map((date) => ({
       date: instantOfKey(date, timezone),
       staffCount: counts.get(date) ?? 0,

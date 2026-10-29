@@ -1,6 +1,8 @@
 import { Injectable } from "@nestjs/common";
 import { Types } from "mongoose";
 
+import { compareDisplayName } from "@repo/domain/collation";
+
 import {
   FormSubmissionsRepository,
   OrgsRepository,
@@ -83,7 +85,7 @@ export class InventoryNames {
           isVisibleStore(operator, org, tenantOrgs) ||
           (isOrgVisible(operator, org.id) && withData.has(String(org.id))),
       )
-      .toSorted((a, b) => a.name.localeCompare(b.name, "zh-Hant"));
+      .toSorted((a, b) => compareDisplayName(a.name, b.name));
   }
 
   async orgNames(

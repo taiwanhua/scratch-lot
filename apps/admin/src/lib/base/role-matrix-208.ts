@@ -1,3 +1,4 @@
+import { COLLATION_LOCALE } from "@repo/domain/collation";
 import {
   type MatrixModuleNode,
   type MatrixModuleTree,
@@ -209,7 +210,7 @@ export const ungrantedMatrixRowIds = rowIdsOutside;
 export const outOfCeilingMatrixRowIds = rowIdsOutside;
 
 const byKey = (left: string, right: string): number =>
-  left.localeCompare(right);
+  left.localeCompare(right, COLLATION_LOCALE);
 
 const signatureOf = (grant: PermissionGrant): string =>
   JSON.stringify([

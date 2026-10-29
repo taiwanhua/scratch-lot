@@ -5,6 +5,8 @@ import { ConfigService } from "@nestjs/config";
 import { hash } from "@node-rs/argon2";
 import { type ClientSession, Types } from "mongoose";
 
+import { COLLATION_LOCALE } from "@repo/domain/collation";
+
 import { AuditService } from "../audit/audit.service";
 import { assertPasswordRule } from "../auth/password/password-error";
 import { PasswordService } from "../auth/password/password.service";
@@ -146,7 +148,7 @@ function sortForTree(documents: ModuleRecord[]): ModuleRecord[] {
     (left, right) =>
       left.ancestors.length - right.ancestors.length ||
       left.order - right.order ||
-      left.key.localeCompare(right.key),
+      left.key.localeCompare(right.key, COLLATION_LOCALE),
   );
 }
 

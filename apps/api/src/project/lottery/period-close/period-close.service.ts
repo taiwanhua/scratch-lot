@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { type ClientSession, Types } from "mongoose";
 
+import { compareDisplayName } from "@repo/domain/collation";
 import {
   type StoredValues,
   localMonthOf,
@@ -614,7 +615,7 @@ export class PeriodCloseService {
       drawers: drawers.get(String(orgId)) ?? [],
       uncoveredShifts: uncovered.get(String(orgId)) ?? [],
     }));
-    return stores.toSorted((a, b) => a.name.localeCompare(b.name, "zh-Hant"));
+    return stores.toSorted((a, b) => compareDisplayName(a.name, b.name));
   }
 
   /**

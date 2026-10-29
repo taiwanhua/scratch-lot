@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import type { Types } from "mongoose";
 
+import { COLLATION_LOCALE } from "@repo/domain/collation";
 import {
   TICKET_EVENT_TYPE,
   TICKET_LOCATION_KIND,
@@ -145,8 +146,8 @@ export class StoreCounterService {
       })
       .toSorted(
         (a, b) =>
-          a.gameCode.localeCompare(b.gameCode) ||
-          a.bookNo.localeCompare(b.bookNo),
+          a.gameCode.localeCompare(b.gameCode, COLLATION_LOCALE) ||
+          a.bookNo.localeCompare(b.bookNo, COLLATION_LOCALE),
       );
   }
 
