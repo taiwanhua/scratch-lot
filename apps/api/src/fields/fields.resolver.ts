@@ -4,6 +4,7 @@ import { CurrentOperator } from "../auth/decorators";
 import type { OperatorContext } from "../database/operator-context";
 import { RequirePermission } from "../permission/require-permission.decorator";
 import { CreateFieldInput } from "./dto/create-field.input";
+import { SetFieldColorInput } from "./dto/set-field-color.input";
 import { SetFieldEnabledInput } from "./dto/set-field-enabled.input";
 import { UpdateFieldInput } from "./dto/update-field.input";
 import { FieldsService } from "./fields.service";
@@ -53,5 +54,15 @@ export class FieldsResolver {
     @CurrentOperator() operator: OperatorContext,
   ): Promise<FieldPayload> {
     return { field: await this.service.setEnabled(operator, input) };
+  }
+
+  /** 顏色在欄位管理頁的選項表上,綁 `edit`;誰能改同停用 / 啟用(service 檢查)。 */
+  @RequirePermission("system.field-manager.edit")
+  @Mutation(() => FieldPayload)
+  async setFieldColor(
+    @Args("input") input: SetFieldColorInput,
+    @CurrentOperator() operator: OperatorContext,
+  ): Promise<FieldPayload> {
+    return { field: await this.service.setColor(operator, input) };
   }
 }

@@ -1,14 +1,12 @@
 import { ModuleEngine, ModuleSidebarType } from "@repo/graphql";
 
 import type { TestModule } from "@/test/msw/auth-handlers";
-import { fieldsByCategory } from "@/test/msw/field-fixtures";
 import {
   printButtonWorld,
   printingModule,
 } from "@/test/msw/print-button-handlers";
 import { dealersModules } from "@/test/msw/project/dealers-fixtures";
 import { dealersWorld } from "@/test/msw/project/dealers-handlers";
-import { fieldOptionColorWorld } from "@/test/msw/project/field-option-colors-handlers";
 import { accountsModules } from "@/test/msw/project/lottery/accounts-fixtures";
 import { accountsWorld } from "@/test/msw/project/lottery/accounts-handlers";
 import {
@@ -76,30 +74,6 @@ import {
 } from "@/test/msw/project/schedule-support-request-fixtures";
 
 import type { ProjectMockWorld } from "../mock-world-source";
-
-/** 欄位管理(客製替換頁)的選項顏色:示範分類三筆有顏色,其餘「不設定」。 */
-const fieldOptionColors = () =>
-  fieldOptionColorWorld({
-    colorsByCategory: {
-      "demo-category": [
-        { fieldId: "f-staple", value: "staple", paletteKey: "green" },
-        { fieldId: "f-side-dish", value: "side-dish", paletteKey: "yellow" },
-        { fieldId: "f-fried", value: "fried", paletteKey: "orange" },
-      ],
-    },
-    options: Object.fromEntries(
-      Object.values(fieldsByCategory)
-        .flat()
-        .map((field) => [
-          field.id,
-          {
-            categoryKey:
-              field.categoryId === "cat-gender" ? "gender" : "demo-category",
-            value: field.value,
-          },
-        ]),
-    ),
-  }).handlers;
 
 /**
  * 排班表的檢核情境(看檢核面板與發布的三種確認視窗用):網址加 `?rosterCheck=reminders` / `clear`
@@ -186,7 +160,6 @@ export const projectMockWorld: ProjectMockWorld = {
     printingModule(["api.printing.print", "api.printing.reprint"]),
   ],
   handlers: () => [
-    ...fieldOptionColors(),
     ...masterDataWorld().handlers,
     ...dealersWorld().handlers,
     ...scheduleSettingsWorld().handlers,

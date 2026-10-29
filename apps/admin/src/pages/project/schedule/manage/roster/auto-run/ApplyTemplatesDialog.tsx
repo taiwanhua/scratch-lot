@@ -4,6 +4,7 @@ import { useTranslations } from "use-intl";
 
 import { DEFAULT_TENANT_TIMEZONE } from "@repo/domain/form";
 import { SCHEDULE_FIELD_CATEGORY_KEYS } from "@repo/domain/project/schedule-fields";
+import { isTagPaletteKey } from "@repo/domain/tag-palette";
 import {
   useApplyScheduleTemplatesMutation,
   useScheduleTemplateApplyPreviewQuery,
@@ -24,7 +25,7 @@ import { Stack } from "@repo/ui/stack";
 import { Tag } from "@repo/ui/tag";
 import { Typography } from "@repo/ui/typography";
 
-import { TagPaletteChip } from "@/components/project/TagPaletteChip/TagPaletteChip";
+import { TagPaletteChip } from "@/components/base/TagPaletteChip/TagPaletteChip";
 import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
 import { useSession } from "@/hooks/base/useSession";
 import { useTenantTimezone } from "@/hooks/base/useTenantTimezone";
@@ -36,7 +37,6 @@ import {
   weekTemplateSummary,
 } from "@/lib/project/schedule-auto-run";
 import { datesOfMonth, dayInstantOf } from "@/lib/project/schedule-roster";
-import { isTagPaletteKey } from "@/lib/project/tag-palettes";
 
 import { scheduleErrorKey } from "../../../schedule-error";
 import { useRosterCheck } from "../check-panel/roster-check-context";

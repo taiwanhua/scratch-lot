@@ -3,10 +3,11 @@ import { useTranslations } from "use-intl";
 
 import { DEFAULT_TENANT_TIMEZONE } from "@repo/domain/form";
 import { displayBookNo } from "@repo/domain/project/lottery";
-import { isTagPaletteKey } from "@repo/domain/project/tag-palette";
+import { isTagPaletteKey } from "@repo/domain/tag-palette";
 import type { LotteryStoreBoardQuery } from "@repo/graphql";
 import { Box } from "@repo/ui/box";
 import { Stack } from "@repo/ui/stack";
+import { tagPaletteColorOf } from "@repo/ui/theme";
 
 import { BoardBookCard } from "@/components/project/lottery/BoardBookCard/BoardBookCard";
 import {
@@ -15,7 +16,6 @@ import {
 } from "@/components/project/lottery/CashPointHeader/CashPointHeader";
 import { useTenantTimezone } from "@/hooks/base/useTenantTimezone";
 import { localPartsOf } from "@/lib/project/schedule-roster";
-import { tagPaletteColorOf } from "@/lib/project/tag-palettes";
 
 import { moneyText } from "../store-text";
 

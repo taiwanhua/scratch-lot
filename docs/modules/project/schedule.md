@@ -205,7 +205,7 @@
 ### 行事曆(規格 14.5)
 
 - 某家店某天以**最接近的那一層**為準(`apps/api/src/project/schedule/calendar/calendar-resolution.ts`):上層設店休、本店沒設 → 本店那天店休;本店自設特殊日 → 以本店為準。同一層同一天只有一筆(重複 → `VALIDATION_FAILED`,欄位 `date`)。
-- 特殊日:類別(欄位管理「特殊日類別」啟用中的選項,否則欄位 `category`)、名稱、顏色必填,顏色不能選灰色(`@repo/domain/project/tag-palette` 的 `isSpecialDayPaletteKey`;不符 → `VALIDATION_FAILED` 欄位 `paletteKey`;admin 行事曆對話框的 `TagPaletteSelect` 只列 `SPECIAL_DAY_PALETTE_KEYS`、沒有「不設定」);店休:類別與顏色一律存 null。這條規則之前的特殊日由 migration `20261028120000_data_special-day-palette-required` 補成藍色。
+- 特殊日:類別(欄位管理「特殊日類別」啟用中的選項,否則欄位 `category`)、名稱、顏色必填,顏色不能選灰色(`@repo/domain/project/schedule-settings` 的 `isSpecialDayPaletteKey`;不符 → `VALIDATION_FAILED` 欄位 `paletteKey`;admin 行事曆對話框的 `TagPaletteSelect` 只列 `SPECIAL_DAY_PALETTE_KEYS`、沒有「不設定」);店休:類別與顏色一律存 null。這條規則之前的特殊日由 migration `20261028120000_data_special-day-palette-required` 補成藍色。
 - 寫入要 `schedule.manage.edit-calendar`,寫在選的那家店那一層;上層設的那一天本店改不了(`FORBIDDEN`,`NOT_OWNER`)。存成店休時回應附 `closedConflicts`(這一層與看得到的下層各店中那天沿用這一筆的,那天 —— 含前一天跨午夜做進來的 —— 已經有人力需求 / 排班的店:`orgId`、`orgName`、`demandCount`、`entryCount`;特殊日回空陣列),照樣存,畫面提醒去刪(`useClosedDayConflictNotice`,做法同先排班、後登記畫休)。排班作業共用 `ScheduleCalendarService.effectiveDays(operator, orgId, range)`(半開的時點區間 `[from, to)`;回的 `date` 是那天 00:00 的時點,要日期鍵的呼叫端用 `dateKeyOf` 換)。
 - **日期是時點**:`date` 收發都是租戶時區那天 00:00 的時點,寫入時以租戶時區正規化成那天 00:00(送當天其他時刻也歸到同一天)。查詢收 `from` / `to` 半開區間 `[起, 迄)`(月 = 月初 00:00 到下月初 00:00),迄要晚於起、最長 31 天再多一小時(夏令時間),否則 `VALIDATION_FAILED`(欄位 `from`、`to`)。
 

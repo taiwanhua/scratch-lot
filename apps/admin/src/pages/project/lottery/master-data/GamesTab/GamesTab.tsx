@@ -2,6 +2,7 @@ import { useNavigate } from "react-router";
 import { useTranslations } from "use-intl";
 
 import { STANDARD_UNIT_PRICES } from "@repo/domain/project/lottery-master-data";
+import { isTagPaletteKey } from "@repo/domain/tag-palette";
 import {
   type LotteryGameFieldsFragment,
   useLotteryGamesQuery,
@@ -16,11 +17,10 @@ import { TextField } from "@repo/ui/text-field";
 import { Typography } from "@repo/ui/typography";
 
 import { FilterDrawer } from "@/components/base/FilterDrawer/FilterDrawer";
-import { TagPaletteChip } from "@/components/project/TagPaletteChip/TagPaletteChip";
+import { TagPaletteChip } from "@/components/base/TagPaletteChip/TagPaletteChip";
 import { useSession } from "@/hooks/base/useSession";
 import { useTemporalText } from "@/hooks/base/useTemporalText";
 import { useUrlState } from "@/hooks/base/useUrlState";
-import { isTagPaletteKey } from "@/lib/project/tag-palettes";
 
 import { GameStatusTag } from "../GameStatusTag/GameStatusTag";
 import {

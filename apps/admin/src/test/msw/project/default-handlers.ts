@@ -1,4 +1,4 @@
-import { HttpResponse, type graphql } from "msw";
+import type { RequestHandler, graphql } from "msw";
 
 type GraphQLLink = ReturnType<typeof graphql.link>;
 
@@ -8,13 +8,8 @@ type GraphQLLink = ReturnType<typeof graphql.link>;
  *
  * 專案替換了底座頁時,底座頁自己的測試經路由看到的是專案版(jest 的 `admin` project 用正式的
  * `app/project/` 登記),專案版多打的 api 在這裡給「沒有資料」的預設回應,底座測試就不會出現
- * 未處理的請求。要驗資料的測試用各自的 world 以 `server.use()` 蓋過。
+ * 未處理的請求。要驗資料的測試用各自的 world 以 `server.use()` 蓋過。目前沒有替換頁要補。
  */
-export const projectDefaultHandlers = (api: GraphQLLink) => [
-  // 欄位管理換成帶「顏色」欄的客製頁(`app/project/page-replacements.ts`):預設沒有任何顏色
-  api.query("FieldOptionColors", () =>
-    HttpResponse.json({
-      data: { fieldOptionColors: { items: [], totalCount: 0 } },
-    }),
-  ),
-];
+export const projectDefaultHandlers: (
+  api: GraphQLLink,
+) => RequestHandler[] = () => [];

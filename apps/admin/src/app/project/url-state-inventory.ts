@@ -6,8 +6,6 @@ import type { UrlStateInventory } from "../module-page-registry";
  * (換掉之後的頁放進網址的 key 以這裡為準):頁面 key → 這一頁以 `useUrlState` 放進網址的 key。
  */
 export const projectUrlStateInventory: UrlStateInventory = {
-  // 欄位管理換成帶「顏色」欄的客製頁:網址狀態與底座頁相同(選中的類別、編輯中的選項)
-  "system.field-manager": ["detail", "edit"],
   // 檔案管理:分頁、遊戲篩選、收銀點頁碼、編輯中的收銀點;遊戲詳情的分頁
   "master-data": ["tab", "games", "cashPoints", "edit"],
   "master-data.games.view-page": ["tab"],

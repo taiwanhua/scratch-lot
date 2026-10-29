@@ -1,6 +1,7 @@
 import { HttpResponse } from "msw";
 
 import { isValidFieldCategoryKey } from "@repo/domain/form";
+import { isTagPaletteKey } from "@repo/domain/tag-palette";
 import {
   type CreateFieldCategoryMutationVariables,
   type CreateFieldMutationVariables,
@@ -9,6 +10,7 @@ import {
   type FieldsQuery,
   type FieldsQueryVariables,
   type SetFieldCategoryEnabledMutationVariables,
+  type SetFieldColorMutationVariables,
   type SetFieldEnabledMutationVariables,
   type UpdateFieldCategoryMutationVariables,
   type UpdateFieldMutationVariables,
@@ -26,6 +28,7 @@ export type FieldOperation =
   | "CreateField"
   | "UpdateField"
   | "SetFieldEnabled"
+  | "SetFieldColor"
   | "CreateFieldCategory"
   | "UpdateFieldCategory"
   | "SetFieldCategoryEnabled";
@@ -51,6 +54,7 @@ export interface FieldWorld {
     createField: CreateFieldMutationVariables["input"][];
     updateField: UpdateFieldMutationVariables["input"][];
     setFieldEnabled: SetFieldEnabledMutationVariables["input"][];
+    setFieldColor: SetFieldColorMutationVariables["input"][];
     createFieldCategory: CreateFieldCategoryMutationVariables["input"][];
     updateFieldCategory: UpdateFieldCategoryMutationVariables["input"][];
     setFieldCategoryEnabled: SetFieldCategoryEnabledMutationVariables["input"][];
@@ -60,7 +64,7 @@ export interface FieldWorld {
 }
 
 /**
- * 欄位管理頁的假 api(兩個 query + 三個 mutation;可見範圍規則)。
+ * 欄位管理頁的假 api(兩個 query + 選項的四個 mutation + 類別作業;可見範圍規則)。
  *
  * 清單是**有狀態的**:新增 / 編輯 / 切換寫回同一份資料,所以「mutation → invalidate →
  * 重新查 `fields`」在測試裡看得到新的值 —— 只回固定清單的 handler 驗不出失效有沒有發生。
@@ -69,8 +73,9 @@ export interface FieldWorld {
  *
  * - **可不可以動由每一列自己的 `canEdit` / `canToggleEnabled` 決定**(api 依操作者算好),
  *   假伺服器不重算組織關係 —— 這正是前端該相信的那一份
- * - `updateField` / `setFieldEnabled` 被擋時:種子 → `FORBIDDEN` + reason
+ * - `updateField` / `setFieldEnabled` / `setFieldColor` 被擋時:種子 → `FORBIDDEN` + reason
  *   `SEED_READ_ONLY` / `SEED_GLOBAL_SWITCH`;別的組織加的 → reason `NOT_OWNER`
+ * - `setFieldColor`:誰能改同 `canToggleEnabled`;不在色票清單的代號 → `VALIDATION_FAILED`(`fields: ["color"]`)
  * - `createField` 的 `value` 與同類別的**繼承鏈**(全域 / 上層 / 自己)重複 → `FIELD_VALUE_DUPLICATE`
  * - 類別作業:`key` 格式不符 → `VALIDATION_FAILED`、重複(含停用的)→ `FIELD_CATEGORY_KEY_DUPLICATE`、
  *   改名 / 停用系統類別 → `FORBIDDEN` + reason `SYSTEM_CATEGORY`;`fieldCategories(input.enabledOnly)` 只回啟用的
@@ -90,6 +95,7 @@ export const fieldWorld = (options: FieldWorldOptions = {}): FieldWorld => {
     createField: [],
     updateField: [],
     setFieldEnabled: [],
+    setFieldColor: [],
     createFieldCategory: [],
     updateFieldCategory: [],
     setFieldCategoryEnabled: [],
@@ -167,6 +173,7 @@ export const fieldWorld = (options: FieldWorldOptions = {}): FieldWorld => {
         order: input.order ?? 0,
         enabled: true,
         description: input.description ?? null,
+        color: null,
         ownerOrg: currentOrg ?? null,
         isOwn: true,
         canEdit: true,
@@ -220,6 +227,30 @@ export const fieldWorld = (options: FieldWorldOptions = {}): FieldWorld => {
       return HttpResponse.json({
         data: { setFieldEnabled: { field: target } },
       });
+    }),
+    api.mutation("SetFieldColor", ({ variables }) => {
+      const { input } = variables as SetFieldColorMutationVariables;
+      inputs.setFieldColor.push(input);
+      const failure = fail("SetFieldColor");
+      if (failure !== null) {
+        return failure;
+      }
+      const color = input.color ?? null;
+      if (color !== null && !isTagPaletteKey(color)) {
+        return graphqlError("VALIDATION_FAILED", "VALIDATION_FAILED", {
+          fields: ["color"],
+        });
+      }
+      const target = findField(input.id);
+      if (target === undefined) {
+        return graphqlError("FORBIDDEN", "NOT_FOUND");
+      }
+      // 顏色與停用 / 啟用同一條規則:種子限根組織、自訂的只有加它的組織改得動
+      if (!target.canToggleEnabled) {
+        return forbidden(target, "SEED_GLOBAL_SWITCH");
+      }
+      target.color = color;
+      return HttpResponse.json({ data: { setFieldColor: { field: target } } });
     }),
   ];
 

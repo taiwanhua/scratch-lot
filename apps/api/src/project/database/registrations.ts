@@ -1,5 +1,4 @@
 import type { DatabaseRegistration } from "../../database/registration";
-import { FIELD_OPTION_COLORS_REGISTRATION } from "./field-option-colors/registration";
 import { LOTTERY_ACCOUNTS_REGISTRATION } from "./lottery-accounts/registration";
 import { LOTTERY_CASH_POINTS_REGISTRATION } from "./lottery-cash-points/registration";
 import { LOTTERY_CHECKOUTS_REGISTRATION } from "./lottery-checkouts/registration";
@@ -24,7 +23,6 @@ import { SCHEDULE_ROSTER_REGISTRATION } from "./schedule/roster-registration";
  * 少任何一項 app 都起不來。這裡沒有任何「略過檢查」的旗標可用。
  */
 export const PROJECT_DATABASE_REGISTRATIONS: readonly DatabaseRegistration[] = [
-  FIELD_OPTION_COLORS_REGISTRATION,
   LOTTERY_GAMES_REGISTRATION,
   LOTTERY_CASH_POINTS_REGISTRATION,
   LOTTERY_DEALERS_REGISTRATION,

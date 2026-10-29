@@ -1,5 +1,4 @@
 import type { TenantPurgeRegistration } from "../../database/tenant-purge";
-import { FIELD_OPTION_COLORS_COLLECTION } from "./field-option-colors/field-option-color.schema";
 import { LOTTERY_BANK_ACCOUNTS_COLLECTION } from "./lottery-accounts/lottery-bank-account.schema";
 import { LOTTERY_BANK_TRANSACTIONS_COLLECTION } from "./lottery-accounts/lottery-bank-transaction.schema";
 import { LOTTERY_CASH_MOVEMENTS_COLLECTION } from "./lottery-accounts/lottery-cash-movement.schema";
@@ -55,7 +54,6 @@ const byTenantId = (collection: string): TenantPurgeRegistration => ({
  */
 export const PROJECT_TENANT_PURGE_REGISTRATIONS: readonly TenantPurgeRegistration[] =
   [
-    FIELD_OPTION_COLORS_COLLECTION,
     LOTTERY_GAMES_COLLECTION,
     LOTTERY_CASH_POINTS_COLLECTION,
     LOTTERY_DEALERS_COLLECTION,

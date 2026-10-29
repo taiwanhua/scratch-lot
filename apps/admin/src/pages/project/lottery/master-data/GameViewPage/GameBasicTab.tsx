@@ -1,14 +1,14 @@
 import type { ReactNode } from "react";
 import { useTranslations } from "use-intl";
 
+import { isTagPaletteKey } from "@repo/domain/tag-palette";
 import type { LotteryGameFieldsFragment } from "@repo/graphql";
 import { Box } from "@repo/ui/box";
 import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
 
-import { TagPaletteChip } from "@/components/project/TagPaletteChip/TagPaletteChip";
+import { TagPaletteChip } from "@/components/base/TagPaletteChip/TagPaletteChip";
 import { useTemporalText } from "@/hooks/base/useTemporalText";
-import { isTagPaletteKey } from "@/lib/project/tag-palettes";
 
 export interface GameBasicTabProps {
   game: LotteryGameFieldsFragment;

@@ -3,9 +3,9 @@ import { useTranslations } from "use-intl";
 import { Box } from "@repo/ui/box";
 import { Stack } from "@repo/ui/stack";
 import { Tag } from "@repo/ui/tag";
+import { tagPaletteBackgroundVarsSx } from "@repo/ui/theme";
 import { Typography } from "@repo/ui/typography";
 
-import { tagPaletteBackgroundVarsSx } from "@/components/project/TagPaletteChip/tag-palette-background";
 import {
   calendarMarkBackground,
   calendarMarkOf,

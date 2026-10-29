@@ -129,6 +129,16 @@
         "default": "./dist/cjs/printing.cjs"
       }
     },
+    "./tag-palette": {
+      "import": {
+        "types": "./dist/es/tag-palette.d.ts",
+        "default": "./dist/es/tag-palette.js"
+      },
+      "require": {
+        "types": "./dist/cjs/tag-palette.d.cts",
+        "default": "./dist/cjs/tag-palette.cjs"
+      }
+    },
     "./project/reason-note": {
       "import": {
         "types": "./dist/es/project/reason-note.d.ts",
@@ -167,16 +177,6 @@
       "require": {
         "types": "./dist/cjs/project/schedule-settings.d.cts",
         "default": "./dist/cjs/project/schedule-settings.cjs"
-      }
-    },
-    "./project/tag-palette": {
-      "import": {
-        "types": "./dist/es/project/tag-palette.d.ts",
-        "default": "./dist/es/project/tag-palette.js"
-      },
-      "require": {
-        "types": "./dist/cjs/project/tag-palette.d.cts",
-        "default": "./dist/cjs/project/tag-palette.cjs"
       }
     },
     "./project/lottery-master-data": {
@@ -248,6 +248,9 @@
       "printing": [
         "./dist/es/printing.d.ts"
       ],
+      "tag-palette": [
+        "./dist/es/tag-palette.d.ts"
+      ],
       "project/reason-note": [
         "./dist/es/project/reason-note.d.ts"
       ],
@@ -259,9 +262,6 @@
       ],
       "project/schedule-settings": [
         "./dist/es/project/schedule-settings.d.ts"
-      ],
-      "project/tag-palette": [
-        "./dist/es/project/tag-palette.d.ts"
       ],
       "project/lottery-master-data": [
         "./dist/es/project/lottery-master-data.d.ts"

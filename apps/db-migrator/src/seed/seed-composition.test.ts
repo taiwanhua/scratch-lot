@@ -433,7 +433,7 @@ describe("固定組裝入口:明確拒絕(寫入之前)", () => {
         "orgs 在 base 與 project 的宣告政策不相容(初始值欄位不同)",
       ),
       expect.stringContaining(
-        "fields 在 base 與 project 的宣告政策不相容(認養條件不同)",
+        "fields 在 base 與 project 的宣告政策不相容(初始值欄位、認養條件不同)",
       ),
     ]);
   });

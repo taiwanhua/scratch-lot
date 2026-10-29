@@ -22,7 +22,7 @@ import { Tag } from "@repo/ui/tag";
 import { Typography } from "@repo/ui/typography";
 
 import { OrgTreeSelect } from "@/components/base/OrgTreeSelect/OrgTreeSelect";
-import { TagPaletteChip } from "@/components/project/TagPaletteChip/TagPaletteChip";
+import { TagPaletteChip } from "@/components/base/TagPaletteChip/TagPaletteChip";
 import { CalendarClosedLayer } from "@/components/project/schedule/CalendarMark/CalendarClosedLayer";
 import {
   calendarMarkMonthBackground,

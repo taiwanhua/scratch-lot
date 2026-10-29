@@ -4,12 +4,12 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { IntlProvider } from "use-intl";
 
+import type { TagPaletteKey } from "@repo/domain/tag-palette";
 import { defaultLocale, messages } from "@repo/i18n";
 import { AppThemeProvider } from "@repo/ui/app-theme-provider";
 import { defaultBrand } from "@repo/ui/theme";
 
-import { TagPaletteChip } from "@/components/project/TagPaletteChip/TagPaletteChip";
-import type { TagPaletteKey } from "@/lib/project/tag-palettes";
+import { TagPaletteChip } from "@/components/base/TagPaletteChip/TagPaletteChip";
 
 import { TagPaletteSelect } from "./TagPaletteSelect";
 
@@ -46,10 +46,10 @@ describe("TagPaletteChip(色票標籤)", () => {
   it("可以換成呼叫端的字(例:選項名稱),顏色仍是那組色票", () => {
     render(
       <Providers>
-        <TagPaletteChip paletteKey="green" label="補貨" />
+        <TagPaletteChip paletteKey="green" label="炸物" />
       </Providers>,
     );
-    expect(screen.getByText("補貨").closest("[data-palette]")).toHaveAttribute(
+    expect(screen.getByText("炸物").closest("[data-palette]")).toHaveAttribute(
       "data-palette",
       "green",
     );
@@ -67,7 +67,7 @@ describe("TagPaletteChip(色票標籤)", () => {
 });
 
 describe("TagPaletteSelect(標籤 + 色票面板)", () => {
-  const NAME = "「補貨」的顏色";
+  const NAME = "「炸物」的顏色";
 
   const setup = (value: TagPaletteKey | null) => {
     const onChange = jest.fn<(next: TagPaletteKey | null) => void>();

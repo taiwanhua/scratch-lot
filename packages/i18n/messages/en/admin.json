@@ -963,6 +963,8 @@
       "empty": "This category has no options yet",
       "tableAria": "Option list",
       "label": "Display name",
+      "color": "Color",
+      "colorAria": "Color of \"{name}\"",
       "value": "Value",
       "order": "Order",
       "source": "Source",
@@ -1019,7 +1021,8 @@
       "categoryCreateSuccess": "Category added.",
       "categoryUpdateSuccess": "Category saved.",
       "categoryEnableSuccess": "Category enabled.",
-      "categoryDisableSuccess": "Category disabled. The form designer no longer lists it."
+      "categoryDisableSuccess": "Category disabled. The form designer no longer lists it.",
+      "colorSuccess": "Color updated."
     },
     "errors": {
       "FIELD_VALUE_DUPLICATE": "This value is already used in this category. Pick another one.",
@@ -1031,6 +1034,25 @@
       "FIELD_CATEGORY_KEY_DUPLICATE": "This key is already used by another category (including disabled ones). Pick another one.",
       "SYSTEM_CATEGORY": "System categories cannot be disabled.",
       "ROOT_ONLY": "Only the system administrator can add, rename or disable field categories."
+    }
+  },
+  "tagPalettes": {
+    "names": {
+      "blue": "Blue",
+      "cyan": "Cyan",
+      "green": "Green",
+      "lime": "Lime",
+      "yellow": "Yellow",
+      "orange": "Orange",
+      "red": "Red",
+      "pink": "Pink",
+      "purple": "Purple",
+      "grey": "Grey"
+    },
+    "select": {
+      "label": "Color",
+      "none": "None",
+      "title": "Choose a color"
     }
   },
   "demoSampleOne": {

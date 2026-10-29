@@ -1,26 +1,23 @@
 import { useId, useState } from "react";
 import { useTranslations } from "use-intl";
 
+import { TAG_PALETTE_KEYS, type TagPaletteKey } from "@repo/domain/tag-palette";
 import { Box } from "@repo/ui/box";
 import { Button } from "@repo/ui/button";
 import { Popover } from "@repo/ui/popover";
 import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
 
-import { TagPaletteChip } from "@/components/project/TagPaletteChip/TagPaletteChip";
-import {
-  TAG_PALETTE_KEYS,
-  type TagPaletteKey,
-} from "@/lib/project/tag-palettes";
+import { TagPaletteChip } from "@/components/base/TagPaletteChip/TagPaletteChip";
 
 export interface TagPaletteSelectProps {
   /** 目前的色票代號;`null` = 不設定 */
   value: TagPaletteKey | null;
   onChange: (value: TagPaletteKey | null) => void;
-  /** 觸發標籤的無障礙名稱(例「「補貨」的顏色」);省略 = 「顏色」 */
+  /** 觸發標籤的無障礙名稱(例「「炸物」的顏色」);省略 = 「顏色」 */
   label?: string;
   disabled?: boolean;
-  /** 面板列哪些色票(依這個順序);省略 = 十組全部(例:行事曆特殊日不列灰色) */
+  /** 面板列哪些色票(依這個順序);省略 = 十組全部(例:不給灰色的用途只列九組) */
   keys?: readonly TagPaletteKey[];
   /** 面板下方有沒有「不設定」;必填的顏色給 false */
   allowNone?: boolean;
@@ -37,7 +34,7 @@ const rowsOf = (
   );
 
 /**
- * 色票選擇(規格 18.5:**只能從色票選,不能輸入色碼**;Figma BS-13 289:87534 / 色票面板 289:88006)。
+ * 色票選擇(**只能從色票選,不能輸入色碼**;Figma BS-13 289:87534 / 色票面板 289:88006)。
  *
  * - 觸發:目前的色票標籤本身(沒有外框、沒有箭頭);沒有顏色時是文字按鈕「不設定」(必填時「選擇顏色」)
  * - 面板:`@repo/ui` 的 Popover,標題「選擇顏色」、色票每列 5 個(預設十組)、下方「不設定」(必填時不放);選了就關

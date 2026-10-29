@@ -49,4 +49,30 @@ describe("Tag", () => {
       container.querySelector(".MuiChip-deleteIcon"),
     ).not.toBeInTheDocument();
   });
+
+  it("給 palette 就以那組色票畫(標出代號),取代 tone", () => {
+    render(<Tag palette="green" tone="error" label="分類" />);
+
+    const chip = screen.getByText("分類").closest("[data-palette]");
+    expect(chip).toHaveAttribute("data-palette", "green");
+    expect(chip).toHaveStyle({ backgroundColor: "#E8F5E9", color: "#1B5E20" });
+  });
+
+  it("可點的色票標籤是按鈕,點下去會回報", async () => {
+    const user = userEvent.setup();
+    const onClick = jest.fn();
+    render(<Tag palette="orange" label="橘" onClick={onClick} />);
+
+    await user.click(screen.getByRole("button", { name: "橘" }));
+
+    expect(onClick).toHaveBeenCalledTimes(1);
+  });
+
+  it("沒給 palette 就沒有 data-palette", () => {
+    render(<Tag label="停用" />);
+
+    expect(
+      screen.getByText("停用").closest("[data-palette]"),
+    ).not.toBeInTheDocument();
+  });
 });

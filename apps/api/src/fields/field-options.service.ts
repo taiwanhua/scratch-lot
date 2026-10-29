@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common";
 import { GraphQLError } from "graphql";
 
 import { REASON_OPTION_OTHER } from "@repo/domain/form";
+import type { TagPaletteKey } from "@repo/domain/tag-palette";
 
 import {
   FieldCategoriesRepository,
@@ -10,6 +11,7 @@ import {
 } from "../database/database.module";
 import type { OperatorContext } from "../database/operator-context";
 import {
+  colorOf,
   fieldReadContext,
   resolveFieldVisibility,
   scopeFilterOf,
@@ -19,6 +21,8 @@ import {
 export interface FieldOption {
   value: string;
   label: string;
+  /** 標籤色票代號;null = 不設定顏色(畫面照舊只顯示文字) */
+  color: TagPaletteKey | null;
 }
 
 /** 使用者選的原因:選項值 + 說明。 */
@@ -49,7 +53,7 @@ function validationError(message: string, fields: string[]): GraphQLError {
 /**
  * 業務畫面的欄位管理下拉選項與「原因」檢查(底座能力;`docs/modules/field-manager.md`「給業務功能用的選項」):
  *
- * - `optionsOf`:某類別**啟用中**的選項,範圍照欄位管理的合併規則(全域 + 上層 + 自己 + 看得到的下層,
+ * - `optionsOf`:某類別**啟用中**的選項 `{ value, label, color }`,範圍照欄位管理的合併規則(全域 + 上層 + 自己 + 看得到的下層,
  *   `fields/field-visibility.ts`),依排序值、建立順序。不需要欄位管理的權限
  * - `assertReason`:原因必填且是該類別啟用中的選項;選「其他」(`REASON_OPTION_OTHER`)時說明必填。
  *   不合 → `VALIDATION_FAILED`(`fields` 指到原因 / 說明欄)
@@ -90,6 +94,7 @@ export class FieldOptionsService {
     return found.map((option) => ({
       value: option.value,
       label: option.label,
+      color: colorOf(option),
     }));
   }
 

@@ -874,6 +874,7 @@ type Field {
   canEdit: Boolean!
   canToggleEnabled: Boolean!
   categoryId: ID!
+  color: String
   description: String
   enabled: Boolean!
   id: ID!
@@ -904,21 +905,6 @@ type FieldCategory {
 
 type FieldCategoryPayload {
   category: FieldCategory!
-}
-
-type FieldOptionColor {
-  fieldId: ID!
-  paletteKey: String
-  value: String!
-}
-
-type FieldOptionColorPayload {
-  color: FieldOptionColor!
-}
-
-type FieldOptionColorsPayload {
-  items: [FieldOptionColor!]!
-  totalCount: Int!
 }
 
 type FieldOwnerOrg {
@@ -3883,8 +3869,8 @@ type Mutation {
   setDemoItemOneEnabled(input: SetDemoItemOneEnabledInput!): DemoItemOnePayload!
   setDemoItemTwoEnabled(input: SetDemoItemTwoEnabledInput!): DemoItemTwoPayload!
   setFieldCategoryEnabled(input: SetFieldCategoryEnabledInput!): FieldCategoryPayload!
+  setFieldColor(input: SetFieldColorInput!): FieldPayload!
   setFieldEnabled(input: SetFieldEnabledInput!): FieldPayload!
-  setFieldOptionColor(input: SetFieldOptionColorInput!): FieldOptionColorPayload!
   setLotteryAllocation(input: SetLotteryAllocationInput!): LotteryAllocationPayload!
   setModuleEnabled(input: SetModuleEnabledInput!): ModuleAdminPayload!
   setModuleIcon(input: SetModuleIconInput!): ModuleAdminPayload!
@@ -4583,7 +4569,6 @@ type Query {
   exportFormSeed(input: ExportFormSeedInput!): ExportFormSeedPayload!
   exportWorkflowSeed(input: ExportWorkflowSeedInput!): ExportWorkflowSeedPayload!
   fieldCategories(input: FieldCategoriesInput): FieldCategoriesPayload!
-  fieldOptionColors(categoryKey: String!): FieldOptionColorsPayload!
   fields(categoryId: ID!): FieldsPayload!
   form(key: ID!): FormPayload!
   formFieldOptions(input: FormFieldOptionsInput!): FormFieldOptionsPayload!
@@ -5979,14 +5964,14 @@ input SetFieldCategoryEnabledInput {
   id: ID!
 }
 
-input SetFieldEnabledInput {
-  enabled: Boolean!
+input SetFieldColorInput {
+  color: String
   id: ID!
 }
 
-input SetFieldOptionColorInput {
-  fieldId: ID!
-  paletteKey: String
+input SetFieldEnabledInput {
+  enabled: Boolean!
+  id: ID!
 }
 
 input SetLotteryAllocationInput {

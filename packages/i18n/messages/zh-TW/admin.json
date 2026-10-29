@@ -963,6 +963,8 @@
       "empty": "這個類別還沒有選項",
       "tableAria": "選項清單",
       "label": "顯示名稱",
+      "color": "顏色",
+      "colorAria": "「{name}」的顏色",
       "value": "值(value)",
       "order": "排序",
       "source": "來源",
@@ -1019,7 +1021,8 @@
       "categoryCreateSuccess": "已新增類別。",
       "categoryUpdateSuccess": "已儲存類別。",
       "categoryEnableSuccess": "已啟用這個類別。",
-      "categoryDisableSuccess": "已停用這個類別,表單設計器不會再列出它。"
+      "categoryDisableSuccess": "已停用這個類別,表單設計器不會再列出它。",
+      "colorSuccess": "已更新顏色。"
     },
     "errors": {
       "FIELD_VALUE_DUPLICATE": "這個值在這個類別已經有人用了,請換一個。",
@@ -1031,6 +1034,25 @@
       "FIELD_CATEGORY_KEY_DUPLICATE": "這個 key 已經有類別用了(含已停用的),請換一個。",
       "SYSTEM_CATEGORY": "系統類別不能停用。",
       "ROOT_ONLY": "欄位類別只能由系統管理員新增、改名或停用。"
+    }
+  },
+  "tagPalettes": {
+    "names": {
+      "blue": "藍",
+      "cyan": "青",
+      "green": "綠",
+      "lime": "萊姆",
+      "yellow": "黃",
+      "orange": "橘",
+      "red": "紅",
+      "pink": "粉",
+      "purple": "紫",
+      "grey": "灰"
+    },
+    "select": {
+      "label": "顏色",
+      "none": "不設定",
+      "title": "選擇顏色"
     }
   },
   "demoSampleOne": {

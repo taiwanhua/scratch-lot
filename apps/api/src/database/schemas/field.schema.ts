@@ -1,6 +1,8 @@
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
 import { Types } from "mongoose";
 
+import { TAG_PALETTE_KEYS } from "@repo/domain/tag-palette";
+
 import { baseFieldsPlugin } from "../plugins/base-fields.plugin";
 import { tenantScopePlugin } from "../plugins/tenant-scope.plugin";
 
@@ -42,6 +44,13 @@ export class Field {
   /** 描述說明(選填)。 */
   @Prop({ type: String })
   description?: string;
+
+  /**
+   * 標籤色票代號(`@repo/domain/tag-palette`);null / 缺欄位 = 不設定顏色。
+   * 誰能設 = 誰能切 `enabled`(自訂選項限加它的那一層、種子限根組織);種子宣告的顏色是初始 seed 值(ADR-0002)。
+   */
+  @Prop({ type: String, enum: [...TAG_PALETTE_KEYS, null], default: null })
+  color?: string | null;
 }
 
 // 由 class 產生 Mongoose Schema(供 MongooseModule 註冊為 model,並掛下方索引)

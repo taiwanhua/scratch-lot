@@ -6,8 +6,8 @@ import { SCHEDULE_FIELD_CATEGORY_KEYS } from "@repo/domain/project/schedule-fiel
 import {
   SCHEDULE_CALENDAR_DAY_TYPES,
   type ScheduleCalendarDayType,
+  isSpecialDayPaletteKey,
 } from "@repo/domain/project/schedule-settings";
-import { isSpecialDayPaletteKey } from "@repo/domain/project/tag-palette";
 
 import { AuditService } from "../../../audit/audit.service";
 import type { Persisted } from "../../../database/base.repository";

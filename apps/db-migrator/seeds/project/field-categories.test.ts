@@ -162,11 +162,7 @@ describe("專案欄位管理類別的宣告(第 13 章)", () => {
       set.kind === "documents" ? set.collection : set.kind,
     );
     expect(collections).toEqual(
-      expect.arrayContaining([
-        "field_categories",
-        "fields",
-        "project_field_option_colors",
-      ]),
+      expect.arrayContaining(["field_categories", "fields"]),
     );
   });
 });
@@ -253,7 +249,7 @@ describe("正式 registry 的 seed:專案類別落庫且冪等", () => {
 });
 
 describe("正式 registry 的 seed:崗位不內建", () => {
-  it("崗位類別在,但沒有全域選項,也不種任何全域選項顏色", async () => {
+  it("崗位類別在,但沒有全域選項", async () => {
     const databaseUri = mongo.uri("positions");
     const seeded = await startEntry(SEED_ENTRY, [], databaseUri).done;
     expect(seeded.status).toBe(0);
@@ -265,9 +261,6 @@ describe("正式 registry 的 seed:崗位不內建", () => {
       await documentsOf(databaseUri, "fields", {
         categoryId: category?._id as unknown,
       }),
-    ).toEqual([]);
-    expect(
-      await documentsOf(databaseUri, "project_field_option_colors"),
     ).toEqual([]);
   }, 300_000);
 });

@@ -5,8 +5,8 @@ import { Box } from "@repo/ui/box";
 import { useBreakpointDown } from "@repo/ui/media-query";
 import { ScheduleTimeline } from "@repo/ui/schedule-timeline";
 import { Stack } from "@repo/ui/stack";
+import { tagPaletteBackgroundVarsSx } from "@repo/ui/theme";
 
-import { tagPaletteBackgroundVarsSx } from "@/components/project/TagPaletteChip/tag-palette-background";
 import { ScheduleLegend } from "@/components/project/schedule/ScheduleLegend/ScheduleLegend";
 import { useFitMainHeight } from "@/hooks/base/useFitMainHeight";
 
