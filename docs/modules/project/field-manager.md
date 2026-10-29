@@ -4,6 +4,7 @@
 
 - 選項 value 一律英文 kebab-case;「其他」一律 `other`,選它時說明必填,全系統一致(`@repo/domain/project/reason-note` 的 `requiresReasonNote`)。
 - 選項依表中順序 1 起算(`order`);租戶可以再自己加選項。
+- 所有單據共用的「作廢原因」`void-reason`(叫貨單、進貨單、調貨單、補打卡申請…)是底座類別(底座[欄位管理](../field-manager.md)的種子內容),不在本表;key 與選項沒變,已部署環境的資料不必搬。
 - 崗位類別**不內建選項**:各機構開通時自己建(開通資料的 `positions`;示範機構的店內櫃台A、店外櫃台B 放示範資料,不是系統選項)。全域選項目前都沒有初始顏色(要給的話在 seed 的選項宣告加 `color`,規則見底座「規則」的「選項顏色」)。
 - 不放欄位管理(程式依值做事):銀行交易類型、現金流水類型、張的狀態 / 位置、經銷商類型與狀態、關係人身分、職責、行事曆類型。
 
@@ -15,7 +16,6 @@
 | `lottery-redemption-revoke-reason` | 撤銷兌獎原因   | 登記錯誤 `entry-error`、金額錯誤 `wrong-amount`、其他                                                                                                                       | 撤銷兌獎(已結帳或別人登記)   |
 | `lottery-manual-sale-reason`       | 手動標記原因   | 刷不到條碼 `scan-failed`(預設)、系統異常補登 `system-backfill`、其他                                                                                                        | 手動標記售出                 |
 | `lottery-cash-correction-reason`   | 現金更正原因   | 員工賠補 `staff-compensation`、客人補付 `customer-top-up`、尋回 `recovered`、退還客人 `customer-refund`、遺失 `lost`、假鈔 `counterfeit`、存款短少 `deposit-shortage`、其他 | 現金更正單                   |
-| `void-reason`                      | 作廢原因       | 輸入錯誤 `input-error`、重複建立 `duplicate`、交易取消 `transaction-cancelled`、其他                                                                                        | 所有單據作廢                 |
 | `lottery-checkout-diff-reason`     | 結帳差額原因   | 找錯錢 `wrong-change`、兌獎誤付 `redemption-overpaid`、審核中的單據 `pending-documents`、其他                                                                               | 結帳精靈、日結               |
 | `lottery-skip-stocktake-reason`    | 跳過盤點原因   | 人力不足 `short-staffed`、系統異常 `system-error`、其他                                                                                                                     | 結帳精靈、日結               |
 | `lottery-withdraw-reason`          | 出庫原因       | 開班零用金 `opening-float`、補零錢 `change-refill`、其他                                                                                                                    | 出庫                         |

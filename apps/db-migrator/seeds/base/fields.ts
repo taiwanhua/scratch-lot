@@ -1,3 +1,4 @@
+import { VOID_REASON_CATEGORY_KEY } from "@repo/domain/form";
 import type { TagPaletteKey } from "@repo/domain/tag-palette";
 
 import {
@@ -84,6 +85,13 @@ export const fields: SeedDocumentSet = {
     ...globalFieldOptions(REPRINT_REASON_CATEGORY_KEY, [
       { value: "lost", label: "遺失" },
       { value: "damaged", label: "破損" },
+      { value: "other", label: "其他" },
+    ]),
+    // 作廢原因:`other` = 作廢說明必填(`@repo/domain/form` 的 `VOID_REASON_OTHER`)
+    ...globalFieldOptions(VOID_REASON_CATEGORY_KEY, [
+      { value: "input-error", label: "輸入錯誤" },
+      { value: "duplicate", label: "重複建立" },
+      { value: "transaction-cancelled", label: "交易取消" },
       { value: "other", label: "其他" },
     ]),
   ],

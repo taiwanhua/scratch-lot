@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, it, jest } from "@jest/globals";
 import { Types } from "mongoose";
 
 import { type FormDefinition, VOID_REASON_OTHER } from "@repo/domain/form";
-import { SHARED_FIELD_CATEGORY_KEYS } from "@repo/domain/project/reason-note";
+import { VOID_REASON_CATEGORY_KEY } from "@repo/domain/form";
 import { SKIP_ORG_TENANT, type StepDef } from "@repo/domain/workflow";
 
 import {
@@ -45,7 +45,6 @@ import {
   roleSource,
 } from "../../../workflows/test-support/workflow-fixtures";
 import { isGameInUse } from "../games/game-usage";
-import { seedReasonCategory } from "../test-support/master-data-fixtures";
 import { RequisitionReference } from "./requisition-reference";
 import {
   PURCHASING_MODULE_KEYS,
@@ -323,20 +322,11 @@ describe("叫貨單(規格 8.1)", () => {
       },
     });
     await publishDefinition(api, root, FORM, requisitionDefinition(), null);
-    // 同受管表單:作廢原因用「作廢原因」類別(選項同 seeds/project/field-categories.ts)
-    await seedReasonCategory(
-      connection,
-      SHARED_FIELD_CATEGORY_KEYS.voidReason,
-      [
-        { value: "input-error", label: "輸入錯誤" },
-        { value: "duplicate", label: "重複建立" },
-        { value: VOID_REASON_OTHER, label: "其他" },
-      ],
-    );
+    // 同受管表單:作廢原因用底座的「作廢原因」類別(底座 seed 已種下,選項見 seeds/base/fields.ts)
     await ok(api, root, UPDATE_FORM, {
       input: {
         key: FORM,
-        voidReasonCategoryKey: SHARED_FIELD_CATEGORY_KEYS.voidReason,
+        voidReasonCategoryKey: VOID_REASON_CATEGORY_KEY,
       },
     });
     await ok(api, root, ASSIGN, {

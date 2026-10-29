@@ -45,18 +45,22 @@
 
 **種子內容**(全域類別與選項,`orgId = null`;order 依宣告順序 1 起算):
 
-| 類別 key         | 類別名   | 選項 value    | 選項 label | order |
-| ---------------- | -------- | ------------- | ---------- | ----- |
-| `gender`         | 性別     | `male`        | 男         | 1     |
-|                  |          | `female`      | 女         | 2     |
-|                  |          | `other`       | 其他       | 3     |
-|                  |          | `undisclosed` | 不透露     | 4     |
-| `demo-category`  | 示範分類 | `staple`      | 主食       | 1     |
-|                  |          | `side-dish`   | 小菜       | 2     |
-|                  |          | `drink`       | 飲品       | 3     |
-| `reprint-reason` | 補印原因 | `lost`        | 遺失       | 1     |
-|                  |          | `damaged`     | 破損       | 2     |
-|                  |          | `other`       | 其他       | 3     |
+| 類別 key         | 類別名   | 選項 value              | 選項 label | order |
+| ---------------- | -------- | ----------------------- | ---------- | ----- |
+| `gender`         | 性別     | `male`                  | 男         | 1     |
+|                  |          | `female`                | 女         | 2     |
+|                  |          | `other`                 | 其他       | 3     |
+|                  |          | `undisclosed`           | 不透露     | 4     |
+| `demo-category`  | 示範分類 | `staple`                | 主食       | 1     |
+|                  |          | `side-dish`             | 小菜       | 2     |
+|                  |          | `drink`                 | 飲品       | 3     |
+| `reprint-reason` | 補印原因 | `lost`                  | 遺失       | 1     |
+|                  |          | `damaged`               | 破損       | 2     |
+|                  |          | `other`                 | 其他       | 3     |
+| `void-reason`    | 作廢原因 | `input-error`           | 輸入錯誤   | 1     |
+|                  |          | `duplicate`             | 重複建立   | 2     |
+|                  |          | `transaction-cancelled` | 交易取消   | 3     |
+|                  |          | `other`                 | 其他       | 4     |
 
 示範畫面上的「甜點」是租戶自訂選項的示意,**不是種子**。
 

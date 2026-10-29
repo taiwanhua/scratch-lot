@@ -416,7 +416,7 @@ describe("seed 指令(對真 MongoDB)", () => {
 });
 
 describe("欄位類別與全域選項種子(docs/modules/field-manager.md「種子內容」)", () => {
-  it("空資料庫執行後具備三個全域類別與十個全域選項(orgId=null、isSystem=true),選項以 categoryId 指向所屬類別", async () => {
+  it("空資料庫執行後具備四個全域類別與十四個全域選項(orgId=null、isSystem=true),選項以 categoryId 指向所屬類別", async () => {
     const databaseUri = createTestDatabaseUri("fields");
 
     const result = await runSeedCommand(databaseUri);
@@ -431,6 +431,7 @@ describe("欄位類別與全域選項種子(docs/modules/field-manager.md「種�
       ["demo-category", "示範分類"],
       ["gender", "性別"],
       ["reprint-reason", "補印原因"],
+      ["void-reason", "作廢原因"],
     ]);
     for (const category of fieldCategories) {
       expect(category.isSystem).toBe(true);
@@ -459,9 +460,15 @@ describe("欄位類別與全域選項種子(docs/modules/field-manager.md「種�
         ["damaged", "破損", 2],
         ["other", "其他", 3],
       ],
+      "void-reason": [
+        ["input-error", "輸入錯誤", 1],
+        ["duplicate", "重複建立", 2],
+        ["transaction-cancelled", "交易取消", 3],
+        ["other", "其他", 4],
+      ],
     };
 
-    expect(fields).toHaveLength(10);
+    expect(fields).toHaveLength(14);
     for (const [categoryKey, options] of Object.entries(expectedOptions)) {
       const seeded = fields.filter(
         (field) =>
@@ -552,13 +559,13 @@ describe("seed 以 key 認養 root 在畫面建的類別與選項(ADR-0002)", ()
     });
     expect(adoptRun.stderr).toBe("");
     expect(adoptRun.status).toBe(0);
-    // 類別:demo-category 補說明 = 更新、cuisine = 認養、gender 與 reprint-reason = 未變
+    // 類別:demo-category 補說明 = 更新、cuisine = 認養、gender、reprint-reason 與 void-reason = 未變
     expect(adoptRun.stdout).toContain(
-      "field_categories:新增 0 / 更新 1 / 認養 1 / 未變 2",
+      "field_categories:新增 0 / 更新 1 / 認養 1 / 未變 3",
     );
-    // 選項:cuisine.sweet = 新增、根組織的 spicy = 認養、十個種子選項未變
+    // 選項:cuisine.sweet = 新增、根組織的 spicy = 認養、十四個種子選項未變
     expect(adoptRun.stdout).toContain(
-      "fields:新增 1 / 更新 0 / 認養 1 / 未變 10",
+      "fields:新增 1 / 更新 0 / 認養 1 / 未變 14",
     );
 
     const after = await withDatabase(databaseUri, async (database) => {
@@ -619,9 +626,9 @@ describe("seed 以 key 認養 root 在畫面建的類別與選項(ADR-0002)", ()
     });
     expect(rerun.status).toBe(0);
     expect(rerun.stdout).toContain(
-      "field_categories:新增 0 / 更新 0 / 認養 0 / 未變 4",
+      "field_categories:新增 0 / 更新 0 / 認養 0 / 未變 5",
     );
-    expect(rerun.stdout).toContain("fields:新增 0 / 更新 0 / 認養 0 / 未變 12");
+    expect(rerun.stdout).toContain("fields:新增 0 / 更新 0 / 認養 0 / 未變 16");
   }, 120_000);
 });
 

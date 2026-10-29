@@ -1,3 +1,5 @@
+import { VOID_REASON_CATEGORY_KEY } from "@repo/domain/form";
+
 import type {
   SeedDocument,
   SeedDocumentSet,
@@ -38,6 +40,11 @@ export const fieldCategories: SeedDocumentSet = {
       REPRINT_REASON_CATEGORY_KEY,
       "補印原因",
       "列印的補印原因;選「其他」時補印說明必填(docs/modules/printers.md)",
+    ),
+    category(
+      VOID_REASON_CATEGORY_KEY,
+      "作廢原因",
+      "表單作廢的原因(表單設定 voidReasonCategoryKey 指到它);選「其他」時作廢說明必填(docs/modules/forms.md)",
     ),
   ],
 };

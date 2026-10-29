@@ -119,7 +119,7 @@
 
 ### 作廢原因
 
-`forms.voidReasonCategoryKey`(`FormModel.voidReasonCategoryKey`):作廢原因用哪個欄位管理類別;null = 不設定(預設),作廢理由自由填寫。畫面是表單管理右側「單號」下方的「作廢原因」下拉(`pages/base/system/FormsPage/VoidReasonCategoryField.tsx`):列啟用的類別(同選項欄的類別下拉),選了立刻以 `updateForm` 存;改不動的人(`abilities.canEdit` false)看得到目前的設定但不能改。底座不知道專案的類別名,由專案在表單設定或受管宣告指定。
+`forms.voidReasonCategoryKey`(`FormModel.voidReasonCategoryKey`):作廢原因用哪個欄位管理類別;null = 不設定(預設),作廢理由自由填寫。畫面是表單管理右側「單號」下方的「作廢原因」下拉(`pages/base/system/FormsPage/VoidReasonCategoryField.tsx`):列啟用的類別(同選項欄的類別下拉),選了立刻以 `updateForm` 存;改不動的人(`abilities.canEdit` false)看得到目前的設定但不能改。底座內建一個共用的「作廢原因」類別 `void-reason`(`@repo/domain/form` 的 `VOID_REASON_CATEGORY_KEY`;選項見[欄位管理](./field-manager.md)的種子內容),各模組的表單要共用同一組原因就指到它;要另一組原因,由專案宣告自己的類別,在表單設定或受管宣告指定。
 
 | 情境                                        | 結果                                                                                                                                       |
 | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |

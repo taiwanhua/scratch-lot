@@ -1,5 +1,8 @@
 import { describe, expect, it } from "@jest/globals";
 
+import { VOID_REASON_CATEGORY_KEY, VOID_REASON_OTHER } from "@repo/domain/form";
+
+import { fieldCategories } from "./field-categories";
 import {
   FIELD_INITIAL_SEED_VALUE_FIELDS,
   fields,
@@ -27,5 +30,25 @@ describe("全域欄位選項的宣告", () => {
     });
     expect(plain?.data).toMatchObject({ value: "second", order: 2 });
     expect(plain?.data).not.toHaveProperty("color");
+  });
+
+  it("作廢原因是底座系統類別:key 不變(`void-reason`),選項 輸入錯誤 / 重複建立 / 交易取消 / 其他(其他排最後)", () => {
+    expect(VOID_REASON_CATEGORY_KEY).toBe("void-reason");
+    expect(
+      fieldCategories.entries.find(
+        (entry) => entry.key === VOID_REASON_CATEGORY_KEY,
+      )?.data,
+    ).toMatchObject({ name: "作廢原因", enabled: true });
+    const options = fields.entries.filter((entry) =>
+      entry.key.startsWith(`${VOID_REASON_CATEGORY_KEY}.`),
+    );
+    expect(
+      options.map((entry) => [entry.key, entry.data.label, entry.data.order]),
+    ).toEqual([
+      ["void-reason.input-error", "輸入錯誤", 1],
+      ["void-reason.duplicate", "重複建立", 2],
+      ["void-reason.transaction-cancelled", "交易取消", 3],
+      [`void-reason.${VOID_REASON_OTHER}`, "其他", 4],
+    ]);
   });
 });

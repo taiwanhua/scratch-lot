@@ -1,8 +1,5 @@
 import { LOTTERY_FIELD_CATEGORY_KEYS as LOTTERY } from "@repo/domain/project/lottery-fields";
-import {
-  REASON_OTHER_VALUE,
-  SHARED_FIELD_CATEGORY_KEYS as SHARED,
-} from "@repo/domain/project/reason-note";
+import { REASON_OTHER_VALUE } from "@repo/domain/project/reason-note";
 import { SCHEDULE_FIELD_CATEGORY_KEYS as SCHEDULE } from "@repo/domain/project/schedule-fields";
 
 import {
@@ -30,6 +27,7 @@ const other: FieldOption = { value: REASON_OTHER_VALUE, label: "其他" };
 
 /**
  * 專案的欄位管理系統類別(專案規格第 13 章;內容正本:`docs/modules/project/field-manager.md`)。
+ * 所有單據共用的「作廢原因」是底座類別(`@repo/domain/form` 的 `VOID_REASON_CATEGORY_KEY`,`seeds/base/`),不在這裡宣告。
  * 類別 key 與程式要認得的選項代碼在 `@repo/domain/project/{lottery,schedule}-fields`;
  * 選項 value 一律英文 kebab-case,「其他」一律 `other`(選它時說明必填,`requiresReasonNote`)。
  * 選項可宣告初始顏色 `color`(底座 `fields.color` 的初始 seed 值;目前都沒有,崗位不內建,由各機構開通時自建)。
@@ -78,18 +76,6 @@ export const PROJECT_FIELD_CATEGORIES: readonly ProjectFieldCategory[] = [
       { value: "lost", label: "遺失" },
       { value: "counterfeit", label: "假鈔" },
       { value: "deposit-shortage", label: "存款短少" },
-      other,
-    ],
-  },
-  {
-    // 刮刮樂與排班共用(叫貨單、進貨單、調貨單、補打卡申請的作廢原因)
-    key: SHARED.voidReason,
-    name: "作廢原因",
-    usedIn: "所有單據作廢",
-    options: [
-      { value: "input-error", label: "輸入錯誤" },
-      { value: "duplicate", label: "重複建立" },
-      { value: "transaction-cancelled", label: "交易取消" },
       other,
     ],
   },

@@ -50,7 +50,6 @@ const EXPECTED: readonly [key: string, name: string, labels: string[]][] = [
       "其他",
     ],
   ],
-  ["void-reason", "作廢原因", ["輸入錯誤", "重複建立", "交易取消", "其他"]],
   [
     "lottery-checkout-diff-reason",
     "結帳差額原因",
@@ -112,7 +111,7 @@ const optionValues = (categoryKey: string): string[] =>
   )?.options.map((option) => option.value) ?? [];
 
 describe("專案欄位管理類別的宣告(第 13 章)", () => {
-  it("19 個類別(含崗位),key、名稱、選項標籤與順序同規格表", () => {
+  it("18 個類別(含崗位;所有單據共用的作廢原因是底座類別),key、名稱、選項標籤與順序同規格表", () => {
     expect(
       PROJECT_FIELD_CATEGORIES.map(({ key, name, options }) => [
         key,
@@ -178,7 +177,7 @@ afterAll(async () => {
 }, 60_000);
 
 describe("正式 registry 的 seed:專案類別落庫且冪等", () => {
-  it("seed 後 19 個專案系統類別與它們的全域選項都在(orgId = null);重跑不增加、id 不動", async () => {
+  it("seed 後 18 個專案系統類別與它們的全域選項都在(orgId = null);重跑不增加、id 不動", async () => {
     const databaseUri = mongo.uri("fresh");
     const first = await startEntry(SEED_ENTRY, [], databaseUri).done;
     expect(first.stderr).toBe("");
@@ -203,7 +202,7 @@ describe("正式 registry 的 seed:專案類別落庫且冪等", () => {
     };
 
     const seeded = await readProject();
-    expect(seeded.categories).toHaveLength(19);
+    expect(seeded.categories).toHaveLength(18);
     const totalOptions = EXPECTED.reduce(
       (sum, expected) => sum + expected[2].length,
       0,

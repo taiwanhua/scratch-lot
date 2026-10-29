@@ -1,5 +1,6 @@
 import { describe, expect, it } from "@jest/globals";
 
+import { VOID_REASON_CATEGORY_KEY } from "@repo/domain/form";
 import {
   CASH_CORRECTION_FIELD_KEYS,
   CASH_CORRECTION_FORM_KEY,
@@ -7,7 +8,6 @@ import {
   SALE_REVERSAL_FORM_KEY,
   STORE_KEY,
 } from "@repo/domain/project/lottery";
-import { SHARED_FIELD_CATEGORY_KEYS } from "@repo/domain/project/reason-note";
 
 import { assembleSeedRegistry } from "../registry";
 import type { OnboardingContext } from "./onboarding/context";
@@ -46,7 +46,7 @@ describe("受管表單 撤銷售出申請(sale_reversal r3)、現金更正單(ca
         key,
         moduleKey: STORE_KEY,
         allowDraft: false,
-        voidReasonCategoryKey: SHARED_FIELD_CATEGORY_KEYS.voidReason,
+        voidReasonCategoryKey: VOID_REASON_CATEGORY_KEY,
         // 依欄位共用:分店欄指到的分店也看得到(唯讀)
         sharedByFieldKeys: ["branch"],
         serial: { prefix, period: "none", digits: 4 },

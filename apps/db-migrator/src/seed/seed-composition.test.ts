@@ -383,7 +383,7 @@ describe("固定組裝入口:底座 + 非空的專案來源", () => {
   });
 
   it("專案在底座既有的 collection 加種子:政策相同就並存", () => {
-    expect(entryKeys(projectRegistry, "fields")).toHaveLength(10 + 1);
+    expect(entryKeys(projectRegistry, "fields")).toHaveLength(14 + 1);
     expect(entryKeys(projectRegistry, "roles")).toEqual([
       "super-admin",
       "tenant-admin",
