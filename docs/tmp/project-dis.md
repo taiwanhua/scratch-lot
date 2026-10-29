@@ -79,12 +79,13 @@
 - 表單列表支援「組織欄 / 日期區間」篩選(`FormListPage.tsx` 只有關鍵字、表單、狀態)。
 - 拖拉排序共用元件(RouteTabs 與表單設計器各用一份 dnd-kit)。
 
+**已在本專案的底座路徑改好、待 contribute**
+
+- 表單引擎的類別選項併進 `FieldOptionsService`(`optionMapOf` / `categoryKeys`;刪 `forms/field-category-options.service.ts`)。
+- 共用宣告「預設不共用 + 清單固定」不再有 `shareOrgs` 欄位 / 索引 / 讀取分支(`hasShareList`),附底座 migration `migrations/base/20261029140000_cleanup_form-submissions-share-orgs.js`;共用清單的讀取分支拆成兩支走得到索引。
+
 **要先評估再決定**
 
-- 合併 `FieldCategoryOptionsService` 與 `FieldOptionsService`。
-- `form_submissions` 共用成本:`editable:false` + `defaultShareOrgs:none` 時省掉 shareOrgs 欄位 / 索引 / 讀取分支。
-- 列表 `$or` 後排序的索引用 explain 確認。
-- org lookup「整個租戶」範圍;收付 `sharedByValues` 與帳本系統鎖升格。
-- 任務改派掛接點與側欄信號、可攜性檢查的 `{var}` 連動篩選:底座有相關程式,是否已涵蓋要再確認。
+- org lookup「整個租戶」範圍:底座 `org` 來源只列可見範圍(`forms/lookup-providers.ts`),前端 `OrgTreeSelect` 已有 `scope="tenant"`。本專案目前沒有表單需要(調貨單的收貨分店照規格由總部開單,`docs/modules/project/purchasing.md`「收貨分店選不到時」)。要做的話是表單引擎的設計取捨:引用來源加範圍選項(定義型別、定義檢查、設計器、可攜性、送出重驗都要跟著改),並決定租戶內組織名稱給所有填寫者查。等有表單真的要選可見範圍外的組織再開票。
 
 現況:未開票;依上面分組,建議先做「使用者點名」與「小修正」,再做升格(欄位選項顏色最大,單獨一張)。
