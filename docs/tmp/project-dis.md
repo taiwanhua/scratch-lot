@@ -105,7 +105,7 @@
 
 ### 本輪要回收到底座的項目
 
-這一輪實作中記下、要回收到底座的改良,2026-10-29 逐條核對 wowgo-base v0.4.4 後還沒進底座的。做法照 `docs/deployment.md`「底座首次接軌與版本升級」:在本專案實作 → base-sync contribute → 底座 release → 各專案 upgrade。回收前跑 verify:第 1 節只剩預期差異、第 5 節 0、第 6 節只剩值行。
+這一輪實作中記下、要回收到底座的改良,2026-10-29 逐條核對 wowgo-base v0.4.4 後還沒進底座的(v0.4.5 只帶文件,清單不變)。做法照 `docs/deployment.md`「底座首次接軌與版本升級」:在本專案實作 → base-sync contribute → 底座 release → 各專案 upgrade。回收前跑 verify:第 1 節只剩預期差異、第 5 節 0、第 6 節只剩值行。
 
 **使用者點名要做的底座功能**
 
