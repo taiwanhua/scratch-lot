@@ -102,3 +102,56 @@
 | C5  | 背面編號手動輸入   | 在查刮刮樂輸入實票背面編號(六段)                                      | 解析出遊戲、本號、張號;第 5、6 段不驗證                                                    |
 
 現況:等銷售票(M3)部署到 dev;C4 等條碼槍到貨。
+
+### 本輪要回收到底座的項目
+
+這一輪實作中記下、要回收到底座的改良,2026-10-29 逐條核對 wowgo-base v0.4.4 後還沒進底座的。做法照 `docs/deployment.md`「底座首次接軌與版本升級」:在本專案實作 → base-sync contribute → 底座 release → 各專案 upgrade。回收前跑 verify:第 1 節只剩預期差異、第 5 節 0、第 6 節只剩值行。
+
+**使用者點名要做的底座功能**
+
+| 項目                    | 要做什麼                                                                  | 現況       |
+| ----------------------- | ------------------------------------------------------------------------- | ---------- |
+| 列表欄位支援組合欄      | 列表欄位配置加 template 類,例 `{start_time}–{end_time}`                   | 兩邊都沒有 |
+| lookup 欄位依登入者預設 | 表單引擎 lookup 欄位依登入者動態給預設值(例:現金更正單的位置預設目前的班) | 兩邊都沒有 |
+
+**只在本專案、要升格進底座的元件與機制**
+
+| 項目                            | 本專案位置                                                                                                                                                                                                                          |
+| ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 欄位選項顏色(最大,含 migration) | `apps/admin/src/lib/project/tag-palettes*`、`components/project/TagPalette*`、`apps/api/src/project/database/field-option-colors/`;要把 tagPalettes 搬進 `@repo/ui`、`project_field_option_colors` 以 migration 搬進 `fields.color` |
+| 報表登記(含 seed 所有權轉移)    | `apps/admin/src/lib/project/reports/report-registry.ts`                                                                                                                                                                             |
+| `useScanner`                    | `apps/admin/src/hooks/project/useScanner/` → `hooks/base`                                                                                                                                                                           |
+| TicketGrid 閃爍提示             | `components/project/lottery/TicketGrid/`                                                                                                                                                                                            |
+| 交易後列印 `useReceiptPrinter`  | `components/project/lottery/ReceiptPrint/useReceiptPrinter.tsx`;一併讓 admin 接 `@repo/logger`(`receipt-log.ts` 暫用 console)                                                                                                       |
+| 共用作廢原因類別 `void-reason`  | `apps/db-migrator/seeds/project/field-categories.ts`(進 `SHARED_FIELD_CATEGORY_KEYS`)                                                                                                                                               |
+| `RootOrgNotice` / 需要租戶的頁  | `components/project/RootOrgNotice/{RootOrgNotice,WithTenantRequired}.tsx`(底座通知設定、側欄數字、流程綁定各有一份 TENANT_ONLY)                                                                                                     |
+| 表單代號分派四頁共用機制        | `pages/project/lottery/purchasing/*-keys.ts`                                                                                                                                                                                        |
+| 依模組登記審核後 / 送出後動作   | 底座只有 `ApprovalSection` 的 `onDecided`;要加 `registerApprovalEffect` 一類的登記機制                                                                                                                                              |
+
+**底座小修正(兩邊都沒做)**
+
+- 姓名 / 名稱排序明寫 `zh-Hant`(`apps/api/src/orgs/orgs.service.ts:207` 等;CI Linux 與本機語系不同)。
+- 殼層 `ShellMinWidth` 加 `md`;`Drawer` 寬度參數(現在寫死 `DRAWER_SIDE_WIDTH`)。
+- `MonthCalendar` 小尺寸 `size` prop;一格多個角標並排。
+- 表單事後動作的 context 加 `decidedBy`(核准人)。
+- 表單列表支援「組織欄 / 日期區間」篩選(`FormListPage.tsx` 只有關鍵字、表單、狀態)。
+- 拖拉排序共用元件(RouteTabs 與表單設計器各用一份 dnd-kit)。
+- 假 api 的 `graphqlError` 共用 CONFLICT / NOT_FOUND。
+- 文件補:FormField key `summary` 是保留字;api 信任代理 `TRUST_PROXY_HOPS`(加外部 LB 要 +1)寫進 deployment / architecture。
+
+**要先評估再決定**
+
+- 合併 `FieldCategoryOptionsService` 與 `FieldOptionsService`。
+- `form_submissions` 共用成本:`editable:false` + `defaultShareOrgs:none` 時省掉 shareOrgs 欄位 / 索引 / 讀取分支。
+- 列表 `$or` 後排序的索引用 explain 確認。
+- org lookup「整個租戶」範圍;收付 `sharedByValues` 與帳本系統鎖升格。
+- 平板 1024 殼層最小寬度的底座整體規則。
+- 任務改派掛接點與側欄信號、可攜性檢查的 `{var}` 連動篩選:底座有相關程式,是否已涵蓋要再確認。
+
+現況:未開票;依上面分組,建議先做「使用者點名」與「小修正」,再做升格(欄位選項顏色最大,單獨一張)。
+
+### 上線前提醒
+
+- 每月最少畫休預設 4 天,限制先維持;上線前請使用者查法規,再決定要不要調預設值。
+
+現況:等上線前提醒使用者。
