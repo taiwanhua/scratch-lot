@@ -1,4 +1,8 @@
-import { fieldProtections, isProtected } from "@repo/domain/form";
+import {
+  type FieldType,
+  fieldProtections,
+  isProtected,
+} from "@repo/domain/form";
 import { useFormsQuery } from "@repo/graphql";
 
 import { useSession } from "@/hooks/base/useSession";
@@ -9,6 +13,8 @@ export interface FieldCandidate {
   formName: string;
   key: string;
   label: string;
+  /** 欄位型別(組合欄的「插入欄位」給日期 / 日期時間多列格式快捷) */
+  type: FieldType;
 }
 
 /**
@@ -52,6 +58,7 @@ export const useListColumnCandidates = (moduleKey: string) => {
           formName: form.name,
           key: field.key,
           label: field.label,
+          type: field.type,
         }))
     );
   });

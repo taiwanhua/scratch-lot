@@ -427,6 +427,216 @@ export function formatTemporal(
   }
 }
 
+// ---- 格式字串(對齊 dayjs `format`)----
+
+/**
+ * 格式字串支援的 token,意義與 dayjs `format`(預設英文語系、無外掛)一致:
+ * 年 `YYYY` / `YY`、月 `MM` / `M`、日 `DD` / `D`、24 時 `HH` / `H`、12 時 `hh` / `h`、分 `mm` / `m`、
+ * 秒 `ss` / `s`、毫秒 `SSS`、上下午 `A`(AM / PM)/ `a`(am / pm)。
+ */
+export const TEMPORAL_FORMAT_TOKENS = [
+  "YYYY",
+  "YY",
+  "MM",
+  "M",
+  "DD",
+  "D",
+  "HH",
+  "H",
+  "hh",
+  "h",
+  "mm",
+  "m",
+  "ss",
+  "s",
+  "SSS",
+  "A",
+  "a",
+] as const;
+
+export type TemporalFormatToken = (typeof TEMPORAL_FORMAT_TOKENS)[number];
+
+/**
+ * 切 token 的規則,與 dayjs 的 `REGEX_FORMAT`(`/\[([^\]]+)]|YYYY|YY|M{1,4}|D{1,2}|d{1,4}|H{1,2}|h{1,2}|a|A|m{1,2}|s{1,2}|Z{1,2}|SSS/g`)
+ * 切法相同:`[...]`(至少一個字)原樣印;同一個字母連續出現時,依它可用的長度由長到短貪婪地切
+ * (例 `YYY` = `YY` + 落單的 `Y`)。切出來但不在 `TEMPORAL_FORMAT_TOKENS` 的(`MMM` 月名、`d` 星期、
+ * `Z` 時區…)與落單的字母不支援。逐字掃描而不用整條正則:正則的回溯成本與複雜度都過高。
+ */
+const TOKEN_LENGTHS: Readonly<Record<string, readonly number[]>> = {
+  Y: [4, 2],
+  M: [4, 3, 2, 1],
+  D: [2, 1],
+  d: [4, 3, 2, 1],
+  H: [2, 1],
+  h: [2, 1],
+  m: [2, 1],
+  s: [2, 1],
+  Z: [2, 1],
+  S: [3],
+  a: [1],
+  A: [1],
+};
+
+/** 格式字串的長度上限。 */
+export const TEMPORAL_FORMAT_MAX_LENGTH = 50;
+
+type FormatSegment =
+  | { kind: "token"; token: TemporalFormatToken }
+  | { kind: "literal"; text: string };
+
+function isTemporalFormatToken(text: string): text is TemporalFormatToken {
+  return (TEMPORAL_FORMAT_TOKENS as readonly string[]).includes(text);
+}
+
+/** 不在 `[...]` 裡的英文字母要是 token,其他字母不收(dayjs 會原樣印,但多半是打錯或外掛 token)。 */
+const LETTER = /^[A-Za-z]$/;
+
+/** 從 `start` 起同一個字母連續幾個。 */
+function runLengthAt(pattern: string, start: number): number {
+  let end = start;
+  while (pattern[end] === pattern[start]) {
+    end += 1;
+  }
+  return end - start;
+}
+
+/** 格式字串 → 段落;有不支援的 token 或沒跳脫的英文字母 → null。 */
+function formatSegmentsOf(pattern: string): FormatSegment[] | null {
+  const segments: FormatSegment[] = [];
+  let index = 0;
+  while (index < pattern.length) {
+    const char = pattern.charAt(index);
+    const close = char === "[" ? pattern.indexOf("]", index + 1) : -1;
+    // 同 dayjs:`[` 後至少一個字才算跳脫(`[]` 照印)
+    if (close > index + 1) {
+      segments.push({ kind: "literal", text: pattern.slice(index + 1, close) });
+      index = close + 1;
+      continue;
+    }
+    if (!LETTER.test(char)) {
+      segments.push({ kind: "literal", text: char });
+      index += 1;
+      continue;
+    }
+    const run = runLengthAt(pattern, index);
+    const length = (TOKEN_LENGTHS[char] ?? []).find((one) => one <= run);
+    const token = length === undefined ? "" : char.repeat(length);
+    if (!isTemporalFormatToken(token)) {
+      return null;
+    }
+    segments.push({ kind: "token", token });
+    index += token.length;
+  }
+  return segments;
+}
+
+/**
+ * 是不是可用的格式字串:1–50 字、至少一個 token、只用 `TEMPORAL_FORMAT_TOKENS`;
+ * 要原樣印的英文字母放進 `[...]`(例 `YYYY-MM-DD[T]HH:mm`),其他字元(分隔符號、空白、中文)照印。
+ */
+export function isTemporalFormat(pattern: unknown): pattern is string {
+  if (
+    typeof pattern !== "string" ||
+    pattern === "" ||
+    pattern.length > TEMPORAL_FORMAT_MAX_LENGTH
+  ) {
+    return false;
+  }
+  const segments = formatSegmentsOf(pattern);
+  return segments?.some((segment) => segment.kind === "token") ?? false;
+}
+
+function tokenText(
+  token: TemporalFormatToken,
+  wall: LocalDateTime,
+  ms: number,
+): string {
+  const hour12 = wall.hour % 12 || 12;
+  switch (token) {
+    case "YYYY": {
+      return pad(wall.year, 4);
+    }
+    case "YY": {
+      return String(wall.year).slice(-2);
+    }
+    case "MM": {
+      return pad(wall.month);
+    }
+    case "M": {
+      return String(wall.month);
+    }
+    case "DD": {
+      return pad(wall.day);
+    }
+    case "D": {
+      return String(wall.day);
+    }
+    case "HH": {
+      return pad(wall.hour);
+    }
+    case "H": {
+      return String(wall.hour);
+    }
+    case "hh": {
+      return pad(hour12);
+    }
+    case "h": {
+      return String(hour12);
+    }
+    case "mm": {
+      return pad(wall.minute);
+    }
+    case "m": {
+      return String(wall.minute);
+    }
+    case "ss": {
+      return pad(wall.second);
+    }
+    case "s": {
+      return String(wall.second);
+    }
+    case "SSS": {
+      return pad(ms, 3);
+    }
+    case "A": {
+      return wall.hour < 12 ? "AM" : "PM";
+    }
+    case "a": {
+      return wall.hour < 12 ? "am" : "pm";
+    }
+  }
+}
+
+/**
+ * 依格式字串印日期 / 日期時間(token 意義同 dayjs `format`,見 `TEMPORAL_FORMAT_TOKENS`):
+ * 時點換成 `timezone` 的當地時間再套格式。空值 → 空字串;不是時點的字串原樣回(同 `formatTemporal`);
+ * 時區不合法 → 以 UTC;格式字串不合法(`isTemporalFormat` 不過)→ 退回 `formatTemporal` 的 `datetime`。
+ */
+export function formatTemporalPattern(
+  value: unknown,
+  pattern: string,
+  timezone: string,
+): string {
+  const segments = isTemporalFormat(pattern) ? formatSegmentsOf(pattern) : null;
+  if (segments === null) {
+    return formatTemporal(value, { type: "datetime", timezone });
+  }
+  const instant = toInstant(value);
+  if (instant === null) {
+    return typeof value === "string" ? value : "";
+  }
+  const zone = isValidTimezone(timezone) ? timezone : "UTC";
+  const wall = localDateTimeOf(instant, zone);
+  const ms = ((instant % MS_PER_SECOND) + MS_PER_SECOND) % MS_PER_SECOND;
+  return segments
+    .map((segment) =>
+      segment.kind === "literal"
+        ? segment.text
+        : tokenText(segment.token, wall, ms),
+    )
+    .join("");
+}
+
 // ---- 時刻(`HH:mm`)----
 
 /** `HH:mm`(00:00–23:59,到分鐘;24 小時制、補零,字串比較就是先後順序)。 */

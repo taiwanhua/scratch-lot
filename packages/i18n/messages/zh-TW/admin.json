@@ -610,7 +610,7 @@
         "templateUnavailable": "模板引用的欄位(或限定的表單)已經不在目前的表單版本,請換一個",
         "templateProtected": "模板不能引用受保護的欄位",
         "templateLabel": "欄名必填,最多 {max} 個字",
-        "templateText": "模板最多 {max} 個字,要有至少一個從「插入欄位」挑的摘要槽或欄位"
+        "templateText": "模板最多 {max} 個字,要有至少一個從「插入欄位」挑的摘要槽或欄位;格式只能加在日期 / 日期時間上,且只能用支援的格式代號"
       },
       "title": "列表欄位配置 — {name}",
       "loading": "載入配置",
@@ -639,10 +639,11 @@
       "templateForm": "限定表單",
       "anyForm": "任一表單",
       "templateText": "模板",
-      "templateTextHint": "用「插入欄位」挑摘要槽或欄位,中間可打分隔文字;讀不到的欄位顯示空白",
+      "templateTextHint": "用「插入欄位」挑摘要槽或欄位,中間可打分隔文字;日期可在名稱後加「|格式」(例 |HH:mm 只印時分);讀不到的欄位顯示空白",
       "insertPlaceholder": "插入欄位",
       "insertPlaceholderHint": "挑一個摘要槽或欄位,把它插到模板最後",
       "slotPlaceholder": "摘要槽 / {name}",
+      "formatPlaceholder": "{name}(格式 {format})",
       "cancel": "取消",
       "save": "儲存",
       "saved": "已儲存列表欄位配置。",

@@ -1,6 +1,11 @@
 import { useTranslations } from "use-intl";
 
-import { VALUE_PLACEHOLDER_PREFIX } from "@repo/domain/form";
+import {
+  LIST_TEMPLATE_FORMATTABLE_SLOTS,
+  LIST_TEMPLATE_FORMAT_PRESETS,
+  LIST_TEMPLATE_FORMAT_SEPARATOR,
+  VALUE_PLACEHOLDER_PREFIX,
+} from "@repo/domain/form";
 import { SelectField } from "@repo/ui/select-field";
 import { Stack } from "@repo/ui/stack";
 import { TextField } from "@repo/ui/text-field";
@@ -33,8 +38,28 @@ export interface ListTemplateColumnFieldsProps {
 const ANY_FORM = "";
 
 /**
+ * 一個佔位符在「插入欄位」下拉的幾項:原樣一項;日期 / 日期時間再多列格式快捷
+ * (`LIST_TEMPLATE_FORMAT_PRESETS`,例 `{{value.start_at|HH:mm}}`;其他格式字串使用者自己打)。
+ */
+const placeholderOptions = (
+  label: string,
+  ref: string,
+  isTemporal: boolean,
+  formatLabel: (label: string, format: string) => string,
+): TemplatePlaceholderOption[] => [
+  { label, placeholder: `{{${ref}}}` },
+  ...(isTemporal
+    ? LIST_TEMPLATE_FORMAT_PRESETS.map((format) => ({
+        label: formatLabel(label, format),
+        placeholder: `{{${ref}${LIST_TEMPLATE_FORMAT_SEPARATOR}${format}}}`,
+      }))
+    : []),
+];
+
+/**
  * 組合欄的設定:欄名(表頭,root 輸入的顯示名稱)、限定表單(選填,同表單欄位的 `formKey`)、模板
- * (`TemplatePlaceholderInput`:摘要槽與表單欄位從「插入欄位」下拉挑;欄位只列可當列表欄的,限定了表單就只列那一張的)。
+ * (`TemplatePlaceholderInput`:摘要槽與表單欄位從「插入欄位」下拉挑;欄位只列可當列表欄的,限定了表單就只列那一張的;
+ * 日期 / 日期時間的欄位與「日期」槽另列幾個常用格式)。
  */
 export const ListTemplateColumnFields = ({
   row,
@@ -48,6 +73,8 @@ export const ListTemplateColumnFields = ({
   const t = useTranslations("admin.moduleManager.listColumns");
   const formKey = row.formKey ?? null;
   const seen = new Set<string>();
+  const formatLabel = (label: string, format: string) =>
+    t("formatPlaceholder", { name: label, format });
   const fieldOptions: TemplatePlaceholderOption[] = candidates
     .filter((candidate) => formKey === null || candidate.formKey === formKey)
     .flatMap((candidate) => {
@@ -56,18 +83,22 @@ export const ListTemplateColumnFields = ({
         return [];
       }
       seen.add(candidate.key);
-      return [
-        {
-          label: `${candidate.formName} / ${candidate.label}`,
-          placeholder: `{{${VALUE_PLACEHOLDER_PREFIX}${candidate.key}}}`,
-        },
-      ];
+      return placeholderOptions(
+        `${candidate.formName} / ${candidate.label}`,
+        `${VALUE_PLACEHOLDER_PREFIX}${candidate.key}`,
+        candidate.type === "date" || candidate.type === "datetime",
+        formatLabel,
+      );
     });
   const options: TemplatePlaceholderOption[] = [
-    ...SUMMARY_SLOTS.map((slot) => ({
-      label: t("slotPlaceholder", { name: t(`slots.${slot}`) }),
-      placeholder: `{{${slot}}}`,
-    })),
+    ...SUMMARY_SLOTS.flatMap((slot) =>
+      placeholderOptions(
+        t("slotPlaceholder", { name: t(`slots.${slot}`) }),
+        slot,
+        LIST_TEMPLATE_FORMATTABLE_SLOTS.includes(slot),
+        formatLabel,
+      ),
+    ),
     ...fieldOptions,
   ];
 

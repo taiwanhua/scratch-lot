@@ -80,6 +80,28 @@ describe("列表欄位配置:組合欄", () => {
     });
   });
 
+  it("「插入欄位」給日期多列常用格式(插入 `|格式`),其他摘要槽沒有;格式字串也能自己打", async () => {
+    const { user } = renderFormsPage();
+    server.use(
+      ...formRuntimeWorld({
+        versions: { [`${SHOPPING_FORM_KEY}@1`]: shoppingDefinition() },
+      }).handlers,
+    );
+    const dialog = await openEditor(user);
+    const row = within(dialog).getByRole("group", { name: "第 1 欄" });
+    await user.click(within(row).getByRole("combobox", { name: "插入欄位" }));
+    expect(
+      screen.queryByRole("option", { name: "摘要槽 / 標題(格式 HH:mm)" }),
+    ).toBeNull();
+    expect(
+      screen.getByRole("option", { name: "摘要槽 / 日期(格式 YYYY/MM/DD)" }),
+    ).toBeInTheDocument();
+    await user.click(
+      screen.getByRole("option", { name: "摘要槽 / 日期(格式 HH:mm)" }),
+    );
+    expect(within(row).getByLabelText("模板")).toHaveValue("{{date|HH:mm}}");
+  });
+
   it("api 擋下:欄名格式錯寫在欄名下、模板引用受保護欄位寫在那一列下", async () => {
     const { user } = renderFormsPage();
     server.use(

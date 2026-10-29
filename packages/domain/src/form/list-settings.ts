@@ -4,6 +4,7 @@ import {
   templatePlaceholdersOf,
   valuePlaceholderKeyOf,
 } from "./template";
+import { isTemporalFormat } from "./temporal";
 
 /**
  * 列表欄位配置(`modules.settings.list`)的共用零件:
@@ -66,26 +67,59 @@ export const LIST_TEMPLATE_LABEL_MAX_LENGTH = 50;
 export const LIST_TEMPLATE_MAX_LENGTH = 200;
 
 /**
+ * 組合欄佔位符裡,名稱與格式字串的分隔:`{{value.start_at|HH:mm}}`。只有組合欄認這個寫法;
+ * 頁籤模板與 lookup `labelTemplate` 沒有格式,寫了就是不認得的佔位符。
+ */
+export const LIST_TEMPLATE_FORMAT_SEPARATOR = "|";
+
+/**
+ * 「插入欄位」下拉給日期 / 日期時間佔位符的格式快捷(使用者也可以自己打其他格式字串)。
+ */
+export const LIST_TEMPLATE_FORMAT_PRESETS = [
+  "HH:mm",
+  "YYYY/MM/DD",
+  "YYYY-MM-DD HH:mm",
+] as const;
+
+/** 可以加格式的槽:「日期」槽(依版本是日期或日期時間)。 */
+export const LIST_TEMPLATE_FORMATTABLE_SLOTS: readonly ListSlotKey[] = ["date"];
+
+/**
  * 組合欄模板裡的一個佔位符:槽 `{{title}}` / `{{date}}` / `{{amount}}` / `{{serialNo}}`、
- * 表單欄位 `{{value.<欄位key>}}`;其他寫法(含欄位 key 格式不對)為 `invalid`。
+ * 表單欄位 `{{value.<欄位key>}}`;日期 / 日期時間可加格式字串 `{{value.<key>|<格式>}}`、`{{date|<格式>}}`
+ * (token 對齊 dayjs,見 `temporal.ts` 的 `TEMPORAL_FORMAT_TOKENS`;`format` 沒寫為 null)。
+ * 其他寫法(含欄位 key 格式不對、格式字串不合法、日期以外的槽加格式)為 `invalid`。
+ * 欄位是不是日期 / 日期時間要看表單定義:api 存檔時驗,前端遇到改版後不是日期的欄位就不套格式。
  */
 export type ListTemplatePlaceholder =
-  | { kind: "slot"; slot: ListSlotKey }
-  | { kind: "field"; key: string }
+  | { kind: "slot"; slot: ListSlotKey; format: string | null }
+  | { kind: "field"; key: string; format: string | null }
   | { kind: "invalid"; name: string };
 
 /** 一個佔位符名稱(`{{` 與 `}}` 之間、去掉頭尾空白)→ 它引用什麼。 */
 export function listTemplatePlaceholderOf(
   name: string,
 ): ListTemplatePlaceholder {
-  const valueKey = valuePlaceholderKeyOf(name);
+  const separator = name.indexOf(LIST_TEMPLATE_FORMAT_SEPARATOR);
+  const ref = (separator === -1 ? name : name.slice(0, separator)).trim();
+  const format =
+    separator === -1
+      ? null
+      : name.slice(separator + LIST_TEMPLATE_FORMAT_SEPARATOR.length).trim();
+  if (format !== null && !isTemporalFormat(format)) {
+    return { kind: "invalid", name };
+  }
+  const valueKey = valuePlaceholderKeyOf(ref);
   if (valueKey !== null) {
     return isValidFieldKey(valueKey)
-      ? { kind: "field", key: valueKey }
+      ? { kind: "field", key: valueKey, format }
       : { kind: "invalid", name };
   }
-  return isListSlotKey(name)
-    ? { kind: "slot", slot: name }
+  if (!isListSlotKey(ref)) {
+    return { kind: "invalid", name };
+  }
+  return format === null || LIST_TEMPLATE_FORMATTABLE_SLOTS.includes(ref)
+    ? { kind: "slot", slot: ref, format }
     : { kind: "invalid", name };
 }
 
@@ -114,7 +148,7 @@ export type ListTemplateReference = Exclude<
 
 /**
  * 套組合欄模板:每個佔位符換成 `resolve(佔位符)` 的文字(沒值 = 空字串;`invalid` 一律空字串),
- * 結果去頭尾空白。值的格式化(日期、選項名稱、讀不到的欄位)由呼叫端的 `resolve` 決定 ——
+ * 結果去頭尾空白。值的格式化(日期與它的格式字串、選項名稱、讀不到的欄位)由呼叫端的 `resolve` 決定 ——
  * 前端列表與同一列表的表單欄位欄用同一套顯示規則。
  */
 export function renderListTemplate(

@@ -29,12 +29,43 @@ describe("組合欄模板", () => {
         "{{ serialNo }}:{{value.start_at}}–{{value.end_at}} {{applicant}} {{value.}} {{value.Bad-Key}}",
       ),
     ).toEqual([
-      { kind: "slot", slot: "serialNo" },
-      { kind: "field", key: "start_at" },
-      { kind: "field", key: "end_at" },
+      { kind: "slot", slot: "serialNo", format: null },
+      { kind: "field", key: "start_at", format: null },
+      { kind: "field", key: "end_at", format: null },
       { kind: "invalid", name: "applicant" },
       { kind: "invalid", name: "value." },
       { kind: "invalid", name: "value.Bad-Key" },
+    ]);
+  });
+
+  it("日期佔位符可加格式字串(`|` 後面,token 對齊 dayjs);格式不合法或非日期槽加格式 = 不認得", () => {
+    expect(
+      listTemplatePlaceholdersOf(
+        "{{value.start_at|HH:mm}}–{{ value.end_at | HH:mm }} {{date|YYYY/MM/DD}} {{value.at|YYYY-MM-DD[T]HH:mm:ss}}",
+      ),
+    ).toEqual([
+      { kind: "field", key: "start_at", format: "HH:mm" },
+      { kind: "field", key: "end_at", format: "HH:mm" },
+      { kind: "slot", slot: "date", format: "YYYY/MM/DD" },
+      { kind: "field", key: "at", format: "YYYY-MM-DD[T]HH:mm:ss" },
+    ]);
+    expect(
+      listTemplatePlaceholdersOf(
+        "{{value.a|}} {{value.a|time}} {{value.a|MMM}} {{value.a|-}} {{title|HH:mm}} {{value.Bad|HH:mm}}",
+      ).map((one) => one.kind),
+    ).toEqual([
+      "invalid",
+      "invalid",
+      "invalid",
+      "invalid",
+      "invalid",
+      "invalid",
+    ]);
+  });
+
+  it("加了格式的欄位一樣算引用", () => {
+    expect(listTemplateFieldKeysOf("{{value.a|HH:mm}}–{{value.a}}")).toEqual([
+      "a",
     ]);
   });
 

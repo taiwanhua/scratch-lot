@@ -610,7 +610,7 @@
         "templateUnavailable": "A field used in the template (or the chosen form) is no longer in the current form version; pick another",
         "templateProtected": "The template can't use protected fields",
         "templateLabel": "Name is required, up to {max} characters",
-        "templateText": "Up to {max} characters, with at least one summary slot or field picked from Insert a field"
+        "templateText": "Up to {max} characters, with at least one summary slot or field picked from Insert a field; formats only apply to date or date-time values and must use supported format tokens"
       },
       "title": "List columns — {name}",
       "loading": "Loading configuration",
@@ -639,10 +639,11 @@
       "templateForm": "Form",
       "anyForm": "Any form",
       "templateText": "Template",
-      "templateTextHint": "Pick slots or fields with Insert a field and type separators between them; fields the reader can't see stay blank",
+      "templateTextHint": "Pick slots or fields with Insert a field and type separators between them; dates can take a format after the name, e.g. |HH:mm for hours and minutes; fields the reader can't see stay blank",
       "insertPlaceholder": "Insert a field",
       "insertPlaceholderHint": "Pick a slot or field to append it to the template",
       "slotPlaceholder": "Summary slot / {name}",
+      "formatPlaceholder": "{name} (format {format})",
       "cancel": "Cancel",
       "save": "Save",
       "saved": "List columns saved.",

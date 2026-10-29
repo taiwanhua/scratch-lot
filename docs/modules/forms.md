@@ -405,23 +405,46 @@
 
 ## 列表欄位配置
 
-`modules.settings.list = { columns: [ { kind: "slot" | "field" | "template", key, formKey?, label?, width, order } ], builtin: { form, status, createdBy } }`,root 整份覆蓋(`setModuleListColumns`,`form-design/module-list-columns.service.ts`)。三種欄:摘要槽(`key` = 槽)、表單欄位(`key` = 欄位 key)、**組合欄**(`key` = 模板、`label` = 欄名,把幾個槽 / 欄位組成一格,例 `{{value.start_at}}–{{value.end_at}}` 顯示「2026-10-29 09:00–2026-10-29 17:00」)。
+`modules.settings.list = { columns: [ { kind: "slot" | "field" | "template", key, formKey?, label?, width, order } ], builtin: { form, status, createdBy } }`,root 整份覆蓋(`setModuleListColumns`,`form-design/module-list-columns.service.ts`)。三種欄:摘要槽(`key` = 槽)、表單欄位(`key` = 欄位 key)、**組合欄**(`key` = 模板、`label` = 欄名,把幾個槽 / 欄位組成一格,例 `{{value.start_at}}–{{value.end_at}}` 顯示「2026-10-29 09:00–2026-10-29 17:00」,加格式 `{{value.start_at|HH:mm}}–{{value.end_at|HH:mm}}` 顯示「09:00–17:00」)。
 
 - 寫入時驗:摘要槽 key 只能是 `title` / `date` / `amount` / `serialNo`(單號,讀 `form_submissions.serialNo`;正本 `@repo/domain/form` 的 `LIST_SLOT_KEYS`);表單欄位要存在於該模組**共用表單**目前版本,且在那些版本裡都**不是受保護欄位**(`formKey` 給了就只看那一張,沒給就看模組內全部);欄寬 40–2000;同一欄不能重複(組合欄比 `formKey` + 去頭尾空白後的模板;錯了 `VALIDATION_FAILED` 指到 `columns.<i>`,原因見「錯誤」;編輯器把原因寫在那一列下方);`builtin` 三個鍵都要是 boolean。空陣列 = 清掉配置、回前端預設欄。
 - 定義檢查器讀它出 `LIST_COLUMN_MISSING` 警告(組合欄算模板引用的欄位);表單改版後引用到不存在的欄位不自動清,前端顯示「—」(組合欄是那個佔位符空白)。
 
 ### 組合欄
 
-| 項目     | 規則                                                                                                                                                                                                                                                                   |
-| -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 佔位符   | 槽 `{{title}}` / `{{date}}` / `{{amount}}` / `{{serialNo}}`、表單欄位 `{{value.<欄位key>}}`(與 `labelTemplate`、頁籤模板同一套 `{{名稱}}` 解析,`@repo/domain/form` 的 `listTemplatePlaceholdersOf` / `renderListTemplate`);其他寫法(`{{applicant}}`、key 格式不對)不收 |
-| 欄名     | `label` 必填,去頭尾空白後 1–50 字(`LIST_TEMPLATE_LABEL_MAX_LENGTH`);是 root 輸入的顯示名稱,同表單欄位欄的表頭(欄位 `label`)不經字典翻譯;其他種類的 `label` 忽略、讀回 `null`                                                                                           |
-| 模板     | 去頭尾空白後存;最多 200 字(`LIST_TEMPLATE_MAX_LENGTH`)、至少一個佔位符、沒有不收的寫法,否則 `VALIDATION_FAILED` 指到 `columns.<i>.template`(欄名錯指到 `columns.<i>.label`;兩者都是格式錯,沒有 `reason`)                                                               |
-| 引用欄位 | 每個 `{{value.<key>}}` 照表單欄位欄同一條規則驗(`assertListableField`):不在目前版本 → `LIST_COLUMN_UNAVAILABLE`、受保護 → `LIST_COLUMN_PROTECTED`(受保護欄位不能經組合欄露出);`formKey` 給了但不是這個模組的共用表單 → `LIST_COLUMN_UNAVAILABLE`                       |
-| 限定表單 | `formKey` 語意同表單欄位欄:給了只有那張表單的列有值、其他列「—」;沒給則每一筆依它綁的版本取值                                                                                                                                                                          |
-| 組字串   | **前端組**(`lib/base/form-engine/list-columns.ts` 的 `listTemplateTextOf`),理由見下                                                                                                                                                                                    |
-| 格式化   | 每個佔位符照同一列表的欄位欄:欄位走 `displayTextOf`(選項 / 引用印名稱、日期 / 日期時間依讀者的租戶時區、數字帶單位、是 / 否印文字、上傳印檔名),槽照摘要槽欄(「日期」依那一筆的版本印日期或日期時間);那一版沒有的欄位、沒值、讀不到 → 空字串;整格都空 → 「—」           |
-| 排序     | 不可排序:列表欄位都不提供表頭排序(列表固定依 api 的順序),組合欄也一樣                                                                                                                                                                                                  |
+| 項目     | 規則                                                                                                                                                                                                                                                                                                                                                   |
+| -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 佔位符   | 槽 `{{title}}` / `{{date}}` / `{{amount}}` / `{{serialNo}}`、表單欄位 `{{value.<欄位key>}}`(與 `labelTemplate`、頁籤模板同一套 `{{名稱}}` 解析,`@repo/domain/form` 的 `listTemplatePlaceholdersOf` / `renderListTemplate`);其他寫法(`{{applicant}}`、key 格式不對)不收;日期 / 日期時間可加格式字串,見下方「格式字串」                                  |
+| 欄名     | `label` 必填,去頭尾空白後 1–50 字(`LIST_TEMPLATE_LABEL_MAX_LENGTH`);是 root 輸入的顯示名稱,同表單欄位欄的表頭(欄位 `label`)不經字典翻譯;其他種類的 `label` 忽略、讀回 `null`                                                                                                                                                                           |
+| 模板     | 去頭尾空白後存;最多 200 字(`LIST_TEMPLATE_MAX_LENGTH`)、至少一個佔位符、沒有不收的寫法(含格式字串不合法、加在日期 / 日期時間以外的欄位或槽),否則 `VALIDATION_FAILED` 指到 `columns.<i>.template`(欄名錯指到 `columns.<i>.label`;兩者都是格式錯,沒有 `reason`)                                                                                          |
+| 引用欄位 | 每個 `{{value.<key>}}` 照表單欄位欄同一條規則驗(`assertListableField`):不在目前版本 → `LIST_COLUMN_UNAVAILABLE`、受保護 → `LIST_COLUMN_PROTECTED`(受保護欄位不能經組合欄露出);`formKey` 給了但不是這個模組的共用表單 → `LIST_COLUMN_UNAVAILABLE`                                                                                                       |
+| 限定表單 | `formKey` 語意同表單欄位欄:給了只有那張表單的列有值、其他列「—」;沒給則每一筆依它綁的版本取值                                                                                                                                                                                                                                                          |
+| 組字串   | **前端組**(`lib/base/form-engine/list-columns.ts` 的 `listTemplateTextOf`),理由見下                                                                                                                                                                                                                                                                    |
+| 格式化   | 每個佔位符照同一列表的欄位欄:欄位走 `displayTextOf`(選項 / 引用印名稱、日期 / 日期時間依讀者的租戶時區、數字帶單位、是 / 否印文字、上傳印檔名),槽照摘要槽欄(「日期」依那一筆的版本印日期或日期時間);帶格式字串的日期 / 日期時間依讀者的租戶時區照格式印(那一版的欄位已不是日期類就照一般顯示);那一版沒有的欄位、沒值、讀不到 → 空字串;整格都空 → 「—」 |
+| 排序     | 不可排序:列表欄位都不提供表頭排序(列表固定依 api 的順序),組合欄也一樣                                                                                                                                                                                                                                                                                  |
+
+#### 格式字串
+
+寫在佔位符名稱後、以 `|` 分隔:`{{value.<欄位key>|<格式>}}`、`{{date|<格式>}}`。只有**日期 / 日期時間欄位**與「日期」槽可以加;不加就照上表「格式化」的一般顯示。**token 與 dayjs `format` 一致**(預設英文語系、不含外掛;`@repo/ui` 的 DatePicker / DateTimePicker 也用 dayjs 格式字串),例 `HH:mm`、`YYYY/MM/DD`、`YYYY-MM-DD HH:mm:ss`。
+
+| token         | 意義                            | 例(2026-10-29 09:05:07) |
+| ------------- | ------------------------------- | ----------------------- |
+| `YYYY` / `YY` | 年(四位 / 末兩位)               | `2026` / `26`           |
+| `MM` / `M`    | 月(補零 / 不補零)               | `10` / `10`             |
+| `DD` / `D`    | 日(補零 / 不補零)               | `29` / `29`             |
+| `HH` / `H`    | 時,24 小時制(補零 / 不補零)     | `09` / `9`              |
+| `hh` / `h`    | 時,12 小時制(補零 / 不補零)     | `09` / `9`              |
+| `mm` / `m`    | 分(補零 / 不補零)               | `05` / `5`              |
+| `ss` / `s`    | 秒(補零 / 不補零)               | `07` / `7`              |
+| `SSS`         | 毫秒(三位)                      | `000`                   |
+| `A` / `a`     | 上下午 `AM` / `PM`、`am` / `pm` | `AM` / `am`             |
+| `[...]`       | 跳脫:括號內原樣印               | `[T]` → `T`             |
+
+- 其他字元(`-` `/` `:` `.` 空白、中文)原樣印;**沒放進 `[...]` 的英文字母必須是上表的 token**,dayjs 的其他 token(`MMM` 月名、`d` / `dddd` 星期、`Z` 時區…)與外掛 token 不支援。格式字串 1–50 字、至少一個 token。
+- 正本:`@repo/domain/form` 的 `TEMPORAL_FORMAT_TOKENS` / `isTemporalFormat` / `formatTemporalPattern`(`temporal.ts`;切 token 用與 dayjs 相同的正則,`@repo/domain` 執行期不依賴日期套件,dayjs 只是測試對照用的 devDependency),佔位符解析 `listTemplatePlaceholderOf`(`format` 欄);時點先換成讀者的租戶時區再套格式,與其他日期顯示同一套換算。
+- 存檔驗證(`setModuleListColumns`):格式字串不合法、加在 `{{title}}` / `{{amount}}` / `{{serialNo}}`、或欄位在宣告它的任一張共用表單目前版本不是日期 / 日期時間 → `VALIDATION_FAILED` 指到 `columns.<i>.template`(沒有 `reason`)。
+- 編輯器的「插入欄位」下拉對日期 / 日期時間欄位與「日期」槽多列三個快捷(`LIST_TEMPLATE_FORMAT_PRESETS`:`HH:mm`、`YYYY/MM/DD`、`YYYY-MM-DD HH:mm`);其他格式自己打。
+- 只有組合欄認 `|`:頁籤 / 標題模板與 lookup `labelTemplate` 沒有格式,寫了就是不認得的佔位符。
 
 **為什麼在前端組**:表單欄位欄本來就由前端依每一筆的 `values` / `displayValues` 渲染,這兩樣已經過 api 的讀取投影(欄位級權限,讀不到的是 `"[redacted]"`,見「讀取投影」)。組合欄沿用同一份資料與同一個 `displayTextOf`,格式化(時區、選項名稱、引用現名與「來源不可用」)與表單欄位欄逐字一致,權限也不另開一條路:受保護欄位存檔時就擋,改版後才變受保護的欄位對沒有 show 權限的讀者只拿得到遮蔽值,那個佔位符空白。後端組字串要在 api 重做一份顯示規則,且列表查詢多一個依配置而變的欄位,不採用。
 

@@ -1,7 +1,10 @@
 import {
+  DEFAULT_TENANT_TIMEZONE,
   type FieldDef,
   type ListSlotKey,
+  formatTemporalPattern,
   renderListTemplate,
+  toInstant,
 } from "@repo/domain/form";
 import { ModuleListColumnKind } from "@repo/graphql";
 
@@ -177,10 +180,22 @@ export interface ListTemplateTextOptions {
   slotText: (slot: SummarySlotKey, value: string) => string;
 }
 
+/** 日期 / 日期時間佔位符帶了格式字串:值是時點就照格式印(讀者時區);不是時點(沒值、讀不到)→ null,走一般顯示。 */
+const formattedTemporalOf = (
+  value: unknown,
+  format: string | null,
+  timezone: string | undefined,
+): string | null =>
+  format === null || toInstant(value) === null
+    ? null
+    : formatTemporalPattern(value, format, timezone ?? DEFAULT_TENANT_TIMEZONE);
+
 /**
  * 組合欄的一格文字:槽佔位符取那一筆的摘要槽 / 單號(`slotText` 格式化)、欄位佔位符取那一筆綁的版本的欄位
  * 與值(`displayTextOf`,同表單欄位欄:選項 / 引用印名稱、日期依讀者時區、數字帶單位、是 / 否印文字);
  * 那一版沒有的欄位、沒值、讀不到(api 投影成 `"[redacted]"`)→ 空字串。套出來全空回空字串(呼叫端顯示「—」)。
+ * 佔位符帶格式字串(`{{value.start_at|HH:mm}}`、`{{date|YYYY/MM/DD}}`)時,日期 / 日期時間依讀者時區照格式印;
+ * 那一版的欄位已不是日期類(改版換了型別)就照一般顯示。
  */
 export const listTemplateTextOf = (
   template: string,
@@ -191,15 +206,26 @@ export const listTemplateTextOf = (
   renderListTemplate(template, (placeholder) => {
     if (placeholder.kind === "slot") {
       const value = slotValueOf(row, placeholder.slot);
-      return value === null ? null : options.slotText(placeholder.slot, value);
+      return value === null
+        ? null
+        : (formattedTemporalOf(value, placeholder.format, options.timezone) ??
+            options.slotText(placeholder.slot, value));
     }
     const field = fields.find((candidate) => candidate.key === placeholder.key);
     if (field === undefined) {
       return null;
     }
+    const value = row.values[field.key] ?? null;
+    const formatted =
+      field.type === "date" || field.type === "datetime"
+        ? formattedTemporalOf(value, placeholder.format, options.timezone)
+        : null;
+    if (formatted !== null) {
+      return formatted;
+    }
     return displayTextOf({
       field,
-      value: row.values[field.key] ?? null,
+      value,
       display: options.displayOf(field.key),
       text: { ...options.text, empty: "" },
       ...(options.timezone !== undefined && { timezone: options.timezone }),

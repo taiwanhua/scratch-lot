@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 
 import {
+  type FieldType,
   LIST_BUILTIN_COLUMNS,
   LIST_TEMPLATE_LABEL_MAX_LENGTH,
   LIST_TEMPLATE_MAX_LENGTH,
@@ -60,8 +61,20 @@ const STORED_KINDS: Record<StoredColumn["kind"], ModuleListColumnKind> = {
   template: ModuleListColumnKind.TEMPLATE,
 };
 
-/** 表單 key → 目前版本的欄位 key → 是否受保護。 */
-type FieldCatalog = ReadonlyMap<string, ReadonlyMap<string, boolean>>;
+/** 目前版本裡一個可當列表欄的欄位:型別與是否受保護。 */
+interface CatalogField {
+  type: FieldType;
+  isProtected: boolean;
+}
+
+/** 表單 key → 目前版本的欄位 key → 型別與是否受保護。 */
+type FieldCatalog = ReadonlyMap<string, ReadonlyMap<string, CatalogField>>;
+
+/** 組合欄佔位符可以加格式字串的欄位型別。 */
+const FORMATTABLE_FIELD_TYPES: ReadonlySet<FieldType> = new Set([
+  "date",
+  "datetime",
+]);
 
 /**
  * 列表欄位配置(`modules.settings.list`;見 `docs/modules/forms.md`「列表欄位配置」):root 改全域預設。
@@ -195,7 +208,7 @@ export class ModuleListColumnsService {
       ownerOrgId: null,
       currentVersion: { $ne: null },
     });
-    const catalog = new Map<string, Map<string, boolean>>();
+    const catalog = new Map<string, Map<string, CatalogField>>();
     for (const form of forms) {
       const version = await this.versions.findOne(facts.operator, {
         formKey: form.key,
@@ -210,7 +223,10 @@ export class ModuleListColumnsService {
             .filter((field) => field.type !== "array")
             .map((field) => [
               field.key,
-              requiredShowKeys(fields, field.key).length > 0,
+              {
+                type: field.type,
+                isProtected: requiredShowKeys(fields, field.key).length > 0,
+              },
             ]),
         ),
       );
@@ -221,7 +237,8 @@ export class ModuleListColumnsService {
   /**
    * 組合欄:欄名必填(1–50 字)、模板 1–200 字且至少一個佔位符(格式錯,沒有 reason,定位到 `.label` / `.template`);
    * 佔位符是槽(`isListSlotKey`)或表單欄位 —— 欄位照表單欄位欄同一套規則(存在於目前版本、不是受保護欄位,
-   * `formKey` 給了就只看那一張),錯了帶 reason 定位到整欄。
+   * `formKey` 給了就只看那一張),錯了帶 reason 定位到整欄。佔位符加了格式字串(`{{value.<key>|HH:mm}}`)
+   * 的欄位在宣告它的每一張表單都要是日期 / 日期時間,否則是格式錯(沒有 reason,定位到 `.template`)。
    */
   private templateColumnOf(
     catalog: FieldCatalog,
@@ -256,12 +273,22 @@ export class ModuleListColumnsService {
       );
     }
     for (const placeholder of placeholders) {
-      if (placeholder.kind === "field") {
-        this.assertListableField(
-          catalog,
-          placeholder.key,
-          column.formKey,
-          path,
+      if (placeholder.kind !== "field") {
+        continue;
+      }
+      const declaring = this.assertListableField(
+        catalog,
+        placeholder.key,
+        column.formKey,
+        path,
+      );
+      if (
+        placeholder.format !== null &&
+        declaring.some((field) => !FORMATTABLE_FIELD_TYPES.has(field.type))
+      ) {
+        throw validationError(
+          `Field ${placeholder.key} is not a date or datetime field and cannot take a format`,
+          [`${path}.template`],
         );
       }
     }
@@ -280,7 +307,7 @@ export class ModuleListColumnsService {
     key: string,
     formKey: string | null | undefined,
     path: string,
-  ): void {
+  ): CatalogField[] {
     if (!isValidFieldKey(key)) {
       throw validationError(`Invalid field key ${key}`, [path]);
     }
@@ -288,10 +315,13 @@ export class ModuleListColumnsService {
       formKey === null || formKey === undefined
         ? [...catalog.values()]
         : [catalog.get(formKey)].filter(
-            (fields): fields is ReadonlyMap<string, boolean> =>
+            (fields): fields is ReadonlyMap<string, CatalogField> =>
               fields !== undefined,
           );
-    const declaring = scoped.filter((fields) => fields.has(key));
+    const declaring = scoped.flatMap((fields) => {
+      const field = fields.get(key);
+      return field === undefined ? [] : [field];
+    });
     if (declaring.length === 0) {
       throw validationError(
         `Field ${key} is not in the current version of any form of this module`,
@@ -299,13 +329,14 @@ export class ModuleListColumnsService {
         FORM_VALIDATION_REASONS.listColumnUnavailable,
       );
     }
-    if (declaring.some((fields) => fields.get(key) === true)) {
+    if (declaring.some((field) => field.isProtected)) {
       throw validationError(
         `Field ${key} is protected and cannot be a list column`,
         [path],
         FORM_VALIDATION_REASONS.listColumnProtected,
       );
     }
+    return declaring;
   }
 }
 

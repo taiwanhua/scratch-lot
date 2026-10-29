@@ -206,6 +206,34 @@ describe("列表欄位配置:組合欄", () => {
     }
   });
 
+  it("日期 / 日期時間的佔位符可加格式字串(token 對齊 dayjs),存得住、原樣讀回", async () => {
+    const key =
+      "{{value.start_at|HH:mm}}–{{value.end_at|HH:mm}} {{date|YYYY/MM/DD}}";
+    const saved = await ok<{
+      setModuleListColumns: { columns: ColumnRow[] };
+    }>(api, root, SET_COLUMNS, {
+      input: { moduleKey: MODULE_KEY, columns: [template({ key })] },
+    });
+    expect(saved.setModuleListColumns.columns[0]?.key).toBe(key);
+  });
+
+  it("格式字串:不是日期 / 日期時間的欄位或槽、不認得的 token → 定位到 .template(沒有 reason)", async () => {
+    for (const key of [
+      "{{value.note|HH:mm}}",
+      "{{value.title|YYYY}}",
+      "{{value.start_at|MMM D}}",
+      "{{value.start_at|time}}",
+      "{{value.start_at|}}",
+      "{{title|HH:mm}}",
+      "{{amount|YYYY}}",
+    ]) {
+      const result = await setColumns([template({ key })]);
+      expect(codeOf(result)).toBe("VALIDATION_FAILED");
+      expect(extensionsOf(result).fields).toEqual(["columns.0.template"]);
+      expect(extensionsOf(result).reason).toBeUndefined();
+    }
+  });
+
   it("佔位符的欄位照表單欄位欄的規則:不在目前版本 / 限定的表單不存在 → UNAVAILABLE,受保護 → PROTECTED,重複 → DUPLICATE", async () => {
     const cases: [Record<string, unknown>, string][] = [
       [{ key: "{{value.no_such}}" }, "LIST_COLUMN_UNAVAILABLE"],
