@@ -90,7 +90,7 @@ export interface FormRuntimeWorldOptions {
   submitAs?: { status: FormSubmissionStatus; instanceId?: string };
   /** `copySubmissionToDraft` 回報被清空的欄位(引用來源失效) */
   copyClearedFields?: string[];
-  /** 列表組織篩選查的整棵租戶樹;沒給 = 只有 `org-1`;`null` = 不攔(mock 模式由 `orgWorld` 提供) */
+  /** 列表組織篩選查的整棵租戶樹;沒給或 `null` = 不攔(由測試自己或 mock 模式的 `orgWorld` 提供) */
   tenantOrgTree?: OrgTreeOption;
   /** 表單 key → 作廢原因的類別與選項(`formVoidReasonOptions`;沒給 = 沒設類別、自由填寫) */
   voidReasonOptions?: Record<

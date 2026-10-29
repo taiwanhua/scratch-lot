@@ -50,9 +50,12 @@ export const tenantOrgTreeHandler = (
     HttpResponse.json({ data: { tenantOrgTree: nodes } }),
   );
 
-/** world 的租戶樹選項:`null` = 不攔。 */
+/** world 的租戶樹選項:給樹 = 攔下回這棵;`null` 或沒給 = 不攔(由測試或別的 world 提供)。 */
 export type OrgTreeOption = readonly TestTenantOrgNode[] | null;
 
-/** 給 world 用:`null` = 不攔(由別的 world 提供),沒給 = 預設的樹。 */
+/**
+ * 給 world 用:只有明確給樹才攔。沒給也不攔,免得 world 先登記的 handler 蓋掉測試自己的 `TenantOrgTree`
+ * (同名 handler 先登記的先回)。
+ */
 export const orgTreeHandlers = (nodes?: OrgTreeOption) =>
-  nodes === null ? [] : [tenantOrgTreeHandler(nodes)];
+  nodes ? [tenantOrgTreeHandler(nodes)] : [];
