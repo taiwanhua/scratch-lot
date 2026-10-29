@@ -313,8 +313,8 @@ describe("reset --mode=data(對真 MongoDB)", () => {
     expect(state.actionTokens).toHaveLength(0);
     expect(state.refreshTokens).toHaveLength(0);
     expect(state.customers).toHaveLength(0);
-    // 租戶自訂的欄位選項被刪,seed 宣告的十筆留著(判準是 registry 的 key,不是 isSystem)
-    expect(state.fields).toHaveLength(10);
+    // 租戶自訂的欄位選項被刪,seed 宣告的十四筆留著(判準是 registry 的 key,不是 isSystem)
+    expect(state.fields).toHaveLength(14);
     expect(state.fields.map((field) => field.label)).not.toContain("甜點");
     expect(state.fields.map((field) => field.label)).not.toContain("辣味");
 
@@ -326,6 +326,7 @@ describe("reset --mode=data(對真 MongoDB)", () => {
       "demo-category",
       "gender",
       "reprint-reason",
+      "void-reason",
     ]);
     expect(state.dataScopeTargets).toHaveLength(4);
 
