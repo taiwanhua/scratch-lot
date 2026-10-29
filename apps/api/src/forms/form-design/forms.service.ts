@@ -27,7 +27,7 @@ import {
   sharedByFieldKeysOf,
   voidReasonCategoryOf,
 } from "../../database/schemas/form.schema";
-import { FieldCategoryOptionsService } from "../field-category-options.service";
+import { FieldOptionsService } from "../../fields/field-options.service";
 import {
   FormAccessService,
   type FormOperatorFacts,
@@ -235,7 +235,7 @@ export class FormsService {
     private readonly access: FormAccessService,
     private readonly versionsService: FormVersionsService,
     private readonly audit: AuditService,
-    private readonly categories: FieldCategoryOptionsService,
+    private readonly categories: FieldOptionsService,
   ) {}
 
   async list(

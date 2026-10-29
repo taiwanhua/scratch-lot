@@ -11,7 +11,7 @@ import {
   withoutLookupFilterVars,
 } from "@repo/domain/form";
 
-import { FieldCategoryOptionsService } from "../field-category-options.service";
+import { FieldOptionsService } from "../../fields/field-options.service";
 import type { FormOperatorFacts } from "../form-access.service";
 import { REDACTED } from "../form-values/stored-values";
 import {
@@ -202,7 +202,7 @@ function groupsOf(entries: readonly DisplayNameEntry[]): {
 @Injectable()
 export class DisplayNamesService {
   constructor(
-    private readonly categories: FieldCategoryOptionsService,
+    private readonly categories: FieldOptionsService,
     private readonly lookups: LookupProvidersService,
   ) {}
 
@@ -213,7 +213,7 @@ export class DisplayNamesService {
   ): Promise<Map<string, ReadonlyMap<string, string>>> {
     const labels = new Map<string, ReadonlyMap<string, string>>();
     for (const key of keys) {
-      const options = await this.categories.options(facts.operator, key);
+      const options = await this.categories.optionMapOf(facts.operator, key);
       labels.set(
         key,
         new Map([...options].map(([value, option]) => [value, option.label])),

@@ -21,7 +21,7 @@ import {
   ModulesRepository,
 } from "../../database/database.module";
 import type { OperatorContext } from "../../database/operator-context";
-import { FieldCategoryOptionsService } from "../field-category-options.service";
+import { FieldOptionsService } from "../../fields/field-options.service";
 import type { FormOperatorFacts, FormRecord } from "../form-access.service";
 import { validationError } from "../forms-error";
 import {
@@ -192,7 +192,7 @@ export class FormDefinitionChecker {
   constructor(
     private readonly versions: FormVersionsRepository,
     private readonly modules: ModulesRepository,
-    private readonly categories: FieldCategoryOptionsService,
+    private readonly categories: FieldOptionsService,
     private readonly lookups: LookupProvidersService,
   ) {}
 

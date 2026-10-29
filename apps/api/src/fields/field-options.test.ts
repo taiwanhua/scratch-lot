@@ -108,6 +108,33 @@ describe("FieldOptionsService(業務功能用的選項與原因檢查)", () => {
     expect(colorOf("legacy-color")).toBeNull();
   });
 
+  it("optionMapOf:同一個合併範圍、含停用的(以 enabled 區分),順序與 optionsOf 一致", async () => {
+    const map = await service.optionMapOf(atStore, CATEGORY);
+    expect(map.get("store-disabled")).toEqual({
+      label: "自訂 store-disabled",
+      enabled: false,
+      color: null,
+    });
+    expect(map.get("tenant-wide")).toMatchObject({
+      enabled: true,
+      color: "green",
+    });
+    expect(map.has("other-tenant")).toBe(false);
+    const enabledValues = [...map]
+      .filter(([, option]) => option.enabled)
+      .map(([value]) => value);
+    const listed = await service.optionsOf(atStore, CATEGORY, ALLOWED);
+    expect(enabledValues).toEqual(listed.map((option) => option.value));
+    const missing = await service.optionMapOf(atStore, "no-such-category");
+    expect(missing.size).toBe(0);
+  });
+
+  it("categoryKeys:全部類別 key", async () => {
+    const keys = await service.categoryKeys(atStore);
+    expect(keys.has(CATEGORY)).toBe(true);
+    expect(keys.has("no-such-category")).toBe(false);
+  });
+
   it("類別不在呼叫端的白名單 → VALIDATION_FAILED(categoryKey);類別不存在 → 沒有選項", async () => {
     const error: unknown = await service
       .optionsOf(atStore, "gender", ALLOWED)

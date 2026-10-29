@@ -122,6 +122,7 @@
 - `optionsOf(operator, categoryKey, allowedCategories)`:該類別**啟用中**的選項 `{ value, label, color }`(`color` 規則同 `Field.color`),範圍同上方「自訂選項的可見範圍」的合併清單(全域 + 上層 + 自己 + 看得到的下層),依排序值、建立順序。不需要 `system.field-manager.view`。
 - `assertReason(operator, categoryKey, { reasonKey, reasonNote }, allowedCategories, names?)`:`reasonKey` 必填且是上面列得出來的選項;選「其他」(選項值 `other`,`@repo/domain/form` 的 `REASON_OPTION_OTHER`)時 `reasonNote` 必填。回 `{ reasonKey, reasonLabel, reasonNote }`(說明去空白,空 = null)。不合 → `VALIDATION_FAILED`,`fields` 預設指到 `reasonKey` / `reasonNote`(`names` 可改成呼叫端的欄位名)。
 - **類別白名單**由呼叫端傳(例:作廢原因 = 那張表單設的那一個類別);不在白名單 → `VALIDATION_FAILED`(`fields: ["categoryKey"]`),不讓前端帶任意類別讀別的清單。類別不存在 → 沒有選項(原因一律不合法)。
+- 表單引擎(類別 key 來自表單定義,不經白名單)用同一支服務的另外兩個方法:`optionMapOf(operator, categoryKey)` 回同一個合併範圍、**含停用的**選項(`value → { label, enabled, color }`;新值只收啟用中的,顯示既有值時停用的仍算來源還在),`categoryKeys(operator)` 回全部類別 key(表單定義檢查的 `OPTIONS_UNKNOWN_CATEGORY`)。
 
 正本測試:`apps/api/src/fields/field-options.test.ts`
 

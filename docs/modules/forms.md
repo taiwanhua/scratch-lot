@@ -327,7 +327,7 @@
 
 ## 欄位管理類別選項
 
-`formFieldOptions`(`form-runtime/form-field-options.service.ts`):選項欄(`options.kind = "fieldCategory"`)給填寫者取當前選項,**不需要** `system.field-manager.view`。前端只帶 `{ formKey, version, fieldKey }`,類別 key 從版本定義取(與 `formLookup` 同一原則);範圍是 `FieldCategoryOptionsService` 的合併範圍(送出時驗值、顯示名解析用的同一支),只回啟用的選項,依欄位管理的排序值、建立順序排。類別本身停用不影響這裡:既有欄位用到它照常查。
+`formFieldOptions`(`form-runtime/form-field-options.service.ts`):選項欄(`options.kind = "fieldCategory"`)給填寫者取當前選項,**不需要** `system.field-manager.view`。前端只帶 `{ formKey, version, fieldKey }`,類別 key 從版本定義取(與 `formLookup` 同一原則);範圍是 `FieldOptionsService.optionMapOf` 的合併範圍(送出時驗值、顯示名解析用的同一支;業務功能的 `optionsOf` 也是同一個查詢),只回啟用的選項,依欄位管理的排序值、建立順序排。類別本身停用不影響這裡:既有欄位用到它照常查。
 
 | 情況                                                  | 回什麼                                                 |
 | ----------------------------------------------------- | ------------------------------------------------------ |
