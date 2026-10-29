@@ -80,7 +80,6 @@
 **底座小修正(兩邊都沒做)**
 
 - 姓名 / 名稱排序明寫 `zh-Hant`(`apps/api/src/orgs/orgs.service.ts:207` 等;CI Linux 與本機語系不同)。
-- 殼層 `ShellMinWidth` 加 `md`;`Drawer` 寬度參數(現在寫死 `DRAWER_SIDE_WIDTH`)。
 - `MonthCalendar` 小尺寸 `size` prop;一格多個角標並排。
 - 表單事後動作的 context 加 `decidedBy`(核准人)。
 - 表單列表支援「組織欄 / 日期區間」篩選(`FormListPage.tsx` 只有關鍵字、表單、狀態)。
@@ -94,7 +93,6 @@
 - `form_submissions` 共用成本:`editable:false` + `defaultShareOrgs:none` 時省掉 shareOrgs 欄位 / 索引 / 讀取分支。
 - 列表 `$or` 後排序的索引用 explain 確認。
 - org lookup「整個租戶」範圍;收付 `sharedByValues` 與帳本系統鎖升格。
-- 平板 1024 殼層最小寬度的底座整體規則。
 - 任務改派掛接點與側欄信號、可攜性檢查的 `{var}` 連動篩選:底座有相關程式,是否已涵蓋要再確認。
 
 現況:未開票;依上面分組,建議先做「使用者點名」與「小修正」,再做升格(欄位選項顏色最大,單獨一張)。

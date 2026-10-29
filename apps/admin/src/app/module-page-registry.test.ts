@@ -234,6 +234,24 @@ describe("composeModulePages:替換", () => {
     });
   });
 
+  it("替換可以明寫 md:底座宣告 xl 的頁,換成平板寬就排得下的版本時降回殼層預設那一級", () => {
+    const { pageMinWidths } = compose({
+      project: {
+        pages: [{ key: "project.report", Page: ProjectReport, minWidth: "md" }],
+        forms: [],
+      },
+      replacements: [
+        { target: "system.forms", Page: ProjectReport, minWidth: "md" },
+      ],
+    });
+
+    // 明寫的 md 照樣進表(與省略不同:省略是繼承底座的 xl)
+    expect(pageMinWidths).toEqual({
+      "project.report": "md",
+      "system.forms": "md",
+    });
+  });
+
   it("移除替換就恢復底座原版(底座登記沒有被改掉)", () => {
     compose({
       replacements: [{ target: "system.role-manager", Page: ProjectRoles }],

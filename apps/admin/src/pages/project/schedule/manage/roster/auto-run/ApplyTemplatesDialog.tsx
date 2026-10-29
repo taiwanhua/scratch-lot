@@ -353,8 +353,8 @@ export const ApplyTemplatesDialog = ({
       closeLabel={t("close")}
       actions={actions}
       onClose={onClose}
-      // 底座抽屜寬 360;月曆要放得下(Figma SC-17a 抽屜寬 460)
-      sx={{ "& .MuiDrawer-paper": { width: DRAWER_WIDTH } }}
+      // 底座抽屜預設寬 360;月曆要放得下(Figma SC-17a 抽屜寬 460)
+      width={DRAWER_WIDTH}
     >
       {body}
     </Drawer>

@@ -50,7 +50,7 @@ test/       測試支援
 | SideNav   | `me.modules` 以 `parentId` 組樹;`group` 可展開、`link` 可點、`hidden` 不顯示;頂部是當前組織的商標(自己沒有就沿 `ancestors` 由近到遠繼承上層的商標,整條鏈都沒有才顯示組織名);可收合;精簡版(< `md`)改成抽屜;模組列可掛待辦數 | `app/AdminShell/SideNav/`、`stores/base/useSideNavStore.ts`      |
 | AppBar    | 頁名、「?」模組說明、當前組織切換器、頭像選單;精簡版(< `md`)說明與頭像選單移到側欄抽屜                                                                                                                                     | `app/AdminShell/AppBar/`、`components/base/OrgSwitcher/`         |
 | RouteTabs | 開過的路由各一個頁籤;可關閉、可批次關閉、可拖曳排序、鍵盤可操作                                                                                                                                                            | `app/AdminShell/RouteTabs/`、`stores/base/useRouteTabsStore.ts`  |
-| 內容區    | `<main>`:高度由殼給、自己捲動;`lg` 以上有最小寬度                                                                                                                                                                          | `app/AdminShell/ShellLayout.tsx`、`AdminShell/shell-geometry.ts` |
+| 內容區    | `<main>`:高度由殼給、自己捲動;宣告 `lg` / `xl` 的頁有最小寬度                                                                                                                                                              | `app/AdminShell/ShellLayout.tsx`、`AdminShell/shell-geometry.ts` |
 
 - 殼的設計稿節點登記在 `docs/branding.md`。
 
@@ -78,7 +78,11 @@ test/       測試支援
 
 ### 內容區的寬度與內距
 
-- **最小寬度**:只在視窗 ≥ `lg` 時套用;平板以下(< `lg`)不設下限,內容隨視窗縮放,寬表格靠表格自己的橫向捲動。內容區最小寬度 = 主題斷點 − 側欄寬(隨收合狀態)− 左右內距。殼層預設 `lg`;頁面可在 `app/base/module-pages.ts`(專案頁在 `app/project/`)的頁面宣告設定 `minWidth: "xl"`,組裝後由 `app/module-pages.tsx` 的 `modulePageMinWidths` 交給殼。`lg` 在 ≥ `lg` 的視窗本來就放得下,實際會讓內容區水平捲動的只有 `xl`(視窗介於 `lg` 與 `xl` 之間)。目前底座頁都沒有宣告 `xl`:表單管理與流程管理(兩個設計器)沿用 `lg`,在 `xl` 以下由設計器自己換版(`pages/base/system/designer-layout.ts`);平板寬(`sm`–`lg`)內容區不設下限,兩個設計器改成左清單收起、屬性面板右側抽屜(REACT-17「平板設計器」)。客製替換未寫 `minWidth` 時繼承底座值。視窗比斷點窄時由 `<main>` 水平捲動,不擠壓內容;document 本身不出現水平捲軸。
+- **最小寬度**:頁面以 `minWidth` 宣告「排得下的最窄視窗」(主題斷點 `md` / `lg` / `xl`,`shell-geometry.ts` 的 `ShellMinWidth`),在 `app/base/module-pages.ts`(專案頁在 `app/project/`)的頁面宣告設定,組裝後由 `app/module-pages.tsx` 的 `modulePageMinWidths` 交給殼;客製替換未寫 `minWidth` 時繼承底座值。
+  - **殼層預設 `md`:平板寬(含橫拿平板 1024)就完整顯示、不需水平捲動**,內容隨視窗縮放,寬表格靠表格自己的橫向捲動(STYLE-11),放不下的區塊由頁面自己換版(篩選收進抽屜、設計器左清單收起等)。新頁一律做到這一級;`md` 在 ≥ `md` 的視窗本來就放得下,所以不產生下限。底座頁都是這一級(1024 實測每一頁的 `<main>` 都不水平捲動)。
+  - **`lg` / `xl`:例外宣告**,給還沒做平板版、比該斷點窄就排不下的頁。只在完整版殼(視窗 ≥ `md`,與側欄抽屜同一條界線 `SHELL_COMPACT_BELOW`)套用:內容區最小寬度 = 斷點 − 側欄寬(隨收合狀態)− 左右內距,視窗介於 `md` 與該斷點之間時由 `<main>` 水平捲動,不擠壓內容。宣告時在登記那一行註明排不下的理由。
+  - **精簡版(< `md`,手機與直拿平板)一律不設下限**,不論宣告哪一級;頁面自己處理窄版(REACT-17)。
+  - 目前底座頁都沒有宣告:表單管理與流程管理(兩個設計器)在 `xl` 以下由設計器自己換版(`pages/base/system/designer-layout.ts`),平板寬(`sm`–`lg`)改成左清單收起、屬性面板右側抽屜(REACT-17「平板設計器」)。document 本身不出現水平捲軸。
 - **內距**:手機寬(< `sm`)8px,其餘 24px(`MAIN_PADDING`)。
 - **高度**:殼外框固定 `100vh`,`<main>` 以 `flex: 1` + `minHeight: 0` 取得確定的高度,頁面可以撐滿(STYLE-08)。
 
@@ -290,7 +294,7 @@ Provider 內找不到模組設定時使用預設模板 `{{title}}`;缺少 Provid
 
 正本:`apps/admin/src/components/base/FilterDrawer/FilterDrawer.tsx`、`packages/ui/src/Drawer/Drawer.tsx`
 
-`Drawer` 另有**非遮罩**模式(`isModal={false}`,MUI `persistent`,就地渲染、不開 portal):不蓋遮罩、不鎖焦點,抽屜外照樣能看、能點,給「邊看邊改」的用途;元件自己補上打開時焦點移進抽屜、抽屜裡按 Esc 關閉、關閉時焦點還給打開前的元素,內容是以標題命名的 region;`topOffset` 讓紙面從殼的頂部兩列下面開始(admin 給 `lib/base/shell-header-geometry.ts` 的 `SHELL_HEADER_HEIGHT` = 頂部列 + 頁籤列,不蓋通知、頭像與頁籤列的「⋯」);匯出寬度 `DRAWER_SIDE_WIDTH` 讓呼叫端算要讓出多寬。就地渲染的好處是 Tab 順序跟著頁面位置、祖先藏起來時抽屜跟著藏;代價是祖先不能有 `transform` / `filter`(紙面是 `position: fixed`)。先例:兩個設計器在平板寬的屬性面板(`pages/base/system/DesignerPropertyPanel.tsx`,REACT-17「平板設計器」)。
+`Drawer` 另有**非遮罩**模式(`isModal={false}`,MUI `persistent`,就地渲染、不開 portal):不蓋遮罩、不鎖焦點,抽屜外照樣能看、能點,給「邊看邊改」的用途;元件自己補上打開時焦點移進抽屜、抽屜裡按 Esc 關閉、關閉時焦點還給打開前的元素,內容是以標題命名的 region;`topOffset` 讓紙面從殼的頂部兩列下面開始(admin 給 `lib/base/shell-header-geometry.ts` 的 `SHELL_HEADER_HEIGHT` = 頂部列 + 頁籤列,不蓋通知、頭像與頁籤列的「⋯」);右側抽屜寬預設 `DRAWER_SIDE_WIDTH`(360,匯出讓呼叫端算要讓出多寬),內容放不下時以 `width` 改(例:要並排月曆的抽屜給 460),非遮罩抽屜的呼叫端讓出空間時要用同一個值。就地渲染的好處是 Tab 順序跟著頁面位置、祖先藏起來時抽屜跟著藏;代價是祖先不能有 `transform` / `filter`(紙面是 `position: fixed`)。先例:兩個設計器在平板寬的屬性面板(`pages/base/system/DesignerPropertyPanel.tsx`,REACT-17「平板設計器」)。
 
 ## 頁內權限判斷
 

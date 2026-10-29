@@ -25,19 +25,32 @@ export const useIsShellCompact = (): boolean =>
   useBreakpointDown(SHELL_COMPACT_BELOW);
 
 /**
- * 內容區的最小寬度以哪個主題斷點為準(**只在視窗 ≥ `lg` 時套用**;平板以下不設下限,內容隨視窗縮放):
- * 殼層預設 `lg`,頁面可在登記時以 `minWidth` 宣告更大的 `xl`
- * (`app/base/module-pages.ts`;目前底座頁都沒宣告),合成後是 `app/module-pages.tsx` 的 `modulePageMinWidths`。
- * 因為只在 ≥ `lg` 套用,`lg` 在那個寬度本來就放得下,實際會讓 `<main>` 水平捲動的只有 `xl`(視窗介於 `lg` 與 `xl` 之間時)。
- * 比 `lg` 小的斷點沒有意義(< `lg` 本來就不設下限),所以型別只收這兩個。
+ * 頁面「排得下」的最窄視窗,以主題斷點表示;內容區的最小寬度依它換算(`shellContentMinWidth`)。
+ *
+ * - **只在完整版殼(視窗 ≥ `SHELL_COMPACT_BELOW`,即 `md` 起:橫拿平板、電腦)套用**;精簡版(< `md`,手機與直拿平板)
+ *   不設下限,頁面自己處理窄版(表格橫向捲動、卡片、抽屜)。
+ * - `md`(殼層預設):平板寬就能完整顯示 —— 在 ≥ `md` 的視窗本來就放得下,所以**不產生下限**,內容隨視窗縮放。
+ *   底座頁都是這一級(1024 實測每頁都不需水平捲動)。
+ * - `lg` / `xl`:這一頁在比它窄的視窗排不下(例:多欄設計器還沒做平板版)。視窗介於 `md` 與該斷點之間時,
+ *   內容區維持「視窗 = 斷點」時的寬度,由 `<main>` 水平捲動,不擠壓內容。
+ *
+ * 頁面在登記時以 `minWidth` 宣告(`app/base/module-pages.ts`,專案頁在 `app/project/`;目前底座頁都沒宣告),
+ * 合成後是 `app/module-pages.tsx` 的 `modulePageMinWidths`。
  */
-export type ShellMinWidth = "lg" | "xl";
+export type ShellMinWidth = "md" | "lg" | "xl";
 
-export const DEFAULT_SHELL_MIN_WIDTH: ShellMinWidth = "lg";
+export const DEFAULT_SHELL_MIN_WIDTH: ShellMinWidth = "md";
+
+/**
+ * 這個宣告在完整版殼要不要產生下限:只有比精簡版界線大的斷點才要(等於界線的 `md` 在 ≥ `md` 的視窗本來就放得下;
+ * 不產生下限也避開「視窗剛好等於斷點、又有垂直捲軸」時多出的那幾 px 水平捲動)。
+ */
+export const shellMinWidthApplies = (minWidth: ShellMinWidth): boolean =>
+  minWidth !== SHELL_COMPACT_BELOW;
 
 /**
  * 「視窗寬 = 斷點值」時內容區剛好放得下的最小寬度:斷點 − 側欄(隨收合狀態)− 內容區左右內距
- * (最小寬度只在 `lg` 以上套用,所以取 `sm` 起的內距)。
+ * (最小寬度只在完整版殼(≥ `md`)套用,所以取 `sm` 起的內距)。
  * 視窗比斷點窄 → `<main>` 自己水平捲動(`overflow: auto`),不擠壓內容;比斷點寬 → 不捲。
  * 側欄收合時側欄變窄,最小寬度跟著重算(否則收合後內容區多出一截、無故出現水平捲軸)。
  * 回 CSS `calc()`:theme 開了 `cssVariables`,`spacing()` 回的可能是 `var()` 算式,不能當數字相減。

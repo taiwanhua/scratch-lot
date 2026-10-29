@@ -16,7 +16,7 @@ import { ShellLayout } from "./ShellLayout";
 import type { ShellMinWidth } from "./shell-geometry";
 
 export interface AdminShellProps {
-  /** 模組 key → 內容區最小寬度的斷點(沒列 = `lg`;見 `shell-geometry.ts`) */
+  /** 模組 key → 內容區最小寬度的斷點(沒列 = `md`;見 `shell-geometry.ts`) */
   pageMinWidths?: Readonly<Record<string, ShellMinWidth>>;
 }
 

@@ -36,7 +36,7 @@ const composed = composeModulePages({
  */
 export const modulePages = composed.pages;
 
-/** 模組 key → 內容區最小寬度的主題斷點(沒列 = 殼層預設 `lg`;`AdminShell/shell-geometry.ts`)。 */
+/** 模組 key → 內容區最小寬度的主題斷點(沒列 = 殼層預設 `md`;`AdminShell/shell-geometry.ts`)。 */
 export const modulePageMinWidths = composed.pageMinWidths;
 
 /** 模組 key → 表單模組的模組層設定;由 `providers/RootProviders.tsx` 注入給表單頁。 */
