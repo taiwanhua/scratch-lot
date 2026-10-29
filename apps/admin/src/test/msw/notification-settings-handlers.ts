@@ -97,7 +97,7 @@ const fail = (
 /**
  * 通知設定頁的假 api(`notificationSettings` / `updateNotificationSetting` / `resetNotificationSetting`
  * + 選擇器的 `roles` / `audiencePermissionOptions`)。有狀態(TEST-08):改了或還原後重查拿到新值;
- * `keyword` 比對名稱與類型 key、分頁照 api(`notification-settings.service.ts`)。
+ * `keyword` 比對名稱與類型 key、與 `nameMatchedTypes`(前端以顯示名稱比中的)取聯集,分頁照 api(`notification-settings.service.ts`)。
  * 「側欄數字」區塊的 `sidebarBadgeSettings` / `updateSidebarBadgeSetting` / `resetSidebarBadgeSetting` 同樣有狀態。
  */
 export const notificationSettingsWorld = (
@@ -191,11 +191,13 @@ export const notificationSettingsWorld = (
       const page = input.page ?? 1;
       const pageSize = input.pageSize ?? 20;
       const keyword = input.keyword?.trim().toLowerCase() ?? "";
+      const nameMatched = new Set(input.nameMatchedTypes);
       const matched = types.filter(
         (type) =>
           keyword === "" ||
           type.name.toLowerCase().includes(keyword) ||
-          type.type.includes(keyword),
+          type.type.includes(keyword) ||
+          nameMatched.has(type.type),
       );
       return HttpResponse.json({
         data: {

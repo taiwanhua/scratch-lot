@@ -94,7 +94,8 @@ fragment NotificationSettingItem on NotificationSetting {
   updatedBy
 }
 
-# NotificationSettingsInput: { keyword?, page?, pageSize? }(所有負責人提醒 + 宣告了可調時間的當事人通知)
+# NotificationSettingsInput: { keyword?, nameMatchedTypes?, page?, pageSize? }(所有負責人提醒 + 宣告了可調時間的當事人通知;
+# keyword 比對登記的 name 與 key,nameMatchedTypes = 前端以顯示名稱比中的類型 key,兩者取聯集)
 query NotificationSettings($input: NotificationSettingsInput!) {
   notificationSettings(input: $input) {
     items {

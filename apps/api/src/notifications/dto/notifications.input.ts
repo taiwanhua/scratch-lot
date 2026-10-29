@@ -39,11 +39,21 @@ export class MarkNotificationsReadInput {
   ids!: string[];
 }
 
-/** 通知設定清單:關鍵字比對類型名稱與 key。 */
+/**
+ * 通知設定清單:關鍵字比對類型名稱(登記的繁中 `name`)與 key;
+ * `nameMatchedTypes` 是前端以畫面上的顯示名稱(訊息檔,依介面語言)比中的類型 key,與關鍵字的比對取聯集。
+ */
 @InputType()
 export class NotificationSettingsInput {
   @Field(() => String, { nullable: true })
   keyword?: string | null;
+
+  @Field(() => [String], {
+    nullable: true,
+    description:
+      "前端以顯示名稱比中 keyword 的類型 key(與 keyword 比對 name / key 的結果取聯集;沒給 keyword 時不影響清單)",
+  })
+  nameMatchedTypes?: string[] | null;
 
   @Field(() => Int, { nullable: true, defaultValue: 1 })
   page?: number;

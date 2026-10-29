@@ -5449,6 +5449,8 @@ export type NotificationSettingPayload = {
 
 export type NotificationSettingsInput = {
   keyword?: InputMaybe<Scalars['String']['input']>;
+  /** 前端以顯示名稱比中 keyword 的類型 key(與 keyword 比對 name / key 的結果取聯集;沒給 keyword 時不影響清單) */
+  nameMatchedTypes?: InputMaybe<Array<Scalars['String']['input']>>;
   page?: InputMaybe<Scalars['Int']['input']>;
   /** 每頁筆數,上限 100 */
   pageSize?: InputMaybe<Scalars['Int']['input']>;

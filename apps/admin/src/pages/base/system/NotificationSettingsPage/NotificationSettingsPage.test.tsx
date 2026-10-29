@@ -259,6 +259,24 @@ describe("通知設定頁", () => {
     ).toBeVisible();
   });
 
+  it("英文介面:用畫面上的英文名稱搜尋得到(前端以顯示名稱比中的類型一起送)", async () => {
+    const { user } = renderPage({ locale: "en" });
+    const englishTable = await screen.findByRole("table", {
+      name: "Notification types",
+    });
+    await within(englishTable).findByText("Print agent offline");
+
+    await user.type(
+      screen.getByRole("textbox", { name: "Search notification types" }),
+      "agent OFF",
+    );
+
+    await waitFor(() => {
+      expect(within(englishTable).queryByText("到期提醒")).toBeNull();
+    });
+    expect(within(englishTable).getByText("Print agent offline")).toBeVisible();
+  });
+
   it("還原預設失敗 → 錯誤顯示在確認框裡、不另跳提示", async () => {
     const { user } = renderPage({
       world: {

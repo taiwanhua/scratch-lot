@@ -297,6 +297,17 @@ describe("通知 notify() / 通知清單 / 通知設定", () => {
     return data.myNotifications;
   };
 
+  /** 通知設定清單列出的類型 key。 */
+  const settingTypesOf = async (
+    who: FormOperator,
+    input: Record<string, unknown>,
+  ) => {
+    const { notificationSettings } = await ok<{
+      notificationSettings: { items: SettingRow[] };
+    }>(api, who.token, NOTIFICATION_SETTINGS, { input });
+    return notificationSettings.items.map((item) => item.type);
+  };
+
   const setPreference = (
     who: FormOperator,
     settings: Record<string, unknown>,
@@ -937,6 +948,25 @@ describe("通知 notify() / 通知清單 / 通知設定", () => {
         isScheduleDefault: true,
       });
       expect(offline?.audience).toEqual(offline?.defaultAudience);
+    });
+
+    it("關鍵字比對登記的名稱與 key;nameMatchedTypes(前端以顯示名稱比中的)取聯集", async () => {
+      expect(await settingTypesOf(admin, { keyword: "列印代理" })).toEqual([
+        PRINTING_AGENT_OFFLINE,
+      ]);
+      expect(await settingTypesOf(admin, { keyword: "agent-offline" })).toEqual(
+        [PRINTING_AGENT_OFFLINE],
+      );
+      // 英文介面的名稱(例「Print agent offline」)api 比不到,前端把比中的類型 key 帶來
+      expect(await settingTypesOf(admin, { keyword: "print agent" })).toEqual(
+        [],
+      );
+      expect(
+        await settingTypesOf(admin, {
+          keyword: "print agent",
+          nameMatchedTypes: [PRINTING_AGENT_OFFLINE, "not.a-type"],
+        }),
+      ).toEqual([PRINTING_AGENT_OFFLINE]);
     });
 
     it("租戶調整人員條件後,下一次觸發依新條件(且只在類型宣告的組織範圍內);還原預設後回到類型宣告", async () => {

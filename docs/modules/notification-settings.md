@@ -206,7 +206,8 @@ type NotificationChannelPreference {
 }
 
 input NotificationSettingsInput {
-  keyword: String # 比對類型名稱與 key
+  keyword: String # 比對類型登記的名稱(繁中 name)與 key
+  nameMatchedTypes: [String!] # 前端以畫面上的顯示名稱比中 keyword 的類型 key;與 keyword 的比對取聯集
   page: Int = 1
   pageSize: Int = 20
 }
@@ -282,6 +283,7 @@ input ResetNotificationSettingInput {
 通知設定頁(`pages/base/system/NotificationSettingsPage/`),版面沿用示範模組列表:說明 + 搜尋 + 表格卡片 + 頁碼。使用者說明在 `apps/admin/src/md/module-help/base/system.notification-settings.help.md`。
 
 - **清單**:一列一種類型(負責人提醒 + 宣告了可調時間的當事人通知),欄位是通知類型、組織範圍、收件人、提醒時間、操作。組織範圍唯讀,由 `orgScope` 換成一行白話(`ref`:觸發事件的組織 / 最上層組織;`range`:本身 / 含下層 / 含上層);當事人通知顯示「—」。收件人是人員條件的一行摘要(與流程設計器的審核者框共用 `useAudienceSummary`),沒調整過的(`isDefault`)標「預設」;當事人通知唯讀「由事件決定(`recipientNote`)」。提醒時間是一行摘要(`notification-schedule.ts` 的 `useScheduleSummary`:「到期前 30、7 天及當天 09:00」「隔天起每天 09:00」「每月 3 號 09:00」),沒調整過的標「預設」,沒宣告的顯示「—(發生時)」。日期稱呼依類型 key 先查 `admin.notifications.scheduleDateLabels.<類型 key>`,沒有用 api 的 `scheduleDateLabel`,再沒有是「日期」。
+- **搜尋**:關鍵字送 `keyword`(api 比對登記的繁中名稱與類型 key),另外前端以目前語言訊息檔的顯示名稱(`admin.notifications.types.<key>`,`lib/base/notification-type-name.ts` 的 `useNotificationTypesMatchingName`,不分大小寫的子字串)比中的類型 key 一起送成 `nameMatchedTypes`,英文介面用畫面上的英文名稱也搜得到。由前端比對而不是 api 依語言比對:顯示名稱只在 admin 訊息檔(含專案字典的覆寫),api 沒有這份字典,也不必複製一份。
 - **網址**(REACT-14,`app/base/url-state-inventory.ts`):`list` 存搜尋與頁碼;`edit` 存正在編輯的類型 key(`?edit=printing.agent-offline`),打開時以類型 key 查 `notificationSettings`、挑出 key 完全相同的那一筆,不靠目前這一頁的清單。不放網址:還原預設的確認(確認類彈窗)、編輯彈窗裡的條件(未存輸入)。
 - **唯讀**:沒有 `system.notification-settings.edit` → 沒有操作欄;網址帶 `?edit=` 時清掉參數、不打開。站在根組織時也唯讀,並說明要先切換組織:判斷用 `hooks/base/useIsAtRootOrg.ts`(`me` 已載入且 `me.currentOrg.tenantId === null`;表單管理共用同一支),手上有根組織專屬模組的超級管理員站在租戶時照常可改。`me` 還沒載入時還不知道,按鈕先不出現、`?edit=` 先留著,載入後才決定打開或清掉。api 仍會擋(`TENANT_ONLY`),萬一擋下,對話框顯示同一句說明。
 - **編輯框**(`EditNotificationSettingDialog`):有幾塊顯示幾塊 ——「收件人」(`category = responsible`)、「提醒時間」(`schedule` 不是 `null`);標題依塊數是「編輯收件人 / 編輯提醒時間 / 編輯通知設定」。兩塊各有 [還原預設]:那一塊調整過 → 立即送 `resetNotificationSetting({ part })`、對話框不關、清單重抓;只改了草稿 → 就地改回預設。[儲存] 只送碰過的那一塊;都沒碰就直接關閉。
@@ -290,7 +292,7 @@ input ResetNotificationSettingInput {
 - **還原預設(清單)**:只在任何一塊調整過的列可按;確認框逐行寫出還原後的預設收件人與提醒時間。送出不帶 `part`(兩塊一起還原)。成功後清單回到類型宣告的值並標「預設」。
 - **類型名稱的語系**:畫面上的類型名稱一律經 `lib/base/notification-type-name.ts` 的 `useNotificationTypeName()`:有 `admin.notifications.types.<類型 key>`(key 的 `.` 就是巢狀層級)用它,沒有退回 api 的 `name`。底座 6 種類型兩個語系都有文案;專案的類型在專案字典加同樣的 key,沒加的顯示登記的名稱。通知設定頁與個人設定的通知管道開關(`PreferencesTab`)共用這一支;🔔 清單與新通知提示顯示的是通知的標題 / 內容(寫入當下依收件人的語言產生),不顯示類型名稱,之後要顯示也走這一支。
 - **與 Figma 的差異(刻意)**:通知類型清單的「預設管道」欄不做(`NotificationSetting` 沒有管道欄位,管道由收件人在個人設定開關);編輯收件人的「所屬組織」條件不做(人員條件不含所屬組織,組織範圍由類型宣告);組織範圍用通用的「觸發事件的組織」,不逐類型寫「印表機所在組織」。
-- **測試**:`NotificationSettingsPage.test.tsx`(清單、搜尋、編輯、錯誤標回條件列、還原預設、英文名稱與退回)、`NotificationSettingsSchedule.test.tsx`(提醒時間欄、編輯框的塊數、改值與各自還原、範圍檢查、時間選單)、`NotificationSettingsAccess.test.tsx`(沒有 edit 權限、站在根組織、超級管理員站在租戶、`?edit=` 的開啟與清除;共用 `notification-settings-test-support.ts`),假 api 是有狀態的 `test/msw/notification-settings-handlers.ts`(mock 模式也用它)。
+- **測試**:`NotificationSettingsPage.test.tsx`(清單、搜尋(含英文名稱)、編輯、錯誤標回條件列、還原預設、英文名稱與退回)、`NotificationSettingsSchedule.test.tsx`(提醒時間欄、編輯框的塊數、改值與各自還原、範圍檢查、時間選單)、`NotificationSettingsAccess.test.tsx`(沒有 edit 權限、站在根組織、超級管理員站在租戶、`?edit=` 的開啟與清除;共用 `notification-settings-test-support.ts`),假 api 是有狀態的 `test/msw/notification-settings-handlers.ts`(mock 模式也用它)。
 
 正本:`apps/admin/src/pages/base/system/NotificationSettingsPage/`(提醒時間:`notification-schedule.ts`、`ScheduleEditor.tsx`)、`apps/admin/src/lib/base/notification-type-name.ts`、`apps/admin/src/test/msw/notification-settings-handlers.ts`
 
