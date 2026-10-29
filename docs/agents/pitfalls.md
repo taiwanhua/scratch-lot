@@ -9,6 +9,12 @@
 - **heredoc 餵多行內容給指令被擋**(`gh pr create --body-file -`、`git commit -F -`、`gh issue comment --body-file -`) → 先用 Write 工具把內容寫成 scratchpad 裡的檔(檔名帶票號),再 `--body-file <檔>` / `git commit -F <檔>`;單行 commit 訊息用 `-m` 即可。
 - **一支 python 腳本用 `pathlib` 批次寫多個檔被判定太複雜而擋掉** → 一次只改一個檔,或直接用 Write / Edit。
 - **建 `.claude/hook-typecheck-off` 的指令被整條擋掉** → 單獨一行做、做完 `ls .claude/` 確認;還是被擋就略過(只是每次寫檔多等一次 typecheck,不影響交件),不要繞路關 hook。
+- **`cd <路徑> && git …`、`git -C <路徑> …` 被擋** → 直接下 git(工作目錄已在該 repo / worktree)。
+- **子殼層 `( cd <pkg> && … )` 被擋** → 改 `pnpm -C <pkg> …`。
+- **把輸出導到 `.claude/` 底下被擋** → 導到 scratchpad。
+- **`git checkout -- <檔>` 丟棄變更被擋** → 用 Edit 把內容改回。
+- **同一種寫法被擋一次** → 換上面的寫法;不改權限設定去繞。
+- **commit 落到別人的分支**(共用目錄的 HEAD 被另一個 agent 切走) → 只動 ref 修:`git branch -f <分支> <正確 sha>` 再 push;不在共用目錄 checkout / reset,以免再動到對方的工作目錄(預防見 collaboration「一票一位寫入 owner、一個工作樹」)。
 - **scratchpad 裡的暫存檔被別的 agent 覆蓋** → scratchpad 是共用的,檔名一律帶票號。
 - **`git stash pop` 撈到別的 session 的東西** → stash 堆疊與主 checkout、其他 worktree 共用;改用 WIP commit,非用不可就 `git stash push -u -m "<票號>-<標記>"`,再以 `git stash list` 找到自己那筆當下的 `stash@{n}` 去 apply。
 

@@ -52,6 +52,7 @@ Issues 追蹤在目前 repo 的 GitHub Issues,透過 `gh` CLI 操作;repo 身分
 - 底座現況(是什麼 / 怎麼運作)→ `docs/concepts/`(七份,順序見 `docs/agents/domain.md`「概念導讀」);決策理由 → `docs/adr/`(專案的在 `docs/adr/project/`)
 - agent 的工具與環境須知 → `docs/agents/toolbox.md`
 - 跨工具分工、工作樹與接手 → `docs/agents/collaboration.md`(Claude、Codex 與人員共用)
+- repo 擁有者的協作偏好(溝通、動手前、進行中)→ `docs/agents/working-preferences.md`(正本;本機 `~/.claude/CLAUDE.md` 與 Claude 專案的 Project instructions 是副本)
 - **新增**一個後台 CRUD 模組 → `docs/agents/module-scaffold.md`(檔案清單 + 步驟 + 每步的正本;藍本是示範模組 1 / 2)
 - 開發/修改後台模組 → 先讀 `docs/modules/<key>.md`(內部技術文件;專案模組在 `docs/modules/project/<key>.md`)+ `apps/admin/src/md/module-help/{base,project/additions,project/replacements}/<key>.help.md`(租戶使用者說明:守詞彙表、不得出現平台視角詞彙;build 時打包進說明彈窗)
 - 設計稿與 Library → `docs/branding.md` 的設計資源登記(專案的設計檔與節點在 `docs/project/branding.md`、`docs/project/figma-nodes.md`);規範見 `docs/standards/general/figma.md`
