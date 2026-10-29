@@ -1,6 +1,7 @@
 import { describe, expect, it } from "@jest/globals";
 
-import { buildWorkbook } from "./reports/excel";
+import { buildWorkbook } from "@/lib/base/reports/excel";
+
 import {
   ATTENDANCE_SHEET_COLUMNS,
   type AttendanceSheetRow,

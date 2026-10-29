@@ -161,7 +161,7 @@
 ### 採購清單(規格 8.1)
 
 - 取副本中 `voidedAt` 為空且未被引用的列,依遊戲 × 分店加總本數、預估批購金額;下半部列出每一張待購買的叫貨單(單號、叫貨分店、本數、預估批購)。
-- [匯出 Excel]:底座 B11 產生器(`lib/project/reports/excel.ts`),內容 = 畫面上的表(`purchase-list-sheet.ts`)。
+- [匯出 Excel]:底座 B11 產生器(`lib/base/reports/excel.ts`),內容 = 畫面上的表(`purchase-list-sheet.ts`)。
 - 每張叫貨單的 [建立進貨單](帶入)與 [從其他分店調貨](開調貨單並引用)由進貨單、調貨單的功能在 `PurchaseListTab/purchase-list-actions.ts` 的 `PENDING_REQUISITION_ACTIONS` 各自追加一列;還沒有時不顯示動作欄。
 
 ### 受管表單引用遊戲(可攜的 lookup 來源)

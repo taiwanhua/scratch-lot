@@ -252,8 +252,8 @@ describe("底座 + 非空的專案來源(對真 MongoDB)", () => {
       idOf(seeded, "modules", "system"),
       idOf(seeded, "modules", PROJECT_AUDIT_KEY),
     ]);
-    expect(documentsOf(seeded, "modules")).toHaveLength(41 + 8);
-    expect(documentsOf(seeded, "permissions")).toHaveLength(125 + 8 + 7);
+    expect(documentsOf(seeded, "modules")).toHaveLength(42 + 8);
+    expect(documentsOf(seeded, "permissions")).toHaveLength(128 + 8 + 7);
     expect(documentsOf(seeded, "data_scope_targets")).toHaveLength(4 + 2);
 
     // 專案對底座模組的初值指定:首次建立時生效
@@ -284,8 +284,8 @@ describe("底座 + 非空的專案來源(對真 MongoDB)", () => {
       "tenant-admin",
       "permissions",
     );
-    expect(templateModules).toHaveLength(37 + 6);
-    expect(templatePermissions).toHaveLength(37 + 6);
+    expect(templateModules).toHaveLength(38 + 6);
+    expect(templatePermissions).toHaveLength(38 + 6);
     expect(templateModules).toEqual(
       expect.arrayContaining([
         PROJECT_REPORT_KEY,
@@ -415,7 +415,7 @@ describe("底座 + 非空的專案來源(對真 MongoDB)", () => {
     );
     expect(
       boundKeys(after, "role_module", "tenant-admin", "modules"),
-    ).toHaveLength(37 + 6);
+    ).toHaveLength(38 + 6);
     // 專案新增的模組照宣告建立
     expect(byKey(after, "modules", PROJECT_REPORT_KEY)).toMatchObject({
       enabled: true,

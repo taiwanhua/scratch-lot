@@ -8,7 +8,7 @@ import {
 
 import { useSession } from "@/hooks/base/useSession";
 import { flattenOrgs, tenantTreeToOrgNodes } from "@/lib/base/org-tree";
-import { downloadWorkbook } from "@/lib/project/reports/excel";
+import { downloadWorkbook } from "@/lib/base/reports/excel";
 
 import { formatCount } from "../purchasing-keys";
 import { type PurchaseList, purchaseListSheetOf } from "./purchase-list-sheet";

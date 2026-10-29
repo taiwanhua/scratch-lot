@@ -1,4 +1,5 @@
 import { FIELD_MANAGER_MODULE_KEY } from "@/components/base/FieldManager/field-manager-permissions";
+import { REPORTS_MODULE_KEY } from "@/lib/base/reports/report-registry";
 import { OverviewPage } from "@/pages/base/OverviewPage/OverviewPage";
 import {
   APPLY_CENTER_MODULE_KEY,
@@ -16,6 +17,7 @@ import { SampleTwoPage } from "@/pages/base/demo/SampleTwoPage/SampleTwoPage";
 import { SampleTwoViewPage } from "@/pages/base/demo/SampleTwoPage/SampleTwoViewPage";
 import { SAMPLE_ONE_MODULE_KEYS } from "@/pages/base/demo/demo-sample-one-config";
 import { SAMPLE_TWO_MODULE_KEYS } from "@/pages/base/demo/demo-sample-two-config";
+import { ReportsPage } from "@/pages/base/reports/ReportsPage/ReportsPage";
 import { DataScopePage } from "@/pages/base/system/DataScopePage/DataScopePage";
 import { DATA_SCOPE_MODULE_KEY } from "@/pages/base/system/DataScopePage/data-scope-permissions";
 import { FieldManagerPage } from "@/pages/base/system/FieldManagerPage/FieldManagerPage";
@@ -94,6 +96,8 @@ export const baseModulePages: ModulePageSource = {
     { key: APPLY_CENTER_VIEW_PAGE_KEY, Page: LazyApplyCenterViewPage },
     // 印表機管理:懶載入(測試頁的條碼 / QR code 零件不進首屏 bundle)
     { key: PRINTERS_MODULE_KEY, Page: LazyPrintersPage },
+    // 輸出報表:報表本身由底座 / 專案登記(`app/base/reports.ts`、`app/project/reports.ts`)
+    { key: REPORTS_MODULE_KEY, Page: ReportsPage },
   ],
   // 三個示範表單模組(頂層 / 群組內 / 次群組內):四個 key 全用表單引擎的預設組裝;
   // 表單綁了流程時,詳情頁下方自動掛審核區塊(預設組裝含)

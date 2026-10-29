@@ -3511,5 +3511,77 @@
       "VALIDATION_FAILED": "Can't print: the printer is disabled or the document image is invalid",
       "UNEXPECTED": "Couldn't send the print job. Try again later."
     }
+  },
+  "reports": {
+    "reportList": {
+      "title": "Reports",
+      "option": "{name} (up to {max} organizations)",
+      "empty": "You don't have any reports to export. Ask your system administrator to grant report permissions if you need them."
+    },
+    "conditions": {
+      "title": "{name} · Conditions",
+      "orgs": "Organizations",
+      "orgsRequired": "Select at least one organization",
+      "preview": "Preview",
+      "export": "Export Excel",
+      "exporting": "Exporting…"
+    },
+    "periodPicker": {
+      "kindsAria": "Period type",
+      "kinds": {
+        "day": "Day",
+        "week": "Week",
+        "month": "Month"
+      },
+      "date": "Date",
+      "today": "Today",
+      "yesterday": "Yesterday",
+      "thisWeek": "This week",
+      "lastWeek": "Last week",
+      "thisMonth": "This month",
+      "lastMonth": "Last month",
+      "weekCalendarAria": "Choose a week",
+      "weekHint": "Click any day to select its whole week (weeks start on Sunday).",
+      "weekRange": "{from} ({fromWeekday}) – {to} ({toWeekday})",
+      "weekdays": {
+        "0": "Sun",
+        "1": "Mon",
+        "2": "Tue",
+        "3": "Wed",
+        "4": "Thu",
+        "5": "Fri",
+        "6": "Sat"
+      },
+      "monthTitle": "{month}/{year}",
+      "prevMonth": "Previous month",
+      "nextMonth": "Next month",
+      "yearTitle": "{year}",
+      "prevYear": "Previous year",
+      "nextYear": "Next year",
+      "monthGridAria": "Choose a month",
+      "monthLabel": "Month {month}"
+    },
+    "period": {
+      "day": "{date}",
+      "week": "{from} – {to}",
+      "month": "{month}/{year}"
+    },
+    "preview": {
+      "title": "{name} · {period}",
+      "back": "Back to conditions",
+      "loading": "Generating report…"
+    },
+    "sheetPreview": {
+      "tabsAria": "Worksheets",
+      "empty": "No data in this worksheet"
+    },
+    "totalSheet": "All organizations",
+    "fileName": "{name}_{period}",
+    "errors": {
+      "RANGE_TOO_LARGE": "The period or number of organizations exceeds this report's limit. Narrow it down and try again.",
+      "VALIDATION_FAILED": "The conditions are incomplete. Check the period and organizations.",
+      "FORBIDDEN": "You don't have permission for this report.",
+      "UNEXPECTED": "Couldn't generate the report. Please try again later."
+    }
   }
 }

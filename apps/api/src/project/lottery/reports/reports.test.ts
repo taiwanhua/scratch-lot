@@ -646,32 +646,17 @@ describe("輸出報表:營運報表、班次結帳歷史報表(GraphQL 端點 + 
   beforeAll(async () => {
     api = await startAuthTestApp("scratch-lot-test-reports");
     connection = api.connection;
-    const { insertedId: moduleId } = await connection
+    // 模組與模組層權限(export / show-cost)由底座 seed 種好;這裡只補專案兩張報表的權限
+    const reportsModule = await connection
       .collection("modules")
-      .insertOne({
-        key: "reports",
-        name: "輸出報表",
-        parentId: null,
-        ancestors: [],
-        route: "reports",
-        sidebarType: "link",
-        order: 50,
-        enabled: true,
-        isSystem: false,
-        icon: null,
-        settings: {},
-        engine: "form",
-        ...base(),
-      });
+      .findOne({ key: "reports" });
+    if (reportsModule === null) {
+      throw new Error("base seed did not create the reports module");
+    }
     await connection.collection("permissions").insertMany(
-      [
-        "reports.operations",
-        "reports.shift-checkouts",
-        "reports.export",
-        "reports.show-cost",
-      ].map((key) => ({
+      ["reports.operations", "reports.shift-checkouts"].map((key) => ({
         key,
-        moduleId,
+        moduleId: reportsModule._id,
         name: key,
         enabled: true,
         isSystem: false,

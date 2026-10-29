@@ -2,7 +2,7 @@ import { useTranslations } from "use-intl";
 
 import { Tag } from "@repo/ui/tag";
 
-import type { ReportMonthCaptionProps } from "@/lib/project/reports/report-registry";
+import type { ReportMonthCaptionProps } from "@/lib/base/reports/report-registry";
 
 import { useOperationsPeriods } from "./useOperationsPeriods";
 

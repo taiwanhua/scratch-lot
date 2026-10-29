@@ -5,10 +5,7 @@ import {
   useLotteryShiftCheckoutsReportQuery,
 } from "@repo/graphql";
 
-import {
-  type ReportDefinition,
-  registerReport,
-} from "@/lib/project/reports/report-registry";
+import { registerReport } from "@/lib/base/reports/report-registry";
 
 import { OperationsConditionsAddon } from "./operations/OperationsConditionsAddon";
 import { OperationsMonthCaption } from "./operations/OperationsMonthCaption";
@@ -71,14 +68,3 @@ export const shiftCheckoutsReport =
     query: useLotteryShiftCheckoutsReportQuery,
     sheets: buildShiftCheckoutsSheets,
   });
-
-/**
- * 「輸出報表」的報表登記清單(專案規格 18.4;正本 `docs/modules/project/reports.md`「報表登記介面」)。
- * 新報表在這裡加一筆 `registerReport({...})`(`lib/project/reports/report-registry.ts`),
- * 權限 `reports.<報表 key>` 要先在 `apps/db-migrator/seeds/project/reports.ts` 宣告。
- * 清單順序 = 報表選單的順序。
- */
-export const REPORT_REGISTRATIONS: readonly ReportDefinition[] = [
-  operationsReport,
-  shiftCheckoutsReport,
-];

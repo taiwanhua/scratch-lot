@@ -47,6 +47,7 @@ import {
   systemModules,
 } from "@/test/msw/module-fixtures";
 import { printersModule } from "@/test/msw/printing-fixtures";
+import { reportsModule } from "@/test/msw/reports-fixtures";
 import type { TestRole } from "@/test/msw/role-fixtures";
 import type { TestUser } from "@/test/msw/user-manager-handlers";
 import { HR_ROLE_ID } from "@/test/msw/workflow-audience-fixtures";
@@ -253,6 +254,8 @@ export const modulesForView = (view: MockView): TestModule[] => [
   notificationSettingsModule,
   // 印表機管理(系統管理群組最後一項)
   printersModule(),
+  // 輸出報表(頂層;報表本身由登記決定,權限給滿)
+  reportsModule(),
 ];
 
 /** `me.orgs`(組織切換器);第一個即 `me.currentOrg`。 */

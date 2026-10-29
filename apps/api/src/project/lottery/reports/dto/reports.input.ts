@@ -1,7 +1,7 @@
 import { Field, GraphQLISODateTime, ID, InputType } from "@nestjs/graphql";
 
 /**
- * 報表查詢共用的範圍(輸出報表外框送來的 input;正本 `docs/modules/project/reports.md`「報表登記介面」):
+ * 報表查詢共用的範圍(輸出報表外框送來的 input;正本 `docs/modules/reports.md`「報表登記介面」):
  * 期間類型照收字串、交給 `assertReportRange` 驗;起訖是 admin 依租戶時區換好的時點(迄不含)。
  */
 @InputType({ isAbstract: true })

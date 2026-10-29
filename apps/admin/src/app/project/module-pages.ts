@@ -30,7 +30,6 @@ import { TransferCreatePage } from "@/pages/project/lottery/purchasing/transfer/
 import { TransferEditPage } from "@/pages/project/lottery/purchasing/transfer/TransferEditPage/TransferEditPage";
 import { TransferPage } from "@/pages/project/lottery/purchasing/transfer/TransferPage/TransferPage";
 import { TransferViewPage } from "@/pages/project/lottery/purchasing/transfer/TransferViewPage/TransferViewPage";
-import { ReportsPage } from "@/pages/project/lottery/reports/ReportsPage/ReportsPage";
 import { StorePage } from "@/pages/project/lottery/store/StorePage/StorePage";
 import { StoreCreatePage } from "@/pages/project/lottery/store/forms/StoreCreatePage/StoreCreatePage";
 import {
@@ -75,7 +74,6 @@ const sources: ModulePageSource = {
     { key: DEALERS_MODULE_KEYS.contactCreatePage, Page: ContactFormPage },
     { key: DEALERS_MODULE_KEYS.contactEditPage, Page: ContactFormPage },
     // 輸出報表(規格第 11 章、18.4)
-    { key: "reports", Page: ReportsPage },
     // 班表管理(規格 3.1):我的班表、排班設定是固定頁(頁內分頁)
     { key: "schedule.my", Page: ScheduleMyPage },
     { key: "schedule.settings", Page: ScheduleSettingsPage },

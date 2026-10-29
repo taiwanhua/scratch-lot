@@ -1,6 +1,3 @@
-import { ModuleEngine, ModuleSidebarType } from "@repo/graphql";
-
-import type { TestModule } from "@/test/msw/auth-handlers";
 import {
   printButtonWorld,
   printingModule,
@@ -112,20 +109,6 @@ const myOptions = (): ScheduleMyWorldOptions => {
   };
 };
 
-/** 輸出報表(seed `apps/db-migrator/seeds/project/reports.ts`;權限給滿)。 */
-const reportsModule: TestModule = {
-  id: "m-reports",
-  key: "reports",
-  name: "輸出報表",
-  parentId: null,
-  sidebarType: ModuleSidebarType.Link,
-  engine: ModuleEngine.Fixed,
-  order: 50,
-  route: "/reports",
-  icon: "chart",
-  permissions: ["reports.*"],
-};
-
 /**
  * 專案的 mock world:專案新增的模組在此登記 mock 模式的模組清單與假 api,底座更新不會動到這份。
  *
@@ -142,12 +125,11 @@ const storeAndSalesHandlers = () => {
 };
 
 export const projectMockWorld: ProjectMockWorld = {
-  // 檔案管理、經銷商管理:權限給滿(經銷商兩個批購基準日的欄位級權限也有),各分頁都看得到;輸出報表同樣給滿;
+  // 檔案管理、經銷商管理:權限給滿(經銷商兩個批購基準日的欄位級權限也有),各分頁都看得到;
   // 班表管理(群組 + 四個子模組,權限給滿);帳戶管理、庫存管理(權限給滿)
   modules: () => [
     ...masterDataModules(),
     ...dealersModules(),
-    reportsModule,
     ...scheduleModules(),
     ...accountsModules(),
     ...purchasingModules(),

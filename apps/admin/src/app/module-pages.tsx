@@ -5,14 +5,17 @@ import type { ComponentType } from "react";
 import { projectModulePages } from "@/app/project/module-pages";
 import { projectPageReplacements } from "@/app/project/page-replacements";
 import { projectRealtimeSignals } from "@/app/project/realtime-signals";
+import { projectReports } from "@/app/project/reports";
 import { projectShellExtensions } from "@/app/project/shell-extensions";
 import { projectUrlStateInventory } from "@/app/project/url-state-inventory";
 import { projectWorkflowExtensions } from "@/app/project/workflow-extensions";
 import type { WorkflowExtensionRegistration } from "@/hooks/base/useWorkflowExtensions";
 import { composeRealtimeSignals } from "@/lib/base/realtime/signal-registry";
+import { composeReports } from "@/lib/base/reports/report-registry";
 
 import { baseModulePages } from "./base/module-pages";
 import { baseRealtimeSignals } from "./base/realtime-signals";
+import { baseReports } from "./base/reports";
 import { baseShellExtensions } from "./base/shell-extensions";
 import { baseWorkflowExtensions } from "./base/workflow-extensions";
 import { composeModulePages } from "./module-page-registry";
@@ -50,6 +53,12 @@ export const realtimeSignals = composeRealtimeSignals(
   baseRealtimeSignals,
   projectRealtimeSignals,
 );
+
+/**
+ * 輸出報表的登記清單(`docs/modules/reports.md`「報表登記介面」):底座(`app/base/reports.ts`)在前
+ * + 專案(`app/project/reports.ts`);同一個報表 key 登記兩次載入就丟錯。由 `providers/RootProviders.tsx` 注入。
+ */
+export const reportRegistrations = composeReports(baseReports, projectReports);
 
 /**
  * 依模組登記的審核擴充(`docs/modules/workflows.md`「依模組登記的審核擴充」):底座(`app/base/workflow-extensions.ts`)

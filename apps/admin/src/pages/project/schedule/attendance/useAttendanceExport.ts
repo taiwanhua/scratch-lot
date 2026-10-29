@@ -9,7 +9,7 @@ import {
 
 import { useSnackbar } from "@/hooks/base/useMutationFeedback";
 import { useSession } from "@/hooks/base/useSession";
-import { downloadWorkbook } from "@/lib/project/reports/excel";
+import { downloadWorkbook } from "@/lib/base/reports/excel";
 import { attendanceSheetsOf } from "@/lib/project/schedule-attendance";
 
 import { scheduleErrorKey } from "../schedule-error";

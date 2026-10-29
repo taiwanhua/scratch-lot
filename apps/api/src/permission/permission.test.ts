@@ -116,7 +116,7 @@ const SAMPLE_ONE_FAMILY = [
 ];
 /**
  * seed 的全部模組(總覽 1 + 系統管理群組 14 + 隱藏 api 樹 2 + 示範家族 6 + 示範模組2 一支 4
- * + 申請中心一支 2 + 三個示範表單各 4)。
+ * + 申請中心一支 2 + 輸出報表 1 + 三個示範表單各 4)。
  */
 const ALL_SEEDED_MODULES = [
   "overview",
@@ -143,6 +143,7 @@ const ALL_SEEDED_MODULES = [
   "demo.sample-two.edit-page",
   "apply-center",
   "apply-center.view-page",
+  "reports",
   ...["demo-form", "demo.form", "demo.sub.form"].flatMap((key) => [
     key,
     `${key}.view-page`,

@@ -5,8 +5,8 @@ import {
   type SheetCell,
   type SheetColumn,
   type SheetRow,
-} from "@/lib/project/reports/excel";
-import type { ReportSheetContext } from "@/lib/project/reports/report-registry";
+} from "@/lib/base/reports/excel";
+import type { ReportSheetContext } from "@/lib/base/reports/report-registry";
 
 export type OperationsReport =
   LotteryOperationsReportQuery["lotteryOperationsReport"];

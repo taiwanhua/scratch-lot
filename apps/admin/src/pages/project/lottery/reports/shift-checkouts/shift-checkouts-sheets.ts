@@ -1,13 +1,13 @@
 import { formatTemporal } from "@repo/domain/form";
 import type { LotteryShiftCheckoutsReportQuery } from "@repo/graphql";
 
-import type { SheetCell, SheetColumn } from "@/lib/project/reports/excel";
+import type { SheetCell, SheetColumn } from "@/lib/base/reports/excel";
 import {
   type ReportSheetBody,
   type ReportSheetContext,
   type ReportSheetSet,
   fullPathTranslator,
-} from "@/lib/project/reports/report-registry";
+} from "@/lib/base/reports/report-registry";
 
 export type ShiftCheckoutRow =
   LotteryShiftCheckoutsReportQuery["lotteryShiftCheckoutsReport"]["rows"][number];

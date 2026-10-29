@@ -104,12 +104,8 @@ export const weekdayOf = (date: string): number => {
   return day === null ? 0 : weekdayOfLocalDate(day);
 };
 
-/** 日期鍵的「M/D」(那天租戶時區 00:00 走 `formatTemporal` 的 `monthDay`);不是日期鍵 → 空字串。 */
-export const monthDayOf = (date: string, timezone: string): string =>
-  formatTemporal(localDayInstantOf(date, timezone), {
-    type: "monthDay",
-    timezone,
-  });
+/** 日期鍵的「M/D」(底座 `lib/base/form-engine/local-day.ts`;班表各檢視沿用這個入口)。 */
+export { monthDayOf } from "@/lib/base/form-engine/local-day";
 
 /** 日期鍵 → api 的日期(那天租戶時區 00:00 的 ISO);不是日期鍵 → null。 */
 export const dayInstantOf = (date: string, timezone: string): string | null =>
