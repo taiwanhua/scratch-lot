@@ -98,6 +98,64 @@ function actorOfEvent(
   return event === "withdrawn" ? withdrawerOf(instance) : null;
 }
 
+/** 一筆被接受的決定(實例上的,或這次更新整份寫入的)。 */
+interface DecisionLike {
+  userId: Types.ObjectId | string;
+  decision: string;
+  at: Date;
+}
+
+/** 陣列裡最後一筆核准的人(陣列順序 = 接受順序);沒有核准 → null。 */
+function lastApproverIn(
+  decisions: readonly DecisionLike[],
+): Types.ObjectId | null {
+  const last = decisions.findLast((one) => one.decision === "approved");
+  return last === undefined ? null : toObjectId(String(last.userId));
+}
+
+/**
+ * 讓這一關通過的核准人(`FormEffectContext.decidedBy`):這一關最後一筆被接受的核准;這次更新整份寫入
+ * 決定(進關時的自動通過)就以更新的那份為準。
+ */
+function stepApproverOf(
+  instance: InstanceRecord,
+  stepKey: string,
+  update: InstanceUpdate,
+): Types.ObjectId | null {
+  const written = update.steps?.[stepKey]?.decisions;
+  return lastApproverIn(
+    written ??
+      instance.steps.find((state) => state.stepKey === stepKey)?.decisions ??
+      [],
+  );
+}
+
+/** 整個實例最後一筆核准的人(依決定時間;同時間依接受順序);每一關都跳過 → null。 */
+function lastApproverOf(instance: InstanceRecord): Types.ObjectId | null {
+  const approved = instance.steps
+    .flatMap((state) => state.decisions)
+    .filter((one) => one.decision === "approved");
+  const latest = approved.reduce<(typeof approved)[number] | null>(
+    (best, one) =>
+      best === null || one.at.getTime() >= best.at.getTime() ? one : best,
+    null,
+  );
+  return latest?.userId ?? null;
+}
+
+/**
+ * 做出決定的人(`FormEffectContext.decidedBy`):完成 = 最後一位核准人、駁回 / 退回 = 做決定的審核者、
+ * 撤回 = 申請人。
+ */
+function deciderOfEvent(
+  event: FormEffectName,
+  instance: InstanceRecord,
+): Types.ObjectId | null {
+  return event === "completed"
+    ? lastApproverOf(instance)
+    : actorOfEvent(event, instance);
+}
+
 /** 推進的上限輪數(正常一次推進只要個位數輪;超過代表判斷表在來回打架,記 log 停下)。 */
 const MAX_ROUNDS = 60;
 
@@ -545,6 +603,7 @@ export class WorkflowEngineService {
     await this.lifecycle.emit(event, effectSubjectOf(instance), {
       stepKey: decided ? (instance.outcome?.stepKey ?? null) : null,
       actorId: actorOfEvent(event, instance),
+      decidedBy: deciderOfEvent(event, instance),
     });
     if (event === "completed" || event === "rejected") {
       await this.cc.outcome(instance, definition, event);
@@ -570,6 +629,7 @@ export class WorkflowEngineService {
       await this.lifecycle.emit("stepPassed", effectSubjectOf(instance), {
         stepKey,
         skipped,
+        decidedBy: skipped ? null : stepApproverOf(instance, stepKey, update),
       });
       // 知會:關卡整關通過 / 被跳過 → 該關的知會對象(同一個交易)
       await this.cc.stepPassed(instance, definition, stepKey, skipped);

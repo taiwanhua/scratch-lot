@@ -89,6 +89,20 @@ function actors(): (string | null)[] {
   );
 }
 
+/** 每個事後動作拿到的 `decidedBy`(做出決定的人,`id:名稱`;沒有 = null)。 */
+function deciders(): (string | null)[] {
+  return lifecycleProbe.effectContexts.map((context) =>
+    context.decidedBy === null
+      ? null
+      : `${String(context.decidedBy.id)}:${context.decidedBy.name ?? "-"}`,
+  );
+}
+
+/** `decidedBy` 的期望值(測試使用者的名稱 = 帳號)。 */
+function decider(person: Person): string {
+  return `${String(person.userId)}:${person.account}`;
+}
+
 function expectBlocked(result: {
   errors?: { extensions?: Record<string, unknown> }[];
 }): void {
@@ -214,6 +228,8 @@ describe("表單 / 流程的掛接點", () => {
       // 權限仍是系統身分;`actorId` 另外記送出的人
       const applicant = String(world.applicant.userId);
       expect(actors()).toEqual([applicant, applicant]);
+      // 沒有任何決定(沒走流程直接完成)→ 沒有核准人
+      expect(deciders()).toEqual([null, null]);
       expect(operator?.roleIds).toEqual([]);
       expect(operator?.currentOrgId?.equals(world.kitchen)).toBe(true);
       expect(
@@ -426,6 +442,7 @@ describe("表單 / 流程的掛接點", () => {
       expect(events()).toEqual(["submitted"]);
       expect(lifecycleProbe.effects[0]?.revision).toBe(1);
       expect(actors()).toEqual([String(world.applicant.userId)]);
+      expect(deciders()).toEqual([null]);
       resetLifecycleProbe();
       await decideOn(world, staff(0), submitted.id, "APPROVE");
       expect(lifecycleProbe.guards.map((one) => one.guard)).toEqual([
@@ -433,11 +450,15 @@ describe("表單 / 流程的掛接點", () => {
       ]);
       expect(lifecycleProbe.guards[0]?.context.stepKey).toBe("first");
       expect(events()).toEqual(["stepPassed:first"]);
+      // 關卡通過帶這一關的核准人
+      expect(deciders()).toEqual([decider(staff(0))]);
       resetLifecycleProbe();
       await decideOn(world, staff(1), submitted.id, "APPROVE");
       expect(events()).toEqual(["stepPassed:second", "completed"]);
       // 關卡通過、完成不帶造成的人
       expect(actors()).toEqual([null, null]);
+      // 但帶核准人:這一關的核准人;完成 = 整個實例最後一位核准人
+      expect(deciders()).toEqual([decider(staff(1)), decider(staff(1))]);
       resetLifecycleProbe();
       const approved = await submission(world, world.applicant, submitted.id);
       await ok(api, world.applicant.token, VOID, {
@@ -452,6 +473,7 @@ describe("表單 / 流程的掛接點", () => {
       ]);
       expect(events()).toEqual(["voided"]);
       expect(actors()).toEqual([String(world.applicant.userId)]);
+      expect(deciders()).toEqual([decider(world.applicant)]);
     });
 
     it("第一關被既有跳過條件跳過 → stepPassed(skipped: true)", async () => {
@@ -472,6 +494,8 @@ describe("表單 / 流程的掛接點", () => {
           skipped: true,
         },
       ]);
+      // 跳過沒有核准人
+      expect(deciders()).toEqual([null, null]);
     });
 
     it("beforeSubmit 擋下 → 沒有實例,仍是草稿", async () => {
@@ -569,11 +593,13 @@ describe("表單 / 流程的掛接點", () => {
       expect(events()).toEqual(["rejected:first"]);
       // 造成的人 = 做這個決定的審核者
       expect(actors()).toEqual([String(staff(0).userId)]);
+      expect(deciders()).toEqual([decider(staff(0))]);
 
       const returned = await atFirstStep();
       await decideOn(world, staff(0), returned.id, "RETURN");
       expect(events()).toEqual(["returned:first"]);
       expect(actors()).toEqual([String(staff(0).userId)]);
+      expect(deciders()).toEqual([decider(staff(0))]);
 
       const withdrawn = await atFirstStep();
       await ok(api, world.applicant.token, WITHDRAW, {
@@ -585,6 +611,7 @@ describe("表單 / 流程的掛接點", () => {
       expect(events()).toEqual(["withdrawn"]);
       // 造成的人 = 撤回的人(申請人)
       expect(actors()).toEqual([String(world.applicant.userId)]);
+      expect(deciders()).toEqual([decider(world.applicant)]);
     });
 
     it("事後動作拋錯 → 狀態、任務、實例、專案寫入全部回復", async () => {

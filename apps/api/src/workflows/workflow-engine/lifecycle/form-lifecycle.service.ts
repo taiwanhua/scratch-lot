@@ -8,8 +8,10 @@ import type { StoredValues } from "@repo/domain/form";
 import { OperatorContextService } from "../../../auth/operator-context.service";
 import type { OperatorContext } from "../../../database/operator-context";
 import { currentSession } from "../../../database/transaction";
+import { FormUserNames } from "../../../forms/form-mapper";
 import { NotificationService } from "../../../notifications/notification.service";
 import { RealtimePublisher } from "../../../realtime/realtime-publisher.service";
+import { systemContext } from "../../tenant-directory.service";
 import {
   FORM_LIFECYCLES,
   type FormEffectContext,
@@ -20,6 +22,7 @@ import {
   type FormVoidReason,
   type LifecycleResolver,
   type LifecycleSubmission,
+  type LifecycleUserRef,
   resolveLifecycleInjections,
 } from "./form-lifecycle-registration";
 
@@ -111,6 +114,7 @@ export class FormLifecycleService implements OnModuleInit {
     private readonly realtime: RealtimePublisher,
     private readonly moduleRef: ModuleRef,
     private readonly notifications: NotificationService,
+    private readonly userNames: FormUserNames,
   ) {}
 
   /** 啟動時解析每筆登記的 `inject`;宣告的 token 找不到 → app 起不來。 */
@@ -201,6 +205,8 @@ export class FormLifecycleService implements OnModuleInit {
       voidReason?: FormVoidReason;
       /** 造成這個事件的人(`FormEffectContext.actorId`);不給 = null。 */
       actorId?: Types.ObjectId | null;
+      /** 做出決定的人(`FormEffectContext.decidedBy`,名稱由這裡讀);不給 = null。 */
+      decidedBy?: Types.ObjectId | null;
     } = {},
   ): Promise<void> {
     const registration = this.lifecycles.lookup(
@@ -227,6 +233,7 @@ export class FormLifecycleService implements OnModuleInit {
         : { voidReason: detail.voidReason }),
       operator: await this.operators.systemOperatorOfOrg(subject.orgId),
       actorId: detail.actorId ?? null,
+      decidedBy: await this.userRefOf(detail.decidedBy ?? null),
       session,
       get: this.resolverOf(registration),
       notify: (input) => this.notifications.notify(input),
@@ -237,5 +244,16 @@ export class FormLifecycleService implements OnModuleInit {
       },
     };
     await handler(context);
+  }
+
+  /** 使用者參照(名稱以系統身分讀,同審核區塊顯示的名稱;已被刪除 = null)。 */
+  private async userRefOf(
+    id: Types.ObjectId | null,
+  ): Promise<LifecycleUserRef | null> {
+    if (id === null) {
+      return null;
+    }
+    const names = await this.userNames.load(systemContext(), [id]);
+    return { id, name: names.get(String(id)) ?? null };
   }
 }

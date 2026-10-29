@@ -459,9 +459,11 @@ admin 端(`hooks/base/useApplyCenterCounts.ts`):
 - **`Review`**:警告文字由元件自己畫(租戶看得到的字放該模組的字典);`onStateChange({ approveDisabled: true })` → 那筆任務的 [核准] 停用(`TaskActions` 的 `approveDisabled`),駁回 / 退回照常。沒回報 = 不停用。畫面停用只是提示,擋下仍要靠 api 的守門(掛接點)。
 - **批次核准不套用 `Review`**:申請中心的批次核准不畫審核畫面,`Review` 回報的停用在那裡不生效;該擋的一律由 api 的掛接點守門(`beforeApprove` 等)擋下,批次結果逐筆顯示被擋的原因。
 - **`Section`**:要的資料自己向 api 讀(能不能操作由 api 回,例:任務在不在自己手上);寫入後更新自己讀的快取。和模組詳情頁共用同一個元件,兩邊不各寫一份。
+- **審核區塊不收「決定之後」的 callback**:`ApprovalSection` 沒有給呼叫頁的 `onDecided`,決定之後的動作一律登記 `Effect`。理由:審核區塊同時掛在模組詳情頁與申請中心詳情頁、批次核准不經審核區塊,callback 只在呼叫的那一頁生效,登記則每個入口都通知;`Effect` 掛在殼層,換頁、關彈窗都不中斷。審核區塊自己的善後(重查實例、更新審核快取、「此關已結束」提示)留在區塊內部。
+- **不放進 `Effect` 的**:送出那一頁自己的流程(成功提示、送出後去哪一頁、要用到畫面上還沒存的資料而且必須做完才離開的動作)留在該頁的送出處理;`Effect` 只拿得到事件的識別,也會在引擎的編輯頁重新送出時觸發。
 - 例:某個模組的單據在第一關通過後要自動列印 → 登記 `Effect`;某個模組的審核要先看關聯資料是否還在 → 登記 `Review` 顯示警告、停用 [核准];審核者從通知進申請中心、要在審核頁操作單據上的東西 → 登記 `Section`。
 
-正本:`apps/admin/src/hooks/base/useWorkflowExtensions.ts`、`apps/admin/src/app/providers/WorkflowExtensionsProvider.tsx`、`apps/admin/src/components/base/workflow/ApprovalSection/MyTask.tsx`、`apps/admin/src/pages/base/apply-center/ApplyCenterViewPage/ApplyCenterViewPage.tsx`;測試 `ApprovalSection/MyTask.test.tsx`、`ApplyCenterViewPage/ApplyCenterViewPageSections.test.tsx`
+正本:`apps/admin/src/hooks/base/useWorkflowExtensions.ts`、`apps/admin/src/app/providers/WorkflowExtensionsProvider.tsx`、`apps/admin/src/components/base/workflow/ApprovalSection/MyTask.tsx`、`apps/admin/src/pages/base/apply-center/ApplyCenterViewPage/ApplyCenterViewPage.tsx`;測試 `app/providers/WorkflowExtensionsProvider.test.tsx`、`ApprovalSection/MyTask.test.tsx`、`ApplyCenterViewPage/ApplyCenterViewPageSections.test.tsx`
 
 ### 表單管理的流程綁定欄、組織管理的主管欄
 
@@ -498,7 +500,7 @@ GraphQL 文件:`packages/graphql/src/documents/base/workflows.graphql`(設計、
 
 - `guard(name, { operator, submission, values?, stepKey? })`:動作的交易內、寫入之前呼叫;擋下 → `FORBIDDEN` + `reason` = 專案錯誤碼。
 - `runApproveGuard({ operator, submission, stepKey })`:`beforeApprove` 的單一入口(`decideTask` 的核准、`batchApproveTasks` 的每一筆);其他會核准的路徑一律經它,不各自呼叫 `guard`。
-- `emit(event, subject, { stepKey?, skipped?, voidReason?, actorId? })`:事後動作,以系統身分在同一個交易內執行(`actorId` = 造成事件的人,見 `docs/concepts/workflow-engine.md`「掛接點」;駁回 / 退回取全案終局那筆決定的審核者,撤回取 `withdrawn` 歷程的人);推進(`WorkflowEngineService`)在關卡完成 / 跳過與提交同步成終局時呼叫,送出(`WorkflowSubmitService`)在建好實例後呼叫 `submitted`。
+- `emit(event, subject, { stepKey?, skipped?, voidReason?, actorId?, decidedBy? })`:事後動作,以系統身分在同一個交易內執行(`actorId` = 造成事件的人、`decidedBy` = 做出決定的人,見 `docs/concepts/workflow-engine.md`「掛接點」;駁回 / 退回取全案終局那筆決定的審核者,撤回取 `withdrawn` 歷程的人;`decidedBy` 另在關卡通過取那一關最後一筆核准、完成取整個實例最後一筆核准,傳 id、名稱由 `emit` 以 `FormUserNames` 讀);推進(`WorkflowEngineService`)在關卡完成 / 跳過與提交同步成終局時呼叫,送出(`WorkflowSubmitService`)在建好實例後呼叫 `submitted`。
 
 時機與帶入的資料見 `docs/concepts/workflow-engine.md`「掛接點:守門與事後動作」。
 

@@ -74,13 +74,11 @@
 | 共用作廢原因類別 `void-reason` | `apps/db-migrator/seeds/project/field-categories.ts`(進 `SHARED_FIELD_CATEGORY_KEYS`)                                           |
 | `RootOrgNotice` / 需要租戶的頁 | `components/project/RootOrgNotice/{RootOrgNotice,WithTenantRequired}.tsx`(底座通知設定、側欄數字、流程綁定各有一份 TENANT_ONLY) |
 | 表單代號分派四頁共用機制       | `pages/project/lottery/purchasing/*-keys.ts`                                                                                    |
-| 依模組登記審核後 / 送出後動作  | 底座只有 `ApprovalSection` 的 `onDecided`;要加 `registerApprovalEffect` 一類的登記機制                                          |
 
 **底座小修正(兩邊都沒做)**
 
 - 姓名 / 名稱排序明寫 `zh-Hant`(`apps/api/src/orgs/orgs.service.ts:207` 等;CI Linux 與本機語系不同)。
 - `MonthCalendar` 小尺寸 `size` prop;一格多個角標並排。
-- 表單事後動作的 context 加 `decidedBy`(核准人)。
 - 表單列表支援「組織欄 / 日期區間」篩選(`FormListPage.tsx` 只有關鍵字、表單、狀態)。
 - 拖拉排序共用元件(RouteTabs 與表單設計器各用一份 dnd-kit)。
 - 假 api 的 `graphqlError` 共用 CONFLICT / NOT_FOUND。

@@ -1378,6 +1378,7 @@ export class FormSubmissionsService {
     await this.lifecycle.emit("voided", effectSubjectOf(updated), {
       voidReason,
       actorId: facts.operator.actorId,
+      decidedBy: facts.operator.actorId,
     });
     // 知會:單據被作廢 → 整個流程的知會對象(同一個交易)
     await this.cc.voided(record.currentInstanceId);
