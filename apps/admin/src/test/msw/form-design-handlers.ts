@@ -22,7 +22,7 @@ import {
   type UpdateFormMutationVariables,
 } from "@repo/graphql";
 
-import { type AuthErrorCode, graphqlError } from "./auth-handlers";
+import { graphqlError } from "./auth-handlers";
 import { fieldCategories } from "./field-fixtures";
 import type { FormFailure } from "./form-runtime-handlers";
 import { formUpdateHandler } from "./form-update-handler";
@@ -78,7 +78,7 @@ export interface FormDesignWorld {
   };
 }
 
-const notFound = () => graphqlError("NOT_FOUND" as AuthErrorCode);
+const notFound = () => graphqlError("NOT_FOUND");
 
 /**
  * 表單設計端的假 api(docs/modules/forms.md「api 介面」設計端)。有狀態:存草稿 `draftRevision + 1`、
@@ -108,11 +108,7 @@ export const formDesignWorld = (
     const failure = failures[operation];
     return failure === undefined
       ? null
-      : graphqlError(
-          failure.code as AuthErrorCode,
-          failure.code,
-          failure.extensions ?? {},
-        );
+      : graphqlError(failure.code, failure.code, failure.extensions ?? {});
   };
   const versionsOf = (formKey: string) => versions[formKey] ?? [];
   const draftOf = (formKey: string) =>
@@ -215,7 +211,7 @@ export const formDesignWorld = (
         return failure;
       }
       if (draft.draftRevision !== input.expectedDraftRevision) {
-        return graphqlError("CONFLICT" as AuthErrorCode, "CONFLICT", {
+        return graphqlError("CONFLICT", "CONFLICT", {
           reason: "DRAFT_REVISION_MISMATCH",
         });
       }
@@ -279,12 +275,12 @@ export const formDesignWorld = (
       const draft = draftOf(input.formKey);
       const form = forms.find((item) => item.key === input.formKey);
       if (draft === undefined || form === undefined) {
-        return graphqlError("CONFLICT" as AuthErrorCode, "CONFLICT", {
+        return graphqlError("CONFLICT", "CONFLICT", {
           reason: "DRAFT_MISSING",
         });
       }
       if (draft.draftRevision !== input.expectedDraftRevision) {
-        return graphqlError("CONFLICT" as AuthErrorCode, "CONFLICT", {
+        return graphqlError("CONFLICT", "CONFLICT", {
           reason: "DRAFT_REVISION_MISMATCH",
         });
       }
@@ -374,7 +370,7 @@ export const formDesignWorld = (
         !(isConfirmOnly && input.confirmCompletedUsage === true)
       ) {
         return graphqlError(
-          outcome.code as AuthErrorCode,
+          outcome.code,
           outcome.code,
           outcome.extensions ?? {},
         );

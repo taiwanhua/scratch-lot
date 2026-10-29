@@ -57,7 +57,7 @@ export const storeCounterHandlers = ({
       const { bookId } = variables as LotteryStoreBookCardQueryVariables;
       const book = books.find((item) => item.bookId === bookId);
       if (book === undefined) {
-        return graphqlError("FORBIDDEN", "NOT_FOUND", { code: "NOT_FOUND" });
+        return graphqlError("NOT_FOUND");
       }
       const tickets: LotteryStoreCardTicketFieldsFragment[] = book.tickets
         .filter((ticket) => ticket.status !== "skipped")
@@ -137,7 +137,7 @@ export const storeCounterHandlers = ({
       inputs.split.push(input);
       const book = books.find((item) => item.bookId === input.bookId);
       if (book === undefined) {
-        return graphqlError("FORBIDDEN", "NOT_FOUND", { code: "NOT_FOUND" });
+        return graphqlError("NOT_FOUND");
       }
       for (const ticket of book.tickets) {
         if (input.skippedTicketNos.includes(ticket.ticketNo)) {

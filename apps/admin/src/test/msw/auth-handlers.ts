@@ -14,24 +14,55 @@ import {
 
 import { api } from "./server";
 
-/** GQL-04 的錯誤碼(前端只靠它分流);api 的正本 `apps/api/src/auth/auth-error.ts`。 */
-export type AuthErrorCode =
-  | "UNAUTHENTICATED"
-  | "TOKEN_EXPIRED"
-  | "INVALID_CREDENTIALS"
-  | "ACCOUNT_DISABLED"
-  | "TOO_MANY_ATTEMPTS"
-  | "FORBIDDEN"
-  | "MUST_CHANGE_PASSWORD"
-  | "ACTION_TOKEN_INVALID"
-  | "CURRENT_PASSWORD_INVALID"
-  | "VALIDATION_FAILED";
+/**
+ * 假 api 能回的錯誤碼 = GQL-04 那張 code 表的全部,加上非預期錯誤時框架回的
+ * `INTERNAL_SERVER_ERROR`(前端只靠 code 分流;清單正本 `docs/standards/api/graphql-schema.md`
+ * GQL-04,那張表加碼時這裡一起加)。api 不把錯誤碼放進 schema(只在 `extensions.code`),
+ * codegen 沒有列舉可用,所以在這裡列一次。
+ * 同一個 code 的細分走 `extensions.reason`,不在這裡加碼。
+ */
+export const GRAPHQL_ERROR_CODES = [
+  "NOT_FOUND",
+  "VALIDATION_FAILED",
+  "UNAUTHENTICATED",
+  "TOKEN_EXPIRED",
+  "FORBIDDEN",
+  "INVALID_CREDENTIALS",
+  "ACCOUNT_DISABLED",
+  "TOO_MANY_ATTEMPTS",
+  "MUST_CHANGE_PASSWORD",
+  "ACTION_TOKEN_INVALID",
+  "CURRENT_PASSWORD_INVALID",
+  "UPLOAD_REJECTED",
+  "LAST_ORG",
+  "ROLE_OUT_OF_REACH",
+  "OWNER_PROTECTED",
+  "CROSS_TENANT",
+  "CYCLIC_MOVE",
+  "ORG_NOT_DELETABLE",
+  "PROVISION_NOT_REVOKABLE",
+  "RULE_INVALID",
+  "FIELD_VALUE_DUPLICATE",
+  "FIELD_CATEGORY_KEY_DUPLICATE",
+  "ROLE_NOT_DELETABLE",
+  "USER_NOT_ELIGIBLE",
+  "ROLE_DISABLED",
+  "CONFLICT",
+  "PERMISSION_NOT_DELETABLE",
+  "TRANSACTION_TIMEOUT",
+  "INTERNAL_SERVER_ERROR",
+] as const;
+
+export type GraphqlErrorCode = (typeof GRAPHQL_ERROR_CODES)[number];
 
 type ErrorBody = GraphQLResponseBody<Record<string, never>>;
 
-/** 以 GQL-04 形式回業務錯誤:HTTP 200 + `errors[].extensions.code`(`extensions` 可附加如 `violations`)。 */
+/**
+ * 以 GQL-04 形式回業務錯誤:HTTP 200 + `errors[].extensions.code`。
+ * `extensions` 可附加如 `violations` / `reason` / `fields`;`code` 一律以第一個參數為準。
+ */
 export const graphqlError = (
-  code: AuthErrorCode,
+  code: GraphqlErrorCode,
   message: string = code,
   extensions: Record<string, unknown> = {},
 ) =>

@@ -248,7 +248,7 @@ export const storeSalesWorld = ({
       for (const item of input.tickets) {
         const found = find(item.ticketId);
         if (found === null) {
-          return graphqlError("FORBIDDEN", "NOT_FOUND", { code: "NOT_FOUND" });
+          return graphqlError("NOT_FOUND");
         }
         const { book, ticket } = found;
         if (ticket.status === "sold") {
@@ -298,7 +298,7 @@ export const storeSalesWorld = ({
         // 不是這次在假 api 賣的(夾具裡早就賣掉的)→ 超過 30 分鐘
         const found = find(ticketId);
         if (found === null) {
-          return graphqlError("FORBIDDEN", "NOT_FOUND", { code: "NOT_FOUND" });
+          return graphqlError("NOT_FOUND");
         }
         return HttpResponse.json({
           data: {

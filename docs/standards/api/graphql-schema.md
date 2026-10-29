@@ -98,6 +98,8 @@ type UsersPayload {
 
 錯誤的 `message` 給開發者看(英文);給使用者的繁體中文文案由前端依 code 對應,不從 api 傳。
 
+admin 元件測試的假 api(TEST-08)用 `apps/admin/src/test/msw/auth-handlers.ts` 的 `graphqlError(code, …)` 回錯誤,`code` 的型別是同檔 `GRAPHQL_ERROR_CODES`(本表全部的 code,加上非預期錯誤的 `INTERNAL_SERVER_ERROR`)。api 不把 code 放進 schema,codegen 沒有列舉,所以**本表新增 code 時同步加進那份清單**;假 api 不用轉型硬塞 code。
+
 **同一個 code 有多種說法時加 `extensions.reason`,不要新增 code**(先例 `RULE_INVALID` 的 `reason`、`ORG_NOT_DELETABLE` 的 `reasons`):通用碼(`FORBIDDEN` / `NOT_FOUND`)的語意全站一致,分歧的是「為什麼」。`reason` 的列舉值屬該模組,正本放模組自己的 error 檔(如 `apps/api/src/fields/fields-error.ts` 的 `FIELD_FORBIDDEN_REASONS`:`SEED_READ_ONLY` / `SEED_GLOBAL_SWITCH` / `NOT_OWNER`)並在模組文件的「錯誤」節逐項寫明,不進本表 — 本表只列 code。前端認不得的 `reason` 要能退回該 code 的通用文案。
 
 **多票並行時這張表的衝突解法**:追加或修改一列都會讓 prettier 重排整張表的欄寬(STRUCT-09),diff 看起來整張表都動了,對 `dev` 必衝突。所以:

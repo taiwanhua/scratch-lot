@@ -140,7 +140,7 @@ export const masterDataWorld = ({
       const { id } = variables as LotteryGameQueryVariables;
       const item = gameState.find((row) => row.id === id);
       return item === undefined
-        ? graphqlError("VALIDATION_FAILED", "NOT_FOUND", { code: "NOT_FOUND" })
+        ? graphqlError("NOT_FOUND")
         : HttpResponse.json({ data: { lotteryGame: { item } } });
     }),
     api.mutation("CreateLotteryGame", ({ variables }) => {
@@ -181,9 +181,7 @@ export const masterDataWorld = ({
       inputs.updateGame.push(input);
       const current = gameState.find((row) => row.id === input.id);
       if (current === undefined) {
-        return graphqlError("VALIDATION_FAILED", "NOT_FOUND", {
-          code: "NOT_FOUND",
-        });
+        return graphqlError("NOT_FOUND");
       }
       const locked = (
         ["gameCode", "unitPrice", "ticketsPerBook"] as const
@@ -281,9 +279,7 @@ export const masterDataWorld = ({
       inputs.updateCashPoint.push(input);
       const current = pointState.find((row) => row.id === input.id);
       if (current === undefined) {
-        return graphqlError("VALIDATION_FAILED", "NOT_FOUND", {
-          code: "NOT_FOUND",
-        });
+        return graphqlError("NOT_FOUND");
       }
       const item = {
         ...current,

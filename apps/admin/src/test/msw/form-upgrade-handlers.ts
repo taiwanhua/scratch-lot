@@ -7,7 +7,7 @@ import type {
   UpgradeFormSubmissionsMutationVariables,
 } from "@repo/graphql";
 
-import { type AuthErrorCode, graphqlError } from "./auth-handlers";
+import { graphqlError } from "./auth-handlers";
 import type { FormFailure } from "./form-runtime-handlers";
 import { api } from "./server";
 
@@ -51,7 +51,7 @@ export const formUpgradeWorld = (
       const failure = options.planFailure;
       if (failure !== undefined) {
         return graphqlError(
-          failure.code as AuthErrorCode,
+          failure.code,
           failure.code,
           failure.extensions ?? {},
         );

@@ -76,8 +76,7 @@ export interface AccountsWorld {
 const validation = (reason: string, fields: string[]) =>
   graphqlError("VALIDATION_FAILED", reason, { reason, fields });
 
-const notFound = () =>
-  graphqlError("VALIDATION_FAILED", "NOT_FOUND", { code: "NOT_FOUND" });
+const notFound = () => graphqlError("NOT_FOUND");
 
 export const accountsWorld = ({
   accounts = sampleBankAccounts(),
@@ -128,9 +127,7 @@ export const accountsWorld = ({
     settle: [],
   };
   const forbidden = (permission: string) =>
-    has(permission)
-      ? null
-      : graphqlError("FORBIDDEN", "FORBIDDEN", { code: "FORBIDDEN" });
+    has(permission) ? null : graphqlError("FORBIDDEN");
 
   const handlers: AccountsWorld["handlers"] = [
     api.query("LotteryBankAccounts", () => {
@@ -277,7 +274,7 @@ export const accountsWorld = ({
         !has(PERMISSIONS.reverseBankTransaction) ||
         (sidePermission !== null && !has(sidePermission))
       ) {
-        return graphqlError("FORBIDDEN", "FORBIDDEN", { code: "FORBIDDEN" });
+        return graphqlError("FORBIDDEN");
       }
       if (original.reversedById || original.reversalOf) {
         return validation("ALREADY_REVERSED", ["id"]);

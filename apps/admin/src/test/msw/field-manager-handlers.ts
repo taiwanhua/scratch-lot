@@ -16,7 +16,7 @@ import {
   type UpdateFieldMutationVariables,
 } from "@repo/graphql";
 
-import { type AuthErrorCode, graphqlError } from "./auth-handlers";
+import { type GraphqlErrorCode, graphqlError } from "./auth-handlers";
 import { api } from "./server";
 
 export type TestFieldCategory =
@@ -44,7 +44,7 @@ export interface FieldWorldOptions {
    * 但可以與旁支 / 下層重複 —— 假伺服器要跟 api 同一條規則,不然測試會比 api 寬鬆。
    */
   upperOrgIds?: string[];
-  failures?: Partial<Record<FieldOperation, string>>;
+  failures?: Partial<Record<FieldOperation, GraphqlErrorCode>>;
 }
 
 export interface FieldWorld {
@@ -105,9 +105,7 @@ export const fieldWorld = (options: FieldWorldOptions = {}): FieldWorld => {
 
   const fail = (operation: FieldOperation) => {
     const code = failures[operation];
-    return code === undefined
-      ? null
-      : graphqlError(code as AuthErrorCode, code);
+    return code === undefined ? null : graphqlError(code, code);
   };
 
   const findField = (id: string): TestField | undefined =>
@@ -159,10 +157,7 @@ export const fieldWorld = (options: FieldWorldOptions = {}): FieldWorld => {
       if (
         siblings.some((item) => item.value === input.value && isInherited(item))
       ) {
-        return graphqlError(
-          "FIELD_VALUE_DUPLICATE" as AuthErrorCode,
-          "FIELD_VALUE_DUPLICATE",
-        );
+        return graphqlError("FIELD_VALUE_DUPLICATE", "FIELD_VALUE_DUPLICATE");
       }
       created += 1;
       const field: TestField = {
@@ -257,7 +252,7 @@ export const fieldWorld = (options: FieldWorldOptions = {}): FieldWorld => {
   return { handlers: handlers as FieldWorld["handlers"], inputs, calls };
 };
 
-const notFoundError = () => graphqlError("NOT_FOUND" as AuthErrorCode);
+const notFoundError = () => graphqlError("NOT_FOUND");
 
 /** 類別作業的三個 mutation(寫回 `categoryState`,讓失效後的重查看得到新值)。 */
 const categoryHandlers = (
@@ -283,7 +278,7 @@ const categoryHandlers = (
       }
       if (categoryState.some((category) => category.key === input.key)) {
         return graphqlError(
-          "FIELD_CATEGORY_KEY_DUPLICATE" as AuthErrorCode,
+          "FIELD_CATEGORY_KEY_DUPLICATE",
           "FIELD_CATEGORY_KEY_DUPLICATE",
           { fields: ["key"] },
         );

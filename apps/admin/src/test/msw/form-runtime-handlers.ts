@@ -29,7 +29,7 @@ import {
 
 import { rawOf } from "@/lib/base/form-engine/definition";
 
-import { type AuthErrorCode, graphqlError } from "./auth-handlers";
+import { type GraphqlErrorCode, graphqlError } from "./auth-handlers";
 import { formCreateHandlers } from "./form-create-handlers";
 import type { MockSubmission } from "./form-fixtures";
 import { submissionActionHandlers } from "./form-submission-action-handlers";
@@ -50,7 +50,7 @@ export type FormRuntimeOperation =
   | "CopySubmissionToDraft";
 
 export interface FormFailure {
-  code: string;
+  code: GraphqlErrorCode;
   extensions?: Record<string, unknown>;
 }
 
@@ -104,11 +104,11 @@ export interface FormRuntimeWorld {
   };
 }
 
-const notFound = () => graphqlError("NOT_FOUND" as AuthErrorCode);
+const notFound = () => graphqlError("NOT_FOUND");
 
 /** 樂觀鎖沒搶到(與 api 同一個 code / reason)。 */
 const conflict = () =>
-  graphqlError("CONFLICT" as AuthErrorCode, "CONFLICT", {
+  graphqlError("CONFLICT", "CONFLICT", {
     reason: "EDIT_VERSION_MISMATCH",
   });
 
@@ -148,11 +148,7 @@ export const formRuntimeWorld = (
     const failure = failures[operation];
     return failure === undefined
       ? null
-      : graphqlError(
-          failure.code as AuthErrorCode,
-          failure.code,
-          failure.extensions ?? {},
-        );
+      : graphqlError(failure.code, failure.code, failure.extensions ?? {});
   };
   const find = (id: string) => state.find((item) => item.id === id);
   const push = (submission: MockSubmission) => {

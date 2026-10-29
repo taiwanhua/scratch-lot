@@ -8,7 +8,7 @@ import type {
   SetPermissionEnabledMutationVariables,
 } from "@repo/graphql";
 
-import { type AuthErrorCode, graphqlError } from "./auth-handlers";
+import { type GraphqlErrorCode, graphqlError } from "./auth-handlers";
 import { api } from "./server";
 
 export type TestModuleAdminNode = ModuleTreeQuery["moduleTree"][number];
@@ -20,7 +20,7 @@ export type ModuleAdminOperation =
 
 export interface ModuleAdminWorldOptions {
   tree?: TestModuleAdminNode[];
-  failures?: Partial<Record<ModuleAdminOperation, string>>;
+  failures?: Partial<Record<ModuleAdminOperation, GraphqlErrorCode>>;
 }
 
 export interface ModuleAdminWorld {
@@ -70,9 +70,7 @@ export const moduleAdminWorld = (
 
   const fail = (operation: ModuleAdminOperation) => {
     const code = failures[operation];
-    return code === undefined
-      ? null
-      : graphqlError(code as AuthErrorCode, code);
+    return code === undefined ? null : graphqlError(code, code);
   };
 
   const handlers = [

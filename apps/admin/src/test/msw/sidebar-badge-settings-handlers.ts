@@ -6,7 +6,7 @@ import type {
   UpdateSidebarBadgeSettingMutationVariables,
 } from "@repo/graphql";
 
-import { type AuthErrorCode, graphqlError } from "./auth-handlers";
+import { type GraphqlErrorCode, graphqlError } from "./auth-handlers";
 import { api } from "./server";
 
 /** 通知設定頁「側欄數字」區塊的一列(程式登記 + 租戶有開通);`audience` 是租戶調整過的,null = 程式預設。 */
@@ -19,15 +19,17 @@ export interface TestSidebarBadge {
 }
 
 export interface SidebarBadgeSettingsFailure {
-  code: string;
+  code: GraphqlErrorCode;
   extensions?: Record<string, unknown>;
 }
 
 const TIMESTAMP = "2026-10-17T03:00:00.000Z";
 const OPERATOR_ID = "user-admin";
 
-const fail = (code: string, extensions: Record<string, unknown> = {}) =>
-  graphqlError(code as AuthErrorCode, code, extensions);
+const fail = (
+  code: GraphqlErrorCode,
+  extensions: Record<string, unknown> = {},
+) => graphqlError(code, code, extensions);
 
 /**
  * 通知設定頁「側欄數字」區塊的假 api(`sidebarBadgeSettings` / `updateSidebarBadgeSetting` /

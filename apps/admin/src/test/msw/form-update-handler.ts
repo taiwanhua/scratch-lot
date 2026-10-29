@@ -5,7 +5,7 @@ import type {
   UpdateFormMutationVariables,
 } from "@repo/graphql";
 
-import { type AuthErrorCode, graphqlError } from "./auth-handlers";
+import { graphqlError } from "./auth-handlers";
 import { api } from "./server";
 
 type Failure = ReturnType<typeof graphqlError> | null;
@@ -32,7 +32,7 @@ export const formUpdateHandler = (state: FormUpdateState) =>
     }
     const form = state.findForm(input.key);
     if (form === undefined) {
-      return graphqlError("NOT_FOUND" as AuthErrorCode);
+      return graphqlError("NOT_FOUND");
     }
     if (input.name != null) {
       form.name = input.name;

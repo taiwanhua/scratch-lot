@@ -17,7 +17,7 @@ import {
   type UsersQueryVariables,
 } from "@repo/graphql";
 
-import { type AuthErrorCode, graphqlError } from "./auth-handlers";
+import { type GraphqlErrorCode, graphqlError } from "./auth-handlers";
 import type { TestRole } from "./role-fixtures";
 import { api } from "./server";
 
@@ -108,7 +108,7 @@ export interface UserWorldOptions {
       | "SetUserOrgs"
       | "AssignUserRoles"
       | "CopyUserOrgRoles",
-      | AuthErrorCode
+      | GraphqlErrorCode
       | "OWNER_PROTECTED"
       | "LAST_ORG"
       | "ROLE_OUT_OF_REACH"
@@ -186,7 +186,7 @@ export const userWorld = (options: UserWorldOptions = {}): UserWorld => {
 
   const fail = (operation: keyof typeof failures) => {
     const code = failures[operation];
-    return code === undefined ? null : graphqlError(code as AuthErrorCode);
+    return code === undefined ? null : graphqlError(code);
   };
 
   const handlers = [

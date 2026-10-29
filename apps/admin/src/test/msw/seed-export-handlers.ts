@@ -19,7 +19,7 @@ import {
   WorkflowVersionStatus,
 } from "@repo/graphql";
 
-import { type AuthErrorCode, graphqlError } from "./auth-handlers";
+import { graphqlError } from "./auth-handlers";
 import { api } from "./server";
 
 /**
@@ -71,7 +71,7 @@ export const formSeedExportHandler = (state: FormSeedExportState) =>
       .versionsOf(input.formKey)
       .find((item) => item.version === input.version);
     if (form === undefined || version === undefined) {
-      return graphqlError("NOT_FOUND" as AuthErrorCode);
+      return graphqlError("NOT_FOUND");
     }
     if (version.status !== FormVersionStatus.Published) {
       return notPublished();
@@ -119,7 +119,7 @@ export const workflowSeedExportHandler = (state: WorkflowSeedExportState) =>
       .versionsOf(input.workflowKey)
       .find((item) => item.version === input.version);
     if (workflow === undefined || version === undefined) {
-      return graphqlError("NOT_FOUND" as AuthErrorCode);
+      return graphqlError("NOT_FOUND");
     }
     if (version.status !== WorkflowVersionStatus.Published) {
       return notPublished();

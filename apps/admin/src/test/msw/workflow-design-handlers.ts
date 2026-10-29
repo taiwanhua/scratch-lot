@@ -21,7 +21,7 @@ import {
   type WorkflowsQueryVariables,
 } from "@repo/graphql";
 
-import { type AuthErrorCode, graphqlError } from "./auth-handlers";
+import { graphqlError } from "./auth-handlers";
 import type { FormFailure } from "./form-runtime-handlers";
 import { workflowSeedExportHandler } from "./seed-export-handlers";
 import { api } from "./server";
@@ -68,7 +68,7 @@ export interface WorkflowDesignWorld {
   };
 }
 
-const notFound = () => graphqlError("NOT_FOUND" as AuthErrorCode);
+const notFound = () => graphqlError("NOT_FOUND");
 
 /** 單個流程的 payload(`{ <操作名>: { workflow } }`)。 */
 const workflowPayload = (name: string, workflow: WorkflowFieldsFragment) =>
@@ -105,11 +105,7 @@ export const workflowDesignWorld = (
     const failure = failures[operation];
     return failure === undefined
       ? null
-      : graphqlError(
-          failure.code as AuthErrorCode,
-          failure.code,
-          failure.extensions ?? {},
-        );
+      : graphqlError(failure.code, failure.code, failure.extensions ?? {});
   };
   const findWorkflow = (key: string) =>
     workflows.find((workflow) => workflow.key === key);
@@ -291,7 +287,7 @@ export const workflowDesignWorld = (
         return notFound();
       }
       if (draft.draftRevision !== input.expectedDraftRevision) {
-        return graphqlError("CONFLICT" as AuthErrorCode, "CONFLICT", {
+        return graphqlError("CONFLICT", "CONFLICT", {
           reason: "DRAFT_REVISION_MISMATCH",
         });
       }
@@ -325,12 +321,12 @@ export const workflowDesignWorld = (
       const workflow = findWorkflow(input.workflowKey);
       const draft = draftOf(input.workflowKey);
       if (workflow === undefined || draft === undefined) {
-        return graphqlError("CONFLICT" as AuthErrorCode, "CONFLICT", {
+        return graphqlError("CONFLICT", "CONFLICT", {
           reason: "DRAFT_MISSING",
         });
       }
       if (draft.draftRevision !== input.expectedDraftRevision) {
-        return graphqlError("CONFLICT" as AuthErrorCode, "CONFLICT", {
+        return graphqlError("CONFLICT", "CONFLICT", {
           reason: "DRAFT_REVISION_MISMATCH",
         });
       }

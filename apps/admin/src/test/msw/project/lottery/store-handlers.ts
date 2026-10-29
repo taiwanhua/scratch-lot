@@ -90,7 +90,7 @@ export const storeWorld = ({
         variables as LotteryStoreOpenShiftFormQueryVariables;
       const point = state.cashPoints.find((item) => item.id === cashPointId);
       if (point === undefined) {
-        return graphqlError("FORBIDDEN", "NOT_FOUND", { code: "NOT_FOUND" });
+        return graphqlError("NOT_FOUND");
       }
       return HttpResponse.json({
         data: {
@@ -107,7 +107,7 @@ export const storeWorld = ({
         (item) => item.id === input.cashPointId,
       );
       if (point === undefined) {
-        return graphqlError("FORBIDDEN", "NOT_FOUND", { code: "NOT_FOUND" });
+        return graphqlError("NOT_FOUND");
       }
       if (point.shift != null) {
         return validation("SHIFT_ALREADY_OPEN", ["cashPointId"]);
@@ -150,7 +150,7 @@ export const storeWorld = ({
       const { id } = variables as LotteryShiftInfoQueryVariables;
       const shift = shiftById(id);
       if (shift === null) {
-        return graphqlError("FORBIDDEN", "NOT_FOUND", { code: "NOT_FOUND" });
+        return graphqlError("NOT_FOUND");
       }
       return HttpResponse.json({
         data: { lotteryShiftInfo: { item: sampleShiftInfo(shift) } },
@@ -161,7 +161,7 @@ export const storeWorld = ({
       inputs.reassign.push(input);
       const shift = shiftById(input.shiftId);
       if (shift === null) {
-        return graphqlError("FORBIDDEN", "NOT_FOUND", { code: "NOT_FOUND" });
+        return graphqlError("NOT_FOUND");
       }
       shift.unmatchedEntry = input.temporaryCover;
       return HttpResponse.json({
@@ -173,7 +173,7 @@ export const storeWorld = ({
       inputs.deposit.push(input);
       const shift = shiftById(input.shiftId);
       if (shift === null) {
-        return graphqlError("FORBIDDEN", "NOT_FOUND", { code: "NOT_FOUND" });
+        return graphqlError("NOT_FOUND");
       }
       if (input.amount > shift.expectedCash) {
         return validation("AMOUNT_EXCEEDS_DRAWER", ["amount"]);
@@ -189,7 +189,7 @@ export const storeWorld = ({
       inputs.withdraw.push(input);
       const shift = shiftById(input.shiftId);
       if (shift === null) {
-        return graphqlError("FORBIDDEN", "NOT_FOUND", { code: "NOT_FOUND" });
+        return graphqlError("NOT_FOUND");
       }
       if (input.amount > state.vaultExpected) {
         return validation("AMOUNT_EXCEEDS_VAULT", ["amount"]);

@@ -136,7 +136,7 @@ const settlementHandler = (mode: "own" | "all") =>
     }
     const row = sampleOutstanding().find((one) => one.refId === refId);
     return row === undefined
-      ? graphqlError("VALIDATION_FAILED", "NOT_FOUND", { code: "NOT_FOUND" })
+      ? graphqlError("NOT_FOUND")
       : HttpResponse.json({
           data: { lotterySettlement: { item: settlementOf(row) } },
         });
@@ -189,7 +189,7 @@ export const transferWorld = ({
     }
     const receivedTicketNos = [
       ...new Set([...target.receivedTicketNos, ...ticketNos]),
-    ].toSorted((a, b) => a.localeCompare(b));
+    ].toSorted((a, b) => a.localeCompare(b, "zh-Hant"));
     const isFull = receivedTicketNos.length >= target.tickets;
     const next = {
       ...current,
