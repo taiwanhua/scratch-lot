@@ -1,6 +1,6 @@
-// Draft/OrgTreeSelect(底座規格 10.2)。前置:貼上 _resolve.js;目標頁已有 Draft/ActionIcon+。
+// Draft/OrgTreeSelect(底座規格 10.2)。前置:貼上 _resolve.js;底座 Draft/ActionIcon 已併入本輪圖示(README「搬回底座的方法」第 2 步)。
 // 變體:State=Closed / Open × Mode=Single / Multiple。
-const icons = draft("Draft/ActionIcon+");
+const icons = await comp("Draft/ActionIcon");
 const icon = (k) => {
   const i = icons.children.find((c) => c.name === "key=" + k).createInstance();
   i.name = "icon-" + k;

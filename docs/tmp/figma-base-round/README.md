@@ -74,6 +74,8 @@
      | 21  | `Base-layout.js`             | (排版)                                                                                                                      | `PAGE_ID`  | 全部                                  | 可                  |
 
      原本標「不可」與「沒有腳本」的 6 支已照 `_resolve.js` 檔頭的規則(元件本體只透過 `tok()` / `style()` / `comp()` / `draft()` 取資源)與上一段「腳本裡沒有寫死 scratch-lot 的節點 id」改寫或新增(2026-10-30),和現況的核對結果記在 nodes.md。
+
+     第 2 步(ActionIcon+ 併入 Draft/ActionIcon)完成後,表中「草稿頁要先有 ActionIcon+」改為底座 `Draft/ActionIcon`(2001:68,已含本輪 19 個 key);2、5、6、8~11 列的腳本已改用 `await comp("Draft/ActionIcon")`(2026-10-30)。
 2. **ActionIcon+ 併入 Draft/ActionIcon**:在底座檔把 `Draft/ActionIcon+` 的 19 個變體移進既有 set `Draft/ActionIcon`(2001:68)成為新的 `key=` 變體,刪除空的 ActionIcon+ set;重建其他元件前把腳本裡的 `draft('Draft/ActionIcon+')` 改為 `comp('Draft/ActionIcon')`(兩者變體名相同)。
 3. 底座 Library 依 `docs/deployment.md` 的 Release 步驟發布(Library 版本與 Git tag 互相指向)。
 4. **底座既有元件與畫面的修改**(scratch-lot 不能改底座元件,所以留到這一步在底座檔直接改):

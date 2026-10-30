@@ -1,8 +1,8 @@
-// Draft/StepperStep + Draft/Stepper(底座規格 10.8,第 27 項)。前置:貼上 _resolve.js;目標頁已有 Draft/ActionIcon+。
+// Draft/StepperStep + Draft/Stepper(底座規格 10.8,第 27 項)。前置:貼上 _resolve.js;底座 Draft/ActionIcon 已併入本輪圖示(README「搬回底座的方法」第 2 步)。
 // 由專案草稿 Draft/WizardStep 升格而來;專案畫面改用本元件。
 // StepperStep 屬性:State=Done / Current / Todo / Error;Index、Label(TEXT)。
 // Stepper 屬性:Width=Wide / Narrow;Narrow 只顯示「第 N / M 步 · 名稱」+ 進度條。
-const icons = draft("Draft/ActionIcon+");
+const icons = await comp("Draft/ActionIcon");
 const glyph = (k) => icons.children.find((c) => c.name === "key=" + k);
 
 async function step(state) {

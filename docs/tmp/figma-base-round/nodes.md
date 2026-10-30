@@ -1284,3 +1284,10 @@ Figma 限制:實例裡的子圖層不能改位置 / 尺寸,所以「長條 + 前
 | Draft/ToggleButton           | `2173:2060` | 9    |
 
 另有 Receipt58Test.js 建的參考畫面「BS-18d 測試頁(58mm)」`2171:1003`。
+
+## ActionIcon+ 併入 Draft/ActionIcon(第 4 步,2026-10-30)
+
+- 把重建的 `Draft/ActionIcon+` `2169:59` 的 19 個變體 appendChild 進 `Draft/ActionIcon` `2001:68`(Icons 頁)。移進去後 19 個名稱都變成 `key=Draft, =ActionIcon+, =<名稱>`(Figma 把來源 set 名稱帶進變體名稱),已逐個改回 `key=<名稱>`;`key` 屬性現在 27 個選項,沒有壞名稱。
+- 空的 ActionIcon+ set 已移除;草稿頁 8 個指向這些變體的實例連結沒斷。`2001:68` 沿用原本的不換行橫排,寬 1320。
+- 腳本 Section / OrgTreeSelect / MonthCalendar / Notification / Snackbar / Print / Stepper 改用 `await comp("Draft/ActionIcon")`;`Screens2-base.js` 用 `_kit.js` 的函式,第 6 步補參考畫面時一起改。
+- `2001:68` 的元件說明還只寫原本 8 個圖示,登記表 `docs/branding.md` 也是;第 8 步登記時一起更新。

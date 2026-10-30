@@ -1,4 +1,4 @@
-// Draft/AudiencePicker:人員條件(底座規格 3.0)。前置:貼上 _resolve.js;目標頁已有 Draft/ActionIcon+。
+// Draft/AudiencePicker:人員條件(底座規格 3.0)。前置:貼上 _resolve.js;底座 Draft/ActionIcon 已併入本輪圖示(README「搬回底座的方法」第 2 步)。
 // 變體:Value=Everyone / Conditions × AllowEveryone=True / False(False 只有 Conditions)。
 // 條件樹樣式對齊資料範圍頁既有規則卡(群組 bg/default 底、radius/sm;條件列 = Draft/Select ×n + Link「刪除」)。
 async function sel(label, value, w) {

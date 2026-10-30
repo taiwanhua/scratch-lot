@@ -1,6 +1,6 @@
-// Draft/Section:可收合區塊(底座規格 10.3)。前置:貼上 _resolve.js;目標頁已有 Draft/ActionIcon+。
+// Draft/Section:可收合區塊(底座規格 10.3)。前置:貼上 _resolve.js;底座 Draft/ActionIcon 已併入本輪圖示(README「搬回底座的方法」第 2 步)。
 // 屬性:Title(TEXT)、Summary(TEXT)、Content(SLOT,只在 Expanded)、State=Expanded / Collapsed。
-const icons = draft("Draft/ActionIcon+");
+const icons = await comp("Draft/ActionIcon");
 const glyph = (k) => icons.children.find((c) => c.name === "key=" + k);
 
 async function variant(expanded) {

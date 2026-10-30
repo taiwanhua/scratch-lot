@@ -1,6 +1,6 @@
 // Draft/PrintButton、Draft/Receipt58Row、Draft/Receipt58Signature、Draft/Receipt58(底座規格 B8)。
-// 前置:貼上 _resolve.js;目標頁已有 Draft/ActionIcon+。
-const icons = draft("Draft/ActionIcon+");
+// 前置:貼上 _resolve.js;底座 Draft/ActionIcon 已併入本輪圖示(README「搬回底座的方法」第 2 步)。
+const icons = await comp("Draft/ActionIcon");
 const glyph = (k) => icons.children.find((c) => c.name === "key=" + k);
 async function coloredIcon(k, col, size = 20) {
   const i = glyph(k).createInstance();

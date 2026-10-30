@@ -1,6 +1,6 @@
 // Draft/NotificationBell、Draft/NotificationItem、Draft/NotificationPanel(底座規格 B7;新通知提示用 Draft/Snackbar+)。
-// 前置:貼上 _resolve.js;目標頁已有 Draft/ActionIcon+。
-const icons = draft("Draft/ActionIcon+");
+// 前置:貼上 _resolve.js;底座 Draft/ActionIcon 已併入本輪圖示(README「搬回底座的方法」第 2 步)。
+const icons = await comp("Draft/ActionIcon");
 const glyph = (k) => icons.children.find((c) => c.name === "key=" + k);
 async function iconBtn(k, variant = "Plain", size = "Medium") {
   const b = await inst("Draft/IconButton", { Variant: variant, Size: size });

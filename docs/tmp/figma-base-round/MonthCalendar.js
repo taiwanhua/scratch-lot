@@ -1,6 +1,6 @@
-// Draft/MonthCalendarCell + Draft/MonthCalendar(底座規格 10.5)。前置:貼上 _resolve.js;目標頁已有 Draft/ActionIcon+。
+// Draft/MonthCalendarCell + Draft/MonthCalendar(底座規格 10.5)。前置:貼上 _resolve.js;底座 Draft/ActionIcon 已併入本輪圖示(README「搬回底座的方法」第 2 步)。
 // Cell 屬性:State=Default / Today / Selected / Outside、Day(TEXT)、Show tag(BOOLEAN)、Show slot(BOOLEAN)。
-const icons = draft("Draft/ActionIcon+");
+const icons = await comp("Draft/ActionIcon");
 const glyph = (k) => icons.children.find((c) => c.name === "key=" + k);
 async function iconBtn(k) {
   const b = await inst("Draft/IconButton", {

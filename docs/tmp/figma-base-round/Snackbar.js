@@ -1,10 +1,10 @@
 // Draft/Snackbar+(底座規格 10.12):全站統一的提示條,搬回底座時取代現有 Draft/Snackbar(變體與屬性見下)。
-// 前置:貼上 _resolve.js;目標頁已有 Draft/ActionIcon+。
+// 前置:貼上 _resolve.js;底座 Draft/ActionIcon 已併入本輪圖示(README「搬回底座的方法」第 2 步)。
 // 樣式 = 卡片:底 bg/paper、文字 text/primary、左側 4px 色條 <severity>/main、陰影與尺寸沿用現有 Draft/Snackbar(寬 360、Shadow/z8、radius/md);
 // 全部綁主題變數,暗色模式自動套用暗色那組。右側 ✕;有動作時 [動作] 在 ✕ 左邊。
 // 變體 Severity = Success / Error / Warning / Info;屬性 Title(TEXT)+ ShowTitle(BOOLEAN)、Message(TEXT)、ShowAction(BOOLEAN);
 // 動作按鈕是 exposed instance(現有 Button,Text / Small),實例上直接改 Label。
-const icons = draft("Draft/ActionIcon+");
+const icons = await comp("Draft/ActionIcon");
 const glyph = (k) => icons.children.find((c) => c.name === "key=" + k);
 async function closeBtn() {
   const b = await inst("Draft/IconButton", { Variant: "Plain", Size: "Small" });
