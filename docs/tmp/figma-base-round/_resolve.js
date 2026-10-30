@@ -86,20 +86,28 @@ const K = {
     "Draft/Checkbox": {
       key: "0f43bc3c9cb7d2b8bddee5c6e5259b687718911f",
       set: true,
+      baseNode: "2001:355",
     },
     "Draft/Select": {
       key: "3fc29f6f9084c597dff396222e9731fcfdd3e8a0",
       set: true,
+      baseNode: "2001:379",
     },
     "Draft/SelectField": {
       key: "7565cb3914284d0a300c3f55e5c1aff84a57a408",
       set: true,
+      baseNode: "2001:432",
     },
-    TextField: { key: "700a2b66cbc9de512532d2fd163b7c1e98823816", set: true },
+    TextField: {
+      key: "700a2b66cbc9de512532d2fd163b7c1e98823816",
+      set: true,
+      baseNode: "2001:247",
+    },
     // 現有組織樹列(選擇所屬組織等對話框用的那個);OrgTreeSelect 的樹沿用它(第十九輪)
     "Draft/OrgTreeItem": {
       key: "abfc25a6adf89900f5855cec32278badeeb2c6b4",
       set: true,
+      baseNode: "2001:1049",
     },
     "Draft/Autocomplete": {
       key: "5c38eec3f628b810495609e04fb1e9830726c2c1",
@@ -155,10 +163,15 @@ const K = {
       set: true,
       baseNode: "2001:1100",
     },
-    Link: { key: "e5ab1c3479391ac2a6507f9be7ac5f94a0da7f33", set: true },
+    Link: {
+      key: "e5ab1c3479391ac2a6507f9be7ac5f94a0da7f33",
+      set: true,
+      baseNode: "2001:347",
+    },
     "Draft/Radio": {
       key: "cdf29d6eb4da90beb38e896a85e2df468eb38aba",
       set: true,
+      baseNode: "2001:365",
     },
     "Draft/SegmentedControl": {
       key: "b2802133e71ea722a7ab42238bb8f7cfdba34f11",
@@ -168,6 +181,7 @@ const K = {
     "Draft/Popover": {
       key: "ca3a578b09cca4e7cac93a81536a6c9100636f2d",
       set: false,
+      baseNode: "2001:976",
     },
     "Draft/CircularProgress": {
       key: "da1d7ddcda1dead54ebae11808b5ffb81e2d0907",
@@ -187,10 +201,12 @@ const K = {
     "Draft/AdminRouteTabs": {
       key: "14eb1d7575fe6f6cc39fe28163e6bbadcbb07bda",
       set: false,
+      baseNode: "2001:1261",
     },
     "Draft/ConfirmDialog": {
       key: "5b037167a3e719472e1a3bc08192a892254e31b9",
       set: false,
+      baseNode: "2001:920",
     },
   },
 };

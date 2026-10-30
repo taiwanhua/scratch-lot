@@ -75,19 +75,19 @@ const KC = {
 const BASE_NODE = {
   Button: "2001:111",
   Tag: "2001:463",
-  Checkbox: "",
-  Radio: "",
+  Checkbox: "2001:355",
+  Radio: "2001:365",
   Switch: "2001:369",
   SelectField: "2001:432",
-  TextField: "",
+  TextField: "2001:247",
   Alert: "2001:942",
   Tab: "2001:599",
-  Link: "",
+  Link: "2001:347",
   Badge: "2001:478",
-  StatCard: "",
+  StatCard: "2001:1210",
   AdminSideNav: "2001:1214",
   AdminAppBar: "2001:1248",
-  AdminRouteTabs: "",
+  AdminRouteTabs: "2001:1261",
 };
 // 本輪草稿元件:scratch 依 scratch-lot 節點 id,base 依名稱在草稿頁找(專案元件只在 scratch 有)
 const ND_NAME = {
