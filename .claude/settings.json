@@ -5,7 +5,8 @@
       "Bash(bash /c/Users/*/AppData/Local/Temp/claude/*)",
       "Bash(rm -rf /c/project/wt-*)",
       "Bash(rm -rf /c/project/sl-*)",
-      "Bash(rm -rf /c/project/base-contrib/*)"
+      "Bash(rm -rf /c/project/base-contrib/*)",
+      "Bash(git push origin --delete *)"
     ]
   },
   "hooks": {
