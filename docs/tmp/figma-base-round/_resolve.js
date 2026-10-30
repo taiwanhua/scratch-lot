@@ -139,6 +139,7 @@ const K = {
     "Draft/Snackbar": {
       key: "1a48435131b2c4acd8e4555aef6da483980c6252",
       set: true,
+      baseNode: "2001:992",
     },
     "Draft/TableCell": {
       key: "7badb31de335380e5cb950dda0bdb30f5cc6aeb3",

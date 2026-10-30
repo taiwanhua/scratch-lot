@@ -1298,3 +1298,5 @@ Figma 限制:實例裡的子圖層不能改位置 / 尺寸,所以「長條 + 前
 - **側欄** `2001:1214`:系統管理群組 spare-1~~5、頂層 spare-top-1~~8 都在;收合版 `2001:1295` 有 spare-top-1~~8。元件裡的備用槽是隱藏的「(備用項目)」,展開版 NavItem 沒有圖示槽;通知設定 = spare-4、印表機管理 = spare-5 與圖示 notifications / print 在參考畫面實例上填(`Base-ref.js` 的 `sysNav()`),第 6 步重跑參考畫面時核對。
 - **資料範圍參考畫面**「Admin 資料範圍」`2022:3559`:兩張規則卡 `2159:3660`(規則 1)、`2159:3846`(規則 2)用 swapComponent 換成重建的 `2169:310`,保留 Title。旁邊註記卡「_註記:合成規則與資料影響」`2022:3641` 還是舊範例,改寫方式待確認。
 - **Snackbar**:方案 A 第 1 步要從 Figma 版本紀錄救回 `2001:992`,外掛做不到,待使用者操作。
+- **Snackbar(方案 A,完成)**:`2001:992` 不在任何頁面上但節點還在(parent 為 null),直接掛回 Popover 頁即救回,key 仍是 `1a48435131b2c4acd8e4555aef6da483980c6252`,不需要版本紀錄。原地改成卡片樣式:Success `2001:993`、Error `2001:997` 沿用原變體節點(內容與外框照 `Snackbar.js`),Warning `2170:1027`、Info `2170:1039` 從重建的 Snackbar+ 移入;屬性 Title / ShowTitle / Message / ShowAction;說明換成新版。另一方做的 `2156:590` 已刪(0 實例);草稿頁的 Snackbar+ 移空後由 Figma 自動移除。`_resolve.js` 的 `Draft/Snackbar` 補 `baseNode` `2001:992`。
+- Popover 頁說明 `2001:1001` 原寫「右上角、AppBar 下方(#426)」,和程式(`SnackbarStack.tsx` right / bottom 24)與 DATA-06 的右下角不一致,依 FIGMA-10 改成現況。

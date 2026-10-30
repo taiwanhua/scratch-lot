@@ -46,7 +46,7 @@
    - 有依賴的要照順序(後面的會在目前頁找前面的草稿元件)。
    - 全部跑完後跑 `Base-layout.js`(`PAGE_ID` 設成草稿頁):元件區在上、畫面區在下,同類一列、固定間距、彼此不重疊;新元件或新畫面要加進它的 `ROWS`(沒列進的會排到最後的「其他」列)。`audit.js` 的 `canvasOverlap` 要是 0。
    - 第七、八輪核對過:Base Draft 上的文字(數字除外)都能在底座腳本裡找到(上面的註解卡除外),示範文字是中性內容。
-   - `base` 模式:變數 / 樣式依同一個 key 找本檔 local;底座既有元件依 `K.comp[*].baseNode`(FIGMA-09 節點 id)。`K.comp` 裡只剩 `Draft/Snackbar` 沒填 `baseNode`(等 Snackbar 取代方式定案);其餘已在 2026-10-30 依 key 查到補上。
+   - `base` 模式:變數 / 樣式依同一個 key 找本檔 local;底座既有元件依 `K.comp[*].baseNode`(FIGMA-09 節點 id)。`K.comp` 的 `baseNode` 已在 2026-10-30 依 key 查到全部補上(`Draft/Snackbar` 是原地改成卡片樣式的 `2001:992`,key 不變)。
    - **元件腳本完整順序**(上面那段散落的順序整理成一張表;Base Draft 每個元件都要有建立它的腳本):
 
      | #   | 腳本                         | 建立(修改)的元件                                                                                                            | 前置檔     | 草稿頁要先有                          | base 模式           |
