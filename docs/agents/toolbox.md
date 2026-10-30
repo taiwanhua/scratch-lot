@@ -168,6 +168,16 @@ GraphQL 文件登記負例用 `pnpm --filter @repo/graphql test:documents`,CI �
 
 ### 底座升級與共用改良回收
 
+**底座發布 Library 前**(底座維護者;每次有 Figma 變更都做,缺一步就不發布):
+
+1. **底座檔全部頁稽核為 0**:`scripts/figma-audit/` 的單頁腳本跑 wowgo-base Design System 每一頁(元件說明頁、Admin Shell、「Draft / 本輪」、全部 `Screen /` 頁),不只跑有改的頁(FIGMA-17)。底座檔與 Starter 本來就綁底座主色,`basePrimaryBindings` 不適用。
+2. **底座檔保持中性**:參考畫面、元件預設文字與說明頁不放引用專案的品牌名或業務用語(模組名、示範資料主題都用中性寫法,例:專案模組 A、示範項目);底座自己的品牌名是 `wowgo-base`。
+3. **同步 Screens Starter**:底座 `Screen /` 參考畫面有改,就在桌面版逐頁「全選 → 複製」貼到 Starter 同名頁(先刪舊內容;兩檔頁序不同,貼完核對每頁第一張畫面的名稱)。貼完把底座寫法換回 Starter 的中性寫法(`wowgo-base` → `專案名稱`、示範組織名照 Starter 原文),再對 Starter 全部頁跑稽核。貼上的實例自動連到已發布的 Library 元件,不會在 Starter 產生本機元件或變數。
+4. **發布與登記**:發布 Library(說明寫版本號),元件組數、component 數與新節點登記到 [FIGMA-09](../standards/general/figma.md) 與[品牌註冊表](../branding.md);Git Release 附 Figma 版本連結(桌面版 `File → Show version history` → 該筆的「⋯ → Copy link」)。
+5. **改變元件屬性時**:單一元件合併成元件組(`combineAsVariants`)後原元件的 key 不變、實例不斷連結,但 TEXT / BOOLEAN 屬性 id 會換新;發布前用 plugin 核對既有實例的值(例:AppBar 頁名、通知鈴開關)沒有跑掉。
+
+專案端接受更新時,Libraries 視窗若顯示「沒有更新」但實例仍是舊版,關掉該檔分頁重開再看。
+
 底座發布 Library 更新後，引用專案在相應的 `base-sync upgrade` PR 中先審查程式碼合併，再於 Screens 接受 Figma Library 更新。對受影響頁面重跑外掛預覽；新增或回到底座主色的 fill/stroke 會列為待補綁，已有專案色及私人覆寫保留。補綁後重檢並看受影響的 Button、側欄或其他代表元件；元件身分相同不代表已接受某次發布。將 Git tag、底座與專案 file key、Figma 發布版本、接受範圍及代表畫面結果記在升級 PR。純程式碼更新且 Figma 來源與範圍未變時，沿用仍有效的設計驗證，不重跑全檔。
 
 專案新增可共用元件時，先確認不含專案品牌或業務依賴；程式碼用 `base-sync inspect` / `contribute` 提交到底座，Figma 主元件則經審查移入底座 Library、發布並登記版本。其他專案只透過正式底座版本及 Library 更新採用，專案 Screens 不整份回收。
