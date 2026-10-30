@@ -1291,3 +1291,10 @@ Figma 限制:實例裡的子圖層不能改位置 / 尺寸,所以「長條 + 前
 - 空的 ActionIcon+ set 已移除;草稿頁 8 個指向這些變體的實例連結沒斷。`2001:68` 沿用原本的不換行橫排,寬 1320。
 - 腳本 Section / OrgTreeSelect / MonthCalendar / Notification / Snackbar / Print / Stepper 改用 `await comp("Draft/ActionIcon")`;`Screens2-base.js` 用 `_kit.js` 的函式,第 6 步補參考畫面時一起改。
 - `2001:68` 的元件說明還只寫原本 8 個圖示,登記表 `docs/branding.md` 也是;第 8 步登記時一起更新。
+
+## 底座既有元件與畫面(第 5 步,2026-10-30,進行中)
+
+- **AppBar** `2001:1248`:加 BOOLEAN `Notifications#2176:0`(預設開),鈴實例 `2176:99`(`notification-bell`,指向重建的 `Draft/NotificationBell` `2170:949`,預設變體 Unread=True)放在 `orgSwitcher` 左邊,順序同 `AppBar.tsx`(頁名 → ? → 通知鈴 → 當前組織 → 使用者選單)。AppBar 全檔 82 個實例。
+- **側欄** `2001:1214`:系統管理群組 spare-1~~5、頂層 spare-top-1~~8 都在;收合版 `2001:1295` 有 spare-top-1~~8。元件裡的備用槽是隱藏的「(備用項目)」,展開版 NavItem 沒有圖示槽;通知設定 = spare-4、印表機管理 = spare-5 與圖示 notifications / print 在參考畫面實例上填(`Base-ref.js` 的 `sysNav()`),第 6 步重跑參考畫面時核對。
+- **資料範圍參考畫面**「Admin 資料範圍」`2022:3559`:兩張規則卡 `2159:3660`(規則 1)、`2159:3846`(規則 2)用 swapComponent 換成重建的 `2169:310`,保留 Title。旁邊註記卡「_註記:合成規則與資料影響」`2022:3641` 還是舊範例,改寫方式待確認。
+- **Snackbar**:方案 A 第 1 步要從 Figma 版本紀錄救回 `2001:992`,外掛做不到,待使用者操作。
