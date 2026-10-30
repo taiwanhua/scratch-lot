@@ -448,8 +448,11 @@ if (PART === 2) {
       for (const r of vt.children) {
         const a = r.children[r.children.length - 2],
           b = r.children[r.children.length - 1];
-        a.resize(a.width - 50, a.height);
-        b.resize(b.width + 50, b.height);
+        // 先記下兩欄寬度:最後一欄若是填滿,前一欄縮了它會自己變寬
+        const aw = a.width,
+          bw = b.width;
+        a.resize(aw - 50, a.height);
+        b.resize(bw + 50, b.height);
       }
     }
     const ov2 = await refOverlay(

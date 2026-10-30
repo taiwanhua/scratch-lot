@@ -1330,3 +1330,10 @@ Figma 限制:實例裡的子圖層不能改位置 / 尺寸,所以「長條 + 前
   - `refOverlay()`:B7 之後現有 Overlay 畫面第一個子框是「背景:…」,改成取名稱不是「背景」開頭的框當對話框樣板。
   - `refShell()`:`main` / `content` 改成只找直接子層(AppBar 加了通知鈴後,鈴裡也有叫 `content` 的圖層)。
   - BS-08:AppBar 有 `Notifications` 屬性就直接用 AppBar 裡的鈴,不再疊加;新通知提示改用底座 Snackbar(`_kit.js` 補 `Snackbar` key / `BASE_NODE` 2001:992)。
+- `Base-layout.js`(`PAGE_ID = "2151:2"`)排版:元件 34 個、畫面 34 張(含 BS-18d)全部排進列,沒有「其他」。
+- BS-04b 表單版本的操作欄:底座來源表格最後一欄是填滿,前一欄縮 50 時它先自己變寬,再加 50 變成 268(多 50)。腳本改成先記下兩欄寬度再調整;畫面上原地改回 218(每列 744 = 表格寬)。
+- **第 7 步檢查(草稿頁 `2151:2`,先跑一輪)**:`canvasOverlap`、`misalignedRows`、`overlapText`、`rowGapInContainer`、`legendMismatch`、`draftTokenBindings`、`nonBaseBindingsInBaseDrafts`、`devTextInScreens` 都是 0;`basePrimaryBindings` 在底座檔不適用。非 0 的項目都來自底座現有畫面(複製來的):
+  - BS-13 的 3 個 `Draft/Tag` 被裁切(來源「Admin 欄位管理 — 自訂類別」同樣 3 處)。
+  - BS-04b / BS-12 / BS-21 表單設定面板說明文字超出(來源表單管理頁 16 處)。
+  - BS-14 收合側欄一處顏色沒綁變數(來源流程管理頁 2 處)。
+  - 底座「Screen / Admin 表單管理」頁 `clippedText` 612:B7 加的「背景:」複本被 Overlay 框裁切;`audit-legend.js` 排除背景複本,`audit-layout.js` 沒有。
