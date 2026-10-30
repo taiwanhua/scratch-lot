@@ -25,7 +25,7 @@ import type {
   UsersQueryVariables,
 } from "@repo/graphql";
 
-import { type AuthErrorCode, graphqlError } from "./auth-handlers";
+import { type GraphqlErrorCode, graphqlError } from "./auth-handlers";
 import {
   type TestUserSummary,
   orgManagersWorld,
@@ -61,7 +61,7 @@ export type OrgOperation =
   | "CreateUploadUrl";
 
 export interface OrgFailure {
-  code: string;
+  code: GraphqlErrorCode;
   /** 附加在 `extensions` 上的欄位(如 `ORG_NOT_DELETABLE` 的 `reasons`) */
   extensions?: Record<string, unknown>;
 }
@@ -137,11 +137,7 @@ export const orgWorld = (options: OrgWorldOptions = {}): OrgWorld => {
     const failure = failures[operation];
     return failure === undefined
       ? null
-      : graphqlError(
-          failure.code as AuthErrorCode,
-          failure.code,
-          failure.extensions ?? {},
-        );
+      : graphqlError(failure.code, failure.code, failure.extensions ?? {});
   };
 
   const tenantTopWorld = orgTenantTopWorld({ failure: fail });

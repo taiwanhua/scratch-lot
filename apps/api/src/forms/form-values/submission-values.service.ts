@@ -26,14 +26,14 @@ import {
 } from "@repo/domain/form";
 
 import {
+  type CategoryOptions,
+  FieldOptionsService,
+} from "../../fields/field-options.service";
+import {
   UPLOAD_RULES,
   UploadPurpose,
   isOwnedUploadPath,
 } from "../../storage/upload-rules";
-import {
-  type CategoryOptions,
-  FieldCategoryOptionsService,
-} from "../field-category-options.service";
 import { type FieldGate, fieldGateOf } from "../field-permission-gate";
 import type { FormOperatorFacts } from "../form-access.service";
 import { forbiddenError, valuesInvalidError } from "../forms-error";
@@ -165,7 +165,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 @Injectable()
 export class SubmissionValuesService {
   constructor(
-    private readonly categories: FieldCategoryOptionsService,
+    private readonly categories: FieldOptionsService,
     private readonly lookups: LookupProvidersService,
   ) {}
 
@@ -764,7 +764,10 @@ export class SubmissionValuesService {
     if (options?.kind === "fieldCategory") {
       let pending = context.categories.get(options.key);
       if (!pending) {
-        pending = this.categories.options(context.facts.operator, options.key);
+        pending = this.categories.optionMapOf(
+          context.facts.operator,
+          options.key,
+        );
         context.categories.set(options.key, pending);
       }
       const categoryOptions = await pending;

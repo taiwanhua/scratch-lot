@@ -26,13 +26,15 @@ import { SideNav } from "./SideNav/SideNav";
 import {
   DEFAULT_SHELL_MIN_WIDTH,
   MAIN_PADDING,
+  SHELL_COMPACT_BELOW,
   type ShellMinWidth,
   shellContentMinWidth,
+  shellMinWidthApplies,
 } from "./shell-geometry";
 
 export interface ShellLayoutProps {
   me: MeQuery["me"];
-  /** 模組 key → 該頁內容區最小寬度的斷點(沒列 = `lg`;`app/module-pages.tsx` 的 `modulePageMinWidths`) */
+  /** 模組 key → 該頁內容區最小寬度的斷點(沒列 = `md`;`app/module-pages.tsx` 的 `modulePageMinWidths`) */
   pageMinWidths?: Readonly<Record<string, ShellMinWidth>>;
 }
 
@@ -44,9 +46,9 @@ export interface ShellLayoutProps {
  * 頁面因此可以用 `flex: 1` / `height: 100%` 撐滿(組織管理、使用者管理的左右兩欄就是這樣滿版);
  * 內容比視窗高的頁面照舊在內容區捲動,不會被裁掉。
  *
- * **寬度下限只在 `lg` 以上**:內容區的最小寬度 = 頁面宣告的主題斷點(預設 `lg`,可宣告 `md` / `xl`)− 側欄 − 內距,
- * 視窗比斷點窄時由 `<main>` 水平捲動,不擠壓內容;側欄收合時跟著重算。平板以下(< `lg`)不設下限,
- * 內容隨視窗縮放(表格靠自己的橫向捲動)。document 本身永遠不出現水平捲軸
+ * **寬度下限只在完整版殼(≥ `md`)、而且頁面宣告 `lg` / `xl` 時才有**:內容區的最小寬度 = 宣告的主題斷點 − 側欄 − 內距,
+ * 視窗比斷點窄時由 `<main>` 水平捲動,不擠壓內容;側欄收合時跟著重算。殼層預設 `md`(平板寬就排得下)不設下限,
+ * 精簡版(< `md`)也不設,內容隨視窗縮放(表格靠自己的橫向捲動)。規則在 `shell-geometry.ts` 的 `ShellMinWidth`。document 本身永遠不出現水平捲軸
  * (外框 `overflow: hidden`,主欄 `minWidth: 0`)。精簡版(< `md`)側欄改成抽屜(`SideNav`)。幾何在 `shell-geometry.ts`。
  */
 export const ShellLayout = ({ me, pageMinWidths = {} }: ShellLayoutProps) => {
@@ -142,7 +144,8 @@ export const ShellLayout = ({ me, pageMinWidths = {} }: ShellLayoutProps) => {
             p: MAIN_PADDING,
           }}
         >
-          {/* 內容的最小寬度(lg 以上):視窗比斷點窄時由 <main> 水平捲動,不擠壓內容;平板以下不設;
+          {/* 內容的最小寬度(完整版殼、頁面宣告 lg / xl 時):視窗比斷點窄時由 <main> 水平捲動,不擠壓內容;
+              預設 md 與精簡版不設;
               高度鏈照舊往下傳(`flex: 1` + `minHeight: 0`,STYLE-08) */}
           <Box
             data-testid="shell-content"
@@ -153,11 +156,13 @@ export const ShellLayout = ({ me, pageMinWidths = {} }: ShellLayoutProps) => {
               flexDirection: "column",
               minWidth: {
                 xs: 0,
-                lg: shellContentMinWidth(
-                  theme.breakpoints.values[minWidth],
-                  theme.spacing,
-                  isNavCollapsed,
-                ),
+                ...(shellMinWidthApplies(minWidth) && {
+                  [SHELL_COMPACT_BELOW]: shellContentMinWidth(
+                    theme.breakpoints.values[minWidth],
+                    theme.spacing,
+                    isNavCollapsed,
+                  ),
+                }),
               },
             })}
           >

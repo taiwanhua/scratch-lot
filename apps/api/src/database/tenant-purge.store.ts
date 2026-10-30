@@ -2,6 +2,8 @@ import { Inject, Injectable } from "@nestjs/common";
 import { InjectConnection } from "@nestjs/mongoose";
 import type { ClientSession, Connection, Types } from "mongoose";
 
+import { COLLATION_LOCALE } from "@repo/domain/collation";
+
 import { isOwnedUploadPath } from "../storage/upload-rules";
 import { CORE_RELATIONSHIPS_COLLECTION } from "./schemas/core-relationship.schema";
 import { ORGS_COLLECTION } from "./schemas/org.schema";
@@ -228,7 +230,7 @@ export class TenantPurgeStore {
     const collections = [...counts]
       .map(([collection, deleted]) => ({ collection, deleted }))
       .toSorted((left, right) =>
-        left.collection.localeCompare(right.collection),
+        left.collection.localeCompare(right.collection, COLLATION_LOCALE),
       );
     return {
       collections,

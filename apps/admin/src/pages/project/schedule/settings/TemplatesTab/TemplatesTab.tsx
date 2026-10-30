@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useTranslations } from "use-intl";
 
 import { SCHEDULE_FIELD_CATEGORY_KEYS } from "@repo/domain/project/schedule-fields";
+import { isTagPaletteKey } from "@repo/domain/tag-palette";
 import {
   type ScheduleDemandTemplateFieldsFragment,
   useScheduleDemandTemplatesQuery,
@@ -15,10 +16,9 @@ import { Table, type TableColumn } from "@repo/ui/table";
 import { Tag } from "@repo/ui/tag";
 import { Typography } from "@repo/ui/typography";
 
-import { TagPaletteChip } from "@/components/project/TagPaletteChip/TagPaletteChip";
+import { TagPaletteChip } from "@/components/base/TagPaletteChip/TagPaletteChip";
 import { useSession } from "@/hooks/base/useSession";
 import { useScheduleFieldOptions } from "@/hooks/project/schedule/useScheduleFieldOptions/useScheduleFieldOptions";
-import { isTagPaletteKey } from "@/lib/project/tag-palettes";
 
 import { TemplateDialog } from "./TemplateDialog";
 

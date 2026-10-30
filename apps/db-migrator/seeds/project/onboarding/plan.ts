@@ -18,7 +18,7 @@ import {
   TAG_PALETTE_KEYS,
   type TagPaletteKey,
   isTagPaletteKey,
-} from "@repo/domain/project/tag-palette";
+} from "@repo/domain/tag-palette";
 
 import {
   ONBOARDING_ROLE_KEYS,

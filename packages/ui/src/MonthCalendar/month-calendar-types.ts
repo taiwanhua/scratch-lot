@@ -14,6 +14,13 @@ export type MonthCalendarCorner =
   | { variant: "badge"; content: ReactNode };
 
 /**
+ * 月曆尺寸:
+ * - `medium`(預設):格子高度電腦大格(96px)、手機約 48px,隨螢幕寬度切換。
+ * - `small`:任何寬度都用小格(約 40px)與小留白,給選日期的浮層、側欄這類窄容器。
+ */
+export type MonthCalendarSize = "small" | "medium";
+
+/**
  * 日期格的底色(顏色由主題 token 提供,使用處只給語意):
  * - `special`:特殊日(例:店慶)——淡藍底(`info.lighter`)
  * - `closed`:休息日但仍可點(例:店休)——淡灰底(`action.hover`);不能點的日子用 `disabled`
@@ -38,7 +45,10 @@ export interface MonthCalendarDayInfo {
   note?: ReactNode;
   /** 右上角角標(只有一個時;多個用 `corners`) */
   corner?: MonthCalendarCorner;
-  /** 右上角多個角標,依陣列順序由左到右並排;給了就取代 `corner` */
+  /**
+   * 右上角多個角標,依陣列順序由左到右並排;給了就取代 `corner`。
+   * 超過月曆的 `maxCorners` 時,前面的照畫、其餘收成一個「+N」(同 MUI `AvatarGroup` 的 `max`)
+   */
   corners?: readonly MonthCalendarCorner[];
   /**
    * 格子內的自訂內容(標籤、時段…),由使用處決定。內容裡 `position: absolute` 鋪滿整格的裝飾(底紋等)

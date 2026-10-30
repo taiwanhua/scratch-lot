@@ -1,3 +1,4 @@
+import { COLLATION_LOCALE } from "../../collation/compare-display-name";
 import {
   TICKET_LOCATION_KIND,
   TICKET_STATUS,
@@ -193,7 +194,7 @@ export function pendingStoreOf(
   let picked: string | null = null;
   let most = 0;
   for (const [store, count] of [...countsByStore].toSorted(([a], [b]) =>
-    a.localeCompare(b),
+    a.localeCompare(b, COLLATION_LOCALE),
   )) {
     if (count > most) {
       picked = store;

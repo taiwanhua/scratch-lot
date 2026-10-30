@@ -18,6 +18,7 @@ import { Table, type TableColumn } from "@repo/ui/table";
 import { Tag } from "@repo/ui/tag";
 import { Typography } from "@repo/ui/typography";
 
+import { RootOrgNotice } from "@/components/base/RootOrgNotice/RootOrgNotice";
 import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
 import { useSession } from "@/hooks/base/useSession";
 import { type UrlEdit, useUrlEditGuard } from "@/hooks/base/useUrlEdit";
@@ -263,7 +264,10 @@ export const SidebarBadgeSettingsSection = ({
             <Typography variant="body2" color="textSecondary">
               {t("reset.body")}
             </Typography>
-            {resetError !== null && (
+            {resetError === "TENANT_ONLY" && (
+              <RootOrgNotice variant="inline" message={tErrors(resetError)} />
+            )}
+            {resetError !== null && resetError !== "TENANT_ONLY" && (
               <Alert severity="error">{tErrors(resetError)}</Alert>
             )}
           </Stack>

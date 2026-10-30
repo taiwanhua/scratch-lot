@@ -5,7 +5,7 @@ import {
   DEFAULT_LIST_BUILTIN_COLUMNS,
   type ListBuiltinColumns,
 } from "@repo/domain/form";
-import { ModuleListColumnKind, useModuleListColumnsQuery } from "@repo/graphql";
+import { useModuleListColumnsQuery } from "@repo/graphql";
 
 import { renderValue } from "@/components/base/form-engine/render-value";
 import { SubmissionStatusTag } from "@/components/base/workflow/SubmissionStatusTag";
@@ -18,6 +18,8 @@ import {
   type ListColumnSpec,
   columnIdOf,
   fieldColumnLabelOf,
+  listColumnHeaderOf,
+  listTemplateTextOf,
   resolveListCell,
   sortedColumns,
 } from "@/lib/base/form-engine/list-columns";
@@ -81,23 +83,38 @@ export const useSupportRequestColumns = (
   const timezone = tenantTimezone ?? undefined;
 
   const headerOf = (spec: ListColumnSpec): string =>
-    spec.kind === ModuleListColumnKind.Slot
-      ? t(`slots.${spec.key}`)
-      : (fieldColumnLabelOf(
-          spec,
+    listColumnHeaderOf(spec, {
+      slotLabel: (slot) => t(`slots.${slot}`),
+      fieldLabel: (column) =>
+        fieldColumnLabelOf(
+          column,
           currentRefs.map((ref) => ({
             formKey: ref.formKey,
             fields: currentDefinitionOf(ref.formKey, ref.version)?.fields,
           })),
         ) ??
         fieldColumnLabelOf(
-          spec,
+          column,
           rows.map((row) => ({
             formKey: row.formKey,
             fields: definitionOf(row.formKey, row.version)?.fields,
           })),
         ) ??
-        spec.key);
+        column.key,
+    });
+  /** 摘要槽的文字:「日期」依那一筆的版本印日期或日期時間,其他照字。 */
+  const slotTextOf = (
+    slot: string,
+    value: string,
+    row: SupportRequestRow,
+  ): string =>
+    slot === "date"
+      ? temporalText(
+          value,
+          summaryDateTypeOf(definitionOf(row.formKey, row.version)),
+          timezone,
+        )
+      : value;
 
   const cellOf = (spec: ListColumnSpec, row: SupportRequestRow): ReactNode => {
     const cell = resolveListCell(
@@ -108,14 +125,17 @@ export const useSupportRequestColumns = (
     // 引用的欄位在那一筆的版本不存在(或是別張表單的欄位)→「—」
     let node: ReactNode = valueText.empty;
     if (cell.kind === "slot" && cell.value !== null) {
-      node =
-        spec.key === "date"
-          ? temporalText(
-              cell.value,
-              summaryDateTypeOf(definitionOf(row.formKey, row.version)),
-              timezone,
-            )
-          : cell.value;
+      node = slotTextOf(spec.key, cell.value, row);
+    } else if (cell.kind === "template") {
+      const text = listTemplateTextOf(spec.key, row, cell.fields, {
+        displayOf: (fieldKey) =>
+          row.displayValues.find((entry) => entry.fieldKey === fieldKey)
+            ?.items ?? [],
+        text: valueText,
+        timezone,
+        slotText: (slot, value) => slotTextOf(slot, value, row),
+      });
+      node = text === "" ? valueText.empty : text;
     } else if (cell.kind === "field") {
       node = renderValue({
         field: cell.field,

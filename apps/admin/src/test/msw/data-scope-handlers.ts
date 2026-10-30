@@ -10,7 +10,7 @@ import type {
   UsersQueryVariables,
 } from "@repo/graphql";
 
-import { type AuthErrorCode, graphqlError } from "./auth-handlers";
+import { type GraphqlErrorCode, graphqlError } from "./auth-handlers";
 import type { TestOrgNode, TestOrgUser } from "./org-manager-handlers";
 import type { TestMatrixModule } from "./role-fixtures";
 import { api } from "./server";
@@ -24,7 +24,7 @@ export type TestRole = RolesQuery["roles"]["items"][number];
 
 /** 會被指定失敗的操作(值是 `errors[0].extensions.code` 與附加的 `extensions`)。 */
 export interface DataScopeFailure {
-  code: string;
+  code: GraphqlErrorCode;
   /** `RULE_INVALID` 的 `path` / `reason` 就放這裡 */
   extensions?: Record<string, unknown>;
 }
@@ -49,9 +49,11 @@ export interface DataScopeWorld {
 
 const TIMESTAMP = "2026-09-20T03:00:00.000Z";
 
-/** 業務錯誤碼(GQL-04:`errors[0].extensions.code`);`AuthErrorCode` 只列了登入線那幾個,故轉型。 */
-const fail = (code: string, extensions: Record<string, unknown> = {}) =>
-  graphqlError(code as AuthErrorCode, code, extensions);
+/** 業務錯誤碼(GQL-04:`errors[0].extensions.code`)。 */
+const fail = (
+  code: GraphqlErrorCode,
+  extensions: Record<string, unknown> = {},
+) => graphqlError(code, code, extensions);
 
 /**
  * 資料範圍頁的假 api(三個端點 + 選擇器要用的 `roles` / `users` / `orgTree`

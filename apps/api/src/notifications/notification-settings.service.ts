@@ -113,10 +113,19 @@ export class NotificationSettingsService {
     private readonly transactions: TransactionService,
   ) {}
 
-  /** 清單:所有負責人提醒 + 宣告了可調時間的當事人通知(依登記順序)。 */
+  /**
+   * 清單:所有負責人提醒 + 宣告了可調時間的當事人通知(依登記順序)。
+   * `keyword` 比對登記的 `name` 與 key;介面的顯示名稱在 admin 訊息檔(依語言),
+   * 由前端比對後以 `nameMatchedTypes` 帶來,兩邊取聯集。
+   */
   async list(
     operator: OperatorContext,
-    input: { keyword?: string | null; page?: number; pageSize?: number },
+    input: {
+      keyword?: string | null;
+      nameMatchedTypes?: readonly string[] | null;
+      page?: number;
+      pageSize?: number;
+    },
   ): Promise<NotificationSettingPage> {
     const page = Math.max(1, Math.trunc(input.page ?? 1));
     const pageSize = Math.min(
@@ -124,11 +133,13 @@ export class NotificationSettingsService {
       Math.max(1, Math.trunc(input.pageSize ?? 20)),
     );
     const keyword = input.keyword?.trim().toLowerCase() ?? "";
+    const nameMatched = new Set(input.nameMatchedTypes);
     const matched = this.listedTypes().filter(
       (type) =>
         keyword === "" ||
         type.name.toLowerCase().includes(keyword) ||
-        type.key.includes(keyword),
+        type.key.includes(keyword) ||
+        nameMatched.has(type.key),
     );
     const tenantId = await this.tenantOf(operator);
     const stored =

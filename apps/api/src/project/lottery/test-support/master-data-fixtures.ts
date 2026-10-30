@@ -146,7 +146,7 @@ export async function seedPositionCategory(
 
 /**
  * 全域的原因類別與種子選項(同 `seeds/project/field-categories.ts` 的形狀;測試 app 不跑專案 seed),回類別 id。
- * 例:作廢原因 `SHARED_FIELD_CATEGORY_KEYS.voidReason` + 輸入錯誤 / 其他。
+ * 例:作廢原因 `VOID_REASON_CATEGORY_KEY` + 輸入錯誤 / 其他。
  */
 export async function seedReasonCategory(
   connection: Connection,

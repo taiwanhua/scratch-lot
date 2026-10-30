@@ -1,10 +1,13 @@
 import { useState } from "react";
 import { useTranslations } from "use-intl";
 
+import type { TagPaletteKey } from "@repo/domain/tag-palette";
 import {
   type SetFieldCategoryEnabledMutation,
+  type SetFieldColorMutation,
   type SetFieldEnabledMutation,
   useSetFieldCategoryEnabledMutation,
+  useSetFieldColorMutation,
   useSetFieldEnabledMutation,
 } from "@repo/graphql";
 import { Alert } from "@repo/ui/alert";
@@ -25,19 +28,10 @@ import { FieldOptionsPanel } from "./FieldOptionsPanel/FieldOptionsPanel";
 import { fieldManagerErrorOf } from "./field-manager-error";
 import type {
   FieldManagerErrorCode,
-  FieldOptionColumnsSlot,
   FieldOptionLike,
 } from "./field-manager-types";
 import { canEditOption } from "./field-source";
 import { useFieldManagerData } from "./useFieldManagerData";
-
-export interface FieldManagerProps {
-  /**
-   * 客製頁(`app/project/page-replacements.ts`)在選項表多加的欄位,接在「顯示名稱」之後;
-   * 底座頁不給。見 `FieldOptionColumnsSlot`。
-   */
-  extraOptionColumns?: FieldOptionColumnsSlot;
-}
 
 /**
  * 欄位管理(模組 key `system.field-manager`,正本 `docs/modules/field-manager.md`;
@@ -48,12 +42,13 @@ export interface FieldManagerProps {
  * + 本組織自訂 + 可見範圍內的下層自訂(規則表正本見上述模組文件)。
  * 一列能做什麼由 api 逐列算好(`canEdit` / `canToggleEnabled`),前端只跟權限取交集;
  * 自訂選項可改 label / order / description,但 `value` 建立後不可改;選項一律不刪、只停用。
+ * 每個選項可設一個標籤色票(「顏色」欄,只能從色票選);誰能改同停用 / 啟用,另要 `edit` 權限。
  * 解讀集中在 `field-source.ts`,表格與彈窗不自己推組織關係。
  *
  * 放在 `components/base/` 而不是頁面目錄:底座頁(`pages/base/system/FieldManagerPage/`)與專案的
  * 客製替換頁都以它組成(專案頁不能 import 底座頁的內部,frontend-style 的 `projectOwnership`)。
  */
-export const FieldManager = ({ extraOptionColumns }: FieldManagerProps) => {
+export const FieldManager = () => {
   const { session } = useSession();
   const t = useTranslations("admin.fieldManager");
   const data = useFieldManagerData();
@@ -108,6 +103,23 @@ export const FieldManager = ({ extraOptionColumns }: FieldManagerProps) => {
     }),
   );
 
+  const setFieldColor = useSetFieldColorMutation(
+    session.client,
+    useMutationFeedback<SetFieldColorMutation>({
+      success: t("feedback.colorSuccess"),
+      error: (error) => t(`errors.${fieldManagerErrorOf(error).code}`),
+      onSuccess: () => {
+        setPendingFieldId(null);
+        setActionError(null);
+        void data.invalidate();
+      },
+      onError: (error: unknown) => {
+        setPendingFieldId(null);
+        setActionError(fieldManagerErrorOf(error).code);
+      },
+    }),
+  );
+
   const setCategoryEnabled = useSetFieldCategoryEnabledMutation(
     session.client,
     useMutationFeedback<SetFieldCategoryEnabledMutation>({
@@ -131,6 +143,16 @@ export const FieldManager = ({ extraOptionColumns }: FieldManagerProps) => {
     setActionError(null);
     setPendingFieldId(field.id);
     setFieldEnabled.mutate({ input: { id: field.id, enabled } });
+  };
+
+  /** 選了就存,不另開確認(可逆);`null` = 清掉顏色。 */
+  const handleSetColor = (
+    field: FieldOptionLike,
+    color: TagPaletteKey | null,
+  ) => {
+    setActionError(null);
+    setPendingFieldId(field.id);
+    setFieldColor.mutate({ input: { id: field.id, color } });
   };
 
   const closeDialog = () => {
@@ -203,7 +225,7 @@ export const FieldManager = ({ extraOptionColumns }: FieldManagerProps) => {
             edit.open(field.id);
           }}
           onToggleEnabled={handleToggleEnabled}
-          {...(extraOptionColumns === undefined ? {} : { extraOptionColumns })}
+          onSetColor={handleSetColor}
         />
       </Stack>
 

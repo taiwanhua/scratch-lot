@@ -6,8 +6,8 @@ import {
   SHEET_ROW_KEYS,
   type SheetData,
   type SheetSection,
-} from "@/lib/project/reports/excel";
-import type { ReportSheetBody } from "@/lib/project/reports/report-registry";
+} from "@/lib/base/reports/excel";
+import type { ReportSheetBody } from "@/lib/base/reports/report-registry";
 import { operationsStore } from "@/test/msw/project/lottery/reports-handlers";
 
 import { buildOperationsSheets } from "./operations-sheets";

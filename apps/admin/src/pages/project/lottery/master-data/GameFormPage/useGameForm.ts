@@ -14,6 +14,8 @@ import {
   isValidUnitPrice,
   standardTicketsPerBook,
 } from "@repo/domain/project/lottery-master-data";
+import type { TagPaletteKey } from "@repo/domain/tag-palette";
+import { isTagPaletteKey } from "@repo/domain/tag-palette";
 import {
   type LotteryGameFieldsFragment,
   useCreateLotteryGameMutation,
@@ -33,8 +35,6 @@ import {
   localDayInstantOf,
   localDayTextOf,
 } from "@/lib/base/form-engine/local-day";
-import type { TagPaletteKey } from "@/lib/project/tag-palettes";
-import { isTagPaletteKey } from "@/lib/project/tag-palettes";
 
 import { masterDataErrorOf } from "../master-data-error";
 import {

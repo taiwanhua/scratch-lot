@@ -284,6 +284,81 @@ describe("MonthCalendar 註記、角標與自訂內容", () => {
     );
   });
 
+  it("角標超過上限:前面的照畫,其餘收成「+N」並報讀被收起來的角標(medium 預設 3)", () => {
+    renderCalendar({
+      days: {
+        "2026-10-05": {
+          corners: [
+            { variant: "dot", color: "error", label: "缺卡" },
+            { variant: "dot", color: "warning", label: "有異動" },
+            { variant: "dot", color: "info", label: "有備註" },
+            { variant: "badge", content: "資料待補" },
+          ],
+        },
+        "2026-10-06": {
+          corners: [
+            { variant: "dot", color: "error", label: "缺卡" },
+            { variant: "dot", color: "warning", label: "有異動" },
+            { variant: "dot", color: "info", label: "有備註" },
+          ],
+        },
+      },
+    });
+
+    const crowded = day("2026-10-05");
+    expect(
+      within(crowded)
+        .getAllByRole("img")
+        .map((mark) => mark.getAttribute("aria-label")),
+    ).toEqual(["缺卡", "有異動", "還有:有備註、資料待補"]);
+    expect(within(crowded).getByText("+2")).toHaveAttribute(
+      "data-corner",
+      "more",
+    );
+    expect(within(crowded).queryByText("資料待補")).toBeNull();
+    // 剛好等於上限:全部照畫,沒有「+N」
+    const full = day("2026-10-06");
+    expect(within(full).getAllByRole("img")).toHaveLength(3);
+    expect(full.querySelector('[data-corner="more"]')).toBeNull();
+  });
+
+  it("maxCorners 可調(小於 2 以 2 計);自訂節點的角標收起來時只報個數", () => {
+    const corners = [
+      { variant: "dot", color: "error", label: "缺卡" },
+      { variant: "badge", content: <span>自訂</span> },
+      { variant: "dot", color: "warning", label: "有異動" },
+    ] as const;
+    renderCalendar({ maxCorners: 1, days: { "2026-10-05": { corners } } });
+
+    const cell = day("2026-10-05");
+    expect(
+      within(cell)
+        .getAllByRole("img")
+        .map((mark) => mark.getAttribute("aria-label")),
+    ).toEqual(["缺卡", "還有 2 個標記"]);
+    expect(within(cell).getByText("+2")).toBeInTheDocument();
+  });
+
+  it("formatMoreCornersLabel 覆寫「+N」的無障礙名稱", () => {
+    renderCalendar({
+      maxCorners: 2,
+      formatMoreCornersLabel: (hidden) => `more ${String(hidden.length)}`,
+      days: {
+        "2026-10-05": {
+          corners: [
+            { variant: "dot", color: "error", label: "缺卡" },
+            { variant: "dot", color: "warning", label: "有異動" },
+            { variant: "dot", color: "info", label: "有備註" },
+          ],
+        },
+      },
+    });
+
+    expect(
+      within(day("2026-10-05")).getByRole("img", { name: "more 2" }),
+    ).toHaveTextContent("+2");
+  });
+
   it("自訂內容裡鋪滿整格的裝飾畫在日期數字、註記與角標底下", () => {
     renderCalendar({
       days: {
@@ -328,5 +403,47 @@ describe("MonthCalendar 註記、角標與自訂內容", () => {
 
     expect(screen.queryByText("上月註記")).toBeNull();
     expect(screen.queryByRole("img", { name: "缺卡" })).toBeNull();
+  });
+});
+
+describe("MonthCalendar 尺寸", () => {
+  it("預設 medium:格子標 data-size=medium,行為與既有一致", () => {
+    renderCalendar();
+    expect(day("2026-10-05")).toHaveAttribute("data-size", "medium");
+  });
+
+  it("small:任何寬度都用約 40px 的小格", () => {
+    renderCalendar({ size: "small" });
+    const cell = day("2026-10-05");
+    expect(cell).toHaveAttribute("data-size", "small");
+    expect(cell).toHaveStyle({ minHeight: "40px" });
+  });
+
+  it("small 的角標預設上限 2:第三個起收成「+N」", () => {
+    renderCalendar({
+      size: "small",
+      days: {
+        "2026-10-05": {
+          corners: [
+            { variant: "dot", color: "error", label: "缺卡" },
+            { variant: "dot", color: "warning", label: "有異動" },
+            { variant: "dot", color: "info", label: "有備註" },
+          ],
+        },
+        "2026-10-06": {
+          corners: [
+            { variant: "dot", color: "error", label: "缺卡" },
+            { variant: "dot", color: "warning", label: "有異動" },
+          ],
+        },
+      },
+    });
+
+    expect(
+      within(day("2026-10-05"))
+        .getAllByRole("img")
+        .map((mark) => mark.getAttribute("aria-label")),
+    ).toEqual(["缺卡", "還有:有異動、有備註"]);
+    expect(within(day("2026-10-06")).getAllByRole("img")).toHaveLength(2);
   });
 });

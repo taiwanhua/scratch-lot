@@ -1,3 +1,5 @@
+import { compareDisplayName } from "@repo/domain/collation";
+
 /**
  * 角色選單的顯示與分組(改用 `@repo/ui/autocomplete` 後收斂)。
  *
@@ -76,12 +78,6 @@ export interface RoleOwnerOrgGroupable {
 }
 
 /**
- * 排序一律**明講 `zh-Hant`**:`localeCompare` 不給語言時吃執行環境的預設語言,
- * 中文字的先後在開發機(zh-TW)與 CI(通常退回 en-US)會不一樣,斷言跟著飄。
- */
-const COLLATION_LOCALE = "zh-Hant";
-
-/**
  * 依「擁有組織 → 角色名」排序,讓同一個擁有組織的角色**相鄰**。
  *
  * MUI 的 `groupBy` 只是「相鄰且同值就合成一組」,**它自己不排序** —— api 回的順序裡
@@ -100,11 +96,11 @@ export const sortRolesByOwnerOrg = <T extends RoleOwnerOrgGroupable>(
       if (rightOrg === null) {
         return -1;
       }
-      return leftOrg.localeCompare(rightOrg, COLLATION_LOCALE);
+      return compareDisplayName(leftOrg, rightOrg);
     }
-    return (left.name ?? left.label).localeCompare(
+    return compareDisplayName(
+      left.name ?? left.label,
       right.name ?? right.label,
-      COLLATION_LOCALE,
     );
   });
 

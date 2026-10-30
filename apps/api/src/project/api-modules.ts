@@ -1,5 +1,4 @@
 import type { ApiFeatureRegistration } from "../base/api-feature-registration";
-import { FieldOptionColorsModule } from "./field-option-colors/field-option-colors.module";
 import { LotteryAccountsModule } from "./lottery/accounts/accounts.module";
 import { LotteryCheckoutModule } from "./lottery/checkout/checkout.module";
 import { LotteryDailyCloseModule } from "./lottery/daily-close/daily-close.module";
@@ -23,7 +22,6 @@ import { ScheduleModule } from "./schedule/schedule.module";
  * 不必動 `app.module.ts` 與底座清單。key 與 module 都不可與底座或其他專案功能重複。
  */
 export const PROJECT_API_MODULES: readonly ApiFeatureRegistration[] = [
-  { key: "field-option-colors", module: FieldOptionColorsModule },
   { key: "lottery-master-data", module: LotteryMasterDataModule },
   { key: "lottery-dealers", module: LotteryDealersModule },
   { key: "schedule", module: ScheduleModule },

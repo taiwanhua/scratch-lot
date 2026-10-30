@@ -5,7 +5,7 @@ import {
   type VoidSubmissionMutationVariables,
 } from "@repo/graphql";
 
-import { type AuthErrorCode, graphqlError } from "./auth-handlers";
+import { graphqlError } from "./auth-handlers";
 import { type MockSubmission, submissionFragment } from "./form-fixtures";
 import { api } from "./server";
 
@@ -32,7 +32,7 @@ export interface SubmissionActionContext {
   voidReasonLabelOf: (formKey: string, reasonKey: string) => string | null;
 }
 
-const notFound = () => graphqlError("NOT_FOUND" as AuthErrorCode);
+const notFound = () => graphqlError("NOT_FOUND");
 
 /**
  * 申請人的撤回 / 作廢 / 複製為新單:寫回表單執行端 world 的同一份清單,

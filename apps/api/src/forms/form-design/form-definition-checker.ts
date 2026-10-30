@@ -9,6 +9,7 @@ import {
   type ValidationReport,
   arrayColumnsOf,
   hasLabelTemplate,
+  listTemplateFieldKeysOf,
   lookupTemplateFieldOf,
   templatePlaceholdersOf,
   validateDefinition,
@@ -20,7 +21,7 @@ import {
   ModulesRepository,
 } from "../../database/database.module";
 import type { OperatorContext } from "../../database/operator-context";
-import { FieldCategoryOptionsService } from "../field-category-options.service";
+import { FieldOptionsService } from "../../fields/field-options.service";
 import type { FormOperatorFacts, FormRecord } from "../form-access.service";
 import { validationError } from "../forms-error";
 import {
@@ -191,7 +192,7 @@ export class FormDefinitionChecker {
   constructor(
     private readonly versions: FormVersionsRepository,
     private readonly modules: ModulesRepository,
-    private readonly categories: FieldCategoryOptionsService,
+    private readonly categories: FieldOptionsService,
     private readonly lookups: LookupProvidersService,
   ) {}
 
@@ -302,7 +303,7 @@ export class FormDefinitionChecker {
     return [...byKey.values()];
   }
 
-  /** `modules.settings.list.columns` 裡指到這張表單(或沒指定表單)的欄位 key。 */
+  /** `modules.settings.list.columns` 裡指到這張表單(或沒指定表單)的欄位 key(含組合欄模板引用的欄位)。 */
   private async listColumnFieldKeys(
     operator: OperatorContext,
     form: Pick<FormRecord, "key" | "moduleKey">,
@@ -313,17 +314,23 @@ export class FormDefinitionChecker {
     const list = module?.settings.list;
     const columns =
       isRecord(list) && Array.isArray(list.columns) ? list.columns : [];
-    return columns
+    const keys = columns
       .filter(
         (column): column is Record<string, unknown> =>
           isRecord(column) &&
-          column.kind === "field" &&
+          (column.kind === "field" || column.kind === "template") &&
           typeof column.key === "string" &&
           [undefined, null, form.key].includes(
             column.formKey as string | null | undefined,
           ),
       )
-      .map((column) => String(column.key));
+      .flatMap((column) =>
+        column.kind === "template"
+          ? listTemplateFieldKeysOf(String(column.key))
+          : [String(column.key)],
+      );
+    // 同一個欄位被好幾欄引用(表單欄位欄 + 組合欄)只警告一次
+    return [...new Set(keys)];
   }
 
   private async checkSubmissionSources(

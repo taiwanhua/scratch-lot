@@ -129,6 +129,26 @@
         "default": "./dist/cjs/printing.cjs"
       }
     },
+    "./tag-palette": {
+      "import": {
+        "types": "./dist/es/tag-palette.d.ts",
+        "default": "./dist/es/tag-palette.js"
+      },
+      "require": {
+        "types": "./dist/cjs/tag-palette.d.cts",
+        "default": "./dist/cjs/tag-palette.cjs"
+      }
+    },
+    "./collation": {
+      "import": {
+        "types": "./dist/es/collation.d.ts",
+        "default": "./dist/es/collation.js"
+      },
+      "require": {
+        "types": "./dist/cjs/collation.d.cts",
+        "default": "./dist/cjs/collation.cjs"
+      }
+    },
     "./project/reason-note": {
       "import": {
         "types": "./dist/es/project/reason-note.d.ts",
@@ -167,16 +187,6 @@
       "require": {
         "types": "./dist/cjs/project/schedule-settings.d.cts",
         "default": "./dist/cjs/project/schedule-settings.cjs"
-      }
-    },
-    "./project/tag-palette": {
-      "import": {
-        "types": "./dist/es/project/tag-palette.d.ts",
-        "default": "./dist/es/project/tag-palette.js"
-      },
-      "require": {
-        "types": "./dist/cjs/project/tag-palette.d.cts",
-        "default": "./dist/cjs/project/tag-palette.cjs"
       }
     },
     "./project/lottery-master-data": {
@@ -248,6 +258,12 @@
       "printing": [
         "./dist/es/printing.d.ts"
       ],
+      "tag-palette": [
+        "./dist/es/tag-palette.d.ts"
+      ],
+      "collation": [
+        "./dist/es/collation.d.ts"
+      ],
       "project/reason-note": [
         "./dist/es/project/reason-note.d.ts"
       ],
@@ -259,9 +275,6 @@
       ],
       "project/schedule-settings": [
         "./dist/es/project/schedule-settings.d.ts"
-      ],
-      "project/tag-palette": [
-        "./dist/es/project/tag-palette.d.ts"
       ],
       "project/lottery-master-data": [
         "./dist/es/project/lottery-master-data.d.ts"
@@ -298,6 +311,7 @@
     "@types/json-logic-js": "^2.0.8",
     "@types/node": "^24.19.2",
     "bunchee": "^6.4.0",
+    "dayjs": "^1.11.23",
     "eslint": "^9.39.0",
     "jest": "^30.5.2",
     "typescript": "5.9.3"

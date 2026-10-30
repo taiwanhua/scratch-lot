@@ -9,7 +9,7 @@ import {
   exceededTaskRoles,
   isTemplateShortName,
 } from "@repo/domain/project/schedule-settings";
-import { isTagPaletteKey } from "@repo/domain/project/tag-palette";
+import { isTagPaletteKey } from "@repo/domain/tag-palette";
 
 import { AuditService } from "../../../audit/audit.service";
 import type { Persisted } from "../../../database/base.repository";

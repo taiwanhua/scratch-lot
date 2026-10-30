@@ -21,6 +21,8 @@ export interface ArrayRowActionsProps {
   onMove: (rowId: string, offset: -1 | 1) => void;
   onDuplicate: (rowId: string) => void;
   onRemove: (rowId: string) => void;
+  /** 手機卡片的標題列用:文字鈕不留最小寬度,動作整組才放得進窄卡片的同一行 */
+  isCompact?: boolean;
 }
 
 /**
@@ -38,8 +40,10 @@ export const ArrayRowActions = memo(
     onMove,
     onDuplicate,
     onRemove,
+    isCompact = false,
   }: ArrayRowActionsProps) => {
     const t = useTranslations("admin.formEngine.array");
+    const textButtonSx = isCompact ? { minWidth: 0, px: 1 } : undefined;
 
     return (
       <Stack direction="row" spacing={0.5} sx={{ alignItems: "center" }}>
@@ -83,6 +87,7 @@ export const ArrayRowActions = memo(
           variant="text"
           size="small"
           disabled={!canAdd}
+          sx={textButtonSx}
           aria-label={t("duplicateRowAria", { index })}
           onClick={() => {
             onDuplicate(rowId);
@@ -94,6 +99,7 @@ export const ArrayRowActions = memo(
           variant="text"
           size="small"
           color="error"
+          sx={textButtonSx}
           aria-label={t("removeRowAria", { index })}
           onClick={() => {
             onRemove(rowId);

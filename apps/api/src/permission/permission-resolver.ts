@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import type { Types } from "mongoose";
 
+import { COLLATION_LOCALE } from "@repo/domain/collation";
 import { hasPermission, isWildcardKey } from "@repo/domain/permission";
 
 import type { Persisted } from "../database/base.repository";
@@ -370,7 +371,9 @@ function assemble(
         engine: module.engine,
         // 同 engine:欄位加上之前寫入的文件讀出時套 schema default(false)
         perFormCreate: module.perFormCreate,
-        permissions: permissionKeys.toSorted((a, b) => a.localeCompare(b)),
+        permissions: permissionKeys.toSorted((a, b) =>
+          a.localeCompare(b, COLLATION_LOCALE),
+        ),
       };
     })
     .toSorted(compareModules);
@@ -397,5 +400,5 @@ function fullRouteOf(
 }
 
 function compareModules(a: ResolvedModule, b: ResolvedModule): number {
-  return a.order - b.order || a.key.localeCompare(b.key);
+  return a.order - b.order || a.key.localeCompare(b.key, COLLATION_LOCALE);
 }

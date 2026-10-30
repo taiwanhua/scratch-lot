@@ -6,7 +6,7 @@ import {
   parseCheckoutDraft,
 } from "@repo/domain/project/lottery";
 
-import { injectScan } from "@/hooks/project/useScanner/scanner-registry";
+import { injectScan } from "@/hooks/base/useScanner/scanner-registry";
 import { writeLocalCashPoint } from "@/lib/project/lottery/local-cash-point";
 import { STORE_ALL_PERMISSIONS } from "@/test/msw/project/lottery/store-fixtures";
 

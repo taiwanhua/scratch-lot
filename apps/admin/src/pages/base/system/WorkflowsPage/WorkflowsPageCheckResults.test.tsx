@@ -82,7 +82,9 @@ describe("流程管理:「檢查」的結果面板", () => {
     const { user } = renderWorkflows({
       world: {
         ...defaultDesignOptions(),
-        failures: { ValidateWorkflowVersion: { code: "UNEXPECTED" } },
+        failures: {
+          ValidateWorkflowVersion: { code: "INTERNAL_SERVER_ERROR" },
+        },
       },
     });
     await findCanvas();

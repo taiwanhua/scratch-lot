@@ -4,7 +4,7 @@ import { screen, waitFor, within } from "@testing-library/react";
 import { CopyUserOrgRolesBlockerCode } from "@repo/graphql";
 
 import { autocompleteOption, openAutocomplete } from "@/test/autocomplete";
-import { type AuthErrorCode, graphqlError } from "@/test/msw/auth-handlers";
+import { graphqlError } from "@/test/msw/auth-handlers";
 import { api, server } from "@/test/msw/server";
 import { findSnackbarAlert, querySnackbar } from "@/test/snackbar";
 
@@ -245,7 +245,7 @@ describe("複製組織與角色", () => {
       api.mutation("CopyUserOrgRoles", ({ variables }) => {
         const { input } = variables as { input: { dryRun?: boolean } };
         return input.dryRun === false
-          ? graphqlError("OWNER_PROTECTED" as AuthErrorCode)
+          ? graphqlError("OWNER_PROTECTED")
           : undefined;
       }),
     );

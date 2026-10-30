@@ -6,18 +6,14 @@ import type { SeedSource } from "../base/seed-source";
 import { accountsModule } from "./accounts";
 import { dealersModule } from "./dealers";
 import { lotteryDemoSource } from "./demo";
-import {
-  projectFieldCategories,
-  projectFieldOptionColors,
-  projectFields,
-} from "./field-categories";
+import { projectFieldCategories, projectFields } from "./field-categories";
 import { inventoryModule } from "./inventory";
 import { masterDataModule } from "./master-data";
 import { purchasingModuleDeclarations } from "./purchasing";
 import { purchasingPurchaseModule } from "./purchasing.purchase";
 import { purchasingTransferModule } from "./purchasing.transfer";
 import { reportsModule } from "./reports";
-import { seed as cashCorrectionForm } from "./revisions/cash_correction.r2.seed";
+import { seed as cashCorrectionForm } from "./revisions/cash_correction.r3.seed";
 import { seed as checkoutConfirmForm } from "./revisions/checkout_confirm.r2.seed";
 import { seed as makeupPunchForm } from "./revisions/makeup_punch.r4.seed";
 import { seed as purchaseForm } from "./revisions/purchase.r5.seed";
@@ -71,8 +67,6 @@ export const projectSeedSource: SeedSource = {
     // 欄位管理的專案系統類別與全域選項(專案規格第 13 章)
     projectFieldCategories,
     projectFields,
-    // 全域選項的初始顏色(目前只有崗位;規格 18.5)
-    projectFieldOptionColors,
     // 排班作業的受管表單:支援需求單(規格 14.10;流程不 seed,由開通腳本依租戶角色建)。
     // 結束欄的 custom 公式是 `and` 兩種形狀的聯集,型別收窄理由同下面的進貨單
     supportRequestForm as SeedSet,

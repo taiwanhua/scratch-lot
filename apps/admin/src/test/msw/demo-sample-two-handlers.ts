@@ -10,7 +10,7 @@ import type {
   UpdateDemoItemTwoMutationVariables,
 } from "@repo/graphql";
 
-import { type AuthErrorCode, graphqlError } from "./auth-handlers";
+import { type GraphqlErrorCode, graphqlError } from "./auth-handlers";
 import { api } from "./server";
 
 export type TestDemoItemTwo =
@@ -23,7 +23,7 @@ export type DemoTwoOperation =
   | "SetDemoItemTwoEnabled";
 
 export interface DemoTwoFailure {
-  code: string;
+  code: GraphqlErrorCode;
   /** 附加在 `extensions` 上的欄位(`fields`) */
   extensions?: Record<string, unknown>;
 }
@@ -47,7 +47,7 @@ export interface DemoTwoWorld {
 }
 
 /** 看不到的資料一律 `NOT_FOUND`,不透露它存在。 */
-const notFound = () => graphqlError("NOT_FOUND" as AuthErrorCode, "NOT_FOUND");
+const notFound = () => graphqlError("NOT_FOUND", "NOT_FOUND");
 
 /**
  * 示範模組2 的假 api(兩個 query + 四個 mutation;規則正本
@@ -81,11 +81,7 @@ export const demoTwoWorld = (
     const failure = failures[operation];
     return failure === undefined
       ? null
-      : graphqlError(
-          failure.code as AuthErrorCode,
-          failure.code,
-          failure.extensions ?? {},
-        );
+      : graphqlError(failure.code, failure.code, failure.extensions ?? {});
   };
 
   const findItem = (id: string) => state.find((item) => item.id === id);

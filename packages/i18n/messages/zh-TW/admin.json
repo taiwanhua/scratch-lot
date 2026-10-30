@@ -104,6 +104,10 @@
     "currentOrg": "當前組織",
     "currentOrgNamed": "當前組織:{name}",
     "currentOrgNone": "當前組織:尚未選擇",
+    "rootOrgNotice": {
+      "message": "目前所在的組織不屬於任何最上層組織,請先切換到要管理的組織",
+      "hint": "切換當前組織後,就會看到那個組織的資料。"
+    },
     "placeholder": {
       "pending": "此頁面尚未建置"
     },
@@ -602,12 +606,16 @@
         "width": "寬度要填 {min}–{max} 的整數",
         "LIST_COLUMN_DUPLICATE": "這一欄重複了,請移除其中一欄",
         "LIST_COLUMN_UNAVAILABLE": "這個欄位已經不在目前的表單版本,請換一個",
-        "LIST_COLUMN_PROTECTED": "受保護的欄位不能當列表欄"
+        "LIST_COLUMN_PROTECTED": "受保護的欄位不能當列表欄",
+        "templateUnavailable": "模板引用的欄位(或限定的表單)已經不在目前的表單版本,請換一個",
+        "templateProtected": "模板不能引用受保護的欄位",
+        "templateLabel": "欄名必填,最多 {max} 個字",
+        "templateText": "模板最多 {max} 個字,要有至少一個從「插入欄位」挑的摘要槽或欄位;格式只能加在日期 / 日期時間上,且只能用支援的格式代號"
       },
       "title": "列表欄位配置 — {name}",
       "loading": "載入配置",
       "moduleWide": "此設定影響整個模組的列表:模組裡的每張表單共用同一份列表欄位。",
-      "body": "選擇列表要顯示的摘要槽或表單欄位;表單欄位只列共用表單目前版本的非受保護欄位。",
+      "body": "選擇列表要顯示的摘要槽、表單欄位或組合欄;表單欄位只列共用表單目前版本的非受保護欄位。組合欄把幾個摘要槽 / 欄位組成一格(例:開始時間–結束時間)。",
       "usingDefault": "目前沒有設定,列表使用預設欄(標題、日期)。",
       "row": "第 {index} 欄",
       "slot": "摘要槽",
@@ -625,6 +633,17 @@
       "remove": "移除",
       "addSlot": "+ 摘要槽",
       "addField": "+ 表單欄位",
+      "addTemplate": "+ 組合欄",
+      "templateLabel": "欄名",
+      "templateLabelHint": "列表表頭顯示的名稱",
+      "templateForm": "限定表單",
+      "anyForm": "任一表單",
+      "templateText": "模板",
+      "templateTextHint": "用「插入欄位」挑摘要槽或欄位,中間可打分隔文字;日期可在名稱後加「|格式」(例 |HH:mm 只印時分);讀不到的欄位顯示空白",
+      "insertPlaceholder": "插入欄位",
+      "insertPlaceholderHint": "挑一個摘要槽或欄位,把它插到模板最後",
+      "slotPlaceholder": "摘要槽 / {name}",
+      "formatPlaceholder": "{name}(格式 {format})",
       "cancel": "取消",
       "save": "儲存",
       "saved": "已儲存列表欄位配置。",
@@ -949,6 +968,8 @@
       "empty": "這個類別還沒有選項",
       "tableAria": "選項清單",
       "label": "顯示名稱",
+      "color": "顏色",
+      "colorAria": "「{name}」的顏色",
       "value": "值(value)",
       "order": "排序",
       "source": "來源",
@@ -1005,7 +1026,8 @@
       "categoryCreateSuccess": "已新增類別。",
       "categoryUpdateSuccess": "已儲存類別。",
       "categoryEnableSuccess": "已啟用這個類別。",
-      "categoryDisableSuccess": "已停用這個類別,表單設計器不會再列出它。"
+      "categoryDisableSuccess": "已停用這個類別,表單設計器不會再列出它。",
+      "colorSuccess": "已更新顏色。"
     },
     "errors": {
       "FIELD_VALUE_DUPLICATE": "這個值在這個類別已經有人用了,請換一個。",
@@ -1017,6 +1039,25 @@
       "FIELD_CATEGORY_KEY_DUPLICATE": "這個 key 已經有類別用了(含已停用的),請換一個。",
       "SYSTEM_CATEGORY": "系統類別不能停用。",
       "ROOT_ONLY": "欄位類別只能由系統管理員新增、改名或停用。"
+    }
+  },
+  "tagPalettes": {
+    "names": {
+      "blue": "藍",
+      "cyan": "青",
+      "green": "綠",
+      "lime": "萊姆",
+      "yellow": "黃",
+      "orange": "橘",
+      "red": "紅",
+      "pink": "粉",
+      "purple": "紫",
+      "grey": "灰"
+    },
+    "select": {
+      "label": "顏色",
+      "none": "不設定",
+      "title": "選擇顏色"
     }
   },
   "demoSampleOne": {
@@ -1326,6 +1367,9 @@
       "allForms": "全部表單",
       "statusFilter": "狀態",
       "allStatuses": "全部狀態",
+      "orgFilter": "組織",
+      "dateFrom": "日期起",
+      "dateTo": "日期迄",
       "create": "+ 新增",
       "noFormsHint": "目前沒有可以填寫的表單。",
       "tableAria": "{module}清單",
@@ -1768,6 +1812,9 @@
         "user": "填寫者",
         "org": "填寫者的組織"
       },
+      "defaultProvider": "來源提供的預設",
+      "defaultProviderFilter": "預設值的條件(選填)",
+      "defaultProviderFilterHint": "來源依這些欄位目前的值找出填寫者自己的那一筆(例:那個組織裡自己的);欄位改值時跟著重新帶入,填寫的人改過就不再變。",
       "defaultBoolean": {
         "true": "是",
         "false": "否"
@@ -2648,7 +2695,7 @@
       "field": "表單欄位:{form} · {field}",
       "manager": "主管第 {level} 層",
       "unset": "未設定",
-      "skipWhen": "有跳過條件",
+      "skipWhen": "可能跳過",
       "noReturn": "不可退回",
       "join": "匯合:{name}",
       "issues": "{count} 個問題"
@@ -2691,7 +2738,7 @@
         "includeDescendants": "包含下層",
         "orgsHint": "看申請人所屬的組織(全部),不是只看目前組織。",
         "sharedOrgsHint": "共用流程只能選最上層組織。",
-        "condition": "符合條件"
+        "condition": "符合跳過條件"
       },
       "autoApprove": {
         "title": "自動通過",
@@ -2722,7 +2769,7 @@
     "join": {
       "region": "匯合節點「{name}」",
       "title": "匯合節點",
-      "body": "系統節點:{count} 條分支都通過(或依條件跳過)後自動完成,不設審核者、不能設跳過條件。",
+      "body": "系統節點:{count} 條分支都通過(或依條件跳過)後自動完成,不設審核者、不能設定「跳過這一關」。",
       "name": "名稱",
       "addBranch": "加一條分支",
       "insertAfter": "在匯合後加一關",
@@ -3464,6 +3511,78 @@
       "NOT_FOUND": "找不到這台印表機,請重新整理後再試",
       "VALIDATION_FAILED": "印表機已停用或單據圖片不正確,無法列印",
       "UNEXPECTED": "送出列印失敗,請稍後再試"
+    }
+  },
+  "reports": {
+    "reportList": {
+      "title": "報表",
+      "option": "{name}(組織最多 {max} 個)",
+      "empty": "你目前沒有可以輸出的報表。需要的話,請洽系統管理員開放報表權限。"
+    },
+    "conditions": {
+      "title": "{name} · 條件",
+      "orgs": "組織",
+      "orgsRequired": "請至少選一個組織",
+      "preview": "預覽",
+      "export": "匯出 Excel",
+      "exporting": "匯出中…"
+    },
+    "periodPicker": {
+      "kindsAria": "期間類型",
+      "kinds": {
+        "day": "日",
+        "week": "週",
+        "month": "月"
+      },
+      "date": "日期",
+      "today": "今天",
+      "yesterday": "昨天",
+      "thisWeek": "本週",
+      "lastWeek": "上週",
+      "thisMonth": "本月",
+      "lastMonth": "上月",
+      "weekCalendarAria": "選擇週",
+      "weekHint": "點任一天選整週(星期日起算)。",
+      "weekRange": "{from}({fromWeekday})~ {to}({toWeekday})",
+      "weekdays": {
+        "0": "日",
+        "1": "一",
+        "2": "二",
+        "3": "三",
+        "4": "四",
+        "5": "五",
+        "6": "六"
+      },
+      "monthTitle": "{year} 年 {month} 月",
+      "prevMonth": "上一個月",
+      "nextMonth": "下一個月",
+      "yearTitle": "{year} 年",
+      "prevYear": "上一年",
+      "nextYear": "下一年",
+      "monthGridAria": "選擇月份",
+      "monthLabel": "{month} 月"
+    },
+    "period": {
+      "day": "{date}",
+      "week": "{from} ~ {to}",
+      "month": "{year} 年 {month} 月"
+    },
+    "preview": {
+      "title": "{name} · {period}",
+      "back": "返回條件",
+      "loading": "報表產生中…"
+    },
+    "sheetPreview": {
+      "tabsAria": "工作表",
+      "empty": "這個工作表沒有資料"
+    },
+    "totalSheet": "全部組織合計",
+    "fileName": "{name}_{period}",
+    "errors": {
+      "RANGE_TOO_LARGE": "期間或組織數超過這張報表的上限,請縮小範圍後再試一次。",
+      "VALIDATION_FAILED": "條件不完整,請檢查期間與組織。",
+      "FORBIDDEN": "你沒有這張報表的權限。",
+      "UNEXPECTED": "報表產生失敗,請稍後再試。"
     }
   }
 }

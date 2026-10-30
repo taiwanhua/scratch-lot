@@ -19,6 +19,7 @@ import {
   NOTIFICATION_TYPES,
 } from "./notification-registry.module";
 import { IN_APP_FILTER } from "./notification.service";
+import { notificationCursorInvalid } from "./notifications-error";
 
 /** 清單每頁上限(GQL-03)。 */
 const MAX_PAGE_SIZE = 100;
@@ -49,11 +50,41 @@ export interface NotificationTypePreferenceItem {
 
 export interface NotificationPage {
   items: NotificationListItem[];
-  page: number;
   pageSize: number;
+  /** 下一批的游標;沒有更多 = null */
+  nextCursor: string | null;
   totalCount: number;
   unreadCount: number;
 }
+
+/** 游標指到的那一則:清單依 `createdAt` 再 `_id` 新到舊排,所以兩個一起才唯一。 */
+interface NotificationCursor {
+  createdAt: Date;
+  id: Types.ObjectId;
+}
+
+/** 游標 = `<createdAt ISO>_<_id>` 的 base64url(不透明;前端原樣送回)。 */
+export const encodeNotificationCursor = (cursor: NotificationCursor): string =>
+  Buffer.from(
+    `${cursor.createdAt.toISOString()}_${cursor.id.toHexString()}`,
+  ).toString("base64url");
+
+/** 解不開(不是這支產的)→ `null`。 */
+export const decodeNotificationCursor = (
+  raw: string,
+): NotificationCursor | null => {
+  const [at, id, ...rest] = Buffer.from(raw, "base64url")
+    .toString("utf8")
+    .split("_");
+  if (at === undefined || id === undefined || rest.length > 0) {
+    return null;
+  }
+  const createdAt = new Date(at);
+  if (Number.isNaN(createdAt.getTime()) || !/^[\da-f]{24}$/.test(id)) {
+    return null;
+  }
+  return { createdAt, id: new Types.ObjectId(id) };
+};
 
 /**
  * 自己的通知清單:只讀寫**自己的**(身分取自登入,不收 userId),
@@ -94,27 +125,53 @@ export class NotificationInboxService {
     }));
   }
 
+  /**
+   * 游標分頁:比 `after` 舊的(`createdAt` 較早,或同時間 `_id` 較小)取 `pageSize` 則。
+   * 游標記的是位置而不是筆數,所以載入途中有新通知(排在最前面)不會讓下一批重複,
+   * 「未讀」清單裡已載入的被標成已讀(離開篩選)也不會讓下一批漏掉。
+   */
   async list(
     operator: OperatorContext,
-    input: { unreadOnly?: boolean | null; page?: number; pageSize?: number },
+    input: {
+      unreadOnly?: boolean | null;
+      after?: string | null;
+      pageSize?: number;
+    },
   ): Promise<NotificationPage> {
-    const page = Math.max(1, Math.trunc(input.page ?? 1));
     const pageSize = Math.min(
       MAX_PAGE_SIZE,
       Math.max(1, Math.trunc(input.pageSize ?? 20)),
     );
     const mine = this.mineFilter(operator);
     const filter = input.unreadOnly === true ? { ...mine, readAt: null } : mine;
-    const documents = await this.notifications.findMany(operator, filter, {
-      sort: { createdAt: -1, _id: -1 },
-      skip: (page - 1) * pageSize,
-      limit: pageSize,
-    });
+    const after = this.cursorOf(input.after);
+    const documents = await this.notifications.findMany(
+      operator,
+      after === null
+        ? filter
+        : {
+            ...filter,
+            $or: [
+              { createdAt: { $lt: after.createdAt } },
+              { createdAt: after.createdAt, _id: { $lt: after.id } },
+            ],
+          },
+      // 多取一則判斷還有沒有下一批
+      { sort: { createdAt: -1, _id: -1 }, limit: pageSize + 1 },
+    );
+    const page = documents.slice(0, pageSize);
+    const last = page.at(-1);
     const totalCount = await this.notifications.count(operator, filter);
     return {
-      items: documents.map((document) => this.toItem(document)),
-      page,
+      items: page.map((document) => this.toItem(document)),
       pageSize,
+      nextCursor:
+        documents.length > pageSize && last !== undefined
+          ? encodeNotificationCursor({
+              createdAt: last.createdAt,
+              id: last._id,
+            })
+          : null,
       totalCount,
       unreadCount: await this.unreadCount(operator),
     };
@@ -153,6 +210,18 @@ export class NotificationInboxService {
       { $set: { readAt: new Date() } },
     );
     return this.unreadCount(operator);
+  }
+
+  /** 缺席 / null / 空字串 = 從最新的開始;解不開 → `INVALID_CURSOR`。 */
+  private cursorOf(raw: string | null | undefined): NotificationCursor | null {
+    if (raw === undefined || raw === null || raw.length === 0) {
+      return null;
+    }
+    const cursor = decodeNotificationCursor(raw);
+    if (cursor === null) {
+      throw notificationCursorInvalid();
+    }
+    return cursor;
   }
 
   private mineFilter(operator: OperatorContext) {

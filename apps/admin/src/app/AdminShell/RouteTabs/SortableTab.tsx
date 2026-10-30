@@ -1,4 +1,3 @@
-import { useSortable } from "@dnd-kit/sortable";
 import type { KeyboardEvent, MouseEvent, PointerEvent } from "react";
 
 import { Box } from "@repo/ui/box";
@@ -6,6 +5,10 @@ import { IconButton } from "@repo/ui/icon-button";
 import { CloseIcon } from "@repo/ui/icons";
 import { Typography } from "@repo/ui/typography";
 
+import {
+  DRAG_START_DISTANCE,
+  useSortableItem,
+} from "@/hooks/base/useSortableItem";
 import type { RouteTab } from "@/lib/base/route-tabs";
 
 import type { RouteTabMenuAnchor } from "./RouteTabMenu";
@@ -26,8 +29,6 @@ export interface SortableTabProps {
   onKeyDown: (event: KeyboardEvent<HTMLDivElement>) => void;
   /** 叫出批次關閉選單(右鍵、觸控長按) */
   onOpenMenu: (anchor: RouteTabMenuAnchor) => void;
-  /** 拖曳啟動的距離(px);長按移動超過它就取消,交給拖曳 */
-  dragStartDistance: number;
 }
 
 const stopPointerPropagation = (event: PointerEvent<HTMLButtonElement>) => {
@@ -37,7 +38,7 @@ const stopPointerPropagation = (event: PointerEvent<HTMLButtonElement>) => {
 
 /**
  * 單一頁籤(Figma Draft/RouteTab 26:48:State=Active 品牌淺色底 + 深色字、Default 底色 + 次要字;Closable 開關 = 關閉鈕)。
- * 整顆 tab 是 dnd-kit 的可拖曳節點(指標);鍵盤排序不走 dnd-kit,由 `RouteTabs` 的 keydown 直接搬(見 keyboardHint)。
+ * 整顆 tab 是 dnd-kit 的可拖曳節點(指標;共用 `hooks/base/useSortableItem`);鍵盤排序不走 dnd-kit,由 `RouteTabs` 的 keydown 直接搬(見 keyboardHint)。
  * 右鍵或觸控長按(按住不動約 0.5 秒;一移動就交給拖曳)叫出批次關閉選單;長按放開後補來的那次點擊不切換頁籤。
  */
 export const SortableTab = ({
@@ -49,19 +50,13 @@ export const SortableTab = ({
   onClose,
   onKeyDown,
   onOpenMenu,
-  dragStartDistance,
 }: SortableTabProps) => {
+  // 長按移動超過拖曳門檻就取消,交給拖曳
   const longPress = useLongPress(({ x, y }) => {
     onOpenMenu({ top: y, left: x });
-  }, dragStartDistance);
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: tab.route });
+  }, DRAG_START_DISTANCE);
+  const { attributes, listeners, setNodeRef, isDragging, dragSx } =
+    useSortableItem(tab.route);
   // dnd-kit 的指標感測器掛在 onPointerDown;本元件也要接 pointerdown(長按),所以自己串起來。
   // 型別是 `Record<string, Function>`,沒有哪個 key 一定在(換感測器就沒有),照可能不存在處理
   const dndPointerDown = listeners?.onPointerDown as
@@ -106,21 +101,14 @@ export const SortableTab = ({
         pr: 1,
         borderRadius: 1,
         flexShrink: 0,
-        cursor: isDragging ? "grabbing" : "pointer",
         userSelect: "none",
-        touchAction: "none",
         // iOS 長按不跳出系統的連結 / 文字選單(長按交給頁籤選單)
         WebkitTouchCallout: "none",
         bgcolor: isActive ? "primary.lighter" : "background.default",
         color: isActive ? "primary.dark" : "text.secondary",
         boxShadow: isDragging ? 2 : 0,
-        zIndex: isDragging ? 1 : "auto",
-        position: "relative",
-        // 拖曳中的位移是執行期幾何值,不是設計 token(STYLE-01 例外);走 sx 而非 style={}(STYLE-02)
-        transform: transform
-          ? `translate3d(${String(Math.round(transform.x))}px, ${String(Math.round(transform.y))}px, 0)`
-          : undefined,
-        transition,
+        // 拖曳中的位移、過場、抓取游標(共用 `useSortableItem`)
+        ...dragSx,
         "&:hover": { bgcolor: isActive ? "primary.lighter" : "action.hover" },
         "&:focus-visible": {
           outline: "2px solid",

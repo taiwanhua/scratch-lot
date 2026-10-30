@@ -37,15 +37,36 @@ import { DeleteSubmissionDialog } from "./DeleteSubmissionDialog";
 import { FormListToolbar } from "./FormListToolbar";
 import { formModuleKeyOf, useFormModuleAccess } from "./useFormModuleAccess";
 
-/** 列表的篩選條件存在網址 `?list=`(REACT-14):搜尋、表單、狀態、頁碼。 */
+/** 當地日期 `YYYY-MM-DD`(網址被改壞 → `useUrlState` 整包回預設)。 */
+const localDateParam = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/)
+  .nullable()
+  .default(null);
+
+/**
+ * 列表的篩選條件存在網址 `?list=`(REACT-14):搜尋、表單、狀態、組織(含下層)、日期區間(摘要槽「日期」,
+ * 含頭尾)、頁碼。
+ */
 const listSchema = z
   .object({
     keyword: z.string().default(""),
     formKey: z.string().nullable().default(null),
     status: z.enum(FormSubmissionStatus).nullable().default(null),
+    orgId: z.string().nullable().default(null),
+    dateFrom: localDateParam,
+    dateTo: localDateParam,
     page: z.number().int().min(1).default(1),
   })
-  .default({ keyword: "", formKey: null, status: null, page: 1 });
+  .default({
+    keyword: "",
+    formKey: null,
+    status: null,
+    orgId: null,
+    dateFrom: null,
+    dateTo: null,
+    page: 1,
+  });
 
 export interface FormListPageProps extends ModulePageProps {
   /**
@@ -58,7 +79,7 @@ export interface FormListPageProps extends ModulePageProps {
 const NO_EXCLUDED: readonly string[] = [];
 
 /**
- * 表單模組列表頁(預設組裝):搜尋、依表單 / 狀態篩選、分頁;
+ * 表單模組列表頁(預設組裝):搜尋、依表單 / 狀態 / 組織 / 日期區間篩選、分頁;
  * 新增鈕 —— 此刻可新增(且讀者有新增權限)的表單一張 → 直接進、多張 → 先選(`FormPicker`)。
  * 列操作依 api 的 `abilities`(已含權限)與「有沒有綁那一頁」相乘:綁流程且已核准的單鎖定 ——
  * 不出現「編輯」(api 的 `canEdit` 為 false)、改出現「作廢」(`canVoid`)。
@@ -88,7 +109,7 @@ export const FormListPage = ({
     (creatableForms.length > 0 || (access.canCreate && forms.length === 0));
 
   const [filters, setFilters] = useUrlState("list", listSchema);
-  const { keyword, formKey, status } = filters;
+  const { keyword, formKey, status, orgId, dateFrom, dateTo } = filters;
   /** 換任何一個篩選都回到第一頁(否則會停在一個不存在的頁碼上看到空清單)。 */
   const setFilter = (patch: Partial<Omit<typeof filters, "page">>) => {
     setFilters((current) => ({ ...current, ...patch, page: 1 }));
@@ -204,14 +225,8 @@ export const FormListPage = ({
           setFilter({ keyword: value });
         }}
         forms={forms}
-        formKey={formKey}
-        onFormKeyChange={(value) => {
-          setFilter({ formKey: value });
-        }}
-        status={status}
-        onStatusChange={(value) => {
-          setFilter({ status: value });
-        }}
+        filters={{ formKey, status, orgId, dateFrom, dateTo }}
+        onFiltersChange={setFilter}
         canCreate={canCreate}
         hasForms={creatableForms.length > 0}
         onCreate={handleCreate}

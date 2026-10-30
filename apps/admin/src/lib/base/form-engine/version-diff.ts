@@ -1,3 +1,4 @@
+import { COLLATION_LOCALE } from "@repo/domain/collation";
 import type { FieldDef } from "@repo/domain/form";
 
 /**
@@ -15,7 +16,7 @@ const stable = (value: unknown): string =>
     item !== null && typeof item === "object" && !Array.isArray(item)
       ? Object.fromEntries(
           Object.entries(item as Record<string, unknown>).toSorted(([a], [b]) =>
-            a.localeCompare(b),
+            a.localeCompare(b, COLLATION_LOCALE),
           ),
         )
       : item,

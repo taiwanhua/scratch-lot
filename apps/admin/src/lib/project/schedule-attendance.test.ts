@@ -1,6 +1,7 @@
 import { describe, expect, it } from "@jest/globals";
 
-import { buildWorkbook } from "./reports/excel";
+import { buildWorkbook } from "@/lib/base/reports/excel";
+
 import {
   ATTENDANCE_SHEET_COLUMNS,
   type AttendanceSheetRow,
@@ -170,7 +171,7 @@ describe("排班對話框的未對應排班的打卡(規格 14.5)", () => {
   it("重複打卡:上班取最早、下班取最晚,其餘重複", () => {
     expect(
       [...duplicatePunchIdsOfDay(punches)].toSorted((a, b) =>
-        a.localeCompare(b),
+        a.localeCompare(b, "zh-Hant"),
       ),
     ).toEqual(["p2", "p3"]);
   });
@@ -184,7 +185,7 @@ describe("排班對話框的未對應排班的打卡(規格 14.5)", () => {
     expect([...defaultCheckedPunchIds(punches, span, 60)]).toEqual(["p1"]);
     expect(
       [...defaultCheckedPunchIds(punches, span, 400)].toSorted((a, b) =>
-        a.localeCompare(b),
+        a.localeCompare(b, "zh-Hant"),
       ),
     ).toEqual(["p1", "p4"]);
     expect(defaultCheckedPunchIds(punches, null, 60).size).toBe(0);

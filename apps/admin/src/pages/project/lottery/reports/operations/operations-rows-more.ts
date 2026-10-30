@@ -1,5 +1,5 @@
 /** 營運報表的依遊戲、區塊 6–8 與分店比較(`operations-rows.ts` 的後半)。 */
-import type { SheetRow, SheetSection } from "@/lib/project/reports/excel";
+import type { SheetRow, SheetSection } from "@/lib/base/reports/excel";
 
 import {
   BANK_TYPE_KEYS,

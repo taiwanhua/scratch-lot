@@ -65,6 +65,12 @@ gcloud iam service-accounts add-iam-policy-binding <deployer-sa> --member="princ
 
 預算在選定帳單帳戶、金額與通知門檻後建立,例如 `gcloud billing budgets create --billing-account=<billing-account-id> --display-name="<project> budget" --budget-amount=<amount><currency> --filter-projects=projects/<gcp-project> --threshold-rule=percent=0.5 --threshold-rule=percent=0.9`。預算只通知、不會自動停止服務;建立後在 Billing 核對通知收件者與範圍。
 
+### api 前面的代理層數(`TRUST_PROXY_HOPS`)
+
+api 以 Express 的 `trust proxy` 換算客戶端 IP(`req.ip`),層數是 `apps/api/src/http-proxy.ts` 的 `TRUST_PROXY_HOPS`(程式常數,不是環境變數),`main.ts` 與測試 harness 共用。目前是 **1**:Cloud Run 的請求一律先經 Google Front End 一層,由它把客戶端 IP 附加在 `X-Forwarded-For` 最右邊;`req.ip` 取由右數第一個,客戶端自己塞在前面的假值不會被採用。瀏覽器直接打 api 的 Cloud Run 網址(admin 的 nginx 只出靜態檔,不轉送 api)。
+
+**在 Cloud Run 前面每多一層代理(外部 HTTPS 負載平衡器、CDN 等),`TRUST_PROXY_HOPS` 要跟著 +1**,隨同改架構的 PR 一起改。沒加的話 `req.ip` 拿到的是最外層代理附上的位址,而不是使用者的 IP:記錄來源 IP 的稽核欄位與任何依 IP 的限速都會用錯對象(所有人看起來來自同一個 IP)。反過來設太多層,`req.ip` 會採用客戶端可以偽造的值。改完在該環境打一次請求、核對記下的來源 IP 是自己的對外 IP。本機沒有代理,客戶端可自帶 `X-Forwarded-For` 改寫 `req.ip`,只影響本機開發。
+
 ## 二、分支模型與 CI/CD 流程
 
 ### 分支模型

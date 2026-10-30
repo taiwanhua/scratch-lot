@@ -5,14 +5,17 @@ import type { ComponentType } from "react";
 import { projectModulePages } from "@/app/project/module-pages";
 import { projectPageReplacements } from "@/app/project/page-replacements";
 import { projectRealtimeSignals } from "@/app/project/realtime-signals";
+import { projectReports } from "@/app/project/reports";
 import { projectShellExtensions } from "@/app/project/shell-extensions";
 import { projectUrlStateInventory } from "@/app/project/url-state-inventory";
 import { projectWorkflowExtensions } from "@/app/project/workflow-extensions";
 import type { WorkflowExtensionRegistration } from "@/hooks/base/useWorkflowExtensions";
 import { composeRealtimeSignals } from "@/lib/base/realtime/signal-registry";
+import { composeReports } from "@/lib/base/reports/report-registry";
 
 import { baseModulePages } from "./base/module-pages";
 import { baseRealtimeSignals } from "./base/realtime-signals";
+import { baseReports } from "./base/reports";
 import { baseShellExtensions } from "./base/shell-extensions";
 import { baseWorkflowExtensions } from "./base/workflow-extensions";
 import { composeModulePages } from "./module-page-registry";
@@ -36,7 +39,7 @@ const composed = composeModulePages({
  */
 export const modulePages = composed.pages;
 
-/** 模組 key → 內容區最小寬度的主題斷點(沒列 = 殼層預設 `lg`;`AdminShell/shell-geometry.ts`)。 */
+/** 模組 key → 內容區最小寬度的主題斷點(沒列 = 殼層預設 `md`;`AdminShell/shell-geometry.ts`)。 */
 export const modulePageMinWidths = composed.pageMinWidths;
 
 /** 模組 key → 表單模組的模組層設定;由 `providers/RootProviders.tsx` 注入給表單頁。 */
@@ -50,6 +53,12 @@ export const realtimeSignals = composeRealtimeSignals(
   baseRealtimeSignals,
   projectRealtimeSignals,
 );
+
+/**
+ * 輸出報表的登記清單(`docs/modules/reports.md`「報表登記介面」):底座(`app/base/reports.ts`)在前
+ * + 專案(`app/project/reports.ts`);同一個報表 key 登記兩次載入就丟錯。由 `providers/RootProviders.tsx` 注入。
+ */
+export const reportRegistrations = composeReports(baseReports, projectReports);
 
 /**
  * 依模組登記的審核擴充(`docs/modules/workflows.md`「依模組登記的審核擴充」):底座(`app/base/workflow-extensions.ts`)

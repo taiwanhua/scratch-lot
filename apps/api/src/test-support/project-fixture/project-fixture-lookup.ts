@@ -6,6 +6,7 @@ import { PROJECT_FIXTURE_PERMISSIONS } from "./fixtures";
 export const PROJECT_FIXTURE_LOOKUP_KEY = "project_fixture_item";
 export const PROJECT_FIXTURE_CODE_LOOKUP_KEY = "project_fixture_code";
 export const PROJECT_FIXTURE_SHARED_LOOKUP_KEY = "project_fixture_shared";
+export const PROJECT_FIXTURE_OWNED_LOOKUP_KEY = "project_fixture_owned";
 
 /**
  * 測試專案的 lookup 來源(只存在於測試;測試以它頂替 `project/lookup-providers.ts` 的內容):
@@ -63,6 +64,23 @@ export const PROJECT_FIXTURE_LOOKUP_PROVIDERS: readonly LookupProviderRegistrati
         filterFields: ["sharedTo"],
         sharedToFilter: "sharedTo",
         labelField: "name",
+      },
+      repositoryToken: ProjectFixtureItemsRepository,
+    },
+    {
+      // 依操作者的預設值:操作者自己建的、啟用中的項目裡 `rank` 最大的那一筆;可依組織篩
+      declaration: {
+        key: PROJECT_FIXTURE_OWNED_LOOKUP_KEY,
+        name: "測試專案項目(自己的)",
+        permission: PROJECT_FIXTURE_PERMISSIONS.view,
+        fields: { name: { type: "text" } },
+        filterFields: ["orgId", "enabled"],
+        labelField: "name",
+        defaultForOperator: {
+          operatorField: "createdBy",
+          where: { enabled: true },
+          latestBy: "rank",
+        },
       },
       repositoryToken: ProjectFixtureItemsRepository,
     },

@@ -56,7 +56,9 @@ export interface SharedByField {
  * - `private`(預設):只照可見範圍
  * - `shareable`:每筆資料有共用清單 `shareOrgs`(plugin 加欄位與索引);`defaultShareOrgs` 是新增時的
  *   預設清單(`none` = 空、`wholeTenant` = 租戶頂層含下層 = 全部分店);`editable: false` = 清單固定、
- *   一般更新改不了;`sharedByFields` 另讓欄位指到的組織看得到(不需同步任何清單)
+ *   一般更新改不了;`sharedByFields` 另讓欄位指到的組織看得到(不需同步任何清單)。
+ *   `defaultShareOrgs: "none"` + `editable: false` = 清單永遠是空的:plugin 不宣告 `shareOrgs` 欄位與索引、
+ *   讀取不加共用清單的分支,只靠 `sharedByFields`(見 `hasShareList`)
  * - `inheritDown`:下層看得到上層建的(看所屬組織的上層鏈,不隨當前組織切換)
  *
  * 共用只放寬**讀**;修改 / 刪除仍只對「歸屬組織在自己可見範圍內」的資料做(共用進來的只能看)。
@@ -165,6 +167,18 @@ export class TenantScopeError extends Error {
 export const SHARE_ORGS_PATH = "shareOrgs";
 
 /**
+ * 這張表有沒有共用清單 `shareOrgs`:`shareable` 且清單可能非空(可編輯,或預設全部分店)。
+ * 預設不共用又不可編輯的清單永遠是空的,欄位、索引與讀取分支都只是成本(每次讀取多一個
+ * 比對整個租戶的 `$or` 分支),一律省掉;寫入時也不寫這個欄位。
+ */
+export function hasShareList(sharing: TenantSharing): boolean {
+  return (
+    sharing.mode === "shareable" &&
+    (sharing.editable || sharing.defaultShareOrgs !== "none")
+  );
+}
+
+/**
  * Mongoose plugin(ADR-0005 / ADR-0014):把「組織 ∈ 操作者可見組織」自動加進每一條查詢。
  * - 條件以 `$and` 追加,呼叫端自己的 orgId 條件只會再收窄、無法放寬。
  * - 讀取另依 `sharing` 宣告以 `$or` 加上共用分支(每個分支都釘 `tenantId`);寫入不加。
@@ -188,7 +202,7 @@ export function tenantScopePlugin(
   if (scope.moduleData) {
     declareModuleDataFields(schema);
   }
-  if (scope.sharing.mode === "shareable") {
+  if (hasShareList(scope.sharing)) {
     declareShareOrgsField(schema);
   }
   // collection 名在 schema 定義時就確定(每張 schema 都以 `@Schema({ collection })` 明寫),
@@ -271,6 +285,15 @@ function assertSharingDeclaration(schema: Schema, scope: TenantScope): void {
   if (scope.refFields.length > 0 && !hasTenantIdPath(schema, scope)) {
     throw new TenantScopeError(
       `${subject}:引用名稱出口要以 tenantId 為邊界,表要有 tenantId 欄(模組資料表或自己宣告的 ObjectId 欄)`,
+    );
+  }
+  if (
+    scope.sharing.mode === "shareable" &&
+    !hasShareList(scope.sharing) &&
+    scope.sharing.sharedByFields.length === 0
+  ) {
+    throw new TenantScopeError(
+      `${subject}:預設不共用又不可編輯、也沒有 sharedByFields = 不會共用給任何人,請改宣告 private`,
     );
   }
   if (scope.sharing.mode === "shareable") {
@@ -501,19 +524,23 @@ function tenantBranchesOf(scope: TenantScope, tenant: MemberTenant): Filter[] {
   if (sharing.mode !== "shareable") {
     return [];
   }
-  const branches: Filter[] = [
-    {
+  const branches: Filter[] = [];
+  if (hasShareList(sharing)) {
+    // 「共用給所屬組織」與「共用給上層鏈且含下層」拆成兩個分支(語意同 `$elemMatch` 裡放 `$or`):
+    // `$elemMatch` 內有 `$or` 時索引 `{ tenantId, shareOrgs.orgId }` 只用得到 `tenantId`,要掃過整個租戶
+    branches.push({
       tenantId: tenant.tenantId,
-      [SHARE_ORGS_PATH]: {
-        $elemMatch: {
-          $or: [
-            { orgId: { $in: members } },
-            { orgId: { $in: ancestors }, includeDescendants: true },
-          ],
+      [SHARE_ORGS_PATH]: { $elemMatch: { orgId: { $in: members } } },
+    });
+    if (ancestors.length > 0) {
+      branches.push({
+        tenantId: tenant.tenantId,
+        [SHARE_ORGS_PATH]: {
+          $elemMatch: { orgId: { $in: ancestors }, includeDescendants: true },
         },
-      },
-    },
-  ];
+      });
+    }
+  }
   for (const field of sharing.sharedByFields) {
     branches.push({
       tenantId: tenant.tenantId,

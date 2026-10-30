@@ -1,4 +1,5 @@
 import { FIELD_MANAGER_MODULE_KEY } from "@/components/base/FieldManager/field-manager-permissions";
+import { REPORTS_MODULE_KEY } from "@/lib/base/reports/report-registry";
 import { OverviewPage } from "@/pages/base/OverviewPage/OverviewPage";
 import {
   APPLY_CENTER_MODULE_KEY,
@@ -16,6 +17,7 @@ import { SampleTwoPage } from "@/pages/base/demo/SampleTwoPage/SampleTwoPage";
 import { SampleTwoViewPage } from "@/pages/base/demo/SampleTwoPage/SampleTwoViewPage";
 import { SAMPLE_ONE_MODULE_KEYS } from "@/pages/base/demo/demo-sample-one-config";
 import { SAMPLE_TWO_MODULE_KEYS } from "@/pages/base/demo/demo-sample-two-config";
+import { ReportsPage } from "@/pages/base/reports/ReportsPage/ReportsPage";
 import { DataScopePage } from "@/pages/base/system/DataScopePage/DataScopePage";
 import { DATA_SCOPE_MODULE_KEY } from "@/pages/base/system/DataScopePage/data-scope-permissions";
 import { FieldManagerPage } from "@/pages/base/system/FieldManagerPage/FieldManagerPage";
@@ -59,8 +61,8 @@ export const DEMO_SUB_GROUP_FORM_MODULE_KEY = "demo.sub.form";
  * (新增 → `app/project/module-pages.ts`,替換底座頁 → `app/project/page-replacements.ts`)。
  * 沒登記的模組由殼顯示佔位頁(模組名)。路由本身仍由 `me.modules` 決定,這裡只決定「進去看到什麼」。
  *
- * `minWidth` = 內容區最小寬度的主題斷點(沒寫 = 殼層預設 `lg`;`AdminShell/shell-geometry.ts`)。
- * 目前底座沒有頁面宣告 `xl`:兩個設計器在 `xl` 以下自己換版(`pages/base/system/designer-layout.ts`)。
+ * `minWidth` = 這一頁排得下的最窄視窗(主題斷點;沒寫 = 殼層預設 `md`,平板寬就完整顯示;`AdminShell/shell-geometry.ts`)。
+ * 目前底座頁都沒宣告:兩個設計器在 `xl` 以下、平板寬各自換版(`pages/base/system/designer-layout.ts`)。
  */
 export const baseModulePages: ModulePageSource = {
   pages: [
@@ -81,11 +83,11 @@ export const baseModulePages: ModulePageSource = {
     { key: USER_MANAGER_MODULE_KEY, Page: UserManagerPage },
     { key: ROLE_MANAGER_MODULE_KEY, Page: RoleManagerPage },
     { key: DATA_SCOPE_MODULE_KEY, Page: DataScopePage },
-    // 表單管理:懶載入(設計器不進首屏 bundle);沿用殼層預設 `lg`,設計器在 `xl` 以下自己換版
+    // 表單管理:懶載入(設計器不進首屏 bundle);沿用殼層預設 `md`,設計器在 `xl` 以下自己換版
     // (`pages/base/system/designer-layout.ts`)
     { key: FORMS_MODULE_KEY, Page: LazyFormsPage },
     // 審核流程:流程管理、阻擋清單、申請中心兩頁籤與詳情,全部懶載入(不進首屏 bundle);
-    // 流程設計器(流程圖 + 關卡屬性)同表單管理沿用 `lg`、在 `xl` 以下收窄屬性面板
+    // 流程設計器(流程圖 + 關卡屬性)同表單管理沿用 `md`、在 `xl` 以下收窄屬性面板
     { key: WORKFLOWS_MODULE_KEY, Page: LazyWorkflowsPage },
     { key: WORKFLOWS_BLOCKED_PAGE_KEY, Page: LazyWorkflowBlockedPage },
     // 通知設定:負責人提醒的收件人
@@ -94,6 +96,8 @@ export const baseModulePages: ModulePageSource = {
     { key: APPLY_CENTER_VIEW_PAGE_KEY, Page: LazyApplyCenterViewPage },
     // 印表機管理:懶載入(測試頁的條碼 / QR code 零件不進首屏 bundle)
     { key: PRINTERS_MODULE_KEY, Page: LazyPrintersPage },
+    // 輸出報表:報表本身由底座 / 專案登記(`app/base/reports.ts`、`app/project/reports.ts`)
+    { key: REPORTS_MODULE_KEY, Page: ReportsPage },
   ],
   // 三個示範表單模組(頂層 / 群組內 / 次群組內):四個 key 全用表單引擎的預設組裝;
   // 表單綁了流程時,詳情頁下方自動掛審核區塊(預設組裝含)

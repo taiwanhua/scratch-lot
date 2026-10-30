@@ -42,7 +42,7 @@ interface TicketRow {
 }
 
 function byText(left: string, right: string): number {
-  return left.localeCompare(right);
+  return left.localeCompare(right, "zh-Hant");
 }
 
 function own(operator: OperatorContext): LedgerContext {

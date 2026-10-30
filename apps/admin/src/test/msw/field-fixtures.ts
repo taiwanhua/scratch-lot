@@ -33,6 +33,7 @@ const globalField = (
   order,
   enabled: true,
   description: null,
+  color: null,
   ownerOrg: null,
   isOwn: false,
   canEdit: false,

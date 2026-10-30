@@ -83,7 +83,7 @@ function firstOf<TValue>(values: readonly TValue[]): TValue {
 
 /** id 字串排序(比對「同一批」用,不看順序)。 */
 function sorted(values: readonly string[]): string[] {
-  return values.toSorted((left, right) => left.localeCompare(right));
+  return values.toSorted((left, right) => left.localeCompare(right, "zh-Hant"));
 }
 
 function isValidationFailed(error: unknown, field: string): boolean {

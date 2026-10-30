@@ -143,7 +143,7 @@ async function sharedOrgIdsOf(
     .findOne({ _id: id });
   return document?.sharedOrgIds
     ?.map(String)
-    .toSorted((left, right) => left.localeCompare(right));
+    .toSorted((left, right) => left.localeCompare(right, "zh-Hant"));
 }
 
 function snapshotOf(database: Db) {
@@ -191,7 +191,7 @@ describe("遷移:受管表單的提交補上依欄位共用的 sharedOrgIds", ()
   it("調貨單:出貨店 + 收貨店(同一家只算一次)", async () => {
     expect(await sharedOrgIdsOf(database, ids.transfer)).toEqual(
       [String(zhongshan), String(xinyi)].toSorted((left, right) =>
-        left.localeCompare(right),
+        left.localeCompare(right, "zh-Hant"),
       ),
     );
     expect(await sharedOrgIdsOf(database, ids.transferSame)).toEqual([

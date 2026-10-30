@@ -38,6 +38,27 @@
 | `packages/i18n/messages/*/front.json` `meta`                                                                                         | 基礎字典是中性預設;`title` / `titleTemplate` / `description` 由 `apps/front/src/i18n/request.ts` 注入 `projectPublic.front.metadata`(每個支援語系一份:「wowgo-base — 多租戶應用底座」/「wowgo-base — Multi-tenant Application Base」等;`%s` 是 Next title template 的佔位,不是 ICU 變數)。front 的 favicon 是專案資產 `apps/front/public/favicon.ico`                                                                                                                                                                                                                                                                                                                              | 改 `project/public.ts` 的 `front.metadata`;新增語系時補一份;favicon 換檔                                                                                                                 |
 | `apps/admin/src/test/msw/`(mock 模式與測試共用夾具)、`apps/admin/src/mock/mock-fixtures.ts`、`packages/ui/src/Tree/Tree.stories.tsx` | 預覽用的範例資料不帶專案品牌:共用夾具與 Storybook 範例的根組織名固定為「平台根組織」、信箱用 `example.invalid`,不讀專案設定;只有 mock 模式自己的根組織名(`mock-fixtures.ts`)讀 `projectPublic.brand.name`                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | 換品牌不必改;新增預覽夾具沿用同一組中性值,不寫專案品牌或真實網域                                                                                                                         |
 
+## 標籤色票 `tagPalettes`
+
+分類標籤用的 10 組顏色:欄位管理的選項顏色(`fields.color`)與專案的分類色都從這組選,只能選代號、不能輸入色碼。與狀態色(info / success / warning / error)分開,只表分類(FIGMA-13)。色票不隨品牌換,換品牌不必改;登記在此是因為它是畫面上固定的色彩。每組文字對底色都達 WCAG AA(≥ 4.5:1,單元測試 `packages/ui/src/theme/tag-palettes.test.ts` 逐組算)。
+
+| 代號     | 名稱 | 淺色 底 / 字          | 深色 底 / 字          |
+| -------- | ---- | --------------------- | --------------------- |
+| `blue`   | 藍   | `#E3F2FD` / `#0D47A1` | `#0B2A4A` / `#90CAF9` |
+| `cyan`   | 青   | `#E0F7FA` / `#006064` | `#04363B` / `#80DEEA` |
+| `green`  | 綠   | `#E8F5E9` / `#1B5E20` | `#11331A` / `#A5D6A7` |
+| `lime`   | 萊姆 | `#F1F8E9` / `#33691E` | `#26330F` / `#C5E1A5` |
+| `yellow` | 黃   | `#FFF8E1` / `#7A5B00` | `#3A2F05` / `#FFE082` |
+| `orange` | 橘   | `#FFF3E0` / `#9A3B00` | `#3D2306` / `#FFCC80` |
+| `red`    | 紅   | `#FFEBEE` / `#B71C1C` | `#3E1214` / `#EF9A9A` |
+| `pink`   | 粉   | `#FCE4EC` / `#880E4F` | `#3D1028` / `#F48FB1` |
+| `purple` | 紫   | `#F3E5F5` / `#4A148C` | `#2A1238` / `#CE93D8` |
+| `grey`   | 灰   | `#F5F5F5` / `#424242` | `#2E2E2E` / `#E0E0E0` |
+
+- 程式:色值 `packages/ui/src/theme/tag-palettes.ts`(出口 `@repo/ui/theme`;`@repo/ui/tag` 的 `Tag palette` 依它畫、深色模式自動換);代號清單(api 以它驗證寫入)`packages/domain/src/tag-palette/keys.ts`(`@repo/domain/tag-palette`)。兩份代號由 `apps/admin/src/components/base/TagPaletteChip/tag-palette-keys.test.ts` 把關一致
+- admin 畫面一律經 `components/base/TagPaletteChip`、`TagPaletteSelect` 取用,不在別處寫色碼(STYLE-01)
+- 改色值:兩語系的色票名稱在 `packages/i18n/messages/*/admin.json` 的 `tagPalettes.names`;加減代號要同改 ui、domain 兩份並寫 db-migrator migration 處理既有資料
+
 ## 設計資源登記
 
 正式設計檔位於 Wowgo 團隊的 [Design system](https://www.figma.com/files/team/963068133549518258/project/28668795)。引用專案須另外登記自己的品牌 Library 與業務畫面檔(寫在 `docs/project/branding.md`,畫面節點寫在 `docs/project/figma-nodes.md`)。

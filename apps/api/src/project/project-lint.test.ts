@@ -150,7 +150,7 @@ describe("依賴方向:排班不得 import 刮刮樂", () => {
   it.each([
     "apps/api/src/project/lottery/store/store.service.ts",
     "apps/api/src/project/notifications.ts",
-    "apps/admin/src/hooks/project/useScanner/useScanner.ts",
+    "apps/admin/src/hooks/project/useLotteryFieldOptions/useLotteryFieldOptions.ts",
     "apps/admin/src/mock/project/mock-world.ts",
     "packages/domain/src/project/reason-note/index.ts",
     "packages/domain/src/project/lottery-fields/index.ts",

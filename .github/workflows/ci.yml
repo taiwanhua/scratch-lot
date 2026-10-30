@@ -180,6 +180,9 @@ jobs:
       - name: app 圖示產生工具測試
         run: node --test scripts/app-icons/*.test.mjs
 
+      - name: Claude hook 腳本測試
+        run: node --test scripts/claude-hooks/*.test.mjs
+
       # 以本 repo 的身分實際解析正式設定:三個環境與看板各一次(只印非機密設定與 Secret 名稱)
       - name: 正式設定 dry-run
         env:

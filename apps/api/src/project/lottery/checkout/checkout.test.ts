@@ -61,7 +61,7 @@ import { EXPECTED_CASH_SOURCE_NAMES } from "./expected-cash";
 
 jest.setTimeout(WORKFLOW_TEST_TIMEOUT_MS);
 
-const byName = (a: string, b: string) => a.localeCompare(b);
+const byName = (a: string, b: string) => a.localeCompare(b, "zh-Hant");
 
 // ---- GraphQL ----
 

@@ -20,11 +20,12 @@ Figma 頁面:Base Draft 41:5914、刮刮樂元件 64:14、店面管理 65:14、�
 
 1. **底座先做**(已完成):底座的票都做在整合分支 `feat/base-round`,已 release 並回收成 wowgo-base v0.4.0;規則已寫進正式文件。
 2. **專案後做**(已完成):整合分支 `feat/lottery-round` 做完專案規格的票(P01–P39),已 release。
-3. **同步回底座**(已跑過多輪,底座到 v0.4.4;還沒回收的見本檔第 6 節):`base-sync contribute` 回收到 `C:\project\wowgo-base` → release 新底座版本 → scratch-lot、cookhome 升級(去掉重複功能)。驗收準則:子專案修的底座問題能回到底座;底座新版升級能去掉重複功能並同步成功;整套用同步工具跑完。
+3. **同步回底座**(已跑過多輪,底座到 v0.4.5;還沒回收的見本檔第 6 節):`base-sync contribute` 回收到 `C:\project\wowgo-base` → release 新底座版本 → scratch-lot、cookhome 升級(去掉重複功能)。驗收準則:子專案修的底座問題能回到底座;底座新版升級能去掉重複功能並同步成功;整套用同步工具跑完。
 
 **一條整合分支的做法**
 
 - 一張票一個 agent,各自 worktree,從整合分支最新的一筆往下做;完成、reviewer 審過、CI 綠後 rebase 到整合分支最新再快轉併回。**不個別開 PR、不個別進 dev。**
+- **趕工時省 CI**(使用者 2026-10-29):各票在本機跑相關測試、review 後併進整合分支,整批要一起上的票都併好再 push,只跑一次 GitHub CI;不每張票各推一次。
 - **只有彼此沒有相依、或依賴的票已併回整合分支,才能同時派多個 agent**;每批派工前列出「這批的票 + 依賴是否已併回」。
 - 整合分支的票全部完成 → 一個 PR 進 dev(內文列所有 `Closes #n`)→ 手動部署 dev 給使用者測 → staging → main,一次 release。
 - 其餘照 repo 規則:不直接 commit / push main;dev / staging 只用 reset 對齊 main;不把 main / dev merge 進 feat;E2E 要先問;部署手動觸發。
@@ -48,24 +49,22 @@ Figma 頁面:Base Draft 41:5914、刮刮樂元件 64:14、店面管理 65:14、�
 
 ## 5. 目前進度(2026-10-29)
 
-- **三個 repo 都在底座 v0.4.4,production 已部署**:wowgo-base main `2b400322`、scratch-lot main `bdb0f0a3`、cookhome main `8b7c1e60`;三個 repo 的 dev / staging 都已 reset 對齊 main。
+- **scratch-lot 在底座 v0.4.5**(wowgo-base `2971cf9a`):scratch-lot main `43f3dd95`,dev / staging 已 reset 對齊 main。v0.4.5 只帶文件(協作偏好、交付與換手、deployment 等)與 `package.json` 版本,程式和 v0.4.4 相同;v0.4.4 時 production 已部署。cookhome 是否已升到 v0.4.5 要在 cookhome repo 確認。
 - 專案階段的票(P01–P39)全部完成並 release;使用者已在 production 驗收最後一批(待標註調整列、庫存概況、單張金額下拉、手機帳戶篩選抽屜)。
-- 本輪的共用改良已分五次回收成 wowgo-base v0.4.0–v0.4.4(base-sync contribute → 底座 release → 各專案 base-sync upgrade)。
-- 沒有進行中的分支、PR 或工作樹。
+- 本輪的共用改良已分五次回收成 wowgo-base v0.4.0–v0.4.4(base-sync contribute → 底座 release → 各專案 base-sync upgrade);v0.4.5 是文件版。
+- 沒有進行中的分支、PR 或工作樹;刮刮樂本輪最後五張 issue(#139、#143–#146,P35–P39)已實作但當時沒關,2026-10-29 補關,scratch-lot 沒有開著的 issue。
 - 開通租戶照 skill `scratch-lot-onboarding`(正本 `docs/modules/project/lottery-onboarding.md`);示範機構用 `demo` 指令(見同一份正本)。
 
 ## 6. 接下來可以做的
 
 每一項的細節與現況放在待辦正本,這裡只列入口;做完就從正本刪掉。
 
-| 類別                 | 在哪                                                                | 摘要                                                                                                            |
-| -------------------- | ------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| 還沒回收到底座的改良 | `docs/tmp/project-dis.md`「本輪要回收到底座的項目」                 | 只在本專案的元件與機制 9 項;兩邊都沒做的底座功能與修正約 20 項(含使用者點名的列表組合欄、lookup 動態預設值)     |
-| Figma 回收與待修     | `docs/tmp/project-dis.md`「Figma 待修清單」                         | 本專案底座參考畫面 A1–A8、底座檔 B1–B11,全部未做;做法見 `docs/tmp/figma-base-round/README.md`「搬回底座的方法」 |
-| 實機測試             | `docs/tmp/project-dis.md`「收據機實機測試清單」「條碼實機測試清單」 | 等收據機、條碼槍到貨                                                                                            |
-| 上線前提醒           | `docs/tmp/project-dis.md`「上線前提醒」                             | 每月最少畫休預設 4 天,上線前請使用者查法規再決定                                                                |
-| 開著的 issue         | GitHub Issues                                                       | #83 structure.md 一句被中性化切斷;#66 Figma 品牌同步改用本機外掛                                                |
-| 底座待討論(含 skill) | `docs/tmp/dis.md`                                                   | 例:自訂 `/to-figma` skill、module-scaffold 入口與設計流程整合、AI 自動 PR review 的時機                         |
-| GitHub 上的舊分支    | `git branch -r`                                                     | 約 187 條已合併的舊分支,要不要清由使用者決定                                                                    |
+| 類別                 | 在哪                                                | 摘要                                                                                                                          |
+| -------------------- | --------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| 還沒回收到底座的改良 | `docs/tmp/project-dis.md`「本輪要回收到底座的項目」 | 2026-10-29 這輪在本專案底座路徑做完的改良,等 PR 進 main 後 base-sync contribute(本機 thread 負責)                             |
+| Figma 回收與待修     | `docs/tmp/project-dis.md`「Figma 待修清單」         | 本專案底座參考畫面 A1–A8、底座檔 B1–B11,全部未做;做法見 `docs/tmp/figma-base-round/README.md`「搬回底座的方法」               |
+| 開著的 issue         | wowgo-base 的 GitHub Issues                         | 「structure.md 一句被中性化切斷」「Figma 品牌同步改用本機外掛」是 wowgo-base 的 issue(scratch-lot 的 #83、#66 是別的、已關閉) |
+| 底座待討論(含 skill) | `docs/tmp/dis.md`                                   | 例:自訂 `/to-figma` skill、module-scaffold 入口與設計流程整合、AI 自動 PR review 的時機                                       |
+| GitHub 上的舊分支    | `git branch -r`                                     | 約 187 條已合併的舊分支,要不要清由使用者決定                                                                                  |
 
 換帳號、換電腦時的接手方式見 `docs/agents/collaboration.md`「交付與換手」;使用者的協作偏好正本見 `docs/agents/working-preferences.md`(兩者隨底座 v0.4.5 同步進來)。

@@ -22,6 +22,7 @@
 - **共用表單**(`ownerOrgId = null`):只有站在根組織的人能建、改、分派。
 - **客製表單**:租戶以分派來的(或自己的)某一版為基底建的(`forkedFrom`),只有該租戶看得到(平台也看不到);建立時自動在本租戶啟用。
 - 表單 key 全域唯一、**建立後不可改**(格式 `^[a-z][a-z0-9_]{0,39}$`,不准 `.` 與 `-`,欄位級權限 key 才能唯一拆回)。客製表單的 key 建議 `<來源 key>_<租戶短碼>`。
+- 欄位 key(含明細子欄)格式同表單 key,另有**保留字**不能用:表達式上下文 `ctx`、`row`,以及提交本身的系統欄位 `id`、`status`、`summary`、`revision`、`createdBy`、`orgId`、`tenantId`、`moduleKey`、`formKey`、`version`。用了會和它們混淆 —— 例如 `summary` 是提交依版本 `summaryMap` 算出的列表摘要快照(列表、關鍵字搜尋、引用來源的候選都讀它),欄位也叫 `summary` 就分不清讀的是哪個。清單正本 `packages/domain/src/form/keys.ts` 的 `RESERVED_FIELD_KEYS`;表單結構檢查器擋(欄位 `KEY_RESERVED`、明細子欄 `ARRAY_COLUMN_KEY`),設計器改 key 時當場擋。
 
 某租戶在模組 M **此刻能新增**的表單 = 本租戶 `org_form` 啟用中 ∩ 掛在 M ∩ 有發布版本(`moduleForms`)。一張 → 新增直接進;多張 → 先選。
 
@@ -79,7 +80,7 @@
   - 夏令時間:不存在的時刻把跳過的時間平移過去(02:30 → 03:30),重複的時刻取較早的一個;一天的起點一律用 `startOfLocalDay`(午夜切換的時區也對)
 - **明細列**(`array`)= 一個欄位裝多列同結構的子欄位(採購品項、出差行程),存 `[{ rowId, <子欄 key>: 值 }]`,每列有穩定的 `rowId`;子欄可用列內公式(`row.<子欄 key>`),表單層以彙總(`sumOf` / `countOf` / `minOf` / `maxOf` / `avgOf`)讀它;子欄可以是**引用**(存 `{ id, label }`,同表單層引用欄:送出時每一列重驗來源並重取 label,同一子欄的 id 合併成一次查詢;表格格子是自動完成、手機寬是卡片;現名以 `<明細 key>.<子欄 key>` 回;修訂差異比 id);權限、顯示條件與「不能填的原因」都套在整個明細欄上,有列數與子欄數的硬上限。細節見 `docs/modules/forms.md`「明細列」。
 - **被顯示條件隱藏的欄位當 null 算**(明細整欄 null、彙總視為空明細):下游公式讀到被隱藏的計算欄位也是 null;前端即時預覽與後端送出同一套語意(`packages/domain/src/form/visibility.ts` 的 `settleHidden`),預覽算出的值 = 存下的值。被隱藏的欄位每次寫入都清空(含存草稿)。
-- **預設值**(只有使用者填的欄位;固定值或公式):建草稿時後端算一次、只填沒碰過的空欄;填寫時沒碰過的欄位依賴變了跟著重算,碰過(`touched[]`)就停。預設值計算不看顯示條件,前後端一致。
+- **預設值**(只有使用者填的欄位;固定值或公式;引用欄另可用填寫者 / 填寫者的組織,或「來源提供的預設」—— 資料來源宣告了依操作者的預設值時,由來源查出操作者自己的那一筆,仍照可見範圍與篩選驗過):建草稿時後端算一次、只填沒碰過的空欄;填寫時沒碰過的欄位依賴變了跟著重算,碰過(`touched[]`)就停。預設值計算不看顯示條件,前後端一致。
 - 計算欄位送出時由後端重算、以後端為準;條件也一律以後端算的為準。
 
 ## 版面區塊
@@ -131,6 +132,9 @@
 
 - **lookup 的顯示模板**(`labelTemplate`,來源描述的選填欄位):選資料、引用與 lookup 選項的顯示名由 api 以模板組好(`{{name}}({{email}})`);模板引用的欄位只要有一個讀者讀不到,整串退回顯示欄 `labelField`。佔位符見 `docs/modules/forms.md`「lookup 登錄表」。
 - **頁籤 / 標題模板**:表單的 `tabLabelTemplate` 有值用它,否則用模組層模板(預設 `{{title}}`)。前端從那筆資料的值即時算(草稿也算得出來),可用摘要槽、欄位值 `{{value.<key>}}`、建立者、表單名、模組名與頁面種類;沒寫 `{{action}}` 時自動加在最前面(「檢視・病假申請」)。佔位符見 `docs/modules/forms.md`「頁籤 / 標題模板」。
+- **列表的組合欄**:列表欄位配置的一種欄(`kind: TEMPLATE`),root 以模板把摘要槽、單號與欄位值組成一格(`{{value.start_at}}–{{value.end_at}}`),表頭是設定的欄名。存檔時 api 驗佔位符(欄位照表單欄位欄的規則,受保護欄位不收);前端依每一筆已套欄位級權限的值組字串,格式化同表單欄位欄,讀不到的佔位符空白,不能排序。規則見 `docs/modules/forms.md`「組合欄」。
+
+三種模板共用 `@repo/domain/form` 的 `{{名稱}}` 解析(`template.ts`);各自可用的佔位符不同,設定畫面的「插入欄位」下拉(`TemplatePlaceholderInput`)只列合用的。
 
 ## 前端:引擎零件與預設組裝
 
@@ -153,19 +157,22 @@ export const projectModulePages: ModulePageSource = {
 
 `ModulePageSource` 型別在 `app/module-page-registry.ts`。`pageOverrides` 的四個 slot 是 `list`、`viewPage`、`createPage`、`editPage`,每個收 `{ Page, minWidth? }`;省略就用預設頁。四頁都自行組裝也可在同一筆 `forms` 宣告四個 slot,仍保留 options 的單一來源。組裝器用純函式 `formModulePages(moduleKey)` 取得四個懶載入預設元件,不靠 spread 覆寫或載入時修改共享狀態。
 
+客製的列表 / 新增頁只服務模組裡**指定的一張表單**時(預設頁讓使用者挑表單),四頁都用 `useFormEntry(moduleKey, formKey)`(`components/base/form-engine/FormModulePages/useFormEntry.ts`)判斷能不能新增與組新增頁網址,不各自比對 `creatableForms` 或手拼路由。
+
 要客製的是**底座既有表單頁**時,改在 `app/project/page-replacements.ts` 寫明目標,不把相同 moduleKey 再加進專案 `forms`。底座原版與 options 保留,移除替換即可還原頁面。登記或換 Page 都不改 `me.modules` 的路由與授權;碰撞與替換規則見[前端架構](frontend-architecture.md#頁面登記與客製替換)。
 
 options 由 `lib/base/form-engine/form-module-options.ts` 的 `composeFormModuleOptions` 合成唯讀表,再由 `app/providers/RootProviders.tsx` 經 `FormModuleOptionsProvider` 注入。context 與 hook 在 `hooks/base/useFormModuleOptions.ts`,Provider 在 `app/providers/FormModuleOptionsProvider.tsx`;components 向下讀 hook,不 import app。`useTabLabelRenderer` 用這份設定,表單自身模板仍優先於模組模板,未設定時用 `{{title}}`;有 Provider 但未登記該 key 時亦用預設,缺 Provider 則報接線錯誤。不同組裝不會互相污染。
 
-| 零件                                                    | 做什麼                                                                          |
-| ------------------------------------------------------- | ------------------------------------------------------------------------------- |
-| `FormRenderer`(`version` / `values` / `mode`)           | 依版本畫表單;`mode` = `create` / `edit` / `readonly` / `design` / `preview`     |
-| `FormSubmissionList`                                    | 提交列表(`DataTable`),欄來自列表欄位配置;引用那一筆版本沒有的欄位顯示「—」      |
-| `FormSubmissionDetail`                                  | 詳情:唯讀渲染、現名 / 快照、附件下載、修訂紀錄與差異                            |
-| `FormPicker` / `LookupDialog` / `ReferenceField`        | 選表單 / 帶入資料跳窗 / 引用欄位的搜尋選擇器                                    |
-| `useModuleForms` / `useFormDraft` / `useFormSubmission` | 可新增的表單 / 建草稿與送出 / 讀寫既有提交                                      |
-| `renderValue(ctx)`                                      | 語意型別 → 畫面(REACT-13 簽章)                                                  |
-| widget 登錄表                                           | `widget.kind` → 元件;擴充一個 widget = domain 型別登錄 + admin 元件登錄各加一筆 |
+| 零件                                                    | 做什麼                                                                                                                                                   |
+| ------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `FormRenderer`(`version` / `values` / `mode`)           | 依版本畫表單;`mode` = `create` / `edit` / `readonly` / `design` / `preview`                                                                              |
+| `FormSubmissionList`                                    | 提交列表(`DataTable`),欄來自列表欄位配置(摘要槽 / 表單欄位 / 組合欄);引用那一筆版本沒有的欄位顯示「—」                                                   |
+| `FormSubmissionDetail`                                  | 詳情:唯讀渲染、現名 / 快照、附件下載、修訂紀錄與差異                                                                                                     |
+| `FormPicker` / `LookupDialog` / `ReferenceField`        | 選表單 / 帶入資料跳窗 / 引用欄位的搜尋選擇器                                                                                                             |
+| `useModuleForms` / `useFormDraft` / `useFormSubmission` | 可新增的表單 / 建草稿與送出 / 讀寫既有提交                                                                                                               |
+| `useFormEntry(moduleKey, formKey)`                      | 客製頁綁定一張表單時的入口:這張表單可不可新增(`form`、`canCreate`)、新增頁網址 `createHref(search?)` = `<新增頁路由>/<表單代號>`、模組四頁路由(`access`) |
+| `renderValue(ctx)`                                      | 語意型別 → 畫面(REACT-13 簽章)                                                                                                                           |
+| widget 登錄表                                           | `widget.kind` → 元件;擴充一個 widget = domain 型別登錄 + admin 元件登錄各加一筆                                                                          |
 
 | `mode`            | 條件 / 計算                                  | 權限           | 值     |
 | ----------------- | -------------------------------------------- | -------------- | ------ |
@@ -173,6 +180,8 @@ options 由 `lib/base/form-engine/form-module-options.ts` 的 `composeFormModule
 | `preview`         | 跑(前端即時,另可以後端 `previewFormVersion`) | 不套           | 測試值 |
 | `create` / `edit` | 跑                                           | 套             | 真實值 |
 | `readonly`        | 只重算顯示 / 唯讀條件(用該修訂的 `ctx`)      | 套(現在的讀者) | 存值   |
+
+預設列表頁 `FormListPage` 的篩選:搜尋(摘要標題)、表單、狀態、組織(`OrgTreeSelect` `scope="visible"` 單選,含下層)、日期起迄(摘要槽「日期」,含頭尾),全部存在網址 `?list=`(`useUrlState`),換條件回到第一頁。篩選列走 `FilterDrawer`:電腦攤在列上、改了立刻套用;平板 / 手機收進 [篩選 (N)] 抽屜,按 [套用] 才查。條件的語意見 `docs/modules/forms.md`「`formSubmissions` 的組織與日期條件」。`FormSubmissionList` 的 `filters` 也收 `orgId` / `dateFrom` / `dateTo`(選填),自組列表的頁面可以直接帶。
 
 預設列表頁 `FormListPage` 收選填的 `excludeFormKeys`:組裝頁另外呈現的表單(自己的分頁或入口)不出現在列表、表單篩選選項與 [+ 新增];排除條件經 `FormSubmissionList` 送到 api 的 `formSubmissions`,總筆數與分頁照排除後算。不給 = 模組內全部表單。
 

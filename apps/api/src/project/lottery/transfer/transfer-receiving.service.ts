@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { type ClientSession, Types } from "mongoose";
 
+import { COLLATION_LOCALE } from "@repo/domain/collation";
 import {
   TICKET_EVENT_TYPE,
   TICKET_LOCATION_KIND,
@@ -657,7 +658,7 @@ export class TransferReceivingService {
           const no = ticketNoOf.get(id);
           return no === undefined ? [] : [no];
         })
-        .toSorted((a, b) => a.localeCompare(b));
+        .toSorted((a, b) => a.localeCompare(b, COLLATION_LOCALE));
     const rows = lines.map((line) => {
       const book = books.get(line.bookId);
       const game =

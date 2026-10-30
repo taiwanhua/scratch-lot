@@ -210,7 +210,9 @@ function dateRule(cond: string, values: string[]) {
 
 /** 名稱排序後比對:查詢順序不是本測試的斷言對象。 */
 function sortedNames(rows: readonly { name: string }[]): string[] {
-  return rows.map((row) => row.name).toSorted((a, b) => a.localeCompare(b));
+  return rows
+    .map((row) => row.name)
+    .toSorted((a, b) => a.localeCompare(b, "zh-Hant"));
 }
 
 /** 兩條都可能命中同一個人的規則:「全部人 → 僅本人」+「客服角色 → 部門二」。 */
@@ -1492,10 +1494,10 @@ describe("資料範圍(GraphQL 端點 + 真 MongoDB)", () => {
       expect(
         orgs
           .map((org) => String(org._id))
-          .toSorted((a, b) => a.localeCompare(b)),
+          .toSorted((a, b) => a.localeCompare(b, "zh-Hant")),
       ).toEqual(
         [String(tenantA), String(deptOne), String(deptTwo)].toSorted((a, b) =>
-          a.localeCompare(b),
+          a.localeCompare(b, "zh-Hant"),
         ),
       );
       expect(rootOrgId).toBeDefined();

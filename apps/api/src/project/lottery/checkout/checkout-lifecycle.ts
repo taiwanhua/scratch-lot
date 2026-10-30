@@ -68,16 +68,19 @@ export const checkoutConfirmLifecycle = registerFormLifecycle({
         submissionId,
       );
     },
-    completed: async ({ submissionId, tenantId, session, get }) => {
+    // 確認人 = 最後核准的人(`decidedBy`;兩關都跳過 = 申請人)
+    completed: async ({ submissionId, tenantId, decidedBy, session, get }) => {
+      const approverId = decidedBy?.id ?? null;
       const daily = get<DailyCloseService>(DAILY_CLOSE_SERVICE);
       if (await daily.isDaily(session, tenantId, submissionId)) {
-        await daily.apply(session, tenantId, submissionId);
+        await daily.apply(session, tenantId, submissionId, approverId);
         return;
       }
       await get<CheckoutService>(CHECKOUT_SERVICE).apply(
         session,
         tenantId,
         submissionId,
+        approverId,
       );
     },
   },

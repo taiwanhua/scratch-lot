@@ -92,7 +92,7 @@ const FORM = "project_sharing_form";
 
 /** 依字串排序(比對用)。 */
 const byText = (left: string, right: string): number =>
-  left.localeCompare(right);
+  left.localeCompare(right, "zh-Hant");
 
 /** 引用測試專案來源(`item`),以及依「分店」換值的共用篩選(`account` 只列給那個分店看得到的)。 */
 const formDefinition = (): FormDefinition =>

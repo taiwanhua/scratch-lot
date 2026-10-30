@@ -104,6 +104,10 @@
     "currentOrg": "Current organization",
     "currentOrgNamed": "Current organization: {name}",
     "currentOrgNone": "Current organization: none selected",
+    "rootOrgNotice": {
+      "message": "The current organization is not under any top-level organization. Switch to the organization you want to manage first.",
+      "hint": "After switching the current organization you will see that organization’s data."
+    },
     "placeholder": {
       "pending": "This page is not built yet"
     },
@@ -602,12 +606,16 @@
         "width": "Width must be a whole number from {min} to {max}",
         "LIST_COLUMN_DUPLICATE": "This column is listed twice; remove one",
         "LIST_COLUMN_UNAVAILABLE": "This field is no longer in the current form version; pick another",
-        "LIST_COLUMN_PROTECTED": "Protected fields can't be list columns"
+        "LIST_COLUMN_PROTECTED": "Protected fields can't be list columns",
+        "templateUnavailable": "A field used in the template (or the chosen form) is no longer in the current form version; pick another",
+        "templateProtected": "The template can't use protected fields",
+        "templateLabel": "Name is required, up to {max} characters",
+        "templateText": "Up to {max} characters, with at least one summary slot or field picked from Insert a field; formats only apply to date or date-time values and must use supported format tokens"
       },
       "title": "List columns — {name}",
       "loading": "Loading configuration",
       "moduleWide": "This setting affects the whole module's list: every form in the module shares the same list columns.",
-      "body": "Choose summary slots or form fields for the list; form fields are the non-protected fields of shared forms' current versions.",
+      "body": "Choose summary slots, form fields or combined columns for the list; form fields are the non-protected fields of shared forms' current versions. A combined column joins several slots / fields into one cell (e.g. start time–end time).",
       "usingDefault": "Not configured: the list uses the default columns (title, date).",
       "row": "Column {index}",
       "slot": "Summary slot",
@@ -625,6 +633,17 @@
       "remove": "Remove",
       "addSlot": "+ Summary slot",
       "addField": "+ Form field",
+      "addTemplate": "+ Combined column",
+      "templateLabel": "Name",
+      "templateLabelHint": "Shown as the list column header",
+      "templateForm": "Form",
+      "anyForm": "Any form",
+      "templateText": "Template",
+      "templateTextHint": "Pick slots or fields with Insert a field and type separators between them; dates can take a format after the name, e.g. |HH:mm for hours and minutes; fields the reader can't see stay blank",
+      "insertPlaceholder": "Insert a field",
+      "insertPlaceholderHint": "Pick a slot or field to append it to the template",
+      "slotPlaceholder": "Summary slot / {name}",
+      "formatPlaceholder": "{name} (format {format})",
       "cancel": "Cancel",
       "save": "Save",
       "saved": "List columns saved.",
@@ -949,6 +968,8 @@
       "empty": "This category has no options yet",
       "tableAria": "Option list",
       "label": "Display name",
+      "color": "Color",
+      "colorAria": "Color of \"{name}\"",
       "value": "Value",
       "order": "Order",
       "source": "Source",
@@ -1005,7 +1026,8 @@
       "categoryCreateSuccess": "Category added.",
       "categoryUpdateSuccess": "Category saved.",
       "categoryEnableSuccess": "Category enabled.",
-      "categoryDisableSuccess": "Category disabled. The form designer no longer lists it."
+      "categoryDisableSuccess": "Category disabled. The form designer no longer lists it.",
+      "colorSuccess": "Color updated."
     },
     "errors": {
       "FIELD_VALUE_DUPLICATE": "This value is already used in this category. Pick another one.",
@@ -1017,6 +1039,25 @@
       "FIELD_CATEGORY_KEY_DUPLICATE": "This key is already used by another category (including disabled ones). Pick another one.",
       "SYSTEM_CATEGORY": "System categories cannot be disabled.",
       "ROOT_ONLY": "Only the system administrator can add, rename or disable field categories."
+    }
+  },
+  "tagPalettes": {
+    "names": {
+      "blue": "Blue",
+      "cyan": "Cyan",
+      "green": "Green",
+      "lime": "Lime",
+      "yellow": "Yellow",
+      "orange": "Orange",
+      "red": "Red",
+      "pink": "Pink",
+      "purple": "Purple",
+      "grey": "Grey"
+    },
+    "select": {
+      "label": "Color",
+      "none": "None",
+      "title": "Choose a color"
     }
   },
   "demoSampleOne": {
@@ -1326,6 +1367,9 @@
       "allForms": "All forms",
       "statusFilter": "Status",
       "allStatuses": "All statuses",
+      "orgFilter": "Organization",
+      "dateFrom": "Date from",
+      "dateTo": "Date to",
       "create": "+ New",
       "noFormsHint": "No forms are available to fill in right now.",
       "tableAria": "{module} list",
@@ -1768,6 +1812,9 @@
         "user": "Filler",
         "org": "Filler's organization"
       },
+      "defaultProvider": "Default from the source",
+      "defaultProviderFilter": "Default conditions (optional)",
+      "defaultProviderFilterHint": "The source uses the current values of these fields to find the filler's own record (e.g. their own one in that organization); it is refilled when those fields change, until the filler edits this field.",
       "defaultBoolean": {
         "true": "Yes",
         "false": "No"
@@ -2648,7 +2695,7 @@
       "field": "Form field: {form} · {field}",
       "manager": "Manager level {level}",
       "unset": "Not set",
-      "skipWhen": "Has skip condition",
+      "skipWhen": "May be skipped",
       "noReturn": "No return",
       "join": "Join: {name}",
       "issues": "{count} issues"
@@ -2691,7 +2738,7 @@
         "includeDescendants": "Include sub-organizations",
         "orgsHint": "Checks all organizations the applicant belongs to, not just the current one.",
         "sharedOrgsHint": "Shared workflows can only choose the top-level organization.",
-        "condition": "Matches condition"
+        "condition": "Matches skip condition"
       },
       "autoApprove": {
         "title": "Auto-approve",
@@ -2722,7 +2769,7 @@
     "join": {
       "region": "Join node \"{name}\"",
       "title": "Join node",
-      "body": "System node: completes automatically when all {count} branches pass (or are skipped). No reviewers, no skip condition.",
+      "body": "System node: completes automatically when all {count} branches pass (or are skipped). No reviewers, and \"Skip this step\" cannot be set.",
       "name": "Name",
       "addBranch": "Add a branch",
       "insertAfter": "Add a step after the join",
@@ -3464,6 +3511,78 @@
       "NOT_FOUND": "Printer not found. Refresh and try again.",
       "VALIDATION_FAILED": "Can't print: the printer is disabled or the document image is invalid",
       "UNEXPECTED": "Couldn't send the print job. Try again later."
+    }
+  },
+  "reports": {
+    "reportList": {
+      "title": "Reports",
+      "option": "{name} (up to {max} organizations)",
+      "empty": "You don't have any reports to export. Ask your system administrator to grant report permissions if you need them."
+    },
+    "conditions": {
+      "title": "{name} · Conditions",
+      "orgs": "Organizations",
+      "orgsRequired": "Select at least one organization",
+      "preview": "Preview",
+      "export": "Export Excel",
+      "exporting": "Exporting…"
+    },
+    "periodPicker": {
+      "kindsAria": "Period type",
+      "kinds": {
+        "day": "Day",
+        "week": "Week",
+        "month": "Month"
+      },
+      "date": "Date",
+      "today": "Today",
+      "yesterday": "Yesterday",
+      "thisWeek": "This week",
+      "lastWeek": "Last week",
+      "thisMonth": "This month",
+      "lastMonth": "Last month",
+      "weekCalendarAria": "Choose a week",
+      "weekHint": "Click any day to select its whole week (weeks start on Sunday).",
+      "weekRange": "{from} ({fromWeekday}) – {to} ({toWeekday})",
+      "weekdays": {
+        "0": "Sun",
+        "1": "Mon",
+        "2": "Tue",
+        "3": "Wed",
+        "4": "Thu",
+        "5": "Fri",
+        "6": "Sat"
+      },
+      "monthTitle": "{month}/{year}",
+      "prevMonth": "Previous month",
+      "nextMonth": "Next month",
+      "yearTitle": "{year}",
+      "prevYear": "Previous year",
+      "nextYear": "Next year",
+      "monthGridAria": "Choose a month",
+      "monthLabel": "Month {month}"
+    },
+    "period": {
+      "day": "{date}",
+      "week": "{from} – {to}",
+      "month": "{month}/{year}"
+    },
+    "preview": {
+      "title": "{name} · {period}",
+      "back": "Back to conditions",
+      "loading": "Generating report…"
+    },
+    "sheetPreview": {
+      "tabsAria": "Worksheets",
+      "empty": "No data in this worksheet"
+    },
+    "totalSheet": "All organizations",
+    "fileName": "{name}_{period}",
+    "errors": {
+      "RANGE_TOO_LARGE": "The period or number of organizations exceeds this report's limit. Narrow it down and try again.",
+      "VALIDATION_FAILED": "The conditions are incomplete. Check the period and organizations.",
+      "FORBIDDEN": "You don't have permission for this report.",
+      "UNEXPECTED": "Couldn't generate the report. Please try again later."
     }
   }
 }

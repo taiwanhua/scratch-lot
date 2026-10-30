@@ -122,7 +122,7 @@ export const redemptionWorld = (
   const revoke = (id: string): RedemptionFixture | Response => {
     const row = state.find((item) => item.id === id);
     if (row === undefined) {
-      return graphqlError("FORBIDDEN", "NOT_FOUND", { code: "NOT_FOUND" });
+      return graphqlError("NOT_FOUND");
     }
     if (row.status === "sent") {
       return validation("REDEMPTION_SENT", ["id"]);
@@ -205,7 +205,7 @@ export const redemptionWorld = (
       if (revoked instanceof Response || original === undefined) {
         return revoked instanceof Response
           ? revoked
-          : graphqlError("FORBIDDEN", "NOT_FOUND", { code: "NOT_FOUND" });
+          : graphqlError("NOT_FOUND");
       }
       const created = create(original.shift.id, input.code, input.prizeAmount);
       if (created instanceof Response) {
@@ -258,7 +258,7 @@ export const redemptionWorld = (
       const { id } = variables as LotteryRedemptionQueryVariables;
       const row = state.find((item) => item.id === id);
       return row === undefined
-        ? graphqlError("FORBIDDEN", "NOT_FOUND", { code: "NOT_FOUND" })
+        ? graphqlError("NOT_FOUND")
         : HttpResponse.json({ data: { lotteryRedemption: { item: row } } });
     }),
     api.query("LotteryPurchaseRedemptionRecords", ({ variables }) => {

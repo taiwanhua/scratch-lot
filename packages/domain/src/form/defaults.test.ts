@@ -1,10 +1,18 @@
 import { describe, expect, it } from "@jest/globals";
 
 import { recheckRegexSafety } from "../form-regex-safety";
-import { applyDefaults, defaultValueOf } from "./defaults";
+import {
+  applyDefaults,
+  defaultDependenciesOf,
+  defaultOrder,
+  defaultValueOf,
+  providerDefaultSourceOf,
+} from "./defaults";
 import { CTX, definitionOf, field } from "./form-test-support";
 import type { DefinitionIssueCode } from "./issues";
-import type { FieldDef } from "./types";
+import { filterVarValueOf } from "./lookup-filter";
+import type { LookupProviderRegistry } from "./registry";
+import type { FieldDef, StoredValues } from "./types";
 import { validateDefinition } from "./validate-definition";
 
 const title = field("title", "text");
@@ -200,5 +208,171 @@ describe("@repo/domain/form 預設值:檢查器每種錯誤", () => {
         }),
       ]),
     ).toEqual(["EXPR_CYCLE"]);
+  });
+});
+
+describe("@repo/domain/form 預設值:來源提供的預設(provider)", () => {
+  const site = field("site", "reference", {
+    source: { provider: "org", labelField: "name" },
+    default: { kind: "expression", expr: { var: "ctx.user.orgId" } },
+  });
+  const slot = field("slot", "reference", {
+    source: { provider: "item", labelField: "name", filter: { enabled: true } },
+    default: { kind: "provider", filter: { orgId: { var: "site" } } },
+  });
+  const fields = [slot, site];
+  const byKey = new Map(fields.map((item) => [item.key, item]));
+  const valueOf =
+    (values: StoredValues) =>
+    (key: string): ReturnType<typeof filterVarValueOf> =>
+      filterVarValueOf(byKey.get(key), values[key]);
+
+  it("依賴 = 預設值條件引用的欄位(+ 來源的連動篩選);排在被引用欄位的預設值之後", () => {
+    expect(defaultDependenciesOf(slot)).toEqual(["site"]);
+    expect(defaultOrder(fields).map((item) => item.key)).toEqual([
+      "site",
+      "slot",
+    ]);
+  });
+
+  it("交給來源的描述:條件換成目前的值、併進固定條件;被引用欄位沒值 → null", () => {
+    expect(
+      providerDefaultSourceOf(slot, valueOf({ site: { id: "org-9" } })),
+    ).toEqual({
+      provider: "item",
+      labelField: "name",
+      filter: { enabled: true, orgId: "org-9" },
+    });
+    expect(providerDefaultSourceOf(slot, valueOf({}))).toBeNull();
+    expect(providerDefaultSourceOf(site, valueOf({}))).toBeNull();
+  });
+
+  it("條件與來源的固定條件衝突、或條件不是連動條件 → null", () => {
+    const clash = field("clash", "reference", {
+      source: { provider: "item", labelField: "name", filter: { orgId: "x" } },
+      default: { kind: "provider", filter: { orgId: { var: "site" } } },
+    });
+    expect(
+      providerDefaultSourceOf(clash, valueOf({ site: { id: "org-9" } })),
+    ).toBeNull();
+    const fixed = field("fixed", "reference", {
+      source: { provider: "item", labelField: "name" },
+      default: {
+        kind: "provider",
+        filter: { orgId: "org-9" } as unknown as Record<
+          string,
+          { var: string }
+        >,
+      },
+    });
+    expect(providerDefaultSourceOf(fixed, valueOf({}))).toBeNull();
+  });
+
+  const providerDefault = (target: FieldDef, values: StoredValues) => {
+    const source = providerDefaultSourceOf(target, valueOf(values));
+    return source === null
+      ? null
+      : { id: `open-of-${String(source.filter?.orgId)}`, label: null };
+  };
+
+  it("值由呼叫端給(providerDefault);沒給 → 空;fill-empty 不覆蓋、recompute 跟著依賴變", () => {
+    expect(
+      applyDefaults(fields, {}, CTX, { mode: "fill-empty" }).slot,
+    ).toBeNull();
+    const first = applyDefaults(fields, {}, CTX, {
+      mode: "fill-empty",
+      providerDefault,
+    });
+    expect(first.slot).toEqual({ id: "open-of-org-1", label: null });
+    expect(
+      applyDefaults(fields, { slot: { id: "mine", label: "x" } }, CTX, {
+        mode: "fill-empty",
+        providerDefault,
+      }).slot,
+    ).toEqual({ id: "mine", label: "x" });
+    const changed = applyDefaults(
+      fields,
+      { ...first, site: { id: "org-2", label: null } },
+      CTX,
+      { mode: "recompute", touched: ["site"], providerDefault },
+    );
+    expect(changed.slot).toEqual({ id: "open-of-org-2", label: null });
+  });
+});
+
+/** 「來源提供的預設」帶某組條件的引用欄。 */
+const slotWithFilter = (filter: Record<string, unknown>): FieldDef =>
+  field("slot", "reference", {
+    source: { provider: "item", labelField: "name" },
+    default: {
+      kind: "provider",
+      filter: filter as Record<string, { var: string }>,
+    },
+  });
+
+describe("@repo/domain/form 預設值:檢查器的來源提供的預設", () => {
+  const providers: LookupProviderRegistry = {
+    org: { fields: { name: "text" }, filterFields: { enabled: "boolean" } },
+    item: {
+      fields: { name: "text" },
+      filterFields: { orgId: null, enabled: "boolean" },
+      operatorDefault: true,
+    },
+  };
+  const site = field("site", "reference", {
+    source: { provider: "org", labelField: "name" },
+  });
+  const codesWith = (fields: FieldDef[]): DefinitionIssueCode[] =>
+    validateDefinition(definitionOf([title, site, ...fields]), {
+      regexSafety: recheckRegexSafety,
+      lookupProviders: providers,
+    }).errors.map((issue) => issue.code);
+
+  it("來源有宣告就能選;條件照連動篩選的規則驗", () => {
+    expect(
+      codesWith([
+        field("slot", "reference", {
+          source: { provider: "item", labelField: "name" },
+          default: { kind: "provider", filter: { orgId: { var: "site" } } },
+        }),
+      ]),
+    ).toEqual([]);
+    expect(
+      codesWith([
+        field("slot", "reference", {
+          source: { provider: "item", labelField: "name" },
+          default: { kind: "provider" },
+        }),
+      ]),
+    ).toEqual([]);
+  });
+
+  it("DEFAULT_PROVIDER_UNSUPPORTED:來源沒有提供預設值", () => {
+    expect(
+      codesWith([
+        field("who", "reference", {
+          source: { provider: "org", labelField: "name" },
+          default: { kind: "provider" },
+        }),
+      ]),
+    ).toEqual(["DEFAULT_PROVIDER_UNSUPPORTED"]);
+  });
+
+  it("DEFAULT_KIND_INVALID:不是引用欄", () => {
+    expect(
+      codesWith([field("note", "text", { default: { kind: "provider" } })]),
+    ).toEqual(["DEFAULT_KIND_INVALID"]);
+  });
+
+  it("LOOKUP_FILTER_VAR_INVALID:條件寫固定值、引用自己、不是來源的篩選欄位", () => {
+    expect(codesWith([slotWithFilter({ orgId: "org-1" })])).toEqual([
+      "LOOKUP_FILTER_VAR_INVALID",
+    ]);
+    expect(codesWith([slotWithFilter({ orgId: { var: "slot" } })])).toEqual([
+      "LOOKUP_FILTER_VAR_INVALID",
+    ]);
+    expect(codesWith([slotWithFilter({ status: { var: "site" } })])).toEqual([
+      "LOOKUP_FILTER_VAR_INVALID",
+    ]);
   });
 });

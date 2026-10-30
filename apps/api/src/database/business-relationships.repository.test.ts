@@ -17,7 +17,7 @@ import {
 
 /** id 字串的穩定排序(STRUCT-10:不留給執行環境的預設語言)。 */
 const byText = (left: string, right: string): number =>
-  left.localeCompare(right, "en");
+  left.localeCompare(right, "zh-Hant");
 
 /** 站在某組織、只看得到那一個組織的操作者(部門使用者的典型:可見範圍不含租戶頂層)。 */
 function standingAt(orgId: Types.ObjectId): OperatorContext {

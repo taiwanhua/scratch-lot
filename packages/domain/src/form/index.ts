@@ -13,7 +13,7 @@
  * - `validate-*.ts`、`issues.ts`、`registry.ts`:定義檢查器與它的登錄表
  * - `values.ts`:提交值的型別正規化與規則驗證(存草稿只驗型別、送出再驗規則)
  * - `template.ts`:顯示模板(頁籤 / 標題模板、lookup `labelTemplate`)的佔位符解析、套用與欄位值的模板文字
- * - `list-settings.ts`:列表欄位配置(`modules.settings.list`)的內建欄開關
+ * - `list-settings.ts`:列表欄位配置(`modules.settings.list`)的內建欄開關、摘要槽 key、組合欄模板的佔位符解析與套用
  * - `shared-by-fields.ts`:表單設定「依欄位共用」的欄位檢查與從存值取組織 id
  * - `serial.ts`:單號格式(前綴 / 期間 / 位數 / 分隔符)的檢查、期間鍵與組字
  * - `temporal.ts`:日期 / 日期時間的單一入口(時點 `toInstant`、租戶時區的當地日期、日曆加減、月份、期間的時點區間、`HH:mm`、`formatTemporal`)

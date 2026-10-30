@@ -79,7 +79,7 @@ export function validateDefinition(
     },
     collector,
   );
-  validateDefaults(definition.fields, collector);
+  validateDefaults(definition.fields, collector, options.lookupProviders);
   validateExpressions(definition.fields, protections, collector);
   validateExpressionTypes(definition.fields, collector);
   validateLayout(definition, collector);

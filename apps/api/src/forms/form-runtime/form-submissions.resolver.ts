@@ -19,6 +19,7 @@ import {
   CreateFormDraftInput,
   DeleteFormSubmissionInput,
   FormFieldOptionsInput,
+  FormLookupDefaultInput,
   FormLookupInput,
   FormLookupRecordInput,
   FormSubmissionsInput,
@@ -293,6 +294,20 @@ export class FormSubmissionsResolver {
       await this.access.factsOf(operator),
       formKey,
     );
+  }
+
+  /** 引用欄「來源提供的預設」此刻的值(填寫頁顯示用);provider 與條件從版本定義取。 */
+  @Query(() => FormLookupRecordPayload, { name: "formLookupDefault" })
+  async formLookupDefault(
+    @Args("input") input: FormLookupDefaultInput,
+    @CurrentOperator() operator: OperatorContext,
+  ): Promise<FormLookupRecordPayload> {
+    return {
+      record: await this.lookups.defaultRecord(
+        await this.access.factsOf(operator),
+        input,
+      ),
+    };
   }
 
   @Query(() => FormLookupRecordPayload, { name: "formLookupRecord" })

@@ -4,7 +4,7 @@ import {
 } from "@repo/graphql";
 
 import { useSession } from "@/hooks/base/useSession";
-import type { ReportQueryInput } from "@/lib/project/reports/report-registry";
+import type { ReportQueryInput } from "@/lib/base/reports/report-registry";
 
 /**
  * 營運報表條件畫面的期間資訊(`lotteryOperationsReportPeriods`):各店實際期間(對齊日結)與已關帳到哪。

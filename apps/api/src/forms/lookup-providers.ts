@@ -325,17 +325,21 @@ export interface LookupProviderSummary {
   valueField: string;
   filterFields: readonly string[];
   fields: readonly { key: string; type: FieldType; label: string | null }[];
+  /** 有沒有依操作者的預設值(引用欄的預設值能選「來源提供的預設」)。 */
+  operatorDefault: boolean;
 }
 
 function summaryOf(
   key: string,
   declaration: LookupProviderDeclaration,
   isBase: boolean,
+  operatorDefault = false,
 ): LookupProviderSummary {
   return {
     key,
     name: declaration.name,
     isBase,
+    operatorDefault,
     labelField: declaration.labelField,
     valueField: declaration.valueField ?? "id",
     filterFields: declaration.filterFields,
@@ -466,7 +470,12 @@ export class LookupProvidersService implements OnModuleInit {
       ),
       ...[...this.projectSources.values()]
         .map(({ declaration }) =>
-          summaryOf(declaration.key, declaration, false),
+          summaryOf(
+            declaration.key,
+            declaration,
+            false,
+            declaration.defaultForOperator !== undefined,
+          ),
         )
         .toSorted((a, b) => a.key.localeCompare(b.key, "zh-Hant")),
     ];
@@ -486,6 +495,7 @@ export class LookupProvidersService implements OnModuleInit {
       {
         fields: Record<string, FieldType>;
         filterFields?: Record<string, FieldType | null>;
+        operatorDefault?: boolean;
       }
     > = {};
     for (const [key, declaration] of Object.entries(LOOKUP_PROVIDERS)) {
@@ -498,6 +508,7 @@ export class LookupProvidersService implements OnModuleInit {
       registry[key] = {
         fields: fieldTypesOf(declaration),
         filterFields: filterFieldTypesOf(declaration),
+        operatorDefault: declaration.defaultForOperator !== undefined,
       };
     }
     const union: Record<string, FieldType> = { ...SUMMARY_SLOT_FIELDS };
@@ -564,6 +575,54 @@ export class LookupProvidersService implements OnModuleInit {
       fields,
       options,
     );
+  }
+
+  /**
+   * 依操作者的預設值(引用欄的「來源提供的預設」):回那一筆的 id;來源沒宣告、讀不到來源、沒有操作者、
+   * 連動條件還沒換成值、或查無 → null。`source` 是引用欄的來源描述,篩選與預設值條件都已換成目前的值
+   * (`providerDefaultSourceOf`)。查詢照來源宣告(`defaultForOperator`)組、一律經 BaseRepository;
+   * 呼叫端要的顯示名與篩選檢查再以 `findByValues` 取回(同一條讀取規則)。
+   */
+  async operatorDefaultId(
+    facts: FormOperatorFacts,
+    source: LookupSourceDescriptor,
+  ): Promise<string | null> {
+    const resolved = this.projectSources.get(source.provider);
+    const declared = resolved?.declaration.defaultForOperator;
+    const actorId = facts.operator.actorId;
+    if (
+      resolved === undefined ||
+      declared === undefined ||
+      actorId === null ||
+      hasLookupFilterVars(source)
+    ) {
+      return null;
+    }
+    const { declaration, repository } = resolved;
+    if (
+      declaration.permission !== null &&
+      !this.access.has(facts, declaration.permission)
+    ) {
+      return null;
+    }
+    const fixed = await this.projectFilterOf(facts, resolved, source.filter);
+    const [found] = await baseFindMany(
+      repository,
+      facts.operator,
+      {
+        $and: [fixed, { ...declared.where, [declared.operatorField]: actorId }],
+      },
+      {
+        sort:
+          declared.latestBy === undefined
+            ? { _id: -1 }
+            : { [declared.latestBy]: -1, _id: -1 },
+        limit: 1,
+      },
+    );
+    return found === undefined
+      ? null
+      : String((found as unknown as { _id: Types.ObjectId })._id);
   }
 
   private providerFor(key: string): LookupProviderRuntime {

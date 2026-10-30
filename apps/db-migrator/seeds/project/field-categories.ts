@@ -1,24 +1,18 @@
 import { LOTTERY_FIELD_CATEGORY_KEYS as LOTTERY } from "@repo/domain/project/lottery-fields";
-import {
-  REASON_OTHER_VALUE,
-  SHARED_FIELD_CATEGORY_KEYS as SHARED,
-} from "@repo/domain/project/reason-note";
+import { REASON_OTHER_VALUE } from "@repo/domain/project/reason-note";
 import { SCHEDULE_FIELD_CATEGORY_KEYS as SCHEDULE } from "@repo/domain/project/schedule-fields";
-import type { TagPaletteKey } from "@repo/domain/project/tag-palette";
 
 import {
   type SeedDocument,
   type SeedDocumentSet,
   seedRef,
 } from "../../src/seed/seed-declaration";
+import {
+  FIELD_INITIAL_SEED_VALUE_FIELDS,
+  type SeedFieldOption as FieldOption,
+  globalFieldOptions,
+} from "../base/fields";
 import { ROOT_ORG_KEY } from "../base/orgs";
-
-interface FieldOption {
-  value: string;
-  label: string;
-  /** 全域選項的初始顏色(標籤色票代號,規格 18.5);沒有就不設。 */
-  color?: TagPaletteKey;
-}
 
 /** 一個專案系統類別與它的全域預設選項(order 依宣告順序 1 起算)。 */
 export interface ProjectFieldCategory {
@@ -33,9 +27,10 @@ const other: FieldOption = { value: REASON_OTHER_VALUE, label: "其他" };
 
 /**
  * 專案的欄位管理系統類別(專案規格第 13 章;內容正本:`docs/modules/project/field-manager.md`)。
+ * 所有單據共用的「作廢原因」是底座類別(`@repo/domain/form` 的 `VOID_REASON_CATEGORY_KEY`,`seeds/base/`),不在這裡宣告。
  * 類別 key 與程式要認得的選項代碼在 `@repo/domain/project/{lottery,schedule}-fields`;
  * 選項 value 一律英文 kebab-case,「其他」一律 `other`(選它時說明必填,`requiresReasonNote`)。
- * 有 `color` 的選項另由 `projectFieldOptionColors` 種下初始顏色(目前沒有;崗位不內建,由各機構開通時自建)。
+ * 選項可宣告初始顏色 `color`(底座 `fields.color` 的初始 seed 值;目前都沒有,崗位不內建,由各機構開通時自建)。
  */
 export const PROJECT_FIELD_CATEGORIES: readonly ProjectFieldCategory[] = [
   {
@@ -81,18 +76,6 @@ export const PROJECT_FIELD_CATEGORIES: readonly ProjectFieldCategory[] = [
       { value: "lost", label: "遺失" },
       { value: "counterfeit", label: "假鈔" },
       { value: "deposit-shortage", label: "存款短少" },
-      other,
-    ],
-  },
-  {
-    // 刮刮樂與排班共用(叫貨單、進貨單、調貨單、補打卡申請的作廢原因)
-    key: SHARED.voidReason,
-    name: "作廢原因",
-    usedIn: "所有單據作廢",
-    options: [
-      { value: "input-error", label: "輸入錯誤" },
-      { value: "duplicate", label: "重複建立" },
-      { value: "transaction-cancelled", label: "交易取消" },
       other,
     ],
   },
@@ -266,59 +249,18 @@ export const projectFieldCategories: SeedDocumentSet = {
 };
 
 /**
- * 全域欄位選項:形狀與認養條件同 `seeds/base/fields.ts`(同一個 collection 的政策必須一致,組裝時驗)。
+ * 全域欄位選項:形狀、初始值欄位與認養條件同 `seeds/base/fields.ts`(同一個 collection 的政策必須一致,組裝時驗)。
  * key = `<類別 key>.<value>`;categoryId 於執行時由類別 key 解析。
  */
 export const projectFields: SeedDocumentSet = {
   kind: "documents",
   collection: "fields",
+  initialSeedValueFields: [...FIELD_INITIAL_SEED_VALUE_FIELDS],
   adoptBy: {
     fields: ["categoryId", "value"],
     where: { isSystem: false, orgId: seedRef("orgs", ROOT_ORG_KEY) },
   },
   entries: PROJECT_FIELD_CATEGORIES.flatMap((category) =>
-    category.options.map(({ value, label }, index): SeedDocument => ({
-      key: `${category.key}.${value}`,
-      data: {
-        categoryId: seedRef("field_categories", category.key),
-        orgId: null,
-        value,
-        label,
-        order: index + 1,
-        enabled: true,
-      },
-    })),
-  ),
-};
-
-/**
- * 全域選項的初始顏色(S2 專案臨時表 `project_field_option_colors`,形狀同 P02 的全域選項顏色:
- * `orgId` = 根組織、`tenantId` = null、一筆 = 一個選項的色票代號;正本 `docs/modules/project/field-manager.md`)。
- * key 同選項的 key(`<類別 key>.<value>`)。
- *
- * `paletteKey` 是**初始 seed 值**:只在那個選項還沒有顏色時寫入;平台管理員之後在欄位管理改過(含清成「不設定」),
- * 重跑 seed 不覆蓋。平台管理員在 seed 之前就設過的那一筆以 `fieldId` 認養,顏色同樣保留。
- */
-export const projectFieldOptionColors: SeedDocumentSet = {
-  kind: "documents",
-  collection: "project_field_option_colors",
-  initialSeedValueFields: ["paletteKey"],
-  adoptBy: { fields: ["fieldId"], where: { tenantId: null } },
-  entries: PROJECT_FIELD_CATEGORIES.flatMap((category) =>
-    category.options.flatMap(({ value, color }): SeedDocument[] =>
-      color === undefined
-        ? []
-        : [
-            {
-              key: `${category.key}.${value}`,
-              data: {
-                orgId: seedRef("orgs", ROOT_ORG_KEY),
-                tenantId: null,
-                fieldId: seedRef("fields", `${category.key}.${value}`),
-                paletteKey: color,
-              },
-            },
-          ],
-    ),
+    globalFieldOptions(category.key, category.options),
   ),
 };

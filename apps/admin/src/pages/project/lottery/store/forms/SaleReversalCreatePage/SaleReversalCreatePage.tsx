@@ -33,10 +33,10 @@ import { useModuleForms } from "@/hooks/base/useModuleForms";
 import { useSnackbar } from "@/hooks/base/useMutationFeedback";
 import { useRouteTabHref } from "@/hooks/base/useRouteTabHref";
 import { useRouteTabItemLabel } from "@/hooks/base/useRouteTabItemLabel";
+import { useScanner } from "@/hooks/base/useScanner/useScanner";
 import { useSession } from "@/hooks/base/useSession";
 import { useUrlState } from "@/hooks/base/useUrlState";
 import { useLotteryFieldOptions } from "@/hooks/project/useLotteryFieldOptions/useLotteryFieldOptions";
-import { useScanner } from "@/hooks/project/useScanner/useScanner";
 
 import { moneyText } from "../../store-text";
 import {

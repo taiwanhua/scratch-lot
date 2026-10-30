@@ -1,4 +1,4 @@
-import type { SheetRow, SheetSection } from "@/lib/project/reports/excel";
+import type { SheetRow, SheetSection } from "@/lib/base/reports/excel";
 
 import {
   type OperationsStore,

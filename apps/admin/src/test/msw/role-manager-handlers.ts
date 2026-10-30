@@ -13,7 +13,7 @@ import type {
   UpdateRoleMutationVariables,
 } from "@repo/graphql";
 
-import { type AuthErrorCode, graphqlError } from "./auth-handlers";
+import { type GraphqlErrorCode, graphqlError } from "./auth-handlers";
 import type { TestOrgNode } from "./org-manager-handlers";
 import {
   type TestCandidate,
@@ -31,7 +31,7 @@ import { api } from "./server";
 
 /** 角色管理會回的業務錯誤碼(GQL-04;`graphqlError` 的型別只認 auth 那組,故轉型)。 */
 export type RoleErrorCode =
-  | AuthErrorCode
+  | GraphqlErrorCode
   | "ROLE_NOT_DELETABLE"
   | "ROLE_OUT_OF_REACH"
   | "USER_NOT_ELIGIBLE"
@@ -135,7 +135,7 @@ export const roleWorld = (options: RoleWorldOptions = {}): RoleWorld => {
     if (failure === undefined) {
       return null;
     }
-    return graphqlError(failure.code as AuthErrorCode, failure.code, {
+    return graphqlError(failure.code, failure.code, {
       ...(failure.reasons === undefined ? {} : { reasons: failure.reasons }),
       ...(failure.references === undefined
         ? {}

@@ -5,7 +5,7 @@ import { SelectField } from "@repo/ui/select-field";
 import { Stack } from "@repo/ui/stack";
 import { TextField } from "@repo/ui/text-field";
 
-import { useScanner } from "@/hooks/project/useScanner/useScanner";
+import { useScanner } from "@/hooks/base/useScanner/useScanner";
 
 /** 「正面條碼的遊戲」選單的一個選項。 */
 export interface ScanGameOption {

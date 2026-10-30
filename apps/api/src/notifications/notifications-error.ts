@@ -51,3 +51,13 @@ export function notificationSettingTenantOnly(): GraphQLError {
     { extensions: { code: "FORBIDDEN", reason: "TENANT_ONLY" } },
   );
 }
+
+/**
+ * 我的通知清單的游標(`after`)解不開:`VALIDATION_FAILED` + `reason: INVALID_CURSOR`。
+ * 游標只該是上一批回傳的 `nextCursor`,原樣送回。
+ */
+export function notificationCursorInvalid(): GraphQLError {
+  return new GraphQLError("Invalid notification list cursor", {
+    extensions: { code: "VALIDATION_FAILED", reason: "INVALID_CURSOR" },
+  });
+}

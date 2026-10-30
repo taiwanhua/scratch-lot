@@ -47,6 +47,10 @@ describe("通知設定頁:唯讀與編輯網址", () => {
     await waitForRows();
 
     expect(screen.getByText(/這裡只顯示預設值,不能調整/)).toBeVisible();
+    // 說明附當前組織切換器(AppBar 一個、說明裡一個)
+    expect(screen.getAllByRole("combobox", { name: "當前組織" })).toHaveLength(
+      2,
+    );
     expect(within(table()).queryByRole("button", { name: "編輯" })).toBeNull();
   });
 

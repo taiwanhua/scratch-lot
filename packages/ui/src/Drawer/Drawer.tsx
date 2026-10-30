@@ -47,11 +47,17 @@ export interface DrawerProps extends Omit<MuiDrawerProps, "title" | "anchor"> {
    * 呼叫端有固定的頂部列時給它的高,抽屜就不會蓋住頂部列上的通知、頭像。
    */
   topOffset?: number;
+  /**
+   * 右側抽屜的寬(px;預設 `DRAWER_SIDE_WIDTH` 360)。內容在 360 放不下時給(例:要並排一個月曆);
+   * 視窗比它窄時仍以視窗寬為上限。只用在 `anchor="right"`(底部抽屜一律滿寬)。
+   * 非遮罩抽屜的呼叫端替被蓋住的內容讓出空間時,要用同一個值。
+   */
+  width?: number;
 }
 
 /**
- * 右側抽屜寬(Figma RW-01b 平板 224:1855:360;STYLE-06 直寫)。
- * 匯出給非遮罩抽屜的呼叫端:抽屜開著時要替被蓋住的內容讓出多寬,以它為準。
+ * 右側抽屜的預設寬(Figma RW-01b 平板 224:1855:360;STYLE-06 直寫);個別抽屜可用 `width` 改。
+ * 匯出給非遮罩抽屜的呼叫端:沒給 `width` 的抽屜開著時要替被蓋住的內容讓出多寬,以它為準。
  */
 export const DRAWER_SIDE_WIDTH = 360;
 /** 底部抽屜上方的拉把(Figma RW-01b 手機 224:1952:40 × 4)。 */
@@ -74,6 +80,7 @@ export const Drawer = ({
   slotProps,
   isModal = true,
   topOffset = 0,
+  width = DRAWER_SIDE_WIDTH,
   open,
   sx,
   ...rest
@@ -136,7 +143,7 @@ export const Drawer = ({
                 borderTopRightRadius: radius.lg,
               }
             : {
-                width: DRAWER_SIDE_WIDTH,
+                width,
                 maxWidth: "100%",
                 borderTopLeftRadius: radius.lg,
                 borderBottomLeftRadius: radius.lg,

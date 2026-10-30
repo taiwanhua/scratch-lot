@@ -371,7 +371,7 @@ admin 端(`hooks/base/useApplyCenterCounts.ts`):
 
 ### 流程管理(`system.workflows`)
 
-`apps/admin/src/pages/base/system/WorkflowsPage/`(懶載入:React Flow、dagre、檢查器不進首屏;內容區最小寬度沿用殼層預設 `lg`;設計器在 `xl` 以下把屬性面板從 360 收窄為 300、流程圖拿剩下的寬度,右側標頭的操作鈕放不下時整組換到標題下一列,版面規則與表單設計器共用 `pages/base/system/designer-layout.ts`;平板寬(`sm`–`lg`)左清單收起、屬性面板改成右側非遮罩抽屜,點關卡、點檢查結果或按工具列的 [整個流程設定] 打開,點流程圖空白處或 Esc 關閉,唯讀檢視同樣如此 —— 見 REACT-17「平板設計器」;手機寬只顯示唯讀摘要,設計器有未存變更時藏起來不卸載)。左清單、右面板;頁首「阻擋清單」進隱藏頁(有 `system.workflows.blocked-page.reassign` 才出現)。
+`apps/admin/src/pages/base/system/WorkflowsPage/`(懶載入:React Flow、dagre、檢查器不進首屏;內容區最小寬度沿用殼層預設 `md`;設計器在 `xl` 以下把屬性面板從 360 收窄為 300、流程圖拿剩下的寬度,右側標頭的操作鈕放不下時整組換到標題下一列,版面規則與表單設計器共用 `pages/base/system/designer-layout.ts`;平板寬(`sm`–`lg`)左清單收起、屬性面板改成右側非遮罩抽屜,點關卡、點檢查結果或按工具列的 [整個流程設定] 打開,點流程圖空白處或 Esc 關閉,唯讀檢視同樣如此 —— 見 REACT-17「平板設計器」;手機寬只顯示唯讀摘要,設計器有未存變更時藏起來不卸載)。左清單、右面板;頁首「阻擋清單」進隱藏頁(有 `system.workflows.blocked-page.reassign` 才出現)。
 
 | 畫面                 | 做什麼                                                                                                                                                                                                                                                                                                                 |
 | -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -392,7 +392,7 @@ admin 端(`hooks/base/useApplyCenterCounts.ts`):
 - **操作**:在後面加一關、從此關分流(選分支數,只有主線上還沒分流的關卡可以)、加一條分支、在匯合後加一關、刪除此關(連線自動接上;刪掉分支最後一關 = 刪那條分支,剩一條時收成直線)、刪除整組分流(連同匯合節點)。**移動**:拖審核關卡放開,依放開位置找最近的節點插在它前 / 後或匯合之後(`lib/base/workflow/flow-drop.ts`);鍵盤也做得到:屬性面板的「上移 / 下移 / 移到分支」。分流來源不能移、會留下空分支的移動被拒。
 - **檢查用表單**(`CheckFormField`):設計時對照的表單 —— 列出可選的欄位、驗證審核者欄位與跳過條件;實際送出以綁定的表單為準,綁定時會再驗一次(這句說明就放在欄位旁)。隨草稿存(`checkFormKey`,換掉也算未存變更);新草稿(`draftRevision === 0`)沒有值時預設第一張綁定的表單;存過的草稿照存的值(存了 null = 明確不指定)。
 - **屬性面板**:名稱、key(已發布過的關卡 key 鎖定,以草稿的基底版本為準)、審核者來源三種(人員條件 / 表單欄位 / 主管)、會簽、允許退回,以及四個區塊(`StepSkipSection` / `StepAutoApproveSection` / `StepOverdueSection` / `PeopleCcSection`):
-  - **跳過這一關(符合任一項就跳過)**:☑ 申請人屬於這些組織(`skipOrgs`;勾了預設「最上層組織」= `SKIP_ORG_TENANT`、不含下層;客製流程另有「指定組織」`OrgTreeSelect`;共用流程不給組織樹、最上層組織固定勾著)+ 包含下層;☑ 符合條件(`skipWhen`,原本單獨的「跳過條件」欄位搬進來,表單引擎的結構化表達式選擇器;既有公式載入後就是勾著)。取消勾選清掉那一項;「符合條件」勾了但沒設公式不存東西。
+  - **跳過這一關(符合任一項就跳過)**:☑ 申請人屬於這些組織(`skipOrgs`;勾了預設「最上層組織」= `SKIP_ORG_TENANT`、不含下層;客製流程另有「指定組織」`OrgTreeSelect`;共用流程不給組織樹、最上層組織固定勾著)+ 包含下層;☑ 符合跳過條件(`skipWhen` = 跳過條件公式,原本單獨的欄位搬進來,表單引擎的結構化表達式選擇器;既有公式載入後就是勾著)。取消勾選清掉那一項;「符合跳過條件」勾了但沒設公式不存東西。「符合條件」只用在人員條件的頂層模式(「所有人 / 符合條件」),這裡不用。
   - **自動通過**:「申請人是這一關的審核者時」一組 剔除申請人(預設)/ 自動通過 / 照常審核(存 `applicant: true` / `"review"`);「審核者已在前面的關卡核准過時」一組 照常審核(預設)/ 自動通過。預設不存鍵,兩項都預設 = 存 `null`(改了再改回預設不算未存變更)。
   - **逾時提醒**:開關預設關閉;開啟帶入 N = 24、M = 48、通知對象 `DEFAULT_OVERDUE_AUDIENCE`。N、M 是時數欄,通知對象是人員條件摘要 + 「編輯條件」(同審核者的對話框)。`OVERDUE_INVALID` → 時數欄標紅並說明,設計器擋下不讓存(api 存草稿照收、發布擋)。
   - **知會**:知會對象來源下拉(不知會(預設)/ 人員條件 / 表單欄位 / 主管,與審核者同一個 `AssigneeSourcePicker`,`purpose` 換標題與說明),說明「這一關通過或被跳過時通知;要知道最後結果請加進整個流程的知會對象」。
@@ -400,7 +400,7 @@ admin 端(`hooks/base/useApplyCenterCounts.ts`):
 - **整個流程**(`FlowSettingsPanel.tsx`):屬性面板沒選關卡時(點流程圖空白處)顯示 —— 整個流程的知會對象(`definition.cc`,同上的來源下拉),說明「單據完成、被駁回或被作廢時通知;各關的知會對象只在那一關通過或被跳過時收到」。它不在段落串裡,由 `useFlowDesignerState` 另存,一起算進「未存的變更」(`definitionFingerprint` 含 `cc`)。檢查結果裡整個流程的知會對象那幾筆(沒有 `stepKey`、`property` 以 `cc` 開頭)點了就取消選取、回到這裡。選了關卡或匯合節點時,屬性面板頂端有「回到整個流程設定」(`BackToFlowButton.tsx`,一般按鈕、鍵盤可達),點了取消選取、回到這裡;唯讀檢視同樣有。
 - **與設計稿的差異**:知會拿掉「通過這一關時 / 流程完成時」單選鈕(收件時機已改成關卡 / 整個流程分開設定);逾時提醒多一個開關;整個流程的知會對象與「回到整個流程設定」按鈕設計稿沒有。待 Figma 對齊(`docs/tmp/dis.md`)。
   - 「表單欄位」來源與跳過條件的欄位都從檢查用表單的目前版本列(非受保護欄位;來源另限使用者型引用欄)。沒選檢查用表單時兩處欄位下拉顯示「請先選檢查用表單」;載入中、或選了但沒有可用欄位(「此表單沒有可用欄位」)也說明原因,已設的欄位值照樣顯示。檢查用表單沒有使用者引用欄時,「表單欄位」來源下方說明要先在表單設計器加一個資料來源為使用者的引用欄位並發布(唯讀檢視不提示)。
-  - **人員條件**(`AudienceSourceSummary.tsx`、`AudienceConditionDialog.tsx`):面板只放一行白話摘要(「角色 屬於 人資 且 所屬組織 屬於 【單據所屬組織】(本身)」,`lib/base/audience-summary.ts`)與 [編輯條件];條件在對話框用 `AudiencePicker` 編輯,[套用] 前本地驗證空群組 / 沒挑值。所屬組織的來源:客製 = 指定組織 / 單據所屬組織 / 表單的組織欄位(檢查用表單的組織引用欄)/ 最上層組織;共用流程沒有指定組織、欄位只有權限與所屬組織,對話框頂端說明原因。換成人員條件時直接開對話框。流程圖卡片顯示「審核者:人員條件」;設了跳過(任一項)顯示「有跳過條件」。
+  - **人員條件**(`AudienceSourceSummary.tsx`、`AudienceConditionDialog.tsx`):面板只放一行白話摘要(「角色 屬於 人資 且 所屬組織 屬於 【單據所屬組織】(本身)」,`lib/base/audience-summary.ts`)與 [編輯條件];條件在對話框用 `AudiencePicker` 編輯,[套用] 前本地驗證空群組 / 沒挑值。所屬組織的來源:客製 = 指定組織 / 單據所屬組織 / 表單的組織欄位(檢查用表單的組織引用欄)/ 最上層組織;共用流程沒有指定組織、欄位只有權限與所屬組織,對話框頂端說明原因。換成人員條件時直接開對話框。流程圖卡片顯示「審核者:人員條件」;設了「跳過這一關」(任一項)顯示「可能跳過」。
   - 候選借既有查詢:角色 `roles`、使用者 `users`、組織 `orgTree`、權限樹 `audiencePermissionOptions`、表單 `forms` / `formVersion`,拿不到就是空清單(摘要顯示「不在候選清單中」),存草稿時 api 的檢查器照樣把關。
 - **即時檢查**:跑 `@repo/domain/workflow` 的 `validateWorkflowDefinition`(與 api 同一份;跳過條件與「表單欄位」來源對檢查用表單驗,`useLocalFlowReport.ts`),再併上次存草稿時 api 回的結果(api 有完整目錄;改過之後以即時為準,`lib/base/workflow/validation.ts`);每筆定位到關卡,點一下選中它。
 - **「檢查」鈕**(`useFlowCheck.ts`、`FlowCheckPanel.tsx`):把目前的定義與檢查用表單送 `validateWorkflowVersion`,併入即時檢查後依關卡列出錯誤 / 警告,點一筆選中那一關並打開屬性面板;之後又改過就提示重新檢查。沒選檢查用表單時提示:跳過條件沒有對照表單時只做結構檢查,審核者的表單欄位來源仍以各自的表單驗。api 失敗時降級只列即時結果並說明。
@@ -459,9 +459,11 @@ admin 端(`hooks/base/useApplyCenterCounts.ts`):
 - **`Review`**:警告文字由元件自己畫(租戶看得到的字放該模組的字典);`onStateChange({ approveDisabled: true })` → 那筆任務的 [核准] 停用(`TaskActions` 的 `approveDisabled`),駁回 / 退回照常。沒回報 = 不停用。畫面停用只是提示,擋下仍要靠 api 的守門(掛接點)。
 - **批次核准不套用 `Review`**:申請中心的批次核准不畫審核畫面,`Review` 回報的停用在那裡不生效;該擋的一律由 api 的掛接點守門(`beforeApprove` 等)擋下,批次結果逐筆顯示被擋的原因。
 - **`Section`**:要的資料自己向 api 讀(能不能操作由 api 回,例:任務在不在自己手上);寫入後更新自己讀的快取。和模組詳情頁共用同一個元件,兩邊不各寫一份。
+- **審核區塊不收「決定之後」的 callback**:`ApprovalSection` 沒有給呼叫頁的 `onDecided`,決定之後的動作一律登記 `Effect`。理由:審核區塊同時掛在模組詳情頁與申請中心詳情頁、批次核准不經審核區塊,callback 只在呼叫的那一頁生效,登記則每個入口都通知;`Effect` 掛在殼層,換頁、關彈窗都不中斷。審核區塊自己的善後(重查實例、更新審核快取、「此關已結束」提示)留在區塊內部。
+- **不放進 `Effect` 的**:送出那一頁自己的流程(成功提示、送出後去哪一頁、要用到畫面上還沒存的資料而且必須做完才離開的動作)留在該頁的送出處理;`Effect` 只拿得到事件的識別,也會在引擎的編輯頁重新送出時觸發。
 - 例:某個模組的單據在第一關通過後要自動列印 → 登記 `Effect`;某個模組的審核要先看關聯資料是否還在 → 登記 `Review` 顯示警告、停用 [核准];審核者從通知進申請中心、要在審核頁操作單據上的東西 → 登記 `Section`。
 
-正本:`apps/admin/src/hooks/base/useWorkflowExtensions.ts`、`apps/admin/src/app/providers/WorkflowExtensionsProvider.tsx`、`apps/admin/src/components/base/workflow/ApprovalSection/MyTask.tsx`、`apps/admin/src/pages/base/apply-center/ApplyCenterViewPage/ApplyCenterViewPage.tsx`;測試 `ApprovalSection/MyTask.test.tsx`、`ApplyCenterViewPage/ApplyCenterViewPageSections.test.tsx`
+正本:`apps/admin/src/hooks/base/useWorkflowExtensions.ts`、`apps/admin/src/app/providers/WorkflowExtensionsProvider.tsx`、`apps/admin/src/components/base/workflow/ApprovalSection/MyTask.tsx`、`apps/admin/src/pages/base/apply-center/ApplyCenterViewPage/ApplyCenterViewPage.tsx`;測試 `app/providers/WorkflowExtensionsProvider.test.tsx`、`ApprovalSection/MyTask.test.tsx`、`ApplyCenterViewPage/ApplyCenterViewPageSections.test.tsx`
 
 ### 表單管理的流程綁定欄、組織管理的主管欄
 
@@ -498,7 +500,7 @@ GraphQL 文件:`packages/graphql/src/documents/base/workflows.graphql`(設計、
 
 - `guard(name, { operator, submission, values?, stepKey? })`:動作的交易內、寫入之前呼叫;擋下 → `FORBIDDEN` + `reason` = 專案錯誤碼。
 - `runApproveGuard({ operator, submission, stepKey })`:`beforeApprove` 的單一入口(`decideTask` 的核准、`batchApproveTasks` 的每一筆);其他會核准的路徑一律經它,不各自呼叫 `guard`。
-- `emit(event, subject, { stepKey?, skipped?, voidReason?, actorId? })`:事後動作,以系統身分在同一個交易內執行(`actorId` = 造成事件的人,見 `docs/concepts/workflow-engine.md`「掛接點」;駁回 / 退回取全案終局那筆決定的審核者,撤回取 `withdrawn` 歷程的人);推進(`WorkflowEngineService`)在關卡完成 / 跳過與提交同步成終局時呼叫,送出(`WorkflowSubmitService`)在建好實例後呼叫 `submitted`。
+- `emit(event, subject, { stepKey?, skipped?, voidReason?, actorId?, decidedBy? })`:事後動作,以系統身分在同一個交易內執行(`actorId` = 造成事件的人、`decidedBy` = 做出決定的人,見 `docs/concepts/workflow-engine.md`「掛接點」;駁回 / 退回取全案終局那筆決定的審核者,撤回取 `withdrawn` 歷程的人;`decidedBy` 另在關卡通過取那一關最後一筆核准、完成取整個實例最後一筆核准,傳 id、名稱由 `emit` 以 `FormUserNames` 讀);推進(`WorkflowEngineService`)在關卡完成 / 跳過與提交同步成終局時呼叫,送出(`WorkflowSubmitService`)在建好實例後呼叫 `submitted`。
 
 時機與帶入的資料見 `docs/concepts/workflow-engine.md`「掛接點:守門與事後動作」。
 

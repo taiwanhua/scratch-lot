@@ -8,7 +8,6 @@ import {
 import {
   type FormSubmissionFieldsFragment,
   type FormSubmissionStatus,
-  ModuleListColumnKind,
   useFormSubmissionsQuery,
   useModuleListColumnsQuery,
 } from "@repo/graphql";
@@ -27,6 +26,8 @@ import {
   type ListColumnSpec,
   columnIdOf,
   fieldColumnLabelOf,
+  listColumnHeaderOf,
+  listTemplateTextOf,
   resolveListCell,
   sortedColumns,
 } from "@/lib/base/form-engine/list-columns";
@@ -41,6 +42,11 @@ export interface FormSubmissionListFilters {
   keyword: string;
   formKey: string | null;
   status: FormSubmissionStatus | null;
+  /** 歸屬組織(含下層);不給 / null = 不篩 */
+  orgId?: string | null;
+  /** 摘要槽「日期」的區間(當地日期 `YYYY-MM-DD`,含頭尾,以租戶時區切日);不給 / null = 那一邊不限 */
+  dateFrom?: string | null;
+  dateTo?: string | null;
   page: number;
 }
 
@@ -65,9 +71,10 @@ const DEFAULT_PAGE_SIZE = 20;
 /**
  * 提交列表(`<FormSubmissionList moduleKey columns? …>`,`DataTable` + REACT-13 `render(ctx)`)。
  *
- * 欄位來自列表欄位配置(摘要槽或表單欄位);表單欄位的一格依**那一筆綁的版本**判斷:
+ * 欄位來自列表欄位配置(摘要槽、表單欄位或組合欄);表單欄位與組合欄的一格依**那一筆綁的版本**判斷:
  * 配置引用的欄位在那一版不存在(或是別張表單的欄位)→ 顯示「—」。表單欄位的表頭讀該表單**目前版本**的定義
- * (沒有資料列也顯示欄位名;多張表單取第一個有該欄位的),再退到這一頁資料列的版本、最後才是 key。
+ * (沒有資料列也顯示欄位名;多張表單取第一個有該欄位的),再退到這一頁資料列的版本、最後才是 key;
+ * 組合欄的表頭是配置的欄名,一格由模板組字串(`listTemplateTextOf`,佔位符照表單欄位欄的顯示規則,全空顯示「—」)。
  * 內建欄「表單 / 狀態 / 建立者」依配置的開關顯示。範圍(可見範圍 + 資料範圍規則)由 api 套,
  * 別人的草稿不列;搜尋只比對摘要標題。
  */
@@ -123,6 +130,9 @@ export const FormSubmissionList = ({
       pageSize,
       ...(filters.formKey !== null && { formKey: filters.formKey }),
       ...(filters.status !== null && { status: filters.status }),
+      ...(filters.orgId != null && { orgId: filters.orgId }),
+      ...(filters.dateFrom != null && { dateFrom: filters.dateFrom }),
+      ...(filters.dateTo != null && { dateTo: filters.dateTo }),
       ...(excludeFormKeys !== undefined &&
         excludeFormKeys.length > 0 && {
           excludeFormKeys: [...excludeFormKeys],
@@ -175,42 +185,63 @@ export const FormSubmissionList = ({
     unavailable: tValue("sourceUnavailable"),
   };
 
+  const displayItemsOf = (row: FormSubmissionRow, fieldKey: string) =>
+    row.displayValues.find((entry) => entry.fieldKey === fieldKey)?.items ?? [];
+  /** 配置欄的一格;引用的欄位在那一筆的版本不存在(或是別張表單的欄位)→「—」。 */
+  const cellOf = (spec: ListColumnSpec, row: FormSubmissionRow): ReactNode => {
+    const cell = resolveListCell(
+      spec,
+      row,
+      (formKey, version) => definitionOf(formKey, version)?.fields,
+    );
+    // 一律用讀者的租戶時區(修訂的 ctx 時區不決定顯示)
+    const timezone = tenantTimezone ?? undefined;
+    let node: ReactNode = valueText.empty;
+    switch (cell.kind) {
+      case "slot": {
+        if (cell.value !== null) {
+          node = slotText(spec.key, cell.value, row, timezone);
+        }
+        break;
+      }
+      case "template": {
+        const text = listTemplateTextOf(spec.key, row, cell.fields, {
+          displayOf: (fieldKey) => displayItemsOf(row, fieldKey),
+          text: valueText,
+          timezone,
+          slotText: (slot, value) => slotText(slot, value, row, timezone),
+        });
+        if (text !== "") {
+          node = text;
+        }
+        break;
+      }
+      case "field": {
+        node = renderValue({
+          field: cell.field,
+          value: cell.value,
+          display: displayItemsOf(row, spec.key),
+          text: valueText,
+          ...(timezone !== undefined && { timezone }),
+        });
+        break;
+      }
+      default: {
+        break;
+      }
+    }
+    return node;
+  };
+
   const configuredColumns: DataTableColumn<FormSubmissionRow>[] = specs.map(
     (spec) => ({
       key: columnIdOf(spec),
-      header:
-        spec.kind === ModuleListColumnKind.Slot
-          ? t(`slots.${spec.key}`)
-          : fieldLabelOf(spec),
+      header: listColumnHeaderOf(spec, {
+        slotLabel: (slot) => t(`slots.${slot}`),
+        fieldLabel: fieldLabelOf,
+      }),
       width: spec.width,
-      render: ({ row }) => {
-        const cell = resolveListCell(
-          spec,
-          row,
-          (formKey, version) => definitionOf(formKey, version)?.fields,
-        );
-        // 引用的欄位在那一筆的版本不存在(或是別張表單的欄位)→「—」
-        let node: ReactNode = valueText.empty;
-        // 一律用讀者的租戶時區(修訂的 ctx 時區不決定顯示)
-        const timezone = tenantTimezone ?? undefined;
-        if (cell.kind === "slot") {
-          node =
-            cell.value === null
-              ? valueText.empty
-              : slotText(spec.key, cell.value, row, timezone);
-        } else if (cell.kind === "field") {
-          node = renderValue({
-            field: cell.field,
-            value: cell.value,
-            display:
-              row.displayValues.find((entry) => entry.fieldKey === spec.key)
-                ?.items ?? [],
-            text: valueText,
-            ...(timezone !== undefined && { timezone }),
-          });
-        }
-        return node;
-      },
+      render: ({ row }) => cellOf(spec, row),
     }),
   );
 

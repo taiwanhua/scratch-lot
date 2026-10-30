@@ -213,7 +213,7 @@ describe("每一關指定組織跳過與自動通過", () => {
       expect(stepIn(instance, "first").status).toBe("skipped");
     });
 
-    it("兩項都勾、只有公式成立 → 跳過,時間軸記「符合條件」", async () => {
+    it("兩項都勾、只有公式成立 → 跳過,時間軸記「符合跳過條件」", async () => {
       await bindNew({
         steps: [
           usersStep("first", [staff(0)], {

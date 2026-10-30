@@ -61,7 +61,7 @@ export const useFlowNodeData = (
       };
     }
     const lines = [sourceLine(step.assignee), tMode(step.mode)];
-    // 「跳過這一關」兩項(符合條件 / 申請人屬於這些組織)任一項有設就標
+    // 「跳過這一關」兩項(符合跳過條件 / 申請人屬於這些組織)任一項有設就標
     const hasSkip =
       (step.skipWhen !== undefined && step.skipWhen !== null) ||
       (step.skipOrgs !== undefined && step.skipOrgs !== null);

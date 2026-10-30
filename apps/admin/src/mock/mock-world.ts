@@ -130,6 +130,25 @@ const withoutOperations = (
   });
 
 /** 該視角側欄看得到的模組:底座 + 專案(`authWorld` 的 `me.modules`;殼內頁面的通用測試也從這裡取頁面清單)。 */
+
+/** mock 模式的欄位管理:示範分類三筆有顏色(看「顏色」欄),其餘「不設定」。測試夾具本身不帶顏色。 */
+const MOCK_FIELD_COLORS: Readonly<Record<string, string>> = {
+  "f-staple": "green",
+  "f-side-dish": "yellow",
+  "f-fried": "orange",
+};
+
+const mockFieldsByCategory = () =>
+  Object.fromEntries(
+    Object.entries(fieldsByCategory).map(([categoryId, items]) => [
+      categoryId,
+      items.map((field) => ({
+        ...field,
+        color: MOCK_FIELD_COLORS[field.id] ?? null,
+      })),
+    ]),
+  );
+
 export const mockModules = (view: MockWorldOptions["view"]) => [
   ...modulesForView(view),
   ...projectMockWorld.modules(view),
@@ -212,7 +231,7 @@ export const mockHandlers = ({
     // 欄位管理:`currentOrg` 只決定新增選項的擁有組織標籤
     ...fieldWorld({
       categories: fieldCategories,
-      fieldsByCategory,
+      fieldsByCategory: mockFieldsByCategory(),
       currentOrg,
       upperOrgIds: [upperOrg.id],
     }).handlers,

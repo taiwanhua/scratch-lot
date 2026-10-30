@@ -33,12 +33,12 @@ async function ccBodies(token: string, subject: string): Promise<string[]> {
   const items = await notificationsMatching(token, CC, subject);
   return items
     .map((item) => item.body)
-    .toSorted((left, right) => left.localeCompare(right));
+    .toSorted((left, right) => left.localeCompare(right, "zh-Hant"));
 }
 
 /** 依同一規則排序的預期內文。 */
 function sorted(...bodies: string[]): string[] {
-  return bodies.toSorted((left, right) => left.localeCompare(right));
+  return bodies.toSorted((left, right) => left.localeCompare(right, "zh-Hant"));
 }
 
 /**

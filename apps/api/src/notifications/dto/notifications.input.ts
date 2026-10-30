@@ -7,15 +7,22 @@ import { NotificationScheduleKindEnum } from "../models/notifications.model";
 const DEFAULT_PAGE_SIZE = 20;
 const MAX_PAGE_SIZE = 100;
 
-/** 我的通知清單:依時間新到舊;`unreadOnly` = 只列未讀(「全部 / 未讀」切換)。 */
+/**
+ * 我的通知清單:依時間新到舊;`unreadOnly` = 只列未讀(「全部 / 未讀」切換)。
+ * 以游標分頁(GQL-03 的例外):`after` 帶上一批回傳的 `nextCursor`,接著列比它舊的。
+ */
 @InputType()
 export class MyNotificationsInput {
   /** 缺席 / null / false = 全部;true = 只列未讀 */
   @Field(() => Boolean, { nullable: true })
   unreadOnly?: boolean | null;
 
-  @Field(() => Int, { nullable: true, defaultValue: 1 })
-  page?: number;
+  @Field(() => String, {
+    nullable: true,
+    description:
+      "上一批回傳的 nextCursor;缺席 / null = 從最新的開始。格式不對 → VALIDATION_FAILED(reason INVALID_CURSOR)",
+  })
+  after?: string | null;
 
   @Field(() => Int, {
     nullable: true,
@@ -32,11 +39,21 @@ export class MarkNotificationsReadInput {
   ids!: string[];
 }
 
-/** 通知設定清單:關鍵字比對類型名稱與 key。 */
+/**
+ * 通知設定清單:關鍵字比對類型名稱(登記的繁中 `name`)與 key;
+ * `nameMatchedTypes` 是前端以畫面上的顯示名稱(訊息檔,依介面語言)比中的類型 key,與關鍵字的比對取聯集。
+ */
 @InputType()
 export class NotificationSettingsInput {
   @Field(() => String, { nullable: true })
   keyword?: string | null;
+
+  @Field(() => [String], {
+    nullable: true,
+    description:
+      "前端以顯示名稱比中 keyword 的類型 key(與 keyword 比對 name / key 的結果取聯集;沒給 keyword 時不影響清單)",
+  })
+  nameMatchedTypes?: string[] | null;
 
   @Field(() => Int, { nullable: true, defaultValue: 1 })
   page?: number;

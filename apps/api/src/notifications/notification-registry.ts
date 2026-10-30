@@ -5,6 +5,7 @@ import {
   type AudienceOrgRange,
   validateAudience,
 } from "@repo/domain/audience";
+import { COLLATION_LOCALE } from "@repo/domain/collation";
 import {
   NOTIFICATION_SCHEDULE_KINDS,
   type NotificationSchedule,
@@ -234,11 +235,13 @@ function assertTypeDefinition(
     );
   }
   const declared = Object.keys(type.canDisable).toSorted((a, b) =>
-    a.localeCompare(b),
+    a.localeCompare(b, COLLATION_LOCALE),
   );
   if (
     declared.join(",") !==
-    [...type.defaultChannels].toSorted((a, b) => a.localeCompare(b)).join(",")
+    [...type.defaultChannels]
+      .toSorted((a, b) => a.localeCompare(b, COLLATION_LOCALE))
+      .join(",")
   ) {
     throw new NotificationRegistryError(
       `${label} 的 canDisable 必須逐一宣告 defaultChannels 的每個管道`,

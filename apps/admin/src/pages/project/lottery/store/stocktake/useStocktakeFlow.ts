@@ -19,8 +19,8 @@ import {
 
 import { useSnackbar } from "@/hooks/base/useMutationFeedback";
 import { useRealtimeBoard } from "@/hooks/base/useRealtime";
+import { useScanner } from "@/hooks/base/useScanner/useScanner";
 import { useSession } from "@/hooks/base/useSession";
-import { useScanner } from "@/hooks/project/useScanner/useScanner";
 import { parseAdminError } from "@/lib/base/errors";
 
 import { moneyText } from "../store-text";

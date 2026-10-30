@@ -101,18 +101,18 @@
 - **拆本 / 上檯面**(ST-37 → ST-09;使用者 10/27 定案 D:拆本 = 把本店庫存的張放上檯面):[拆本 / 上檯面] 先列本店有未售、在庫存、沒被調貨單鎖住的張的本(`lotteryStoreStockBooks`;`sealed` = 這家店原封不動 → 標「未拆 · N 張」(扣待標註),其他標「拆過 · 庫存 N 張」(照庫存張數);全部被鎖住的本不列;可刷條碼或輸入本號選中,開著時宣告掃描用途 `store-split`)→ 精靈只分配這家店這本庫存裡未售、沒被鎖的張:① 標跳號(只有這家店原封不動、待標註 > 0 才出現;其他本(拆過、只尋回幾張…)`pendingSkipCount` = 0,待標註保留,之後在本的詳情 [標跳號] 補標;使用者 10/27 定案 M1;點滿才能 [下一步])② 全部放到一個收銀點(預設本機)或分放到多個收銀點(每一張都分配完才能確認;拆過的本標題「上檯面 · …」、按鈕 [確認上檯面])。`splitLotteryBook` 寫「跳號」與「拆本」事件(檢查 `splitPlanProblemOf`;本店沒有可放的庫存張 → `BOOK_ALREADY_OPENED`);帳本在第一筆「拆本」事件寫本的 `firstOpenedAt`,時間軸之後的寫「上檯面」。跳號的張不算庫存(看板總張數不含)。拆本分放到多個收銀點算拆本,不需要 `store.move`。
 - 刷到拆過的本在庫存的張(收回、尋回、調回):維持擋下 `in_stock`「這張刮刮樂在庫存,請先移到收銀點檯面再賣」(用 [拆本 / 上檯面] 放上檯面)。
 - **移櫃 / 收回**(ST-10b / 10a):全部(這個收銀點檯面上這本未售的張)或部分(格子選的);`moveLotteryTickets` / `recallLotteryTickets` 寫「移櫃」/「收回」事件(誰、時間、從哪到哪),不需審核。
-- **相機掃描**(規格 6.3、18.3):頂部 [📷 掃描] 只在有相機的手機 / 平板顯示(`pointer: coarse` + `videoinput`);全螢幕相機框,連續掃描(同一個碼 2 秒內只算一次),讀到的碼注入 B10(`injectScan`),和條碼槍同一條路。讀碼用 `@zxing/browser` 的一維碼讀取器;實票掃不出來就調整碼制(`docs/tmp/project-dis.md`「條碼實機測試清單」)。測試以 `setCameraReaderFactory` 注入模擬的讀碼結果。
+- **相機掃描**(規格 6.3、18.3):頂部 [📷 掃描] 只在有相機的手機 / 平板顯示(`pointer: coarse` + `videoinput`);全螢幕相機框,連續掃描(同一個碼 2 秒內只算一次),讀到的碼注入 B10(`injectScan`),和條碼槍同一條路。讀碼用 `@zxing/browser` 的一維碼讀取器;實機測試已通過(2026-10-29)。測試以 `setCameraReaderFactory` 注入模擬的讀碼結果。
 
 ### 撤銷售出申請與現金更正單(ST-31a/b、ST-32a/b)
 
 正本:`packages/domain/src/project/lottery/store-forms.ts`(表單代號、欄位 key、存值解析、送出前的值檢查);掛接點規則 `apps/api/src/project/lottery/store/store-forms-rules.service.ts`。
 
-兩張都是**受管表單**(`seeds/project/revisions/sale_reversal.r3.seed.ts`、`cash_correction.r2.seed.ts`):綁 `store`、**沒有草稿**(`allowDraft: false`)、單號 `SR-0001` / `X-0001`、作廢原因用共用「作廢原因」(`void-reason`)。流程不 seed,由開通腳本建(`onboarding/form-workflows/store-forms.ts`)。
+兩張都是**受管表單**(`seeds/project/revisions/sale_reversal.r3.seed.ts`、`cash_correction.r3.seed.ts`):綁 `store`、**沒有草稿**(`allowDraft: false`)、單號 `SR-0001` / `X-0001`、作廢原因用共用「作廢原因」(`void-reason`)。流程不 seed,由開通腳本建(`onboarding/form-workflows/store-forms.ts`)。
 
-| 表單         | formKey           | 欄位                                                                                                                                                                                                                                                                                                  | 新增頁           |
-| ------------ | ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------- |
-| 撤銷售出申請 | `sale_reversal`   | 分店 `branch`、張數 `lines[{ book, ticket_nos, tickets, amount }]`(每本一列)、原因 `reason`(欄位管理「撤銷售出原因」`lottery-sale-reversal-reason`)、退款給客人 `refund`(是 / 否)、退款班次 `refund_shift`(`lottery_shift`,退款 = 是才顯示)、說明 `note`、退款金額 `refund_amount`(明細金額合計,計算) | 替換(ST-31b)     |
-| 現金更正單   | `cash_correction` | 分店、方向 `direction`(現金增加 / 減少)、金額 `amount`(正整數)、位置 `place`(某一班的抽屜 / 小金庫)、班次 `shift`(位置 = 抽屜才顯示)、歸屬班次 `attributed_shift`(選填)、原因類別 `reason`(欄位管理「現金更正原因」`lottery-cash-correction-reason`)、說明 `note`(必填)                               | 表單引擎(不替換) |
+| 表單         | formKey           | 欄位                                                                                                                                                                                                                                                                                                                                                                    | 新增頁           |
+| ------------ | ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------- |
+| 撤銷售出申請 | `sale_reversal`   | 分店 `branch`、張數 `lines[{ book, ticket_nos, tickets, amount }]`(每本一列)、原因 `reason`(欄位管理「撤銷售出原因」`lottery-sale-reversal-reason`)、退款給客人 `refund`(是 / 否)、退款班次 `refund_shift`(`lottery_shift`,退款 = 是才顯示)、說明 `note`、退款金額 `refund_amount`(明細金額合計,計算)                                                                   | 替換(ST-31b)     |
+| 現金更正單   | `cash_correction` | 分店、方向 `direction`(現金增加 / 減少)、金額 `amount`(正整數)、位置 `place`(某一班的抽屜 / 小金庫)、班次 `shift`(位置 = 抽屜才顯示;預設 = 填寫者自己在這家分店開著的班,沒有就空:引用欄預設值「來源提供的預設」,條件 `orgId = 分店`)、歸屬班次 `attributed_shift`(選填)、原因類別 `reason`(欄位管理「現金更正原因」`lottery-cash-correction-reason`)、說明 `note`(必填) | 表單引擎(不替換) |
 
 **建議流程設定**(開通腳本建的那一份,規格 2.1):兩張都是一關「店長審核」,人員條件「角色 店長 且 所屬組織屬於表單欄位『分店』(本身)」,**B5 申請人是審核者時自動通過**(`autoApprove.applicant`;店長自己送的單直接完成)。租戶要改審核者,自己改流程。
 
@@ -161,7 +161,7 @@
   - `beforeSubmit`:盤點內容讀得懂、分店一致;有 `store.stocktake`(確認遺失另要 `store.confirm-lost` 與原因);每筆差異都已處理且還對得到(`STOCKTAKE_DIFF_STALE` / `STOCKTAKE_DIFF_UNHANDLED`;「未拆的本」放了不是未拆的本、庫存那一行放了不在「拆過、在庫存」那一區的本,也算已被處理;庫存那一行的差異只能 [待查])
   - `submitted`:同一個交易建立盤點單(待核准;退回後再送出改寫同一筆)、再比對一次(不合 → 整個送出回復)
   - `returned` / `withdrawn` → 已退回;`rejected` → 已駁回(補登的售出不退,錯了用撤銷售出申請「盤點錯誤」)
-  - `completed`:依時間順序套用 —— 差異 [待查]、未拆的本不在(本店庫存裡未售的張)→ 待查(責任分店 = 本店);待查清單 確認遺失 → 遺失、找到了 → 尋回(回到本店庫存);各張以目前的版本條件更新;盤點之後被動過的張(差異看那本的 `countedAt`,未拆的本與待查清單看開始盤的時間,之後有任何張數事件)或已不是要的狀態就略過 —— 舊盤點晚完成不覆蓋新盤點的結果;標記異常只做記號。盤點單 → 已確認,`confirmedBy` = 這張申請目前流程實例裡最後核准的審核者(依決定時間;沒有已核准任務 = 申請人)
+  - `completed`:依時間順序套用 —— 差異 [待查]、未拆的本不在(本店庫存裡未售的張)→ 待查(責任分店 = 本店);待查清單 確認遺失 → 遺失、找到了 → 尋回(回到本店庫存);各張以目前的版本條件更新;盤點之後被動過的張(差異看那本的 `countedAt`,未拆的本與待查清單看開始盤的時間,之後有任何張數事件)或已不是要的狀態就略過 —— 舊盤點晚完成不覆蓋新盤點的結果;標記異常只做記號。盤點單 → 已確認,`confirmedBy` = 事後動作的 `decidedBy`(這張申請的流程實例裡最後核准的審核者,依決定時間);沒有(每一關都跳過)= 申請人
   - `beforeVoid`:一律擋下(`STOCKTAKE_VOID_FORBIDDEN`;待查錯誤刷到時尋回)
 - **交班 / 日結的盤點介面**(結帳的功能用):`StocktakeService`(token `STOCKTAKE_SERVICE`,`LotteryStocktakeModule` 匯出)的 `checkDraft(operator, draft)`(送出前守門)、`submitStocktakeDraft(session, draft, { type, submissionId, tenantId, submittedBy })`(在結帳確認申請的同一個交易建立盤點單)、`markStatus(session, tenantId, submissionId, "returned" | "rejected")`、`apply(session, tenantId, submissionId)`(核准完成時套用)。
 - **盤點紀錄分頁**(ST-29,`StocktakesTab`):篩選 類型、狀態(`?stocktakes=`);欄位 單號、類型、盤點時間、補登售出、新增待查、確認遺失、狀態(沒盤完送出的在狀態旁標「N 本未盤」);平板 / 手機改卡片;點一列開那張申請的檢視頁。
@@ -183,7 +183,7 @@
   - `beforeSubmit`:結帳內容讀得懂、與這一班對得上;有 `store.checkout`、是負責人或店長;班開著(退回後再送出 = 自己那張結帳的班);這一班沒有其他審核中的結帳(`CHECKOUT_PENDING_EXISTS`);盤點方式合法(沿用 → 待核准或已確認、還在 30 分鐘內、範圍對;現在盤點 → `StocktakeService.checkDraft`;跳過 → `store.skip-stocktake` + 原因);差額不為 0 要原因;交接(留給下一班非負整數、不超過實點 `CHECKOUT_LEFT_EXCEEDS_COUNTED`、> 0 要接班人 `CHECKOUT_LEFT_MUST_BE_ZERO`、接班人不是申請人也不是負責人 `CHECKOUT_SUCCESSOR_SELF`、是這家店的人 `CHECKOUT_SUCCESSOR_INVALID`)
   - `submitted`:同一個交易鎖住抽屜(`drawerVersion` +1,和售出 / 投庫序列化)、算應有各項並快照、建立(退回後再送出改寫)結帳單、現在盤點 → `StocktakeService.submitStocktakeDraft(type: "shift")` 建立盤點單(退回後再送出改成沿用 / 跳過 → 自己上一次建立的盤點單軟刪除,P24 沒有「已放棄」狀態)、**這一班結束**(`closedAt`、`checkoutId`;下一班可以先開)、下一班已先開(`previousShiftId` = 這一班、期初來自交接)→ 期初改成留給下一班(規格 8.7「退回修正跟著更新」)。**已知的低機率競態**:退回後再送出與下一班同時開班 —— 開班讀「留給下一班」(`registerHandoverAmount`)不在再送出的交易內,兩者交錯時下一班可能先以舊金額開班、再送出的 `updateMany` 沒更新到它(開班的寫入晚於 `updateMany`);發生時由店長用現金更正單調整下一班的期初,不另加鎖(機率極低、兩邊都是人工操作)
   - `returned` / `withdrawn`:結帳單 → 已退回(記 `returnedAt`,那一次送出的快照也記退回時間;自己建立的盤點單一起退回、記 `closedAt`(盤點單同樣另存 `firstSubmittedAt` 與每一次送出的快照 `attempts`:送出時間、退回 / 駁回時間、未盤本數));班不重開。結帳單另存第一次送出的時間 `firstSubmittedAt`(重送不改寫)與每一次送出的快照 `attempts`(送出時間、退回時間、差額、盤點方式、日結涵蓋的班),營運報表依期末那一刻有效的那一次算
-  - `completed`:現在盤點 → `StocktakeService.apply`;結帳單 → 已確認,`confirmedBy` = 最後核准的審核者(兩關都跳過 = 申請人)。零用金成為下一班期初由 `registerHandoverAmount` 的登記讀結帳單(送出就算,核准前下一班先開也先用它)
+  - `completed`:現在盤點 → `StocktakeService.apply`;結帳單 → 已確認,`confirmedBy` = 事後動作的 `decidedBy`(最後核准的審核者;兩關都跳過 = 申請人)。零用金成為下一班期初由 `registerHandoverAmount` 的登記讀結帳單(送出就算,核准前下一班先開也先用它)
   - `beforeReject` / `beforeVoid`:**一律擋下**(`CHECKOUT_REJECT_FORBIDDEN` / `CHECKOUT_VOID_FORBIDDEN`,只能退回)
 - **建議流程設定**(規格 2.1、8.7;開通腳本 `onboarding/form-workflows/checkout-confirm.ts`):兩關 —— 第 1 關「接班人確認」審核者 = 表單欄位「接班人」,跳過條件 `{ or: [type == "daily", !successor] }`;第 2 關「店長審核」人員條件「角色 店長 且 所屬組織屬於表單欄位『分店』(本身)」,跳過條件 `{ and: [type == "shift", !!successor] }`。結果:交班有接班人 → 接班人審;交班沒有接班人 → 店長審;日結 → 店長審。第 2 關「申請人也是審核者時」= **照常審核**(`autoApprove.applicant = "review"`):店長自己交班(沒有接班人)或自己送日結時,任務派給他自己再檢查一次,不自動通過。第 1 關維持預設(接班人不能是自己)。租戶要改審核者,自己改流程。
 - **班次結帳歷史紀錄分頁**(ST-27,`CheckoutsTab`):篩選 期間(送出時間)、收銀點、類型、狀態(申請的狀態:待審核 = `reviewing` / 已退回 / 已撤回 / 已完成;`?checkouts=`);欄位 單號、收銀點、類型、交班人、應有、實點、差額、狀態;平板 / 手機改卡片;點一列開結帳確認申請的檢視頁。
@@ -322,7 +322,7 @@
 | `lotteryBankDepositForm(orgId)` | `store.bank-deposit` | 存銀行視窗:小金庫目前應有、這家店可用的帳戶 |
 | `depositLotteryVaultToBank(input)` | `store.bank-deposit` | `{ orgId, amount, accountId, note? }` → `{ vaultExpected, movementId, transactionId }` |
 
-- 撤銷售出申請、現金更正單的寫入一律經表單引擎(送出 / 審核 / 掛接點,見上方「撤銷售出申請與現金更正單」);lookup 來源 `lottery_shift`(`project/lookup-providers.ts`,顯示欄 `label`,讀取要 `store.view`;可攜、沒有固定條件)。
+- 撤銷售出申請、現金更正單的寫入一律經表單引擎(送出 / 審核 / 掛接點,見上方「撤銷售出申請與現金更正單」);lookup 來源 `lottery_shift`(`project/lookup-providers.ts`,顯示欄 `label`,讀取要 `store.view`;可攜、沒有固定條件;依操作者的預設值 `defaultForOperator` = 操作者開的(`openedBy`)、還沒結帳(`closedAt: null`)、最新開班的那一班,與看板「我的班」同一個判準)。
 - 排班只經 `ScheduleModule` 匯出的 `ScheduleEntryLookup` 讀(`findEntryForShift` / `listEntriesOfDay` / `taskSnapshotFor` / `punchStart` / `hasStartPunch`;依賴方向刮刮樂 → 排班)。
 - 現金流水經 `CashLedgerService.recordCashMovement`(交易內)。出庫原因的欄位管理選項對到流水的原因代碼:「開班零用金」→ `opening_float`、「補零錢」→ `change`、其他(含租戶自己加的選項)→ `other`,選項名稱與說明寫進流水備註(`store-cash.service.ts` 的 `withdrawReasonOf`)。
 - 讀取照操作者的可見範圍;負責人名稱以租戶邊界讀(`shift-views.ts`,反查)。刷到時的張以租戶邊界反查(`store-sales.service.ts`:待查 / 遺失的張可能在別家店、不是本店的也要說得出來);寫入一律照操作者的範圍經帳本。

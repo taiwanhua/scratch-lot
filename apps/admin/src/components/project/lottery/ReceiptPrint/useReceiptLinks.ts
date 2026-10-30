@@ -10,7 +10,7 @@ import {
 import { usePermissions } from "@/hooks/base/usePermissions";
 import { useSession } from "@/hooks/base/useSession";
 import { PRINT_BUTTON_PERMISSIONS } from "@/lib/base/print-button";
-import { logReceiptPrintFailure } from "@/lib/project/lottery/receipts/receipt-log";
+import { logPrintFailure } from "@/lib/base/print-log";
 
 /**
  * 單據底部 QR code 的連結(完整網址)。路由是 null(模組停用、沒有 route、還沒讀到或讀不到)→ 連結 = null,
@@ -89,7 +89,7 @@ export const useReceiptLinks = () => {
       return receiptLinksOf(data.lotteryReceiptLinks);
     } catch (error) {
       // 讀不到路由:照印、不印 QR(只記 log)
-      logReceiptPrintFailure("links failed", { error });
+      logPrintFailure("links failed", { error });
       return receiptLinksOf(NO_ROUTES);
     }
   }, [canPrint, queryClient, session.client]);

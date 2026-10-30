@@ -538,7 +538,7 @@ describe("畫休(GraphQL 端點 + 真 MongoDB)", () => {
       .toArray();
     return rows
       .map((row) => String(row.recipientId))
-      .toSorted((left, right) => left.localeCompare(right));
+      .toSorted((left, right) => left.localeCompare(right, "zh-Hant"));
   };
 
   const overriddenOf = (user: ScheduleTestUser) =>
@@ -566,7 +566,7 @@ describe("畫休(GraphQL 端點 + 真 MongoDB)", () => {
   const ids = (...users: ScheduleTestUser[]) =>
     users
       .map((user) => String(user.userId))
-      .toSorted((left, right) => left.localeCompare(right));
+      .toSorted((left, right) => left.localeCompare(right, "zh-Hant"));
 
   function febFullDay(user: ScheduleTestUser, date: string) {
     return onBehalf({

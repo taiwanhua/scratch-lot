@@ -2,7 +2,6 @@ import { Module } from "@nestjs/common";
 
 import { DatabaseModule } from "../database/database.module";
 import { FieldOptionsModule } from "../fields/field-options.module";
-import { FieldCategoryOptionsService } from "./field-category-options.service";
 import { FormAccessService } from "./form-access.service";
 import { FormUserNames } from "./form-mapper";
 import { SubmissionValuesService } from "./form-values/submission-values.service";
@@ -18,7 +17,6 @@ import { MeOrgTimezoneResolver } from "./me-org-timezone.resolver";
   imports: [DatabaseModule, FieldOptionsModule],
   providers: [
     FormAccessService,
-    FieldCategoryOptionsService,
     LookupProvidersService,
     SubmissionValuesService,
     FormUserNames,
@@ -27,7 +25,6 @@ import { MeOrgTimezoneResolver } from "./me-org-timezone.resolver";
   exports: [
     FieldOptionsModule,
     FormAccessService,
-    FieldCategoryOptionsService,
     LookupProvidersService,
     SubmissionValuesService,
     FormUserNames,

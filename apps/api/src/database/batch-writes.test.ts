@@ -530,7 +530,7 @@ describe("批次寫入出口(TX-06;對真 MongoDB replica set)", () => {
       expect(
         names
           .map((row) => row.name)
-          .toSorted((left, right) => left.localeCompare(right)),
+          .toSorted((left, right) => left.localeCompare(right, "zh-Hant")),
       ).toEqual(["allowed-4", "blocked-1"]);
     });
   });

@@ -4,7 +4,7 @@ import type { LotterySettlementFieldsFragment } from "@repo/graphql";
 
 import { useReceiptLinks } from "@/components/project/lottery/ReceiptPrint/useReceiptLinks";
 import { useReceiptPrinter } from "@/components/project/lottery/ReceiptPrint/useReceiptPrinter";
-import { logReceiptPrintFailure } from "@/lib/project/lottery/receipts/receipt-log";
+import { logPrintFailure } from "@/lib/base/print-log";
 import { transferPaymentInputOf } from "@/lib/project/lottery/receipts/transfer-payment-receipt";
 
 /**
@@ -30,7 +30,7 @@ export const useSettlementReceipt = () => {
         }
       };
       print().catch((error: unknown) => {
-        logReceiptPrintFailure("print failed", {
+        logPrintFailure("print failed", {
           kind: "transfer-payment",
           error,
         });

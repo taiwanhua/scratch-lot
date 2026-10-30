@@ -102,7 +102,7 @@ const expectConfiguredPanel = () => {
     expect(within(skip).getByRole("checkbox", { name })).toBeChecked();
   }
   expect(
-    within(skip).getByRole("checkbox", { name: "符合條件" }),
+    within(skip).getByRole("checkbox", { name: "符合跳過條件" }),
   ).toBeChecked();
   const prior = within(panel).getByRole("radiogroup", {
     name: "審核者已在前面的關卡核准過時",

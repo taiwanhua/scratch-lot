@@ -4,10 +4,9 @@ import { useTranslations } from "use-intl";
 import { Alert } from "@repo/ui/alert";
 import { CircularProgress } from "@repo/ui/circular-progress";
 
-import { useFormModuleAccess } from "@/components/base/form-engine/FormModulePages/useFormModuleAccess";
+import { useFormEntry } from "@/components/base/form-engine/FormModulePages/useFormEntry";
 import { useFormDraft } from "@/hooks/base/useFormDraft";
 import { useMe } from "@/hooks/base/useMe";
-import { useModuleForms } from "@/hooks/base/useModuleForms";
 import { useSnackbar } from "@/hooks/base/useMutationFeedback";
 import { useRouteTabHref } from "@/hooks/base/useRouteTabHref";
 import { useRouteTabItemLabel } from "@/hooks/base/useRouteTabItemLabel";
@@ -30,11 +29,11 @@ export const RequisitionCreatePage = () => {
   const tabHref = useRouteTabHref();
   const showSnackbar = useSnackbar();
   const me = useMe();
-  const access = useFormModuleAccess(REQUISITION_MODULE_KEY);
-  const { creatableForms, isLoading: isFormsLoading } = useModuleForms(
-    REQUISITION_MODULE_KEY,
-  );
-  const form = creatableForms.find((item) => item.key === REQUISITION_FORM_KEY);
+  const {
+    access,
+    form,
+    isLoading: isFormsLoading,
+  } = useFormEntry(REQUISITION_MODULE_KEY, REQUISITION_FORM_KEY);
   const draft = useFormDraft(REQUISITION_FORM_KEY);
   useRouteTabItemLabel(t("tabLabel"));
 

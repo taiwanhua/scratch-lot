@@ -98,7 +98,13 @@ export const renderStore = ({
   /** 表單執行端的覆寫(送出失敗、送出後的狀態);表單 / 版本 / 提交是附加在內建四張之後(租戶自己綁的表單) */
   formRuntime?: Pick<
     FormRuntimeWorldOptions,
-    "failures" | "submitAs" | "moduleForms" | "versions" | "submissions"
+    | "failures"
+    | "submitAs"
+    | "moduleForms"
+    | "versions"
+    | "submissions"
+    | "lookupRecords"
+    | "lookupDefault"
   >;
 } = {}) => {
   const printingFake =

@@ -23,7 +23,7 @@ import { AppRoutes } from "./routes";
  * 底座只比對底座來源、專案只比對專案來源:專案加頁面只改 `app/project/`,不碰底座的盤點表。
  */
 
-const byText = (a: string, b: string) => a.localeCompare(b);
+const byText = (a: string, b: string) => a.localeCompare(b, "zh-Hant");
 
 /**
  * 一個來源裡要個別登記的頁:固定頁 + 表單模組單頁客製過的頁。

@@ -5,7 +5,7 @@ import { useState } from "react";
 
 import { Button } from "../Button/Button";
 import { TextField } from "../TextField/TextField";
-import { Drawer } from "./Drawer";
+import { DRAWER_SIDE_WIDTH, Drawer } from "./Drawer";
 
 /** 非遮罩抽屜:外面一顆按鈕打開它(關閉後焦點要回到這顆) */
 const NonModal = () => {
@@ -34,6 +34,15 @@ const NonModal = () => {
       </Drawer>
     </>
   );
+};
+
+/** 右側抽屜紙面的計算樣式(標題所在的 MUI Paper) */
+const paperStyleOf = (title: string): CSSStyleDeclaration => {
+  const paper = screen.getByText(title).closest(".MuiDrawer-paper");
+  if (paper === null) {
+    throw new Error(`找不到「${title}」的抽屜紙面`);
+  }
+  return globalThis.getComputedStyle(paper);
 };
 
 describe("Drawer", () => {
@@ -93,5 +102,53 @@ describe("Drawer", () => {
       expect(screen.queryByRole("textbox", { name: "名稱" })).toBeNull();
     });
     expect(opener).toHaveFocus();
+  });
+
+  it("右側抽屜預設寬 DRAWER_SIDE_WIDTH(360),最寬不超過視窗", () => {
+    render(
+      <Drawer
+        open
+        anchor="right"
+        title="篩選"
+        closeLabel="關閉"
+        onClose={jest.fn()}
+      >
+        內容
+      </Drawer>,
+    );
+    const style = paperStyleOf("篩選");
+    expect(DRAWER_SIDE_WIDTH).toBe(360);
+    expect(style.width).toBe(`${String(DRAWER_SIDE_WIDTH)}px`);
+    expect(style.maxWidth).toBe("100%");
+  });
+
+  it("width 改右側抽屜的寬(遮罩與非遮罩都是)", () => {
+    render(
+      <>
+        <Drawer
+          open
+          anchor="right"
+          width={460}
+          title="套用"
+          closeLabel="關閉"
+          onClose={jest.fn()}
+        >
+          內容
+        </Drawer>
+        <Drawer
+          open
+          isModal={false}
+          anchor="right"
+          width={420}
+          title="屬性"
+          closeLabel="關閉"
+          onClose={jest.fn()}
+        >
+          屬性內容
+        </Drawer>
+      </>,
+    );
+    expect(paperStyleOf("套用").width).toBe("460px");
+    expect(paperStyleOf("屬性").width).toBe("420px");
   });
 });

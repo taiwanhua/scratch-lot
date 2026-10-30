@@ -111,6 +111,13 @@ export type FormGuard = (
  */
 export type LifecycleNotify = (input: NotifyInput) => Promise<void>;
 
+/** 使用者的最小參照(同 GraphQL 的 `FormUserRef`:id + 顯示名稱;id 用 ObjectId,專案寫入直接用)。 */
+export interface LifecycleUserRef {
+  readonly id: Types.ObjectId;
+  /** 顯示名稱(事件當下的使用者名稱);使用者已被刪除 = null。 */
+  readonly name: string | null;
+}
+
 export interface FormEffectContext {
   readonly event: FormEffectName;
   readonly submissionId: Types.ObjectId;
@@ -138,6 +145,15 @@ export interface FormEffectContext {
    * 只有系統推進的事件(排程、自動通過、重試)是 null:`stepPassed` 與走流程的 `completed`。
    */
   readonly actorId: Types.ObjectId | null;
+  /**
+   * 做出決定的人(核准人、駁回 / 退回的審核者、撤回 / 作廢的人;自動通過記成那位審核者的核准,
+   * 代理審核 = 實際按下的代理人):
+   * `stepPassed` = 這一關最後一筆被接受的核准(跳過 = null)、走流程的 `completed` = 整個實例最後一筆核准
+   * (依決定時間;每一關都跳過 = null)、`rejected` / `returned` = 全案終局那筆決定的審核者、
+   * `withdrawn` = 撤回的人、`voided` = 作廢的人。沒有決定的事件是 null:`submitted`、沒走流程直接完成的 `completed`。
+   * 和 `actorId` 的差別:系統推進的 `stepPassed` / `completed` 沒有 `actorId`,但仍帶讓它通過的核准人。
+   */
+  readonly decidedBy: LifecycleUserRef | null;
   readonly session: ClientSession;
   readonly get: LifecycleResolver;
   readonly notify: LifecycleNotify;

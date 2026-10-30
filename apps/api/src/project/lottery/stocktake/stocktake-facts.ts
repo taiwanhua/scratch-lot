@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { type ClientSession, Types } from "mongoose";
 
+import { COLLATION_LOCALE } from "@repo/domain/collation";
 import {
   type StocktakeDiff,
   type StocktakeDraft,
@@ -210,7 +211,7 @@ export class StocktakeFacts {
       pendingReversalNos: facts
         .filter((item) => item.pendingReversal && item.atCount !== "absent")
         .map((item) => item.ticketNo)
-        .toSorted((a, b) => a.localeCompare(b)),
+        .toSorted((a, b) => a.localeCompare(b, COLLATION_LOCALE)),
       stale: problems.stale,
       unhandled: problems.unhandled,
       ticketById: new Map(

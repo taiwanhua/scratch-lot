@@ -1,3 +1,4 @@
+import { COLLATION_LOCALE } from "@repo/domain/collation";
 import type { StoredValues } from "@repo/domain/form";
 import {
   TRANSFER_FIELD_KEYS as K,
@@ -119,7 +120,7 @@ export const addPartial = (
   }
   if (existing !== undefined) {
     const merged = [...new Set([...existing.ticketNos, ...ticketNos])].toSorted(
-      (left, right) => left.localeCompare(right),
+      (left, right) => left.localeCompare(right, COLLATION_LOCALE),
     );
     return {
       kind: "added",
@@ -137,7 +138,7 @@ export const addPartial = (
         book,
         mode: TRANSFER_MODE.partial,
         ticketNos: [...ticketNos].toSorted((left, right) =>
-          left.localeCompare(right),
+          left.localeCompare(right, COLLATION_LOCALE),
         ),
         rate: book.rate,
       },

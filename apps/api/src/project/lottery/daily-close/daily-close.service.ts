@@ -485,6 +485,7 @@ export class DailyCloseService {
     session: ClientSession,
     tenantId: Types.ObjectId | null,
     submissionId: Types.ObjectId,
+    approverId: Types.ObjectId | null,
   ): Promise<void> {
     const reader = await tenantBoundaryContext(this.orgs, null, tenantId);
     const record = await this.checkouts.findOne(
@@ -500,7 +501,12 @@ export class DailyCloseService {
       return;
     }
     if (record.stocktakeMode === "new") {
-      await this.stocktakeService.apply(session, tenantId, submissionId);
+      await this.stocktakeService.apply(
+        session,
+        tenantId,
+        submissionId,
+        approverId,
+      );
     }
     await this.vault.serialize(reader, record.orgId, session);
     const deposit = await this.writeDeposit(session, reader, record);
@@ -511,9 +517,10 @@ export class DailyCloseService {
         $set: {
           status: CHECKOUT_STATUS.confirmed,
           confirmedAt: this.clock.now(),
-          confirmedBy: await this.checkout.approverOf(
-            tenantId,
+          confirmedBy: await this.checkout.confirmerOf(
+            reader,
             submissionId,
+            approverId,
             session,
           ),
           bankTransactionId: deposit?.transactionId ?? null,

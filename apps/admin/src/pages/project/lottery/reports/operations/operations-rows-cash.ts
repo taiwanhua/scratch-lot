@@ -1,5 +1,5 @@
 /** 營運報表區塊 5 現金:5a 差額與更正、5b 現金移動(`operations-rows.ts` 的一部分)。 */
-import type { SheetSection } from "@/lib/project/reports/excel";
+import type { SheetSection } from "@/lib/base/reports/excel";
 
 import {
   MOVEMENT_KEYS,

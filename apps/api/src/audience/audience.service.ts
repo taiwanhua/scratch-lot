@@ -9,6 +9,7 @@ import {
   type AudienceOrgRange,
   isAudienceGroup,
 } from "@repo/domain/audience";
+import { COLLATION_LOCALE } from "@repo/domain/collation";
 import { ownerModuleKey, wildcardKeyOf } from "@repo/domain/permission";
 
 import {
@@ -206,7 +207,7 @@ export class AudienceService {
     facts.ancestorsByTargets ??= new Map();
     const key = targets
       .map(String)
-      .toSorted((a, b) => a.localeCompare(b))
+      .toSorted((a, b) => a.localeCompare(b, COLLATION_LOCALE))
       .join(",");
     let cached = facts.ancestorsByTargets.get(key);
     if (!cached) {
@@ -398,7 +399,9 @@ export class AudienceService {
     const holdingBySet = new Map<string, Promise<PermissionHolding>>();
     const holders = new Set<string>();
     for (const [userId, roleIds] of rolesByUser) {
-      const setKey = roleIds.toSorted((x, y) => x.localeCompare(y)).join(",");
+      const setKey = roleIds
+        .toSorted((x, y) => x.localeCompare(y, COLLATION_LOCALE))
+        .join(",");
       let holding = holdingBySet.get(setKey);
       if (!holding) {
         holding = this.resolver.grantedPermissionKeys(

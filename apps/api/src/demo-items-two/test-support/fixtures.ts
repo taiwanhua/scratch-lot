@@ -235,7 +235,9 @@ export async function listItems(
 
 /** 名稱排序後比對:查詢順序由個別測試自己斷言,不在這裡預設。 */
 export function sortedNames(rows: readonly { name: string }[]): string[] {
-  return rows.map((row) => row.name).toSorted((a, b) => a.localeCompare(b));
+  return rows
+    .map((row) => row.name)
+    .toSorted((a, b) => a.localeCompare(b, "zh-Hant"));
 }
 
 /** 新增一筆並回傳它的 id(前提壞掉就直接拋,不讓後面的斷言變成假綠)。 */

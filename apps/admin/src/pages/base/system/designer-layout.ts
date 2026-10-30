@@ -3,7 +3,7 @@ import { DRAWER_SIDE_WIDTH } from "@repo/ui/drawer";
 /**
  * 兩個設計器頁(表單管理、流程管理)共用的響應式版面(STYLE-03 只用 theme 斷點)。
  *
- * 兩頁都沿用殼層預設的內容區最小寬度 `lg`(`app/base/module-pages.ts` 不另宣告 `xl`),
+ * 兩頁都沿用殼層預設的內容區最小寬度 `md`(`app/base/module-pages.ts` 不另宣告,殼不設下限),
  * 所以視窗 1200–1535 時右側詳情卡片只有約 520–850px。設計器在 `xl` 以下自己換版,
  * 只換排列,DOM 順序與操作(點擊、拖拉、選取)不變:
  *
@@ -14,8 +14,8 @@ import { DRAWER_SIDE_WIDTH } from "@repo/ui/drawer";
  *
  * 寬度值是設計器一次性的版面尺寸(STYLE-06),集中在這裡。
  *
- * **平板寬(`sm` ≤ 視窗 < `lg`,`DESIGNER_TABLET_BELOW`)另一套**:殼層的內容區最小寬度只在 ≥ `lg` 套用,
- * 平板以下內容隨視窗縮放,左清單 320 + 屬性面板 300 會把畫布擠到幾乎沒有。所以平板寬時
+ * **平板寬(`sm` ≤ 視窗 < `lg`,`DESIGNER_TABLET_BELOW`)另一套**:殼層預設 `md` 不設內容區最小寬度,
+ * 內容隨視窗縮放,左清單 320 + 屬性面板 300 會把畫布擠到幾乎沒有。所以平板寬時
  * 左清單自動收起(`DesignerListRail`)、屬性面板改成右側滑出的非遮罩抽屜(`DesignerPropertyPanel`),
  * 抽屜開著時詳情卡片讓出抽屜寬(`designerDrawerReserve`、`useDesignerDrawerStore`);
  * 手機寬(< `sm`)不掛設計器(REACT-17)。
@@ -23,8 +23,7 @@ import { DRAWER_SIDE_WIDTH } from "@repo/ui/drawer";
 
 /**
  * 設計器的「平板寬」上界:視窗小於 `lg` 改用收起的清單與屬性抽屜。
- * 與篩選抽屜(`FilterDrawer`:< `lg` 收進右側抽屜)、`FormActions` 黏底(< `lg`)、殼的內容區最小寬度
- * (≥ `lg` 才套用)同一條界線 —— 視窗 ≥ `lg` 時兩欄加屬性面板放得下,以下就放不下。
+ * 與篩選抽屜(`FilterDrawer`:< `lg` 收進右側抽屜)、`FormActions` 黏底(< `lg`)同一條界線 —— 視窗 ≥ `lg` 時兩欄加屬性面板放得下,以下就放不下。
  */
 export const DESIGNER_TABLET_BELOW = "lg" as const;
 

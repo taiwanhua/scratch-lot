@@ -16,6 +16,9 @@ import { ExpressionPicker } from "@/components/base/form-engine/ExpressionPicker
 import { TypedValueInput } from "@/components/base/form-engine/TypedValueInput/TypedValueInput";
 import { initialExpressionOf } from "@/lib/base/form-engine/expression-options";
 
+import { LinkedFilterEditor } from "./LinkedFilterEditor";
+import { useLookupProviders } from "./useLookupCatalog";
+
 export interface DefaultValueEditorProps {
   field: FieldDef;
   fields: readonly FieldDef[];
@@ -30,8 +33,14 @@ type PartProps = DefaultValueEditorProps & { constant: unknown };
 
 const NONE = "";
 
-/** 引用欄預設值目前選的系統值路徑(`{ var: "ctx.user.id" }` → `ctx.user.id`);沒設為空字串。 */
+/** 引用欄預設值的「來源提供的預設」在下拉裡的值。 */
+const PROVIDER = "provider";
+
+/** 引用欄預設值目前選的系統值路徑(`{ var: "ctx.user.id" }` → `ctx.user.id`)或 `provider`;沒設為空字串。 */
 const referencePathOf = (value: FieldDefault | null | undefined): string => {
+  if (value?.kind === "provider") {
+    return PROVIDER;
+  }
   if (value?.kind !== "expression") {
     return NONE;
   }
@@ -47,28 +56,71 @@ const constantOf = (value: unknown): FieldDefault | null =>
     ? null
     : { kind: "constant", value };
 
-/** 引用:只能系統值「填寫者 / 填寫者的組織」。 */
-const ReferenceDefault = ({ field, onChange }: PartProps) => {
+/**
+ * 引用:系統值「填寫者 / 填寫者的組織」,或來源有提供時「來源提供的預設」(另設條件:來源的篩選欄位
+ * 等於表單上的哪一欄,同連動篩選的編輯器)。
+ */
+const ReferenceDefault = ({ field, fields, onChange }: PartProps) => {
   const t = useTranslations("admin.forms.property");
+  const { providers } = useLookupProviders();
+  const provider = providers.find(
+    (candidate) => candidate.key === field.source?.provider,
+  );
+  const current = field.default ?? null;
+  const isProvider = current?.kind === "provider";
+  // 來源沒提供時不列;已經選了(例:來源後來拿掉了)仍列出,讓設計者看得到並改掉(檢查器另報錯)
+  const canProvide = provider?.operatorDefault === true || isProvider;
   return (
-    <SelectField<string>
-      label={t("defaultValue")}
-      value={referencePathOf(field.default)}
-      displayEmpty
-      options={[
-        { value: NONE, label: t("defaultKinds.none") },
-        ...REFERENCE_DEFAULT_PATHS.map((path) => ({
-          value: path,
-          label: t(`defaultSystem.${path === "ctx.user.id" ? "user" : "org"}`),
-        })),
-      ]}
-      onChange={(path) => {
-        onChange(
-          path === NONE ? null : { kind: "expression", expr: { var: path } },
-        );
-      }}
-      size="small"
-    />
+    <Stack spacing={1}>
+      <SelectField<string>
+        label={t("defaultValue")}
+        value={referencePathOf(current)}
+        displayEmpty
+        options={[
+          { value: NONE, label: t("defaultKinds.none") },
+          ...REFERENCE_DEFAULT_PATHS.map((path) => ({
+            value: path,
+            label: t(
+              `defaultSystem.${path === "ctx.user.id" ? "user" : "org"}`,
+            ),
+          })),
+          ...(canProvide
+            ? [{ value: PROVIDER, label: t("defaultProvider") }]
+            : []),
+        ]}
+        onChange={(path) => {
+          if (path === PROVIDER) {
+            onChange({ kind: "provider" });
+            return;
+          }
+          onChange(
+            path === NONE ? null : { kind: "expression", expr: { var: path } },
+          );
+        }}
+        size="small"
+      />
+      {isProvider && field.source && provider !== undefined && (
+        <LinkedFilterEditor
+          value={{ ...field.source, filter: { ...current.filter } }}
+          provider={provider}
+          fields={fields.filter(
+            (candidate) =>
+              candidate.key !== field.key && candidate.type !== "array",
+          )}
+          title={t("defaultProviderFilter")}
+          hint={t("defaultProviderFilterHint")}
+          onChange={(next) => {
+            const filter = next.filter as
+              Record<string, { var: string }> | undefined;
+            onChange(
+              filter === undefined || Object.keys(filter).length === 0
+                ? { kind: "provider" }
+                : { kind: "provider", filter },
+            );
+          }}
+        />
+      )}
+    </Stack>
   );
 };
 
@@ -200,7 +252,7 @@ const ScalarDefault = (props: PartProps) => {
  * 預設值(值來源 = 使用者填才出現,上傳沒有):
  * - 文字 / 多行 / 數字 / 日期 / 日期時間:固定值或公式(公式根型別 = 欄位型別,不可引用自己)
  * - 單選 / 多選:從選項挑 —— 靜態清單直接挑;類別 / 資料來源用填寫時的同一個選擇器挑
- * - 是否:固定值(是 / 否);引用:只能系統值「填寫者 / 填寫者的組織」
+ * - 是否:固定值(是 / 否);引用:系統值「填寫者 / 填寫者的組織」,或來源有提供時「來源提供的預設」
  *
  * 使用者沒改過這個欄位前,它依賴的欄位變了會跟著重算;改過就停。
  */

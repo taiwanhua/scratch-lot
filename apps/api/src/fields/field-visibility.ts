@@ -1,5 +1,7 @@
 import { Types } from "mongoose";
 
+import { type TagPaletteKey, isTagPaletteKey } from "@repo/domain/tag-palette";
+
 import type { Persisted } from "../database/base.repository";
 import type {
   FieldDocument,
@@ -211,11 +213,19 @@ export function toFieldModel(
     order: field.order,
     enabled: field.enabled,
     description: field.description ?? null,
+    color: colorOf(field),
     ownerOrg: ownerOrgOf(field, owners),
     isOwn: isOwnedByCurrentOrg(field, visibility),
     canEdit: canEditField(field, visibility),
     canToggleEnabled: canToggleFieldEnabled(field, visibility),
   };
+}
+
+/** 選項的色票代號;沒設或認不得的代號(色票改版前的舊資料)一律當沒有顏色。 */
+export function colorOf(
+  field: Pick<FieldRecord, "color">,
+): TagPaletteKey | null {
+  return isTagPaletteKey(field.color) ? field.color : null;
 }
 
 /**

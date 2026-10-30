@@ -12,6 +12,7 @@ import { Alert } from "@repo/ui/alert";
 import { SelectField } from "@repo/ui/select-field";
 import { Stack } from "@repo/ui/stack";
 
+import { RootOrgNotice } from "@/components/base/RootOrgNotice/RootOrgNotice";
 import { useModuleRoutes } from "@/hooks/base/useModuleRoutes";
 import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
 import { useSession } from "@/hooks/base/useSession";
@@ -50,6 +51,8 @@ export const WorkflowBindingField = ({
   const { session } = useSession();
   const [isUnbinding, setIsUnbinding] = useState(false);
   const [errorText, setErrorText] = useState<string | null>(null);
+  /** api 回 `TENANT_ONLY`(例如別的分頁剛切到根組織):改顯示切換組織的提示,不只是一行錯誤。 */
+  const [isTenantOnly, setIsTenantOnly] = useState(false);
   const options = useFormWorkflowOptionsQuery(session.client, {
     formKey: form.key,
   });
@@ -57,6 +60,7 @@ export const WorkflowBindingField = ({
   const binding = form.workflowBinding ?? null;
   const onFailure = (failure: unknown) => {
     const parsed = workflowErrorOf(failure);
+    setIsTenantOnly(parsed.code === "TENANT_ONLY");
     const bindingIssues = (parsed.issues ?? []).filter((issue) =>
       isBindingIssue(issue),
     );
@@ -121,6 +125,7 @@ export const WorkflowBindingField = ({
         options={selectOptions}
         onChange={(next) => {
           setErrorText(null);
+          setIsTenantOnly(false);
           if (next === (binding?.workflowKey ?? NO_WORKFLOW)) {
             return;
           }
@@ -134,7 +139,12 @@ export const WorkflowBindingField = ({
       {binding !== null && !binding.isValid && (
         <Alert severity="warning">{t("invalid")}</Alert>
       )}
-      {errorText !== null && <Alert severity="error">{errorText}</Alert>}
+      {errorText !== null &&
+        (isTenantOnly ? (
+          <RootOrgNotice variant="inline" message={errorText} />
+        ) : (
+          <Alert severity="error">{errorText}</Alert>
+        ))}
       <UnbindableWorkflows
         items={items.filter((item) => !item.canBind)}
         onCreateCustom={

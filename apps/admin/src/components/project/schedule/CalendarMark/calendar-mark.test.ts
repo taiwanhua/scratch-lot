@@ -1,7 +1,6 @@
 import { describe, expect, it } from "@jest/globals";
 
-import { tagPaletteBackground } from "@/components/project/TagPaletteChip/tag-palette-background";
-import { tagPaletteColorOf } from "@/lib/project/tag-palettes";
+import { tagPaletteBackground, tagPaletteColorOf } from "@repo/ui/theme";
 
 import {
   calendarMarkBackground,

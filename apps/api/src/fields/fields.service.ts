@@ -1,6 +1,8 @@
 import { Injectable } from "@nestjs/common";
 import { Types } from "mongoose";
 
+import { isTagPaletteKey } from "@repo/domain/tag-palette";
+
 import { AuditService } from "../audit/audit.service";
 import type { Persisted } from "../database/base.repository";
 import {
@@ -12,12 +14,14 @@ import {
 } from "../database/database.module";
 import type { OperatorContext } from "../database/operator-context";
 import type { CreateFieldInput } from "./dto/create-field.input";
+import type { SetFieldColorInput } from "./dto/set-field-color.input";
 import type { SetFieldEnabledInput } from "./dto/set-field-enabled.input";
 import type { UpdateFieldInput } from "./dto/update-field.input";
 import {
   type FieldVisibility,
   canEditField,
   canToggleFieldEnabled,
+  colorOf,
   compareFields,
   fieldReadContext,
   loadOwnerOrgs,
@@ -42,6 +46,7 @@ const AUDIT_TARGET_TYPE = "field";
 const AUDIT_CREATE = "field.create";
 const AUDIT_EDIT = "field.edit";
 const AUDIT_TOGGLE_ENABLED = "field.toggle-enabled";
+const AUDIT_SET_COLOR = "field.set-color";
 
 /** MongoDB 唯一索引衝突;唯一索引與表單驗證之間的競態由它兜底。 */
 const DUPLICATE_KEY_ERROR = 11_000;
@@ -210,22 +215,11 @@ export class FieldsService {
     input: SetFieldEnabledInput,
   ): Promise<FieldModel> {
     const visibility = await resolveFieldVisibility(operator, this.orgs);
-    const current = await this.mustFindVisibleField(
+    const current = await this.mustFindToggleableField(
       operator,
       visibility,
       input.id,
     );
-    if (!canToggleFieldEnabled(current, visibility)) {
-      throw current.orgId === null || current.isSystem
-        ? forbiddenError(
-            `seed field option is a global switch; only the root org can toggle it: ${input.id}`,
-            "SEED_GLOBAL_SWITCH",
-          )
-        : forbiddenError(
-            `field option belongs to another org: ${input.id}`,
-            "NOT_OWNER",
-          );
-    }
     const updated = await this.fields.updateById(operator, current._id, {
       $set: { enabled: input.enabled },
     });
@@ -238,6 +232,47 @@ export class FieldsService {
       targetId: updated._id,
       before: { enabled: current.enabled },
       after: { enabled: updated.enabled },
+    });
+    return this.toModel(operator, updated, visibility);
+  }
+
+  /**
+   * 設定 / 清掉選項的顏色(`color` null = 清掉,不刪欄位)。誰能設 = 誰能切 `enabled`:
+   * 每個選項只有一個擁有者(自訂選項是加它的那一層、種子是根組織),所以顏色就存在選項本身。
+   * 只能從色票選:不在清單的代號(含色碼)回 `VALIDATION_FAILED`;沒有變更不寫入、不記稽核。
+   */
+  async setColor(
+    operator: OperatorContext,
+    input: SetFieldColorInput,
+  ): Promise<FieldModel> {
+    const color = input.color ?? null;
+    if (color !== null && !isTagPaletteKey(color)) {
+      throw validationError(`color is not a tag palette key: ${color}`, [
+        "color",
+      ]);
+    }
+    const visibility = await resolveFieldVisibility(operator, this.orgs);
+    const current = await this.mustFindToggleableField(
+      operator,
+      visibility,
+      input.id,
+    );
+    const before = colorOf(current);
+    if (before === color) {
+      return this.toModel(operator, current, visibility);
+    }
+    const updated = await this.fields.updateById(operator, current._id, {
+      $set: { color },
+    });
+    if (!updated) {
+      throw notFoundError(`field not found: ${input.id}`);
+    }
+    await this.audit.record(operator, {
+      action: AUDIT_SET_COLOR,
+      targetType: AUDIT_TARGET_TYPE,
+      targetId: updated._id,
+      before: { color: before },
+      after: { color },
     });
     return this.toModel(operator, updated, visibility);
   }
@@ -282,6 +317,30 @@ export class FieldsService {
       throw notFoundError(`field not found: ${id}`);
     }
     return found;
+  }
+
+  /**
+   * 取一筆**這一層切得動**的選項(停用 / 啟用與顏色同一條規則):自訂選項限加它的那一層
+   * (別層 → `NOT_OWNER`);種子選項只有一筆文件、改了全平台生效,限根組織(→ `SEED_GLOBAL_SWITCH`)。
+   */
+  private async mustFindToggleableField(
+    operator: OperatorContext,
+    visibility: FieldVisibility,
+    id: string,
+  ): Promise<FieldRecord> {
+    const found = await this.mustFindVisibleField(operator, visibility, id);
+    if (canToggleFieldEnabled(found, visibility)) {
+      return found;
+    }
+    throw found.orgId === null || found.isSystem
+      ? forbiddenError(
+          `seed field option is a global switch; only the root org can change it: ${id}`,
+          "SEED_GLOBAL_SWITCH",
+        )
+      : forbiddenError(
+          `field option belongs to another org: ${id}`,
+          "NOT_OWNER",
+        );
   }
 
   /** 取一筆**可編輯**的選項:自己這一層的自訂選項;種子與別層的一律 `FORBIDDEN`。 */

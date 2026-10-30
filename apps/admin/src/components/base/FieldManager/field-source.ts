@@ -48,6 +48,15 @@ export const canEditOption = (
 ): boolean => canEdit && field.canEdit;
 
 /**
+ * 這一列的顏色能不能改 = 有 `edit` 權限 ∩ api 說這一筆可切(誰能改顏色同誰能停用 / 啟用:
+ * 自訂選項限加它的那一層、全域選項限根組織)。
+ */
+export const canSetOptionColor = (
+  field: FieldOptionLike,
+  { canEdit }: { canEdit: boolean },
+): boolean => canEdit && field.canToggleEnabled;
+
+/**
  * 這一列動不了是因為「別的組織在管它」時,回那個組織的名稱(提示文案用);
  * 種子選項(由系統管理員維護)與自己加的回 null —— 那兩種各有自己的說法。
  */

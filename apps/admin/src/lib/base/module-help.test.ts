@@ -56,9 +56,9 @@ describe("buildHelpRegistry(glob 產物 → 模組 key 對照表)", () => {
         "## 這個模組做什麼\n\n管組織。",
     });
 
-    expect([...registry.keys()].toSorted((a, b) => a.localeCompare(b))).toEqual(
-      ["overview", "system.org-manager"],
-    );
+    expect(
+      [...registry.keys()].toSorted((a, b) => a.localeCompare(b, "zh-Hant")),
+    ).toEqual(["overview", "system.org-manager"]);
     expect(registry.get("overview")).toBe("## 這個模組做什麼\n\n看重點。");
   });
 

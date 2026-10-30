@@ -1,5 +1,6 @@
 import { useTranslations } from "use-intl";
 
+import { type TagPaletteKey, isTagPaletteKey } from "@repo/domain/tag-palette";
 import { Button } from "@repo/ui/button";
 import { Switch } from "@repo/ui/switch";
 import { Table, type TableColumn } from "@repo/ui/table";
@@ -7,9 +8,13 @@ import { Tag } from "@repo/ui/tag";
 import { Tooltip } from "@repo/ui/tooltip";
 import { Typography, type TypographyColor } from "@repo/ui/typography";
 
+import { TagPaletteChip } from "@/components/base/TagPaletteChip/TagPaletteChip";
+import { TagPaletteSelect } from "@/components/base/TagPaletteSelect/TagPaletteSelect";
+
 import type { FieldOptionLike } from "../field-manager-types";
 import {
   canEditOption,
+  canSetOptionColor,
   canToggleOption,
   fieldSourceView,
   isSeedOption,
@@ -25,12 +30,15 @@ export interface FieldOptionsTableProps {
   pendingFieldId: string | null;
   onToggleEnabled: (field: FieldOptionLike, enabled: boolean) => void;
   onEdit: (field: FieldOptionLike) => void;
-  /** 接在「顯示名稱」之後的擴充欄(客製替換頁用;底座頁為空) */
-  extraColumns?: readonly TableColumn<FieldOptionLike>[];
+  /** 選了色票(`null` = 清掉顏色) */
+  onSetColor: (field: FieldOptionLike, color: TagPaletteKey | null) => void;
 }
 
 /**
- * 選項表格(Figma 90:232 起):顯示名稱、值、排序、來源、啟用、操作。
+ * 選項表格(Figma 90:232 起):顯示名稱、顏色(Figma BS-13 289:87534)、值、排序、來源、啟用、操作。
+ *
+ * 「顏色」欄:改得動(`edit` 權限 ∩ 這一層切得動)→ 色票標籤本身可點、開色票面板(沒有顏色時是「不設定」);
+ * 改不動 → 只顯示標籤,沒有顏色顯示「不設定」文字(Figma 289:87612)。只能從十組色票選,不能輸入色碼。
  *
  * 合併清單含**上層組織**加的選項與**可見範圍內的下層**加的:兩種都看得到、
  * 都改不動,整列以淡色呈現 + 提示「由 <組織名> 管理」。一列能做什麼一律讀 api 給的
@@ -49,9 +57,10 @@ export const FieldOptionsTable = ({
   pendingFieldId,
   onToggleEnabled,
   onEdit,
-  extraColumns = [],
+  onSetColor,
 }: FieldOptionsTableProps) => {
   const t = useTranslations("admin.fieldManager.options");
+  const tPalette = useTranslations("admin.tagPalettes.select");
 
   /** 動不了的理由:別的組織在管 → 帶組織名;種子 → 由系統管理員維護。 */
   const lockedHintOf = (field: FieldOptionLike): string => {
@@ -88,7 +97,34 @@ export const FieldOptionsTable = ({
         </Typography>
       ),
     },
-    ...extraColumns,
+    {
+      key: "color",
+      header: t("color"),
+      width: 96,
+      render: (field) => {
+        // 認不得的代號(色票改版前的舊資料)當沒有顏色
+        const color = isTagPaletteKey(field.color) ? field.color : null;
+        if (!canSetOptionColor(field, { canEdit })) {
+          return color === null ? (
+            <Typography component="span" variant="body2" color="textSecondary">
+              {tPalette("none")}
+            </Typography>
+          ) : (
+            <TagPaletteChip paletteKey={color} />
+          );
+        }
+        return (
+          <TagPaletteSelect
+            value={color}
+            label={t("colorAria", { name: field.label })}
+            disabled={pendingFieldId === field.id}
+            onChange={(next) => {
+              onSetColor(field, next);
+            }}
+          />
+        );
+      },
+    },
     {
       key: "value",
       header: t("value"),

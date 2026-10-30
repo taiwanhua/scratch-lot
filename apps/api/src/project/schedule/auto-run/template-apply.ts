@@ -1,3 +1,4 @@
+import { COLLATION_LOCALE } from "@repo/domain/collation";
 import { weekdayOfLocalDate } from "@repo/domain/form";
 
 import { localDateOfKey, shiftDateKey } from "../shared/schedule-dates";
@@ -118,7 +119,7 @@ export function planTemplateApply(input: {
     slotsOf.set(demand.date, slots);
   }
   const dates = [...new Set(input.dates)].toSorted((left, right) =>
-    left.localeCompare(right),
+    left.localeCompare(right, COLLATION_LOCALE),
   );
   for (const date of dates) {
     if (input.closedDates.has(date)) {

@@ -1,11 +1,16 @@
 import { Injectable } from "@nestjs/common";
 
 import {
+  type FieldType,
   LIST_BUILTIN_COLUMNS,
+  LIST_TEMPLATE_LABEL_MAX_LENGTH,
+  LIST_TEMPLATE_MAX_LENGTH,
   type ListBuiltinColumn,
   type ListBuiltinColumns,
+  isListSlotKey,
   isValidFieldKey,
   listBuiltinColumnsOf,
+  listTemplatePlaceholdersOf,
 } from "@repo/domain/form";
 
 import { AuditService } from "../../audit/audit.service";
@@ -25,10 +30,10 @@ import {
   validationError,
 } from "../forms-error";
 import {
-  LIST_SLOT_KEYS,
   MAX_COLUMN_WIDTH,
   MIN_COLUMN_WIDTH,
   type ModuleListColumn,
+  type ModuleListColumnInput,
   ModuleListColumnKind,
   type ModuleListColumnsPayload,
   type SetModuleListColumnsInput,
@@ -40,18 +45,43 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 /** 存在 `modules.settings.list.columns` 的一筆(落庫形狀,kind 是小寫字串)。 */
 interface StoredColumn {
-  kind: "slot" | "field";
+  kind: "slot" | "field" | "template";
+  /** 摘要槽 key、欄位 key,或組合欄的模板 */
   key: string;
   formKey?: string | null;
+  /** 只有組合欄:欄名 */
+  label?: string;
   width: number;
   order: number;
 }
+
+const STORED_KINDS: Record<StoredColumn["kind"], ModuleListColumnKind> = {
+  slot: ModuleListColumnKind.SLOT,
+  field: ModuleListColumnKind.FIELD,
+  template: ModuleListColumnKind.TEMPLATE,
+};
+
+/** 目前版本裡一個可當列表欄的欄位:型別與是否受保護。 */
+interface CatalogField {
+  type: FieldType;
+  isProtected: boolean;
+}
+
+/** 表單 key → 目前版本的欄位 key → 型別與是否受保護。 */
+type FieldCatalog = ReadonlyMap<string, ReadonlyMap<string, CatalogField>>;
+
+/** 組合欄佔位符可以加格式字串的欄位型別。 */
+const FORMATTABLE_FIELD_TYPES: ReadonlySet<FieldType> = new Set([
+  "date",
+  "datetime",
+]);
 
 /**
  * 列表欄位配置(`modules.settings.list`;見 `docs/modules/forms.md`「列表欄位配置」):root 改全域預設。
  *
  * 寫入時驗:摘要槽 key 合法;表單欄位存在於該模組**共用表單**的目前版本、而且在那些版本裡都
- * **不是受保護欄位**(受保護欄位不可當列表欄 —— 列表對每個人顯示同一組欄)。
+ * **不是受保護欄位**(受保護欄位不可當列表欄 —— 列表對每個人顯示同一組欄);組合欄的欄名必填、
+ * 模板至少一個佔位符且每個佔位符都是槽或照表單欄位同一套規則可列的欄位(受保護欄位不能透過組合欄露出)。
  * 讀取給表單模組的使用者(有該模組任一個個別權限)。
  */
 @Injectable()
@@ -98,7 +128,11 @@ export class ModuleListColumnsService {
     const seen = new Set<string>();
     const stored: StoredColumn[] = input.columns.map((column, index) => {
       const path = `columns.${String(index)}`;
-      const identity = `${column.kind}:${column.formKey ?? ""}:${column.key}`;
+      const key =
+        column.kind === ModuleListColumnKind.TEMPLATE
+          ? column.key.trim()
+          : column.key;
+      const identity = `${column.kind}:${column.formKey ?? ""}:${key}`;
       if (seen.has(identity)) {
         throw validationError(
           `Duplicate list column ${identity}`,
@@ -117,8 +151,11 @@ export class ModuleListColumnsService {
           [path],
         );
       }
+      if (column.kind === ModuleListColumnKind.TEMPLATE) {
+        return this.templateColumnOf(catalog, column, key, path);
+      }
       if (column.kind === ModuleListColumnKind.SLOT) {
-        if (!(LIST_SLOT_KEYS as readonly string[]).includes(column.key)) {
+        if (!isListSlotKey(column.key)) {
           throw validationError(
             `Unknown summary slot ${column.key}`,
             [path],
@@ -165,13 +202,13 @@ export class ModuleListColumnsService {
   private async fieldCatalog(
     facts: FormOperatorFacts,
     moduleKey: string,
-  ): Promise<Map<string, Map<string, boolean>>> {
+  ): Promise<FieldCatalog> {
     const forms = await this.forms.findMany(facts.operator, {
       moduleKey,
       ownerOrgId: null,
       currentVersion: { $ne: null },
     });
-    const catalog = new Map<string, Map<string, boolean>>();
+    const catalog = new Map<string, Map<string, CatalogField>>();
     for (const form of forms) {
       const version = await this.versions.findOne(facts.operator, {
         formKey: form.key,
@@ -186,7 +223,10 @@ export class ModuleListColumnsService {
             .filter((field) => field.type !== "array")
             .map((field) => [
               field.key,
-              requiredShowKeys(fields, field.key).length > 0,
+              {
+                type: field.type,
+                isProtected: requiredShowKeys(fields, field.key).length > 0,
+              },
             ]),
         ),
       );
@@ -194,12 +234,80 @@ export class ModuleListColumnsService {
     return catalog;
   }
 
+  /**
+   * 組合欄:欄名必填(1–50 字)、模板 1–200 字且至少一個佔位符(格式錯,沒有 reason,定位到 `.label` / `.template`);
+   * 佔位符是槽(`isListSlotKey`)或表單欄位 —— 欄位照表單欄位欄同一套規則(存在於目前版本、不是受保護欄位,
+   * `formKey` 給了就只看那一張),錯了帶 reason 定位到整欄。佔位符加了格式字串(`{{value.<key>|HH:mm}}`)
+   * 的欄位在宣告它的每一張表單都要是日期 / 日期時間,否則是格式錯(沒有 reason,定位到 `.template`)。
+   */
+  private templateColumnOf(
+    catalog: FieldCatalog,
+    column: ModuleListColumnInput,
+    template: string,
+    path: string,
+  ): StoredColumn {
+    const label = (column.label ?? "").trim();
+    if (label === "" || label.length > LIST_TEMPLATE_LABEL_MAX_LENGTH) {
+      throw validationError(
+        `label must be 1-${String(LIST_TEMPLATE_LABEL_MAX_LENGTH)} characters`,
+        [`${path}.label`],
+      );
+    }
+    const placeholders = listTemplatePlaceholdersOf(template);
+    if (
+      template.length > LIST_TEMPLATE_MAX_LENGTH ||
+      placeholders.length === 0 ||
+      placeholders.some((placeholder) => placeholder.kind === "invalid")
+    ) {
+      throw validationError(
+        `template must be at most ${String(LIST_TEMPLATE_MAX_LENGTH)} characters with known placeholders`,
+        [`${path}.template`],
+      );
+    }
+    const formKey = column.formKey ?? null;
+    if (formKey !== null && !catalog.has(formKey)) {
+      throw validationError(
+        `Form ${formKey} is not a shared form of this module`,
+        [path],
+        FORM_VALIDATION_REASONS.listColumnUnavailable,
+      );
+    }
+    for (const placeholder of placeholders) {
+      if (placeholder.kind !== "field") {
+        continue;
+      }
+      const declaring = this.assertListableField(
+        catalog,
+        placeholder.key,
+        column.formKey,
+        path,
+      );
+      if (
+        placeholder.format !== null &&
+        declaring.some((field) => !FORMATTABLE_FIELD_TYPES.has(field.type))
+      ) {
+        throw validationError(
+          `Field ${placeholder.key} is not a date or datetime field and cannot take a format`,
+          [`${path}.template`],
+        );
+      }
+    }
+    return {
+      kind: "template",
+      key: template,
+      formKey,
+      label,
+      width: column.width,
+      order: column.order,
+    };
+  }
+
   private assertListableField(
-    catalog: ReadonlyMap<string, ReadonlyMap<string, boolean>>,
+    catalog: FieldCatalog,
     key: string,
     formKey: string | null | undefined,
     path: string,
-  ): void {
+  ): CatalogField[] {
     if (!isValidFieldKey(key)) {
       throw validationError(`Invalid field key ${key}`, [path]);
     }
@@ -207,10 +315,13 @@ export class ModuleListColumnsService {
       formKey === null || formKey === undefined
         ? [...catalog.values()]
         : [catalog.get(formKey)].filter(
-            (fields): fields is ReadonlyMap<string, boolean> =>
+            (fields): fields is ReadonlyMap<string, CatalogField> =>
               fields !== undefined,
           );
-    const declaring = scoped.filter((fields) => fields.has(key));
+    const declaring = scoped.flatMap((fields) => {
+      const field = fields.get(key);
+      return field === undefined ? [] : [field];
+    });
     if (declaring.length === 0) {
       throw validationError(
         `Field ${key} is not in the current version of any form of this module`,
@@ -218,13 +329,14 @@ export class ModuleListColumnsService {
         FORM_VALIDATION_REASONS.listColumnUnavailable,
       );
     }
-    if (declaring.some((fields) => fields.get(key) === true)) {
+    if (declaring.some((field) => field.isProtected)) {
       throw validationError(
         `Field ${key} is protected and cannot be a list column`,
         [path],
         FORM_VALIDATION_REASONS.listColumnProtected,
       );
     }
+    return declaring;
   }
 }
 
@@ -266,18 +378,20 @@ function columnsOf(settings: Record<string, unknown>): ModuleListColumn[] {
     .filter(
       (item): item is StoredColumn =>
         isRecord(item) &&
-        (item.kind === "slot" || item.kind === "field") &&
+        typeof item.kind === "string" &&
+        Object.hasOwn(STORED_KINDS, item.kind) &&
         typeof item.key === "string" &&
         typeof item.width === "number" &&
         typeof item.order === "number",
     )
     .map((item) => ({
-      kind:
-        item.kind === "slot"
-          ? ModuleListColumnKind.SLOT
-          : ModuleListColumnKind.FIELD,
+      kind: STORED_KINDS[item.kind],
       key: item.key,
       formKey: typeof item.formKey === "string" ? item.formKey : null,
+      label:
+        item.kind === "template" && typeof item.label === "string"
+          ? item.label
+          : null,
       width: item.width,
       order: item.order,
     }))

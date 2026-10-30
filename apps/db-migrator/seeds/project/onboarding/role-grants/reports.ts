@@ -1,4 +1,4 @@
-import { REPORTS_MODULE_KEY } from "../../reports";
+import { REPORTS_MODULE_KEY } from "../../../base/modules/reports";
 import { type ModuleRoleGrants, type RoleGrant, everything } from "../roles";
 
 /** 輸出報表全部(兩張報表、匯出、成本與毛利)。 */

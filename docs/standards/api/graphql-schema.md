@@ -59,7 +59,26 @@ type UsersPayload {
 - **同形的兩個清單共用一組 input / payload**:「已經在裡面的」與「還沒在裡面的」兩支 query 的列完全同形時,再宣告一組只是多兩個名字(先例 `OrgMembersInput` / `OrgMembersPayload` 同時服務 `orgMembers` 與 `orgMemberCandidates`)。形狀真的分岔時才拆。
 - **不分頁的清單**(一次全取的字典型資料,如 `fields(categoryId: ID!)`)仍回 `{ items, totalCount }`,不硬塞 `page` / `pageSize`;會長大的清單一律分頁。同一類的還有**天生有上限、畫面要一次看全**的清單:表單的版本(`formVersions(formKey)`,版本面板要列全部版本)與退役欄位級權限(`retiredFormPermissions`,清理頁一次列完)。
 
-(專案規模不需要 Relay cursor connection;若未來需要無限捲動再開討論、記 ADR。)
+**例外:捲到底載入下一批、資料會從前面插進來的清單用游標分頁**。offset 分頁在這類清單有兩個破口:載入途中前面多一筆,下一頁會重複一筆;清單篩選依賴可變狀態(例「未讀」)時,已載入的項目離開篩選,下一頁會漏掉等量的項目。改成游標後前端不必去重或從第 1 頁重抓。形狀(先例 `myNotifications`):
+
+```graphql
+input MyNotificationsInput {
+  unreadOnly: Boolean # 篩選照常放 input
+  after: String # 上一批的 nextCursor;缺席 / null = 從頭
+  pageSize: Int = 20 # 上限 100,同上
+}
+
+type MyNotificationsPayload {
+  items: [Notification!]!
+  pageSize: Int!
+  nextCursor: String # 沒有更多 = null
+  totalCount: Int! # 符合篩選的總數(不受游標影響)
+}
+```
+
+- 游標記**排序鍵的值**(例 `createdAt` + `_id`,base64url 編碼、對前端不透明),不記筆數也不只記 id:游標指到的那一筆被刪或離開篩選也定得了位。排序鍵必須唯一(時間相同時以 `_id` 決勝)。
+- 解不開的游標 → `VALIDATION_FAILED` + 模組自己的 `reason`(先例 `INVALID_CURSOR`)。
+- 有頁碼、要跳頁的表格清單仍用 `page` / `pageSize`;不採 Relay connection(`edges` / `pageInfo`)。
 
 ## GQL-04 錯誤:business error 用 `GraphQLError` + `extensions.code`
 
@@ -97,6 +116,8 @@ type UsersPayload {
 | `TRANSACTION_TIMEOUT`          | 這次動作的交易超過上限(預設 60 秒),**已整個回復、資料沒有變更**(程式正本 `apps/api/src/database/transaction.ts` 的 `TransactionTimeoutError`;規則見 `docs/standards/api/transactions.md` TX-01、TX-06)                                                                                   | `parseAdminError` 在任何一頁都標 `timedOut`(`code` 仍是 `UNEXPECTED`);**經 `adminErrorText` / `useAdminErrorText` 顯示的頁**才顯示「處理時間過長,已取消,資料沒有變更,請稍後再試或聯絡管理員」,直接 `tErrors(code)` 的頁顯示該頁的 `UNEXPECTED` 文案(`apps/admin/src/lib/base/errors.ts`);不自動重試 |
 
 錯誤的 `message` 給開發者看(英文);給使用者的繁體中文文案由前端依 code 對應,不從 api 傳。
+
+admin 元件測試的假 api(TEST-08)用 `apps/admin/src/test/msw/auth-handlers.ts` 的 `graphqlError(code, …)` 回錯誤,`code` 的型別是同檔 `GRAPHQL_ERROR_CODES`(本表全部的 code,加上非預期錯誤的 `INTERNAL_SERVER_ERROR`)。api 不把 code 放進 schema,codegen 沒有列舉,所以**本表新增 code 時同步加進那份清單**;假 api 不用轉型硬塞 code。
 
 **同一個 code 有多種說法時加 `extensions.reason`,不要新增 code**(先例 `RULE_INVALID` 的 `reason`、`ORG_NOT_DELETABLE` 的 `reasons`):通用碼(`FORBIDDEN` / `NOT_FOUND`)的語意全站一致,分歧的是「為什麼」。`reason` 的列舉值屬該模組,正本放模組自己的 error 檔(如 `apps/api/src/fields/fields-error.ts` 的 `FIELD_FORBIDDEN_REASONS`:`SEED_READ_ONLY` / `SEED_GLOBAL_SWITCH` / `NOT_OWNER`)並在模組文件的「錯誤」節逐項寫明,不進本表 — 本表只列 code。前端認不得的 `reason` 要能退回該 code 的通用文案。
 

@@ -170,7 +170,9 @@ export const PROJECT_LOOKUP_PROVIDERS: readonly LookupProviderRegistration[] = [
   {
     // 收銀班次(專案規格 6.6;`docs/modules/project/store.md`「撤銷售出申請與現金更正單」):撤銷售出申請的
     // 退款班次、現金更正單的位置 / 歸屬班次。顯示欄 = 開班時存的 `label`(收銀點 · 負責人 開班時間);
-    // 「本店的班」是送出前檢查(`orgId` 連動篩選不可攜);讀取要 `store.view`,範圍照可見範圍
+    // 「本店的班」是送出前檢查(`orgId` 連動篩選不可攜);讀取要 `store.view`,範圍照可見範圍。
+    // 依操作者的預設值 = 操作者自己開著的班(同 `lotteryStoreShiftOptions` 的 `mine`:沒結帳、開班的人是自己);
+    // 現金更正單的「班次」以預設值條件 `orgId = 分店` 取那家店的
     declaration: {
       key: "lottery_shift",
       name: "收銀班次",
@@ -183,6 +185,11 @@ export const PROJECT_LOOKUP_PROVIDERS: readonly LookupProviderRegistration[] = [
       labelField: "label",
       keywordFields: ["label"],
       portable: LOTTERY_PORTABLE_LOOKUP_PROVIDERS.lottery_shift,
+      defaultForOperator: {
+        operatorField: "openedBy",
+        where: { closedAt: null },
+        latestBy: "openedAt",
+      },
     },
     repositoryToken: LotteryShiftsRepository,
   },

@@ -1,16 +1,15 @@
 import { describe, expect, it } from "@jest/globals";
-import { render, screen } from "@testing-library/react";
-import { IntlProvider } from "use-intl";
+import { screen } from "@testing-library/react";
 
-import { defaultLocale, messages } from "@repo/i18n";
-import { AppThemeProvider } from "@repo/ui/app-theme-provider";
-import { defaultBrand } from "@repo/ui/theme";
+import { DEMO_FORM_ROUTES, submissionFragment } from "@/test/msw/form-fixtures";
+import { setupFakeViewport } from "@/test/viewport";
 
-import { FormListToolbar } from "./FormListToolbar";
+import {
+  defaultRuntimeOptions,
+  renderShopping,
+} from "./form-module-test-support";
 
-const noop = () => {
-  // 回呼在本測試不觸發
-};
+setupFakeViewport();
 
 /**
  * 元素宣告的 CSS(emotion 插進 `<style>` 的規則原文,含 `& > :not(style) ~ :not(style)` 這類子選擇器)。
@@ -26,28 +25,23 @@ const declaredCss = (element: Element): string => {
 };
 
 describe("FormListToolbar(列表頁的過濾條件列)", () => {
-  it("欄距用 gap 不用 margin:換行後第一個欄位和上一行左對齊", () => {
-    render(
-      <IntlProvider locale={defaultLocale} messages={messages[defaultLocale]}>
-        <AppThemeProvider brand={defaultBrand}>
-          <FormListToolbar
-            keyword=""
-            onKeywordChange={noop}
-            forms={[]}
-            formKey={null}
-            onFormKeyChange={noop}
-            status={null}
-            onStatusChange={noop}
-            canCreate={false}
-            hasForms={false}
-            onCreate={noop}
-          />
-        </AppThemeProvider>
-      </IntlProvider>,
-    );
+  it("欄距用 gap 不用 margin:換行後第一個欄位和上一行左對齊", async () => {
+    renderShopping({
+      path: DEMO_FORM_ROUTES.list,
+      world: {
+        ...defaultRuntimeOptions(),
+        submissions: [submissionFragment()],
+      },
+    });
 
-    const row = screen.getByRole("textbox").closest(".MuiStack-root");
+    const search = await screen.findByRole("textbox", { name: "搜尋" });
+    const row = search.closest(".MuiStack-root");
     expect(row).not.toBeNull();
+    // 篩選列(表單、狀態、組織、日期起迄)與搜尋框在同一列
+    expect(row).toContainElement(
+      screen.getByRole("combobox", { name: "狀態" }),
+    );
+    expect(row).toContainElement(screen.getByRole("group", { name: "日期起" }));
     const css = declaredCss(row ?? document.body);
     expect(css).toContain("flex-wrap: wrap");
     expect(css).toMatch(/(^|[\s;{])gap:/);

@@ -221,6 +221,44 @@ describe("resolveLookupRegistrations:專案 lookup 來源的登記驗證", () =>
       resolve([registration("demo_item", { filterFields: ["$where"] })]),
     ).toThrow(/篩選欄位 \$where 不是合法的欄位名/);
   });
+
+  it("依操作者的預設值(defaultForOperator):操作者欄位 / 固定條件 / 排序欄位都要是合法的欄位名", () => {
+    expect(() =>
+      resolve([
+        registration("demo_item", {
+          defaultForOperator: {
+            operatorField: "createdBy",
+            where: { enabled: true, closedAt: null },
+            latestBy: "createdAt",
+          },
+        }),
+      ]),
+    ).not.toThrow();
+    expect(() =>
+      resolve([
+        registration("demo_item", {
+          defaultForOperator: { operatorField: "$where" },
+        }),
+      ]),
+    ).toThrow(/預設值的操作者欄位 \$where 不是合法的欄位名/);
+    expect(() =>
+      resolve([
+        registration("demo_item", {
+          defaultForOperator: {
+            operatorField: "createdBy",
+            where: { "a.b": 1 },
+          },
+        }),
+      ]),
+    ).toThrow(/預設值的固定條件 a\.b 不是合法的欄位名/);
+    expect(() =>
+      resolve([
+        registration("demo_item", {
+          defaultForOperator: { operatorField: "createdBy", latestBy: "id" },
+        }),
+      ]),
+    ).toThrow(/預設值的排序欄位 id 不是合法的欄位名/);
+  });
 });
 
 describe("assertLookupRepositories:只能綁專案資料登記的 repository", () => {

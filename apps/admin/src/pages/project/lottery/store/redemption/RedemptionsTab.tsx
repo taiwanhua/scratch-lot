@@ -1,6 +1,7 @@
 import { useTranslations } from "use-intl";
 import { z } from "zod";
 
+import { compareDisplayName } from "@repo/domain/collation";
 import {
   DEFAULT_TENANT_TIMEZONE,
   localDateOf,
@@ -28,8 +29,8 @@ import { Tag } from "@repo/ui/tag";
 import { TextField } from "@repo/ui/text-field";
 import { Typography } from "@repo/ui/typography";
 
+import { DateFilterPicker } from "@/components/base/DateFilterPicker/DateFilterPicker";
 import { FilterDrawer } from "@/components/base/FilterDrawer/FilterDrawer";
-import { DateFilterPicker } from "@/components/project/DateFilterPicker/DateFilterPicker";
 import { useMe } from "@/hooks/base/useMe";
 import { useSession } from "@/hooks/base/useSession";
 import { useTemporalText } from "@/hooks/base/useTemporalText";
@@ -191,7 +192,7 @@ export const RedemptionsTab = () => {
     ),
   ]
     .map(([, person]) => person)
-    .toSorted((a, b) => a.name.localeCompare(b.name, "zh-Hant"));
+    .toSorted((a, b) => compareDisplayName(a.name, b.name));
 
   const shiftText = (row: RedemptionRow) =>
     `${row.shift.openedBy.name} ${temporal(row.shift.openedAt, "monthDayTime").split(" ").at(-1) ?? ""}`;

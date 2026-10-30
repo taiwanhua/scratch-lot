@@ -70,6 +70,24 @@ export interface ProjectLookupDeclaration extends LookupProviderDeclaration {
    * (db-migrator 的 `SeedSource.portableLookupProviders`;兩邊讀同一個 domain 常數)。條件 key 必須列在 `filterFields`。
    */
   portable?: PortableLookupProvider;
+  /**
+   * **依操作者的預設值**(選填):宣告了,引用這個來源的欄位在表單設計可以選預設值「來源提供的預設」。
+   * 底座照宣告查**操作者自己的**一筆:文件的 `operatorField` = 操作者 id、`where` 的固定條件,再加上那個
+   * 引用欄的篩選條件與預設值條件(`FieldDef.default.filter`,鍵是 `filterFields`);好幾筆時取 `latestBy`
+   * 最新的(不給 = `_id` 最新的),查無 → 沒有預設值。查詢一樣經 BaseRepository(可見範圍、資料範圍、軟刪除由
+   * plugin 套)與來源的 `permission`,查到的再以依值取回驗一次,放寬不了範圍。
+   */
+  defaultForOperator?: LookupOperatorDefault;
+}
+
+/** 依操作者的預設值的宣告(`ProjectLookupDeclaration.defaultForOperator`)。 */
+export interface LookupOperatorDefault {
+  /** 存操作者 id(使用者 id)的文件欄位,例 `openedBy`。 */
+  operatorField: string;
+  /** 固定條件(等值;`null` = 沒有值),例 `{ closedAt: null }` = 還開著的。 */
+  where?: Readonly<Record<string, string | number | boolean | null>>;
+  /** 好幾筆時依這個文件欄位取最新的;不給 = `_id` 最新的。 */
+  latestBy?: string;
 }
 
 /** 固定入口 `project/lookup-providers.ts` 的一筆。 */
@@ -165,6 +183,7 @@ function checkDeclaration(
     }
   }
   checkPortable(key, declaration);
+  checkOperatorDefault(key, declaration.defaultForOperator);
   checkKnownField(declaration, "顯示欄", declaration.labelField);
   const valueField = declaration.valueField ?? "id";
   checkKnownField(declaration, "值欄", valueField);
@@ -183,6 +202,23 @@ function checkPortable(
     if (!declaration.filterFields.includes(name)) {
       fail(key, `可攜的固定條件 ${name} 必須列在 filterFields`);
     }
+  }
+}
+
+/** 依操作者的預設值:欄位名都要是合法的文件欄位名。 */
+function checkOperatorDefault(
+  key: string,
+  operatorDefault: LookupOperatorDefault | undefined,
+): void {
+  if (operatorDefault === undefined) {
+    return;
+  }
+  checkFieldName(key, "預設值的操作者欄位", operatorDefault.operatorField);
+  for (const name of Object.keys(operatorDefault.where ?? {})) {
+    checkFieldName(key, "預設值的固定條件", name);
+  }
+  if (operatorDefault.latestBy !== undefined) {
+    checkFieldName(key, "預設值的排序欄位", operatorDefault.latestBy);
   }
 }
 

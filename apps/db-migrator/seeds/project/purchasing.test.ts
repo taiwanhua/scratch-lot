@@ -1,6 +1,6 @@
 import { describe, expect, it } from "@jest/globals";
 
-import { SHARED_FIELD_CATEGORY_KEYS } from "@repo/domain/project/reason-note";
+import { VOID_REASON_CATEGORY_KEY } from "@repo/domain/form";
 
 import { assembleSeedRegistry } from "../registry";
 import { FORM_WORKFLOWS } from "./onboarding/form-workflows";
@@ -63,7 +63,7 @@ describe("叫貨與進貨的模組宣告(規格 3.1、3.2)", () => {
       moduleKey: "purchasing.requisition",
       allowDraft: true,
       serial: { prefix: "R", period: "none", digits: 4 },
-      voidReasonCategoryKey: SHARED_FIELD_CATEGORY_KEYS.voidReason,
+      voidReasonCategoryKey: VOID_REASON_CATEGORY_KEY,
       // 依欄位共用:分店欄指到的分店也看得到(唯讀)
       sharedByFieldKeys: ["branch"],
     });

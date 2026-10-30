@@ -242,7 +242,18 @@ function saleReversalDefinition(): FormDefinition {
   ]);
 }
 
-/** 現金更正單的定義(欄位 key 同受管表單 `seeds/project/revisions/cash_correction.r2.seed.ts`)。 */
+const FORM_LOOKUP_DEFAULT = /* GraphQL */ `
+  query FormLookupDefault($input: FormLookupDefaultInput!) {
+    formLookupDefault(input: $input) {
+      record {
+        id
+        label
+      }
+    }
+  }
+`;
+
+/** 現金更正單的定義(欄位 key 同受管表單 `seeds/project/revisions/cash_correction.r3.seed.ts`)。 */
 function cashCorrectionDefinition(): FormDefinition {
   return definitionOf([
     field("note", "text", { rules: { required: true } }),
@@ -267,6 +278,8 @@ function cashCorrectionDefinition(): FormDefinition {
     }),
     field("shift", "reference", {
       ...reference("lottery_shift", "label"),
+      // 來源提供的預設:填寫者自己在「分店」那家店開著的班
+      default: { kind: "provider", filter: { orgId: { var: "branch" } } },
       visibleWhen: { "==": [{ var: "place" }, "drawer"] },
       rules: { required: true },
     }),
@@ -1049,6 +1062,58 @@ describe("撤銷售出申請與現金更正單(規格 8.5、8.8)", () => {
         }),
       ]);
       expect(await expectedOf(counter)).toBe(before - 300);
+    });
+
+    it("班次預設 = 填寫者自己在那家店開著的班(已結帳的不算);換分店、自己沒開班 → 空", async () => {
+      // 不送班次(缺席的欄位 = 空白,由後端填預設值)
+      const withoutShift = correctionValues({ shift: undefined });
+      const draft = await createDraft(
+        api,
+        wang.token,
+        CASH_CORRECTION_FORM_KEY,
+        withoutShift,
+      );
+      expect(draft.values.shift).toEqual({
+        id: String(counterShift),
+        label: "店內櫃台 · 王小明",
+      });
+      const otherStore = await createDraft(
+        api,
+        wang.token,
+        CASH_CORRECTION_FORM_KEY,
+        { ...withoutShift, branch: String(banqiao) },
+      );
+      expect(otherStore.values.shift ?? null).toBeNull();
+      const noShift = await createDraft(
+        api,
+        manager.token,
+        CASH_CORRECTION_FORM_KEY,
+        withoutShift,
+      );
+      expect(noShift.values.shift ?? null).toBeNull();
+
+      // 填寫頁顯示用的查詢:照目前的分店查
+      const lookupDefault = async (who: Person, branch: Types.ObjectId) => {
+        const data = await ok<{
+          formLookupDefault: {
+            record: { id: string; label: string } | null;
+          };
+        }>(api, who.token, FORM_LOOKUP_DEFAULT, {
+          input: {
+            formKey: CASH_CORRECTION_FORM_KEY,
+            version: 1,
+            fieldKey: "shift",
+            filterValues: { branch: String(branch) },
+          },
+        });
+        return data.formLookupDefault.record;
+      };
+      expect(await lookupDefault(wang, xinyi)).toEqual({
+        id: String(counterShift),
+        label: "店內櫃台 · 王小明",
+      });
+      expect(await lookupDefault(wang, banqiao)).toBeNull();
+      expect(await lookupDefault(manager, xinyi)).toBeNull();
     });
 
     it("位置 = 小金庫 → 小金庫應有變化;歸屬班次可以選已結帳的班(只做歸屬)", async () => {

@@ -132,7 +132,7 @@ describe("tenantOrgTree:整棵租戶樹 + 可見 / 可管理旗標", () => {
     // 樹上只有名稱與兩個旗標(查詢只問得到這些)
     expect(
       Object.keys(tree[0] ?? {}).toSorted((left, right) =>
-        left.localeCompare(right),
+        left.localeCompare(right, "zh-Hant"),
       ),
     ).toEqual(["children", "id", "isManaged", "isVisible", "name", "parentId"]);
   });

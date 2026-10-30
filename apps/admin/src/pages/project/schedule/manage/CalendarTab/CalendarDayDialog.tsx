@@ -5,6 +5,11 @@ import { useTranslations } from "use-intl";
 import { DEFAULT_TENANT_TIMEZONE } from "@repo/domain/form";
 import { SCHEDULE_FIELD_CATEGORY_KEYS } from "@repo/domain/project/schedule-fields";
 import {
+  SPECIAL_DAY_PALETTE_KEYS,
+  isSpecialDayPaletteKey,
+} from "@repo/domain/project/schedule-settings";
+import type { TagPaletteKey } from "@repo/domain/tag-palette";
+import {
   type SaveScheduleCalendarDayMutation,
   type ScheduleCalendarDayFieldsFragment,
   useDeleteScheduleCalendarDayMutation,
@@ -22,7 +27,7 @@ import { TextField } from "@repo/ui/text-field";
 import { Typography } from "@repo/ui/typography";
 
 import { FieldErrorGroup } from "@/components/base/FieldErrorGroup/FieldErrorGroup";
-import { TagPaletteSelect } from "@/components/project/TagPaletteSelect/TagPaletteSelect";
+import { TagPaletteSelect } from "@/components/base/TagPaletteSelect/TagPaletteSelect";
 import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
 import { useSession } from "@/hooks/base/useSession";
 import { useTemporalText } from "@/hooks/base/useTemporalText";
@@ -32,11 +37,6 @@ import { useScheduleFieldOptions } from "@/hooks/project/schedule/useScheduleFie
 import type { FieldErrorTexts } from "@/lib/base/field-errors";
 import { localDayInstantOf } from "@/lib/base/form-engine/local-day";
 import { dayKeyOf } from "@/lib/project/schedule-day-offs";
-import {
-  SPECIAL_DAY_PALETTE_KEYS,
-  type TagPaletteKey,
-  isSpecialDayPaletteKey,
-} from "@/lib/project/tag-palettes";
 
 import { ConfirmDeleteDialog } from "../../ConfirmDeleteDialog";
 import {

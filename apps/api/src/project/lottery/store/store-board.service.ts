@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { Types } from "mongoose";
 
+import { COLLATION_LOCALE, compareDisplayName } from "@repo/domain/collation";
 import { localDateOf, startOfLocalDay } from "@repo/domain/form";
 import {
   TICKET_LOCATION_KIND,
@@ -77,7 +78,7 @@ export class StoreBoardService {
       enabled: true,
     });
     const points = found.toSorted(
-      (a, b) => a.order - b.order || a.name.localeCompare(b.name, "zh-Hant"),
+      (a, b) => a.order - b.order || compareDisplayName(a.name, b.name),
     );
     const pointNames = new Map(
       points.map((point) => [String(point._id), point.name]),
@@ -214,8 +215,8 @@ export class StoreBoardService {
     for (const list of cards.values()) {
       list.sort(
         (a, b) =>
-          a.gameCode.localeCompare(b.gameCode) ||
-          a.bookNo.localeCompare(b.bookNo),
+          a.gameCode.localeCompare(b.gameCode, COLLATION_LOCALE) ||
+          a.bookNo.localeCompare(b.bookNo, COLLATION_LOCALE),
       );
     }
     return cards;

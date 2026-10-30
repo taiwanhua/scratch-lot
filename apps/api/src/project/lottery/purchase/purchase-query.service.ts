@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import type { Types } from "mongoose";
 
+import { compareDisplayName } from "@repo/domain/collation";
 import {
   PURCHASE_FIELD_KEYS,
   PURCHASE_FORM_KEY,
@@ -48,7 +49,7 @@ import { PURCHASE_LIVE_STATUSES, toObjectId } from "./purchase-rules.service";
 const DEALER_CONTACT = "lottery_dealer_lottery_dealer_contact";
 
 function byLabel(left: { label: string }, right: { label: string }): number {
-  return left.label.localeCompare(right.label, "zh-Hant");
+  return compareDisplayName(left.label, right.label);
 }
 
 function labelOf(value: unknown): string {

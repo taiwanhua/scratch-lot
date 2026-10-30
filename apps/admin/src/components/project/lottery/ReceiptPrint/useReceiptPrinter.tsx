@@ -1,31 +1,15 @@
-import { useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useCallback, useRef, useState } from "react";
 import { useTranslations } from "use-intl";
 
 import { REPRINT_REASON_OTHER } from "@repo/domain/printing";
-import {
-  useCreatePrintJobMutation,
-  useDocumentPrintCountQuery,
-  usePrintablePrintersQuery,
-} from "@repo/graphql";
 import { Box } from "@repo/ui/box";
 import type { Receipt58ReprintMarkProps } from "@repo/ui/receipt58";
 
+import { useAutoPrint } from "@/components/base/AutoPrint/useAutoPrint";
 import type { PrintReprintMark } from "@/components/base/PrintButton/PrintButton";
 import { useMe } from "@/hooks/base/useMe";
-import {
-  useMutationFeedback,
-  useSnackbar,
-} from "@/hooks/base/useMutationFeedback";
-import { usePermissions } from "@/hooks/base/usePermissions";
-import { useSession } from "@/hooks/base/useSession";
+import { useSnackbar } from "@/hooks/base/useMutationFeedback";
 import { useTemporalText } from "@/hooks/base/useTemporalText";
-import {
-  PRINT_BUTTON_PERMISSIONS,
-  blobToBase64,
-  resolvePrinterId,
-} from "@/lib/base/print-button";
-import { isPrintImageTooLarge } from "@/lib/project/lottery/receipts/receipt-image-limits";
 import {
   RECEIPT_ALL_COPIES,
   type ReceiptKind,
@@ -38,10 +22,8 @@ import type {
   ReceiptLayout,
   ReceiptTranslator,
 } from "@/lib/project/lottery/receipts/receipt-layout";
-import { logReceiptPrintFailure } from "@/lib/project/lottery/receipts/receipt-log";
 
 import { PendingReceipt, type PendingRender } from "./PendingReceipt";
-import { PrintResultWatch, type WatchedPrintJob } from "./PrintResultWatch";
 
 /** 補印標示的文案(`admin.lotteryPurchasing.receipts.reprint.*`)。 */
 const REPRINT_I18N = "admin.lotteryPurchasing.receipts.reprint";
@@ -55,9 +37,8 @@ export interface ReceiptPrinter {
    * 交易成功之後自動列印(專案規格第 12 章的「自動」):呼叫端在寫入成功之後才呼叫,寫入失敗就不叫。
    * 沒有 `api.printing.print` → 不印;分店沒有可用的印表機 → 不印。
    * 印表機 = 單據的預設(收銀點的印表機)→ 分店預設 → 第一台。
-   * 任何失敗(查印表機、轉圖、建立工作)只記 log,不拋錯、不跳提示,呼叫端照常往下做;
+   * 送出、等結果與失敗處理走底座的自動列印(`useAutoPrint`:任何失敗只記 log,不拋錯、不跳提示);
    * 唯一的例外:接成一張的圖超過高度 / 大小上限(多聯加總、明細很長)→ 不送,跳一則提示請按 [列印](沒印過)或 [補印](印過)分聯印。
-   * 工作有結果時重查那張單據的已印次數(`PrintResultWatch`;呼叫端還掛著 `host` 時),標頭按鈕跟著變 [補印]。
    */
   printReceiptAfterCommit: <Kind extends ReceiptKind>(
     kind: Kind,
@@ -80,7 +61,7 @@ export interface ReceiptPrinter {
 /**
  * 58mm 單據的列印(專案規格第 12 章;底座 B8 列印流程見 `docs/modules/printers.md`):
  * 單據由 `lib/project/lottery/receipts/` 排版、`ReceiptDocument` 組成版面零件,掛在畫面外轉成 384 點黑白 PNG,
- * 送 `createPrintJob`。補印走底座的列印按鈕與補印對話框(`ReceiptPrintButton`)。
+ * 交給底座的自動列印(`useAutoPrint`)送出。補印走底座的列印按鈕與補印對話框(`ReceiptPrintButton`)。
  */
 export const useReceiptPrinter = (): ReceiptPrinter => {
   const tRoot = useTranslations();
@@ -90,18 +71,9 @@ export const useReceiptPrinter = (): ReceiptPrinter => {
   const showSnackbar = useSnackbar();
   const temporalText = useTemporalText();
   const tenantName = useMe().data?.me.currentOrg?.tenantName ?? "";
-  const { session } = useSession();
-  const queryClient = useQueryClient();
-  const { hasPermission } = usePermissions();
-  const canPrint = hasPermission(PRINT_BUTTON_PERMISSIONS.print);
-  // 自動列印的回饋只有 log(失敗由底座的列印失敗通知告訴要求人),不跳提示
-  const createJob = useCreatePrintJobMutation(
-    session.client,
-    useMutationFeedback({ success: null, error: () => null }),
-  );
-  const { mutateAsync: createPrintJob } = createJob;
+  const autoPrint = useAutoPrint();
+  const { canPrint, printAfterCommit } = autoPrint;
   const [pending, setPending] = useState<PendingRender[]>([]);
-  const [watching, setWatching] = useState<WatchedPrintJob[]>([]);
   const nextId = useRef(0);
 
   const translatorOf = useCallback(
@@ -158,74 +130,35 @@ export const useReceiptPrinter = (): ReceiptPrinter => {
       const t = translatorOf(definition.i18n);
       const {
         orgId,
-        defaultPrinterId: preferredId,
+        defaultPrinterId: preferredPrinterId,
         ...document
       } = receiptPrintRefOf(kind, payload, t);
-      try {
-        const printers = await queryClient.fetchQuery({
-          queryKey: usePrintablePrintersQuery.getKey({ orgId }),
-          queryFn: usePrintablePrintersQuery.fetcher(session.client, {
-            orgId,
-          }),
-        });
-        const { items, defaultPrinterId } = printers.printablePrinters;
-        const printerId = resolvePrinterId(
-          items,
-          preferredId,
-          defaultPrinterId,
-        );
-        if (printerId === null) {
-          logReceiptPrintFailure("no printer", { kind, orgId });
-          return;
-        }
+      await printAfterCommit({
+        orgId,
+        preferredPrinterId,
+        document,
         // 一次列印 = 一個工作:多聯的單據各聯接成一張圖、中間切紙(已印次數算 1 次)
-        const image = await blobToBase64(
-          await renderLayouts(
+        renderImage: () =>
+          renderLayouts(
             receiptLayoutsOf(kind, payload, t, new Date().toISOString()),
             null,
           ),
-        );
-        if (isPrintImageTooLarge(image)) {
-          // api 一定擋(INVALID_IMAGE):不送,告訴使用者這次沒印出、怎麼補
-          logReceiptPrintFailure("image too large", { kind, orgId });
-          // 照按鈕現在的樣子寫:沒印過是 [列印]、印過是 [補印](兩邊都能選聯別)
-          const printed = await queryClient
-            .fetchQuery({
-              queryKey: useDocumentPrintCountQuery.getKey({
-                input: { refType: document.refType, refId: document.refId },
-              }),
-              queryFn: useDocumentPrintCountQuery.fetcher(session.client, {
-                input: { refType: document.refType, refId: document.refId },
-              }),
-            })
-            .then((data) => data.documentPrintCount.printedCount)
-            .catch(() => 0);
+        // 照按鈕現在的樣子寫:沒印過是 [列印]、印過是 [補印](兩邊都能選聯別)
+        onTooLarge: (printed) => {
           showSnackbar(
             "warning",
             tReceipts("tooLong", {
               button: tPrintButton(printed > 0 ? "reprint" : "print"),
             }),
           );
-          return;
-        }
-        const created = await createPrintJob({
-          input: { printerId, ...document, image },
-        });
-        const { job } = created.createPrintJob;
-        setWatching((current) => [
-          ...current,
-          { job, refType: document.refType, refId: document.refId },
-        ]);
-      } catch (error) {
-        logReceiptPrintFailure("print failed", { kind, orgId, error });
-      }
+        },
+        logDetail: { kind },
+      });
     },
     [
       canPrint,
-      createPrintJob,
-      queryClient,
+      printAfterCommit,
       renderLayouts,
-      session.client,
       showSnackbar,
       tPrintButton,
       tReceipts,
@@ -235,9 +168,6 @@ export const useReceiptPrinter = (): ReceiptPrinter => {
 
   const onDone = useCallback((id: number) => {
     setPending((current) => current.filter((item) => item.id !== id));
-  }, []);
-  const onWatched = useCallback((jobId: string) => {
-    setWatching((current) => current.filter((item) => item.job.id !== jobId));
   }, []);
 
   const reprintMarkOf = (
@@ -273,9 +203,7 @@ export const useReceiptPrinter = (): ReceiptPrinter => {
           onDone={onDone}
         />
       ))}
-      {watching.map((item) => (
-        <PrintResultWatch key={item.job.id} watched={item} onDone={onWatched} />
-      ))}
+      {autoPrint.host}
     </Box>
   );
 

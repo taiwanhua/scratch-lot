@@ -21,6 +21,7 @@ const FIELDS = /* GraphQL */ `
         value
         order
         isOwn
+        color
       }
     }
   }
@@ -36,23 +37,12 @@ const CREATE_FIELD = /* GraphQL */ `
   }
 `;
 
-const OPTION_COLORS = /* GraphQL */ `
-  query OnboardingPositionColors($categoryKey: String!) {
-    fieldOptionColors(categoryKey: $categoryKey) {
-      items {
-        fieldId
-        paletteKey
-      }
-    }
-  }
-`;
-
 const SET_OPTION_COLOR = /* GraphQL */ `
-  mutation OnboardingSetPositionColor($input: SetFieldOptionColorInput!) {
-    setFieldOptionColor(input: $input) {
-      color {
-        fieldId
-        paletteKey
+  mutation OnboardingSetPositionColor($input: SetFieldColorInput!) {
+    setFieldColor(input: $input) {
+      field {
+        id
+        color
       }
     }
   }
@@ -63,6 +53,7 @@ interface FieldRow {
   value: string;
   order: number;
   isOwn: boolean;
+  color: string | null;
 }
 
 /**
@@ -70,7 +61,7 @@ interface FieldRow {
  * 開通資料列的崗位(示範資料:店內櫃台A、店外櫃台B)建成這個租戶自己的選項,
  * 已有同一個代碼的就沿用。
  *
- * 選項顏色(欄位管理的「顏色」,色票代號 `paletteKey`):開通資料有給、選項是這個租戶自己的、
+ * 選項顏色(欄位管理的「顏色」,選項的 `color`):開通資料有給、選項是這個租戶自己的、
  * 而且**還沒有顏色**時才設定;已有顏色(租戶自己選過)不動。全域選項的顏色只有根組織能設,這一步不碰。
  */
 export const positionsStep: OnboardingStep = {
@@ -97,22 +88,13 @@ export const positionsStep: OnboardingStep = {
       { categoryId: category.id },
     );
     const byValue = new Map(fields.items.map((field) => [field.value, field]));
-    const { fieldOptionColors } = await client.request<{
-      fieldOptionColors: {
-        items: { fieldId: string; paletteKey: string | null }[];
-      };
-    }>(OPTION_COLORS, { categoryKey });
-    const colored = new Set(
-      fieldOptionColors.items
-        .filter((item) => item.paletteKey !== null)
-        .map((item) => item.fieldId),
-    );
     let order = Math.max(0, ...fields.items.map((field) => field.order));
     const lines: string[] = [];
     for (const position of plan.positions) {
       const found = byValue.get(position.value);
       let fieldId: string;
       let own: boolean;
+      let colored: boolean;
       if (found === undefined) {
         order += 1;
         const { createField } = await client.request<{
@@ -127,10 +109,12 @@ export const positionsStep: OnboardingStep = {
         });
         fieldId = createField.field.id;
         own = true;
+        colored = false;
         lines.push(`建立「${position.label}」`);
       } else {
         fieldId = found.id;
         own = found.isOwn;
+        colored = found.color !== null;
         lines.push(`「${position.label}」已存在`);
       }
       if (position.color === null) {
@@ -140,12 +124,12 @@ export const positionsStep: OnboardingStep = {
         lines.push(`  「${position.label}」不是這個租戶自己的選項,顏色不設`);
         continue;
       }
-      if (colored.has(fieldId)) {
+      if (colored) {
         lines.push(`  「${position.label}」已有顏色,不動`);
         continue;
       }
       await client.request(SET_OPTION_COLOR, {
-        input: { fieldId, paletteKey: position.color },
+        input: { id: fieldId, color: position.color },
       });
       lines.push(`  「${position.label}」顏色設為 ${position.color}`);
     }

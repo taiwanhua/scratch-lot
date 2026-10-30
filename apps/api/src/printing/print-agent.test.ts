@@ -899,7 +899,7 @@ describe("列印代理程式 API", () => {
       expect(
         rows
           .map((row) => String(row.status))
-          .toSorted((a, b) => a.localeCompare(b)),
+          .toSorted((a, b) => a.localeCompare(b, "zh-Hant")),
       ).toEqual(["failed", "pending"]);
       await service.expireStale(internalReader(), {}, new Date());
     });

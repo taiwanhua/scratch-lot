@@ -19,7 +19,7 @@ import {
   WorkflowTaskStatus,
 } from "@repo/graphql";
 
-import { type AuthErrorCode, graphqlError } from "./auth-handlers";
+import { graphqlError } from "./auth-handlers";
 import type { FormFailure } from "./form-runtime-handlers";
 import { api } from "./server";
 import { type ApplicationRow, STAMP } from "./workflow-fixtures";
@@ -120,11 +120,7 @@ export const workflowRuntimeWorld = (
     const failure = failures[operation];
     return failure === undefined
       ? null
-      : graphqlError(
-          failure.code as AuthErrorCode,
-          failure.code,
-          failure.extensions ?? {},
-        );
+      : graphqlError(failure.code, failure.code, failure.extensions ?? {});
   };
   const withMyTasks = (instance: WorkflowInstanceFieldsFragment) => ({
     ...instance,
@@ -226,7 +222,7 @@ export const workflowRuntimeWorld = (
     api.query("WorkflowInstance", ({ variables }) => {
       const instance = findInstance((variables as { id: string }).id);
       return instance === undefined
-        ? graphqlError("NOT_FOUND" as AuthErrorCode)
+        ? graphqlError("NOT_FOUND")
         : HttpResponse.json({
             data: { workflowInstance: { instance: withMyTasks(instance) } },
           });
@@ -240,7 +236,7 @@ export const workflowRuntimeWorld = (
       }
       const task = tasks.find((item) => item.id === input.taskId);
       if (task === undefined) {
-        return graphqlError("NOT_FOUND" as AuthErrorCode);
+        return graphqlError("NOT_FOUND");
       }
       if (options.closedTaskIds?.includes(task.id) === true) {
         return HttpResponse.json({
@@ -379,7 +375,7 @@ export const workflowRuntimeWorld = (
       }
       const instance = findInstance(input.instanceId);
       return instance === undefined
-        ? graphqlError("NOT_FOUND" as AuthErrorCode)
+        ? graphqlError("NOT_FOUND")
         : HttpResponse.json({
             data: {
               retryAdvanceInstance: { instance: withMyTasks(instance) },

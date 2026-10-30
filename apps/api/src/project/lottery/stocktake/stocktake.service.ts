@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common";
 import { GraphQLError } from "graphql";
 import { type ClientSession, Types } from "mongoose";
 
+import { COLLATION_LOCALE } from "@repo/domain/collation";
 import type { StoredValues } from "@repo/domain/form";
 import {
   INVENTORY_PERMISSIONS,
@@ -30,7 +31,6 @@ import {
 import type { OperatorContext } from "../../../database/operator-context";
 import { tenantBoundaryContext } from "../../../database/tenant-boundary-context";
 import { TransactionService } from "../../../database/transaction";
-import { WorkflowTasksRepository } from "../../../database/workflow-tasks.repository";
 import { FieldOptionsService } from "../../../fields/field-options.service";
 import type { FormGuardResult } from "../../../workflows/workflow-engine/lifecycle/form-lifecycle-registration";
 import {
@@ -122,7 +122,6 @@ export class StocktakeService {
     private readonly shifts: LotteryShiftsRepository,
     private readonly orgs: OrgsRepository,
     private readonly submissions: FormSubmissionsRepository,
-    private readonly workflowTasks: WorkflowTasksRepository,
     private readonly facts: StocktakeFacts,
     private readonly ledger: TicketLedgerService,
     private readonly fieldOptions: FieldOptionsService,
@@ -581,12 +580,14 @@ export class StocktakeService {
   /**
    * 核准完成:套用庫存變動(依時間順序,各張以目前的版本條件更新;已不是要的狀態 → 略過):
    * 差異 [待查]、未拆的本不在 → 待查(責任分店 = 本店);待查清單 確認遺失 → 遺失、找到了 → 尋回(回到本店庫存);
-   * 標記異常只做記號。盤點單 → 已確認。
+   * 標記異常只做記號。盤點單 → 已確認;`approverId` = 事後動作的 `decidedBy`(最後核准的人),
+   * 沒有(每一關都跳過)= 申請人。
    */
   async apply(
     session: ClientSession,
     tenantId: Types.ObjectId | null,
     submissionId: Types.ObjectId,
+    approverId: Types.ObjectId | null,
   ): Promise<void> {
     const reader = await tenantBoundaryContext(this.orgs, null, tenantId);
     const record = await this.stocktakes.findOne(
@@ -721,7 +722,9 @@ export class StocktakeService {
         $set: {
           status: STOCKTAKE_STATUS.confirmed,
           confirmedAt: at,
-          confirmedBy: await this.approverOf(tenantId, submissionId, session),
+          confirmedBy:
+            approverId ??
+            (await this.applicantOf(reader, submissionId, session)),
         },
         $inc: { version: 1 },
       },
@@ -729,29 +732,16 @@ export class StocktakeService {
     );
   }
 
-  /**
-   * 核准的人:這張申請目前的流程實例裡已核准的任務,依決定時間取最後一筆的審核者;
-   * 沒有(申請人是審核者、自動通過沒有留任務)= 申請人。
-   */
-  private async approverOf(
-    tenantId: Types.ObjectId,
+  /** 申請人(核准的人的備援:每一關都跳過,沒有人核准)。 */
+  private async applicantOf(
+    reader: OperatorContext,
     submissionId: Types.ObjectId,
     session: ClientSession,
   ): Promise<Types.ObjectId | null> {
-    const reader = await tenantBoundaryContext(this.orgs, null, tenantId);
     const submission = await this.submissions.findById(reader, submissionId, {
       session,
     });
-    const instanceId = submission?.currentInstanceId ?? null;
-    const [last] =
-      instanceId === null
-        ? []
-        : await this.workflowTasks.findMany(
-            tenantId,
-            { instanceId, status: "approved" },
-            { sort: { decidedAt: -1 }, limit: 1 },
-          );
-    return last?.assigneeId ?? submission?.createdBy ?? null;
+    return submission?.createdBy ?? null;
   }
 
   // ---- 組盤點單 ----
@@ -981,8 +971,8 @@ export class StocktakeService {
         (a, b) =>
           (order.get(String(a.cashPointId)) ?? 0) -
             (order.get(String(b.cashPointId)) ?? 0) ||
-          a.gameCode.localeCompare(b.gameCode) ||
-          a.bookNo.localeCompare(b.bookNo),
+          a.gameCode.localeCompare(b.gameCode, COLLATION_LOCALE) ||
+          a.bookNo.localeCompare(b.bookNo, COLLATION_LOCALE),
       );
     return [...onCounter, ...stockUncounted];
   }
@@ -1009,8 +999,8 @@ export class StocktakeService {
       }))
       .toSorted(
         (a, b) =>
-          a.gameCode.localeCompare(b.gameCode) ||
-          a.bookNo.localeCompare(b.bookNo),
+          a.gameCode.localeCompare(b.gameCode, COLLATION_LOCALE) ||
+          a.bookNo.localeCompare(b.bookNo, COLLATION_LOCALE),
       );
   }
 

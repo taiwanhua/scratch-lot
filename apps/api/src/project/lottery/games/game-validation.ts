@@ -11,7 +11,7 @@ import {
   isGameStatus,
   isValidUnitPrice,
 } from "@repo/domain/project/lottery-master-data";
-import { isTagPaletteKey } from "@repo/domain/project/tag-palette";
+import { isTagPaletteKey } from "@repo/domain/tag-palette";
 
 /**
  * 遊戲欄位的驗證(專案規格 5.1):一次收齊所有不合的欄位,由呼叫端丟一個 `VALIDATION_FAILED`。

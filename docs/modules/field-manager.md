@@ -26,7 +26,7 @@
 | ----------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `system.field-manager.view`                           | 看類別與選項(來源欄:全域 / <組織名稱> 自訂)。表單引擎的填寫者經 `formFieldOptions` 讀類別選項,不需要本權限(`docs/modules/forms.md`「欄位管理類別選項」)                                                        |
 | `system.field-manager.create`                         | 「新增選項」+ API(本組織自訂,`orgId` = 當前組織;不可與上層繼承鏈同 `value`,見「規則」;Figma「Overlay / 新增選項」)                                                                                             |
-| `system.field-manager.edit`                           | 編輯自訂選項的 label / order / description + API(種子選項只能改 `enabled`)                                                                                                                                     |
+| `system.field-manager.edit`                           | 編輯自訂選項的 label / order / description + API(種子選項只能改 `enabled`);設定選項顏色(另守「誰能停用該選項」,見「規則」的「選項顏色」)                                                                       |
 | `system.field-manager.category-ops.manage-categories` | 「新增類別」按鈕、類別的「編輯類別」與停用 / 啟用 + API。**根組織專屬**:掛在 isRootOnly 的權限容器下,另守「站在根組織」(同租戶作業的 `isRootOperator`)                                                         |
 | `system.field-manager.toggle-enabled`                 | 停用 / 啟用選項 + API。**自訂選項只有加它的那一層切得動**(上層 / 下層看得到但 `FORBIDDEN` + `reason: NOT_OWNER`);**種子選項限根組織操作者**(那一筆 `orgId = null`,切下去是全域生效),租戶操作者切 → `FORBIDDEN` |
 
@@ -40,22 +40,27 @@
   - 畫面建的類別日後要固定下來,就在 seed 宣告**同一個 key**:seed 以 key **認養**那一筆(`isSystem` 改 true、名稱 / 說明以 seed 為準、`_id` 不動,表單版本的類別 key 與 `fields.categoryId` 的引用都不受影響);該類別下根組織加的、與 seed 宣告同 `value` 的選項一併認養成全域種子(租戶的自訂選項與根組織加的其他選項不動)。認養單向;seed 沒宣告的畫面類別一律不碰。
 - **`fields`**:選項。`orgId` nullable —— `null` = 全域種子、有值 = 該組織的自訂選項。`(categoryId, orgId, value)` 唯一索引;`key` 選填、sparse unique。
 - **種子選項的 key**:`<類別 key>.<value>`(如 `gender.male`、`demo-category.side-dish`),只給冪等識別用;自訂選項沒有 key、以 `_id` 識別。production 第一次 seed 後不可改。
-- `enabled` 是 ADR-0002 的「初始 seed 值的欄位」:由人在系統內管理,seed 重跑不覆蓋。
+- **`fields.color`**:選項的標籤色票代號(`@repo/domain/tag-palette` 的 `TAG_PALETTE_KEYS`),nullable,`null` / 缺席 = 不設定(標籤照原樣顯示)。
+- `enabled`、`color` 都是 ADR-0002 的「初始 seed 值的欄位」(`seeds/base/fields.ts` 的 `FIELD_INITIAL_SEED_VALUE_FIELDS`,底座與專案的 `fields` 宣告共用同一份):只在那一筆還沒有該欄位時寫入,由人在系統內管理,seed 重跑不覆蓋(含清成不設定)。種子選項宣告 `color` 才有初始顏色;沒宣告就不寫。
 
 **種子內容**(全域類別與選項,`orgId = null`;order 依宣告順序 1 起算):
 
-| 類別 key         | 類別名   | 選項 value    | 選項 label | order |
-| ---------------- | -------- | ------------- | ---------- | ----- |
-| `gender`         | 性別     | `male`        | 男         | 1     |
-|                  |          | `female`      | 女         | 2     |
-|                  |          | `other`       | 其他       | 3     |
-|                  |          | `undisclosed` | 不透露     | 4     |
-| `demo-category`  | 示範分類 | `staple`      | 主食       | 1     |
-|                  |          | `side-dish`   | 小菜       | 2     |
-|                  |          | `drink`       | 飲品       | 3     |
-| `reprint-reason` | 補印原因 | `lost`        | 遺失       | 1     |
-|                  |          | `damaged`     | 破損       | 2     |
-|                  |          | `other`       | 其他       | 3     |
+| 類別 key         | 類別名   | 選項 value              | 選項 label | order |
+| ---------------- | -------- | ----------------------- | ---------- | ----- |
+| `gender`         | 性別     | `male`                  | 男         | 1     |
+|                  |          | `female`                | 女         | 2     |
+|                  |          | `other`                 | 其他       | 3     |
+|                  |          | `undisclosed`           | 不透露     | 4     |
+| `demo-category`  | 示範分類 | `staple`                | 主食       | 1     |
+|                  |          | `side-dish`             | 小菜       | 2     |
+|                  |          | `drink`                 | 飲品       | 3     |
+| `reprint-reason` | 補印原因 | `lost`                  | 遺失       | 1     |
+|                  |          | `damaged`               | 破損       | 2     |
+|                  |          | `other`                 | 其他       | 3     |
+| `void-reason`    | 作廢原因 | `input-error`           | 輸入錯誤   | 1     |
+|                  |          | `duplicate`             | 重複建立   | 2     |
+|                  |          | `transaction-cancelled` | 交易取消   | 3     |
+|                  |          | `other`                 | 其他       | 4     |
 
 示範畫面上的「甜點」是租戶自訂選項的示意,**不是種子**。
 
@@ -101,9 +106,15 @@
 - 類別不可刪;系統類別**唯讀**:名稱與說明是「每次都 seed 的欄位」,由 seed 維護(說明沒宣告即 `null`),所以不可改名 / 說明、不可停用(啟用可以 —— 認養時可能帶著停用狀態),違反回 `FORBIDDEN` + `SYSTEM_CATEGORY`。
 - **停用只影響表單設計器**:類別清單(`fieldCategories(input: { enabledOnly: true })`)不列、不能新選。既有欄位用到停用類別時照常顯示:執行期的選項查詢(`formFieldOptions`、送出驗值、顯示名解析)不看類別的 `enabled`,發布檢查器的類別 key 集合也含停用的類別。欄位管理頁照樣列出停用的類別(灰掉、標「已停用」),選項照常可管。
 
+### 選項顏色
+
+- **只能從色票選**:十個代號(`@repo/domain/tag-palette`;顏色值在 `@repo/ui/theme` 的 `tagPalettes`,見 `docs/branding.md`「標籤色票」),不在清單(含色碼、大小寫不同)→ `VALIDATION_FAILED`(`extensions.fields = ["color"]`)。
+- **誰能設 = 誰能停用該選項**(`canToggleEnabled`)∩ `system.field-manager.edit`:自訂選項限加它的那一層;種子選項限根組織操作者(只有一筆文件,顏色對全平台生效)。
+- 清掉顏色 = 設成 `null`;與目前相同 → 不寫入、不記稽核。資料庫裡出現不在色票的值(舊資料)一律當 `null` 讀出。
+
 ### 其他
 
-- 種子選項僅 `enabled` 可改;自訂選項的 `value` 建立後不可改。
+- 種子選項僅 `enabled` 與顏色可改;自訂選項的 `value` 建立後不可改。
 - 選項不可刪(既有資料要對照),僅停用;停用只影響新填寫,既有資料不受影響。
 
 正本:`apps/api/src/fields/fields.service.ts`、`apps/api/src/fields/field-visibility.ts`
@@ -112,9 +123,10 @@
 
 業務功能(作廢原因、各種原因 / 類別下拉)讀選項與驗「原因」用底座的 `FieldOptionsService`(`apps/api/src/fields/field-options.service.ts`;業務模組 import `FieldOptionsModule`),不自己寫一份:
 
-- `optionsOf(operator, categoryKey, allowedCategories)`:該類別**啟用中**的選項 `{ value, label }`,範圍同上方「自訂選項的可見範圍」的合併清單(全域 + 上層 + 自己 + 看得到的下層),依排序值、建立順序。不需要 `system.field-manager.view`。
+- `optionsOf(operator, categoryKey, allowedCategories)`:該類別**啟用中**的選項 `{ value, label, color }`(`color` 規則同 `Field.color`),範圍同上方「自訂選項的可見範圍」的合併清單(全域 + 上層 + 自己 + 看得到的下層),依排序值、建立順序。不需要 `system.field-manager.view`。
 - `assertReason(operator, categoryKey, { reasonKey, reasonNote }, allowedCategories, names?)`:`reasonKey` 必填且是上面列得出來的選項;選「其他」(選項值 `other`,`@repo/domain/form` 的 `REASON_OPTION_OTHER`)時 `reasonNote` 必填。回 `{ reasonKey, reasonLabel, reasonNote }`(說明去空白,空 = null)。不合 → `VALIDATION_FAILED`,`fields` 預設指到 `reasonKey` / `reasonNote`(`names` 可改成呼叫端的欄位名)。
 - **類別白名單**由呼叫端傳(例:作廢原因 = 那張表單設的那一個類別);不在白名單 → `VALIDATION_FAILED`(`fields: ["categoryKey"]`),不讓前端帶任意類別讀別的清單。類別不存在 → 沒有選項(原因一律不合法)。
+- 表單引擎(類別 key 來自表單定義,不經白名單)用同一支服務的另外兩個方法:`optionMapOf(operator, categoryKey)` 回同一個合併範圍、**含停用的**選項(`value → { label, enabled, color }`;新值只收啟用中的,顯示既有值時停用的仍算來源還在),`categoryKeys(operator)` 回全部類別 key(表單定義檢查的 `OPTIONS_UNKNOWN_CATEGORY`)。
 
 正本測試:`apps/api/src/fields/field-options.test.ts`
 
@@ -126,12 +138,13 @@ fields(categoryId: ID!): FieldsPayload!            # 合併清單(範圍與排�
 createField(input: CreateFieldInput!): FieldPayload!
 updateField(input: UpdateFieldInput!): FieldPayload!
 setFieldEnabled(input: SetFieldEnabledInput!): FieldPayload!
+setFieldColor(input: SetFieldColorInput!): FieldPayload!   # edit + 誰能停用該選項
 createFieldCategory(input: CreateFieldCategoryInput!): FieldCategoryPayload!         # manage-categories + 站在根組織
 updateFieldCategory(input: UpdateFieldCategoryInput!): FieldCategoryPayload!         # 同上
 setFieldCategoryEnabled(input: SetFieldCategoryEnabledInput!): FieldCategoryPayload! # 同上
 ```
 
-兩個 query 回 GQL-03 的列表形狀 `{ items, totalCount }`(不分頁,`totalCount` 即 `items` 長度);選項的三個 mutation 回 `FieldPayload { field: Field! }`、類別的三個回 `FieldCategoryPayload { category: FieldCategory! }`(GQL-02)。類別沒有刪除端點。
+兩個 query 回 GQL-03 的列表形狀 `{ items, totalCount }`(不分頁,`totalCount` 即 `items` 長度);選項的四個 mutation 回 `FieldPayload { field: Field! }`、類別的三個回 `FieldCategoryPayload { category: FieldCategory! }`(GQL-02)。類別沒有刪除端點。
 
 **欄位語意**(GQL-07:正本在此,前端引用不另寫解釋)
 
@@ -141,11 +154,13 @@ setFieldCategoryEnabled(input: SetFieldCategoryEnabledInput!): FieldCategoryPayl
 - `Field.isOwn`:這筆是不是**當前組織**這一層加的(`orgId = 操作者的當前組織`)。
 - `Field.canEdit` / `Field.canToggleEnabled`:api **依操作者算好**的「這一列能不能動」,前端只讀、再與自己的權限(`edit` / `toggle-enabled`)取交集,不自己推組織關係、也不推「是不是根組織視角」。規則:`canEdit` = 自訂選項且 `isOwn`;`canToggleEnabled` = 自訂選項看 `isOwn`、種子選項看操作者是不是根組織。
 - `Field.enabled`:`false` = 已停用,影響範圍見「規則」的「其他」。
+- `Field.color`:標籤色票代號;`null` = 不設定。前端以 `@repo/ui/tag` 的 `Tag palette` 畫(admin 經 `components/base/TagPaletteChip`),不自己寫色碼。改不改得動看 `canToggleEnabled`(見「規則」的「選項顏色」)。
 
 **缺席 / null 語意(GQL-06)**
 
 - `CreateFieldInput.order` 缺席 / null = `0`;`description` 缺席 / null = 不寫。
 - `UpdateFieldInput.label` / `order` 缺席 = 不動;`description` 缺席 = 不動、`null` = 清空。`value` 不在 input 內(見「規則」的「其他」)。
+- `SetFieldColorInput.color` 缺席 / null = 清掉顏色。
 - `FieldCategoriesInput.enabledOnly` 缺席 / null / `false` = 全部(欄位管理頁);`true` = 只列啟用(表單設計器)。整個 `input` 可省略。
 - `CreateFieldCategoryInput.description` 缺席 / null / 空白 = 不寫。
 - `UpdateFieldCategoryInput.name` 缺席 / null = 不動;`description` 缺席 = 不動、`null`(或空白)= 清空(`$unset`)。`key` 不在 input 內 —— 建立後不可改。
@@ -154,7 +169,7 @@ setFieldCategoryEnabled(input: SetFieldCategoryEnabledInput!): FieldCategoryPayl
 
 ## admin 頁面
 
-`apps/admin/src/components/base/FieldManager/`(頁面 `pages/base/system/FieldManagerPage/FieldManagerPage.tsx` 只包一層)。左類別清單(`CategoryListPanel.tsx`),右邊是所選類別的合併清單(`FieldOptionsPanel/`):顯示名稱、值、排序、**來源**、啟用開關、操作;新增 / 編輯彈窗在 `FieldFormDialog/`。
+`apps/admin/src/components/base/FieldManager/`(頁面 `pages/base/system/FieldManagerPage/FieldManagerPage.tsx` 只包一層)。左類別清單(`CategoryListPanel.tsx`),右邊是所選類別的合併清單(`FieldOptionsPanel/`):顯示名稱、顏色、值、排序、**來源**、啟用開關、操作;新增 / 編輯彈窗在 `FieldFormDialog/`。
 
 - **來源欄與「這一列能做什麼」集中在 `field-source.ts`**(`isSeedOption` / `fieldSourceView` / `canToggleOption` / `canEditOption` / `managedByOrgOf`),表格與彈窗不自己解讀 `ownerOrg`。規則本身在 api(`canEdit` / `canToggleEnabled`),這個檔只做「與權限取交集 + 文案」。
 - **「來源」欄文案**:「全域」或「<組織名稱> 自訂」。不用「租戶自訂」—— 下層組織也可能自訂,且「租戶」是平台詞彙。
@@ -163,6 +178,7 @@ setFieldCategoryEnabled(input: SetFieldCategoryEnabledInput!): FieldCategoryPayl
 - **`FIELD_VALUE_DUPLICATE` 標在「值」欄位上**(不是頁面 Alert),彈窗留著讓人改值。
 - **改不動的列反灰不隱藏**:上層 / 下層組織加的選項整列以 `text.disabled` 呈現、開關 disabled,操作欄顯示「由 <組織名> 管理」,開關與這句文字都以 `Tooltip` 說明原因(REACT-10)。看得到但動不了,跟「這個動作我沒有權限」是兩回事。
 - 前端不推「根組織視角」:每一列能不能切由 api 的 `canToggleEnabled` 決定。
+- **「顏色」欄**(Figma BS-13 289:87534;色票面板 289:88006):改得動(`field-source.ts` 的 `canSetOptionColor` = `edit` 權限 ∩ `canToggleEnabled`)→ 色票標籤本身可點(沒有顏色時是「不設定」按鈕),開「選擇顏色」面板(兩列各 5 個 + 「不設定」),選了直接送、不另確認(可逆);改不動 → 只顯示標籤,沒有顏色顯示「不設定」文字。共用元件 `components/base/TagPaletteChip/`(一個代號的標籤)、`components/base/TagPaletteSelect/`(標籤 + 色票面板),其他頁面要顯示選項顏色也用它們。
 - **類別作業**只看 `manage-categories` 權限(租戶管理員模板拿不到,所以不必另判視角):左欄標題列的「+ 新增類別」、右欄標題列的「編輯類別」與「停用類別 / 啟用類別」。彈窗在 `CategoryFormDialog/`:新增時 key 的格式與唯一(對照已載入的全部類別)當場擋、送出鈕停用;api 回的 `FIELD_CATEGORY_KEY_DUPLICATE` 同樣標在 key 欄位;編輯時 key 唯讀。停用 / 啟用直接送、不另開確認(可逆)。
 - 左欄每個類別:系統類別標 `Tag`「系統」;停用的類別名稱以 `text.disabled` 呈現並標「已停用」。系統類別沒有「編輯類別」與「停用類別」鈕(停用的系統類別仍給「啟用類別」)。
 - 表單設計器的類別下拉(`FormsPage/FormDesigner/PropertyPanel/OptionsEditor.tsx`)帶 `enabledOnly: true`;已選了停用類別的欄位,下拉以 key 顯示那一個值。
@@ -171,17 +187,17 @@ setFieldCategoryEnabled(input: SetFieldCategoryEnabledInput!): FieldCategoryPayl
 
 ## 錯誤碼
 
-| 情況                                                                                    | 回什麼                                                        |
-| --------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
-| 同一類別下 `value` 與**上層繼承鏈**重複(自己這一層已有、全域選項、看得到的上層組織自訂) | `FIELD_VALUE_DUPLICATE`                                       |
-| `updateField` 碰種子選項(種子只能 `setFieldEnabled`)                                    | `FORBIDDEN` + `extensions.reason = "SEED_READ_ONLY"`          |
-| `setFieldEnabled` 碰**種子**選項而操作者不是根組織                                      | `FORBIDDEN` + `extensions.reason = "SEED_GLOBAL_SWITCH"`      |
-| mutation 碰**看得到但不是自己這一層加的**自訂選項(上層或下層組織加的)                   | `FORBIDDEN` + `extensions.reason = "NOT_OWNER"`               |
-| 類別或選項不在合併清單 / 可見範圍內(不透露它存在)                                       | `NOT_FOUND`                                                   |
-| 新增類別的 `key` 已存在(含停用的類別)                                                   | `FIELD_CATEGORY_KEY_DUPLICATE`(`extensions.fields = ["key"]`) |
-| 改名 / 停用系統類別                                                                     | `FORBIDDEN` + `extensions.reason = "SYSTEM_CATEGORY"`         |
-| 類別作業不是站在根組織做(權限可能經角色被帶到別的組織)                                  | `FORBIDDEN` + `extensions.reason = "ROOT_ONLY"`               |
-| id 格式不對、`label` / `value` / 類別 `name` 空白、類別 `key` 格式不符                  | `VALIDATION_FAILED`                                           |
+| 情況                                                                                     | 回什麼                                                        |
+| ---------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| 同一類別下 `value` 與**上層繼承鏈**重複(自己這一層已有、全域選項、看得到的上層組織自訂)  | `FIELD_VALUE_DUPLICATE`                                       |
+| `updateField` 碰種子選項(種子只能 `setFieldEnabled`)                                     | `FORBIDDEN` + `extensions.reason = "SEED_READ_ONLY"`          |
+| `setFieldEnabled` / `setFieldColor` 碰**種子**選項而操作者不是根組織                     | `FORBIDDEN` + `extensions.reason = "SEED_GLOBAL_SWITCH"`      |
+| mutation 碰**看得到但不是自己這一層加的**自訂選項(上層或下層組織加的)                    | `FORBIDDEN` + `extensions.reason = "NOT_OWNER"`               |
+| 類別或選項不在合併清單 / 可見範圍內(不透露它存在)                                        | `NOT_FOUND`                                                   |
+| 新增類別的 `key` 已存在(含停用的類別)                                                    | `FIELD_CATEGORY_KEY_DUPLICATE`(`extensions.fields = ["key"]`) |
+| 改名 / 停用系統類別                                                                      | `FORBIDDEN` + `extensions.reason = "SYSTEM_CATEGORY"`         |
+| 類別作業不是站在根組織做(權限可能經角色被帶到別的組織)                                   | `FORBIDDEN` + `extensions.reason = "ROOT_ONLY"`               |
+| id 格式不對、`label` / `value` / 類別 `name` 空白、類別 `key` 格式不符、`color` 不在色票 | `VALIDATION_FAILED`                                           |
 
 前端依 `reason` 換文案,解讀集中在 `components/base/FieldManager/field-manager-error.ts`。
 
@@ -189,15 +205,16 @@ setFieldCategoryEnabled(input: SetFieldCategoryEnabledInput!): FieldCategoryPayl
 
 ## 稽核
 
-選項:動作 `field.create` / `field.edit` / `field.toggle-enabled`,`targetType` 一律 `field`。
+選項:動作 `field.create` / `field.edit` / `field.toggle-enabled` / `field.set-color`(before / after 記 `color`),`targetType` 一律 `field`。
 類別:動作 `field-category.create` / `field-category.update` / `field-category.set-enabled`,`targetType` 一律 `field-category`。沒有實際變更(已是目標狀態、`update` 沒帶任何欄位)不寫入、不記稽核。
 
 正本:`apps/api/src/fields/fields.service.ts`、`apps/api/src/fields/field-categories.service.ts`
 
 ## 測試
 
-- api:`apps/api/src/fields/fields.test.ts`(端點、錯誤、種子開關)、`apps/api/src/fields/field-categories.test.ts`(類別作業:新增 / 改名 / 停用、守門、設計器清單)、`apps/api/src/fields/field-visibility.test.ts`(可見 / 可編輯範圍表);夾具 `apps/api/src/fields/test-support/fixtures.ts`
-- admin:`apps/admin/src/pages/base/system/FieldManagerPage/` 的 `FieldManagerPage.test.tsx`、`FieldManagerFeedback.test.tsx`、`FieldManagerSeed.test.tsx`、`FieldManagerVisibility.test.tsx`、`FieldManagerCategories.test.tsx`(類別作業);設計器的類別下拉只列啟用在 `FormsPage/FormsPageDesignerPickers.test.tsx`;共用 harness `field-manager-test-support.ts`
+- api:`apps/api/src/fields/fields.test.ts`(端點、錯誤、種子開關)、`apps/api/src/fields/field-categories.test.ts`(類別作業:新增 / 改名 / 停用、守門、設計器清單)、`apps/api/src/fields/field-visibility.test.ts`(可見 / 可編輯範圍表)、`apps/api/src/fields/field-colors.test.ts`(選項顏色:讀寫、色票驗證、誰能設、稽核);夾具 `apps/api/src/fields/test-support/fixtures.ts`
+- admin:`apps/admin/src/pages/base/system/FieldManagerPage/` 的 `FieldManagerPage.test.tsx`、`FieldManagerFeedback.test.tsx`、`FieldManagerSeed.test.tsx`、`FieldManagerVisibility.test.tsx`、`FieldManagerCategories.test.tsx`(類別作業)、`FieldManagerColor.test.tsx`(顏色欄);色票元件 `components/base/TagPaletteSelect/TagPaletteSelect.test.tsx`、代號兩份一致 `components/base/TagPaletteChip/tag-palette-keys.test.ts`;設計器的類別下拉只列啟用在 `FormsPage/FormsPageDesignerPickers.test.tsx`;共用 harness `field-manager-test-support.ts`
+- db-migrator:`apps/db-migrator/seeds/base/fields.test.ts`(初始值欄位含 `color`、宣告了才寫)
 - 劇本 E2E(`docs/testing/permission-scenarios.md`):劇本 2 / 12 確認沒有 `system.field-manager.view` 時示範模組1 的分類欄退化(`scenario-02-data-scope-rule.spec.ts`、`scenario-12-visibility-toggle.spec.ts`)、劇本 16 租戶視角的種子選項唯讀(`scenario-16-tenant-perspective.spec.ts`)
 
 正本:上列檔案、`docs/testing/permission-scenarios.md`
