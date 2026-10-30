@@ -624,7 +624,7 @@ describe("我的班表與打卡(GraphQL 端點 + 真 MongoDB)", () => {
       page.changes
         .map((item) => [item.date, item.reason, item.reasonNote])
         .toSorted((left, right) =>
-          String(left[0]).localeCompare(String(right[0])),
+          String(left[0]).localeCompare(String(right[0]), "zh-Hant"),
         ),
     ).toEqual([
       [day("2026-11-08"), "shift-swap", null],

@@ -33,6 +33,23 @@ export class FormSubmissionsInput {
   @Field(() => String, { nullable: true })
   keyword?: string;
 
+  /**
+   * 只列歸屬這個組織**與它的下層**的提交(`orgId` = 建立者建立當時的當前組織);缺席 = 不篩。
+   * 只收窄、不放寬:可見範圍外的組織照樣看不到(選了範圍外的 = 空清單)。
+   */
+  @Field(() => ID, { nullable: true })
+  orgId?: string;
+
+  /**
+   * 日期區間(`YYYY-MM-DD`,含頭尾,以讀者的租戶時區切日):比對摘要槽「日期」(`summary.date`;
+   * 摘要沒對日期欄 = 送出時間)。缺一邊 = 那一邊不限;摘要沒有日期的(還沒送出、日期欄空白的草稿)在有日期條件時不列。
+   */
+  @Field(() => String, { nullable: true })
+  dateFrom?: string;
+
+  @Field(() => String, { nullable: true })
+  dateTo?: string;
+
   @Field(() => FormSubmissionSort, {
     nullable: true,
     defaultValue: FormSubmissionSort.SUBMITTED_AT_DESC,
@@ -221,6 +238,24 @@ export class FormLookupRecordInput {
   /** 來源資料的 id。 */
   @Field(() => ID)
   id!: string;
+}
+
+/** `formLookupDefault`:引用欄「來源提供的預設」此刻的值(只收表單層引用欄)。 */
+@InputType()
+export class FormLookupDefaultInput {
+  @Field(() => ID)
+  formKey!: string;
+
+  /** 省略 = 草稿(設計器預覽)。 */
+  @Field(() => Int, { nullable: true })
+  version?: number | null;
+
+  @Field(() => String)
+  fieldKey!: string;
+
+  /** 預設值條件與連動篩選引用的欄位目前的值(同 `FormLookupInput.filterValues`)。 */
+  @Field(() => GraphQLJSONObject, { nullable: true })
+  filterValues?: Record<string, unknown> | null;
 }
 
 /** 撤回(申請人本人;審核中、還沒有任何被接受的審核意見)。 */

@@ -1,13 +1,13 @@
 import { formatTemporal } from "@repo/domain/form";
 import type { LotteryOperationsReportQuery } from "@repo/graphql";
 
-import type { SheetData, SheetSection } from "@/lib/project/reports/excel";
+import type { SheetData, SheetSection } from "@/lib/base/reports/excel";
 import {
   type ReportSheetBody,
   type ReportSheetContext,
   type ReportSheetSet,
   fullPathTranslator,
-} from "@/lib/project/reports/report-registry";
+} from "@/lib/base/reports/report-registry";
 
 import { compareSectionOf } from "./operations-compare";
 import {
@@ -107,7 +107,7 @@ export const buildOperationsSheets = (
   const nameOf = (orgId: string) =>
     orgs.find((org) => org.id === orgId)?.name ?? orgId;
   const total = totalStoreOf(report.stores);
-  const totalName = t("admin.lotteryReports.totalSheet");
+  const totalName = t("admin.reports.totalSheet");
   const extras: SheetData[] =
     report.stores.length > 1
       ? [

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useTranslations } from "use-intl";
 
+import { COLLATION_LOCALE } from "@repo/domain/collation";
 import { TRANSFER_MODE, type TransferMode } from "@repo/domain/project/lottery";
 import type { LotteryTransferReceivingFieldsFragment } from "@repo/graphql";
 import { Stack } from "@repo/ui/stack";
@@ -115,7 +116,7 @@ export const useShippedLines = (
 
   const keep = (row: ShippedRowFacts, kept: readonly string[]) => {
     const next = [...new Set([...row.receivedNos, ...kept])].toSorted((a, b) =>
-      a.localeCompare(b),
+      a.localeCompare(b, COLLATION_LOCALE),
     );
     // 至少留一張(全部沒到 → 整列移除)
     if (next.length === 0) {

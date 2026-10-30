@@ -277,19 +277,10 @@ describe("開通腳本與 demo create(真 api + 真 MongoDB)", () => {
       expect(new Set(positions.map((field) => field.label as string))).toEqual(
         new Set(["店內櫃台A", "店外櫃台B"]),
       );
-      // 選項顏色(P02 的 project_field_option_colors:一筆 = 一個選項的色票代號)
-      const colors = await find("project_field_option_colors", {
-        fieldId: { $in: positions.map((field) => field._id as ObjectId) },
-      });
-      const labelOf = new Map(
-        positions.map((field) => [String(field._id), field.label as string]),
-      );
+      // 選項顏色(欄位管理的「顏色」,存在選項本身的 `color`)
       expect(
         Object.fromEntries(
-          colors.map((color) => [
-            labelOf.get(String(color.fieldId)),
-            color.paletteKey as string,
-          ]),
+          positions.map((field) => [field.label as string, field.color]),
         ),
       ).toEqual({
         店內櫃台A: "blue",

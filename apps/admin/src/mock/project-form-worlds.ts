@@ -21,6 +21,8 @@ export const projectForms = (
   const extra = project.formRuntime?.() ?? {};
   return formRuntimeWorld({
     ...base,
+    // 組織篩選的整棵租戶樹由 orgWorld 提供(同名 handler 只留一份)
+    tenantOrgTree: null,
     moduleForms: [...(base.moduleForms ?? []), ...(extra.moduleForms ?? [])],
     versions: { ...base.versions, ...extra.versions },
     submissions: [...(base.submissions ?? []), ...(extra.submissions ?? [])],

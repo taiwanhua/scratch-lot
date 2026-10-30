@@ -3,7 +3,11 @@ import { type HydratedDocument, type Model, Schema, Types } from "mongoose";
 
 import { BaseRepository } from "./base.repository";
 import { OrgsRepository } from "./base/repositories";
-import type { MemberTenant, OperatorContext } from "./operator-context";
+import {
+  type MemberTenant,
+  type OperatorContext,
+  scopeQuery,
+} from "./operator-context";
 import { baseFieldsPlugin } from "./plugins/base-fields.plugin";
 import { setDataScopeRuleProvider } from "./plugins/data-scope-provider";
 import {
@@ -61,7 +65,7 @@ type Repo = BaseRepository<Item, HydratedDocument<Item>>;
 
 /** 依字串排序(比對用)。 */
 const byText = (left: string, right: string): number =>
-  left.localeCompare(right);
+  left.localeCompare(right, "zh-Hant");
 
 const sorted = (names: string[]): string[] => names.toSorted(byText);
 
@@ -693,6 +697,100 @@ describe("資料共用(ADR-0014):三種宣告 × 人 × 資料歸屬", () => {
     ).resolves.toBeNull();
   });
 
+  it("共用清單的分支用得到 { tenantId, shareOrgs.orgId } 索引的 orgId 範圍(不掃整個租戶)", async () => {
+    const model = database.connection.model<Item>("ShareableItem");
+    await model.createIndexes();
+    // 可見範圍那一支也要有索引,整個 `$or` 才會走索引(正式表有 `{ orgId, ... }` 開頭的索引)
+    await model.collection.createIndex({ orgId: 1 });
+    const raw: unknown = await scopeQuery(model.find({}), {
+      operator: PEOPLE.單一分店人員,
+    }).explain("queryPlanner");
+    const bounds: unknown[] = [];
+    const collect = (node: unknown): void => {
+      if (typeof node !== "object" || node === null) {
+        return;
+      }
+      const record = node as Record<string, unknown>;
+      if (record.indexName === "tenantId_1_shareOrgs.orgId_1") {
+        bounds.push(
+          (record.indexBounds as Record<string, unknown>)["shareOrgs.orgId"],
+        );
+      }
+      for (const value of Object.values(record)) {
+        collect(value);
+      }
+    };
+    collect(raw);
+    // 兩個分支(共用給所屬組織 / 共用給上層鏈且含下層)各自走索引,orgId 都有明確範圍
+    expect(bounds.length).toBeGreaterThanOrEqual(2);
+    for (const bound of bounds) {
+      expect(bound).not.toEqual(["[MinKey, MaxKey]"]);
+    }
+  });
+
+  it("清單永遠是空的(預設不共用 + editable: false):不宣告 shareOrgs 欄位與索引、讀取沒有清單分支,只靠欄位", async () => {
+    const schema = itemSchema("sharing_field_only_items", {
+      sharing: {
+        mode: "shareable",
+        defaultShareOrgs: "none",
+        editable: false,
+        sharedByFields: [{ path: "branchId", includeDescendants: false }],
+      },
+    });
+    expect(schema.path("shareOrgs")).toBeUndefined();
+    expect(
+      schema
+        .indexes()
+        .some(([fields]) => Object.keys(fields).includes("shareOrgs.orgId")),
+    ).toBe(false);
+    const fieldOnlyItems: Repo = new BaseRepository(
+      database.connection.model<Item>("FieldOnlyItem", schema),
+    );
+    const created = await fieldOnlyItems.create(
+      { ...asRoot, currentOrgId: B2 },
+      {
+        name: "欄位指分店",
+        orgId: B2,
+        branchId: B1,
+        shareOrgs: [{ orgId: B1a, includeDescendants: false }],
+      },
+    );
+    const raw = await database.connection
+      .collection("sharing_field_only_items")
+      .findOne({ _id: created._id });
+    expect(raw).not.toHaveProperty("shareOrgs");
+    await expect(
+      fieldOnlyItems.findById(PEOPLE.單一分店人員, created._id),
+    ).resolves.not.toBeNull();
+    await expect(
+      fieldOnlyItems.findById(PEOPLE.分店下層人員, created._id),
+    ).resolves.toBeNull();
+    // 繞過寫入直接寫了非空清單(資料損毀):讀取端不看清單,分店下層一樣看不到
+    const now = new Date();
+    const { insertedId } = await database.connection
+      .collection("sharing_field_only_items")
+      .insertOne({
+        orgId: B2,
+        tenantId: T,
+        moduleKey: "sharing-test",
+        name: "直接寫的清單",
+        branchId: null,
+        targetOrgIds: [],
+        shareOrgs: [{ orgId: B1a, includeDescendants: false }],
+        createdAt: now,
+        updatedAt: now,
+        deletedAt: null,
+      });
+    await expect(
+      fieldOnlyItems.findById(PEOPLE.分店下層人員, insertedId),
+    ).resolves.toBeNull();
+    await expect(
+      fieldOnlyItems.updateById(PEOPLE.總部屬頂層, created._id, {
+        $set: { shareOrgs: [{ orgId: B1a, includeDescendants: false }] },
+      }),
+    ).rejects.toThrow(TenantScopeError);
+  });
+
   it("資料範圍規則仍會縮小共用資料(先放寬、再縮小)", async () => {
     setDataScopeRuleProvider({
       conditionFor: (collection) =>
@@ -1019,6 +1117,23 @@ describe("資料共用(ADR-0014):三種宣告 × 人 × 資料歸屬", () => {
             mode: "shareable",
             defaultShareOrgs: "none",
             editable: true,
+          },
+        }),
+      ).toThrow(TenantScopeError);
+    });
+
+    it("可共用但清單永遠是空、又沒有 sharedByFields(等於不可共用)→ TenantScopeError", () => {
+      const schema = new Schema(
+        { orgId: Schema.Types.ObjectId },
+        { collection: "w" },
+      );
+      expect(() =>
+        schema.plugin(tenantScopePlugin, {
+          moduleData: true,
+          sharing: {
+            mode: "shareable",
+            defaultShareOrgs: "none",
+            editable: false,
           },
         }),
       ).toThrow(TenantScopeError);

@@ -9,7 +9,7 @@ import { SelectField } from "@repo/ui/select-field";
 
 import { useSession } from "@/hooks/base/useSession";
 import { flattenOrgs, tenantTreeToOrgNodes } from "@/lib/base/org-tree";
-import type { ReportCustomFieldProps } from "@/lib/project/reports/report-registry";
+import type { ReportCustomFieldProps } from "@/lib/base/reports/report-registry";
 
 /**
  * 班次結帳歷史報表的「收銀點」條件(Figma RE-05 `129:1512`):選的分店的收銀點 + 「全部」(值 = 空字串)。

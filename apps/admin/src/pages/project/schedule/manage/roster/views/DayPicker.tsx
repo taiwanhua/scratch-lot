@@ -20,7 +20,7 @@ import { Popover } from "@repo/ui/popover";
 import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
 
-import { TagPaletteChip } from "@/components/project/TagPaletteChip/TagPaletteChip";
+import { TagPaletteChip } from "@/components/base/TagPaletteChip/TagPaletteChip";
 import { calendarMarkOf } from "@/components/project/schedule/CalendarMark/calendar-mark";
 import { ScheduleLegend } from "@/components/project/schedule/ScheduleLegend/ScheduleLegend";
 import { useSession } from "@/hooks/base/useSession";

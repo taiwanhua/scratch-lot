@@ -13,7 +13,7 @@ import type {
 } from "@repo/graphql";
 import { DemoItemOneStatus } from "@repo/graphql";
 
-import { type AuthErrorCode, graphqlError } from "./auth-handlers";
+import { type GraphqlErrorCode, graphqlError } from "./auth-handlers";
 import { api } from "./server";
 
 export type TestDemoItem = DemoItemsOneQuery["demoItemsOne"]["items"][number];
@@ -33,7 +33,7 @@ export type DemoOperation =
   | "CreateUploadUrl";
 
 export interface DemoFailure {
-  code: string;
+  code: GraphqlErrorCode;
   /** 附加在 `extensions` 上的欄位(`reason` / `fields`) */
   extensions?: Record<string, unknown>;
 }
@@ -73,10 +73,10 @@ export interface DemoWorld {
 }
 
 /**
- * 看不到的資料一律 `NOT_FOUND`,不透露它存在(`AuthErrorCode` 沒有這一碼,所以轉型;
+ * 看不到的資料一律 `NOT_FOUND`,不透露它存在(`GraphqlErrorCode` 沒有這一碼,所以轉型;
  * `graphqlError` 的第一個參數才是 `extensions.code`,第二個只是給開發者看的 message)。
  */
-const notFound = () => graphqlError("NOT_FOUND" as AuthErrorCode, "NOT_FOUND");
+const notFound = () => graphqlError("NOT_FOUND", "NOT_FOUND");
 
 /** input 裡出現 `internalNote`(含送 null 清空)而那一筆不能改 → 欄位級權限拒絕。 */
 const fieldForbidden = (
@@ -130,11 +130,7 @@ export const demoWorld = (options: DemoWorldOptions = {}): DemoWorld => {
     const failure = failures[operation];
     return failure === undefined
       ? null
-      : graphqlError(
-          failure.code as AuthErrorCode,
-          failure.code,
-          failure.extensions ?? {},
-        );
+      : graphqlError(failure.code, failure.code, failure.extensions ?? {});
   };
 
   /** 欄位投影:沒有 `show-internal-note` 就不把這個欄位放進回傳物件。 */

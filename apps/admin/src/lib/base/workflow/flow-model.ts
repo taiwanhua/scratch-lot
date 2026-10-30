@@ -1,3 +1,4 @@
+import { COLLATION_LOCALE } from "@repo/domain/collation";
 import type {
   JoinStepDef,
   ReviewStepDef,
@@ -188,7 +189,7 @@ export const canonical = (value: unknown): unknown => {
     return Object.fromEntries(
       Object.entries(value)
         .filter(([, item]) => item !== undefined && item !== null)
-        .toSorted(([a], [b]) => a.localeCompare(b))
+        .toSorted(([a], [b]) => a.localeCompare(b, COLLATION_LOCALE))
         .map(([key, item]) => [key, canonical(item)]),
     );
   }
@@ -219,11 +220,11 @@ export const effectiveEdgesOf = (
 export const definitionFingerprint = (definition: WorkflowDefinition): string =>
   JSON.stringify({
     steps: definition.steps
-      .toSorted((a, b) => a.key.localeCompare(b.key))
+      .toSorted((a, b) => a.key.localeCompare(b.key, COLLATION_LOCALE))
       .map((step) => canonical(step)),
     edges: effectiveEdgesOf(definition)
       .map((edge) => edgeIdOf(edge))
-      .toSorted((a, b) => a.localeCompare(b)),
+      .toSorted((a, b) => a.localeCompare(b, COLLATION_LOCALE)),
     cc: canonical(definition.cc ?? null),
   });
 

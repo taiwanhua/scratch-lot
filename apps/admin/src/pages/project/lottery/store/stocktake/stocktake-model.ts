@@ -1,3 +1,4 @@
+import { COLLATION_LOCALE } from "@repo/domain/collation";
 import {
   type StocktakeDiffAction,
   type StocktakeDiffKind,
@@ -195,7 +196,7 @@ export const draftOf = (
           countedAt: count.countedAt,
           method: count.method,
           presentTicketNos: [...count.present].toSorted((a, b) =>
-            a.localeCompare(b),
+            a.localeCompare(b, COLLATION_LOCALE),
           ),
           diffs: Object.entries(state.diffs).flatMap(([diffKey, choice]) => {
             const [lineKey, ticketNo] = diffKey.split("#");

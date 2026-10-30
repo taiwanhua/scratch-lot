@@ -8,7 +8,7 @@ import {
 
 import { useReceiptLinks } from "@/components/project/lottery/ReceiptPrint/useReceiptLinks";
 import { useReceiptPrinter } from "@/components/project/lottery/ReceiptPrint/useReceiptPrinter";
-import { logReceiptPrintFailure } from "@/lib/project/lottery/receipts/receipt-log";
+import { logPrintFailure } from "@/lib/base/print-log";
 
 import { type ReversalGroup, refundAmountOf } from "../sale-reversal-form";
 
@@ -61,7 +61,7 @@ export const useSaleRefundPrint = () => {
       });
     } catch (error) {
       // 列印出錯只記 log(讀不到 QR 的路由不會到這裡,`fetchLinks` 照印、不印 QR)
-      logReceiptPrintFailure("print failed", {
+      logPrintFailure("print failed", {
         kind: "store-sale-refund",
         error,
       });

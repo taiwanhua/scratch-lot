@@ -170,6 +170,10 @@ describe("通知設定頁", () => {
         "這裡不能調整通知設定,請先切換到要設定的組織",
       ),
     ).toBeVisible();
+    // 提示裡附當前組織切換器(`RootOrgNotice`),可以直接切回組織
+    expect(
+      within(dialog).getByRole("combobox", { name: "當前組織" }),
+    ).toBeVisible();
     // 錯誤已就地顯示在對話框裡,不再跳提示(同一句不出現兩次)
     expect(querySnackbar()).toBeNull();
   });
@@ -255,6 +259,24 @@ describe("通知設定頁", () => {
     ).toBeVisible();
   });
 
+  it("英文介面:用畫面上的英文名稱搜尋得到(前端以顯示名稱比中的類型一起送)", async () => {
+    const { user } = renderPage({ locale: "en" });
+    const englishTable = await screen.findByRole("table", {
+      name: "Notification types",
+    });
+    await within(englishTable).findByText("Print agent offline");
+
+    await user.type(
+      screen.getByRole("textbox", { name: "Search notification types" }),
+      "agent OFF",
+    );
+
+    await waitFor(() => {
+      expect(within(englishTable).queryByText("到期提醒")).toBeNull();
+    });
+    expect(within(englishTable).getByText("Print agent offline")).toBeVisible();
+  });
+
   it("還原預設失敗 → 錯誤顯示在確認框裡、不另跳提示", async () => {
     const { user } = renderPage({
       world: {
@@ -283,6 +305,9 @@ describe("通知設定頁", () => {
       await within(dialog).findByText(
         "這裡不能調整通知設定,請先切換到要設定的組織",
       ),
+    ).toBeVisible();
+    expect(
+      within(dialog).getByRole("combobox", { name: "當前組織" }),
     ).toBeVisible();
     expect(querySnackbar()).toBeNull();
   });

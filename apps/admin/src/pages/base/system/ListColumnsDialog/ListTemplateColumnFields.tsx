@@ -1,0 +1,153 @@
+import { useTranslations } from "use-intl";
+
+import {
+  LIST_TEMPLATE_FORMATTABLE_SLOTS,
+  LIST_TEMPLATE_FORMAT_PRESETS,
+  LIST_TEMPLATE_FORMAT_SEPARATOR,
+  VALUE_PLACEHOLDER_PREFIX,
+} from "@repo/domain/form";
+import { SelectField } from "@repo/ui/select-field";
+import { Stack } from "@repo/ui/stack";
+import { TextField } from "@repo/ui/text-field";
+
+import {
+  type ListColumnSpec,
+  SUMMARY_SLOTS,
+} from "@/lib/base/form-engine/list-columns";
+import {
+  TemplatePlaceholderInput,
+  type TemplatePlaceholderOption,
+} from "@/pages/base/system/TemplatePlaceholderInput";
+
+import type { FieldCandidate } from "./useListColumnCandidates";
+
+export interface ListTemplateColumnFieldsProps {
+  row: ListColumnSpec;
+  candidates: readonly FieldCandidate[];
+  /** 共用表單(「限定表單」的選項) */
+  forms: readonly { key: string; name: string }[];
+  /** 欄名 / 模板格式錯的原因(api 定位到 `columns.<i>.label` / `.template`);undefined = 沒錯 */
+  labelErrorText: string | undefined;
+  templateErrorText: string | undefined;
+  /** 整欄被擋(引用的欄位不在了、受保護、重複):限定表單的下拉標紅,原因由列寫在下方 */
+  hasRowError: boolean;
+  onChange: (row: ListColumnSpec) => void;
+}
+
+/** 「限定表單」沒限定的值。 */
+const ANY_FORM = "";
+
+/**
+ * 一個佔位符在「插入欄位」下拉的幾項:原樣一項;日期 / 日期時間再多列格式快捷
+ * (`LIST_TEMPLATE_FORMAT_PRESETS`,例 `{{value.start_at|HH:mm}}`;其他格式字串使用者自己打)。
+ */
+const placeholderOptions = (
+  label: string,
+  ref: string,
+  isTemporal: boolean,
+  formatLabel: (label: string, format: string) => string,
+): TemplatePlaceholderOption[] => [
+  { label, placeholder: `{{${ref}}}` },
+  ...(isTemporal
+    ? LIST_TEMPLATE_FORMAT_PRESETS.map((format) => ({
+        label: formatLabel(label, format),
+        placeholder: `{{${ref}${LIST_TEMPLATE_FORMAT_SEPARATOR}${format}}}`,
+      }))
+    : []),
+];
+
+/**
+ * 組合欄的設定:欄名(表頭,root 輸入的顯示名稱)、限定表單(選填,同表單欄位的 `formKey`)、模板
+ * (`TemplatePlaceholderInput`:摘要槽與表單欄位從「插入欄位」下拉挑;欄位只列可當列表欄的,限定了表單就只列那一張的;
+ * 日期 / 日期時間的欄位與「日期」槽另列幾個常用格式)。
+ */
+export const ListTemplateColumnFields = ({
+  row,
+  candidates,
+  forms,
+  labelErrorText,
+  templateErrorText,
+  hasRowError,
+  onChange,
+}: ListTemplateColumnFieldsProps) => {
+  const t = useTranslations("admin.moduleManager.listColumns");
+  const formKey = row.formKey ?? null;
+  const seen = new Set<string>();
+  const formatLabel = (label: string, format: string) =>
+    t("formatPlaceholder", { name: label, format });
+  const fieldOptions: TemplatePlaceholderOption[] = candidates
+    .filter((candidate) => formKey === null || candidate.formKey === formKey)
+    .flatMap((candidate) => {
+      // 沒限定表單時,幾張表單有同一個欄位 key 只列一次(模板只寫 key,每一筆依它的版本取值)
+      if (seen.has(candidate.key)) {
+        return [];
+      }
+      seen.add(candidate.key);
+      return placeholderOptions(
+        `${candidate.formName} / ${candidate.label}`,
+        `${VALUE_PLACEHOLDER_PREFIX}${candidate.key}`,
+        candidate.type === "date" || candidate.type === "datetime",
+        formatLabel,
+      );
+    });
+  const options: TemplatePlaceholderOption[] = [
+    ...SUMMARY_SLOTS.flatMap((slot) =>
+      placeholderOptions(
+        t("slotPlaceholder", { name: t(`slots.${slot}`) }),
+        slot,
+        LIST_TEMPLATE_FORMATTABLE_SLOTS.includes(slot),
+        formatLabel,
+      ),
+    ),
+    ...fieldOptions,
+  ];
+
+  return (
+    <Stack spacing={1} sx={{ flex: 1, minWidth: 240 }}>
+      <Stack direction="row" spacing={1} useFlexGap sx={{ flexWrap: "wrap" }}>
+        <TextField
+          label={t("templateLabel")}
+          value={row.label ?? ""}
+          error={labelErrorText !== undefined}
+          helperText={labelErrorText ?? t("templateLabelHint")}
+          onChange={(event) => {
+            onChange({ ...row, label: event.target.value });
+          }}
+          size="small"
+          sx={{ flex: 1, minWidth: 160 }}
+        />
+        <SelectField<string>
+          label={t("templateForm")}
+          value={formKey ?? ANY_FORM}
+          displayEmpty
+          options={[
+            { value: ANY_FORM, label: t("anyForm") },
+            ...forms.map((form) => ({ value: form.key, label: form.name })),
+          ]}
+          onChange={(value) => {
+            onChange({ ...row, formKey: value === ANY_FORM ? null : value });
+          }}
+          error={hasRowError}
+          size="small"
+          sx={{ flex: 1, minWidth: 160 }}
+        />
+      </Stack>
+      <TemplatePlaceholderInput
+        value={row.key}
+        options={options}
+        onChange={(key) => {
+          onChange({ ...row, key });
+        }}
+        text={{
+          label: t("templateText"),
+          hint: t("templateTextHint"),
+          insert: t("insertPlaceholder"),
+          insertHint: t("insertPlaceholderHint"),
+        }}
+        {...(templateErrorText !== undefined && {
+          errorText: templateErrorText,
+        })}
+      />
+    </Stack>
+  );
+};

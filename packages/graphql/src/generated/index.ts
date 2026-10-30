@@ -943,6 +943,7 @@ export type Field = {
   canEdit: Scalars['Boolean']['output'];
   canToggleEnabled: Scalars['Boolean']['output'];
   categoryId: Scalars['ID']['output'];
+  color?: Maybe<Scalars['String']['output']>;
   description?: Maybe<Scalars['String']['output']>;
   enabled: Scalars['Boolean']['output'];
   id: Scalars['ID']['output'];
@@ -976,24 +977,6 @@ export type FieldCategory = {
 export type FieldCategoryPayload = {
   __typename?: 'FieldCategoryPayload';
   category: FieldCategory;
-};
-
-export type FieldOptionColor = {
-  __typename?: 'FieldOptionColor';
-  fieldId: Scalars['ID']['output'];
-  paletteKey?: Maybe<Scalars['String']['output']>;
-  value: Scalars['String']['output'];
-};
-
-export type FieldOptionColorPayload = {
-  __typename?: 'FieldOptionColorPayload';
-  color: FieldOptionColor;
-};
-
-export type FieldOptionColorsPayload = {
-  __typename?: 'FieldOptionColorsPayload';
-  items: Array<FieldOptionColor>;
-  totalCount: Scalars['Int']['output'];
 };
 
 export type FieldOwnerOrg = {
@@ -1112,6 +1095,13 @@ export type FormForkSourceModel = {
   version: Scalars['Int']['output'];
 };
 
+export type FormLookupDefaultInput = {
+  fieldKey: Scalars['String']['input'];
+  filterValues?: InputMaybe<Scalars['JSONObject']['input']>;
+  formKey: Scalars['ID']['input'];
+  version?: InputMaybe<Scalars['Int']['input']>;
+};
+
 export type FormLookupInput = {
   filterValues?: InputMaybe<Scalars['JSONObject']['input']>;
   formKey: Scalars['ID']['input'];
@@ -1138,6 +1128,7 @@ export type FormLookupProvider = {
   key: Scalars['String']['output'];
   labelField: Scalars['String']['output'];
   name: Scalars['String']['output'];
+  operatorDefault: Scalars['Boolean']['output'];
   valueField: Scalars['String']['output'];
 };
 
@@ -1339,10 +1330,13 @@ export type FormSubmissionSummary = {
 };
 
 export type FormSubmissionsInput = {
+  dateFrom?: InputMaybe<Scalars['String']['input']>;
+  dateTo?: InputMaybe<Scalars['String']['input']>;
   excludeFormKeys?: InputMaybe<Array<Scalars['ID']['input']>>;
   formKey?: InputMaybe<Scalars['ID']['input']>;
   keyword?: InputMaybe<Scalars['String']['input']>;
   moduleKey: Scalars['String']['input'];
+  orgId?: InputMaybe<Scalars['ID']['input']>;
   page?: InputMaybe<Scalars['Int']['input']>;
   /** 每頁筆數,上限 100 */
   pageSize?: InputMaybe<Scalars['Int']['input']>;
@@ -4043,6 +4037,7 @@ export type ModuleListColumn = {
   formKey?: Maybe<Scalars['ID']['output']>;
   key: Scalars['String']['output'];
   kind: ModuleListColumnKind;
+  label?: Maybe<Scalars['String']['output']>;
   order: Scalars['Int']['output'];
   width: Scalars['Int']['output'];
 };
@@ -4051,14 +4046,16 @@ export type ModuleListColumnInput = {
   formKey?: InputMaybe<Scalars['ID']['input']>;
   key: Scalars['String']['input'];
   kind: ModuleListColumnKind;
+  label?: InputMaybe<Scalars['String']['input']>;
   order: Scalars['Int']['input'];
   width: Scalars['Int']['input'];
 };
 
-/** 列表欄位的種類:摘要槽 / 表單欄位 */
+/** 列表欄位的種類:摘要槽 / 表單欄位 / 組合欄 */
 export enum ModuleListColumnKind {
   Field = 'FIELD',
-  Slot = 'SLOT'
+  Slot = 'SLOT',
+  Template = 'TEMPLATE'
 }
 
 export type ModuleListColumnsPayload = {
@@ -4232,8 +4229,8 @@ export type Mutation = {
   setDemoItemOneEnabled: DemoItemOnePayload;
   setDemoItemTwoEnabled: DemoItemTwoPayload;
   setFieldCategoryEnabled: FieldCategoryPayload;
+  setFieldColor: FieldPayload;
   setFieldEnabled: FieldPayload;
-  setFieldOptionColor: FieldOptionColorPayload;
   setLotteryAllocation: LotteryAllocationPayload;
   setModuleEnabled: ModuleAdminPayload;
   setModuleIcon: ModuleAdminPayload;
@@ -4934,13 +4931,13 @@ export type MutationSetFieldCategoryEnabledArgs = {
 };
 
 
-export type MutationSetFieldEnabledArgs = {
-  input: SetFieldEnabledInput;
+export type MutationSetFieldColorArgs = {
+  input: SetFieldColorInput;
 };
 
 
-export type MutationSetFieldOptionColorArgs = {
-  input: SetFieldOptionColorInput;
+export type MutationSetFieldEnabledArgs = {
+  input: SetFieldEnabledInput;
 };
 
 
@@ -5240,7 +5237,8 @@ export type MyNotificationUnreadCountPayload = {
 };
 
 export type MyNotificationsInput = {
-  page?: InputMaybe<Scalars['Int']['input']>;
+  /** 上一批回傳的 nextCursor;缺席 / null = 從最新的開始。格式不對 → VALIDATION_FAILED(reason INVALID_CURSOR) */
+  after?: InputMaybe<Scalars['String']['input']>;
   /** 每頁筆數,上限 100 */
   pageSize?: InputMaybe<Scalars['Int']['input']>;
   unreadOnly?: InputMaybe<Scalars['Boolean']['input']>;
@@ -5249,7 +5247,7 @@ export type MyNotificationsInput = {
 export type MyNotificationsPayload = {
   __typename?: 'MyNotificationsPayload';
   items: Array<Notification>;
-  page: Scalars['Int']['output'];
+  nextCursor?: Maybe<Scalars['String']['output']>;
   pageSize: Scalars['Int']['output'];
   totalCount: Scalars['Int']['output'];
   unreadCount: Scalars['Int']['output'];
@@ -5451,6 +5449,8 @@ export type NotificationSettingPayload = {
 
 export type NotificationSettingsInput = {
   keyword?: InputMaybe<Scalars['String']['input']>;
+  /** 前端以顯示名稱比中 keyword 的類型 key(與 keyword 比對 name / key 的結果取聯集;沒給 keyword 時不影響清單) */
+  nameMatchedTypes?: InputMaybe<Array<Scalars['String']['input']>>;
   page?: InputMaybe<Scalars['Int']['input']>;
   /** 每頁筆數,上限 100 */
   pageSize?: InputMaybe<Scalars['Int']['input']>;
@@ -5868,11 +5868,11 @@ export type Query = {
   exportFormSeed: ExportFormSeedPayload;
   exportWorkflowSeed: ExportWorkflowSeedPayload;
   fieldCategories: FieldCategoriesPayload;
-  fieldOptionColors: FieldOptionColorsPayload;
   fields: FieldsPayload;
   form: FormPayload;
   formFieldOptions: FormFieldOptionsPayload;
   formLookup: FormLookupPayload;
+  formLookupDefault: FormLookupRecordPayload;
   formLookupProviders: FormLookupProvidersPayload;
   formLookupRecord: FormLookupRecordPayload;
   formRuntimeVersion: FormVersionPayload;
@@ -6092,11 +6092,6 @@ export type QueryFieldCategoriesArgs = {
 };
 
 
-export type QueryFieldOptionColorsArgs = {
-  categoryKey: Scalars['String']['input'];
-};
-
-
 export type QueryFieldsArgs = {
   categoryId: Scalars['ID']['input'];
 };
@@ -6114,6 +6109,11 @@ export type QueryFormFieldOptionsArgs = {
 
 export type QueryFormLookupArgs = {
   input: FormLookupInput;
+};
+
+
+export type QueryFormLookupDefaultArgs = {
+  input: FormLookupDefaultInput;
 };
 
 
@@ -8123,14 +8123,14 @@ export type SetFieldCategoryEnabledInput = {
   id: Scalars['ID']['input'];
 };
 
-export type SetFieldEnabledInput = {
-  enabled: Scalars['Boolean']['input'];
+export type SetFieldColorInput = {
+  color?: InputMaybe<Scalars['String']['input']>;
   id: Scalars['ID']['input'];
 };
 
-export type SetFieldOptionColorInput = {
-  fieldId: Scalars['ID']['input'];
-  paletteKey?: InputMaybe<Scalars['String']['input']>;
+export type SetFieldEnabledInput = {
+  enabled: Scalars['Boolean']['input'];
+  id: Scalars['ID']['input'];
 };
 
 export type SetLotteryAllocationInput = {
@@ -9307,7 +9307,7 @@ export type SetDemoItemTwoEnabledMutationVariables = Exact<{
 
 export type SetDemoItemTwoEnabledMutation = { __typename?: 'Mutation', setDemoItemTwoEnabled: { __typename?: 'DemoItemTwoPayload', item: { __typename?: 'DemoItemTwo', id: string, name: string, note?: string | null, enabled: boolean, createdAt: string, updatedAt: string, isShared: boolean, createdBy?: { __typename?: 'DemoItemTwoUser', id: string, name: string } | null, abilities: { __typename?: 'DemoItemTwoAbilities', canEdit: boolean, canDelete: boolean }, shareOrgs: Array<{ __typename?: 'ShareOrg', orgId: string, includeDescendants: boolean }> } } };
 
-export type FieldFieldsFragment = { __typename?: 'Field', id: string, categoryId: string, label: string, value: string, order: number, enabled: boolean, description?: string | null, isOwn: boolean, canEdit: boolean, canToggleEnabled: boolean, ownerOrg?: { __typename?: 'FieldOwnerOrg', id: string, name: string } | null };
+export type FieldFieldsFragment = { __typename?: 'Field', id: string, categoryId: string, label: string, value: string, order: number, enabled: boolean, description?: string | null, color?: string | null, isOwn: boolean, canEdit: boolean, canToggleEnabled: boolean, ownerOrg?: { __typename?: 'FieldOwnerOrg', id: string, name: string } | null };
 
 export type FieldCategoryFieldsFragment = { __typename?: 'FieldCategory', id: string, key: string, name: string, description?: string | null, isSystem: boolean, enabled: boolean };
 
@@ -9344,28 +9344,35 @@ export type FieldsQueryVariables = Exact<{
 }>;
 
 
-export type FieldsQuery = { __typename?: 'Query', fields: { __typename?: 'FieldsPayload', totalCount: number, items: Array<{ __typename?: 'Field', id: string, categoryId: string, label: string, value: string, order: number, enabled: boolean, description?: string | null, isOwn: boolean, canEdit: boolean, canToggleEnabled: boolean, ownerOrg?: { __typename?: 'FieldOwnerOrg', id: string, name: string } | null }> } };
+export type FieldsQuery = { __typename?: 'Query', fields: { __typename?: 'FieldsPayload', totalCount: number, items: Array<{ __typename?: 'Field', id: string, categoryId: string, label: string, value: string, order: number, enabled: boolean, description?: string | null, color?: string | null, isOwn: boolean, canEdit: boolean, canToggleEnabled: boolean, ownerOrg?: { __typename?: 'FieldOwnerOrg', id: string, name: string } | null }> } };
 
 export type CreateFieldMutationVariables = Exact<{
   input: CreateFieldInput;
 }>;
 
 
-export type CreateFieldMutation = { __typename?: 'Mutation', createField: { __typename?: 'FieldPayload', field: { __typename?: 'Field', id: string, categoryId: string, label: string, value: string, order: number, enabled: boolean, description?: string | null, isOwn: boolean, canEdit: boolean, canToggleEnabled: boolean, ownerOrg?: { __typename?: 'FieldOwnerOrg', id: string, name: string } | null } } };
+export type CreateFieldMutation = { __typename?: 'Mutation', createField: { __typename?: 'FieldPayload', field: { __typename?: 'Field', id: string, categoryId: string, label: string, value: string, order: number, enabled: boolean, description?: string | null, color?: string | null, isOwn: boolean, canEdit: boolean, canToggleEnabled: boolean, ownerOrg?: { __typename?: 'FieldOwnerOrg', id: string, name: string } | null } } };
 
 export type UpdateFieldMutationVariables = Exact<{
   input: UpdateFieldInput;
 }>;
 
 
-export type UpdateFieldMutation = { __typename?: 'Mutation', updateField: { __typename?: 'FieldPayload', field: { __typename?: 'Field', id: string, categoryId: string, label: string, value: string, order: number, enabled: boolean, description?: string | null, isOwn: boolean, canEdit: boolean, canToggleEnabled: boolean, ownerOrg?: { __typename?: 'FieldOwnerOrg', id: string, name: string } | null } } };
+export type UpdateFieldMutation = { __typename?: 'Mutation', updateField: { __typename?: 'FieldPayload', field: { __typename?: 'Field', id: string, categoryId: string, label: string, value: string, order: number, enabled: boolean, description?: string | null, color?: string | null, isOwn: boolean, canEdit: boolean, canToggleEnabled: boolean, ownerOrg?: { __typename?: 'FieldOwnerOrg', id: string, name: string } | null } } };
 
 export type SetFieldEnabledMutationVariables = Exact<{
   input: SetFieldEnabledInput;
 }>;
 
 
-export type SetFieldEnabledMutation = { __typename?: 'Mutation', setFieldEnabled: { __typename?: 'FieldPayload', field: { __typename?: 'Field', id: string, categoryId: string, label: string, value: string, order: number, enabled: boolean, description?: string | null, isOwn: boolean, canEdit: boolean, canToggleEnabled: boolean, ownerOrg?: { __typename?: 'FieldOwnerOrg', id: string, name: string } | null } } };
+export type SetFieldEnabledMutation = { __typename?: 'Mutation', setFieldEnabled: { __typename?: 'FieldPayload', field: { __typename?: 'Field', id: string, categoryId: string, label: string, value: string, order: number, enabled: boolean, description?: string | null, color?: string | null, isOwn: boolean, canEdit: boolean, canToggleEnabled: boolean, ownerOrg?: { __typename?: 'FieldOwnerOrg', id: string, name: string } | null } } };
+
+export type SetFieldColorMutationVariables = Exact<{
+  input: SetFieldColorInput;
+}>;
+
+
+export type SetFieldColorMutation = { __typename?: 'Mutation', setFieldColor: { __typename?: 'FieldPayload', field: { __typename?: 'Field', id: string, categoryId: string, label: string, value: string, order: number, enabled: boolean, description?: string | null, color?: string | null, isOwn: boolean, canEdit: boolean, canToggleEnabled: boolean, ownerOrg?: { __typename?: 'FieldOwnerOrg', id: string, name: string } | null } } };
 
 export type FormSubmissionFieldsFragment = { __typename?: 'FormSubmissionModel', id: string, moduleKey: string, formKey: string, formName?: string | null, version: number, status: FormSubmissionStatus, revision: number, viewedRevision: number, values: Record<string, unknown>, viewedVersion: number, editVersion: number, orgId: string, serialNo?: string | null, submittedAt?: string | null, createdAt: string, updatedAt: string, currentInstanceId?: string | null, blocked: boolean, voidedAt?: string | null, voidReason?: string | null, voidReasonKey?: string | null, voidReasonLabel?: string | null, replacedById?: string | null, copiedFrom?: string | null, touched: Array<string>, fieldStates: Array<{ __typename?: 'FormFieldState', key: string, visible: boolean, readonly: boolean, redacted: boolean }>, displayValues: Array<{ __typename?: 'FormDisplayValue', fieldKey: string, items: Array<{ __typename?: 'FormDisplayItem', value: string, label?: string | null, available: boolean }> }>, summary?: { __typename?: 'FormSubmissionSummary', title?: string | null, date?: string | null, amount?: string | null } | null, ctx?: { __typename?: 'FormSubmissionContext', at: string, timezone: string, userId?: string | null, orgId?: string | null, orgIds: Array<string>, tenantId?: string | null } | null, createdBy?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null, abilities: { __typename?: 'FormSubmissionAbilities', canEdit: boolean, canSaveDraft: boolean, canDelete: boolean, canEditField: Array<string>, canWithdraw: boolean, canVoid: boolean, canCopy: boolean } };
 
@@ -9480,6 +9487,13 @@ export type FormVoidReasonOptionsQueryVariables = Exact<{
 
 export type FormVoidReasonOptionsQuery = { __typename?: 'Query', formVoidReasonOptions: { __typename?: 'FormVoidReasonOptionsPayload', categoryKey?: string | null, items: Array<{ __typename?: 'FormFieldOption', value: string, label: string }> } };
 
+export type FormLookupDefaultQueryVariables = Exact<{
+  input: FormLookupDefaultInput;
+}>;
+
+
+export type FormLookupDefaultQuery = { __typename?: 'Query', formLookupDefault: { __typename?: 'FormLookupRecordPayload', record?: { __typename?: 'FormLookupRecord', id: string, value?: string | null, label?: string | null, values: Record<string, unknown> } | null } };
+
 export type FormLookupRecordQueryVariables = Exact<{
   input: FormLookupRecordInput;
 }>;
@@ -9531,7 +9545,7 @@ export type ForkFormMutation = { __typename?: 'Mutation', forkForm: { __typename
 export type FormLookupProvidersQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type FormLookupProvidersQuery = { __typename?: 'Query', formLookupProviders: { __typename?: 'FormLookupProvidersPayload', totalCount: number, items: Array<{ __typename?: 'FormLookupProvider', key: string, name: string, isBase: boolean, labelField: string, valueField: string, filterFields: Array<string>, fields: Array<{ __typename?: 'FormLookupProviderField', key: string, type: string, label?: string | null }> }> } };
+export type FormLookupProvidersQuery = { __typename?: 'Query', formLookupProviders: { __typename?: 'FormLookupProvidersPayload', totalCount: number, items: Array<{ __typename?: 'FormLookupProvider', key: string, name: string, isBase: boolean, labelField: string, valueField: string, filterFields: Array<string>, operatorDefault: boolean, fields: Array<{ __typename?: 'FormLookupProviderField', key: string, type: string, label?: string | null }> }> } };
 
 export type FormVersionQueryVariables = Exact<{
   formKey: Scalars['ID']['input'];
@@ -9657,14 +9671,14 @@ export type ModuleListColumnsQueryVariables = Exact<{
 }>;
 
 
-export type ModuleListColumnsQuery = { __typename?: 'Query', moduleListColumns: { __typename?: 'ModuleListColumnsPayload', moduleKey: string, columns: Array<{ __typename?: 'ModuleListColumn', kind: ModuleListColumnKind, key: string, formKey?: string | null, width: number, order: number }>, builtin: { __typename?: 'ModuleListBuiltinColumns', form: boolean, status: boolean, createdBy: boolean } } };
+export type ModuleListColumnsQuery = { __typename?: 'Query', moduleListColumns: { __typename?: 'ModuleListColumnsPayload', moduleKey: string, columns: Array<{ __typename?: 'ModuleListColumn', kind: ModuleListColumnKind, key: string, formKey?: string | null, label?: string | null, width: number, order: number }>, builtin: { __typename?: 'ModuleListBuiltinColumns', form: boolean, status: boolean, createdBy: boolean } } };
 
 export type SetModuleListColumnsMutationVariables = Exact<{
   input: SetModuleListColumnsInput;
 }>;
 
 
-export type SetModuleListColumnsMutation = { __typename?: 'Mutation', setModuleListColumns: { __typename?: 'ModuleListColumnsPayload', moduleKey: string, columns: Array<{ __typename?: 'ModuleListColumn', kind: ModuleListColumnKind, key: string, formKey?: string | null, width: number, order: number }>, builtin: { __typename?: 'ModuleListBuiltinColumns', form: boolean, status: boolean, createdBy: boolean } } };
+export type SetModuleListColumnsMutation = { __typename?: 'Mutation', setModuleListColumns: { __typename?: 'ModuleListColumnsPayload', moduleKey: string, columns: Array<{ __typename?: 'ModuleListColumn', kind: ModuleListColumnKind, key: string, formKey?: string | null, label?: string | null, width: number, order: number }>, builtin: { __typename?: 'ModuleListBuiltinColumns', form: boolean, status: boolean, createdBy: boolean } } };
 
 export type FormEngineModulesQueryVariables = Exact<{ [key: string]: never; }>;
 
@@ -9706,7 +9720,7 @@ export type MyNotificationsQueryVariables = Exact<{
 }>;
 
 
-export type MyNotificationsQuery = { __typename?: 'Query', myNotifications: { __typename?: 'MyNotificationsPayload', page: number, pageSize: number, totalCount: number, unreadCount: number, items: Array<{ __typename?: 'Notification', id: string, type: string, title: string, body: string, refType?: string | null, refId?: string | null, link?: string | null, readAt?: string | null, createdAt: string }> } };
+export type MyNotificationsQuery = { __typename?: 'Query', myNotifications: { __typename?: 'MyNotificationsPayload', pageSize: number, nextCursor?: string | null, totalCount: number, unreadCount: number, items: Array<{ __typename?: 'Notification', id: string, type: string, title: string, body: string, refType?: string | null, refId?: string | null, link?: string | null, readAt?: string | null, createdAt: string }> } };
 
 export type MyNotificationUnreadCountQueryVariables = Exact<{ [key: string]: never; }>;
 
@@ -10420,22 +10434,6 @@ export type RetryAdvanceInstanceMutationVariables = Exact<{
 
 
 export type RetryAdvanceInstanceMutation = { __typename?: 'Mutation', retryAdvanceInstance: { __typename?: 'WorkflowInstancePayload', instance: { __typename?: 'WorkflowInstanceModel', id: string, submissionId: string, revision: number, moduleKey: string, moduleName?: string | null, formKey: string, formName?: string | null, formVersion: number, workflowKey: string, workflowName?: string | null, workflowVersion: number, status: WorkflowInstanceStatus, activeStepKeys: Array<string>, editVersion: number, createdAt: string, updatedAt: string, finishedAt?: string | null, summary?: { __typename?: 'FormSubmissionSummary', title?: string | null, date?: string | null, amount?: string | null } | null, applicant?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null, steps: Array<{ __typename?: 'WorkflowInstanceStepModel', stepKey: string, name: string, kind: string, mode?: string | null, allowReturn: boolean, allowsApplicantAssignee: boolean, status: WorkflowStepStatus, blocked: boolean, plan: Array<{ __typename?: 'WorkflowPlanItemModel', taskKey: string, assigneeState: string, taskId?: string | null, assignee: { __typename?: 'FormUserRef', id: string, name?: string | null }, previousAssignees: Array<{ __typename?: 'FormUserRef', id: string, name?: string | null }>, delegators: Array<{ __typename?: 'FormUserRef', id: string, name?: string | null }> }>, decisions: Array<{ __typename?: 'WorkflowDecisionModel', taskKey: string, decision: string, comment?: string | null, at: string, user: { __typename?: 'FormUserRef', id: string, name?: string | null } }> }>, history: Array<{ __typename?: 'WorkflowHistoryEventModel', at: string, kind: string, stepKey?: string | null, taskKey?: string | null, comment?: string | null, result?: string | null, reason?: string | null, code?: string | null, user?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null, toUser?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null, delegators: Array<{ __typename?: 'FormUserRef', id: string, name?: string | null }> }>, outcome?: { __typename?: 'WorkflowOutcomeModel', kind: string, stepKey: string, taskKey: string } | null, myTasks: Array<{ __typename?: 'WorkflowTaskModel', id: string, instanceId: string, submissionId: string, revision: number, moduleKey: string, moduleName?: string | null, formKey: string, formName?: string | null, stepKey: string, stepName: string, taskKey: string, status: WorkflowTaskStatus, instanceStatus: WorkflowInstanceStatus, decidedAt?: string | null, comment?: string | null, editVersion: number, createdAt: string, assignee: { __typename?: 'FormUserRef', id: string, name?: string | null }, applicant?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null, summary?: { __typename?: 'FormSubmissionSummary', title?: string | null, date?: string | null, amount?: string | null } | null }>, abilities: { __typename?: 'WorkflowInstanceAbilities', canWithdraw: boolean, canManage: boolean } } } };
-
-export type FieldOptionColorFieldsFragment = { __typename?: 'FieldOptionColor', fieldId: string, value: string, paletteKey?: string | null };
-
-export type FieldOptionColorsQueryVariables = Exact<{
-  categoryKey: Scalars['String']['input'];
-}>;
-
-
-export type FieldOptionColorsQuery = { __typename?: 'Query', fieldOptionColors: { __typename?: 'FieldOptionColorsPayload', totalCount: number, items: Array<{ __typename?: 'FieldOptionColor', fieldId: string, value: string, paletteKey?: string | null }> } };
-
-export type SetFieldOptionColorMutationVariables = Exact<{
-  input: SetFieldOptionColorInput;
-}>;
-
-
-export type SetFieldOptionColorMutation = { __typename?: 'Mutation', setFieldOptionColor: { __typename?: 'FieldOptionColorPayload', color: { __typename?: 'FieldOptionColor', fieldId: string, value: string, paletteKey?: string | null } } };
 
 export type LotteryAccountsRefFieldsFragment = { __typename?: 'LotteryAccountsRef', id: string, name: string };
 
@@ -11945,6 +11943,7 @@ export const FieldFieldsFragmentDoc = `
   order
   enabled
   description
+  color
   ownerOrg {
     id
     name
@@ -12485,13 +12484,6 @@ export const WorkflowValidationFieldsFragmentDoc = `
     property
     exprPath
   }
-}
-    `;
-export const FieldOptionColorFieldsFragmentDoc = `
-    fragment FieldOptionColorFields on FieldOptionColor {
-  fieldId
-  value
-  paletteKey
 }
     `;
 export const LotteryAccountsRefFieldsFragmentDoc = `
@@ -15363,6 +15355,36 @@ export const useSetFieldEnabledMutation = <
 
 useSetFieldEnabledMutation.fetcher = (client: GraphQLClient, variables: SetFieldEnabledMutationVariables, headers?: RequestInit['headers']) => fetcher<SetFieldEnabledMutation, SetFieldEnabledMutationVariables>(client, SetFieldEnabledDocument, variables, headers);
 
+export const SetFieldColorDocument = `
+    mutation SetFieldColor($input: SetFieldColorInput!) {
+  setFieldColor(input: $input) {
+    field {
+      ...FieldFields
+    }
+  }
+}
+    ${FieldFieldsFragmentDoc}`;
+
+export const useSetFieldColorMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<SetFieldColorMutation, TError, SetFieldColorMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<SetFieldColorMutation, TError, SetFieldColorMutationVariables, TContext>(
+      {
+    mutationKey: ['SetFieldColor'],
+    mutationFn: (variables?: SetFieldColorMutationVariables) => fetcher<SetFieldColorMutation, SetFieldColorMutationVariables>(client, SetFieldColorDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useSetFieldColorMutation.fetcher = (client: GraphQLClient, variables: SetFieldColorMutationVariables, headers?: RequestInit['headers']) => fetcher<SetFieldColorMutation, SetFieldColorMutationVariables>(client, SetFieldColorDocument, variables, headers);
+
 export const ModuleFormsDocument = `
     query ModuleForms($moduleKey: ID!) {
   moduleForms(moduleKey: $moduleKey) {
@@ -15876,6 +15898,39 @@ useFormVoidReasonOptionsQuery.getKey = (variables: FormVoidReasonOptionsQueryVar
 
 useFormVoidReasonOptionsQuery.fetcher = (client: GraphQLClient, variables: FormVoidReasonOptionsQueryVariables, headers?: RequestInit['headers']) => fetcher<FormVoidReasonOptionsQuery, FormVoidReasonOptionsQueryVariables>(client, FormVoidReasonOptionsDocument, variables, headers);
 
+export const FormLookupDefaultDocument = `
+    query FormLookupDefault($input: FormLookupDefaultInput!) {
+  formLookupDefault(input: $input) {
+    record {
+      ...FormLookupRecordFields
+    }
+  }
+}
+    ${FormLookupRecordFieldsFragmentDoc}`;
+
+export const useFormLookupDefaultQuery = <
+      TData = FormLookupDefaultQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: FormLookupDefaultQueryVariables,
+      options?: Omit<UseQueryOptions<FormLookupDefaultQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<FormLookupDefaultQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<FormLookupDefaultQuery, TError, TData>(
+      {
+    queryKey: ['FormLookupDefault', variables],
+    queryFn: fetcher<FormLookupDefaultQuery, FormLookupDefaultQueryVariables>(client, FormLookupDefaultDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useFormLookupDefaultQuery.getKey = (variables: FormLookupDefaultQueryVariables) => ['FormLookupDefault', variables];
+
+
+useFormLookupDefaultQuery.fetcher = (client: GraphQLClient, variables: FormLookupDefaultQueryVariables, headers?: RequestInit['headers']) => fetcher<FormLookupDefaultQuery, FormLookupDefaultQueryVariables>(client, FormLookupDefaultDocument, variables, headers);
+
 export const FormLookupRecordDocument = `
     query FormLookupRecord($input: FormLookupRecordInput!) {
   formLookupRecord(input: $input) {
@@ -16078,6 +16133,7 @@ export const FormLookupProvidersDocument = `
       labelField
       valueField
       filterFields
+      operatorDefault
       fields {
         key
         type
@@ -16705,6 +16761,7 @@ export const ModuleListColumnsDocument = `
       kind
       key
       formKey
+      label
       width
       order
     }
@@ -16748,6 +16805,7 @@ export const SetModuleListColumnsDocument = `
       kind
       key
       formKey
+      label
       width
       order
     }
@@ -16977,8 +17035,8 @@ export const MyNotificationsDocument = `
     items {
       ...NotificationItem
     }
-    page
     pageSize
+    nextCursor
     totalCount
     unreadCount
   }
@@ -20353,70 +20411,6 @@ export const useRetryAdvanceInstanceMutation = <
 
 
 useRetryAdvanceInstanceMutation.fetcher = (client: GraphQLClient, variables: RetryAdvanceInstanceMutationVariables, headers?: RequestInit['headers']) => fetcher<RetryAdvanceInstanceMutation, RetryAdvanceInstanceMutationVariables>(client, RetryAdvanceInstanceDocument, variables, headers);
-
-export const FieldOptionColorsDocument = `
-    query FieldOptionColors($categoryKey: String!) {
-  fieldOptionColors(categoryKey: $categoryKey) {
-    items {
-      ...FieldOptionColorFields
-    }
-    totalCount
-  }
-}
-    ${FieldOptionColorFieldsFragmentDoc}`;
-
-export const useFieldOptionColorsQuery = <
-      TData = FieldOptionColorsQuery,
-      TError = unknown
-    >(
-      client: GraphQLClient,
-      variables: FieldOptionColorsQueryVariables,
-      options?: Omit<UseQueryOptions<FieldOptionColorsQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<FieldOptionColorsQuery, TError, TData>['queryKey'] },
-      headers?: RequestInit['headers']
-    ) => {
-    
-    return useQuery<FieldOptionColorsQuery, TError, TData>(
-      {
-    queryKey: ['FieldOptionColors', variables],
-    queryFn: fetcher<FieldOptionColorsQuery, FieldOptionColorsQueryVariables>(client, FieldOptionColorsDocument, variables, headers),
-    ...options
-  }
-    )};
-
-useFieldOptionColorsQuery.getKey = (variables: FieldOptionColorsQueryVariables) => ['FieldOptionColors', variables];
-
-
-useFieldOptionColorsQuery.fetcher = (client: GraphQLClient, variables: FieldOptionColorsQueryVariables, headers?: RequestInit['headers']) => fetcher<FieldOptionColorsQuery, FieldOptionColorsQueryVariables>(client, FieldOptionColorsDocument, variables, headers);
-
-export const SetFieldOptionColorDocument = `
-    mutation SetFieldOptionColor($input: SetFieldOptionColorInput!) {
-  setFieldOptionColor(input: $input) {
-    color {
-      ...FieldOptionColorFields
-    }
-  }
-}
-    ${FieldOptionColorFieldsFragmentDoc}`;
-
-export const useSetFieldOptionColorMutation = <
-      TError = unknown,
-      TContext = unknown
-    >(
-      client: GraphQLClient,
-      options?: UseMutationOptions<SetFieldOptionColorMutation, TError, SetFieldOptionColorMutationVariables, TContext>,
-      headers?: RequestInit['headers']
-    ) => {
-    
-    return useMutation<SetFieldOptionColorMutation, TError, SetFieldOptionColorMutationVariables, TContext>(
-      {
-    mutationKey: ['SetFieldOptionColor'],
-    mutationFn: (variables?: SetFieldOptionColorMutationVariables) => fetcher<SetFieldOptionColorMutation, SetFieldOptionColorMutationVariables>(client, SetFieldOptionColorDocument, variables, headers)(),
-    ...options
-  }
-    )};
-
-
-useSetFieldOptionColorMutation.fetcher = (client: GraphQLClient, variables: SetFieldOptionColorMutationVariables, headers?: RequestInit['headers']) => fetcher<SetFieldOptionColorMutation, SetFieldOptionColorMutationVariables>(client, SetFieldOptionColorDocument, variables, headers);
 
 export const LotteryBankAccountsDocument = `
     query LotteryBankAccounts($input: LotteryBankAccountsInput!) {

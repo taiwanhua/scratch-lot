@@ -1,5 +1,6 @@
 import { useTranslations } from "use-intl";
 
+import type { TagPaletteKey } from "@repo/domain/tag-palette";
 import { Box } from "@repo/ui/box";
 import { Button } from "@repo/ui/button";
 import { Card } from "@repo/ui/card";
@@ -8,7 +9,6 @@ import { Typography } from "@repo/ui/typography";
 
 import type {
   FieldCategoryLike,
-  FieldOptionColumnsSlot,
   FieldOptionLike,
 } from "../field-manager-types";
 import { FieldOptionsTable } from "./FieldOptionsTable";
@@ -29,8 +29,7 @@ export interface FieldOptionsPanelProps {
   onCreate: () => void;
   onEdit: (field: FieldOptionLike) => void;
   onToggleEnabled: (field: FieldOptionLike, enabled: boolean) => void;
-  /** 客製頁多加的欄位(見 `FieldOptionColumnsSlot`);底座頁不給 */
-  extraOptionColumns?: FieldOptionColumnsSlot;
+  onSetColor: (field: FieldOptionLike, color: TagPaletteKey | null) => void;
 }
 
 /**
@@ -54,7 +53,7 @@ export const FieldOptionsPanel = ({
   onCreate,
   onEdit,
   onToggleEnabled,
-  extraOptionColumns,
+  onSetColor,
 }: FieldOptionsPanelProps) => {
   const t = useTranslations("admin.fieldManager.options");
   const tCategory = useTranslations("admin.fieldManager.categoryActions");
@@ -120,7 +119,7 @@ export const FieldOptionsPanel = ({
             pendingFieldId={pendingFieldId}
             onToggleEnabled={onToggleEnabled}
             onEdit={onEdit}
-            extraColumns={extraOptionColumns?.(category) ?? []}
+            onSetColor={onSetColor}
           />
         </Box>
       )}

@@ -111,7 +111,7 @@ api 的功能測試只有一個接縫:用 supertest 對啟動起來的 Nest app 
 
 - **夾具的形狀以 api 測試的斷言為準**(`apps/api/src/**/*.test.ts` 裡有現成斷言可對照;TEST-12 在網路層的特例):例如 api 對樹根的 `parentId` 一律回 `null`,夾具寫成有值,前端拿 `parentId` 判視角的 bug 在測試裡就會是綠的。
 - **假伺服器若有「連動 / 狀態」語意就實作進 handler**,不要回固定資料:停用模組連動子樹、儲存後重查要拿到新值這類驗收條件,對著無狀態的假伺服器根本驗不到,還容易寫出「對著比 api 寬鬆的假伺服器才會過」的測試。先例 `test/msw/module-manager-handlers.ts`。
-- **`graphqlError(code, message)` 的參數順序是「碼在前、訊息在後」**:簽章 `graphqlError(code, message = code, extensions = {})`(`src/test/msw/auth-handlers.ts`),`message` 省略時等於 `code`,所以**大多數情況只傳第一個參數**(`graphqlError("FORBIDDEN")`),要附 `reason` / `violations` 這類 `extensions` 才傳第三個。與 api 那側的 `GraphQLError(message, { extensions: { code } })` 順序相反,寫反時 MSW 回的 `code` 是人話,前端分流不到。
+- **`graphqlError(code, message)` 的參數順序是「碼在前、訊息在後」**:簽章 `graphqlError(code, message = code, extensions = {})`(`src/test/msw/auth-handlers.ts`),`message` 省略時等於 `code`,所以**大多數情況只傳第一個參數**(`graphqlError("FORBIDDEN")`),要附 `reason` / `violations` 這類 `extensions` 才傳第三個。與 api 那側的 `GraphQLError(message, { extensions: { code } })` 順序相反,寫反時 MSW 回的 `code` 是人話,前端分流不到。`code` 的型別是 `GraphqlErrorCode`(GQL-04 表全部的碼,見 [GQL-04](../api/graphql-schema.md#gql-04-錯誤business-error-用-graphqlerror--extensionscode)):`NOT_FOUND`、`CONFLICT` 這類模組碼直接傳,不用 `as` 轉型;也不要把碼塞進第三個參數的 `extensions.code` —— 第一個參數會蓋掉它。夾具的 `failures` 選項把碼的型別寫成 `GraphqlErrorCode`,不要寫 `string`。
 - **「閃一下」這種中間幀用 msw 的 `delay("infinite")` 擋住**:儲存成功後的重取一旦回來,畫面就是最終狀態,DATA-04 那種「先寫快取、避免閃一下舊值」的行為在測試裡**根本來不及被觀察到**。讓重取的那個 handler 永遠不回應(`await delay("infinite")`),中間那一幀就停在畫面上可以斷言;斷言完就結束該測試,不必收尾。要驗的是「寫入端有沒有把新值交給快取」,不是重取回來對不對。
 
 ### 頁面測試怎麼分檔

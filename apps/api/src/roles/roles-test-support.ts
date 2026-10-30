@@ -263,7 +263,7 @@ async function keysOf(
     .toArray();
   return documents
     .map((document) => document.key)
-    .toSorted((a, b) => a.localeCompare(b));
+    .toSorted((a, b) => a.localeCompare(b, "zh-Hant"));
 }
 
 /** 角色實際落庫的 `role_module` key(斷言「存了什麼」,不是「回了什麼」)。 */

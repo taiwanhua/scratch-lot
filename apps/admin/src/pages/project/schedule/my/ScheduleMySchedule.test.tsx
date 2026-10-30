@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from "@jest/globals";
 import { screen, waitFor, within } from "@testing-library/react";
 
-import { tagPaletteColorOf } from "@/lib/project/tag-palettes";
+import { tagPaletteColorOf } from "@repo/ui/theme";
 
 import {
   fastUser,

@@ -10,6 +10,7 @@ import {
   MAX_LEADER_TASKS,
   type ScheduleTaskRole,
 } from "@repo/domain/project/schedule-settings";
+import { type TagPaletteKey, isTagPaletteKey } from "@repo/domain/tag-palette";
 import {
   type ScheduleDemandTemplateFieldsFragment,
   useDeleteScheduleDemandTemplateMutation,
@@ -27,7 +28,7 @@ import { TimePicker } from "@repo/ui/time-picker";
 import { Typography } from "@repo/ui/typography";
 
 import { FieldErrorGroup } from "@/components/base/FieldErrorGroup/FieldErrorGroup";
-import { TagPaletteSelect } from "@/components/project/TagPaletteSelect/TagPaletteSelect";
+import { TagPaletteSelect } from "@/components/base/TagPaletteSelect/TagPaletteSelect";
 import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
 import { useSession } from "@/hooks/base/useSession";
 import { useScheduleFieldOptions } from "@/hooks/project/schedule/useScheduleFieldOptions/useScheduleFieldOptions";
@@ -35,10 +36,6 @@ import {
   type FieldErrorTexts,
   withoutFieldError,
 } from "@/lib/base/field-errors";
-import {
-  type TagPaletteKey,
-  isTagPaletteKey,
-} from "@/lib/project/tag-palettes";
 
 import { ConfirmDeleteDialog } from "../../ConfirmDeleteDialog";
 import {

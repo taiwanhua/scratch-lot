@@ -13,14 +13,15 @@ fragment NotificationItem on Notification {
   createdAt
 }
 
-# MyNotificationsInput: { unreadOnly?, page?, pageSize? }(依時間新到舊;unreadOnly = 只列未讀)
+# MyNotificationsInput: { unreadOnly?, after?, pageSize? }(依時間新到舊;unreadOnly = 只列未讀;
+# 游標分頁:after 送上一批的 nextCursor,nextCursor = null 表示沒有更多)
 query MyNotifications($input: MyNotificationsInput!) {
   myNotifications(input: $input) {
     items {
       ...NotificationItem
     }
-    page
     pageSize
+    nextCursor
     totalCount
     unreadCount
   }
@@ -93,7 +94,8 @@ fragment NotificationSettingItem on NotificationSetting {
   updatedBy
 }
 
-# NotificationSettingsInput: { keyword?, page?, pageSize? }(所有負責人提醒 + 宣告了可調時間的當事人通知)
+# NotificationSettingsInput: { keyword?, nameMatchedTypes?, page?, pageSize? }(所有負責人提醒 + 宣告了可調時間的當事人通知;
+# keyword 比對登記的 name 與 key,nameMatchedTypes = 前端以顯示名稱比中的類型 key,兩者取聯集)
 query NotificationSettings($input: NotificationSettingsInput!) {
   notificationSettings(input: $input) {
     items {

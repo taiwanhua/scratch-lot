@@ -190,7 +190,7 @@ describe("通知清單", () => {
     expect(items).toHaveLength(20);
     expect(items[0]).toHaveTextContent("通知 1");
     expect(items[19]).toHaveTextContent("通知 20");
-    expect(world.calls.list).toEqual([{ unreadOnly: false, page: 1 }]);
+    expect(world.calls.list).toEqual([{ unreadOnly: false, after: null }]);
   });
 
   it("捲到清單底部:載入下一批;沒有更多時不再載入", async () => {
@@ -209,32 +209,33 @@ describe("通知清單", () => {
     await act(async () => {
       await Promise.resolve();
     });
+    // 下一批帶上一批的游標(最後一則「通知 20」的位置)
     expect(world.calls.list).toEqual([
-      { unreadOnly: false, page: 1 },
-      { unreadOnly: false, page: 2 },
+      { unreadOnly: false, after: null },
+      { unreadOnly: false, after: "通知-20" },
     ]);
   });
 
-  it("載入下一批的途中來了新通知:重複的那一則只出現一次", async () => {
+  it("載入下一批的途中來了新通知:下一批從游標往下接,不重複、不漏", async () => {
     const { user, world } = renderShell(unreadList(25));
     const panel = await openPanel(user);
     await within(panel).findByRole("list", { name: "通知" });
 
-    // 新通知插到最前面:offset 分頁的第二頁第一筆會是第一頁已經有的「通知 20」
+    // 新通知插到最前面:下一批仍從「通知 20」之後接(offset 分頁會讓第二批第一筆重複「通知 20」)
     world.arrive(notificationFixture({ id: "fresh", title: "新的" }));
     fireEvent.scroll(screen.getByTestId("notification-list"));
 
-    await waitFor(() => {
-      expect(
-        within(panel).getAllByRole("button", { name: /通知 \d+/ }),
-      ).toHaveLength(25);
-    });
+    await within(panel).findByRole("button", { name: /通知 25(?!\d)/ });
+    const shown = within(panel).getAllByRole("button", { name: /通知 \d+/ });
+    expect(shown.map((item) => /通知 \d+/.exec(item.textContent)?.[0])).toEqual(
+      Array.from({ length: 25 }, (_, index) => `通知 ${String(index + 1)}`),
+    );
     expect(
       within(panel).getAllByRole("button", { name: /通知 20(?!\d)/ }),
     ).toHaveLength(1);
   });
 
-  it("「未讀」清單點過通知後捲到底:從頭重抓,不接續 offset(不漏通知)", async () => {
+  it("「未讀」清單點過通知後捲到底:下一批從游標往下接,不漏通知、不必重抓", async () => {
     // 沒有連結的通知:點了只標已讀,清單維持開著
     const notifications = unreadList(25).map((item) => ({
       ...item,
@@ -254,17 +255,22 @@ describe("通知清單", () => {
     });
     fireEvent.scroll(screen.getByTestId("notification-list"));
 
-    // 從第 1 頁重抓:伺服器端未讀只剩 24 則,第 1 頁是「通知 2」~「通知 21」
-    await within(panel).findByRole("button", { name: /通知 21(?!\d)/ });
-    fireEvent.scroll(screen.getByTestId("notification-list"));
+    // 伺服器端未讀少了「通知 1」,但游標記的是位置:下一批仍是「通知 21」~「通知 25」
     await within(panel).findByRole("button", { name: /通知 25(?!\d)/ });
-
-    const shown = within(panel).getAllByRole("button", { name: /通知 \d+/ });
-    expect(shown).toHaveLength(24);
+    for (const index of [21, 22, 23, 24]) {
+      expect(
+        within(panel).getByRole("button", {
+          name: new RegExp(String.raw`通知 ${String(index)}(?!\d)`),
+        }),
+      ).toBeInTheDocument();
+    }
+    // 點過的那一則留在畫面上(下次重抓才拿掉),共 25 則
+    expect(
+      within(panel).getAllByRole("button", { name: /通知 \d+/ }),
+    ).toHaveLength(25);
     expect(world.calls.list.filter((call) => call.unreadOnly)).toEqual([
-      { unreadOnly: true, page: 1 },
-      { unreadOnly: true, page: 1 },
-      { unreadOnly: true, page: 2 },
+      { unreadOnly: true, after: null },
+      { unreadOnly: true, after: "通知-20" },
     ]);
   });
 

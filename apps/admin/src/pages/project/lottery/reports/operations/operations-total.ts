@@ -1,3 +1,5 @@
+import { COLLATION_LOCALE } from "@repo/domain/collation";
+
 import type { OperationsStore } from "./operations-rows";
 
 /**
@@ -236,7 +238,7 @@ export const totalStoreOf = (
       priorPeriodAmount: sumBy(notes, "priorPeriodAmount"),
       openMonths: [
         ...new Set(notes.flatMap((item) => item.openMonths)),
-      ].toSorted((a, b) => a.localeCompare(b)),
+      ].toSorted((a, b) => a.localeCompare(b, COLLATION_LOCALE)),
     },
   };
 };

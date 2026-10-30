@@ -1,3 +1,4 @@
+import { COLLATION_LOCALE } from "@repo/domain/collation";
 import { ModuleSidebarType } from "@repo/graphql";
 
 import type { ModuleAdminNodeLike } from "./module-manager-types";
@@ -69,5 +70,5 @@ export const sortPermissions = <T extends { key: string }>(
     if (leftIsAll !== rightIsAll) {
       return leftIsAll ? -1 : 1;
     }
-    return left.key.localeCompare(right.key);
+    return left.key.localeCompare(right.key, COLLATION_LOCALE);
   });

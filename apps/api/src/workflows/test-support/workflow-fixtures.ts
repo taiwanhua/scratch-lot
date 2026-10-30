@@ -1343,5 +1343,5 @@ export async function taskStatusOf(
 
 /** 字串排序(`toSorted` 的比較函式)。 */
 export function byText(left: string, right: string): number {
-  return left.localeCompare(right);
+  return left.localeCompare(right, "zh-Hant");
 }

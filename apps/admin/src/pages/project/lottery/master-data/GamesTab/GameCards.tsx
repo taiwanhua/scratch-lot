@@ -1,13 +1,13 @@
 import { useTranslations } from "use-intl";
 
+import { isTagPaletteKey } from "@repo/domain/tag-palette";
 import type { LotteryGameFieldsFragment } from "@repo/graphql";
 import { Card } from "@repo/ui/card";
 import { CircularProgress } from "@repo/ui/circular-progress";
 import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
 
-import { TagPaletteChip } from "@/components/project/TagPaletteChip/TagPaletteChip";
-import { isTagPaletteKey } from "@/lib/project/tag-palettes";
+import { TagPaletteChip } from "@/components/base/TagPaletteChip/TagPaletteChip";
 
 import { GameStatusTag } from "../GameStatusTag/GameStatusTag";
 

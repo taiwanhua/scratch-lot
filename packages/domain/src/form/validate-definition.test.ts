@@ -81,17 +81,18 @@ describe("validateDefinition:key", () => {
     });
   });
 
-  it("保留字(ctx、row、status、createdBy)", () => {
+  it("保留字(ctx、row、status、summary、createdBy)", () => {
     const codes = codesOf(
       definitionOf([
         title,
         field("ctx", "text"),
         field("row", "text"),
         field("status", "text"),
+        field("summary", "text"),
         field("createdBy", "text"),
       ]),
     );
-    expect(codes.filter((code) => code === "KEY_RESERVED")).toHaveLength(4);
+    expect(codes.filter((code) => code === "KEY_RESERVED")).toHaveLength(5);
     expect(codes).not.toContain("KEY_FORMAT");
   });
 

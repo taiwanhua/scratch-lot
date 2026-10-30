@@ -1,3 +1,4 @@
+import { COLLATION_LOCALE } from "@repo/domain/collation";
 import { type MeQuery, ModuleSidebarType } from "@repo/graphql";
 
 /** `me.modules` 的單筆(ADR-0011 步驟 7:route 為完整路徑、api 樹 route 為 null、permissions 為完整 key)。 */
@@ -20,7 +21,7 @@ export interface ModulePageProps {
 
 /** 同層排序:order → key(ADR-0011:陣列順序不可信,前端仍以 parentId 組樹後自行排序)。 */
 const byOrder = (a: ShellModule, b: ShellModule): number =>
-  a.order - b.order || a.key.localeCompare(b.key);
+  a.order - b.order || a.key.localeCompare(b.key, COLLATION_LOCALE);
 
 /** 進得了側欄的節點:有路由,且不是隱藏頁(api 樹 route 為 null,一併略過)。 */
 const isSidebarVisible = (module: ShellModule): boolean =>

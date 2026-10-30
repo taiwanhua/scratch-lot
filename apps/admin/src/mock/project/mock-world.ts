@@ -1,14 +1,9 @@
-import { ModuleEngine, ModuleSidebarType } from "@repo/graphql";
-
-import type { TestModule } from "@/test/msw/auth-handlers";
-import { fieldsByCategory } from "@/test/msw/field-fixtures";
 import {
   printButtonWorld,
   printingModule,
 } from "@/test/msw/print-button-handlers";
 import { dealersModules } from "@/test/msw/project/dealers-fixtures";
 import { dealersWorld } from "@/test/msw/project/dealers-handlers";
-import { fieldOptionColorWorld } from "@/test/msw/project/field-option-colors-handlers";
 import { accountsModules } from "@/test/msw/project/lottery/accounts-fixtures";
 import { accountsWorld } from "@/test/msw/project/lottery/accounts-handlers";
 import {
@@ -77,30 +72,6 @@ import {
 
 import type { ProjectMockWorld } from "../mock-world-source";
 
-/** 欄位管理(客製替換頁)的選項顏色:示範分類三筆有顏色,其餘「不設定」。 */
-const fieldOptionColors = () =>
-  fieldOptionColorWorld({
-    colorsByCategory: {
-      "demo-category": [
-        { fieldId: "f-staple", value: "staple", paletteKey: "green" },
-        { fieldId: "f-side-dish", value: "side-dish", paletteKey: "yellow" },
-        { fieldId: "f-fried", value: "fried", paletteKey: "orange" },
-      ],
-    },
-    options: Object.fromEntries(
-      Object.values(fieldsByCategory)
-        .flat()
-        .map((field) => [
-          field.id,
-          {
-            categoryKey:
-              field.categoryId === "cat-gender" ? "gender" : "demo-category",
-            value: field.value,
-          },
-        ]),
-    ),
-  }).handlers;
-
 /**
  * 排班表的檢核情境(看檢核面板與發布的三種確認視窗用):網址加 `?rosterCheck=reminders` / `clear`
  * 換檢核結果(預設 1 項限制 + 提醒),`?rosterPublished=1` 這個月一開始就已發布。
@@ -138,20 +109,6 @@ const myOptions = (): ScheduleMyWorldOptions => {
   };
 };
 
-/** 輸出報表(seed `apps/db-migrator/seeds/project/reports.ts`;權限給滿)。 */
-const reportsModule: TestModule = {
-  id: "m-reports",
-  key: "reports",
-  name: "輸出報表",
-  parentId: null,
-  sidebarType: ModuleSidebarType.Link,
-  engine: ModuleEngine.Fixed,
-  order: 50,
-  route: "/reports",
-  icon: "chart",
-  permissions: ["reports.*"],
-};
-
 /**
  * 專案的 mock world:專案新增的模組在此登記 mock 模式的模組清單與假 api,底座更新不會動到這份。
  *
@@ -168,12 +125,11 @@ const storeAndSalesHandlers = () => {
 };
 
 export const projectMockWorld: ProjectMockWorld = {
-  // 檔案管理、經銷商管理:權限給滿(經銷商兩個批購基準日的欄位級權限也有),各分頁都看得到;輸出報表同樣給滿;
+  // 檔案管理、經銷商管理:權限給滿(經銷商兩個批購基準日的欄位級權限也有),各分頁都看得到;
   // 班表管理(群組 + 四個子模組,權限給滿);帳戶管理、庫存管理(權限給滿)
   modules: () => [
     ...masterDataModules(),
     ...dealersModules(),
-    reportsModule,
     ...scheduleModules(),
     ...accountsModules(),
     ...purchasingModules(),
@@ -186,7 +142,6 @@ export const projectMockWorld: ProjectMockWorld = {
     printingModule(["api.printing.print", "api.printing.reprint"]),
   ],
   handlers: () => [
-    ...fieldOptionColors(),
     ...masterDataWorld().handlers,
     ...dealersWorld().handlers,
     ...scheduleSettingsWorld().handlers,

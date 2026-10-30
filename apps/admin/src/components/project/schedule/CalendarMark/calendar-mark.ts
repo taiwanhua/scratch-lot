@@ -1,9 +1,5 @@
-import { tagPaletteBackground } from "@/components/project/TagPaletteChip/tag-palette-background";
-import {
-  type TagPaletteKey,
-  isTagPaletteKey,
-  tagPaletteColorOf,
-} from "@/lib/project/tag-palettes";
+import { type TagPaletteKey, isTagPaletteKey } from "@repo/domain/tag-palette";
+import { tagPaletteBackground, tagPaletteColorOf } from "@repo/ui/theme";
 
 /** 行事曆的一天(排班表、我的班表的查詢都帶這三個欄位)。 */
 export interface CalendarMarkDay {

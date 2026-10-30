@@ -2,6 +2,7 @@ import { Injectable, type OnModuleInit } from "@nestjs/common";
 import { GraphQLError } from "graphql";
 import { Types } from "mongoose";
 
+import { COLLATION_LOCALE, compareDisplayName } from "@repo/domain/collation";
 import { type InstantRange, parseLocalMonth } from "@repo/domain/form";
 import type { ScheduleRuleLevel } from "@repo/domain/project/schedule-settings";
 
@@ -50,7 +51,6 @@ import {
   loadOrgNames,
   resolveScheduleOrg,
 } from "../shared/schedule-org";
-import { compareScheduleNames } from "../shared/schedule-sort";
 import { ScheduleStaffService } from "../staff/schedule-staff.service";
 import type {
   ScheduleCheckItemModel,
@@ -424,7 +424,7 @@ export class ScheduleCheckService implements OnModuleInit {
         levelRank(left.level) - levelRank(right.level) ||
         orderOf(left.key) - orderOf(right.key) ||
         left.date.getTime() - right.date.getTime() ||
-        compareScheduleNames(left.userName ?? "", right.userName ?? "") ||
+        compareDisplayName(left.userName ?? "", right.userName ?? "") ||
         (left.startAt?.getTime() ?? 0) - (right.startAt?.getTime() ?? 0),
     );
     return {
@@ -451,7 +451,7 @@ export class ScheduleCheckService implements OnModuleInit {
       ...(check.before ? [check.before.date] : []),
     ];
     const sortedDates = dates.toSorted((left, right) =>
-      left.localeCompare(right),
+      left.localeCompare(right, COLLATION_LOCALE),
     );
     const first = sortedDates[0] ?? check.after.date;
     const last = sortedDates.at(-1) ?? check.after.date;

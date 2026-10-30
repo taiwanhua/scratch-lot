@@ -64,11 +64,9 @@ export interface InventoryWorld {
 const validation = (reason: string, fields: string[]) =>
   graphqlError("VALIDATION_FAILED", reason, { reason, fields });
 
-const notFound = () =>
-  graphqlError("VALIDATION_FAILED", "NOT_FOUND", { code: "NOT_FOUND" });
+const notFound = () => graphqlError("NOT_FOUND");
 
-const forbiddenError = () =>
-  graphqlError("FORBIDDEN", "FORBIDDEN", { code: "FORBIDDEN" });
+const forbiddenError = () => graphqlError("FORBIDDEN");
 
 /** 別店的張(`operable = false`)不能操作(api 的 `CROSS_STORE_NOT_ALLOWED`)。 */
 const crossStore = (ticketIds: string[]) =>

@@ -8,6 +8,7 @@ import {
   field,
   versionFragment,
 } from "@/test/msw/form-fixtures";
+import { BASE_LOOKUP_PROVIDERS } from "@/test/msw/lookup-provider-fixtures";
 
 import {
   addField,
@@ -132,6 +133,80 @@ describe("表單管理:預設值、上傳上限、刪除草稿", () => {
     const fields = await savedFields(user, world);
     expect(fields.find((item) => item.key === "who")).toMatchObject({
       default: { kind: "expression", expr: { var: "ctx.user.id" } },
+    });
+  });
+
+  it("引用欄的來源有提供預設值:多一個「來源提供的預設」,條件選「篩選欄位 = 表單上的哪一欄」", async () => {
+    const options = defaultDesignOptions();
+    const draft = defaultsDraft();
+    const { user, world } = renderFormsPage({
+      ...options,
+      lookupProviders: [
+        ...BASE_LOOKUP_PROVIDERS,
+        {
+          key: "project_slot",
+          name: "時段",
+          isBase: false,
+          operatorDefault: true,
+          labelField: "name",
+          valueField: "id",
+          filterFields: ["orgId"],
+          fields: [{ key: "name", type: "text", label: "名稱" }],
+        },
+      ],
+      versions: {
+        [SHOPPING_FORM_KEY]: [
+          versionFragment(
+            {
+              ...draft,
+              fields: [
+                ...draft.fields,
+                field("site", "站點", "reference", {
+                  widget: { kind: "referencePicker" },
+                  source: { provider: "org", labelField: "name" },
+                }),
+                field("slot", "時段", "reference", {
+                  widget: { kind: "referencePicker" },
+                  source: { provider: "project_slot", labelField: "name" },
+                }),
+              ],
+              layout: {
+                sections: [
+                  {
+                    key: "basic",
+                    title: "基本",
+                    rows: [
+                      ...(draft.layout.sections[0]?.rows ?? []),
+                      { cols: [{ fieldKey: "site", span: 12 }] },
+                      { cols: [{ fieldKey: "slot", span: 12 }] },
+                    ],
+                  },
+                ],
+              },
+            },
+            { baseVersion: 1 },
+          ),
+          ...(options.versions?.[SHOPPING_FORM_KEY] ?? []).slice(1),
+        ],
+      },
+    });
+    await findDesigner();
+    await selectField(user, "時段", "slot");
+    expect(await openSelect(user, "預設值")).toEqual([
+      "不設",
+      "填寫者",
+      "填寫者的組織",
+      "來源提供的預設",
+    ]);
+    await user.click(screen.getByRole("option", { name: "來源提供的預設" }));
+    const conditions = await screen.findByRole("group", {
+      name: "預設值的條件(選填)",
+    });
+    await pickOption(user, "orgId 等於", "站點(site)", conditions);
+
+    const fields = await savedFields(user, world);
+    expect(fields.find((item) => item.key === "slot")).toMatchObject({
+      default: { kind: "provider", filter: { orgId: { var: "site" } } },
     });
   });
 

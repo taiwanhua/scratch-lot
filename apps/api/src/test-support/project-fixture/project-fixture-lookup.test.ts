@@ -43,6 +43,7 @@ import {
 import {
   PROJECT_FIXTURE_CODE_LOOKUP_KEY,
   PROJECT_FIXTURE_LOOKUP_KEY,
+  PROJECT_FIXTURE_OWNED_LOOKUP_KEY,
   PROJECT_FIXTURE_SHARED_LOOKUP_KEY,
 } from "./project-fixture-lookup";
 
@@ -99,6 +100,7 @@ const FORM_LOOKUP_PROVIDERS = /* GraphQL */ `
         labelField
         valueField
         filterFields
+        operatorDefault
         fields {
           key
           type
@@ -119,6 +121,7 @@ interface ProvidersData {
       labelField: string;
       valueField: string;
       filterFields: string[];
+      operatorDefault: boolean;
       fields: { key: string; type: string; label: string | null }[];
     }[];
     totalCount: number;
@@ -326,9 +329,10 @@ describe("專案登記的 lookup 來源:設計器清單、檢查器、租戶隔�
       ["form_submission", true],
       [PROJECT_FIXTURE_CODE_LOOKUP_KEY, false],
       [PROVIDER, false],
+      [PROJECT_FIXTURE_OWNED_LOOKUP_KEY, false],
       [PROJECT_FIXTURE_SHARED_LOOKUP_KEY, false],
     ]);
-    expect(totalCount).toBe(6);
+    expect(totalCount).toBe(7);
     expect(items.find((item) => item.key === PROVIDER)).toEqual({
       key: PROVIDER,
       name: "測試專案項目",
@@ -336,6 +340,7 @@ describe("專案登記的 lookup 來源:設計器清單、檢查器、租戶隔�
       labelField: "name",
       valueField: "id",
       filterFields: ["enabled"],
+      operatorDefault: false,
       fields: [
         { key: "name", type: "text", label: "名稱" },
         { key: "code", type: "text", label: "代碼" },

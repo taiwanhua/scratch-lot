@@ -8,7 +8,7 @@ import {
 } from "@repo/ui/month-calendar";
 import { Stack } from "@repo/ui/stack";
 
-import { TagPaletteChip } from "@/components/project/TagPaletteChip/TagPaletteChip";
+import { TagPaletteChip } from "@/components/base/TagPaletteChip/TagPaletteChip";
 import {
   calendarMarkMonthBackground,
   calendarMarkOf,

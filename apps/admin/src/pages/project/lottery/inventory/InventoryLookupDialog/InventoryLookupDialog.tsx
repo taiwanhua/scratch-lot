@@ -19,8 +19,8 @@ import { Stack } from "@repo/ui/stack";
 import { TextField } from "@repo/ui/text-field";
 import { Typography } from "@repo/ui/typography";
 
+import { useScanner } from "@/hooks/base/useScanner/useScanner";
 import { useSession } from "@/hooks/base/useSession";
-import { useScanner } from "@/hooks/project/useScanner/useScanner";
 
 import { INVENTORY_LOOKUP_SCAN_PURPOSE, moneyText } from "../inventory-config";
 import { useInventoryAccess } from "../useInventoryAccess";

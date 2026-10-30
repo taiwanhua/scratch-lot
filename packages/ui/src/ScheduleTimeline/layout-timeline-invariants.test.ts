@@ -47,7 +47,7 @@ const randomGroups = (random: () => number): TimelineLayoutGroup[] => {
   });
 };
 
-const byId = (a: string, b: string) => a.localeCompare(b);
+const byId = (a: string, b: string) => a.localeCompare(b, "zh-Hant");
 
 const idsOf = (layout: ReturnType<typeof layoutTimeline>) => ({
   placed: layout.placed.map(({ group, x, width }) => [group.id, x, width]),

@@ -2,7 +2,7 @@ import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
 import { Schema as MongooseSchema, type Types } from "mongoose";
 
 import { SCHEDULE_TASK_ROLES } from "@repo/domain/project/schedule-settings";
-import { TAG_PALETTE_KEYS } from "@repo/domain/project/tag-palette";
+import { TAG_PALETTE_KEYS } from "@repo/domain/tag-palette";
 
 import { baseFieldsPlugin } from "../../../database/plugins/base-fields.plugin";
 import { tenantScopePlugin } from "../../../database/plugins/tenant-scope.plugin";

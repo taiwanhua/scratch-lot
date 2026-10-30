@@ -1,7 +1,8 @@
 # 欄位管理(模組 system.field-manager,規則正本 docs/modules/field-manager.md)。
 # 合併清單 = 全域種子 + 上層組織自訂 + 當前組織自訂 + 可見範圍內的下層自訂,每筆帶:
 # ownerOrg(null = 全域種子,有值 = 加這筆的組織)、isOwn(是不是自己這一層加的)、
-# canEdit / canToggleEnabled(api 依操作者算好,前端只讀、不再自己推視角)。
+# canEdit / canToggleEnabled(api 依操作者算好,前端只讀、不再自己推視角)、
+# color(標籤色票代號,@repo/domain/tag-palette;null = 不設定,顏色值在 @repo/ui/theme 的 tagPalettes)。
 
 fragment FieldFields on Field {
   id
@@ -11,6 +12,7 @@ fragment FieldFields on Field {
   order
   enabled
   description
+  color
   ownerOrg {
     id
     name
@@ -106,6 +108,16 @@ mutation UpdateField($input: UpdateFieldInput!) {
 # (否則 FORBIDDEN,reason SEED_GLOBAL_SWITCH);別層組織加的 → reason NOT_OWNER
 mutation SetFieldEnabled($input: SetFieldEnabledInput!) {
   setFieldEnabled(input: $input) {
+    field {
+      ...FieldFields
+    }
+  }
+}
+
+# 設定 / 清掉選項的顏色(system.field-manager.edit);color null = 清掉,不在色票清單 → VALIDATION_FAILED(fields ["color"])。
+# 誰能設同停用 / 啟用:種子選項限根組織(否則 reason SEED_GLOBAL_SWITCH)、別層組織加的 → reason NOT_OWNER
+mutation SetFieldColor($input: SetFieldColorInput!) {
+  setFieldColor(input: $input) {
     field {
       ...FieldFields
     }

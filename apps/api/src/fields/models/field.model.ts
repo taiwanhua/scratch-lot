@@ -73,6 +73,13 @@ export class FieldModel {
   @Field(() => String, { nullable: true })
   description!: string | null;
 
+  /**
+   * 標籤色票代號(`@repo/domain/tag-palette`,顏色值由前端依代號取);`null` = 不設定顏色。
+   * 改它用 `setFieldColor`,誰能改同 `canToggleEnabled`。
+   */
+  @Field(() => String, { nullable: true })
+  color!: string | null;
+
   /** 加這筆的組織;`null` = 全域種子(`orgId = null`,ADR-0002)。 */
   @Field(() => FieldOwnerOrgModel, { nullable: true })
   ownerOrg!: FieldOwnerOrgModel | null;

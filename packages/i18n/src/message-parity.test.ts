@@ -17,7 +17,7 @@ import {
 describe("字典的語系一致性(I18N-02)", () => {
   it("messages/ 底下的語系資料夾就是 `locales` 宣告的那幾個", () => {
     expect(localeDirs()).toEqual(
-      [...locales].toSorted((a, b) => a.localeCompare(b)),
+      [...locales].toSorted((a, b) => a.localeCompare(b, "zh-Hant")),
     );
   });
 
@@ -39,8 +39,10 @@ describe("字典的語系一致性(I18N-02)", () => {
         extra: [...other.leaves].filter((key) => !base.leaves.has(key)),
       }).toEqual({ missing: [], extra: [] });
       expect(
-        [...other.branches].toSorted((a, b) => a.localeCompare(b)),
-      ).toEqual([...base.branches].toSorted((a, b) => a.localeCompare(b)));
+        [...other.branches].toSorted((a, b) => a.localeCompare(b, "zh-Hant")),
+      ).toEqual(
+        [...base.branches].toSorted((a, b) => a.localeCompare(b, "zh-Hant")),
+      );
     });
   });
 });

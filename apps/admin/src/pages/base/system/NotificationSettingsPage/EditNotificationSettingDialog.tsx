@@ -19,6 +19,7 @@ import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
 
 import { AudiencePicker } from "@/components/base/AudiencePicker/AudiencePicker";
+import { RootOrgNotice } from "@/components/base/RootOrgNotice/RootOrgNotice";
 import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
 import { useSession } from "@/hooks/base/useSession";
 import {
@@ -356,7 +357,10 @@ export const EditNotificationSettingDialog = ({
             />
           </Section>
         )}
-        {errorCode !== null && (
+        {errorCode === "TENANT_ONLY" && (
+          <RootOrgNotice variant="inline" message={tErrors(errorCode)} />
+        )}
+        {errorCode !== null && errorCode !== "TENANT_ONLY" && (
           <Typography variant="body2" color="error" role="alert">
             {tErrors(errorCode)}
           </Typography>

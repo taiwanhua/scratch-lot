@@ -10,6 +10,7 @@ import {
   type CreateFormDraftMutationVariables,
   type FormFieldOptionsQuery,
   type FormFieldOptionsQueryVariables,
+  type FormLookupDefaultQueryVariables,
   type FormLookupQuery,
   type FormLookupQueryVariables,
   type FormRuntimeVersionQueryVariables,
@@ -29,13 +30,15 @@ import {
 
 import { rawOf } from "@/lib/base/form-engine/definition";
 
-import { type AuthErrorCode, graphqlError } from "./auth-handlers";
+import { type GraphqlErrorCode, graphqlError } from "./auth-handlers";
 import { formCreateHandlers } from "./form-create-handlers";
 import type { MockSubmission } from "./form-fixtures";
+import { formLookupHandlers } from "./form-lookup-handlers";
 import { submissionActionHandlers } from "./form-submission-action-handlers";
 import { fragmentOf, revisionsOf } from "./form-submission-revisions";
 import { matchesSubmissionsInput } from "./form-submissions-filter";
 import { api } from "./server";
+import { type OrgTreeOption, orgTreeHandlers } from "./tenant-org-tree";
 
 export type FormRuntimeOperation =
   | "FormFieldOptions"
@@ -50,7 +53,7 @@ export type FormRuntimeOperation =
   | "CopySubmissionToDraft";
 
 export interface FormFailure {
-  code: string;
+  code: GraphqlErrorCode;
   extensions?: Record<string, unknown>;
 }
 
@@ -65,6 +68,13 @@ export interface FormRuntimeWorldOptions {
   /** 模組 key → 內建欄開關(沒給 = 全開) */
   listBuiltin?: Record<string, ListBuiltinColumns>;
   lookupRecords?: FormLookupQuery["formLookup"]["items"];
+  /**
+   * 引用欄「來源提供的預設」(`formLookupDefault`):依欄位 key 與條件值回一筆(沒給 = 一律 null)。
+   * 回 `lookupRecords` 裡的 id;找不到就當 null
+   */
+  lookupDefault?: (
+    input: FormLookupDefaultQueryVariables["input"],
+  ) => string | null;
   /** 欄位 key → `formFieldOptions` 回的類別選項(沒給 = 空清單) */
   fieldOptions?: Record<
     string,
@@ -80,6 +90,8 @@ export interface FormRuntimeWorldOptions {
   submitAs?: { status: FormSubmissionStatus; instanceId?: string };
   /** `copySubmissionToDraft` 回報被清空的欄位(引用來源失效) */
   copyClearedFields?: string[];
+  /** 列表組織篩選查的整棵租戶樹;沒給或 `null` = 不攔(由測試自己或 mock 模式的 `orgWorld` 提供) */
+  tenantOrgTree?: OrgTreeOption;
   /** 表單 key → 作廢原因的類別與選項(`formVoidReasonOptions`;沒給 = 沒設類別、自由填寫) */
   voidReasonOptions?: Record<
     string,
@@ -100,15 +112,16 @@ export interface FormRuntimeWorld {
     copySubmissionToDraft: { id: string; clientRequestId: string }[];
     formSubmissions: FormSubmissionsQueryVariables["input"][];
     formLookup: FormLookupQueryVariables["input"][];
+    formLookupDefault: FormLookupDefaultQueryVariables["input"][];
     formFieldOptions: FormFieldOptionsQueryVariables["input"][];
   };
 }
 
-const notFound = () => graphqlError("NOT_FOUND" as AuthErrorCode);
+const notFound = () => graphqlError("NOT_FOUND");
 
 /** 樂觀鎖沒搶到(與 api 同一個 code / reason)。 */
 const conflict = () =>
-  graphqlError("CONFLICT" as AuthErrorCode, "CONFLICT", {
+  graphqlError("CONFLICT", "CONFLICT", {
     reason: "EDIT_VERSION_MISMATCH",
   });
 
@@ -140,6 +153,7 @@ export const formRuntimeWorld = (
     copySubmissionToDraft: [],
     formSubmissions: [],
     formLookup: [],
+    formLookupDefault: [],
     formFieldOptions: [],
   };
   let created = 0;
@@ -148,11 +162,7 @@ export const formRuntimeWorld = (
     const failure = failures[operation];
     return failure === undefined
       ? null
-      : graphqlError(
-          failure.code as AuthErrorCode,
-          failure.code,
-          failure.extensions ?? {},
-        );
+      : graphqlError(failure.code, failure.code, failure.extensions ?? {});
   };
   const find = (id: string) => state.find((item) => item.id === id);
   const push = (submission: MockSubmission) => {
@@ -208,6 +218,7 @@ export const formRuntimeWorld = (
             },
           });
     }),
+    ...orgTreeHandlers(options.tenantOrgTree),
     api.query("FormSubmissions", ({ variables }) => {
       const { input } = variables as FormSubmissionsQueryVariables;
       inputs.formSubmissions.push(input);
@@ -265,19 +276,10 @@ export const formRuntimeWorld = (
         },
       });
     }),
-    api.query("FormLookup", ({ variables }) => {
-      const { input } = variables as FormLookupQueryVariables;
-      inputs.formLookup.push(input);
-      return HttpResponse.json({
-        data: {
-          formLookup: {
-            items: lookupRecords,
-            totalCount: lookupRecords.length,
-            page: 1,
-            pageSize: 20,
-          },
-        },
-      });
+    ...formLookupHandlers({
+      records: lookupRecords,
+      lookupDefault: options.lookupDefault,
+      inputs,
     }),
     api.query("FormFieldOptions", ({ variables }) => {
       const { input } = variables as FormFieldOptionsQueryVariables;

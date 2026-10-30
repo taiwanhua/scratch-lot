@@ -904,7 +904,9 @@ describe("逾時提醒與知會", () => {
       // 關卡通過一則 + 單據完成一則,各自一次
       const sent = await notices(WORKFLOW_CC, watcher, instanceId);
       expect(
-        sent.map((one) => one.dedupeKey).toSorted((a, b) => a.localeCompare(b)),
+        sent
+          .map((one) => one.dedupeKey)
+          .toSorted((a, b) => a.localeCompare(b, "zh-Hant")),
       ).toEqual([
         `${WORKFLOW_CC}:${instanceId}:completed`,
         `${WORKFLOW_CC}:${instanceId}:step:first`,

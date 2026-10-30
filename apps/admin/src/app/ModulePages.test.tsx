@@ -116,6 +116,7 @@ describe("底座來源 + 空專案(原版相容性)", () => {
         "demo.sub.sample-one.edit-page",
         "demo.sub.sample-one.view-page",
         "overview",
+        "reports",
         "system.data-scope",
         "system.field-manager",
         "system.forms",

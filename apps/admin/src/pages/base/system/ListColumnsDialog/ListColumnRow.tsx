@@ -13,6 +13,7 @@ import {
   SUMMARY_SLOTS,
 } from "@/lib/base/form-engine/list-columns";
 
+import { ListTemplateColumnFields } from "./ListTemplateColumnFields";
 import type { FieldCandidate } from "./useListColumnCandidates";
 
 export interface ListColumnRowProps {
@@ -20,8 +21,13 @@ export interface ListColumnRowProps {
   index: number;
   count: number;
   candidates: readonly FieldCandidate[];
+  /** 共用表單(組合欄「限定表單」的選項) */
+  forms: readonly { key: string; name: string }[];
   /** 這一列被 api 擋下的原因(REACT-18;寫在這一列正下方);undefined = 沒錯 */
   errorText: string | undefined;
+  /** 組合欄:欄名 / 模板格式錯的原因(寫在那一格下) */
+  labelErrorText: string | undefined;
+  templateErrorText: string | undefined;
   onChange: (row: ListColumnSpec) => void;
   onMove: (offset: number) => void;
   onRemove: () => void;
@@ -30,19 +36,23 @@ export interface ListColumnRowProps {
 const candidateId = (formKey: string | null | undefined, key: string) =>
   `${formKey ?? ""}:${key}`;
 
-/** 一欄:摘要槽 / 表單欄位、欄寬(40–2000)、上移 / 下移 / 移除。 */
+/** 一欄:摘要槽 / 表單欄位 / 組合欄(欄名 + 限定表單 + 模板)、欄寬(40–2000)、上移 / 下移 / 移除。 */
 export const ListColumnRow = ({
   row,
   index,
   count,
   candidates,
+  forms,
   errorText,
+  labelErrorText,
+  templateErrorText,
   onChange,
   onMove,
   onRemove,
 }: ListColumnRowProps) => {
   const t = useTranslations("admin.moduleManager.listColumns");
   const isSlot = row.kind === ModuleListColumnKind.Slot;
+  const isTemplate = row.kind === ModuleListColumnKind.Template;
   const hasError = errorText !== undefined;
   // 這一列被擋下的原因寫在列正下方,並連到這一列的群組(REACT-18)
   const rowError = useFieldErrorText(errorText);
@@ -51,7 +61,10 @@ export const ListColumnRow = ({
     value: candidateId(candidate.formKey, candidate.key),
     label: `${candidate.formName} / ${candidate.label}`,
   }));
-  if (!isSlot && !fieldOptions.some((option) => option.value === current)) {
+  if (
+    row.kind === ModuleListColumnKind.Field &&
+    !fieldOptions.some((option) => option.value === current)
+  ) {
     // 目前的版本已沒有這個欄位(改版後):仍列出來,讓 root 看得到並自己換掉
     fieldOptions.push({
       value: current,
@@ -67,9 +80,22 @@ export const ListColumnRow = ({
         role="group"
         aria-label={t("row", { index: index + 1 })}
         aria-describedby={rowError.describedBy}
-        sx={{ alignItems: "center" }}
+        useFlexGap
+        // 窄螢幕(手機寬)放不下一列時換行,不撐出橫向捲動
+        sx={{ alignItems: "center", flexWrap: "wrap" }}
       >
-        {isSlot ? (
+        {isTemplate && (
+          <ListTemplateColumnFields
+            row={row}
+            candidates={candidates}
+            forms={forms}
+            labelErrorText={labelErrorText}
+            templateErrorText={templateErrorText}
+            hasRowError={hasError}
+            onChange={onChange}
+          />
+        )}
+        {isSlot && (
           <SelectField<string>
             label={t("slot")}
             value={row.key}
@@ -84,7 +110,8 @@ export const ListColumnRow = ({
             size="small"
             sx={{ minWidth: 200 }}
           />
-        ) : (
+        )}
+        {row.kind === ModuleListColumnKind.Field && (
           <SelectField<string>
             label={t("field")}
             value={current}

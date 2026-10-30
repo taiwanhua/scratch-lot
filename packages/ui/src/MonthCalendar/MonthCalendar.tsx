@@ -6,6 +6,10 @@ import type { ReactNode } from "react";
 import { Box } from "../Box/Box";
 import { todayIn } from "../DatePicker/zoned-day";
 import { mergeSx } from "../theme/sx";
+import {
+  DEFAULT_MAX_CORNERS,
+  defaultMoreCornersLabel,
+} from "./MonthCalendarCornerMark";
 import { MonthCalendarDayCell } from "./MonthCalendarDayCell";
 import { MonthCalendarHeader } from "./MonthCalendarHeader";
 import { MonthCalendarWeekRow } from "./MonthCalendarWeekRow";
@@ -16,7 +20,11 @@ import {
   shiftMonth,
   toggleDaySelection,
 } from "./month-calendar-grid";
-import type { MonthCalendarDayInfo } from "./month-calendar-types";
+import type {
+  MonthCalendarCorner,
+  MonthCalendarDayInfo,
+  MonthCalendarSize,
+} from "./month-calendar-types";
 
 export type * from "./month-calendar-types";
 
@@ -87,6 +95,18 @@ export interface MonthCalendarProps {
   formatDayLabel?: (date: string) => string;
   /** 整週勾選框的無障礙名稱(`weekIndex` 從 0 起) */
   formatWeekLabel?: (weekIndex: number) => string;
+  /**
+   * 尺寸;預設 `medium`(電腦大格、手機約 48px)。`small` 任何寬度都用約 40px 的小格,
+   * 給選日期的浮層、側欄這類窄容器
+   */
+  size?: MonthCalendarSize;
+  /**
+   * 一格最多顯示幾個角標(含「+N」);超過時前面的照畫、其餘收成「+N」(同 MUI `AvatarGroup` 的 `max`,
+   * 小於 2 時以 2 計)。預設 `medium` 3、`small` 2
+   */
+  maxCorners?: number;
+  /** 「+N」的無障礙名稱;預設列出被收起來的角標文字(都有文字時),否則「還有 N 個標記」 */
+  formatMoreCornersLabel?: (hidden: readonly MonthCalendarCorner[]) => string;
   /** 月曆本體的無障礙名稱 */
   "aria-label"?: string;
   sx?: SxProps<Theme>;
@@ -94,7 +114,7 @@ export interface MonthCalendarProps {
 
 /**
  * 月曆(Figma Draft/MonthCalendar)。
- * **一週固定從星期日開始**;格子寬度由容器七等分,高度電腦大格、手機約 48px。
+ * **一週固定從星期日開始**;格子寬度由容器七等分,高度依 `size`(預設電腦大格、手機約 48px)。
  * 月份與選取都是受控值,元件只回報操作,不自己存。
  */
 export const MonthCalendar = ({
@@ -115,6 +135,9 @@ export const MonthCalendar = ({
   nextMonthLabel = "下一個月",
   formatDayLabel = (date) => date,
   formatWeekLabel = defaultWeekLabel,
+  size = "medium",
+  maxCorners = DEFAULT_MAX_CORNERS[size],
+  formatMoreCornersLabel = defaultMoreCornersLabel,
   "aria-label": ariaLabel,
   sx,
 }: MonthCalendarProps) => {
@@ -184,6 +207,9 @@ export const MonthCalendar = ({
                 isToday={day.date === today}
                 label={formatDayLabel(day.date)}
                 onSelect={selectDay}
+                size={size}
+                maxCorners={maxCorners}
+                formatMoreCornersLabel={formatMoreCornersLabel}
               />
             ))}
           </MonthCalendarWeekRow>

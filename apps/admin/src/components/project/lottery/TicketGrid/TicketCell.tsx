@@ -1,16 +1,9 @@
 import { Box } from "@repo/ui/box";
 import { Tooltip } from "@repo/ui/tooltip";
 
-import { TICKET_CELL_SX, type TicketCellState } from "./ticket-cell-styles";
+import { FLASH_HIGHLIGHT_SX } from "@/lib/base/flash-highlight";
 
-/** 刷到時閃一下:外框主色光暈淡出(動畫長度是設計值,只有這裡用到;STYLE-06)。 */
-const FLASH_SX = {
-  animation: "ticket-cell-flash 1.2s ease-out 1",
-  "@keyframes ticket-cell-flash": {
-    "0%": { boxShadow: "0 0 0 4px var(--mui-palette-primary-main)" },
-    "100%": { boxShadow: "0 0 0 0 transparent" },
-  },
-} as const;
+import { TICKET_CELL_SX, type TicketCellState } from "./ticket-cell-styles";
 
 export interface TicketCellProps {
   /** 張號(3 位,例 "012")。 */
@@ -23,7 +16,7 @@ export interface TicketCellProps {
   selectable: boolean;
   /** 滑過 / 長按的提示(例:在別的收銀點的收銀點名稱)。 */
   tooltip?: string;
-  /** 閃一下(刷到這一張);值換了就再閃一次。不給 = 不閃。 */
+  /** 閃一下(刷到這一張;底座閃爍提示 `FLASH_HIGHLIGHT_SX`);值換了就再閃一次。不給 = 不閃。 */
   flashKey?: number;
   /** 點格子;`shiftKey` = 按著 Shift(連選)。 */
   onClick?: (shiftKey: boolean) => void;
@@ -73,7 +66,7 @@ export const TicketCell = ({
           outlineOffset: 1,
         },
         ...TICKET_CELL_SX[state],
-        ...(flashKey !== undefined && FLASH_SX),
+        ...(flashKey !== undefined && FLASH_HIGHLIGHT_SX),
       }}
     >
       {ticketNo}

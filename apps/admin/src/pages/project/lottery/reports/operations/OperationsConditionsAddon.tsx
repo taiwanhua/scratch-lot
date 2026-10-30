@@ -15,7 +15,7 @@ import { Table, type TableColumn } from "@repo/ui/table";
 import { useSession } from "@/hooks/base/useSession";
 import { useTenantTimezone } from "@/hooks/base/useTenantTimezone";
 import { flattenOrgs, tenantTreeToOrgNodes } from "@/lib/base/org-tree";
-import type { ReportConditionsAddonProps } from "@/lib/project/reports/report-registry";
+import type { ReportConditionsAddonProps } from "@/lib/base/reports/report-registry";
 
 import { useOperationsPeriods } from "./useOperationsPeriods";
 

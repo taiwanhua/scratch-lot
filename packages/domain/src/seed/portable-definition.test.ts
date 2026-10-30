@@ -667,6 +667,37 @@ describe("validatePortableDefinition:lookup 來源與固定值", () => {
     ]);
   });
 
+  it("引用欄的來源提供的預設:條件只引用欄位時可攜;條件寫固定值拒絕", () => {
+    const allowed = formSeed([
+      field("title", "text"),
+      field("dept", "reference", {
+        source: { provider: "org", labelField: "name" },
+        default: { kind: "expression", expr: { var: "ctx.user.orgId" } },
+      }),
+      userReference("applicant", {
+        default: { kind: "provider", filter: { enabled: { var: "dept" } } },
+      }),
+      userReference("backup", { default: { kind: "provider" } }),
+    ]);
+    expect(errorsOf(allowed)).toEqual([]);
+
+    const fixed = formSeed([
+      field("title", "text"),
+      userReference("applicant", {
+        default: {
+          kind: "provider",
+          filter: { enabled: HEX_24 } as unknown as Record<
+            string,
+            { var: string }
+          >,
+        },
+      }),
+    ]);
+    expect(codesAt(errorsOf(fixed))).toEqual([
+      ["FIELD_UNSUPPORTED", "definition.fields.1.default.filter"],
+    ]);
+  });
+
   it("lookup 選項的固定預設:任何非空值都拒絕(用 account / slug 當值也一樣),多選逐項報;空的通過", () => {
     const seed = formSeed([
       field("title", "text"),

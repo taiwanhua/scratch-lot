@@ -35,6 +35,11 @@ const SOURCE_ROOTS = [
  */
 const BASE_DYNAMIC_KEYS: readonly DynamicKey[] = [
   {
+    key: "admin.tagPalettes.names.",
+    reason:
+      "`components/base/TagPaletteChip` 的 `t(paletteKey)`(namespace `admin.tagPalettes.names`),paletteKey 逐一取自 `@repo/domain/tag-palette` 的 `TAG_PALETTE_KEYS`",
+  },
+  {
     key: "admin.sidebarBadgeSettings.descriptions.",
     reason:
       "通知設定頁「側欄數字」的「數什麼」:完整 key 由 api 側欄計數登記的 `descriptionKey` 給(`SidebarBadgeSettingsSection`)",
@@ -492,6 +497,21 @@ const BASE_DYNAMIC_KEYS: readonly DynamicKey[] = [
     key: "admin.personalSettings.delegations.errors.",
     reason:
       "`t(`errors.${delegationsErrorKey(error)}`)`,`delegations-error.ts` 把 api 錯誤換成 `<code>` 或 `reasons.<reason>`(碼與 reason 列舉見同檔)",
+  },
+  {
+    key: "admin.reports.periodPicker.kinds.",
+    reason:
+      "`components/base/ReportPeriodPicker` 的 `t(`kinds.${kind}`)`,kind 取自報表登記的 `conditions.period`(`REPORT_PERIOD_KINDS`)",
+  },
+  {
+    key: "admin.reports.periodPicker.weekdays.",
+    reason:
+      "`components/base/ReportPeriodPicker` 的 `t(`weekdays.${day}`)`,day 是 0(星期日)到 6",
+  },
+  {
+    key: "admin.reports.errors.",
+    reason:
+      "輸出報表的 `t(`reports.errors.${code}`)`,code 由 `pages/base/reports/ReportsPage/reports-error.ts` 從 api 錯誤碼換算",
   },
 ];
 

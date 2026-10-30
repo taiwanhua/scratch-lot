@@ -64,7 +64,7 @@ function resolveFor(
     });
 }
 
-const byText = (a: string, b: string): number => a.localeCompare(b);
+const byText = (a: string, b: string): number => a.localeCompare(b, "zh-Hant");
 
 function problemsOf(result: IssueResult): string[] {
   const issues = result.errors?.[0]?.extensions?.issues;

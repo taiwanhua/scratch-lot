@@ -7,9 +7,11 @@
  * - `attendance.ts`:出勤紀錄的遲到 / 早退 / 工時與補打卡申請的表單代號、欄位 key(規格 14.7、14.8)
  * - `day-off.ts`:時段不可排的幾段有沒有蓋滿整天(規格 14.6;admin 與 api 共用)
  * - `roster.ts`:排班表的預設休息、自動填執行任務、負責人時間涵蓋、統計欄(規格 14.5)
+ * - `special-day-palette.ts`:行事曆特殊日可選的標籤色票(灰色以外;規格 14.1)
  */
 export * from "./attendance";
 export * from "./day-off";
 export * from "./roster";
 export * from "./rules";
 export * from "./settings";
+export * from "./special-day-palette";

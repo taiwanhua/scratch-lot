@@ -2,7 +2,7 @@ import { describe, expect, it } from "@jest/globals";
 
 import type { LotteryShiftCheckoutsReportQuery } from "@repo/graphql";
 
-import { fullPathTranslator } from "@/lib/project/reports/report-registry";
+import { fullPathTranslator } from "@/lib/base/reports/report-registry";
 
 import {
   type ShiftCheckoutRow,

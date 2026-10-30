@@ -1,5 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
+import { Stack } from "../Stack/Stack";
+import { TAG_PALETTE_ORDER } from "../theme/tag-palettes";
 import { Tag } from "./Tag";
 
 const meta = {
@@ -24,6 +26,28 @@ export const Deletable: Story = {
     label: "客服",
     onDelete: () => {
       // story 只示範外觀,不需要真的移除
+    },
+  },
+};
+
+/** 分類標籤的色票(`palette`):十組,深色模式自動換成深色那一組。 */
+export const Palettes: Story = {
+  render: () => (
+    <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap" }}>
+      {TAG_PALETTE_ORDER.map((key) => (
+        <Tag key={key} palette={key} label={key} />
+      ))}
+    </Stack>
+  ),
+};
+
+/** 可點的色票標籤(例:色票面板的選項):hover / focus 只加一圈文字色外框。 */
+export const PaletteClickable: Story = {
+  args: {
+    palette: "orange",
+    label: "橘",
+    onClick: () => {
+      // story 只示範外觀
     },
   },
 };

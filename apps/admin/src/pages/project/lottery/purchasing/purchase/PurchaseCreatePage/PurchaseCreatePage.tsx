@@ -7,10 +7,9 @@ import { DEFAULT_TENANT_TIMEZONE } from "@repo/domain/form";
 import { Alert } from "@repo/ui/alert";
 import { CircularProgress } from "@repo/ui/circular-progress";
 
-import { useFormModuleAccess } from "@/components/base/form-engine/FormModulePages/useFormModuleAccess";
+import { useFormEntry } from "@/components/base/form-engine/FormModulePages/useFormEntry";
 import { useFormDraft } from "@/hooks/base/useFormDraft";
 import { useMe } from "@/hooks/base/useMe";
-import { useModuleForms } from "@/hooks/base/useModuleForms";
 import { useSnackbar } from "@/hooks/base/useMutationFeedback";
 import { useRouteTabHref } from "@/hooks/base/useRouteTabHref";
 import { useRouteTabItemLabel } from "@/hooks/base/useRouteTabItemLabel";
@@ -47,10 +46,11 @@ export const PurchaseCreatePage = () => {
   const showSnackbar = useSnackbar();
   const me = useMe();
   const timezone = useTenantTimezone() ?? DEFAULT_TENANT_TIMEZONE;
-  const access = useFormModuleAccess(PURCHASE_MODULE_KEY);
-  const { creatableForms, isLoading: isFormsLoading } =
-    useModuleForms(PURCHASE_MODULE_KEY);
-  const form = creatableForms.find((item) => item.key === PURCHASE_FORM_KEY);
+  const {
+    access,
+    form,
+    isLoading: isFormsLoading,
+  } = useFormEntry(PURCHASE_MODULE_KEY, PURCHASE_FORM_KEY);
   const draft = useFormDraft(PURCHASE_FORM_KEY);
   useRouteTabItemLabel(t("tabLabel"));
 

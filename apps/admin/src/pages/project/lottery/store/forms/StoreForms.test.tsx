@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "@jest/globals";
 import { act, screen, waitFor, within } from "@testing-library/react";
 
-import { injectScan } from "@/hooks/project/useScanner/scanner-registry";
+import { injectScan } from "@/hooks/base/useScanner/scanner-registry";
 import { writeLocalCashPoint } from "@/lib/project/lottery/local-cash-point";
 
 import { renderStore } from "../store-test-support";

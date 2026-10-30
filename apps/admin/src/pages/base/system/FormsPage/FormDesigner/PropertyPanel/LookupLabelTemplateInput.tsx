@@ -6,9 +6,8 @@ import {
   type LookupSourceDescriptor,
   VALUE_PLACEHOLDER_PREFIX,
 } from "@repo/domain/form";
-import { SelectField } from "@repo/ui/select-field";
-import { Stack } from "@repo/ui/stack";
-import { TextField } from "@repo/ui/text-field";
+
+import { TemplatePlaceholderInput } from "@/pages/base/system/TemplatePlaceholderInput";
 
 import type { LookupFieldOption } from "./useLookupCatalog";
 
@@ -19,8 +18,6 @@ export interface LookupLabelTemplateInputProps {
   onChange: (value: LookupSourceDescriptor) => void;
 }
 
-const UNSET = "";
-
 /** 一個來源欄位在模板裡的寫法:表單提交的摘要槽 `{{title}}`、欄位 `{{value.<key>}}`;其他來源 `{{欄位}}`。 */
 const placeholderOf = (provider: string, field: string): string =>
   provider === FORM_SUBMISSION_PROVIDER &&
@@ -30,7 +27,8 @@ const placeholderOf = (provider: string, field: string): string =>
 
 /**
  * lookup 來源的顯示模板(`labelTemplate`,選填;`docs/concepts/form-engine.md`「lookup 來源」):文字框 + 「插入欄位」下拉
- * (欄位從來源可回的欄位挑,插到模板最後)。清空 = 拿掉 `labelTemplate`,顯示名回到顯示欄。
+ * (`TemplatePlaceholderInput`,與列表欄位配置的組合欄共用;欄位從來源可回的欄位挑,插到模板最後)。
+ * 清空 = 拿掉 `labelTemplate`,顯示名回到顯示欄。
  * 顯示名由 api `formLookup` 在後端組好,這裡不預覽。
  */
 export const LookupLabelTemplateInput = ({
@@ -49,36 +47,23 @@ export const LookupLabelTemplateInput = ({
   };
 
   return (
-    <Stack spacing={1}>
-      <TextField
-        label={t("labelTemplate")}
-        value={template}
-        helperText={t("labelTemplateHint")}
-        onChange={(event) => {
-          change(event.target.value);
-        }}
-        size="small"
-      />
-      <SelectField<string>
-        label={t("insertPlaceholder")}
-        value={UNSET}
-        displayEmpty
-        disabled={fieldOptions === null || fieldOptions.length === 0}
-        helperText={t("insertPlaceholderHint")}
-        options={[
-          { value: UNSET, label: "—" },
-          ...(fieldOptions ?? []).map((option) => ({
-            value: option.value,
-            label: option.label,
-          })),
-        ]}
-        onChange={(field) => {
-          if (field !== UNSET) {
-            change(`${template}${placeholderOf(value.provider, field)}`);
-          }
-        }}
-        size="small"
-      />
-    </Stack>
+    <TemplatePlaceholderInput
+      value={template}
+      options={
+        fieldOptions === null
+          ? null
+          : fieldOptions.map((option) => ({
+              label: option.label,
+              placeholder: placeholderOf(value.provider, option.value),
+            }))
+      }
+      onChange={change}
+      text={{
+        label: t("labelTemplate"),
+        hint: t("labelTemplateHint"),
+        insert: t("insertPlaceholder"),
+        insertHint: t("insertPlaceholderHint"),
+      }}
+    />
   );
 };

@@ -118,9 +118,9 @@ export const FORM_VALIDATION_REASONS = {
   formKeyDuplicate: "FORM_KEY_DUPLICATE",
   /** 列表欄位:同一欄列了兩次 */
   listColumnDuplicate: "LIST_COLUMN_DUPLICATE",
-  /** 列表欄位:摘要槽不存在,或欄位不在這個模組任何表單的目前版本 */
+  /** 列表欄位:摘要槽不存在,或欄位(含組合欄模板引用的欄位、限定的表單)不在這個模組任何表單的目前版本 */
   listColumnUnavailable: "LIST_COLUMN_UNAVAILABLE",
-  /** 列表欄位:受欄位級權限保護的欄位不能當列表欄 */
+  /** 列表欄位:受欄位級權限保護的欄位不能當列表欄(也不能被組合欄模板引用) */
   listColumnProtected: "LIST_COLUMN_PROTECTED",
 } as const;
 

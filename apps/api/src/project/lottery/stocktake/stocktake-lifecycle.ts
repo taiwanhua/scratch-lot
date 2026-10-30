@@ -61,11 +61,13 @@ export const stocktakeConfirmLifecycle = registerFormLifecycle({
         "rejected",
       );
     },
-    completed: async ({ submissionId, tenantId, session, get }) => {
+    // 確認人 = 最後核准的人(`decidedBy`;每一關都跳過 = 申請人)
+    completed: async ({ submissionId, tenantId, decidedBy, session, get }) => {
       await get<StocktakeService>(STOCKTAKE_SERVICE).apply(
         session,
         tenantId,
         submissionId,
+        decidedBy?.id ?? null,
       );
     },
   },

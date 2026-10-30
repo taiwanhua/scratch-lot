@@ -287,9 +287,19 @@ operation 文件:`packages/graphql/src/documents/base/printing.graphql`。
 - 結果:見下方「等列印結果」;有結果後重抓 `documentPrintCount`;另外收到別張工作的 `print-result`(例:使用處在交易後自動送的那一張印完)時查那張工作(`printJob`,同頁好幾顆按鈕合併成一次),是這張單據(`refType` + `refId`)的才重抓,按鈕不會停在送出當下查到的 [列印];自己正在送的那張不另查;已印次數查不到時當作沒印過。等待期間按鈕不能按,最長約 4 分鐘(等待中快到 2 分鐘才被認領,再等 2 分鐘的回報逾時;第二次補查才拿到結果)。
 - 送出的回饋是按鈕旁的進度文字,成功不另跳提示;送不出去(轉圖片失敗、API 錯誤)跳一則失敗提示。
 
+### 自動列印(`components/base/AutoPrint/useAutoPrint.tsx`)
+
+寫入成功之後在背景送出的列印(使用者沒有按 [列印]),使用處在寫入成功之後才呼叫 `printAfterCommit({ orgId, preferredPrinterId?, document, renderImage, onTooLarge?, logDetail? })`,寫入失敗就不叫。
+
+- 沒有 `api.printing.print` → 不印(`canPrint` 讓使用處省掉為列印而查的資料)。
+- 印表機:使用處指定的 → 組織預設 → 第一台可選的(同列印按鈕的 `resolvePrinterId`);沒有可選的 → 不印。
+- 影像由使用處的 `renderImage` 產生;轉成 base64 後先檢查上限(`lib/base/print-image-limits.ts` 的 `isPrintImageTooLarge`:高度超過 `PRINT_IMAGE_MAX_HEIGHT_DOTS` 或大小超過 `PRINT_IMAGE_MAX_BYTES`,api 一定擋)。超過就不送,改叫 `onTooLarge(已印次數)` 讓使用處告訴使用者怎麼補印。
+- 任何失敗(查印表機、轉圖、建立工作)只記 log(`lib/base/print-log.ts` 的 `logPrintFailure`,走 `@repo/logger` 的 `warn`;STRUCT-06),不拋錯、不跳提示;工作建立之後的失敗由「列印失敗」通知告訴要求人。
+- 工作送出後等結果(`PrintResultWatch`,用下方的 `usePrintJobResult`),有結果就重查那張單據的 `documentPrintCount`,列印按鈕跟著變 [補印]。使用處要把回傳的 `host` 放進畫面(不畫任何東西)。
+
 ### 等列印結果(`hooks/base/usePrintJobResult.ts`)
 
-列印按鈕與測試列印共用同一個 hook:傳入建立工作時 api 回的那一筆,回傳最新的那一筆。常數(`PRINT_RESULT_LIVE_CHECK_MS`、`PRINT_RESULT_SLOW_POLL_MS`)也在這支。
+列印按鈕、測試列印與自動列印共用同一個 hook:傳入建立工作時 api 回的那一筆,回傳最新的那一筆。常數(`PRINT_RESULT_LIVE_CHECK_MS`、`PRINT_RESULT_SLOW_POLL_MS`)也在這支。
 
 | 情況                                           | 做法                                                                                                                   |
 | ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |

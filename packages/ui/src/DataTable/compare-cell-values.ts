@@ -1,5 +1,6 @@
 /**
  * 排序用的比較:只回「升冪」的結果,降冪由 TanStack Table 反轉。
+ * 文字明給 `zh-Hant`(STRUCT-10):不跟著瀏覽器語系變,中文依筆畫、數字依數值。
  * 空值(`null` / `undefined`)一律排在最後,不論升降冪 —— 由呼叫端(`sortUndefined: "last"`)
  * 處理 `undefined`,`null` 在這裡先當成 `undefined` 看待。
  */
@@ -13,7 +14,7 @@ export const compareCellValues = (a: unknown, b: unknown): number => {
   if (typeof a === "boolean" && typeof b === "boolean") {
     return Number(a) - Number(b);
   }
-  return textOf(a).localeCompare(textOf(b), undefined, { numeric: true });
+  return textOf(a).localeCompare(textOf(b), "zh-Hant", { numeric: true });
 };
 
 const textOf = (value: unknown): string =>

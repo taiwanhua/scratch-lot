@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { Types } from "mongoose";
 
+import { COLLATION_LOCALE, compareDisplayName } from "@repo/domain/collation";
 import {
   INVENTORY_PERMISSIONS,
   STOCKTAKE_REMINDER_HOURS,
@@ -65,7 +66,7 @@ type StocktakeRecord = Persisted<LotteryStocktakeDocument>;
 const LIST_LIMIT_MAX = 100;
 
 const byName = (a: { name: string }, b: { name: string }) =>
-  a.name.localeCompare(b.name, "zh-Hant");
+  compareDisplayName(a.name, b.name);
 
 /** 舊資料防禦:加「未盤的本」之前建立的盤點單沒有 `summary.uncountedCount` → 0。 */
 const uncountedCountOf = (summary: StocktakeSummary): number =>
@@ -217,8 +218,8 @@ export class StocktakeQueryService {
       }))
       .toSorted(
         (a, b) =>
-          a.gameCode.localeCompare(b.gameCode) ||
-          a.bookNo.localeCompare(b.bookNo),
+          a.gameCode.localeCompare(b.gameCode, COLLATION_LOCALE) ||
+          a.bookNo.localeCompare(b.bookNo, COLLATION_LOCALE),
       );
     const stockBooks = [...inStock.stock.values()].map(({ book }) => book);
     const stockTickets =
@@ -287,8 +288,8 @@ export class StocktakeQueryService {
       .toSorted(
         (a, b) =>
           (order.get(a.cashPointId) ?? 0) - (order.get(b.cashPointId) ?? 0) ||
-          a.gameCode.localeCompare(b.gameCode) ||
-          a.bookNo.localeCompare(b.bookNo),
+          a.gameCode.localeCompare(b.gameCode, COLLATION_LOCALE) ||
+          a.bookNo.localeCompare(b.bookNo, COLLATION_LOCALE),
       );
     // 拆過、在庫存的張:一本一行(收銀點 = `STOCKTAKE_STOCK_LINE`),排在收銀點的本之後
     const stockLines = stockBooks
@@ -314,8 +315,8 @@ export class StocktakeQueryService {
       })
       .toSorted(
         (a, b) =>
-          a.gameCode.localeCompare(b.gameCode) ||
-          a.bookNo.localeCompare(b.bookNo),
+          a.gameCode.localeCompare(b.gameCode, COLLATION_LOCALE) ||
+          a.bookNo.localeCompare(b.bookNo, COLLATION_LOCALE),
       );
     return {
       orgId: String(store.orgId),

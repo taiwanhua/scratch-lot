@@ -1,4 +1,8 @@
-import { fieldProtections, isProtected } from "@repo/domain/form";
+import {
+  type FieldType,
+  fieldProtections,
+  isProtected,
+} from "@repo/domain/form";
 import { useFormsQuery } from "@repo/graphql";
 
 import { useSession } from "@/hooks/base/useSession";
@@ -9,11 +13,14 @@ export interface FieldCandidate {
   formName: string;
   key: string;
   label: string;
+  /** 欄位型別(組合欄的「插入欄位」給日期 / 日期時間多列格式快捷) */
+  type: FieldType;
 }
 
 /**
  * 列表欄位配置可選的表單欄位(api 的寫入規則,docs/modules/forms.md「列表欄位配置」):
- * 該模組**共用表單**目前版本裡、**不是受保護欄位**(含只因依賴而受保護的計算欄位)的欄位。
+ * 該模組**共用表單**目前版本裡、**不是受保護欄位**(含只因依賴而受保護的計算欄位)的欄位;
+ * 組合欄模板可插入的欄位也是這一份。
  */
 export const useListColumnCandidates = (moduleKey: string) => {
   const { session } = useSession();
@@ -51,9 +58,16 @@ export const useListColumnCandidates = (moduleKey: string) => {
           formName: form.name,
           key: field.key,
           label: field.label,
+          type: field.type,
         }))
     );
   });
 
-  return { candidates, isLoading: forms.isLoading };
+  /** 共用表單(有目前版本的;組合欄「限定表單」的選項) */
+  const sharedForms = shared.map((form) => ({
+    key: form.key,
+    name: form.name,
+  }));
+
+  return { candidates, sharedForms, isLoading: forms.isLoading };
 };

@@ -28,6 +28,7 @@ import { sampleTwoModule } from "./modules/demo.sample-two";
 import { demoSubGroupFormModule } from "./modules/demo.sub.form";
 import { sampleOneModule } from "./modules/demo.sub.sample-one";
 import { overviewModule } from "./modules/overview";
+import { reportsModule } from "./modules/reports";
 import { systemModules } from "./modules/system";
 import { tenantAdminBindingsOf } from "./role-bindings";
 
@@ -46,6 +47,7 @@ export const baseModuleDeclarations: readonly ModuleSeedDeclaration[] = [
   demoSubGroupFormModule,
   demoFormModule,
   applyCenterModule,
+  reportsModule,
 ];
 
 /** 由全部模組宣告推導出的四類種子(只推導一次;其他來源不得再宣告這些內容)。 */

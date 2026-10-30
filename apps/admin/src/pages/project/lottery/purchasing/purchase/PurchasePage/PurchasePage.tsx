@@ -21,9 +21,8 @@ import { Tag } from "@repo/ui/tag";
 import { Typography } from "@repo/ui/typography";
 
 import { FilterDrawer } from "@/components/base/FilterDrawer/FilterDrawer";
-import { useFormModuleAccess } from "@/components/base/form-engine/FormModulePages/useFormModuleAccess";
+import { useFormEntry } from "@/components/base/form-engine/FormModulePages/useFormEntry";
 import { SubmissionStatusTag } from "@/components/base/workflow/SubmissionStatusTag";
-import { useModuleForms } from "@/hooks/base/useModuleForms";
 import { useSession } from "@/hooks/base/useSession";
 import { useUrlState } from "@/hooks/base/useUrlState";
 import { LIST_PAGE_SHELL_SX } from "@/lib/base/list-page-layout";
@@ -109,12 +108,9 @@ export const PurchasePage = () => {
   const navigate = useNavigate();
   const { session } = useSession();
   const isMobile = useBreakpointDown("sm");
-  const access = useFormModuleAccess(PURCHASE_MODULE_KEY);
-  const { creatableForms } = useModuleForms(PURCHASE_MODULE_KEY);
+  const entry = useFormEntry(PURCHASE_MODULE_KEY, PURCHASE_FORM_KEY);
+  const { access, canCreate } = entry;
   const [filters, setFilters] = useUrlState(PURCHASE_LIST_KEY, listSchema);
-  const canCreate =
-    access.createRoute !== null &&
-    creatableForms.some((form) => form.key === PURCHASE_FORM_KEY);
 
   const query = useFormSubmissionsQuery(session.client, {
     input: {
@@ -289,9 +285,7 @@ export const PurchasePage = () => {
           {canCreate && (
             <Button
               onClick={() => {
-                void navigate(
-                  `${access.createRoute ?? ""}/${PURCHASE_FORM_KEY}`,
-                );
+                void navigate(entry.createHref() ?? "");
               }}
             >
               {t("create")}

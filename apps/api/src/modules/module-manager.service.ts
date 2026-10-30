@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { Types } from "mongoose";
 
+import { COLLATION_LOCALE } from "@repo/domain/collation";
 import { isModuleIconKey } from "@repo/domain/module-icon";
 import { isWildcardKey } from "@repo/domain/permission";
 
@@ -58,11 +59,11 @@ function comparePermissions(a: PermissionRecord, b: PermissionRecord): number {
   if (aWildcard !== bWildcard) {
     return aWildcard ? -1 : 1;
   }
-  return a.key.localeCompare(b.key);
+  return a.key.localeCompare(b.key, COLLATION_LOCALE);
 }
 
 function compareModules(a: ModuleRecord, b: ModuleRecord): number {
-  return a.order - b.order || a.key.localeCompare(b.key);
+  return a.order - b.order || a.key.localeCompare(b.key, COLLATION_LOCALE);
 }
 
 function toPermissionAdmin(permission: PermissionRecord): PermissionAdmin {
@@ -298,7 +299,7 @@ export class ModuleManagerService {
     );
     return descendants
       .map((descendant) => descendant.key)
-      .toSorted((a, b) => a.localeCompare(b));
+      .toSorted((a, b) => a.localeCompare(b, COLLATION_LOCALE));
   }
 
   /** 這個模組加上它整棵子樹(切換後的最新狀態),組成一棵以它為根的 `ModuleAdminNode`。 */

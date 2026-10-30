@@ -1,6 +1,6 @@
 import type { LotteryPurchaseListQuery } from "@repo/graphql";
 
-import type { SheetColumn, SheetData } from "@/lib/project/reports/excel";
+import type { SheetColumn, SheetData } from "@/lib/base/reports/excel";
 
 /** 採購清單(`lotteryPurchaseList`)。 */
 export type PurchaseList = LotteryPurchaseListQuery["lotteryPurchaseList"];

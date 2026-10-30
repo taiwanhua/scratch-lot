@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { Types } from "mongoose";
 
+import { COLLATION_LOCALE } from "@repo/domain/collation";
 import {
   type BookTicketCounts,
   INVENTORY_PERMISSIONS,
@@ -500,6 +501,8 @@ export class InventoryStockService {
         gameCode: game.gameCode,
         name: game.name,
       }))
-      .toSorted((a, b) => a.gameCode.localeCompare(b.gameCode));
+      .toSorted((a, b) =>
+        a.gameCode.localeCompare(b.gameCode, COLLATION_LOCALE),
+      );
   }
 }

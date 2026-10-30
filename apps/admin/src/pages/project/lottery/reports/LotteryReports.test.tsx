@@ -3,8 +3,7 @@ import { screen, within } from "@testing-library/react";
 
 import { reportsWorld } from "@/test/msw/project/lottery/reports-handlers";
 import { server } from "@/test/msw/server";
-
-import { renderReportsPage } from "./ReportsPage/reports-test-support";
+import { orgTreeOf, renderReportsPage } from "@/test/reports-page";
 
 /**
  * 輸出報表的兩張正式報表(專案規格第 11 章;Figma RE-01 / RE-02 / RE-03 / RE-04 / RE-05):正式路由與登記清單,
@@ -16,12 +15,21 @@ const conditions = (value: Record<string, unknown>) =>
 
 const TWO_BRANCHES = ["org-zhongshan", "org-hsinchu"];
 
+const ORG_TREE = orgTreeOf("好運彩券行", [
+  ["org-zhongshan", "中山店"],
+  ["org-hsinchu", "新竹店"],
+]);
+
 const render = (
   permissions: readonly string[],
   search: string,
   options: { withCost?: boolean } = {},
 ) => {
-  const rendered = renderReportsPage({ permissions, search });
+  const rendered = renderReportsPage({
+    permissions,
+    search,
+    orgTree: ORG_TREE,
+  });
   const world = reportsWorld(options);
   server.use(...world.handlers);
   return { ...rendered, world };

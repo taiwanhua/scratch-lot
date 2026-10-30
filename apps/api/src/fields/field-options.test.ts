@@ -69,10 +69,11 @@ describe("FieldOptionsService(業務功能用的選項與原因檢查)", () => {
       parentId: tenant,
     });
     const otherTenant = await createOrg(api.connection, { name: "租戶乙" });
-    await addOption(tenant, "tenant-wide");
+    await addOption(tenant, "tenant-wide", { color: "green" });
     await addOption(store, "store-only");
     await addOption(store, "store-disabled", { enabled: false });
     await addOption(otherTenant, "other-tenant");
+    await addOption(store, "legacy-color", { color: "#FFA500" });
     atStore = await api.app
       .get(OperatorContextService)
       .systemOperatorOfOrg(store);
@@ -96,6 +97,42 @@ describe("FieldOptionsService(業務功能用的選項與原因檢查)", () => {
     );
     expect(values).not.toContain("store-disabled");
     expect(values).not.toContain("other-tenant");
+  });
+
+  it("optionsOf 帶選項的顏色:有設的回色票代號,沒設或認不得的代號回 null", async () => {
+    const options = await service.optionsOf(atStore, CATEGORY, ALLOWED);
+    const colorOf = (value: string) =>
+      options.find((option) => option.value === value)?.color;
+    expect(colorOf("tenant-wide")).toBe("green");
+    expect(colorOf("store-only")).toBeNull();
+    expect(colorOf("legacy-color")).toBeNull();
+  });
+
+  it("optionMapOf:同一個合併範圍、含停用的(以 enabled 區分),順序與 optionsOf 一致", async () => {
+    const map = await service.optionMapOf(atStore, CATEGORY);
+    expect(map.get("store-disabled")).toEqual({
+      label: "自訂 store-disabled",
+      enabled: false,
+      color: null,
+    });
+    expect(map.get("tenant-wide")).toMatchObject({
+      enabled: true,
+      color: "green",
+    });
+    expect(map.has("other-tenant")).toBe(false);
+    const enabledValues = [...map]
+      .filter(([, option]) => option.enabled)
+      .map(([value]) => value);
+    const listed = await service.optionsOf(atStore, CATEGORY, ALLOWED);
+    expect(enabledValues).toEqual(listed.map((option) => option.value));
+    const missing = await service.optionMapOf(atStore, "no-such-category");
+    expect(missing.size).toBe(0);
+  });
+
+  it("categoryKeys:全部類別 key", async () => {
+    const keys = await service.categoryKeys(atStore);
+    expect(keys.has(CATEGORY)).toBe(true);
+    expect(keys.has("no-such-category")).toBe(false);
   });
 
   it("類別不在呼叫端的白名單 → VALIDATION_FAILED(categoryKey);類別不存在 → 沒有選項", async () => {

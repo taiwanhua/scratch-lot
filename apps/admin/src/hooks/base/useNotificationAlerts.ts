@@ -54,7 +54,7 @@ export const useNotificationAlerts = (): void => {
     }
     try {
       const data = await useMyNotificationsQuery.fetcher(session.client, {
-        input: { unreadOnly: true, page: 1, pageSize: 1 },
+        input: { unreadOnly: true, pageSize: 1 },
       })();
       const latest = data.myNotifications.items.at(0);
       if (latest !== undefined) {

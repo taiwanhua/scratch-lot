@@ -25,6 +25,7 @@
 - `shareable` 的選項:
   - `defaultShareOrgs`:新增時的預設清單 —— `none`(空)或 `wholeTenant`(`[{ 租戶頂層, 含下層 }]` = 全部分店)。
   - `editable`:`false` = 清單固定,新增一律用預設、一般更新改不了(受保護欄位),畫面不出現「共用給」;`true` = 新增 / 編輯頁出現「共用給」,有該模組修改權限的人才能改。
+  - `defaultShareOrgs: none` + `editable: false` = 清單永遠是空的:不建 `shareOrgs` 欄位與索引、讀取不加清單分支,只靠 `sharedByFields`(一定要有,否則等於 `private`,掛 plugin 時拋錯)。理由:空清單的分支在 `$elemMatch` 裡帶 `$or`,索引只用得到 `tenantId`,每次讀取都要掃過整個租戶在這個模組的資料才確定沒有命中。
   - `sharedByFields`:選填、可多個欄位;資料「也給這些欄位指到的組織看」(欄位是單一組織或組織陣列,任一對上就看得到;`includeDescendants` = 被指到的組織的下層也看得到)。不需同步任何清單,欄位改了看得到的人跟著變。欄位與 `{ tenantId, <欄位> }` 開頭的索引由宣告的表自己建,掛 plugin 時驗證存在。
 - `shareable` 與 `refFields` 只給模組資料表(`moduleData: true`,有 `tenantId`);共用宣告只給業務類、`orgId`、`allowGlobal: false` 的表。宣告不自洽在掛 plugin 時就拋錯,app 起不來。
 - 新表在 `docs/agents/module-scaffold.md` 步驟 2 選一種。

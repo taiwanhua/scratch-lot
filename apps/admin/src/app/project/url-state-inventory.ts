@@ -6,8 +6,6 @@ import type { UrlStateInventory } from "../module-page-registry";
  * (換掉之後的頁放進網址的 key 以這裡為準):頁面 key → 這一頁以 `useUrlState` 放進網址的 key。
  */
 export const projectUrlStateInventory: UrlStateInventory = {
-  // 欄位管理換成帶「顏色」欄的客製頁:網址狀態與底座頁相同(選中的類別、編輯中的選項)
-  "system.field-manager": ["detail", "edit"],
   // 檔案管理:分頁、遊戲篩選、收銀點頁碼、編輯中的收銀點;遊戲詳情的分頁
   "master-data": ["tab", "games", "cashPoints", "edit"],
   "master-data.games.view-page": ["tab"],
@@ -22,7 +20,6 @@ export const projectUrlStateInventory: UrlStateInventory = {
   "dealers.contacts.create-page": [],
   "dealers.contacts.edit-page": [],
   // 輸出報表:選的報表、條件(期間、分店、其他條件)、預覽(開著沒、第幾個工作表)
-  reports: ["report", "conditions", "preview"],
   // 班表管理:頁內分頁 `tab`;排班人員篩選 `joined`;規則 / 行事曆 / 畫休總覽的分店 `org`;
   // 行事曆 / 畫休總覽的月份 `month`;我的班表(班表 / 我的畫休分頁)的月份 `month` 與 `[月曆 | 條列]` `view`;畫休總覽的篩選 `dayOffFilter`;
   // 支援需求單的篩選 `support`、右側打開的那一筆 `detail`、詳情看的修訂 `revision`

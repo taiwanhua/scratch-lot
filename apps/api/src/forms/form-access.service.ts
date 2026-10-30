@@ -155,6 +155,22 @@ export class FormAccessService {
       : null;
   }
 
+  /**
+   * 某組織與它全部下層的 id(列表的組織篩選)。只讀組織樹、不判斷範圍:回來的 id 只拿來**收窄**
+   * 業務查詢,可見範圍由業務資料表的插件照套。組織不存在 = 只有它自己(查不到資料 = 空清單)。
+   */
+  async orgSubtreeIds(
+    operator: OperatorContext,
+    orgId: Types.ObjectId,
+  ): Promise<Types.ObjectId[]> {
+    const descendants = await this.orgs.findMany(
+      orgReader(operator),
+      { ancestors: orgId },
+      { select: "_id" },
+    );
+    return [orgId, ...descendants.map((org) => org._id)];
+  }
+
   /** 持有某權限(含同層 wildcard;權限不存在或被停用 → 不持有;別租戶表單的動態權限 → 不持有)。 */
   has(facts: FormOperatorFacts, key: string): boolean {
     return holdsPermission(facts, key);

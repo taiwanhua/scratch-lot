@@ -1,3 +1,4 @@
+import { COLLATION_LOCALE } from "@repo/domain/collation";
 import {
   type ScheduleAutoRunSortCondition,
   type ScheduleBreakTier,
@@ -333,7 +334,7 @@ class AutoScheduler {
       this.taken.add(`${item.demandId}|${item.taskId}`);
     }
     this.candidates = input.candidates.toSorted((left, right) =>
-      left.userId.localeCompare(right.userId),
+      left.userId.localeCompare(right.userId, COLLATION_LOCALE),
     );
     for (const entry of this.entries) {
       if (this.isStore(entry) && isDateKeyInMonth(entry.date, input.month)) {
@@ -351,9 +352,9 @@ class AutoScheduler {
   run(): AutoScheduleResult {
     const demands = this.input.demands.toSorted(
       (left, right) =>
-        left.date.localeCompare(right.date) ||
+        left.date.localeCompare(right.date, COLLATION_LOCALE) ||
         left.startAt.getTime() - right.startAt.getTime() ||
-        left.id.localeCompare(right.id),
+        left.id.localeCompare(right.id, COLLATION_LOCALE),
     );
     for (const demand of demands) {
       const tasks = [

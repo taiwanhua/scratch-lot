@@ -39,7 +39,7 @@ function filesMentioning(needle: string): string[] {
   return sourceFiles(SRC_ROOT)
     .filter((file) => readFileSync(file, "utf8").includes(needle))
     .map((file) => path.relative(SRC_ROOT, file).split(path.sep).join("/"))
-    .toSorted((left, right) => left.localeCompare(right));
+    .toSorted((left, right) => left.localeCompare(right, "zh-Hant"));
 }
 
 /**
@@ -53,7 +53,7 @@ describe("存在性檢查(existsAny)的呼叫端登記", () => {
     );
     expect(callers).toEqual(
       [...EXISTS_ANY_CALLERS].toSorted((left, right) =>
-        left.localeCompare(right),
+        left.localeCompare(right, "zh-Hant"),
       ),
     );
   });
@@ -80,10 +80,10 @@ describe("租戶邊界出口的呼叫端登記", () => {
       ]),
     ]
       .filter((file) => file !== "database/base.repository.ts")
-      .toSorted((left, right) => left.localeCompare(right));
+      .toSorted((left, right) => left.localeCompare(right, "zh-Hant"));
     expect(callers).toEqual(
       [...TENANT_BOUNDARY_CALLERS, ...PROJECT_TENANT_BOUNDARY_CALLERS].toSorted(
-        (left, right) => left.localeCompare(right),
+        (left, right) => left.localeCompare(right, "zh-Hant"),
       ),
     );
   });
@@ -144,7 +144,7 @@ describe("清空租戶出口(TenantPurgeStore)的呼叫端登記", () => {
     );
     expect(callers).toEqual(
       [...TENANT_PURGE_STORE_CALLERS].toSorted((left, right) =>
-        left.localeCompare(right),
+        left.localeCompare(right, "zh-Hant"),
       ),
     );
   });
@@ -159,7 +159,7 @@ function reassignCallersUnder(root: string): string[] {
     .filter((file) => REASSIGN_CALL.test(readFileSync(file, "utf8")))
     .map((file) => path.relative(root, file).split(path.sep).join("/"))
     .filter((file) => file !== "database/base.repository.ts")
-    .toSorted((left, right) => left.localeCompare(right));
+    .toSorted((left, right) => left.localeCompare(right, "zh-Hant"));
 }
 
 /**
@@ -170,7 +170,7 @@ describe("搬家(reassignOrg / reassignOrgMany)的呼叫端登記", () => {
   it("正式程式碼裡呼叫 reassignOrg 的檔案都在底座或專案的登記清單內", () => {
     expect(reassignCallersUnder(SRC_ROOT)).toEqual(
       [...ORG_REASSIGN_CALLERS, ...PROJECT_ORG_REASSIGN_CALLERS].toSorted(
-        (left, right) => left.localeCompare(right),
+        (left, right) => left.localeCompare(right, "zh-Hant"),
       ),
     );
   });

@@ -11,7 +11,7 @@ import { Typography } from "@repo/ui/typography";
 import { FieldErrorGroup } from "@/components/base/FieldErrorGroup/FieldErrorGroup";
 import { FormActions } from "@/components/base/FormActions/FormActions";
 import { Section } from "@/components/base/Section/Section";
-import { TagPaletteSelect } from "@/components/project/TagPaletteSelect/TagPaletteSelect";
+import { TagPaletteSelect } from "@/components/base/TagPaletteSelect/TagPaletteSelect";
 import { useRouteTabHref } from "@/hooks/base/useRouteTabHref";
 import { useUnsavedGuard } from "@/hooks/base/useUnsavedGuard";
 

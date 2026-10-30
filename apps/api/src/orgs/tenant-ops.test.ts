@@ -288,7 +288,7 @@ const TENANT_OPS_PERMISSIONS = [
 
 /** 字串排序的比較函式(`toSorted()` 不給比較函式在非 ASCII 下不可靠)。 */
 function byText(left: string, right: string): number {
-  return left.localeCompare(right);
+  return left.localeCompare(right, "zh-Hant");
 }
 
 function flatten(nodes: TreeNode[]): TreeNode[] {

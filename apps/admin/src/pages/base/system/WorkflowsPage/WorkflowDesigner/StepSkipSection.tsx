@@ -23,7 +23,7 @@ export interface StepSkipSectionProps {
   onChange: (next: ReviewStepDef) => void;
   /** 共用流程:「申請人屬於這些組織」只能選最上層組織 */
   isShared: boolean;
-  /** 「檢查用表單」與它目前版本的欄位;「符合條件」的欄位選項來自它 */
+  /** 「檢查用表單」與它目前版本的欄位;「符合跳過條件」(跳過條件公式)的欄位選項來自它 */
   checkFormKey: string | null;
   checkFormFields: readonly FieldDef[] | null;
   isReadonly: boolean;
@@ -58,10 +58,10 @@ const orgIdsOf = (hasTenant: boolean, specific: readonly string[]): string[] =>
  * 關卡面板「跳過這一關(符合任一項就跳過)」區塊:
  * - ☑ 申請人屬於這些組織(`skipOrgs`):最上層組織(特殊值 `SKIP_ORG_TENANT`)/ 指定組織(客製流程才有)+ 包含下層。
  *   共用流程只能選最上層組織:不給組織樹,最上層組織固定勾著。
- * - ☑ 符合條件(`skipWhen`,原本單獨的「跳過條件」公式搬進來,格式不變):6a 表達式選擇器,欄位來自檢查用表單。
+ * - ☑ 符合跳過條件(`skipWhen`,跳過條件公式,原本單獨的欄位搬進來,格式不變):6a 表達式選擇器,欄位來自檢查用表單。
  *
  * 兩項各自勾選,任一項成立就跳過;都不勾 = 不跳過。取消勾選就清掉那一項的設定。
- * 「符合條件」勾了但還沒設公式時不存東西(存檔後重新載入 = 沒勾)。
+ * 「符合跳過條件」勾了但還沒設公式時不存東西(存檔後重新載入 = 沒勾)。
  */
 export const StepSkipSection = ({
   step,

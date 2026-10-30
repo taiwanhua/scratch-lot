@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { Types } from "mongoose";
 
+import { compareDisplayName } from "@repo/domain/collation";
 import { type InstantRange, parseLocalMonth } from "@repo/domain/form";
 
 import { OrgsRepository } from "../../../database/database.module";
@@ -37,7 +38,6 @@ import {
   SCHEDULE_PERMISSIONS,
   SchedulePermissions,
 } from "../shared/schedule-permissions";
-import { compareScheduleNames } from "../shared/schedule-sort";
 import { ScheduleStaffService } from "../staff/schedule-staff.service";
 import type {
   ScheduleRosterPayload,
@@ -347,7 +347,7 @@ export class ScheduleRosterService {
       ...candidates.map((candidate) => personOf(candidate.userId, candidate)),
       ...extraIds
         .map((id) => personOf(id))
-        .toSorted((left, right) => compareScheduleNames(left.name, right.name)),
+        .toSorted((left, right) => compareDisplayName(left.name, right.name)),
     ];
 
     const blocked = await blockedEntryIdsOf(

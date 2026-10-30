@@ -6,6 +6,8 @@ import { Dialog } from "@repo/ui/dialog";
 import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
 
+import { RootOrgNotice } from "@/components/base/RootOrgNotice/RootOrgNotice";
+
 import type { NotificationSettingsErrorCode } from "./notification-settings-error";
 
 export interface ResetDefaultDialogProps {
@@ -69,7 +71,10 @@ export const ResetDefaultDialog = ({
         <Typography variant="body2" color="textSecondary">
           {t("body")}
         </Typography>
-        {errorCode !== null && (
+        {errorCode === "TENANT_ONLY" && (
+          <RootOrgNotice variant="inline" message={tErrors(errorCode)} />
+        )}
+        {errorCode !== null && errorCode !== "TENANT_ONLY" && (
           <Alert severity="error">{tErrors(errorCode)}</Alert>
         )}
       </Stack>

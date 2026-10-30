@@ -1,6 +1,7 @@
 import { formatTemporal } from "@repo/domain/form";
 
-import type { SheetColumn, SheetData } from "./reports/excel";
+import type { SheetColumn, SheetData } from "@/lib/base/reports/excel";
+
 import { localPartsOf } from "./schedule-roster";
 
 /**

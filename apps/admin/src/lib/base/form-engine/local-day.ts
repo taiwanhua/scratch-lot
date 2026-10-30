@@ -29,3 +29,10 @@ export const localDayInstantOf = (
   const date = parseLocalDate(text);
   return date === null ? null : toIso(startOfLocalDay(date, timezone));
 };
+
+/** `YYYY-MM-DD` 的「M/D」(那天在時區 00:00 走 `formatTemporal` 的 `monthDay`);不是日期 → 空字串。 */
+export const monthDayOf = (date: string, timezone: string): string =>
+  formatTemporal(localDayInstantOf(date, timezone), {
+    type: "monthDay",
+    timezone,
+  });

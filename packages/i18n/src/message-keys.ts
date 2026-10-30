@@ -14,14 +14,14 @@ export const localeDirs = (): string[] =>
   readdirSync(MESSAGES_DIR, { withFileTypes: true })
     .filter((entry) => entry.isDirectory())
     .map((entry) => entry.name)
-    .toSorted((a, b) => a.localeCompare(b));
+    .toSorted((a, b) => a.localeCompare(b, "zh-Hant"));
 
 /** 某語系底下的字典檔名(不含副檔名,即 namespace:`admin` / `front` / `common`)。 */
 export const namespacesOf = (locale: string): string[] =>
   readdirSync(path.join(MESSAGES_DIR, locale))
     .filter((file) => file.endsWith(".json"))
     .map((file) => file.slice(0, -".json".length))
-    .toSorted((a, b) => a.localeCompare(b));
+    .toSorted((a, b) => a.localeCompare(b, "zh-Hant"));
 
 /**
  * 某語系的專案文案檔名(`messages/<locale>/project/*.json`,不含副檔名:`admin` / `admin.replacements`);
@@ -35,7 +35,7 @@ export const projectFilesOf = (locale: string): string[] => {
   return readdirSync(dir)
     .filter((file) => file.endsWith(".json"))
     .map((file) => file.slice(0, -".json".length))
-    .toSorted((a, b) => a.localeCompare(b));
+    .toSorted((a, b) => a.localeCompare(b, "zh-Hant"));
 };
 
 /** 讀一份專案文案檔(`project/<name>.json`)的原始內容。 */

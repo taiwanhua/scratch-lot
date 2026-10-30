@@ -1,10 +1,11 @@
 import {
   type ExpressionContext,
   type FieldDef,
+  type ProviderDefaultOf,
   type StoredValues,
+  defaultDependenciesOf,
   defaultOrder,
   defaultValueOf,
-  referencedFieldKeys,
 } from "@repo/domain/form";
 
 import type { FieldPermissionFacts } from "./field-states";
@@ -17,7 +18,8 @@ import type { FieldPermissionFacts } from "./field-states";
  * - 讀不到(公式引用的欄位沒有 show)或改不動(沒有欄位級 edit)的欄位不填 —— 與 api 同一條
  *
  * 引用欄的預設值(填寫者 / 填寫者的組織)只有 id;畫面上先用登入者的名稱 / 當前組織名稱當 label,
- * 送出時 api 重取 label 寫快照。
+ * 送出時 api 重取 label 寫快照。引用欄的「來源提供的預設」由呼叫端查好給(`providerDefault`;
+ * `useFillValues` 以 `formLookupDefault` 查),值已帶 label。
  */
 
 export interface DefaultFillInput {
@@ -28,6 +30,8 @@ export interface DefaultFillInput {
   permissions: FieldPermissionFacts;
   /** 系統值的顯示名(引用欄預設值的暫時 label):`ctx.user.id` → 登入者名稱、`ctx.user.orgId` → 當前組織名稱 */
   systemLabels?: { user: string | null; org: string | null };
+  /** 「來源提供的預設」目前的值(已查回來的;還沒查到的回 null) */
+  providerDefault?: ProviderDefaultOf;
 }
 
 const labelOf = (
@@ -56,23 +60,23 @@ export const withDefaults = ({
   touched,
   permissions,
   systemLabels,
+  providerDefault,
 }: DefaultFillInput): StoredValues => {
   const next: StoredValues = { ...values };
   for (const field of defaultOrder(fields)) {
-    const refs =
-      field.default?.kind === "expression"
-        ? referencedFieldKeys(field.default.expr)
-        : [];
     if (
       touched.has(field.key) ||
       !permissions.canEdit(field.key) ||
-      refs.some((key) => !permissions.canShow(key))
+      defaultDependenciesOf(field).some((key) => !permissions.canShow(key))
     ) {
       continue;
     }
-    const value = defaultValueOf(field, fields, next, ctx) ?? null;
+    const value =
+      defaultValueOf(field, fields, next, ctx, providerDefault) ?? null;
     next[field.key] =
-      field.type === "reference" ? labelOf(value, ctx, systemLabels) : value;
+      field.type === "reference" && field.default?.kind !== "provider"
+        ? labelOf(value, ctx, systemLabels)
+        : value;
   }
   return next;
 };

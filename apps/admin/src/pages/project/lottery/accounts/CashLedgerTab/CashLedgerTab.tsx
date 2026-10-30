@@ -18,9 +18,9 @@ import { Stack } from "@repo/ui/stack";
 import type { TableColumn } from "@repo/ui/table";
 import { Typography } from "@repo/ui/typography";
 
+import { DateFilterPicker } from "@/components/base/DateFilterPicker/DateFilterPicker";
 import { FilterDrawer } from "@/components/base/FilterDrawer/FilterDrawer";
 import { OrgTreeSelect } from "@/components/base/OrgTreeSelect/OrgTreeSelect";
-import { DateFilterPicker } from "@/components/project/DateFilterPicker/DateFilterPicker";
 import { useMe } from "@/hooks/base/useMe";
 import { useSession } from "@/hooks/base/useSession";
 import { useTenantTimezone } from "@/hooks/base/useTenantTimezone";

@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { Types } from "mongoose";
 
+import { COLLATION_LOCALE } from "@repo/domain/collation";
 import { type InstantRange, localDayRange } from "@repo/domain/form";
 import { SCHEDULE_FIELD_CATEGORY_KEYS } from "@repo/domain/project/schedule-fields";
 import {
@@ -1043,7 +1044,7 @@ export class ScheduleRosterWritesService {
   ): Promise<Set<string>> {
     const published = new Set<string>();
     for (const month of months.toSorted((left, right) =>
-      left.localeCompare(right),
+      left.localeCompare(right, COLLATION_LOCALE),
     )) {
       const touched = await this.periods.findOneAndUpdate(
         operator,

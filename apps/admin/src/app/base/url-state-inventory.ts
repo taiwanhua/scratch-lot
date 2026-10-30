@@ -30,6 +30,7 @@ export const baseUrlStateInventory: UrlStateInventory = {
   "apply-center": ["tab", "list"],
   "apply-center.view-page": [],
   "system.printers": ["tab", "list", "edit"],
+  reports: ["report", "conditions", "preview"],
 };
 
 /**

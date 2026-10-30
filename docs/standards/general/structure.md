@@ -176,14 +176,21 @@ admin 每個環境各建一顆 image,正是最容易吃到這個坑的形狀(`VI
 
 ## STRUCT-10 `localeCompare` 一律明給 `zh-Hant`
 
-全 repo(api、admin、db-migrator 都算)排字串一律寫 `a.localeCompare(b, "zh-Hant")`,**不留給執行環境決定**。
+全 repo(api、admin、db-migrator、packages、測試都算)排字串一律明給 `zh-Hant`,**不留給執行環境決定**。共用的比較函式與語系常數在 `@repo/domain/collation`:
 
 ```ts
-✅ rows.toSorted((a, b) => a.name.localeCompare(b.name, COLLATION_LOCALE)); // const COLLATION_LOCALE = "zh-Hant"
+import { COLLATION_LOCALE, compareDisplayName } from "@repo/domain/collation";
+
+✅ rows.toSorted((a, b) => compareDisplayName(a.name, b.name)); // 給人看的名稱:姓名、組織名、選項名
+✅ rows.toSorted((a, b) => a.key.localeCompare(b.key, COLLATION_LOCALE)); // key / 代號 / 日期字串
 ❌ rows.toSorted((a, b) => a.name.localeCompare(b.name));
 ```
 
-不給語言時 `localeCompare` 吃的是執行環境的預設語言:開發機通常是 `zh-TW`、**CI runner 通常退回 `en-US`**,中文字的先後跟著不一樣 —— 排序斷言於是「本機綠、CI 紅」,而且看起來像偶發。先例與理由註解在 `apps/admin/src/lib/base/role-options.ts`(`COLLATION_LOCALE`)。同一支檔案裡排多處時抽成模組層常數,不要逐處重打字串。
+不給語言時 `localeCompare` 吃的是執行環境的預設語言:開發機通常是 `zh-TW`、**CI runner 與 Cloud Run(Linux)通常退回 `en-US`**,中文字的先後跟著不一樣 —— 使用者看到的清單順序隨部署環境變,排序斷言於是「本機綠、CI 紅」,而且看起來像偶發。zh-Hant 依筆畫排中文(王 4 畫在李 7 畫之前),拉丁字母排在中文之後。
+
+- **給人看的名稱用 `compareDisplayName`**,不在各處重打 `localeCompare(…, "zh-Hant")`,前端(admin)與 api 同一份。
+- **key / 代號 / 日期字串也明給 `COLLATION_LOCALE`**,不另用字碼比較:純 ASCII 在 zh-Hant 與 en 的 ICU 排序規則相同,統一語系不改變既有順序(CI 與正式環境一直是這個順序),只是不再依賴執行環境;字碼比較(`<` / `>`)反而會讓大寫排在所有小寫前面,改變既有輸出。例外是需要跨 ICU 版本逐位元一致的計算(如 `packages/domain/src/form/decimal.ts`),那裡完全不用 `localeCompare`。
+- 不依賴 `@repo/domain` 的套件(`@repo/ui`、`@repo/i18n`)與測試檔可以直接寫 `"zh-Hant"`;同一支檔案裡排多處時抽成模組層常數,不要逐處重打字串。
 
 ## STRUCT-11 正式文件寫現況,完成的計畫歸回正本
 

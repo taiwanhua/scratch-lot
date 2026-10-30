@@ -154,14 +154,14 @@
 
 **草稿**不影響任何統計:沒有副本,不進採購清單、不算在途、不算遊戲引用(遊戲引用檢查只看草稿以外的叫貨單)。
 
-**作廢原因**:受管表單設了 `voidReasonCategoryKey: "void-reason"`(`requisition.r3.seed.ts`;刮刮樂與排班共用的類別),作廢對話框是欄位管理「作廢原因」的下拉(輸入錯誤 / 重複建立 / 交易取消 / 其他),選「其他」說明必填;不在類別內的值 → `VALIDATION_FAILED`(`fields: ["reasonKey"]`)。選項依作廢者的範圍(全域 + 上層 + 自己),機制見底座 `docs/modules/forms.md`「作廢原因」。
+**作廢原因**:受管表單設了 `voidReasonCategoryKey: "void-reason"`(`requisition.r3.seed.ts`;底座的共用類別,刮刮樂與排班都用),作廢對話框是欄位管理「作廢原因」的下拉(輸入錯誤 / 重複建立 / 交易取消 / 其他),選「其他」說明必填;不在類別內的值 → `VALIDATION_FAILED`(`fields: ["reasonKey"]`)。選項依作廢者的範圍(全域 + 上層 + 自己),機制見底座 `docs/modules/forms.md`「作廢原因」。
 
 **被引用的叫貨單不能作廢**:已被進貨單 / 調貨單引用的(已進貨 / 已調貨)作廢會被擋下,要先作廢引用它的那張單,叫貨單回到待購買後才能作廢。
 
 ### 採購清單(規格 8.1)
 
 - 取副本中 `voidedAt` 為空且未被引用的列,依遊戲 × 分店加總本數、預估批購金額;下半部列出每一張待購買的叫貨單(單號、叫貨分店、本數、預估批購)。
-- [匯出 Excel]:底座 B11 產生器(`lib/project/reports/excel.ts`),內容 = 畫面上的表(`purchase-list-sheet.ts`)。
+- [匯出 Excel]:底座 B11 產生器(`lib/base/reports/excel.ts`),內容 = 畫面上的表(`purchase-list-sheet.ts`)。
 - 每張叫貨單的 [建立進貨單](帶入)與 [從其他分店調貨](開調貨單並引用)由進貨單、調貨單的功能在 `PurchaseListTab/purchase-list-actions.ts` 的 `PENDING_REQUISITION_ACTIONS` 各自追加一列;還沒有時不顯示動作欄。
 
 ### 受管表單引用遊戲(可攜的 lookup 來源)
@@ -343,12 +343,12 @@
 - **第一次列印也能選聯**(使用者 10/26 定案):還沒印過時按 [列印],先選「列印哪一聯」(兩聯都印(預設)/ 第 1 聯 / 第 2 聯;底座 `printVariants`);一聯的單據 [列印] 直接送。照「一次 = 一個工作」:只印第 1 聯也是第 1 次(不是補印),之後再印第 2 聯是補印(「【補印】第 2 次」)。
 - **列印紀錄的單據名稱**(`documentName`,列印紀錄分頁與列印失敗通知):寫印了哪幾聯,補印另標「補印」—— 「進貨點收單 P-0001(兩聯)」「進貨點收單 P-0001(送貨人留存)補印」(`receiptDocumentNameOf`);只有一聯的單據維持原本的名稱(補印看「次數」欄)。不另加欄位。
 - **單據太長**:多聯接成一張後超過高度 / 大小上限(`PRINT_IMAGE_MAX_HEIGHT_DOTS` / `PRINT_IMAGE_MAX_BYTES`,`isPrintImageTooLarge`)時,自動列印不送,跳一則提示「單據太長,這次沒有印出,請按 [列印] 分聯印」(那張單據已印過時寫 [補印])。
-- **已印次數印完才更新**:交易後自動列印送出時工作還在等待中,那張單據的已印次數是 0;`useReceiptPrinter` 等這張工作的結果(`PrintResultWatch`,共用 `usePrintJobResult`),有結果就重查已印次數,標頭的 [列印] 跟著變 [補印]「已印 1 次」;做完就卸載的地方(調貨出貨單的審核擴充)靠底座列印按鈕收到那張工作的 `print-result`(同一張單據)就重查。
+- **已印次數印完才更新**:交易後自動列印送出時工作還在等待中,那張單據的已印次數是 0;`useReceiptPrinter` 經底座的自動列印(`useAutoPrint`,見底座 printers.md「自動列印」)等這張工作的結果,有結果就重查已印次數,標頭的 [列印] 跟著變 [補印]「已印 1 次」;做完就卸載的地方(調貨出貨單的審核擴充)靠底座列印按鈕收到那張工作的 `print-result`(同一張單據)就重查。
 - **印表機**:單據所屬分店的預設印表機(`printablePrinters` 的 `defaultPrinterId`)→ 第一台可用的;單據可以給自己的預設,排在分店預設前面:調貨付款收據從收銀點抽屜付時用那個收銀點的印表機(店面的單據同理)。
 - **自動列印只在寫入成功之後**:寫入失敗(送出、審核決定、付款被擋)不印;列印本身失敗(查印表機、轉圖、建立工作)只記 log,不打斷操作 —— 工作建立後的失敗(缺紙、代理程式離線)由底座的「列印失敗」通知告訴要求人。
 - **在哪裡觸發**:進貨點收單、調貨點收單、調貨付款收據在做動作的畫面上([完成這次點收]、付款視窗寫入成功後);調貨出貨單登記成調貨單的審核擴充(`app/project/workflow-extensions.ts` 的 `Effect`,`docs/modules/workflows.md`「依模組登記的審核擴充」):審核決定 = 在第一關核准、送出 = 第一關被跳過,再讀點收區塊,只印出貨時間(`shippedAt`)在這個審核實例開始之後的在途列。
 
-正本:`apps/admin/src/lib/project/lottery/receipts/`(每張單據一支版面函式 + `receipt-kinds.ts` 的單據種類)、`apps/admin/src/components/project/lottery/ReceiptPrint/`(`useReceiptPrinter` 的 `printReceiptAfterCommit(kind, payload)`、`ReceiptPrintButton`、點收單的批次選單 `ReceivingBatchPrint`、`ReceiptDocument`、`PrintResultWatch`)
+正本:`apps/admin/src/lib/project/lottery/receipts/`(每張單據一支版面函式 + `receipt-kinds.ts` 的單據種類)、`apps/admin/src/components/project/lottery/ReceiptPrint/`(`useReceiptPrinter` 的 `printReceiptAfterCommit(kind, payload)`、`ReceiptPrintButton`、點收單的批次選單 `ReceivingBatchPrint`、`ReceiptDocument`;送出、等結果與失敗處理在底座 `components/base/AutoPrint/`)
 
 ## api 介面
 

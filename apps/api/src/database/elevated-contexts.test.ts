@@ -39,11 +39,11 @@ function filesWithElevatedContext(root: string): string[] {
   return sourceFiles(root)
     .filter((file) => ELEVATED_PATTERN.test(readFileSync(file, "utf8")))
     .map((file) => path.relative(root, file).split(path.sep).join("/"))
-    .toSorted((left, right) => left.localeCompare(right));
+    .toSorted((left, right) => left.localeCompare(right, "zh-Hant"));
 }
 
 const byPath = (left: string, right: string): number =>
-  left.localeCompare(right);
+  left.localeCompare(right, "zh-Hant");
 
 /**
  * 提升上下文(`visibleOrgIds: "all"`)只准出現在登記清單的檔案(ADR-0005「例外出口」、ADR-0014)。

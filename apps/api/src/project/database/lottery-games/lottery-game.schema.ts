@@ -6,7 +6,7 @@ import {
   GAME_STATUSES,
   type GameStatus,
 } from "@repo/domain/project/lottery-master-data";
-import { TAG_PALETTE_KEYS } from "@repo/domain/project/tag-palette";
+import { TAG_PALETTE_KEYS } from "@repo/domain/tag-palette";
 
 import { baseFieldsPlugin } from "../../../database/plugins/base-fields.plugin";
 import {
@@ -54,7 +54,7 @@ export class LotteryGame {
   @Prop({ type: Number, required: true })
   defaultRate!: number;
 
-  /** 顏色:標籤色票代號(`@repo/domain/project/tag-palette`);null = 不設定。 */
+  /** 顏色:標籤色票代號(`@repo/domain/tag-palette`);null = 不設定。 */
   @Prop({ type: String, enum: [...TAG_PALETTE_KEYS, null], default: null })
   color!: string | null;
 

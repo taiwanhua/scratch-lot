@@ -126,7 +126,7 @@ async function login(
   return token;
 }
 
-const byText = (a: string, b: string): number => a.localeCompare(b);
+const byText = (a: string, b: string): number => a.localeCompare(b, "zh-Hant");
 
 const match = (filter: AudienceNode): Audience => ({ mode: "match", filter });
 

@@ -19,6 +19,9 @@ export interface LinkedFilterEditorProps {
   /** 可引用的表單層欄位(呼叫端已排除自己與明細欄) */
   fields: readonly FieldDef[];
   onChange: (value: LookupSourceDescriptor) => void;
+  /** 標題與說明(預設 = 連動篩選;引用欄「來源提供的預設」的條件共用這個編輯器) */
+  title?: string;
+  hint?: string;
 }
 
 const UNSET = "";
@@ -49,6 +52,8 @@ export const LinkedFilterEditor = ({
   provider,
   fields,
   onChange,
+  title,
+  hint,
 }: LinkedFilterEditorProps) => {
   const t = useTranslations("admin.forms.lookupSource");
   if (provider.filterFields.length === 0) {
@@ -78,11 +83,11 @@ export const LinkedFilterEditor = ({
   };
 
   return (
-    <Stack spacing={1} role="group" aria-label={t("linkedFilter")}>
+    <Stack spacing={1} role="group" aria-label={title ?? t("linkedFilter")}>
       <Stack spacing={0.25}>
-        <Typography variant="body2">{t("linkedFilter")}</Typography>
+        <Typography variant="body2">{title ?? t("linkedFilter")}</Typography>
         <Typography variant="caption" color="textSecondary">
-          {t("linkedFilterHint")}
+          {hint ?? t("linkedFilterHint")}
         </Typography>
       </Stack>
       {provider.filterFields.map((name) => {

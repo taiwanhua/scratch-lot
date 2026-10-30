@@ -65,8 +65,8 @@ const MY_NOTIFICATIONS = /* GraphQL */ `
         link
         readAt
       }
-      page
       pageSize
+      nextCursor
       totalCount
       unreadCount
     }
@@ -184,8 +184,8 @@ interface NotificationRow {
 interface MyNotificationsData {
   myNotifications: {
     items: NotificationRow[];
-    page: number;
     pageSize: number;
+    nextCursor: string | null;
     totalCount: number;
     unreadCount: number;
   };
@@ -297,6 +297,17 @@ describe("通知 notify() / 通知清單 / 通知設定", () => {
     return data.myNotifications;
   };
 
+  /** 通知設定清單列出的類型 key。 */
+  const settingTypesOf = async (
+    who: FormOperator,
+    input: Record<string, unknown>,
+  ) => {
+    const { notificationSettings } = await ok<{
+      notificationSettings: { items: SettingRow[] };
+    }>(api, who.token, NOTIFICATION_SETTINGS, { input });
+    return notificationSettings.items.map((item) => item.type);
+  };
+
   const setPreference = (
     who: FormOperator,
     settings: Record<string, unknown>,
@@ -323,7 +334,7 @@ describe("通知 notify() / 通知清單 / 通知設定", () => {
     const rows = await rowsOf(dedupeKey);
     return rows
       .map((row) => String(row.recipientId))
-      .toSorted((a, b) => a.localeCompare(b));
+      .toSorted((a, b) => a.localeCompare(b, "zh-Hant"));
   };
 
   beforeAll(async () => {
@@ -751,8 +762,8 @@ describe("通知 notify() / 通知清單 / 通知設定", () => {
       });
     });
 
-    it("依時間新到舊、分頁;每則帶連結登記表換成的路徑", async () => {
-      const first = await listOf(reader, { page: 1, pageSize: 3 });
+    it("依時間新到舊、游標分頁;每則帶連結登記表換成的路徑", async () => {
+      const first = await listOf(reader, { pageSize: 3 });
       expect(first.totalCount).toBe(4);
       expect(first.unreadCount).toBe(4);
       expect(first.items).toHaveLength(3);
@@ -762,11 +773,94 @@ describe("通知 notify() / 通知清單 / 通知設定", () => {
       expect(first.items[1]?.link).toBe(
         `/apply-center/view-page/${first.items[1]?.refId ?? ""}`,
       );
-      const second = await listOf(reader, { page: 2, pageSize: 3 });
+      expect(first.nextCursor).not.toBeNull();
+      const second = await listOf(reader, {
+        after: first.nextCursor,
+        pageSize: 3,
+      });
       expect(second.items.map((item) => item.title)).toEqual([
         "申請已核准:第 0 張",
       ]);
+      expect(second.nextCursor).toBeNull();
       ids.push(...first.items.map((item) => item.id));
+    });
+
+    it("游標解不開 → VALIDATION_FAILED(INVALID_CURSOR)", async () => {
+      for (const after of [
+        "not-a-cursor",
+        Buffer.from("x_y").toString("base64url"),
+      ]) {
+        const rejected = await call(api, reader.token, MY_NOTIFICATIONS, {
+          input: { after },
+        });
+        expect(codeOf(rejected)).toBe("VALIDATION_FAILED");
+        expect(extensionsOf(rejected)).toMatchObject({
+          reason: "INVALID_CURSOR",
+        });
+      }
+    });
+
+    it("載入下一批的途中來了新通知:下一批接著游標往下,不重複、不漏", async () => {
+      const watcher = await createOperator(api, api.connection, {
+        orgId: store,
+        ownerOrgId: tenant,
+        moduleKeys: [],
+        permissionKeys: [],
+      });
+      const notifyWatcher = (subject: string) =>
+        service.notify({
+          ...partyInput(WORKFLOW_RESULT, [watcher], nextKey("cursor")),
+          params: { subject, result: "approved" },
+        });
+      for (const subject of ["A", "B", "C", "D"]) {
+        await notifyWatcher(subject);
+      }
+      const first = await listOf(watcher, { pageSize: 2 });
+      expect(first.items.map((item) => item.title)).toEqual([
+        "申請已核准:D",
+        "申請已核准:C",
+      ]);
+      await notifyWatcher("E");
+      const second = await listOf(watcher, {
+        after: first.nextCursor,
+        pageSize: 2,
+      });
+      expect(second.items.map((item) => item.title)).toEqual([
+        "申請已核准:B",
+        "申請已核准:A",
+      ]);
+      expect(second.nextCursor).toBeNull();
+      expect(second.totalCount).toBe(5);
+    });
+
+    it("「未讀」清單點過已載入的通知:下一批接著游標往下,不漏", async () => {
+      const clicker = await createOperator(api, api.connection, {
+        orgId: store,
+        ownerOrgId: tenant,
+        moduleKeys: [],
+        permissionKeys: [],
+      });
+      for (const subject of ["A", "B", "C", "D"]) {
+        await service.notify({
+          ...partyInput(WORKFLOW_RESULT, [clicker], nextKey("unread")),
+          params: { subject, result: "approved" },
+        });
+      }
+      const first = await listOf(clicker, { unreadOnly: true, pageSize: 2 });
+      // 點了第一批的兩則(標已讀,離開「未讀」篩選)
+      await ok(api, clicker.token, MARK_READ, {
+        input: { ids: first.items.map((item) => item.id) },
+      });
+      const second = await listOf(clicker, {
+        unreadOnly: true,
+        after: first.nextCursor,
+        pageSize: 2,
+      });
+      expect(second.items.map((item) => item.title)).toEqual([
+        "申請已核准:B",
+        "申請已核准:A",
+      ]);
+      expect(second.nextCursor).toBeNull();
     });
 
     it("標已讀 → 未讀數減少;「未讀」只列未讀;別人的通知標不到", async () => {
@@ -854,6 +948,25 @@ describe("通知 notify() / 通知清單 / 通知設定", () => {
         isScheduleDefault: true,
       });
       expect(offline?.audience).toEqual(offline?.defaultAudience);
+    });
+
+    it("關鍵字比對登記的名稱與 key;nameMatchedTypes(前端以顯示名稱比中的)取聯集", async () => {
+      expect(await settingTypesOf(admin, { keyword: "列印代理" })).toEqual([
+        PRINTING_AGENT_OFFLINE,
+      ]);
+      expect(await settingTypesOf(admin, { keyword: "agent-offline" })).toEqual(
+        [PRINTING_AGENT_OFFLINE],
+      );
+      // 英文介面的名稱(例「Print agent offline」)api 比不到,前端把比中的類型 key 帶來
+      expect(await settingTypesOf(admin, { keyword: "print agent" })).toEqual(
+        [],
+      );
+      expect(
+        await settingTypesOf(admin, {
+          keyword: "print agent",
+          nameMatchedTypes: [PRINTING_AGENT_OFFLINE, "not.a-type"],
+        }),
+      ).toEqual([PRINTING_AGENT_OFFLINE]);
     });
 
     it("租戶調整人員條件後,下一次觸發依新條件(且只在類型宣告的組織範圍內);還原預設後回到類型宣告", async () => {
@@ -978,7 +1091,7 @@ describe("通知 notify() / 通知清單 / 通知設定", () => {
       expect(maxInFlight).toBe(1);
       expect(await recipientsOf(dedupeKey)).toEqual(
         [String(printerAdmin.userId), String(bob.userId)].toSorted((a, b) =>
-          a.localeCompare(b),
+          a.localeCompare(b, "zh-Hant"),
         ),
       );
       await ok(api, admin.token, RESET_SETTING, {

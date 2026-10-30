@@ -1,1 +1,22 @@
-{}
+{
+  "shell": {
+    "rootOrgNotice": {
+      "message": "You are at the platform level. Switch to the organization you want to manage first.",
+      "hint": "After switching the current organization you will see that organization’s data."
+    }
+  },
+  "reports": {
+    "reportList": {
+      "option": "{name} (up to {max} branches)"
+    },
+    "conditions": {
+      "orgs": "Branches",
+      "orgsRequired": "Select at least one branch"
+    },
+    "totalSheet": "All branches",
+    "errors": {
+      "RANGE_TOO_LARGE": "The period or number of branches exceeds this report's limit. Narrow it down and try again.",
+      "VALIDATION_FAILED": "The conditions are incomplete. Check the period and branches."
+    }
+  }
+}

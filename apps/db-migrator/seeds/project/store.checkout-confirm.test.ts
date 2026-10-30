@@ -1,12 +1,12 @@
 import { describe, expect, it } from "@jest/globals";
 
+import { VOID_REASON_CATEGORY_KEY } from "@repo/domain/form";
 import {
   CHECKOUT_CONFIRM_FORM_KEY,
   CHECKOUT_CREATE_PERMISSION,
   CHECKOUT_FIELD_KEYS,
   STORE_KEY,
 } from "@repo/domain/project/lottery";
-import { SHARED_FIELD_CATEGORY_KEYS } from "@repo/domain/project/reason-note";
 
 import { assembleSeedRegistry } from "../registry";
 import { FORM_WORKFLOWS } from "./onboarding/form-workflows";
@@ -33,7 +33,7 @@ describe("受管表單 結帳確認申請(checkout_confirm r1)", () => {
       key: CHECKOUT_CONFIRM_FORM_KEY,
       moduleKey: STORE_KEY,
       allowDraft: false,
-      voidReasonCategoryKey: SHARED_FIELD_CATEGORY_KEYS.voidReason,
+      voidReasonCategoryKey: VOID_REASON_CATEGORY_KEY,
       // 依欄位共用:分店欄指到的分店也看得到(唯讀)
       sharedByFieldKeys: ["branch"],
       serial: { prefix: "C", period: "none", digits: 4 },

@@ -1,5 +1,5 @@
 /** 營運報表的「分店比較」工作表(項目 × 分店 + 合計;使用者 10/26 定)。 */
-import type { SheetSection } from "@/lib/project/reports/excel";
+import type { SheetSection } from "@/lib/base/reports/excel";
 
 import {
   type OperationsStore,

@@ -552,8 +552,12 @@ describe("清空示範機構 purgeDemoTenant(規格 2.2:demo --mode=purge / rebu
     ).toBe(0);
 
     // 檔案:示範機構的商標與資料裡的附件刪掉,另一個租戶的不動
-    expect(storage.deleted.toSorted((a, b) => a.localeCompare(b))).toEqual(
-      [DEMO_ATTACHMENT, DEMO_LOGO].toSorted((a, b) => a.localeCompare(b)),
+    expect(
+      storage.deleted.toSorted((a, b) => a.localeCompare(b, "zh-Hant")),
+    ).toEqual(
+      [DEMO_ATTACHMENT, DEMO_LOGO].toSorted((a, b) =>
+        a.localeCompare(b, "zh-Hant"),
+      ),
     );
     expect(payload?.deletedFiles).toBe(2);
 

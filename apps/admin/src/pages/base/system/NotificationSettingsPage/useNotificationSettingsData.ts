@@ -12,6 +12,7 @@ import { useIsAtRootOrg } from "@/hooks/base/useIsAtRootOrg";
 import { usePermissions } from "@/hooks/base/usePermissions";
 import { useSession } from "@/hooks/base/useSession";
 import { useUrlState } from "@/hooks/base/useUrlState";
+import { useNotificationTypesMatchingName } from "@/lib/base/notification-type-name";
 
 import { NOTIFICATION_SETTINGS_PERMISSIONS } from "./notification-settings-permissions";
 
@@ -59,17 +60,20 @@ export const useNotificationSettingsData = () => {
 
   const [list, setList] = useUrlState("list", listSchema);
   const { keyword, page } = list;
+  const typesMatchingName = useNotificationTypesMatchingName();
 
-  const variables = useMemo<NotificationSettingsQueryVariables>(
-    () => ({
+  // 搜尋也比對畫面上的顯示名稱(英文介面的名稱只在訊息檔,api 比不到):比中的類型 key 一起送
+  const variables = useMemo<NotificationSettingsQueryVariables>(() => {
+    const trimmed = keyword.trim();
+    return {
       input: {
-        keyword: keyword.trim() === "" ? null : keyword.trim(),
+        keyword: trimmed === "" ? null : trimmed,
+        nameMatchedTypes: trimmed === "" ? null : typesMatchingName(trimmed),
         page,
         pageSize: NOTIFICATION_SETTINGS_PAGE_SIZE,
       },
-    }),
-    [keyword, page],
-  );
+    };
+  }, [keyword, page, typesMatchingName]);
   const settings = useNotificationSettingsQuery(session.client, variables);
 
   const rows: readonly NotificationSettingItemFragment[] =

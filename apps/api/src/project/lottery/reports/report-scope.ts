@@ -18,10 +18,10 @@ import {
   type ReportRangeInput,
   type ReportRangeRule,
   assertReportRange,
-} from "../../reports/report-range";
+} from "../../../reports/report-range";
 import { PeriodLock } from "../accounts/period-lock";
 
-/** 報表模組的頁內權限(seed 正本 `apps/db-migrator/seeds/project/reports.ts`)。 */
+/** 報表模組的頁內權限(seed 正本:兩張報表 `apps/db-migrator/seeds/project/reports.ts`、`show-cost` `seeds/base/modules/reports.ts`)。 */
 export const REPORTS_PERMISSIONS = {
   operations: "reports.operations",
   shiftCheckouts: "reports.shift-checkouts",

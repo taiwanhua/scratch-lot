@@ -118,7 +118,7 @@ export interface ReviewStepDef {
   assignee: AssigneeSource;
   mode: ApprovalMode;
   /**
-   * 跳過條件(6a 表達式;畫面上的「符合條件」);成立 → 整關跳過;沒設 → 不看公式。
+   * 跳過條件(6a 表達式;畫面上的「符合跳過條件」);成立 → 整關跳過;沒設 → 不看公式。
    * 與 `skipOrgs` 任一項成立就跳過。
    */
   skipWhen?: Expression | null;
@@ -333,7 +333,7 @@ export type HistoryKind = (typeof HISTORY_KINDS)[number];
 
 /**
  * 歷程事件的原因(時間軸顯示「是哪一項成立」):
- * - `step_skipped`:`skip_orgs`(申請人屬於指定組織)/ `skip_condition`(符合條件)
+ * - `step_skipped`:`skip_orgs`(申請人屬於指定組織)/ `skip_condition`(符合跳過條件)
  * - `approved`:`auto_applicant`(申請人是審核者,自動通過)/ `auto_prior_approver`(已在前關核准,自動通過)
  * - `auto_approve_blocked`(自動通過被 `beforeApprove` 擋下):同上兩個值,表示是哪一種自動通過沒成立
  *

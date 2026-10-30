@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { Types } from "mongoose";
 
+import { compareDisplayName } from "@repo/domain/collation";
 import {
   SCHEDULE_EMPLOYMENT_TYPES,
   type ScheduleEmploymentType,
@@ -44,7 +45,6 @@ import {
   SCHEDULE_PERMISSIONS,
   SchedulePermissions,
 } from "../shared/schedule-permissions";
-import { compareScheduleNames } from "../shared/schedule-sort";
 import type {
   AddScheduleStaffInput,
   ScheduleStaffListInput,
@@ -118,7 +118,7 @@ export class ScheduleStaffService {
       staffByUser.set(String(record.userId), record);
     }
     const users = [...candidates, ...shared.users].toSorted((left, right) =>
-      compareScheduleNames(left.name, right.name),
+      compareDisplayName(left.name, right.name),
     );
     const joinedInTenant = await this.joinedInTenant(operator, tenantId, users);
     const rows = await this.rowsOf(
@@ -384,7 +384,7 @@ export class ScheduleStaffService {
       .toSorted(
         (left, right) =>
           left.sortOrder - right.sortOrder ||
-          compareScheduleNames(left.name, right.name),
+          compareDisplayName(left.name, right.name),
       );
   }
 
@@ -422,7 +422,7 @@ export class ScheduleStaffService {
       tenantId: org.tenantId,
       visibleOrgs,
       users: users.toSorted((left, right) =>
-        compareScheduleNames(left.name, right.name),
+        compareDisplayName(left.name, right.name),
       ),
     };
   }

@@ -30,6 +30,7 @@ const FIELD_FIELDS = /* GraphQL */ `
     order
     enabled
     description
+    color
     ownerOrg {
       id
       name
@@ -100,6 +101,17 @@ export const SET_FIELD_ENABLED = /* GraphQL */ `
   }
 `;
 
+export const SET_FIELD_COLOR = /* GraphQL */ `
+  ${FIELD_FIELDS}
+  mutation SetFieldColor($input: SetFieldColorInput!) {
+    setFieldColor(input: $input) {
+      field {
+        ...FieldFields
+      }
+    }
+  }
+`;
+
 export interface FieldOwnerOrgRow {
   id: string;
   name: string;
@@ -113,6 +125,8 @@ export interface FieldRow {
   order: number;
   enabled: boolean;
   description: string | null;
+  /** 標籤色票代號;null = 不設定顏色。 */
+  color: string | null;
   /** null = 全域種子;有值 = 加這筆的組織(可能是上層 / 下層組織)。 */
   ownerOrg: FieldOwnerOrgRow | null;
   isOwn: boolean;
@@ -130,6 +144,10 @@ export interface CreateFieldData {
 
 export interface SetFieldEnabledData {
   setFieldEnabled: { field: FieldRow };
+}
+
+export interface SetFieldColorData {
+  setFieldColor: { field: FieldRow };
 }
 
 interface LoginData {

@@ -2,13 +2,11 @@
 
 ## 用途
 
-「輸出報表」模組:選報表 → 填條件(期間、分店、其他條件)→ [預覽] [匯出 Excel]。本模組是**報表登記的外框**(專案規格 18.4 B11):外框只認得一份報表宣告的形狀,每張報表自己提供查詢與「查詢結果 → 工作表」;Excel 與預覽共用同一份工作表,畫面看到的就是匯出的內容。
+專案在底座「輸出報表」模組(外框、報表登記介面、期間、Excel 與預覽:`docs/modules/reports.md`)登記了兩張報表:營運報表、班次結帳歷史報表(專案規格 11.2、11.3;見下方「營運報表」「班次結帳歷史報表」兩節)。本文件只寫這兩張報表與專案的權限、角色、用詞;外框的規則以底座文件為準。
 
-登記了兩張報表:營運報表、班次結帳歷史報表(專案規格 11.2、11.3;見下方「營運報表」「班次結帳歷史報表」兩節)。Excel 產生器也給沒有期間 / 分店的單純表格用(出勤紀錄、採購清單)。
+用詞:底座的「組織」在本專案的報表畫面一律叫「分店」(`packages/i18n/messages/<語系>/project/admin.replacements.json` 的 `reports.*`;例「分店最多 50 家」「全部分店合計」),使用者說明以專案版替換(`project/replacements/reports.help.md`)。
 
-這是 S2 的專案客製(專案規格 18.2):先放專案路徑,回收前升格成底座,見文末「S2 升格待辦」。
-
-正本:`apps/db-migrator/seeds/project/reports.ts`、`apps/admin/src/lib/project/reports/`
+正本:`apps/db-migrator/seeds/project/reports.ts`、`apps/admin/src/app/project/reports.ts`、`apps/admin/src/pages/project/lottery/reports/`
 
 ## 模組 key 與畫面
 
@@ -16,7 +14,7 @@
 | --------- | -------- | ----------- | ---------- | -------- |
 | `reports` | 輸出報表 | link        | `/reports` | 見權限表 |
 
-一頁,沒有隱藏頁。側欄排序 `order: 50`(專案模組依規格 3.1 的順序每隔 10 一號:店面 10、庫存 20、叫貨與進貨 30、帳戶 40、報表 50、經銷商 60、檔案管理 70、班表 80)。
+模組是底座的(`apps/db-migrator/seeds/base/modules/reports.ts`);一頁,沒有隱藏頁。側欄排序 `order: 50` 剛好落在專案模組依規格 3.1 每隔 10 一號的位置(店面 10、庫存 20、叫貨與進貨 30、帳戶 40、報表 50、經銷商 60、檔案管理 70、班表 80)。
 
 **畫面**(Figma 報表頁 94:14;平板 / 手機照 RW-01–04 共用規則,不另畫):
 
@@ -28,22 +26,19 @@
 | RE-04 | 營運報表 預覽        | `129:1186`(平板 `143:36149`、手機 `143:36385`) |
 | RE-05 | 班次結帳歷史報表     | `129:1512`                                     |
 
-外框只做選報表、期間、分店、其他條件、預覽、匯出按鈕;報表內容(RE-02 的八個區塊卡片、RE-04、RE-05)與月份格子的「已關帳 / 尚未關帳」屬於各報表(經報表登記的 `ConditionsAddon` / `MonthCaption` / `SheetBody` 接進外框)。
+外框(底座)只做選報表、期間、分店、其他條件、預覽、匯出按鈕;報表內容(RE-02 的八個區塊卡片、RE-04、RE-05)與月份格子的「已關帳 / 尚未關帳」屬於各報表(經報表登記的 `ConditionsAddon` / `MonthCaption` / `SheetBody` 接進外框)。外框畫面在底座的 Figma 尚未重建,目前以本專案報表頁 94:14 為準。
 
-正本:`apps/db-migrator/seeds/project/reports.ts`、`apps/admin/src/app/project/module-pages.ts`
+正本:`apps/admin/src/app/base/module-pages.ts`(頁面)、`apps/admin/src/app/project/reports.ts`(專案的登記)
 
 ## 權限表
 
-| 權限 key                  | moduleId 指向 | 它是哪一頁的什麼                                                        |
-| ------------------------- | ------------- | ----------------------------------------------------------------------- |
-| `reports.*`               | 輸出報表      | wildcard(同層語意,ADR-0004);seed 自動產生                               |
-| `reports.operations`      | 輸出報表      | 報表選單出現「營運報表」                                                |
-| `reports.shift-checkouts` | 輸出報表      | 報表選單出現「班次結帳歷史報表」                                        |
-| `reports.export`          | 輸出報表      | [匯出 Excel](條件區與預覽都是);沒有就看不到按鈕,[預覽] 照常             |
-| `reports.show-cost`       | 輸出報表      | 報表的成本與毛利欄;外框把它交給報表的 `sheets`(`canShowCost`)決定放不放 |
+| 權限 key                  | moduleId 指向 | 它是哪一頁的什麼                 |
+| ------------------------- | ------------- | -------------------------------- |
+| `reports.operations`      | 輸出報表      | 報表選單出現「營運報表」         |
+| `reports.shift-checkouts` | 輸出報表      | 報表選單出現「班次結帳歷史報表」 |
 
-- 每張報表一條頁內權限 `reports.<報表 key>`,沒有的報表不出現在選單;一張都沒有時選單是空的並顯示說明。
-- 進不進得去整頁看 `me.modules` 有沒有 `reports`;報表的查詢端點由各報表以 `reports.<報表 key>` 守門(api)。
+- 專案 seed 只宣告這兩條(`nodes: []`、`moduleKey: "reports"`);`reports.*`、`reports.export`、`reports.show-cost` 是底座的(`docs/modules/reports.md`「權限表」)。
+- 兩張報表的查詢端點以各自的權限守門;營運報表的成本與毛利另看 `reports.show-cost`。
 
 **開通時建立的角色**(專案規格 3.3;配方 `apps/db-migrator/seeds/project/onboarding/role-grants/reports.ts`):
 
@@ -61,106 +56,22 @@
 
 ## 規則
 
-### 期間
+期間、條件放網址、分店上限與範圍檢查、工作表與 Excel、預覽:外框的規則見 `docs/modules/reports.md`「規則」。兩張報表的範圍限制:營運報表日 / 週 / 月、分店最多 50 家;班次結帳歷史報表日 / 週 / 月、分店最多 20 家(admin `report-registrations.ts` 的 `conditions` 與 api `report-scope.ts` 的 `OPERATIONS_RANGE` / `SHIFT_CHECKOUTS_RANGE` 同一組值)。
 
-選擇器給的是**租戶時區**的當地日期,admin 用表單引擎的 `startOfLocalDay`、`addLocalCalendar` 換成起訖時點(迄不含)再送 api;api 只收時點。沒有自訂區間。
+## 報表登記
 
-| 類型 | 選擇器                                                         | 起               | 迄(不含)           |
-| ---- | -------------------------------------------------------------- | ---------------- | ------------------ |
-| 日   | 日期 + [今天] [昨天]                                           | 當日 00:00       | 隔日 00:00         |
-| 週   | 月曆點任一天選整週,顯示「10/11(日)~ 10/17(六)」+ [本週] [上週] | **星期日** 00:00 | 下一個星期日 00:00 |
-| 月   | 年份切換 + 12 個月格子 + [本月] [上月]                         | 1 日 00:00       | 下個月 1 日 00:00  |
+兩張報表在 `apps/admin/src/pages/project/lottery/reports/report-registrations.ts` 以 `registerReport` 宣告(登記介面見 `docs/modules/reports.md`「報表登記介面」),由 `apps/admin/src/app/project/reports.ts` 列進專案的登記清單(順序 = 選單順序)。報表名稱的訊息 key 在 `admin.lotteryReports.reports.<key>`(死鍵白名單 `packages/i18n/src/project/dynamic-keys.ts`),其他條件的文案在 `admin.lotteryReports.extra.*`。
 
-- 一週固定從星期日開始(與 `MonthCalendar` 同一規則);週次不顯示。
-- 「今天」是租戶時區的今天(頁面開啟時取一次),不用瀏覽器時區。
-- 換期間類型時保留日期、整理成新類型的起點(日 10/14 → 週 10/11 → 月 10/1)。
+| 報表             | key               | 其他條件                                                                  |
+| ---------------- | ----------------- | ------------------------------------------------------------------------- |
+| 營運報表         | `operations`      | 對齊日結(勾選,只有日);`ConditionsAddon`(逐店期間)、`MonthCaption`(已關帳) |
+| 班次結帳歷史報表 | `shift-checkouts` | 收銀點(`custom`,選項查 api)、只看有差額(勾選)                             |
 
-### 條件放網址
-
-`report`(報表 key)、`conditions`(期間、分店、其他條件)、`preview`(預覽開著沒、第幾個工作表)都經 `useUrlState`(REACT-14)。網址的條件可能來自別張報表或被手改,畫面先整理成這張報表合法的值:期間類型不在清單 → 第一種;分店去重、超過上限只留前面的;其他條件留這張報表宣告的全部(只在別種期間類型出現的也留著,例:日勾了「對齊日結」,切到週再切回日仍勾著),值不合用預設(勾選 = 不勾、下拉 = 第一個選項),送查詢時才依期間類型過濾。改條件會關掉預覽,上一次匯出失敗的提示也一併清掉(關掉預覽時同樣清掉)。
-
-### 分店上限與範圍檢查
-
-- admin:`OrgTreeSelect` 多選、`scope="visible"`(列整棵租戶樹 `tenantOrgTree`,只有可見範圍內的能選;預覽的分店名稱也取同一份)、`maxCount` = 報表的 `conditions.orgs.max`;沒選分店時 [匯出 Excel] [預覽] 都不能按。按鈕順序照 Figma RE-03:[匯出 Excel](主要)在左、[預覽](外框)在右。
-- api:每張報表的查詢在讀資料前呼叫 `assertReportRange`,不合格丟 `GraphQLError`:
-
-| 情況                                                                                     | 結果                                                      |
-| ---------------------------------------------------------------------------------------- | --------------------------------------------------------- |
-| 期間類型不在 `allowed`(含不認得的字)                                                     | `VALIDATION_FAILED` + `reason: "RANGE_TOO_LARGE"`         |
-| 分店數超過 `maxOrgs`                                                                     | `VALIDATION_FAILED` + `reason: "RANGE_TOO_LARGE"`         |
-| 起訖長度超過該類型上限(日 25 小時、週 7 天 1 小時、月 31 天 1 小時;多的一小時給夏令時間) | `VALIDATION_FAILED` + `reason: "RANGE_TOO_LARGE"`         |
-| 沒選分店                                                                                 | `VALIDATION_FAILED`(沒有 reason),`fields: ["orgIds"]`     |
-| 起訖不是時點、或迄不晚於起                                                               | `VALIDATION_FAILED`(沒有 reason),`fields: ["from", "to"]` |
-
-分店是否在操作者的可見範圍內由各報表的查詢自己處理。
-
-### 工作表與 Excel
-
-- 報表的 `sheets` 回「全部分店合計」一張 + 每家分店一張(+ `extras` 其他工作表,排在最後);外框排成合計在前、分店照選擇器順序,工作表名稱用分店名(合計固定「全部分店合計」)。工作表建構拿得到產出時間 `generatedAt` 與產出人 `generatedBy`(登入者名稱)。
-- Excel:每個工作表 A4、縮放成一頁寬(`fitToWidth: 1`、`fitToHeight: 0`)、每頁重複標題列(`printTitlesRow` = 第 1 列到表頭那一列;有表頭說明 `notes` 時說明列一起重複)。
-- **分段表格**(`SheetData.sections`;營運報表用):一個工作表排好幾段小表,每段 = 標題列(深色底、合併到最寬那段的欄數)、表頭(淺色底、框線)、資料列(框線;列上 `_emphasis: "total"` = 合計列粗體、`_format: "percent"` = 比率列 `0.0%`)、補充說明(斜體);段與段之間空一列。表頭說明 `notes` 第一列粗體、凍結(`views` frozen)並每頁重複;一段放不進這一頁剩下的空間、但放得進一整頁 → 那一段前面換頁(估一頁 48 列,`sectionPageBreaksOf`);欄寬取各段同一欄最寬的。負數紅字由欄位的 `numFmt`(例 `#,##0;[Red]-#,##0`)決定。
-- 工作表名稱依 Excel 限制整理:去掉 `\ / ? * : [ ]`、最多 31 字、重名加「 (2)」。
-- exceljs 只在匯出時才載入(動態 import,獨立 chunk)。
-- 匯出的資料:從預覽按 [匯出 Excel] 直接用預覽那一份(`fetchQuery` 帶 `staleTime: Infinity`,不重打 api,Excel 就是畫面上那一份);從條件區按(預覽沒開)時每次重查(`staleTime: 0`)。
-- 檔名「報表名稱\_期間.xlsx」(例 `營運報表_2026-10-16.xlsx`)。
-
-### 預覽
-
-`SheetPreview`:工作表 → 表格,上方頁籤切工作表,預設顯示第一個(合計);表頭說明排在表格上方。分段表格逐段一張表(段標題 + 一句說明 + 表格 + 補充說明);手機(< sm)每列一張卡片(第一欄當標題、其他有值的欄「表頭 值」);負數紅字、合計列粗體、比率列「8.0%」,與 Excel 相同。預覽頁的標題是「報表 · 期間」,旁邊列出選的分店,右上 [返回條件] [匯出 Excel]。
-
-正本:`apps/admin/src/lib/project/reports/report-period.ts`、`apps/admin/src/lib/project/reports/report-conditions.ts`、`apps/admin/src/lib/project/reports/excel.ts`、`apps/api/src/project/reports/report-range.ts`
-
-## 報表登記介面
-
-admin 登記一張報表:在 `apps/admin/src/pages/project/lottery/reports/report-registrations.ts` 的清單加一筆 `registerReport({...})`(`apps/admin/src/lib/project/reports/report-registry.ts`)。清單順序 = 選單順序;宣告式清單,載入時不寫共享狀態。
-
-```ts
-registerReport({
-  key: "operations", // 權限 reports.operations(seed 要有同名一筆)
-  name: "lotteryReports.reports.operations", // 訊息 key(admin namespace)
-  conditions: {
-    period: ["day", "week", "month"],
-    orgs: { max: 50 },
-    extra: [
-      {
-        key: "alignDailyClose", // 也是查詢 input 的欄位名
-        type: "boolean", // 或 "select"(帶 options)
-        label: "lotteryReports.extra.alignDailyClose", // 訊息 key
-        only: "day",
-      },
-    ],
-  },
-  query: useOperationsReportQuery, // codegen 的 query hook(取它的 getKey / fetcher)
-  sheets: buildOperationsSheets, // (data, context) => { total, branches }
-});
-```
-
-| 欄位                                    | 說明                                                                                                                                                                                                                                                                             |
-| --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `key`                                   | kebab-case;權限 `reports.<key>`                                                                                                                                                                                                                                                  |
-| `name`、`extra[].label`、選項的 `label` | **訊息 key**(`admin` namespace,I18N-01),不是文字;報表名稱放 `lotteryReports.reports.<key>`                                                                                                                                                                                       |
-| `conditions.period`                     | 可選的期間類型,至少一種、不重複;頁籤順序照它,只有一種時不顯示頁籤                                                                                                                                                                                                                |
-| `conditions.orgs.max`                   | 分店上限(正整數);選單上註明「分店最多 N 家」                                                                                                                                                                                                                                     |
-| `conditions.extra`                      | 其他條件:`boolean`(勾選)、`select`(下拉,至少一個選項)、`custom`(報表自己給欄位元件 `Field`,值是字串、預設 `defaultValue`;選項要查 api 的下拉用它,網址裡的值不檢查選項、交給 api);`only` 限定某種期間類型;key 不可重複,也不可用 `periodKind` / `from` / `to` / `orgIds`           |
-| `query`                                 | `{ getKey, fetcher }`,直接給 codegen 的 query hook;變數一律 `{ input }`(GQL-02)                                                                                                                                                                                                  |
-| `sheets`                                | 查詢結果 → `{ total, branches: [{ orgId, ... }] }`;每張是 `{ columns, rows, notes? }`;context 有 `t`、`timezone`、`input`、`orgs`、`canShowCost`。`t` 是 `admin` namespace;工作表裡的訊息 key 寫完整路徑(`admin.` 開頭,死鍵掃描才認得),用 `fullPathTranslator(context.t)` 包一層 |
-| `ConditionsAddon`(選填)                 | 條件卡片裡、其他條件下方的報表專屬區塊(拿到 `input`、期間類型與起點、其他條件的值)                                                                                                                                                                                               |
-| `MonthCaption`(選填)                    | 月份格子下方的註記(拿到 `month`、`input`)                                                                                                                                                                                                                                        |
-| `SheetBody`(選填)                       | 預覽換成報表自己的畫法(拿到同一份 `SheetData`;頁籤、表頭說明照外框);Excel 一律是表格                                                                                                                                                                                             |
-
-宣告寫錯在載入時就丟錯(`registerReport("<key>"): …`),不等到使用者點到。
-
-**查詢 input**(admin 組好交給 `fetcher`):`{ periodKind, from, to, orgIds, ...其他條件 }`,其他條件依 key 攤平(例 `alignDailyClose: true`);只在該期間類型出現的條件,其他類型不送。`periodKind` 是字串 `day` / `week` / `month`,api 端照收字串、交給 `assertReportRange` 驗(不另宣告 GraphQL enum,避免 enum 名稱與值不同)。
-
-**api 端**:報表的 resolver 用 `@RequirePermission("reports.<key>")` 守門,service 讀資料前 `assertReportRange({ periodKind, from, to, orgIds }, { allowed, maxOrgs })`,`allowed` / `maxOrgs` 與 admin 的 `conditions` 同一組值。
-
-**Excel 的其他用途**:`buildWorkbook({ sheets: [{ name, columns, rows }] })` 回 exceljs 的 `Workbook`;`downloadWorkbook({ sheets, fileName })` 直接下載。沒有期間 / 分店的單純表格(出勤紀錄、採購清單)直接給一個工作表即可。
-
-正本:`apps/admin/src/lib/project/reports/report-registry.ts`、`apps/admin/src/lib/project/reports/excel.ts`、`apps/api/src/project/reports/report-range.ts`
+正本:`apps/admin/src/pages/project/lottery/reports/report-registrations.ts`、`apps/admin/src/app/project/reports.ts`
 
 ## api 介面
 
-外框本身沒有 GraphQL 端點;只提供共用函式 `assertReportRange`(`apps/api/src/project/reports/report-range.ts`)給各報表的 service 呼叫。
+外框本身沒有 GraphQL 端點;各報表的 service 呼叫底座的 `assertReportRange`(`apps/api/src/reports/report-range.ts`)。
 
 | 端點(Query)                                    | 權限                      | 說明                                                                    |
 | ---------------------------------------------- | ------------------------- | ----------------------------------------------------------------------- |
@@ -171,24 +82,20 @@ registerReport({
 
 input:`{ periodKind, from, to, orgIds }`,營運報表另有 `alignDailyClose`,班次結帳歷史另有 `cashPointId`(空 = 全部)、`onlyWithDifference`。分店要在操作者的可見範圍內、同一個租戶(看不到 → `NOT_FOUND`);確認後以租戶邊界讀這些分店的資料(`report-scope.ts`,登記在 `project/database/tenant-boundary-callers.ts`,用途「反查」)。唯讀,不寫稽核。
 
-正本:`apps/api/src/project/reports/report-range.ts`、`apps/api/src/project/lottery/reports/`
+正本:`apps/api/src/reports/report-range.ts`、`apps/api/src/project/lottery/reports/`
 
 ## admin 頁面
 
-| 檔案                                                            | 內容                                                                                                                                                                           |
-| --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `pages/project/lottery/reports/ReportsPage/ReportsPage.tsx`     | 依權限過濾報表、選報表(網址 `report`)                                                                                                                                          |
-| `pages/project/lottery/reports/ReportsPage/ReportWorkspace.tsx` | 條件 ↔ 預覽、網址狀態 `conditions` / `preview`                                                                                                                                 |
-| `pages/project/lottery/reports/ReportsPage/useReportRun.ts`     | 預覽查詢、匯出(同一個 query key;從預覽按匯出用預覽那份快取、不重查,從條件區按匯出每次重查)                                                                                     |
-| `components/project/ReportPeriodPicker/`                        | 期間選擇器(日 / 週 / 月 + 快捷;`monthCaption` 給月份格子加註記)                                                                                                                |
-| `components/project/SheetPreview/`                              | 工作表 → 表格的預覽(分段表格逐段一張表、手機每列一張卡片;報表給了 `SheetBody` 就換成它的畫法)                                                                                  |
-| `pages/project/lottery/reports/report-registrations.ts`         | 營運報表、班次結帳歷史報表的登記                                                                                                                                               |
-| `pages/project/lottery/reports/operations/`                     | 營運報表:工作表(`operations-sheets.ts`、列 `operations-rows*.ts`、合計 `operations-total.ts`)、逐店期間與提醒(`OperationsConditionsAddon`)、月份註記(`OperationsMonthCaption`) |
-| `pages/project/lottery/reports/shift-checkouts/`                | 班次結帳歷史報表:工作表(`shift-checkouts-sheets.ts`)、收銀點條件(`CashPointConditionField`)                                                                                    |
+外框頁面與元件是底座的(`docs/modules/reports.md`「admin 頁面」)。專案的部分:
 
-錯誤顯示在頁面上方(`Alert`),文案 `admin.lotteryReports.errors.<code>`。
+| 檔案                                                    | 內容                                                                                                                                                                           |
+| ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `app/project/reports.ts`                                | 專案的報表登記清單                                                                                                                                                             |
+| `pages/project/lottery/reports/report-registrations.ts` | 營運報表、班次結帳歷史報表的 `registerReport` 宣告                                                                                                                             |
+| `pages/project/lottery/reports/operations/`             | 營運報表:工作表(`operations-sheets.ts`、列 `operations-rows*.ts`、合計 `operations-total.ts`)、逐店期間與提醒(`OperationsConditionsAddon`)、月份註記(`OperationsMonthCaption`) |
+| `pages/project/lottery/reports/shift-checkouts/`        | 班次結帳歷史報表:工作表(`shift-checkouts-sheets.ts`)、收銀點條件(`CashPointConditionField`)                                                                                    |
 
-正本:`apps/admin/src/pages/project/lottery/reports/`、`apps/admin/src/components/project/ReportPeriodPicker/`、`apps/admin/src/components/project/SheetPreview/`
+正本:`apps/admin/src/pages/project/lottery/reports/`、`apps/admin/src/app/project/reports.ts`
 
 ## 營運報表
 
@@ -273,15 +180,7 @@ input:`{ periodKind, from, to, orgIds }`,營運報表另有 `alignDailyClose`,�
 
 ## 錯誤碼
 
-| code / reason                           | 什麼時候                       | 畫面                                                      |
-| --------------------------------------- | ------------------------------ | --------------------------------------------------------- |
-| `VALIDATION_FAILED` + `RANGE_TOO_LARGE` | 期間類型、分店數或起訖超過上限 | 「期間或分店數超過這張報表的上限,請縮小範圍後再試一次。」 |
-| `VALIDATION_FAILED`                     | 條件不完整                     | 「條件不完整,請檢查期間與分店。」                         |
-| `FORBIDDEN`                             | 沒有該報表的權限               | 「你沒有這張報表的權限。」                                |
-| `NOT_FOUND`                             | 選的分店不在可見範圍內         | 「報表產生失敗,請稍後再試。」                             |
-| 其他                                    | —                              | 「報表產生失敗,請稍後再試。」                             |
-
-正本:`apps/admin/src/pages/project/lottery/reports/ReportsPage/reports-error.ts`
+外框的錯誤碼與畫面見 `docs/modules/reports.md`「錯誤碼」(本專案的文案把「組織」換成「分店」)。兩張報表另有:選的分店不在可見範圍內 → `NOT_FOUND`,畫面「報表產生失敗,請稍後再試。」。
 
 ## 稽核
 
@@ -289,40 +188,27 @@ input:`{ periodKind, from, to, orgIds }`,營運報表另有 `alignDailyClose`,�
 
 ## 測試
 
-- api:`apps/api/src/project/reports/report-range.test.ts`(期間類型、分店數、起訖長度);`apps/api/src/project/lottery/reports/reports.test.ts`(權限、`RANGE_TOO_LARGE`、第 17 章第 5 題的事後更正 +1,800、對齊日結、8 個區塊各一組固定資料(期初 + 加減 = 期末、核對 0;5a / 5b;銀行同類型一列;未結清單號)、調出看出貨時間 / 期末在途 / 作廢兩邊反向 / 沒有 show-cost 隱藏調貨金額、真的進貨點收與帳本寫的 S1–S5(迄號 101、標準 100 張:進貨、拆本、賣出、撤銷、作廢、整本調貨、未拆整本待查與遺失,每步 100 張 / 18,400、核對 0)、重跑舊報表數字不變(之後撤銷兌獎、送兌、退回結帳、核准、補日結、調走期末的張)、班次結帳歷史的負責人 / 協同 / 條件、關帳後的前期更正、資料庫指令數(一家店一份與本數無關;未結清與調貨單張數、期末時點數無關,期末以前就結清的不讀;選店與分店數無關));待標註的跳號另見 `transfer.test.ts`(可調張數、單上張數、收貨店單張成本、退回重送)、`stocktake.test.ts`(盤點頁張數、新增待查、確認遺失成本)、`inventory.test.ts` / `tickets.test.ts`(持有與總張數、待查·遺失的張數與成本);退回時間見 `checkout.test.ts`。
-- seed:`apps/db-migrator/seeds/project/reports.test.ts`(模組、權限、開通角色配方)。
-- admin:`lib/project/reports/report-period.test.ts`(台北與 UTC+0 的日 / 週 / 月起訖、跨月週、跨年週、閏年 2 月)、`report-conditions.test.ts`、`report-registry.test.ts`、`excel.test.ts`(寫出再讀回:工作表數、A4、fitToWidth、printTitlesRow;分段表格的標題列 / 表頭底色、合併、凍結、負數紅字格式、比率格式、合計粗體、換頁);`components/project/ReportPeriodPicker/ReportPeriodPicker.test.tsx`;`pages/project/lottery/reports/ReportsPage/ReportsPage.test.tsx`(以測試報表 `reports-fixtures.ts` 換掉登記清單:選單依權限、空選單說明、[匯出 Excel] 依 `reports.export`、預覽、匯出、`RANGE_TOO_LARGE`);`pages/project/lottery/reports/LotteryReports.test.tsx`(正式登記:對齊日結的提醒與逐店期間、分段表格預覽與分店比較頁籤、沒有 show-cost 沒有毛利、月份已關帳、班次結帳歷史的條件與盤點標示);`operations/operations-sheets.test.ts`、`shift-checkouts/shift-checkouts-sheets.test.ts`(工作表)。
+- api:`apps/api/src/project/lottery/reports/reports.test.ts`(權限、`RANGE_TOO_LARGE`、第 17 章第 5 題的事後更正 +1,800、對齊日結、8 個區塊各一組固定資料(期初 + 加減 = 期末、核對 0;5a / 5b;銀行同類型一列;未結清單號)、調出看出貨時間 / 期末在途 / 作廢兩邊反向 / 沒有 show-cost 隱藏調貨金額、真的進貨點收與帳本寫的 S1–S5(迄號 101、標準 100 張:進貨、拆本、賣出、撤銷、作廢、整本調貨、未拆整本待查與遺失,每步 100 張 / 18,400、核對 0)、重跑舊報表數字不變(之後撤銷兌獎、送兌、退回結帳、核准、補日結、調走期末的張)、班次結帳歷史的負責人 / 協同 / 條件、關帳後的前期更正、資料庫指令數(一家店一份與本數無關;未結清與調貨單張數、期末時點數無關,期末以前就結清的不讀;選店與分店數無關));待標註的跳號另見 `transfer.test.ts`(可調張數、單上張數、收貨店單張成本、退回重送)、`stocktake.test.ts`(盤點頁張數、新增待查、確認遺失成本)、`inventory.test.ts` / `tickets.test.ts`(持有與總張數、待查·遺失的張數與成本);退回時間見 `checkout.test.ts`。
+- seed:`apps/db-migrator/seeds/project/reports.test.ts`(專案的兩條權限、與底座合成後 `reports` 的模組與權限各一筆、開通角色配方)。
+- admin(外框的測試見 `docs/modules/reports.md`「測試」):`pages/project/lottery/reports/LotteryReports.test.tsx`(正式登記:對齊日結的提醒與逐店期間、分段表格預覽與分店比較頁籤、沒有 show-cost 沒有毛利、月份已關帳、班次結帳歷史的條件與盤點標示);`operations/operations-sheets.test.ts`、`shift-checkouts/shift-checkouts-sheets.test.ts`(工作表)。
 
 正本:上列測試檔
 
 ## 使用者說明(help.md)
 
-[reports.help.md](../../../apps/admin/src/md/module-help/project/additions/reports.help.md)
+專案以 [replacements/reports.help.md](../../../apps/admin/src/md/module-help/project/replacements/reports.help.md) 換掉底座的說明(分店用詞 + 兩張報表的內容)。
 
-正本:`apps/admin/src/md/module-help/project/additions/reports.help.md`
+正本:`apps/admin/src/md/module-help/project/replacements/reports.help.md`
 
-## S2 升格待辦
+## 升格狀態
 
-回收前在 scratch-lot 開「升格」分支搬到底座(專案規格 18.2;同步流程 `docs/deployment.md`「底座首次接軌與版本升級」):
+外框(登記介面、期間、Excel、選擇器、預覽、頁面、範圍檢查、文案、說明、模組與模組層權限的 seed)已在底座(`docs/modules/reports.md`);專案只留兩張報表、它們的權限與開通角色配方。模組與權限的 seed 文件以 collection + key 辨識,所有權從專案移到底座不改 key、不需資料遷移;已部署環境重跑 seed 只會更新模組說明文字(「分店」→「組織」),不新增、不刪除。
 
-| 項目                  | 專案階段的位置                                                           | 升格時                                                                                                                                                                                                                                             |
-| --------------------- | ------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 模組 / 權限 seed      | `apps/db-migrator/seeds/project/reports.ts`                              | **seed 所有權轉移**:底座新增 seed 接手同一組 key(已發布的 seed 快照只能新增,不能改寫或刪除),專案 seed 以新增版本退場;驗證已部署環境的模組與權限不重複、不遺失                                                                                      |
-| 登記介面、期間、Excel | `apps/admin/src/lib/project/reports/`                                    | 搬到 `lib/base/reports/`;報表登記清單改成底座來源 + 專案來源(同 `module-pages` 的合成方式)。Excel 產生器專案階段新增的能力一起回收:分段表格、段標題列 / 表頭底色與框線、合計 / 比率列、凍結說明列、每頁重複說明列、一段盡量不跨頁、`extras` 工作表 |
-| 選擇器、預覽元件      | `apps/admin/src/components/project/ReportPeriodPicker/`、`SheetPreview/` | 搬到 `components/base/`                                                                                                                                                                                                                            |
-| 頁面                  | `apps/admin/src/pages/project/lottery/reports/`                          | 外框搬到 `pages/base/`;刮刮樂的報表登記留在專案                                                                                                                                                                                                    |
-| 範圍檢查              | `apps/api/src/project/reports/report-range.ts`                           | 搬到底座 api;期間類型常數考慮放 `@repo/domain`(admin 與 api 現在各有一份 `REPORT_PERIOD_KINDS`)                                                                                                                                                    |
-| 文案                  | `packages/i18n/messages/<語系>/project/admin.json` 的 `lotteryReports`   | 外框的字串搬到底座 `admin.json`(不帶 lottery 的新 namespace);報表名稱留專案;動態 key 前綴跟著改(底座的在 `packages/i18n/src/dead-keys.test.ts`,專案的在 `packages/i18n/src/project/dynamic-keys.ts`)                                               |
-| 說明                  | `apps/admin/src/md/module-help/project/additions/reports.help.md`        | 搬到 `base/`                                                                                                                                                                                                                                       |
-| 開通角色配方          | `apps/db-migrator/seeds/project/onboarding/role-grants/reports.ts`       | 留專案(開通腳本是專案的)                                                                                                                                                                                                                           |
-| 依賴                  | `apps/admin/package.json` 的 `exceljs`                                   | 隨程式進底座                                                                                                                                                                                                                                       |
-| Figma                 | 專案報表頁 94:14                                                         | 依底座流程重建外框畫面                                                                                                                                                                                                                             |
-
-升格後確認:`project/` 路徑不再有報表外框,只剩底座那一份;已部署環境的 `reports` 模組與權限資料不重複、不遺失。
+尚未完成:外框畫面在底座 Figma 重建(目前仍是本專案報表頁 94:14);`REPORT_PERIOD_KINDS` admin 與 api 各一份,可考慮收進 `@repo/domain`。
 
 ## 平台視角備註
 
 - 沒有任何一張報表的權限時,有 `reports` 模組的人看到的是「報表」選單的空狀態說明。
 - 側欄順序:專案模組每隔 10 一號(見「模組 key 與畫面」),底座的總覽 0 在最前,申請中心 90、系統管理 95 排在業務模組之後(`docs/modules/module-manager.md`「側欄順序」)。
 
-正本:`apps/db-migrator/seeds/project/reports.ts`
+正本:`apps/db-migrator/seeds/base/modules/reports.ts`、`apps/db-migrator/seeds/project/reports.ts`

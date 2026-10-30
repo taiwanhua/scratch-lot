@@ -26,7 +26,6 @@ import {
 import type { OperatorContext } from "../../../database/operator-context";
 import { RelationService } from "../../../database/relation.service";
 import { tenantBoundaryContext } from "../../../database/tenant-boundary-context";
-import { WorkflowTasksRepository } from "../../../database/workflow-tasks.repository";
 import { FieldOptionsService } from "../../../fields/field-options.service";
 import type { FormGuardResult } from "../../../workflows/workflow-engine/lifecycle/form-lifecycle-registration";
 import type { LotteryCheckout } from "../../database/lottery-checkouts/lottery-checkout.schema";
@@ -85,7 +84,6 @@ export class CheckoutService {
     private readonly shifts: LotteryShiftsRepository,
     private readonly orgs: OrgsRepository,
     private readonly submissions: FormSubmissionsRepository,
-    private readonly workflowTasks: WorkflowTasksRepository,
     private readonly relations: RelationService,
     private readonly fieldOptions: FieldOptionsService,
     private readonly support: StoreSalesSupport,
@@ -722,6 +720,7 @@ export class CheckoutService {
     session: ClientSession,
     tenantId: Types.ObjectId | null,
     submissionId: Types.ObjectId,
+    approverId: Types.ObjectId | null,
   ): Promise<void> {
     const reader = await tenantBoundaryContext(this.orgs, null, tenantId);
     const record = await this.checkouts.findOne(
@@ -733,7 +732,12 @@ export class CheckoutService {
       return;
     }
     if (record.stocktakeMode === "new") {
-      await this.stocktakeService.apply(session, tenantId, submissionId);
+      await this.stocktakeService.apply(
+        session,
+        tenantId,
+        submissionId,
+        approverId,
+      );
     }
     await this.checkouts.findOneAndUpdate(
       reader,
@@ -742,7 +746,12 @@ export class CheckoutService {
         $set: {
           status: CHECKOUT_STATUS.confirmed,
           confirmedAt: this.clock.now(),
-          confirmedBy: await this.approverOf(tenantId, submissionId, session),
+          confirmedBy: await this.confirmerOf(
+            reader,
+            submissionId,
+            approverId,
+            session,
+          ),
         },
         $inc: { version: 1 },
       },
@@ -751,29 +760,23 @@ export class CheckoutService {
     await this.support.publish({ orgId: record.orgId, tenantId });
   }
 
-  /** 核准的人:目前流程實例裡最後核准的審核者;沒有(兩關都跳過)= 申請人。 */
-  async approverOf(
-    tenantId: Types.ObjectId | null,
+  /**
+   * 結帳單的確認人(`confirmedBy`):`approverId` = 事後動作的 `decidedBy`(最後核准的人);
+   * 沒有(兩關都跳過)= 申請人。
+   */
+  async confirmerOf(
+    reader: OperatorContext,
     submissionId: Types.ObjectId,
+    approverId: Types.ObjectId | null,
     session: ClientSession,
   ): Promise<Types.ObjectId | null> {
-    if (tenantId === null) {
-      return null;
+    if (approverId !== null) {
+      return approverId;
     }
-    const reader = await tenantBoundaryContext(this.orgs, null, tenantId);
     const submission = await this.submissions.findById(reader, submissionId, {
       session,
     });
-    const instanceId = submission?.currentInstanceId ?? null;
-    const [last] =
-      instanceId === null
-        ? []
-        : await this.workflowTasks.findMany(
-            tenantId,
-            { instanceId, status: "approved" },
-            { sort: { decidedAt: -1 }, limit: 1 },
-          );
-    return last?.assigneeId ?? submission?.createdBy ?? null;
+    return submission?.createdBy ?? null;
   }
 
   /** 這一班「留給下一班」(`registerHandoverAmount` 的來源):最近一張結帳單;沒有 = 0。 */

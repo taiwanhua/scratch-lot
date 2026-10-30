@@ -29,10 +29,10 @@ describe("WorkflowSubmissionStore 的呼叫端登記", () => {
         readFileSync(file, "utf8").includes("workflow-submission-store"),
       )
       .map((file) => path.relative(SRC_ROOT, file).split(path.sep).join("/"))
-      .toSorted((left, right) => left.localeCompare(right));
+      .toSorted((left, right) => left.localeCompare(right, "zh-Hant"));
     expect(callers).toEqual(
       [...WORKFLOW_SUBMISSION_STORE_CALLERS].toSorted((left, right) =>
-        left.localeCompare(right),
+        left.localeCompare(right, "zh-Hant"),
       ),
     );
   });

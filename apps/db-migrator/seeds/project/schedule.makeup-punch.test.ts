@@ -1,6 +1,6 @@
 import { describe, expect, it } from "@jest/globals";
 
-import { SHARED_FIELD_CATEGORY_KEYS } from "@repo/domain/project/reason-note";
+import { VOID_REASON_CATEGORY_KEY } from "@repo/domain/form";
 import { MAKEUP_PUNCH_FIELD_KEYS } from "@repo/domain/project/schedule-settings";
 
 import { assembleSeedRegistry } from "../registry";
@@ -25,7 +25,7 @@ describe("受管表單 補打卡申請(makeup_punch r4)", () => {
       key: "makeup_punch",
       moduleKey: "schedule.attendance",
       allowDraft: false,
-      voidReasonCategoryKey: SHARED_FIELD_CATEGORY_KEYS.voidReason,
+      voidReasonCategoryKey: VOID_REASON_CATEGORY_KEY,
       // 依欄位共用:分店欄指到的分店也看得到(唯讀)
       sharedByFieldKeys: ["branch"],
       serial: { prefix: "M", period: "none", digits: 4 },

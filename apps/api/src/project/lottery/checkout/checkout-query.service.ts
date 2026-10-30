@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { Types } from "mongoose";
 
+import { compareDisplayName } from "@repo/domain/collation";
 import {
   CHECKOUT_CONFIRM_FORM_KEY,
   CHECKOUT_TYPE,
@@ -294,7 +295,7 @@ export class CheckoutQueryService {
     });
     return found
       .map((user) => ({ id: String(user._id), name: user.name }))
-      .toSorted((a, b) => a.name.localeCompare(b.name, "zh-Hant"));
+      .toSorted((a, b) => compareDisplayName(a.name, b.name));
   }
 
   // ---- 班次結帳歷史紀錄、檢視頁 ----

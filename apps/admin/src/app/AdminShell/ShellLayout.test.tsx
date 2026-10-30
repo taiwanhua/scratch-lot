@@ -9,52 +9,38 @@ import { demoGroupNode, superAdminModules } from "@/test/msw/module-fixtures";
 import { server } from "@/test/msw/server";
 import { renderApp } from "@/test/render";
 
-/** 主題斷點(MUI 預設,`packages/ui` 的 theme 沒改):lg 1200、xl 1536。 */
+/** 主題斷點(MUI 預設,`packages/ui` 的 theme 沒改):md 900、lg 1200、xl 1536。 */
+const MD = 900;
 const LG = 1200;
 const XL = 1536;
 
-/** `lg` 起(`@media (min-width:1200px)`)那條的 `min-width`(jsdom 不套 @media,讀宣告)。 */
-const contentMinWidth = (): string =>
-  mediaRulesOf(screen.getByTestId("shell-content"), LG);
+/** 完整版殼(`md` 起,`@media (min-width:900px)`)那條規則(jsdom 不套 @media,讀宣告)。 */
+const contentFullShellRule = (): string =>
+  mediaRulesOf(screen.getByTestId("shell-content"), MD);
 
-describe("殼的內容區最小寬度(lg 以上才套;視窗更窄時由內容區水平捲動)", () => {
-  it("平板以下(< lg)不設最小寬度:sm / md 斷點沒有 min-width 宣告,xs 是 0", async () => {
-    server.use(
-      ...authWorld({ hasRefreshCookie: true, modules: superAdminModules })
-        .handlers,
-    );
-    renderApp({ path: "/overview" });
+const renderOverview = () => {
+  server.use(
+    ...authWorld({ hasRefreshCookie: true, modules: superAdminModules })
+      .handlers,
+  );
+  return renderApp({ path: "/overview" });
+};
+
+describe("殼的內容區最小寬度(殼層預設 md 不設下限;頁面宣告 lg / xl 才在完整版殼設)", () => {
+  it("殼層預設 md:每個斷點都不設最小寬度(xs 是 0),平板寬也不水平捲動", async () => {
+    renderOverview();
     await screen.findByRole("navigation", { name: "主選單" });
 
     const content = screen.getByTestId("shell-content");
     expect(mediaRulesOf(content, 0)).toContain("min-width: 0");
-    expect(mediaRulesOf(content, 600)).not.toContain("min-width");
-    expect(mediaRulesOf(content, 900)).not.toContain("min-width");
-    expect(contentMinWidth()).toContain("min-width");
+    for (const breakpoint of [600, MD, LG, XL]) {
+      expect(mediaRulesOf(content, breakpoint)).not.toContain("min-width");
+    }
   });
 
-  it("殼層預設以 lg 為準,收合側欄後重算;水平捲動只在 <main>,外框不捲", async () => {
-    server.use(
-      ...authWorld({ hasRefreshCookie: true, modules: superAdminModules })
-        .handlers,
-    );
-    const { user } = renderApp({ path: "/overview" });
-    const nav = await screen.findByRole("navigation", { name: "主選單" });
-
-    // 斷點 − 側欄(30 單位)− 左右內距(非手機版面 3 單位 × 2)
-    const expanded = contentMinWidth();
-    expect(expanded).toContain(`${String(LG)}px`);
-    expect(expanded).toContain("30 * var(--mui-spacing)");
-
-    await user.click(within(nav).getByRole("button", { name: "收合側欄" }));
-    // 收合後側欄只剩 8 單位,最小寬度跟著變大(視窗 ≥ 斷點時仍放得下,不多出捲軸)
-    const collapsed = contentMinWidth();
-    expect(collapsed).toContain(`${String(LG)}px`);
-    expect(collapsed).not.toContain("30 * var(--mui-spacing)");
-    // 側欄(8 單位)與左右內距(6 單位)各一次
-    expect(collapsed.split("(8 * var(--mui-spacing))")).toHaveLength(2);
-    expect(collapsed.split("(6 * var(--mui-spacing))")).toHaveLength(2);
-    // 水平捲動只發生在 <main>:它自己 overflow: auto,殼的外框 overflow: hidden(document 不捲)
+  it("水平捲動只在 <main>,外框不捲", async () => {
+    renderOverview();
+    await screen.findByRole("navigation", { name: "主選單" });
     const main = screen.getByRole("main");
     expect(globalThis.getComputedStyle(main).overflow).toBe("auto");
     const frame = main.parentElement?.parentElement ?? document.body;
@@ -80,20 +66,21 @@ describe("殼的內容區最小寬度(lg 以上才套;視窗更窄時由內容�
     expect(collapsed.overflowY).toBe("auto");
   });
 
-  it("表單管理沿用殼層預設 lg(設計器在 xl 以下自己換版,1440 寬不再水平溢出)", async () => {
+  it("表單管理沿用殼層預設 md(設計器在 xl 以下、平板寬自己換版,不水平溢出)", async () => {
     renderFormsPage();
 
     await screen.findByRole("navigation", { name: "主選單" });
-    expect(contentMinWidth()).toContain(`${String(LG)}px`);
-    expect(contentMinWidth()).not.toContain(`${String(XL)}px`);
+    expect(contentFullShellRule()).not.toContain("min-width");
+    expect(mediaRulesOf(screen.getByTestId("shell-content"), LG)).not.toContain(
+      "min-width",
+    );
   });
 
-  it("流程管理也沿用殼層預設 lg", async () => {
+  it("流程管理也沿用殼層預設 md", async () => {
     renderWorkflows();
 
     await screen.findByRole("navigation", { name: "主選單" });
-    expect(contentMinWidth()).toContain(`${String(LG)}px`);
-    expect(contentMinWidth()).not.toContain(`${String(XL)}px`);
+    expect(contentFullShellRule()).not.toContain("min-width");
   });
 });
 

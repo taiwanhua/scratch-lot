@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { Types } from "mongoose";
 
+import { compareDisplayName } from "@repo/domain/collation";
 import { CHECKOUT_TYPE } from "@repo/domain/project/lottery";
 import { SCHEDULE_FIELD_CATEGORY_KEYS } from "@repo/domain/project/schedule-fields";
 
@@ -76,7 +77,7 @@ export class ShiftCheckoutsReportService {
         (a, b) =>
           storeIndex(a.orgId) - storeIndex(b.orgId) ||
           a.order - b.order ||
-          a.name.localeCompare(b.name, "zh-Hant"),
+          compareDisplayName(a.name, b.name),
       )
       .map((point) => ({
         id: String(point._id),

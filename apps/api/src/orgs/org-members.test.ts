@@ -112,7 +112,7 @@ const accountsOf = (rows: { account: string }[]): string[] =>
   rows.map((row) => row.account);
 
 const sorted = (values: readonly string[]): string[] =>
-  values.toSorted((left, right) => left.localeCompare(right));
+  values.toSorted((left, right) => left.localeCompare(right, "zh-Hant"));
 
 const ORG_MANAGER_MODULE = "system.org-manager";
 const VIEW_MEMBERS = `${ORG_MANAGER_MODULE}.view-members`;

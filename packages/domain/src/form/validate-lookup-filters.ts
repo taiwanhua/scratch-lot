@@ -16,6 +16,8 @@ import type {
  * - `var` 要是表單層欄位的 key(不能是自己、明細欄;明細子欄不能引用同一列的其他子欄)→ 否則 `LOOKUP_FILTER_VAR_INVALID`
  * - 篩選欄位要是 provider 可當 `filter` 的欄位 → 否則 `LOOKUP_FILTER_VAR_INVALID`(登錄表沒給篩選欄位就不驗)
  * - 被引用欄位的型別要能當篩選值、且與篩選欄位相符(`isFilterVarCompatible`)→ 否則 `LOOKUP_FILTER_VAR_TYPE`
+ * - 引用欄「來源提供的預設」的條件(`default.filter`)同一套規則;條件只能是連動條件(固定條件寫在來源的
+ *   `filter`)→ 否則 `LOOKUP_FILTER_VAR_INVALID`
  */
 export function validateLookupFilters(
   definition: FormDefinition,
@@ -36,6 +38,7 @@ export function validateLookupFilters(
         siblings: [],
         location: { fieldKey: field.key, property: "source" },
       });
+      checkProviderDefault(field, field.source, providers, byKey, collector);
     }
     if (field.type === "array") {
       for (const column of arrayColumnsOf(field)) {
@@ -49,6 +52,48 @@ export function validateLookupFilters(
       property: "source",
     });
   }
+}
+
+/** 來源提供的預設的條件:只收連動條件,每個條件照連動篩選的規則驗。 */
+function checkProviderDefault(
+  field: FieldDef,
+  source: LookupSourceDescriptor,
+  providers: LookupProviderRegistry | undefined,
+  byKey: ReadonlyMap<string, FieldDef>,
+  collector: IssueCollector,
+): void {
+  if (field.default?.kind !== "provider") {
+    return;
+  }
+  const filter: unknown = field.default.filter;
+  if (filter === undefined) {
+    return;
+  }
+  const location = { fieldKey: field.key, property: "default" };
+  if (typeof filter !== "object" || filter === null || Array.isArray(filter)) {
+    collector.error(
+      "LOOKUP_FILTER_VAR_INVALID",
+      `「${field.label}」的預設值條件必須是物件`,
+      { ...location, property: "default.filter" },
+    );
+    return;
+  }
+  for (const [key, value] of Object.entries(filter)) {
+    if (!isLookupFilterVar(value)) {
+      collector.error(
+        "LOOKUP_FILTER_VAR_INVALID",
+        `「${field.label}」的預設值條件 ${key} 只能引用欄位(固定條件寫在來源的篩選條件)`,
+        { ...location, property: `default.filter.${key}` },
+      );
+    }
+  }
+  checkVars(
+    { ...source, filter: filter as Record<string, unknown> },
+    providers,
+    byKey,
+    collector,
+    { owner: field.key, siblings: [], location },
+  );
 }
 
 function checkColumnVars(

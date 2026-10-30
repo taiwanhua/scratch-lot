@@ -4,11 +4,13 @@ import { screen, waitFor, within } from "@testing-library/react";
 import { formModulePages } from "@/components/base/form-engine/FormModulePages/form-module-pages";
 import { DEFAULT_TAB_LABEL_TEMPLATE } from "@/lib/base/form-engine/tab-label";
 import { setHelpFiles } from "@/test/help-registry";
+import { mediaRulesOf } from "@/test/media-rules";
 import {
   type TestModule,
   authWorld,
   overviewModule,
 } from "@/test/msw/auth-handlers";
+import { FORMS_ROUTE, formsModules } from "@/test/msw/form-fixtures";
 import { superAdminModules } from "@/test/msw/module-fixtures";
 import { server } from "@/test/msw/server";
 import { ProjectDesignerPage } from "@/test/project-fixture/project-designer-page";
@@ -205,6 +207,44 @@ describe("專案替換治理頁:同網址、同授權開出客製版", () => {
       screen.queryByRole("region", { name: "專案角色頁" }),
     ).not.toBeInTheDocument();
     expect(tabLabels()).toEqual([]);
+  });
+});
+
+/** 殼內容區在完整版殼(`@media (min-width:900px)`)那條規則;jsdom 不套 @media,讀宣告 */
+const fullShellRule = () =>
+  mediaRulesOf(screen.getByTestId("shell-content"), 900);
+
+describe("宣告 xl 的頁:完整版殼(md 起)就設內容區最小寬度,收合側欄重算", () => {
+  it("下限 = xl(1536)− 側欄 − 左右內距;精簡版(< md)不設;水平捲動只在 <main>", async () => {
+    useModules([overviewModule, ...formsModules(["system.forms.view"])]);
+    const { user } = renderApp({ path: FORMS_ROUTE });
+    await screen.findByRole("region", { name: "專案表單管理頁" });
+    const nav = screen.getByRole("navigation", { name: "主選單" });
+
+    const content = screen.getByTestId("shell-content");
+    expect(mediaRulesOf(content, 0)).toContain("min-width: 0");
+    expect(mediaRulesOf(content, 600)).not.toContain("min-width");
+    // 只有一條(完整版殼起):不在 lg / xl 另寫
+    expect(mediaRulesOf(content, 1200)).not.toContain("min-width");
+    const expanded = fullShellRule();
+    expect(expanded).toContain("1536px");
+    expect(expanded).toContain("30 * var(--mui-spacing)");
+
+    await user.click(within(nav).getByRole("button", { name: "收合側欄" }));
+    // 收合後側欄只剩 8 單位,最小寬度跟著變大(視窗 ≥ 斷點時仍放得下,不多出捲軸)
+    const collapsed = fullShellRule();
+    expect(collapsed).toContain("1536px");
+    expect(collapsed).not.toContain("30 * var(--mui-spacing)");
+    expect(collapsed.split("(8 * var(--mui-spacing))")).toHaveLength(2);
+    expect(collapsed.split("(6 * var(--mui-spacing))")).toHaveLength(2);
+  });
+
+  it("沒宣告的替換頁(角色管理)沿用殼層預設 md,不設下限", async () => {
+    useModules(fullModules);
+    renderApp({ path: ROLE_MANAGER_ROUTE });
+    await screen.findByRole("region", { name: "專案角色頁" });
+
+    expect(fullShellRule()).not.toContain("min-width");
   });
 });
 

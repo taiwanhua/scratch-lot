@@ -204,7 +204,7 @@ export class WorkflowHistoryEventModel {
 
   /**
    * 跳過 / 自動通過的原因(`@repo/domain/workflow` 的 `HISTORY_REASONS`):`step_skipped` 帶
-   * `skip_orgs`(申請人屬於指定組織)/ `skip_condition`(符合條件);自動通過記的 `approved` 帶
+   * `skip_orgs`(申請人屬於指定組織)/ `skip_condition`(符合跳過條件);自動通過記的 `approved` 帶
    * `auto_applicant` / `auto_prior_approver`;`auto_approve_blocked` 帶同兩值(哪一種自動通過沒成立)。其他事件 null。
    */
   @Field(() => String, { nullable: true })

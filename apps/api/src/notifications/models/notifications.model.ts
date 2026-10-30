@@ -49,10 +49,11 @@ export class MyNotificationsPayload {
   items!: NotificationModel[];
 
   @Field(() => Int)
-  page!: number;
-
-  @Field(() => Int)
   pageSize!: number;
+
+  /** 下一批的游標(送回 `after`);沒有更多 = null */
+  @Field(() => String, { nullable: true })
+  nextCursor!: string | null;
 
   @Field(() => Int)
   totalCount!: number;

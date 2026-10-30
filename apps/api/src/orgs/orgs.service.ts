@@ -1,6 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { Types } from "mongoose";
 
+import { compareDisplayName } from "@repo/domain/collation";
 import { isValidTimezone } from "@repo/domain/form";
 
 import { AuditService } from "../audit/audit.service";
@@ -201,10 +202,10 @@ function auditSideOf(
   );
 }
 
-/** 同層依名稱排序,讓樹的順序穩定(不依賴寫入順序)。 */
+/** 同層依名稱排序(zh-Hant 筆畫序),讓樹的順序穩定(不依賴寫入順序與執行環境語系)。 */
 function byName(documents: OrgRecord[]): OrgRecord[] {
   return documents.toSorted((left, right) =>
-    left.name.localeCompare(right.name),
+    compareDisplayName(left.name, right.name),
   );
 }
 

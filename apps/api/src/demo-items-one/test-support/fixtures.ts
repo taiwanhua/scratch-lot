@@ -358,7 +358,9 @@ export async function listItems(
 }
 
 export function namesOf(items: readonly ItemRow[]): string[] {
-  return items.map((item) => item.name).toSorted((a, b) => a.localeCompare(b));
+  return items
+    .map((item) => item.name)
+    .toSorted((a, b) => a.localeCompare(b, "zh-Hant"));
 }
 
 /** 清單的名稱(排序後),篩選條件的斷言直接比這個。 */

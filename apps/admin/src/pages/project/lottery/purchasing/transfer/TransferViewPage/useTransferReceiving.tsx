@@ -13,6 +13,7 @@ import {
 
 import type { BookListRow } from "@/components/project/lottery/BookGroupList/BookGroupList";
 import type { ReceiveScanOutcome } from "@/components/project/lottery/ReceiveBooksPanel/ReceiveBooksPanel";
+import { useFlashTarget } from "@/hooks/base/useFlashTarget";
 import { useSnackbar } from "@/hooks/base/useMutationFeedback";
 import { useSession } from "@/hooks/base/useSession";
 import { ticketListText } from "@/lib/project/lottery/ticket-list-text";
@@ -32,7 +33,6 @@ type ReceivedPayload =
 interface Flash {
   rowId: string;
   ticketNo: string;
-  nonce: number;
 }
 
 /**
@@ -56,7 +56,7 @@ export const useTransferReceiving = (
   );
   const [thisTime, setThisTime] = useState<ReadonlySet<string>>(new Set());
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
-  const [flash, setFlash] = useState<Flash | null>(null);
+  const { target: flash, flash: flashRow } = useFlashTarget<Flash>();
   useEffect(() => {
     if (flash === null) {
       return;
@@ -90,11 +90,7 @@ export const useTransferReceiving = (
     }
     if (first !== undefined) {
       setExpanded((current) => new Set([...current, rowId]));
-      setFlash((current) => ({
-        rowId,
-        ticketNo: first,
-        nonce: (current?.nonce ?? 0) + 1,
-      }));
+      flashRow({ rowId, ticketNo: first });
     }
   };
 

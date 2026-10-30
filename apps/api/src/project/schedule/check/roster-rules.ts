@@ -1,3 +1,4 @@
+import { COLLATION_LOCALE } from "@repo/domain/collation";
 import type { ScheduleRuleLevel } from "@repo/domain/project/schedule-settings";
 
 import { consecutiveRuns } from "../day-offs/day-off-rules";
@@ -120,7 +121,9 @@ function groupByDate(
     byDate.set(entry.date, [...(byDate.get(entry.date) ?? []), entry]);
   }
   return new Map(
-    [...byDate].toSorted(([left], [right]) => left.localeCompare(right)),
+    [...byDate].toSorted(([left], [right]) =>
+      left.localeCompare(right, COLLATION_LOCALE),
+    ),
   );
 }
 
@@ -412,7 +415,7 @@ export const understaffedEvaluator = ({
     .toSorted(
       (left, right) =>
         left.startAt.getTime() - right.startAt.getTime() ||
-        left.id.localeCompare(right.id),
+        left.id.localeCompare(right.id, COLLATION_LOCALE),
     )
     .flatMap((demand) =>
       ["leader", "helper"].flatMap((role) =>

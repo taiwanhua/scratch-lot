@@ -6,8 +6,11 @@ import {
   type LookupSourceDescriptor,
   type Prefill,
   arrayColumnsOf,
+  defaultDependenciesOf,
   filterScalarForField,
+  isProviderDefault,
   lookupLabelFieldsOf,
+  providerDefaultSourceOf,
   resolveLookupSource,
 } from "@repo/domain/form";
 
@@ -27,6 +30,7 @@ import {
 } from "../lookup-providers";
 import {
   DEFAULT_PAGE_SIZE,
+  type FormLookupDefaultInput,
   type FormLookupInput,
   type FormLookupRecordInput,
   type FormLookupTargetInput,
@@ -188,6 +192,57 @@ export class FormLookupService {
   }
 
   /**
+   * `formLookupDefault`:引用欄「來源提供的預設」此刻的值(填寫頁顯示用;建草稿時 api 另外照同一條再算)。
+   * 權限同 `formLookupRecord`;欄位不是來源提供的預設、改不動(欄位級 edit)、條件引用讀不到的欄位、
+   * 條件還沒填齊或查無 → null。條件值照 `filterValues` 收(同連動篩選),查到的再照來源的可見範圍與篩選取回。
+   */
+  async defaultRecord(
+    facts: FormOperatorFacts,
+    input: FormLookupDefaultInput,
+  ): Promise<FormLookupRecord | null> {
+    const { fields, gate } = await this.readableVersion(
+      facts,
+      input,
+      input.fieldKey,
+    );
+    const field = fields.find((candidate) => candidate.key === input.fieldKey);
+    if (
+      field === undefined ||
+      !isProviderDefault(field) ||
+      !gate.canEdit(fields, field) ||
+      defaultDependenciesOf(field).some((key) => !gate.canShow(fields, key))
+    ) {
+      return null;
+    }
+    const source = providerDefaultSourceOf(field, (fieldKey) =>
+      filterScalarForField(
+        fields.find((candidate) => candidate.key === fieldKey),
+        input.filterValues?.[fieldKey],
+      ),
+    );
+    if (source === null) {
+      return null;
+    }
+    const id = await this.providers.operatorDefaultId(facts, source);
+    if (id === null) {
+      return null;
+    }
+    const target: ResolvedTarget = {
+      source,
+      valueField: "id",
+      mappedFields: [],
+    };
+    const [record] = await this.providers.findByValues(
+      facts,
+      source,
+      "id",
+      [id],
+      this.requestedFields(target),
+    );
+    return record ? this.toRecord(record, target) : null;
+  }
+
+  /**
    * 讀版本定義並解析目標。已發布 / 退役版:要有這張表單的新增資格(`canCreateWithForm`)或模組 `edit`(填寫中才會查),
    * 目標是欄位時還要讀得到那一欄(欄位級 `show`,含依賴鏈);
    * 草稿(`version` 省略):設計器預覽,要表單管理的檢視且讀得到這張表單。
@@ -201,6 +256,36 @@ export class FormLookupService {
       filterValues?: Record<string, unknown> | null;
     },
   ): Promise<ResolvedTarget | null> {
+    const { fields, prefills } = await this.readableVersion(
+      facts,
+      input,
+      input.target.fieldKey,
+    );
+    const target = targetOf(fields, prefills, input.target);
+    // 連動篩選:換成前端送的目前值,只當縮小範圍的條件;被引用欄位沒有值 → 查無
+    // 值依被引用欄位的型別收,型別不符當沒填(查無),不讓竄改的值撞上文件欄位的型別
+    const source = resolveLookupSource(target.source, (fieldKey) =>
+      filterScalarForField(
+        fields.find((field) => field.key === fieldKey),
+        input.filterValues?.[fieldKey],
+      ),
+    );
+    return source === null ? null : { ...target, source };
+  }
+
+  /**
+   * 讀版本定義並檢查權限(見 `resolve`);`fieldKey` 給了就要讀得到那一欄(明細子欄看整個明細欄)。
+   * 回欄位與帶入規則(`gate` 給預設值檢查改得動 / 讀得到用)。
+   */
+  private async readableVersion(
+    facts: FormOperatorFacts,
+    input: { formKey: string; version?: number | null },
+    fieldKey: string | null | undefined,
+  ): Promise<{
+    fields: FieldDef[];
+    prefills: Prefill[];
+    gate: ReturnType<typeof fieldGateOf>;
+  }> {
     const isDraft = input.version === null || input.version === undefined;
     if (isDraft) {
       if (!this.access.has(facts, FORMS_PERMISSIONS.view)) {
@@ -235,35 +320,23 @@ export class FormLookupService {
         `Form version not found: ${form.key}@${String(input.version ?? "draft")}`,
       );
     }
-    const fieldKey = input.target.fieldKey;
     // 讀不到這一欄(受保護沒有 show)的人不給候選資料;先於「有沒有 lookup 來源」判,
     // 否則能從錯誤碼的差別推出這欄的定義(骨架省略了 `options` / `source`)。
     // 明細子欄(`<明細 key>.<子欄 key>`)看整個明細欄的權限
     const ownerKey =
       fieldKey === undefined || fieldKey === null ? null : ownerKeyOf(fieldKey);
+    const gate = fieldGateOf(facts, form.moduleKey, form.key);
     if (
       !isDraft &&
       ownerKey !== null &&
       version.fields.some((candidate) => candidate.key === ownerKey) &&
-      !fieldGateOf(facts, form.moduleKey, form.key).canShow(
-        version.fields,
-        ownerKey,
-      )
+      !gate.canShow(version.fields, ownerKey)
     ) {
       throw forbiddenError(
         `Missing field permission: ${requiredShowKeys(version.fields, ownerKey).join(", ")}`,
       );
     }
-    const target = targetOf(version.fields, version.prefills, input.target);
-    // 連動篩選:換成前端送的目前值,只當縮小範圍的條件;被引用欄位沒有值 → 查無
-    // 值依被引用欄位的型別收,型別不符當沒填(查無),不讓竄改的值撞上文件欄位的型別
-    const source = resolveLookupSource(target.source, (fieldKey) =>
-      filterScalarForField(
-        version.fields.find((field) => field.key === fieldKey),
-        input.filterValues?.[fieldKey],
-      ),
-    );
-    return source === null ? null : { ...target, source };
+    return { fields: version.fields, prefills: version.prefills, gate };
   }
 
   private requestedFields(target: ResolvedTarget): string[] {

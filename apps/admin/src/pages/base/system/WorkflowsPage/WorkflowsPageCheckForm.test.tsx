@@ -175,7 +175,7 @@ describe("流程管理:檢查用表單與「檢查」", () => {
     expect(world.inputs.validate[0]?.checkFormKey).toBeNull();
   });
 
-  it("既有的跳過條件公式載入後在「跳過這一關」的「符合條件」;沒選檢查用表單時保留目前欄位、提示「請先選檢查用表單」", async () => {
+  it("既有的跳過條件公式載入後在「跳過這一關」的「符合跳過條件」;沒選檢查用表單時保留目前欄位、提示「請先選檢查用表單」", async () => {
     const options = defaultDesignOptions();
     const [, ...rest] = options.versions?.leave_review ?? [];
     renderWorkflows({
@@ -208,7 +208,7 @@ describe("流程管理:檢查用表單與「檢查」", () => {
       name: "跳過這一關(符合任一項就跳過)",
     });
     expect(
-      within(block).getByRole("checkbox", { name: "符合條件" }),
+      within(block).getByRole("checkbox", { name: "符合跳過條件" }),
     ).toBeChecked();
     expect(
       within(block).getByRole("checkbox", { name: "申請人屬於這些組織" }),
@@ -217,7 +217,7 @@ describe("流程管理:檢查用表單與「檢查」", () => {
     expect(
       within(propertiesPanel()).queryByRole("group", { name: "跳過條件" }),
     ).toBeNull();
-    const skip = within(block).getByRole("group", { name: "符合條件" });
+    const skip = within(block).getByRole("group", { name: "符合跳過條件" });
     const field = within(skip).getByRole("combobox", { name: "欄位" });
     // 目前的值不被提示字蓋掉
     expect(field).toHaveTextContent("days");

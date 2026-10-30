@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import type { Types } from "mongoose";
 
+import { COLLATION_LOCALE } from "@repo/domain/collation";
 import { isValidFormKey } from "@repo/domain/form";
 
 import { AuditService } from "../../audit/audit.service";
@@ -128,7 +129,9 @@ export class WorkflowsService {
           pattern.test(workflow.key.toLowerCase()) ||
           pattern.test(workflow.name.toLowerCase()),
       )
-      .toSorted((left, right) => left.key.localeCompare(right.key));
+      .toSorted((left, right) =>
+        left.key.localeCompare(right.key, COLLATION_LOCALE),
+      );
     const items = await this.toModels(
       facts,
       visible.slice((page - 1) * pageSize, page * pageSize),

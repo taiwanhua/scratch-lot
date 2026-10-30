@@ -21,8 +21,8 @@ import { Tag } from "@repo/ui/tag";
 import { TextField } from "@repo/ui/text-field";
 import { Typography } from "@repo/ui/typography";
 
+import { DateFilterPicker } from "@/components/base/DateFilterPicker/DateFilterPicker";
 import { OrgTreeSelect } from "@/components/base/OrgTreeSelect/OrgTreeSelect";
-import { DateFilterPicker } from "@/components/project/DateFilterPicker/DateFilterPicker";
 import { useMe } from "@/hooks/base/useMe";
 import { useSession } from "@/hooks/base/useSession";
 import { useTemporalText } from "@/hooks/base/useTemporalText";

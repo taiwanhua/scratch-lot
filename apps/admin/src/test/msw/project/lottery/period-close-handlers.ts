@@ -48,7 +48,7 @@ export const periodCloseWorld = ({
   const denied = () =>
     permissions.includes(PERMISSIONS.closePeriod)
       ? null
-      : graphqlError("FORBIDDEN", "FORBIDDEN", { code: "FORBIDDEN" });
+      : graphqlError("FORBIDDEN");
   const handlers: PeriodCloseWorld["handlers"] = [
     api.query("LotteryPeriodCloses", () => {
       const forbidden = denied();

@@ -11,6 +11,7 @@ import type { ArrayRowsViewProps } from "./array-rows-view";
 
 /**
  * 明細列的手機畫法(< `sm`):每列一張卡片,子欄直排(子欄的 `width` 不適用);列尾動作在卡片標題列。
+ * 標題「第 N 列」不換行、動作靠右;寬度放不下時動作整組換到下一行(仍靠右),不會被擠出卡片。
  */
 export const ArrayRowCards = ({
   arrayKey,
@@ -58,27 +59,32 @@ export const ArrayRowCards = ({
               direction="row"
               sx={{
                 alignItems: "center",
+                flexWrap: "wrap",
+                columnGap: 1,
                 px: 2,
                 py: 1,
                 borderBottom: 1,
                 borderColor: "divider",
               }}
             >
-              <Typography variant="subtitle2" sx={{ flex: 1 }}>
+              <Typography variant="subtitle2" noWrap sx={{ flexShrink: 0 }}>
                 {title}
               </Typography>
               {canEdit && (
-                <ArrayRowActions
-                  rowId={row.rowId}
-                  index={index + 1}
-                  isFirst={index === 0}
-                  isLast={index === rows.length - 1}
-                  canAdd={canAdd}
-                  onInsertBefore={onInsertBefore}
-                  onMove={onMove}
-                  onDuplicate={onDuplicate}
-                  onRemove={onRemove}
-                />
+                <Box sx={{ ml: "auto", maxWidth: "100%", overflowX: "auto" }}>
+                  <ArrayRowActions
+                    rowId={row.rowId}
+                    index={index + 1}
+                    isFirst={index === 0}
+                    isLast={index === rows.length - 1}
+                    canAdd={canAdd}
+                    onInsertBefore={onInsertBefore}
+                    onMove={onMove}
+                    onDuplicate={onDuplicate}
+                    onRemove={onRemove}
+                    isCompact
+                  />
+                </Box>
               )}
             </Stack>
             <Box sx={{ p: 2 }}>

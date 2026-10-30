@@ -5,7 +5,6 @@ import { arrayColumnsOf } from "@repo/domain/form";
 import { FormVersionsRepository } from "../../database/database.module";
 import { voidReasonCategoryOf } from "../../database/schemas/form.schema";
 import { FieldOptionsService } from "../../fields/field-options.service";
-import { FieldCategoryOptionsService } from "../field-category-options.service";
 import { fieldGateOf, requiredShowKeys } from "../field-permission-gate";
 import {
   FormAccessService,
@@ -29,7 +28,7 @@ import type {
  * **不需要** `system.field-manager.view`。
  *
  * - 類別 key 從版本定義取(與 `formLookup` 同一原則),前端只帶「哪一版的哪一個欄位」
- * - 可選範圍 = `FieldCategoryOptionsService` 的合併範圍(送出時驗值也用它,兩邊不會分岔);只列啟用中的
+ * - 可選範圍 = `FieldOptionsService.optionMapOf` 的合併範圍(送出時驗值也用它,兩邊不會分岔);只列啟用中的
  * - 已發布 / 退役版:表單要在執行端看得到(共用或本租戶客製,否則 `NOT_FOUND`)+ 模組
  *   `view` / `create` / `edit` 任一(同 `formRuntimeVersion`);讀者沒有這一欄的 `show` → `FORBIDDEN`
  *   (定義投影也不給它選項,見 `definition-projection.ts`)
@@ -40,7 +39,6 @@ export class FormFieldOptionsService {
   constructor(
     private readonly versions: FormVersionsRepository,
     private readonly access: FormAccessService,
-    private readonly categories: FieldCategoryOptionsService,
     private readonly fieldOptions: FieldOptionsService,
   ) {}
 
@@ -84,7 +82,7 @@ export class FormFieldOptionsService {
         ["fieldKey"],
       );
     }
-    const found = await this.categories.options(
+    const found = await this.fieldOptions.optionMapOf(
       facts.operator,
       target.options.key,
     );

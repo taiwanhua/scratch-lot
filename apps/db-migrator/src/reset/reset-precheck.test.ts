@@ -115,7 +115,7 @@ describe("reset 的零刪除預檢", () => {
     expect(after.customers).toEqual([]);
     expect(after.orgs).toHaveLength(1);
     // 專案來源的模組由同一次執行的 seed 補上
-    expect(after.modules).toHaveLength(41 + 8);
+    expect(after.modules).toHaveLength(42 + 8);
   }, 180_000);
 
   it.each(["data", "full"] as const)(

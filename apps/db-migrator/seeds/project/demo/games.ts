@@ -3,7 +3,7 @@ import {
   addLocalCalendar,
   toIso,
 } from "@repo/domain/form";
-import type { TagPaletteKey } from "@repo/domain/project/tag-palette";
+import type { TagPaletteKey } from "@repo/domain/tag-palette";
 
 import type { OnboardingStep } from "../onboarding/context";
 
