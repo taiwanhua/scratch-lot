@@ -1395,3 +1395,16 @@ wowgo-base Design System 以 v0.4.7 發布後,在 scratch-lot 換掉本機草稿
 - **換元件後的版面**:Library 的 `Draft/DataScopeRuleCard` 多了巢狀群組(每張 917 高),「Admin 資料範圍」與 BS-01 的 RuleEditor 放不下(clippedText 37);兩張畫面加高 564(1873 → 2437),BS-01 下方的畫面框跟著下移。
 - **結果**(正式工具,大頁逐 Section):全部頁 `audit-layout` / `audit-legend` 0;`audit.js` 的 draftTokenBindings、basePrimaryBindings、nonBaseInBaseScreens、canvasOverlap 0;`audit-sync` 分 3 批 0(例外照列:店面管理 9、班表 12);`audit-roster` 114 個班表 0。
 - **注意**:`audit-roster.js` 不會切換目前頁;目前頁不是班表管理時,基準班表實例內的文字可能讀不到,差異會整片出現(這次第一次跑 994 處都是這個原因)。執行前先切到班表管理頁。
+
+## 補完草稿回收與 Starter 同步(v0.4.8,2026-10-31)
+
+v0.4.7 漏了三件事:`AdminAppBar+` / `OrgSwitcher+` 誤當成「本輪排除」留在本機、Screens Starter 沒有依修正後的參考畫面同步、底座檔只稽核了畫面頁。這次補完。
+
+- **底座元件**(wowgo-base Design System「Admin Shell」頁):`Draft/AdminAppBar` 合併成元件組 `2215:139`(Size=Full `2001:1248` key 不變、Size=Compact `2215:122`);新增 `Draft/OrgSwitcher` `2215:121`(Compact `2215:108`、Full `2215:113`),都照程式 `AppBar.tsx` / `OrgSwitcher.tsx`。合併後 Title / Notifications 屬性 id 換新,核對 111 個既有實例的頁名與通知鈴都沒跑掉。
+- **底座檔中性化**:參考畫面、TextField 預設文字、說明頁裡的引用專案業務用語換成中性寫法(專案模組 A / B / C、示範項目、範例資料);Typography 範例改「後台管理 Admin console, ready to go」。
+- **底座檔全部頁稽核 0**(含元件說明頁):說明頁未綁顏色補綁變數(287 處,依色差選 `divider` / `bg/*` / `primary/*` / Primitives 灰階,文字選 `text/*`)、TextField Error 變體高度改跟內容、Button / Icons 頁說明框移位、使用者管理與角色管理的畫布重疊。
+- **Screens Starter**:15 頁依 Design System 重鋪(桌面版逐頁複製),`wowgo-base` → `專案名稱`、`內容組` → `示範部門` 與上述業務用語中性化;「流程版本(發布中斷)」隨底座移除;稽核全部 0。
+- **發布**:Library 兩次(說明皆標 v0.4.8)。
+- **scratch-lot**:接受 Library 更新(278 個 AppBar 實例頁名保留);`AdminAppBar+` 實例 1、`OrgSwitcher+` 實例 3(在 `Draft/ScratchLotAppBar` 內)換成 Library Compact 變體,刪掉兩個本機草稿,標示本輪草稿的元件 0;補綁專案色 48 處;班表三尺寸 6 列欄位高度改成和 Error 欄位一致(74)。稽核:全部頁 `audit-layout` / `audit-legend` / `audit.js` 0,`audit-sync` 3 批 0(例外照列:店面 9、班表 12),`audit-roster` 114 個班表 0。
+- **CookHome Screens**:15 頁依 Starter 重鋪、`專案名稱` → `CookHome`、補綁品牌色 6388 處;用 cookhome 補好的稽核設定跑全部頁 0。
+- **操作注意**:桌面版連按換頁鍵(`repeat`)會漏頁,逐頁貼上後用 plugin 依第一張畫面名稱搬到正確頁最穩;專案端 Libraries 顯示沒有更新但實例仍舊時,關掉分頁重開。
