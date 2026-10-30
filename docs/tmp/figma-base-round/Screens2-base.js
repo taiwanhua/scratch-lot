@@ -781,15 +781,29 @@ if (PART === 3) {
     const ab = sh.s.findOne(
       (n) => n.type === "INSTANCE" && /AdminAppBar/.test(n.name),
     );
-    const org = ab.findOne((n) => n.type === "TEXT" && n.name === "label");
-    const bell = await dvar("Draft/NotificationBell", "Unread=True");
-    bell.name = "notification-bell(待 AppBar 加槽)";
-    sh.main.appendChild(bell);
-    bell.layoutPositioning = "ABSOLUTE";
-    const ox =
-      org.absoluteBoundingBox.x - sh.s.absoluteBoundingBox.x - sh.main.x;
-    bell.x = Math.round(ox - bell.width - 24);
-    bell.y = Math.round((64 - bell.height) / 2);
+    // AppBar 已有 Notifications 屬性(鈴在 AppBar 裡)就用它;沒有(Library 未發布前)才疊一個鈴上去
+    const nk = Object.keys(ab.componentProperties).find((k) =>
+      k.startsWith("Notifications#"),
+    );
+    let bx, bw;
+    if (nk) {
+      ab.setProperties({ [nk]: true });
+      const b = ab.findOne((n) => n.name === "notification-bell");
+      bx = b.absoluteBoundingBox.x - sh.main.absoluteBoundingBox.x;
+      bw = b.width;
+    } else {
+      const org = ab.findOne((n) => n.type === "TEXT" && n.name === "label");
+      const bell = await dvar("Draft/NotificationBell", "Unread=True");
+      bell.name = "notification-bell(待 AppBar 加槽)";
+      sh.main.appendChild(bell);
+      bell.layoutPositioning = "ABSOLUTE";
+      const ox =
+        org.absoluteBoundingBox.x - sh.s.absoluteBoundingBox.x - sh.main.x;
+      bell.x = Math.round(ox - bell.width - 24);
+      bell.y = Math.round((64 - bell.height) / 2);
+      bx = bell.x;
+      bw = bell.width;
+    }
     const one = async (n) => {
       const c = await dcomp(n);
       return c.type === "COMPONENT_SET"
@@ -801,10 +815,10 @@ if (PART === 3) {
     panel.name = "通知清單(浮層)";
     sh.main.appendChild(panel);
     panel.layoutPositioning = "ABSOLUTE";
-    panel.x = Math.round(bell.x + bell.width - panel.width);
+    panel.x = Math.round(bx + bw - panel.width);
     panel.y = 60;
     // 新通知提示 = 統一的 Snackbar(底座規格 10.12):Info、有標題、沒有動作;電腦右下(距邊 24)
-    const toast = await dvar("Draft/Snackbar+", "Severity=Info");
+    const toast = await inst("Snackbar", { Severity: "Info" });
     await setProps(toast, {
       Title: "待你審核:示範表單 #F-0012",
       Message: "王小明 送出示範表單,共 5 筆明細。",
@@ -816,7 +830,9 @@ if (PART === 3) {
     toast.y = sh.s.height - toast.height - 24;
     await refNote(
       sh,
-      "AppBar 加通知鈴(未讀數),點開通知清單;新通知在右下角提示(統一的 Snackbar,Info)。現有 AppBar 還沒有鈴的槽,先疊在上面,搬回底座時 AppBar 加 Notifications 屬性。",
+      nk
+        ? "AppBar 的通知鈴(Notifications 屬性,未讀數),點開通知清單;新通知在右下角提示(統一的 Snackbar,Info)。"
+        : "AppBar 加通知鈴(未讀數),點開通知清單;新通知在右下角提示(統一的 Snackbar,Info)。現有 AppBar 還沒有鈴的槽,先疊在上面,搬回底座時 AppBar 加 Notifications 屬性。",
     );
     fin(sh);
   }

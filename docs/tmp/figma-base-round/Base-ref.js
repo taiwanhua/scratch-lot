@@ -184,11 +184,12 @@ async function refShell(refName, name) {
   s.x = 0;
   s.y = 0;
   await rebase(s);
-  const main = s.findOne((n) => n.name === "main");
+  // 只找直接子層:AppBar 的通知鈴裡也有叫 content 的圖層
+  const main = s.findChild((n) => n.name === "main");
   await sysNav({ s });
   wrapOverflow(s);
   await bindKnownColors(s);
-  const content = main && main.findOne((n) => n.name === "content");
+  const content = main && main.findChild((n) => n.name === "content");
   return { s, main, content, src: refName };
 }
 const q = (root, name) => root.findOne((n) => n.name === name);
@@ -342,7 +343,10 @@ async function refOverlay(bgShell, name, width) {
   s.appendChild(scrim);
   // 對話框沿用現有底座對話框的樣式(圓角、內距、陰影、標題、右下按鈕列)
   const src = await refFrame("Overlay / 退回修改「主管審核」");
-  const dlg = src.children.find((n) => n.type === "FRAME").clone();
+  // B7 之後現有 Overlay 畫面第一個子框是「背景:…」,對話框是其他的那個
+  const dlg = src.children
+    .find((n) => n.type === "FRAME" && !n.name.startsWith("背景"))
+    .clone();
   s.appendChild(dlg);
   dlg.name = "dialog";
   await rebase(dlg);
