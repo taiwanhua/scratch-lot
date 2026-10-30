@@ -1151,3 +1151,54 @@ Figma 限制:實例裡的子圖層不能改位置 / 尺寸,所以「長條 + 前
   - B10:組織管理資料區的「建立時間」兩處刪除(可見範圍已是開關)。
   - B11:權限設定頁籤本來就沒有資料範圍 Radio;視角註記與模組說明改寫成「資料範圍在資料範圍模組設定」。
   - 新開頁「Draft / 本輪」`2151:2`,放從 scratch-lot Base Draft 貼過來的草稿元件(B1)。
+
+## 照規定重做:撤除前盤點(2026-10-30)
+
+跨檔貼上不符「搬回底座的方法(重建,不跨檔搬移)」,依使用者決定全部照規定重做。以下是撤除前在 wowgo-base Design System 讀到的現況(實例數用 `getInstancesAsync()`,全檔)。
+
+**「Draft / 本輪」`2151:2` 上跨檔貼上的 34 個元件**(刪除,重建取代)。草稿頁以外的實例只有 Admin Shell 的鈴 1 個、資料範圍頁的規則卡 2 個:
+
+| 元件                         | 節點        | 變體 | 實例(所在頁)               |
+| ---------------------------- | ----------- | ---- | -------------------------- |
+| Draft/Section                | `2156:73`   | 2    | 0                          |
+| Draft/AudiencePicker         | `2156:127`  | 3    | 1(草稿頁)                  |
+| Draft/DataScopeRuleCard      | `2156:217`  | 1    | 2(Screen / Admin 資料範圍) |
+| Draft/OrgTreeSelect          | `2156:244`  | 4    | 0                          |
+| Draft/MonthCalendarCell      | `2156:294`  | 4    | 35(草稿頁)                 |
+| Draft/MonthCalendar          | `2156:315`  | 1    | 0                          |
+| Draft/RosterCell             | `2156:378`  | 5    | 84(草稿頁)                 |
+| Draft/NotificationBell       | `2156:432`  | 2    | 1(Admin Shell)             |
+| Draft/NotificationItem       | `2156:438`  | 2    | 3(草稿頁)                  |
+| Draft/NotificationPanel      | `2156:453`  | 2    | 0                          |
+| Draft/PrintButton            | `2156:471`  | 6    | 0                          |
+| Draft/Receipt58Row           | `2156:501`  | 1    | 2(草稿頁)                  |
+| Draft/Receipt58Signature     | `2156:505`  | 1    | 2(草稿頁)                  |
+| Draft/Receipt58              | `2156:508`  | 1    | 0                          |
+| Draft/StepperStep            | `2156:523`  | 4    | 5(草稿頁)                  |
+| Draft/Stepper                | `2156:541`  | 2    | 0                          |
+| Draft/Receipt58Header        | `2156:560`  | 1    | 1(草稿頁)                  |
+| Draft/Receipt58TableRow      | `2156:569`  | 2    | 3(草稿頁)                  |
+| Draft/Receipt58Range         | `2156:578`  | 1    | 1(草稿頁)                  |
+| Draft/Receipt58Total         | `2156:580`  | 1    | 1(草稿頁)                  |
+| Draft/Receipt58Divider       | `2156:584`  | 1    | 3(草稿頁)                  |
+| Draft/Receipt58QR            | `2156:586`  | 1    | 1(草稿頁)                  |
+| Draft/Receipt58Text          | `2156:623`  | 12   | 0                          |
+| Draft/Receipt58Barcode       | `2156:648`  | 1    | 0                          |
+| Draft/Receipt58Cut           | `2156:671`  | 1    | 0                          |
+| Draft/RosterGrid             | `2156:675`  | 3    | 0                          |
+| Draft/ScheduleTimelineBlock  | `2156:941`  | 15   | 34(草稿頁)                 |
+| Draft/ScheduleAutoMark       | `2156:1113` | 1    | 8(草稿頁)                  |
+| Draft/ScheduleTimelineDemand | `2156:1115` | 6    | 19(草稿頁)                 |
+| Draft/ScheduleTimeline       | `2156:1160` | 2    | 0                          |
+| Draft/BreakMark              | `2156:1297` | 1    | 0                          |
+| Draft/ScheduleTimelineMore   | `2156:1301` | 9    | 1(草稿頁)                  |
+| Draft/StatusChip             | `2156:1326` | 9    | 18(草稿頁)                 |
+| Draft/ToggleButton           | `2156:1360` | 9    | 0                          |
+
+**其他項目**:
+
+- `Draft/ActionIcon` `2001:68`:多出 19 個名稱壞掉的變體 `2156:89`~~`2156:125`(奇數 id,`key=Draft, =ActionIcon+, =<名稱>`)。有實例的只有 expand-more 1、expand-less 1、chevron-left 1、chevron-right 1、arrow-drop-down 4、notifications 4(草稿頁 3、Admin Shell 1)、check 2、check-circle 1、error-outline 1;Admin Shell 那 1 個在 AppBar 的鈴裡面。其餘 10 個 0 實例。
+- `Draft/AdminAppBar` `2001:1248`(全檔 82 個實例):BOOLEAN `Notifications#2159:0`(預設開),鈴實例 `2159:1606`(`notification-bell`,指向貼上的 `2156:432`,visible 綁 Notifications)。
+- `Draft/Snackbar` 新節點 `2156:590`(Popover 頁,x 0 / y 260,key `0f95adbb32486015a4fdcf4ec4d2c94dbb847cbf`,0 實例);舊的 `2001:992`(key `1a48435131b2c4acd8e4555aef6da483980c6252`)已不在頁面上。
+- 資料範圍參考畫面的規則卡實例 `2159:3846`、`2159:3660`(父層 RuleEditor),指向貼上的 `2156:217`。
+- 變數集合 `tagPalettes` `VariableCollectionId:2152:2`:20 個變數,mode Light / Dark(保留)。
