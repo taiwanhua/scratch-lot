@@ -59,12 +59,11 @@ Figma 頁面:Base Draft 41:5914、刮刮樂元件 64:14、店面管理 65:14、�
 
 每一項的細節與現況放在待辦正本,這裡只列入口;做完就從正本刪掉。
 
-| 類別                 | 在哪                                                | 摘要                                                                                                                          |
-| -------------------- | --------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| 還沒回收到底座的改良 | `docs/tmp/project-dis.md`「本輪要回收到底座的項目」 | 2026-10-29 這輪在本專案底座路徑做完的改良,等 PR 進 main 後 base-sync contribute(本機 thread 負責)                             |
-| Figma 回收與待修     | `docs/tmp/project-dis.md`「Figma 待修清單」         | 本專案底座參考畫面 A1–A8、底座檔 B1–B11,全部未做;做法見 `docs/tmp/figma-base-round/README.md`「搬回底座的方法」               |
-| 開著的 issue         | wowgo-base 的 GitHub Issues                         | 「structure.md 一句被中性化切斷」「Figma 品牌同步改用本機外掛」是 wowgo-base 的 issue(scratch-lot 的 #83、#66 是別的、已關閉) |
-| 底座待討論(含 skill) | `docs/tmp/dis.md`                                   | 例:自訂 `/to-figma` skill、module-scaffold 入口與設計流程整合、AI 自動 PR review 的時機                                       |
-| GitHub 上的舊分支    | `git branch -r`                                     | 約 187 條已合併的舊分支,要不要清由使用者決定                                                                                  |
+| 類別                 | 在哪                                          | 摘要                                                                                                                          |
+| -------------------- | --------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| Figma 待修           | `docs/tmp/dis.md`「Figma 對齊通知設定頁現況」 | 底座草稿回收與 Screens Starter 同步已隨 wowgo-base v0.4.8 完成;剩通知設定頁對齊(底座待辦)                                     |
+| 開著的 issue         | wowgo-base 的 GitHub Issues                   | 「structure.md 一句被中性化切斷」「Figma 品牌同步改用本機外掛」是 wowgo-base 的 issue(scratch-lot 的 #83、#66 是別的、已關閉) |
+| 底座待討論(含 skill) | `docs/tmp/dis.md`                             | 例:自訂 `/to-figma` skill、module-scaffold 入口與設計流程整合、AI 自動 PR review 的時機                                       |
+| GitHub 上的舊分支    | `git branch -r`                               | 約 187 條已合併的舊分支,要不要清由使用者決定                                                                                  |
 
 換帳號、換電腦時的接手方式見 `docs/agents/collaboration.md`「交付與換手」;使用者的協作偏好正本見 `docs/agents/working-preferences.md`(兩者隨底座 v0.4.5 同步進來)。
