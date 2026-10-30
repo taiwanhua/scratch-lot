@@ -1209,3 +1209,29 @@ Figma 限制:實例裡的子圖層不能改位置 / 尺寸,所以「長條 + 前
 - `Draft/ActionIcon` `2001:68`:刪除 19 個壞變體 `2156:89`~~`2156:125`,回到 8 個變體(刪除前核對,實例都在草稿頁)。
 - 「Draft / 本輪」`2151:2`:刪除跨檔貼上的 34 個元件,頁面清空。
 - 留到後面的步驟:資料範圍頁規則卡 `2159:3846`、`2159:3660` 的主元件已刪,第 5 步換成重建的 DataScopeRuleCard;Snackbar 照第 5 步;B7 的 Overlay 背景照第 6 步。
+
+## 腳本核對(第 2.3 步,2026-10-30)
+
+在 scratch-lot Screens 開暫存頁「暫存 / 腳本核對」`757:14`,用 `MODE='scratch'` 照 README 對照表的順序跑全部元件腳本,和 Base Draft `41:5914` 的同名元件逐節點比對(型別、尺寸、版面、填色 / 框線綁的變數、圓角、文字內容與樣式、實例指向與屬性值、屬性綁定、元件屬性定義、說明)。差異一律改腳本,不改 Figma 現況。
+
+**第一輪**:36 個裡 19 個一致,17 個有差異。原因與改法:
+
+| 元件                                         | 差異(現況 vs 腳本)                                                                                          | 改了哪支腳本                                            |
+| -------------------------------------------- | ----------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| ActionIcon+                                  | 現況多 `menu`、`more-horiz`(共 19 個)                                                                       | `ActionIcon+.js` 補兩個 MUI 路徑                        |
+| Section                                      | 內容槽間距 12、上內距 12;spacer 是一般框                                                                    | `Section.js`                                            |
+| OrgTreeSelect                                | field 間距 4;input 裁切;說明多「程式 @repo/ui 或 admin components」                                         | `OrgTreeSelect.js`                                      |
+| MonthCalendarCell / MonthCalendar            | 說明補 StatusChip                                                                                           | `MonthCalendar.js`                                      |
+| NotificationBell / Item / Panel              | 鈴外框內距 16、徽章圖層名 `Badge`;content 裁切                                                              | `Notification.js`                                       |
+| Receipt58Signature                           | 說明的 Role 範例                                                                                            | `Print.js`                                              |
+| Receipt58Barcode                             | 條碼寬 142                                                                                                  | `Receipt58Test.js`                                      |
+| RosterCell / RosterGrid                      | 現況多休息列(Break / BreakText)、右上角標槽(Corner / CornerContent)、Selected 改互動狀態樣式;日期表頭內距 3 | `RosterGrid.js` 改寫格子段落;`RosterGrid-group.js` 說明 |
+| ScheduleAutoMark / Block / Demand / Timeline | AutoMark 行高 150%;Selected 框不佔版面;時間軸長條副標空白時隱藏                                             | `ScheduleTimeline-parts.js`、`ScheduleTimeline.js`      |
+| ScheduleTimelineMore / StatusChip            | 變體寬 28;外框橫向換行;StatusChip 無框 Tone 的 Hover 框佔版面;說明                                          | `TimelineMore-StatusChip.js`                            |
+
+**第二輪**(重跑有改的腳本與依賴它們的元件):31 個一致;再修 RosterGrid 凍結表頭內距 6、角標槽不裁切後,單獨重跑核對一致。剩下的差異都不是腳本問題:
+
+- **Section 說明**:現況的 `<`、`>` 被重複跳脫成 `&amp;amp;lt;` 一類字串(資料瑕疵),腳本版文字正確,不跟現況。
+- **Receipt58Signature 說明**:腳本已和現況一字不差;第二輪沒重跑 `Print.js`(避免重複建 Receipt58),以字串比對確認。
+- **MonthCalendarCell**:現況裡 `Draft/Tag` 實例的子節點比較少,推論是現況實例停在舊版 Library、沒接受更新(未實測);腳本照目前的 Library 建立。
+- 暫存頁 `757:14` 保留到第 6 步參考畫面腳本補完後一起核對(計畫第 6.2 步),之後刪除。

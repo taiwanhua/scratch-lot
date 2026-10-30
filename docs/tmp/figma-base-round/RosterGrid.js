@@ -95,6 +95,7 @@ async function rcell(state) {
   corner.primaryAxisAlignItems = "MAX";
   corner.counterAxisAlignItems = "MIN";
   corner.fills = [];
+  corner.clipsContent = false;
   corner.layoutPositioning = "ABSOLUTE";
   corner.primaryAxisSizingMode = corner.counterAxisSizingMode = "FIXED";
   corner.resize(48, 22);
@@ -179,8 +180,8 @@ async function headCell(t1, t2, w, frozen) {
     name: frozen ? "frozen-header" : "date-header",
     paddingLeft: 8,
     paddingRight: 8,
-    paddingTop: 3,
-    paddingBottom: 3,
+    paddingTop: frozen ? 6 : 3,
+    paddingBottom: frozen ? 6 : 3,
   });
   h.fills = [await paint("bg/default")];
   h.strokes = [await paint("divider")];
