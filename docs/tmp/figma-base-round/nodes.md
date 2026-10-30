@@ -1345,3 +1345,21 @@ Figma 限制:實例裡的子圖層不能改位置 / 尺寸,所以「長條 + 前
   - 示範表單:修訂紀錄 →「檢視」;帶入資料兩步 →「新增」。
   - 角色管理「加入使用者」實際在角色詳情的分配使用者頁籤;候選「Demo / 角色分配使用者檢視」只是 880×700 局部示範,當背景會留白,維持「Admin 角色管理」。
   - 比框高的開啟畫面(表單版本 976、申請詳情 1082 / 1100)由 Overlay 框裁切,只露上半部。
+
+## 檢查(第 7 步,2026-10-30,完成)
+
+使用者決定「全部都處理」:草稿頁的非 0 項目來自底座現有畫面,所以連同 wowgo-base 全部 `Screen /` 頁一起修到 0。
+
+- **修法**(都在 wowgo-base;修正腳本 `fix-audit` 暫存在 `2168:2`,第 8 步隨暫存頁刪除):
+  - Overlay 框比背景頁矮(B7 的背景被切):框高改成背景頁高度、scrim 跟著撐滿、對話框重新置中(表單 12、流程 4、申請中心 3 張)。
+  - 「Admin 使用者管理」(表格 5 列共 972 高放進 734 的欄)與「Admin 角色管理」(權限矩陣)畫面高度貼合內容(1248 / 1033),並重新複製到用它們當背景的 Overlay。
+  - 格子溢出:放不下的欄加寬(整列沒有 FILL 欄時從前一欄借),含使用者 / 角色 / 欄位管理的 Tag 欄、BS-13 選項顏色欄;表單版本表格操作欄改成固定 218(同 BS-04b 腳本修正),35 列。
+  - 欄位說明文字超出:表單 / 流程設定面板的下拉改成跟內容高(表單 15、流程 5、草稿頁 3)。
+  - 兩欄欄位用換行排的網格(`grid`):依寬度重排成「兩個一列」的 `grid-row`(不裁切),表單 1、申請中心 5、示範表單 12;示範表單的明細表(ArrayTableWidget)改跟內容高。
+  - 使用者管理兩張對話框的「性別」由 40 高的 `Draft/Select` 換成 56 高的 `Draft/SelectField`(和同列 TextField 對齊)。
+  - 沒綁變數的顏色:有同色變數的直接綁;視角註記卡文字(#212B36 / #63707D,底座沒有同色)綁 `text/primary` / `text/secondary`。
+  - Overlay 裡直接放的對話框實例名稱加「(浮層)」(audit-layout 檔頭的浮層寫法),5 個。
+- **結果**:wowgo-base 草稿頁與全部 15 個 `Screen /` 頁 `audit-layout`(clippedText、misalignedRows、overflowNodes、overlapText、overflowTextInInstance、rowGapInContainer)、`audit-legend`(unboundColors、legendMismatch)都是 0;草稿頁 `audit.js` 的 canvasOverlap、draftTokenBindings、nonBaseBindingsInBaseDrafts、devTextInScreens 為 0(baseDraftComponents 等三項在第 9 步 scratch-lot 換成 Library 元件後歸 0)。
+- **scratch-lot**:
+  - `audit-roster`:原本 4 處(SC-21e / 21f 電腦與平板)是背景複本沿用 SC-63「滑過空白格」的「+ 人力需求」;例外改成連背景來源一起判斷(`audit-roster.js`),結果 0。
+  - `audit-sync`:一次跑 8 頁會斷線,分 4 次跑。只有店面管理 ST-01 / 02 / 20 / 34 / 35 / 36 / 38 的「📷 掃描」電腦沒有,規格 6.3、18.3 本來就只在有相機的手機 / 平板顯示,依檔頭規則列進 `EXEMPT` 並寫理由;其他項目(overlayNotCovering、sharedHandDrawn、sectionMismatch、filterDrawerMissing)都是 0。
