@@ -60,11 +60,68 @@ async function filterTree() {
     ]),
     "FILL",
   );
+  add(g, await nestedGroup(), "FILL");
   const foot = al("HORIZONTAL", { name: "add-actions", itemSpacing: 16 });
   add(foot, await link("+ 條件"));
   add(foot, await link("+ 群組"));
   add(g, foot);
   return g;
+}
+// 巢狀群組樣式同 AudiencePicker.js group(…, nested=true):bg/paper + divider 框
+async function nestedGroup() {
+  const n = al("VERTICAL", {
+    name: "group(巢狀)",
+    itemSpacing: 10,
+    paddingLeft: 14,
+    paddingRight: 14,
+    paddingTop: 12,
+    paddingBottom: 12,
+  });
+  n.fills = [await paint("bg/paper")];
+  n.strokes = [await paint("divider")];
+  n.strokeWeight = 1;
+  await radius(n, "radius/sm");
+  const h = al("HORIZONTAL", {
+    name: "group-header",
+    itemSpacing: 10,
+    counterAxisAlignItems: "CENTER",
+  });
+  add(h, await sel("群組組合", "OR — 其中一個成立即可", 220));
+  add(
+    h,
+    await txt(
+      "整個群組視為上一層的一個條件",
+      "Caption",
+      "text/secondary",
+      "hint",
+    ),
+  );
+  const sp = add(h, al("HORIZONTAL", { name: "spacer" }), "FILL");
+  sp.resize(sp.width, 1);
+  add(h, await link("刪除群組"));
+  add(n, h, "FILL");
+  add(
+    n,
+    await row([
+      await sel("欄位", "組織", 140),
+      await sel("條件", "屬於", 110),
+      await sel("值", "A-2", 200),
+    ]),
+    "FILL",
+  );
+  add(
+    n,
+    await row([
+      await sel("欄位", "狀態", 140),
+      await sel("條件", "屬於", 110),
+      await sel("值", "已發布", 200),
+    ]),
+    "FILL",
+  );
+  const foot = al("HORIZONTAL", { name: "add-actions", itemSpacing: 16 });
+  add(foot, await link("+ 條件"));
+  add(n, foot);
+  return n;
 }
 const c = figma.createComponent();
 c.name = "Draft/DataScopeRuleCard";
@@ -117,5 +174,5 @@ title.componentPropertyReferences = {
 };
 c.description =
   DESC_PREFIX +
-  "資料範圍規則卡片新版(底座規格 3.0「資料範圍的變更」;程式 DataScopePage/RuleEditorPanel/RuleCard)。上半「套用對象」= Draft/AudiencePicker(AllowEveryone=True,所有人 / 符合條件);分隔線;下半「條件組合」= 既有過濾條件樹(欄位依資料目標目錄,比較方式 屬於 / 不屬於 / 之間 / 之前 / 之後,動態值【操作者本人】【操作者的所屬組織】)。兩棵樹根層下拉都標「組合」,巢狀仍標「群組組合」。右上 Link「刪除規則」。規則合成(頁面層級)不變。取代資料範圍頁現有規則卡(Figma「Screen / 資料範圍」要跟著改)。";
+  "資料範圍規則卡片新版(底座規格 3.0「資料範圍的變更」;程式 DataScopePage/RuleEditorPanel/RuleCard)。上半「套用對象」= Draft/AudiencePicker(AllowEveryone=True,所有人 / 符合條件);分隔線;下半「條件組合」= 既有過濾條件樹(欄位依資料目標目錄,比較方式 屬於 / 不屬於 / 之間 / 之前 / 之後,動態值【操作者本人】【操作者的所屬組織】),可巢狀群組(程式 ConditionGroup,UI 最多 3 層;示意一層「群組組合」OR)。兩棵樹根層下拉都標「組合」,巢狀仍標「群組組合」。右上 Link「刪除規則」。規則合成(頁面層級)不變。取代資料範圍頁現有規則卡(Figma「Screen / 資料範圍」要跟著改)。";
 return { id: c.id };

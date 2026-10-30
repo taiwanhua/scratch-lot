@@ -1292,11 +1292,20 @@ Figma 限制:實例裡的子圖層不能改位置 / 尺寸,所以「長條 + 前
 - 腳本 Section / OrgTreeSelect / MonthCalendar / Notification / Snackbar / Print / Stepper 改用 `await comp("Draft/ActionIcon")`;`Screens2-base.js` 用 `_kit.js` 的函式,第 6 步補參考畫面時一起改。
 - `2001:68` 的元件說明還只寫原本 8 個圖示,登記表 `docs/branding.md` 也是;第 8 步登記時一起更新。
 
-## 底座既有元件與畫面(第 5 步,2026-10-30,進行中)
+## 底座既有元件與畫面(第 5 步,2026-10-30,完成)
 
 - **AppBar** `2001:1248`:加 BOOLEAN `Notifications#2176:0`(預設開),鈴實例 `2176:99`(`notification-bell`,指向重建的 `Draft/NotificationBell` `2170:949`,預設變體 Unread=True)放在 `orgSwitcher` 左邊,順序同 `AppBar.tsx`(頁名 → ? → 通知鈴 → 當前組織 → 使用者選單)。AppBar 全檔 82 個實例。
 - **側欄** `2001:1214`:系統管理群組 spare-1~~5、頂層 spare-top-1~~8 都在;收合版 `2001:1295` 有 spare-top-1~~8。元件裡的備用槽是隱藏的「(備用項目)」,展開版 NavItem 沒有圖示槽;通知設定 = spare-4、印表機管理 = spare-5 與圖示 notifications / print 在參考畫面實例上填(`Base-ref.js` 的 `sysNav()`),第 6 步重跑參考畫面時核對。
 - **資料範圍參考畫面**「Admin 資料範圍」`2022:3559`:兩張規則卡 `2159:3660`(規則 1)、`2159:3846`(規則 2)用 swapComponent 換成重建的 `2169:310`,保留 Title。旁邊註記卡「_註記:合成規則與資料影響」`2022:3641` 還是舊範例,改寫方式待確認。
+- **DataScopeRuleCard 補巢狀群組(使用者核可 B 方案)**:註記的規則 2「2026 後 且(A-2 或 已發布)」需要巢狀群組,而卡片下半「條件組合」原本只畫兩列平行條件;程式 `ConditionGroup.tsx` 本來就支援巢狀(最多 3 層),屬元件少畫,不是新功能。
+  - `DataScopeRuleCard.js`:`filterTree()` 在兩列條件後加 `group(巢狀)`(樣式同 `AudiencePicker.js` 巢狀群組:bg/paper + divider 框、「群組組合 OR」、「刪除群組」、兩列 組織 屬於 A-2 / 狀態 屬於 已發布、「+ 條件」),說明補「可巢狀群組」一句。
+  - 核對:scratch-lot 暫存頁 `757:14` 跑新腳本得 `775:1434`,跟原核對版 `758:316` 逐節點比對,只多出巢狀群組 20 個節點、沒有少,高度 715 → 917。
+  - wowgo-base `2169:310` 原地插入 `group(巢狀)` `2179:1413`(不重建,key `6fd48a1916a482acf9571fdfb3a86ab2cf4eff31` 不變,2 個實例仍連著),節點簽章與暫存頁產出一致,高度 917。
+- **規則卡內容(實例覆寫)**:
+  - 規則 1 `2159:3660`(客服):套用對象 角色 屬於 客服,隱藏巢狀群組;條件組合 建立者 屬於【操作者本人】,隱藏第二列與巢狀群組。
+  - 規則 2 `2159:3846`(租戶 A):套用對象隱藏根層角色列、巢狀群組的權限列,只留「所屬組織 屬於 租戶 A 含下層」;條件組合 建立時間 之後 2026-01-01,隱藏第二列,巢狀群組 OR(組織 屬於 A-2 / 狀態 屬於 已發布)。
+  - `AudiencePicker` 不改(流程審核者、知會、通知設定共用)。
+- **註記 `2022:3641` 改寫**:下半用詞「符合條件」改「條件組合」;只命中規則 1 =「租戶 A 以外的客服」、只命中規則 2 =「租戶 A 裡不是客服的人」、命中兩條 =「租戶 A 的客服」(OR 聯集 / AND 交集);「永遠疊加…可見範圍」保留。
 - **Snackbar**:方案 A 第 1 步要從 Figma 版本紀錄救回 `2001:992`,外掛做不到,待使用者操作。
 - **Snackbar(方案 A,完成)**:`2001:992` 不在任何頁面上但節點還在(parent 為 null),直接掛回 Popover 頁即救回,key 仍是 `1a48435131b2c4acd8e4555aef6da483980c6252`,不需要版本紀錄。原地改成卡片樣式:Success `2001:993`、Error `2001:997` 沿用原變體節點(內容與外框照 `Snackbar.js`),Warning `2170:1027`、Info `2170:1039` 從重建的 Snackbar+ 移入;屬性 Title / ShowTitle / Message / ShowAction;說明換成新版。另一方做的 `2156:590` 已刪(0 實例);草稿頁的 Snackbar+ 移空後由 Figma 自動移除。`_resolve.js` 的 `Draft/Snackbar` 補 `baseNode` `2001:992`。
 - Popover 頁說明 `2001:1001` 原寫「右上角、AppBar 下方(#426)」,和程式(`SnackbarStack.tsx` right / bottom 24)與 DATA-06 的右下角不一致,依 FIGMA-10 改成現況。
