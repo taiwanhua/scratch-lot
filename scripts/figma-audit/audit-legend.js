@@ -14,7 +14,9 @@
 //                  (1) 不算錯、改列在 legendExempted(回報時照列理由);(2) 照查。
 //                  設定 legend.exemptMarks 列的「畫面名稱開頭|變數名稱」(值是理由):那些畫面的那個標示色
 //                  在圖例找不到樣本時 (2) 不算錯,改列在 legendExempted(例:文字本身就說明、圖例不列的標示)。
+// 頁太大、一次跑不完(use_figma 逾時)時,填 SECTION_ID 逐個尺寸 Section 分段跑,回報時加總。
 const PAGE_ID = ""; // 要稽核的頁 id(必填)
+const SECTION_ID = ""; // 選填:只查這頁的某一個 Section;空白 = 整頁
 if (typeof AUDIT_CONFIG === "undefined")
   throw new Error("先貼 project/config.js 再貼本檔");
 if (!PAGE_ID) throw new Error("PAGE_ID 未填");
@@ -34,7 +36,14 @@ const markExemptOf = (screenName, mark) =>
 figma.skipInvisibleInstanceChildren = true;
 const page = await figma.getNodeByIdAsync(PAGE_ID);
 await figma.setCurrentPageAsync(page);
-const screens = page.children
+const section = SECTION_ID ? await figma.getNodeByIdAsync(SECTION_ID) : null;
+if (
+  SECTION_ID &&
+  (!section || section.type !== "SECTION" || section.parent !== page)
+)
+  throw new Error("SECTION_ID 不是這頁的 Section");
+const root = section || page; // 稽核範圍
+const screens = root.children
   .flatMap((n) => (n.type === "SECTION" ? [...n.children] : [n]))
   .filter((n) => n.visible && n.type !== "TEXT" && "children" in n);
 const vName = {};
@@ -190,6 +199,7 @@ for (const s of screens) {
 }
 return {
   page: page.name,
+  section: section ? section.name : null,
   unboundColors: unbound,
   legendMismatch: mismatch.length,
   legendExempted: exempted.length,
