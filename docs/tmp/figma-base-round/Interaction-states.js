@@ -1,4 +1,5 @@
-// 互動狀態(底座規格 10.11「互動狀態」;專案規格 14.5「滑過提示」)。前置:貼上 _resolve.js;在 scratch-lot Screens 執行。
+// 互動狀態(底座規格 10.11「互動狀態」;專案規格 14.5「滑過提示」)。前置:貼上 _resolve.js;在草稿頁執行(scratch:Base Draft、base:Draft / 本輪)。
+// 2026-10-30 起元件依名稱在目前頁找、變數經 tok() 取(原本寫死 scratch-lot 節點 id、用 teamLibrary 查);已經有互動狀態的元件跳過,可重跑。
 // Draft/ScheduleTimelineBlock(259:4770)、Draft/ScheduleTimelineDemand(286:77949)加變體屬性 Interaction = Default / Hover / Selected / Focus
 // (只做 State=Normal、Tone=Normal 一組,其他狀態沿用同規則);Draft/RosterCell(49:493)的 State 加 Hover / Focus(Selected 原本就有);
 // (專案 Draft/MoreStrip 的 Interaction 已隨元件移到底座 Draft/ScheduleTimelineMore 的 State,見 TimelineMore-StatusChip.js。)
@@ -8,17 +9,6 @@
 //              疊色用 state layer 圖層(最底層 `state-layer` 矩形,圖層不透明度;見 StateLayer.js),不新增變數、不寫死色碼。
 //   Focus    = action/focus 2px 外框(鍵盤焦點;畫面不用每張畫)
 // 手機沒有滑過:按下時底色加深(同 Hover 外觀),內容看對話框。Base Draft 的 BS-22 加一列「互動狀態」示範。
-const KEY = {
-  hover: "9d069b9ff19a0e0bb8e82e1205e9b20fa27eea47",
-  sel: "37f80e5dfc92ba565ff5e53f7dd2c91ea8e4a323",
-  focus: "906e5a99b09714d270bb29494c2b153ee90e6f8f",
-  pdark: "c4d9e8d337cf252393a3cb8ec36da76e173ee699",
-  g500: "c84c76fe3426c8a7433557941dff0bed92c7d2bb",
-  pmain: "3666ac0c6b3d12e8e38f6be8270287eb55a5cce1",
-};
-const V = {};
-for (const [k, v] of Object.entries(KEY))
-  V[k] = await figma.variables.importVariableByKeyAsync(v);
 const Pt = (v) =>
   figma.variables.setBoundVariableForPaint(
     { type: "SOLID", color: { r: 0.5, g: 0.5, b: 0.5 } },
@@ -48,19 +38,7 @@ const TONE = (nm) =>
         : /^(bg\/|grey\/)/.test(nm)
           ? "grey/500"
           : null;
-const libCols = (
-  await figma.teamLibrary.getAvailableLibraryVariableCollectionsAsync()
-).filter((c) => c.libraryName === "wowgo-base Design System");
-const libVar = async (name) => {
-  for (const cn of ["Color", "Primitives"]) {
-    const c = libCols.find((x) => x.name === cn);
-    const v = (
-      await figma.teamLibrary.getVariablesInLibraryCollectionAsync(c.key)
-    ).find((x) => x.name === name);
-    if (v) return figma.variables.importVariableByKeyAsync(v.key);
-  }
-  throw new Error("沒有共用色票 " + name + ",回報不要自創");
-};
+const libVar = (name) => tok(name);
 const varName = async (p) =>
   p?.boundVariables?.color
     ? (await figma.variables.getVariableByIdAsync(p.boundVariables.color.id))
@@ -95,14 +73,16 @@ const make = async (base, mode) => {
     }
   }
   if (mode === "Focus") {
-    c.strokes = [Pt(V.focus)];
+    c.strokes = [Pt(await tok("action/focus"))];
     c.strokeWeight = 2;
     c.strokeAlign = "OUTSIDE";
   }
   return c;
 };
-const addProp = async (setId, baseName, modes, nameOf) => {
-  const set = await figma.getNodeByIdAsync(setId);
+const addProp = async (setName, baseName, modes, nameOf) => {
+  const set = draft(setName);
+  // ScheduleTimeline-parts.js 建立時就有 Interaction,不重複加
+  if (set.componentPropertyDefinitions.Interaction) return;
   for (const v of set.children) v.name += ", Interaction=Default";
   const base = set.children.find(
     (v) => v.name === baseName + ", Interaction=Default",
@@ -110,20 +90,22 @@ const addProp = async (setId, baseName, modes, nameOf) => {
   for (const m of modes) (await make(base, m)).name = nameOf(m);
 };
 await addProp(
-  "259:4770",
+  "Draft/ScheduleTimelineBlock",
   "State=Normal, Auto=False",
   ["Hover", "Selected", "Focus"],
   (m) => `State=Normal, Auto=False, Interaction=${m}`,
 );
 await addProp(
-  "286:77949",
+  "Draft/ScheduleTimelineDemand",
   "Tone=Normal",
   ["Hover", "Selected", "Focus"],
   (m) => `Tone=Normal, Interaction=${m}`,
 );
 {
-  const set = await figma.getNodeByIdAsync("49:493");
+  const set = draft("Draft/RosterCell");
   const base = set.children.find((v) => v.name === "State=Filled");
-  for (const m of ["Hover", "Focus"]) (await make(base, m)).name = "State=" + m;
+  if (!set.children.some((v) => v.name === "State=Hover"))
+    for (const m of ["Hover", "Focus"])
+      (await make(base, m)).name = "State=" + m;
 }
 return "ok";

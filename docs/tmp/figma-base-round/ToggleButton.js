@@ -1,22 +1,14 @@
-// Draft/ToggleButton(底座規格 10.11 互動狀態)。在 scratch-lot Screens 的 Base Draft 頁(41:5914)執行,只綁 wowgo-base 變數。
+// Draft/ToggleButton(底座規格 10.11 互動狀態)。前置:貼上 _resolve.js;在草稿頁執行(scratch:Base Draft、base:Draft / 本輪)。
+// 2026-10-30 起變數與底座 Button 一律經 _resolve.js 的 tok() / comp() 取(原本寫死頁 id、直接從 Library 匯入),兩種 MODE 都能跑。
 // 開關型按鈕(實作用 MUI ToggleButton):按一下展開 / 收合面板,展開時是 Selected。第一個用處:排班的檢核按鈕「限制 n · 提醒 n」。
 // 外觀和底座 Button Outlined Small 同一套(高 32、左右內距 10、圓角 8、1px 框、文字取自 Library Button 的 label):
 //   Color = Error(error/main 框與字)/ Warning(warning/main 框與字)/ Neutral(grey/500 框、text/secondary 字)
 //   × State = Default(無底)/ Hover(疊同色系 main × 8%)/ Selected(疊同色系 main × 16%);框一律 1px 同色系 main、不佔版面。
 //   疊色是最底層的 state-layer 矩形(圖層不透明度),不是第二層 paint。
 // 屬性 Label。放在 Base Draft 元件區「時間軸」那一列的最後面。
-const KEYS = {
-  em: "0d2b086b0de059122075ae1efcdf53c86d10497d", // error/main
-  wm: "c4795bb776010891dbb7e03790c05d403ac4c75a", // warning/main
-  g500: "c84c76fe3426c8a7433557941dff0bed92c7d2bb", // grey/500
-  ts: "c11ac6a81b471a6a46f85602d056355c19fd4166", // text/secondary
-};
-const BUTTON_KEY = "70952d51062bc2783af95327d7634b98982b98dd"; // Library Button Variant=Outlined, Size=Small, State=Default, Color=Error
-const V = {};
-for (const [k, v] of Object.entries(KEYS))
-  V[k] = await figma.variables.importVariableByKeyAsync(v);
 // 綁變數時 paint 的底色先填變數解析後的值:只填灰色時,複製來的文字節點會一直畫成灰色(Error 字變灰)
-const P = (v, node) => {
+const P = async (name, node) => {
+  const v = await tok(name);
   const c = node
     ? v.resolveForConsumer(node).value
     : { r: 0.5, g: 0.5, b: 0.5 };
@@ -26,20 +18,22 @@ const P = (v, node) => {
     v,
   );
 };
-const page = await figma.getNodeByIdAsync("41:5914");
-await figma.setCurrentPageAsync(page);
+const page = figma.currentPage;
 const PREFIX = "【底座・本輪草稿,完成後搬回 wowgo-base Design System】";
 // 文字樣式照 Library Button:取它的 label 複本(字型、字級、行高一致)
-const ref = (
-  await figma.importComponentByKeyAsync(BUTTON_KEY)
-).createInstance();
+const ref = variantOf(await comp("Button"), {
+  Variant: "Outlined",
+  Size: "Small",
+  State: "Default",
+  Color: "Error",
+}).createInstance();
 const refText = ref.findOne((n) => n.type === "TEXT");
 await figma.loadFontAsync(refText.fontName);
 // [框 / 疊色, 字]
 const TONE = {
-  Error: ["em", "em"],
-  Warning: ["wm", "wm"],
-  Neutral: ["g500", "ts"],
+  Error: ["error/main", "error/main"],
+  Warning: ["warning/main", "warning/main"],
+  Neutral: ["grey/500", "text/secondary"],
 };
 const LABEL = {
   Error: "限制 1 · 提醒 12",
@@ -49,7 +43,7 @@ const LABEL = {
 const comps = [];
 for (const color of Object.keys(TONE))
   for (const st of ["Default", "Hover", "Selected"]) {
-    const [main, txt] = TONE[color];
+    const [main, tc] = TONE[color];
     const c = figma.createComponent();
     c.name = `Color=${color}, State=${st}`;
     c.layoutMode = "HORIZONTAL";
@@ -59,7 +53,7 @@ for (const color of Object.keys(TONE))
     c.paddingLeft = c.paddingRight = 10;
     c.paddingTop = c.paddingBottom = 0;
     c.cornerRadius = 8;
-    c.strokes = [P(V[main], c)];
+    c.strokes = [await P(main, c)];
     c.strokeWeight = 1;
     c.strokeAlign = "INSIDE";
     c.strokesIncludedInLayout = false;
@@ -67,7 +61,7 @@ for (const color of Object.keys(TONE))
     c.appendChild(t);
     t.name = "label";
     t.characters = LABEL[color];
-    t.fills = [P(V[txt], t)];
+    t.fills = [await P(tc, t)];
     c.resize(c.width, 32);
     c.fills = [];
     // 疊色用一層 state-layer(同色系 main、圖層不透明度 8% / 16%),不用 paint 不透明度:
@@ -82,7 +76,7 @@ for (const color of Object.keys(TONE))
       r.resize(c.width, c.height);
       r.constraints = { horizontal: "STRETCH", vertical: "STRETCH" };
       r.cornerRadius = 8;
-      r.fills = [P(V[main], c)];
+      r.fills = [await P(main, c)];
       r.opacity = op;
     }
     page.appendChild(c);
@@ -107,17 +101,24 @@ set.description =
   PREFIX +
   "開關型按鈕(實作用 MUI ToggleButton):按一下展開 / 收合面板,展開時 State=Selected,再按一次收合回 Default。外觀同 Button Outlined Small(高 32、圓角 8、1px 框)。Color:Error(error/main)/ Warning(warning/main)/ Neutral(grey/500 框、text/secondary 字),由模組依狀態決定(例:排班檢核有限制 Error、只有提醒 Warning、沒有問題 Neutral)。State:Default(無底)/ Hover(疊同色系 main × 8%)/ Selected(疊同色系 main × 16%),框一律 1px 同色系 main(照底座規格 10.11 互動狀態)。屬性 Label。";
 // 放在「時間軸(ScheduleTimeline)」列的最後面(列與節點間距同 Base-layout.js:GAP 80)
+// 草稿頁還沒有列標題時(base 重建)不定位,由 Base-layout.js 排
 const title = page.children.find(
   (n) => n.name === "列標題 / 時間軸(ScheduleTimeline)",
 );
-const next = page.children
-  .filter((n) => /^列標題 \//.test(n.name) && n.y > title.y)
-  .sort((a, b) => a.y - b.y)[0];
-const inRow = page.children.filter(
-  (n) => n !== set && n !== title && n.y >= title.y - 1 && n.y < next.y - 1,
-);
-set.x = Math.max(...inRow.map((n) => n.x + n.width)) + 80;
-set.y = title.y;
+if (title) {
+  const next = page.children
+    .filter((n) => /^列標題 \//.test(n.name) && n.y > title.y)
+    .sort((a, b) => a.y - b.y)[0];
+  const inRow = page.children.filter(
+    (n) =>
+      n !== set &&
+      n !== title &&
+      n.y >= title.y - 1 &&
+      (!next || n.y < next.y - 1),
+  );
+  set.x = Math.max(...inRow.map((n) => n.x + n.width)) + 80;
+  set.y = title.y;
+}
 return {
   set: set.id,
   variants: set.children.map((v) => `${v.name} ${v.id} ${v.width}×${v.height}`),
