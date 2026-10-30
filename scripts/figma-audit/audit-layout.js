@@ -16,7 +16,9 @@
 //   rowGapInContainer 容器(設定 layout.rowGap.container)裡上下堆疊的各列(layout.rowGap.rows)間距要一致為 gap(容許 1px);
 //                  列變矮後沒重排、留下大空隙就算。只看寬度 ≥ 容器 minWidthRatio 的列,左右並排的直排窄條不比。
 //   basePrimaryBindings 專案頁殘留底座 primary/* 綁定(設定 basePrimaryCollections),含元件實例內部實際生效的綁定(底座草稿頁不檢查)。
+// 頁太大、一次跑不完(use_figma 逾時)時,填 SECTION_ID 逐個尺寸 Section 分段跑,回報時加總。
 const PAGE_ID = ""; // 要稽核的頁 id(必填)
+const SECTION_ID = ""; // 選填:只查這頁的某一個 Section;空白 = 整頁
 if (typeof AUDIT_CONFIG === "undefined")
   throw new Error("先貼 project/config.js 再貼本檔");
 if (!PAGE_ID) throw new Error("PAGE_ID 未填");
@@ -26,7 +28,14 @@ const BASE_PRIMARY = AUDIT_CONFIG.basePrimaryCollections;
 figma.skipInvisibleInstanceChildren = true;
 const page = await figma.getNodeByIdAsync(PAGE_ID);
 await figma.setCurrentPageAsync(page);
-const screens = page.children
+const section = SECTION_ID ? await figma.getNodeByIdAsync(SECTION_ID) : null;
+if (
+  SECTION_ID &&
+  (!section || section.type !== "SECTION" || section.parent !== page)
+)
+  throw new Error("SECTION_ID 不是這頁的 Section");
+const root = section || page; // 稽核範圍
+const screens = root.children
   .flatMap((n) => (n.type === "SECTION" ? [...n.children] : [n]))
   .filter((n) => n.visible && n.type !== "TEXT");
 const visibleChain = (n) => {
@@ -326,7 +335,7 @@ if (!page.name.startsWith(AUDIT_CONFIG.baseDraftPagePrefix)) {
   // 連元件實例內部(含隱藏的子節點)一起算:實例沒被品牌覆寫、仍綁底座 primary 的節點也是錯的
   figma.skipInvisibleInstanceChildren = false;
   const vc = {};
-  for (const n of page.findAll(() => true))
+  for (const n of root.findAll(() => true))
     for (const p of ["fills", "strokes"]) {
       if (!(p in n) || !Array.isArray(n[p])) continue;
       for (const paint of n[p]) {
@@ -350,6 +359,7 @@ if (!page.name.startsWith(AUDIT_CONFIG.baseDraftPagePrefix)) {
 }
 return {
   page: page.name,
+  section: section ? section.name : null,
   screens: screens.length,
   clippedText: clipped.length,
   misalignedRows: misaligned.length,
