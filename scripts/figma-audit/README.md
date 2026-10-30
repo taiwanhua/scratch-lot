@@ -21,7 +21,8 @@
 2. `code` 參數 = **`project/config.js` 全文 + 換行 + 稽核腳本全文**。整份貼上,不要貼精簡版或只貼片段:精簡版少掉的分支會讓數字變少,看起來像通過。
 3. 改腳本檔頭參數(只改貼上的副本,不改檔案):
    - `audit-layout.js`、`audit-legend.js`、`audit.js`:`PAGE_ID` = 要查的頁 id。一次只查一頁(`use_figma` 一次只切一次頁);所有頁平行各跑一次,回報時逐頁列原始數字並加總。
-   - `audit-sync.js`:沒有檔頭參數,一次跑完 `sync.pages` 的全部頁,另查 `sync.overlayOnlyPages` 的遮罩。
+   - `audit-layout.js`、`audit-legend.js`、`audit.js` 的 `SECTION_ID`(選填):頁太大、整頁一次跑不完(`use_figma` 逾時斷線)時,填這頁的尺寸 Section id,逐個 Section 分段跑,回報時逐段列原始數字並加總。空白 = 整頁。頁上直接放的畫面(不在 Section 裡)只有整頁跑會查到,分段時另外說明。
+   - `audit-sync.js`:預設一次跑完 `sync.pages` 的全部頁,另查 `sync.overlayOnlyPages` 的遮罩。頁多跑不完時填 `ONLY_PAGES`(逗號分隔的頁 id,必須是設定裡的頁)分批跑,所有頁都要輪到,回報時加總。按鈕比對只比同一頁內,分批不影響結果。
    - `audit-crossview.js`:`RULE` = `crossView` 的規則名稱。
 4. 沒貼設定、檔頭參數沒填或規則不存在時,腳本直接報錯,不會靜默跑空。
 5. 回傳是 JSON:數字欄位是計數,`*Sample` / `*List` 是前幾筆樣本(節點 id、畫面名、原因),拿來定位;回報時附原始數字,做不到的明說。

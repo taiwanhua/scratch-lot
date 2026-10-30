@@ -18,11 +18,27 @@
 // 6. 遮罩 / 全螢幕對話框蓋滿畫面(overlayNotCovering):有「背景:…」或 scrim 的畫面,直屬子節點裡的
 //    scrim、full-dialog(或名稱含「全螢幕」)、背景:… 要從頂到底、左到右蓋滿畫面框;drawer(或含「抽屜」)要從頂到底;
 //    bottom-sheet(或含「底部面板」)要貼齊畫面底部(容許 1px)。背景變高之後遮罩沒跟著撐滿、底下露出背景內容就算。數量要是 0。
+// 頁多、一次跑不完(use_figma 逾時)時,填 ONLY_PAGES 分批跑(每批列幾個頁 id),回報時加總;第 1 項只比同一頁內,分批不影響結果。
+const ONLY_PAGES = ""; // 選填:逗號分隔的頁 id(sync.pages 或 sync.overlayOnlyPages 裡的);空白 = 全部
 if (typeof AUDIT_CONFIG === "undefined")
   throw new Error("先貼 project/config.js 再貼本檔");
 const C = AUDIT_CONFIG.sync;
 figma.skipInvisibleInstanceChildren = false;
-const PAGES = C.pages;
+const ONLY = ONLY_PAGES
+  ? ONLY_PAGES.split(",")
+      .map((s) => s.trim())
+      .filter(Boolean)
+  : null;
+if (ONLY) {
+  const known = [...C.pages, ...(C.overlayOnlyPages || []).map((p) => p.id)];
+  const unknown = ONLY.filter((id) => !known.includes(id));
+  if (unknown.length)
+    throw new Error(`ONLY_PAGES 有設定裡沒有的頁:${unknown.join(", ")}`);
+}
+const PAGES = ONLY ? C.pages.filter((id) => ONLY.includes(id)) : C.pages;
+const OVERLAY_ONLY = (C.overlayOnlyPages || []).filter(
+  (p) => !ONLY || ONLY.includes(p.id),
+);
 const SIZE = Object.fromEntries(
   Object.entries(C.sizes).map(([k, v]) => [k, v.code]),
 );
@@ -230,7 +246,7 @@ for (const pid of PAGES) {
     }
   counts[label0(page.name)] = Object.keys(groups).length;
 }
-for (const { id, label: pageLabel } of C.overlayOnlyPages || []) {
+for (const { id, label: pageLabel } of OVERLAY_ONLY) {
   const extra = await figma.getNodeByIdAsync(id); // 沒有尺寸 Section 的頁(例:底座草稿頁)
   await extra.loadAsync();
   for (const f of extra.children) {

@@ -181,7 +181,7 @@ function layoutScene({ pageName = "Screen / 測試" } = {}) {
   const page = n("PAGE", { name: pageName }, [
     n("SECTION", { name: "電腦 1440", width: 3000, height: 3000 }, [screen]),
   ]);
-  return { figma, page };
+  return { figma, page, n };
 }
 
 test("audit-layout:每一項各抓到一個問題", async () => {
@@ -214,6 +214,44 @@ test("audit-layout:底座草稿頁不查底座主色;rowGap 設 null 時回報 n
   });
   assert.equal(r.basePrimaryBindings, null);
   assert.equal(r.rowGapInContainer, null);
+});
+
+test("SECTION_ID:只查該 Section;不是這頁的 Section 直接報錯", async () => {
+  const { figma, page, n } = layoutScene();
+  const full = page.children[0];
+  const empty = n("SECTION", { name: "手機 390", ax: 4000 });
+  empty.parent = page;
+  page.children.push(empty);
+  const config = testConfig();
+  const inSection = await runAudit("audit-layout.js", figma, config, {
+    PAGE_ID: page.id,
+    SECTION_ID: full.id,
+  });
+  assert.equal(inSection.section, "電腦 1440");
+  assert.equal(inSection.screens, 1);
+  assert.equal(inSection.clippedText, 2);
+  assert.equal(inSection.basePrimaryBindings, 1);
+  const inEmpty = await runAudit("audit-layout.js", figma, config, {
+    PAGE_ID: page.id,
+    SECTION_ID: empty.id,
+  });
+  assert.equal(inEmpty.screens, 0);
+  assert.equal(inEmpty.clippedText, 0);
+  assert.equal(inEmpty.basePrimaryBindings, 0);
+  const whole = await runAudit("audit-layout.js", figma, config, {
+    PAGE_ID: page.id,
+  });
+  assert.equal(whole.section, null);
+  assert.equal(whole.screens, 1);
+  for (const file of ["audit-layout.js", "audit-legend.js", "audit.js"])
+    await assert.rejects(
+      runAudit(file, figma, config, {
+        PAGE_ID: page.id,
+        SECTION_ID: page.children[0].children[0].id,
+      }),
+      /SECTION_ID 不是這頁的 Section/,
+      file,
+    );
 });
 
 // ---- audit-sync ----
@@ -288,6 +326,28 @@ test("audit-sync:例外與註解寫明照共用規則都不算", async () => {
   assert.equal(r.syncDiffs, 0);
   assert.deepEqual(r.exempted, ["AA-01|新增|M:手機收進更多"]);
   assert.equal(r.filterDrawerMissing, 0);
+});
+
+test("audit-sync:ONLY_PAGES 只跑列出的頁;列了設定沒有的頁直接報錯", async () => {
+  const { figma, page, n } = syncScene();
+  const other = n("PAGE", { name: "Screen / 另一頁" }, [
+    n("SECTION", { name: "電腦 1440" }, [
+      n("FRAME", { name: "BB-01 列表", width: 1440, height: 900 }),
+    ]),
+  ]);
+  const config = testConfig();
+  config.sync.pages = [page.id, other.id];
+  const only = await runAudit("audit-sync.js", figma, config, {
+    ONLY_PAGES: other.id,
+  });
+  assert.deepEqual(only.groupsPerPage, { 另一頁: 1 });
+  assert.equal(only.sectionMismatch, 0);
+  const all = await runAudit("audit-sync.js", figma, config);
+  assert.deepEqual(all.groupsPerPage, { 測試: 3, 另一頁: 1 });
+  await assert.rejects(
+    runAudit("audit-sync.js", figma, config, { ONLY_PAGES: "0:0" }),
+    /ONLY_PAGES 有設定裡沒有的頁/,
+  );
 });
 
 // ---- audit-legend ----

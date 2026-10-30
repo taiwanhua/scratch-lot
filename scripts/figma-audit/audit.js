@@ -10,7 +10,9 @@
 // canvasOverlap 任何時候都應為 0:畫布上頁面頂層節點彼此、尺寸 Section 內的子節點彼此,範圍(外框)不能重疊。
 //   例外:框外註解卡(名稱「<畫面名> · 註解」的文字)不算;隱藏的節點不算。
 // devTextInScreens 任何時候都應為 0:畫面框內不能有設計稿編號、規格章節號、開發用說明(設定 audit.devText);註解放在畫面框外。
+// 頁太大、一次跑不完(use_figma 逾時)時,填 SECTION_ID 逐個尺寸 Section 分段跑,回報時加總。
 const PAGE_ID = ""; // 要稽核的頁 id(必填)
+const SECTION_ID = ""; // 選填:只查這頁的某一個 Section;空白 = 整頁
 if (typeof AUDIT_CONFIG === "undefined")
   throw new Error("先貼 project/config.js 再貼本檔");
 if (!PAGE_ID) throw new Error("PAGE_ID 未填");
@@ -21,20 +23,27 @@ const A = AUDIT_CONFIG.audit;
 figma.skipInvisibleInstanceChildren = false;
 const page = await figma.getNodeByIdAsync(PAGE_ID);
 await figma.setCurrentPageAsync(page);
+const section = SECTION_ID ? await figma.getNodeByIdAsync(SECTION_ID) : null;
+if (
+  SECTION_ID &&
+  (!section || section.type !== "SECTION" || section.parent !== page)
+)
+  throw new Error("SECTION_ID 不是這頁的 Section");
+const root = section || page; // 稽核範圍
 
 const descOf = (c) => {
   if (!c) return "";
   const owner = c.parent && c.parent.type === "COMPONENT_SET" ? c.parent : c;
   return owner.description || "";
 };
-const comps = page.findAllWithCriteria({
+const comps = root.findAllWithCriteria({
   types: ["COMPONENT", "COMPONENT_SET"],
 });
 const baseDrafts = comps
   .filter((c) => c.type !== "COMPONENT" || c.parent.type !== "COMPONENT_SET")
   .filter((c) => (c.description || "").includes(MARKER));
 
-const instances = page.findAllWithCriteria({ types: ["INSTANCE"] });
+const instances = root.findAllWithCriteria({ types: ["INSTANCE"] });
 let instancesOfBaseDrafts = 0;
 for (const i of instances) {
   const mc = await i.getMainComponentAsync();
@@ -105,7 +114,7 @@ let basePrimaryBindings = null;
 if (!page.name.startsWith(BASE_PAGE)) {
   basePrimaryBindings = 0;
   const varCache = {};
-  for (const n of page.findAll(() => true)) {
+  for (const n of root.findAll(() => true)) {
     for (const p of ["fills", "strokes"]) {
       if (!(p in n) || !Array.isArray(n[p])) continue;
       for (const paint of n[p]) {
@@ -125,7 +134,7 @@ if (!page.name.startsWith(BASE_PAGE)) {
 }
 
 // 畫面框內的開發用文字(FIGMA-17)。頁上或尺寸 Section 內的頂層節點算畫面;名稱以「說明」開頭的註解卡與框外的註解文字不算。
-const screenNodes = page.children
+const screenNodes = root.children
   .flatMap((n) => (n.type === "SECTION" ? [...n.children] : [n]))
   .filter(
     (n) => n.type !== "TEXT" && !n.name.startsWith("說明") && "findAll" in n,
@@ -149,11 +158,11 @@ const baseScreensNotFromRef = [];
 let nonBaseInBaseScreens = 0;
 if (page.name.startsWith(BASE_PAGE)) {
   const notes = new Set(
-    page.children
+    root.children
       .filter((n) => n.type === "TEXT" && n.characters.includes(A.baseRefNote))
       .map((n) => n.name.replace(/ · 註解$/, "")),
   );
-  for (const f of page.children.filter(
+  for (const f of root.children.filter(
     (n) =>
       n.type === "FRAME" &&
       A.baseRefScreen.test(n.name) &&
@@ -215,7 +224,7 @@ if (page.name.startsWith(BASE_PAGE)) {
 
 // 綁到本機 Draft/ 變數集合的節點(過渡用,回收後要是 0)
 let draftTokenBindings = 0;
-for (const n of page.findAll(() => true)) {
+for (const n of root.findAll(() => true)) {
   let hit = false;
   for (const p of ["fills", "strokes"]) {
     if (!(p in n) || !Array.isArray(n[p])) continue;
@@ -236,8 +245,8 @@ const canvasOverlaps = [];
     a.y < b.y + b.height - 1 &&
     b.y < a.y + a.height - 1;
   const groups = [
-    page.children,
-    ...page.children
+    root.children,
+    ...root.children
       .filter((n) => n.type === "SECTION")
       .map((sec) => sec.children),
   ];
@@ -256,6 +265,7 @@ const canvasOverlaps = [];
 
 return {
   page: page.name,
+  section: section ? section.name : null,
   canvasOverlap: canvasOverlaps.length,
   canvasOverlapSample: canvasOverlaps.slice(0, 10),
   draftTokenBindings,
