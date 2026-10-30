@@ -29,6 +29,8 @@ const K = {
     "action/selected": "37f80e5dfc92ba565ff5e53f7dd2c91ea8e4a323",
     "action/disabled": "0a2d364f0914dc6806f251b04b3fee8dbeb9f830",
     "action/disabledBackground": "585480db6e01a4e2cb325bf38b8400dd5b0797ba",
+    "action/focus": "906e5a99b09714d270bb29494c2b153ee90e6f8f",
+    "grey/500": "c84c76fe3426c8a7433557941dff0bed92c7d2bb",
     "radius/sm": "090b2c8aaafdc7c094af9a5115294468c5726601",
     "radius/md": "0f80284942703a107a0d15ce580a86d4172f7651",
     "radius/lg": "01e922b59587582538054db097868efcdbac5730",
