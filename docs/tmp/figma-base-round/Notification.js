@@ -43,7 +43,7 @@ async function bell(unread) {
       { Color: "Primary", Variant: "Standard" },
       { Content: "3" },
     );
-    bd.name = "badge";
+    bd.name = "Badge";
     c.appendChild(bd);
     bd.x = 22;
     bd.y = 2;
@@ -56,6 +56,11 @@ const bellSet = figma.combineAsVariants(
 );
 bellSet.name = "Draft/NotificationBell";
 hugSet(bellSet, "HORIZONTAL");
+bellSet.paddingLeft =
+  bellSet.paddingRight =
+  bellSet.paddingTop =
+  bellSet.paddingBottom =
+    16;
 bellSet.description =
   DESC_PREFIX +
   "通知鈴(底座規格 B7「UI」;放在 Draft/AdminAppBar 右側、語言切換左邊)。Draft/IconButton(Plain / Medium)+ Draft/ActionIcon+ key=notifications;Unread=True 時右上 Draft/Badge(Primary)顯示未讀數(0 不顯示、超過 99 顯示 99+)。點開 Draft/NotificationPanel。未讀數由即時通道 user:<id> 的 notification 信號觸發重抓。";
@@ -83,6 +88,7 @@ async function item(read) {
   add(dw, dot);
   add(c, dw);
   const col = al("VERTICAL", { name: "content", itemSpacing: 2 });
+  col.clipsContent = true;
   add(
     col,
     await txt(

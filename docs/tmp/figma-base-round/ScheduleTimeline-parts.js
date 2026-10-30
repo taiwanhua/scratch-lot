@@ -82,6 +82,7 @@ const out = {};
   g.name = "glyph";
   g.fontName = font;
   g.fontSize = 9;
+  g.lineHeight = { unit: "PERCENT", value: 150 };
   g.characters = "✦";
   g.fills = [await paint("primary/contrast")];
   add(c, g, "HUG", "HUG");
@@ -157,7 +158,10 @@ const out = {};
     add(row, b, "HUG", "HUG");
     b.visible = false;
     if (inter === "Hover") await stateLayer(c, "grey/500", 0.08);
-    if (inter === "Selected") await stateLayer(c, "grey/500", 0.16);
+    if (inter === "Selected") {
+      await stateLayer(c, "grey/500", 0.16);
+      c.strokesIncludedInLayout = false;
+    }
     return c;
   }
   const vs = [];
@@ -349,7 +353,10 @@ const out = {};
       m.constraints = { horizontal: "MAX", vertical: "MIN" };
     }
     if (inter === "Hover") await stateLayer(c, "primary/main", 0.08);
-    if (inter === "Selected") await stateLayer(c, "primary/main", 0.16);
+    if (inter === "Selected") {
+      await stateLayer(c, "primary/main", 0.16);
+      c.strokesIncludedInLayout = false;
+    }
     return c;
   }
   const vs = [];

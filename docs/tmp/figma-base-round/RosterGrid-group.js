@@ -134,6 +134,6 @@ set.primaryAxisSizingMode = "AUTO";
 set.counterAxisSizingMode = "AUTO";
 set.description =
   g.description.replace(/ 表頭彙總列[\s\S]*$/, "") +
-  " 頂部固定群組(Group,選用):Expanded = 日期表頭下方、人員列上方一組列(群組標題「▾ 標題」+ 群組列,每格一個狀態標籤),和表頭、左右固定欄一起固定,不隨人員列捲動;Collapsed = 收合成一列彙總(「▸ 標題」+ 每天一格,主行 + 副行);None = 沒有群組。群組內容、列數、標籤顏色、收合預設值與收合狀態保存由使用的模組決定(示範:班表人力需求,滿 = grey/100 + divider 細框、缺 = warning、缺負責 = error)。";
+  " 頂部固定群組(Group,選用):Expanded = 日期表頭下方、人員列上方一組列(群組標題「▾ 標題」+ 群組列,每格一個狀態標籤 Draft/StatusChip),和表頭、左右固定欄一起固定,不隨人員列捲動;Collapsed = 收合成一列彙總(「▸ 標題」+ 每天一格,主行 + 副行);None = 沒有群組。群組內容、列數、標籤顏色、收合預設值與收合狀態保存由使用的模組決定(示範:班表人力需求,滿 = grey/100 + divider 細框、缺 = warning、缺負責 = error)。停用欄(例:店休)整欄同一底色 grey/200:日期表頭、群組列 / 彙總列、人員列都用同一個來源(欄位 disabled 狀態),不各畫各的。";
 for (const v of set.children) v.description = "";
 return { set: set.id, variants: set.children.map((v) => v.name + " " + v.id) };

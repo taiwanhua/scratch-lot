@@ -73,7 +73,7 @@ for (let i = 0; i < pattern.length && x < 236; i++) {
   }
   x += w;
 }
-bars.resize(x + 4, 48); // 條碼寬度貼合線條,置中
+bars.resize(x + 2, 48); // 條碼寬度貼合線條
 add(BC, bars);
 const bcT = add(
   BC,

@@ -35,7 +35,11 @@ async function variant(expanded) {
     await txt("示範摘要", "Body/2", "text/secondary", "summary"),
   );
   summary.visible = !expanded;
-  const sp = add(head, al("HORIZONTAL", { name: "spacer" }), "FILL");
+  const sp = figma.createFrame(); // 一般框(不是 auto layout),和現況一致
+  sp.name = "spacer";
+  sp.fills = [];
+  add(head, sp, "FILL");
+  sp.layoutSizingVertical = "FIXED";
   sp.resize(sp.width, 1);
   const btn = await inst("Draft/IconButton", {
     Variant: "Plain",
@@ -56,9 +60,9 @@ async function variant(expanded) {
     slot.name = "Content";
     slot.layoutMode = "VERTICAL";
     slot.paddingLeft = slot.paddingRight = 16;
-    slot.paddingTop = 4;
+    slot.paddingTop = 12;
     slot.paddingBottom = 16;
-    slot.itemSpacing = 8;
+    slot.itemSpacing = 12;
     slot.fills = [];
     slot.layoutSizingHorizontal = "FILL";
     slot.primaryAxisSizingMode = "AUTO";

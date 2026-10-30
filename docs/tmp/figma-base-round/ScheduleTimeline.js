@@ -39,6 +39,11 @@ async function place(parent, set, variant, props, [x, y, w, h], hug) {
           ? "FIXED"
           : main.primaryAxisSizingMode;
   await setProps(i, props);
+  // 副標空白時隱藏(現況的長條實例沒有副標,高度只有標題一行)
+  if (props.Subtitle === "") {
+    const sub = i.findOne((n) => n.name === "subtitle");
+    if (sub) sub.visible = false;
+  }
   return i;
 }
 const D = (tone, title, box) => [

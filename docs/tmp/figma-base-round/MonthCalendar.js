@@ -101,7 +101,7 @@ for (const v of cs.children) {
 }
 cs.description =
   DESC_PREFIX +
-  "MonthCalendar 的日期格(底座規格 10.5)。State=Default / Today(日期數字 primary 圓底)/ Selected(action/selected 底 + primary 2px 框)/ Outside(非本月,數字 text/disabled)。屬性:Day(TEXT)、Show tag(BOOLEAN,行事曆標示,例「國定假日」用 Draft/Tag,顏色依欄位管理選項色)、Show slot(BOOLEAN,格子內容槽,內容由使用的模組決定,例:我的班表放排班時段)。";
+  "MonthCalendar 的日期格(底座規格 10.5)。State=Default / Today(日期數字 primary 圓底)/ Selected(action/selected 底 + primary 2px 框)/ Outside(非本月,數字 text/disabled)。屬性:Day(TEXT)、Show tag(BOOLEAN,行事曆標示,例「國定假日」用 Draft/Tag,顏色依欄位管理選項色)、Show slot(BOOLEAN,格子內容槽,內容由使用的模組決定,例:我的班表放排班時段)。 內容槽的狀態標籤用 Draft/StatusChip。";
 
 const cal = figma.createComponent();
 cal.name = "Draft/MonthCalendar";
@@ -182,5 +182,5 @@ for (let w = 0; w < 5; w++) {
 add(cal, grid);
 cal.description =
   DESC_PREFIX +
-  "MonthCalendar 月曆(@repo/ui,底座規格 10.5;不用第三方行事曆套件)。週日開頭(全系統一週從星期日開始);工具列 上月 / 月份 / 下月 / 今天;日期格 = Draft/MonthCalendarCell 實例(Today、Selected、Outside、行事曆標示 tag、內容槽)。選取、格子內容由使用的模組決定(排班:我的班表、行事曆編輯)。";
+  "MonthCalendar 月曆(@repo/ui,底座規格 10.5;不用第三方行事曆套件)。週日開頭(全系統一週從星期日開始);工具列 上月 / 月份 / 下月 / 今天;日期格 = Draft/MonthCalendarCell 實例(Today、Selected、Outside、行事曆標示 tag、內容槽)。選取、格子內容由使用的模組決定(排班:我的班表、行事曆編輯)。 格子內容槽裡的狀態標籤(例:排班人力需求「早 08:30–14:30 負1/1 協1/1」)用 Draft/StatusChip(Tone Neutral / Warning / Error)。";
 return { cellSet: cs.id, cal: cal.id };

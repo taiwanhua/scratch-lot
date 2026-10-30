@@ -23,6 +23,7 @@ async function input(multiple) {
   });
   box.strokes = [await paint("divider")];
   box.strokeWeight = 1;
+  box.clipsContent = true;
   await radius(box, "radius/sm");
   if (multiple)
     for (const l of ["A 店", "B 店"])
@@ -31,7 +32,11 @@ async function input(multiple) {
   spacer(box);
   add(box, icon("arrow-drop-down"));
   // 浮動標籤(和 TextField / SelectField 一致):輸入框高 40,標籤壓在上框線(10, −8),底部留 16 給說明文字,總高 56
-  const w = al("VERTICAL", { name: "field", paddingBottom: 16 });
+  const w = al("VERTICAL", {
+    name: "field",
+    itemSpacing: 4,
+    paddingBottom: 16,
+  });
   w.clipsContent = false;
   add(w, box, "FILL");
   box.layoutSizingVertical = "FIXED";
@@ -137,5 +142,5 @@ set.resize(24 * 2 + 320 * 2 + 32, 10);
 set.counterAxisSizingMode = "AUTO";
 set.description =
   DESC_PREFIX +
-  "OrgTreeSelect 組織樹下拉(底座規格 10.2;內部沿用 OrgTreePicker 與 lib/org-tree.ts)。State=Closed:輸入框顯示已選組織(Single 為文字、Multiple 為 Draft/Tag chip)+ arrow-drop-down;State=Open:下拉面板(bg/paper、radius/md、Shadow/Dropdown)= 搜尋框 + 組織樹(每層縮排 20、expand-more / chevron-right 展開、Multiple 用 Draft/Checkbox、Single 選中列 action/selected 底)。只列操作者可見範圍內的組織;可設上限(Multiple 底部「已選 n / 上限 m」)。最上層組織在租戶畫面顯示實際名稱,不寫「租戶」。屬性:State=Closed / Open、Mode=Single / Multiple。";
+  "OrgTreeSelect 組織樹下拉(底座規格 10.2;程式 @repo/ui 或 admin components,內部沿用 OrgTreePicker 與 lib/org-tree.ts)。State=Closed:輸入框顯示已選組織(Single 為文字、Multiple 為 Draft/Tag chip)+ arrow-drop-down;State=Open:下拉面板(bg/paper、radius/md、Shadow/Dropdown)= 搜尋框 + 組織樹(每層縮排 20、expand-more / chevron-right 展開、Multiple 用 Draft/Checkbox、Single 選中列 action/selected 底)。只列操作者可見範圍內的組織;可設上限(Multiple 底部「已選 n / 上限 m」)。最上層組織在租戶畫面顯示實際名稱,不寫「租戶」。屬性:State=Closed / Open、Mode=Single / Multiple。";
 return { setId: set.id };

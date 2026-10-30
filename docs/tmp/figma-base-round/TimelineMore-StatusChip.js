@@ -52,7 +52,7 @@ for (const tone of Object.keys(TM))
     c.strokeWeight = 1;
     c.strokeAlign = "INSIDE";
     c.primaryAxisSizingMode = c.counterAxisSizingMode = "FIXED";
-    c.resize(20, 120);
+    c.resize(28, 120);
     c.appendChild(await T("+1", "Caption/SemiBold", tc, "label"));
     await state(c, st, hs);
     page.appendChild(c);
@@ -60,6 +60,17 @@ for (const tone of Object.keys(TM))
   }
 const ms = figma.combineAsVariants(mores, page);
 ms.name = "Draft/ScheduleTimelineMore";
+// 外框照現況:橫向換行、間距 12、內距 16、寬 148(一列 3 個)
+function wrapSet(s, w) {
+  s.layoutMode = "HORIZONTAL";
+  s.layoutWrap = "WRAP";
+  s.itemSpacing = s.counterAxisSpacing = 12;
+  s.paddingLeft = s.paddingRight = s.paddingTop = s.paddingBottom = 16;
+  s.primaryAxisSizingMode = "FIXED";
+  s.counterAxisSizingMode = "AUTO";
+  s.resize(w, s.height);
+}
+wrapSet(ms, 148);
 const km = ms.addComponentProperty("Label", "TEXT", "+1");
 for (const v of ms.children)
   v.findOne((n) => n.name === "label").componentPropertyReferences = {
@@ -91,7 +102,8 @@ for (const tone of Object.keys(TS))
       c.strokeWeight = 1;
     }
     c.strokeAlign = "INSIDE";
-    c.strokesIncludedInLayout = false;
+    // 本來就有框的(Neutral)框不佔版面;沒有框的 Hover 加框後照現況佔版面,Selected 在 state() 設成不佔
+    if (sk) c.strokesIncludedInLayout = false;
     c.appendChild(await T("負1/1 協1/1", "Caption/SemiBold", tc, "label"));
     c.appendChild(await T("缺 1 · 可排 2", "Caption", "text/secondary", "sub"));
     await state(c, st, hs);
@@ -100,6 +112,7 @@ for (const tone of Object.keys(TS))
   }
 const cs = figma.combineAsVariants(chips, page);
 cs.name = "Draft/StatusChip";
+wrapSet(cs, 360);
 const kl = cs.addComponentProperty("Label", "TEXT", "負1/1 協1/1");
 const ksub = cs.addComponentProperty("Sub", "TEXT", "缺 1 · 可排 2");
 const kh = cs.addComponentProperty("HasSub", "BOOLEAN", false);
@@ -114,5 +127,5 @@ for (const v of cs.children) {
 }
 cs.description =
   PREFIX +
-  "狀態標籤(底座規格 10.5 / 10.11):文字由使用處傳入(Label;HasSub 時第二行 Sub);Tone Neutral(grey/100 + divider 細框)/ Warning / Error;State Default / Hover / Selected。";
+  "狀態標籤(底座規格 10.5 / 10.11):人數、彙總等短文字標籤,文字由使用處傳入(Label;HasSub 開啟時第二行 Sub 用 text/secondary)。Tone:Neutral(grey/100 底 + divider 細框,滿 / 一般)/ Warning(warning/lighter 底 + warning/darker 字,缺協同)/ Error(error/lighter 底 + error/darker 字,缺負責)。State:Default / Hover(原底色上疊同色系 main × 8%:Neutral grey/500、Warning warning/main、Error error/main;框換同色系 main)/ Selected(疊同色系 main × 16% + 1px 同色系 main 框)。用於 RosterGrid 頂部群組列 / 彙總列、MonthCalendar 格子內容、時間軸清單浮層。寬高 hug。";
 return { more: ms.id, chip: cs.id };

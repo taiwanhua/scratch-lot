@@ -139,7 +139,7 @@ sl.componentPropertyReferences = {
 };
 sg.description =
   DESC_PREFIX +
-  "58mm 單據簽名欄(底座規格 B8)。屬性 Role(例:經手人簽名 / 收件人簽名 / 主管簽名)。";
+  "58mm 單據簽名欄(底座規格 B8)。屬性 Role(例:交班人簽名 / 接班人簽名 / 經手人簽名 / 店長簽名)。";
 
 // ---- Receipt58(示範組合)----
 const R = figma.createComponent();
