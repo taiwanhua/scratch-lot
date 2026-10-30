@@ -70,6 +70,7 @@ const KC = {
   AdminSideNav: "=13a24be1d3948435515fa6c7d2f5cc0c7592b0a1",
   AdminAppBar: "=471aba0f2558d59a459b88b25dcf531be908e940",
   AdminRouteTabs: "=14eb1d7575fe6f6cc39fe28163e6bbadcbb07bda",
+  ActionIcon: "a491aeba877eac49ffcb0e39a589837c77eca4cd",
 };
 // 底座既有元件在 wowgo-base 本檔的節點 id(FIGMA-09);空字串 = 重建前要先查到補上
 const BASE_NODE = {
@@ -88,6 +89,7 @@ const BASE_NODE = {
   AdminSideNav: "2001:1214",
   AdminAppBar: "2001:1248",
   AdminRouteTabs: "2001:1261",
+  ActionIcon: "2001:68",
 };
 // 本輪草稿元件:scratch 依 scratch-lot 節點 id,base 依名稱在草稿頁找(專案元件只在 scratch 有)
 const ND_NAME = {

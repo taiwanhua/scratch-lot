@@ -1309,3 +1309,14 @@ Figma 限制:實例裡的子圖層不能改位置 / 尺寸,所以「長條 + 前
 - **Snackbar**:方案 A 第 1 步要從 Figma 版本紀錄救回 `2001:992`,外掛做不到,待使用者操作。
 - **Snackbar(方案 A,完成)**:`2001:992` 不在任何頁面上但節點還在(parent 為 null),直接掛回 Popover 頁即救回,key 仍是 `1a48435131b2c4acd8e4555aef6da483980c6252`,不需要版本紀錄。原地改成卡片樣式:Success `2001:993`、Error `2001:997` 沿用原變體節點(內容與外框照 `Snackbar.js`),Warning `2170:1027`、Info `2170:1039` 從重建的 Snackbar+ 移入;屬性 Title / ShowTitle / Message / ShowAction;說明換成新版。另一方做的 `2156:590` 已刪(0 實例);草稿頁的 Snackbar+ 移空後由 Figma 自動移除。`_resolve.js` 的 `Draft/Snackbar` 補 `baseNode` `2001:992`。
 - Popover 頁說明 `2001:1001` 原寫「右上角、AppBar 下方(#426)」,和程式(`SnackbarStack.tsx` right / bottom 24)與 DATA-06 的右下角不一致,依 FIGMA-10 改成現況。
+
+## 參考畫面(第 6 步,2026-10-30,進行中)
+
+- **腳本補齊(待修清單 A1 / A4 / A5)**:`Screens2-base.js`
+  - BS-03:屬性面板頂端「回到整個流程設定」(放在 `flowDesigner()`,所有選了關卡的流程設計畫面都有,同 `BackToFlowButton`);逾時提醒加開關列「開啟逾時提醒」、時數後綴與說明照 `workflows.step.overdue`;知會拿掉單選鈕、改來源下拉 `cc-source`、說明照 `cc.hint`;註解照現況改寫。
+  - 程式對照另補(FIGMA-10,不在 A 清單):自動通過的「申請人是審核者時」三個選項 剔除申請人(預設)/ 自動通過 / 照常審核 + 說明(`StepAutoApproveSection`);跳過區塊勾選項「符合跳過條件」(`skip.condition`)。
+  - 新增 BS-03b 整個流程設定(沒選關卡):關卡節點都改未選取,屬性面板只剩選取提示、「整個流程」、整個流程的知會對象(`workflows.flow`)。
+  - BS-05:拿掉語言標題與下拉;「待你審核」站內開關停用;註解照現況改寫。
+  - 原本手動做在 scratch-lot 畫面上的兩處補進腳本:工具列「檢查用表單」下拉改跟內容高(helper 兩行);個人設定頁 `main` 撐滿框高。
+  - `_kit.js` 補 `ActionIcon`(key / `BASE_NODE` 2001:68),`iconBtn()` 改用底座 ActionIcon。
+- **scratch-lot 暫存頁核對**:只跑 BS-03 / 03b / 05,跟 Base Draft 現有 `289:84779`、`746:9288`、`257:4821` 逐節點比對,差異只有上述預期改動,以及:BS-05 側欄是底座 AdminSideNav(本身有 spare-5,不需要 AdminSideNav+);BS-03b 屬性面板撐滿欄高(現有手畫的是 376 高,腳本照兩欄等高規則)。核對後刪除暫存頁 `757:14`。

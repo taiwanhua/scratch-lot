@@ -83,17 +83,37 @@ async function skipBlock(formula, orgOn, formulaOn) {
     await btn("+ 選擇組織", "Text", "Primary", "Default", "Small"),
     await check("包含下層"),
   ]);
-  add(box, await check("符合條件", formulaOn));
+  add(box, await check("符合跳過條件", formulaOn));
   const f = add(box, H(8, { name: "formula", paddingLeft: 26 }), "FILL");
   add(f, await T(formula, "Body/2", "text/secondary"), "FILL").textAutoResize =
     "HEIGHT";
   add(f, await btn("編輯公式", "Text", "Primary", "Default", "Small"));
   return box;
 }
+// 知會來源下拉(PeopleCcSection:不知會(預設)/ 人員條件 / 表單欄位 / 主管)
+async function ccSource() {
+  const s = await select("知會對象", "人員條件");
+  s.name = "cc-source";
+  return s;
+}
 // 流程設計器:關卡面板的「審核者來源 / 角色」換成人員條件;「跳過條件」欄位換成合併後的跳過區塊
 async function flowDesigner(name, shared) {
   const sh = await refShell("Admin 流程管理 — 流程設計(側欄收合)", name);
   const se = q(sh.s, "StepEditor");
+  // 選了關卡時屬性面板頂端「回到整個流程設定」(BackToFlowButton)
+  const back = await btn(
+    "回到整個流程設定",
+    "Text",
+    "Primary",
+    "Default",
+    "Small",
+  );
+  back.name = "back-to-flow";
+  se.insertChild(0, back);
+  // 工具列「檢查用表單」的 helper 有兩行,主元件固定 56 高會截字:改成跟內容高
+  const tb = q(sh.s, "toolbar-row1");
+  const tbSel = tb && tb.children.find((n) => n.type === "INSTANCE");
+  if (tbSel) tbSel.layoutSizingVertical = "HUG";
   const src = fieldBy(se, "審核者來源");
   if (src) await setField(src, "審核者來源", "人員條件");
   const role = fieldBy(se, "角色");
@@ -271,12 +291,14 @@ if (PART === 1) {
     );
     const at = se.children.indexOf(q(se, "actions-1"));
     const parts = [];
+    // 選項與說明照 StepAutoApproveSection(workflows.step.autoApprove)
     const auto = V(8, { name: "B5 自動通過" });
     add(auto, await T("自動通過", "Subtitle/2"));
     add(auto, await T("申請人是這一關的審核者時", "Body/2", "text/secondary"));
     await put(add(auto, H(16)), [
-      await radio("照常審核", true),
+      await radio("剔除申請人", true),
       await radio("自動通過"),
+      await radio("照常審核"),
     ]);
     add(
       auto,
@@ -286,9 +308,19 @@ if (PART === 1) {
       await radio("照常審核"),
       await radio("自動通過", true),
     ]);
+    await cap(
+      auto,
+      "剔除申請人 = 這一關不派給申請人,沒有其他審核者就停住等人處理;照常審核 = 申請人也拿一張待審任務,自己再按一次核准;自動通過 = 記成那個人核准(多人會簽只算他那一票),照樣經過核准前的檢查,沒通過就回到剔除申請人或照常審核。",
+    );
     parts.push(auto);
+    // 文字照 StepOverdueSection / PeopleCcSection(workflows.step.overdue / cc)
     const remind = V(8, { name: "B16 逾時提醒" });
     add(remind, await T("逾時提醒", "Subtitle/2"));
+    const on = add(remind, H(8, { name: "overdue-enabled" }));
+    await put(on, [
+      await inst("Switch", { State: "On", Enabled: "True" }),
+      await T("開啟逾時提醒"),
+    ]);
     await put(add(remind, H(8)), [
       await T("超過"),
       await field("", "24", { w: 72 }),
@@ -297,19 +329,22 @@ if (PART === 1) {
     await put(add(remind, H(8)), [
       await T("超過"),
       await field("", "48", { w: 72 }),
-      await T("小時 → 同時通知"),
+      await T("小時 → 同時通知「通知對象」"),
     ]);
     add(remind, await approverBox("通知對象", "角色 屬於 流程管理者"), "FILL");
-    await cap(remind, "只提醒,不會自動核准或駁回。");
+    await cap(
+      remind,
+      "只提醒,不自動核准或駁回。以日曆小時計(含夜間與假日),從任務派給目前的審核者起算。",
+    );
     parts.push(remind);
     const cc = V(8, { name: "B17 知會" });
     add(cc, await T("知會", "Subtitle/2"));
-    await put(add(cc, H(16)), [
-      await radio("通過這一關時", true),
-      await radio("流程完成時"),
-    ]);
+    add(cc, await ccSource(), "FILL");
     add(cc, await approverBox("知會對象", "角色 屬於 人資"), "FILL");
-    await cap(cc, "知會對象不用審核,看得到這張單據(唯讀)。");
+    await cap(
+      cc,
+      "這一關通過或被跳過時通知知會對象(不用審核,可以唯讀查看這張單據)。要讓他也知道最後結果(完成、駁回、作廢),請把他加進「整個流程的知會對象」。",
+    );
     parts.push(cc);
     for (const [i, p] of parts.entries()) {
       se.insertChild(at + i, p);
@@ -328,7 +363,46 @@ if (PART === 1) {
     );
     await refNote(
       sh,
-      "「跳過條件」欄位改成「跳過這一關」區塊(指定組織 B4 + 既有公式,符合任一項就跳過);另加三個區塊:自動通過(B5)、逾時提醒(B16,通知對象用人員條件)、知會(B17);其他既有欄位不變。",
+      "「跳過條件」欄位改成「跳過這一關」區塊(指定組織 B4 + 既有公式,符合任一項就跳過);另加三個區塊:自動通過(B5)、逾時提醒(B16:開關預設關閉,開啟才顯示兩個時數與通知對象)、知會(B17:來源下拉 不知會(預設)/ 人員條件 / 表單欄位 / 主管,這一關通過或被跳過時通知);屬性面板頂端「回到整個流程設定」;其他既有欄位不變。",
+    );
+    fin(sh);
+  }
+  // ---- BS-03b 流程設計器:沒選關卡時的整個流程設定 ----
+  {
+    const { sh, se } = await flowDesigner(
+      "BS-03b 流程設計器 整個流程設定(沒選關卡)",
+      false,
+    );
+    for (const n of sh.s.findAll(
+      (x) => x.type === "INSTANCE" && x.name === "Draft/FlowStepNode",
+    ))
+      if (n.componentProperties.State?.value === "Selected")
+        await setProps(n, { State: "Default" });
+    for (const k of [...se.children]) k.remove();
+    // 文字照 workflows.designer.selectHint / workflows.flow
+    await cap(
+      se,
+      "點流程圖上的關卡或匯合節點來編輯。「從此關分流」在關卡的屬性裡。",
+    );
+    add(se, await T("整個流程", "Subtitle/2"));
+    const fc = add(se, V(8, { name: "flow-cc" }), "FILL");
+    add(fc, await T("整個流程的知會對象", "Subtitle/2"));
+    add(fc, await ccSource(), "FILL");
+    add(fc, await approverBox("知會對象", "角色 屬於 申請人主管"), "FILL");
+    await cap(
+      fc,
+      "單據完成、被駁回或被作廢時通知(不用審核,可以唯讀查看這張單據)。各關的知會對象只在那一關通過或被跳過時收到;退回修改、撤回都不知會。",
+    );
+    wrapText(se);
+    hug(
+      se,
+      q(sh.s, "FlowDesignerWorkspace"),
+      q(sh.s, "WorkflowDetailPanel"),
+      q(sh.s, "body"),
+    );
+    await refNote(
+      sh,
+      "沒選關卡(點流程圖空白處或按「回到整個流程設定」)時,屬性面板顯示「整個流程」:整個流程的知會對象(來源下拉同關卡知會),單據完成、被駁回或被作廢時通知。版本頁籤的「與上一版差異」多一行整個流程知會對象的變動(新增 / 移除 / 有變更)。",
     );
     fin(sh);
   }
@@ -427,6 +501,8 @@ if (PART === 2) {
       (n) => n.type === "INSTANCE" && /Button/.test(n.name),
     );
     q(cardF, "ApplyCenterFilters").remove();
+    // 來源畫面的 main 是跟內容高,拿掉篩選後會比框矮:撐滿整個框高
+    q(sh.s, "main").layoutSizingVertical = "FILL";
     return { sh, cardF, topBtn };
   };
   {
@@ -440,12 +516,14 @@ if (PART === 2) {
     const body = V(16, { name: "prefs" });
     cardF.insertChild(at, body);
     body.layoutSizingHorizontal = "FILL";
-    add(body, await T("語言", "Subtitle/2"));
-    add(body, await select("語言", "繁體中文", 280));
     add(body, await T("通知管道", "Subtitle/2"));
     add(body, dt, "FILL");
-    const swc = (on) =>
-      inst("Switch", { State: on ? "On" : "Off", Enabled: "True" });
+    // locked = 不能關的管道(notifications.preferences.locked),開關停用
+    const swc = (on, locked) =>
+      inst("Switch", {
+        State: on ? "On" : "Off",
+        Enabled: locked ? "False" : "True",
+      });
     await refTable(
       dt,
       [
@@ -454,7 +532,7 @@ if (PART === 2) {
         ["Email", 200],
       ],
       [
-        ["待你審核", await swc(1), await swc(1)],
+        ["待你審核", await swc(1, true), await swc(1)],
         ["單據被退回", await swc(1), await swc(0)],
         ["審核逾時提醒", await swc(1), await swc(0)],
         ["知會", await swc(1), await swc(0)],
@@ -466,11 +544,11 @@ if (PART === 2) {
     add(body, await actions([await btn("儲存")]), "FILL");
     await noteOut(
       sh.s,
-      "語言與通知管道跟著帳號(user_preferences);外觀(亮 / 暗)、側欄收合跟著這台瀏覽器,在頭像選單調整。",
+      "通知管道跟著帳號(user_preferences);語言、外觀(亮 / 暗)、側欄收合在頭像選單調整,不在這一頁。",
     );
     await refNote(
       sh,
-      "新頁(頭像選單 → 個人設定),版型沿用申請中心的卡片 + 分頁;分頁:偏好 | 代理人。",
+      "新頁(頭像選單 → 個人設定),版型沿用申請中心的卡片 + 分頁;分頁:偏好 | 代理人。偏好分頁只有每種通知類型 × 管道的開關;類型預設沒有的管道那格空白;不能關的管道(待你審核的站內通知)開關停用。",
     );
     fin(sh);
   }
@@ -1314,7 +1392,7 @@ async function iconBtn(key) {
   const b = (
     set.type === "COMPONENT_SET" ? set.defaultVariant : set
   ).createInstance();
-  const icons = await dcomp("Draft/ActionIcon+");
+  const icons = await comp("ActionIcon");
   const g = icons.children.find((c) => c.name === "key=" + key);
   const pk = Object.keys(b.componentProperties).find((x) =>
     x.startsWith("Icon"),
