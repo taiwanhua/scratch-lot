@@ -1235,3 +1235,52 @@ Figma 限制:實例裡的子圖層不能改位置 / 尺寸,所以「長條 + 前
 - **Receipt58Signature 說明**:腳本已和現況一字不差;第二輪沒重跑 `Print.js`(避免重複建 Receipt58),以字串比對確認。
 - **MonthCalendarCell**:現況裡 `Draft/Tag` 實例的子節點比較少,推論是現況實例停在舊版 Library、沒接受更新(未實測);腳本照目前的 Library 建立。
 - 暫存頁 `757:14` 保留到第 6 步參考畫面腳本補完後一起核對(計畫第 6.2 步),之後刪除。
+
+## 在 wowgo-base 重建(第 3 步,2026-10-30)
+
+在 wowgo-base Design System「Draft / 本輪」`2151:2`,三份檔頭用 `MODE='base'`,照 README 對照表順序跑元件腳本(1~20,AdminSideNav+.js 不跑)。檔頭暫存在同檔的「暫存 / 重建腳本」`2168:2`,發布前刪除。
+
+- Interaction-states.js:Block / Demand 已有互動狀態而跳過,只替 RosterCell 加 Hover / Focus;StateLayer.js 沒有要轉的舊疊色。
+- Base-layout.js(`PAGE_ID` = `2151:2`):元件 6 列共 36 個,畫面區只有 BS-18d,沒有落到「其他」列。
+- audit.js(`PAGE_ID` = `2151:2`):`canvasOverlap` 0、`nonBaseBindingsInBaseDrafts` 0、`draftTokenBindings` 0、`devTextInScreens` 0;`baseDraftComponents` 36、`instancesOfBaseDrafts` 260、`nodesWithDraftMarker` 36;`basePrimaryBindings` 210(這項是檢查專案頁,底座檔本來就綁底座主色,不適用)。只在 scratch-lot Base Draft 頁才執行的參考畫面檢查段落沒有送。
+
+| 元件                         | 節點        | 變體 |
+| ---------------------------- | ----------- | ---- |
+| Draft/ActionIcon+            | `2169:59`   | 19   |
+| Draft/Section                | `2169:81`   | 2    |
+| Draft/AudiencePicker         | `2169:309`  | 3    |
+| Draft/DataScopeRuleCard      | `2169:310`  | 1    |
+| Draft/OrgTreeSelect          | `2170:419`  | 4    |
+| Draft/MonthCalendarCell      | `2170:444`  | 4    |
+| Draft/MonthCalendar          | `2170:445`  | 1    |
+| Draft/RosterCell             | `2170:719`  | 5    |
+| Draft/NotificationBell       | `2170:949`  | 2    |
+| Draft/NotificationItem       | `2170:964`  | 2    |
+| Draft/NotificationPanel      | `2170:1002` | 2    |
+| Draft/Snackbar+              | `2170:1051` | 4    |
+| Draft/PrintButton            | `2171:731`  | 6    |
+| Draft/Receipt58Row           | `2171:732`  | 1    |
+| Draft/Receipt58Signature     | `2171:736`  | 1    |
+| Draft/Receipt58              | `2171:739`  | 1    |
+| Draft/StepperStep            | `2171:816`  | 4    |
+| Draft/Stepper                | `2171:852`  | 2    |
+| Draft/Receipt58Header        | `2171:870`  | 1    |
+| Draft/Receipt58TableRow      | `2171:887`  | 2    |
+| Draft/Receipt58Range         | `2171:888`  | 1    |
+| Draft/Receipt58Total         | `2171:890`  | 1    |
+| Draft/Receipt58Divider       | `2171:894`  | 1    |
+| Draft/Receipt58QR            | `2171:896`  | 1    |
+| Draft/Receipt58Text          | `2171:975`  | 12   |
+| Draft/Receipt58Barcode       | `2171:976`  | 1    |
+| Draft/Receipt58Cut           | `2171:999`  | 1    |
+| Draft/ScheduleTimelineMore   | `2172:835`  | 9    |
+| Draft/StatusChip             | `2172:869`  | 9    |
+| Draft/ScheduleAutoMark       | `2172:870`  | 1    |
+| Draft/BreakMark              | `2172:872`  | 1    |
+| Draft/ScheduleTimelineDemand | `2172:920`  | 6    |
+| Draft/ScheduleTimelineBlock  | `2172:1096` | 15   |
+| Draft/ScheduleTimeline       | `2173:1454` | 2    |
+| Draft/RosterGrid             | `2173:2008` | 3    |
+| Draft/ToggleButton           | `2173:2060` | 9    |
+
+另有 Receipt58Test.js 建的參考畫面「BS-18d 測試頁(58mm)」`2171:1003`。
