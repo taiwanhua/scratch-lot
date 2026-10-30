@@ -5,6 +5,7 @@
 // 「Base Draft / 本輪底座元件」頁不要跑:那頁的草稿要搬回底座,必須維持綁 wowgo-base。
 figma.skipInvisibleInstanceChildren = false; // 實例裡隱藏的子節點(例:側欄 Badge)也要補綁
 const PAGE_ID = "65:14"; // 換成要補綁的頁
+const SECTION_ID = ""; // 選填:頁太大一次跑不完時,只補綁這頁的某一個 Section(同 scripts/figma-audit 的分段跑法)
 const DRY = false; // true = 只預覽待補綁數
 const SOURCE = "wowgo-base Design System";
 const TARGET = "scratch-lot Brand Library";
@@ -49,7 +50,10 @@ let changed = 0;
 let already = 0;
 const issues = [];
 const fonts = new Set();
-for (const node of page.findAll(() => true)) {
+const section = SECTION_ID ? await figma.getNodeByIdAsync(SECTION_ID) : null;
+if (SECTION_ID && (!section || section.parent !== page))
+  throw new Error("SECTION_ID 不是這頁的 Section");
+for (const node of (section || page).findAll(() => true)) {
   for (const prop of ["fills", "strokes"]) {
     if (!(prop in node)) continue;
     const paints = node[prop];
@@ -106,4 +110,11 @@ for (const node of page.findAll(() => true)) {
       node[prop] = after.map((q, i) => ({ ...q, opacity: next[i].opacity }));
   }
 }
-return { page: page.name, dry: DRY, changed, already, issues };
+return {
+  page: page.name,
+  section: section ? section.name : null,
+  dry: DRY,
+  changed,
+  already,
+  issues,
+};

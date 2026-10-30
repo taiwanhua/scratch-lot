@@ -1383,3 +1383,15 @@ Figma 限制:實例裡的子圖層不能改位置 / 尺寸,所以「長條 + 前
 - **上一輪修正的更正**:
   - 收合側欄框線(#939EA9)上一輪綁成 `text/disabled`,改成 `divider`(與 `Base-ref.js` 規則一致;`divider` 變數本身帶 0.24 透明度,Figma 顯示在 paint 透明度)。wowgo-base 6 處、scratch-lot 6 處。
   - 通用修正腳本加寬欄位時把非表格的水平列也算進去:「Demo / 角色分配使用者檢視」的頁籤、標題列、分頁文字,與使用者管理表格頁尾的頁碼被加寬,兩個檔都改回原值(72 / 252 / 填滿 / 32)。
+
+## 換成 Library 元件(第 9 步,2026-10-31,完成)
+
+wowgo-base Design System 以 v0.4.7 發布後,在 scratch-lot 換掉本機草稿。
+
+- **換元件**:Base Draft 與各頁指向本機底座草稿的實例,用 `importComponentSetByKeyAsync` / `importComponentByKeyAsync` + `swapComponent` 換成 Library 同名元件(覆寫保留,沒有缺變體);換完刪掉 37 個本機草稿元件與本機集合 `Draft/tagPalettes`(20 個變數,色票改綁 Library `tagPalettes`)。
+- **保留**:`Draft/AdminAppBar+`、`Draft/OrgSwitcher+` 本輪一開始就排除,仍是本機草稿(`project-dis.md` B1);所以 Base Draft 的 `baseDraftComponents` 2、各頁手機 Section 的 `instancesOfBaseDrafts` 是這兩組的實例。
+- **補綁專案色**:`project/brand-rebind.js`(加選填 `SECTION_ID`,同稽核工具的分段跑法)逐頁 / 逐 Section 把 Library 元件帶進來的底座 `primary/*` 換成 scratch-lot Brand 同名變數。
+- **設定**:`scripts/figma-audit/project/config.js` 的 `baseCollections` 加 Library `tagPalettes` 集合 key。
+- **換元件後的版面**:Library 的 `Draft/DataScopeRuleCard` 多了巢狀群組(每張 917 高),「Admin 資料範圍」與 BS-01 的 RuleEditor 放不下(clippedText 37);兩張畫面加高 564(1873 → 2437),BS-01 下方的畫面框跟著下移。
+- **結果**(正式工具,大頁逐 Section):全部頁 `audit-layout` / `audit-legend` 0;`audit.js` 的 draftTokenBindings、basePrimaryBindings、nonBaseInBaseScreens、canvasOverlap 0;`audit-sync` 分 3 批 0(例外照列:店面管理 9、班表 12);`audit-roster` 114 個班表 0。
+- **注意**:`audit-roster.js` 不會切換目前頁;目前頁不是班表管理時,基準班表實例內的文字可能讀不到,差異會整片出現(這次第一次跑 994 處都是這個原因)。執行前先切到班表管理頁。
