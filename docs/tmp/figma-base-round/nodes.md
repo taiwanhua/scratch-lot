@@ -1363,3 +1363,23 @@ Figma 限制:實例裡的子圖層不能改位置 / 尺寸,所以「長條 + 前
 - **scratch-lot**:
   - `audit-roster`:原本 4 處(SC-21e / 21f 電腦與平板)是背景複本沿用 SC-63「滑過空白格」的「+ 人力需求」;例外改成連背景來源一起判斷(`audit-roster.js`),結果 0。
   - `audit-sync`:一次跑 8 頁會斷線,分 4 次跑。只有店面管理 ST-01 / 02 / 20 / 34 / 35 / 36 / 38 的「📷 掃描」電腦沒有,規格 6.3、18.3 本來就只在有相機的手機 / 平板顯示,依檔頭規則列進 `EXEMPT` 並寫理由;其他項目(overlayNotCovering、sharedHandDrawn、sectionMismatch、filterDrawerMissing)都是 0。
+
+## 用正式工具重新檢查(2026-10-31)
+
+上一輪第 7 步用的是 `docs/tmp` 的舊稽核副本、而且壓縮後才貼,違反 FIGMA 規範「`scripts/figma-audit/` 完整腳本整份貼上」;結論收回,改用正式工具重跑。
+
+- **執行方式**:`scripts/figma-audit/project/config.js` 與各稽核腳本原封不動存進暫存頁的文字節點(scratch-lot「暫存 / 稽核」`784:14`、wowgo-base「暫存 / 稽核」`2197:2`),核對字數與雜湊值和 repo 檔案一致;每次執行只替換檔頭參數。wowgo-base 用它自己的 `config.js` 範本。
+- **工具改良(底座共用程式,commit `6f39fc38`)**:班表管理整頁的 `audit-layout` / `audit.js` 與一次 8 頁的 `audit-sync` 超過 `use_figma` 時限、連線中斷。`audit-layout` / `audit-legend` / `audit.js` 加選填 `SECTION_ID`(逐個尺寸 Section 分段跑),`audit-sync` 加選填 `ONLY_PAGES`(分批跑);空白時行為不變。README 補說明,`figma-audit.test.mjs` 補兩項測試(19 項全過)。
+- **`docs/tmp` 副本**:`audit-sync.js` 還原(📷 掃描的例外本來就在 `config.js` 的 `sync.exempt`);`audit-roster.js` 是 `config.js` 指定的班表比對工具,背景複本沿用來源畫面例外的修改保留。
+- **scratch-lot 結果**:
+  - 專案頁、班表時間軸、兩個草稿頁:`audit-layout` / `audit-legend` 全 0;班表管理分 3 個 Section 跑也全 0。
+  - `audit-sync` 分 4 批:8 個專案頁 + Base Draft 全 0(例外照列:店面管理 9、班表 12)。
+  - `Screen / Admin …` 本機頁原有的問題比照 wowgo-base 修到 0:使用者管理(1058)、角色管理(1033)、資料範圍(1873)畫面高度貼合內容;表單 / 申請中心 / 示範表單的欄位網格依原順序兩兩成列;說明文字超出的欄位改跟內容高;表單版本操作欄 218;使用者管理對話框「性別」換成 SelectField;視角註記卡與收合側欄的顏色綁 Library 變數。
+  - 資料範圍頁的 `basePrimaryBindings` 26、草稿實例 4 是本機草稿元件,第 9 步換成 Library 元件並改綁品牌色後處理。
+  - 草稿相關(baseDraftComponents、instancesOfBaseDrafts、draftTokenBindings)第 9 步歸 0。
+- **wowgo-base 結果**:草稿頁與 15 個 `Screen /` 頁 `audit-layout` / `audit-legend` 全 0;元件頁「Admin Shell」上一輪沒查,這次修到 0(對照程式 `SideNavToggle`、`IconButton`、`NavRailGroupItem`):
+  - group-flyout 示意框改跟內容高(原本固定 18 高把內容切掉);使用者選單「跟隨系統」選項改跟內容寬。
+  - 收合鈕外框 → `divider`;「«」「»」→ `text/secondary`;群組小圓點、flyout 標題 → `text/disabled`;選中底色 → `primary/lighter`;logo → `primary/main`;說明框文字 → `text/primary` / `text/secondary`。
+- **上一輪修正的更正**:
+  - 收合側欄框線(#939EA9)上一輪綁成 `text/disabled`,改成 `divider`(與 `Base-ref.js` 規則一致;`divider` 變數本身帶 0.24 透明度,Figma 顯示在 paint 透明度)。wowgo-base 6 處、scratch-lot 6 處。
+  - 通用修正腳本加寬欄位時把非表格的水平列也算進去:「Demo / 角色分配使用者檢視」的頁籤、標題列、分頁文字,與使用者管理表格頁尾的頁碼被加寬,兩個檔都改回原值(72 / 252 / 填滿 / 32)。
