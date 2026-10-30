@@ -246,7 +246,8 @@ const out = {};
       "text/disabled",
     ],
   };
-  // 變體尺寸照 scratch-lot 現況(Short 較窄、文字換行較高;虛線框的較高 2)
+  // 變體尺寸照 scratch-lot 現況;HUG 的四種高度跟著內容(表上的高度只是參考)
+  const HUG = ["Short", "MissingLead", "MissingHelper", "Extension"];
   const SIZE = {
     "Normal,False": [160, 44],
     "Normal,True": [160, 44],
@@ -338,6 +339,7 @@ const out = {};
     const sub = await txt("超出容器的時間", "Caption", sc2, "subtitle");
     add(c, sub, "FILL", "HUG");
     sub.textAutoResize = "HEIGHT";
+    if (HUG.includes(state)) c.primaryAxisSizingMode = "AUTO";
     if (auto === "True") {
       const m = autoMark.createInstance();
       c.appendChild(m);
