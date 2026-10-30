@@ -33,6 +33,7 @@ const AUDIT_CONFIG = {
     "84c5f309f7b50688d1eca745ea4db116afb1ad5a",
     "1eea29cadf44f500544c6b840aea015c8a3b092b",
     "aa51fafef4bb2e4d3b578ccaa8bc8f1a930ed17e",
+    "7a1c297f46864f27457e07e60a87d5cb7c6a0530", // tagPalettes(標籤色票,v0.4.7 起在底座 Library)
   ],
   // 上面之中放 primary/* 的集合(Color、Brand):專案頁不得殘留這兩個集合的 primary/* 綁定
   basePrimaryCollections: [
