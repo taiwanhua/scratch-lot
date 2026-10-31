@@ -7,22 +7,23 @@
 | 文件                                             | 內容                                                                                                   |
 | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------ |
 | [branding.md](branding.md)                       | 品牌註冊表各列的本專案值、設計檔                                                                       |
-| [figma-nodes.md](figma-nodes.md)                 | 底座模組在本專案 Screens 的節點                                                                        |
+| [figma-nodes.md](figma-nodes.md)                 | 本專案 Screens 的頁、尺寸 Section 與專案元件;稽核設定                                                  |
 | [data-model.md](data-model.md)                   | 專案資料表地圖(表由各功能登記)                                                                         |
+| [spec.md](spec.md)                               | 專案規格(刮刮樂 + 排班與出勤)定稿:模組文件與程式註解寫的「規格 x.y」指這份的章節;現況以模組文件為準    |
 | [docs/modules/project/](../modules/project/)     | 專案模組文件;另有 `lottery-notifications.md`(專案通知類型)、`field-manager.md`(欄位管理的專案系統類別) |
 | [CONTEXT-PROJECT.md](../../CONTEXT-PROJECT.md)   | 專案詞彙(只新增,不重新定義底座名詞)                                                                    |
 | [docs/tmp/project-dis.md](../tmp/project-dis.md) | 專案的進行中討論與待辦(`docs/tmp/` 的規格與工作檔同樣是專案的)                                         |
 
 ## 新增專案文件放哪
 
-| 內容                     | 位置                                                         | 備註                                                                               |
-| ------------------------ | ------------------------------------------------------------ | ---------------------------------------------------------------------------------- |
-| 專案模組的內部技術文件   | `docs/modules/project/<key>.md`                              | 寫法同底座模組文件;底座模組在本專案的補充(節點、刻意的差異)也寫在這裡,不改底座文件 |
-| 專案 ADR                 | `docs/adr/project/NNNN-<主題>.md`                            | 獨立編號,從 0001 起                                                                |
-| 專案資料表地圖           | `docs/project/data-model.md`                                 | 格式同 `docs/data-model.md`;有第一張專案資料表時建立                               |
-| 專案環境變數             | `docs/project/env-registry.md`                               | 格式同 `docs/env-registry.md`;有第一個專案變數時建立,判準照底座那份                |
-| 專案 E2E 劇本說明        | `docs/testing/project/scenarios.md`                          | 劇本編號用專案前綴,不接底座的序號(TEST-05)                                         |
-| 品牌值、設計稿節點       | [branding.md](branding.md)、[figma-nodes.md](figma-nodes.md) | 完工的 Figma 工作檔節點表也搬進 figma-nodes.md                                     |
-| 規格、交接、Figma 工作檔 | `docs/tmp/spec-<主題>.md`、`docs/tmp/figma-<主題>/`          | 只放未完成的工作,完工後內容寫進上面的正本再刪(STRUCT-11)                           |
+| 內容                     | 位置                                                         | 備註                                                                                                                     |
+| ------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------ |
+| 專案模組的內部技術文件   | `docs/modules/project/<key>.md`                              | 寫法同底座模組文件;底座模組在本專案的補充(節點、刻意的差異)也寫在這裡,不改底座文件                                       |
+| 專案 ADR                 | `docs/adr/project/NNNN-<主題>.md`                            | 獨立編號,從 0001 起                                                                                                      |
+| 專案資料表地圖           | `docs/project/data-model.md`                                 | 格式同 `docs/data-model.md`;有第一張專案資料表時建立                                                                     |
+| 專案環境變數             | `docs/project/env-registry.md`                               | 格式同 `docs/env-registry.md`;有第一個專案變數時建立,判準照底座那份                                                      |
+| 專案 E2E 劇本說明        | `docs/testing/project/scenarios.md`                          | 劇本編號用專案前綴,不接底座的序號(TEST-05)                                                                               |
+| 品牌值、設計稿節點       | [branding.md](branding.md)、[figma-nodes.md](figma-nodes.md) | 完工的 Figma 工作檔節點表也搬進 figma-nodes.md                                                                           |
+| 規格、交接、Figma 工作檔 | `docs/tmp/spec-<主題>.md`、`docs/tmp/figma-<主題>/`          | 只放未完成的工作,完工後內容寫進上面的正本再刪(STRUCT-11);已被模組文件與程式大量引用的定稿規格搬到 `docs/project/` 當出處 |
 
 新增文件後在「現有文件」補一列。程式、文案、seed、skill 的專案位置見[初始化索引](../project-initialization.md#功能與專案內容)。

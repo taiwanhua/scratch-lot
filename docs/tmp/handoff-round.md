@@ -4,23 +4,21 @@
 
 ## 1. 文件與資源在哪裡
 
-| 東西                        | 位置                                                                                                                        |
-| --------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| 專案規格(刮刮樂 + 排班出勤) | `docs/tmp/spec-project-lottery.md`(第 16 章畫面清單、16.10 入口 → 畫面)                                                     |
-| 底座機制(已完成)            | 正式文件:`docs/concepts/`、`docs/modules/`、`docs/standards/`;Figma 規範 FIGMA-11~17;尚未實作的 S2 三項見專案規格第 18 章   |
-| Figma 畫圖紀錄              | `docs/tmp/figma-base-round/README.md`(畫圖檢查清單、每次改圖的固定流程、搬回底座的方法)、`nodes.md`(各輪節點 id 與修改紀錄) |
-| 班表流程走查                | `docs/tmp/figma-base-round/schedule-walkthrough.md`                                                                         |
-| 畫圖腳本                    | `docs/tmp/figma-base-round/*.js`(底座)、`docs/tmp/figma-base-round/project/*.js`(專案)                                      |
-| 稽核腳本                    | `audit-layout.js`、`audit-sync.js`、`audit-legend.js`、`audit.js`、`audit-roster.js`(同一資料夾)                            |
-| Figma 檔                    | scratch-lot Screens `sXOJkIX53eBMUyDE8yYUJm`;品牌 Library `vR4pASiPSzHnxC1y778zAx`;底座 wowgo-base Design System(Library)   |
+| 東西                        | 位置                                                                                                                      |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| 專案規格(刮刮樂 + 排班出勤) | `docs/project/spec.md`(定稿;模組文件與程式註解的「規格 x.y」出處;第 16 章畫面清單、16.10 入口 → 畫面)                     |
+| 底座機制(已完成)            | 正式文件:`docs/concepts/`、`docs/modules/`、`docs/standards/`;Figma 規範 FIGMA-11~17                                      |
+| Figma 節點與慣例            | `docs/project/figma-nodes.md`(本專案的頁、尺寸 Section、專案元件);底座參考畫面見 FIGMA-09                                 |
+| 稽核腳本                    | `scripts/figma-audit/`(做法見同資料夾 README);本專案設定與班表比對在 `scripts/figma-audit/project/`                       |
+| Figma 檔                    | scratch-lot Screens `sXOJkIX53eBMUyDE8yYUJm`;品牌 Library `vR4pASiPSzHnxC1y778zAx`;底座 wowgo-base Design System(Library) |
 
-Figma 頁面:Base Draft 41:5914、刮刮樂元件 64:14、店面管理 65:14、叫貨與進貨 69:14、班表管理 70:14、庫存 91:14、帳戶 93:14、報表 94:14、經銷商 95:14、檔案 97:14、班表時間軸 · 各種情況(規則頁 T-01~T-18)401:805。
+Figma 頁面:刮刮樂元件 64:14、店面管理 65:14、叫貨與進貨 69:14、班表管理 70:14、庫存 91:14、帳戶 93:14、報表 94:14、經銷商 95:14、檔案 97:14、班表時間軸 · 各種情況(規則頁 T-01~T-18)401:805。
 
 ## 2. 實作怎麼進行(使用者 2026-10-13 定)
 
 1. **底座先做**(已完成):底座的票都做在整合分支 `feat/base-round`,已 release 並回收成 wowgo-base v0.4.0;規則已寫進正式文件。
 2. **專案後做**(已完成):整合分支 `feat/lottery-round` 做完專案規格的票(P01–P39),已 release。
-3. **同步回底座**(已跑過多輪,底座到 v0.4.5;還沒回收的見本檔第 6 節):`base-sync contribute` 回收到 `C:\project\wowgo-base` → release 新底座版本 → scratch-lot、cookhome 升級(去掉重複功能)。驗收準則:子專案修的底座問題能回到底座;底座新版升級能去掉重複功能並同步成功;整套用同步工具跑完。
+3. **同步回底座**(已跑過多輪,底座到 v0.4.9;還沒回收的見本檔第 6 節):`base-sync contribute` 回收到 `C:\project\wowgo-base` → release 新底座版本 → scratch-lot、cookhome 升級(去掉重複功能)。驗收準則:子專案修的底座問題能回到底座;底座新版升級能去掉重複功能並同步成功;整套用同步工具跑完。
 
 **一條整合分支的做法**
 
@@ -33,9 +31,9 @@ Figma 頁面:Base Draft 41:5914、刮刮樂元件 64:14、店面管理 65:14、�
 
 ## 3. 這幾輪定下的原則(實作與畫圖都適用)
 
-- **一個東西一個名詞**;名詞表在專案規格第 1 章。班表:「職責」只指負責人 / 協同;人力需求是一組「執行任務」;排班「填進」執行任務。
+- **一個東西一個名詞**;名詞表在 `CONTEXT-PROJECT.md`。班表:「職責」只指負責人 / 協同;人力需求是一組「執行任務」;排班「填進」執行任務。
 - **三種尺寸**:每張畫面都有電腦 1440 / 平板 1024 / 手機 390;修一個尺寸,其他尺寸和背景複本同類問題一起修。
-- **顏色只用共用色票**,不自創;一個顏色在一個模組只有一個意思;分類色用 `tagPalettes`(目前在 Figma 是本機 `Draft/tagPalettes`,回收時改綁 Library 並刪除本機集合)。
+- **顏色只用共用色票**,不自創;一個顏色在一個模組只有一個意思;分類色用 `tagPalettes`(Figma 綁 wowgo-base Library 的同名集合)。
 - **圖例和畫面標示一一對應**;圖例樣本用真實元件。
 - **互動狀態照 MUI**:滑過 = 同色系 main × 8%、已選取 = × 16% + 1px main 框;Figma 用 state layer 圖層。
 - **元件**:小標籤用標籤元件;共用元件設計 props 前先盤點所有使用處。
@@ -47,11 +45,12 @@ Figma 頁面:Base Draft 41:5914、刮刮樂元件 64:14、店面管理 65:14、�
 
 在 Figma MCP `use_figma`(先載入 figma-use skill)貼上整份腳本、改檔頭的 `PAGE_ID`;每項要是 0,例外寫在各腳本檔頭。順序:`audit-layout` → `audit-legend` → `audit-sync` → `audit-roster`(班表頁)→ `audit.js`。如果 `use_figma` 連最簡單的 `return "ok"` 都回 `truncated to 20kb`,是 Figma 外掛卡住,請使用者重新載入檔案。
 
-## 5. 目前進度(2026-10-29)
+## 5. 目前進度(2026-10-31)
 
-- **scratch-lot 在底座 v0.4.5**(wowgo-base `2971cf9a`):scratch-lot main `43f3dd95`,dev / staging 已 reset 對齊 main。v0.4.5 只帶文件(協作偏好、交付與換手、deployment 等)與 `package.json` 版本,程式和 v0.4.4 相同;v0.4.4 時 production 已部署。cookhome 是否已升到 v0.4.5 要在 cookhome repo 確認。
+- **scratch-lot 與 cookhome 都在底座 v0.4.9**(wowgo-base `1d425640`),兩邊 dev / staging 都 reset 對齊 main。v0.4.6–v0.4.9 是 Figma 的收尾:底座草稿回收進 Design System、Screens Starter 同步、底座參考畫面(含通知設定 BS-09a ~ 09g)對齊程式現況;四個 Figma 檔稽核都是 0。
 - 專案階段的票(P01–P39)全部完成並 release;使用者已在 production 驗收最後一批(待標註調整列、庫存概況、單張金額下拉、手機帳戶篩選抽屜)。
 - 本輪的共用改良已分五次回收成 wowgo-base v0.4.0–v0.4.4(base-sync contribute → 底座 release → 各專案 base-sync upgrade);v0.4.5 是文件版。
+- 本輪的 `docs/tmp` 工作檔已收尾:專案規格搬到 `docs/project/spec.md` 當出處,Figma 節點與慣例在 `docs/project/figma-nodes.md`,稽核腳本在 `scripts/figma-audit/`。
 - 沒有進行中的分支、PR 或工作樹;刮刮樂本輪最後五張 issue(#139、#143–#146,P35–P39)已實作但當時沒關,2026-10-29 補關,scratch-lot 沒有開著的 issue。
 - 開通租戶照 skill `scratch-lot-onboarding`(正本 `docs/modules/project/lottery-onboarding.md`);示範機構用 `demo` 指令(見同一份正本)。
 
@@ -59,11 +58,10 @@ Figma 頁面:Base Draft 41:5914、刮刮樂元件 64:14、店面管理 65:14、�
 
 每一項的細節與現況放在待辦正本,這裡只列入口;做完就從正本刪掉。
 
-| 類別                 | 在哪                                          | 摘要                                                                                                                          |
-| -------------------- | --------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| Figma 待修           | `docs/tmp/dis.md`「Figma 對齊通知設定頁現況」 | 底座草稿回收與 Screens Starter 同步已隨 wowgo-base v0.4.8 完成;剩通知設定頁對齊(底座待辦)                                     |
-| 開著的 issue         | wowgo-base 的 GitHub Issues                   | 「structure.md 一句被中性化切斷」「Figma 品牌同步改用本機外掛」是 wowgo-base 的 issue(scratch-lot 的 #83、#66 是別的、已關閉) |
-| 底座待討論(含 skill) | `docs/tmp/dis.md`                             | 例:自訂 `/to-figma` skill、module-scaffold 入口與設計流程整合、AI 自動 PR review 的時機                                       |
-| GitHub 上的舊分支    | `git branch -r`                               | 約 187 條已合併的舊分支,要不要清由使用者決定                                                                                  |
+| 類別                 | 在哪                        | 摘要                                                                                                                          |
+| -------------------- | --------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| 開著的 issue         | wowgo-base 的 GitHub Issues | 「structure.md 一句被中性化切斷」「Figma 品牌同步改用本機外掛」是 wowgo-base 的 issue(scratch-lot 的 #83、#66 是別的、已關閉) |
+| 底座待討論(含 skill) | `docs/tmp/dis.md`           | 例:自訂 `/to-figma` skill、module-scaffold 入口與設計流程整合、AI 自動 PR review 的時機                                       |
+| GitHub 上的舊分支    | `git branch -r`             | 約 187 條已合併的舊分支,要不要清由使用者決定                                                                                  |
 
 換帳號、換電腦時的接手方式見 `docs/agents/collaboration.md`「交付與換手」;使用者的協作偏好正本見 `docs/agents/working-preferences.md`(兩者隨底座 v0.4.5 同步進來)。
