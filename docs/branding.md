@@ -65,7 +65,7 @@
 
 | 檔案                                                                              | fileKey                  | 目前用途                                                                                                 |
 | --------------------------------------------------------------------------------- | ------------------------ | -------------------------------------------------------------------------------------------------------- |
-| [wowgo-base Design System](https://www.figma.com/design/XKQ18kf6SkfAQYk7GmBkk5)   | `XKQ18kf6SkfAQYk7GmBkk5` | 共用元件與後台殼 Library;86 組元件(含「Draft / 本輪」34 組)、15 頁治理及示範參考畫面與 33 張本輪參考畫面 |
+| [wowgo-base Design System](https://www.figma.com/design/XKQ18kf6SkfAQYk7GmBkk5)   | `XKQ18kf6SkfAQYk7GmBkk5` | 共用元件與後台殼 Library;86 組元件(含「Draft / 本輪」34 組)、15 頁治理及示範參考畫面與 34 張本輪參考畫面 |
 | [wowgo-base Screens Starter](https://www.figma.com/design/t80RWevFt8yezd0Bue9aGJ) | `t80RWevFt8yezd0Bue9aGJ` | 新專案取用的中性後台 Screens;15 頁、95 張參考畫面，共用元件維持遠端 Library 實例                         |
 | [CookHome Design System](https://www.figma.com/design/SvnBvi8Opfj8daJAclOnWW)     | `SvnBvi8Opfj8daJAclOnWW` | CookHome 品牌與業務畫面;共用元件引用 wowgo-base Library                                                  |
 
