@@ -15,7 +15,7 @@ import {
 
 const DAY = "2026-11-10";
 
-// ---- 規則頁(Figma 401:805)T-01–T-18 的輸入寫法(同 `docs/tmp/figma-base-round/project/r6-timeline-cases.js`) ----
+// ---- 規則頁(Figma「Screen / 班表時間軸 · 各種情況」401:805)T-01–T-18 的輸入寫法 ----
 
 /** 小時(可帶 .5)→ 台北時間的 ISO。 */
 export const at = (hours: number): string => {
