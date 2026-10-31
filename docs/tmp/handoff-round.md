@@ -62,6 +62,5 @@ Figma 頁面:刮刮樂元件 64:14、店面管理 65:14、叫貨與進貨 69:14�
 | -------------------- | --------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
 | 開著的 issue         | wowgo-base 的 GitHub Issues | 「structure.md 一句被中性化切斷」「Figma 品牌同步改用本機外掛」是 wowgo-base 的 issue(scratch-lot 的 #83、#66 是別的、已關閉) |
 | 底座待討論(含 skill) | `docs/tmp/dis.md`           | 例:自訂 `/to-figma` skill、module-scaffold 入口與設計流程整合、AI 自動 PR review 的時機                                       |
-| GitHub 上的舊分支    | `git branch -r`             | 約 187 條已合併的舊分支,要不要清由使用者決定                                                                                  |
 
 換帳號、換電腦時的接手方式見 `docs/agents/collaboration.md`「交付與換手」;使用者的協作偏好正本見 `docs/agents/working-preferences.md`(兩者隨底座 v0.4.5 同步進來)。
