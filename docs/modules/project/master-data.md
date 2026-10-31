@@ -89,7 +89,7 @@
 registerGameUsageChecker(name, (tenantId, gameId) => Promise<boolean>): () => void
 ```
 
-由引用遊戲的功能各登記一個(在自己 provider 的 `onModuleInit`):P15(本 `lottery_books`)、P17(叫貨單)、P18(進貨單)。目前沒有任何登記 → 一律沒有庫存。
+由引用遊戲的功能各登記一個(在自己 provider 的 `onModuleInit`):P15 本 `lottery_books`(`tickets/book-game-usage.ts`)、P17 叫貨單(`requisition/requisition-registrations.ts`)、P18 進貨單(`purchase/purchase-registrations.ts`)。
 
 | 操作                                           | 沒有庫存           | 有庫存                                                             |
 | ---------------------------------------------- | ------------------ | ------------------------------------------------------------------ |
@@ -118,7 +118,7 @@ registerGameUsageChecker(name, (tenantId, gameId) => Promise<boolean>): () => vo
 | 刪除                             | 沒有刪除端點                                                                |
 
 - 崗位選單 = 全域種子 + 這家分店的上層(一路到最上層組織)+ 自己加的、啟用中的,依欄位管理排序(規則同欄位管理的上層繼承,`lottery/cash-points/position-options.ts`);選單與送出時的驗證同一支。
-- 停用守門介面 `apps/api/src/project/lottery/cash-points/cash-point-deactivation.ts`:`registerCashPointDeactivationGuard(name, (tenantId, cashPointId) => Promise<boolean>)`,由店面管理(P21)登記「有開著的班或檯面上還有張數」;目前沒有登記。
+- 停用守門介面 `apps/api/src/project/lottery/cash-points/cash-point-deactivation.ts`:`registerCashPointDeactivationGuard(name, (tenantId, cashPointId) => Promise<boolean>)`,由店面管理(P21)在 `store/store-registrations.ts` 登記「有開著的班或檯面上還有張數」。
 - 對應崗位只用來說明關係與提醒,不用來找排班(規格 14.9)。
 
 ## api 介面
@@ -209,4 +209,4 @@ registerGameUsageChecker(name, (tenantId, gameId) => Promise<boolean>): () => vo
 
 ## 平台視角備註
 
-- lookup `lottery_game` 的範圍是底座固定的**可見範圍**:遊戲掛在最上層組織,只屬於分店的人(例:只屬於中山店的店長)看不到上層的資料,所以在表單裡查不到遊戲。分店人員能不能看到遊戲,待底座「資料共用」機制(逐筆開放給全部或指定分店)定案後處理;在那之前維持現狀(`game-lookup.test.ts` 的「現況」測試釘住這個行為)。
+- lookup `lottery_game` 的範圍是底座固定的**可見範圍**。遊戲共用給整個租戶的分店(見「資料」的租戶共用主檔),所以只屬於分店的人(例:只屬於中山店的店長)在表單裡也查得到總部建的遊戲;別的租戶的查不到(`game-lookup.test.ts`)。
