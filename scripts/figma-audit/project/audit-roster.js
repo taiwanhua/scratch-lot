@@ -1,10 +1,12 @@
 // 班表檢視一致性稽核:同月同店的所有班表(RosterGrid(組成),含背景複本、三尺寸)逐格比對 SC-03 電腦(290:83686)。
 // 比對:人員列格子(State / 負責 / 休息 / 文字)、格子右上角的自動排入與未對應打卡徽章、人力需求區每一列、人員欄與統計欄。
 // 只比對兩邊都有的日期與欄位(平板 / 手機顯示的天數較少、統計欄收成窄欄)。狀態標籤與工具列不在比對範圍(已發布規則不同)。
-// 結果 total 必須是 0(互動狀態 Hover / Focus 視同 Filled)。在 scratch-lot Screens 執行。
+// 結果 total 必須是 0(互動狀態 Hover / Focus 視同 Filled)。在 scratch-lot Screens 執行;整份貼進 use_figma,不需要先貼 config.js。
 const PAGE_ID = "70:14";
 const REF = "290:83686";
 const pg = await figma.getNodeByIdAsync(PAGE_ID);
+// 先切到班表頁:目前頁是別頁時,基準班表裡實例的文字可能讀不到,差異會整片出現
+await figma.setCurrentPageAsync(pg);
 const ref = (await figma.getNodeByIdAsync(REF)).findOne(
   (n) => n.name === "RosterGrid(組成)",
 );
@@ -104,6 +106,10 @@ for (const g of pg.findAll((n) => n.name === "RosterGrid(組成)")) {
   const s = sig(g);
   let top = g;
   while (top.parent.type !== "SECTION") top = top.parent;
+  // 背景複本沿用來源畫面的名稱(「背景:SC-63 …」),例外跟著來源算
+  const names = [top.name];
+  for (let x = g.parent; x && x !== top; x = x.parent)
+    if (x.name.startsWith("背景:")) names.push(x.name.slice(3));
   const diffs = [];
   for (const [k, v] of Object.entries(s)) {
     if (R[k] === undefined) continue;
@@ -113,10 +119,10 @@ for (const g of pg.findAll((n) => n.name === "RosterGrid(組成)")) {
     // 「fill:*」= 互動狀態的格子,底色不比
     const strip = (x) => x.replace(/\|fill:[^#]*/, "");
     const same = v.includes("|fill:*") ? strip(v) === strip(R[k]) : R[k] === v;
-    // 刻意例外:SC-63 / SC-21a 滑過人力需求區空白格,格子多一個淡色「+ 人力需求」
+    // 刻意例外:SC-63 / SC-21a 滑過人力需求區空白格,格子多一個淡色「+ 人力需求」(含以它們為背景的對話框)
     const hoverAdd =
       k.startsWith("demand-row") &&
-      /^SC-(63|21a)/.test(top.name) &&
+      names.some((nm) => /^SC-(63|21a)/.test(nm)) &&
       v.replace("/+ 人力需求", "") === R[k];
     if (!same && !hoverAdd) diffs.push(`${k}: ${v} ≠ ${R[k]}`);
   }

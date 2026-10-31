@@ -221,6 +221,6 @@ const AUDIT_CONFIG = {
     baseAppBar: /AdminAppBar/,
   },
 
-  // audit-crossview.js:跨畫面資料比對規則(名稱 → 規則)。scratch-lot 的班表比對仍用 docs/tmp/figma-base-round/audit-roster.js。
+  // audit-crossview.js:跨畫面資料比對規則(名稱 → 規則)。scratch-lot 的班表比對用同資料夾的 audit-roster.js。
   crossView: {},
 };

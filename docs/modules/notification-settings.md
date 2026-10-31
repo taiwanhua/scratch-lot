@@ -291,7 +291,7 @@ input ResetNotificationSettingInput {
 - **提醒時間那塊**(`ScheduleEditor`):寫法由類型決定;某日期前 N 天 = 提前天數一格一個(`[+ 加一個]` 到 5 個為止、每格旁 [×] 移除,剩一個時不能移)+ 寄送時間;逾期後每天 = 寄送時間;每月第 N 天 = 第幾天 + 寄送時間。寄送時間是 `TimePicker`(`minutesStep` 15,選單的分鐘只列 00 / 15 / 30 / 45;鍵盤打得出不在格子上的時間)。[儲存] 前本地驗證(0–365 整數、不重複、至少一個;1–31;寄送時間是 15 分鐘格子上的 `HH:mm`,`isScheduleTime`),api 擋下的 `SCHEDULE_INVALID` 依 `path`(例 `daysBefore[1]`)標回那一格。
 - **還原預設(清單)**:只在任何一塊調整過的列可按;確認框逐行寫出還原後的預設收件人與提醒時間。送出不帶 `part`(兩塊一起還原)。成功後清單回到類型宣告的值並標「預設」。
 - **類型名稱的語系**:畫面上的類型名稱一律經 `lib/base/notification-type-name.ts` 的 `useNotificationTypeName()`:有 `admin.notifications.types.<類型 key>`(key 的 `.` 就是巢狀層級)用它,沒有退回 api 的 `name`。底座 6 種類型兩個語系都有文案;專案的類型在專案字典加同樣的 key,沒加的顯示登記的名稱。通知設定頁與個人設定的通知管道開關(`PreferencesTab`)共用這一支;🔔 清單與新通知提示顯示的是通知的標題 / 內容(寫入當下依收件人的語言產生),不顯示類型名稱,之後要顯示也走這一支。
-- **與 Figma 的差異(刻意)**:通知類型清單的「預設管道」欄不做(`NotificationSetting` 沒有管道欄位,管道由收件人在個人設定開關);編輯收件人的「所屬組織」條件不做(人員條件不含所屬組織,組織範圍由類型宣告);組織範圍用通用的「觸發事件的組織」,不逐類型寫「印表機所在組織」。
+- **不做的**:清單沒有「預設管道」欄(`NotificationSetting` 沒有管道欄位,管道由收件人在個人設定開關);收件人條件不含「所屬組織」(組織範圍由類型宣告);組織範圍一律用通用寫法「觸發事件的組織」,不逐類型改寫成「印表機所在組織」這類說法。
 - **測試**:`NotificationSettingsPage.test.tsx`(清單、搜尋(含英文名稱)、編輯、錯誤標回條件列、還原預設、英文名稱與退回)、`NotificationSettingsSchedule.test.tsx`(提醒時間欄、編輯框的塊數、改值與各自還原、範圍檢查、時間選單)、`NotificationSettingsAccess.test.tsx`(沒有 edit 權限、站在根組織、超級管理員站在租戶、`?edit=` 的開啟與清除;共用 `notification-settings-test-support.ts`),假 api 是有狀態的 `test/msw/notification-settings-handlers.ts`(mock 模式也用它)。
 
 正本:`apps/admin/src/pages/base/system/NotificationSettingsPage/`(提醒時間:`notification-schedule.ts`、`ScheduleEditor.tsx`)、`apps/admin/src/lib/base/notification-type-name.ts`、`apps/admin/src/test/msw/notification-settings-handlers.ts`
