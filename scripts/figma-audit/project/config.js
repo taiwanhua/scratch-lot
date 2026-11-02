@@ -57,16 +57,22 @@ const AUDIT_CONFIG = {
 
   // audit-sync.js
   sync: {
-    // 一次跑完的專案頁(店面管理、叫貨與進貨、庫存管理、班表管理、帳戶管理、輸出報表、經銷商管理、檔案管理)
+    // 一次跑完的專案頁(店面管理、庫存管理、叫貨與進貨、輸出報表各分「· 編號店」「· 張數店」兩頁;
+    // 班表管理、帳戶管理、經銷商管理、檔案管理、刮刮樂設定)
     pages: [
       "65:14",
+      "829:20481",
       "91:14",
+      "829:20482",
       "69:14",
+      "829:20483",
       "70:14",
       "93:14",
       "94:14",
+      "829:20484",
       "95:14",
       "97:14",
+      "829:20485",
     ],
     // 只檢查遮罩(overlayNoPage / overlayNotCovering)的頁:沒有尺寸 Section 的底座草稿頁
     overlayOnlyPages: [{ id: "41:5914", label: "Base Draft" }],
@@ -210,7 +216,7 @@ const AUDIT_CONFIG = {
   audit: {
     // 畫面框內不能出現的開發用文字(devTextInScreens)
     devText: [
-      /\b(ST|IN|PU|AC|RE|DE|MD|SC|RC|RW|BS)-\d{2}[a-c]?\b/, // 設計稿編號
+      /\b(ST|IN|PU|AC|RE|DE|MD|SC|RC|RW|BS|CS)-\d{2}[a-e]?\b/, // 設計稿編號
       /第 ?\d+(\.\d+)* ?(節|章)|規格/, // 規格章節
       /RANGE_TOO_LARGE|show-cost|\b(store|inventory|purchasing|accounts|reports|dealers|games|schedule|system|master-data)\.[a-z][a-z-]+|swapComponent|Draft\/|PageTabs|SLOT/, // 錯誤碼、權限 key、實作詞
     ],
