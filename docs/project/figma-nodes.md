@@ -39,8 +39,8 @@
 
 | 元件                     | 節點        | 變體 / 用途                                                                                                                                                |
 | ------------------------ | ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Draft/ScratchLotSideNav  | `64:15`     | 電腦側欄(專案的頂層模組);還沒有「刮刮樂設定」這一項                                                                                                        |
-| Draft/ScratchLotNavRail  | `196:7592`  | 平板收合側欄                                                                                                                                               |
+| Draft/ScratchLotSideNav  | `64:15`     | 電腦側欄(專案的頂層模組);含「刮刮樂設定」(排在檔案管理之後)                                                                                                |
+| Draft/ScratchLotNavRail  | `196:7592`  | 平板收合側欄;含「刮刮樂設定」(◎)                                                                                                                           |
 | Draft/ScratchLotAppBar   | `209:407`   | `Size=Tablet / Mobile` × `Kind=Page / Back / Dialog`;手機排法用底座 AdminAppBar 的精簡版                                                                   |
 | Draft/StoreTopBar        | `196:328`   | 店面管理看板頂部列,`Size=Desktop / Tablet / Mobile`                                                                                                        |
 | Draft/CashPointHeader    | `64:512`    | 看板收銀點標題列,`Size` × `State=Open / Closed / Other`;BOOLEAN `CountSale`(Open 變體的 [依張數標記售出])、`RescanPending`(標題旁「這裡還沒刷遊戲 X」標籤) |
