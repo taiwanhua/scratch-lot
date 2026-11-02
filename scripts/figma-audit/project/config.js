@@ -75,7 +75,8 @@ const AUDIT_CONFIG = {
       "829:20485",
     ],
     // 只檢查遮罩(overlayNoPage / overlayNotCovering)的頁:沒有尺寸 Section 的底座草稿頁
-    overlayOnlyPages: [{ id: "41:5914", label: "Base Draft" }],
+    // (原本的「Base Draft / 本輪底座元件」頁 41:5914 已回收到 wowgo-base、本檔已無此頁;留著會讓整份跑時找不到頁而中斷)
+    overlayOnlyPages: [],
     // 回報時的頁名:去掉「Screen / 」前綴
     pageLabel: (name) => name.slice(9),
     // 尺寸 Section 名稱 → 代號與畫面寬度;code 為 D 的是電腦(不查篩選抽屜、不比 app bar)
@@ -111,6 +112,9 @@ const AUDIT_CONFIG = {
         "ST-36|開班|M":
           "手機的卡片展開是底部面板,蓋住下面其他收銀點的標題列(電腦 / 平板原地展開,看得到)",
       };
+      // 張數店的卡片展開(CS-02)同 ST-36:手機底部面板蓋住其他收銀點的標題列
+      for (const b of ["開班", "切換到這個收銀點"])
+        out[`CS-02|${b}|M`] = out["ST-36|開班|M"];
       // 看板 StoreTopBar 的 [📷 掃描](Camera 屬性)只在平板 / 手機打開
       for (const code of [
         "ST-01",
@@ -120,6 +124,11 @@ const AUDIT_CONFIG = {
         "ST-35",
         "ST-36",
         "ST-38",
+        "CS-01",
+        "CS-02",
+        "CS-03",
+        "CS-06",
+        "CS-07",
       ])
         out[`${code}|📷 掃描|D`] =
           "掃描按鈕只在有相機的手機 / 平板看板顯示,電腦不畫(ST-43)";
