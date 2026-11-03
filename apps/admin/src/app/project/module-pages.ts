@@ -30,6 +30,8 @@ import { TransferCreatePage } from "@/pages/project/lottery/purchasing/transfer/
 import { TransferEditPage } from "@/pages/project/lottery/purchasing/transfer/TransferEditPage/TransferEditPage";
 import { TransferPage } from "@/pages/project/lottery/purchasing/transfer/TransferPage/TransferPage";
 import { TransferViewPage } from "@/pages/project/lottery/purchasing/transfer/TransferViewPage/TransferViewPage";
+import { LotterySettingsPage } from "@/pages/project/lottery/settings/LotterySettingsPage/LotterySettingsPage";
+import { LOTTERY_SETTINGS_KEY } from "@/pages/project/lottery/settings/lottery-settings-config";
 import { StorePage } from "@/pages/project/lottery/store/StorePage/StorePage";
 import { StoreCreatePage } from "@/pages/project/lottery/store/forms/StoreCreatePage/StoreCreatePage";
 import {
@@ -65,6 +67,8 @@ const sources: ModulePageSource = {
     { key: MASTER_DATA_MODULE_KEYS.gameViewPage, Page: GameViewPage },
     { key: MASTER_DATA_MODULE_KEYS.gameCreatePage, Page: GameFormPage },
     { key: MASTER_DATA_MODULE_KEYS.gameEditPage, Page: GameFormPage },
+    // 刮刮樂設定(張數店規格第 4 節):一頁一條設定一列
+    { key: LOTTERY_SETTINGS_KEY, Page: LotterySettingsPage },
     // 經銷商管理(專案規格 5.2–5.4;新增與編輯同一個版型,情境由 module.key 判斷)
     { key: DEALERS_MODULE_KEYS.list, Page: DealersPage },
     { key: DEALERS_MODULE_KEYS.viewPage, Page: DealerViewPage },

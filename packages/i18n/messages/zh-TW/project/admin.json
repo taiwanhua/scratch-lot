@@ -4280,5 +4280,137 @@
         "day-off-closing": "截止日"
       }
     }
+  },
+  "lotterySettings": {
+    "title": "刮刮樂設定",
+    "org": "分店",
+    "customize": "自訂",
+    "restore": "還原",
+    "history": "變更紀錄",
+    "cancelConversion": "取消轉換",
+    "converting": "張數盤點 → 編號盤點(轉換中,等補點編號)",
+    "parent": "上層:{value}",
+    "labels": {
+      "count_mode": "盤點制度",
+      "renumber_required": "張數店補點編號",
+      "renumber_reminder": "補點編號提醒",
+      "transfer_grid_pick": "調貨單可點格子選張"
+    },
+    "options": {
+      "count_mode": {
+        "numbered": "編號盤點",
+        "count": "張數盤點"
+      },
+      "renumber_required": {
+        "remind": "只提醒",
+        "required": "必須(擋關帳)"
+      },
+      "renumber_reminder": {
+        "none": "不設",
+        "weekly": "每週",
+        "biweekly": "雙週",
+        "monthly": "每月"
+      },
+      "transfer_grid_pick": {
+        "on": "開",
+        "off": "關"
+      }
+    },
+    "descriptions": {
+      "count_mode": {
+        "numbered": "每張都刷或點格子才賣、盤點逐張。從張數改回時先進入轉換中:之後銷售一律要刷或點格子,並要做一次全店補點編號;補點編號核准後才改成編號。",
+        "count": "當下生效,下一次盤點起改數張數。"
+      },
+      "count_mode_upper": {
+        "numbered": "沿用預設的分店會跟著改成編號;還有系統預設帶入張號的分店先進入轉換中。",
+        "count": "沿用預設的分店會跟著改成張數。"
+      },
+      "renumber_required": {
+        "remind": "只警告,不擋關帳。",
+        "required": "該月最後一次日結前沒做補點編號就擋關帳。"
+      },
+      "renumber_reminder": {
+        "none": "不提醒補點編號。",
+        "weekly": "上次補點編號後滿 7 天提醒。",
+        "biweekly": "上次補點編號後滿 14 天提醒。",
+        "monthly": "上次補點編號後滿一個月提醒。"
+      },
+      "transfer_grid_pick": {
+        "on": "編號店的調貨單可以點格子選張。張數店一律只能刷條碼或手輸張號。",
+        "off": "調貨單只能刷條碼或手輸張號選張。"
+      }
+    },
+    "source": {
+      "own": "本店自訂",
+      "ownTop": "本層自訂",
+      "inherited": "沿用:{org}",
+      "inheritedHidden": "沿用上層設定",
+      "default": "程式預設"
+    },
+    "dialog": {
+      "title": "{label} · {org}",
+      "titleDefault": "{label}預設 · {org}",
+      "restore": "還原成沿用",
+      "cancel": "取消",
+      "save": "儲存",
+      "close": "關閉",
+      "renumberToRemind": "這個月關帳時改成只警告,報表標估算並註記「月底未補點編號」。這次變更會留紀錄。"
+    },
+    "check": {
+      "checking": "檢查中…",
+      "separator": "、",
+      "reasonSeparator": ";",
+      "pendingSkip": "檯面上還有待標註的本,請先到看板標完跳號再改。",
+      "pendingSkipBook": "{cashPoint} · {gameCode} {gameName} · 本號 {bookNo}",
+      "pendingSkipCount": "待標註 {count} 張",
+      "busy": "{org}有進行中的盤點/重刷,完成或結束後再改",
+      "toConverting": "{org}會進入轉換中,直到補點編號核准;轉換中不能依張數標記售出、依張數移櫃。",
+      "toNumbered": "沒有系統預設帶入的張號,直接改成編號盤點。",
+      "followingToCount": "會跟著改成張數的分店",
+      "followingToNumbered": "會跟著改成編號的分店",
+      "noneFollowing": "沒有分店會跟著改",
+      "blocked": "這次不能存:{reasons}。",
+      "blockedPendingSkip": "{org} {cashPoint} {gameCode} · {bookNo} 待標註 {count} 張(先標完,或先幫那家店 [自訂] 成編號)"
+    },
+    "cancelDialog": {
+      "title": "取消{org}的轉換?",
+      "body": "{org}會當下回到張數盤點,未對號記號照常用。取消轉換等於幫這家店自訂「張數」;之後上層預設再改也不跟著動,要按 [還原] 才恢復沿用。",
+      "back": "取消",
+      "confirm": "取消轉換"
+    },
+    "historyDialog": {
+      "title": "盤點制度變更紀錄 · {org}",
+      "when": "{at} · {by}",
+      "system": "系統",
+      "change": "{from} → {to}({cause})",
+      "renumberOnly": "補點編號 核准(不改制度)",
+      "empty": "還沒有變更紀錄",
+      "close": "關閉",
+      "modes": {
+        "numbered": "編號",
+        "count": "張數",
+        "converting": "轉換中"
+      },
+      "causes": {
+        "setting": "設定",
+        "renumber_approved": "補點編號核准",
+        "convert_cancelled": "取消轉換"
+      }
+    },
+    "feedback": {
+      "saveSuccess": "已自訂設定",
+      "restoreSuccess": "已還原成沿用",
+      "cancelConversionSuccess": "已取消轉換,回到張數盤點"
+    },
+    "errors": {
+      "FORBIDDEN": "沒有改這個組織設定的權限",
+      "NOT_FOUND": "找不到這個組織,或你看不到",
+      "VALIDATION_FAILED": "設定的值不正確,請重新選擇",
+      "COUNT_MODE_CHANGE_BLOCKED": "這次不能改盤點制度:有分店檯面上還有待標註的本,或有進行中的盤點/重刷/補點編號",
+      "NOT_CONVERTING": "這家店不是轉換中,不能取消轉換",
+      "NOT_STORE": "只有分店有盤點制度",
+      "CONCURRENT_EDIT": "別人同時改了這條設定,請重新整理後再試",
+      "UNEXPECTED": "發生錯誤,請稍後再試"
+    }
   }
 }

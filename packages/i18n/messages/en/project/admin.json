@@ -4280,5 +4280,137 @@
         "day-off-closing": "the closing date"
       }
     }
+  },
+  "lotterySettings": {
+    "title": "Scratch-off settings",
+    "org": "Store",
+    "customize": "Customize",
+    "restore": "Restore",
+    "history": "Change log",
+    "cancelConversion": "Cancel conversion",
+    "converting": "Quantity → Numbered (converting, awaiting renumbering)",
+    "parent": "Upper level: {value}",
+    "labels": {
+      "count_mode": "Counting method",
+      "renumber_required": "Renumbering for quantity-count stores",
+      "renumber_reminder": "Renumbering reminder",
+      "transfer_grid_pick": "Pick tickets on the grid in transfers"
+    },
+    "options": {
+      "count_mode": {
+        "numbered": "Numbered count",
+        "count": "Quantity count"
+      },
+      "renumber_required": {
+        "remind": "Reminder only",
+        "required": "Required (blocks period close)"
+      },
+      "renumber_reminder": {
+        "none": "None",
+        "weekly": "Weekly",
+        "biweekly": "Every two weeks",
+        "monthly": "Monthly"
+      },
+      "transfer_grid_pick": {
+        "on": "On",
+        "off": "Off"
+      }
+    },
+    "descriptions": {
+      "count_mode": {
+        "numbered": "Every ticket is scanned or picked on the grid to sell, and counts go ticket by ticket. Switching back from quantity count first enters converting: every sale must be scanned or picked on the grid, and one store-wide renumbering is required; the store becomes numbered once the renumbering is approved.",
+        "count": "Takes effect now; counts switch to quantities from the next stocktake."
+      },
+      "count_mode_upper": {
+        "numbered": "Stores following the default switch to numbered; stores still holding system-assigned ticket numbers enter converting first.",
+        "count": "Stores following the default switch to quantity count."
+      },
+      "renumber_required": {
+        "remind": "Warn only; does not block period close.",
+        "required": "Blocks period close if no renumbering is done before the last daily close of the month."
+      },
+      "renumber_reminder": {
+        "none": "No renumbering reminder.",
+        "weekly": "Remind 7 days after the last renumbering.",
+        "biweekly": "Remind 14 days after the last renumbering.",
+        "monthly": "Remind one month after the last renumbering."
+      },
+      "transfer_grid_pick": {
+        "on": "Numbered stores can pick tickets on the grid in transfers. Quantity-count stores always scan or type ticket numbers.",
+        "off": "Transfers pick tickets only by scanning or typing ticket numbers."
+      }
+    },
+    "source": {
+      "own": "Customized here",
+      "ownTop": "Customized at this level",
+      "inherited": "Inherited: {org}",
+      "inheritedHidden": "Inherited from upper level",
+      "default": "Built-in default"
+    },
+    "dialog": {
+      "title": "{label} · {org}",
+      "titleDefault": "{label} default · {org}",
+      "restore": "Restore to inherited",
+      "cancel": "Cancel",
+      "save": "Save",
+      "close": "Close",
+      "renumberToRemind": "Period close for this month will only warn; reports are marked as estimates with a note that renumbering was not done at month end. This change is recorded."
+    },
+    "check": {
+      "checking": "Checking…",
+      "separator": ", ",
+      "reasonSeparator": "; ",
+      "pendingSkip": "Books on the counter still have skips to mark. Mark them on the board first.",
+      "pendingSkipBook": "{cashPoint} · {gameCode} {gameName} · book {bookNo}",
+      "pendingSkipCount": "{count} to mark",
+      "busy": "{org} has a stocktake or rescan in progress; change after it finishes or ends",
+      "toConverting": "{org} will enter converting until the renumbering is approved; selling or moving by quantity is unavailable while converting.",
+      "toNumbered": "No system-assigned ticket numbers; switches to numbered count directly.",
+      "followingToCount": "Stores switching to quantity count",
+      "followingToNumbered": "Stores switching to numbered count",
+      "noneFollowing": "No store follows this change",
+      "blocked": "Cannot save this time: {reasons}.",
+      "blockedPendingSkip": "{org} {cashPoint} {gameCode} · {bookNo} has {count} skips to mark (mark them first, or customize that store to numbered)"
+    },
+    "cancelDialog": {
+      "title": "Cancel the conversion of {org}?",
+      "body": "{org} returns to quantity count now and unmatched marks stay in use. Cancelling customizes this store to quantity count; later changes to the upper default no longer apply until you press Restore.",
+      "back": "Back",
+      "confirm": "Cancel conversion"
+    },
+    "historyDialog": {
+      "title": "Counting method change log · {org}",
+      "when": "{at} · {by}",
+      "system": "System",
+      "change": "{from} → {to} ({cause})",
+      "renumberOnly": "Renumbering approved (method unchanged)",
+      "empty": "No changes yet",
+      "close": "Close",
+      "modes": {
+        "numbered": "Numbered",
+        "count": "Quantity",
+        "converting": "Converting"
+      },
+      "causes": {
+        "setting": "setting",
+        "renumber_approved": "renumbering approved",
+        "convert_cancelled": "conversion cancelled"
+      }
+    },
+    "feedback": {
+      "saveSuccess": "Setting customized",
+      "restoreSuccess": "Restored to inherited",
+      "cancelConversionSuccess": "Conversion cancelled; back to quantity count"
+    },
+    "errors": {
+      "FORBIDDEN": "You cannot change settings for this organization",
+      "NOT_FOUND": "Organization not found or not visible to you",
+      "VALIDATION_FAILED": "Invalid value; please choose again",
+      "COUNT_MODE_CHANGE_BLOCKED": "Cannot change the counting method: a store has books with skips to mark on the counter, or a stocktake, rescan or renumbering in progress",
+      "NOT_CONVERTING": "This store is not converting",
+      "NOT_STORE": "Only stores have a counting method",
+      "CONCURRENT_EDIT": "Someone changed this setting at the same time; refresh and try again",
+      "UNEXPECTED": "Something went wrong; please try again later"
+    }
   }
 }

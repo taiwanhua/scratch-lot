@@ -405,4 +405,29 @@ export const PROJECT_DYNAMIC_KEYS: readonly DynamicKey[] = [
     reason:
       "班次結帳歷史紀錄的 `t(`list.statuses.${status}`)`,status 是申請的狀態(api 回的值、篩選)",
   },
+  {
+    key: "admin.lotterySettings.labels.",
+    reason:
+      "刮刮樂設定的 `t(`labels.${key}`)`,key 取自 api 回的設定(定義清單 `@repo/domain/project/lottery-settings` 的 `LOTTERY_SETTING_DEFINITIONS`)",
+  },
+  {
+    key: "admin.lotterySettings.options.",
+    reason:
+      "`setting-display.ts` 的 `t(`options.${key}.${option}`)`,選項取自設定定義的 `options`",
+  },
+  {
+    key: "admin.lotterySettings.descriptions.",
+    reason:
+      "`SettingDialog` 的 `t(`descriptions.${key}.${option}`)`(上層的盤點制度用 `count_mode_upper`),選項取自設定定義",
+  },
+  {
+    key: "admin.lotterySettings.historyDialog.modes.",
+    reason:
+      "`CountModeHistoryDialog` 的 `t(`modes.${mode}`)`,mode 為 `COUNT_MODES`(api 回的歷程)",
+  },
+  {
+    key: "admin.lotterySettings.historyDialog.causes.",
+    reason:
+      "`CountModeHistoryDialog` 的 `t(`causes.${cause}`)`,cause 為 `COUNT_MODE_CHANGE_CAUSES`",
+  },
 ];

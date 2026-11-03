@@ -14,6 +14,8 @@ import { checkoutWorld } from "@/test/msw/project/lottery/checkout-handlers";
 import { dailyCloseWorld } from "@/test/msw/project/lottery/daily-close-handlers";
 import { inventoryModules } from "@/test/msw/project/lottery/inventory-fixtures";
 import { inventoryWorld } from "@/test/msw/project/lottery/inventory-handlers";
+import { lotterySettingsModules } from "@/test/msw/project/lottery/lottery-settings-fixtures";
+import { lotterySettingsWorld } from "@/test/msw/project/lottery/lottery-settings-handlers";
 import { masterDataModules } from "@/test/msw/project/lottery/master-data-fixtures";
 import { masterDataWorld } from "@/test/msw/project/lottery/master-data-handlers";
 import {
@@ -129,6 +131,8 @@ export const projectMockWorld: ProjectMockWorld = {
   // 班表管理(群組 + 四個子模組,權限給滿);帳戶管理、庫存管理(權限給滿)
   modules: () => [
     ...masterDataModules(),
+    // 刮刮樂設定(權限給滿)
+    ...lotterySettingsModules(),
     ...dealersModules(),
     ...scheduleModules(),
     ...accountsModules(),
@@ -143,6 +147,11 @@ export const projectMockWorld: ProjectMockWorld = {
   ],
   handlers: () => [
     ...masterDataWorld().handlers,
+    // 刮刮樂設定:中山店是轉換中(看得到 [取消轉換] 與變更紀錄)
+    ...lotterySettingsWorld({
+      storeModes: { "org-ls-zhongshan": "converting" },
+      unmatchedStores: ["org-ls-zhongshan"],
+    }).handlers,
     ...dealersWorld().handlers,
     ...scheduleSettingsWorld().handlers,
     ...scheduleCalendarWorld().handlers,
