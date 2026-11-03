@@ -206,6 +206,7 @@ export const sampleStoreBoard = (
     myOpenShifts: [counter, outdoor],
     vaultExpected: 48_200,
     countMode,
+    movePauses: [],
   };
 };
 

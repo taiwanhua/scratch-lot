@@ -55,6 +55,7 @@ fragment LotteryInventoryTicketFields on LotteryInventoryTicket {
   locked
   operable
   version
+  unmatched
 }
 
 fragment LotteryInventoryPlaceFields on LotteryInventoryPlace {
@@ -128,6 +129,7 @@ fragment LotteryInventoryBookDetailFields on LotteryInventoryBookDetail {
     canMarkSkips
     canRecover
     canScrap
+    bookOpened
     canShowCost
   }
 }
@@ -303,6 +305,14 @@ mutation RecoverLotteryTickets($input: RecoverLotteryTicketsInput!) {
 # ScrapLotteryTicketsInput: { tickets: [{ ticketId, version }], reasonKey, reasonNote? }
 mutation ScrapLotteryTickets($input: ScrapLotteryTicketsInput!) {
   scrapLotteryTickets(input: $input) {
+    count
+    lossCost
+  }
+}
+
+# 撤銷報廢(張數店規格 7.8):UndoLotteryScrapInput { tickets, reasonKey, reasonNote? }
+mutation UndoLotteryScrap($input: UndoLotteryScrapInput!) {
+  undoLotteryScrap(input: $input) {
     count
     lossCost
   }

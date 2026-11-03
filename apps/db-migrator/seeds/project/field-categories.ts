@@ -148,6 +148,12 @@ export const PROJECT_FIELD_CATEGORIES: readonly ProjectFieldCategory[] = [
     ],
   },
   {
+    key: LOTTERY.scrapUndoReason,
+    name: "撤銷報廢原因",
+    usedIn: "本的詳情的撤銷報廢(報錯張要先撤銷報廢)",
+    options: [{ value: "mis-scrapped", label: "報錯張" }, other],
+  },
+  {
     key: SCHEDULE.position,
     name: "崗位",
     usedIn:

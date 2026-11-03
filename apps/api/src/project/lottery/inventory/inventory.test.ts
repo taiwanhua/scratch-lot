@@ -537,6 +537,13 @@ describe("庫存管理(GraphQL 端點 + 真 MongoDB)", () => {
   }
 
   /** 中山店的本,#001–010 調到新竹店;中山店的 #050 待查、新竹店的 #005 待查。 */
+  /** 這本拆過(報廢要拆過的本,張數店規格 7.8;這裡直接寫 `firstOpenedAt`,不經拆本)。 */
+  async function markOpened(bookId: Types.ObjectId): Promise<void> {
+    await api.connection
+      .collection("lottery_books")
+      .updateOne({ _id: bookId }, { $set: { firstOpenedAt: new Date() } });
+  }
+
   async function splitBook(lastTicketNo = 100): Promise<Types.ObjectId> {
     const bookId = await receiveBook(storeA, lastTicketNo);
     const moved = Array.from({ length: 10 }, (_, index) =>
@@ -1056,6 +1063,7 @@ describe("庫存管理(GraphQL 端點 + 真 MongoDB)", () => {
   describe("報廢(規格 7.4)", () => {
     it("只能報未售;損失 = 單張成本加總(批購成本);張保留單張成本給報表", async () => {
       const bookId = await receiveBook(storeA);
+      await markOpened(bookId);
       await apply(storeA, bookId, ["001"], {
         type: TICKET_EVENT_TYPE.sale,
         patch: { status: TICKET_STATUS.sold },
@@ -1104,6 +1112,7 @@ describe("庫存管理(GraphQL 端點 + 真 MongoDB)", () => {
 
     it("沒有 show-cost:損失與成本不回;沒有 recover 看不到 [尋回]", async () => {
       const bookId = await receiveBook(storeA);
+      await markOpened(bookId);
       const detail = await bookOf(bookId, scrapOnly);
       expect(detail.cost).toBeNull();
       expect(detail.abilities).toEqual({
@@ -1224,6 +1233,7 @@ describe("庫存管理(GraphQL 端點 + 真 MongoDB)", () => {
 
     it("報廢別店的張 → CROSS_STORE_NOT_ALLOWED(不是已被處理);總部可以報廢、事件記在張的分店", async () => {
       const bookId = await splitBook();
+      await markOpened(bookId);
       const detail = await bookOf(bookId, managerB);
       expect(
         await errorOf(api, managerB, SCRAP, {

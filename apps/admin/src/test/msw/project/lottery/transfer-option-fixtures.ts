@@ -53,6 +53,8 @@ export const transferOptions =
         inTransitBooks: 1,
       },
     ],
+    gridPick: true,
+    countMode: "numbered",
   });
 
 /** 拆過的那本的格子:#001–011、#032、#048 已售,其餘可以調。 */
@@ -64,5 +66,11 @@ export const transferBookTickets = () =>
       __typename: "LotteryTransferTicketCell" as const,
       ticketNo,
       state: isSold ? "sold" : "available",
+      unmatched: false,
+      matchable: false,
+      soldCashPointName: isSold ? "店內櫃台" : null,
+      soldAt: isSold ? "2026-10-16T02:12:00.000Z" : null,
+      cashPointName: null,
+      lockedSerialNo: null,
     };
   });

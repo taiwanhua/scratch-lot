@@ -78,6 +78,8 @@ import { LotteryStoreResolver } from "./store.resolver";
   // 同一個「現在」(測試注入時間的是同一個實例)
   exports: [
     StoreFormsQueryService,
+    // 對號的配對張(調貨送出、更正跳號也照 6.3 對號)
+    StoreMatching,
     StoreAccess,
     StoreClock,
     StoreSalesSupport,

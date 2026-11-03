@@ -5,7 +5,9 @@ import type { OperatorContext } from "../../../database/operator-context";
 import { RequirePermission } from "../../../permission/require-permission.decorator";
 import { RequireTenant } from "../../tenant-scope/require-tenant.decorator";
 import {
+  LotteryStoreCounterScanInput,
   LotteryStoreScanInput,
+  MoveLotteryTicketsByCountInput,
   MoveLotteryTicketsInput,
   RecallLotteryTicketsInput,
   SellLotteryTicketsByCountInput,
@@ -18,6 +20,7 @@ import {
   LotteryStoreBookCardPayload,
   LotteryStoreCountSalesPayload,
   LotteryStoreCounterPayload,
+  LotteryStoreCounterScanPayload,
   LotteryStoreSalePayload,
   LotteryStoreSalesPayload,
   LotteryStoreScanItemModel,
@@ -138,6 +141,27 @@ export class LotteryStoreSalesResolver {
     @CurrentOperator() operator: OperatorContext,
   ): Promise<LotteryStoreCounterPayload> {
     return { count: await this.counter.move(operator, input) };
+  }
+
+  /** [收回] / [刷條碼移櫃] 刷到一張(張數店規格 13.1;只讀,service 檢查 `store.view`)。 */
+  @Query(() => LotteryStoreCounterScanPayload, {
+    name: "lotteryStoreCounterScan",
+  })
+  async lotteryStoreCounterScan(
+    @Args("input") input: LotteryStoreCounterScanInput,
+    @CurrentOperator() operator: OperatorContext,
+  ): Promise<LotteryStoreCounterScanPayload> {
+    return { items: await this.counter.counterScan(operator, input) };
+  }
+
+  /** 依張數移櫃(張數店規格 7.7;`store.move`,另要 `store.sell`,service 檢查)。 */
+  @RequirePermission("store.move")
+  @Mutation(() => LotteryStoreCounterPayload)
+  async moveLotteryTicketsByCount(
+    @Args("input") input: MoveLotteryTicketsByCountInput,
+    @CurrentOperator() operator: OperatorContext,
+  ): Promise<LotteryStoreCounterPayload> {
+    return { count: await this.counter.moveByCount(operator, input) };
   }
 
   @RequirePermission("store.move")

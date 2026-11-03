@@ -103,6 +103,9 @@ query LotteryStoreBoard($orgId: ID!) {
       }
       vaultExpected
       countMode
+      movePauses {
+        gameId
+      }
     }
   }
 }

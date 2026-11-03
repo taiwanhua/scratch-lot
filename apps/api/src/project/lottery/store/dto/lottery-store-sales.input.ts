@@ -141,22 +141,17 @@ export class SplitLotteryBookInput {
 
   @Field(() => [LotterySplitAssignmentInput])
   assignments!: LotterySplitAssignmentInput[];
+
+  /** 手上這本實際有幾張(張數店與轉換中、不是原封不動的本必填;張數店規格 7.5) */
+  @Field(() => Int, { nullable: true })
+  actualCount?: number | null;
 }
 
-/** 移櫃(收銀點之間;規格 6.4)。 */
-@InputType()
-export class MoveLotteryTicketsInput {
-  @Field(() => ID)
-  orgId!: string;
-
-  @Field(() => [LotteryStoreTicketRefInput])
-  tickets!: LotteryStoreTicketRefInput[];
-
-  @Field(() => ID)
-  toCashPointId!: string;
-}
-
-/** 收回(檯面 → 庫存;規格 6.4)。 */
+/**
+ * 收回(檯面 → 庫存;規格 6.4):`source` = `grid`(格子選的、整本;不給 = grid)或 `scan`(刷條碼、相機、手輸張號,
+ * 張數店規格 13.4「手輸和刷一樣」)。張數店與轉換中只接受 `scan`,並要給 `fromCashPointId`(來源台:未對號或
+ * 系統記在別台的張先在這台對號,6.3)。
+ */
 @InputType()
 export class RecallLotteryTicketsInput {
   @Field(() => ID)
@@ -164,4 +159,52 @@ export class RecallLotteryTicketsInput {
 
   @Field(() => [LotteryStoreTicketRefInput])
   tickets!: LotteryStoreTicketRefInput[];
+
+  @Field(() => String, { nullable: true })
+  source?: string | null;
+
+  @Field(() => ID, { nullable: true })
+  fromCashPointId?: string | null;
+}
+
+/** 移櫃(收銀點之間;規格 6.4;`source`、`fromCashPointId` 同收回)。 */
+@InputType()
+export class MoveLotteryTicketsInput extends RecallLotteryTicketsInput {
+  @Field(() => ID)
+  toCashPointId!: string;
+}
+
+/** 依張數移櫃(張數店規格 7.7、13.1):從哪台、哪個遊戲、移到哪台、幾張。 */
+@InputType()
+export class MoveLotteryTicketsByCountInput {
+  @Field(() => ID)
+  orgId!: string;
+
+  @Field(() => ID)
+  fromCashPointId!: string;
+
+  @Field(() => ID)
+  toCashPointId!: string;
+
+  @Field(() => ID)
+  gameId!: string;
+
+  @Field(() => Int)
+  count!: number;
+}
+
+/** [收回] / [刷條碼移櫃] 刷到一張(張數店規格 13.1;移櫃給 `toCashPointId`)。 */
+@InputType()
+export class LotteryStoreCounterScanInput {
+  @Field(() => ID)
+  orgId!: string;
+
+  @Field(() => ID)
+  fromCashPointId!: string;
+
+  @Field(() => ID, { nullable: true })
+  toCashPointId?: string | null;
+
+  @Field(() => String)
+  code!: string;
 }

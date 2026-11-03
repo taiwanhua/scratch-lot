@@ -8,8 +8,10 @@ import {
   type CountMode,
   type CountModeChangeCause,
   type CountModeSetting,
+  type MovePauseBlock,
   type StoreBusy,
   displayBookNo,
+  movePauseBlockOf,
   pendingSkipCountOf,
   storeBusyOf,
 } from "@repo/domain/project/lottery";
@@ -215,6 +217,45 @@ export class StoreCountModeService {
       stocktakeId: String(pause.stocktakeId),
       gameId: pause.gameId === null ? null : String(pause.gameId),
     }));
+  }
+
+  /**
+   * 移櫃前的檢查與先後(張數店規格 5.6、8.5、8.5a B1 / B2;要在移櫃的交易內):讀分店那一筆的 `movePauses`,
+   * 要移的遊戲在重刷中、或補點編號中 → 回擋下的原因、不寫;沒擋 → `$inc version`(和「開始重刷」更新同一份文件,
+   * 後到的一方寫入衝突、整個交易重跑,結果只會是「先移後重刷」或「移櫃被擋」)。沒有那一筆(編號店、沒設過制度)
+   * → 不會有重刷或補點,不寫。
+   */
+  async guardMove(
+    operator: OperatorContext,
+    target: { orgId: Types.ObjectId; tenantId: Types.ObjectId | null },
+    gameIds: readonly Types.ObjectId[],
+    session: ClientSession,
+  ): Promise<MovePauseBlock | null> {
+    const record = await this.sessionRecordOf(operator, target.orgId, session);
+    if (record === null) {
+      return null;
+    }
+    const block = movePauseBlockOf(
+      record.movePauses.map((pause) => ({
+        gameId: pause.gameId === null ? null : String(pause.gameId),
+      })),
+      gameIds.map(String),
+    );
+    if (block !== null) {
+      return block;
+    }
+    const writer = await tenantBoundaryContext(
+      this.orgs,
+      operator,
+      target.tenantId,
+    );
+    await this.countModes.findOneAndUpdate(
+      writer,
+      { _id: record._id },
+      { $inc: { version: 1 } },
+      { session },
+    );
+    return null;
   }
 
   /**

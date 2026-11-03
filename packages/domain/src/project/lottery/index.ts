@@ -7,6 +7,7 @@
  * - `ticket-events.ts`:張的狀態、位置、鎖定與張數事件類型
  * - `book-stats.ts`:本的即時計算(待標註、剩餘、持有、未拆 / 檯面中 / 售完)與已給本數
  * - `count-mode.ts`:張數店的盤點制度、挑張順序、對號的配對張、補點編號到期、張數盤點的差異
+ * - `counter-moves.ts`:收回、移櫃(刷條碼、依張數)、移櫃暫停、拆本的手上實際張數、報廢只限庫存
  * - `portable-lookups.ts`:可以跟著受管表單交付的 lookup 來源(種子組裝與 api 匯出共用)
  * - `purchase.ts`:進貨單的表單代號 / 欄位 key、明細列、批購金額、應付、點收刷條碼的比對與進度
  * - `transfer.ts`:調貨單的表單代號 / 欄位 key、權限、明細列、金額、張號區段、收付按鈕先填值與核准前檢查
@@ -26,6 +27,7 @@ export * from "./book-scan";
 export * from "./book-stats";
 export * from "./checkout";
 export * from "./count-mode";
+export * from "./counter-moves";
 export * from "./daily-close";
 export * from "./dealer-limits";
 export * from "./inventory";

@@ -2,7 +2,11 @@ import { GraphQLError } from "graphql";
 
 import type {
   CountSaleLinesProblem,
+  CounterScanProblem,
+  MoveByCountProblem,
+  MovePauseBlock,
   SaleUndoBlock,
+  SplitActualCountProblem,
   SplitPlanProblem,
   StoreScanBlockReason,
 } from "@repo/domain/project/lottery";
@@ -42,6 +46,21 @@ export const STORE_SALES_REASONS = {
   countSaleNotFound: "COUNT_SALE_NOT_FOUND",
   /** 依張數撤銷:要撤的張數超過現在可以撤的(`extensions.available`) */
   countUndoExceeds: "COUNT_UNDO_EXCEEDS",
+  /**
+   * 收回 / 移櫃:張數店與轉換中只接受刷條碼或手輸張號的張(格子、「整本」不行;張數店規格 7.6、7.7),
+   * 並要給來源台 `fromCashPointId`
+   */
+  countStoreScanOnly: "COUNT_STORE_SCAN_ONLY",
+  /** 收回 / 移櫃:刷到的張不能收回 / 移櫃(`extensions.problems`:每張 `{ ticketId, problem }`,`CounterScanProblem`) */
+  counterTicketBlocked: "COUNTER_TICKET_BLOCKED",
+  /** 移櫃:這個遊戲全店重刷中 / 補點編號中,暫停移櫃(`extensions.pause`:`MovePauseBlock`;8.5a B1 / B2) */
+  movePaused: "MOVE_PAUSED",
+  /** 依張數移櫃:不是張數店 / 移到同一台 / 張數不對 / 超過來源台剩餘(`extensions.problem`、`available`) */
+  moveByCountInvalid: "MOVE_BY_COUNT_INVALID",
+  /** 拆本:張數店與轉換中不是原封不動的本要輸入手上實際張數 */
+  splitActualCountRequired: "SPLIT_ACTUAL_COUNT_REQUIRED",
+  /** 拆本:手上實際張數比系統多 / 少太多(`extensions.problem`、`count`;張數店規格 7.5) */
+  splitActualCountMismatch: "SPLIT_ACTUAL_COUNT_MISMATCH",
 } as const;
 
 export type StoreSalesReason =
@@ -200,5 +219,79 @@ export function gameNotFoundError(ticketId: string): GraphQLError {
     "the game of this ticket cannot be read",
     STORE_SALES_REASONS.gameNotFound,
     { fields: ["tickets"], ticketIds: [ticketId] },
+  );
+}
+
+export function countStoreScanOnlyError(): GraphQLError {
+  return storeSalesError(
+    "VALIDATION_FAILED",
+    "count stores recall and move scanned tickets only",
+    STORE_SALES_REASONS.countStoreScanOnly,
+    { fields: ["source", "fromCashPointId"] },
+  );
+}
+
+export function counterTicketBlockedError(
+  problems: readonly { ticketId: string; problem: CounterScanProblem }[],
+): GraphQLError {
+  return storeSalesError(
+    "VALIDATION_FAILED",
+    "these tickets cannot be recalled or moved",
+    STORE_SALES_REASONS.counterTicketBlocked,
+    {
+      fields: ["tickets"],
+      ticketIds: problems.map((item) => item.ticketId),
+      problems,
+    },
+  );
+}
+
+export function movePausedError(pause: MovePauseBlock): GraphQLError {
+  return storeSalesError(
+    "VALIDATION_FAILED",
+    "moving is paused while a rescan or renumber is in progress",
+    STORE_SALES_REASONS.movePaused,
+    { pause },
+  );
+}
+
+export function moveByCountInvalidError(
+  problem: MoveByCountProblem,
+): GraphQLError {
+  return storeSalesError(
+    "VALIDATION_FAILED",
+    "cannot move tickets by count",
+    STORE_SALES_REASONS.moveByCountInvalid,
+    {
+      fields:
+        problem.kind === "same_cash_point" ? ["toCashPointId"] : ["count"],
+      problem: problem.kind,
+      ...("available" in problem ? { available: problem.available } : {}),
+      ...("countMode" in problem ? { countMode: problem.countMode } : {}),
+    },
+  );
+}
+
+export function splitActualCountRequiredError(): GraphQLError {
+  return storeSalesError(
+    "VALIDATION_FAILED",
+    "enter how many tickets of this book are on hand",
+    STORE_SALES_REASONS.splitActualCountRequired,
+    { fields: ["actualCount"] },
+  );
+}
+
+export function splitActualCountMismatchError(
+  problem: SplitActualCountProblem,
+): GraphQLError {
+  return storeSalesError(
+    "VALIDATION_FAILED",
+    "the tickets on hand do not match the system",
+    STORE_SALES_REASONS.splitActualCountMismatch,
+    {
+      fields: ["actualCount"],
+      problem: problem.kind,
+      ...("count" in problem ? { count: problem.count } : {}),
+    },
   );
 }

@@ -239,12 +239,13 @@ export class InventoryViewService {
     // 能不能操作某一張 = 它的所在分店在操作者的可見範圍內(別店的張只能看)
     const operable = (ticket: TicketRecord) =>
       isOrgVisible(operator, ticket.orgId);
-    // 對調跳號要這本有跳號(記在哪家店都可以),和一張自己範圍內未售、未鎖定、不在途的張可以改標
+    // 更正跳號要這本有跳號(記在哪家店都可以),和一張自己範圍內未售(張數店另可是系統預設帶入的狀態,7.10)、
+    // 未鎖定、不在途的張可以改標
     const canCorrectSkips =
       sortedTickets.some((ticket) => ticket.status === TICKET_STATUS.skipped) &&
       sortedTickets.some(
         (ticket) =>
-          ticket.status === TICKET_STATUS.unsold &&
+          (ticket.status === TICKET_STATUS.unsold || ticket.unmatched) &&
           ticket.lockedBy === null &&
           ticket.location.kind !== TICKET_LOCATION_KIND.inTransit &&
           operable(ticket),
@@ -289,6 +290,7 @@ export class InventoryViewService {
           ),
         canRecover: grant.has(INVENTORY_PERMISSIONS.recover),
         canScrap: grant.has(INVENTORY_PERMISSIONS.scrap),
+        bookOpened: (record.firstOpenedAt ?? null) !== null,
         canShowCost: grant.canShowCost,
       },
     };
@@ -633,6 +635,7 @@ export class InventoryViewService {
       locked: ticket.lockedBy !== null,
       operable: isOrgVisible(operator, ticket.orgId),
       version: ticket.version,
+      unmatched: ticket.unmatched,
     };
   }
 

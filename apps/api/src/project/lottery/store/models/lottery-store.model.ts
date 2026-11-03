@@ -161,6 +161,20 @@ export class LotteryStoreBoardModel {
    */
   @Field(() => String)
   countMode!: string;
+
+  /**
+   * 進行中的全店重刷(`gameId` = 那個遊戲)或補點編號(`gameId` = null)(張數店規格 5.6、8.5;14.2 `movePause`):
+   * 看板的 [刷條碼移櫃] [依張數移櫃] 變灰。後端移櫃一律再檢查。
+   */
+  @Field(() => [LotteryStoreMovePauseModel])
+  movePauses!: LotteryStoreMovePauseModel[];
+}
+
+/** 暫停移櫃的一筆(`gameId` = null:補點編號,全部遊戲暫停)。 */
+@ObjectType("LotteryStoreMovePause")
+export class LotteryStoreMovePauseModel {
+  @Field(() => ID, { nullable: true })
+  gameId!: string | null;
 }
 
 @ObjectType()

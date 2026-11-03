@@ -14,6 +14,7 @@ import {
   ScrapLotteryTicketsInput,
   SetLotteryAllocationInput,
   SwapLotterySkippedTicketInput,
+  UndoLotteryScrapInput,
 } from "./dto/lottery-inventory.input";
 import { InventoryActionsService } from "./inventory-actions.service";
 import { InventoryStockService } from "./inventory-stock.service";
@@ -146,5 +147,15 @@ export class LotteryInventoryResolver {
     @CurrentOperator() operator: OperatorContext,
   ): Promise<LotteryInventoryActionPayload> {
     return this.actions.scrap(operator, input);
+  }
+
+  /** 撤銷報廢(張數店規格 7.8;`inventory.scrap`)。 */
+  @RequirePermission("inventory.scrap")
+  @Mutation(() => LotteryInventoryActionPayload)
+  undoLotteryScrap(
+    @Args("input") input: UndoLotteryScrapInput,
+    @CurrentOperator() operator: OperatorContext,
+  ): Promise<LotteryInventoryActionPayload> {
+    return this.actions.undoScrap(operator, input);
   }
 }

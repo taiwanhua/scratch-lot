@@ -128,6 +128,8 @@ export const inventoryWorld = ({
             ticket.operable && ticket.status === "unsold" && !ticket.locked,
         ),
       canRecover: has(PERMISSIONS.recover),
+      // 這本拆過(有張不在庫存;未拆的本不能報廢,張數店規格 7.8)
+      bookOpened: detail.book.state !== "unopened",
       canScrap: has(PERMISSIONS.scrap),
       canShowCost: has(PERMISSIONS.showCost),
     },

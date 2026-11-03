@@ -26,6 +26,8 @@ export const LOTTERY_FIELD_CATEGORY_KEYS = {
   recoverReason: "lottery-recover-reason",
   /** 報廢原因(報廢) */
   scrapReason: "lottery-scrap-reason",
+  /** 撤銷報廢原因(本的詳情 [撤銷報廢];張數店規格 7.8,Figma IN-04-2b「撤銷原因:報錯張」) */
+  scrapUndoReason: "lottery-scrap-undo-reason",
   /** 更正跳號原因(更正已標註的跳號) */
   skipCorrectionReason: "lottery-skip-correction-reason",
   /** 依張數售出原因(張數店的 [依張數標記售出];張數店規格 5.7) */

@@ -166,6 +166,13 @@ export class LotteryInventoryTicketModel {
 
   @Field(() => Int)
   version!: number;
+
+  /**
+   * 未對號(張數店:狀態是系統預設帶入的;張數店規格 5.1)。更正跳號時張數店可以選這種已售 / 待查 / 遺失·未對號
+   * 當「手上沒有的那張」(7.10)。
+   */
+  @Field(() => Boolean)
+  unmatched!: boolean;
 }
 
 /** 張在哪裡:分店 + 位置 + 收銀點。 */
@@ -318,6 +325,10 @@ export class LotteryInventoryBookAbilitiesModel {
 
   @Field(() => Boolean)
   canScrap!: boolean;
+
+  /** 這本拆過(`firstOpenedAt` ≠ null);沒拆過的本不能報廢(張數店規格 7.8,Figma IN-03-2a)。 */
+  @Field(() => Boolean)
+  bookOpened!: boolean;
 
   @Field(() => Boolean)
   canShowCost!: boolean;

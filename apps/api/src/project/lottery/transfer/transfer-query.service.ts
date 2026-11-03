@@ -2,14 +2,17 @@ import { Injectable } from "@nestjs/common";
 import type { Types } from "mongoose";
 
 import {
+  COUNT_MODE,
   TICKET_LOCATION_KIND,
   TICKET_STATUS,
   TRANSFER_FORM_KEY,
   TRANSFER_MODE,
   TRANSFER_MODULE_KEY,
+  type TicketStatus,
   pendingSkipCountOf,
   transferLinesOf,
 } from "@repo/domain/project/lottery";
+import { LOTTERY_SETTING_KEYS } from "@repo/domain/project/lottery-settings";
 
 import {
   FormSubmissionsRepository,
@@ -20,6 +23,7 @@ import {
   isOrgVisible,
 } from "../../../database/operator-context";
 import { tenantBoundaryContext } from "../../../database/tenant-boundary-context";
+import { LotteryCashPointsRepository } from "../../database/lottery-cash-points/lottery-cash-points.repository";
 import {
   LotteryBooksRepository,
   LotteryTicketsRepository,
@@ -28,6 +32,7 @@ import { LotteryRequisitionLinesRepository } from "../../database/lottery-requis
 import { LotteryTransferReceiptsRepository } from "../../database/lottery-transfers/lottery-transfer-receipts.repository";
 import { tenantOfOperator } from "../master-data-tenant";
 import { inTransitBooksOf } from "../requisition/in-transit";
+import { StoreCountModeService } from "../settings/store-count-mode.service";
 import {
   SettlementLedger,
   outstandingOf,
@@ -44,16 +49,60 @@ import type {
 } from "./models/transfer.model";
 import { notFoundError } from "./transfer-error";
 import { isLineReceived, receivedByRow } from "./transfer-received";
-import { TransferRules, toObjectId } from "./transfer-rules.service";
+import {
+  TransferRules,
+  isGuessedTicket,
+  toObjectId,
+} from "./transfer-rules.service";
 
 /** 讀到的一張(選本 / 格子用)。 */
 interface TicketFact {
+  _id: Types.ObjectId;
   bookId: Types.ObjectId;
   orgId: Types.ObjectId;
+  gameId: Types.ObjectId;
   ticketNo: string;
-  status: string;
-  location: { kind: string };
-  lockedBy: unknown;
+  status: TicketStatus;
+  location: { kind: string; cashPointId?: Types.ObjectId | null };
+  lockedBy: { refType: string; refId: Types.ObjectId } | null;
+  unmatched: boolean;
+  soldAt?: Date | null;
+}
+
+const CELL_SELECT =
+  "bookId orgId gameId ticketNo status location lockedBy unmatched soldAt";
+
+/** 格子的狀態(張數店規格 7.4「刷到不能調的提示」;順序 = 判斷順序)。 */
+function cellStateOf(ticket: TicketFact, fromId: Types.ObjectId): string {
+  if (ticket.status === TICKET_STATUS.skipped) {
+    return "skipped";
+  }
+  if (!ticket.orgId.equals(fromId)) {
+    return "elsewhere";
+  }
+  switch (ticket.status) {
+    case TICKET_STATUS.sold: {
+      // 已售(撤銷審核中鎖住的也是已售)
+      return "sold";
+    }
+    case TICKET_STATUS.investigating:
+    case TICKET_STATUS.lost:
+    case TICKET_STATUS.scrapped: {
+      return ticket.status;
+    }
+    default: {
+      break;
+    }
+  }
+  if (ticket.lockedBy !== null) {
+    return "locked";
+  }
+  if (ticket.location.kind === TICKET_LOCATION_KIND.inTransit) {
+    return "in_transit";
+  }
+  return ticket.location.kind === TICKET_LOCATION_KIND.counter
+    ? "counter"
+    : "available";
 }
 
 /** 這張在出貨店可以調:在出貨店、未售、沒被鎖定、不在途。 */
@@ -87,6 +136,8 @@ export class TransferQueryService {
     private readonly rules: TransferRules,
     private readonly ledger: SettlementLedger,
     private readonly allocations: LotteryAllocationsService,
+    private readonly cashPoints: LotteryCashPointsRepository,
+    private readonly countModes: StoreCountModeService,
   ) {}
 
   async optionsOf(
@@ -104,12 +155,14 @@ export class TransferQueryService {
         lockedBy: null,
         "location.kind": { $ne: TICKET_LOCATION_KIND.inTransit },
       },
-      { select: "bookId" },
-    )) as unknown as { bookId: Types.ObjectId }[];
+      { select: "bookId location" },
+    )) as unknown as { bookId: Types.ObjectId; location: { kind: string } }[];
+    // 可調張數只算庫存(拆過的本的部分張只能從庫存調,張數店規格 7.4);檯面上有張的本仍列出,刷到時提示先收回
     const counts = new Map<string, number>();
     for (const ticket of available) {
       const key = String(ticket.bookId);
-      counts.set(key, (counts.get(key) ?? 0) + 1);
+      const inStock = ticket.location.kind === TICKET_LOCATION_KIND.stock;
+      counts.set(key, (counts.get(key) ?? 0) + (inStock ? 1 : 0));
     }
     const bookRows =
       counts.size === 0
@@ -186,7 +239,17 @@ export class TransferQueryService {
           left.gameCode.localeCompare(right.gameCode, "zh-Hant") ||
           left.bookNo.localeCompare(right.bookNo, "zh-Hant"),
       );
+    const countMode = await this.countModes.modeOf(reader, fromId);
+    const gridPick =
+      countMode === COUNT_MODE.numbered &&
+      (await this.countModes.settingOf(
+        reader,
+        fromId,
+        LOTTERY_SETTING_KEYS.transferGridPick,
+      )) === "on";
     return {
+      gridPick,
+      countMode,
       books,
       requisitions:
         toId === null ? [] : await this.requisitionsOf(reader, toId, editingId),
@@ -214,30 +277,83 @@ export class TransferQueryService {
     const tickets = (await this.tickets.findMany(
       reader,
       { bookId },
-      {
-        select: "bookId orgId ticketNo status location lockedBy",
-        sort: { ticketNo: 1 },
-      },
+      { select: CELL_SELECT, sort: { ticketNo: 1 } },
     )) as unknown as TicketFact[];
     if (tickets.length === 0) {
       throw notFoundError("本不存在");
     }
+    // 張數店與轉換中:系統預設帶入狀態的張在出貨店庫存有配對張 → 可以調(送出時先對號,7.4)
+    const guessed = tickets.filter(
+      (ticket) => ticket.orgId.equals(fromId) && isGuessedTicket(ticket),
+    );
+    const partners =
+      guessed.length > 0 && (await this.rules.isCountingStore(reader, fromId))
+        ? await this.rules.matchPartnersOf(reader, fromId, guessed, new Set())
+        : new Map<string, unknown>();
+    const pointIds = [
+      ...new Set(
+        tickets.flatMap((ticket) =>
+          ticket.location.cashPointId == null
+            ? []
+            : [String(ticket.location.cashPointId)],
+        ),
+      ),
+    ];
+    const lockIds = [
+      ...new Set(
+        tickets.flatMap((ticket) =>
+          ticket.lockedBy?.refType === "transfer"
+            ? [String(ticket.lockedBy.refId)]
+            : [],
+        ),
+      ),
+    ];
+    const [points, locks] = await Promise.all([
+      pointIds.length === 0
+        ? []
+        : this.cashPoints.findMany(reader, {
+            _id: { $in: pointIds.map((id) => toObjectId(id)) },
+          }),
+      lockIds.length === 0
+        ? []
+        : this.submissions.findMany(
+            reader,
+            { _id: { $in: lockIds.map((id) => toObjectId(id)) } },
+            { select: "serialNo" },
+          ),
+    ]);
+    const pointName = new Map(
+      points.map((point) => [String(point._id), point.name]),
+    );
+    const serialOf = new Map(
+      locks.map((lock) => [String(lock._id), lock.serialNo ?? null]),
+    );
     return tickets.map((ticket) => {
-      let state = "elsewhere";
-      if (ticket.status === TICKET_STATUS.skipped) {
-        state = "skipped";
-      } else if (!ticket.orgId.equals(fromId)) {
-        // 不在出貨店:維持 elsewhere
-      } else if (ticket.status === TICKET_STATUS.sold) {
-        // 已售(撤銷審核中鎖住的也是已售)
-        state = "sold";
-      } else if (ticket.lockedBy !== null) {
-        // 未售、被其他調貨單鎖住(調貨中)
-        state = "locked";
-      } else if (isAvailableIn(ticket, fromId)) {
-        state = "available";
-      }
-      return { ticketNo: ticket.ticketNo, state };
+      const state = cellStateOf(ticket, fromId);
+      const pointId =
+        ticket.location.cashPointId == null
+          ? null
+          : String(ticket.location.cashPointId);
+      const sameStore = ticket.orgId.equals(fromId);
+      return {
+        ticketNo: ticket.ticketNo,
+        state,
+        unmatched: ticket.unmatched,
+        matchable: partners.has(String(ticket._id)),
+        soldCashPointName:
+          state === "sold" && pointId !== null && sameStore
+            ? (pointName.get(pointId) ?? null)
+            : null,
+        soldAt: state === "sold" ? (ticket.soldAt ?? null) : null,
+        cashPointName:
+          state === "counter" && pointId !== null
+            ? (pointName.get(pointId) ?? null)
+            : null,
+        lockedSerialNo:
+          state === "locked" && ticket.lockedBy?.refType === "transfer"
+            ? (serialOf.get(String(ticket.lockedBy.refId)) ?? null)
+            : null,
+      };
     });
   }
 

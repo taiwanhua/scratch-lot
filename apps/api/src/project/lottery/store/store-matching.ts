@@ -30,7 +30,7 @@ type TicketRecord = Persisted<LotteryTicketDocument>;
 
 /** 一張要找配對張的刷到的張與要找的位置(依序;張數店規格 6.3)。 */
 export interface MatchRequest {
-  ticket: TicketRecord;
+  ticket: Pick<TicketRecord, "_id" | "gameId">;
   places: readonly CountPlace[];
 }
 
@@ -146,12 +146,15 @@ export class StoreMatching {
     return this.countModes.modeOf(operator, orgId);
   }
 
-  /** 每張刷到的張的配對張(找不到 = 不在 map 裡)。 */
+  /**
+   * 每張刷到的張的配對張(找不到 = 不在 map 裡)。`exclude` = 不能當配對張的其他張(例:同一張調貨單要調的張)。
+   */
   async partnersOf(
     operator: OperatorContext,
     orgId: Types.ObjectId,
     requests: readonly MatchRequest[],
     session?: ClientSession,
+    exclude: ReadonlySet<string> = new Set(),
   ): Promise<Map<string, TicketRecord>> {
     const partners = new Map<string, TicketRecord>();
     const wanted = requests.filter((request) => request.places.length > 0);
@@ -218,7 +221,10 @@ export class StoreMatching {
     );
     const byId = new Map(found.map((ticket) => [String(ticket._id), ticket]));
     // 刷到的張自己不能當別張的配對;挑過的不再挑
-    const used = new Set(requests.map((request) => String(request.ticket._id)));
+    const used = new Set([
+      ...exclude,
+      ...requests.map((request) => String(request.ticket._id)),
+    ]);
     for (const request of wanted) {
       const candidates: MatchTicket[] = found
         .filter((ticket) => !used.has(String(ticket._id)))

@@ -8,7 +8,6 @@ import {
   TICKET_STATUS,
   boardRemainingOf,
   isLowStock,
-  pendingSkipCountOf,
 } from "@repo/domain/project/lottery";
 
 import { OrgsRepository } from "../../../database/database.module";
@@ -27,6 +26,7 @@ import {
 import { LotteryShiftsRepository } from "../../database/lottery-store/lottery-shifts.repository";
 import { CashLedgerService } from "../cash/cash-ledger.service";
 import { StoreCountModeService } from "../settings/store-count-mode.service";
+import { pendingSkipCountOfBook } from "../tickets/books.service";
 import type {
   LotteryStoreBoardBookModel,
   LotteryStoreBoardModel,
@@ -113,17 +113,19 @@ export class StoreBoardService {
       orgId,
       closedAt: null,
     });
-    const [shiftModels, cards, vault, countMode] = await Promise.all([
-      this.views.toModels(operator, openShifts, pointNames),
-      this.cardsOf(
-        operator,
-        tenantId,
-        orgId,
-        points.map((point) => point._id),
-      ),
-      this.ledger.vaultExpected(operator, tenantId, orgId),
-      this.countModes.modeOf(operator, orgId),
-    ]);
+    const [shiftModels, cards, vault, countMode, movePauses] =
+      await Promise.all([
+        this.views.toModels(operator, openShifts, pointNames),
+        this.cardsOf(
+          operator,
+          tenantId,
+          orgId,
+          points.map((point) => point._id),
+        ),
+        this.ledger.vaultExpected(operator, tenantId, orgId),
+        this.countModes.modeOf(operator, orgId),
+        this.countModes.movePauseOf(operator, orgId),
+      ]);
     const shiftByPoint = new Map(
       shiftModels.map((shift) => [shift.cashPoint.id, shift]),
     );
@@ -143,6 +145,7 @@ export class StoreBoardService {
       myOpenShifts: shiftModels.filter((shift) => shift.isMine),
       vaultExpected: vault.amount,
       countMode,
+      movePauses: movePauses.map((pause) => ({ gameId: pause.gameId })),
     };
   }
 
@@ -250,11 +253,7 @@ export class StoreBoardService {
       const list = cards.get(String(group.cashPointId)) ?? [];
       const remaining = boardRemainingOf(
         group.remaining,
-        pendingSkipCountOf(
-          Number(book.lastTicketNo),
-          book.standardTickets,
-          book.skippedTicketNos.length,
-        ),
+        pendingSkipCountOfBook(book),
         counterCountOf.get(String(book._id)) ?? 0,
       );
       list.push({

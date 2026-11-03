@@ -93,6 +93,7 @@ fragment LotteryStoreStockBookFields on LotteryStoreStockBook {
   ticketCount
   pendingSkipCount
   sealed
+  pendingSkipTotal
 }
 
 query LotteryStoreScan($input: LotteryStoreScanInput!) {
@@ -188,5 +189,37 @@ mutation MoveLotteryTickets($input: MoveLotteryTicketsInput!) {
 mutation RecallLotteryTickets($input: RecallLotteryTicketsInput!) {
   recallLotteryTickets(input: $input) {
     count
+  }
+}
+
+# 依張數移櫃(張數店規格 7.7)
+mutation MoveLotteryTicketsByCount($input: MoveLotteryTicketsByCountInput!) {
+  moveLotteryTicketsByCount(input: $input) {
+    count
+  }
+}
+
+# [收回] / [刷條碼移櫃] 刷到一張(張數店規格 13.1)
+query LotteryStoreCounterScan($input: LotteryStoreCounterScanInput!) {
+  lotteryStoreCounterScan(input: $input) {
+    items {
+      ticketId
+      version
+      bookId
+      gameId
+      gameCode
+      gameName
+      bookNo
+      ticketNo
+      status
+      unmatched
+      cashPoint {
+        id
+        name
+      }
+      soldAt
+      problem
+      match
+    }
   }
 }

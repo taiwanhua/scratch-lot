@@ -124,6 +124,11 @@ export const sampleReasonOptions: Record<
     { value: "system-backfill", label: "系統異常補登" },
     { value: "other", label: "其他" },
   ],
+  // 本的詳情的撤銷報廢(張數店規格 7.8)
+  [LOTTERY_FIELD_CATEGORY_KEYS.scrapUndoReason]: [
+    { value: "mis-scrapped", label: "報錯張" },
+    { value: "other", label: "其他" },
+  ],
   // 張數店的依張數標記售出(張數店規格 5.7)
   [LOTTERY_FIELD_CATEGORY_KEYS.countSaleReason]: [
     { value: "too-busy", label: "太忙沒刷" },

@@ -152,6 +152,7 @@ export const inventoryTicket = (
   locked: false,
   operable: true,
   version: 3,
+  unmatched: false,
   ...overrides,
 });
 
@@ -318,6 +319,7 @@ export const sampleBookDetail =
         canMarkSkips: false,
         canRecover: true,
         canScrap: true,
+        bookOpened: true,
         canShowCost: true,
       },
     };
