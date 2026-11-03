@@ -53,6 +53,9 @@ export const PROJECT_TENANT_BOUNDARY_CONTEXT_CALLERS: Readonly<
   "project/lottery/tickets/book-game-usage.ts": ["系統重算"],
   // 庫存管理:看得到本就看得到它全部的張與事件(格子、時間軸、各分店持有)
   "project/lottery/inventory/inventory-view.service.ts": ["反查"],
+  // 刮刮樂設定:改盤點制度時重算子樹裡全部分店的實際制度(下層分店不一定在操作者的可見範圍);
+  // 分店那一筆、上層鏈的設定、檯面待標註的本與未對號張數、歷程的人名
+  "project/lottery/settings/store-count-mode.service.ts": ["反查", "系統重算"],
   // 庫存概況:待標註扣在哪家店要看整本跨店的未售張數(只回扣的張數)
   "project/lottery/inventory/inventory-stock.service.ts": ["反查"],
   // 庫存管理:分店與使用者名稱、組織樹(分店可能不在讀者的可見範圍)

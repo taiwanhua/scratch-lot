@@ -18,6 +18,8 @@ import { LOTTERY_TICKETS_COLLECTION } from "./lottery-inventory/lottery-ticket.s
 import { LOTTERY_PURCHASE_RECEIPTS_COLLECTION } from "./lottery-purchases/lottery-purchase-receipt.schema";
 import { LOTTERY_REDEMPTIONS_COLLECTION } from "./lottery-redemptions/lottery-redemption.schema";
 import { LOTTERY_REQUISITION_LINES_COLLECTION } from "./lottery-requisitions/lottery-requisition-line.schema";
+import { LOTTERY_SETTINGS_COLLECTION } from "./lottery-settings/lottery-setting.schema";
+import { LOTTERY_STORE_COUNT_MODES_COLLECTION } from "./lottery-settings/lottery-store-count-mode.schema";
 import { LOTTERY_STOCKTAKES_COLLECTION } from "./lottery-stocktakes/lottery-stocktake.schema";
 import { LOTTERY_SHIFT_PERSON_LOCKS_COLLECTION } from "./lottery-store/lottery-shift-person-lock.schema";
 import { LOTTERY_SHIFTS_COLLECTION } from "./lottery-store/lottery-shift.schema";
@@ -73,6 +75,8 @@ export const PROJECT_TENANT_PURGE_REGISTRATIONS: readonly TenantPurgeRegistratio
     LOTTERY_SHIFTS_COLLECTION,
     LOTTERY_SHIFT_PERSON_LOCKS_COLLECTION,
     LOTTERY_VAULT_LOCKS_COLLECTION,
+    LOTTERY_SETTINGS_COLLECTION,
+    LOTTERY_STORE_COUNT_MODES_COLLECTION,
     LOTTERY_REDEMPTIONS_COLLECTION,
     LOTTERY_STOCKTAKES_COLLECTION,
     LOTTERY_CHECKOUTS_COLLECTION,

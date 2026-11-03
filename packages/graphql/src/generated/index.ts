@@ -180,6 +180,10 @@ export type BlockedInstancesInput = {
   pageSize?: InputMaybe<Scalars['Int']['input']>;
 };
 
+export type CancelLotteryCountModeConversionInput = {
+  orgId: Scalars['ID']['input'];
+};
+
 export type ChangePasswordInput = {
   currentPassword: Scalars['String']['input'];
   newPassword: Scalars['String']['input'];
@@ -502,6 +506,12 @@ export type CreateWorkflowInput = {
 export type CreateWorkflowVersionDraftInput = {
   baseVersion?: InputMaybe<Scalars['Int']['input']>;
   workflowKey: Scalars['ID']['input'];
+};
+
+export type CustomizeLotterySettingInput = {
+  key: Scalars['String']['input'];
+  option: Scalars['String']['input'];
+  orgId?: InputMaybe<Scalars['ID']['input']>;
 };
 
 export type CustomizeScheduleAutoRunInput = {
@@ -1901,6 +1911,48 @@ export enum LotteryContactStatus {
   Disabled = 'DISABLED'
 }
 
+export type LotteryCountModeBusyStore = {
+  __typename?: 'LotteryCountModeBusyStore';
+  orgId: Scalars['ID']['output'];
+  orgName: Scalars['String']['output'];
+  renumber: Scalars['Boolean']['output'];
+  rescan: Scalars['Boolean']['output'];
+  stocktake: Scalars['Boolean']['output'];
+};
+
+export type LotteryCountModeChangeCheck = {
+  __typename?: 'LotteryCountModeChangeCheck';
+  busyStores: Array<LotteryCountModeBusyStore>;
+  canSave: Scalars['Boolean']['output'];
+  pendingSkipBooks: Array<LotteryCountModePendingSkipBook>;
+  stores: Array<LotteryCountModeChangeStore>;
+};
+
+export type LotteryCountModeChangeCheckInput = {
+  option?: InputMaybe<Scalars['String']['input']>;
+  orgId?: InputMaybe<Scalars['ID']['input']>;
+};
+
+export type LotteryCountModeChangeStore = {
+  __typename?: 'LotteryCountModeChangeStore';
+  from: Scalars['String']['output'];
+  orgId: Scalars['ID']['output'];
+  orgName: Scalars['String']['output'];
+  problems: Array<Scalars['String']['output']>;
+  to: Scalars['String']['output'];
+};
+
+export type LotteryCountModePendingSkipBook = {
+  __typename?: 'LotteryCountModePendingSkipBook';
+  bookNo: Scalars['String']['output'];
+  cashPointName: Scalars['String']['output'];
+  gameCode: Scalars['String']['output'];
+  gameName: Scalars['String']['output'];
+  orgId: Scalars['ID']['output'];
+  orgName: Scalars['String']['output'];
+  pendingCount: Scalars['Int']['output'];
+};
+
 export type LotteryDailyCloseOpenShift = {
   __typename?: 'LotteryDailyCloseOpenShift';
   cashPointName: Scalars['String']['output'];
@@ -3100,6 +3152,41 @@ export type LotteryRequisitionStateItem = {
   state: Scalars['String']['output'];
 };
 
+export type LotterySetting = {
+  __typename?: 'LotterySetting';
+  effective: LotterySettingValue;
+  key: Scalars['ID']['output'];
+  options: Array<Scalars['String']['output']>;
+  parent?: Maybe<LotterySettingValue>;
+};
+
+export type LotterySettingMutationPayload = {
+  __typename?: 'LotterySettingMutationPayload';
+  settings: LotterySettingsPayload;
+};
+
+export type LotterySettingValue = {
+  __typename?: 'LotterySettingValue';
+  option: Scalars['String']['output'];
+  source: Scalars['String']['output'];
+  sourceOrgName?: Maybe<Scalars['String']['output']>;
+};
+
+export type LotterySettingsInput = {
+  orgId?: InputMaybe<Scalars['ID']['input']>;
+};
+
+export type LotterySettingsPayload = {
+  __typename?: 'LotterySettingsPayload';
+  canEdit: Scalars['Boolean']['output'];
+  isStore: Scalars['Boolean']['output'];
+  isTenantTop: Scalars['Boolean']['output'];
+  items: Array<LotterySetting>;
+  orgId: Scalars['ID']['output'];
+  orgName: Scalars['String']['output'];
+  storeCountMode?: Maybe<LotteryStoreCountMode>;
+};
+
 export type LotterySettlement = {
   __typename?: 'LotterySettlement';
   counterparty: Scalars['String']['output'];
@@ -3605,6 +3692,35 @@ export type LotteryStoreCashPoint = {
   shift?: Maybe<LotteryStoreShift>;
 };
 
+export type LotteryStoreCountMode = {
+  __typename?: 'LotteryStoreCountMode';
+  canCancelConversion: Scalars['Boolean']['output'];
+  lastRenumberAt?: Maybe<Scalars['DateTime']['output']>;
+  mode: Scalars['String']['output'];
+  since?: Maybe<Scalars['DateTime']['output']>;
+};
+
+export type LotteryStoreCountModeHistory = {
+  __typename?: 'LotteryStoreCountModeHistory';
+  items: Array<LotteryStoreCountModeHistoryEntry>;
+  orgId: Scalars['ID']['output'];
+  orgName: Scalars['String']['output'];
+};
+
+export type LotteryStoreCountModeHistoryEntry = {
+  __typename?: 'LotteryStoreCountModeHistoryEntry';
+  at: Scalars['DateTime']['output'];
+  byName?: Maybe<Scalars['String']['output']>;
+  cause: Scalars['String']['output'];
+  from?: Maybe<Scalars['String']['output']>;
+  stocktakeId?: Maybe<Scalars['ID']['output']>;
+  to: Scalars['String']['output'];
+};
+
+export type LotteryStoreCountModeHistoryInput = {
+  orgId: Scalars['ID']['input'];
+};
+
 export type LotteryStoreCounterPayload = {
   __typename?: 'LotteryStoreCounterPayload';
   count: Scalars['Int']['output'];
@@ -4107,6 +4223,7 @@ export type Mutation = {
   backfillLotteryStocktakeSales: LotteryStocktakeBackfillPayload;
   batchApproveTasks: BatchApproveTasksPayload;
   bindFormWorkflow: FormPayload;
+  cancelLotteryCountModeConversion: LotterySettingMutationPayload;
   changePassword: ChangePasswordPayload;
   clearScheduleAutoAssignments: ClearScheduleAutoAssignmentsPayload;
   closeLotteryPeriod: LotteryPeriodClose;
@@ -4137,6 +4254,7 @@ export type Mutation = {
   createUser: UserPayload;
   createWorkflow: WorkflowPayload;
   createWorkflowVersionDraft: WorkflowVersionPayload;
+  customizeLotterySetting: LotterySettingMutationPayload;
   customizeScheduleAutoRun: ScheduleRuleMutationPayload;
   customizeScheduleRule: ScheduleRuleMutationPayload;
   decideTask: WorkflowTaskPayload;
@@ -4202,6 +4320,7 @@ export type Mutation = {
   resetNotificationSetting: NotificationSettingPayload;
   resetPrintAgentPairing: PrintAgentPairingPayload;
   resetSidebarBadgeSetting: SidebarBadgeSettingPayload;
+  restoreLotterySetting: LotterySettingMutationPayload;
   restoreScheduleRule: ScheduleRuleMutationPayload;
   retireCurrentVersion: FormPayload;
   retireCurrentWorkflowVersion: WorkflowPayload;
@@ -4338,6 +4457,11 @@ export type MutationBatchApproveTasksArgs = {
 
 export type MutationBindFormWorkflowArgs = {
   input: BindFormWorkflowInput;
+};
+
+
+export type MutationCancelLotteryCountModeConversionArgs = {
+  input: CancelLotteryCountModeConversionInput;
 };
 
 
@@ -4488,6 +4612,11 @@ export type MutationCreateWorkflowArgs = {
 
 export type MutationCreateWorkflowVersionDraftArgs = {
   input: CreateWorkflowVersionDraftInput;
+};
+
+
+export type MutationCustomizeLotterySettingArgs = {
+  input: CustomizeLotterySettingInput;
 };
 
 
@@ -4793,6 +4922,11 @@ export type MutationResetPrintAgentPairingArgs = {
 
 export type MutationResetSidebarBadgeSettingArgs = {
   input: ResetSidebarBadgeSettingInput;
+};
+
+
+export type MutationRestoreLotterySettingArgs = {
+  input: RestoreLotterySettingInput;
 };
 
 
@@ -5896,6 +6030,7 @@ export type Query = {
   lotteryCheckout: LotteryCheckoutDetail;
   lotteryCheckoutWizard: LotteryCheckoutWizard;
   lotteryCheckouts: LotteryCheckoutsPayload;
+  lotteryCountModeChangeCheck: LotteryCountModeChangeCheck;
   lotteryDailyCloseStatus: LotteryDailyCloseStatus;
   lotteryDailyCloseWizard: LotteryDailyCloseWizard;
   lotteryDealer: LotteryDealerPayload;
@@ -5933,6 +6068,7 @@ export type Query = {
   lotteryRedemptions: LotteryRedemptionsPayload;
   lotteryRequisitionCandidates: Array<LotteryRequisitionCandidate>;
   lotteryRequisitionStates: Array<LotteryRequisitionStateItem>;
+  lotterySettings: LotterySettingsPayload;
   lotterySettlement: LotterySettlementPayload;
   lotterySettlementAccounts: LotterySettlementAccountsPayload;
   lotterySettlementCandidates: LotteryOutstandingSettlementsPayload;
@@ -5948,6 +6084,7 @@ export type Query = {
   lotteryStoreBoard: LotteryStoreBoardPayload;
   lotteryStoreBookCard: LotteryStoreBookCardPayload;
   lotteryStoreCashCorrections: LotteryStoreCashCorrectionsPayload;
+  lotteryStoreCountModeHistory: LotteryStoreCountModeHistory;
   lotteryStoreOpenShiftForm: LotteryStoreOpenShiftFormPayload;
   lotteryStoreRecentSales: LotteryStoreSalesPayload;
   lotteryStoreSale: LotteryStoreSalePayload;
@@ -6233,6 +6370,11 @@ export type QueryLotteryCheckoutsArgs = {
 };
 
 
+export type QueryLotteryCountModeChangeCheckArgs = {
+  input: LotteryCountModeChangeCheckInput;
+};
+
+
 export type QueryLotteryDailyCloseStatusArgs = {
   orgId: Scalars['ID']['input'];
 };
@@ -6387,6 +6529,11 @@ export type QueryLotteryRequisitionStatesArgs = {
 };
 
 
+export type QueryLotterySettingsArgs = {
+  input?: InputMaybe<LotterySettingsInput>;
+};
+
+
 export type QueryLotterySettlementArgs = {
   moduleKey: Scalars['String']['input'];
   refId: Scalars['ID']['input'];
@@ -6463,6 +6610,11 @@ export type QueryLotteryStoreBookCardArgs = {
 
 export type QueryLotteryStoreCashCorrectionsArgs = {
   orgId: Scalars['ID']['input'];
+};
+
+
+export type QueryLotteryStoreCountModeHistoryArgs = {
+  input: LotteryStoreCountModeHistoryInput;
 };
 
 
@@ -6982,6 +7134,11 @@ export type ResetNotificationSettingInput = {
 
 export type ResetSidebarBadgeSettingInput = {
   moduleKey: Scalars['String']['input'];
+};
+
+export type RestoreLotterySettingInput = {
+  key: Scalars['String']['input'];
+  orgId?: InputMaybe<Scalars['ID']['input']>;
 };
 
 export type RestoreScheduleRuleInput = {
@@ -10817,6 +10974,52 @@ export type LotteryInventoryStoresQueryVariables = Exact<{ [key: string]: never;
 
 export type LotteryInventoryStoresQuery = { __typename?: 'Query', lotteryInventoryStores: { __typename?: 'LotteryInventoryStoresPayload', items: Array<{ __typename?: 'LotteryInventoryRef', id: string, name: string }> } };
 
+export type LotterySettingValueFieldsFragment = { __typename?: 'LotterySettingValue', option: string, source: string, sourceOrgName?: string | null };
+
+export type LotterySettingsFieldsFragment = { __typename?: 'LotterySettingsPayload', orgId: string, orgName: string, isTenantTop: boolean, isStore: boolean, canEdit: boolean, items: Array<{ __typename?: 'LotterySetting', key: string, options: Array<string>, effective: { __typename?: 'LotterySettingValue', option: string, source: string, sourceOrgName?: string | null }, parent?: { __typename?: 'LotterySettingValue', option: string, source: string, sourceOrgName?: string | null } | null }>, storeCountMode?: { __typename?: 'LotteryStoreCountMode', mode: string, since?: string | null, lastRenumberAt?: string | null, canCancelConversion: boolean } | null };
+
+export type LotterySettingsQueryVariables = Exact<{
+  input?: InputMaybe<LotterySettingsInput>;
+}>;
+
+
+export type LotterySettingsQuery = { __typename?: 'Query', lotterySettings: { __typename?: 'LotterySettingsPayload', orgId: string, orgName: string, isTenantTop: boolean, isStore: boolean, canEdit: boolean, items: Array<{ __typename?: 'LotterySetting', key: string, options: Array<string>, effective: { __typename?: 'LotterySettingValue', option: string, source: string, sourceOrgName?: string | null }, parent?: { __typename?: 'LotterySettingValue', option: string, source: string, sourceOrgName?: string | null } | null }>, storeCountMode?: { __typename?: 'LotteryStoreCountMode', mode: string, since?: string | null, lastRenumberAt?: string | null, canCancelConversion: boolean } | null } };
+
+export type LotteryCountModeChangeCheckQueryVariables = Exact<{
+  input: LotteryCountModeChangeCheckInput;
+}>;
+
+
+export type LotteryCountModeChangeCheckQuery = { __typename?: 'Query', lotteryCountModeChangeCheck: { __typename?: 'LotteryCountModeChangeCheck', canSave: boolean, stores: Array<{ __typename?: 'LotteryCountModeChangeStore', orgId: string, orgName: string, from: string, to: string, problems: Array<string> }>, pendingSkipBooks: Array<{ __typename?: 'LotteryCountModePendingSkipBook', orgId: string, orgName: string, cashPointName: string, gameCode: string, gameName: string, bookNo: string, pendingCount: number }>, busyStores: Array<{ __typename?: 'LotteryCountModeBusyStore', orgId: string, orgName: string, stocktake: boolean, rescan: boolean, renumber: boolean }> } };
+
+export type LotteryStoreCountModeHistoryQueryVariables = Exact<{
+  input: LotteryStoreCountModeHistoryInput;
+}>;
+
+
+export type LotteryStoreCountModeHistoryQuery = { __typename?: 'Query', lotteryStoreCountModeHistory: { __typename?: 'LotteryStoreCountModeHistory', orgId: string, orgName: string, items: Array<{ __typename?: 'LotteryStoreCountModeHistoryEntry', from?: string | null, to: string, at: string, byName?: string | null, cause: string, stocktakeId?: string | null }> } };
+
+export type CustomizeLotterySettingMutationVariables = Exact<{
+  input: CustomizeLotterySettingInput;
+}>;
+
+
+export type CustomizeLotterySettingMutation = { __typename?: 'Mutation', customizeLotterySetting: { __typename?: 'LotterySettingMutationPayload', settings: { __typename?: 'LotterySettingsPayload', orgId: string, orgName: string, isTenantTop: boolean, isStore: boolean, canEdit: boolean, items: Array<{ __typename?: 'LotterySetting', key: string, options: Array<string>, effective: { __typename?: 'LotterySettingValue', option: string, source: string, sourceOrgName?: string | null }, parent?: { __typename?: 'LotterySettingValue', option: string, source: string, sourceOrgName?: string | null } | null }>, storeCountMode?: { __typename?: 'LotteryStoreCountMode', mode: string, since?: string | null, lastRenumberAt?: string | null, canCancelConversion: boolean } | null } } };
+
+export type RestoreLotterySettingMutationVariables = Exact<{
+  input: RestoreLotterySettingInput;
+}>;
+
+
+export type RestoreLotterySettingMutation = { __typename?: 'Mutation', restoreLotterySetting: { __typename?: 'LotterySettingMutationPayload', settings: { __typename?: 'LotterySettingsPayload', orgId: string, orgName: string, isTenantTop: boolean, isStore: boolean, canEdit: boolean, items: Array<{ __typename?: 'LotterySetting', key: string, options: Array<string>, effective: { __typename?: 'LotterySettingValue', option: string, source: string, sourceOrgName?: string | null }, parent?: { __typename?: 'LotterySettingValue', option: string, source: string, sourceOrgName?: string | null } | null }>, storeCountMode?: { __typename?: 'LotteryStoreCountMode', mode: string, since?: string | null, lastRenumberAt?: string | null, canCancelConversion: boolean } | null } } };
+
+export type CancelLotteryCountModeConversionMutationVariables = Exact<{
+  input: CancelLotteryCountModeConversionInput;
+}>;
+
+
+export type CancelLotteryCountModeConversionMutation = { __typename?: 'Mutation', cancelLotteryCountModeConversion: { __typename?: 'LotterySettingMutationPayload', settings: { __typename?: 'LotterySettingsPayload', orgId: string, orgName: string, isTenantTop: boolean, isStore: boolean, canEdit: boolean, items: Array<{ __typename?: 'LotterySetting', key: string, options: Array<string>, effective: { __typename?: 'LotterySettingValue', option: string, source: string, sourceOrgName?: string | null }, parent?: { __typename?: 'LotterySettingValue', option: string, source: string, sourceOrgName?: string | null } | null }>, storeCountMode?: { __typename?: 'LotteryStoreCountMode', mode: string, since?: string | null, lastRenumberAt?: string | null, canCancelConversion: boolean } | null } } };
+
 export type LotteryGameFieldsFragment = { __typename?: 'LotteryGame', id: string, gameCode: string, name: string, unitPrice: number, ticketsPerBook: number, bookPrice: number, defaultRate: number, color?: string | null, status: string, launchedAt?: string | null, discontinuedAt?: string | null, claimDeadline?: string | null, note?: string | null, inUse: boolean, createdAt: string, updatedAt: string, abilities: { __typename?: 'LotteryGameAbilities', canEdit: boolean, canDelete: boolean } };
 
 export type LotteryGamesQueryVariables = Exact<{
@@ -13001,6 +13204,38 @@ export const LotteryTicketLookupItemFieldsFragmentDoc = `
   }
   responsibleOrg {
     ...LotteryInventoryRefFields
+  }
+}
+    `;
+export const LotterySettingValueFieldsFragmentDoc = `
+    fragment LotterySettingValueFields on LotterySettingValue {
+  option
+  source
+  sourceOrgName
+}
+    `;
+export const LotterySettingsFieldsFragmentDoc = `
+    fragment LotterySettingsFields on LotterySettingsPayload {
+  orgId
+  orgName
+  isTenantTop
+  isStore
+  canEdit
+  items {
+    key
+    options
+    effective {
+      ...LotterySettingValueFields
+    }
+    parent {
+      ...LotterySettingValueFields
+    }
+  }
+  storeCountMode {
+    mode
+    since
+    lastRenumberAt
+    canCancelConversion
   }
 }
     `;
@@ -22246,6 +22481,225 @@ useLotteryInventoryStoresQuery.getKey = (variables?: LotteryInventoryStoresQuery
 
 
 useLotteryInventoryStoresQuery.fetcher = (client: GraphQLClient, variables?: LotteryInventoryStoresQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryInventoryStoresQuery, LotteryInventoryStoresQueryVariables>(client, LotteryInventoryStoresDocument, variables, headers);
+
+export const LotterySettingsDocument = `
+    query LotterySettings($input: LotterySettingsInput) {
+  lotterySettings(input: $input) {
+    ...LotterySettingsFields
+  }
+}
+    ${LotterySettingsFieldsFragmentDoc}
+${LotterySettingValueFieldsFragmentDoc}`;
+
+export const useLotterySettingsQuery = <
+      TData = LotterySettingsQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables?: LotterySettingsQueryVariables,
+      options?: Omit<UseQueryOptions<LotterySettingsQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotterySettingsQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<LotterySettingsQuery, TError, TData>(
+      {
+    queryKey: variables === undefined ? ['LotterySettings'] : ['LotterySettings', variables],
+    queryFn: fetcher<LotterySettingsQuery, LotterySettingsQueryVariables>(client, LotterySettingsDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useLotterySettingsQuery.getKey = (variables?: LotterySettingsQueryVariables) => variables === undefined ? ['LotterySettings'] : ['LotterySettings', variables];
+
+
+useLotterySettingsQuery.fetcher = (client: GraphQLClient, variables?: LotterySettingsQueryVariables, headers?: RequestInit['headers']) => fetcher<LotterySettingsQuery, LotterySettingsQueryVariables>(client, LotterySettingsDocument, variables, headers);
+
+export const LotteryCountModeChangeCheckDocument = `
+    query LotteryCountModeChangeCheck($input: LotteryCountModeChangeCheckInput!) {
+  lotteryCountModeChangeCheck(input: $input) {
+    stores {
+      orgId
+      orgName
+      from
+      to
+      problems
+    }
+    pendingSkipBooks {
+      orgId
+      orgName
+      cashPointName
+      gameCode
+      gameName
+      bookNo
+      pendingCount
+    }
+    busyStores {
+      orgId
+      orgName
+      stocktake
+      rescan
+      renumber
+    }
+    canSave
+  }
+}
+    `;
+
+export const useLotteryCountModeChangeCheckQuery = <
+      TData = LotteryCountModeChangeCheckQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: LotteryCountModeChangeCheckQueryVariables,
+      options?: Omit<UseQueryOptions<LotteryCountModeChangeCheckQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotteryCountModeChangeCheckQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<LotteryCountModeChangeCheckQuery, TError, TData>(
+      {
+    queryKey: ['LotteryCountModeChangeCheck', variables],
+    queryFn: fetcher<LotteryCountModeChangeCheckQuery, LotteryCountModeChangeCheckQueryVariables>(client, LotteryCountModeChangeCheckDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useLotteryCountModeChangeCheckQuery.getKey = (variables: LotteryCountModeChangeCheckQueryVariables) => ['LotteryCountModeChangeCheck', variables];
+
+
+useLotteryCountModeChangeCheckQuery.fetcher = (client: GraphQLClient, variables: LotteryCountModeChangeCheckQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryCountModeChangeCheckQuery, LotteryCountModeChangeCheckQueryVariables>(client, LotteryCountModeChangeCheckDocument, variables, headers);
+
+export const LotteryStoreCountModeHistoryDocument = `
+    query LotteryStoreCountModeHistory($input: LotteryStoreCountModeHistoryInput!) {
+  lotteryStoreCountModeHistory(input: $input) {
+    orgId
+    orgName
+    items {
+      from
+      to
+      at
+      byName
+      cause
+      stocktakeId
+    }
+  }
+}
+    `;
+
+export const useLotteryStoreCountModeHistoryQuery = <
+      TData = LotteryStoreCountModeHistoryQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: LotteryStoreCountModeHistoryQueryVariables,
+      options?: Omit<UseQueryOptions<LotteryStoreCountModeHistoryQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotteryStoreCountModeHistoryQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<LotteryStoreCountModeHistoryQuery, TError, TData>(
+      {
+    queryKey: ['LotteryStoreCountModeHistory', variables],
+    queryFn: fetcher<LotteryStoreCountModeHistoryQuery, LotteryStoreCountModeHistoryQueryVariables>(client, LotteryStoreCountModeHistoryDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useLotteryStoreCountModeHistoryQuery.getKey = (variables: LotteryStoreCountModeHistoryQueryVariables) => ['LotteryStoreCountModeHistory', variables];
+
+
+useLotteryStoreCountModeHistoryQuery.fetcher = (client: GraphQLClient, variables: LotteryStoreCountModeHistoryQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryStoreCountModeHistoryQuery, LotteryStoreCountModeHistoryQueryVariables>(client, LotteryStoreCountModeHistoryDocument, variables, headers);
+
+export const CustomizeLotterySettingDocument = `
+    mutation CustomizeLotterySetting($input: CustomizeLotterySettingInput!) {
+  customizeLotterySetting(input: $input) {
+    settings {
+      ...LotterySettingsFields
+    }
+  }
+}
+    ${LotterySettingsFieldsFragmentDoc}
+${LotterySettingValueFieldsFragmentDoc}`;
+
+export const useCustomizeLotterySettingMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<CustomizeLotterySettingMutation, TError, CustomizeLotterySettingMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<CustomizeLotterySettingMutation, TError, CustomizeLotterySettingMutationVariables, TContext>(
+      {
+    mutationKey: ['CustomizeLotterySetting'],
+    mutationFn: (variables?: CustomizeLotterySettingMutationVariables) => fetcher<CustomizeLotterySettingMutation, CustomizeLotterySettingMutationVariables>(client, CustomizeLotterySettingDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useCustomizeLotterySettingMutation.fetcher = (client: GraphQLClient, variables: CustomizeLotterySettingMutationVariables, headers?: RequestInit['headers']) => fetcher<CustomizeLotterySettingMutation, CustomizeLotterySettingMutationVariables>(client, CustomizeLotterySettingDocument, variables, headers);
+
+export const RestoreLotterySettingDocument = `
+    mutation RestoreLotterySetting($input: RestoreLotterySettingInput!) {
+  restoreLotterySetting(input: $input) {
+    settings {
+      ...LotterySettingsFields
+    }
+  }
+}
+    ${LotterySettingsFieldsFragmentDoc}
+${LotterySettingValueFieldsFragmentDoc}`;
+
+export const useRestoreLotterySettingMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<RestoreLotterySettingMutation, TError, RestoreLotterySettingMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<RestoreLotterySettingMutation, TError, RestoreLotterySettingMutationVariables, TContext>(
+      {
+    mutationKey: ['RestoreLotterySetting'],
+    mutationFn: (variables?: RestoreLotterySettingMutationVariables) => fetcher<RestoreLotterySettingMutation, RestoreLotterySettingMutationVariables>(client, RestoreLotterySettingDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useRestoreLotterySettingMutation.fetcher = (client: GraphQLClient, variables: RestoreLotterySettingMutationVariables, headers?: RequestInit['headers']) => fetcher<RestoreLotterySettingMutation, RestoreLotterySettingMutationVariables>(client, RestoreLotterySettingDocument, variables, headers);
+
+export const CancelLotteryCountModeConversionDocument = `
+    mutation CancelLotteryCountModeConversion($input: CancelLotteryCountModeConversionInput!) {
+  cancelLotteryCountModeConversion(input: $input) {
+    settings {
+      ...LotterySettingsFields
+    }
+  }
+}
+    ${LotterySettingsFieldsFragmentDoc}
+${LotterySettingValueFieldsFragmentDoc}`;
+
+export const useCancelLotteryCountModeConversionMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<CancelLotteryCountModeConversionMutation, TError, CancelLotteryCountModeConversionMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<CancelLotteryCountModeConversionMutation, TError, CancelLotteryCountModeConversionMutationVariables, TContext>(
+      {
+    mutationKey: ['CancelLotteryCountModeConversion'],
+    mutationFn: (variables?: CancelLotteryCountModeConversionMutationVariables) => fetcher<CancelLotteryCountModeConversionMutation, CancelLotteryCountModeConversionMutationVariables>(client, CancelLotteryCountModeConversionDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useCancelLotteryCountModeConversionMutation.fetcher = (client: GraphQLClient, variables: CancelLotteryCountModeConversionMutationVariables, headers?: RequestInit['headers']) => fetcher<CancelLotteryCountModeConversionMutation, CancelLotteryCountModeConversionMutationVariables>(client, CancelLotteryCountModeConversionDocument, variables, headers);
 
 export const LotteryGamesDocument = `
     query LotteryGames($input: LotteryGamesInput!) {

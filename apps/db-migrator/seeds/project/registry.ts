@@ -8,6 +8,7 @@ import { dealersModule } from "./dealers";
 import { lotteryDemoSource } from "./demo";
 import { projectFieldCategories, projectFields } from "./field-categories";
 import { inventoryModule } from "./inventory";
+import { lotterySettingsModule } from "./lottery-settings";
 import { masterDataModule } from "./master-data";
 import { purchasingModuleDeclarations } from "./purchasing";
 import { purchasingPurchaseModule } from "./purchasing.purchase";
@@ -40,6 +41,8 @@ export const projectSeedSource: SeedSource = {
   moduleDeclarations: [
     // 檔案管理(專案規格 5.1、5.5)
     masterDataModule,
+    // 刮刮樂設定(張數店規格第 4 節)
+    lotterySettingsModule,
     // 經銷商管理(專案規格 5.2–5.4)
     dealersModule,
     // 輸出報表(規格 3.1、3.2、第 11 章)
