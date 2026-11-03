@@ -689,18 +689,22 @@ describe("張數核心(帳本 + 本 + 預計要給本數)", () => {
       if (!first || !second) {
         throw new Error("沒有張");
       }
-      await transactions.withTransaction((session) =>
-        ledger.applyTicketEvents(session, own(storeOperator(storeA)), [
-          countSaleOf(first),
-          countSaleOf(second),
-        ]),
+      const [firstSale, secondSale] = await transactions.withTransaction(
+        (session) =>
+          ledger.applyTicketEvents(session, own(storeOperator(storeA)), [
+            countSaleOf(first),
+            countSaleOf(second),
+          ]),
       );
+      // 每張帶著自己這筆售出事件(值各不同,一次 bulkUpdateByIds 寫)
       expect(await countRow(first._id)).toMatchObject({
         status: "sold",
         unmatched: true,
-        saleEventId: null,
+        saleEventId: firstSale?.eventId,
         soldSource: "count",
       });
+      const secondRow = await countRow(second._id);
+      expect(secondRow?.saleEventId).toBe(secondSale?.eventId);
       const event = await api.connection
         .collection<{
           from: { unmatched: boolean };
@@ -733,6 +737,7 @@ describe("張數核心(帳本 + 本 + 預計要給本數)", () => {
       if (!sale || !before) {
         throw new Error("沒賣出");
       }
+      expect(before.saleEventId).toBe(sale.eventId);
       await transactions.withTransaction((session) =>
         ledger.applyTicketEvents(session, own(storeOperator(storeA)), [
           {
@@ -753,7 +758,7 @@ describe("張數核心(帳本 + 本 + 預計要給本數)", () => {
               status: TICKET_STATUS.sold,
               sold: { at: new Date(), source: "count", by: before.soldBy },
               unmatched: true,
-              saleEventId: sale.eventId,
+              saleEventId: before.saleEventId,
             },
           },
         ]),
@@ -777,7 +782,7 @@ describe("張數核心(帳本 + 本 + 預計要給本數)", () => {
       });
     });
 
-    it("撤銷依張數售出 → 改回未售,帳本自動清掉未對號", async () => {
+    it("撤銷依張數售出 → 改回未售,帳本自動清掉未對號與帶著的售出事件", async () => {
       const bookId = await receiveBook();
       const ticket = await firstTicket(bookId);
       await transactions.withTransaction((session) =>
@@ -804,6 +809,7 @@ describe("張數核心(帳本 + 本 + 預計要給本數)", () => {
       expect(await countRow(ticket._id)).toMatchObject({
         status: "unsold",
         unmatched: false,
+        saleEventId: null,
       });
       expect(await bookCounts(bookId)).toMatchObject({
         stock: 100,

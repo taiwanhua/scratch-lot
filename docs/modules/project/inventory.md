@@ -162,20 +162,20 @@
 
 ### 張 `lottery_tickets`
 
-| 欄位                             | 規則                                                                                                                            |
-| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| `bookId`、`gameId`、`bookNo`     | 本與快照                                                                                                                        |
-| `ticketNo`                       | 3 碼字串                                                                                                                        |
-| `ticketKey`                      | `5164-0056527-001`,租戶內唯一                                                                                                   |
-| `status`                         | `unsold` / `sold` / `skipped` / `scrapped` / `investigating`(待查)/ `lost`;跳號 = 實體不存在,不算庫存、成本與損失               |
-| `location`                       | `{ kind: stock \| counter \| in_transit, cashPointId }`                                                                         |
-| `lockedBy`                       | `{ refType: transfer \| sale_reversal, refId }` 或 null;被調貨單鎖定 = 「調貨中」;鎖定時不能賣                                  |
-| `responsibleOrgId`               | 待查或遺失時的責任分店                                                                                                          |
-| `unitCost`                       | 點收時 = 本的成本 ÷ 標準張數,**不四捨五入**(存除出來的值,一本加總 = 這本的成本;報表加總單張成本後再四捨五入到元);調入時由調貨改 |
-| `soldAt`、`soldBy`、`soldSource` | 最近一次售出(`scan` / `manual` / `stocktake` / `count` 依張數)                                                                  |
-| `unmatched`                      | 未對號(張數店):張號是系統照挑張順序預設帶入的;改成未售或報廢時帳本自動清掉                                                      |
-| `saleEventId`                    | 這張帶著的售出事件(對號時換過來的那一筆);null = 這張自己最近一次的售出事件。新的售出或撤銷時帳本清成 null                       |
-| `version`                        | 樂觀鎖,每次變動 +1;鎖定 / 解除也用掉一個版本(不寫事件)                                                                          |
+| 欄位                             | 規則                                                                                                                                                   |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `bookId`、`gameId`、`bookNo`     | 本與快照                                                                                                                                               |
+| `ticketNo`                       | 3 碼字串                                                                                                                                               |
+| `ticketKey`                      | `5164-0056527-001`,租戶內唯一                                                                                                                          |
+| `status`                         | `unsold` / `sold` / `skipped` / `scrapped` / `investigating`(待查)/ `lost`;跳號 = 實體不存在,不算庫存、成本與損失                                      |
+| `location`                       | `{ kind: stock \| counter \| in_transit, cashPointId }`                                                                                                |
+| `lockedBy`                       | `{ refType: transfer \| sale_reversal, refId }` 或 null;被調貨單鎖定 = 「調貨中」;鎖定時不能賣                                                         |
+| `responsibleOrgId`               | 待查或遺失時的責任分店                                                                                                                                 |
+| `unitCost`                       | 點收時 = 本的成本 ÷ 標準張數,**不四捨五入**(存除出來的值,一本加總 = 這本的成本;報表加總單張成本後再四捨五入到元);調入時由調貨改                        |
+| `soldAt`、`soldBy`、`soldSource` | 最近一次售出(`scan` / `manual` / `stocktake` / `count` 依張數)                                                                                         |
+| `unmatched`                      | 未對號(張數店):張號是系統照挑張順序預設帶入的;改成未售或報廢時帳本自動清掉                                                                             |
+| `saleEventId`                    | 這張現在帶著的售出事件 id:售出時帳本寫入(整批售出以 `bulkUpdateByIds` 一次寫)、撤銷時清成 null;對號時跟著售出資訊換到另一張,撤銷一律找帶著這筆售出的張 |
+| `version`                        | 樂觀鎖,每次變動 +1;鎖定 / 解除也用掉一個版本(不寫事件)                                                                                                 |
 
 索引:`(bookId, ticketNo)` 唯一、`(orgId, bookNo, ticketNo)`、`(orgId, location.kind, status)`、`(tenantId, ticketKey)` 唯一。
 

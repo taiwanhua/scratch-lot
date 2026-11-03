@@ -113,8 +113,8 @@ describe("張的寫入只經帳本服務(靜態檢查)", () => {
       }),
     );
     expect(writers).toEqual({
-      // 狀態寫入(updateMany + 換店 reassignOrgMany)與改鎖(updateMany)
-      "project/lottery/tickets/ticket-ledger.service.ts": 3,
+      // 狀態寫入(updateMany + 換店 reassignOrgMany)、售出帶著的售出事件(bulkUpdateByIds)與改鎖(updateMany)
+      "project/lottery/tickets/ticket-ledger.service.ts": 4,
       "project/lottery/tickets/books.service.ts": 1,
     });
   });

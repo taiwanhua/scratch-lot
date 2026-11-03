@@ -115,8 +115,8 @@ export class LotteryTicket {
   unmatched!: boolean;
 
   /**
-   * 這張現在帶著的售出事件(事件 id);null = 這張自己最近一次的售出事件(或沒有售出)。
-   * 對號時和 `soldAt`、`soldBy`、`soldSource` 一起換到另一張,撤銷一律找「現在帶著這筆售出的張」。
+   * 這張現在帶著的售出事件 id(售出時帳本寫入、撤銷時清成 null)。對號時和 `soldAt`、`soldBy`、`soldSource`
+   * 一起換到另一張,所以撤銷一律找「現在帶著這筆售出的張」,不是售出事件上原本記的張。
    */
   @Prop({ type: String, default: null })
   saleEventId!: string | null;
@@ -148,6 +148,11 @@ LotteryTicketSchema.index({
 LotteryTicketSchema.index(
   { orgId: 1, gameId: 1, "location.cashPointId": 1, status: 1, soldAt: -1 },
   { partialFilterExpression: { unmatched: true } },
+);
+// 撤銷時找「現在帶著這筆售出的張」(只收帶著售出事件的張)
+LotteryTicketSchema.index(
+  { saleEventId: 1 },
+  { partialFilterExpression: { saleEventId: { $type: "string" } } },
 );
 LotteryTicketSchema.index(
   { tenantId: 1, ticketKey: 1 },

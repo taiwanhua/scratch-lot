@@ -137,8 +137,10 @@ function setOf(
     set.soldAt = patch.sold?.at ?? null;
     set.soldBy = patch.sold ? (patch.sold.by ?? by) : null;
     set.soldSource = patch.sold?.source ?? null;
-    // 新的售出或撤銷:帶著的售出事件回到「這張自己的」(對號換過來的另外給)
-    set.saleEventId = null;
+    if (patch.sold === null) {
+      // 撤銷:不再帶著售出事件(新的售出由 updateTickets 逐張寫這筆事件的 id)
+      set.saleEventId = null;
+    }
   }
   if (patch.saleEventId !== undefined) {
     set.saleEventId = patch.saleEventId;
@@ -770,6 +772,7 @@ export class TicketLedgerService {
         );
       }
     }
+    await this.writeSaleEventIds(ledger, session, writes);
     if (moves.size > 0 && ledger.context.actorId === null) {
       throw new Error("帳本:換店要寫搬家稽核,需要操作者");
     }
@@ -785,6 +788,28 @@ export class TicketLedgerService {
         throw ticketConflictError(problems);
       }
     }
+  }
+
+  /**
+   * 新的售出(給了 `sold`、沒給 `saleEventId`):這張帶著的售出事件 = 這筆事件(張數店規格 5.1)。每張的值不同,
+   * 以 `bulkUpdateByIds` 一次寫完(TX-06「每筆要改的值不同」),條件是剛寫完的版本。
+   */
+  private async writeSaleEventIds(
+    ledger: ResolvedLedger,
+    session: ClientSession,
+    writes: readonly PlannedWrite[],
+  ): Promise<void> {
+    const items = writes
+      .filter(
+        ({ input }) =>
+          input.patch.sold != null && input.patch.saleEventId === undefined,
+      )
+      .map((write) => ({
+        id: write.input.ticketId,
+        filter: { version: write.version },
+        update: { $set: { saleEventId: write.eventId } },
+      }));
+    await this.tickets.bulkUpdateByIds(ledger.context, items, { session });
   }
 
   /** 條件更新筆數不符時,找出沒寫到的張(版本不是預期的寫後版本)。 */

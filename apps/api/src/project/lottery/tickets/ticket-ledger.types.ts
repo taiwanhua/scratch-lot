@@ -55,8 +55,8 @@ export interface TicketStatePatch {
    */
   unmatched?: boolean;
   /**
-   * 這張帶著的售出事件(對號時換過來的那一筆)。不給時:給了 `sold`(新的售出或撤銷)→ 帳本清成 null
-   * (= 這張自己最近一次的售出事件);其他不變。
+   * 這張現在帶著的售出事件 id(張數店規格 5.1)。不給時:新的售出 → 帳本寫這筆事件的 id;撤銷(`sold: null`)→
+   * 清成 null;其他不變。對號時給原本那張帶著的 id(跟著狀態換到另一張)。
    */
   saleEventId?: string | null;
 }
