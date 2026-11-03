@@ -665,6 +665,7 @@ export class InventoryViewService {
             status: ticket.status,
             locationKind: ticket.location.kind,
             cashPointId: ticket.location.cashPointId,
+            unmatched: ticket.unmatched,
           },
           names,
         ),

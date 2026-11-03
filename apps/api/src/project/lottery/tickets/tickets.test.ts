@@ -68,6 +68,18 @@ function saleOf(
   };
 }
 
+/** 依張數賣一張(已售·未對號、來源 count)。 */
+function countSaleOf(ticket: TicketRow): TicketEventInput {
+  return saleOf(ticket, {
+    refType: "count_sale",
+    patch: {
+      status: TICKET_STATUS.sold,
+      sold: { at: new Date(), source: "count" },
+      unmatched: true,
+    },
+  });
+}
+
 /** 呼叫並取錯誤的 extensions(GraphQLError)。 */
 async function extensionsOf(promise: Promise<unknown>): Promise<unknown> {
   try {
@@ -642,6 +654,162 @@ describe("張數核心(帳本 + 本 + 預計要給本數)", () => {
         .collection<{ lockedTicketCount: number }>("lottery_books")
         .findOne({ _id: bookId });
       expect(afterUnlock?.lockedTicketCount).toBe(0);
+    });
+  });
+
+  describe("未對號與帶著的售出事件(張數店規格 5.1–5.3)", () => {
+    interface CountRow {
+      _id: Types.ObjectId;
+      status: string;
+      unmatched: boolean;
+      saleEventId: string | null;
+      soldBy: Types.ObjectId | null;
+      soldSource: string | null;
+      version: number;
+    }
+
+    async function countRow(id: Types.ObjectId): Promise<CountRow | null> {
+      return api.connection
+        .collection<CountRow>("lottery_tickets")
+        .findOne({ _id: id });
+    }
+
+    async function bookCounts(
+      bookId: Types.ObjectId,
+    ): Promise<Record<string, number> | undefined> {
+      const book = await api.connection
+        .collection<{ ticketCounts: Record<string, number> }>("lottery_books")
+        .findOne({ _id: bookId });
+      return book?.ticketCounts;
+    }
+
+    it("依張數賣 → 已售·未對號;事件快照記未對號;本多算已售·未對號", async () => {
+      const bookId = await receiveBook();
+      const [first, second] = await ticketsOf(bookId);
+      if (!first || !second) {
+        throw new Error("沒有張");
+      }
+      await transactions.withTransaction((session) =>
+        ledger.applyTicketEvents(session, own(storeOperator(storeA)), [
+          countSaleOf(first),
+          countSaleOf(second),
+        ]),
+      );
+      expect(await countRow(first._id)).toMatchObject({
+        status: "sold",
+        unmatched: true,
+        saleEventId: null,
+        soldSource: "count",
+      });
+      const event = await api.connection
+        .collection<{
+          from: { unmatched: boolean };
+          to: { unmatched: boolean };
+        }>("lottery_ticket_events")
+        .findOne({ ticketId: first._id, type: TICKET_EVENT_TYPE.sale });
+      expect(event).toMatchObject({
+        from: { unmatched: false },
+        to: { unmatched: true },
+      });
+      expect(await bookCounts(bookId)).toMatchObject({
+        stock: 98,
+        sold: 2,
+        unmatchedSold: 2,
+        unmatchedInvestigating: 0,
+      });
+    });
+
+    it("對號:兩張互換狀態,售出資訊與帶著的售出事件跟著換;已售·未對號張數不變", async () => {
+      const bookId = await receiveBook();
+      const [sold, partner] = await ticketsOf(bookId);
+      if (!sold || !partner) {
+        throw new Error("沒有張");
+      }
+      const seller = storeOperator(storeA);
+      const [sale] = await transactions.withTransaction((session) =>
+        ledger.applyTicketEvents(session, own(seller), [countSaleOf(sold)]),
+      );
+      const before = await countRow(sold._id);
+      if (!sale || !before) {
+        throw new Error("沒賣出");
+      }
+      await transactions.withTransaction((session) =>
+        ledger.applyTicketEvents(session, own(storeOperator(storeA)), [
+          {
+            ticketId: sold._id,
+            expectedVersion: before.version,
+            type: TICKET_EVENT_TYPE.match,
+            refType: "ticket_match",
+            refId: partner._id,
+            patch: { status: TICKET_STATUS.unsold, sold: null },
+          },
+          {
+            ticketId: partner._id,
+            expectedVersion: partner.version,
+            type: TICKET_EVENT_TYPE.match,
+            refType: "ticket_match",
+            refId: sold._id,
+            patch: {
+              status: TICKET_STATUS.sold,
+              sold: { at: new Date(), source: "count", by: before.soldBy },
+              unmatched: true,
+              saleEventId: sale.eventId,
+            },
+          },
+        ]),
+      );
+      expect(await countRow(sold._id)).toMatchObject({
+        status: "unsold",
+        unmatched: false,
+        saleEventId: null,
+        soldSource: null,
+      });
+      expect(await countRow(partner._id)).toMatchObject({
+        status: "sold",
+        unmatched: true,
+        saleEventId: sale.eventId,
+        soldBy: seller.actorId,
+        soldSource: "count",
+      });
+      expect(await bookCounts(bookId)).toMatchObject({
+        sold: 1,
+        unmatchedSold: 1,
+      });
+    });
+
+    it("撤銷依張數售出 → 改回未售,帳本自動清掉未對號", async () => {
+      const bookId = await receiveBook();
+      const ticket = await firstTicket(bookId);
+      await transactions.withTransaction((session) =>
+        ledger.applyTicketEvents(session, own(storeOperator(storeA)), [
+          countSaleOf(ticket),
+        ]),
+      );
+      const sold = await countRow(ticket._id);
+      if (!sold) {
+        throw new Error("沒賣出");
+      }
+      await transactions.withTransaction((session) =>
+        ledger.applyTicketEvents(session, own(storeOperator(storeA)), [
+          {
+            ticketId: ticket._id,
+            expectedVersion: sold.version,
+            type: TICKET_EVENT_TYPE.saleUndo,
+            amount: 200,
+            cashEffect: "decrease",
+            patch: { status: TICKET_STATUS.unsold, sold: null },
+          },
+        ]),
+      );
+      expect(await countRow(ticket._id)).toMatchObject({
+        status: "unsold",
+        unmatched: false,
+      });
+      expect(await bookCounts(bookId)).toMatchObject({
+        stock: 100,
+        sold: 0,
+        unmatchedSold: 0,
+      });
     });
   });
 

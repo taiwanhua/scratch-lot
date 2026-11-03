@@ -142,21 +142,21 @@
 
 ### 本 `lottery_books`
 
-| 欄位                                                      | 規則                                                                                      |
-| --------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| `gameId`、`gameCode`                                      | 遊戲與代號快照                                                                            |
-| `bookNo`                                                  | `^\d{7}$`;輸入 6 位自動補 0;開頭 0 時顯示 6 位                                            |
-| `bookKey`                                                 | `5164-0056527`,租戶內唯一(部分唯一索引,只算未刪除的);顯示 `5164-056527`                   |
-| `printVersion`                                            | 預設 "1"                                                                                  |
-| `purchaseSubmissionId`、`purchasedAt`、`purchaseDealerId` | 進貨快照                                                                                  |
-| `rate`、`cost`                                            | 批購金額率(整數 %)、成本(元);小數四捨五入                                                 |
-| `standardTickets`                                         | 遊戲整本張數的快照;待標註張數 = 迄號 − 標準張數 − 已標跳號                                |
-| `firstTicketNo`、`lastTicketNo`                           | 起號一律 "001";迄號 ≥ 標準張數且 ≤ 999                                                    |
-| `skippedTicketNos`                                        | 跳號(拆本時標註,數量 = 待標註張數)                                                        |
-| `lockedTicketCount`                                       | 被單據鎖定的張數(lookup 篩「未被鎖定」= 0)                                                |
-| `ticketCounts`                                            | 各狀態張數 `{ stock, counter, inTransit, sold, scrapped, investigating, lost }`(跳號不算) |
-| `firstOpenedAt`                                           | 第一次拆本時間;null = 從沒拆過                                                            |
-| `status`                                                  | `normal` / `revoked`(進貨單作廢)                                                          |
+| 欄位                                                      | 規則                                                                                                                                                                                                         |
+| --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `gameId`、`gameCode`                                      | 遊戲與代號快照                                                                                                                                                                                               |
+| `bookNo`                                                  | `^\d{7}$`;輸入 6 位自動補 0;開頭 0 時顯示 6 位                                                                                                                                                               |
+| `bookKey`                                                 | `5164-0056527`,租戶內唯一(部分唯一索引,只算未刪除的);顯示 `5164-056527`                                                                                                                                      |
+| `printVersion`                                            | 預設 "1"                                                                                                                                                                                                     |
+| `purchaseSubmissionId`、`purchasedAt`、`purchaseDealerId` | 進貨快照                                                                                                                                                                                                     |
+| `rate`、`cost`                                            | 批購金額率(整數 %)、成本(元);小數四捨五入                                                                                                                                                                    |
+| `standardTickets`                                         | 遊戲整本張數的快照;待標註張數 = 迄號 − 標準張數 − 已標跳號                                                                                                                                                   |
+| `firstTicketNo`、`lastTicketNo`                           | 起號一律 "001";迄號 ≥ 標準張數且 ≤ 999                                                                                                                                                                       |
+| `skippedTicketNos`                                        | 跳號(拆本時標註,數量 = 待標註張數)                                                                                                                                                                           |
+| `lockedTicketCount`                                       | 被單據鎖定的張數(lookup 篩「未被鎖定」= 0)                                                                                                                                                                   |
+| `ticketCounts`                                            | 各狀態張數 `{ stock, counter, inTransit, sold, scrapped, investigating, lost, unmatchedSold, unmatchedInvestigating }`(跳號不算;後兩格是張數店的已售·未對號、待查·未對號,已算在 `sold` / `investigating` 內) |
+| `firstOpenedAt`                                           | 第一次拆本時間;null = 從沒拆過                                                                                                                                                                               |
+| `status`                                                  | `normal` / `revoked`(進貨單作廢)                                                                                                                                                                             |
 
 **張數由帳本服務維護,狀態由張數算出**(使用者 10/27 定案 B;規則在 `@repo/domain/project/lottery` 的 `book-stats.ts`,api `LotteryBooksService.statsOf`):`ticketCounts` 建本時 = 全部在庫存,之後只經帳本 `$inc`(見「帳本」);`firstOpenedAt` 在帳本寫第一筆「拆本」事件時填。顯示狀態 `bookDisplayStateOf`(已撤銷 / 未拆 / 檯面中 / 庫存中 / 在途 / 待查 / 遺失 / 已報廢 / 售完,依序判斷);「未拆」= 從沒拆過(`isBookSealed`;一家店的未拆 `isUnopenedInStore`),拆過一次就永遠不算未拆。讀取時算:待標註張數、剩餘張數(`remainingOfCounts`:未售 − 待標註;還沒標的跳號實體不存在)、總張數(`totalOfCounts`:紀錄張數 − 待標註)。待標註一本只扣一次,扣在還沒確認實體的那一組(`pendingPlacementOf`:有待查 / 遺失 → 那一組,剩餘不扣;沒有 → 未售,剩餘扣、所在分店只扣張數多的那家 `holdingsWithoutPendingSkips`;使用者 10/27 定案)、各分店的未售張數(`holdingsOf`,讀這本未售的張)。**待標註的跳號不算張數**(使用者 10/27 定案甲;`withoutPendingSkips`):帳本分不出是哪幾張,`ticketCounts` 存紀錄張數;總張數與持有張數在「整本一起(張數 = 標準張數 + 待標註)」時扣掉待標註,例:迄號 101、標準 100、未拆 → 總張數 / 持有 100;待查·遺失分頁的一列同樣扣(`ticketCount`、成本 = 單張成本合計 × 張數比例),張的清單照列 101 張紀錄。報表、調貨、盤點的口徑見各自文件。
 
@@ -172,7 +172,9 @@
 | `lockedBy`                       | `{ refType: transfer \| sale_reversal, refId }` 或 null;被調貨單鎖定 = 「調貨中」;鎖定時不能賣                                  |
 | `responsibleOrgId`               | 待查或遺失時的責任分店                                                                                                          |
 | `unitCost`                       | 點收時 = 本的成本 ÷ 標準張數,**不四捨五入**(存除出來的值,一本加總 = 這本的成本;報表加總單張成本後再四捨五入到元);調入時由調貨改 |
-| `soldAt`、`soldBy`、`soldSource` | 最近一次售出(`scan` / `manual` / `stocktake`)                                                                                   |
+| `soldAt`、`soldBy`、`soldSource` | 最近一次售出(`scan` / `manual` / `stocktake` / `count` 依張數)                                                                  |
+| `unmatched`                      | 未對號(張數店):張號是系統照挑張順序預設帶入的;改成未售或報廢時帳本自動清掉                                                      |
+| `saleEventId`                    | 這張帶著的售出事件(對號時換過來的那一筆);null = 這張自己最近一次的售出事件。新的售出或撤銷時帳本清成 null                       |
 | `version`                        | 樂觀鎖,每次變動 +1;鎖定 / 解除也用掉一個版本(不寫事件)                                                                          |
 
 索引:`(bookId, ticketNo)` 唯一、`(orgId, bookNo, ticketNo)`、`(orgId, location.kind, status)`、`(tenantId, ticketKey)` 唯一。
@@ -181,7 +183,7 @@
 
 欄位:`eventId`、`ticketId`、`bookId`、`gameId`、`orgId`、`at`、`by`、`type`、`from`、`to`(狀態、位置、收銀點、所在分店的快照)、`quantity`(一筆一張)、`amount`(**一律正數**)、`cost`(成本快照:沒指定就記事件前的單張成本,之後調貨改了單張成本也不變;報表的已售成本、期初 / 期末成本都用它)、`cashEffect`(`none` / `increase` / `decrease`)、`cashPointId`、`shiftId`、`refType`、`refId`、`reasonKey`、`reasonNote`。索引 `eventId` 唯一、`(orgId, at)`、`(cashPointId, at)`、`(ticketId, at)`、`(orgId, gameId, type)`。
 
-事件類型(`packages/domain/src/project/lottery/ticket-events.ts`):`purchase` 進貨、`purchase_void` 進貨作廢、`open` 拆本、`recall` 收回、`move` 移櫃、`sale` 售出、`sale_stocktake` 售出(盤點補登)、`sale_undo` 撤銷、`skip` 跳號、`unskip` 取消跳號、`scrap` 報廢、`transfer_out` 調出、`in_transit` 在途、`transfer_in` 調入、`investigate` 待查、`lose` 遺失、`recover` 尋回、`cost_adjust` 成本調整(調貨改單張成本時寫)。
+事件類型(`packages/domain/src/project/lottery/ticket-events.ts`):`purchase` 進貨、`purchase_void` 進貨作廢、`open` 拆本、`recall` 收回、`move` 移櫃、`sale` 售出、`sale_stocktake` 售出(盤點補登)、`sale_undo` 撤銷、`skip` 跳號、`unskip` 取消跳號、`scrap` 報廢、`transfer_out` 調出、`in_transit` 在途、`transfer_in` 調入、`investigate` 待查、`lose` 遺失、`recover` 尋回、`cost_adjust` 成本調整(調貨改單張成本時寫)、`match` 對號(張數店,兩張互換狀態 + 位置,`refType: ticket_match`)、`renumber_confirm` 補點編號確認(清未對號記號)、`scrap_undo` 撤銷報廢。事件的 `from` / `to` 快照多記 `unmatched`。
 
 ### 帳本服務(唯一入口)
 

@@ -59,6 +59,10 @@ export interface BookTicketCounts {
   scrapped: number;
   investigating: number;
   lost: number;
+  /** 已售·未對號(張數店;已算在 `sold` 內)。 */
+  unmatchedSold: number;
+  /** 待查·未對號(張數店;已算在 `investigating` 內)。 */
+  unmatchedInvestigating: number;
 }
 
 /** 本上張數欄位的 key(固定順序;帳本依它算增減、api 依它組篩選)。 */
@@ -70,6 +74,8 @@ export const BOOK_COUNT_KEYS = [
   "scrapped",
   "investigating",
   "lost",
+  "unmatchedSold",
+  "unmatchedInvestigating",
 ] as const satisfies readonly (keyof BookTicketCounts)[];
 export type BookCountKey = (typeof BOOK_COUNT_KEYS)[number];
 
@@ -83,6 +89,8 @@ export function emptyBookCounts(): BookTicketCounts {
     scrapped: 0,
     investigating: 0,
     lost: 0,
+    unmatchedSold: 0,
+    unmatchedInvestigating: 0,
   };
 }
 
@@ -118,15 +126,40 @@ export function bookCountKeyOf(
   }
 }
 
-/** 一批張重數成張數(核對測試與舊資料重建用)。 */
+/**
+ * 未對號的張另外算在哪一格(疊在 `bookCountKeyOf` 的格上):已售 → `unmatchedSold`、待查 → `unmatchedInvestigating`;
+ * 其他(含遺失·未對號)或不是未對號 → null(規格 5.3 只存這兩格)。
+ */
+export function unmatchedCountKeyOf(
+  status: TicketStatus,
+  unmatched: boolean,
+): BookCountKey | null {
+  if (!unmatched) {
+    return null;
+  }
+  if (status === TICKET_STATUS.sold) {
+    return "unmatchedSold";
+  }
+  return status === TICKET_STATUS.investigating
+    ? "unmatchedInvestigating"
+    : null;
+}
+
+/** 一批張重數成張數(核對測試與舊資料重建用;沒給 `unmatched` = 不是未對號)。 */
 export function bookCountsOf(
-  tickets: readonly Pick<BookTicketSnapshot, "status" | "locationKind">[],
+  tickets: readonly (Pick<BookTicketSnapshot, "status" | "locationKind"> & {
+    unmatched?: boolean;
+  })[],
 ): BookTicketCounts {
   const counts = emptyBookCounts();
   for (const ticket of tickets) {
     const key = bookCountKeyOf(ticket.status, ticket.locationKind);
     if (key !== null) {
       counts[key] += 1;
+    }
+    const extra = unmatchedCountKeyOf(ticket.status, ticket.unmatched ?? false);
+    if (extra !== null) {
+      counts[extra] += 1;
     }
   }
   return counts;

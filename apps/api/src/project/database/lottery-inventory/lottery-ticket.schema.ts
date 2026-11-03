@@ -107,6 +107,20 @@ export class LotteryTicket {
   @Prop({ type: String, enum: [...TICKET_SOLD_SOURCES, null], default: null })
   soldSource!: TicketSoldSource | null;
 
+  /**
+   * 未對號(張數店):張號是系統照挑張順序預設帶入的,不是刷到的那一張。已售·未對號 = `status: sold` + 這個記號;
+   * 待查·未對號、遺失·未對號同理。對號、改成未售或報廢(帳本自動清)、補點編號核准時清掉;確認遺失不清。
+   */
+  @Prop({ type: Boolean, default: false })
+  unmatched!: boolean;
+
+  /**
+   * 這張現在帶著的售出事件(事件 id);null = 這張自己最近一次的售出事件(或沒有售出)。
+   * 對號時和 `soldAt`、`soldBy`、`soldSource` 一起換到另一張,撤銷一律找「現在帶著這筆售出的張」。
+   */
+  @Prop({ type: String, default: null })
+  saleEventId!: string | null;
+
   /** 樂觀鎖:每次變動 +1;張數事件 id = `<ticketId>:<變動後的版本>`。 */
   @Prop({ type: Number, required: true, default: 1 })
   version!: number;
@@ -123,6 +137,18 @@ export const LotteryTicketSchema = SchemaFactory.createForClass(LotteryTicket);
 LotteryTicketSchema.index({ bookId: 1, ticketNo: 1 }, { unique: true });
 LotteryTicketSchema.index({ orgId: 1, bookNo: 1, ticketNo: 1 });
 LotteryTicketSchema.index({ orgId: 1, "location.kind": 1, status: 1 });
+// 張數店挑張、找配對張(同店 × 遊戲 × 收銀點 × 狀態)
+LotteryTicketSchema.index({
+  orgId: 1,
+  gameId: 1,
+  "location.cashPointId": 1,
+  status: 1,
+});
+// 挑最近的已售·未對號、算各店未對號張數(已售的張越積越多,只收未對號的)
+LotteryTicketSchema.index(
+  { orgId: 1, gameId: 1, "location.cashPointId": 1, status: 1, soldAt: -1 },
+  { partialFilterExpression: { unmatched: true } },
+);
 LotteryTicketSchema.index(
   { tenantId: 1, ticketKey: 1 },
   { unique: true, partialFilterExpression: { deletedAt: { $type: "null" } } },

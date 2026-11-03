@@ -25,6 +25,8 @@ export interface TicketStateSnapshot {
   cashPointId: Types.ObjectId | null;
   /** 所在分店。 */
   orgId: Types.ObjectId;
+  /** 未對號(張數店;舊事件沒有 = false)。 */
+  unmatched: boolean;
 }
 
 const SNAPSHOT_TYPE = {
@@ -33,6 +35,7 @@ const SNAPSHOT_TYPE = {
   locationKind: { type: String, enum: TICKET_LOCATION_KINDS, required: true },
   cashPointId: { type: MongooseSchema.Types.ObjectId, default: null },
   orgId: { type: MongooseSchema.Types.ObjectId, required: true },
+  unmatched: { type: Boolean, default: false },
 };
 
 /**
