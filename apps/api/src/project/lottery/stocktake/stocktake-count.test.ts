@@ -989,6 +989,7 @@ describe("張數盤點與盤點中登記(GraphQL 端點 + 真 MongoDB)", () => {
       const sheet = await ok<{
         lotteryStocktakeSheet: {
           lostTickets: {
+            ticketId: string;
             unmatched: boolean;
             sourceType: string | null;
             sourceCashPointName: string | null;
@@ -1003,6 +1004,15 @@ describe("張數盤點與盤點中登記(GraphQL 端點 + 真 MongoDB)", () => {
           sourceCashPointName: "店內櫃台",
         },
       ]);
+      // 待查·未對號不提供 [找到了](只有確認遺失、繼續待查)
+      const lostId = sheet.lotteryStocktakeSheet.lostTickets[0]?.ticketId ?? "";
+      const found = await review(
+        clerkA,
+        draftOf([], {
+          lostReview: [{ ticketId: lostId, action: "found" }],
+        }),
+      );
+      expect(found.staleCount).toBe(1);
     });
 
     it("S2 已結帳的收銀點 [算售出] → 那個收銀點最近一班的事後更正;可挑的張不夠 → 擋下並說還有幾張", async () => {

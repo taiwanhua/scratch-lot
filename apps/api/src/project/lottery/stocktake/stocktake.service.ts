@@ -977,6 +977,7 @@ export class StocktakeService {
       store,
       draft,
       options,
+      stale,
     );
     const uncountedBooks = await this.uncountedBooksOf(
       reader,
@@ -1261,6 +1262,7 @@ export class StocktakeService {
     store: StoreRef,
     draft: StocktakeDraft,
     options: { session?: ClientSession },
+    stale: string[],
   ): Promise<StocktakeLostReviewLine[]> {
     const ids = draft.lostReview.flatMap((item) => {
       const id = parseId(item.ticketId);
@@ -1284,6 +1286,11 @@ export class StocktakeService {
     return draft.lostReview.flatMap((item) => {
       const ticket = byId.get(item.ticketId);
       if (ticket === undefined) {
+        return [];
+      }
+      // 待查·未對號(系統預設帶入的張號)不提供 [找到了](張數店規格 7.9:交給全店重刷)→ 對不上,請重新核對
+      if (item.action === "found" && ticket.unmatched) {
+        stale.push(ticket.ticketNo);
         return [];
       }
       const book = books.get(String(ticket.bookId));
