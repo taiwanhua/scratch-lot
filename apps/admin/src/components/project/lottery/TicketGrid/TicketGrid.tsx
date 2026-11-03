@@ -34,6 +34,8 @@ export interface TicketGridProps {
   legendItems: readonly TicketCellState[];
   /** 覆寫狀態文字(格子的念法與圖例共用;例 `{ selected: "在(已點)" }`)。 */
   labels?: Partial<Record<TicketCellState, string>>;
+  /** 圖例最後的說明(張數店「虛線 = 系統預設帶入的張號」)。 */
+  legendNote?: string;
   /** 顯示「連號快選 從 [ ] 到 [ ]」;預設顯示。 */
   quickSelect?: boolean;
   /** 已選上限(例:拆本標跳號點滿 N 張);不給 = 不限。 */
@@ -61,6 +63,7 @@ export const TicketGrid = ({
   onSelectedChange,
   legendItems,
   labels,
+  legendNote,
   quickSelect = true,
   maxSelected,
   summary,
@@ -100,7 +103,11 @@ export const TicketGrid = ({
           onSelectedChange={onSelectedChange}
         />
       ) : null}
-      <TicketGridLegend items={legendItems} labels={labels} />
+      <TicketGridLegend
+        items={legendItems}
+        labels={labels}
+        {...(legendNote !== undefined && { note: legendNote })}
+      />
       <Box
         role="group"
         aria-label={t("gridAria")}

@@ -45,7 +45,7 @@ interface CounterGroup {
 
 /** 卡片依遊戲合計(張數店看板「遊戲名 · 剩 N 張 · M 本」;卡片已依遊戲代號、本號排序)。 */
 export function gameTotalsOf(
-  cards: readonly (LotteryStoreBoardBookModel & { gameId: string })[],
+  cards: readonly LotteryStoreBoardBookModel[],
 ): LotteryStoreGameTotalModel[] {
   const totals = new Map<string, LotteryStoreGameTotalModel>();
   for (const card of cards) {
@@ -153,7 +153,7 @@ export class StoreBoardService {
     tenantId: Types.ObjectId | null,
     orgId: Types.ObjectId,
     pointIds: readonly Types.ObjectId[],
-  ): Promise<Map<string, (LotteryStoreBoardBookModel & { gameId: string })[]>> {
+  ): Promise<Map<string, LotteryStoreBoardBookModel[]>> {
     if (pointIds.length === 0) {
       return new Map();
     }
@@ -232,10 +232,7 @@ export class StoreBoardService {
       _id: { $in: books.map((book) => book.gameId) },
     });
     const gameById = new Map(games.map((game) => [String(game._id), game]));
-    const cards = new Map<
-      string,
-      (LotteryStoreBoardBookModel & { gameId: string })[]
-    >();
+    const cards = new Map<string, LotteryStoreBoardBookModel[]>();
     for (const group of groups) {
       const book = bookById.get(String(group.bookId));
       const game =

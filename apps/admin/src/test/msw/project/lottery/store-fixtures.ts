@@ -99,6 +99,7 @@ const book = (
 ): LotteryStoreBoardBookFieldsFragment => ({
   __typename: "LotteryStoreBoardBook",
   bookId,
+  gameId: `game-${gameCode}`,
   gameCode,
   gameName,
   color,
@@ -116,11 +117,43 @@ const ref = (id: string, name: string) => ({
   name,
 });
 
+/** 卡片依遊戲合計(張數店看板「遊戲名 · 剩 N 張 · M 本」;同 api `gameTotalsOf`)。 */
+export const gameTotalsOf = (
+  books: readonly LotteryStoreBoardBookFieldsFragment[],
+): StoreCashPoint["gameTotals"] => {
+  const totals = new Map<string, StoreCashPoint["gameTotals"][number]>();
+  for (const item of books) {
+    const total = totals.get(item.gameId) ?? {
+      __typename: "LotteryStoreGameTotal",
+      gameId: item.gameId,
+      gameCode: item.gameCode,
+      gameName: item.gameName,
+      remaining: 0,
+      bookCount: 0,
+    };
+    total.remaining += item.remaining;
+    total.bookCount += 1;
+    totals.set(item.gameId, total);
+  }
+  return [...totals.values()];
+};
+
 /** Figma ST-01 的看板(`orgId` = 看的那家店)。 */
 export const sampleStoreBoard = (
   orgId = "org-store-a",
   orgName = "中山店",
+  countMode = "numbered",
 ): StoreBoard => {
+  const counterBooks = [
+    book("b-1", "5164", "發大財", "red", 200, "0056527", 35, 100, 12),
+    book("b-2", "5201", "金好運", "orange", 100, "0060112", 35, 100, 9),
+    book("b-3", "5198", "鼠來寶", "blue", 100, "0088102", 6, 100, 21),
+    book("b-4", "5150", "好運旺旺", "green", 500, "0042210", 18, 50, 3),
+  ];
+  const outdoorBooks = [
+    book("b-5", "5164", "發大財", "red", 200, "0056528", 35, 100, 6),
+    book("b-6", "5133", "招財貓", "purple", 1000, "0071204", 10, 25, 2),
+  ];
   const counter = storeShift({
     id: "shift-counter",
     cashPoint: ref("cp-counter", "店內櫃台"),
@@ -148,12 +181,8 @@ export const sampleStoreBoard = (
         name: "店內櫃台",
         positionKey: "in-store-counter",
         shift: counter,
-        books: [
-          book("b-1", "5164", "發大財", "red", 200, "0056527", 35, 100, 12),
-          book("b-2", "5201", "金好運", "orange", 100, "0060112", 35, 100, 9),
-          book("b-3", "5198", "鼠來寶", "blue", 100, "0088102", 6, 100, 21),
-          book("b-4", "5150", "好運旺旺", "green", 500, "0042210", 18, 50, 3),
-        ],
+        books: counterBooks,
+        gameTotals: gameTotalsOf(counterBooks),
       },
       {
         __typename: "LotteryStoreCashPoint",
@@ -161,10 +190,8 @@ export const sampleStoreBoard = (
         name: "店外攤位",
         positionKey: "outdoor-stall",
         shift: outdoor,
-        books: [
-          book("b-5", "5164", "發大財", "red", 200, "0056528", 35, 100, 6),
-          book("b-6", "5133", "招財貓", "purple", 1000, "0071204", 10, 25, 2),
-        ],
+        books: outdoorBooks,
+        gameTotals: gameTotalsOf(outdoorBooks),
       },
       {
         __typename: "LotteryStoreCashPoint",
@@ -173,10 +200,12 @@ export const sampleStoreBoard = (
         positionKey: "lottery-machine",
         shift: null,
         books: [],
+        gameTotals: [],
       },
     ],
     myOpenShifts: [counter, outdoor],
     vaultExpected: 48_200,
+    countMode,
   };
 };
 

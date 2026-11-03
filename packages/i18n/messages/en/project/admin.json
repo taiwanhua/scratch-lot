@@ -441,7 +441,9 @@
         "scrapped": "Scrapped",
         "lost": "Investigating / lost",
         "otherStore": "Other branch",
-        "transferring": "In transfer"
+        "transferring": "In transfer",
+        "unmatchedSold": "Sold · unmatched",
+        "unmatchedLost": "Investigating / lost · unmatched"
       },
       "quickSelect": {
         "label": "Select a run",
@@ -3128,14 +3130,17 @@
       "split": "Open / put on counter",
       "redeem": "Redeem",
       "recentRedemptions": "Recent redemptions",
-      "checkout": "Close shift"
+      "checkout": "Close shift",
+      "countSale": "Mark sold by count"
     },
     "card": {
       "title": "{code} {name}",
       "price": "{price}",
       "meta": "Book {bookNo} · sold today {count}",
       "remaining": "{remaining} / {total} left",
-      "lowStock": "Running low"
+      "lowStock": "Running low",
+      "estimate": "approx.",
+      "gameSummary": "{remaining} left · {books} books"
     },
     "localDialog": {
       "title": "Set this device's cash point",
@@ -3241,7 +3246,8 @@
       "cancel": "Cancel",
       "soldTitle": "Sold",
       "soldMessage": "{key} {amount} · {cashPoint}",
-      "undo": "Undo"
+      "undo": "Undo",
+      "soldMatchedMessage": "{key} {amount} · {cashPoint} · matched"
     },
     "scan": {
       "bookTicket": "Book {bookNo} · ticket {ticketNo}",
@@ -3284,7 +3290,10 @@
         "locked": "This ticket is locked by a form (transfer or sale reversal) and cannot be sold.",
         "inTransit": "This ticket is in transit and cannot be sold.",
         "inStock": "This ticket is in stock. Move it to a counter first.",
-        "moveForbidden": "This ticket is on {cashPoint} and you cannot move tickets. Sell it at {cashPoint}."
+        "moveForbidden": "This ticket is on {cashPoint} and you cannot move tickets. Sell it at {cashPoint}.",
+        "unmatchedNoPartner": "This ticket is recorded as sold (unmatched), but {cashPoint} has no unsold ticket of this game to match. Send a sale reversal request (reason: stocktake error) and sell it after approval.",
+        "skippedFix": "This ticket is recorded as \"skipped\" and cannot be sold. Correct the skipped ticket on the book detail first.",
+        "scrappedFix": "This ticket is recorded as scrapped and cannot be sold. Undo the scrap first."
       },
       "notFound": "Ticket not found, or it does not belong to this store.",
       "recoverNoPermission": "This ticket is under investigation. Someone with the recover permission has to handle it.",
@@ -3338,7 +3347,10 @@
       "undone": "Undone",
       "expired": "Over 30 minutes",
       "footer": "Over 30 minutes or the shift is checked out → send a sale reversal request.",
-      "close": "Close"
+      "close": "Close",
+      "undoCount": "Undo some",
+      "partlyUndone": "{undone} undone, {left} left",
+      "countLine": "{code} {name} × {count} · by count"
     },
     "expand": {
       "title": "{code} {name} · book {bookNo}",
@@ -3356,7 +3368,9 @@
       "undoSale": "Undo sale",
       "recover": "Recover",
       "atCashPoint": "On {name}",
-      "inStock": "In stock"
+      "inStock": "In stock",
+      "metaEstimate": "{cashPoint} · {price} · {remaining} / {total} left (approx.)",
+      "dashedNote": "Dashed = ticket numbers filled in by the system"
     },
     "move": {
       "title": "Move",
@@ -3438,7 +3452,11 @@
       "SPLIT_PLAN_INVALID": "Skipped tickets are not all marked, or some tickets are not assigned",
       "TICKET_NOT_ON_COUNTER": "Only unsold tickets on a counter can be moved or recalled",
       "CONFLICT": "These tickets have been processed; please check again",
-      "GAME_NOT_FOUND": "The game of this ticket cannot be read, so it cannot be sold"
+      "GAME_NOT_FOUND": "The game of this ticket cannot be read, so it cannot be sold",
+      "COUNT_SALE_NOT_ALLOWED": "Only count stores can mark tickets sold by count",
+      "COUNT_SALE_INVALID": "More than the unsold tickets at this cash point ({available} left)",
+      "COUNT_SALE_NOT_FOUND": "No sale by count at this cash point to match; send a sale reversal request instead",
+      "COUNT_UNDO_EXCEEDS": "At most {available} tickets of this sale can be undone now"
     },
     "redemption": {
       "redeemTitle": "Redeem · {name}",
@@ -4009,11 +4027,13 @@
           "expected": "Expected",
           "counted": "Counted",
           "difference": "Difference",
-          "status": "Status"
+          "status": "Status",
+          "countSale": "Sold by count"
         },
         "total": "{count} total",
         "empty": "No checkouts",
-        "cardFacts": "Expected {expected} · counted {counted} · difference {difference}"
+        "cardFacts": "Expected {expected} · counted {counted} · difference {difference}",
+        "countSaleValue": "{count} · {amount}"
       },
       "view": {
         "title": "Checkout confirmation",
@@ -4243,6 +4263,40 @@
         "ticketCount": " ({count} tickets)",
         "refund": "Refund"
       }
+    },
+    "recover": {
+      "hint": "After recovery this ticket is recorded in this store's stock. Put the physical ticket into stock; to sell it, use \"Open book / Put on counter\" to place it on a cash point.",
+      "success": "Recovered {ranges} into stock. To sell it, use \"Open book / Put on counter\" first."
+    },
+    "countSale": {
+      "title": "Mark sold by count",
+      "shiftText": "Owner {name} · opened {time} · this shift's cash",
+      "game": "Game",
+      "gameOption": "{code} {name} ({remaining} left)",
+      "decrease": "One fewer on line {line}",
+      "increase": "One more on line {line}",
+      "count": "Tickets on line {line}",
+      "addLine": "+ Add line",
+      "total": "Total",
+      "totalValue": "{count} tickets · {amount}",
+      "reason": "Reason",
+      "hint": "The sale counts toward {name}'s shift; expected cash +{amount}. Ticket numbers are filled in by the system and corrected when the physical ticket is scanned.",
+      "submit": "Mark sold",
+      "successTitle": "Marked sold by count",
+      "success": "{lines}, total {amount}",
+      "successLine": "{code} {name} × {count}",
+      "successSeparator": ", "
+    },
+    "countUndo": {
+      "title": "Undo sale by count",
+      "line": "Sold by count at {time} · {count} in this sale",
+      "count": "Tickets to undo",
+      "decrease": "Undo one fewer",
+      "increase": "Undo one more",
+      "max": "At most {count}",
+      "hint": "If the customer returns a ticket, scan it to undo instead. After undoing, {amount} is deducted from {cashPoint}'s expected drawer cash.",
+      "submit": "Undo {count}",
+      "success": "Undid {count} of {code} {name}, {amount} deducted"
     }
   },
   "notifications": {

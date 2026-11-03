@@ -15,6 +15,7 @@ import { api, type server } from "../../server";
 import {
   STORE_CLERK,
   type StoreBoard,
+  gameTotalsOf,
   sampleOpenShiftForm,
   sampleShiftInfo,
   sampleStoreBoard,
@@ -80,7 +81,15 @@ export const storeWorld = ({
       return HttpResponse.json({
         data: {
           lotteryStoreBoard: {
-            item: { ...state, org: { ...state.org, id: orgId } },
+            item: {
+              ...state,
+              org: { ...state.org, id: orgId },
+              // 遊戲合計跟著卡片剩餘(售出 / 撤銷時卡片會變)
+              cashPoints: state.cashPoints.map((point) => ({
+                ...point,
+                gameTotals: gameTotalsOf(point.books),
+              })),
+            },
           },
         },
       });

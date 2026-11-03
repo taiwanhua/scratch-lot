@@ -14,31 +14,28 @@ import type {
   LotteryStoreScanQueryVariables,
   MoveLotteryTicketsMutationVariables,
   RecallLotteryTicketsMutationVariables,
+  SellLotteryTicketsByCountMutationVariables,
   SellLotteryTicketsMutationVariables,
   SplitLotteryBookMutationVariables,
+  UndoLotteryCountSaleMutationVariables,
   UndoLotteryTicketSaleMutationVariables,
 } from "@repo/graphql";
 
 import { graphqlError } from "../../auth-handlers";
 import { api, type server } from "../../server";
+import {
+  countStoreMatching,
+  storeCountSalesHandlers,
+} from "./store-count-sales-handlers";
 import { storeCounterHandlers } from "./store-counter-handlers";
 import type { StoreBoard } from "./store-fixtures";
 import {
   type BoardShift,
+  type SaleRecord,
   type SalesBook,
   type SalesTicket,
   booksOf,
 } from "./store-sales-fixtures";
-
-interface SaleRecord {
-  ticketId: string;
-  bookId: string;
-  shiftId: string;
-  cashPointId: string;
-  amount: number;
-  soldAt: string;
-  undone: boolean;
-}
 
 export interface StoreSalesWorld {
   handlers: Parameters<typeof server.use>;
@@ -48,6 +45,8 @@ export interface StoreSalesWorld {
     split: SplitLotteryBookMutationVariables["input"][];
     move: MoveLotteryTicketsMutationVariables["input"][];
     recall: RecallLotteryTicketsMutationVariables["input"][];
+    countSale: SellLotteryTicketsByCountMutationVariables["input"][];
+    undoCount: UndoLotteryCountSaleMutationVariables["input"][];
   };
 }
 
@@ -58,6 +57,8 @@ export interface StoreSalesWorldOptions {
   alreadySoldAt?: string;
   /** 這幾張是遺失(展開卡片選它 → [尋回]) */
   lostTicketIds?: readonly string[];
+  /** 這幾張是已售·未對號(張數店;依張數賣時系統預設帶入的張號) */
+  unmatchedSoldTicketIds?: readonly string[];
 }
 
 const validation = (reason: string, extra: Record<string, unknown> = {}) =>
@@ -77,13 +78,21 @@ export const storeSalesWorld = ({
   board,
   alreadySoldAt,
   lostTicketIds = [],
+  unmatchedSoldTicketIds = [],
 }: StoreSalesWorldOptions): StoreSalesWorld => {
   const books = booksOf(board);
   for (const ticket of books.flatMap((book) => book.tickets)) {
     if (lostTicketIds.includes(ticket.id)) {
       ticket.status = "lost";
     }
+    if (unmatchedSoldTicketIds.includes(ticket.id)) {
+      ticket.status = "sold";
+      ticket.unmatched = true;
+      ticket.soldSource = "count";
+      ticket.soldAt = "2026-10-16T05:30:00.000Z";
+    }
   }
+  const { partnerOf, matchUnmatched } = countStoreMatching(books);
   const sales: SaleRecord[] = [];
   const inputs: StoreSalesWorld["inputs"] = {
     sell: [],
@@ -91,6 +100,8 @@ export const storeSalesWorld = ({
     split: [],
     move: [],
     recall: [],
+    countSale: [],
+    undoCount: [],
   };
   let pendingAlreadySold = alreadySoldAt;
   const pointName = (id: string | null) =>
@@ -129,6 +140,8 @@ export const storeSalesWorld = ({
       shiftId: record.shiftId,
       undone: record.undone,
       undoBlock: record.undone ? "already_undone" : null,
+      matched: record.matched === true,
+      countSale: null,
     };
   };
   /** 售出 / 撤銷時跟著改看板(本班已售、應有現金、卡片剩餘)。 */
@@ -161,6 +174,7 @@ export const storeSalesWorld = ({
       (item) => item.cashPointId === null && item.status === "unsold",
     );
     const counterShift = shiftOf(ticket.cashPointId);
+    const partner = partnerOf(book.gameCode, localId);
     const decision = storeScanDecisionOf(
       {
         status: ticket.status as "unsold",
@@ -170,13 +184,22 @@ export const storeSalesWorld = ({
         locked: false,
         bookUnopened: unopened,
         counterShiftIsMine: counterShift?.isMine === true,
+        unmatched: ticket.unmatched === true,
       },
       {
         localCashPointId: localId,
         localShiftOpen: shiftOf(localId) !== null,
         canSell: true,
         canMove: true,
+        countMode: board.countMode as "numbered",
       },
+      partner === null || partner.ticket.id === ticket.id
+        ? null
+        : {
+            locationKind: "counter",
+            cashPointId: localId,
+            counterShiftIsMine: shiftOf(localId)?.isMine === true,
+          },
     );
     return {
       __typename: "LotteryStoreScanItem",
@@ -202,9 +225,21 @@ export const storeSalesWorld = ({
       pendingSkipCount: unopened
         ? pendingSkipCountOf(book.lastTicketNo, book.standardTickets, 0)
         : 0,
+      unmatched: ticket.unmatched === true,
+      match: decision.match,
     };
   };
 
+  const count = storeCountSalesHandlers({
+    board,
+    books,
+    sales,
+    inputs,
+    shiftOf,
+    find,
+    applyToBoard,
+    saleModel,
+  });
   const handlers = [
     api.query("LotteryStoreScan", ({ variables }) => {
       const { input } = variables as LotteryStoreScanQueryVariables;
@@ -251,6 +286,12 @@ export const storeSalesWorld = ({
           return graphqlError("NOT_FOUND");
         }
         const { book, ticket } = found;
+        const matched = matchUnmatched(book, ticket, input.localCashPointId);
+        if (matched === null) {
+          return validation("TICKET_NOT_SELLABLE", {
+            blockReason: "unmatched_no_partner",
+          });
+        }
         if (ticket.status === "sold") {
           return validation("ALREADY_SOLD", { soldAt: ticket.soldAt });
         }
@@ -283,6 +324,7 @@ export const storeSalesWorld = ({
           amount: book.unitPrice,
           soldAt: now,
           undone: false,
+          matched,
         };
         sales.unshift(record);
         rows.push(saleModel(record));
@@ -328,9 +370,9 @@ export const storeSalesWorld = ({
       return HttpResponse.json({
         data: {
           lotteryStoreRecentSales: {
-            items: sales
-              .filter((sale) => sale.shiftId === shiftId)
-              .map((sale) => saleModel(sale)),
+            items: count.recentOf(
+              sales.filter((sale) => sale.shiftId === shiftId),
+            ),
           },
         },
       });
@@ -362,6 +404,7 @@ export const storeSalesWorld = ({
       });
     }),
     ...storeCounterHandlers({ books, board, inputs }),
+    ...count.handlers,
   ];
   return { handlers, inputs };
 };

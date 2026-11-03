@@ -24,6 +24,7 @@ export const useSalesText = () => {
     }
     return t(SALES_ERROR_KEYS[parsed.code], {
       time: parsed.soldAt === null ? "" : clock(parsed.soldAt),
+      available: parsed.available ?? 0,
     });
   };
   return { t, clock, errorText };

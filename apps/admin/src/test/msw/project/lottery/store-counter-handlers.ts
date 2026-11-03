@@ -73,7 +73,10 @@ export const storeCounterHandlers = ({
               ? null
               : ref(ticket.cashPointId, pointName(ticket.cashPointId)),
           soldShiftId: ticket.soldShiftId,
+          soldSource:
+            ticket.status === "sold" ? (ticket.soldSource ?? "scan") : null,
           locked: false,
+          unmatched: ticket.unmatched === true,
         }));
       const unopened = book.tickets.every(
         (ticket) => ticket.cashPointId === null && ticket.status === "unsold",
@@ -94,6 +97,8 @@ export const storeCounterHandlers = ({
                 ? pendingSkipCountOf(book.lastTicketNo, book.standardTickets, 0)
                 : 0,
               unopened,
+              unmatchedCount: tickets.filter((ticket) => ticket.unmatched)
+                .length,
               tickets,
             },
           },
@@ -157,6 +162,7 @@ export const storeCounterHandlers = ({
         point?.books.push({
           __typename: "LotteryStoreBoardBook",
           bookId: book.bookId,
+          gameId: `game-${book.gameCode}`,
           gameCode: book.gameCode,
           gameName: book.gameName,
           color: book.color,

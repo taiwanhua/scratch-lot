@@ -17,6 +17,10 @@ export const STORE_SALES_ERROR_CODES = [
   "SPLIT_PLAN_INVALID",
   "TICKET_NOT_ON_COUNTER",
   "GAME_NOT_FOUND",
+  "COUNT_SALE_NOT_ALLOWED",
+  "COUNT_SALE_INVALID",
+  "COUNT_SALE_NOT_FOUND",
+  "COUNT_UNDO_EXCEEDS",
   "CONFLICT",
 ] as const;
 
@@ -26,6 +30,8 @@ export interface StoreSalesError {
   code: StoreSalesErrorCode | null;
   /** `ALREADY_SOLD`:什麼時候賣的 */
   soldAt: string | null;
+  /** `COUNT_SALE_INVALID` / `COUNT_UNDO_EXCEEDS`:還有幾張 */
+  available: number | null;
 }
 
 const extensionsOf = (error: unknown): Record<string, unknown> => {
@@ -48,9 +54,10 @@ export const storeSalesErrorOf = (error: unknown): StoreSalesError => {
         ? (reason as StoreSalesErrorCode)
         : undefined,
   });
-  const { soldAt } = extensionsOf(error);
+  const { soldAt, available } = extensionsOf(error);
   return {
     code: parsed.code === "UNEXPECTED" ? null : parsed.code,
     soldAt: typeof soldAt === "string" ? soldAt : null,
+    available: typeof available === "number" ? available : null,
   };
 };

@@ -3,8 +3,6 @@ import { useNavigate } from "react-router";
 
 import {
   INVENTORY_MODULE_KEYS,
-  INVENTORY_PERMISSIONS,
-  STORE_PERMISSIONS,
   displayBookNo,
   formatTicketRanges,
 } from "@repo/domain/project/lottery";
@@ -38,8 +36,11 @@ import {
   type CardDialog,
   type ExpandedCashPoint,
   actionsOf,
+  cardActionAllowed,
   cellStateOf,
+  isCountBoard,
   legendOf,
+  selectableOf,
   toCounter,
 } from "./card-cells";
 import { useRefreshSales } from "./sales-queries";
@@ -61,6 +62,8 @@ export interface ExpandedBookCardProps {
   flash: { ticketNo: string; nonce: number } | null;
   onClose: () => void;
   onUndo: (ticketId: string) => void;
+  /** 這家店實際的盤點制度(張數店與轉換中:虛線格子、格子只留三種操作;張數店規格 13.2、13.4) */
+  countMode?: string;
 }
 
 /**
@@ -80,7 +83,9 @@ export const ExpandedBookCard = ({
   flash,
   onClose,
   onUndo,
+  countMode = "numbered",
 }: ExpandedBookCardProps) => {
+  const countBoard = isCountBoard(countMode);
   const { t, clock, errorText } = useSalesText();
   const { session } = useSession();
   const { hasPermission } = usePermissions();
@@ -127,31 +132,20 @@ export const ExpandedBookCard = ({
   const states = new Set(
     picked.map((ticket) => stateByNo.get(ticket.ticketNo) ?? "sold"),
   );
-  const can = (action: CardAction): boolean => {
-    switch (action) {
-      case "markSold": {
-        return hasPermission(STORE_PERMISSIONS.sell) && point.shift != null;
-      }
-      case "move":
-      case "recall": {
-        return hasPermission(STORE_PERMISSIONS.move);
-      }
-      case "moveAndSell": {
-        return (
-          hasPermission(STORE_PERMISSIONS.move) &&
-          hasPermission(STORE_PERMISSIONS.sell) &&
-          local !== null
-        );
-      }
-      case "undoSale": {
-        return hasPermission(STORE_PERMISSIONS.undoSale);
-      }
-      case "recover": {
-        return hasPermission(INVENTORY_PERMISSIONS.recover);
-      }
-    }
-  };
-  const actions = actionsOf(states, picked.length, isLocal, can);
+  const can = (action: CardAction): boolean =>
+    cardActionAllowed(action, {
+      has: hasPermission,
+      shiftOpen: point.shift != null,
+      hasLocal: local !== null,
+    });
+  const actions = actionsOf(
+    states,
+    picked.length,
+    isLocal,
+    can,
+    countBoard,
+    picked.every((ticket) => ticket.soldSource === "scan"),
+  );
   const onCounter = tickets.filter(
     (ticket) => cellStateOf(ticket, point) === "unsold",
   );
@@ -262,6 +256,14 @@ export const ExpandedBookCard = ({
         }))}
         // 展開卡片是在格子上點選,不是刷到實體:不換店(檯面上的張本來就在這家店)
         keepStore
+        {...(countBoard && {
+          hint: t("recover.hint"),
+          successText: t("recover.success", {
+            ranges: formatTicketRanges(
+              dialog.tickets.map((ticket) => ticket.ticketNo),
+            ),
+          }),
+        })}
         onClose={() => {
           setDialog(null);
         }}
@@ -321,12 +323,11 @@ export const ExpandedBookCard = ({
       ) : null}
       <TicketGrid
         cells={cells}
-        selectableStates={
-          isLocal ? ["unsold", "soldThisShift", "lost"] : ["unsold"]
-        }
+        selectableStates={selectableOf(isLocal, countBoard)}
         selected={selected}
         onSelectedChange={setSelected}
-        legendItems={legendOf(tickets)}
+        legendItems={legendOf(tickets, countBoard)}
+        {...(countBoard && { legendNote: t("expand.dashedNote") })}
         quickSelect={false}
         summary={false}
         {...(flash && { flash })}
@@ -339,7 +340,7 @@ export const ExpandedBookCard = ({
     name: book.gameName,
     bookNo: displayBookNo(book.bookNo),
   });
-  const meta = t("expand.meta", {
+  const meta = t(countBoard ? "expand.metaEstimate" : "expand.meta", {
     cashPoint: point.name,
     price: moneyText(book.unitPrice),
     remaining: book.remaining,

@@ -3628,6 +3628,7 @@ export type LotteryStoreBoardBook = {
   bookNo: Scalars['String']['output'];
   color?: Maybe<Scalars['String']['output']>;
   gameCode: Scalars['String']['output'];
+  gameId: Scalars['ID']['output'];
   gameName: Scalars['String']['output'];
   isLowStock: Scalars['Boolean']['output'];
   remaining: Scalars['Int']['output'];
@@ -11542,7 +11543,7 @@ export type RecallLotteryTicketsMutation = { __typename?: 'Mutation', recallLott
 
 export type LotteryStoreShiftFieldsFragment = { __typename?: 'LotteryStoreShift', id: string, openedAt: string, isMine: boolean, openingFloat: number, expectedCash: number, soldCount: number, soldAmount: number, unmatchedEntry: boolean, cashPoint: { __typename?: 'LotteryAccountsRef', id: string, name: string }, openedBy: { __typename?: 'LotteryAccountsRef', id: string, name: string } };
 
-export type LotteryStoreBoardBookFieldsFragment = { __typename?: 'LotteryStoreBoardBook', bookId: string, gameCode: string, gameName: string, color?: string | null, unitPrice: number, bookNo: string, remaining: number, total: number, soldToday: number, isLowStock: boolean };
+export type LotteryStoreBoardBookFieldsFragment = { __typename?: 'LotteryStoreBoardBook', bookId: string, gameId: string, gameCode: string, gameName: string, color?: string | null, unitPrice: number, bookNo: string, remaining: number, total: number, soldToday: number, isLowStock: boolean };
 
 export type LotteryStoreEntryOptionFieldsFragment = { __typename?: 'LotteryStoreEntryOption', id: string, startAt: string, endAt: string, shortName?: string | null, hasStartPunch: boolean, tasks: Array<{ __typename?: 'LotteryStoreEntryTask', role: string, taskKey: string, positionKey: string }>, snapshot?: { __typename?: 'LotteryStoreEntryTask', role: string, taskKey: string, positionKey: string } | null };
 
@@ -11553,7 +11554,7 @@ export type LotteryStoreBoardQueryVariables = Exact<{
 }>;
 
 
-export type LotteryStoreBoardQuery = { __typename?: 'Query', lotteryStoreBoard: { __typename?: 'LotteryStoreBoardPayload', item: { __typename?: 'LotteryStoreBoard', vaultExpected: number, countMode: string, org: { __typename?: 'LotteryAccountsRef', id: string, name: string }, cashPoints: Array<{ __typename?: 'LotteryStoreCashPoint', id: string, name: string, positionKey: string, shift?: { __typename?: 'LotteryStoreShift', id: string, openedAt: string, isMine: boolean, openingFloat: number, expectedCash: number, soldCount: number, soldAmount: number, unmatchedEntry: boolean, cashPoint: { __typename?: 'LotteryAccountsRef', id: string, name: string }, openedBy: { __typename?: 'LotteryAccountsRef', id: string, name: string } } | null, books: Array<{ __typename?: 'LotteryStoreBoardBook', bookId: string, gameCode: string, gameName: string, color?: string | null, unitPrice: number, bookNo: string, remaining: number, total: number, soldToday: number, isLowStock: boolean }>, gameTotals: Array<{ __typename?: 'LotteryStoreGameTotal', gameId: string, gameCode: string, gameName: string, remaining: number, bookCount: number }> }>, myOpenShifts: Array<{ __typename?: 'LotteryStoreShift', id: string, openedAt: string, isMine: boolean, openingFloat: number, expectedCash: number, soldCount: number, soldAmount: number, unmatchedEntry: boolean, cashPoint: { __typename?: 'LotteryAccountsRef', id: string, name: string }, openedBy: { __typename?: 'LotteryAccountsRef', id: string, name: string } }> } } };
+export type LotteryStoreBoardQuery = { __typename?: 'Query', lotteryStoreBoard: { __typename?: 'LotteryStoreBoardPayload', item: { __typename?: 'LotteryStoreBoard', vaultExpected: number, countMode: string, org: { __typename?: 'LotteryAccountsRef', id: string, name: string }, cashPoints: Array<{ __typename?: 'LotteryStoreCashPoint', id: string, name: string, positionKey: string, shift?: { __typename?: 'LotteryStoreShift', id: string, openedAt: string, isMine: boolean, openingFloat: number, expectedCash: number, soldCount: number, soldAmount: number, unmatchedEntry: boolean, cashPoint: { __typename?: 'LotteryAccountsRef', id: string, name: string }, openedBy: { __typename?: 'LotteryAccountsRef', id: string, name: string } } | null, books: Array<{ __typename?: 'LotteryStoreBoardBook', bookId: string, gameId: string, gameCode: string, gameName: string, color?: string | null, unitPrice: number, bookNo: string, remaining: number, total: number, soldToday: number, isLowStock: boolean }>, gameTotals: Array<{ __typename?: 'LotteryStoreGameTotal', gameId: string, gameCode: string, gameName: string, remaining: number, bookCount: number }> }>, myOpenShifts: Array<{ __typename?: 'LotteryStoreShift', id: string, openedAt: string, isMine: boolean, openingFloat: number, expectedCash: number, soldCount: number, soldAmount: number, unmatchedEntry: boolean, cashPoint: { __typename?: 'LotteryAccountsRef', id: string, name: string }, openedBy: { __typename?: 'LotteryAccountsRef', id: string, name: string } }> } } };
 
 export type LotteryStoreOpenShiftFormQueryVariables = Exact<{
   cashPointId: Scalars['ID']['input'];
@@ -13708,6 +13709,7 @@ export const LotteryStoreShiftFieldsFragmentDoc = `
 export const LotteryStoreBoardBookFieldsFragmentDoc = `
     fragment LotteryStoreBoardBookFields on LotteryStoreBoardBook {
   bookId
+  gameId
   gameCode
   gameName
   color

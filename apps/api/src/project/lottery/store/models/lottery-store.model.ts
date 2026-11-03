@@ -54,6 +54,9 @@ export class LotteryStoreBoardBookModel {
   @Field(() => ID)
   bookId!: string;
 
+  @Field(() => ID)
+  gameId!: string;
+
   @Field(() => String)
   gameCode!: string;
 

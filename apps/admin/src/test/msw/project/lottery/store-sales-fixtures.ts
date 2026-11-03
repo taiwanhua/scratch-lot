@@ -26,6 +26,25 @@ export interface SalesTicket {
   cashPointId: string | null;
   soldShiftId: string | null;
   soldAt: string | null;
+  /** 未對號(張數店;系統預設帶入的張號) */
+  unmatched?: boolean;
+  /** 售出來源(`scan` / `manual` / `count`…);沒給 = 刷條碼 */
+  soldSource?: string | null;
+}
+
+/** 假 api 記下的一筆售出。 */
+export interface SaleRecord {
+  ticketId: string;
+  bookId: string;
+  shiftId: string;
+  cashPointId: string;
+  amount: number;
+  soldAt: string;
+  undone: boolean;
+  /** 依張數賣的那一次(同一次的張同一個 refId;最近售出合成一列) */
+  refId?: string;
+  /** 這次先對號了(售出提示「已對號」) */
+  matched?: boolean;
 }
 
 /**

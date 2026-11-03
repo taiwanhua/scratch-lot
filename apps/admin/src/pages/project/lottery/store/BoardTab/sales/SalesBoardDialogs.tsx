@@ -1,4 +1,5 @@
 import { CameraScanDialog } from "./CameraScanDialog";
+import { CountSaleDialog, type CountSaleGame } from "./CountSaleDialog";
 import { RecentSalesDrawer } from "./RecentSalesDrawer";
 import { SplitPickBookDialog } from "./SplitPickBookDialog";
 import { SplitWizardDialog } from "./SplitWizardDialog";
@@ -8,7 +9,14 @@ export type SalesDialog =
   | { kind: "splitPick" }
   | { kind: "splitWizard"; bookId: string }
   | { kind: "recent"; shiftId: string; cashPointName: string }
-  | { kind: "camera" };
+  | { kind: "camera" }
+  | {
+      kind: "countSale";
+      cashPointId: string;
+      cashPointName: string;
+      shiftText: string;
+      games: readonly CountSaleGame[];
+    };
 
 export interface SalesBoardDialogsProps {
   dialog: SalesDialog | null;
@@ -61,6 +69,7 @@ export const SalesBoardDialogs = ({
     case "recent": {
       return (
         <RecentSalesDrawer
+          orgId={orgId}
           shiftId={dialog.shiftId}
           cashPointName={dialog.cashPointName}
           onClose={close}
@@ -70,6 +79,18 @@ export const SalesBoardDialogs = ({
     }
     case "camera": {
       return <CameraScanDialog onClose={close} />;
+    }
+    case "countSale": {
+      return (
+        <CountSaleDialog
+          orgId={orgId}
+          localCashPointId={dialog.cashPointId}
+          cashPointName={dialog.cashPointName}
+          shiftText={dialog.shiftText}
+          games={dialog.games}
+          onClose={close}
+        />
+      );
     }
     case undefined: {
       return null;

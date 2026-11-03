@@ -441,7 +441,9 @@
         "scrapped": "報廢",
         "lost": "待查·遺失",
         "otherStore": "其他分店",
-        "transferring": "調貨中"
+        "transferring": "調貨中",
+        "unmatchedSold": "已售·未對號",
+        "unmatchedLost": "待查·遺失·未對號"
       },
       "quickSelect": {
         "label": "連號快選",
@@ -3128,14 +3130,17 @@
       "split": "拆本 / 上檯面",
       "redeem": "兌獎",
       "recentRedemptions": "最近兌獎",
-      "checkout": "交班結帳"
+      "checkout": "交班結帳",
+      "countSale": "依張數標記售出"
     },
     "card": {
       "title": "{code} {name}",
       "price": "{price} 元",
       "meta": "本號 {bookNo} · 今日售出 {count}",
       "remaining": "剩 {remaining} / {total}",
-      "lowStock": "剩很少"
+      "lowStock": "剩很少",
+      "estimate": "約",
+      "gameSummary": "剩 {remaining} 張 · {books} 本"
     },
     "localDialog": {
       "title": "設定本機收銀點",
@@ -3241,7 +3246,8 @@
       "cancel": "取消",
       "soldTitle": "已售出",
       "soldMessage": "{key} {amount} 元 · {cashPoint}",
-      "undo": "撤銷"
+      "undo": "撤銷",
+      "soldMatchedMessage": "{key} {amount} 元 · {cashPoint} · 已對號"
     },
     "scan": {
       "bookTicket": "本號 {bookNo} · 張號 {ticketNo}",
@@ -3284,7 +3290,10 @@
         "locked": "這張刮刮樂被單據鎖定(調貨中或撤銷審核中),不能賣。",
         "inTransit": "這張刮刮樂在調貨途中,不能賣。",
         "inStock": "這張刮刮樂在庫存,請先移到收銀點檯面再賣。",
-        "moveForbidden": "這張在{cashPoint},你沒有移櫃權限,請由{cashPoint}售出。"
+        "moveForbidden": "這張在{cashPoint},你沒有移櫃權限,請由{cashPoint}售出。",
+        "unmatchedNoPartner": "這張刮刮樂系統記為已售(未對號),但{cashPoint}的這個遊戲已沒有未售的張可以對號。請送撤銷售出申請(原因:盤點錯誤)核准後再賣。",
+        "skippedFix": "這張刮刮樂系統記為「跳號」,不能賣。請先到本的詳情更正跳號。",
+        "scrappedFix": "這張刮刮樂系統記為報廢,不能賣。請先撤銷報廢。"
       },
       "notFound": "找不到這張刮刮樂,或不是本店的刮刮樂。",
       "recoverNoPermission": "這張刮刮樂待查中,尋回需要有權限的人處理。",
@@ -3338,7 +3347,10 @@
       "undone": "已撤銷",
       "expired": "超過 30 分鐘",
       "footer": "超過 30 分鐘或這一班已交班 → 改送撤銷售出申請。",
-      "close": "關閉"
+      "close": "關閉",
+      "undoCount": "撤銷幾張",
+      "partlyUndone": "已撤 {undone} 張,剩 {left} 張",
+      "countLine": "{code} {name} × {count} 張 · 依張數"
     },
     "expand": {
       "title": "{code} {name} · 本號 {bookNo}",
@@ -3356,7 +3368,9 @@
       "undoSale": "撤銷售出",
       "recover": "尋回",
       "atCashPoint": "在{name}",
-      "inStock": "在庫存"
+      "inStock": "在庫存",
+      "metaEstimate": "{cashPoint} · {price} 元 · 剩 {remaining} / {total}(約)",
+      "dashedNote": "虛線 = 系統預設帶入的張號"
     },
     "move": {
       "title": "移櫃",
@@ -3438,7 +3452,11 @@
       "SPLIT_PLAN_INVALID": "跳號還沒點滿,或還有張沒分配",
       "TICKET_NOT_ON_COUNTER": "只有檯面上未售的張能移櫃或收回",
       "CONFLICT": "這幾張已被處理,請重新核對",
-      "GAME_NOT_FOUND": "讀不到這張刮刮樂的遊戲(面額不明),不能賣;請洽系統管理員"
+      "GAME_NOT_FOUND": "讀不到這張刮刮樂的遊戲(面額不明),不能賣;請洽系統管理員",
+      "COUNT_SALE_NOT_ALLOWED": "只有張數盤點的店可以依張數標記售出",
+      "COUNT_SALE_INVALID": "張數超過這個收銀點的未售張數(還有 {available} 張)",
+      "COUNT_SALE_NOT_FOUND": "這台沒有依張數售出可以對號,請改送撤銷售出申請",
+      "COUNT_UNDO_EXCEEDS": "這一筆現在最多只能撤 {available} 張"
     },
     "redemption": {
       "redeemTitle": "兌獎 · {name}",
@@ -4009,11 +4027,13 @@
           "expected": "應有",
           "counted": "實點",
           "difference": "差額",
-          "status": "狀態"
+          "status": "狀態",
+          "countSale": "依張數標記售出"
         },
         "total": "共 {count} 筆",
         "empty": "沒有結帳紀錄",
-        "cardFacts": "應有 {expected} · 實點 {counted} · 差額 {difference}"
+        "cardFacts": "應有 {expected} · 實點 {counted} · 差額 {difference}",
+        "countSaleValue": "{count} 張 · {amount}"
       },
       "view": {
         "title": "結帳確認申請",
@@ -4243,6 +4263,40 @@
         "ticketCount": "({count} 張)",
         "refund": "退款"
       }
+    },
+    "recover": {
+      "hint": "尋回後這張會記在本店庫存。請把實體票放進庫存;要賣的時候,用「拆本 / 上檯面」放到收銀台。",
+      "success": "已尋回 {ranges},記在庫存。要賣請先「拆本 / 上檯面」。"
+    },
+    "countSale": {
+      "title": "依張數標記售出",
+      "shiftText": "負責人 {name} · {time} 開班 · 這一班的錢",
+      "game": "遊戲",
+      "gameOption": "{code} {name}(剩 {remaining} 張)",
+      "decrease": "第 {line} 列少一張",
+      "increase": "第 {line} 列多一張",
+      "count": "第 {line} 列張數",
+      "addLine": "+ 加一列",
+      "total": "合計",
+      "totalValue": "{count} 張 · {amount} 元",
+      "reason": "原因",
+      "hint": "售出算進{name}這一班,應有現金 +{amount}。張號由系統預設帶入,之後刷到實體會自動更正。",
+      "submit": "標記售出",
+      "successTitle": "已依張數標記售出",
+      "success": "{lines},合計 {amount}",
+      "successLine": "{code} {name} × {count} 張",
+      "successSeparator": "、"
+    },
+    "countUndo": {
+      "title": "撤銷依張數售出",
+      "line": "{time} 依張數售出 · 這一筆 {count} 張",
+      "count": "撤幾張",
+      "decrease": "少撤一張",
+      "increase": "多撤一張",
+      "max": "最多 {count} 張",
+      "hint": "客人有退票的話請改用刷條碼撤銷。撤銷後 {amount} 元從{cashPoint}的抽屜應有金額扣除。",
+      "submit": "撤銷 {count} 張",
+      "success": "已撤銷 {code} {name} {count} 張,扣回 {amount}"
     }
   },
   "notifications": {

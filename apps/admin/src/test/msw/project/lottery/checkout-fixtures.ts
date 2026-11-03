@@ -208,6 +208,9 @@ const listRow = (
   counted,
   difference: counted - expected,
   submittedAt,
+  // Figma CS-15:C-0042 依張數標記售出 3 張 · 500
+  countSaleCount: id === "42" ? 3 : 0,
+  countSaleAmount: id === "42" ? 500 : 0,
 });
 
 /** Figma ST-27 的四列(新到舊)。 */

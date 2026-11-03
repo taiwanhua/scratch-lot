@@ -17,6 +17,7 @@ fragment LotteryStoreShiftFields on LotteryStoreShift {
 
 fragment LotteryStoreBoardBookFields on LotteryStoreBoardBook {
   bookId
+  gameId
   gameCode
   gameName
   color

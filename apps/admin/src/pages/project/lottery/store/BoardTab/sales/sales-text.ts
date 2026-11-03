@@ -18,6 +18,7 @@ export const BLOCK_REASON_KEYS: Record<StoreScanBlockReason, string> = {
   locked: "scan.blocked.locked",
   in_transit: "scan.blocked.inTransit",
   in_stock: "scan.blocked.inStock",
+  unmatched_no_partner: "scan.blocked.unmatchedNoPartner",
 };
 
 /** 不能當下撤銷的原因(ST-08b)。 */
@@ -41,6 +42,10 @@ export const SALES_ERROR_KEYS: Record<StoreSalesErrorCode, string> = {
   SPLIT_PLAN_INVALID: "salesErrors.SPLIT_PLAN_INVALID",
   TICKET_NOT_ON_COUNTER: "salesErrors.TICKET_NOT_ON_COUNTER",
   GAME_NOT_FOUND: "salesErrors.GAME_NOT_FOUND",
+  COUNT_SALE_NOT_ALLOWED: "salesErrors.COUNT_SALE_NOT_ALLOWED",
+  COUNT_SALE_INVALID: "salesErrors.COUNT_SALE_INVALID",
+  COUNT_SALE_NOT_FOUND: "salesErrors.COUNT_SALE_NOT_FOUND",
+  COUNT_UNDO_EXCEEDS: "salesErrors.COUNT_UNDO_EXCEEDS",
   CONFLICT: "salesErrors.CONFLICT",
 };
 
