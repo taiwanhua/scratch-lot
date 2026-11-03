@@ -37,6 +37,9 @@ export const LOTTERY_FIELD_CATEGORY_KEYS = {
 /** 撤銷售出原因「客人退貨」:8.5 撤銷售出申請依這個代碼帶入。 */
 export const SALE_REVERSAL_CUSTOMER_RETURN = "customer-return";
 
+/** 撤銷售出原因「盤點錯誤」:全店重刷「記已售但還在」[送撤銷售出申請] 帶入(張數店規格 7.3 第 4 點、8.4)。 */
+export const SALE_REVERSAL_STOCKTAKE_ERROR = "stocktake-error";
+
 /** 手動標記原因「刷不到條碼」:手動標記售出的預設選項。 */
 export const MANUAL_SALE_SCAN_FAILED = "scan-failed";
 

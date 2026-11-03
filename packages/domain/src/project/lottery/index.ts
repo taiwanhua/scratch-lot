@@ -17,6 +17,7 @@
  * - `store.ts`:店面管理的模組 key、權限 key、分頁、看板頻道、剩很少的門檻與期初零用金的規則
  * - `store-sales.ts`:店面的刷到時怎麼處理、當下撤銷的條件、拆本精靈的檢查
  * - `store-forms.ts`:撤銷售出申請、現金更正單的表單代號 / 欄位 key、存值解析與送出前檢查
+ * - `sale-reversal-plan.ts`:撤銷售出申請送出時鎖哪幾張(刷的張先對號、依遊戲 + 張數挑張)、核准後張回到哪裡
  * - `stocktake.ts`:盤點的類型 / 狀態、盤點內容(含張數盤點的組)、與盤點那一刻比對的差異、送出前的檢查、[上一本] [下一本]
  * - `rescan.ts`:全店重刷(一個位置的處理、位置狀態、自動取消、開始重刷的互斥、B5 擋盤點的組、重刷提醒)
  * - `stocktake-session.ts`:盤點中登記(同位置一次一人、1 小時自動失效、接續、全店盤點中不能交班)
@@ -37,6 +38,7 @@ export * from "./purchase";
 export * from "./receipt-links";
 export * from "./redemption";
 export * from "./requisition";
+export * from "./sale-reversal-plan";
 export * from "./rescan";
 export * from "./store";
 export * from "./store-forms";
