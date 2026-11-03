@@ -37,6 +37,7 @@ import { useDailyCloseEntry } from "../daily-close/useDailyCloseEntry";
 import { storeFormCreateHref } from "../forms/store-forms-keys";
 import { redemptionBoardActions } from "../redemption/redemption-board-actions";
 import { useRedemptionFlow } from "../redemption/useRedemptionFlow";
+import { useRescanEntry } from "../rescan/useRescanEntry";
 import { useStocktakeEntry } from "../stocktake/useStocktakeEntry";
 import { type BoardDialog, BoardDialogs } from "./BoardDialogs";
 import { BoardTopBar } from "./BoardTopBar";
@@ -112,7 +113,9 @@ export const BoardTab = () => {
   // 兌獎(P23):[兌獎] [最近兌獎]、兌獎提示的 [撤銷] 與兌獎紀錄詳情
   const redemption = useRedemptionFlow();
   // 盤點(P24):頂部 [盤點]、距離上次盤點超過 24 小時的提醒、盤點範圍視窗
-  const stocktake = useStocktakeEntry(orgId, cashPoints);
+  // 全店重刷(張數店規格 8.3、8.5、13.2):重刷中橫幅、重刷提醒、還沒刷的收銀點標籤;盤點入口先提醒(8.5a)
+  const rescan = useRescanEntry(orgId, cashPoints);
+  const stocktake = useStocktakeEntry(orgId, cashPoints, rescan.rescans);
   // 日結 / 存銀行(P27):頂部「上次日結」、[存銀行]、[日結](還有班沒送出交班 → 停用)
   const daily = useDailyCloseEntry(
     orgId,
@@ -310,6 +313,7 @@ export const BoardTab = () => {
         }
       />
       {stocktake.reminder}
+      {rescan.banners}
       {board !== null && local === null && cashPoints.length > 0 ? (
         <Alert
           severity="warning"
@@ -347,6 +351,7 @@ export const BoardTab = () => {
           key={point.id}
           point={point}
           countMode={countMode}
+          notices={rescan.noticesOf(point.id)}
           isLocal={point.id === local?.id}
           actions={actionsOf(point)}
           onShiftInfo={(shiftId) => {
@@ -420,6 +425,7 @@ export const BoardTab = () => {
       {flow.element}
       {redemption.element}
       {stocktake.element}
+      {rescan.element}
       {daily.element}
     </Stack>
   );

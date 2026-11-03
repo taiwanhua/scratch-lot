@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useTranslations } from "use-intl";
 
 import { displayBookNo } from "@repo/domain/project/lottery";
+import { Alert } from "@repo/ui/alert";
 import { Button } from "@repo/ui/button";
 import { Card } from "@repo/ui/card";
 import { Stack } from "@repo/ui/stack";
@@ -16,7 +17,8 @@ export interface StocktakeCountGroupPanelProps {
   group: SheetCountGroup;
   cashPointName: string;
   count: GroupCount | undefined;
-  /** 這一組全店重刷中(之後的全店重刷;現在一律 false) */
+  /** 這一組的位置正在全店重刷這個遊戲(8.5a B5):不能輸入、寫「這裡正在重刷 X,刷完再數」;沒有 = null */
+  rescanningCode?: string | null;
   onConfirm: (presentCount: number) => void;
   onRecount: () => void;
   /** [上一組]:第一組 = null(停用、不隱藏;張數店規格 13.3) */
@@ -42,8 +44,11 @@ export const StocktakeCountGroupPanel = ({
   onPrev,
   onNext,
   nextIsReview,
+  rescanningCode = null,
 }: StocktakeCountGroupPanelProps) => {
   const t = useTranslations("admin.lotteryStore.stocktake.count");
+  const rescanText = useTranslations("admin.lotteryStore.rescan.stocktake");
+  const blocked = rescanningCode !== null;
   const [input, setInput] = useState("");
   const confirmed = count?.presentCount != null;
   const diff = groupDiffOf(group, count);
@@ -57,7 +62,7 @@ export const StocktakeCountGroupPanel = ({
       : t("diffOver", { count: diff });
   })();
   const confirm = () => {
-    if (isWholeNumber(input)) {
+    if (!blocked && isWholeNumber(input)) {
       onConfirm(Number(input.trim()));
     }
   };
@@ -85,14 +90,20 @@ export const StocktakeCountGroupPanel = ({
             })}
           </Typography>
         </Stack>
-        <Typography variant="body2" color="textSecondary">
-          {t("hint")}
-        </Typography>
+        {blocked ? (
+          <Alert severity="warning">
+            {rescanText("blocked", { code: rescanningCode })}
+          </Alert>
+        ) : (
+          <Typography variant="body2" color="textSecondary">
+            {t("hint")}
+          </Typography>
+        )}
         <TextField
           label={t("present")}
           size="small"
           value={confirmed ? String(count.presentCount) : input}
-          disabled={confirmed}
+          disabled={confirmed || blocked}
           onChange={(event) => {
             setInput(event.target.value);
           }}
@@ -147,7 +158,7 @@ export const StocktakeCountGroupPanel = ({
           ) : (
             <Button
               variant="contained"
-              disabled={!isWholeNumber(input)}
+              disabled={blocked || !isWholeNumber(input)}
               onClick={confirm}
             >
               {t("confirm")}

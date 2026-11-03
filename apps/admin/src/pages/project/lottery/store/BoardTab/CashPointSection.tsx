@@ -41,6 +41,8 @@ export interface CashPointSectionProps {
    * 每本卡片的剩餘旁加小字「約」(張數店規格 13.2;Figma CS-01a)
    */
   countMode?: string;
+  /** 標題列的提醒標籤(全店重刷:「這裡還沒刷遊戲 X」) */
+  notices?: readonly string[];
 }
 
 /** 卡片左側色條:遊戲顏色(標籤色票);沒設 = 灰。 */
@@ -60,6 +62,7 @@ export const CashPointSection = ({
   onBookClick,
   renderExpanded,
   countMode = "numbered",
+  notices = [],
 }: CashPointSectionProps) => {
   const countBoard = isCountBoard(countMode);
   const t = useTranslations("admin.lotteryStore");
@@ -102,6 +105,7 @@ export const CashPointSection = ({
     <Stack spacing={1.5}>
       <CashPointHeader
         name={point.name}
+        notices={notices}
         localLabel={isLocal ? t("header.local") : null}
         isOpen={shift !== null}
         statusLabel={shift === null ? t("header.closed") : t("header.open")}

@@ -38,6 +38,10 @@ export interface StocktakeBookListProps {
   onRedeem: ((cashPoint: SheetCashPoint) => void) | null;
   /** 手機寬度:本清單改成上方的下拉 */
   isNarrow: boolean;
+  /** 這一組正在全店重刷(8.5a B5):變灰、標「重刷中」 */
+  isGroupBlocked?: (group: SheetCountGroup) => boolean;
+  /** 庫存那一區這本的遊戲正在全店重刷 */
+  isBookBlocked?: (book: SheetBook) => boolean;
 }
 
 /**
@@ -54,10 +58,17 @@ export const StocktakeBookList = ({
   onSelect,
   onRedeem,
   isNarrow,
+  isGroupBlocked = () => false,
+  isBookBlocked = () => false,
 }: StocktakeBookListProps) => {
   const t = useTranslations("admin.lotteryStore.stocktake");
+  const rescanText = useTranslations("admin.lotteryStore.rescan.stocktake");
+  const rescanTag = <Tag tone="grey" label={rescanText("tag")} />;
   const statusOf = (book: SheetBook) => {
     const key = bookKeyOf(book);
+    if (isBookBlocked(book)) {
+      return rescanTag;
+    }
     const count = state.counts[key];
     if (key === selectedKey) {
       return <Tag tone="primary" label={t("bookStatus.current")} />;
@@ -75,6 +86,9 @@ export const StocktakeBookList = ({
   /** 張數盤點一組的狀態:目前這組 / 還沒數 / 已數 / 差 N 張(Figma CS-09a / 09b)。 */
   const groupStatusOf = (group: SheetCountGroup) => {
     const key = countGroupKeyOf(group);
+    if (isGroupBlocked(group)) {
+      return rescanTag;
+    }
     const diff = groupDiffOf(group, state.groups[key]);
     if (key === selectedKey && diff === null) {
       return <Tag tone="primary" label={t("bookStatus.currentGroup")} />;
@@ -96,6 +110,7 @@ export const StocktakeBookList = ({
     title: string,
     subtitle: string,
     status: ReactNode,
+    dimmed = false,
   ) => (
     <Box
       key={key}
@@ -117,6 +132,7 @@ export const StocktakeBookList = ({
         cursor: "pointer",
         bgcolor: key === selectedKey ? "grey.100" : undefined,
         "&:hover": { bgcolor: "grey.50" },
+        opacity: dimmed ? 0.55 : 1,
       }}
     >
       <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
@@ -141,6 +157,7 @@ export const StocktakeBookList = ({
         count: group.bookNos.length,
       }),
       groupStatusOf(group),
+      isGroupBlocked(group),
     );
   const cashPointHeader = (point: SheetCashPoint) => (
     <Stack spacing={0.5} key={`head-${point.id}`}>

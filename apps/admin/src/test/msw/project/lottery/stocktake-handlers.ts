@@ -20,6 +20,13 @@ import type {
 import { graphqlError } from "../../auth-handlers";
 import { api, type server } from "../../server";
 import {
+  type RescanReminderFixture,
+  type RescanWorld,
+  type RescanWorldOptions,
+  rescanBriefOf,
+  rescanWorld,
+} from "./rescan-handlers";
+import {
   sampleCountStocktakeDetail,
   sampleCountStocktakeSheet,
 } from "./stocktake-count-fixtures";
@@ -55,10 +62,15 @@ export interface StocktakeWorldOptions {
   sessions?: readonly StocktakeSessionFixture[];
   /** 這幾組(`<收銀點>:<遊戲>`)在開始數之後被別張盤點處理過(B6:要重數) */
   staleGroups?: readonly string[];
+  /** 全店重刷(重刷頁、看板橫幅;進行中的會列在 `lotteryStocktakeStatus.rescans`) */
+  rescan?: RescanWorldOptions;
+  /** 全店重刷提醒(張數店規格 8.3) */
+  rescanReminders?: readonly RescanReminderFixture[];
 }
 
 export interface StocktakeWorld {
   handlers: Parameters<typeof server.use>;
+  rescan: RescanWorld;
   state: {
     sheet: StocktakeSheetFixture;
     backfilled: Set<string>;
@@ -114,6 +126,7 @@ export const stocktakeWorld = (
       : sampleStocktakeSheet();
   const backfilled = new Set<string>();
   const sessions: StocktakeSessionFixture[] = [...(options.sessions ?? [])];
+  const rescan = rescanWorld(options.rescan);
   /** 開始數那一刻的系統數字(算售出後畫面上的未售會變,比對仍用這個) */
   const systemOf = new Map(
     sheet.countGroups.map((group) => [
@@ -266,6 +279,7 @@ export const stocktakeWorld = (
   };
 
   const handlers = [
+    ...rescan.handlers,
     // 單一收銀點:只回那個收銀點與它檯面上的本,沒有未拆的本與待查清單(同 api)
     api.query("LotteryStocktakeSheet", ({ variables }) => {
       const { input } = variables as LotteryStocktakeSheetQueryVariables;
@@ -367,6 +381,11 @@ export const stocktakeWorld = (
             __typename: "LotteryStocktakeStatus",
             lastSubmittedAt: "2026-10-13T14:20:00.000Z",
             remind: options.remind ?? true,
+            rescans:
+              rescan.state.rescan?.status === "in_progress"
+                ? [rescanBriefOf(rescan.state.rescan)]
+                : [],
+            rescanReminders: [...(options.rescanReminders ?? [])],
           },
         },
       }),
@@ -403,5 +422,5 @@ export const stocktakeWorld = (
       });
     }),
   ];
-  return { handlers, state: { sheet, backfilled, sessions }, inputs };
+  return { handlers, rescan, state: { sheet, backfilled, sessions }, inputs };
 };

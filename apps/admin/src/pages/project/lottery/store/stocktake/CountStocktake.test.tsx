@@ -135,7 +135,9 @@ describe("店面管理:張數盤點與盤點中登記", () => {
     const overCard = screen.getByText("店內櫃台 · 5201 金好運");
     const over = cardOf(overCard);
     await user.click(within(over).getByRole("button", { name: "標記異常" }));
-    expect(within(over).getByText("標記異常:張的狀態不動")).toBeInTheDocument();
+    expect(
+      within(over).getByText(/標記異常:張的狀態不動,觸發全店重刷 \d+ 提醒/),
+    ).toBeInTheDocument();
     const submit = screen.getByRole("button", { name: "送出 →" });
     await waitFor(() => {
       expect(submit).toBeEnabled();

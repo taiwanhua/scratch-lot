@@ -29,6 +29,16 @@ export const PROJECT_DYNAMIC_KEYS: readonly DynamicKey[] = [
       "待查清單未對號那一組的來源盤點 `t(`sourceTypes.${type}`)`,type 是 api 回的盤點類型 `STOCKTAKE_TYPES`(`StocktakeSections`)",
   },
   {
+    key: "admin.lotteryStore.rescan.outcomes.",
+    reason:
+      "全店重刷刷到的結果 `t(`outcomes.${item.outcome}`)`,outcome 是 api 回的 `RESCAN_OUTCOMES` 或 `investigated`(`useRescanLabels`)",
+  },
+  {
+    key: "admin.lotteryStore.rescan.states.",
+    reason:
+      "全店重刷位置的狀態 `t(`states.${place.state}`)`,state 是 api 回的 `RescanPlaceState`(`useRescanLabels`)",
+  },
+  {
     key: "admin.lotteryStore.stocktake.session.types.",
     reason:
       "盤點中登記的範圍文字 `t(`types.${session.type}`)`,type 是 api 回的盤點類型 `STOCKTAKE_TYPES`(`session-text.ts`)",

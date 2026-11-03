@@ -4065,7 +4065,7 @@
         "result": {
           "match": "No difference",
           "none": "Not handled yet",
-          "flag": "Flagged: ticket states do not change",
+          "flag": "Flagged: ticket states do not change; a store-wide rescan reminder for {code} is raised",
           "saleOpen": "{count} counted as sold: added to the {cashPoint} shift, expected cash {amount} (ticket numbers filled in by the system)",
           "saleClosed": "{count} counted as sold as a post-close correction of the {cashPoint} {time} shift {amount}",
           "investigate": "{count} to investigate (filled in by the system; responsible store = {store})"
@@ -4544,12 +4544,123 @@
       "hint": "Take any {count} tickets to {to}; the ticket numbers are filled in by the system and corrected when the tickets are scanned.",
       "submit": "Move",
       "success": "Moved {count} of game {game} from {from} to {to}"
+    },
+    "rescan": {
+      "reminder": {
+        "investigate": "Game {game} has {count} investigating ticket(s) whose numbers are not confirmed. Please rescan game {code} at every counter and the stock.",
+        "flagged": "Game {game} was counted over by {count} (flagged). Please rescan game {code} at every counter and the stock.",
+        "start": "Rescan game {code}"
+      },
+      "banner": {
+        "active": "Game {game} store-wide rescan in progress, moves paused · {done}/{total} places done (not yet: {pending}) · auto-cancels in {minutes} min",
+        "go": "Go to rescan",
+        "pendingChip": "Game {code} not rescanned here yet"
+      },
+      "start": {
+        "title": "Start a store-wide rescan of {game}?",
+        "before": "Before starting, finish any ongoing shift checkout or stocktake at each counter, and count game {code} first.",
+        "places": "Places to scan",
+        "placesValue": "{names} ({count})",
+        "during": "Moves of {code} are paused during the rescan; everything else works as usual. It ends when every place is done, and is cancelled automatically after 1 hour without any scan.",
+        "cancel": "Cancel",
+        "submit": "Start rescan"
+      },
+      "page": {
+        "title": "Store-wide rescan · {game}",
+        "started": "Started by {name} at {time}",
+        "cancel": "Cancel rescan",
+        "info": "{done}/{total} places done · started by {name} at {time} · auto-cancels in {minutes} min. Moves of {code} are paused; everything else works as usual.",
+        "placesTitle": "Places (ends when all are done)",
+        "stock": "Stock",
+        "local": "{name} (this device)",
+        "current": "Scanning: {place}",
+        "pickPlace": "Which place are you scanning",
+        "placeHint": "If this place is in a shift checkout or stocktake, submit it before scanning.",
+        "input": "Barcode, camera or ticket number",
+        "add": "Add",
+        "camera": "Camera",
+        "scannedCount": "{count} scanned here",
+        "okRange": "{first}~{last}, {count} tickets",
+        "finishPlace": "Done here",
+        "backToBoard": "Back to board",
+        "loadFailed": "Could not load this rescan. Please reload."
+      },
+      "states": {
+        "pending": "Not scanned",
+        "scanning": "In progress · {name}",
+        "released": "In progress · {name}",
+        "done": "Done · {time} {name}"
+      },
+      "outcomes": {
+        "ok": "OK",
+        "matched": "Matched",
+        "recovered": "Recovered (kept at {place})",
+        "moved": "Place corrected (now at {place})",
+        "sold_here": "Recorded sold but here",
+        "skipped": "Recorded skipped, correct first",
+        "scrapped": "Recorded scrapped, correct first",
+        "locked": "Locked, correct first",
+        "unopened": "Book not opened, not in the rescan",
+        "other_game": "Not game {code}",
+        "not_this_store": "Not this store's ticket",
+        "investigated": "Confirmed missing"
+      },
+      "finish": {
+        "title": "{count} scanned at {place}. Done?",
+        "body": "Unsold {code} tickets recorded at {place} but not scanned this time will be marked as investigating (corrected automatically if scanned at another place).",
+        "continue": "Keep scanning",
+        "confirm": "Done"
+      },
+      "cancelDialog": {
+        "title": "Cancel the rescan?",
+        "body": "Corrections at places already done are kept; other places are left as they are, and moves of {code} resume.",
+        "keep": "Keep rescanning",
+        "confirm": "Cancel rescan"
+      },
+      "done": {
+        "info": "Store-wide rescan finished · {done}/{total} places · ended at {time}; moves of {code} resumed.",
+        "cancelled": "This rescan was cancelled: corrections at places already done are kept, other places are left as they are, and moves of {code} resumed.",
+        "expired": "This rescan had no scans for 1 hour and was cancelled automatically: corrections at places already done are kept, and moves of {code} resumed.",
+        "summaryTitle": "Summary",
+        "matched": "Matched",
+        "matchedValue": "{count} (cost differences listed as match cost adjustments)",
+        "recovered": "Recovered",
+        "soldHere": "Recorded sold but here",
+        "soldHereValue": "{count} ({tickets}, please send a sale reversal request)",
+        "investigated": "Confirmed missing",
+        "toFix": "Correct first",
+        "countValue": "{count} ({tickets})",
+        "none": "None"
+      },
+      "errors": {
+        "placeStocktaking": "{name} is counting this place (since {time}, ends automatically in {minutes} min). Please wait until it is submitted.",
+        "placeBusy": "{name} is scanning this place. Please pick another place.",
+        "placeDone": "This place is already done.",
+        "ended": "This rescan has ended.",
+        "notFound": "Ticket not found. Scan again or type the ticket number.",
+        "startRescan": "Game {code} is already being rescanned.",
+        "startRenumber": "A renumbering is in progress; rescans cannot start.",
+        "notCountStore": "Only stores using count stocktakes can run a store-wide rescan.",
+        "duplicate": "#{no} was already scanned."
+      },
+      "enterNotice": {
+        "title": "Game {game} is being rescanned store-wide",
+        "body": "Places not done yet: {places}. {code} at these places can be counted after they are done; count the rest as usual.",
+        "cancel": "Cancel",
+        "continue": "Continue stocktake"
+      },
+      "stocktake": {
+        "tag": "Rescanning",
+        "blocked": "{code} is being rescanned here. Count it after the rescan.",
+        "notice": "{place} · {game}: {code} is being rescanned here. Count it after the rescan."
+      }
     }
   },
   "notifications": {
     "types": {
       "lottery": {
         "daily-close-overdue": "Daily close overdue",
+        "rescan-reminder": "Store-wide rescan reminder",
         "transfer-shipped": "Transfer shipped",
         "license-expiring": "License expiring",
         "store-rent-due": "Store rent due",

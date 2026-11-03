@@ -41,6 +41,8 @@ export interface CashPointHeaderProps {
   stats: readonly CashPointHeaderStat[];
   /** 按鈕列(依序;同一收銀點的各功能各自追加,Spec #104 第 3 節第 9 批) */
   actions: readonly CashPointHeaderAction[];
+  /** 狀態標籤後面的提醒標籤(例:全店重刷「這裡還沒刷遊戲 X」;張數店規格 13.2) */
+  notices?: readonly string[];
 }
 
 /**
@@ -58,6 +60,7 @@ export const CashPointHeader = ({
   detailActionLabel,
   stats,
   actions,
+  notices = [],
 }: CashPointHeaderProps) => (
   <Card
     variant="outlined"
@@ -77,6 +80,9 @@ export const CashPointHeader = ({
         </Typography>
         {localLabel === null ? null : <Tag tone="primary" label={localLabel} />}
         <Tag tone={isOpen ? "success" : "grey"} label={statusLabel} />
+        {notices.map((notice) => (
+          <Tag key={notice} tone="warning" label={notice} />
+        ))}
       </Stack>
       {detail === null ? null : (
         <Box

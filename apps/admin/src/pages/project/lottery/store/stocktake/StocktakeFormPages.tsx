@@ -26,6 +26,7 @@ import { useSession } from "@/hooks/base/useSession";
 import { useUrlState } from "@/hooks/base/useUrlState";
 import type { ModulePageProps } from "@/lib/base/module-tree";
 
+import { RescanPage } from "../rescan/RescanPage";
 import { StocktakeWorkspace } from "./StocktakeWorkspace";
 
 const orgSchema = z.string().default("");
@@ -67,7 +68,7 @@ const useLeave = () => {
 /**
  * 臨時盤點(盤點確認申請的新增頁;規格 6.8、8.6;Figma ST-13 / 14 / 15):`?org=` 分店(預設目前組織)、
  * `?scope=` 單一收銀點(空 = 全店,ST-16 選)、`?session=` 看板登記好的盤點中登記(張數店規格 8.5a;進度存在登記上,
- * 重新整理可 [繼續])。[送出盤點確認申請] 以表單引擎建立並送出申請,盤點單由掛接點在同一個交易建立(同時解除登記)。
+ * 重新整理可 [繼續])、`?rescan=` 全店重刷頁(張數店規格 8.4)。[送出盤點確認申請] 以表單引擎建立並送出申請,盤點單由掛接點在同一個交易建立(同時解除登記)。
  */
 export const StocktakeCreatePage = () => {
   const t = useTranslations("admin.lotteryStore.stocktake");
@@ -75,6 +76,7 @@ export const StocktakeCreatePage = () => {
   const [orgParam] = useUrlState("org", orgSchema);
   const [scope] = useUrlState("scope", scopeSchema);
   const [sessionParam] = useUrlState("session", scopeSchema);
+  const [rescanParam] = useUrlState("rescan", scopeSchema);
   const orgId = orgParam === "" ? (me.data?.me.currentOrg?.id ?? "") : orgParam;
   const draftState = useFormDraft(STOCKTAKE_CONFIRM_FORM_KEY);
   const errorText = useAdminErrorText("admin.formEngine.errors");
@@ -82,6 +84,26 @@ export const StocktakeCreatePage = () => {
   useRouteTabItemLabel(t("page.tabLabel"));
   if (orgId === "") {
     return null;
+  }
+  // 全店重刷頁(張數店規格 8.4;Figma CS-10b):同一個頁籤「盤點」,`?rescan=` 那一次重刷
+  if (rescanParam !== "") {
+    return (
+      <Card
+        sx={{
+          flex: 1,
+          minHeight: 0,
+          overflow: "auto",
+          px: { xs: 1.5, sm: 3 },
+          py: 2.5,
+        }}
+      >
+        <RescanPage
+          orgId={orgId}
+          rescanId={rescanParam}
+          onLeave={leave.toList}
+        />
+      </Card>
+    );
   }
   return (
     <Card

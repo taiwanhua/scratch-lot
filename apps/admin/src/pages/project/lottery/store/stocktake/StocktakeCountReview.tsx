@@ -94,7 +94,9 @@ export const StocktakeCountReview = ({
       return t("result.match");
     }
     if (line.kind === "over") {
-      return group.flagged ? t("result.flag") : t("result.none");
+      return group.flagged
+        ? t("result.flag", { code: line.gameCode })
+        : t("result.none");
     }
     const parts: string[] = [];
     if (group.saleCount > 0) {

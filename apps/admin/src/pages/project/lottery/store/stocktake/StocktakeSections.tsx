@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { useTranslations } from "use-intl";
 
 import {
@@ -116,6 +117,8 @@ export interface LostSectionProps {
   /** 有 `store.confirm-lost` 才有「確認遺失」 */
   canConfirmLost: boolean;
   onChange: (bookId: string, choice: LostChoice | null) => void;
+  /** 清單上方的全店重刷提醒(張數店規格 8.3;Figma CS-09b) */
+  notice?: ReactNode;
 }
 
 const DEFAULT_LOST: LostChoice = {
@@ -134,6 +137,7 @@ export const LostSection = ({
   state,
   canConfirmLost,
   onChange,
+  notice = null,
 }: LostSectionProps) => {
   const t = useTranslations("admin.lotteryStore.stocktake.lost");
   const temporal = useTemporalText();
@@ -190,6 +194,7 @@ export const LostSection = ({
         <Typography variant="subtitle1" component="h2">
           {t("title")}
         </Typography>
+        {notice}
         {groups.length === 0 ? (
           <Typography variant="body2" color="textSecondary">
             {t("empty")}

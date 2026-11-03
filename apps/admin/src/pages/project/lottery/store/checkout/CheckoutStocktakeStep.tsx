@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useTranslations } from "use-intl";
 
 import {
@@ -22,6 +23,9 @@ import { usePermissions } from "@/hooks/base/usePermissions";
 import { useTemporalText } from "@/hooks/base/useTemporalText";
 
 import type { RedemptionFlow } from "../redemption/useRedemptionFlow";
+import { RescanEnterNotice } from "../rescan/RescanEnterNotice";
+import { rescansToNotice } from "../rescan/rescan-model";
+import { useRescanBlocks } from "../rescan/useRescanBlocks";
 import { StocktakeCountStep } from "../stocktake/StocktakeCountStep";
 import { StocktakeReviewStep } from "../stocktake/StocktakeReviewStep";
 import {
@@ -164,6 +168,10 @@ const CountingArea = ({
  */
 export const CheckoutStocktakeStep = (props: CheckoutStocktakeStepProps) => {
   const { flow, texts } = props;
+  // 選「現在盤點」時有全店重刷進行中 → 先跳 8.5a 的提醒(只列自己這台;只提醒、不擋;Figma ST-16-2)
+  const blocks = useRescanBlocks(props.orgId);
+  const rescanNotices = rescansToNotice(blocks.rescans, props.scopeCashPointId);
+  const [noticeOpen, setNoticeOpen] = useState(false);
   const t = useTranslations("admin.lotteryStore.checkout.stocktake");
   const temporal = useTemporalText();
   const reusable = props.reusable;
@@ -193,9 +201,14 @@ export const CheckoutStocktakeStep = (props: CheckoutStocktakeStepProps) => {
             value={flow.stocktakeMode}
             onChange={(event) => {
               const next = event.target.value;
-              if (isMode(next)) {
-                flow.setStocktakeMode(next);
+              if (!isMode(next)) {
+                return;
               }
+              if (next === "new" && rescanNotices.length > 0) {
+                setNoticeOpen(true);
+                return;
+              }
+              flow.setStocktakeMode(next);
             }}
           >
             <ModeOption
@@ -252,6 +265,17 @@ export const CheckoutStocktakeStep = (props: CheckoutStocktakeStepProps) => {
         <StocktakeSessionNotices link={session} />
       ) : null}
       {flow.stocktakeMode === "new" ? <CountingArea {...props} /> : null}
+      <RescanEnterNotice
+        notices={rescanNotices}
+        open={noticeOpen}
+        onCancel={() => {
+          setNoticeOpen(false);
+        }}
+        onContinue={() => {
+          setNoticeOpen(false);
+          flow.setStocktakeMode("new");
+        }}
+      />
       {/* ST-17a-2b 重新整理後 [繼續] [放棄] */}
       <ResumeSessionDialog
         session={

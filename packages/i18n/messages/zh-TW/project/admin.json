@@ -4065,7 +4065,7 @@
         "result": {
           "match": "沒有差異",
           "none": "還沒處理",
-          "flag": "標記異常:張的狀態不動",
+          "flag": "標記異常:張的狀態不動,觸發全店重刷 {code} 提醒",
           "saleOpen": "算售出 {count} 張:算進{cashPoint}這一班,應有現金 {amount}(張號系統預設帶入)",
           "saleClosed": "算售出 {count} 張記成{cashPoint} {time} 班的事後更正 {amount}",
           "investigate": "待查 {count} 張(系統預設帶入,責任分店 = {store})"
@@ -4544,12 +4544,123 @@
       "hint": "拿任意 {count} 張放到{to}就好,張號由系統預設帶入;之後刷到實體會自動更正。",
       "submit": "移櫃",
       "success": "已從 {from} 移 {count} 張遊戲 {game} 到 {to}"
+    },
+    "rescan": {
+      "reminder": {
+        "investigate": "遊戲 {game} 有 {count} 張待查還沒確認是哪張,請把全店(各收銀台和庫存)的遊戲 {code} 都刷一次。",
+        "flagged": "遊戲 {game} 盤點多出 {count} 張(標記異常),請把全店(各收銀台和庫存)的遊戲 {code} 都刷一次。",
+        "start": "全店重刷 遊戲 {code}"
+      },
+      "banner": {
+        "active": "遊戲 {game} 全店重刷中,暫停移櫃 · 已刷 {done}/{total} 個位置(還沒刷:{pending})· 剩 {minutes} 分鐘自動取消",
+        "go": "前往重刷",
+        "pendingChip": "這裡還沒刷遊戲 {code}"
+      },
+      "start": {
+        "title": "開始全店重刷 {game}?",
+        "before": "開始前請各收銀點先完成正在進行的交班或盤點,並先盤點遊戲 {code}。",
+        "places": "要刷的位置",
+        "placesValue": "{names}({count} 個)",
+        "during": "重刷中暫停 {code} 的移櫃,其他操作照常;全部位置刷完才結束,1 小時沒有任何位置刷到會自動取消。",
+        "cancel": "取消",
+        "submit": "開始全店重刷"
+      },
+      "page": {
+        "title": "全店重刷 · {game}",
+        "started": "{name} {time} 開始",
+        "cancel": "取消重刷",
+        "info": "已刷 {done}/{total} 個位置 · {name} {time} 開始 · 剩 {minutes} 分鐘自動取消。重刷中暫停 {code} 的移櫃,其他照常。",
+        "placesTitle": "位置(全部刷完才結束)",
+        "stock": "庫存",
+        "local": "{name}(本機)",
+        "current": "現在刷:{place}",
+        "pickPlace": "現在刷哪個位置",
+        "placeHint": "如果這個位置正在交班或盤點,請先送出再刷。",
+        "input": "刷條碼、相機或手輸張號",
+        "add": "加入",
+        "camera": "相機",
+        "scannedCount": "這裡已刷 {count} 張",
+        "okRange": "{first}~{last} 等 {count} 張",
+        "finishPlace": "這裡刷完了",
+        "backToBoard": "回到看板",
+        "loadFailed": "讀不到這次全店重刷,請重新整理。"
+      },
+      "states": {
+        "pending": "還沒刷",
+        "scanning": "刷到一半 · {name}",
+        "released": "刷到一半 · {name}",
+        "done": "刷完 · {time} {name}"
+      },
+      "outcomes": {
+        "ok": "沒問題",
+        "matched": "已對號",
+        "recovered": "已尋回(留在{place})",
+        "moved": "位置已更正(記到{place})",
+        "sold_here": "記已售但還在",
+        "skipped": "記跳號,要先更正",
+        "scrapped": "記報廢,要先更正",
+        "locked": "鎖定中,要先更正",
+        "unopened": "這本還沒拆,不在重刷範圍",
+        "other_game": "不是遊戲 {code}",
+        "not_this_store": "不是本店的張",
+        "investigated": "確定待查"
+      },
+      "finish": {
+        "title": "{place}刷到 {count} 張,確定刷完了?",
+        "body": "按下後,系統記在{place}、這次沒刷到的 {code} 未售會記成待查(之後別的位置刷到會自動更正)。",
+        "continue": "繼續刷",
+        "confirm": "刷完了"
+      },
+      "cancelDialog": {
+        "title": "取消重刷?",
+        "body": "已按「這裡刷完了」的位置更正保留、不退回,其餘位置不處理,{code} 的移櫃恢復。",
+        "keep": "繼續重刷",
+        "confirm": "取消重刷"
+      },
+      "done": {
+        "info": "全店重刷完成 · {done}/{total} 個位置 · {time} 結束;{code} 的移櫃已恢復。",
+        "cancelled": "這次全店重刷已取消:已刷完的位置的更正保留,其餘位置不處理,{code} 的移櫃已恢復。",
+        "expired": "這次全店重刷 1 小時沒有任何位置刷到,已自動取消:已刷完的位置的更正保留,{code} 的移櫃已恢復。",
+        "summaryTitle": "結果摘要",
+        "matched": "已對號",
+        "matchedValue": "{count} 張(成本差額列對號成本調整)",
+        "recovered": "已尋回",
+        "soldHere": "記已售但還在",
+        "soldHereValue": "{count} 張({tickets},請送撤銷售出申請)",
+        "investigated": "確定待查",
+        "toFix": "要先更正",
+        "countValue": "{count} 張({tickets})",
+        "none": "沒有"
+      },
+      "errors": {
+        "placeStocktaking": "這個位置正在由 {name} 盤點({time} 開始,剩 {minutes} 分鐘自動結束),請等他送出。",
+        "placeBusy": "這個位置正在由 {name} 刷,請選別的位置。",
+        "placeDone": "這個位置已經刷完了。",
+        "ended": "這次全店重刷已結束。",
+        "notFound": "找不到這張刮刮樂,請再刷一次或手輸張號。",
+        "startRescan": "遊戲 {code} 已在重刷中,不能重刷。",
+        "startRenumber": "補點編號中,不能重刷。",
+        "notCountStore": "只有張數盤點的店可以全店重刷。",
+        "duplicate": "#{no} 已經刷過了。"
+      },
+      "enterNotice": {
+        "title": "遊戲 {game} 正在全店重刷",
+        "body": "還沒刷完的位置:{places};這些位置的 {code} 要等刷完才能數,其他照常盤。",
+        "cancel": "取消",
+        "continue": "繼續盤點"
+      },
+      "stocktake": {
+        "tag": "重刷中",
+        "blocked": "這裡正在重刷 {code},刷完再數。",
+        "notice": "{place} · {game}:這裡正在重刷 {code},刷完再數。"
+      }
     }
   },
   "notifications": {
     "types": {
       "lottery": {
         "daily-close-overdue": "日結逾期",
+        "rescan-reminder": "全店重刷提醒",
         "transfer-shipped": "調貨出貨通知",
         "license-expiring": "證照到期",
         "store-rent-due": "牌租繳費提醒",

@@ -28,6 +28,8 @@ import { usePermissions } from "@/hooks/base/usePermissions";
 import { useSession } from "@/hooks/base/useSession";
 import { useTemporalText } from "@/hooks/base/useTemporalText";
 
+import { RescanEnterNotice } from "../rescan/RescanEnterNotice";
+import { type RescanBrief, rescansToNotice } from "../rescan/rescan-model";
 import { ResumeSessionDialog } from "./StocktakeSessionNotices";
 import { useBlockedText, useSessionPlaceText } from "./session-text";
 import {
@@ -55,6 +57,8 @@ export interface StocktakeEntry {
 export const useStocktakeEntry = (
   orgId: string,
   cashPoints: readonly { id: string; name: string }[],
+  /** 進行中的全店重刷:按 [開始盤點] 先跳 8.5a 的提醒(只提醒、不擋;Figma ST-16-2) */
+  rescans: readonly RescanBrief[] = [],
 ): StocktakeEntry => {
   const t = useTranslations("admin.lotteryStore.stocktake");
   const { session } = useSession();
@@ -71,6 +75,7 @@ export const useStocktakeEntry = (
   const [confirmEnd, setConfirmEnd] = useState(false);
   const [dismissed, setDismissed] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
+  const [noticeOpen, setNoticeOpen] = useState(false);
   const status = useLotteryStocktakeStatusQuery(
     session.client,
     { orgId },
@@ -144,6 +149,11 @@ export const useStocktakeEntry = (
       .mutateAsync({ input: { orgId, sessionId: target.sessionId } })
       .then(() => sessions.refetch());
 
+  const rescanNotices = rescansToNotice(
+    rescans,
+    mode === "cashPoint" && cashPointId !== "" ? cashPointId : null,
+  );
+
   const startedText = (target: StocktakeSessionView) =>
     temporal(target.startedAt, "monthDayTime").split(" ").at(-1) ?? "";
 
@@ -200,7 +210,14 @@ export const useStocktakeEntry = (
                   (mode === "cashPoint" && cashPointId === "") ||
                   startSession.isPending
                 }
-                onClick={start}
+                onClick={() => {
+                  if (rescanNotices.length > 0) {
+                    setOpen(false);
+                    setNoticeOpen(true);
+                  } else {
+                    start();
+                  }
+                }}
               >
                 {t("scope.start")}
               </Button>
@@ -252,6 +269,18 @@ export const useStocktakeEntry = (
             ) : null}
           </Stack>
         </Dialog>
+        {/* ST-16-2 全店重刷進行中的提醒(只提醒、不擋) */}
+        <RescanEnterNotice
+          notices={rescanNotices}
+          open={noticeOpen}
+          onCancel={() => {
+            setNoticeOpen(false);
+          }}
+          onContinue={() => {
+            setNoticeOpen(false);
+            start();
+          }}
+        />
         {/* ST-13-2c 不能開始盤點 */}
         <Dialog
           open={blocked !== null && !confirmEnd}

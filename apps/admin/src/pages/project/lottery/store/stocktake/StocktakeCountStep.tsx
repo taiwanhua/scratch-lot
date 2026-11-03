@@ -5,6 +5,7 @@ import { Button } from "@repo/ui/button";
 import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
 
+import { useStocktakeRescan } from "../rescan/useStocktakeRescan";
 import { StocktakeBookList } from "./StocktakeBookList";
 import { StocktakeBookPanel } from "./StocktakeBookPanel";
 import { StocktakeCountGroupPanel } from "./StocktakeCountGroupPanel";
@@ -46,6 +47,13 @@ export const StocktakeCountStep = ({
   const t = useTranslations("admin.lotteryStore.stocktake");
   const { books, countGroups, current, currentGroup, currentKey, itemKeys } =
     flow;
+  // 全店重刷(張數店規格 8.5a B5、8.3;Figma CS-09b):正在重刷的組變灰、不能數;待查清單上方的重刷提醒
+  const rescan = useStocktakeRescan(
+    sheet.orgId,
+    sheet.cashPoints,
+    scopeCashPointId,
+    t("stock.name"),
+  );
   const pointName = (id: string) =>
     placeNameOf(sheet.cashPoints, id, t("stock.name"));
   const nav = stocktakeNavKeysOf(itemKeys, currentKey, flow.isCounted);
@@ -73,6 +81,7 @@ export const StocktakeCountStep = ({
 
   return (
     <>
+      {rescan.notices}
       <Stack direction="row" spacing={2} sx={{ alignItems: "center" }}>
         <Typography variant="subtitle2" sx={{ whiteSpace: "nowrap" }}>
           {t(progressKey, { done: nav.counted, total })}
@@ -122,6 +131,8 @@ export const StocktakeCountStep = ({
           onSelect={flow.select}
           onRedeem={onRedeem}
           isNarrow={isNarrow}
+          isGroupBlocked={rescan.groupBlocked}
+          isBookBlocked={rescan.bookBlocked}
         />
         <Stack spacing={2} sx={{ minWidth: 0 }}>
           {currentGroup !== undefined && currentKey !== null ? (
@@ -139,9 +150,13 @@ export const StocktakeCountStep = ({
               onPrev={goPrev}
               onNext={goNext}
               nextIsReview={nextIsReview}
+              rescanningCode={rescan.groupCode(currentGroup)}
             />
           ) : null}
-          {current !== undefined && currentKey !== null ? (
+          {rescan.bookNotice(current)}
+          {current !== undefined &&
+          currentKey !== null &&
+          !rescan.bookBlocked(current) ? (
             <StocktakeBookPanel
               key={currentKey}
               book={current}
@@ -183,6 +198,7 @@ export const StocktakeCountStep = ({
                 state={state}
                 canConfirmLost={canConfirmLost}
                 onChange={flow.setLost}
+                notice={rescan.reminders}
               />
             </>
           ) : null}
@@ -206,6 +222,7 @@ export const StocktakeCountStep = ({
           {t("page.review")}
         </Button>
       </Stack>
+      {rescan.element}
     </>
   );
 };
