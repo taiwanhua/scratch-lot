@@ -47,7 +47,7 @@ describe("刮刮樂設定", () => {
     ]);
     const [countMode, required] = rows;
     expect(within(countMode).getAllByText("編號盤點")).not.toHaveLength(0);
-    expect(within(countMode).getByText("程式預設")).toBeInTheDocument();
+    expect(within(countMode).getByText("沿用:程式預設")).toBeInTheDocument();
     expect(within(required).getByText("沿用:好運彩券行")).toBeInTheDocument();
     expect(
       within(countMode).getByRole("button", { name: "自訂" }),

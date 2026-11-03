@@ -4345,7 +4345,7 @@
       "ownTop": "本層自訂",
       "inherited": "沿用:{org}",
       "inheritedHidden": "沿用上層設定",
-      "default": "程式預設"
+      "default": "沿用:程式預設"
     },
     "dialog": {
       "title": "{label} · {org}",

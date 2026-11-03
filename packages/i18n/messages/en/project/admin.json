@@ -4345,7 +4345,7 @@
       "ownTop": "Customized at this level",
       "inherited": "Inherited: {org}",
       "inheritedHidden": "Inherited from upper level",
-      "default": "Built-in default"
+      "default": "Inherited: built-in default"
     },
     "dialog": {
       "title": "{label} · {org}",

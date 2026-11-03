@@ -32,7 +32,7 @@ export const settingValueText = (
 
 /**
  * 來源那一欄的文字(照排班規則):本層自訂 →「本店自訂」(最上層組織「本層自訂」);
- * 沿用 →「沿用:<上層組織名稱>」,看不到上層 →「沿用上層設定」;都沒設 →「程式預設」。
+ * 沿用 →「沿用:<上層組織名稱>」,看不到上層 →「沿用上層設定」;都沒設 →「沿用:程式預設」(Figma CS-50a)。
  */
 export const settingSourceText = (
   t: SettingTranslate,
