@@ -6,7 +6,9 @@ import {
   type MatchTicket,
   countDiffOf,
   countModeOf,
+  countSaleLinesProblemOf,
   matchPartnerOf,
+  matchPlacesOf,
   pickForCountSale,
   pickForReversal,
   renumberDueOf,
@@ -239,4 +241,77 @@ describe("張數盤點的差異(規格 8.2 countDiffOf)", () => {
       expect(shortSplitProblemOf(short, sale, investigate)).toBe(expected);
     },
   );
+});
+
+describe("對號去哪裡找配對張(規格 6.3 matchPlacesOf;16.3 M2)", () => {
+  const a = { locationKind: "counter" as const, cashPointId: "a" };
+  const b = { locationKind: "counter" as const, cashPointId: "b" };
+  const stock = { locationKind: "stock" as const, cashPointId: null };
+
+  it.each([
+    ["sale", { scanned: a, system: b }, [a, b]],
+    ["sale", { scanned: a, system: a }, [a]],
+    ["sale", { scanned: null, system: b }, [b]],
+    ["recall", { source: a, scanned: b, system: b }, [a]],
+    ["move", { source: b, system: a }, [b]],
+    ["transfer", { system: a }, [stock]],
+    ["scrap", { system: a }, [stock]],
+    ["renumber", { counting: b, system: a }, [b]],
+    ["rescan", { counting: stock, system: a }, [stock]],
+  ] as const)("%s %o → %o", (operation, facts, expected) => {
+    expect(matchPlacesOf(operation, facts)).toEqual(expected);
+  });
+
+  it("在途不能當配對的位置", () => {
+    expect(
+      matchPlacesOf("sale", {
+        scanned: a,
+        system: { locationKind: "in_transit", cashPointId: null },
+      }),
+    ).toEqual([a]);
+  });
+});
+
+describe("依張數賣送出前的檢查(規格 7.2、13.1 countSaleLinesProblemOf;16.4 SA1)", () => {
+  const available = new Map([
+    ["g1", 3],
+    ["g2", 1],
+  ]);
+
+  it("每列不超過剩餘 → 可以", () => {
+    expect(
+      countSaleLinesProblemOf(
+        [
+          { gameId: "g1", count: 3 },
+          { gameId: "g2", count: 1 },
+        ],
+        available,
+      ),
+    ).toBeNull();
+  });
+
+  it("沒有列 / 同遊戲兩列 / 張數不是正整數 / 超過剩餘 → 不行", () => {
+    expect(countSaleLinesProblemOf([], available)).toEqual({ kind: "empty" });
+    expect(
+      countSaleLinesProblemOf(
+        [
+          { gameId: "g1", count: 1 },
+          { gameId: "g1", count: 1 },
+        ],
+        available,
+      ),
+    ).toEqual({ kind: "duplicate_game", gameId: "g1" });
+    expect(
+      countSaleLinesProblemOf([{ gameId: "g1", count: 0 }], available),
+    ).toEqual({ kind: "invalid_count", gameId: "g1" });
+    expect(
+      countSaleLinesProblemOf([{ gameId: "g1", count: 1.5 }], available),
+    ).toEqual({ kind: "invalid_count", gameId: "g1" });
+    expect(
+      countSaleLinesProblemOf([{ gameId: "g1", count: 4 }], available),
+    ).toEqual({ kind: "exceeds", gameId: "g1", available: 3 });
+    expect(
+      countSaleLinesProblemOf([{ gameId: "g9", count: 1 }], available),
+    ).toEqual({ kind: "exceeds", gameId: "g9", available: 0 });
+  });
 });

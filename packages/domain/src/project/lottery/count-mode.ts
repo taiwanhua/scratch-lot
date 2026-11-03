@@ -348,3 +348,106 @@ export function storeBusyOf(
   };
   return busy.stocktake || busy.rescan || busy.renumber ? busy : null;
 }
+
+/**
+ * 對號發生在哪一種操作(張數店規格 6.3 表的列):看板刷條碼賣與 [標記售出] / 收回 / 刷條碼移櫃 / 調貨 / 報廢 /
+ * 補點編號 / 全店重刷。撤銷售出(刷退的票)不找未售的配對張,另見 `pickForReversal`(7.3)。
+ */
+export const MATCH_OPERATIONS = [
+  "sale",
+  "recall",
+  "move",
+  "transfer",
+  "scrap",
+  "renumber",
+  "rescan",
+] as const;
+export type MatchOperation = (typeof MATCH_OPERATIONS)[number];
+
+/** 找配對張要用到的位置(呼叫端有的才給)。 */
+export interface MatchPlaceFacts {
+  /** 刷的那台(看板的本機收銀點) */
+  scanned?: CountPlace | null;
+  /** 刷到的張系統記的位置 */
+  system?: CountPlace | null;
+  /** 收回、刷條碼移櫃的來源台 */
+  source?: CountPlace | null;
+  /** 補點編號、全店重刷正在盤的位置 */
+  counting?: CountPlace | null;
+}
+
+const STOCK_PLACE: CountPlace = {
+  locationKind: TICKET_LOCATION_KIND.stock,
+  cashPointId: null,
+};
+
+/**
+ * 對號時依序去哪裡找配對張(張數店規格 6.3):看板賣 → 刷的那台、找不到再找系統記的位置;收回、刷條碼移櫃 →
+ * 來源台;調貨、報廢 → 庫存;補點編號、全店重刷 → 正在盤的位置。沒給的位置略過、同一個位置只列一次。
+ */
+export function matchPlacesOf(
+  operation: MatchOperation,
+  facts: MatchPlaceFacts,
+): CountPlace[] {
+  const listed: (CountPlace | null | undefined)[] = {
+    sale: [facts.scanned, facts.system],
+    recall: [facts.source],
+    move: [facts.source],
+    transfer: [STOCK_PLACE],
+    scrap: [STOCK_PLACE],
+    renumber: [facts.counting],
+    rescan: [facts.counting],
+  }[operation];
+  const places: CountPlace[] = [];
+  for (const place of listed) {
+    if (
+      place != null &&
+      place.locationKind !== TICKET_LOCATION_KIND.inTransit &&
+      !places.some((other) => samePlace(other, place))
+    ) {
+      places.push(place);
+    }
+  }
+  return places;
+}
+
+/** 依張數賣的一列:遊戲 × 張數(張數店規格 7.2、13.1)。 */
+export interface CountSaleLine {
+  gameId: string;
+  count: number;
+}
+
+/** 依張數賣的檢查結果;可以賣 = null。 */
+export type CountSaleLinesProblem =
+  | { kind: "empty" }
+  | { kind: "duplicate_game"; gameId: string }
+  | { kind: "invalid_count"; gameId: string }
+  | { kind: "exceeds"; gameId: string; available: number };
+
+/**
+ * 依張數賣送出前的檢查(張數店規格 7.2、13.1):至少一列;同一個遊戲不能兩列;張數是 1 以上的整數;
+ * 不超過這個收銀點這個遊戲的未售張數(`available`,沒列到 = 0)。
+ */
+export function countSaleLinesProblemOf(
+  lines: readonly CountSaleLine[],
+  available: ReadonlyMap<string, number>,
+): CountSaleLinesProblem | null {
+  if (lines.length === 0) {
+    return { kind: "empty" };
+  }
+  const seen = new Set<string>();
+  for (const line of lines) {
+    if (seen.has(line.gameId)) {
+      return { kind: "duplicate_game", gameId: line.gameId };
+    }
+    seen.add(line.gameId);
+    if (!Number.isInteger(line.count) || line.count < 1) {
+      return { kind: "invalid_count", gameId: line.gameId };
+    }
+    const left = available.get(line.gameId) ?? 0;
+    if (line.count > left) {
+      return { kind: "exceeds", gameId: line.gameId, available: left };
+    }
+  }
+  return null;
+}
