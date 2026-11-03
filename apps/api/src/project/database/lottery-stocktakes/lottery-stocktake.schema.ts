@@ -2,17 +2,21 @@ import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
 import { Schema as MongooseSchema, type Types } from "mongoose";
 
 import {
+  STOCKTAKE_COUNT_MODES,
   STOCKTAKE_DIFF_ACTIONS,
   STOCKTAKE_DIFF_KINDS,
   STOCKTAKE_LOST_ACTIONS,
   STOCKTAKE_METHODS,
+  STOCKTAKE_PURPOSES,
   STOCKTAKE_STATUSES,
   STOCKTAKE_TYPES,
   STORE_KEY,
+  type StocktakeCountMode,
   type StocktakeDiffAction,
   type StocktakeDiffKind,
   type StocktakeLostAction,
   type StocktakeMethod,
+  type StocktakePurpose,
   type StocktakeStatus,
   type StocktakeType,
 } from "@repo/domain/project/lottery";
@@ -50,6 +54,42 @@ export interface StocktakeLine {
   /** 實盤(點到 / 刷到的張數)。 */
   presentTicketNos: string[];
   diffs: StocktakeDiffRow[];
+}
+
+/**
+ * 張數盤點的一組「遊戲 × 收銀點」(張數店規格 5.4 `countLines[]`、8.1、8.2、13.1)。
+ * `diffs[]` 共用 `DIFF_TYPE`:[算售出] 送出時記挑到的每一張(立即生效的那幾筆);[待查] 核准時才挑張,
+ * 挑到的每一張在核准時加進來。
+ */
+export interface StocktakeCountLine {
+  gameId: Types.ObjectId;
+  gameCode: string;
+  gameName: string;
+  cashPointId: Types.ObjectId;
+  countedAt: Date;
+  /** 開始數那一刻這個收銀點這個遊戲的未售張數。 */
+  systemCount: number;
+  /** 實際剩幾張(最後一次輸入)。 */
+  presentCount: number;
+  /** 之前的每次輸入([重數] 前的數字;店長看得到「第一次數 11、改成 12」)。 */
+  recounts: number[];
+  /** [算售出] 的張數。 */
+  saleCount: number;
+  /** [算售出] 寫的售出事件的 `refId`(退回後再送出時核對是自己算售出的)。 */
+  saleRefIds: Types.ObjectId[];
+  /** [待查] 的張數(核准時照挑張順序挑張記待查·未對號)。 */
+  investigateCount: number;
+  /** 多出 [標記異常] 的張數(只做記號)。 */
+  flaggedCount: number;
+  diffs: StocktakeDiffRow[];
+}
+
+/** 送出時盤點範圍內還沒數的組(張數盤點;比照 `uncountedBooks[]`)。 */
+export interface StocktakeUncountedGroup {
+  gameId: Types.ObjectId;
+  gameCode: string;
+  gameName: string;
+  cashPointId: Types.ObjectId;
 }
 
 /** 未拆的本:在 / 不在(不在 → 完成時待查)。 */
@@ -96,7 +136,7 @@ export interface StocktakeSummary {
   flagged: number;
   confirmLost: number;
   confirmLostCost: number;
-  /** 送出時還沒盤的本數(`uncountedBooks.length`;報表讀這裡)。 */
+  /** 送出時還沒盤的本數(`uncountedBooks.length`,張數盤點另加還沒數的組 `uncountedGroups.length`;報表讀這裡)。 */
   uncountedCount: number;
 }
 
@@ -125,6 +165,31 @@ const LINE_TYPE = {
   systemCount: { type: Number, default: 0 },
   presentTicketNos: { type: [String], default: [] },
   diffs: { type: [DIFF_TYPE], default: [] },
+};
+
+const COUNT_LINE_TYPE = {
+  _id: false,
+  gameId: { type: OBJECT_ID, required: true },
+  gameCode: { type: String, required: true },
+  gameName: { type: String, default: "" },
+  cashPointId: { type: OBJECT_ID, required: true },
+  countedAt: { type: Date, required: true },
+  systemCount: { type: Number, default: 0 },
+  presentCount: { type: Number, default: 0 },
+  recounts: { type: [Number], default: [] },
+  saleCount: { type: Number, default: 0 },
+  saleRefIds: { type: [OBJECT_ID], default: [] },
+  investigateCount: { type: Number, default: 0 },
+  flaggedCount: { type: Number, default: 0 },
+  diffs: { type: [DIFF_TYPE], default: [] },
+};
+
+const UNCOUNTED_GROUP_TYPE = {
+  _id: false,
+  gameId: { type: OBJECT_ID, required: true },
+  gameCode: { type: String, required: true },
+  gameName: { type: String, default: "" },
+  cashPointId: { type: OBJECT_ID, required: true },
 };
 
 const UNOPENED_TYPE = {
@@ -249,8 +314,20 @@ export class LotteryStocktake {
   @Prop({ type: OBJECT_ID, required: true })
   submissionId!: Types.ObjectId;
 
+  /** 盤點制度(張數店規格 5.4;送出時定;舊資料沒有 = 編號盤點)。 */
+  @Prop({ type: String, enum: STOCKTAKE_COUNT_MODES, default: "numbered" })
+  countMode!: StocktakeCountMode;
+
+  /** 用途:一般 / 補點編號 / 全店重刷(交班 / 日結 / 臨時是入口 `type`)。 */
+  @Prop({ type: String, enum: STOCKTAKE_PURPOSES, default: "normal" })
+  purpose!: StocktakePurpose;
+
   @Prop({ type: [LINE_TYPE], default: [] })
   lines!: StocktakeLine[];
+
+  /** 張數盤點的「遊戲 × 收銀點」(編號盤點 = 空;庫存照舊在 `lines` 逐張)。 */
+  @Prop({ type: [COUNT_LINE_TYPE], default: [] })
+  countLines!: StocktakeCountLine[];
 
   @Prop({ type: [UNOPENED_TYPE], default: [] })
   unopenedLines!: StocktakeUnopenedLine[];
@@ -261,6 +338,10 @@ export class LotteryStocktake {
   /** 送出時範圍內還沒盤的本(不比對;沒盤完可以送出)。 */
   @Prop({ type: [UNCOUNTED_TYPE], default: [] })
   uncountedBooks!: StocktakeUncountedBook[];
+
+  /** 張數盤點送出時範圍內還沒數的組(`summary.uncountedCount` 含這些組)。 */
+  @Prop({ type: [UNCOUNTED_GROUP_TYPE], default: [] })
+  uncountedGroups!: StocktakeUncountedGroup[];
 
   @Prop({ type: SUMMARY_TYPE, required: true })
   summary!: StocktakeSummary;

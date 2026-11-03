@@ -943,7 +943,7 @@ describe("刮刮樂設定(GraphQL 端點 + 真 MongoDB)", () => {
   describe("9.1 切換前的檢查:檯面待標註、進行中的盤點 / 重刷 / 補點", () => {
     beforeAll(resetWorld);
 
-    it("改張數:列出檯面上還有待標註的本,不能存", async () => {
+    it("S12(16.7)改張數:列出檯面上還有待標註的本,不能存", async () => {
       await insertPendingSkipBook();
       const listed = await check(hq, minsheng, "count");
       expect(listed.canSave).toBe(false);

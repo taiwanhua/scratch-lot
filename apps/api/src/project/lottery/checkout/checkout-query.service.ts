@@ -200,7 +200,11 @@ export class CheckoutQueryService {
         closed: shift.closedAt !== null,
       },
       canSubmit: this.checkout.canCheckout(operator, grant, shift),
-      canSkipStocktake: grant.has(STORE_PERMISSIONS.skipStocktake),
+      canSkipStocktake: await this.checkout.canSkipStocktake(
+        operator,
+        grant,
+        shift.orgId,
+      ),
       reusableStocktake: reusable,
       redemptions,
       redemptionTotal: redemptionRows.reduce(

@@ -7,6 +7,12 @@ import {
 } from "@nestjs/graphql";
 
 import { LotteryAccountsRefModel } from "../../accounts/models/lottery-bank-account.model";
+import {
+  LotteryStocktakeCountGroupModel,
+  LotteryStocktakeDetailCountLineModel,
+  LotteryStocktakeDetailUncountedGroupModel,
+  LotteryStocktakeReviewCountLineModel,
+} from "./stocktake-count.model";
 
 /** 收銀點的一班(盤點頁每個收銀點旁的應有現金;補登售出算到哪一班)。 */
 @ObjectType("LotteryStocktakeShift")
@@ -141,6 +147,31 @@ export class LotteryStocktakeLostTicketModel {
   /** 怎麼變成待查的:`transfer`(調貨在途刪除)/ `stocktake`(盤點時不在)/ 其他 = null。 */
   @Field(() => String, { nullable: true })
   source!: string | null;
+
+  @Field(() => ID)
+  gameId!: string;
+
+  @Field(() => String)
+  gameName!: string;
+
+  /**
+   * 待查·未對號(張數盤點 [待查] 由系統預設帶入的張號):不提供 [找到了],只有 [確認遺失]、[繼續待查]
+   * (張數店規格 7.9、13.2);依「遊戲 × 來源盤點」一組。
+   */
+  @Field(() => Boolean)
+  unmatched!: boolean;
+
+  /** 來源盤點單(`source = stocktake` 時;未對號依它分組)。 */
+  @Field(() => ID, { nullable: true })
+  sourceId!: string | null;
+
+  /** 來源盤點的類型(`shift` / `daily` / `adhoc`;找不到 = null)。 */
+  @Field(() => String, { nullable: true })
+  sourceType!: string | null;
+
+  /** 待查時在哪個收銀點(張數盤點 [待查] 的那一組;庫存 / 不明 = null)。 */
+  @Field(() => String, { nullable: true })
+  sourceCashPointName!: string | null;
 }
 
 /** 盤點頁(ST-13):收銀點、檯面上的本、未拆的本、待查清單。 */
@@ -167,6 +198,14 @@ export class LotteryStocktakeSheetModel {
 
   @Field(() => [LotteryStocktakeLostTicketModel])
   lostTickets!: LotteryStocktakeLostTicketModel[];
+
+  /** 盤點制度:`numbered`(檯面逐張)/ `count`(張數店與轉換中:檯面數張數,張數店規格 8.1)。 */
+  @Field(() => String)
+  countMode!: string;
+
+  /** 張數盤點的組(收銀點 × 遊戲,依收銀點順序、遊戲);編號盤點 = 空,檯面照舊在 `books`。 */
+  @Field(() => [LotteryStocktakeCountGroupModel])
+  countGroups!: LotteryStocktakeCountGroupModel[];
 }
 
 @ObjectType("LotteryStocktakeSummary")
@@ -266,6 +305,14 @@ export class LotteryStocktakeReviewLineModel {
 export class LotteryStocktakeReviewModel {
   @Field(() => [LotteryStocktakeReviewLineModel])
   lines!: LotteryStocktakeReviewLineModel[];
+
+  /** 張數盤點的組(編號盤點 = 空)。 */
+  @Field(() => [LotteryStocktakeReviewCountLineModel])
+  countLines!: LotteryStocktakeReviewCountLineModel[];
+
+  /** 送出時還沒數的組 / 本(交班盤點的張數店不能沒盤完送出)。 */
+  @Field(() => Int)
+  uncountedCount!: number;
 
   @Field(() => Int)
   staleCount!: number;
@@ -509,6 +556,18 @@ export class LotteryStocktakeDetailModel {
   /** 送出時範圍內還沒盤的本(沒盤完可以送出;不比對)。 */
   @Field(() => [LotteryStocktakeDetailUncountedModel])
   uncountedBooks!: LotteryStocktakeDetailUncountedModel[];
+
+  /** 盤點制度(`numbered` / `count`)。 */
+  @Field(() => String)
+  countMode!: string;
+
+  /** 張數盤點的組(含 [重數] 前的每次輸入)。 */
+  @Field(() => [LotteryStocktakeDetailCountLineModel])
+  countLines!: LotteryStocktakeDetailCountLineModel[];
+
+  /** 張數盤點送出時還沒數的組。 */
+  @Field(() => [LotteryStocktakeDetailUncountedGroupModel])
+  uncountedGroups!: LotteryStocktakeDetailUncountedGroupModel[];
 
   @Field(() => LotteryStocktakeSummaryModel)
   summary!: LotteryStocktakeSummaryModel;

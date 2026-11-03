@@ -49,15 +49,19 @@ import { StoreClock } from "../store/store-clock";
 import { StoreSalesSupport } from "../store/store-sales-support";
 import { pendingSkipCountOfBook } from "../tickets/books.service";
 import type { LotteryStocktakesInput } from "./dto/stocktake.input";
+import type { LotteryStocktakeCountGroupModel } from "./models/stocktake-count.model";
 import type {
   LotteryStocktakeCashPointModel,
   LotteryStocktakeDetailModel,
   LotteryStocktakeListItemModel,
+  LotteryStocktakeLostTicketModel,
   LotteryStocktakeSheetModel,
   LotteryStocktakeStatusModel,
   LotteryStocktakeSummaryModel,
   LotteryStocktakesPayload,
 } from "./models/stocktake.model";
+import { StocktakeCountFacts } from "./stocktake-count-facts";
+import { StocktakeCountService } from "./stocktake-count.service";
 import { forbiddenError, notFoundError } from "./stocktake-error";
 import { StocktakeFacts } from "./stocktake-facts";
 
@@ -78,6 +82,24 @@ const uncountedBooksOf = (
 ): LotteryStocktake["uncountedBooks"] =>
   (record as Partial<Pick<LotteryStocktake, "uncountedBooks">>)
     .uncountedBooks ?? [];
+
+/** 舊資料防禦:張數店以前建立的盤點單沒有 `countMode` / `countLines` / `uncountedGroups`(= 編號盤點)。 */
+const countModeOfRecord = (
+  record: Pick<LotteryStocktake, "countMode">,
+): LotteryStocktake["countMode"] =>
+  (record as Partial<Pick<LotteryStocktake, "countMode">>).countMode ??
+  "numbered";
+
+const countLinesOfRecord = (
+  record: Pick<LotteryStocktake, "countLines">,
+): LotteryStocktake["countLines"] =>
+  (record as Partial<Pick<LotteryStocktake, "countLines">>).countLines ?? [];
+
+const uncountedGroupsOfRecord = (
+  record: Pick<LotteryStocktake, "uncountedGroups">,
+): LotteryStocktake["uncountedGroups"] =>
+  (record as Partial<Pick<LotteryStocktake, "uncountedGroups">>)
+    .uncountedGroups ?? [];
 
 /** 盤點單 → 畫面的彙總(沒有 `inventory.show-cost` 不給成本)。 */
 export function summaryModelOf(
@@ -129,6 +151,24 @@ export function draftOfStocktake(record: LotteryStocktake): string {
       reasonKey: line.reasonKey,
       reasonNote: line.reasonNote,
     })),
+    // 張數盤點:帶回組與每次輸入(退回後再送出;編號盤點不帶,和以前的盤點內容一樣)
+    ...(countModeOfRecord(record) === "count"
+      ? {
+          countMode: "count" as const,
+          purpose: record.purpose,
+          countLines: countLinesOfRecord(record).map((line) => ({
+            gameId: String(line.gameId),
+            cashPointId: String(line.cashPointId),
+            countedAt: line.countedAt.toISOString(),
+            presentCount: line.presentCount,
+            recounts: [...line.recounts],
+            saleCount: line.saleCount,
+            saleRefIds: line.saleRefIds.map(String),
+            investigateCount: line.investigateCount,
+            flagged: line.flaggedCount > 0,
+          })),
+        }
+      : {}),
   });
 }
 
@@ -158,6 +198,8 @@ export class StocktakeQueryService {
     private readonly access: StoreAccess,
     private readonly clock: StoreClock,
     private readonly facts: StocktakeFacts,
+    private readonly countFacts: StocktakeCountFacts,
+    private readonly count: StocktakeCountService,
   ) {}
 
   // ---- 盤點頁 ----
@@ -185,17 +227,26 @@ export class StocktakeQueryService {
       .filter((point) => scopeId === null || point._id.equals(scopeId))
       .toSorted((a, b) => a.order - b.order || byName(a, b));
     const cashPoints = await this.cashPointModels(operator, store, points);
+    // 張數店與轉換中:檯面數張數(組),庫存照舊逐張(張數店規格 8.1)
+    const countMode = await this.count.storeCountModeOf(operator, store.orgId);
+    const countGroups =
+      countMode === "count"
+        ? await this.countGroupsOf(operator, store.orgId, points)
+        : [];
 
-    const counter = await this.tickets.findMany(
-      operator,
-      {
-        orgId: store.orgId,
-        "location.kind": TICKET_LOCATION_KIND.counter,
-        "location.cashPointId": { $in: points.map((point) => point._id) },
-        status: { $in: [TICKET_STATUS.unsold, TICKET_STATUS.sold] },
-      },
-      { sort: { ticketNo: 1 } },
-    );
+    const counter =
+      countMode === "count"
+        ? []
+        : await this.tickets.findMany(
+            operator,
+            {
+              orgId: store.orgId,
+              "location.kind": TICKET_LOCATION_KIND.counter,
+              "location.cashPointId": { $in: points.map((point) => point._id) },
+              status: { $in: [TICKET_STATUS.unsold, TICKET_STATUS.sold] },
+            },
+            { sort: { ticketNo: 1 } },
+          );
     const bookIds = [
       ...new Set(counter.map((ticket) => String(ticket.bookId))),
     ];
@@ -237,7 +288,9 @@ export class StocktakeQueryService {
             { sort: { ticketNo: 1 } },
           );
     const lost =
-      scopeId === null ? await this.lostTickets(operator, store.orgId) : [];
+      scopeId === null
+        ? await this.lostTickets(operator, store.orgId, allPoints)
+        : [];
     const games = await this.support.gamesOf(operator, [
       ...bookRecords.map((book) => book.gameId),
       ...unopened.map((book) => book.gameId),
@@ -332,7 +385,58 @@ export class StocktakeQueryService {
         ticketCount: book.ticketCount,
       })),
       lostTickets: lost,
+      countMode,
+      countGroups,
     };
+  }
+
+  /**
+   * 張數盤點的組(收銀點 × 遊戲,依收銀點順序、遊戲代號):現在的未售張數與在哪幾本(一次 `$group`、本與遊戲各一次)。
+   */
+  private async countGroupsOf(
+    operator: OperatorContext,
+    orgId: Types.ObjectId,
+    points: readonly { _id: Types.ObjectId }[],
+  ): Promise<LotteryStocktakeCountGroupModel[]> {
+    const grouped = await this.countFacts.groupsOf(
+      operator,
+      orgId,
+      points.map((point) => point._id),
+    );
+    const groups = [...grouped.values()];
+    const [bookNos, games] = await Promise.all([
+      this.countFacts.bookNosOf(
+        operator,
+        groups.flatMap((group) => group.bookIds),
+      ),
+      this.support.gamesOf(
+        operator,
+        groups.map((group) => group.gameId),
+      ),
+    ]);
+    const order = new Map(
+      points.map((point, index) => [String(point._id), index]),
+    );
+    return groups
+      .map((group) => {
+        const game = games.get(String(group.gameId));
+        return {
+          cashPointId: String(group.cashPointId),
+          gameId: String(group.gameId),
+          gameCode: game?.gameCode ?? "",
+          gameName: game?.name ?? "",
+          unitPrice: game?.unitPrice ?? 0,
+          unsoldCount: group.unsoldCount,
+          bookNos: group.bookIds
+            .map((id) => bookNos.get(String(id)) ?? "")
+            .toSorted((a, b) => a.localeCompare(b, COLLATION_LOCALE)),
+        };
+      })
+      .toSorted(
+        (a, b) =>
+          (order.get(a.cashPointId) ?? 0) - (order.get(b.cashPointId) ?? 0) ||
+          a.gameCode.localeCompare(b.gameCode, COLLATION_LOCALE),
+      );
   }
 
   /** 每個收銀點:開著的班(應有現金)、最近一班。 */
@@ -388,7 +492,11 @@ export class StocktakeQueryService {
   }
 
   /** 待查清單:本店的待查張(含責任分店是本店的),帶變成待查的時間與來源。 */
-  private async lostTickets(operator: OperatorContext, orgId: Types.ObjectId) {
+  private async lostTickets(
+    operator: OperatorContext,
+    orgId: Types.ObjectId,
+    points: ReadonlyMap<string, { name: string }>,
+  ): Promise<LotteryStocktakeLostTicketModel[]> {
     const found = await this.tickets.findMany(
       operator,
       { orgId, status: TICKET_STATUS.investigating },
@@ -434,9 +542,40 @@ export class StocktakeQueryService {
     const totalOf = new Map(
       totals.map((row) => [String(row._id), Number(row.count)]),
     );
+    // 未對號的待查依來源盤點分組(張數店規格 7.9、13.2):來源盤點單的類型一次讀完
+    const sourceIds = [
+      ...new Set(
+        events.flatMap((event) =>
+          event.refType === "stocktake" && event.refId !== null
+            ? [String(event.refId)]
+            : [],
+        ),
+      ),
+    ].map((id) => new Types.ObjectId(id));
+    const [sources, games] = await Promise.all([
+      sourceIds.length === 0
+        ? []
+        : this.stocktakes.findMany(
+            operator,
+            { _id: { $in: sourceIds } },
+            { select: "type" },
+          ),
+      this.support.gamesOf(
+        operator,
+        found.map((ticket) => ticket.gameId),
+      ),
+    ]);
+    const sourceType = new Map(
+      sources.map((record) => [String(record._id), record.type]),
+    );
     return found.map((ticket) => {
       const event = eventOf.get(String(ticket._id));
       const refType = event?.refType ?? null;
+      const sourceId =
+        refType === "stocktake" && event?.refId != null
+          ? String(event.refId)
+          : null;
+      const pointId = event?.cashPointId ?? null;
       return {
         ticketId: String(ticket._id),
         bookId: String(ticket.bookId),
@@ -447,6 +586,14 @@ export class StocktakeQueryService {
         since: event?.at ?? null,
         source:
           refType === "transfer" || refType === "stocktake" ? refType : null,
+        gameId: String(ticket.gameId),
+        gameName: games.get(String(ticket.gameId))?.name ?? "",
+        unmatched: ticket.unmatched,
+        sourceId,
+        sourceType:
+          sourceId === null ? null : (sourceType.get(sourceId) ?? null),
+        sourceCashPointName:
+          pointId === null ? null : (points.get(String(pointId))?.name ?? null),
       };
     });
   }
@@ -628,6 +775,29 @@ export class StocktakeQueryService {
         gameCode: book.gameCode,
         gameName: book.gameName,
         bookNo: book.bookNo,
+      })),
+      countMode: countModeOfRecord(record),
+      countLines: countLinesOfRecord(record).map((line) => ({
+        cashPointId: String(line.cashPointId),
+        cashPointName: pointName(line.cashPointId),
+        gameCode: line.gameCode,
+        gameName: line.gameName,
+        countedAt: line.countedAt,
+        systemCount: line.systemCount,
+        presentCount: line.presentCount,
+        recounts: [...line.recounts],
+        saleCount: line.saleCount,
+        saleAmount: line.diffs
+          .filter((diff) => diff.action === "sale_backfill")
+          .reduce((sum, diff) => sum + diff.amount, 0),
+        investigateCount: line.investigateCount,
+        flaggedCount: line.flaggedCount,
+      })),
+      uncountedGroups: uncountedGroupsOfRecord(record).map((group) => ({
+        cashPointId: String(group.cashPointId),
+        cashPointName: pointName(group.cashPointId),
+        gameCode: group.gameCode,
+        gameName: group.gameName,
       })),
       summary: summaryModelOf(record.summary, showCost),
       draft: draftOfStocktake(record),

@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common";
-import { Types } from "mongoose";
+import { GraphQLError } from "graphql";
+import { type ClientSession, Types } from "mongoose";
 
 import { compareDisplayName } from "@repo/domain/collation";
 import {
@@ -43,7 +44,10 @@ import {
   type LotteryStoreCountModeDocument,
   LotteryStoreCountModesRepository,
 } from "../../database/lottery-settings/lottery-settings.repositories";
-import type { CountModeHistoryEntry } from "../../database/lottery-settings/lottery-store-count-mode.schema";
+import type {
+  CountModeHistoryEntry,
+  CountModeStocktakeSession,
+} from "../../database/lottery-settings/lottery-store-count-mode.schema";
 import { tenantOfOperator } from "../../tenant-scope/operator-tenant";
 import { bookStateConditionsOf } from "../inventory/book-state-filter";
 import { type TenantOrg, isStoreOrg } from "../inventory/store-orgs";
@@ -266,6 +270,68 @@ export class StoreCountModeService {
           entry.stocktakeId === null ? null : String(entry.stocktakeId),
       }))
       .toSorted((left, right) => right.at.getTime() - left.at.getTime());
+  }
+
+  // ---- 盤點中登記(8.5a;讀寫分店那一筆的 `stocktakeSessions[]`) ----
+
+  /**
+   * 分店那一筆(盤點中登記用;交易內給 `session` 讀交易的快照)。以租戶邊界讀(店員看得到這家店,
+   * 但分店那一筆的登記要全店的人都算進去)。
+   */
+  async sessionRecordOf(
+    operator: OperatorContext,
+    orgId: Types.ObjectId,
+    session?: ClientSession,
+  ): Promise<CountModeRecord | null> {
+    const reader = await this.tenantReaderOf(operator);
+    return this.countModes.findOne(
+      reader,
+      { orgId },
+      session === undefined ? {} : { session },
+    );
+  }
+
+  /**
+   * 寫盤點中登記(要在交易內):整個 `stocktakeSessions` 換成 `sessions`,`$inc version`(和全店重刷的
+   * 「開始刷這個位置」、改盤點制度互相有先後,8.5a)。還沒有那一筆 → 新增一筆(`mode` 留空 = 編號店,5.6)。
+   * 版本對不上(交易外有人改過)→ `CONFLICT`。
+   */
+  async writeSessions(
+    operator: OperatorContext,
+    target: { orgId: Types.ObjectId; tenantId: Types.ObjectId | null },
+    record: CountModeRecord | null,
+    sessions: CountModeStocktakeSession[],
+    session: ClientSession,
+  ): Promise<void> {
+    const writer = await tenantBoundaryContext(
+      this.orgs,
+      operator,
+      target.tenantId,
+    );
+    if (record === null) {
+      await this.countModes.create(
+        writer,
+        {
+          orgId: target.orgId,
+          mode: null,
+          stocktakeSessions: sessions,
+          version: 1,
+        },
+        { session },
+      );
+      return;
+    }
+    const updated = await this.countModes.findOneAndUpdate(
+      writer,
+      { _id: record._id, version: record.version },
+      { $set: { stocktakeSessions: sessions }, $inc: { version: 1 } },
+      { session },
+    );
+    if (updated === null) {
+      throw new GraphQLError("store count mode changed, please retry", {
+        extensions: { code: "CONFLICT" },
+      });
+    }
   }
 
   // ---- 改盤點制度 ----

@@ -6,7 +6,9 @@ import {
   COUNT_MODE_CHANGE_CAUSES,
   type CountMode,
   type CountModeChangeCause,
+  STOCKTAKE_TYPES,
   STORE_KEY,
+  type StocktakeType,
 } from "@repo/domain/project/lottery";
 
 import { baseFieldsPlugin } from "../../../database/plugins/base-fields.plugin";
@@ -35,6 +37,8 @@ export interface CountModeMovePause {
 /** 盤點中登記(規格 5.6 `stocktakeSessions[]`、8.5a)。 */
 export interface CountModeStocktakeSession {
   sessionId: string;
+  /** 交班 / 日結 / 臨時(接續時回到哪個畫面、被擋時寫「交班盤點 · 店內櫃台」) */
+  type: StocktakeType;
   /** 登記的位置:單一收銀點 = 那台;全店 = 全部收銀點(庫存以 null 表示) */
   cashPointIds: (Types.ObjectId | null)[];
   by: Types.ObjectId;
@@ -43,6 +47,9 @@ export interface CountModeStocktakeSession {
   lastActiveAt: Date;
   /** 盤點進度(`serializeStocktakeDraft` 的字串);接續用 */
   draft: string | null;
+  /** 店長 [結束這個盤點] 的時間與人(進度保留,本人回來仍可 [繼續]);null = 沒被結束 */
+  endedAt: Date | null;
+  endedBy: Types.ObjectId | null;
 }
 
 /**
@@ -112,6 +119,7 @@ export class LotteryStoreCountMode {
       {
         _id: false,
         sessionId: { type: String, required: true },
+        type: { type: String, enum: STOCKTAKE_TYPES, default: "adhoc" },
         cashPointIds: {
           type: [MongooseSchema.Types.ObjectId],
           default: [],
@@ -120,6 +128,8 @@ export class LotteryStoreCountMode {
         startedAt: { type: Date, required: true },
         lastActiveAt: { type: Date, required: true },
         draft: { type: String, default: null },
+        endedAt: { type: Date, default: null },
+        endedBy: { type: MongooseSchema.Types.ObjectId, default: null },
       },
     ],
     default: [],

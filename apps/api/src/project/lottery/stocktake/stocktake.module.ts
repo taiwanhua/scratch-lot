@@ -5,10 +5,14 @@ import { FormsCoreModule } from "../../../forms/forms-core.module";
 import { RealtimeModule } from "../../../realtime/realtime.module";
 import { WorkflowEngineModule } from "../../../workflows/workflow-engine/workflow-engine.module";
 import { LotteryFieldOptionsModule } from "../field-options/lottery-field-options.module";
+import { LotterySettingsModule } from "../settings/lottery-settings.module";
 import { LotteryStoreModule } from "../store/store.module";
 import { LotteryTicketsModule } from "../tickets/tickets.module";
+import { StocktakeCountFacts } from "./stocktake-count-facts";
+import { StocktakeCountService } from "./stocktake-count.service";
 import { StocktakeFacts } from "./stocktake-facts";
 import { StocktakeQueryService } from "./stocktake-query.service";
+import { StocktakeSessions } from "./stocktake-sessions";
 import { LotteryStocktakeResolver } from "./stocktake.resolver";
 import { StocktakeService } from "./stocktake.service";
 import { STOCKTAKE_SERVICE } from "./stocktake.token";
@@ -29,14 +33,18 @@ import { STOCKTAKE_SERVICE } from "./stocktake.token";
     LotteryFieldOptionsModule,
     LotteryTicketsModule,
     LotteryStoreModule,
+    LotterySettingsModule,
   ],
   providers: [
     StocktakeFacts,
+    StocktakeCountFacts,
+    StocktakeCountService,
+    StocktakeSessions,
     StocktakeService,
     StocktakeQueryService,
     LotteryStocktakeResolver,
     { provide: STOCKTAKE_SERVICE, useExisting: StocktakeService },
   ],
-  exports: [STOCKTAKE_SERVICE, StocktakeService],
+  exports: [STOCKTAKE_SERVICE, StocktakeService, StocktakeSessions],
 })
 export class LotteryStocktakeModule {}

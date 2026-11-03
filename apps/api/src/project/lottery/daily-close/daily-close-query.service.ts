@@ -23,6 +23,7 @@ import { LotteryCheckoutsRepository } from "../../database/lottery-checkouts/lot
 import { LotteryStocktakesRepository } from "../../database/lottery-stocktakes/lottery-stocktakes.repository";
 import { forbiddenError, notFoundError } from "../checkout/checkout-error";
 import { CheckoutQueryService } from "../checkout/checkout-query.service";
+import { CheckoutService } from "../checkout/checkout.service";
 import type { LotteryCheckoutCashItemModel } from "../checkout/models/checkout.model";
 import { SettlementService } from "../settlement/settlement.service";
 import { StoreShiftViews, parseId } from "../store/shift-views";
@@ -74,6 +75,7 @@ export class DailyCloseQueryService {
     private readonly orgs: OrgsRepository,
     private readonly dailyLedger: DailyCloseLedger,
     private readonly checkoutQueries: CheckoutQueryService,
+    private readonly checkout: CheckoutService,
     private readonly settlement: SettlementService,
     private readonly views: StoreShiftViews,
     private readonly support: StoreSalesSupport,
@@ -183,7 +185,11 @@ export class DailyCloseQueryService {
       shifts: rows,
       differenceTotal: rows.reduce((sum, row) => sum + row.difference, 0),
       canSubmit: grant.has(STORE_PERMISSIONS.checkout),
-      canSkipStocktake: grant.has(STORE_PERMISSIONS.skipStocktake),
+      canSkipStocktake: await this.checkout.canSkipStocktake(
+        operator,
+        grant,
+        store.orgId,
+      ),
       reusableStocktake: reusable,
       vaultItems: vault.items.map((item) => itemModelOf(item)),
       vaultExpected: vault.expected,
