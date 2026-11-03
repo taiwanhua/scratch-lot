@@ -305,11 +305,10 @@ export const useStoreSaleFlow = ({
           ]}
           // 刷到的那家店 = 看板正在看的店(總部在看板操作某家店時,目前組織不是那家店)
           store={{ id: orgId }}
-          {...(countBoard && {
-            hint: t("recover.hint"),
-            successText: t("recover.success", {
-              ranges: `#${step.item.ticketNo}`,
-            }),
+          // 尋回的說明與成功提示兩種店共用(張數店規格 7.9、13.2)
+          hint={t("recover.hint")}
+          successText={t("recover.success", {
+            ranges: `#${step.item.ticketNo}`,
           })}
           onClose={close}
           onRecovered={refresh}

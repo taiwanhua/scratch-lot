@@ -256,13 +256,12 @@ export const ExpandedBookCard = ({
         }))}
         // 展開卡片是在格子上點選,不是刷到實體:不換店(檯面上的張本來就在這家店)
         keepStore
-        {...(countBoard && {
-          hint: t("recover.hint"),
-          successText: t("recover.success", {
-            ranges: formatTicketRanges(
-              dialog.tickets.map((ticket) => ticket.ticketNo),
-            ),
-          }),
+        // 尋回的說明與成功提示兩種店共用(張數店規格 7.9、13.2「尋回確認視窗與提示」)
+        hint={t("recover.hint")}
+        successText={t("recover.success", {
+          ranges: formatTicketRanges(
+            dialog.tickets.map((ticket) => ticket.ticketNo),
+          ),
         })}
         onClose={() => {
           setDialog(null);

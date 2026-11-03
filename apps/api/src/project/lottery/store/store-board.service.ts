@@ -6,7 +6,9 @@ import { localDateOf, startOfLocalDay } from "@repo/domain/form";
 import {
   TICKET_LOCATION_KIND,
   TICKET_STATUS,
+  boardRemainingOf,
   isLowStock,
+  pendingSkipCountOf,
 } from "@repo/domain/project/lottery";
 
 import { OrgsRepository } from "../../../database/database.module";
@@ -206,21 +208,26 @@ export class StoreBoardService {
         },
       },
     ]);
-    const groups: CounterGroup[] = rows
-      .map((row) => {
-        const key = row._id as {
-          cashPointId: Types.ObjectId;
-          bookId: Types.ObjectId;
-        };
-        return {
-          cashPointId: key.cashPointId,
-          bookId: key.bookId,
-          total: Number(row.total ?? 0),
-          remaining: Number(row.remaining ?? 0),
-          soldToday: Number(row.soldToday ?? 0),
-        };
-      })
-      .filter((group) => group.remaining > 0);
+    const all: CounterGroup[] = rows.map((row) => {
+      const key = row._id as {
+        cashPointId: Types.ObjectId;
+        bookId: Types.ObjectId;
+      };
+      return {
+        cashPointId: key.cashPointId,
+        bookId: key.bookId,
+        total: Number(row.total ?? 0),
+        remaining: Number(row.remaining ?? 0),
+        soldToday: Number(row.soldToday ?? 0),
+      };
+    });
+    // 這本在檯面上的張分在幾個收銀點(卡片剩餘要不要扣待標註;只算有張的收銀點,剩 0 的也算)
+    const counterCountOf = new Map<string, number>();
+    for (const group of all) {
+      const key = String(group.bookId);
+      counterCountOf.set(key, (counterCountOf.get(key) ?? 0) + 1);
+    }
+    const groups = all.filter((group) => group.remaining > 0);
     if (groups.length === 0) {
       return new Map();
     }
@@ -241,6 +248,15 @@ export class StoreBoardService {
         continue;
       }
       const list = cards.get(String(group.cashPointId)) ?? [];
+      const remaining = boardRemainingOf(
+        group.remaining,
+        pendingSkipCountOf(
+          Number(book.lastTicketNo),
+          book.standardTickets,
+          book.skippedTicketNos.length,
+        ),
+        counterCountOf.get(String(book._id)) ?? 0,
+      );
       list.push({
         bookId: String(book._id),
         gameId: String(book.gameId),
@@ -249,10 +265,10 @@ export class StoreBoardService {
         color: game.color,
         unitPrice: game.unitPrice,
         bookNo: book.bookNo,
-        remaining: group.remaining,
+        remaining,
         total: group.total,
         soldToday: group.soldToday,
-        isLowStock: isLowStock(group.remaining, group.total),
+        isLowStock: isLowStock(remaining, group.total),
       });
       cards.set(String(group.cashPointId), list);
     }

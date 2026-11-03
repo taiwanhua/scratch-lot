@@ -342,6 +342,8 @@ describe("店面管理:銷售", () => {
     await user.click(within(panel).getByRole("button", { name: "尋回" }));
     const dialog = await screen.findByRole("dialog", { name: "尋回 1 張" });
     expect(within(dialog).getByText("中山店 庫存")).toBeInTheDocument();
+    // 兩種店共用的尋回說明(張數店規格 7.9)
+    expect(within(dialog).getByText(/尋回後這張會記在本店庫存/)).toBeVisible();
     expect(
       within(dialog).queryByRole("combobox", { name: /回到哪家店/ }),
     ).not.toBeInTheDocument();
@@ -354,6 +356,7 @@ describe("店面管理:銷售", () => {
       expect(recovered).toHaveLength(1);
     });
     expect(recovered[0]?.orgId).toBeUndefined();
+    expect(await screen.findByText(/已尋回 #080,記在庫存/)).toBeVisible();
   });
 
   it("展開卡片:其他收銀點選未售 → [移櫃] [移櫃並售出](沒有 [標記售出])", async () => {

@@ -243,7 +243,7 @@ describe("店面管理:張數店的銷售", () => {
     expect(within(panel).queryByRole("button", { name: "收回" })).toBeNull();
   });
 
-  it("店員尋回:只有 store.recover(沒有庫存管理)也能在看板尋回,視窗寫張數店的說明(規格 7.9)", async () => {
+  it("店員尋回:只有 store.recover(沒有庫存管理)也能在看板尋回,視窗寫規格 7.9 的說明", async () => {
     renderStore({
       world: countBoard(),
       permissions: [P.view, P.sell, P.recover],

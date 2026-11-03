@@ -66,6 +66,21 @@ export function isLowStock(remaining: number, total: number): boolean {
   return total > 0 && remaining > 0 && remaining <= total * LOW_STOCK_RATIO;
 }
 
+/**
+ * 看板卡片的剩餘張數(張數店規格 14.2 `lotteryStoreBoard`「順便修卡片剩餘要扣待標註」;使用者 11/04 定):
+ * 這本還沒標的跳號實體不存在,**這本在檯面上的張全在這一個收銀點**(`counterCount` = 1)時才扣掉待標註;
+ * 分在好幾個收銀點時不知道少的落在哪一台,不扣。不會小於 0。
+ */
+export function boardRemainingOf(
+  remaining: number,
+  pendingSkipCount: number,
+  counterCount: number,
+): number {
+  return counterCount === 1
+    ? Math.max(0, remaining - pendingSkipCount)
+    : remaining;
+}
+
 /** 這個收銀點的上一班(依開班時間最近的一班;沒有 = 從來沒開過班)。 */
 export interface PreviousShiftState {
   /** 上一班已送出交班結帳(班已結束)。 */

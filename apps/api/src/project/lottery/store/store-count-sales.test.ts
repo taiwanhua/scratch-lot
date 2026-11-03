@@ -448,6 +448,7 @@ describe("張數店:對號、依張數賣與撤銷(GraphQL 端點 + 真 MongoDB)
   async function receiveBook(
     game = gameId,
     orgId = xinyi,
+    lastTicketNo = 100,
   ): Promise<{ bookId: Types.ObjectId; bookNo: string }> {
     bookSequence += 1;
     const { book } = await api.app
@@ -459,7 +460,7 @@ describe("張數店:對號、依張數賣與撤銷(GraphQL 端點 + 真 MongoDB)
             orgId,
             gameId: game,
             bookNo: String(bookSequence).padStart(6, "0"),
-            lastTicketNo: 100,
+            lastTicketNo,
             rate: 92,
             cost: 18_400,
           }),
@@ -702,6 +703,26 @@ describe("張數店:對號、依張數賣與撤銷(GraphQL 端點 + 真 MongoDB)
     await applyEvents(
       matchEventsOf(scanned as never, partner as never, taipei("09:00")),
     );
+  }
+
+  /** 卡片在某收銀點的剩餘。 */
+  async function cardRemaining(
+    cashPointId: Types.ObjectId,
+    bookId: Types.ObjectId,
+  ): Promise<number | undefined> {
+    const data = await ok<{
+      lotteryStoreBoard: {
+        item: {
+          cashPoints: {
+            id: string;
+            books: { bookId: string; remaining: number }[];
+          }[];
+        };
+      };
+    }>(wang, BOARD, { orgId: String(xinyi) });
+    return data.lotteryStoreBoard.item.cashPoints
+      .find((point) => point.id === String(cashPointId))
+      ?.books.find((book) => book.bookId === String(bookId))?.remaining;
   }
 
   beforeAll(async () => {
@@ -1579,6 +1600,42 @@ describe("張數店:對號、依張數賣與撤銷(GraphQL 端點 + 真 MongoDB)
         unmatched: true,
         soldSource: "count",
       });
+    });
+  });
+
+  describe("看板卡片剩餘扣待標註(規格 14.2;使用者 11/04 定)", () => {
+    it("這本在檯面上的張全在一台 → 剩餘扣掉待標註;分在兩台 → 不扣", async () => {
+      now("15:05");
+      // 迄號 102、標準 100 → 待標註 2;沒經拆本精靈直接放上檯面(拆過又收回的本會帶著待標註上檯面,7.5)
+      const { bookId } = await receiveBook(gameId, xinyi, 102);
+      const tickets = await connection
+        .collection<TicketDoc>(LOTTERY_TICKETS_COLLECTION)
+        .find({ bookId })
+        .toArray();
+      await applyEvents(
+        tickets.map((ticket) => ({
+          ticketId: ticket._id,
+          expectedVersion: ticket.version,
+          type: "open",
+          patch: {
+            location: { kind: "counter", cashPointId: stallB },
+          },
+          cashPointId: stallB,
+        })),
+      );
+      expect(await cardRemaining(stallB, bookId)).toBe(100);
+      const last = await ticketOf(bookId, "102");
+      await applyEvents([
+        {
+          ticketId: last._id,
+          expectedVersion: last.version,
+          type: "move",
+          patch: { location: { kind: "counter", cashPointId: counterA } },
+          cashPointId: counterA,
+        },
+      ]);
+      expect(await cardRemaining(stallB, bookId)).toBe(101);
+      expect(await cardRemaining(counterA, bookId)).toBe(1);
     });
   });
 
