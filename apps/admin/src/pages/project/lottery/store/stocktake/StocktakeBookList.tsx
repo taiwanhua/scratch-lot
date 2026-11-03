@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { useTranslations } from "use-intl";
 
 import {
@@ -13,11 +14,14 @@ import { Tag } from "@repo/ui/tag";
 import { Typography } from "@repo/ui/typography";
 
 import { moneyText } from "../store-text";
+import { groupDiffOf } from "./stocktake-count-model";
 import {
   type SheetBook,
   type SheetCashPoint,
+  type SheetCountGroup,
   type StocktakeState,
   bookKeyOf,
+  countGroupKeyOf,
   figuresOf,
   placeNameOf,
 } from "./stocktake-model";
@@ -25,6 +29,8 @@ import {
 export interface StocktakeBookListProps {
   cashPoints: readonly SheetCashPoint[];
   books: readonly SheetBook[];
+  /** 張數盤點的組(編號盤點 = 空) */
+  countGroups?: readonly SheetCountGroup[];
   state: StocktakeState;
   selectedKey: string | null;
   onSelect: (key: string) => void;
@@ -42,6 +48,7 @@ export interface StocktakeBookListProps {
 export const StocktakeBookList = ({
   cashPoints,
   books,
+  countGroups = [],
   state,
   selectedKey,
   onSelect,
@@ -65,6 +72,76 @@ export const StocktakeBookList = ({
       <Tag tone="success" label={t("bookStatus.counted")} />
     );
   };
+  /** 張數盤點一組的狀態:目前這組 / 還沒數 / 已數 / 差 N 張(Figma CS-09a / 09b)。 */
+  const groupStatusOf = (group: SheetCountGroup) => {
+    const key = countGroupKeyOf(group);
+    const diff = groupDiffOf(group, state.groups[key]);
+    if (key === selectedKey && diff === null) {
+      return <Tag tone="primary" label={t("bookStatus.currentGroup")} />;
+    }
+    if (diff === null) {
+      return <Tag tone="grey" label={t("bookStatus.uncounted")} />;
+    }
+    return diff === 0 ? (
+      <Tag tone="success" label={t("bookStatus.counted")} />
+    ) : (
+      <Tag
+        tone="warning"
+        label={t("bookStatus.diff", { count: Math.abs(diff) })}
+      />
+    );
+  };
+  const selectableRow = (
+    key: string,
+    title: string,
+    subtitle: string,
+    status: ReactNode,
+  ) => (
+    <Box
+      key={key}
+      role="button"
+      tabIndex={0}
+      aria-current={key === selectedKey ? "true" : undefined}
+      onClick={() => {
+        onSelect(key);
+      }}
+      onKeyDown={(event) => {
+        if (event.key === "Enter") {
+          onSelect(key);
+        }
+      }}
+      sx={{
+        px: 1.5,
+        py: 1,
+        borderRadius: 1,
+        cursor: "pointer",
+        bgcolor: key === selectedKey ? "grey.100" : undefined,
+        "&:hover": { bgcolor: "grey.50" },
+      }}
+    >
+      <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
+        <Stack sx={{ flex: 1, minWidth: 0 }}>
+          <Typography variant="body2" sx={{ fontWeight: 600 }}>
+            {title}
+          </Typography>
+          <Typography variant="caption" color="textSecondary">
+            {subtitle}
+          </Typography>
+        </Stack>
+        {status}
+      </Stack>
+    </Box>
+  );
+  const groupRow = (group: SheetCountGroup, pointName: string) =>
+    selectableRow(
+      countGroupKeyOf(group),
+      `${group.gameCode} ${group.gameName}`,
+      t("count.subtitle", {
+        cashPoint: pointName,
+        count: group.bookNos.length,
+      }),
+      groupStatusOf(group),
+    );
   const cashPointHeader = (point: SheetCashPoint) => (
     <Stack spacing={0.5} key={`head-${point.id}`}>
       <Stack
@@ -161,10 +238,16 @@ export const StocktakeBookList = ({
           size="small"
           fullWidth
           value={selectedKey ?? ""}
-          options={books.map((book) => ({
-            value: bookKeyOf(book),
-            label: `${placeNameOf(cashPoints, book.cashPointId, t("stock.name"))} · ${book.gameCode} ${book.gameName} · ${displayBookNo(book.bookNo)}`,
-          }))}
+          options={[
+            ...countGroups.map((group) => ({
+              value: countGroupKeyOf(group),
+              label: `${placeNameOf(cashPoints, group.cashPointId, t("stock.name"))} · ${group.gameCode} ${group.gameName}`,
+            })),
+            ...books.map((book) => ({
+              value: bookKeyOf(book),
+              label: `${placeNameOf(cashPoints, book.cashPointId, t("stock.name"))} · ${book.gameCode} ${book.gameName} · ${displayBookNo(book.bookNo)}`,
+            })),
+          ]}
           onChange={(next: string) => {
             onSelect(next);
           }}
@@ -179,6 +262,9 @@ export const StocktakeBookList = ({
         {cashPoints.map((point) => (
           <Stack key={point.id} spacing={1}>
             {cashPointHeader(point)}
+            {countGroups
+              .filter((group) => group.cashPointId === point.id)
+              .map((group) => groupRow(group, point.name))}
             {books
               .filter((book) => book.cashPointId === point.id)
               .map((book) => bookRow(book))}

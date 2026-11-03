@@ -23,6 +23,7 @@ import {
 
 import { lostChoicesReady, unhandledOf } from "../stocktake/stocktake-model";
 import { useStocktakeFlow } from "../stocktake/useStocktakeFlow";
+import { useStocktakeFlowSession } from "../stocktake/useStocktakeSession";
 import { CHECKOUT_STEPS, type CheckoutStep } from "./checkout-keys";
 
 export type CheckoutWizardData = WizardQuery["lotteryCheckoutWizard"];
@@ -87,6 +88,13 @@ export const useCheckoutWizard = ({
     initialDraft:
       initialStocktake?.mode === "new" ? initialStocktake.draft : null,
   });
+  // 選「現在盤點」就登記這台盤點中;進度存到伺服器,重新整理後 [繼續](張數店規格 8.5a、13.2)
+  const session = useStocktakeFlowSession(stocktake, {
+    orgId: wizard.shift.orgId,
+    type: "shift",
+    scopeCashPointId: wizard.shift.cashPoint.id,
+    enabled: stocktakeMode === "new",
+  });
 
   const denominations = CHECKOUT_DENOMINATIONS.map((value) => ({
     value,
@@ -123,7 +131,7 @@ export const useCheckoutWizard = ({
         );
       }
       case "new": {
-        return stocktakeReviewed;
+        return stocktakeReviewed && session.blocked === null;
       }
     }
   })();
@@ -246,6 +254,7 @@ export const useCheckoutWizard = ({
     skipReason,
     setSkipReason,
     stocktake,
+    session,
     stocktakeReviewed,
     denominations,
     setCount: (value: number, count: number) => {

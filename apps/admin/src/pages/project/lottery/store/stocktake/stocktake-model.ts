@@ -15,6 +15,8 @@ import type {
 
 import { missingReasonFields } from "@/components/project/lottery/ReasonFields/reason-value";
 
+import type { GroupCount } from "./stocktake-count-model";
+
 export type StocktakeSheet =
   LotteryStocktakeSheetQuery["lotteryStocktakeSheet"];
 export type SheetBook = StocktakeSheet["books"][number];
@@ -23,6 +25,16 @@ export type SheetLostTicket = StocktakeSheet["lostTickets"][number];
 export type StocktakeReview =
   LotteryStocktakeReviewQuery["lotteryStocktakeReview"];
 export type ReviewLine = StocktakeReview["lines"][number];
+export type SheetCountGroup = StocktakeSheet["countGroups"][number];
+export type ReviewCountLine = StocktakeReview["countLines"][number];
+
+/** 張數盤點一組的 key(收銀點 × 遊戲;本清單與本的 key 分得開)。 */
+export const groupKeyOf = (cashPointId: string, gameId: string): string =>
+  `g:${cashPointId}:${gameId}`;
+
+export const countGroupKeyOf = (
+  group: Pick<SheetCountGroup, "cashPointId" | "gameId">,
+): string => groupKeyOf(group.cashPointId, group.gameId);
 
 /**
  * 一行的位置名稱:收銀點名稱;拆過、在庫存的張那一區(`STOCKTAKE_STOCK_LINE`)= `stockLabel`(「庫存」)。
@@ -78,6 +90,8 @@ export interface StocktakeState {
   lost: Partial<Record<string, LostChoice>>;
   /** `<lineKey>#<張號>` → 處理 */
   diffs: Partial<Record<string, DiffChoice>>;
+  /** 張數盤點的組(`groupKeyOf` → 這一組的盤點與處理) */
+  groups: Partial<Record<string, GroupCount>>;
 }
 
 export const diffKeyOf = (lineKey: string, ticketNo: string): string =>
@@ -89,6 +103,7 @@ export const emptyState = (startedAt: string): StocktakeState => ({
   unopened: {},
   lost: {},
   diffs: {},
+  groups: {},
 });
 
 /** 退回後打開:盤點內容 → 畫面狀態(帶入原內容)。 */
@@ -111,14 +126,28 @@ export const stateOfDraft = (
       };
     }
   }
+  for (const line of draft.countLines ?? []) {
+    state.groups[groupKeyOf(line.cashPointId, line.gameId)] = {
+      countedAt: line.countedAt,
+      presentCount: line.presentCount,
+      recounts: [...line.recounts],
+      saleCount: line.saleCount,
+      saleRefIds: [...line.saleRefIds],
+      investigateCount: line.investigateCount,
+      flagged: line.flagged,
+    };
+  }
   for (const item of draft.unopened) {
     state.unopened[item.bookId] = item.present;
   }
-  const bookOfTicket = new Map(
-    sheet.lostTickets.map((ticket) => [ticket.ticketId, ticket.bookId]),
+  const groupOfTicket = new Map(
+    sheet.lostTickets.map((ticket) => [
+      ticket.ticketId,
+      lostGroupKeyOf(ticket),
+    ]),
   );
   for (const item of draft.lostReview) {
-    const bookId = bookOfTicket.get(item.ticketId);
+    const bookId = groupOfTicket.get(item.ticketId);
     if (bookId !== undefined) {
       const before = state.lost[bookId];
       state.lost[bookId] = {
@@ -135,9 +164,26 @@ export const stateOfDraft = (
   return state;
 };
 
-/** 待查清單依本分組。 */
+/**
+ * 待查清單一組的 key:確定的待查依本;待查·未對號(張數盤點 [待查] 系統預設帶入的張號)依「遊戲 × 來源盤點」
+ * (張數店規格 7.9、13.2)。
+ */
+export const lostGroupKeyOf = (
+  ticket: Pick<SheetLostTicket, "bookId" | "unmatched" | "sourceId" | "gameId">,
+): string =>
+  ticket.unmatched
+    ? `u:${ticket.sourceId ?? "none"}:${ticket.gameId}`
+    : ticket.bookId;
+
+/** 待查清單一組(確定的待查 = 一本;待查·未對號 = 遊戲 × 來源盤點)。 */
 export interface LostGroup {
+  /** 這一組的 key(`lostGroupKeyOf`;畫面狀態 `lost` 的 key) */
   bookId: string;
+  /** 待查·未對號(只有 [確認遺失]、[繼續待查],沒有 [找到了]) */
+  unmatched: boolean;
+  gameName: string;
+  sourceType: string | null;
+  sourceCashPointName: string | null;
   gameCode: string;
   bookNo: string;
   tickets: SheetLostTicket[];
@@ -150,8 +196,13 @@ export interface LostGroup {
 export const lostGroupsOf = (sheet: StocktakeSheet): LostGroup[] => {
   const groups = new Map<string, LostGroup>();
   for (const ticket of sheet.lostTickets) {
-    const group = groups.get(ticket.bookId) ?? {
-      bookId: ticket.bookId,
+    const key = lostGroupKeyOf(ticket);
+    const group = groups.get(key) ?? {
+      bookId: key,
+      unmatched: ticket.unmatched,
+      gameName: ticket.gameName,
+      sourceType: ticket.sourceType ?? null,
+      sourceCashPointName: ticket.sourceCashPointName ?? null,
       gameCode: ticket.gameCode,
       bookNo: ticket.bookNo,
       tickets: [],
@@ -160,11 +211,12 @@ export const lostGroupsOf = (sheet: StocktakeSheet): LostGroup[] => {
       source: ticket.source ?? null,
     };
     group.tickets.push(ticket);
-    groups.set(ticket.bookId, group);
+    groups.set(key, group);
   }
   return [...groups.values()].map((group) => ({
     ...group,
     wholeBook:
+      !group.unmatched &&
       group.tickets.length > 0 &&
       group.tickets.length === group.tickets[0]?.bookTicketCount,
   }));
@@ -178,11 +230,38 @@ export const draftOf = (
   sheet: StocktakeSheet,
 ): StocktakeDraft => {
   const lostGroups = lostGroupsOf(sheet);
+  const countMode = sheet.countMode === "count" ? "count" : "numbered";
   return {
     version: 1,
     orgId,
     scopeCashPointId,
     startedAt: state.startedAt,
+    // 張數盤點:檯面是組(數過、按了 [確定] 的才送);編號盤點不帶這些欄位(和以前的盤點內容一樣)
+    ...(countMode === "count"
+      ? {
+          countMode: "count" as const,
+          purpose: "normal" as const,
+          countLines: sheet.countGroups.flatMap((group) => {
+            const count = state.groups[countGroupKeyOf(group)];
+            if (count?.presentCount == null) {
+              return [];
+            }
+            return [
+              {
+                gameId: group.gameId,
+                cashPointId: group.cashPointId,
+                countedAt: count.countedAt,
+                presentCount: count.presentCount,
+                recounts: [...count.recounts],
+                saleCount: count.saleCount,
+                saleRefIds: [...count.saleRefIds],
+                investigateCount: count.investigateCount,
+                flagged: count.flagged,
+              },
+            ];
+          }),
+        }
+      : {}),
     lines: sheet.books.flatMap((book) => {
       const key = bookKeyOf(book);
       const count = state.counts[key];
@@ -266,11 +345,12 @@ export const figuresOf = (
   };
 };
 
-/** 差異核對還沒處理的張數(目前的差異、沒有選處理或處理對不上)。 */
+/** 差異核對還沒處理的張數(目前的差異、沒有選處理或處理對不上)+ 還沒處理完的組(伺服器比對)。 */
 export const unhandledOf = (
   review: StocktakeReview,
   state: StocktakeState,
 ): number =>
+  review.countLines.filter((line) => line.unhandled).length +
   review.lines.reduce(
     (sum, line) =>
       sum +

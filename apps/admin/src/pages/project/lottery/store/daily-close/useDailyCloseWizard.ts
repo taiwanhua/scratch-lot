@@ -25,6 +25,7 @@ import {
 
 import { lostChoicesReady, unhandledOf } from "../stocktake/stocktake-model";
 import { useStocktakeFlow } from "../stocktake/useStocktakeFlow";
+import { useStocktakeFlowSession } from "../stocktake/useStocktakeSession";
 
 export type DailyCloseWizardData = WizardQuery["lotteryDailyCloseWizard"];
 
@@ -86,6 +87,13 @@ export const useDailyCloseWizard = ({
     initialDraft:
       initialStocktake?.mode === "new" ? initialStocktake.draft : null,
   });
+  // 選「現在盤點」就登記全店盤點中(全部收銀點與庫存;張數店規格 8.5a)
+  const session = useStocktakeFlowSession(stocktake, {
+    orgId: wizard.org.id,
+    type: "daily",
+    scopeCashPointId: null,
+    enabled: stocktakeMode === "new",
+  });
 
   const denominations = CHECKOUT_DENOMINATIONS.map((value) => ({
     value,
@@ -132,7 +140,7 @@ export const useDailyCloseWizard = ({
         );
       }
       case "new": {
-        return stocktakeReviewed;
+        return stocktakeReviewed && session.blocked === null;
       }
     }
   })();
@@ -243,6 +251,7 @@ export const useDailyCloseWizard = ({
     skipReason,
     setSkipReason,
     stocktake,
+    session,
     stocktakeReviewed,
     denominations,
     setCount: (value: number, count: number) => {

@@ -66,14 +66,15 @@ const useLeave = () => {
 
 /**
  * 臨時盤點(盤點確認申請的新增頁;規格 6.8、8.6;Figma ST-13 / 14 / 15):`?org=` 分店(預設目前組織)、
- * `?scope=` 單一收銀點(空 = 全店,ST-16 選)。盤點過程只在畫面上;[送出盤點確認申請] 以表單引擎建立並送出申請,
- * 盤點單由掛接點在同一個交易建立。
+ * `?scope=` 單一收銀點(空 = 全店,ST-16 選)、`?session=` 看板登記好的盤點中登記(張數店規格 8.5a;進度存在登記上,
+ * 重新整理可 [繼續])。[送出盤點確認申請] 以表單引擎建立並送出申請,盤點單由掛接點在同一個交易建立(同時解除登記)。
  */
 export const StocktakeCreatePage = () => {
   const t = useTranslations("admin.lotteryStore.stocktake");
   const me = useMe();
   const [orgParam] = useUrlState("org", orgSchema);
   const [scope] = useUrlState("scope", scopeSchema);
+  const [sessionParam] = useUrlState("session", scopeSchema);
   const orgId = orgParam === "" ? (me.data?.me.currentOrg?.id ?? "") : orgParam;
   const draftState = useFormDraft(STOCKTAKE_CONFIRM_FORM_KEY);
   const errorText = useAdminErrorText("admin.formEngine.errors");
@@ -96,6 +97,8 @@ export const StocktakeCreatePage = () => {
         orgId={orgId}
         scopeCashPointId={scope === "" ? null : scope}
         heading={t("types.adhoc")}
+        type="adhoc"
+        sessionId={sessionParam === "" ? null : sessionParam}
         initialDraft={null}
         submitError={
           draftState.error === null ? null : errorText(draftState.error)
@@ -156,6 +159,7 @@ export const StocktakeEditPage = ({ routeParam }: ModulePageProps) => {
         orgId={stocktake.orgId}
         scopeCashPointId={stocktake.scopeCashPoint?.id ?? null}
         heading={t("types.adhoc")}
+        type="adhoc"
         initialDraft={parsed.ok ? parsed.draft : null}
         notice={<Alert severity="info">{t("page.returnedHint")}</Alert>}
         submitError={

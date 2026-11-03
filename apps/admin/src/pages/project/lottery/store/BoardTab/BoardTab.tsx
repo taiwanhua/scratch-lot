@@ -251,6 +251,8 @@ export const BoardTab = () => {
               key: "checkout",
               label: t("header.checkout"),
               emphasis: "primary" as const,
+              // 全店盤點中各台不能交班(張數店規格 8.5a;Figma ST-01-2)
+              disabled: stocktake.blocksCheckout,
               onClick: () => {
                 void navigate(
                   storeFormCreateHref(

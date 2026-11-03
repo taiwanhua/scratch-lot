@@ -9,6 +9,7 @@ import { LOTTERY_FIELD_CATEGORY_KEYS } from "@repo/domain/project/lottery-fields
 import type { LotteryCheckoutStocktakeRefFieldsFragment } from "@repo/graphql";
 import { Alert } from "@repo/ui/alert";
 import { Box } from "@repo/ui/box";
+import { Button } from "@repo/ui/button";
 import { Card } from "@repo/ui/card";
 import { FormControlLabel } from "@repo/ui/form-control-label";
 import { useBreakpointDown } from "@repo/ui/media-query";
@@ -23,7 +24,13 @@ import { useTemporalText } from "@/hooks/base/useTemporalText";
 import type { RedemptionFlow } from "../redemption/useRedemptionFlow";
 import { StocktakeCountStep } from "../stocktake/StocktakeCountStep";
 import { StocktakeReviewStep } from "../stocktake/StocktakeReviewStep";
+import {
+  ResumeSessionDialog,
+  StocktakeSessionNotices,
+} from "../stocktake/StocktakeSessionNotices";
+import { useBlockedText } from "../stocktake/session-text";
 import { type SheetCashPoint, unhandledOf } from "../stocktake/stocktake-model";
+import { countReviewPropsOf } from "../stocktake/useCountGroupActions";
 import type { CheckoutWizard } from "./useCheckoutWizard";
 
 /** 盤點步驟要的精靈狀態(交班精靈 `useCheckoutWizard`、日結精靈 `useDailyCloseWizard` 共用)。 */
@@ -34,6 +41,7 @@ export type StocktakeChoiceFlow = Pick<
   | "skipReason"
   | "setSkipReason"
   | "stocktake"
+  | "session"
   | "stocktakeReviewed"
   | "next"
 >;
@@ -90,9 +98,9 @@ const CountingArea = ({
   const t = useTranslations("admin.lotteryStore.checkout.stocktake");
   const { hasPermission } = usePermissions();
   const isNarrow = useBreakpointDown("md");
-  const { stocktake } = flow;
+  const { stocktake, session } = flow;
   const { sheet, state, review } = stocktake;
-  if (sheet === null || state === null) {
+  if (sheet === null || state === null || session.blocked !== null) {
     return null;
   }
   const openRedeem = (point: SheetCashPoint) => {
@@ -144,6 +152,7 @@ const CountingArea = ({
         unhandled={review === null ? 0 : unhandledOf(review, state)}
         lostReady
         canSubmit={flow.stocktakeReviewed}
+        count={countReviewPropsOf(stocktake)}
       />
     </Stack>
   );
@@ -157,7 +166,6 @@ export const CheckoutStocktakeStep = (props: CheckoutStocktakeStepProps) => {
   const { flow, texts } = props;
   const t = useTranslations("admin.lotteryStore.checkout.stocktake");
   const temporal = useTemporalText();
-  const { hasPermission } = usePermissions();
   const reusable = props.reusable;
   const reuseHint =
     reusable === null
@@ -169,8 +177,10 @@ export const CheckoutStocktakeStep = (props: CheckoutStocktakeStepProps) => {
           scope: reusable.scopeName ?? t("wholeStore"),
           count: reusable.diffCount,
         });
-  const canSkip =
-    props.canSkipStocktake || hasPermission(STORE_PERMISSIONS.skipStocktake);
+  // 張數店與轉換中不能跳過(有 store.skip-stocktake 也不顯示;api 回 canSkipStocktake = false;張數店規格 13.2、Figma CS-12)
+  const canSkip = props.canSkipStocktake;
+  const { session } = flow;
+  const blockedText = useBlockedText();
   return (
     <Stack spacing={2}>
       <Card sx={{ px: { xs: 2, sm: 3 }, py: 2.5 }}>
@@ -199,6 +209,28 @@ export const CheckoutStocktakeStep = (props: CheckoutStocktakeStepProps) => {
               label={t("new")}
               hint={texts?.newHint ?? t("newHint")}
             />
+            {/* ST-17a-2a 選現在盤點被擋:誰、幾點開始、剩幾分鐘;店長 [結束這個盤點] */}
+            {flow.stocktakeMode === "new" && session.blocked !== null ? (
+              <Alert
+                severity="warning"
+                sx={{ ml: 4 }}
+                action={
+                  session.blocked.canEnd ? (
+                    <Button
+                      size="small"
+                      variant="text"
+                      color="error"
+                      disabled={session.isEnding}
+                      onClick={session.endBlocked}
+                    >
+                      {t("endSession")}
+                    </Button>
+                  ) : undefined
+                }
+              >
+                {blockedText(session.blocked)}
+              </Alert>
+            ) : null}
             {canSkip ? (
               <ModeOption mode="skip" label={t("skip")} hint={t("skipHint")} />
             ) : null}
@@ -216,7 +248,25 @@ export const CheckoutStocktakeStep = (props: CheckoutStocktakeStepProps) => {
           ) : null}
         </Stack>
       </Card>
+      {flow.stocktakeMode === "new" && session.blocked === null ? (
+        <StocktakeSessionNotices link={session} />
+      ) : null}
       {flow.stocktakeMode === "new" ? <CountingArea {...props} /> : null}
+      {/* ST-17a-2b 重新整理後 [繼續] [放棄] */}
+      <ResumeSessionDialog
+        session={
+          flow.stocktakeMode === "new"
+            ? (session.resumable ?? session.own)
+            : null
+        }
+        isPending={session.isStarting || session.isEnding}
+        onResume={session.resume}
+        onAbandon={(target) => {
+          void session.abandon(target).then(() => {
+            session.startNew();
+          });
+        }}
+      />
     </Stack>
   );
 };

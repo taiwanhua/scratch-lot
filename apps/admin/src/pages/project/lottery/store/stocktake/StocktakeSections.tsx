@@ -139,6 +139,14 @@ export const LostSection = ({
   const temporal = useTemporalText();
   const sinceText = (group: LostGroup) => {
     const date = group.since === null ? "" : temporal(group.since, "monthDay");
+    // 待查·未對號:來源盤點(例「10/16 交班盤點 · 店內櫃台」;張數店規格 13.2)
+    if (group.unmatched) {
+      return t("sinceCount", {
+        date,
+        type: t(`sourceTypes.${group.sourceType ?? "adhoc"}`),
+        cashPoint: group.sourceCashPointName ?? "",
+      });
+    }
     if (group.source === "transfer") {
       return t("sinceTransfer", { date });
     }
@@ -160,6 +168,19 @@ export const LostSection = ({
           total: group.tickets.length,
         });
   };
+  /** 一組的標題:確定的待查「遊戲 · 本號 · 整本 / 張號」;未對號「遊戲 · N 張 · 系統預設帶入」。 */
+  const labelOf = (group: LostGroup): string => {
+    if (group.unmatched) {
+      return t("unmatchedLabel", {
+        game: group.gameCode,
+        count: group.tickets.length,
+      });
+    }
+    const tickets = group.wholeBook
+      ? t("wholeBook")
+      : formatTicketRanges(group.tickets.map((ticket) => ticket.ticketNo));
+    return `${group.gameCode} · ${displayBookNo(group.bookNo)} · ${tickets}`;
+  };
   const actions: StocktakeLostAction[] = canConfirmLost
     ? ["found", "lost", "keep"]
     : ["found", "keep"];
@@ -176,13 +197,11 @@ export const LostSection = ({
         ) : null}
         {groups.map((group) => {
           const choice = state.lost[group.bookId] ?? DEFAULT_LOST;
-          const label = `${group.gameCode} · ${displayBookNo(group.bookNo)} · ${
-            group.wholeBook
-              ? t("wholeBook")
-              : formatTicketRanges(
-                  group.tickets.map((ticket) => ticket.ticketNo),
-                )
-          }`;
+          // 待查·未對號不提供 [找到了](只有 [確認遺失]、[繼續待查],交給全店重刷;張數店規格 7.9)
+          const groupActions = group.unmatched
+            ? actions.filter((action) => action !== "found")
+            : actions;
+          const label = labelOf(group);
           return (
             <Stack
               key={group.bookId}
@@ -208,7 +227,7 @@ export const LostSection = ({
                   label={t("action")}
                   size="small"
                   value={choice.action}
-                  options={actions.map((action) => ({
+                  options={groupActions.map((action) => ({
                     value: action,
                     label: t(`actions.${action}`),
                   }))}
@@ -253,7 +272,9 @@ export const LostSection = ({
         })}
         {groups.length > 0 ? (
           <Typography variant="caption" color="textSecondary">
-            {t("hint")}
+            {groups.some((group) => group.unmatched)
+              ? `${t("hint")}${t("hintUnmatched")}`
+              : t("hint")}
           </Typography>
         ) : null}
       </Stack>

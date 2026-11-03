@@ -55,6 +55,14 @@ const shift = (
   expectedCash,
 });
 
+/** 待查清單一張的張數店欄位(確定的待查:不是未對號、沒有來源盤點)。 */
+const LOST_DEFAULTS = {
+  unmatched: false,
+  sourceId: null,
+  sourceType: null,
+  sourceCashPointName: null,
+};
+
 const FA_DA_CAI: [string, string, number] = ["5164", "發大財", 200];
 const JIN_HAO_YUN: [string, string, number] = ["5201", "金好運", 200];
 const SHU_LAI_BAO: [string, string, number] = ["5198", "鼠來寶", 100];
@@ -130,6 +138,9 @@ export const sampleStocktakeSheet = (
       bookTicketCount: 3,
       since: "2026-10-12T02:00:00.000Z",
       source: "transfer",
+      ...LOST_DEFAULTS,
+      gameId: "g-5164",
+      gameName: "發大財",
     })),
     ...["023", "024"].map((ticketNo) => ({
       __typename: "LotteryStocktakeLostTicket" as const,
@@ -141,8 +152,13 @@ export const sampleStocktakeSheet = (
       bookTicketCount: 100,
       since: "2026-10-05T02:00:00.000Z",
       source: "stocktake",
+      ...LOST_DEFAULTS,
+      gameId: "g-5201",
+      gameName: "金好運",
     })),
   ],
+  countMode: "numbered",
+  countGroups: [],
 });
 
 /** Figma ST-30 的那一張盤點確認申請(審核中)。 */
@@ -307,6 +323,9 @@ export const sampleStocktakeDetail = (): StocktakeDetailFixture => ({
       reasonNote: null,
     },
   ],
+  countMode: "numbered",
+  countLines: [],
+  uncountedGroups: [],
   // 沒盤完就送出:檯面上 6 本盤了 3 本,其餘 3 本記為未盤(規格 6.8,10/21 定案)
   uncountedBooks: [
     {

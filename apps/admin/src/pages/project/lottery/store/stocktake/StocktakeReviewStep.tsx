@@ -19,7 +19,12 @@ import { Tag } from "@repo/ui/tag";
 import { Typography } from "@repo/ui/typography";
 
 import { moneyText } from "../store-text";
+import {
+  StocktakeCountReview,
+  type StocktakeCountReviewProps,
+} from "./StocktakeCountReview";
 import { ReviewFooter } from "./StocktakeReviewFooter";
+import { reviewTotalsOf } from "./stocktake-count-model";
 import {
   type ReviewLine,
   type SheetCashPoint,
@@ -60,6 +65,11 @@ export interface StocktakeReviewStepProps {
   /** 待查清單的處理都填好了(找到了要刷到、確認遺失要原因) */
   lostReady: boolean;
   canSubmit: boolean;
+  /** 張數盤點的組(張數店;編號盤點不給) */
+  count?: Pick<
+    StocktakeCountReviewProps,
+    "groups" | "onCountSale" | "onChoose" | "onRecount"
+  >;
 }
 
 /**
@@ -83,6 +93,7 @@ export const StocktakeReviewStep = ({
   unhandled,
   lostReady,
   canSubmit,
+  count,
 }: StocktakeReviewStepProps) => {
   const t = useTranslations("admin.lotteryStore.stocktake.review");
   const tStock = useTranslations("admin.lotteryStore.stocktake.stock");
@@ -235,6 +246,7 @@ export const StocktakeReviewStep = ({
     { key: "result", header: t("columns.result"), render: resultOf },
   ];
   const summary = review?.summary;
+  const totals = reviewTotalsOf(review, state);
 
   return (
     <Stack spacing={2}>
@@ -243,7 +255,9 @@ export const StocktakeReviewStep = ({
           {t("title")}
         </Typography>
       </Stack>
-      <Alert severity="info">{t("info")}</Alert>
+      <Alert severity="info">
+        {t(count === undefined ? "info" : "infoCount")}
+      </Alert>
       {notice === null ? null : (
         <Alert
           severity="warning"
@@ -294,7 +308,24 @@ export const StocktakeReviewStep = ({
           </Stack>
         </Card>
       ) : null}
-      {review !== null && allRows.length === 0 ? (
+      {count === undefined || review === null ? null : (
+        <StocktakeCountReview
+          lines={review.countLines}
+          groups={count.groups}
+          cashPoints={cashPoints}
+          storeName={storeName}
+          canBackfill={canBackfill}
+          isBackfilling={isBackfilling}
+          onCountSale={count.onCountSale}
+          onChoose={count.onChoose}
+          onRecount={count.onRecount}
+        />
+      )}
+      {review !== null &&
+      allRows.length === 0 &&
+      review.countLines.every(
+        (line) => line.kind === "match" && !line.stale,
+      ) ? (
         <Typography color="textSecondary">{t("noDiff")}</Typography>
       ) : null}
       {lines
@@ -371,15 +402,8 @@ export const StocktakeReviewStep = ({
       <ReviewFooter
         backfillCount={summary?.backfillCount ?? 0}
         backfillAmount={summary?.backfillAmount ?? 0}
-        investigated={
-          allRows.filter(
-            (row) => state.diffs[row.key]?.action === "investigate",
-          ).length
-        }
-        flagged={
-          allRows.filter((row) => state.diffs[row.key]?.action === "flag")
-            .length
-        }
+        investigated={totals.investigated}
+        flagged={totals.flagged}
         unhandled={unhandled}
         canSubmit={canSubmit}
         onBack={onBack}

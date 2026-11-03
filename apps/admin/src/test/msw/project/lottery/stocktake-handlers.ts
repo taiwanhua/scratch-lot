@@ -5,16 +5,29 @@ import {
   parseStocktakeDraft,
 } from "@repo/domain/project/lottery";
 import type {
+  BackfillLotteryStocktakeCountSalesMutationVariables,
   BackfillLotteryStocktakeSalesMutationVariables,
+  EndLotteryStocktakeSessionMutationVariables,
   LotteryStocktakeQueryVariables,
   LotteryStocktakeReviewQuery,
   LotteryStocktakeReviewQueryVariables,
   LotteryStocktakeSheetQueryVariables,
   LotteryStocktakesQueryVariables,
+  SaveLotteryStocktakeSessionMutationVariables,
+  StartLotteryStocktakeSessionMutationVariables,
 } from "@repo/graphql";
 
 import { graphqlError } from "../../auth-handlers";
 import { api, type server } from "../../server";
+import {
+  sampleCountStocktakeDetail,
+  sampleCountStocktakeSheet,
+} from "./stocktake-count-fixtures";
+import {
+  type StocktakeSessionFixture,
+  countReviewOf,
+  countStocktakeHandlers,
+} from "./stocktake-count-handlers";
 import {
   STOCKTAKE_REVIEWING_ID,
   type StocktakeSheetFixture,
@@ -22,6 +35,11 @@ import {
   sampleStocktakeList,
   sampleStocktakeSheet,
 } from "./stocktake-fixtures";
+
+export {
+  type StocktakeSessionFixture,
+  sampleStocktakeSession,
+} from "./stocktake-count-handlers";
 
 type Review = LotteryStocktakeReviewQuery["lotteryStocktakeReview"];
 type ReviewLine = Review["lines"][number];
@@ -31,14 +49,28 @@ export interface StocktakeWorldOptions {
   remind?: boolean;
   /** 補登售出時這幾張已被處理(回 `STOCKTAKE_ALREADY_PROCESSED`) */
   processedTicketIds?: readonly string[];
+  /** 張數店(檯面是「收銀點 × 遊戲」的組;張數店規格 8.1) */
+  countMode?: boolean;
+  /** 這家店現有的盤點中登記(別人的會擋住重疊的位置;張數店規格 8.5a) */
+  sessions?: readonly StocktakeSessionFixture[];
+  /** 這幾組(`<收銀點>:<遊戲>`)在開始數之後被別張盤點處理過(B6:要重數) */
+  staleGroups?: readonly string[];
 }
 
 export interface StocktakeWorld {
   handlers: Parameters<typeof server.use>;
-  state: { sheet: StocktakeSheetFixture; backfilled: Set<string> };
+  state: {
+    sheet: StocktakeSheetFixture;
+    backfilled: Set<string>;
+    sessions: StocktakeSessionFixture[];
+  };
   inputs: {
     backfill: BackfillLotteryStocktakeSalesMutationVariables["input"][];
+    countBackfill: BackfillLotteryStocktakeCountSalesMutationVariables["input"][];
     reviews: StocktakeDraft[];
+    sessionStarts: StartLotteryStocktakeSessionMutationVariables["input"][];
+    sessionSaves: SaveLotteryStocktakeSessionMutationVariables["input"][];
+    sessionEnds: EndLotteryStocktakeSessionMutationVariables["input"][];
   };
 }
 
@@ -76,9 +108,29 @@ const bookOfTicket = (sheet: StocktakeSheetFixture, ticketId: string) =>
 export const stocktakeWorld = (
   options: StocktakeWorldOptions = {},
 ): StocktakeWorld => {
-  const sheet = sampleStocktakeSheet();
+  const sheet =
+    options.countMode === true
+      ? sampleCountStocktakeSheet()
+      : sampleStocktakeSheet();
   const backfilled = new Set<string>();
-  const inputs: StocktakeWorld["inputs"] = { backfill: [], reviews: [] };
+  const sessions: StocktakeSessionFixture[] = [...(options.sessions ?? [])];
+  /** 開始數那一刻的系統數字(算售出後畫面上的未售會變,比對仍用這個) */
+  const systemOf = new Map(
+    sheet.countGroups.map((group) => [
+      `${group.cashPointId}:${group.gameId}`,
+      group.unsoldCount,
+    ]),
+  );
+  /** 算售出寫的張數(依 refId) */
+  const countSales = new Map<string, number>();
+  const inputs: StocktakeWorld["inputs"] = {
+    backfill: [],
+    countBackfill: [],
+    reviews: [],
+    sessionStarts: [],
+    sessionSaves: [],
+    sessionEnds: [],
+  };
 
   const reviewOf = (draft: StocktakeDraft): Review => {
     let stale = 0;
@@ -164,20 +216,39 @@ export const stocktakeWorld = (
         0,
       );
     const lost = draft.lostReview.filter((item) => item.action === "lost");
+    // 張數盤點的組(同 api:開始數那一刻的系統數字、B6 要重數、處理對不上 / 還沒處理完)
+    const counted = countReviewOf(draft, {
+      sheet,
+      systemOf,
+      countSales,
+      staleGroups: options.staleGroups ?? [],
+    });
+    stale += counted.stale;
+    unhandled += counted.unhandled;
+    backfillCount += counted.backfillCount;
+    backfillAmount += counted.backfillAmount;
+    investigate += counted.investigate;
+    flagged += counted.flagged;
+    const countLines = counted.lines;
+    const uncountedGroups = counted.uncountedGroups;
     // 範圍內(單一收銀點 / 全店)檯面上還沒盤的本(同 api:不比對,只記下來)
-    const uncountedCount = sheet.books.filter(
-      (book) =>
-        (draft.scopeCashPointId === null ||
-          book.cashPointId === draft.scopeCashPointId) &&
-        !draft.lines.some(
-          (line) =>
-            line.bookId === book.bookId &&
-            line.cashPointId === book.cashPointId,
-        ),
-    ).length;
+    const uncountedCount =
+      uncountedGroups +
+      sheet.books.filter(
+        (book) =>
+          (draft.scopeCashPointId === null ||
+            book.cashPointId === draft.scopeCashPointId) &&
+          !draft.lines.some(
+            (line) =>
+              line.bookId === book.bookId &&
+              line.cashPointId === book.cashPointId,
+          ),
+      ).length;
     return {
       __typename: "LotteryStocktakeReview",
       lines,
+      countLines,
+      uncountedCount,
       staleCount: stale,
       unhandledCount: unhandled,
       summary: {
@@ -211,6 +282,9 @@ export const stocktakeWorld = (
                   ),
                   books: sheet.books.filter(
                     (item) => item.cashPointId === scope,
+                  ),
+                  countGroups: sheet.countGroups.filter(
+                    (group) => group.cashPointId === scope,
                   ),
                   unopenedBooks: [],
                   lostTickets: [],
@@ -285,6 +359,7 @@ export const stocktakeWorld = (
         },
       });
     }),
+    ...countStocktakeHandlers({ sheet, sessions, countSales, inputs }),
     api.query("LotteryStocktakeStatus", () =>
       HttpResponse.json({
         data: {
@@ -319,9 +394,14 @@ export const stocktakeWorld = (
         return apiError("NOT_FOUND", {});
       }
       return HttpResponse.json({
-        data: { lotteryStocktake: sampleStocktakeDetail() },
+        data: {
+          lotteryStocktake:
+            options.countMode === true
+              ? sampleCountStocktakeDetail()
+              : sampleStocktakeDetail(),
+        },
       });
     }),
   ];
-  return { handlers, state: { sheet, backfilled }, inputs };
+  return { handlers, state: { sheet, backfilled, sessions }, inputs };
 };

@@ -3673,7 +3673,8 @@
         "noBooks": "No books on the counters in this scope",
         "loadFailed": "Could not load the stocktake data. Try again later.",
         "pickBook": "Book to count",
-        "returnedHint": "This stocktake confirmation was returned. Edit and submit again."
+        "returnedHint": "This stocktake confirmation was returned. Edit and submit again.",
+        "progressGroups": "Counted {done} / {total} groups"
       },
       "cashPoint": {
         "expected": "Expected cash {amount}",
@@ -3685,7 +3686,8 @@
         "counted": "Counted",
         "uncounted": "Not counted",
         "current": "Current",
-        "diff": "{count} diff"
+        "diff": "{count} diff",
+        "currentGroup": "Current"
       },
       "book": {
         "title": "{game} · Book {bookNo}",
@@ -3709,7 +3711,8 @@
         "legendSelected": "Present (counted)",
         "pendingReversal": "Reversal pending",
         "subtitleStock": "Book {bookNo} · {count} in stock",
-        "hintStock": "Tap the tickets still in stock (selected = present); the system figure is as of when you started this book."
+        "hintStock": "Tap the tickets still in stock (selected = present); the system figure is as of when you started this book.",
+        "finish": "Done, go to review"
       },
       "unopened": {
         "title": "Unopened books (present / missing)",
@@ -3742,7 +3745,15 @@
         "empty": "No tickets under investigation",
         "foundTicket": "Scanned #{ticketNo}, found",
         "scanEach": "Scan each ticket: only scanned tickets count as found; the rest stay under investigation",
-        "foundSome": "Scanned {count} / {total}; the rest stay under investigation"
+        "foundSome": "Scanned {count} / {total}; the rest stay under investigation",
+        "sinceCount": "{date} {type} · {cashPoint}",
+        "sourceTypes": {
+          "shift": "Shift stocktake",
+          "daily": "Daily stocktake",
+          "adhoc": "Ad hoc stocktake"
+        },
+        "unmatchedLabel": "{game} · {count} tickets · filled in by the system",
+        "hintUnmatched": " Tickets filled in by the system can only be [Confirm lost] or [Keep investigating]; a store-wide rescan finds which ones they are."
       },
       "review": {
         "title": "Review differences",
@@ -3801,7 +3812,8 @@
         "noShift": "This cash point has never had a shift, so the sale cannot be backfilled",
         "backfillDone": "Backfilled {count} sales · {amount} (immediate)",
         "lostNotReady": "Finish the investigation list: found tickets must be scanned and losses need a reason",
-        "stockHint": "Missing stock tickets can only be marked for investigation (stock tickets cannot be sold, so there is no backfill)."
+        "stockHint": "Missing stock tickets can only be marked for investigation (stock tickets cannot be sold, so there is no backfill).",
+        "infoCount": "Handle each group: short tickets can be [Count as sold], [Investigate] or split (e.g. 1 sold, 1 investigate); over tickets can only be [Flag]. [Count as sold] takes effect at once: an open shift at that cash point gets it; a checked-out shift gets a post-close correction."
       },
       "submit": {
         "title": "Submit stocktake?",
@@ -3822,7 +3834,10 @@
         "uncounted": "{count} books were not counted; they are not compared and the stocktake records them as uncounted.",
         "note": "Note",
         "back": "Back",
-        "confirm": "Submit stocktake confirmation"
+        "confirm": "Submit stocktake confirmation",
+        "countGroupLabel": "{game} · {cashPoint}",
+        "countInvestigate": "{label} {count} · filled in by the system",
+        "countFlag": "{label} {count}"
       },
       "list": {
         "type": "Type",
@@ -3878,7 +3893,22 @@
         },
         "backfillValue": "{count} · {amount}",
         "lostValue": "{count} · cost {cost}",
-        "count": "{count}",
+        "count": {
+          "title": "Count stocktake",
+          "empty": "No groups counted",
+          "columns": {
+            "group": "Cash point · Game",
+            "system": "System",
+            "present": "Actual",
+            "handled": "Action"
+          },
+          "recounted": "First counted {first}, changed to {rest}",
+          "sale": "{count} counted as sold · {amount}",
+          "investigate": "{count} to investigate (filled in by the system)",
+          "flag": "{count} flagged",
+          "none": "No difference",
+          "uncounted": "Not counted: {group}"
+        },
         "books": "{count} books",
         "uncounted": "Uncounted book",
         "uncountedHint": "Books not counted before submission; they are not compared and have no differences. Run another stocktake to count them.",
@@ -3897,6 +3927,84 @@
         "title": "Stock (opened books)",
         "name": "Stock",
         "hint": "Stock tickets of opened books (recalled, recovered or transferred back): count them ticket by ticket like a counter; missing tickets can only be marked for investigation."
+      },
+      "count": {
+        "subtitle": "{cashPoint} · {count} books",
+        "title": "{game} · {cashPoint}",
+        "meta": "{price} · {count} books ({books})",
+        "hint": "Count how many tickets of this game are left on the counter, then press [Confirm]. The system count is shown only after you count.",
+        "present": "Tickets left",
+        "confirm": "Confirm",
+        "recount": "Recount",
+        "prev": "Previous group",
+        "next": "Next group",
+        "finish": "Done, go to review",
+        "figures": "System {system} · Actual {present} · {diff}",
+        "diffNone": "No difference",
+        "diffShort": "{count} short",
+        "diffOver": "{count} over",
+        "saleUnavailable": "Not enough tickets in this group to count as sold (just handled elsewhere). Please review this group again."
+      },
+      "countReview": {
+        "title": "{cashPoint} · {game}",
+        "shiftOpen": "Open shift at {cashPoint}: {name} {time}",
+        "shiftClosed": "The {time} shift is checked out",
+        "noShift": "This cash point has never had a shift",
+        "recount": "Recount this group",
+        "stale": "Game {game} at {cashPoint} was just handled by another stocktake or rescan. Please count this group again.",
+        "overHint": "Over: only marked on the stocktake; ticket states do not change. A store-wide rescan will find which ticket it is.",
+        "splitSale": "Count as sold (up to {max})",
+        "splitApply": "Apply",
+        "kind": {
+          "short": "{count} short",
+          "over": "{count} over",
+          "match": "No difference"
+        },
+        "columns": {
+          "kind": "Difference",
+          "system": "System",
+          "actual": "Actual",
+          "action": "Action",
+          "result": "Result"
+        },
+        "actions": {
+          "sale": "Count as sold",
+          "investigate": "Investigate",
+          "split": "Split",
+          "flag": "Flag"
+        },
+        "result": {
+          "match": "No difference",
+          "none": "Not handled yet",
+          "flag": "Flagged: ticket states do not change",
+          "saleOpen": "{count} counted as sold: added to the {cashPoint} shift, expected cash {amount} (ticket numbers filled in by the system)",
+          "saleClosed": "{count} counted as sold as a post-close correction of the {cashPoint} {time} shift {amount}",
+          "investigate": "{count} to investigate (filled in by the system; responsible store = {store})"
+        }
+      },
+      "session": {
+        "scope": "{type} · {place}",
+        "types": {
+          "shift": "Shift stocktake",
+          "daily": "Daily stocktake",
+          "adhoc": "Ad hoc stocktake"
+        },
+        "wholeStore": "Whole store",
+        "blocked": "{place} is being counted by {name} (started {time}, ends automatically in {minutes} min). Please wait until it is submitted.",
+        "end": "End this stocktake",
+        "ended": "This stocktake was ended by a store manager or expired (no activity for 1 hour). Your progress is kept; start the stocktake again to [Continue].",
+        "active": "You started counting at {time} · ends automatically in {minutes} min (resets on activity)",
+        "resumeTitle": "You have a stocktake in progress",
+        "resumeBody": "{scope} · started {time}. [Continue] goes back to where you were with everything counted so far; [Abandon] releases this stocktake.",
+        "resume": "Continue",
+        "abandon": "Abandon",
+        "wholeStoreBlocksCheckout": "Whole-store stocktake in progress ({name}, started {time}). Please check out after it is submitted.",
+        "startFailed": "Cannot start the stocktake. Please try again later.",
+        "blockedTitle": "Cannot start the stocktake",
+        "gotIt": "Got it",
+        "endTitle": "End {name}'s stocktake?",
+        "endBody": "{place} will no longer be in stocktake. {name}'s progress is kept and can be continued later. This action is recorded.",
+        "cancel": "Cancel"
       }
     },
     "checkout": {
@@ -3933,7 +4041,8 @@
         "skipHint": "Requires the skip-stocktake permission; a reason is required and reports mark it as not counted.",
         "skipReason": "Skip reason (required)",
         "review": "Review differences →",
-        "reviewed": "Differences reviewed; continue to the next step"
+        "reviewed": "Differences reviewed; continue to the next step",
+        "endSession": "End this stocktake"
       },
       "redemption": {
         "title": "② Redemptions ({count} this shift)",

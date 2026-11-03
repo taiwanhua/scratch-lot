@@ -3673,7 +3673,8 @@
         "noBooks": "這個範圍沒有檯面上的本",
         "loadFailed": "讀不到盤點資料,請稍後再試",
         "pickBook": "選擇要盤的本",
-        "returnedHint": "這張盤點確認申請已退回,修改後再送出。"
+        "returnedHint": "這張盤點確認申請已退回,修改後再送出。",
+        "progressGroups": "已數 {done} / {total} 組"
       },
       "cashPoint": {
         "expected": "應有現金 {amount}",
@@ -3685,7 +3686,8 @@
         "counted": "已盤",
         "uncounted": "未盤",
         "current": "目前這本",
-        "diff": "差異 {count}"
+        "diff": "差異 {count}",
+        "currentGroup": "目前這組"
       },
       "book": {
         "title": "{game} · 本號 {bookNo}",
@@ -3709,7 +3711,8 @@
         "legendSelected": "在(已點)",
         "pendingReversal": "撤銷審核中",
         "subtitleStock": "本號 {bookNo} · 庫存 {count} 張",
-        "hintStock": "點出實際還在庫存的張(已選 = 在);系統數字是開始盤這本那一刻的數字。"
+        "hintStock": "點出實際還在庫存的張(已選 = 在);系統數字是開始盤這本那一刻的數字。",
+        "finish": "盤完,前往差異核對"
       },
       "unopened": {
         "title": "未拆的本(在 / 不在)",
@@ -3742,7 +3745,15 @@
         "empty": "沒有待查的張",
         "foundTicket": "已刷到 #{ticketNo},找到了",
         "scanEach": "逐張刷條碼:刷到的張才算找到了,沒刷到的維持待查",
-        "foundSome": "已刷到 {count} / {total} 張;沒刷到的維持待查"
+        "foundSome": "已刷到 {count} / {total} 張;沒刷到的維持待查",
+        "sinceCount": "{date} {type} · {cashPoint}",
+        "sourceTypes": {
+          "shift": "交班盤點",
+          "daily": "日結盤點",
+          "adhoc": "臨時盤點"
+        },
+        "unmatchedLabel": "{game} · {count} 張 · 系統預設帶入",
+        "hintUnmatched": "系統預設帶入的待查只能 [確認遺失] 或 [繼續待查],由全店重刷找出是哪張。"
       },
       "review": {
         "title": "差異核對",
@@ -3801,7 +3812,8 @@
         "noShift": "這個收銀點從來沒有開過班,沒有班可以記這筆補登售出",
         "backfillDone": "已補登售出 {count} 張 · {amount} 元(立即生效)",
         "lostNotReady": "待查清單還沒處理完:「找到了」要刷條碼,「確認遺失」要選原因",
-        "stockHint": "庫存的張不在:只能待查(庫存的張不能賣,沒有補登售出)。"
+        "stockHint": "庫存的張不在:只能待查(庫存的張不能賣,沒有補登售出)。",
+        "infoCount": "每一組各自處理:少的可以 [算售出]、[待查] 或拆開(例:算售出 1、待查 1);多出只能 [標記異常]。[算售出] 立即生效:那個收銀點有開著的班 → 算進那一班;已結帳 → 記成那個收銀點最近一班的事後更正。"
       },
       "submit": {
         "title": "送出盤點?",
@@ -3822,7 +3834,10 @@
         "uncounted": "還有 {count} 本沒有盤;沒盤的本不比對,盤點單會記下未盤的本。",
         "note": "說明",
         "back": "返回",
-        "confirm": "送出盤點確認申請"
+        "confirm": "送出盤點確認申請",
+        "countGroupLabel": "{game} · {cashPoint}",
+        "countInvestigate": "{label} {count} 張 · 系統預設帶入",
+        "countFlag": "{label} {count} 張"
       },
       "list": {
         "type": "類型",
@@ -3878,7 +3893,22 @@
         },
         "backfillValue": "{count} 張 · {amount} 元",
         "lostValue": "{count} 張 · 批購成本 {cost}",
-        "count": "{count} 張",
+        "count": {
+          "title": "張數盤點",
+          "empty": "沒有數的組",
+          "columns": {
+            "group": "收銀點 · 遊戲",
+            "system": "系統",
+            "present": "實際",
+            "handled": "處理"
+          },
+          "recounted": "第一次數 {first}、改成 {rest}",
+          "sale": "算售出 {count} 張 · {amount} 元",
+          "investigate": "待查 {count} 張(系統預設帶入)",
+          "flag": "標記異常 {count} 張",
+          "none": "沒有差異",
+          "uncounted": "還沒數:{group}"
+        },
         "books": "{count} 本",
         "uncounted": "未盤的本",
         "uncountedHint": "送出時還沒盤的本,不比對、不記差異;可另開一次盤點補盤。",
@@ -3897,6 +3927,84 @@
         "title": "庫存(拆過的本)",
         "name": "庫存",
         "hint": "拆過的本收回、尋回或調回的庫存張:比照檯面逐張盤,不在的張只能待查。"
+      },
+      "count": {
+        "subtitle": "{cashPoint} · {count} 本",
+        "title": "{game} · {cashPoint}",
+        "meta": "{price} 元 · {count} 本({books})",
+        "hint": "數一數檯面上這個遊戲還剩幾張,輸入後按 [確定]。數之前不顯示系統數字。",
+        "present": "實際剩幾張",
+        "confirm": "確定",
+        "recount": "重數",
+        "prev": "上一組",
+        "next": "下一組",
+        "finish": "盤完,前往差異核對",
+        "figures": "系統 {system} · 實際 {present} · {diff}",
+        "diffNone": "沒有差異",
+        "diffShort": "少 {count} 張",
+        "diffOver": "多 {count} 張",
+        "saleUnavailable": "這一組可以算售出的張不夠(剛被處理過),請重新核對這一組。"
+      },
+      "countReview": {
+        "title": "{cashPoint} · {game}",
+        "shiftOpen": "{cashPoint}開著的班:{name} {time}",
+        "shiftClosed": "{time} 的班已結帳",
+        "noShift": "這個收銀點沒有開過班",
+        "recount": "重數這組",
+        "stale": "遊戲 {game} 在{cashPoint}剛被別的盤點或重刷處理過,請重新數這一組。",
+        "overHint": "多出:只在盤點單做記號、張的狀態不動;之後做全店重刷找出是哪張。",
+        "splitSale": "算售出幾張(最多 {max})",
+        "splitApply": "套用",
+        "kind": {
+          "short": "少 {count} 張",
+          "over": "多 {count} 張",
+          "match": "沒有差異"
+        },
+        "columns": {
+          "kind": "差異",
+          "system": "系統",
+          "actual": "實際",
+          "action": "處理",
+          "result": "結果"
+        },
+        "actions": {
+          "sale": "算售出",
+          "investigate": "待查",
+          "split": "拆開",
+          "flag": "標記異常"
+        },
+        "result": {
+          "match": "沒有差異",
+          "none": "還沒處理",
+          "flag": "標記異常:張的狀態不動",
+          "saleOpen": "算售出 {count} 張:算進{cashPoint}這一班,應有現金 {amount}(張號系統預設帶入)",
+          "saleClosed": "算售出 {count} 張記成{cashPoint} {time} 班的事後更正 {amount}",
+          "investigate": "待查 {count} 張(系統預設帶入,責任分店 = {store})"
+        }
+      },
+      "session": {
+        "scope": "{type} · {place}",
+        "types": {
+          "shift": "交班盤點",
+          "daily": "日結盤點",
+          "adhoc": "臨時盤點"
+        },
+        "wholeStore": "全店",
+        "blocked": "{place}正在由{name}盤點({time} 開始,剩 {minutes} 分鐘自動結束),請等他送出。",
+        "end": "結束這個盤點",
+        "ended": "這個盤點已被店長結束或已失效(1 小時沒操作)。你的進度還在,重新進入盤點後可以 [繼續]。",
+        "active": "你從 {time} 開始盤點 · 剩 {minutes} 分鐘自動結束(有操作就重算)",
+        "resumeTitle": "你有一個進行中的盤點",
+        "resumeBody": "{scope} · {time} 開始。[繼續] 回到原本的畫面,已盤的都還在;[放棄] 會解除這次盤點。",
+        "resume": "繼續",
+        "abandon": "放棄",
+        "wholeStoreBlocksCheckout": "全店盤點中({name},{time} 開始),請等送出後再交班。",
+        "startFailed": "不能開始盤點,請稍後再試。",
+        "blockedTitle": "不能開始盤點",
+        "gotIt": "知道了",
+        "endTitle": "結束{name}的盤點?",
+        "endBody": "結束後{place}解除盤點中,{name}的進度保留,他回來還能 [繼續];這個動作會留紀錄。",
+        "cancel": "取消"
       }
     },
     "checkout": {
@@ -3933,7 +4041,8 @@
         "skipHint": "需要有跳過盤點的權限;原因必填,報表會標示「未盤點」。",
         "skipReason": "跳過原因(必填)",
         "review": "差異核對 →",
-        "reviewed": "差異已核對,可以到下一步"
+        "reviewed": "差異已核對,可以到下一步",
+        "endSession": "結束這個盤點"
       },
       "redemption": {
         "title": "② 兌獎(本班 {count} 筆)",

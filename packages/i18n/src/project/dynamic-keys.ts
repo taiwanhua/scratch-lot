@@ -14,6 +14,16 @@ import type { DynamicKey } from "../usage-scan";
  */
 export const PROJECT_DYNAMIC_KEYS: readonly DynamicKey[] = [
   {
+    key: "admin.lotteryStore.stocktake.lost.sourceTypes.",
+    reason:
+      "待查清單未對號那一組的來源盤點 `t(`sourceTypes.${type}`)`,type 是 api 回的盤點類型 `STOCKTAKE_TYPES`(`StocktakeSections`)",
+  },
+  {
+    key: "admin.lotteryStore.stocktake.session.types.",
+    reason:
+      "盤點中登記的範圍文字 `t(`types.${session.type}`)`,type 是 api 回的盤點類型 `STOCKTAKE_TYPES`(`session-text.ts`)",
+  },
+  {
     key: "admin.schedule.roster.applyTemplates.presets.",
     reason:
       "套用範本的日子快選 `t(`presets.${preset}`)`,preset 取自 `ApplyTemplatesDialog` 的 `PRESETS`(`DatePreset`,`lib/project/schedule-auto-run.ts`)",

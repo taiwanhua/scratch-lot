@@ -33,13 +33,18 @@ export interface StocktakeBookPanelProps {
   onChange: (count: Pick<BookCount, "method" | "present">) => void;
   /** 掃描模式:刷到 / 輸入的碼(交給頁面解析) */
   onCode: (code: string) => void;
+  /** [上一本]:第一本 = null(停用、不隱藏;張數店規格 13.3) */
   onPrev: (() => void) | null;
+  /** [下一本]:記成已盤後跳到下一本還沒盤的 */
   onNext: () => void;
+  /** 其他的本都盤完了:[下一本] 改成 [盤完,前往差異核對] */
+  nextIsReview?: boolean;
 }
 
 /**
  * 盤點頁右欄:選中的本(規格 6.8;Figma ST-13):方式切換(點格子 / 掃描,不用數量)、張數格子(已選 = 在)、
- * 系統數字(開始盤這本那一刻)、實盤數、差異張數;[上一本] [下一本]。
+ * 系統數字(開始盤這本那一刻)、實盤數、差異張數;[上一本] [下一本](13.3:[上一本] 外框按鈕、第一本停用、位置固定;
+ * 最後一本是 [盤完,前往差異核對];Figma ST-13-3a / 3b)。
  */
 export const StocktakeBookPanel = ({
   book,
@@ -50,6 +55,7 @@ export const StocktakeBookPanel = ({
   onCode,
   onPrev,
   onNext,
+  nextIsReview = false,
 }: StocktakeBookPanelProps) => {
   const t = useTranslations("admin.lotteryStore.stocktake.book");
   const temporal = useTemporalText();
@@ -185,15 +191,17 @@ export const StocktakeBookPanel = ({
           </Stack>
         </Stack>
         <Stack direction="row" sx={{ justifyContent: "space-between" }}>
-          {onPrev === null ? (
-            <span />
-          ) : (
-            <Button variant="text" onClick={onPrev}>
-              {t("prev")}
-            </Button>
-          )}
+          <Button
+            variant="outlined"
+            disabled={onPrev === null}
+            onClick={() => {
+              onPrev?.();
+            }}
+          >
+            {t("prev")}
+          </Button>
           <Button variant="contained" onClick={onNext}>
-            {t("next")}
+            {nextIsReview ? t("finish") : t("next")}
           </Button>
         </Stack>
       </Stack>
