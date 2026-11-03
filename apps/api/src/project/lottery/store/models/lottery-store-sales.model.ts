@@ -71,12 +71,54 @@ export class LotteryStoreScanItemModel {
   /** 未拆的本的待標註張數(拆本並售出要先標跳號)。 */
   @Field(() => Int)
   pendingSkipCount!: number;
+
+  /** 未對號(張數店:已售·未對號、待查·未對號、遺失·未對號)。 */
+  @Field(() => Boolean)
+  unmatched!: boolean;
+
+  /** 這次要先對號再處理(張數店規格 6.7;售出提示加「已對號」)。 */
+  @Field(() => Boolean)
+  match!: boolean;
 }
 
 @ObjectType()
 export class LotteryStoreScanPayload {
   @Field(() => [LotteryStoreScanItemModel])
   items!: LotteryStoreScanItemModel[];
+}
+
+/**
+ * [最近售出] 的一次依張數賣出(張數店規格 13.2、14.2 `lotteryStoreRecentSales`):一個遊戲一列「遊戲 × N 張」。
+ */
+@ObjectType("LotteryStoreCountSaleRow")
+export class LotteryStoreCountSaleRowModel {
+  /** 這一次依張數賣的 id(`refType: count_sale` 的 `refId`;撤銷用)。 */
+  @Field(() => ID)
+  refId!: string;
+
+  @Field(() => ID)
+  gameId!: string;
+
+  @Field(() => String)
+  gameCode!: string;
+
+  @Field(() => String)
+  gameName!: string;
+
+  @Field(() => Int)
+  unitPrice!: number;
+
+  /** 這一筆賣了幾張。 */
+  @Field(() => Int)
+  count!: number;
+
+  /** 已撤幾張。 */
+  @Field(() => Int)
+  undoneCount!: number;
+
+  /** 現在可以撤幾張(這一筆現在帶著的已售·未對號,沒被鎖、之後沒有異動)。 */
+  @Field(() => Int)
+  undoableCount!: number;
 }
 
 /** 一筆售出(售出提示、[最近售出]、撤銷確認視窗)。 */
@@ -113,6 +155,47 @@ export class LotteryStoreSaleModel {
   /** 不能當下撤銷的原因(`SaleUndoBlock`);可以 = null。 */
   @Field(() => String, { nullable: true })
   undoBlock!: string | null;
+
+  /**
+   * 這次先對號了(張數店規格 7.1 售出提示加「已對號」;7.3 刷退的票:這張接手了 `soldAt` 那一筆依張數售出)。
+   */
+  @Field(() => Boolean)
+  matched!: boolean;
+
+  /** 依張數賣出合成的一列(張數店);刷條碼、手動的 = null。 */
+  @Field(() => LotteryStoreCountSaleRowModel, { nullable: true })
+  countSale!: LotteryStoreCountSaleRowModel | null;
+}
+
+/** 依張數標記售出的一個遊戲(張數店規格 7.2、13.1;成功提示「遊戲 X × 3 張」)。 */
+@ObjectType("LotteryStoreCountSale")
+export class LotteryStoreCountSaleModel {
+  @Field(() => ID)
+  refId!: string;
+
+  @Field(() => ID)
+  gameId!: string;
+
+  @Field(() => String)
+  gameCode!: string;
+
+  @Field(() => String)
+  gameName!: string;
+
+  @Field(() => Int)
+  unitPrice!: number;
+
+  @Field(() => Int)
+  count!: number;
+
+  @Field(() => Int)
+  amount!: number;
+}
+
+@ObjectType()
+export class LotteryStoreCountSalesPayload {
+  @Field(() => [LotteryStoreCountSaleModel])
+  items!: LotteryStoreCountSaleModel[];
 }
 
 @ObjectType()
@@ -152,8 +235,16 @@ export class LotteryStoreCardTicketModel {
   @Field(() => ID, { nullable: true })
   soldShiftId!: string | null;
 
+  /** 售出來源(`scan` / `manual` / `stocktake` / `count`);沒售出 = null。 */
+  @Field(() => String, { nullable: true })
+  soldSource!: string | null;
+
   @Field(() => Boolean)
   locked!: boolean;
+
+  /** 未對號(張數店;格子畫虛線、「系統預設帶入的張號」)。 */
+  @Field(() => Boolean)
+  unmatched!: boolean;
 }
 
 /** 看板展開的卡片(規格 6.2)或拆本的本(規格 6.4)。 */
@@ -187,6 +278,10 @@ export class LotteryStoreBookCardModel {
   /** 這本在這家店還沒拆。 */
   @Field(() => Boolean)
   unopened!: boolean;
+
+  /** 這本在這家店的未對號張數(已售·未對號、待查·遺失·未對號;張數店規格 14.2「表頭多回未對號計數」)。 */
+  @Field(() => Int)
+  unmatchedCount!: number;
 
   @Field(() => [LotteryStoreCardTicketModel])
   tickets!: LotteryStoreCardTicketModel[];

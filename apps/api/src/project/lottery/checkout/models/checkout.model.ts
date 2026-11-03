@@ -201,6 +201,14 @@ export class LotteryCheckoutListItemModel {
 
   @Field(() => GraphQLISODateTime)
   submittedAt!: Date;
+
+  /** 涵蓋的班裡依張數標記售出的淨張數(張數店;Figma CS-15「依張數標記售出」欄)。 */
+  @Field(() => Int)
+  countSaleCount!: number;
+
+  /** 同上的淨金額。 */
+  @Field(() => Int)
+  countSaleAmount!: number;
 }
 
 @ObjectType()

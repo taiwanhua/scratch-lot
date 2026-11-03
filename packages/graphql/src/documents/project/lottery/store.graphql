@@ -89,11 +89,19 @@ query LotteryStoreBoard($orgId: ID!) {
         books {
           ...LotteryStoreBoardBookFields
         }
+        gameTotals {
+          gameId
+          gameCode
+          gameName
+          remaining
+          bookCount
+        }
       }
       myOpenShifts {
         ...LotteryStoreShiftFields
       }
       vaultExpected
+      countMode
     }
   }
 }

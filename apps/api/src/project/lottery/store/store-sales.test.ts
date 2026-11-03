@@ -87,7 +87,7 @@ const SELL = /* GraphQL */ `
 `;
 
 const UNDO = /* GraphQL */ `
-  mutation Undo($input: LotteryStoreTicketRefInput!) {
+  mutation Undo($input: UndoLotteryTicketSaleInput!) {
     undoLotteryTicketSale(input: $input) { item { ${SALE_FIELDS} } }
   }
 `;

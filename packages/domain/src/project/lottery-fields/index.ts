@@ -28,6 +28,8 @@ export const LOTTERY_FIELD_CATEGORY_KEYS = {
   scrapReason: "lottery-scrap-reason",
   /** 更正跳號原因(更正已標註的跳號) */
   skipCorrectionReason: "lottery-skip-correction-reason",
+  /** 依張數售出原因(張數店的 [依張數標記售出];張數店規格 5.7) */
+  countSaleReason: "lottery-count-sale-reason",
 } as const;
 
 /** 撤銷售出原因「客人退貨」:8.5 撤銷售出申請依這個代碼帶入。 */
@@ -38,6 +40,9 @@ export const MANUAL_SALE_SCAN_FAILED = "scan-failed";
 
 /** 手動標記原因「系統異常補登」。 */
 export const MANUAL_SALE_SYSTEM_BACKFILL = "system-backfill";
+
+/** 依張數售出原因「太忙沒刷」:[依張數標記售出] 的預設選項(張數店規格 5.7、13.1)。 */
+export const COUNT_SALE_TOO_BUSY = "too-busy";
 
 /** 出庫原因「開班零用金」:開班視窗從小金庫領零用金時寫入(6.2、6.6)。 */
 export const WITHDRAW_OPENING_FLOAT = "opening-float";

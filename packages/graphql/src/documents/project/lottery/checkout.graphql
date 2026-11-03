@@ -83,6 +83,8 @@ query LotteryCheckouts($input: LotteryCheckoutsInput!) {
       counted
       difference
       submittedAt
+      countSaleCount
+      countSaleAmount
     }
   }
 }

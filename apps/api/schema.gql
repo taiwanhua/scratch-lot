@@ -1713,6 +1713,8 @@ type LotteryCheckoutDetail {
 
 type LotteryCheckoutListItem {
   cashPoint: LotteryAccountsRef
+  countSaleAmount: Int!
+  countSaleCount: Int!
   counted: Int!
   difference: Int!
   expected: Int!
@@ -1833,6 +1835,11 @@ type LotteryCountModePendingSkipBook {
   orgId: ID!
   orgName: String!
   pendingCount: Int!
+}
+
+input LotteryCountSaleLineInput {
+  count: Int!
+  gameId: ID!
 }
 
 type LotteryDailyCloseOpenShift {
@@ -3351,6 +3358,7 @@ type LotteryStocktakesPayload {
 
 type LotteryStoreBoard {
   cashPoints: [LotteryStoreCashPoint!]!
+  countMode: String!
   myOpenShifts: [LotteryStoreShift!]!
   org: LotteryAccountsRef!
   vaultExpected: Int!
@@ -3383,6 +3391,7 @@ type LotteryStoreBookCard {
   pendingSkipCount: Int!
   tickets: [LotteryStoreCardTicket!]!
   unitPrice: Int!
+  unmatchedCount: Int!
   unopened: Boolean!
 }
 
@@ -3396,8 +3405,10 @@ type LotteryStoreCardTicket {
   locationKind: String!
   locked: Boolean!
   soldShiftId: ID
+  soldSource: String
   status: String!
   ticketNo: String!
+  unmatched: Boolean!
   version: Int!
 }
 
@@ -3420,6 +3431,7 @@ type LotteryStoreCashCorrectionsPayload {
 
 type LotteryStoreCashPoint {
   books: [LotteryStoreBoardBook!]!
+  gameTotals: [LotteryStoreGameTotal!]!
   id: ID!
   name: String!
   positionKey: String!
@@ -3452,6 +3464,31 @@ input LotteryStoreCountModeHistoryInput {
   orgId: ID!
 }
 
+type LotteryStoreCountSale {
+  amount: Int!
+  count: Int!
+  gameCode: String!
+  gameId: ID!
+  gameName: String!
+  refId: ID!
+  unitPrice: Int!
+}
+
+type LotteryStoreCountSaleRow {
+  count: Int!
+  gameCode: String!
+  gameId: ID!
+  gameName: String!
+  refId: ID!
+  undoableCount: Int!
+  undoneCount: Int!
+  unitPrice: Int!
+}
+
+type LotteryStoreCountSalesPayload {
+  items: [LotteryStoreCountSale!]!
+}
+
 type LotteryStoreCounterPayload {
   count: Int!
 }
@@ -3470,6 +3507,14 @@ type LotteryStoreEntryTask {
   positionKey: String!
   role: String!
   taskKey: String!
+}
+
+type LotteryStoreGameTotal {
+  bookCount: Int!
+  gameCode: String!
+  gameId: ID!
+  gameName: String!
+  remaining: Int!
 }
 
 type LotteryStoreOpenShiftForm {
@@ -3496,6 +3541,8 @@ type LotteryStorePunchPayload {
 type LotteryStoreSale {
   amount: Int!
   cashPoint: LotteryAccountsRef!
+  countSale: LotteryStoreCountSaleRow
+  matched: Boolean!
   shiftId: ID!
   soldAt: DateTime!
   ticketId: ID!
@@ -3545,6 +3592,7 @@ type LotteryStoreScanItem {
   gameCode: String!
   gameName: String!
   locationKind: String!
+  match: Boolean!
   outcome: String!
   pendingSkipCount: Int!
   responsibleOrg: LotteryAccountsRef
@@ -3553,6 +3601,7 @@ type LotteryStoreScanItem {
   ticketId: ID!
   ticketNo: String!
   unitPrice: Int!
+  unmatched: Boolean!
   version: Int!
 }
 
@@ -4175,6 +4224,9 @@ type Mutation {
     input: ScrapLotteryTicketsInput!
   ): LotteryInventoryActionPayload!
   sellLotteryTickets(input: SellLotteryTicketsInput!): LotteryStoreSalesPayload!
+  sellLotteryTicketsByCount(
+    input: SellLotteryTicketsByCountInput!
+  ): LotteryStoreCountSalesPayload!
   setDemoItemOneEnabled(input: SetDemoItemOneEnabledInput!): DemoItemOnePayload!
   setDemoItemTwoEnabled(input: SetDemoItemTwoEnabledInput!): DemoItemTwoPayload!
   setFieldCategoryEnabled(
@@ -4213,8 +4265,11 @@ type Mutation {
   switchOrg(input: SwitchOrgInput!): SwitchOrgPayload!
   transferOrgOwner(input: TransferOrgOwnerInput!): OrgPayload!
   unbindFormWorkflow(input: UnbindFormWorkflowInput!): FormPayload!
+  undoLotteryCountSale(
+    input: UndoLotteryCountSaleInput!
+  ): LotteryStoreSalePayload!
   undoLotteryTicketSale(
-    input: LotteryStoreTicketRefInput!
+    input: UndoLotteryTicketSaleInput!
   ): LotteryStoreSalePayload!
   updateDemoItemOne(input: UpdateDemoItemOneInput!): DemoItemOnePayload!
   updateDemoItemTwo(input: UpdateDemoItemTwoInput!): DemoItemTwoPayload!
@@ -6449,6 +6504,14 @@ input ScrapLotteryTicketsInput {
   tickets: [LotteryTicketVersionInput!]!
 }
 
+input SellLotteryTicketsByCountInput {
+  lines: [LotteryCountSaleLineInput!]!
+  localCashPointId: ID!
+  orgId: ID!
+  reasonKey: String
+  reasonNote: String
+}
+
 input SellLotteryTicketsInput {
   confirmMove: Boolean
   localCashPointId: ID!
@@ -6695,6 +6758,19 @@ input TransferOrgOwnerInput {
 
 input UnbindFormWorkflowInput {
   formKey: ID!
+}
+
+input UndoLotteryCountSaleInput {
+  count: Int!
+  orgId: ID!
+  refId: ID!
+}
+
+input UndoLotteryTicketSaleInput {
+  localCashPointId: ID
+  orgId: ID
+  ticketId: ID!
+  version: Int!
 }
 
 type UnqualifiedRole {

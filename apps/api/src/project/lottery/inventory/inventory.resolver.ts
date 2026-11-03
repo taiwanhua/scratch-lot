@@ -130,7 +130,7 @@ export class LotteryInventoryResolver {
     return this.actions.markSkips(operator, input);
   }
 
-  @RequirePermission("inventory.recover")
+  /** 尋回:`inventory.recover` 或 `store.recover`(店員,張數店規格 7.9、12);守門在 service(任一即可)。 */
   @Mutation(() => LotteryInventoryActionPayload)
   recoverLotteryTickets(
     @Args("input") input: RecoverLotteryTicketsInput,

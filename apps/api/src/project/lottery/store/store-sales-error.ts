@@ -1,6 +1,7 @@
 import { GraphQLError } from "graphql";
 
 import type {
+  CountSaleLinesProblem,
   SaleUndoBlock,
   SplitPlanProblem,
   StoreScanBlockReason,
@@ -31,6 +32,16 @@ export const STORE_SALES_REASONS = {
   gameNotFound: "GAME_NOT_FOUND",
   /** 移櫃 / 收回:張不是在檯面上的未售張 */
   ticketNotOnCounter: "TICKET_NOT_ON_COUNTER",
+  /**
+   * 依張數標記售出:這家店不是張數店(編號店、轉換中不能用;張數店規格 7.2、9.2)(`extensions.countMode`)
+   */
+  countSaleNotAllowed: "COUNT_SALE_NOT_ALLOWED",
+  /** 依張數標記售出:列不對(`extensions.problem`:沒有列 / 同遊戲兩列 / 張數不對 / 超過剩餘,帶 `gameId`、`available`) */
+  countSaleInvalid: "COUNT_SALE_INVALID",
+  /** 刷退的票:這台沒有依張數售出可以對號(張數店規格 7.3 第 1 點)→ 改送撤銷售出申請 */
+  countSaleNotFound: "COUNT_SALE_NOT_FOUND",
+  /** 依張數撤銷:要撤的張數超過現在可以撤的(`extensions.available`) */
+  countUndoExceeds: "COUNT_UNDO_EXCEEDS",
 } as const;
 
 export type StoreSalesReason =
@@ -137,6 +148,49 @@ export function notOnCounterError(ticketIds: readonly string[]): GraphQLError {
     "only unsold tickets on a counter can be moved or recalled",
     STORE_SALES_REASONS.ticketNotOnCounter,
     { fields: ["tickets"], ticketIds },
+  );
+}
+
+export function countSaleNotAllowedError(countMode: string): GraphQLError {
+  return storeSalesError(
+    "VALIDATION_FAILED",
+    "selling by count is only for count stores",
+    STORE_SALES_REASONS.countSaleNotAllowed,
+    { countMode },
+  );
+}
+
+export function countSaleInvalidError(
+  problem: CountSaleLinesProblem,
+): GraphQLError {
+  return storeSalesError(
+    "VALIDATION_FAILED",
+    "the count sale lines are invalid",
+    STORE_SALES_REASONS.countSaleInvalid,
+    {
+      fields: ["lines"],
+      problem: problem.kind,
+      ...("gameId" in problem ? { gameId: problem.gameId } : {}),
+      ...("available" in problem ? { available: problem.available } : {}),
+    },
+  );
+}
+
+export function countSaleNotFoundError(ticketId: string): GraphQLError {
+  return storeSalesError(
+    "VALIDATION_FAILED",
+    "no sale by count on this cash point to match the returned ticket",
+    STORE_SALES_REASONS.countSaleNotFound,
+    { fields: ["ticketId"], ticketIds: [ticketId] },
+  );
+}
+
+export function countUndoExceedsError(available: number): GraphQLError {
+  return storeSalesError(
+    "VALIDATION_FAILED",
+    "more tickets than can be undone",
+    STORE_SALES_REASONS.countUndoExceeds,
+    { fields: ["count"], available },
   );
 }
 

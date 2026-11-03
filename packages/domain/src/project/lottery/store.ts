@@ -35,6 +35,8 @@ export const STORE_PERMISSIONS = {
   checkout: `${STORE_KEY}.checkout`,
   skipStocktake: `${STORE_KEY}.skip-stocktake`,
   confirmLost: `${STORE_KEY}.confirm-lost`,
+  /** 店員尋回:看板刷到待查 / 遺失的張與卡片 [尋回](張數店規格 7.9、12;尋回 API 也接受 `inventory.recover`) */
+  recover: `${STORE_KEY}.recover`,
 } as const;
 
 /** 頁內分頁的值(`?tab=`;規格 6.1 的順序)。各功能只追加自己那一個。 */

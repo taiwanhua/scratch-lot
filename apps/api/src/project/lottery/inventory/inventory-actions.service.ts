@@ -12,6 +12,7 @@ import {
 } from "@repo/domain/project/lottery";
 import { LOTTERY_FIELD_CATEGORY_KEYS } from "@repo/domain/project/lottery-fields";
 
+import { authError } from "../../../auth/auth-error";
 import type { Persisted } from "../../../database/base.repository";
 import { OrgsRepository } from "../../../database/database.module";
 import {
@@ -292,6 +293,17 @@ export class InventoryActionsService {
     operator: OperatorContext,
     input: RecoverLotteryTicketsInput,
   ): Promise<LotteryInventoryActionPayload> {
+    // 庫存管理的尋回或店面管理的店員尋回(張數店規格 12:「尋回 API 接受 store.recover 或 inventory.recover」)
+    const grant = await this.access.grantOf(operator);
+    if (
+      !grant.has(INVENTORY_PERMISSIONS.recover) &&
+      !grant.has(STORE_PERMISSIONS.recover)
+    ) {
+      throw authError(
+        "FORBIDDEN",
+        `Missing permission ${INVENTORY_PERMISSIONS.recover} or ${STORE_PERMISSIONS.recover}`,
+      );
+    }
     const refs = ticketRefsOf(input.tickets);
     const target =
       input.orgId == null

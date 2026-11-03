@@ -65,6 +65,12 @@ export const PROJECT_FIELD_CATEGORIES: readonly ProjectFieldCategory[] = [
     ],
   },
   {
+    key: LOTTERY.countSaleReason,
+    name: "依張數售出原因",
+    usedIn: "張數店的依張數標記售出(預設「太忙沒刷」)",
+    options: [{ value: "too-busy", label: "太忙沒刷" }, other],
+  },
+  {
     key: LOTTERY.cashCorrectionReason,
     name: "現金更正原因",
     usedIn: "現金更正單",

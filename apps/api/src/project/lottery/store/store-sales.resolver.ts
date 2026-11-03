@@ -6,14 +6,17 @@ import { RequirePermission } from "../../../permission/require-permission.decora
 import { RequireTenant } from "../../tenant-scope/require-tenant.decorator";
 import {
   LotteryStoreScanInput,
-  LotteryStoreTicketRefInput,
   MoveLotteryTicketsInput,
   RecallLotteryTicketsInput,
+  SellLotteryTicketsByCountInput,
   SellLotteryTicketsInput,
   SplitLotteryBookInput,
+  UndoLotteryCountSaleInput,
+  UndoLotteryTicketSaleInput,
 } from "./dto/lottery-store-sales.input";
 import {
   LotteryStoreBookCardPayload,
+  LotteryStoreCountSalesPayload,
   LotteryStoreCounterPayload,
   LotteryStoreSalePayload,
   LotteryStoreSalesPayload,
@@ -21,6 +24,7 @@ import {
   LotteryStoreScanPayload,
   LotteryStoreStockBooksPayload,
 } from "./models/lottery-store-sales.model";
+import { StoreCountSalesService } from "./store-count-sales.service";
 import { StoreCounterService } from "./store-counter.service";
 import { StoreSalesService } from "./store-sales.service";
 
@@ -34,6 +38,7 @@ export class LotteryStoreSalesResolver {
   constructor(
     private readonly sales: StoreSalesService,
     private readonly counter: StoreCounterService,
+    private readonly countSales: StoreCountSalesService,
   ) {}
 
   @Query(() => LotteryStoreScanPayload, { name: "lotteryStoreScan" })
@@ -69,13 +74,33 @@ export class LotteryStoreSalesResolver {
     return { items: await this.sales.recentSales(operator, shiftId) };
   }
 
+  /** 依張數標記售出(張數店規格 7.2;只有張數店,權限 `store.sell`)。 */
+  @RequirePermission("store.sell")
+  @Mutation(() => LotteryStoreCountSalesPayload)
+  async sellLotteryTicketsByCount(
+    @Args("input") input: SellLotteryTicketsByCountInput,
+    @CurrentOperator() operator: OperatorContext,
+  ): Promise<LotteryStoreCountSalesPayload> {
+    return { items: await this.countSales.sellByCount(operator, input) };
+  }
+
   @RequirePermission("store.undo-sale")
   @Mutation(() => LotteryStoreSalePayload)
   async undoLotteryTicketSale(
-    @Args("input") input: LotteryStoreTicketRefInput,
+    @Args("input") input: UndoLotteryTicketSaleInput,
     @CurrentOperator() operator: OperatorContext,
   ): Promise<LotteryStoreSalePayload> {
     return { item: await this.sales.undo(operator, input) };
+  }
+
+  /** 撤一筆依張數賣出的其中 N 張(張數店規格 7.3 第 2 點;權限同當下撤銷)。 */
+  @RequirePermission("store.undo-sale")
+  @Mutation(() => LotteryStoreSalePayload)
+  async undoLotteryCountSale(
+    @Args("input") input: UndoLotteryCountSaleInput,
+    @CurrentOperator() operator: OperatorContext,
+  ): Promise<LotteryStoreSalePayload> {
+    return { item: await this.sales.undoCountSale(operator, input) };
   }
 
   @Query(() => LotteryStoreBookCardPayload, { name: "lotteryStoreBookCard" })

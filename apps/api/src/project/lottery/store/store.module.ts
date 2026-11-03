@@ -5,6 +5,7 @@ import { RealtimeModule } from "../../../realtime/realtime.module";
 import { ScheduleModule } from "../../schedule/schedule.module";
 import { LotteryAccountsModule } from "../accounts/accounts.module";
 import { LotteryFieldOptionsModule } from "../field-options/lottery-field-options.module";
+import { LotterySettingsModule } from "../settings/lottery-settings.module";
 import { LotteryTicketsModule } from "../tickets/tickets.module";
 import { ReceiptLinksService } from "./receipt-links.service";
 import { StoreShiftViews } from "./shift-views";
@@ -12,11 +13,13 @@ import { StoreAccess } from "./store-access";
 import { StoreBoardService } from "./store-board.service";
 import { StoreCashService } from "./store-cash.service";
 import { StoreClock } from "./store-clock";
+import { StoreCountSalesService } from "./store-count-sales.service";
 import { StoreCounterService } from "./store-counter.service";
 import { StoreFormsQueryService } from "./store-forms-query.service";
 import { StoreFormsRules } from "./store-forms-rules.service";
 import { STORE_FORMS_RULES } from "./store-forms-rules.token";
 import { LotteryStoreFormsResolver } from "./store-forms.resolver";
+import { StoreMatching } from "./store-matching";
 import { StorePersonLocks } from "./store-person-locks";
 import { StoreRegistrations } from "./store-registrations";
 import { StoreSalesSupport } from "./store-sales-support";
@@ -42,6 +45,8 @@ import { LotteryStoreResolver } from "./store.resolver";
     LotteryAccountsModule,
     LotteryFieldOptionsModule,
     LotteryTicketsModule,
+    // 分店實際的盤點制度(張數店:對號、依張數賣、看板合計;只經 StoreCountModeService 讀)
+    LotterySettingsModule,
   ],
   providers: [
     StoreAccess,
@@ -58,6 +63,8 @@ import { LotteryStoreResolver } from "./store.resolver";
     // 銷售、當下撤銷、拆本、移櫃 / 收回(規格 6.2–6.4)
     StoreSalesSupport,
     StoreSalesService,
+    StoreMatching,
+    StoreCountSalesService,
     StoreCounterService,
     LotteryStoreSalesResolver,
     // 撤銷售出申請、現金更正單(規格 8.5、8.8):掛接點的規則(`project/form-lifecycles.ts` 登記)與查詢
