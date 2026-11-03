@@ -156,7 +156,10 @@ export const inventoryTicket = (
   ...overrides,
 });
 
-/** 本 056527 的張(Figma IN-03):001–040 已售(037 跳號)、041–065 店外攤位(064 跳號、065 已售)、071 待查。 */
+/**
+ * 本 056527 的張(Figma IN-03、IN-03-2b):001–040 已售(037 跳號)、041–065 店外攤位(064 跳號、065 已售)、
+ * 071 待查、088–092 收回到庫存(其中 088 報廢;報廢只能選庫存的張,張數店規格 7.8),其餘在店內櫃台。
+ */
 const sampleTickets = (): LotteryInventoryTicketFieldsFragment[] =>
   Array.from({ length: 102 }, (_, index) => {
     const no = index + 1;
@@ -167,6 +170,12 @@ const sampleTickets = (): LotteryInventoryTicketFieldsFragment[] =>
     if (ticketNo === "071") {
       return inventoryTicket(ticketNo, "investigating", {
         responsibleOrg: inventoryOrgs.storeA,
+      });
+    }
+    if (no >= 88 && no <= 92) {
+      return inventoryTicket(ticketNo, no === 88 ? "scrapped" : "unsold", {
+        locationKind: "stock",
+        cashPoint: null,
       });
     }
     if (no <= 40 || ticketNo === "065") {

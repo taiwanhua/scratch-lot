@@ -17,6 +17,7 @@ import {
 import type { TicketCellState } from "@/components/project/lottery/TicketGrid/ticket-cell-styles";
 import { useSession } from "@/hooks/base/useSession";
 
+import { transferCellStateOf } from "./transfer-cells";
 import { type TransferBookOption, bookLabelOf } from "./transfer-form";
 
 const NONE = "none";
@@ -24,48 +25,34 @@ const NONE = "none";
 /** 選張能選的狀態(未售)。 */
 const SELECTABLE: readonly TicketCellState[] = ["unsold"];
 
-/** 圖例:未售 / 已售(不能選)/ 調貨中 / 已在明細 / 已選。 */
-const LEGEND: readonly TicketCellState[] = [
+/** 圖例:未售 / 已售(不能選)/ 調貨中 / 已在明細 / 已選;有系統預設帶入的張(張數店)另放兩種虛線。 */
+const legendOf = (hasUnmatched: boolean): readonly TicketCellState[] => [
   "unsold",
   "sold",
   "transferring",
   "assigned",
+  ...(hasUnmatched ? (["unmatchedSold", "unmatchedLost"] as const) : []),
   "selected",
 ];
 
 /**
- * api 的格子狀態 → 格子變體:可以調 = 未售;被其他調貨單鎖住的未售 = 調貨中;已售、不在出貨店 = 不能選;跳號。
+ * 拆過的本:張數格子選張 + [加入選取]。不能點格子(`gridPick` = false;張數店與轉換中、或編號店關掉
+ * 「調貨單可點格子選張」)時格子只能看、沒有連號快選,只能刷條碼或手輸張號加進已選(張數店規格 7.4)。
  */
-const cellStateOf = (state: string): Exclude<TicketCellState, "selected"> => {
-  switch (state) {
-    case "available": {
-      return "unsold";
-    }
-    case "locked": {
-      return "transferring";
-    }
-    case "skipped": {
-      return "skipped";
-    }
-    default: {
-      return "sold";
-    }
-  }
-};
-
-/** 拆過的本:張數格子選張 + [加入選取]。 */
 const PartialPicker = ({
   isLoading,
   cells,
   selected,
   onSelectedChange,
   onAdd,
+  gridPick,
 }: {
   isLoading: boolean;
   cells: readonly TicketGridCell[];
   selected: readonly string[];
   onSelectedChange: (selected: string[]) => void;
   onAdd: (ticketNos: string[]) => void;
+  gridPick: boolean;
 }) => {
   const t = useTranslations("admin.lotteryPurchasing.transfer.create");
   if (isLoading) {
@@ -75,11 +62,17 @@ const PartialPicker = ({
     <>
       <TicketGrid
         cells={cells}
-        selectableStates={SELECTABLE}
+        selectableStates={gridPick ? SELECTABLE : []}
         selected={selected}
         onSelectedChange={onSelectedChange}
-        legendItems={LEGEND}
+        legendItems={legendOf(
+          cells.some(
+            (cell) =>
+              cell.state === "unmatchedSold" || cell.state === "unmatchedLost",
+          ),
+        )}
         labels={{ sold: t("cellUnavailable"), assigned: t("cellInLines") }}
+        {...(!gridPick && { quickSelect: false })}
       />
       <Stack direction="row" sx={{ justifyContent: "flex-end" }}>
         <Button
@@ -108,13 +101,16 @@ export interface TransferBookPanelProps {
   inLines: readonly string[];
   /** 有 `purchasing.transfer.partial-tickets` 才能選張 */
   canPartial: boolean;
+  /** 出貨店能不能點格子選張(`lotteryTransferOptions.gridPick`;不能 = 格子只能看,只能刷或手輸) */
+  gridPick?: boolean;
   onAddWhole: (book: TransferBookOption) => void;
   onAddPartial: (book: TransferBookOption, ticketNos: string[]) => void;
 }
 
 /**
- * 調貨單新增頁右側的選本與張數格子(規格 7.5、8.4;Figma PU-09):選出貨店能調的一本 ——
- * 原封不動的本 [整本加入];拆過的本以張數格子選張(連號快選、Shift 連選)後 [加入選取],
+ * 調貨單新增頁右側的選本與張數格子(規格 7.5、8.4;Figma PU-09、CS-30):選出貨店能調的一本 ——
+ * 原封不動的本 [整本加入];拆過的本以張數格子選張(連號快選、Shift 連選;`gridPick` = false 時格子只能看、
+ * 只能刷或手輸)後 [加入選取],
  * 要 `partial-tickets`,沒有時不出現格子(L784)。
  */
 export const TransferBookPanel = ({
@@ -126,6 +122,7 @@ export const TransferBookPanel = ({
   onSelectedChange,
   inLines,
   canPartial,
+  gridPick = true,
   onAddWhole,
   onAddPartial,
 }: TransferBookPanelProps) => {
@@ -141,7 +138,9 @@ export const TransferBookPanel = ({
     const assigned = new Set(inLines);
     return (tickets.data?.lotteryTransferBookTickets ?? []).map((cell) => ({
       ticketNo: cell.ticketNo,
-      state: assigned.has(cell.ticketNo) ? "assigned" : cellStateOf(cell.state),
+      state: assigned.has(cell.ticketNo)
+        ? "assigned"
+        : transferCellStateOf(cell),
     }));
   }, [tickets.data, inLines]);
 
@@ -190,7 +189,9 @@ export const TransferBookPanel = ({
                 })}
               </Typography>
               <Typography variant="caption" color="textSecondary">
-                {t("bookFacts", { count: book.availableCount })}
+                {gridPick
+                  ? t("bookFacts", { count: book.availableCount })
+                  : t("bookFactsReadOnly", { count: book.availableCount })}
               </Typography>
             </Stack>
             {book.isWhole ? (
@@ -217,6 +218,7 @@ export const TransferBookPanel = ({
                 onAdd={(ticketNos) => {
                   onAddPartial(book, ticketNos);
                 }}
+                gridPick={gridPick}
               />
             ) : null}
           </Stack>

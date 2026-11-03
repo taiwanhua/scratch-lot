@@ -75,6 +75,7 @@ fragment LotteryStoreBookCardFields on LotteryStoreBookCard {
   firstTicketNo
   lastTicketNo
   pendingSkipCount
+  pendingSkipTotal
   unopened
   unmatchedCount
   tickets {

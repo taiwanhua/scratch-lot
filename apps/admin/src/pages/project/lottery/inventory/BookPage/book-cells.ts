@@ -1,6 +1,8 @@
 import {
+  type ScrapBlock,
   TICKET_LOCATION_KIND,
   TICKET_STATUS,
+  scrapBlockOf,
 } from "@repo/domain/project/lottery";
 import type { LotteryInventoryTicketFieldsFragment } from "@repo/graphql";
 
@@ -12,7 +14,7 @@ import type {
 type Ticket = Pick<
   LotteryInventoryTicketFieldsFragment,
   "ticketNo" | "status" | "locked" | "operable" | "locationKind"
-> & { org: { id: string; name: string } };
+> & { org: { id: string; name: string }; unmatched?: boolean };
 type CellState = TicketGridCell["state"];
 
 /** 張的狀態 → 本的詳情頁格子的狀態(規格 7.5「本的詳情頁:未售 / 已售 / 跳號 / 報廢 / 待查·遺失 / 已選」)。 */
@@ -68,15 +70,18 @@ const withOtherStore = (
 const isTransferring = (ticket: Ticket): boolean =>
   ticket.operable && ticket.locked && ticket.status === TICKET_STATUS.unsold;
 
-/** 本的詳情頁能選:未售(報廢)、待查·遺失(尋回);能對調跳號時另加跳號。 */
-export const bookSelectableOf = (
-  canSwapSkips: boolean,
-): TicketGridProps["selectableStates"] =>
-  canSwapSkips ? ["unsold", "lost", "skipped"] : ["unsold", "lost"];
+/**
+ * 本的詳情頁能選:未售(報廢)、待查·遺失(尋回)、報廢(撤銷報廢,張數店規格 7.8)。
+ * 更正跳號改在 [更正跳號] 視窗裡先刷實體、再點缺的那張(7.10),格子不再選跳號。
+ */
+export const BOOK_SELECTABLE: TicketGridProps["selectableStates"] = [
+  "unsold",
+  "lost",
+  "scrapped",
+];
 
-/** 選到的張能不能出現在操作列:自己範圍內的張;跳號記在哪家店都可以(對調跳號用)。 */
-export const isSelectable = (ticket: Ticket): boolean =>
-  ticket.operable || ticket.status === TICKET_STATUS.skipped;
+/** 選到的張能不能出現在操作列:自己範圍內的張。 */
+export const isSelectable = (ticket: Ticket): boolean => ticket.operable;
 
 /** 本的詳情頁的圖例(未售 / 已售 /(調貨中)/ 跳號 / 報廢 / 待查·遺失 /(其他分店)/ 已選)。 */
 export const bookLegendOf = (
@@ -98,28 +103,47 @@ export const bookLegendOf = (
   );
 
 /**
- * 對調跳號的一對(規格 7.3 做法 D):剛好兩張,一張跳號(記在哪家店都可以)+ 一張自己範圍內未售、未鎖定、
- * 不在途的張;其他組合 → null(按鈕停用並提示)。
+ * 更正跳號「手上沒有、要改記跳號的那張」能選哪些(張數店規格 7.10):自己範圍內、未鎖定、不在途的未售;
+ * 張數店另可選系統預設帶入的已售 / 待查 / 遺失·未對號(送出時先把這個狀態移給同位置一張未售)。
  */
-export const swapPairOf = <T extends Ticket>(
-  tickets: readonly T[],
-): { skipped: T; unsold: T } | null => {
-  if (tickets.length !== 2) {
-    return null;
+export const isCorrectionTarget = (ticket: Ticket): boolean =>
+  ticket.operable &&
+  !ticket.locked &&
+  ticket.locationKind !== TICKET_LOCATION_KIND.inTransit &&
+  (ticket.status === TICKET_STATUS.unsold || ticket.unmatched === true);
+
+/** 更正跳號 ② 的格子:能選的未售、系統預設帶入的張畫虛線;其他照本的詳情頁。 */
+export const correctionCellsOf = (
+  tickets: readonly Ticket[],
+): TicketGridCell[] =>
+  bookCellsOf(tickets).map((cell, index) => {
+    const ticket = tickets.at(index);
+    if (ticket === undefined || !isCorrectionTarget(ticket)) {
+      return cell.state === "unsold" ? { ...cell, state: "sold" } : cell;
+    }
+    if (ticket.status === TICKET_STATUS.sold) {
+      return { ...cell, state: "unmatchedSold" };
+    }
+    return ticket.status === TICKET_STATUS.unsold
+      ? cell
+      : { ...cell, state: "unmatchedLost" };
+  });
+
+/** 更正跳號 ② 的圖例:有系統預設帶入的張才放兩種虛線。 */
+export const correctionLegendOf = (
+  tickets: readonly Ticket[],
+): TicketGridProps["legendItems"] => {
+  const legend = bookLegendOf(tickets);
+  if (!tickets.some((ticket) => ticket.unmatched === true)) {
+    return legend;
   }
-  const skipped = tickets.find(
-    (ticket) => ticket.status === TICKET_STATUS.skipped,
-  );
-  const unsold = tickets.find(
-    (ticket) =>
-      ticket.status === TICKET_STATUS.unsold &&
-      ticket.operable &&
-      !ticket.locked &&
-      ticket.locationKind !== TICKET_LOCATION_KIND.inTransit,
-  );
-  return skipped === undefined || unsold === undefined
-    ? null
-    : { skipped, unsold };
+  const selected = legend.indexOf("selected");
+  return [
+    ...legend.slice(0, selected),
+    "unmatchedSold",
+    "unmatchedLost",
+    ...legend.slice(selected),
+  ];
 };
 
 /**
@@ -153,21 +177,56 @@ export const isRecoverable = (ticket: Ticket): boolean =>
   (ticket.status === TICKET_STATUS.investigating ||
     ticket.status === TICKET_STATUS.lost);
 
+/** 選到的動作與報廢不能按的原因。 */
+export interface SelectionActions {
+  /** 選到的全是自己範圍內的未售(顯示 [報廢];`scrapBlock` ≠ null 時停用並寫原因) */
+  showScrap: boolean;
+  /** 不能報廢的第一個原因:這本還沒拆 / 有張不在庫存(檯面上的請先收回)/ 被鎖定(張數店規格 7.8) */
+  scrapBlock: ScrapBlock | null;
+  canRecover: boolean;
+  /** 選到的全是自己範圍內的報廢 → [撤銷報廢] */
+  canUndoScrap: boolean;
+}
+
 /**
- * 選到的張能做什麼:全部未售 → 報廢;全部待查 / 遺失 → 尋回;混在一起 → 沒有共同可用的按鈕。
+ * 選到的張能做什麼:全部未售 → 報廢(只能報拆過的本在庫存的張,其他停用並寫原因;張數店規格 7.8,
+ * Figma IN-03-2a / 2b);全部待查 / 遺失 → 尋回;全部報廢 → 撤銷報廢;混在一起 → 沒有共同可用的按鈕。
  * 選到別店的張(例:查刮刮樂帶來的張號在別店)→ 沒有按鈕。
  */
 export const selectionActionsOf = (
   tickets: readonly Ticket[],
-): { canScrap: boolean; canRecover: boolean } => ({
-  canScrap:
-    tickets.length > 0 &&
-    tickets.every(
-      (ticket) =>
-        ticket.operable &&
-        ticket.status === TICKET_STATUS.unsold &&
-        !ticket.locked,
+  bookOpened: boolean,
+): SelectionActions => {
+  const all = (predicate: (ticket: Ticket) => boolean) =>
+    tickets.length > 0 && tickets.every((ticket) => predicate(ticket));
+  const showScrap = all(
+    (ticket) => ticket.operable && ticket.status === TICKET_STATUS.unsold,
+  );
+  const blocks = new Set(
+    tickets.flatMap((ticket) => {
+      const block = scrapBlockOf({
+        status: ticket.status,
+        locationKind: ticket.locationKind,
+        locked: ticket.locked,
+        bookFirstOpenedAt: bookOpened ? "opened" : null,
+      });
+      return block === null ? [] : [block];
+    }),
+  );
+  const order: readonly ScrapBlock[] = [
+    "book_unopened",
+    "not_in_stock",
+    "locked",
+    "not_unsold",
+  ];
+  return {
+    showScrap,
+    scrapBlock: showScrap
+      ? (order.find((block) => blocks.has(block)) ?? null)
+      : null,
+    canRecover: all((ticket) => isRecoverable(ticket)),
+    canUndoScrap: all(
+      (ticket) => ticket.operable && ticket.status === TICKET_STATUS.scrapped,
     ),
-  canRecover:
-    tickets.length > 0 && tickets.every((ticket) => isRecoverable(ticket)),
-});
+  };
+};

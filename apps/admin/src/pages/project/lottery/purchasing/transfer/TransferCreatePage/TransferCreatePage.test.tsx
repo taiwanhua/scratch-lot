@@ -9,7 +9,7 @@ import { renderTransferPage } from "../transfer-test-support";
 const CREATE = "/purchasing/transfer/create-page/transfer";
 
 /**
- * 調貨單的替換新增頁(規格 8.4;Figma PU-09):整本加入、張數格子選張、刷條碼加入選取、
+ * 調貨單的替換新增頁(規格 8.4;Figma PU-09):整本加入、張數格子選張、刷條碼或手輸張號加入、
  * 沒有 `partial-tickets` 不出現格子、送出存值。
  */
 describe("調貨單新增頁", () => {
@@ -19,7 +19,7 @@ describe("調貨單新增頁", () => {
       path: `${CREATE}?requisition=R-0022&to=org-store-b`,
     });
     const scan = await screen.findByRole("textbox", {
-      name: "刷條碼加入選取",
+      name: "刷條碼或手輸張號加入",
     });
     await user.type(scan, "5201-1-001233-050-0-6{Enter}");
     const table = await screen.findByRole("table", { name: /^調貨明細/ });
@@ -64,7 +64,7 @@ describe("調貨單新增頁", () => {
     const user = userEvent.setup();
     renderTransferPage({ path: `${CREATE}?to=org-store-b` });
     await user.type(
-      await screen.findByRole("textbox", { name: "刷條碼加入選取" }),
+      await screen.findByRole("textbox", { name: "刷條碼或手輸張號加入" }),
       "5164-1-056527-012-0-6{Enter}",
     );
     const grid = await screen.findByRole("group", { name: "張數格子" });
@@ -95,7 +95,7 @@ describe("調貨單新增頁", () => {
       omit: ["purchasing.transfer.partial-tickets"],
     });
     await user.type(
-      await screen.findByRole("textbox", { name: "刷條碼加入選取" }),
+      await screen.findByRole("textbox", { name: "刷條碼或手輸張號加入" }),
       "5164-1-056527-012-0-6{Enter}",
     );
     expect(
@@ -134,7 +134,7 @@ describe("調貨單新增頁", () => {
       },
     });
     const scan = await screen.findByRole("textbox", {
-      name: "刷條碼加入選取",
+      name: "刷條碼或手輸張號加入",
     });
     await user.type(scan, "5201-1-001233-050-0-6{Enter}");
     await screen.findByRole("table", { name: /^調貨明細/ });

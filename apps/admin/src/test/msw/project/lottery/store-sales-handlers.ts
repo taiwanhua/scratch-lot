@@ -12,6 +12,7 @@ import type {
   LotteryStoreSaleQueryVariables,
   LotteryStoreScanItemFieldsFragment,
   LotteryStoreScanQueryVariables,
+  MoveLotteryTicketsByCountMutationVariables,
   MoveLotteryTicketsMutationVariables,
   RecallLotteryTicketsMutationVariables,
   SellLotteryTicketsByCountMutationVariables,
@@ -45,6 +46,7 @@ export interface StoreSalesWorld {
     split: SplitLotteryBookMutationVariables["input"][];
     move: MoveLotteryTicketsMutationVariables["input"][];
     recall: RecallLotteryTicketsMutationVariables["input"][];
+    moveByCount: MoveLotteryTicketsByCountMutationVariables["input"][];
     countSale: SellLotteryTicketsByCountMutationVariables["input"][];
     undoCount: UndoLotteryCountSaleMutationVariables["input"][];
   };
@@ -100,6 +102,7 @@ export const storeSalesWorld = ({
     split: [],
     move: [],
     recall: [],
+    moveByCount: [],
     countSale: [],
     undoCount: [],
   };

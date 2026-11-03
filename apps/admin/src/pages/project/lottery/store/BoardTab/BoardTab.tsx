@@ -44,6 +44,7 @@ import { type BoardCashPoint, CashPointSection } from "./CashPointSection";
 import { CameraScanButton } from "./sales/CameraScanButton";
 import { ExpandedBookCard } from "./sales/ExpandedBookCard";
 import { SalesBoardDialogs, type SalesDialog } from "./sales/SalesBoardDialogs";
+import { countCardOf } from "./sales/card-cells";
 import { countSaleActionsOf } from "./sales/count-sale-action";
 import { useSalesText } from "./sales/useSalesText";
 import { useStoreSaleFlow } from "./sales/useStoreSaleFlow";
@@ -384,6 +385,7 @@ export const BoardTab = () => {
               }}
               onUndo={flow.openUndo}
               countMode={countMode}
+              countCard={countCardOf(board, point.gameTotals, book.gameId)}
             />
           )}
         />

@@ -114,7 +114,19 @@ export const booksOf = (board: StoreBoard): SalesBook[] => {
       soldAt: null,
     })),
   });
+  // 拆過又收回的本(張數店規格 7.5、Figma CS-08):#001–080 賣掉、#081–102 收回在庫存(系統 22 張、待標註 2)
+  const reopened = unopened("b-reopen", "5201", "金好運", 100, "0060117", 102);
+  for (const ticket of reopened.tickets) {
+    if (Number(ticket.ticketNo) <= 80) {
+      Object.assign(ticket, {
+        status: "sold",
+        cashPointId: "cp-counter",
+        soldAt: "2026-10-15T05:30:00.000Z",
+      });
+    }
+  }
   books.push(
+    reopened,
     unopened("b-new-1", "5201", "金好運", 100, "0060116", 102),
     unopened("b-new-2", "5198", "鼠來寶", 100, "0088104", 100),
     {

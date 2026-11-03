@@ -30,10 +30,14 @@ import { usePermissions } from "@/hooks/base/usePermissions";
 import { useSession } from "@/hooks/base/useSession";
 
 import { moneyText } from "../../store-text";
-import { CounterMoveDialog, ManualSaleDialog } from "./CounterActionDialogs";
+import { CountCardActions } from "./CountCardActions";
+import { ManualSaleDialog } from "./CounterActionDialogs";
+import { CounterMoveDialog } from "./CounterMoveDialog";
 import {
+  CARD_ACTION_KEYS,
   type CardAction,
   type CardDialog,
+  type CountCardData,
   type ExpandedCashPoint,
   actionsOf,
   cardActionAllowed,
@@ -64,6 +68,8 @@ export interface ExpandedBookCardProps {
   onUndo: (ticketId: string) => void;
   /** 這家店實際的盤點制度(張數店與轉換中:虛線格子、格子只留三種操作;張數店規格 13.2、13.4) */
   countMode?: string;
+  /** 張數店卡片底部按鈕要的移櫃暫停與遊戲合計(`CountCardActions`;張數店規格 13.2、8.5) */
+  countCard?: CountCardData;
 }
 
 /**
@@ -84,6 +90,7 @@ export const ExpandedBookCard = ({
   onClose,
   onUndo,
   countMode = "numbered",
+  countCard = { movePauses: [] },
 }: ExpandedBookCardProps) => {
   const countBoard = isCountBoard(countMode);
   const { t, clock, errorText } = useSalesText();
@@ -187,20 +194,6 @@ export const ExpandedBookCard = ({
       }
     }
   };
-  const actionLabels: Record<CardAction, string> = {
-    markSold: t("expand.markSold"),
-    move: t("expand.move"),
-    recall: t("expand.recall"),
-    undoSale: t("expand.undoSale"),
-    recover: t("expand.recover"),
-    moveAndSell: t("expand.moveAndSell"),
-  };
-  const counterBook = {
-    gameCode: book.gameCode,
-    gameName: book.gameName,
-    unitPrice: book.unitPrice,
-    bookNo: book.bookNo,
-  };
   const done = () => {
     setDialog(null);
     setSelected([]);
@@ -218,7 +211,7 @@ export const ExpandedBookCard = ({
           owner: point.shift.openedBy.name,
           time: clock(point.shift.openedAt),
         })}
-        book={counterBook}
+        book={book}
         tickets={toCounter(dialog.tickets)}
         onClose={() => {
           setDialog(null);
@@ -231,7 +224,7 @@ export const ExpandedBookCard = ({
       <CounterMoveDialog
         kind={dialog.kind}
         orgId={orgId}
-        book={counterBook}
+        book={book}
         cashPointId={point.id}
         cashPointName={point.name}
         all={toCounter(onCounter)}
@@ -246,7 +239,7 @@ export const ExpandedBookCard = ({
   } else if (dialog?.kind === "recover") {
     dialogElement = (
       <RecoverTicketDialog
-        book={counterBook}
+        book={book}
         tickets={dialog.tickets.map((ticket) => ({
           id: ticket.id,
           version: ticket.version,
@@ -305,7 +298,7 @@ export const ExpandedBookCard = ({
                   run(action);
                 }}
               >
-                {actionLabels[action]}
+                {t(CARD_ACTION_KEYS[action])}
               </Button>
             ))}
             <Button
@@ -331,6 +324,17 @@ export const ExpandedBookCard = ({
         summary={false}
         {...(flash && { flash })}
       />
+      {countBoard ? (
+        <CountCardActions
+          orgId={orgId}
+          book={book}
+          point={point}
+          isLocal={isLocal}
+          cashPoints={cashPoints}
+          countMode={countMode}
+          {...countCard}
+        />
+      ) : null}
     </Stack>
   );
 

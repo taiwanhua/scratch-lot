@@ -275,6 +275,10 @@ export class LotteryStoreBookCardModel {
   @Field(() => Int)
   pendingSkipCount!: number;
 
+  /** 這本還沒標的跳號(不論拆過沒;張數店拆過的本拆本時,手上比系統少的張數上限,規格 7.5)。 */
+  @Field(() => Int)
+  pendingSkipTotal!: number;
+
   /** 這本在這家店還沒拆。 */
   @Field(() => Boolean)
   unopened!: boolean;

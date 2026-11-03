@@ -1,12 +1,17 @@
 import { HttpResponse } from "msw";
 
 import {
+  counterScanDecisionOf,
   formatTicketNo,
+  normalizeBookNo,
+  parseTicketInput,
   pendingSkipCountOf,
 } from "@repo/domain/project/lottery";
 import type {
   LotteryStoreBookCardQueryVariables,
   LotteryStoreCardTicketFieldsFragment,
+  LotteryStoreCounterScanQueryVariables,
+  MoveLotteryTicketsByCountMutationVariables,
   MoveLotteryTicketsMutationVariables,
   RecallLotteryTicketsMutationVariables,
   SplitLotteryBookMutationVariables,
@@ -30,6 +35,7 @@ export interface StoreCounterContext {
     split: SplitLotteryBookMutationVariables["input"][];
     move: MoveLotteryTicketsMutationVariables["input"][];
     recall: RecallLotteryTicketsMutationVariables["input"][];
+    moveByCount: MoveLotteryTicketsByCountMutationVariables["input"][];
   };
 }
 
@@ -52,7 +58,99 @@ export const storeCounterHandlers = ({
     }
     return null;
   };
+  /** 來源台這個遊戲有沒有未售的張(對號的配對張;不含刷到的那張)。 */
+  const hasPartner = (gameCode: string, pointId: string, ticketId: string) =>
+    books.some(
+      (book) =>
+        book.gameCode === gameCode &&
+        book.tickets.some(
+          (ticket) =>
+            ticket.id !== ticketId &&
+            ticket.status === "unsold" &&
+            ticket.cashPointId === pointId,
+        ),
+    );
   return [
+    // [收回] / [刷條碼移櫃] 刷到一張(張數店規格 13.1;判斷用 domain 的 `counterScanDecisionOf`)
+    api.query("LotteryStoreCounterScan", ({ variables }) => {
+      const { input } = variables as LotteryStoreCounterScanQueryVariables;
+      const parsed = parseTicketInput(input.code);
+      const bookNo = parsed === null ? null : normalizeBookNo(parsed.bookNo);
+      const book = books.find((item) => item.bookNo === bookNo);
+      const ticket = book?.tickets.find(
+        (item) => item.ticketNo === parsed?.ticketNo,
+      );
+      if (book === undefined || ticket === undefined) {
+        return HttpResponse.json({
+          data: { lotteryStoreCounterScan: { items: [] } },
+        });
+      }
+      const decision = counterScanDecisionOf(
+        {
+          inThisStore: true,
+          status: ticket.status as "unsold",
+          unmatched: ticket.unmatched === true,
+          locked: false,
+          locationKind: ticket.cashPointId === null ? "stock" : "counter",
+          cashPointId: ticket.cashPointId,
+        },
+        {
+          countMode: board.countMode as "count",
+          sourceCashPointId: input.fromCashPointId,
+          targetCashPointId: input.toCashPointId ?? null,
+        },
+        hasPartner(book.gameCode, input.fromCashPointId, ticket.id),
+      );
+      return HttpResponse.json({
+        data: {
+          lotteryStoreCounterScan: {
+            items: [
+              {
+                __typename: "LotteryStoreCounterScanItem",
+                ticketId: ticket.id,
+                version: ticket.version,
+                bookId: book.bookId,
+                gameId: `game-${book.gameCode}`,
+                gameCode: book.gameCode,
+                gameName: book.gameName,
+                bookNo: book.bookNo,
+                ticketNo: ticket.ticketNo,
+                status: ticket.status,
+                unmatched: ticket.unmatched === true,
+                cashPoint:
+                  ticket.cashPointId === null
+                    ? null
+                    : ref(ticket.cashPointId, pointName(ticket.cashPointId)),
+                soldAt: ticket.soldAt,
+                problem: decision.problem,
+                match: decision.match,
+              },
+            ],
+          },
+        },
+      });
+    }),
+    // 依張數移櫃(張數店規格 7.7):來源台這個遊戲的前 N 張未售移到目的台
+    api.mutation("MoveLotteryTicketsByCount", ({ variables }) => {
+      const { input } = variables as MoveLotteryTicketsByCountMutationVariables;
+      inputs.moveByCount.push(input);
+      const picked = books
+        .filter((book) => `game-${book.gameCode}` === input.gameId)
+        .flatMap((book) => book.tickets)
+        .filter(
+          (ticket) =>
+            ticket.status === "unsold" &&
+            ticket.cashPointId === input.fromCashPointId,
+        )
+        .slice(0, input.count);
+      for (const ticket of picked) {
+        ticket.cashPointId = input.toCashPointId;
+        ticket.version += 1;
+      }
+      return HttpResponse.json({
+        data: { moveLotteryTicketsByCount: { count: picked.length } },
+      });
+    }),
     api.query("LotteryStoreBookCard", ({ variables }) => {
       const { bookId } = variables as LotteryStoreBookCardQueryVariables;
       const book = books.find((item) => item.bookId === bookId);
@@ -96,6 +194,12 @@ export const storeCounterHandlers = ({
               pendingSkipCount: unopened
                 ? pendingSkipCountOf(book.lastTicketNo, book.standardTickets, 0)
                 : 0,
+              pendingSkipTotal: pendingSkipCountOf(
+                book.lastTicketNo,
+                book.standardTickets,
+                book.tickets.filter((ticket) => ticket.status === "skipped")
+                  .length,
+              ),
               unopened,
               unmatchedCount: tickets.filter((ticket) => ticket.unmatched)
                 .length,
@@ -109,30 +213,43 @@ export const storeCounterHandlers = ({
       HttpResponse.json({
         data: {
           lotteryStoreStockBooks: {
+            // 庫存裡有未售的本;整本都在庫存、都未售 = 原封不動(拆本時標跳號)
             items: books
               .filter((book) =>
-                book.tickets.every(
+                book.tickets.some(
                   (ticket) =>
                     ticket.cashPointId === null && ticket.status === "unsold",
                 ),
               )
-              .map((book) => ({
-                __typename: "LotteryStoreStockBook" as const,
-                bookId: book.bookId,
-                gameCode: book.gameCode,
-                gameName: book.gameName,
-                unitPrice: book.unitPrice,
-                bookNo: book.bookNo,
-                firstTicketNo: "001",
-                lastTicketNo: formatTicketNo(book.lastTicketNo),
-                ticketCount: book.tickets.length,
-                pendingSkipCount: pendingSkipCountOf(
+              .map((book) => {
+                const sealed = book.tickets.every(
+                  (ticket) =>
+                    ticket.cashPointId === null && ticket.status === "unsold",
+                );
+                const pending = pendingSkipCountOf(
                   book.lastTicketNo,
                   book.standardTickets,
                   0,
-                ),
-                sealed: true,
-              })),
+                );
+                const inStock = book.tickets.filter(
+                  (ticket) =>
+                    ticket.cashPointId === null && ticket.status === "unsold",
+                ).length;
+                return {
+                  __typename: "LotteryStoreStockBook" as const,
+                  bookId: book.bookId,
+                  gameCode: book.gameCode,
+                  gameName: book.gameName,
+                  unitPrice: book.unitPrice,
+                  bookNo: book.bookNo,
+                  firstTicketNo: "001",
+                  lastTicketNo: formatTicketNo(book.lastTicketNo),
+                  ticketCount: sealed ? book.tickets.length : inStock,
+                  pendingSkipCount: sealed ? pending : 0,
+                  sealed,
+                  pendingSkipTotal: pending,
+                };
+              }),
           },
         },
       }),

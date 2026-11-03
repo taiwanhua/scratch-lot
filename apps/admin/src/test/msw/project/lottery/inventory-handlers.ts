@@ -34,6 +34,7 @@ import {
   sampleReasonOptions,
   sampleStockOverview,
 } from "./inventory-stock-fixtures";
+import { type UndoScrapInput, undoScrapHandler } from "./undo-scrap-handler";
 
 /**
  * 庫存管理的假 api(夾具在 `inventory-fixtures.ts`;規則照 `docs/modules/project/inventory.md`):
@@ -57,6 +58,7 @@ export interface InventoryWorld {
     swap: SwapLotterySkippedTicketMutationVariables["input"][];
     recover: RecoverLotteryTicketsMutationVariables["input"][];
     scrap: ScrapLotteryTicketsMutationVariables["input"][];
+    undoScrap: UndoScrapInput[];
     allocation: SetLotteryAllocationMutationVariables["input"][];
   };
 }
@@ -128,7 +130,6 @@ export const inventoryWorld = ({
             ticket.operable && ticket.status === "unsold" && !ticket.locked,
         ),
       canRecover: has(PERMISSIONS.recover),
-      // 這本拆過(有張不在庫存;未拆的本不能報廢,張數店規格 7.8)
       bookOpened: detail.book.state !== "unopened",
       canScrap: has(PERMISSIONS.scrap),
       canShowCost: has(PERMISSIONS.showCost),
@@ -140,6 +141,7 @@ export const inventoryWorld = ({
     swap: [],
     recover: [],
     scrap: [],
+    undoScrap: [],
     allocation: [],
   };
   const forbidden = (permission: string) =>
@@ -418,6 +420,7 @@ export const inventoryWorld = ({
         },
       });
     }),
+    undoScrapHandler({ inputs, forbidden, has, updateTickets }),
   ];
   return { handlers, inputs };
 };

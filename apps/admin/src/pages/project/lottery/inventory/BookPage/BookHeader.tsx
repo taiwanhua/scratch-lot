@@ -1,9 +1,12 @@
+import { useState } from "react";
 import { useTranslations } from "use-intl";
 
 import { displayBookNo } from "@repo/domain/project/lottery";
 import type { LotteryInventoryBookDetailFieldsFragment } from "@repo/graphql";
 import { Alert } from "@repo/ui/alert";
 import { Button } from "@repo/ui/button";
+import { useBreakpointDown } from "@repo/ui/media-query";
+import { Menu, MenuItem } from "@repo/ui/menu";
 import { Stack } from "@repo/ui/stack";
 import { Tag } from "@repo/ui/tag";
 import { Typography } from "@repo/ui/typography";
@@ -18,23 +21,83 @@ export interface BookHeaderProps {
   canRecoverAll: boolean;
   /** [標跳號](`abilities.canMarkSkips`:還有待標註) */
   onMarkSkips: () => void;
+  /** [更正跳號](`abilities.canCorrectSkips`;張數店規格 7.10,兩種店共用) */
+  onCorrectSkip: () => void;
   onRecoverAll: () => void;
 }
 
 /**
- * 本的詳情頁首(Figma IN-03):遊戲 · 本號、面額 · 張號、顯示狀態(`bookStates.*`,含已撤銷)、
- * [標跳號](`abilities.canMarkSkips`;更正標錯的跳號改在格子上選一對 [對調跳號…]);沒有未售、而且有待查 / 遺失時
- * 下方加狀態列「這本待查中 … [整本尋回]」(Figma 125:1699)。
+ * 本的詳情頁首(Figma IN-03、IN-03-3 / 3b):遊戲 · 本號、面額 · 張號、顯示狀態(`bookStates.*`,含已撤銷)、
+ * [標跳號](`abilities.canMarkSkips`)、[更正跳號](`abilities.canCorrectSkips`;張數店規格 7.10);手機兩顆收成
+ * 一顆 [跳號 ▾] 選單(避免標題列換行)。沒有未售、而且有待查 / 遺失時下方加狀態列「這本待查中 … [整本尋回]」
+ * (Figma 125:1699)。
  */
 export const BookHeader = ({
   detail,
   canRecoverAll,
   onMarkSkips,
+  onCorrectSkip,
   onRecoverAll,
 }: BookHeaderProps) => {
   const t = useTranslations("admin.lotteryInventory");
   const temporal = useTemporalText();
+  const isMobile = useBreakpointDown("sm");
+  const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
   const { book, abilities, investigation } = detail;
+  const skipActions = [
+    ...(abilities.canMarkSkips
+      ? [{ key: "mark", label: t("book.markSkips"), onClick: onMarkSkips }]
+      : []),
+    ...(abilities.canCorrectSkips
+      ? [
+          {
+            key: "correct",
+            label: t("book.correctSkip"),
+            onClick: onCorrectSkip,
+          },
+        ]
+      : []),
+  ];
+  const skipButtons =
+    isMobile && skipActions.length > 1 ? (
+      <>
+        <Button
+          variant="outlined"
+          size="small"
+          aria-haspopup="menu"
+          onClick={(event) => {
+            setMenuAnchor(event.currentTarget);
+          }}
+        >
+          {t("book.skipMenu")}
+        </Button>
+        <Menu
+          anchorEl={menuAnchor}
+          open={menuAnchor !== null}
+          onClose={() => {
+            setMenuAnchor(null);
+          }}
+        >
+          {skipActions.map((action) => (
+            <MenuItem
+              key={action.key}
+              onClick={() => {
+                setMenuAnchor(null);
+                action.onClick();
+              }}
+            >
+              {action.label}
+            </MenuItem>
+          ))}
+        </Menu>
+      </>
+    ) : (
+      skipActions.map((action) => (
+        <Button key={action.key} variant="outlined" onClick={action.onClick}>
+          {action.label}
+        </Button>
+      ))
+    );
   return (
     <>
       <Stack
@@ -64,11 +127,7 @@ export const BookHeader = ({
             tone={investigation == null ? "grey" : "warning"}
             label={t(`bookStates.${book.state}`)}
           />
-          {abilities.canMarkSkips ? (
-            <Button variant="outlined" onClick={onMarkSkips}>
-              {t("book.markSkips")}
-            </Button>
-          ) : null}
+          {skipButtons}
         </Stack>
       </Stack>
 

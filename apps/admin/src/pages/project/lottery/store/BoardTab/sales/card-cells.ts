@@ -1,6 +1,7 @@
 import {
   INVENTORY_PERMISSIONS,
   STORE_PERMISSIONS,
+  formatTicketRanges,
 } from "@repo/domain/project/lottery";
 import type { LotteryStoreCardTicketFieldsFragment } from "@repo/graphql";
 
@@ -27,6 +28,16 @@ export const LEGEND: readonly TicketCellState[] = [
 
 export type CardAction =
   "markSold" | "move" | "recall" | "undoSale" | "recover" | "moveAndSell";
+
+/** 卡片操作列按鈕的文字 key(`admin.lotteryStore.expand.*`)。 */
+export const CARD_ACTION_KEYS: Record<CardAction, string> = {
+  markSold: "expand.markSold",
+  move: "expand.move",
+  recall: "expand.recall",
+  undoSale: "expand.undoSale",
+  recover: "expand.recover",
+  moveAndSell: "expand.moveAndSell",
+};
 
 export type CardDialog = {
   kind: "manual" | "move" | "recall" | "recover";
@@ -208,3 +219,60 @@ export const cardActionAllowed = (
     }
   }
 };
+
+/** 張數店卡片底部的按鈕(張數店規格 13.2、13.4):[收回]、[刷條碼移櫃]、[依張數移櫃](轉換中不顯示,9.2)。 */
+export type CountCardAction = "recall" | "move" | "byCount";
+
+/**
+ * 張數店卡片底部要顯示哪幾顆(有 `store.move`;[依張數移櫃] 另要 `store.sell`,只有張數店)。
+ * 收回與刷條碼移櫃開視窗刷條碼或手輸張號,依張數移櫃輸入張數;都預帶這張卡片的收銀點與遊戲。
+ */
+export const countCardActionsOf = (
+  countMode: string,
+  has: (permission: string) => boolean,
+): CountCardAction[] => {
+  if (!has(STORE_PERMISSIONS.move)) {
+    return [];
+  }
+  return countMode === "count" && has(STORE_PERMISSIONS.sell)
+    ? ["recall", "move", "byCount"]
+    : ["recall", "move"];
+};
+
+/**
+ * 這本的遊戲是不是暫停移櫃(張數店規格 8.5、8.5a B1 / B2):補點編號中(`gameId` = null)→ `renumber`;
+ * 這個遊戲全店重刷中 → `rescan`;沒有 → null。後端一律再檢查。
+ */
+export const movePauseOf = (
+  pauses: readonly { gameId?: string | null }[],
+  gameId: string,
+): "rescan" | "renumber" | null => {
+  if (pauses.some((pause) => (pause.gameId ?? null) === null)) {
+    return "renumber";
+  }
+  return pauses.some((pause) => pause.gameId === gameId) ? "rescan" : null;
+};
+
+/** 展開卡片的張數店按鈕要的資料:移櫃暫停(看板)與卡片收銀點這個遊戲的總剩餘、本數(看板的遊戲合計)。 */
+export interface CountCardData {
+  movePauses: readonly { gameId?: string | null }[];
+  gameTotal?: { remaining: number; bookCount: number };
+}
+
+export const countCardOf = (
+  board: { movePauses: readonly { gameId?: string | null }[] } | null,
+  totals: readonly { gameId: string; remaining: number; bookCount: number }[],
+  gameId: string,
+): CountCardData => {
+  const total = totals.find((item) => item.gameId === gameId);
+  return {
+    movePauses: board?.movePauses ?? [],
+    ...(total && {
+      gameTotal: { remaining: total.remaining, bookCount: total.bookCount },
+    }),
+  };
+};
+
+/** 選到的張的張號區段(「#080–081」)。 */
+export const rangesOf = (tickets: readonly CounterTicket[]) =>
+  formatTicketRanges(tickets.map((ticket) => ticket.ticketNo));

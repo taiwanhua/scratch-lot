@@ -489,7 +489,10 @@
       "UNEXPECTED": "發生錯誤,請稍後再試",
       "RECOVER_TARGET_NOT_STORE": "尋回要回到一家店,請選擇回到哪家店",
       "RECOVER_TARGET_NOT_OPERATING_STORE": "只能尋回到你正在操作的店",
-      "NO_PENDING_SKIPS": "這本沒有待標註的跳號"
+      "NO_PENDING_SKIPS": "這本沒有待標註的跳號",
+      "SCRAP_NOT_ALLOWED": "只能報廢拆過的本在庫存的未售張;檯面上的張請先收回",
+      "NO_MATCH_PARTNER": "同位置沒有未售的張可以接手系統預設帶入的狀態,請先盤點或全店重刷",
+      "COUNT_STORE_SCAN_ONLY": "張數盤點的店要刷條碼或手輸實體在手上的那張"
     },
     "ticketStatuses": {
       "unsold": "未售",
@@ -626,8 +629,16 @@
       "clearSelection": "取消選取",
       "timeline": "事件時間軸",
       "markSkips": "標跳號",
-      "swapSkip": "對調跳號…",
-      "swapSkipHint": "選一格跳號 + 一格未售才能對調"
+      "correctSkip": "更正跳號",
+      "skipMenu": "跳號 ▾",
+      "undoScrap": "撤銷報廢",
+      "scrapStockOnly": "只能選在庫存的張;檯面上的張請先收回",
+      "scrapBlocks": {
+        "bookUnopened": "這本還沒拆,請先拆本",
+        "notInStock": "只能選在庫存的張;檯面上的張請先收回",
+        "locked": "被調貨單鎖住的張不能報廢",
+        "notUnsold": "只能報廢未售的張"
+      }
     },
     "timeline": {
       "columns": {
@@ -700,7 +711,7 @@
       "success": "已標跳號"
     },
     "swapSkip": {
-      "title": "對調跳號",
+      "title": "更正跳號",
       "toUnsold": "{ticketNo} 跳號 → 未售,放到 {place}",
       "toSkipped": "{ticketNo} 未售 → 跳號",
       "counter": "{store} · {cashPoint} 檯面",
@@ -708,8 +719,26 @@
       "reason": "更正原因",
       "confirm": "我已確認 {skipped} 的實體在我手上,{unsold} 實際不存在",
       "hint": "一次對調一對;改回未售的張接手另一張的所在分店、位置與單張成本。",
-      "submit": "對調",
-      "success": "已對調跳號"
+      "submit": "更正",
+      "success": "已更正跳號"
+    },
+    "undoScrap": {
+      "title": "撤銷報廢 {count} 張",
+      "reason": "撤銷原因",
+      "recovered": "扣回報廢損失",
+      "hint": "撤銷後回到未售、位置不變({place})。報廢的票不會退回彩券公司,沒有時限。",
+      "stock": "{store} · 庫存",
+      "counter": "{store} · {cashPoint} 檯面",
+      "submit": "撤銷報廢",
+      "success": "已撤銷報廢 {count} 張"
+    },
+    "skipCorrection": {
+      "scan": "① 刷條碼或手輸實體在手上的那張",
+      "pick": "② 點出手上沒有、要改記跳號的那張(只能選未售)",
+      "codeInvalid": "讀不出張號,請重刷或照「本號-張號」輸入",
+      "notThisBook": "這張不是這一本",
+      "notSkipped": "#{ticketNo} 現在是{status},不是跳號;請刷記成跳號、但實體在手上的那張",
+      "guessedToSkipped": "{ticketNo} {status}(系統預設帶入)→ 跳號;這個狀態先移給同位置一張未售"
     }
   },
   "lotteryReports": {
@@ -2761,7 +2790,7 @@
         },
         "sameBranch": "收貨分店不能和出貨分店相同",
         "lines": "調貨明細",
-        "scan": "刷條碼加入選取",
+        "scan": "刷條碼或手輸張號加入",
         "scanNotFound": "這本不在出貨分店可以調的本裡",
         "partialForbidden": "這本拆過了,只能選張;你沒有零碎張數的權限",
         "noLines": "還沒有加入任何一本",
@@ -2806,7 +2835,45 @@
         "toBranchHint": "看不到收貨分店時:調貨由總部開單,或請管理員把你加入收貨分店",
         "toBranchUnavailable": "你選不到這家收貨分店:調貨由總部開單,或請管理員把你加入收貨分店",
         "scanAmbiguousGame": "這個本號有多款遊戲,請刷背面編號或先選「正面條碼的遊戲」",
-        "wholeRangeWithCount": "{range}({count} 張)"
+        "wholeRangeWithCount": "{range}({count} 張)",
+        "gridPickCount": "這家店是張數盤點,請刷條碼或手輸張號選張。",
+        "gridPickOff": "這家店設定為只能刷條碼或手輸張號選張。",
+        "bookFactsReadOnly": "出貨分店可調 {count} 張 · 格子只能看",
+        "cellProblems": {
+          "sold": "#{ticketNo} 已售({cashPoint} {time} 賣出):沒真的賣出請當下撤銷或送撤銷售出申請",
+          "soldAt": "#{ticketNo} 已售({time} 賣出):沒真的賣出請當下撤銷或送撤銷售出申請",
+          "counter": "#{ticketNo} 在檯面上({cashPoint}),請先收回到庫存",
+          "locked": "#{ticketNo} 調貨中({serialNo}),不能調",
+          "investigating": "#{ticketNo} 待查中,請先尋回",
+          "lost": "#{ticketNo} 已遺失,請先尋回",
+          "scrapped": "#{ticketNo} 已報廢,不能調",
+          "inTransit": "#{ticketNo} 在調貨途中,不能調",
+          "skipped": "#{ticketNo} 記為跳號,不能調",
+          "elsewhere": "#{ticketNo} 在別家店,不能調"
+        },
+        "cellStates": {
+          "counter": "在檯面上",
+          "sold": "已售",
+          "locked": "調貨中",
+          "investigating": "待查",
+          "lost": "遺失",
+          "scrapped": "報廢",
+          "inTransit": "在途",
+          "skipped": "跳號",
+          "elsewhere": "在別家店"
+        },
+        "blockedHandling": {
+          "counter": "請先收回到庫存,",
+          "sold": "沒真的賣出請當下撤銷或送撤銷售出申請,",
+          "locked": "",
+          "investigating": "請先尋回,",
+          "lost": "請先尋回,",
+          "scrapped": "",
+          "inTransit": "",
+          "skipped": "",
+          "elsewhere": ""
+        },
+        "blockedRow": "{game} · {bookNo}:{ranges} 現在是「{state}」,不能調。{handling}或從這一列移除後再送出。"
       },
       "view": {
         "title": "調貨單",
@@ -3028,7 +3095,7 @@
     "TRANSFER_BRANCH_INVALID": "出貨分店、收貨分店都要選、不能相同,出貨分店要在你的範圍內",
     "TRANSFER_LINE_INVALID": "明細的本、方式、張數或金額不合(整本要沒拆過、選張要拆過),請檢查後再送出",
     "TRANSFER_PARTIAL_FORBIDDEN": "沒有零碎張數的權限,不能選張",
-    "TRANSFER_TICKETS_UNAVAILABLE": "有本或張不在出貨分店、已售、被鎖定,或在其他還沒結束的調貨單上",
+    "TRANSFER_TICKETS_UNAVAILABLE": "有本或張不在出貨分店的庫存(在檯面上、已售、被鎖定)或在其他還沒結束的調貨單上;明細下方列出哪幾張",
     "TRANSFER_RECEIVED_ROW_CHANGED": "已點收的列不能修改或刪除",
     "TRANSFER_REQUISITION_INVALID": "叫貨單要是收貨分店、待購買的叫貨單",
     "TRANSFER_UNRECEIVED_ROWS": "還有張沒點收,全部點收後才能核准;沒到的張請退回,由出貨店移除",
@@ -3370,7 +3437,11 @@
       "atCashPoint": "在{name}",
       "inStock": "在庫存",
       "metaEstimate": "{cashPoint} · {price} 元 · 剩 {remaining} / {total}(約)",
-      "dashedNote": "虛線 = 系統預設帶入的張號"
+      "dashedNote": "虛線 = 系統預設帶入的張號",
+      "scanMove": "刷條碼移櫃",
+      "moveByCount": "依張數移櫃",
+      "pausedRescan": "遊戲 {game} 全店重刷中,暫停移櫃",
+      "pausedRenumber": "補點編號中,暫停移櫃"
     },
     "move": {
       "title": "移櫃",
@@ -3379,7 +3450,10 @@
       "all": "全部 {count} 張",
       "partial": "部分張數(點格子,已選 {count} 張)",
       "submit": "移櫃",
-      "success": "已移櫃 {count} 張"
+      "success": "已移櫃 {count} 張",
+      "code": "刷條碼或手輸張號",
+      "codeInvalid": "讀不出張號,請重刷或照「本號-張號」輸入",
+      "codeNotHere": "#{ticketNo} 不在{cashPoint}檯面上的這一本"
     },
     "recall": {
       "title": "收回到庫存",
@@ -3430,7 +3504,16 @@
       "titleReopen": "上檯面 · {code} {name} · 本號 {bookNo}",
       "reopenHint": "這本拆過了:只放這家店庫存裡的 {count} 張,不用再標跳號。",
       "confirmReopen": "確認上檯面",
-      "successReopen": "已上檯面"
+      "successReopen": "已上檯面",
+      "countHint": "這本不是原封不動(之前拆過又收回),請數手上實際有幾張。",
+      "actualCount": "手上這本實際有幾張",
+      "systemCount": "系統記在本店庫存 {count} 張",
+      "countOver": "多了 {count} 張,請先盤點庫存。",
+      "countShort": "少了 {count} 張,請先盤點庫存或檢查是不是報錯張。",
+      "countOverField": "多了 {count} 張",
+      "countShortField": "少了 {count} 張",
+      "countInvalid": "請輸入 0 以上的整數",
+      "countSkipHint": "比系統少 {count} 張:請在下面點出手上沒有的 {count} 個號碼(標跳號)才能拆。"
     },
     "camera": {
       "button": "📷 掃描",
@@ -3456,7 +3539,13 @@
       "COUNT_SALE_NOT_ALLOWED": "只有張數盤點的店可以依張數標記售出",
       "COUNT_SALE_INVALID": "張數超過這個收銀點的未售張數(還有 {available} 張)",
       "COUNT_SALE_NOT_FOUND": "這台沒有依張數售出可以對號,請改送撤銷售出申請",
-      "COUNT_UNDO_EXCEEDS": "這一筆現在最多只能撤 {available} 張"
+      "COUNT_UNDO_EXCEEDS": "這一筆現在最多只能撤 {available} 張",
+      "COUNT_STORE_SCAN_ONLY": "張數盤點的店只能刷條碼或手輸張號收回、移櫃,請用卡片底部的 [收回] [刷條碼移櫃]",
+      "COUNTER_TICKET_BLOCKED": "有刮刮樂不能收回或移櫃,請移除後再送出",
+      "MOVE_PAUSED": "{kind, select, renumber {補點編號中,暫停移櫃} other {這個遊戲全店重刷中,暫停移櫃}}",
+      "MOVE_BY_COUNT_INVALID": "{problem, select, exceeds {來源台這個遊戲只剩 {available} 張} same_cash_point {要移到另一個收銀點} not_count_store {只有張數盤點的店能依張數移櫃} other {張數不對}}",
+      "SPLIT_ACTUAL_COUNT_REQUIRED": "請輸入手上這本實際有幾張",
+      "SPLIT_ACTUAL_COUNT_MISMATCH": "{problem, select, over {多了 {count} 張,請先盤點庫存。} other {少了 {count} 張,請先盤點庫存或檢查是不是報錯張。}}"
     },
     "redemption": {
       "redeemTitle": "兌獎 · {name}",
@@ -4406,6 +4495,55 @@
       "hint": "客人有退票的話請改用刷條碼撤銷。撤銷後 {amount} 元從{cashPoint}的抽屜應有金額扣除。",
       "submit": "撤銷 {count} 張",
       "success": "已撤銷 {code} {name} {count} 張,扣回 {amount}"
+    },
+    "counterScan": {
+      "moveTitle": "刷條碼移櫃",
+      "recallTitle": "收回到庫存",
+      "local": "本機",
+      "moveFrom": "從{cashPoint}移出 · 這台的任何遊戲都可以刷",
+      "recallFrom": "從{cashPoint}收回到庫存 · 這台的任何遊戲都可以刷",
+      "to": "移到哪台",
+      "recallTo": "收回到",
+      "stock": "庫存",
+      "input": "刷條碼、相機或手輸張號",
+      "add": "加入",
+      "camera": "相機",
+      "scanned": "已刷 {count} 張",
+      "row": "{code} {name} · 本號 {bookNo} · #{ticketNo}",
+      "matched": "已對號",
+      "remove": "移除",
+      "removeLabel": "移除 #{ticketNo}",
+      "moveSubmit": "移櫃 {count} 張",
+      "recallSubmit": "收回 {count} 張",
+      "moveAction": "移櫃",
+      "recallAction": "收回",
+      "notFound": "找不到這張刮刮樂({code})",
+      "duplicate": "#{ticketNo} 已在清單裡",
+      "problems": {
+        "notThisStore": "#{ticketNo} 不是本店的刮刮樂,不能{action}",
+        "sold": "#{ticketNo} 已售({cashPoint} {time} 賣出),不能{action}",
+        "unmatchedNoPartner": "#{ticketNo} 系統記為已售(未對號),但{source}的這個遊戲已沒有未售的張可以對號。請送撤銷售出申請(原因:盤點錯誤)核准後再{action}",
+        "skipped": "#{ticketNo} 記為跳號,請先到本的詳情更正跳號",
+        "scrapped": "#{ticketNo} 記為報廢,請先到本的詳情撤銷報廢",
+        "locked": "#{ticketNo} 被調貨單或撤銷售出申請鎖住,不能{action}",
+        "inTransit": "#{ticketNo} 在調貨途中,不能{action}",
+        "inStock": "#{ticketNo} 已經在庫存",
+        "missing": "#{ticketNo} 記為待查或遺失,請先尋回",
+        "alreadyThere": "#{ticketNo} 已經在{target}",
+        "notOnSource": "#{ticketNo} 不在{source}的檯面上"
+      }
+    },
+    "moveByCount": {
+      "title": "依張數移櫃",
+      "from": "從{cashPoint}移出 · 這台這個遊戲剩 {remaining} 張({books} 本)",
+      "to": "移到哪台",
+      "count": "張數",
+      "decrease": "少一張",
+      "increase": "多一張",
+      "max": "最多 {count} 張",
+      "hint": "拿任意 {count} 張放到{to}就好,張號由系統預設帶入;之後刷到實體會自動更正。",
+      "submit": "移櫃",
+      "success": "已從 {from} 移 {count} 張遊戲 {game} 到 {to}"
     }
   },
   "notifications": {

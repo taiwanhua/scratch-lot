@@ -3498,6 +3498,7 @@ type LotteryStoreBookCard {
   gameName: String!
   lastTicketNo: String!
   pendingSkipCount: Int!
+  pendingSkipTotal: Int!
   tickets: [LotteryStoreCardTicket!]!
   unitPrice: Int!
   unmatchedCount: Int!

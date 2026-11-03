@@ -240,7 +240,10 @@ describe("店面管理:張數店的銷售", () => {
       within(panel).getByRole("button", { name: "標記售出" }),
     ).toBeInTheDocument();
     expect(within(panel).queryByRole("button", { name: "移櫃" })).toBeNull();
-    expect(within(panel).queryByRole("button", { name: "收回" })).toBeNull();
+    // 收回、移櫃不在選張的操作列,改在卡片底部刷條碼(張數店規格 13.4)
+    expect(within(panel).getAllByRole("button", { name: "收回" })).toHaveLength(
+      1,
+    );
   });
 
   it("店員尋回:只有 store.recover(沒有庫存管理)也能在看板尋回,視窗寫規格 7.9 的說明", async () => {

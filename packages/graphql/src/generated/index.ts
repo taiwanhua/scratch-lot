@@ -3766,6 +3766,7 @@ export type LotteryStoreBookCard = {
   gameName: Scalars['String']['output'];
   lastTicketNo: Scalars['String']['output'];
   pendingSkipCount: Scalars['Int']['output'];
+  pendingSkipTotal: Scalars['Int']['output'];
   tickets: Array<LotteryStoreCardTicket>;
   unitPrice: Scalars['Int']['output'];
   unmatchedCount: Scalars['Int']['output'];
@@ -11736,7 +11737,7 @@ export type LotteryStoreSaleFieldsFragment = { __typename?: 'LotteryStoreSale', 
 
 export type LotteryStoreCardTicketFieldsFragment = { __typename?: 'LotteryStoreCardTicket', id: string, ticketNo: string, version: number, status: string, locationKind: string, soldShiftId?: string | null, soldSource?: string | null, locked: boolean, unmatched: boolean, cashPoint?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null };
 
-export type LotteryStoreBookCardFieldsFragment = { __typename?: 'LotteryStoreBookCard', bookId: string, gameCode: string, gameName: string, unitPrice: number, bookNo: string, firstTicketNo: string, lastTicketNo: string, pendingSkipCount: number, unopened: boolean, unmatchedCount: number, tickets: Array<{ __typename?: 'LotteryStoreCardTicket', id: string, ticketNo: string, version: number, status: string, locationKind: string, soldShiftId?: string | null, soldSource?: string | null, locked: boolean, unmatched: boolean, cashPoint?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null }> };
+export type LotteryStoreBookCardFieldsFragment = { __typename?: 'LotteryStoreBookCard', bookId: string, gameCode: string, gameName: string, unitPrice: number, bookNo: string, firstTicketNo: string, lastTicketNo: string, pendingSkipCount: number, pendingSkipTotal: number, unopened: boolean, unmatchedCount: number, tickets: Array<{ __typename?: 'LotteryStoreCardTicket', id: string, ticketNo: string, version: number, status: string, locationKind: string, soldShiftId?: string | null, soldSource?: string | null, locked: boolean, unmatched: boolean, cashPoint?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null }> };
 
 export type LotteryStoreStockBookFieldsFragment = { __typename?: 'LotteryStoreStockBook', bookId: string, gameCode: string, gameName: string, unitPrice: number, bookNo: string, firstTicketNo: string, lastTicketNo: string, ticketCount: number, pendingSkipCount: number, sealed: boolean, pendingSkipTotal: number };
 
@@ -11795,7 +11796,7 @@ export type LotteryStoreBookCardQueryVariables = Exact<{
 }>;
 
 
-export type LotteryStoreBookCardQuery = { __typename?: 'Query', lotteryStoreBookCard: { __typename?: 'LotteryStoreBookCardPayload', item: { __typename?: 'LotteryStoreBookCard', bookId: string, gameCode: string, gameName: string, unitPrice: number, bookNo: string, firstTicketNo: string, lastTicketNo: string, pendingSkipCount: number, unopened: boolean, unmatchedCount: number, tickets: Array<{ __typename?: 'LotteryStoreCardTicket', id: string, ticketNo: string, version: number, status: string, locationKind: string, soldShiftId?: string | null, soldSource?: string | null, locked: boolean, unmatched: boolean, cashPoint?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null }> } } };
+export type LotteryStoreBookCardQuery = { __typename?: 'Query', lotteryStoreBookCard: { __typename?: 'LotteryStoreBookCardPayload', item: { __typename?: 'LotteryStoreBookCard', bookId: string, gameCode: string, gameName: string, unitPrice: number, bookNo: string, firstTicketNo: string, lastTicketNo: string, pendingSkipCount: number, pendingSkipTotal: number, unopened: boolean, unmatchedCount: number, tickets: Array<{ __typename?: 'LotteryStoreCardTicket', id: string, ticketNo: string, version: number, status: string, locationKind: string, soldShiftId?: string | null, soldSource?: string | null, locked: boolean, unmatched: boolean, cashPoint?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null }> } } };
 
 export type LotteryStoreStockBooksQueryVariables = Exact<{
   orgId: Scalars['ID']['input'];
@@ -13987,6 +13988,7 @@ export const LotteryStoreBookCardFieldsFragmentDoc = `
   firstTicketNo
   lastTicketNo
   pendingSkipCount
+  pendingSkipTotal
   unopened
   unmatchedCount
   tickets {

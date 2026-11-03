@@ -14,6 +14,16 @@ import type { DynamicKey } from "../usage-scan";
  */
 export const PROJECT_DYNAMIC_KEYS: readonly DynamicKey[] = [
   {
+    key: "admin.lotteryPurchasing.transfer.create.cellStates.",
+    reason:
+      "調貨單送出被擋的列 `t(`cellStates.${key}`)`,key 由 api 的格子狀態換算(`useTransferTicketChecks` 的 `STATE_KEYS`)",
+  },
+  {
+    key: "admin.lotteryPurchasing.transfer.create.blockedHandling.",
+    reason:
+      "調貨單送出被擋的列的處理方式 `t(`blockedHandling.${key}`)`,key 同 `cellStates`(`useTransferTicketChecks` 的 `STATE_KEYS`)",
+  },
+  {
     key: "admin.lotteryStore.stocktake.lost.sourceTypes.",
     reason:
       "待查清單未對號那一組的來源盤點 `t(`sourceTypes.${type}`)`,type 是 api 回的盤點類型 `STOCKTAKE_TYPES`(`StocktakeSections`)",

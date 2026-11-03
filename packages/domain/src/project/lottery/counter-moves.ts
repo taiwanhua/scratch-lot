@@ -266,10 +266,13 @@ export function moveByCountProblemOf(
  * (拆過又收回、尋回過、報廢過…)。原封不動的本張數固定,不用輸入;編號店照現況。
  */
 export function splitNeedsActualCount(
-  countMode: CountMode,
+  countMode: string,
   sealed: boolean,
 ): boolean {
-  return isMatchingCountMode(countMode) && !sealed;
+  return (
+    (countMode === COUNT_MODE.count || countMode === COUNT_MODE.converting) &&
+    !sealed
+  );
 }
 
 /** 手上實際張數對不上時不能拆的原因:比系統多 / 少太多(超過待標註)/ 輸入不是 0 以上的整數。 */
@@ -316,8 +319,10 @@ export type ScrapBlock = (typeof SCRAP_BLOCKS)[number];
 
 /** 報廢要看的一張與它的本。 */
 export interface ScrapTicketFacts {
-  status: TicketStatus;
-  locationKind: TicketLocationKind;
+  /** `TicketStatus`(畫面讀到的是字串) */
+  status: string;
+  /** `TicketLocationKind` */
+  locationKind: string;
   locked: boolean;
   /** 這本第一次拆本的時間(null = 從沒拆過) */
   bookFirstOpenedAt: Date | string | null;

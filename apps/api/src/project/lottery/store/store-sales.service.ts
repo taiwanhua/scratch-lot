@@ -1250,6 +1250,7 @@ export class StoreSalesService {
       lastTicketNo: book.lastTicketNo,
       // 這家店原封不動才在拆本時標跳號;其他(拆過、只尋回幾張…)不標,待標註保留(使用者 10/27 定案 M1)
       pendingSkipCount: unopened ? pendingSkipOf(book) : 0,
+      pendingSkipTotal: pendingSkipOf(book),
       unopened,
       unmatchedCount: usable.filter((ticket) => ticket.unmatched).length,
       tickets: usable.map((ticket) => {

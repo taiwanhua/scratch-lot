@@ -36,12 +36,12 @@
 
 整張照抄 `schedule_settings`:`{ orgId, key, enabled, value, level, order }`,一列 = 某組織對某條設定的自訂。唯一 `(orgId, key)`(只算未刪除的);[還原] = 軟刪除;`sharing: inheritDown`(下層看得到上層鏈建的)。`value` 一律 `{ option }`;`enabled` 固定 true、`level` null、`order` 0。
 
-| key                  | 名稱               | 選項                                       | 程式預設   |
-| -------------------- | ------------------ | ------------------------------------------ | ---------- |
-| `count_mode`         | 盤點制度           | `numbered` 編號盤點 / `count` 張數盤點     | `numbered` |
-| `renumber_required`  | 張數店補點編號     | `remind` 只提醒 / `required` 必須(擋關帳)  | `remind`   |
-| `renumber_reminder`  | 補點編號提醒       | `none` / `weekly` / `biweekly` / `monthly` | `monthly`  |
-| `transfer_grid_pick` | 調貨單可點格子選張 | `on` / `off`(只對編號店有效)               | `on`       |
+| key                  | 名稱               | 選項                                                                            | 程式預設   |
+| -------------------- | ------------------ | ------------------------------------------------------------------------------- | ---------- |
+| `count_mode`         | 盤點制度           | `numbered` 編號盤點 / `count` 張數盤點                                          | `numbered` |
+| `renumber_required`  | 張數店補點編號     | `remind` 只提醒 / `required` 必須(擋關帳)                                       | `remind`   |
+| `renumber_reminder`  | 補點編號提醒       | `none` / `weekly` / `biweekly` / `monthly`                                      | `monthly`  |
+| `transfer_grid_pick` | 調貨單可點格子選張 | `on` / `off`(只對編號店有效;`lotteryTransferOptions.gridPick`,見 purchasing.md) | `on`       |
 
 ### `lottery_store_count_modes`
 
@@ -87,13 +87,14 @@
 
 ### 給其他模組的介面(`StoreCountModeService`,`LotterySettingsModule` 匯出)
 
-| 方法                                           | 回                                               |
-| ---------------------------------------------- | ------------------------------------------------ |
-| `modeOf(operator, orgId)` / `modesOf`          | 分店實際的盤點制度(沒有筆 = `numbered`)          |
-| `settingOf(operator, orgId, key)`              | 分店某一條設定的生效選項                         |
-| `movePauseOf(operator, orgId)`                 | 進行中的全店重刷 / 補點編號(移櫃暫停)            |
-| `recordOf` / `busyOf` / `historyOf`            | 分店那一筆、進行中的工作、歷程                   |
-| `planCountModeChange` / `applyCountModeChange` | 改盤點制度的計畫與寫入(補點編號核准也用 `apply`) |
+| 方法                                           | 回                                                                               |
+| ---------------------------------------------- | -------------------------------------------------------------------------------- |
+| `modeOf(operator, orgId)` / `modesOf`          | 分店實際的盤點制度(沒有筆 = `numbered`)                                          |
+| `settingOf(operator, orgId, key)`              | 分店某一條設定的生效選項                                                         |
+| `movePauseOf(operator, orgId)`                 | 進行中的全店重刷 / 補點編號(移櫃暫停)                                            |
+| `guardMove(operator, store, gameIds, session)` | 移櫃交易內:擋到的暫停(`MovePauseBlock`);沒擋 → 分店那一筆 `version` +1(8.5 先後) |
+| `recordOf` / `busyOf` / `historyOf`            | 分店那一筆、進行中的工作、歷程                                                   |
+| `planCountModeChange` / `applyCountModeChange` | 改盤點制度的計畫與寫入(補點編號核准也用 `apply`)                                 |
 
 ## api 介面
 
