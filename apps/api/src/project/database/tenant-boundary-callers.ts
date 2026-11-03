@@ -142,6 +142,12 @@ export const PROJECT_TENANT_BOUNDARY_CONTEXT_CALLERS: Readonly<
   "project/lottery/stocktake/stocktake.service.ts": ["反查", "例外寫入"],
   // 盤點紀錄 / 檢視頁:審核者從申請中心進來讀盤點單、申請的單號(分店不一定在他的可見範圍)
   "project/lottery/stocktake/stocktake-query.service.ts": ["反查"],
+  // 收回 / 刷條碼移櫃刷到一張:碼可能對到別家店的張(「不是本店」;張數店規格 13.1)
+  "project/lottery/store/store-counter.service.ts": ["反查"],
+  // 全店重刷:刷到的碼可能是別家店的張(反查);重刷單與分店那一筆由刷的人寫(張數店規格 8.4)
+  "project/lottery/stocktake/rescan.service.ts": ["反查", "例外寫入"],
+  // 全店重刷 1 小時沒動作自動取消,逐租戶跑
+  "project/lottery/stocktake/rescan-expiry.service.ts": ["排程"],
   // 交班結帳:掛接點以系統身分建立結帳單、結束班次、更新下一班期初(例外寫入);人名、單號、接班人候選反查
   "project/lottery/checkout/checkout.service.ts": ["反查", "例外寫入"],
   "project/lottery/checkout/checkout-query.service.ts": ["反查"],

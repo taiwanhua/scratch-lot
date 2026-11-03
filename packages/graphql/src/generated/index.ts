@@ -1018,6 +1018,12 @@ export type FieldsPayload = {
   totalCount: Scalars['Int']['output'];
 };
 
+export type FinishLotteryRescanPlaceInput = {
+  cashPointId?: InputMaybe<Scalars['ID']['input']>;
+  orgId: Scalars['ID']['input'];
+  rescanId: Scalars['ID']['input'];
+};
+
 export type ForkFormInput = {
   key: Scalars['ID']['input'];
   name: Scalars['String']['input'];
@@ -3173,6 +3179,83 @@ export type LotteryRequisitionStateItem = {
   state: Scalars['String']['output'];
 };
 
+export type LotteryRescan = {
+  __typename?: 'LotteryRescan';
+  canCancel: Scalars['Boolean']['output'];
+  cancelCause?: Maybe<Scalars['String']['output']>;
+  doneCount: Scalars['Int']['output'];
+  finishedAt?: Maybe<Scalars['DateTime']['output']>;
+  gameCode: Scalars['String']['output'];
+  gameId: Scalars['ID']['output'];
+  gameName: Scalars['String']['output'];
+  id: Scalars['ID']['output'];
+  minutesLeft: Scalars['Int']['output'];
+  orgId: Scalars['ID']['output'];
+  places: Array<LotteryRescanPlace>;
+  results: Array<LotteryRescanItem>;
+  startedAt: Scalars['DateTime']['output'];
+  startedByName: Scalars['String']['output'];
+  status: Scalars['String']['output'];
+};
+
+export type LotteryRescanBrief = {
+  __typename?: 'LotteryRescanBrief';
+  doneCount: Scalars['Int']['output'];
+  gameCode: Scalars['String']['output'];
+  gameId: Scalars['ID']['output'];
+  gameName: Scalars['String']['output'];
+  id: Scalars['ID']['output'];
+  minutesLeft: Scalars['Int']['output'];
+  places: Array<LotteryRescanPlace>;
+  startedAt: Scalars['DateTime']['output'];
+  startedByName: Scalars['String']['output'];
+};
+
+export type LotteryRescanInput = {
+  orgId: Scalars['ID']['input'];
+  rescanId: Scalars['ID']['input'];
+};
+
+export type LotteryRescanItem = {
+  __typename?: 'LotteryRescanItem';
+  bookNo: Scalars['String']['output'];
+  cashPointId?: Maybe<Scalars['ID']['output']>;
+  gameCode: Scalars['String']['output'];
+  outcome: Scalars['String']['output'];
+  partnerTicketNo?: Maybe<Scalars['String']['output']>;
+  ticketId: Scalars['ID']['output'];
+  ticketNo: Scalars['String']['output'];
+};
+
+export type LotteryRescanPlace = {
+  __typename?: 'LotteryRescanPlace';
+  cashPointId?: Maybe<Scalars['ID']['output']>;
+  doneAt?: Maybe<Scalars['DateTime']['output']>;
+  doneByName?: Maybe<Scalars['String']['output']>;
+  items: Array<LotteryRescanItem>;
+  mine: Scalars['Boolean']['output'];
+  name: Scalars['String']['output'];
+  scannedCount: Scalars['Int']['output'];
+  scanningByName?: Maybe<Scalars['String']['output']>;
+  state: Scalars['String']['output'];
+};
+
+export type LotteryRescanReminder = {
+  __typename?: 'LotteryRescanReminder';
+  flaggedCount: Scalars['Int']['output'];
+  gameCode: Scalars['String']['output'];
+  gameId: Scalars['ID']['output'];
+  gameName: Scalars['String']['output'];
+  investigateCount: Scalars['Int']['output'];
+};
+
+export type LotteryRescanScanPayload = {
+  __typename?: 'LotteryRescanScanPayload';
+  duplicate: Scalars['Boolean']['output'];
+  item: LotteryRescanItem;
+  rescan: LotteryRescan;
+};
+
 export type LotterySetting = {
   __typename?: 'LotterySetting';
   effective: LotterySettingValue;
@@ -3679,6 +3762,8 @@ export type LotteryStocktakeStatus = {
   __typename?: 'LotteryStocktakeStatus';
   lastSubmittedAt?: Maybe<Scalars['DateTime']['output']>;
   remind: Scalars['Boolean']['output'];
+  rescanReminders: Array<LotteryRescanReminder>;
+  rescans: Array<LotteryRescanBrief>;
 };
 
 export type LotteryStocktakeSummary = {
@@ -4449,6 +4534,7 @@ export type Mutation = {
   batchApproveTasks: BatchApproveTasksPayload;
   bindFormWorkflow: FormPayload;
   cancelLotteryCountModeConversion: LotterySettingMutationPayload;
+  cancelLotteryRescan: LotteryRescan;
   changePassword: ChangePasswordPayload;
   clearScheduleAutoAssignments: ClearScheduleAutoAssignmentsPayload;
   closeLotteryPeriod: LotteryPeriodClose;
@@ -4505,6 +4591,7 @@ export type Mutation = {
   depositLotteryVaultToBank: LotteryBankDepositPayload;
   disablePrintAgent: PrintAgentPayload;
   endLotteryStocktakeSession: Scalars['Boolean']['output'];
+  finishLotteryRescanPlace: LotteryRescan;
   forkForm: FormPayload;
   forkWorkflow: WorkflowPayload;
   grantRoleUsers: RoleUsersPayload;
@@ -4571,6 +4658,7 @@ export type Mutation = {
   saveScheduleDemandWeekTemplate: ScheduleDemandWeekTemplatePayload;
   saveScheduleEntry: SaveScheduleEntryPayload;
   saveWorkflowVersionDraft: WorkflowVersionPayload;
+  scanLotteryRescanTicket: LotteryRescanScanPayload;
   scrapLotteryTickets: LotteryInventoryActionPayload;
   sellLotteryTickets: LotteryStoreSalesPayload;
   sellLotteryTicketsByCount: LotteryStoreCountSalesPayload;
@@ -4595,6 +4683,7 @@ export type Mutation = {
   setUserEnabled: UserPayload;
   setUserOrgs: SetUserOrgsPayload;
   splitLotteryBook: LotteryStoreCounterPayload;
+  startLotteryRescan: LotteryRescan;
   startLotteryStocktakeSession: LotteryStocktakeSession;
   submitFormSubmission: FormSubmissionPayload;
   swapLotterySkippedTicket: LotteryInventoryActionPayload;
@@ -4699,6 +4788,11 @@ export type MutationBindFormWorkflowArgs = {
 
 export type MutationCancelLotteryCountModeConversionArgs = {
   input: CancelLotteryCountModeConversionInput;
+};
+
+
+export type MutationCancelLotteryRescanArgs = {
+  input: LotteryRescanInput;
 };
 
 
@@ -4979,6 +5073,11 @@ export type MutationDisablePrintAgentArgs = {
 
 export type MutationEndLotteryStocktakeSessionArgs = {
   input: EndLotteryStocktakeSessionInput;
+};
+
+
+export type MutationFinishLotteryRescanPlaceArgs = {
+  input: FinishLotteryRescanPlaceInput;
 };
 
 
@@ -5292,6 +5391,11 @@ export type MutationSaveWorkflowVersionDraftArgs = {
 };
 
 
+export type MutationScanLotteryRescanTicketArgs = {
+  input: ScanLotteryRescanTicketInput;
+};
+
+
 export type MutationScrapLotteryTicketsArgs = {
   input: ScrapLotteryTicketsInput;
 };
@@ -5409,6 +5513,11 @@ export type MutationSetUserOrgsArgs = {
 
 export type MutationSplitLotteryBookArgs = {
   input: SplitLotteryBookInput;
+};
+
+
+export type MutationStartLotteryRescanArgs = {
+  input: StartLotteryRescanInput;
 };
 
 
@@ -6340,6 +6449,7 @@ export type Query = {
   lotteryRedemptions: LotteryRedemptionsPayload;
   lotteryRequisitionCandidates: Array<LotteryRequisitionCandidate>;
   lotteryRequisitionStates: Array<LotteryRequisitionStateItem>;
+  lotteryRescan: LotteryRescan;
   lotterySettings: LotterySettingsPayload;
   lotterySettlement: LotterySettlementPayload;
   lotterySettlementAccounts: LotterySettlementAccountsPayload;
@@ -6800,6 +6910,11 @@ export type QueryLotteryRequisitionCandidatesArgs = {
 
 export type QueryLotteryRequisitionStatesArgs = {
   requisitionIds: Array<Scalars['ID']['input']>;
+};
+
+
+export type QueryLotteryRescanArgs = {
+  input: LotteryRescanInput;
 };
 
 
@@ -7804,6 +7919,13 @@ export type SaveWorkflowVersionDraftInput = {
   workflowKey: Scalars['ID']['input'];
 };
 
+export type ScanLotteryRescanTicketInput = {
+  cashPointId?: InputMaybe<Scalars['ID']['input']>;
+  code: Scalars['String']['input'];
+  orgId: Scalars['ID']['input'];
+  rescanId: Scalars['ID']['input'];
+};
+
 export type ScheduleApplyWeekTemplate = {
   __typename?: 'ScheduleApplyWeekTemplate';
   days: Array<Array<Scalars['ID']['output']>>;
@@ -8740,6 +8862,11 @@ export type SplitLotteryBookInput = {
   bookId: Scalars['ID']['input'];
   orgId: Scalars['ID']['input'];
   skippedTicketNos: Array<Scalars['String']['input']>;
+};
+
+export type StartLotteryRescanInput = {
+  gameId: Scalars['ID']['input'];
+  orgId: Scalars['ID']['input'];
 };
 
 export type StartLotteryStocktakeSessionInput = {
@@ -11621,6 +11748,45 @@ export type LotteryRequisitionStatesQueryVariables = Exact<{
 
 export type LotteryRequisitionStatesQuery = { __typename?: 'Query', lotteryRequisitionStates: Array<{ __typename?: 'LotteryRequisitionStateItem', requisitionId: string, state: string }> };
 
+export type LotteryRescanItemFieldsFragment = { __typename?: 'LotteryRescanItem', ticketId: string, gameCode: string, bookNo: string, ticketNo: string, outcome: string, partnerTicketNo?: string | null, cashPointId?: string | null };
+
+export type LotteryRescanFieldsFragment = { __typename?: 'LotteryRescan', id: string, orgId: string, gameId: string, gameCode: string, gameName: string, status: string, cancelCause?: string | null, startedAt: string, startedByName: string, finishedAt?: string | null, minutesLeft: number, canCancel: boolean, doneCount: number, places: Array<{ __typename?: 'LotteryRescanPlace', cashPointId?: string | null, name: string, state: string, scanningByName?: string | null, mine: boolean, doneAt?: string | null, doneByName?: string | null, scannedCount: number, items: Array<{ __typename?: 'LotteryRescanItem', ticketId: string, gameCode: string, bookNo: string, ticketNo: string, outcome: string, partnerTicketNo?: string | null, cashPointId?: string | null }> }>, results: Array<{ __typename?: 'LotteryRescanItem', ticketId: string, gameCode: string, bookNo: string, ticketNo: string, outcome: string, partnerTicketNo?: string | null, cashPointId?: string | null }> };
+
+export type LotteryRescanQueryVariables = Exact<{
+  input: LotteryRescanInput;
+}>;
+
+
+export type LotteryRescanQuery = { __typename?: 'Query', lotteryRescan: { __typename?: 'LotteryRescan', id: string, orgId: string, gameId: string, gameCode: string, gameName: string, status: string, cancelCause?: string | null, startedAt: string, startedByName: string, finishedAt?: string | null, minutesLeft: number, canCancel: boolean, doneCount: number, places: Array<{ __typename?: 'LotteryRescanPlace', cashPointId?: string | null, name: string, state: string, scanningByName?: string | null, mine: boolean, doneAt?: string | null, doneByName?: string | null, scannedCount: number, items: Array<{ __typename?: 'LotteryRescanItem', ticketId: string, gameCode: string, bookNo: string, ticketNo: string, outcome: string, partnerTicketNo?: string | null, cashPointId?: string | null }> }>, results: Array<{ __typename?: 'LotteryRescanItem', ticketId: string, gameCode: string, bookNo: string, ticketNo: string, outcome: string, partnerTicketNo?: string | null, cashPointId?: string | null }> } };
+
+export type StartLotteryRescanMutationVariables = Exact<{
+  input: StartLotteryRescanInput;
+}>;
+
+
+export type StartLotteryRescanMutation = { __typename?: 'Mutation', startLotteryRescan: { __typename?: 'LotteryRescan', id: string, orgId: string, gameId: string, gameCode: string, gameName: string, status: string, cancelCause?: string | null, startedAt: string, startedByName: string, finishedAt?: string | null, minutesLeft: number, canCancel: boolean, doneCount: number, places: Array<{ __typename?: 'LotteryRescanPlace', cashPointId?: string | null, name: string, state: string, scanningByName?: string | null, mine: boolean, doneAt?: string | null, doneByName?: string | null, scannedCount: number, items: Array<{ __typename?: 'LotteryRescanItem', ticketId: string, gameCode: string, bookNo: string, ticketNo: string, outcome: string, partnerTicketNo?: string | null, cashPointId?: string | null }> }>, results: Array<{ __typename?: 'LotteryRescanItem', ticketId: string, gameCode: string, bookNo: string, ticketNo: string, outcome: string, partnerTicketNo?: string | null, cashPointId?: string | null }> } };
+
+export type ScanLotteryRescanTicketMutationVariables = Exact<{
+  input: ScanLotteryRescanTicketInput;
+}>;
+
+
+export type ScanLotteryRescanTicketMutation = { __typename?: 'Mutation', scanLotteryRescanTicket: { __typename?: 'LotteryRescanScanPayload', duplicate: boolean, item: { __typename?: 'LotteryRescanItem', ticketId: string, gameCode: string, bookNo: string, ticketNo: string, outcome: string, partnerTicketNo?: string | null, cashPointId?: string | null }, rescan: { __typename?: 'LotteryRescan', id: string, orgId: string, gameId: string, gameCode: string, gameName: string, status: string, cancelCause?: string | null, startedAt: string, startedByName: string, finishedAt?: string | null, minutesLeft: number, canCancel: boolean, doneCount: number, places: Array<{ __typename?: 'LotteryRescanPlace', cashPointId?: string | null, name: string, state: string, scanningByName?: string | null, mine: boolean, doneAt?: string | null, doneByName?: string | null, scannedCount: number, items: Array<{ __typename?: 'LotteryRescanItem', ticketId: string, gameCode: string, bookNo: string, ticketNo: string, outcome: string, partnerTicketNo?: string | null, cashPointId?: string | null }> }>, results: Array<{ __typename?: 'LotteryRescanItem', ticketId: string, gameCode: string, bookNo: string, ticketNo: string, outcome: string, partnerTicketNo?: string | null, cashPointId?: string | null }> } } };
+
+export type FinishLotteryRescanPlaceMutationVariables = Exact<{
+  input: FinishLotteryRescanPlaceInput;
+}>;
+
+
+export type FinishLotteryRescanPlaceMutation = { __typename?: 'Mutation', finishLotteryRescanPlace: { __typename?: 'LotteryRescan', id: string, orgId: string, gameId: string, gameCode: string, gameName: string, status: string, cancelCause?: string | null, startedAt: string, startedByName: string, finishedAt?: string | null, minutesLeft: number, canCancel: boolean, doneCount: number, places: Array<{ __typename?: 'LotteryRescanPlace', cashPointId?: string | null, name: string, state: string, scanningByName?: string | null, mine: boolean, doneAt?: string | null, doneByName?: string | null, scannedCount: number, items: Array<{ __typename?: 'LotteryRescanItem', ticketId: string, gameCode: string, bookNo: string, ticketNo: string, outcome: string, partnerTicketNo?: string | null, cashPointId?: string | null }> }>, results: Array<{ __typename?: 'LotteryRescanItem', ticketId: string, gameCode: string, bookNo: string, ticketNo: string, outcome: string, partnerTicketNo?: string | null, cashPointId?: string | null }> } };
+
+export type CancelLotteryRescanMutationVariables = Exact<{
+  input: LotteryRescanInput;
+}>;
+
+
+export type CancelLotteryRescanMutation = { __typename?: 'Mutation', cancelLotteryRescan: { __typename?: 'LotteryRescan', id: string, orgId: string, gameId: string, gameCode: string, gameName: string, status: string, cancelCause?: string | null, startedAt: string, startedByName: string, finishedAt?: string | null, minutesLeft: number, canCancel: boolean, doneCount: number, places: Array<{ __typename?: 'LotteryRescanPlace', cashPointId?: string | null, name: string, state: string, scanningByName?: string | null, mine: boolean, doneAt?: string | null, doneByName?: string | null, scannedCount: number, items: Array<{ __typename?: 'LotteryRescanItem', ticketId: string, gameCode: string, bookNo: string, ticketNo: string, outcome: string, partnerTicketNo?: string | null, cashPointId?: string | null }> }>, results: Array<{ __typename?: 'LotteryRescanItem', ticketId: string, gameCode: string, bookNo: string, ticketNo: string, outcome: string, partnerTicketNo?: string | null, cashPointId?: string | null }> } };
+
 export type LotteryStocktakeShiftFieldsFragment = { __typename?: 'LotteryStocktakeShift', id: string, ownerName: string, openedAt: string, closed: boolean, expectedCash?: number | null };
 
 export type LotteryStocktakeSummaryFieldsFragment = { __typename?: 'LotteryStocktakeSummary', books: number, backfillCount: number, backfillAmount: number, newInvestigate: number, flagged: number, confirmLost: number, confirmLostCost?: number | null, uncountedCount: number };
@@ -11651,7 +11817,7 @@ export type LotteryStocktakeStatusQueryVariables = Exact<{
 }>;
 
 
-export type LotteryStocktakeStatusQuery = { __typename?: 'Query', lotteryStocktakeStatus: { __typename?: 'LotteryStocktakeStatus', lastSubmittedAt?: string | null, remind: boolean } };
+export type LotteryStocktakeStatusQuery = { __typename?: 'Query', lotteryStocktakeStatus: { __typename?: 'LotteryStocktakeStatus', lastSubmittedAt?: string | null, remind: boolean, rescans: Array<{ __typename?: 'LotteryRescanBrief', id: string, gameId: string, gameCode: string, gameName: string, startedByName: string, startedAt: string, minutesLeft: number, doneCount: number, places: Array<{ __typename?: 'LotteryRescanPlace', cashPointId?: string | null, name: string, state: string }> }>, rescanReminders: Array<{ __typename?: 'LotteryRescanReminder', gameId: string, gameCode: string, gameName: string, investigateCount: number, flaggedCount: number }> } };
 
 export type LotteryStocktakesQueryVariables = Exact<{
   input: LotteryStocktakesInput;
@@ -13826,6 +13992,50 @@ export const LotteryRequisitionCandidateFieldsFragmentDoc = `
   sold30
   plannedBooks
   givenBooks
+}
+    `;
+export const LotteryRescanItemFieldsFragmentDoc = `
+    fragment LotteryRescanItemFields on LotteryRescanItem {
+  ticketId
+  gameCode
+  bookNo
+  ticketNo
+  outcome
+  partnerTicketNo
+  cashPointId
+}
+    `;
+export const LotteryRescanFieldsFragmentDoc = `
+    fragment LotteryRescanFields on LotteryRescan {
+  id
+  orgId
+  gameId
+  gameCode
+  gameName
+  status
+  cancelCause
+  startedAt
+  startedByName
+  finishedAt
+  minutesLeft
+  canCancel
+  doneCount
+  places {
+    cashPointId
+    name
+    state
+    scanningByName
+    mine
+    doneAt
+    doneByName
+    scannedCount
+    items {
+      ...LotteryRescanItemFields
+    }
+  }
+  results {
+    ...LotteryRescanItemFields
+  }
 }
     `;
 export const LotteryStocktakeShiftFieldsFragmentDoc = `
@@ -24609,6 +24819,160 @@ useLotteryRequisitionStatesQuery.getKey = (variables: LotteryRequisitionStatesQu
 
 useLotteryRequisitionStatesQuery.fetcher = (client: GraphQLClient, variables: LotteryRequisitionStatesQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryRequisitionStatesQuery, LotteryRequisitionStatesQueryVariables>(client, LotteryRequisitionStatesDocument, variables, headers);
 
+export const LotteryRescanDocument = `
+    query LotteryRescan($input: LotteryRescanInput!) {
+  lotteryRescan(input: $input) {
+    ...LotteryRescanFields
+  }
+}
+    ${LotteryRescanFieldsFragmentDoc}
+${LotteryRescanItemFieldsFragmentDoc}`;
+
+export const useLotteryRescanQuery = <
+      TData = LotteryRescanQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: LotteryRescanQueryVariables,
+      options?: Omit<UseQueryOptions<LotteryRescanQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotteryRescanQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<LotteryRescanQuery, TError, TData>(
+      {
+    queryKey: ['LotteryRescan', variables],
+    queryFn: fetcher<LotteryRescanQuery, LotteryRescanQueryVariables>(client, LotteryRescanDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useLotteryRescanQuery.getKey = (variables: LotteryRescanQueryVariables) => ['LotteryRescan', variables];
+
+
+useLotteryRescanQuery.fetcher = (client: GraphQLClient, variables: LotteryRescanQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryRescanQuery, LotteryRescanQueryVariables>(client, LotteryRescanDocument, variables, headers);
+
+export const StartLotteryRescanDocument = `
+    mutation StartLotteryRescan($input: StartLotteryRescanInput!) {
+  startLotteryRescan(input: $input) {
+    ...LotteryRescanFields
+  }
+}
+    ${LotteryRescanFieldsFragmentDoc}
+${LotteryRescanItemFieldsFragmentDoc}`;
+
+export const useStartLotteryRescanMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<StartLotteryRescanMutation, TError, StartLotteryRescanMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<StartLotteryRescanMutation, TError, StartLotteryRescanMutationVariables, TContext>(
+      {
+    mutationKey: ['StartLotteryRescan'],
+    mutationFn: (variables?: StartLotteryRescanMutationVariables) => fetcher<StartLotteryRescanMutation, StartLotteryRescanMutationVariables>(client, StartLotteryRescanDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useStartLotteryRescanMutation.fetcher = (client: GraphQLClient, variables: StartLotteryRescanMutationVariables, headers?: RequestInit['headers']) => fetcher<StartLotteryRescanMutation, StartLotteryRescanMutationVariables>(client, StartLotteryRescanDocument, variables, headers);
+
+export const ScanLotteryRescanTicketDocument = `
+    mutation ScanLotteryRescanTicket($input: ScanLotteryRescanTicketInput!) {
+  scanLotteryRescanTicket(input: $input) {
+    duplicate
+    item {
+      ...LotteryRescanItemFields
+    }
+    rescan {
+      ...LotteryRescanFields
+    }
+  }
+}
+    ${LotteryRescanItemFieldsFragmentDoc}
+${LotteryRescanFieldsFragmentDoc}`;
+
+export const useScanLotteryRescanTicketMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<ScanLotteryRescanTicketMutation, TError, ScanLotteryRescanTicketMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<ScanLotteryRescanTicketMutation, TError, ScanLotteryRescanTicketMutationVariables, TContext>(
+      {
+    mutationKey: ['ScanLotteryRescanTicket'],
+    mutationFn: (variables?: ScanLotteryRescanTicketMutationVariables) => fetcher<ScanLotteryRescanTicketMutation, ScanLotteryRescanTicketMutationVariables>(client, ScanLotteryRescanTicketDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useScanLotteryRescanTicketMutation.fetcher = (client: GraphQLClient, variables: ScanLotteryRescanTicketMutationVariables, headers?: RequestInit['headers']) => fetcher<ScanLotteryRescanTicketMutation, ScanLotteryRescanTicketMutationVariables>(client, ScanLotteryRescanTicketDocument, variables, headers);
+
+export const FinishLotteryRescanPlaceDocument = `
+    mutation FinishLotteryRescanPlace($input: FinishLotteryRescanPlaceInput!) {
+  finishLotteryRescanPlace(input: $input) {
+    ...LotteryRescanFields
+  }
+}
+    ${LotteryRescanFieldsFragmentDoc}
+${LotteryRescanItemFieldsFragmentDoc}`;
+
+export const useFinishLotteryRescanPlaceMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<FinishLotteryRescanPlaceMutation, TError, FinishLotteryRescanPlaceMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<FinishLotteryRescanPlaceMutation, TError, FinishLotteryRescanPlaceMutationVariables, TContext>(
+      {
+    mutationKey: ['FinishLotteryRescanPlace'],
+    mutationFn: (variables?: FinishLotteryRescanPlaceMutationVariables) => fetcher<FinishLotteryRescanPlaceMutation, FinishLotteryRescanPlaceMutationVariables>(client, FinishLotteryRescanPlaceDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useFinishLotteryRescanPlaceMutation.fetcher = (client: GraphQLClient, variables: FinishLotteryRescanPlaceMutationVariables, headers?: RequestInit['headers']) => fetcher<FinishLotteryRescanPlaceMutation, FinishLotteryRescanPlaceMutationVariables>(client, FinishLotteryRescanPlaceDocument, variables, headers);
+
+export const CancelLotteryRescanDocument = `
+    mutation CancelLotteryRescan($input: LotteryRescanInput!) {
+  cancelLotteryRescan(input: $input) {
+    ...LotteryRescanFields
+  }
+}
+    ${LotteryRescanFieldsFragmentDoc}
+${LotteryRescanItemFieldsFragmentDoc}`;
+
+export const useCancelLotteryRescanMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<CancelLotteryRescanMutation, TError, CancelLotteryRescanMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<CancelLotteryRescanMutation, TError, CancelLotteryRescanMutationVariables, TContext>(
+      {
+    mutationKey: ['CancelLotteryRescan'],
+    mutationFn: (variables?: CancelLotteryRescanMutationVariables) => fetcher<CancelLotteryRescanMutation, CancelLotteryRescanMutationVariables>(client, CancelLotteryRescanDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useCancelLotteryRescanMutation.fetcher = (client: GraphQLClient, variables: CancelLotteryRescanMutationVariables, headers?: RequestInit['headers']) => fetcher<CancelLotteryRescanMutation, CancelLotteryRescanMutationVariables>(client, CancelLotteryRescanDocument, variables, headers);
+
 export const LotteryStocktakeSheetDocument = `
     query LotteryStocktakeSheet($input: LotteryStocktakeSheetInput!) {
   lotteryStocktakeSheet(input: $input) {
@@ -24812,6 +25176,28 @@ export const LotteryStocktakeStatusDocument = `
   lotteryStocktakeStatus(orgId: $orgId) {
     lastSubmittedAt
     remind
+    rescans {
+      id
+      gameId
+      gameCode
+      gameName
+      startedByName
+      startedAt
+      minutesLeft
+      doneCount
+      places {
+        cashPointId
+        name
+        state
+      }
+    }
+    rescanReminders {
+      gameId
+      gameCode
+      gameName
+      investigateCount
+      flaggedCount
+    }
   }
 }
     `;

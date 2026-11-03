@@ -60,6 +60,8 @@ import type {
   LotteryStocktakeSummaryModel,
   LotteryStocktakesPayload,
 } from "./models/stocktake.model";
+import { RescanReminders } from "./rescan-reminders";
+import { RescanService } from "./rescan.service";
 import { StocktakeCountFacts } from "./stocktake-count-facts";
 import { StocktakeCountService } from "./stocktake-count.service";
 import { forbiddenError, notFoundError } from "./stocktake-error";
@@ -200,6 +202,8 @@ export class StocktakeQueryService {
     private readonly facts: StocktakeFacts,
     private readonly countFacts: StocktakeCountFacts,
     private readonly count: StocktakeCountService,
+    private readonly rescans: RescanService,
+    private readonly rescanReminders: RescanReminders,
   ) {}
 
   // ---- 盤點頁 ----
@@ -606,18 +610,37 @@ export class StocktakeQueryService {
   ): Promise<LotteryStocktakeStatusModel> {
     await this.access.assertView(operator);
     const store = await this.support.mustStore(operator, orgIdText);
+    // 全店重刷單不算「上次盤點」(只刷一個遊戲)
     const last = await this.stocktakes.findOne(
       operator,
-      { orgId: store.orgId, status: { $ne: "rejected" } },
+      {
+        orgId: store.orgId,
+        status: { $ne: "rejected" },
+        purpose: { $ne: "rescan" },
+      },
       { sort: { submittedAt: -1 } },
     );
     const lastAt = last?.submittedAt ?? null;
     const limit = STOCKTAKE_REMINDER_HOURS * 60 * 60 * 1000;
+    // 全店重刷(張數店規格 8.3、13.2):進行中的重刷與要重刷的遊戲(以租戶邊界讀,店員看得到這家店就看得到)
+    const rescans = await this.rescans.activeOf(operator, store);
+    const reader = await tenantBoundaryContext(
+      this.orgs,
+      operator,
+      store.tenantId,
+    );
+    const rescanReminders = await this.rescanReminders.remindersOf(
+      reader,
+      store,
+      new Set(rescans.map((rescan) => rescan.gameId)),
+    );
     return {
       lastSubmittedAt: lastAt,
       remind:
         lastAt === null ||
         this.clock.now().getTime() - lastAt.getTime() > limit,
+      rescans,
+      rescanReminders,
     };
   }
 
@@ -629,7 +652,11 @@ export class StocktakeQueryService {
   ): Promise<LotteryStocktakesPayload> {
     await this.access.assertView(operator);
     const store = await this.support.mustStore(operator, input.orgId);
-    const filter: Record<string, unknown> = { orgId: store.orgId };
+    // 全店重刷單不列在盤點紀錄(進度與結果在重刷頁;張數店規格 8.4)
+    const filter: Record<string, unknown> = {
+      orgId: store.orgId,
+      purpose: { $ne: "rescan" },
+    };
     if (input.from != null || input.to != null) {
       filter.submittedAt = {
         ...(input.from == null ? {} : { $gte: input.from }),

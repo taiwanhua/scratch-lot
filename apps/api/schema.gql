@@ -963,6 +963,12 @@ type FieldsPayload {
   totalCount: Int!
 }
 
+input FinishLotteryRescanPlaceInput {
+  cashPointId: ID
+  orgId: ID!
+  rescanId: ID!
+}
+
 input ForkFormInput {
   key: ID!
   name: String!
@@ -2953,6 +2959,77 @@ type LotteryRequisitionStateItem {
   state: String!
 }
 
+type LotteryRescan {
+  canCancel: Boolean!
+  cancelCause: String
+  doneCount: Int!
+  finishedAt: DateTime
+  gameCode: String!
+  gameId: ID!
+  gameName: String!
+  id: ID!
+  minutesLeft: Int!
+  orgId: ID!
+  places: [LotteryRescanPlace!]!
+  results: [LotteryRescanItem!]!
+  startedAt: DateTime!
+  startedByName: String!
+  status: String!
+}
+
+type LotteryRescanBrief {
+  doneCount: Int!
+  gameCode: String!
+  gameId: ID!
+  gameName: String!
+  id: ID!
+  minutesLeft: Int!
+  places: [LotteryRescanPlace!]!
+  startedAt: DateTime!
+  startedByName: String!
+}
+
+input LotteryRescanInput {
+  orgId: ID!
+  rescanId: ID!
+}
+
+type LotteryRescanItem {
+  bookNo: String!
+  cashPointId: ID
+  gameCode: String!
+  outcome: String!
+  partnerTicketNo: String
+  ticketId: ID!
+  ticketNo: String!
+}
+
+type LotteryRescanPlace {
+  cashPointId: ID
+  doneAt: DateTime
+  doneByName: String
+  items: [LotteryRescanItem!]!
+  mine: Boolean!
+  name: String!
+  scannedCount: Int!
+  scanningByName: String
+  state: String!
+}
+
+type LotteryRescanReminder {
+  flaggedCount: Int!
+  gameCode: String!
+  gameId: ID!
+  gameName: String!
+  investigateCount: Int!
+}
+
+type LotteryRescanScanPayload {
+  duplicate: Boolean!
+  item: LotteryRescanItem!
+  rescan: LotteryRescan!
+}
+
 type LotterySetting {
   effective: LotterySettingValue!
   key: ID!
@@ -3419,6 +3496,8 @@ type LotteryStocktakeShift {
 type LotteryStocktakeStatus {
   lastSubmittedAt: DateTime
   remind: Boolean!
+  rescanReminders: [LotteryRescanReminder!]!
+  rescans: [LotteryRescanBrief!]!
 }
 
 type LotteryStocktakeSummary {
@@ -4143,6 +4222,7 @@ type Mutation {
   cancelLotteryCountModeConversion(
     input: CancelLotteryCountModeConversionInput!
   ): LotterySettingMutationPayload!
+  cancelLotteryRescan(input: LotteryRescanInput!): LotteryRescan!
   changePassword(input: ChangePasswordInput!): ChangePasswordPayload!
   clearScheduleAutoAssignments(
     input: ScheduleAutoRunRangeInput!
@@ -4251,6 +4331,9 @@ type Mutation {
   ): LotteryBankDepositPayload!
   disablePrintAgent(input: PrintAgentIdInput!): PrintAgentPayload!
   endLotteryStocktakeSession(input: EndLotteryStocktakeSessionInput!): Boolean!
+  finishLotteryRescanPlace(
+    input: FinishLotteryRescanPlaceInput!
+  ): LotteryRescan!
   forkForm(input: ForkFormInput!): FormPayload!
   forkWorkflow(input: ForkWorkflowInput!): WorkflowPayload!
   grantRoleUsers(input: GrantRoleUsersInput!): RoleUsersPayload!
@@ -4391,6 +4474,9 @@ type Mutation {
   saveWorkflowVersionDraft(
     input: SaveWorkflowVersionDraftInput!
   ): WorkflowVersionPayload!
+  scanLotteryRescanTicket(
+    input: ScanLotteryRescanTicketInput!
+  ): LotteryRescanScanPayload!
   scrapLotteryTickets(
     input: ScrapLotteryTicketsInput!
   ): LotteryInventoryActionPayload!
@@ -4427,6 +4513,7 @@ type Mutation {
   setUserEnabled(input: SetUserEnabledInput!): UserPayload!
   setUserOrgs(input: SetUserOrgsInput!): SetUserOrgsPayload!
   splitLotteryBook(input: SplitLotteryBookInput!): LotteryStoreCounterPayload!
+  startLotteryRescan(input: StartLotteryRescanInput!): LotteryRescan!
   startLotteryStocktakeSession(
     input: StartLotteryStocktakeSessionInput!
   ): LotteryStocktakeSession!
@@ -5286,6 +5373,7 @@ type Query {
   lotteryRequisitionStates(
     requisitionIds: [ID!]!
   ): [LotteryRequisitionStateItem!]!
+  lotteryRescan(input: LotteryRescanInput!): LotteryRescan!
   lotterySettings(input: LotterySettingsInput): LotterySettingsPayload!
   lotterySettlement(moduleKey: String!, refId: ID!): LotterySettlementPayload!
   lotterySettlementAccounts(
@@ -6012,6 +6100,13 @@ input SaveWorkflowVersionDraftInput {
   definition: WorkflowDefinitionInput!
   expectedDraftRevision: Int!
   workflowKey: ID!
+}
+
+input ScanLotteryRescanTicketInput {
+  cashPointId: ID
+  code: String!
+  orgId: ID!
+  rescanId: ID!
 }
 
 type ScheduleApplyWeekTemplate {
@@ -6907,6 +7002,11 @@ input SplitLotteryBookInput {
   bookId: ID!
   orgId: ID!
   skippedTicketNos: [String!]!
+}
+
+input StartLotteryRescanInput {
+  gameId: ID!
+  orgId: ID!
 }
 
 input StartLotteryStocktakeSessionInput {

@@ -1,0 +1,79 @@
+# 全店重刷(張數店規格 8.4;Figma CS-10a–d)
+
+fragment LotteryRescanItemFields on LotteryRescanItem {
+  ticketId
+  gameCode
+  bookNo
+  ticketNo
+  outcome
+  partnerTicketNo
+  cashPointId
+}
+
+fragment LotteryRescanFields on LotteryRescan {
+  id
+  orgId
+  gameId
+  gameCode
+  gameName
+  status
+  cancelCause
+  startedAt
+  startedByName
+  finishedAt
+  minutesLeft
+  canCancel
+  doneCount
+  places {
+    cashPointId
+    name
+    state
+    scanningByName
+    mine
+    doneAt
+    doneByName
+    scannedCount
+    items {
+      ...LotteryRescanItemFields
+    }
+  }
+  results {
+    ...LotteryRescanItemFields
+  }
+}
+
+query LotteryRescan($input: LotteryRescanInput!) {
+  lotteryRescan(input: $input) {
+    ...LotteryRescanFields
+  }
+}
+
+mutation StartLotteryRescan($input: StartLotteryRescanInput!) {
+  startLotteryRescan(input: $input) {
+    ...LotteryRescanFields
+  }
+}
+
+mutation ScanLotteryRescanTicket($input: ScanLotteryRescanTicketInput!) {
+  scanLotteryRescanTicket(input: $input) {
+    duplicate
+    item {
+      ...LotteryRescanItemFields
+    }
+    rescan {
+      ...LotteryRescanFields
+    }
+  }
+}
+
+mutation FinishLotteryRescanPlace($input: FinishLotteryRescanPlaceInput!) {
+  finishLotteryRescanPlace(input: $input) {
+    ...LotteryRescanFields
+  }
+}
+
+mutation CancelLotteryRescan($input: LotteryRescanInput!) {
+  cancelLotteryRescan(input: $input) {
+    ...LotteryRescanFields
+  }
+}

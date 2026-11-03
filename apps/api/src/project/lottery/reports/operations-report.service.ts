@@ -491,6 +491,8 @@ export class OperationsReportService {
         reader,
         {
           orgId,
+          // 全店重刷單不是盤點(張數店規格 8.4;重刷的事件照樣在庫存異動裡)
+          purpose: { $ne: "rescan" },
           $or: [
             { firstSubmittedAt: { $gte: from, $lt: to } },
             { firstSubmittedAt: null, submittedAt: { $gte: from, $lt: to } },

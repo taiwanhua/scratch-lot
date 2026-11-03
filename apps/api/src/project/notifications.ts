@@ -22,6 +22,8 @@ import type { ProjectNotificationRegistrations } from "../notifications/notifica
 
 /** 刮刮樂:有已送出交班結帳的班還沒被日結涵蓋計算(B14,逾期後每天)。 */
 export const LOTTERY_DAILY_CLOSE_OVERDUE = "lottery.daily-close-overdue";
+/** 刮刮樂:張數店某個遊戲有待查·未對號或標記異常,請全店重刷(張數店規格 8.3;盤點送出 / 核准時)。 */
+export const LOTTERY_RESCAN_REMINDER = "lottery.rescan-reminder";
 /** 刮刮樂:調貨單第一關通過(含跳過),通知收貨店。 */
 export const LOTTERY_TRANSFER_SHIPPED = "lottery.transfer-shipped";
 /** 通知連結:經銷商詳情頁(證照到期、牌租繳費提醒點進去是那位經銷商)。 */
@@ -137,6 +139,25 @@ const lotteryTypes: NotificationTypeDefinition[] = [
       en: (params) => ({
         title: `Daily close overdue: ${text(params, "orgName")}`,
         body: `"${text(params, "orgName")}" has shift checkouts submitted on ${text(params, "since")} not yet covered by a daily close.`,
+      }),
+    },
+  },
+  {
+    key: LOTTERY_RESCAN_REMINDER,
+    name: "全店重刷提醒",
+    ...CHANNELS,
+    category: "responsible",
+    orgScope: { ref: "event-org", range: "self" },
+    defaultAudience: STORE_MANAGER_AUDIENCE,
+    // 張數店的盤點送出時有 [標記異常]、核准時記了待查·未對號(張數店規格 8.3;觸發在 lottery/stocktake)
+    template: {
+      "zh-TW": (params) => ({
+        title: `全店重刷提醒:${text(params, "orgName")}`,
+        body: `「${text(params, "orgName")}」的遊戲 ${text(params, "games")} 有待查還沒確認是哪張(或盤點多出),請把全店(各收銀台和庫存)的這個遊戲都刷一次。`,
+      }),
+      en: (params) => ({
+        title: `Store-wide rescan needed: ${text(params, "orgName")}`,
+        body: `"${text(params, "orgName")}" has tickets of ${text(params, "games")} under investigation without a confirmed number (or counted over). Please rescan this game at every counter and the stock.`,
       }),
     },
   },

@@ -149,6 +149,28 @@ query LotteryStocktakeStatus($orgId: ID!) {
   lotteryStocktakeStatus(orgId: $orgId) {
     lastSubmittedAt
     remind
+    rescans {
+      id
+      gameId
+      gameCode
+      gameName
+      startedByName
+      startedAt
+      minutesLeft
+      doneCount
+      places {
+        cashPointId
+        name
+        state
+      }
+    }
+    rescanReminders {
+      gameId
+      gameCode
+      gameName
+      investigateCount
+      flaggedCount
+    }
   }
 }
 

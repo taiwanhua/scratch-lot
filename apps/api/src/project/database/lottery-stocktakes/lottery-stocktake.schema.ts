@@ -2,6 +2,8 @@ import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
 import { Schema as MongooseSchema, type Types } from "mongoose";
 
 import {
+  RESCAN_OUTCOMES,
+  type RescanOutcome,
   STOCKTAKE_COUNT_MODES,
   STOCKTAKE_DIFF_ACTIONS,
   STOCKTAKE_DIFF_KINDS,
@@ -140,7 +142,94 @@ export interface StocktakeSummary {
   uncountedCount: number;
 }
 
+/** 全店重刷的一個位置(`cashPointId: null` = 庫存;張數店規格 5.4 `rescan`、8.4)。 */
+export interface StocktakeRescanPlace {
+  cashPointId: Types.ObjectId | null;
+  /** 刷到的張(依刷的順序;每刷一張就存,重新整理不會不見、換裝置可接著刷) */
+  scannedTicketIds: Types.ObjectId[];
+  /** 刷到一半的人(1 小時沒刷就釋出、清單保留) */
+  scanningBy: Types.ObjectId | null;
+  lastScanAt: Date | null;
+  doneAt: Date | null;
+  doneBy: Types.ObjectId | null;
+}
+
+/** 全店重刷的一筆結果(按「這裡刷完了」時寫;`ok` 不記)。 */
+export interface StocktakeRescanResult {
+  cashPointId: Types.ObjectId | null;
+  ticketId: Types.ObjectId;
+  /** `investigated` = 系統記在這裡、沒刷到 → 待查;其餘同 `RescanOutcome` */
+  outcome: RescanOutcome | "investigated";
+  /** `matched`:互換的配對張 */
+  partnerTicketId: Types.ObjectId | null;
+}
+
+/** 全店重刷(只有 `purpose: rescan`;張數店規格 5.4、8.4)。 */
+export interface StocktakeRescan {
+  gameId: Types.ObjectId;
+  gameCode: string;
+  gameName: string;
+  /** 開始重刷的人([取消重刷] = 他或店長) */
+  startedBy: Types.ObjectId;
+  /** 最後一次有位置刷到或按刷完(1 小時沒動作 → 自動取消) */
+  lastActiveAt: Date;
+  finishedAt: Date | null;
+  cancelledAt: Date | null;
+  cancelledBy: Types.ObjectId | null;
+  /** `manual` = [取消重刷];`expired` = 1 小時沒動作自動取消 */
+  cancelCause: "manual" | "expired" | null;
+  places: StocktakeRescanPlace[];
+  results: StocktakeRescanResult[];
+}
+
 const OBJECT_ID = MongooseSchema.Types.ObjectId;
+
+const RESCAN_TYPE = {
+  _id: false,
+  gameId: { type: OBJECT_ID, required: true },
+  gameCode: { type: String, default: "" },
+  gameName: { type: String, default: "" },
+  startedBy: { type: OBJECT_ID, required: true },
+  lastActiveAt: { type: Date, required: true },
+  finishedAt: { type: Date, default: null },
+  cancelledAt: { type: Date, default: null },
+  cancelledBy: { type: OBJECT_ID, default: null },
+  cancelCause: {
+    type: String,
+    enum: ["manual", "expired", null],
+    default: null,
+  },
+  places: {
+    type: [
+      {
+        _id: false,
+        cashPointId: { type: OBJECT_ID, default: null },
+        scannedTicketIds: { type: [OBJECT_ID], default: [] },
+        scanningBy: { type: OBJECT_ID, default: null },
+        lastScanAt: { type: Date, default: null },
+        doneAt: { type: Date, default: null },
+        doneBy: { type: OBJECT_ID, default: null },
+      },
+    ],
+    default: [],
+  },
+  results: {
+    type: [
+      {
+        _id: false,
+        cashPointId: { type: OBJECT_ID, default: null },
+        ticketId: { type: OBJECT_ID, required: true },
+        outcome: {
+          type: String,
+          enum: [...RESCAN_OUTCOMES, "investigated"],
+          required: true,
+        },
+        partnerTicketId: { type: OBJECT_ID, default: null },
+      },
+    ],
+    default: [],
+  },
+};
 
 const DIFF_TYPE = {
   _id: false,
@@ -343,6 +432,13 @@ export class LotteryStocktake {
   @Prop({ type: [UNCOUNTED_GROUP_TYPE], default: [] })
   uncountedGroups!: StocktakeUncountedGroup[];
 
+  /**
+   * 全店重刷(只有 `purpose: rescan`;其他 = null)。重刷單不需核准:進行中 = `pending`、全部位置刷完 = `confirmed`、
+   * 取消(含自動取消)= `rejected`(`closedAt`);`type` 記 `adhoc`(入口是看板的提醒,不是交班 / 日結)。
+   */
+  @Prop({ type: RESCAN_TYPE, default: null })
+  rescan!: StocktakeRescan | null;
+
   @Prop({ type: SUMMARY_TYPE, required: true })
   summary!: StocktakeSummary;
 
@@ -362,6 +458,11 @@ export const LotteryStocktakeSchema =
 
 LotteryStocktakeSchema.index({ submissionId: 1 }, { unique: true });
 LotteryStocktakeSchema.index({ orgId: 1, submittedAt: -1 });
+// 進行中的全店重刷、各遊戲上次重刷完成(看板提醒;partial:只有重刷單)
+LotteryStocktakeSchema.index(
+  { orgId: 1, "rescan.gameId": 1, status: 1 },
+  { partialFilterExpression: { purpose: "rescan" } },
+);
 LotteryStocktakeSchema.plugin(baseFieldsPlugin);
 // 資料共用 private(ADR-0014):總部看得到分店的盤點靠可見範圍「包含下層」
 LotteryStocktakeSchema.plugin(tenantScopePlugin, {

@@ -8,6 +8,10 @@ import {
 
 import { LotteryAccountsRefModel } from "../../accounts/models/lottery-bank-account.model";
 import {
+  LotteryRescanBriefModel,
+  LotteryRescanReminderModel,
+} from "./rescan.model";
+import {
   LotteryStocktakeCountGroupModel,
   LotteryStocktakeDetailCountLineModel,
   LotteryStocktakeDetailUncountedGroupModel,
@@ -359,6 +363,14 @@ export class LotteryStocktakeStatusModel {
 
   @Field(() => Boolean)
   remind!: boolean;
+
+  /** 進行中的全店重刷(看板橫幅、盤點頁 B5;張數店規格 8.5a、13.2) */
+  @Field(() => [LotteryRescanBriefModel])
+  rescans!: LotteryRescanBriefModel[];
+
+  /** 要提醒全店重刷的遊戲(張數店規格 8.3) */
+  @Field(() => [LotteryRescanReminderModel])
+  rescanReminders!: LotteryRescanReminderModel[];
 }
 
 /** 盤點紀錄分頁的一列(ST-29)。 */

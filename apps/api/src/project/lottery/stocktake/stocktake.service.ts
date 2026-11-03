@@ -20,6 +20,7 @@ import {
   isStocktakeStockLine,
   parseStocktakeDraft,
   pendingSkipCountOf,
+  rescanBlocksCountGroup,
   stocktakeCountModeOf,
 } from "@repo/domain/project/lottery";
 import { LOTTERY_FIELD_CATEGORY_KEYS } from "@repo/domain/project/lottery-fields";
@@ -68,6 +69,8 @@ import type {
   LotteryStocktakeBackfillModel,
   LotteryStocktakeReviewModel,
 } from "./models/stocktake.model";
+import { RescanReminders } from "./rescan-reminders";
+import { RescanService } from "./rescan.service";
 import {
   type BuiltCountLines,
   StocktakeCountService,
@@ -151,6 +154,8 @@ export class StocktakeService {
     private readonly clock: StoreClock,
     private readonly count: StocktakeCountService,
     private readonly sessions: StocktakeSessions,
+    private readonly rescans: RescanService,
+    private readonly rescanReminders: RescanReminders,
   ) {}
 
   // ---- 差異核對 ----
@@ -467,6 +472,13 @@ export class StocktakeService {
         `already processed: ${built.stale.join(", ")}`,
       );
     }
+    const rescanning = await this.rescanBlockedOf(operator, store, built);
+    if (rescanning.length > 0) {
+      return block(
+        STOCKTAKE_REASONS.rescanning,
+        `rescanning: ${rescanning.join(", ")}`,
+      );
+    }
     if (built.unhandled.length > 0) {
       return block(
         STOCKTAKE_REASONS.unhandled,
@@ -531,6 +543,20 @@ export class StocktakeService {
         { ticketNos: [...built.stale, ...built.unhandled] },
       );
     }
+    const rescanning = await this.rescanBlockedOf(
+      reader,
+      store,
+      built,
+      session,
+    );
+    if (rescanning.length > 0) {
+      throw validationError(
+        "these groups are being rescanned",
+        ["draft"],
+        STOCKTAKE_REASONS.rescanning,
+        { groups: rescanning },
+      );
+    }
     if (isIncomplete(built, options.type)) {
       throw validationError(
         "shift stocktake must count every group",
@@ -579,6 +605,15 @@ export class StocktakeService {
       closedAt: null,
       uncountedCount: built.summary.uncountedCount,
     };
+    // [標記異常] 觸發全店重刷提醒(張數店規格 8.2、8.3):負責人提醒給店長(跟著這個交易)
+    await this.rescanReminders.notify(
+      reader,
+      store,
+      built.count.countLines
+        .filter((line) => line.flaggedCount > 0)
+        .map((line) => line.gameId),
+      `flagged:${String(options.submissionId)}:${content.submittedAt.toISOString()}`,
+    );
     if (existing === null) {
       await this.stocktakes.create(
         reader,
@@ -816,6 +851,15 @@ export class StocktakeService {
       { operator: null, crossStoreTenantId: tenantId },
       [...events, ...counted.events],
     );
+    // 張數盤點 [待查] 記了待查·未對號 → 全店重刷提醒給店長(張數店規格 8.3)
+    await this.rescanReminders.notify(
+      reader,
+      { orgId: record.orgId, tenantId },
+      (countLines ?? [])
+        .filter((_line, index) => (counted.picked.get(index) ?? []).length > 0)
+        .map((line) => line.gameId),
+      `investigate:${String(record._id)}`,
+    );
     const countLinesAfter = (countLines ?? []).map((line, index) => ({
       gameId: line.gameId,
       gameCode: line.gameCode,
@@ -869,6 +913,47 @@ export class StocktakeService {
   }
 
   /** 申請人(核准的人的備援:每一關都跳過,沒有人核准)。 */
+  /**
+   * 8.5a B5:盤點的組(位置 P × 遊戲 X)/ 庫存那一區遊戲 X 的本,P 的 X 正在全店重刷(已開始刷、還沒按刷完)→
+   * 不能數,送出時後端再擋(「這裡正在重刷 X,刷完再數」)。回傳被擋的「遊戲代號@收銀點」(庫存 = 「@」後空白)。
+   */
+  private async rescanBlockedOf(
+    reader: OperatorContext,
+    store: StoreRef,
+    built: Pick<BuiltStocktake, "count" | "lines">,
+    session?: ClientSession,
+  ): Promise<string[]> {
+    const stockLines = built.lines.filter((line) => line.cashPointId === null);
+    if (built.count.countLines.length === 0 && stockLines.length === 0) {
+      return [];
+    }
+    const active = await this.rescans.activeRescansOf(
+      reader,
+      store.orgId,
+      session,
+    );
+    if (active.length === 0) {
+      return [];
+    }
+    const counted = built.count.countLines
+      .filter((line) =>
+        rescanBlocksCountGroup(
+          active,
+          String(line.cashPointId),
+          String(line.gameId),
+        ),
+      )
+      .map((line) => `${line.gameCode}@${String(line.cashPointId)}`);
+    const byCode = active.map((rescan) => ({
+      ...rescan,
+      gameId: rescan.gameCode,
+    }));
+    const stock = stockLines
+      .filter((line) => rescanBlocksCountGroup(byCode, null, line.gameCode))
+      .map((line) => `${line.gameCode}@`);
+    return [...new Set([...counted, ...stock])];
+  }
+
   private async applicantOf(
     reader: OperatorContext,
     submissionId: Types.ObjectId,

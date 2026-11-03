@@ -9,8 +9,10 @@ import {
   type CountModeChangeCause,
   type CountModeSetting,
   type MovePauseBlock,
+  STOCKTAKE_STATUS,
   type StoreBusy,
   displayBookNo,
+  isRescanLive,
   movePauseBlockOf,
   pendingSkipCountOf,
   storeBusyOf,
@@ -50,6 +52,7 @@ import type {
   CountModeHistoryEntry,
   CountModeStocktakeSession,
 } from "../../database/lottery-settings/lottery-store-count-mode.schema";
+import { LotteryStocktakesRepository } from "../../database/lottery-stocktakes/lottery-stocktakes.repository";
 import { tenantOfOperator } from "../../tenant-scope/operator-tenant";
 import { bookStateConditionsOf } from "../inventory/book-state-filter";
 import { type TenantOrg, isStoreOrg } from "../inventory/store-orgs";
@@ -137,6 +140,7 @@ export class StoreCountModeService {
     private readonly books: LotteryBooksRepository,
     private readonly games: LotteryGamesRepository,
     private readonly cashPoints: LotteryCashPointsRepository,
+    private readonly stocktakes: LotteryStocktakesRepository,
     private readonly audit: AuditService,
   ) {}
 
@@ -221,6 +225,7 @@ export class StoreCountModeService {
 
   /**
    * 移櫃前的檢查與先後(張數店規格 5.6、8.5、8.5a B1 / B2;要在移櫃的交易內):讀分店那一筆的 `movePauses`,
+   * 1 小時沒動作的全店重刷當場自動取消(8.4 第 6 點,同 `releaseExpiredRescans`);
    * 要移的遊戲在重刷中、或補點編號中 → 回擋下的原因、不寫;沒擋 → `$inc version`(和「開始重刷」更新同一份文件,
    * 後到的一方寫入衝突、整個交易重跑,結果只會是「先移後重刷」或「移櫃被擋」)。沒有那一筆(編號店、沒設過制度)
    * → 不會有重刷或補點,不寫。
@@ -230,15 +235,19 @@ export class StoreCountModeService {
     target: { orgId: Types.ObjectId; tenantId: Types.ObjectId | null },
     gameIds: readonly Types.ObjectId[],
     session: ClientSession,
+    now: Date,
   ): Promise<MovePauseBlock | null> {
     const record = await this.sessionRecordOf(operator, target.orgId, session);
     if (record === null) {
       return null;
     }
+    const expired = await this.expiredRescansOf(operator, record, now, session);
     const block = movePauseBlockOf(
-      record.movePauses.map((pause) => ({
-        gameId: pause.gameId === null ? null : String(pause.gameId),
-      })),
+      record.movePauses
+        .filter((pause) => !expired.has(String(pause.stocktakeId)))
+        .map((pause) => ({
+          gameId: pause.gameId === null ? null : String(pause.gameId),
+        })),
       gameIds.map(String),
     );
     if (block !== null) {
@@ -249,13 +258,193 @@ export class StoreCountModeService {
       operator,
       target.tenantId,
     );
+    const ids = [...expired.values()];
+    if (ids.length > 0) {
+      await this.cancelExpiredRescans(writer, ids, now, session);
+    }
     await this.countModes.findOneAndUpdate(
       writer,
       { _id: record._id },
-      { $inc: { version: 1 } },
+      {
+        $inc: { version: 1 },
+        ...(ids.length === 0
+          ? {}
+          : { $pull: { movePauses: { stocktakeId: { $in: ids } } } }),
+      },
       { session },
     );
     return null;
+  }
+
+  // ---- 全店重刷的移櫃暫停(8.4、8.5;重刷服務經這裡寫分店那一筆) ----
+
+  /**
+   * 開始全店重刷:`movePauses` 加一筆(遊戲 = 重刷的遊戲)、`$inc version`(要在交易內;以讀到的 `version` 條件更新,
+   * 和移櫃、盤點中登記一定有先後)。版本對不上 → `CONFLICT`。
+   */
+  async addRescanPause(
+    operator: OperatorContext,
+    target: { orgId: Types.ObjectId; tenantId: Types.ObjectId | null },
+    record: CountModeRecord,
+    pause: { stocktakeId: Types.ObjectId; gameId: Types.ObjectId },
+    session: ClientSession,
+  ): Promise<void> {
+    const writer = await tenantBoundaryContext(
+      this.orgs,
+      operator,
+      target.tenantId,
+    );
+    const updated = await this.countModes.findOneAndUpdate(
+      writer,
+      { _id: record._id, version: record.version },
+      { $push: { movePauses: pause }, $inc: { version: 1 } },
+      { session },
+    );
+    if (updated === null) {
+      throw conflictError();
+    }
+  }
+
+  /** 全店重刷結束(完成或取消):拿掉這次重刷的暫停、`$inc version`(要在交易內)。 */
+  async removeRescanPause(
+    operator: OperatorContext,
+    target: { orgId: Types.ObjectId; tenantId: Types.ObjectId | null },
+    stocktakeId: Types.ObjectId,
+    session: ClientSession,
+  ): Promise<void> {
+    const writer = await tenantBoundaryContext(
+      this.orgs,
+      operator,
+      target.tenantId,
+    );
+    await this.countModes.findOneAndUpdate(
+      writer,
+      { orgId: target.orgId },
+      { $pull: { movePauses: { stocktakeId } }, $inc: { version: 1 } },
+      { session },
+    );
+  }
+
+  /**
+   * 重刷「開始刷這個位置」:和盤點中登記檢查、更新同一筆分店文件(8.5a;以讀到的 `version` 條件 `$inc`,
+   * 兩邊一定有先後)。版本對不上 → `CONFLICT`。
+   */
+  async touchForRescanPlace(
+    operator: OperatorContext,
+    target: { orgId: Types.ObjectId; tenantId: Types.ObjectId | null },
+    record: CountModeRecord,
+    session: ClientSession,
+  ): Promise<void> {
+    const writer = await tenantBoundaryContext(
+      this.orgs,
+      operator,
+      target.tenantId,
+    );
+    const updated = await this.countModes.findOneAndUpdate(
+      writer,
+      { _id: record._id, version: record.version },
+      { $inc: { version: 1 } },
+      { session },
+    );
+    if (updated === null) {
+      throw conflictError();
+    }
+  }
+
+  /**
+   * 把 1 小時沒動作的全店重刷自動取消(8.4 第 6 點「同 [取消重刷]」;要在交易內):重刷單記成取消、
+   * 拿掉移櫃暫停、`$inc version`;已刷完的位置的更正保留。回傳取消了幾個。重刷的每個動作、移櫃前與排程都會呼叫。
+   */
+  async releaseExpiredRescans(
+    operator: OperatorContext,
+    target: { orgId: Types.ObjectId; tenantId: Types.ObjectId | null },
+    now: Date,
+    session: ClientSession,
+  ): Promise<number> {
+    const record = await this.sessionRecordOf(operator, target.orgId, session);
+    if (record === null) {
+      return 0;
+    }
+    const expired = await this.expiredRescansOf(operator, record, now, session);
+    if (expired.size === 0) {
+      return 0;
+    }
+    const writer = await tenantBoundaryContext(
+      this.orgs,
+      operator,
+      target.tenantId,
+    );
+    const ids = [...expired.values()];
+    await this.cancelExpiredRescans(writer, ids, now, session);
+    await this.countModes.findOneAndUpdate(
+      writer,
+      { _id: record._id },
+      {
+        $pull: { movePauses: { stocktakeId: { $in: ids } } },
+        $inc: { version: 1 },
+      },
+      { session },
+    );
+    return ids.length;
+  }
+
+  /** 移櫃暫停裡已結束或 1 小時沒動作的全店重刷(一次讀;補點編號的暫停不在這裡處理)。 */
+  private async expiredRescansOf(
+    operator: OperatorContext,
+    record: CountModeRecord,
+    now: Date,
+    session: ClientSession,
+  ): Promise<Map<string, Types.ObjectId>> {
+    const ids = record.movePauses.flatMap((pause) =>
+      pause.gameId === null ? [] : [pause.stocktakeId],
+    );
+    if (ids.length === 0) {
+      return new Map();
+    }
+    const reader = await this.tenantReaderOf(operator);
+    const rows = await this.stocktakes.findMany(
+      reader,
+      { _id: { $in: ids }, purpose: "rescan" },
+      { session, select: "status rescan.lastActiveAt" },
+    );
+    // 找不到重刷單的暫停照舊(不猜);重刷單已結束或 1 小時沒動作 → 取消
+    return new Map(
+      rows
+        .filter(
+          (row) =>
+            row.status !== STOCKTAKE_STATUS.pending ||
+            row.rescan == null ||
+            !isRescanLive(row.rescan.lastActiveAt, now),
+        )
+        .map((row) => [String(row._id), row._id]),
+    );
+  }
+
+  /** 自動取消的重刷單:記成取消(一次寫)。已經結束的不動。 */
+  private async cancelExpiredRescans(
+    writer: OperatorContext,
+    ids: readonly Types.ObjectId[],
+    now: Date,
+    session: ClientSession,
+  ): Promise<void> {
+    await this.stocktakes.updateMany(
+      writer,
+      {
+        _id: { $in: [...ids] },
+        purpose: "rescan",
+        status: STOCKTAKE_STATUS.pending,
+      },
+      {
+        $set: {
+          status: STOCKTAKE_STATUS.rejected,
+          closedAt: now,
+          "rescan.cancelledAt": now,
+          "rescan.cancelCause": "expired",
+        },
+        $inc: { version: 1 },
+      },
+      { session },
+    );
   }
 
   /**
@@ -369,9 +558,7 @@ export class StoreCountModeService {
       { session },
     );
     if (updated === null) {
-      throw new GraphQLError("store count mode changed, please retry", {
-        extensions: { code: "CONFLICT" },
-      });
+      throw conflictError();
     }
   }
 
@@ -706,6 +893,13 @@ export class StoreCountModeService {
           left.bookNo.localeCompare(right.bookNo),
       );
   }
+}
+
+/** 分店那一筆在讀之後被改過(交易外有人改):請重試。 */
+function conflictError(): GraphQLError {
+  return new GraphQLError("store count mode changed, please retry", {
+    extensions: { code: "CONFLICT" },
+  });
 }
 
 /** `lottery_settings` 的一列 → 共用的生效值解析要的形狀。 */

@@ -645,6 +645,7 @@ export class StoreCounterService {
       store,
       gameIds,
       session,
+      this.clock.now(),
     );
     if (block !== null) {
       throw movePausedError(block);

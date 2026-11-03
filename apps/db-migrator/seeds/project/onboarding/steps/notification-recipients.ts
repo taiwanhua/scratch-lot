@@ -1,11 +1,12 @@
 import { type OnboardingStep, requireRoleId } from "../context";
 
 /**
- * 規格 3.4 預設收件人是「角色 店長」的四種負責人提醒。類型宣告(`apps/api/src/project/notifications.ts`)
+ * 規格 3.4 預設收件人是「角色 店長」的負責人提醒(張數店規格 5.7 加「全店重刷提醒」)。類型宣告(`apps/api/src/project/notifications.ts`)
  * 寫不了角色 id(每個租戶不同),預設用「持有 `store.bank-deposit`」;開通時建好角色後改成角色 店長。
  */
 export const STORE_MANAGER_NOTIFICATION_TYPES = [
   "lottery.daily-close-overdue",
+  "lottery.rescan-reminder",
   "lottery.transfer-shipped",
   "lottery.license-expiring",
   "lottery.store-rent-due",
@@ -49,7 +50,7 @@ export function storeManagerAudience(roleId: string): Record<string, unknown> {
 }
 
 /**
- * 開通清單第 12 點裡自動的部分:四種通知的收件人改成角色 店長(用「角色」步驟取得的 id)。
+ * 開通清單第 12 點裡自動的部分:這些通知的收件人改成角色 店長(用「角色」步驟取得的 id)。
  * 只改還是預設值的;租戶已調整過(含之前開通時改成店長的)一律不動。
  */
 export const notificationRecipientsStep: OnboardingStep = {
