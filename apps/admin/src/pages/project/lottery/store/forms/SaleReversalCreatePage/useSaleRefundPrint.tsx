@@ -10,7 +10,11 @@ import { useReceiptLinks } from "@/components/project/lottery/ReceiptPrint/useRe
 import { useReceiptPrinter } from "@/components/project/lottery/ReceiptPrint/useReceiptPrinter";
 import { logPrintFailure } from "@/lib/base/print-log";
 
-import { type ReversalGroup, refundAmountOf } from "../sale-reversal-form";
+import {
+  type ReversalCountRow,
+  type ReversalGroup,
+  refundAmountOf,
+} from "../sale-reversal-form";
 
 export interface SaleRefundPrintInput {
   submitted: FormSubmissionFieldsFragment;
@@ -18,6 +22,8 @@ export interface SaleRefundPrintInput {
   refundShift: LotteryStoreShiftOptionFieldsFragment | null;
   reasonLabel: string;
   groups: readonly ReversalGroup[];
+  /** 依遊戲 + 張數的列(帶遊戲代號與名稱) */
+  countRows: readonly ReversalCountRow[];
 }
 
 /**
@@ -36,6 +42,7 @@ export const useSaleRefundPrint = () => {
     refundShift,
     reasonLabel,
     groups,
+    countRows,
   }: SaleRefundPrintInput): Promise<void> => {
     setIsPrinting(true);
     try {
@@ -48,15 +55,31 @@ export const useSaleRefundPrint = () => {
         refundShiftLabel: refundShift?.label ?? "",
         defaultPrinterId: refundShift?.cashPointPrinterId ?? null,
         reasonLabel,
-        groups: groups
-          .filter((group) => group.ticketNos.length > 0)
-          .map((group) => ({
-            gameCode: group.gameCode,
-            gameName: group.gameName,
-            ticketNos: group.ticketNos,
-            amount: group.unitPrice * group.ticketNos.length,
+        groups: [
+          ...groups.flatMap((group) => {
+            const ticketNos = [...group.ticketNos, ...group.matchNos].toSorted(
+              (left, right) => left.localeCompare(right),
+            );
+            return ticketNos.length === 0
+              ? []
+              : [
+                  {
+                    gameCode: group.gameCode,
+                    gameName: group.gameName,
+                    ticketNos,
+                    amount: group.unitPrice * ticketNos.length,
+                  },
+                ];
+          }),
+          ...countRows.map((row) => ({
+            gameCode: row.gameCode,
+            gameName: row.gameName,
+            ticketNos: [],
+            count: row.count,
+            amount: row.unitPrice * row.count,
           })),
-        refundAmount: refundAmountOf(groups),
+        ],
+        refundAmount: refundAmountOf(groups, countRows),
         url: links.storeViewUrl(submitted.id),
       });
     } catch (error) {

@@ -32,7 +32,7 @@ export interface CountUndoDialogProps {
 /**
  * 撤銷依張數售出(張數店規格 7.3 第 2 點、13.2;Figma CS-07b):遊戲、這一筆張數、單價,撤幾張(1 到現在可以撤的),
  * 提示「客人有退票的話請改用刷條碼撤銷」,[撤銷 N 張];成功「已撤銷 遊戲 X 1 張,扣回 200」。
- * 不符條件 → 照現況「請改送撤銷售出申請」+ [送撤銷售出申請]。
+ * 不符條件 → 照現況「請改送撤銷售出申請」+ [送撤銷售出申請](帶入「遊戲 + 張數」列:這一筆的遊戲、收銀點與選的張數)。
  */
 export const CountUndoDialog = ({
   row,
@@ -93,7 +93,15 @@ export const CountUndoDialog = ({
               {t("countUndo.submit", { count })}
             </Button>
           ) : (
-            <SendReversalButton ticketId={row.ticketId} orgId={orgId} />
+            <SendReversalButton
+              orgId={orgId}
+              // 帶入「遊戲 + 張數」列(張數店規格 13.2):這一筆的遊戲、賣出的收銀點、選的張數
+              countLine={{
+                gameId: sale.gameId,
+                cashPointId: row.cashPoint.id,
+                count,
+              }}
+            />
           )}
         </>
       }

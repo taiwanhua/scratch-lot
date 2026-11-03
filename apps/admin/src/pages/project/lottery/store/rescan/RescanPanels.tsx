@@ -110,7 +110,11 @@ const ItemRow = ({
     </Stack>
     {item.outcome === "sold_here" ? (
       <Box>
-        <SendReversalButton ticketId={item.ticketId} orgId={orgId} />
+        <SendReversalButton
+          ticketId={item.ticketId}
+          orgId={orgId}
+          rescanPlace={item.cashPointId ?? null}
+        />
       </Box>
     ) : null}
   </Stack>
@@ -340,6 +344,7 @@ export const RescanSummaryCard = ({
               key={item.ticketId}
               ticketId={item.ticketId}
               orgId={orgId}
+              rescanPlace={item.cashPointId ?? null}
             />
           ))}
           <Button variant="contained" onClick={onLeave}>
