@@ -22,6 +22,9 @@ import {
  * 位置 = 收銀點檯面或庫存(`cashPointId: null`);全部位置按「這裡刷完了」這次重刷才結束。
  */
 
+/** 全店重刷頁的掃描用途(B10;開著時條碼槍刷到的碼交給重刷頁,不走看板的銷售)。 */
+export const STORE_RESCAN_SCAN_PURPOSE = "store-rescan";
+
 /** 重刷的自動失效:某個位置「刷到一半」、整次重刷都是 1 小時沒有動作(8.4 第 6 點,同盤點 8.5a)。 */
 export const RESCAN_IDLE_MS = STOCKTAKE_SESSION_IDLE_MS;
 
@@ -105,6 +108,49 @@ const isMissing = (status: TicketStatus): boolean =>
   status === TICKET_STATUS.investigating || status === TICKET_STATUS.lost;
 
 /**
+ * 不用找配對就定的結果:不是本店 / 不是這個遊戲 → 不處理;鎖定(含在途)、記跳號、記報廢 → 要先更正;
+ * 本還沒拆 → 不在範圍(庫存裡刷到的未售 = 沒問題)。其他 → null(照對號規則處理)。
+ */
+function fixedOutcomeOf(
+  ticket: RescanTicket,
+  gameId: string,
+  place: CountPlace,
+  opened: boolean,
+): RescanOutcome | null {
+  if (!ticket.inThisStore) {
+    return "not_this_store";
+  }
+  if (ticket.gameId !== gameId) {
+    return "other_game";
+  }
+  if (ticket.locked || ticket.locationKind === TICKET_LOCATION_KIND.inTransit) {
+    return "locked";
+  }
+  if (
+    ticket.status === TICKET_STATUS.skipped ||
+    ticket.status === TICKET_STATUS.scrapped
+  ) {
+    return ticket.status;
+  }
+  if (opened) {
+    return null;
+  }
+  return ticket.status === TICKET_STATUS.unsold &&
+    samePlace(ticket, place) &&
+    place.locationKind === TICKET_LOCATION_KIND.stock
+    ? "ok"
+    : "unopened";
+}
+
+/** 沒有對號(不用或找不到配對)時的結果:未售 → 在這裡沒問題 / 記到這裡;待查 / 遺失 → 尋回;已售 → 記已售但還在。 */
+function unpairedOutcomeOf(status: TicketStatus, here: boolean): RescanOutcome {
+  if (status === TICKET_STATUS.unsold) {
+    return here ? "ok" : "moved";
+  }
+  return isMissing(status) ? "recovered" : "sold_here";
+}
+
+/**
  * 全店重刷一個位置的處理(張數店規格 8.4 第 3–5 點、6.3「補點編號、全店重刷 → 正在盤的位置」、6.7、7.9、14.1):
  *
  * 1. 不是本店 / 不是重刷的遊戲 → 不處理;鎖定中(含在途)、記跳號、記報廢 → 不動、要先更正;本還沒拆 → 不在範圍
@@ -135,31 +181,10 @@ export function rescanResultOf(input: RescanPlaceInput): RescanPlaceResult {
       outcome: RescanOutcome,
       partnerId: string | null = null,
     ): RescanItemResult => ({ ticketId: ticket.id, outcome, partnerId });
-    if (!ticket.inThisStore) {
-      return result("not_this_store");
-    }
-    if (ticket.gameId !== gameId) {
-      return result("other_game");
-    }
-    if (
-      ticket.locked ||
-      ticket.locationKind === TICKET_LOCATION_KIND.inTransit
-    ) {
-      return result("locked");
-    }
-    if (ticket.status === TICKET_STATUS.skipped) {
-      return result("skipped");
-    }
-    if (ticket.status === TICKET_STATUS.scrapped) {
-      return result("scrapped");
-    }
     const here = samePlace(ticket, place);
-    if (!opened(ticket.bookId)) {
-      return ticket.status === TICKET_STATUS.unsold &&
-        here &&
-        place.locationKind === TICKET_LOCATION_KIND.stock
-        ? result("ok")
-        : result("unopened");
+    const fixed = fixedOutcomeOf(ticket, gameId, place, opened(ticket.bookId));
+    if (fixed !== null) {
+      return result(fixed);
     }
     const needsMatch =
       ticket.status === TICKET_STATUS.unsold
@@ -177,13 +202,7 @@ export function rescanResultOf(input: RescanPlaceInput): RescanPlaceResult {
         return result("matched", partnerId);
       }
     }
-    if (ticket.status === TICKET_STATUS.unsold) {
-      return result(here ? "ok" : "moved");
-    }
-    if (isMissing(ticket.status)) {
-      return result("recovered");
-    }
-    return result("sold_here");
+    return result(unpairedOutcomeOf(ticket.status, here));
   });
   return {
     items,

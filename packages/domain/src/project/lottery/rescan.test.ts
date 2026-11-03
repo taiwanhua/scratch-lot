@@ -247,17 +247,19 @@ describe("rescanResultOf:一個位置按「這裡刷完了」的處理(8.4 第 3
   });
 });
 
+/** 一個位置的事實(預設還沒刷)。 */
+const place = (facts: Partial<RescanPlaceFacts> = {}): RescanPlaceFacts => ({
+  scanningBy: null,
+  lastScanAt: null,
+  doneAt: null,
+  scannedCount: 0,
+  ...facts,
+});
+
 describe("位置的狀態與誰能刷(8.4 第 1、6 點)", () => {
   const now = new Date("2026-11-06T10:30:00+08:00");
   const minutesAgo = (minutes: number) =>
     new Date(now.getTime() - minutes * 60_000);
-  const place = (facts: Partial<RescanPlaceFacts> = {}): RescanPlaceFacts => ({
-    scanningBy: null,
-    lastScanAt: null,
-    doneAt: null,
-    scannedCount: 0,
-    ...facts,
-  });
 
   it.each([
     ["還沒刷", place(), "pending"],

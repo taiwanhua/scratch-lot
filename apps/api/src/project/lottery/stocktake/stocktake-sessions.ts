@@ -132,7 +132,7 @@ function sessionError(
  * - `releaseOnSubmit`:送出時解除送出的人這個範圍的登記(和申請同一個交易)
  * - `wholeStoreOf`:全店盤點中各台不能交班
  *
- * 登記與重刷的「開始刷這個位置」(T6)在同一個交易裡檢查、更新同一筆分店文件(`$inc version`),兩邊一定有先後。
+ * 登記與重刷的「開始刷這個位置」(`RescanService` → `StoreCountModeService.touchForRescanPlace`)在同一個交易裡檢查、更新同一筆分店文件(`$inc version`),兩邊一定有先後。
  * 讀寫分店那一筆一律經 `StoreCountModeService`。
  */
 @Injectable()

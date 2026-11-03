@@ -121,7 +121,7 @@ export interface CountModeHistoryView {
  *
  * - `modeOf` / `modesOf`:分店實際的盤點制度(沒有筆 = 編號店)
  * - `settingOf`:分店某一條刮刮樂設定的生效值(沿組織樹往上找)
- * - `movePauseOf`:進行中的全店重刷 / 補點編號(移櫃暫停;T6、T8 寫)
+ * - `movePauseOf`:進行中的全店重刷 / 補點編號(移櫃暫停;重刷經 `addRescanPause` / `removeRescanPause` 寫,補點是 T8)
  * - `busyOf`:有沒有進行中的盤點 / 重刷 / 補點(改盤點制度的檢查;9.1)
  * - `planCountModeChange` / `applyCountModeChange`:改盤點制度時重算下層分店(同一個交易,一次 aggregate + 一次批次寫)
  *
@@ -449,7 +449,7 @@ export class StoreCountModeService {
 
   /**
    * 進行中的盤點 / 全店重刷 / 補點編號(改盤點制度的檢查,9.1)。來源是分店那一筆的
-   * `stocktakeSessions`(盤點中登記,T4 寫)與 `movePauses`(重刷 T6、補點 T8 寫);還沒有人寫時都是空 = 沒有。
+   * `stocktakeSessions`(盤點中登記,T4 寫)與 `movePauses`(全店重刷寫;補點 T8 寫);沒有時都是空 = 沒有。
    */
   busyOf(
     record: CountModeRecord | null | undefined,

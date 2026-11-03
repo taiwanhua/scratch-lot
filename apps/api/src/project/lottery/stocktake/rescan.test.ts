@@ -275,6 +275,70 @@ interface EventRow {
   refId: Types.ObjectId | null;
 }
 
+/** 依張數賣挑到的是「依張數」、刷條碼賣的是「刷條碼」。 */
+const soldSourceOf = (spec: { unmatched?: boolean }): string =>
+  spec.unmatched === true ? "count" : "scan";
+
+const outcomesOf = (items: readonly { ticketNo: string; outcome: string }[]) =>
+  Object.fromEntries(items.map((item) => [item.ticketNo, item.outcome]));
+
+/** 結果的錯誤 extensions(沒有錯 = undefined)。 */
+async function extensionsOf(
+  run: Promise<GraphqlResult>,
+): Promise<Record<string, unknown> | undefined> {
+  const result = await run;
+  return result.errors?.[0]?.extensions;
+}
+
+/** 建立閘門時先放的空函式(建立後由 Promise 的 resolve 換掉)。 */
+const noop = (): void => {
+  // 沒事做
+};
+
+/** 測試用的閘門:`hold()` 停在那裡、`reached` 等到有人停住、`open()` 放行。 */
+function gate() {
+  let open: () => void = noop;
+  let arrive: () => void = noop;
+  const opened = new Promise<void>((resolve) => {
+    open = resolve;
+  });
+  const reached = new Promise<void>((resolve) => {
+    arrive = resolve;
+  });
+  return {
+    reached,
+    open: () => {
+      open();
+    },
+    hold: async () => {
+      arrive();
+      await opened;
+    },
+  };
+}
+
+const blockOf = (blocks: number): TicketSpec[] =>
+  Array.from({ length: blocks * 4 }, (_, index) => {
+    const no = String(index + 1).padStart(3, "0");
+    return index % 4 === 0
+      ? { no, status: "sold" as const, unmatched: true }
+      : { no };
+  });
+const scannedOf = (blocks: number): string[] =>
+  Array.from({ length: blocks }, (_, block) => [
+    String(block * 4 + 1).padStart(3, "0"),
+    String(block * 4 + 2).padStart(3, "0"),
+  ]).flat();
+
+/** 讀非同步結果的一個欄位(不在 `await` 運算式上直接取成員)。 */
+async function fieldOf<T, K extends keyof T>(
+  promise: Promise<T>,
+  key: K,
+): Promise<T[K]> {
+  const value = await promise;
+  return value[key];
+}
+
 const base = () => {
   const now = new Date();
   return {
@@ -426,12 +490,7 @@ describe("全店重刷、提醒與移櫃暫停(GraphQL 端點 + 真 MongoDB)", (
         unitCost: 184,
         soldAt: status === "sold" ? taipei("09:00") : null,
         soldBy: null,
-        soldSource:
-          status === "sold"
-            ? spec.unmatched === true
-              ? "count"
-              : "scan"
-            : null,
+        soldSource: status === "sold" ? soldSourceOf(spec) : null,
         unmatched: spec.unmatched ?? false,
         saleEventId: status === "sold" ? `sale-${bookNo}-${spec.no}` : null,
         version: 1,
@@ -574,9 +633,6 @@ describe("全店重刷、提醒與移櫃暫停(GraphQL 端點 + 真 MongoDB)", (
       .sort({ at: 1, _id: 1 })
       .toArray();
   }
-
-  const outcomesOf = (items: readonly RescanItem[]) =>
-    Object.fromEntries(items.map((item) => [item.ticketNo, item.outcome]));
 
   const placeOf = (rescan: Rescan, place: Types.ObjectId | null) => {
     const found = rescan.places.find((one) =>
@@ -877,7 +933,7 @@ describe("全店重刷、提醒與移櫃暫停(GraphQL 端點 + 真 MongoDB)", (
         "006": "matched",
         "007": "matched",
       });
-      expect((await ticket(a.bookId, "006")).status).toBe("sold");
+      expect(await fieldOf(ticket(a.bookId, "006"), "status")).toBe("sold");
 
       publish.mockClear();
       const afterA = await finish(clerkA, rescan.id, counterA);
@@ -907,7 +963,9 @@ describe("全店重刷、提醒與移櫃暫停(GraphQL 端點 + 真 MongoDB)", (
       });
       expect(await unsoldAt(counterA)).toBe(5);
       // I4:對號不影響現金、金額 0
-      for (const event of await eventsOf((await ticket(a.bookId, "006"))._id)) {
+      for (const event of await eventsOf(
+        await fieldOf(ticket(a.bookId, "006"), "_id"),
+      )) {
         expect(event).toMatchObject({
           type: "match",
           cashEffect: "none",
@@ -925,7 +983,7 @@ describe("全店重刷、提醒與移櫃暫停(GraphQL 端點 + 真 MongoDB)", (
         afterB.results.filter((item) => item.outcome === "sold_here"),
       ).toEqual([expect.objectContaining({ ticketNo: "013" })]);
       // 重刷不直接改回未售(7.3 第 4 點):#013 照舊已售,送撤銷售出申請
-      expect((await ticket(b.bookId, "013")).status).toBe("sold");
+      expect(await fieldOf(ticket(b.bookId, "013"), "status")).toBe("sold");
 
       // 庫存刷到 #008(系統記在 A、刷完 A 時記成待查)→ 庫存沒有沒刷到的未售可配對 → 尋回、留在庫存
       await scanAll(clerkA, rescan.id, null, [
@@ -935,7 +993,9 @@ describe("全店重刷、提醒與移櫃暫停(GraphQL 端點 + 真 MongoDB)", (
         stock.code("034"),
         a.code("008"),
       ]);
-      expect((await view(clerkA, rescan.id)).status).toBe("in_progress");
+      expect(await fieldOf(view(clerkA, rescan.id), "status")).toBe(
+        "in_progress",
+      );
       const done = await finish(clerkA, rescan.id, null);
       expect(done.status).toBe("finished");
       expect(done.doneCount).toBe(3);
@@ -957,7 +1017,9 @@ describe("全店重刷、提醒與移櫃暫停(GraphQL 端點 + 真 MongoDB)", (
       expect(await unsoldAt(stallB)).toBe(2);
       expect(await unsoldAt(null)).toBe(5);
       // 寫入記成這張重刷單(B6 會把重刷寫的事件當成「別張盤點處理過」)
-      const recovered = await eventsOf((await ticket(a.bookId, "008"))._id);
+      const recovered = await eventsOf(
+        await fieldOf(ticket(a.bookId, "008"), "_id"),
+      );
       expect(recovered.at(-1)).toMatchObject({
         type: "recover",
         refType: "stocktake",
@@ -989,12 +1051,16 @@ describe("全店重刷、提醒與移櫃暫停(GraphQL 端點 + 真 MongoDB)", (
         "003": "scrapped",
         "004": "locked",
       });
-      expect((await ticket(a.bookId, "002")).status).toBe("skipped");
-      expect((await ticket(a.bookId, "003")).status).toBe("scrapped");
+      expect(await fieldOf(ticket(a.bookId, "002"), "status")).toBe("skipped");
+      expect(await fieldOf(ticket(a.bookId, "003"), "status")).toBe("scrapped");
       // 鎖定中的張刷到了、不記待查
-      expect((await ticket(a.bookId, "004")).status).toBe("unsold");
-      expect((await ticket(other.bookId, "001")).status).toBe("unsold");
-      expect(await eventsOf((await ticket(a.bookId, "002"))._id)).toEqual([]);
+      expect(await fieldOf(ticket(a.bookId, "004"), "status")).toBe("unsold");
+      expect(await fieldOf(ticket(other.bookId, "001"), "status")).toBe(
+        "unsold",
+      );
+      expect(
+        await eventsOf(await fieldOf(ticket(a.bookId, "002"), "_id")),
+      ).toEqual([]);
     });
 
     it("刷到一半的清單每刷一張就存(換裝置可接著刷);重複刷到不重複算;找不到的碼 → 說明", async () => {
@@ -1075,18 +1141,6 @@ describe("全店重刷、提醒與移櫃暫停(GraphQL 端點 + 真 MongoDB)", (
     it("TX-06:按「這裡刷完了」的資料庫指令數不隨刷到的張數成長", async () => {
       // 每 4 張一組:刷到 1 張已售·未對號(對號)+ 1 張未售(沒問題),沒刷到 2 張(1 張被挑去配對、1 張記待查);
       // 1 組與 5 組比
-      const blockOf = (blocks: number): TicketSpec[] =>
-        Array.from({ length: blocks * 4 }, (_, index) => {
-          const no = String(index + 1).padStart(3, "0");
-          return index % 4 === 0
-            ? { no, status: "sold" as const, unmatched: true }
-            : { no };
-        });
-      const scannedOf = (blocks: number): string[] =>
-        Array.from({ length: blocks }, (_, block) => [
-          String(block * 4 + 1).padStart(3, "0"),
-          String(block * 4 + 2).padStart(3, "0"),
-        ]).flat();
       const small = await book(gameX, counterA, blockOf(1));
       const big = await book(gameY, counterA, blockOf(5));
       const one = await startRescan(clerkA, gameX);
@@ -1125,9 +1179,7 @@ describe("全店重刷、提醒與移櫃暫停(GraphQL 端點 + 真 MongoDB)", (
       const a = await book(gameX, counterA, [{ no: "001" }, { no: "002" }]);
       await book(gameY, counterA, [{ no: "001" }, { no: "002" }]);
       const rescan = await startRescan(clerkA);
-      expect(
-        (await moveByCount(clerkA, gameX)).errors?.[0]?.extensions,
-      ).toMatchObject({
+      expect(await extensionsOf(moveByCount(clerkA, gameX))).toMatchObject({
         reason: "MOVE_PAUSED",
         pause: { kind: "rescan", gameId: String(gameX) },
       });
@@ -1136,7 +1188,7 @@ describe("全店重刷、提醒與移櫃暫停(GraphQL 端點 + 真 MongoDB)", (
           orgId: String(xinyi),
           tickets: [
             {
-              ticketId: String((await ticket(a.bookId, "001"))._id),
+              ticketId: String(await fieldOf(ticket(a.bookId, "001"), "_id")),
               version: 1,
             },
           ],
@@ -1148,25 +1200,22 @@ describe("全店重刷、提醒與移櫃暫停(GraphQL 端點 + 真 MongoDB)", (
       expect(scanMove.errors?.[0]?.extensions).toMatchObject({
         reason: "MOVE_PAUSED",
       });
-      expect((await moveByCount(clerkA, gameY)).errors).toBeUndefined();
+      expect(
+        await fieldOf(moveByCount(clerkA, gameY), "errors"),
+      ).toBeUndefined();
       await ok(clerkA, CANCEL, {
         input: { orgId: String(xinyi), rescanId: rescan.id },
       });
-      expect((await moveByCount(clerkA, gameX)).errors).toBeUndefined();
+      expect(
+        await fieldOf(moveByCount(clerkA, gameX), "errors"),
+      ).toBeUndefined();
     });
 
     it("S5 開始重刷與移櫃同時:移櫃讀完暫停清單後重刷先提交 → 移櫃的寫入衝突、重跑後被擋(不會「重刷後才移」)", async () => {
       await book(gameX, counterA, [{ no: "001" }, { no: "002" }]);
       const repository = api.app.get(LotteryStoreCountModesRepository);
       const original = repository.findOneAndUpdate.bind(repository);
-      let release: () => void = () => undefined;
-      const gate = new Promise<void>((resolve) => {
-        release = resolve;
-      });
-      let reached: () => void = () => undefined;
-      const atGate = new Promise<void>((resolve) => {
-        reached = resolve;
-      });
+      const door = gate();
       let held = false;
       jest
         .spyOn(repository, "findOneAndUpdate")
@@ -1180,15 +1229,14 @@ describe("全店重刷、提醒與移櫃暫停(GraphQL 端點 + 真 MongoDB)", (
             !("version" in (filter as Record<string, unknown>))
           ) {
             held = true;
-            reached();
-            await gate;
+            await door.hold();
           }
           return original(operator, filter, update, options);
         });
       const move = moveByCount(clerkA, gameX);
-      await atGate;
+      await door.reached;
       const rescan = await startRescan(clerkB);
-      release();
+      door.open();
       const moved = await move;
       expect(moved.errors?.[0]?.extensions).toMatchObject({
         reason: "MOVE_PAUSED",
@@ -1199,7 +1247,9 @@ describe("全店重刷、提醒與移櫃暫停(GraphQL 端點 + 真 MongoDB)", (
 
     it("S5 先移後重刷:移櫃先提交 → 兩個都成功,移過去的張由重刷照常刷到", async () => {
       const a = await book(gameX, counterA, [{ no: "001" }, { no: "002" }]);
-      expect((await moveByCount(clerkA, gameX)).errors).toBeUndefined();
+      expect(
+        await fieldOf(moveByCount(clerkA, gameX), "errors"),
+      ).toBeUndefined();
       const rescan = await startRescan(clerkB);
       expect(await unsoldAt(stallB)).toBe(1);
       await scanAll(clerkB, rescan.id, stallB, [a.code("001")]);
@@ -1232,9 +1282,9 @@ describe("全店重刷、提醒與移櫃暫停(GraphQL 端點 + 真 MongoDB)", (
         block: "renumber",
       });
       // 補點中全部遊戲的移櫃都擋
-      expect(
-        (await moveByCount(clerkA, gameZ)).errors?.[0]?.extensions,
-      ).toMatchObject({ pause: { kind: "renumber" } });
+      expect(await extensionsOf(moveByCount(clerkA, gameZ))).toMatchObject({
+        pause: { kind: "renumber" },
+      });
       await connection
         .collection(LOTTERY_STORE_COUNT_MODES_COLLECTION)
         .updateOne({ orgId: xinyi }, { $set: { movePauses: [] } });
@@ -1251,19 +1301,25 @@ describe("全店重刷、提醒與移櫃暫停(GraphQL 端點 + 真 MongoDB)", (
       await scanAll(clerkB, y.id, null, []);
       await finish(clerkB, y.id, null);
       await scanAll(clerkA, x.id, counterA, [ax.code("002")]);
-      expect((await moveByCount(clerkA, gameX)).errors).toBeDefined();
-      expect((await moveByCount(clerkA, gameY)).errors).toBeDefined();
-      expect((await moveByCount(clerkA, gameZ)).errors).toBeUndefined();
+      expect(await fieldOf(moveByCount(clerkA, gameX), "errors")).toBeDefined();
+      expect(await fieldOf(moveByCount(clerkA, gameY), "errors")).toBeDefined();
+      expect(
+        await fieldOf(moveByCount(clerkA, gameZ), "errors"),
+      ).toBeUndefined();
       await finish(clerkA, x.id, counterA);
       await finish(clerkA, x.id, stallB);
       await finish(clerkA, x.id, null);
       // X 結束 → X 解除;Y 還在重刷
-      expect((await moveByCount(clerkA, gameX)).errors).toBeUndefined();
-      expect((await moveByCount(clerkA, gameY)).errors).toBeDefined();
+      expect(
+        await fieldOf(moveByCount(clerkA, gameX), "errors"),
+      ).toBeUndefined();
+      expect(await fieldOf(moveByCount(clerkA, gameY), "errors")).toBeDefined();
       await scanAll(clerkB, y.id, counterA, [ay.code("001"), ay.code("002")]);
       await finish(clerkB, y.id, counterA);
       await finish(clerkB, y.id, stallB);
-      expect((await moveByCount(clerkA, gameY)).errors).toBeUndefined();
+      expect(
+        await fieldOf(moveByCount(clerkA, gameY), "errors"),
+      ).toBeUndefined();
       expect(await pauses()).toEqual([]);
     });
 
@@ -1272,8 +1328,8 @@ describe("全店重刷、提醒與移櫃暫停(GraphQL 端點 + 真 MongoDB)", (
       const b = await book(gameX, stallB, [{ no: "011" }]);
       const rescan = await startRescan(clerkA);
       expect(rescan.canCancel).toBe(true);
-      expect((await view(clerkB, rescan.id)).canCancel).toBe(false);
-      expect((await view(manager, rescan.id)).canCancel).toBe(true);
+      expect(await fieldOf(view(clerkB, rescan.id), "canCancel")).toBe(false);
+      expect(await fieldOf(view(manager, rescan.id), "canCancel")).toBe(true);
       await scanAll(clerkA, rescan.id, counterA, [a.code("001")]);
       await finish(clerkA, rescan.id, counterA);
       expect(
@@ -1290,8 +1346,10 @@ describe("全店重刷、提醒與移櫃暫停(GraphQL 端點 + 真 MongoDB)", (
         status: "cancelled",
         cancelCause: "manual",
       });
-      expect((await ticket(a.bookId, "002")).status).toBe("investigating");
-      expect((await ticket(b.bookId, "011")).status).toBe("unsold");
+      expect(await fieldOf(ticket(a.bookId, "002"), "status")).toBe(
+        "investigating",
+      );
+      expect(await fieldOf(ticket(b.bookId, "011"), "status")).toBe("unsold");
       expect(await pauses()).toEqual([]);
       expect(
         await errorOf(clerkA, FINISH, {
@@ -1308,13 +1366,19 @@ describe("全店重刷、提醒與移櫃暫停(GraphQL 端點 + 真 MongoDB)", (
       await book(gameX, counterA, [{ no: "001" }]);
       const rescan = await startRescan(clerkA);
       now("10:08");
-      expect((await status(clerkA)).rescans).toEqual([
+      expect(await fieldOf(status(clerkA), "rescans")).toEqual([
         expect.objectContaining({ id: rescan.id, minutesLeft: 52 }),
       ]);
       now("11:00");
-      expect((await moveByCount(clerkA, gameX)).errors).toBeUndefined();
-      expect((await view(clerkA, rescan.id)).status).toBe("cancelled");
-      expect((await view(clerkA, rescan.id)).cancelCause).toBe("expired");
+      expect(
+        await fieldOf(moveByCount(clerkA, gameX), "errors"),
+      ).toBeUndefined();
+      expect(await fieldOf(view(clerkA, rescan.id), "status")).toBe(
+        "cancelled",
+      );
+      expect(await fieldOf(view(clerkA, rescan.id), "cancelCause")).toBe(
+        "expired",
+      );
 
       const second = await startRescan(clerkA);
       now("12:30");
@@ -1322,7 +1386,9 @@ describe("全店重刷、提醒與移櫃暫停(GraphQL 端點 + 真 MongoDB)", (
         scheduledFor: taipei("12:30"),
         tenants: [{ tenantId: tenant, timezone: "Asia/Taipei" }],
       } as unknown as Parameters<RescanExpiryService["run"]>[0]);
-      expect((await view(clerkA, second.id)).status).toBe("cancelled");
+      expect(await fieldOf(view(clerkA, second.id), "status")).toBe(
+        "cancelled",
+      );
       expect(await pauses()).toEqual([]);
     });
 
@@ -1345,7 +1411,7 @@ describe("全店重刷、提醒與移櫃暫停(GraphQL 端點 + 真 MongoDB)", (
         xinyi,
       );
       expect(record?.movePauses).toHaveLength(1);
-      expect((await moveByCount(clerkB, gameX)).errors).toBeDefined();
+      expect(await fieldOf(moveByCount(clerkB, gameX), "errors")).toBeDefined();
     });
   });
 
@@ -1363,8 +1429,7 @@ describe("全店重刷、提醒與移櫃暫停(GraphQL 端點 + 真 MongoDB)", (
       const rescan = await startRescan(clerkA);
       now("10:08");
       expect(
-        (await scan(clerkA, rescan.id, counterA, a.code("001"))).errors?.[0]
-          ?.extensions,
+        await extensionsOf(scan(clerkA, rescan.id, counterA, a.code("001"))),
       ).toMatchObject({
         reason: RESCAN_REASONS.placeStocktaking,
         byName: "李小華",
@@ -1372,7 +1437,7 @@ describe("全店重刷、提醒與移櫃暫停(GraphQL 端點 + 真 MongoDB)", (
         minutesLeft: 52,
       });
       expect(
-        (await scan(clerkA, rescan.id, stallB, b.code("011"))).errors,
+        await fieldOf(scan(clerkA, rescan.id, stallB, b.code("011")), "errors"),
       ).toBeUndefined();
     });
 
@@ -1381,27 +1446,19 @@ describe("全店重刷、提醒與移櫃暫停(GraphQL 端點 + 真 MongoDB)", (
       const rescan = await startRescan(clerkA);
       const service = api.app.get(StoreCountModeService);
       const original = service.touchForRescanPlace.bind(service);
-      let release: () => void = () => undefined;
-      const gate = new Promise<void>((resolve) => {
-        release = resolve;
-      });
-      let reached: () => void = () => undefined;
-      const atGate = new Promise<void>((resolve) => {
-        reached = resolve;
-      });
+      const door = gate();
       let held = false;
       jest
         .spyOn(service, "touchForRescanPlace")
         .mockImplementation(async (...args) => {
           if (!held) {
             held = true;
-            reached();
-            await gate;
+            await door.hold();
           }
           return original(...args);
         });
       const scanning = scan(clerkA, rescan.id, counterA, a.code("001"));
-      await atGate;
+      await door.reached;
       await ok(clerkB, START_SESSION, {
         input: {
           orgId: String(xinyi),
@@ -1409,8 +1466,8 @@ describe("全店重刷、提醒與移櫃暫停(GraphQL 端點 + 真 MongoDB)", (
           cashPointId: String(counterA),
         },
       });
-      release();
-      expect((await scanning).errors?.[0]?.extensions).toMatchObject({
+      door.open();
+      expect(await extensionsOf(scanning)).toMatchObject({
         reason: RESCAN_REASONS.placeStocktaking,
       });
       expect(placeOf(await view(clerkA, rescan.id), counterA).state).toBe(
@@ -1452,7 +1509,8 @@ describe("全店重刷、提醒與移櫃暫停(GraphQL 端點 + 真 MongoDB)", (
       );
       expect(fine.errors).toBeUndefined();
       // 盤點頁的 B5 依進行中重刷的位置狀態(看板信號重抓)
-      expect((await status(clerkB)).rescans[0]?.places).toEqual(
+      const statusB = await status(clerkB);
+      expect(statusB.rescans[0]?.places).toEqual(
         expect.arrayContaining([
           { cashPointId: String(counterA), state: "scanning" },
           { cashPointId: String(stallB), state: "pending" },
@@ -1468,7 +1526,7 @@ describe("全店重刷、提醒與移櫃暫停(GraphQL 端點 + 真 MongoDB)", (
         { no: "002", status: "investigating", unmatched: true },
       ]);
       await book(gameY, counterA, [{ no: "001" }]);
-      expect((await status(clerkA)).rescanReminders).toEqual([
+      expect(await fieldOf(status(clerkA), "rescanReminders")).toEqual([
         { gameCode: "5164", investigateCount: 1, flaggedCount: 0 },
       ]);
       const rescan = await startRescan(clerkA);
@@ -1506,7 +1564,7 @@ describe("全店重刷、提醒與移櫃暫停(GraphQL 端點 + 真 MongoDB)", (
         ]),
       );
       expect(flagged.errors).toBeUndefined();
-      const reminders = (await status(clerkA)).rescanReminders;
+      const reminders = await fieldOf(status(clerkA), "rescanReminders");
       expect(reminders).toEqual([
         { gameCode: "5164", investigateCount: 0, flaggedCount: 1 },
       ]);
@@ -1542,7 +1600,7 @@ describe("全店重刷、提醒與移櫃暫停(GraphQL 端點 + 真 MongoDB)", (
       await connection
         .collection(LOTTERY_STORE_COUNT_MODES_COLLECTION)
         .updateOne({ orgId: xinyi }, { $set: { mode: "numbered" } });
-      expect((await status(clerkA)).rescanReminders).toEqual([]);
+      expect(await fieldOf(status(clerkA), "rescanReminders")).toEqual([]);
       expect(
         await errorOf(clerkA, START_RESCAN, {
           input: { orgId: String(xinyi), gameId: String(gameX) },
