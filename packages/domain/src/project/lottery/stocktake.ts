@@ -134,7 +134,58 @@ export const STOCKTAKE_REASONS = {
   alreadyProcessed: "STOCKTAKE_ALREADY_PROCESSED",
   /** 補登售出:那個收銀點從來沒有開過班,沒有班可以記 */
   noShift: "STOCKTAKE_NO_SHIFT",
+  /** 交班盤點(張數店)沒盤完不能送出(張數店規格 8.1;`extensions.groups`) */
+  incomplete: "STOCKTAKE_INCOMPLETE",
+  /** [算售出]:這一組可以挑的未售張不夠(`extensions.available`) */
+  countSaleUnavailable: "STOCKTAKE_COUNT_SALE_UNAVAILABLE",
+  /** 盤點中登記:這個位置正在由別人盤點(`extensions.session`;張數店規格 8.5a) */
+  sessionBusy: "STOCKTAKE_SESSION_BUSY",
+  /** 盤點中登記:自己已有一個進行中的盤點(先 [繼續] 或 [放棄];`extensions.session`) */
+  sessionOwn: "STOCKTAKE_SESSION_OWN",
+  /** 盤點中登記已解除(送出、放棄或店長結束)或已失效被別人接手 */
+  sessionEnded: "STOCKTAKE_SESSION_ENDED",
 } as const;
+
+/** 盤點內容的盤點制度(沒給 = 編號盤點)。 */
+export const stocktakeCountModeOf = (
+  draft: Pick<StocktakeDraft, "countMode">,
+): StocktakeCountMode => draft.countMode ?? "numbered";
+
+/** 盤點內容的張數盤點組(沒給 = 空)。 */
+export const stocktakeCountLinesOf = (
+  draft: Pick<StocktakeDraft, "countLines">,
+): StocktakeDraftCountLine[] => draft.countLines ?? [];
+
+// ---- [上一本] [下一本](張數店規格 13.3) ----
+
+/** 盤點頁 [下一本] / [下一組] 要去哪裡:下一個還沒盤的;都盤完了 → 差異核對。 */
+export type StocktakeNextStep =
+  { kind: "item"; index: number } | { kind: "review" };
+
+/**
+ * 盤點頁的 [上一本] [下一本](張數店規格 13.3;本清單、張數盤點的組、全店重刷的位置清單同一個規則):
+ *
+ * - [上一本]:第一本時停用(`prev = null`)、不隱藏
+ * - [下一本]:把這一本算成已盤後,跳到之後下一本還沒盤的;之後都盤了 → 從頭找還沒盤的;
+ *   全部盤完 → `{ kind: "review" }`(按鈕改成 [盤完,前往差異核對])
+ *
+ * `counted` = 已盤的 key(不用含目前這本)。
+ */
+export function stocktakeNavOf(
+  keys: readonly string[],
+  current: number,
+  counted: ReadonlySet<string>,
+): { prev: number | null; next: StocktakeNextStep } {
+  const isOpen = (index: number) =>
+    index !== current && !counted.has(keys[index] ?? "");
+  const after = keys.findIndex((_, index) => index > current && isOpen(index));
+  const before = keys.findIndex((_, index) => index < current && isOpen(index));
+  const target = after === -1 ? before : after;
+  return {
+    prev: current > 0 ? current - 1 : null,
+    next: target === -1 ? { kind: "review" } : { kind: "item", index: target },
+  };
+}
 
 // ---- 盤點內容(畫面狀態;送出時才寫進盤點單) ----
 
@@ -169,6 +220,40 @@ export interface StocktakeDraftLostReview {
   reasonNote?: string | null;
 }
 
+/**
+ * 盤點單的盤點制度(張數店規格 5.4 `countMode`):編號盤點(檯面逐張)/ 張數盤點(檯面數張數)。
+ * 送出時定;轉換中的店仍是張數盤點(9.2)。不叫 `mode`,避開結帳單的 `stocktakeMode`。
+ */
+export const STOCKTAKE_COUNT_MODES = ["numbered", "count"] as const;
+export type StocktakeCountMode = (typeof STOCKTAKE_COUNT_MODES)[number];
+
+/** 盤點的用途(張數店規格 5.4 `purpose`):一般 / 補點編號(T8)/ 全店重刷(T6);交班 / 日結 / 臨時是入口(`type`)。 */
+export const STOCKTAKE_PURPOSES = ["normal", "renumber", "rescan"] as const;
+export type StocktakePurpose = (typeof STOCKTAKE_PURPOSES)[number];
+
+/**
+ * 張數盤點的一組「遊戲 × 收銀點」(張數店規格 5.4 `countLines[]`、8.1、8.2、13.1):開始數這一組的時間、
+ * 實際剩幾張(最後一次輸入)、之前的每次輸入(`recounts`,[重數] 前的數字)、差異的處理 ——
+ * 少 N 張:[算售出](立即生效,`saleRefIds` = 這次盤點寫的算售出 id)、[待查](核准時才挑張);多出:[標記異常]。
+ */
+export interface StocktakeDraftCountLine {
+  gameId: string;
+  cashPointId: string;
+  /** 開始數這一組的時間(ISO);和那一刻的系統數字比對(8.1)。 */
+  countedAt: string;
+  presentCount: number;
+  /** 之前的每次輸入(依時間;按 [重數] 時把上一次的數字放進來)。 */
+  recounts: number[];
+  /** [算售出] 的張數(這次盤點真的寫了幾張)。 */
+  saleCount: number;
+  /** [算售出] 寫的售出事件的 `refId`(送出時核對「是自己算售出的」)。 */
+  saleRefIds: string[];
+  /** [待查] 的張數(核准時照挑張順序挑張記待查·未對號)。 */
+  investigateCount: number;
+  /** 多出時 [標記異常](只做記號,張的狀態不動)。 */
+  flagged: boolean;
+}
+
 /** 盤點內容(盤點確認申請的 `draft` 欄位 / 交班、日結的結帳確認申請帶來的)。 */
 export interface StocktakeDraft {
   version: 1;
@@ -179,6 +264,12 @@ export interface StocktakeDraft {
   lines: StocktakeDraftLine[];
   unopened: StocktakeDraftUnopened[];
   lostReview: StocktakeDraftLostReview[];
+  /** 盤點制度;沒給 = 編號盤點(張數店以前的盤點內容;讀取用 `stocktakeCountModeOf`)。 */
+  countMode?: StocktakeCountMode;
+  /** 用途;沒給 = 一般。 */
+  purpose?: StocktakePurpose;
+  /** 張數盤點的「遊戲 × 收銀點」;編號盤點 = 空。 */
+  countLines?: StocktakeDraftCountLine[];
 }
 
 export type ParsedStocktakeDraft =
@@ -267,6 +358,39 @@ function parseLine(value: unknown): StocktakeDraftLine | null {
   };
 }
 
+const isCount = (value: unknown): value is number =>
+  typeof value === "number" && Number.isInteger(value) && value >= 0;
+
+function parseCountLine(value: unknown): StocktakeDraftCountLine | null {
+  if (
+    !isRecord(value) ||
+    !isText(value.gameId) ||
+    !isText(value.cashPointId) ||
+    !isIso(value.countedAt) ||
+    !isCount(value.presentCount) ||
+    !isCount(value.saleCount) ||
+    !isCount(value.investigateCount) ||
+    typeof value.flagged !== "boolean" ||
+    !Array.isArray(value.recounts) ||
+    !value.recounts.every(isCount) ||
+    !Array.isArray(value.saleRefIds) ||
+    !value.saleRefIds.every(isText)
+  ) {
+    return null;
+  }
+  return {
+    gameId: value.gameId,
+    cashPointId: value.cashPointId,
+    countedAt: value.countedAt,
+    presentCount: value.presentCount,
+    recounts: [...value.recounts],
+    saleCount: value.saleCount,
+    saleRefIds: [...new Set(value.saleRefIds)],
+    investigateCount: value.investigateCount,
+    flagged: value.flagged,
+  };
+}
+
 function parseUnopened(value: unknown): StocktakeDraftUnopened | null {
   return isRecord(value) &&
     isText(value.bookId) &&
@@ -313,8 +437,25 @@ export function parseStocktakeDraft(raw: unknown): ParsedStocktakeDraft {
   const lines = parseList(value.lines, parseLine);
   const unopened = parseList(value.unopened, parseUnopened);
   const lostReview = parseList(value.lostReview, parseLostReview);
-  if (lines === null || unopened === null || lostReview === null) {
+  const countLines =
+    value.countLines === undefined
+      ? []
+      : parseList(value.countLines, parseCountLine);
+  const countMode = value.countMode ?? "numbered";
+  const purpose = value.purpose ?? "normal";
+  if (
+    lines === null ||
+    unopened === null ||
+    lostReview === null ||
+    countLines === null
+  ) {
     return { ok: false, problem: "lines" };
+  }
+  if (
+    !isOneOf(STOCKTAKE_COUNT_MODES, countMode) ||
+    !isOneOf(STOCKTAKE_PURPOSES, purpose)
+  ) {
+    return { ok: false, problem: "header" };
   }
   return {
     ok: true,
@@ -326,6 +467,10 @@ export function parseStocktakeDraft(raw: unknown): ParsedStocktakeDraft {
       lines,
       unopened,
       lostReview,
+      // 沒給的欄位照沒給(序列化來回一致);讀的時候用 `stocktakeCountModeOf` 等補預設
+      ...(value.countMode === undefined ? {} : { countMode }),
+      ...(value.purpose === undefined ? {} : { purpose }),
+      ...(value.countLines === undefined ? {} : { countLines }),
     },
   };
 }

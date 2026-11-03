@@ -319,8 +319,8 @@ export function isStocktakeSessionActive(
 export interface StoreWorkInProgress {
   /** 進行中的全店重刷(gameId = 那個遊戲)或補點編號(gameId = null) */
   movePauses: readonly { gameId: string | null }[];
-  /** 盤點中登記(只看最後一次操作時間;失效的不算) */
-  stocktakeSessions: readonly { lastActiveAt: Date }[];
+  /** 盤點中登記(只看最後一次操作時間;失效、被店長結束的不算) */
+  stocktakeSessions: readonly { lastActiveAt: Date; endedAt?: Date | null }[];
 }
 
 /** 這家店進行中的工作:有效的盤點中登記、全店重刷、補點編號。 */
@@ -340,8 +340,10 @@ export function storeBusyOf(
   now: Date,
 ): StoreBusy | null {
   const busy: StoreBusy = {
-    stocktake: work.stocktakeSessions.some((session) =>
-      isStocktakeSessionActive(session.lastActiveAt, now),
+    stocktake: work.stocktakeSessions.some(
+      (session) =>
+        (session.endedAt ?? null) === null &&
+        isStocktakeSessionActive(session.lastActiveAt, now),
     ),
     rescan: work.movePauses.some((pause) => pause.gameId !== null),
     renumber: work.movePauses.some((pause) => pause.gameId === null),
@@ -450,4 +452,127 @@ export function countSaleLinesProblemOf(
     }
   }
   return null;
+}
+
+// ---- 張數盤點一組的比對(規格 8.1、8.2、8.5a B6) ----
+
+/** 張在某一刻的狀態(張數事件的 from / to)。 */
+export interface CountLineSnapshot {
+  status: TicketStatus;
+  locationKind: TicketLocationKind;
+  cashPointId: string | null;
+}
+
+/** 這一組開始數之後的一筆張數事件(同遊戲、同店;`at` 晚於 `countedAt`)。 */
+export interface CountLineEvent {
+  eventId: string;
+  type: string;
+  from: CountLineSnapshot | null;
+  to: CountLineSnapshot;
+  refType: string | null;
+  refId: string | null;
+}
+
+/** 盤點寫的事件(盤點的 [算售出] / 核准的待查;之後的全店重刷、補點編號也記成盤點)。 */
+export const STOCKTAKE_REF_TYPE = "stocktake";
+
+const isUnsoldAt = (
+  snapshot: CountLineSnapshot | null,
+  cashPointId: string,
+): boolean =>
+  snapshot !== null &&
+  snapshot.status === TICKET_STATUS.unsold &&
+  snapshot.locationKind === TICKET_LOCATION_KIND.counter &&
+  snapshot.cashPointId === cashPointId;
+
+const touches = (event: CountLineEvent, cashPointId: string): boolean =>
+  [event.from, event.to].some(
+    (snapshot) =>
+      snapshot?.locationKind === TICKET_LOCATION_KIND.counter &&
+      snapshot.cashPointId === cashPointId,
+  );
+
+/** 張數盤點一組的事實(與開始數那一刻比對)。 */
+export interface CountLineFacts {
+  /** 開始數那一刻這個收銀點這個遊戲的未售張數(8.1「系統數字」) */
+  systemCount: number;
+  /** 這次盤點自己 [算售出] 的張數(`saleRefIds` 的售出事件) */
+  ownSaleCount: number;
+  /**
+   * 開始數之後,這個收銀點的這個遊戲已有別張盤點、重刷或補點寫入的事件(8.5a B6)→ 這一組退回重數。
+   * 一般的銷售、移櫃不算(盤點以開始數那一刻的系統數字比對)。
+   */
+  touchedByOther: boolean;
+}
+
+/**
+ * 張數盤點一組的事實(規格 8.1、8.5a B6;14.1 張數盤點):由「現在的未售張數」與開始數之後的事件倒推那一刻:
+ * 每筆事件之後進到這裡(to 是這台未售)的減回去、離開的加回來。
+ */
+export function countLineFactsOf(
+  currentUnsold: number,
+  eventsAfter: readonly CountLineEvent[],
+  cashPointId: string,
+  ownSaleRefIds: ReadonlySet<string>,
+): CountLineFacts {
+  let systemCount = currentUnsold;
+  let ownSaleCount = 0;
+  let touchedByOther = false;
+  for (const event of eventsAfter) {
+    systemCount +=
+      (isUnsoldAt(event.from, cashPointId) ? 1 : 0) -
+      (isUnsoldAt(event.to, cashPointId) ? 1 : 0);
+    if (event.refType !== STOCKTAKE_REF_TYPE || !touches(event, cashPointId)) {
+      continue;
+    }
+    if (event.refId !== null && ownSaleRefIds.has(event.refId)) {
+      ownSaleCount += event.type === "sale_stocktake" ? 1 : 0;
+    } else {
+      touchedByOther = true;
+    }
+  }
+  return { systemCount, ownSaleCount, touchedByOther };
+}
+
+/** 張數盤點一組的處理(畫面送來的)。 */
+export interface CountLineChoice {
+  presentCount: number;
+  saleCount: number;
+  investigateCount: number;
+  flagged: boolean;
+}
+
+/**
+ * 張數盤點一組送出前的檢查(規格 8.2、8.5a B6):
+ *
+ * - `stale`(這一組退回重數):開始數之後被別張盤點 / 重刷 / 補點處理過;或處理對不上目前的差異
+ *   (算售出的張數和這次真的寫的不同、沒差異卻有處理、少的卻標記異常、多的卻算售出 / 待查、拆開加起來超過)
+ * - `unhandled`:少 N 張還沒分完(算售出 + 待查 < N)、多出還沒 [標記異常]
+ */
+export function countLineProblemOf(
+  facts: CountLineFacts,
+  choice: CountLineChoice,
+): "stale" | "unhandled" | null {
+  if (facts.touchedByOther || facts.ownSaleCount !== choice.saleCount) {
+    return "stale";
+  }
+  const diff = countDiffOf(facts.systemCount, choice.presentCount);
+  const assigned = choice.saleCount + choice.investigateCount;
+  switch (diff.kind) {
+    case "match": {
+      return assigned > 0 || choice.flagged ? "stale" : null;
+    }
+    case "short": {
+      if (choice.flagged || assigned > diff.count) {
+        return "stale";
+      }
+      return assigned < diff.count ? "unhandled" : null;
+    }
+    case "over": {
+      if (assigned > 0) {
+        return "stale";
+      }
+      return choice.flagged ? null : "unhandled";
+    }
+  }
 }

@@ -1,10 +1,13 @@
 import { describe, expect, it } from "@jest/globals";
 
 import {
+  type CountLineEvent,
   type CountPickBook,
   type CountPickTicket,
   type MatchTicket,
   countDiffOf,
+  countLineFactsOf,
+  countLineProblemOf,
   countModeOf,
   countSaleLinesProblemOf,
   matchPartnerOf,
@@ -313,5 +316,140 @@ describe("依張數賣送出前的檢查(規格 7.2、13.1 countSaleLinesProblem
     expect(
       countSaleLinesProblemOf([{ gameId: "g9", count: 1 }], available),
     ).toEqual({ kind: "exceeds", gameId: "g9", available: 0 });
+  });
+});
+
+const placeOf = (
+  status: "unsold" | "sold" | "investigating",
+  cashPointId: string | null,
+) => ({
+  status,
+  locationKind:
+    cashPointId === null ? ("stock" as const) : ("counter" as const),
+  cashPointId,
+});
+const event = (
+  eventId: string,
+  type: string,
+  from: ReturnType<typeof placeOf>,
+  to: ReturnType<typeof placeOf>,
+  ref: { refType?: string; refId?: string } = {},
+): CountLineEvent => ({
+  eventId,
+  type,
+  from,
+  to,
+  refType: ref.refType ?? null,
+  refId: ref.refId ?? null,
+});
+
+const facts = (systemCount: number, extra = {}) => ({
+  systemCount,
+  ownSaleCount: 0,
+  touchedByOther: false,
+  ...extra,
+});
+const choice = (presentCount: number, extra = {}) => ({
+  presentCount,
+  saleCount: 0,
+  investigateCount: 0,
+  flagged: false,
+  ...extra,
+});
+
+describe("張數盤點一組的比對(規格 8.1、8.2、8.5a B6;16.7 S10)", () => {
+  it("系統數字 = 開始數那一刻:之後賣掉的加回、移進來的扣掉、收回的加回", () => {
+    const facts = countLineFactsOf(
+      10,
+      [
+        event("e1", "sale", placeOf("unsold", "A"), placeOf("sold", "A")),
+        event("e2", "move", placeOf("unsold", "B"), placeOf("unsold", "A")),
+        event("e3", "recall", placeOf("unsold", "A"), placeOf("unsold", null)),
+      ],
+      "A",
+      new Set(),
+    );
+    expect(facts).toEqual({
+      systemCount: 11,
+      ownSaleCount: 0,
+      touchedByOther: false,
+    });
+  });
+
+  it("B6:之後同位置同遊戲有別張盤點寫的事件 → 退回;自己的 [算售出] 不算;別台的不算", () => {
+    const own = event(
+      "e1",
+      "sale_stocktake",
+      placeOf("unsold", "A"),
+      placeOf("sold", "A"),
+      {
+        refType: "stocktake",
+        refId: "mine",
+      },
+    );
+    const other = event(
+      "e2",
+      "sale_stocktake",
+      placeOf("unsold", "A"),
+      placeOf("sold", "A"),
+      { refType: "stocktake", refId: "theirs" },
+    );
+    const elsewhere = event(
+      "e3",
+      "investigate",
+      placeOf("unsold", "B"),
+      placeOf("investigating", "B"),
+      { refType: "stocktake", refId: "theirs" },
+    );
+    const mine = new Set(["mine"]);
+    expect(countLineFactsOf(9, [own, elsewhere], "A", mine)).toEqual({
+      systemCount: 10,
+      ownSaleCount: 1,
+      touchedByOther: false,
+    });
+    expect(countLineFactsOf(8, [own, other], "A", mine).touchedByOther).toBe(
+      true,
+    );
+  });
+
+  it.each([
+    ["沒差、沒處理", facts(12), choice(12), null],
+    [
+      "少 2:算售出 1 + 待查 1",
+      facts(12, { ownSaleCount: 1 }),
+      choice(10, { saleCount: 1, investigateCount: 1 }),
+      null,
+    ],
+    [
+      "少 2:只待查 1 → 還沒分完",
+      facts(12),
+      choice(10, { investigateCount: 1 }),
+      "unhandled",
+    ],
+    [
+      "少 1:待查 2 → 超過",
+      facts(12),
+      choice(11, { investigateCount: 2 }),
+      "stale",
+    ],
+    [
+      "少 1:標記異常 → 對不上",
+      facts(12),
+      choice(11, { flagged: true }),
+      "stale",
+    ],
+    ["多 1:標記異常", facts(12), choice(13, { flagged: true }), null],
+    ["多 1:還沒標記", facts(12), choice(13), "unhandled"],
+    ["多 1:卻待查", facts(12), choice(13, { investigateCount: 1 }), "stale"],
+    ["沒差卻標記異常", facts(12), choice(12, { flagged: true }), "stale"],
+    ["算售出 1 但沒真的寫", facts(12), choice(11, { saleCount: 1 }), "stale"],
+    [
+      "B6 被別張盤點處理過",
+      facts(12, { touchedByOther: true }),
+      choice(12),
+      "stale",
+    ],
+  ])("%s", (_, given, picked, expected) => {
+    expect(countLineProblemOf(given, picked)).toBe(expected);
   });
 });
