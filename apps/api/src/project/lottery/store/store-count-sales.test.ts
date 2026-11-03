@@ -1250,6 +1250,40 @@ describe("張數店:對號、依張數賣與撤銷(GraphQL 端點 + 真 MongoDB)
       }
     });
 
+    it("售出時對號的資料庫指令數(TX-06):對號賣 3 張只比 1 張多「配對張接手的值」的種類數", async () => {
+      now("11:55");
+      const { bookId } = await receiveBook();
+      await split(bookId, [
+        { cashPointId: stallB, ticketNos: ["091", "092", "093", "094"] },
+      ]);
+      await sellByCount(lin, 4, stallB);
+      const sellAll = async (nos: string[]) => {
+        const tickets = await Promise.all(
+          nos.map((no) => ticketOf(bookId, no)),
+        );
+        return () =>
+          ok(wang, SELL, {
+            input: {
+              orgId: String(xinyi),
+              localCashPointId: String(counterA),
+              tickets: tickets.map((ticket) => ({
+                ticketId: String(ticket._id),
+                version: ticket.version,
+              })),
+              source: "scan",
+            },
+          });
+      };
+      const one = await countDbCommands(await sellAll(["091"]));
+      const three = await countDbCommands(await sellAll(["092", "093", "094"]));
+      // 帳本依要改的值分組(TX-06):刷到的張接手的都是「A 台未售」= 同一組;配對張各自接手不同的售出事件 →
+      // 多 2 張就多 2 組(多出的次數只等於多出的值的種類),其他指令數不變
+      expect(three.byCommand.get("lottery_tickets.updateMany")).toBe(
+        (one.byCommand.get("lottery_tickets.updateMany") ?? 0) + 2,
+      );
+      expect(three.total).toBe(one.total + 2);
+    });
+
     it("M8 對號與售出同一個交易:後面失敗時什麼都不寫", async () => {
       now("12:00");
       const { bookId } = await receiveBook();
