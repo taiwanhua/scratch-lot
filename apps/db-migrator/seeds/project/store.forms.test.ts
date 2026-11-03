@@ -19,7 +19,7 @@ import { ROLE_GRANT_SECTIONS } from "./onboarding/role-grants";
 import { roleGrantOf } from "./onboarding/roles";
 import { projectSeedSource } from "./registry";
 import { seed as cashCorrectionForm } from "./revisions/cash_correction.r3.seed";
-import { seed as saleReversalForm } from "./revisions/sale_reversal.r3.seed";
+import { seed as saleReversalForm } from "./revisions/sale_reversal.r4.seed";
 import { projectSeedSettings } from "./settings";
 
 const keysOf = (form: { definition: { fields: readonly { key: string }[] } }) =>
@@ -28,7 +28,7 @@ const keysOf = (form: { definition: { fields: readonly { key: string }[] } }) =>
     .toSorted((left, right) => left.localeCompare(right, "zh-Hant"));
 
 /** 店面管理的兩張受管表單(規格 8.5、8.8;正本 `docs/modules/project/store.md`「撤銷售出申請與現金更正單」)。 */
-describe("受管表單 撤銷售出申請(sale_reversal r3)、現金更正單(cash_correction r3)", () => {
+describe("受管表單 撤銷售出申請(sale_reversal r4)、現金更正單(cash_correction r3)", () => {
   it("登記進專案來源,與底座一起組裝不衝突(定義檢查與可攜性檢查都過)", () => {
     expect(projectSeedSource.seeds).toContain(saleReversalForm);
     expect(projectSeedSource.seeds).toContain(cashCorrectionForm);
@@ -71,7 +71,17 @@ describe("受管表單 撤銷售出申請(sale_reversal r3)、現金更正單(ca
     expect(keysOf(saleReversalForm)).toEqual(
       Object.values(SALE_REVERSAL_FIELD_KEYS)
         .filter(
-          (key) => !["book", "ticket_nos", "tickets", "amount"].includes(key),
+          (key) =>
+            ![
+              "line_kind",
+              "book",
+              "ticket_nos",
+              "tickets",
+              "game",
+              "cash_point",
+              "count",
+              "amount",
+            ].includes(key),
         )
         .toSorted((left, right) => left.localeCompare(right, "zh-Hant")),
     );
@@ -80,6 +90,44 @@ describe("受管表單 撤銷售出申請(sale_reversal r3)、現金更正單(ca
         left.localeCompare(right, "zh-Hant"),
       ),
     );
+  });
+});
+
+describe("撤銷售出申請 r4 的明細列(張數店規格 5.7)", () => {
+  it("明細列有種類(依張號 / 依遊戲 + 張數)、遊戲、收銀點、張數;本、張號、張數不必填(依種類由送出前檢查)", () => {
+    const lines = saleReversalForm.definition.fields.find(
+      (field) => field.key === SALE_REVERSAL_FIELD_KEYS.lines,
+    );
+    const columns = new Map(
+      (lines?.columns ?? []).map((column) => [column.key, column]),
+    );
+    expect([...columns.keys()]).toEqual([
+      "line_kind",
+      "book",
+      "ticket_nos",
+      "tickets",
+      "game",
+      "cash_point",
+      "count",
+      "amount",
+    ]);
+    expect(
+      columns.get("line_kind")?.options?.kind === "static"
+        ? columns.get("line_kind")?.options
+        : null,
+    ).toMatchObject({
+      items: [{ value: "by_ticket" }, { value: "by_count" }],
+    });
+    expect(columns.get("game")).toMatchObject({
+      source: { provider: "lottery_game" },
+    });
+    expect(columns.get("cash_point")).toMatchObject({
+      source: { provider: "lottery_cash_point" },
+    });
+    for (const key of ["book", "ticket_nos", "tickets", "count"]) {
+      expect(columns.get(key)?.rules?.required).toBeUndefined();
+    }
+    expect(columns.get("amount")?.rules?.required).toBe(true);
   });
 });
 

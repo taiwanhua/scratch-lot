@@ -126,3 +126,48 @@ export class LotteryStoreCashCorrectionsPayload {
   @Field(() => [LotteryStoreCashCorrectionRowModel])
   items!: LotteryStoreCashCorrectionRowModel[];
 }
+
+/** 撤銷售出申請「依遊戲 + 張數」可選的遊戲(張數店規格 13.2;Figma CS-14)。 */
+@ObjectType("LotteryStoreSaleReversalGameOption")
+export class LotteryStoreSaleReversalGameOptionModel {
+  @Field(() => ID)
+  gameId!: string;
+
+  @Field(() => String)
+  gameCode!: string;
+
+  @Field(() => String)
+  gameName!: string;
+
+  @Field(() => Int)
+  unitPrice!: number;
+
+  /** 「最多 N 張」:這台這個遊戲的已售·未對號(沒被單據鎖住的)張數。 */
+  @Field(() => Int)
+  available!: number;
+}
+
+/** 撤銷售出申請「依遊戲 + 張數」的收銀點(這家店啟用中的)。 */
+@ObjectType("LotteryStoreSaleReversalCashPoint")
+export class LotteryStoreSaleReversalCashPointModel {
+  @Field(() => ID)
+  id!: string;
+
+  @Field(() => String)
+  name!: string;
+}
+
+/** 撤銷售出申請新增頁的選項(張數店規格 7.3 第 3 點、13.2;Figma CS-14)。 */
+@ObjectType("LotteryStoreSaleReversalOptions")
+export class LotteryStoreSaleReversalOptionsModel {
+  /** 這家店實際的盤點制度(numbered / count / converting;張數店與轉換中才有「依遊戲 + 張數」、刷的票送出時對號)。 */
+  @Field(() => String)
+  countMode!: string;
+
+  @Field(() => [LotteryStoreSaleReversalCashPointModel])
+  cashPoints!: LotteryStoreSaleReversalCashPointModel[];
+
+  /** 給了收銀點時:這台有已售·未對號的遊戲(依遊戲代號);沒給 = 空。 */
+  @Field(() => [LotteryStoreSaleReversalGameOptionModel])
+  games!: LotteryStoreSaleReversalGameOptionModel[];
+}

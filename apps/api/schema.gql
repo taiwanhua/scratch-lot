@@ -3777,6 +3777,25 @@ type LotteryStoreSalePayload {
   item: LotteryStoreSale!
 }
 
+type LotteryStoreSaleReversalCashPoint {
+  id: ID!
+  name: String!
+}
+
+type LotteryStoreSaleReversalGameOption {
+  available: Int!
+  gameCode: String!
+  gameId: ID!
+  gameName: String!
+  unitPrice: Int!
+}
+
+type LotteryStoreSaleReversalOptions {
+  cashPoints: [LotteryStoreSaleReversalCashPoint!]!
+  countMode: String!
+  games: [LotteryStoreSaleReversalGameOption!]!
+}
+
 type LotteryStoreSaleReversalRow {
   id: ID!
   reasonLabel: String!
@@ -5416,6 +5435,10 @@ type Query {
   lotteryStoreOpenShiftForm(cashPointId: ID!): LotteryStoreOpenShiftFormPayload!
   lotteryStoreRecentSales(shiftId: ID!): LotteryStoreSalesPayload!
   lotteryStoreSale(ticketId: ID!): LotteryStoreSalePayload!
+  lotteryStoreSaleReversalOptions(
+    cashPointId: ID
+    orgId: ID!
+  ): LotteryStoreSaleReversalOptions!
   lotteryStoreSaleReversals(orgId: ID!): LotteryStoreSaleReversalsPayload!
   lotteryStoreScan(input: LotteryStoreScanInput!): LotteryStoreScanPayload!
   lotteryStoreShiftOptions(orgId: ID!): LotteryStoreShiftOptionsPayload!

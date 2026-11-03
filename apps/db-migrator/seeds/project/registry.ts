@@ -19,7 +19,7 @@ import { seed as checkoutConfirmForm } from "./revisions/checkout_confirm.r2.see
 import { seed as makeupPunchForm } from "./revisions/makeup_punch.r4.seed";
 import { seed as purchaseForm } from "./revisions/purchase.r5.seed";
 import { seed as requisitionForm } from "./revisions/requisition.r4.seed";
-import { seed as saleReversalForm } from "./revisions/sale_reversal.r3.seed";
+import { seed as saleReversalForm } from "./revisions/sale_reversal.r4.seed";
 import { seed as stocktakeConfirmForm } from "./revisions/stocktake_confirm.r3.seed";
 import { seed as supportRequestForm } from "./revisions/support_request.r4.seed";
 import { seed as transferForm } from "./revisions/transfer.r3.seed";
