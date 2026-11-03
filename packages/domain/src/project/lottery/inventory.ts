@@ -30,7 +30,8 @@ export const INVENTORY_TABS = {
 } as const;
 
 /** 本的詳情 [更正跳號] 刷實體在手上那張的掃描用途(張數店規格 7.10;開著時優先於查刮刮樂)。 */
-export const INVENTORY_SKIP_CORRECTION_SCAN_PURPOSE = "inventory-skip-correction";
+export const INVENTORY_SKIP_CORRECTION_SCAN_PURPOSE =
+  "inventory-skip-correction";
 
 /** 查刮刮樂的掃描用途(`useScanner` 宣告,規格 18.3)。 */
 export const INVENTORY_LOOKUP_SCAN_PURPOSE = "inventory-lookup";
