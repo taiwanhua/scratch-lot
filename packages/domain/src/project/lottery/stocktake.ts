@@ -144,6 +144,8 @@ export const STOCKTAKE_REASONS = {
   sessionOwn: "STOCKTAKE_SESSION_OWN",
   /** 盤點中登記已解除(送出、放棄或店長結束)或已失效被別人接手 */
   sessionEnded: "STOCKTAKE_SESSION_ENDED",
+  /** 這一組的位置正在全店重刷這個遊戲,刷完再數(張數店規格 8.5a B5;`extensions.groups`) */
+  rescanning: "STOCKTAKE_RESCANNING",
 } as const;
 
 /** 盤點內容的盤點制度(沒給 = 編號盤點)。 */

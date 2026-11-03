@@ -141,7 +141,8 @@ export interface MatchTicket extends CountPickTicket, CountPlace {
   gameId: string;
 }
 
-function samePlace(ticket: CountPlace, place: CountPlace): boolean {
+/** 兩個位置是同一個(庫存 = 庫存;檯面要同一個收銀點)。 */
+export function samePlace(ticket: CountPlace, place: CountPlace): boolean {
   return (
     ticket.locationKind === place.locationKind &&
     (place.locationKind !== TICKET_LOCATION_KIND.counter ||
