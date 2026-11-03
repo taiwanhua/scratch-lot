@@ -293,3 +293,58 @@ export function shortSplitProblemOf(
   }
   return sale + investigate === short ? null : "not_total";
 }
+
+/**
+ * 分店盤點制度歷程的「為什麼變」(規格 5.6 `history[].cause`):改設定 / 補點編號核准 / 取消轉換。
+ */
+export const COUNT_MODE_CHANGE_CAUSES = [
+  "setting",
+  "renumber_approved",
+  "convert_cancelled",
+] as const;
+export type CountModeChangeCause = (typeof COUNT_MODE_CHANGE_CAUSES)[number];
+
+/** 盤點中登記的自動失效:從最後一次操作算起 1 小時(規格 8.5a)。 */
+export const STOCKTAKE_SESSION_IDLE_MS = 60 * 60 * 1000;
+
+/** 盤點中登記還有沒有效(最後一次操作後還沒滿 1 小時;規格 8.5a)。 */
+export function isStocktakeSessionActive(
+  lastActiveAt: Date,
+  now: Date,
+): boolean {
+  return now.getTime() - lastActiveAt.getTime() < STOCKTAKE_SESSION_IDLE_MS;
+}
+
+/** 分店那一筆上的進行中工作(規格 5.6 `movePauses`、`stocktakeSessions`)。 */
+export interface StoreWorkInProgress {
+  /** 進行中的全店重刷(gameId = 那個遊戲)或補點編號(gameId = null) */
+  movePauses: readonly { gameId: string | null }[];
+  /** 盤點中登記(只看最後一次操作時間;失效的不算) */
+  stocktakeSessions: readonly { lastActiveAt: Date }[];
+}
+
+/** 這家店進行中的工作:有效的盤點中登記、全店重刷、補點編號。 */
+export interface StoreBusy {
+  stocktake: boolean;
+  rescan: boolean;
+  renumber: boolean;
+}
+
+/**
+ * 這家店有沒有進行中的盤點、全店重刷或補點編號(規格 9.1:有的話兩個方向都不能改盤點制度)。
+ * 盤點中登記超過 1 小時沒操作就失效、不算(8.5a);重刷 = `movePauses` 有指定遊戲的、補點 = 有 `gameId: null` 的。
+ * 都沒有 → null。
+ */
+export function storeBusyOf(
+  work: StoreWorkInProgress,
+  now: Date,
+): StoreBusy | null {
+  const busy: StoreBusy = {
+    stocktake: work.stocktakeSessions.some((session) =>
+      isStocktakeSessionActive(session.lastActiveAt, now),
+    ),
+    rescan: work.movePauses.some((pause) => pause.gameId !== null),
+    renumber: work.movePauses.some((pause) => pause.gameId === null),
+  };
+  return busy.stocktake || busy.rescan || busy.renumber ? busy : null;
+}
