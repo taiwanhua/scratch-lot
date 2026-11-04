@@ -129,6 +129,17 @@ describe("營運報表的工作表:張數店", () => {
       note: item("monthEndRenumberMonthOnly"),
     });
 
+    // 月報、那個月還沒關帳(沒有月底快照)→ 關帳時判斷
+    const open = sectionOf(
+      buildOperationsSheets(dataOf([countStore()]), context("month"))
+        .branches[0],
+      "notes",
+    );
+    expect(rowOf(open, item("monthEndUnrenumbered"))).toMatchObject({
+      quantity: 0,
+      note: item("monthEndRenumberOpen"),
+    });
+
     const store = countStore();
     if (store.notes.countMode == null) {
       throw new Error("count store fixture has no countMode");

@@ -976,7 +976,8 @@
         "neverRenumbered": "Never renumbered",
         "monthEndUnrenumbered": "Not renumbered at month end",
         "monthEndRenumberNone": "None",
-        "monthEndRenumberMonthOnly": "— (monthly reports only)"
+        "monthEndRenumberMonthOnly": "— (monthly reports only)",
+        "monthEndRenumberOpen": "— (decided at period close)"
       },
       "closing": {
         "closed": "Closed",

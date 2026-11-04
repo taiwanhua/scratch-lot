@@ -976,7 +976,8 @@
         "neverRenumbered": "還沒補點編號過",
         "monthEndUnrenumbered": "月底未補點編號",
         "monthEndRenumberNone": "無",
-        "monthEndRenumberMonthOnly": "—(月報才判斷)"
+        "monthEndRenumberMonthOnly": "—(月報才判斷)",
+        "monthEndRenumberOpen": "—(關帳時判斷)"
       },
       "closing": {
         "closed": "已關帳",

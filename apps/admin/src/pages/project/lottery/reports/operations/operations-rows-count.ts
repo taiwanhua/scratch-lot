@@ -68,18 +68,26 @@ const modeNoteOf = (
   });
 };
 
-/** 「月底未補點編號」的說明:只有月報判斷(關帳被放行或設「只提醒」的店的月份)。 */
+/**
+ * 「月底未補點編號」的說明:只有月報判斷(已關帳月份的快照:關帳被放行或設「只提醒」的店的月份);
+ * 還沒關帳的月份寫「關帳時判斷」。
+ */
 const monthEndNoteOf = (
   mode: CountMode,
+  openMonths: readonly string[],
   t: T,
   options: SheetOptions,
 ): string => {
   if (options.periodKind !== "month") {
     return t("admin.lotteryReports.operations.items.monthEndRenumberMonthOnly");
   }
-  return mode.monthEndUnrenumbered.length === 0
-    ? t("admin.lotteryReports.operations.items.monthEndRenumberNone")
-    : mode.monthEndUnrenumbered.join("、");
+  if (mode.monthEndUnrenumbered.length > 0) {
+    return mode.monthEndUnrenumbered.join("、");
+  }
+  // 還沒關帳的月份沒有月底快照:關帳時才判斷
+  return openMonths.length > 0
+    ? t("admin.lotteryReports.operations.items.monthEndRenumberOpen")
+    : t("admin.lotteryReports.operations.items.monthEndRenumberNone");
 };
 
 /**
@@ -125,7 +133,7 @@ export const countModeRows = (
         options.periodKind === "month"
           ? mode.monthEndUnrenumbered.length
           : null,
-      note: monthEndNoteOf(mode, t, options),
+      note: monthEndNoteOf(mode, store.notes.openMonths, t, options),
     }),
   ];
 };
