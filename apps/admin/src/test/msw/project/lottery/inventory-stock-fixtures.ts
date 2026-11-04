@@ -176,6 +176,9 @@ export const sampleInvestigations =
       at,
       cost,
       ticketCount: count,
+      unmatched: false,
+      sourceStocktakeType: null,
+      unmatchedBooks: [],
       tickets: Array.from({ length: count }, (_, index) =>
         inventoryTicket(formatTicketNo(index + 1), status, {
           id: `${bookId}-t-${String(index + 1)}`,
@@ -216,5 +219,29 @@ export const sampleInvestigations =
         18_400,
         100,
       ),
+      // 系統預設帶入的待查(張數店規格 13.2,Figma CS-21):遊戲 × 責任分店 × 來源盤點一列,不給 [尋回]
+      {
+        ...row(
+          "b-056527",
+          "",
+          inventoryGames[0],
+          "investigating",
+          inventoryOrgs.storeA,
+          "ST-0031",
+          "2026-10-16T02:00:00.000Z",
+          184,
+          1,
+        ),
+        unmatched: true,
+        sourceStocktakeType: "shift",
+        unmatchedBooks: [
+          {
+            __typename: "LotteryInvestigationBookTickets",
+            bookId: "b-056527",
+            bookNo: "0056527",
+            ticketNos: ["090"],
+          },
+        ],
+      },
     ];
   };

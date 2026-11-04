@@ -65,6 +65,7 @@ export const inventoryBook = (
     },
   ],
   remainingCount: 100,
+  unmatchedCount: 0,
   totalCount: 100,
   pendingSkipCount: 0,
   requiredSkipCount: 0,
@@ -228,6 +229,7 @@ const event = (
   reasonKey: null,
   reasonNote: null,
   correctionOfShift: null,
+  matchPartner: null,
   ...overrides,
 });
 

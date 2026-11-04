@@ -341,6 +341,11 @@ export const PROJECT_DYNAMIC_KEYS: readonly DynamicKey[] = [
       "`t(`ticketStatuses.${status}`)`,status 是張的狀態 `TICKET_STATUSES`(api 回的值)",
   },
   {
+    key: "admin.lotteryInventory.investigations.stocktakeTypes.",
+    reason:
+      "待查·遺失分頁未對號那一列的來源盤點 `t(`investigations.stocktakeTypes.${row.sourceStocktakeType}`)`,值是 api 回的盤點類型 `STOCKTAKE_TYPES`(`InvestigationsTab`)",
+  },
+  {
     key: "admin.lotteryInventory.bookStates.",
     reason:
       "`t(`bookStates.${state}`)`,state 是本的狀態(api 回的 `state`)與篩選值 `INVENTORY_BOOK_FILTER_STATES`",

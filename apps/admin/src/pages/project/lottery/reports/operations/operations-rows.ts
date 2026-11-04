@@ -2,8 +2,10 @@ import type { SheetRow, SheetSection } from "@/lib/base/reports/excel";
 
 import {
   type OperationsStore,
+  type SheetOptions,
   type T,
   hasCost,
+  isCountSheet,
   line,
   negate,
   numberColumn,
@@ -22,9 +24,9 @@ import {
   outstandingSection,
 } from "./operations-rows-more";
 
-export type { OperationsStore, T } from "./operations-row-base";
+export type { OperationsStore, SheetOptions, T } from "./operations-row-base";
 
-/** 1 銷售:刷條碼、手動(依原因)、補登售出、撤銷(負數)、淨銷售。 */
+/** 1 銷售:刷條碼、手動(依原因)、依張數標記售出(張數店)、補登售出、撤銷(負數)、淨銷售。 */
 const salesSection = (store: OperationsStore, t: T): SheetSection => {
   const { sales } = store;
   return {
@@ -57,6 +59,16 @@ const salesSection = (store: OperationsStore, t: T): SheetSection => {
           amount: reason.amount,
         }),
       ),
+      // 張數店多一列來源(依張數賣不混進手動;張數店規格 11.2、11.4)
+      ...(isCountSheet(store)
+        ? [
+            line({
+              item: t("admin.lotteryReports.operations.items.countSale"),
+              tickets: sales.countSale.count,
+              amount: sales.countSale.amount,
+            }),
+          ]
+        : []),
       line({
         item: t("admin.lotteryReports.operations.items.stocktake"),
         tickets: sales.stocktake.count,
@@ -80,15 +92,24 @@ const salesSection = (store: OperationsStore, t: T): SheetSection => {
 export const marginOf = (netAmount: number, cost: number): number | null =>
   netAmount === 0 ? null : (netAmount - cost) / netAmount;
 
-/** 2 毛利(要成本權限):淨銷售金額、已售成本、毛利、毛利率。 */
+/**
+ * 2 毛利(要成本權限):淨銷售金額、已售成本、毛利、毛利率。這一期含估算(張數店規格 11.1)→ 標題「毛利(估算)」、
+ * 說明前面加估算的範圍;數字不加標記。
+ */
 const profitSection = (store: OperationsStore, t: T): SheetSection | null => {
   const { sales } = store;
   if (sales.cost == null) {
     return null;
   }
   return {
-    title: t("admin.lotteryReports.operations.blocks.profit"),
-    description: t("admin.lotteryReports.operations.descriptions.profit"),
+    title: t(
+      store.estimated
+        ? "admin.lotteryReports.operations.blocks.profitEstimated"
+        : "admin.lotteryReports.operations.blocks.profit",
+    ),
+    description: store.estimated
+      ? `${t("admin.lotteryReports.operations.descriptions.estimated")}${t("admin.lotteryReports.operations.descriptions.profit")}`
+      : t("admin.lotteryReports.operations.descriptions.profit"),
     columns: [
       textColumn("item", t("admin.lotteryReports.operations.columns.item")),
       numberColumn(
@@ -255,6 +276,16 @@ const inventorySection = (store: OperationsStore, t: T): SheetSection => {
       tickets: negate(inv.newInvestigatingTickets),
       cost: negate(inv.newInvestigatingCost),
     }),
+    // 撤銷報廢(兩種店共用,張數店規格 7.8、11.2):有撤銷或張數店才列
+    ...(isCountSheet(store) || inv.scrapUndoTickets !== 0
+      ? [
+          line({
+            item: t("admin.lotteryReports.operations.items.scrapUndo"),
+            tickets: inv.scrapUndoTickets,
+            cost: inv.scrapUndoCost,
+          }),
+        ]
+      : []),
     line({
       item: t("admin.lotteryReports.operations.items.investigateRecovered"),
       tickets: inv.investigateRecoveredTickets,
@@ -271,6 +302,18 @@ const inventorySection = (store: OperationsStore, t: T): SheetSection => {
       cost: inv.pendingAdjustCost,
       note: t("admin.lotteryReports.operations.items.pendingAdjustNote"),
     }),
+    // 對號成本調整(張數店;只有成本、張數留空,張數店規格 11.2)
+    ...(isCountSheet(store)
+      ? [
+          line({
+            item: t("admin.lotteryReports.operations.items.matchCostAdjust"),
+            cost: inv.matchCostAdjustCost,
+            note: t(
+              "admin.lotteryReports.operations.items.matchCostAdjustNote",
+            ),
+          }),
+        ]
+      : []),
     totalLine({
       item: t("admin.lotteryReports.operations.items.ending"),
       tickets: inv.endingTickets,
@@ -306,9 +349,16 @@ const inventoryInfoSection = (store: OperationsStore, t: T): SheetSection => {
       item: t("admin.lotteryReports.operations.items.investigating"),
       tickets: inv.investigatingTickets,
       amount: inv.investigatingCost,
-      note: t("admin.lotteryReports.operations.items.books", {
-        count: inv.investigatingBooks,
-      }),
+      // 系統預設帶入的(待查·未對號)不列張號區段(張數店規格 11.4)
+      note:
+        inv.investigatingUnmatchedTickets > 0
+          ? t("admin.lotteryReports.operations.items.investigatingUnmatched", {
+              count: inv.investigatingBooks,
+              unmatched: inv.investigatingUnmatchedTickets,
+            })
+          : t("admin.lotteryReports.operations.items.books", {
+              count: inv.investigatingBooks,
+            }),
     }),
     line({
       item: t("admin.lotteryReports.operations.items.lost"),
@@ -361,6 +411,7 @@ const inventoryInfoSection = (store: OperationsStore, t: T): SheetSection => {
 export const operationsSectionsOf = (
   store: OperationsStore,
   t: T,
+  options: SheetOptions,
 ): SheetSection[] =>
   [
     salesSection(store, t),
@@ -373,5 +424,5 @@ export const operationsSectionsOf = (
     cashMovementSection(store, t),
     bankSection(store, t),
     outstandingSection(store, t),
-    notesSection(store, t),
+    notesSection(store, t, options),
   ].filter((section): section is SheetSection => section !== null);

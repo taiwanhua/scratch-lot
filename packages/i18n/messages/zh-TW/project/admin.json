@@ -556,7 +556,8 @@
         "remaining": "剩餘 / 總張數",
         "pendingSkip": "待標註",
         "purchasedAt": "批購日",
-        "dealer": "批購甲類"
+        "dealer": "批購甲類",
+        "remainingEstimated": "剩餘 / 總張數(約)"
       },
       "remaining": "{remaining} / {total}",
       "none": "—",
@@ -573,7 +574,8 @@
       "listAria": "庫存(以本為單位)",
       "pickOrg": "請先選分店",
       "empty": "沒有符合條件的本",
-      "total": "共 {count} 本"
+      "total": "共 {count} 本",
+      "remainingEstimated": "約 {remaining} / {total}"
     },
     "lookup": {
       "open": "查刮刮樂",
@@ -605,7 +607,16 @@
       "listAria": "待查·遺失",
       "empty": "目前沒有待查或遺失的刮刮樂",
       "loadFailed": "待查·遺失清單載入失敗,請稍後再試",
-      "daysValue": "{days} 天"
+      "daysValue": "{days} 天",
+      "systemDefault": "系統預設帶入",
+      "sourceStocktake": "{date} {type}",
+      "stocktakeTypes": {
+        "shift": "交班盤點",
+        "daily": "日結盤點",
+        "adhoc": "臨時盤點"
+      },
+      "unmatchedBook": "本號 {bookNo} · {tickets}(系統預設帶入)",
+      "unmatchedDetail": "{books}· 這是系統預設帶入的張號,找到實體請刷條碼尋回,或做全店重刷。"
     },
     "book": {
       "tabLabel": "本 {key}",
@@ -638,7 +649,9 @@
         "notInStock": "只能選在庫存的張;檯面上的張請先收回",
         "locked": "被調貨單鎖住的張不能報廢",
         "notUnsold": "只能報廢未售的張"
-      }
+      },
+      "remainingEstimated": " · 剩 {remaining} 張(估算,含未對號 {unmatched} 張)",
+      "dashedNote": "虛線 = 系統預設帶入的張號"
     },
     "timeline": {
       "columns": {
@@ -651,7 +664,9 @@
       "wholeBook": "整本",
       "aria": "事件時間軸",
       "empty": "還沒有事件",
-      "correctionOf": "(前期更正,屬於 {shift})"
+      "correctionOf": "(前期更正,屬於 {shift})",
+      "matchPair": "#{ticketNo} ↔ #{partner}",
+      "matchPairOtherBook": "#{ticketNo} ↔ 本號 {bookNo} #{partner}"
     },
     "scrap": {
       "title": "報廢 {count} 張",
@@ -775,7 +790,8 @@
         "bank": "6 銀行",
         "outstanding": "7 未結清",
         "notes": "8 註記",
-        "compare": "分店比較"
+        "compare": "分店比較",
+        "profitEstimated": "2 毛利(估算)"
       },
       "descriptions": {
         "sales": "這段期間賣了多少。撤銷是負數,可能是以前賣出的。",
@@ -789,7 +805,9 @@
         "bank": "這家店使用的帳戶,只算歸屬這家店的交易;收是正數、支是負數。",
         "outstanding": "期間結束那一刻還欠多少;是餘額,不是期間內發生的。",
         "notes": "提醒要注意、但不是金額的事。",
-        "compare": "各分店的重要數字放在一起比較;合計和「全部分店合計」工作表相同。"
+        "compare": "各分店的重要數字放在一起比較;合計和「全部分店合計」工作表相同。",
+        "estimated": "本期有系統預設帶入的張號:遊戲合計精確,逐本銷售、已售成本、毛利、期末庫存成本是估算。",
+        "gamesCount": "售出 = 刷條碼 + 手動標記 + 依張數標記售出 + 補登售出;依遊戲代號排序。毛利率 = 毛利 ÷ 淨銷售金額。"
       },
       "footnotes": {
         "cashMovement": "5b 不是完整的現金帳:賣出收的現金在 1 銷售、兌獎付的現金在 3 兌獎,這裡不重複列。要看抽屜和小金庫的完整應有,請看帳戶管理的即時現金帳。",
@@ -867,7 +885,10 @@
         "endingCost": "期末庫存成本",
         "shiftDifference": "各班結帳差額",
         "toPay": "待付(進貨款 + 調貨款)",
-        "toReceive": "待收調貨款"
+        "toReceive": "待收調貨款",
+        "countName": "{name}(張數)",
+        "countEstimatedName": "{name}(張數)· 估算",
+        "estimatedName": "{name} · 估算"
       },
       "items": {
         "scan": "刷條碼售出",
@@ -939,7 +960,23 @@
         "fullDayNote": "{store} {date} 未日結,期間改用整天,小金庫和盤點未核對",
         "thisStore": "本店",
         "monthClosed": "已關帳:數字固定;之後才記的更正列在報表的「前期更正」",
-        "monthOpen": "尚未關帳:數字可能還會變動"
+        "monthOpen": "尚未關帳:數字可能還會變動",
+        "countSale": "依張數標記售出",
+        "scrapUndo": "+ 撤銷報廢",
+        "matchCostAdjust": "對號成本調整",
+        "matchCostAdjustNote": "對號換到成本不同的張;接手已售的差額已算在已售成本",
+        "investigatingUnmatched": "{count} 本;其中 {unmatched} 張系統預設帶入,不列張號區段",
+        "estimated": "含估算",
+        "countMode": "盤點制度",
+        "countModeSince": "{mode}({date} 起)",
+        "countModeChange": "{date} 起 {from} → {to}",
+        "renumberCount": "補點編號次數",
+        "daysSinceRenumber": "距上次補點編號",
+        "daysValue": "{days} 天",
+        "neverRenumbered": "還沒補點編號過",
+        "monthEndUnrenumbered": "月底未補點編號",
+        "monthEndRenumberNone": "無",
+        "monthEndRenumberMonthOnly": "—(月報才判斷)"
       },
       "closing": {
         "closed": "已關帳",
@@ -953,6 +990,16 @@
         "period": "實際期間",
         "note": "註記",
         "loading": "選了分店就會列出各店實際期間"
+      },
+      "countModes": {
+        "numbered": "編號盤點",
+        "count": "張數盤點",
+        "converting": "轉換中"
+      },
+      "countModeShort": {
+        "numbered": "編號",
+        "count": "張數",
+        "converting": "轉換中"
       }
     },
     "shiftCheckouts": {

@@ -79,6 +79,10 @@ const headerNotesOf = (
       t(KIND_KEYS[input.periodKind]),
       ...alignment.filter((note): note is string => note !== null),
       closed,
+      // 這一期判定估算(張數店規格 11.1、13.2;合計有一家是就加)
+      ...(store.estimated
+        ? [t("admin.lotteryReports.operations.items.estimated")]
+        : []),
     ].join(" · "),
     t("admin.lotteryReports.operations.sheet.generated", {
       at: dateTimeText(context.generatedAt, timezone),
@@ -106,6 +110,22 @@ export const buildOperationsSheets = (
   const report = data.lotteryOperationsReport;
   const nameOf = (orgId: string) =>
     orgs.find((org) => org.id === orgId)?.name ?? orgId;
+  const options = { periodKind: context.input.periodKind, timezone };
+  /** 分店比較的店名:張數店「A 店(張數)」、估算的加「· 估算」(張數店規格 13.2;編號店不變)。 */
+  const compareNameOf = (store: OperationsStore) => {
+    const name = nameOf(store.orgId);
+    if (store.notes.countMode == null) {
+      return store.estimated
+        ? t("admin.lotteryReports.operations.compare.estimatedName", { name })
+        : name;
+    }
+    return t(
+      store.estimated
+        ? "admin.lotteryReports.operations.compare.countEstimatedName"
+        : "admin.lotteryReports.operations.compare.countName",
+      { name },
+    );
+  };
   const total = totalStoreOf(report.stores);
   const totalName = t("admin.reports.totalSheet");
   const extras: SheetData[] =
@@ -124,7 +144,7 @@ export const buildOperationsSheets = (
               [
                 compareSectionOf(
                   report.stores.map((store) => ({
-                    name: nameOf(store.orgId),
+                    name: compareNameOf(store),
                     store,
                   })),
                   total,
@@ -148,7 +168,7 @@ export const buildOperationsSheets = (
         context,
         t,
       ),
-      operationsSectionsOf(total, t),
+      operationsSectionsOf(total, t, options),
     ),
     branches: report.stores.map((store) => ({
       orgId: store.orgId,
@@ -160,7 +180,7 @@ export const buildOperationsSheets = (
           context,
           t,
         ),
-        operationsSectionsOf(store, t),
+        operationsSectionsOf(store, t, options),
       ),
     })),
     extras,

@@ -55,6 +55,7 @@ const totalInventoryOf = (list: readonly Inventory[]): Inventory => {
     "transferOutTickets",
     "salesTickets",
     "scrapTickets",
+    "scrapUndoTickets",
     "newInvestigatingTickets",
     "investigateRecoveredTickets",
     "lostRecoveredTickets",
@@ -63,6 +64,7 @@ const totalInventoryOf = (list: readonly Inventory[]): Inventory => {
     "checkTickets",
     "inTransitTickets",
     "investigatingTickets",
+    "investigatingUnmatchedTickets",
     "lostTickets",
     "skippedTickets",
   ] as const;
@@ -75,6 +77,8 @@ const totalInventoryOf = (list: readonly Inventory[]): Inventory => {
     "transferGain",
     "salesCost",
     "scrapCost",
+    "scrapUndoCost",
+    "matchCostAdjustCost",
     "newInvestigatingCost",
     "investigateRecoveredCost",
     "lostRecoveredCost",
@@ -120,6 +124,8 @@ export const totalStoreOf = (
   const latest = latestOf(stores);
   return {
     orgId: "",
+    // 有一家含估算,合計就含估算(張數店規格 13.2)
+    estimated: stores.some((store) => store.estimated),
     period: stores[0]?.period ?? {
       orgId: "",
       from: "",
@@ -137,6 +143,7 @@ export const totalStoreOf = (
           amount: left.amount + right.amount,
         }),
       ),
+      countSale: sumQty(sales.map((item) => item.countSale)),
       stocktake: sumQty(sales.map((item) => item.stocktake)),
       undo: sumQty(sales.map((item) => item.undo)),
       net: sumQty(sales.map((item) => item.net)),
@@ -239,6 +246,8 @@ export const totalStoreOf = (
       openMonths: [
         ...new Set(notes.flatMap((item) => item.openMonths)),
       ].toSorted((a, b) => a.localeCompare(b, COLLATION_LOCALE)),
+      // 盤點制度是一家店的事:合計不列
+      countMode: null,
     },
   };
 };

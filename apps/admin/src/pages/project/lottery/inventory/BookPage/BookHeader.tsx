@@ -120,6 +120,13 @@ export const BookHeader = ({
               first: book.firstTicketNo,
               last: book.lastTicketNo,
             })}
+            {/* 有未對號 → 逐本剩餘是估算(遊戲合計精確;張數店規格 13.2,Figma CS-20) */}
+            {book.unmatchedCount > 0
+              ? t("book.remainingEstimated", {
+                  remaining: book.remainingCount,
+                  unmatched: book.unmatchedCount,
+                })
+              : null}
           </Typography>
         </Stack>
         <Stack direction="row" sx={{ alignItems: "center", gap: 1 }}>

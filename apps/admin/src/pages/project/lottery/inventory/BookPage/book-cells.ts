@@ -31,8 +31,19 @@ const STATE_OF: Record<string, CellState> = {
 const spansStores = (tickets: readonly Ticket[]): boolean =>
   new Set(tickets.map((ticket) => ticket.org.id)).size > 1;
 
+/** 系統預設帶入的張(張數店的已售 / 待查 / 遺失·未對號)→ 虛線格子(張數店規格 13.2;不能選)。 */
+const unmatchedStateOf = (ticket: Ticket): CellState | null => {
+  if (ticket.unmatched !== true) {
+    return null;
+  }
+  return ticket.status === TICKET_STATUS.sold
+    ? "unmatchedSold"
+    : "unmatchedLost";
+};
+
 /**
  * 本的詳情頁的格子:別店的張(`operable = false`,所在分店不在可見範圍內)用「其他分店」、不能選;
+ * 系統預設帶入的張(未對號)畫虛線、不能選(只有張號確定的可以點選;張數店規格 13.2,Figma CS-20);
  * 跳號一律畫成跳號(跳號不算任何店的庫存;對調跳號時記在哪家店都能選,規格 7.3 做法 D);
  * 被調貨單鎖住的未售用「調貨中」、不能選(使用者 10/27 定案)。張分在不止一家店時,每格的提示寫所在分店。
  */
@@ -47,7 +58,8 @@ export const bookCellsOf = (tickets: readonly Ticket[]): TicketGridCell[] => {
     } else if (ticket.locked && ticket.status === TICKET_STATUS.unsold) {
       state = "transferring";
     } else {
-      state = STATE_OF[ticket.status] ?? "sold";
+      const fallback: CellState = STATE_OF[ticket.status] ?? "sold";
+      state = unmatchedStateOf(ticket) ?? fallback;
     }
     return {
       ticketNo: ticket.ticketNo,
@@ -83,7 +95,14 @@ export const BOOK_SELECTABLE: TicketGridProps["selectableStates"] = [
 /** 選到的張能不能出現在操作列:自己範圍內的張。 */
 export const isSelectable = (ticket: Ticket): boolean => ticket.operable;
 
-/** 本的詳情頁的圖例(未售 / 已售 /(調貨中)/ 跳號 / 報廢 / 待查·遺失 /(其他分店)/ 已選)。 */
+/** 這本有系統預設帶入的張(自己範圍內的未對號;圖例放兩種虛線與說明)。 */
+export const hasUnmatched = (tickets: readonly Ticket[]): boolean =>
+  tickets.some((ticket) => ticket.operable && ticket.unmatched === true);
+
+/**
+ * 本的詳情頁的圖例(未售 / 已售 /(調貨中)/ 跳號 / 報廢 / 待查·遺失 /(已售·未對號 / 待查·遺失·未對號)/
+ * (其他分店)/ 已選);有未對號時圖例下方另寫「虛線 = 系統預設帶入的張號」(`legendNote`,Figma CS-20)。
+ */
 export const bookLegendOf = (
   tickets: readonly Ticket[],
 ): TicketGridProps["legendItems"] =>
@@ -97,6 +116,9 @@ export const bookLegendOf = (
       "skipped",
       "scrapped",
       "lost",
+      ...(hasUnmatched(tickets)
+        ? (["unmatchedSold", "unmatchedLost"] as const)
+        : []),
       "selected",
     ],
     tickets,
@@ -132,19 +154,7 @@ export const correctionCellsOf = (
 /** 更正跳號 ② 的圖例:有系統預設帶入的張才放兩種虛線。 */
 export const correctionLegendOf = (
   tickets: readonly Ticket[],
-): TicketGridProps["legendItems"] => {
-  const legend = bookLegendOf(tickets);
-  if (!tickets.some((ticket) => ticket.unmatched === true)) {
-    return legend;
-  }
-  const selected = legend.indexOf("selected");
-  return [
-    ...legend.slice(0, selected),
-    "unmatchedSold",
-    "unmatchedLost",
-    ...legend.slice(selected),
-  ];
-};
+): TicketGridProps["legendItems"] => bookLegendOf(tickets);
 
 /**
  * 標跳號的格子(使用者 10/27 定案 M1):自己範圍內、沒被鎖的未售張能選,別店的張是「其他分店」、
@@ -174,6 +184,7 @@ export const markSkipCellsOf = (
 /** 待查 / 遺失、而且操作者能操作(所在分店在可見範圍內)的張:[尋回] / [整本尋回] 的對象。 */
 export const isRecoverable = (ticket: Ticket): boolean =>
   ticket.operable &&
+  ticket.unmatched !== true &&
   (ticket.status === TICKET_STATUS.investigating ||
     ticket.status === TICKET_STATUS.lost);
 

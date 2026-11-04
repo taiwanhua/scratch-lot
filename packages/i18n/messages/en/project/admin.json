@@ -556,7 +556,8 @@
         "remaining": "Remaining / total",
         "pendingSkip": "To mark",
         "purchasedAt": "Purchased",
-        "dealer": "Class A dealer"
+        "dealer": "Class A dealer",
+        "remainingEstimated": "Left / total (approx.)"
       },
       "remaining": "{remaining} / {total}",
       "none": "—",
@@ -573,7 +574,8 @@
       "listAria": "Stock (by book)",
       "pickOrg": "Pick a branch first",
       "empty": "No books match",
-      "total": "{count} books"
+      "total": "{count} books",
+      "remainingEstimated": "≈ {remaining} / {total}"
     },
     "lookup": {
       "open": "Find ticket",
@@ -605,7 +607,16 @@
       "listAria": "Investigating · Lost",
       "empty": "No investigating or lost tickets",
       "loadFailed": "Could not load investigating and lost tickets. Please try again later.",
-      "daysValue": "{days} d"
+      "daysValue": "{days} d",
+      "systemDefault": "Assigned by the system",
+      "sourceStocktake": "{date} {type}",
+      "stocktakeTypes": {
+        "shift": "Shift count",
+        "daily": "Daily close count",
+        "adhoc": "Ad-hoc count"
+      },
+      "unmatchedBook": "Book {bookNo} · {tickets} (assigned by the system)",
+      "unmatchedDetail": "{books} · These ticket numbers were assigned by the system. If you find the ticket, scan it to recover it, or run a store-wide rescan."
     },
     "book": {
       "tabLabel": "Book {key}",
@@ -638,7 +649,9 @@
         "notInStock": "Only tickets in stock can be selected; recall counter tickets first",
         "locked": "Tickets locked by a transfer cannot be scrapped",
         "notUnsold": "Only unsold tickets can be scrapped"
-      }
+      },
+      "remainingEstimated": " · {remaining} left (estimated, plus {unmatched} system-assigned)",
+      "dashedNote": "Dashed = ticket numbers assigned by the system"
     },
     "timeline": {
       "columns": {
@@ -651,7 +664,9 @@
       "wholeBook": "Whole book",
       "aria": "Event timeline",
       "empty": "No events yet",
-      "correctionOf": " (prior correction, belongs to {shift})"
+      "correctionOf": " (prior correction, belongs to {shift})",
+      "matchPair": "#{ticketNo} ↔ #{partner}",
+      "matchPairOtherBook": "#{ticketNo} ↔ book {bookNo} #{partner}"
     },
     "scrap": {
       "title": "Scrap {count} tickets",
@@ -775,7 +790,8 @@
         "bank": "6 Bank",
         "outstanding": "7 Outstanding",
         "notes": "8 Notes",
-        "compare": "Branch comparison"
+        "compare": "Branch comparison",
+        "profitEstimated": "2 Gross profit (estimated)"
       },
       "descriptions": {
         "sales": "What sold in this period. Undone sales are negative and may be from earlier sales.",
@@ -789,7 +805,9 @@
         "bank": "Accounts this store uses, counting only this store's transactions; in is positive, out is negative.",
         "outstanding": "What was still owed at the end of the period (balances, not activity).",
         "notes": "Things to look at that are not amounts.",
-        "compare": "Key figures of each branch side by side; the total matches the all-branches sheet."
+        "compare": "Key figures of each branch side by side; the total matches the all-branches sheet.",
+        "estimated": "This period has ticket numbers assigned by the system: game totals are exact; per-book sales, cost of sales, gross profit and ending stock cost are estimates. ",
+        "gamesCount": "Sold = scanned + marked manually + marked by count + stocktake backfill; sorted by game code. Margin = gross profit ÷ net sales."
       },
       "footnotes": {
         "cashMovement": "5b is not a full cash book: cash from sales is in 1 Sales and prize payouts in 3 Prize redemption. See the live cash book in Accounts for the expected drawer and vault amounts.",
@@ -867,7 +885,10 @@
         "endingCost": "Ending stock cost",
         "shiftDifference": "Shift checkout differences",
         "toPay": "Payable (purchases + transfers)",
-        "toReceive": "Transfer payment to receive"
+        "toReceive": "Transfer payment to receive",
+        "countName": "{name} (quantity)",
+        "countEstimatedName": "{name} (quantity) · estimated",
+        "estimatedName": "{name} · estimated"
       },
       "items": {
         "scan": "Scanned sales",
@@ -939,7 +960,23 @@
         "fullDayNote": "{store} had no daily close on {date}; the whole day is used and the vault and stocktake are not reconciled",
         "thisStore": "This store",
         "monthClosed": "Closed: figures are fixed; later corrections appear under prior-period corrections",
-        "monthOpen": "Not yet closed: figures may still change"
+        "monthOpen": "Not yet closed: figures may still change",
+        "countSale": "Marked sold by count",
+        "scrapUndo": "+ Scrap undone",
+        "matchCostAdjust": "Match cost adjustment",
+        "matchCostAdjustNote": "Matched tickets with a different cost; differences taken over as sold are already in cost of sales",
+        "investigatingUnmatched": "{count} books; {unmatched} assigned by the system, ranges not listed",
+        "estimated": "Includes estimates",
+        "countMode": "Count mode",
+        "countModeSince": "{mode} (since {date})",
+        "countModeChange": "From {date}: {from} → {to}",
+        "renumberCount": "Renumber counts",
+        "daysSinceRenumber": "Since last renumber",
+        "daysValue": "{days} days",
+        "neverRenumbered": "Never renumbered",
+        "monthEndUnrenumbered": "Not renumbered at month end",
+        "monthEndRenumberNone": "None",
+        "monthEndRenumberMonthOnly": "— (monthly reports only)"
       },
       "closing": {
         "closed": "Closed",
@@ -953,6 +990,16 @@
         "period": "Actual period",
         "note": "Note",
         "loading": "Choose stores to list the actual period of each store"
+      },
+      "countModes": {
+        "numbered": "Numbered count",
+        "count": "Count by quantity",
+        "converting": "Converting"
+      },
+      "countModeShort": {
+        "numbered": "Numbered",
+        "count": "Quantity",
+        "converting": "Converting"
       }
     },
     "shiftCheckouts": {

@@ -34,6 +34,7 @@ import {
   BOOK_SELECTABLE,
   bookCellsOf,
   bookLegendOf,
+  hasUnmatched,
   isRecoverable,
   isSelectable,
   selectionActionsOf,
@@ -170,6 +171,9 @@ export const BookPage = ({ routeParam }: ModulePageProps) => {
             selected={selectedNos}
             onSelectedChange={setSelected}
             legendItems={bookLegendOf(detail.tickets)}
+            {...(hasUnmatched(detail.tickets) && {
+              legendNote: t("book.dashedNote"),
+            })}
             summary={false}
           />
         </Box>
