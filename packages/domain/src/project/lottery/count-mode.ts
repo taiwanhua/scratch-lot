@@ -232,12 +232,27 @@ export function renumberDueOf(
   if (lastRenumberAt === null) {
     return true;
   }
+  const dueAt = renumberDueAtOf(cycle, lastRenumberAt);
+  return dueAt !== null && now.getTime() >= dueAt.getTime();
+}
+
+/**
+ * 補點編號到期的時間(第 10 節「補點編號提醒」;排程的「逾期後每天」從這天起算):不設 → null;
+ * 每週 / 雙週 = 上次補點後 7 / 14 天;每月 = 上次補點後一個月(同一天,月底照那個月最後一天)。
+ * 從沒補點過 → 呼叫端給的起算時間(例:進入張數店的時間)就是到期。
+ */
+export function renumberDueAtOf(
+  cycle: RenumberCycle,
+  lastRenumberAt: Date,
+): Date | null {
+  if (cycle === "none") {
+    return null;
+  }
+  if (cycle === "monthly") {
+    return addMonths(lastRenumberAt, 1);
+  }
   const days = cycle === "weekly" ? 7 : 14;
-  const dueAt =
-    cycle === "monthly"
-      ? addMonths(lastRenumberAt, 1)
-      : new Date(lastRenumberAt.getTime() + days * DAY_MS);
-  return now.getTime() >= dueAt.getTime();
+  return new Date(lastRenumberAt.getTime() + days * DAY_MS);
 }
 
 /** 張數盤點一組(收銀點 × 遊戲)差異的處理(規格 8.2)。 */

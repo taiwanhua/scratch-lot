@@ -19,6 +19,7 @@
  * - `store-forms.ts`:撤銷售出申請、現金更正單的表單代號 / 欄位 key、存值解析與送出前檢查
  * - `sale-reversal-plan.ts`:撤銷售出申請送出時鎖哪幾張(刷的張先對號、依遊戲 + 張數挑張)、核准後張回到哪裡
  * - `stocktake.ts`:盤點的類型 / 狀態、盤點內容(含張數盤點的組)、與盤點那一刻比對的差異、送出前的檢查、[上一本] [下一本]
+ * - `renumber.ts`:補點編號(自動對號、核准後的制度、移櫃暫停跟著登記走、月底補點編號的關帳檢查、日結第 ② 步的預設)
  * - `rescan.ts`:全店重刷(一個位置的處理、位置狀態、自動取消、開始重刷的互斥、B5 擋盤點的組、重刷提醒)
  * - `stocktake-session.ts`:盤點中登記(同位置一次一人、1 小時自動失效、接續、全店盤點中不能交班)
  * - `checkout.ts`:交班結帳的表單代號 / 欄位 key、結帳內容、面額表、應有 / 實點 / 差額與交接的檢查
@@ -39,6 +40,7 @@ export * from "./receipt-links";
 export * from "./redemption";
 export * from "./requisition";
 export * from "./sale-reversal-plan";
+export * from "./renumber";
 export * from "./rescan";
 export * from "./store";
 export * from "./store-forms";

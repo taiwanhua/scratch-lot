@@ -56,11 +56,15 @@ export type StocktakeMethod = (typeof STOCKTAKE_METHODS)[number];
 export const STOCKTAKE_DIFF_KINDS = ["missing", "extra"] as const;
 export type StocktakeDiffKind = (typeof STOCKTAKE_DIFF_KINDS)[number];
 
-/** 差異的處理:補登售出(立即生效)/ 待查 / 標記異常(只做記號)。 */
+/**
+ * 差異的處理:補登售出(立即生效)/ 待查 / 標記異常(只做記號)/ 標跳號(只有補點編號:已拆還有待標註的本,
+ * 不在的張一併標跳號,張數店規格 9.3 第 3 點;核准時才寫)。
+ */
 export const STOCKTAKE_DIFF_ACTIONS = [
   "sale_backfill",
   "investigate",
   "flag",
+  "skip",
 ] as const;
 export type StocktakeDiffAction = (typeof STOCKTAKE_DIFF_ACTIONS)[number];
 
@@ -68,6 +72,7 @@ export const STOCKTAKE_DIFF_ACTION = {
   saleBackfill: "sale_backfill",
   investigate: "investigate",
   flag: "flag",
+  skip: "skip",
 } as const satisfies Record<string, StocktakeDiffAction>;
 
 /** 每種差異可用的處理(規格 6.8):未售不在 → [補登售出] / [待查];已售還在 → [標記異常]。 */
@@ -98,14 +103,23 @@ export const STOCKTAKE_STOCK_ACTIONS_OF: Record<
   extra: [],
 };
 
-/** 一行的差異可用的處理(檯面 / 庫存)。 */
+/** 一行的差異可用的處理時的條件:這本還有待標註、而且是補點編號(9.3 第 3 點)→ 不在的張可以 [標跳號]。 */
+export interface StocktakeActionOptions {
+  pendingSkip?: boolean;
+}
+
+/** 一行的差異可用的處理(檯面 / 庫存;補點編號且這本還有待標註時,不在的張多一個 [標跳號])。 */
 export function stocktakeActionsOf(
   kind: StocktakeDiffKind,
   cashPointId: string | null,
+  options: StocktakeActionOptions = {},
 ): readonly StocktakeDiffAction[] {
-  return isStocktakeStockLine(cashPointId)
+  const base = isStocktakeStockLine(cashPointId)
     ? STOCKTAKE_STOCK_ACTIONS_OF[kind]
     : STOCKTAKE_ACTIONS_OF[kind];
+  return kind === "missing" && options.pendingSkip === true
+    ? [...base, STOCKTAKE_DIFF_ACTION.skip]
+    : base;
 }
 
 /** 待查清單的處理:找到了(要刷條碼)/ 確認遺失(`store.confirm-lost`,原因必填)/ 繼續待查。 */
@@ -146,6 +160,12 @@ export const STOCKTAKE_REASONS = {
   sessionEnded: "STOCKTAKE_SESSION_ENDED",
   /** 這一組的位置正在全店重刷這個遊戲,刷完再數(張數店規格 8.5a B5;`extensions.groups`) */
   rescanning: "STOCKTAKE_RESCANNING",
+  /** 補點編號:有遊戲正在全店重刷,完成或取消後再補點(張數店規格 8.5a B4) */
+  renumberBlocked: "STOCKTAKE_RENUMBER_BLOCKED",
+  /** 補點編號:這家店不是張數店或轉換中、或不是全店盤點(9.3) */
+  renumberNotAllowed: "STOCKTAKE_RENUMBER_NOT_ALLOWED",
+  /** 補點編號:每本都要盤,不能沒盤完送出(9.3 第 1 點、16.8 RN3;`extensions.books`) */
+  renumberIncomplete: "STOCKTAKE_RENUMBER_INCOMPLETE",
 } as const;
 
 /** 盤點內容的盤點制度(沒給 = 編號盤點)。 */
@@ -615,8 +635,9 @@ export function isStocktakeActionValid(
   diff: Pick<StocktakeDiff, "kind" | "backfilled">,
   action: StocktakeDiffAction,
   cashPointId: string | null = "",
+  options: StocktakeActionOptions = {},
 ): boolean {
-  if (!stocktakeActionsOf(diff.kind, cashPointId).includes(action)) {
+  if (!stocktakeActionsOf(diff.kind, cashPointId, options).includes(action)) {
     return false;
   }
   return (action === "sale_backfill") === diff.backfilled;
@@ -625,20 +646,30 @@ export function isStocktakeActionValid(
 /**
  * 送出前檢查差異的處理:畫面上的處理對不到目前的差異(已被其他盤點或操作處理掉、或處理方式不合、
  * 按了補登售出卻沒有補登成功)→ `stale`(「這幾張已被處理,請重新核對」);目前的差異沒有處理 → `unhandled`。
+ * 補點編號的 [標跳號] 最多標這本的待標註張數(`skipLimit`;超過的那幾張 → `stale`)。
  */
 export function stocktakeActionProblemsOf(
   diffs: readonly StocktakeDiff[],
   actions: readonly { ticketNo: string; action: StocktakeDiffAction }[],
   cashPointId: string | null = "",
+  skipLimit = 0,
 ): { stale: string[]; unhandled: string[] } {
   const byNo = new Map(diffs.map((diff) => [diff.ticketNo, diff]));
   const handled = new Set<string>();
   const stale: string[] = [];
+  const options = { pendingSkip: skipLimit > 0 };
+  let skips = 0;
   for (const item of actions) {
     const diff = byNo.get(item.ticketNo);
+    if (item.action === STOCKTAKE_DIFF_ACTION.skip) {
+      skips += 1;
+    }
+    const overSkip =
+      item.action === STOCKTAKE_DIFF_ACTION.skip && skips > skipLimit;
     if (
       diff === undefined ||
-      !isStocktakeActionValid(diff, item.action, cashPointId)
+      overSkip ||
+      !isStocktakeActionValid(diff, item.action, cashPointId, options)
     ) {
       stale.push(item.ticketNo);
     } else {
