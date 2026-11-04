@@ -47,15 +47,15 @@
 
 分店實際的盤點制度,一店一筆(`orgId` 唯一、`version`、`moduleKey: store`,比照 `lottery_vault_locks`),**沒有筆或 `mode` 空 = 編號店**。
 
-| 欄位                                        | 意思                                                                                                                                                                 |
-| ------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `mode`                                      | `numbered` / `count` / `converting`                                                                                                                                  |
-| `since`                                     | 進入現在制度的時間                                                                                                                                                   |
-| `lastRenumberAt`、`lastRenumberStocktakeId` | 上次補點編號核准(補點編號的票寫)                                                                                                                                     |
-| `history[]`                                 | `{ from, to, at, by, cause, stocktakeId }`,`cause` = `setting` / `renumber_approved` / `convert_cancelled`;只加不改                                                  |
-| `movePauses[]`                              | 進行中的全店重刷(`gameId`)或補點編號(`gameId: null`);全店重刷寫(`addRescanPause` / `removeRescanPause`,1 小時沒動作 `releaseExpiredRescans` 自動取消),補點編號的票寫 |
-| `stocktakeSessions[]`                       | 盤點中登記 `{ sessionId, type, cashPointIds, by, startedAt, lastActiveAt, draft, endedAt, endedBy }`(T4 寫;規則見 `store.md`「張數盤點與盤點中登記」)                |
-| `version`                                   | 改制度、開始 / 結束重刷、移櫃、登記 / 解除盤點中都 `$inc`(讓彼此一定有先後)                                                                                          |
+| 欄位                                        | 意思                                                                                                                                                                                                                                                      |
+| ------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `mode`                                      | `numbered` / `count` / `converting`                                                                                                                                                                                                                       |
+| `since`                                     | 進入現在制度的時間                                                                                                                                                                                                                                        |
+| `lastRenumberAt`、`lastRenumberStocktakeId` | 上次補點編號核准(`applyRenumberApproval` 寫)                                                                                                                                                                                                              |
+| `history[]`                                 | `{ from, to, at, by, cause, stocktakeId }`,`cause` = `setting` / `renumber_approved` / `convert_cancelled`;只加不改                                                                                                                                       |
+| `movePauses[]`                              | 進行中的全店重刷(`gameId`)或補點編號(`gameId: null`);全店重刷寫(`addRescanPause` / `removeRescanPause`,1 小時沒動作 `releaseExpiredRescans` 自動取消);補點編號跟著它的盤點中登記寫(`writeSessions`;登記的 `renumberPauseId`),登記有效才算(`livePausesOf`) |
+| `stocktakeSessions[]`                       | 盤點中登記 `{ sessionId, type, cashPointIds, by, startedAt, lastActiveAt, draft, endedAt, endedBy }`(T4 寫;規則見 `store.md`「張數盤點與盤點中登記」)                                                                                                     |
+| `version`                                   | 改制度、開始 / 結束重刷、移櫃、登記 / 解除盤點中都 `$inc`(讓彼此一定有先後)                                                                                                                                                                               |
 
 正本:`apps/api/src/project/database/lottery-settings/*.schema.ts`
 
@@ -79,7 +79,7 @@
 
 沒被擋就在同一個交易寫:設定那一列、各分店那一筆(已有的一次批次更新 `$set mode/since` + `$push history` + `$inc version`,還沒有的一次批次新增)、稽核。查詢次數固定、不逐店:組織樹 1、整個租戶的 `count_mode` 自訂 1、分店那一筆 1、未對號張數 1 次 aggregate、檯面待標註的本 1 + 收銀點 1 次 aggregate。子樹裡的分店不一定在操作者的可見範圍,這些讀寫以租戶邊界做(`PROJECT_TENANT_BOUNDARY_CONTEXT_CALLERS`,用途「反查」「系統重算」)。
 
-**目前的來源**:`stocktakeSessions` 由盤點中登記寫(T4;`StoreCountModeService.sessionRecordOf` / `writeSessions`,店長結束的不算進行中);`movePauses` 由全店重刷(見 `store.md`「全店重刷、提醒與移櫃暫停」)寫入,補點編號的票做好之前不會有 `gameId: null`。檢查本身已讀這兩個欄位(`StoreCountModeService.busyOf` → `storeBusyOf`),之後的票只要寫進同一筆就生效。
+**目前的來源**:`stocktakeSessions` 由盤點中登記寫(T4;`StoreCountModeService.sessionRecordOf` / `writeSessions`,店長結束的不算進行中);`movePauses` 由全店重刷(見 `store.md`「全店重刷、提醒與移櫃暫停」)寫入;補點編號的 `gameId: null` 跟著補點的盤點中登記寫,登記失效、送出後不算(審核中的補點不擋 [取消轉換],張數店規格 9.3 第 5 點)。檢查本身已讀這兩個欄位(`StoreCountModeService.busyOf` → `storeBusyOf`),之後的票只要寫進同一筆就生效。
 
 ### [取消轉換](9.2)
 
@@ -91,11 +91,13 @@
 | ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------- |
 | `modeOf(operator, orgId)` / `modesOf`                                                                  | 分店實際的盤點制度(沒有筆 = `numbered`)                                                                             |
 | `settingOf(operator, orgId, key)`                                                                      | 分店某一條設定的生效選項                                                                                            |
-| `movePauseOf(operator, orgId)`                                                                         | 進行中的全店重刷 / 補點編號(移櫃暫停)                                                                               |
+| `movePauseOf(operator, orgId, now)`                                                                    | 進行中的全店重刷 / 補點編號(移櫃暫停;補點編號只算登記還有效的)                                                      |
 | `guardMove` / `addRescanPause` / `removeRescanPause` / `touchForRescanPlace` / `releaseExpiredRescans` | 移櫃前的檢查與先後、開始 / 結束重刷、重刷「開始刷這個位置」、1 小時沒動作的重刷自動取消(都在交易內、`$inc version`) |
 | `guardMove(operator, store, gameIds, session)`                                                         | 移櫃交易內:擋到的暫停(`MovePauseBlock`);沒擋 → 分店那一筆 `version` +1(8.5 先後)                                    |
 | `recordOf` / `busyOf` / `historyOf`                                                                    | 分店那一筆、進行中的工作、歷程                                                                                      |
-| `planCountModeChange` / `applyCountModeChange`                                                         | 改盤點制度的計畫與寫入(補點編號核准也用 `apply`)                                                                    |
+| `planCountModeChange` / `applyCountModeChange`                                                         | 改盤點制度的計畫與寫入                                                                                              |
+| `applyRenumberApproval(writer, orgId, approval, session)`                                              | 補點編號核准:上次補點、轉換中 → 編號、歷程 `renumber_approved`(沒改制度時 from = to)、稽核                          |
+| `storesOf(operator, tenantId, orgIds, keys)` / `renumberReminderOf` / `countStoreIdsOf`                | 多家分店的設定生效值與那一筆(關帳第四項、補點編號提醒;一次讀)、看板 / 日結的補點編號提醒、張數店清單                |
 
 ## api 介面
 
