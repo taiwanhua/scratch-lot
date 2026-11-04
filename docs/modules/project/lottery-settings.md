@@ -4,7 +4,7 @@
 
 分店層級的刮刮樂設定(張數店規格第 4 節、5.5、5.6):最上層組織給預設,區域、分店可以自訂;生效值沿組織樹往上找(分店 → 區域 → 最上層組織 → 程式預設)。做法照抄排班設定的「規則」分頁(`schedule_settings`、`RulesTab` / `RuleRow`),生效值解析是兩邊共用的 `@repo/domain/project/org-setting-chain`。
 
-另管**分店實際的盤點制度**(`lottery_store_count_modes`):設定是「要哪一種」,分店那一筆是「現在是哪一種」(多一個轉換中)。改盤點制度時同一個交易重算下層分店。之後的銷售、盤點、全店重刷、補點編號、調貨、關帳一律經 `StoreCountModeService` 讀。
+另管**分店實際的盤點制度**(`lottery_store_count_modes`):設定是「要哪一種」,分店那一筆是「現在是哪一種」(多一個轉換中)。改盤點制度時同一個交易重算下層分店。之後的銷售、盤點、全店重刷、補點編號、調貨、關帳、營運報表(`historiesOf`:各店的制度與歷程一次讀,判斷估算與區塊 8 的盤點制度註記)一律經 `StoreCountModeService` 讀。
 
 正本:`apps/db-migrator/seeds/project/lottery-settings.ts`、`packages/domain/src/project/lottery-settings/`
 
