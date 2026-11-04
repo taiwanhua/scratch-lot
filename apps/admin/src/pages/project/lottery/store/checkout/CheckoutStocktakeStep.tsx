@@ -210,7 +210,9 @@ export const CheckoutStocktakeStep = (props: CheckoutStocktakeStepProps) => {
           ) : null}
           <RadioGroup
             aria-label={texts?.title ?? t("title")}
-            value={flow.renumber === true ? RENUMBER_CHOICE : flow.stocktakeMode}
+            value={
+              flow.renumber === true ? RENUMBER_CHOICE : flow.stocktakeMode
+            }
             onChange={(event) => {
               const next = event.target.value;
               if (next === RENUMBER_CHOICE) {
