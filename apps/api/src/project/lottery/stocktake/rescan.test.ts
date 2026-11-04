@@ -1263,13 +1263,29 @@ describe("全店重刷、提醒與移櫃暫停(GraphQL 端點 + 真 MongoDB)", (
       const ax = await book(gameX, counterA, [{ no: "001" }, { no: "002" }]);
       const ay = await book(gameY, counterA, [{ no: "001" }, { no: "002" }]);
       await book(gameZ, counterA, [{ no: "001" }, { no: "002" }]);
+      // 補點編號中:暫停跟著那一筆盤點中登記(全店、還有效;T8)
+      const renumberPause = new Types.ObjectId();
       await connection
         .collection(LOTTERY_STORE_COUNT_MODES_COLLECTION)
         .updateOne(
           { orgId: xinyi },
           {
             $set: {
-              movePauses: [{ stocktakeId: new Types.ObjectId(), gameId: null }],
+              movePauses: [{ stocktakeId: renumberPause, gameId: null }],
+              stocktakeSessions: [
+                {
+                  sessionId: "renumber-session",
+                  type: "daily",
+                  cashPointIds: [counterA, stallB, null],
+                  by: manager.userId,
+                  startedAt: taipei("09:50"),
+                  lastActiveAt: taipei("09:55"),
+                  draft: null,
+                  endedAt: null,
+                  endedBy: null,
+                  renumberPauseId: renumberPause,
+                },
+              ],
             },
           },
         );
@@ -1287,7 +1303,10 @@ describe("全店重刷、提醒與移櫃暫停(GraphQL 端點 + 真 MongoDB)", (
       });
       await connection
         .collection(LOTTERY_STORE_COUNT_MODES_COLLECTION)
-        .updateOne({ orgId: xinyi }, { $set: { movePauses: [] } });
+        .updateOne(
+          { orgId: xinyi },
+          { $set: { movePauses: [], stocktakeSessions: [] } },
+        );
 
       const x = await startRescan(clerkA, gameX);
       expect(

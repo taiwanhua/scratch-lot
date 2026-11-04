@@ -75,7 +75,7 @@ export interface BuiltCountLines {
 }
 
 /** 盤點內容與分店盤點制度對不上的原因;沒問題 = null。 */
-export type CountDraftProblem = "mode" | "shape" | null;
+export type CountDraftProblem = "mode" | "shape" | "renumber" | null;
 
 /**
  * 張數盤點(張數店規格 8.1、8.2、8.5a B6、14.2;正本 `docs/modules/project/store.md`「張數盤點」):
@@ -123,6 +123,17 @@ export class StocktakeCountService {
     storeMode: StocktakeCountMode,
   ): CountDraftProblem {
     const draftMode = stocktakeCountModeOf(draft);
+    // 補點編號:張數店與轉換中的全店編號盤點(9.3 第 1 點)
+    if (draft.purpose === "renumber") {
+      if (
+        storeMode !== "count" ||
+        draftMode !== "numbered" ||
+        draft.scopeCashPointId !== null
+      ) {
+        return "renumber";
+      }
+      return stocktakeCountLinesOf(draft).length === 0 ? null : "shape";
+    }
     if (draftMode !== storeMode) {
       return "mode";
     }

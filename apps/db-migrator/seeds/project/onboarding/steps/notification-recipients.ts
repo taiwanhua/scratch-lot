@@ -1,12 +1,13 @@
 import { type OnboardingStep, requireRoleId } from "../context";
 
 /**
- * 規格 3.4 預設收件人是「角色 店長」的負責人提醒(張數店規格 5.7 加「全店重刷提醒」)。類型宣告(`apps/api/src/project/notifications.ts`)
+ * 規格 3.4 預設收件人是「角色 店長」的負責人提醒(張數店規格 5.7 加「全店重刷提醒」「補點編號到期」)。類型宣告(`apps/api/src/project/notifications.ts`)
  * 寫不了角色 id(每個租戶不同),預設用「持有 `store.bank-deposit`」;開通時建好角色後改成角色 店長。
  */
 export const STORE_MANAGER_NOTIFICATION_TYPES = [
   "lottery.daily-close-overdue",
   "lottery.rescan-reminder",
+  "lottery.renumber-due",
   "lottery.transfer-shipped",
   "lottery.license-expiring",
   "lottery.store-rent-due",

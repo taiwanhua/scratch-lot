@@ -10,9 +10,11 @@ import {
   STORE_PERMISSIONS,
   type StocktakeSessionEntry,
   type StocktakeType,
+  canRenumber,
   isSessionLive,
   isWholeStoreSession,
   parseStocktakeDraft,
+  renumberStartBlockOf,
   sessionExpiresAtOf,
   sessionMinutesLeftOf,
   stocktakeSessionPlacesOf,
@@ -24,7 +26,10 @@ import { AuditService } from "../../../audit/audit.service";
 import type { OperatorContext } from "../../../database/operator-context";
 import { TransactionService } from "../../../database/transaction";
 import type { CountModeStocktakeSession } from "../../database/lottery-settings/lottery-store-count-mode.schema";
-import { StoreCountModeService } from "../settings/store-count-mode.service";
+import {
+  StoreCountModeService,
+  livePausesOf,
+} from "../settings/store-count-mode.service";
 import { StoreShiftViews } from "../store/shift-views";
 import { StoreAccess, isStoreManager } from "../store/store-access";
 import { StoreClock } from "../store/store-clock";
@@ -57,6 +62,7 @@ function sessionsOfRecord(
     draft: item.draft,
     endedAt: item.endedAt ?? null,
     endedBy: item.endedBy ?? null,
+    renumberPauseId: item.renumberPauseId ?? null,
   }));
 }
 
@@ -77,6 +83,20 @@ function entryOf(item: CountModeStocktakeSession): StocktakeSessionEntry {
 
 const isType = (value: string): value is StocktakeType =>
   (STOCKTAKE_TYPES as readonly string[]).includes(value);
+
+/** 盤點中登記的用途:一般 / 補點編號(張數店規格 9.3;補點 = 全店、全部遊戲暫停移櫃)。 */
+const SESSION_PURPOSES = ["normal", "renumber"] as const;
+type SessionPurpose = (typeof SESSION_PURPOSES)[number];
+
+const isSessionPurpose = (value: string): value is SessionPurpose =>
+  (SESSION_PURPOSES as readonly string[]).includes(value);
+
+/** 補點編號的登記錯誤(GQL-04:`extensions.reason` 細分)。 */
+function renumberError(code: string, reason: string): GraphQLError {
+  return new GraphQLError("renumber is not available", {
+    extensions: { code, reason },
+  });
+}
 
 /** 同一個範圍(送出時解除自己那一筆):全店 = 含庫存;單一收銀點 = 只有那台。 */
 const sameScope = (
@@ -211,11 +231,26 @@ export class StocktakeSessions {
       throw validationError("invalid stocktake type", ["type"]);
     }
     const type = input.type;
+    const purpose = input.purpose ?? "normal";
+    if (!isSessionPurpose(purpose)) {
+      throw validationError("invalid stocktake purpose", ["purpose"]);
+    }
     const store = await this.support.mustStore(operator, input.orgId);
     const points = await this.support.cashPointsOf(operator, store.orgId);
     const scope = input.cashPointId ?? null;
     if (scope !== null && !points.has(scope)) {
       throw validationError("cash point not found", ["cashPointId"]);
+    }
+    // 補點編號:全店、張數店或轉換中才有(9.3)
+    if (
+      purpose === "renumber" &&
+      (scope !== null ||
+        !canRenumber(await this.countModes.modeOf(operator, store.orgId)))
+    ) {
+      throw renumberError(
+        "VALIDATION_FAILED",
+        STOCKTAKE_REASONS.renumberNotAllowed,
+      );
     }
     const by = operator.actorId;
     const places = stocktakeSessionPlacesOf(scope, [...points.keys()]);
@@ -246,6 +281,18 @@ export class StocktakeSessions {
             (item) => item.sessionId === decision.entry.sessionId,
           );
           return { kind: "blocked" as const, own: decision.own, blocking, now };
+        }
+        const resumed =
+          decision.kind === "resume"
+            ? items.find((item) => item.sessionId === decision.sessionId)
+            : undefined;
+        // 開始(或接續)補點編號:有任何全店重刷進行中 → 擋(8.5a B4)
+        if (
+          (purpose === "renumber" ||
+            (resumed?.renumberPauseId ?? null) !== null) &&
+          renumberStartBlockOf(livePausesOf(record, now)) !== null
+        ) {
+          throw renumberError("CONFLICT", STOCKTAKE_REASONS.renumberBlocked);
         }
         let next: CountModeStocktakeSession[];
         let sessionId: string;
@@ -280,6 +327,9 @@ export class StocktakeSessions {
               draft: null,
               endedAt: null,
               endedBy: null,
+              // 補點編號:全部遊戲暫停移櫃,暫停跟著這筆登記(5.6、8.5)
+              renumberPauseId:
+                purpose === "renumber" ? new Types.ObjectId() : null,
             },
           ];
         }
@@ -551,6 +601,8 @@ export class StocktakeSessions {
       return {
         sessionId: item.sessionId,
         type: item.type,
+        purpose:
+          (item.renumberPauseId ?? null) === null ? "normal" : "renumber",
         wholeStore: whole,
         cashPointId: pointId,
         cashPointName:

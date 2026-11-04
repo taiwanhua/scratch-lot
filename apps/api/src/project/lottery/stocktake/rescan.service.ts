@@ -50,7 +50,10 @@ import {
   type LotteryStocktakeDocument,
   LotteryStocktakesRepository,
 } from "../../database/lottery-stocktakes/lottery-stocktakes.repository";
-import { StoreCountModeService } from "../settings/store-count-mode.service";
+import {
+  StoreCountModeService,
+  livePausesOf,
+} from "../settings/store-count-mode.service";
 import { StoreShiftViews, parseId } from "../store/shift-views";
 import { StoreAccess, isStoreManager } from "../store/store-access";
 import { StoreClock } from "../store/store-clock";
@@ -350,10 +353,9 @@ export class RescanService {
       if (record === null) {
         throw rescanError("VALIDATION_FAILED", RESCAN_REASONS.notCountStore);
       }
+      // 補點編號的暫停只算登記還有效的(8.5a B3;送出後審核中不算)
       const block = rescanStartBlockOf(
-        record.movePauses.map((pause) => ({
-          gameId: pause.gameId === null ? null : String(pause.gameId),
-        })),
+        livePausesOf(record, now),
         String(gameId),
       );
       if (block !== null) {

@@ -113,7 +113,8 @@ export class StoreBoardService {
       orgId,
       closedAt: null,
     });
-    const [shiftModels, cards, vault, countMode, movePauses] =
+    const now = this.clock.now();
+    const [shiftModels, cards, vault, countMode, movePauses, renumber] =
       await Promise.all([
         this.views.toModels(operator, openShifts, pointNames),
         this.cardsOf(
@@ -124,7 +125,8 @@ export class StoreBoardService {
         ),
         this.ledger.vaultExpected(operator, tenantId, orgId),
         this.countModes.modeOf(operator, orgId),
-        this.countModes.movePauseOf(operator, orgId),
+        this.countModes.movePauseOf(operator, orgId, now),
+        this.countModes.renumberReminderOf(operator, tenantId, orgId, now),
       ]);
     const shiftByPoint = new Map(
       shiftModels.map((shift) => [shift.cashPoint.id, shift]),
@@ -146,6 +148,7 @@ export class StoreBoardService {
       vaultExpected: vault.amount,
       countMode,
       movePauses: movePauses.map((pause) => ({ gameId: pause.gameId })),
+      renumber,
     };
   }
 

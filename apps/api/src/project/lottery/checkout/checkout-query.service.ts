@@ -257,6 +257,8 @@ export class CheckoutQueryService {
       scopeCashPointId: Types.ObjectId | null;
       lines: { diffs: unknown[] }[];
       orgId: Types.ObjectId;
+      purpose?: string | null;
+      summary?: { renumberMatched?: number | null } | null;
     },
   ): Promise<LotteryCheckoutReusableStocktakeModel> {
     const reader = await tenantBoundaryContext(this.orgs, operator, tenantId);
@@ -275,6 +277,8 @@ export class CheckoutQueryService {
           ? null
           : (points.get(String(record.scopeCashPointId))?.name ?? ""),
       diffCount: record.lines.reduce((sum, line) => sum + line.diffs.length, 0),
+      purpose: record.purpose ?? "normal",
+      renumberMatched: record.summary?.renumberMatched ?? 0,
     };
   }
 

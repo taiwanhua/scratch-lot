@@ -1,6 +1,7 @@
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
 import { Schema as MongooseSchema, type Types } from "mongoose";
 
+import { COUNT_MODES, type CountMode } from "@repo/domain/project/lottery";
 import { ACCOUNTS_KEY } from "@repo/domain/project/lottery-accounts";
 
 import { baseFieldsPlugin } from "../../../database/plugins/base-fields.plugin";
@@ -42,6 +43,19 @@ export interface PeriodCloseStoreSnapshot {
   drawers: PeriodCloseDrawerSnapshot[];
   /** 那個月沒有被日結涵蓋計算的班(只警告) */
   uncoveredShifts: PeriodCloseShiftSnapshot[];
+  /**
+   * 月底補點編號(張數店規格 5.7、第 10 節):月底的盤點制度、當時「必須」與否、該月最後一次日結前補點過沒有、
+   * 上次補點編號核准。舊資料沒有 = 不顯示(畫面「—」)。關帳後改設定不影響已關帳的月。
+   */
+  renumber?: PeriodCloseRenumberSnapshot | null;
+}
+
+/** 一家店的月底補點編號(張數店規格 5.7 `snapshot.stores[].renumber`)。 */
+export interface PeriodCloseRenumberSnapshot {
+  mode: CountMode;
+  required: boolean;
+  done: boolean;
+  lastRenumberAt: Date | null;
 }
 
 export interface PeriodCloseSnapshot {
@@ -90,6 +104,16 @@ const SNAPSHOT_TYPE = {
             },
           ],
           default: [],
+        },
+        renumber: {
+          type: {
+            _id: false,
+            mode: { type: String, enum: COUNT_MODES, required: true },
+            required: { type: Boolean, default: false },
+            done: { type: Boolean, default: false },
+            lastRenumberAt: { type: Date, default: null },
+          },
+          default: null,
         },
       },
     ],

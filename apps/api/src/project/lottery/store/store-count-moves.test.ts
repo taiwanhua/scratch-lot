@@ -385,16 +385,36 @@ describe("張數店:收回、移櫃、拆本、報廢、更正跳號(GraphQL 端
     mode: "numbered" | "count" | "converting",
     movePauses: { gameId: Types.ObjectId | null }[] = [],
   ): Promise<void> {
+    const pauses = movePauses.map((pause) => ({
+      stocktakeId: new Types.ObjectId(),
+      gameId: pause.gameId,
+    }));
     await connection.collection(LOTTERY_STORE_COUNT_MODES_COLLECTION).updateOne(
       { orgId },
       {
         $set: {
           mode,
           since: taipei("07:00"),
-          movePauses: movePauses.map((pause) => ({
-            stocktakeId: new Types.ObjectId(),
-            gameId: pause.gameId,
-          })),
+          movePauses: pauses,
+          // 補點編號的暫停跟著它的盤點中登記(全店、還有效;T8)
+          stocktakeSessions: pauses.flatMap((pause) =>
+            pause.gameId === null
+              ? [
+                  {
+                    sessionId: `renumber-${String(pause.stocktakeId)}`,
+                    type: "daily",
+                    cashPointIds: [null],
+                    by: new Types.ObjectId(),
+                    startedAt: taipei("07:00"),
+                    lastActiveAt: taipei("09:59"),
+                    draft: null,
+                    endedAt: null,
+                    endedBy: null,
+                    renumberPauseId: pause.stocktakeId,
+                  },
+                ]
+              : [],
+          ),
         },
         $setOnInsert: {
           orgId,
@@ -403,7 +423,6 @@ describe("張數店:收回、移櫃、拆本、報廢、更正跳號(GraphQL 端
           lastRenumberAt: null,
           lastRenumberStocktakeId: null,
           history: [],
-          stocktakeSessions: [],
           version: 0,
           ...base(),
         },

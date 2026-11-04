@@ -51,7 +51,12 @@ export class LotteryStocktakeResolver {
     @Args("input") input: LotteryStocktakeSheetInput,
     @CurrentOperator() operator: OperatorContext,
   ): Promise<LotteryStocktakeSheetModel> {
-    return this.queries.sheet(operator, input.orgId, input.cashPointId ?? null);
+    return this.queries.sheet(
+      operator,
+      input.orgId,
+      input.cashPointId ?? null,
+      input.purpose ?? null,
+    );
   }
 
   @RequirePermission("store.stocktake")

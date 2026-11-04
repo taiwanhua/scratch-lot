@@ -10,6 +10,8 @@ import { LotteryFieldOptionsModule } from "../field-options/lottery-field-option
 import { LotterySettingsModule } from "../settings/lottery-settings.module";
 import { LotteryStoreModule } from "../store/store.module";
 import { LotteryTicketsModule } from "../tickets/tickets.module";
+import { RenumberRemindersService } from "./renumber-reminders.service";
+import { RenumberStocktake } from "./renumber-stocktake";
 import { RescanExpiryService } from "./rescan-expiry.service";
 import { RescanReminders } from "./rescan-reminders";
 import { LotteryRescanResolver } from "./rescan.resolver";
@@ -50,6 +52,10 @@ import { STOCKTAKE_SERVICE } from "./stocktake.token";
     StocktakeCountService,
     StocktakeSessions,
     StocktakeService,
+    // 補點編號(張數店規格 9.3):送出時的自動對號、核准時的對號 / 清記號
+    RenumberStocktake,
+    // 補點編號到期提醒(張數店規格第 10 節;每天 09:00,同日結逾期)
+    RenumberRemindersService,
     StocktakeQueryService,
     LotteryStocktakeResolver,
     // 全店重刷(張數店規格 8.3–8.5a):重刷頁、提醒、1 小時沒動作自動取消

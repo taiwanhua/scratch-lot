@@ -58,6 +58,13 @@ const EXPECTED = [
     defaultAudience: STORE_MANAGER,
   },
   {
+    key: "lottery.renumber-due",
+    name: "補點編號到期",
+    category: "responsible",
+    orgScope: BRANCH_SELF,
+    defaultAudience: STORE_MANAGER,
+  },
+  {
     key: "lottery.transfer-shipped",
     name: "調貨出貨通知",
     category: "responsible",
@@ -128,7 +135,7 @@ describe("專案通知類型(專案規格 3.4)", () => {
     ).not.toThrow();
   });
 
-  it("通知設定頁列出的負責人提醒 = 底座的列印代理程式離線 + 專案六種(當事人通知不列)", () => {
+  it("通知設定頁列出的負責人提醒 = 底座的列印代理程式離線 + 專案七種(當事人通知不列)", () => {
     const listed = [
       ...composeAllNotificationTypes(PROJECT_NOTIFICATIONS).values(),
     ]
@@ -138,6 +145,7 @@ describe("專案通知類型(專案規格 3.4)", () => {
       PRINTING_AGENT_OFFLINE,
       "lottery.daily-close-overdue",
       "lottery.rescan-reminder",
+      "lottery.renumber-due",
       "lottery.transfer-shipped",
       "lottery.license-expiring",
       "lottery.store-rent-due",

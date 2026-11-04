@@ -137,6 +137,18 @@ export class LotteryStoreCashPointModel {
   gameTotals!: LotteryStoreGameTotalModel[];
 }
 
+/** 看板的補點編號提醒。 */
+@ObjectType("LotteryStoreRenumber")
+export class LotteryStoreRenumberModel {
+  /** 依「補點編號提醒」的週期到了 */
+  @Field(() => Boolean)
+  due!: boolean;
+
+  /** 上次補點編號核准;沒做過 = null */
+  @Field(() => GraphQLISODateTime, { nullable: true })
+  lastRenumberAt!: Date | null;
+}
+
 /** 看板(一家店)。 */
 @ObjectType("LotteryStoreBoard")
 export class LotteryStoreBoardModel {
@@ -168,6 +180,13 @@ export class LotteryStoreBoardModel {
    */
   @Field(() => [LotteryStoreMovePauseModel])
   movePauses!: LotteryStoreMovePauseModel[];
+
+  /**
+   * 補點編號提醒(張數店規格第 10 節、13.2;張數店與轉換中才有,編號店 = null):週期到了 → 看板頂部
+   * 「建議補點編號(上次 MM/DD)」。
+   */
+  @Field(() => LotteryStoreRenumberModel, { nullable: true })
+  renumber!: LotteryStoreRenumberModel | null;
 }
 
 /** 暫停移櫃的一筆(`gameId` = null:補點編號,全部遊戲暫停)。 */

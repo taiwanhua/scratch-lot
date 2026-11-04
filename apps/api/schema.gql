@@ -1755,6 +1755,8 @@ type LotteryCheckoutPendingImpact {
 
 type LotteryCheckoutReusableStocktake {
   diffCount: Int!
+  purpose: String!
+  renumberMatched: Int!
   scopeName: String
   serialNo: String
   startedAt: DateTime!
@@ -1871,6 +1873,12 @@ type LotteryDailyClosePending {
   submissionId: ID!
 }
 
+type LotteryDailyCloseRenumber {
+  available: Boolean!
+  monthEndWarning: Boolean!
+  suggested: Boolean!
+}
+
 type LotteryDailyCloseShiftRow {
   cashPoint: LotteryAccountsRef!
   counted: Int!
@@ -1904,6 +1912,7 @@ type LotteryDailyCloseWizard {
   openShifts: [LotteryDailyCloseOpenShift!]!
   org: LotteryAccountsRef!
   pending: LotteryDailyClosePending
+  renumber: LotteryDailyCloseRenumber!
   reusableStocktake: LotteryCheckoutReusableStocktake
   serverNow: DateTime!
   shifts: [LotteryDailyCloseShiftRow!]!
@@ -2596,6 +2605,7 @@ type LotteryPeriodCloseCheck {
   month: String!
   openShifts: [LotteryPeriodOpenShift!]!
   pendingDocuments: [LotteryPeriodPendingDocument!]!
+  renumberStores: [LotteryPeriodRenumberStore!]!
   snapshot: LotteryPeriodSnapshot!
 }
 
@@ -2626,6 +2636,19 @@ type LotteryPeriodPendingDocument {
   submissionId: ID!
 }
 
+type LotteryPeriodRenumberSnapshot {
+  done: Boolean!
+  lastRenumberAt: DateTime
+  mode: String!
+  required: Boolean!
+}
+
+type LotteryPeriodRenumberStore {
+  orgId: ID!
+  orgName: String!
+  status: String!
+}
+
 type LotteryPeriodRow {
   canClose: Boolean!
   closedAt: DateTime
@@ -2649,6 +2672,7 @@ type LotteryPeriodStoreSnapshot {
   drawers: [LotteryPeriodDrawerSnapshot!]!
   name: String!
   orgId: ID!
+  renumber: LotteryPeriodRenumberSnapshot
   uncoveredShifts: [LotteryPeriodShiftSnapshot!]!
   vault: Int!
 }
@@ -3244,6 +3268,7 @@ type LotteryStocktakeBook {
   cashPointId: ID!
   gameCode: String!
   gameName: String!
+  pendingSkipCount: Int!
   tickets: [LotteryStocktakeTicket!]!
   unitPrice: Int!
 }
@@ -3400,9 +3425,22 @@ type LotteryStocktakeLostTicket {
   unmatched: Boolean!
 }
 
+type LotteryStocktakeRenumberMatch {
+  bookNo: String!
+  cashPointId: ID
+  cashPointName: String
+  gameCode: String!
+  gameName: String!
+  partnerBookNo: String!
+  partnerTicketNo: String!
+  ticketNo: String!
+}
+
 type LotteryStocktakeReview {
   countLines: [LotteryStocktakeReviewCountLine!]!
   lines: [LotteryStocktakeReviewLine!]!
+  renumberMatches: [LotteryStocktakeRenumberMatch!]!
+  renumberMissing: Int!
   staleCount: Int!
   summary: LotteryStocktakeSummary!
   uncountedCount: Int!
@@ -3438,6 +3476,7 @@ type LotteryStocktakeReviewLine {
   gameCode: String!
   gameName: String!
   pendingReversalTicketNos: [String!]!
+  pendingSkipCount: Int!
   presentCount: Int!
   staleTicketNos: [String!]!
   systemCount: Int!
@@ -3457,6 +3496,7 @@ type LotteryStocktakeSession {
   live: Boolean!
   mine: Boolean!
   minutesLeft: Int!
+  purpose: String!
   sessionId: ID!
   startedAt: DateTime!
   type: String!
@@ -3476,6 +3516,7 @@ type LotteryStocktakeSheet {
   lostTickets: [LotteryStocktakeLostTicket!]!
   orgId: ID!
   orgName: String!
+  purpose: String!
   serverNow: DateTime!
   unopenedBooks: [LotteryStocktakeUnopenedBook!]!
 }
@@ -3483,6 +3524,7 @@ type LotteryStocktakeSheet {
 input LotteryStocktakeSheetInput {
   cashPointId: ID
   orgId: ID!
+  purpose: String
 }
 
 type LotteryStocktakeShift {
@@ -3508,6 +3550,7 @@ type LotteryStocktakeSummary {
   confirmLostCost: Int
   flagged: Int!
   newInvestigate: Int!
+  renumberMatched: Int!
   uncountedCount: Int!
 }
 
@@ -3516,6 +3559,7 @@ type LotteryStocktakeTicket {
   status: String!
   ticketId: ID!
   ticketNo: String!
+  unmatched: Boolean!
   version: Int!
 }
 
@@ -3548,6 +3592,7 @@ type LotteryStoreBoard {
   movePauses: [LotteryStoreMovePause!]!
   myOpenShifts: [LotteryStoreShift!]!
   org: LotteryAccountsRef!
+  renumber: LotteryStoreRenumber
   vaultExpected: Int!
 }
 
@@ -3757,6 +3802,11 @@ type LotteryStoreOpenShiftFormPayload {
 type LotteryStorePunchPayload {
   at: DateTime!
   entryId: ID
+}
+
+type LotteryStoreRenumber {
+  due: Boolean!
+  lastRenumberAt: DateTime
 }
 
 type LotteryStoreSale {
@@ -7035,6 +7085,7 @@ input StartLotteryRescanInput {
 input StartLotteryStocktakeSessionInput {
   cashPointId: ID
   orgId: ID!
+  purpose: String
   sessionId: ID
   type: String!
 }

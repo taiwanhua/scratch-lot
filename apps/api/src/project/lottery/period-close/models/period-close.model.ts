@@ -101,6 +101,44 @@ export class LotteryPeriodStoreSnapshotModel {
   /** 那個月沒有被日結涵蓋計算的班 */
   @Field(() => [LotteryPeriodShiftSnapshotModel])
   uncoveredShifts!: LotteryPeriodShiftSnapshotModel[];
+
+  /** 月底補點編號(舊的快照沒有 = null;畫面「—」) */
+  @Field(() => LotteryPeriodRenumberSnapshotModel, { nullable: true })
+  renumber!: LotteryPeriodRenumberSnapshotModel | null;
+}
+
+/** 一家店的月底補點編號(快照;張數店規格 5.7、第 10 節)。 */
+@ObjectType("LotteryPeriodRenumberSnapshot")
+export class LotteryPeriodRenumberSnapshotModel {
+  /** 月底的盤點制度:`numbered` / `count` / `converting` */
+  @Field(() => String)
+  mode!: string;
+
+  /** 當時「張數店補點編號」是不是「必須」 */
+  @Field(() => Boolean)
+  required!: boolean;
+
+  /** 該月最後一次日結前補點過 */
+  @Field(() => Boolean)
+  done!: boolean;
+
+  /** 上次補點編號核准(畫面「11/30 完成」);沒有 = null */
+  @Field(() => GraphQLISODateTime, { nullable: true })
+  lastRenumberAt!: Date | null;
+}
+
+/** 關帳第四項「張數店月底補點編號」的一家店(只列月底是張數或轉換中的店)。 */
+@ObjectType("LotteryPeriodRenumberStore")
+export class LotteryPeriodRenumberStoreModel {
+  @Field(() => ID)
+  orgId!: string;
+
+  @Field(() => String)
+  orgName!: string;
+
+  /** `pass` / `blocked`(必須,擋關帳)/ `warning`(只提醒) */
+  @Field(() => String)
+  status!: string;
 }
 
 @ObjectType("LotteryPeriodSnapshot")
@@ -167,6 +205,10 @@ export class LotteryPeriodCloseCheckModel {
   /** 快照預覽(含沒被日結涵蓋計算的班:只警告) */
   @Field(() => LotteryPeriodSnapshotModel)
   snapshot!: LotteryPeriodSnapshotModel;
+
+  /** 第四項「張數店月底補點編號」:月底是張數或轉換中的店(擋下 = 必須且沒補點;警告 = 只提醒且沒補點) */
+  @Field(() => [LotteryPeriodRenumberStoreModel])
+  renumberStores!: LotteryPeriodRenumberStoreModel[];
 
   /** 沒有擋下的項目、而且是下一個要關的月份 */
   @Field(() => Boolean)

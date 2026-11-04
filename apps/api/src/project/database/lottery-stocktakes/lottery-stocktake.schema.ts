@@ -140,6 +140,8 @@ export interface StocktakeSummary {
   confirmLostCost: number;
   /** 送出時還沒盤的本數(`uncountedBooks.length`,張數盤點另加還沒數的組 `uncountedGroups.length`;報表讀這裡)。 */
   uncountedCount: number;
+  /** 補點編號自動對號的組數(不算差異;日結確認「補點編號 · 對號 3 張」)。舊資料沒有 = 0。 */
+  renumberMatched?: number;
 }
 
 /** 全店重刷的一個位置(`cashPointId: null` = 庫存;張數店規格 5.4 `rescan`、8.4)。 */
@@ -312,6 +314,71 @@ const UNCOUNTED_TYPE = {
   cashPointId: { type: OBJECT_ID, default: null },
 };
 
+/**
+ * 補點編號的一組自動對號(張數店規格 9.3 第 2 點):實際在、系統是未對號的張 ↔ 實際不在、系統未售的張
+ * (同遊戲、同位置;送出時比對算出,核准時才寫 `match`)。
+ */
+export interface StocktakeRenumberMatch {
+  ticketId: Types.ObjectId;
+  ticketNo: string;
+  bookNo: string;
+  partnerId: Types.ObjectId;
+  partnerTicketNo: string;
+  partnerBookNo: string;
+  gameCode: string;
+  gameName: string;
+  /** 位置(收銀點;庫存 = null) */
+  cashPointId: Types.ObjectId | null;
+  /** 那一本開始盤的時間(核准時之後有異動的不寫) */
+  countedAt: Date;
+}
+
+/**
+ * 補點編號的比對結果(只有 `purpose: renumber`;其他 = null):自動對號、實際在但沒有配對張的待查 / 遺失·未對號
+ * (核准時尋回留在盤到的位置,6.4)。
+ */
+export interface StocktakeRenumber {
+  matches: StocktakeRenumberMatch[];
+  recovered: {
+    ticketId: Types.ObjectId;
+    cashPointId: Types.ObjectId | null;
+    countedAt: Date;
+  }[];
+}
+
+const RENUMBER_TYPE = {
+  _id: false,
+  matches: {
+    type: [
+      {
+        _id: false,
+        ticketId: { type: OBJECT_ID, required: true },
+        ticketNo: { type: String, required: true },
+        bookNo: { type: String, default: "" },
+        partnerId: { type: OBJECT_ID, required: true },
+        partnerTicketNo: { type: String, required: true },
+        partnerBookNo: { type: String, default: "" },
+        gameCode: { type: String, default: "" },
+        gameName: { type: String, default: "" },
+        cashPointId: { type: OBJECT_ID, default: null },
+        countedAt: { type: Date, required: true },
+      },
+    ],
+    default: [],
+  },
+  recovered: {
+    type: [
+      {
+        _id: false,
+        ticketId: { type: OBJECT_ID, required: true },
+        cashPointId: { type: OBJECT_ID, default: null },
+        countedAt: { type: Date, required: true },
+      },
+    ],
+    default: [],
+  },
+};
+
 const SUMMARY_TYPE = {
   _id: false,
   books: { type: Number, default: 0 },
@@ -322,6 +389,7 @@ const SUMMARY_TYPE = {
   confirmLost: { type: Number, default: 0 },
   confirmLostCost: { type: Number, default: 0 },
   uncountedCount: { type: Number, default: 0 },
+  renumberMatched: { type: Number, default: 0 },
 };
 
 /**
@@ -438,6 +506,10 @@ export class LotteryStocktake {
    */
   @Prop({ type: RESCAN_TYPE, default: null })
   rescan!: StocktakeRescan | null;
+
+  /** 補點編號的比對結果(只有 `purpose: renumber`;其他 = null)。 */
+  @Prop({ type: RENUMBER_TYPE, default: null })
+  renumber!: StocktakeRenumber | null;
 
   @Prop({ type: SUMMARY_TYPE, required: true })
   summary!: StocktakeSummary;

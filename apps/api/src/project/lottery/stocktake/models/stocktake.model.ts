@@ -68,9 +68,13 @@ export class LotteryStocktakeTicketModel {
   @Field(() => Int)
   version!: number;
 
-  /** `unsold` / `sold` */
+  /** `unsold` / `sold`(補點編號另有待查 / 遺失·未對號) */
   @Field(() => String)
   status!: string;
+
+  /** 未對號(系統預設帶入的張號;格子虛線;張數店規格 13.2) */
+  @Field(() => Boolean)
+  unmatched!: boolean;
 
   /** 撤銷售出申請審核中(「撤銷審核中」,不算差異)。 */
   @Field(() => Boolean)
@@ -94,6 +98,10 @@ export class LotteryStocktakeBookModel {
 
   @Field(() => Int)
   unitPrice!: number;
+
+  /** 補點編號:不在的張最多可以 [標跳號] 幾張(這本的待標註;其他盤點 = 0;張數店規格 9.3 第 3 點)。 */
+  @Field(() => Int)
+  pendingSkipCount!: number;
 
   /** 本號 7 位。 */
   @Field(() => String)
@@ -207,6 +215,10 @@ export class LotteryStocktakeSheetModel {
   @Field(() => String)
   countMode!: string;
 
+  /** `normal` / `renumber`(補點編號:張數店的全店編號盤點,`countMode` = `numbered`;張數店規格 9.3)。 */
+  @Field(() => String)
+  purpose!: string;
+
   /** 張數盤點的組(收銀點 × 遊戲,依收銀點順序、遊戲);編號盤點 = 空,檯面照舊在 `books`。 */
   @Field(() => [LotteryStocktakeCountGroupModel])
   countGroups!: LotteryStocktakeCountGroupModel[];
@@ -239,6 +251,10 @@ export class LotteryStocktakeSummaryModel {
   /** 送出時範圍內還沒盤的本數(沒盤完可以送出;盤點紀錄標「N 本未盤」)。 */
   @Field(() => Int)
   uncountedCount!: number;
+
+  /** 補點編號自動對號的張數(不算差異;張數店規格 9.3 第 2 點)。 */
+  @Field(() => Int)
+  renumberMatched!: number;
 }
 
 /** 差異核對的一張(ST-14)。 */
@@ -286,6 +302,10 @@ export class LotteryStocktakeReviewLineModel {
   @Field(() => Int)
   unitPrice!: number;
 
+  /** 補點編號:不在的張最多可以 [標跳號] 幾張(這本的待標註;其他盤點 = 0)。 */
+  @Field(() => Int)
+  pendingSkipCount!: number;
+
   @Field(() => Int)
   systemCount!: number;
 
@@ -314,6 +334,14 @@ export class LotteryStocktakeReviewModel {
   @Field(() => [LotteryStocktakeReviewCountLineModel])
   countLines!: LotteryStocktakeReviewCountLineModel[];
 
+  /** 補點編號的自動對號(不算差異;其他盤點 = 空)。 */
+  @Field(() => [LotteryStocktakeRenumberMatchModel])
+  renumberMatches!: LotteryStocktakeRenumberMatchModel[];
+
+  /** 補點編號還沒盤的本(含未拆的本還沒回答在 / 不在;要 0 才能送出)。 */
+  @Field(() => Int)
+  renumberMissing!: number;
+
   /** 送出時還沒數的組 / 本(交班盤點的張數店不能沒盤完送出)。 */
   @Field(() => Int)
   uncountedCount!: number;
@@ -326,6 +354,37 @@ export class LotteryStocktakeReviewModel {
 
   @Field(() => LotteryStocktakeSummaryModel)
   summary!: LotteryStocktakeSummaryModel;
+}
+
+/** 補點編號的一組自動對號(張數店規格 9.3 第 2 點):實際在的未對號張 ↔ 實際不在的未售張,不算差異。 */
+@ObjectType("LotteryStocktakeRenumberMatch")
+export class LotteryStocktakeRenumberMatchModel {
+  @Field(() => String)
+  gameCode!: string;
+
+  @Field(() => String)
+  gameName!: string;
+
+  /** 位置(收銀點;庫存 = null) */
+  @Field(() => ID, { nullable: true })
+  cashPointId!: string | null;
+
+  @Field(() => String, { nullable: true })
+  cashPointName!: string | null;
+
+  /** 實際在的那張 */
+  @Field(() => String)
+  ticketNo!: string;
+
+  @Field(() => String)
+  bookNo!: string;
+
+  /** 實際不在、接手系統預設帶入狀態的那張 */
+  @Field(() => String)
+  partnerTicketNo!: string;
+
+  @Field(() => String)
+  partnerBookNo!: string;
 }
 
 /** 補登售出的一張(立即生效)。 */

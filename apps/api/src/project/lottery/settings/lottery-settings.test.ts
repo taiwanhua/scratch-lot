@@ -1066,11 +1066,27 @@ describe("刮刮樂設定(GraphQL 端點 + 真 MongoDB)", () => {
       expect(rescanning.busyStores).toEqual([
         expect.objectContaining({ rescan: true, renumber: false }),
       ]);
+      // 補點編號中:暫停跟著那一筆盤點中登記(還有效;T8)
+      const renumberPause = new Types.ObjectId();
       await sessions.updateOne(
         { orgId: zhongshan },
         {
           $set: {
-            movePauses: [{ stocktakeId: new Types.ObjectId(), gameId: null }],
+            movePauses: [{ stocktakeId: renumberPause, gameId: null }],
+            stocktakeSessions: [
+              {
+                sessionId: "renumber-session",
+                type: "daily",
+                cashPointIds: [null],
+                by: new Types.ObjectId(),
+                startedAt: new Date(),
+                lastActiveAt: new Date(),
+                draft: null,
+                endedAt: null,
+                endedBy: null,
+                renumberPauseId: renumberPause,
+              },
+            ],
           },
         },
       );
@@ -1085,7 +1101,7 @@ describe("刮刮樂設定(GraphQL 端點 + 真 MongoDB)", () => {
       ).toMatchObject({ reason: "COUNT_MODE_CHANGE_BLOCKED" });
       await sessions.updateOne(
         { orgId: zhongshan },
-        { $set: { movePauses: [] } },
+        { $set: { movePauses: [], stocktakeSessions: [] } },
       );
       dataOf(await restore(hq, tenant, "count_mode"), "restoreLotterySetting");
       expect(await modeOf(zhongshan)).toBe("numbered");

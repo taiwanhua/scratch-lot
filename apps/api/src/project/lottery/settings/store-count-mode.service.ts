@@ -11,10 +11,14 @@ import {
   type MovePauseBlock,
   STOCKTAKE_STATUS,
   type StoreBusy,
+  canRenumber,
   displayBookNo,
   isRescanLive,
+  liveMovePausesOf,
   movePauseBlockOf,
   pendingSkipCountOf,
+  renumberApprovalOf,
+  renumberStoreDueAtOf,
   storeBusyOf,
 } from "@repo/domain/project/lottery";
 import {
@@ -50,6 +54,7 @@ import {
 } from "../../database/lottery-settings/lottery-settings.repositories";
 import type {
   CountModeHistoryEntry,
+  CountModeMovePause,
   CountModeStocktakeSession,
 } from "../../database/lottery-settings/lottery-store-count-mode.schema";
 import { LotteryStocktakesRepository } from "../../database/lottery-stocktakes/lottery-stocktakes.repository";
@@ -62,6 +67,31 @@ type CountModeRecord = Persisted<LotteryStoreCountModeDocument>;
 /** 一家分店的實際盤點制度(沒有筆或 mode 空 = 編號店)。 */
 function modeOfRecord(record: CountModeRecord | null | undefined): CountMode {
   return record?.mode ?? COUNT_MODE.numbered;
+}
+
+/**
+ * 分店那一筆上有效的移櫃暫停(張數店規格 5.6、8.5):全店重刷照舊;補點編號(`gameId: null`)只有它的盤點中登記
+ * 還有效時才算(`liveMovePausesOf`)。id 換成字串。
+ */
+export function livePausesOf(
+  record: Pick<CountModeRecord, "movePauses" | "stocktakeSessions"> | null,
+  now: Date,
+): { stocktakeId: string; gameId: string | null }[] {
+  return liveMovePausesOf(
+    (record?.movePauses ?? []).map((pause) => ({
+      stocktakeId: String(pause.stocktakeId),
+      gameId: pause.gameId === null ? null : String(pause.gameId),
+    })),
+    (record?.stocktakeSessions ?? []).map((item) => ({
+      renumberPauseId:
+        (item.renumberPauseId ?? null) === null
+          ? null
+          : String(item.renumberPauseId),
+      lastActiveAt: item.lastActiveAt,
+      endedAt: item.endedAt ?? null,
+    })),
+    now,
+  );
 }
 
 /** 組織鏈:自己 → 父 → … → 租戶頂層(ancestors = [根, 租戶頂層, …, 父])。 */
@@ -211,16 +241,13 @@ export class StoreCountModeService {
     );
   }
 
-  /** 進行中的全店重刷 / 補點編號(移櫃暫停;空 = 不暫停)。 */
+  /** 進行中的全店重刷 / 補點編號(移櫃暫停;空 = 不暫停;補點編號只算登記還有效的)。 */
   async movePauseOf(
     operator: OperatorContext,
     orgId: Types.ObjectId,
+    now: Date,
   ): Promise<{ stocktakeId: string; gameId: string | null }[]> {
-    const record = await this.recordOf(operator, orgId);
-    return (record?.movePauses ?? []).map((pause) => ({
-      stocktakeId: String(pause.stocktakeId),
-      gameId: pause.gameId === null ? null : String(pause.gameId),
-    }));
+    return livePausesOf(await this.recordOf(operator, orgId), now);
   }
 
   /**
@@ -243,11 +270,9 @@ export class StoreCountModeService {
     }
     const expired = await this.expiredRescansOf(operator, record, now, session);
     const block = movePauseBlockOf(
-      record.movePauses
-        .filter((pause) => !expired.has(String(pause.stocktakeId)))
-        .map((pause) => ({
-          gameId: pause.gameId === null ? null : String(pause.gameId),
-        })),
+      livePausesOf(record, now)
+        .filter((pause) => !expired.has(pause.stocktakeId))
+        .map((pause) => ({ gameId: pause.gameId })),
       gameIds.map(String),
     );
     if (block !== null) {
@@ -457,9 +482,7 @@ export class StoreCountModeService {
   ): StoreBusy | null {
     return storeBusyOf(
       {
-        movePauses: (record?.movePauses ?? []).map((pause) => ({
-          gameId: pause.gameId === null ? null : String(pause.gameId),
-        })),
+        movePauses: livePausesOf(record ?? null, now),
         stocktakeSessions: record?.stocktakeSessions ?? [],
       },
       now,
@@ -538,6 +561,7 @@ export class StoreCountModeService {
       operator,
       target.tenantId,
     );
+    const pauses = pausesWithSessions(record?.movePauses ?? [], sessions);
     if (record === null) {
       await this.countModes.create(
         writer,
@@ -545,6 +569,7 @@ export class StoreCountModeService {
           orgId: target.orgId,
           mode: null,
           stocktakeSessions: sessions,
+          movePauses: pauses,
           version: 1,
         },
         { session },
@@ -554,12 +579,201 @@ export class StoreCountModeService {
     const updated = await this.countModes.findOneAndUpdate(
       writer,
       { _id: record._id, version: record.version },
-      { $set: { stocktakeSessions: sessions }, $inc: { version: 1 } },
+      {
+        $set: { stocktakeSessions: sessions, movePauses: pauses },
+        $inc: { version: 1 },
+      },
       { session },
     );
     if (updated === null) {
       throw conflictError();
     }
+  }
+
+  /**
+   * 多家分店的刮刮樂設定生效值與分店那一筆(關帳第四項、補點編號提醒;一次讀,不逐店):組織樹 1、
+   * 這幾條設定在整個租戶的自訂 1、分店那一筆 1。沒有那一筆的店 `record` = null(編號店)。
+   */
+  async storesOf(
+    operator: OperatorContext,
+    tenantId: Types.ObjectId,
+    orgIds: readonly Types.ObjectId[],
+    keys: readonly LotterySettingKey[],
+  ): Promise<
+    Map<
+      string,
+      {
+        record: CountModeRecord | null;
+        settings: Map<LotterySettingKey, string>;
+      }
+    >
+  > {
+    if (orgIds.length === 0) {
+      return new Map();
+    }
+    const reader = await tenantBoundaryContext(this.orgs, operator, tenantId);
+    const [tenantOrgs, rows, records] = await Promise.all([
+      this.tenantOrgsOf(reader, tenantId),
+      this.settings.findMany(reader, { key: { $in: [...keys] } }),
+      this.countModes.findMany(reader, { orgId: { $in: [...orgIds] } }),
+    ]);
+    const orgById = new Map(tenantOrgs.map((org) => [String(org.id), org]));
+    const settingRows = rows.map((record) => toSettingRow(record));
+    const recordByOrg = new Map(
+      records.map((record) => [String(record.orgId), record]),
+    );
+    return new Map(
+      orgIds.map((id) => {
+        const org = orgById.get(String(id));
+        const chain = org === undefined ? [String(id)] : chainOf(org);
+        return [
+          String(id),
+          {
+            record: recordByOrg.get(String(id)) ?? null,
+            settings: new Map(
+              keys.map((key) => [
+                key,
+                lotterySettingOptionOf(key, chain, settingRows),
+              ]),
+            ),
+          },
+        ];
+      }),
+    );
+  }
+
+  /**
+   * 看板頂部的「建議補點編號(上次 MM/DD)」(張數店規格第 10 節、13.2):張數店與轉換中的店依「補點編號提醒」
+   * 的週期到了 → `due`;`lastRenumberAt` = 上次補點編號核准(沒有 = null)。編號店 → null。
+   */
+  async renumberReminderOf(
+    operator: OperatorContext,
+    tenantId: Types.ObjectId | null,
+    orgId: Types.ObjectId,
+    now: Date,
+  ): Promise<{
+    mode: CountMode;
+    due: boolean;
+    required: boolean;
+    lastRenumberAt: Date | null;
+  } | null> {
+    if (tenantId === null) {
+      return null;
+    }
+    const stores = await this.storesOf(
+      operator,
+      tenantId,
+      [orgId],
+      [
+        LOTTERY_SETTING_KEYS.renumberReminder,
+        LOTTERY_SETTING_KEYS.renumberRequired,
+      ],
+    );
+    const store = stores.get(String(orgId));
+    const record = store?.record ?? null;
+    if (record === null || !canRenumber(modeOfRecord(record))) {
+      return null;
+    }
+    const lastRenumberAt = record.lastRenumberAt ?? null;
+    const dueAt = renumberStoreDueAtOf(
+      store?.settings.get(LOTTERY_SETTING_KEYS.renumberReminder) ?? "",
+      { lastRenumberAt, since: record.since ?? null },
+    );
+    return {
+      mode: modeOfRecord(record),
+      due: dueAt !== null && now.getTime() >= dueAt.getTime(),
+      required:
+        store?.settings.get(LOTTERY_SETTING_KEYS.renumberRequired) ===
+        "required",
+      lastRenumberAt,
+    };
+  }
+
+  /** 這個租戶的張數店與轉換中的店(補點編號提醒;一次讀)。 */
+  async countStoreIdsOf(
+    operator: OperatorContext,
+    tenantId: Types.ObjectId,
+  ): Promise<Types.ObjectId[]> {
+    const reader = await tenantBoundaryContext(this.orgs, operator, tenantId);
+    const records = await this.countModes.findMany(
+      reader,
+      { mode: { $in: [COUNT_MODE.count, COUNT_MODE.converting] } },
+      { select: "orgId" },
+    );
+    return records.map((record) => record.orgId);
+  }
+
+  // ---- 補點編號核准(9.3 第 4 點) ----
+
+  /**
+   * 補點編號核准後寫分店那一筆(要在交易內):`lastRenumberAt`、`lastRenumberStocktakeId`;轉換中 → 編號
+   * (`since` 換成現在);每次核准都記一筆歷程 `renumber_approved`(沒改制度時 from = to);`$inc version`、留稽核。
+   * 生效設定已是張數(含審核中 [取消轉換])→ 不改制度(`renumberApprovalOf`)。
+   */
+  async applyRenumberApproval(
+    writer: OperatorContext,
+    orgId: Types.ObjectId,
+    approval: {
+      stocktakeId: Types.ObjectId;
+      by: Types.ObjectId | null;
+      at: Date;
+    },
+    session: ClientSession,
+  ): Promise<void> {
+    const record = await this.countModes.findOne(
+      writer,
+      { orgId },
+      { session },
+    );
+    const current = modeOfRecord(record);
+    const outcome = renumberApprovalOf(current);
+    const entry: CountModeHistoryEntry = {
+      ...outcome.history,
+      at: approval.at,
+      by: approval.by,
+      stocktakeId: approval.stocktakeId,
+    };
+    const fields = {
+      lastRenumberAt: approval.at,
+      lastRenumberStocktakeId: approval.stocktakeId,
+      ...(outcome.mode === current
+        ? {}
+        : { mode: outcome.mode, since: approval.at }),
+    };
+    await (record === null
+      ? this.countModes.create(
+          writer,
+          {
+            orgId,
+            mode: outcome.mode,
+            history: [entry],
+            version: 1,
+            ...fields,
+          },
+          { session },
+        )
+      : this.countModes.findOneAndUpdate(
+          writer,
+          { _id: record._id },
+          { $set: fields, $push: { history: entry }, $inc: { version: 1 } },
+          { session },
+        ));
+    // 稽核記核准的人(掛接點是系統身分;每一關都跳過時是申請人);都沒有 → 不寫
+    if (approval.by === null) {
+      return;
+    }
+    await this.audit.recordMany({ ...writer, actorId: approval.by }, [
+      {
+        action: "lottery-store-count-mode.renumber",
+        targetType: "lottery_store_count_mode",
+        targetId: orgId,
+        before: { mode: current },
+        after: {
+          mode: outcome.mode,
+          stocktakeId: String(approval.stocktakeId),
+        },
+      },
+    ]);
   }
 
   // ---- 改盤點制度 ----
@@ -893,6 +1107,29 @@ export class StoreCountModeService {
           left.bookNo.localeCompare(right.bookNo),
       );
   }
+}
+
+/**
+ * 補點編號的移櫃暫停跟著盤點中登記走(5.6、8.5):全店重刷的暫停照舊;補點編號(`gameId: null`)只留登記還在的,
+ * 登記帶了 `renumberPauseId` 而暫停還沒有 → 加一筆。
+ */
+function pausesWithSessions(
+  current: readonly CountModeMovePause[],
+  sessions: readonly CountModeStocktakeSession[],
+): CountModeMovePause[] {
+  const ids = sessions.flatMap((item) =>
+    item.renumberPauseId == null ? [] : [item.renumberPauseId],
+  );
+  const kept = current
+    .filter(
+      (pause) =>
+        pause.gameId !== null || ids.some((id) => id.equals(pause.stocktakeId)),
+    )
+    .map((pause) => ({ stocktakeId: pause.stocktakeId, gameId: pause.gameId }));
+  const added = ids
+    .filter((id) => !kept.some((pause) => pause.stocktakeId.equals(id)))
+    .map((id) => ({ stocktakeId: id, gameId: null }));
+  return [...kept, ...added];
 }
 
 /** 分店那一筆在讀之後被改過(交易外有人改):請重試。 */

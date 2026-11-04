@@ -178,6 +178,10 @@ export class LotteryStocktakeSessionModel {
   @Field(() => String)
   type!: string;
 
+  /** `normal` / `renumber`(補點編號;被擋時寫「補點編號 · 全店」) */
+  @Field(() => String)
+  purpose!: string;
+
   /** 全店盤點(全部收銀點與庫存)。 */
   @Field(() => Boolean)
   wholeStore!: boolean;

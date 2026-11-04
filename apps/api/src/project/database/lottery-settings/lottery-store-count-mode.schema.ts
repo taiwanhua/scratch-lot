@@ -50,6 +50,11 @@ export interface CountModeStocktakeSession {
   /** 店長 [結束這個盤點] 的時間與人(進度保留,本人回來仍可 [繼續]);null = 沒被結束 */
   endedAt: Date | null;
   endedBy: Types.ObjectId | null;
+  /**
+   * 補點編號(張數店規格 9.3):這次補點在 `movePauses` 的那一筆(`gameId: null`,全部遊戲暫停移櫃);一般盤點 = null。
+   * 暫停跟著登記走:登記有效才算(`liveMovePausesOf`),送出、放棄就拿掉。
+   */
+  renumberPauseId?: Types.ObjectId | null;
 }
 
 /**
@@ -58,7 +63,7 @@ export interface CountModeStocktakeSession {
  *
  * - 誰讀:一律經 `StoreCountModeService`(`modeOf`、`settingOf`、`movePauseOf`、`busyOf`)
  * - 誰寫:刮刮樂設定改盤點制度(`count_mode` 同一個交易重算下層分店)、[取消轉換];
- *   之後的補點編號核准(T8)、全店重刷與補點的移櫃暫停(T6、T8)、盤點中登記(T4)寫同一筆
+ *   補點編號核准(上次補點、轉換中 → 編號與歷程)、全店重刷與補點的移櫃暫停、盤點中登記寫同一筆
  * - `version`:開始 / 結束重刷、移櫃、登記 / 解除盤點中都 `$inc`,讓兩邊一定有先後(8.5、8.5a)
  */
 @Schema({ collection: LOTTERY_STORE_COUNT_MODES_COLLECTION, timestamps: true })
@@ -130,6 +135,7 @@ export class LotteryStoreCountMode {
         draft: { type: String, default: null },
         endedAt: { type: Date, default: null },
         endedBy: { type: MongooseSchema.Types.ObjectId, default: null },
+        renumberPauseId: { type: MongooseSchema.Types.ObjectId, default: null },
       },
     ],
     default: [],

@@ -117,6 +117,7 @@ export function summaryModelOf(
     confirmLost: summary.confirmLost,
     confirmLostCost: showCost ? summary.confirmLostCost : null,
     uncountedCount: uncountedCountOf(summary),
+    renumberMatched: summary.renumberMatched ?? 0,
   };
 }
 
@@ -171,6 +172,8 @@ export function draftOfStocktake(record: LotteryStocktake): string {
           })),
         }
       : {}),
+    // 補點編號(編號盤點):帶回用途,退回後再盤仍是補點
+    ...(record.purpose === "renumber" ? { purpose: "renumber" as const } : {}),
   });
 }
 
@@ -212,6 +215,7 @@ export class StocktakeQueryService {
     operator: OperatorContext,
     orgIdText: string,
     cashPointIdText: string | null,
+    purpose: string | null = null,
   ): Promise<LotteryStocktakeSheetModel> {
     const grant = await this.access.assertView(operator);
     if (!grant.has(STORE_PERMISSIONS.stocktake)) {
@@ -231,8 +235,12 @@ export class StocktakeQueryService {
       .filter((point) => scopeId === null || point._id.equals(scopeId))
       .toSorted((a, b) => a.order - b.order || byName(a, b));
     const cashPoints = await this.cashPointModels(operator, store, points);
-    // 張數店與轉換中:檯面數張數(組),庫存照舊逐張(張數店規格 8.1)
-    const countMode = await this.count.storeCountModeOf(operator, store.orgId);
+    // 張數店與轉換中:檯面數張數(組),庫存照舊逐張(張數店規格 8.1);
+    // 補點編號(全店):照編號盤點逐本點格子或刷,未對號的張也列出來(9.3 第 1 點)
+    const storeMode = await this.count.storeCountModeOf(operator, store.orgId);
+    const renumbering =
+      purpose === "renumber" && storeMode === "count" && scopeId === null;
+    const countMode = renumbering ? "numbered" : storeMode;
     const countGroups =
       countMode === "count"
         ? await this.countGroupsOf(operator, store.orgId, points)
@@ -247,7 +255,22 @@ export class StocktakeQueryService {
               orgId: store.orgId,
               "location.kind": TICKET_LOCATION_KIND.counter,
               "location.cashPointId": { $in: points.map((point) => point._id) },
-              status: { $in: [TICKET_STATUS.unsold, TICKET_STATUS.sold] },
+              $or: [
+                { status: { $in: [TICKET_STATUS.unsold, TICKET_STATUS.sold] } },
+                ...(renumbering
+                  ? [
+                      {
+                        status: {
+                          $in: [
+                            TICKET_STATUS.investigating,
+                            TICKET_STATUS.lost,
+                          ],
+                        },
+                        unmatched: true,
+                      },
+                    ]
+                  : []),
+              ],
             },
             { sort: { ticketNo: 1 } },
           );
@@ -331,12 +354,14 @@ export class StocktakeQueryService {
             gameCode: book.gameCode,
             gameName: game?.name ?? "",
             unitPrice: game?.unitPrice ?? 0,
+            pendingSkipCount: renumbering ? pendingSkipCountOfBook(book) : 0,
             bookNo: book.bookNo,
             tickets: tickets.map((ticket) => ({
               ticketId: String(ticket._id),
               ticketNo: ticket.ticketNo,
               version: ticket.version,
               status: ticket.status,
+              unmatched: ticket.unmatched,
               pendingReversal: ticket.lockedBy?.refType === "sale_reversal",
             })),
           },
@@ -358,6 +383,7 @@ export class StocktakeQueryService {
           gameCode: book.gameCode,
           gameName: game?.name ?? "",
           unitPrice: game?.unitPrice ?? 0,
+          pendingSkipCount: renumbering ? pendingSkipCountOfBook(book) : 0,
           bookNo: book.bookNo,
           tickets: stockTickets
             .filter((ticket) => ticket.bookId.equals(book._id))
@@ -366,6 +392,7 @@ export class StocktakeQueryService {
               ticketNo: ticket.ticketNo,
               version: ticket.version,
               status: ticket.status,
+              unmatched: false,
               pendingReversal: false,
             })),
         };
@@ -390,6 +417,7 @@ export class StocktakeQueryService {
       })),
       lostTickets: lost,
       countMode,
+      purpose: renumbering ? "renumber" : "normal",
       countGroups,
     };
   }

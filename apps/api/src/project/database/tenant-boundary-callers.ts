@@ -148,6 +148,8 @@ export const PROJECT_TENANT_BOUNDARY_CONTEXT_CALLERS: Readonly<
   "project/lottery/stocktake/rescan.service.ts": ["反查", "例外寫入"],
   // 全店重刷 1 小時沒動作自動取消,逐租戶跑
   "project/lottery/stocktake/rescan-expiry.service.ts": ["排程"],
+  // 補點編號到期提醒,逐租戶跑(張數店規格第 10 節)
+  "project/lottery/stocktake/renumber-reminders.service.ts": ["排程"],
   // 交班結帳:掛接點以系統身分建立結帳單、結束班次、更新下一班期初(例外寫入);人名、單號、接班人候選反查
   "project/lottery/checkout/checkout.service.ts": ["反查", "例外寫入"],
   "project/lottery/checkout/checkout-query.service.ts": ["反查"],
