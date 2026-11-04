@@ -42,7 +42,18 @@ export const INVENTORY_EVENT_TYPES: readonly TicketEventType[] = [
   TICKET_EVENT_TYPE.recover,
   TICKET_EVENT_TYPE.skip,
   TICKET_EVENT_TYPE.unskip,
+  // 張數店(規格 11.2):撤銷報廢回到庫存;對號換到在手上的成本
+  TICKET_EVENT_TYPE.scrapUndo,
+  TICKET_EVENT_TYPE.match,
 ];
+
+/** 對號的成本差這一期怎麼分(`matchCostSplitOf`;已售那部分由區塊 1 的已售成本帶進來)。 */
+export interface InventoryMatchCost {
+  /** 區塊 4「對號成本調整」(放進 `expectedEnding`) */
+  adjust: number;
+  /** 遺失損失的變動(配對張接手遺失) */
+  lost: number;
+}
 
 /** 區塊 4 用的一筆事件(`cost` = 事件前的單張成本快照;舊資料沒有時由呼叫端補現況的單張成本)。 */
 export interface InventoryEvent {
@@ -158,7 +169,10 @@ const flowOf = (direction: 1 | -1, flow: PendingFlow): AttributedFlow => ({
  * 營運報表區塊 4 庫存異動(規格 11.2;正本 `docs/modules/project/reports.md`「營運報表」):由上往下加減,
  * 最後一列核對要是 0。
  *
- * `期初 + 進貨 + 調入 − 調出 − 淨銷售 − 報廢 − 新增待查 + 待查轉回 + 遺失尋回 ± 待標註調整 = 期末`
+ * `期初 + 進貨 + 調入 − 調出 − 淨銷售 − 報廢 + 撤銷報廢 − 新增待查 + 待查轉回 + 遺失尋回 ± 待標註調整 ± 對號成本調整 = 期末`
+ *
+ * - 張數店(張數店規格 11.2):撤銷報廢 = 報廢 → 這家店的庫存(在撤銷的期間扣回報廢損失,已關帳月份不動);對號成本調整 =
+ *   對號在手上成本的變動扣掉已經跟著已售成本換掉的部分(`matchCostSplitOf`;只有成本、張數 0)
  *
  * - 每一列只算「進出這家店庫存(未售、在庫存或檯面)」的那一步:新增待查 = 庫存 → 待查;待查轉回 / 遺失尋回 =
  *   待查 / 遺失 → 這家店的庫存;確認遺失(待查 → 遺失)、跳號、期末在途、期末待查另列,不在加減裡
@@ -180,6 +194,7 @@ export class OperationsInventory {
     period: StorePeriod,
     events: readonly InventoryEvent[],
     sales: StockFigures,
+    matchCost: InventoryMatchCost,
   ): Promise<LotteryOperationsInventoryModel> {
     const { orgId, from, to } = period;
     const [openingHeld, endingHeld, inbound, outbound] = await Promise.all([
@@ -285,6 +300,14 @@ export class OperationsInventory {
       -1,
     );
     const scrap = { tickets: scrapFlow.tickets, cost: scrapFlow.cost };
+    // 撤銷報廢:報廢 → 這家店的庫存(位置不變);在撤銷的期間扣回報廢損失,已關帳月份的報廢不動(張數店規格 11.2)
+    const scrapUndoFlow = figures(
+      ofType(TICKET_EVENT_TYPE.scrapUndo, onHandAfter),
+    );
+    const scrapUndo = {
+      tickets: scrapUndoFlow.tickets,
+      cost: scrapUndoFlow.cost,
+    };
     // 新增待查:庫存 → 待查,加上在途中被刪掉變待查的(那幾張的調出在同一天反向算回)
     const lostInTransit = figuresOf(
       outboundGroupsOf(
@@ -327,6 +350,7 @@ export class OperationsInventory {
         flowOf(-1, shippedCost),
         flowOf(1, returnedCost),
         flowOf(-1, scrapFlow),
+        flowOf(1, scrapUndoFlow),
         flowOf(-1, onHandInvestigating),
         flowOf(-1, lostInTransit),
         flowOf(1, investigateRecovered),
@@ -352,7 +376,8 @@ export class OperationsInventory {
         transferIn.tickets -
         outCost.tickets -
         sales.tickets -
-        scrap.tickets -
+        scrap.tickets +
+        scrapUndo.tickets -
         newInvestigating.tickets +
         investigateRecovered.tickets +
         lostRecovered.tickets +
@@ -363,11 +388,13 @@ export class OperationsInventory {
         transferIn.amount -
         outCost.cost -
         sales.cost -
-        scrap.cost -
+        scrap.cost +
+        scrapUndo.cost -
         newInvestigating.cost +
         investigateRecovered.cost +
         lostRecovered.cost +
-        pendingAdjust.cost,
+        pendingAdjust.cost +
+        matchCost.adjust,
     };
     const inTransitAmount = await this.stock.inTransitAmountOf(
       reader,
@@ -391,6 +418,9 @@ export class OperationsInventory {
       salesCost: sales.cost,
       scrapTickets: scrap.tickets,
       scrapCost: scrap.cost,
+      scrapUndoTickets: scrapUndo.tickets,
+      scrapUndoCost: scrapUndo.cost,
+      matchCostAdjustCost: roundCents(matchCost.adjust),
       newInvestigatingTickets: newInvestigating.tickets,
       newInvestigatingCost: newInvestigating.cost,
       investigateRecoveredTickets: investigateRecovered.tickets,
@@ -412,8 +442,9 @@ export class OperationsInventory {
       investigatingCost: ending.investigating.cost,
       investigatingBooks: ending.investigating.bookIds.length,
       investigatingBookIds: ending.investigating.bookIds,
+      investigatingUnmatchedTickets: ending.investigating.unmatchedTickets,
       lostTickets: lost.tickets,
-      lostCost: lost.cost,
+      lostCost: lost.cost + matchCost.lost,
       skippedTickets:
         ofType(TICKET_EVENT_TYPE.skip, () => true).length -
         ofType(TICKET_EVENT_TYPE.unskip, () => true).length,

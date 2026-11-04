@@ -78,6 +78,13 @@ export class LotteryInventoryBookModel {
   @Field(() => Int)
   remainingCount!: number;
 
+  /**
+   * 這本的未對號張數(已售·未對號、待查·遺失·未對號;不算在剩餘裡)。大於 0 → 逐本剩餘是估算,本的詳情頁首
+   * 「剩 N 張(估算,含未對號 X 張)」、庫存列表「約」(張數店規格 13.2)
+   */
+  @Field(() => Int)
+  unmatchedCount!: number;
+
   /** 總張數(不算跳號)。 */
   @Field(() => Int)
   totalCount!: number;
@@ -202,6 +209,17 @@ export class LotteryInventoryLocationModel {
  * 事件時間軸的一列:同一時間、同一類型、同一人 / 單據、同一個從 → 到的張合成一列(例:移櫃 #041–065)。
  * 單據顯示 `refSerialNo`(找不到單號時只有 `refType`)。
  */
+/** 對號互換的另一張(張號;在別本時帶本號)。 */
+@ObjectType("LotteryInventoryMatchPartner")
+export class LotteryInventoryMatchPartnerModel {
+  @Field(() => String)
+  ticketNo!: string;
+
+  /** 另一張在別本時的本號(同本 = null) */
+  @Field(() => String, { nullable: true })
+  bookNo!: string | null;
+}
+
 @ObjectType("LotteryInventoryEvent")
 export class LotteryInventoryEventModel {
   @Field(() => GraphQLISODateTime)
@@ -252,6 +270,13 @@ export class LotteryInventoryEventModel {
    */
   @Field(() => String, { nullable: true })
   correctionOfShift!: string | null;
+
+  /**
+   * 對號(`match`,張數店規格 13.2「對號 #041 ↔ #042」):互換的另一張;它在別本時帶那本的本號(同本 = null)。
+   * 兩張都在這本時只列一筆。其他事件 = null
+   */
+  @Field(() => LotteryInventoryMatchPartnerModel, { nullable: true })
+  matchPartner!: LotteryInventoryMatchPartnerModel | null;
 }
 
 /** 來源:進貨單 / 調貨單(調入)。 */
@@ -462,6 +487,34 @@ export class LotteryInvestigationRowModel {
 
   @Field(() => [LotteryInventoryTicketModel])
   tickets!: LotteryInventoryTicketModel[];
+
+  /**
+   * 系統預設帶入的張號(待查·遺失·未對號;張數店規格 7.9、13.2):依「遊戲 × 責任分店 × 來源盤點」一列,
+   * 不給 [尋回](找到實體請刷條碼尋回,或做全店重刷)。確定的待查 / 遺失 = false(一本 × 一種狀態一列)
+   */
+  @Field(() => Boolean)
+  unmatched!: boolean;
+
+  /** 未對號的列:來源盤點的類型(`shift` / `daily` / `adhoc`,畫面「11/01 交班盤點」);其他 = null */
+  @Field(() => String, { nullable: true })
+  sourceStocktakeType!: string | null;
+
+  /** 未對號的列:依本列出張號(確定的列 = 空;本號與張號看 `bookNo`、`tickets`) */
+  @Field(() => [LotteryInvestigationBookTicketsModel])
+  unmatchedBooks!: LotteryInvestigationBookTicketsModel[];
+}
+
+/** 待查·遺失·未對號一列裡的一本與張號(展開看本與張號,標「系統預設帶入」)。 */
+@ObjectType("LotteryInvestigationBookTickets")
+export class LotteryInvestigationBookTicketsModel {
+  @Field(() => ID)
+  bookId!: string;
+
+  @Field(() => String)
+  bookNo!: string;
+
+  @Field(() => [String])
+  ticketNos!: string[];
 }
 
 @ObjectType("LotteryInvestigationsPayload")

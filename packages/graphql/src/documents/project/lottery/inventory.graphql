@@ -26,6 +26,7 @@ fragment LotteryInventoryBookFields on LotteryInventoryBook {
     count
   }
   remainingCount
+  unmatchedCount
   totalCount
   pendingSkipCount
   requiredSkipCount
@@ -102,6 +103,10 @@ fragment LotteryInventoryBookDetailFields on LotteryInventoryBookDetail {
     reasonKey
     reasonNote
     correctionOfShift
+    matchPartner {
+      ticketNo
+      bookNo
+    }
   }
   sources {
     type
@@ -151,6 +156,13 @@ fragment LotteryInvestigationRowFields on LotteryInvestigationRow {
   cost
   # 張數:還有待標註就扣掉(實體不存在)
   ticketCount
+  unmatched
+  sourceStocktakeType
+  unmatchedBooks {
+    bookId
+    bookNo
+    ticketNos
+  }
   tickets {
     ...LotteryInventoryTicketFields
   }

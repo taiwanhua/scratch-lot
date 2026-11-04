@@ -209,6 +209,37 @@ export class StoreCountModeService {
     return this.countModes.findOne(reader, { orgId });
   }
 
+  /**
+   * 多家分店那一筆的制度與歷程(營運報表判斷期間內的制度、補點編號、估算;張數店規格 11.1、11.4)。一次讀,
+   * 沒列到的分店 = 編號店、沒有歷程(TX-07)。
+   */
+  async historiesOf(
+    operator: OperatorContext,
+    orgIds: readonly Types.ObjectId[],
+  ): Promise<
+    Map<string, Pick<CountModeRecord, "mode" | "history" | "lastRenumberAt">>
+  > {
+    if (orgIds.length === 0) {
+      return new Map();
+    }
+    const reader = await this.tenantReaderOf(operator);
+    const records = await this.countModes.findMany(
+      reader,
+      { orgId: { $in: [...orgIds] } },
+      { select: "orgId mode history lastRenumberAt" },
+    );
+    return new Map(
+      records.map((record) => [
+        String(record.orgId),
+        {
+          mode: record.mode,
+          history: record.history,
+          lastRenumberAt: record.lastRenumberAt,
+        },
+      ]),
+    );
+  }
+
   /** 這個組織是不是分店(租戶裡沒有下層組織;下層不一定在操作者的可見範圍,以租戶邊界讀)。 */
   async isStore(
     operator: OperatorContext,
