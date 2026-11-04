@@ -45,6 +45,8 @@ export interface StocktakeWorkspaceProps {
   type: StocktakeType;
   /** 看板登記好帶進來的那一筆(`?session=`);進來就 [繼續] 這一筆 */
   sessionId?: string | null;
+  /** 補點編號(張數店規格 9.3;Figma CS-11):全店、照編號盤點逐本、全部遊戲暫停移櫃 */
+  purpose?: "normal" | "renumber";
   /** 退回後再送出:帶入原內容 */
   initialDraft: StocktakeDraft | null;
   /** 頁首的提示(例:已退回) */
@@ -68,12 +70,19 @@ export interface StocktakeWorkspaceProps {
  * 應有現金,立即生效)→ 選中的本(點格子 / 掃描)→ 未拆的本、待查清單 → [差異核對] → [送出]。
  * 狀態與動作在 `useStocktakeFlow`;交班 / 日結的盤點步驟以 `scopeCashPointId` 嵌入同一個元件(之後的功能)。
  */
+/** 補點編號的說明(全部遊戲暫停移櫃、每本都要盤、比對時先自動對號;Figma CS-11)。 */
+const RenumberBanner = ({ show }: { show: boolean }) => {
+  const t = useTranslations("admin.lotteryStore.stocktake.renumber");
+  return show ? <Alert severity="info">{t("banner")}</Alert> : null;
+};
+
 export const StocktakeWorkspace = ({
   orgId,
   scopeCashPointId,
   heading,
   type,
   sessionId = null,
+  purpose = "normal",
   initialDraft,
   notice,
   onSubmit,
@@ -86,15 +95,23 @@ export const StocktakeWorkspace = ({
   const temporal = useTemporalText();
   const { hasPermission } = usePermissions();
   const isNarrow = useBreakpointDown("md");
-  const flow = useStocktakeFlow({ orgId, scopeCashPointId, initialDraft });
+  const flow = useStocktakeFlow({
+    orgId,
+    scopeCashPointId,
+    initialDraft,
+    purpose,
+  });
   // 盤點中登記:進來就登記這些位置、進度存到伺服器、重新整理可 [繼續](張數店規格 8.5a)
   const session = useStocktakeFlowSession(flow, {
     orgId,
     type,
+    purpose,
     scopeCashPointId,
     enabled: orgId !== "",
     sessionId,
   });
+  // 補點編號(張數店規格 9.3;Figma CS-11):頁首「補點編號 · 全店」
+  const title = { normal: heading, renumber: t("renumber.heading") }[purpose];
   const redemption = useRedemptionFlow();
   const [isConfirming, setIsConfirming] = useState(false);
   const { sheet, state, review } = flow;
@@ -156,7 +173,7 @@ export const StocktakeWorkspace = ({
         sx={{ alignItems: { sm: "baseline" } }}
       >
         <Typography variant="h6" component="h1">
-          {t("page.title", { heading, scope: scopeLabel })}
+          {t("page.title", { heading: title, scope: scopeLabel })}
         </Typography>
         <Typography variant="body2" color="textSecondary" sx={{ flex: 1 }}>
           {t("page.started", {
@@ -175,6 +192,7 @@ export const StocktakeWorkspace = ({
           {t("page.cancel")}
         </Button>
       </Stack>
+      <RenumberBanner show={flow.isRenumber} />
       <StocktakeSessionNotices link={session} />
       <ResumeSessionDialog
         session={session.resumable ?? session.own}
@@ -225,7 +243,7 @@ export const StocktakeWorkspace = ({
       {review !== null && isConfirming ? (
         <StocktakeSubmitDialog
           open
-          scopeLabel={`${heading} · ${scopeLabel}`}
+          scopeLabel={`${title} · ${scopeLabel}`}
           sheet={sheet}
           review={review}
           state={state}

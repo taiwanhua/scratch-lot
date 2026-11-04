@@ -41,14 +41,18 @@ import type { CheckoutWizard } from "./useCheckoutWizard";
 export type StocktakeChoiceFlow = Pick<
   CheckoutWizard,
   | "stocktakeMode"
-  | "setStocktakeMode"
   | "skipReason"
   | "setSkipReason"
   | "stocktake"
   | "session"
   | "stocktakeReviewed"
   | "next"
->;
+> & {
+  setStocktakeMode: (mode: CheckoutStocktakeMode) => void;
+  /** 日結第 ② 步選了「這次做補點編號」(張數店規格 13.2;交班沒有) */
+  renumber?: boolean;
+  chooseRenumber?: () => void;
+};
 
 export interface CheckoutStocktakeStepProps {
   orgId: string;
@@ -62,7 +66,12 @@ export interface CheckoutStocktakeStepProps {
   redemption: RedemptionFlow;
   /** 標題與「現在盤點」的說明(日結:「② 全店盤點」「盤全店…」);不給 = 交班的文字 */
   texts?: { title: string; newHint: string };
+  /** 日結第 ② 步的「這次做補點編號」(張數店與轉換中;Figma CS-13a);不給 = 沒有這個選項 */
+  renumberOption?: { available: boolean; monthEndWarning: boolean };
 }
+
+/** 單選鈕的值:三種盤點方式 + 日結的「這次做補點編號」。 */
+const RENUMBER_CHOICE = "renumber";
 
 const isMode = (value: string): value is CheckoutStocktakeMode =>
   (CHECKOUT_STOCKTAKE_MODES as readonly string[]).includes(value);
@@ -74,7 +83,7 @@ const ModeOption = ({
   hint,
   disabled = false,
 }: {
-  mode: CheckoutStocktakeMode;
+  mode: CheckoutStocktakeMode | typeof RENUMBER_CHOICE;
   label: string;
   hint: string;
   disabled?: boolean;
@@ -196,11 +205,18 @@ export const CheckoutStocktakeStep = (props: CheckoutStocktakeStepProps) => {
           <Typography variant="subtitle1">
             {texts?.title ?? t("title")}
           </Typography>
+          {props.renumberOption?.monthEndWarning === true ? (
+            <Alert severity="warning">{t("renumberMonthEnd")}</Alert>
+          ) : null}
           <RadioGroup
             aria-label={texts?.title ?? t("title")}
-            value={flow.stocktakeMode}
+            value={flow.renumber === true ? RENUMBER_CHOICE : flow.stocktakeMode}
             onChange={(event) => {
               const next = event.target.value;
+              if (next === RENUMBER_CHOICE) {
+                flow.chooseRenumber?.();
+                return;
+              }
               if (!isMode(next)) {
                 return;
               }
@@ -222,6 +238,13 @@ export const CheckoutStocktakeStep = (props: CheckoutStocktakeStepProps) => {
               label={t("new")}
               hint={texts?.newHint ?? t("newHint")}
             />
+            {props.renumberOption?.available === true ? (
+              <ModeOption
+                mode={RENUMBER_CHOICE}
+                label={t("renumber")}
+                hint={t("renumberHint")}
+              />
+            ) : null}
             {/* ST-17a-2a 選現在盤點被擋:誰、幾點開始、剩幾分鐘;店長 [結束這個盤點] */}
             {flow.stocktakeMode === "new" && session.blocked !== null ? (
               <Alert

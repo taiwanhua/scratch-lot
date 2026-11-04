@@ -26,10 +26,7 @@ import {
   rescanBriefOf,
   rescanWorld,
 } from "./rescan-handlers";
-import {
-  sampleCountStocktakeDetail,
-  sampleCountStocktakeSheet,
-} from "./stocktake-count-fixtures";
+import { sampleCountStocktakeDetail } from "./stocktake-count-fixtures";
 import {
   type StocktakeSessionFixture,
   countReviewOf,
@@ -40,8 +37,14 @@ import {
   type StocktakeSheetFixture,
   sampleStocktakeDetail,
   sampleStocktakeList,
-  sampleStocktakeSheet,
 } from "./stocktake-fixtures";
+import {
+  bookOfTicket,
+  renumberMatchesOfBook,
+  renumberMissingOf,
+  sheetOf,
+  staleNosOf,
+} from "./stocktake-review-mock";
 
 export {
   type StocktakeSessionFixture,
@@ -66,6 +69,8 @@ export interface StocktakeWorldOptions {
   rescan?: RescanWorldOptions;
   /** 全店重刷提醒(張數店規格 8.3) */
   rescanReminders?: readonly RescanReminderFixture[];
+  /** 補點編號(張數店規格 9.3):盤點頁回 `sampleRenumberStocktakeSheet`(一本有虛線格子、一本未拆) */
+  renumber?: boolean;
 }
 
 export interface StocktakeWorld {
@@ -93,25 +98,6 @@ const apiError = (code: string, extensions: Record<string, unknown>) =>
     errors: [{ message: code, extensions: { ...extensions, code } }],
   });
 
-/** 畫面上的處理對不到目前差異的張號(已被處理)。 */
-const staleNosOf = (
-  choices: StocktakeDraft["lines"][number]["diffs"],
-  diffs: readonly { ticket: { ticketNo: string }; backfilled: boolean }[],
-): string[] =>
-  choices
-    .filter((choice) => {
-      const diff = diffs.find(
-        (item) => item.ticket.ticketNo === choice.ticketNo,
-      );
-      return (choice.action === "sale_backfill") !== diff?.backfilled;
-    })
-    .map((choice) => choice.ticketNo);
-
-const bookOfTicket = (sheet: StocktakeSheetFixture, ticketId: string) =>
-  sheet.books.find((item) =>
-    item.tickets.some((ticket) => ticket.ticketId === ticketId),
-  );
-
 /**
  * 盤點的假 api(夾具在 `stocktake-fixtures.ts`;規則照 `docs/modules/project/store.md`「盤點」):有狀態 ——
  * 補登售出後那張改已售、那個收銀點的應有現金增加;差異核對照盤點內容比(未售不在 / 已售還在;
@@ -120,10 +106,7 @@ const bookOfTicket = (sheet: StocktakeSheetFixture, ticketId: string) =>
 export const stocktakeWorld = (
   options: StocktakeWorldOptions = {},
 ): StocktakeWorld => {
-  const sheet =
-    options.countMode === true
-      ? sampleCountStocktakeSheet()
-      : sampleStocktakeSheet();
+  const sheet = sheetOf(options.renumber === true, options.countMode === true);
   const backfilled = new Set<string>();
   const sessions: StocktakeSessionFixture[] = [...(options.sessions ?? [])];
   const rescan = rescanWorld(options.rescan);
@@ -146,6 +129,8 @@ export const stocktakeWorld = (
   };
 
   const reviewOf = (draft: StocktakeDraft): Review => {
+    const renumber = draft.purpose === "renumber";
+    const matches: Review["renumberMatches"] = [];
     let stale = 0;
     let unhandled = 0;
     let backfillCount = 0;
@@ -161,7 +146,7 @@ export const stocktakeWorld = (
         return [];
       }
       const present = new Set(line.presentTicketNos);
-      const diffs = book.tickets.flatMap((ticket) => {
+      const all = book.tickets.flatMap((ticket) => {
         const isBackfilled = backfilled.has(ticket.ticketId);
         const wasUnsold = ticket.status === "unsold" || isBackfilled;
         if (wasUnsold && !present.has(ticket.ticketNo)) {
@@ -172,6 +157,10 @@ export const stocktakeWorld = (
         }
         return [];
       });
+      // 補點編號:自動對號配走的不算差異
+      const renumbered = renumberMatchesOfBook(renumber, book, sheet, all);
+      matches.push(...renumbered.matches);
+      const diffs = renumbered.diffs;
       const staleNos = staleNosOf(line.diffs, diffs);
       stale += staleNos.length;
       for (const diff of diffs) {
@@ -201,6 +190,7 @@ export const stocktakeWorld = (
           gameName: book.gameName,
           bookNo: book.bookNo,
           unitPrice: book.unitPrice,
+          pendingSkipCount: book.pendingSkipCount,
           systemCount: book.tickets.filter(
             (ticket) =>
               ticket.status === "unsold" || backfilled.has(ticket.ticketId),
@@ -261,6 +251,14 @@ export const stocktakeWorld = (
       __typename: "LotteryStocktakeReview",
       lines,
       countLines,
+      renumberMatches: matches,
+      // 補點編號:每本都要盤(含未拆的本回答在 / 不在)
+      renumberMissing: renumberMissingOf(
+        renumber,
+        draft,
+        sheet,
+        uncountedCount,
+      ),
       uncountedCount,
       staleCount: stale,
       unhandledCount: unhandled,
@@ -274,6 +272,7 @@ export const stocktakeWorld = (
         uncountedCount,
         confirmLost: lost.length,
         confirmLostCost: lost.length * 184,
+        renumberMatched: matches.length,
       },
     };
   };
@@ -288,7 +287,7 @@ export const stocktakeWorld = (
         data: {
           lotteryStocktakeSheet:
             scope === null
-              ? sheet
+              ? { ...sheet, purpose: input.purpose ?? "normal" }
               : {
                   ...sheet,
                   cashPoints: sheet.cashPoints.filter(

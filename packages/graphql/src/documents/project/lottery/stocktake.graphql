@@ -15,6 +15,7 @@ fragment LotteryStocktakeSummaryFields on LotteryStocktakeSummary {
   confirmLost
   confirmLostCost
   uncountedCount
+  renumberMatched
 }
 
 query LotteryStocktakeSheet($input: LotteryStocktakeSheetInput!) {
@@ -38,12 +39,14 @@ query LotteryStocktakeSheet($input: LotteryStocktakeSheetInput!) {
       gameCode
       gameName
       unitPrice
+      pendingSkipCount
       bookNo
       tickets {
         ticketId
         ticketNo
         version
         status
+        unmatched
         pendingReversal
       }
     }
@@ -71,6 +74,7 @@ query LotteryStocktakeSheet($input: LotteryStocktakeSheetInput!) {
       sourceCashPointName
     }
     countMode
+    purpose
     countGroups {
       cashPointId
       gameId
@@ -88,6 +92,17 @@ query LotteryStocktakeReview($input: LotteryStocktakeReviewInput!) {
     staleCount
     unhandledCount
     uncountedCount
+    renumberMissing
+    renumberMatches {
+      gameCode
+      gameName
+      cashPointId
+      cashPointName
+      ticketNo
+      bookNo
+      partnerTicketNo
+      partnerBookNo
+    }
     countLines {
       cashPointId
       cashPointName
@@ -114,6 +129,7 @@ query LotteryStocktakeReview($input: LotteryStocktakeReviewInput!) {
       gameName
       bookNo
       unitPrice
+      pendingSkipCount
       systemCount
       presentCount
       diffs {
@@ -294,6 +310,7 @@ mutation BackfillLotteryStocktakeCountSales(
 fragment LotteryStocktakeSessionFields on LotteryStocktakeSession {
   sessionId
   type
+  purpose
   wholeStore
   cashPointId
   cashPointName

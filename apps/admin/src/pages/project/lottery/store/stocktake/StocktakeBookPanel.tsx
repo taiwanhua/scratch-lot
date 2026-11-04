@@ -39,7 +39,28 @@ export interface StocktakeBookPanelProps {
   onNext: () => void;
   /** 其他的本都盤完了:[下一本] 改成 [盤完,前往差異核對] */
   nextIsReview?: boolean;
+  /**
+   * 補點編號(張數店規格 9.3、13.2;Figma CS-11):未對號的格子虛線、可以點(實際在 = 已選),圖例「虛線 = 系統預設帶入的張號」;
+   * 比對時先自動對號,不算差異。
+   */
+  renumber?: boolean;
 }
+
+/** 盤點說明:補點編號 / 庫存那一區 / 檯面。 */
+const hintKeyOf = (renumber: boolean, cashPointId: string) => {
+  if (renumber) {
+    return "hintRenumber";
+  }
+  return isStocktakeStockLine(cashPointId) ? "hintStock" : "hint";
+};
+
+/** 補點編號的格子狀態:已售·未對號 / 待查·遺失·未對號(虛線)、未售、已售。 */
+const cellStateOf = (ticket: SheetBook["tickets"][number]) => {
+  if (ticket.unmatched) {
+    return ticket.status === "sold" ? "unmatchedSold" : "unmatchedLost";
+  }
+  return ticket.status === "unsold" ? "unsold" : "sold";
+};
 
 /**
  * 盤點頁右欄:選中的本(規格 6.8;Figma ST-13):方式切換(點格子 / 掃描,不用數量)、張數格子(已選 = 在)、
@@ -56,6 +77,7 @@ export const StocktakeBookPanel = ({
   onPrev,
   onNext,
   nextIsReview = false,
+  renumber = false,
 }: StocktakeBookPanelProps) => {
   const t = useTranslations("admin.lotteryStore.stocktake.book");
   const temporal = useTemporalText();
@@ -65,7 +87,7 @@ export const StocktakeBookPanel = ({
   const figures = figuresOf(book, count ?? { countedAt, method, present: [] });
   const cells: TicketGridCell[] = book.tickets.map((ticket) => ({
     ticketNo: ticket.ticketNo,
-    state: ticket.status === "unsold" ? "unsold" : "sold",
+    state: cellStateOf(ticket),
     ...(ticket.pendingReversal && { tooltip: t("pendingReversal") }),
   }));
   const time = temporal(countedAt, "monthDayTime").split(" ").at(-1) ?? "";
@@ -126,7 +148,7 @@ export const StocktakeBookPanel = ({
           />
         </Stack>
         <Typography variant="body2" color="textSecondary">
-          {isStocktakeStockLine(book.cashPointId) ? t("hintStock") : t("hint")}
+          {t(hintKeyOf(renumber, book.cashPointId))}
         </Typography>
         {method === "scan" ? (
           <TextField
@@ -150,13 +172,22 @@ export const StocktakeBookPanel = ({
         ) : null}
         <TicketGrid
           cells={cells}
-          selectableStates={["unsold", "sold"]}
+          selectableStates={
+            renumber
+              ? ["unsold", "sold", "unmatchedSold", "unmatchedLost"]
+              : ["unsold", "sold"]
+          }
           selected={present}
           onSelectedChange={(next) => {
             onChange({ method, present: next });
           }}
-          legendItems={["unsold", "sold", "selected"]}
+          legendItems={
+            renumber
+              ? ["unsold", "sold", "unmatchedSold", "unmatchedLost", "selected"]
+              : ["unsold", "sold", "selected"]
+          }
           labels={{ selected: t("legendSelected") }}
+          {...(renumber && { legendNote: t("legendGuess") })}
           summary={false}
         />
         <Stack direction="row" spacing={4} sx={{ flexWrap: "wrap" }}>

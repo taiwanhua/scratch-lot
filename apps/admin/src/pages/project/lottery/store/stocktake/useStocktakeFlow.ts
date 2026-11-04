@@ -6,7 +6,6 @@ import {
   STOCKTAKE_SCAN_PURPOSE,
   STORE_BOARD_KEY,
   type StocktakeDiffAction,
-  type StocktakeDraft,
   normalizeBookNo,
   parseStocktakeDraft,
   parseTicketInput,
@@ -26,9 +25,12 @@ import { parseAdminError } from "@/lib/base/errors";
 
 import { moneyText } from "../store-text";
 import {
+  type StocktakeFlowInput,
   isItemCounted,
   resumedOf,
+  sheetInputOf,
   stocktakeItemsOf,
+  useResetOnChange,
 } from "./stocktake-count-model";
 import {
   type BookCount,
@@ -69,12 +71,6 @@ const useResumedDraft = (
   return { restore: setPending, isRestoring: pending !== undefined };
 };
 
-export interface StocktakeFlowInput {
-  orgId: string;
-  scopeCashPointId: string | null;
-  initialDraft: StocktakeDraft | null;
-}
-
 /**
  * 盤點頁的畫面狀態與動作(規格 6.0、6.8;`StocktakeWorkspace` 用):盤點資料、每本開始盤的時間
  * (伺服器時間)、點到的張、未拆的本、待查清單、差異的處理、[補登售出](立即生效)、刷條碼。
@@ -86,6 +82,7 @@ export const useStocktakeFlow = ({
   orgId,
   scopeCashPointId,
   initialDraft,
+  purpose = "normal",
 }: StocktakeFlowInput) => {
   const t = useTranslations("admin.lotteryStore.stocktake");
   const { session } = useSession();
@@ -93,7 +90,7 @@ export const useStocktakeFlow = ({
   useRealtimeBoard(STORE_BOARD_KEY, orgId === "" ? null : orgId);
   const sheetQuery = useLotteryStocktakeSheetQuery(
     session.client,
-    { input: { orgId, cashPointId: scopeCashPointId } },
+    { input: sheetInputOf(orgId, scopeCashPointId, purpose) },
     { enabled: orgId !== "", retry: false },
   );
   const sheet = sheetQuery.data?.lotteryStocktakeSheet ?? null;
@@ -107,6 +104,14 @@ export const useStocktakeFlow = ({
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [step, setStep] = useState<"count" | "review">("count");
   const [notice, setNotice] = useState<string | null>(null);
+  // 日結第 ② 步換「現在盤點 / 這次做補點編號」:換了就從頭盤(兩種的盤點資料不同)
+  useResetOnChange(purpose, () => {
+    setState(null);
+    setViewedAt({});
+    setSelectedKey(null);
+    setStep("count");
+  });
+  const isRenumber = sheet?.purpose === "renumber";
 
   // 讀到盤點資料後才定開始時間(伺服器讀到資料的時間;退回 → 帶入原內容)
   if (sheet !== null && state === null) {
@@ -396,6 +401,7 @@ export const useStocktakeFlow = ({
     sheetQuery,
     sheet,
     state,
+    isRenumber,
     books,
     countGroups,
     isCountMode,

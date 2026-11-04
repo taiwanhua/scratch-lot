@@ -80,6 +80,13 @@ const stocktakeTextOf = (
     return "—";
   }
   const time = temporal(stocktake.startedAt, "monthDayTime");
+  // 補點編號(張數店規格 13.2;Figma CS-13c):盤點方式寫「補點編號」
+  if (stocktake.purpose === "renumber") {
+    return t("view.stocktakeRenumber", {
+      serial: stocktake.serialNo ?? "",
+      time,
+    });
+  }
   return item.stocktakeMode === "reuse"
     ? t("view.stocktakeReuse", {
         time,

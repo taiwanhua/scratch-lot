@@ -19,6 +19,7 @@ import { Tag } from "@repo/ui/tag";
 import { Typography } from "@repo/ui/typography";
 
 import { moneyText } from "../store-text";
+import { PendingSkipHint, RenumberMatchesCard } from "./RenumberMatchesCard";
 import {
   StocktakeCountReview,
   type StocktakeCountReviewProps,
@@ -35,6 +36,12 @@ import {
 } from "./stocktake-model";
 
 type ReviewDiff = ReviewLine["diffs"][number];
+
+/** 這一行可用的處理(補點編號且這本還有待標註:不在的張多一個 [標跳號];張數店規格 9.3 第 3 點)。 */
+const actionsOf = (line: ReviewLine, kind: string) =>
+  stocktakeActionsOf(kind as StocktakeDiffKind, line.cashPointId, {
+    pendingSkip: line.pendingSkipCount > 0,
+  });
 
 interface Row {
   key: string;
@@ -110,15 +117,12 @@ export const StocktakeReviewStep = ({
     (row) => selected.includes(row.key) && !row.diff.backfilled,
   );
   const commonActions = (
-    ["sale_backfill", "investigate", "flag"] as const
+    ["sale_backfill", "investigate", "flag", "skip"] as const
   ).filter(
     (action) =>
       chosen.length > 0 &&
       chosen.every((row) =>
-        stocktakeActionsOf(
-          row.diff.kind as StocktakeDiffKind,
-          row.line.cashPointId,
-        ).includes(action),
+        actionsOf(row.line, row.diff.kind).includes(action),
       ) &&
       (action !== "sale_backfill" || canBackfill),
   );
@@ -169,6 +173,9 @@ export const StocktakeReviewStep = ({
     }
     if (choice?.action === "flag") {
       return t("result.flag");
+    }
+    if (choice?.action === "skip") {
+      return t("result.skip");
     }
     return t("result.none");
   };
@@ -234,10 +241,7 @@ export const StocktakeReviewStep = ({
           <Tag tone="success" label={t("backfilled")} />
         ) : (
           <Stack direction="row" spacing={1}>
-            {stocktakeActionsOf(
-              row.diff.kind as StocktakeDiffKind,
-              row.line.cashPointId,
-            )
+            {actionsOf(row.line, row.diff.kind)
               .filter((action) => action !== "sale_backfill" || canBackfill)
               .map((action) => actionButton(row, action))}
           </Stack>
@@ -308,6 +312,8 @@ export const StocktakeReviewStep = ({
           </Stack>
         </Card>
       ) : null}
+      {/* 補點編號的自動對號(張數店規格 9.3 第 2 點;不算差異) */}
+      <RenumberMatchesCard matches={review?.renumberMatches ?? []} />
       {count === undefined || review === null ? null : (
         <StocktakeCountReview
           lines={review.countLines}
@@ -381,6 +387,7 @@ export const StocktakeReviewStep = ({
                     containerSx={{ height: "auto" }}
                   />
                 ) : null}
+                <PendingSkipHint line={line} />
                 {line.diffs.some((diff) => diff.kind === "extra") ? (
                   <Typography variant="caption" color="textSecondary">
                     {t("extraHint")}

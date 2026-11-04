@@ -10,7 +10,13 @@ import { StocktakeBookList } from "./StocktakeBookList";
 import { StocktakeBookPanel } from "./StocktakeBookPanel";
 import { StocktakeCountGroupPanel } from "./StocktakeCountGroupPanel";
 import { LostSection, UnopenedSection } from "./StocktakeSections";
-import { diffTotalOf, stocktakeNavKeysOf } from "./stocktake-count-model";
+import {
+  canReviewOf,
+  countFooterOf,
+  diffTotalOf,
+  renumberLeftOf,
+  stocktakeNavKeysOf,
+} from "./stocktake-count-model";
 import {
   type SheetCashPoint,
   type StocktakeSheet,
@@ -78,6 +84,15 @@ export const StocktakeCountStep = ({
   const progressKey = flow.isCountMode
     ? "page.progressGroups"
     : "page.progress";
+  // 補點編號:每本都要盤(含未拆的本在 / 不在),全部盤完才能前往差異核對(張數店規格 9.3 第 1 點、16.8 RN3)
+  const renumberLeft = renumberLeftOf(
+    flow.isRenumber,
+    total - nav.counted,
+    sheet.unopenedBooks,
+    state.unopened,
+  );
+  const footer = t(...countFooterOf(flow.isRenumber, renumberLeft));
+  const canReview = canReviewOf(nav.counted, renumberLeft);
 
   return (
     <>
@@ -172,6 +187,7 @@ export const StocktakeCountStep = ({
               }}
               onCode={flow.handleCode}
               onPrev={goPrev}
+              renumber={flow.isRenumber}
               nextIsReview={nextIsReview}
               onNext={() => {
                 const before = state.counts[currentKey];
@@ -210,11 +226,11 @@ export const StocktakeCountStep = ({
         sx={{ alignItems: { sm: "center" } }}
       >
         <Typography variant="body2" color="textSecondary" sx={{ flex: 1 }}>
-          {t("page.footer")}
+          {footer}
         </Typography>
         <Button
           variant="contained"
-          disabled={nav.counted === 0}
+          disabled={!canReview}
           onClick={() => {
             flow.setStep("review");
           }}

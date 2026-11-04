@@ -2456,6 +2456,16 @@
         "title": "Snapshot {month}",
         "closedBy": "Closed by {name} at {at}",
         "close": "Close"
+      },
+      "renumber": {
+        "pass": "Count stores renumbered at month end: passed",
+        "blocked": "Count stores renumbered at month end: {stores} not renumbered before the month's last daily close (required; blocks the close)",
+        "warning": "Count stores renumbered at month end: {stores} not renumbered (reminder only; reports are marked as estimates and noted)",
+        "toSettings": "Go to lottery settings",
+        "snapshotLabel": "{store} renumber",
+        "snapshotDone": "Done {date}",
+        "snapshotMissing": "Not renumbered",
+        "snapshotEstimated": "Not renumbered (estimated)"
       }
     },
     "errors": {
@@ -2478,7 +2488,8 @@
       "PERIOD_ALREADY_CLOSED": "This month is already closed (it cannot be reopened)",
       "PERIOD_OUT_OF_ORDER": "Close months in order; close the earlier month first",
       "PERIOD_SHIFTS_NOT_CLOSED": "Some cash register shifts of that month have not checked out",
-      "PERIOD_PENDING_DOCUMENTS": "Some documents of that month are under review; handle them first"
+      "PERIOD_PENDING_DOCUMENTS": "Some documents of that month are under review; handle them first",
+      "RENUMBER_REQUIRED": "A count store set to \"required\" was not renumbered before the month's last daily close; the period cannot be closed"
     }
   },
   "lotteryPurchasing": {
@@ -3143,7 +3154,10 @@
     "DAILY_CLOSE_ACCOUNT_NOT_USABLE": "Choose an active bank account used by this store.",
     "PERIOD_CLOSED": "The selected shift is in a closed month and cannot be chosen.",
     "PURCHASE_NOT_DRAFT": "Only drafts can be deleted; void or reject a submitted purchase",
-    "TRANSFER_NOT_DRAFT": "Only drafts can be deleted; void or reject a submitted transfer"
+    "TRANSFER_NOT_DRAFT": "Only drafts can be deleted; void or reject a submitted transfer",
+    "STOCKTAKE_RENUMBER_INCOMPLETE": "Renumber needs every book counted; some books are not counted yet",
+    "STOCKTAKE_RENUMBER_NOT_ALLOWED": "Only count stores and converting stores can renumber, and it must cover the whole store",
+    "STOCKTAKE_RENUMBER_BLOCKED": "A game is being rescanned store-wide; renumber after it finishes or is cancelled"
   },
   "lotteryStore": {
     "fieldErrors": {
@@ -3820,7 +3834,9 @@
         "pendingReversal": "Reversal pending",
         "subtitleStock": "Book {bookNo} · {count} in stock",
         "hintStock": "Tap the tickets still in stock (selected = present); the system figure is as of when you started this book.",
-        "finish": "Done, go to review"
+        "finish": "Done, go to review",
+        "hintRenumber": "Mark the tickets that are actually here (selected = here). Dashed cells are numbers set by the system; they are matched automatically first and are not differences.",
+        "legendGuess": "Dashed = number set by the system"
       },
       "unopened": {
         "title": "Unopened books (present / missing)",
@@ -3871,7 +3887,8 @@
         "actions": {
           "sale_backfill": "Backfill sale",
           "investigate": "Investigate",
-          "flag": "Flag"
+          "flag": "Flag",
+          "skip": "Mark skipped"
         },
         "clear": "Clear selection",
         "recount": "Recount this book",
@@ -3902,7 +3919,8 @@
           "backfillClosed": "Post-close correction of the latest shift at {cashPoint} {amount}",
           "investigate": "Under investigation; responsible store = {store}",
           "flag": "Correct later with a sale reversal (stocktake error)",
-          "none": "Not handled"
+          "none": "Not handled",
+          "skip": "Marked skipped on approval (pending skips of this book)"
         },
         "summary": {
           "backfill": "Backfilled sales",
@@ -3921,7 +3939,8 @@
         "backfillDone": "Backfilled {count} sales · {amount} (immediate)",
         "lostNotReady": "Finish the investigation list: found tickets must be scanned and losses need a reason",
         "stockHint": "Missing stock tickets can only be marked for investigation (stock tickets cannot be sold, so there is no backfill).",
-        "infoCount": "Handle each group: short tickets can be [Count as sold], [Investigate] or split (e.g. 1 sold, 1 investigate); over tickets can only be [Flag]. [Count as sold] takes effect at once: an open shift at that cash point gets it; a checked-out shift gets a post-close correction."
+        "infoCount": "Handle each group: short tickets can be [Count as sold], [Investigate] or split (e.g. 1 sold, 1 investigate); over tickets can only be [Flag]. [Count as sold] takes effect at once: an open shift at that cash point gets it; a checked-out shift gets a post-close correction.",
+        "skipHint": "{count, plural, one {This book has # pending skip: a missing ticket can be marked skipped.} other {This book has # pending skips: missing tickets can be marked skipped.}}"
       },
       "submit": {
         "title": "Submit stocktake?",
@@ -4113,6 +4132,19 @@
         "endTitle": "End {name}'s stocktake?",
         "endBody": "{place} will no longer be in stocktake. {name}'s progress is kept and can be continued later. This action is recorded.",
         "cancel": "Cancel"
+      },
+      "renumber": {
+        "heading": "Renumber",
+        "banner": "Renumbering: moving tickets between counters is paused for every game. Count every book; you can submit only after all are counted. Numbers set by the system are matched automatically first and are not counted as differences.",
+        "footer": "{count, plural, =0 {All counted. You can go to the difference check. Sales can continue while counting.} one {# book left to count. Count every book before the difference check. Sales can continue while counting.} other {# books left to count. Count every book before the difference check. Sales can continue while counting.}}",
+        "converting": "Converting: please complete the renumber. Until then, scan or type the ticket number to sell, recall or move.",
+        "start": "Renumber",
+        "due": "Renumber suggested (last {date})",
+        "dueNever": "Renumber suggested (never done)",
+        "blockedRescan": "A game is being rescanned store-wide. Renumber after it finishes or is cancelled.",
+        "matchedTitle": "{count, plural, one {# ticket matched automatically (not a difference)} other {# tickets matched automatically (not differences)}}",
+        "matchedHint": "Tickets that are here but whose numbers were set by the system swap status with tickets the system marks unsold that are not here. Written on approval; cash is not affected.",
+        "matchedRow": "{place} · {game}: #{ticketNo} (book {bookNo}) ↔ #{partnerNo} (book {partnerBookNo})"
       }
     },
     "checkout": {
@@ -4150,7 +4182,10 @@
         "skipReason": "Skip reason (required)",
         "review": "Review differences →",
         "reviewed": "Differences reviewed; continue to the next step",
-        "endSession": "End this stocktake"
+        "endSession": "End this stocktake",
+        "renumber": "Renumber this time",
+        "renumberHint": "Count every book by grid or scan; all must be counted before the next step. Moving tickets is paused for every game.",
+        "renumberMonthEnd": "No renumber this month yet, so the period close will be blocked. Choose \"Renumber this time\" for this daily close."
       },
       "redemption": {
         "title": "② Redemptions ({count} this shift)",
@@ -4272,7 +4307,8 @@
         "noSuccessor": "(No successor)",
         "pending": "Under review at submission: {items}",
         "hint": "Each line opens the original document.",
-        "loadFailed": "Could not load this checkout sheet"
+        "loadFailed": "Could not load this checkout sheet",
+        "stocktakeRenumber": "Renumber {serial} ({time})"
       }
     },
     "badgeDescription": "Stores whose daily close is overdue: the earliest shift checkout not yet covered by a daily close passed its reminder time on the next day",
@@ -4389,7 +4425,8 @@
         "shiftDifference": "Shift checkout differences",
         "vaultDifference": "Vault difference",
         "bankDeposit": "Bank deposit",
-        "noDeposit": "None"
+        "noDeposit": "None",
+        "stocktakeRenumber": "Renumber · {matched} matched · {diff} differences"
       },
       "view": {
         "period": "Covered period",
@@ -4685,7 +4722,8 @@
         "store-rent-due": "Store rent due",
         "period-close-overdue": "Period close overdue",
         "purchase-wrong-store": "Purchase sent to the wrong store",
-        "transfer-wrong-store": "Transfer sent to the wrong store"
+        "transfer-wrong-store": "Transfer sent to the wrong store",
+        "renumber-due": "Renumber due"
       },
       "schedule": {
         "day-off-open": "Day-off requests open",

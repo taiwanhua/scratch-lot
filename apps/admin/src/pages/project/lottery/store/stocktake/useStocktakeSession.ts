@@ -58,6 +58,8 @@ const sameScope = (
 export interface StocktakeSessionInput {
   orgId: string;
   type: StocktakeType;
+  /** 補點編號(全店、全部遊戲暫停移櫃;張數店規格 9.3、8.5);不給 = 一般盤點 */
+  purpose?: "normal" | "renumber";
   /** 只盤一個收銀點;全店 = null */
   scopeCashPointId: string | null;
   /** 要登記了(例:交班第 ① 步選了「現在盤點」) */
@@ -82,6 +84,7 @@ export interface StocktakeSessionInput {
 export const useStocktakeSession = ({
   orgId,
   type,
+  purpose = "normal",
   scopeCashPointId,
   enabled,
   sessionId = null,
@@ -122,6 +125,7 @@ export const useStocktakeSession = ({
           (item) =>
             item.mine &&
             item.type === type &&
+            item.purpose === purpose &&
             sameScope(item, scopeCashPointId),
         ) ?? null)
       : null;
@@ -135,6 +139,7 @@ export const useStocktakeSession = ({
           type,
           cashPointId: scopeCashPointId,
           sessionId: resumeId,
+          ...(purpose === "renumber" && { purpose }),
         },
       },
       {
@@ -162,6 +167,28 @@ export const useStocktakeSession = ({
       },
     );
   };
+
+  // 換了用途(日結第 ② 步「現在盤點」↔「這次做補點編號」):放棄目前的登記,重新登記(補點的暫停跟著登記)
+  const purposeRef = useRef(purpose);
+  useEffect(() => {
+    if (purposeRef.current === purpose) {
+      return;
+    }
+    purposeRef.current = purpose;
+    const previous = active;
+    setActive(null);
+    const restart = () => {
+      startedRef.current = false;
+      void sessions.refetch();
+    };
+    if (previous === null) {
+      restart();
+      return;
+    }
+    void endMutation
+      .mutateAsync({ input: { orgId, sessionId: previous.sessionId } })
+      .finally(restart);
+  }, [purpose, active, endMutation, orgId, sessions]);
 
   // 進來就登記:帶了那一筆 → [繼續];自己在這個範圍有一筆 → 先問;沒有 → 新登記
   useEffect(() => {

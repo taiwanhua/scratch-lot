@@ -36,6 +36,7 @@ export const sampleStocktakeSession = (
   __typename: "LotteryStocktakeSession",
   sessionId: "session-li",
   type: "adhoc",
+  purpose: "normal",
   wholeStore: false,
   cashPointId: "cp-counter",
   cashPointName: "店內櫃台",
@@ -258,6 +259,7 @@ export const countStocktakeHandlers = ({
       byName: "王小明",
       mine: true,
       minutesLeft: 60,
+      purpose: input.purpose ?? "normal",
     });
     sessions.push(created);
     return HttpResponse.json({

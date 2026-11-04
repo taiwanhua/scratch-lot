@@ -30,6 +30,7 @@ import { useTemporalText } from "@/hooks/base/useTemporalText";
 
 import { RescanEnterNotice } from "../rescan/RescanEnterNotice";
 import { type RescanBrief, rescansToNotice } from "../rescan/rescan-model";
+import { RenumberNotices } from "./RenumberNotices";
 import { ResumeSessionDialog } from "./StocktakeSessionNotices";
 import { useBlockedText, useSessionPlaceText } from "./session-text";
 import {
@@ -109,6 +110,8 @@ export const useStocktakeEntry = (
     if (!target.wholeStore && target.cashPointId != null) {
       params.set("scope", target.cashPointId);
     }
+    // 補點編號(張數店規格 9.3):接續時回到補點編號的盤點頁
+    params.set("purpose", target.purpose);
     void navigate(
       `${access.createRoute ?? ""}/${STOCKTAKE_CONFIRM_FORM_KEY}?${params.toString()}`,
     );
@@ -181,6 +184,7 @@ export const useStocktakeEntry = (
         {remind ? (
           <Alert severity="warning">{t("entry.reminder")}</Alert>
         ) : null}
+        <RenumberNotices orgId={orgId} />
       </>
     ),
     blocksCheckout: wholeStore !== null,

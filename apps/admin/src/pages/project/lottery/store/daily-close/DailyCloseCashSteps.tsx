@@ -239,9 +239,20 @@ export const DailyCloseConfirmStep = ({
             });
       }
       case "new": {
-        return t("confirm.stocktakeNew", {
-          count: flow.stocktake.review?.summary.backfillCount ?? 0,
-        });
+        const review = flow.stocktake.review;
+        // 補點編號(張數店規格 13.2;Figma CS-13b):「補點編號 · 對號 3 張 · 差異 1 張」
+        return flow.renumber
+          ? t("confirm.stocktakeRenumber", {
+              matched: review?.summary.renumberMatched ?? 0,
+              diff:
+                review?.lines.reduce(
+                  (sum, line) => sum + line.diffs.length,
+                  0,
+                ) ?? 0,
+            })
+          : t("confirm.stocktakeNew", {
+              count: review?.summary.backfillCount ?? 0,
+            });
       }
       case "skip": {
         return t("confirm.stocktakeSkip");

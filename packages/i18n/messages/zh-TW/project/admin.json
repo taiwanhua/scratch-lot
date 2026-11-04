@@ -2456,6 +2456,16 @@
         "title": "快照 {month}",
         "closedBy": "{name} 於 {at} 關帳",
         "close": "關閉"
+      },
+      "renumber": {
+        "pass": "張數店月底補點編號:通過",
+        "blocked": "張數店月底補點編號:{stores}本月最後一次日結前沒補點編號(必須,擋關帳)",
+        "warning": "張數店月底補點編號:{stores}沒補點(只提醒;報表標估算並註記月底未補點編號)",
+        "toSettings": "到刮刮樂設定",
+        "snapshotLabel": "{store} 補點編號",
+        "snapshotDone": "{date} 完成",
+        "snapshotMissing": "未補點",
+        "snapshotEstimated": "未補點(估算)"
       }
     },
     "errors": {
@@ -2478,7 +2488,8 @@
       "PERIOD_ALREADY_CLOSED": "這個月已經關帳(不能重新開帳)",
       "PERIOD_OUT_OF_ORDER": "要依序關帳,請先關更早的月份",
       "PERIOD_SHIFTS_NOT_CLOSED": "那個月還有收銀班次沒結帳",
-      "PERIOD_PENDING_DOCUMENTS": "那個月還有審核中的單據,請先處理"
+      "PERIOD_PENDING_DOCUMENTS": "那個月還有審核中的單據,請先處理",
+      "RENUMBER_REQUIRED": "有設「必須」的張數店本月最後一次日結前沒做補點編號,不能關帳"
     }
   },
   "lotteryPurchasing": {
@@ -3143,7 +3154,10 @@
     "DAILY_CLOSE_ACCOUNT_NOT_USABLE": "存入帳戶要選,而且要使用中、使用組織包含這家店",
     "PERIOD_CLOSED": "選的班是已關帳月份的班,不能選",
     "PURCHASE_NOT_DRAFT": "只有草稿可以刪除;送出過的進貨單請作廢或駁回",
-    "TRANSFER_NOT_DRAFT": "只有草稿可以刪除;送出過的調貨單請作廢或駁回"
+    "TRANSFER_NOT_DRAFT": "只有草稿可以刪除;送出過的調貨單請作廢或駁回",
+    "STOCKTAKE_RENUMBER_INCOMPLETE": "補點編號每本都要盤,還有本沒盤完不能送出",
+    "STOCKTAKE_RENUMBER_NOT_ALLOWED": "補點編號只有張數店與轉換中的店能做,而且要盤全店",
+    "STOCKTAKE_RENUMBER_BLOCKED": "有遊戲正在全店重刷,完成或取消後再補點"
   },
   "lotteryStore": {
     "fieldErrors": {
@@ -3820,7 +3834,9 @@
         "pendingReversal": "撤銷審核中",
         "subtitleStock": "本號 {bookNo} · 庫存 {count} 張",
         "hintStock": "點出實際還在庫存的張(已選 = 在);系統數字是開始盤這本那一刻的數字。",
-        "finish": "盤完,前往差異核對"
+        "finish": "盤完,前往差異核對",
+        "hintRenumber": "點出實際還在的張(已選 = 在)。虛線是系統預設帶入的張號;比對時會先自動對號,不算差異。",
+        "legendGuess": "虛線 = 系統預設帶入的張號"
       },
       "unopened": {
         "title": "未拆的本(在 / 不在)",
@@ -3871,7 +3887,8 @@
         "actions": {
           "sale_backfill": "補登售出",
           "investigate": "待查",
-          "flag": "標記異常"
+          "flag": "標記異常",
+          "skip": "標跳號"
         },
         "clear": "取消選取",
         "recount": "重新盤點這本",
@@ -3902,7 +3919,8 @@
           "backfillClosed": "記成{cashPoint}最近一班的事後更正 {amount}",
           "investigate": "待查,責任分店 = {store}",
           "flag": "之後用撤銷售出申請「盤點錯誤」更正",
-          "none": "還沒處理"
+          "none": "還沒處理",
+          "skip": "核准時標跳號(這本的待標註)"
         },
         "summary": {
           "backfill": "補登售出",
@@ -3921,7 +3939,8 @@
         "backfillDone": "已補登售出 {count} 張 · {amount} 元(立即生效)",
         "lostNotReady": "待查清單還沒處理完:「找到了」要刷條碼,「確認遺失」要選原因",
         "stockHint": "庫存的張不在:只能待查(庫存的張不能賣,沒有補登售出)。",
-        "infoCount": "每一組各自處理:少的可以 [算售出]、[待查] 或拆開(例:算售出 1、待查 1);多出只能 [標記異常]。[算售出] 立即生效:那個收銀點有開著的班 → 算進那一班;已結帳 → 記成那個收銀點最近一班的事後更正。"
+        "infoCount": "每一組各自處理:少的可以 [算售出]、[待查] 或拆開(例:算售出 1、待查 1);多出只能 [標記異常]。[算售出] 立即生效:那個收銀點有開著的班 → 算進那一班;已結帳 → 記成那個收銀點最近一班的事後更正。",
+        "skipHint": "這本還有 {count} 張待標註:不在的張可以 [標跳號]。"
       },
       "submit": {
         "title": "送出盤點?",
@@ -4113,6 +4132,19 @@
         "endTitle": "結束{name}的盤點?",
         "endBody": "結束後{place}解除盤點中,{name}的進度保留,他回來還能 [繼續];這個動作會留紀錄。",
         "cancel": "取消"
+      },
+      "renumber": {
+        "heading": "補點編號",
+        "banner": "補點編號中:全部遊戲暫停移櫃。每本都要盤,全部盤完才能送出;比對時系統預設帶入的張號會先自動對號,不算差異。",
+        "footer": "{count, plural, =0 {全部盤完了,可以前往差異核對。盤的時候可以繼續賣。} other {還有 # 本沒盤,全部盤完才能前往差異核對。盤的時候可以繼續賣。}}",
+        "converting": "轉換中:請完成補點編號。完成前銷售、收回、移櫃都要刷條碼或手輸張號。",
+        "start": "補點編號",
+        "due": "建議補點編號(上次 {date})",
+        "dueNever": "建議補點編號(還沒做過)",
+        "blockedRescan": "有遊戲正在全店重刷,完成或取消後再補點。",
+        "matchedTitle": "自動對號 {count} 張(不算差異)",
+        "matchedHint": "實際在、系統預設帶入的張號,和實際不在、系統記未售的張互換狀態;核准時寫入,不動現金。",
+        "matchedRow": "{place} · {game}:#{ticketNo}(本號 {bookNo})↔ #{partnerNo}(本號 {partnerBookNo})"
       }
     },
     "checkout": {
@@ -4150,7 +4182,10 @@
         "skipReason": "跳過原因(必填)",
         "review": "差異核對 →",
         "reviewed": "差異已核對,可以到下一步",
-        "endSession": "結束這個盤點"
+        "endSession": "結束這個盤點",
+        "renumber": "這次做補點編號",
+        "renumberHint": "逐本點格子或刷,全部盤完才能下一步;全部遊戲暫停移櫃",
+        "renumberMonthEnd": "本月還沒補點編號,關帳會被擋。這次日結請選「這次做補點編號」。"
       },
       "redemption": {
         "title": "② 兌獎(本班 {count} 筆)",
@@ -4272,7 +4307,8 @@
         "noSuccessor": "(沒有接班人)",
         "pending": "送出時審核中:{items}",
         "hint": "每一項可以點開原本的單據。",
-        "loadFailed": "讀不到這張結帳單"
+        "loadFailed": "讀不到這張結帳單",
+        "stocktakeRenumber": "補點編號 {serial}({time})"
       }
     },
     "badgeDescription": "日結逾期的店數:最早一張還沒被日結涵蓋計算的交班結帳,送出日隔天的提醒時間已過",
@@ -4389,7 +4425,8 @@
         "shiftDifference": "各班結帳差額",
         "vaultDifference": "小金庫差額",
         "bankDeposit": "存入銀行",
-        "noDeposit": "不存"
+        "noDeposit": "不存",
+        "stocktakeRenumber": "補點編號 · 對號 {matched} 張 · 差異 {diff} 張"
       },
       "view": {
         "period": "涵蓋計算期間",
@@ -4685,7 +4722,8 @@
         "store-rent-due": "牌租繳費提醒",
         "period-close-overdue": "關帳逾期",
         "purchase-wrong-store": "進貨送錯分店",
-        "transfer-wrong-store": "調貨送錯分店"
+        "transfer-wrong-store": "調貨送錯分店",
+        "renumber-due": "補點編號到期"
       },
       "schedule": {
         "day-off-open": "畫休開放",

@@ -30,6 +30,7 @@ const book = (
   gameCode: game[0],
   gameName: game[1],
   unitPrice: game[2],
+  pendingSkipCount: 0,
   bookNo,
   tickets: ticketNos(total).map((ticketNo, index) => ({
     __typename: "LotteryStocktakeTicket",
@@ -37,6 +38,7 @@ const book = (
     ticketNo,
     version: 1,
     status: index < soldUpTo ? "sold" : "unsold",
+    unmatched: false,
     pendingReversal: false,
   })),
 });
@@ -158,6 +160,7 @@ export const sampleStocktakeSheet = (
     })),
   ],
   countMode: "numbered",
+  purpose: "normal",
   countGroups: [],
 });
 
@@ -176,6 +179,7 @@ const summary = (
   confirmLost: 0,
   confirmLostCost: 0,
   uncountedCount: 0,
+  renumberMatched: 0,
   ...overrides,
 });
 
@@ -376,3 +380,35 @@ export const sampleStocktakeDetail = (): StocktakeDetailFixture => ({
     lostReview: [],
   }),
 });
+
+/**
+ * 補點編號的盤點頁(張數店規格 9.3;Figma CS-11):只留店外攤位的 5133 招財貓 · 071204(#001–015 已售、
+ * #014 #015 是已售·未對號(虛線)、#016–025 未售、還有 1 張待標註)與一本未拆的本,方便逐本盤完。
+ */
+export const sampleRenumberStocktakeSheet = (
+  orgId = "org-store-a",
+): StocktakeSheetFixture => {
+  const sheet = sampleStocktakeSheet(orgId);
+  const target = sheet.books.find((item) => item.bookId === "b-6");
+  const unopened = sheet.unopenedBooks.slice(0, 1);
+  if (target === undefined) {
+    return sheet;
+  }
+  return {
+    ...sheet,
+    countMode: "numbered",
+    purpose: "renumber",
+    books: [
+      {
+        ...target,
+        pendingSkipCount: 1,
+        tickets: target.tickets.map((ticket) => ({
+          ...ticket,
+          unmatched: ticket.ticketNo === "014" || ticket.ticketNo === "015",
+        })),
+      },
+    ],
+    unopenedBooks: unopened,
+    lostTickets: [],
+  };
+};

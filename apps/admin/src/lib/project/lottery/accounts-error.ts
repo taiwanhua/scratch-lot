@@ -24,6 +24,7 @@ export type AccountsErrorCode =
   | "PERIOD_OUT_OF_ORDER"
   | "PERIOD_SHIFTS_NOT_CLOSED"
   | "PERIOD_PENDING_DOCUMENTS"
+  | "RENUMBER_REQUIRED"
   | "UNEXPECTED";
 
 export type AccountsError = AdminError<AccountsErrorCode, never>;
@@ -49,6 +50,8 @@ const REASON_CODES: readonly AccountsErrorCode[] = [
   "PERIOD_OUT_OF_ORDER",
   "PERIOD_SHIFTS_NOT_CLOSED",
   "PERIOD_PENDING_DOCUMENTS",
+  // 關帳第四項:設「必須」的張數店月底沒補點編號(張數店規格第 10 節)
+  "RENUMBER_REQUIRED",
 ];
 
 export const accountsErrorOf = (error: unknown): AccountsError =>

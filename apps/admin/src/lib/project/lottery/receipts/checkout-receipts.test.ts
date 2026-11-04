@@ -68,6 +68,8 @@ const shiftDetail = (): Detail => ({
     startedAt: "2026-10-16T02:32:00.000Z",
     scopeName: null,
     diffCount: 0,
+    purpose: "normal",
+    renumberMatched: 0,
   },
   skipReason: null,
   skipReasonNote: null,

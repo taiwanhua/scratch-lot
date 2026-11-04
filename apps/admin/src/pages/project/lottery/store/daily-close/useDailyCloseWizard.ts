@@ -51,9 +51,23 @@ export const useDailyCloseWizard = ({
       if (initialStocktake !== null) {
         return initialStocktake.mode;
       }
-      return wizard.reusableStocktake == null ? "new" : "reuse";
+      // 轉換中或補點編號提醒週期到了:預設「這次做補點編號」(張數店規格 13.2)
+      return wizard.reusableStocktake == null || wizard.renumber.suggested
+        ? "new"
+        : "reuse";
     },
   );
+  // 第 ② 步「這次做補點編號」(張數店與轉換中;全店照編號盤點逐本、全部遊戲暫停移櫃)
+  const [renumber, setRenumber] = useState(() =>
+    initialStocktake === null
+      ? wizard.renumber.suggested
+      : initialStocktake.mode === "new" &&
+        initialStocktake.draft.purpose === "renumber",
+  );
+  const purpose =
+    stocktakeMode === "new" && renumber && wizard.renumber.available
+      ? "renumber"
+      : "normal";
   const [skipReason, setSkipReason] = useState<ReasonValue>(() =>
     initialStocktake?.mode === "skip"
       ? {
@@ -86,11 +100,13 @@ export const useDailyCloseWizard = ({
     scopeCashPointId: null,
     initialDraft:
       initialStocktake?.mode === "new" ? initialStocktake.draft : null,
+    purpose,
   });
   // 選「現在盤點」就登記全店盤點中(全部收銀點與庫存;張數店規格 8.5a)
   const session = useStocktakeFlowSession(stocktake, {
     orgId: wizard.org.id,
     type: "daily",
+    purpose,
     scopeCashPointId: null,
     enabled: stocktakeMode === "new",
   });
@@ -247,7 +263,15 @@ export const useDailyCloseWizard = ({
     allApproved,
     unapproved,
     stocktakeMode,
-    setStocktakeMode,
+    setStocktakeMode: (mode: CheckoutStocktakeMode) => {
+      setStocktakeMode(mode);
+      setRenumber(false);
+    },
+    renumber: purpose === "renumber",
+    chooseRenumber: () => {
+      setStocktakeMode("new");
+      setRenumber(true);
+    },
     skipReason,
     setSkipReason,
     stocktake,

@@ -173,6 +173,7 @@ const WizardBody = ({
           scopeCashPointId={null}
           reusable={wizard.reusableStocktake ?? null}
           canSkipStocktake={wizard.canSkipStocktake}
+          renumberOption={wizard.renumber}
           flow={flow}
           redemption={redemption}
           texts={{

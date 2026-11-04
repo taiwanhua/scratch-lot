@@ -77,6 +77,7 @@ export const StocktakeCreatePage = () => {
   const [scope] = useUrlState("scope", scopeSchema);
   const [sessionParam] = useUrlState("session", scopeSchema);
   const [rescanParam] = useUrlState("rescan", scopeSchema);
+  const [purposeParam] = useUrlState("purpose", scopeSchema);
   const orgId = orgParam === "" ? (me.data?.me.currentOrg?.id ?? "") : orgParam;
   const draftState = useFormDraft(STOCKTAKE_CONFIRM_FORM_KEY);
   const errorText = useAdminErrorText("admin.formEngine.errors");
@@ -121,6 +122,7 @@ export const StocktakeCreatePage = () => {
         heading={t("types.adhoc")}
         type="adhoc"
         sessionId={sessionParam === "" ? null : sessionParam}
+        purpose={purposeParam === "renumber" ? "renumber" : "normal"}
         initialDraft={null}
         submitError={
           draftState.error === null ? null : errorText(draftState.error)
@@ -182,6 +184,11 @@ export const StocktakeEditPage = ({ routeParam }: ModulePageProps) => {
         scopeCashPointId={stocktake.scopeCashPoint?.id ?? null}
         heading={t("types.adhoc")}
         type="adhoc"
+        purpose={
+          parsed.ok && parsed.draft.purpose === "renumber"
+            ? "renumber"
+            : "normal"
+        }
         initialDraft={parsed.ok ? parsed.draft : null}
         notice={<Alert severity="info">{t("page.returnedHint")}</Alert>}
         submitError={

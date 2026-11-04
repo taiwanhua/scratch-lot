@@ -1,3 +1,5 @@
+import { useState } from "react";
+
 import {
   type StocktakeDiffAction,
   type StocktakeDraft,
@@ -206,3 +208,58 @@ export const stocktakeNavKeysOf = (
     counted: counted.length,
   };
 };
+
+/** 盤點頁的查詢條件:補點編號另帶 `purpose`(張數店規格 9.3;一般盤點不帶,和以前一樣)。 */
+export const sheetInputOf = (
+  orgId: string,
+  cashPointId: string | null,
+  purpose: "normal" | "renumber",
+) => ({
+  orgId,
+  cashPointId,
+  ...(purpose === "renumber" && { purpose }),
+});
+
+/** 值換了就呼叫一次 `reset`(畫面計算時調整 state,同 React 的「依前一次 render 調整 state」)。 */
+export const useResetOnChange = (value: string, reset: () => void): void => {
+  const [seen, setSeen] = useState(value);
+  if (seen !== value) {
+    setSeen(value);
+    reset();
+  }
+};
+
+/**
+ * 補點編號還沒盤的(張數店規格 9.3 第 1 點、16.8 RN3):還沒盤的本 + 還沒回答在 / 不在的未拆的本;
+ * 一般盤點 = 0(沒盤完也可以前往差異核對)。
+ */
+export const renumberLeftOf = (
+  isRenumber: boolean,
+  uncountedItems: number,
+  unopenedBooks: readonly { bookId: string }[],
+  unopened: Partial<Record<string, boolean>>,
+): number =>
+  isRenumber
+    ? uncountedItems +
+      unopenedBooks.filter((book) => unopened[book.bookId] == null).length
+    : 0;
+
+/** 盤點頁的狀態要的輸入(`useStocktakeFlow`)。 */
+export interface StocktakeFlowInput {
+  orgId: string;
+  scopeCashPointId: string | null;
+  initialDraft: StocktakeDraft | null;
+  /** 補點編號(張數店與轉換中的全店編號盤點;張數店規格 9.3);不給 = 一般盤點 */
+  purpose?: "normal" | "renumber";
+}
+
+/** 盤點步驟底部的說明:補點編號 = 還有幾本沒盤;一般盤點 = 盤點期間照常銷售。 */
+export const countFooterOf = (
+  isRenumber: boolean,
+  left: number,
+): [key: string, values?: { count: number }] =>
+  isRenumber ? ["renumber.footer", { count: left }] : ["page.footer"];
+
+/** 能不能前往差異核對:至少盤了一項;補點編號要全部盤完。 */
+export const canReviewOf = (counted: number, renumberLeft: number): boolean =>
+  counted > 0 && renumberLeft === 0;

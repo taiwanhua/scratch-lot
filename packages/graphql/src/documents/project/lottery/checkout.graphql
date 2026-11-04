@@ -24,6 +24,8 @@ fragment LotteryCheckoutStocktakeRefFields on LotteryCheckoutReusableStocktake {
   startedAt
   scopeName
   diffCount
+  purpose
+  renumberMatched
 }
 
 query LotteryCheckoutWizard($shiftId: ID!) {

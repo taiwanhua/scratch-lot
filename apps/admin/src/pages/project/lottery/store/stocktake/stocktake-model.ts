@@ -262,6 +262,10 @@ export const draftOf = (
           }),
         }
       : {}),
+    // 補點編號(張數店與轉換中的全店編號盤點;張數店規格 9.3)
+    ...(sheet.purpose === "renumber"
+      ? { countMode: "numbered" as const, purpose: "renumber" as const }
+      : {}),
     lines: sheet.books.flatMap((book) => {
       const key = bookKeyOf(book);
       const count = state.counts[key];
@@ -364,6 +368,9 @@ export const unhandledOf = (
           !stocktakeActionsOf(
             diff.kind as StocktakeDiffKind,
             line.cashPointId,
+            {
+              pendingSkip: line.pendingSkipCount > 0,
+            },
           ).includes(choice.action) ||
           (choice.action === "sale_backfill") !== diff.backfilled
         );

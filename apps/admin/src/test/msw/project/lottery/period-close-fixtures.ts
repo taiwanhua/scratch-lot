@@ -119,6 +119,7 @@ export const samplePeriodCheck = (
   openShifts: [],
   pendingDocuments: [],
   snapshot: samplePeriodSnapshot(),
+  renumberStores: [],
   canClose: true,
   ...overrides,
 });
