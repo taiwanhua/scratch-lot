@@ -1,36 +1,49 @@
 import { useTranslations } from "use-intl";
 
-import { formatTicketRanges } from "@repo/domain/project/lottery";
+import {
+  type ScrapBlock,
+  formatTicketRanges,
+} from "@repo/domain/project/lottery";
 import { Box } from "@repo/ui/box";
 import { Button } from "@repo/ui/button";
 import { Typography } from "@repo/ui/typography";
 
 export interface SelectionBarProps {
   tickets: readonly { ticketNo: string }[];
-  /** 顯示 [報廢](選到的全是未售,且有 `scrap`) */
-  canScrap: boolean;
+  /**
+   * [報廢](選到的全是未售,且有 `scrap`;null = 不顯示):`block` ≠ null 時停用並寫原因
+   * (這本還沒拆 / 檯面上的張請先收回 / 被鎖定;張數店規格 7.8)
+   */
+  scrap: { block: ScrapBlock | null } | null;
+  /** 顯示 [撤銷報廢](選到的全是報廢,且有 `scrap`) */
+  canUndoScrap: boolean;
   /** 顯示 [尋回](選到的全是待查 / 遺失,且有 `recover`) */
   canRecover: boolean;
-  /**
-   * [對調跳號…](有 `mark-skipped` 而且這本有跳號才顯示):`isReady` = 選到一格跳號 + 一格未售才能按,
-   * 否則停用並提示;不給 = 不顯示
-   */
-  swap?: { isReady: boolean; onSwap: () => void };
   onScrap: () => void;
+  onUndoScrap: () => void;
   onRecover: () => void;
   onClear: () => void;
 }
 
+/** 報廢停用的原因 → 文字 key(`admin.lotteryInventory.book`)。 */
+const SCRAP_BLOCK_KEYS: Record<ScrapBlock, string> = {
+  book_unopened: "scrapBlocks.bookUnopened",
+  not_in_stock: "scrapBlocks.notInStock",
+  locked: "scrapBlocks.locked",
+  not_unsold: "scrapBlocks.notUnsold",
+};
+
 /**
- * 選張後格子正上方的操作列(規格 7.3;Figma IN-03):「已選 3 張 #090–092」+ 依選到的狀態給的按鈕
- * (選到不同狀態只顯示共同可用的)+ [對調跳號…](一格跳號 + 一格未售才能按)+ [取消選取]。沒有選張時不顯示。
+ * 選張後格子正上方的操作列(規格 7.3;Figma IN-03、IN-03-2a / 2b):「已選 3 張 #090–092」+ 依選到的狀態給的按鈕
+ * (選到不同狀態只顯示共同可用的;[報廢] 不能按時寫原因)+ [取消選取]。沒有選張時不顯示。
  */
 export const SelectionBar = ({
   tickets,
-  canScrap,
+  scrap,
+  canUndoScrap,
   canRecover,
-  swap,
   onScrap,
+  onUndoScrap,
   onRecover,
   onClear,
 }: SelectionBarProps) => {
@@ -58,33 +71,44 @@ export const SelectionBar = ({
           ranges: formatTicketRanges(tickets.map((ticket) => ticket.ticketNo)),
         })}
       </Typography>
-      {canScrap ? (
-        <Button variant="outlined" color="error" size="small" onClick={onScrap}>
-          {t("scrap")}
-        </Button>
+      {scrap === null ? null : (
+        <>
+          <Button
+            variant="outlined"
+            color="error"
+            size="small"
+            disabled={scrap.block !== null}
+            onClick={onScrap}
+          >
+            {t("scrap")}
+          </Button>
+          <Typography variant="caption" color="textSecondary">
+            {scrap.block === null
+              ? t("scrapStockOnly")
+              : t(SCRAP_BLOCK_KEYS[scrap.block])}
+          </Typography>
+        </>
+      )}
+      {canUndoScrap ? (
+        <>
+          <Button
+            variant="outlined"
+            color="error"
+            size="small"
+            onClick={onUndoScrap}
+          >
+            {t("undoScrap")}
+          </Button>
+          <Typography variant="caption" color="textSecondary">
+            {t("scrapStockOnly")}
+          </Typography>
+        </>
       ) : null}
       {canRecover ? (
         <Button variant="outlined" size="small" onClick={onRecover}>
           {t("recover")}
         </Button>
       ) : null}
-      {swap === undefined ? null : (
-        <>
-          <Button
-            variant="outlined"
-            size="small"
-            disabled={!swap.isReady}
-            onClick={swap.onSwap}
-          >
-            {t("swapSkip")}
-          </Button>
-          {swap.isReady ? null : (
-            <Typography variant="caption" color="textSecondary">
-              {t("swapSkipHint")}
-            </Typography>
-          )}
-        </>
-      )}
       <Button variant="text" size="small" onClick={onClear}>
         {t("clearSelection")}
       </Button>

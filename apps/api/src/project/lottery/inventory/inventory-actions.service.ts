@@ -1,17 +1,21 @@
 import { Injectable } from "@nestjs/common";
 import { GraphQLError } from "graphql";
-import { Types } from "mongoose";
+import { type ClientSession, Types } from "mongoose";
 
 import {
   INVENTORY_PERMISSIONS,
   STORE_PERMISSIONS,
+  type ScrapBlock,
   TICKET_EVENT_TYPE,
   TICKET_LOCATION_KIND,
   TICKET_STATUS,
   type TicketStatus,
+  isMatchingCountMode,
+  scrapBlockOf,
 } from "@repo/domain/project/lottery";
 import { LOTTERY_FIELD_CATEGORY_KEYS } from "@repo/domain/project/lottery-fields";
 
+import { authError } from "../../../auth/auth-error";
 import type { Persisted } from "../../../database/base.repository";
 import { OrgsRepository } from "../../../database/database.module";
 import {
@@ -22,12 +26,20 @@ import { tenantBoundaryContext } from "../../../database/tenant-boundary-context
 import { TransactionService } from "../../../database/transaction";
 import { FieldOptionsService } from "../../../fields/field-options.service";
 import {
+  LotteryBooksRepository,
   type LotteryTicketDocument,
   LotteryTicketsRepository,
 } from "../../database/lottery-inventory/lottery-inventory.repository";
 import { parseId } from "../accounts/accounts-util";
 import { LOTTERY_FIELD_CATEGORIES } from "../field-options/lottery-field-options";
 import { tenantOfOperator } from "../master-data-tenant";
+import { StoreCountModeService } from "../settings/store-count-mode.service";
+import {
+  StoreMatching,
+  afterMatchOf,
+  matchEventsOf,
+  ticketCopyOf,
+} from "../store/store-matching";
 import { pendingSkipCountOfBook } from "../tickets/books.service";
 import {
   INVENTORY_REASONS,
@@ -38,12 +50,14 @@ import {
   validationError,
 } from "../tickets/inventory-error";
 import { TicketLedgerService } from "../tickets/ticket-ledger.service";
+import type { TicketEventInput } from "../tickets/ticket-ledger.types";
 import type {
   LotteryTicketVersionInput,
   MarkLotterySkippedTicketsInput,
   RecoverLotteryTicketsInput,
   ScrapLotteryTicketsInput,
   SwapLotterySkippedTicketInput,
+  UndoLotteryScrapInput,
 } from "./dto/lottery-inventory.input";
 import { InventoryAccess } from "./inventory-access";
 import { InventoryNames } from "./inventory-names";
@@ -67,6 +81,31 @@ function statusNotAllowedError(
     },
   });
 }
+
+/** 報廢不合(`SCRAP_NOT_ALLOWED`;`scrapBlock` = 第一個擋到的原因)。 */
+function scrapNotAllowedError(
+  block: ScrapBlock,
+  ticketIds: readonly string[],
+): GraphQLError {
+  return new GraphQLError("these tickets cannot be scrapped", {
+    extensions: {
+      code: "VALIDATION_FAILED",
+      reason: INVENTORY_REASONS.scrapNotAllowed,
+      fields: ["tickets"],
+      scrapBlock: block,
+      ticketIds,
+    },
+  });
+}
+
+/** 系統預設帶入的狀態(張數店的已售 / 待查 / 遺失·未對號;7.10 更正跳號時先移給同位置一張未售)。 */
+const GUESSED_STATUSES: ReadonlySet<TicketStatus> = new Set([
+  TICKET_STATUS.sold,
+  TICKET_STATUS.investigating,
+  TICKET_STATUS.lost,
+]);
+const isGuessed = (ticket: TicketRecord): boolean =>
+  ticket.unmatched && GUESSED_STATUSES.has(ticket.status);
 
 /** 輸入的張(去重、id 合法);空 → `VALIDATION_FAILED`。 */
 function ticketRefsOf(
@@ -97,6 +136,7 @@ function ticketRefsOf(
 export class InventoryActionsService {
   constructor(
     private readonly tickets: LotteryTicketsRepository,
+    private readonly books: LotteryBooksRepository,
     private readonly orgs: OrgsRepository,
     private readonly ledger: TicketLedgerService,
     private readonly view: InventoryViewService,
@@ -104,6 +144,8 @@ export class InventoryActionsService {
     private readonly access: InventoryAccess,
     private readonly names: InventoryNames,
     private readonly transactions: TransactionService,
+    private readonly matching: StoreMatching,
+    private readonly countModes: StoreCountModeService,
   ) {}
 
   /**
@@ -160,27 +202,49 @@ export class InventoryActionsService {
         [TICKET_STATUS.skipped],
         "要改回未售的不是跳號",
       );
+      const at = new Date();
+      // 張數店與轉換中:跳號那張要刷或手輸(實體在手上);要改標跳號的若是系統預設帶入的狀態,
+      // 先把這個狀態移給同位置一張未售(對號,張數店規格 7.10)
+      const counting = isMatchingCountMode(
+        await this.countModes.modeOf(operator, unsold.orgId),
+      );
+      if (counting && input.scanned !== true) {
+        throw validationError(
+          "張數店的更正跳號要刷條碼或手輸實體在手上的那張",
+          ["skipped"],
+          INVENTORY_REASONS.countStoreScanOnly,
+        );
+      }
+      const { target, events: handOver } = await this.handOverGuessOf(
+        operator,
+        ticketCopyOf(unsold, { version: unsoldRef.version }),
+        counting,
+        at,
+        session,
+      );
       this.assertStatuses(
-        [unsold],
+        [target],
         [TICKET_STATUS.unsold],
         "要改標跳號的不是未售",
       );
       if (
-        unsold.lockedBy !== null ||
-        unsold.location.kind === TICKET_LOCATION_KIND.inTransit
+        target.lockedBy !== null ||
+        target.location.kind === TICKET_LOCATION_KIND.inTransit
       ) {
         throw statusNotAllowedError("要改標跳號的張被鎖定或在途", [
-          String(unsold._id),
+          String(target._id),
         ]);
       }
-      const at = new Date();
+      if (handOver.length > 0) {
+        await this.ledger.applyTicketEvents(session, { operator }, handOver);
+      }
       const takeOver = {
         status: TICKET_STATUS.unsold,
         location: {
-          kind: unsold.location.kind,
-          cashPointId: unsold.location.cashPointId,
+          kind: target.location.kind,
+          cashPointId: target.location.cashPointId,
         },
-        unitCost: unsold.unitCost,
+        unitCost: target.unitCost,
       };
       const unskip = {
         ticketId: skipped._id,
@@ -191,19 +255,19 @@ export class InventoryActionsService {
         ...reason,
       };
       // 跳號那張改回未售、接手配對那張的所在分店:同一家店 → 照操作者的範圍寫;不同 → 跨店寫入(留換店稽核)
-      await (skipped.orgId.equals(unsold.orgId)
+      await (skipped.orgId.equals(target.orgId)
         ? this.ledger.applyTicketEvents(session, { operator }, [
             { ...unskip, patch: takeOver },
           ])
         : this.ledger.applyTicketEvents(
             session,
             { operator, crossStoreTenantId: tenantId },
-            [{ ...unskip, patch: { ...takeOver, orgId: unsold.orgId } }],
+            [{ ...unskip, patch: { ...takeOver, orgId: target.orgId } }],
           ));
       await this.ledger.applyTicketEvents(session, { operator }, [
         {
-          ticketId: unsold._id,
-          expectedVersion: unsoldRef.version,
+          ticketId: target._id,
+          expectedVersion: target.version,
           expectedStatuses: [TICKET_STATUS.unsold],
           type: TICKET_EVENT_TYPE.skip,
           at,
@@ -213,6 +277,52 @@ export class InventoryActionsService {
       ]);
     });
     return { count: 2, lossCost: null };
+  }
+
+  /**
+   * 更正跳號時「要改標跳號的那張」是系統預設帶入的狀態(張數店的已售 / 待查 / 遺失·未對號;7.10):
+   * 先和同位置一張未售(配對張,6.2 的條件)互換「狀態 + 位置」,讓那張接手這個狀態,這張變成未售再更正。
+   * 不是張數店或不是預設帶入的 → 原樣、不寫。同位置沒有配對張 → `NO_MATCH_PARTNER`。
+   */
+  private async handOverGuessOf(
+    operator: OperatorContext,
+    ticket: TicketRecord,
+    counting: boolean,
+    at: Date,
+    session: ClientSession,
+  ): Promise<{ target: TicketRecord; events: TicketEventInput[] }> {
+    if (!counting || !isGuessed(ticket) || ticket.lockedBy !== null) {
+      return { target: ticket, events: [] };
+    }
+    const pointId = ticket.location.cashPointId ?? null;
+    const partners = await this.matching.partnersOf(
+      operator,
+      ticket.orgId,
+      [
+        {
+          ticket,
+          places: [
+            {
+              locationKind: ticket.location.kind,
+              cashPointId: pointId === null ? null : String(pointId),
+            },
+          ],
+        },
+      ],
+      session,
+    );
+    const partner = partners.get(String(ticket._id));
+    if (partner === undefined) {
+      throw validationError(
+        "同位置沒有未售的張可以接手系統預設帶入的狀態",
+        ["unsold"],
+        INVENTORY_REASONS.noMatchPartner,
+      );
+    }
+    return {
+      target: afterMatchOf(ticket, partner),
+      events: matchEventsOf(ticket, partner, at),
+    };
   }
 
   /**
@@ -292,6 +402,17 @@ export class InventoryActionsService {
     operator: OperatorContext,
     input: RecoverLotteryTicketsInput,
   ): Promise<LotteryInventoryActionPayload> {
+    // 庫存管理的尋回或店面管理的店員尋回(張數店規格 12:「尋回 API 接受 store.recover 或 inventory.recover」)
+    const grant = await this.access.grantOf(operator);
+    if (
+      !grant.has(INVENTORY_PERMISSIONS.recover) &&
+      !grant.has(STORE_PERMISSIONS.recover)
+    ) {
+      throw authError(
+        "FORBIDDEN",
+        `Missing permission ${INVENTORY_PERMISSIONS.recover} or ${STORE_PERMISSIONS.recover}`,
+      );
+    }
     const refs = ticketRefsOf(input.tickets);
     const target =
       input.orgId == null
@@ -404,7 +525,102 @@ export class InventoryActionsService {
   }
 
   /**
-   * 報廢(`inventory.scrap`):只能報未售的張(破損、污損、受潮);張的所在分店要在操作者的可見範圍內
+   * 報廢的檢查(張數店規格 7.8,兩種店一樣):只能報拆過的本(`firstOpenedAt` ≠ null)在庫存、未售、沒被鎖的張;
+   * 檯面上的張請先收回。本一次讀(TX-06)。不合 → `SCRAP_NOT_ALLOWED`(第一個原因與不合的張)。
+   */
+  private async assertScrappable(
+    reader: OperatorContext,
+    tickets: readonly TicketRecord[],
+    session: ClientSession,
+  ): Promise<void> {
+    const books = await this.books.findMany(
+      reader,
+      { _id: { $in: [...new Set(tickets.map((ticket) => ticket.bookId))] } },
+      { session, select: "firstOpenedAt" },
+    );
+    const openedAt = new Map(
+      books.map((book) => [String(book._id), book.firstOpenedAt ?? null]),
+    );
+    const blocked = tickets.flatMap((ticket) => {
+      const block = scrapBlockOf({
+        status: ticket.status,
+        locationKind: ticket.location.kind,
+        locked: ticket.lockedBy !== null,
+        bookFirstOpenedAt: openedAt.get(String(ticket.bookId)) ?? null,
+      });
+      return block === null ? [] : [{ id: String(ticket._id), block }];
+    });
+    const [first] = blocked;
+    if (first !== undefined) {
+      throw scrapNotAllowedError(
+        first.block,
+        blocked.map((item) => item.id),
+      );
+    }
+  }
+
+  /**
+   * 撤銷報廢(`inventory.scrap`;張數店規格 7.8,兩種店):報廢的張回到未售、位置不變,寫「撤銷報廢」
+   * (`scrap_undo`,記成本快照與原因;報表在撤銷的期間扣回報廢損失)。報廢的票不會退回彩券公司,沒有時限。
+   * 張的所在分店要在操作者的可見範圍內。回扣回的損失 = 這幾張的單張成本加總(要 `inventory.show-cost`)。
+   */
+  async undoScrap(
+    operator: OperatorContext,
+    input: UndoLotteryScrapInput,
+  ): Promise<LotteryInventoryActionPayload> {
+    const refs = ticketRefsOf(input.tickets);
+    const reason = await this.fieldOptions.assertReason(
+      operator,
+      LOTTERY_FIELD_CATEGORY_KEYS.scrapUndoReason,
+      input,
+      LOTTERY_FIELD_CATEGORIES,
+    );
+    const grant = await this.access.grantOf(operator);
+    const tenantId = tenantOfOperator(operator)?.tenantId ?? null;
+    if (tenantId === null) {
+      throw notFoundError("找不到所在租戶");
+    }
+    let recovered = 0;
+    await this.transactions.withTransaction(async (session) => {
+      const reader = await tenantBoundaryContext(this.orgs, operator, tenantId);
+      const found = await this.tickets.findMany(
+        reader,
+        { _id: { $in: refs.map((item) => item.id) } },
+        { session },
+      );
+      this.assertFound(refs, found);
+      this.assertOperable(operator, found);
+      this.assertStatuses(found, [TICKET_STATUS.scrapped], "只能撤銷報廢的張");
+      const unitCostOf = new Map(
+        found.map((ticket) => [String(ticket._id), ticket.unitCost]),
+      );
+      const at = new Date();
+      await this.ledger.applyTicketEvents(
+        session,
+        { operator },
+        refs.map((item) => ({
+          ticketId: item.id,
+          expectedVersion: item.version,
+          expectedStatuses: [TICKET_STATUS.scrapped],
+          type: TICKET_EVENT_TYPE.scrapUndo,
+          at,
+          cost: unitCostOf.get(String(item.id)) ?? 0,
+          patch: { status: TICKET_STATUS.unsold },
+          ...reason,
+        })),
+      );
+      recovered = found.reduce((sum, ticket) => sum + ticket.unitCost, 0);
+    });
+    return {
+      count: refs.length,
+      lossCost: grant.has(INVENTORY_PERMISSIONS.showCost)
+        ? Math.round(recovered)
+        : null,
+    };
+  }
+
+  /**
+   * 報廢(`inventory.scrap`):只能報拆過的本在庫存的未售張(破損、污損、受潮;張數店規格 7.8);張的所在分店要在操作者的可見範圍內
    * (別店的張 → `FORBIDDEN` `CROSS_STORE_NOT_ALLOWED`),帳本照操作者自己的範圍寫。
    * 回損失 = 這幾張的單張成本加總(批購成本,四捨五入到元;要 `inventory.show-cost`)。
    */
@@ -436,6 +652,7 @@ export class InventoryActionsService {
       this.assertFound(refs, found);
       this.assertOperable(operator, found);
       this.assertStatuses(found, [TICKET_STATUS.unsold], "只能報廢未售的張");
+      await this.assertScrappable(reader, found, session);
       const unitCostOf = new Map(
         found.map((ticket) => [String(ticket._id), ticket.unitCost]),
       );

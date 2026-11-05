@@ -6,8 +6,8 @@ import {
   STOCKTAKE_SCAN_PURPOSE,
   STORE_BOARD_KEY,
   type StocktakeDiffAction,
-  type StocktakeDraft,
   normalizeBookNo,
+  parseStocktakeDraft,
   parseTicketInput,
   serializeStocktakeDraft,
 } from "@repo/domain/project/lottery";
@@ -25,10 +25,18 @@ import { parseAdminError } from "@/lib/base/errors";
 
 import { moneyText } from "../store-text";
 import {
+  type StocktakeFlowInput,
+  isItemCounted,
+  resumedOf,
+  sheetInputOf,
+  stocktakeItemsOf,
+  useResetOnChange,
+} from "./stocktake-count-model";
+import {
   type BookCount,
   type LostChoice,
   type ReviewLine,
-  type SheetBook,
+  type StocktakeSheet,
   type StocktakeState,
   bookKeyOf,
   diffKeyOf,
@@ -39,24 +47,43 @@ import {
   omitKeys,
   stateOfDraft,
 } from "./stocktake-model";
+import { useRefreshWizardCash } from "./stocktake-queries";
+import { useCountGroupActions } from "./useCountGroupActions";
 
 type ReviewDiff = ReviewLine["diffs"][number];
 
-export interface StocktakeFlowInput {
-  orgId: string;
-  scopeCashPointId: string | null;
-  initialDraft: StocktakeDraft | null;
-}
+/**
+ * [繼續] 帶回的進度:先記下來,讀到盤點資料(與初始狀態)後在畫面計算時套用一次(同 React 的「依前一次 render 調整 state」)。
+ */
+const useResumedDraft = (
+  sheet: StocktakeSheet | null,
+  state: StocktakeState | null,
+  apply: (resumed: NonNullable<ReturnType<typeof resumedOf>>) => void,
+) => {
+  const [pending, setPending] = useState<string | null>();
+  if (sheet !== null && state !== null && pending !== undefined) {
+    const parsed = parseStocktakeDraft(pending ?? "");
+    const resumed = resumedOf(parsed.ok ? parsed.draft : null, sheet);
+    if (resumed !== null) {
+      apply(resumed);
+    }
+    setPending(undefined);
+  }
+  return { restore: setPending, isRestoring: pending !== undefined };
+};
 
 /**
  * 盤點頁的畫面狀態與動作(規格 6.0、6.8;`StocktakeWorkspace` 用):盤點資料、每本開始盤的時間
  * (伺服器時間)、點到的張、未拆的本、待查清單、差異的處理、[補登售出](立即生效)、刷條碼。
- * 盤點過程只在畫面上,重新整理就從頭開始。
+ * 張數店(與轉換中)的檯面是「收銀點 × 遊戲」的組(張數店規格 8.1):輸入實際剩幾張、[確定] 後才顯示系統數字、[重數];
+ * 少 → [算售出 N 張](立即生效)/ [待查];多 → [標記異常]。進度由盤點中登記存到伺服器(`useStocktakeSession`),
+ * 重新整理後 [繼續] 以 `restore` 帶回已數的組與 `countedAt`。
  */
 export const useStocktakeFlow = ({
   orgId,
   scopeCashPointId,
   initialDraft,
+  purpose = "normal",
 }: StocktakeFlowInput) => {
   const t = useTranslations("admin.lotteryStore.stocktake");
   const { session } = useSession();
@@ -64,7 +91,7 @@ export const useStocktakeFlow = ({
   useRealtimeBoard(STORE_BOARD_KEY, orgId === "" ? null : orgId);
   const sheetQuery = useLotteryStocktakeSheetQuery(
     session.client,
-    { input: { orgId, cashPointId: scopeCashPointId } },
+    { input: sheetInputOf(orgId, scopeCashPointId, purpose) },
     { enabled: orgId !== "", retry: false },
   );
   const sheet = sheetQuery.data?.lotteryStocktakeSheet ?? null;
@@ -78,6 +105,14 @@ export const useStocktakeFlow = ({
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [step, setStep] = useState<"count" | "review">("count");
   const [notice, setNotice] = useState<string | null>(null);
+  // 日結第 ② 步換「現在盤點 / 這次做補點編號」:換了就從頭盤(兩種的盤點資料不同)
+  useResetOnChange(purpose, () => {
+    setState(null);
+    setViewedAt({});
+    setSelectedKey(null);
+    setStep("count");
+  });
+  const isRenumber = sheet?.purpose === "renumber";
 
   // 讀到盤點資料後才定開始時間(伺服器讀到資料的時間;退回 → 帶入原內容)
   if (sheet !== null && state === null) {
@@ -87,10 +122,11 @@ export const useStocktakeFlow = ({
         : stateOfDraft(initialDraft, sheet),
     );
   }
-  const books: readonly SheetBook[] = sheet?.books ?? [];
-  const current =
-    books.find((book) => bookKeyOf(book) === selectedKey) ?? books.at(0);
-  const currentKey = current === undefined ? null : bookKeyOf(current);
+  const isCountMode = sheet?.countMode === "count";
+  const { books, countGroups, itemKeys, currentKey, current, currentGroup } =
+    stocktakeItemsOf(sheet, selectedKey);
+  /** 這一項已數(本:有盤點;組:按了 [確定])。 */
+  const isCounted = (key: string): boolean => isItemCounted(state, key);
   // 開始盤這一本的時間 = 畫面上的格子那一刻的系統數字(盤點資料讀到的伺服器時間)
   if (
     sheet !== null &&
@@ -116,6 +152,7 @@ export const useStocktakeFlow = ({
   );
   const review = reviewQuery.data?.lotteryStocktakeReview ?? null;
   const backfill = useBackfillLotteryStocktakeSalesMutation(session.client);
+  const refreshWizardCash = useRefreshWizardCash();
 
   const update = (change: (before: StocktakeState) => StocktakeState) => {
     setState((before) => (before === null ? before : change(before)));
@@ -136,6 +173,28 @@ export const useStocktakeFlow = ({
     }));
   };
   const lostGroups = sheet === null ? [] : lostGroupsOf(sheet);
+
+  // ---- 張數盤點的組([確定] / [重數] / [算售出] / [待查] / [標記異常]) ----
+  const countActions = useCountGroupActions({
+    orgId,
+    update,
+    nowIso,
+    viewedAt,
+    setViewedAt,
+    setSelectedKey,
+    setStep,
+    setNotice,
+    refetch: () => {
+      void sheetQuery.refetch();
+      void reviewQuery.refetch();
+    },
+  });
+
+  // [繼續]:帶回存在盤點中登記上的進度(讀到盤點資料後才套用;套用前 `isRestoring`)
+  const resume = useResumedDraft(sheet, state, (resumed) => {
+    setState(resumed.state);
+    setViewedAt(resumed.viewedAt);
+  });
 
   /** 刷到 / 輸入的碼:這次盤點範圍裡的那一張記為「在」;待查清單裡的本記為「找到了」(已刷到)。 */
   const handleCode = (code: string) => {
@@ -167,6 +226,7 @@ export const useStocktakeFlow = ({
     // 待查清單:整本都待查 → 刷到這本任一張就算整本找到;零碎 → 刷到的那一張才算
     const group = lostGroups.find(
       (item) =>
+        !item.unmatched &&
         item.bookNo === bookNo &&
         sameGame(item.gameCode) &&
         (item.wholeBook ||
@@ -307,6 +367,7 @@ export const useStocktakeFlow = ({
           }),
         );
         void sheetQuery.refetch();
+        refreshWizardCash();
       })
       .catch((error: unknown) => {
         const failure = parseAdminError(error, {
@@ -343,8 +404,14 @@ export const useStocktakeFlow = ({
     sheetQuery,
     sheet,
     state,
+    isRenumber,
     books,
+    countGroups,
+    isCountMode,
+    itemKeys,
+    isCounted,
     current,
+    currentGroup,
     currentKey,
     viewedAt,
     select: setSelectedKey,
@@ -356,9 +423,13 @@ export const useStocktakeFlow = ({
     step,
     setStep,
     draft,
+    serializedDraft: draft === null ? null : serializeStocktakeDraft(draft),
+    restore: resume.restore,
+    isRestoring: resume.isRestoring,
     review,
     reviewQuery,
-    isBackfilling: backfill.isPending,
+    ...countActions,
+    isBackfilling: backfill.isPending || countActions.isBackfilling,
     runBackfill,
     choose,
     recount,

@@ -53,6 +53,9 @@ export const PROJECT_TENANT_BOUNDARY_CONTEXT_CALLERS: Readonly<
   "project/lottery/tickets/book-game-usage.ts": ["系統重算"],
   // 庫存管理:看得到本就看得到它全部的張與事件(格子、時間軸、各分店持有)
   "project/lottery/inventory/inventory-view.service.ts": ["反查"],
+  // 刮刮樂設定:改盤點制度時重算子樹裡全部分店的實際制度(下層分店不一定在操作者的可見範圍);
+  // 分店那一筆、上層鏈的設定、檯面待標註的本與未對號張數、歷程的人名
+  "project/lottery/settings/store-count-mode.service.ts": ["反查", "系統重算"],
   // 庫存概況:待標註扣在哪家店要看整本跨店的未售張數(只回扣的張數)
   "project/lottery/inventory/inventory-stock.service.ts": ["反查"],
   // 庫存管理:分店與使用者名稱、組織樹(分店可能不在讀者的可見範圍)
@@ -139,6 +142,14 @@ export const PROJECT_TENANT_BOUNDARY_CONTEXT_CALLERS: Readonly<
   "project/lottery/stocktake/stocktake.service.ts": ["反查", "例外寫入"],
   // 盤點紀錄 / 檢視頁:審核者從申請中心進來讀盤點單、申請的單號(分店不一定在他的可見範圍)
   "project/lottery/stocktake/stocktake-query.service.ts": ["反查"],
+  // 收回 / 刷條碼移櫃刷到一張:碼可能對到別家店的張(「不是本店」;張數店規格 13.1)
+  "project/lottery/store/store-counter.service.ts": ["反查"],
+  // 全店重刷:刷到的碼可能是別家店的張(反查);重刷單與分店那一筆由刷的人寫(張數店規格 8.4)
+  "project/lottery/stocktake/rescan.service.ts": ["反查", "例外寫入"],
+  // 全店重刷 1 小時沒動作自動取消,逐租戶跑
+  "project/lottery/stocktake/rescan-expiry.service.ts": ["排程"],
+  // 補點編號到期提醒,逐租戶跑(張數店規格第 10 節)
+  "project/lottery/stocktake/renumber-reminders.service.ts": ["排程"],
   // 交班結帳:掛接點以系統身分建立結帳單、結束班次、更新下一班期初(例外寫入);人名、單號、接班人候選反查
   "project/lottery/checkout/checkout.service.ts": ["反查", "例外寫入"],
   "project/lottery/checkout/checkout-query.service.ts": ["反查"],

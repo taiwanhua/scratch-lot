@@ -106,6 +106,10 @@ export const CHECKOUT_REASONS = {
   pendingExists: "CHECKOUT_PENDING_EXISTS",
   /** 沿用的盤點不存在、不是這個收銀點(或全店)的、或超過 30 分鐘 */
   stocktakeNotReusable: "CHECKOUT_STOCKTAKE_NOT_REUSABLE",
+  /** 張數店(含轉換中)交班 / 日結不能跳過盤點(張數店規格 8.1、13.2) */
+  skipNotAllowed: "CHECKOUT_SKIP_NOT_ALLOWED",
+  /** 全店盤點中不能交班(張數店規格 8.5a;`extensions.session`) */
+  stocktakeInProgress: "CHECKOUT_STOCKTAKE_IN_PROGRESS",
   /** 跳過盤點沒有原因 / 差額不為 0 沒有原因 */
   reasonRequired: "CHECKOUT_REASON_REQUIRED",
   /** 沒有接班人時留給下一班必須是 0(留給下一班 > 0 要有接班人) */

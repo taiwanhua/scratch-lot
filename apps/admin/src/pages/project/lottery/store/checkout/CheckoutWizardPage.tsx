@@ -133,7 +133,14 @@ const WizardBody = ({
                 .at(-1) ?? "",
           })}
         </Typography>
-        <Button variant="text" color="error" onClick={onCancel}>
+        <Button
+          variant="text"
+          color="error"
+          onClick={() => {
+            // [取消] 離開精靈 = 放棄這次盤點(解除盤點中登記;張數店規格 13.2)
+            void flow.session.abandon().finally(onCancel);
+          }}
+        >
           {t("page.cancel")}
         </Button>
       </Stack>

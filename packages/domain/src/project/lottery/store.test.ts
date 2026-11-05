@@ -1,6 +1,6 @@
 import { describe, expect, it } from "@jest/globals";
 
-import { isLowStock, openingFloatPlanOf } from "./store";
+import { boardRemainingOf, isLowStock, openingFloatPlanOf } from "./store";
 
 describe("期初零用金(規格 6.6)", () => {
   it("沒有上一班 → 第一班", () => {
@@ -46,5 +46,16 @@ describe("剩很少(看板卡片)", () => {
     expect(isLowStock(10, 25)).toBe(false);
     expect(isLowStock(0, 100)).toBe(false);
     expect(isLowStock(0, 0)).toBe(false);
+  });
+});
+
+describe("看板卡片剩餘扣待標註(張數店規格 14.2;使用者 11/04 定)", () => {
+  it.each([
+    ["全在這一台 → 扣待標註", 30, 2, 1, 28],
+    ["分在兩台 → 不扣", 30, 2, 2, 30],
+    ["沒有待標註 → 照舊", 30, 0, 1, 30],
+    ["扣完不會小於 0", 1, 2, 1, 0],
+  ])("%s", (_, remaining, pending, counters, expected) => {
+    expect(boardRemainingOf(remaining, pending, counters)).toBe(expected);
   });
 });

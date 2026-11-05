@@ -12,13 +12,19 @@ export interface TicketGridLegendProps {
   items: readonly TicketCellState[];
   /** 覆寫的文字(例:盤點把「已選」寫成「在(已點)」);沒給的用預設文字。 */
   labels?: Partial<Record<TicketCellState, string>>;
+  /** 圖例最後的說明(例:張數店「虛線 = 系統預設帶入的張號」);不給 = 沒有。 */
+  note?: string;
 }
 
 /**
  * 張數格子的共用圖例(專案規格 7.5;Figma `Draft/TicketGridLegend` 174:264):放在格子正上方靠右、
  * 寬度跟格子一樣,窄螢幕自動換行。色塊就是格子的變體樣式,格子改色圖例跟著變。
  */
-export const TicketGridLegend = ({ items, labels }: TicketGridLegendProps) => {
+export const TicketGridLegend = ({
+  items,
+  labels,
+  note,
+}: TicketGridLegendProps) => {
   const t = useTranslations("admin.lotteryInventory.ticketGrid");
   const labelOf = useTicketCellLabels(labels);
   return (
@@ -60,6 +66,11 @@ export const TicketGridLegend = ({ items, labels }: TicketGridLegendProps) => {
           </Typography>
         </Stack>
       ))}
+      {note === undefined ? null : (
+        <Typography component="li" variant="caption" color="textSecondary">
+          {note}
+        </Typography>
+      )}
     </Stack>
   );
 };

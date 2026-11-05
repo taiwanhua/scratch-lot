@@ -105,7 +105,17 @@ const CHECK = /* GraphQL */ `
           uncoveredShifts {
             label
           }
+          renumber {
+            mode
+            required
+            done
+            lastRenumberAt
+          }
         }
+      }
+      renumberStores {
+        orgName
+        status
       }
       canClose
     }
@@ -163,8 +173,15 @@ interface CheckData {
           spanningShiftLabel: string | null;
         }[];
         uncoveredShifts: { label: string }[];
+        renumber: {
+          mode: string;
+          required: boolean;
+          done: boolean;
+          lastRenumberAt: string | null;
+        } | null;
       }[];
     };
+    renumberStores: { orgName: string; status: string }[];
     canClose: boolean;
   };
 }
@@ -833,6 +850,13 @@ describe("關帳(GraphQL 端點 + 真 MongoDB)", () => {
           { label: "店內櫃台 · 10/30 早班" },
           { label: "店內櫃台 · 10/31 晚班" },
         ],
+        // 編號店:補點編號「—」(張數店規格 5.7)
+        renumber: {
+          mode: "numbered",
+          required: false,
+          done: false,
+          lastRenumberAt: null,
+        },
       },
     ]);
 
@@ -924,6 +948,12 @@ describe("關帳(GraphQL 端點 + 真 MongoDB)", () => {
         drawerTotal: 1500,
         drawers: [{ name: "店內櫃台", amount: 1500, spanningShiftLabel: null }],
         uncoveredShifts: [],
+        renumber: {
+          mode: "numbered",
+          required: false,
+          done: false,
+          lastRenumberAt: null,
+        },
       },
     ]);
 
@@ -1167,5 +1197,155 @@ describe("關帳(GraphQL 端點 + 真 MongoDB)", () => {
       expect(() => repository.softDeleteMany()).toThrow(AppendOnlyLedgerError);
       expect(() => repository.bulkUpdateByIds()).toThrow(AppendOnlyLedgerError);
     }
+  });
+
+  it("CL1 張數店月底補點編號:必須的店沒補點 → 擋(畫面與 closeLotteryPeriod 都擋);月底後才補 → 仍擋;改成只提醒 → 警告可關;最後一次日結前補點 → 通過;快照寫 renumber", async () => {
+    now("2027-01-03", "10:00");
+    const counts = connection.collection("lottery_store_count_modes");
+    await counts.insertOne({
+      orgId: store,
+      tenantId: tenant,
+      mode: "count",
+      since: taipei("2026-11-20", "10:00"),
+      lastRenumberAt: null,
+      lastRenumberStocktakeId: null,
+      history: [
+        {
+          from: "numbered",
+          to: "count",
+          at: taipei("2026-11-20", "10:00"),
+          by: null,
+          cause: "setting",
+          stocktakeId: null,
+        },
+      ],
+      movePauses: [],
+      stocktakeSessions: [],
+      version: 1,
+      moduleKey: "store",
+      ...base(),
+    });
+    const { insertedId: requiredRow } = await connection
+      .collection("lottery_settings")
+      .insertOne({
+        orgId: store,
+        tenantId: tenant,
+        key: "renumber_required",
+        enabled: true,
+        value: { option: "required" },
+        level: "org",
+        order: 0,
+        moduleKey: "lottery-settings",
+        ...base(),
+      });
+    // 12 月最後一次日結 12/31 20:00
+    await connection.collection(LOTTERY_CHECKOUTS_COLLECTION).insertOne(
+      checkoutDoc({
+        type: "daily",
+        status: "confirmed",
+        shiftId: null,
+        submittedAt: taipei("2026-12-31", "20:00"),
+      }),
+    );
+    const renumberAt = (submittedAt: Date, confirmedAt: Date) =>
+      connection.collection("lottery_stocktakes").insertOne({
+        orgId: store,
+        tenantId: tenant,
+        type: "daily",
+        status: "confirmed",
+        scopeCashPointId: null,
+        startedAt: submittedAt,
+        submittedAt,
+        confirmedAt,
+        submissionId: new Types.ObjectId(),
+        countMode: "numbered",
+        purpose: "renumber",
+        summary: { books: 0 },
+        version: 1,
+        moduleKey: "store",
+        ...base(),
+      });
+
+    const blocked = await check("2026-12");
+    expect(blocked.renumberStores).toEqual([
+      { orgName: "中山店", status: "blocked" },
+    ]);
+    expect(blocked.canClose).toBe(false);
+    expect(
+      blocked.snapshot.stores.find((one) => one.name === "中山店")?.renumber,
+    ).toEqual({
+      mode: "count",
+      required: true,
+      done: false,
+      lastRenumberAt: null,
+    });
+    // 編號店不列
+    expect(
+      blocked.snapshot.stores.find((one) => one.name === "信義店")?.renumber,
+    ).toMatchObject({ mode: "numbered", done: false });
+    const closeResult = await close("2026-12");
+    const extensions: Record<string, unknown> | undefined =
+      closeResult.errors?.[0]?.extensions;
+    const reason = extensions?.reason;
+    expect([
+      "RENUMBER_REQUIRED",
+      "PERIOD_SHIFTS_NOT_CLOSED",
+      "PERIOD_PENDING_DOCUMENTS",
+    ]).toContain(reason);
+    if (
+      blocked.openShifts.length === 0 &&
+      blocked.pendingDocuments.length === 0
+    ) {
+      expect(reason).toBe("RENUMBER_REQUIRED");
+    }
+
+    // 最後一次日結之後才補點:不算(不做「上月補點編號」)
+    await renumberAt(
+      taipei("2026-12-31", "21:00"),
+      taipei("2026-12-31", "22:00"),
+    );
+    const late = await check("2026-12");
+    expect(late.renumberStores).toEqual([
+      { orgName: "中山店", status: "blocked" },
+    ]);
+
+    // 總部改成只提醒 → 警告
+    await connection
+      .collection("lottery_settings")
+      .updateOne(
+        { _id: requiredRow },
+        { $set: { value: { option: "remind" } } },
+      );
+    const warned = await check("2026-12");
+    expect(warned.renumberStores).toEqual([
+      { orgName: "中山店", status: "warning" },
+    ]);
+    expect(warned.canClose).toBe(
+      warned.openShifts.length === 0 && warned.pendingDocuments.length === 0,
+    );
+
+    // 最後一次日結前(跟日結一起送出)補點 → 通過
+    await connection
+      .collection("lottery_settings")
+      .updateOne(
+        { _id: requiredRow },
+        { $set: { value: { option: "required" } } },
+      );
+    await renumberAt(
+      taipei("2026-12-31", "20:00"),
+      taipei("2027-01-01", "09:00"),
+    );
+    const passed = await check("2026-12");
+    expect(passed.renumberStores).toEqual([
+      { orgName: "中山店", status: "pass" },
+    ]);
+    expect(
+      passed.snapshot.stores.find((one) => one.name === "中山店")?.renumber,
+    ).toEqual({
+      mode: "count",
+      required: true,
+      done: true,
+      lastRenumberAt: taipei("2027-01-01", "09:00").toISOString(),
+    });
   });
 });

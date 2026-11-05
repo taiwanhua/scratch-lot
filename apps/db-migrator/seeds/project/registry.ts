@@ -8,6 +8,7 @@ import { dealersModule } from "./dealers";
 import { lotteryDemoSource } from "./demo";
 import { projectFieldCategories, projectFields } from "./field-categories";
 import { inventoryModule } from "./inventory";
+import { lotterySettingsModule } from "./lottery-settings";
 import { masterDataModule } from "./master-data";
 import { purchasingModuleDeclarations } from "./purchasing";
 import { purchasingPurchaseModule } from "./purchasing.purchase";
@@ -18,7 +19,7 @@ import { seed as checkoutConfirmForm } from "./revisions/checkout_confirm.r2.see
 import { seed as makeupPunchForm } from "./revisions/makeup_punch.r4.seed";
 import { seed as purchaseForm } from "./revisions/purchase.r5.seed";
 import { seed as requisitionForm } from "./revisions/requisition.r4.seed";
-import { seed as saleReversalForm } from "./revisions/sale_reversal.r3.seed";
+import { seed as saleReversalForm } from "./revisions/sale_reversal.r4.seed";
 import { seed as stocktakeConfirmForm } from "./revisions/stocktake_confirm.r3.seed";
 import { seed as supportRequestForm } from "./revisions/support_request.r4.seed";
 import { seed as transferForm } from "./revisions/transfer.r3.seed";
@@ -40,6 +41,8 @@ export const projectSeedSource: SeedSource = {
   moduleDeclarations: [
     // 檔案管理(專案規格 5.1、5.5)
     masterDataModule,
+    // 刮刮樂設定(張數店規格第 4 節)
+    lotterySettingsModule,
     // 經銷商管理(專案規格 5.2–5.4)
     dealersModule,
     // 輸出報表(規格 3.1、3.2、第 11 章)

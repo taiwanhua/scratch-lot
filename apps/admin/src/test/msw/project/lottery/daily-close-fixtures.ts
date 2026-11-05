@@ -142,6 +142,8 @@ const sampleRows = (): ShiftRow[] => [
 export interface DailyCloseWizardOptions {
   /** 各班都已核准(可以到下一步);預設 false(Figma ST-21 的樣子) */
   allApproved?: boolean;
+  /** 張數店(或轉換中):第 ② 步有「這次做補點編號」;給了就是張數店(不能跳過盤點) */
+  renumber?: { suggested?: boolean; monthEndWarning?: boolean };
 }
 
 /** Figma ST-21–25b 的日結精靈資料(中山店;涵蓋計算期間 10/14 09:02 至現在,10/14、10/15 沒有日結)。 */
@@ -165,7 +167,14 @@ export const sampleDailyCloseWizard = (
     shifts,
     differenceTotal: shifts.reduce((sum, one) => sum + one.difference, 0),
     canSubmit: true,
-    canSkipStocktake: true,
+    canSkipStocktake: options.renumber === undefined,
+    // 第 ② 步「這次做補點編號」(張數店規格 13.2;編號店沒有)
+    renumber: {
+      __typename: "LotteryDailyCloseRenumber",
+      available: options.renumber !== undefined,
+      suggested: options.renumber?.suggested ?? false,
+      monthEndWarning: options.renumber?.monthEndWarning ?? false,
+    },
     reusableStocktake: {
       __typename: "LotteryCheckoutReusableStocktake",
       submissionId: STOCKTAKE_REVIEWING_ID,
@@ -173,6 +182,8 @@ export const sampleDailyCloseWizard = (
       startedAt: "2026-10-16T13:40:00.000Z",
       scopeName: null,
       diffCount: 0,
+      purpose: "normal",
+      renumberMatched: 0,
     },
     vaultItems: [
       item("opening", 0, 20_000),
@@ -250,6 +261,8 @@ export const sampleDailyCloseDetail = (): CheckoutDetail => {
       startedAt: "2026-10-16T13:40:00.000Z",
       scopeName: null,
       diffCount: 0,
+      purpose: "normal",
+      renumberMatched: 0,
     },
     skipReason: null,
     skipReasonNote: null,

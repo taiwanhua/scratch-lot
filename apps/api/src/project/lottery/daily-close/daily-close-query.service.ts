@@ -1,12 +1,19 @@
 import { Injectable } from "@nestjs/common";
 import type { Types } from "mongoose";
 
-import { localDayDiff } from "@repo/domain/form";
+import {
+  addLocalDays,
+  localDateOf,
+  localDayDiff,
+  localMonthOf,
+  localMonthRange,
+} from "@repo/domain/form";
 import {
   CHECKOUT_STATUS,
   STOCKTAKE_STATUS,
   STORE_PERMISSIONS,
   dailyCloseGapDates,
+  dailyCloseRenumberOptionOf,
   isStocktakeReusable,
 } from "@repo/domain/project/lottery";
 
@@ -23,7 +30,9 @@ import { LotteryCheckoutsRepository } from "../../database/lottery-checkouts/lot
 import { LotteryStocktakesRepository } from "../../database/lottery-stocktakes/lottery-stocktakes.repository";
 import { forbiddenError, notFoundError } from "../checkout/checkout-error";
 import { CheckoutQueryService } from "../checkout/checkout-query.service";
+import { CheckoutService } from "../checkout/checkout.service";
 import type { LotteryCheckoutCashItemModel } from "../checkout/models/checkout.model";
+import { StoreCountModeService } from "../settings/store-count-mode.service";
 import { SettlementService } from "../settlement/settlement.service";
 import { StoreShiftViews, parseId } from "../store/shift-views";
 import { StoreAccess } from "../store/store-access";
@@ -32,6 +41,7 @@ import { StoreSalesSupport } from "../store/store-sales-support";
 import { type CheckoutRecord, DailyCloseLedger } from "./daily-close-ledger";
 import type {
   LotteryDailyClosePendingModel,
+  LotteryDailyCloseRenumberModel,
   LotteryDailyCloseShiftRowModel,
   LotteryDailyCloseStatusModel,
   LotteryDailyCloseWizardModel,
@@ -74,11 +84,13 @@ export class DailyCloseQueryService {
     private readonly orgs: OrgsRepository,
     private readonly dailyLedger: DailyCloseLedger,
     private readonly checkoutQueries: CheckoutQueryService,
+    private readonly checkout: CheckoutService,
     private readonly settlement: SettlementService,
     private readonly views: StoreShiftViews,
     private readonly support: StoreSalesSupport,
     private readonly access: StoreAccess,
     private readonly clock: StoreClock,
+    private readonly countModes: StoreCountModeService,
   ) {}
 
   async status(
@@ -183,8 +195,19 @@ export class DailyCloseQueryService {
       shifts: rows,
       differenceTotal: rows.reduce((sum, row) => sum + row.difference, 0),
       canSubmit: grant.has(STORE_PERMISSIONS.checkout),
-      canSkipStocktake: grant.has(STORE_PERMISSIONS.skipStocktake),
+      canSkipStocktake: await this.checkout.canSkipStocktake(
+        operator,
+        grant,
+        store.orgId,
+      ),
       reusableStocktake: reusable,
+      renumber: await this.renumberOptionOf(
+        operator,
+        store.tenantId,
+        store.orgId,
+        now,
+        timezone,
+      ),
       vaultItems: vault.items.map((item) => itemModelOf(item)),
       vaultExpected: vault.expected,
       vaultBaselineAt: vault.baseline.since,
@@ -194,6 +217,52 @@ export class DailyCloseQueryService {
       })),
       serverNow: now,
     };
+  }
+
+  /**
+   * 第 ② 步「這次做補點編號」(張數店規格 13.2、第 10 節):張數店與轉換中才有;轉換中或提醒週期到了預設選它;
+   * 設「必須」的店在月底最後一天、這個月還沒送出過補點編號時提示關帳會被擋。
+   */
+  private async renumberOptionOf(
+    operator: OperatorContext,
+    tenantId: Types.ObjectId | null,
+    orgId: Types.ObjectId,
+    now: Date,
+    timezone: string,
+  ): Promise<LotteryDailyCloseRenumberModel> {
+    const status = await this.countModes.renumberReminderOf(
+      operator,
+      tenantId,
+      orgId,
+      now,
+    );
+    if (status === null) {
+      return { available: false, suggested: false, monthEndWarning: false };
+    }
+    const today = localDateOf(now.getTime(), timezone);
+    const month = localMonthRange(
+      localMonthOf(now.getTime(), timezone),
+      timezone,
+    );
+    const renumbered = await this.stocktakes.findOne(
+      operator,
+      {
+        orgId,
+        purpose: "renumber",
+        status: {
+          $in: [STOCKTAKE_STATUS.pending, STOCKTAKE_STATUS.confirmed],
+        },
+        submittedAt: { $gte: new Date(month.from), $lt: new Date(month.to) },
+      },
+      { select: "_id" },
+    );
+    return dailyCloseRenumberOptionOf({
+      mode: status.mode,
+      due: status.due,
+      required: status.required,
+      isMonthLastDay: addLocalDays(today, 1).day === 1,
+      renumberedThisMonth: renumbered !== null,
+    });
   }
 
   private async coveredShiftsOf(

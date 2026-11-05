@@ -92,6 +92,14 @@ export class LotteryCheckoutReusableStocktakeModel {
   /** 差異張數(有處理的) */
   @Field(() => Int)
   diffCount!: number;
+
+  /** `normal` / `renumber`(補點編號;日結確認、結帳單的盤點方式寫「補點編號」,張數店規格 13.2) */
+  @Field(() => String)
+  purpose!: string;
+
+  /** 補點編號自動對號的張數(不算差異;其他 = 0) */
+  @Field(() => Int)
+  renumberMatched!: number;
 }
 
 /** 交班精靈要的那一班(頁首「交班結帳 · 店內櫃台 王小明 · 08:02 開班」)。 */
@@ -201,6 +209,14 @@ export class LotteryCheckoutListItemModel {
 
   @Field(() => GraphQLISODateTime)
   submittedAt!: Date;
+
+  /** 涵蓋的班裡依張數標記售出的淨張數(張數店;Figma CS-15「依張數標記售出」欄)。 */
+  @Field(() => Int)
+  countSaleCount!: number;
+
+  /** 同上的淨金額。 */
+  @Field(() => Int)
+  countSaleAmount!: number;
 }
 
 @ObjectType()

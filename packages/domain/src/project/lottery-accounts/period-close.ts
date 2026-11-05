@@ -35,6 +35,8 @@ export const PERIOD_CLOSE_REASONS = {
   pendingDocuments: "PERIOD_PENDING_DOCUMENTS",
   /** 選的時間落在已關帳的月份(`assertPeriodOpen`:退款班次、現金更正位置、開班改選的排班) */
   periodClosed: "PERIOD_CLOSED",
+  /** 設「必須」的張數店該月最後一次日結前沒做補點編號(張數店規格第 10 節) */
+  renumberRequired: "RENUMBER_REQUIRED",
 } as const;
 
 export type PeriodCloseReason =

@@ -1,4 +1,10 @@
 import {
+  type ChainSettingSource,
+  chainRowOf,
+  firstOnChain,
+  rowsByOrg,
+} from "@repo/domain/project/org-setting-chain";
+import {
   SCHEDULE_RULE_DEFINITIONS,
   type ScheduleRuleDefinition,
   type ScheduleRuleLevel,
@@ -25,8 +31,8 @@ export interface SettingRow {
   order: number;
 }
 
-/** 生效值從哪裡來:本層自訂 / 沿用某個上層 / 程式預設。 */
-export type RuleSource = "own" | "inherited" | "default";
+/** 生效值從哪裡來:本層自訂 / 沿用某個上層 / 程式預設(共用的鏈解析,`@repo/domain/project/org-setting-chain`)。 */
+export type RuleSource = ChainSettingSource;
 
 export interface ResolvedSetting extends EffectiveRuleSetting {
   source: RuleSource;
@@ -65,27 +71,14 @@ function fromRow(row: SettingRow, source: RuleSource): ResolvedSetting {
   };
 }
 
-function rowsByOrg(rows: readonly SettingRow[]): Map<string, SettingRow[]> {
-  const byOrg = new Map<string, SettingRow[]>();
-  for (const row of rows) {
-    byOrg.set(row.orgId, [...(byOrg.get(row.orgId) ?? []), row]);
-  }
-  return byOrg;
-}
-
 /** 一條規則在這條鏈上的生效值;`chain[0]` 是自己。 */
 function resolveRule(
   definition: ScheduleRuleDefinition,
   chain: readonly string[],
   byOrg: ReadonlyMap<string, SettingRow[]>,
 ): ResolvedSetting {
-  for (const [index, orgId] of chain.entries()) {
-    const row = byOrg.get(orgId)?.find((item) => item.key === definition.key);
-    if (row) {
-      return fromRow(row, index === 0 ? "own" : "inherited");
-    }
-  }
-  return defaultsOf(definition);
+  const hit = chainRowOf(chain, byOrg, definition.key);
+  return hit === null ? defaultsOf(definition) : fromRow(hit.value, hit.source);
 }
 
 const AUTO_RUN_KEYS: ReadonlySet<string> = new Set(
@@ -100,20 +93,19 @@ function resolveAutoRun(
   chain: readonly string[],
   byOrg: ReadonlyMap<string, SettingRow[]>,
 ): ResolvedSetting {
-  for (const [index, orgId] of chain.entries()) {
+  const hit = firstOnChain(chain, (orgId) => {
     const groupRows = (byOrg.get(orgId) ?? []).filter((row) =>
       AUTO_RUN_KEYS.has(row.key),
     );
-    if (groupRows.length === 0) {
-      continue;
-    }
-    const source: RuleSource = index === 0 ? "own" : "inherited";
-    const row = groupRows.find((item) => item.key === definition.key);
-    return row
-      ? fromRow(row, source)
-      : { ...defaultsOf(definition), source, sourceOrgId: orgId };
+    return groupRows.length === 0 ? undefined : groupRows;
+  });
+  if (hit === null) {
+    return defaultsOf(definition);
   }
-  return defaultsOf(definition);
+  const row = hit.value.find((item) => item.key === definition.key);
+  return row
+    ? fromRow(row, hit.source)
+    : { ...defaultsOf(definition), source: hit.source, sourceOrgId: hit.orgId };
 }
 
 function resolveOne(

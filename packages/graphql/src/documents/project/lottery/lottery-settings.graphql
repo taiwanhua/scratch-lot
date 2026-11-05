@@ -1,0 +1,107 @@
+# 刮刮樂設定(張數店規格第 4 節、5.5、5.6;正本 docs/modules/project/lottery-settings.md)
+
+fragment LotterySettingValueFields on LotterySettingValue {
+  option
+  source
+  sourceOrgName
+}
+
+fragment LotterySettingsFields on LotterySettingsPayload {
+  orgId
+  orgName
+  isTenantTop
+  isStore
+  canEdit
+  items {
+    key
+    options
+    effective {
+      ...LotterySettingValueFields
+    }
+    parent {
+      ...LotterySettingValueFields
+    }
+  }
+  storeCountMode {
+    mode
+    since
+    lastRenumberAt
+    canCancelConversion
+  }
+}
+
+query LotterySettings($input: LotterySettingsInput) {
+  lotterySettings(input: $input) {
+    ...LotterySettingsFields
+  }
+}
+
+query LotteryCountModeChangeCheck($input: LotteryCountModeChangeCheckInput!) {
+  lotteryCountModeChangeCheck(input: $input) {
+    stores {
+      orgId
+      orgName
+      from
+      to
+      problems
+    }
+    pendingSkipBooks {
+      orgId
+      orgName
+      cashPointName
+      gameCode
+      gameName
+      bookNo
+      pendingCount
+    }
+    busyStores {
+      orgId
+      orgName
+      stocktake
+      rescan
+      renumber
+    }
+    canSave
+  }
+}
+
+query LotteryStoreCountModeHistory($input: LotteryStoreCountModeHistoryInput!) {
+  lotteryStoreCountModeHistory(input: $input) {
+    orgId
+    orgName
+    items {
+      from
+      to
+      at
+      byName
+      cause
+      stocktakeId
+    }
+  }
+}
+
+mutation CustomizeLotterySetting($input: CustomizeLotterySettingInput!) {
+  customizeLotterySetting(input: $input) {
+    settings {
+      ...LotterySettingsFields
+    }
+  }
+}
+
+mutation RestoreLotterySetting($input: RestoreLotterySettingInput!) {
+  restoreLotterySetting(input: $input) {
+    settings {
+      ...LotterySettingsFields
+    }
+  }
+}
+
+mutation CancelLotteryCountModeConversion(
+  $input: CancelLotteryCountModeConversionInput!
+) {
+  cancelLotteryCountModeConversion(input: $input) {
+    settings {
+      ...LotterySettingsFields
+    }
+  }
+}

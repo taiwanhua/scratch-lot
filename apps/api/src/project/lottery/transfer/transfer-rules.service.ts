@@ -1,4 +1,5 @@
 import { Injectable, Logger } from "@nestjs/common";
+import { GraphQLError } from "graphql";
 import { type ClientSession, Types } from "mongoose";
 
 import type { StoredValues } from "@repo/domain/form";
@@ -14,6 +15,7 @@ import {
   type TicketLocationKind,
   type TicketStatus,
   type TransferLineValue,
+  isMatchingCountMode,
   isUnopenedInStore,
   pendingSkipCountOf,
   transferHeaderOf,
@@ -59,8 +61,10 @@ import {
   LOTTERY_TRANSFER_SHIPPED,
 } from "../../notifications";
 import { RequisitionReference } from "../requisition/requisition-reference";
+import { StoreCountModeService } from "../settings/store-count-mode.service";
 import { SettlementLedger } from "../settlement/settlement-ledger";
 import { settlementDocumentOf } from "../settlement/settlement-registry";
+import { StoreMatching, matchEventsOf } from "../store/store-matching";
 import { TicketLedgerService } from "../tickets/ticket-ledger.service";
 import type { TicketLockRef } from "../tickets/ticket-ledger.types";
 import { TRANSFER_REASONS } from "./transfer-error";
@@ -120,10 +124,36 @@ export interface TransferTicket {
   lockedBy: { refType: string; refId: Types.ObjectId } | null;
   unitCost: number;
   version: number;
+  gameId: Types.ObjectId;
+  unmatched: boolean;
 }
 
 const TICKET_SELECT =
-  "bookId orgId ticketNo status location lockedBy unitCost version";
+  "bookId orgId ticketNo status location lockedBy unitCost version gameId unmatched";
+
+/**
+ * 張數店的張是系統預設帶入的狀態(已售 / 待查 / 遺失·未對號):調貨刷到時先在庫存找配對張對號再鎖定
+ * (張數店規格 6.3「調貨 → 庫存」、7.4 `lineProblemOf` 放行「已售·未對號且有配對張」)。
+ */
+export function isGuessedTicket(
+  ticket: Pick<TransferTicket, "status" | "unmatched" | "lockedBy">,
+): boolean {
+  const guessed: readonly TicketStatus[] = [
+    TICKET_STATUS.sold,
+    TICKET_STATUS.investigating,
+    TICKET_STATUS.lost,
+  ];
+  return (
+    ticket.lockedBy === null &&
+    ticket.unmatched &&
+    guessed.includes(ticket.status)
+  );
+}
+
+/** 庫存(調貨的配對張只在庫存找,6.3)。 */
+export const TRANSFER_MATCH_PLACES = [
+  { locationKind: TICKET_LOCATION_KIND.stock, cashPointId: null },
+] as const;
 
 /** 讀到的本。 */
 export interface TransferBook {
@@ -332,7 +362,37 @@ export class TransferRules {
     private readonly requisitions: RequisitionReference,
     private readonly ledger: TicketLedgerService,
     private readonly realtime: RealtimePublisher,
+    private readonly countModes: StoreCountModeService,
+    private readonly matching: StoreMatching,
   ) {}
+
+  /** 出貨店是張數店或轉換中(選張只能刷或手輸、未對號的張先對號;張數店規格 7.4)。 */
+  async isCountingStore(
+    reader: OperatorContext,
+    orgId: Types.ObjectId,
+  ): Promise<boolean> {
+    return isMatchingCountMode(await this.countModes.modeOf(reader, orgId));
+  }
+
+  /**
+   * 系統預設帶入狀態的張在出貨店庫存的配對張(依張 id;找不到 = 不在 map 裡)。`exclude` = 這張單要調的張
+   * (不能拿來當配對)。
+   */
+  matchPartnersOf(
+    reader: OperatorContext,
+    fromId: Types.ObjectId,
+    guessed: readonly Pick<TransferTicket, "_id" | "gameId">[],
+    exclude: ReadonlySet<string>,
+    session?: ClientSession,
+  ) {
+    return this.matching.partnersOf(
+      reader,
+      fromId,
+      guessed.map((ticket) => ({ ticket, places: TRANSFER_MATCH_PLACES })),
+      session,
+      exclude,
+    );
+  }
 
   /** 租戶的系統身分(反查)。 */
   readerOf(tenantId: Types.ObjectId | null): Promise<OperatorContext> {
@@ -900,6 +960,18 @@ export class TransferRules {
       lock,
     );
     const lockedIds = new Set(locked.map((ticket) => String(ticket._id)));
+    if (fromId !== null) {
+      await this.matchGuessed(
+        reader,
+        tenantId,
+        fromId,
+        [...wanted.values()].filter(
+          (ticket) => !lockedIds.has(String(ticket._id)),
+        ),
+        new Set(wanted.keys()),
+        context.session,
+      );
+    }
     await this.ledger.lockTicketsInTenant(
       context.session,
       tenantId,
@@ -1179,6 +1251,60 @@ export class TransferRules {
     return submission;
   }
 
+  /**
+   * 送出時先對號再鎖定(張數店規格 7.4「送出時同一個交易先對號再鎖定」):要調的張是系統預設帶入的狀態(張數店
+   * 出貨)→ 和出貨店庫存的配對張互換「狀態 + 位置」(兩筆 `match`),這張變成庫存的未售。配對張整批挑、
+   * 不挑這張單要調的張;找不到(送出前檢查之後被別人用掉)→ `CONFLICT`,整個送出回復。
+   */
+  private async matchGuessed(
+    reader: OperatorContext,
+    tenantId: Types.ObjectId,
+    fromId: Types.ObjectId,
+    tickets: readonly TransferTicket[],
+    exclude: ReadonlySet<string>,
+    session: ClientSession,
+  ): Promise<void> {
+    const guessedIds = tickets
+      .filter((ticket) => isGuessedTicket(ticket))
+      .map((ticket) => ticket._id);
+    if (
+      guessedIds.length === 0 ||
+      !(await this.isCountingStore(reader, fromId))
+    ) {
+      return;
+    }
+    const records = await this.tickets.findMany(
+      reader,
+      { _id: { $in: guessedIds } },
+      { session },
+    );
+    const partners = await this.matchPartnersOf(
+      reader,
+      fromId,
+      records,
+      exclude,
+      session,
+    );
+    const at = new Date();
+    const events = records.flatMap((ticket) => {
+      const partner = partners.get(String(ticket._id));
+      if (partner === undefined) {
+        throw new GraphQLError("no partner to match in stock", {
+          extensions: {
+            code: "CONFLICT",
+            reason: TRANSFER_REASONS.ticketsUnavailable,
+          },
+        });
+      }
+      return matchEventsOf(ticket, partner, at);
+    });
+    await this.ledger.applyTicketEvents(
+      session,
+      { operator: null, crossStoreTenantId: tenantId },
+      events,
+    );
+  }
+
   /** 還沒點收的列:每一列的本、方式、張數、金額、張的位置與鎖。 */
   private async lineProblemOf(
     reader: OperatorContext,
@@ -1195,7 +1321,9 @@ export class TransferRules {
       reader,
       [...books.values()].map((book) => book._id),
     );
+    const counting = await this.isCountingStore(reader, fromId);
     const seen = new Set<string>();
+    const guessed: TransferTicket[] = [];
     for (const line of lines) {
       const book = books.get(line.bookId);
       const game =
@@ -1218,19 +1346,45 @@ export class TransferRules {
       for (const key of keys) {
         seen.add(key);
       }
-      const isAvailable = rowTickets.every(
-        (ticket) =>
-          ticket.orgId.equals(fromId) &&
-          (isLockedBy(ticket, own.submissionId)
-            ? true
-            : ticket.lockedBy === null &&
-              ticket.status === TICKET_STATUS.unsold &&
-              !isInTransit(ticket)),
-      );
+      // 拆過的本的部分張只能從庫存調(張數店規格 7.4,兩種店一樣;檯面上的張請先收回);
+      // 張數店另放行系統預設帶入狀態的張(下面整批確認庫存裡有配對張)
+      const isAvailable = rowTickets.every((ticket) => {
+        if (!ticket.orgId.equals(fromId)) {
+          return false;
+        }
+        if (isLockedBy(ticket, own.submissionId)) {
+          return true;
+        }
+        if (counting && isGuessedTicket(ticket)) {
+          guessed.push(ticket);
+          return true;
+        }
+        return (
+          ticket.lockedBy === null &&
+          ticket.status === TICKET_STATUS.unsold &&
+          !isInTransit(ticket) &&
+          (line.mode === TRANSFER_MODE.whole ||
+            ticket.location.kind === TICKET_LOCATION_KIND.stock)
+        );
+      });
       if (!isAvailable) {
         return block(
           TRANSFER_REASONS.ticketsUnavailable,
           `Tickets of line ${line.rowId} are not available in the from branch`,
+        );
+      }
+    }
+    if (guessed.length > 0) {
+      const partners = await this.matchPartnersOf(
+        reader,
+        fromId,
+        guessed,
+        seen,
+      );
+      if (guessed.some((ticket) => !partners.has(String(ticket._id)))) {
+        return block(
+          TRANSFER_REASONS.ticketsUnavailable,
+          "Unmatched tickets have no partner in the from branch stock",
         );
       }
     }

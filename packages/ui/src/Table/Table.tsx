@@ -9,7 +9,7 @@ import MuiTableContainer from "@mui/material/TableContainer";
 import MuiTableHead from "@mui/material/TableHead";
 import MuiTableRow from "@mui/material/TableRow";
 import type { SxProps, Theme } from "@mui/material/styles";
-import type { ReactNode } from "react";
+import { Fragment, type ReactNode } from "react";
 
 import { CircularProgress } from "../CircularProgress/CircularProgress";
 import {
@@ -61,6 +61,11 @@ export interface TableProps<Row> {
    * 少數場合(彈窗裡的小表、要限制最大高度)才由呼叫端覆寫。
    */
   containerSx?: SxProps<Theme>;
+  /**
+   * 列下方的展開內容(整列寬、次要文字;例:待查·遺失的未對號列展開看本與張號)。回 null / undefined = 不展開。
+   * 展不展開由呼叫端的狀態決定(常搭配 `onRowClick` 切換)。
+   */
+  renderExpanded?: (row: Row) => ReactNode;
   "aria-label"?: string;
 }
 
@@ -78,6 +83,7 @@ export const Table = <Row,>({
   size = "medium",
   minWidth,
   containerSx,
+  renderExpanded,
   "aria-label": ariaLabel,
 }: TableProps<Row>) => {
   const isEmpty = !isLoading && rows.length === 0;
@@ -125,36 +131,47 @@ export const Table = <Row,>({
           )}
           {!isLoading &&
             rows.map((row, index) => (
-              <MuiTableRow
-                key={getRowKey(row)}
-                hover={isRowClickable}
-                onClick={
-                  isRowClickable
-                    ? () => {
-                        onRowClick(row);
-                      }
-                    : undefined
-                }
-                sx={{ cursor: isRowClickable ? "pointer" : undefined }}
-              >
-                {columns.map((column) => (
-                  <MuiTableCell
-                    key={column.key}
-                    align={column.align}
-                    sx={{
-                      typography: column.isEmphasized ? "subtitle2" : "body2",
-                    }}
-                  >
-                    {column.render(row, {
-                      value: cellValueOf(column, row),
-                      row,
-                      rows,
-                      index,
-                      column,
-                    })}
-                  </MuiTableCell>
-                ))}
-              </MuiTableRow>
+              <Fragment key={getRowKey(row)}>
+                <MuiTableRow
+                  hover={isRowClickable}
+                  onClick={
+                    isRowClickable
+                      ? () => {
+                          onRowClick(row);
+                        }
+                      : undefined
+                  }
+                  sx={{ cursor: isRowClickable ? "pointer" : undefined }}
+                >
+                  {columns.map((column) => (
+                    <MuiTableCell
+                      key={column.key}
+                      align={column.align}
+                      sx={{
+                        typography: column.isEmphasized ? "subtitle2" : "body2",
+                      }}
+                    >
+                      {column.render(row, {
+                        value: cellValueOf(column, row),
+                        row,
+                        rows,
+                        index,
+                        column,
+                      })}
+                    </MuiTableCell>
+                  ))}
+                </MuiTableRow>
+                {renderExpanded?.(row) == null ? null : (
+                  <MuiTableRow>
+                    <MuiTableCell
+                      colSpan={columns.length}
+                      sx={{ typography: "body2", color: "text.secondary" }}
+                    >
+                      {renderExpanded(row)}
+                    </MuiTableCell>
+                  </MuiTableRow>
+                )}
+              </Fragment>
             ))}
         </MuiTableBody>
       </MuiTable>

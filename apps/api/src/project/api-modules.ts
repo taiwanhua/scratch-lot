@@ -10,6 +10,7 @@ import { LotteryPurchaseModule } from "./lottery/purchase/purchase.module";
 import { LotteryRedemptionModule } from "./lottery/redemption/redemption.module";
 import { LotteryReportsModule } from "./lottery/reports/reports.module";
 import { LotteryRequisitionModule } from "./lottery/requisition/requisition.module";
+import { LotterySettingsModule } from "./lottery/settings/lottery-settings.module";
 import { LotteryStocktakeModule } from "./lottery/stocktake/stocktake.module";
 import { LotteryStoreModule } from "./lottery/store/store.module";
 import { LotteryTicketsModule } from "./lottery/tickets/tickets.module";
@@ -38,4 +39,5 @@ export const PROJECT_API_MODULES: readonly ApiFeatureRegistration[] = [
   { key: "lottery-daily-close", module: LotteryDailyCloseModule },
   { key: "lottery-period-close", module: LotteryPeriodCloseModule },
   { key: "lottery-reports", module: LotteryReportsModule },
+  { key: "lottery-settings", module: LotterySettingsModule },
 ];

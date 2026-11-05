@@ -132,6 +132,8 @@ export const sampleCheckoutWizard = (
       startedAt: "2026-10-16T02:32:00.000Z",
       scopeName: "店內櫃台",
       diffCount: 0,
+      purpose: "normal",
+      renumberMatched: 0,
     },
     redemptions,
     redemptionTotal: 1200,
@@ -208,6 +210,9 @@ const listRow = (
   counted,
   difference: counted - expected,
   submittedAt,
+  // Figma CS-15:C-0042 依張數標記售出 3 張 · 500
+  countSaleCount: id === "42" ? 3 : 0,
+  countSaleAmount: id === "42" ? 500 : 0,
 });
 
 /** Figma ST-27 的四列(新到舊)。 */
@@ -294,6 +299,8 @@ export const sampleCheckoutDetail = (): CheckoutDetailFixture => {
       startedAt: "2026-10-16T13:40:00.000Z",
       scopeName: null,
       diffCount: 3,
+      purpose: "normal",
+      renumberMatched: 0,
     },
     skipReason: null,
     skipReasonNote: null,

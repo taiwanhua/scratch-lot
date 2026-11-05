@@ -37,6 +37,7 @@ import { useDailyCloseEntry } from "../daily-close/useDailyCloseEntry";
 import { storeFormCreateHref } from "../forms/store-forms-keys";
 import { redemptionBoardActions } from "../redemption/redemption-board-actions";
 import { useRedemptionFlow } from "../redemption/useRedemptionFlow";
+import { useRescanEntry } from "../rescan/useRescanEntry";
 import { useStocktakeEntry } from "../stocktake/useStocktakeEntry";
 import { type BoardDialog, BoardDialogs } from "./BoardDialogs";
 import { BoardTopBar } from "./BoardTopBar";
@@ -44,6 +45,12 @@ import { type BoardCashPoint, CashPointSection } from "./CashPointSection";
 import { CameraScanButton } from "./sales/CameraScanButton";
 import { ExpandedBookCard } from "./sales/ExpandedBookCard";
 import { SalesBoardDialogs, type SalesDialog } from "./sales/SalesBoardDialogs";
+import { countCardOf } from "./sales/card-cells";
+import {
+  countSaleActionsOf,
+  recentSalesAction,
+} from "./sales/count-sale-action";
+import { useSalesText } from "./sales/useSalesText";
 import { useStoreSaleFlow } from "./sales/useStoreSaleFlow";
 
 const orgSchema = z.string().default("");
@@ -73,6 +80,9 @@ export const BoardTab = () => {
   );
   const board = query.data?.lotteryStoreBoard.item ?? null;
   const cashPoints = board?.cashPoints ?? [];
+  // 這家店實際的盤點制度(張數店:遊戲合計、虛線格子、[依張數標記售出];轉換中不顯示 [依張數標記售出])
+  const countMode = board?.countMode ?? "numbered";
+  const { clock } = useSalesText();
 
   // 這次在畫面上選的本機收銀點(依分店);沒選過 = 讀這台瀏覽器記住的
   const [chosen, setChosen] = useState<Record<string, string>>({});
@@ -95,6 +105,7 @@ export const BoardTab = () => {
     local:
       localOpen === null ? null : { id: localOpen.id, name: localOpen.name },
     mode: "board",
+    countMode,
     onScanned: (item) => {
       flashTicket({ bookId: item.bookId, ticketNo: item.ticketNo });
     },
@@ -105,7 +116,9 @@ export const BoardTab = () => {
   // 兌獎(P23):[兌獎] [最近兌獎]、兌獎提示的 [撤銷] 與兌獎紀錄詳情
   const redemption = useRedemptionFlow();
   // 盤點(P24):頂部 [盤點]、距離上次盤點超過 24 小時的提醒、盤點範圍視窗
-  const stocktake = useStocktakeEntry(orgId, cashPoints);
+  // 全店重刷(張數店規格 8.3、8.5、13.2):重刷中橫幅、重刷提醒、還沒刷的收銀點標籤;盤點入口先提醒(8.5a)
+  const rescan = useRescanEntry(orgId, cashPoints);
+  const stocktake = useStocktakeEntry(orgId, cashPoints, rescan.rescans);
   // 日結 / 存銀行(P27):頂部「上次日結」、[存銀行]、[日結](還有班沒送出交班 → 停用)
   const daily = useDailyCloseEntry(
     orgId,
@@ -184,26 +197,35 @@ export const BoardTab = () => {
       },
       flow: redemption,
     });
+    // [依張數標記售出](張數店規格 7.2、13.1):只有張數店(轉換中不顯示)、本機收銀點、自己開的班、`store.sell`
+    const countSale = countSaleActionsOf({
+      point,
+      countMode,
+      canSell: hasPermission(STORE_PERMISSIONS.sell),
+      label: t("header.countSale"),
+      shiftText: t("countSale.shiftText", {
+        name: shift.openedBy.name,
+        time: clock(shift.openedAt),
+      }),
+      open: setSalesDialog,
+    });
     return [
       // [最近售出] 只在本機收銀點、自己開的班(規格 6.2)
       ...(shift.isMine
         ? [
-            {
-              key: "recent-sales",
-              label: t("header.recentSales"),
-              emphasis: "link" as const,
-              onClick: () => {
-                setSalesDialog({
-                  kind: "recent",
-                  shiftId: shift.id,
-                  cashPointName: point.name,
-                });
-              },
-            },
+            recentSalesAction(t("header.recentSales"), () => {
+              setSalesDialog({
+                kind: "recent",
+                shiftId: shift.id,
+                cashPointName: point.name,
+              });
+            }),
           ]
         : []),
-      // [最近兌獎](自己的班)接在 [最近售出] 後面;[兌獎] 在按鈕列最前面(Figma ST-01)
+      // [最近兌獎](自己的班)接在 [最近售出] 後面;[兌獎] 在按鈕列最前面(Figma ST-01);
+      // 張數店的 [依張數標記售出] 在 [兌獎] 前面(Figma CS-01a)
       ...redeem.trailing,
+      ...countSale,
       ...redeem.leading,
       ...(hasPermission(STORE_PERMISSIONS.deposit)
         ? [cashAction("deposit")]
@@ -231,6 +253,8 @@ export const BoardTab = () => {
               key: "checkout",
               label: t("header.checkout"),
               emphasis: "primary" as const,
+              // 全店盤點中各台不能交班(張數店規格 8.5a;Figma ST-01-2)
+              disabled: stocktake.blocksCheckout,
               onClick: () => {
                 void navigate(
                   storeFormCreateHref(
@@ -287,6 +311,7 @@ export const BoardTab = () => {
         }
       />
       {stocktake.reminder}
+      {rescan.banners}
       {board !== null && local === null && cashPoints.length > 0 ? (
         <Alert
           severity="warning"
@@ -323,6 +348,8 @@ export const BoardTab = () => {
         <CashPointSection
           key={point.id}
           point={point}
+          countMode={countMode}
+          notices={rescan.noticesOf(point.id)}
           isLocal={point.id === local?.id}
           actions={actionsOf(point)}
           onShiftInfo={(shiftId) => {
@@ -360,6 +387,8 @@ export const BoardTab = () => {
                 setExpanded(null);
               }}
               onUndo={flow.openUndo}
+              countMode={countMode}
+              countCard={countCardOf(board, point.gameTotals, book.gameId)}
             />
           )}
         />
@@ -390,10 +419,12 @@ export const BoardTab = () => {
         }
         onChange={setSalesDialog}
         onUndo={flow.openUndo}
+        countMode={countMode}
       />
       {flow.element}
       {redemption.element}
       {stocktake.element}
+      {rescan.element}
       {daily.element}
     </Stack>
   );

@@ -6,8 +6,6 @@ import { TRANSFER_MODE } from "@repo/domain/project/lottery";
 import { useLotteryTransferOptionsQuery } from "@repo/graphql";
 import { Alert } from "@repo/ui/alert";
 import { Box } from "@repo/ui/box";
-import { Button } from "@repo/ui/button";
-import { Dialog } from "@repo/ui/dialog";
 import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
 
@@ -29,6 +27,7 @@ import {
   TRANSFER_PERMISSIONS,
   formatMoney,
 } from "../transfer-keys";
+import { DropConfirmDialog } from "./DropConfirmDialog";
 import { TransferBookPanel } from "./TransferBookPanel";
 import { TransferHeaderFields } from "./TransferHeaderFields";
 import {
@@ -47,6 +46,7 @@ import {
 } from "./transfer-form";
 import { type ShippedRowFacts, useShippedLines } from "./useShippedLines";
 import { useTransferLineList } from "./useTransferLineList";
+import { useTransferTicketChecks } from "./useTransferTicketChecks";
 
 /** 送出時收貨分店讀不到(不在送出的人的可見範圍):改用看得懂的說明。 */
 const isToBranchUnavailable = (error: FormError): boolean =>
@@ -59,7 +59,7 @@ const isToBranchUnavailable = (error: FormError): boolean =>
 /** 明細列的 rowId。 */
 const newRowId = (): string => crypto.randomUUID();
 
-/** 掃描用途(B10;新增 / 編輯頁刷條碼加入選取)。 */
+/** 掃描用途(B10;新增 / 編輯頁刷條碼或手輸張號加入)。 */
 export const TRANSFER_CREATE_SCAN_PURPOSE = "transfer-create";
 
 export interface TransferFormProps {
@@ -121,7 +121,10 @@ export const TransferForm = ({
   const [bookId, setBookId] = useState<string | null>(null);
   const [selected, setSelected] = useState<string[]>([]);
   const [fallbackGameId, setFallbackGameId] = useState<string | null>(null);
-  const [scanNotice, setScanNotice] = useState<string | null>(null);
+  const [scanNotice, setScanNotice] = useState<{
+    severity: "warning" | "error";
+    text: string;
+  } | null>(null);
   const locked = useMemo(() => new Set(lockedRows.keys()), [lockedRows]);
   const hasLocked = lines.some((line) => locked.has(line.rowId));
 
@@ -135,6 +138,11 @@ export const TransferForm = ({
     { enabled: fromBranchId !== "" },
   );
   const data = options.data?.lotteryTransferOptions ?? null;
+  // 出貨店能不能點格子選張(張數店與轉換中一律不能;編號店看「調貨單可點格子選張」;張數店規格 7.4)
+  const gridPick = data?.gridPick ?? true;
+  const isCountStore =
+    data?.countMode === "count" || data?.countMode === "converting";
+  const checks = useTransferTicketChecks(fromBranchId, lines, error);
   const books = useMemo(() => data?.books ?? [], [data]);
   const book = books.find((item) => item.bookId === bookId) ?? null;
   const inLines =
@@ -162,7 +170,7 @@ export const TransferForm = ({
       setScanNotice(null);
       return;
     }
-    setScanNotice(t(`addErrors.${result.kind}`));
+    setScanNotice({ severity: "warning", text: t(`addErrors.${result.kind}`) });
   };
 
   const pickBook = (next: string | null) => {
@@ -170,18 +178,21 @@ export const TransferForm = ({
     setSelected([]);
   };
 
-  /** 刷條碼:整本的本直接整本加入;拆過的本選到那一本並把刷到的那張加進已選。 */
-  const scan = (raw: string): boolean => {
+  /**
+   * 刷條碼或手輸張號:整本的本直接整本加入;拆過的本先重新拿格子資料判斷這張能不能調(張數店規格 7.4:
+   * 不能調的當下寫原因與處理方式、不加進已選),能調才選到那一本並把這張加進已選。
+   */
+  const scan = async (raw: string): Promise<boolean> => {
     if (fromBranchId === "") {
       return false;
     }
     const hit = bookOfScan(books, raw, fallbackGameId);
     if (hit.kind === "ambiguous_game") {
-      setScanNotice(t("scanAmbiguousGame"));
+      setScanNotice({ severity: "warning", text: t("scanAmbiguousGame") });
       return false;
     }
     if (hit.kind === "not_found") {
-      setScanNotice(t("scanNotFound"));
+      setScanNotice({ severity: "warning", text: t("scanNotFound") });
       return false;
     }
     if (hit.book.isWhole) {
@@ -189,8 +200,13 @@ export const TransferForm = ({
       return true;
     }
     if (!canPartial) {
-      setScanNotice(t("partialForbidden"));
+      setScanNotice({ severity: "warning", text: t("partialForbidden") });
       return true;
+    }
+    const problem = await checks.checkTicket(hit.book.bookId, hit.ticketNo);
+    if (problem !== null) {
+      setScanNotice({ severity: "error", text: problem });
+      return false;
     }
     setScanNotice(null);
     if (hit.book.bookId !== bookId) {
@@ -231,6 +247,11 @@ export const TransferForm = ({
             {title}
           </Typography>
           {notice}
+          {gridPick || fromBranchId === "" ? null : (
+            <Alert severity="info">
+              {isCountStore ? t("gridPickCount") : t("gridPickOff")}
+            </Alert>
+          )}
           <TransferHeaderFields
             fromBranchId={fromBranchId}
             toBranchId={toBranchId}
@@ -280,11 +301,7 @@ export const TransferForm = ({
                     value: fallbackGameId,
                     onChange: setFallbackGameId,
                   }}
-                  message={
-                    scanNotice === null
-                      ? null
-                      : { severity: "warning", text: scanNotice }
-                  }
+                  message={scanNotice}
                 />
               }
               notice={
@@ -302,6 +319,11 @@ export const TransferForm = ({
                     error={error}
                     fieldKey={TRANSFER_FIELD_KEYS.lines}
                   />
+                  {checks.blockedRows.map((row) => (
+                    <Alert key={row} severity="error">
+                      {row}
+                    </Alert>
+                  ))}
                 </>
               }
               footer={
@@ -347,6 +369,7 @@ export const TransferForm = ({
                   : []
               }
               canPartial={canPartial}
+              gridPick={gridPick}
               onAddWhole={(target: TransferBookOption) => {
                 apply(addWhole(lines, target, newRowId));
               }}
@@ -389,38 +412,17 @@ export const TransferForm = ({
         }}
       />
       {isConfirmingDrop && shipped.confirmText !== null && (
-        <Dialog
-          open
-          onClose={() => {
+        <DropConfirmDialog
+          text={shipped.confirmText}
+          isPending={isPending}
+          onCancel={() => {
             setIsConfirmingDrop(false);
           }}
-          fullWidth
-          maxWidth="xs"
-          title={tEdit("dropConfirm.title")}
-          actions={
-            <>
-              <Button
-                variant="text"
-                onClick={() => {
-                  setIsConfirmingDrop(false);
-                }}
-              >
-                {tEdit("dropConfirm.cancel")}
-              </Button>
-              <Button
-                disabled={isPending}
-                onClick={() => {
-                  setIsConfirmingDrop(false);
-                  onSubmit(valuesOf());
-                }}
-              >
-                {tEdit("dropConfirm.confirm")}
-              </Button>
-            </>
-          }
-        >
-          <Typography variant="body2">{shipped.confirmText}</Typography>
-        </Dialog>
+          onConfirm={() => {
+            setIsConfirmingDrop(false);
+            onSubmit(valuesOf());
+          }}
+        />
       )}
     </Stack>
   );

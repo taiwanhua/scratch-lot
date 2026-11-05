@@ -1,14 +1,23 @@
 import { CameraScanDialog } from "./CameraScanDialog";
+import { CountSaleDialog, type CountSaleGame } from "./CountSaleDialog";
 import { RecentSalesDrawer } from "./RecentSalesDrawer";
 import { SplitPickBookDialog } from "./SplitPickBookDialog";
 import { SplitWizardDialog } from "./SplitWizardDialog";
+import { isCountBoard } from "./card-cells";
 
 /** 看板上銷售類的視窗(一次一個)。 */
 export type SalesDialog =
   | { kind: "splitPick" }
   | { kind: "splitWizard"; bookId: string }
   | { kind: "recent"; shiftId: string; cashPointName: string }
-  | { kind: "camera" };
+  | { kind: "camera" }
+  | {
+      kind: "countSale";
+      cashPointId: string;
+      cashPointName: string;
+      shiftText: string;
+      games: readonly CountSaleGame[];
+    };
 
 export interface SalesBoardDialogsProps {
   dialog: SalesDialog | null;
@@ -18,6 +27,8 @@ export interface SalesBoardDialogsProps {
   onChange: (dialog: SalesDialog | null) => void;
   /** [最近售出] 每列的 [撤銷] */
   onUndo: (ticketId: string) => void;
+  /** 這家店實際的盤點制度(張數店的 [最近售出] 多「刷退的票」) */
+  countMode: string;
 }
 
 /**
@@ -30,6 +41,7 @@ export const SalesBoardDialogs = ({
   local,
   onChange,
   onUndo,
+  countMode,
 }: SalesBoardDialogsProps) => {
   const close = () => {
     onChange(null);
@@ -61,15 +73,31 @@ export const SalesBoardDialogs = ({
     case "recent": {
       return (
         <RecentSalesDrawer
+          orgId={orgId}
           shiftId={dialog.shiftId}
           cashPointName={dialog.cashPointName}
           onClose={close}
           onUndo={onUndo}
+          returnCashPointId={
+            isCountBoard(countMode) ? (local?.id ?? null) : null
+          }
         />
       );
     }
     case "camera": {
       return <CameraScanDialog onClose={close} />;
+    }
+    case "countSale": {
+      return (
+        <CountSaleDialog
+          orgId={orgId}
+          localCashPointId={dialog.cashPointId}
+          cashPointName={dialog.cashPointName}
+          shiftText={dialog.shiftText}
+          games={dialog.games}
+          onClose={close}
+        />
+      );
     }
     case undefined: {
       return null;

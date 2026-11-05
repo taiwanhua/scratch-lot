@@ -28,7 +28,7 @@ describe("店面管理的模組宣告(規格 3.1、3.2)", () => {
     });
   });
 
-  it("權限照規格 3.2:表單四條 + 14 個頁內權限", () => {
+  it("權限照規格 3.2:表單四條 + 15 個頁內權限", () => {
     expect(
       (storeModule.permissions ?? []).map((permission) => permission.key),
     ).toEqual([
@@ -50,6 +50,7 @@ describe("店面管理的模組宣告(規格 3.1、3.2)", () => {
       "store.checkout",
       "store.skip-stocktake",
       "store.confirm-lost",
+      "store.recover",
     ]);
   });
 
@@ -85,6 +86,7 @@ describe("開通時建立的角色(規格 3.3)", () => {
         "store.withdraw",
         "store.stocktake",
         "store.checkout",
+        "store.recover",
       ]),
     );
     for (const key of [

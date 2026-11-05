@@ -51,6 +51,17 @@ describe("parseTicketInput(規格 6.3 四種輸入格式)", () => {
       },
     ],
     [
+      "背面條碼 ITF 16 位(張數店規格 7.4、16.5 T4)",
+      "5166101153910000",
+      {
+        format: "back",
+        gameCode: "5166",
+        printVersion: "1",
+        bookNo: "0011539",
+        ticketNo: "100",
+      },
+    ],
+    [
       "前後空白忽略",
       "  0056527099\n",
       { format: "barcode", bookNo: "0056527", ticketNo: "099" },
@@ -66,6 +77,8 @@ describe("parseTicketInput(規格 6.3 四種輸入格式)", () => {
     ["背面編號少一段", "5164-1-056527-099-0"],
     ["遊戲代號不是 4 位", "516-1-056527-099-0-6"],
     ["張號 000 不存在", "0056527000"],
+    ["ITF 15 位", "516610115391000"],
+    ["ITF 17 位", "51661011539100000"],
   ])("錯誤格式 → null:%s", (_label, raw) => {
     expect(parseTicketInput(raw)).toBeNull();
   });

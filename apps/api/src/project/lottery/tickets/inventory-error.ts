@@ -31,6 +31,15 @@ export const INVENTORY_REASONS = {
    * (總部、區域)時要有店面權限 `store.view`
    */
   recoverTargetNotOperatingStore: "RECOVER_TARGET_NOT_OPERATING_STORE",
+  /**
+   * 報廢:只能報拆過的本在庫存的未售、沒被鎖的張(張數店規格 7.8;`extensions.scrapBlock`:`ScrapBlock`
+   * 第一個擋到的原因,`ticketIds` 列出不合的張)
+   */
+  scrapNotAllowed: "SCRAP_NOT_ALLOWED",
+  /** 更正跳號(張數店):要改標跳號的張是系統預設帶入的狀態,但同位置沒有未售的張可以接手這個狀態(7.10) */
+  noMatchPartner: "NO_MATCH_PARTNER",
+  /** 更正跳號(張數店與轉換中):跳號那張要刷條碼或手輸張號(7.10) */
+  countStoreScanOnly: "COUNT_STORE_SCAN_ONLY",
 } as const;
 
 export type InventoryReason =

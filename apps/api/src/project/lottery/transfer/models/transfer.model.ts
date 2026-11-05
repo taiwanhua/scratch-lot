@@ -95,6 +95,17 @@ export class LotteryTransferOptionsModel {
   /** 收貨店的預計要給本數(出貨店能調的本的遊戲;沒給收貨分店 = 空)。 */
   @Field(() => [LotteryTransferAllocationModel])
   allocations!: LotteryTransferAllocationModel[];
+
+  /**
+   * 出貨店能不能點格子選張(張數店規格 7.4、4 `transfer_grid_pick`):張數店與轉換中一律不能(只能刷或手輸、
+   * 無連號快選);編號店看「調貨單可點格子選張」的生效值。
+   */
+  @Field(() => Boolean)
+  gridPick!: boolean;
+
+  /** 出貨店的盤點制度(`numbered` / `count` / `converting`;提示文字用)。 */
+  @Field(() => String)
+  countMode!: string;
 }
 
 /** 張數格子的一格(新增頁選張)。 */
@@ -103,9 +114,36 @@ export class LotteryTransferTicketCellModel {
   @Field(() => String)
   ticketNo!: string;
 
-  /** `available` 可選 / `sold` 已售 / `locked` 被鎖定 / `skipped` 跳號 / `elsewhere` 不在出貨店或不能動。 */
+  /**
+   * `available` 可選(出貨店庫存的未售、沒被鎖)/ `counter` 在檯面上(先收回到庫存)/ `sold` 已售 /
+   * `locked` 被調貨單或撤銷售出申請鎖住 / `investigating` / `lost` 待查、遺失(請先尋回)/ `scrapped` 報廢 /
+   * `in_transit` 在途 / `skipped` 跳號 / `elsewhere` 在別家店(張數店規格 7.4「刷到不能調的提示」)。
+   */
   @Field(() => String)
   state!: string;
+
+  /** 未對號(張數店:系統預設帶入的狀態) */
+  @Field(() => Boolean)
+  unmatched!: boolean;
+
+  /** 系統預設帶入狀態的張在出貨店庫存有配對張:送出時先對號再鎖定,可以加進已選(7.4) */
+  @Field(() => Boolean)
+  matchable!: boolean;
+
+  /** 已售:哪一個收銀點、哪時賣的(提示「#041 已售(A 台 10:12 賣出)」) */
+  @Field(() => String, { nullable: true })
+  soldCashPointName!: string | null;
+
+  @Field(() => GraphQLISODateTime, { nullable: true })
+  soldAt!: Date | null;
+
+  /** 在檯面上:哪一個收銀點 */
+  @Field(() => String, { nullable: true })
+  cashPointName!: string | null;
+
+  /** 調貨中:鎖住它的那張調貨單單號 */
+  @Field(() => String, { nullable: true })
+  lockedSerialNo!: string | null;
 }
 
 /** 檢視頁的一列(出貨確認清單、點收區塊)。 */

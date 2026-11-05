@@ -41,8 +41,10 @@ describe("撤銷售出申請的存值(規格 8.5)", () => {
           ticketNos: ["012", "013", "014", "020"],
           tickets: 4,
           amount: 800,
+          cashPointId: null,
         },
       ],
+      countLines: [],
       reasonKey: "customer-return",
       refund: true,
       refundShiftId: "shift-1",
@@ -73,6 +75,71 @@ describe("撤銷售出申請的存值(規格 8.5)", () => {
     expect(saleReversalProblemOf({ ...values, lines: [] })).toEqual({
       field: "lines",
     });
+  });
+
+  it("依遊戲 + 張數的列(張數店規格 5.7)另外解析;遊戲、收銀點、張數不合 → lines", () => {
+    const values = saleReversalValuesOf({
+      ...stored,
+      lines: [
+        {
+          rowId: "r1",
+          line_kind: "by_ticket",
+          book: { id: "book-1", label: "5164-0056527" },
+          ticket_nos: "030",
+          tickets: 1,
+          amount: 200,
+          cash_point: { id: "cp-a", label: "店內櫃台" },
+        },
+        {
+          rowId: "r3",
+          line_kind: { value: "by_count", label: "依遊戲 + 張數" },
+          game: { id: "game-1", label: "發大財" },
+          cash_point: { id: "cp-a", label: "店內櫃台" },
+          count: 2,
+          amount: 400,
+        },
+      ],
+    });
+    expect(values.lines).toEqual([
+      {
+        rowId: "r1",
+        bookId: "book-1",
+        ticketNos: ["030"],
+        tickets: 1,
+        amount: 200,
+        cashPointId: "cp-a",
+      },
+    ]);
+    expect(values.countLines).toEqual([
+      {
+        rowId: "r3",
+        gameId: "game-1",
+        cashPointId: "cp-a",
+        count: 2,
+        amount: 400,
+      },
+    ]);
+    expect(saleReversalProblemOf(values)).toBeNull();
+    expect(
+      saleReversalProblemOf({
+        ...values,
+        lines: [],
+        countLines: values.countLines,
+      }),
+    ).toBeNull();
+    for (const broken of [
+      { gameId: null },
+      { cashPointId: null },
+      { count: 0 },
+      { count: 1.5 },
+    ]) {
+      expect(
+        saleReversalProblemOf({
+          ...values,
+          countLines: values.countLines.map((line) => ({ ...line, ...broken })),
+        }),
+      ).toEqual({ field: "lines" });
+    }
   });
 
   it("客人退貨帶入退款 = 是,其他(含租戶新增的原因)= 否", () => {

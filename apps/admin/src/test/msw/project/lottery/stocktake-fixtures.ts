@@ -30,6 +30,7 @@ const book = (
   gameCode: game[0],
   gameName: game[1],
   unitPrice: game[2],
+  pendingSkipCount: 0,
   bookNo,
   tickets: ticketNos(total).map((ticketNo, index) => ({
     __typename: "LotteryStocktakeTicket",
@@ -37,6 +38,7 @@ const book = (
     ticketNo,
     version: 1,
     status: index < soldUpTo ? "sold" : "unsold",
+    unmatched: false,
     pendingReversal: false,
   })),
 });
@@ -54,6 +56,14 @@ const shift = (
   closed,
   expectedCash,
 });
+
+/** 待查清單一張的張數店欄位(確定的待查:不是未對號、沒有來源盤點)。 */
+const LOST_DEFAULTS = {
+  unmatched: false,
+  sourceId: null,
+  sourceType: null,
+  sourceCashPointName: null,
+};
 
 const FA_DA_CAI: [string, string, number] = ["5164", "發大財", 200];
 const JIN_HAO_YUN: [string, string, number] = ["5201", "金好運", 200];
@@ -130,6 +140,9 @@ export const sampleStocktakeSheet = (
       bookTicketCount: 3,
       since: "2026-10-12T02:00:00.000Z",
       source: "transfer",
+      ...LOST_DEFAULTS,
+      gameId: "g-5164",
+      gameName: "發大財",
     })),
     ...["023", "024"].map((ticketNo) => ({
       __typename: "LotteryStocktakeLostTicket" as const,
@@ -141,8 +154,14 @@ export const sampleStocktakeSheet = (
       bookTicketCount: 100,
       since: "2026-10-05T02:00:00.000Z",
       source: "stocktake",
+      ...LOST_DEFAULTS,
+      gameId: "g-5201",
+      gameName: "金好運",
     })),
   ],
+  countMode: "numbered",
+  purpose: "normal",
+  countGroups: [],
 });
 
 /** Figma ST-30 的那一張盤點確認申請(審核中)。 */
@@ -160,6 +179,7 @@ const summary = (
   confirmLost: 0,
   confirmLostCost: 0,
   uncountedCount: 0,
+  renumberMatched: 0,
   ...overrides,
 });
 
@@ -307,6 +327,9 @@ export const sampleStocktakeDetail = (): StocktakeDetailFixture => ({
       reasonNote: null,
     },
   ],
+  countMode: "numbered",
+  countLines: [],
+  uncountedGroups: [],
   // 沒盤完就送出:檯面上 6 本盤了 3 本,其餘 3 本記為未盤(規格 6.8,10/21 定案)
   uncountedBooks: [
     {
@@ -357,3 +380,35 @@ export const sampleStocktakeDetail = (): StocktakeDetailFixture => ({
     lostReview: [],
   }),
 });
+
+/**
+ * 補點編號的盤點頁(張數店規格 9.3;Figma CS-11):只留店外攤位的 5133 招財貓 · 071204(#001–015 已售、
+ * #014 #015 是已售·未對號(虛線)、#016–025 未售、還有 1 張待標註)與一本未拆的本,方便逐本盤完。
+ */
+export const sampleRenumberStocktakeSheet = (
+  orgId = "org-store-a",
+): StocktakeSheetFixture => {
+  const sheet = sampleStocktakeSheet(orgId);
+  const target = sheet.books.find((item) => item.bookId === "b-6");
+  const unopened = sheet.unopenedBooks.slice(0, 1);
+  if (target === undefined) {
+    return sheet;
+  }
+  return {
+    ...sheet,
+    countMode: "numbered",
+    purpose: "renumber",
+    books: [
+      {
+        ...target,
+        pendingSkipCount: 1,
+        tickets: target.tickets.map((ticket) => ({
+          ...ticket,
+          unmatched: ticket.ticketNo === "014" || ticket.ticketNo === "015",
+        })),
+      },
+    ],
+    unopenedBooks: unopened,
+    lostTickets: [],
+  };
+};

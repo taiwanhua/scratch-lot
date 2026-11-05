@@ -19,6 +19,7 @@ query LotteryOperationsReport($input: LotteryOperationsReportInput!) {
     canShowCost
     stores {
       orgId
+      estimated
       period {
         ...LotteryReportStorePeriodFields
       }
@@ -31,6 +32,9 @@ query LotteryOperationsReport($input: LotteryOperationsReportInput!) {
           reason
           count
           amount
+        }
+        countSale {
+          ...LotteryReportQtyFields
         }
         stocktake {
           ...LotteryReportQtyFields
@@ -84,6 +88,9 @@ query LotteryOperationsReport($input: LotteryOperationsReportInput!) {
         salesCost
         scrapTickets
         scrapCost
+        scrapUndoTickets
+        scrapUndoCost
+        matchCostAdjustCost
         newInvestigatingTickets
         newInvestigatingCost
         investigateRecoveredTickets
@@ -101,6 +108,7 @@ query LotteryOperationsReport($input: LotteryOperationsReportInput!) {
         investigatingTickets
         investigatingCost
         investigatingBooks
+        investigatingUnmatchedTickets
         investigatingBookIds
         lostTickets
         lostCost
@@ -156,6 +164,19 @@ query LotteryOperationsReport($input: LotteryOperationsReportInput!) {
         priorPeriodCount
         priorPeriodAmount
         openMonths
+        countMode {
+          modeAtStart
+          since
+          modeAtEnd
+          changes {
+            at
+            from
+            to
+          }
+          renumberAts
+          daysSinceRenumber
+          monthEndUnrenumbered
+        }
       }
     }
   }

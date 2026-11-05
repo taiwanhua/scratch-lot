@@ -14,6 +14,36 @@ import type { DynamicKey } from "../usage-scan";
  */
 export const PROJECT_DYNAMIC_KEYS: readonly DynamicKey[] = [
   {
+    key: "admin.lotteryPurchasing.transfer.create.cellStates.",
+    reason:
+      "調貨單送出被擋的列 `t(`cellStates.${key}`)`,key 由 api 的格子狀態換算(`useTransferTicketChecks` 的 `STATE_KEYS`)",
+  },
+  {
+    key: "admin.lotteryPurchasing.transfer.create.blockedHandling.",
+    reason:
+      "調貨單送出被擋的列的處理方式 `t(`blockedHandling.${key}`)`,key 同 `cellStates`(`useTransferTicketChecks` 的 `STATE_KEYS`)",
+  },
+  {
+    key: "admin.lotteryStore.stocktake.lost.sourceTypes.",
+    reason:
+      "待查清單未對號那一組的來源盤點 `t(`sourceTypes.${type}`)`,type 是 api 回的盤點類型 `STOCKTAKE_TYPES`(`StocktakeSections`)",
+  },
+  {
+    key: "admin.lotteryStore.rescan.outcomes.",
+    reason:
+      "全店重刷刷到的結果 `t(`outcomes.${item.outcome}`)`,outcome 是 api 回的 `RESCAN_OUTCOMES` 或 `investigated`(`useRescanLabels`)",
+  },
+  {
+    key: "admin.lotteryStore.rescan.states.",
+    reason:
+      "全店重刷位置的狀態 `t(`states.${place.state}`)`,state 是 api 回的 `RescanPlaceState`(`useRescanLabels`)",
+  },
+  {
+    key: "admin.lotteryStore.stocktake.session.types.",
+    reason:
+      "盤點中登記的範圍文字 `t(`types.${session.type}`)`,type 是 api 回的盤點類型 `STOCKTAKE_TYPES`(`session-text.ts`)",
+  },
+  {
     key: "admin.schedule.roster.applyTemplates.presets.",
     reason:
       "套用範本的日子快選 `t(`presets.${preset}`)`,preset 取自 `ApplyTemplatesDialog` 的 `PRESETS`(`DatePreset`,`lib/project/schedule-auto-run.ts`)",
@@ -311,6 +341,11 @@ export const PROJECT_DYNAMIC_KEYS: readonly DynamicKey[] = [
       "`t(`ticketStatuses.${status}`)`,status 是張的狀態 `TICKET_STATUSES`(api 回的值)",
   },
   {
+    key: "admin.lotteryInventory.investigations.stocktakeTypes.",
+    reason:
+      "待查·遺失分頁未對號那一列的來源盤點 `t(`investigations.stocktakeTypes.${row.sourceStocktakeType}`)`,值是 api 回的盤點類型 `STOCKTAKE_TYPES`(`InvestigationsTab`)",
+  },
+  {
     key: "admin.lotteryInventory.bookStates.",
     reason:
       "`t(`bookStates.${state}`)`,state 是本的狀態(api 回的 `state`)與篩選值 `INVENTORY_BOOK_FILTER_STATES`",
@@ -404,5 +439,30 @@ export const PROJECT_DYNAMIC_KEYS: readonly DynamicKey[] = [
     key: "admin.lotteryStore.checkout.list.statuses.",
     reason:
       "班次結帳歷史紀錄的 `t(`list.statuses.${status}`)`,status 是申請的狀態(api 回的值、篩選)",
+  },
+  {
+    key: "admin.lotterySettings.labels.",
+    reason:
+      "刮刮樂設定的 `t(`labels.${key}`)`,key 取自 api 回的設定(定義清單 `@repo/domain/project/lottery-settings` 的 `LOTTERY_SETTING_DEFINITIONS`)",
+  },
+  {
+    key: "admin.lotterySettings.options.",
+    reason:
+      "`setting-display.ts` 的 `t(`options.${key}.${option}`)`,選項取自設定定義的 `options`",
+  },
+  {
+    key: "admin.lotterySettings.descriptions.",
+    reason:
+      "`SettingDialog` 的 `t(`descriptions.${key}.${option}`)`(上層的盤點制度用 `count_mode_upper`),選項取自設定定義",
+  },
+  {
+    key: "admin.lotterySettings.historyDialog.modes.",
+    reason:
+      "`CountModeHistoryDialog` 的 `t(`modes.${mode}`)`,mode 為 `COUNT_MODES`(api 回的歷程)",
+  },
+  {
+    key: "admin.lotterySettings.historyDialog.causes.",
+    reason:
+      "`CountModeHistoryDialog` 的 `t(`causes.${cause}`)`,cause 為 `COUNT_MODE_CHANGE_CAUSES`",
   },
 ];

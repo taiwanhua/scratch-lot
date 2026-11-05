@@ -17,6 +17,7 @@ fragment LotteryStoreShiftFields on LotteryStoreShift {
 
 fragment LotteryStoreBoardBookFields on LotteryStoreBoardBook {
   bookId
+  gameId
   gameCode
   gameName
   color
@@ -89,11 +90,26 @@ query LotteryStoreBoard($orgId: ID!) {
         books {
           ...LotteryStoreBoardBookFields
         }
+        gameTotals {
+          gameId
+          gameCode
+          gameName
+          remaining
+          bookCount
+        }
       }
       myOpenShifts {
         ...LotteryStoreShiftFields
       }
       vaultExpected
+      countMode
+      movePauses {
+        gameId
+      }
+      renumber {
+        due
+        lastRenumberAt
+      }
     }
   }
 }

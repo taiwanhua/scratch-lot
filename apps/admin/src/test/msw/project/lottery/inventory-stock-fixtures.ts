@@ -124,6 +124,16 @@ export const sampleReasonOptions: Record<
     { value: "system-backfill", label: "系統異常補登" },
     { value: "other", label: "其他" },
   ],
+  // 本的詳情的撤銷報廢(張數店規格 7.8)
+  [LOTTERY_FIELD_CATEGORY_KEYS.scrapUndoReason]: [
+    { value: "mis-scrapped", label: "報錯張" },
+    { value: "other", label: "其他" },
+  ],
+  // 張數店的依張數標記售出(張數店規格 5.7)
+  [LOTTERY_FIELD_CATEGORY_KEYS.countSaleReason]: [
+    { value: "too-busy", label: "太忙沒刷" },
+    { value: "other", label: "其他" },
+  ],
   // 店面管理的撤銷兌獎(規格 6.5)
   [LOTTERY_FIELD_CATEGORY_KEYS.redemptionRevokeReason]: [
     { value: "entry-error", label: "登記錯誤" },
@@ -166,6 +176,9 @@ export const sampleInvestigations =
       at,
       cost,
       ticketCount: count,
+      unmatched: false,
+      sourceStocktakeType: null,
+      unmatchedBooks: [],
       tickets: Array.from({ length: count }, (_, index) =>
         inventoryTicket(formatTicketNo(index + 1), status, {
           id: `${bookId}-t-${String(index + 1)}`,
@@ -206,5 +219,29 @@ export const sampleInvestigations =
         18_400,
         100,
       ),
+      // 系統預設帶入的待查(張數店規格 13.2,Figma CS-21):遊戲 × 責任分店 × 來源盤點一列,不給 [尋回]
+      {
+        ...row(
+          "b-056527",
+          "",
+          inventoryGames[0],
+          "investigating",
+          inventoryOrgs.storeA,
+          "ST-0031",
+          "2026-10-16T02:00:00.000Z",
+          184,
+          1,
+        ),
+        unmatched: true,
+        sourceStocktakeType: "shift",
+        unmatchedBooks: [
+          {
+            __typename: "LotteryInvestigationBookTickets",
+            bookId: "b-056527",
+            bookNo: "0056527",
+            ticketNos: ["090"],
+          },
+        ],
+      },
     ];
   };

@@ -5,15 +5,22 @@ import { Button } from "@repo/ui/button";
 import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
 
+import { useStocktakeRescan } from "../rescan/useStocktakeRescan";
 import { StocktakeBookList } from "./StocktakeBookList";
 import { StocktakeBookPanel } from "./StocktakeBookPanel";
+import { StocktakeCountGroupPanel } from "./StocktakeCountGroupPanel";
 import { LostSection, UnopenedSection } from "./StocktakeSections";
+import {
+  canReviewOf,
+  countFooterOf,
+  diffTotalOf,
+  renumberLeftOf,
+  stocktakeNavKeysOf,
+} from "./stocktake-count-model";
 import {
   type SheetCashPoint,
   type StocktakeSheet,
   type StocktakeState,
-  bookKeyOf,
-  figuresOf,
   placeNameOf,
 } from "./stocktake-model";
 import type { useStocktakeFlow } from "./useStocktakeFlow";
@@ -29,7 +36,11 @@ export interface StocktakeCountStepProps {
   canConfirmLost: boolean;
 }
 
-/** 盤點頁的盤點步驟(規格 6.8;Figma ST-13):進度、本清單、選中的本、未拆的本、待查清單、[差異核對]。 */
+/**
+ * 盤點頁的盤點步驟(規格 6.8;Figma ST-13、張數店 CS-09a / 09b):進度、本清單(張數店:收銀點 → 遊戲的組)、
+ * 選中的本或組、未拆的本、待查清單、[差異核對]。[上一本] [下一本](張數盤點是 [上一組] [下一組])照張數店規格 13.3:
+ * [上一本] 外框按鈕、第一本停用;[下一本] 跳到下一本還沒盤的,全部盤完改成 [盤完,前往差異核對](`stocktakeNavOf`)。
+ */
 export const StocktakeCountStep = ({
   flow,
   sheet,
@@ -40,37 +51,61 @@ export const StocktakeCountStep = ({
   canConfirmLost,
 }: StocktakeCountStepProps) => {
   const t = useTranslations("admin.lotteryStore.stocktake");
-  const { books, current, currentKey } = flow;
+  const { books, countGroups, current, currentGroup, currentKey, itemKeys } =
+    flow;
+  // 全店重刷(張數店規格 8.5a B5、8.3;Figma CS-09b):正在重刷的組變灰、不能數;待查清單上方的重刷提醒
+  const rescan = useStocktakeRescan(
+    sheet.orgId,
+    sheet.cashPoints,
+    scopeCashPointId,
+    t("stock.name"),
+  );
   const pointName = (id: string) =>
     placeNameOf(sheet.cashPoints, id, t("stock.name"));
-  const index = current === undefined ? -1 : books.indexOf(current);
-  const moveTo = (by: number) => {
-    const next = books.at(index + by);
-    if (next !== undefined && index + by >= 0) {
-      flow.select(bookKeyOf(next));
+  const nav = stocktakeNavKeysOf(itemKeys, currentKey, flow.isCounted);
+  const prevKey = nav.prevKey;
+  const goPrev =
+    prevKey === null
+      ? null
+      : () => {
+          flow.select(prevKey);
+        };
+  const goNext = () => {
+    if (nav.nextKey === null) {
+      flow.setStep("review");
+    } else {
+      flow.select(nav.nextKey);
     }
   };
-  const counted = books.filter(
-    (book) => state.counts[bookKeyOf(book)] !== undefined,
-  ).length;
-  const diffTotal = books.reduce(
-    (sum, book) =>
-      sum + figuresOf(book, state.counts[bookKeyOf(book)]).diffNos.length,
-    0,
+  const nextIsReview = nav.nextKey === null;
+  const diffTotal = diffTotalOf(books, countGroups, state);
+  const total = itemKeys.length;
+  const progress = total === 0 ? 0 : (nav.counted / total) * 100;
+  const progressKey = flow.isCountMode
+    ? "page.progressGroups"
+    : "page.progress";
+  // 補點編號:每本都要盤(含未拆的本在 / 不在),全部盤完才能前往差異核對(張數店規格 9.3 第 1 點、16.8 RN3)
+  const renumberLeft = renumberLeftOf(
+    flow.isRenumber,
+    total - nav.counted,
+    sheet.unopenedBooks,
+    state.unopened,
   );
-  const progress = books.length === 0 ? 0 : (counted / books.length) * 100;
+  const footer = t(...countFooterOf(flow.isRenumber, renumberLeft));
+  const canReview = canReviewOf(nav.counted, renumberLeft);
 
   return (
     <>
+      {rescan.notices}
       <Stack direction="row" spacing={2} sx={{ alignItems: "center" }}>
         <Typography variant="subtitle2" sx={{ whiteSpace: "nowrap" }}>
-          {t("page.progress", { done: counted, total: books.length })}
+          {t(progressKey, { done: nav.counted, total })}
         </Typography>
         <Box
           role="progressbar"
-          aria-valuenow={counted}
+          aria-valuenow={nav.counted}
           aria-valuemin={0}
-          aria-valuemax={books.length}
+          aria-valuemax={total}
           sx={{
             flex: 1,
             height: 6,
@@ -105,16 +140,38 @@ export const StocktakeCountStep = ({
         <StocktakeBookList
           cashPoints={sheet.cashPoints}
           books={books}
+          countGroups={countGroups}
           state={state}
           selectedKey={currentKey}
           onSelect={flow.select}
           onRedeem={onRedeem}
           isNarrow={isNarrow}
+          isGroupBlocked={rescan.groupBlocked}
+          isBookBlocked={rescan.bookBlocked}
         />
         <Stack spacing={2} sx={{ minWidth: 0 }}>
-          {current === undefined || currentKey === null ? (
-            <Typography color="textSecondary">{t("page.noBooks")}</Typography>
-          ) : (
+          {currentGroup !== undefined && currentKey !== null ? (
+            <StocktakeCountGroupPanel
+              key={currentKey}
+              group={currentGroup}
+              cashPointName={pointName(currentGroup.cashPointId)}
+              count={state.groups[currentKey]}
+              onConfirm={(present) => {
+                flow.confirmGroup(currentGroup, present);
+              }}
+              onRecount={() => {
+                flow.recountGroup(currentKey);
+              }}
+              onPrev={goPrev}
+              onNext={goNext}
+              nextIsReview={nextIsReview}
+              rescanningCode={rescan.groupCode(currentGroup)}
+            />
+          ) : null}
+          {rescan.bookNotice(current)}
+          {current !== undefined &&
+          currentKey !== null &&
+          !rescan.bookBlocked(current) ? (
             <StocktakeBookPanel
               key={currentKey}
               book={current}
@@ -129,23 +186,22 @@ export const StocktakeCountStep = ({
                 flow.setCount(currentKey, next);
               }}
               onCode={flow.handleCode}
-              onPrev={
-                index > 0
-                  ? () => {
-                      moveTo(-1);
-                    }
-                  : null
-              }
+              onPrev={goPrev}
+              renumber={flow.isRenumber}
+              nextIsReview={nextIsReview}
               onNext={() => {
                 const before = state.counts[currentKey];
                 flow.setCount(currentKey, {
                   method: before?.method ?? "grid",
                   present: before?.present ?? [],
                 });
-                moveTo(1);
+                goNext();
               }}
             />
-          )}
+          ) : null}
+          {currentKey === null ? (
+            <Typography color="textSecondary">{t("page.noBooks")}</Typography>
+          ) : null}
           {scopeCashPointId === null ? (
             <>
               <UnopenedSection
@@ -158,6 +214,7 @@ export const StocktakeCountStep = ({
                 state={state}
                 canConfirmLost={canConfirmLost}
                 onChange={flow.setLost}
+                notice={rescan.reminders}
               />
             </>
           ) : null}
@@ -169,11 +226,11 @@ export const StocktakeCountStep = ({
         sx={{ alignItems: { sm: "center" } }}
       >
         <Typography variant="body2" color="textSecondary" sx={{ flex: 1 }}>
-          {t("page.footer")}
+          {footer}
         </Typography>
         <Button
           variant="contained"
-          disabled={counted === 0}
+          disabled={!canReview}
           onClick={() => {
             flow.setStep("review");
           }}
@@ -181,6 +238,7 @@ export const StocktakeCountStep = ({
           {t("page.review")}
         </Button>
       </Stack>
+      {rescan.element}
     </>
   );
 };

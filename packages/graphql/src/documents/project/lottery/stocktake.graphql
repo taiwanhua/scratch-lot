@@ -15,6 +15,7 @@ fragment LotteryStocktakeSummaryFields on LotteryStocktakeSummary {
   confirmLost
   confirmLostCost
   uncountedCount
+  renumberMatched
 }
 
 query LotteryStocktakeSheet($input: LotteryStocktakeSheetInput!) {
@@ -38,12 +39,14 @@ query LotteryStocktakeSheet($input: LotteryStocktakeSheetInput!) {
       gameCode
       gameName
       unitPrice
+      pendingSkipCount
       bookNo
       tickets {
         ticketId
         ticketNo
         version
         status
+        unmatched
         pendingReversal
       }
     }
@@ -63,6 +66,23 @@ query LotteryStocktakeSheet($input: LotteryStocktakeSheetInput!) {
       bookTicketCount
       since
       source
+      gameId
+      gameName
+      unmatched
+      sourceId
+      sourceType
+      sourceCashPointName
+    }
+    countMode
+    purpose
+    countGroups {
+      cashPointId
+      gameId
+      gameCode
+      gameName
+      unitPrice
+      unsoldCount
+      bookNos
     }
   }
 }
@@ -71,6 +91,33 @@ query LotteryStocktakeReview($input: LotteryStocktakeReviewInput!) {
   lotteryStocktakeReview(input: $input) {
     staleCount
     unhandledCount
+    uncountedCount
+    renumberMissing
+    renumberMatches {
+      gameCode
+      gameName
+      cashPointId
+      cashPointName
+      ticketNo
+      bookNo
+      partnerTicketNo
+      partnerBookNo
+    }
+    countLines {
+      cashPointId
+      cashPointName
+      gameId
+      gameCode
+      gameName
+      unitPrice
+      systemCount
+      presentCount
+      kind
+      diffCount
+      saleCount
+      stale
+      unhandled
+    }
     summary {
       ...LotteryStocktakeSummaryFields
     }
@@ -82,6 +129,7 @@ query LotteryStocktakeReview($input: LotteryStocktakeReviewInput!) {
       gameName
       bookNo
       unitPrice
+      pendingSkipCount
       systemCount
       presentCount
       diffs {
@@ -117,6 +165,28 @@ query LotteryStocktakeStatus($orgId: ID!) {
   lotteryStocktakeStatus(orgId: $orgId) {
     lastSubmittedAt
     remind
+    rescans {
+      id
+      gameId
+      gameCode
+      gameName
+      startedByName
+      startedAt
+      minutesLeft
+      doneCount
+      places {
+        cashPointId
+        name
+        state
+      }
+    }
+    rescanReminders {
+      gameId
+      gameCode
+      gameName
+      investigateCount
+      flaggedCount
+    }
   }
 }
 
@@ -197,9 +267,91 @@ query LotteryStocktake($submissionId: ID!) {
       gameName
       bookNo
     }
+    countMode
+    countLines {
+      cashPointId
+      cashPointName
+      gameCode
+      gameName
+      countedAt
+      systemCount
+      presentCount
+      recounts
+      saleCount
+      saleAmount
+      investigateCount
+      flaggedCount
+    }
+    uncountedGroups {
+      cashPointId
+      cashPointName
+      gameCode
+      gameName
+    }
     summary {
       ...LotteryStocktakeSummaryFields
     }
     draft
   }
+}
+
+mutation BackfillLotteryStocktakeCountSales(
+  $input: BackfillLotteryStocktakeCountSalesInput!
+) {
+  backfillLotteryStocktakeCountSales(input: $input) {
+    refId
+    count
+    amount
+    shiftId
+    postClose
+  }
+}
+
+fragment LotteryStocktakeSessionFields on LotteryStocktakeSession {
+  sessionId
+  type
+  purpose
+  wholeStore
+  cashPointId
+  cashPointName
+  byId
+  byName
+  mine
+  canEnd
+  startedAt
+  lastActiveAt
+  expiresAt
+  minutesLeft
+  live
+  ended
+  draft
+}
+
+query LotteryStocktakeSessions($orgId: ID!) {
+  lotteryStocktakeSessions(orgId: $orgId) {
+    serverNow
+    items {
+      ...LotteryStocktakeSessionFields
+    }
+  }
+}
+
+mutation StartLotteryStocktakeSession(
+  $input: StartLotteryStocktakeSessionInput!
+) {
+  startLotteryStocktakeSession(input: $input) {
+    ...LotteryStocktakeSessionFields
+  }
+}
+
+mutation SaveLotteryStocktakeSession(
+  $input: SaveLotteryStocktakeSessionInput!
+) {
+  saveLotteryStocktakeSession(input: $input) {
+    ...LotteryStocktakeSessionFields
+  }
+}
+
+mutation EndLotteryStocktakeSession($input: EndLotteryStocktakeSessionInput!) {
+  endLotteryStocktakeSession(input: $input)
 }

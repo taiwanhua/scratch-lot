@@ -1,5 +1,4 @@
 import { useQueryClient } from "@tanstack/react-query";
-import type { ReactNode } from "react";
 import { useState } from "react";
 import { useTranslations } from "use-intl";
 
@@ -11,10 +10,8 @@ import {
   useLotteryPeriodClosesQuery,
 } from "@repo/graphql";
 import { Alert } from "@repo/ui/alert";
-import { Box } from "@repo/ui/box";
 import { Button } from "@repo/ui/button";
 import { Dialog } from "@repo/ui/dialog";
-import { CheckIcon, ErrorCircleIcon } from "@repo/ui/icons";
 import { useBreakpointDown } from "@repo/ui/media-query";
 import { Stack } from "@repo/ui/stack";
 import { TextField } from "@repo/ui/text-field";
@@ -24,36 +21,11 @@ import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
 import { useSession } from "@/hooks/base/useSession";
 import { accountsErrorOf } from "@/lib/project/lottery/accounts-error";
 
+import { CheckLine } from "./CheckLine";
 import { PeriodSnapshotList } from "./PeriodSnapshotList";
+import { RenumberCheckLine } from "./RenumberCheckLine";
 
 type Check = LotteryPeriodCloseCheckQuery["lotteryPeriodCloseCheck"];
-
-/** 檢查清單的一項:✓ 通過、✕ 擋下、! 只警告。 */
-const CheckLine = ({
-  state,
-  children,
-}: {
-  state: "ok" | "blocked" | "warning";
-  children: ReactNode;
-}) => {
-  const colors = {
-    ok: "success.main",
-    blocked: "error.main",
-    warning: "warning.main",
-  } as const;
-  return (
-    <Stack direction="row" spacing={1} sx={{ alignItems: "flex-start" }}>
-      <Box sx={{ color: colors[state], display: "flex", pt: "2px" }}>
-        {state === "ok" ? (
-          <CheckIcon fontSize="small" />
-        ) : (
-          <ErrorCircleIcon fontSize="small" />
-        )}
-      </Box>
-      <Box sx={{ minWidth: 0 }}>{children}</Box>
-    </Stack>
-  );
-};
 
 /**
  * 關帳彈窗(Figma AC-07 93:1664;規格 10.4):檢查清單(班都已結帳、沒有審核中且會記到那個月的單據 —— 擋;
@@ -145,7 +117,7 @@ export const PeriodCloseDialog = ({
   );
 };
 
-/** 檢查清單三項(規格 10.4)。 */
+/** 檢查清單四項(規格 10.4;第四項「張數店月底補點編號」張數店規格第 10 節)。 */
 const Checklist = ({ check, month }: { check: Check; month: string }) => {
   const t = useTranslations("admin.lotteryAccounts.periodClose");
   const uncovered = check.snapshot.stores.filter(
@@ -211,6 +183,7 @@ const Checklist = ({ check, month }: { check: Check; month: string }) => {
               })}
         </Typography>
       </CheckLine>
+      <RenumberCheckLine stores={check.renumberStores} />
     </Stack>
   );
 };

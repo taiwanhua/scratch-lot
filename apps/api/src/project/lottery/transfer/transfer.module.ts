@@ -6,7 +6,9 @@ import { RealtimeModule } from "../../../realtime/realtime.module";
 import { SidebarBadgesModule } from "../../../sidebar-badges/sidebar-badges.module";
 import { LotteryAccountsModule } from "../accounts/accounts.module";
 import { LotteryRequisitionModule } from "../requisition/requisition.module";
+import { LotterySettingsModule } from "../settings/lottery-settings.module";
 import { ReceiptLinksService } from "../store/receipt-links.service";
+import { LotteryStoreModule } from "../store/store.module";
 import { LotteryTicketsModule } from "../tickets/tickets.module";
 import { TransferAccess } from "./transfer-access";
 import { TransferQueryService } from "./transfer-query.service";
@@ -30,6 +32,9 @@ import { TransferResolver } from "./transfer.resolver";
     LotteryAccountsModule,
     LotteryRequisitionModule,
     LotteryTicketsModule,
+    // 出貨店的盤點制度與張數店的對號(張數店規格 7.4)
+    LotterySettingsModule,
+    LotteryStoreModule,
   ],
   providers: [
     TransferRules,

@@ -197,7 +197,7 @@ let requestSequence = 0;
 /** 店面時鐘往前一分鐘(每一步的事件時間不同)。 */
 function tick(): Date {
   minute += 1;
-  const at = new Date(Date.UTC(2026, 10, 5, 1, 0) + minute * 60_000);
+  const at = new Date(Date.UTC(2036, 10, 5, 1, 0) + minute * 60_000);
   jest.spyOn(StoreClock.prototype, "now").mockReturnValue(at);
   return at;
 }
@@ -1012,7 +1012,7 @@ describe("本狀態與再上檯面(GraphQL 端點 + 真 MongoDB)", () => {
         tenantId: tenant,
         cashPointId: point,
         openedBy: clerk.userId,
-        openedAt: new Date(Date.UTC(2026, 10, 5, 0, 0)),
+        openedAt: new Date(Date.UTC(2036, 10, 5, 0, 0)),
         openingFloat: 5000,
         openingFloatSource: "handover",
         previousShiftId: null,
@@ -1256,12 +1256,17 @@ describe("本狀態與再上檯面(GraphQL 端點 + 真 MongoDB)", () => {
     const c09 = await newBook(storeA);
     await split(clerkA, storeA, pointA, c09.bookId);
     await sell(clerkA, storeA, pointA, c09.bookId, nos(1, 10));
+    // 報廢只能從庫存(張數店規格 7.8,兩種店一樣):檯面上的先收回
+    await recall(clerkA, storeA, c09.bookId, nos(11, 100));
     await scrap(managerA, c09.bookId, nos(11, 100));
     await expectState("C09 賣 10、90 報廢", c09.bookId, "sold_out");
 
+    // 未拆的本不能報廢(張數店規格 7.8):拆過、全部收回後整本報廢
     const c09c = await newBook(storeA);
+    await split(clerkA, storeA, pointA, c09c.bookId);
+    await recall(clerkA, storeA, c09c.bookId, nos(1, 100));
     await scrap(managerA, c09c.bookId, nos(1, 100));
-    await expectState("C09c 未拆整本報廢", c09c.bookId, "scrapped");
+    await expectState("C09c 拆過收回後整本報廢", c09c.bookId, "scrapped");
 
     const c11 = await newBook(storeA);
     await split(clerkA, storeA, pointA, c11.bookId);
