@@ -47,6 +47,7 @@ import {
   omitKeys,
   stateOfDraft,
 } from "./stocktake-model";
+import { useRefreshWizardCash } from "./stocktake-queries";
 import { useCountGroupActions } from "./useCountGroupActions";
 
 type ReviewDiff = ReviewLine["diffs"][number];
@@ -151,6 +152,7 @@ export const useStocktakeFlow = ({
   );
   const review = reviewQuery.data?.lotteryStocktakeReview ?? null;
   const backfill = useBackfillLotteryStocktakeSalesMutation(session.client);
+  const refreshWizardCash = useRefreshWizardCash();
 
   const update = (change: (before: StocktakeState) => StocktakeState) => {
     setState((before) => (before === null ? before : change(before)));
@@ -365,6 +367,7 @@ export const useStocktakeFlow = ({
           }),
         );
         void sheetQuery.refetch();
+        refreshWizardCash();
       })
       .catch((error: unknown) => {
         const failure = parseAdminError(error, {

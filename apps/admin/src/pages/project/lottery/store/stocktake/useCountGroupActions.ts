@@ -15,6 +15,7 @@ import {
   countGroupKeyOf,
   groupKeyOf,
 } from "./stocktake-model";
+import { useRefreshWizardCash } from "./stocktake-queries";
 
 export interface CountGroupActionsInput {
   orgId: string;
@@ -52,6 +53,7 @@ export const useCountGroupActions = ({
   const t = useTranslations("admin.lotteryStore.stocktake");
   const { session } = useSession();
   const showSnackbar = useSnackbar();
+  const refreshWizardCash = useRefreshWizardCash();
   const countBackfill = useBackfillLotteryStocktakeCountSalesMutation(
     session.client,
   );
@@ -139,6 +141,7 @@ export const useCountGroupActions = ({
             }),
           );
           refetch();
+          refreshWizardCash();
         })
         .catch((error: unknown) => {
           const failure = parseAdminError(error, {

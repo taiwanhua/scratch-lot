@@ -4,15 +4,16 @@
 
 ## 現有文件
 
-| 文件                                             | 內容                                                                                                   |
-| ------------------------------------------------ | ------------------------------------------------------------------------------------------------------ |
-| [branding.md](branding.md)                       | 品牌註冊表各列的本專案值、設計檔                                                                       |
-| [figma-nodes.md](figma-nodes.md)                 | 本專案 Screens 的頁、尺寸 Section 與專案元件;稽核設定                                                  |
-| [data-model.md](data-model.md)                   | 專案資料表地圖(表由各功能登記)                                                                         |
-| [spec.md](spec.md)                               | 專案規格(刮刮樂 + 排班與出勤)定稿:模組文件與程式註解寫的「規格 x.y」指這份的章節;現況以模組文件為準    |
-| [docs/modules/project/](../modules/project/)     | 專案模組文件;另有 `lottery-notifications.md`(專案通知類型)、`field-manager.md`(欄位管理的專案系統類別) |
-| [CONTEXT-PROJECT.md](../../CONTEXT-PROJECT.md)   | 專案詞彙(只新增,不重新定義底座名詞)                                                                    |
-| [docs/tmp/project-dis.md](../tmp/project-dis.md) | 專案的進行中討論與待辦(`docs/tmp/` 的規格與工作檔同樣是專案的)                                         |
+| 文件                                                                 | 內容                                                                                                   |
+| -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| [branding.md](branding.md)                                           | 品牌註冊表各列的本專案值、設計檔                                                                       |
+| [figma-nodes.md](figma-nodes.md)                                     | 本專案 Screens 的頁、尺寸 Section 與專案元件;稽核設定                                                  |
+| [data-model.md](data-model.md)                                       | 專案資料表地圖(表由各功能登記)                                                                         |
+| [spec.md](spec.md)                                                   | 專案規格(刮刮樂 + 排班與出勤)定稿:模組文件與程式註解寫的「規格 x.y」指這份的章節;現況以模組文件為準    |
+| [docs/modules/project/](../modules/project/)                         | 專案模組文件;另有 `lottery-notifications.md`(專案通知類型)、`field-manager.md`(欄位管理的專案系統類別) |
+| [docs/testing/project/scenarios.md](../testing/project/scenarios.md) | 專案 E2E 劇本(張數店)                                                                                  |
+| [CONTEXT-PROJECT.md](../../CONTEXT-PROJECT.md)                       | 專案詞彙(只新增,不重新定義底座名詞)                                                                    |
+| [docs/tmp/project-dis.md](../tmp/project-dis.md)                     | 專案的進行中討論與待辦(`docs/tmp/` 的規格與工作檔同樣是專案的)                                         |
 
 ## 新增專案文件放哪
 
