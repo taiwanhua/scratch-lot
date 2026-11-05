@@ -238,7 +238,7 @@ const base = () => {
   };
 };
 
-const taipei = (time: string) => new Date(`2026-11-05T${time}:00+08:00`);
+const taipei = (time: string) => new Date(`2036-11-05T${time}:00+08:00`);
 
 /** 正面條碼 = 本號 7 位 + 張號 3 位。 */
 const barcodeOf = (bookNo: string, ticketNo: string) => `${bookNo}${ticketNo}`;
