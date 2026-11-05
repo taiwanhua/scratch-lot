@@ -64,11 +64,6 @@ import { type TenantOrg, isStoreOrg } from "../inventory/store-orgs";
 
 type CountModeRecord = Persisted<LotteryStoreCountModeDocument>;
 
-/** 一家分店的實際盤點制度(沒有筆或 mode 空 = 編號店)。 */
-function modeOfRecord(record: CountModeRecord | null | undefined): CountMode {
-  return record?.mode ?? COUNT_MODE.numbered;
-}
-
 /**
  * 分店那一筆上有效的移櫃暫停(張數店規格 5.6、8.5):全店重刷照舊;補點編號(`gameId: null`)只有它的盤點中登記
  * 還有效時才算(`liveMovePausesOf`)。id 換成字串。
@@ -149,7 +144,7 @@ export interface CountModeHistoryView {
  * 分店實際盤點制度(`lottery_store_count_modes`,張數店規格 5.6)的**唯一讀寫入口**:
  * 「誰讀:一律經 StoreCountModeService」。之後的票(銷售、盤點、重刷、補點、調貨、關帳)都從這裡讀。
  *
- * - `modeOf` / `modesOf`:分店實際的盤點制度(沒有筆 = 編號店)
+ * - `modeOf` / `modesOf`:分店實際的盤點制度(沒有筆或 mode 空 = 生效值;新開的店還沒有那一筆)
  * - `settingOf`:分店某一條刮刮樂設定的生效值(沿組織樹往上找)
  * - `movePauseOf`:進行中的全店重刷 / 補點編號(移櫃暫停;重刷經 `addRescanPause` / `removeRescanPause` 寫,補點是 T8)
  * - `busyOf`:有沒有進行中的盤點 / 重刷 / 補點(改盤點制度的檢查;9.1)
@@ -176,15 +171,16 @@ export class StoreCountModeService {
 
   // ---- 讀 ----
 
-  /** 分店實際的盤點制度(沒有筆或 mode 空 = 編號店)。 */
+  /** 分店實際的盤點制度(沒有筆或 mode 空 = 生效值,張數店規格 5.6)。 */
   async modeOf(
     operator: OperatorContext,
     orgId: Types.ObjectId,
   ): Promise<CountMode> {
-    return modeOfRecord(await this.recordOf(operator, orgId));
+    const record = await this.recordOf(operator, orgId);
+    return record?.mode ?? this.effectiveModeOf(operator, orgId);
   }
 
-  /** 多家分店的實際盤點制度(一次讀;沒列到的 = 編號店)。 */
+  /** 多家分店的實際盤點制度(一次讀;沒有筆或 mode 空 = 生效值)。 */
   async modesOf(
     operator: OperatorContext,
     orgIds: readonly Types.ObjectId[],
@@ -195,8 +191,17 @@ export class StoreCountModeService {
     const byOrg = new Map(
       records.map((record) => [String(record.orgId), record]),
     );
+    const effective = await this.effectiveModesOf(
+      await this.tenantReaderOf(operator),
+      orgIds.filter((id) => (byOrg.get(String(id))?.mode ?? null) === null),
+    );
     return new Map(
-      orgIds.map((id) => [String(id), modeOfRecord(byOrg.get(String(id)))]),
+      orgIds.map((id) => [
+        String(id),
+        byOrg.get(String(id))?.mode ??
+          effective.get(String(id)) ??
+          COUNT_MODE.numbered,
+      ]),
     );
   }
 
@@ -211,7 +216,7 @@ export class StoreCountModeService {
 
   /**
    * 多家分店那一筆的制度與歷程(營運報表判斷期間內的制度、補點編號、估算;張數店規格 11.1、11.4)。一次讀,
-   * 沒列到的分店 = 編號店、沒有歷程(TX-07)。
+   * 沒有筆或 mode 空的分店 = 生效值、沒有歷程(TX-07)。
    */
   async historiesOf(
     operator: OperatorContext,
@@ -228,15 +233,25 @@ export class StoreCountModeService {
       { orgId: { $in: [...orgIds] } },
       { select: "orgId mode history lastRenumberAt" },
     );
+    const byOrg = new Map(
+      records.map((record) => [String(record.orgId), record]),
+    );
+    const effective = await this.effectiveModesOf(
+      reader,
+      orgIds.filter((id) => (byOrg.get(String(id))?.mode ?? null) === null),
+    );
     return new Map(
-      records.map((record) => [
-        String(record.orgId),
-        {
-          mode: record.mode,
-          history: record.history,
-          lastRenumberAt: record.lastRenumberAt,
-        },
-      ]),
+      orgIds.map((id) => {
+        const record = byOrg.get(String(id));
+        return [
+          String(id),
+          {
+            mode: record?.mode ?? effective.get(String(id)) ?? null,
+            history: record?.history ?? [],
+            lastRenumberAt: record?.lastRenumberAt ?? null,
+          },
+        ];
+      }),
     );
   }
 
@@ -623,7 +638,8 @@ export class StoreCountModeService {
 
   /**
    * 多家分店的刮刮樂設定生效值與分店那一筆(關帳第四項、補點編號提醒;一次讀,不逐店):組織樹 1、
-   * 這幾條設定在整個租戶的自訂 1、分店那一筆 1。沒有那一筆的店 `record` = null(編號店)。
+   * 這幾條設定在整個租戶的自訂 1、分店那一筆 1。沒有那一筆的店 `record` = null;`mode` = 實際的盤點制度
+   * (沒有筆或 mode 空 = 生效值)。
    */
   async storesOf(
     operator: OperatorContext,
@@ -635,6 +651,7 @@ export class StoreCountModeService {
       string,
       {
         record: CountModeRecord | null;
+        mode: CountMode;
         settings: Map<LotterySettingKey, string>;
       }
     >
@@ -645,7 +662,9 @@ export class StoreCountModeService {
     const reader = await tenantBoundaryContext(this.orgs, operator, tenantId);
     const [tenantOrgs, rows, records] = await Promise.all([
       this.tenantOrgsOf(reader, tenantId),
-      this.settings.findMany(reader, { key: { $in: [...keys] } }),
+      this.settings.findMany(reader, {
+        key: { $in: [...keys, LOTTERY_SETTING_KEYS.countMode] },
+      }),
       this.countModes.findMany(reader, { orgId: { $in: [...orgIds] } }),
     ]);
     const orgById = new Map(tenantOrgs.map((org) => [String(org.id), org]));
@@ -661,6 +680,9 @@ export class StoreCountModeService {
           String(id),
           {
             record: recordByOrg.get(String(id)) ?? null,
+            mode:
+              recordByOrg.get(String(id))?.mode ??
+              countModeSettingOf(chain, settingRows),
             settings: new Map(
               keys.map((key) => [
                 key,
@@ -702,16 +724,17 @@ export class StoreCountModeService {
     );
     const store = stores.get(String(orgId));
     const record = store?.record ?? null;
-    if (record === null || !canRenumber(modeOfRecord(record))) {
+    const mode = store?.mode ?? COUNT_MODE.numbered;
+    if (!canRenumber(mode)) {
       return null;
     }
-    const lastRenumberAt = record.lastRenumberAt ?? null;
+    const lastRenumberAt = record?.lastRenumberAt ?? null;
     const dueAt = renumberStoreDueAtOf(
       store?.settings.get(LOTTERY_SETTING_KEYS.renumberReminder) ?? "",
-      { lastRenumberAt, since: record.since ?? null },
+      { lastRenumberAt, since: record?.since ?? null },
     );
     return {
-      mode: modeOfRecord(record),
+      mode,
       due: dueAt !== null && now.getTime() >= dueAt.getTime(),
       required:
         store?.settings.get(LOTTERY_SETTING_KEYS.renumberRequired) ===
@@ -726,12 +749,24 @@ export class StoreCountModeService {
     tenantId: Types.ObjectId,
   ): Promise<Types.ObjectId[]> {
     const reader = await tenantBoundaryContext(this.orgs, operator, tenantId);
-    const records = await this.countModes.findMany(
-      reader,
-      { mode: { $in: [COUNT_MODE.count, COUNT_MODE.converting] } },
-      { select: "orgId" },
+    const [tenantOrgs, rows, records] = await Promise.all([
+      this.tenantOrgsOf(reader, tenantId),
+      this.settings.findMany(reader, { key: LOTTERY_SETTING_KEYS.countMode }),
+      this.countModes.findMany(reader, {}, { select: "orgId mode" }),
+    ]);
+    const settingRows = rows.map((record) => toSettingRow(record));
+    const modeByOrg = new Map(
+      records.map((record) => [String(record.orgId), record.mode]),
     );
-    return records.map((record) => record.orgId);
+    return tenantOrgs
+      .filter((org) => isStoreOrg(org, tenantOrgs))
+      .filter((org) =>
+        canRenumber(
+          modeByOrg.get(String(org.id)) ??
+            countModeSettingOf(chainOf(org), settingRows),
+        ),
+      )
+      .map((org) => org.id);
   }
 
   // ---- 補點編號核准(9.3 第 4 點) ----
@@ -756,7 +791,7 @@ export class StoreCountModeService {
       { orgId },
       { session },
     );
-    const current = modeOfRecord(record);
+    const current = record?.mode ?? (await this.effectiveModeOf(writer, orgId));
     const outcome = renumberApprovalOf(current);
     const entry: CountModeHistoryEntry = {
       ...outcome.history,
@@ -871,7 +906,7 @@ export class StoreCountModeService {
     const toCount = changing.filter(
       (item) =>
         item.after === COUNT_MODE.count &&
-        modeOfRecord(recordByOrg.get(String(item.org.id))) ===
+        (recordByOrg.get(String(item.org.id))?.mode ?? item.before) ===
           COUNT_MODE.numbered,
     );
     const [unmatched, pendingSkipBooks] = await Promise.all([
@@ -893,7 +928,7 @@ export class StoreCountModeService {
         orgId: id,
         before: item.before,
         after: item.after,
-        current: modeOfRecord(record),
+        current: record?.mode ?? item.before,
         unmatchedCount: unmatched.get(id) ?? 0,
         pendingSkipBooks: pendingByOrg.get(id) ?? 0,
         busy: this.busyOf(record, now),
@@ -1002,6 +1037,42 @@ export class StoreCountModeService {
       this.orgs,
       operator,
       tenantOfOperator(operator)?.tenantId ?? null,
+    );
+  }
+
+  /** 一家分店的生效值(沒有筆或 mode 空時用;程式預設 = 編號)。 */
+  private async effectiveModeOf(
+    operator: OperatorContext,
+    orgId: Types.ObjectId,
+  ): Promise<CountMode> {
+    const modes = await this.effectiveModesOf(
+      await this.tenantReaderOf(operator),
+      [orgId],
+    );
+    return modes.get(String(orgId)) ?? COUNT_MODE.numbered;
+  }
+
+  /** 多家分店的生效值(組織 1、整個租戶的 `count_mode` 自訂 1;空 → 不讀)。 */
+  private async effectiveModesOf(
+    reader: OperatorContext,
+    orgIds: readonly Types.ObjectId[],
+  ): Promise<Map<string, CountMode>> {
+    if (orgIds.length === 0) {
+      return new Map();
+    }
+    const [orgs, rows] = await Promise.all([
+      this.orgs.findMany(reader, { _id: { $in: [...orgIds] } }),
+      this.settings.findMany(reader, { key: LOTTERY_SETTING_KEYS.countMode }),
+    ]);
+    const settingRows = rows.map((record) => toSettingRow(record));
+    return new Map(
+      orgs.map((org) => [
+        String(org._id),
+        countModeSettingOf(
+          chainOf({ id: org._id, ancestors: org.ancestors }),
+          settingRows,
+        ),
+      ]),
     );
   }
 

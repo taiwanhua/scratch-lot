@@ -683,6 +683,37 @@ describe("刮刮樂設定(GraphQL 端點 + 真 MongoDB)", () => {
       ).resolves.toBe("biweekly");
     });
 
+    it("分店沒有那一筆(新開的店)→ 實際制度讀生效值,不是一律編號(5.6);上層改回編號 → 進轉換中", async () => {
+      await resetWorld();
+      const service = api.app.get(StoreCountModeService);
+      const operator = await operatorOf(hq, tenant);
+      // 上層預設張數,但這家店還沒有那一筆(例:預設改完才開的店)
+      dataOf(
+        await customize(hq, tenant, "count_mode", "count"),
+        "customizeLotterySetting",
+      );
+      await connection
+        .collection(LOTTERY_STORE_COUNT_MODES_COLLECTION)
+        .deleteMany({ orgId: zhongshan });
+      await expect(service.modeOf(operator, zhongshan)).resolves.toBe("count");
+      const modes = await service.modesOf(operator, [zhongshan, minsheng]);
+      expect(modes.get(String(zhongshan))).toBe("count");
+      const histories = await service.historiesOf(operator, [zhongshan]);
+      expect(histories.get(String(zhongshan))).toMatchObject({
+        mode: "count",
+        history: [],
+      });
+      const ids = await service.countStoreIdsOf(operator, tenant);
+      expect(ids.map(String)).toContain(String(zhongshan));
+      const page = await settingsOf(hq, zhongshan);
+      expect(page.storeCountMode?.mode).toBe("count");
+
+      // 改回編號:這家店是張數店、有未對號的張,要走轉換中(9.2),不是當成本來就編號
+      await insertUnmatchedTicket(zhongshan);
+      dataOf(await restore(hq, tenant, "count_mode"), "restoreLotterySetting");
+      expect(await modeOf(zhongshan)).toBe("converting");
+    });
+
     it("店長只有 view:看得到、canEdit = false,[自訂] / [還原] → FORBIDDEN", async () => {
       const page = await settingsOf(manager);
       expect(page.orgName).toBe("中山店");

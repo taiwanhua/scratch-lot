@@ -793,7 +793,7 @@ export class PeriodCloseService {
       result.set(key, {
         mode: countModeAtOf(
           record?.history ?? [],
-          record?.mode ?? COUNT_MODE.numbered,
+          store?.mode ?? COUNT_MODE.numbered,
           period.end,
         ),
         required:

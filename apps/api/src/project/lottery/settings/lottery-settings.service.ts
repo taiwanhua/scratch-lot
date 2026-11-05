@@ -391,7 +391,9 @@ export class LotterySettingsService {
       parent: parent === null ? null : valueOf(parent),
     }));
     const record = isStore ? await this.modes.recordOf(operator, org.id) : null;
-    const mode = record?.mode ?? COUNT_MODE.numbered;
+    const mode = isStore
+      ? await this.modes.modeOf(operator, org.id)
+      : COUNT_MODE.numbered;
     return {
       orgId: String(org.id),
       orgName: org.name,
