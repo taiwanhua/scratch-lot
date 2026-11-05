@@ -18,6 +18,7 @@ import { useSession } from "@/hooks/base/useSession";
 
 import { moneyText } from "../../store-text";
 import { CountUndoDialog } from "./CountUndoDialog";
+import { ReturnScanField } from "./ReturnScanField";
 import { useSalesText } from "./useSalesText";
 
 export interface RecentSalesDrawerProps {
@@ -28,6 +29,8 @@ export interface RecentSalesDrawerProps {
   onClose: () => void;
   /** 每列的 [撤銷](先開撤銷確認) */
   onUndo: (ticketId: string) => void;
+  /** 張數店與轉換中才給:這台的本機收銀點(上方多「刷退的票」,張數店規格 7.3 第 1 點) */
+  returnCashPointId?: string | null;
 }
 
 /**
@@ -42,6 +45,7 @@ export const RecentSalesDrawer = ({
   cashPointName,
   onClose,
   onUndo,
+  returnCashPointId = null,
 }: RecentSalesDrawerProps) => {
   const { t, clock } = useSalesText();
   const { session } = useSession();
@@ -111,6 +115,9 @@ export const RecentSalesDrawer = ({
         <Typography variant="body2" color="textSecondary">
           {t("recentSales.hint")}
         </Typography>
+        {returnCashPointId !== null && canUndo ? (
+          <ReturnScanField orgId={orgId} localCashPointId={returnCashPointId} />
+        ) : null}
         {rows.length === 0 ? (
           <Typography color="textSecondary">
             {t("recentSales.empty")}

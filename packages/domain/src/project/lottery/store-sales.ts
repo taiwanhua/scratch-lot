@@ -19,6 +19,9 @@ export const STORE_SALE_SCAN_PURPOSE = "store-sale";
 /** 拆本精靈「先選要拆的本」可以刷條碼選本(開著時優先於看板的銷售)。 */
 export const STORE_SPLIT_SCAN_PURPOSE = "store-split";
 
+/** [最近售出] 開著時刷的是客人退回的票(開著時優先於看板的銷售;張數店規格 7.3 第 1 點)。 */
+export const STORE_RETURN_SCAN_PURPOSE = "store-sale-return";
+
 /** 當下撤銷的時限:售出後 30 分鐘內(規格 6.3)。 */
 export const SALE_UNDO_WINDOW_MINUTES = 30;
 const MINUTE_MS = 60_000;

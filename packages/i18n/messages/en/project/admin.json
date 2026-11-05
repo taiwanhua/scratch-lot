@@ -540,7 +540,7 @@
       "reopen": "Put on counter",
       "cost_adjust": "Cost adjusted",
       "match": "Matched",
-      "renumber_confirm": "Renumber confirmed",
+      "renumber_confirm": "Ticket number confirmed",
       "scrap_undo": "Scrap undone"
     },
     "sources": {
@@ -3471,6 +3471,14 @@
       "hint": "Counts to the shift on {name}; expected cash +{amount}.",
       "submit": "Confirm sale",
       "success": "{count} tickets marked as sold"
+    },
+    "returnScan": {
+      "input": "Scan returned ticket",
+      "help": "Customer brought a ticket back: scan it or enter the ticket number, once per ticket",
+      "add": "Look up",
+      "line": "{code} {name} · #{ticketNo} · {amount}",
+      "hint": "Undoing deducts {amount}. A ticket not scanned as sold at this cash point is first matched to the latest sale by count here.",
+      "matched": "Undone. Matched: this ticket took over 1 ticket sold by count at {time}"
     },
     "recentSales": {
       "title": "Recent sales · {cashPoint}",

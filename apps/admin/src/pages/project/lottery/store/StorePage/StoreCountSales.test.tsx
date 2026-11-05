@@ -174,6 +174,70 @@ describe("店面管理:張數店的銷售", () => {
     ).toBeInTheDocument();
   });
 
+  it("[最近售出] 刷退的票:開著時刷到的是退票,不是賣出;確認 → 帶本機收銀點撤銷,提示「已對號」(7.3 第 1 點)", async () => {
+    const { user, salesFake } = renderStore({ world: countBoard() });
+    const undone: unknown[] = [];
+    server.use(
+      api.mutation("UndoLotteryTicketSale", ({ variables }) => {
+        const { input } = variables as { input: unknown };
+        undone.push(input);
+        return HttpResponse.json({
+          data: {
+            undoLotteryTicketSale: {
+              item: {
+                ticketId: "b-5-t1",
+                version: 4,
+                ticketKey: "5164-056528-001",
+                amount: 200,
+                soldAt: "2026-10-16T02:05:00.000Z",
+                cashPoint: { id: "cp-counter", name: "店內櫃台" },
+                shiftId: "shift-1",
+                undone: true,
+                undoBlock: null,
+                matched: true,
+                countSale: null,
+              },
+            },
+          },
+        });
+      }),
+    );
+    const counter = await sectionOf("店內櫃台");
+    await user.click(within(counter).getByRole("button", { name: "最近售出" }));
+    const drawer = await screen.findByRole("presentation");
+    expect(
+      await within(drawer).findByLabelText("刷退的票"),
+    ).toBeInTheDocument();
+    act(() => {
+      injectScan("0056528001");
+    });
+    const dialog = await screen.findByRole("dialog", {
+      name: "撤銷這張售出?",
+    });
+    expect(salesFake.inputs.sell).toEqual([]);
+    await user.click(within(dialog).getByRole("button", { name: "撤銷" }));
+    await waitFor(() => {
+      expect(undone).toEqual([
+        expect.objectContaining({
+          ticketId: "b-5-t1",
+          orgId: STORE_A,
+          localCashPointId: "cp-counter",
+        }),
+      ]);
+    });
+    expect(await findLatestSnackbar()).toHaveTextContent(
+      /已撤銷。已對號:這張接手了 .* 依張數售出的 1 張/,
+    );
+  });
+
+  it("編號店的 [最近售出] 沒有「刷退的票」", async () => {
+    const { user } = renderStore();
+    const counter = await sectionOf("店內櫃台");
+    await user.click(within(counter).getByRole("button", { name: "最近售出" }));
+    const drawer = await screen.findByRole("presentation");
+    expect(within(drawer).queryByLabelText("刷退的票")).toBeNull();
+  });
+
   it("刷到已售·未對號的張:本機收銀點有配對 → 對號後賣出,提示「已對號」(Figma CS-06a)", async () => {
     const { salesFake } = renderStore({
       world: countBoard(),

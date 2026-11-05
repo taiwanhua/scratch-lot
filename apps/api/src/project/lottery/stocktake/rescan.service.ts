@@ -614,6 +614,14 @@ export class RescanService {
           : plainPlace(item),
       );
       const finished = places.every((item) => item.doneAt !== null);
+      const confirmed = finished
+        ? await this.confirmUnmatchedOf(operator, store, record, now, session)
+        : { events: [], results: [] };
+      await this.ledger.applyTicketEvents(
+        session,
+        { operator },
+        confirmed.events,
+      );
       await this.writeRescan(operator, store, record, session, {
         "rescan.places": places,
         "rescan.results": [
@@ -624,6 +632,7 @@ export class RescanService {
             partnerTicketId: row.partnerTicketId ?? null,
           })),
           ...results,
+          ...confirmed.results,
         ],
         "rescan.lastActiveAt": now,
         ...(finished
@@ -875,6 +884,50 @@ export class RescanService {
       });
     }
     return { events, results };
+  }
+
+  /**
+   * 全部位置刷完(8.3、8.4 第 4 點):這個遊戲到這時還是待查·未對號、遺失·未對號的張,全店都沒刷到,確定不在,
+   * 每張一筆 `renumber_confirm` 清掉記號(同補點編號,帳本整批寫)。已售·未對號不動:重刷分不出賣掉或遺失
+   * (5.1,補點編號才清)。鎖定中的張可能刷到過(8.4 第 5 點),不動。一次讀,不隨張數成長(TX-06)。
+   */
+  private async confirmUnmatchedOf(
+    operator: OperatorContext,
+    store: StoreRef,
+    record: RescanRecord,
+    now: Date,
+    session: ClientSession,
+  ): Promise<{ events: TicketEventInput[]; results: StocktakeRescanResult[] }> {
+    const reader = await this.readerOf(operator, store);
+    const tickets = await this.tickets.findMany(
+      reader,
+      {
+        orgId: store.orgId,
+        gameId: record.rescan.gameId,
+        status: { $in: [TICKET_STATUS.investigating, TICKET_STATUS.lost] },
+        unmatched: true,
+        lockedBy: null,
+      },
+      { session },
+    );
+    return {
+      events: tickets.map((ticket) => ({
+        ticketId: ticket._id,
+        expectedVersion: ticket.version,
+        expectedStatuses: [ticket.status],
+        type: TICKET_EVENT_TYPE.renumberConfirm,
+        at: now,
+        patch: { unmatched: false },
+        refType: STOCKTAKE_REF_TYPE,
+        refId: record._id,
+      })),
+      results: tickets.map((ticket) => ({
+        cashPointId: ticket.location.cashPointId ?? null,
+        ticketId: ticket._id,
+        outcome: "investigated",
+        partnerTicketId: null,
+      })),
+    };
   }
 
   /** 刷到的一張按刷完要寫的事件:對號兩筆 `match`、尋回、記到這裡;其他(記已售但還在、要先更正)不動。 */

@@ -194,7 +194,7 @@
 
 欄位:`eventId`、`ticketId`、`bookId`、`gameId`、`orgId`、`at`、`by`、`type`、`from`、`to`(狀態、位置、收銀點、所在分店的快照)、`quantity`(一筆一張)、`amount`(**一律正數**)、`cost`(成本快照:沒指定就記事件前的單張成本,之後調貨改了單張成本也不變;報表的已售成本、期初 / 期末成本都用它)、`cashEffect`(`none` / `increase` / `decrease`)、`cashPointId`、`shiftId`、`refType`、`refId`、`reasonKey`、`reasonNote`。索引 `eventId` 唯一、`(orgId, at)`、`(cashPointId, at)`、`(ticketId, at)`、`(orgId, gameId, type)`。
 
-事件類型(`packages/domain/src/project/lottery/ticket-events.ts`):`purchase` 進貨、`purchase_void` 進貨作廢、`open` 拆本、`recall` 收回、`move` 移櫃、`sale` 售出、`sale_stocktake` 售出(盤點補登)、`sale_undo` 撤銷、`skip` 跳號、`unskip` 取消跳號、`scrap` 報廢、`transfer_out` 調出、`in_transit` 在途、`transfer_in` 調入、`investigate` 待查、`lose` 遺失、`recover` 尋回、`cost_adjust` 成本調整(調貨改單張成本時寫)、`match` 對號(張數店,兩張互換狀態 + 位置,`refType: ticket_match`)、`renumber_confirm` 補點編號確認(清未對號記號)、`scrap_undo` 撤銷報廢。事件的 `from` / `to` 快照多記 `unmatched`。
+事件類型(`packages/domain/src/project/lottery/ticket-events.ts`):`purchase` 進貨、`purchase_void` 進貨作廢、`open` 拆本、`recall` 收回、`move` 移櫃、`sale` 售出、`sale_stocktake` 售出(盤點補登)、`sale_undo` 撤銷、`skip` 跳號、`unskip` 取消跳號、`scrap` 報廢、`transfer_out` 調出、`in_transit` 在途、`transfer_in` 調入、`investigate` 待查、`lose` 遺失、`recover` 尋回、`cost_adjust` 成本調整(調貨改單張成本時寫)、`match` 對號(張數店,兩張互換狀態 + 位置,`refType: ticket_match`)、`renumber_confirm` 張號確認(補點編號核准、全店重刷全部刷完時清未對號記號)、`scrap_undo` 撤銷報廢。事件的 `from` / `to` 快照多記 `unmatched`。
 
 ### 帳本服務(唯一入口)
 

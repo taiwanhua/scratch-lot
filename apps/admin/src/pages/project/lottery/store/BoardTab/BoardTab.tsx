@@ -46,7 +46,10 @@ import { CameraScanButton } from "./sales/CameraScanButton";
 import { ExpandedBookCard } from "./sales/ExpandedBookCard";
 import { SalesBoardDialogs, type SalesDialog } from "./sales/SalesBoardDialogs";
 import { countCardOf } from "./sales/card-cells";
-import { countSaleActionsOf } from "./sales/count-sale-action";
+import {
+  countSaleActionsOf,
+  recentSalesAction,
+} from "./sales/count-sale-action";
 import { useSalesText } from "./sales/useSalesText";
 import { useStoreSaleFlow } from "./sales/useStoreSaleFlow";
 
@@ -210,18 +213,13 @@ export const BoardTab = () => {
       // [最近售出] 只在本機收銀點、自己開的班(規格 6.2)
       ...(shift.isMine
         ? [
-            {
-              key: "recent-sales",
-              label: t("header.recentSales"),
-              emphasis: "link" as const,
-              onClick: () => {
-                setSalesDialog({
-                  kind: "recent",
-                  shiftId: shift.id,
-                  cashPointName: point.name,
-                });
-              },
-            },
+            recentSalesAction(t("header.recentSales"), () => {
+              setSalesDialog({
+                kind: "recent",
+                shiftId: shift.id,
+                cashPointName: point.name,
+              });
+            }),
           ]
         : []),
       // [最近兌獎](自己的班)接在 [最近售出] 後面;[兌獎] 在按鈕列最前面(Figma ST-01);
@@ -421,6 +419,7 @@ export const BoardTab = () => {
         }
         onChange={setSalesDialog}
         onUndo={flow.openUndo}
+        countMode={countMode}
       />
       {flow.element}
       {redemption.element}

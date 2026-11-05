@@ -55,3 +55,11 @@ export const countSaleActionsOf = ({
     },
   ];
 };
+
+/** 收銀點標題列的 [最近售出]。 */
+export const recentSalesAction = (label: string, onClick: () => void) => ({
+  key: "recent-sales",
+  label,
+  emphasis: "link" as const,
+  onClick,
+});

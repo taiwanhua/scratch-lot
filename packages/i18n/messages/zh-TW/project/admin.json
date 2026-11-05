@@ -540,7 +540,7 @@
       "reopen": "上檯面",
       "cost_adjust": "成本調整",
       "match": "對號",
-      "renumber_confirm": "補點編號確認",
+      "renumber_confirm": "張號確認",
       "scrap_undo": "撤銷報廢"
     },
     "sources": {
@@ -3471,6 +3471,14 @@
       "hint": "售出算進{name}這一班,應有現金 +{amount}。",
       "submit": "確認售出",
       "success": "已標記售出 {count} 張"
+    },
+    "returnScan": {
+      "input": "刷退的票",
+      "help": "客人帶票回來退:刷條碼或手輸張號,退幾張刷幾張",
+      "add": "查詢",
+      "line": "{code} {name} · #{ticketNo} · {amount} 元",
+      "hint": "撤銷後扣回 {amount} 元。不是這台刷條碼賣出的票,會先和這台最近一筆依張數售出對號。",
+      "matched": "已撤銷。已對號:這張接手了 {time} 依張數售出的 1 張"
     },
     "recentSales": {
       "title": "最近售出 · {cashPoint}",

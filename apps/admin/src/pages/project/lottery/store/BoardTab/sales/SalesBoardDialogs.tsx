@@ -3,6 +3,7 @@ import { CountSaleDialog, type CountSaleGame } from "./CountSaleDialog";
 import { RecentSalesDrawer } from "./RecentSalesDrawer";
 import { SplitPickBookDialog } from "./SplitPickBookDialog";
 import { SplitWizardDialog } from "./SplitWizardDialog";
+import { isCountBoard } from "./card-cells";
 
 /** 看板上銷售類的視窗(一次一個)。 */
 export type SalesDialog =
@@ -26,6 +27,8 @@ export interface SalesBoardDialogsProps {
   onChange: (dialog: SalesDialog | null) => void;
   /** [最近售出] 每列的 [撤銷] */
   onUndo: (ticketId: string) => void;
+  /** 這家店實際的盤點制度(張數店的 [最近售出] 多「刷退的票」) */
+  countMode: string;
 }
 
 /**
@@ -38,6 +41,7 @@ export const SalesBoardDialogs = ({
   local,
   onChange,
   onUndo,
+  countMode,
 }: SalesBoardDialogsProps) => {
   const close = () => {
     onChange(null);
@@ -74,6 +78,9 @@ export const SalesBoardDialogs = ({
           cashPointName={dialog.cashPointName}
           onClose={close}
           onUndo={onUndo}
+          returnCashPointId={
+            isCountBoard(countMode) ? (local?.id ?? null) : null
+          }
         />
       );
     }

@@ -1007,6 +1007,24 @@ describe("全店重刷、提醒與移櫃暫停(GraphQL 端點 + 真 MongoDB)", (
       expect(outcomesOf(placeOf(done, null).items)).toEqual({
         "008": "recovered",
       });
+      // 全部刷完:#005(對號接手的待查·未對號)全店都沒刷到 → 確定待查,清記號;已售·未對號不動(8.4、5.1)
+      expect(await ticket(a.bookId, "005")).toMatchObject({
+        status: "investigating",
+        unmatched: false,
+      });
+      expect(outcomesOf(done.results)).toMatchObject({ "005": "investigated" });
+      const confirmed = await eventsOf(
+        await fieldOf(ticket(a.bookId, "005"), "_id"),
+      );
+      expect(confirmed.at(-1)).toMatchObject({
+        type: "renumber_confirm",
+        refType: "stocktake",
+        refId: new Types.ObjectId(rescan.id),
+      });
+      expect(await ticket(a.bookId, "004")).toMatchObject({
+        status: "sold",
+        unmatched: true,
+      });
       // B 的 #014 沒刷到 → 確定待查(I3)
       expect(await ticket(b.bookId, "014")).toMatchObject({
         status: "investigating",
