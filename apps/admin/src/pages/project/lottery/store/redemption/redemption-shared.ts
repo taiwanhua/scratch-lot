@@ -12,6 +12,8 @@ import {
 } from "@/lib/project/lottery/redemption-error";
 
 import { STORE_BOARD_QUERY_KEY } from "../BoardTab/board-query";
+import { STORE_CHECKOUT_WIZARD_QUERY_KEY } from "../checkout/checkout-keys";
+import { STORE_DAILY_CLOSE_WIZARD_QUERY_KEY } from "../daily-close/daily-close-keys";
 import { moneyText } from "../store-text";
 
 export type RedemptionRow = LotteryRedemptionFieldsFragment;
@@ -37,6 +39,9 @@ const REDEMPTION_QUERY_KEYS: readonly QueryKey[] = [
   STORE_REDEMPTIONS_QUERY_KEY,
   ["LotteryRedemption"],
   ["LotteryPurchaseRedemptions"],
+  // 補登兌獎立即生效:交班、日結精靈的應有現金與兌獎清單要跟著變,不只靠 `board` 信號(同 `useRefreshWizardCash`)
+  STORE_CHECKOUT_WIZARD_QUERY_KEY,
+  STORE_DAILY_CLOSE_WIZARD_QUERY_KEY,
 ];
 
 export const invalidateRedemptions = (queryClient: QueryClient): void => {
