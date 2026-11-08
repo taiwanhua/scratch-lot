@@ -88,6 +88,7 @@ const MOVEMENT_ROWS: readonly { type: string; sources: readonly string[] }[] = [
   { type: "deposit", sources: [CASH_MOVEMENT_TYPE.deposit] },
   { type: "withdraw", sources: [CASH_MOVEMENT_TYPE.withdraw] },
   { type: "bank_deposit", sources: [CASH_MOVEMENT_TYPE.bankDeposit] },
+  { type: "bank_withdraw", sources: [CASH_MOVEMENT_TYPE.bankWithdraw] },
   { type: "refund", sources: [CASH_MOVEMENT_TYPE.refund] },
   { type: "transfer_out", sources: [CASH_MOVEMENT_TYPE.transferOut] },
   { type: "transfer_in", sources: [CASH_MOVEMENT_TYPE.transferIn] },

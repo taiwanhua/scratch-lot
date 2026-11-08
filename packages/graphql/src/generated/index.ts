@@ -5887,6 +5887,7 @@ export type Query = {
   forms: FormsPayload;
   lotteryAllocations: LotteryAllocationsPayload;
   lotteryBankAccount: LotteryBankAccountPayload;
+  lotteryBankAccountVaultStores: Array<LotteryAccountsRef>;
   lotteryBankAccounts: LotteryBankAccountsPayload;
   lotteryBankDepositForm: LotteryBankDepositForm;
   lotteryBankTransactions: LotteryBankTransactionsPayload;
@@ -6185,6 +6186,11 @@ export type QueryLotteryAllocationsArgs = {
 
 export type QueryLotteryBankAccountArgs = {
   id: Scalars['ID']['input'];
+};
+
+
+export type QueryLotteryBankAccountVaultStoresArgs = {
+  accountId: Scalars['ID']['input'];
 };
 
 
@@ -6885,6 +6891,7 @@ export type RecordLotteryBankTransactionInput = {
   refType?: InputMaybe<Scalars['String']['input']>;
   summary?: InputMaybe<Scalars['String']['input']>;
   type: Scalars['String']['input'];
+  vaultOrgId?: InputMaybe<Scalars['ID']['input']>;
 };
 
 export type RecordLotterySettlementInput = {
@@ -10488,6 +10495,13 @@ export type DeleteLotteryBankAccountMutationVariables = Exact<{
 
 
 export type DeleteLotteryBankAccountMutation = { __typename?: 'Mutation', deleteLotteryBankAccount: { __typename?: 'DeleteLotteryBankAccountPayload', id: string } };
+
+export type LotteryBankAccountVaultStoresQueryVariables = Exact<{
+  accountId: Scalars['ID']['input'];
+}>;
+
+
+export type LotteryBankAccountVaultStoresQuery = { __typename?: 'Query', lotteryBankAccountVaultStores: Array<{ __typename?: 'LotteryAccountsRef', id: string, name: string }> };
 
 export type RecordLotteryBankTransactionMutationVariables = Exact<{
   input: RecordLotteryBankTransactionInput;
@@ -20609,6 +20623,37 @@ export const useDeleteLotteryBankAccountMutation = <
 
 
 useDeleteLotteryBankAccountMutation.fetcher = (client: GraphQLClient, variables: DeleteLotteryBankAccountMutationVariables, headers?: RequestInit['headers']) => fetcher<DeleteLotteryBankAccountMutation, DeleteLotteryBankAccountMutationVariables>(client, DeleteLotteryBankAccountDocument, variables, headers);
+
+export const LotteryBankAccountVaultStoresDocument = `
+    query LotteryBankAccountVaultStores($accountId: ID!) {
+  lotteryBankAccountVaultStores(accountId: $accountId) {
+    ...LotteryAccountsRefFields
+  }
+}
+    ${LotteryAccountsRefFieldsFragmentDoc}`;
+
+export const useLotteryBankAccountVaultStoresQuery = <
+      TData = LotteryBankAccountVaultStoresQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: LotteryBankAccountVaultStoresQueryVariables,
+      options?: Omit<UseQueryOptions<LotteryBankAccountVaultStoresQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotteryBankAccountVaultStoresQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<LotteryBankAccountVaultStoresQuery, TError, TData>(
+      {
+    queryKey: ['LotteryBankAccountVaultStores', variables],
+    queryFn: fetcher<LotteryBankAccountVaultStoresQuery, LotteryBankAccountVaultStoresQueryVariables>(client, LotteryBankAccountVaultStoresDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useLotteryBankAccountVaultStoresQuery.getKey = (variables: LotteryBankAccountVaultStoresQueryVariables) => ['LotteryBankAccountVaultStores', variables];
+
+
+useLotteryBankAccountVaultStoresQuery.fetcher = (client: GraphQLClient, variables: LotteryBankAccountVaultStoresQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryBankAccountVaultStoresQuery, LotteryBankAccountVaultStoresQueryVariables>(client, LotteryBankAccountVaultStoresDocument, variables, headers);
 
 export const RecordLotteryBankTransactionDocument = `
     mutation RecordLotteryBankTransaction($input: RecordLotteryBankTransactionInput!) {

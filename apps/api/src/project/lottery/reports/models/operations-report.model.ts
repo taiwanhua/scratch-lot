@@ -274,7 +274,7 @@ export class LotteryReportPostCloseModel {
 /** 5b 現金移動的一類(抽屜、小金庫各自的增減:+ 流入、− 流出;沖正那一筆兩端對調,自然是反向)。 */
 @ObjectType("LotteryOperationsCashMovement")
 export class LotteryOperationsCashMovementModel {
-  /** `deposit` 投庫 / `withdraw` 出庫 / `bank_deposit` 存銀行 / `refund` 退貨退款 / `transfer_out` 調貨支出 / `transfer_in` 調貨收入 / `correction` 現金更正 */
+  /** `deposit` 投庫 / `withdraw` 出庫 / `bank_deposit` 存銀行 / `bank_withdraw` 銀行提領 / `refund` 退貨退款 / `transfer_out` 調貨支出 / `transfer_in` 調貨收入 / `correction` 現金更正 */
   @Field(() => String)
   type!: string;
 

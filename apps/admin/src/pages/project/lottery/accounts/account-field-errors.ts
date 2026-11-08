@@ -34,6 +34,7 @@ const FORMAT_TEXTS: Record<string, [string, Record<string, string>?]> = {
   amount: ["fieldErrors.positiveInteger"],
   occurredAt: ["fieldErrors.requiredTime"],
   branchOrgId: ["fieldErrors.required"],
+  vaultOrgId: ["fieldErrors.choose"],
   summary: ["fieldErrors.summary", max(BANK_ACCOUNT_LIMITS.summary)],
   reason: ["fieldErrors.requiredText", max(BANK_ACCOUNT_LIMITS.summary)],
 };

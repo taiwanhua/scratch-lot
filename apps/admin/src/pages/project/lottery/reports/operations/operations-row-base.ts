@@ -89,6 +89,7 @@ export const MOVEMENT_KEYS: Readonly<Record<string, string>> = {
   deposit: "admin.lotteryReports.operations.movements.deposit",
   withdraw: "admin.lotteryReports.operations.movements.withdraw",
   bank_deposit: "admin.lotteryReports.operations.movements.bank_deposit",
+  bank_withdraw: "admin.lotteryReports.operations.movements.bank_withdraw",
   refund: "admin.lotteryReports.operations.movements.refund",
   transfer_out: "admin.lotteryReports.operations.movements.transfer_out",
   transfer_in: "admin.lotteryReports.operations.movements.transfer_in",

@@ -43,6 +43,7 @@ export const VAULT_CASH_ITEM_KINDS = [
   "transfers",
   "corrections",
   "bank_deposits",
+  "bank_withdrawals",
 ] as const satisfies readonly ExpectedCashItemKind[];
 
 /** 日結與存銀行擋下的原因(api 的 `extensions.reason`)。 */

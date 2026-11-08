@@ -812,6 +812,7 @@
         "deposit": "Deposited to vault",
         "withdraw": "Taken from vault",
         "bank_deposit": "Deposited to bank",
+        "bank_withdraw": "Withdrawn from bank",
         "refund": "Return refund (open shift)",
         "transfer_out": "Transfer expense (cash)",
         "transfer_in": "Transfer income (cash)",
@@ -2126,6 +2127,7 @@
       "withdraw": "Withdraw",
       "deposit": "Deposit",
       "bank_deposit": "Bank deposit",
+      "bank_withdraw": "Bank withdrawal",
       "transfer_out": "Transfer expense",
       "transfer_in": "Transfer income",
       "refund": "Refund",
@@ -2235,10 +2237,13 @@
         "amount": "Amount",
         "occurredAt": "Time",
         "branchOrgId": "Branch",
+        "vaultOrgId": "Cash goes to (optional)",
         "summary": "Summary"
       },
       "documentOption": "{docNo} {label} · {due}",
       "noDocument": "No documents to refund or receive",
+      "vaultNone": "Not into a vault (withdraw cash from the account)",
+      "vaultHint": "Leave empty to withdraw cash from the account: only the bank balance goes down, no vault receives it. Pick a store to put the cash into that store's vault (the live cash ledger records a \"Bank withdrawal\"); the attributed store becomes that store too.",
       "hint": "Adjustment and other need a direction and a summary.",
       "cancel": "Cancel",
       "submit": "Record"
@@ -3952,7 +3957,8 @@
         "refunds": "Refunds",
         "corrections": "Cash corrections",
         "transfers": "Transfers (cash)",
-        "bank_deposits": "Bank deposits"
+        "bank_deposits": "Bank deposits",
+        "bank_withdrawals": "Bank withdrawals"
       },
       "itemCount": {
         "sales": "({count} tickets)",
@@ -4126,7 +4132,8 @@
           "withdrawals": "Withdrawals",
           "transfers": "Transfers (cash)",
           "corrections": "Cash corrections",
-          "bank_deposits": "Bank deposits"
+          "bank_deposits": "Bank deposits",
+          "bank_withdrawals": "Bank withdrawals"
         }
       },
       "bank": {

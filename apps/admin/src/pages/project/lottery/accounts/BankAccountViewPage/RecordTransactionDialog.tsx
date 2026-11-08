@@ -12,6 +12,7 @@ import {
 } from "@repo/domain/project/lottery-accounts";
 import {
   type LotteryBankAccountFieldsFragment,
+  useLotteryBankAccountVaultStoresQuery,
   useLotterySettlementCandidatesQuery,
   useRecordLotteryBankTransactionMutation,
 } from "@repo/graphql";
@@ -54,6 +55,7 @@ type Field =
   | "amount"
   | "occurredAt"
   | "branchOrgId"
+  | "vaultOrgId"
   | "summary";
 
 const FIELDS: readonly Field[] = [
@@ -63,12 +65,15 @@ const FIELDS: readonly Field[] = [
   "amount",
   "occurredAt",
   "branchOrgId",
+  "vaultOrgId",
   "summary",
 ];
 
 /**
  * 登記交易(Figma AC-03b 222:23044;規格 9、10.1):類型 → 單據(進貨收入 / 調貨收入必填、只列有待退或待收的)→
  * 金額 + 時間 → 歸屬分店(進貨與調貨必填)→ 摘要(調整、其他要選方向,說明必填)。
+ * 提領多一欄選填「現金去向」(帳戶使用組織包含的分店):選了 → 現金進那家店的小金庫(api 同時寫「銀行提領」流水),
+ * 歸屬分店跟著是那家店;沒選 = 從帳戶提領現金,只扣銀行(欄位下方註明)。
  */
 export const RecordTransactionDialog = ({
   account,
@@ -87,6 +92,7 @@ export const RecordTransactionDialog = ({
     new Date().toISOString(),
   );
   const [branchOrgId, setBranchOrgId] = useState("");
+  const [vaultOrgId, setVaultOrgId] = useState("");
   const [summary, setSummary] = useState("");
   // 欄位錯了就在欄位正下方寫原因(REACT-18);上方提示只放通用句
   const [fieldErrors, setFieldErrors] = useState<FieldErrorTexts<Field>>({});
@@ -102,6 +108,24 @@ export const RecordTransactionDialog = ({
     { enabled: requirement === "required" },
   );
   const documents = candidates.data?.lotterySettlementCandidates.items ?? [];
+  const isWithdrawal = type === "withdrawal";
+  const vaultStores = useLotteryBankAccountVaultStoresQuery(
+    session.client,
+    { accountId: account.id },
+    { enabled: isWithdrawal },
+  );
+  const vaultOptions = [
+    { value: "", label: t("recordForm.vaultNone") },
+    ...(vaultStores.data?.lotteryBankAccountVaultStores ?? []).map((org) => ({
+      value: org.id,
+      label: org.name,
+    })),
+  ];
+  // 現金去向的分店就是歸屬分店(api 以它為準,不另送歸屬分店)
+  const hasVault = isWithdrawal && vaultOrgId !== "";
+  const shownBranchId = hasVault ? vaultOrgId : branchOrgId;
+  const branchInput = shownBranchId === "" ? {} : { branchOrgId };
+  const placeInput = hasVault ? { vaultOrgId } : branchInput;
   const documentOptions = documents.map((row) => ({
     value: row.refId,
     label: t("recordForm.documentOption", {
@@ -140,6 +164,7 @@ export const RecordTransactionDialog = ({
   const chooseType = (value: BankTransactionType) => {
     setType(value);
     setRefId("");
+    setVaultOrgId("");
     setFieldErrors({});
   };
 
@@ -176,7 +201,7 @@ export const RecordTransactionDialog = ({
         ...(needsDirection && direction !== "" ? { direction } : {}),
         amount: amountValue,
         occurredAt,
-        ...(branchOrgId === "" ? {} : { branchOrgId }),
+        ...placeInput,
         ...(summary.trim() === "" ? {} : { summary: summary.trim() }),
         ...(selected === undefined
           ? {}
@@ -285,11 +310,26 @@ export const RecordTransactionDialog = ({
             sx={{ flex: 1 }}
           />
         </Stack>
+        {isWithdrawal && (
+          <SelectField
+            label={t("recordForm.fields.vaultOrgId")}
+            value={vaultOrgId}
+            options={vaultOptions}
+            error={fieldErrors.vaultOrgId !== undefined}
+            helperText={fieldErrors.vaultOrgId ?? t("recordForm.vaultHint")}
+            onChange={(value) => {
+              setVaultOrgId(value);
+              clearError("vaultOrgId");
+              clearError("branchOrgId");
+            }}
+          />
+        )}
         <OrgTreeSelect
           scope="visible"
           label={t("recordForm.fields.branchOrgId")}
-          value={branchOrgId === "" ? [] : [branchOrgId]}
+          value={shownBranchId === "" ? [] : [shownBranchId]}
           required={requiresBranch(type)}
+          disabled={hasVault}
           fullWidth
           error={fieldErrors.branchOrgId !== undefined}
           helperText={fieldErrors.branchOrgId}
