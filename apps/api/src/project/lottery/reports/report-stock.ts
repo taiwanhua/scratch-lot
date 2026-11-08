@@ -38,6 +38,8 @@ export interface StateSnapshot {
   status: string;
   locationKind: string;
   orgId: Types.ObjectId;
+  /** 未對號(張數店;舊資料沒有 = 不是) */
+  unmatched?: boolean;
 }
 
 /** 這個狀態是「這家店的庫存」:在這家店、未售、在庫存或檯面。 */
@@ -57,6 +59,8 @@ interface HeldTicket {
   status: string;
   locationKind: string;
   cost: number;
+  /** 那一刻是未對號(張數店:系統預設帶入的待查 / 遺失 / 已售) */
+  unmatched: boolean;
 }
 
 /** 張數 + 成本。 */
@@ -78,7 +82,8 @@ export interface StockSnapshot {
   onHand: StockFigures;
   /** 庫存扣掉的待標註(張數 / 成本;待標註調整用) */
   onHandPending: StockFigures;
-  investigating: StockFigures & { bookIds: string[] };
+  /** 期末待查(其中 `unmatchedTickets` 張是系統預設帶入的,不列張號區段;張數店規格 11.4) */
+  investigating: StockFigures & { bookIds: string[]; unmatchedTickets: number };
   inTransit: InTransitGroup[];
 }
 
@@ -262,6 +267,7 @@ export class ReportStock {
           status: row.from.status,
           locationKind: row.from.locationKind,
           cost: row.cost,
+          unmatched: row.from.unmatched === true,
         });
       }
     }
@@ -269,7 +275,7 @@ export class ReportStock {
     const current = await this.tickets.findMany(
       reader,
       { orgId, status: { $in: [...HELD_STATUSES] } },
-      { select: "bookId status location unitCost" },
+      { select: "bookId status location unitCost unmatched" },
     );
     for (const ticket of current) {
       if (touched.has(String(ticket._id))) {
@@ -281,6 +287,7 @@ export class ReportStock {
         status: ticket.status,
         locationKind: ticket.location.kind,
         cost: ticket.unitCost,
+        unmatched: ticket.unmatched,
       });
     }
     // 沒有成本快照的舊事件:改用現況的單張成本(那一刻之後才調入的,用點收記的調入前成本還原)
@@ -376,6 +383,8 @@ export class ReportStock {
         bookIds: [
           ...new Set(investigating.map((ticket) => String(ticket.bookId))),
         ],
+        unmatchedTickets: investigating.filter((ticket) => ticket.unmatched)
+          .length,
       },
       inTransit: groupsOf(inTransit).flatMap((group) => {
         const first = group[0];

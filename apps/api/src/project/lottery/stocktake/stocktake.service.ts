@@ -20,6 +20,8 @@ import {
   isStocktakeStockLine,
   parseStocktakeDraft,
   pendingSkipCountOf,
+  rescanBlocksCountGroup,
+  stocktakeCountModeOf,
 } from "@repo/domain/project/lottery";
 import { LOTTERY_FIELD_CATEGORY_KEYS } from "@repo/domain/project/lottery-fields";
 
@@ -38,9 +40,11 @@ import {
   LotteryTicketsRepository,
 } from "../../database/lottery-inventory/lottery-inventory.repository";
 import type {
+  StocktakeCountLine,
   StocktakeDiffRow,
   StocktakeLine,
   StocktakeLostReviewLine,
+  StocktakeRenumber,
   StocktakeSummary,
   StocktakeUncountedBook,
   StocktakeUnopenedLine,
@@ -57,13 +61,22 @@ import { countsOfBook, pendingSkipCountOfBook } from "../tickets/books.service";
 import { TicketLedgerService } from "../tickets/ticket-ledger.service";
 import type { TicketEventInput } from "../tickets/ticket-ledger.types";
 import type {
+  BackfillLotteryStocktakeCountSalesInput,
   BackfillLotteryStocktakeSalesInput,
   LotteryStocktakeReviewInput,
 } from "./dto/stocktake.input";
+import type { LotteryStocktakeCountBackfillModel } from "./models/stocktake-count.model";
 import type {
   LotteryStocktakeBackfillModel,
   LotteryStocktakeReviewModel,
 } from "./models/stocktake.model";
+import { RenumberStocktake } from "./renumber-stocktake";
+import { RescanReminders } from "./rescan-reminders";
+import { RescanService } from "./rescan.service";
+import {
+  type BuiltCountLines,
+  StocktakeCountService,
+} from "./stocktake-count.service";
 import {
   alreadyProcessedError,
   forbiddenError,
@@ -72,6 +85,7 @@ import {
 } from "./stocktake-error";
 import { type LineEvaluation, StocktakeFacts } from "./stocktake-facts";
 import { summaryModelOf } from "./stocktake-query.service";
+import { StocktakeSessions } from "./stocktake-sessions";
 import { draftOfValues } from "./stocktake-values";
 
 /** 送出盤點的選項(臨時盤點 = 盤點確認申請;交班 / 日結 = 結帳確認申請)。 */
@@ -91,6 +105,12 @@ interface BuiltStocktake {
   lostReviewLines: StocktakeLostReviewLine[];
   /** 範圍內還沒盤的本(不比對;沒盤完可以送出)。 */
   uncountedBooks: StocktakeUncountedBook[];
+  /** 張數盤點的組(編號盤點 = 空)。 */
+  count: BuiltCountLines;
+  /** 補點編號的比對結果(其他 = null)。 */
+  renumber: StocktakeRenumber | null;
+  /** 補點編號還沒盤的本(本號 / 未拆的本 id;不能沒盤完送出)。 */
+  renumberMissing: string[];
   summary: StocktakeSummary;
   stale: string[];
   unhandled: string[];
@@ -104,6 +124,15 @@ const block = (code: string, message: string): FormGuardResult => ({
   code,
   message,
 });
+
+/**
+ * 交班的張數盤點沒盤完(張數店規格 8.1:交班盤點不能沒盤完送出;臨時盤點、一般日結可以;
+ * 編號店照舊可以,使用者 10/21 定案)。
+ */
+const isIncomplete = (
+  built: Pick<BuiltStocktake, "count">,
+  type: StocktakeType | undefined,
+): boolean => type === "shift" && built.count.uncountedGroups.length > 0;
 
 /**
  * 盤點(專案規格 6.8、8.6、7.4、第 17 章第 1、2、3、6 題;正本 `docs/modules/project/store.md`「盤點」):
@@ -129,6 +158,11 @@ export class StocktakeService {
     private readonly support: StoreSalesSupport,
     private readonly access: StoreAccess,
     private readonly clock: StoreClock,
+    private readonly count: StocktakeCountService,
+    private readonly sessions: StocktakeSessions,
+    private readonly rescans: RescanService,
+    private readonly rescanReminders: RescanReminders,
+    private readonly renumber: RenumberStocktake,
   ) {}
 
   // ---- 差異核對 ----
@@ -150,6 +184,17 @@ export class StocktakeService {
       );
     }
     const store = await this.support.mustStore(operator, parsed.draft.orgId);
+    const problem = this.count.draftProblemOf(
+      parsed.draft,
+      await this.count.storeCountModeOf(operator, store.orgId),
+    );
+    if (problem !== null) {
+      throw validationError(
+        `stocktake draft does not match the store (${problem})`,
+        ["draft"],
+        STOCKTAKE_REASONS.invalid,
+      );
+    }
     const evaluations = await this.facts.evaluate(
       operator,
       store.orgId,
@@ -178,6 +223,11 @@ export class StocktakeService {
             gameName: game?.name ?? "",
             bookNo: item.book.bookNo,
             unitPrice: game?.unitPrice ?? 0,
+            // 補點編號:不在的張可以 [標跳號] 的上限(9.3 第 3 點;其他盤點 = 0)
+            pendingSkipCount:
+              parsed.draft.purpose === "renumber"
+                ? pendingSkipCountOfBook(item.book)
+                : 0,
             systemCount: item.systemCount,
             presentCount: item.line.presentTicketNos.length,
             diffs: item.diffs.map((diff) => ({
@@ -192,6 +242,23 @@ export class StocktakeService {
           },
         ];
       }),
+      countLines: built.count.reviewLines,
+      renumberMatches: (built.renumber?.matches ?? []).map((match) => ({
+        gameCode: match.gameCode,
+        gameName: match.gameName,
+        cashPointId:
+          match.cashPointId === null ? null : String(match.cashPointId),
+        cashPointName:
+          match.cashPointId === null
+            ? null
+            : (points.get(String(match.cashPointId))?.name ?? ""),
+        ticketNo: match.ticketNo,
+        bookNo: match.bookNo,
+        partnerTicketNo: match.partnerTicketNo,
+        partnerBookNo: match.partnerBookNo,
+      })),
+      renumberMissing: built.renumberMissing.length,
+      uncountedCount: built.summary.uncountedCount,
       staleCount: built.stale.length,
       unhandledCount: built.unhandled.length,
       summary: summaryModelOf(
@@ -361,10 +428,23 @@ export class StocktakeService {
     return this.checkDraft(operator, draft);
   }
 
-  /** 交班 / 日結的結帳確認申請也用:盤點內容 → 守門結果。 */
+  // ---- [算售出 N 張](張數盤點,立即生效) ----
+
+  backfillCount(
+    operator: OperatorContext,
+    input: BackfillLotteryStocktakeCountSalesInput,
+  ): Promise<LotteryStocktakeCountBackfillModel> {
+    return this.count.backfill(operator, input);
+  }
+
+  /**
+   * 交班 / 日結的結帳確認申請也用:盤點內容 → 守門結果。`type` = 交班時,張數盤點不能沒盤完送出
+   * (張數店規格 8.1:交班盤點、補點編號、全店重刷不行;臨時盤點、一般日結可以)。
+   */
   async checkDraft(
     operator: OperatorContext,
     draft: StocktakeDraft,
+    options: { type?: StocktakeType } = {},
   ): Promise<FormGuardResult> {
     const grant = await this.access.grantOf(operator);
     if (!grant.has(STORE_PERMISSIONS.stocktake)) {
@@ -401,6 +481,18 @@ export class StocktakeService {
       return block(STOCKTAKE_REASONS.invalid, "invalid store");
     }
     const store = await this.support.mustStore(operator, draft.orgId);
+    const problem = this.count.draftProblemOf(
+      draft,
+      await this.count.storeCountModeOf(operator, store.orgId),
+    );
+    if (problem !== null) {
+      return block(
+        problem === "renumber"
+          ? STOCKTAKE_REASONS.renumberNotAllowed
+          : STOCKTAKE_REASONS.invalid,
+        `stocktake draft does not match the store (${problem})`,
+      );
+    }
     const evaluations = await this.facts.evaluate(operator, store.orgId, draft);
     const built = await this.build(operator, store, draft, evaluations);
     if (built.stale.length > 0) {
@@ -409,10 +501,29 @@ export class StocktakeService {
         `already processed: ${built.stale.join(", ")}`,
       );
     }
+    const rescanning = await this.rescanBlockedOf(operator, store, built);
+    if (rescanning.length > 0) {
+      return block(
+        STOCKTAKE_REASONS.rescanning,
+        `rescanning: ${rescanning.join(", ")}`,
+      );
+    }
     if (built.unhandled.length > 0) {
       return block(
         STOCKTAKE_REASONS.unhandled,
         `unhandled differences: ${built.unhandled.join(", ")}`,
+      );
+    }
+    if (isIncomplete(built, options.type)) {
+      return block(
+        STOCKTAKE_REASONS.incomplete,
+        `uncounted groups: ${String(built.count.uncountedGroups.length)}`,
+      );
+    }
+    if (built.renumberMissing.length > 0) {
+      return block(
+        STOCKTAKE_REASONS.renumberIncomplete,
+        `renumber must count every book: ${String(built.renumberMissing.length)}`,
       );
     }
     return null;
@@ -441,6 +552,19 @@ export class StocktakeService {
       options.tenantId,
     );
     const store: StoreRef = { orgId: storeId, tenantId: options.tenantId };
+    const storeMode = await this.count.storeCountModeOf(reader, storeId);
+    const problem = this.count.draftProblemOf(draft, storeMode);
+    if (problem !== null) {
+      throw validationError(
+        `stocktake draft does not match the store (${problem})`,
+        ["draft"],
+        problem === "renumber"
+          ? STOCKTAKE_REASONS.renumberNotAllowed
+          : STOCKTAKE_REASONS.invalid,
+      );
+    }
+    // 補點編號是編號盤點(9.3 第 1 點);其他照這家店的制度
+    const countMode = stocktakeCountModeOf(draft);
     const evaluations = await this.facts.evaluate(
       reader,
       storeId,
@@ -458,6 +582,36 @@ export class StocktakeService {
         { ticketNos: [...built.stale, ...built.unhandled] },
       );
     }
+    const rescanning = await this.rescanBlockedOf(
+      reader,
+      store,
+      built,
+      session,
+    );
+    if (rescanning.length > 0) {
+      throw validationError(
+        "these groups are being rescanned",
+        ["draft"],
+        STOCKTAKE_REASONS.rescanning,
+        { groups: rescanning },
+      );
+    }
+    if (isIncomplete(built, options.type)) {
+      throw validationError(
+        "shift stocktake must count every group",
+        ["draft"],
+        STOCKTAKE_REASONS.incomplete,
+        { groups: built.count.uncountedGroups.length },
+      );
+    }
+    if (built.renumberMissing.length > 0) {
+      throw validationError(
+        "renumber must count every book",
+        ["draft"],
+        STOCKTAKE_REASONS.renumberIncomplete,
+        { books: built.renumberMissing.length },
+      );
+    }
     // 退回後再送出改寫同一筆:`orgId` 不在 `$set` 裡(一般更新不得變更所屬組織;分店本來就不會換)
     const content = {
       type: options.type,
@@ -473,8 +627,21 @@ export class StocktakeService {
       unopenedLines: built.unopenedLines,
       lostReviewLines: built.lostReviewLines,
       uncountedBooks: built.uncountedBooks,
+      countMode,
+      purpose: draft.purpose ?? "normal",
+      countLines: built.count.countLines,
+      uncountedGroups: built.count.uncountedGroups,
+      renumber: built.renumber,
       summary: built.summary,
     };
+    // 送出就解除送出的人這個範圍的盤點中登記(8.5a;同一個交易)
+    await this.sessions.releaseOnSubmit(
+      session,
+      reader,
+      store,
+      options.submittedBy,
+      draft.scopeCashPointId,
+    );
     const existing = await this.stocktakes.findOne(
       reader,
       { submissionId: options.submissionId },
@@ -486,6 +653,15 @@ export class StocktakeService {
       closedAt: null,
       uncountedCount: built.summary.uncountedCount,
     };
+    // [標記異常] 觸發全店重刷提醒(張數店規格 8.2、8.3):負責人提醒給店長(跟著這個交易)
+    await this.rescanReminders.notify(
+      reader,
+      store,
+      built.count.countLines
+        .filter((line) => line.flaggedCount > 0)
+        .map((line) => line.gameId),
+      `flagged:${String(options.submissionId)}:${content.submittedAt.toISOString()}`,
+    );
     if (existing === null) {
       await this.stocktakes.create(
         reader,
@@ -710,21 +886,81 @@ export class StocktakeService {
         },
       });
     }
+    // 張數盤點 [待查]:核准時才照挑張順序挑張記待查·未對號(張數店規格 8.2、14.2)
+    const countLines = record.countLines as StocktakeCountLine[] | undefined;
+    const counted = await this.count.investigateEvents(
+      reader,
+      { _id: record._id, orgId: record.orgId, countLines: countLines ?? [] },
+      at,
+      session,
+    );
+    // 補點編號:[標跳號]、自動對號、尋回、猜對了的清記號(9.3 第 2–4 點;同一批寫)
+    const renumbering = record.purpose === "renumber";
+    const renumberEvents = renumbering
+      ? await this.renumber.approvalEvents(reader, record, at, session)
+      : [];
     await this.ledger.applyTicketEvents(
       session,
       { operator: null, crossStoreTenantId: tenantId },
-      events,
+      [...events, ...counted.events, ...renumberEvents],
     );
+    const confirmedBy =
+      approverId ?? (await this.applicantOf(reader, submissionId, session));
+    if (renumbering) {
+      await this.renumber.approve(reader, record, confirmedBy, at, session);
+    }
+    // 張數盤點 [待查] 記了待查·未對號 → 全店重刷提醒給店長(張數店規格 8.3)
+    await this.rescanReminders.notify(
+      reader,
+      { orgId: record.orgId, tenantId },
+      (countLines ?? [])
+        .filter((_line, index) => (counted.picked.get(index) ?? []).length > 0)
+        .map((line) => line.gameId),
+      `investigate:${String(record._id)}`,
+    );
+    const countLinesAfter = (countLines ?? []).map((line, index) => ({
+      gameId: line.gameId,
+      gameCode: line.gameCode,
+      gameName: line.gameName,
+      cashPointId: line.cashPointId,
+      countedAt: line.countedAt,
+      systemCount: line.systemCount,
+      presentCount: line.presentCount,
+      recounts: [...line.recounts],
+      saleCount: line.saleCount,
+      saleRefIds: [...line.saleRefIds],
+      investigateCount: line.investigateCount,
+      flaggedCount: line.flaggedCount,
+      diffs: [
+        ...line.diffs.map((diff) => ({
+          ticketId: diff.ticketId,
+          ticketNo: diff.ticketNo,
+          kind: diff.kind,
+          action: diff.action,
+          eventId: diff.eventId,
+          postClose: diff.postClose,
+          amount: diff.amount,
+        })),
+        ...(counted.picked.get(index) ?? []).map((ticket) => ({
+          ticketId: ticket.ticketId,
+          ticketNo: ticket.ticketNo,
+          kind: "missing" as const,
+          action: "investigate" as const,
+          eventId: null,
+          postClose: false,
+          amount: 0,
+        })),
+      ],
+    }));
     await this.stocktakes.findOneAndUpdate(
       reader,
       { _id: record._id, version: record.version },
       {
         $set: {
+          ...(counted.picked.size === 0 ? {} : { countLines: countLinesAfter }),
           status: STOCKTAKE_STATUS.confirmed,
           confirmedAt: at,
-          confirmedBy:
-            approverId ??
-            (await this.applicantOf(reader, submissionId, session)),
+          confirmedBy,
         },
         $inc: { version: 1 },
       },
@@ -733,6 +969,47 @@ export class StocktakeService {
   }
 
   /** 申請人(核准的人的備援:每一關都跳過,沒有人核准)。 */
+  /**
+   * 8.5a B5:盤點的組(位置 P × 遊戲 X)/ 庫存那一區遊戲 X 的本,P 的 X 正在全店重刷(已開始刷、還沒按刷完)→
+   * 不能數,送出時後端再擋(「這裡正在重刷 X,刷完再數」)。回傳被擋的「遊戲代號@收銀點」(庫存 = 「@」後空白)。
+   */
+  private async rescanBlockedOf(
+    reader: OperatorContext,
+    store: StoreRef,
+    built: Pick<BuiltStocktake, "count" | "lines">,
+    session?: ClientSession,
+  ): Promise<string[]> {
+    const stockLines = built.lines.filter((line) => line.cashPointId === null);
+    if (built.count.countLines.length === 0 && stockLines.length === 0) {
+      return [];
+    }
+    const active = await this.rescans.activeRescansOf(
+      reader,
+      store.orgId,
+      session,
+    );
+    if (active.length === 0) {
+      return [];
+    }
+    const counted = built.count.countLines
+      .filter((line) =>
+        rescanBlocksCountGroup(
+          active,
+          String(line.cashPointId),
+          String(line.gameId),
+        ),
+      )
+      .map((line) => `${line.gameCode}@${String(line.cashPointId)}`);
+    const byCode = active.map((rescan) => ({
+      ...rescan,
+      gameId: rescan.gameCode,
+    }));
+    const stock = stockLines
+      .filter((line) => rescanBlocksCountGroup(byCode, null, line.gameCode))
+      .map((line) => `${line.gameCode}@`);
+    return [...new Set([...counted, ...stock])];
+  }
+
   private async applicantOf(
     reader: OperatorContext,
     submissionId: Types.ObjectId,
@@ -841,6 +1118,7 @@ export class StocktakeService {
       store,
       draft,
       options,
+      stale,
     );
     const uncountedBooks = await this.uncountedBooksOf(
       reader,
@@ -850,6 +1128,25 @@ export class StocktakeService {
       [...inStock.stock.values()].map(({ book }) => book),
       options,
     );
+    // 張數盤點的組(編號盤點 = 空):B6 退回組、還沒處理完、還沒數的組
+    const count = await this.count.build(reader, store, draft, session);
+    // 補點編號:自動對號的結果、每本都要盤(9.3 第 1、2 點)
+    const renumbering = draft.purpose === "renumber";
+    const renumber = renumbering
+      ? this.renumber.resultOf(
+          evaluations,
+          new Map([...games.entries()].map(([id, game]) => [id, game.name])),
+        )
+      : null;
+    const renumberMissing = renumbering
+      ? this.renumber.missingOf(
+          uncountedBooks.map((book) => book.bookNo),
+          [...inStock.unopened.keys()],
+          draft.unopened.map((item) => item.bookId),
+        )
+      : [];
+    stale.push(...count.stale);
+    unhandled.push(...count.unhandled);
     const all = lines.flatMap((line) => line.diffs);
     const backfilled = all.filter((diff) => diff.action === "sale_backfill");
     const lostLines = lostReviewLines.filter((line) => line.action === "lost");
@@ -859,21 +1156,30 @@ export class StocktakeService {
       unopenedLines,
       lostReviewLines,
       uncountedBooks,
+      count,
+      renumber,
+      renumberMissing,
       stale,
       unhandled,
       summary: {
-        uncountedCount: uncountedBooks.length,
+        uncountedCount: uncountedBooks.length + count.uncountedGroups.length,
         books: lines.length,
-        backfillCount: backfilled.length,
-        backfillAmount: backfilled.reduce((sum, diff) => sum + diff.amount, 0),
+        backfillCount: backfilled.length + count.saleCount,
+        backfillAmount:
+          backfilled.reduce((sum, diff) => sum + diff.amount, 0) +
+          count.saleAmount,
         newInvestigate:
           all.filter((diff) => diff.action === "investigate").length +
           unopenedLines
             .filter((line) => !line.present)
-            .reduce((sum, line) => sum + line.ticketCount, 0),
-        flagged: all.filter((diff) => diff.action === "flag").length,
+            .reduce((sum, line) => sum + line.ticketCount, 0) +
+          count.investigateCount,
+        flagged:
+          all.filter((diff) => diff.action === "flag").length +
+          count.flaggedCount,
         confirmLost: lost.tickets,
         confirmLostCost: Math.round(lost.cost),
+        renumberMatched: renumber?.matches.length ?? 0,
       },
     };
   }
@@ -928,7 +1234,10 @@ export class StocktakeService {
       ],
       options,
     );
-    const pending = rows.flatMap((row) => {
+    // 張數盤點的檯面是組,不是本(還沒數的組另記 `uncountedGroups`)
+    const pending = (
+      stocktakeCountModeOf(draft) === "count" ? [] : rows
+    ).flatMap((row) => {
       const key = row._id as {
         bookId: Types.ObjectId;
         cashPointId: Types.ObjectId;
@@ -1112,6 +1421,7 @@ export class StocktakeService {
     store: StoreRef,
     draft: StocktakeDraft,
     options: { session?: ClientSession },
+    stale: string[],
   ): Promise<StocktakeLostReviewLine[]> {
     const ids = draft.lostReview.flatMap((item) => {
       const id = parseId(item.ticketId);
@@ -1135,6 +1445,11 @@ export class StocktakeService {
     return draft.lostReview.flatMap((item) => {
       const ticket = byId.get(item.ticketId);
       if (ticket === undefined) {
+        return [];
+      }
+      // 待查·未對號(系統預設帶入的張號)不提供 [找到了](張數店規格 7.9:交給全店重刷)→ 對不上,請重新核對
+      if (item.action === "found" && ticket.unmatched) {
+        stale.push(ticket.ticketNo);
         return [];
       }
       const book = books.get(String(ticket.bookId));

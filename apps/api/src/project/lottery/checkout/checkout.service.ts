@@ -6,6 +6,7 @@ import {
   CHECKOUT_FIELD_KEYS,
   CHECKOUT_REASONS,
   CHECKOUT_STATUS,
+  COUNT_MODE,
   type CheckoutDraft,
   type CheckoutStocktakeChoice,
   STOCKTAKE_STATUS,
@@ -33,6 +34,8 @@ import { LotteryCheckoutsRepository } from "../../database/lottery-checkouts/lot
 import { LotteryStocktakesRepository } from "../../database/lottery-stocktakes/lottery-stocktakes.repository";
 import { LotteryShiftsRepository } from "../../database/lottery-store/lottery-shifts.repository";
 import { LOTTERY_FIELD_CATEGORIES } from "../field-options/lottery-field-options";
+import { StoreCountModeService } from "../settings/store-count-mode.service";
+import { StocktakeSessions } from "../stocktake/stocktake-sessions";
 import type { StocktakeService } from "../stocktake/stocktake.service";
 import { STOCKTAKE_SERVICE } from "../stocktake/stocktake.token";
 import { type ShiftRecord, parseId } from "../store/shift-views";
@@ -93,6 +96,8 @@ export class CheckoutService {
     private readonly expectedCash: ExpectedCashItems,
     @Inject(STOCKTAKE_SERVICE)
     private readonly stocktakeService: StocktakeService,
+    private readonly countModes: StoreCountModeService,
+    private readonly stocktakeSessions: StocktakeSessions,
   ) {}
 
   // ---- 守門 ----
@@ -136,6 +141,17 @@ export class CheckoutService {
     );
     if (shiftState !== null) {
       return shiftState;
+    }
+    // 全店盤點中各台不能交班(張數店規格 8.5a,兩種店相同;使用者定維持)
+    const wholeStore = await this.stocktakeSessions.wholeStoreOf(
+      operator,
+      await this.support.mustStore(operator, String(shift.orgId)),
+    );
+    if (wholeStore !== null) {
+      return block(
+        CHECKOUT_REASONS.stocktakeInProgress,
+        `whole-store stocktake in progress by ${wholeStore.byName}`,
+      );
     }
     const stocktake = await this.checkStocktakeChoice(
       operator,
@@ -273,6 +289,21 @@ export class CheckoutService {
   }
 
   /**
+   * 這家店的交班 / 日結能不能 [跳過] 盤點:要有 `store.skip-stocktake`,而且是編號店
+   * (張數店與轉換中不能跳過,跳過就算不出沒刷的銷售;張數店規格 8.1、13.2)。
+   */
+  async canSkipStocktake(
+    operator: OperatorContext,
+    grant: StoreGrant,
+    orgId: Types.ObjectId,
+  ): Promise<boolean> {
+    return (
+      grant.has(STORE_PERMISSIONS.skipStocktake) &&
+      (await this.countModes.modeOf(operator, orgId)) === COUNT_MODE.numbered
+    );
+  }
+
+  /**
    * 盤點方式的守門(交班:那個收銀點;日結:全店 `cashPointId = null`):跳過要 `store.skip-stocktake` + 原因;
    * 沿用要 30 分鐘內、範圍對;現在盤點照盤點的守門、範圍要對。
    */
@@ -288,6 +319,18 @@ export class CheckoutService {
           return block(
             CHECKOUT_REASONS.forbidden,
             "missing store.skip-stocktake",
+          );
+        }
+        // 張數店與轉換中不能跳過(張數店規格 8.1、13.2;有 store.skip-stocktake 也不行)
+        if (
+          (await this.countModes.modeOf(
+            operator,
+            new Types.ObjectId(scope.orgId),
+          )) !== COUNT_MODE.numbered
+        ) {
+          return block(
+            CHECKOUT_REASONS.skipNotAllowed,
+            "count stores cannot skip the stocktake",
           );
         }
         const reason = await this.reasonOf(
@@ -321,7 +364,9 @@ export class CheckoutService {
             "stocktake draft must cover this cash point",
           );
         }
-        return this.stocktakeService.checkDraft(operator, choice.draft);
+        return this.stocktakeService.checkDraft(operator, choice.draft, {
+          type: scope.cashPointId === null ? "daily" : "shift",
+        });
       }
     }
   }

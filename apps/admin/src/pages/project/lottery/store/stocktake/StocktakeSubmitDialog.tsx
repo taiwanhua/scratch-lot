@@ -14,11 +14,12 @@ import { Typography } from "@repo/ui/typography";
 import { useTemporalText } from "@/hooks/base/useTemporalText";
 
 import { moneyText } from "../store-text";
-import type {
-  SheetCashPoint,
-  StocktakeReview,
-  StocktakeSheet,
-  StocktakeState,
+import {
+  type SheetCashPoint,
+  type StocktakeReview,
+  type StocktakeSheet,
+  type StocktakeState,
+  groupKeyOf,
 } from "./stocktake-model";
 
 interface CashPointRow {
@@ -66,6 +67,14 @@ export const StocktakeSubmitDialog = ({
       .flatMap((line) =>
         line.diffs.filter((diff) => diff.backfilled).map(() => line.unitPrice),
       );
+    // 張數盤點的 [算售出](Figma CS-09d)
+    for (const line of review.countLines) {
+      if (line.cashPointId === point.id) {
+        for (let index = 0; index < line.saleCount; index += 1) {
+          backfilled.push(line.unitPrice);
+        }
+      }
+    }
     return backfilled.length === 0
       ? []
       : [
@@ -128,6 +137,26 @@ export const StocktakeSubmitDialog = ({
       )
       .map((diff) => `#${diff.ticketNo}`),
   );
+  // 張數盤點:待查幾張(系統預設帶入)、標記異常幾張(遊戲 · 收銀點)
+  let investigatedCount = investigated.length;
+  let flaggedCount = flagged.length;
+  for (const line of review.countLines) {
+    const group = state.groups[groupKeyOf(line.cashPointId, line.gameId)];
+    const label = t("countGroupLabel", {
+      game: line.gameCode,
+      cashPoint: line.cashPointName,
+    });
+    if ((group?.investigateCount ?? 0) > 0) {
+      investigatedCount += group?.investigateCount ?? 0;
+      investigated.push(
+        t("countInvestigate", { count: group?.investigateCount ?? 0, label }),
+      );
+    }
+    if (line.kind === "over" && group?.flagged === true) {
+      flaggedCount += line.diffCount;
+      flagged.push(t("countFlag", { count: line.diffCount, label }));
+    }
+  }
   const absentBooks = sheet.unopenedBooks.filter(
     (book) => state.unopened[book.bookId] === false,
   );
@@ -137,13 +166,13 @@ export const StocktakeSubmitDialog = ({
       t("newInvestigate"),
       investigated.length === 0
         ? t("count", { count: 0 })
-        : `${t("count", { count: investigated.length })}(${investigated.join("、")})`,
+        : `${t("count", { count: investigatedCount })}(${investigated.join("、")})`,
     ],
     [
       t("flagged"),
       flagged.length === 0
         ? t("count", { count: 0 })
-        : `${t("count", { count: flagged.length })}(${flagged.join("、")})`,
+        : `${t("count", { count: flaggedCount })}(${flagged.join("、")})`,
     ],
     [
       t("unopenedAbsent"),

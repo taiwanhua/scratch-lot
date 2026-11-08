@@ -10,6 +10,9 @@ import { LOTTERY_FIELD_CATEGORY_KEYS } from "@repo/domain/project/lottery-fields
 import {
   FormSubmissionStatus,
   type LotteryStoreCashCorrectionRowFieldsFragment,
+  type LotteryStoreSaleReversalOptionsFieldsFragment,
+  type LotteryStoreSaleReversalOptionsQuery,
+  type LotteryStoreSaleReversalOptionsQueryVariables,
   type LotteryStoreSaleReversalRowFieldsFragment,
   type LotteryStoreShiftOptionFieldsFragment,
 } from "@repo/graphql";
@@ -20,7 +23,7 @@ import { api, type server } from "../../server";
 
 /**
  * 店面管理兩張表單(撤銷售出申請、現金更正單;規格 8.5、8.8)的夾具:定義與受管表單同形
- * (正本 `apps/db-migrator/seeds/project/revisions/sale_reversal.r3.seed.ts`、`cash_correction.r3.seed.ts`)、
+ * (正本 `apps/db-migrator/seeds/project/revisions/sale_reversal.r4.seed.ts`、`cash_correction.r3.seed.ts`)、
  * Figma ST-31a / ST-32a 的列表列、退款班次的選項。元件測試、假 api 與 mock 模式共用。
  */
 
@@ -192,6 +195,8 @@ export interface StoreFormsWorldOptions {
   /** 登入者能不能新增(B9b `store.create-<formKey>`;預設都能)。 */
   canCreateSaleReversal?: boolean;
   canCreateCashCorrection?: boolean;
+  /** 新增頁讀到的盤點制度(張數店規格 13.2;預設編號店) */
+  countMode?: "numbered" | "count" | "converting";
 }
 
 /** 表單執行端的假 api 選項(兩張表單的定義;沒有提交,列表走專用的查詢)。 */
@@ -315,6 +320,43 @@ export const sampleShiftOptions =
     },
   ];
 
+/**
+ * 撤銷售出申請新增頁的選項(張數店規格 13.2;Figma CS-14):店內櫃台、店外攤位;店內櫃台有 5164 發大財
+ * 系統預設帶入的已售 2 張(「最多 2 張」)。
+ */
+export const sampleSaleReversalOptions = (
+  countMode: string,
+  cashPointId: string | null,
+): LotteryStoreSaleReversalOptionsFieldsFragment => ({
+  __typename: "LotteryStoreSaleReversalOptions",
+  countMode,
+  cashPoints: [
+    {
+      __typename: "LotteryStoreSaleReversalCashPoint",
+      id: "cp-counter",
+      name: "店內櫃台",
+    },
+    {
+      __typename: "LotteryStoreSaleReversalCashPoint",
+      id: "cp-outdoor",
+      name: "店外攤位",
+    },
+  ],
+  games:
+    cashPointId === "cp-counter"
+      ? [
+          {
+            __typename: "LotteryStoreSaleReversalGameOption",
+            gameId: "g-5164",
+            gameCode: "5164",
+            gameName: "發大財",
+            unitPrice: 200,
+            available: 2,
+          },
+        ]
+      : [],
+});
+
 export interface StoreFormsWorld {
   handlers: Parameters<typeof server.use>;
   runtime: FormRuntimeWorldOptions;
@@ -343,6 +385,19 @@ export const storeFormsWorld = (
     api.query("LotteryStoreShiftOptions", () =>
       HttpResponse.json({
         data: { lotteryStoreShiftOptions: { items: sampleShiftOptions() } },
+      }),
+    ),
+    api.query<
+      LotteryStoreSaleReversalOptionsQuery,
+      LotteryStoreSaleReversalOptionsQueryVariables
+    >("LotteryStoreSaleReversalOptions", ({ variables }) =>
+      HttpResponse.json({
+        data: {
+          lotteryStoreSaleReversalOptions: sampleSaleReversalOptions(
+            options.countMode ?? "numbered",
+            variables.cashPointId ?? null,
+          ),
+        },
       }),
     ),
   ],

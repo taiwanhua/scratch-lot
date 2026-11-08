@@ -65,6 +65,12 @@ export const PROJECT_FIELD_CATEGORIES: readonly ProjectFieldCategory[] = [
     ],
   },
   {
+    key: LOTTERY.countSaleReason,
+    name: "依張數售出原因",
+    usedIn: "張數店的依張數標記售出(預設「太忙沒刷」)",
+    options: [{ value: "too-busy", label: "太忙沒刷" }, other],
+  },
+  {
     key: LOTTERY.cashCorrectionReason,
     name: "現金更正原因",
     usedIn: "現金更正單",
@@ -140,6 +146,12 @@ export const PROJECT_FIELD_CATEGORIES: readonly ProjectFieldCategory[] = [
       { value: "soiled", label: "污損" },
       other,
     ],
+  },
+  {
+    key: LOTTERY.scrapUndoReason,
+    name: "撤銷報廢原因",
+    usedIn: "本的詳情的撤銷報廢(報錯張要先撤銷報廢)",
+    options: [{ value: "mis-scrapped", label: "報錯張" }, other],
   },
   {
     key: SCHEDULE.position,

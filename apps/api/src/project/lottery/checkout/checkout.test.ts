@@ -52,6 +52,7 @@ import {
   LotteryCheckout,
 } from "../../database/lottery-checkouts/lottery-checkout.schema";
 import { LOTTERY_TICKETS_COLLECTION } from "../../database/lottery-inventory/lottery-ticket.schema";
+import { LOTTERY_STORE_COUNT_MODES_COLLECTION } from "../../database/lottery-settings/lottery-store-count-mode.schema";
 import { LOTTERY_STOCKTAKES_COLLECTION } from "../../database/lottery-stocktakes/lottery-stocktake.schema";
 import { LOTTERY_SHIFTS_COLLECTION } from "../../database/lottery-store/lottery-shift.schema";
 import { drawerCashSourceNames } from "../store/drawer-cash";
@@ -1417,5 +1418,80 @@ describe("交班結帳(GraphQL 端點 + 真 MongoDB)", () => {
         skipReason: "人力不足",
       }),
     );
+  });
+
+  it("張數店(張數店規格 8.1、8.5a、13.2;Figma CS-12、ST-01-2):交班不能跳過盤點(有 store.skip-stocktake 也一樣,後端擋);全店盤點中各台不能交班", async () => {
+    now("16:00");
+    const shiftId = await openShift(stall, clerkA.userId, 1000);
+    const modes = connection.collection(LOTTERY_STORE_COUNT_MODES_COLLECTION);
+    await modes.insertOne({
+      orgId: xinyi,
+      tenantId: tenant,
+      mode: "count",
+      since: taipei("08:00"),
+      lastRenumberAt: null,
+      lastRenumberStocktakeId: null,
+      history: [],
+      movePauses: [],
+      stocktakeSessions: [],
+      version: 0,
+      moduleKey: "store",
+      ...base(),
+    });
+    try {
+      // 編號店可以跳過的店長,在張數店的精靈看不到 [跳過]
+      const managerWizard = await wizard(manager, shiftId);
+      expect(managerWizard.canSkipStocktake).toBe(false);
+      expect(
+        await submitBlocked(
+          manager,
+          draftOf(shiftId, stall, 1000, {
+            stocktake: {
+              mode: "skip",
+              reasonKey: "short-staffed",
+              reasonNote: null,
+            },
+          }),
+        ),
+      ).toMatchObject({ reason: CHECKOUT_REASONS.skipNotAllowed });
+
+      // 全店盤點中(登記全部收銀點與庫存)→ 交班被擋;登記失效(1 小時沒操作)後就可以
+      await modes.updateOne(
+        { orgId: xinyi },
+        {
+          $set: {
+            stocktakeSessions: [
+              {
+                sessionId: "whole",
+                type: "adhoc",
+                cashPointIds: [counter, stall, null],
+                by: clerkB.userId,
+                startedAt: taipei("15:50"),
+                lastActiveAt: taipei("15:55"),
+                draft: null,
+                endedAt: null,
+                endedBy: null,
+              },
+            ],
+          },
+        },
+      );
+      const reuse = draftOf(shiftId, stall, 1000, {
+        stocktake: {
+          mode: "skip",
+          reasonKey: "short-staffed",
+          reasonNote: null,
+        },
+      });
+      expect(await submitBlocked(manager, reuse)).toMatchObject({
+        reason: CHECKOUT_REASONS.stocktakeInProgress,
+      });
+      now("16:56");
+      expect(await submitBlocked(manager, reuse)).toMatchObject({
+        reason: CHECKOUT_REASONS.skipNotAllowed,
+      });
+    } finally {
+      await modes.deleteOne({ orgId: xinyi });
+    }
   });
 });

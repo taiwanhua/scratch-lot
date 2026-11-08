@@ -26,6 +26,7 @@ import { HOOK_TIMEOUT_MS } from "../../../database/test-support/mongo-connection
 import { TransactionService } from "../../../database/transaction";
 import { login } from "../../../demo-items-two/test-support/fixtures";
 import { createRole } from "../../../permission/test-support/fixtures";
+import { matchEventsOf } from "../store/store-matching";
 import { PASSWORD, errorOf, ok } from "../test-support/master-data-fixtures";
 import { LotteryAllocationsService } from "../tickets/allocations.service";
 import { LotteryBooksService } from "../tickets/books.service";
@@ -537,6 +538,13 @@ describe("庫存管理(GraphQL 端點 + 真 MongoDB)", () => {
   }
 
   /** 中山店的本,#001–010 調到新竹店;中山店的 #050 待查、新竹店的 #005 待查。 */
+  /** 這本拆過(報廢要拆過的本,張數店規格 7.8;這裡直接寫 `firstOpenedAt`,不經拆本)。 */
+  async function markOpened(bookId: Types.ObjectId): Promise<void> {
+    await api.connection
+      .collection("lottery_books")
+      .updateOne({ _id: bookId }, { $set: { firstOpenedAt: new Date() } });
+  }
+
   async function splitBook(lastTicketNo = 100): Promise<Types.ObjectId> {
     const bookId = await receiveBook(storeA, lastTicketNo);
     const moved = Array.from({ length: 10 }, (_, index) =>
@@ -1056,6 +1064,7 @@ describe("庫存管理(GraphQL 端點 + 真 MongoDB)", () => {
   describe("報廢(規格 7.4)", () => {
     it("只能報未售;損失 = 單張成本加總(批購成本);張保留單張成本給報表", async () => {
       const bookId = await receiveBook(storeA);
+      await markOpened(bookId);
       await apply(storeA, bookId, ["001"], {
         type: TICKET_EVENT_TYPE.sale,
         patch: { status: TICKET_STATUS.sold },
@@ -1104,6 +1113,7 @@ describe("庫存管理(GraphQL 端點 + 真 MongoDB)", () => {
 
     it("沒有 show-cost:損失與成本不回;沒有 recover 看不到 [尋回]", async () => {
       const bookId = await receiveBook(storeA);
+      await markOpened(bookId);
       const detail = await bookOf(bookId, scrapOnly);
       expect(detail.cost).toBeNull();
       expect(detail.abilities).toEqual({
@@ -1224,6 +1234,7 @@ describe("庫存管理(GraphQL 端點 + 真 MongoDB)", () => {
 
     it("報廢別店的張 → CROSS_STORE_NOT_ALLOWED(不是已被處理);總部可以報廢、事件記在張的分店", async () => {
       const bookId = await splitBook();
+      await markOpened(bookId);
       const detail = await bookOf(bookId, managerB);
       expect(
         await errorOf(api, managerB, SCRAP, {
@@ -1610,5 +1621,242 @@ describe("庫存管理(GraphQL 端點 + 真 MongoDB)", () => {
         totalCount: 100,
       },
     ]);
+  });
+
+  describe("張數店:本的詳情剩 N 張(估算)、對號紀錄、庫存列表的未對號、待查·遺失未對號一列(張數店規格 13.2)", () => {
+    const COUNT_BOOK = /* GraphQL */ `
+      query TestCountBook($id: ID!) {
+        lotteryInventoryBook(id: $id) {
+          item {
+            book {
+              remainingCount
+              unmatchedCount
+            }
+            tickets {
+              ticketNo
+              status
+              unmatched
+            }
+            events {
+              type
+              ticketNos
+              matchPartner {
+                ticketNo
+                bookNo
+              }
+            }
+          }
+        }
+      }
+    `;
+    const COUNT_BOOKS = /* GraphQL */ `
+      query TestCountBooks($input: LotteryInventoryBooksInput!) {
+        lotteryInventoryBooks(input: $input) {
+          items {
+            id
+            remainingCount
+            unmatchedCount
+          }
+        }
+      }
+    `;
+    const COUNT_INVESTIGATIONS = /* GraphQL */ `
+      query TestCountInvestigations {
+        lotteryInvestigations {
+          items {
+            bookId
+            bookNo
+            status
+            ticketCount
+            cost
+            unmatched
+            sourceStocktakeType
+            refSerialNo
+            responsibleOrg {
+              name
+            }
+            unmatchedBooks {
+              bookNo
+              ticketNos
+            }
+          }
+        }
+      }
+    `;
+    interface CountBook {
+      book: { remainingCount: number; unmatchedCount: number };
+      tickets: { ticketNo: string; status: string; unmatched: boolean }[];
+      events: {
+        type: string;
+        ticketNos: string[];
+        matchPartner: { ticketNo: string; bookNo: string | null } | null;
+      }[];
+    }
+    interface CountRow {
+      bookId: string;
+      bookNo: string;
+      status: string;
+      ticketCount: number;
+      cost: number | null;
+      unmatched: boolean;
+      sourceStocktakeType: string | null;
+      refSerialNo: string | null;
+      responsibleOrg: { name: string } | null;
+      unmatchedBooks: { bookNo: string; ticketNos: string[] }[];
+    }
+
+    let first: Types.ObjectId;
+    let second: Types.ObjectId;
+    let stocktakeId: Types.ObjectId;
+
+    beforeAll(async () => {
+      first = await receiveBook(storeC);
+      second = await receiveBook(storeC);
+      await markOpened(first);
+      await markOpened(second);
+      // 依張數賣挑到 first #001–#002(已售·未對號);盤點 [待查] 挑到 first #003、second #001(待查·未對號);
+      // first #004 待查·未對號後確認遺失(保留記號)
+      await apply(storeC, first, ["001", "002"], {
+        type: TICKET_EVENT_TYPE.sale,
+        patch: {
+          status: TICKET_STATUS.sold,
+          sold: { at: new Date(), source: "count" },
+          unmatched: true,
+        },
+      });
+      ({ insertedId: stocktakeId } = await api.connection
+        .collection("lottery_stocktakes")
+        .insertOne({
+          orgId: storeC,
+          tenantId: tenant,
+          type: "shift",
+          submissionId: newObjectId(),
+          moduleKey: "store",
+          ...baseFields(new Date()),
+        }));
+      const investigate = (bookId: Types.ObjectId, nos: string[]) =>
+        ticketsOf(bookId).then((all) =>
+          transactions().withTransaction((session) =>
+            ledger().applyTicketEvents(
+              session,
+              { operator: storeOperator(storeC) },
+              all
+                .filter((ticket) => nos.includes(ticket.ticketNo))
+                .map((ticket) => ({
+                  ticketId: ticket._id,
+                  expectedVersion: ticket.version,
+                  type: TICKET_EVENT_TYPE.investigate,
+                  refType: "stocktake",
+                  refId: stocktakeId,
+                  patch: {
+                    status: TICKET_STATUS.investigating,
+                    responsibleOrgId: storeC,
+                    unmatched: true,
+                  },
+                })),
+            ),
+          ),
+        );
+      await investigate(first, ["003", "004"]);
+      await investigate(second, ["001"]);
+      await apply(storeC, first, ["004"], {
+        type: TICKET_EVENT_TYPE.lose,
+        patch: { status: TICKET_STATUS.lost },
+      });
+      // 刷到 first #002 實體 → 和 second #002 對號(second #002 接手已售·未對號)
+      const [scanned, partner] = await Promise.all([
+        api.connection
+          .collection("lottery_tickets")
+          .findOne({ bookId: first, ticketNo: "002" }),
+        api.connection
+          .collection("lottery_tickets")
+          .findOne({ bookId: second, ticketNo: "002" }),
+      ]);
+      await transactions().withTransaction((session) =>
+        ledger().applyTicketEvents(
+          session,
+          { operator: storeOperator(storeC) },
+          matchEventsOf(
+            scanned as unknown as Parameters<typeof matchEventsOf>[0],
+            partner as unknown as Parameters<typeof matchEventsOf>[1],
+            new Date(),
+          ),
+        ),
+      );
+    });
+
+    it("本的詳情:剩 N 張不含未對號,另回未對號張數(已售 / 待查 / 遺失·未對號);時間軸的對號寫另一張(別本帶本號)", async () => {
+      const detail = await ok<{ lotteryInventoryBook: { item: CountBook } }>(
+        api,
+        managerC,
+        COUNT_BOOK,
+        { id: String(first) },
+      ).then((data) => data.lotteryInventoryBook.item);
+      // first:#001 已售·未對號、#003 待查·未對號、#004 遺失·未對號;#002 對號後是未售(確定)
+      expect(detail.book).toEqual({ remainingCount: 97, unmatchedCount: 3 });
+      expect(
+        detail.tickets
+          .filter((ticket) => ticket.unmatched)
+          .map((t) => t.ticketNo),
+      ).toEqual(["001", "003", "004"]);
+      const match = detail.events.find((event) => event.type === "match");
+      expect(match).toMatchObject({
+        ticketNos: ["002"],
+        matchPartner: { ticketNo: "002" },
+      });
+      expect(match?.matchPartner?.bookNo).not.toBeNull();
+    });
+
+    it("庫存列表:每本回未對號張數(遺失·未對號也算)", async () => {
+      const books = await ok<{
+        lotteryInventoryBooks: {
+          items: {
+            id: string;
+            remainingCount: number;
+            unmatchedCount: number;
+          }[];
+        };
+      }>(api, managerC, COUNT_BOOKS, { input: { orgId: String(storeC) } });
+      const byId = new Map(
+        books.lotteryInventoryBooks.items.map((item) => [item.id, item]),
+      );
+      expect(byId.get(String(first))).toMatchObject({ unmatchedCount: 3 });
+      // second:#001 待查·未對號、#002 對號接手的已售·未對號
+      expect(byId.get(String(second))).toMatchObject({
+        remainingCount: 98,
+        unmatchedCount: 2,
+      });
+    });
+
+    it("待查·遺失:未對號依「遊戲 × 責任分店 × 來源盤點」一列(跨本合併、帶盤點類型、展開看本與張號);確認遺失的另一列", async () => {
+      const list = await ok<{
+        lotteryInvestigations: { items: CountRow[] };
+      }>(api, managerC, COUNT_INVESTIGATIONS);
+      const rows = list.lotteryInvestigations.items.filter(
+        (row) => row.unmatched,
+      );
+      const investigating = rows.find((row) => row.status === "investigating");
+      expect(investigating).toMatchObject({
+        bookNo: "",
+        ticketCount: 2,
+        cost: 368,
+        sourceStocktakeType: "shift",
+        responsibleOrg: { name: "台中店" },
+      });
+      expect(investigating?.unmatchedBooks).toHaveLength(2);
+      expect(
+        investigating?.unmatchedBooks.flatMap((book) => book.ticketNos),
+      ).toEqual(expect.arrayContaining(["003", "001"]));
+      expect(rows.find((row) => row.status === "lost")).toMatchObject({
+        ticketCount: 1,
+        sourceStocktakeType: "shift",
+      });
+      // 確定的待查 / 遺失不混進未對號列
+      expect(
+        list.lotteryInvestigations.items.filter(
+          (row) => !row.unmatched && row.bookId === String(first),
+        ),
+      ).toEqual([]);
+    });
   });
 });

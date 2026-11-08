@@ -22,6 +22,8 @@ fragment LotteryStoreScanItemFields on LotteryStoreScanItem {
   blockReason
   soldAt
   pendingSkipCount
+  unmatched
+  match
 }
 
 fragment LotteryStoreSaleFields on LotteryStoreSale {
@@ -36,6 +38,17 @@ fragment LotteryStoreSaleFields on LotteryStoreSale {
   shiftId
   undone
   undoBlock
+  matched
+  countSale {
+    refId
+    gameId
+    gameCode
+    gameName
+    unitPrice
+    count
+    undoneCount
+    undoableCount
+  }
 }
 
 fragment LotteryStoreCardTicketFields on LotteryStoreCardTicket {
@@ -48,7 +61,9 @@ fragment LotteryStoreCardTicketFields on LotteryStoreCardTicket {
     ...LotteryAccountsRefFields
   }
   soldShiftId
+  soldSource
   locked
+  unmatched
 }
 
 fragment LotteryStoreBookCardFields on LotteryStoreBookCard {
@@ -60,7 +75,9 @@ fragment LotteryStoreBookCardFields on LotteryStoreBookCard {
   firstTicketNo
   lastTicketNo
   pendingSkipCount
+  pendingSkipTotal
   unopened
+  unmatchedCount
   tickets {
     ...LotteryStoreCardTicketFields
   }
@@ -77,6 +94,7 @@ fragment LotteryStoreStockBookFields on LotteryStoreStockBook {
   ticketCount
   pendingSkipCount
   sealed
+  pendingSkipTotal
 }
 
 query LotteryStoreScan($input: LotteryStoreScanInput!) {
@@ -111,7 +129,29 @@ query LotteryStoreRecentSales($shiftId: ID!) {
   }
 }
 
-mutation UndoLotteryTicketSale($input: LotteryStoreTicketRefInput!) {
+mutation SellLotteryTicketsByCount($input: SellLotteryTicketsByCountInput!) {
+  sellLotteryTicketsByCount(input: $input) {
+    items {
+      refId
+      gameId
+      gameCode
+      gameName
+      unitPrice
+      count
+      amount
+    }
+  }
+}
+
+mutation UndoLotteryCountSale($input: UndoLotteryCountSaleInput!) {
+  undoLotteryCountSale(input: $input) {
+    item {
+      ...LotteryStoreSaleFields
+    }
+  }
+}
+
+mutation UndoLotteryTicketSale($input: UndoLotteryTicketSaleInput!) {
   undoLotteryTicketSale(input: $input) {
     item {
       ...LotteryStoreSaleFields
@@ -150,5 +190,37 @@ mutation MoveLotteryTickets($input: MoveLotteryTicketsInput!) {
 mutation RecallLotteryTickets($input: RecallLotteryTicketsInput!) {
   recallLotteryTickets(input: $input) {
     count
+  }
+}
+
+# 依張數移櫃(張數店規格 7.7)
+mutation MoveLotteryTicketsByCount($input: MoveLotteryTicketsByCountInput!) {
+  moveLotteryTicketsByCount(input: $input) {
+    count
+  }
+}
+
+# [收回] / [刷條碼移櫃] 刷到一張(張數店規格 13.1)
+query LotteryStoreCounterScan($input: LotteryStoreCounterScanInput!) {
+  lotteryStoreCounterScan(input: $input) {
+    items {
+      ticketId
+      version
+      bookId
+      gameId
+      gameCode
+      gameName
+      bookNo
+      ticketNo
+      status
+      unmatched
+      cashPoint {
+        id
+        name
+      }
+      soldAt
+      problem
+      match
+    }
   }
 }

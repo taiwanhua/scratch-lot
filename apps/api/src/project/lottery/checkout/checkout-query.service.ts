@@ -6,6 +6,7 @@ import {
   CHECKOUT_CONFIRM_FORM_KEY,
   CHECKOUT_TYPE,
   CHECKOUT_TYPES,
+  COUNT_SALE_REF_TYPE,
   type CheckoutDraft,
   type DailyCloseDraft,
   REDEMPTION_STATUS,
@@ -13,6 +14,7 @@ import {
   STOCKTAKE_STATUS,
   STORE_KEY,
   STORE_PERMISSIONS,
+  TICKET_EVENT_TYPE,
   expectedCashTotalOf,
   isStocktakeReusable,
   serializeCheckoutDraft,
@@ -39,6 +41,7 @@ import {
   type LotteryCheckoutDocument,
   LotteryCheckoutsRepository,
 } from "../../database/lottery-checkouts/lottery-checkouts.repository";
+import { LotteryTicketEventsRepository } from "../../database/lottery-inventory/lottery-inventory.repository";
 import { LotteryRedemptionsRepository } from "../../database/lottery-redemptions/lottery-redemptions.repository";
 import {
   type LotteryStocktakeDocument,
@@ -138,6 +141,7 @@ export class CheckoutQueryService {
     private readonly checkout: CheckoutService,
     private readonly access: StoreAccess,
     private readonly clock: StoreClock,
+    private readonly events: LotteryTicketEventsRepository,
   ) {}
 
   // ---- 交班精靈 ----
@@ -196,7 +200,11 @@ export class CheckoutQueryService {
         closed: shift.closedAt !== null,
       },
       canSubmit: this.checkout.canCheckout(operator, grant, shift),
-      canSkipStocktake: grant.has(STORE_PERMISSIONS.skipStocktake),
+      canSkipStocktake: await this.checkout.canSkipStocktake(
+        operator,
+        grant,
+        shift.orgId,
+      ),
       reusableStocktake: reusable,
       redemptions,
       redemptionTotal: redemptionRows.reduce(
@@ -249,6 +257,8 @@ export class CheckoutQueryService {
       scopeCashPointId: Types.ObjectId | null;
       lines: { diffs: unknown[] }[];
       orgId: Types.ObjectId;
+      purpose?: string | null;
+      summary?: { renumberMatched?: number | null } | null;
     },
   ): Promise<LotteryCheckoutReusableStocktakeModel> {
     const reader = await tenantBoundaryContext(this.orgs, operator, tenantId);
@@ -267,6 +277,8 @@ export class CheckoutQueryService {
           ? null
           : (points.get(String(record.scopeCashPointId))?.name ?? ""),
       diffCount: record.lines.reduce((sum, line) => sum + line.diffs.length, 0),
+      purpose: record.purpose ?? "normal",
+      renumberMatched: record.summary?.renumberMatched ?? 0,
     };
   }
 
@@ -351,7 +363,7 @@ export class CheckoutQueryService {
       }),
       this.checkouts.count(operator, filter),
     ]);
-    const [submissions, points, names] = await Promise.all([
+    const [submissions, points, names, countSales] = await Promise.all([
       this.submissionsOf(operator, store.tenantId, records),
       this.support.cashPointsOf(operator, store.orgId),
       this.views.userNames(
@@ -361,6 +373,7 @@ export class CheckoutQueryService {
           record.submittedBy === null ? [] : [record.submittedBy],
         ),
       ),
+      this.countSalesOf(operator, records),
     ]);
     return {
       total,
@@ -391,9 +404,85 @@ export class CheckoutQueryService {
           counted: record.counted,
           difference: record.difference,
           submittedAt: record.submittedAt,
+          countSaleCount: countSales.get(String(record._id))?.count ?? 0,
+          countSaleAmount: countSales.get(String(record._id))?.amount ?? 0,
         };
       }),
     };
+  }
+
+  /**
+   * 每張結帳單涵蓋的班裡依張數標記售出的淨張數與金額(張數店規格 13.2「班次結帳歷史:銷售來源多一欄」;
+   * Figma CS-15):依張數售出 − 當下撤銷那幾筆。交班 = 那一班、日結 = 涵蓋計算的班;一頁一次讀(走 `{ shiftId, type }`)。
+   */
+  private async countSalesOf(
+    operator: OperatorContext,
+    records: readonly {
+      _id: Types.ObjectId;
+      shiftId: Types.ObjectId | null;
+      coveredShiftIds: Types.ObjectId[];
+    }[],
+  ): Promise<Map<string, { count: number; amount: number }>> {
+    const shiftsOfRecord = (record: (typeof records)[number]) =>
+      record.shiftId === null ? record.coveredShiftIds : [record.shiftId];
+    const shiftIds = records.flatMap((record) => shiftsOfRecord(record));
+    if (shiftIds.length === 0) {
+      return new Map();
+    }
+    const events = await this.events.findMany(
+      operator,
+      {
+        shiftId: { $in: shiftIds },
+        type: { $in: [TICKET_EVENT_TYPE.sale, TICKET_EVENT_TYPE.saleUndo] },
+      },
+      { select: "_id shiftId type amount refType refId" },
+    );
+    const countSales = new Set(
+      events
+        .filter(
+          (event) =>
+            event.type === TICKET_EVENT_TYPE.sale &&
+            event.refType === COUNT_SALE_REF_TYPE,
+        )
+        .map((event) => String(event._id)),
+    );
+    const byShift = new Map<string, { count: number; amount: number }>();
+    for (const event of events) {
+      const sale =
+        event.type === TICKET_EVENT_TYPE.sale &&
+        countSales.has(String(event._id));
+      const undo =
+        event.type === TICKET_EVENT_TYPE.saleUndo &&
+        event.refId !== null &&
+        countSales.has(String(event.refId));
+      if (!sale && !undo) {
+        continue;
+      }
+      const key = String(event.shiftId);
+      const sum = byShift.get(key) ?? { count: 0, amount: 0 };
+      const sign = sale ? 1 : -1;
+      byShift.set(key, {
+        count: sum.count + sign,
+        amount: sum.amount + sign * event.amount,
+      });
+    }
+    return new Map(
+      records.map((record) => [
+        String(record._id),
+        shiftsOfRecord(record).reduce(
+          (sum, id) => {
+            const item = byShift.get(String(id));
+            return item === undefined
+              ? sum
+              : {
+                  count: sum.count + item.count,
+                  amount: sum.amount + item.amount,
+                };
+          },
+          { count: 0, amount: 0 },
+        ),
+      ]),
+    );
   }
 
   async detail(

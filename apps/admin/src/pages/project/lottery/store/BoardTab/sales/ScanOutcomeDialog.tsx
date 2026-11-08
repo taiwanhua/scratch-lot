@@ -9,6 +9,7 @@ import { Radio, RadioGroup } from "@repo/ui/radio";
 import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
 
+import { SendReversalButton } from "../../forms/SendReversalButton";
 import { moneyText } from "../../store-text";
 import { ScanTicketSummary } from "./ScanTicketSummary";
 import type { ScanItem } from "./scan-place";
@@ -22,10 +23,18 @@ import { useSalesText } from "./useSalesText";
 export type ScanPrompt =
   | { kind: "pick"; items: readonly ScanItem[] }
   | { kind: "otherMine" | "move" | "unopened" | "info"; item: ScanItem }
-  | { kind: "blocked"; item: ScanItem | null; message: string };
+  | {
+      kind: "blocked";
+      item: ScanItem | null;
+      message: string;
+      /** 加 [送撤銷售出申請](張數店:已售·未對號找不到配對,規格 6.4;Figma CS-06b) */
+      reversal?: boolean;
+    };
 
 export interface ScanOutcomeDialogProps {
   prompt: ScanPrompt;
+  /** 看板的分店([送撤銷售出申請] 帶入新增頁) */
+  orgId?: string;
   /** 本機收銀點名稱(移櫃並售出、拆本的說明) */
   localName: string;
   busy: boolean;
@@ -109,6 +118,7 @@ const PickGame = ({
  */
 export const ScanOutcomeDialog = ({
   prompt,
+  orgId = "",
   localName,
   busy,
   onClose,
@@ -128,9 +138,27 @@ export const ScanOutcomeDialog = ({
         fullWidth
         maxWidth="xs"
         title={t("scan.blockedTitle")}
-        actions={<Button onClick={onClose}>{t("scan.gotIt")}</Button>}
+        actions={
+          prompt.reversal === true && prompt.item !== null ? (
+            <>
+              <Button variant="text" onClick={onClose}>
+                {t("scan.gotIt")}
+              </Button>
+              <SendReversalButton
+                ticketId={prompt.item.ticketId}
+                orgId={orgId}
+              />
+            </>
+          ) : (
+            <Button onClick={onClose}>{t("scan.gotIt")}</Button>
+          )
+        }
       >
-        <Stack spacing={2}>
+        {/* 張數店找不到配對(Figma CS-06b):原因在上、刷到的張在下;其他照 ST-05e */}
+        <Stack
+          spacing={2}
+          direction={prompt.reversal === true ? "column-reverse" : "column"}
+        >
           {prompt.item === null ? null : (
             <ScanTicketSummary item={prompt.item} />
           )}

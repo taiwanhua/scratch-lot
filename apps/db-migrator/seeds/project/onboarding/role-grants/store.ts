@@ -40,6 +40,8 @@ const CLERK: RoleGrant = {
     P.stocktake,
     `${STORE_KEY}.create-${STOCKTAKE_CONFIRM_FORM_KEY}`,
     P.checkout,
+    // 店員尋回(張數店規格 7.9、12):看板刷到待查 / 遺失與卡片 [尋回];店員選單不變(不給庫存管理)
+    P.recover,
     CHECKOUT_CREATE_PERMISSION,
     STORE_FORM_PERMISSIONS.createSaleReversal,
     STORE_FORM_PERMISSIONS.createCashCorrection,

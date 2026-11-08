@@ -29,14 +29,20 @@ const qty = (count: number, amount: number) => ({
 
 /**
  * 營運報表一家店的示範數字(Figma RE-04 `129:1186` 中山店的那一份):第二家店起把數字縮小一點,合計看得出加總。
- * `withCost = false`(沒有 `reports.show-cost`)時成本欄是 null,與 api 一致。
+ * `withCost = false`(沒有 `reports.show-cost`)時成本欄是 null,與 api 一致。`countStore`:張數店(Figma CS-40a:
+ * 依張數標記售出、含估算、盤點制度註記)。
  */
 export const operationsStore = (
   orgId: string,
   index: number,
   input: { from: string; to: string },
-  options: { withCost?: boolean; alignment?: string } = {},
+  options: {
+    withCost?: boolean;
+    alignment?: string;
+    countStore?: boolean;
+  } = {},
 ): OperationsStore => {
+  const countStore = options.countStore === true;
   const scale = index === 0 ? 1 : 0.5;
   const n = (value: number) => Math.round(value * scale);
   const cost = (value: number) =>
@@ -44,6 +50,7 @@ export const operationsStore = (
   return {
     __typename: "LotteryOperationsStore",
     orgId,
+    estimated: countStore,
     period: {
       __typename: "LotteryReportStorePeriod",
       orgId,
@@ -63,6 +70,7 @@ export const operationsStore = (
           amount: n(300),
         },
       ],
+      countSale: countStore ? qty(5, 900) : qty(0, 0),
       stocktake: qty(1, 200),
       undo: qty(2, 300),
       net: qty(n(211), n(42_200)),
@@ -99,7 +107,15 @@ export const operationsStore = (
       sent: qty(4, n(8000)),
       revoked: qty(1, 500),
     },
-    inventory: inventoryOf(n, cost),
+    inventory: countStore
+      ? {
+          ...inventoryOf(n, cost),
+          scrapUndoTickets: 1,
+          scrapUndoCost: cost(184),
+          matchCostAdjustCost: cost(-16),
+          investigatingUnmatchedTickets: 1,
+        }
+      : inventoryOf(n, cost),
     cash: {
       __typename: "LotteryOperationsCash",
       shiftCount: 2,
@@ -180,6 +196,18 @@ export const operationsStore = (
       priorPeriodCount: 0,
       priorPeriodAmount: 0,
       openMonths: ["2026-10"],
+      countMode: countStore
+        ? {
+            __typename: "LotteryOperationsCountMode",
+            modeAtStart: "count",
+            since: "2026-09-30T16:00:00.000Z",
+            modeAtEnd: "count",
+            changes: [],
+            renumberAts: ["2026-10-05T14:00:00.000Z"],
+            daysSinceRenumber: 11,
+            monthEndUnrenumbered: [],
+          }
+        : null,
     },
   };
 };

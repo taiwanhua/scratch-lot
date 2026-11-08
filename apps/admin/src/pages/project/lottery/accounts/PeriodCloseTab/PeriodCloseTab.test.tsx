@@ -9,7 +9,10 @@ import {
   pageRootOf,
   squeezedPageRootProblem,
 } from "@/test/height-chain";
-import { blockedPeriodCheck } from "@/test/msw/project/lottery/period-close-fixtures";
+import {
+  blockedPeriodCheck,
+  samplePeriodCheck,
+} from "@/test/msw/project/lottery/period-close-fixtures";
 import { restoreViewportAfterEach, setMobileViewport } from "@/test/viewport";
 
 import { renderAccounts } from "../accounts-test-support";
@@ -124,6 +127,94 @@ describe("帳戶管理:關帳", () => {
       "2026-09",
     );
     expect(dialog.getByRole("button", { name: "關帳" })).toBeDisabled();
+  });
+
+  it("CL1 第四項「張數店月底補點編號」:必須的店沒補點 → 擋下 + [到刮刮樂設定];快照每家店的補點編號(Figma AC-07-2b)", async () => {
+    const { user } = renderAccounts({
+      path: CLOSE_TAB,
+      lotterySettings: true,
+      world: {
+        periodClose: {
+          check: (month) => {
+            const check = samplePeriodCheck(month, { canClose: false });
+            const stores = check.snapshot.stores.map((store, index) => ({
+              ...store,
+              renumber:
+                index === 0
+                  ? {
+                      __typename: "LotteryPeriodRenumberSnapshot" as const,
+                      mode: "count",
+                      required: true,
+                      done: false,
+                      lastRenumberAt: null,
+                    }
+                  : null,
+            }));
+            return {
+              ...check,
+              renumberStores: stores.slice(0, 1).map((store) => ({
+                __typename: "LotteryPeriodRenumberStore" as const,
+                orgId: store.orgId,
+                orgName: store.name,
+                status: "blocked",
+              })),
+              snapshot: { ...check.snapshot, stores },
+            };
+          },
+        },
+      },
+    });
+    const open = await rowOf("2026-09");
+    await user.click(open.getByRole("button", { name: "關帳" }));
+    const dialog = within(await screen.findByRole("dialog"));
+    expect(
+      await dialog.findByText(
+        /^張數店月底補點編號:.+本月最後一次日結前沒補點編號\(必須,擋關帳\)$/u,
+      ),
+    ).toBeInTheDocument();
+    expect(
+      dialog.getByRole("button", { name: "到刮刮樂設定" }),
+    ).toBeInTheDocument();
+    expect(dialog.getByText("未補點")).toBeInTheDocument();
+    await user.type(
+      dialog.getByRole("textbox", { name: "輸入月份確認" }),
+      "2026-09",
+    );
+    expect(dialog.getByRole("button", { name: "關帳" })).toBeDisabled();
+  });
+
+  it("CL1 只提醒的店沒補點 → 警告(可以關);沒有張數店 → 通過(Figma AC-07-2a / 2c)", async () => {
+    const { user } = renderAccounts({
+      path: CLOSE_TAB,
+      world: {
+        periodClose: {
+          check: (month) => ({
+            ...samplePeriodCheck(month),
+            renumberStores: [
+              {
+                __typename: "LotteryPeriodRenumberStore",
+                orgId: "org-store-a",
+                orgName: "中山店",
+                status: "warning",
+              },
+            ],
+          }),
+        },
+      },
+    });
+    const open = await rowOf("2026-09");
+    await user.click(open.getByRole("button", { name: "關帳" }));
+    const dialog = within(await screen.findByRole("dialog"));
+    expect(
+      await dialog.findByText(
+        "張數店月底補點編號:中山店沒補點(只提醒;報表標估算並註記月底未補點編號)",
+      ),
+    ).toBeInTheDocument();
+    await user.type(
+      dialog.getByRole("textbox", { name: "輸入月份確認" }),
+      "2026-09",
+    );
+    expect(dialog.getByRole("button", { name: "關帳" })).toBeEnabled();
   });
 
   it("[快照]:關帳的人與時間、月底餘額、小金庫 / 抽屜", async () => {

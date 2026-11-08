@@ -3,6 +3,11 @@ import { type ClientSession, Types } from "mongoose";
 
 import { COLLATION_LOCALE } from "@repo/domain/collation";
 import {
+  type CountPickBook,
+  type RenumberMatchResult,
+  type RenumberPresentTicket,
+  type RenumberTicket,
+  STOCKTAKE_STOCK_LINE,
   type StocktakeDiff,
   type StocktakeDraft,
   type StocktakeDraftLine,
@@ -12,6 +17,7 @@ import {
   TICKET_STATUS,
   isSealedInStore,
   isStocktakeStockLine,
+  renumberMatchesOf,
   stocktakeActionProblemsOf,
   stocktakeDiffsOf,
   stocktakeTicketFactsOf,
@@ -27,7 +33,7 @@ import {
   LotteryTicketEventsRepository,
   LotteryTicketsRepository,
 } from "../../database/lottery-inventory/lottery-inventory.repository";
-import { countsOfBook } from "../tickets/books.service";
+import { countsOfBook, pendingSkipCountOfBook } from "../tickets/books.service";
 
 type BookRecord = Persisted<LotteryBookDocument>;
 type TicketRecord = Persisted<LotteryTicketDocument>;
@@ -62,6 +68,8 @@ export interface LineEvaluation {
   cashPointId: Types.ObjectId | null;
   facts: StocktakeTicketFacts[];
   diffs: StocktakeDiff[];
+  /** 補點編號自動對號之前的差異(其他盤點 = `diffs`;自動對號從這裡算,重算也一樣)。 */
+  allDiffs: StocktakeDiff[];
   /** 盤到那一刻這個收銀點檯面上未售的張數。 */
   systemCount: number;
   /** 撤銷審核中的張號。 */
@@ -71,6 +79,137 @@ export interface LineEvaluation {
   /** 還沒處理的差異張號。 */
   unhandled: string[];
   ticketById: Map<string, TicketRecord>;
+}
+
+/** 補點編號一行的位置 key(收銀點 id;庫存 = `STOCKTAKE_STOCK_LINE`)。 */
+const placeKeyOf = (item: LineEvaluation): string =>
+  item.cashPointId === null ? STOCKTAKE_STOCK_LINE : String(item.cashPointId);
+
+/**
+ * 補點編號的自動對號(張數店規格 9.3 第 2 點、16.8 RN1;規則在 `renumberMatchesOf`):每一行(本 × 位置)
+ * 實際不在、盤點那一刻未售、之後沒被動過的張(差異 `missing`、沒補登)當配對張;實際在的未對號張 =
+ * 那一刻已售·未對號(差異 `extra`)、或現在待查 / 遺失·未對號而且盤點之後沒被動過、系統記在這個位置的張。
+ * 同遊戲 × 位置跨本配對。
+ */
+export function renumberOfEvaluations(
+  evaluations: readonly LineEvaluation[],
+): RenumberMatchResult {
+  const present: RenumberPresentTicket[] = [];
+  const absent: RenumberTicket[] = [];
+  const books = new Map<string, CountPickBook>();
+  for (const item of evaluations) {
+    if (item.book === null) {
+      continue;
+    }
+    books.set(String(item.book._id), {
+      firstOpenedAt: item.book.firstOpenedAt ?? null,
+      bookNo: item.book.bookNo,
+    });
+    const line = renumberTicketsOfLine(item, item.book);
+    present.push(...line.present);
+    absent.push(...line.absent);
+  }
+  return renumberMatchesOf(present, absent, books);
+}
+
+/** 補點編號比對的一張(位置 = 這一行的位置)。 */
+const renumberTicketOf = (
+  ticket: TicketRecord,
+  book: BookRecord,
+  place: string,
+): RenumberTicket => ({
+  ticketId: String(ticket._id),
+  ticketNo: ticket.ticketNo,
+  bookId: String(book._id),
+  gameId: String(book.gameId),
+  place,
+});
+
+/** 這張現在系統記在這一行的位置(檯面 = 同一個收銀點;庫存那一行 = 庫存)。 */
+const isAtLine = (ticket: TicketRecord, item: LineEvaluation): boolean => {
+  if (item.cashPointId === null) {
+    return ticket.location.kind === TICKET_LOCATION_KIND.stock;
+  }
+  return (
+    ticket.location.kind === TICKET_LOCATION_KIND.counter &&
+    ticket.location.cashPointId?.equals(item.cashPointId) === true
+  );
+};
+
+/** 實際在、現在是待查 / 遺失·未對號、盤點之後沒被動過、沒被鎖、系統記在這個位置的張。 */
+const isPresentGuess = (
+  ticket: TicketRecord,
+  item: LineEvaluation,
+  changed: ReadonlySet<string>,
+): boolean =>
+  ticket.unmatched &&
+  (ticket.status === TICKET_STATUS.investigating ||
+    ticket.status === TICKET_STATUS.lost) &&
+  ticket.lockedBy === null &&
+  item.line.presentTicketNos.includes(ticket.ticketNo) &&
+  !changed.has(String(ticket._id)) &&
+  isAtLine(ticket, item);
+
+/** 一行(本 × 位置)要拿去配的兩邊:實際在的未對號張、實際不在的未售張。 */
+function renumberTicketsOfLine(
+  item: LineEvaluation,
+  book: BookRecord,
+): { present: RenumberPresentTicket[]; absent: RenumberTicket[] } {
+  const place = placeKeyOf(item);
+  const present: RenumberPresentTicket[] = [];
+  const absent: RenumberTicket[] = [];
+  for (const diff of item.allDiffs) {
+    const ticket = item.ticketById.get(diff.ticketId);
+    if (ticket === undefined) {
+      continue;
+    }
+    if (diff.kind === "missing" && !diff.backfilled) {
+      absent.push(renumberTicketOf(ticket, book, place));
+    } else if (diff.kind === "extra" && ticket.unmatched) {
+      present.push({
+        ...renumberTicketOf(ticket, book, place),
+        status: TICKET_STATUS.sold,
+      });
+    }
+  }
+  const changed = new Set(
+    item.facts.filter((fact) => fact.changedSince).map((fact) => fact.ticketId),
+  );
+  for (const ticket of item.ticketById.values()) {
+    if (isPresentGuess(ticket, item, changed)) {
+      present.push({
+        ...renumberTicketOf(ticket, book, place),
+        status: ticket.status,
+      });
+    }
+  }
+  return { present, absent };
+}
+
+/**
+ * 補點編號:自動對號配走的差異不算差異(配對張的「不在」、未對號張的「已售還在」),剩下的照編號差異處理;
+ * 已拆還有待標註的本,不在的張多一個 [標跳號](最多標待標註張數;9.3 第 3 點)。重算 stale / unhandled。
+ */
+function withRenumber(
+  item: LineEvaluation,
+  matched: ReadonlySet<string>,
+): LineEvaluation {
+  if (item.book === null) {
+    return item;
+  }
+  const diffs = item.allDiffs.filter((diff) => !matched.has(diff.ticketId));
+  const problems = stocktakeActionProblemsOf(
+    diffs,
+    item.line.diffs,
+    item.line.cashPointId,
+    pendingSkipCountOfBook(item.book),
+  );
+  return {
+    ...item,
+    diffs,
+    stale: problems.stale,
+    unhandled: problems.unhandled,
+  };
 }
 
 /**
@@ -139,7 +278,7 @@ export class StocktakeFacts {
             },
             { ...options, sort: { at: 1, _id: 1 } },
           );
-    return draft.lines.map((line) => {
+    const evaluations = draft.lines.map((line) => {
       const book = bookOf(line);
       return this.evaluateLine(
         line,
@@ -148,6 +287,14 @@ export class StocktakeFacts {
         after,
       );
     });
+    if (draft.purpose !== "renumber") {
+      return evaluations;
+    }
+    const renumber = renumberOfEvaluations(evaluations);
+    const matched = new Set(
+      renumber.matches.flatMap((match) => [match.ticketId, match.partnerId]),
+    );
+    return evaluations.map((item) => withRenumber(item, matched));
   }
 
   private evaluateLine(
@@ -207,6 +354,7 @@ export class StocktakeFacts {
       cashPointId,
       facts,
       diffs,
+      allDiffs: diffs,
       systemCount: facts.filter((item) => item.atCount === "unsold").length,
       pendingReversalNos: facts
         .filter((item) => item.pendingReversal && item.atCount !== "absent")

@@ -14,9 +14,14 @@ import {
   CASH_CORRECTION_PLACE,
   CHECKOUT_STATUS,
   CHECKOUT_TYPE,
+  COUNT_MODE,
   SALE_REVERSAL_FORM_KEY,
+  STOCKTAKE_STATUS,
   STORE_KEY,
   cashCorrectionValuesOf,
+  countModeAtOf,
+  renumberCloseStatusOf,
+  renumberDoneInPeriodOf,
   saleReversalValuesOf,
 } from "@repo/domain/project/lottery";
 import {
@@ -25,6 +30,7 @@ import {
   nextClosableMonth,
   periodMonthsOf,
 } from "@repo/domain/project/lottery-accounts";
+import { LOTTERY_SETTING_KEYS } from "@repo/domain/project/lottery-settings";
 
 import { AuditService } from "../../../audit/audit.service";
 import { FormSubmissionsRepository } from "../../../database/base/repositories";
@@ -39,11 +45,13 @@ import {
 } from "../../database/lottery-accounts/lottery-accounts.repositories";
 import type {
   LotteryPeriodClose,
+  PeriodCloseRenumberSnapshot,
   PeriodCloseSnapshot,
   PeriodCloseStoreSnapshot,
 } from "../../database/lottery-accounts/lottery-period-close.schema";
 import { LotteryCashPointsRepository } from "../../database/lottery-cash-points/lottery-cash-points.repository";
 import { LotteryCheckoutsRepository } from "../../database/lottery-checkouts/lottery-checkouts.repository";
+import { LotteryStocktakesRepository } from "../../database/lottery-stocktakes/lottery-stocktakes.repository";
 import { LotteryShiftsRepository } from "../../database/lottery-store/lottery-shifts.repository";
 import { AccountsAccess } from "../accounts/accounts-access";
 import {
@@ -55,6 +63,7 @@ import {
 import { BankTransactionsService } from "../accounts/bank-transactions.service";
 import { CashLedgerService } from "../cash/cash-ledger.service";
 import { DailyCloseLedger } from "../daily-close/daily-close-ledger";
+import { StoreCountModeService } from "../settings/store-count-mode.service";
 import { StoreShiftViews } from "../store/shift-views";
 import { StoreClock } from "../store/store-clock";
 import type { CloseLotteryPeriodInput } from "./dto/period-close.input";
@@ -64,6 +73,7 @@ import type {
   LotteryPeriodClosesModel,
   LotteryPeriodOpenShiftModel,
   LotteryPeriodPendingDocumentModel,
+  LotteryPeriodRenumberStoreModel,
   LotteryPeriodSnapshotModel,
 } from "./models/period-close.model";
 
@@ -148,6 +158,9 @@ function placeOf(row: { formKey: string; values: StoredValues }): {
  *   且時間落在那個月 —— 撤銷售出申請(退款 = 是:退款班次的開班時間)、現金更正單(位置是某一班:那一班的開班時間;
  *   小金庫:送出時間)、結帳確認申請(交班:那一班與該月重疊;日結:涵蓋計算期間與該月重疊)
  * - **只警告**(記入快照):那個月開的班沒有被日結涵蓋計算
+ * - **第四項「張數店月底補點編號」**(張數店規格第 10 節):那個月底是張數或轉換中、該月最後一次日結前沒做補點編號的店 ——
+ *   設「必須」→ 擋(`RENUMBER_REQUIRED`)、設「只提醒」→ 警告;「必須」看現在的設定(總部改成只提醒後重新檢查就能關)。
+ *   快照寫 `stores[].renumber`
  */
 @Injectable()
 export class PeriodCloseService {
@@ -167,6 +180,8 @@ export class PeriodCloseService {
     private readonly clock: StoreClock,
     private readonly audit: AuditService,
     private readonly transactions: TransactionService,
+    private readonly stocktakes: LotteryStocktakesRepository,
+    private readonly countModes: StoreCountModeService,
   ) {}
 
   /** 月份列表(AC-06):起始月份(租戶開始使用的月份)到本月,新的在前。 */
@@ -230,15 +245,18 @@ export class PeriodCloseService {
         this.snapshotOf(period),
         this.closableMonthOf(period),
       ]);
+    const renumberStores = renumberStoresOf(snapshot);
     return {
       month,
       openShifts,
       pendingDocuments,
       snapshot: snapshotModelOf(snapshot),
+      renumberStores,
       canClose:
         closable === month &&
         openShifts.length === 0 &&
-        pendingDocuments.length === 0,
+        pendingDocuments.length === 0 &&
+        renumberStores.every((store) => store.status !== "blocked"),
     };
   }
 
@@ -317,6 +335,16 @@ export class PeriodCloseService {
       );
     }
     const snapshot = await this.snapshotOf(period);
+    // 第四項:設「必須」的張數店月底沒補點編號 → 擋(張數店規格第 10 節)
+    if (
+      renumberStoresOf(snapshot).some((store) => store.status === "blocked")
+    ) {
+      throw validationError(
+        `${period.month} has count stores without renumber`,
+        ["month"],
+        ACCOUNTS_REASONS.renumberRequired,
+      );
+    }
     const writer: OperatorContext = {
       ...period.reader,
       actorId,
@@ -596,10 +624,11 @@ export class PeriodCloseService {
     if (storeIds.length === 0) {
       return [];
     }
-    const [names, uncovered, drawers] = await Promise.all([
+    const [names, uncovered, drawers, renumbers] = await Promise.all([
       this.orgNamesOf(period.reader, storeIds),
       this.uncoveredShiftsOf(period),
       this.drawersOf(period, points),
+      this.renumbersOf(period, storeIds),
     ]);
     // 各店月底小金庫一次算(TX-07)
     const vaults = await this.ledger.vaultExpectedMany(
@@ -614,6 +643,7 @@ export class PeriodCloseService {
       vault: vaults.get(String(orgId))?.amount ?? 0,
       drawers: drawers.get(String(orgId)) ?? [],
       uncoveredShifts: uncovered.get(String(orgId)) ?? [],
+      renumber: renumbers.get(String(orgId)) ?? null,
     }));
     return stores.toSorted((a, b) => compareDisplayName(a.name, b.name));
   }
@@ -700,6 +730,80 @@ export class PeriodCloseService {
         spanningShiftLabel,
       });
       result.set(String(point.orgId), list);
+    }
+    return result;
+  }
+
+  /**
+   * 各店的月底補點編號(張數店規格第 10 節、5.7;一次讀,不逐店):月底的盤點制度(分店那一筆的歷程)、
+   * 「張數店補點編號」現在的生效值、該月核准完成的補點編號盤點單(送出時間)、該月最後一次日結的送出時間。
+   */
+  private async renumbersOf(
+    period: Period,
+    storeIds: readonly Types.ObjectId[],
+  ): Promise<Map<string, PeriodCloseRenumberSnapshot>> {
+    const [stores, renumbers, dailies] = await Promise.all([
+      this.countModes.storesOf(period.reader, period.tenantId, storeIds, [
+        LOTTERY_SETTING_KEYS.renumberRequired,
+      ]),
+      this.stocktakes.findMany(
+        period.reader,
+        {
+          orgId: { $in: [...storeIds] },
+          purpose: "renumber",
+          status: STOCKTAKE_STATUS.confirmed,
+          submittedAt: { $gte: period.start, $lt: period.end },
+        },
+        { select: "orgId submittedAt confirmedAt" },
+      ),
+      this.checkouts.aggregate(period.reader, [
+        {
+          $match: {
+            orgId: { $in: [...storeIds] },
+            type: CHECKOUT_TYPE.daily,
+            submittedAt: { $gte: period.start, $lt: period.end },
+          },
+        },
+        { $group: { _id: "$orgId", last: { $max: "$submittedAt" } } },
+      ]),
+    ]);
+    const lastDaily = new Map(
+      dailies.map((row) => [String(row._id), row.last as Date]),
+    );
+    const result = new Map<string, PeriodCloseRenumberSnapshot>();
+    for (const orgId of storeIds) {
+      const key = String(orgId);
+      const store = stores.get(key);
+      const record = store?.record ?? null;
+      const mine = renumbers.filter((row) => row.orgId.equals(orgId));
+      const doneAt = renumberDoneInPeriodOf(
+        mine,
+        period,
+        lastDaily.get(key) ?? null,
+      );
+      const approved = (record?.history ?? [])
+        .filter(
+          (entry) =>
+            entry.cause === "renumber_approved" && entry.at < period.end,
+        )
+        .map((entry) => entry.at.getTime());
+      const done = mine.find(
+        (row) => row.submittedAt.getTime() === doneAt?.getTime(),
+      );
+      result.set(key, {
+        mode: countModeAtOf(
+          record?.history ?? [],
+          store?.mode ?? COUNT_MODE.numbered,
+          period.end,
+        ),
+        required:
+          store?.settings.get(LOTTERY_SETTING_KEYS.renumberRequired) ===
+          "required",
+        done: doneAt !== null,
+        lastRenumberAt:
+          done?.confirmedAt ??
+          (approved.length === 0 ? null : new Date(Math.max(...approved))),
+      });
     }
     return result;
   }
@@ -810,6 +914,26 @@ function alreadyClosed() {
   );
 }
 
+/** 關帳第四項的店(月底是張數或轉換中;張數店規格第 10 節)。 */
+function renumberStoresOf(
+  snapshot: PeriodCloseSnapshot,
+): LotteryPeriodRenumberStoreModel[] {
+  return snapshot.stores.flatMap((store) => {
+    const renumber = store.renumber ?? null;
+    if (renumber === null) {
+      return [];
+    }
+    const status = renumberCloseStatusOf({
+      modeAtEnd: renumber.mode,
+      required: renumber.required,
+      done: renumber.done,
+    });
+    return status === "none"
+      ? []
+      : [{ orgId: String(store.orgId), orgName: store.name, status }];
+  });
+}
+
 function snapshotModelOf(
   snapshot: PeriodCloseSnapshot,
 ): LotteryPeriodSnapshotModel {
@@ -837,6 +961,15 @@ function snapshotModelOf(
         shiftId: String(shift.shiftId),
         label: shift.label,
       })),
+      renumber:
+        store.renumber == null
+          ? null
+          : {
+              mode: store.renumber.mode,
+              required: store.renumber.required,
+              done: store.renumber.done,
+              lastRenumberAt: store.renumber.lastRenumberAt,
+            },
     })),
   };
 }

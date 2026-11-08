@@ -54,6 +54,9 @@ export class LotteryStoreBoardBookModel {
   @Field(() => ID)
   bookId!: string;
 
+  @Field(() => ID)
+  gameId!: string;
+
   @Field(() => String)
   gameCode!: string;
 
@@ -89,6 +92,27 @@ export class LotteryStoreBoardBookModel {
   isLowStock!: boolean;
 }
 
+/** 張數店看板一個收銀點的一個遊戲合計「遊戲名 · 剩 N 張 · M 本」(張數店規格 13.2;精確,不標「約」)。 */
+@ObjectType("LotteryStoreGameTotal")
+export class LotteryStoreGameTotalModel {
+  @Field(() => ID)
+  gameId!: string;
+
+  @Field(() => String)
+  gameCode!: string;
+
+  @Field(() => String)
+  gameName!: string;
+
+  /** 這個收銀點這個遊戲的未售張數(各本剩餘相加)。 */
+  @Field(() => Int)
+  remaining!: number;
+
+  /** 幾本。 */
+  @Field(() => Int)
+  bookCount!: number;
+}
+
 /** 看板的一個收銀點(依排序)。 */
 @ObjectType("LotteryStoreCashPoint")
 export class LotteryStoreCashPointModel {
@@ -107,6 +131,22 @@ export class LotteryStoreCashPointModel {
 
   @Field(() => [LotteryStoreBoardBookModel])
   books!: LotteryStoreBoardBookModel[];
+
+  /** 每個遊戲的合計(依遊戲代號;`books` 同遊戲的本排在一起)。 */
+  @Field(() => [LotteryStoreGameTotalModel])
+  gameTotals!: LotteryStoreGameTotalModel[];
+}
+
+/** 看板的補點編號提醒。 */
+@ObjectType("LotteryStoreRenumber")
+export class LotteryStoreRenumberModel {
+  /** 依「補點編號提醒」的週期到了 */
+  @Field(() => Boolean)
+  due!: boolean;
+
+  /** 上次補點編號核准;沒做過 = null */
+  @Field(() => GraphQLISODateTime, { nullable: true })
+  lastRenumberAt!: Date | null;
 }
 
 /** 看板(一家店)。 */
@@ -126,6 +166,34 @@ export class LotteryStoreBoardModel {
   /** 小金庫目前的應有(出庫視窗顯示)。 */
   @Field(() => Int)
   vaultExpected!: number;
+
+  /**
+   * 這家店實際的盤點制度(`numbered` / `count` / `converting`;張數店規格 14.2):張數店與轉換中顯示遊戲合計、
+   * 卡片剩餘標「約」、虛線格子;只有張數店有 [依張數標記售出]。
+   */
+  @Field(() => String)
+  countMode!: string;
+
+  /**
+   * 進行中的全店重刷(`gameId` = 那個遊戲)或補點編號(`gameId` = null)(張數店規格 5.6、8.5;14.2 `movePause`):
+   * 看板的 [刷條碼移櫃] [依張數移櫃] 變灰。後端移櫃一律再檢查。
+   */
+  @Field(() => [LotteryStoreMovePauseModel])
+  movePauses!: LotteryStoreMovePauseModel[];
+
+  /**
+   * 補點編號提醒(張數店規格第 10 節、13.2;張數店與轉換中才有,編號店 = null):週期到了 → 看板頂部
+   * 「建議補點編號(上次 MM/DD)」。
+   */
+  @Field(() => LotteryStoreRenumberModel, { nullable: true })
+  renumber!: LotteryStoreRenumberModel | null;
+}
+
+/** 暫停移櫃的一筆(`gameId` = null:補點編號,全部遊戲暫停)。 */
+@ObjectType("LotteryStoreMovePause")
+export class LotteryStoreMovePauseModel {
+  @Field(() => ID, { nullable: true })
+  gameId!: string | null;
 }
 
 @ObjectType()

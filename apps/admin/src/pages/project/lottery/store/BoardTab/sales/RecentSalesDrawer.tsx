@@ -1,7 +1,10 @@
-import type { ReactNode } from "react";
+import { type ReactNode, useState } from "react";
 
 import { STORE_PERMISSIONS } from "@repo/domain/project/lottery";
-import { useLotteryStoreRecentSalesQuery } from "@repo/graphql";
+import {
+  type LotteryStoreSaleFieldsFragment,
+  useLotteryStoreRecentSalesQuery,
+} from "@repo/graphql";
 import { Alert } from "@repo/ui/alert";
 import { Box } from "@repo/ui/box";
 import { Button } from "@repo/ui/button";
@@ -14,25 +17,35 @@ import { usePermissions } from "@/hooks/base/usePermissions";
 import { useSession } from "@/hooks/base/useSession";
 
 import { moneyText } from "../../store-text";
+import { CountUndoDialog } from "./CountUndoDialog";
+import { ReturnScanField } from "./ReturnScanField";
 import { useSalesText } from "./useSalesText";
 
 export interface RecentSalesDrawerProps {
+  /** 看板的分店(撤銷依張數售出、[送撤銷售出申請]) */
+  orgId?: string;
   shiftId: string;
   cashPointName: string;
   onClose: () => void;
   /** 每列的 [撤銷](先開撤銷確認) */
   onUndo: (ticketId: string) => void;
+  /** 張數店與轉換中才給:這台的本機收銀點(上方多「刷退的票」,張數店規格 7.3 第 1 點) */
+  returnCashPointId?: string | null;
 }
 
 /**
  * [最近售出](Figma ST-35b;規格 6.2、6.3):自己在這一班 30 分鐘內賣的張,每列 [撤銷];撤銷後清單不關,
  * 那一筆顯示「已撤銷」。電腦 / 平板右側抽屜(✕、點外面、Esc 關閉),手機底部面板(上方有拉桿)。
+ * 張數店的一次依張數賣出合成一列「遊戲 × N 張 · 依張數」[撤銷幾張](Figma CS-07a / 07b;張數店規格 13.2),
+ * 撤了一部分寫「已撤 1 張,剩 2 張」,全撤寫「已撤銷」。
  */
 export const RecentSalesDrawer = ({
+  orgId = "",
   shiftId,
   cashPointName,
   onClose,
   onUndo,
+  returnCashPointId = null,
 }: RecentSalesDrawerProps) => {
   const { t, clock } = useSalesText();
   const { session } = useSession();
@@ -45,6 +58,51 @@ export const RecentSalesDrawer = ({
       { staleTime: 0 },
     ).data?.lotteryStoreRecentSales.items ?? [];
   const canUndo = hasPermission(STORE_PERMISSIONS.undoSale);
+  const [countUndo, setCountUndo] =
+    useState<LotteryStoreSaleFieldsFragment | null>(null);
+  /** 一次依張數賣出那一列的狀態欄:撤銷幾張 / 已撤 N 張,剩 M 張 / 已撤銷。 */
+  const countStatusOf = (row: LotteryStoreSaleFieldsFragment): ReactNode => {
+    const sale = row.countSale;
+    if (sale == null) {
+      return null;
+    }
+    const left = sale.count - sale.undoneCount;
+    if (left === 0) {
+      return (
+        <Typography variant="caption" color="textSecondary">
+          {t("recentSales.undone")}
+        </Typography>
+      );
+    }
+    return (
+      <Stack spacing={0.5} sx={{ alignItems: "flex-end" }}>
+        {row.undoBlock == null && canUndo ? (
+          <Button
+            size="small"
+            variant="outlined"
+            onClick={() => {
+              setCountUndo(row);
+            }}
+          >
+            {t("recentSales.undoCount")}
+          </Button>
+        ) : null}
+        {sale.undoneCount > 0 ? (
+          <Typography variant="caption" color="textSecondary">
+            {t("recentSales.partlyUndone", {
+              undone: sale.undoneCount,
+              left,
+            })}
+          </Typography>
+        ) : null}
+        {row.undoBlock === "expired" ? (
+          <Typography variant="caption" color="textSecondary">
+            {t("recentSales.expired")}
+          </Typography>
+        ) : null}
+      </Stack>
+    );
+  };
   return (
     <Drawer
       open
@@ -57,6 +115,9 @@ export const RecentSalesDrawer = ({
         <Typography variant="body2" color="textSecondary">
           {t("recentSales.hint")}
         </Typography>
+        {returnCashPointId !== null && canUndo ? (
+          <ReturnScanField orgId={orgId} localCashPointId={returnCashPointId} />
+        ) : null}
         {rows.length === 0 ? (
           <Typography color="textSecondary">
             {t("recentSales.empty")}
@@ -65,7 +126,9 @@ export const RecentSalesDrawer = ({
           <Box component="ul" sx={{ m: 0, p: 0, listStyle: "none" }}>
             {rows.map((row) => {
               let status: ReactNode = null;
-              if (row.undone) {
+              if (row.countSale != null) {
+                status = countStatusOf(row);
+              } else if (row.undone) {
                 status = (
                   <Typography variant="caption" color="textSecondary">
                     {t("recentSales.undone")}
@@ -92,7 +155,7 @@ export const RecentSalesDrawer = ({
               }
               return (
                 <Stack
-                  key={`${row.ticketId}-${row.soldAt}`}
+                  key={row.countSale?.refId ?? `${row.ticketId}-${row.soldAt}`}
                   component="li"
                   direction="row"
                   spacing={1.5}
@@ -107,7 +170,13 @@ export const RecentSalesDrawer = ({
                     {clock(row.soldAt)}
                   </Typography>
                   <Typography variant="body2" sx={{ flex: 1 }}>
-                    {row.ticketKey}
+                    {row.countSale == null
+                      ? row.ticketKey
+                      : t("recentSales.countLine", {
+                          code: row.countSale.gameCode,
+                          name: row.countSale.gameName,
+                          count: row.countSale.count,
+                        })}
                   </Typography>
                   <Typography variant="body2">
                     {moneyText(row.amount)}
@@ -120,6 +189,15 @@ export const RecentSalesDrawer = ({
         )}
         <Alert severity="info">{t("recentSales.footer")}</Alert>
       </Stack>
+      {countUndo === null ? null : (
+        <CountUndoDialog
+          row={countUndo}
+          orgId={orgId}
+          onClose={() => {
+            setCountUndo(null);
+          }}
+        />
+      )}
     </Drawer>
   );
 };

@@ -441,7 +441,9 @@
         "scrapped": "Scrapped",
         "lost": "Investigating / lost",
         "otherStore": "Other branch",
-        "transferring": "In transfer"
+        "transferring": "In transfer",
+        "unmatchedSold": "Sold · unmatched",
+        "unmatchedLost": "Investigating / lost · unmatched"
       },
       "quickSelect": {
         "label": "Select a run",
@@ -487,7 +489,10 @@
       "UNEXPECTED": "Something went wrong; try again later",
       "RECOVER_TARGET_NOT_STORE": "Recovered tickets must go back to a branch; pick one",
       "RECOVER_TARGET_NOT_OPERATING_STORE": "Tickets can only be recovered into the branch you are working in",
-      "NO_PENDING_SKIPS": "This book has no skipped numbers left to mark"
+      "NO_PENDING_SKIPS": "This book has no skipped numbers left to mark",
+      "SCRAP_NOT_ALLOWED": "Only unsold stock tickets of opened books can be scrapped; recall counter tickets first",
+      "NO_MATCH_PARTNER": "No unsold ticket at the same place can take over the status filled in by the system; count or rescan first",
+      "COUNT_STORE_SCAN_ONLY": "Count stores must scan or type the ticket in hand"
     },
     "ticketStatuses": {
       "unsold": "Unsold",
@@ -533,7 +538,10 @@
       "lose": "Lost",
       "recover": "Recover",
       "reopen": "Put on counter",
-      "cost_adjust": "Cost adjusted"
+      "cost_adjust": "Cost adjusted",
+      "match": "Matched",
+      "renumber_confirm": "Ticket number confirmed",
+      "scrap_undo": "Scrap undone"
     },
     "sources": {
       "purchase": "Purchase order",
@@ -548,7 +556,8 @@
         "remaining": "Remaining / total",
         "pendingSkip": "To mark",
         "purchasedAt": "Purchased",
-        "dealer": "Class A dealer"
+        "dealer": "Class A dealer",
+        "remainingEstimated": "Left / total (approx.)"
       },
       "remaining": "{remaining} / {total}",
       "none": "—",
@@ -565,7 +574,8 @@
       "listAria": "Stock (by book)",
       "pickOrg": "Pick a branch first",
       "empty": "No books match",
-      "total": "{count} books"
+      "total": "{count} books",
+      "remainingEstimated": "≈ {remaining} / {total}"
     },
     "lookup": {
       "open": "Find ticket",
@@ -597,7 +607,16 @@
       "listAria": "Investigating · Lost",
       "empty": "No investigating or lost tickets",
       "loadFailed": "Could not load investigating and lost tickets. Please try again later.",
-      "daysValue": "{days} d"
+      "daysValue": "{days} d",
+      "systemDefault": "Assigned by the system",
+      "sourceStocktake": "{date} {type}",
+      "stocktakeTypes": {
+        "shift": "Shift count",
+        "daily": "Daily close count",
+        "adhoc": "Ad-hoc count"
+      },
+      "unmatchedBook": "Book {bookNo} · {tickets} (assigned by the system)",
+      "unmatchedDetail": "{books} · These ticket numbers were assigned by the system. If you find the ticket, scan it to recover it, or run a store-wide rescan."
     },
     "book": {
       "tabLabel": "Book {key}",
@@ -621,8 +640,18 @@
       "clearSelection": "Clear selection",
       "timeline": "Event timeline",
       "markSkips": "Mark skipped",
-      "swapSkip": "Swap skipped ticket…",
-      "swapSkipHint": "Pick one skipped and one unsold ticket to swap"
+      "correctSkip": "Correct skip",
+      "skipMenu": "Skips ▾",
+      "undoScrap": "Undo scrap",
+      "scrapStockOnly": "Only tickets in stock can be selected; recall counter tickets first",
+      "scrapBlocks": {
+        "bookUnopened": "This book has not been opened; open it first",
+        "notInStock": "Only tickets in stock can be selected; recall counter tickets first",
+        "locked": "Tickets locked by a transfer cannot be scrapped",
+        "notUnsold": "Only unsold tickets can be scrapped"
+      },
+      "remainingEstimated": " · {remaining} left (estimated, plus {unmatched} system-assigned)",
+      "dashedNote": "Dashed = ticket numbers assigned by the system"
     },
     "timeline": {
       "columns": {
@@ -635,7 +664,9 @@
       "wholeBook": "Whole book",
       "aria": "Event timeline",
       "empty": "No events yet",
-      "correctionOf": " (prior correction, belongs to {shift})"
+      "correctionOf": " (prior correction, belongs to {shift})",
+      "matchPair": "#{ticketNo} ↔ #{partner}",
+      "matchPairOtherBook": "#{ticketNo} ↔ book {bookNo} #{partner}"
     },
     "scrap": {
       "title": "Scrap {count} tickets",
@@ -695,7 +726,7 @@
       "success": "Skipped tickets marked"
     },
     "swapSkip": {
-      "title": "Swap skipped ticket",
+      "title": "Correct skip",
       "toUnsold": "{ticketNo} skipped → unsold, placed at {place}",
       "toSkipped": "{ticketNo} unsold → skipped",
       "counter": "{store} · {cashPoint} counter",
@@ -703,8 +734,26 @@
       "reason": "Correction reason",
       "confirm": "I confirm ticket {skipped} is physically in my hands and {unsold} does not exist",
       "hint": "One pair at a time; the ticket set back to unsold takes the other ticket's store, place and unit cost.",
-      "submit": "Swap",
-      "success": "Skipped ticket swapped"
+      "submit": "Correct",
+      "success": "Skip corrected"
+    },
+    "undoScrap": {
+      "title": "Undo scrap of {count}",
+      "reason": "Reason",
+      "recovered": "Scrap loss reversed",
+      "hint": "The ticket returns to unsold at the same place ({place}). Scrapped tickets are not returned to the lottery company; there is no time limit.",
+      "stock": "{store} · stock",
+      "counter": "{store} · {cashPoint} counter",
+      "submit": "Undo scrap",
+      "success": "Undid scrap of {count}"
+    },
+    "skipCorrection": {
+      "scan": "① Scan or type the ticket you have in hand",
+      "pick": "② Pick the ticket you do not have (unsold only)",
+      "codeInvalid": "Cannot read the ticket number; scan again or type book-ticket",
+      "notThisBook": "This ticket is not from this book",
+      "notSkipped": "#{ticketNo} is now {status}, not skipped; scan the ticket recorded as skipped that you have in hand",
+      "guessedToSkipped": "{ticketNo} {status} (filled in by the system) → skipped; this status moves to an unsold ticket at the same place first"
     }
   },
   "lotteryReports": {
@@ -741,7 +790,8 @@
         "bank": "6 Bank",
         "outstanding": "7 Outstanding",
         "notes": "8 Notes",
-        "compare": "Branch comparison"
+        "compare": "Branch comparison",
+        "profitEstimated": "2 Gross profit (estimated)"
       },
       "descriptions": {
         "sales": "What sold in this period. Undone sales are negative and may be from earlier sales.",
@@ -755,7 +805,9 @@
         "bank": "Accounts this store uses, counting only this store's transactions; in is positive, out is negative.",
         "outstanding": "What was still owed at the end of the period (balances, not activity).",
         "notes": "Things to look at that are not amounts.",
-        "compare": "Key figures of each branch side by side; the total matches the all-branches sheet."
+        "compare": "Key figures of each branch side by side; the total matches the all-branches sheet.",
+        "estimated": "This period has ticket numbers assigned by the system: game totals are exact; per-book sales, cost of sales, gross profit and ending stock cost are estimates. ",
+        "gamesCount": "Sold = scanned + marked manually + marked by count + stocktake backfill; sorted by game code. Margin = gross profit ÷ net sales."
       },
       "footnotes": {
         "cashMovement": "5b is not a full cash book: cash from sales is in 1 Sales and prize payouts in 3 Prize redemption. See the live cash book in Accounts for the expected drawer and vault amounts.",
@@ -833,7 +885,10 @@
         "endingCost": "Ending stock cost",
         "shiftDifference": "Shift checkout differences",
         "toPay": "Payable (purchases + transfers)",
-        "toReceive": "Transfer payment to receive"
+        "toReceive": "Transfer payment to receive",
+        "countName": "{name} (quantity)",
+        "countEstimatedName": "{name} (quantity) · estimated",
+        "estimatedName": "{name} · estimated"
       },
       "items": {
         "scan": "Scanned sales",
@@ -905,7 +960,24 @@
         "fullDayNote": "{store} had no daily close on {date}; the whole day is used and the vault and stocktake are not reconciled",
         "thisStore": "This store",
         "monthClosed": "Closed: figures are fixed; later corrections appear under prior-period corrections",
-        "monthOpen": "Not yet closed: figures may still change"
+        "monthOpen": "Not yet closed: figures may still change",
+        "countSale": "Marked sold by count",
+        "scrapUndo": "+ Scrap undone",
+        "matchCostAdjust": "Match cost adjustment",
+        "matchCostAdjustNote": "Matched tickets with a different cost; differences taken over as sold are already in cost of sales",
+        "investigatingUnmatched": "{count} books; {unmatched} assigned by the system, ranges not listed",
+        "estimated": "Includes estimates",
+        "countMode": "Count mode",
+        "countModeSince": "{mode} (since {date})",
+        "countModeChange": "From {date}: {from} → {to}",
+        "renumberCount": "Renumber counts",
+        "daysSinceRenumber": "Since last renumber",
+        "daysValue": "{days} days",
+        "neverRenumbered": "Never renumbered",
+        "monthEndUnrenumbered": "Not renumbered at month end",
+        "monthEndRenumberNone": "None",
+        "monthEndRenumberMonthOnly": "— (monthly reports only)",
+        "monthEndRenumberOpen": "— (decided at period close)"
       },
       "closing": {
         "closed": "Closed",
@@ -919,6 +991,16 @@
         "period": "Actual period",
         "note": "Note",
         "loading": "Choose stores to list the actual period of each store"
+      },
+      "countModes": {
+        "numbered": "Numbered count",
+        "count": "Count by quantity",
+        "converting": "Converting"
+      },
+      "countModeShort": {
+        "numbered": "Numbered",
+        "count": "Quantity",
+        "converting": "Converting"
       }
     },
     "shiftCheckouts": {
@@ -2422,6 +2504,16 @@
         "title": "Snapshot {month}",
         "closedBy": "Closed by {name} at {at}",
         "close": "Close"
+      },
+      "renumber": {
+        "pass": "Count stores renumbered at month end: passed",
+        "blocked": "Count stores renumbered at month end: {stores} not renumbered before the month's last daily close (required; blocks the close)",
+        "warning": "Count stores renumbered at month end: {stores} not renumbered (reminder only; reports are marked as estimates and noted)",
+        "toSettings": "Go to lottery settings",
+        "snapshotLabel": "{store} renumber",
+        "snapshotDone": "Done {date}",
+        "snapshotMissing": "Not renumbered",
+        "snapshotEstimated": "Not renumbered (estimated)"
       }
     },
     "errors": {
@@ -2444,7 +2536,8 @@
       "PERIOD_ALREADY_CLOSED": "This month is already closed (it cannot be reopened)",
       "PERIOD_OUT_OF_ORDER": "Close months in order; close the earlier month first",
       "PERIOD_SHIFTS_NOT_CLOSED": "Some cash register shifts of that month have not checked out",
-      "PERIOD_PENDING_DOCUMENTS": "Some documents of that month are under review; handle them first"
+      "PERIOD_PENDING_DOCUMENTS": "Some documents of that month are under review; handle them first",
+      "RENUMBER_REQUIRED": "A count store set to \"required\" was not renumbered before the month's last daily close; the period cannot be closed"
     }
   },
   "lotteryPurchasing": {
@@ -2756,7 +2849,7 @@
         },
         "sameBranch": "The to store must differ from the from store",
         "lines": "Transfer lines",
-        "scan": "Scan to add to selection",
+        "scan": "Scan or type a ticket number to add",
         "scanNotFound": "This book is not available in the from store",
         "partialForbidden": "This book is opened and can only be transferred by ticket; you lack the partial tickets permission",
         "noLines": "No books added yet",
@@ -2801,7 +2894,45 @@
         "toBranchHint": "Cannot find the to store? Headquarters opens transfers, or ask an admin to add you to the to store",
         "toBranchUnavailable": "You cannot pick this to store: headquarters opens transfers, or ask an admin to add you to the to store",
         "scanAmbiguousGame": "Several games share this book number; scan the back code or pick the game for front barcodes first",
-        "wholeRangeWithCount": "{range} ({count} tickets)"
+        "wholeRangeWithCount": "{range} ({count} tickets)",
+        "gridPickCount": "This store counts by quantity; scan or type ticket numbers to pick.",
+        "gridPickOff": "This store only allows scanning or typing ticket numbers to pick.",
+        "bookFactsReadOnly": "{count} available in the from branch · grid is view only",
+        "cellProblems": {
+          "sold": "#{ticketNo} was sold ({cashPoint} {time}): if it was not really sold, undo the sale or send a sale reversal",
+          "soldAt": "#{ticketNo} was sold ({time}): if it was not really sold, undo the sale or send a sale reversal",
+          "counter": "#{ticketNo} is on a counter ({cashPoint}); recall it to stock first",
+          "locked": "#{ticketNo} is on transfer {serialNo}; cannot transfer",
+          "investigating": "#{ticketNo} is under investigation; recover it first",
+          "lost": "#{ticketNo} is lost; recover it first",
+          "scrapped": "#{ticketNo} is scrapped; cannot transfer",
+          "inTransit": "#{ticketNo} is in transit; cannot transfer",
+          "skipped": "#{ticketNo} is recorded as skipped; cannot transfer",
+          "elsewhere": "#{ticketNo} is in another store; cannot transfer"
+        },
+        "cellStates": {
+          "counter": "on a counter",
+          "sold": "sold",
+          "locked": "on another transfer",
+          "investigating": "under investigation",
+          "lost": "lost",
+          "scrapped": "scrapped",
+          "inTransit": "in transit",
+          "skipped": "skipped",
+          "elsewhere": "in another store"
+        },
+        "blockedHandling": {
+          "counter": "Recall them to stock, ",
+          "sold": "If not really sold, undo the sale or send a sale reversal, ",
+          "locked": "",
+          "investigating": "Recover them first, ",
+          "lost": "Recover them first, ",
+          "scrapped": "",
+          "inTransit": "",
+          "skipped": "",
+          "elsewhere": ""
+        },
+        "blockedRow": "{game} · {bookNo}: {ranges} are now {state} and cannot be transferred. {handling}or remove them from this line and submit again."
       },
       "view": {
         "title": "Transfer",
@@ -3023,7 +3154,7 @@
     "TRANSFER_BRANCH_INVALID": "Pick different from and to stores; the from store must be in your scope",
     "TRANSFER_LINE_INVALID": "A line does not match its book (whole books must be unopened; tickets need an opened book)",
     "TRANSFER_PARTIAL_FORBIDDEN": "You lack the partial tickets permission",
-    "TRANSFER_TICKETS_UNAVAILABLE": "Some books or tickets are not in the from store, are sold, locked, or on another open transfer",
+    "TRANSFER_TICKETS_UNAVAILABLE": "Some books or tickets are not in the from branch stock (on a counter, sold or locked) or are on another open transfer; the tickets are listed below the lines",
     "TRANSFER_RECEIVED_ROW_CHANGED": "Received lines cannot be changed or removed",
     "TRANSFER_REQUISITION_INVALID": "The requisition must be a pending requisition of the to store",
     "TRANSFER_UNRECEIVED_ROWS": "Some tickets are not received yet. Receive them all before approval; return the transfer so the shipping store removes tickets that did not arrive",
@@ -3043,6 +3174,9 @@
     "STORE_FORM_SHIFT_NOT_IN_BRANCH": "The selected shift is not a shift of this store",
     "SALE_REVERSAL_TICKET_NOT_REVERSIBLE": "Some tickets are not sold in this store, or are on another open sale reversal request",
     "SALE_REVERSAL_AMOUNT_MISMATCH": "The refund amount does not match the face value of these tickets; pick them again",
+    "SALE_REVERSAL_COUNT_SALE_NOT_FOUND": "The scanned ticket is not recorded as sold and this cash point has no sale by count of this game to match it with; check the cash point or use \"by game + count\"",
+    "SALE_REVERSAL_COUNT_EXCEEDS": "Not enough sold tickets of this game at this cash point (filled in by the system by default); check \"up to\" and lower the count",
+    "SALE_REVERSAL_CASH_POINT_NOT_IN_BRANCH": "The selected cash point is not in this branch",
     "STORE_FORM_VOID_NOT_ALLOWED": "Sale reversals and cash corrections cannot be voided; create an opposite one instead",
     "STOCKTAKE_DIFF_STALE": "These tickets were already processed. Please recheck.",
     "STOCKTAKE_DIFF_UNHANDLED": "Some differences are not handled yet.",
@@ -3068,7 +3202,10 @@
     "DAILY_CLOSE_ACCOUNT_NOT_USABLE": "Choose an active bank account used by this store.",
     "PERIOD_CLOSED": "The selected shift is in a closed month and cannot be chosen.",
     "PURCHASE_NOT_DRAFT": "Only drafts can be deleted; void or reject a submitted purchase",
-    "TRANSFER_NOT_DRAFT": "Only drafts can be deleted; void or reject a submitted transfer"
+    "TRANSFER_NOT_DRAFT": "Only drafts can be deleted; void or reject a submitted transfer",
+    "STOCKTAKE_RENUMBER_INCOMPLETE": "Renumber needs every book counted; some books are not counted yet",
+    "STOCKTAKE_RENUMBER_NOT_ALLOWED": "Only count stores and converting stores can renumber, and it must cover the whole store",
+    "STOCKTAKE_RENUMBER_BLOCKED": "A game is being rescanned store-wide; renumber after it finishes or is cancelled"
   },
   "lotteryStore": {
     "fieldErrors": {
@@ -3125,14 +3262,17 @@
       "split": "Open / put on counter",
       "redeem": "Redeem",
       "recentRedemptions": "Recent redemptions",
-      "checkout": "Close shift"
+      "checkout": "Close shift",
+      "countSale": "Mark sold by count"
     },
     "card": {
       "title": "{code} {name}",
       "price": "{price}",
       "meta": "Book {bookNo} · sold today {count}",
       "remaining": "{remaining} / {total} left",
-      "lowStock": "Running low"
+      "lowStock": "Running low",
+      "estimate": "approx.",
+      "gameSummary": "{remaining} left · {books} books"
     },
     "localDialog": {
       "title": "Set this device's cash point",
@@ -3238,7 +3378,8 @@
       "cancel": "Cancel",
       "soldTitle": "Sold",
       "soldMessage": "{key} {amount} · {cashPoint}",
-      "undo": "Undo"
+      "undo": "Undo",
+      "soldMatchedMessage": "{key} {amount} · {cashPoint} · matched"
     },
     "scan": {
       "bookTicket": "Book {bookNo} · ticket {ticketNo}",
@@ -3281,7 +3422,10 @@
         "locked": "This ticket is locked by a form (transfer or sale reversal) and cannot be sold.",
         "inTransit": "This ticket is in transit and cannot be sold.",
         "inStock": "This ticket is in stock. Move it to a counter first.",
-        "moveForbidden": "This ticket is on {cashPoint} and you cannot move tickets. Sell it at {cashPoint}."
+        "moveForbidden": "This ticket is on {cashPoint} and you cannot move tickets. Sell it at {cashPoint}.",
+        "unmatchedNoPartner": "This ticket is recorded as sold (unmatched), but {cashPoint} has no unsold ticket of this game to match. Send a sale reversal request (reason: stocktake error) and sell it after approval.",
+        "skippedFix": "This ticket is recorded as \"skipped\" and cannot be sold. Correct the skipped ticket on the book detail first.",
+        "scrappedFix": "This ticket is recorded as scrapped and cannot be sold. Undo the scrap first."
       },
       "notFound": "Ticket not found, or it does not belong to this store.",
       "recoverNoPermission": "This ticket is under investigation. Someone with the recover permission has to handle it.",
@@ -3328,6 +3472,14 @@
       "submit": "Confirm sale",
       "success": "{count} tickets marked as sold"
     },
+    "returnScan": {
+      "input": "Scan returned ticket",
+      "help": "Customer brought a ticket back: scan it or enter the ticket number, once per ticket",
+      "add": "Look up",
+      "line": "{code} {name} · #{ticketNo} · {amount}",
+      "hint": "Undoing deducts {amount}. A ticket not scanned as sold at this cash point is first matched to the latest sale by count here.",
+      "matched": "Undone. Matched: this ticket took over 1 ticket sold by count at {time}"
+    },
     "recentSales": {
       "title": "Recent sales · {cashPoint}",
       "hint": "Tickets you sold on this shift in the last 30 minutes; only unchanged tickets can be undone.",
@@ -3335,7 +3487,10 @@
       "undone": "Undone",
       "expired": "Over 30 minutes",
       "footer": "Over 30 minutes or the shift is checked out → send a sale reversal request.",
-      "close": "Close"
+      "close": "Close",
+      "undoCount": "Undo some",
+      "partlyUndone": "{undone} undone, {left} left",
+      "countLine": "{code} {name} × {count} · by count"
     },
     "expand": {
       "title": "{code} {name} · book {bookNo}",
@@ -3353,7 +3508,13 @@
       "undoSale": "Undo sale",
       "recover": "Recover",
       "atCashPoint": "On {name}",
-      "inStock": "In stock"
+      "inStock": "In stock",
+      "metaEstimate": "{cashPoint} · {price} · {remaining} / {total} left (approx.)",
+      "dashedNote": "Dashed = ticket numbers filled in by the system",
+      "scanMove": "Scan to move",
+      "moveByCount": "Move by count",
+      "pausedRescan": "Moving is paused while game {game} is being rescanned",
+      "pausedRenumber": "Moving is paused during renumbering"
     },
     "move": {
       "title": "Move",
@@ -3362,7 +3523,10 @@
       "all": "All {count} tickets",
       "partial": "Selected tickets only ({count})",
       "submit": "Move",
-      "success": "{count} tickets moved"
+      "success": "{count} tickets moved",
+      "code": "Scan or type a ticket number",
+      "codeInvalid": "Cannot read the ticket number; scan again or type book-ticket",
+      "codeNotHere": "#{ticketNo} is not on {cashPoint} in this book"
     },
     "recall": {
       "title": "Recall to stock",
@@ -3413,7 +3577,16 @@
       "titleReopen": "Put on counter · {code} {name} · book {bookNo}",
       "reopenHint": "This book has been opened: only the {count} tickets in this store's stock are placed; no skipped numbers to mark.",
       "confirmReopen": "Put on counter",
-      "successReopen": "Put on counter"
+      "successReopen": "Put on counter",
+      "countHint": "This book is not sealed (it was opened and recalled). Count the tickets on hand.",
+      "actualCount": "Tickets of this book on hand",
+      "systemCount": "The system has {count} in this store's stock",
+      "countOver": "{count} more than the system; count the stock first.",
+      "countShort": "{count} fewer than the system; count the stock first or check for a wrongly reported ticket.",
+      "countOverField": "{count} more",
+      "countShortField": "{count} fewer",
+      "countInvalid": "Enter a whole number of 0 or more",
+      "countSkipHint": "{count} fewer than the system: mark the {count} missing numbers below as skipped before opening."
     },
     "camera": {
       "button": "📷 Scan",
@@ -3435,7 +3608,17 @@
       "SPLIT_PLAN_INVALID": "Skipped tickets are not all marked, or some tickets are not assigned",
       "TICKET_NOT_ON_COUNTER": "Only unsold tickets on a counter can be moved or recalled",
       "CONFLICT": "These tickets have been processed; please check again",
-      "GAME_NOT_FOUND": "The game of this ticket cannot be read, so it cannot be sold"
+      "GAME_NOT_FOUND": "The game of this ticket cannot be read, so it cannot be sold",
+      "COUNT_SALE_NOT_ALLOWED": "Only count stores can mark tickets sold by count",
+      "COUNT_SALE_INVALID": "More than the unsold tickets at this cash point ({available} left)",
+      "COUNT_SALE_NOT_FOUND": "No sale by count at this cash point to match; send a sale reversal request instead",
+      "COUNT_UNDO_EXCEEDS": "At most {available} tickets of this sale can be undone now",
+      "COUNT_STORE_SCAN_ONLY": "Count stores recall and move scanned tickets only; use Recall / Scan to move at the bottom of the card",
+      "COUNTER_TICKET_BLOCKED": "Some tickets cannot be recalled or moved; remove them and try again",
+      "MOVE_PAUSED": "{kind, select, renumber {Moving is paused during renumbering} other {Moving is paused while this game is being rescanned}}",
+      "MOVE_BY_COUNT_INVALID": "{problem, select, exceeds {Only {available} of this game are left on the counter} same_cash_point {Move to another counter} not_count_store {Only count stores can move by count} other {Invalid count}}",
+      "SPLIT_ACTUAL_COUNT_REQUIRED": "Enter the number of tickets on hand",
+      "SPLIT_ACTUAL_COUNT_MISMATCH": "{problem, select, over {{count} more than the system; count the stock first.} other {{count} fewer than the system; count the stock first or check for a wrongly reported ticket.}}"
     },
     "redemption": {
       "redeemTitle": "Redeem · {name}",
@@ -3608,7 +3791,23 @@
       "cancel": "Cancel",
       "submit": "Submit",
       "submitted": "Sale reversal request submitted",
-      "submitAndPrint": "Submit and print receipt"
+      "submitAndPrint": "Submit and print receipt",
+      "scanNotReversibleCount": "This ticket cannot be reversed: it is locked by another form, recorded as skipped or scrapped, in transit, or not from this store",
+      "dashedNote": "Dashed = ticket number filled in by the system by default",
+      "matchTicket": "{gameCode} · {bookNo} · #{ticketNo} (scanned)",
+      "matched": "Matched",
+      "remove": "Remove",
+      "addCountRow": "+ Add a row: by game + count",
+      "countCashPoint": "Cash point",
+      "localCashPoint": "{name} (this device)",
+      "countGame": "Game",
+      "countGameOption": "{gameCode} {gameName}",
+      "countNoGames": "This cash point has no sold tickets filled in by the system by default",
+      "countDecrease": "One less",
+      "countIncrease": "One more",
+      "countValue": "Count",
+      "countMax": "Up to {count}",
+      "ruleCount": "Only tickets sold in this store and not on another open reversal request can be picked; dashed cells (sold, filled in by the system by default) cannot be clicked. Without a ticket to scan, use \"by game + count\"."
     },
     "undoRequest": {
       "send": "Send sale reversal request"
@@ -3652,7 +3851,8 @@
         "noBooks": "No books on the counters in this scope",
         "loadFailed": "Could not load the stocktake data. Try again later.",
         "pickBook": "Book to count",
-        "returnedHint": "This stocktake confirmation was returned. Edit and submit again."
+        "returnedHint": "This stocktake confirmation was returned. Edit and submit again.",
+        "progressGroups": "Counted {done} / {total} groups"
       },
       "cashPoint": {
         "expected": "Expected cash {amount}",
@@ -3664,7 +3864,8 @@
         "counted": "Counted",
         "uncounted": "Not counted",
         "current": "Current",
-        "diff": "{count} diff"
+        "diff": "{count} diff",
+        "currentGroup": "Current"
       },
       "book": {
         "title": "{game} · Book {bookNo}",
@@ -3688,7 +3889,10 @@
         "legendSelected": "Present (counted)",
         "pendingReversal": "Reversal pending",
         "subtitleStock": "Book {bookNo} · {count} in stock",
-        "hintStock": "Tap the tickets still in stock (selected = present); the system figure is as of when you started this book."
+        "hintStock": "Tap the tickets still in stock (selected = present); the system figure is as of when you started this book.",
+        "finish": "Done, go to review",
+        "hintRenumber": "Mark the tickets that are actually here (selected = here). Dashed cells are numbers set by the system; they are matched automatically first and are not differences.",
+        "legendGuess": "Dashed = number set by the system"
       },
       "unopened": {
         "title": "Unopened books (present / missing)",
@@ -3721,7 +3925,15 @@
         "empty": "No tickets under investigation",
         "foundTicket": "Scanned #{ticketNo}, found",
         "scanEach": "Scan each ticket: only scanned tickets count as found; the rest stay under investigation",
-        "foundSome": "Scanned {count} / {total}; the rest stay under investigation"
+        "foundSome": "Scanned {count} / {total}; the rest stay under investigation",
+        "sinceCount": "{date} {type} · {cashPoint}",
+        "sourceTypes": {
+          "shift": "Shift stocktake",
+          "daily": "Daily stocktake",
+          "adhoc": "Ad hoc stocktake"
+        },
+        "unmatchedLabel": "{game} · {count} tickets · filled in by the system",
+        "hintUnmatched": " Tickets filled in by the system can only be [Confirm lost] or [Keep investigating]; a store-wide rescan finds which ones they are."
       },
       "review": {
         "title": "Review differences",
@@ -3731,7 +3943,8 @@
         "actions": {
           "sale_backfill": "Backfill sale",
           "investigate": "Investigate",
-          "flag": "Flag"
+          "flag": "Flag",
+          "skip": "Mark skipped"
         },
         "clear": "Clear selection",
         "recount": "Recount this book",
@@ -3762,7 +3975,8 @@
           "backfillClosed": "Post-close correction of the latest shift at {cashPoint} {amount}",
           "investigate": "Under investigation; responsible store = {store}",
           "flag": "Correct later with a sale reversal (stocktake error)",
-          "none": "Not handled"
+          "none": "Not handled",
+          "skip": "Marked skipped on approval (pending skips of this book)"
         },
         "summary": {
           "backfill": "Backfilled sales",
@@ -3780,7 +3994,9 @@
         "noShift": "This cash point has never had a shift, so the sale cannot be backfilled",
         "backfillDone": "Backfilled {count} sales · {amount} (immediate)",
         "lostNotReady": "Finish the investigation list: found tickets must be scanned and losses need a reason",
-        "stockHint": "Missing stock tickets can only be marked for investigation (stock tickets cannot be sold, so there is no backfill)."
+        "stockHint": "Missing stock tickets can only be marked for investigation (stock tickets cannot be sold, so there is no backfill).",
+        "infoCount": "Handle each group: short tickets can be [Count as sold], [Investigate] or split (e.g. 1 sold, 1 investigate); over tickets can only be [Flag]. [Count as sold] takes effect at once: an open shift at that cash point gets it; a checked-out shift gets a post-close correction.",
+        "skipHint": "{count, plural, one {This book has # pending skip: a missing ticket can be marked skipped.} other {This book has # pending skips: missing tickets can be marked skipped.}}"
       },
       "submit": {
         "title": "Submit stocktake?",
@@ -3801,7 +4017,10 @@
         "uncounted": "{count} books were not counted; they are not compared and the stocktake records them as uncounted.",
         "note": "Note",
         "back": "Back",
-        "confirm": "Submit stocktake confirmation"
+        "confirm": "Submit stocktake confirmation",
+        "countGroupLabel": "{game} · {cashPoint}",
+        "countInvestigate": "{label} {count} · filled in by the system",
+        "countFlag": "{label} {count}"
       },
       "list": {
         "type": "Type",
@@ -3857,7 +4076,22 @@
         },
         "backfillValue": "{count} · {amount}",
         "lostValue": "{count} · cost {cost}",
-        "count": "{count}",
+        "count": {
+          "title": "Count stocktake",
+          "empty": "No groups counted",
+          "columns": {
+            "group": "Cash point · Game",
+            "system": "System",
+            "present": "Actual",
+            "handled": "Action"
+          },
+          "recounted": "First counted {first}, changed to {rest}",
+          "sale": "{count} counted as sold · {amount}",
+          "investigate": "{count} to investigate (filled in by the system)",
+          "flag": "{count} flagged",
+          "none": "No difference",
+          "uncounted": "Not counted: {group}"
+        },
         "books": "{count} books",
         "uncounted": "Uncounted book",
         "uncountedHint": "Books not counted before submission; they are not compared and have no differences. Run another stocktake to count them.",
@@ -3876,6 +4110,97 @@
         "title": "Stock (opened books)",
         "name": "Stock",
         "hint": "Stock tickets of opened books (recalled, recovered or transferred back): count them ticket by ticket like a counter; missing tickets can only be marked for investigation."
+      },
+      "count": {
+        "subtitle": "{cashPoint} · {count} books",
+        "title": "{game} · {cashPoint}",
+        "meta": "{price} · {count} books ({books})",
+        "hint": "Count how many tickets of this game are left on the counter, then press [Confirm]. The system count is shown only after you count.",
+        "present": "Tickets left",
+        "confirm": "Confirm",
+        "recount": "Recount",
+        "prev": "Previous group",
+        "next": "Next group",
+        "finish": "Done, go to review",
+        "figures": "System {system} · Actual {present} · {diff}",
+        "diffNone": "No difference",
+        "diffShort": "{count} short",
+        "diffOver": "{count} over",
+        "saleUnavailable": "Not enough tickets in this group to count as sold (just handled elsewhere). Please review this group again."
+      },
+      "countReview": {
+        "title": "{cashPoint} · {game}",
+        "shiftOpen": "Open shift at {cashPoint}: {name} {time}",
+        "shiftClosed": "The {time} shift is checked out",
+        "noShift": "This cash point has never had a shift",
+        "recount": "Recount this group",
+        "stale": "Game {game} at {cashPoint} was just handled by another stocktake or rescan. Please count this group again.",
+        "overHint": "Over: only marked on the stocktake; ticket states do not change. A store-wide rescan will find which ticket it is.",
+        "splitSale": "Count as sold (up to {max})",
+        "splitApply": "Apply",
+        "kind": {
+          "short": "{count} short",
+          "over": "{count} over",
+          "match": "No difference"
+        },
+        "columns": {
+          "kind": "Difference",
+          "system": "System",
+          "actual": "Actual",
+          "action": "Action",
+          "result": "Result"
+        },
+        "actions": {
+          "sale": "Count as sold",
+          "investigate": "Investigate",
+          "split": "Split",
+          "flag": "Flag"
+        },
+        "result": {
+          "match": "No difference",
+          "none": "Not handled yet",
+          "flag": "Flagged: ticket states do not change; a store-wide rescan reminder for {code} is raised",
+          "saleOpen": "{count} counted as sold: added to the {cashPoint} shift, expected cash {amount} (ticket numbers filled in by the system)",
+          "saleClosed": "{count} counted as sold as a post-close correction of the {cashPoint} {time} shift {amount}",
+          "investigate": "{count} to investigate (filled in by the system; responsible store = {store})"
+        }
+      },
+      "session": {
+        "scope": "{type} · {place}",
+        "types": {
+          "shift": "Shift stocktake",
+          "daily": "Daily stocktake",
+          "adhoc": "Ad hoc stocktake"
+        },
+        "wholeStore": "Whole store",
+        "blocked": "{place} is being counted by {name} (started {time}, ends automatically in {minutes} min). Please wait until it is submitted.",
+        "end": "End this stocktake",
+        "ended": "This stocktake was ended by a store manager or expired (no activity for 1 hour). Your progress is kept; start the stocktake again to [Continue].",
+        "active": "You started counting at {time} · ends automatically in {minutes} min (resets on activity)",
+        "resumeTitle": "You have a stocktake in progress",
+        "resumeBody": "{scope} · started {time}. [Continue] goes back to where you were with everything counted so far; [Abandon] releases this stocktake.",
+        "resume": "Continue",
+        "abandon": "Abandon",
+        "wholeStoreBlocksCheckout": "Whole-store stocktake in progress ({name}, started {time}). Please check out after it is submitted.",
+        "startFailed": "Cannot start the stocktake. Please try again later.",
+        "blockedTitle": "Cannot start the stocktake",
+        "gotIt": "Got it",
+        "endTitle": "End {name}'s stocktake?",
+        "endBody": "{place} will no longer be in stocktake. {name}'s progress is kept and can be continued later. This action is recorded.",
+        "cancel": "Cancel"
+      },
+      "renumber": {
+        "heading": "Renumber",
+        "banner": "Renumbering: moving tickets between counters is paused for every game. Count every book; you can submit only after all are counted. Numbers set by the system are matched automatically first and are not counted as differences.",
+        "footer": "{count, plural, =0 {All counted. You can go to the difference check. Sales can continue while counting.} one {# book left to count. Count every book before the difference check. Sales can continue while counting.} other {# books left to count. Count every book before the difference check. Sales can continue while counting.}}",
+        "converting": "Converting: please complete the renumber. Until then, scan or type the ticket number to sell, recall or move.",
+        "start": "Renumber",
+        "due": "Renumber suggested (last {date})",
+        "dueNever": "Renumber suggested (never done)",
+        "blockedRescan": "A game is being rescanned store-wide. Renumber after it finishes or is cancelled.",
+        "matchedTitle": "{count, plural, one {# ticket matched automatically (not a difference)} other {# tickets matched automatically (not differences)}}",
+        "matchedHint": "Tickets that are here but whose numbers were set by the system swap status with tickets the system marks unsold that are not here. Written on approval; cash is not affected.",
+        "matchedRow": "{place} · {game}: #{ticketNo} (book {bookNo}) ↔ #{partnerNo} (book {partnerBookNo})"
       }
     },
     "checkout": {
@@ -3912,7 +4237,11 @@
         "skipHint": "Requires the skip-stocktake permission; a reason is required and reports mark it as not counted.",
         "skipReason": "Skip reason (required)",
         "review": "Review differences →",
-        "reviewed": "Differences reviewed; continue to the next step"
+        "reviewed": "Differences reviewed; continue to the next step",
+        "endSession": "End this stocktake",
+        "renumber": "Renumber this time",
+        "renumberHint": "Count every book by grid or scan; all must be counted before the next step. Moving tickets is paused for every game.",
+        "renumberMonthEnd": "No renumber this month yet, so the period close will be blocked. Choose \"Renumber this time\" for this daily close."
       },
       "redemption": {
         "title": "② Redemptions ({count} this shift)",
@@ -4006,11 +4335,13 @@
           "expected": "Expected",
           "counted": "Counted",
           "difference": "Difference",
-          "status": "Status"
+          "status": "Status",
+          "countSale": "Sold by count"
         },
         "total": "{count} total",
         "empty": "No checkouts",
-        "cardFacts": "Expected {expected} · counted {counted} · difference {difference}"
+        "cardFacts": "Expected {expected} · counted {counted} · difference {difference}",
+        "countSaleValue": "{count} · {amount}"
       },
       "view": {
         "title": "Checkout confirmation",
@@ -4032,7 +4363,8 @@
         "noSuccessor": "(No successor)",
         "pending": "Under review at submission: {items}",
         "hint": "Each line opens the original document.",
-        "loadFailed": "Could not load this checkout sheet"
+        "loadFailed": "Could not load this checkout sheet",
+        "stocktakeRenumber": "Renumber {serial} ({time})"
       }
     },
     "badgeDescription": "Stores whose daily close is overdue: the earliest shift checkout not yet covered by a daily close passed its reminder time on the next day",
@@ -4149,7 +4481,8 @@
         "shiftDifference": "Shift checkout differences",
         "vaultDifference": "Vault difference",
         "bankDeposit": "Bank deposit",
-        "noDeposit": "None"
+        "noDeposit": "None",
+        "stocktakeRenumber": "Renumber · {matched} matched · {diff} differences"
       },
       "view": {
         "period": "Covered period",
@@ -4240,18 +4573,213 @@
         "ticketCount": " ({count} tickets)",
         "refund": "Refund"
       }
+    },
+    "recover": {
+      "hint": "After recovery this ticket is recorded in this store's stock. Put the physical ticket into stock; to sell it, use \"Open book / Put on counter\" to place it on a cash point.",
+      "success": "Recovered {ranges} into stock. To sell it, use \"Open book / Put on counter\" first."
+    },
+    "countSale": {
+      "title": "Mark sold by count",
+      "shiftText": "Owner {name} · opened {time} · this shift's cash",
+      "game": "Game",
+      "gameOption": "{code} {name} ({remaining} left)",
+      "decrease": "One fewer on line {line}",
+      "increase": "One more on line {line}",
+      "count": "Tickets on line {line}",
+      "addLine": "+ Add line",
+      "total": "Total",
+      "totalValue": "{count} tickets · {amount}",
+      "reason": "Reason",
+      "hint": "The sale counts toward {name}'s shift; expected cash +{amount}. Ticket numbers are filled in by the system and corrected when the physical ticket is scanned.",
+      "submit": "Mark sold",
+      "successTitle": "Marked sold by count",
+      "success": "{lines}, total {amount}",
+      "successLine": "{code} {name} × {count}",
+      "successSeparator": ", "
+    },
+    "countUndo": {
+      "title": "Undo sale by count",
+      "line": "Sold by count at {time} · {count} in this sale",
+      "count": "Tickets to undo",
+      "decrease": "Undo one fewer",
+      "increase": "Undo one more",
+      "max": "At most {count}",
+      "hint": "If the customer returns a ticket, scan it to undo instead. After undoing, {amount} is deducted from {cashPoint}'s expected drawer cash.",
+      "submit": "Undo {count}",
+      "success": "Undid {count} of {code} {name}, {amount} deducted"
+    },
+    "counterScan": {
+      "moveTitle": "Scan to move",
+      "recallTitle": "Recall to stock",
+      "local": "This device",
+      "moveFrom": "Move out of {cashPoint} · any game on this counter",
+      "recallFrom": "Recall from {cashPoint} to stock · any game on this counter",
+      "to": "Move to",
+      "recallTo": "Recall to",
+      "stock": "Stock",
+      "input": "Scan, use the camera or type a ticket number",
+      "add": "Add",
+      "camera": "Camera",
+      "scanned": "{count} scanned",
+      "row": "{code} {name} · book {bookNo} · #{ticketNo}",
+      "matched": "Matched",
+      "remove": "Remove",
+      "removeLabel": "Remove #{ticketNo}",
+      "moveSubmit": "Move {count}",
+      "recallSubmit": "Recall {count}",
+      "moveAction": "move",
+      "recallAction": "recall",
+      "notFound": "Ticket not found ({code})",
+      "duplicate": "#{ticketNo} is already in the list",
+      "problems": {
+        "notThisStore": "#{ticketNo} is not from this store; cannot {action}",
+        "sold": "#{ticketNo} was sold ({cashPoint} {time}); cannot {action}",
+        "unmatchedNoPartner": "#{ticketNo} is recorded as sold (unmatched) and {source} has no unsold ticket of this game to match. Send a sale reversal (stocktake error) and {action} after approval",
+        "skipped": "#{ticketNo} is recorded as skipped; correct the skip in the book detail first",
+        "scrapped": "#{ticketNo} is scrapped; undo the scrap in the book detail first",
+        "locked": "#{ticketNo} is locked by a transfer or sale reversal; cannot {action}",
+        "inTransit": "#{ticketNo} is in transit; cannot {action}",
+        "inStock": "#{ticketNo} is already in stock",
+        "missing": "#{ticketNo} is under investigation or lost; recover it first",
+        "alreadyThere": "#{ticketNo} is already on {target}",
+        "notOnSource": "#{ticketNo} is not on {source}"
+      }
+    },
+    "moveByCount": {
+      "title": "Move by count",
+      "from": "Out of {cashPoint} · {remaining} left of this game ({books} books)",
+      "to": "Move to",
+      "count": "Count",
+      "decrease": "One fewer",
+      "increase": "One more",
+      "max": "Up to {count}",
+      "hint": "Take any {count} tickets to {to}; the ticket numbers are filled in by the system and corrected when the tickets are scanned.",
+      "submit": "Move",
+      "success": "Moved {count} of game {game} from {from} to {to}"
+    },
+    "rescan": {
+      "reminder": {
+        "investigate": "Game {game} has {count} investigating ticket(s) whose numbers are not confirmed. Please rescan game {code} at every counter and the stock.",
+        "flagged": "Game {game} was counted over by {count} (flagged). Please rescan game {code} at every counter and the stock.",
+        "start": "Rescan game {code}"
+      },
+      "banner": {
+        "active": "Game {game} store-wide rescan in progress, moves paused · {done}/{total} places done (not yet: {pending}) · auto-cancels in {minutes} min",
+        "go": "Go to rescan",
+        "pendingChip": "Game {code} not rescanned here yet"
+      },
+      "start": {
+        "title": "Start a store-wide rescan of {game}?",
+        "before": "Before starting, finish any ongoing shift checkout or stocktake at each counter, and count game {code} first.",
+        "places": "Places to scan",
+        "placesValue": "{names} ({count})",
+        "during": "Moves of {code} are paused during the rescan; everything else works as usual. It ends when every place is done, and is cancelled automatically after 1 hour without any scan.",
+        "cancel": "Cancel",
+        "submit": "Start rescan"
+      },
+      "page": {
+        "title": "Store-wide rescan · {game}",
+        "started": "Started by {name} at {time}",
+        "cancel": "Cancel rescan",
+        "info": "{done}/{total} places done · started by {name} at {time} · auto-cancels in {minutes} min. Moves of {code} are paused; everything else works as usual.",
+        "placesTitle": "Places (ends when all are done)",
+        "stock": "Stock",
+        "local": "{name} (this device)",
+        "current": "Scanning: {place}",
+        "pickPlace": "Which place are you scanning",
+        "placeHint": "If this place is in a shift checkout or stocktake, submit it before scanning.",
+        "input": "Barcode, camera or ticket number",
+        "add": "Add",
+        "camera": "Camera",
+        "scannedCount": "{count} scanned here",
+        "okRange": "{first}~{last}, {count} tickets",
+        "finishPlace": "Done here",
+        "backToBoard": "Back to board",
+        "loadFailed": "Could not load this rescan. Please reload."
+      },
+      "states": {
+        "pending": "Not scanned",
+        "scanning": "In progress · {name}",
+        "released": "In progress · {name}",
+        "done": "Done · {time} {name}"
+      },
+      "outcomes": {
+        "ok": "OK",
+        "matched": "Matched",
+        "recovered": "Recovered (kept at {place})",
+        "moved": "Place corrected (now at {place})",
+        "sold_here": "Recorded sold but here",
+        "skipped": "Recorded skipped, correct first",
+        "scrapped": "Recorded scrapped, correct first",
+        "locked": "Locked, correct first",
+        "unopened": "Book not opened, not in the rescan",
+        "other_game": "Not game {code}",
+        "not_this_store": "Not this store's ticket",
+        "investigated": "Confirmed missing"
+      },
+      "finish": {
+        "title": "{count} scanned at {place}. Done?",
+        "body": "Unsold {code} tickets recorded at {place} but not scanned this time will be marked as investigating (corrected automatically if scanned at another place).",
+        "continue": "Keep scanning",
+        "confirm": "Done"
+      },
+      "cancelDialog": {
+        "title": "Cancel the rescan?",
+        "body": "Corrections at places already done are kept; other places are left as they are, and moves of {code} resume.",
+        "keep": "Keep rescanning",
+        "confirm": "Cancel rescan"
+      },
+      "done": {
+        "info": "Store-wide rescan finished · {done}/{total} places · ended at {time}; moves of {code} resumed.",
+        "cancelled": "This rescan was cancelled: corrections at places already done are kept, other places are left as they are, and moves of {code} resumed.",
+        "expired": "This rescan had no scans for 1 hour and was cancelled automatically: corrections at places already done are kept, and moves of {code} resumed.",
+        "summaryTitle": "Summary",
+        "matched": "Matched",
+        "matchedValue": "{count} (cost differences listed as match cost adjustments)",
+        "recovered": "Recovered",
+        "soldHere": "Recorded sold but here",
+        "soldHereValue": "{count} ({tickets}, please send a sale reversal request)",
+        "investigated": "Confirmed missing",
+        "toFix": "Correct first",
+        "countValue": "{count} ({tickets})",
+        "none": "None"
+      },
+      "errors": {
+        "placeStocktaking": "{name} is counting this place (since {time}, ends automatically in {minutes} min). Please wait until it is submitted.",
+        "placeBusy": "{name} is scanning this place. Please pick another place.",
+        "placeDone": "This place is already done.",
+        "ended": "This rescan has ended.",
+        "notFound": "Ticket not found. Scan again or type the ticket number.",
+        "startRescan": "Game {code} is already being rescanned.",
+        "startRenumber": "A renumbering is in progress; rescans cannot start.",
+        "notCountStore": "Only stores using count stocktakes can run a store-wide rescan.",
+        "duplicate": "#{no} was already scanned."
+      },
+      "enterNotice": {
+        "title": "Game {game} is being rescanned store-wide",
+        "body": "Places not done yet: {places}. {code} at these places can be counted after they are done; count the rest as usual.",
+        "cancel": "Cancel",
+        "continue": "Continue stocktake"
+      },
+      "stocktake": {
+        "tag": "Rescanning",
+        "blocked": "{code} is being rescanned here. Count it after the rescan.",
+        "notice": "{place} · {game}: {code} is being rescanned here. Count it after the rescan."
+      }
     }
   },
   "notifications": {
     "types": {
       "lottery": {
         "daily-close-overdue": "Daily close overdue",
+        "rescan-reminder": "Store-wide rescan reminder",
         "transfer-shipped": "Transfer shipped",
         "license-expiring": "License expiring",
         "store-rent-due": "Store rent due",
         "period-close-overdue": "Period close overdue",
         "purchase-wrong-store": "Purchase sent to the wrong store",
-        "transfer-wrong-store": "Transfer sent to the wrong store"
+        "transfer-wrong-store": "Transfer sent to the wrong store",
+        "renumber-due": "Renumber due"
       },
       "schedule": {
         "day-off-open": "Day-off requests open",
@@ -4276,6 +4804,138 @@
         "day-off-open": "the opening date",
         "day-off-closing": "the closing date"
       }
+    }
+  },
+  "lotterySettings": {
+    "title": "Scratch-off settings",
+    "org": "Store",
+    "customize": "Customize",
+    "restore": "Restore",
+    "history": "Change log",
+    "cancelConversion": "Cancel conversion",
+    "converting": "Quantity → Numbered (converting, awaiting renumbering)",
+    "parent": "Upper level: {value}",
+    "labels": {
+      "count_mode": "Counting method",
+      "renumber_required": "Renumbering for quantity-count stores",
+      "renumber_reminder": "Renumbering reminder",
+      "transfer_grid_pick": "Pick tickets on the grid in transfers"
+    },
+    "options": {
+      "count_mode": {
+        "numbered": "Numbered count",
+        "count": "Quantity count"
+      },
+      "renumber_required": {
+        "remind": "Reminder only",
+        "required": "Required (blocks period close)"
+      },
+      "renumber_reminder": {
+        "none": "None",
+        "weekly": "Weekly",
+        "biweekly": "Every two weeks",
+        "monthly": "Monthly"
+      },
+      "transfer_grid_pick": {
+        "on": "On",
+        "off": "Off"
+      }
+    },
+    "descriptions": {
+      "count_mode": {
+        "numbered": "Every ticket is scanned or picked on the grid to sell, and counts go ticket by ticket. Switching back from quantity count first enters converting: every sale must be scanned or picked on the grid, and one store-wide renumbering is required; the store becomes numbered once the renumbering is approved.",
+        "count": "Takes effect now; counts switch to quantities from the next stocktake."
+      },
+      "count_mode_upper": {
+        "numbered": "Stores following the default switch to numbered; stores still holding system-assigned ticket numbers enter converting first.",
+        "count": "Stores following the default switch to quantity count."
+      },
+      "renumber_required": {
+        "remind": "Warn only; does not block period close.",
+        "required": "Blocks period close if no renumbering is done before the last daily close of the month."
+      },
+      "renumber_reminder": {
+        "none": "No renumbering reminder.",
+        "weekly": "Remind 7 days after the last renumbering.",
+        "biweekly": "Remind 14 days after the last renumbering.",
+        "monthly": "Remind one month after the last renumbering."
+      },
+      "transfer_grid_pick": {
+        "on": "Numbered stores can pick tickets on the grid in transfers. Quantity-count stores always scan or type ticket numbers.",
+        "off": "Transfers pick tickets only by scanning or typing ticket numbers."
+      }
+    },
+    "source": {
+      "own": "Customized here",
+      "ownTop": "Customized at this level",
+      "inherited": "Inherited: {org}",
+      "inheritedHidden": "Inherited from upper level",
+      "default": "Inherited: built-in default"
+    },
+    "dialog": {
+      "title": "{label} · {org}",
+      "titleDefault": "{label} default · {org}",
+      "restore": "Restore to inherited",
+      "cancel": "Cancel",
+      "save": "Save",
+      "close": "Close",
+      "renumberToRemind": "Period close for this month will only warn; reports are marked as estimates with a note that renumbering was not done at month end. This change is recorded."
+    },
+    "check": {
+      "checking": "Checking…",
+      "separator": ", ",
+      "reasonSeparator": "; ",
+      "pendingSkip": "Books on the counter still have skips to mark. Mark them on the board first.",
+      "pendingSkipBook": "{cashPoint} · {gameCode} {gameName} · book {bookNo}",
+      "pendingSkipCount": "{count} to mark",
+      "busy": "{org} has a stocktake or rescan in progress; change after it finishes or ends",
+      "toConverting": "{org} will enter converting until the renumbering is approved; selling or moving by quantity is unavailable while converting.",
+      "toNumbered": "No system-assigned ticket numbers; switches to numbered count directly.",
+      "followingToCount": "Stores switching to quantity count",
+      "followingToNumbered": "Stores switching to numbered count",
+      "noneFollowing": "No store follows this change",
+      "blocked": "Cannot save this time: {reasons}.",
+      "blockedPendingSkip": "{org} {cashPoint} {gameCode} · {bookNo} has {count} skips to mark (mark them first, or customize that store to numbered)"
+    },
+    "cancelDialog": {
+      "title": "Cancel the conversion of {org}?",
+      "body": "{org} returns to quantity count now and unmatched marks stay in use. Cancelling customizes this store to quantity count; later changes to the upper default no longer apply until you press Restore.",
+      "back": "Back",
+      "confirm": "Cancel conversion"
+    },
+    "historyDialog": {
+      "title": "Counting method change log · {org}",
+      "when": "{at} · {by}",
+      "system": "System",
+      "change": "{from} → {to} ({cause})",
+      "renumberOnly": "Renumbering approved (method unchanged)",
+      "empty": "No changes yet",
+      "close": "Close",
+      "modes": {
+        "numbered": "Numbered",
+        "count": "Quantity",
+        "converting": "Converting"
+      },
+      "causes": {
+        "setting": "setting",
+        "renumber_approved": "renumbering approved",
+        "convert_cancelled": "conversion cancelled"
+      }
+    },
+    "feedback": {
+      "saveSuccess": "Setting customized",
+      "restoreSuccess": "Restored to inherited",
+      "cancelConversionSuccess": "Conversion cancelled; back to quantity count"
+    },
+    "errors": {
+      "FORBIDDEN": "You cannot change settings for this organization",
+      "NOT_FOUND": "Organization not found or not visible to you",
+      "VALIDATION_FAILED": "Invalid value; please choose again",
+      "COUNT_MODE_CHANGE_BLOCKED": "Cannot change the counting method: a store has books with skips to mark on the counter, or a stocktake, rescan or renumbering in progress",
+      "NOT_CONVERTING": "This store is not converting",
+      "NOT_STORE": "Only stores have a counting method",
+      "CONCURRENT_EDIT": "Someone changed this setting at the same time; refresh and try again",
+      "UNEXPECTED": "Something went wrong; please try again later"
     }
   }
 }

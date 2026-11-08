@@ -124,6 +124,25 @@ export const CheckoutsTab = () => {
     { enabled: orgId !== "", retry: false },
   );
   const cashPoints = board.data?.lotteryStoreBoard.item.cashPoints ?? [];
+  // 張數店與轉換中多一欄「依張數標記售出」(張數店規格 13.2;Figma CS-15)
+  const countMode = board.data?.lotteryStoreBoard.item.countMode ?? "numbered";
+  const countColumn: TableColumn<Row>[] =
+    countMode === "numbered"
+      ? []
+      : [
+          {
+            key: "countSale",
+            header: t("list.columns.countSale"),
+            align: "right",
+            render: (row) =>
+              row.countSaleCount === 0
+                ? "0"
+                : t("list.countSaleValue", {
+                    count: row.countSaleCount,
+                    amount: moneyText(row.countSaleAmount),
+                  }),
+          },
+        ];
   const query = useLotteryCheckoutsQuery(
     session.client,
     {
@@ -187,6 +206,7 @@ export const CheckoutsTab = () => {
       header: t("list.columns.submittedBy"),
       render: (row) => row.submittedBy?.name ?? "—",
     },
+    ...countColumn,
     {
       key: "expected",
       header: t("list.columns.expected"),

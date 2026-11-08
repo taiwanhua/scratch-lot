@@ -122,6 +122,7 @@ export const StockTab = () => {
     { enabled: orgId !== "" },
   );
   const rows = query.data?.lotteryInventoryBooks.items ?? [];
+  const estimated = rows.some((row) => row.unmatchedCount > 0);
   const totalCount = query.data?.lotteryInventoryBooks.totalCount ?? 0;
   const pageCount = Math.max(1, Math.ceil(totalCount / STOCK_PAGE_SIZE));
 
@@ -151,10 +152,13 @@ export const StockTab = () => {
     },
     {
       key: "remaining",
-      header: t("columns.remaining"),
+      // 有系統預設帶入的張(未對號)的本:逐本剩餘是估算,標「約」(張數店規格 13.2,Figma CS-22;遊戲合計精確)
+      header: estimated
+        ? t("columns.remainingEstimated")
+        : t("columns.remaining"),
       align: "right",
       render: (row) =>
-        t("remaining", {
+        t(row.unmatchedCount > 0 ? "remainingEstimated" : "remaining", {
           remaining: row.remainingCount,
           total: row.totalCount,
         }),

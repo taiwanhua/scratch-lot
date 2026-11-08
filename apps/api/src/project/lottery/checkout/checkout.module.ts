@@ -6,6 +6,7 @@ import { RealtimeModule } from "../../../realtime/realtime.module";
 import { WorkflowEngineModule } from "../../../workflows/workflow-engine/workflow-engine.module";
 import { LotteryFieldOptionsModule } from "../field-options/lottery-field-options.module";
 import { LotteryRedemptionModule } from "../redemption/redemption.module";
+import { LotterySettingsModule } from "../settings/lottery-settings.module";
 import { LotteryStocktakeModule } from "../stocktake/stocktake.module";
 import { LotteryStoreModule } from "../store/store.module";
 import { CheckoutQueryService } from "./checkout-query.service";
@@ -31,6 +32,7 @@ import { ExpectedCashItems } from "./expected-cash";
     LotteryStoreModule,
     LotteryStocktakeModule,
     LotteryRedemptionModule,
+    LotterySettingsModule,
   ],
   providers: [
     ExpectedCashItems,

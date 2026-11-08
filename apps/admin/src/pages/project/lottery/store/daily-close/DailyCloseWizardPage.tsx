@@ -136,7 +136,14 @@ const WizardBody = ({
         <Typography variant="h6" component="h1" sx={{ flex: 1 }}>
           {t("page.title", { store: wizard.org.name })}
         </Typography>
-        <Button variant="text" color="error" onClick={onCancel}>
+        <Button
+          variant="text"
+          color="error"
+          onClick={() => {
+            // [取消] 離開精靈 = 放棄這次盤點(解除盤點中登記;張數店規格 8.5a)
+            void flow.session.abandon().finally(onCancel);
+          }}
+        >
           {t("page.cancel")}
         </Button>
       </Stack>
@@ -166,6 +173,7 @@ const WizardBody = ({
           scopeCashPointId={null}
           reusable={wizard.reusableStocktake ?? null}
           canSkipStocktake={wizard.canSkipStocktake}
+          renumberOption={wizard.renumber}
           flow={flow}
           redemption={redemption}
           texts={{

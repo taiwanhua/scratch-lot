@@ -19,7 +19,13 @@ import { Tag } from "@repo/ui/tag";
 import { Typography } from "@repo/ui/typography";
 
 import { moneyText } from "../store-text";
+import { PendingSkipHint, RenumberMatchesCard } from "./RenumberMatchesCard";
+import {
+  StocktakeCountReview,
+  type StocktakeCountReviewProps,
+} from "./StocktakeCountReview";
 import { ReviewFooter } from "./StocktakeReviewFooter";
+import { reviewTotalsOf } from "./stocktake-count-model";
 import {
   type ReviewLine,
   type SheetCashPoint,
@@ -30,6 +36,12 @@ import {
 } from "./stocktake-model";
 
 type ReviewDiff = ReviewLine["diffs"][number];
+
+/** 這一行可用的處理(補點編號且這本還有待標註:不在的張多一個 [標跳號];張數店規格 9.3 第 3 點)。 */
+const actionsOf = (line: ReviewLine, kind: string) =>
+  stocktakeActionsOf(kind as StocktakeDiffKind, line.cashPointId, {
+    pendingSkip: line.pendingSkipCount > 0,
+  });
 
 interface Row {
   key: string;
@@ -60,6 +72,11 @@ export interface StocktakeReviewStepProps {
   /** 待查清單的處理都填好了(找到了要刷到、確認遺失要原因) */
   lostReady: boolean;
   canSubmit: boolean;
+  /** 張數盤點的組(張數店;編號盤點不給) */
+  count?: Pick<
+    StocktakeCountReviewProps,
+    "groups" | "onCountSale" | "onChoose" | "onRecount"
+  >;
 }
 
 /**
@@ -83,6 +100,7 @@ export const StocktakeReviewStep = ({
   unhandled,
   lostReady,
   canSubmit,
+  count,
 }: StocktakeReviewStepProps) => {
   const t = useTranslations("admin.lotteryStore.stocktake.review");
   const tStock = useTranslations("admin.lotteryStore.stocktake.stock");
@@ -99,15 +117,12 @@ export const StocktakeReviewStep = ({
     (row) => selected.includes(row.key) && !row.diff.backfilled,
   );
   const commonActions = (
-    ["sale_backfill", "investigate", "flag"] as const
+    ["sale_backfill", "investigate", "flag", "skip"] as const
   ).filter(
     (action) =>
       chosen.length > 0 &&
       chosen.every((row) =>
-        stocktakeActionsOf(
-          row.diff.kind as StocktakeDiffKind,
-          row.line.cashPointId,
-        ).includes(action),
+        actionsOf(row.line, row.diff.kind).includes(action),
       ) &&
       (action !== "sale_backfill" || canBackfill),
   );
@@ -158,6 +173,9 @@ export const StocktakeReviewStep = ({
     }
     if (choice?.action === "flag") {
       return t("result.flag");
+    }
+    if (choice?.action === "skip") {
+      return t("result.skip");
     }
     return t("result.none");
   };
@@ -223,10 +241,7 @@ export const StocktakeReviewStep = ({
           <Tag tone="success" label={t("backfilled")} />
         ) : (
           <Stack direction="row" spacing={1}>
-            {stocktakeActionsOf(
-              row.diff.kind as StocktakeDiffKind,
-              row.line.cashPointId,
-            )
+            {actionsOf(row.line, row.diff.kind)
               .filter((action) => action !== "sale_backfill" || canBackfill)
               .map((action) => actionButton(row, action))}
           </Stack>
@@ -235,6 +250,7 @@ export const StocktakeReviewStep = ({
     { key: "result", header: t("columns.result"), render: resultOf },
   ];
   const summary = review?.summary;
+  const totals = reviewTotalsOf(review, state);
 
   return (
     <Stack spacing={2}>
@@ -243,7 +259,9 @@ export const StocktakeReviewStep = ({
           {t("title")}
         </Typography>
       </Stack>
-      <Alert severity="info">{t("info")}</Alert>
+      <Alert severity="info">
+        {t(count === undefined ? "info" : "infoCount")}
+      </Alert>
       {notice === null ? null : (
         <Alert
           severity="warning"
@@ -294,7 +312,26 @@ export const StocktakeReviewStep = ({
           </Stack>
         </Card>
       ) : null}
-      {review !== null && allRows.length === 0 ? (
+      {/* 補點編號的自動對號(張數店規格 9.3 第 2 點;不算差異) */}
+      <RenumberMatchesCard matches={review?.renumberMatches ?? []} />
+      {count === undefined || review === null ? null : (
+        <StocktakeCountReview
+          lines={review.countLines}
+          groups={count.groups}
+          cashPoints={cashPoints}
+          storeName={storeName}
+          canBackfill={canBackfill}
+          isBackfilling={isBackfilling}
+          onCountSale={count.onCountSale}
+          onChoose={count.onChoose}
+          onRecount={count.onRecount}
+        />
+      )}
+      {review !== null &&
+      allRows.length === 0 &&
+      review.countLines.every(
+        (line) => line.kind === "match" && !line.stale,
+      ) ? (
         <Typography color="textSecondary">{t("noDiff")}</Typography>
       ) : null}
       {lines
@@ -350,6 +387,7 @@ export const StocktakeReviewStep = ({
                     containerSx={{ height: "auto" }}
                   />
                 ) : null}
+                <PendingSkipHint line={line} />
                 {line.diffs.some((diff) => diff.kind === "extra") ? (
                   <Typography variant="caption" color="textSecondary">
                     {t("extraHint")}
@@ -371,15 +409,8 @@ export const StocktakeReviewStep = ({
       <ReviewFooter
         backfillCount={summary?.backfillCount ?? 0}
         backfillAmount={summary?.backfillAmount ?? 0}
-        investigated={
-          allRows.filter(
-            (row) => state.diffs[row.key]?.action === "investigate",
-          ).length
-        }
-        flagged={
-          allRows.filter((row) => state.diffs[row.key]?.action === "flag")
-            .length
-        }
+        investigated={totals.investigated}
+        flagged={totals.flagged}
         unhandled={unhandled}
         canSubmit={canSubmit}
         onBack={onBack}

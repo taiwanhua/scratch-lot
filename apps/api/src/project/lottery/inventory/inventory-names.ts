@@ -152,6 +152,23 @@ export class InventoryNames {
     );
   }
 
+  /** 盤點單的類型(交班 / 日結 / 臨時;待查·未對號的來源盤點「11/01 交班盤點」,張數店規格 13.2)。 */
+  async stocktakeTypes(
+    operator: OperatorContext,
+    ids: readonly unknown[],
+  ): Promise<Map<string, string>> {
+    const unique = uniqueIds(ids);
+    if (unique.length === 0) {
+      return new Map();
+    }
+    const found = await this.stocktakes.findMany(
+      operator,
+      { _id: { $in: unique } },
+      { select: "type" },
+    );
+    return new Map(found.map((record) => [String(record._id), record.type]));
+  }
+
   /**
    * 單據單號(依事件的 `refId`;看不到或還沒有單號的不回):進貨單、調貨單是表單提交本身;盤點寫的事件
    * (待查、遺失、尋回)`refId` 是盤點單紀錄,單號取它帶的申請(盤點確認申請 / 結帳確認申請)。

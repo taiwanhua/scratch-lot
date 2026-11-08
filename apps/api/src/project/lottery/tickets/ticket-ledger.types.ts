@@ -40,11 +40,25 @@ export interface TicketStatePatch {
   responsibleOrgId?: Types.ObjectId | null;
   /** 單張成本(調入時改成調貨單那一列的批購金額 ÷ 張數)。 */
   unitCost?: number;
-  /** 最近一次售出;null = 清掉(撤銷)。售出的「誰」一律是帳本的操作者。 */
+  /**
+   * 最近一次售出;null = 清掉(撤銷)。售出的「誰」不給 = 帳本的操作者;對號時給原本那張的
+   * (售出資訊跟著狀態換到另一張,張數店規格 6.1)。
+   */
   sold?: {
     at: Date;
     source: TicketSoldSource;
+    by?: Types.ObjectId | null;
   } | null;
+  /**
+   * 未對號(張數店)。不給時:狀態改成未售或報廢 → 帳本自動清成 false;其他不變。
+   * 設成 true:依張數賣、盤點 [算售出] / [待查] 挑到的張、對號時接手狀態的配對張。
+   */
+  unmatched?: boolean;
+  /**
+   * 這張現在帶著的售出事件 id(張數店規格 5.1)。不給時:新的售出 → 帳本寫這筆事件的 id;撤銷(`sold: null`)→
+   * 清成 null;其他不變。對號時給原本那張帶著的 id(跟著狀態換到另一張)。
+   */
+  saleEventId?: string | null;
 }
 
 /** 鎖定的來源(調貨單 / 撤銷售出申請)。 */

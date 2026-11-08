@@ -31,6 +31,7 @@ import { useTemporalText } from "@/hooks/base/useTemporalText";
 import type { ModulePageProps } from "@/lib/base/module-tree";
 
 import { moneyText } from "../store-text";
+import { StocktakeCountLinesCard } from "./StocktakeCountLinesCard";
 
 type Detail = LotteryStocktakeQuery["lotteryStocktake"];
 type Line = Detail["lines"][number];
@@ -244,6 +245,7 @@ export const StocktakeViewPage = ({ routeParam }: ModulePageProps) => {
               containerSx={{ height: "auto" }}
             />
           </Card>
+          <StocktakeCountLinesCard detail={detail} />
           {uncounted.length > 0 ? (
             <Card sx={{ px: { xs: 2, sm: 3 }, py: 2, flexShrink: 0 }}>
               <Stack spacing={1}>

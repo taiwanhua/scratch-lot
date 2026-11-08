@@ -17,6 +17,8 @@ export interface BoardBookCardProps {
   total: number;
   /** 剩很少的提示字;不需要提示 = null */
   lowStockLabel: string | null;
+  /** 剩餘旁的小字「約」(張數店:逐本剩餘是估算;Figma `Estimate`);不給 = 不顯示 */
+  estimateLabel?: string | null;
   /** 左側色條(遊戲設定的顏色;沒設 = 灰) */
   stripeColor: string;
   /** 點卡片(展開由之後的功能接上;不給 = 不能點) */
@@ -37,6 +39,7 @@ export const BoardBookCard = ({
   remaining,
   total,
   lowStockLabel,
+  estimateLabel = null,
   stripeColor,
   onClick,
   expanded = false,
@@ -104,7 +107,19 @@ export const BoardBookCard = ({
         direction="row"
         sx={{ mt: 1, justifyContent: "space-between", alignItems: "center" }}
       >
-        <Typography variant="body1">{remainingText}</Typography>
+        <Typography variant="body1">
+          {remainingText}
+          {estimateLabel === null ? null : (
+            <Typography
+              component="span"
+              variant="caption"
+              color="textSecondary"
+              sx={{ ml: 1 }}
+            >
+              {estimateLabel}
+            </Typography>
+          )}
+        </Typography>
         {lowStockLabel === null ? null : (
           <Tag tone="error" label={lowStockLabel} />
         )}

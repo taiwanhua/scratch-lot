@@ -27,9 +27,12 @@ import { useInventoryAccess } from "../useInventoryAccess";
 type Row = LotteryInvestigationRowFieldsFragment;
 
 /**
- * 待查·遺失分頁(Figma IN-05 91:1109;規格 7.4):列出有待查或遺失的張的本(一本 × 一種狀態一列):
- * 本、遊戲、狀態、責任分店、來源單據、日期、批購成本(`show-cost`)、[尋回](`recover`;不換店,回到張所在分店的庫存)。
- * 「確認遺失」在盤點確認申請(店面管理)。點一列進本的詳情。
+ * 待查·遺失分頁(Figma IN-05 91:1109、CS-21;規格 7.4、張數店規格 7.9 / 13.2):列出有待查或遺失的張的本
+ * (一本 × 一種狀態一列):本、遊戲、狀態、責任分店、來源單據、日期、批購成本(`show-cost`)、[尋回](`recover`;
+ * 不換店,回到張所在分店的庫存)。「確認遺失」在盤點確認申請(店面管理)。點一列進本的詳情。
+ *
+ * 張數店系統預設帶入的待查 / 遺失(未對號)依「遊戲 × 責任分店 × 來源盤點」一列:本寫「—」、張號寫「系統預設帶入」、
+ * 來源寫「11/01 交班盤點」;點一下展開看本與張號,不給 [尋回](從清單尋回會把帶入的張號記回庫存,找到的可能是別張)。
  */
 export const InvestigationsTab = () => {
   const t = useTranslations("admin.lotteryInventory");
@@ -38,6 +41,7 @@ export const InvestigationsTab = () => {
   const access = useInventoryAccess();
   const temporal = useTemporalText();
   const [recovering, setRecovering] = useState<Row | null>(null);
+  const [expanded, setExpanded] = useState<string | null>(null);
   const query = useLotteryInvestigationsQuery(session.client);
   const data = query.data?.lotteryInvestigations;
   const rows = data?.items ?? [];
@@ -49,7 +53,8 @@ export const InvestigationsTab = () => {
       key: "bookNo",
       header: t("investigations.columns.book"),
       isEmphasized: true,
-      render: (row) => displayBookNo(row.bookNo),
+      render: (row) =>
+        row.unmatched ? t("stock.none") : displayBookNo(row.bookNo),
     },
     {
       key: "game",
@@ -82,15 +87,24 @@ export const InvestigationsTab = () => {
       key: "ticketNos",
       header: t("investigations.columns.ticketNos"),
       render: (row) =>
-        formatTicketRanges(row.tickets.map((ticket) => ticket.ticketNo)),
+        row.unmatched
+          ? t("investigations.systemDefault")
+          : formatTicketRanges(row.tickets.map((ticket) => ticket.ticketNo)),
     },
     {
       key: "source",
       header: t("investigations.columns.source"),
       render: (row) =>
-        t("investigations.source", {
-          serial: row.refSerialNo ?? t("stock.none"),
-        }),
+        row.unmatched && row.sourceStocktakeType != null
+          ? t("investigations.sourceStocktake", {
+              date: row.at ? temporal(row.at, "monthDay") : "",
+              type: t(
+                `investigations.stocktakeTypes.${row.sourceStocktakeType}`,
+              ),
+            })
+          : t("investigations.source", {
+              serial: row.refSerialNo ?? t("stock.none"),
+            }),
     },
     {
       key: "at",
@@ -121,31 +135,53 @@ export const InvestigationsTab = () => {
           {
             key: "actions",
             header: "",
-            render: (row: Row) => (
-              <Button
-                variant="text"
-                size="small"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  setRecovering(row);
-                }}
-              >
-                {t("investigations.recover")}
-              </Button>
-            ),
+            render: (row: Row) =>
+              row.unmatched ? null : (
+                <Button
+                  variant="text"
+                  size="small"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    setRecovering(row);
+                  }}
+                >
+                  {t("investigations.recover")}
+                </Button>
+              ),
           },
         ]
       : []),
   ];
   const bookRoute = access.bookRoute;
-  const rowClick =
-    bookRoute === null
-      ? {}
-      : {
-          onRowClick: (row: Row) => {
-            void navigate(`${bookRoute}/${row.bookId}`);
-          },
-        };
+  const keyOf = (row: Row) =>
+    row.unmatched
+      ? `unmatched:${row.gameCode}:${row.responsibleOrg?.id ?? ""}:${row.refSerialNo ?? ""}:${row.status}`
+      : `${row.bookId}:${row.status}`;
+  // 未對號的列:點一下展開 / 收起看本與張號;確定的列:進本的詳情
+  const onRowClick = (row: Row) => {
+    if (row.unmatched) {
+      setExpanded((current) => (current === keyOf(row) ? null : keyOf(row)));
+      return;
+    }
+    if (bookRoute !== null) {
+      void navigate(`${bookRoute}/${row.bookId}`);
+    }
+  };
+  const expandedOf = (row: Row) =>
+    row.unmatched && expanded === keyOf(row)
+      ? t("investigations.unmatchedDetail", {
+          books: row.unmatchedBooks
+            .map((book) =>
+              t("investigations.unmatchedBook", {
+                bookNo: displayBookNo(book.bookNo),
+                tickets: book.ticketNos
+                  .map((ticketNo) => `#${ticketNo}`)
+                  .join("、"),
+              }),
+            )
+            .join("、"),
+        })
+      : null;
 
   return (
     <Box sx={{ flex: 1, minHeight: 0 }}>
@@ -158,11 +194,12 @@ export const InvestigationsTab = () => {
         aria-label={t("investigations.listAria")}
         columns={columns}
         rows={rows}
-        getRowKey={(row) => `${row.bookId}:${row.status}`}
+        getRowKey={keyOf}
+        onRowClick={onRowClick}
+        renderExpanded={expandedOf}
         isLoading={query.isLoading}
         emptyMessage={t("investigations.empty")}
         minWidth={INVESTIGATIONS_TABLE_MIN_WIDTH}
-        {...rowClick}
       />
       {recovering === null ? null : (
         <RecoverTicketDialog

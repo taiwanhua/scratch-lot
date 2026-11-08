@@ -467,7 +467,7 @@ describe("開通腳本與 demo create(真 api + 真 MongoDB)", () => {
       ).toEqual(["TEMPLATE_COPY"]);
     });
 
-    it("四種通知的收件人 = 角色 店長(用建立時的角色 id)", async () => {
+    it("店長收的負責人提醒收件人 = 角色 店長(用建立時的角色 id)", async () => {
       const { roles } = await adminClient.request<{
         roles: { items: RoleItem[] };
       }>(ROLES);

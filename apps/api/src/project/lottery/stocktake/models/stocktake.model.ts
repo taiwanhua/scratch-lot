@@ -7,6 +7,16 @@ import {
 } from "@nestjs/graphql";
 
 import { LotteryAccountsRefModel } from "../../accounts/models/lottery-bank-account.model";
+import {
+  LotteryRescanBriefModel,
+  LotteryRescanReminderModel,
+} from "./rescan.model";
+import {
+  LotteryStocktakeCountGroupModel,
+  LotteryStocktakeDetailCountLineModel,
+  LotteryStocktakeDetailUncountedGroupModel,
+  LotteryStocktakeReviewCountLineModel,
+} from "./stocktake-count.model";
 
 /** 收銀點的一班(盤點頁每個收銀點旁的應有現金;補登售出算到哪一班)。 */
 @ObjectType("LotteryStocktakeShift")
@@ -58,9 +68,13 @@ export class LotteryStocktakeTicketModel {
   @Field(() => Int)
   version!: number;
 
-  /** `unsold` / `sold` */
+  /** `unsold` / `sold`(補點編號另有待查 / 遺失·未對號) */
   @Field(() => String)
   status!: string;
+
+  /** 未對號(系統預設帶入的張號;格子虛線;張數店規格 13.2) */
+  @Field(() => Boolean)
+  unmatched!: boolean;
 
   /** 撤銷售出申請審核中(「撤銷審核中」,不算差異)。 */
   @Field(() => Boolean)
@@ -84,6 +98,10 @@ export class LotteryStocktakeBookModel {
 
   @Field(() => Int)
   unitPrice!: number;
+
+  /** 補點編號:不在的張最多可以 [標跳號] 幾張(這本的待標註;其他盤點 = 0;張數店規格 9.3 第 3 點)。 */
+  @Field(() => Int)
+  pendingSkipCount!: number;
 
   /** 本號 7 位。 */
   @Field(() => String)
@@ -141,6 +159,31 @@ export class LotteryStocktakeLostTicketModel {
   /** 怎麼變成待查的:`transfer`(調貨在途刪除)/ `stocktake`(盤點時不在)/ 其他 = null。 */
   @Field(() => String, { nullable: true })
   source!: string | null;
+
+  @Field(() => ID)
+  gameId!: string;
+
+  @Field(() => String)
+  gameName!: string;
+
+  /**
+   * 待查·未對號(張數盤點 [待查] 由系統預設帶入的張號):不提供 [找到了],只有 [確認遺失]、[繼續待查]
+   * (張數店規格 7.9、13.2);依「遊戲 × 來源盤點」一組。
+   */
+  @Field(() => Boolean)
+  unmatched!: boolean;
+
+  /** 來源盤點單(`source = stocktake` 時;未對號依它分組)。 */
+  @Field(() => ID, { nullable: true })
+  sourceId!: string | null;
+
+  /** 來源盤點的類型(`shift` / `daily` / `adhoc`;找不到 = null)。 */
+  @Field(() => String, { nullable: true })
+  sourceType!: string | null;
+
+  /** 待查時在哪個收銀點(張數盤點 [待查] 的那一組;庫存 / 不明 = null)。 */
+  @Field(() => String, { nullable: true })
+  sourceCashPointName!: string | null;
 }
 
 /** 盤點頁(ST-13):收銀點、檯面上的本、未拆的本、待查清單。 */
@@ -167,6 +210,18 @@ export class LotteryStocktakeSheetModel {
 
   @Field(() => [LotteryStocktakeLostTicketModel])
   lostTickets!: LotteryStocktakeLostTicketModel[];
+
+  /** 盤點制度:`numbered`(檯面逐張)/ `count`(張數店與轉換中:檯面數張數,張數店規格 8.1)。 */
+  @Field(() => String)
+  countMode!: string;
+
+  /** `normal` / `renumber`(補點編號:張數店的全店編號盤點,`countMode` = `numbered`;張數店規格 9.3)。 */
+  @Field(() => String)
+  purpose!: string;
+
+  /** 張數盤點的組(收銀點 × 遊戲,依收銀點順序、遊戲);編號盤點 = 空,檯面照舊在 `books`。 */
+  @Field(() => [LotteryStocktakeCountGroupModel])
+  countGroups!: LotteryStocktakeCountGroupModel[];
 }
 
 @ObjectType("LotteryStocktakeSummary")
@@ -196,6 +251,10 @@ export class LotteryStocktakeSummaryModel {
   /** 送出時範圍內還沒盤的本數(沒盤完可以送出;盤點紀錄標「N 本未盤」)。 */
   @Field(() => Int)
   uncountedCount!: number;
+
+  /** 補點編號自動對號的張數(不算差異;張數店規格 9.3 第 2 點)。 */
+  @Field(() => Int)
+  renumberMatched!: number;
 }
 
 /** 差異核對的一張(ST-14)。 */
@@ -243,6 +302,10 @@ export class LotteryStocktakeReviewLineModel {
   @Field(() => Int)
   unitPrice!: number;
 
+  /** 補點編號:不在的張最多可以 [標跳號] 幾張(這本的待標註;其他盤點 = 0)。 */
+  @Field(() => Int)
+  pendingSkipCount!: number;
+
   @Field(() => Int)
   systemCount!: number;
 
@@ -267,6 +330,22 @@ export class LotteryStocktakeReviewModel {
   @Field(() => [LotteryStocktakeReviewLineModel])
   lines!: LotteryStocktakeReviewLineModel[];
 
+  /** 張數盤點的組(編號盤點 = 空)。 */
+  @Field(() => [LotteryStocktakeReviewCountLineModel])
+  countLines!: LotteryStocktakeReviewCountLineModel[];
+
+  /** 補點編號的自動對號(不算差異;其他盤點 = 空)。 */
+  @Field(() => [LotteryStocktakeRenumberMatchModel])
+  renumberMatches!: LotteryStocktakeRenumberMatchModel[];
+
+  /** 補點編號還沒盤的本(含未拆的本還沒回答在 / 不在;要 0 才能送出)。 */
+  @Field(() => Int)
+  renumberMissing!: number;
+
+  /** 送出時還沒數的組 / 本(交班盤點的張數店不能沒盤完送出)。 */
+  @Field(() => Int)
+  uncountedCount!: number;
+
   @Field(() => Int)
   staleCount!: number;
 
@@ -275,6 +354,37 @@ export class LotteryStocktakeReviewModel {
 
   @Field(() => LotteryStocktakeSummaryModel)
   summary!: LotteryStocktakeSummaryModel;
+}
+
+/** 補點編號的一組自動對號(張數店規格 9.3 第 2 點):實際在的未對號張 ↔ 實際不在的未售張,不算差異。 */
+@ObjectType("LotteryStocktakeRenumberMatch")
+export class LotteryStocktakeRenumberMatchModel {
+  @Field(() => String)
+  gameCode!: string;
+
+  @Field(() => String)
+  gameName!: string;
+
+  /** 位置(收銀點;庫存 = null) */
+  @Field(() => ID, { nullable: true })
+  cashPointId!: string | null;
+
+  @Field(() => String, { nullable: true })
+  cashPointName!: string | null;
+
+  /** 實際在的那張 */
+  @Field(() => String)
+  ticketNo!: string;
+
+  @Field(() => String)
+  bookNo!: string;
+
+  /** 實際不在、接手系統預設帶入狀態的那張 */
+  @Field(() => String)
+  partnerTicketNo!: string;
+
+  @Field(() => String)
+  partnerBookNo!: string;
 }
 
 /** 補登售出的一張(立即生效)。 */
@@ -312,6 +422,14 @@ export class LotteryStocktakeStatusModel {
 
   @Field(() => Boolean)
   remind!: boolean;
+
+  /** 進行中的全店重刷(看板橫幅、盤點頁 B5;張數店規格 8.5a、13.2) */
+  @Field(() => [LotteryRescanBriefModel])
+  rescans!: LotteryRescanBriefModel[];
+
+  /** 要提醒全店重刷的遊戲(張數店規格 8.3) */
+  @Field(() => [LotteryRescanReminderModel])
+  rescanReminders!: LotteryRescanReminderModel[];
 }
 
 /** 盤點紀錄分頁的一列(ST-29)。 */
@@ -509,6 +627,18 @@ export class LotteryStocktakeDetailModel {
   /** 送出時範圍內還沒盤的本(沒盤完可以送出;不比對)。 */
   @Field(() => [LotteryStocktakeDetailUncountedModel])
   uncountedBooks!: LotteryStocktakeDetailUncountedModel[];
+
+  /** 盤點制度(`numbered` / `count`)。 */
+  @Field(() => String)
+  countMode!: string;
+
+  /** 張數盤點的組(含 [重數] 前的每次輸入)。 */
+  @Field(() => [LotteryStocktakeDetailCountLineModel])
+  countLines!: LotteryStocktakeDetailCountLineModel[];
+
+  /** 張數盤點送出時還沒數的組。 */
+  @Field(() => [LotteryStocktakeDetailUncountedGroupModel])
+  uncountedGroups!: LotteryStocktakeDetailUncountedGroupModel[];
 
   @Field(() => LotteryStocktakeSummaryModel)
   summary!: LotteryStocktakeSummaryModel;

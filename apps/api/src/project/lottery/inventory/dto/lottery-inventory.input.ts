@@ -79,9 +79,19 @@ export class SwapLotterySkippedTicketInput {
   @Field(() => LotteryTicketVersionInput)
   skipped!: LotteryTicketVersionInput;
 
-  /** 改標跳號的那張(目前是未售) */
+  /**
+   * 改標跳號的那張(目前是未售;張數店另可選系統預設帶入的已售 / 待查 / 遺失·未對號:先把這個狀態移給同位置
+   * 一張未售再更正,張數店規格 7.10)
+   */
   @Field(() => LotteryTicketVersionInput)
   unsold!: LotteryTicketVersionInput;
+
+  /**
+   * 跳號那張是刷條碼或手輸張號找到的(實體在手上;張數店規格 7.10「張數店一定要刷或手輸」)。
+   * 張數店與轉換中沒給 true → `COUNT_STORE_SCAN_ONLY`。
+   */
+  @Field(() => Boolean, { nullable: true })
+  scanned?: boolean | null;
 
   /** 欄位管理「更正跳號原因」;選「其他」要填說明。 */
   @Field(() => String)
@@ -131,13 +141,27 @@ export class RecoverLotteryTicketsInput {
   reasonNote?: string | null;
 }
 
-/** 報廢(`inventory.scrap`):只能報未售的張。 */
+/** 報廢(`inventory.scrap`):只能報拆過的本在庫存的未售張(張數店規格 7.8)。 */
 @InputType()
 export class ScrapLotteryTicketsInput {
   @Field(() => [LotteryTicketVersionInput])
   tickets!: LotteryTicketVersionInput[];
 
   /** 欄位管理「報廢原因」;選「其他」要填說明。 */
+  @Field(() => String)
+  reasonKey!: string;
+
+  @Field(() => String, { nullable: true })
+  reasonNote?: string | null;
+}
+
+/** 撤銷報廢(`inventory.scrap`;張數店規格 7.8):報廢的張回到未售、位置不變;原因必填。 */
+@InputType()
+export class UndoLotteryScrapInput {
+  @Field(() => [LotteryTicketVersionInput])
+  tickets!: LotteryTicketVersionInput[];
+
+  /** 欄位管理「撤銷報廢原因」;選「其他」要填說明。 */
   @Field(() => String)
   reasonKey!: string;
 

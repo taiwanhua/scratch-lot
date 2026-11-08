@@ -2,6 +2,8 @@ import { Module } from "@nestjs/common";
 
 import { DatabaseModule } from "../../../database/database.module";
 import { LotteryFieldOptionsModule } from "../field-options/lottery-field-options.module";
+import { LotterySettingsModule } from "../settings/lottery-settings.module";
+import { LotteryStoreModule } from "../store/store.module";
 import { LotteryTicketsModule } from "../tickets/tickets.module";
 import { InventoryAccess } from "./inventory-access";
 import { InventoryActionsService } from "./inventory-actions.service";
@@ -16,7 +18,14 @@ import { LotteryInventoryResolver } from "./inventory.resolver";
  * 張的狀態與事件經 `LotteryTicketsModule` 的帳本寫入;原因下拉與檢查是底座的 `FieldOptionsService`(經 `LotteryFieldOptionsModule` 匯入)。
  */
 @Module({
-  imports: [DatabaseModule, LotteryTicketsModule, LotteryFieldOptionsModule],
+  imports: [
+    DatabaseModule,
+    LotteryTicketsModule,
+    LotteryFieldOptionsModule,
+    // 張數店的更正跳號:盤點制度與對號(張數店規格 7.10)
+    LotterySettingsModule,
+    LotteryStoreModule,
+  ],
   providers: [
     InventoryAccess,
     InventoryNames,

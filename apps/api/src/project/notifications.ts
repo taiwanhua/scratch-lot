@@ -22,6 +22,10 @@ import type { ProjectNotificationRegistrations } from "../notifications/notifica
 
 /** 刮刮樂:有已送出交班結帳的班還沒被日結涵蓋計算(B14,逾期後每天)。 */
 export const LOTTERY_DAILY_CLOSE_OVERDUE = "lottery.daily-close-overdue";
+/** 刮刮樂:張數店某個遊戲有待查·未對號或標記異常,請全店重刷(張數店規格 8.3;盤點送出 / 核准時)。 */
+export const LOTTERY_RESCAN_REMINDER = "lottery.rescan-reminder";
+/** 刮刮樂:張數店依「補點編號提醒」的週期到期,請做補點編號(張數店規格第 10 節;到期後每天)。 */
+export const LOTTERY_RENUMBER_DUE = "lottery.renumber-due";
 /** 刮刮樂:調貨單第一關通過(含跳過),通知收貨店。 */
 export const LOTTERY_TRANSFER_SHIPPED = "lottery.transfer-shipped";
 /** 通知連結:經銷商詳情頁(證照到期、牌租繳費提醒點進去是那位經銷商)。 */
@@ -99,6 +103,14 @@ const optional = (
   return value === null ? "" : prefix + value;
 };
 
+/** 補點編號到期:上次補點的日期(沒做過 → 另一句)。 */
+const lastRenumberText = (
+  params: NotificationParams,
+  never: string,
+  prefix: string,
+): string =>
+  text(params, "last") === "" ? never : prefix + text(params, "last");
+
 const isToday = (params: NotificationParams): boolean =>
   params.daysLeft === "0";
 
@@ -137,6 +149,46 @@ const lotteryTypes: NotificationTypeDefinition[] = [
       en: (params) => ({
         title: `Daily close overdue: ${text(params, "orgName")}`,
         body: `"${text(params, "orgName")}" has shift checkouts submitted on ${text(params, "since")} not yet covered by a daily close.`,
+      }),
+    },
+  },
+  {
+    key: LOTTERY_RESCAN_REMINDER,
+    name: "全店重刷提醒",
+    ...CHANNELS,
+    category: "responsible",
+    orgScope: { ref: "event-org", range: "self" },
+    defaultAudience: STORE_MANAGER_AUDIENCE,
+    // 張數店的盤點送出時有 [標記異常]、核准時記了待查·未對號(張數店規格 8.3;觸發在 lottery/stocktake)
+    template: {
+      "zh-TW": (params) => ({
+        title: `全店重刷提醒:${text(params, "orgName")}`,
+        body: `「${text(params, "orgName")}」的遊戲 ${text(params, "games")} 有待查還沒確認是哪張(或盤點多出),請把全店(各收銀台和庫存)的這個遊戲都刷一次。`,
+      }),
+      en: (params) => ({
+        title: `Store-wide rescan needed: ${text(params, "orgName")}`,
+        body: `"${text(params, "orgName")}" has tickets of ${text(params, "games")} under investigation without a confirmed number (or counted over). Please rescan this game at every counter and the stock.`,
+      }),
+    },
+  },
+  {
+    key: LOTTERY_RENUMBER_DUE,
+    name: "補點編號到期",
+    ...CHANNELS,
+    category: "responsible",
+    orgScope: { ref: "event-org", range: "self" },
+    defaultAudience: STORE_MANAGER_AUDIENCE,
+    // 「補點編號提醒」的週期到了(上次補點後滿 7 / 14 天、一個月;從沒補點 = 進入張數店時),到期當天起每天 09:00
+    // (同日結逾期;張數店規格第 10 節;排程在 lottery/stocktake)
+    schedule: { default: { kind: "daily-overdue", time: "09:00" } },
+    template: {
+      "zh-TW": (params) => ({
+        title: `補點編號到期:${text(params, "orgName")}`,
+        body: `「${text(params, "orgName")}」${lastRenumberText(params, "還沒做過補點編號", "上次補點編號是 ")},已到補點編號提醒的週期,請在日結時選「這次做補點編號」。`,
+      }),
+      en: (params) => ({
+        title: `Renumber due: ${text(params, "orgName")}`,
+        body: `"${text(params, "orgName")}" ${lastRenumberText(params, "has never been renumbered", "was last renumbered on ")}. The renumber reminder cycle is due; please choose "Renumber this time" at the daily close.`,
       }),
     },
   },

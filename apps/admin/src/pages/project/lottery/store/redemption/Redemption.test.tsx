@@ -1,4 +1,11 @@
-import { beforeEach, describe, expect, it, jest } from "@jest/globals";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  jest,
+} from "@jest/globals";
 import { act, screen, waitFor, within } from "@testing-library/react";
 
 import { STORE_PERMISSIONS as P } from "@repo/domain/project/lottery";
@@ -44,6 +51,14 @@ describe("店面管理:兌獎", () => {
   beforeEach(() => {
     globalThis.localStorage.clear();
     writeLocalCashPoint(STORE_A, "cp-counter");
+    // 兌獎紀錄分頁預設期間是「這個月」:固定今天在範例資料的日期(10/16),不隨跑測試的日子變
+    jest
+      .spyOn(Date, "now")
+      .mockReturnValue(Date.parse("2026-10-16T14:00:00.000Z"));
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
   });
 
   it("本機收銀點開班中:[兌獎] 在按鈕列最前面、自己的班有 [最近兌獎];沒有 store.redeem 看不到 [兌獎]", async () => {

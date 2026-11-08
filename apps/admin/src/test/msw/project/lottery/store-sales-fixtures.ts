@@ -26,6 +26,25 @@ export interface SalesTicket {
   cashPointId: string | null;
   soldShiftId: string | null;
   soldAt: string | null;
+  /** 未對號(張數店;系統預設帶入的張號) */
+  unmatched?: boolean;
+  /** 售出來源(`scan` / `manual` / `count`…);沒給 = 刷條碼 */
+  soldSource?: string | null;
+}
+
+/** 假 api 記下的一筆售出。 */
+export interface SaleRecord {
+  ticketId: string;
+  bookId: string;
+  shiftId: string;
+  cashPointId: string;
+  amount: number;
+  soldAt: string;
+  undone: boolean;
+  /** 依張數賣的那一次(同一次的張同一個 refId;最近售出合成一列) */
+  refId?: string;
+  /** 這次先對號了(售出提示「已對號」) */
+  matched?: boolean;
 }
 
 /**
@@ -95,7 +114,19 @@ export const booksOf = (board: StoreBoard): SalesBook[] => {
       soldAt: null,
     })),
   });
+  // 拆過又收回的本(張數店規格 7.5、Figma CS-08):#001–080 賣掉、#081–102 收回在庫存(系統 22 張、待標註 2)
+  const reopened = unopened("b-reopen", "5201", "金好運", 100, "0060117", 102);
+  for (const ticket of reopened.tickets) {
+    if (Number(ticket.ticketNo) <= 80) {
+      Object.assign(ticket, {
+        status: "sold",
+        cashPointId: "cp-counter",
+        soldAt: "2026-10-15T05:30:00.000Z",
+      });
+    }
+  }
   books.push(
+    reopened,
     unopened("b-new-1", "5201", "金好運", 100, "0060116", 102),
     unopened("b-new-2", "5198", "鼠來寶", 100, "0088104", 100),
     {

@@ -22,6 +22,7 @@ import { QuickSaleDialog } from "./QuickSaleDialog";
 import { ScanOutcomeDialog, type ScanPrompt } from "./ScanOutcomeDialog";
 import { SplitWizardDialog } from "./SplitWizardDialog";
 import { UndoSaleDialog } from "./UndoSaleDialog";
+import { isCountBoard } from "./card-cells";
 import { useRefreshSales } from "./sales-queries";
 import { type ScanItem, useBlockedText } from "./scan-place";
 import { useSalesText } from "./useSalesText";
@@ -51,6 +52,8 @@ export interface StoreSaleFlowOptions {
   mode: "board" | "quick";
   /** 刷到本店的張(看板:展開的卡片裡那一格閃一下) */
   onScanned?: (item: ScanItem) => void;
+  /** 這家店實際的盤點制度(張數店:找不到配對的視窗、尋回的文字;張數店規格 6.4、7.9) */
+  countMode?: string;
 }
 
 export interface StoreSaleFlow {
@@ -72,14 +75,16 @@ export const useStoreSaleFlow = ({
   local,
   mode,
   onScanned,
+  countMode = "numbered",
 }: StoreSaleFlowOptions): StoreSaleFlow => {
+  const countBoard = isCountBoard(countMode);
   const { t, errorText } = useSalesText();
   const { session } = useSession();
   const queryClient = useQueryClient();
   const { hasPermission } = usePermissions();
   const show = useSnackbar();
   const refresh = useRefreshSales();
-  const blockedText = useBlockedText();
+  const blockedText = useBlockedText(countBoard, local?.name ?? "");
   const [step, setStep] = useState<Step | null>(null);
   const close = () => {
     setStep(null);
@@ -92,7 +97,7 @@ export const useStoreSaleFlow = ({
       for (const row of data.sellLotteryTickets.items) {
         show(
           "success",
-          t("sale.soldMessage", {
+          t(row.matched ? "sale.soldMatchedMessage" : "sale.soldMessage", {
             key: row.ticketKey,
             amount: moneyText(row.amount),
             cashPoint: row.cashPoint.name,
@@ -169,8 +174,10 @@ export const useStoreSaleFlow = ({
         return;
       }
       case "recover": {
+        // 庫存管理的尋回或店員尋回(張數店規格 7.9、12)
         setStep(
-          hasPermission(INVENTORY_PERMISSIONS.recover)
+          hasPermission(INVENTORY_PERMISSIONS.recover) ||
+            hasPermission(STORE_PERMISSIONS.recover)
             ? { kind: "recover", item }
             : {
                 kind: "prompt",
@@ -190,7 +197,12 @@ export const useStoreSaleFlow = ({
       default: {
         setStep({
           kind: "prompt",
-          prompt: { kind: "blocked", item, message: blockedText(item) },
+          prompt: {
+            kind: "blocked",
+            item,
+            message: blockedText(item),
+            reversal: item.blockReason === "unmatched_no_partner",
+          },
         });
       }
     }
@@ -240,6 +252,7 @@ export const useStoreSaleFlow = ({
       element = (
         <ScanOutcomeDialog
           prompt={step.prompt}
+          orgId={orgId}
           localName={local?.name ?? ""}
           busy={sell.isPending}
           onClose={close}
@@ -292,6 +305,11 @@ export const useStoreSaleFlow = ({
           ]}
           // 刷到的那家店 = 看板正在看的店(總部在看板操作某家店時,目前組織不是那家店)
           store={{ id: orgId }}
+          // 尋回的說明與成功提示兩種店共用(張數店規格 7.9、13.2)
+          hint={t("recover.hint")}
+          successText={t("recover.success", {
+            ranges: `#${step.item.ticketNo}`,
+          })}
           onClose={close}
           onRecovered={refresh}
         />

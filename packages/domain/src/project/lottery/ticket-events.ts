@@ -41,8 +41,13 @@ export const TICKET_LOCATION_KIND = {
 export const TICKET_LOCK_REF_TYPES = ["transfer", "sale_reversal"] as const;
 export type TicketLockRefType = (typeof TICKET_LOCK_REF_TYPES)[number];
 
-/** 最近一次售出的來源:刷條碼 / 手動 / 盤點補登。 */
-export const TICKET_SOLD_SOURCES = ["scan", "manual", "stocktake"] as const;
+/** 最近一次售出的來源:刷條碼 / 手動 / 盤點補登 / 依張數(張數店,張號由系統照挑張順序挑)。 */
+export const TICKET_SOLD_SOURCES = [
+  "scan",
+  "manual",
+  "stocktake",
+  "count",
+] as const;
 export type TicketSoldSource = (typeof TICKET_SOLD_SOURCES)[number];
 
 /**
@@ -68,6 +73,9 @@ export const TICKET_EVENT_TYPES = [
   "lose",
   "recover",
   "cost_adjust",
+  "match",
+  "renumber_confirm",
+  "scrap_undo",
 ] as const;
 export type TicketEventType = (typeof TICKET_EVENT_TYPES)[number];
 
@@ -111,7 +119,22 @@ export const TICKET_EVENT_TYPE = {
    * 批購金額 ÷ 張數(使用者 10/27 定案);事件的成本快照 = 調整前的成本,舊報表重跑不變
    */
   costAdjust: "cost_adjust",
+  /**
+   * 對號(張數店):刷到未對號或位置不同的實體,和一張配對張互換「狀態 + 位置」;一次兩筆
+   * (`refType: ticket_match`、`refId` = 另一張),不影響現金、金額 0
+   */
+  match: "match",
+  /** 補點編號核准:「猜對了」的未對號張只清掉未對號記號(`refType: stocktake`) */
+  renumberConfirm: "renumber_confirm",
+  /** 撤銷報廢:報廢 → 未售、位置不變 */
+  scrapUndo: "scrap_undo",
 } as const satisfies Record<string, TicketEventType>;
+
+/** 對號事件的來源單據類型(`refId` = 互換的另一張)。 */
+export const TICKET_MATCH_REF_TYPE = "ticket_match";
+
+/** 依張數賣的來源單據類型(`refId` = 這一次依張數賣的 id;每張一筆 `sale`)。 */
+export const COUNT_SALE_REF_TYPE = "count_sale";
 
 /** 事件對應有現金的影響:不影響 / 增加 / 減少(金額一律正數,方向看這裡)。 */
 export const TICKET_CASH_EFFECTS = ["none", "increase", "decrease"] as const;
