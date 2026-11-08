@@ -23,6 +23,8 @@ export const CASH_MOVEMENT_TYPE = {
   deposit: "deposit",
   /** 存銀行:小金庫 → 銀行(連到銀行「存入」) */
   bankDeposit: "bank_deposit",
+  /** 銀行提領:銀行 → 小金庫(帳戶管理 [登記交易] 選「提領」並選了現金去向;連到銀行「提領」) */
+  bankWithdraw: "bank_withdraw",
   /** 調貨支出:抽屜或小金庫 → 外部 */
   transferOut: "transfer_out",
   /** 調貨收入:外部 → 抽屜或小金庫 */
@@ -49,6 +51,7 @@ const ROUTES: Record<
   withdraw: { from: ["vault"], to: ["drawer"] },
   deposit: { from: ["drawer"], to: ["vault"] },
   bank_deposit: { from: ["vault"], to: ["bank"] },
+  bank_withdraw: { from: ["bank"], to: ["vault"] },
   transfer_out: { from: ["drawer", "vault"], to: ["external"] },
   transfer_in: { from: ["external"], to: ["drawer", "vault"] },
   refund: { from: ["drawer"], to: ["external"] },

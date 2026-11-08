@@ -57,6 +57,8 @@ describe("現金流水(規格 10.2)", () => {
     expect(isCashRouteAllowed("transfer_out", "drawer", "external")).toBe(true);
     expect(isCashRouteAllowed("refund", "vault", "external")).toBe(false);
     expect(isCashRouteAllowed("bank_deposit", "vault", "bank")).toBe(true);
+    expect(isCashRouteAllowed("bank_withdraw", "bank", "vault")).toBe(true);
+    expect(isCashRouteAllowed("bank_withdraw", "vault", "bank")).toBe(false);
   });
 
   it("對某個地方的影響:流入 +、流出 −", () => {

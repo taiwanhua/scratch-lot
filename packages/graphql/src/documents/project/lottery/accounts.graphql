@@ -216,6 +216,12 @@ mutation DeleteLotteryBankAccount($id: ID!) {
   }
 }
 
+query LotteryBankAccountVaultStores($accountId: ID!) {
+  lotteryBankAccountVaultStores(accountId: $accountId) {
+    ...LotteryAccountsRefFields
+  }
+}
+
 mutation RecordLotteryBankTransaction(
   $input: RecordLotteryBankTransactionInput!
 ) {

@@ -1469,6 +1469,7 @@ describe("輸出報表:營運報表、班次結帳歷史報表(GraphQL 端點 + 
       await cash("deposit", "drawer", "vault", 2000);
       await cash("deposit", "vault", "drawer", 500); // 沖正
       await cash("bank_deposit", "vault", "bank", 1000);
+      await cash("bank_withdraw", "bank", "vault", 400);
       await cash("refund", "drawer", "external", 200);
       await cash("transfer_out", "vault", "external", 300);
       await cash("transfer_in", "external", "vault", 120);
@@ -1696,6 +1697,7 @@ describe("輸出報表:營運報表、班次結帳歷史報表(GraphQL 端點 + 
           { type: "deposit", count: 2, drawer: -1500, vault: 1500 },
           { type: "withdraw", count: 0, drawer: 0, vault: 0 },
           { type: "bank_deposit", count: 1, drawer: 0, vault: -1000 },
+          { type: "bank_withdraw", count: 1, drawer: 0, vault: 400 },
           // 事後更正那筆 150 在 5a,不重複列
           { type: "refund", count: 1, drawer: -200, vault: 0 },
           { type: "transfer_out", count: 1, drawer: 0, vault: -300 },
