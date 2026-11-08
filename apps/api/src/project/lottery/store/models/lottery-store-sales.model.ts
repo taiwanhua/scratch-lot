@@ -71,12 +71,54 @@ export class LotteryStoreScanItemModel {
   /** 未拆的本的待標註張數(拆本並售出要先標跳號)。 */
   @Field(() => Int)
   pendingSkipCount!: number;
+
+  /** 未對號(張數店:已售·未對號、待查·未對號、遺失·未對號)。 */
+  @Field(() => Boolean)
+  unmatched!: boolean;
+
+  /** 這次要先對號再處理(張數店規格 6.7;售出提示加「已對號」)。 */
+  @Field(() => Boolean)
+  match!: boolean;
 }
 
 @ObjectType()
 export class LotteryStoreScanPayload {
   @Field(() => [LotteryStoreScanItemModel])
   items!: LotteryStoreScanItemModel[];
+}
+
+/**
+ * [最近售出] 的一次依張數賣出(張數店規格 13.2、14.2 `lotteryStoreRecentSales`):一個遊戲一列「遊戲 × N 張」。
+ */
+@ObjectType("LotteryStoreCountSaleRow")
+export class LotteryStoreCountSaleRowModel {
+  /** 這一次依張數賣的 id(`refType: count_sale` 的 `refId`;撤銷用)。 */
+  @Field(() => ID)
+  refId!: string;
+
+  @Field(() => ID)
+  gameId!: string;
+
+  @Field(() => String)
+  gameCode!: string;
+
+  @Field(() => String)
+  gameName!: string;
+
+  @Field(() => Int)
+  unitPrice!: number;
+
+  /** 這一筆賣了幾張。 */
+  @Field(() => Int)
+  count!: number;
+
+  /** 已撤幾張。 */
+  @Field(() => Int)
+  undoneCount!: number;
+
+  /** 現在可以撤幾張(這一筆現在帶著的已售·未對號,沒被鎖、之後沒有異動)。 */
+  @Field(() => Int)
+  undoableCount!: number;
 }
 
 /** 一筆售出(售出提示、[最近售出]、撤銷確認視窗)。 */
@@ -113,6 +155,47 @@ export class LotteryStoreSaleModel {
   /** 不能當下撤銷的原因(`SaleUndoBlock`);可以 = null。 */
   @Field(() => String, { nullable: true })
   undoBlock!: string | null;
+
+  /**
+   * 這次先對號了(張數店規格 7.1 售出提示加「已對號」;7.3 刷退的票:這張接手了 `soldAt` 那一筆依張數售出)。
+   */
+  @Field(() => Boolean)
+  matched!: boolean;
+
+  /** 依張數賣出合成的一列(張數店);刷條碼、手動的 = null。 */
+  @Field(() => LotteryStoreCountSaleRowModel, { nullable: true })
+  countSale!: LotteryStoreCountSaleRowModel | null;
+}
+
+/** 依張數標記售出的一個遊戲(張數店規格 7.2、13.1;成功提示「遊戲 X × 3 張」)。 */
+@ObjectType("LotteryStoreCountSale")
+export class LotteryStoreCountSaleModel {
+  @Field(() => ID)
+  refId!: string;
+
+  @Field(() => ID)
+  gameId!: string;
+
+  @Field(() => String)
+  gameCode!: string;
+
+  @Field(() => String)
+  gameName!: string;
+
+  @Field(() => Int)
+  unitPrice!: number;
+
+  @Field(() => Int)
+  count!: number;
+
+  @Field(() => Int)
+  amount!: number;
+}
+
+@ObjectType()
+export class LotteryStoreCountSalesPayload {
+  @Field(() => [LotteryStoreCountSaleModel])
+  items!: LotteryStoreCountSaleModel[];
 }
 
 @ObjectType()
@@ -152,8 +235,16 @@ export class LotteryStoreCardTicketModel {
   @Field(() => ID, { nullable: true })
   soldShiftId!: string | null;
 
+  /** 售出來源(`scan` / `manual` / `stocktake` / `count`);沒售出 = null。 */
+  @Field(() => String, { nullable: true })
+  soldSource!: string | null;
+
   @Field(() => Boolean)
   locked!: boolean;
+
+  /** 未對號(張數店;格子畫虛線、「系統預設帶入的張號」)。 */
+  @Field(() => Boolean)
+  unmatched!: boolean;
 }
 
 /** 看板展開的卡片(規格 6.2)或拆本的本(規格 6.4)。 */
@@ -184,9 +275,17 @@ export class LotteryStoreBookCardModel {
   @Field(() => Int)
   pendingSkipCount!: number;
 
+  /** 這本還沒標的跳號(不論拆過沒;張數店拆過的本拆本時,手上比系統少的張數上限,規格 7.5)。 */
+  @Field(() => Int)
+  pendingSkipTotal!: number;
+
   /** 這本在這家店還沒拆。 */
   @Field(() => Boolean)
   unopened!: boolean;
+
+  /** 這本在這家店的未對號張數(已售·未對號、待查·遺失·未對號;張數店規格 14.2「表頭多回未對號計數」)。 */
+  @Field(() => Int)
+  unmatchedCount!: number;
 
   @Field(() => [LotteryStoreCardTicketModel])
   tickets!: LotteryStoreCardTicketModel[];
@@ -236,6 +335,13 @@ export class LotteryStoreStockBookModel {
   /** 這家店原封不動:從沒拆過、這家店的張全是未售在庫存。 */
   @Field(() => Boolean)
   sealed!: boolean;
+
+  /**
+   * 這本還沒標的跳號(不論原封不動;張數店規格 7.5):張數店與轉換中不是原封不動的本,手上實際張數比系統少
+   * 最多只能少這麼多張(差幾張標幾張)。
+   */
+  @Field(() => Int)
+  pendingSkipTotal!: number;
 }
 
 @ObjectType()
@@ -249,4 +355,64 @@ export class LotteryStoreStockBooksPayload {
 export class LotteryStoreCounterPayload {
   @Field(() => Int)
   count!: number;
+}
+
+/**
+ * [收回] / [刷條碼移櫃] 刷到的一張(張數店規格 13.1「刷條碼移櫃視窗」、7.6、7.7):這台的任何遊戲都可以刷;
+ * `problem` = 不能收回 / 移櫃的原因(當下顯示、不加進清單);`match` = 送出時會先在來源台對號(清單標「已對號」)。
+ * 只讀,真正對號在送出的交易裡重挑配對張。
+ */
+@ObjectType("LotteryStoreCounterScanItem")
+export class LotteryStoreCounterScanItemModel {
+  @Field(() => ID)
+  ticketId!: string;
+
+  @Field(() => Int)
+  version!: number;
+
+  @Field(() => ID)
+  bookId!: string;
+
+  @Field(() => ID)
+  gameId!: string;
+
+  @Field(() => String)
+  gameCode!: string;
+
+  @Field(() => String)
+  gameName!: string;
+
+  @Field(() => String)
+  bookNo!: string;
+
+  @Field(() => String)
+  ticketNo!: string;
+
+  /** `TicketStatus` */
+  @Field(() => String)
+  status!: string;
+
+  @Field(() => Boolean)
+  unmatched!: boolean;
+
+  /** 系統記的收銀點(在檯面時) */
+  @Field(() => LotteryAccountsRefModel, { nullable: true })
+  cashPoint!: LotteryAccountsRefModel | null;
+
+  /** 售出時間(已售時;提示「已售(… 10:12 賣出)」) */
+  @Field(() => GraphQLISODateTime, { nullable: true })
+  soldAt!: Date | null;
+
+  /** `CounterScanProblem`;可以收回 / 移櫃 = null */
+  @Field(() => String, { nullable: true })
+  problem!: string | null;
+
+  @Field(() => Boolean)
+  match!: boolean;
+}
+
+@ObjectType()
+export class LotteryStoreCounterScanPayload {
+  @Field(() => [LotteryStoreCounterScanItemModel])
+  items!: LotteryStoreCounterScanItemModel[];
 }

@@ -76,6 +76,10 @@ export class LotteryOperationsSalesModel {
   @Field(() => [LotteryReportReasonQtyModel])
   manual!: LotteryReportReasonQtyModel[];
 
+  /** 依張數標記售出(張數店;`refType: count_sale` 的售出,不混進手動;張數店規格 11.2) */
+  @Field(() => LotteryReportQtyModel)
+  countSale!: LotteryReportQtyModel;
+
   /** 盤點補登 */
   @Field(() => LotteryReportQtyModel)
   stocktake!: LotteryReportQtyModel;
@@ -186,6 +190,20 @@ export class LotteryOperationsInventoryModel {
   @Field(() => Float, { nullable: true })
   newInvestigatingCost!: number | null;
 
+  /** 撤銷報廢(報廢 → 未售、位置不變;張數店規格 7.8、11.2:在撤銷的期間扣回報廢損失) */
+  @Field(() => Int)
+  scrapUndoTickets!: number;
+
+  @Field(() => Float, { nullable: true })
+  scrapUndoCost!: number | null;
+
+  /**
+   * 對號成本調整(張數店規格 11.2;只有成本、張數留空):對號在手上成本的變動扣掉已經跟著已售成本換掉的部分
+   * (配對張接手已售時 0,差額在已售成本裡;接手待查或遺失時差額列在這裡)
+   */
+  @Field(() => Float, { nullable: true })
+  matchCostAdjustCost!: number | null;
+
   /** 待查轉回(待查 → 回到這家店的庫存) */
   @Field(() => Int)
   investigateRecoveredTickets!: number;
@@ -242,6 +260,10 @@ export class LotteryOperationsInventoryModel {
   @Field(() => Int)
   investigatingBooks!: number;
 
+  /** 期末待查裡系統預設帶入的張數(待查·未對號;不列張號區段,張數店規格 11.4) */
+  @Field(() => Int)
+  investigatingUnmatchedTickets!: number;
+
   /** 期末待查的本(合計工作表依本去重複) */
   @Field(() => [ID])
   investigatingBookIds!: string[];
@@ -274,7 +296,7 @@ export class LotteryReportPostCloseModel {
 /** 5b 現金移動的一類(抽屜、小金庫各自的增減:+ 流入、− 流出;沖正那一筆兩端對調,自然是反向)。 */
 @ObjectType("LotteryOperationsCashMovement")
 export class LotteryOperationsCashMovementModel {
-  /** `deposit` 投庫 / `withdraw` 出庫 / `bank_deposit` 存銀行 / `refund` 退貨退款 / `transfer_out` 調貨支出 / `transfer_in` 調貨收入 / `correction` 現金更正 */
+  /** `deposit` 投庫 / `withdraw` 出庫 / `bank_deposit` 存銀行 / `bank_withdraw` 銀行提領 / `refund` 退貨退款 / `transfer_out` 調貨支出 / `transfer_in` 調貨收入 / `correction` 現金更正 */
   @Field(() => String)
   type!: string;
 
@@ -400,6 +422,51 @@ export class LotteryOperationsSkipReasonModel {
   count!: number;
 }
 
+/** 期間內換盤點制度的一筆(`lottery_store_count_modes.history`)。 */
+@ObjectType("LotteryOperationsCountModeChange")
+export class LotteryOperationsCountModeChangeModel {
+  @Field(() => GraphQLISODateTime)
+  at!: Date;
+
+  @Field(() => String)
+  from!: string;
+
+  @Field(() => String)
+  to!: string;
+}
+
+/** 區塊 8 的盤點制度註記(張數店規格 11.4、第 10 節)。 */
+@ObjectType("LotteryOperationsCountMode")
+export class LotteryOperationsCountModeModel {
+  /** 期初的盤點制度 `numbered` / `count` / `converting` */
+  @Field(() => String)
+  modeAtStart!: string;
+
+  /** 期初那個制度從什麼時候開始(沒有歷程 = null) */
+  @Field(() => GraphQLISODateTime, { nullable: true })
+  since!: Date | null;
+
+  /** 期末的盤點制度 */
+  @Field(() => String)
+  modeAtEnd!: string;
+
+  /** 期間內換制度 */
+  @Field(() => [LotteryOperationsCountModeChangeModel])
+  changes!: LotteryOperationsCountModeChangeModel[];
+
+  /** 期間內補點編號核准的時間(「補點編號次數」) */
+  @Field(() => [GraphQLISODateTime])
+  renumberAts!: Date[];
+
+  /** 距上次補點編號幾天(期末 − 上次核准;沒補點過 = null) */
+  @Field(() => Int, { nullable: true })
+  daysSinceRenumber!: number | null;
+
+  /** 月底未補點編號的已關帳月份(`YYYY-MM`;關帳被放行或設「只提醒」的店,第 10 節) */
+  @Field(() => [String])
+  monthEndUnrenumbered!: string[];
+}
+
 /** 區塊 8 註記。 */
 @ObjectType("LotteryOperationsNotes")
 export class LotteryOperationsNotesModel {
@@ -432,6 +499,10 @@ export class LotteryOperationsNotesModel {
   /** 期間涵蓋、尚未關帳的月份(`YYYY-MM`) */
   @Field(() => [String])
   openMonths!: string[];
+
+  /** 張數店的盤點制度與補點編號(期間內一直是編號店 = null,畫面不變;張數店規格 11.4) */
+  @Field(() => LotteryOperationsCountModeModel, { nullable: true })
+  countMode!: LotteryOperationsCountModeModel | null;
 }
 
 /** 一家店實際用的期間(對齊日結時逐店不同)。 */
@@ -459,6 +530,13 @@ export class LotteryOperationsStoreModel {
 
   @Field(() => LotteryReportStorePeriodModel)
   period!: LotteryReportStorePeriodModel;
+
+  /**
+   * 這一期含估算(張數店規格 11.1):有未對號的事件、到期末沒有補點編號核准晚於最後一筆 → 逐本銷售、已售成本、
+   * 毛利、期末庫存成本是估算(張數與現金一定精確)
+   */
+  @Field(() => Boolean)
+  estimated!: boolean;
 
   @Field(() => LotteryOperationsSalesModel)
   sales!: LotteryOperationsSalesModel;

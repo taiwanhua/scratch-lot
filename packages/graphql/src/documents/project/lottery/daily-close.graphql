@@ -49,6 +49,11 @@ query LotteryDailyCloseWizard($orgId: ID!, $submissionId: ID) {
     differenceTotal
     canSubmit
     canSkipStocktake
+    renumber {
+      available
+      suggested
+      monthEndWarning
+    }
     reusableStocktake {
       ...LotteryCheckoutStocktakeRefFields
     }

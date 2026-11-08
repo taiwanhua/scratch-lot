@@ -74,5 +74,11 @@ export const storeModule: ModuleSeedDeclaration = formModuleDeclaration({
       name: "確認遺失",
       description: "盤點待查清單的 [確認遺失]",
     },
+    {
+      action: "recover",
+      name: "尋回",
+      description:
+        "看板刷到待查 / 遺失的張與卡片 [尋回](給店員;庫存管理另有自己的尋回權限)",
+    },
   ],
 });

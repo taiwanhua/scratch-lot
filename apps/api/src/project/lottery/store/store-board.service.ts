@@ -6,6 +6,7 @@ import { localDateOf, startOfLocalDay } from "@repo/domain/form";
 import {
   TICKET_LOCATION_KIND,
   TICKET_STATUS,
+  boardRemainingOf,
   isLowStock,
 } from "@repo/domain/project/lottery";
 
@@ -24,9 +25,12 @@ import {
 } from "../../database/lottery-inventory/lottery-inventory.repository";
 import { LotteryShiftsRepository } from "../../database/lottery-store/lottery-shifts.repository";
 import { CashLedgerService } from "../cash/cash-ledger.service";
+import { StoreCountModeService } from "../settings/store-count-mode.service";
+import { pendingSkipCountOfBook } from "../tickets/books.service";
 import type {
   LotteryStoreBoardBookModel,
   LotteryStoreBoardModel,
+  LotteryStoreGameTotalModel,
 } from "./models/lottery-store.model";
 import { StoreShiftViews, parseId } from "./shift-views";
 import { StoreAccess } from "./store-access";
@@ -39,6 +43,26 @@ interface CounterGroup {
   total: number;
   remaining: number;
   soldToday: number;
+}
+
+/** 卡片依遊戲合計(張數店看板「遊戲名 · 剩 N 張 · M 本」;卡片已依遊戲代號、本號排序)。 */
+export function gameTotalsOf(
+  cards: readonly LotteryStoreBoardBookModel[],
+): LotteryStoreGameTotalModel[] {
+  const totals = new Map<string, LotteryStoreGameTotalModel>();
+  for (const card of cards) {
+    const total = totals.get(card.gameId) ?? {
+      gameId: card.gameId,
+      gameCode: card.gameCode,
+      gameName: card.gameName,
+      remaining: 0,
+      bookCount: 0,
+    };
+    total.remaining += card.remaining;
+    total.bookCount += 1;
+    totals.set(card.gameId, total);
+  }
+  return [...totals.values()];
 }
 
 /**
@@ -55,6 +79,7 @@ export class StoreBoardService {
     private readonly games: LotteryGamesRepository,
     private readonly orgs: OrgsRepository,
     private readonly ledger: CashLedgerService,
+    private readonly countModes: StoreCountModeService,
     private readonly views: StoreShiftViews,
     private readonly access: StoreAccess,
     private readonly clock: StoreClock,
@@ -88,34 +113,49 @@ export class StoreBoardService {
       orgId,
       closedAt: null,
     });
-    const [shiftModels, cards, vault] = await Promise.all([
-      this.views.toModels(operator, openShifts, pointNames),
-      this.cardsOf(
-        operator,
-        tenantId,
-        orgId,
-        points.map((point) => point._id),
-      ),
-      this.ledger.vaultExpected(operator, tenantId, orgId),
-    ]);
+    const now = this.clock.now();
+    const [shiftModels, cards, vault, countMode, movePauses, renumber] =
+      await Promise.all([
+        this.views.toModels(operator, openShifts, pointNames),
+        this.cardsOf(
+          operator,
+          tenantId,
+          orgId,
+          points.map((point) => point._id),
+        ),
+        this.ledger.vaultExpected(operator, tenantId, orgId),
+        this.countModes.modeOf(operator, orgId),
+        this.countModes.movePauseOf(operator, orgId, now),
+        this.countModes.renumberReminderOf(operator, tenantId, orgId, now),
+      ]);
     const shiftByPoint = new Map(
       shiftModels.map((shift) => [shift.cashPoint.id, shift]),
     );
     return {
       org: { id: String(orgId), name: org.name },
-      cashPoints: points.map((point) => ({
-        id: String(point._id),
-        name: point.name,
-        positionKey: point.positionKey,
-        shift: shiftByPoint.get(String(point._id)) ?? null,
-        books: cards.get(String(point._id)) ?? [],
-      })),
+      cashPoints: points.map((point) => {
+        const books = cards.get(String(point._id)) ?? [];
+        return {
+          id: String(point._id),
+          name: point.name,
+          positionKey: point.positionKey,
+          shift: shiftByPoint.get(String(point._id)) ?? null,
+          books,
+          gameTotals: gameTotalsOf(books),
+        };
+      }),
       myOpenShifts: shiftModels.filter((shift) => shift.isMine),
       vaultExpected: vault.amount,
+      countMode,
+      movePauses: movePauses.map((pause) => ({ gameId: pause.gameId })),
+      renumber,
     };
   }
 
-  /** 每個收銀點檯面上的本(還有未售的張);依遊戲代號、本號排序。 */
+  /**
+   * 每個收銀點檯面上的本(還有未售的張);依遊戲代號、本號排序。先找檯面上有未售張的本,再只彙總這些本
+   * (張數店規格 14.2 `lotteryStoreBoard`「彙總改成先找有未售的本再算」:已售的張留在檯面上越積越多,不整個掃)。
+   */
   private async cardsOf(
     operator: OperatorContext,
     tenantId: Types.ObjectId | null,
@@ -130,12 +170,23 @@ export class StoreBoardService {
     const todayStart = new Date(
       startOfLocalDay(localDateOf(now, timezone), timezone),
     );
+    const onCounter = {
+      orgId,
+      "location.kind": TICKET_LOCATION_KIND.counter,
+      "location.cashPointId": { $in: [...pointIds] },
+    };
+    const open = await this.tickets.aggregate(operator, [
+      { $match: { ...onCounter, status: TICKET_STATUS.unsold } },
+      { $group: { _id: "$bookId" } },
+    ]);
+    if (open.length === 0) {
+      return new Map();
+    }
     const rows = await this.tickets.aggregate(operator, [
       {
         $match: {
-          orgId,
-          "location.kind": TICKET_LOCATION_KIND.counter,
-          "location.cashPointId": { $in: [...pointIds] },
+          ...onCounter,
+          bookId: { $in: open.map((row) => row._id as Types.ObjectId) },
           status: { $ne: TICKET_STATUS.skipped },
         },
       },
@@ -163,21 +214,26 @@ export class StoreBoardService {
         },
       },
     ]);
-    const groups: CounterGroup[] = rows
-      .map((row) => {
-        const key = row._id as {
-          cashPointId: Types.ObjectId;
-          bookId: Types.ObjectId;
-        };
-        return {
-          cashPointId: key.cashPointId,
-          bookId: key.bookId,
-          total: Number(row.total ?? 0),
-          remaining: Number(row.remaining ?? 0),
-          soldToday: Number(row.soldToday ?? 0),
-        };
-      })
-      .filter((group) => group.remaining > 0);
+    const all: CounterGroup[] = rows.map((row) => {
+      const key = row._id as {
+        cashPointId: Types.ObjectId;
+        bookId: Types.ObjectId;
+      };
+      return {
+        cashPointId: key.cashPointId,
+        bookId: key.bookId,
+        total: Number(row.total ?? 0),
+        remaining: Number(row.remaining ?? 0),
+        soldToday: Number(row.soldToday ?? 0),
+      };
+    });
+    // 這本在檯面上的張分在幾個收銀點(卡片剩餘要不要扣待標註;只算有張的收銀點,剩 0 的也算)
+    const counterCountOf = new Map<string, number>();
+    for (const group of all) {
+      const key = String(group.bookId);
+      counterCountOf.set(key, (counterCountOf.get(key) ?? 0) + 1);
+    }
+    const groups = all.filter((group) => group.remaining > 0);
     if (groups.length === 0) {
       return new Map();
     }
@@ -198,17 +254,23 @@ export class StoreBoardService {
         continue;
       }
       const list = cards.get(String(group.cashPointId)) ?? [];
+      const remaining = boardRemainingOf(
+        group.remaining,
+        pendingSkipCountOfBook(book),
+        counterCountOf.get(String(book._id)) ?? 0,
+      );
       list.push({
         bookId: String(book._id),
+        gameId: String(book.gameId),
         gameCode: book.gameCode,
         gameName: game.name,
         color: game.color,
         unitPrice: game.unitPrice,
         bookNo: book.bookNo,
-        remaining: group.remaining,
+        remaining,
         total: group.total,
         soldToday: group.soldToday,
-        isLowStock: isLowStock(group.remaining, group.total),
+        isLowStock: isLowStock(remaining, group.total),
       });
       cards.set(String(group.cashPointId), list);
     }

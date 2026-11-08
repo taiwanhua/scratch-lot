@@ -76,6 +76,10 @@ export interface RecoverTicketDialogProps {
   onClose: () => void;
   /** 尋回成功(對話框已關閉;呼叫端重讀自己的資料) */
   onRecovered?: () => void;
+  /** 對話框下方的說明(張數店看板:「尋回後這張會記在本店庫存…」,張數店規格 7.9);不給 = 沒有 */
+  hint?: string;
+  /** 成功提示(不給 = 「已尋回 N 張」) */
+  successText?: string;
 }
 
 /** 尋回後要重讀的查詢(codegen 的 query key 第一段是 operation 名稱)。 */
@@ -97,6 +101,8 @@ const REFRESH_KEYS = [
 export const RecoverTicketDialog = ({
   book,
   tickets,
+  hint,
+  successText,
   keepStore = false,
   store,
   onClose,
@@ -158,7 +164,7 @@ export const RecoverTicketDialog = ({
   const recover = useRecoverLotteryTicketsMutation(
     session.client,
     useMutationFeedback({
-      success: t("recover.success", { count: tickets.length }),
+      success: successText ?? t("recover.success", { count: tickets.length }),
       error: (error) => inventoryErrorTextsOf(error, FIELDS, t).summary,
       onSuccess: () => {
         for (const key of REFRESH_KEYS) {
@@ -277,6 +283,11 @@ export const RecoverTicketDialog = ({
               {t("recover.backToStore", { store: fixedStore.name })}
             </Typography>
           </Stack>
+        )}
+        {hint === undefined ? null : (
+          <Typography variant="body2" color="textSecondary">
+            {hint}
+          </Typography>
         )}
       </Stack>
     </Dialog>

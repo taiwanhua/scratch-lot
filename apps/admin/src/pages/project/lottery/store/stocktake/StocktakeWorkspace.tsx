@@ -4,6 +4,7 @@ import { useTranslations } from "use-intl";
 import {
   STORE_PERMISSIONS,
   type StocktakeDraft,
+  type StocktakeType,
 } from "@repo/domain/project/lottery";
 import { Alert } from "@repo/ui/alert";
 import { Button } from "@repo/ui/button";
@@ -19,15 +20,20 @@ import { useRedemptionFlow } from "../redemption/useRedemptionFlow";
 import { moneyText } from "../store-text";
 import { StocktakeCountStep } from "./StocktakeCountStep";
 import { StocktakeReviewStep } from "./StocktakeReviewStep";
+import {
+  ResumeSessionDialog,
+  StocktakeSessionNotices,
+} from "./StocktakeSessionNotices";
 import { StocktakeSubmitDialog } from "./StocktakeSubmitDialog";
 import {
   type SheetCashPoint,
-  bookKeyOf,
   lostChoicesReady,
   placeNameOf,
   unhandledOf,
 } from "./stocktake-model";
+import { countReviewPropsOf } from "./useCountGroupActions";
 import { useStocktakeFlow } from "./useStocktakeFlow";
+import { useStocktakeFlowSession } from "./useStocktakeSession";
 
 export interface StocktakeWorkspaceProps {
   orgId: string;
@@ -35,6 +41,12 @@ export interface StocktakeWorkspaceProps {
   scopeCashPointId: string | null;
   /** 頁首:盤點類型(例:「臨時盤點」) */
   heading: string;
+  /** 盤點中登記的類型(交班 / 日結 / 臨時;張數店規格 8.5a) */
+  type: StocktakeType;
+  /** 看板登記好帶進來的那一筆(`?session=`);進來就 [繼續] 這一筆 */
+  sessionId?: string | null;
+  /** 補點編號(張數店規格 9.3;Figma CS-11):全店、照編號盤點逐本、全部遊戲暫停移櫃 */
+  purpose?: "normal" | "renumber";
   /** 退回後再送出:帶入原內容 */
   initialDraft: StocktakeDraft | null;
   /** 頁首的提示(例:已退回) */
@@ -58,10 +70,19 @@ export interface StocktakeWorkspaceProps {
  * 應有現金,立即生效)→ 選中的本(點格子 / 掃描)→ 未拆的本、待查清單 → [差異核對] → [送出]。
  * 狀態與動作在 `useStocktakeFlow`;交班 / 日結的盤點步驟以 `scopeCashPointId` 嵌入同一個元件(之後的功能)。
  */
+/** 補點編號的說明(全部遊戲暫停移櫃、每本都要盤、比對時先自動對號;Figma CS-11)。 */
+const RenumberBanner = ({ show }: { show: boolean }) => {
+  const t = useTranslations("admin.lotteryStore.stocktake.renumber");
+  return show ? <Alert severity="info">{t("banner")}</Alert> : null;
+};
+
 export const StocktakeWorkspace = ({
   orgId,
   scopeCashPointId,
   heading,
+  type,
+  sessionId = null,
+  purpose = "normal",
   initialDraft,
   notice,
   onSubmit,
@@ -74,10 +95,26 @@ export const StocktakeWorkspace = ({
   const temporal = useTemporalText();
   const { hasPermission } = usePermissions();
   const isNarrow = useBreakpointDown("md");
-  const flow = useStocktakeFlow({ orgId, scopeCashPointId, initialDraft });
+  const flow = useStocktakeFlow({
+    orgId,
+    scopeCashPointId,
+    initialDraft,
+    purpose,
+  });
+  // 盤點中登記:進來就登記這些位置、進度存到伺服器、重新整理可 [繼續](張數店規格 8.5a)
+  const session = useStocktakeFlowSession(flow, {
+    orgId,
+    type,
+    purpose,
+    scopeCashPointId,
+    enabled: orgId !== "",
+    sessionId,
+  });
+  // 補點編號(張數店規格 9.3;Figma CS-11):頁首「補點編號 · 全店」
+  const title = { normal: heading, renumber: t("renumber.heading") }[purpose];
   const redemption = useRedemptionFlow();
   const [isConfirming, setIsConfirming] = useState(false);
-  const { sheet, state, books, review } = flow;
+  const { sheet, state, review } = flow;
 
   if (flow.sheetQuery.isError) {
     return <Alert severity="error">{t("page.loadFailed")}</Alert>;
@@ -88,9 +125,7 @@ export const StocktakeWorkspace = ({
 
   const pointName = (id: string) =>
     placeNameOf(sheet.cashPoints, id, t("stock.name"));
-  const counted = books.filter(
-    (book) => state.counts[bookKeyOf(book)] !== undefined,
-  ).length;
+  const counted = flow.itemKeys.filter((key) => flow.isCounted(key)).length;
   const scopeLabel =
     scopeCashPointId === null
       ? t("page.wholeStore")
@@ -138,7 +173,7 @@ export const StocktakeWorkspace = ({
         sx={{ alignItems: { sm: "baseline" } }}
       >
         <Typography variant="h6" component="h1">
-          {t("page.title", { heading, scope: scopeLabel })}
+          {t("page.title", { heading: title, scope: scopeLabel })}
         </Typography>
         <Typography variant="body2" color="textSecondary" sx={{ flex: 1 }}>
           {t("page.started", {
@@ -146,10 +181,29 @@ export const StocktakeWorkspace = ({
             name: me.data?.me.name ?? "",
           })}
         </Typography>
-        <Button variant="text" color="error" onClick={onCancel}>
+        <Button
+          variant="text"
+          color="error"
+          onClick={() => {
+            // [取消(不保留)] = 放棄這次盤點(解除登記)
+            void session.abandon().finally(onCancel);
+          }}
+        >
           {t("page.cancel")}
         </Button>
       </Stack>
+      <RenumberBanner show={flow.isRenumber} />
+      <StocktakeSessionNotices link={session} />
+      <ResumeSessionDialog
+        session={session.resumable ?? session.own}
+        isPending={session.isStarting || session.isEnding}
+        onResume={session.resume}
+        onAbandon={(target) => {
+          void session.abandon(target).then(() => {
+            session.startNew();
+          });
+        }}
+      />
       {notice}
       {flow.step === "count" ? (
         <StocktakeCountStep
@@ -182,17 +236,18 @@ export const StocktakeWorkspace = ({
           onClearStale={flow.staleNos.length > 0 ? flow.clearStale : null}
           unhandled={unhandled}
           lostReady={lostReady}
-          canSubmit={canSubmit}
+          canSubmit={canSubmit && session.blocked === null}
+          count={countReviewPropsOf(flow)}
         />
       )}
       {review !== null && isConfirming ? (
         <StocktakeSubmitDialog
           open
-          scopeLabel={`${heading} · ${scopeLabel}`}
+          scopeLabel={`${title} · ${scopeLabel}`}
           sheet={sheet}
           review={review}
           state={state}
-          uncounted={books.length - counted}
+          uncounted={flow.itemKeys.length - counted}
           isPending={isSubmitting}
           error={submitError}
           onClose={() => {

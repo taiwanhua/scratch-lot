@@ -5,6 +5,7 @@ import type { OperatorContext } from "../../../database/operator-context";
 import { RequireTenant } from "../../tenant-scope/require-tenant.decorator";
 import {
   LotteryStoreCashCorrectionsPayload,
+  LotteryStoreSaleReversalOptionsModel,
   LotteryStoreSaleReversalRowModel,
   LotteryStoreSaleReversalsPayload,
   LotteryStoreShiftOptionsPayload,
@@ -38,6 +39,19 @@ export class LotteryStoreFormsResolver {
     @CurrentOperator() operator: OperatorContext,
   ): Promise<LotteryStoreSaleReversalsPayload> {
     return { items: await this.query.saleReversals(operator, orgId) };
+  }
+
+  /** 撤銷售出申請新增頁的選項:盤點制度、收銀點、「依遊戲 + 張數」這台可選的遊戲與最多幾張(張數店規格 13.2)。 */
+  @Query(() => LotteryStoreSaleReversalOptionsModel, {
+    name: "lotteryStoreSaleReversalOptions",
+  })
+  async lotteryStoreSaleReversalOptions(
+    @Args("orgId", { type: () => ID }) orgId: string,
+    @Args("cashPointId", { type: () => ID, nullable: true })
+    cashPointId: string | null,
+    @CurrentOperator() operator: OperatorContext,
+  ): Promise<LotteryStoreSaleReversalOptionsModel> {
+    return this.query.saleReversalOptions(operator, orgId, cashPointId);
   }
 
   @Query(() => LotteryStoreCashCorrectionsPayload, {

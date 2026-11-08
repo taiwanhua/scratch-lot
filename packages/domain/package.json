@@ -218,6 +218,26 @@
         "types": "./dist/cjs/project/lottery-accounts.d.cts",
         "default": "./dist/cjs/project/lottery-accounts.cjs"
       }
+    },
+    "./project/org-setting-chain": {
+      "import": {
+        "types": "./dist/es/project/org-setting-chain.d.ts",
+        "default": "./dist/es/project/org-setting-chain.js"
+      },
+      "require": {
+        "types": "./dist/cjs/project/org-setting-chain.d.cts",
+        "default": "./dist/cjs/project/org-setting-chain.cjs"
+      }
+    },
+    "./project/lottery-settings": {
+      "import": {
+        "types": "./dist/es/project/lottery-settings.d.ts",
+        "default": "./dist/es/project/lottery-settings.js"
+      },
+      "require": {
+        "types": "./dist/cjs/project/lottery-settings.d.cts",
+        "default": "./dist/cjs/project/lottery-settings.cjs"
+      }
     }
   },
   "typesVersions": {
@@ -284,6 +304,12 @@
       ],
       "project/lottery-accounts": [
         "./dist/es/project/lottery-accounts.d.ts"
+      ],
+      "project/org-setting-chain": [
+        "./dist/es/project/org-setting-chain.d.ts"
+      ],
+      "project/lottery-settings": [
+        "./dist/es/project/lottery-settings.d.ts"
       ]
     }
   },

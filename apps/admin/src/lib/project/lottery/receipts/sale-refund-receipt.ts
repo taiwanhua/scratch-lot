@@ -9,8 +9,10 @@ import {
 export interface SaleRefundReceiptGroup {
   gameCode: string;
   gameName: string;
-  /** 3 位張號(排序) */
+  /** 3 位張號(排序);依遊戲 + 張數的列(張號送出時才由系統挑)= 空 */
   ticketNos: readonly string[];
+  /** 依遊戲 + 張數的張數(張數店規格 7.3 第 3 點);沒給 = 張號的張數 */
+  count?: number;
   amount: number;
 }
 
@@ -71,19 +73,26 @@ export const saleRefundReceiptOf = (
               gameCode: group.gameCode,
               gameName: group.gameName,
             }),
-            String(group.ticketNos.length),
+            String(group.count ?? group.ticketNos.length),
             receiptMoney(group.amount),
           ],
         ],
       },
-      {
-        type: "range",
-        label: t("saleRefund.ticketNos"),
-        numbers: group.ticketNos.map(Number),
-        prefix: "#",
-        digits: 3,
-        count: t("saleRefund.ticketCount", { count: group.ticketNos.length }),
-      },
+      // 依遊戲 + 張數沒有張號,不印號碼區段
+      ...(group.ticketNos.length === 0
+        ? []
+        : [
+            {
+              type: "range" as const,
+              label: t("saleRefund.ticketNos"),
+              numbers: group.ticketNos.map(Number),
+              prefix: "#",
+              digits: 3,
+              count: t("saleRefund.ticketCount", {
+                count: group.ticketNos.length,
+              }),
+            },
+          ]),
     ]),
     {
       type: "total",

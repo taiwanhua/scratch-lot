@@ -100,6 +100,7 @@ export class LotteryBook {
    * 各狀態張數(不算跳號;**只經帳本服務改**:建本時 = 全部在庫存,之後每筆張數事件依本 `$inc`):
    * - `stock` / `counter` / `inTransit`:未售在庫存 / 檯面 / 在途
    * - `sold` 已售、`scrapped` 報廢、`investigating` 待查、`lost` 遺失
+   * - `unmatchedSold` 已售·未對號、`unmatchedInvestigating` 待查·未對號(張數店;已算在 `sold` / `investigating` 內)
    *
    * 待標註的跳號(拆本前還沒標的)分不出是哪幾張,算在所在的格;剩餘 / 總張數讀取時扣(定案甲)。
    */
@@ -113,6 +114,8 @@ export class LotteryBook {
       scrapped: { type: Number, default: 0 },
       investigating: { type: Number, default: 0 },
       lost: { type: Number, default: 0 },
+      unmatchedSold: { type: Number, default: 0 },
+      unmatchedInvestigating: { type: Number, default: 0 },
     },
     default: () => ({}),
   })

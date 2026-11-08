@@ -58,6 +58,7 @@ import type {
   LotteryInventoryBooksPayload,
   LotteryInventoryEventModel,
   LotteryInventoryLocationModel,
+  LotteryInventoryMatchPartnerModel,
   LotteryInventoryPlaceModel,
   LotteryInventoryRefModel,
   LotteryInventorySourceModel,
@@ -239,12 +240,13 @@ export class InventoryViewService {
     // 能不能操作某一張 = 它的所在分店在操作者的可見範圍內(別店的張只能看)
     const operable = (ticket: TicketRecord) =>
       isOrgVisible(operator, ticket.orgId);
-    // 對調跳號要這本有跳號(記在哪家店都可以),和一張自己範圍內未售、未鎖定、不在途的張可以改標
+    // 更正跳號要這本有跳號(記在哪家店都可以),和一張自己範圍內未售(張數店另可是系統預設帶入的狀態,7.10)、
+    // 未鎖定、不在途的張可以改標
     const canCorrectSkips =
       sortedTickets.some((ticket) => ticket.status === TICKET_STATUS.skipped) &&
       sortedTickets.some(
         (ticket) =>
-          ticket.status === TICKET_STATUS.unsold &&
+          (ticket.status === TICKET_STATUS.unsold || ticket.unmatched) &&
           ticket.lockedBy === null &&
           ticket.location.kind !== TICKET_LOCATION_KIND.inTransit &&
           operable(ticket),
@@ -252,6 +254,7 @@ export class InventoryViewService {
     const ticketNos = new Map(
       sortedTickets.map((ticket) => [String(ticket._id), ticket.ticketNo]),
     );
+    const partners = await this.matchPartnersOf(whole, events, ticketNos);
     return {
       book,
       tickets: sortedTickets.map((ticket) =>
@@ -264,6 +267,7 @@ export class InventoryViewService {
         names,
         corrections,
         record.firstOpenedAt ?? null,
+        partners,
       ),
       sources: this.sourcesOf(events, ticketNos, names),
       cost: grant.canShowCost
@@ -289,6 +293,7 @@ export class InventoryViewService {
           ),
         canRecover: grant.has(INVENTORY_PERMISSIONS.recover),
         canScrap: grant.has(INVENTORY_PERMISSIONS.scrap),
+        bookOpened: (record.firstOpenedAt ?? null) !== null,
         canShowCost: grant.canShowCost,
       },
     };
@@ -358,8 +363,15 @@ export class InventoryViewService {
         canRecover: grant.has(INVENTORY_PERMISSIONS.recover),
       };
     }
+    // 確定的待查 / 遺失:一本 × 一種狀態一列;系統預設帶入的(未對號)另依「遊戲 × 責任分店 × 來源盤點」一列
+    const certain = missing.filter((ticket) => !ticket.unmatched);
+    const unmatchedIds = new Set(
+      missing
+        .filter((ticket) => ticket.unmatched)
+        .map((ticket) => String(ticket._id)),
+    );
     const bookIds = [
-      ...new Set(missing.map((ticket) => String(ticket.bookId))),
+      ...new Set(certain.map((ticket) => String(ticket.bookId))),
     ];
     const [bookRecords, events] = await Promise.all([
       this.books.findMany(operator, {
@@ -381,7 +393,16 @@ export class InventoryViewService {
     });
     const gameOf = new Map(games.map((game) => [String(game._id), game]));
     const bookOf = new Map(bookRecords.map((book) => [String(book._id), book]));
-    const names = await this.namesOf(operator, missing, events);
+    const [names, stocktakeTypes] = await Promise.all([
+      this.namesOf(operator, missing, events),
+      this.names.stocktakeTypes(
+        operator,
+        // 未對號的列寫來源盤點的類型(只讀那幾張的待查事件的盤點單)
+        events
+          .filter((event) => unmatchedIds.has(String(event.ticketId)))
+          .map((event) => event.refId),
+      ),
+    ]);
     // 天數:租戶時區的日曆天差(同經銷商的距今天數;日期只有一種做法)
     const timezone = await tenantTimezoneOf(
       this.orgs,
@@ -395,7 +416,7 @@ export class InventoryViewService {
       // 還沒標的跳號在還沒處理的那一組(先待查、再遺失),一本只扣一次
       let pendingLeft = book === undefined ? 0 : pendingSkipCountOfBook(book);
       for (const status of MISSING_STATUSES) {
-        const tickets = missing
+        const tickets = certain
           .filter(
             (ticket) =>
               String(ticket.bookId) === bookId && ticket.status === status,
@@ -432,9 +453,28 @@ export class InventoryViewService {
           tickets: tickets.map((ticket) =>
             this.ticketModel(operator, ticket, names),
           ),
+          unmatched: false,
+          sourceStocktakeType: null,
+          unmatchedBooks: [],
         });
       }
     }
+    rows.push(
+      ...unmatchedInvestigationRowsOf(
+        missing.filter((ticket) => ticket.unmatched),
+        {
+          events,
+          bookOf,
+          gameOf,
+          stocktakeTypes,
+          canShowCost: grant.canShowCost,
+          ticketModel: (ticket) => this.ticketModel(operator, ticket, names),
+          serials: names.serials,
+          orgs: names.orgs,
+          daysOf: (at) => daysSince(at, today, timezone),
+        },
+      ),
+    );
     return {
       items: rows.toSorted(
         (a, b) => (b.at?.getTime() ?? 0) - (a.at?.getTime() ?? 0),
@@ -480,10 +520,19 @@ export class InventoryViewService {
         storeOrgId: string;
       }[]
     >();
-    const tickets =
-      knownTickets?.filter(
-        (ticket) => ticket.status === TICKET_STATUS.unsold,
-      ) ?? (await this.unsoldTicketsOfBooks(operator, records));
+    const read =
+      knownTickets ?? (await this.unsoldTicketsOfBooks(operator, records));
+    const tickets = read.filter(
+      (ticket) => ticket.status === TICKET_STATUS.unsold,
+    );
+    // 遺失·未對號(本的張數欄位沒有這一格,張數店規格 5.3):從讀到的張數
+    const lostUnmatched = new Map<string, number>();
+    for (const ticket of read) {
+      if (ticket.status === TICKET_STATUS.lost && ticket.unmatched) {
+        const key = String(ticket.bookId);
+        lostUnmatched.set(key, (lostUnmatched.get(key) ?? 0) + 1);
+      }
+    }
     for (const ticket of tickets) {
       const key = String(ticket.bookId);
       const list = snapshotsOf.get(key) ?? [];
@@ -541,6 +590,10 @@ export class InventoryViewService {
         org: mustRef(record.orgId, orgNames),
         holdings,
         remainingCount: remainingOfCounts(counts, pendingSkipCount),
+        unmatchedCount:
+          counts.unmatchedSold +
+          counts.unmatchedInvestigating +
+          (lostUnmatched.get(String(record._id)) ?? 0),
         totalCount: totalOfCounts(counts, pendingSkipCount),
         pendingSkipCount,
         requiredSkipCount: requiredSkipCountOf(
@@ -581,9 +634,13 @@ export class InventoryViewService {
         whole,
         {
           bookId: { $in: group.map((record) => record._id) },
-          status: TICKET_STATUS.unsold,
+          // 未售(所在分店)+ 遺失·未對號(本的未對號張數;同一次讀)
+          $or: [
+            { status: TICKET_STATUS.unsold },
+            { status: TICKET_STATUS.lost, unmatched: true },
+          ],
         },
-        { select: "bookId status location orgId" },
+        { select: "bookId status location orgId unmatched" },
       );
       result.push(...found);
     }
@@ -633,6 +690,7 @@ export class InventoryViewService {
       locked: ticket.lockedBy !== null,
       operable: isOrgVisible(operator, ticket.orgId),
       version: ticket.version,
+      unmatched: ticket.unmatched,
     };
   }
 
@@ -665,6 +723,7 @@ export class InventoryViewService {
             status: ticket.status,
             locationKind: ticket.location.kind,
             cashPointId: ticket.location.cashPointId,
+            unmatched: ticket.unmatched,
           },
           names,
         ),
@@ -685,11 +744,20 @@ export class InventoryViewService {
     names: Names,
     corrections: ReadonlyMap<string, string>,
     firstOpenedAt: Date | null,
+    partners: ReadonlyMap<string, LotteryInventoryMatchPartnerModel>,
   ): LotteryInventoryEventModel[] {
     const rows = new Map<string, { event: EventRecord; ticketNos: string[] }>();
     const ticketNoOf = (event: EventRecord) =>
       ticketNos.get(String(event.ticketId)) ?? "";
     for (const event of events) {
+      // 對號兩張都在這本:只列張號小的那一筆(「對號 #041 ↔ #042」)
+      const partner = partners.get(String(event._id));
+      if (
+        partner?.bookNo === null &&
+        byTicketNo(ticketNoOf(event), partner.ticketNo) > 0
+      ) {
+        continue;
+      }
       const key = [
         event.at.getTime(),
         event.type,
@@ -725,7 +793,51 @@ export class InventoryViewService {
       reasonKey: event.reasonKey,
       reasonNote: event.reasonNote,
       correctionOfShift: corrections.get(String(event._id)) ?? null,
+      matchPartner: partners.get(String(event._id)) ?? null,
     }));
+  }
+
+  /**
+   * 這本的對號事件各自互換的另一張(張數店規格 13.2):同本的從已讀的張取;在別本的一次讀(張號、本號)。
+   */
+  private async matchPartnersOf(
+    reader: OperatorContext,
+    events: readonly EventRecord[],
+    ticketNos: ReadonlyMap<string, string>,
+  ): Promise<Map<string, LotteryInventoryMatchPartnerModel>> {
+    const matches = events.filter(
+      (event) => event.type === TICKET_EVENT_TYPE.match && event.refId !== null,
+    );
+    const others = matches.flatMap((event) =>
+      event.refId === null || ticketNos.has(String(event.refId))
+        ? []
+        : [event.refId],
+    );
+    const found =
+      others.length === 0
+        ? []
+        : await this.tickets.findMany(
+            reader,
+            { _id: { $in: others } },
+            { select: "ticketNo bookNo" },
+          );
+    const otherOf = new Map(
+      found.map((ticket) => [
+        String(ticket._id),
+        { ticketNo: ticket.ticketNo, bookNo: ticket.bookNo },
+      ]),
+    );
+    return new Map(
+      matches.flatMap((event) => {
+        const key = String(event.refId);
+        const same = ticketNos.get(key);
+        const partner =
+          same === undefined
+            ? otherOf.get(key)
+            : { ticketNo: same, bookNo: null };
+        return partner === undefined ? [] : [[String(event._id), partner]];
+      }),
+    );
   }
 
   /**
@@ -862,4 +974,100 @@ function withoutPendingSkipFigures(
   }
   const count = tickets.length - deducted;
   return { tickets: count, cost: (total * count) / tickets.length };
+}
+
+/**
+ * 待查·遺失分頁的未對號列(張數店規格 7.9、13.2,Figma CS-21):系統預設帶入的待查 / 遺失·未對號依
+ * 「遊戲 × 責任分店 × 來源盤點」一列(來源盤點 = 這張最近一筆「待查」事件的盤點單;同一列的狀態一樣,
+ * 確認遺失後保留未對號記號、改列在遺失)。展開看本與張號;不給 [尋回]。
+ */
+function unmatchedInvestigationRowsOf(
+  tickets: readonly TicketRecord[],
+  context: {
+    events: readonly EventRecord[];
+    bookOf: ReadonlyMap<string, BookRecord>;
+    gameOf: ReadonlyMap<string, { name: string; unitPrice: number }>;
+    stocktakeTypes: ReadonlyMap<string, string>;
+    serials: ReadonlyMap<string, string>;
+    orgs: ReadonlyMap<string, string>;
+    canShowCost: boolean;
+    ticketModel: (ticket: TicketRecord) => LotteryInventoryTicketModel;
+    daysOf: (at: Date | null) => number | null;
+  },
+): LotteryInvestigationRowModel[] {
+  const groups = new Map<
+    string,
+    { tickets: TicketRecord[]; source: EventRecord | undefined }
+  >();
+  for (const ticket of tickets) {
+    // 事件依時間新到舊:第一筆「待查」= 這張的來源盤點
+    const source = context.events.find(
+      (event) =>
+        event.ticketId.equals(ticket._id) &&
+        event.type === TICKET_EVENT_TYPE.investigate,
+    );
+    const key = [
+      String(ticket.gameId),
+      String(ticket.responsibleOrgId),
+      String(source?.refId ?? null),
+      ticket.status,
+    ].join("|");
+    const group = groups.get(key) ?? { tickets: [], source };
+    group.tickets.push(ticket);
+    groups.set(key, group);
+  }
+  return [...groups.values()].flatMap(({ tickets: list, source }) => {
+    const [first] = list;
+    if (first === undefined) {
+      return [];
+    }
+    const ticketIds = new Set(list.map((ticket) => String(ticket._id)));
+    const latest = context.events.find((event) =>
+      ticketIds.has(String(event.ticketId)),
+    );
+    const game = context.gameOf.get(String(first.gameId));
+    const byBook = new Map<string, TicketRecord[]>();
+    for (const ticket of list) {
+      const key = String(ticket.bookId);
+      byBook.set(key, [...(byBook.get(key) ?? []), ticket]);
+    }
+    const at = latest?.at ?? null;
+    return [
+      {
+        bookId: String(first.bookId),
+        bookNo: "",
+        gameCode: context.bookOf.get(String(first.bookId))?.gameCode ?? "",
+        gameName: game?.name ?? "",
+        unitPrice: game?.unitPrice ?? 0,
+        status: first.status,
+        responsibleOrg: ref(first.responsibleOrgId, context.orgs),
+        refType: source?.refType ?? null,
+        refSerialNo:
+          source?.refId == null
+            ? null
+            : (context.serials.get(String(source.refId)) ?? null),
+        at,
+        days: context.daysOf(at),
+        cost: context.canShowCost
+          ? Math.round(list.reduce((sum, ticket) => sum + ticket.unitCost, 0))
+          : null,
+        ticketCount: list.length,
+        tickets: list
+          .toSorted((a, b) => byTicketNo(a.ticketNo, b.ticketNo))
+          .map((ticket) => context.ticketModel(ticket)),
+        unmatched: true,
+        sourceStocktakeType:
+          source?.refId == null
+            ? null
+            : (context.stocktakeTypes.get(String(source.refId)) ?? null),
+        unmatchedBooks: [...byBook.entries()].map(([bookId, items]) => ({
+          bookId,
+          bookNo: context.bookOf.get(bookId)?.bookNo ?? items[0]?.bookNo ?? "",
+          ticketNos: items
+            .map((ticket) => ticket.ticketNo)
+            .toSorted(byTicketNo),
+        })),
+      },
+    ];
+  });
 }

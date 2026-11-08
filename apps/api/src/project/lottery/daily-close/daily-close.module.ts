@@ -7,6 +7,7 @@ import { ScheduledJobsModule } from "../../../scheduled-jobs/scheduled-jobs.modu
 import { SidebarBadgesModule } from "../../../sidebar-badges/sidebar-badges.module";
 import { LotteryAccountsModule } from "../accounts/accounts.module";
 import { LotteryCheckoutModule } from "../checkout/checkout.module";
+import { LotterySettingsModule } from "../settings/lottery-settings.module";
 import { LotteryStocktakeModule } from "../stocktake/stocktake.module";
 import { LotteryStoreModule } from "../store/store.module";
 import { BankDepositService } from "./bank-deposit.service";
@@ -36,6 +37,7 @@ import { StoreBadge } from "./store-badge";
     LotteryStoreModule,
     LotteryStocktakeModule,
     LotteryCheckoutModule,
+    LotterySettingsModule,
   ],
   providers: [
     DailyCloseLedger,

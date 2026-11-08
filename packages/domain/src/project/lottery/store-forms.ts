@@ -22,13 +22,21 @@ export const STORE_FORM_PERMISSIONS = {
 /** 張被撤銷售出申請鎖定時的鎖來源(`TICKET_LOCK_REF_TYPES`)。 */
 export const SALE_REVERSAL_LOCK_REF_TYPE = "sale_reversal";
 
-/** 撤銷售出申請的欄位 key(受管表單 `sale_reversal.r1.seed.ts`)。 */
+/** 撤銷售出申請的欄位 key(受管表單 `sale_reversal.r4.seed.ts`)。 */
 export const SALE_REVERSAL_FIELD_KEYS = {
   branch: "branch",
   lines: "lines",
+  /** 明細列的種類(`SALE_REVERSAL_LINE_KIND`;沒有值 = 依張號,r3 以前的單) */
+  lineKind: "line_kind",
   book: "book",
   ticketNos: "ticket_nos",
   tickets: "tickets",
+  /** 依遊戲 + 張數:遊戲 */
+  game: "game",
+  /** 收銀點:依遊戲 + 張數 = 挑哪一台的已售·未對號;依張號 = 刷退票的那一台(對號找這台最近一筆依張數售出;張數店規格 7.3) */
+  cashPoint: "cash_point",
+  /** 依遊戲 + 張數:張數 */
+  count: "count",
   amount: "amount",
   reason: "reason",
   refund: "refund",
@@ -48,6 +56,17 @@ export const CASH_CORRECTION_FIELD_KEYS = {
   reason: "reason",
   note: "note",
 } as const;
+
+/**
+ * 撤銷售出申請明細列的種類(張數店規格 5.7、7.3 第 3 點):依張號(刷條碼、手輸或點格子;預設)/
+ * 依遊戲 + 張數(沒有票可刷時,系統挑這台最近的已售·未對號)。
+ */
+export const SALE_REVERSAL_LINE_KIND = {
+  byTicket: "by_ticket",
+  byCount: "by_count",
+} as const;
+export type SaleReversalLineKind =
+  (typeof SALE_REVERSAL_LINE_KIND)[keyof typeof SALE_REVERSAL_LINE_KIND];
 
 /** 退款給客人:是 / 否。 */
 export const SALE_REVERSAL_REFUND = { yes: "yes", no: "no" } as const;
@@ -80,7 +99,7 @@ export function refundDefaultOf(reasonKey: string | null): boolean {
   return reasonKey !== null && REFUND_DEFAULT_REASON_KEYS.includes(reasonKey);
 }
 
-/** 撤銷售出申請的一列:一本的幾張(張數跨多本時依本分組)。 */
+/** 撤銷售出申請的一列(依張號):一本的幾張(張數跨多本時依本分組)。 */
 export interface SaleReversalLine {
   rowId: string;
   bookId: string;
@@ -88,11 +107,23 @@ export interface SaleReversalLine {
   ticketNos: string[];
   tickets: number;
   amount: number;
+  /** 刷退票的那一台(沒有 = null;重刷進來的 = 重刷刷到的位置,庫存也是 null) */
+  cashPointId: string | null;
+}
+
+/** 撤銷售出申請的一列(依遊戲 + 張數;張數店規格 5.7、7.3 第 3 點):送出時系統挑這台最近的已售·未對號。 */
+export interface SaleReversalCountLine {
+  rowId: string;
+  gameId: string | null;
+  cashPointId: string | null;
+  count: number;
+  amount: number;
 }
 
 export interface SaleReversalValues {
   branchId: string | null;
   lines: SaleReversalLine[];
+  countLines: SaleReversalCountLine[];
   reasonKey: string | null;
   refund: boolean;
   refundShiftId: string | null;
@@ -150,37 +181,56 @@ function oneOf<T extends string>(
     : null;
 }
 
-/** 撤銷售出申請的存值 → 規則用的值(沒有 rowId 或沒有本的列略過;張號看不懂的列張號為空)。 */
+/**
+ * 撤銷售出申請的存值 → 規則用的值:依張號的列(沒有 rowId 或沒有本的略過;張號看不懂的列張號為空)與
+ * 依遊戲 + 張數的列(`line_kind = by_count`)分開。
+ */
 export function saleReversalValuesOf(
   values: Record<string, unknown>,
 ): SaleReversalValues {
   const keys = SALE_REVERSAL_FIELD_KEYS;
   const rows = values[keys.lines];
-  const lines = Array.isArray(rows)
-    ? rows.flatMap((row): SaleReversalLine[] => {
-        if (!isRecord(row) || typeof row.rowId !== "string") {
-          return [];
-        }
-        const bookId = storedIdOf(row[keys.book]);
-        if (bookId === null) {
-          return [];
-        }
-        const rawNos = row[keys.ticketNos];
-        return [
-          {
-            rowId: row.rowId,
-            bookId,
-            ticketNos:
-              typeof rawNos === "string" ? (parseTicketNos(rawNos) ?? []) : [],
-            tickets: numberOf(row[keys.tickets]),
-            amount: numberOf(row[keys.amount]),
-          },
-        ];
-      })
+  const records = Array.isArray(rows)
+    ? rows.filter(
+        (row): row is Record<string, unknown> & { rowId: string } =>
+          isRecord(row) && typeof row.rowId === "string",
+      )
     : [];
+  const isCountRow = (row: Record<string, unknown>) =>
+    storedIdOf(row[keys.lineKind]) === SALE_REVERSAL_LINE_KIND.byCount;
+  const countLines = records
+    .filter((row) => isCountRow(row))
+    .map((row): SaleReversalCountLine => ({
+      rowId: row.rowId,
+      gameId: storedIdOf(row[keys.game]),
+      cashPointId: storedIdOf(row[keys.cashPoint]),
+      count: numberOf(row[keys.count]),
+      amount: numberOf(row[keys.amount]),
+    }));
+  const lines = records
+    .filter((row) => !isCountRow(row))
+    .flatMap((row): SaleReversalLine[] => {
+      const bookId = storedIdOf(row[keys.book]);
+      if (bookId === null) {
+        return [];
+      }
+      const rawNos = row[keys.ticketNos];
+      return [
+        {
+          rowId: row.rowId,
+          bookId,
+          ticketNos:
+            typeof rawNos === "string" ? (parseTicketNos(rawNos) ?? []) : [],
+          tickets: numberOf(row[keys.tickets]),
+          amount: numberOf(row[keys.amount]),
+          cashPointId: storedIdOf(row[keys.cashPoint]),
+        },
+      ];
+    });
   return {
     branchId: storedIdOf(values[keys.branch]),
     lines,
+    countLines,
     reasonKey: storedIdOf(values[keys.reason]),
     refund: storedIdOf(values[keys.refund]) === SALE_REVERSAL_REFUND.yes,
     refundShiftId: storedIdOf(values[keys.refundShift]),
@@ -233,10 +283,17 @@ export function saleReversalProblemOf(values: SaleReversalValues): {
     return { field: keys.branch };
   }
   if (
-    values.lines.length === 0 ||
+    values.lines.length + values.countLines.length === 0 ||
     values.lines.some(
       (line) =>
         line.ticketNos.length === 0 || line.tickets !== line.ticketNos.length,
+    ) ||
+    values.countLines.some(
+      (line) =>
+        line.gameId === null ||
+        line.cashPointId === null ||
+        !Number.isInteger(line.count) ||
+        line.count < 1,
     )
   ) {
     return { field: keys.lines };

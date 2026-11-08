@@ -478,20 +478,25 @@ describe("日結與存銀行(GraphQL 端點 + 真 MongoDB)", () => {
   /** 一筆碰小金庫的流水(投庫:抽屜 → 小金庫;出庫:小金庫 → 抽屜)。 */
   async function vaultMovement(
     orgId: Types.ObjectId,
-    type: "deposit" | "withdraw",
+    type: "deposit" | "withdraw" | "bank_withdraw",
     amount: number,
     occurredAt: Date,
   ): Promise<void> {
+    const route = {
+      deposit: { from: "drawer", to: "vault" },
+      withdraw: { from: "vault", to: "drawer" },
+      bank_withdraw: { from: "bank", to: "vault" },
+    }[type];
+    const isDrawer = type !== "bank_withdraw";
     await connection.collection(LOTTERY_CASH_MOVEMENTS_COLLECTION).insertOne({
       orgId,
       tenantId: tenant,
       occurredAt,
       type,
-      from: type === "deposit" ? "drawer" : "vault",
-      to: type === "deposit" ? "vault" : "drawer",
+      ...route,
       reason: type === "withdraw" ? "change" : null,
-      cashPointId: new Types.ObjectId(),
-      shiftId: new Types.ObjectId(),
+      cashPointId: isDrawer ? new Types.ObjectId() : null,
+      shiftId: isDrawer ? new Types.ObjectId() : null,
       attributedShiftId: null,
       postCloseOf: null,
       amount,
@@ -1022,6 +1027,7 @@ describe("日結與存銀行(GraphQL 端點 + 真 MongoDB)", () => {
       ["transfers", 0, 0],
       ["corrections", 0, 0],
       ["bank_deposits", 0, 0],
+      ["bank_withdrawals", 0, 0],
     ]);
     expect(view.bankAccounts.map((account) => account.id)).toEqual([
       String(sharedAccount),
@@ -1112,6 +1118,28 @@ describe("日結與存銀行(GraphQL 端點 + 真 MongoDB)", () => {
       ["opening", 8900],
       ["deposits", 1000],
       ["bank_deposits", -5000],
+    ]);
+  });
+
+  it("第 ③ 步小金庫應有算進「銀行提領」(帳戶管理提領時選了現金去向)", async () => {
+    const store = await newStore("內湖店");
+    await vaultMovement(store.orgId, "deposit", 1000, taipei("14", "10:00"));
+    await vaultMovement(
+      store.orgId,
+      "bank_withdraw",
+      2000,
+      taipei("14", "11:00"),
+    );
+    now("14", "22:00");
+    const view = await wizard(store.orgId);
+    expect(view.vaultExpected).toBe(3000);
+    expect(
+      view.vaultItems
+        .filter((item) => item.amount !== 0)
+        .map((item) => [item.kind, item.count, item.amount]),
+    ).toEqual([
+      ["deposits", 1, 1000],
+      ["bank_withdrawals", 1, 2000],
     ]);
   });
 

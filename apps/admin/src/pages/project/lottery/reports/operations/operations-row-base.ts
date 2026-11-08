@@ -53,6 +53,19 @@ export const percentLine = (
   values: Readonly<Record<string, SheetCell | undefined>>,
 ): SheetRow => ({ ...line(values), [SHEET_ROW_KEYS.format]: "percent" });
 
+/** 工作表的期間種類與時區(區塊 8 的日期、「月底未補點編號」只在月報判斷)。 */
+export interface SheetOptions {
+  periodKind: "day" | "week" | "month";
+  timezone: string;
+}
+
+/**
+ * 張數店的工作表(張數店規格 11.4):期間內是張數店(有盤點制度註記)或有依張數標記售出。編號店畫面不變:
+ * 「依張數標記售出」「對號成本調整」這些列只放在張數店的工作表(合計有依張數標記售出時也放)。
+ */
+export const isCountSheet = (store: OperationsStore): boolean =>
+  store.notes.countMode != null || store.sales.countSale.count !== 0;
+
 /** 有成本權限(api 沒權限時成本回 null)。 */
 export const hasCost = (store: OperationsStore): boolean =>
   store.sales.cost != null;
@@ -89,6 +102,7 @@ export const MOVEMENT_KEYS: Readonly<Record<string, string>> = {
   deposit: "admin.lotteryReports.operations.movements.deposit",
   withdraw: "admin.lotteryReports.operations.movements.withdraw",
   bank_deposit: "admin.lotteryReports.operations.movements.bank_deposit",
+  bank_withdraw: "admin.lotteryReports.operations.movements.bank_withdraw",
   refund: "admin.lotteryReports.operations.movements.refund",
   transfer_out: "admin.lotteryReports.operations.movements.transfer_out",
   transfer_in: "admin.lotteryReports.operations.movements.transfer_in",

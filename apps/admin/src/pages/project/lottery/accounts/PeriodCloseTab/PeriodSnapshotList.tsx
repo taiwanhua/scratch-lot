@@ -5,7 +5,11 @@ import { Box } from "@repo/ui/box";
 import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
 
+import { useTemporalText } from "@/hooks/base/useTemporalText";
+
 import { moneyText } from "../accounts-config";
+
+type Snapshot = LotteryPeriodSnapshotFieldsFragment;
 
 const Line = ({ label, value }: { label: string; value: string }) => (
   <Stack
@@ -34,6 +38,26 @@ export const PeriodSnapshotList = ({
   title: string;
 }) => {
   const t = useTranslations("admin.lotteryAccounts.periodClose.dialog");
+  const tRenumber = useTranslations(
+    "admin.lotteryAccounts.periodClose.renumber",
+  );
+  const temporal = useTemporalText();
+  /** 補點編號一欄(張數店規格 13.2;Figma AC-07-2):「11/30 完成」/「未補點」/「未補點(估算)」;編號店「—」。 */
+  const renumberText = (
+    renumber: Snapshot["stores"][number]["renumber"] | null,
+  ): string => {
+    if (renumber == null || renumber.mode === "numbered") {
+      return "—";
+    }
+    if (renumber.done && renumber.lastRenumberAt != null) {
+      return tRenumber("snapshotDone", {
+        date: temporal(renumber.lastRenumberAt, "monthDay"),
+      });
+    }
+    return renumber.required
+      ? tRenumber("snapshotMissing")
+      : tRenumber("snapshotEstimated");
+  };
   return (
     <Box
       component="section"
@@ -75,6 +99,10 @@ export const PeriodSnapshotList = ({
                   })}
                 </Typography>
               ))}
+            <Line
+              label={tRenumber("snapshotLabel", { store: store.name })}
+              value={renumberText(store.renumber ?? null)}
+            />
             {store.uncoveredShifts.length > 0 && (
               <Line
                 label={t("uncovered", { store: store.name })}

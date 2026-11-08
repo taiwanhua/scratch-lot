@@ -1,6 +1,5 @@
 import { useState } from "react";
 
-import { COLLATION_LOCALE } from "@repo/domain/collation";
 import {
   displayBookNo,
   splitPlanProblemOf,
@@ -17,14 +16,18 @@ import { Stack } from "@repo/ui/stack";
 import { Stepper } from "@repo/ui/stepper";
 import { Typography } from "@repo/ui/typography";
 
-import { TicketGrid } from "@/components/project/lottery/TicketGrid/TicketGrid";
 import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
 import { useSession } from "@/hooks/base/useSession";
 
 import { moneyText } from "../../store-text";
 import { SplitPlaceStep } from "./SplitPlaceStep";
+import { CountStep, SkipStep } from "./SplitSkipSteps";
 import { useRefreshSales } from "./sales-queries";
-import { type SplitPlaceState, splitAssignmentsOf } from "./split-plan";
+import {
+  type SplitPlaceState,
+  splitAssignmentsOf,
+  splitSkipPlanOf,
+} from "./split-plan";
 import { useSalesText } from "./useSalesText";
 
 export interface SplitWizardDialogProps {
@@ -36,54 +39,6 @@ export interface SplitWizardDialogProps {
   /** 拆好了(對話框由呼叫端關) */
   onSplit: () => void;
 }
-
-const SkipStep = ({
-  ticketNos,
-  lastTicketNo,
-  pending,
-  skipped,
-  onChange,
-}: {
-  ticketNos: readonly string[];
-  lastTicketNo: string;
-  pending: number;
-  skipped: string[];
-  onChange: (skipped: string[]) => void;
-}) => {
-  const { t } = useSalesText();
-  return (
-    <Stack spacing={1.5}>
-      <Typography variant="body2">
-        {t("split.skipHint", { last: lastTicketNo, count: pending })}
-      </Typography>
-      <TicketGrid
-        cells={ticketNos.map((no) => ({ ticketNo: no, state: "unsold" }))}
-        selectableStates={["unsold"]}
-        selected={skipped}
-        onSelectedChange={onChange}
-        legendItems={["unsold", "selected"]}
-        quickSelect={false}
-        maxSelected={pending}
-        summary={false}
-      />
-      <Stack direction="row" sx={{ justifyContent: "space-between" }}>
-        <Typography variant="body2" color="textSecondary">
-          {t("split.skipSelected")}
-        </Typography>
-        <Typography variant="body1">
-          {t("split.skipSelectedValue", {
-            count: skipped.length,
-            total: pending,
-            nos: skipped
-              .toSorted((a, b) => a.localeCompare(b, COLLATION_LOCALE))
-              .map((no) => `#${no}`)
-              .join("、"),
-          })}
-        </Typography>
-      </Stack>
-    </Stack>
-  );
-};
 
 /** 從沒拆過的本寫「拆本」,拆過的本再上檯面寫「上檯面」(標題、確認按鈕、成功訊息)。 */
 const SPLIT_KEYS = {
@@ -99,10 +54,38 @@ const SPLIT_KEYS = {
   },
 } as const;
 
+/** 精靈上方的兩步(① 標跳號 ② 放到哪個收銀點)。 */
+const SplitStepper = ({ current }: { current: "skip" | "place" }) => {
+  const { t } = useSalesText();
+  const label = (step: "skip" | "place") =>
+    step === "skip" ? t("split.steps.skip") : t("split.steps.place");
+  return (
+    <Stepper
+      aria-label={t("split.stepsAria")}
+      steps={[
+        {
+          key: "skip",
+          label: label("skip"),
+          status: current === "skip" ? "current" : "done",
+        },
+        {
+          key: "place",
+          label: label("place"),
+          status: current === "place" ? "current" : "todo",
+        },
+      ]}
+      progressText={({ current: index, total }) =>
+        t("split.progress", { current: index, total, label: label(current) })
+      }
+    />
+  );
+};
+
 /**
- * 拆本精靈(Figma ST-09a ① 標跳號、09b ② 全部放到本機收銀點、09c ② 分放到多個收銀點;規格 6.4):
- * 只分配這家店庫存裡未售、沒被鎖的張(拆過的本再上檯面:檯面上、已售、待查的張不列)。
- * ① 只有待標註 > 0 才出現(從沒拆過的本;沒有就直接從 ② 開始、不顯示 Stepper),點滿才能 [下一步];
+ * 拆本精靈(Figma ST-09a ① 標跳號、09b ② 全部放到本機收銀點、09c ② 分放到多個收銀點、CS-08a / 08b / 08c;規格 6.4、
+ * 張數店規格 7.5):只分配這家店庫存裡未售、沒被鎖的張(拆過的本再上檯面:檯面上、已售、待查的張不列)。
+ * ① 原封不動的本待標註 > 0 才出現,點滿才能 [下一步];張數店與轉換中不是原封不動的本先問手上實際有幾張,
+ * 比系統少幾張就點出幾張(標跳號),多了或少太多擋下(`CountStep`);其他沒有 ①(直接從 ② 開始、不顯示 Stepper)。
  * ② 預設全部放到本機收銀點,分放時每一張都要分配到一個收銀點才能確認。拆過的本標題、按鈕寫「上檯面」。
  * 跳號的張實體不存在,不算庫存。步驟之間只放在畫面狀態,關掉不留資料。
  */
@@ -122,12 +105,11 @@ export const SplitWizardDialog = ({
     { orgId, bookId },
     { staleTime: 0 },
   ).data?.lotteryStoreBookCard.item;
-  const points =
-    useLotteryStoreBoardQuery(session.client, { orgId }).data?.lotteryStoreBoard
-      .item.cashPoints ?? [];
-  const pending = card?.pendingSkipCount ?? 0;
+  const board = useLotteryStoreBoardQuery(session.client, { orgId }).data
+    ?.lotteryStoreBoard.item;
+  const points = board?.cashPoints ?? [];
+  const [actualText, setActualText] = useState("");
   const [step, setStep] = useState<"skip" | "place" | null>(null);
-  const current = step ?? (pending > 0 ? "skip" : "place");
   const [skipped, setSkipped] = useState<string[]>([]);
   const [place, setPlace] = useState<SplitPlaceState>({
     mode: "all",
@@ -159,19 +141,34 @@ export const SplitWizardDialog = ({
         !ticket.locked,
     )
     .map((ticket) => ticket.ticketNo);
+  // ① 要標幾張跳號(張數店拆過的本 = 手上比系統少幾張;張數店規格 7.5)
+  const plan = splitSkipPlanOf(
+    board?.countMode ?? "numbered",
+    card,
+    ticketNos.length,
+    actualText,
+  );
+  const current = step ?? (plan.hasSkipStep ? "skip" : "place");
   const usable = ticketNos.filter((no) => !skipped.includes(no));
   const effective: SplitPlaceState = {
     ...place,
     allTo: place.allTo === "" ? (points.at(0)?.id ?? "") : place.allTo,
   };
   const assignments = splitAssignmentsOf(usable, points, effective);
-  const problem = splitPlanProblemOf(ticketNos, pending, skipped, assignments);
+  const problem = splitPlanProblemOf(
+    ticketNos,
+    plan.pending,
+    skipped,
+    assignments,
+  );
   const submit = () => {
     split.mutate({
       input: {
         orgId,
         bookId,
         skippedTicketNos: skipped,
+        ...(plan.askCount &&
+          plan.actualCount !== null && { actualCount: plan.actualCount }),
         assignments: assignments
           .filter((row) => row.ticketNos.length > 0)
           .map((row) => ({
@@ -181,7 +178,16 @@ export const SplitWizardDialog = ({
       },
     });
   };
-  const cancel = (
+  const back = plan.hasSkipStep ? (
+    <Button
+      variant="text"
+      onClick={() => {
+        setStep("skip");
+      }}
+    >
+      {t("split.previous")}
+    </Button>
+  ) : (
     <Button variant="text" onClick={onClose}>
       {t("sale.cancel")}
     </Button>
@@ -189,9 +195,11 @@ export const SplitWizardDialog = ({
   const actions =
     current === "skip" ? (
       <>
-        {cancel}
+        <Button variant="text" onClick={onClose}>
+          {t("sale.cancel")}
+        </Button>
         <Button
-          disabled={skipped.length !== pending}
+          disabled={!plan.countReady || skipped.length !== plan.pending}
           onClick={() => {
             setStep("place");
           }}
@@ -201,23 +209,18 @@ export const SplitWizardDialog = ({
       </>
     ) : (
       <>
-        {pending > 0 ? (
-          <Button
-            variant="text"
-            onClick={() => {
-              setStep("skip");
-            }}
-          >
-            {t("split.previous")}
-          </Button>
-        ) : (
-          cancel
-        )}
+        {back}
         <Button disabled={problem !== null || split.isPending} onClick={submit}>
           {t(keys.confirm)}
         </Button>
       </>
     );
+  const skipProps = {
+    ticketNos,
+    lastTicketNo: card.lastTicketNo,
+    skipped,
+    onChange: setSkipped,
+  };
 
   return (
     <Dialog
@@ -241,47 +244,27 @@ export const SplitWizardDialog = ({
             last: card.lastTicketNo,
           })}
         </Typography>
-        {card.unopened ? null : (
+        {card.unopened || plan.askCount ? null : (
           <Typography variant="body2">
             {t("split.reopenHint", { count: ticketNos.length })}
           </Typography>
         )}
-        {pending > 0 ? (
-          <Stepper
-            aria-label={t("split.stepsAria")}
-            steps={[
-              {
-                key: "skip",
-                label: t("split.steps.skip"),
-                status: current === "skip" ? "current" : "done",
-              },
-              {
-                key: "place",
-                label: t("split.steps.place"),
-                status: current === "place" ? "current" : "todo",
-              },
-            ]}
-            progressText={({ current: index, total }) =>
-              t("split.progress", {
-                current: index,
-                total,
-                label:
-                  current === "skip"
-                    ? t("split.steps.skip")
-                    : t("split.steps.place"),
-              })
-            }
+        {plan.hasSkipStep ? <SplitStepper current={current} /> : null}
+        {current === "skip" && plan.askCount ? (
+          <CountStep
+            {...skipProps}
+            plan={plan}
+            actualText={actualText}
+            onActualChange={(text) => {
+              setActualText(text);
+              setSkipped([]);
+            }}
           />
         ) : null}
-        {current === "skip" ? (
-          <SkipStep
-            ticketNos={ticketNos}
-            lastTicketNo={card.lastTicketNo}
-            pending={pending}
-            skipped={skipped}
-            onChange={setSkipped}
-          />
-        ) : (
+        {current === "skip" && !plan.askCount ? (
+          <SkipStep {...skipProps} pending={plan.pending} />
+        ) : null}
+        {current === "place" ? (
           <SplitPlaceStep
             ticketNos={ticketNos}
             skipped={skipped}
@@ -291,7 +274,7 @@ export const SplitWizardDialog = ({
             onChange={setPlace}
             assignments={assignments}
           />
-        )}
+        ) : null}
       </Stack>
     </Dialog>
   );

@@ -56,3 +56,24 @@ query LotteryStoreCashCorrections($orgId: ID!) {
     }
   }
 }
+
+fragment LotteryStoreSaleReversalOptionsFields on LotteryStoreSaleReversalOptions {
+  countMode
+  cashPoints {
+    id
+    name
+  }
+  games {
+    gameId
+    gameCode
+    gameName
+    unitPrice
+    available
+  }
+}
+
+query LotteryStoreSaleReversalOptions($orgId: ID!, $cashPointId: ID) {
+  lotteryStoreSaleReversalOptions(orgId: $orgId, cashPointId: $cashPointId) {
+    ...LotteryStoreSaleReversalOptionsFields
+  }
+}

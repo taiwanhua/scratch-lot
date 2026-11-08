@@ -72,6 +72,8 @@ query LotteryTransferOptions($fromOrgId: ID!, $toOrgId: ID, $submissionId: ID) {
       givenBooks
       inTransitBooks
     }
+    gridPick
+    countMode
   }
 }
 
@@ -79,6 +81,12 @@ query LotteryTransferBookTickets($fromOrgId: ID!, $bookId: ID!) {
   lotteryTransferBookTickets(fromOrgId: $fromOrgId, bookId: $bookId) {
     ticketNo
     state
+    unmatched
+    matchable
+    soldCashPointName
+    soldAt
+    cashPointName
+    lockedSerialNo
   }
 }
 

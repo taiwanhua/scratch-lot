@@ -5,6 +5,8 @@
  *   工廠控管碼、終端校驗碼(第 5、6 段**不驗證**,演算法未知)
  * - 正面編號 `056527-099` / `056527099`:本號 6 位 + 張號 3 位
  * - 正面條碼 `0056527099`:本號 7 位 + 張號 3 位
+ * - 背面條碼(ITF,Interleaved 2 of 5)16 位、無減號:`5166101153910000` = `5166-1-011539-100-0-0`
+ *   (張數店規格 7.4;條碼槍要開啟 ITF 並允許 16 位),解析成背面編號
  *
  * 本號一律存 7 位(`^\d{7}$`,6 位自動補 0);開頭是 0 時顯示 6 位。
  */
@@ -42,6 +44,8 @@ const BACK_PATTERN =
 const FRONT_DASH_PATTERN = /^(\d{6})-(\d{3})$/;
 const FRONT_PATTERN = /^(\d{6})(\d{3})$/;
 const BARCODE_PATTERN = /^(\d{7})(\d{3})$/;
+/** 背面條碼(ITF 16 位):遊戲代號 4、印刷版別 1、本號 6、張號 3、工廠控管碼 1、終端校驗碼 1。 */
+const BACK_ITF_PATTERN = /^(\d{4})(\d)(\d{6})(\d{3})(\d)(\d)$/;
 
 /** 6 位或 7 位本號 → 7 位(6 位補 0);其他 → null。 */
 export function normalizeBookNo(raw: string): string | null {
@@ -101,7 +105,7 @@ export function parseTicketInput(raw: string): ParsedTicketInput | null {
 }
 
 function parseValue(value: string): ParsedTicketInput | null {
-  const back = BACK_PATTERN.exec(value);
+  const back = BACK_PATTERN.exec(value) ?? BACK_ITF_PATTERN.exec(value);
   if (back) {
     const [, gameCode, printVersion, bookNo, ticketNo] = back;
     return {

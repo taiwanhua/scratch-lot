@@ -6,6 +6,9 @@
  * - `ticket-code.ts`:編號解析(背面編號 / 正面編號 / 正面條碼)、本號補 0、本編號 / 張編號、張號區段
  * - `ticket-events.ts`:張的狀態、位置、鎖定與張數事件類型
  * - `book-stats.ts`:本的即時計算(待標註、剩餘、持有、未拆 / 檯面中 / 售完)與已給本數
+ * - `count-mode.ts`:張數店的盤點制度、挑張順序、對號的配對張、補點編號到期、張數盤點的差異
+ * - `count-report.ts`:張數店的營運報表(對號成本差怎麼分、要不要標估算、盤點制度與補點編號的註記、月底未補點編號)
+ * - `counter-moves.ts`:收回、移櫃(刷條碼、依張數)、移櫃暫停、拆本的手上實際張數、報廢只限庫存
  * - `portable-lookups.ts`:可以跟著受管表單交付的 lookup 來源(種子組裝與 api 匯出共用)
  * - `purchase.ts`:進貨單的表單代號 / 欄位 key、明細列、批購金額、應付、點收刷條碼的比對與進度
  * - `transfer.ts`:調貨單的表單代號 / 欄位 key、權限、明細列、金額、張號區段、收付按鈕先填值與核准前檢查
@@ -15,7 +18,11 @@
  * - `store.ts`:店面管理的模組 key、權限 key、分頁、看板頻道、剩很少的門檻與期初零用金的規則
  * - `store-sales.ts`:店面的刷到時怎麼處理、當下撤銷的條件、拆本精靈的檢查
  * - `store-forms.ts`:撤銷售出申請、現金更正單的表單代號 / 欄位 key、存值解析與送出前檢查
- * - `stocktake.ts`:盤點的類型 / 狀態、盤點內容、與盤點那一刻比對的差異、送出前的檢查
+ * - `sale-reversal-plan.ts`:撤銷售出申請送出時鎖哪幾張(刷的張先對號、依遊戲 + 張數挑張)、核准後張回到哪裡
+ * - `stocktake.ts`:盤點的類型 / 狀態、盤點內容(含張數盤點的組)、與盤點那一刻比對的差異、送出前的檢查、[上一本] [下一本]
+ * - `renumber.ts`:補點編號(自動對號、核准後的制度、移櫃暫停跟著登記走、月底補點編號的關帳檢查、日結第 ② 步的預設)
+ * - `rescan.ts`:全店重刷(一個位置的處理、位置狀態、自動取消、開始重刷的互斥、B5 擋盤點的組、重刷提醒)
+ * - `stocktake-session.ts`:盤點中登記(同位置一次一人、1 小時自動失效、接續、全店盤點中不能交班)
  * - `checkout.ts`:交班結帳的表單代號 / 欄位 key、結帳內容、面額表、應有 / 實點 / 差額與交接的檢查
  * - `daily-close.ts`:日結的結帳內容、精靈步驟、小金庫應有的各項、存入銀行的檢查、涵蓋計算期間沒有日結的日子
  * - `dealer-limits.ts`:經銷商與關係人文字欄位的長度上限(api 檢查與 admin 欄位下的格式要求共用)
@@ -23,6 +30,9 @@
 export * from "./book-scan";
 export * from "./book-stats";
 export * from "./checkout";
+export * from "./count-mode";
+export * from "./count-report";
+export * from "./counter-moves";
 export * from "./daily-close";
 export * from "./dealer-limits";
 export * from "./inventory";
@@ -31,9 +41,13 @@ export * from "./purchase";
 export * from "./receipt-links";
 export * from "./redemption";
 export * from "./requisition";
+export * from "./sale-reversal-plan";
+export * from "./renumber";
+export * from "./rescan";
 export * from "./store";
 export * from "./store-forms";
 export * from "./stocktake";
+export * from "./stocktake-session";
 export * from "./store-sales";
 export * from "./ticket-code";
 export * from "./ticket-events";

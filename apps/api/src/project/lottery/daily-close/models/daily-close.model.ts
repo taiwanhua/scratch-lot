@@ -99,6 +99,22 @@ export class LotteryDailyCloseShiftRowModel {
   isMine!: boolean;
 }
 
+/** 日結第 ② 步的補點編號選項(張數店規格 13.2)。 */
+@ObjectType("LotteryDailyCloseRenumber")
+export class LotteryDailyCloseRenumberModel {
+  /** 張數店與轉換中才有「這次做補點編號」 */
+  @Field(() => Boolean)
+  available!: boolean;
+
+  /** 轉換中或補點編號提醒週期到了 → 預設選它 */
+  @Field(() => Boolean)
+  suggested!: boolean;
+
+  /** 設「必須」的店月底最後一天、這個月還沒補點 →「本月還沒補點編號,關帳會被擋」 */
+  @Field(() => Boolean)
+  monthEndWarning!: boolean;
+}
+
 /** 日結精靈的資料(規格 6.10;Figma ST-21–25b)。 */
 @ObjectType("LotteryDailyCloseWizard")
 export class LotteryDailyCloseWizardModel {
@@ -138,6 +154,10 @@ export class LotteryDailyCloseWizardModel {
 
   @Field(() => Boolean)
   canSkipStocktake!: boolean;
+
+  /** 第 ② 步「這次做補點編號」(張數店規格 13.2;張數店與轉換中才有) */
+  @Field(() => LotteryDailyCloseRenumberModel)
+  renumber!: LotteryDailyCloseRenumberModel;
 
   /** 可以沿用的全店盤點(30 分鐘內);沒有 = null */
   @Field(() => LotteryCheckoutReusableStocktakeModel, { nullable: true })

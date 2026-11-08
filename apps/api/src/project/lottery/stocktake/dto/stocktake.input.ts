@@ -10,6 +10,10 @@ export class LotteryStocktakeSheetInput {
 
   @Field(() => ID, { nullable: true })
   cashPointId?: string | null;
+
+  /** `renumber` = 補點編號(張數店與轉換中的全店編號盤點;張數店規格 9.3) */
+  @Field(() => String, { nullable: true })
+  purpose?: string | null;
 }
 
 /** 差異核對 / 送出前檢查:`draft` = 盤點內容(`serializeStocktakeDraft` 的 JSON)。 */
@@ -52,4 +56,66 @@ export class LotteryStocktakesInput {
 
   @Field(() => Int, { nullable: true })
   limit?: number | null;
+}
+
+/** [算售出 N 張](張數盤點,立即生效;`store.sell` + `store.stocktake`):收銀點 × 遊戲 × 張數。 */
+@InputType()
+export class BackfillLotteryStocktakeCountSalesInput {
+  @Field(() => ID)
+  orgId!: string;
+
+  @Field(() => ID)
+  cashPointId!: string;
+
+  @Field(() => ID)
+  gameId!: string;
+
+  @Field(() => Int)
+  count!: number;
+}
+
+/**
+ * 登記盤點中(張數店規格 8.5a):交班 / 日結 / 臨時、範圍(單一收銀點;全店不給);
+ * `sessionId` = [繼續] 這一筆(重新整理後、失效後回來)。
+ */
+@InputType()
+export class StartLotteryStocktakeSessionInput {
+  @Field(() => ID)
+  orgId!: string;
+
+  @Field(() => String)
+  type!: string;
+
+  @Field(() => ID, { nullable: true })
+  cashPointId?: string | null;
+
+  @Field(() => ID, { nullable: true })
+  sessionId?: string | null;
+
+  /** `normal`(預設)/ `renumber`(補點編號:全店、全部遊戲暫停移櫃;張數店規格 9.3、8.5) */
+  @Field(() => String, { nullable: true })
+  purpose?: string | null;
+}
+
+/** 存盤點進度(每次變動;重算倒數):`draft` = `serializeStocktakeDraft` 的 JSON。 */
+@InputType()
+export class SaveLotteryStocktakeSessionInput {
+  @Field(() => ID)
+  orgId!: string;
+
+  @Field(() => ID)
+  sessionId!: string;
+
+  @Field(() => String)
+  draft!: string;
+}
+
+/** 解除盤點中:自己的 = [放棄];別人的 = 店長 [結束這個盤點](留稽核)。 */
+@InputType()
+export class EndLotteryStocktakeSessionInput {
+  @Field(() => ID)
+  orgId!: string;
+
+  @Field(() => ID)
+  sessionId!: string;
 }

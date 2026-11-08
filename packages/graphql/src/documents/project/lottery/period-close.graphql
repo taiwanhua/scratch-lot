@@ -19,6 +19,12 @@ fragment LotteryPeriodSnapshotFields on LotteryPeriodSnapshot {
       shiftId
       label
     }
+    renumber {
+      mode
+      required
+      done
+      lastRenumberAt
+    }
   }
 }
 
@@ -55,6 +61,11 @@ query LotteryPeriodCloseCheck($month: String!) {
     }
     snapshot {
       ...LotteryPeriodSnapshotFields
+    }
+    renumberStores {
+      orgId
+      orgName
+      status
     }
     canClose
   }

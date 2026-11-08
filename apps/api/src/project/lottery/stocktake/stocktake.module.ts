@@ -2,13 +2,25 @@ import { Module } from "@nestjs/common";
 
 import { DatabaseModule } from "../../../database/database.module";
 import { FormsCoreModule } from "../../../forms/forms-core.module";
+import { NotificationsModule } from "../../../notifications/notifications.module";
 import { RealtimeModule } from "../../../realtime/realtime.module";
+import { ScheduledJobsModule } from "../../../scheduled-jobs/scheduled-jobs.module";
 import { WorkflowEngineModule } from "../../../workflows/workflow-engine/workflow-engine.module";
 import { LotteryFieldOptionsModule } from "../field-options/lottery-field-options.module";
+import { LotterySettingsModule } from "../settings/lottery-settings.module";
 import { LotteryStoreModule } from "../store/store.module";
 import { LotteryTicketsModule } from "../tickets/tickets.module";
+import { RenumberRemindersService } from "./renumber-reminders.service";
+import { RenumberStocktake } from "./renumber-stocktake";
+import { RescanExpiryService } from "./rescan-expiry.service";
+import { RescanReminders } from "./rescan-reminders";
+import { LotteryRescanResolver } from "./rescan.resolver";
+import { RescanService } from "./rescan.service";
+import { StocktakeCountFacts } from "./stocktake-count-facts";
+import { StocktakeCountService } from "./stocktake-count.service";
 import { StocktakeFacts } from "./stocktake-facts";
 import { StocktakeQueryService } from "./stocktake-query.service";
+import { StocktakeSessions } from "./stocktake-sessions";
 import { LotteryStocktakeResolver } from "./stocktake.resolver";
 import { StocktakeService } from "./stocktake.service";
 import { STOCKTAKE_SERVICE } from "./stocktake.token";
@@ -18,25 +30,41 @@ import { STOCKTAKE_SERVICE } from "./stocktake.token";
  * 盤點頁、差異核對、[補登售出](立即生效,經 `TicketLedgerService`)、盤點紀錄與檢視頁;盤點確認申請的掛接點
  * (`stocktake-lifecycle.ts`)以 `STOCKTAKE_SERVICE` 取服務。交班 / 日結的結帳確認申請(之後的功能)
  * 匯入本模組,以同一個 token 取 `submitStocktakeDraft` 等入口。
+ * 全店重刷(`rescan.service.ts`)也在這裡:重刷單是 `purpose: rescan` 的盤點單,提醒依盤點的 [標記異常] 與待查·未對號。
  * 店、收銀點、班與抽屜的讀取沿用店面模組匯出的 `StoreSalesSupport` / `StoreShiftViews` / `StoreAccess` / `StoreClock`。
  */
 @Module({
   imports: [
     DatabaseModule,
     RealtimeModule,
+    NotificationsModule,
+    ScheduledJobsModule,
     FormsCoreModule,
     WorkflowEngineModule,
     LotteryFieldOptionsModule,
     LotteryTicketsModule,
     LotteryStoreModule,
+    LotterySettingsModule,
   ],
   providers: [
     StocktakeFacts,
+    StocktakeCountFacts,
+    StocktakeCountService,
+    StocktakeSessions,
     StocktakeService,
+    // 補點編號(張數店規格 9.3):送出時的自動對號、核准時的對號 / 清記號
+    RenumberStocktake,
+    // 補點編號到期提醒(張數店規格第 10 節;每天 09:00,同日結逾期)
+    RenumberRemindersService,
     StocktakeQueryService,
     LotteryStocktakeResolver,
+    // 全店重刷(張數店規格 8.3–8.5a):重刷頁、提醒、1 小時沒動作自動取消
+    RescanService,
+    RescanReminders,
+    RescanExpiryService,
+    LotteryRescanResolver,
     { provide: STOCKTAKE_SERVICE, useExisting: StocktakeService },
   ],
-  exports: [STOCKTAKE_SERVICE, StocktakeService],
+  exports: [STOCKTAKE_SERVICE, StocktakeService, StocktakeSessions],
 })
 export class LotteryStocktakeModule {}

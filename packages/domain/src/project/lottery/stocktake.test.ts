@@ -8,7 +8,10 @@ import {
   parseStocktakeDraft,
   serializeStocktakeDraft,
   stocktakeActionProblemsOf,
+  stocktakeCountLinesOf,
+  stocktakeCountModeOf,
   stocktakeDiffsOf,
+  stocktakeNavOf,
   stocktakeTicketFactsOf,
 } from "./stocktake";
 
@@ -332,5 +335,82 @@ describe("拆過、在庫存的張那一區(使用者 10/27 要求)", () => {
         STOCKTAKE_STOCK_LINE,
       ).stale,
     ).toEqual(["001"]);
+  });
+});
+
+describe("[上一本] [下一本](張數店規格 13.3、16.7 S8)", () => {
+  const keys = ["a", "b", "c", "d"];
+
+  it("第一本 [上一本] 停用;之後是上一本", () => {
+    expect(stocktakeNavOf(keys, 0, new Set()).prev).toBeNull();
+    expect(stocktakeNavOf(keys, 2, new Set()).prev).toBe(1);
+  });
+
+  it("[下一本] 跳到之後下一本還沒盤的;之後都盤了從頭找;全部盤完 → 差異核對", () => {
+    expect(stocktakeNavOf(keys, 0, new Set(["b"])).next).toEqual({
+      kind: "item",
+      index: 2,
+    });
+    expect(stocktakeNavOf(keys, 2, new Set(["d"])).next).toEqual({
+      kind: "item",
+      index: 0,
+    });
+    // 最後一本:別的都盤完 → [盤完,前往差異核對]
+    expect(stocktakeNavOf(keys, 3, new Set(["a", "b", "c"])).next).toEqual({
+      kind: "review",
+    });
+    expect(stocktakeNavOf(["only"], 0, new Set()).next).toEqual({
+      kind: "review",
+    });
+  });
+});
+
+describe("盤點內容的張數盤點欄位(張數店規格 5.4)", () => {
+  const base = {
+    version: 1,
+    orgId: "store",
+    scopeCashPointId: null,
+    startedAt: "2026-11-05T10:05:00.000Z",
+    lines: [],
+    unopened: [],
+    lostReview: [],
+  };
+  const countLine = {
+    gameId: "g",
+    cashPointId: "A",
+    countedAt: "2026-11-05T10:06:00.000Z",
+    presentCount: 11,
+    recounts: [12],
+    saleCount: 1,
+    saleRefIds: ["r1", "r1"],
+    investigateCount: 0,
+    flagged: false,
+  };
+
+  it("舊的盤點內容沒有這些欄位 → 編號盤點、沒有組", () => {
+    const parsed = parseStocktakeDraft(base);
+    expect(parsed.ok && stocktakeCountModeOf(parsed.draft)).toBe("numbered");
+    expect(parsed.ok && stocktakeCountLinesOf(parsed.draft)).toEqual([]);
+  });
+
+  it("張數盤點的組照存(算售出 id 去重);形狀不對 → 讀不懂", () => {
+    const parsed = parseStocktakeDraft(
+      serializeStocktakeDraft({
+        ...base,
+        version: 1,
+        countMode: "count",
+        countLines: [countLine],
+      }),
+    );
+    expect(parsed.ok && parsed.draft.countLines).toEqual([
+      { ...countLine, saleRefIds: ["r1"] },
+    ]);
+    expect(
+      parseStocktakeDraft({
+        ...base,
+        countLines: [{ ...countLine, presentCount: -1 }],
+      }).ok,
+    ).toBe(false);
+    expect(parseStocktakeDraft({ ...base, countMode: "x" }).ok).toBe(false);
   });
 });

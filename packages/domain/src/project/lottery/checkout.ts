@@ -75,7 +75,7 @@ export const CHECKOUT_DENOMINATIONS: readonly number[] = [
 /**
  * 應有現金的各項(規格 6.9 公式的順序):期初 + 銷售 − 兌獎 − 投庫 + 出庫 − 調貨支出 + 調貨收入 − 退貨退款 ± 現金更正。
  * 金額一律帶正負號(流入抽屜 +、流出 −),只算已完成的單據;事後更正不算。
- * 日結的小金庫應有(規格 6.10 第 ③ 步)用同一組:期初(上次日結清點)+ 投庫 − 出庫 ± 調貨 ± 現金更正 − 存銀行
+ * 日結的小金庫應有(規格 6.10 第 ③ 步)用同一組:期初(上次日結清點)+ 投庫 − 出庫 ± 調貨 ± 現金更正 − 存銀行 + 銀行提領
  * (金額以流入小金庫 +、流出 −;`daily-close.ts` 的 `VAULT_CASH_ITEM_KINDS`)。
  */
 export const EXPECTED_CASH_ITEM_KINDS = [
@@ -88,9 +88,10 @@ export const EXPECTED_CASH_ITEM_KINDS = [
   "transfer_in",
   "refunds",
   "corrections",
-  // 小金庫(日結第 ③ 步):調貨(現金,支出 / 收入合計)、存銀行
+  // 小金庫(日結第 ③ 步):調貨(現金,支出 / 收入合計)、存銀行、銀行提領
   "transfers",
   "bank_deposits",
+  "bank_withdrawals",
 ] as const;
 export type ExpectedCashItemKind = (typeof EXPECTED_CASH_ITEM_KINDS)[number];
 
@@ -106,6 +107,10 @@ export const CHECKOUT_REASONS = {
   pendingExists: "CHECKOUT_PENDING_EXISTS",
   /** 沿用的盤點不存在、不是這個收銀點(或全店)的、或超過 30 分鐘 */
   stocktakeNotReusable: "CHECKOUT_STOCKTAKE_NOT_REUSABLE",
+  /** 張數店(含轉換中)交班 / 日結不能跳過盤點(張數店規格 8.1、13.2) */
+  skipNotAllowed: "CHECKOUT_SKIP_NOT_ALLOWED",
+  /** 全店盤點中不能交班(張數店規格 8.5a;`extensions.session`) */
+  stocktakeInProgress: "CHECKOUT_STOCKTAKE_IN_PROGRESS",
   /** 跳過盤點沒有原因 / 差額不為 0 沒有原因 */
   reasonRequired: "CHECKOUT_REASON_REQUIRED",
   /** 沒有接班人時留給下一班必須是 0(留給下一班 > 0 要有接班人) */

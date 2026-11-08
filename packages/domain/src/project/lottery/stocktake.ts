@@ -56,11 +56,15 @@ export type StocktakeMethod = (typeof STOCKTAKE_METHODS)[number];
 export const STOCKTAKE_DIFF_KINDS = ["missing", "extra"] as const;
 export type StocktakeDiffKind = (typeof STOCKTAKE_DIFF_KINDS)[number];
 
-/** 差異的處理:補登售出(立即生效)/ 待查 / 標記異常(只做記號)。 */
+/**
+ * 差異的處理:補登售出(立即生效)/ 待查 / 標記異常(只做記號)/ 標跳號(只有補點編號:已拆還有待標註的本,
+ * 不在的張一併標跳號,張數店規格 9.3 第 3 點;核准時才寫)。
+ */
 export const STOCKTAKE_DIFF_ACTIONS = [
   "sale_backfill",
   "investigate",
   "flag",
+  "skip",
 ] as const;
 export type StocktakeDiffAction = (typeof STOCKTAKE_DIFF_ACTIONS)[number];
 
@@ -68,6 +72,7 @@ export const STOCKTAKE_DIFF_ACTION = {
   saleBackfill: "sale_backfill",
   investigate: "investigate",
   flag: "flag",
+  skip: "skip",
 } as const satisfies Record<string, StocktakeDiffAction>;
 
 /** 每種差異可用的處理(規格 6.8):未售不在 → [補登售出] / [待查];已售還在 → [標記異常]。 */
@@ -98,14 +103,23 @@ export const STOCKTAKE_STOCK_ACTIONS_OF: Record<
   extra: [],
 };
 
-/** 一行的差異可用的處理(檯面 / 庫存)。 */
+/** 一行的差異可用的處理時的條件:這本還有待標註、而且是補點編號(9.3 第 3 點)→ 不在的張可以 [標跳號]。 */
+export interface StocktakeActionOptions {
+  pendingSkip?: boolean;
+}
+
+/** 一行的差異可用的處理(檯面 / 庫存;補點編號且這本還有待標註時,不在的張多一個 [標跳號])。 */
 export function stocktakeActionsOf(
   kind: StocktakeDiffKind,
   cashPointId: string | null,
+  options: StocktakeActionOptions = {},
 ): readonly StocktakeDiffAction[] {
-  return isStocktakeStockLine(cashPointId)
+  const base = isStocktakeStockLine(cashPointId)
     ? STOCKTAKE_STOCK_ACTIONS_OF[kind]
     : STOCKTAKE_ACTIONS_OF[kind];
+  return kind === "missing" && options.pendingSkip === true
+    ? [...base, STOCKTAKE_DIFF_ACTION.skip]
+    : base;
 }
 
 /** 待查清單的處理:找到了(要刷條碼)/ 確認遺失(`store.confirm-lost`,原因必填)/ 繼續待查。 */
@@ -134,7 +148,66 @@ export const STOCKTAKE_REASONS = {
   alreadyProcessed: "STOCKTAKE_ALREADY_PROCESSED",
   /** 補登售出:那個收銀點從來沒有開過班,沒有班可以記 */
   noShift: "STOCKTAKE_NO_SHIFT",
+  /** 交班盤點(張數店)沒盤完不能送出(張數店規格 8.1;`extensions.groups`) */
+  incomplete: "STOCKTAKE_INCOMPLETE",
+  /** [算售出]:這一組可以挑的未售張不夠(`extensions.available`) */
+  countSaleUnavailable: "STOCKTAKE_COUNT_SALE_UNAVAILABLE",
+  /** 盤點中登記:這個位置正在由別人盤點(`extensions.session`;張數店規格 8.5a) */
+  sessionBusy: "STOCKTAKE_SESSION_BUSY",
+  /** 盤點中登記:自己已有一個進行中的盤點(先 [繼續] 或 [放棄];`extensions.session`) */
+  sessionOwn: "STOCKTAKE_SESSION_OWN",
+  /** 盤點中登記已解除(送出、放棄或店長結束)或已失效被別人接手 */
+  sessionEnded: "STOCKTAKE_SESSION_ENDED",
+  /** 這一組的位置正在全店重刷這個遊戲,刷完再數(張數店規格 8.5a B5;`extensions.groups`) */
+  rescanning: "STOCKTAKE_RESCANNING",
+  /** 補點編號:有遊戲正在全店重刷,完成或取消後再補點(張數店規格 8.5a B4) */
+  renumberBlocked: "STOCKTAKE_RENUMBER_BLOCKED",
+  /** 補點編號:這家店不是張數店或轉換中、或不是全店盤點(9.3) */
+  renumberNotAllowed: "STOCKTAKE_RENUMBER_NOT_ALLOWED",
+  /** 補點編號:每本都要盤,不能沒盤完送出(9.3 第 1 點、16.8 RN3;`extensions.books`) */
+  renumberIncomplete: "STOCKTAKE_RENUMBER_INCOMPLETE",
 } as const;
+
+/** 盤點內容的盤點制度(沒給 = 編號盤點)。 */
+export const stocktakeCountModeOf = (
+  draft: Pick<StocktakeDraft, "countMode">,
+): StocktakeCountMode => draft.countMode ?? "numbered";
+
+/** 盤點內容的張數盤點組(沒給 = 空)。 */
+export const stocktakeCountLinesOf = (
+  draft: Pick<StocktakeDraft, "countLines">,
+): StocktakeDraftCountLine[] => draft.countLines ?? [];
+
+// ---- [上一本] [下一本](張數店規格 13.3) ----
+
+/** 盤點頁 [下一本] / [下一組] 要去哪裡:下一個還沒盤的;都盤完了 → 差異核對。 */
+export type StocktakeNextStep =
+  { kind: "item"; index: number } | { kind: "review" };
+
+/**
+ * 盤點頁的 [上一本] [下一本](張數店規格 13.3;本清單、張數盤點的組、全店重刷的位置清單同一個規則):
+ *
+ * - [上一本]:第一本時停用(`prev = null`)、不隱藏
+ * - [下一本]:把這一本算成已盤後,跳到之後下一本還沒盤的;之後都盤了 → 從頭找還沒盤的;
+ *   全部盤完 → `{ kind: "review" }`(按鈕改成 [盤完,前往差異核對])
+ *
+ * `counted` = 已盤的 key(不用含目前這本)。
+ */
+export function stocktakeNavOf(
+  keys: readonly string[],
+  current: number,
+  counted: ReadonlySet<string>,
+): { prev: number | null; next: StocktakeNextStep } {
+  const isOpen = (index: number) =>
+    index !== current && !counted.has(keys[index] ?? "");
+  const after = keys.findIndex((_, index) => index > current && isOpen(index));
+  const before = keys.findIndex((_, index) => index < current && isOpen(index));
+  const target = after === -1 ? before : after;
+  return {
+    prev: current > 0 ? current - 1 : null,
+    next: target === -1 ? { kind: "review" } : { kind: "item", index: target },
+  };
+}
 
 // ---- 盤點內容(畫面狀態;送出時才寫進盤點單) ----
 
@@ -169,6 +242,40 @@ export interface StocktakeDraftLostReview {
   reasonNote?: string | null;
 }
 
+/**
+ * 盤點單的盤點制度(張數店規格 5.4 `countMode`):編號盤點(檯面逐張)/ 張數盤點(檯面數張數)。
+ * 送出時定;轉換中的店仍是張數盤點(9.2)。不叫 `mode`,避開結帳單的 `stocktakeMode`。
+ */
+export const STOCKTAKE_COUNT_MODES = ["numbered", "count"] as const;
+export type StocktakeCountMode = (typeof STOCKTAKE_COUNT_MODES)[number];
+
+/** 盤點的用途(張數店規格 5.4 `purpose`):一般 / 補點編號(T8)/ 全店重刷(T6);交班 / 日結 / 臨時是入口(`type`)。 */
+export const STOCKTAKE_PURPOSES = ["normal", "renumber", "rescan"] as const;
+export type StocktakePurpose = (typeof STOCKTAKE_PURPOSES)[number];
+
+/**
+ * 張數盤點的一組「遊戲 × 收銀點」(張數店規格 5.4 `countLines[]`、8.1、8.2、13.1):開始數這一組的時間、
+ * 實際剩幾張(最後一次輸入)、之前的每次輸入(`recounts`,[重數] 前的數字)、差異的處理 ——
+ * 少 N 張:[算售出](立即生效,`saleRefIds` = 這次盤點寫的算售出 id)、[待查](核准時才挑張);多出:[標記異常]。
+ */
+export interface StocktakeDraftCountLine {
+  gameId: string;
+  cashPointId: string;
+  /** 開始數這一組的時間(ISO);和那一刻的系統數字比對(8.1)。 */
+  countedAt: string;
+  presentCount: number;
+  /** 之前的每次輸入(依時間;按 [重數] 時把上一次的數字放進來)。 */
+  recounts: number[];
+  /** [算售出] 的張數(這次盤點真的寫了幾張)。 */
+  saleCount: number;
+  /** [算售出] 寫的售出事件的 `refId`(送出時核對「是自己算售出的」)。 */
+  saleRefIds: string[];
+  /** [待查] 的張數(核准時照挑張順序挑張記待查·未對號)。 */
+  investigateCount: number;
+  /** 多出時 [標記異常](只做記號,張的狀態不動)。 */
+  flagged: boolean;
+}
+
 /** 盤點內容(盤點確認申請的 `draft` 欄位 / 交班、日結的結帳確認申請帶來的)。 */
 export interface StocktakeDraft {
   version: 1;
@@ -179,6 +286,12 @@ export interface StocktakeDraft {
   lines: StocktakeDraftLine[];
   unopened: StocktakeDraftUnopened[];
   lostReview: StocktakeDraftLostReview[];
+  /** 盤點制度;沒給 = 編號盤點(張數店以前的盤點內容;讀取用 `stocktakeCountModeOf`)。 */
+  countMode?: StocktakeCountMode;
+  /** 用途;沒給 = 一般。 */
+  purpose?: StocktakePurpose;
+  /** 張數盤點的「遊戲 × 收銀點」;編號盤點 = 空。 */
+  countLines?: StocktakeDraftCountLine[];
 }
 
 export type ParsedStocktakeDraft =
@@ -267,6 +380,39 @@ function parseLine(value: unknown): StocktakeDraftLine | null {
   };
 }
 
+const isCount = (value: unknown): value is number =>
+  typeof value === "number" && Number.isInteger(value) && value >= 0;
+
+function parseCountLine(value: unknown): StocktakeDraftCountLine | null {
+  if (
+    !isRecord(value) ||
+    !isText(value.gameId) ||
+    !isText(value.cashPointId) ||
+    !isIso(value.countedAt) ||
+    !isCount(value.presentCount) ||
+    !isCount(value.saleCount) ||
+    !isCount(value.investigateCount) ||
+    typeof value.flagged !== "boolean" ||
+    !Array.isArray(value.recounts) ||
+    !value.recounts.every(isCount) ||
+    !Array.isArray(value.saleRefIds) ||
+    !value.saleRefIds.every(isText)
+  ) {
+    return null;
+  }
+  return {
+    gameId: value.gameId,
+    cashPointId: value.cashPointId,
+    countedAt: value.countedAt,
+    presentCount: value.presentCount,
+    recounts: [...value.recounts],
+    saleCount: value.saleCount,
+    saleRefIds: [...new Set(value.saleRefIds)],
+    investigateCount: value.investigateCount,
+    flagged: value.flagged,
+  };
+}
+
 function parseUnopened(value: unknown): StocktakeDraftUnopened | null {
   return isRecord(value) &&
     isText(value.bookId) &&
@@ -313,8 +459,25 @@ export function parseStocktakeDraft(raw: unknown): ParsedStocktakeDraft {
   const lines = parseList(value.lines, parseLine);
   const unopened = parseList(value.unopened, parseUnopened);
   const lostReview = parseList(value.lostReview, parseLostReview);
-  if (lines === null || unopened === null || lostReview === null) {
+  const countLines =
+    value.countLines === undefined
+      ? []
+      : parseList(value.countLines, parseCountLine);
+  const countMode = value.countMode ?? "numbered";
+  const purpose = value.purpose ?? "normal";
+  if (
+    lines === null ||
+    unopened === null ||
+    lostReview === null ||
+    countLines === null
+  ) {
     return { ok: false, problem: "lines" };
+  }
+  if (
+    !isOneOf(STOCKTAKE_COUNT_MODES, countMode) ||
+    !isOneOf(STOCKTAKE_PURPOSES, purpose)
+  ) {
+    return { ok: false, problem: "header" };
   }
   return {
     ok: true,
@@ -326,6 +489,10 @@ export function parseStocktakeDraft(raw: unknown): ParsedStocktakeDraft {
       lines,
       unopened,
       lostReview,
+      // 沒給的欄位照沒給(序列化來回一致);讀的時候用 `stocktakeCountModeOf` 等補預設
+      ...(value.countMode === undefined ? {} : { countMode }),
+      ...(value.purpose === undefined ? {} : { purpose }),
+      ...(value.countLines === undefined ? {} : { countLines }),
     },
   };
 }
@@ -468,8 +635,9 @@ export function isStocktakeActionValid(
   diff: Pick<StocktakeDiff, "kind" | "backfilled">,
   action: StocktakeDiffAction,
   cashPointId: string | null = "",
+  options: StocktakeActionOptions = {},
 ): boolean {
-  if (!stocktakeActionsOf(diff.kind, cashPointId).includes(action)) {
+  if (!stocktakeActionsOf(diff.kind, cashPointId, options).includes(action)) {
     return false;
   }
   return (action === "sale_backfill") === diff.backfilled;
@@ -478,20 +646,30 @@ export function isStocktakeActionValid(
 /**
  * 送出前檢查差異的處理:畫面上的處理對不到目前的差異(已被其他盤點或操作處理掉、或處理方式不合、
  * 按了補登售出卻沒有補登成功)→ `stale`(「這幾張已被處理,請重新核對」);目前的差異沒有處理 → `unhandled`。
+ * 補點編號的 [標跳號] 最多標這本的待標註張數(`skipLimit`;超過的那幾張 → `stale`)。
  */
 export function stocktakeActionProblemsOf(
   diffs: readonly StocktakeDiff[],
   actions: readonly { ticketNo: string; action: StocktakeDiffAction }[],
   cashPointId: string | null = "",
+  skipLimit = 0,
 ): { stale: string[]; unhandled: string[] } {
   const byNo = new Map(diffs.map((diff) => [diff.ticketNo, diff]));
   const handled = new Set<string>();
   const stale: string[] = [];
+  const options = { pendingSkip: skipLimit > 0 };
+  let skips = 0;
   for (const item of actions) {
     const diff = byNo.get(item.ticketNo);
+    if (item.action === STOCKTAKE_DIFF_ACTION.skip) {
+      skips += 1;
+    }
+    const overSkip =
+      item.action === STOCKTAKE_DIFF_ACTION.skip && skips > skipLimit;
     if (
       diff === undefined ||
-      !isStocktakeActionValid(diff, item.action, cashPointId)
+      overSkip ||
+      !isStocktakeActionValid(diff, item.action, cashPointId, options)
     ) {
       stale.push(item.ticketNo);
     } else {

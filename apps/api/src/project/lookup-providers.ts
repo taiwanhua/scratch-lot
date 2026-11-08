@@ -2,6 +2,7 @@ import { LOTTERY_PORTABLE_LOOKUP_PROVIDERS } from "@repo/domain/project/lottery"
 
 import type { LookupProviderRegistration } from "../forms/lookup-provider-registration";
 import { LotteryBankAccountsRepository } from "./database/lottery-accounts/lottery-accounts.repositories";
+import { LotteryCashPointsRepository } from "./database/lottery-cash-points/lottery-cash-points.repository";
 import {
   LotteryDealerContactsRepository,
   LotteryDealersRepository,
@@ -192,5 +193,23 @@ export const PROJECT_LOOKUP_PROVIDERS: readonly LookupProviderRegistration[] = [
       },
     },
     repositoryToken: LotteryShiftsRepository,
+  },
+  {
+    // 收銀點(專案規格 5.5;`docs/modules/project/store.md`「撤銷售出申請」):撤銷售出申請明細列的收銀點
+    // (依遊戲 + 張數 = 挑哪一台的已售·未對號;依張號 = 刷退票的那一台,張數店規格 5.7、7.3)。
+    // 「本店的收銀點」是送出前檢查(`orgId` 連動篩選不可攜);讀取要 `store.view`,範圍照可見範圍
+    declaration: {
+      key: "lottery_cash_point",
+      name: "收銀點",
+      permission: "store.view",
+      fields: {
+        name: { type: "text", label: "收銀點" },
+      },
+      filterFields: ["orgId", "enabled"],
+      labelField: "name",
+      keywordFields: ["name"],
+      portable: LOTTERY_PORTABLE_LOOKUP_PROVIDERS.lottery_cash_point,
+    },
+    repositoryToken: LotteryCashPointsRepository,
   },
 ];

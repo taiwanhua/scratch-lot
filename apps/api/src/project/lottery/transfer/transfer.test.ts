@@ -57,6 +57,7 @@ import {
 } from "../../../workflows/test-support/workflow-fixtures";
 import { LOTTERY_CASH_MOVEMENTS_COLLECTION } from "../../database/lottery-accounts/lottery-cash-movement.schema";
 import { LOTTERY_SETTLEMENT_MARKS_COLLECTION } from "../../database/lottery-accounts/lottery-settlement-mark.schema";
+import { LOTTERY_STORE_COUNT_MODES_COLLECTION } from "../../database/lottery-settings/lottery-store-count-mode.schema";
 import { InventoryActionsService } from "../inventory/inventory-actions.service";
 import {
   insertBankAccount,
@@ -68,6 +69,7 @@ import { ReportStock } from "../reports/report-stock";
 import { inTransitBooksOf } from "../requisition/in-transit";
 import { LotteryBooksService } from "../tickets/books.service";
 import { TicketLedgerService } from "../tickets/ticket-ledger.service";
+import type { TicketEventInput } from "../tickets/ticket-ledger.types";
 import {
   TRANSFER_MODULE_KEYS,
   TRANSFER_PERMISSION_KEYS,
@@ -220,6 +222,40 @@ const BOOK_TICKETS = /* GraphQL */ `
     }
   }
 `;
+
+const CELLS = /* GraphQL */ `
+  query TestTransferCells($from: ID!, $book: ID!) {
+    lotteryTransferBookTickets(fromOrgId: $from, bookId: $book) {
+      ticketNo
+      state
+      unmatched
+      matchable
+      soldCashPointName
+      soldAt
+      cashPointName
+      lockedSerialNo
+    }
+  }
+`;
+const GRID = /* GraphQL */ `
+  query TestTransferGrid($from: ID!, $to: ID) {
+    lotteryTransferOptions(fromOrgId: $from, toOrgId: $to) {
+      gridPick
+      countMode
+    }
+  }
+`;
+
+interface Cell {
+  ticketNo: string;
+  state: string;
+  unmatched: boolean;
+  matchable: boolean;
+  soldCashPointName: string | null;
+  soldAt: string | null;
+  cashPointName: string | null;
+  lockedSerialNo: string | null;
+}
 
 const PROGRESS = /* GraphQL */ `
   query TestTransferProgress($ids: [ID!]!) {
@@ -409,6 +445,84 @@ describe("調貨單(規格 8.4、第 9 章)", () => {
       assignTo: [userId],
     });
     return { userId, account, token: await login(api, account, PASSWORD) };
+  }
+
+  /** 出貨店的盤點制度(張數店規格 7.4 的情境用)。 */
+  async function setMode(mode: "numbered" | "count"): Promise<void> {
+    await db()
+      .collection(LOTTERY_STORE_COUNT_MODES_COLLECTION)
+      .updateOne(
+        { orgId: branchA },
+        {
+          $set: { mode },
+          $setOnInsert: {
+            orgId: branchA,
+            tenantId: tenant,
+            moduleKey: "store",
+            since: null,
+            lastRenumberAt: null,
+            lastRenumberStocktakeId: null,
+            history: [],
+            movePauses: [],
+            stocktakeSessions: [],
+            version: 0,
+          },
+        },
+        { upsert: true },
+      );
+  }
+
+  async function cellsOf(bookId: Types.ObjectId): Promise<Cell[]> {
+    const data = await ok<{ lotteryTransferBookTickets: Cell[] }>(
+      api,
+      managerA.token,
+      CELLS,
+      { from: String(branchA), book: String(bookId) },
+    );
+    return data.lotteryTransferBookTickets;
+  }
+
+  /** 經帳本改一張(模擬售出、待查、報廢之後的狀態)。 */
+  async function applyTo(
+    bookId: Types.ObjectId,
+    ticketNo: string,
+    event: Omit<TicketEventInput, "ticketId" | "expectedVersion">,
+  ): Promise<void> {
+    const rows = await ticketsOf(bookId);
+    const ticket = rows.find((row) => row.ticketNo === ticketNo);
+    if (ticket === undefined) {
+      throw new Error(`沒有 #${ticketNo}`);
+    }
+    await transactions().withTransaction((session) =>
+      api.app
+        .get(TicketLedgerService)
+        .applyTicketEvents(session, { operator: storeOperator(branchA) }, [
+          { ticketId: ticket._id, expectedVersion: ticket.version, ...event },
+        ]),
+    );
+  }
+
+  async function rowOf(
+    bookId: Types.ObjectId,
+    ticketNo: string,
+  ): Promise<TicketRow & { unmatched: boolean }> {
+    const row = await db()
+      .collection<TicketRow & { unmatched: boolean }>("lottery_tickets")
+      .findOne({ bookId, ticketNo });
+    if (row === null) {
+      throw new Error(`沒有 #${ticketNo}`);
+    }
+    return row;
+  }
+
+  async function gridOf(): Promise<{ gridPick: boolean; countMode: string }> {
+    const data = await ok<{
+      lotteryTransferOptions: { gridPick: boolean; countMode: string };
+    }>(api, managerA.token, GRID, {
+      from: String(branchA),
+      to: String(branchB),
+    });
+    return data.lotteryTransferOptions;
   }
 
   /**
@@ -1081,7 +1195,8 @@ describe("調貨單(規格 8.4、第 9 章)", () => {
       });
       expect(
         options.books.find((book) => book.bookId === String(opened.bookId)),
-      ).toMatchObject({ isWhole: false, availableCount: 100 });
+        // 拆上檯面的 10 張不算(部分張只能從庫存調,張數店規格 7.4)
+      ).toMatchObject({ isWhole: false, availableCount: 90 });
       expect(options.requisitions).toContainEqual({
         serialNo: "R-7001",
         books: 2,
@@ -1131,11 +1246,13 @@ describe("調貨單(規格 8.4、第 9 章)", () => {
         book: String(opened.bookId),
       });
       expect(cells.lotteryTransferBookTickets).toHaveLength(100);
+      // 檯面上的 10 張 = 先收回(張數店規格 7.4,兩種店一樣),其餘庫存的可以調
       expect(
-        cells.lotteryTransferBookTickets.every(
-          (cell) => cell.state === "available",
-        ),
-      ).toBe(true);
+        cells.lotteryTransferBookTickets.map((cell) => cell.state),
+      ).toEqual([
+        ...Array.from({ length: 10 }, () => "counter"),
+        ...Array.from({ length: 90 }, () => "available"),
+      ]);
     });
   });
 
@@ -2871,6 +2988,189 @@ describe("調貨單(規格 8.4、第 9 章)", () => {
       await record(managerA, id, "shipper", "in", 2000);
       expect(await decideBlocked(managerB, id, "APPROVE")).toBeNull();
       expect(await current(id).then((value) => value.status)).toBe("completed");
+    });
+  });
+
+  describe("收回到庫存才能調、張數店的調貨(張數店規格 7.4;16.5 T1–T3、T5、T6)", () => {
+    it("T5:兩種店拆過的本的部分張只能從庫存調;檯面上的張擋下(送出時後端一定重新檢查)", async () => {
+      const opened = await newBook(branchA);
+      await openBook(branchA, opened.bookId);
+      expect(await blockedOf(hq, [partial(opened.bookId, 9, 12)])).toBe(
+        "TRANSFER_TICKETS_UNAVAILABLE",
+      );
+      expect(await blockedOf(hq, [partial(opened.bookId, 11, 12)])).toBeNull();
+    });
+
+    it("T2:格子每一張帶不能調的原因(已售的時間、在檯面上、調貨中的單號、待查、報廢)", async () => {
+      const opened = await newBook(branchA);
+      await openBook(branchA, opened.bookId);
+      const soldAt = new Date("2026-10-16T02:12:00.000Z");
+      await applyTo(opened.bookId, "001", {
+        type: "sale",
+        at: soldAt,
+        amount: 20,
+        patch: { status: "sold", sold: { at: soldAt, source: "scan" } },
+      });
+      await applyTo(opened.bookId, "050", {
+        type: "investigate",
+        patch: { status: "investigating", responsibleOrgId: branchA },
+      });
+      await applyTo(opened.bookId, "051", {
+        type: "scrap",
+        patch: { status: "scrapped" },
+      });
+      const locking = await submit(hq, [partial(opened.bookId, 60, 61)]);
+      const cells = await cellsOf(opened.bookId);
+      const cell = (no: string) => cells.find((item) => item.ticketNo === no);
+      expect(cell("001")).toMatchObject({
+        state: "sold",
+        soldAt: soldAt.toISOString(),
+      });
+      expect(cell("002")).toMatchObject({ state: "counter" });
+      expect(cell("050")).toMatchObject({ state: "investigating" });
+      expect(cell("051")).toMatchObject({ state: "scrapped" });
+      expect(cell("060")?.state).toBe("locked");
+      const lockingRow = await db()
+        .collection<{ serialNo: string | null }>("form_submissions")
+        .findOne({ _id: new Types.ObjectId(locking) });
+      expect(cell("060")?.lockedSerialNo).toBe(lockingRow?.serialNo);
+      expect(cell("070")).toMatchObject({
+        state: "available",
+        unmatched: false,
+        matchable: false,
+      });
+    });
+
+    it("T1:張數店的出貨店不能點格子(gridPick = false);編號店照「調貨單可點格子選張」(預設開)", async () => {
+      expect(await gridOf()).toEqual({
+        gridPick: true,
+        countMode: "numbered",
+      });
+      await setMode("count");
+      try {
+        expect(await gridOf()).toEqual({
+          gridPick: false,
+          countMode: "count",
+        });
+      } finally {
+        await setMode("numbered");
+      }
+    });
+
+    it("張數店:刷到已售·未對號、庫存有配對張 → 可以調;送出時同一個交易先對號再鎖定;鎖定中的張不被選作配對(T6)", async () => {
+      await setMode("count");
+      try {
+        const opened = await newBook(branchA);
+        await openBook(branchA, opened.bookId);
+        const soldAt = new Date("2026-10-16T03:00:00.000Z");
+        await applyTo(opened.bookId, "005", {
+          type: "sale",
+          at: soldAt,
+          amount: 20,
+          patch: {
+            status: "sold",
+            unmatched: true,
+            sold: { at: soldAt, source: "count" },
+          },
+        });
+        // #011 先被另一張調貨單鎖住 → 不能當配對張,配對挑 #012
+        await submit(hq, [partial(opened.bookId, 11, 11)]);
+        const cells = await cellsOf(opened.bookId);
+        const cell = cells.find((item) => item.ticketNo === "005");
+        expect(cell).toMatchObject({
+          state: "sold",
+          unmatched: true,
+          matchable: true,
+        });
+        await submit(hq, [partial(opened.bookId, 5, 5)]);
+        const scanned = await rowOf(opened.bookId, "005");
+        expect(scanned).toMatchObject({
+          status: "unsold",
+          unmatched: false,
+          location: { kind: "stock" },
+        });
+        expect(scanned.lockedBy?.refType).toBe("transfer");
+        // 配對張(庫存、照挑張順序,可跨本)接手已售·未對號;被鎖住的 #011 不會被挑
+        const matches = await db()
+          .collection<{ ticketId: Types.ObjectId; refId: Types.ObjectId }>(
+            "lottery_ticket_events",
+          )
+          .find({ type: "match", refId: scanned._id })
+          .toArray();
+        expect(matches).toHaveLength(1);
+        const partnerId = matches[0]?.ticketId;
+        const partner = await db()
+          .collection<TicketRow & { unmatched: boolean }>("lottery_tickets")
+          .findOne({ _id: partnerId });
+        expect(partner).toMatchObject({
+          status: "sold",
+          unmatched: true,
+          lockedBy: null,
+          location: { kind: "counter" },
+        });
+        const locked = await rowOf(opened.bookId, "011");
+        expect(partnerId?.equals(locked._id)).toBe(false);
+        expect(locked.status).toBe("unsold");
+      } finally {
+        await setMode("numbered");
+      }
+    });
+
+    it("張數店:已售·未對號但庫存沒有配對張 → 送出被擋、什麼都不寫", async () => {
+      await setMode("count");
+      try {
+        // 另一個遊戲(配對張可以跨本,要確定整家店這個遊戲的庫存沒有未售的張)
+        const lonelyGame = await insertGame(db(), tenant, {
+          gameCode: "5299",
+          name: "孤單遊戲",
+          unitPrice: 20,
+          ticketsPerBook: 100,
+        });
+        const opened = await newBook(branchA, {
+          gameId: lonelyGame,
+          bookNo: "099001",
+        });
+        await openBook(branchA, opened.bookId);
+        await applyTo(opened.bookId, "001", {
+          type: "sale",
+          amount: 20,
+          patch: {
+            status: "sold",
+            unmatched: true,
+            sold: { at: new Date(), source: "count" },
+          },
+        });
+        // 庫存的張全部報廢:沒有未售的張可以配對
+        const rows = await ticketsOf(opened.bookId);
+        const stock = rows.filter((row) => row.location.kind === "stock");
+        await transactions().withTransaction((session) =>
+          api.app.get(TicketLedgerService).applyTicketEvents(
+            session,
+            { operator: storeOperator(branchA) },
+            stock.map((row) => ({
+              ticketId: row._id,
+              expectedVersion: row.version,
+              type: "scrap" as const,
+              patch: { status: "scrapped" as const },
+            })),
+          ),
+        );
+        const cells = await cellsOf(opened.bookId);
+        expect(cells.find((item) => item.ticketNo === "001")).toMatchObject({
+          unmatched: true,
+          matchable: false,
+        });
+        expect(
+          await blockedOf(hq, [
+            partial(opened.bookId, 1, 1, { game: String(lonelyGame) }),
+          ]),
+        ).toBe("TRANSFER_TICKETS_UNAVAILABLE");
+        expect(await rowOf(opened.bookId, "001")).toMatchObject({
+          status: "sold",
+        });
+      } finally {
+        await setMode("numbered");
+      }
     });
   });
 });

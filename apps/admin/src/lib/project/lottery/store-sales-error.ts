@@ -17,6 +17,16 @@ export const STORE_SALES_ERROR_CODES = [
   "SPLIT_PLAN_INVALID",
   "TICKET_NOT_ON_COUNTER",
   "GAME_NOT_FOUND",
+  "COUNT_SALE_NOT_ALLOWED",
+  "COUNT_SALE_INVALID",
+  "COUNT_SALE_NOT_FOUND",
+  "COUNT_UNDO_EXCEEDS",
+  "COUNT_STORE_SCAN_ONLY",
+  "COUNTER_TICKET_BLOCKED",
+  "MOVE_PAUSED",
+  "MOVE_BY_COUNT_INVALID",
+  "SPLIT_ACTUAL_COUNT_REQUIRED",
+  "SPLIT_ACTUAL_COUNT_MISMATCH",
   "CONFLICT",
 ] as const;
 
@@ -26,6 +36,14 @@ export interface StoreSalesError {
   code: StoreSalesErrorCode | null;
   /** `ALREADY_SOLD`:什麼時候賣的 */
   soldAt: string | null;
+  /** `COUNT_SALE_INVALID` / `COUNT_UNDO_EXCEEDS` / `MOVE_BY_COUNT_INVALID`:還有幾張 */
+  available: number | null;
+  /** `MOVE_BY_COUNT_INVALID` / `SPLIT_ACTUAL_COUNT_MISMATCH`:細分的問題 */
+  problem: string | null;
+  /** `SPLIT_ACTUAL_COUNT_MISMATCH`:多 / 少幾張 */
+  count: number | null;
+  /** `MOVE_PAUSED`:全店重刷(`rescan`)/ 補點編號(`renumber`) */
+  pauseKind: string | null;
 }
 
 const extensionsOf = (error: unknown): Record<string, unknown> => {
@@ -48,9 +66,17 @@ export const storeSalesErrorOf = (error: unknown): StoreSalesError => {
         ? (reason as StoreSalesErrorCode)
         : undefined,
   });
-  const { soldAt } = extensionsOf(error);
+  const { soldAt, available, problem, count, pause } = extensionsOf(error);
+  const pauseKind =
+    typeof pause === "object" && pause !== null && "kind" in pause
+      ? pause.kind
+      : null;
   return {
     code: parsed.code === "UNEXPECTED" ? null : parsed.code,
     soldAt: typeof soldAt === "string" ? soldAt : null,
+    available: typeof available === "number" ? available : null,
+    problem: typeof problem === "string" ? problem : null,
+    count: typeof count === "number" ? count : null,
+    pauseKind: typeof pauseKind === "string" ? pauseKind : null,
   };
 };

@@ -2,6 +2,7 @@ import { useTranslations } from "use-intl";
 
 import {
   TICKET_EVENT_TYPE,
+  displayBookNo,
   formatTicketRanges,
 } from "@repo/domain/project/lottery";
 import { LOTTERY_FIELD_CATEGORY_KEYS } from "@repo/domain/project/lottery-fields";
@@ -110,10 +111,25 @@ export const BookTimeline = ({ events }: BookTimelineProps) => {
     {
       key: "tickets",
       header: t("timeline.columns.tickets"),
-      render: (event) =>
-        event.wholeBook
+      render: (event) => {
+        // 對號(張數店規格 13.2):「#041 ↔ #042」;另一張在別本時帶本號
+        const partner = event.matchPartner;
+        if (partner != null) {
+          return t(
+            partner.bookNo == null
+              ? "timeline.matchPair"
+              : "timeline.matchPairOtherBook",
+            {
+              ticketNo: event.ticketNos[0] ?? "",
+              partner: partner.ticketNo,
+              bookNo: displayBookNo(partner.bookNo ?? ""),
+            },
+          );
+        }
+        return event.wholeBook
           ? t("timeline.wholeBook")
-          : formatTicketRanges(event.ticketNos),
+          : formatTicketRanges(event.ticketNos);
+      },
     },
     {
       key: "route",

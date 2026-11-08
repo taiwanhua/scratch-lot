@@ -7,6 +7,7 @@ import {
   type AccountsWorldOptions,
   accountsWorld,
 } from "@/test/msw/project/lottery/accounts-handlers";
+import { lotterySettingsModules } from "@/test/msw/project/lottery/lottery-settings-fixtures";
 import { masterDataOrgs } from "@/test/msw/project/lottery/master-data-fixtures";
 import { masterDataSharedLookupHandlers } from "@/test/msw/project/lottery/master-data-handlers";
 import { server } from "@/test/msw/server";
@@ -21,11 +22,14 @@ export const renderAccounts = ({
   permissions = ALL_ACCOUNTS_PERMISSIONS,
   viewPage = true,
   world = {},
+  lotterySettings = false,
 }: {
   path?: string;
   permissions?: readonly string[];
   viewPage?: boolean;
   world?: AccountsWorldOptions;
+  /** 也有刮刮樂設定模組(關帳第四項的 [到刮刮樂設定]) */
+  lotterySettings?: boolean;
 } = {}) => {
   const fake = accountsWorld({ permissions, ...world });
   server.use(
@@ -34,7 +38,11 @@ export const renderAccounts = ({
     ...authWorld({
       hasRefreshCookie: true,
       orgs: [masterDataOrgs.storeA],
-      modules: [overviewModule, ...accountsModules({ permissions, viewPage })],
+      modules: [
+        overviewModule,
+        ...accountsModules({ permissions, viewPage }),
+        ...(lotterySettings ? lotterySettingsModules() : []),
+      ],
     }).handlers,
   );
   return { ...renderApp({ path }), fake };

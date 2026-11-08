@@ -5,8 +5,10 @@ import {
   BANK_TYPE_KEYS,
   OUTSTANDING_KEYS,
   type OperationsStore,
+  type SheetOptions,
   type T,
   hasCost,
+  isCountSheet,
   keyIn,
   line,
   negate,
@@ -14,6 +16,7 @@ import {
   textColumn,
   totalLine,
 } from "./operations-row-base";
+import { countModeRows } from "./operations-rows-count";
 
 /** 說明欄列出的單號 / 班名最多幾個(api 也只送這麼多)。 */
 const MAX_LISTED = 5;
@@ -110,7 +113,11 @@ export const gamesSection = (
   });
   return {
     title: t("admin.lotteryReports.operations.blocks.games"),
-    description: t("admin.lotteryReports.operations.descriptions.games"),
+    description: t(
+      isCountSheet(store)
+        ? "admin.lotteryReports.operations.descriptions.gamesCount"
+        : "admin.lotteryReports.operations.descriptions.games",
+    ),
     columns: [
       textColumn("game", t("admin.lotteryReports.operations.columns.game"), 24),
       numberColumn(
@@ -265,7 +272,11 @@ export const outstandingSection = (
 });
 
 /** 8 註記:跳過盤點、盤點未盤、沒有被日結涵蓋計算的班、前期更正、尚未關帳。 */
-export const notesSection = (store: OperationsStore, t: T): SheetSection => {
+export const notesSection = (
+  store: OperationsStore,
+  t: T,
+  options: SheetOptions,
+): SheetSection => {
   const { notes } = store;
   const skipped = notes.skippedStocktakes.reduce(
     (sum, item) => sum + item.count,
@@ -340,6 +351,7 @@ export const notesSection = (store: OperationsStore, t: T): SheetSection => {
             ? t("admin.lotteryReports.operations.items.allClosed")
             : notes.openMonths.join("、"),
       }),
+      ...countModeRows(store, t, options),
     ],
   };
 };

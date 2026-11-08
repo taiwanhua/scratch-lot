@@ -109,6 +109,8 @@ export class LotteryBankTransactionsInput {
  * 登記交易(`accounts.record-bank-transaction`)。`direction` 只有調整 / 其他要給(其他類型給了也照類型);
  * 進貨 / 調貨的 `branchOrgId` 必填;進貨收入 / 調貨收入的單據(`refType` + `refId`)必填、
  * 只收有待退或待收的單據;兌獎入帳的單據選填(不算進單據淨額)。
+ * `vaultOrgId`(現金去向)只有「提領」能給:領出來的現金放進那家分店的小金庫(同時寫現金流水「銀行提領」);
+ * 沒給 = 從帳戶提領現金,只扣銀行。
  */
 @InputType()
 export class RecordLotteryBankTransactionInput {
@@ -141,6 +143,9 @@ export class RecordLotteryBankTransactionInput {
 
   @Field(() => ID, { nullable: true })
   refId?: string | null;
+
+  @Field(() => ID, { nullable: true })
+  vaultOrgId?: string | null;
 }
 
 /** 沖正(`accounts.reverse-bank-transaction`):原因必填。 */

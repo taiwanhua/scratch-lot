@@ -171,4 +171,19 @@ describe("Table", () => {
       expect(header).toHaveClass("MuiTableCell-stickyHeader");
     }
   });
+
+  it("renderExpanded:回內容的列下方多一列整列寬的展開內容;回 null 不展開", () => {
+    render(
+      <Table
+        columns={columns}
+        rows={rows}
+        getRowKey={getRowKey}
+        renderExpanded={(row) => (row.id === "u1" ? "王小明的明細" : null)}
+      />,
+    );
+    const detail = screen.getByText("王小明的明細");
+    expect(detail.closest("td")?.getAttribute("colspan")).toBe("2");
+    // 表頭 + 2 列 + 1 列展開
+    expect(screen.getAllByRole("row")).toHaveLength(4);
+  });
 });

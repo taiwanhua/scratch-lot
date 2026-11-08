@@ -7,7 +7,7 @@ import {
   localMonthOf,
   localMonthText,
 } from "@repo/domain/form";
-import { CHECKOUT_TYPE } from "@repo/domain/project/lottery";
+import { CHECKOUT_TYPE, type CountMode } from "@repo/domain/project/lottery";
 
 import { LotteryPeriodClosesRepository } from "../../database/lottery-accounts/lottery-accounts.repositories";
 import { LotteryCheckoutsRepository } from "../../database/lottery-checkouts/lottery-checkouts.repository";
@@ -73,6 +73,46 @@ export class ReportPeriods {
         alignment: "dailyClose",
       };
     });
+  }
+
+  /**
+   * 月底落在 `from` 之後、`to` 以前(含)的已關帳月份,各家店快照的月底補點編號(張數店規格 5.7、第 10 節;
+   * 區塊 8「月底未補點編號」)。一次讀(TX-07);快照沒有 `renumber`(舊資料、編號店以前)= null。
+   */
+  async renumberClosesOf(
+    scope: ReportScope,
+    from: Date,
+    to: Date,
+  ): Promise<
+    {
+      month: string;
+      periodEnd: Date;
+      stores: Map<string, { mode: CountMode; done: boolean } | null>;
+    }[]
+  > {
+    if (scope.lastClosed === null) {
+      return [];
+    }
+    const rows = await this.closes.findMany(
+      scope.reader,
+      { periodEnd: { $gt: from, $lte: to } },
+      {
+        select:
+          "month periodEnd snapshot.stores.orgId snapshot.stores.renumber",
+      },
+    );
+    return rows.map((row) => ({
+      month: row.month,
+      periodEnd: row.periodEnd,
+      stores: new Map(
+        row.snapshot.stores.map((store) => [
+          String(store.orgId),
+          store.renumber == null
+            ? null
+            : { mode: store.renumber.mode, done: store.renumber.done },
+        ]),
+      ),
+    }));
   }
 
   /** 各已關帳月份(`YYYY-MM`)→ 關帳時間。 */

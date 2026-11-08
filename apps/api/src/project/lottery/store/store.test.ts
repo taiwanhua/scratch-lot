@@ -1167,6 +1167,10 @@ describe("店面(一):看板、收銀班次、投庫 / 出庫(GraphQL 端點 + �
         gameCode: "5198",
         bookNo: "0088102",
         bookKey: "5198-0088102",
+        // 看板卡片的剩餘要扣待標註(迄號 vs 標準張數)
+        lastTicketNo: "020",
+        standardTickets: 20,
+        skippedTicketNos: [],
         holderOrgIds: [xinyi],
         moduleKey: "inventory",
         ...base(),

@@ -489,6 +489,15 @@ describe("帳戶管理(GraphQL 端點 + 真 MongoDB)", () => {
     });
   };
 
+  /** 一家店小金庫目前的應有。 */
+  const vaultOf = async (orgId: Types.ObjectId) => {
+    const operator = await operatorOf(api, tenantA);
+    const { amount } = await api.app
+      .get(CashLedgerService)
+      .vaultExpected(operator, tenantA, orgId);
+    return amount;
+  };
+
   const reverseCash = (
     id: Types.ObjectId,
     by: { operator: OperatorContext; note?: string | null },
@@ -962,6 +971,160 @@ describe("帳戶管理(GraphQL 端點 + 真 MongoDB)", () => {
         to: "vault",
         amount: 20_000,
       });
+    });
+  });
+
+  describe("提領的現金去向(銀行提領)", () => {
+    const VAULT_STORES = /* GraphQL */ `
+      query TestVaultStores($accountId: ID!) {
+        lotteryBankAccountVaultStores(accountId: $accountId) {
+          id
+          name
+        }
+      }
+    `;
+
+    it("選了分店小金庫:同一筆寫銀行「提領」(歸屬那家店)+「銀行提領」流水;沒選只扣銀行;分店要在使用組織裡、只有提領能選", async () => {
+      const beitou = await createOrg(api.connection, {
+        name: "北投店",
+        parentId: tenantA,
+      });
+      const shilin = await createOrg(api.connection, {
+        name: "士林店",
+        parentId: tenantA,
+      });
+      const account = await create({
+        accountNo: "0004-00010",
+        shareOrgs: [{ orgId: String(beitou) }],
+      });
+      // 可選的分店只列使用組織包含的
+      const stores = await ok<{
+        lotteryBankAccountVaultStores: { id: string; name: string }[];
+      }>(api, hq, VAULT_STORES, { accountId: account.id });
+      expect(stores.lotteryBankAccountVaultStores).toEqual([
+        { id: String(beitou), name: "北投店" },
+      ]);
+      expect(
+        await errorOf(api, managerA, VAULT_STORES, { accountId: account.id }),
+      ).toMatchObject({ code: "FORBIDDEN" });
+
+      const withdrawal = await record({
+        accountId: account.id,
+        type: "withdrawal",
+        amount: 3000,
+        vaultOrgId: String(beitou),
+        note: "補小金庫零錢",
+      });
+      const row = await api.connection
+        .collection("lottery_bank_transactions")
+        .findOne({ _id: new Types.ObjectId(withdrawal.id) });
+      expect(row).toMatchObject({
+        type: "withdrawal",
+        direction: "out",
+        amount: 3000,
+        branchOrgId: beitou,
+      });
+      const movement = await api.connection
+        .collection("lottery_cash_movements")
+        .findOne({ bankTransactionId: new Types.ObjectId(withdrawal.id) });
+      expect(movement).toMatchObject({
+        orgId: beitou,
+        type: "bank_withdraw",
+        from: "bank",
+        to: "vault",
+        amount: 3000,
+        note: "補小金庫零錢",
+      });
+      expect(await vaultOf(beitou)).toBe(3000);
+
+      // 沒選 = 從帳戶提領現金:只扣銀行,不寫流水
+      const plain = await record({
+        accountId: account.id,
+        type: "withdrawal",
+        amount: 500,
+      });
+      expect(
+        await api.connection
+          .collection("lottery_cash_movements")
+          .countDocuments({ bankTransactionId: new Types.ObjectId(plain.id) }),
+      ).toBe(0);
+
+      // 分店不在使用組織裡 → BANK_ACCOUNT_NOT_USABLE;存入不能選現金去向
+      const base = {
+        accountId: account.id,
+        occurredAt: "2026-10-10T02:00:00.000Z",
+        amount: 100,
+      };
+      expect(
+        await errorOf(api, hq, RECORD, {
+          input: { ...base, type: "withdrawal", vaultOrgId: String(shilin) },
+        }),
+      ).toMatchObject({
+        code: "VALIDATION_FAILED",
+        fields: ["vaultOrgId"],
+        reason: "BANK_ACCOUNT_NOT_USABLE",
+      });
+      expect(
+        await errorOf(api, hq, RECORD, {
+          input: { ...base, type: "deposit", vaultOrgId: String(beitou) },
+        }),
+      ).toMatchObject({ code: "VALIDATION_FAILED", fields: ["vaultOrgId"] });
+      // 歸屬分店和現金去向不一樣 = 填錯
+      expect(
+        await errorOf(api, hq, RECORD, {
+          input: {
+            ...base,
+            type: "withdrawal",
+            vaultOrgId: String(beitou),
+            branchOrgId: String(shilin),
+          },
+        }),
+      ).toMatchObject({ code: "VALIDATION_FAILED", fields: ["branchOrgId"] });
+      expect(await vaultOf(beitou)).toBe(3000);
+    });
+
+    it("沖正「銀行提領」= 從小金庫扣回:超過小金庫應有擋下,剛好等於可以,連結的流水自動反向", async () => {
+      const yonghe = await createOrg(api.connection, {
+        name: "永和店",
+        parentId: tenantA,
+      });
+      const account = await create({
+        accountNo: "0004-00011",
+        shareOrgs: [{ orgId: String(tenantA), includeDescendants: true }],
+      });
+      const withdrawal = await record({
+        accountId: account.id,
+        type: "withdrawal",
+        amount: 3000,
+        vaultOrgId: String(yonghe),
+      });
+      await fillVault(yonghe, 2999);
+      expect(
+        await errorOf(api, hq, REVERSE, {
+          input: { id: withdrawal.id, reason: "記錯" },
+        }),
+      ).toMatchObject({
+        code: "VALIDATION_FAILED",
+        fields: ["id"],
+        reason: "AMOUNT_EXCEEDS_VAULT",
+      });
+      await fillVault(yonghe, 3000);
+      await ok(api, hq, REVERSE, {
+        input: { id: withdrawal.id, reason: "記錯" },
+      });
+      const movement = await api.connection
+        .collection("lottery_cash_movements")
+        .findOne({ bankTransactionId: new Types.ObjectId(withdrawal.id) });
+      const reversed = await api.connection
+        .collection("lottery_cash_movements")
+        .findOne({ reversalOf: movement?._id });
+      expect(reversed).toMatchObject({
+        type: "bank_withdraw",
+        from: "vault",
+        to: "bank",
+        amount: 3000,
+      });
+      expect(await vaultOf(yonghe)).toBe(0);
     });
   });
 
