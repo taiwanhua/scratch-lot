@@ -616,7 +616,10 @@
         "adhoc": "Ad-hoc count"
       },
       "unmatchedBook": "Book {bookNo} · {tickets} (assigned by the system)",
-      "unmatchedDetail": "{books} · These ticket numbers were assigned by the system. If you find the ticket, scan it to recover it, or run a store-wide rescan."
+      "unmatchedDetail": "{books} · These ticket numbers were assigned by the system. If you find the ticket, scan it to recover it, or run a store-wide rescan.",
+      "unmatchedCardDetail": "{books} · If you find the ticket, scan it to recover it, or run a store-wide rescan.",
+      "cardTickets": "{count} tickets",
+      "cardCost": "Cost {cost}"
     },
     "book": {
       "tabLabel": "Book {key}",

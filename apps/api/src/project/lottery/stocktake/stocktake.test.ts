@@ -61,6 +61,7 @@ import {
   LotteryStocktake,
 } from "../../database/lottery-stocktakes/lottery-stocktake.schema";
 import { LOTTERY_SHIFTS_COLLECTION } from "../../database/lottery-store/lottery-shift.schema";
+import { useFakeNow } from "../../test-support/test-clock";
 import { StoreClock } from "../store/store-clock";
 import { ticketEventsPostCloseNet } from "../store/store-registrations";
 import { seedReasonCategory } from "../test-support/master-data-fixtures";
@@ -320,6 +321,9 @@ function extensionsOfSubmit(
  * 組織樹:root ─ 租戶甲 ─ 信義店(店內櫃台:開班中;店外攤位:上一班已結帳)
  */
 describe("盤點(GraphQL 端點 + 真 MongoDB)", () => {
+  // 前置資料、api 的 `new Date()` 與店面時鐘同一條時間軸:起點早於測試撥到的每個時間
+  useFakeNow(new Date("2026-11-05T00:00:00+08:00"));
+
   let api: AuthTestApp;
   let connection: Connection;
   let world: World;
