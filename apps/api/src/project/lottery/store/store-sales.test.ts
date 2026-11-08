@@ -34,6 +34,7 @@ import {
   LOTTERY_SHIFTS_COLLECTION,
   LotteryShift,
 } from "../../database/lottery-store/lottery-shift.schema";
+import { useFakeNow } from "../../test-support/test-clock";
 import { seedReasonCategory } from "../test-support/master-data-fixtures";
 import { LotteryBooksService } from "../tickets/books.service";
 import { TicketLedgerService } from "../tickets/ticket-ledger.service";
@@ -238,7 +239,7 @@ const base = () => {
   };
 };
 
-const taipei = (time: string) => new Date(`2036-11-05T${time}:00+08:00`);
+const taipei = (time: string) => new Date(`2026-11-05T${time}:00+08:00`);
 
 /** 正面條碼 = 本號 7 位 + 張號 3 位。 */
 const barcodeOf = (bookNo: string, ticketNo: string) => `${bookNo}${ticketNo}`;
@@ -252,6 +253,9 @@ const barcodeOf = (bookNo: string, ticketNo: string) => `${bookNo}${ticketNo}`;
  * 班:王 開店內櫃台(期初 5,000)、林 開店外攤位、王 也開彩券機旁(自己開兩班)。
  */
 describe("店面(二):銷售、當下撤銷、拆本、移櫃(GraphQL 端點 + 真 MongoDB)", () => {
+  // 前置資料、api 的 `new Date()` 與店面時鐘同一條時間軸:從當天 00:00 起算,店面時鐘撥到的時間都在前置資料之後
+  useFakeNow(new Date("2026-11-05T00:00:00+08:00"));
+
   let api: AuthTestApp;
   let connection: Connection;
 

@@ -21,6 +21,7 @@ import { SCHEDULE_ATTENDANCE_PUNCHES_COLLECTION } from "../../database/schedule/
 import { ScheduleEntryLock } from "../../database/schedule/schedule-entry-lock.schema";
 import { SCHEDULE_ENTRIES_COLLECTION } from "../../database/schedule/schedule-entry.schema";
 import { SCHEDULE_PERIODS_COLLECTION } from "../../database/schedule/schedule-period.schema";
+import { useFakeNow } from "../../test-support/test-clock";
 import { ScheduleClock } from "../shared/schedule-clock";
 import {
   SCHEDULE_TEST_PERMISSIONS as P,
@@ -161,6 +162,9 @@ const base = () => {
  * 11/5 新竹店:王 早(看得到的人才列)。11 月兩家店都已發布。
  */
 describe("出勤紀錄(GraphQL 端點 + 真 MongoDB)", () => {
+  // 前置資料、api 的 `new Date()` 與排班時鐘同一條時間軸:起點早於測試撥到的每個時間
+  useFakeNow(new Date("2026-10-01T00:00:00+08:00"));
+
   let api: AuthTestApp;
   let connection: Connection;
 

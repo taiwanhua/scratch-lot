@@ -37,6 +37,7 @@ import {
   LOTTERY_SHIFTS_COLLECTION,
   LotteryShift,
 } from "../../database/lottery-store/lottery-shift.schema";
+import { useFakeNow } from "../../test-support/test-clock";
 import { seedReasonCategory } from "../test-support/master-data-fixtures";
 import { LotteryBooksService } from "../tickets/books.service";
 import { TicketLedgerService } from "../tickets/ticket-ledger.service";
@@ -247,6 +248,9 @@ function swapInput(
  *                        └─ 板橋店(編號店;店內櫃台)
  */
 describe("張數店:收回、移櫃、拆本、報廢、更正跳號(GraphQL 端點 + 真 MongoDB)", () => {
+  // 前置資料、api 的 `new Date()` 與店面時鐘同一條時間軸:起點早於測試撥到的每個時間
+  useFakeNow(new Date("2026-11-06T00:00:00+08:00"));
+
   let api: AuthTestApp;
   let connection: Connection;
 

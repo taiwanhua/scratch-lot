@@ -26,6 +26,7 @@ import { ScheduleEntryLock } from "../../database/schedule/schedule-entry-lock.s
 import { SCHEDULE_ENTRIES_COLLECTION } from "../../database/schedule/schedule-entry.schema";
 import { SCHEDULE_PERIODS_COLLECTION } from "../../database/schedule/schedule-period.schema";
 import { SCHEDULE_TASK_ASSIGNMENTS_COLLECTION } from "../../database/schedule/schedule-task-assignment.schema";
+import { useFakeNow } from "../../test-support/test-clock";
 import { ScheduleEntryLookup } from "../integration/entry-lookup";
 import { ScheduleClock } from "../shared/schedule-clock";
 import { monthKeyRange } from "../shared/schedule-dates";
@@ -186,6 +187,9 @@ function errorOf(result: GraphqlResult): Record<string, unknown> | undefined {
  * 12/3 信義店(12 月未發布)。
  */
 describe("我的班表與打卡(GraphQL 端點 + 真 MongoDB)", () => {
+  // 前置資料、api 的 `new Date()` 與排班時鐘同一條時間軸:起點早於測試撥到的每個時間
+  useFakeNow(new Date("2026-10-01T00:00:00+08:00"));
+
   let api: AuthTestApp;
   let connection: Connection;
   let clock: ScheduleClock;

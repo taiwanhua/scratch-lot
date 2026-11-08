@@ -58,6 +58,7 @@ import {
   LotteryStocktake,
 } from "../../database/lottery-stocktakes/lottery-stocktake.schema";
 import { LOTTERY_SHIFTS_COLLECTION } from "../../database/lottery-store/lottery-shift.schema";
+import { useFakeNow } from "../../test-support/test-clock";
 import { StoreClock } from "../store/store-clock";
 import { seedReasonCategory } from "../test-support/master-data-fixtures";
 import { StocktakeService } from "./stocktake.service";
@@ -300,6 +301,9 @@ function now(time: string): void {
  * 遊戲:5164 發大財 200 元、5201 金好運 100 元
  */
 describe("張數盤點與盤點中登記(GraphQL 端點 + 真 MongoDB)", () => {
+  // 前置資料、api 的 `new Date()` 與店面時鐘同一條時間軸:起點早於測試撥到的每個時間
+  useFakeNow(new Date("2026-11-05T00:00:00+08:00"));
+
   let api: AuthTestApp;
   let connection: Connection;
   let world: World;

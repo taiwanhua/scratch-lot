@@ -72,6 +72,7 @@ import {
   LOTTERY_SHIFTS_COLLECTION,
   LotteryShift,
 } from "../../database/lottery-store/lottery-shift.schema";
+import { useFakeNow } from "../../test-support/test-clock";
 import { insertGame } from "../purchase/test-support/purchase-fixtures";
 import { StoreClock } from "../store/store-clock";
 import { seedReasonCategory } from "../test-support/master-data-fixtures";
@@ -197,12 +198,15 @@ let requestSequence = 0;
 /** 店面時鐘往前一分鐘(每一步的事件時間不同)。 */
 function tick(): Date {
   minute += 1;
-  const at = new Date(Date.UTC(2036, 10, 5, 1, 0) + minute * 60_000);
+  const at = new Date(Date.UTC(2026, 10, 5, 1, 0) + minute * 60_000);
   jest.spyOn(StoreClock.prototype, "now").mockReturnValue(at);
   return at;
 }
 
 describe("本狀態與再上檯面(GraphQL 端點 + 真 MongoDB)", () => {
+  // 前置資料、api 的 `new Date()` 與店面時鐘同一條時間軸:從當天 00:00 起算,店面時鐘撥到的時間都在前置資料之後
+  useFakeNow(new Date("2026-11-05T00:00:00+08:00"));
+
   let api: AuthTestApp;
   let tenant: Types.ObjectId;
   let storeA: Types.ObjectId;
@@ -1012,7 +1016,7 @@ describe("本狀態與再上檯面(GraphQL 端點 + 真 MongoDB)", () => {
         tenantId: tenant,
         cashPointId: point,
         openedBy: clerk.userId,
-        openedAt: new Date(Date.UTC(2036, 10, 5, 0, 0)),
+        openedAt: new Date(Date.UTC(2026, 10, 5, 0, 0)),
         openingFloat: 5000,
         openingFloatSource: "handover",
         previousShiftId: null,
