@@ -2,11 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router";
 import { useTranslations } from "use-intl";
 
-import {
-  TICKET_STATUS,
-  displayBookNo,
-  formatTicketRanges,
-} from "@repo/domain/project/lottery";
+import { TICKET_STATUS } from "@repo/domain/project/lottery";
 import {
   type LotteryInvestigationRowFieldsFragment,
   useLotteryInvestigationsQuery,
@@ -14,15 +10,17 @@ import {
 import { Alert } from "@repo/ui/alert";
 import { Box } from "@repo/ui/box";
 import { Button } from "@repo/ui/button";
+import { useBreakpointDown } from "@repo/ui/media-query";
 import { Table, type TableColumn } from "@repo/ui/table";
 import { Tag } from "@repo/ui/tag";
 
 import { RecoverTicketDialog } from "@/components/project/lottery/RecoverTicketDialog/RecoverTicketDialog";
 import { useSession } from "@/hooks/base/useSession";
-import { useTemporalText } from "@/hooks/base/useTemporalText";
 
 import { INVESTIGATIONS_TABLE_MIN_WIDTH, moneyText } from "../inventory-config";
 import { useInventoryAccess } from "../useInventoryAccess";
+import { InvestigationCards } from "./InvestigationCards";
+import { useInvestigationText } from "./useInvestigationText";
 
 type Row = LotteryInvestigationRowFieldsFragment;
 
@@ -33,13 +31,16 @@ type Row = LotteryInvestigationRowFieldsFragment;
  *
  * 張數店系統預設帶入的待查 / 遺失(未對號)依「遊戲 × 責任分店 × 來源盤點」一列:本寫「—」、張號寫「系統預設帶入」、
  * 來源寫「11/01 交班盤點」;點一下展開看本與張號,不給 [尋回](從清單尋回會把帶入的張號記回庫存,找到的可能是別張)。
+ *
+ * 手機(< sm)一列一張卡片(`InvestigationCards`;Figma CS-21 手機 862:22606),未對號的卡片直接寫本與張號。
  */
 export const InvestigationsTab = () => {
   const t = useTranslations("admin.lotteryInventory");
   const { session } = useSession();
   const navigate = useNavigate();
   const access = useInventoryAccess();
-  const temporal = useTemporalText();
+  const text = useInvestigationText();
+  const isMobile = useBreakpointDown("sm");
   const [recovering, setRecovering] = useState<Row | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
   const query = useLotteryInvestigationsQuery(session.client);
@@ -53,13 +54,12 @@ export const InvestigationsTab = () => {
       key: "bookNo",
       header: t("investigations.columns.book"),
       isEmphasized: true,
-      render: (row) =>
-        row.unmatched ? t("stock.none") : displayBookNo(row.bookNo),
+      render: text.book,
     },
     {
       key: "game",
       header: t("investigations.columns.game"),
-      render: (row) => `${row.gameCode} ${row.gameName}`,
+      render: text.game,
     },
     {
       key: "status",
@@ -74,7 +74,7 @@ export const InvestigationsTab = () => {
     {
       key: "responsible",
       header: t("investigations.columns.responsible"),
-      render: (row) => row.responsibleOrg?.name ?? t("stock.none"),
+      render: text.responsible,
     },
     {
       key: "tickets",
@@ -86,39 +86,23 @@ export const InvestigationsTab = () => {
     {
       key: "ticketNos",
       header: t("investigations.columns.ticketNos"),
-      render: (row) =>
-        row.unmatched
-          ? t("investigations.systemDefault")
-          : formatTicketRanges(row.tickets.map((ticket) => ticket.ticketNo)),
+      render: text.ticketNos,
     },
     {
       key: "source",
       header: t("investigations.columns.source"),
-      render: (row) =>
-        row.unmatched && row.sourceStocktakeType != null
-          ? t("investigations.sourceStocktake", {
-              date: row.at ? temporal(row.at, "monthDay") : "",
-              type: t(
-                `investigations.stocktakeTypes.${row.sourceStocktakeType}`,
-              ),
-            })
-          : t("investigations.source", {
-              serial: row.refSerialNo ?? t("stock.none"),
-            }),
+      render: text.source,
     },
     {
       key: "at",
       header: t("investigations.columns.at"),
-      render: (row) => (row.at ? temporal(row.at, "monthDay") : ""),
+      render: text.at,
     },
     {
       key: "days",
       header: t("investigations.columns.days"),
       align: "right",
-      render: (row) =>
-        row.days == null
-          ? ""
-          : t("investigations.daysValue", { days: row.days }),
+      render: text.days,
     },
     ...(showCost
       ? [
@@ -169,19 +153,10 @@ export const InvestigationsTab = () => {
   };
   const expandedOf = (row: Row) =>
     row.unmatched && expanded === keyOf(row)
-      ? t("investigations.unmatchedDetail", {
-          books: row.unmatchedBooks
-            .map((book) =>
-              t("investigations.unmatchedBook", {
-                bookNo: displayBookNo(book.bookNo),
-                tickets: book.ticketNos
-                  .map((ticketNo) => `#${ticketNo}`)
-                  .join("、"),
-              }),
-            )
-            .join("、"),
-        })
+      ? t("investigations.unmatchedDetail", { books: text.unmatchedBooks(row) })
       : null;
+  // 手機卡片:沒綁本的詳情頁時卡片不能點
+  const openCard = bookRoute === null ? {} : { onOpen: onRowClick };
 
   return (
     <Box sx={{ flex: 1, minHeight: 0 }}>
@@ -190,17 +165,28 @@ export const InvestigationsTab = () => {
           {t("investigations.loadFailed")}
         </Alert>
       ) : null}
-      <Table
-        aria-label={t("investigations.listAria")}
-        columns={columns}
-        rows={rows}
-        getRowKey={keyOf}
-        onRowClick={onRowClick}
-        renderExpanded={expandedOf}
-        isLoading={query.isLoading}
-        emptyMessage={t("investigations.empty")}
-        minWidth={INVESTIGATIONS_TABLE_MIN_WIDTH}
-      />
+      {isMobile ? (
+        <InvestigationCards
+          rows={rows}
+          isLoading={query.isLoading}
+          getRowKey={keyOf}
+          canRecover={canRecover}
+          {...openCard}
+          onRecover={setRecovering}
+        />
+      ) : (
+        <Table
+          aria-label={t("investigations.listAria")}
+          columns={columns}
+          rows={rows}
+          getRowKey={keyOf}
+          onRowClick={onRowClick}
+          renderExpanded={expandedOf}
+          isLoading={query.isLoading}
+          emptyMessage={t("investigations.empty")}
+          minWidth={INVESTIGATIONS_TABLE_MIN_WIDTH}
+        />
+      )}
       {recovering === null ? null : (
         <RecoverTicketDialog
           book={{

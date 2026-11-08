@@ -616,7 +616,10 @@
         "adhoc": "臨時盤點"
       },
       "unmatchedBook": "本號 {bookNo} · {tickets}(系統預設帶入)",
-      "unmatchedDetail": "{books}· 這是系統預設帶入的張號,找到實體請刷條碼尋回,或做全店重刷。"
+      "unmatchedDetail": "{books}· 這是系統預設帶入的張號,找到實體請刷條碼尋回,或做全店重刷。",
+      "unmatchedCardDetail": "{books}· 找到實體請刷條碼尋回,或做全店重刷",
+      "cardTickets": "{count} 張",
+      "cardCost": "批購成本 {cost}"
     },
     "book": {
       "tabLabel": "本 {key}",
