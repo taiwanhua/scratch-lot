@@ -864,6 +864,7 @@
         "deposit": "投庫",
         "withdraw": "出庫",
         "bank_deposit": "存銀行",
+        "bank_withdraw": "銀行提領",
         "refund": "退貨退款(班開著時)",
         "transfer_out": "調貨支出(現金)",
         "transfer_in": "調貨收入(現金)",
@@ -2208,6 +2209,7 @@
       "withdraw": "出庫",
       "deposit": "投庫",
       "bank_deposit": "存銀行",
+      "bank_withdraw": "銀行提領",
       "transfer_out": "調貨支出",
       "transfer_in": "調貨收入",
       "refund": "退貨退款",
@@ -2317,10 +2319,13 @@
         "amount": "金額",
         "occurredAt": "時間",
         "branchOrgId": "歸屬分店",
+        "vaultOrgId": "現金去向(選填)",
         "summary": "摘要"
       },
       "documentOption": "{docNo} {label} · {due}",
       "noDocument": "沒有待退或待收的單據",
+      "vaultNone": "不放進小金庫(從帳戶提領現金)",
+      "vaultHint": "沒選 = 從帳戶提領現金,只扣銀行、不進任何小金庫。選了分店 = 現金放進那家店的小金庫(即時現金帳記一筆「銀行提領」),歸屬分店也是那家店。",
       "hint": "調整、其他要選方向,說明必填。",
       "cancel": "取消",
       "submit": "登記"
@@ -4281,7 +4286,8 @@
         "refunds": "退貨退款",
         "corrections": "現金更正",
         "transfers": "調貨(現金)",
-        "bank_deposits": "存銀行"
+        "bank_deposits": "存銀行",
+        "bank_withdrawals": "銀行提領"
       },
       "itemCount": {
         "sales": "({count} 張)",
@@ -4458,7 +4464,8 @@
           "withdrawals": "出庫",
           "transfers": "調貨(現金)",
           "corrections": "現金更正",
-          "bank_deposits": "存銀行"
+          "bank_deposits": "存銀行",
+          "bank_withdrawals": "銀行提領"
         }
       },
       "bank": {

@@ -4,7 +4,7 @@
 
 刮刮樂的錢(專案規格第 9 章、10.1–10.4):**銀行帳戶與交易**、**即時現金帳與現金流水**、**收付機制**(進貨單、調貨單的付款 / 退款 / 收款)、**待結清款項**與**關帳**(整個租戶某月的鎖帳)。一頁四個分頁(銀行帳戶 | 即時現金帳 | 待結清款項 | 關帳)。
 
-銀行交易與現金流水是跨功能共用的帳本:店面的出庫 / 投庫 / 存銀行 / 退貨退款 / 現金更正、調貨的現金收付都寫進同一組流水;進貨單、調貨單以收付機制登記後寫進同一組交易。
+銀行交易與現金流水是跨功能共用的帳本:店面的出庫 / 投庫 / 存銀行 / 退貨退款 / 現金更正、調貨的現金收付、帳戶管理提領時選了現金去向的「銀行提領」都寫進同一組流水;進貨單、調貨單以收付機制登記後寫進同一組交易。
 
 正本:`apps/db-migrator/seeds/project/accounts.ts`、`packages/domain/src/project/lottery-accounts/`
 
@@ -31,7 +31,7 @@
 | `accounts.view-bank-accounts`       | `accounts`    | 銀行帳戶分頁、帳戶詳情、`lotteryBankAccounts` / `lotteryBankAccount` / 交易清單                                                                     |
 | `accounts.create-bank-account`      | `accounts`    | [+ 新增帳戶] + `createLotteryBankAccount`                                                                                                           |
 | `accounts.edit-bank-account`        | `accounts`    | 帳戶設定、[設定使用組織]、停用 / 啟用、沒有交易時 [刪除帳戶](abilities `canEdit` / `canDelete`)                                                     |
-| `accounts.record-bank-transaction`  | `accounts`    | [登記交易] + 單據候選 `lotterySettlementCandidates`                                                                                                 |
+| `accounts.record-bank-transaction`  | `accounts`    | [登記交易] + 單據候選 `lotterySettlementCandidates` + 提領的現金去向分店 `lotteryBankAccountVaultStores`                                            |
 | `accounts.reverse-bank-transaction` | `accounts`    | 交易清單的 [沖正](掛在單據上的交易另要那一邊的收付權限,見「交易」沖正)                                                                              |
 | `accounts.view-cash`                | `accounts`    | 即時現金帳分頁 + `lotteryCashLedger` / `lotteryCashMovement`                                                                                        |
 | `accounts.view-outstanding`         | `accounts`    | 待結清款項分頁 + 側欄數字;每列按鈕沿用單據的權限(進貨單 `settle`、調貨單 `pay` / `receive`)                                                         |
@@ -77,6 +77,7 @@
 | `withdraw` 出庫(原因 `opening_float` / `change` / `other`) | 小金庫 → 抽屜               |
 | `deposit` 投庫                                             | 抽屜 → 小金庫               |
 | `bank_deposit` 存銀行                                      | 小金庫 → 銀行(連到銀行存入) |
+| `bank_withdraw` 銀行提領                                   | 銀行 → 小金庫(連到銀行提領) |
 | `transfer_out` / `transfer_in` 調貨支出 / 收入             | 抽屜或小金庫 ↔ 外部         |
 | `refund` 退貨退款                                          | 抽屜 → 外部                 |
 | `correction_increase` / `correction_decrease` 現金更正     | 外部 ↔ 抽屜或小金庫         |
@@ -114,8 +115,10 @@
 - 進貨收入 / 調貨收入:單據必填,只收有待退或待收的單據(那一邊 [收到退款] / [收款] 的先填 > 0),交易記在那一邊(`settlementSide`)。兌獎入帳:單據選填、不算進任何單據淨額。
 - **沖正**:寫一筆同類型、方向相反、同金額的交易(`reversalOf`),原交易不改;已被沖正或本身是沖正 → `ALREADY_REVERSED`;兩人同時沖正由唯一索引擋下後到的。
 - **沖正的權限**:沒掛單據的手動交易只要 `reverse-bank-transaction`;**掛在單據上的交易**(`refType` / `settlementSide` 有值)另要**那一邊的收付權限**、看得到那一邊(與單據結算區的「沖正收付」同一判準,`settlement/settlement-side-access.ts`),沒有 → `FORBIDDEN`。交易清單的 `abilities.canReverse` 依同一判準(只看登記的權限,不讀單據)。現金流水沒有獨立的沖正入口(收付的現金只能從單據結算區沖正,已檢查那一邊;沖正「存入」連動的存銀行流水跟著那筆交易)。
+- **提領的現金去向**(規格 10.1,使用者 11/08 定案):`recordLotteryBankTransaction` 的 `vaultOrgId` 選填、只有 `withdrawal` 能給(其他類型給了 → `VALIDATION_FAILED`,欄位 `vaultOrgId`)。分店要在帳戶的使用組織裡(歸屬組織本身、共用給的組織,或共用給含下層時它底下的組織;最上層組織本身不算),不在 → `BANK_ACCOUNT_NOT_USABLE`(欄位 `vaultOrgId`)。選了 → 同一個交易寫銀行「提領」(歸屬分店 = 那家店;另給了不同的 `branchOrgId` → `VALIDATION_FAILED`,欄位 `branchOrgId`)+ 現金流水 `bank_withdraw`(銀行 → 小金庫,`bankTransactionId` 相連,備註沿用交易的備註 / 摘要;租戶邊界寫入,用途「例外寫入」)+ 稽核帶 `cashMovementId`,寫完通知那家店的看板。沒選 = 從帳戶提領現金,只扣銀行。選單由 `lotteryBankAccountVaultStores(accountId)` 列(同一個判準,依名稱排序)。
 - **沖正標原交易日期**:交易清單的沖正那一筆回 `reversalOfAt`(原交易的發生時間,以租戶邊界讀),畫面顯示「沖正 · 原交易 9/28」(沖正沒有班)。
-- 沖正「存入」→ 連結的「存銀行」流水(`bankTransactionId`)自動寫一筆反向(租戶邊界,用途「例外寫入」)。
+- 沖正時連結的流水(`bankTransactionId`;存入 → 「存銀行」、提領 → 「銀行提領」)自動寫一筆反向(租戶邊界,用途「例外寫入」)。
+- 沖正「提領」而它連到「銀行提領」= 從小金庫扣回:交易外先建好那家店的小金庫守門文件,交易內 `StoreVaultGuard.assertCovers`(小金庫應有 − 審核中日結的存入 ≥ 金額),不夠 → `AMOUNT_EXCEEDS_VAULT`(欄位 `id`);和出庫、存銀行、收付付現同一個守門文件序列化。
 
 ### 即時現金帳
 
@@ -271,7 +274,7 @@ targetType `lottery_bank_account` / `lottery_bank_transaction` / `lottery_cash_m
 ## 測試
 
 - `packages/domain/src/project/lottery-accounts/lottery-accounts.test.ts`:類型與方向、從 → 到、規格 9 的進貨單 ①–⑤ 驗算、調貨單例、分次付款例、待結清種類。
-- `apps/api/src/project/lottery/accounts/accounts.test.ts`(TEST-07):期初鎖定 / 刪除 / 停用、可見範圍(列表與單筆 `NOT_FOUND`、共用進來的只能看)、權限、交易方向與餘額、沖正(原交易不改、不能沖兩次;掛在單據上的要那一邊的收付權限)、沖正存入連動存銀行流水、小金庫只由流水算 + schema 與 repository 檢查、收付(分次付款、待結清、候選、作廢 / 駁回守門、帳戶使用組織、現金來源、從小金庫付現超過應有擋下 / 剛好等於可以)、結清標記(結清後不再讀、沖正回到待確認、某個時點照樣算、指令數與張數無關)。收付用兩種測試單據登記驗。
+- `apps/api/src/project/lottery/accounts/accounts.test.ts`(TEST-07):期初鎖定 / 刪除 / 停用、可見範圍(列表與單筆 `NOT_FOUND`、共用進來的只能看)、權限、交易方向與餘額、沖正(原交易不改、不能沖兩次;掛在單據上的要那一邊的收付權限)、沖正存入連動存銀行流水、提領的現金去向(寫銀行提領流水、沒選只扣銀行、分店要在使用組織裡、只有提領能選)與沖正扣回超過小金庫應有擋下 / 剛好等於可以、小金庫只由流水算 + schema 與 repository 檢查、收付(分次付款、待結清、候選、作廢 / 駁回守門、帳戶使用組織、現金來源、從小金庫付現超過應有擋下 / 剛好等於可以)、結清標記(結清後不再讀、沖正回到待確認、某個時點照樣算、指令數與張數無關)。收付用兩種測試單據登記驗。
 - `apps/db-migrator/seeds/project/accounts.test.ts`:模組宣告與開通角色配方。
 - `packages/domain/src/project/lottery-accounts/period-close.test.ts`:月份期間(10/31 23:59:59.999 算 10 月)、依序、月份列表。
 - `apps/api/src/project/lottery/period-close/period-close.test.ts`(TEST-07):沒有 `close-period` → `FORBIDDEN`;跳過 9 月關 10 月、關本月、重關、確認月份不同 → 擋下;沒結帳的班 → 擋;三種單據審核中落在那個月 → 擋(11 月的不擋);沒被日結涵蓋的班 → 警告並記快照;CL1 第四項(必須的店沒補點 → 擋、月底後才補 → 仍擋、改成只提醒 → 警告、最後一次日結前補點 → 通過,快照寫 `renumber`);月底餘額 / 小金庫只算到 10/31 23:59:59.999;`assertPeriodOpen` 的邊界;關帳逾期(3 號、上月未關 → 提醒;2 號不寄;已關不寄)。退款班次 / 現金更正位置 / 開班選排班的擋下在店面的 `store-forms.test.ts`、`store.test.ts`。

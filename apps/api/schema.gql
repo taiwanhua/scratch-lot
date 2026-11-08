@@ -5124,6 +5124,7 @@ type Query {
   forms(input: FormsInput!): FormsPayload!
   lotteryAllocations(input: LotteryAllocationsInput!): LotteryAllocationsPayload!
   lotteryBankAccount(id: ID!): LotteryBankAccountPayload!
+  lotteryBankAccountVaultStores(accountId: ID!): [LotteryAccountsRef!]!
   lotteryBankAccounts(input: LotteryBankAccountsInput!): LotteryBankAccountsPayload!
   lotteryBankDepositForm(orgId: ID!): LotteryBankDepositForm!
   lotteryBankTransactions(input: LotteryBankTransactionsInput!): LotteryBankTransactionsPayload!
@@ -5364,6 +5365,7 @@ input RecordLotteryBankTransactionInput {
   refType: String
   summary: String
   type: String!
+  vaultOrgId: ID
 }
 
 input RecordLotterySettlementInput {

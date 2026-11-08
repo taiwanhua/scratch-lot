@@ -16,6 +16,7 @@ import {
 } from "./dto/lottery-bank-account.input";
 import {
   DeleteLotteryBankAccountPayload,
+  LotteryAccountsRefModel,
   LotteryBankAccountModel,
   LotteryBankAccountPayload,
   LotteryBankAccountsPayload,
@@ -59,6 +60,18 @@ export class LotteryBankAccountsResolver {
     @CurrentOperator() operator: OperatorContext,
   ): Promise<LotteryBankTransactionsPayload> {
     return this.transactions.list(operator, input);
+  }
+
+  /** 登記交易選「提領」時「現金去向」可選的分店(帳戶使用組織包含的分店)。 */
+  @RequirePermission("accounts.record-bank-transaction")
+  @Query(() => [LotteryAccountsRefModel], {
+    name: "lotteryBankAccountVaultStores",
+  })
+  lotteryBankAccountVaultStores(
+    @Args("accountId", { type: () => ID }) accountId: string,
+    @CurrentOperator() operator: OperatorContext,
+  ): Promise<LotteryAccountsRefModel[]> {
+    return this.transactions.vaultStoresOf(operator, accountId);
   }
 
   @RequirePermission("accounts.create-bank-account")

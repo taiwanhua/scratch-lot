@@ -3,6 +3,7 @@ import { type ClientSession, Types } from "mongoose";
 
 import {
   ACCOUNTS_PERMISSIONS,
+  BANK_TRANSACTION_TYPE,
   BANK_TRANSACTION_TYPES,
   type BankTransactionType,
   DIRECTIONS,
@@ -37,6 +38,8 @@ import {
   assertSideReversible,
   canReverseSide,
 } from "../settlement/settlement-side-access";
+import { publishStoreBoard } from "../store/store-board-signal";
+import { StoreVaultGuard } from "../store/store-vault-guard";
 import { AccountNames } from "./account-names";
 import { AccountsAccess, type AccountsGrant } from "./accounts-access";
 import { ACCOUNTS_AUDIT } from "./accounts-audit";
@@ -53,6 +56,7 @@ import type {
   RecordLotteryBankTransactionInput,
 } from "./dto/lottery-bank-account.input";
 import type {
+  LotteryAccountsRefModel,
   LotteryBankTransactionModel,
   LotteryBankTransactionsPayload,
 } from "./models/lottery-bank-account.model";
@@ -84,7 +88,10 @@ export interface BankTransactionWrite {
  *   `TENANT_BOUNDARY_CONTEXT_CALLERS`:看得到帳戶就看得到它的交易,交易可能是別家分店登記的)
  * - **登記交易**:`record-bank-transaction`;帳戶要使用中;進貨 / 調貨歸屬分店必填;進貨收入 / 調貨收入
  *   單據必填、只收有待退或待收的單據(那一邊的 [收到退款] / [收款] 預設 > 0)
- * - **沖正**:寫一筆方向相反、同金額的交易,原交易不改;銀行「存入」被沖正 → 連結的「存銀行」流水自動反向
+ * - **提領的現金去向**(`vaultOrgId`,選填):選了分店小金庫 → 同一個交易另寫現金流水「銀行提領」(銀行 → 小金庫,
+ *   `bankTransactionId` 連起來),歸屬分店 = 那家店;分店要在帳戶的使用組織裡。沒選 = 從帳戶提領現金,只扣銀行
+ * - **沖正**:寫一筆方向相反、同金額的交易,原交易不改;連結的現金流水(存銀行、銀行提領)自動反向。
+ *   沖正「銀行提領」= 從小金庫扣回,不能超過小金庫應有(`StoreVaultGuard`,同出庫、存銀行)
  */
 @Injectable()
 export class BankTransactionsService {
@@ -101,6 +108,7 @@ export class BankTransactionsService {
     private readonly audit: AuditService,
     private readonly tx: TransactionService,
     private readonly realtime: RealtimePublisher,
+    private readonly vault: StoreVaultGuard,
   ) {}
 
   // ---- 讀 ----
@@ -224,11 +232,25 @@ export class BankTransactionsService {
     assertActive(account);
     const parsed = parseRecordInput(input);
     const linked = await this.linkedDocumentOf(operator, parsed);
-    const branchOrgId = parsed.branchOrgId ?? linked.branchOrgId;
+    const vaultOrgId =
+      parsed.vaultOrgId === null
+        ? null
+        : await this.mustVaultStore(operator, account, parsed.vaultOrgId);
+    if (
+      vaultOrgId !== null &&
+      parsed.branchOrgId !== null &&
+      !parsed.branchOrgId.equals(vaultOrgId)
+    ) {
+      // 現金去向的分店就是歸屬分店,兩個不一樣 = 填錯
+      throw validationError("branch must be the vault's store", [
+        "branchOrgId",
+      ]);
+    }
+    const branchOrgId = vaultOrgId ?? parsed.branchOrgId ?? linked.branchOrgId;
     if (requiresBranch(parsed.type) && branchOrgId === null) {
       throw validationError("branch is required", ["branchOrgId"]);
     }
-    const created = await this.tx.withTransaction(async () => {
+    const created = await this.tx.withTransaction(async (session) => {
       const row = await this.write(operator, {
         account,
         type: parsed.type,
@@ -243,16 +265,26 @@ export class BankTransactionsService {
         summary: parsed.summary,
         note: parsed.note,
       });
+      const movementId =
+        vaultOrgId === null
+          ? null
+          : await this.recordVaultInflow(session, operator, row, vaultOrgId);
       await this.audit.record(operator, {
         action: ACCOUNTS_AUDIT.transactionCreate,
         targetType: ACCOUNTS_AUDIT.transactionTarget,
         targetId: row._id,
-        after: auditOf(row),
+        after: {
+          ...auditOf(row),
+          ...(movementId === null ? {} : { cashMovementId: movementId }),
+        },
       });
       return row;
     });
     if (linked.side !== null) {
       await this.publishBadge(operator, account.tenantId);
+    }
+    if (vaultOrgId !== null) {
+      await publishStoreBoard(this.realtime, account.tenantId, vaultOrgId);
     }
     return firstOf(
       await this.toModels(
@@ -336,11 +368,29 @@ export class BankTransactionsService {
       operator,
       String(original.accountId),
     );
-    const reversal = await this.tx.withTransaction(() =>
-      this.reverseRecord(operator, original, reason),
-    );
+    // 沖正「銀行提領」= 從小金庫扣回:不能超過小金庫應有(與出庫、存銀行同一個守門文件;規格 9)
+    const vaultOut = await this.linkedVaultInflowOf(operator, original);
+    if (vaultOut !== null) {
+      await this.vault.prepare(vaultOut.reader, vaultOut.orgId);
+    }
+    const reversal = await this.tx.withTransaction(async (session) => {
+      if (vaultOut !== null) {
+        await this.vault.assertCovers(
+          session,
+          vaultOut.reader,
+          original.tenantId,
+          vaultOut.orgId,
+          vaultOut.amount,
+          "id",
+        );
+      }
+      return this.reverseRecord(operator, original, reason);
+    });
     if (original.settlementSide !== null) {
       await this.publishBadge(operator, account.tenantId);
+    }
+    if (vaultOut !== null) {
+      await publishStoreBoard(this.realtime, original.tenantId, vaultOut.orgId);
     }
     return firstOf(
       await this.toModels(
@@ -405,8 +455,9 @@ export class BankTransactionsService {
   }
 
   /**
-   * 交易內沖正一筆(呼叫端已檢查權限):寫一筆同類型、方向相反、同金額的交易,原交易不改;
-   * 原交易是「存入」→ 連結的「存銀行」流水自動寫一筆反向。已被沖正 / 本身是沖正 → `ALREADY_REVERSED`。
+   * 交易內沖正一筆(呼叫端已檢查權限;沖正「銀行提領」的小金庫檢查也由呼叫端做):寫一筆同類型、方向相反、
+   * 同金額的交易,原交易不改;連結的現金流水(存入 → 「存銀行」、提領 → 「銀行提領」)自動寫一筆反向。
+   * 已被沖正 / 本身是沖正 → `ALREADY_REVERSED`。
    */
   async reverseRecord(
     operator: OperatorContext,
@@ -449,19 +500,17 @@ export class BankTransactionsService {
       throw error;
     }
     await this.touchSettlement(reversal);
-    if (original.type === "deposit") {
-      // 存銀行的流水在分店;沖正存入的人不一定看得到那家分店的現金(例外寫入,租戶邊界)
-      const linked = await this.movements.findMany(reader, {
-        bankTransactionId: original._id,
-        reversalOf: null,
+    // 連結的流水(存銀行、銀行提領)在分店;沖正的人不一定看得到那家分店的現金(例外寫入,租戶邊界)
+    const linked = await this.movements.findMany(reader, {
+      bankTransactionId: original._id,
+      reversalOf: null,
+    });
+    for (const movement of linked) {
+      // 沿用呼叫端進行中的交易(與這筆沖正一起成功、一起回復)
+      await this.cashLedger.reverseCashMovement(undefined, movement._id, {
+        operator: reader,
+        note: reason,
       });
-      for (const movement of linked) {
-        // 沿用呼叫端進行中的交易(與這筆沖正一起成功、一起回復)
-        await this.cashLedger.reverseCashMovement(undefined, movement._id, {
-          operator: reader,
-          note: reason,
-        });
-      }
     }
     await this.audit.record(operator, {
       action: ACCOUNTS_AUDIT.transactionReverse,
@@ -473,7 +522,115 @@ export class BankTransactionsService {
     return reversal;
   }
 
+  /**
+   * 提領的「現金去向」可選的分店(規格 10.1):帳戶的使用組織包含的分店(最上層組織底下的組織;共用給含下層時
+   * 含它底下的組織),依名稱排序。以租戶邊界讀(分店不一定在操作者的可見範圍內,和沖正連結流水同理)。
+   */
+  async vaultStoresOf(
+    operator: OperatorContext,
+    accountId: string,
+  ): Promise<LotteryAccountsRefModel[]> {
+    await this.access.assert(
+      operator,
+      ACCOUNTS_PERMISSIONS.recordBankTransaction,
+    );
+    const account = await this.mustFindAccount(operator, accountId);
+    const stores = await this.vaultStoreRows(operator, account);
+    return stores.map((org) => ({ id: String(org._id), name: org.name }));
+  }
+
   // ---- 內部 ----
+
+  private async vaultStoreRows(
+    operator: OperatorContext,
+    account: AccountRecord,
+  ): Promise<{ _id: Types.ObjectId; name: string }[]> {
+    if (account.tenantId === null) {
+      return [];
+    }
+    const reader = await tenantBoundaryContext(
+      this.orgs,
+      operator,
+      account.tenantId,
+    );
+    const orgs = await this.orgs.findMany(
+      reader,
+      { ancestors: account.tenantId },
+      { sort: { name: 1, _id: 1 } },
+    );
+    return orgs.filter((org) => isUsableByAccount(account, org));
+  }
+
+  /** 現金去向的分店要在帳戶的使用組織裡;不在 → `VALIDATION_FAILED`(欄位 `vaultOrgId`)。 */
+  private async mustVaultStore(
+    operator: OperatorContext,
+    account: AccountRecord,
+    orgId: Types.ObjectId,
+  ): Promise<Types.ObjectId> {
+    const stores = await this.vaultStoreRows(operator, account);
+    if (!stores.some((org) => org._id.equals(orgId))) {
+      throw validationError(
+        "vault store is not using this account",
+        ["vaultOrgId"],
+        ACCOUNTS_REASONS.accountNotUsable,
+      );
+    }
+    return orgId;
+  }
+
+  /** 交易內寫「銀行提領」流水(銀行 → 那家店的小金庫),連到剛寫的銀行「提領」;回傳流水 id。 */
+  private async recordVaultInflow(
+    session: ClientSession,
+    operator: OperatorContext,
+    row: BankTransactionRecord,
+    orgId: Types.ObjectId,
+  ): Promise<string> {
+    // 分店不一定在操作者的可見範圍內(例外寫入,租戶邊界;同沖正連結流水)
+    const reader = await tenantBoundaryContext(
+      this.orgs,
+      operator,
+      row.tenantId,
+    );
+    const movement = await this.cashLedger.recordCashMovement(session, {
+      operator: reader,
+      orgId,
+      type: "bank_withdraw",
+      from: "bank",
+      to: "vault",
+      amount: row.amount,
+      occurredAt: row.occurredAt,
+      note: row.note ?? row.summary ?? null,
+      bankTransactionId: row._id,
+    });
+    return String(movement._id);
+  }
+
+  /** 這筆銀行交易連結的「錢進小金庫」流水(銀行提領,還沒被沖正);沒有 → null。 */
+  private async linkedVaultInflowOf(
+    operator: OperatorContext,
+    original: BankTransactionRecord,
+  ): Promise<{
+    reader: OperatorContext;
+    orgId: Types.ObjectId;
+    amount: number;
+  } | null> {
+    if (original.reversalOf !== null) {
+      return null;
+    }
+    const reader = await tenantBoundaryContext(
+      this.orgs,
+      operator,
+      original.tenantId,
+    );
+    const movement = await this.movements.findOne(reader, {
+      bankTransactionId: original._id,
+      reversalOf: null,
+      to: "vault",
+    });
+    return movement === null
+      ? null
+      : { reader, orgId: movement.orgId, amount: movement.amount };
+  }
 
   /** 看得到的帳戶(可見範圍 + 使用組織);看不到 → `NOT_FOUND`。 */
   async mustFindAccount(
@@ -700,6 +857,8 @@ interface ParsedRecordInput {
   type: BankTransactionType;
   direction: Direction;
   branchOrgId: Types.ObjectId | null;
+  /** 提領的現金去向(分店小金庫);只有提領能給 */
+  vaultOrgId: Types.ObjectId | null;
   summary: string | null;
   note: string | null;
   ref: { moduleKey: string; refId: Types.ObjectId } | null;
@@ -766,6 +925,14 @@ function parseRecordInput(
   if (input.branchOrgId != null && branchOrgId === null) {
     errors.add("branchOrgId");
   }
+  const vaultOrgId = parseId(input.vaultOrgId);
+  if (
+    input.vaultOrgId != null &&
+    (vaultOrgId === null ||
+      (typed !== null && typed.type !== BANK_TRANSACTION_TYPE.withdrawal))
+  ) {
+    errors.add("vaultOrgId");
+  }
   const refId = parseId(input.refId);
   const ref =
     input.refType == null || refId === null
@@ -783,5 +950,22 @@ function parseRecordInput(
   if (typed === null) {
     throw validationError("bank transaction input is invalid", ["type"]);
   }
-  return { ...typed, branchOrgId, summary, note, ref };
+  return { ...typed, branchOrgId, vaultOrgId, summary, note, ref };
+}
+
+/** 帳戶的使用組織包含這個組織(歸屬組織本身、共用給的組織,或共用給含下層時它底下的組織)。 */
+function isUsableByAccount(
+  account: AccountRecord,
+  org: { _id: Types.ObjectId; ancestors?: readonly Types.ObjectId[] | null },
+): boolean {
+  const chain = [org._id, ...(org.ancestors ?? [])];
+  return (
+    account.orgId.equals(org._id) ||
+    account.shareOrgs.some(
+      (entry) =>
+        entry.orgId.equals(org._id) ||
+        (entry.includeDescendants &&
+          chain.some((id) => id.equals(entry.orgId))),
+    )
+  );
 }
