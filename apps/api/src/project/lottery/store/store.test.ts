@@ -47,6 +47,7 @@ import {
   SCHEDULE_TEST_PERMISSIONS as SP,
   seedScheduleAuthorization,
 } from "../../schedule/test-support/fixtures";
+import { useFakeNow } from "../../test-support/test-clock";
 import { isCashPointDeactivationBlocked } from "../cash-points/cash-point-deactivation";
 import { openDrawersOf, openShiftOf } from "../cash/open-shift";
 import { seedReasonCategory } from "../test-support/master-data-fixtures";
@@ -215,6 +216,9 @@ const soldDayOf = (index: number) => (index < 3 ? "2026-11-04" : "2026-11-05");
  * 11/5 王:08:00–16:00 信義店(負責 · 店內櫃台);16:00–22:00 信義店(協同 · 補貨)。林:08:00–16:00 信義店(店外攤位)。
  */
 describe("店面(一):看板、收銀班次、投庫 / 出庫(GraphQL 端點 + 真 MongoDB)", () => {
+  // 前置資料、api 的 `new Date()` 與店面 / 排班時鐘同一條時間軸:起點早於測試撥到的每個時間
+  useFakeNow(new Date("2026-11-01T00:00:00+08:00"));
+
   let api: AuthTestApp;
   let connection: Connection;
 

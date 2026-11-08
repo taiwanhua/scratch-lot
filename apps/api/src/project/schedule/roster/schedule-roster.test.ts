@@ -20,6 +20,7 @@ import { SCHEDULE_ATTENDANCE_PUNCHES_COLLECTION } from "../../database/schedule/
 import { SCHEDULE_DAY_OFFS_COLLECTION } from "../../database/schedule/schedule-day-off.schema";
 import { ScheduleEntryLock } from "../../database/schedule/schedule-entry-lock.schema";
 import { ScheduleTaskAssignment } from "../../database/schedule/schedule-task-assignment.schema";
+import { useFakeNow } from "../../test-support/test-clock";
 import {
   clearEntryDeletionGuardsForTest,
   registerEntryDeletionGuard,
@@ -584,6 +585,9 @@ describe("排班表(GraphQL 端點 + 真 MongoDB)", () => {
     });
     expect(updated.errors).toBeUndefined();
   }
+
+  // 排班、畫休的日期寫死在 2026-12 / 2027-02:「今天」固定在那之前(畫休截止、自動排班鎖都看今天)
+  useFakeNow(new Date("2026-11-08T09:00:00+08:00"));
 
   beforeAll(async () => {
     api = await startAuthTestApp("cookhome-test-schedule-roster");
