@@ -80,3 +80,32 @@ export async function expectSold(
 export function snackbar(page: Page, text: string | RegExp): Locator {
   return page.locator(".MuiAlert-message").filter({ hasText: text });
 }
+
+/** 台北今天(`YYYY-MM-DD`;報表的日報條件)。 */
+export function taipeiToday(): string {
+  return new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString().slice(0, 10);
+}
+
+/** 輸出報表 → 營運報表、日報、那家店 → [預覽],切到那家店的工作表。 */
+export async function previewDailyOperations(
+  page: Page,
+  orgId: string,
+  storeName: string,
+): Promise<void> {
+  const conditions = {
+    period: { kind: "day", date: taipeiToday() },
+    orgIds: [orgId],
+    extra: {},
+  };
+  await page.goto(
+    `/reports?report=operations&conditions=${encodeURIComponent(JSON.stringify(conditions))}`,
+  );
+  await Promise.all([
+    waitForOperation(page, "Operations"),
+    page.getByRole("button", { name: "預覽" }).click(),
+  ]);
+  const tab = page.getByRole("tab", { name: new RegExp(storeName) });
+  if ((await tab.count()) > 0) {
+    await tab.first().click();
+  }
+}

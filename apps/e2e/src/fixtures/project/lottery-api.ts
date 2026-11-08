@@ -300,7 +300,7 @@ export async function submitCountStocktake(
     presentCount: number;
     investigateCount: number;
   },
-): Promise<void> {
+): Promise<string> {
   const now = new Date().toISOString();
   const draft = {
     version: 1,
@@ -326,7 +326,9 @@ export async function submitCountStocktake(
       },
     ],
   };
-  await graphqlOk(
+  const data = await graphqlOk<{
+    createAndSubmitFormSubmission: { submission: { id: string } };
+  }>(
     SUBMIT_FORM,
     {
       input: {
@@ -342,6 +344,7 @@ export async function submitCountStocktake(
     },
     token,
   );
+  return data.createAndSubmitFormSubmission.submission.id;
 }
 
 const MOVE_BY_COUNT = `
@@ -361,4 +364,28 @@ export function moveByCountRaw(
   },
 ): Promise<GraphqlResponse<unknown>> {
   return graphql(MOVE_BY_COUNT, { input }, token);
+}
+
+const SELL_BY_COUNT = `
+mutation E2eSellByCount($input: SellLotteryTicketsByCountInput!) {
+  sellLotteryTicketsByCount(input: $input) { items { refId count } }
+}`;
+
+/** [依張數標記售出](原因「太忙沒刷」;要那台開著自己的班)。 */
+export async function sellByCount(
+  token: string,
+  input: { orgId: string; cashPointId: string; gameId: string; count: number },
+): Promise<void> {
+  await graphqlOk(
+    SELL_BY_COUNT,
+    {
+      input: {
+        orgId: input.orgId,
+        localCashPointId: input.cashPointId,
+        lines: [{ gameId: input.gameId, count: input.count }],
+        reasonKey: "too-busy",
+      },
+    },
+    token,
+  );
 }

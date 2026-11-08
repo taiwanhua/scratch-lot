@@ -133,6 +133,10 @@ async function publishReviewWorkflow(
 export async function createLotteryTenant(
   tenant: ScenarioTenant,
   storeOrgIds: readonly string[],
+  options: {
+    /** 盤點確認:`auto` 送出即完成(預設);`review` 要另外核准(劇本 5 驗補點編號核准) */
+    stocktakeApproval?: "auto" | "review";
+  } = {},
 ): Promise<LotteryTenant> {
   const token = tenant.tenantAdmin.token;
   await assignForms(tenant.rootToken, tenant.tenantOrgId, SCENARIO_FORMS);
@@ -157,7 +161,12 @@ export async function createLotteryTenant(
   });
   await publishReviewWorkflow(tenant, "purchase", "點收", "review");
   await publishReviewWorkflow(tenant, "checkout_confirm", "店長審核", "review");
-  await publishReviewWorkflow(tenant, "stocktake_confirm", "店長審核", true);
+  await publishReviewWorkflow(
+    tenant,
+    "stocktake_confirm",
+    "店長審核",
+    options.stocktakeApproval === "review" ? "review" : true,
+  );
   return {
     tenant,
     token,
@@ -233,11 +242,18 @@ export async function stockStore(
 }
 
 /** 南港店設成張數店(自訂一筆)、備好貨,+tenant 開 A 台的班(期初零用金 0,應有現金就是賣的錢)。 */
-export async function createCountStore(tenant: ScenarioTenant): Promise<{
+export async function createCountStore(
+  tenant: ScenarioTenant,
+  options: Parameters<typeof createLotteryTenant>[2] = {},
+): Promise<{
   lottery: LotteryTenant;
   store: LotteryStore;
 }> {
-  const lottery = await createLotteryTenant(tenant, [tenant.nangangOrgId]);
+  const lottery = await createLotteryTenant(
+    tenant,
+    [tenant.nangangOrgId],
+    options,
+  );
   await customizeSetting(lottery.token, {
     orgId: tenant.nangangOrgId,
     key: "count_mode",
