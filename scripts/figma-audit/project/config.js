@@ -226,7 +226,7 @@ const AUDIT_CONFIG = {
   audit: {
     // 畫面框內不能出現的開發用文字(devTextInScreens)
     devText: [
-      /\b(ST|IN|PU|AC|RE|DE|MD|SC|RC|RW|BS|CS)-\d{2}[a-e]?\b/, // 設計稿編號
+      /\b(ST|IN|PU|AC|RE|DE|MD|SC|RC|RW|BS|CS|WS)-\d{2}[a-e]?\b/, // 設計稿編號
       /第 ?\d+(\.\d+)* ?(節|章)|規格/, // 規格章節
       /RANGE_TOO_LARGE|show-cost|\b(store|inventory|purchasing|accounts|reports|dealers|games|schedule|system|master-data)\.[a-z][a-z-]+|swapComponent|Draft\/|PageTabs|SLOT/, // 錯誤碼、權限 key、實作詞
     ],
