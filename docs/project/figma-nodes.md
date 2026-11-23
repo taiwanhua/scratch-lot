@@ -222,6 +222,8 @@ CS-22 原本沒有手機框,CS-22-2 手機照 IN-01-2 · 手機(RW-01 標準列�
 - CS-11 補點編號:圖例和格子沒有調貨中。
 - CS-30 調貨單新增:不能調的原因清單共用 PU-09-2a,已在 PU-09-2a 註解補「批售中(哪一張批售單)」。
 
+畫完後(11/24)在全部專案頁(13 個 Screen 頁、班表時間軸、刮刮樂元件頁)重跑完整的 audit-layout / audit-legend / audit.js / audit-sync,全部 0;大頁(店面兩頁、班表管理)依尺寸 Section 分開跑,audit-sync 的 28 筆是設定檔既有豁免。
+
 ### 稽核
 
 `scripts/figma-audit/project/config.js` 是本專案的稽核設定,做法見 [figma-audit README](../../scripts/figma-audit/README.md)。班表另有 `scripts/figma-audit/project/audit-roster.js`:以 SC-03 電腦的班表(`290:83686`)為基準,逐格比對同月同店的所有班表(含背景複本、三種尺寸),`total` 要是 0;它和其他稽核腳本一樣整份貼進 use_figma 執行,不需要先貼設定檔。
