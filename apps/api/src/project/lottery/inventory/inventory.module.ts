@@ -11,6 +11,8 @@ import { InventoryNames } from "./inventory-names";
 import { InventoryStockService } from "./inventory-stock.service";
 import { InventoryViewService } from "./inventory-view.service";
 import { LotteryInventoryResolver } from "./inventory.resolver";
+import { LotteryOpeningResolver } from "./opening/opening.resolver";
+import { InventoryOpeningService } from "./opening/opening.service";
 
 /**
  * 庫存管理(`inventory`,專案規格 7.3、7.4、7.6;正本 `docs/modules/project/inventory.md`):
@@ -33,6 +35,9 @@ import { LotteryInventoryResolver } from "./inventory.resolver";
     InventoryActionsService,
     InventoryStockService,
     LotteryInventoryResolver,
+    // 期初建檔(期初建檔規格)
+    InventoryOpeningService,
+    LotteryOpeningResolver,
   ],
 })
 export class LotteryInventoryModule {}

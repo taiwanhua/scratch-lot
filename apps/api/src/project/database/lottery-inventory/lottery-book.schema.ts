@@ -142,7 +142,7 @@ export class LotteryBook {
 
   /** 期初建檔的人與時間(進貨點收的本 = null)。 */
   @Prop({ type: MongooseSchema.Types.ObjectId, default: null })
-  openingBy!: Types.ObjectId | null;
+  openedBy!: Types.ObjectId | null;
 
   @Prop({ type: Date, default: null })
   openingAt!: Date | null;
