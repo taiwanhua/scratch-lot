@@ -40,6 +40,22 @@ const CREATE = /* GraphQL */ `
   }
 `;
 
+const BOOKS = /* GraphQL */ `
+  query OpeningBooks($input: LotteryInventoryBooksInput!) {
+    lotteryInventoryBooks(input: $input) {
+      items {
+        id
+        source
+        purchasedAt
+        openingAt
+        openedBy {
+          name
+        }
+      }
+    }
+  }
+`;
+
 const VOID = /* GraphQL */ `
   mutation TestVoidOpening($bookId: ID!) {
     voidLotteryOpeningBook(bookId: $bookId) {
@@ -885,6 +901,40 @@ describe("期初建檔(GraphQL 端點 + 真 MongoDB)", () => {
         input: { orgId: String(storeA), reason: "測試還原" },
       });
     }
+  });
+
+  it("庫存列表:來源篩選(期初建檔 / 進貨)與本的來源、建檔人、時間(規格 5.3)", async () => {
+    const { bookId } = await create(managerA, sealedInput(nextBookNo()));
+    const list = (source: string | null) =>
+      ok<{
+        lotteryInventoryBooks: {
+          items: {
+            id: string;
+            source: string;
+            purchasedAt: string | null;
+            openingAt: string | null;
+            openedBy: { name: string } | null;
+          }[];
+        };
+      }>(api, hq, BOOKS, { input: { source, pageSize: 100 } }).then(
+        (data) => data.lotteryInventoryBooks.items,
+      );
+    const opening = await list("opening");
+    const book = opening.find((item) => item.id === bookId);
+    expect(book).toMatchObject({ source: "opening", purchasedAt: null });
+    expect(book?.openingAt).not.toBeNull();
+    expect(book?.openedBy?.name).toBeTruthy();
+    expect(opening.every((item) => item.source === "opening")).toBe(true);
+    const purchased = await list("purchase");
+    expect(purchased.some((item) => item.id === bookId)).toBe(false);
+    const all = await list(null);
+    expect(all.some((item) => item.id === bookId)).toBe(true);
+    const result = await api.graphql(
+      BOOKS,
+      { input: { source: "gift" } },
+      { accessToken: hq },
+    );
+    expect(result.errors?.[0]?.extensions?.code).toBe("VALIDATION_FAILED");
   });
 
   it("OP6 沒有權限 / 看不到的分店 → FORBIDDEN;指令數與張數無關", async () => {

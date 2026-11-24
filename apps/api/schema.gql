@@ -2196,6 +2196,8 @@ type LotteryInventoryBook {
   holdings: [LotteryInventoryHolding!]!
   id: ID!
   lastTicketNo: String!
+  openedBy: LotteryInventoryRef
+  openingAt: DateTime
   org: LotteryInventoryRef!
   pendingSkipCount: Int!
   purchaseDealer: LotteryInventoryRef
@@ -2203,6 +2205,7 @@ type LotteryInventoryBook {
   remainingCount: Int!
   requiredSkipCount: Int!
   skippedTicketNos: [String!]!
+  source: String!
   standardTickets: Int!
   state: String!
   status: String!
@@ -2243,6 +2246,7 @@ input LotteryInventoryBooksInput {
   pageSize: Int = 50
   purchasedFrom: DateTime
   purchasedTo: DateTime
+  source: String
   state: String
 }
 

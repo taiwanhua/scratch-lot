@@ -2380,6 +2380,8 @@ export type LotteryInventoryBook = {
   holdings: Array<LotteryInventoryHolding>;
   id: Scalars['ID']['output'];
   lastTicketNo: Scalars['String']['output'];
+  openedBy?: Maybe<LotteryInventoryRef>;
+  openingAt?: Maybe<Scalars['DateTime']['output']>;
   org: LotteryInventoryRef;
   pendingSkipCount: Scalars['Int']['output'];
   purchaseDealer?: Maybe<LotteryInventoryRef>;
@@ -2387,6 +2389,7 @@ export type LotteryInventoryBook = {
   remainingCount: Scalars['Int']['output'];
   requiredSkipCount: Scalars['Int']['output'];
   skippedTicketNos: Array<Scalars['String']['output']>;
+  source: Scalars['String']['output'];
   standardTickets: Scalars['Int']['output'];
   state: Scalars['String']['output'];
   status: Scalars['String']['output'];
@@ -2430,6 +2433,7 @@ export type LotteryInventoryBooksInput = {
   pageSize?: InputMaybe<Scalars['Int']['input']>;
   purchasedFrom?: InputMaybe<Scalars['DateTime']['input']>;
   purchasedTo?: InputMaybe<Scalars['DateTime']['input']>;
+  source?: InputMaybe<Scalars['String']['input']>;
   state?: InputMaybe<Scalars['String']['input']>;
 };
 

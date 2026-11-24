@@ -114,6 +114,21 @@ export class LotteryInventoryBookModel {
   /** 批購甲類(名稱 = 「姓名 #證號」)。 */
   @Field(() => LotteryInventoryRefModel, { nullable: true })
   purchaseDealer!: LotteryInventoryRefModel | null;
+
+  /**
+   * 來源:`purchase` 進貨 / `opening` 期初建檔(期初建檔規格 5.3:批購日、批購甲類顯示「導入前既有」,
+   * 本的詳情來源卡寫「期初建檔 · 建檔人 · 時間」)。
+   */
+  @Field(() => String)
+  source!: string;
+
+  /** 期初建檔的時間;進貨的本 = null。 */
+  @Field(() => GraphQLISODateTime, { nullable: true })
+  openingAt!: Date | null;
+
+  /** 期初建檔人;進貨的本 = null。 */
+  @Field(() => LotteryInventoryRefModel, { nullable: true })
+  openedBy!: LotteryInventoryRefModel | null;
 }
 
 @ObjectType("LotteryInventoryBooksPayload")
