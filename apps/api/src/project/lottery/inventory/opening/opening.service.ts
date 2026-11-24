@@ -8,15 +8,18 @@ import {
   PURCHASE_FORM_KEY,
   PURCHASE_MODULE_KEY,
   TICKET_EVENT_TYPE,
+  TICKET_LOCATION_KIND,
   TICKET_STATUS,
   bookKeyOf,
   displayBookNo,
+  isOpeningSold,
   normalizeBookNo,
   openingPlanProblemOf,
   parseTicketInput,
   purchaseAmountOf,
   purchaseLinesOf,
 } from "@repo/domain/project/lottery";
+import { LOTTERY_FIELD_CATEGORY_KEYS } from "@repo/domain/project/lottery-fields";
 import { GAME_STATUS } from "@repo/domain/project/lottery-master-data";
 import { LOTTERY_SETTINGS_PERMISSIONS } from "@repo/domain/project/lottery-settings";
 
@@ -33,6 +36,7 @@ import {
 } from "../../../../database/operator-context";
 import { tenantBoundaryContext } from "../../../../database/tenant-boundary-context";
 import { TransactionService } from "../../../../database/transaction";
+import { FieldOptionsService } from "../../../../fields/field-options.service";
 import { LotteryGamesRepository } from "../../../database/lottery-games/lottery-games.repository";
 import {
   LotteryBooksRepository,
@@ -41,6 +45,7 @@ import {
   LotteryTicketsRepository,
 } from "../../../database/lottery-inventory/lottery-inventory.repository";
 import type { StoreOpeningHistoryEntry } from "../../../database/lottery-inventory/lottery-store-opening.schema";
+import { LOTTERY_FIELD_CATEGORIES } from "../../field-options/lottery-field-options";
 import { tenantOfOperator } from "../../master-data-tenant";
 import { PURCHASE_OPEN_STATUSES } from "../../purchase/purchase-rules.service";
 import { StoreSalesSupport } from "../../store/store-sales-support";
@@ -48,16 +53,20 @@ import { LotteryBooksService } from "../../tickets/books.service";
 import {
   INVENTORY_REASONS,
   notFoundError,
+  ticketConflictError,
   validationError,
 } from "../../tickets/inventory-error";
 import { TicketLedgerService } from "../../tickets/ticket-ledger.service";
 import { InventoryAccess } from "../inventory-access";
 import { InventoryNames } from "../inventory-names";
 import { isStoreOrg } from "../store-orgs";
-import type {
-  CreateLotteryOpeningBookInput,
-  LotteryOpeningScanInput,
-  ReopenLotteryStoreOpeningInput,
+import {
+  type CreateLotteryOpeningBookInput,
+  type FixLotteryOpeningTicketsInput,
+  type LotteryOpeningScanInput,
+  OPENING_FIX_DIRECTIONS,
+  type OpeningFixDirection,
+  type ReopenLotteryStoreOpeningInput,
 } from "./opening.input";
 import type {
   LotteryOpeningBookModel,
@@ -136,6 +145,7 @@ export class InventoryOpeningService {
     private readonly names: InventoryNames,
     private readonly transactions: TransactionService,
     private readonly audit: AuditService,
+    private readonly fieldOptions: FieldOptionsService,
   ) {}
 
   // ---- 讀取 ----
@@ -444,6 +454,157 @@ export class InventoryOpeningService {
     });
   }
 
+  /**
+   * 期初更正(規格 4.1;寫 `opening_fix`,不碰現金、不寫售出 / 撤銷):
+   *
+   * - 改回未售:選到的全是期初已售 → 未售,放到選的收銀點檯面或庫存。任何時候都可以(含結束後)
+   * - 改成導入前已賣出:選到的全是未售、沒被鎖、不在途 → 期初已售(位置不變);只在期初建檔進行中(E2)
+   *
+   * 張要在同一家店、操作者看得到,而且是期初建檔的本;原因必填(欄位管理「期初更正原因」)。回寫了幾張。
+   */
+  async fix(
+    operator: OperatorContext,
+    input: FixLotteryOpeningTicketsInput,
+  ): Promise<number> {
+    if (!(OPENING_FIX_DIRECTIONS as readonly string[]).includes(input.to)) {
+      throw validationError("更正方向不合", ["to"]);
+    }
+    const to = input.to as OpeningFixDirection;
+    const refs = new Map<string, number>();
+    for (const ticket of input.tickets) {
+      if (!Types.ObjectId.isValid(ticket.ticketId)) {
+        throw validationError("張的 id 不合法", ["tickets"]);
+      }
+      refs.set(ticket.ticketId, ticket.version);
+    }
+    if (refs.size === 0) {
+      throw validationError("請選擇張", ["tickets"]);
+    }
+    const reason = await this.fieldOptions.assertReason(
+      operator,
+      LOTTERY_FIELD_CATEGORY_KEYS.openingCorrectionReason,
+      input,
+      LOTTERY_FIELD_CATEGORIES,
+    );
+    const ids = [...refs.keys()].map((id) => new Types.ObjectId(id));
+    const found = await this.tickets.findMany(operator, { _id: { $in: ids } });
+    if (found.length !== ids.length) {
+      throw notFoundError("有幾張找不到");
+    }
+    const orgIds = new Set(found.map((ticket) => String(ticket.orgId)));
+    const [orgIdText] = [...orgIds];
+    if (orgIds.size !== 1 || orgIdText === undefined) {
+      throw validationError("一次只能更正同一家店的張", ["tickets"]);
+    }
+    const store = await this.mustStore(operator, orgIdText);
+    const bookIds = [...new Set(found.map((ticket) => String(ticket.bookId)))];
+    const openingBooks = await this.books.findMany(
+      operator,
+      {
+        _id: { $in: bookIds.map((id) => new Types.ObjectId(id)) },
+        source: "opening",
+      },
+      { select: "_id" },
+    );
+    if (openingBooks.length !== bookIds.length) {
+      throw validationError(
+        "只有期初建檔的本可以期初更正",
+        ["tickets"],
+        INVENTORY_REASONS.ticketStatusNotAllowed,
+      );
+    }
+    const location =
+      to === "unsold"
+        ? await this.fixLocationOf(operator, store, input.cashPointId ?? null)
+        : null;
+    return this.transactions.withTransaction(async (session) => {
+      const tickets = await this.tickets.findMany(
+        operator,
+        { _id: { $in: ids } },
+        { session },
+      );
+      const stale = tickets.filter(
+        (ticket) => refs.get(String(ticket._id)) !== ticket.version,
+      );
+      if (stale.length > 0 || tickets.length !== ids.length) {
+        throw ticketConflictError(stale.map((ticket) => String(ticket._id)));
+      }
+      const wrong = tickets.filter((ticket) =>
+        to === "unsold"
+          ? !isOpeningSold(ticket)
+          : ticket.status !== TICKET_STATUS.unsold ||
+            ticket.lockedBy !== null ||
+            ticket.location.kind === TICKET_LOCATION_KIND.inTransit,
+      );
+      if (wrong.length > 0) {
+        throw new GraphQLError(
+          to === "unsold"
+            ? "要改回未售的不是導入前已賣出"
+            : "要改成導入前已賣出的不是未售",
+          {
+            extensions: {
+              code: "VALIDATION_FAILED",
+              reason: INVENTORY_REASONS.ticketStatusNotAllowed,
+              fields: ["tickets"],
+              ticketIds: wrong.map((ticket) => String(ticket._id)),
+            },
+          },
+        );
+      }
+      if (to === "opening_sold") {
+        // E2:結束後不能把未售標成導入前已賣出
+        await this.touchOpen(operator, store, session);
+      }
+      const at = new Date();
+      await this.ledger.applyTicketEvents(
+        session,
+        { operator },
+        tickets.map((ticket) => ({
+          ticketId: ticket._id,
+          expectedVersion: ticket.version,
+          expectedStatuses: [
+            to === "unsold" ? TICKET_STATUS.sold : TICKET_STATUS.unsold,
+          ],
+          type: TICKET_EVENT_TYPE.openingFix,
+          at,
+          patch:
+            to === "unsold"
+              ? {
+                  status: TICKET_STATUS.unsold,
+                  sold: null,
+                  ...(location === null ? {} : { location }),
+                }
+              : {
+                  status: TICKET_STATUS.sold,
+                  sold: { at, source: "opening" as const },
+                  saleEventId: null,
+                  unmatched: false,
+                },
+          ...(to === "unsold" && location?.cashPointId != null
+            ? { cashPointId: location.cashPointId }
+            : {}),
+          refType: OPENING_REF_TYPE,
+          refId: ticket.bookId,
+          reasonKey: reason.reasonKey,
+          reasonNote: reason.reasonNote,
+        })),
+      );
+      await this.audit.recordMany(operator, [
+        {
+          action: "inventory.opening-fix",
+          targetType: "lottery_ticket",
+          targetId: tickets[0]?._id,
+          after: {
+            to,
+            ticketIds: tickets.map((ticket) => String(ticket._id)),
+            reasonKey: reason.reasonKey,
+          },
+        },
+      ]);
+      return tickets.length;
+    });
+  }
+
   /** [結束期初建檔](D10)。已結束 → `CONFLICT`。 */
   async close(
     operator: OperatorContext,
@@ -582,6 +743,27 @@ export class InventoryOpeningService {
       throw authError("FORBIDDEN", "tenant required");
     }
     return { orgId, name: org.name, tenantId };
+  }
+
+  /** 改回未售放哪:收銀點(要是這家店啟用中的)的檯面,或庫存。 */
+  private async fixLocationOf(
+    operator: OperatorContext,
+    store: OpeningStore,
+    cashPointIdText: string | null,
+  ): Promise<{
+    kind: "stock" | "counter";
+    cashPointId: Types.ObjectId | null;
+  }> {
+    if (cashPointIdText === null) {
+      return { kind: TICKET_LOCATION_KIND.stock, cashPointId: null };
+    }
+    const point = await this.support.mustCashPoint(
+      operator,
+      store.orgId,
+      cashPointIdText,
+      "cashPointId",
+    );
+    return { kind: TICKET_LOCATION_KIND.counter, cashPointId: point._id };
   }
 
   private writerOf(

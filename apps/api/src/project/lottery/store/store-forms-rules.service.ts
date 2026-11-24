@@ -76,6 +76,8 @@ export const STORE_FORM_BLOCKS = {
    * 同當下撤銷的 `COUNT_SALE_NOT_FOUND`)。
    */
   countSaleNotFound: "SALE_REVERSAL_COUNT_SALE_NOT_FOUND",
+  /** 期初已售(導入前已賣出)不能撤銷,請用期初更正(期初建檔規格 4.2;`message` 帶列與張)。 */
+  openingSaleNotReversible: "OPENING_SALE_NOT_REVERSIBLE",
   /** 依遊戲 + 張數:這台這個遊戲的已售·未對號不夠(`message` = `available <還有幾張>`;張數店規格 16.4 U7)。 */
   countExceeds: "SALE_REVERSAL_COUNT_EXCEEDS",
   /** 依遊戲 + 張數的收銀點不是這家分店的。 */
@@ -152,6 +154,12 @@ function planBlockOf(problem: ReversalPlanProblem): FormGuardBlock {
     case "not_reversible": {
       return {
         code: STORE_FORM_BLOCKS.ticketNotReversible,
+        message: `row ${problem.rowId} ticket ${problem.ticketId}`,
+      };
+    }
+    case "opening_sold": {
+      return {
+        code: STORE_FORM_BLOCKS.openingSaleNotReversible,
         message: `row ${problem.rowId} ticket ${problem.ticketId}`,
       };
     }

@@ -4,8 +4,10 @@ import { CurrentOperator } from "../../../../auth/decorators";
 import type { OperatorContext } from "../../../../database/operator-context";
 import { RequirePermission } from "../../../../permission/require-permission.decorator";
 import { RequireTenant } from "../../../tenant-scope/require-tenant.decorator";
+import { LotteryInventoryActionPayload } from "../models/lottery-inventory.model";
 import {
   CreateLotteryOpeningBookInput,
+  FixLotteryOpeningTicketsInput,
   LotteryOpeningScanInput,
   ReopenLotteryStoreOpeningInput,
 } from "./opening.input";
@@ -60,6 +62,15 @@ export class LotteryOpeningResolver {
     @CurrentOperator() operator: OperatorContext,
   ): Promise<LotteryOpeningBookPayload> {
     return this.openings.voidBook(operator, bookId);
+  }
+
+  @RequirePermission("inventory.opening")
+  @Mutation(() => LotteryInventoryActionPayload)
+  async fixLotteryOpeningTickets(
+    @Args("input") input: FixLotteryOpeningTicketsInput,
+    @CurrentOperator() operator: OperatorContext,
+  ): Promise<LotteryInventoryActionPayload> {
+    return { count: await this.openings.fix(operator, input), lossCost: null };
   }
 
   @RequirePermission("lottery-settings.edit-org")

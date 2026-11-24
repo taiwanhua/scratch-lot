@@ -1,5 +1,7 @@
 import { Field, ID, InputType, Int } from "@nestjs/graphql";
 
+import { LotteryTicketVersionInput } from "../dto/lottery-inventory.input";
+
 /** 期初建檔一本的 ③ 分放:這些張號放到哪個收銀點的檯面;`cashPointId` 缺席 / null = 庫存。 */
 @InputType()
 export class LotteryOpeningPlacementInput {
@@ -64,4 +66,30 @@ export class ReopenLotteryStoreOpeningInput {
 
   @Field(() => String)
   reason!: string;
+}
+
+/** 期初更正的方向:期初已售 → 未售 / 未售 → 期初已售(E2:後者只在期初建檔進行中)。 */
+export const OPENING_FIX_DIRECTIONS = ["unsold", "opening_sold"] as const;
+export type OpeningFixDirection = (typeof OPENING_FIX_DIRECTIONS)[number];
+
+/** 期初更正(期初建檔規格 4.1;`inventory.opening`)。選到的張要在同一家店、同一個方向。 */
+@InputType()
+export class FixLotteryOpeningTicketsInput {
+  @Field(() => [LotteryTicketVersionInput])
+  tickets!: LotteryTicketVersionInput[];
+
+  /** `unsold` 改回未售 / `opening_sold` 改成導入前已賣出。 */
+  @Field(() => String)
+  to!: string;
+
+  /** 改回未售放哪個收銀點的檯面;缺席 / null = 庫存。改成導入前已賣出時不看。 */
+  @Field(() => ID, { nullable: true })
+  cashPointId?: string | null;
+
+  /** 原因(欄位管理「期初更正原因」;選「其他」要填說明)。 */
+  @Field(() => String)
+  reasonKey!: string;
+
+  @Field(() => String, { nullable: true })
+  reasonNote?: string | null;
 }

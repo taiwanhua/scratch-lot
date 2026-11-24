@@ -279,3 +279,29 @@ describe("撤銷售出申請核准後張回到哪裡(張數店規格 7.3 第 5 �
     expect(saleReversalReturnPlaceOf(input)).toEqual(expected);
   });
 });
+
+describe("撤銷售出申請:期初已售不能撤銷(期初建檔規格 4.2、OP8)", () => {
+  it("刷到導入前已賣出的張 → opening_sold,請用期初更正", () => {
+    expect(
+      saleReversalPlanOf({
+        matching: false,
+        scans: [
+          {
+            rowId: "r1",
+            cashPointId: "cp-a",
+            ticket: ticket("t-open", {
+              status: "sold",
+              soldSource: "opening",
+              soldAt: at("08:00"),
+            }),
+          },
+        ],
+        carriers: [],
+        countLines: [],
+      }),
+    ).toEqual({
+      ok: false,
+      problem: { kind: "opening_sold", rowId: "r1", ticketId: "t-open" },
+    });
+  });
+});

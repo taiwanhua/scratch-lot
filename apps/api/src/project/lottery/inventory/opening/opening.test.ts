@@ -10,6 +10,7 @@ import {
   TICKET_EVENT_TYPE,
   TICKET_LOCATION_KIND,
 } from "@repo/domain/project/lottery";
+import { LOTTERY_FIELD_CATEGORY_KEYS } from "@repo/domain/project/lottery-fields";
 import { LOTTERY_SETTINGS_PERMISSIONS } from "@repo/domain/project/lottery-settings";
 
 import {
@@ -96,6 +97,14 @@ const SCAN = /* GraphQL */ `
         block
         serialNo
       }
+    }
+  }
+`;
+
+const FIX = /* GraphQL */ `
+  mutation TestFixOpening($input: FixLotteryOpeningTicketsInput!) {
+    fixLotteryOpeningTickets(input: $input) {
+      count
     }
   }
 `;
@@ -205,6 +214,36 @@ async function seedAuthorization(connection: Connection) {
       settings: {},
       source: "seed",
       retiredAt: null,
+      ...baseFields(now),
+    })),
+  );
+}
+
+/** 欄位管理「期初更正原因」(全域):建檔時標錯、其他。 */
+async function seedReasonCategory(connection: Connection) {
+  const now = new Date();
+  const key = LOTTERY_FIELD_CATEGORY_KEYS.openingCorrectionReason;
+  const { insertedId: categoryId } = await connection
+    .collection("field_categories")
+    .insertOne({
+      key,
+      name: key,
+      isSystem: true,
+      enabled: true,
+      ...baseFields(now),
+    });
+  await connection.collection("fields").insertMany(
+    [
+      { value: "mis-entered", label: "建檔時標錯" },
+      { value: "other", label: "其他" },
+    ].map((option, index) => ({
+      ...option,
+      key: `${key}.${option.value}`,
+      categoryId,
+      orgId: null,
+      order: index + 1,
+      enabled: true,
+      isSystem: true,
       ...baseFields(now),
     })),
   );
@@ -332,6 +371,7 @@ describe("期初建檔(GraphQL 端點 + 真 MongoDB)", () => {
   beforeAll(async () => {
     api = await startAuthTestApp("scratch-lot-test-lottery-opening");
     await seedAuthorization(api.connection);
+    await seedReasonCategory(api.connection);
     tenant = await createOrg(api.connection, {
       name: "租戶甲",
       settings: { visibility: "subtree" },
@@ -744,6 +784,107 @@ describe("期初建檔(GraphQL 端點 + 真 MongoDB)", () => {
     expect(
       await errorOf(api, managerA, VOID, { bookId: second.bookId }),
     ).toMatchObject({ reason: "OPENING_NOT_VOIDABLE" });
+  });
+
+  it("OP11 期初更正:改回未售放到選的位置;改成導入前已賣出只在進行中;原因必填;不碰現金", async () => {
+    const { bookId } = await create(managerA, openedInput(nextBookNo()));
+    const tickets = await ticketsOf(bookId);
+    const pick = (nos: string[]) =>
+      tickets
+        .filter((ticket) => nos.includes(ticket.ticketNo))
+        .map((ticket) => ({
+          ticketId: String(ticket._id),
+          version: ticket.version,
+        }));
+    expect(
+      await errorOf(api, managerA, FIX, {
+        input: { tickets: pick(["046"]), to: "unsold", reasonKey: "" },
+      }),
+    ).toMatchObject({ code: "VALIDATION_FAILED", fields: ["reasonKey"] });
+    expect(
+      await errorOf(api, managerA, FIX, {
+        input: {
+          tickets: pick(["047"]),
+          to: "unsold",
+          reasonKey: "mis-entered",
+        },
+      }),
+    ).toMatchObject({ reason: "TICKET_STATUS_NOT_ALLOWED" });
+    await ok(api, managerA, FIX, {
+      input: {
+        tickets: pick(["045", "046"]),
+        to: "unsold",
+        cashPointId: String(pointA),
+        reasonKey: "mis-entered",
+      },
+    });
+    const after = await ticketsOf(bookId);
+    const fixed = after.filter((ticket) =>
+      ["045", "046"].includes(ticket.ticketNo),
+    );
+    expect(
+      fixed.every(
+        (ticket) =>
+          ticket.status === "unsold" &&
+          ticket.soldSource === null &&
+          ticket.location.cashPointId?.equals(pointA) === true,
+      ),
+    ).toBe(true);
+    const fixEvents = await api.connection
+      .collection("lottery_ticket_events")
+      .find({
+        bookId: new Types.ObjectId(bookId),
+        type: TICKET_EVENT_TYPE.openingFix,
+      })
+      .toArray();
+    expect(fixEvents).toHaveLength(2);
+    expect(
+      fixEvents.every(
+        (event) =>
+          event.cashEffect === "none" &&
+          event.amount === 0 &&
+          event.reasonKey === "mis-entered",
+      ),
+    ).toBe(true);
+    // 進行中:未售 → 導入前已賣出
+    const unsold = after.find((ticket) => ticket.ticketNo === "060");
+    await ok(api, managerA, FIX, {
+      input: {
+        tickets: [{ ticketId: String(unsold?._id), version: unsold?.version }],
+        to: "opening_sold",
+        reasonKey: "other",
+        reasonNote: "漏標",
+      },
+    });
+    const afterSold = await ticketsOf(bookId);
+    const sixty = afterSold.find((ticket) => ticket.ticketNo === "060");
+    expect(sixty).toMatchObject({ status: "sold", soldSource: "opening" });
+    expect(sixty?.saleEventId).toBeNull();
+    // 結束後:只能改回未售
+    await ok(api, hq, CLOSE, { orgId: String(storeA) });
+    try {
+      const current = await ticketsOf(bookId);
+      const ref = (no: string) => {
+        const ticket = current.find((item) => item.ticketNo === no);
+        return [{ ticketId: String(ticket?._id), version: ticket?.version }];
+      };
+      expect(
+        await errorOf(api, managerA, FIX, {
+          input: {
+            tickets: ref("061"),
+            to: "opening_sold",
+            reasonKey: "mis-entered",
+          },
+        }),
+      ).toMatchObject({ reason: "STORE_OPENING_CLOSED" });
+      await ok(api, managerA, FIX, {
+        input: { tickets: ref("060"), to: "unsold", reasonKey: "mis-entered" },
+      });
+    } finally {
+      await ok(api, hq, REOPEN, {
+        input: { orgId: String(storeA), reason: "測試還原" },
+      });
+    }
   });
 
   it("OP6 沒有權限 / 看不到的分店 → FORBIDDEN;指令數與張數無關", async () => {

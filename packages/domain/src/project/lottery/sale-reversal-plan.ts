@@ -60,6 +60,8 @@ export interface ReversalPlanMatch {
 export type ReversalPlanProblem =
   /** 不是本店已售(或不能對號的狀態)、被別的單鎖住、跳號、報廢、在途 */
   | { kind: "not_reversible"; rowId: string; ticketId: string }
+  /** 期初已售(導入前已賣出):沒算過銷售,不能撤銷,請用期初更正(期初建檔規格 4.2) */
+  | { kind: "opening_sold"; rowId: string; ticketId: string }
   /** 張數店刷到的票不是確定張號的已售,這台這個遊戲又沒有依張數售出可對號 */
   | { kind: "count_sale_not_found"; rowId: string; ticketId: string }
   /** 依遊戲 + 張數:這台這個遊戲的已售·未對號不夠,還有 `available` 張 */
@@ -105,7 +107,7 @@ const newestFirst = (
 type ScanStep =
   | { kind: "by_number" }
   | { kind: "match"; partnerId: string }
-  | { kind: "not_reversible" | "count_sale_not_found" };
+  | { kind: "not_reversible" | "count_sale_not_found" | "opening_sold" };
 
 /** 刷它的那一台、同遊戲最近一筆依張數售出帶著的一張(沒用過、沒被鎖)。 */
 function countSaleCarrierOf(
@@ -140,6 +142,9 @@ function scanStepOf(
   if (isBlocked(ticket)) {
     return { kind: "not_reversible" };
   }
+  if (ticket.status === TICKET_STATUS.sold && ticket.soldSource === "opening") {
+    return { kind: "opening_sold" };
+  }
   const sold = ticket.status === TICKET_STATUS.sold;
   if (isCertainSold(ticket) || (!matching && sold)) {
     return { kind: "by_number" };
@@ -160,7 +165,7 @@ function scanStepOf(
  * - **依張號**:確定張號的已售 → 照張號鎖。張數店的其他張(未售、待查、遺失、已售·未對號)→ 先和刷它的那一台、
  *   同遊戲最近一筆依張數售出帶著的其中一張對號(這張接手那筆售出),再鎖;那台沒有依張數售出可對號時,
  *   自己是已售(·未對號)就照張號鎖,否則擋下 `count_sale_not_found`。編號店只收已售。
- *   被別的單鎖住、跳號、報廢、在途、不是本店 → `not_reversible`。
+ *   被別的單鎖住、跳號、報廢、在途、不是本店 → `not_reversible`;期初已售 → `opening_sold`。
  * - **依遊戲 + 張數**:這台這個遊戲最近的已售·未對號(`pickForReversal`,售出時間新到舊);
  *   不夠 → `count_exceeds` 帶還有幾張。
  *

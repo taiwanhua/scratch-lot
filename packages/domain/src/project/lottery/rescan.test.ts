@@ -365,3 +365,25 @@ describe("互斥、B5、提醒、取消(5.6、8.3、8.5a)", () => {
     expect(canCancelRescan("wang", "lee", true)).toBe(true);
   });
 });
+
+describe("rescanResultOf:期初已售(期初建檔規格 4.2、OP10)", () => {
+  it("刷到導入前已賣出的張 → 導入前已賣出但還在,不對號、不拿未售的張配對", () => {
+    const result = rescanResultOf({
+      gameId: X,
+      place: atA,
+      scanned: [
+        scanned("010", {
+          status: "sold",
+          openingSold: true,
+          locationKind: "counter",
+          cashPointId: B,
+        }),
+      ],
+      candidates: [unsoldAt("038")],
+      books,
+    });
+    expect(result.items).toEqual([
+      { ticketId: "010", outcome: "opening_sold_here", partnerId: null },
+    ]);
+  });
+});

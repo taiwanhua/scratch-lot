@@ -18,6 +18,7 @@ import {
   TICKET_STATUS,
   canCancelRescan,
   isMatchingCountMode,
+  isOpeningSold,
   isRescanLive,
   isSessionLive,
   normalizeBookNo,
@@ -97,6 +98,7 @@ const RECORDED_OUTCOMES: ReadonlySet<string> = new Set([
   "recovered",
   "moved",
   "sold_here",
+  "opening_sold_here",
   "skipped",
   "scrapped",
   "locked",
@@ -155,6 +157,7 @@ function rescanTicketOf(
     inThisStore: ticket.orgId.equals(orgId),
     status: ticket.status,
     unmatched: ticket.unmatched,
+    openingSold: isOpeningSold(ticket),
     locked: ticket.lockedBy !== null,
     locationKind: ticket.location.kind,
     cashPointId:

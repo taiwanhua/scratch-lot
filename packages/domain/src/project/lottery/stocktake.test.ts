@@ -414,3 +414,36 @@ describe("盤點內容的張數盤點欄位(張數店規格 5.4)", () => {
     expect(parseStocktakeDraft({ ...base, countMode: "x" }).ok).toBe(false);
   });
 });
+
+describe("盤點差異:期初已售實際還在多一個 [期初更正](期初建檔規格 4.2、OP9)", () => {
+  const extra = {
+    ticketId: "t1",
+    ticketNo: "005",
+    kind: "extra" as const,
+    backfilled: false,
+  };
+
+  it("期初已售的已售還在可以 [期初更正];一般的已售還在、庫存那一行不行", () => {
+    expect(
+      stocktakeActionProblemsOf(
+        [{ ...extra, openingSold: true }],
+        [{ ticketNo: "005", action: "opening_fix" }],
+        "cp-a",
+      ),
+    ).toEqual({ stale: [], unhandled: [] });
+    expect(
+      stocktakeActionProblemsOf(
+        [extra],
+        [{ ticketNo: "005", action: "opening_fix" }],
+        "cp-a",
+      ).stale,
+    ).toEqual(["005"]);
+    expect(
+      stocktakeActionProblemsOf(
+        [{ ...extra, openingSold: true }],
+        [{ ticketNo: "005", action: "flag" }],
+        "cp-a",
+      ),
+    ).toEqual({ stale: [], unhandled: [] });
+  });
+});
