@@ -8,6 +8,7 @@ import {
 } from "../../../database/base.repository";
 import { LotteryAllocation } from "./lottery-allocation.schema";
 import { LotteryBook } from "./lottery-book.schema";
+import { LotteryStoreOpening } from "./lottery-store-opening.schema";
 import { LotteryTicketEvent } from "./lottery-ticket-event.schema";
 import { LotteryTicket } from "./lottery-ticket.schema";
 
@@ -15,6 +16,7 @@ export type LotteryBookDocument = HydratedDocument<LotteryBook>;
 export type LotteryTicketDocument = HydratedDocument<LotteryTicket>;
 export type LotteryTicketEventDocument = HydratedDocument<LotteryTicketEvent>;
 export type LotteryAllocationDocument = HydratedDocument<LotteryAllocation>;
+export type LotteryStoreOpeningDocument = HydratedDocument<LotteryStoreOpening>;
 
 /** lottery_books(本,專案規格 7.1)。 */
 @Injectable()
@@ -67,6 +69,20 @@ export class LotteryAllocationsRepository extends BaseRepository<
   constructor(
     @InjectModel(LotteryAllocation.name)
     model: RepositoryModel<LotteryAllocation, LotteryAllocationDocument>,
+  ) {
+    super(model);
+  }
+}
+
+/** lottery_store_openings(分店期初建檔狀態,期初建檔規格第 2 節)。 */
+@Injectable()
+export class LotteryStoreOpeningsRepository extends BaseRepository<
+  LotteryStoreOpening,
+  LotteryStoreOpeningDocument
+> {
+  constructor(
+    @InjectModel(LotteryStoreOpening.name)
+    model: RepositoryModel<LotteryStoreOpening, LotteryStoreOpeningDocument>,
   ) {
     super(model);
   }

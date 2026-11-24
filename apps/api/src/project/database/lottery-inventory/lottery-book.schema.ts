@@ -16,8 +16,12 @@ export const LOTTERY_BOOKS_COLLECTION = "lottery_books";
 export const BOOK_STATUSES = ["normal", "revoked"] as const;
 export type BookStatus = (typeof BOOK_STATUSES)[number];
 
+/** 本怎麼進到系統:進貨點收 / 期初建檔(期初建檔規格 2.3;舊資料沒有 = 進貨)。 */
+export const BOOK_SOURCES = ["purchase", "opening"] as const;
+export type BookSource = (typeof BOOK_SOURCES)[number];
+
 /**
- * 本(專案規格 7.1;正本 `docs/modules/project/inventory.md`「資料與帳本」)。只在進貨點收時建立
+ * 本(專案規格 7.1;正本 `docs/modules/project/inventory.md`「資料與帳本」)。只在進貨點收或期初建檔時建立
  * (`LotteryBooksService.createBook`),之後的狀態變化只經帳本服務。
  *
  * `orgId` = **所在分店**(整本調貨時由帳本服務以底座的搬家入口 `reassignOrg` 改)。持有這本任何一張的
@@ -131,6 +135,17 @@ export class LotteryBook {
   /** 正常 / 已撤銷。 */
   @Prop({ type: String, enum: BOOK_STATUSES, default: "normal" })
   status!: BookStatus;
+
+  /** 本怎麼進到系統:進貨點收 / 期初建檔(期初建檔規格 2.3)。 */
+  @Prop({ type: String, enum: BOOK_SOURCES, default: "purchase" })
+  source!: BookSource;
+
+  /** 期初建檔的人與時間(進貨點收的本 = null)。 */
+  @Prop({ type: MongooseSchema.Types.ObjectId, default: null })
+  openingBy!: Types.ObjectId | null;
+
+  @Prop({ type: Date, default: null })
+  openingAt!: Date | null;
 
   /** 模組 key(plugin 宣告;本表固定 `inventory`)。 */
   moduleKey!: string;

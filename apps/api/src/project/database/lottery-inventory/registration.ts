@@ -12,9 +12,15 @@ import {
 import {
   LotteryAllocationsRepository,
   LotteryBooksRepository,
+  LotteryStoreOpeningsRepository,
   LotteryTicketEventsRepository,
   LotteryTicketsRepository,
 } from "./lottery-inventory.repository";
+import {
+  LOTTERY_STORE_OPENINGS_COLLECTION,
+  LotteryStoreOpening,
+  LotteryStoreOpeningSchema,
+} from "./lottery-store-opening.schema";
 import {
   LOTTERY_TICKET_EVENTS_COLLECTION,
   LotteryTicketEvent,
@@ -26,7 +32,7 @@ import {
   LotteryTicketSchema,
 } from "./lottery-ticket.schema";
 
-/** 張數帳本的資料登記:本、張、張數事件、預計要給本數四張模組資料表與各自的組織歸屬檢查。 */
+/** 張數帳本的資料登記:本、張、張數事件、預計要給本數四張模組資料表、分店期初建檔狀態與各自的組織歸屬檢查。 */
 export const LOTTERY_INVENTORY_REGISTRATION: DatabaseRegistration = {
   key: "lottery-inventory",
   models: [
@@ -50,6 +56,11 @@ export const LOTTERY_INVENTORY_REGISTRATION: DatabaseRegistration = {
       collection: LOTTERY_ALLOCATIONS_COLLECTION,
       schema: LotteryAllocationSchema,
     },
+    {
+      name: LotteryStoreOpening.name,
+      collection: LOTTERY_STORE_OPENINGS_COLLECTION,
+      schema: LotteryStoreOpeningSchema,
+    },
   ],
   repositories: [
     { modelName: LotteryBook.name, provider: LotteryBooksRepository },
@@ -61,6 +72,10 @@ export const LOTTERY_INVENTORY_REGISTRATION: DatabaseRegistration = {
     {
       modelName: LotteryAllocation.name,
       provider: LotteryAllocationsRepository,
+    },
+    {
+      modelName: LotteryStoreOpening.name,
+      provider: LotteryStoreOpeningsRepository,
     },
   ],
   orgDataChecks: [
@@ -86,6 +101,12 @@ export const LOTTERY_INVENTORY_REGISTRATION: DatabaseRegistration = {
       key: "lottery-allocations",
       modelName: LotteryAllocation.name,
       repository: LotteryAllocationsRepository,
+      ownerField: "orgId",
+    },
+    {
+      key: "lottery-store-openings",
+      modelName: LotteryStoreOpening.name,
+      repository: LotteryStoreOpeningsRepository,
       ownerField: "orgId",
     },
   ],
