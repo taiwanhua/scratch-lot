@@ -10,10 +10,11 @@
 
 ## 模組 key 與畫面
 
-| key                   | 名稱     | sidebarType  | 路由                                | 說明                                                                                                                                                          |
-| --------------------- | -------- | ------------ | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `inventory`           | 庫存管理 | link(列表頁) | `/inventory`                        | 分頁 庫存 \| 待查·遺失 \| 預計要給本數(Figma IN-01 91:17、IN-05 91:1109、IN-06 91:1375);右上 [查刮刮樂](IN-02)                                                |
-| `inventory.book-page` | 本的詳情 | hidden       | `/inventory/book-page/<id>?ticket=` | 頁首、來源 / 所在 / 成本、張數格子與選張操作列、事件時間軸(IN-03 125:1159 / 125:1699);更正跳號 / 尋回 / 報廢 / 撤銷報廢是彈窗(IN-04-3a、IN-04b / c、IN-04-2b) |
+| key                      | 名稱     | sidebarType  | 路由                                | 說明                                                                                                                                                          |
+| ------------------------ | -------- | ------------ | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `inventory`              | 庫存管理 | link(列表頁) | `/inventory`                        | 分頁 庫存 \| 待查·遺失 \| 預計要給本數(Figma IN-01 91:17、IN-05 91:1109、IN-06 91:1375);右上 [查刮刮樂](IN-02)                                                |
+| `inventory.book-page`    | 本的詳情 | hidden       | `/inventory/book-page/<id>?ticket=` | 頁首、來源 / 所在 / 成本、張數格子與選張操作列、事件時間軸(IN-03 125:1159 / 125:1699);更正跳號 / 尋回 / 報廢 / 撤銷報廢是彈窗(IN-04-3a、IN-04b / c、IN-04-2b) |
+| `inventory.opening-page` | 期初建檔 | hidden       | `/inventory/opening-page`           | 一家店導入時建檔已在店裡的本(期初建檔規格第 3 節);畫面待 Figma(O5)                                                                                            |
 
 - 側欄順序 `order: 20`、圖示 `inventory`;沒有側欄數字。
 - 分頁**不是模組節點**:綁了模組三個分頁都看得到(本模組沒有 `view`)。
@@ -27,16 +28,17 @@
 
 規格 3.2 的 `inventory` **沒有 `view`**:讀取看模組有沒有綁(`InventoryAccess.assertModule`);遊戲詳情、乙類詳情的四個分頁在分頁登記加 `visible: hasInventoryModule`,沒綁庫存管理時不顯示。
 
-| 權限 key                     | moduleId 指向 | 它是哪一頁的什麼                                                                                           |
-| ---------------------------- | ------------- | ---------------------------------------------------------------------------------------------------------- |
-| `<每個節點>.*`               | 各節點        | wildcard;seed 自動產生                                                                                     |
-| `inventory.mark-skipped`     | `inventory`   | 本的詳情頁首 [更正跳號](`abilities.canCorrectSkips`)+ `swapLotterySkippedTicket`                           |
-| `inventory.recover`          | `inventory`   | 本的詳情選張 [尋回]、[整本尋回]、待查·遺失分頁 [尋回]、店面刷到待查 / 遺失的提示 + `recoverLotteryTickets` |
-| `inventory.scrap`            | `inventory`   | 本的詳情選未售的張 [報廢] + `scrapLotteryTickets`                                                          |
-| `inventory.show-cost`        | `inventory`   | 本的詳情的成本卡、待查·遺失的批購成本、報廢的損失(沒有時 api 回 null、畫面不顯示)                          |
-| `inventory.edit-allocations` | `inventory`   | 預計要給本數點格子修改(庫存管理、遊戲詳情、乙類詳情三處;`canEdit`)+ `setLotteryAllocation`;沒有時唯讀      |
+| 權限 key                     | moduleId 指向 | 它是哪一頁的什麼                                                                                                                                                                                    |
+| ---------------------------- | ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `<每個節點>.*`               | 各節點        | wildcard;seed 自動產生                                                                                                                                                                              |
+| `inventory.mark-skipped`     | `inventory`   | 本的詳情頁首 [更正跳號](`abilities.canCorrectSkips`)+ `swapLotterySkippedTicket`                                                                                                                    |
+| `inventory.recover`          | `inventory`   | 本的詳情選張 [尋回]、[整本尋回]、待查·遺失分頁 [尋回]、店面刷到待查 / 遺失的提示 + `recoverLotteryTickets`                                                                                          |
+| `inventory.scrap`            | `inventory`   | 本的詳情選未售的張 [報廢] + `scrapLotteryTickets`                                                                                                                                                   |
+| `inventory.show-cost`        | `inventory`   | 本的詳情的成本卡、待查·遺失的批購成本、報廢的損失(沒有時 api 回 null、畫面不顯示)                                                                                                                   |
+| `inventory.edit-allocations` | `inventory`   | 預計要給本數點格子修改(庫存管理、遊戲詳情、乙類詳情三處;`canEdit`)+ `setLotteryAllocation`;沒有時唯讀                                                                                               |
+| `inventory.opening`          | `inventory`   | 期初建檔頁(建檔、作廢)、本的詳情 [期初更正]、店面 / 盤點 / 重刷遇到期初已售時的 [期初更正] + `lotteryOpeningScan`、`createLotteryOpeningBook`、`voidLotteryOpeningBook`、`fixLotteryOpeningTickets` |
 
-開通時建立的角色(規格 3.3,`apps/db-migrator/seeds/project/onboarding/role-grants/inventory.ts`):總部管理全部;店長 `mark-skipped`、`recover`、`scrap`、`show-cost`(不含 `edit-allocations`);店員不給。
+開通時建立的角色(規格 3.3,`apps/db-migrator/seeds/project/onboarding/role-grants/inventory.ts`):總部管理全部;店長 `mark-skipped`、`recover`、`scrap`、`show-cost`、`opening`(不含 `edit-allocations`);店員不給。
 
 ## 頁面規則
 
@@ -113,25 +115,44 @@
 
 - **欄位錯誤**(REACT-18):查刮刮樂的編號格式不對寫在輸入欄下;尋回的原因、回到哪家店沒選或被擋下(`RECOVER_TARGET_NOT_STORE`)寫在那一欄下,Snackbar 只放通用句(`RecoverTicketDialog/inventory-field-errors.ts`);原因欄的預設句在 `ReasonFields`。
 
+### 期初建檔(期初建檔規格;正本 Claude Doc「期初建檔規格」)
+
+分店導入時把已在店裡的本建進系統:導入前已賣出的張記成期初已售(是「已售」的一種,售出來源 `opening`),不算銷售、現金與毛利。
+
+- 每店一筆 `lottery_store_openings`(`orgId` 唯一、`closedAt`、`closedBy`、`history[]` 結束 / 重新開放、`version`):建檔、作廢、改成期初已售在同一個交易讀這一筆並 `$inc version`,和「結束」一定有先後;結束後一律 `STORE_OPENING_CLOSED`。沒有這一筆 = 進行中。
+- 作廢:寫 `opening_void`、本改 `revoked`,本與張軟刪除(釋出本號可重建);報表的待標註與作廢時間讀已刪除的本(`report-pending.ts` 的 `includeDeleted`)。
+- 期初更正:改回未售(放到選的收銀點檯面或庫存;結束後也可以)/ 改成期初已售(只在進行中);寫 `opening_fix`,原因類別「期初更正原因」`lottery-opening-correction-reason`。
+- 其他模組遇到期初已售:店面刷到 → `OPENING_SOLD`(「導入前已賣出,請用期初更正」);撤銷售出申請 → `OPENING_SALE_NOT_REVERSIBLE`;盤點差異多一個動作 `opening_fix`;重刷結果 `opening_sold_here`。對號、依張數賣、依張數移櫃只挑未售或已售·未對號,不會挑到期初已售(推論、未實測)。
+- 預計要給本數:`opening` 算進給的事件,期初建檔的本算 1 本;作廢的本是已撤銷,不算。
+- 稽核:`inventory.opening`、`inventory.opening-void`、`inventory.opening-fix`、`inventory.opening-close`、`inventory.opening-reopen`。
+
+正本:`apps/api/src/project/lottery/inventory/opening/`、`packages/domain/src/project/lottery/opening.ts`
+
 ## api 介面
 
 ### GraphQL
 
-| 端點                               | 權限                         | 說明                                                                                                                                    |
-| ---------------------------------- | ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| `lotteryInventoryBooks(input)`     | 綁了 `inventory`             | 庫存分頁;`orgId`(子樹)、`gameId`、`state`、`purchasedFrom` / `purchasedTo`、`bookNo`                                                    |
-| `lotteryInventoryBook(id)`         | 綁了 `inventory`             | 本的詳情:本、全部的張(含版本、`operable`)、所在、事件時間軸、來源、成本(`show-cost`)、狀態列、`abilities`                               |
-| `lotteryTicketLookup(input)`       | 綁了 `inventory`             | 查刮刮樂:`{ gameCode?, bookNo, ticketNo }`;沒有遊戲代號時列出本號對到的每一款                                                           |
-| `lotteryInvestigations`            | 綁了 `inventory`             | 待查·遺失分頁;`canRecover`                                                                                                              |
-| `lotteryAllocations(input)`        | 綁了 `inventory`             | 預計要給本數:`{ orgId?, gameId? }` → 分店、遊戲、格子、`canEdit`                                                                        |
-| `lotteryStockOverview(input)`      | 綁了 `inventory`             | 庫存概況 / 在店庫存:`{ orgId?, gameId? }`                                                                                               |
-| `lotteryInventoryStores`           | 登入即可                     | 看得到的店(尋回「回到哪家店」的選項)                                                                                                    |
-| `lotteryFieldOptions(categoryKey)` | 登入即可                     | 刮刮樂的原因類別下拉(只收 `LOTTERY_FIELD_CATEGORY_KEYS`)                                                                                |
-| `setLotteryAllocation(input)`      | `inventory.edit-allocations` | 修改一格(0 以上的整數、備註 200 字內)                                                                                                   |
-| `swapLotterySkippedTicket(input)`  | `inventory.mark-skipped`     | `{ bookId, skipped: { ticketId, version }, unsold: { ticketId, version }, scanned?, reasonKey, reasonNote? }`(張數店要 `scanned: true`) |
-| `undoLotteryScrap(input)`          | `inventory.scrap`            | `{ tickets: [{ ticketId, version }], reasonKey, reasonNote? }` → `{ count, lossCost }`                                                  |
-| `recoverLotteryTickets(input)`     | `inventory.recover`          | `{ tickets: [{ ticketId, version }], orgId?, reasonKey, reasonNote? }`;不給 `orgId` = 從清單選、不換店                                  |
-| `scrapLotteryTickets(input)`       | `inventory.scrap`            | `{ tickets: [{ ticketId, version }], reasonKey, reasonNote? }` → `lossCost`(`show-cost`)                                                |
+| 端點                                                                   | 權限                         | 說明                                                                                                                                              |
+| ---------------------------------------------------------------------- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `lotteryInventoryBooks(input)`                                         | 綁了 `inventory`             | 庫存分頁;`orgId`(子樹)、`gameId`、`state`、`purchasedFrom` / `purchasedTo`、`bookNo`、`source`(`purchase` / `opening`;舊資料沒有來源 = 進貨)      |
+| `lotteryInventoryBook(id)`                                             | 綁了 `inventory`             | 本的詳情:本、全部的張(含版本、`operable`)、所在、事件時間軸、來源、成本(`show-cost`)、狀態列、`abilities`                                         |
+| `lotteryTicketLookup(input)`                                           | 綁了 `inventory`             | 查刮刮樂:`{ gameCode?, bookNo, ticketNo }`;沒有遊戲代號時列出本號對到的每一款                                                                     |
+| `lotteryInvestigations`                                                | 綁了 `inventory`             | 待查·遺失分頁;`canRecover`                                                                                                                        |
+| `lotteryAllocations(input)`                                            | 綁了 `inventory`             | 預計要給本數:`{ orgId?, gameId? }` → 分店、遊戲、格子、`canEdit`                                                                                  |
+| `lotteryStockOverview(input)`                                          | 綁了 `inventory`             | 庫存概況 / 在店庫存:`{ orgId?, gameId? }`                                                                                                         |
+| `lotteryInventoryStores`                                               | 登入即可                     | 看得到的店(尋回「回到哪家店」的選項)                                                                                                              |
+| `lotteryFieldOptions(categoryKey)`                                     | 登入即可                     | 刮刮樂的原因類別下拉(只收 `LOTTERY_FIELD_CATEGORY_KEYS`)                                                                                          |
+| `setLotteryAllocation(input)`                                          | `inventory.edit-allocations` | 修改一格(0 以上的整數、備註 200 字內)                                                                                                             |
+| `swapLotterySkippedTicket(input)`                                      | `inventory.mark-skipped`     | `{ bookId, skipped: { ticketId, version }, unsold: { ticketId, version }, scanned?, reasonKey, reasonNote? }`(張數店要 `scanned: true`)           |
+| `undoLotteryScrap(input)`                                              | `inventory.scrap`            | `{ tickets: [{ ticketId, version }], reasonKey, reasonNote? }` → `{ count, lossCost }`                                                            |
+| `recoverLotteryTickets(input)`                                         | `inventory.recover`          | `{ tickets: [{ ticketId, version }], orgId?, reasonKey, reasonNote? }`;不給 `orgId` = 從清單選、不換店                                            |
+| `scrapLotteryTickets(input)`                                           | `inventory.scrap`            | `{ tickets: [{ ticketId, version }], reasonKey, reasonNote? }` → `lossCost`(`show-cost`)                                                          |
+| `lotteryStoreOpening(orgId)`                                           | 綁了 `inventory`             | 一家店的期初建檔狀態:進行中 / 已結束、結束人與時間、歷程、已建檔的本(期初已售 / 在手上張數、位置、建檔人、能不能作廢)、`canOpen` / `canClose`     |
+| `lotteryOpeningScan(input)`                                            | `inventory.opening`          | 期初建檔刷條碼 / 手輸:解析本號與張號,回遊戲、迄號預設、這本是否已在系統或在進貨單上                                                               |
+| `createLotteryOpeningBook(input)`                                      | `inventory.opening`          | `{ orgId, gameId, bookNo, lastTicketNo, rate, soldTicketNos, skippedTicketNos, placements: [{ cashPointId?, ticketNos }] }` → `{ bookId, count }` |
+| `voidLotteryOpeningBook(bookId)`                                       | `inventory.opening`          | 作廢一本:只限這本還沒有其他動作(全部的張 `version` 1、都在原店)                                                                                   |
+| `fixLotteryOpeningTickets(input)`                                      | `inventory.opening`          | 期初更正 `{ tickets: [{ ticketId, version }], to: unsold \| opening_sold, cashPointId?, reasonKey, reasonNote? }`                                 |
+| `closeLotteryStoreOpening(orgId)` / `reopenLotteryStoreOpening(input)` | `lottery-settings.edit-org`  | 結束 / 重新開放(重新開放原因必填)                                                                                                                 |
 
 - 讀取範圍:**本**照操作者自己的範圍(所在分店或持有任何一張的分店,資料共用 `holderOrgIds`);讀得到本,就以租戶邊界上下文讀它全部的張與事件(反查,`inventory-view.service.ts`)。每張的 `operable` = 張的所在分店在操作者的可見範圍內(`isOrgVisible`);報廢、撤銷報廢、尋回(從清單選)、更正跳號的未售那張用同一個判斷擋下別店的張(跳號那張記在哪家店都可以)。
 - 組織、使用者、收銀點名稱以租戶邊界讀(`inventory-names.ts`);經銷商、單號照操作者的範圍讀;看不到的經銷商(甲類沒有共用給讀者的分店)在庫存列表與本的詳情顯示「(看不到)」,看不到的單號不顯示。
@@ -168,7 +189,8 @@
 | `lockedTicketCount`                                       | 被單據鎖定的張數(lookup 篩「未被鎖定」= 0)                                                                                                                                                                   |
 | `ticketCounts`                                            | 各狀態張數 `{ stock, counter, inTransit, sold, scrapped, investigating, lost, unmatchedSold, unmatchedInvestigating }`(跳號不算;後兩格是張數店的已售·未對號、待查·未對號,已算在 `sold` / `investigating` 內) |
 | `firstOpenedAt`                                           | 第一次拆本時間;null = 從沒拆過                                                                                                                                                                               |
-| `status`                                                  | `normal` / `revoked`(進貨單作廢)                                                                                                                                                                             |
+| `status`                                                  | `normal` / `revoked`(進貨單作廢、期初建檔作廢)                                                                                                                                                               |
+| `source`、`openedBy`、`openingAt`                         | 來源 `purchase`(預設、舊資料)/ `opening` 期初建檔;期初建檔的建檔人與時間(進貨的本 = null)。期初建檔的本沒有批購日、批購甲類,畫面顯示「導入前既有」                                                           |
 
 **張數由帳本服務維護,狀態由張數算出**(使用者 10/27 定案 B;規則在 `@repo/domain/project/lottery` 的 `book-stats.ts`,api `LotteryBooksService.statsOf`):`ticketCounts` 建本時 = 全部在庫存,之後只經帳本 `$inc`(見「帳本」);`firstOpenedAt` 在帳本寫第一筆「拆本」事件時填。顯示狀態 `bookDisplayStateOf`(已撤銷 / 未拆 / 檯面中 / 庫存中 / 在途 / 待查 / 遺失 / 已報廢 / 售完,依序判斷);「未拆」= 從沒拆過(`isBookSealed`;一家店的未拆 `isUnopenedInStore`),拆過一次就永遠不算未拆。讀取時算:待標註張數、剩餘張數(`remainingOfCounts`:未售 − 待標註;還沒標的跳號實體不存在)、總張數(`totalOfCounts`:紀錄張數 − 待標註)。待標註一本只扣一次,扣在還沒確認實體的那一組(`pendingPlacementOf`:有待查 / 遺失 → 那一組,剩餘不扣;沒有 → 未售,剩餘扣、所在分店只扣張數多的那家 `holdingsWithoutPendingSkips`;使用者 10/27 定案)、各分店的未售張數(`holdingsOf`,讀這本未售的張)。**待標註的跳號不算張數**(使用者 10/27 定案甲;`withoutPendingSkips`):帳本分不出是哪幾張,`ticketCounts` 存紀錄張數;總張數與持有張數在「整本一起(張數 = 標準張數 + 待標註)」時扣掉待標註,例:迄號 101、標準 100、未拆 → 總張數 / 持有 100;待查·遺失分頁的一列同樣扣(`ticketCount`、成本 = 單張成本合計 × 張數比例),張的清單照列 101 張紀錄。報表、調貨、盤點的口徑見各自文件。
 
@@ -195,7 +217,7 @@
 
 欄位:`eventId`、`ticketId`、`bookId`、`gameId`、`orgId`、`at`、`by`、`type`、`from`、`to`(狀態、位置、收銀點、所在分店的快照)、`quantity`(一筆一張)、`amount`(**一律正數**)、`cost`(成本快照:沒指定就記事件前的單張成本,之後調貨改了單張成本也不變;報表的已售成本、期初 / 期末成本都用它)、`cashEffect`(`none` / `increase` / `decrease`)、`cashPointId`、`shiftId`、`refType`、`refId`、`reasonKey`、`reasonNote`。索引 `eventId` 唯一、`(orgId, at)`、`(cashPointId, at)`、`(ticketId, at)`、`(orgId, gameId, type)`。
 
-事件類型(`packages/domain/src/project/lottery/ticket-events.ts`):`purchase` 進貨、`purchase_void` 進貨作廢、`open` 拆本、`recall` 收回、`move` 移櫃、`sale` 售出、`sale_stocktake` 售出(盤點補登)、`sale_undo` 撤銷、`skip` 跳號、`unskip` 取消跳號、`scrap` 報廢、`transfer_out` 調出、`in_transit` 在途、`transfer_in` 調入、`investigate` 待查、`lose` 遺失、`recover` 尋回、`cost_adjust` 成本調整(調貨改單張成本時寫)、`match` 對號(張數店,兩張互換狀態 + 位置,`refType: ticket_match`)、`renumber_confirm` 張號確認(補點編號核准、全店重刷全部刷完時清未對號記號)、`scrap_undo` 撤銷報廢。事件的 `from` / `to` 快照多記 `unmatched`。
+事件類型(`packages/domain/src/project/lottery/ticket-events.ts`):`purchase` 進貨、`purchase_void` 進貨作廢、`open` 拆本、`recall` 收回、`move` 移櫃、`sale` 售出、`sale_stocktake` 售出(盤點補登)、`sale_undo` 撤銷、`skip` 跳號、`unskip` 取消跳號、`scrap` 報廢、`transfer_out` 調出、`in_transit` 在途、`transfer_in` 調入、`investigate` 待查、`lose` 遺失、`recover` 尋回、`cost_adjust` 成本調整(調貨改單張成本時寫)、`match` 對號(張數店,兩張互換狀態 + 位置,`refType: ticket_match`)、`renumber_confirm` 張號確認(補點編號核准、全店重刷全部刷完時清未對號記號)、`scrap_undo` 撤銷報廢、`opening` 期初建檔(每張一筆,含期初已售與跳號;`refType: opening`、`refId` = 本)、`opening_fix` 期初更正、`opening_void` 期初建檔作廢。事件的 `from` / `to` 快照多記 `unmatched`。
 
 ### 帳本服務(唯一入口)
 
@@ -226,6 +248,8 @@
 ### 本的建立
 
 `LotteryBooksService.createBook(session, operator, input)`(`books.service.ts`)**只給進貨點收用**,以點收人自己的範圍寫(點收分店要在他的可見範圍內,而且在他當前組織的租戶裡 —— 本編號以這個租戶判斷重複;不是 → `VALIDATION_FAILED`,`reason: STORE_OUTSIDE_TENANT`):本號補 0、本編號(租戶內重複 → `VALIDATION_FAILED`,`reason: BOOK_KEY_DUPLICATE`)、迄號不在「標準張數 ~ 999」→ `VALIDATION_FAILED`(`reason: LAST_TICKET_NO_OUT_OF_RANGE`);以 `createMany` 一次建立 001 到迄號的每一張(未售、庫存、`version` 1)與每張一筆「進貨」事件;回待標註張數(跳號在拆本時標註)。
+
+期初建檔也用 `createBook`,多給 `opening` 計畫(`soldTicketNos`、`skippedTicketNos`、`placements`;呼叫端先以 `openingPlanProblemOf` 檢查):每張照計畫建成期初已售(`soldSource: opening`、`saleEventId: null`、不算銷售也不碰現金)/ 跳號 / 檯面或庫存的未售,事件寫 `opening`,本記 `source: opening`;拆過的本 `firstOpenedAt` = 建檔時間。
 
 ### 預計要給本數
 
@@ -269,6 +293,11 @@
 | `VALIDATION_FAILED` | `COUNT_STORE_SCAN_ONLY`              | 張數店的更正跳號:跳號那張沒有刷或手輸(`scanned`;7.10)                                                                                  |
 | `VALIDATION_FAILED` | `NO_MATCH_PARTNER`                   | 張數店的更正跳號:要改標跳號的張是系統預設帶入的狀態,同位置沒有未售可以接手(7.10)                                                       |
 | `VALIDATION_FAILED` | —(`fields: reasonKey / reasonNote`)  | 原因沒選、不是啟用中的選項,或選「其他」沒寫說明                                                                                        |
+| `VALIDATION_FAILED` | `STORE_OPENING_CLOSED`               | 期初建檔已結束後還要建檔、作廢,或把未售改成期初已售                                                                                    |
+| `VALIDATION_FAILED` | `BOOK_ON_PURCHASE`                   | 期初建檔:這本在有效的進貨單上(`extensions.serialNo`)                                                                                   |
+| `VALIDATION_FAILED` | `OPENING_PLAN_INVALID`               | 期初建檔的張號不合(`extensions.openingProblem`:超出範圍、重複、沒放位置、整本都賣完、拆過的本跳號沒標齊)                               |
+| `VALIDATION_FAILED` | `OPENING_NOT_VOIDABLE`               | 期初建檔作廢:不是期初建檔的本、已撤銷,或已有銷售或其他動作                                                                             |
+| `CONFLICT`          | `STORE_OPENING_STATE_MISMATCH`       | 結束 / 重新開放時已經是那個狀態(別人剛按)                                                                                              |
 | `FORBIDDEN`         | —                                    | 沒綁庫存管理(讀取)或沒有那條權限(寫入)                                                                                                 |
 
 ### 前端共用
