@@ -26,6 +26,7 @@
  * - `checkout.ts`:交班結帳的表單代號 / 欄位 key、結帳內容、面額表、應有 / 實點 / 差額與交接的檢查
  * - `daily-close.ts`:日結的結帳內容、精靈步驟、小金庫應有的各項、存入銀行的檢查、涵蓋計算期間沒有日結的日子
  * - `dealer-limits.ts`:經銷商與關係人文字欄位的長度上限(api 檢查與 admin 欄位下的格式要求共用)
+ * - `wholesale-customer.ts`:批售客戶文字欄位的長度上限、下拉文字「店名 · 電話」
  */
 export * from "./book-scan";
 export * from "./book-stats";
@@ -52,3 +53,4 @@ export * from "./store-sales";
 export * from "./ticket-code";
 export * from "./ticket-events";
 export * from "./transfer";
+export * from "./wholesale-customer";

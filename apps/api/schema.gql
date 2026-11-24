@@ -401,6 +401,17 @@ input CreateLotteryGameInput {
   unitPrice: Int!
 }
 
+input CreateLotteryWholesaleCustomerInput {
+  address: String
+  contactName: String
+  licenseNo: String
+  note: String
+  phone: String
+  shareOrgs: [ShareOrgInput!]
+  status: LotteryWholesaleCustomerStatus
+  storeName: String
+}
+
 input CreateMyDelegationInput {
   delegateUserId: ID!
   endAt: DateTime!
@@ -615,6 +626,15 @@ input DeleteLotteryGameInput {
 }
 
 type DeleteLotteryGamePayload {
+  deletedId: ID!
+  success: Boolean!
+}
+
+input DeleteLotteryWholesaleCustomerInput {
+  id: ID!
+}
+
+type DeleteLotteryWholesaleCustomerPayload {
   deletedId: ID!
   success: Boolean!
 }
@@ -4084,6 +4104,72 @@ type LotteryVaultExpected {
   baselineAt: DateTime
 }
 
+type LotteryWholesaleCustomer {
+  abilities: LotteryWholesaleCustomerAbilities!
+  address: String
+  contactName: String
+  createdAt: DateTime!
+  createdBy: LotteryDealerUserRef
+  id: ID!
+  isShared: Boolean!
+  lastWholesaleAt: DateTime
+  licenseNo: String
+  note: String
+  ownerOrgName: String
+  phone: String
+  shareOrgs: [ShareOrg!]!
+  status: LotteryWholesaleCustomerStatus!
+  storeName: String!
+  updatedAt: DateTime!
+  updatedBy: LotteryDealerUserRef
+}
+
+type LotteryWholesaleCustomerAbilities {
+  canEdit: Boolean!
+}
+
+type LotteryWholesaleCustomerPayload {
+  item: LotteryWholesaleCustomer!
+}
+
+type LotteryWholesaleCustomerSameName {
+  id: ID!
+  phone: String
+  storeName: String!
+}
+
+input LotteryWholesaleCustomerSameNamesInput {
+  excludeId: ID
+  storeName: String!
+}
+
+type LotteryWholesaleCustomerSameNamesPayload {
+  items: [LotteryWholesaleCustomerSameName!]!
+  totalCount: Int!
+}
+
+"""批售客戶狀態:往來中 / 停用"""
+enum LotteryWholesaleCustomerStatus {
+  ACTIVE
+  INACTIVE
+}
+
+input LotteryWholesaleCustomersInput {
+  keyword: String
+  page: Int = 1
+
+  """每頁筆數,上限 100"""
+  pageSize: Int = 20
+  status: LotteryWholesaleCustomerStatus
+}
+
+type LotteryWholesaleCustomersPayload {
+  items: [LotteryWholesaleCustomer!]!
+  page: Int!
+  pageSize: Int!
+  totalCount: Int!
+}
+
 input MakeupPunchEntryOptionsInput {
   at: DateTime!
   orgId: ID!
@@ -4284,6 +4370,7 @@ type Mutation {
   createLotteryDealer(input: CreateLotteryDealerInput!): LotteryDealerPayload!
   createLotteryDealerContact(input: CreateLotteryDealerContactInput!): LotteryDealerContactPayload!
   createLotteryGame(input: CreateLotteryGameInput!): LotteryGamePayload!
+  createLotteryWholesaleCustomer(input: CreateLotteryWholesaleCustomerInput!): LotteryWholesaleCustomerPayload!
   createMyDelegation(input: CreateMyDelegationInput!): MyDelegationPayload!
   createPrintAgent(input: CreatePrintAgentInput!): PrintAgentPairingPayload!
   createPrintJob(input: CreatePrintJobInput!): PrintJobPayload!
@@ -4303,6 +4390,7 @@ type Mutation {
   deleteFormVersionDraft(input: DeleteFormVersionDraftInput!): FormPayload!
   deleteLotteryBankAccount(id: ID!): DeleteLotteryBankAccountPayload!
   deleteLotteryGame(input: DeleteLotteryGameInput!): DeleteLotteryGamePayload!
+  deleteLotteryWholesaleCustomer(input: DeleteLotteryWholesaleCustomerInput!): DeleteLotteryWholesaleCustomerPayload!
   deleteMyDelegation(input: DeleteMyDelegationInput!): DeleteMyDelegationPayload!
   deleteMyScheduleDayOff(input: DeleteMyScheduleDayOffInput!): DeleteScheduleDayOffPayload!
   deleteOrg(input: DeleteOrgInput!): DeletePayload!
@@ -4433,6 +4521,7 @@ type Mutation {
   updateLotteryDealerContact(input: UpdateLotteryDealerContactInput!): LotteryDealerContactPayload!
   updateLotteryDealerSignin(input: UpdateLotteryDealerSigninInput!): LotteryDealerSigninPayload!
   updateLotteryGame(input: UpdateLotteryGameInput!): LotteryGamePayload!
+  updateLotteryWholesaleCustomer(input: UpdateLotteryWholesaleCustomerInput!): LotteryWholesaleCustomerPayload!
   updateMyPreferences(input: UpdateMyPreferencesInput!): UpdateMyPreferencesPayload!
   updateNotificationSetting(input: UpdateNotificationSettingInput!): NotificationSettingPayload!
   updateOrg(input: UpdateOrgInput!): OrgPayload!
@@ -5205,6 +5294,9 @@ type Query {
   lotteryTransferOptions(fromOrgId: ID!, submissionId: ID, toOrgId: ID): LotteryTransferOptions!
   lotteryTransferProgress(transferIds: [ID!]!): [LotteryTransferProgress!]!
   lotteryTransferReceiving(submissionId: ID!): LotteryTransferReceiving!
+  lotteryWholesaleCustomer(id: ID!): LotteryWholesaleCustomerPayload!
+  lotteryWholesaleCustomerSameNames(input: LotteryWholesaleCustomerSameNamesInput!): LotteryWholesaleCustomerSameNamesPayload!
+  lotteryWholesaleCustomers(input: LotteryWholesaleCustomersInput!): LotteryWholesaleCustomersPayload!
   makeupPunchEntryExists(submissionId: ID!): Boolean!
   makeupPunchEntryOptions(input: MakeupPunchEntryOptionsInput!): [ScheduleAttendanceEntryOption!]!
   me: Me!
@@ -6924,6 +7016,18 @@ input UpdateLotteryGameInput {
   status: String
   ticketsPerBook: Int
   unitPrice: Int
+}
+
+input UpdateLotteryWholesaleCustomerInput {
+  address: String
+  contactName: String
+  id: ID!
+  licenseNo: String
+  note: String
+  phone: String
+  shareOrgs: [ShareOrgInput!]
+  status: LotteryWholesaleCustomerStatus
+  storeName: String
 }
 
 input UpdateMyPreferencesInput {

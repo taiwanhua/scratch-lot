@@ -29,6 +29,7 @@ export interface DealersGrant {
  * 經銷商管理的讀取守門:規格 3.2 的 `dealers` 沒有 `view` 權限,**讀取看模組有沒有綁**
  * (ADR-0011「進得去哪一頁 = me.modules 有沒有那個模組」;先例檔案管理)。
  * 關係人的資料也以 `dealers` 為準(經銷商的表單與詳情要顯示關係人);關係人分頁另看 `dealers.contacts`。
+ * 批售客戶沒有別處要用,讀取直接以 `dealers.wholesale-customers` 為準。
  */
 @Injectable()
 export class DealersAccess {
@@ -60,14 +61,14 @@ export class DealersAccess {
     };
   }
 
-  /** 沒綁 `dealers` → `FORBIDDEN`(與 `@RequirePermission` 同一個碼)。 */
+  /** 沒綁 `moduleKey`(預設 `dealers`)→ `FORBIDDEN`(與 `@RequirePermission` 同一個碼)。 */
   async assertReadable(
     operator: OperatorContext,
-    now?: Date,
+    moduleKey: string = DEALERS_KEY,
   ): Promise<DealersGrant> {
-    const grant = await this.grantOf(operator, now);
-    if (!grant.modules.has(DEALERS_KEY)) {
-      throw authError("FORBIDDEN", `Missing module ${DEALERS_KEY}`);
+    const grant = await this.grantOf(operator);
+    if (!grant.modules.has(moduleKey)) {
+      throw authError("FORBIDDEN", `Missing module ${moduleKey}`);
     }
     return grant;
   }

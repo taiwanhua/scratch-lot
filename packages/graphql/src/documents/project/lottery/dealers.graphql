@@ -274,3 +274,100 @@ mutation UpdateLotteryDealerContact($input: UpdateLotteryDealerContactInput!) {
     }
   }
 }
+
+fragment LotteryWholesaleCustomerFields on LotteryWholesaleCustomer {
+  id
+  storeName
+  licenseNo
+  contactName
+  phone
+  address
+  status
+  note
+  lastWholesaleAt
+  createdBy {
+    id
+    name
+  }
+  createdAt
+  updatedAt
+  updatedBy {
+    id
+    name
+  }
+  ownerOrgName
+  shareOrgs {
+    orgId
+    includeDescendants
+  }
+  isShared
+  abilities {
+    canEdit
+  }
+}
+
+# LotteryWholesaleCustomersInput: { keyword?, status?, page?, pageSize? }
+query LotteryWholesaleCustomers($input: LotteryWholesaleCustomersInput!) {
+  lotteryWholesaleCustomers(input: $input) {
+    items {
+      ...LotteryWholesaleCustomerFields
+    }
+    totalCount
+    page
+    pageSize
+  }
+}
+
+query LotteryWholesaleCustomer($id: ID!) {
+  lotteryWholesaleCustomer(id: $id) {
+    item {
+      ...LotteryWholesaleCustomerFields
+    }
+  }
+}
+
+# LotteryWholesaleCustomerSameNamesInput: { storeName, excludeId? }
+query LotteryWholesaleCustomerSameNames(
+  $input: LotteryWholesaleCustomerSameNamesInput!
+) {
+  lotteryWholesaleCustomerSameNames(input: $input) {
+    items {
+      id
+      storeName
+      phone
+    }
+    totalCount
+  }
+}
+
+# CreateLotteryWholesaleCustomerInput: { storeName, licenseNo?, contactName?, phone?, address?, status?, note?, shareOrgs? }
+mutation CreateLotteryWholesaleCustomer(
+  $input: CreateLotteryWholesaleCustomerInput!
+) {
+  createLotteryWholesaleCustomer(input: $input) {
+    item {
+      ...LotteryWholesaleCustomerFields
+    }
+  }
+}
+
+# UpdateLotteryWholesaleCustomerInput: { id, …(同新增) }
+mutation UpdateLotteryWholesaleCustomer(
+  $input: UpdateLotteryWholesaleCustomerInput!
+) {
+  updateLotteryWholesaleCustomer(input: $input) {
+    item {
+      ...LotteryWholesaleCustomerFields
+    }
+  }
+}
+
+# DeleteLotteryWholesaleCustomerInput: { id }
+mutation DeleteLotteryWholesaleCustomer(
+  $input: DeleteLotteryWholesaleCustomerInput!
+) {
+  deleteLotteryWholesaleCustomer(input: $input) {
+    success
+    deletedId
+  }
+}

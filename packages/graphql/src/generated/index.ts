@@ -444,6 +444,17 @@ export type CreateLotteryGameInput = {
   unitPrice: Scalars['Int']['input'];
 };
 
+export type CreateLotteryWholesaleCustomerInput = {
+  address?: InputMaybe<Scalars['String']['input']>;
+  contactName?: InputMaybe<Scalars['String']['input']>;
+  licenseNo?: InputMaybe<Scalars['String']['input']>;
+  note?: InputMaybe<Scalars['String']['input']>;
+  phone?: InputMaybe<Scalars['String']['input']>;
+  shareOrgs?: InputMaybe<Array<ShareOrgInput>>;
+  status?: InputMaybe<LotteryWholesaleCustomerStatus>;
+  storeName?: InputMaybe<Scalars['String']['input']>;
+};
+
 export type CreateMyDelegationInput = {
   delegateUserId: Scalars['ID']['input'];
   endAt: Scalars['DateTime']['input'];
@@ -660,6 +671,16 @@ export type DeleteLotteryGameInput = {
 
 export type DeleteLotteryGamePayload = {
   __typename?: 'DeleteLotteryGamePayload';
+  deletedId: Scalars['ID']['output'];
+  success: Scalars['Boolean']['output'];
+};
+
+export type DeleteLotteryWholesaleCustomerInput = {
+  id: Scalars['ID']['input'];
+};
+
+export type DeleteLotteryWholesaleCustomerPayload = {
+  __typename?: 'DeleteLotteryWholesaleCustomerPayload';
   deletedId: Scalars['ID']['output'];
   success: Scalars['Boolean']['output'];
 };
@@ -4465,6 +4486,77 @@ export type LotteryVaultExpected = {
   baselineAt?: Maybe<Scalars['DateTime']['output']>;
 };
 
+export type LotteryWholesaleCustomer = {
+  __typename?: 'LotteryWholesaleCustomer';
+  abilities: LotteryWholesaleCustomerAbilities;
+  address?: Maybe<Scalars['String']['output']>;
+  contactName?: Maybe<Scalars['String']['output']>;
+  createdAt: Scalars['DateTime']['output'];
+  createdBy?: Maybe<LotteryDealerUserRef>;
+  id: Scalars['ID']['output'];
+  isShared: Scalars['Boolean']['output'];
+  lastWholesaleAt?: Maybe<Scalars['DateTime']['output']>;
+  licenseNo?: Maybe<Scalars['String']['output']>;
+  note?: Maybe<Scalars['String']['output']>;
+  ownerOrgName?: Maybe<Scalars['String']['output']>;
+  phone?: Maybe<Scalars['String']['output']>;
+  shareOrgs: Array<ShareOrg>;
+  status: LotteryWholesaleCustomerStatus;
+  storeName: Scalars['String']['output'];
+  updatedAt: Scalars['DateTime']['output'];
+  updatedBy?: Maybe<LotteryDealerUserRef>;
+};
+
+export type LotteryWholesaleCustomerAbilities = {
+  __typename?: 'LotteryWholesaleCustomerAbilities';
+  canEdit: Scalars['Boolean']['output'];
+};
+
+export type LotteryWholesaleCustomerPayload = {
+  __typename?: 'LotteryWholesaleCustomerPayload';
+  item: LotteryWholesaleCustomer;
+};
+
+export type LotteryWholesaleCustomerSameName = {
+  __typename?: 'LotteryWholesaleCustomerSameName';
+  id: Scalars['ID']['output'];
+  phone?: Maybe<Scalars['String']['output']>;
+  storeName: Scalars['String']['output'];
+};
+
+export type LotteryWholesaleCustomerSameNamesInput = {
+  excludeId?: InputMaybe<Scalars['ID']['input']>;
+  storeName: Scalars['String']['input'];
+};
+
+export type LotteryWholesaleCustomerSameNamesPayload = {
+  __typename?: 'LotteryWholesaleCustomerSameNamesPayload';
+  items: Array<LotteryWholesaleCustomerSameName>;
+  totalCount: Scalars['Int']['output'];
+};
+
+/** 批售客戶狀態:往來中 / 停用 */
+export enum LotteryWholesaleCustomerStatus {
+  Active = 'ACTIVE',
+  Inactive = 'INACTIVE'
+}
+
+export type LotteryWholesaleCustomersInput = {
+  keyword?: InputMaybe<Scalars['String']['input']>;
+  page?: InputMaybe<Scalars['Int']['input']>;
+  /** 每頁筆數,上限 100 */
+  pageSize?: InputMaybe<Scalars['Int']['input']>;
+  status?: InputMaybe<LotteryWholesaleCustomerStatus>;
+};
+
+export type LotteryWholesaleCustomersPayload = {
+  __typename?: 'LotteryWholesaleCustomersPayload';
+  items: Array<LotteryWholesaleCustomer>;
+  page: Scalars['Int']['output'];
+  pageSize: Scalars['Int']['output'];
+  totalCount: Scalars['Int']['output'];
+};
+
 export type MakeupPunchEntryOptionsInput = {
   at: Scalars['DateTime']['input'];
   orgId: Scalars['ID']['input'];
@@ -4676,6 +4768,7 @@ export type Mutation = {
   createLotteryDealer: LotteryDealerPayload;
   createLotteryDealerContact: LotteryDealerContactPayload;
   createLotteryGame: LotteryGamePayload;
+  createLotteryWholesaleCustomer: LotteryWholesaleCustomerPayload;
   createMyDelegation: MyDelegationPayload;
   createPrintAgent: PrintAgentPairingPayload;
   createPrintJob: PrintJobPayload;
@@ -4695,6 +4788,7 @@ export type Mutation = {
   deleteFormVersionDraft: FormPayload;
   deleteLotteryBankAccount: DeleteLotteryBankAccountPayload;
   deleteLotteryGame: DeleteLotteryGamePayload;
+  deleteLotteryWholesaleCustomer: DeleteLotteryWholesaleCustomerPayload;
   deleteMyDelegation: DeleteMyDelegationPayload;
   deleteMyScheduleDayOff: DeleteScheduleDayOffPayload;
   deleteOrg: DeletePayload;
@@ -4825,6 +4919,7 @@ export type Mutation = {
   updateLotteryDealerContact: LotteryDealerContactPayload;
   updateLotteryDealerSignin: LotteryDealerSigninPayload;
   updateLotteryGame: LotteryGamePayload;
+  updateLotteryWholesaleCustomer: LotteryWholesaleCustomerPayload;
   updateMyPreferences: UpdateMyPreferencesPayload;
   updateNotificationSetting: NotificationSettingPayload;
   updateOrg: OrgPayload;
@@ -5021,6 +5116,11 @@ export type MutationCreateLotteryGameArgs = {
 };
 
 
+export type MutationCreateLotteryWholesaleCustomerArgs = {
+  input: CreateLotteryWholesaleCustomerInput;
+};
+
+
 export type MutationCreateMyDelegationArgs = {
   input: CreateMyDelegationInput;
 };
@@ -5113,6 +5213,11 @@ export type MutationDeleteLotteryBankAccountArgs = {
 
 export type MutationDeleteLotteryGameArgs = {
   input: DeleteLotteryGameInput;
+};
+
+
+export type MutationDeleteLotteryWholesaleCustomerArgs = {
+  input: DeleteLotteryWholesaleCustomerInput;
 };
 
 
@@ -5743,6 +5848,11 @@ export type MutationUpdateLotteryDealerSigninArgs = {
 
 export type MutationUpdateLotteryGameArgs = {
   input: UpdateLotteryGameInput;
+};
+
+
+export type MutationUpdateLotteryWholesaleCustomerArgs = {
+  input: UpdateLotteryWholesaleCustomerInput;
 };
 
 
@@ -6603,6 +6713,9 @@ export type Query = {
   lotteryTransferOptions: LotteryTransferOptions;
   lotteryTransferProgress: Array<LotteryTransferProgress>;
   lotteryTransferReceiving: LotteryTransferReceiving;
+  lotteryWholesaleCustomer: LotteryWholesaleCustomerPayload;
+  lotteryWholesaleCustomerSameNames: LotteryWholesaleCustomerSameNamesPayload;
+  lotteryWholesaleCustomers: LotteryWholesaleCustomersPayload;
   makeupPunchEntryExists: Scalars['Boolean']['output'];
   makeupPunchEntryOptions: Array<ScheduleAttendanceEntryOption>;
   me: Me;
@@ -7210,6 +7323,21 @@ export type QueryLotteryTransferProgressArgs = {
 
 export type QueryLotteryTransferReceivingArgs = {
   submissionId: Scalars['ID']['input'];
+};
+
+
+export type QueryLotteryWholesaleCustomerArgs = {
+  id: Scalars['ID']['input'];
+};
+
+
+export type QueryLotteryWholesaleCustomerSameNamesArgs = {
+  input: LotteryWholesaleCustomerSameNamesInput;
+};
+
+
+export type QueryLotteryWholesaleCustomersArgs = {
+  input: LotteryWholesaleCustomersInput;
 };
 
 
@@ -9224,6 +9352,18 @@ export type UpdateLotteryGameInput = {
   status?: InputMaybe<Scalars['String']['input']>;
   ticketsPerBook?: InputMaybe<Scalars['Int']['input']>;
   unitPrice?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type UpdateLotteryWholesaleCustomerInput = {
+  address?: InputMaybe<Scalars['String']['input']>;
+  contactName?: InputMaybe<Scalars['String']['input']>;
+  id: Scalars['ID']['input'];
+  licenseNo?: InputMaybe<Scalars['String']['input']>;
+  note?: InputMaybe<Scalars['String']['input']>;
+  phone?: InputMaybe<Scalars['String']['input']>;
+  shareOrgs?: InputMaybe<Array<ShareOrgInput>>;
+  status?: InputMaybe<LotteryWholesaleCustomerStatus>;
+  storeName?: InputMaybe<Scalars['String']['input']>;
 };
 
 export type UpdateMyPreferencesInput = {
@@ -11467,6 +11607,50 @@ export type UpdateLotteryDealerContactMutationVariables = Exact<{
 
 
 export type UpdateLotteryDealerContactMutation = { __typename?: 'Mutation', updateLotteryDealerContact: { __typename?: 'LotteryDealerContactPayload', item: { __typename?: 'LotteryDealerContact', id: string, name: string, roles: Array<LotteryContactRole>, nationalId: string, birthday?: string | null, phone?: string | null, mobile?: string | null, email?: string | null, mailingAddress?: string | null, residentialAddress?: string | null, residentialSameAsMailing: boolean, status: LotteryContactStatus, note?: string | null, dealerCount: number, createdAt: string, updatedAt: string, ownerOrgName?: string | null, links: Array<{ __typename?: 'LotteryDealerContactLink', role: LotteryContactRole, dealer: { __typename?: 'LotteryDealerRef', id: string, type: LotteryDealerType, licenseNo: string, name: string, storeName?: string | null, status: LotteryDealerStatus } }>, createdBy?: { __typename?: 'LotteryDealerUserRef', id: string, name: string } | null, updatedBy?: { __typename?: 'LotteryDealerUserRef', id: string, name: string } | null, abilities: { __typename?: 'LotteryDealerContactAbilities', canEdit: boolean } } } };
+
+export type LotteryWholesaleCustomerFieldsFragment = { __typename?: 'LotteryWholesaleCustomer', id: string, storeName: string, licenseNo?: string | null, contactName?: string | null, phone?: string | null, address?: string | null, status: LotteryWholesaleCustomerStatus, note?: string | null, lastWholesaleAt?: string | null, createdAt: string, updatedAt: string, ownerOrgName?: string | null, isShared: boolean, createdBy?: { __typename?: 'LotteryDealerUserRef', id: string, name: string } | null, updatedBy?: { __typename?: 'LotteryDealerUserRef', id: string, name: string } | null, shareOrgs: Array<{ __typename?: 'ShareOrg', orgId: string, includeDescendants: boolean }>, abilities: { __typename?: 'LotteryWholesaleCustomerAbilities', canEdit: boolean } };
+
+export type LotteryWholesaleCustomersQueryVariables = Exact<{
+  input: LotteryWholesaleCustomersInput;
+}>;
+
+
+export type LotteryWholesaleCustomersQuery = { __typename?: 'Query', lotteryWholesaleCustomers: { __typename?: 'LotteryWholesaleCustomersPayload', totalCount: number, page: number, pageSize: number, items: Array<{ __typename?: 'LotteryWholesaleCustomer', id: string, storeName: string, licenseNo?: string | null, contactName?: string | null, phone?: string | null, address?: string | null, status: LotteryWholesaleCustomerStatus, note?: string | null, lastWholesaleAt?: string | null, createdAt: string, updatedAt: string, ownerOrgName?: string | null, isShared: boolean, createdBy?: { __typename?: 'LotteryDealerUserRef', id: string, name: string } | null, updatedBy?: { __typename?: 'LotteryDealerUserRef', id: string, name: string } | null, shareOrgs: Array<{ __typename?: 'ShareOrg', orgId: string, includeDescendants: boolean }>, abilities: { __typename?: 'LotteryWholesaleCustomerAbilities', canEdit: boolean } }> } };
+
+export type LotteryWholesaleCustomerQueryVariables = Exact<{
+  id: Scalars['ID']['input'];
+}>;
+
+
+export type LotteryWholesaleCustomerQuery = { __typename?: 'Query', lotteryWholesaleCustomer: { __typename?: 'LotteryWholesaleCustomerPayload', item: { __typename?: 'LotteryWholesaleCustomer', id: string, storeName: string, licenseNo?: string | null, contactName?: string | null, phone?: string | null, address?: string | null, status: LotteryWholesaleCustomerStatus, note?: string | null, lastWholesaleAt?: string | null, createdAt: string, updatedAt: string, ownerOrgName?: string | null, isShared: boolean, createdBy?: { __typename?: 'LotteryDealerUserRef', id: string, name: string } | null, updatedBy?: { __typename?: 'LotteryDealerUserRef', id: string, name: string } | null, shareOrgs: Array<{ __typename?: 'ShareOrg', orgId: string, includeDescendants: boolean }>, abilities: { __typename?: 'LotteryWholesaleCustomerAbilities', canEdit: boolean } } } };
+
+export type LotteryWholesaleCustomerSameNamesQueryVariables = Exact<{
+  input: LotteryWholesaleCustomerSameNamesInput;
+}>;
+
+
+export type LotteryWholesaleCustomerSameNamesQuery = { __typename?: 'Query', lotteryWholesaleCustomerSameNames: { __typename?: 'LotteryWholesaleCustomerSameNamesPayload', totalCount: number, items: Array<{ __typename?: 'LotteryWholesaleCustomerSameName', id: string, storeName: string, phone?: string | null }> } };
+
+export type CreateLotteryWholesaleCustomerMutationVariables = Exact<{
+  input: CreateLotteryWholesaleCustomerInput;
+}>;
+
+
+export type CreateLotteryWholesaleCustomerMutation = { __typename?: 'Mutation', createLotteryWholesaleCustomer: { __typename?: 'LotteryWholesaleCustomerPayload', item: { __typename?: 'LotteryWholesaleCustomer', id: string, storeName: string, licenseNo?: string | null, contactName?: string | null, phone?: string | null, address?: string | null, status: LotteryWholesaleCustomerStatus, note?: string | null, lastWholesaleAt?: string | null, createdAt: string, updatedAt: string, ownerOrgName?: string | null, isShared: boolean, createdBy?: { __typename?: 'LotteryDealerUserRef', id: string, name: string } | null, updatedBy?: { __typename?: 'LotteryDealerUserRef', id: string, name: string } | null, shareOrgs: Array<{ __typename?: 'ShareOrg', orgId: string, includeDescendants: boolean }>, abilities: { __typename?: 'LotteryWholesaleCustomerAbilities', canEdit: boolean } } } };
+
+export type UpdateLotteryWholesaleCustomerMutationVariables = Exact<{
+  input: UpdateLotteryWholesaleCustomerInput;
+}>;
+
+
+export type UpdateLotteryWholesaleCustomerMutation = { __typename?: 'Mutation', updateLotteryWholesaleCustomer: { __typename?: 'LotteryWholesaleCustomerPayload', item: { __typename?: 'LotteryWholesaleCustomer', id: string, storeName: string, licenseNo?: string | null, contactName?: string | null, phone?: string | null, address?: string | null, status: LotteryWholesaleCustomerStatus, note?: string | null, lastWholesaleAt?: string | null, createdAt: string, updatedAt: string, ownerOrgName?: string | null, isShared: boolean, createdBy?: { __typename?: 'LotteryDealerUserRef', id: string, name: string } | null, updatedBy?: { __typename?: 'LotteryDealerUserRef', id: string, name: string } | null, shareOrgs: Array<{ __typename?: 'ShareOrg', orgId: string, includeDescendants: boolean }>, abilities: { __typename?: 'LotteryWholesaleCustomerAbilities', canEdit: boolean } } } };
+
+export type DeleteLotteryWholesaleCustomerMutationVariables = Exact<{
+  input: DeleteLotteryWholesaleCustomerInput;
+}>;
+
+
+export type DeleteLotteryWholesaleCustomerMutation = { __typename?: 'Mutation', deleteLotteryWholesaleCustomer: { __typename?: 'DeleteLotteryWholesaleCustomerPayload', success: boolean, deletedId: string } };
 
 export type LotteryInventoryRefFieldsFragment = { __typename?: 'LotteryInventoryRef', id: string, name: string };
 
@@ -13734,6 +13918,38 @@ export const LotteryDealerContactFieldsFragmentDoc = `
     name
   }
   ownerOrgName
+  abilities {
+    canEdit
+  }
+}
+    `;
+export const LotteryWholesaleCustomerFieldsFragmentDoc = `
+    fragment LotteryWholesaleCustomerFields on LotteryWholesaleCustomer {
+  id
+  storeName
+  licenseNo
+  contactName
+  phone
+  address
+  status
+  note
+  lastWholesaleAt
+  createdBy {
+    id
+    name
+  }
+  createdAt
+  updatedAt
+  updatedBy {
+    id
+    name
+  }
+  ownerOrgName
+  shareOrgs {
+    orgId
+    includeDescendants
+  }
+  isShared
   abilities {
     canEdit
   }
@@ -22915,6 +23131,200 @@ export const useUpdateLotteryDealerContactMutation = <
 
 
 useUpdateLotteryDealerContactMutation.fetcher = (client: GraphQLClient, variables: UpdateLotteryDealerContactMutationVariables, headers?: RequestInit['headers']) => fetcher<UpdateLotteryDealerContactMutation, UpdateLotteryDealerContactMutationVariables>(client, UpdateLotteryDealerContactDocument, variables, headers);
+
+export const LotteryWholesaleCustomersDocument = `
+    query LotteryWholesaleCustomers($input: LotteryWholesaleCustomersInput!) {
+  lotteryWholesaleCustomers(input: $input) {
+    items {
+      ...LotteryWholesaleCustomerFields
+    }
+    totalCount
+    page
+    pageSize
+  }
+}
+    ${LotteryWholesaleCustomerFieldsFragmentDoc}`;
+
+export const useLotteryWholesaleCustomersQuery = <
+      TData = LotteryWholesaleCustomersQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: LotteryWholesaleCustomersQueryVariables,
+      options?: Omit<UseQueryOptions<LotteryWholesaleCustomersQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotteryWholesaleCustomersQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<LotteryWholesaleCustomersQuery, TError, TData>(
+      {
+    queryKey: ['LotteryWholesaleCustomers', variables],
+    queryFn: fetcher<LotteryWholesaleCustomersQuery, LotteryWholesaleCustomersQueryVariables>(client, LotteryWholesaleCustomersDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useLotteryWholesaleCustomersQuery.getKey = (variables: LotteryWholesaleCustomersQueryVariables) => ['LotteryWholesaleCustomers', variables];
+
+
+useLotteryWholesaleCustomersQuery.fetcher = (client: GraphQLClient, variables: LotteryWholesaleCustomersQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryWholesaleCustomersQuery, LotteryWholesaleCustomersQueryVariables>(client, LotteryWholesaleCustomersDocument, variables, headers);
+
+export const LotteryWholesaleCustomerDocument = `
+    query LotteryWholesaleCustomer($id: ID!) {
+  lotteryWholesaleCustomer(id: $id) {
+    item {
+      ...LotteryWholesaleCustomerFields
+    }
+  }
+}
+    ${LotteryWholesaleCustomerFieldsFragmentDoc}`;
+
+export const useLotteryWholesaleCustomerQuery = <
+      TData = LotteryWholesaleCustomerQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: LotteryWholesaleCustomerQueryVariables,
+      options?: Omit<UseQueryOptions<LotteryWholesaleCustomerQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotteryWholesaleCustomerQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<LotteryWholesaleCustomerQuery, TError, TData>(
+      {
+    queryKey: ['LotteryWholesaleCustomer', variables],
+    queryFn: fetcher<LotteryWholesaleCustomerQuery, LotteryWholesaleCustomerQueryVariables>(client, LotteryWholesaleCustomerDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useLotteryWholesaleCustomerQuery.getKey = (variables: LotteryWholesaleCustomerQueryVariables) => ['LotteryWholesaleCustomer', variables];
+
+
+useLotteryWholesaleCustomerQuery.fetcher = (client: GraphQLClient, variables: LotteryWholesaleCustomerQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryWholesaleCustomerQuery, LotteryWholesaleCustomerQueryVariables>(client, LotteryWholesaleCustomerDocument, variables, headers);
+
+export const LotteryWholesaleCustomerSameNamesDocument = `
+    query LotteryWholesaleCustomerSameNames($input: LotteryWholesaleCustomerSameNamesInput!) {
+  lotteryWholesaleCustomerSameNames(input: $input) {
+    items {
+      id
+      storeName
+      phone
+    }
+    totalCount
+  }
+}
+    `;
+
+export const useLotteryWholesaleCustomerSameNamesQuery = <
+      TData = LotteryWholesaleCustomerSameNamesQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: LotteryWholesaleCustomerSameNamesQueryVariables,
+      options?: Omit<UseQueryOptions<LotteryWholesaleCustomerSameNamesQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotteryWholesaleCustomerSameNamesQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<LotteryWholesaleCustomerSameNamesQuery, TError, TData>(
+      {
+    queryKey: ['LotteryWholesaleCustomerSameNames', variables],
+    queryFn: fetcher<LotteryWholesaleCustomerSameNamesQuery, LotteryWholesaleCustomerSameNamesQueryVariables>(client, LotteryWholesaleCustomerSameNamesDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useLotteryWholesaleCustomerSameNamesQuery.getKey = (variables: LotteryWholesaleCustomerSameNamesQueryVariables) => ['LotteryWholesaleCustomerSameNames', variables];
+
+
+useLotteryWholesaleCustomerSameNamesQuery.fetcher = (client: GraphQLClient, variables: LotteryWholesaleCustomerSameNamesQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryWholesaleCustomerSameNamesQuery, LotteryWholesaleCustomerSameNamesQueryVariables>(client, LotteryWholesaleCustomerSameNamesDocument, variables, headers);
+
+export const CreateLotteryWholesaleCustomerDocument = `
+    mutation CreateLotteryWholesaleCustomer($input: CreateLotteryWholesaleCustomerInput!) {
+  createLotteryWholesaleCustomer(input: $input) {
+    item {
+      ...LotteryWholesaleCustomerFields
+    }
+  }
+}
+    ${LotteryWholesaleCustomerFieldsFragmentDoc}`;
+
+export const useCreateLotteryWholesaleCustomerMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<CreateLotteryWholesaleCustomerMutation, TError, CreateLotteryWholesaleCustomerMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<CreateLotteryWholesaleCustomerMutation, TError, CreateLotteryWholesaleCustomerMutationVariables, TContext>(
+      {
+    mutationKey: ['CreateLotteryWholesaleCustomer'],
+    mutationFn: (variables?: CreateLotteryWholesaleCustomerMutationVariables) => fetcher<CreateLotteryWholesaleCustomerMutation, CreateLotteryWholesaleCustomerMutationVariables>(client, CreateLotteryWholesaleCustomerDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useCreateLotteryWholesaleCustomerMutation.fetcher = (client: GraphQLClient, variables: CreateLotteryWholesaleCustomerMutationVariables, headers?: RequestInit['headers']) => fetcher<CreateLotteryWholesaleCustomerMutation, CreateLotteryWholesaleCustomerMutationVariables>(client, CreateLotteryWholesaleCustomerDocument, variables, headers);
+
+export const UpdateLotteryWholesaleCustomerDocument = `
+    mutation UpdateLotteryWholesaleCustomer($input: UpdateLotteryWholesaleCustomerInput!) {
+  updateLotteryWholesaleCustomer(input: $input) {
+    item {
+      ...LotteryWholesaleCustomerFields
+    }
+  }
+}
+    ${LotteryWholesaleCustomerFieldsFragmentDoc}`;
+
+export const useUpdateLotteryWholesaleCustomerMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<UpdateLotteryWholesaleCustomerMutation, TError, UpdateLotteryWholesaleCustomerMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<UpdateLotteryWholesaleCustomerMutation, TError, UpdateLotteryWholesaleCustomerMutationVariables, TContext>(
+      {
+    mutationKey: ['UpdateLotteryWholesaleCustomer'],
+    mutationFn: (variables?: UpdateLotteryWholesaleCustomerMutationVariables) => fetcher<UpdateLotteryWholesaleCustomerMutation, UpdateLotteryWholesaleCustomerMutationVariables>(client, UpdateLotteryWholesaleCustomerDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useUpdateLotteryWholesaleCustomerMutation.fetcher = (client: GraphQLClient, variables: UpdateLotteryWholesaleCustomerMutationVariables, headers?: RequestInit['headers']) => fetcher<UpdateLotteryWholesaleCustomerMutation, UpdateLotteryWholesaleCustomerMutationVariables>(client, UpdateLotteryWholesaleCustomerDocument, variables, headers);
+
+export const DeleteLotteryWholesaleCustomerDocument = `
+    mutation DeleteLotteryWholesaleCustomer($input: DeleteLotteryWholesaleCustomerInput!) {
+  deleteLotteryWholesaleCustomer(input: $input) {
+    success
+    deletedId
+  }
+}
+    `;
+
+export const useDeleteLotteryWholesaleCustomerMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<DeleteLotteryWholesaleCustomerMutation, TError, DeleteLotteryWholesaleCustomerMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<DeleteLotteryWholesaleCustomerMutation, TError, DeleteLotteryWholesaleCustomerMutationVariables, TContext>(
+      {
+    mutationKey: ['DeleteLotteryWholesaleCustomer'],
+    mutationFn: (variables?: DeleteLotteryWholesaleCustomerMutationVariables) => fetcher<DeleteLotteryWholesaleCustomerMutation, DeleteLotteryWholesaleCustomerMutationVariables>(client, DeleteLotteryWholesaleCustomerDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useDeleteLotteryWholesaleCustomerMutation.fetcher = (client: GraphQLClient, variables: DeleteLotteryWholesaleCustomerMutationVariables, headers?: RequestInit['headers']) => fetcher<DeleteLotteryWholesaleCustomerMutation, DeleteLotteryWholesaleCustomerMutationVariables>(client, DeleteLotteryWholesaleCustomerDocument, variables, headers);
 
 export const LotteryInventoryBooksDocument = `
     query LotteryInventoryBooks($input: LotteryInventoryBooksInput!) {
