@@ -36,6 +36,10 @@ import {
 export const INVENTORY_EVENT_TYPES: readonly TicketEventType[] = [
   TICKET_EVENT_TYPE.purchase,
   TICKET_EVENT_TYPE.purchaseVoid,
+  // 期初建檔(期初建檔規格 5.1):建檔、期初更正、作廢
+  TICKET_EVENT_TYPE.opening,
+  TICKET_EVENT_TYPE.openingFix,
+  TICKET_EVENT_TYPE.openingVoid,
   TICKET_EVENT_TYPE.scrap,
   TICKET_EVENT_TYPE.investigate,
   TICKET_EVENT_TYPE.lose,
@@ -169,7 +173,7 @@ const flowOf = (direction: 1 | -1, flow: PendingFlow): AttributedFlow => ({
  * 營運報表區塊 4 庫存異動(規格 11.2;正本 `docs/modules/project/reports.md`「營運報表」):由上往下加減,
  * 最後一列核對要是 0。
  *
- * `期初 + 進貨 + 調入 − 調出 − 淨銷售 − 報廢 + 撤銷報廢 − 新增待查 + 待查轉回 + 遺失尋回 ± 待標註調整 ± 對號成本調整 = 期末`
+ * `期初 + 期初建檔 + 進貨 + 調入 − 調出 − 淨銷售 − 報廢 + 撤銷報廢 − 新增待查 + 待查轉回 + 遺失尋回 ± 待標註調整 ± 對號成本調整 = 期末`
  *
  * - 張數店(張數店規格 11.2):撤銷報廢 = 報廢 → 這家店的庫存(在撤銷的期間扣回報廢損失,已關帳月份不動);對號成本調整 =
  *   對號在手上成本的變動扣掉已經跟著已售成本換掉的部分(`matchCostSplitOf`;只有成本、張數 0)
@@ -253,6 +257,34 @@ export class OperationsInventory {
     const booksOf = (list: readonly InventoryEvent[]) =>
       new Set(list.map((event) => String(event.bookId))).size;
     const voidBooks = booksOf(voidedEvents);
+
+    // 期初建檔(規格 5.1):建檔只算在手上的張(期初已售、跳號不算);期初更正改回未售 +、改成期初已售 −;
+    // 作廢時還在手上的 −(同進貨作廢,照整本規則)
+    const openedEvents = ofType(TICKET_EVENT_TYPE.opening, onHandAfter);
+    const opened = figures(openedEvents);
+    const fixEvents = ofType(TICKET_EVENT_TYPE.openingFix, () => true);
+    const fixedIn = figures(
+      fixEvents.filter((event) => onHandAfter(event) && !onHandBefore(event)),
+    );
+    const fixedOut = figures(
+      fixEvents.filter((event) => onHandBefore(event) && !onHandAfter(event)),
+      -1,
+    );
+    const openingVoidEvents = ofType(
+      TICKET_EVENT_TYPE.openingVoid,
+      onHandBefore,
+    );
+    const openingVoided = figures(openingVoidEvents, -1, null);
+    const openingRow = minus(
+      {
+        tickets: opened.tickets + fixedIn.tickets,
+        cost: opened.cost + fixedIn.cost,
+      },
+      {
+        tickets: openingVoided.tickets + fixedOut.tickets,
+        cost: openingVoided.cost + fixedOut.cost,
+      },
+    );
 
     const transferIn = inbound.reduce(
       (sum, row) => {
@@ -342,6 +374,10 @@ export class OperationsInventory {
       flows: [
         flowOf(1, purchased),
         flowOf(-1, voided),
+        flowOf(1, opened),
+        flowOf(1, fixedIn),
+        flowOf(-1, fixedOut),
+        flowOf(-1, openingVoided),
         flowOf(1, {
           tickets: transferIn.tickets,
           cost: transferIn.amount,
@@ -372,6 +408,7 @@ export class OperationsInventory {
     const expectedEnding = {
       tickets:
         opening.onHand.tickets +
+        openingRow.tickets +
         purchase.tickets +
         transferIn.tickets -
         outCost.tickets -
@@ -384,6 +421,7 @@ export class OperationsInventory {
         pendingAdjust.tickets,
       cost:
         opening.onHand.cost +
+        openingRow.cost +
         purchase.cost +
         transferIn.amount -
         outCost.cost -
@@ -404,6 +442,11 @@ export class OperationsInventory {
     return {
       openingTickets: opening.onHand.tickets,
       openingCost: opening.onHand.cost,
+      openingEntryBooks: booksOf(openedEvents) - booksOf(openingVoidEvents),
+      openingEntryVoidBooks: booksOf(openingVoidEvents),
+      openingEntryFixTickets: fixEvents.length,
+      openingEntryTickets: openingRow.tickets,
+      openingEntryCost: openingRow.cost,
       purchaseBooks: booksOf(purchasedEvents) - voidBooks,
       purchaseVoidBooks: voidBooks,
       purchaseTickets: purchase.tickets,

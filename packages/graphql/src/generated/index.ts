@@ -444,6 +444,17 @@ export type CreateLotteryGameInput = {
   unitPrice: Scalars['Int']['input'];
 };
 
+export type CreateLotteryOpeningBookInput = {
+  bookNo: Scalars['String']['input'];
+  gameId: Scalars['ID']['input'];
+  lastTicketNo: Scalars['Int']['input'];
+  orgId: Scalars['ID']['input'];
+  placements: Array<LotteryOpeningPlacementInput>;
+  rate: Scalars['Int']['input'];
+  skippedTicketNos: Array<Scalars['String']['input']>;
+  soldTicketNos: Array<Scalars['String']['input']>;
+};
+
 export type CreateMyDelegationInput = {
   delegateUserId: Scalars['ID']['input'];
   endAt: Scalars['DateTime']['input'];
@@ -1022,6 +1033,14 @@ export type FinishLotteryRescanPlaceInput = {
   cashPointId?: InputMaybe<Scalars['ID']['input']>;
   orgId: Scalars['ID']['input'];
   rescanId: Scalars['ID']['input'];
+};
+
+export type FixLotteryOpeningTicketsInput = {
+  cashPointId?: InputMaybe<Scalars['ID']['input']>;
+  reasonKey: Scalars['String']['input'];
+  reasonNote?: InputMaybe<Scalars['String']['input']>;
+  tickets: Array<LotteryTicketVersionInput>;
+  to: Scalars['String']['input'];
 };
 
 export type ForkFormInput = {
@@ -2577,6 +2596,66 @@ export type LotteryOccupiedStoresPayload = {
   totalCount: Scalars['Int']['output'];
 };
 
+export type LotteryOpeningBook = {
+  __typename?: 'LotteryOpeningBook';
+  bookId: Scalars['ID']['output'];
+  bookKey: Scalars['String']['output'];
+  bookNo: Scalars['String']['output'];
+  gameCode: Scalars['String']['output'];
+  gameName: Scalars['String']['output'];
+  inHandCount: Scalars['Int']['output'];
+  lastTicketNo: Scalars['String']['output'];
+  openedBy?: Maybe<LotteryInventoryRef>;
+  openingAt: Scalars['DateTime']['output'];
+  openingSoldCount: Scalars['Int']['output'];
+  places: Array<LotteryOpeningPlace>;
+  voidable: Scalars['Boolean']['output'];
+};
+
+export type LotteryOpeningBookPayload = {
+  __typename?: 'LotteryOpeningBookPayload';
+  bookId: Scalars['ID']['output'];
+  count: Scalars['Int']['output'];
+};
+
+export type LotteryOpeningPlace = {
+  __typename?: 'LotteryOpeningPlace';
+  cashPoint?: Maybe<LotteryInventoryRef>;
+  count: Scalars['Int']['output'];
+};
+
+export type LotteryOpeningPlacementInput = {
+  cashPointId?: InputMaybe<Scalars['ID']['input']>;
+  ticketNos: Array<Scalars['String']['input']>;
+};
+
+export type LotteryOpeningScanCandidate = {
+  __typename?: 'LotteryOpeningScanCandidate';
+  block?: Maybe<Scalars['String']['output']>;
+  bookId?: Maybe<Scalars['ID']['output']>;
+  bookPrice: Scalars['Int']['output'];
+  defaultRate: Scalars['Int']['output'];
+  discontinued: Scalars['Boolean']['output'];
+  gameCode: Scalars['String']['output'];
+  gameId: Scalars['ID']['output'];
+  gameName: Scalars['String']['output'];
+  serialNo?: Maybe<Scalars['String']['output']>;
+  ticketsPerBook: Scalars['Int']['output'];
+};
+
+export type LotteryOpeningScanInput = {
+  code: Scalars['String']['input'];
+  orgId: Scalars['ID']['input'];
+};
+
+export type LotteryOpeningScanPayload = {
+  __typename?: 'LotteryOpeningScanPayload';
+  bookNo?: Maybe<Scalars['String']['output']>;
+  candidates: Array<LotteryOpeningScanCandidate>;
+  hasGameCode: Scalars['Boolean']['output'];
+  topTicketNo?: Maybe<Scalars['String']['output']>;
+};
+
 export type LotteryOperationsBankAccount = {
   __typename?: 'LotteryOperationsBankAccount';
   accountId: Scalars['ID']['output'];
@@ -2666,6 +2745,11 @@ export type LotteryOperationsInventory = {
   newInvestigatingCost?: Maybe<Scalars['Float']['output']>;
   newInvestigatingTickets: Scalars['Int']['output'];
   openingCost?: Maybe<Scalars['Float']['output']>;
+  openingEntryBooks: Scalars['Int']['output'];
+  openingEntryCost?: Maybe<Scalars['Float']['output']>;
+  openingEntryFixTickets: Scalars['Int']['output'];
+  openingEntryTickets: Scalars['Int']['output'];
+  openingEntryVoidBooks: Scalars['Int']['output'];
   openingTickets: Scalars['Int']['output'];
   pendingAdjustCost?: Maybe<Scalars['Float']['output']>;
   pendingAdjustTickets: Scalars['Int']['output'];
@@ -2692,6 +2776,7 @@ export type LotteryOperationsNotes = {
   __typename?: 'LotteryOperationsNotes';
   countMode?: Maybe<LotteryOperationsCountMode>;
   openMonths: Array<Scalars['String']['output']>;
+  openingEntry?: Maybe<LotteryOperationsOpeningEntry>;
   priorPeriodAmount: Scalars['Float']['output'];
   priorPeriodCount: Scalars['Int']['output'];
   skippedStocktakes: Array<LotteryOperationsSkipReason>;
@@ -2699,6 +2784,12 @@ export type LotteryOperationsNotes = {
   uncountedStocktakes: Scalars['Int']['output'];
   uncoveredShiftLabels: Array<Scalars['String']['output']>;
   uncoveredShifts: Scalars['Int']['output'];
+};
+
+export type LotteryOperationsOpeningEntry = {
+  __typename?: 'LotteryOperationsOpeningEntry';
+  closedAt?: Maybe<Scalars['DateTime']['output']>;
+  startedAt: Scalars['DateTime']['output'];
 };
 
 export type LotteryOperationsOutstanding = {
@@ -3694,6 +3785,7 @@ export type LotteryStocktakeDiff = {
   __typename?: 'LotteryStocktakeDiff';
   backfilled: Scalars['Boolean']['output'];
   kind: Scalars['String']['output'];
+  openingSold: Scalars['Boolean']['output'];
   ticketId: Scalars['ID']['output'];
   ticketNo: Scalars['String']['output'];
   version: Scalars['Int']['output'];
@@ -4140,6 +4232,34 @@ export type LotteryStoreOpenShiftFormPayload = {
   item: LotteryStoreOpenShiftForm;
 };
 
+export type LotteryStoreOpening = {
+  __typename?: 'LotteryStoreOpening';
+  bookCount: Scalars['Int']['output'];
+  books: Array<LotteryOpeningBook>;
+  canClose: Scalars['Boolean']['output'];
+  canOpen: Scalars['Boolean']['output'];
+  canShowCost: Scalars['Boolean']['output'];
+  closed: Scalars['Boolean']['output'];
+  closedAt?: Maybe<Scalars['DateTime']['output']>;
+  closedBy?: Maybe<LotteryInventoryRef>;
+  history: Array<LotteryStoreOpeningHistory>;
+  org: LotteryInventoryRef;
+  startedAt?: Maybe<Scalars['DateTime']['output']>;
+};
+
+export type LotteryStoreOpeningHistory = {
+  __typename?: 'LotteryStoreOpeningHistory';
+  action: Scalars['String']['output'];
+  at: Scalars['DateTime']['output'];
+  by?: Maybe<LotteryInventoryRef>;
+  reason?: Maybe<Scalars['String']['output']>;
+};
+
+export type LotteryStoreOpeningPayload = {
+  __typename?: 'LotteryStoreOpeningPayload';
+  item: LotteryStoreOpening;
+};
+
 export type LotteryStorePunchPayload = {
   __typename?: 'LotteryStorePunchPayload';
   at: Scalars['DateTime']['output'];
@@ -4235,6 +4355,7 @@ export type LotteryStoreScanItem = {
   gameName: Scalars['String']['output'];
   locationKind: Scalars['String']['output'];
   match: Scalars['Boolean']['output'];
+  openingSold: Scalars['Boolean']['output'];
   outcome: Scalars['String']['output'];
   pendingSkipCount: Scalars['Int']['output'];
   responsibleOrg?: Maybe<LotteryAccountsRef>;
@@ -4658,6 +4779,7 @@ export type Mutation = {
   changePassword: ChangePasswordPayload;
   clearScheduleAutoAssignments: ClearScheduleAutoAssignmentsPayload;
   closeLotteryPeriod: LotteryPeriodClose;
+  closeLotteryStoreOpening: LotteryStoreOpeningPayload;
   completeLotteryPurchaseReceiving: CompleteLotteryPurchaseReceivingPayload;
   completeLotteryTransferReceiving: CompleteLotteryTransferReceivingPayload;
   copySubmissionToDraft: FormSubmissionPayload;
@@ -4676,6 +4798,7 @@ export type Mutation = {
   createLotteryDealer: LotteryDealerPayload;
   createLotteryDealerContact: LotteryDealerContactPayload;
   createLotteryGame: LotteryGamePayload;
+  createLotteryOpeningBook: LotteryOpeningBookPayload;
   createMyDelegation: MyDelegationPayload;
   createPrintAgent: PrintAgentPairingPayload;
   createPrintJob: PrintJobPayload;
@@ -4712,6 +4835,7 @@ export type Mutation = {
   disablePrintAgent: PrintAgentPayload;
   endLotteryStocktakeSession: Scalars['Boolean']['output'];
   finishLotteryRescanPlace: LotteryRescan;
+  fixLotteryOpeningTickets: LotteryInventoryActionPayload;
   forkForm: FormPayload;
   forkWorkflow: WorkflowPayload;
   grantRoleUsers: RoleUsersPayload;
@@ -4749,6 +4873,7 @@ export type Mutation = {
   refresh: RefreshPayload;
   registerLotteryDealerSignin: LotteryDealerSigninPayload;
   removeScheduleDayEntries: RemoveScheduleDayEntriesPayload;
+  reopenLotteryStoreOpening: LotteryStoreOpeningPayload;
   replaceLotteryRedemption: LotteryRedemptionReplacePayload;
   requestPasswordReset: RequestPasswordResetPayload;
   resetNotificationSetting: NotificationSettingPayload;
@@ -4835,6 +4960,7 @@ export type Mutation = {
   updateUser: UserPayload;
   updateWorkflow: WorkflowPayload;
   upgradeFormSubmissions: FormUpgradePayload;
+  voidLotteryOpeningBook: LotteryOpeningBookPayload;
   voidSubmission: FormSubmissionPayload;
   withdrawLotteryShiftCash: LotteryStoreShiftPayload;
   withdrawSubmission: FormSubmissionPayload;
@@ -4931,6 +5057,11 @@ export type MutationCloseLotteryPeriodArgs = {
 };
 
 
+export type MutationCloseLotteryStoreOpeningArgs = {
+  orgId: Scalars['ID']['input'];
+};
+
+
 export type MutationCompleteLotteryPurchaseReceivingArgs = {
   input: CompleteLotteryPurchaseReceivingInput;
 };
@@ -5018,6 +5149,11 @@ export type MutationCreateLotteryDealerContactArgs = {
 
 export type MutationCreateLotteryGameArgs = {
   input: CreateLotteryGameInput;
+};
+
+
+export type MutationCreateLotteryOpeningBookArgs = {
+  input: CreateLotteryOpeningBookInput;
 };
 
 
@@ -5201,6 +5337,11 @@ export type MutationFinishLotteryRescanPlaceArgs = {
 };
 
 
+export type MutationFixLotteryOpeningTicketsArgs = {
+  input: FixLotteryOpeningTicketsInput;
+};
+
+
 export type MutationForkFormArgs = {
   input: ForkFormInput;
 };
@@ -5363,6 +5504,11 @@ export type MutationRegisterLotteryDealerSigninArgs = {
 
 export type MutationRemoveScheduleDayEntriesArgs = {
   input: RemoveScheduleDayEntriesInput;
+};
+
+
+export type MutationReopenLotteryStoreOpeningArgs = {
+  input: ReopenLotteryStoreOpeningInput;
 };
 
 
@@ -5793,6 +5939,11 @@ export type MutationUpdateWorkflowArgs = {
 
 export type MutationUpgradeFormSubmissionsArgs = {
   input: UpgradeFormSubmissionsInput;
+};
+
+
+export type MutationVoidLotteryOpeningBookArgs = {
+  bookId: Scalars['ID']['input'];
 };
 
 
@@ -6550,6 +6701,7 @@ export type Query = {
   lotteryInventoryStores: LotteryInventoryStoresPayload;
   lotteryInvestigations: LotteryInvestigationsPayload;
   lotteryOccupiedStores: LotteryOccupiedStoresPayload;
+  lotteryOpeningScan: LotteryOpeningScanPayload;
   lotteryOperationsReport: LotteryOperationsReport;
   lotteryOperationsReportPeriods: LotteryReportPeriods;
   lotteryOutstandingSettlements: LotteryOutstandingSettlementsPayload;
@@ -6591,6 +6743,7 @@ export type Query = {
   lotteryStoreCountModeHistory: LotteryStoreCountModeHistory;
   lotteryStoreCounterScan: LotteryStoreCounterScanPayload;
   lotteryStoreOpenShiftForm: LotteryStoreOpenShiftFormPayload;
+  lotteryStoreOpening: LotteryStoreOpeningPayload;
   lotteryStoreRecentSales: LotteryStoreSalesPayload;
   lotteryStoreSale: LotteryStoreSalePayload;
   lotteryStoreSaleReversalOptions: LotteryStoreSaleReversalOptions;
@@ -6958,6 +7111,11 @@ export type QueryLotteryInventoryBooksArgs = {
 };
 
 
+export type QueryLotteryOpeningScanArgs = {
+  input: LotteryOpeningScanInput;
+};
+
+
 export type QueryLotteryOperationsReportArgs = {
   input: LotteryOperationsReportInput;
 };
@@ -7146,6 +7304,11 @@ export type QueryLotteryStoreCounterScanArgs = {
 
 export type QueryLotteryStoreOpenShiftFormArgs = {
   cashPointId: Scalars['ID']['input'];
+};
+
+
+export type QueryLotteryStoreOpeningArgs = {
+  orgId: Scalars['ID']['input'];
 };
 
 
@@ -7631,6 +7794,11 @@ export type RemoveScheduleDayEntriesPayload = {
   __typename?: 'RemoveScheduleDayEntriesPayload';
   deletedIds: Array<Scalars['ID']['output']>;
   skippedIds: Array<Scalars['ID']['output']>;
+};
+
+export type ReopenLotteryStoreOpeningInput = {
+  orgId: Scalars['ID']['input'];
+  reason: Scalars['String']['input'];
 };
 
 export type ReplaceLotteryRedemptionInput = {

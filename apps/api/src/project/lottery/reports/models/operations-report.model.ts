@@ -117,7 +117,7 @@ export class LotteryOperationsRedemptionModel {
 }
 
 /**
- * 區塊 4 庫存異動(期初 + 進貨 + 調入 − 調出 − 淨銷售 − 報廢 − 新增待查 + 待查轉回 + 遺失尋回 = 期末;
+ * 區塊 4 庫存異動(期初 + 期初建檔 + 進貨 + 調入 − 調出 − 淨銷售 − 報廢 − 新增待查 + 待查轉回 + 遺失尋回 = 期末;
  * 核對 = 左邊 − 期末,應為 0)。待標註的跳號(拆本前)不算張數與成本。成本欄、調入 / 調出 / 在途的調貨金額
  * 沒有 `reports.show-cost` = null。
  */
@@ -129,6 +129,29 @@ export class LotteryOperationsInventoryModel {
 
   @Field(() => Float, { nullable: true })
   openingCost!: number | null;
+
+  /**
+   * 期初建檔本數(建檔 − 作廢;期初建檔規格 5.1)。這一期沒有建檔、作廢或期初更正 → 0,畫面不顯示這一列
+   * (看 `openingEntryBooks`、`openingEntryVoidBooks`、`openingEntryFixTickets` 都是 0)。
+   */
+  @Field(() => Int)
+  openingEntryBooks!: number;
+
+  /** 其中作廢的本數 */
+  @Field(() => Int)
+  openingEntryVoidBooks!: number;
+
+  /** 期初更正的張數(改回未售、改成期初已售都算) */
+  @Field(() => Int)
+  openingEntryFixTickets!: number;
+
+  /** 期初建檔張數:建檔時在手上的張 + 改回未售 − 改成期初已售 − 作廢時在手上的 */
+  @Field(() => Int)
+  openingEntryTickets!: number;
+
+  /** 期初建檔成本(成本快照合計) */
+  @Field(() => Float, { nullable: true })
+  openingEntryCost!: number | null;
 
   /** 進貨本數(進貨 − 作廢) */
   @Field(() => Int)
@@ -467,6 +490,18 @@ export class LotteryOperationsCountModeModel {
   monthEndUnrenumbered!: string[];
 }
 
+/** 區塊 8 的期初建檔註記。 */
+@ObjectType("LotteryOperationsOpeningEntry")
+export class LotteryOperationsOpeningEntryModel {
+  /** 第一本建檔的時間 */
+  @Field(() => GraphQLISODateTime)
+  startedAt!: Date;
+
+  /** 期初建檔結束的時間;期末還沒結束 = null(「進行中」) */
+  @Field(() => GraphQLISODateTime, { nullable: true })
+  closedAt!: Date | null;
+}
+
 /** 區塊 8 註記。 */
 @ObjectType("LotteryOperationsNotes")
 export class LotteryOperationsNotesModel {
@@ -503,6 +538,13 @@ export class LotteryOperationsNotesModel {
   /** 張數店的盤點制度與補點編號(期間內一直是編號店 = null,畫面不變;張數店規格 11.4) */
   @Field(() => LotteryOperationsCountModeModel, { nullable: true })
   countMode!: LotteryOperationsCountModeModel | null;
+
+  /**
+   * 期初建檔(期初建檔規格 5.1 區塊 8):「這家店 MM/DD 開始期初建檔;MM/DD 結束」(還沒結束 = 進行中)。
+   * 到期末還沒建過任何一本 = null(不顯示)。
+   */
+  @Field(() => LotteryOperationsOpeningEntryModel, { nullable: true })
+  openingEntry!: LotteryOperationsOpeningEntryModel | null;
 }
 
 /** 一家店實際用的期間(對齊日結時逐店不同)。 */
