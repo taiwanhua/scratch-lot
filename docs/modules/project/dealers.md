@@ -55,13 +55,14 @@
 
 五張表(地圖見 [docs/project/data-model.md](../../project/data-model.md),欄位逐欄註解在 schema 檔):
 
-| collection                    | 用途                                                                                                                                                                                                                  |
-| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `lottery_dealers`             | 經銷商(甲 / 乙);`orgId` = 建立者當時的組織;資料共用「可共用、預設不共用、可編輯」,另給對應分店看(`storeOrgId` 是 `org_lottery_dealer` 的副本,同交易寫入;ADR-0014);證號、身分證字號租戶內唯一(部分唯一索引,軟刪除不算) |
-| `lottery_dealer_contacts`     | 關係人;身分多選(受託人 / 代理人 / 介紹人);身分證字號租戶內唯一                                                                                                                                                        |
-| `lottery_dealer_signins`      | 見簽;唯一 `(dealerId, year, quarter)`;`orgId` 同經銷商                                                                                                                                                                |
-| `lottery_relationships`       | 關聯(形狀比照底座 `business_relationships`);唯一 `(tenantId, type, firstId, secondId, meta.role)`,反查 `(tenantId, type, secondId)`                                                                                   |
-| `lottery_wholesale_customers` | 批售客戶;`orgId` = 建立者當時的組織;資料共用「可共用、預設不共用、可編輯」;證號有填時租戶內唯一(部分唯一索引);`label` = 下拉文字;狀態 `active` 往來中 / `inactive` 停用                                               |
+| collection                         | 用途                                                                                                                                                                                                                  |
+| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `lottery_dealers`                  | 經銷商(甲 / 乙);`orgId` = 建立者當時的組織;資料共用「可共用、預設不共用、可編輯」,另給對應分店看(`storeOrgId` 是 `org_lottery_dealer` 的副本,同交易寫入;ADR-0014);證號、身分證字號租戶內唯一(部分唯一索引,軟刪除不算) |
+| `lottery_dealer_contacts`          | 關係人;身分多選(受託人 / 代理人 / 介紹人);身分證字號租戶內唯一                                                                                                                                                        |
+| `lottery_dealer_signins`           | 見簽;唯一 `(dealerId, year, quarter)`;`orgId` 同經銷商                                                                                                                                                                |
+| `lottery_relationships`            | 關聯(形狀比照底座 `business_relationships`);唯一 `(tenantId, type, firstId, secondId, meta.role)`,反查 `(tenantId, type, secondId)`                                                                                   |
+| `lottery_wholesale_customers`      | 批售客戶;`orgId` = 建立者當時的組織;資料共用「可共用、預設不共用、可編輯」;證號有填時租戶內唯一(部分唯一索引);`label` = 下拉文字;狀態 `active` 往來中 / `inactive` 停用                                               |
+| `lottery_wholesale_customer_locks` | 批售客戶的守門文件(一位客戶一筆,`customerId` 唯一、`version`,歸屬組織同客戶;比照 `lottery_vault_locks`):「送出批售單」與「刪除客戶」在交易裡都 `$inc`,互相衝突重跑                                                    |
 
 `lottery_relationships` 本模組用三種 type:`lottery_dealer_lottery_dealer_contact`(經銷商 → 關係人,`meta.role`)、`lottery_dealer_lottery_dealer`(甲類 → 乙類,共同銷售處所)、`org_lottery_dealer`(分店 → 乙類,對應分店)。`org_lottery_bank_account` 由帳戶管理在同一張表新增 type。關聯的 `orgId` = 所屬經銷商的 `orgId`;解除 = 軟刪除,唯一索引只算未刪除的列。
 
@@ -83,7 +84,7 @@
 - **關係人取消身分**:那個身分還有關聯 → `CONFLICT`(`ROLE_IN_USE`,只列操作者看得到的經銷商上的關聯,看不到的只回筆數 `hiddenCount`,畫面提示「另有 N 筆你看不到的關聯也會一起解除」);帶 `releaseRelationships: true` 重送一併解除 —— 這是**例外寫入**:看不到的經銷商上的關聯以租戶為邊界解除(`dealer-links.service.ts` 的 `releaseContactRoles`)。
 - **資料共用(ADR-0014)**:經銷商看得到 = 可見範圍、共用給(`shareOrgs`,編輯頁「共用給」欄位,要 `dealers.edit`)、或乙類的對應分店。共用進來的只能看(`isShared`、`abilities` 全 false、寫入 `NOT_FOUND`)。看得到經銷商就看得到它的關聯與引用的名稱(關聯列以租戶為邊界讀;名稱經 `findRefsInTenant`)。租戶內唯一(證號、身分證字號)與對應分店是否已被占用以 `existsInTenant` 檢查;共同銷售人數、已被對應的分店、關係人掛在哪些經銷商以租戶為邊界反查(`tenantBoundaryContext`)。別租戶一律看不到。
 - **批售客戶**(規格 21.2):店名必填、可以重複(同名只提醒、不擋:以整個租戶查同名,只回店名與電話,操作者看不到的那一筆不回電話;要有 `create` 或 `edit`);證號選填,有填時租戶內唯一(`existsInTenant` + 部分唯一索引,只算有填、未刪除的)。資料共用「可共用、預設不共用、可編輯」,「共用給」要 `dealers.wholesale-customers.edit`,共用進來的只能看。刪除用 `edit`:被任何批售單(含草稿)引用 → `WHOLESALE_CUSTOMER_IN_USE`,只能停用。不算側欄計數、不寄提醒。
-- **批售客戶與批售單的接點**:`wholesale-customer-documents.ts` 的 `WholesaleCustomerDocuments.registerSource({ lastShippedAt, isReferenced })`,由批售單的功能在 `onModuleInit` 登記;沒有登記 = 沒有批售單(最近一次批售日無紀錄、沒有引用)。`isReferenced` 在刪除的交易裡呼叫,要問整個租戶。
+- **批售客戶與批售單的接點**:`wholesale-customer-documents.ts` 的 `WholesaleCustomerDocuments.registerSource({ lastShippedAt, isReferenced })`,由批售單的功能在 `onModuleInit` 登記(`apps/api/src/project/lottery/wholesale/wholesale-registrations.ts`):最近一次批售日 = 已完成批售單的「批售」事件時間(整個租戶、作廢的不算);`isReferenced` 在刪除的交易裡呼叫,問整個租戶、含草稿與駁回 / 作廢。刪除與送出批售單同時發生時,兩個交易在守門文件上衝突(`serialize`),重跑的一方看得到對方。存草稿沒有掛接點、碰不到守門文件:極短的時間差裡可能留下一張指到已刪除客戶的**草稿**,它送不出去(送出時引用讀不到),改選客戶就好。
 - **沒有刪除**:經銷商只能解約、關係人只能停用(批售客戶沒被引用可以刪除);解約 / 停用後不能再被選取(挑選器帶 `selectable` / `status: ACTIVE`),既有關聯保留。
 - **主檔與關聯同一個交易**;每一筆關聯的新增 / 解除各寫一筆稽核。
 - **見簽**:每年每季一筆;見簽日不限定落在該季;已過沒登記的季別 `MISSING`(警告色)、本季沒登記 `OPEN`、未到 `NOT_STARTED`(不能登記)。
@@ -139,7 +140,7 @@
 
 欄位錯誤(新增 / 編輯、關係人、見簽登記):原因寫在欄位正下方 —— 格式錯寫該欄的格式要求(證號 8 碼數字、身分證字號 1 碼英文 + 9 碼數字、長度上限……),api 帶了 `reason` 寫原因(證號重複、人數上限、分店已被對應……);頁面底部只留通用句(REACT-18;`dealer-field-errors.ts`)。
 
-批售客戶詳情的「批售紀錄」由批售單的功能追加到 `apps/admin/src/pages/project/lottery/dealers/WholesaleCustomerViewPage/wholesale-customer-detail-tabs.ts`(要 `purchasing.wholesale.view`);只有「基本資料」時不顯示分頁籤。
+批售客戶詳情的「批售紀錄」(`CustomerWholesalesTab`:單號、出貨分店、本數、批售金額、已收、狀態)由批售單的功能追加到 `apps/admin/src/pages/project/lottery/dealers/WholesaleCustomerViewPage/wholesale-customer-detail-tabs.ts`(要 `purchasing.wholesale.view`);只有「基本資料」時不顯示分頁籤。
 
 詳情頁的其他分頁由各自的功能追加到 `apps/admin/src/pages/project/lottery/dealers/DealerViewPage/dealer-detail-tabs.ts`:甲類 批購紀錄(進貨單)、乙類 預計要給本數與在店庫存(庫存管理)。
 
