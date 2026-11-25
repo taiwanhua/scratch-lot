@@ -24,14 +24,17 @@ describe("經銷商管理的模組宣告(專案規格 3.1、3.2)", () => {
   });
 
   it("隱藏頁的 key 以 -page 結尾;關係人、批售客戶是權限容器(沒有路由)", () => {
-    const containers = ["dealers.contacts", "dealers.wholesale-customers"];
+    const containers = new Set([
+      "dealers.contacts",
+      "dealers.wholesale-customers",
+    ]);
     for (const key of containers) {
       const container = dealersModule.nodes.find((node) => node.key === key);
       expect(container).toBeDefined();
       expect(container?.route).toBeUndefined();
     }
     for (const node of dealersModule.nodes.filter(
-      (item) => item.sidebarType === "hidden" && !containers.includes(item.key),
+      (item) => item.sidebarType === "hidden" && !containers.has(item.key),
     )) {
       expect(node.key).toMatch(/-page$/);
     }
