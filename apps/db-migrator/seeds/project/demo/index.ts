@@ -24,6 +24,7 @@ import { demoBankAccountsStep } from "./bank-accounts";
 import { DEMO_CASH_POINTS } from "./cash-points";
 import { DEMO_CLASS_B_DEALERS, demoDealersStep } from "./dealers";
 import { demoGamesStep } from "./games";
+import { demoOpeningStep } from "./opening";
 import { DEMO_BRANCHES, DEMO_USERS } from "./organization";
 import { DEMO_POSITIONS } from "./positions";
 import { demoPrintingGrants } from "./printing-grants";
@@ -78,7 +79,7 @@ export function demoPlan(emailBase: string): OnboardingPlan {
 
 /**
  * 示範指令跑的步驟 = 開通清單的步驟(「角色」那一步多套示範的列印權限)+ 示範資料專用的步驟。
- * 開通清單標「人工」的項目(銀行帳戶、兩個批購基準日、列印權限)與不在清單裡的(遊戲、甲類與受託人、
+ * 開通清單標「人工」的項目(銀行帳戶、兩個批購基準日、列印權限、期初建檔)與不在清單裡的(遊戲、甲類與受託人、
  * 小金庫起始現金)只在這裡做,真實租戶的開通不做。小金庫起始現金是送一張現金更正單,要排在「流程」之後。
  */
 export const DEMO_STEPS: readonly OnboardingStep[] = [
@@ -88,6 +89,7 @@ export const DEMO_STEPS: readonly OnboardingStep[] = [
       : step,
   ),
   demoGamesStep,
+  demoOpeningStep,
   demoDealersStep,
   demoBankAccountsStep,
   demoVaultCashStep,

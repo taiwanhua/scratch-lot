@@ -14,7 +14,7 @@
 | ------------------------ | -------- | ------------ | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `inventory`              | 庫存管理 | link(列表頁) | `/inventory`                        | 分頁 庫存 \| 待查·遺失 \| 預計要給本數(Figma IN-01 91:17、IN-05 91:1109、IN-06 91:1375);右上 [查刮刮樂](IN-02)                                                |
 | `inventory.book-page`    | 本的詳情 | hidden       | `/inventory/book-page/<id>?ticket=` | 頁首、來源 / 所在 / 成本、張數格子與選張操作列、事件時間軸(IN-03 125:1159 / 125:1699);更正跳號 / 尋回 / 報廢 / 撤銷報廢是彈窗(IN-04-3a、IN-04b / c、IN-04-2b) |
-| `inventory.opening-page` | 期初建檔 | hidden       | `/inventory/opening-page?org=`      | 一家店導入時建檔已在店裡的本(期初建檔規格第 3 節);畫面待 Figma(O5)                                                                                            |
+| `inventory.opening-page` | 期初建檔 | hidden       | `/inventory/opening-page?org=`      | 一家店導入時建檔已在店裡的本(期初建檔規格第 3 節;Figma OP-01–05)                                                                                              |
 
 - 側欄順序 `order: 20`、圖示 `inventory`;沒有側欄數字。
 - 分頁**不是模組節點**:綁了模組三個分頁都看得到(本模組沒有 `view`)。
@@ -122,7 +122,7 @@
 - 每店一筆 `lottery_store_openings`(`orgId` 唯一、`closedAt`、`closedBy`、`history[]` 結束 / 重新開放、`version`):建檔、作廢、改成期初已售在同一個交易讀這一筆並 `$inc version`,和「結束」一定有先後;結束後一律 `STORE_OPENING_CLOSED`。沒有這一筆 = 進行中。
 - 作廢:寫 `opening_void`、本改 `revoked`,本與張軟刪除(釋出本號可重建);報表的待標註與作廢時間讀已刪除的本(`report-pending.ts` 的 `includeDeleted`)。
 - 期初更正:改回未售(放到選的收銀點檯面或庫存;結束後也可以)/ 改成期初已售(只在進行中);寫 `opening_fix`,原因類別「期初更正原因」`lottery-opening-correction-reason`。
-- 其他模組遇到期初已售:店面刷到 → `OPENING_SOLD`(「導入前已賣出,請用期初更正」);撤銷售出申請 → `OPENING_SALE_NOT_REVERSIBLE`;盤點差異多一個動作 `opening_fix`;重刷結果 `opening_sold_here`。對號、依張數賣、依張數移櫃只挑未售或已售·未對號,不會挑到期初已售(推論、未實測)。
+- 其他模組遇到期初已售:店面刷到 → `OPENING_SOLD`(「導入前已賣出,請用期初更正」);撤銷售出申請 → `OPENING_SALE_NOT_REVERSIBLE`;盤點差異多一個動作 `opening_fix`;重刷結果 `opening_sold_here`。對號、依張數賣、依張數移櫃只挑未售或已售·未對號,不會挑到期初已售(OP12 測過)。
 - 預計要給本數:`opening` 算進給的事件,期初建檔的本算 1 本;作廢的本是已撤銷,不算。
 - 稽核:`inventory.opening`、`inventory.opening-void`、`inventory.opening-fix`、`inventory.opening-close`、`inventory.opening-reopen`。
 

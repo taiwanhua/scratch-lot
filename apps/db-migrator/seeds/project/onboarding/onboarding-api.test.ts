@@ -288,6 +288,40 @@ describe("開通腳本與 demo create(真 api + 真 MongoDB)", () => {
       });
     });
 
+    it("期初建檔:中山店建 2 本(拆過的導入前已賣出 46 張、原封在庫存)並結束;信義店沒建", async () => {
+      const branches = await find("orgs", { parentId: tenantId });
+      const idOf = (name: string) =>
+        branches.find((branch) => branch.name === name)?._id as ObjectId;
+      const books = await find("lottery_books", {
+        tenantId,
+        source: "opening",
+      });
+      expect(
+        books.map(
+          (book) => `${book.gameCode as string}-${book.bookNo as string}`,
+        ),
+      ).toEqual(expect.arrayContaining(["5164-0071201", "5201-0072301"]));
+      expect(books).toHaveLength(2);
+      expect(
+        books.every((book) => String(book.orgId) === String(idOf("中山店"))),
+      ).toBe(true);
+      const sold = await find("lottery_tickets", {
+        tenantId,
+        soldSource: "opening",
+      });
+      expect(sold).toHaveLength(46);
+      const zhongshan = await findOne("lottery_store_openings", {
+        orgId: idOf("中山店"),
+      });
+      expect(zhongshan.closedAt).toBeInstanceOf(Date);
+      expect(
+        await find("lottery_store_openings", {
+          orgId: idOf("信義店"),
+          closedAt: { $ne: null },
+        }),
+      ).toHaveLength(0);
+    });
+
     it("檔案管理:示範遊戲與收銀點(兩家店都是 店內櫃台A、店外櫃台B,對應同名崗位)", async () => {
       const games = await find("lottery_games", { tenantId });
       expect(new Set(games.map((game) => game.gameCode as string))).toEqual(

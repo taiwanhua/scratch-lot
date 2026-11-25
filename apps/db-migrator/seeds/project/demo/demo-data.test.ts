@@ -11,12 +11,14 @@ import { parseOnboardingPlan } from "../onboarding/plan";
 import { ONBOARDING_STEPS } from "../onboarding/steps";
 import { rolesStep } from "../onboarding/steps/roles";
 import { DEMO_BANK_ACCOUNTS } from "./bank-accounts";
+import { DEMO_CASH_POINTS } from "./cash-points";
 import {
   DEMO_CLASS_A_DEALERS,
   DEMO_CLASS_B_DEALERS,
   DEMO_TRUSTEES,
 } from "./dealers";
 import { DEMO_GAMES } from "./games";
+import { DEMO_OPENINGS } from "./opening";
 import { DEMO_BRANCHES } from "./organization";
 import { DEMO_VAULT_CASH } from "./vault-cash";
 
@@ -136,6 +138,7 @@ describe("示範專用的步驟(開通腳本不做)", () => {
     expect(DEMO_STEPS).not.toContain(rolesStep);
     expect(keys.slice(ONBOARDING_STEPS.length)).toEqual([
       "demo-games",
+      "demo-opening",
       "demo-dealers",
       "demo-bank-accounts",
       "demo-vault-cash",
@@ -159,6 +162,21 @@ describe("示範專用的步驟(開通腳本不做)", () => {
     }
     for (const vault of DEMO_VAULT_CASH) {
       expect(branches.has(vault.branch)).toBe(true);
+    }
+    // 期初建檔:分店、收銀點、遊戲都在示範資料裡
+    const points = new Set(
+      DEMO_CASH_POINTS.map((point) => `${point.branch}/${point.name}`),
+    );
+    const games = new Set(DEMO_GAMES.map((game) => game.gameCode));
+    for (const opening of DEMO_OPENINGS) {
+      expect(branches.has(opening.branch)).toBe(true);
+      for (const book of opening.books) {
+        expect(games.has(book.gameCode)).toBe(true);
+        expect(
+          book.cashPoint === null ||
+            points.has(`${opening.branch}/${book.cashPoint}`),
+        ).toBe(true);
+      }
     }
     const classB = new Set(
       DEMO_CLASS_B_DEALERS.map((dealer) => dealer.licenseNo),
