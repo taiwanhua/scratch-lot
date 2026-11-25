@@ -124,6 +124,11 @@ export const sampleReasonOptions: Record<
     { value: "system-backfill", label: "系統異常補登" },
     { value: "other", label: "其他" },
   ],
+  // 本的詳情的期初更正(期初建檔規格 4.1)
+  [LOTTERY_FIELD_CATEGORY_KEYS.openingCorrectionReason]: [
+    { value: "miscount", label: "建檔點錯" },
+    { value: "other", label: "其他" },
+  ],
   // 本的詳情的撤銷報廢(張數店規格 7.8)
   [LOTTERY_FIELD_CATEGORY_KEYS.scrapUndoReason]: [
     { value: "mis-scrapped", label: "報錯張" },

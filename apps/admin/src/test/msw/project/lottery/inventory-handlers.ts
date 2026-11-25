@@ -20,6 +20,7 @@ import type {
 
 import { graphqlError } from "../../auth-handlers";
 import { api, type server } from "../../server";
+import { abilitiesFor } from "./inventory-abilities";
 import {
   ALL_INVENTORY_PERMISSIONS,
   inventoryGames,
@@ -107,34 +108,8 @@ export const inventoryWorld = ({
   permissions = ALL_INVENTORY_PERMISSIONS,
 }: InventoryWorldOptions = {}): InventoryWorld => {
   const has = (key: string) => permissions.includes(key);
-  const withAbilities = (
-    detail: LotteryInventoryBookDetailFieldsFragment,
-  ): LotteryInventoryBookDetailFieldsFragment => ({
-    ...detail,
-    cost: has(PERMISSIONS.showCost) ? detail.cost : null,
-    abilities: {
-      __typename: "LotteryInventoryBookAbilities",
-      // 這本有跳號(記在哪家店都可以)、一張自己範圍內的未售(未鎖定)
-      canCorrectSkips:
-        has(PERMISSIONS.markSkipped) &&
-        detail.tickets.some((ticket) => ticket.status === "skipped") &&
-        detail.tickets.some(
-          (ticket) =>
-            ticket.operable && ticket.status === "unsold" && !ticket.locked,
-        ),
-      canMarkSkips:
-        has(PERMISSIONS.markSkipped) &&
-        detail.book.pendingSkipCount > 0 &&
-        detail.tickets.some(
-          (ticket) =>
-            ticket.operable && ticket.status === "unsold" && !ticket.locked,
-        ),
-      canRecover: has(PERMISSIONS.recover),
-      bookOpened: detail.book.state !== "unopened",
-      canScrap: has(PERMISSIONS.scrap),
-      canShowCost: has(PERMISSIONS.showCost),
-    },
-  });
+  const withAbilities = (detail: LotteryInventoryBookDetailFieldsFragment) =>
+    abilitiesFor(detail, has);
   let detailState = details;
   let cellState = cells;
   const inputs: InventoryWorld["inputs"] = {

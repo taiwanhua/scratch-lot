@@ -492,7 +492,8 @@
       "NO_PENDING_SKIPS": "這本沒有待標註的跳號",
       "SCRAP_NOT_ALLOWED": "只能報廢拆過的本在庫存的未售張;檯面上的張請先收回",
       "NO_MATCH_PARTNER": "同位置沒有未售的張可以接手系統預設帶入的狀態,請先盤點或全店重刷",
-      "COUNT_STORE_SCAN_ONLY": "張數盤點的店要刷條碼或手輸實體在手上的那張"
+      "COUNT_STORE_SCAN_ONLY": "張數盤點的店要刷條碼或手輸實體在手上的那張",
+      "STORE_OPENING_CLOSED": "這家店的期初建檔已結束"
     },
     "ticketStatuses": {
       "unsold": "未售",
@@ -541,7 +542,10 @@
       "cost_adjust": "成本調整",
       "match": "對號",
       "renumber_confirm": "張號確認",
-      "scrap_undo": "撤銷報廢"
+      "scrap_undo": "撤銷報廢",
+      "opening": "期初建檔",
+      "opening_fix": "期初更正",
+      "opening_void": "期初建檔作廢"
     },
     "sources": {
       "purchase": "進貨單",
@@ -661,7 +665,14 @@
         "notUnsold": "只能報廢未售的張"
       },
       "remainingEstimated": " · 剩 {remaining} 張(估算,含未對號 {unmatched} 張)",
-      "dashedNote": "虛線 = 系統預設帶入的張號"
+      "dashedNote": "虛線 = 系統預設帶入的張號",
+      "openingSource": "期初建檔",
+      "openingSourceValue": "{name} · {time}",
+      "rateValueOpening": "{rate}%(期初建檔帶入)",
+      "openingSoldTooltip": "導入前已賣出",
+      "soldWithOpening": "已售(含導入前已賣出)",
+      "fixToUnsold": "改回未售…",
+      "fixToOpeningSold": "改成導入前已賣出…"
     },
     "timeline": {
       "columns": {
@@ -863,12 +874,30 @@
         "FORBIDDEN": "你沒有這個操作的權限",
         "NOT_FOUND": "找不到這家店或這本",
         "VALIDATION_FAILED": "有欄位沒填好,請檢查",
-        "CONFLICT": "這本已經在系統裡",
+        "CONFLICT": "剛被別人處理過,請重新整理後再試",
         "STORE_OPENING_CLOSED": "這家店的期初建檔已結束",
         "BOOK_ON_PURCHASE": "這本在進貨單 #{serialNo},請在進貨單點收",
         "OPENING_PLAN_INVALID": "張號不合,請重新檢查",
         "OPENING_NOT_VOIDABLE": "這本已有銷售或其他動作,請用期初更正",
+        "BOOK_KEY_DUPLICATE": "這本已經在系統裡",
         "UNEXPECTED": "發生錯誤,請稍後再試"
+      }
+    },
+    "openingFix": {
+      "place": "放到",
+      "counter": "檯面 · {name}",
+      "reason": "原因",
+      "toUnsold": {
+        "title": "改回未售 {count} 張",
+        "hint": "這些張其實還在店裡:改回未售,放到選的位置。不算銷售、不碰現金。",
+        "submit": "改回未售",
+        "success": "已改回未售 {count} 張"
+      },
+      "toSold": {
+        "title": "改成導入前已賣出 {count} 張",
+        "hint": "這些張在導入前就已經賣出:改成導入前已賣出,不算銷售、不碰現金。",
+        "submit": "改成導入前已賣出",
+        "success": "已改成導入前已賣出 {count} 張"
       }
     }
   },

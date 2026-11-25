@@ -104,6 +104,22 @@ const STATUS = /* GraphQL */ `
   }
 `;
 
+const DETAIL = /* GraphQL */ `
+  query ($id: ID!) {
+    lotteryInventoryBook(id: $id) {
+      item {
+        tickets {
+          ticketNo
+          openingSold
+        }
+        abilities {
+          canFixOpening
+        }
+      }
+    }
+  }
+`;
+
 const SCAN = /* GraphQL */ `
   query TestOpeningScan($input: LotteryOpeningScanInput!) {
     lotteryOpeningScan(input: $input) {
@@ -531,6 +547,21 @@ describe("期初建檔(GraphQL 端點 + 真 MongoDB)", () => {
       places: [{ cashPoint: { name: "店內櫃台" }, count: 54 }],
       voidable: true,
     });
+
+    // 本的詳情:導入前已賣出的張標出來;期初建檔的本有期初更正(規格 4.1、5.3)
+    const detail = await ok<{
+      lotteryInventoryBook: {
+        item: {
+          tickets: { ticketNo: string; openingSold: boolean }[];
+          abilities: { canFixOpening: boolean };
+        };
+      };
+    }>(api, managerA, DETAIL, { id: bookId });
+    const { item } = detail.lotteryInventoryBook;
+    expect(
+      item.tickets.filter((ticket) => ticket.openingSold).map((t) => t.ticketNo),
+    ).toEqual(range(1, 46));
+    expect(item.abilities.canFixOpening).toBe(true);
   });
 
   it("OP2 擋下:已在系統裡、在進貨單上、整本賣完、跳號沒標、停用的收銀點;停售的遊戲可以建", async () => {

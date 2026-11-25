@@ -3,6 +3,7 @@ import { HttpResponse } from "msw";
 import { LOTTERY_SETTINGS_PERMISSIONS } from "@repo/domain/project/lottery-settings";
 import type {
   CreateLotteryOpeningBookMutationVariables,
+  FixLotteryOpeningTicketsMutationVariables,
   LotteryOpeningScanQuery,
   LotteryStoreOpeningFieldsFragment,
   ReopenLotteryStoreOpeningMutationVariables,
@@ -78,6 +79,7 @@ export const openingWorld = (options: OpeningWorldOptions) => {
     reopen: [] as ReopenLotteryStoreOpeningMutationVariables["input"][],
     create: [] as CreateLotteryOpeningBookMutationVariables["input"][],
     void: [] as string[],
+    fix: [] as FixLotteryOpeningTicketsMutationVariables["input"][],
   };
   const stateOf = (orgId: string): OpeningState =>
     openings.get(orgId) ?? { bookCount: 0 };
@@ -205,6 +207,17 @@ export const openingWorld = (options: OpeningWorldOptions) => {
       return HttpResponse.json({
         data: {
           createLotteryOpeningBook: { bookId, count: input.lastTicketNo },
+        },
+      });
+    }),
+    api.mutation<
+      Record<string, unknown>,
+      FixLotteryOpeningTicketsMutationVariables
+    >("FixLotteryOpeningTickets", ({ variables }) => {
+      inputs.fix.push(variables.input);
+      return HttpResponse.json({
+        data: {
+          fixLotteryOpeningTickets: { count: variables.input.tickets.length },
         },
       });
     }),

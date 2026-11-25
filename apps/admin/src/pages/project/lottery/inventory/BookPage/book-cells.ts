@@ -14,7 +14,12 @@ import type {
 type Ticket = Pick<
   LotteryInventoryTicketFieldsFragment,
   "ticketNo" | "status" | "locked" | "operable" | "locationKind"
-> & { org: { id: string; name: string }; unmatched?: boolean };
+> & {
+  org: { id: string; name: string };
+  unmatched?: boolean;
+  /** 導入前已賣出(期初已售) */
+  openingSold?: boolean;
+};
 type CellState = TicketGridCell["state"];
 
 /** 張的狀態 → 本的詳情頁格子的狀態(規格 7.5「本的詳情頁:未售 / 已售 / 跳號 / 報廢 / 待查·遺失 / 已選」)。 */
@@ -47,7 +52,10 @@ const unmatchedStateOf = (ticket: Ticket): CellState | null => {
  * 跳號一律畫成跳號(跳號不算任何店的庫存;對調跳號時記在哪家店都能選,規格 7.3 做法 D);
  * 被調貨單鎖住的未售用「調貨中」、不能選(使用者 10/27 定案)。張分在不止一家店時,每格的提示寫所在分店。
  */
-export const bookCellsOf = (tickets: readonly Ticket[]): TicketGridCell[] => {
+export const bookCellsOf = (
+  tickets: readonly Ticket[],
+  opening: OpeningCells | null = null,
+): TicketGridCell[] => {
   const showStore = spansStores(tickets);
   return tickets.map((ticket) => {
     let state: CellState;
@@ -61,13 +69,29 @@ export const bookCellsOf = (tickets: readonly Ticket[]): TicketGridCell[] => {
       const fallback: CellState = STATE_OF[ticket.status] ?? "sold";
       state = unmatchedStateOf(ticket) ?? fallback;
     }
+    const isOpening =
+      opening !== null && ticket.openingSold === true && ticket.operable;
+    const tooltip = [
+      ...(showStore ? [ticket.org.name] : []),
+      ...(isOpening ? [opening.tooltip] : []),
+    ].join(" · ");
     return {
       ticketNo: ticket.ticketNo,
       state,
-      ...(showStore && { tooltip: ticket.org.name }),
+      ...(tooltip !== "" && { tooltip }),
+      ...(isOpening && opening.selectable && { selectable: true }),
     };
   });
 };
+
+/**
+ * 導入前已賣出的張(期初已售;期初建檔規格 4.3、5.3):格子照已售樣式,提示「導入前已賣出」;
+ * 能期初更正(`canFixOpening`)時可以選。
+ */
+export interface OpeningCells {
+  tooltip: string;
+  selectable: boolean;
+}
 
 /** 圖例的「其他分店」只在有別店的張時打開(只放畫面用得到的狀態)。 */
 const withOtherStore = (
@@ -92,7 +116,7 @@ export const BOOK_SELECTABLE: TicketGridProps["selectableStates"] = [
   "scrapped",
 ];
 
-/** 選到的張能不能出現在操作列:自己範圍內的張。 */
+/** 選到的張能不能出現在操作列:自己範圍內的張(已售只有導入前已賣出的才選得到)。 */
 export const isSelectable = (ticket: Ticket): boolean => ticket.operable;
 
 /** 這本有系統預設帶入的張(自己範圍內的未對號;圖例放兩種虛線與說明)。 */
@@ -197,6 +221,10 @@ export interface SelectionActions {
   canRecover: boolean;
   /** 選到的全是自己範圍內的報廢 → [撤銷報廢] */
   canUndoScrap: boolean;
+  /** 選到的全是自己範圍內的導入前已賣出 → [改回未售…](期初建檔規格 4.1) */
+  canFixToUnsold: boolean;
+  /** 選到的全是自己範圍內、沒被鎖、不在途的未售 → [改成導入前已賣出…](還要分店在建檔) */
+  canFixToOpeningSold: boolean;
 }
 
 /**
@@ -238,6 +266,16 @@ export const selectionActionsOf = (
     canRecover: all((ticket) => isRecoverable(ticket)),
     canUndoScrap: all(
       (ticket) => ticket.operable && ticket.status === TICKET_STATUS.scrapped,
+    ),
+    canFixToUnsold: all(
+      (ticket) => ticket.operable && ticket.openingSold === true,
+    ),
+    canFixToOpeningSold: all(
+      (ticket) =>
+        ticket.operable &&
+        ticket.status === TICKET_STATUS.unsold &&
+        !ticket.locked &&
+        ticket.locationKind !== TICKET_LOCATION_KIND.inTransit,
     ),
   };
 };

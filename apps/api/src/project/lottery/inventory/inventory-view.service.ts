@@ -13,6 +13,7 @@ import {
   bookDisplayStateOf,
   holdingsOf,
   holdingsWithoutPendingSkips,
+  isOpeningSold,
   normalizeBookNo,
   remainingOfCounts,
   requiredSkipCountOf,
@@ -310,6 +311,9 @@ export class InventoryViewService {
         canScrap: grant.has(INVENTORY_PERMISSIONS.scrap),
         bookOpened: (record.firstOpenedAt ?? null) !== null,
         canShowCost: grant.canShowCost,
+        canFixOpening:
+          record.source === "opening" &&
+          grant.has(INVENTORY_PERMISSIONS.opening),
       },
     };
   }
@@ -713,6 +717,7 @@ export class InventoryViewService {
       operable: isOrgVisible(operator, ticket.orgId),
       version: ticket.version,
       unmatched: ticket.unmatched,
+      openingSold: isOpeningSold(ticket),
     };
   }
 

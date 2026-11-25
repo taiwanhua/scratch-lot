@@ -492,7 +492,8 @@
       "NO_PENDING_SKIPS": "This book has no skipped numbers left to mark",
       "SCRAP_NOT_ALLOWED": "Only unsold stock tickets of opened books can be scrapped; recall counter tickets first",
       "NO_MATCH_PARTNER": "No unsold ticket at the same place can take over the status filled in by the system; count or rescan first",
-      "COUNT_STORE_SCAN_ONLY": "Count stores must scan or type the ticket in hand"
+      "COUNT_STORE_SCAN_ONLY": "Count stores must scan or type the ticket in hand",
+      "STORE_OPENING_CLOSED": "Opening entry for this store has ended"
     },
     "ticketStatuses": {
       "unsold": "Unsold",
@@ -541,7 +542,10 @@
       "cost_adjust": "Cost adjusted",
       "match": "Matched",
       "renumber_confirm": "Ticket number confirmed",
-      "scrap_undo": "Scrap undone"
+      "scrap_undo": "Scrap undone",
+      "opening": "Opening entry",
+      "opening_fix": "Opening correction",
+      "opening_void": "Opening entry voided"
     },
     "sources": {
       "purchase": "Purchase order",
@@ -661,7 +665,14 @@
         "notUnsold": "Only unsold tickets can be scrapped"
       },
       "remainingEstimated": " · {remaining} left (estimated, plus {unmatched} system-assigned)",
-      "dashedNote": "Dashed = ticket numbers assigned by the system"
+      "dashedNote": "Dashed = ticket numbers assigned by the system",
+      "openingSource": "Opening entry",
+      "openingSourceValue": "{name} · {time}",
+      "rateValueOpening": "{rate}% (from opening entry)",
+      "openingSoldTooltip": "Sold before adoption",
+      "soldWithOpening": "Sold (incl. before adoption)",
+      "fixToUnsold": "Change back to unsold…",
+      "fixToOpeningSold": "Mark sold before adoption…"
     },
     "timeline": {
       "columns": {
@@ -863,12 +874,30 @@
         "FORBIDDEN": "You don't have permission for this",
         "NOT_FOUND": "Store or book not found",
         "VALIDATION_FAILED": "Some fields are invalid. Please check",
-        "CONFLICT": "This book is already in the system",
+        "CONFLICT": "Someone just changed this. Refresh and try again",
         "STORE_OPENING_CLOSED": "Opening entry for this store has ended",
         "BOOK_ON_PURCHASE": "This book is on purchase order #{serialNo}. Receive it on the purchase order",
         "OPENING_PLAN_INVALID": "Ticket numbers don't add up. Check again",
         "OPENING_NOT_VOIDABLE": "This book has sales or other actions. Use an opening correction",
+        "BOOK_KEY_DUPLICATE": "This book is already in the system",
         "UNEXPECTED": "Something went wrong. Please try again later"
+      }
+    },
+    "openingFix": {
+      "place": "Put in",
+      "counter": "Counter · {name}",
+      "reason": "Reason",
+      "toUnsold": {
+        "title": "Change {count} tickets back to unsold",
+        "hint": "These tickets are still in the store. They go back to unsold in the place you pick. No sales or cash are recorded.",
+        "submit": "Change to unsold",
+        "success": "Changed {count} tickets to unsold"
+      },
+      "toSold": {
+        "title": "Mark {count} tickets sold before adoption",
+        "hint": "These tickets were sold before adoption. No sales or cash are recorded.",
+        "submit": "Mark sold before adoption",
+        "success": "Marked {count} tickets sold before adoption"
       }
     }
   },

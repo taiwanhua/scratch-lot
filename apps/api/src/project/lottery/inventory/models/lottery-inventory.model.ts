@@ -186,6 +186,10 @@ export class LotteryInventoryTicketModel {
   @Field(() => Boolean)
   operable!: boolean;
 
+  /** 導入前已賣出(期初已售:已售、`soldSource = opening`;期初建檔規格 2.2) */
+  @Field(() => Boolean)
+  openingSold!: boolean;
+
   @Field(() => Int)
   version!: number;
 
@@ -372,6 +376,10 @@ export class LotteryInventoryBookAbilitiesModel {
 
   @Field(() => Boolean)
   canShowCost!: boolean;
+
+  /** 期初更正(`inventory.opening`,只有期初建檔的本;改成導入前已賣出另看分店還在建檔,期初建檔規格 4.1) */
+  @Field(() => Boolean)
+  canFixOpening!: boolean;
 }
 
 /** 本的詳情(`inventory.book-page`;規格 7.3)。 */

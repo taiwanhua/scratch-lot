@@ -26,6 +26,7 @@ import { BookHeader } from "./BookHeader";
 import { BookInfoCards } from "./BookInfoCards";
 import { BookTimeline } from "./BookTimeline";
 import { MarkSkipsDialog } from "./MarkSkipsDialog";
+import { OpeningFixDialogSlot } from "./OpeningFixDialog";
 import { ScrapTicketsDialog } from "./ScrapTicketsDialog";
 import { SelectionBar } from "./SelectionBar";
 import { SkipCorrectionDialog } from "./SkipCorrectionDialog";
@@ -39,9 +40,16 @@ import {
   isSelectable,
   selectionActionsOf,
 } from "./book-cells";
+import { useBookOpening } from "./useBookOpening";
 
 type Detail = LotteryInventoryBookDetailFieldsFragment;
 type Ticket = Detail["tickets"][number];
+
+/** 期初更正的兩個對話框 → 更正方向。 */
+const FIX_TO: Partial<Record<string, "unsold" | "opening_sold">> = {
+  fixToUnsold: "unsold",
+  fixToOpeningSold: "opening_sold",
+};
 
 /** 查刮刮樂帶來的張號(`?ticket=071`):打開時標亮(選起來)那一張。 */
 const ticketSchema = z.string().default("");
@@ -69,6 +77,8 @@ export const BookPage = ({ routeParam }: ModulePageProps) => {
     | "undoScrap"
     | "recover"
     | "recoverAll"
+    | "fixToUnsold"
+    | "fixToOpeningSold"
     | null
   >(null);
   const query = useLotteryInventoryBookQuery(
@@ -77,6 +87,7 @@ export const BookPage = ({ routeParam }: ModulePageProps) => {
     { enabled: id !== "", retry: false },
   );
   const detail = query.data?.lotteryInventoryBook.item ?? null;
+  const opening = useBookOpening(detail);
   useRouteTabItemLabel(
     detail === null
       ? null
@@ -162,15 +173,23 @@ export const BookPage = ({ routeParam }: ModulePageProps) => {
           onRecover={() => {
             setDialog("recover");
           }}
+          {...opening.actionsOf(actions)}
+          onFixToUnsold={() => {
+            setDialog("fixToUnsold");
+          }}
+          onFixToOpeningSold={() => {
+            setDialog("fixToOpeningSold");
+          }}
           onClear={clearSelection}
         />
         <Box sx={{ mt: 1.5, maxWidth: 640 }}>
           <TicketGrid
-            cells={bookCellsOf(detail.tickets)}
+            cells={bookCellsOf(detail.tickets, opening.cells)}
             selectableStates={BOOK_SELECTABLE}
             selected={selectedNos}
             onSelectedChange={setSelected}
             legendItems={bookLegendOf(detail.tickets)}
+            {...opening.gridLabels}
             {...(hasUnmatched(detail.tickets) && {
               legendNote: t("book.dashedNote"),
             })}
@@ -202,6 +221,16 @@ export const BookPage = ({ routeParam }: ModulePageProps) => {
           }}
         />
       ) : null}
+      <OpeningFixDialogSlot
+        detail={detail}
+        tickets={selectedTickets}
+        to={FIX_TO[dialog ?? ""]}
+        cashPoints={opening.cashPoints}
+        onClose={() => {
+          setDialog(null);
+        }}
+        onFixed={clearSelection}
+      />
       {dialog === "undoScrap" ? (
         <UndoScrapDialog
           detail={detail}

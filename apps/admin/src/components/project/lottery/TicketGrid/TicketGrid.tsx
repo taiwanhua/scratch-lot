@@ -20,6 +20,8 @@ export interface TicketGridCell {
   state: Exclude<TicketCellState, "selected">;
   /** 滑過 / 長按的提示(例:在別的收銀點的收銀點名稱)。 */
   tooltip?: string;
+  /** 能不能選;不給 = 看 `selectableStates`(例:本的詳情頁導入前已賣出的張畫成已售、但可選來期初更正)。 */
+  selectable?: boolean;
 }
 
 export interface TicketGridProps {
@@ -84,7 +86,7 @@ export const TicketGrid = ({
       order: cells.map((cell) => cell.ticketNo),
       selectable: new Set(
         cells
-          .filter((cell) => allowed.has(cell.state))
+          .filter((cell) => cell.selectable ?? allowed.has(cell.state))
           .map((cell) => cell.ticketNo),
       ),
       selected,

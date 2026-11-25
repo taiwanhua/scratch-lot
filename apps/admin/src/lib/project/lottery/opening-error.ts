@@ -15,6 +15,7 @@ export type OpeningErrorCode =
   | "BOOK_ON_PURCHASE"
   | "OPENING_PLAN_INVALID"
   | "OPENING_NOT_VOIDABLE"
+  | "BOOK_KEY_DUPLICATE"
   | "UNEXPECTED";
 
 const CODES = [
@@ -29,6 +30,7 @@ const REASON_CODES: readonly OpeningErrorCode[] = [
   "BOOK_ON_PURCHASE",
   "OPENING_PLAN_INVALID",
   "OPENING_NOT_VOIDABLE",
+  "BOOK_KEY_DUPLICATE",
 ];
 
 export const openingErrorOf = (

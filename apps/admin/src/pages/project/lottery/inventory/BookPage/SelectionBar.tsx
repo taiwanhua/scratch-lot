@@ -19,6 +19,12 @@ export interface SelectionBarProps {
   canUndoScrap: boolean;
   /** 顯示 [尋回](選到的全是待查 / 遺失,且有 `recover`) */
   canRecover: boolean;
+  /** 顯示 [改回未售…](選到的全是導入前已賣出,且能期初更正) */
+  canFixToUnsold?: boolean;
+  /** 顯示 [改成導入前已賣出…](選到的全是未售、能期初更正、分店還在建檔) */
+  canFixToOpeningSold?: boolean;
+  onFixToUnsold?: () => void;
+  onFixToOpeningSold?: () => void;
   onScrap: () => void;
   onUndoScrap: () => void;
   onRecover: () => void;
@@ -35,13 +41,18 @@ const SCRAP_BLOCK_KEYS: Record<ScrapBlock, string> = {
 
 /**
  * 選張後格子正上方的操作列(規格 7.3;Figma IN-03、IN-03-2a / 2b):「已選 3 張 #090–092」+ 依選到的狀態給的按鈕
- * (選到不同狀態只顯示共同可用的;[報廢] 不能按時寫原因)+ [取消選取]。沒有選張時不顯示。
+ * (選到不同狀態只顯示共同可用的;[報廢] 不能按時寫原因;期初建檔的本另有 [改回未售…] [改成導入前已賣出…],
+ * Figma IN-03-5a / 5b)+ [取消選取]。沒有選張時不顯示。
  */
 export const SelectionBar = ({
   tickets,
   scrap,
   canUndoScrap,
   canRecover,
+  canFixToUnsold = false,
+  canFixToOpeningSold = false,
+  onFixToUnsold,
+  onFixToOpeningSold,
   onScrap,
   onUndoScrap,
   onRecover,
@@ -107,6 +118,16 @@ export const SelectionBar = ({
       {canRecover ? (
         <Button variant="outlined" size="small" onClick={onRecover}>
           {t("recover")}
+        </Button>
+      ) : null}
+      {canFixToUnsold ? (
+        <Button variant="outlined" size="small" onClick={onFixToUnsold}>
+          {t("fixToUnsold")}
+        </Button>
+      ) : null}
+      {canFixToOpeningSold ? (
+        <Button variant="outlined" size="small" onClick={onFixToOpeningSold}>
+          {t("fixToOpeningSold")}
         </Button>
       ) : null}
       <Button variant="text" size="small" onClick={onClear}>

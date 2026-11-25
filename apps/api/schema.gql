@@ -2217,6 +2217,7 @@ type LotteryInventoryBook {
 type LotteryInventoryBookAbilities {
   bookOpened: Boolean!
   canCorrectSkips: Boolean!
+  canFixOpening: Boolean!
   canMarkSkips: Boolean!
   canRecover: Boolean!
   canScrap: Boolean!
@@ -2338,6 +2339,7 @@ type LotteryInventoryTicket {
   id: ID!
   locationKind: String!
   locked: Boolean!
+  openingSold: Boolean!
   operable: Boolean!
   org: LotteryInventoryRef!
   responsibleOrg: LotteryInventoryRef
