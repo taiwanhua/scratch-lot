@@ -1054,6 +1054,8 @@
         "redemptionSent": "其中 已送兌",
         "redemptionRevoked": "已撤銷(另列)",
         "opening": "期初庫存",
+        "openingEntry": "+ 期初建檔",
+        "openingEntryNote": "{books} 本、含更正 {fix} 張、作廢 {voided} 本",
         "purchase": "+ 進貨",
         "books": "{count} 本",
         "booksWithVoid": "{count} 本(含作廢 {voided} 本)",
@@ -1123,7 +1125,10 @@
         "monthEndUnrenumbered": "月底未補點編號",
         "monthEndRenumberNone": "無",
         "monthEndRenumberMonthOnly": "—(月報才判斷)",
-        "monthEndRenumberOpen": "—(關帳時判斷)"
+        "monthEndRenumberOpen": "—(關帳時判斷)",
+        "openingEntryPeriod": "期初建檔",
+        "openingEntryOngoing": "這家店 {start} 開始期初建檔;進行中",
+        "openingEntryClosed": "這家店 {start} 開始期初建檔;{end} 結束"
       },
       "closing": {
         "closed": "已關帳",

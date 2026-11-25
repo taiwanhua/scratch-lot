@@ -1054,6 +1054,8 @@
         "redemptionSent": "of which sent for claim",
         "redemptionRevoked": "Revoked (listed separately)",
         "opening": "Opening stock",
+        "openingEntry": "+ Opening entry",
+        "openingEntryNote": "{books} books, {fix} tickets corrected, {voided} books voided",
         "purchase": "+ Purchased",
         "books": "{count} books",
         "booksWithVoid": "{count} books (incl. {voided} voided)",
@@ -1123,7 +1125,10 @@
         "monthEndUnrenumbered": "Not renumbered at month end",
         "monthEndRenumberNone": "None",
         "monthEndRenumberMonthOnly": "— (monthly reports only)",
-        "monthEndRenumberOpen": "— (decided at period close)"
+        "monthEndRenumberOpen": "— (decided at period close)",
+        "openingEntryPeriod": "Opening entry",
+        "openingEntryOngoing": "This store started opening entry on {start}; still in progress",
+        "openingEntryClosed": "This store started opening entry on {start}; ended on {end}"
       },
       "closing": {
         "closed": "Closed",

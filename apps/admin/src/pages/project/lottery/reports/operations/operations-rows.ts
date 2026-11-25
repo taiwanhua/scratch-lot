@@ -23,6 +23,7 @@ import {
   notesSection,
   outstandingSection,
 } from "./operations-rows-more";
+import { openingRows } from "./operations-rows-opening";
 
 export type { OperationsStore, SheetOptions, T } from "./operations-row-base";
 
@@ -226,11 +227,7 @@ const inventorySection = (store: OperationsStore, t: T): SheetSection => {
     textColumn("note", t("admin.lotteryReports.operations.columns.note")),
   ];
   const rows: SheetRow[] = [
-    line({
-      item: t("admin.lotteryReports.operations.items.opening"),
-      tickets: inv.openingTickets,
-      cost: inv.openingCost,
-    }),
+    ...openingRows(store, t),
     line({
       item: t("admin.lotteryReports.operations.items.purchase"),
       tickets: inv.purchaseTickets,
