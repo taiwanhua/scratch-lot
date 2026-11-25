@@ -1,6 +1,9 @@
 import type { ComponentType } from "react";
 
+import { WHOLESALE_PERMISSIONS } from "@repo/domain/project/lottery";
 import type { LotteryWholesaleCustomerFieldsFragment } from "@repo/graphql";
+
+import { CustomerWholesalesTab } from "@/pages/project/lottery/purchasing/wholesale/CustomerWholesalesTab";
 
 export interface WholesaleCustomerDetailTabProps {
   customer: LotteryWholesaleCustomerFieldsFragment;
@@ -23,4 +26,12 @@ export interface WholesaleCustomerDetailTab {
  * 只有「基本資料」時不顯示分頁籤。
  */
 export const WHOLESALE_CUSTOMER_DETAIL_TABS: readonly WholesaleCustomerDetailTab[] =
-  [];
+  [
+    // 批售紀錄(規格 21.2;要 `purchasing.wholesale.view`)
+    {
+      value: "wholesales",
+      labelKey: "wholesale.sections.documents",
+      permission: WHOLESALE_PERMISSIONS.view,
+      Content: CustomerWholesalesTab,
+    },
+  ];

@@ -445,7 +445,8 @@
         "lastWholesaleAt": "最近一次批售日"
       },
       "sections": {
-        "basic": "基本資料"
+        "basic": "基本資料",
+        "documents": "批售紀錄"
       },
       "summary": {
         "title": "{name} · 證號 {licenseNo}",
@@ -3216,6 +3217,145 @@
       "titleWithNo": "編輯叫貨單 {serialNo}",
       "notOnSale": "這些遊戲已不在販售中,畫面沒有列出,會照原樣保留:{games}",
       "loadFailed": "讀不到這家店的遊戲清單,請重新整理"
+    },
+    "wholesale": {
+      "badgeDescription": "出貨確認在你手上、還沒決定的批售單數",
+      "paymentModes": {
+        "auto_bank": "從帳戶入帳",
+        "collect_first": "收到錢再核准"
+      },
+      "states": {
+        "wholesaling": "批售中",
+        "wholesaled": "已批售"
+      },
+      "list": {
+        "title": "批售單",
+        "create": "+ 新增批售單",
+        "listAria": "批售單列表",
+        "empty": "沒有符合條件的批售單",
+        "total": "共 {total} 筆",
+        "books": "{count} 本",
+        "cleared": "已結清",
+        "kinds": {
+          "to_receive": "待收 {amount}",
+          "to_refund": "待退 {amount}"
+        },
+        "columns": {
+          "serialNo": "單號",
+          "fromBranch": "出貨分店",
+          "customer": "批售客戶",
+          "paymentMode": "收款方式",
+          "books": "本數",
+          "amount": "批售金額",
+          "settlement": "結算",
+          "status": "狀態"
+        },
+        "filters": {
+          "status": "狀態(含草稿)",
+          "all": "全部"
+        }
+      },
+      "create": {
+        "tabLabel": "批售單・新增",
+        "title": "新增批售單",
+        "loading": "載入中",
+        "unavailable": "現在不能新增批售單(表單沒有開放或沒有新增權限)",
+        "fields": {
+          "fromBranch": "出貨分店",
+          "customer": "批售客戶",
+          "paymentMode": "收款方式",
+          "account": "入帳帳戶",
+          "note": "備註",
+          "pick": "請選擇"
+        },
+        "lines": "明細",
+        "pickBranch": "請先選出貨分店",
+        "empty": "還沒有加入任何一本:刷這本任何一張的條碼,或從可批售的本加入",
+        "scan": "刷條碼加入",
+        "scanInvalid": "看不懂這個碼,請刷背面編號、正面編號或正面條碼",
+        "scanNotFound": "查不到這本",
+        "scanAmbiguousGame": "這個本號有多款遊戲,請刷背面編號或先選「正面條碼的遊戲」",
+        "scanStale": "這本剛剛才能批售,請重新整理後再加入",
+        "duplicate": "{bookNo} 已經在明細裡",
+        "problems": {
+          "revoked": "{bookNo} 已撤銷,不能批售",
+          "wholesaled": "{bookNo} 已批售",
+          "opened": "{bookNo} 拆過的本不能批售",
+          "elsewhere": "{bookNo} 在別家店,不能批售",
+          "transferring": "{bookNo} 調貨中({serialNo}),不能批售",
+          "wholesaling": "{bookNo} 批售中({serialNo}),不能批售",
+          "locked": "{bookNo} 被其他單據鎖住,不能批售",
+          "not_in_stock": "{bookNo} 不是整本在庫存未售,不能批售"
+        },
+        "columns": {
+          "book": "遊戲 / 本號",
+          "tickets": "張數",
+          "bookPrice": "整本金額",
+          "rate": "批購金額率",
+          "amount": "批售金額",
+          "status": "狀態"
+        },
+        "rateOf": "本號 {bookNo} 的批購金額率",
+        "groupTitle": "{code} {name} · {price} 元({books} 本)小計 {subtotal}",
+        "groupRate": "整組批購金額率",
+        "groupRateOf": "{code} 整組的批購金額率",
+        "cardFacts": "{tickets} 張 · 整本 {price} · {rate}% · 批售金額 {amount}",
+        "remove": "移除",
+        "tooMany": "一張單最多 {count} 本",
+        "picker": {
+          "open": "從可批售的本加入",
+          "title": "從可批售的本加入",
+          "hint": "出貨分店庫存裡未拆的整本;拆過、調貨中、批售中的本不會列出",
+          "empty": "沒有可批售的本",
+          "group": "{code} {name} · {price} 元({books} 本)",
+          "defaultRate": "預設批購金額率",
+          "facts": "{tickets} 張 · {price} · {rate}%",
+          "added": "已加入",
+          "pick": "選本 {bookNo}",
+          "picked": "已選 {count} 本",
+          "add": "加入 {count} 本"
+        },
+        "totals": {
+          "books": "本數",
+          "bookCount": "共 {count} 本",
+          "amount": "批售金額",
+          "cost": "原成本",
+          "profit": "預估獲利",
+          "noProfit": "照這個批購金額率沒有獲利"
+        },
+        "stickyTotal": "批售 {amount}",
+        "cancel": "取消",
+        "saveDraft": "存草稿",
+        "submit": "送出",
+        "draftSaved": "已存草稿",
+        "submitted": "批售單已送出"
+      },
+      "edit": {
+        "title": "編輯批售單",
+        "titleWithNo": "編輯批售單 {serialNo}",
+        "loadFailed": "讀不到這張批售單的內容,請重新整理",
+        "keptLines": "有 {count} 列明細讀不到內容,畫面沒有列出,會照原樣保留"
+      },
+      "view": {
+        "title": "批售單",
+        "titleWithNo": "批售單 {serialNo}",
+        "stageShip": "出貨確認",
+        "books": "{count} 本",
+        "paymentMode": "收款方式 {mode}",
+        "paymentModeWithAccount": "收款方式 {mode}({account})",
+        "amount": "批售金額 {amount}",
+        "note": "備註 {note}",
+        "problems": {
+          "unreceived": "還差 {amount} 元沒收",
+          "overreceived": "多收 {amount} 元,請先記退款"
+        },
+        "autoBankHint": "核准時自動入帳 {amount} 到 {account}(批售收入);核准前不能收款"
+      },
+      "customerTab": {
+        "aria": "批售紀錄",
+        "received": "已收",
+        "empty": "還沒有批售紀錄"
+      }
     }
   },
   "lifecycle": {
@@ -3290,7 +3430,18 @@
     "TRANSFER_NOT_DRAFT": "只有草稿可以刪除;送出過的調貨單請作廢或駁回",
     "STOCKTAKE_RENUMBER_INCOMPLETE": "補點編號每本都要盤,還有本沒盤完不能送出",
     "STOCKTAKE_RENUMBER_NOT_ALLOWED": "補點編號只有張數店與轉換中的店能做,而且要盤全店",
-    "STOCKTAKE_RENUMBER_BLOCKED": "有遊戲正在全店重刷,完成或取消後再補點"
+    "STOCKTAKE_RENUMBER_BLOCKED": "有遊戲正在全店重刷,完成或取消後再補點",
+    "WHOLESALE_BRANCH_INVALID": "出貨分店要選,而且要在你的範圍內",
+    "WHOLESALE_CUSTOMER_INVALID": "批售客戶要是往來中、你看得到的客戶",
+    "WHOLESALE_NO_LINES": "至少要有一本才能送出",
+    "WHOLESALE_LINE_INVALID": "明細的本、張數、金額或批購金額率不合(同一本不能重複),請檢查後再送出",
+    "WHOLESALE_BOOK_UNAVAILABLE": "有本不能批售(拆過、被鎖住或不在出貨分店的庫存),請看明細下方列出的原因",
+    "WHOLESALE_ACCOUNT_INVALID": "入帳帳戶要使用中、使用組織要包含出貨分店;請退回改帳戶或收款方式",
+    "WHOLESALE_MODE_HAS_RECEIPTS": "已經登記收款,請維持「收到錢再核准」或先沖正",
+    "WHOLESALE_UNRECEIVED": "還沒收齊批售金額,不能核准(差額見結算的待收)",
+    "WHOLESALE_OVERRECEIVED": "多收了,請先記退款(金額見結算的待退)",
+    "WHOLESALE_NOT_DRAFT": "只有草稿可以刪除;送出過的批售單請駁回或作廢",
+    "WHOLESALE_BOOKS_IN_USE": "批售出去的刮刮樂狀態已變,不能作廢"
   },
   "lotteryStore": {
     "fieldErrors": {

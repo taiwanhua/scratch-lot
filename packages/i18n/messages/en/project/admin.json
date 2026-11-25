@@ -445,7 +445,8 @@
         "lastWholesaleAt": "Last wholesale"
       },
       "sections": {
-        "basic": "Basic information"
+        "basic": "Basic information",
+        "documents": "Wholesale records"
       },
       "summary": {
         "title": "{name} · License {licenseNo}",
@@ -3216,6 +3217,145 @@
       "titleWithNo": "Edit requisition {serialNo}",
       "notOnSale": "These games are no longer on sale; they are not listed and are kept as they are: {games}",
       "loadFailed": "Could not load the games of this branch; reload the page"
+    },
+    "wholesale": {
+      "badgeDescription": "Wholesale documents whose shipment confirmation is waiting for you",
+      "paymentModes": {
+        "auto_bank": "Deposit to account",
+        "collect_first": "Collect before approval"
+      },
+      "states": {
+        "wholesaling": "Wholesaling",
+        "wholesaled": "Wholesaled"
+      },
+      "list": {
+        "title": "Wholesale",
+        "create": "+ New wholesale",
+        "listAria": "Wholesale list",
+        "empty": "No matching wholesale documents",
+        "total": "{total} in total",
+        "books": "{count} books",
+        "cleared": "Settled",
+        "kinds": {
+          "to_receive": "To receive {amount}",
+          "to_refund": "To refund {amount}"
+        },
+        "columns": {
+          "serialNo": "No.",
+          "fromBranch": "Shipping store",
+          "customer": "Wholesale customer",
+          "paymentMode": "Payment",
+          "books": "Books",
+          "amount": "Wholesale amount",
+          "settlement": "Settlement",
+          "status": "Status"
+        },
+        "filters": {
+          "status": "Status (incl. drafts)",
+          "all": "All"
+        }
+      },
+      "create": {
+        "tabLabel": "Wholesale · New",
+        "title": "New wholesale",
+        "loading": "Loading",
+        "unavailable": "Wholesale documents cannot be created now (the form is not available or you cannot create)",
+        "fields": {
+          "fromBranch": "Shipping store",
+          "customer": "Wholesale customer",
+          "paymentMode": "Payment",
+          "account": "Deposit account",
+          "note": "Note",
+          "pick": "Select"
+        },
+        "lines": "Lines",
+        "pickBranch": "Pick the shipping store first",
+        "empty": "No books yet: scan any ticket of a book, or add from the available books",
+        "scan": "Scan to add",
+        "scanInvalid": "Unknown code; scan the back number, front number or front barcode",
+        "scanNotFound": "Book not found",
+        "scanAmbiguousGame": "Several games share this book number; scan the back number or pick the game first",
+        "scanStale": "This book has just become available; refresh and add it again",
+        "duplicate": "{bookNo} is already on this document",
+        "problems": {
+          "revoked": "{bookNo} is revoked and cannot be wholesaled",
+          "wholesaled": "{bookNo} is already wholesaled",
+          "opened": "{bookNo}: opened books cannot be wholesaled",
+          "elsewhere": "{bookNo} is in another store and cannot be wholesaled",
+          "transferring": "{bookNo} is being transferred ({serialNo}) and cannot be wholesaled",
+          "wholesaling": "{bookNo} is being wholesaled ({serialNo})",
+          "locked": "{bookNo} is locked by another document",
+          "not_in_stock": "{bookNo} is not whole and unsold in stock"
+        },
+        "columns": {
+          "book": "Game / book",
+          "tickets": "Tickets",
+          "bookPrice": "Book price",
+          "rate": "Purchase rate",
+          "amount": "Wholesale amount",
+          "status": "Status"
+        },
+        "rateOf": "Purchase rate of book {bookNo}",
+        "groupTitle": "{code} {name} · {price} ({books} books) subtotal {subtotal}",
+        "groupRate": "Rate for all",
+        "groupRateOf": "Purchase rate for all {code}",
+        "cardFacts": "{tickets} tickets · book {price} · {rate}% · {amount}",
+        "remove": "Remove",
+        "tooMany": "At most {count} books per document",
+        "picker": {
+          "open": "Add from available books",
+          "title": "Add from available books",
+          "hint": "Unopened whole books in the shipping store's stock; opened, transferring and wholesaling books are not listed",
+          "empty": "No books available",
+          "group": "{code} {name} · {price} ({books} books)",
+          "defaultRate": "Default rate",
+          "facts": "{tickets} tickets · {price} · {rate}%",
+          "added": "Added",
+          "pick": "Pick book {bookNo}",
+          "picked": "{count} selected",
+          "add": "Add {count}"
+        },
+        "totals": {
+          "books": "Books",
+          "bookCount": "{count} books",
+          "amount": "Wholesale amount",
+          "cost": "Original cost",
+          "profit": "Estimated profit",
+          "noProfit": "There is no profit at this rate"
+        },
+        "stickyTotal": "Wholesale {amount}",
+        "cancel": "Cancel",
+        "saveDraft": "Save draft",
+        "submit": "Submit",
+        "draftSaved": "Draft saved",
+        "submitted": "Wholesale submitted"
+      },
+      "edit": {
+        "title": "Edit wholesale",
+        "titleWithNo": "Edit wholesale {serialNo}",
+        "loadFailed": "This wholesale document could not be loaded; please refresh",
+        "keptLines": "{count} lines could not be read and are kept as they are"
+      },
+      "view": {
+        "title": "Wholesale",
+        "titleWithNo": "Wholesale {serialNo}",
+        "stageShip": "Shipment confirmation",
+        "books": "{count} books",
+        "paymentMode": "Payment: {mode}",
+        "paymentModeWithAccount": "Payment: {mode} ({account})",
+        "amount": "Wholesale amount {amount}",
+        "note": "Note: {note}",
+        "problems": {
+          "unreceived": "{amount} still to collect",
+          "overreceived": "{amount} over-collected; record a refund first"
+        },
+        "autoBankHint": "{amount} is deposited to {account} (wholesale income) on approval; nothing can be collected before that"
+      },
+      "customerTab": {
+        "aria": "Wholesale records",
+        "received": "Received",
+        "empty": "No wholesale records yet"
+      }
     }
   },
   "lifecycle": {
@@ -3290,7 +3430,18 @@
     "TRANSFER_NOT_DRAFT": "Only drafts can be deleted; void or reject a submitted transfer",
     "STOCKTAKE_RENUMBER_INCOMPLETE": "Renumber needs every book counted; some books are not counted yet",
     "STOCKTAKE_RENUMBER_NOT_ALLOWED": "Only count stores and converting stores can renumber, and it must cover the whole store",
-    "STOCKTAKE_RENUMBER_BLOCKED": "A game is being rescanned store-wide; renumber after it finishes or is cancelled"
+    "STOCKTAKE_RENUMBER_BLOCKED": "A game is being rescanned store-wide; renumber after it finishes or is cancelled",
+    "WHOLESALE_BRANCH_INVALID": "Pick a shipping store within your scope",
+    "WHOLESALE_CUSTOMER_INVALID": "The wholesale customer must be active and visible to you",
+    "WHOLESALE_NO_LINES": "At least one book is required",
+    "WHOLESALE_LINE_INVALID": "A book, ticket count, amount or rate does not match (the same book cannot repeat); please check",
+    "WHOLESALE_BOOK_UNAVAILABLE": "Some books cannot be wholesaled (opened, locked or not in the shipping store's stock); see the reasons under the lines",
+    "WHOLESALE_ACCOUNT_INVALID": "The deposit account must be active and used by the shipping store; return it to change the account or the payment",
+    "WHOLESALE_MODE_HAS_RECEIPTS": "Receipts are already recorded; keep \"Collect before approval\" or reverse them first",
+    "WHOLESALE_UNRECEIVED": "The wholesale amount is not fully collected (see the settlement)",
+    "WHOLESALE_OVERRECEIVED": "Over-collected; record a refund first (see the settlement)",
+    "WHOLESALE_NOT_DRAFT": "Only drafts can be deleted; reject or void a submitted wholesale",
+    "WHOLESALE_BOOKS_IN_USE": "The wholesaled tickets have changed and the document cannot be voided"
   },
   "lotteryStore": {
     "fieldErrors": {

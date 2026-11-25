@@ -21,18 +21,25 @@ import { RateInput } from "./RateInput";
  */
 export type BookListMode = "create" | "edit" | "receive" | "view";
 
+/** 點收與在途的狀態(進貨單、調貨單)。 */
+type ReceivingStatus = "received" | "notReceived" | "inTransit" | "partial";
+
+/** 批售的狀態(批售單)。 */
+type WholesaleStatus = "wholesaling" | "wholesaled";
+
 /**
  * 一本的狀態(顏色由這個元件固定;文字由使用處給):已點收 / 未點收 / 在途 / 部分點收
- * (調貨單選張的列逐張點收,只到了部分張)。
+ * (調貨單選張的列逐張點收,只到了部分張)/ 批售中 / 已批售。
  */
-export type BookRowStatus =
-  "received" | "notReceived" | "inTransit" | "partial";
+export type BookRowStatus = ReceivingStatus | WholesaleStatus;
 
 const STATUS_TONE: Record<BookRowStatus, TagTone> = {
   received: "success",
   notReceived: "grey",
   inTransit: "primary",
   partial: "warning",
+  wholesaling: "warning",
+  wholesaled: "success",
 };
 
 /** 帶點收資訊的狀態(組標題顯示「已點收 X / M」)。 */
@@ -56,7 +63,7 @@ export interface BookListRow {
   rowId: string;
   /** 顯示用本號(開頭 0 去掉) */
   bookNo: string;
-  /** 張號欄(進貨單 = 最後張號 3 位;調貨單 = 張號區段) */
+  /** 張號欄(進貨單 = 最後張號 3 位;調貨單 = 張號區段;批售單沒有張號欄,給空字串) */
   ticketText: string;
   /** 本號下面的說明(例 調貨單的方式「選張」);不給 = 沒有 */
   detail?: string;
@@ -114,8 +121,13 @@ export interface BookGroupProgress {
 
 /** 使用處的詞(欄名、狀態、按鈕;先盤點所有使用處,不在元件裡寫死)。 */
 export interface BookListLabels {
-  columns: Record<BookListColumn, string>;
-  status: Record<BookRowStatus, string>;
+  /** 沒給 `ticket` = 不顯示張號欄(批售單一列就是一整本) */
+  columns: Record<Exclude<BookListColumn, "ticket">, string> & {
+    ticket?: string;
+  };
+  /** 批售的兩種只有批售單用到,其他使用處不給 */
+  status: Record<ReceivingStatus, string> &
+    Partial<Record<WholesaleStatus, string>>;
   /** [移除](新增 / 編輯) */
   remove: string;
   /** 每本批購金額率輸入框的無障礙名稱 */
@@ -200,7 +212,7 @@ export const BookGroupList = ({
     row.status === null || row.status === undefined ? null : (
       <Tag
         tone={STATUS_TONE[row.status]}
-        label={row.statusLabel ?? labels.status[row.status]}
+        label={row.statusLabel ?? labels.status[row.status] ?? ""}
       />
     );
   const hasPanel = groups.some((group) =>
@@ -270,11 +282,15 @@ export const BookGroupList = ({
           </Stack>
         ),
     },
-    {
-      key: "ticket",
-      header: labels.columns.ticket,
-      render: (row) => row.ticketText,
-    },
+    ...(labels.columns.ticket === undefined
+      ? []
+      : [
+          {
+            key: "ticket",
+            header: labels.columns.ticket,
+            render: (row) => row.ticketText,
+          } satisfies TableColumn<BookListRow>,
+        ]),
     {
       key: "tickets",
       header: labels.columns.tickets,
