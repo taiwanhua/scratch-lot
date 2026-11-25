@@ -157,6 +157,19 @@ export const CashLedgerTab = () => {
     return `${label}${reason}${row.reversalOf ? t("cash.reversal") : ""}${correction}`;
   };
 
+  const routeText = (row: Movement) => {
+    const places = { from: placeLabel(row.from), to: placeLabel(row.to) };
+    if (!row.payee) {
+      return t("cash.route", places);
+    }
+    // 批售收現金:經手人寫在外部那一端(Figma AC-04-2)
+    const key =
+      row.type === "wholesale_in" && row.from === "external"
+        ? "cash.routeFromPayee"
+        : "cash.routeWithPayee";
+    return t(key, { ...places, payee: row.payee });
+  };
+
   const columns: TableColumn<Movement>[] = [
     {
       key: "occurredAt",
@@ -185,17 +198,7 @@ export const CashLedgerTab = () => {
     {
       key: "route",
       header: t("cash.columns.route"),
-      render: (row) =>
-        row.payee
-          ? t("cash.routeWithPayee", {
-              from: placeLabel(row.from),
-              to: placeLabel(row.to),
-              payee: row.payee,
-            })
-          : t("cash.route", {
-              from: placeLabel(row.from),
-              to: placeLabel(row.to),
-            }),
+      render: routeText,
     },
     {
       key: "cashPoint",
