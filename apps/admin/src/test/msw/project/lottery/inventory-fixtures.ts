@@ -74,6 +74,9 @@ export const inventoryBook = (
   status: "normal",
   purchasedAt: "2026-10-11T16:00:00.000Z",
   purchaseDealer: ref("d-1", "陳志明 #12345678"),
+  source: "purchase",
+  openingAt: null,
+  openedBy: null,
   ...overrides,
 });
 

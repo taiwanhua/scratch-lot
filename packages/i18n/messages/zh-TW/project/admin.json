@@ -4935,7 +4935,9 @@
     "feedback": {
       "saveSuccess": "已自訂設定",
       "restoreSuccess": "已還原成沿用",
-      "cancelConversionSuccess": "已取消轉換,回到張數盤點"
+      "cancelConversionSuccess": "已取消轉換,回到張數盤點",
+      "closeOpeningSuccess": "已結束期初建檔",
+      "reopenOpeningSuccess": "已重新開放期初建檔"
     },
     "errors": {
       "FORBIDDEN": "沒有改這個組織設定的權限",
@@ -4945,7 +4947,29 @@
       "NOT_CONVERTING": "這家店不是轉換中,不能取消轉換",
       "NOT_STORE": "只有分店有盤點制度",
       "CONCURRENT_EDIT": "別人同時改了這條設定,請重新整理後再試",
+      "OPENING_STATE_MISMATCH": "期初建檔狀態已被別人改過,請重新整理",
       "UNEXPECTED": "發生錯誤,請稍後再試"
+    },
+    "opening": {
+      "label": "期初建檔",
+      "open": "進行中(已建 {count} 本)",
+      "closed": "已結束({at} {by})",
+      "close": "結束期初建檔",
+      "reopen": "重新開放",
+      "closeDialog": {
+        "title": "結束{org}的期初建檔?",
+        "body": "結束後這家店不能再建檔,之後進來的貨一律用進貨單。已建 {count} 本。",
+        "back": "取消",
+        "confirm": "結束期初建檔"
+      },
+      "reopenDialog": {
+        "title": "重新開放{org}的期初建檔?",
+        "body": "重新開放後這家店可以再建檔,建完請再按 [結束期初建檔]。",
+        "reason": "原因",
+        "reasonRequired": "請填原因",
+        "back": "取消",
+        "confirm": "重新開放"
+      }
     }
   }
 }

@@ -74,6 +74,11 @@ query LotteryOperationsReport($input: LotteryOperationsReportInput!) {
       inventory {
         openingTickets
         openingCost
+        openingEntryBooks
+        openingEntryVoidBooks
+        openingEntryFixTickets
+        openingEntryTickets
+        openingEntryCost
         purchaseBooks
         purchaseVoidBooks
         purchaseTickets
@@ -176,6 +181,10 @@ query LotteryOperationsReport($input: LotteryOperationsReportInput!) {
           renumberAts
           daysSinceRenumber
           monthEndUnrenumbered
+        }
+        openingEntry {
+          startedAt
+          closedAt
         }
       }
     }

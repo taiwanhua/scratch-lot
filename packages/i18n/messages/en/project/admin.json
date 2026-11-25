@@ -4935,7 +4935,9 @@
     "feedback": {
       "saveSuccess": "Setting customized",
       "restoreSuccess": "Restored to inherited",
-      "cancelConversionSuccess": "Conversion cancelled; back to quantity count"
+      "cancelConversionSuccess": "Conversion cancelled; back to quantity count",
+      "closeOpeningSuccess": "Opening entry closed",
+      "reopenOpeningSuccess": "Opening entry reopened"
     },
     "errors": {
       "FORBIDDEN": "You cannot change settings for this organization",
@@ -4945,7 +4947,29 @@
       "NOT_CONVERTING": "This store is not converting",
       "NOT_STORE": "Only stores have a counting method",
       "CONCURRENT_EDIT": "Someone changed this setting at the same time; refresh and try again",
+      "OPENING_STATE_MISMATCH": "Someone else changed the opening entry status. Refresh and try again.",
       "UNEXPECTED": "Something went wrong; please try again later"
+    },
+    "opening": {
+      "label": "Opening entry",
+      "open": "In progress ({count} books entered)",
+      "closed": "Closed ({at} {by})",
+      "close": "Close opening entry",
+      "reopen": "Reopen",
+      "closeDialog": {
+        "title": "Close opening entry for {org}?",
+        "body": "After closing, this store can no longer enter books here; stock that arrives later goes through purchase orders. {count} books entered.",
+        "back": "Cancel",
+        "confirm": "Close opening entry"
+      },
+      "reopenDialog": {
+        "title": "Reopen opening entry for {org}?",
+        "body": "After reopening, this store can enter books again. Close opening entry again when done.",
+        "reason": "Reason",
+        "reasonRequired": "Enter a reason",
+        "back": "Cancel",
+        "confirm": "Reopen"
+      }
     }
   }
 }

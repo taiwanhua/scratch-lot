@@ -20,6 +20,7 @@ import { useUrlState } from "@/hooks/base/useUrlState";
 
 import { CancelConversionDialog } from "../CancelConversionDialog/CancelConversionDialog";
 import { CountModeHistoryDialog } from "../CountModeHistoryDialog/CountModeHistoryDialog";
+import { OpeningRow } from "../OpeningRow/OpeningRow";
 import { SettingDialog } from "../SettingDialog/SettingDialog";
 import { SettingRow } from "../SettingRow/SettingRow";
 import { lotterySettingsErrorOf } from "../lottery-settings-error";
@@ -35,6 +36,7 @@ const orgSchema = z.string().default("");
  * - 點一列 → 編輯對話框(`SettingDialog`);能不能改由 api 算好的 `canEdit` 決定
  *   (最上層組織看 `edit-default`、其他看 `edit-org`;沒有時看不到 [自訂] [還原])
  * - 盤點制度那一列:分店才有 [變更紀錄];轉換中值寫「張數盤點 → 編號盤點(轉換中,等補點編號)」並有 [取消轉換]
+ * - 選到分店時下方多一列「期初建檔」(`OpeningRow`;CS-50a-x)
  */
 export const LotterySettingsPage = () => {
   const t = useTranslations("admin.lotterySettings");
@@ -148,6 +150,8 @@ export const LotterySettingsPage = () => {
           );
         })}
       </Card>
+      {/* 期初建檔是分店的事實,不繼承:選到區域、最上層組織不顯示(期初建檔規格 6) */}
+      {settings.isStore && <OpeningRow orgId={settings.orgId} />}
       {editing !== null && (
         <SettingDialog
           item={editing}

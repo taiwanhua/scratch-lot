@@ -230,6 +230,7 @@ export const storeSalesWorld = ({
         : 0,
       unmatched: ticket.unmatched === true,
       match: decision.match,
+      openingSold: false,
     };
   };
 

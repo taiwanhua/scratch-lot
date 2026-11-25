@@ -203,6 +203,7 @@ export const stocktakeWorld = (
             version: diff.ticket.version,
             kind: diff.kind,
             backfilled: diff.backfilled,
+            openingSold: false,
           })),
           pendingReversalTicketNos: [],
           staleTicketNos: staleNos,
