@@ -169,8 +169,11 @@ export class InventoryOpeningService {
       { sort: { openingAt: -1, _id: -1 } },
     );
     const items = canOpenGrant ? await this.bookModelsOf(operator, books) : [];
-    const points = canOpenGrant
-      ? [...(await this.support.cashPointsOf(operator, store.orgId)).values()]
+    const pointMap = canOpenGrant
+      ? await this.support.cashPointsOf(operator, store.orgId)
+      : null;
+    const points = pointMap
+      ? [...pointMap.values()]
           .toSorted((a, b) => a.order - b.order)
           .map((point) => ({ id: String(point._id), name: point.name }))
       : [];
