@@ -559,7 +559,9 @@ describe("期初建檔(GraphQL 端點 + 真 MongoDB)", () => {
     }>(api, managerA, DETAIL, { id: bookId });
     const { item } = detail.lotteryInventoryBook;
     expect(
-      item.tickets.filter((ticket) => ticket.openingSold).map((t) => t.ticketNo),
+      item.tickets
+        .filter((ticket) => ticket.openingSold)
+        .map((t) => t.ticketNo),
     ).toEqual(range(1, 46));
     expect(item.abilities.canFixOpening).toBe(true);
   });

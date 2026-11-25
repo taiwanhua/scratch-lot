@@ -1063,7 +1063,10 @@ describe("全店重刷、提醒與移櫃暫停(GraphQL 端點 + 真 MongoDB)", (
         { no: "002", status: "sold", opening: true },
       ]);
       const rescan = await startRescan(clerkA);
-      await scanAll(clerkA, rescan.id, counterA, [a.code("001"), a.code("002")]);
+      await scanAll(clerkA, rescan.id, counterA, [
+        a.code("001"),
+        a.code("002"),
+      ]);
       const done = await finish(clerkA, rescan.id, counterA);
       expect(
         done.results.filter((item) => item.outcome === "opening_sold_here"),

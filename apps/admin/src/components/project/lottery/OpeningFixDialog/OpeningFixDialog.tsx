@@ -81,9 +81,7 @@ export const OpeningFixDialog = ({
   );
   const cashPoints = opening.data?.lotteryStoreOpening.item.cashPoints ?? [];
   // 收銀點還沒讀到(或刷到的位置不在清單)→ 先顯示庫存;讀取中不能送出
-  const chosen = cashPoints.some((point) => point.id === place)
-    ? place
-    : STOCK;
+  const chosen = cashPoints.some((point) => point.id === place) ? place : STOCK;
   const keys = to === "unsold" ? "openingFix.toUnsold" : "openingFix.toSold";
   const fix = useFixLotteryOpeningTicketsMutation(
     session.client,

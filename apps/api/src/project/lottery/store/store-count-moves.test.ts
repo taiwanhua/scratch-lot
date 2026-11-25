@@ -1069,14 +1069,12 @@ describe("張數店:收回、移櫃、拆本、報廢、更正跳號(GraphQL 端
       now("09:00");
       // A 台 #001–#100;#001–#002 是導入前已賣出
       await split(bookId, []);
-      await connection
-        .collection(LOTTERY_TICKETS_COLLECTION)
-        .updateMany(
-          { bookId, ticketNo: { $in: ["001", "002"] } },
-          {
-            $set: { status: "sold", soldSource: "opening", soldAt: new Date() },
-          },
-        );
+      await connection.collection(LOTTERY_TICKETS_COLLECTION).updateMany(
+        { bookId, ticketNo: { $in: ["001", "002"] } },
+        {
+          $set: { status: "sold", soldSource: "opening", soldAt: new Date() },
+        },
+      );
       now("10:00");
       await ok(wang, MOVE_BY_COUNT, moveByCountInput(2));
       for (const no of ["003", "004"]) {

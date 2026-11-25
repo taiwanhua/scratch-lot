@@ -12,6 +12,7 @@ import { TextField } from "@repo/ui/text-field";
 import { Typography } from "@repo/ui/typography";
 
 import { SendReversalButton } from "../forms/SendReversalButton";
+import { RescanOpeningFix } from "./RescanOpeningFix";
 import {
   type RescanItem,
   type RescanPlaceView,
@@ -21,7 +22,6 @@ import {
   rescanSummaryOf,
   ticketLabelOf,
 } from "./rescan-model";
-import { RescanOpeningFix } from "./RescanOpeningFix";
 import type { RescanLabels } from "./useRescanLabels";
 import { useRescanText } from "./useRescanText";
 

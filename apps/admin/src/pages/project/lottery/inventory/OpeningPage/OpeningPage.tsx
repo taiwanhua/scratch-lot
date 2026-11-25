@@ -14,6 +14,7 @@ import { Stack } from "@repo/ui/stack";
 
 import { useMe } from "@/hooks/base/useMe";
 import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
+import { useRouteTabItemLabel } from "@/hooks/base/useRouteTabItemLabel";
 import { useSession } from "@/hooks/base/useSession";
 import { useTenantTimezone } from "@/hooks/base/useTenantTimezone";
 import { useUrlState } from "@/hooks/base/useUrlState";
@@ -56,6 +57,7 @@ export const OpeningPage = () => {
   const [fallbackGameId, setFallbackGameId] = useState<string | null>(null);
   const [isConfirming, setIsConfirming] = useState(false);
   const [voiding, setVoiding] = useState<OpeningBook | null>(null);
+  useRouteTabItemLabel(t("tabLabel"));
 
   const variables = { orgId };
   const query = useLotteryStoreOpeningQuery(session.client, variables, {

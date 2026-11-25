@@ -21,9 +21,9 @@ import {
   dailyCloseWorld,
 } from "@/test/msw/project/lottery/daily-close-handlers";
 import { inventoryWorld } from "@/test/msw/project/lottery/inventory-handlers";
-import { openingWorld } from "@/test/msw/project/lottery/opening-handlers";
 import { masterDataOrgs } from "@/test/msw/project/lottery/master-data-fixtures";
 import { masterDataSharedLookupHandlers } from "@/test/msw/project/lottery/master-data-handlers";
+import { openingWorld } from "@/test/msw/project/lottery/opening-handlers";
 import { receiptLinksHandlers } from "@/test/msw/project/lottery/receipt-links-handlers";
 import type { RedemptionFixture } from "@/test/msw/project/lottery/redemption-fixtures";
 import { redemptionWorld } from "@/test/msw/project/lottery/redemption-handlers";
