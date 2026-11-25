@@ -4496,6 +4496,38 @@ export type LotteryVaultExpected = {
   baselineAt?: Maybe<Scalars['DateTime']['output']>;
 };
 
+export type LotteryWholesale = {
+  __typename?: 'LotteryWholesale';
+  amount: Scalars['Int']['output'];
+  blocked: Scalars['Boolean']['output'];
+  books: Scalars['Int']['output'];
+  canDelete: Scalars['Boolean']['output'];
+  customerName: Scalars['String']['output'];
+  fromBranchName: Scalars['String']['output'];
+  id: Scalars['ID']['output'];
+  inSettlement: Scalars['Boolean']['output'];
+  paymentMode?: Maybe<Scalars['String']['output']>;
+  received: Scalars['Int']['output'];
+  serialNo?: Maybe<Scalars['String']['output']>;
+  settlementAmount: Scalars['Int']['output'];
+  settlementKind?: Maybe<Scalars['String']['output']>;
+  status: FormSubmissionStatus;
+};
+
+export type LotteryWholesaleBook = {
+  __typename?: 'LotteryWholesaleBook';
+  bookId: Scalars['ID']['output'];
+  bookNo: Scalars['String']['output'];
+  bookPrice: Scalars['Int']['output'];
+  cost?: Maybe<Scalars['Int']['output']>;
+  defaultRate: Scalars['Int']['output'];
+  gameCode: Scalars['String']['output'];
+  gameId: Scalars['ID']['output'];
+  gameName: Scalars['String']['output'];
+  tickets: Scalars['Int']['output'];
+  unitPrice: Scalars['Int']['output'];
+};
+
 export type LotteryWholesaleCustomer = {
   __typename?: 'LotteryWholesaleCustomer';
   abilities: LotteryWholesaleCustomerAbilities;
@@ -4562,6 +4594,76 @@ export type LotteryWholesaleCustomersInput = {
 export type LotteryWholesaleCustomersPayload = {
   __typename?: 'LotteryWholesaleCustomersPayload';
   items: Array<LotteryWholesaleCustomer>;
+  page: Scalars['Int']['output'];
+  pageSize: Scalars['Int']['output'];
+  totalCount: Scalars['Int']['output'];
+};
+
+export type LotteryWholesaleDetail = {
+  __typename?: 'LotteryWholesaleDetail';
+  accountLabel?: Maybe<Scalars['String']['output']>;
+  amount: Scalars['Int']['output'];
+  customerName: Scalars['String']['output'];
+  fromBranchName: Scalars['String']['output'];
+  paymentMode?: Maybe<Scalars['String']['output']>;
+  received: Scalars['Int']['output'];
+  rows: Array<LotteryWholesaleRow>;
+  shippedAt?: Maybe<Scalars['DateTime']['output']>;
+  submissionId: Scalars['ID']['output'];
+};
+
+export type LotteryWholesaleOption = {
+  __typename?: 'LotteryWholesaleOption';
+  id: Scalars['ID']['output'];
+  label: Scalars['String']['output'];
+};
+
+export type LotteryWholesaleOptions = {
+  __typename?: 'LotteryWholesaleOptions';
+  accounts: Array<LotteryWholesaleOption>;
+  books: Array<LotteryWholesaleBook>;
+  customers: Array<LotteryWholesaleOption>;
+};
+
+export type LotteryWholesaleRow = {
+  __typename?: 'LotteryWholesaleRow';
+  amount: Scalars['Int']['output'];
+  bookId: Scalars['ID']['output'];
+  bookNo: Scalars['String']['output'];
+  bookPrice: Scalars['Int']['output'];
+  defaultRate: Scalars['Int']['output'];
+  gameCode: Scalars['String']['output'];
+  gameId: Scalars['ID']['output'];
+  gameName: Scalars['String']['output'];
+  rate: Scalars['Int']['output'];
+  rowId: Scalars['String']['output'];
+  state?: Maybe<Scalars['String']['output']>;
+  tickets: Scalars['Int']['output'];
+  unitPrice: Scalars['Int']['output'];
+};
+
+export type LotteryWholesaleScanMatch = {
+  __typename?: 'LotteryWholesaleScanMatch';
+  bookId: Scalars['ID']['output'];
+  bookNo: Scalars['String']['output'];
+  gameCode: Scalars['String']['output'];
+  gameId: Scalars['ID']['output'];
+  lockedSerialNo?: Maybe<Scalars['String']['output']>;
+  problem?: Maybe<Scalars['String']['output']>;
+};
+
+export type LotteryWholesalesInput = {
+  customerId?: InputMaybe<Scalars['ID']['input']>;
+  fromOrgId?: InputMaybe<Scalars['ID']['input']>;
+  page?: InputMaybe<Scalars['Int']['input']>;
+  pageSize?: InputMaybe<Scalars['Int']['input']>;
+  paymentMode?: InputMaybe<Scalars['String']['input']>;
+  status?: InputMaybe<FormSubmissionStatus>;
+};
+
+export type LotteryWholesalesPayload = {
+  __typename?: 'LotteryWholesalesPayload';
+  items: Array<LotteryWholesale>;
   page: Scalars['Int']['output'];
   pageSize: Scalars['Int']['output'];
   totalCount: Scalars['Int']['output'];
@@ -6653,6 +6755,7 @@ export type Query = {
   lotteryCheckoutWizard: LotteryCheckoutWizard;
   lotteryCheckouts: LotteryCheckoutsPayload;
   lotteryCountModeChangeCheck: LotteryCountModeChangeCheck;
+  lotteryCustomerWholesales: Array<LotteryWholesale>;
   lotteryDailyCloseStatus: LotteryDailyCloseStatus;
   lotteryDailyCloseWizard: LotteryDailyCloseWizard;
   lotteryDealer: LotteryDealerPayload;
@@ -6724,8 +6827,13 @@ export type Query = {
   lotteryTransferProgress: Array<LotteryTransferProgress>;
   lotteryTransferReceiving: LotteryTransferReceiving;
   lotteryWholesaleCustomer: LotteryWholesaleCustomerPayload;
+  lotteryWholesaleCustomerFilter: Array<LotteryWholesaleOption>;
   lotteryWholesaleCustomerSameNames: LotteryWholesaleCustomerSameNamesPayload;
   lotteryWholesaleCustomers: LotteryWholesaleCustomersPayload;
+  lotteryWholesaleDetail: LotteryWholesaleDetail;
+  lotteryWholesaleOptions: LotteryWholesaleOptions;
+  lotteryWholesaleScanMatches: Array<LotteryWholesaleScanMatch>;
+  lotteryWholesales: LotteryWholesalesPayload;
   makeupPunchEntryExists: Scalars['Boolean']['output'];
   makeupPunchEntryOptions: Array<ScheduleAttendanceEntryOption>;
   me: Me;
@@ -7006,6 +7114,11 @@ export type QueryLotteryCheckoutsArgs = {
 
 export type QueryLotteryCountModeChangeCheckArgs = {
   input: LotteryCountModeChangeCheckInput;
+};
+
+
+export type QueryLotteryCustomerWholesalesArgs = {
+  customerId: Scalars['ID']['input'];
 };
 
 
@@ -7348,6 +7461,28 @@ export type QueryLotteryWholesaleCustomerSameNamesArgs = {
 
 export type QueryLotteryWholesaleCustomersArgs = {
   input: LotteryWholesaleCustomersInput;
+};
+
+
+export type QueryLotteryWholesaleDetailArgs = {
+  submissionId: Scalars['ID']['input'];
+};
+
+
+export type QueryLotteryWholesaleOptionsArgs = {
+  fromOrgId: Scalars['ID']['input'];
+};
+
+
+export type QueryLotteryWholesaleScanMatchesArgs = {
+  bookNo: Scalars['String']['input'];
+  fromOrgId: Scalars['ID']['input'];
+  gameCode?: InputMaybe<Scalars['String']['input']>;
+};
+
+
+export type QueryLotteryWholesalesArgs = {
+  input: LotteryWholesalesInput;
 };
 
 
@@ -12484,6 +12619,50 @@ export type NotifyLotteryTransferWrongStoreMutationVariables = Exact<{
 
 export type NotifyLotteryTransferWrongStoreMutation = { __typename?: 'Mutation', notifyLotteryTransferWrongStore: boolean };
 
+export type LotteryWholesaleFieldsFragment = { __typename?: 'LotteryWholesale', id: string, serialNo?: string | null, fromBranchName: string, customerName: string, paymentMode?: string | null, books: number, amount: number, received: number, settlementKind?: string | null, settlementAmount: number, inSettlement: boolean, status: FormSubmissionStatus, blocked: boolean, canDelete: boolean };
+
+export type LotteryWholesaleOptionsQueryVariables = Exact<{
+  fromOrgId: Scalars['ID']['input'];
+}>;
+
+
+export type LotteryWholesaleOptionsQuery = { __typename?: 'Query', lotteryWholesaleOptions: { __typename?: 'LotteryWholesaleOptions', books: Array<{ __typename?: 'LotteryWholesaleBook', bookId: string, gameId: string, gameCode: string, gameName: string, bookNo: string, unitPrice: number, tickets: number, bookPrice: number, defaultRate: number, cost?: number | null }>, customers: Array<{ __typename?: 'LotteryWholesaleOption', id: string, label: string }>, accounts: Array<{ __typename?: 'LotteryWholesaleOption', id: string, label: string }> } };
+
+export type LotteryWholesaleScanMatchesQueryVariables = Exact<{
+  fromOrgId: Scalars['ID']['input'];
+  bookNo: Scalars['String']['input'];
+  gameCode?: InputMaybe<Scalars['String']['input']>;
+}>;
+
+
+export type LotteryWholesaleScanMatchesQuery = { __typename?: 'Query', lotteryWholesaleScanMatches: Array<{ __typename?: 'LotteryWholesaleScanMatch', bookId: string, gameId: string, gameCode: string, bookNo: string, problem?: string | null, lockedSerialNo?: string | null }> };
+
+export type LotteryWholesalesQueryVariables = Exact<{
+  input: LotteryWholesalesInput;
+}>;
+
+
+export type LotteryWholesalesQuery = { __typename?: 'Query', lotteryWholesales: { __typename?: 'LotteryWholesalesPayload', totalCount: number, page: number, pageSize: number, items: Array<{ __typename?: 'LotteryWholesale', id: string, serialNo?: string | null, fromBranchName: string, customerName: string, paymentMode?: string | null, books: number, amount: number, received: number, settlementKind?: string | null, settlementAmount: number, inSettlement: boolean, status: FormSubmissionStatus, blocked: boolean, canDelete: boolean }> } };
+
+export type LotteryWholesaleCustomerFilterQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type LotteryWholesaleCustomerFilterQuery = { __typename?: 'Query', lotteryWholesaleCustomerFilter: Array<{ __typename?: 'LotteryWholesaleOption', id: string, label: string }> };
+
+export type LotteryCustomerWholesalesQueryVariables = Exact<{
+  customerId: Scalars['ID']['input'];
+}>;
+
+
+export type LotteryCustomerWholesalesQuery = { __typename?: 'Query', lotteryCustomerWholesales: Array<{ __typename?: 'LotteryWholesale', id: string, serialNo?: string | null, fromBranchName: string, customerName: string, paymentMode?: string | null, books: number, amount: number, received: number, settlementKind?: string | null, settlementAmount: number, inSettlement: boolean, status: FormSubmissionStatus, blocked: boolean, canDelete: boolean }> };
+
+export type LotteryWholesaleDetailQueryVariables = Exact<{
+  submissionId: Scalars['ID']['input'];
+}>;
+
+
+export type LotteryWholesaleDetailQuery = { __typename?: 'Query', lotteryWholesaleDetail: { __typename?: 'LotteryWholesaleDetail', submissionId: string, fromBranchName: string, customerName: string, paymentMode?: string | null, accountLabel?: string | null, amount: number, received: number, shippedAt?: string | null, rows: Array<{ __typename?: 'LotteryWholesaleRow', rowId: string, bookId: string, gameId: string, gameCode: string, gameName: string, bookNo: string, unitPrice: number, defaultRate: number, tickets: number, bookPrice: number, rate: number, amount: number, state?: string | null }> } };
+
 export type MyScheduleEntryFieldsFragment = { __typename?: 'MyScheduleEntry', id: string, orgId: string, orgName: string, date: string, startAt: string, endAt: string, breakMinutes: number, shortName?: string | null, isLead: boolean, positionKey?: string | null, clockIn?: string | null, clockOut?: string | null, missing: Array<string>, tasks: Array<{ __typename?: 'MyScheduleTask', role: string, taskKey: string, positionKey: string }> };
 
 export type MySchedulePunchFieldsFragment = { __typename?: 'MySchedulePunch', id: string, type: string, at: string, entryId?: string | null, orgId: string, duplicate: boolean };
@@ -14773,6 +14952,24 @@ export const LotteryTransferReceivingFieldsFragmentDoc = `
       ticketNos
     }
   }
+}
+    `;
+export const LotteryWholesaleFieldsFragmentDoc = `
+    fragment LotteryWholesaleFields on LotteryWholesale {
+  id
+  serialNo
+  fromBranchName
+  customerName
+  paymentMode
+  books
+  amount
+  received
+  settlementKind
+  settlementAmount
+  inSettlement
+  status
+  blocked
+  canDelete
 }
     `;
 export const MyScheduleEntryFieldsFragmentDoc = `
@@ -27457,6 +27654,248 @@ export const useNotifyLotteryTransferWrongStoreMutation = <
 
 
 useNotifyLotteryTransferWrongStoreMutation.fetcher = (client: GraphQLClient, variables: NotifyLotteryTransferWrongStoreMutationVariables, headers?: RequestInit['headers']) => fetcher<NotifyLotteryTransferWrongStoreMutation, NotifyLotteryTransferWrongStoreMutationVariables>(client, NotifyLotteryTransferWrongStoreDocument, variables, headers);
+
+export const LotteryWholesaleOptionsDocument = `
+    query LotteryWholesaleOptions($fromOrgId: ID!) {
+  lotteryWholesaleOptions(fromOrgId: $fromOrgId) {
+    books {
+      bookId
+      gameId
+      gameCode
+      gameName
+      bookNo
+      unitPrice
+      tickets
+      bookPrice
+      defaultRate
+      cost
+    }
+    customers {
+      id
+      label
+    }
+    accounts {
+      id
+      label
+    }
+  }
+}
+    `;
+
+export const useLotteryWholesaleOptionsQuery = <
+      TData = LotteryWholesaleOptionsQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: LotteryWholesaleOptionsQueryVariables,
+      options?: Omit<UseQueryOptions<LotteryWholesaleOptionsQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotteryWholesaleOptionsQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<LotteryWholesaleOptionsQuery, TError, TData>(
+      {
+    queryKey: ['LotteryWholesaleOptions', variables],
+    queryFn: fetcher<LotteryWholesaleOptionsQuery, LotteryWholesaleOptionsQueryVariables>(client, LotteryWholesaleOptionsDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useLotteryWholesaleOptionsQuery.getKey = (variables: LotteryWholesaleOptionsQueryVariables) => ['LotteryWholesaleOptions', variables];
+
+
+useLotteryWholesaleOptionsQuery.fetcher = (client: GraphQLClient, variables: LotteryWholesaleOptionsQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryWholesaleOptionsQuery, LotteryWholesaleOptionsQueryVariables>(client, LotteryWholesaleOptionsDocument, variables, headers);
+
+export const LotteryWholesaleScanMatchesDocument = `
+    query LotteryWholesaleScanMatches($fromOrgId: ID!, $bookNo: String!, $gameCode: String) {
+  lotteryWholesaleScanMatches(
+    fromOrgId: $fromOrgId
+    bookNo: $bookNo
+    gameCode: $gameCode
+  ) {
+    bookId
+    gameId
+    gameCode
+    bookNo
+    problem
+    lockedSerialNo
+  }
+}
+    `;
+
+export const useLotteryWholesaleScanMatchesQuery = <
+      TData = LotteryWholesaleScanMatchesQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: LotteryWholesaleScanMatchesQueryVariables,
+      options?: Omit<UseQueryOptions<LotteryWholesaleScanMatchesQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotteryWholesaleScanMatchesQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<LotteryWholesaleScanMatchesQuery, TError, TData>(
+      {
+    queryKey: ['LotteryWholesaleScanMatches', variables],
+    queryFn: fetcher<LotteryWholesaleScanMatchesQuery, LotteryWholesaleScanMatchesQueryVariables>(client, LotteryWholesaleScanMatchesDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useLotteryWholesaleScanMatchesQuery.getKey = (variables: LotteryWholesaleScanMatchesQueryVariables) => ['LotteryWholesaleScanMatches', variables];
+
+
+useLotteryWholesaleScanMatchesQuery.fetcher = (client: GraphQLClient, variables: LotteryWholesaleScanMatchesQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryWholesaleScanMatchesQuery, LotteryWholesaleScanMatchesQueryVariables>(client, LotteryWholesaleScanMatchesDocument, variables, headers);
+
+export const LotteryWholesalesDocument = `
+    query LotteryWholesales($input: LotteryWholesalesInput!) {
+  lotteryWholesales(input: $input) {
+    items {
+      ...LotteryWholesaleFields
+    }
+    totalCount
+    page
+    pageSize
+  }
+}
+    ${LotteryWholesaleFieldsFragmentDoc}`;
+
+export const useLotteryWholesalesQuery = <
+      TData = LotteryWholesalesQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: LotteryWholesalesQueryVariables,
+      options?: Omit<UseQueryOptions<LotteryWholesalesQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotteryWholesalesQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<LotteryWholesalesQuery, TError, TData>(
+      {
+    queryKey: ['LotteryWholesales', variables],
+    queryFn: fetcher<LotteryWholesalesQuery, LotteryWholesalesQueryVariables>(client, LotteryWholesalesDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useLotteryWholesalesQuery.getKey = (variables: LotteryWholesalesQueryVariables) => ['LotteryWholesales', variables];
+
+
+useLotteryWholesalesQuery.fetcher = (client: GraphQLClient, variables: LotteryWholesalesQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryWholesalesQuery, LotteryWholesalesQueryVariables>(client, LotteryWholesalesDocument, variables, headers);
+
+export const LotteryWholesaleCustomerFilterDocument = `
+    query LotteryWholesaleCustomerFilter {
+  lotteryWholesaleCustomerFilter {
+    id
+    label
+  }
+}
+    `;
+
+export const useLotteryWholesaleCustomerFilterQuery = <
+      TData = LotteryWholesaleCustomerFilterQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables?: LotteryWholesaleCustomerFilterQueryVariables,
+      options?: Omit<UseQueryOptions<LotteryWholesaleCustomerFilterQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotteryWholesaleCustomerFilterQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<LotteryWholesaleCustomerFilterQuery, TError, TData>(
+      {
+    queryKey: variables === undefined ? ['LotteryWholesaleCustomerFilter'] : ['LotteryWholesaleCustomerFilter', variables],
+    queryFn: fetcher<LotteryWholesaleCustomerFilterQuery, LotteryWholesaleCustomerFilterQueryVariables>(client, LotteryWholesaleCustomerFilterDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useLotteryWholesaleCustomerFilterQuery.getKey = (variables?: LotteryWholesaleCustomerFilterQueryVariables) => variables === undefined ? ['LotteryWholesaleCustomerFilter'] : ['LotteryWholesaleCustomerFilter', variables];
+
+
+useLotteryWholesaleCustomerFilterQuery.fetcher = (client: GraphQLClient, variables?: LotteryWholesaleCustomerFilterQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryWholesaleCustomerFilterQuery, LotteryWholesaleCustomerFilterQueryVariables>(client, LotteryWholesaleCustomerFilterDocument, variables, headers);
+
+export const LotteryCustomerWholesalesDocument = `
+    query LotteryCustomerWholesales($customerId: ID!) {
+  lotteryCustomerWholesales(customerId: $customerId) {
+    ...LotteryWholesaleFields
+  }
+}
+    ${LotteryWholesaleFieldsFragmentDoc}`;
+
+export const useLotteryCustomerWholesalesQuery = <
+      TData = LotteryCustomerWholesalesQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: LotteryCustomerWholesalesQueryVariables,
+      options?: Omit<UseQueryOptions<LotteryCustomerWholesalesQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotteryCustomerWholesalesQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<LotteryCustomerWholesalesQuery, TError, TData>(
+      {
+    queryKey: ['LotteryCustomerWholesales', variables],
+    queryFn: fetcher<LotteryCustomerWholesalesQuery, LotteryCustomerWholesalesQueryVariables>(client, LotteryCustomerWholesalesDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useLotteryCustomerWholesalesQuery.getKey = (variables: LotteryCustomerWholesalesQueryVariables) => ['LotteryCustomerWholesales', variables];
+
+
+useLotteryCustomerWholesalesQuery.fetcher = (client: GraphQLClient, variables: LotteryCustomerWholesalesQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryCustomerWholesalesQuery, LotteryCustomerWholesalesQueryVariables>(client, LotteryCustomerWholesalesDocument, variables, headers);
+
+export const LotteryWholesaleDetailDocument = `
+    query LotteryWholesaleDetail($submissionId: ID!) {
+  lotteryWholesaleDetail(submissionId: $submissionId) {
+    submissionId
+    fromBranchName
+    customerName
+    paymentMode
+    accountLabel
+    amount
+    received
+    shippedAt
+    rows {
+      rowId
+      bookId
+      gameId
+      gameCode
+      gameName
+      bookNo
+      unitPrice
+      defaultRate
+      tickets
+      bookPrice
+      rate
+      amount
+      state
+    }
+  }
+}
+    `;
+
+export const useLotteryWholesaleDetailQuery = <
+      TData = LotteryWholesaleDetailQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: LotteryWholesaleDetailQueryVariables,
+      options?: Omit<UseQueryOptions<LotteryWholesaleDetailQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotteryWholesaleDetailQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<LotteryWholesaleDetailQuery, TError, TData>(
+      {
+    queryKey: ['LotteryWholesaleDetail', variables],
+    queryFn: fetcher<LotteryWholesaleDetailQuery, LotteryWholesaleDetailQueryVariables>(client, LotteryWholesaleDetailDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useLotteryWholesaleDetailQuery.getKey = (variables: LotteryWholesaleDetailQueryVariables) => ['LotteryWholesaleDetail', variables];
+
+
+useLotteryWholesaleDetailQuery.fetcher = (client: GraphQLClient, variables: LotteryWholesaleDetailQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryWholesaleDetailQuery, LotteryWholesaleDetailQueryVariables>(client, LotteryWholesaleDetailDocument, variables, headers);
 
 export const MyScheduleDocument = `
     query MySchedule($input: MyScheduleInput) {

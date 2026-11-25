@@ -44,7 +44,10 @@ import {
 } from "../../database/lottery-inventory/lottery-inventory.repository";
 import { WholesaleCustomerDocuments } from "../dealers/wholesale-customer-documents";
 import { SettlementLedger } from "../settlement/settlement-ledger";
-import { settlementDocumentOf } from "../settlement/settlement-registry";
+import {
+  type SettlementSubmission,
+  settlementDocumentOf,
+} from "../settlement/settlement-registry";
 import { SettlementService } from "../settlement/settlement.service";
 import { TicketLedgerService } from "../tickets/ticket-ledger.service";
 import {
@@ -67,6 +70,22 @@ import {
 } from "./wholesale-error";
 
 const TICKET_SELECT = "bookId orgId ticketNo status location lockedBy";
+
+/** 守門看到的提交 → 收付登記看得到的樣子(守門的提交是 mongoose 文件,展開會掉欄位:逐欄抄)。 */
+function settlementViewOf(
+  submission: LifecycleSubmission,
+): SettlementSubmission {
+  return {
+    _id: submission._id,
+    orgId: submission.orgId,
+    tenantId: submission.tenantId,
+    moduleKey: submission.moduleKey,
+    status: submission.status,
+    revision: submission.revision,
+    values: submission.values,
+    submittedAt: null,
+  };
+}
 
 function block(code: string, message: string): FormGuardResult {
   return { code, message };
@@ -158,10 +177,10 @@ export class WholesaleRules {
     if (accountProblem !== null) {
       return accountProblem;
     }
-    return (await this.settlementLedger.isCleared(operator, {
-      ...submission,
-      submittedAt: null,
-    }))
+    return (await this.settlementLedger.isCleared(
+      operator,
+      settlementViewOf(submission),
+    ))
       ? null
       : block(
           WHOLESALE_REASONS.modeHasReceipts,
@@ -200,7 +219,7 @@ export class WholesaleRules {
       registration === undefined
         ? []
         : await this.settlementLedger.snapshotsOf(operator, registration, [
-            { ...submission, submittedAt: null },
+            settlementViewOf(submission),
           ]);
     const problem = wholesaleReceivedProblemOf(
       wholesaleTotalOf(lines),

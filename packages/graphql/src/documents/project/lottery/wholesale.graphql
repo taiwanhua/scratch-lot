@@ -1,0 +1,112 @@
+fragment LotteryWholesaleFields on LotteryWholesale {
+  id
+  serialNo
+  fromBranchName
+  customerName
+  paymentMode
+  books
+  amount
+  received
+  settlementKind
+  settlementAmount
+  inSettlement
+  status
+  blocked
+  canDelete
+}
+
+query LotteryWholesaleOptions($fromOrgId: ID!) {
+  lotteryWholesaleOptions(fromOrgId: $fromOrgId) {
+    books {
+      bookId
+      gameId
+      gameCode
+      gameName
+      bookNo
+      unitPrice
+      tickets
+      bookPrice
+      defaultRate
+      cost
+    }
+    customers {
+      id
+      label
+    }
+    accounts {
+      id
+      label
+    }
+  }
+}
+
+query LotteryWholesaleScanMatches(
+  $fromOrgId: ID!
+  $bookNo: String!
+  $gameCode: String
+) {
+  lotteryWholesaleScanMatches(
+    fromOrgId: $fromOrgId
+    bookNo: $bookNo
+    gameCode: $gameCode
+  ) {
+    bookId
+    gameId
+    gameCode
+    bookNo
+    problem
+    lockedSerialNo
+  }
+}
+
+query LotteryWholesales($input: LotteryWholesalesInput!) {
+  lotteryWholesales(input: $input) {
+    items {
+      ...LotteryWholesaleFields
+    }
+    totalCount
+    page
+    pageSize
+  }
+}
+
+query LotteryWholesaleCustomerFilter {
+  lotteryWholesaleCustomerFilter {
+    id
+    label
+  }
+}
+
+query LotteryCustomerWholesales($customerId: ID!) {
+  lotteryCustomerWholesales(customerId: $customerId) {
+    ...LotteryWholesaleFields
+  }
+}
+
+query LotteryWholesaleDetail($submissionId: ID!) {
+  lotteryWholesaleDetail(submissionId: $submissionId) {
+    submissionId
+    fromBranchName
+    customerName
+    paymentMode
+    accountLabel
+    amount
+    received
+    shippedAt
+    rows {
+      rowId
+      bookId
+      gameId
+      gameCode
+      gameName
+      bookNo
+      unitPrice
+      defaultRate
+      tickets
+      bookPrice
+      rate
+      amount
+      state
+    }
+  }
+}

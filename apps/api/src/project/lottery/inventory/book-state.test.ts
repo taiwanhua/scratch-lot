@@ -22,6 +22,7 @@ import {
   type TicketStatus,
   bookCountsOf,
   serializeStocktakeDraft,
+  wholesaleCustomerLabel,
 } from "@repo/domain/project/lottery";
 import { LOTTERY_FIELD_CATEGORY_KEYS } from "@repo/domain/project/lottery-fields";
 
@@ -91,6 +92,7 @@ import {
   seedTransferAuthorization,
   transferDefinition,
 } from "../transfer/test-support/transfer-fixtures";
+import { insertWholesaleCustomer } from "../wholesale/test-support/wholesale-fixtures";
 
 jest.setTimeout(600_000);
 
@@ -1650,6 +1652,9 @@ describe("本狀態與再上檯面(GraphQL 端點 + 真 MongoDB)", () => {
     const book = await newBook(storeA);
     const bookId = book.bookId;
     const now = new Date();
+    // 單頭存的 label 是下拉文字「店名 · 電話」;庫存只寫店名
+    const customer = { storeName: "好運彩券行", phone: "0223456789" };
+    const customerId = await insertWholesaleCustomer(db(), tenant, customer);
     const { insertedId: submissionId } = await db()
       .collection("form_submissions")
       .insertOne({
@@ -1658,7 +1663,12 @@ describe("本狀態與再上檯面(GraphQL 端點 + 真 MongoDB)", () => {
         moduleKey: "purchasing.wholesale",
         formKey: "wholesale",
         version: 1,
-        values: { customer: { id: "c", label: "好運彩券行" } },
+        values: {
+          customer: {
+            id: String(customerId),
+            label: wholesaleCustomerLabel(customer),
+          },
+        },
         summary: null,
         status: "reviewing",
         revision: 1,

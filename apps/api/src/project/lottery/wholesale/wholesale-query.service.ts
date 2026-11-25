@@ -242,7 +242,7 @@ export class WholesaleQueryService {
         ? { [`values.${K.customer}.id`]: input.customerId }
         : {}),
       ...(input.paymentMode
-        ? { [`values.${K.paymentMode}.value`]: input.paymentMode }
+        ? { [`values.${K.paymentMode}`]: input.paymentMode }
         : {}),
     };
     const [totalCount, records] = await Promise.all([
