@@ -37,7 +37,8 @@ export const INVENTORY_SKIP_CORRECTION_SCAN_PURPOSE =
 export const INVENTORY_LOOKUP_SCAN_PURPOSE = "inventory-lookup";
 
 /**
- * 庫存分頁的狀態篩選:本的顯示狀態(`bookDisplayStateOf`;已撤銷的本不列,所以沒有這個選項)+ 有待標註。
+ * 庫存分頁的狀態篩選:本的顯示狀態(`bookDisplayStateOf`;已撤銷的本不列,所以沒有這個選項)+
+ * 批售中(有張被批售單鎖住,以張的鎖篩;規格 21.5)+ 有待標註。
  * i18n `bookStates.*` 同一組值。
  */
 export const INVENTORY_BOOK_FILTER_STATES = [
@@ -48,6 +49,8 @@ export const INVENTORY_BOOK_FILTER_STATES = [
   "investigating",
   "lost",
   "scrapped",
+  "wholesaling",
+  "wholesaled",
   "sold_out",
   "pending_skip",
 ] as const;

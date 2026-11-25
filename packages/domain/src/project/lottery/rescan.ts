@@ -132,7 +132,8 @@ function fixedOutcomeOf(
   ) {
     return ticket.status;
   }
-  if (opened) {
+  // 已批售只會是沒拆過的整本(規格 21.5):不在重刷範圍,不動
+  if (opened && ticket.status !== TICKET_STATUS.wholesaled) {
     return null;
   }
   return ticket.status === TICKET_STATUS.unsold &&

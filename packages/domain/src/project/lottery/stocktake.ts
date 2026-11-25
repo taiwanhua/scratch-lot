@@ -1,5 +1,6 @@
 import { COLLATION_LOCALE } from "../../collation/compare-display-name";
 import { SALE_REVERSAL_LOCK_REF_TYPE } from "./store-forms";
+import { isDocumentLock } from "./ticket-events";
 import type { TicketLocationKind, TicketStatus } from "./ticket-events";
 
 /**
@@ -527,7 +528,7 @@ export interface StocktakeTicketFacts {
 
 /**
  * 由目前的張與盤點之後的事件(依時間)倒推盤點那一刻:之後的第一筆事件的 `from` = 那一刻的狀態;
- * 沒有之後的事件 = 目前的狀態。被調貨單鎖定的張(調貨中)不比對;撤銷售出申請鎖定 = 撤銷審核中。
+ * 沒有之後的事件 = 目前的狀態。被單據鎖定的張(調貨中、批售中)不比對;撤銷售出申請鎖定 = 撤銷審核中。
  * 庫存那一行(`STOCKTAKE_STOCK_LINE`)比對那一刻在庫存的未售張。
  */
 export function stocktakeTicketFactsOf(
@@ -558,14 +559,12 @@ export function stocktakeTicketFactsOf(
       : snapshot.locationKind === "counter" &&
         snapshot.cashPointId === cashPointId &&
         (snapshot.status === "unsold" || snapshot.status === "sold"));
-  const lockedByTransfer =
-    ticket.lockRefType !== null &&
-    ticket.lockRefType !== SALE_REVERSAL_LOCK_REF_TYPE;
+  const lockedByDocument = isDocumentLock(ticket.lockRefType);
   return {
     ticketId: ticket.ticketId,
     ticketNo: ticket.ticketNo,
     atCount:
-      !onCounter || lockedByTransfer
+      !onCounter || lockedByDocument
         ? "absent"
         : (snapshot.status as "unsold" | "sold"),
     changedSince: after.length > 0,

@@ -82,13 +82,14 @@ function isCertainSold(ticket: ReversalPlanTicket): boolean {
   return ticket.status === TICKET_STATUS.sold && !ticket.unmatched;
 }
 
-/** 這張不能進撤銷申請(不看狀態是不是已售):不是本店、被別的單鎖住、跳號、報廢、在途。 */
+/** 這張不能進撤銷申請(不看狀態是不是已售):不是本店、被別的單鎖住、跳號、報廢、已批售、在途。 */
 function isBlocked(ticket: ReversalPlanTicket): boolean {
   return (
     !ticket.inStore ||
     ticket.locked ||
     ticket.status === TICKET_STATUS.skipped ||
     ticket.status === TICKET_STATUS.scrapped ||
+    ticket.status === TICKET_STATUS.wholesaled ||
     ticket.locationKind === TICKET_LOCATION_KIND.inTransit
   );
 }

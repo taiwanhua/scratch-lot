@@ -59,6 +59,8 @@ export interface BookTicketCounts {
   scrapped: number;
   investigating: number;
   lost: number;
+  /** 已批售(規格 21.5)。 */
+  wholesaled: number;
   /** 已售·未對號(張數店;已算在 `sold` 內)。 */
   unmatchedSold: number;
   /** 待查·未對號(張數店;已算在 `investigating` 內)。 */
@@ -74,6 +76,7 @@ export const BOOK_COUNT_KEYS = [
   "scrapped",
   "investigating",
   "lost",
+  "wholesaled",
   "unmatchedSold",
   "unmatchedInvestigating",
 ] as const satisfies readonly (keyof BookTicketCounts)[];
@@ -89,6 +92,7 @@ export function emptyBookCounts(): BookTicketCounts {
     scrapped: 0,
     investigating: 0,
     lost: 0,
+    wholesaled: 0,
     unmatchedSold: 0,
     unmatchedInvestigating: 0,
   };
@@ -122,6 +126,9 @@ export function bookCountKeyOf(
     }
     case TICKET_STATUS.lost: {
       return "lost";
+    }
+    case TICKET_STATUS.wholesaled: {
+      return "wholesaled";
     }
   }
 }
@@ -252,7 +259,8 @@ export function totalOfCounts(
 /**
  * 本的顯示狀態(庫存分頁、篩選、本的詳情頁首;使用者 10/27 定案 B,依序判斷):
  * 已撤銷 → 有未售:檯面上有 = 檯面中;庫存有 = 未拆(從沒拆過、而且沒有任何一張離開未售 / 庫存)或庫存中;
- * 只剩在途 = 在途 → 沒有未售:有待查 = 待查;有遺失 = 遺失;只有報廢(沒有已售)= 已報廢;其他 = 售完。
+ * 只剩在途 = 在途 → 沒有未售:有待查 = 待查;有遺失 = 遺失;只有報廢(沒有已售)= 已報廢;
+ * 有已批售 = 已批售(整本批售,規格 21.5);其他 = 售完。
  */
 export const BOOK_DISPLAY_STATES = [
   "revoked",
@@ -263,6 +271,7 @@ export const BOOK_DISPLAY_STATES = [
   "investigating",
   "lost",
   "scrapped",
+  "wholesaled",
   "sold_out",
 ] as const;
 export type BookDisplayState = (typeof BOOK_DISPLAY_STATES)[number];
@@ -276,7 +285,7 @@ export interface BookStateFacts {
   revoked: boolean;
 }
 
-/** 「原封不動」:從沒拆過、未售的張全在庫存、沒有任何一張售出 / 報廢 / 待查 / 遺失。 */
+/** 「原封不動」:從沒拆過、未售的張全在庫存、沒有任何一張售出 / 報廢 / 待查 / 遺失 / 已批售。 */
 export function isBookSealed(facts: Omit<BookStateFacts, "revoked">): boolean {
   const { counts } = facts;
   return (
@@ -287,7 +296,8 @@ export function isBookSealed(facts: Omit<BookStateFacts, "revoked">): boolean {
     counts.sold === 0 &&
     counts.scrapped === 0 &&
     counts.investigating === 0 &&
-    counts.lost === 0
+    counts.lost === 0 &&
+    counts.wholesaled === 0
   );
 }
 
@@ -323,7 +333,10 @@ export function bookDisplayStateOf(facts: BookStateFacts): BookDisplayState {
   if (counts.lost > 0) {
     return "lost";
   }
-  return counts.scrapped > 0 && counts.sold === 0 ? "scrapped" : "sold_out";
+  if (counts.scrapped > 0 && counts.sold === 0) {
+    return "scrapped";
+  }
+  return counts.wholesaled > 0 ? "wholesaled" : "sold_out";
 }
 
 /**
