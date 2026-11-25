@@ -4094,7 +4094,8 @@
           "sale_backfill": "補登售出",
           "investigate": "待查",
           "flag": "標記異常",
-          "skip": "標跳號"
+          "skip": "標跳號",
+          "opening_fix": "期初更正"
         },
         "clear": "取消選取",
         "recount": "重新盤點這本",
@@ -4213,7 +4214,8 @@
         "actions": {
           "sale_backfill": "補登售出",
           "investigate": "待查",
-          "flag": "標記異常"
+          "flag": "標記異常",
+          "opening_fix": "期初更正"
         },
         "postClose": "(事後更正)",
         "noLines": "沒有盤點明細",

@@ -4094,7 +4094,8 @@
           "sale_backfill": "Backfill sale",
           "investigate": "Investigate",
           "flag": "Flag",
-          "skip": "Mark skipped"
+          "skip": "Mark skipped",
+          "opening_fix": "Opening correction"
         },
         "clear": "Clear selection",
         "recount": "Recount this book",
@@ -4213,7 +4214,8 @@
         "actions": {
           "sale_backfill": "Backfill sale",
           "investigate": "Investigate",
-          "flag": "Flag"
+          "flag": "Flag",
+          "opening_fix": "Opening correction"
         },
         "postClose": " (post-close)",
         "noLines": "No counted books",
