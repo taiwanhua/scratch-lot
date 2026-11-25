@@ -76,6 +76,9 @@ const STATUS = /* GraphQL */ `
         bookCount
         canOpen
         canClose
+        cashPoints {
+          name
+        }
         history {
           action
           reason
@@ -155,6 +158,7 @@ interface StatusData {
       closed: boolean;
       closedBy: { name: string } | null;
       bookCount: number;
+      cashPoints: { name: string }[];
       canOpen: boolean;
       canClose: boolean;
       history: { action: string; reason: string | null }[];
@@ -516,6 +520,8 @@ describe("期初建檔(GraphQL 端點 + 真 MongoDB)", () => {
     });
 
     const status = await statusOf(managerA);
+    // ③ 分放的選項:只列啟用中的收銀點
+    expect(status.cashPoints.map((point) => point.name)).toEqual(["店內櫃台"]);
     expect(status.closed).toBe(false);
     expect(status.canOpen).toBe(true);
     const listed = status.books.find((item) => item.bookId === bookId);

@@ -3886,6 +3886,7 @@ type LotteryStoreOpening {
   canClose: Boolean!
   canOpen: Boolean!
   canShowCost: Boolean!
+  cashPoints: [LotteryInventoryRef!]!
   closed: Boolean!
   closedAt: DateTime
   closedBy: LotteryInventoryRef

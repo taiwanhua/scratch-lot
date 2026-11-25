@@ -43,6 +43,9 @@ fragment LotteryStoreOpeningFields on LotteryStoreOpening {
   canOpen
   canClose
   canShowCost
+  cashPoints {
+    ...LotteryInventoryRefFields
+  }
 }
 
 query LotteryStoreOpening($orgId: ID!) {

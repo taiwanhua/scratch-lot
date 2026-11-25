@@ -123,6 +123,10 @@ export class LotteryStoreOpeningModel {
   /** 能看成本(`inventory.show-cost`;建檔頁成本欄)。 */
   @Field(() => Boolean)
   canShowCost!: boolean;
+
+  /** 這家店啟用中的收銀點(依排序;建檔頁 ③ 分放的選項,另有「庫存」)。 */
+  @Field(() => [LotteryInventoryRefModel])
+  cashPoints!: LotteryInventoryRefModel[];
 }
 
 @ObjectType("LotteryStoreOpeningPayload")

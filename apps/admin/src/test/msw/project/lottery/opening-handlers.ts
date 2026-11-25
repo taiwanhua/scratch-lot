@@ -71,6 +71,7 @@ export const openingWorld = (options: OpeningWorldOptions) => {
       canOpen: permissions.includes(OPENING_PERMISSION) && closedAt === null,
       canClose,
       canShowCost: false,
+      cashPoints: [ref("cp-counter", "店內櫃台")],
     };
   };
   const handlers = [

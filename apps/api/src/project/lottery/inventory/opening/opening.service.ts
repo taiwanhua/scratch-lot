@@ -169,6 +169,11 @@ export class InventoryOpeningService {
       { sort: { openingAt: -1, _id: -1 } },
     );
     const items = canOpenGrant ? await this.bookModelsOf(operator, books) : [];
+    const points = canOpenGrant
+      ? [...(await this.support.cashPointsOf(operator, store.orgId)).values()]
+          .toSorted((a, b) => a.order - b.order)
+          .map((point) => ({ id: String(point._id), name: point.name }))
+      : [];
     const firstAt = books
       .map((book) => book.openingAt)
       .filter((at): at is Date => at instanceof Date)
@@ -202,6 +207,7 @@ export class InventoryOpeningService {
       canOpen: canOpenGrant && closedAt === null,
       canClose,
       canShowCost: grant.canShowCost,
+      cashPoints: points,
     };
   }
 
