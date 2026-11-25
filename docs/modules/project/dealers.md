@@ -82,7 +82,7 @@
 - **牌租**:有週期就要繳費日;週期是季或年時起算月份必填;由季 / 年改成月時起算月份寫回 null。繳費日 = 每期第一個月的第 N 日,那個月沒有這一天用月底。
 - **關係人取消身分**:那個身分還有關聯 → `CONFLICT`(`ROLE_IN_USE`,只列操作者看得到的經銷商上的關聯,看不到的只回筆數 `hiddenCount`,畫面提示「另有 N 筆你看不到的關聯也會一起解除」);帶 `releaseRelationships: true` 重送一併解除 —— 這是**例外寫入**:看不到的經銷商上的關聯以租戶為邊界解除(`dealer-links.service.ts` 的 `releaseContactRoles`)。
 - **資料共用(ADR-0014)**:經銷商看得到 = 可見範圍、共用給(`shareOrgs`,編輯頁「共用給」欄位,要 `dealers.edit`)、或乙類的對應分店。共用進來的只能看(`isShared`、`abilities` 全 false、寫入 `NOT_FOUND`)。看得到經銷商就看得到它的關聯與引用的名稱(關聯列以租戶為邊界讀;名稱經 `findRefsInTenant`)。租戶內唯一(證號、身分證字號)與對應分店是否已被占用以 `existsInTenant` 檢查;共同銷售人數、已被對應的分店、關係人掛在哪些經銷商以租戶為邊界反查(`tenantBoundaryContext`)。別租戶一律看不到。
-- **批售客戶**(規格 21.2):店名必填、可以重複(同名只提醒、不擋:以整個租戶查同名,只回店名與電話,要有 `create` 或 `edit`);證號選填,有填時租戶內唯一(`existsInTenant` + 部分唯一索引,只算有填、未刪除的)。資料共用「可共用、預設不共用、可編輯」,「共用給」要 `dealers.wholesale-customers.edit`,共用進來的只能看。刪除用 `edit`:被任何批售單(含草稿)引用 → `WHOLESALE_CUSTOMER_IN_USE`,只能停用。不算側欄計數、不寄提醒。
+- **批售客戶**(規格 21.2):店名必填、可以重複(同名只提醒、不擋:以整個租戶查同名,只回店名與電話,操作者看不到的那一筆不回電話;要有 `create` 或 `edit`);證號選填,有填時租戶內唯一(`existsInTenant` + 部分唯一索引,只算有填、未刪除的)。資料共用「可共用、預設不共用、可編輯」,「共用給」要 `dealers.wholesale-customers.edit`,共用進來的只能看。刪除用 `edit`:被任何批售單(含草稿)引用 → `WHOLESALE_CUSTOMER_IN_USE`,只能停用。不算側欄計數、不寄提醒。
 - **批售客戶與批售單的接點**:`wholesale-customer-documents.ts` 的 `WholesaleCustomerDocuments.registerSource({ lastShippedAt, isReferenced })`,由批售單的功能在 `onModuleInit` 登記;沒有登記 = 沒有批售單(最近一次批售日無紀錄、沒有引用)。`isReferenced` 在刪除的交易裡呼叫,要問整個租戶。
 - **沒有刪除**:經銷商只能解約、關係人只能停用(批售客戶沒被引用可以刪除);解約 / 停用後不能再被選取(挑選器帶 `selectable` / `status: ACTIVE`),既有關聯保留。
 - **主檔與關聯同一個交易**;每一筆關聯的新增 / 解除各寫一筆稽核。
@@ -106,7 +106,7 @@
 | `lotteryDealerContacts(input)` / `lotteryDealerContact(id)`                                                                 | 綁 `dealers`                                               | 關係人清單(`keyword` 比對姓名、手機、身分證字號;`role`、`status`)/ 單筆                                                                            |
 | `createLotteryDealerContact(input)` / `updateLotteryDealerContact(input)`                                                   | `dealers.contacts.create` / `edit`                         | 關係人                                                                                                                                             |
 | `lotteryWholesaleCustomers(input)` / `lotteryWholesaleCustomer(id)`                                                         | 綁 `dealers.wholesale-customers`                           | 批售客戶清單(`keyword` 比對店名、證號、聯絡人、電話;`status`)/ 單筆;`lastWholesaleAt` 讀取時算,`null` = 無紀錄                                     |
-| `lotteryWholesaleCustomerSameNames(input)`                                                                                  | 綁 `dealers.wholesale-customers` 且持有 `create` 或 `edit` | 同名提醒:整個租戶店名完全相同、未刪除的(店名、電話);`excludeId` = 編輯中的那一筆                                                                   |
+| `lotteryWholesaleCustomerSameNames(input)`                                                                                  | 綁 `dealers.wholesale-customers` 且持有 `create` 或 `edit` | 同名提醒:整個租戶店名完全相同、未刪除的(店名、電話;看不到的不回電話);`excludeId` = 編輯中的那一筆                                                  |
 | `createLotteryWholesaleCustomer(input)` / `updateLotteryWholesaleCustomer(input)` / `deleteLotteryWholesaleCustomer(input)` | `dealers.wholesale-customers.create` / `edit` / `edit`     | 批售客戶;編輯缺席 = 不動、`null` = 清空(店名、狀態 `null` 視同缺席);共用進來的寫入 `NOT_FOUND`                                                     |
 
 **input 的缺席 / `null`(GQL-06)**:

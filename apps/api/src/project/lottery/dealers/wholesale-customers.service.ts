@@ -227,7 +227,7 @@ export class WholesaleCustomersService {
   }
 
   /**
-   * 同名提醒:整個租戶(含操作者看不到的)店名相同、還沒刪除的客戶,只回店名與電話。
+   * 同名提醒:整個租戶(含操作者看不到的)店名相同、還沒刪除的客戶,只回店名與電話;操作者看不到的不回電話。
    * 給新增 / 編輯頁用,要有 `create` 或 `edit`。
    */
   async sameNames(
@@ -261,10 +261,16 @@ export class WholesaleCustomersService {
       },
       { sort: { createdAt: 1, _id: 1 } },
     );
+    const visibleRecords = await this.customers.findMany(
+      operator,
+      { _id: { $in: found.map((record) => record._id) } },
+      { select: "_id" },
+    );
+    const visible = new Set(visibleRecords.map((record) => String(record._id)));
     const items = found.map((record) => ({
       id: String(record._id),
       storeName: record.storeName,
-      phone: record.phone,
+      phone: visible.has(String(record._id)) ? record.phone : null,
     }));
     return { items, totalCount: items.length };
   }

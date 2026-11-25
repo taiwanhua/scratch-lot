@@ -107,7 +107,7 @@ export class LotteryWholesaleCustomerPayload {
   item!: LotteryWholesaleCustomerModel;
 }
 
-/** 同名的批售客戶(只給提醒用的店名與電話;可能是操作者看不到的那一筆)。 */
+/** 同名的批售客戶(只給提醒用的店名與電話;可能是操作者看不到的那一筆,那一筆不回電話)。 */
 @ObjectType()
 export class LotteryWholesaleCustomerSameName {
   @Field(() => ID)

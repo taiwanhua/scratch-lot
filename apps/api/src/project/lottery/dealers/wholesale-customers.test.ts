@@ -410,8 +410,11 @@ describe("批售客戶(專案規格 21.2)", () => {
       expect(
         await sameNames({ storeName: "同名行", excludeId: first.id }),
       ).toEqual([secondRow]);
-      // 提醒以租戶為範圍:信義店的人看不到那兩筆,一樣提醒
-      expect(await sameNames({ storeName: "同名行" }, editorB)).toHaveLength(2);
+      // 提醒以租戶為範圍:信義店的人看不到那兩筆,一樣提醒,但不給電話
+      expect(await sameNames({ storeName: "同名行" }, editorB)).toEqual([
+        { id: first.id, storeName: "同名行", phone: null },
+        { ...secondRow, phone: null },
+      ]);
       expect(await sameNames({ storeName: "同名" })).toEqual([]);
       expect(await sameNames({ storeName: " " })).toEqual([]);
     });
