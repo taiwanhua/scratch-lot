@@ -49,6 +49,11 @@ import {
   transferWorld,
   withoutSettlementHandler,
 } from "@/test/msw/project/lottery/transfer-handlers";
+import {
+  wholesaleFormWorld,
+  wholesaleModules,
+} from "@/test/msw/project/lottery/wholesale-fixtures";
+import { wholesaleWorld } from "@/test/msw/project/lottery/wholesale-handlers";
 import { scheduleAttendanceWorld } from "@/test/msw/project/schedule-attendance-handlers";
 import { scheduleCalendarWorld } from "@/test/msw/project/schedule-calendar-handlers";
 import { scheduleDayOffsWorld } from "@/test/msw/project/schedule-day-offs-handlers";
@@ -142,6 +147,7 @@ export const projectMockWorld: ProjectMockWorld = {
     ...purchasingModules(),
     ...purchaseModules(),
     ...transferModules(),
+    ...wholesaleModules(),
     ...inventoryModules(),
     // 店面管理(表單模組,權限給滿)
     ...storeModules(),
@@ -164,6 +170,8 @@ export const projectMockWorld: ProjectMockWorld = {
     ...scheduleMyWorld(myOptions()).handlers,
     // 調貨單:收付端點由這裡一個 handler 回(調貨單兩邊 + 其他單據照帳戶管理夾具),帳戶管理那一個拿掉
     ...transferWorld({ settlement: "all" }).handlers,
+    // 批售單:列表、新增頁選項、檢視內容(收付端點由上面的調貨單那一個一起回)
+    ...wholesaleWorld({ settlement: "none" }).handlers,
     ...withoutSettlementHandler(accountsWorld().handlers),
     ...scheduleRosterWorld(rosterOptions()).handlers,
     // 出勤紀錄:依分店(日)/ 依人員(月)的示範資料(SC-11 / SC-12)、改對應排班、補打卡的對應排班下拉
@@ -204,6 +212,7 @@ export const projectMockWorld: ProjectMockWorld = {
   // 叫貨、採購單 → 叫貨單:表單與五筆提交(草稿、審核中、待購買、已進貨、已調貨);
   // 進貨單:表單與四筆提交(草稿、審核中、已完成待退、已完成已結清);
   // 調貨單:表單與四筆提交(草稿、第一關出貨確認、第二關點收、已完成);
+  // 批售單:表單與四筆提交(草稿、從帳戶入帳審核中、收到錢再核准審核中、已完成);
   // 出勤紀錄 → 補打卡申請:表單與兩筆審核中(一筆對應的排班已被刪除);
   // 店面管理:撤銷售出申請、現金更正單的定義(列表走專用查詢,沒有提交);盤點確認申請與一筆審核中(ST-30)
   formRuntime: () => {
@@ -212,6 +221,7 @@ export const projectMockWorld: ProjectMockWorld = {
     const requisition = requisitionFormWorld();
     const purchase = purchaseFormWorld();
     const transfer = transferFormWorld();
+    const wholesale = wholesaleFormWorld();
     const store = storeFormsWorld().runtime;
     const stocktake = stocktakeFormWorld();
     const checkout = checkoutFormWorld();
@@ -222,6 +232,7 @@ export const projectMockWorld: ProjectMockWorld = {
         ...(requisition.moduleForms ?? []),
         ...(purchase.moduleForms ?? []),
         ...(transfer.moduleForms ?? []),
+        ...(wholesale.moduleForms ?? []),
         ...(store.moduleForms ?? []),
         ...(stocktake.moduleForms ?? []),
         ...(checkout.moduleForms ?? []),
@@ -232,6 +243,7 @@ export const projectMockWorld: ProjectMockWorld = {
         ...requisition.versions,
         ...purchase.versions,
         ...transfer.versions,
+        ...wholesale.versions,
         ...store.versions,
         ...stocktake.versions,
         ...checkout.versions,
@@ -242,6 +254,7 @@ export const projectMockWorld: ProjectMockWorld = {
         ...(requisition.submissions ?? []),
         ...(purchase.submissions ?? []),
         ...(transfer.submissions ?? []),
+        ...(wholesale.submissions ?? []),
         ...(stocktake.submissions ?? []),
         ...(checkout.submissions ?? []),
       ],

@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import type { Types } from "mongoose";
 
+import { compareDisplayName } from "@repo/domain/collation";
 import {
   INVENTORY_PERMISSIONS,
   TICKET_EVENT_TYPE,
@@ -45,6 +46,7 @@ import { settlementDocumentOf } from "../settlement/settlement-registry";
 import { SettlementService } from "../settlement/settlement.service";
 import type {
   LotteryWholesaleDetailModel,
+  LotteryWholesaleFilterOptionsModel,
   LotteryWholesaleModel,
   LotteryWholesaleOptionModel,
   LotteryWholesaleOptionsModel,
@@ -261,19 +263,39 @@ export class WholesaleQueryService {
     };
   }
 
-  /** 列表的「批售客戶」篩選:操作者讀得到的客戶(含停用的,既有的單照常)。 */
-  async customerFilterOf(
+  /** 列表的篩選選項:讀得到的單上的出貨分店;讀得到的批售客戶(含停用的,既有的單照常)。 */
+  async filterOptionsOf(
     operator: OperatorContext,
-  ): Promise<LotteryWholesaleOptionModel[]> {
-    const customers = await this.customers.findMany(
-      operator,
-      {},
-      { select: "label", sort: { label: 1, _id: 1 } },
-    );
-    return customers.map((customer) => ({
-      id: String(customer._id),
-      label: customer.label,
-    }));
+  ): Promise<LotteryWholesaleFilterOptionsModel> {
+    const [branches, customers] = await Promise.all([
+      this.submissions.aggregate(operator, [
+        { $match: this.readableFilterOf(operator) },
+        {
+          $group: {
+            _id: `$values.${K.fromBranch}.id`,
+            label: { $last: `$values.${K.fromBranch}.label` },
+          },
+        },
+      ]),
+      this.customers.findMany(
+        operator,
+        {},
+        { select: "label", sort: { label: 1, _id: 1 } },
+      ),
+    ]);
+    return {
+      branches: branches
+        .flatMap((row): LotteryWholesaleOptionModel[] =>
+          typeof row._id === "string" && typeof row.label === "string"
+            ? [{ id: row._id, label: row.label }]
+            : [],
+        )
+        .toSorted((left, right) => compareDisplayName(left.label, right.label)),
+      customers: customers.map((customer) => ({
+        id: String(customer._id),
+        label: customer.label,
+      })),
+    };
   }
 
   /** 批售客戶詳情「批售紀錄」:這位客戶的批售單(讀得到的;草稿只有自己的),新的在前。 */

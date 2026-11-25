@@ -131,6 +131,18 @@ export class LotteryWholesalesInput {
   paymentMode?: string | null;
 }
 
+/** 列表的篩選選項。 */
+@ObjectType("LotteryWholesaleFilterOptions")
+export class LotteryWholesaleFilterOptionsModel {
+  /** 讀得到的批售單上的出貨分店。 */
+  @Field(() => [LotteryWholesaleOptionModel])
+  branches!: LotteryWholesaleOptionModel[];
+
+  /** 讀得到的批售客戶(文字「店名 · 電話」;含停用的)。 */
+  @Field(() => [LotteryWholesaleOptionModel])
+  customers!: LotteryWholesaleOptionModel[];
+}
+
 /** 批售單的一列(列表)。 */
 @ObjectType("LotteryWholesale")
 export class LotteryWholesaleModel {

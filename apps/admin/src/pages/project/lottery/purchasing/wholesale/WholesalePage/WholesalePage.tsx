@@ -4,7 +4,7 @@ import { useTranslations } from "use-intl";
 import {
   type FormSubmissionStatus,
   type LotteryWholesaleFieldsFragment,
-  useLotteryWholesaleCustomerFilterQuery,
+  useLotteryWholesaleFilterOptionsQuery,
   useLotteryWholesalesQuery,
 } from "@repo/graphql";
 import { Box } from "@repo/ui/box";
@@ -18,7 +18,6 @@ import { Tag } from "@repo/ui/tag";
 import { Typography } from "@repo/ui/typography";
 
 import { FilterDrawer } from "@/components/base/FilterDrawer/FilterDrawer";
-import { OrgTreeSelect } from "@/components/base/OrgTreeSelect/OrgTreeSelect";
 import { useFormEntry } from "@/components/base/form-engine/FormModulePages/useFormEntry";
 import { SubmissionStatusTag } from "@/components/base/workflow/SubmissionStatusTag";
 import { useSession } from "@/hooks/base/useSession";
@@ -93,8 +92,31 @@ export const WholesalePage = () => {
   const query = useLotteryWholesalesQuery(session.client, {
     input: { ...filters, page, pageSize: WHOLESALE_PAGE_SIZE },
   });
-  const customers = useLotteryWholesaleCustomerFilterQuery(session.client);
+  const filterOptions = useLotteryWholesaleFilterOptionsQuery(session.client);
+  const choices = filterOptions.data?.lotteryWholesaleFilterOptions ?? null;
   const totalCount = query.data?.lotteryWholesales.totalCount ?? 0;
+
+  /** 出貨分店 / 批售客戶的下拉(全部 = 不篩)。 */
+  const pick = (
+    label: string,
+    current: string | null,
+    items: readonly { id: string; label: string }[],
+    onPick: (next: string | null) => void,
+  ) => (
+    <SelectField<string>
+      label={label}
+      size="small"
+      value={items.some((item) => item.id === current) ? (current ?? ALL) : ALL}
+      options={[
+        { value: ALL, label: t("filters.all") },
+        ...items.map((item) => ({ value: item.id, label: item.label })),
+      ]}
+      onChange={(next) => {
+        onPick(next === ALL ? null : next);
+      }}
+      sx={{ minWidth: 180 }}
+    />
+  );
 
   const columns: TableColumn<Row>[] = [
     {
@@ -197,41 +219,22 @@ export const WholesalePage = () => {
           }}
           renderFields={(value, change) => (
             <>
-              <Box sx={{ minWidth: 200 }}>
-                <OrgTreeSelect
-                  scope="visible"
-                  label={t("columns.fromBranch")}
-                  size="small"
-                  fullWidth
-                  value={value.fromOrgId === null ? [] : [value.fromOrgId]}
-                  onChange={(ids) => {
-                    const next = ids[0] ?? null;
-                    // 再點一次同一家 = 不篩
-                    change({
-                      ...value,
-                      fromOrgId: next === value.fromOrgId ? null : next,
-                    });
-                  }}
-                />
-              </Box>
-              <SelectField<string>
-                label={t("columns.customer")}
-                size="small"
-                value={value.customerId ?? ALL}
-                options={[
-                  { value: ALL, label: t("filters.all") },
-                  ...(customers.data?.lotteryWholesaleCustomerFilter ?? []).map(
-                    (customer) => ({
-                      value: customer.id,
-                      label: customer.label,
-                    }),
-                  ),
-                ]}
-                onChange={(next) => {
-                  change({ ...value, customerId: next === ALL ? null : next });
-                }}
-                sx={{ minWidth: 200 }}
-              />
+              {pick(
+                t("columns.fromBranch"),
+                value.fromOrgId,
+                choices?.branches ?? [],
+                (fromOrgId) => {
+                  change({ ...value, fromOrgId });
+                },
+              )}
+              {pick(
+                t("columns.customer"),
+                value.customerId,
+                choices?.customers ?? [],
+                (customerId) => {
+                  change({ ...value, customerId });
+                },
+              )}
               <SelectField<
                 typeof ALL | (typeof WHOLESALE_PAYMENT_MODES)[number]
               >

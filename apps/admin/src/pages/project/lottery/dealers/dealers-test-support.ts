@@ -11,6 +11,9 @@ import {
   type DealersWorldOptions,
   dealersWorld,
 } from "@/test/msw/project/dealers-handlers";
+import { purchasingModules } from "@/test/msw/project/lottery/purchasing-fixtures";
+import { wholesaleModules } from "@/test/msw/project/lottery/wholesale-fixtures";
+import { wholesaleWorld } from "@/test/msw/project/lottery/wholesale-handlers";
 import {
   WHOLESALE_CUSTOMER_PERMISSIONS,
   wholesaleCustomerModules,
@@ -32,6 +35,8 @@ export interface RenderDealersOptions {
   wholesalePermissions?: readonly string[];
   withWholesaleCustomers?: boolean;
   wholesaleCustomers?: LotteryWholesaleCustomerFieldsFragment[];
+  /** 另有批售單模組(批售客戶詳情的「批售紀錄」);`omit` = 拿掉的權限 */
+  withWholesaleDocuments?: { omit?: readonly string[] };
 }
 
 export const renderDealers = ({
@@ -43,12 +48,16 @@ export const renderDealers = ({
   wholesalePermissions = WHOLESALE_CUSTOMER_PERMISSIONS,
   withWholesaleCustomers = true,
   wholesaleCustomers,
+  withWholesaleDocuments,
 }: RenderDealersOptions = {}) => {
   const fake = dealersWorld(world);
   const wholesale = wholesaleCustomersWorld(wholesaleCustomers);
   server.use(
     ...fake.handlers,
     ...wholesale.handlers,
+    ...(withWholesaleDocuments === undefined
+      ? []
+      : wholesaleWorld({ settlement: "none" }).handlers),
     ...authWorld({
       hasRefreshCookie: true,
       modules: [
@@ -56,6 +65,12 @@ export const renderDealers = ({
         ...(withWholesaleCustomers
           ? wholesaleCustomerModules(wholesalePermissions)
           : []),
+        ...(withWholesaleDocuments === undefined
+          ? []
+          : [
+              ...purchasingModules(),
+              ...wholesaleModules(withWholesaleDocuments.omit),
+            ]),
       ],
     }).handlers,
   );

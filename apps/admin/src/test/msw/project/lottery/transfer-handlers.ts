@@ -24,6 +24,7 @@ import {
   transferOptions,
 } from "./transfer-option-fixtures";
 import { transferSettlement } from "./transfer-settlement-fixtures";
+import { wholesaleSettlement } from "./wholesale-settlement-fixtures";
 
 /**
  * 調貨單的假 api(規則照 `docs/modules/project/purchasing.md`「調貨單」):新增頁選項、張數格子、
@@ -122,11 +123,13 @@ export interface TransferWorldOptions {
   receiptRoutes?: "default" | "none";
 }
 
-/** 調貨單自己的收付(兩邊);其他單據:`all` 照帳戶管理夾具,`own` 不回(落到下一個 handler)。 */
+/** 調貨單自己的收付(兩邊);其他單據:`all` 照批售單、帳戶管理夾具,`own` 不回(落到下一個 handler)。 */
 const settlementHandler = (mode: "own" | "all") =>
   api.query("LotterySettlement", ({ variables }) => {
     const { refId } = variables as LotterySettlementQueryVariables;
-    const item = transferSettlement(refId);
+    const item =
+      transferSettlement(refId) ??
+      (mode === "all" ? wholesaleSettlement(refId) : null);
     if (item !== null) {
       return HttpResponse.json({ data: { lotterySettlement: { item } } });
     }

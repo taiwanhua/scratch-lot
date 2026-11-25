@@ -4612,6 +4612,12 @@ export type LotteryWholesaleDetail = {
   submissionId: Scalars['ID']['output'];
 };
 
+export type LotteryWholesaleFilterOptions = {
+  __typename?: 'LotteryWholesaleFilterOptions';
+  branches: Array<LotteryWholesaleOption>;
+  customers: Array<LotteryWholesaleOption>;
+};
+
 export type LotteryWholesaleOption = {
   __typename?: 'LotteryWholesaleOption';
   id: Scalars['ID']['output'];
@@ -6827,10 +6833,10 @@ export type Query = {
   lotteryTransferProgress: Array<LotteryTransferProgress>;
   lotteryTransferReceiving: LotteryTransferReceiving;
   lotteryWholesaleCustomer: LotteryWholesaleCustomerPayload;
-  lotteryWholesaleCustomerFilter: Array<LotteryWholesaleOption>;
   lotteryWholesaleCustomerSameNames: LotteryWholesaleCustomerSameNamesPayload;
   lotteryWholesaleCustomers: LotteryWholesaleCustomersPayload;
   lotteryWholesaleDetail: LotteryWholesaleDetail;
+  lotteryWholesaleFilterOptions: LotteryWholesaleFilterOptions;
   lotteryWholesaleOptions: LotteryWholesaleOptions;
   lotteryWholesaleScanMatches: Array<LotteryWholesaleScanMatch>;
   lotteryWholesales: LotteryWholesalesPayload;
@@ -12644,10 +12650,10 @@ export type LotteryWholesalesQueryVariables = Exact<{
 
 export type LotteryWholesalesQuery = { __typename?: 'Query', lotteryWholesales: { __typename?: 'LotteryWholesalesPayload', totalCount: number, page: number, pageSize: number, items: Array<{ __typename?: 'LotteryWholesale', id: string, serialNo?: string | null, fromBranchName: string, customerName: string, paymentMode?: string | null, books: number, amount: number, received: number, settlementKind?: string | null, settlementAmount: number, inSettlement: boolean, status: FormSubmissionStatus, blocked: boolean, canDelete: boolean }> } };
 
-export type LotteryWholesaleCustomerFilterQueryVariables = Exact<{ [key: string]: never; }>;
+export type LotteryWholesaleFilterOptionsQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type LotteryWholesaleCustomerFilterQuery = { __typename?: 'Query', lotteryWholesaleCustomerFilter: Array<{ __typename?: 'LotteryWholesaleOption', id: string, label: string }> };
+export type LotteryWholesaleFilterOptionsQuery = { __typename?: 'Query', lotteryWholesaleFilterOptions: { __typename?: 'LotteryWholesaleFilterOptions', branches: Array<{ __typename?: 'LotteryWholesaleOption', id: string, label: string }>, customers: Array<{ __typename?: 'LotteryWholesaleOption', id: string, label: string }> } };
 
 export type LotteryCustomerWholesalesQueryVariables = Exact<{
   customerId: Scalars['ID']['input'];
@@ -27781,37 +27787,43 @@ useLotteryWholesalesQuery.getKey = (variables: LotteryWholesalesQueryVariables) 
 
 useLotteryWholesalesQuery.fetcher = (client: GraphQLClient, variables: LotteryWholesalesQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryWholesalesQuery, LotteryWholesalesQueryVariables>(client, LotteryWholesalesDocument, variables, headers);
 
-export const LotteryWholesaleCustomerFilterDocument = `
-    query LotteryWholesaleCustomerFilter {
-  lotteryWholesaleCustomerFilter {
-    id
-    label
+export const LotteryWholesaleFilterOptionsDocument = `
+    query LotteryWholesaleFilterOptions {
+  lotteryWholesaleFilterOptions {
+    branches {
+      id
+      label
+    }
+    customers {
+      id
+      label
+    }
   }
 }
     `;
 
-export const useLotteryWholesaleCustomerFilterQuery = <
-      TData = LotteryWholesaleCustomerFilterQuery,
+export const useLotteryWholesaleFilterOptionsQuery = <
+      TData = LotteryWholesaleFilterOptionsQuery,
       TError = unknown
     >(
       client: GraphQLClient,
-      variables?: LotteryWholesaleCustomerFilterQueryVariables,
-      options?: Omit<UseQueryOptions<LotteryWholesaleCustomerFilterQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotteryWholesaleCustomerFilterQuery, TError, TData>['queryKey'] },
+      variables?: LotteryWholesaleFilterOptionsQueryVariables,
+      options?: Omit<UseQueryOptions<LotteryWholesaleFilterOptionsQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotteryWholesaleFilterOptionsQuery, TError, TData>['queryKey'] },
       headers?: RequestInit['headers']
     ) => {
     
-    return useQuery<LotteryWholesaleCustomerFilterQuery, TError, TData>(
+    return useQuery<LotteryWholesaleFilterOptionsQuery, TError, TData>(
       {
-    queryKey: variables === undefined ? ['LotteryWholesaleCustomerFilter'] : ['LotteryWholesaleCustomerFilter', variables],
-    queryFn: fetcher<LotteryWholesaleCustomerFilterQuery, LotteryWholesaleCustomerFilterQueryVariables>(client, LotteryWholesaleCustomerFilterDocument, variables, headers),
+    queryKey: variables === undefined ? ['LotteryWholesaleFilterOptions'] : ['LotteryWholesaleFilterOptions', variables],
+    queryFn: fetcher<LotteryWholesaleFilterOptionsQuery, LotteryWholesaleFilterOptionsQueryVariables>(client, LotteryWholesaleFilterOptionsDocument, variables, headers),
     ...options
   }
     )};
 
-useLotteryWholesaleCustomerFilterQuery.getKey = (variables?: LotteryWholesaleCustomerFilterQueryVariables) => variables === undefined ? ['LotteryWholesaleCustomerFilter'] : ['LotteryWholesaleCustomerFilter', variables];
+useLotteryWholesaleFilterOptionsQuery.getKey = (variables?: LotteryWholesaleFilterOptionsQueryVariables) => variables === undefined ? ['LotteryWholesaleFilterOptions'] : ['LotteryWholesaleFilterOptions', variables];
 
 
-useLotteryWholesaleCustomerFilterQuery.fetcher = (client: GraphQLClient, variables?: LotteryWholesaleCustomerFilterQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryWholesaleCustomerFilterQuery, LotteryWholesaleCustomerFilterQueryVariables>(client, LotteryWholesaleCustomerFilterDocument, variables, headers);
+useLotteryWholesaleFilterOptionsQuery.fetcher = (client: GraphQLClient, variables?: LotteryWholesaleFilterOptionsQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryWholesaleFilterOptionsQuery, LotteryWholesaleFilterOptionsQueryVariables>(client, LotteryWholesaleFilterOptionsDocument, variables, headers);
 
 export const LotteryCustomerWholesalesDocument = `
     query LotteryCustomerWholesales($customerId: ID!) {

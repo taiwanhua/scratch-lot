@@ -9,8 +9,8 @@ import { RequirePermission } from "../../../permission/require-permission.decora
 import { RequireTenant } from "../../tenant-scope/require-tenant.decorator";
 import {
   LotteryWholesaleDetailModel,
+  LotteryWholesaleFilterOptionsModel,
   LotteryWholesaleModel,
-  LotteryWholesaleOptionModel,
   LotteryWholesaleOptionsModel,
   LotteryWholesaleScanMatchModel,
   LotteryWholesalesInput,
@@ -78,13 +78,13 @@ export class WholesaleResolver {
   }
 
   @RequirePermission(WHOLESALE_PERMISSIONS.view)
-  @Query(() => [LotteryWholesaleOptionModel], {
-    name: "lotteryWholesaleCustomerFilter",
+  @Query(() => LotteryWholesaleFilterOptionsModel, {
+    name: "lotteryWholesaleFilterOptions",
   })
-  lotteryWholesaleCustomerFilter(
+  lotteryWholesaleFilterOptions(
     @CurrentOperator() operator: OperatorContext,
-  ): Promise<LotteryWholesaleOptionModel[]> {
-    return this.query.customerFilterOf(operator);
+  ): Promise<LotteryWholesaleFilterOptionsModel> {
+    return this.query.filterOptionsOf(operator);
   }
 
   @RequirePermission(WHOLESALE_PERMISSIONS.view)

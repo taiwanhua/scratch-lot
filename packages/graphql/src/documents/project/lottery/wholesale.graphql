@@ -70,10 +70,16 @@ query LotteryWholesales($input: LotteryWholesalesInput!) {
   }
 }
 
-query LotteryWholesaleCustomerFilter {
-  lotteryWholesaleCustomerFilter {
-    id
-    label
+query LotteryWholesaleFilterOptions {
+  lotteryWholesaleFilterOptions {
+    branches {
+      id
+      label
+    }
+    customers {
+      id
+      label
+    }
   }
 }
 

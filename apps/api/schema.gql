@@ -4222,6 +4222,11 @@ type LotteryWholesaleDetail {
   submissionId: ID!
 }
 
+type LotteryWholesaleFilterOptions {
+  branches: [LotteryWholesaleOption!]!
+  customers: [LotteryWholesaleOption!]!
+}
+
 type LotteryWholesaleOption {
   id: ID!
   label: String!
@@ -5400,10 +5405,10 @@ type Query {
   lotteryTransferProgress(transferIds: [ID!]!): [LotteryTransferProgress!]!
   lotteryTransferReceiving(submissionId: ID!): LotteryTransferReceiving!
   lotteryWholesaleCustomer(id: ID!): LotteryWholesaleCustomerPayload!
-  lotteryWholesaleCustomerFilter: [LotteryWholesaleOption!]!
   lotteryWholesaleCustomerSameNames(input: LotteryWholesaleCustomerSameNamesInput!): LotteryWholesaleCustomerSameNamesPayload!
   lotteryWholesaleCustomers(input: LotteryWholesaleCustomersInput!): LotteryWholesaleCustomersPayload!
   lotteryWholesaleDetail(submissionId: ID!): LotteryWholesaleDetail!
+  lotteryWholesaleFilterOptions: LotteryWholesaleFilterOptions!
   lotteryWholesaleOptions(fromOrgId: ID!): LotteryWholesaleOptions!
   lotteryWholesaleScanMatches(bookNo: String!, fromOrgId: ID!, gameCode: String): [LotteryWholesaleScanMatch!]!
   lotteryWholesales(input: LotteryWholesalesInput!): LotteryWholesalesPayload!

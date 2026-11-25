@@ -249,3 +249,36 @@ describe("批售客戶新增 / 編輯頁", () => {
     expect(screen.queryByLabelText("共用給")).not.toBeInTheDocument();
   });
 });
+
+/** 批售客戶詳情的「批售紀錄」分頁(規格 21.2;Figma DE-10b)。 */
+describe("批售客戶詳情:批售紀錄", () => {
+  it("要 `purchasing.wholesale.view`:單號、出貨分店、本數、批售金額、已收、狀態", async () => {
+    const { user } = renderDealers({
+      path: VIEW_GOOD_LUCK,
+      withWholesaleDocuments: {},
+    });
+    await user.click(await screen.findByRole("tab", { name: "批售紀錄" }));
+    const table = await screen.findByRole("table", { name: "批售紀錄" });
+    expect(
+      within(table)
+        .getAllByRole("columnheader")
+        .map((header) => header.textContent),
+    ).toEqual(["單號", "出貨分店", "本數", "批售金額", "已收", "狀態"]);
+    const serial = await within(table).findByText("W-0001");
+    const row = within(serial.closest("tr") as HTMLElement);
+    expect(row.getByText("2 本")).toBeInTheDocument();
+    expect(row.getByText("37,200")).toBeInTheDocument();
+    expect(row.getByText("20,000")).toBeInTheDocument();
+    expect(row.getByText("審核中")).toBeInTheDocument();
+    expect(within(table).getByText("草稿")).toBeInTheDocument();
+  });
+
+  it("沒有 `purchasing.wholesale.view` 看不到這個分頁", async () => {
+    renderDealers({
+      path: VIEW_GOOD_LUCK,
+      withWholesaleDocuments: { omit: ["purchasing.wholesale.view"] },
+    });
+    await screen.findByRole("heading", { name: /好運彩券行/ });
+    expect(screen.queryByRole("tab", { name: "批售紀錄" })).toBeNull();
+  });
+});
