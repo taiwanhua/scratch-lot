@@ -569,13 +569,20 @@
         "state": "Status",
         "purchasedFrom": "Purchased from",
         "purchasedTo": "Purchased to",
-        "bookNo": "Book no."
+        "bookNo": "Book no.",
+        "source": "Source"
       },
       "listAria": "Stock (by book)",
       "pickOrg": "Pick a branch first",
       "empty": "No books match",
       "total": "{count} books",
-      "remainingEstimated": "≈ {remaining} / {total}"
+      "remainingEstimated": "≈ {remaining} / {total}",
+      "sourceOptions": {
+        "purchase": "Purchase",
+        "opening": "Opening entry"
+      },
+      "preExisting": "Before adoption",
+      "openingEntry": "Opening entry"
     },
     "lookup": {
       "open": "Find ticket",

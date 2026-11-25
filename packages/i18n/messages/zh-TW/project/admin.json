@@ -569,13 +569,20 @@
         "state": "狀態",
         "purchasedFrom": "批購日起",
         "purchasedTo": "批購日迄",
-        "bookNo": "本號"
+        "bookNo": "本號",
+        "source": "來源"
       },
       "listAria": "庫存(以本為單位)",
       "pickOrg": "請先選分店",
       "empty": "沒有符合條件的本",
       "total": "共 {count} 本",
-      "remainingEstimated": "約 {remaining} / {total}"
+      "remainingEstimated": "約 {remaining} / {total}",
+      "sourceOptions": {
+        "purchase": "進貨",
+        "opening": "期初建檔"
+      },
+      "preExisting": "導入前既有",
+      "openingEntry": "期初建檔"
     },
     "lookup": {
       "open": "查刮刮樂",

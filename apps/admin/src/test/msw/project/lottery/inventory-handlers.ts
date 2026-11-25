@@ -176,7 +176,8 @@ export const inventoryWorld = ({
             (input.state === "pending_skip"
               ? book.pendingSkipCount > 0
               : book.state === input.state)) &&
-          (!input.bookNo || book.bookNo.includes(input.bookNo)),
+          (!input.bookNo || book.bookNo.includes(input.bookNo)) &&
+          (!input.source || book.source === input.source),
       );
       return HttpResponse.json({
         data: {
