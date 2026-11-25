@@ -1,6 +1,5 @@
 import { useNavigate } from "react-router";
 import { useTranslations } from "use-intl";
-import { z } from "zod";
 
 import { DEFAULT_TENANT_TIMEZONE } from "@repo/domain/form";
 import {
@@ -37,31 +36,12 @@ import {
   moneyText,
 } from "../inventory-config";
 import { useInventoryAccess } from "../useInventoryAccess";
+import { stockSchema } from "./stock-filters";
 
 type Book = LotteryInventoryBookFieldsFragment;
 
-/**
- * 庫存分頁的篩選放同一個 key(REACT-14):分店、遊戲、狀態、批購日起迄、本號、第幾頁;空字串 = 預設 / 不篩。
- */
-const stockSchema = z
-  .object({
-    org: z.string().default(""),
-    game: z.string().default(""),
-    state: z.string().default(""),
-    from: z.string().default(""),
-    to: z.string().default(""),
-    bookNo: z.string().default(""),
-    page: z.number().int().min(1).default(1),
-  })
-  .default({
-    org: "",
-    game: "",
-    state: "",
-    from: "",
-    to: "",
-    bookNo: "",
-    page: 1,
-  });
+/** 來源篩選的選項(期初建檔規格 5.3;api `LotteryInventoryBooksInput.source`)。 */
+const SOURCE_OPTIONS = ["purchase", "opening"] as const;
 
 /** 每頁本數(api 分頁;上限 100)。 */
 const STOCK_PAGE_SIZE = 50;
@@ -74,7 +54,7 @@ const GAME_OPTIONS_PAGE_SIZE = 100;
 
 /**
  * 庫存分頁(Figma IN-01 91:17;規格 7.3):分店選擇器(看得到的範圍,預設目前組織,記在網址)→
- * 篩選(遊戲、狀態、批購日、本號)→ 以本為單位的列表(資料庫分頁;所在分店只算未售,拆開的本顯示
+ * 篩選(遊戲、狀態、來源、批購日、本號)→ 以本為單位的列表(資料庫分頁;所在分店只算未售,拆開的本顯示
  * 「台北 70 / 新竹 30」)。點一列進本的詳情。
  */
 export const StockTab = () => {
@@ -117,6 +97,7 @@ export const StockTab = () => {
         ...(filters.bookNo.trim() === ""
           ? {}
           : { bookNo: filters.bookNo.trim() }),
+        ...(filters.source === ALL ? {} : { source: filters.source }),
       },
     },
     { enabled: orgId !== "" },
@@ -176,17 +157,28 @@ export const StockTab = () => {
     {
       key: "purchasedAt",
       header: t("columns.purchasedAt"),
-      render: (row) =>
-        row.purchasedAt ? temporal(row.purchasedAt, "monthDay") : t("none"),
+      // 期初建檔的本沒有批購日、批購甲類(期初建檔規格 5.3)
+      render: (row) => {
+        if (row.source === "opening") {
+          return t("preExisting");
+        }
+        return row.purchasedAt
+          ? temporal(row.purchasedAt, "monthDay")
+          : t("none");
+      },
     },
     {
       key: "dealer",
       header: t("columns.dealer"),
       // 甲類沒有共用給讀者的分店時 api 回空名稱
-      render: (row) =>
-        row.purchaseDealer
+      render: (row) => {
+        if (row.source === "opening") {
+          return t("preExisting");
+        }
+        return row.purchaseDealer
           ? row.purchaseDealer.name || t("hiddenName")
-          : t("none"),
+          : t("none");
+      },
     },
   ];
 
@@ -202,6 +194,13 @@ export const StockTab = () => {
     ...INVENTORY_BOOK_FILTER_STATES.map((value) => ({
       value,
       label: tStates(value),
+    })),
+  ];
+  const sourceOptions = [
+    { value: ALL, label: t("filters.all") },
+    ...SOURCE_OPTIONS.map((value) => ({
+      value,
+      label: t(`sourceOptions.${value}`),
     })),
   ];
   const bookRoute = access.bookRoute;
@@ -223,7 +222,8 @@ export const StockTab = () => {
           gridTemplateColumns: {
             xs: "1fr",
             sm: "repeat(2, minmax(0, 1fr))",
-            md: "repeat(6, minmax(0, 1fr))",
+            md: "repeat(4, minmax(0, 1fr))",
+            lg: "repeat(7, minmax(0, 1fr))",
           },
         }}
       >
@@ -257,6 +257,17 @@ export const StockTab = () => {
           options={stateOptions}
           onChange={(value: string) => {
             patch({ state: value });
+          }}
+        />
+        <SelectField
+          label={t("filters.source")}
+          value={filters.source}
+          size="small"
+          displayEmpty
+          fullWidth
+          options={sourceOptions}
+          onChange={(value: string) => {
+            patch({ source: value });
           }}
         />
         <DateFilterPicker

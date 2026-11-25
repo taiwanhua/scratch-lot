@@ -95,6 +95,7 @@
 
 - **錢算在哪一班**:`sellLotteryTickets` 依上表決定;售出寫「售出」事件(金額 = 遊戲面額,讀不到遊戲 → `GAME_NOT_FOUND`、`cashEffect` 增加、`shiftId` = 那一班),移櫃並售出另先寫「移櫃」。張的狀態與事件經帳本(條件更新,`TicketLedgerService`);要動的那一班在交易內先 `drawerVersion` +1(和投庫 / 出庫互相序列化),班已結帳 → `LOCAL_SHIFT_NOT_OPEN`。
 - **同時兩次售出**(第 17 章第 3 題看板一側):帳本的條件更新只讓一個成功;失敗方收到 `ALREADY_SOLD`(`extensions.soldAt`),畫面顯示「這張刮刮樂已於 hh:mm 售出」。
+- **期初已售**(期初建檔規格 4.3、D6;兩種店):刷到導入前已賣出的張(`soldSource: opening`)不是一般的已售 → `lotteryStoreScan` 的 `openingSold: true`、售出 `OPENING_SOLD`(「導入前已賣出,請用期初更正」;有 `inventory.opening` 時附 [期初更正])。
 - **售出提示**:底座 Snackbar「已售出 5164-056527-012 200 元 · 店內櫃台 [撤銷]」(ST-35a);標題列 [最近售出](ST-35b,`lotteryStoreRecentSales`):自己在這一班 30 分鐘內賣的張,撤銷後那一筆顯示「已撤銷」。電腦 / 平板右側抽屜、手機底部面板。
 - **當下撤銷**(ST-08a / b):條件 = 自己賣的、30 分鐘內、那一班還開著、售出之後那張沒有其他事件(`saleUndoBlockOf`)。確認視窗先讀 `lotteryStoreSale`(`undoBlock`),符合 → `undoLotteryTicketSale` 寫「撤銷」(`cashEffect` 減少、同一班;條件更新的版本由伺服器從售出事件推,不用畫面傳來的版本,檢查之後有人動過這張 → `CONFLICT`);不符 → 「請改送撤銷售出申請」+ [送撤銷售出申請](持有 `store.create-sale_reversal` 才顯示;開撤銷售出申請新增頁並帶入那一張,見下方「撤銷售出申請與現金更正單」)。
 - **手動標記售出**(ST-07):展開卡片選本機收銀點檯面上未售的張 → 確認視窗(張號區段、單張金額、合計、原因);原因必選(欄位管理「手動標記原因」`lottery-manual-sale-reason`,預設「刷不到條碼」)。`source = manual`,只收本機收銀點檯面上的張。
@@ -179,6 +180,7 @@
 - **送出時的計畫**(domain `saleReversalPlanOf`;`beforeSubmit` 只讀、`submitted` 在同一個交易重算後寫):
   - 確定張號的已售 → 照張號鎖。
   - 張數店其他刷到的張 → 和刷它的那一台(列的 `cash_point`)同遊戲最近一筆依張數售出帶著的一張對號(兩筆 `match`,這張接手那筆售出、那張接手這張的狀態與位置,同當下撤銷 7.3 第 1 點),再鎖這一張;那台沒有依張數售出:自己是已售(·未對號)→ 照張號鎖,否則擋 `SALE_REVERSAL_COUNT_SALE_NOT_FOUND`。
+- 期初已售(導入前已賣出)不能撤銷,依張號那一列擋 `OPENING_SALE_NOT_REVERSIBLE`(請用期初更正;期初建檔規格 4.2)。
   - 依遊戲 + 張數 → 這台這個遊戲最近的已售·未對號(`pickForReversal`,售出時間新到舊;依張號用掉的不再挑)鎖住;不夠 → `SALE_REVERSAL_COUNT_EXCEEDS`(`message` = `available <還有幾張>`)。存值的 `by_count` 列照原樣留(遊戲、收銀點、張數),挑到的張由鎖記下(核准時撤鎖住的張)。
   - 讀取:依張號各列的張一次、相關「遊戲 × 收銀點」的已售·未對號一次(partial 索引 `unmatched: true`),與張數、列數無關;鎖定依版本分批(TX-06)。
 - **核准後的位置**(`saleReversalReturnPlaceOf`,7.3 第 5 點):這張最近一次全店重刷結果是「記已售但還在」(`rescan.results` 的 `sold_here`),而且申請列記的位置就是那次刷到的位置(收銀點;庫存兩邊都是 null)→ 回到重刷刷到的位置;其他照現況回那筆售出的收銀點。重刷位置以重刷單為準、不信用前端(一次讀這家店這些遊戲的重刷單,新的在前、最多 50 張)。
@@ -198,6 +200,7 @@
 - **比對**(`stocktakeTicketFactsOf` / `stocktakeDiffsOf`):那一刻的狀態由張數事件倒推(`countedAt` 之後第一筆事件的 `from`);那一刻未售、實際不在 → 差異「未售不在」;那一刻已售、實際還在 → 「已售還在」。之後被別人處理過(售出、移櫃、待查…)的張不再是差異(第 17 章第 1、2 題);自己這次補登的售出照列。撤銷售出申請鎖定的張標「撤銷審核中」,不算差異(第 6 題);調貨鎖定的張不比對。
 - **差異核對**(ST-14;`lotteryStocktakeReview`):依本分組列出每一張,可多選後一次套用 —— 未售不在 → [補登售出] / [待查];已售還在 → [標記異常];整本 [重新盤點這本](已補登的售出不退)。畫面上的處理對不到目前的差異(已被其他盤點或操作處理掉、補登沒成功)→「這幾張已被處理,請重新核對」,[重新核對] 拿掉那幾張的處理。
 - **[補登售出]**(`backfillLotteryStocktakeSales`,要 `store.sell` + `store.stocktake`):寫「售出(盤點補登)」事件(`sale_stocktake`、`soldSource = stocktake`、金額 = 面額、`refType = stocktake`)。那個收銀點有開著的班 → 鎖住抽屜(`drawerVersion`)算那一班;沒有 → 那個收銀點最近一班、記 `postCloseOf`(事後更正,不算那一班結帳時的應有);從來沒開過班 → 擋下(`STOCKTAKE_NO_SHIFT`)。帳本條件更新(版本 = 盤點時讀到的):兩人同時補登、補登與看板補刷同時 → 只有一個成功,失敗方 `CONFLICT` + `STOCKTAKE_ALREADY_PROCESSED`(第 17 章第 1、3 題)。回傳事件 id,盤點內容記下,送出時核對「是自己補登的」。
+- **期初已售還在**(期初建檔規格 4.3):差異「已售還在」的那張是期初已售時(`StocktakeDiff.openingSold`)多一個動作 [期初更正](`opening_fix`):核准時寫「期初更正」改回未售、放在那一列的收銀點(庫存那一列 = 庫存),不碰抽屜應有。
 - **送出**(ST-15):各收銀點的補登售出與應有現金(已結帳 → 事後更正)、新增待查、標記異常、未拆的本不在、確認遺失(張 / 批購成本,有 `inventory.show-cost` 才給成本)、說明 → [送出盤點確認申請] 經表單引擎 `createAndSubmitFormSubmission`(退回後再送出走 `submitFormSubmission`)。
 - **沒盤完可以送出**(使用者 2026-10-21 定案):還有本沒盤時送出視窗提示「還有 N 本沒有盤;沒盤的本不比對,盤點單會記下未盤的本」。送出時 api 算出範圍內(單一收銀點 / 全店啟用中的收銀點)檯面上還有未售的張、卻不在盤點內容裡的本 × 收銀點(全店盤點另加「拆過、在庫存」那一區沒盤的本,收銀點空),記進盤點單 `uncountedBooks[]`(遊戲、本號、收銀點)與 `summary.uncountedCount`;不比對、不記差異,張維持系統狀態;退回後再送出時重算。盤點紀錄分頁在狀態旁標「N 本未盤」,檢視頁列出那幾本;之後可另開一次盤點補盤。報表讀 `summary.uncountedCount`。
 - **盤點確認申請**(受管表單 `stocktake_confirm`,`seeds/project/revisions/stocktake_confirm.r3.seed.ts`):分店、盤點範圍、彙總(盤點頁組好帶入)、說明、盤點內容(系統,`serializeStocktakeDraft` 的 JSON;唯讀時不顯示);沒有草稿、單號 `ST-0001`、作廢原因類別 `void-reason`(作廢一律擋下)。掛接點(`stocktake-lifecycle.ts`):
@@ -262,6 +265,7 @@
   - 系統記在這裡的未售 → 沒問題;要對號的(系統記在別的位置的未售;已售 / 待查 / 遺失而未對號或位置不同,6.7 ④)→ 在這個位置照挑張順序找配對張(未售、沒被鎖、本已拆過,不挑已刷到的張)→ 兩筆 `match`(`refType: ticket_match`)。
   - 找不到配對:已售 → 「記已售但還在」(不改回未售,提供 [送撤銷售出申請]:帶入原因盤點錯誤、不退款、刷到的位置,核准後回到這個位置,見「張數店的撤銷售出申請」;7.3 第 4、5 點);待查 / 遺失 → `recover`(未售、**留在刷到的位置**、清責任分店);系統記在別的位置的未售 → 記到這裡(收銀點之間 `move`、檯面 → 庫存 `recall`、庫存 → 檯面 `open`;規格沒寫到的情況)。確定的已售在這裡 → 記已售但還在;確定的待查在這裡 → 尋回。
   - 記跳號 / 報廢 / 鎖定中(含在途)→ 不動、要先更正;本還沒拆 → 不在範圍(庫存裡刷到 = 沒問題);不是這個遊戲 / 不是本店 → 不處理。
+  - 期初已售在這裡 → 「導入前已賣出但還在」(`opening_sold_here`,不改狀態;畫面附 [期初更正 #張號] 當下改回未售、預設放刷到的位置,沒有 `inventory.opening` 寫「請店長做期初更正」;期初建檔規格 4.3)。結果的張帶現在的 `version` 與 `openingSold`(更正過 = false,不再顯示按鈕)。
   - 系統記在這裡、沒刷到也沒被挑去配對的未售(本已拆過、沒被鎖)→ `investigate`(責任分店 = 本店;不是未對號)。
   - 對號以外的事件記 `refType: stocktake`、`refId` = 重刷單(B6 會把它當成「別張盤點處理過」)。帳本整批寫(TX-06;指令數只隨配對張接手的值的種類增加,同售出對號)。結果(不含沒問題)記進 `rescan.results`。全部位置刷完 → 重刷單 `confirmed`、拿掉移櫃暫停。
 - **全部位置刷完**(8.3、8.4 第 4 點):這個遊戲到這時還是待查·未對號、遺失·未對號、沒被鎖的張,全店都沒刷到,確定不在,每張一筆 `renumber_confirm` 清掉記號,結果記 `investigated`(一次讀、帳本整批寫)。已售·未對號不動:重刷分不出賣掉或遺失,補點編號才清。
@@ -612,6 +616,7 @@
 | `VALIDATION_FAILED` | `LOCAL_SHIFT_NOT_OPEN`                                   | 售出時本機收銀點(或那一班)沒有開著的班                                                    |
 | `VALIDATION_FAILED` | `TICKET_NOT_SELLABLE`                                    | 這張不能賣(`extensions.blockReason`);手動標記只收本機收銀點檯面上的張                     |
 | `VALIDATION_FAILED` | `ALREADY_SOLD`                                           | 這張已經賣掉(`extensions.soldAt`;同時兩次售出的失敗方)                                    |
+| `VALIDATION_FAILED` | `OPENING_SOLD`                                           | 這張是導入前已賣出(期初已售),請用期初更正                                                 |
 | `VALIDATION_FAILED` | `GAME_NOT_FOUND`                                         | 售出:讀不到這張的遊戲(面額不明),不以 0 元賣                                               |
 | `VALIDATION_FAILED` | `MOVE_CONFIRM_REQUIRED`                                  | 刮刮樂在別人的班的檯面,沒有 `confirmMove`                                                 |
 | `FORBIDDEN`         | `MOVE_NOT_ALLOWED`                                       | 同上、沒有 `store.move`                                                                   |

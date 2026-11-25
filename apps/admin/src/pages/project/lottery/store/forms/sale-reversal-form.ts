@@ -59,6 +59,8 @@ export interface ReversalScanItem {
   status: string;
   unmatched: boolean;
   blockReason?: string | null;
+  /** 期初已售(導入前已賣出):不能加入,請用期初更正(期初建檔規格 4.2) */
+  openingSold?: boolean;
 }
 
 /** 不論哪種店都不能進撤銷申請的處理方式(被鎖住、跳號、報廢、在途、不是本店)。 */
@@ -87,7 +89,10 @@ export const reversalScanKindOf = (
   item: ReversalScanItem,
   matching: boolean,
 ): ReversalScanKind | null => {
-  if (item.blockReason != null && BLOCKED.has(item.blockReason)) {
+  if (
+    item.openingSold === true ||
+    (item.blockReason != null && BLOCKED.has(item.blockReason))
+  ) {
     return null;
   }
   if (item.status === TICKET_STATUS.sold && !item.unmatched) {

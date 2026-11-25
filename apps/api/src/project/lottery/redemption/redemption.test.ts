@@ -476,6 +476,21 @@ describe("兌獎(GraphQL 端點 + 真 MongoDB)", () => {
     expect(other.lotteryRedemptionPreview.item.isOwnStore).toBe(false);
   });
 
+  it("OP13 導入前賣出的張(期初已售)來兌獎照常:本店的刮刮樂、店內持有、扣抽屜應有", async () => {
+    await connection
+      .collection("lottery_tickets")
+      .updateOne(
+        { bookNo: "0056527", ticketNo: "039" },
+        { $set: { soldSource: "opening" } },
+      );
+    const shiftId = await openShift(counter, clerk);
+    const row = await redeem(clerk, shiftId, back("039"), 300);
+    expect(row).toMatchObject({ status: "in_store", isOwnStore: true });
+    expect(await expectedOf(shiftId)).toBe(4700);
+    await ok(clerk, REVOKE, { input: { id: row.id } });
+    await closeShift(shiftId);
+  });
+
   it("第 17 章第 4 題:兌獎打錯當下撤銷再重登 —— 4,500 → 5,000 → 4,500;#031 之後可以再登記", async () => {
     const shiftId = await openShift(counter, clerk);
     const wrong = await redeem(clerk, shiftId, back("031"), 500);

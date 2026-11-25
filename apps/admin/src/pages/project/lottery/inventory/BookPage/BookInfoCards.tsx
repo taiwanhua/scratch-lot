@@ -41,7 +41,7 @@ const InfoCard = ({
 );
 
 /**
- * 本的詳情的三張小卡(Figma IN-03):來源(進貨單 / 調貨單、批購甲類)、所在(未售的張依分店與收銀點分組)、
+ * 本的詳情的三張小卡(Figma IN-03、IN-03-5):來源(進貨單 / 調貨單、批購甲類;期初建檔的本寫建檔人與時間)、所在(未售的張依分店與收銀點分組)、
  * 成本(要 `inventory.show-cost`;沒有時 api 不回、卡片不顯示)。
  */
 export const BookInfoCards = ({
@@ -52,7 +52,24 @@ export const BookInfoCards = ({
   const t = useTranslations("admin.lotteryInventory");
   const temporal = useTemporalText();
   const { book } = detail;
+  // 期初建檔的本:來源寫「期初建檔 · 建檔人 · 時間」,沒有批購甲類(期初建檔規格 5.3)
+  const isOpening = book.source === "opening";
   const sourceLines = [
+    ...(isOpening
+      ? [
+          {
+            key: "opening",
+            label: t("book.openingSource"),
+            value: t("book.openingSourceValue", {
+              name: book.openedBy?.name ?? "",
+              time:
+                book.openingAt == null
+                  ? ""
+                  : temporal(book.openingAt, "monthDayTime"),
+            }),
+          },
+        ]
+      : []),
     ...detail.sources.map((source, index) => ({
       key: `source-${String(index)}`,
       label: t(`sources.${source.type}`),
@@ -90,7 +107,9 @@ export const BookInfoCards = ({
             {
               key: "rate",
               label: t("book.rate"),
-              value: t("book.rateValue", { rate: detail.cost.rate }),
+              value: t(isOpening ? "book.rateValueOpening" : "book.rateValue", {
+                rate: detail.cost.rate,
+              }),
             },
             {
               key: "cost",

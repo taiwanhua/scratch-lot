@@ -132,6 +132,15 @@ describe("撤銷售出申請新增頁的狀態(規格 8.5)", () => {
     ]) {
       expect(reversalScanKindOf(item("sold", false, blocked), true)).toBeNull();
     }
+    // 期初已售(導入前已賣出):兩種店都不能加入(期初建檔規格 4.2)
+    for (const matching of [false, true]) {
+      expect(
+        reversalScanKindOf(
+          { ...item("sold", false, "sold"), openingSold: true },
+          matching,
+        ),
+      ).toBeNull();
+    }
   });
 
   it("送出時對號的張與「依遊戲 + 張數」列:存成依張號(張號合在同一本)與依遊戲 + 張數兩種列,金額合計(張數店規格 5.7)", () => {

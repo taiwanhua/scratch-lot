@@ -42,6 +42,7 @@ import {
   actionsOf,
   cardActionAllowed,
   cellStateOf,
+  cellTooltipOf,
   isCountBoard,
   legendOf,
   selectableOf,
@@ -125,14 +126,12 @@ export const ExpandedBookCard = ({
   const tickets = card?.tickets ?? [];
   const cells: TicketGridCell[] = tickets.map((ticket) => {
     const state = cellStateOf(ticket, point);
-    let tooltip: string | undefined;
-    if (state === "otherCashPoint") {
-      tooltip =
-        ticket.cashPoint == null
-          ? t("expand.inStock")
-          : t("expand.atCashPoint", { name: ticket.cashPoint.name });
-    }
-    return { ticketNo: ticket.ticketNo, state, ...(tooltip && { tooltip }) };
+    const tip = cellTooltipOf(ticket, state);
+    return {
+      ticketNo: ticket.ticketNo,
+      state,
+      ...(tip !== null && { tooltip: t(tip.key, tip.values) }),
+    };
   });
   const stateByNo = new Map(cells.map((cell) => [cell.ticketNo, cell.state]));
   const picked = tickets.filter((ticket) => selected.includes(ticket.ticketNo));

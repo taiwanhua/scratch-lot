@@ -154,6 +154,12 @@ export const PROJECT_FIELD_CATEGORIES: readonly ProjectFieldCategory[] = [
     options: [{ value: "mis-scrapped", label: "報錯張" }, other],
   },
   {
+    key: LOTTERY.openingCorrectionReason,
+    name: "期初更正原因",
+    usedIn: "本的詳情、盤點、全店重刷的期初更正(期初建檔時標錯)",
+    options: [{ value: "mis-entered", label: "建檔時標錯" }, other],
+  },
+  {
     key: SCHEDULE.position,
     name: "崗位",
     usedIn:

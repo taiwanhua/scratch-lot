@@ -29,6 +29,8 @@ export type ScanPrompt =
       message: string;
       /** 加 [送撤銷售出申請](張數店:已售·未對號找不到配對,規格 6.4;Figma CS-06b) */
       reversal?: boolean;
+      /** 加 [期初更正](期初已售、有 `inventory.opening`;期初建檔規格 4.2) */
+      openingFix?: boolean;
     };
 
 export interface ScanOutcomeDialogProps {
@@ -44,6 +46,8 @@ export interface ScanOutcomeDialogProps {
   onConfirm: (item: ScanItem) => void;
   /** 拆本並售出 */
   onSplit: (item: ScanItem) => void;
+  /** 期初已售 → 開期初更正 */
+  onOpeningFix?: (item: ScanItem) => void;
 }
 
 const PickGame = ({
@@ -112,6 +116,53 @@ const PickGame = ({
   );
 };
 
+/** 不能銷售的按鈕:[知道了],加上 [送撤銷售出申請](CS-06b)或 [期初更正](期初已售)。 */
+const BlockedActions = ({
+  prompt,
+  orgId,
+  onClose,
+  onOpeningFix,
+}: {
+  prompt: Extract<ScanPrompt, { kind: "blocked" }>;
+  orgId: string;
+  onClose: () => void;
+  onOpeningFix: ((item: ScanItem) => void) | undefined;
+}) => {
+  const { t } = useSalesText();
+  const { item } = prompt;
+  if (item === null) {
+    return <Button onClick={onClose}>{t("scan.gotIt")}</Button>;
+  }
+  const gotIt = (
+    <Button variant="text" onClick={onClose}>
+      {t("scan.gotIt")}
+    </Button>
+  );
+  if (prompt.reversal === true) {
+    return (
+      <>
+        {gotIt}
+        <SendReversalButton ticketId={item.ticketId} orgId={orgId} />
+      </>
+    );
+  }
+  if (prompt.openingFix === true && onOpeningFix !== undefined) {
+    return (
+      <>
+        {gotIt}
+        <Button
+          onClick={() => {
+            onOpeningFix(item);
+          }}
+        >
+          {t("scan.openingFix")}
+        </Button>
+      </>
+    );
+  }
+  return <Button onClick={onClose}>{t("scan.gotIt")}</Button>;
+};
+
 /**
  * 刷到時的對話框(Figma ST-05a 你開的班、05b 移櫃並售出、05c 選遊戲、05d 這本還沒拆、05e 不能銷售;
  * 規格 6.3、3.3)。待查的尋回用庫存管理的 `RecoverTicketDialog`(ST-05f)。
@@ -125,6 +176,7 @@ export const ScanOutcomeDialog = ({
   onPick,
   onConfirm,
   onSplit,
+  onOpeningFix,
 }: ScanOutcomeDialogProps) => {
   const { t } = useSalesText();
   if (prompt.kind === "pick") {
@@ -139,19 +191,12 @@ export const ScanOutcomeDialog = ({
         maxWidth="xs"
         title={t("scan.blockedTitle")}
         actions={
-          prompt.reversal === true && prompt.item !== null ? (
-            <>
-              <Button variant="text" onClick={onClose}>
-                {t("scan.gotIt")}
-              </Button>
-              <SendReversalButton
-                ticketId={prompt.item.ticketId}
-                orgId={orgId}
-              />
-            </>
-          ) : (
-            <Button onClick={onClose}>{t("scan.gotIt")}</Button>
-          )
+          <BlockedActions
+            prompt={prompt}
+            orgId={orgId}
+            onClose={onClose}
+            onOpeningFix={onOpeningFix}
+          />
         }
       >
         {/* 張數店找不到配對(Figma CS-06b):原因在上、刷到的張在下;其他照 ST-05e */}

@@ -23,6 +23,7 @@ import {
 import { inventoryWorld } from "@/test/msw/project/lottery/inventory-handlers";
 import { masterDataOrgs } from "@/test/msw/project/lottery/master-data-fixtures";
 import { masterDataSharedLookupHandlers } from "@/test/msw/project/lottery/master-data-handlers";
+import { openingWorld } from "@/test/msw/project/lottery/opening-handlers";
 import { receiptLinksHandlers } from "@/test/msw/project/lottery/receipt-links-handlers";
 import type { RedemptionFixture } from "@/test/msw/project/lottery/redemption-fixtures";
 import { redemptionWorld } from "@/test/msw/project/lottery/redemption-handlers";
@@ -145,7 +146,18 @@ export const renderStore = ({
     tasks: [...stocktakeFlow.tasks, ...checkoutFlow.tasks],
   });
   const dailyClose = dailyCloseWorld(dailyCloseOptions);
+  // 期初更正(刷到期初已售、全店重刷;改回未售能放的收銀點)
+  const opening = openingWorld({
+    permissions: [...permissions],
+    cashPoints: [
+      { id: "cp-counter", name: "店內櫃台" },
+      { id: "cp-outdoor", name: "店外攤位" },
+    ],
+    nameOf: (orgId) =>
+      orgId === masterDataOrgs.storeA.id ? masterDataOrgs.storeA.name : orgId,
+  });
   server.use(
+    ...opening.handlers,
     ...(printingFake?.handlers ?? []),
     ...(printing === undefined ? [] : receiptLinksHandlers()),
     ...stocktake.handlers,
@@ -189,5 +201,6 @@ export const renderStore = ({
     dailyClose,
     printingFake,
     workflow,
+    opening,
   };
 };

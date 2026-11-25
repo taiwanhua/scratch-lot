@@ -6,6 +6,7 @@ import {
   type BookDisplayState,
   type BookTicketCounts,
   LAST_TICKET_NO_MAX,
+  OPENING_REF_TYPE,
   TICKET_EVENT_TYPE,
   TICKET_LOCATION_KIND,
   TICKET_STATUS,
@@ -15,7 +16,9 @@ import {
   formatTicketNo,
   holdingsOf,
   holdingsWithoutPendingSkips,
+  isOpeningBookOpened,
   normalizeBookNo,
+  openingSoldPlaceOf,
   pendingSkipCountOf,
   remainingOfCounts,
   ticketEventIdOf,
@@ -64,6 +67,124 @@ export interface CreateBookInput {
   purchaseDealerId?: Types.ObjectId | null;
   /** 點收時間;不給 = 現在。 */
   at?: Date;
+  /**
+   * 期初建檔(期初建檔規格 2.2、2.3):給了就照計畫建每一張的現況(導入前已賣出 / 跳號 / 檯面或庫存),
+   * 事件寫「期初建檔」、本記來源。計畫由呼叫端先以 `openingPlanProblemOf` 檢查。
+   */
+  opening?: OpeningBookPlan;
+}
+
+/** 期初建檔一本的計畫(張號三位字串;`cashPointId: null` = 庫存)。 */
+export interface OpeningBookPlan {
+  soldTicketNos: readonly string[];
+  skippedTicketNos: readonly string[];
+  placements: readonly {
+    cashPointId: Types.ObjectId | null;
+    ticketNos: readonly string[];
+  }[];
+}
+
+interface TicketLocationValue {
+  kind: "stock" | "counter";
+  cashPointId: Types.ObjectId | null;
+}
+
+/**
+ * 新建的本的跳號、張數、拆本時間與來源。進貨:建本時全部在庫存(之後只經帳本 `$inc`)、從沒拆過;
+ * 期初建檔:照計畫(拆過的本記建檔時間,規格 2.3)。
+ */
+function bookStateOf(
+  input: CreateBookInput,
+  actorId: Types.ObjectId | null,
+  at: Date,
+) {
+  const plan = input.opening;
+  if (plan === undefined) {
+    return {
+      skippedTicketNos: [],
+      ticketCounts: { ...emptyBookCounts(), stock: input.lastTicketNo },
+      firstOpenedAt: null,
+      source: "purchase" as const,
+      openedBy: null,
+      openingAt: null,
+    };
+  }
+  return {
+    skippedTicketNos: plan.skippedTicketNos.toSorted((a, b) =>
+      a.localeCompare(b),
+    ),
+    ticketCounts: openingStatesOf(plan).counts,
+    firstOpenedAt: isOpeningBookOpened(plan) ? at : null,
+    source: "opening" as const,
+    openedBy: actorId,
+    openingAt: at,
+  };
+}
+
+/** 期初建檔:每一張建檔後的狀態與位置(沒列到的張 = 庫存未售,呼叫端已檢查過不會有)。 */
+function openingStatesOf(plan: OpeningBookPlan): {
+  stateOf: (ticketNo: string) => {
+    status: "unsold" | "sold" | "skipped";
+    location: TicketLocationValue;
+  };
+  counts: BookTicketCounts;
+} {
+  const located = new Map<string, TicketLocationValue>();
+  for (const placement of plan.placements) {
+    const location: TicketLocationValue =
+      placement.cashPointId === null
+        ? { kind: TICKET_LOCATION_KIND.stock, cashPointId: null }
+        : {
+            kind: TICKET_LOCATION_KIND.counter,
+            cashPointId: placement.cashPointId,
+          };
+    for (const no of placement.ticketNos) {
+      located.set(no, location);
+    }
+  }
+  const soldPlaceId = openingSoldPlaceOf(
+    plan.placements.map((placement) => ({
+      cashPointId:
+        placement.cashPointId === null ? null : String(placement.cashPointId),
+      ticketNos: placement.ticketNos,
+    })),
+  );
+  const soldLocation: TicketLocationValue =
+    soldPlaceId === null
+      ? { kind: TICKET_LOCATION_KIND.stock, cashPointId: null }
+      : {
+          kind: TICKET_LOCATION_KIND.counter,
+          cashPointId:
+            plan.placements.find(
+              (placement) => String(placement.cashPointId) === soldPlaceId,
+            )?.cashPointId ?? null,
+        };
+  const sold = new Set(plan.soldTicketNos);
+  const skipped = new Set(plan.skippedTicketNos);
+  const counts = emptyBookCounts();
+  for (const location of located.values()) {
+    counts[location.kind === "stock" ? "stock" : "counter"] += 1;
+  }
+  counts.sold = sold.size;
+  return {
+    stateOf: (ticketNo) => {
+      if (sold.has(ticketNo)) {
+        return { status: TICKET_STATUS.sold, location: soldLocation };
+      }
+      if (skipped.has(ticketNo)) {
+        // 跳號跟著期初已售放(實體不存在,位置只是記錄)
+        return { status: TICKET_STATUS.skipped, location: soldLocation };
+      }
+      return {
+        status: TICKET_STATUS.unsold,
+        location: located.get(ticketNo) ?? {
+          kind: TICKET_LOCATION_KIND.stock,
+          cashPointId: null,
+        },
+      };
+    },
+    counts,
+  };
 }
 
 /** 本的張數與狀態(規格 7.1:張數讀本上的欄位,狀態由張數算出)。 */
@@ -114,8 +235,9 @@ export function unitCostOf(cost: number, standardTickets: number): number {
 /**
  * 本(專案規格 7.1;正本 `docs/modules/project/inventory.md`「資料與帳本」)。
  *
- * - `createBook`:**只給進貨點收用**,以點收人(操作者)自己的範圍寫。本號補 0、本編號、迄號範圍、起號 001、
- *   一次建立全部的張(跳號待拆本時標註)與每張一筆「進貨」事件(版本 1);在呼叫端的交易裡
+ * - `createBook`:進貨點收與期初建檔用,以操作者自己的範圍寫。本號補 0、本編號、迄號範圍、起號 001、
+ *   一次建立全部的張與每張一筆事件(版本 1);在呼叫端的交易裡。進貨點收:全部在庫存、跳號待拆本時標註、
+ *   事件「進貨」。期初建檔(`opening`):照計畫建每一張的現況、事件「期初建檔」、本記來源與建檔人
  * - `statsOf`:待標註、剩餘、總張數、各分店未售張數、顯示狀態
  */
 @Injectable()
@@ -189,12 +311,15 @@ export class LotteryBooksService {
       )
     ) {
       throw validationError(
-        "這本已經點收過",
+        input.opening === undefined ? "這本已經點收過" : "這本已經在系統裡",
         ["bookNo"],
         INVENTORY_REASONS.bookKeyDuplicate,
       );
     }
     const cost = Math.round(input.cost);
+    const at = input.at ?? new Date();
+    const opening =
+      input.opening === undefined ? null : openingStatesOf(input.opening);
     const book = await this.books.create(
       operator,
       {
@@ -213,12 +338,9 @@ export class LotteryBooksService {
         standardTickets,
         firstTicketNo: formatTicketNo(1),
         lastTicketNo: formatTicketNo(input.lastTicketNo),
-        skippedTicketNos: [],
         lockedTicketCount: 0,
-        // 建本時全部在庫存(之後只經帳本 `$inc`);從沒拆過
-        ticketCounts: { ...emptyBookCounts(), stock: input.lastTicketNo },
-        firstOpenedAt: null,
         status: "normal",
+        ...bookStateOf(input, operator.actorId, at),
       },
       { session },
     );
@@ -227,6 +349,10 @@ export class LotteryBooksService {
       operator,
       Array.from({ length: input.lastTicketNo }, (_, index) => {
         const ticketNo = formatTicketNo(index + 1);
+        const state = opening?.stateOf(ticketNo) ?? {
+          status: TICKET_STATUS.unsold,
+          location: { kind: TICKET_LOCATION_KIND.stock, cashPointId: null },
+        };
         return {
           orgId: input.orgId,
           bookId: book._id,
@@ -234,8 +360,18 @@ export class LotteryBooksService {
           bookNo,
           ticketNo,
           ticketKey: ticketKeyOf(game.gameCode, bookNo, ticketNo),
-          status: TICKET_STATUS.unsold,
-          location: { kind: TICKET_LOCATION_KIND.stock, cashPointId: null },
+          status: state.status,
+          location: state.location,
+          // 期初已售:售出來源 = 期初、沒有售出事件(期初建檔規格 2.2)
+          ...(state.status === TICKET_STATUS.sold
+            ? {
+                soldAt: at,
+                soldBy: operator.actorId,
+                soldSource: "opening" as const,
+                saleEventId: null,
+                unmatched: false,
+              }
+            : {}),
           lockedBy: null,
           responsibleOrgId: null,
           unitCost,
@@ -244,7 +380,6 @@ export class LotteryBooksService {
       }),
       { session },
     );
-    const at = input.at ?? new Date();
     await this.events.createMany(
       operator,
       tickets.map((ticket) => ({
@@ -255,15 +390,25 @@ export class LotteryBooksService {
         gameId: game._id,
         at,
         by: operator.actorId,
-        type: TICKET_EVENT_TYPE.purchase,
+        type:
+          opening === null
+            ? TICKET_EVENT_TYPE.purchase
+            : TICKET_EVENT_TYPE.opening,
         from: null,
         to: snapshotOf(ticket),
+        ...(opening !== null && ticket.location.kind === "counter"
+          ? { cashPointId: ticket.location.cashPointId }
+          : {}),
         quantity: 1,
         amount: 0,
         cost: unitCost,
         cashEffect: "none" as const,
-        refType: input.purchaseSubmissionId ? "purchase" : null,
-        refId: input.purchaseSubmissionId ?? null,
+        ...(opening === null
+          ? {
+              refType: input.purchaseSubmissionId ? "purchase" : null,
+              refId: input.purchaseSubmissionId ?? null,
+            }
+          : { refType: OPENING_REF_TYPE, refId: book._id }),
       })),
       { session },
     );
@@ -272,7 +417,7 @@ export class LotteryBooksService {
       pendingSkipCount: pendingSkipCountOf(
         input.lastTicketNo,
         standardTickets,
-        0,
+        input.opening?.skippedTicketNos.length ?? 0,
       ),
     };
   }

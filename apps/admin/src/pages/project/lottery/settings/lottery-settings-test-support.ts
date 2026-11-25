@@ -10,6 +10,10 @@ import {
   type LotterySettingsWorldOptions,
   lotterySettingsWorld,
 } from "@/test/msw/project/lottery/lottery-settings-handlers";
+import {
+  type OpeningState,
+  openingWorld,
+} from "@/test/msw/project/lottery/opening-handlers";
 import { api, server } from "@/test/msw/server";
 import { toTenantTree } from "@/test/msw/tenant-org-tree";
 import { renderApp } from "@/test/render";
@@ -25,19 +29,31 @@ export const renderLotterySettings = ({
   permissions = ALL_LOTTERY_SETTINGS_PERMISSIONS,
   currentOrg = zhongshan,
   world = {},
+  openings = {},
 }: {
   path?: string;
   permissions?: readonly string[];
   currentOrg?: { id: string; name: string };
   world?: LotterySettingsWorldOptions;
+  /** 期初建檔狀態(分店 id → 狀態) */
+  openings?: Record<string, OpeningState>;
 } = {}) => {
   const fake = lotterySettingsWorld({
     permissions,
     currentOrgId: currentOrg.id,
     ...world,
   });
+  const names = new Map(
+    [tenant, zhongshan, minsheng, hsinchu].map((org) => [org.id, org.name]),
+  );
+  const opening = openingWorld({
+    permissions,
+    openings,
+    nameOf: (orgId) => names.get(orgId) ?? orgId,
+  });
   server.use(
     ...fake.handlers,
+    ...opening.handlers,
     api.query("TenantOrgTree", () =>
       HttpResponse.json({
         data: {
@@ -60,5 +76,5 @@ export const renderLotterySettings = ({
       modules: [overviewModule, ...lotterySettingsModules(permissions)],
     }).handlers,
   );
-  return { ...renderApp({ path }), fake };
+  return { ...renderApp({ path }), fake, opening };
 };

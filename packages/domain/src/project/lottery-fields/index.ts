@@ -32,6 +32,8 @@ export const LOTTERY_FIELD_CATEGORY_KEYS = {
   skipCorrectionReason: "lottery-skip-correction-reason",
   /** 依張數售出原因(張數店的 [依張數標記售出];張數店規格 5.7) */
   countSaleReason: "lottery-count-sale-reason",
+  /** 期初更正原因(本的詳情、盤點、全店重刷的 [期初更正];期初建檔規格 4.1) */
+  openingCorrectionReason: "lottery-opening-correction-reason",
 } as const;
 
 /** 撤銷售出原因「客人退貨」:8.5 撤銷售出申請依這個代碼帶入。 */

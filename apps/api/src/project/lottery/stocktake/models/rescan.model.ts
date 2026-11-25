@@ -37,6 +37,14 @@ export class LotteryRescanItemModel {
   /** 處理時的位置(刷完後的結果用;null = 庫存) */
   @Field(() => ID, { nullable: true })
   cashPointId!: string | null;
+
+  /** 這張現在的版本(`opening_sold_here` 當下做期初更正用) */
+  @Field(() => Int)
+  version!: number;
+
+  /** 這張現在還是期初已售(`opening_sold_here` 更正過就是 false,不再顯示 [期初更正]) */
+  @Field(() => Boolean)
+  openingSold!: boolean;
 }
 
 /** 重刷的一個位置。 */

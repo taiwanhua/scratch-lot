@@ -41,12 +41,16 @@ export const TICKET_LOCATION_KIND = {
 export const TICKET_LOCK_REF_TYPES = ["transfer", "sale_reversal"] as const;
 export type TicketLockRefType = (typeof TICKET_LOCK_REF_TYPES)[number];
 
-/** 最近一次售出的來源:刷條碼 / 手動 / 盤點補登 / 依張數(張數店,張號由系統照挑張順序挑)。 */
+/**
+ * 最近一次售出的來源:刷條碼 / 手動 / 盤點補登 / 依張數(張數店,張號由系統照挑張順序挑)/ 期初(期初建檔時標成
+ * 導入前已賣出,沒有售出事件、不算銷售與現金;期初建檔規格 2.2)。
+ */
 export const TICKET_SOLD_SOURCES = [
   "scan",
   "manual",
   "stocktake",
   "count",
+  "opening",
 ] as const;
 export type TicketSoldSource = (typeof TICKET_SOLD_SOURCES)[number];
 
@@ -76,6 +80,9 @@ export const TICKET_EVENT_TYPES = [
   "match",
   "renumber_confirm",
   "scrap_undo",
+  "opening",
+  "opening_fix",
+  "opening_void",
 ] as const;
 export type TicketEventType = (typeof TICKET_EVENT_TYPES)[number];
 
@@ -128,7 +135,27 @@ export const TICKET_EVENT_TYPE = {
   renumberConfirm: "renumber_confirm",
   /** 撤銷報廢:報廢 → 未售、位置不變 */
   scrapUndo: "scrap_undo",
+  /**
+   * 期初建檔(期初建檔規格 2.1):導入時把店裡現有的本建進系統,**每一張一筆**(含導入前已賣出與跳號),from = null;
+   * 不影響現金、金額 0、不是售出
+   */
+  opening: "opening",
+  /** 期初更正:導入前已賣出 ↔ 未售(建檔時標錯);不碰現金、不寫售出 / 撤銷 */
+  openingFix: "opening_fix",
+  /** 期初建檔作廢:同進貨作廢,張的狀態不變、本改已撤銷,作廢那一刻起不算任何店的庫存 */
+  openingVoid: "opening_void",
 } as const satisfies Record<string, TicketEventType>;
+
+/** 期初建檔事件的來源單據類型(`refId` = 本)。 */
+export const OPENING_REF_TYPE = "opening";
+
+/** 期初已售 = 已售 + 售出來源「期初」(期初建檔規格 2.2)。 */
+export function isOpeningSold(ticket: {
+  status: string;
+  soldSource?: string | null;
+}): boolean {
+  return ticket.status === "sold" && ticket.soldSource === "opening";
+}
 
 /** 對號事件的來源單據類型(`refId` = 互換的另一張)。 */
 export const TICKET_MATCH_REF_TYPE = "ticket_match";
@@ -140,10 +167,12 @@ export const COUNT_SALE_REF_TYPE = "count_sale";
 export const TICKET_CASH_EFFECTS = ["none", "increase", "decrease"] as const;
 export type TicketCashEffect = (typeof TICKET_CASH_EFFECTS)[number];
 
-/** 預計要給本數的「已給」只算這三種(累計,售出不扣;規格 7.6)。 */
+/** 預計要給本數的「已給」:進貨 + 調入 + 期初建檔 − 調出(累計,售出不扣;規格 7.6)。 */
 export const ALLOCATION_IN_EVENT_TYPES: readonly TicketEventType[] = [
   TICKET_EVENT_TYPE.purchase,
   TICKET_EVENT_TYPE.transferIn,
+  // 期初建檔算進已給(期初建檔規格 D4、5.2)
+  TICKET_EVENT_TYPE.opening,
 ];
 export const ALLOCATION_OUT_EVENT_TYPES: readonly TicketEventType[] = [
   TICKET_EVENT_TYPE.transferOut,

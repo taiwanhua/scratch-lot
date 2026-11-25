@@ -12,11 +12,15 @@ export type LotterySettingsErrorCode =
   | "NOT_CONVERTING"
   | "NOT_STORE"
   | "CONCURRENT_EDIT"
+  | "OPENING_STATE_MISMATCH"
   | "UNEXPECTED";
 
 export type LotterySettingsError = AdminError<LotterySettingsErrorCode, never>;
 
 const CODES = ["FORBIDDEN", "NOT_FOUND", "VALIDATION_FAILED"] as const;
+
+/** 期初建檔結束 / 重新開放時已經是那個狀態(別人剛按;`CONFLICT` + reason) */
+const OPENING_STATE_MISMATCH = "STORE_OPENING_STATE_MISMATCH";
 
 const REASON_CODES: readonly LotterySettingsErrorCode[] = [
   "COUNT_MODE_CHANGE_BLOCKED",
@@ -25,16 +29,21 @@ const REASON_CODES: readonly LotterySettingsErrorCode[] = [
   "CONCURRENT_EDIT",
 ];
 
+type RefinedCode = Exclude<LotterySettingsErrorCode, "UNEXPECTED">;
+
+const refineOf = (code: string, reason: unknown): RefinedCode | undefined => {
+  if (code === "CONFLICT" && reason === OPENING_STATE_MISMATCH) {
+    return "OPENING_STATE_MISMATCH";
+  }
+  return code === "VALIDATION_FAILED" &&
+    typeof reason === "string" &&
+    (REASON_CODES as readonly string[]).includes(reason)
+    ? (reason as RefinedCode)
+    : undefined;
+};
+
 export const lotterySettingsErrorOf = (error: unknown): LotterySettingsError =>
-  parseAdminError<Exclude<LotterySettingsErrorCode, "UNEXPECTED">, never>(
-    error,
-    {
-      codes: CODES,
-      refine: (code, reason) =>
-        code === "VALIDATION_FAILED" &&
-        typeof reason === "string" &&
-        (REASON_CODES as readonly string[]).includes(reason)
-          ? (reason as Exclude<LotterySettingsErrorCode, "UNEXPECTED">)
-          : undefined,
-    },
-  );
+  parseAdminError<RefinedCode, never>(error, {
+    codes: CODES,
+    refine: refineOf,
+  });

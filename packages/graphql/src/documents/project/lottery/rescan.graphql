@@ -8,6 +8,8 @@ fragment LotteryRescanItemFields on LotteryRescanItem {
   outcome
   partnerTicketNo
   cashPointId
+  version
+  openingSold
 }
 
 fragment LotteryRescanFields on LotteryRescan {

@@ -22,6 +22,8 @@ export const STORE_SALES_REASONS = {
   ticketNotSellable: "TICKET_NOT_SELLABLE",
   /** 這張已經賣掉了(`extensions.soldAt`:什麼時候賣的;同時兩次售出的失敗方) */
   alreadySold: "ALREADY_SOLD",
+  /** 這張是期初已售(導入前已賣出;不算銷售,請用期初更正,期初建檔規格 D6) */
+  openingSold: "OPENING_SOLD",
   /** 刮刮樂在別的收銀點檯面,要先確認「移櫃並售出」 */
   moveConfirmRequired: "MOVE_CONFIRM_REQUIRED",
   /** 沒有 `store.move`:別的收銀點檯面的刮刮樂不能在這裡賣 */
@@ -108,6 +110,16 @@ export function alreadySoldError(ticketId: string, soldAt: Date): GraphQLError {
       ticketIds: [ticketId],
       soldAt: soldAt.toISOString(),
     },
+  );
+}
+
+/** 期初已售:「導入前已賣出,請用期初更正」(兩種店共用)。 */
+export function openingSoldError(ticketId: string): GraphQLError {
+  return storeSalesError(
+    "VALIDATION_FAILED",
+    "this ticket was sold before the store started using the system",
+    STORE_SALES_REASONS.openingSold,
+    { fields: ["tickets"], ticketIds: [ticketId] },
   );
 }
 

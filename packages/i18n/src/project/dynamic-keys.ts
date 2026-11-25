@@ -331,6 +331,40 @@ export const PROJECT_DYNAMIC_KEYS: readonly DynamicKey[] = [
       "兌獎紀錄的 `t(`status.${status}`)`,status 是兌獎狀態 `REDEMPTION_STATUSES`(api 回的值)",
   },
   {
+    key: "admin.lotteryInventory.stock.sourceOptions.",
+    reason:
+      "庫存列表來源篩選 `t(`sourceOptions.${value}`)`,value 是 api 的本來源 `purchase` / `opening`(`StockTab`)",
+  },
+  {
+    key: "admin.lotteryInventory.opening.scanErrors.",
+    reason:
+      "期初建檔刷條碼看不懂的提示 `t(`scanErrors.${outcome.kind}`)`,kind 由掃描結果換算(`useOpeningScan`)",
+  },
+  {
+    key: "admin.lotteryInventory.opening.card.steps.",
+    reason:
+      "期初建檔本卡三步 `t(`steps.${step}`)`,step 是 `sold` / `skip` / `place`(`OpeningBookCard`)",
+  },
+  {
+    key: "admin.lotteryInventory.opening.card.problems.",
+    reason:
+      "期初建檔本卡不能建的原因 `t(`problems.${problem}`)`,problem 來自 `opening-plan` 或 api 的 `openingProblem`(`OpeningBookCard`、`useOpeningErrorText`)",
+  },
+  {
+    key: "admin.lotteryInventory.opening.errors.",
+    reason:
+      "期初建檔失敗 `t(`errors.${code}`)`,code 由 api 錯誤碼與 reason 換算(`useOpeningErrorText`)",
+  },
+  {
+    key: "admin.lotteryInventory.openingFix.toUnsold.",
+    reason:
+      "期初更正對話框 `t(`${keys}.title`)` 等,keys 依方向是 `openingFix.toUnsold` / `openingFix.toSold`(`OpeningFixDialog`)",
+  },
+  {
+    key: "admin.lotteryInventory.openingFix.toSold.",
+    reason: "同上,改成導入前已賣出的方向(`OpeningFixDialog`)",
+  },
+  {
     key: "admin.lotteryInventory.errors.",
     reason:
       "庫存管理的 `t(`errors.${code}`)`,code 由 `lib/project/lottery/inventory-error.ts` 從 api 錯誤碼與 reason 換算",

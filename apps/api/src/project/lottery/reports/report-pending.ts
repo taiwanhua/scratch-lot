@@ -17,7 +17,7 @@ interface BookMeta {
   skippedNow: number;
   /** 跳號 +1 / 取消跳號 −1 的時間(只讀可能有待標註的本)。 */
   skipChanges: { at: Date; delta: number }[];
-  /** 進貨作廢的時間(已撤銷的本;沒作廢 = null)。 */
+  /** 進貨作廢 / 期初建檔作廢的時間(已撤銷的本;沒作廢 = null)。 */
   voidedAt: Date | null;
 }
 
@@ -26,7 +26,7 @@ interface BookMeta {
  * 不算庫存張數與成本**;作廢的本從作廢那一刻起不算期末庫存。
  *
  * - 某一刻的待標註張數 = 迄號 − 標準張數 − 那一刻已標的跳號(= 現在已標的 − 那一刻之後的跳號淨數)
- * - 整本一起動的一組張(進貨、進貨作廢、整本調貨、未拆的本盤點不在 / 確認遺失 / 尋回):張數 = 標準張數 + 待標註
+ * - 整本一起動的一組張(進貨、進貨作廢、期初建檔與作廢、整本調貨、未拆的本盤點不在 / 確認遺失 / 尋回):張數 = 標準張數 + 待標註
  *   時扣掉待標註那幾張(成本扣同樣張數 × 這組的平均單張成本)。未拆的本只能整本調貨,其他動作也是整本
  */
 export class BookPendings {
@@ -102,7 +102,11 @@ export async function loadBookPendings(
   const rows = await repositories.books.findMany(
     reader,
     { _id: { $in: unique } },
-    { select: "lastTicketNo standardTickets skippedTicketNos status" },
+    // 期初建檔作廢的本軟刪除了(釋出本號),舊期間的報表仍要它的待標註與作廢時間
+    {
+      select: "lastTicketNo standardTickets skippedTicketNos status",
+      includeDeleted: true,
+    },
   );
   const meta = new Map<string, BookMeta>();
   for (const row of rows) {
@@ -139,7 +143,12 @@ export async function loadBookPendings(
           {
             $match: {
               bookId: { $in: revoked },
-              type: TICKET_EVENT_TYPE.purchaseVoid,
+              type: {
+                $in: [
+                  TICKET_EVENT_TYPE.purchaseVoid,
+                  TICKET_EVENT_TYPE.openingVoid,
+                ],
+              },
             },
           },
           { $group: { _id: "$bookId", at: { $min: "$at" } } },

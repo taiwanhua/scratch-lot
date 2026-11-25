@@ -68,6 +68,10 @@ export class LotteryStoreScanItemModel {
   @Field(() => GraphQLISODateTime, { nullable: true })
   soldAt!: Date | null;
 
+  /** 期初已售(導入前已賣出;提示「導入前已賣出,請用期初更正」,期初建檔規格 D6)。 */
+  @Field(() => Boolean)
+  openingSold!: boolean;
+
   /** 未拆的本的待標註張數(拆本並售出要先標跳號)。 */
   @Field(() => Int)
   pendingSkipCount!: number;
@@ -235,7 +239,7 @@ export class LotteryStoreCardTicketModel {
   @Field(() => ID, { nullable: true })
   soldShiftId!: string | null;
 
-  /** 售出來源(`scan` / `manual` / `stocktake` / `count`);沒售出 = null。 */
+  /** 售出來源(`scan` / `manual` / `stocktake` / `count` / `opening` 期初已售);沒售出 = null。 */
   @Field(() => String, { nullable: true })
   soldSource!: string | null;
 

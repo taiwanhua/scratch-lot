@@ -21,6 +21,7 @@ describe("庫存管理的模組宣告(規格 3.1、3.2)", () => {
     ).toEqual([
       ["inventory", "link", "inventory", 20],
       ["inventory.book-page", "hidden", "book-page", 1],
+      ["inventory.opening-page", "hidden", "opening-page", 2],
     ]);
   });
 
@@ -39,6 +40,7 @@ describe("庫存管理的模組宣告(規格 3.1、3.2)", () => {
       "inventory.scrap",
       "inventory.show-cost",
       "inventory.edit-allocations",
+      "inventory.opening",
     ]);
   });
 
@@ -54,10 +56,18 @@ describe("開通時建立的角色(規格 3.3):庫存管理那一段", () => {
   it("總部管理全部;店長不含 edit-allocations;店員不給", () => {
     const hq = roleGrantOf("hq", ROLE_GRANT_SECTIONS);
     expect(hq.moduleKeys).toEqual(
-      expect.arrayContaining(["inventory", "inventory.book-page"]),
+      expect.arrayContaining([
+        "inventory",
+        "inventory.book-page",
+        "inventory.opening-page",
+      ]),
     );
     expect(hq.permissionKeys).toEqual(
-      expect.arrayContaining(["inventory.*", "inventory.book-page.*"]),
+      expect.arrayContaining([
+        "inventory.*",
+        "inventory.book-page.*",
+        "inventory.opening-page.*",
+      ]),
     );
     const manager = roleGrantOf("store-manager", ROLE_GRANT_SECTIONS);
     expect(
@@ -67,6 +77,7 @@ describe("開通時建立的角色(規格 3.3):庫存管理那一段", () => {
       "inventory.recover",
       "inventory.scrap",
       "inventory.show-cost",
+      "inventory.opening",
     ]);
     const clerk = roleGrantOf("clerk", ROLE_GRANT_SECTIONS);
     expect(

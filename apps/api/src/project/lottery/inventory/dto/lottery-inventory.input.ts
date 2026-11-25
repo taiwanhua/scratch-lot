@@ -39,6 +39,10 @@ export class LotteryInventoryBooksInput {
   /** 本號(6 或 7 位,部分比對)。 */
   @Field(() => String, { nullable: true })
   bookNo?: string | null;
+
+  /** 來源(`purchase` 進貨 / `opening` 期初建檔;不給 = 全部;期初建檔規格 5.3)。 */
+  @Field(() => String, { nullable: true })
+  source?: string | null;
 }
 
 /** 查刮刮樂:解析後的編號(`parseTicketInput`);沒有遊戲代號時列出本號對到的每一款。 */

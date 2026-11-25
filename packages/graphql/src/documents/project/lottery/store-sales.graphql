@@ -24,6 +24,7 @@ fragment LotteryStoreScanItemFields on LotteryStoreScanItem {
   pendingSkipCount
   unmatched
   match
+  openingSold
 }
 
 fragment LotteryStoreSaleFields on LotteryStoreSale {

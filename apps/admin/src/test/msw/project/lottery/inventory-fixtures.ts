@@ -1,5 +1,4 @@
 import {
-  INVENTORY_MODULE_KEYS as KEYS,
   INVENTORY_PERMISSIONS as PERMISSIONS,
   formatTicketNo,
 } from "@repo/domain/project/lottery";
@@ -7,11 +6,7 @@ import {
   type LotteryInventoryBookDetailFieldsFragment,
   type LotteryInventoryBookFieldsFragment,
   type LotteryInventoryTicketFieldsFragment,
-  ModuleEngine,
-  ModuleSidebarType,
 } from "@repo/graphql";
-
-import type { TestModule } from "../../auth-handlers";
 
 /** 庫存管理的夾具(元件測試、假 api 與 mock 模式共用;資料照 Figma IN-01 / 03 / 05 / 06)。 */
 
@@ -74,6 +69,7 @@ export const inventoryBook = (
   status: "normal",
   purchasedAt: "2026-10-11T16:00:00.000Z",
   purchaseDealer: ref("d-1", "陳志明 #12345678"),
+  source: "purchase",
   ...overrides,
 });
 
@@ -154,6 +150,7 @@ export const inventoryTicket = (
   operable: true,
   version: 3,
   unmatched: false,
+  openingSold: false,
   ...overrides,
 });
 
@@ -332,6 +329,7 @@ export const sampleBookDetail =
         canScrap: true,
         bookOpened: true,
         canShowCost: true,
+        canFixOpening: false,
       },
     };
   };
@@ -381,47 +379,4 @@ export const sampleInvestigatingBookDetail =
     };
   };
 
-const module = (
-  key: string,
-  name: string,
-  parentId: string | null,
-  route: string,
-  permissions: readonly string[],
-  sidebarType = ModuleSidebarType.Hidden,
-): TestModule => ({
-  __typename: "MeModule",
-  id: `m-${key}`,
-  key,
-  name,
-  parentId,
-  sidebarType,
-  engine: ModuleEngine.Fixed,
-  order: 20,
-  route,
-  icon: "inventory",
-  permissions: [...permissions],
-});
-
-/** 庫存管理的模組(與 seed 宣告一致):列表 + 本的詳情;`bookPage` 決定綁不綁詳情頁。 */
-export const inventoryModules = ({
-  permissions = ALL_INVENTORY_PERMISSIONS,
-  bookPage = true,
-}: {
-  permissions?: readonly string[];
-  bookPage?: boolean;
-} = {}): TestModule[] => {
-  const root = module(
-    KEYS.list,
-    "庫存管理",
-    null,
-    "/inventory",
-    permissions,
-    ModuleSidebarType.Link,
-  );
-  return [
-    root,
-    ...(bookPage
-      ? [module(KEYS.bookPage, "本的詳情", root.id, "/inventory/book-page", [])]
-      : []),
-  ];
-};
+export { inventoryModules } from "./inventory-module-fixtures";

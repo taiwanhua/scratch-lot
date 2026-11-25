@@ -13,6 +13,7 @@ import {
   bookDisplayStateOf,
   holdingsOf,
   holdingsWithoutPendingSkips,
+  isOpeningSold,
   normalizeBookNo,
   remainingOfCounts,
   requiredSkipCountOf,
@@ -28,6 +29,7 @@ import {
 import { tenantBoundaryContext } from "../../../database/tenant-boundary-context";
 import { tenantTimezoneOf } from "../../../database/tenant-timezone";
 import { LotteryGamesRepository } from "../../database/lottery-games/lottery-games.repository";
+import { BOOK_SOURCES } from "../../database/lottery-inventory/lottery-book.schema";
 import {
   type LotteryBookDocument,
   LotteryBooksRepository,
@@ -42,7 +44,7 @@ import { parseId } from "../accounts/accounts-util";
 import { daysSince, localDayOf } from "../dealers/dealer-dates";
 import { tenantOfOperator } from "../master-data-tenant";
 import { countsOfBook, pendingSkipCountOfBook } from "../tickets/books.service";
-import { notFoundError } from "../tickets/inventory-error";
+import { notFoundError, validationError } from "../tickets/inventory-error";
 import { bookStateConditionsOf } from "./book-state-filter";
 import {
   INVENTORY_BOOKS_MAX_PAGE_SIZE,
@@ -128,6 +130,19 @@ interface Names {
  * - **本**照操作者自己的範圍讀(讀取放行:所在分店或持有任何一張的分店看得到,資料共用 `holderOrgIds`)
  * - 讀得到本,就以租戶邊界上下文讀這本全部的張與事件(格子、時間軸要看整本;反查)
  */
+/** 來源篩選(期初建檔規格 5.3);不給 = 全部。舊資料沒有來源欄位 = 進貨。 */
+function sourceFilterOf(
+  source: string | null | undefined,
+): Record<string, unknown> {
+  if (source == null) {
+    return {};
+  }
+  if (!(BOOK_SOURCES as readonly string[]).includes(source)) {
+    throw validationError("來源不合", ["source"]);
+  }
+  return { source: source === "purchase" ? { $ne: "opening" } : source };
+}
+
 @Injectable()
 export class InventoryViewService {
   constructor(
@@ -175,6 +190,7 @@ export class InventoryViewService {
     if (Object.keys(purchased).length > 0) {
       filter.purchasedAt = purchased;
     }
+    Object.assign(filter, sourceFilterOf(input.source));
     const bookNo = input.bookNo?.trim() ?? "";
     if (bookNo !== "") {
       // 6 位補 0 後完整比對;其他長度當部分比對(只收數字)
@@ -295,6 +311,9 @@ export class InventoryViewService {
         canScrap: grant.has(INVENTORY_PERMISSIONS.scrap),
         bookOpened: (record.firstOpenedAt ?? null) !== null,
         canShowCost: grant.canShowCost,
+        canFixOpening:
+          record.source === "opening" &&
+          grant.has(INVENTORY_PERMISSIONS.opening),
       },
     };
   }
@@ -543,7 +562,7 @@ export class InventoryViewService {
       });
       snapshotsOf.set(key, list);
     }
-    const [games, orgNames, dealerNames] = await Promise.all([
+    const [games, orgNames, dealerNames, userNames] = await Promise.all([
       this.games.findMany(operator, {
         _id: { $in: records.map((record) => record.gameId) },
       }),
@@ -554,6 +573,10 @@ export class InventoryViewService {
       this.names.dealerNames(
         operator,
         records.map((record) => record.purchaseDealerId),
+      ),
+      this.names.userNames(
+        operator,
+        records.map((record) => record.openedBy),
       ),
     ]);
     const gameOf = new Map(games.map((game) => [String(game._id), game]));
@@ -609,6 +632,9 @@ export class InventoryViewService {
         status: record.status,
         purchasedAt: record.purchasedAt,
         purchaseDealer: ref(record.purchaseDealerId, dealerNames),
+        source: record.source,
+        openingAt: record.openingAt,
+        openedBy: ref(record.openedBy, userNames),
       };
     });
   }
@@ -691,6 +717,7 @@ export class InventoryViewService {
       operable: isOrgVisible(operator, ticket.orgId),
       version: ticket.version,
       unmatched: ticket.unmatched,
+      openingSold: isOpeningSold(ticket),
     };
   }
 

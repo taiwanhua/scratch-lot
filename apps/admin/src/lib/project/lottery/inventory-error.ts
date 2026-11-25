@@ -16,6 +16,7 @@ export type InventoryErrorCode =
   | "TICKET_STATUS_NOT_ALLOWED"
   | "RECOVER_TARGET_NOT_STORE"
   | "RECOVER_TARGET_NOT_OPERATING_STORE"
+  | "STORE_OPENING_CLOSED"
   | "UNEXPECTED";
 
 export type InventoryError = AdminError<InventoryErrorCode, never>;
@@ -35,6 +36,7 @@ const REASON_CODES: readonly InventoryErrorCode[] = [
   "TICKET_STATUS_NOT_ALLOWED",
   "RECOVER_TARGET_NOT_STORE",
   "RECOVER_TARGET_NOT_OPERATING_STORE",
+  "STORE_OPENING_CLOSED",
 ];
 
 export const inventoryErrorOf = (error: unknown): InventoryError =>

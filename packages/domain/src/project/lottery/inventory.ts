@@ -4,10 +4,12 @@
  */
 export const INVENTORY_KEY = "inventory";
 
-/** 模組樹:列表頁(分頁 庫存 | 待查·遺失 | 預計要給本數)+ 本的詳情隱藏頁。 */
+/** 模組樹:列表頁(分頁 庫存 | 待查·遺失 | 預計要給本數)+ 本的詳情、期初建檔隱藏頁。 */
 export const INVENTORY_MODULE_KEYS = {
   list: INVENTORY_KEY,
   bookPage: `${INVENTORY_KEY}.book-page`,
+  /** 期初建檔頁(隱藏頁;期初建檔規格第 3 節) */
+  openingPage: `${INVENTORY_KEY}.opening-page`,
 } as const;
 
 /**
@@ -20,6 +22,8 @@ export const INVENTORY_PERMISSIONS = {
   scrap: `${INVENTORY_KEY}.scrap`,
   showCost: `${INVENTORY_KEY}.show-cost`,
   editAllocations: `${INVENTORY_KEY}.edit-allocations`,
+  /** 期初建檔、作廢、結束與重新開啟、期初更正(期初建檔規格第 6 節) */
+  opening: `${INVENTORY_KEY}.opening`,
 } as const;
 
 /** 頁內分頁的值(`?tab=`)。 */
@@ -32,6 +36,9 @@ export const INVENTORY_TABS = {
 /** 本的詳情 [更正跳號] 刷實體在手上那張的掃描用途(張數店規格 7.10;開著時優先於查刮刮樂)。 */
 export const INVENTORY_SKIP_CORRECTION_SCAN_PURPOSE =
   "inventory-skip-correction";
+
+/** 期初建檔頁刷條碼列的掃描用途(期初建檔規格 3.1)。 */
+export const INVENTORY_OPENING_SCAN_PURPOSE = "inventory-opening";
 
 /** 查刮刮樂的掃描用途(`useScanner` 宣告,規格 18.3)。 */
 export const INVENTORY_LOOKUP_SCAN_PURPOSE = "inventory-lookup";

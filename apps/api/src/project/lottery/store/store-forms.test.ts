@@ -389,37 +389,36 @@ describe("撤銷售出申請與現金更正單(規格 8.5、8.8)", () => {
   }
 
   /** 點收一本到信義店、整本拆到店內櫃台。 */
+  /** 信義店的操作者(直接呼叫建本服務用)。 */
+  const xinyiOperator = () => ({
+    actorId: new Types.ObjectId(),
+    currentOrgId: xinyi,
+    visibleOrgIds: [xinyi],
+    managedOrgIds: [],
+    memberOrgIds: [xinyi],
+    roleIds: [],
+    memberTenants: [
+      {
+        tenantId: tenant,
+        memberOrgIds: [xinyi],
+        ancestorOrgIds: [tenant],
+      },
+    ],
+  });
+
   async function counterBook(): Promise<Types.ObjectId> {
     bookSequence += 1;
     const { book } = await api.app
       .get(TransactionService)
       .withTransaction((session) =>
-        api.app.get(LotteryBooksService).createBook(
-          session,
-          {
-            actorId: new Types.ObjectId(),
-            currentOrgId: xinyi,
-            visibleOrgIds: [xinyi],
-            managedOrgIds: [],
-            memberOrgIds: [xinyi],
-            roleIds: [],
-            memberTenants: [
-              {
-                tenantId: tenant,
-                memberOrgIds: [xinyi],
-                ancestorOrgIds: [tenant],
-              },
-            ],
-          },
-          {
-            orgId: xinyi,
-            gameId,
-            bookNo: String(bookSequence).padStart(6, "0"),
-            lastTicketNo: 100,
-            rate: 92,
-            cost: 18_400,
-          },
-        ),
+        api.app.get(LotteryBooksService).createBook(session, xinyiOperator(), {
+          orgId: xinyi,
+          gameId,
+          bookNo: String(bookSequence).padStart(6, "0"),
+          lastTicketNo: 100,
+          rate: 92,
+          cost: 18_400,
+        }),
       );
     const bookTickets = await ticketsOf(book._id);
     const nos = bookTickets.map((ticket) => ticket.ticketNo);
@@ -431,6 +430,32 @@ describe("撤銷售出申請與現金更正單(規格 8.5、8.8)", () => {
         assignments: [{ cashPointId: String(counter), ticketNos: nos }],
       },
     });
+    return book._id;
+  }
+
+  /** 期初建檔的本(期初建檔規格 3.1):#001–#010 導入前已賣出,其餘在店內櫃台。 */
+  async function openingBook(): Promise<Types.ObjectId> {
+    bookSequence += 1;
+    const nos = Array.from({ length: 100 }, (_, index) =>
+      String(index + 1).padStart(3, "0"),
+    );
+    const { book } = await api.app
+      .get(TransactionService)
+      .withTransaction((session) =>
+        api.app.get(LotteryBooksService).createBook(session, xinyiOperator(), {
+          orgId: xinyi,
+          gameId,
+          bookNo: String(bookSequence).padStart(6, "0"),
+          lastTicketNo: 100,
+          rate: 92,
+          cost: 18_400,
+          opening: {
+            soldTicketNos: nos.slice(0, 10),
+            skippedTicketNos: [],
+            placements: [{ cashPointId: counter, ticketNos: nos.slice(10) }],
+          },
+        }),
+      );
     return book._id;
   }
 
@@ -907,6 +932,24 @@ describe("撤銷售出申請與現金更正單(規格 8.5、8.8)", () => {
         ),
       ).toMatchObject({ code: "VALIDATION_FAILED", fields: ["refund_shift"] });
       await decideOn(world, manager, first.id, "REJECT");
+    });
+
+    it("OP8 期初已售(導入前已賣出)不能撤銷:送出擋下 OPENING_SALE_NOT_REVERSIBLE,張不鎖、應有不變", async () => {
+      const bookId = await openingBook();
+      const before = await expectedOf(counter);
+      expect(
+        await submitError(
+          wang,
+          SALE_REVERSAL_FORM_KEY,
+          reversalValues(bookId, "005", 1),
+        ),
+      ).toMatchObject({ reason: "OPENING_SALE_NOT_REVERSIBLE" });
+      expect(await ticketOf(bookId, "005")).toMatchObject({
+        status: "sold",
+        soldSource: "opening",
+        lockedBy: null,
+      });
+      expect(await expectedOf(counter)).toBe(before);
     });
 
     it("駁回什麼都不記:張解除鎖定、還是已售;應有不變", async () => {

@@ -89,6 +89,8 @@ export const projectUrlStateInventory: UrlStateInventory = {
   "store.view-page": ["dialog", "revision"],
   "store.edit-page": [],
   "inventory.book-page": ["ticket"],
+  // 期初建檔頁:選的分店 `org`(庫存管理頁首 [期初建檔] 帶過來)
+  "inventory.opening-page": ["org"],
   // 沿用表單引擎預設頁、只套了根組織守門(`module-pages.ts` 的 `gateTenant`)的那幾頁:網址狀態同表單引擎預設
   // (`app/base/url-state-inventory.ts` 的 `formModuleUrlStateInventory`)
   "schedule.manage.view-page": ["dialog", "revision"],

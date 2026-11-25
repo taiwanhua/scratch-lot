@@ -18,6 +18,7 @@ import {
   TICKET_STATUS,
   canCancelRescan,
   isMatchingCountMode,
+  isOpeningSold,
   isRescanLive,
   isSessionLive,
   normalizeBookNo,
@@ -97,6 +98,7 @@ const RECORDED_OUTCOMES: ReadonlySet<string> = new Set([
   "recovered",
   "moved",
   "sold_here",
+  "opening_sold_here",
   "skipped",
   "scrapped",
   "locked",
@@ -155,6 +157,7 @@ function rescanTicketOf(
     inThisStore: ticket.orgId.equals(orgId),
     status: ticket.status,
     unmatched: ticket.unmatched,
+    openingSold: isOpeningSold(ticket),
     locked: ticket.lockedBy !== null,
     locationKind: ticket.location.kind,
     cashPointId:
@@ -535,6 +538,8 @@ export class RescanService {
         outcome: "ok",
         partnerTicketNo: null,
         cashPointId: cashPointId === null ? null : String(cashPointId),
+        version: ticket.version,
+        openingSold: isOpeningSold(ticket),
       },
       duplicate: outcome.duplicate,
       rescan: model,
@@ -1248,6 +1253,8 @@ export class RescanService {
         partnerTicketNo:
           partnerId === null ? null : (byId.get(partnerId)?.ticketNo ?? null),
         cashPointId: cashPointId === null ? null : String(cashPointId),
+        version: ticket.version,
+        openingSold: isOpeningSold(ticket),
       };
     };
     const results = rescan.results.flatMap((row) => {

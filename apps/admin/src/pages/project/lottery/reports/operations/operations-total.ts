@@ -48,6 +48,10 @@ const mergeBy = <Item extends object>(
 const totalInventoryOf = (list: readonly Inventory[]): Inventory => {
   const counts = [
     "openingTickets",
+    "openingEntryBooks",
+    "openingEntryVoidBooks",
+    "openingEntryFixTickets",
+    "openingEntryTickets",
     "purchaseBooks",
     "purchaseVoidBooks",
     "purchaseTickets",
@@ -70,6 +74,7 @@ const totalInventoryOf = (list: readonly Inventory[]): Inventory => {
   ] as const;
   const amounts = [
     "openingCost",
+    "openingEntryCost",
     "purchaseCost",
     "transferInAmount",
     "transferOutCost",
@@ -246,8 +251,9 @@ export const totalStoreOf = (
       openMonths: [
         ...new Set(notes.flatMap((item) => item.openMonths)),
       ].toSorted((a, b) => a.localeCompare(b, COLLATION_LOCALE)),
-      // 盤點制度是一家店的事:合計不列
+      // 盤點制度、期初建檔期間是一家店的事:合計不列
       countMode: null,
+      openingEntry: null,
     },
   };
 };

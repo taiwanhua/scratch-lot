@@ -19,6 +19,7 @@ import {
   changedAfterSaleOf,
   displayTicketKey,
   isMatchingCountMode,
+  isOpeningSold,
   isSealedInStore,
   normalizeBookNo,
   parseTicketInput,
@@ -80,6 +81,7 @@ import {
   moveConfirmRequiredError,
   moveNotAllowedError,
   notSellableError,
+  openingSoldError,
   undoNotAllowedError,
 } from "./store-sales-error";
 import {
@@ -257,6 +259,10 @@ function saleTargetOf(
   openShifts: ReadonlyMap<string, ShiftRecord>,
   localShift: ShiftRecord,
 ): { shift: ShiftRecord; move: boolean } {
+  // 期初已售(導入前已賣出):不能賣、也不是「已於 hh:mm 售出」,請用期初更正(期初建檔規格 D6)
+  if (isOpeningSold(ticket)) {
+    throw openingSoldError(String(ticket._id));
+  }
   // `ticket` = 對號之後的樣子。已售:已售·未對號找不到配對 → 不能賣(規格 6.4),其他照現況「已於 hh:mm 售出」
   if (
     ticket.status === TICKET_STATUS.sold &&
@@ -513,6 +519,7 @@ export class StoreSalesService {
       blockReason: decision.blockReason,
       soldAt:
         ticket.status === TICKET_STATUS.sold ? (ticket.soldAt ?? null) : null,
+      openingSold: isOpeningSold(ticket),
       pendingSkipCount: unopened ? pendingSkipOf(book) : 0,
       unmatched: ticket.unmatched,
       match: decision.match,
@@ -833,6 +840,9 @@ export class StoreSalesService {
       status: TICKET_STATUS.sold,
     });
     const sold = now.find((ticket) => ticket.soldAt);
+    if (sold !== undefined && isOpeningSold(sold)) {
+      return openingSoldError(String(sold._id));
+    }
     return sold?.soldAt
       ? alreadySoldError(String(sold._id), sold.soldAt)
       : error;

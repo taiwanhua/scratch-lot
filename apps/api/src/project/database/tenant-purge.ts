@@ -13,6 +13,7 @@ import { LOTTERY_RELATIONSHIPS_COLLECTION } from "./lottery-dealers/lottery-rela
 import { LOTTERY_GAMES_COLLECTION } from "./lottery-games/lottery-game.schema";
 import { LOTTERY_ALLOCATIONS_COLLECTION } from "./lottery-inventory/lottery-allocation.schema";
 import { LOTTERY_BOOKS_COLLECTION } from "./lottery-inventory/lottery-book.schema";
+import { LOTTERY_STORE_OPENINGS_COLLECTION } from "./lottery-inventory/lottery-store-opening.schema";
 import { LOTTERY_TICKET_EVENTS_COLLECTION } from "./lottery-inventory/lottery-ticket-event.schema";
 import { LOTTERY_TICKETS_COLLECTION } from "./lottery-inventory/lottery-ticket.schema";
 import { LOTTERY_PURCHASE_RECEIPTS_COLLECTION } from "./lottery-purchases/lottery-purchase-receipt.schema";
@@ -66,6 +67,7 @@ export const PROJECT_TENANT_PURGE_REGISTRATIONS: readonly TenantPurgeRegistratio
     LOTTERY_TICKETS_COLLECTION,
     LOTTERY_TICKET_EVENTS_COLLECTION,
     LOTTERY_ALLOCATIONS_COLLECTION,
+    LOTTERY_STORE_OPENINGS_COLLECTION,
     LOTTERY_BANK_ACCOUNTS_COLLECTION,
     LOTTERY_BANK_TRANSACTIONS_COLLECTION,
     LOTTERY_CASH_MOVEMENTS_COLLECTION,

@@ -6,7 +6,7 @@ import {
 
 import { type ModuleRoleGrants, type RoleGrant, everything } from "../roles";
 
-const NODES = [INVENTORY_KEY, KEYS.bookPage];
+const NODES = [INVENTORY_KEY, KEYS.bookPage, KEYS.openingPage];
 
 /** 總部管理:庫存管理全部(各節點 `*`,含修改預計要給本數)。 */
 const HQ: RoleGrant = {
@@ -22,6 +22,7 @@ const STORE_MANAGER: RoleGrant = {
     PERMISSIONS.recover,
     PERMISSIONS.scrap,
     PERMISSIONS.showCost,
+    PERMISSIONS.opening,
   ],
 };
 
