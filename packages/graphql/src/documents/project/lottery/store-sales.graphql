@@ -20,6 +20,8 @@ fragment LotteryStoreScanItemFields on LotteryStoreScanItem {
   }
   outcome
   blockReason
+  lockRefType
+  lockSerialNo
   soldAt
   pendingSkipCount
   unmatched

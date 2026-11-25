@@ -2395,6 +2395,7 @@ export type LotteryInventoryBook = {
   totalCount: Scalars['Int']['output'];
   unitPrice: Scalars['Int']['output'];
   unmatchedCount: Scalars['Int']['output'];
+  wholesaleCustomerName?: Maybe<Scalars['String']['output']>;
 };
 
 export type LotteryInventoryBookAbilities = {
@@ -2412,6 +2413,7 @@ export type LotteryInventoryBookDetail = {
   abilities: LotteryInventoryBookAbilities;
   book: LotteryInventoryBook;
   cost?: Maybe<LotteryInventoryCost>;
+  countStore: Scalars['Boolean']['output'];
   events: Array<LotteryInventoryEvent>;
   investigation?: Maybe<LotteryInventoryInvestigation>;
   locations: Array<LotteryInventoryLocation>;
@@ -2455,6 +2457,7 @@ export type LotteryInventoryEvent = {
   at: Scalars['DateTime']['output'];
   by?: Maybe<LotteryInventoryRef>;
   correctionOfShift?: Maybe<Scalars['String']['output']>;
+  customerName?: Maybe<Scalars['String']['output']>;
   from?: Maybe<LotteryInventoryPlace>;
   matchPartner?: Maybe<LotteryInventoryMatchPartner>;
   reasonKey?: Maybe<Scalars['String']['output']>;
@@ -2466,6 +2469,7 @@ export type LotteryInventoryEvent = {
   ticketNos: Array<Scalars['String']['output']>;
   to: LotteryInventoryPlace;
   type: Scalars['String']['output'];
+  voidReasonLabel?: Maybe<Scalars['String']['output']>;
   wholeBook: Scalars['Boolean']['output'];
 };
 
@@ -2518,11 +2522,13 @@ export type LotteryInventoryRef = {
 
 export type LotteryInventorySource = {
   __typename?: 'LotteryInventorySource';
-  at: Scalars['DateTime']['output'];
+  at?: Maybe<Scalars['DateTime']['output']>;
+  customerName?: Maybe<Scalars['String']['output']>;
   refId?: Maybe<Scalars['ID']['output']>;
   refSerialNo?: Maybe<Scalars['String']['output']>;
   ticketNos: Array<Scalars['String']['output']>;
   type: Scalars['String']['output'];
+  wholesaleState?: Maybe<Scalars['String']['output']>;
 };
 
 export type LotteryInventoryStoresPayload = {
@@ -2535,6 +2541,7 @@ export type LotteryInventoryTicket = {
   cashPoint?: Maybe<LotteryInventoryRef>;
   id: Scalars['ID']['output'];
   locationKind: Scalars['String']['output'];
+  lockRefType?: Maybe<Scalars['String']['output']>;
   locked: Scalars['Boolean']['output'];
   operable: Scalars['Boolean']['output'];
   org: LotteryInventoryRef;
@@ -4255,6 +4262,8 @@ export type LotteryStoreScanItem = {
   gameCode: Scalars['String']['output'];
   gameName: Scalars['String']['output'];
   locationKind: Scalars['String']['output'];
+  lockRefType?: Maybe<Scalars['String']['output']>;
+  lockSerialNo?: Maybe<Scalars['String']['output']>;
   match: Scalars['Boolean']['output'];
   outcome: Scalars['String']['output'];
   pendingSkipCount: Scalars['Int']['output'];
@@ -4470,6 +4479,7 @@ export type LotteryTransferRow = {
 export type LotteryTransferTicketCell = {
   __typename?: 'LotteryTransferTicketCell';
   cashPointName?: Maybe<Scalars['String']['output']>;
+  lockedRefType?: Maybe<Scalars['String']['output']>;
   lockedSerialNo?: Maybe<Scalars['String']['output']>;
   matchable: Scalars['Boolean']['output'];
   soldAt?: Maybe<Scalars['DateTime']['output']>;
@@ -11654,15 +11664,15 @@ export type DeleteLotteryWholesaleCustomerMutation = { __typename?: 'Mutation', 
 
 export type LotteryInventoryRefFieldsFragment = { __typename?: 'LotteryInventoryRef', id: string, name: string };
 
-export type LotteryInventoryBookFieldsFragment = { __typename?: 'LotteryInventoryBook', id: string, bookKey: string, bookNo: string, gameId: string, gameCode: string, gameName: string, unitPrice: number, standardTickets: number, firstTicketNo: string, lastTicketNo: string, remainingCount: number, unmatchedCount: number, totalCount: number, pendingSkipCount: number, requiredSkipCount: number, skippedTicketNos: Array<string>, state: string, status: string, purchasedAt?: string | null, org: { __typename?: 'LotteryInventoryRef', id: string, name: string }, holdings: Array<{ __typename?: 'LotteryInventoryHolding', count: number, org: { __typename?: 'LotteryInventoryRef', id: string, name: string } }>, purchaseDealer?: { __typename?: 'LotteryInventoryRef', id: string, name: string } | null };
+export type LotteryInventoryBookFieldsFragment = { __typename?: 'LotteryInventoryBook', id: string, bookKey: string, bookNo: string, gameId: string, gameCode: string, gameName: string, unitPrice: number, standardTickets: number, firstTicketNo: string, lastTicketNo: string, remainingCount: number, unmatchedCount: number, totalCount: number, pendingSkipCount: number, requiredSkipCount: number, skippedTicketNos: Array<string>, state: string, wholesaleCustomerName?: string | null, status: string, purchasedAt?: string | null, org: { __typename?: 'LotteryInventoryRef', id: string, name: string }, holdings: Array<{ __typename?: 'LotteryInventoryHolding', count: number, org: { __typename?: 'LotteryInventoryRef', id: string, name: string } }>, purchaseDealer?: { __typename?: 'LotteryInventoryRef', id: string, name: string } | null };
 
-export type LotteryInventoryTicketFieldsFragment = { __typename?: 'LotteryInventoryTicket', id: string, ticketNo: string, status: string, locationKind: string, locked: boolean, operable: boolean, version: number, unmatched: boolean, cashPoint?: { __typename?: 'LotteryInventoryRef', id: string, name: string } | null, org: { __typename?: 'LotteryInventoryRef', id: string, name: string }, responsibleOrg?: { __typename?: 'LotteryInventoryRef', id: string, name: string } | null };
+export type LotteryInventoryTicketFieldsFragment = { __typename?: 'LotteryInventoryTicket', id: string, ticketNo: string, status: string, locationKind: string, locked: boolean, lockRefType?: string | null, operable: boolean, version: number, unmatched: boolean, cashPoint?: { __typename?: 'LotteryInventoryRef', id: string, name: string } | null, org: { __typename?: 'LotteryInventoryRef', id: string, name: string }, responsibleOrg?: { __typename?: 'LotteryInventoryRef', id: string, name: string } | null };
 
 export type LotteryInventoryPlaceFieldsFragment = { __typename?: 'LotteryInventoryPlace', locationKind: string, org: { __typename?: 'LotteryInventoryRef', id: string, name: string }, cashPoint?: { __typename?: 'LotteryInventoryRef', id: string, name: string } | null };
 
-export type LotteryInventoryBookDetailFieldsFragment = { __typename?: 'LotteryInventoryBookDetail', book: { __typename?: 'LotteryInventoryBook', id: string, bookKey: string, bookNo: string, gameId: string, gameCode: string, gameName: string, unitPrice: number, standardTickets: number, firstTicketNo: string, lastTicketNo: string, remainingCount: number, unmatchedCount: number, totalCount: number, pendingSkipCount: number, requiredSkipCount: number, skippedTicketNos: Array<string>, state: string, status: string, purchasedAt?: string | null, org: { __typename?: 'LotteryInventoryRef', id: string, name: string }, holdings: Array<{ __typename?: 'LotteryInventoryHolding', count: number, org: { __typename?: 'LotteryInventoryRef', id: string, name: string } }>, purchaseDealer?: { __typename?: 'LotteryInventoryRef', id: string, name: string } | null }, tickets: Array<{ __typename?: 'LotteryInventoryTicket', id: string, ticketNo: string, status: string, locationKind: string, locked: boolean, operable: boolean, version: number, unmatched: boolean, cashPoint?: { __typename?: 'LotteryInventoryRef', id: string, name: string } | null, org: { __typename?: 'LotteryInventoryRef', id: string, name: string }, responsibleOrg?: { __typename?: 'LotteryInventoryRef', id: string, name: string } | null }>, locations: Array<{ __typename?: 'LotteryInventoryLocation', ticketNos: Array<string>, place: { __typename?: 'LotteryInventoryPlace', locationKind: string, org: { __typename?: 'LotteryInventoryRef', id: string, name: string }, cashPoint?: { __typename?: 'LotteryInventoryRef', id: string, name: string } | null } }>, events: Array<{ __typename?: 'LotteryInventoryEvent', at: string, type: string, reopen: boolean, ticketNos: Array<string>, wholeBook: boolean, refType?: string | null, refId?: string | null, refSerialNo?: string | null, reasonKey?: string | null, reasonNote?: string | null, correctionOfShift?: string | null, from?: { __typename?: 'LotteryInventoryPlace', locationKind: string, org: { __typename?: 'LotteryInventoryRef', id: string, name: string }, cashPoint?: { __typename?: 'LotteryInventoryRef', id: string, name: string } | null } | null, to: { __typename?: 'LotteryInventoryPlace', locationKind: string, org: { __typename?: 'LotteryInventoryRef', id: string, name: string }, cashPoint?: { __typename?: 'LotteryInventoryRef', id: string, name: string } | null }, by?: { __typename?: 'LotteryInventoryRef', id: string, name: string } | null, matchPartner?: { __typename?: 'LotteryInventoryMatchPartner', ticketNo: string, bookNo?: string | null } | null }>, sources: Array<{ __typename?: 'LotteryInventorySource', type: string, refId?: string | null, refSerialNo?: string | null, at: string, ticketNos: Array<string> }>, cost?: { __typename?: 'LotteryInventoryCost', rate: number, cost: number, unitCost: number } | null, investigation?: { __typename?: 'LotteryInventoryInvestigation', status: string, at?: string | null, refType?: string | null, refSerialNo?: string | null, responsibleOrg?: { __typename?: 'LotteryInventoryRef', id: string, name: string } | null } | null, abilities: { __typename?: 'LotteryInventoryBookAbilities', canCorrectSkips: boolean, canMarkSkips: boolean, canRecover: boolean, canScrap: boolean, bookOpened: boolean, canShowCost: boolean } };
+export type LotteryInventoryBookDetailFieldsFragment = { __typename?: 'LotteryInventoryBookDetail', countStore: boolean, book: { __typename?: 'LotteryInventoryBook', id: string, bookKey: string, bookNo: string, gameId: string, gameCode: string, gameName: string, unitPrice: number, standardTickets: number, firstTicketNo: string, lastTicketNo: string, remainingCount: number, unmatchedCount: number, totalCount: number, pendingSkipCount: number, requiredSkipCount: number, skippedTicketNos: Array<string>, state: string, wholesaleCustomerName?: string | null, status: string, purchasedAt?: string | null, org: { __typename?: 'LotteryInventoryRef', id: string, name: string }, holdings: Array<{ __typename?: 'LotteryInventoryHolding', count: number, org: { __typename?: 'LotteryInventoryRef', id: string, name: string } }>, purchaseDealer?: { __typename?: 'LotteryInventoryRef', id: string, name: string } | null }, tickets: Array<{ __typename?: 'LotteryInventoryTicket', id: string, ticketNo: string, status: string, locationKind: string, locked: boolean, lockRefType?: string | null, operable: boolean, version: number, unmatched: boolean, cashPoint?: { __typename?: 'LotteryInventoryRef', id: string, name: string } | null, org: { __typename?: 'LotteryInventoryRef', id: string, name: string }, responsibleOrg?: { __typename?: 'LotteryInventoryRef', id: string, name: string } | null }>, locations: Array<{ __typename?: 'LotteryInventoryLocation', ticketNos: Array<string>, place: { __typename?: 'LotteryInventoryPlace', locationKind: string, org: { __typename?: 'LotteryInventoryRef', id: string, name: string }, cashPoint?: { __typename?: 'LotteryInventoryRef', id: string, name: string } | null } }>, events: Array<{ __typename?: 'LotteryInventoryEvent', at: string, type: string, reopen: boolean, ticketNos: Array<string>, wholeBook: boolean, refType?: string | null, refId?: string | null, refSerialNo?: string | null, reasonKey?: string | null, reasonNote?: string | null, correctionOfShift?: string | null, customerName?: string | null, voidReasonLabel?: string | null, from?: { __typename?: 'LotteryInventoryPlace', locationKind: string, org: { __typename?: 'LotteryInventoryRef', id: string, name: string }, cashPoint?: { __typename?: 'LotteryInventoryRef', id: string, name: string } | null } | null, to: { __typename?: 'LotteryInventoryPlace', locationKind: string, org: { __typename?: 'LotteryInventoryRef', id: string, name: string }, cashPoint?: { __typename?: 'LotteryInventoryRef', id: string, name: string } | null }, by?: { __typename?: 'LotteryInventoryRef', id: string, name: string } | null, matchPartner?: { __typename?: 'LotteryInventoryMatchPartner', ticketNo: string, bookNo?: string | null } | null }>, sources: Array<{ __typename?: 'LotteryInventorySource', type: string, refId?: string | null, refSerialNo?: string | null, at?: string | null, ticketNos: Array<string>, wholesaleState?: string | null, customerName?: string | null }>, cost?: { __typename?: 'LotteryInventoryCost', rate: number, cost: number, unitCost: number } | null, investigation?: { __typename?: 'LotteryInventoryInvestigation', status: string, at?: string | null, refType?: string | null, refSerialNo?: string | null, responsibleOrg?: { __typename?: 'LotteryInventoryRef', id: string, name: string } | null } | null, abilities: { __typename?: 'LotteryInventoryBookAbilities', canCorrectSkips: boolean, canMarkSkips: boolean, canRecover: boolean, canScrap: boolean, bookOpened: boolean, canShowCost: boolean } };
 
-export type LotteryInvestigationRowFieldsFragment = { __typename?: 'LotteryInvestigationRow', bookId: string, bookNo: string, gameCode: string, gameName: string, unitPrice: number, status: string, refType?: string | null, refSerialNo?: string | null, at?: string | null, days?: number | null, cost?: number | null, ticketCount: number, unmatched: boolean, sourceStocktakeType?: string | null, responsibleOrg?: { __typename?: 'LotteryInventoryRef', id: string, name: string } | null, unmatchedBooks: Array<{ __typename?: 'LotteryInvestigationBookTickets', bookId: string, bookNo: string, ticketNos: Array<string> }>, tickets: Array<{ __typename?: 'LotteryInventoryTicket', id: string, ticketNo: string, status: string, locationKind: string, locked: boolean, operable: boolean, version: number, unmatched: boolean, cashPoint?: { __typename?: 'LotteryInventoryRef', id: string, name: string } | null, org: { __typename?: 'LotteryInventoryRef', id: string, name: string }, responsibleOrg?: { __typename?: 'LotteryInventoryRef', id: string, name: string } | null }> };
+export type LotteryInvestigationRowFieldsFragment = { __typename?: 'LotteryInvestigationRow', bookId: string, bookNo: string, gameCode: string, gameName: string, unitPrice: number, status: string, refType?: string | null, refSerialNo?: string | null, at?: string | null, days?: number | null, cost?: number | null, ticketCount: number, unmatched: boolean, sourceStocktakeType?: string | null, responsibleOrg?: { __typename?: 'LotteryInventoryRef', id: string, name: string } | null, unmatchedBooks: Array<{ __typename?: 'LotteryInvestigationBookTickets', bookId: string, bookNo: string, ticketNos: Array<string> }>, tickets: Array<{ __typename?: 'LotteryInventoryTicket', id: string, ticketNo: string, status: string, locationKind: string, locked: boolean, lockRefType?: string | null, operable: boolean, version: number, unmatched: boolean, cashPoint?: { __typename?: 'LotteryInventoryRef', id: string, name: string } | null, org: { __typename?: 'LotteryInventoryRef', id: string, name: string }, responsibleOrg?: { __typename?: 'LotteryInventoryRef', id: string, name: string } | null }> };
 
 export type LotteryAllocationCellFieldsFragment = { __typename?: 'LotteryAllocationCell', orgId: string, gameId: string, plannedBooks?: number | null, note?: string | null, givenBooks: number, givenExtraTickets: number };
 
@@ -11673,14 +11683,14 @@ export type LotteryInventoryBooksQueryVariables = Exact<{
 }>;
 
 
-export type LotteryInventoryBooksQuery = { __typename?: 'Query', lotteryInventoryBooks: { __typename?: 'LotteryInventoryBooksPayload', totalCount: number, page: number, pageSize: number, items: Array<{ __typename?: 'LotteryInventoryBook', id: string, bookKey: string, bookNo: string, gameId: string, gameCode: string, gameName: string, unitPrice: number, standardTickets: number, firstTicketNo: string, lastTicketNo: string, remainingCount: number, unmatchedCount: number, totalCount: number, pendingSkipCount: number, requiredSkipCount: number, skippedTicketNos: Array<string>, state: string, status: string, purchasedAt?: string | null, org: { __typename?: 'LotteryInventoryRef', id: string, name: string }, holdings: Array<{ __typename?: 'LotteryInventoryHolding', count: number, org: { __typename?: 'LotteryInventoryRef', id: string, name: string } }>, purchaseDealer?: { __typename?: 'LotteryInventoryRef', id: string, name: string } | null }> } };
+export type LotteryInventoryBooksQuery = { __typename?: 'Query', lotteryInventoryBooks: { __typename?: 'LotteryInventoryBooksPayload', totalCount: number, page: number, pageSize: number, items: Array<{ __typename?: 'LotteryInventoryBook', id: string, bookKey: string, bookNo: string, gameId: string, gameCode: string, gameName: string, unitPrice: number, standardTickets: number, firstTicketNo: string, lastTicketNo: string, remainingCount: number, unmatchedCount: number, totalCount: number, pendingSkipCount: number, requiredSkipCount: number, skippedTicketNos: Array<string>, state: string, wholesaleCustomerName?: string | null, status: string, purchasedAt?: string | null, org: { __typename?: 'LotteryInventoryRef', id: string, name: string }, holdings: Array<{ __typename?: 'LotteryInventoryHolding', count: number, org: { __typename?: 'LotteryInventoryRef', id: string, name: string } }>, purchaseDealer?: { __typename?: 'LotteryInventoryRef', id: string, name: string } | null }> } };
 
 export type LotteryInventoryBookQueryVariables = Exact<{
   id: Scalars['ID']['input'];
 }>;
 
 
-export type LotteryInventoryBookQuery = { __typename?: 'Query', lotteryInventoryBook: { __typename?: 'LotteryInventoryBookPayload', item: { __typename?: 'LotteryInventoryBookDetail', book: { __typename?: 'LotteryInventoryBook', id: string, bookKey: string, bookNo: string, gameId: string, gameCode: string, gameName: string, unitPrice: number, standardTickets: number, firstTicketNo: string, lastTicketNo: string, remainingCount: number, unmatchedCount: number, totalCount: number, pendingSkipCount: number, requiredSkipCount: number, skippedTicketNos: Array<string>, state: string, status: string, purchasedAt?: string | null, org: { __typename?: 'LotteryInventoryRef', id: string, name: string }, holdings: Array<{ __typename?: 'LotteryInventoryHolding', count: number, org: { __typename?: 'LotteryInventoryRef', id: string, name: string } }>, purchaseDealer?: { __typename?: 'LotteryInventoryRef', id: string, name: string } | null }, tickets: Array<{ __typename?: 'LotteryInventoryTicket', id: string, ticketNo: string, status: string, locationKind: string, locked: boolean, operable: boolean, version: number, unmatched: boolean, cashPoint?: { __typename?: 'LotteryInventoryRef', id: string, name: string } | null, org: { __typename?: 'LotteryInventoryRef', id: string, name: string }, responsibleOrg?: { __typename?: 'LotteryInventoryRef', id: string, name: string } | null }>, locations: Array<{ __typename?: 'LotteryInventoryLocation', ticketNos: Array<string>, place: { __typename?: 'LotteryInventoryPlace', locationKind: string, org: { __typename?: 'LotteryInventoryRef', id: string, name: string }, cashPoint?: { __typename?: 'LotteryInventoryRef', id: string, name: string } | null } }>, events: Array<{ __typename?: 'LotteryInventoryEvent', at: string, type: string, reopen: boolean, ticketNos: Array<string>, wholeBook: boolean, refType?: string | null, refId?: string | null, refSerialNo?: string | null, reasonKey?: string | null, reasonNote?: string | null, correctionOfShift?: string | null, from?: { __typename?: 'LotteryInventoryPlace', locationKind: string, org: { __typename?: 'LotteryInventoryRef', id: string, name: string }, cashPoint?: { __typename?: 'LotteryInventoryRef', id: string, name: string } | null } | null, to: { __typename?: 'LotteryInventoryPlace', locationKind: string, org: { __typename?: 'LotteryInventoryRef', id: string, name: string }, cashPoint?: { __typename?: 'LotteryInventoryRef', id: string, name: string } | null }, by?: { __typename?: 'LotteryInventoryRef', id: string, name: string } | null, matchPartner?: { __typename?: 'LotteryInventoryMatchPartner', ticketNo: string, bookNo?: string | null } | null }>, sources: Array<{ __typename?: 'LotteryInventorySource', type: string, refId?: string | null, refSerialNo?: string | null, at: string, ticketNos: Array<string> }>, cost?: { __typename?: 'LotteryInventoryCost', rate: number, cost: number, unitCost: number } | null, investigation?: { __typename?: 'LotteryInventoryInvestigation', status: string, at?: string | null, refType?: string | null, refSerialNo?: string | null, responsibleOrg?: { __typename?: 'LotteryInventoryRef', id: string, name: string } | null } | null, abilities: { __typename?: 'LotteryInventoryBookAbilities', canCorrectSkips: boolean, canMarkSkips: boolean, canRecover: boolean, canScrap: boolean, bookOpened: boolean, canShowCost: boolean } } } };
+export type LotteryInventoryBookQuery = { __typename?: 'Query', lotteryInventoryBook: { __typename?: 'LotteryInventoryBookPayload', item: { __typename?: 'LotteryInventoryBookDetail', countStore: boolean, book: { __typename?: 'LotteryInventoryBook', id: string, bookKey: string, bookNo: string, gameId: string, gameCode: string, gameName: string, unitPrice: number, standardTickets: number, firstTicketNo: string, lastTicketNo: string, remainingCount: number, unmatchedCount: number, totalCount: number, pendingSkipCount: number, requiredSkipCount: number, skippedTicketNos: Array<string>, state: string, wholesaleCustomerName?: string | null, status: string, purchasedAt?: string | null, org: { __typename?: 'LotteryInventoryRef', id: string, name: string }, holdings: Array<{ __typename?: 'LotteryInventoryHolding', count: number, org: { __typename?: 'LotteryInventoryRef', id: string, name: string } }>, purchaseDealer?: { __typename?: 'LotteryInventoryRef', id: string, name: string } | null }, tickets: Array<{ __typename?: 'LotteryInventoryTicket', id: string, ticketNo: string, status: string, locationKind: string, locked: boolean, lockRefType?: string | null, operable: boolean, version: number, unmatched: boolean, cashPoint?: { __typename?: 'LotteryInventoryRef', id: string, name: string } | null, org: { __typename?: 'LotteryInventoryRef', id: string, name: string }, responsibleOrg?: { __typename?: 'LotteryInventoryRef', id: string, name: string } | null }>, locations: Array<{ __typename?: 'LotteryInventoryLocation', ticketNos: Array<string>, place: { __typename?: 'LotteryInventoryPlace', locationKind: string, org: { __typename?: 'LotteryInventoryRef', id: string, name: string }, cashPoint?: { __typename?: 'LotteryInventoryRef', id: string, name: string } | null } }>, events: Array<{ __typename?: 'LotteryInventoryEvent', at: string, type: string, reopen: boolean, ticketNos: Array<string>, wholeBook: boolean, refType?: string | null, refId?: string | null, refSerialNo?: string | null, reasonKey?: string | null, reasonNote?: string | null, correctionOfShift?: string | null, customerName?: string | null, voidReasonLabel?: string | null, from?: { __typename?: 'LotteryInventoryPlace', locationKind: string, org: { __typename?: 'LotteryInventoryRef', id: string, name: string }, cashPoint?: { __typename?: 'LotteryInventoryRef', id: string, name: string } | null } | null, to: { __typename?: 'LotteryInventoryPlace', locationKind: string, org: { __typename?: 'LotteryInventoryRef', id: string, name: string }, cashPoint?: { __typename?: 'LotteryInventoryRef', id: string, name: string } | null }, by?: { __typename?: 'LotteryInventoryRef', id: string, name: string } | null, matchPartner?: { __typename?: 'LotteryInventoryMatchPartner', ticketNo: string, bookNo?: string | null } | null }>, sources: Array<{ __typename?: 'LotteryInventorySource', type: string, refId?: string | null, refSerialNo?: string | null, at?: string | null, ticketNos: Array<string>, wholesaleState?: string | null, customerName?: string | null }>, cost?: { __typename?: 'LotteryInventoryCost', rate: number, cost: number, unitCost: number } | null, investigation?: { __typename?: 'LotteryInventoryInvestigation', status: string, at?: string | null, refType?: string | null, refSerialNo?: string | null, responsibleOrg?: { __typename?: 'LotteryInventoryRef', id: string, name: string } | null } | null, abilities: { __typename?: 'LotteryInventoryBookAbilities', canCorrectSkips: boolean, canMarkSkips: boolean, canRecover: boolean, canScrap: boolean, bookOpened: boolean, canShowCost: boolean } } } };
 
 export type LotteryTicketLookupQueryVariables = Exact<{
   input: LotteryTicketLookupInput;
@@ -11692,7 +11702,7 @@ export type LotteryTicketLookupQuery = { __typename?: 'Query', lotteryTicketLook
 export type LotteryInvestigationsQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type LotteryInvestigationsQuery = { __typename?: 'Query', lotteryInvestigations: { __typename?: 'LotteryInvestigationsPayload', canRecover: boolean, items: Array<{ __typename?: 'LotteryInvestigationRow', bookId: string, bookNo: string, gameCode: string, gameName: string, unitPrice: number, status: string, refType?: string | null, refSerialNo?: string | null, at?: string | null, days?: number | null, cost?: number | null, ticketCount: number, unmatched: boolean, sourceStocktakeType?: string | null, responsibleOrg?: { __typename?: 'LotteryInventoryRef', id: string, name: string } | null, unmatchedBooks: Array<{ __typename?: 'LotteryInvestigationBookTickets', bookId: string, bookNo: string, ticketNos: Array<string> }>, tickets: Array<{ __typename?: 'LotteryInventoryTicket', id: string, ticketNo: string, status: string, locationKind: string, locked: boolean, operable: boolean, version: number, unmatched: boolean, cashPoint?: { __typename?: 'LotteryInventoryRef', id: string, name: string } | null, org: { __typename?: 'LotteryInventoryRef', id: string, name: string }, responsibleOrg?: { __typename?: 'LotteryInventoryRef', id: string, name: string } | null }> }> } };
+export type LotteryInvestigationsQuery = { __typename?: 'Query', lotteryInvestigations: { __typename?: 'LotteryInvestigationsPayload', canRecover: boolean, items: Array<{ __typename?: 'LotteryInvestigationRow', bookId: string, bookNo: string, gameCode: string, gameName: string, unitPrice: number, status: string, refType?: string | null, refSerialNo?: string | null, at?: string | null, days?: number | null, cost?: number | null, ticketCount: number, unmatched: boolean, sourceStocktakeType?: string | null, responsibleOrg?: { __typename?: 'LotteryInventoryRef', id: string, name: string } | null, unmatchedBooks: Array<{ __typename?: 'LotteryInvestigationBookTickets', bookId: string, bookNo: string, ticketNos: Array<string> }>, tickets: Array<{ __typename?: 'LotteryInventoryTicket', id: string, ticketNo: string, status: string, locationKind: string, locked: boolean, lockRefType?: string | null, operable: boolean, version: number, unmatched: boolean, cashPoint?: { __typename?: 'LotteryInventoryRef', id: string, name: string } | null, org: { __typename?: 'LotteryInventoryRef', id: string, name: string }, responsibleOrg?: { __typename?: 'LotteryInventoryRef', id: string, name: string } | null }> }> } };
 
 export type LotteryAllocationsQueryVariables = Exact<{
   input: LotteryAllocationsInput;
@@ -12233,7 +12243,7 @@ export type LotteryStoreSaleReversalOptionsQueryVariables = Exact<{
 
 export type LotteryStoreSaleReversalOptionsQuery = { __typename?: 'Query', lotteryStoreSaleReversalOptions: { __typename?: 'LotteryStoreSaleReversalOptions', countMode: string, cashPoints: Array<{ __typename?: 'LotteryStoreSaleReversalCashPoint', id: string, name: string }>, games: Array<{ __typename?: 'LotteryStoreSaleReversalGameOption', gameId: string, gameCode: string, gameName: string, unitPrice: number, available: number }> } };
 
-export type LotteryStoreScanItemFieldsFragment = { __typename?: 'LotteryStoreScanItem', ticketId: string, version: number, bookId: string, gameCode: string, gameName: string, unitPrice: number, bookNo: string, ticketNo: string, status: string, locationKind: string, outcome: string, blockReason?: string | null, soldAt?: string | null, pendingSkipCount: number, unmatched: boolean, match: boolean, cashPoint?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null, counterShiftOwner?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null, responsibleOrg?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null };
+export type LotteryStoreScanItemFieldsFragment = { __typename?: 'LotteryStoreScanItem', ticketId: string, version: number, bookId: string, gameCode: string, gameName: string, unitPrice: number, bookNo: string, ticketNo: string, status: string, locationKind: string, outcome: string, blockReason?: string | null, lockRefType?: string | null, lockSerialNo?: string | null, soldAt?: string | null, pendingSkipCount: number, unmatched: boolean, match: boolean, cashPoint?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null, counterShiftOwner?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null, responsibleOrg?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null };
 
 export type LotteryStoreSaleFieldsFragment = { __typename?: 'LotteryStoreSale', ticketId: string, version: number, ticketKey: string, amount: number, soldAt: string, shiftId: string, undone: boolean, undoBlock?: string | null, matched: boolean, cashPoint: { __typename?: 'LotteryAccountsRef', id: string, name: string }, countSale?: { __typename?: 'LotteryStoreCountSaleRow', refId: string, gameId: string, gameCode: string, gameName: string, unitPrice: number, count: number, undoneCount: number, undoableCount: number } | null };
 
@@ -12248,7 +12258,7 @@ export type LotteryStoreScanQueryVariables = Exact<{
 }>;
 
 
-export type LotteryStoreScanQuery = { __typename?: 'Query', lotteryStoreScan: { __typename?: 'LotteryStoreScanPayload', items: Array<{ __typename?: 'LotteryStoreScanItem', ticketId: string, version: number, bookId: string, gameCode: string, gameName: string, unitPrice: number, bookNo: string, ticketNo: string, status: string, locationKind: string, outcome: string, blockReason?: string | null, soldAt?: string | null, pendingSkipCount: number, unmatched: boolean, match: boolean, cashPoint?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null, counterShiftOwner?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null, responsibleOrg?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null }> } };
+export type LotteryStoreScanQuery = { __typename?: 'Query', lotteryStoreScan: { __typename?: 'LotteryStoreScanPayload', items: Array<{ __typename?: 'LotteryStoreScanItem', ticketId: string, version: number, bookId: string, gameCode: string, gameName: string, unitPrice: number, bookNo: string, ticketNo: string, status: string, locationKind: string, outcome: string, blockReason?: string | null, lockRefType?: string | null, lockSerialNo?: string | null, soldAt?: string | null, pendingSkipCount: number, unmatched: boolean, match: boolean, cashPoint?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null, counterShiftOwner?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null, responsibleOrg?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null }> } };
 
 export type SellLotteryTicketsMutationVariables = Exact<{
   input: SellLotteryTicketsInput;
@@ -12430,7 +12440,7 @@ export type LotteryTransferBookTicketsQueryVariables = Exact<{
 }>;
 
 
-export type LotteryTransferBookTicketsQuery = { __typename?: 'Query', lotteryTransferBookTickets: Array<{ __typename?: 'LotteryTransferTicketCell', ticketNo: string, state: string, unmatched: boolean, matchable: boolean, soldCashPointName?: string | null, soldAt?: string | null, cashPointName?: string | null, lockedSerialNo?: string | null }> };
+export type LotteryTransferBookTicketsQuery = { __typename?: 'Query', lotteryTransferBookTickets: Array<{ __typename?: 'LotteryTransferTicketCell', ticketNo: string, state: string, unmatched: boolean, matchable: boolean, soldCashPointName?: string | null, soldAt?: string | null, cashPointName?: string | null, lockedRefType?: string | null, lockedSerialNo?: string | null }> };
 
 export type LotteryTransferProgressQueryVariables = Exact<{
   transferIds: Array<Scalars['ID']['input']> | Scalars['ID']['input'];
@@ -13989,6 +13999,7 @@ export const LotteryInventoryBookFieldsFragmentDoc = `
   requiredSkipCount
   skippedTicketNos
   state
+  wholesaleCustomerName
   status
   purchasedAt
   purchaseDealer {
@@ -14012,6 +14023,7 @@ export const LotteryInventoryTicketFieldsFragmentDoc = `
     ...LotteryInventoryRefFields
   }
   locked
+  lockRefType
   operable
   version
   unmatched
@@ -14033,6 +14045,7 @@ export const LotteryInventoryBookDetailFieldsFragmentDoc = `
   book {
     ...LotteryInventoryBookFields
   }
+  countStore
   tickets {
     ...LotteryInventoryTicketFields
   }
@@ -14067,6 +14080,8 @@ export const LotteryInventoryBookDetailFieldsFragmentDoc = `
       ticketNo
       bookNo
     }
+    customerName
+    voidReasonLabel
   }
   sources {
     type
@@ -14074,6 +14089,8 @@ export const LotteryInventoryBookDetailFieldsFragmentDoc = `
     refSerialNo
     at
     ticketNos
+    wholesaleState
+    customerName
   }
   cost {
     rate
@@ -14546,6 +14563,8 @@ export const LotteryStoreScanItemFieldsFragmentDoc = `
   }
   outcome
   blockReason
+  lockRefType
+  lockSerialNo
   soldAt
   pendingSkipCount
   unmatched
@@ -27206,6 +27225,7 @@ export const LotteryTransferBookTicketsDocument = `
     soldCashPointName
     soldAt
     cashPointName
+    lockedRefType
     lockedSerialNo
   }
 }

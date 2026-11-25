@@ -64,6 +64,14 @@ export class LotteryStoreScanItemModel {
   @Field(() => String, { nullable: true })
   blockReason!: string | null;
 
+  /** `blockReason = locked`:鎖定來源(`TICKET_LOCK_REF_TYPES`;批售單鎖住時畫面寫單號) */
+  @Field(() => String, { nullable: true })
+  lockRefType!: string | null;
+
+  /** `blockReason = locked`:鎖住它的調貨單 / 批售單單號(撤銷售出申請 = null) */
+  @Field(() => String, { nullable: true })
+  lockSerialNo!: string | null;
+
   /** 已售時的售出時間(「已於 hh:mm 售出」)。 */
   @Field(() => GraphQLISODateTime, { nullable: true })
   soldAt!: Date | null;

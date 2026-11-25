@@ -10,9 +10,11 @@ import {
   TICKET_LOCATION_KIND,
   TICKET_STATUS,
   type TicketEventType,
+  WHOLESALE_REF_TYPE,
   bookDisplayStateOf,
   holdingsOf,
   holdingsWithoutPendingSkips,
+  isMatchingCountMode,
   normalizeBookNo,
   remainingOfCounts,
   requiredSkipCountOf,
@@ -41,6 +43,7 @@ import { LotteryShiftsRepository } from "../../database/lottery-store/lottery-sh
 import { parseId } from "../accounts/accounts-util";
 import { daysSince, localDayOf } from "../dealers/dealer-dates";
 import { tenantOfOperator } from "../master-data-tenant";
+import { StoreCountModeService } from "../settings/store-count-mode.service";
 import { countsOfBook, pendingSkipCountOfBook } from "../tickets/books.service";
 import { notFoundError } from "../tickets/inventory-error";
 import { bookStateConditionsOf } from "./book-state-filter";
@@ -51,7 +54,7 @@ import {
   type LotteryTicketLookupInput,
 } from "./dto/lottery-inventory.input";
 import { InventoryAccess } from "./inventory-access";
-import { InventoryNames } from "./inventory-names";
+import { InventoryNames, type WholesaleDocument } from "./inventory-names";
 import type {
   LotteryInventoryBookDetailModel,
   LotteryInventoryBookModel,
@@ -81,10 +84,17 @@ const SALE_EVENT_TYPES: ReadonlySet<string> = new Set([
 /** 待查 / 遺失。 */
 const MISSING_STATUSES = [TICKET_STATUS.investigating, TICKET_STATUS.lost];
 
-/** 來源事件:進貨、調入。 */
+/** 來源事件:進貨、調入、批售。 */
 const SOURCE_EVENT_TYPES: ReadonlySet<TicketEventType> = new Set([
   TICKET_EVENT_TYPE.purchase,
   TICKET_EVENT_TYPE.transferIn,
+  TICKET_EVENT_TYPE.wholesale,
+]);
+
+/** 批售、取消批售:時間軸的「位置」要寫買方(批售客戶)。 */
+const WHOLESALE_EVENT_TYPES: ReadonlySet<string> = new Set([
+  TICKET_EVENT_TYPE.wholesale,
+  TICKET_EVENT_TYPE.wholesaleVoid,
 ]);
 
 const ref = (
@@ -107,6 +117,12 @@ const isFilterState = (value: string): value is InventoryBookFilterState =>
 const byTicketNo = (a: string, b: string): number =>
   a.localeCompare(b, COLLATION_LOCALE);
 
+/** 已出貨的批售單現在的狀態:有取消批售事件 = 已作廢。 */
+const shippedStateOf = (
+  voided: ReadonlySet<string>,
+  refId: Types.ObjectId | null,
+): string => (voided.has(String(refId)) ? "voided" : "shipped");
+
 /** 時間軸合併同一列用的地方 key。 */
 const placeKey = (place: TicketStateSnapshot | null): string =>
   place === null
@@ -119,6 +135,8 @@ interface Names {
   users: ReadonlyMap<string, string>;
   cashPoints: ReadonlyMap<string, string>;
   serials: ReadonlyMap<string, string>;
+  /** 批售單 → 批售客戶、作廢原因 */
+  wholesales: ReadonlyMap<string, WholesaleDocument>;
 }
 
 /**
@@ -139,6 +157,7 @@ export class InventoryViewService {
     private readonly orgs: OrgsRepository,
     private readonly names: InventoryNames,
     private readonly access: InventoryAccess,
+    private readonly countModes: StoreCountModeService,
   ) {}
 
   // ---- 庫存分頁 ----
@@ -185,10 +204,12 @@ export class InventoryViewService {
     }
     // 狀態以本上的張數欄位在資料庫篩(和 `bookDisplayStateOf` 同一套判斷),篩完再分頁
     const state = input.state ?? "";
-    const where =
+    const conditions =
       state !== "" && isFilterState(state)
-        ? { $and: [filter, ...bookStateConditionsOf(state)] }
-        : filter;
+        ? await this.stateConditionsOf(operator, state)
+        : [];
+    const where =
+      conditions.length === 0 ? filter : { $and: [filter, ...conditions] };
     const page = Math.max(1, input.page ?? 1);
     const pageSize = Math.min(
       INVENTORY_BOOKS_MAX_PAGE_SIZE,
@@ -257,6 +278,9 @@ export class InventoryViewService {
     const partners = await this.matchPartnersOf(whole, events, ticketNos);
     return {
       book,
+      countStore: isMatchingCountMode(
+        await this.countModes.modeOf(operator, record.orgId),
+      ),
       tickets: sortedTickets.map((ticket) =>
         this.ticketModel(operator, ticket, names),
       ),
@@ -269,7 +293,7 @@ export class InventoryViewService {
         record.firstOpenedAt ?? null,
         partners,
       ),
-      sources: this.sourcesOf(events, ticketNos, names),
+      sources: this.sourcesOf(sortedTickets, events, ticketNos, names),
       cost: grant.canShowCost
         ? {
             rate: record.rate,
@@ -485,6 +509,21 @@ export class InventoryViewService {
 
   // ---- 內部 ----
 
+  /** 狀態篩選的條件:批售中看張的鎖(本上沒有這一格),其他看本上的張數欄位。 */
+  private async stateConditionsOf(
+    operator: OperatorContext,
+    state: InventoryBookFilterState,
+  ): Promise<Record<string, unknown>[]> {
+    if (state !== "wholesaling") {
+      return bookStateConditionsOf(state);
+    }
+    const rows = await this.tickets.aggregate(operator, [
+      { $match: { "lockedBy.refType": WHOLESALE_REF_TYPE } },
+      { $group: { _id: "$bookId" } },
+    ]);
+    return [{ _id: { $in: rows.map((row) => row._id as Types.ObjectId) } }];
+  }
+
   /** 讀得到這本(操作者自己的範圍 + 資料共用)才回;否則 `NOT_FOUND`。 */
   async mustBook(operator: OperatorContext, id: string): Promise<BookRecord> {
     const bookId = parseId(id);
@@ -557,6 +596,7 @@ export class InventoryViewService {
       ),
     ]);
     const gameOf = new Map(games.map((game) => [String(game._id), game]));
+    const customers = await this.wholesaleCustomersOf(operator, records);
     return records.map((record) => {
       const snapshots = snapshotsOf.get(String(record._id)) ?? [];
       const game = gameOf.get(String(record.gameId));
@@ -606,11 +646,49 @@ export class InventoryViewService {
           firstOpenedAt: record.firstOpenedAt,
           revoked: record.status === "revoked",
         }),
+        wholesaleCustomerName: customers.get(String(record._id)) ?? null,
         status: record.status,
         purchasedAt: record.purchasedAt,
         purchaseDealer: ref(record.purchaseDealerId, dealerNames),
       };
     });
+  }
+
+  /** 已批售的本賣給誰:這本最近一筆批售事件的批售單(看不到批售單的不回)。 */
+  private async wholesaleCustomersOf(
+    operator: OperatorContext,
+    records: readonly BookRecord[],
+  ): Promise<Map<string, string>> {
+    const wholesaled = records.filter(
+      (record) => countsOfBook(record).wholesaled > 0,
+    );
+    if (wholesaled.length === 0) {
+      return new Map();
+    }
+    const found = await this.events.aggregate(operator, [
+      {
+        $match: {
+          bookId: { $in: wholesaled.map((record) => record._id) },
+          type: TICKET_EVENT_TYPE.wholesale,
+        },
+      },
+      { $sort: { at: 1 } },
+      { $group: { _id: "$bookId", refId: { $last: "$refId" } } },
+    ]);
+    const rows = found.map((row) => ({
+      bookId: String(row._id),
+      refId: String(row.refId),
+    }));
+    const documents = await this.names.wholesaleDocuments(
+      operator,
+      rows.map((row) => row.refId),
+    );
+    return new Map(
+      rows.flatMap((row) => {
+        const name = documents.get(row.refId)?.customerName ?? null;
+        return name === null ? [] : [[row.bookId, name] as const];
+      }),
+    );
   }
 
   /** 一批本的未售張(所在分店用;每本以它所在租戶的邊界上下文讀;同一租戶只建一次)。 */
@@ -653,7 +731,18 @@ export class InventoryViewService {
     events: readonly EventRecord[],
   ): Promise<Names> {
     const places = events.flatMap((event) => [event.from, event.to]);
-    const [orgs, users, cashPoints, serials] = await Promise.all([
+    // 批售中的本還沒有事件:單據從張的鎖找
+    const wholesaleIds = [
+      ...events
+        .filter((event) => event.refType === WHOLESALE_REF_TYPE)
+        .map((event) => event.refId),
+      ...tickets.flatMap((ticket) =>
+        ticket.lockedBy?.refType === WHOLESALE_REF_TYPE
+          ? [ticket.lockedBy.refId]
+          : [],
+      ),
+    ];
+    const [orgs, users, cashPoints, serials, wholesales] = await Promise.all([
       this.names.orgNames(operator, [
         ...tickets.flatMap((ticket) => [ticket.orgId, ticket.responsibleOrgId]),
         ...places.map((place) => place?.orgId),
@@ -666,12 +755,13 @@ export class InventoryViewService {
         ...tickets.map((ticket) => ticket.location.cashPointId),
         ...places.map((place) => place?.cashPointId),
       ]),
-      this.names.serialNos(
-        operator,
-        events.map((event) => event.refId),
-      ),
+      this.names.serialNos(operator, [
+        ...events.map((event) => event.refId),
+        ...wholesaleIds,
+      ]),
+      this.names.wholesaleDocuments(operator, wholesaleIds),
     ]);
-    return { orgs, users, cashPoints, serials };
+    return { orgs, users, cashPoints, serials, wholesales };
   }
 
   private ticketModel(
@@ -688,6 +778,7 @@ export class InventoryViewService {
       org: mustRef(ticket.orgId, names.orgs),
       responsibleOrg: ref(ticket.responsibleOrgId, names.orgs),
       locked: ticket.lockedBy !== null,
+      lockRefType: ticket.lockedBy?.refType ?? null,
       operable: isOrgVisible(operator, ticket.orgId),
       version: ticket.version,
       unmatched: ticket.unmatched,
@@ -794,6 +885,13 @@ export class InventoryViewService {
       reasonNote: event.reasonNote,
       correctionOfShift: corrections.get(String(event._id)) ?? null,
       matchPartner: partners.get(String(event._id)) ?? null,
+      customerName: WHOLESALE_EVENT_TYPES.has(event.type)
+        ? (names.wholesales.get(String(event.refId))?.customerName ?? null)
+        : null,
+      voidReasonLabel:
+        event.type === TICKET_EVENT_TYPE.wholesaleVoid
+          ? (names.wholesales.get(String(event.refId))?.voidReasonLabel ?? null)
+          : null,
     }));
   }
 
@@ -890,13 +988,24 @@ export class InventoryViewService {
     );
   }
 
-  /** 來源:進貨與調入的單據(依單據合併,舊的在上)。 */
+  /**
+   * 來源:進貨與調入的單據(依單據合併,舊的在上);批售單(規格 21.5)接在後面:批售中看張的鎖(`reviewing`)、
+   * 批售事件(`shipped`)、有取消批售事件(`voided`)。
+   */
   private sourcesOf(
+    tickets: readonly TicketRecord[],
     events: readonly EventRecord[],
     ticketNos: ReadonlyMap<string, string>,
     names: Names,
   ): LotteryInventorySourceModel[] {
     const sources = new Map<string, LotteryInventorySourceModel>();
+    const voided = new Set(
+      events
+        .filter((event) => event.type === TICKET_EVENT_TYPE.wholesaleVoid)
+        .map((event) => String(event.refId)),
+    );
+    const isWholesale = (event: EventRecord) =>
+      event.type === TICKET_EVENT_TYPE.wholesale;
     for (const event of events.toReversed()) {
       if (!SOURCE_EVENT_TYPES.has(event.type)) {
         continue;
@@ -911,8 +1020,33 @@ export class InventoryViewService {
             : (names.serials.get(String(event.refId)) ?? null),
         at: event.at,
         ticketNos: [],
+        wholesaleState: isWholesale(event)
+          ? shippedStateOf(voided, event.refId)
+          : null,
+        customerName: isWholesale(event)
+          ? (names.wholesales.get(String(event.refId))?.customerName ?? null)
+          : null,
       };
       source.ticketNos.push(ticketNos.get(String(event.ticketId)) ?? "");
+      sources.set(key, source);
+    }
+    for (const ticket of tickets) {
+      const lock = ticket.lockedBy;
+      if (lock?.refType !== WHOLESALE_REF_TYPE) {
+        continue;
+      }
+      const key = `lock|${String(lock.refId)}`;
+      const source = sources.get(key) ?? {
+        type: TICKET_EVENT_TYPE.wholesale,
+        refId: String(lock.refId),
+        refSerialNo: names.serials.get(String(lock.refId)) ?? null,
+        at: null,
+        ticketNos: [],
+        wholesaleState: "reviewing",
+        customerName:
+          names.wholesales.get(String(lock.refId))?.customerName ?? null,
+      };
+      source.ticketNos.push(ticket.ticketNo);
       sources.set(key, source);
     }
     return [...sources.values()];

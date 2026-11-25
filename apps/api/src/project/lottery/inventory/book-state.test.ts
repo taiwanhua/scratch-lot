@@ -30,7 +30,9 @@ import {
   startAuthTestApp,
 } from "../../../auth/test-support/auth-app";
 import { createOrg } from "../../../auth/test-support/fixtures";
+import { OrgsRepository } from "../../../database/database.module";
 import type { OperatorContext } from "../../../database/operator-context";
+import { tenantBoundaryContext } from "../../../database/tenant-boundary-context";
 import {
   countDbCommands,
   expectDbCommandsAtMost,
@@ -78,6 +80,10 @@ import { StoreClock } from "../store/store-clock";
 import { seedReasonCategory } from "../test-support/master-data-fixtures";
 import { LotteryBooksService } from "../tickets/books.service";
 import { TicketLedgerService } from "../tickets/ticket-ledger.service";
+import {
+  WholesaleLedger,
+  wholesaleLockOf,
+} from "../tickets/wholesale-ledger.service";
 import {
   TRANSFER_MODULE_KEYS,
   TRANSFER_PERMISSION_KEYS,
@@ -1638,6 +1644,144 @@ describe("本狀態與再上檯面(GraphQL 端點 + 真 MongoDB)", () => {
         }
       ).summary.confirmLost,
     ).toBe(94);
+  });
+
+  it("批售(規格 21.5):批售中、已批售、取消批售在庫存列表、詳情、拆本清單、盤點、調貨選本一致", async () => {
+    const book = await newBook(storeA);
+    const bookId = book.bookId;
+    const now = new Date();
+    const { insertedId: submissionId } = await db()
+      .collection("form_submissions")
+      .insertOne({
+        orgId: storeA,
+        tenantId: tenant,
+        moduleKey: "purchasing.wholesale",
+        formKey: "wholesale",
+        version: 1,
+        values: { customer: { id: "c", label: "好運彩券行" } },
+        summary: null,
+        status: "reviewing",
+        revision: 1,
+        revisions: [],
+        editVersion: 1,
+        touched: [],
+        clientRequestId: randomUUID(),
+        serialNo: "W-0001",
+        submittedAt: now,
+        currentInstanceId: null,
+        blocked: false,
+        createdAt: now,
+        updatedAt: now,
+        createdBy: null,
+        updatedBy: null,
+        deletedAt: null,
+      });
+    const reader = await tenantBoundaryContext(
+      api.app.get(OrgsRepository),
+      null,
+      tenant,
+    );
+    const wholesale = api.app.get(WholesaleLedger);
+    const write = { reader, tenantId: tenant, submissionId, actorId: null };
+    const locked = await ticketsOf(bookId);
+    await transactions().withTransaction((session) =>
+      api.app.get(TicketLedgerService).lockTicketsInTenant(
+        session,
+        tenant,
+        locked.map((ticket) => ticket._id),
+        wholesaleLockOf(submissionId),
+      ),
+    );
+    const listed = async (state: string): Promise<boolean> => {
+      const rows = await listOf(hq, tenant, state);
+      return rows.some((row) => row.id === String(bookId));
+    };
+    interface WholesaleDetail {
+      tickets: { status: string; lockRefType: string | null }[];
+      sources: {
+        type: string;
+        refSerialNo: string | null;
+        wholesaleState: string | null;
+        customerName: string | null;
+      }[];
+      events: {
+        type: string;
+        customerName: string | null;
+        voidReasonLabel: string | null;
+      }[];
+    }
+    const wholesaleDetail = async (): Promise<WholesaleDetail> => {
+      const data = await must(hq, "LotteryInventoryBook", {
+        id: String(bookId),
+      });
+      return (data.lotteryInventoryBook as { item: WholesaleDetail }).item;
+    };
+    const notUsable = async (): Promise<void> => {
+      await expect(
+        splitListItem(clerkA, storeA, bookId),
+      ).resolves.toBeUndefined();
+      await expect(
+        transferOption(hq, storeA, storeB, bookId),
+      ).resolves.toBeUndefined();
+      const sheet = await sheetOf(clerkA, storeA);
+      expect(
+        [...sheet.books, ...sheet.unopenedBooks].some(
+          (item) => item.bookId === String(bookId),
+        ),
+      ).toBe(false);
+    };
+
+    // 批售中:看張的鎖篩;來源寫審核中
+    await expect(listed("wholesaling")).resolves.toBe(true);
+    await expect(listed("wholesaled")).resolves.toBe(false);
+    const reviewing = await wholesaleDetail();
+    expect(reviewing.tickets[0]).toMatchObject({ lockRefType: "wholesale" });
+    expect(reviewing.sources.at(-1)).toMatchObject({
+      type: "wholesale",
+      refSerialNo: "W-0001",
+      wholesaleState: "reviewing",
+    });
+    await notUsable();
+
+    // 出貨:已批售;買方、單號寫得出來
+    await transactions().withTransaction((session) =>
+      wholesale.ship({ session, ...write }, [
+        { bookId, amount: 1860, tickets: 100 },
+      ]),
+    );
+    await expectState("已批售", bookId, "wholesaled");
+    const shipped = await wholesaleDetail();
+    expect(shipped.sources.at(-1)).toMatchObject({
+      wholesaleState: "shipped",
+      customerName: "好運彩券行",
+    });
+    expect(shipped.events[0]).toMatchObject({
+      type: "wholesale",
+      customerName: "好運彩券行",
+    });
+    await notUsable();
+
+    // 取消:未拆;作廢原因的文字取自批售單
+    await db()
+      .collection("form_submissions")
+      .updateOne(
+        { _id: submissionId },
+        { $set: { status: "voided", voidReasonLabel: "輸入錯誤" } },
+      );
+    await transactions().withTransaction((session) =>
+      wholesale.cancel(
+        { session, ...write },
+        { reasonKey: "input-error", reasonNote: null },
+      ),
+    );
+    await expectState("取消批售", bookId, "unopened");
+    const voided = await wholesaleDetail();
+    expect(voided.sources.at(-1)).toMatchObject({ wholesaleState: "voided" });
+    expect(voided.events[0]).toMatchObject({
+      type: "wholesale_void",
+      voidReasonLabel: "輸入錯誤",
+    });
+    await expect(splitListItem(clerkA, storeA, bookId)).resolves.toBeDefined();
   });
 
   it("本上張數依本整批 $inc:一次賣 4 本(張數相同)比 1 本不多指令(防退化,TX-06)", async () => {

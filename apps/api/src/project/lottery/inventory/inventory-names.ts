@@ -21,6 +21,12 @@ import { type TenantOrg, isVisibleStore } from "./store-orgs";
 
 export type { TenantOrg } from "./store-orgs";
 
+/** 批售單上庫存畫面要的資訊。 */
+export interface WholesaleDocument {
+  customerName: string | null;
+  voidReasonLabel: string | null;
+}
+
 const uniqueIds = (ids: readonly unknown[]): Types.ObjectId[] => [
   ...new Map(
     ids
@@ -167,6 +173,39 @@ export class InventoryNames {
       { select: "type" },
     );
     return new Map(found.map((record) => [String(record._id), record.type]));
+  }
+
+  /**
+   * 批售單 → 批售客戶的顯示名稱(單頭 `customer` 的引用快照)與作廢原因的選項文字(作廢時記在單據上);
+   * 照操作者自己的範圍讀,看不到的單不回。
+   */
+  async wholesaleDocuments(
+    operator: OperatorContext,
+    ids: readonly unknown[],
+  ): Promise<Map<string, WholesaleDocument>> {
+    const unique = uniqueIds(ids);
+    if (unique.length === 0) {
+      return new Map();
+    }
+    const found = await this.submissions.findMany(
+      operator,
+      { _id: { $in: unique } },
+      { select: "values.customer voidReasonLabel" },
+    );
+    return new Map(
+      found.map((submission) => {
+        const customer = submission.values.customer as
+          { label?: unknown } | null | undefined;
+        return [
+          String(submission._id),
+          {
+            customerName:
+              typeof customer?.label === "string" ? customer.label : null,
+            voidReasonLabel: submission.voidReasonLabel ?? null,
+          },
+        ];
+      }),
+    );
   }
 
   /**

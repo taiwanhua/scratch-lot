@@ -54,6 +54,8 @@ const SCAN = /* GraphQL */ `
         status
         outcome
         blockReason
+        lockRefType
+        lockSerialNo
         soldAt
         pendingSkipCount
         cashPoint {
@@ -202,6 +204,8 @@ interface ScanRow {
   status: string;
   outcome: string;
   blockReason: string | null;
+  lockRefType: string | null;
+  lockSerialNo: string | null;
   soldAt: string | null;
   pendingSkipCount: number;
   cashPoint: { id: string; name: string } | null;
@@ -778,6 +782,7 @@ describe("店面(二):銷售、當下撤銷、拆本、移櫃(GraphQL 端點 + �
     it.each([
       ["跳號", { status: "skipped" }, "skipped"],
       ["報廢", { status: "scrapped" }, "scrapped"],
+      ["已批售", { status: "wholesaled" }, "wholesaled"],
       [
         "鎖定",
         { lockedBy: { refType: "transfer", refId: new Types.ObjectId() } },
@@ -800,6 +805,53 @@ describe("店面(二):銷售、當下撤銷、拆本、移櫃(GraphQL 端點 + �
           sellInput(await ticketOf(fresh.bookId, "040")),
         ),
       ).toMatchObject({ reason: "TICKET_NOT_SELLABLE", blockReason: reason });
+    });
+
+    it("批售中(規格 21.9 #3)→ 擋下,帶批售單單號", async () => {
+      now("11:02");
+      const fresh = await receiveBook();
+      const { insertedId } = await connection
+        .collection("form_submissions")
+        .insertOne({
+          orgId: xinyi,
+          tenantId: tenant,
+          moduleKey: "purchasing.wholesale",
+          formKey: "wholesale",
+          version: 1,
+          values: {},
+          summary: null,
+          status: "reviewing",
+          revision: 1,
+          revisions: [],
+          editVersion: 1,
+          touched: [],
+          clientRequestId: String(new Types.ObjectId()),
+          serialNo: "W-0001",
+          submittedAt: new Date(),
+          currentInstanceId: null,
+          blocked: false,
+          ...base(),
+        });
+      await connection
+        .collection(LOTTERY_TICKETS_COLLECTION)
+        .updateMany(
+          { bookId: fresh.bookId },
+          { $set: { lockedBy: { refType: "wholesale", refId: insertedId } } },
+        );
+      const [item] = await scan(wang, barcodeOf(fresh.bookNo, "040"));
+      expect(item).toMatchObject({
+        outcome: "blocked",
+        blockReason: "locked",
+        lockRefType: "wholesale",
+        lockSerialNo: "W-0001",
+      });
+      expect(
+        await errorOf(
+          wang,
+          SELL,
+          sellInput(await ticketOf(fresh.bookId, "040")),
+        ),
+      ).toMatchObject({ reason: "TICKET_NOT_SELLABLE", blockReason: "locked" });
     });
 
     it("未拆的本 → 詢問拆本(帶待標註張數)", async () => {
