@@ -1064,6 +1064,36 @@ describe("張數店:收回、移櫃、拆本、報廢、更正跳號(GraphQL 端
       }
     });
 
+    it("OP12 依張數移櫃不挑期初已售(導入前已賣出;期初建檔規格 4.2)", async () => {
+      const { bookId } = await receiveBook();
+      now("09:00");
+      // A 台 #001–#100;#001–#002 是導入前已賣出
+      await split(bookId, []);
+      await connection
+        .collection(LOTTERY_TICKETS_COLLECTION)
+        .updateMany(
+          { bookId, ticketNo: { $in: ["001", "002"] } },
+          {
+            $set: { status: "sold", soldSource: "opening", soldAt: new Date() },
+          },
+        );
+      now("10:00");
+      await ok(wang, MOVE_BY_COUNT, moveByCountInput(2));
+      for (const no of ["003", "004"]) {
+        expect(await ticketOf(bookId, no)).toMatchObject({
+          status: "unsold",
+          location: { cashPointId: stallB },
+        });
+      }
+      for (const no of ["001", "002"]) {
+        expect(await ticketOf(bookId, no)).toMatchObject({
+          status: "sold",
+          soldSource: "opening",
+          location: { cashPointId: counterA },
+        });
+      }
+    });
+
     it("依張數移櫃:轉換中、編號店擋 not_count_store;移到同一台擋;要 store.sell", async () => {
       const { bookId } = await receiveBook();
       await split(bookId, []);

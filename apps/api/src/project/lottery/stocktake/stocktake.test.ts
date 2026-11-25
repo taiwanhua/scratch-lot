@@ -1164,6 +1164,38 @@ describe("盤點(GraphQL 端點 + 真 MongoDB)", () => {
     });
   });
 
+  it("OP9 期初已售實際還在 → [期初更正],核准完成才寫 opening_fix(改回未售、放在盤到的收銀點);抽屜應有不變", async () => {
+    now("22:00");
+    const { bookId } = await counterBook(counter, ["012"]);
+    await connection
+      .collection(LOTTERY_TICKETS_COLLECTION)
+      .updateOne(
+        { bookId, ticketNo: "012" },
+        { $set: { soldSource: "opening", saleEventId: null } },
+      );
+    const before = await expectedOfCounter();
+    const draft = draftOf([
+      lineOf(bookId, counter, "22:00", allNos(), [
+        { ticketNo: "012", action: "opening_fix" },
+      ]),
+    ]);
+    const submitted = await submitOk(senior, draft);
+    expect(await statusOf(bookId, "012")).toBe("sold");
+    await decideOn(world, manager, submitted.id, "APPROVE");
+    const fixed = await ticketOf(bookId, "012");
+    expect(fixed).toMatchObject({
+      status: "unsold",
+      location: { kind: "counter", cashPointId: counter },
+    });
+    const events = await connection
+      .collection<{ type: string; cashEffect: string }>("lottery_ticket_events")
+      .find({ ticketId: fixed._id })
+      .toArray();
+    expect(events.map((event) => event.type)).toEqual(["opening_fix"]);
+    expect(events[0]?.cashEffect).toBe("none");
+    expect(await expectedOfCounter()).toBe(before);
+  });
+
   it("待標註的跳號(使用者 10/27 定案甲):迄號 021、標準 20 張的未拆本 → 盤點頁 20 張、不在 = 新增待查 20;整本確認遺失 20 張 · 3,680", async () => {
     now("23:00");
     const { bookId: absentId } = await counterBook(counter, [], 21);
