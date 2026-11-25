@@ -3323,6 +3323,7 @@
     "STORE_FORM_BRANCH_NOT_VISIBLE": "分店不在你的範圍內",
     "STORE_FORM_SHIFT_NOT_IN_BRANCH": "選的班不是這家分店的班",
     "SALE_REVERSAL_TICKET_NOT_REVERSIBLE": "有張數不是本店已售,或已在其他還沒結束的撤銷售出申請上",
+    "OPENING_SALE_NOT_REVERSIBLE": "有張數是導入前已賣出,不能撤銷,請用期初更正",
     "SALE_REVERSAL_AMOUNT_MISMATCH": "退款金額和這些張數的面額合計不符,請重新選張數",
     "SALE_REVERSAL_COUNT_SALE_NOT_FOUND": "刷的票系統沒有記成已售,這台這個遊戲也沒有依張數售出可以對號;請確認收銀點或改用「依遊戲 + 張數」",
     "SALE_REVERSAL_COUNT_EXCEEDS": "這台這個遊戲系統預設帶入的已售張數不夠,請看「最多幾張」後改小",
@@ -3666,7 +3667,8 @@
       "scanMove": "刷條碼移櫃",
       "moveByCount": "依張數移櫃",
       "pausedRescan": "遊戲 {game} 全店重刷中,暫停移櫃",
-      "pausedRenumber": "補點編號中,暫停移櫃"
+      "pausedRenumber": "補點編號中,暫停移櫃",
+      "openingSold": "導入前已賣出"
     },
     "move": {
       "title": "移櫃",
@@ -3946,6 +3948,7 @@
       "submitted": "已送出撤銷售出申請",
       "submitAndPrint": "送出並列印收據",
       "scanNotReversibleCount": "這張不能撤銷:被其他單據鎖住、記跳號或報廢、調貨在途,或不是本店的刮刮樂",
+      "scanOpeningSold": "這張刮刮樂導入前已賣出,不能撤銷,請用期初更正",
       "dashedNote": "虛線 = 系統預設帶入的張號",
       "matchTicket": "{gameCode} · {bookNo} · #{ticketNo}(刷條碼加入)",
       "matched": "已對號",

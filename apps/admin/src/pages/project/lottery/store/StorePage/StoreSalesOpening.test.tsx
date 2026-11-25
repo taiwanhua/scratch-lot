@@ -70,4 +70,23 @@ describe("店面管理:刷到期初已售", () => {
       within(blocked).queryByRole("button", { name: "期初更正" }),
     ).not.toBeInTheDocument();
   });
+
+  it("撤銷售出申請新增頁刷到期初已售 → 不能加入,「導入前已賣出,不能撤銷,請用期初更正」(兩種店)", async () => {
+    for (const countMode of ["numbered", "count"] as const) {
+      const { user, unmount } = renderStore({
+        path: `/store/create-page/sale_reversal?org=${STORE_A}`,
+        forms: { countMode },
+        sales: { openingSoldTicketIds: ["b-1-t70"] },
+      });
+      const input = await screen.findByRole("textbox", {
+        name: "刷條碼加入張數",
+      });
+      await user.type(input, "056527-070{Enter}");
+      expect(
+        await screen.findByText("這張刮刮樂導入前已賣出,不能撤銷,請用期初更正"),
+      ).toBeInTheDocument();
+      expect(screen.queryByText(/#070(刷條碼加入)/u)).toBeNull();
+      unmount();
+    }
+  });
 });

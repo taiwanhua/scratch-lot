@@ -91,6 +91,25 @@ export const cellStateOf = (
 };
 
 /**
+ * 格子的提示(`admin.lotteryStore.*` 的 key 與參數):別的收銀點 / 庫存寫在哪;期初已售寫「導入前已賣出」
+ * (期初建檔規格 D9;樣式照已售)。沒有提示 = null。
+ */
+export const cellTooltipOf = (
+  ticket: CardTicket,
+  state: TicketCellState,
+): { key: string; values?: Record<string, string> } | null => {
+  if (ticket.status === "sold" && ticket.soldSource === "opening") {
+    return { key: "expand.openingSold" };
+  }
+  if (state !== "otherCashPoint") {
+    return null;
+  }
+  return ticket.cashPoint == null
+    ? { key: "expand.inStock" }
+    : { key: "expand.atCashPoint", values: { name: ticket.cashPoint.name } };
+};
+
+/**
  * 卡片圖例:有被調貨單鎖住的張才放「調貨中」;張數店另放「已售·未對號」「待查·遺失·未對號」
  * (Figma CS-02a;格子下方另寫「虛線 = 系統預設帶入的張號」)。
  */

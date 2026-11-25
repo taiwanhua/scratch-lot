@@ -3323,6 +3323,7 @@
     "STORE_FORM_BRANCH_NOT_VISIBLE": "The store is outside your scope",
     "STORE_FORM_SHIFT_NOT_IN_BRANCH": "The selected shift is not a shift of this store",
     "SALE_REVERSAL_TICKET_NOT_REVERSIBLE": "Some tickets are not sold in this store, or are on another open sale reversal request",
+    "OPENING_SALE_NOT_REVERSIBLE": "Some tickets were sold before the system was adopted and can't be reversed. Use an opening correction.",
     "SALE_REVERSAL_AMOUNT_MISMATCH": "The refund amount does not match the face value of these tickets; pick them again",
     "SALE_REVERSAL_COUNT_SALE_NOT_FOUND": "The scanned ticket is not recorded as sold and this cash point has no sale by count of this game to match it with; check the cash point or use \"by game + count\"",
     "SALE_REVERSAL_COUNT_EXCEEDS": "Not enough sold tickets of this game at this cash point (filled in by the system by default); check \"up to\" and lower the count",
@@ -3666,7 +3667,8 @@
       "scanMove": "Scan to move",
       "moveByCount": "Move by count",
       "pausedRescan": "Moving is paused while game {game} is being rescanned",
-      "pausedRenumber": "Moving is paused during renumbering"
+      "pausedRenumber": "Moving is paused during renumbering",
+      "openingSold": "Sold before adoption"
     },
     "move": {
       "title": "Move",
@@ -3946,6 +3948,7 @@
       "submitted": "Sale reversal request submitted",
       "submitAndPrint": "Submit and print receipt",
       "scanNotReversibleCount": "This ticket cannot be reversed: it is locked by another form, recorded as skipped or scrapped, in transit, or not from this store",
+      "scanOpeningSold": "This ticket was sold before the system was adopted and can't be reversed. Use an opening correction.",
       "dashedNote": "Dashed = ticket number filled in by the system by default",
       "matchTicket": "{gameCode} · {bookNo} · #{ticketNo} (scanned)",
       "matched": "Matched",
