@@ -75,8 +75,6 @@ export const inventoryBook = (
   purchasedAt: "2026-10-11T16:00:00.000Z",
   purchaseDealer: ref("d-1", "陳志明 #12345678"),
   source: "purchase",
-  openingAt: null,
-  openedBy: null,
   ...overrides,
 });
 
@@ -409,12 +407,9 @@ const module = (
 export const inventoryModules = ({
   permissions = ALL_INVENTORY_PERMISSIONS,
   bookPage = true,
-  openingPage = false,
 }: {
   permissions?: readonly string[];
   bookPage?: boolean;
-  /** 綁期初建檔頁(頁首 [期初建檔]) */
-  openingPage?: boolean;
 } = {}): TestModule[] => {
   const root = module(
     KEYS.list,
@@ -428,17 +423,6 @@ export const inventoryModules = ({
     root,
     ...(bookPage
       ? [module(KEYS.bookPage, "本的詳情", root.id, "/inventory/book-page", [])]
-      : []),
-    ...(openingPage
-      ? [
-          module(
-            KEYS.openingPage,
-            "期初建檔",
-            root.id,
-            "/inventory/opening-page",
-            [],
-          ),
-        ]
       : []),
   ];
 };

@@ -34,7 +34,8 @@ describe("庫存列表:期初建檔", () => {
     const { user } = renderInventory({
       world: { books: [...sampleInventoryBooks(), openingBook] },
     });
-    const row = (await screen.findByText("056601")).closest("tr");
+    const cell = await screen.findByText("056601");
+    const row = cell.closest("tr");
     if (row === null) {
       throw new TypeError("找不到 056601 那一列");
     }
@@ -53,9 +54,9 @@ describe("庫存列表:期初建檔", () => {
     const button = await screen.findByRole("button", { name: "期初建檔" });
     await user.click(button);
     await waitFor(() => {
-      expect(window.location.pathname).toBe("/inventory/opening-page");
+      expect(globalThis.location.pathname).toBe("/inventory/opening-page");
     });
-    expect(window.location.search).toContain(`org=${storeA.id}`);
+    expect(globalThis.location.search).toContain(`org=${storeA.id}`);
   });
 
   it("分店已結束期初建檔:頁首沒有 [期初建檔]", async () => {

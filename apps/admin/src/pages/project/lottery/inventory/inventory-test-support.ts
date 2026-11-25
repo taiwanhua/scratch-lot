@@ -17,6 +17,7 @@ import {
   masterDataSharedLookupHandlers,
   masterDataWorld,
 } from "@/test/msw/project/lottery/master-data-handlers";
+import { openingPageModule } from "@/test/msw/project/lottery/opening-fixtures";
 import {
   type OpeningState,
   openingWorld,
@@ -72,9 +73,8 @@ export const renderInventory = ({
       orgs: [masterDataOrgs.storeA],
       modules: [
         overviewModule,
-        ...(inventory
-          ? inventoryModules({ permissions, bookPage, openingPage })
-          : []),
+        ...(inventory ? inventoryModules({ permissions, bookPage }) : []),
+        ...(inventory && openingPage ? [openingPageModule()] : []),
         ...(masterData ? masterDataModules() : []),
       ],
     }).handlers,
