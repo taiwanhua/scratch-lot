@@ -11,6 +11,8 @@ import { ContactViewPage } from "@/pages/project/lottery/dealers/ContactViewPage
 import { DealerFormPage } from "@/pages/project/lottery/dealers/DealerFormPage/DealerFormPage";
 import { DealerViewPage } from "@/pages/project/lottery/dealers/DealerViewPage/DealerViewPage";
 import { DealersPage } from "@/pages/project/lottery/dealers/DealersPage/DealersPage";
+import { WholesaleCustomerFormPage } from "@/pages/project/lottery/dealers/WholesaleCustomerFormPage/WholesaleCustomerFormPage";
+import { WholesaleCustomerViewPage } from "@/pages/project/lottery/dealers/WholesaleCustomerViewPage/WholesaleCustomerViewPage";
 import { DEALERS_MODULE_KEYS } from "@/pages/project/lottery/dealers/dealers-keys";
 import { BookPage } from "@/pages/project/lottery/inventory/BookPage/BookPage";
 import { InventoryPage } from "@/pages/project/lottery/inventory/InventoryPage/InventoryPage";
@@ -77,6 +79,18 @@ const sources: ModulePageSource = {
     { key: DEALERS_MODULE_KEYS.contactViewPage, Page: ContactViewPage },
     { key: DEALERS_MODULE_KEYS.contactCreatePage, Page: ContactFormPage },
     { key: DEALERS_MODULE_KEYS.contactEditPage, Page: ContactFormPage },
+    {
+      key: DEALERS_MODULE_KEYS.wholesaleCustomerViewPage,
+      Page: WholesaleCustomerViewPage,
+    },
+    {
+      key: DEALERS_MODULE_KEYS.wholesaleCustomerCreatePage,
+      Page: WholesaleCustomerFormPage,
+    },
+    {
+      key: DEALERS_MODULE_KEYS.wholesaleCustomerEditPage,
+      Page: WholesaleCustomerFormPage,
+    },
     // 輸出報表(規格第 11 章、18.4)
     // 班表管理(規格 3.1):我的班表、排班設定是固定頁(頁內分頁)
     { key: "schedule.my", Page: ScheduleMyPage },

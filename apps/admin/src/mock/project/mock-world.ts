@@ -71,6 +71,8 @@ import {
   supportRequestFormWorld,
   supportRequestWorkflowWorld,
 } from "@/test/msw/project/schedule-support-request-fixtures";
+import { wholesaleCustomerModules } from "@/test/msw/project/wholesale-customers-fixtures";
+import { wholesaleCustomersWorld } from "@/test/msw/project/wholesale-customers-handlers";
 
 import type { ProjectMockWorld } from "../mock-world-source";
 
@@ -134,6 +136,7 @@ export const projectMockWorld: ProjectMockWorld = {
     // 刮刮樂設定(權限給滿)
     ...lotterySettingsModules(),
     ...dealersModules(),
+    ...wholesaleCustomerModules(),
     ...scheduleModules(),
     ...accountsModules(),
     ...purchasingModules(),
@@ -153,6 +156,7 @@ export const projectMockWorld: ProjectMockWorld = {
       unmatchedStores: ["org-ls-zhongshan"],
     }).handlers,
     ...dealersWorld().handlers,
+    ...wholesaleCustomersWorld().handlers,
     ...scheduleSettingsWorld().handlers,
     ...scheduleCalendarWorld().handlers,
     ...scheduleDayOffsWorld().handlers,

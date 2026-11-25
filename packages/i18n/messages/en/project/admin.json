@@ -155,7 +155,8 @@
       "label": "Dealer tabs",
       "classA": "Class A",
       "classB": "Class B",
-      "contacts": "Contacts"
+      "contacts": "Contacts",
+      "wholesaleCustomers": "Wholesale customers"
     },
     "actions": {
       "newDealer": "+ New dealer",
@@ -168,7 +169,8 @@
       "registerSignin": "Register sign-in",
       "register": "Register",
       "releaseAndRemove": "Release and remove",
-      "releaseAndSave": "Release and save"
+      "releaseAndSave": "Release and save",
+      "newWholesaleCustomer": "+ New wholesale customer"
     },
     "types": {
       "a": "Class A",
@@ -411,7 +413,9 @@
         "SIGNIN_DUPLICATE": "This quarter is already registered",
         "SIGNIN_QUARTER_NOT_STARTED": "This quarter hasn't started yet",
         "AGENTS_REQUIRE_CO_SALES": "Agents remain; the co-sales store can't be removed",
-        "ROLE_IN_USE": "The roles being removed are still linked"
+        "ROLE_IN_USE": "The roles being removed are still linked",
+        "WHOLESALE_LICENSE_NO_DUPLICATE": "This license number is already used by a wholesale customer",
+        "WHOLESALE_CUSTOMER_IN_USE": "{name} has wholesale documents and can't be deleted; set the status to inactive instead"
       }
     },
     "allocations": {
@@ -422,6 +426,44 @@
     },
     "purchases": {
       "tab": "Purchase records"
+    },
+    "wholesale": {
+      "statuses": {
+        "active": "Active",
+        "inactive": "Inactive"
+      },
+      "keyword": "Keyword (store, license no., contact, phone)",
+      "listAria": "Wholesale customers",
+      "tabsLabel": "Wholesale customer tabs",
+      "fields": {
+        "storeName": "Store",
+        "licenseNo": "License no.",
+        "contactName": "Contact",
+        "phone": "Phone",
+        "address": "Address",
+        "status": "Status",
+        "lastWholesaleAt": "Last wholesale"
+      },
+      "sections": {
+        "basic": "Basic information"
+      },
+      "summary": {
+        "title": "{name} · License {licenseNo}",
+        "contact": "Contact {name}",
+        "lastWholesale": "Last wholesale {date}",
+        "system": "{org} · created {date}"
+      },
+      "sameName": "A wholesale customer with the same name exists: {names}",
+      "sameNameItem": "{name} ({phone})",
+      "delete": {
+        "action": "Delete",
+        "title": "Delete wholesale customer",
+        "body": "Delete \"{name}\"?"
+      },
+      "feedback": {
+        "createSuccess": "Wholesale customer created",
+        "deleteSuccess": "Wholesale customer deleted"
+      }
     }
   },
   "lotteryInventory": {

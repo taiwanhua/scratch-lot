@@ -155,7 +155,8 @@
       "label": "經銷商管理分頁",
       "classA": "甲類",
       "classB": "乙類",
-      "contacts": "關係人"
+      "contacts": "關係人",
+      "wholesaleCustomers": "批售客戶"
     },
     "actions": {
       "newDealer": "+ 新增經銷商",
@@ -168,7 +169,8 @@
       "registerSignin": "登記見簽",
       "register": "登記",
       "releaseAndRemove": "一併解除並移除",
-      "releaseAndSave": "一併解除並儲存"
+      "releaseAndSave": "一併解除並儲存",
+      "newWholesaleCustomer": "+ 新增批售客戶"
     },
     "types": {
       "a": "甲類",
@@ -411,7 +413,9 @@
         "SIGNIN_DUPLICATE": "這一季已經登記過見簽",
         "SIGNIN_QUARTER_NOT_STARTED": "這一季還沒到,不能登記",
         "AGENTS_REQUIRE_CO_SALES": "還有代理人,不能移除共同銷售處所",
-        "ROLE_IN_USE": "要取消的身分還有關聯"
+        "ROLE_IN_USE": "要取消的身分還有關聯",
+        "WHOLESALE_LICENSE_NO_DUPLICATE": "這個證號已經有批售客戶使用",
+        "WHOLESALE_CUSTOMER_IN_USE": "{name}已有批售單,不能刪除;不再往來請把狀態改成停用"
       }
     },
     "allocations": {
@@ -422,6 +426,44 @@
     },
     "purchases": {
       "tab": "批購紀錄"
+    },
+    "wholesale": {
+      "statuses": {
+        "active": "往來中",
+        "inactive": "停用"
+      },
+      "keyword": "關鍵字(店名、證號、聯絡人、電話)",
+      "listAria": "批售客戶清單",
+      "tabsLabel": "批售客戶詳情分頁",
+      "fields": {
+        "storeName": "店名",
+        "licenseNo": "證號",
+        "contactName": "聯絡人",
+        "phone": "電話",
+        "address": "地址",
+        "status": "狀態",
+        "lastWholesaleAt": "最近一次批售日"
+      },
+      "sections": {
+        "basic": "基本資料"
+      },
+      "summary": {
+        "title": "{name} · 證號 {licenseNo}",
+        "contact": "聯絡人 {name}",
+        "lastWholesale": "最近一次批售 {date}",
+        "system": "{org} · {date} 建立"
+      },
+      "sameName": "已有同名的批售客戶:{names}",
+      "sameNameItem": "{name}({phone})",
+      "delete": {
+        "action": "刪除",
+        "title": "刪除批售客戶",
+        "body": "確定要刪除「{name}」?"
+      },
+      "feedback": {
+        "createSuccess": "已新增批售客戶",
+        "deleteSuccess": "已刪除批售客戶"
+      }
     }
   },
   "lotteryInventory": {

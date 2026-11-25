@@ -1,3 +1,5 @@
+import type { LotteryWholesaleCustomerFieldsFragment } from "@repo/graphql";
+
 import { authWorld } from "@/test/msw/auth-handlers";
 import {
   DEALERS_ALL_PERMISSIONS,
@@ -9,6 +11,11 @@ import {
   type DealersWorldOptions,
   dealersWorld,
 } from "@/test/msw/project/dealers-handlers";
+import {
+  WHOLESALE_CUSTOMER_PERMISSIONS,
+  wholesaleCustomerModules,
+} from "@/test/msw/project/wholesale-customers-fixtures";
+import { wholesaleCustomersWorld } from "@/test/msw/project/wholesale-customers-handlers";
 import { server } from "@/test/msw/server";
 import { renderApp } from "@/test/render";
 
@@ -22,6 +29,9 @@ export interface RenderDealersOptions {
   contactPermissions?: readonly string[];
   withContacts?: boolean;
   world?: DealersWorldOptions;
+  wholesalePermissions?: readonly string[];
+  withWholesaleCustomers?: boolean;
+  wholesaleCustomers?: LotteryWholesaleCustomerFieldsFragment[];
 }
 
 export const renderDealers = ({
@@ -30,18 +40,26 @@ export const renderDealers = ({
   contactPermissions = DEALERS_CONTACT_PERMISSIONS,
   withContacts = true,
   world = {},
+  wholesalePermissions = WHOLESALE_CUSTOMER_PERMISSIONS,
+  withWholesaleCustomers = true,
+  wholesaleCustomers,
 }: RenderDealersOptions = {}) => {
   const fake = dealersWorld(world);
+  const wholesale = wholesaleCustomersWorld(wholesaleCustomers);
   server.use(
     ...fake.handlers,
+    ...wholesale.handlers,
     ...authWorld({
       hasRefreshCookie: true,
-      modules: dealersModules(permissions, contactPermissions, {
-        withContacts,
-      }),
+      modules: [
+        ...dealersModules(permissions, contactPermissions, { withContacts }),
+        ...(withWholesaleCustomers
+          ? wholesaleCustomerModules(wholesalePermissions)
+          : []),
+      ],
     }).handlers,
   );
-  return { ...renderApp({ path }), fake };
+  return { ...renderApp({ path }), fake, wholesale };
 };
 
 export { DEALERS_TEST_ROUTES } from "@/test/msw/project/dealers-fixtures";
