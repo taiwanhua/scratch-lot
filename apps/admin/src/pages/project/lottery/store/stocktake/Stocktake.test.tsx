@@ -225,6 +225,16 @@ describe("店面管理:盤點", () => {
     expect(
       within(rowOf("015")).getByRole("button", { name: "標記異常" }),
     ).toBeInTheDocument();
+    await user.click(
+      within(rowOf("015")).getByRole("button", { name: "期初更正" }),
+    );
+    for (const no of ["024", "025"]) {
+      await user.click(within(rowOf(no)).getByRole("button", { name: "待查" }));
+    }
+    // 期初更正算處理過了(核准時才寫)
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "送出 →" })).toBeEnabled();
+    });
   });
 
   it("沒有 store.sell → 差異核對沒有 [補登售出]", async () => {

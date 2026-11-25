@@ -1,7 +1,10 @@
 import { beforeEach, describe, expect, it } from "@jest/globals";
 import { screen, waitFor, within } from "@testing-library/react";
 
-import { RESCAN_REASONS } from "@repo/domain/project/lottery";
+import {
+  INVENTORY_PERMISSIONS,
+  RESCAN_REASONS,
+} from "@repo/domain/project/lottery";
 
 import { writeLocalCashPoint } from "@/lib/project/lottery/local-cash-point";
 import {
@@ -9,7 +12,10 @@ import {
   rescanReminder,
   sampleRescan,
 } from "@/test/msw/project/lottery/rescan-handlers";
-import { sampleStoreBoard } from "@/test/msw/project/lottery/store-fixtures";
+import {
+  STORE_ALL_PERMISSIONS,
+  sampleStoreBoard,
+} from "@/test/msw/project/lottery/store-fixtures";
 
 import { fastUser } from "../../../schedule/manage/roster/roster-test-queries";
 import { renderStore } from "../store-test-support";
@@ -173,6 +179,58 @@ describe("店面管理:全店重刷", () => {
       screen.getByRole("button", { name: "送撤銷售出申請" }),
     ).toBeInTheDocument();
     expect(screen.getByText("刷到一半 · 王小明")).toBeInTheDocument();
+  });
+
+  it("導入前已賣出但還在 → [期初更正 #張號] 當下改回未售、預設放刷到的位置;沒有 inventory.opening 寫「請店長做期初更正」", async () => {
+    const user = fastUser();
+    const codes = { "0056528041": rescanItem("041", "opening_sold_here") };
+    const { opening } = renderStore({
+      path: RESCAN_PATH,
+      permissions: [...STORE_ALL_PERMISSIONS, INVENTORY_PERMISSIONS.opening],
+      stocktakeOptions: { rescan: { rescan: sampleRescan(), codes } },
+    });
+    const input = await screen.findByRole("textbox", {
+      name: "刷條碼、相機或手輸張號",
+    });
+    await user.type(input, "0056528041{Enter}");
+    expect(await screen.findByText("導入前已賣出但還在")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "期初更正 #041" }));
+    const dialog = await screen.findByRole("dialog", {
+      name: /改回未售 1 張/u,
+    });
+    await waitFor(() => {
+      expect(
+        within(dialog).getByRole("combobox", { name: "放到" }),
+      ).toHaveTextContent("檯面 · 店外攤位");
+    });
+    await user.click(within(dialog).getByRole("combobox", { name: /原因/u }));
+    await user.click(await screen.findByRole("option", { name: "建檔點錯" }));
+    await user.click(within(dialog).getByRole("button", { name: "改回未售" }));
+    await waitFor(() => {
+      expect(opening.inputs.fix).toHaveLength(1);
+    });
+    expect(opening.inputs.fix[0]).toMatchObject({
+      to: "unsold",
+      cashPointId: "cp-outdoor",
+      tickets: [{ ticketId: "t-041", version: 1 }],
+    });
+  });
+
+  it("導入前已賣出但還在、沒有 inventory.opening → 「請店長做期初更正」", async () => {
+    const user = fastUser();
+    const codes = { "0056528041": rescanItem("041", "opening_sold_here") };
+    renderStore({
+      path: RESCAN_PATH,
+      stocktakeOptions: { rescan: { rescan: sampleRescan(), codes } },
+    });
+    const input = await screen.findByRole("textbox", {
+      name: "刷條碼、相機或手輸張號",
+    });
+    await user.type(input, "0056528041{Enter}");
+    expect(await screen.findByText("請店長做期初更正")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "期初更正 #041" }),
+    ).not.toBeInTheDocument();
   });
 
   it("CS-10c / 10d [這裡刷完了] 先確認;全部位置刷完 → 結果摘要", async () => {

@@ -8,9 +8,8 @@ import {
 } from "@repo/domain/project/lottery";
 import { LOTTERY_FIELD_CATEGORY_KEYS } from "@repo/domain/project/lottery-fields";
 import {
-  type LotteryInventoryBookDetailFieldsFragment,
-  type LotteryInventoryTicketFieldsFragment,
   useFixLotteryOpeningTicketsMutation,
+  useLotteryStoreOpeningQuery,
 } from "@repo/graphql";
 import { Button } from "@repo/ui/button";
 import { Dialog } from "@repo/ui/dialog";
@@ -33,27 +32,38 @@ import { inventoryErrorOf } from "@/lib/project/lottery/inventory-error";
 /** 改回未售放「庫存」的選項值(其他是收銀點 id)。 */
 const STOCK = "stock";
 
+/** 要更正的張(`version` 給 api 做條件更新)。 */
+export interface OpeningFixTicket {
+  id: string;
+  version: number;
+  ticketNo: string;
+}
+
 export interface OpeningFixDialogProps {
-  detail: LotteryInventoryBookDetailFieldsFragment;
-  tickets: readonly LotteryInventoryTicketFieldsFragment[];
+  /** 這本所在的分店(改回未售能放的收銀點) */
+  orgId: string;
+  book: { gameCode: string; bookNo: string };
+  tickets: readonly OpeningFixTicket[];
   /** `unsold` 改回未售 / `opening_sold` 改成導入前已賣出 */
   to: "unsold" | "opening_sold";
-  /** 這家店的收銀點(改回未售放哪) */
-  cashPoints: readonly { id: string; name: string }[];
+  /** 改回未售預設放哪個收銀點(從刷條碼 / 重刷進來時 = 刷到的位置);沒有 = 庫存 */
+  defaultCashPointId?: string | null;
   onClose: () => void;
   onFixed: () => void;
 }
 
 /**
- * 期初更正(Figma IN-04-5a / 5b;期初建檔規格 4.1,`inventory.opening`):[改回未售…] 選放哪個位置
- * (收銀點檯面或庫存)+ 原因;[改成導入前已賣出…] 只有原因(分店還在建檔才有這個按鈕)。原因必填
- * (欄位管理「期初更正原因」,選「其他」要填說明)。不碰現金、不寫售出 / 撤銷。
+ * 期初更正(Figma IN-04-5a / 5b;期初建檔規格 4.1、4.3,`inventory.opening`):[改回未售…] 選放哪個位置
+ * (收銀點檯面或庫存;從刷條碼 / 重刷進來時預設刷到的位置)+ 原因;[改成導入前已賣出…] 只有原因(分店還在
+ * 建檔才有這個按鈕)。原因必填(欄位管理「期初更正原因」,選「其他」要填說明)。不碰現金、不寫售出 / 撤銷。
+ * 本的詳情、看板刷到期初已售、全店重刷共用。
  */
 export const OpeningFixDialog = ({
-  detail,
+  orgId,
+  book,
   tickets,
   to,
-  cashPoints,
+  defaultCashPointId = null,
   onClose,
   onFixed,
 }: OpeningFixDialogProps) => {
@@ -62,8 +72,18 @@ export const OpeningFixDialog = ({
   const queryClient = useQueryClient();
   const isMobile = useBreakpointDown("sm");
   const [reason, setReason] = useState<ReasonValue>(EMPTY_REASON);
-  const [place, setPlace] = useState(STOCK);
+  const [place, setPlace] = useState(defaultCashPointId ?? STOCK);
   const [invalid, setInvalid] = useState<string[]>([]);
+  const opening = useLotteryStoreOpeningQuery(
+    session.client,
+    { orgId },
+    { enabled: to === "unsold" && orgId !== "", retry: false },
+  );
+  const cashPoints = opening.data?.lotteryStoreOpening.item.cashPoints ?? [];
+  // 收銀點還沒讀到(或刷到的位置不在清單)→ 先顯示庫存;讀取中不能送出
+  const chosen = cashPoints.some((point) => point.id === place)
+    ? place
+    : STOCK;
   const keys = to === "unsold" ? "openingFix.toUnsold" : "openingFix.toSold";
   const fix = useFixLotteryOpeningTicketsMutation(
     session.client,
@@ -99,7 +119,7 @@ export const OpeningFixDialog = ({
         })),
         to,
         ...(to === "unsold" && {
-          cashPointId: place === STOCK ? null : place,
+          cashPointId: chosen === STOCK ? null : chosen,
         }),
         ...reasonInputOf(reason),
       },
@@ -118,8 +138,7 @@ export const OpeningFixDialog = ({
         <Stack direction="row" sx={{ justifyContent: "space-between", gap: 2 }}>
           <span>{t(`${keys}.title`, { count: tickets.length })}</span>
           <Typography variant="body2" component="span">
-            {detail.book.gameCode} · {displayBookNo(detail.book.bookNo)} ·{" "}
-            {ranges}
+            {book.gameCode} · {displayBookNo(book.bookNo)} · {ranges}
           </Typography>
         </Stack>
       }
@@ -128,7 +147,10 @@ export const OpeningFixDialog = ({
           <Button variant="text" onClick={onClose}>
             {t("common.cancel")}
           </Button>
-          <Button disabled={fix.isPending} onClick={submit}>
+          <Button
+            disabled={fix.isPending || opening.isLoading}
+            onClick={submit}
+          >
             {t(`${keys}.submit`)}
           </Button>
         </>
@@ -139,7 +161,7 @@ export const OpeningFixDialog = ({
         {to === "unsold" ? (
           <SelectField
             label={t("openingFix.place")}
-            value={place}
+            value={chosen}
             size="small"
             fullWidth
             options={[
@@ -165,11 +187,3 @@ export const OpeningFixDialog = ({
     </Dialog>
   );
 };
-
-/** 開著期初更正時才畫對話框(`to` 沒給 = 不畫;本的詳情頁用)。 */
-export const OpeningFixDialogSlot = ({
-  to,
-  ...props
-}: Omit<OpeningFixDialogProps, "to"> & {
-  to: OpeningFixDialogProps["to"] | undefined;
-}) => (to === undefined ? null : <OpeningFixDialog to={to} {...props} />);

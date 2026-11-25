@@ -11,6 +11,7 @@ import {
   useSellLotteryTicketsMutation,
 } from "@repo/graphql";
 
+import { OpeningFixDialog } from "@/components/project/lottery/OpeningFixDialog/OpeningFixDialog";
 import { RecoverTicketDialog } from "@/components/project/lottery/RecoverTicketDialog/RecoverTicketDialog";
 import { useSnackbar } from "@/hooks/base/useMutationFeedback";
 import { usePermissions } from "@/hooks/base/usePermissions";
@@ -40,6 +41,7 @@ type Step =
   | { kind: "prompt"; prompt: ScanPrompt }
   | { kind: "quick"; item: ScanItem }
   | { kind: "recover"; item: ScanItem }
+  | { kind: "openingFix"; item: ScanItem }
   | { kind: "undo"; ticketId: string }
   | { kind: "split"; bookId: string; code: string };
 
@@ -202,6 +204,9 @@ export const useStoreSaleFlow = ({
             item,
             message: blockedText(item),
             reversal: item.blockReason === "unmatched_no_partner",
+            // 期初已售:有 inventory.opening 附 [期初更正](期初建檔規格 4.2、D6)
+            openingFix:
+              item.openingSold && hasPermission(INVENTORY_PERMISSIONS.opening),
           },
         });
       }
@@ -269,6 +274,35 @@ export const useStoreSaleFlow = ({
               code: rescanCodeOf(item),
             });
           }}
+          onOpeningFix={(item) => {
+            setStep({ kind: "openingFix", item });
+          }}
+        />
+      );
+      break;
+    }
+    case "openingFix": {
+      const { item } = step;
+      element = (
+        <OpeningFixDialog
+          orgId={orgId}
+          book={item}
+          tickets={[
+            {
+              id: item.ticketId,
+              version: item.version,
+              ticketNo: item.ticketNo,
+            },
+          ]}
+          to="unsold"
+          // 改回未售預設放刷到的位置(期初建檔規格 4.1)
+          defaultCashPointId={
+            item.locationKind === "counter"
+              ? (item.cashPoint?.id ?? null)
+              : null
+          }
+          onClose={close}
+          onFixed={refresh}
         />
       );
       break;

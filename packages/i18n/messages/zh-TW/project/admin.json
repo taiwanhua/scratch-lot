@@ -3575,13 +3575,15 @@
         "moveForbidden": "這張在{cashPoint},你沒有移櫃權限,請由{cashPoint}售出。",
         "unmatchedNoPartner": "這張刮刮樂系統記為已售(未對號),但{cashPoint}的這個遊戲已沒有未售的張可以對號。請送撤銷售出申請(原因:盤點錯誤)核准後再賣。",
         "skippedFix": "這張刮刮樂系統記為「跳號」,不能賣。請先到本的詳情更正跳號。",
-        "scrappedFix": "這張刮刮樂系統記為報廢,不能賣。請先撤銷報廢。"
+        "scrappedFix": "這張刮刮樂系統記為報廢,不能賣。請先撤銷報廢。",
+        "openingSold": "這張刮刮樂導入前已賣出,請用期初更正。"
       },
       "notFound": "找不到這張刮刮樂,或不是本店的刮刮樂。",
       "recoverNoPermission": "這張刮刮樂待查中,尋回需要有權限的人處理。",
       "gotIt": "知道了",
       "infoTitle": "刮刮樂資訊",
-      "infoHint": "這台裝置沒有設定本機收銀點、本機收銀點沒有開班,或你沒有銷售權限:只顯示資訊,不能銷售。"
+      "infoHint": "這台裝置沒有設定本機收銀點、本機收銀點沒有開班,或你沒有銷售權限:只顯示資訊,不能銷售。",
+      "openingFix": "期初更正"
     },
     "quickSale": {
       "title": "快速銷售",
@@ -3768,7 +3770,8 @@
       "MOVE_PAUSED": "{kind, select, renumber {補點編號中,暫停移櫃} other {這個遊戲全店重刷中,暫停移櫃}}",
       "MOVE_BY_COUNT_INVALID": "{problem, select, exceeds {來源台這個遊戲只剩 {available} 張} same_cash_point {要移到另一個收銀點} not_count_store {只有張數盤點的店能依張數移櫃} other {張數不對}}",
       "SPLIT_ACTUAL_COUNT_REQUIRED": "請輸入手上這本實際有幾張",
-      "SPLIT_ACTUAL_COUNT_MISMATCH": "{problem, select, over {多了 {count} 張,請先盤點庫存。} other {少了 {count} 張,請先盤點庫存或檢查是不是報錯張。}}"
+      "SPLIT_ACTUAL_COUNT_MISMATCH": "{problem, select, over {多了 {count} 張,請先盤點庫存。} other {少了 {count} 張,請先盤點庫存或檢查是不是報錯張。}}",
+      "OPENING_SOLD": "這張刮刮樂導入前已賣出,請用期初更正"
     },
     "redemption": {
       "redeemTitle": "兌獎 · {name}",
@@ -4869,7 +4872,8 @@
         "unopened": "這本還沒拆,不在重刷範圍",
         "other_game": "不是遊戲 {code}",
         "not_this_store": "不是本店的張",
-        "investigated": "確定待查"
+        "investigated": "確定待查",
+        "opening_sold_here": "導入前已賣出但還在"
       },
       "finish": {
         "title": "{place}刷到 {count} 張,確定刷完了?",
@@ -4893,6 +4897,7 @@
         "recovered": "已尋回",
         "soldHere": "記已售但還在",
         "soldHereValue": "{count} 張({tickets},請送撤銷售出申請)",
+        "openingSoldHere": "導入前已賣出但還在",
         "investigated": "確定待查",
         "toFix": "要先更正",
         "countValue": "{count} 張({tickets})",
@@ -4919,6 +4924,10 @@
         "tag": "重刷中",
         "blocked": "這裡正在重刷 {code},刷完再數。",
         "notice": "{place} · {game}:這裡正在重刷 {code},刷完再數。"
+      },
+      "openingFix": {
+        "button": "期初更正 #{ticketNo}",
+        "noPermission": "請店長做期初更正"
       }
     }
   },

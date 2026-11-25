@@ -538,6 +538,8 @@ export class RescanService {
         outcome: "ok",
         partnerTicketNo: null,
         cashPointId: cashPointId === null ? null : String(cashPointId),
+        version: ticket.version,
+        openingSold: isOpeningSold(ticket),
       },
       duplicate: outcome.duplicate,
       rescan: model,
@@ -1251,6 +1253,8 @@ export class RescanService {
         partnerTicketNo:
           partnerId === null ? null : (byId.get(partnerId)?.ticketNo ?? null),
         cashPointId: cashPointId === null ? null : String(cashPointId),
+        version: ticket.version,
+        openingSold: isOpeningSold(ticket),
       };
     };
     const results = rescan.results.flatMap((row) => {

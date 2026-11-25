@@ -14,6 +14,10 @@ import { CircularProgress } from "@repo/ui/circular-progress";
 import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
 
+import {
+  OpeningFixDialog,
+  type OpeningFixDialogProps,
+} from "@/components/project/lottery/OpeningFixDialog/OpeningFixDialog";
 import { RecoverTicketDialog } from "@/components/project/lottery/RecoverTicketDialog/RecoverTicketDialog";
 import { TicketGrid } from "@/components/project/lottery/TicketGrid/TicketGrid";
 import { useRouteTabItemLabel } from "@/hooks/base/useRouteTabItemLabel";
@@ -26,7 +30,6 @@ import { BookHeader } from "./BookHeader";
 import { BookInfoCards } from "./BookInfoCards";
 import { BookTimeline } from "./BookTimeline";
 import { MarkSkipsDialog } from "./MarkSkipsDialog";
-import { OpeningFixDialogSlot } from "./OpeningFixDialog";
 import { ScrapTicketsDialog } from "./ScrapTicketsDialog";
 import { SelectionBar } from "./SelectionBar";
 import { SkipCorrectionDialog } from "./SkipCorrectionDialog";
@@ -50,6 +53,14 @@ const FIX_TO: Partial<Record<string, "unsold" | "opening_sold">> = {
   fixToUnsold: "unsold",
   fixToOpeningSold: "opening_sold",
 };
+
+/** 開著期初更正時才畫對話框(`to` 沒給 = 不畫)。 */
+const OpeningFixSlot = ({
+  to,
+  ...props
+}: Omit<OpeningFixDialogProps, "to"> & {
+  to: OpeningFixDialogProps["to"] | undefined;
+}) => (to === undefined ? null : <OpeningFixDialog to={to} {...props} />);
 
 /** 查刮刮樂帶來的張號(`?ticket=071`):打開時標亮(選起來)那一張。 */
 const ticketSchema = z.string().default("");
@@ -221,11 +232,11 @@ export const BookPage = ({ routeParam }: ModulePageProps) => {
           }}
         />
       ) : null}
-      <OpeningFixDialogSlot
-        detail={detail}
+      <OpeningFixSlot
+        orgId={book.org.id}
+        book={book}
         tickets={selectedTickets}
         to={FIX_TO[dialog ?? ""]}
-        cashPoints={opening.cashPoints}
         onClose={() => {
           setDialog(null);
         }}

@@ -138,7 +138,7 @@ export const rescanningPlacesOf = (
       .map((place) => ({ rescan, place })),
   );
 
-/** 結果摘要的五類(CS-10d):已對號、已尋回、記已售但還在、確定待查、要先更正。 */
+/** 結果摘要(CS-10d):已對號、已尋回、記已售但還在、導入前已賣出但還在(期初建檔規格 4.2)、確定待查、要先更正。 */
 export const rescanSummaryOf = (results: readonly RescanItem[]) => {
   const of = (outcomes: readonly string[]) =>
     results.filter((item) => outcomes.includes(item.outcome));
@@ -146,6 +146,7 @@ export const rescanSummaryOf = (results: readonly RescanItem[]) => {
     matched: of(["matched"]),
     recovered: of(["recovered", "moved"]),
     soldHere: of(["sold_here"]),
+    openingSoldHere: of(["opening_sold_here"]),
     investigated: of(["investigated"]),
     toFix: of(["skipped", "scrapped", "locked", "unopened"]),
   };

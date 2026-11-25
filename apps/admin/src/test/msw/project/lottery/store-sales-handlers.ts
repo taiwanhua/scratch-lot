@@ -36,6 +36,7 @@ import {
   type SalesBook,
   type SalesTicket,
   booksOf,
+  markOpeningSold,
 } from "./store-sales-fixtures";
 
 export interface StoreSalesWorld {
@@ -61,6 +62,8 @@ export interface StoreSalesWorldOptions {
   lostTicketIds?: readonly string[];
   /** 這幾張是已售·未對號(張數店;依張數賣時系統預設帶入的張號) */
   unmatchedSoldTicketIds?: readonly string[];
+  /** 這幾張是期初已售(導入前已賣出;刷到擋下、提示用期初更正) */
+  openingSoldTicketIds?: readonly string[];
 }
 
 const validation = (reason: string, extra: Record<string, unknown> = {}) =>
@@ -81,6 +84,7 @@ export const storeSalesWorld = ({
   alreadySoldAt,
   lostTicketIds = [],
   unmatchedSoldTicketIds = [],
+  openingSoldTicketIds = [],
 }: StoreSalesWorldOptions): StoreSalesWorld => {
   const books = booksOf(board);
   for (const ticket of books.flatMap((book) => book.tickets)) {
@@ -93,6 +97,7 @@ export const storeSalesWorld = ({
       ticket.soldSource = "count";
       ticket.soldAt = "2026-10-16T05:30:00.000Z";
     }
+    markOpeningSold(ticket, openingSoldTicketIds);
   }
   const { partnerOf, matchUnmatched } = countStoreMatching(books);
   const sales: SaleRecord[] = [];
@@ -230,7 +235,7 @@ export const storeSalesWorld = ({
         : 0,
       unmatched: ticket.unmatched === true,
       match: decision.match,
-      openingSold: false,
+      openingSold: ticket.soldSource === "opening",
     };
   };
 

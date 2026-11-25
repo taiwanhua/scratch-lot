@@ -143,3 +143,15 @@ export const booksOf = (board: StoreBoard): SalesBook[] => {
   );
   return books;
 };
+
+/** 這張是期初已售(導入前已賣出;刷到擋下、提示用期初更正)就改成已售、來源期初建檔。 */
+export const markOpeningSold = (
+  ticket: SalesTicket,
+  openingSoldTicketIds: readonly string[],
+): void => {
+  if (openingSoldTicketIds.includes(ticket.id)) {
+    ticket.status = "sold";
+    ticket.soldSource = "opening";
+    ticket.soldAt = "2026-10-01T01:00:00.000Z";
+  }
+};

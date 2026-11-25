@@ -3575,13 +3575,15 @@
         "moveForbidden": "This ticket is on {cashPoint} and you cannot move tickets. Sell it at {cashPoint}.",
         "unmatchedNoPartner": "This ticket is recorded as sold (unmatched), but {cashPoint} has no unsold ticket of this game to match. Send a sale reversal request (reason: stocktake error) and sell it after approval.",
         "skippedFix": "This ticket is recorded as \"skipped\" and cannot be sold. Correct the skipped ticket on the book detail first.",
-        "scrappedFix": "This ticket is recorded as scrapped and cannot be sold. Undo the scrap first."
+        "scrappedFix": "This ticket is recorded as scrapped and cannot be sold. Undo the scrap first.",
+        "openingSold": "This ticket was sold before the system was adopted. Use an opening correction."
       },
       "notFound": "Ticket not found, or it does not belong to this store.",
       "recoverNoPermission": "This ticket is under investigation. Someone with the recover permission has to handle it.",
       "gotIt": "OK",
       "infoTitle": "Ticket info",
-      "infoHint": "This device has no local cash point, the local cash point has no open shift, or you cannot sell: info only."
+      "infoHint": "This device has no local cash point, the local cash point has no open shift, or you cannot sell: info only.",
+      "openingFix": "Opening correction"
     },
     "quickSale": {
       "title": "Quick sale",
@@ -3768,7 +3770,8 @@
       "MOVE_PAUSED": "{kind, select, renumber {Moving is paused during renumbering} other {Moving is paused while this game is being rescanned}}",
       "MOVE_BY_COUNT_INVALID": "{problem, select, exceeds {Only {available} of this game are left on the counter} same_cash_point {Move to another counter} not_count_store {Only count stores can move by count} other {Invalid count}}",
       "SPLIT_ACTUAL_COUNT_REQUIRED": "Enter the number of tickets on hand",
-      "SPLIT_ACTUAL_COUNT_MISMATCH": "{problem, select, over {{count} more than the system; count the stock first.} other {{count} fewer than the system; count the stock first or check for a wrongly reported ticket.}}"
+      "SPLIT_ACTUAL_COUNT_MISMATCH": "{problem, select, over {{count} more than the system; count the stock first.} other {{count} fewer than the system; count the stock first or check for a wrongly reported ticket.}}",
+      "OPENING_SOLD": "This ticket was sold before the system was adopted. Use an opening correction"
     },
     "redemption": {
       "redeemTitle": "Redeem · {name}",
@@ -4869,7 +4872,8 @@
         "unopened": "Book not opened, not in the rescan",
         "other_game": "Not game {code}",
         "not_this_store": "Not this store's ticket",
-        "investigated": "Confirmed missing"
+        "investigated": "Confirmed missing",
+        "opening_sold_here": "Sold before adoption but still here"
       },
       "finish": {
         "title": "{count} scanned at {place}. Done?",
@@ -4893,6 +4897,7 @@
         "recovered": "Recovered",
         "soldHere": "Recorded sold but here",
         "soldHereValue": "{count} ({tickets}, please send a sale reversal request)",
+        "openingSoldHere": "Sold before adoption but still here",
         "investigated": "Confirmed missing",
         "toFix": "Correct first",
         "countValue": "{count} ({tickets})",
@@ -4919,6 +4924,10 @@
         "tag": "Rescanning",
         "blocked": "{code} is being rescanned here. Count it after the rescan.",
         "notice": "{place} · {game}: {code} is being rescanned here. Count it after the rescan."
+      },
+      "openingFix": {
+        "button": "Opening correction #{ticketNo}",
+        "noPermission": "Ask the store manager to make an opening correction"
       }
     }
   },

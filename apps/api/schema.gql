@@ -3106,10 +3106,12 @@ type LotteryRescanItem {
   bookNo: String!
   cashPointId: ID
   gameCode: String!
+  openingSold: Boolean!
   outcome: String!
   partnerTicketNo: String
   ticketId: ID!
   ticketNo: String!
+  version: Int!
 }
 
 type LotteryRescanPlace {

@@ -21,6 +21,7 @@ import {
   rescanSummaryOf,
   ticketLabelOf,
 } from "./rescan-model";
+import { RescanOpeningFix } from "./RescanOpeningFix";
 import type { RescanLabels } from "./useRescanLabels";
 import { useRescanText } from "./useRescanText";
 
@@ -31,6 +32,7 @@ const TONES: Record<string, TagTone> = {
   recovered: "success",
   moved: "success",
   sold_here: "warning",
+  opening_sold_here: "warning",
   investigated: "warning",
   skipped: "error",
   scrapped: "error",
@@ -80,14 +82,16 @@ export const RescanPlacesCard = ({
   );
 };
 
-/** 刷到的一張:張號、結果標籤;記已售但還在的 [送撤銷售出申請]。 */
+/** 刷到的一張:張號、結果標籤;記已售但還在的 [送撤銷售出申請];導入前已賣出但還在的 [期初更正]。 */
 const ItemRow = ({
   item,
   orgId,
+  gameCode,
   labels,
 }: {
   item: RescanItem;
   orgId: string;
+  gameCode: string;
   labels: Labels;
 }) => (
   <Stack
@@ -117,6 +121,7 @@ const ItemRow = ({
         />
       </Box>
     ) : null}
+    <RescanOpeningFix item={item} orgId={orgId} gameCode={gameCode} />
   </Stack>
 );
 
@@ -214,6 +219,7 @@ export const RescanScanCard = ({
                 key={row.item.ticketId}
                 item={row.item}
                 orgId={orgId}
+                gameCode={rescan.gameCode}
                 labels={labels}
               />
             ) : (
@@ -293,6 +299,16 @@ export const RescanSummaryCard = ({
       ),
     },
     {
+      key: "openingSoldHere",
+      label: t("done.openingSoldHere"),
+      value: valueOf(summary.openingSoldHere, () =>
+        t("done.countValue", {
+          count: summary.openingSoldHere.length,
+          tickets: ticketsText(summary.openingSoldHere),
+        }),
+      ),
+    },
+    {
       key: "investigated",
       label: t("done.investigated"),
       value: valueOf(summary.investigated, () =>
@@ -345,6 +361,14 @@ export const RescanSummaryCard = ({
               ticketId={item.ticketId}
               orgId={orgId}
               rescanPlace={item.cashPointId ?? null}
+            />
+          ))}
+          {summary.openingSoldHere.map((item) => (
+            <RescanOpeningFix
+              key={item.ticketId}
+              item={item}
+              orgId={orgId}
+              gameCode={rescan.gameCode}
             />
           ))}
           <Button variant="contained" onClick={onLeave}>

@@ -12,7 +12,7 @@ import type { OpeningCells, SelectionActions } from "./book-cells";
 /**
  * 本的詳情的期初建檔部分(期初建檔規格 4.1、5.3):導入前已賣出的格子(已售樣式、提示、能期初更正才可選)、
  * 圖例「已售(含導入前已賣出)」、操作列的 [改回未售…] / [改成導入前已賣出…](後者要分店還在建檔)、
- * 改回未售能放的收銀點。不是期初建檔的本、沒有 `inventory.opening` → 不讀分店狀態。
+ * 不是期初建檔的本、沒有 `inventory.opening` → 不讀分店狀態。
  */
 export const useBookOpening = (
   detail: LotteryInventoryBookDetailFieldsFragment | null,
@@ -41,6 +41,5 @@ export const useBookOpening = (
       canFixToOpeningSold:
         canFix && opening?.canOpen === true && actions.canFixToOpeningSold,
     }),
-    cashPoints: opening?.cashPoints ?? [],
   };
 };

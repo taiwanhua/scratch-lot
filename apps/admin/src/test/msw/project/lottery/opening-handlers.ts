@@ -31,6 +31,8 @@ export interface OpeningWorldOptions {
   nameOf: (orgId: string) => string;
   /** 刷到的碼 → 掃描結果(期初建檔頁);沒列的碼 = 看不懂 */
   scans?: Record<string, OpeningScanResult>;
+  /** 這家店的收銀點(改回未售能放的位置);預設只有店內櫃台 */
+  cashPoints?: readonly { id: string; name: string }[];
 }
 
 export type OpeningScanResult = LotteryOpeningScanQuery["lotteryOpeningScan"];
@@ -100,7 +102,9 @@ export const openingWorld = (options: OpeningWorldOptions) => {
       canOpen: permissions.includes(OPENING_PERMISSION) && closedAt === null,
       canClose,
       canShowCost: false,
-      cashPoints: [ref("cp-counter", "店內櫃台")],
+      cashPoints: (
+        options.cashPoints ?? [{ id: "cp-counter", name: "店內櫃台" }]
+      ).map((point) => ref(point.id, point.name)),
     };
   };
   const handlers = [
