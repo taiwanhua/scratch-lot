@@ -1,7 +1,7 @@
 import type { BoxProps } from "@repo/ui/box";
 
 /**
- * 張數格子的十三種狀態(專案規格 7.5 的樣式表;Figma `Draft/TicketCell` 64:132 的變體)。
+ * 張數格子的十五種狀態(專案規格 7.5 的樣式表;Figma `Draft/TicketCell` 64:132 的變體)。
  * **顏色和狀態一對一固定**,每種狀態的文字、可不可以選、圖例要顯示哪幾項由使用處決定。
  *
  * | 狀態             | 規格名稱          | 樣式                                         |
@@ -19,6 +19,8 @@ import type { BoxProps } from "@repo/ui/box";
  * | `otherStore`     | 其他分店          | 灰底、停用字色、停用字色點線框               |
  * | `unmatchedSold`  | 已售·未對號       | 停用底 + 主要文字色虛線框(張數店;張號是系統預設帶入的) |
  * | `unmatchedLost`  | 待查·遺失·未對號  | 停用底 + 警告色虛線框(張數店)                |
+ * | `wholesaling`    | 批售中            | 停用底 + 成功色虛線框(被批售單鎖住的未售)     |
+ * | `wholesaled`     | 已批售            | 停用底 + 成功色框                            |
  */
 export const TICKET_CELL_STATES = [
   "unsold",
@@ -34,6 +36,8 @@ export const TICKET_CELL_STATES = [
   "otherStore",
   "unmatchedSold",
   "unmatchedLost",
+  "wholesaling",
+  "wholesaled",
 ] as const;
 
 export type TicketCellState = (typeof TICKET_CELL_STATES)[number];
@@ -116,4 +120,11 @@ export const TICKET_CELL_SX: Record<TicketCellState, TicketCellSx> = {
     borderStyle: "dashed",
     borderColor: "warning.main",
   },
+  wholesaling: {
+    ...DISABLED,
+    border: 2,
+    borderStyle: "dashed",
+    borderColor: "success.main",
+  },
+  wholesaled: { ...DISABLED, border: 2, borderColor: "success.main" },
 };

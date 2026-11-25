@@ -1,3 +1,4 @@
+import { WHOLESALE_REF_TYPE } from "@repo/domain/project/lottery";
 import type { LotteryStoreScanItemFieldsFragment } from "@repo/graphql";
 
 import { BLOCK_REASON_KEYS } from "./sales-text";
@@ -45,6 +46,15 @@ export const useBlockedText = (countBoard = false, localName = "") => {
     }
     if (countBoard && item.blockReason === "scrapped") {
       return t("scan.blocked.scrappedFix");
+    }
+    if (
+      item.blockReason === "locked" &&
+      item.lockRefType === WHOLESALE_REF_TYPE &&
+      item.lockSerialNo != null
+    ) {
+      return t("scan.blocked.lockedWholesale", {
+        serialNo: item.lockSerialNo,
+      });
     }
     const reason = (item.blockReason ?? "") as keyof typeof BLOCK_REASON_KEYS;
     if (!(reason in BLOCK_REASON_KEYS)) {

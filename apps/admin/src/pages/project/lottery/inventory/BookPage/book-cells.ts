@@ -2,6 +2,7 @@ import {
   type ScrapBlock,
   TICKET_LOCATION_KIND,
   TICKET_STATUS,
+  WHOLESALE_REF_TYPE,
   scrapBlockOf,
 } from "@repo/domain/project/lottery";
 import type { LotteryInventoryTicketFieldsFragment } from "@repo/graphql";
@@ -14,7 +15,11 @@ import type {
 type Ticket = Pick<
   LotteryInventoryTicketFieldsFragment,
   "ticketNo" | "status" | "locked" | "operable" | "locationKind"
-> & { org: { id: string; name: string }; unmatched?: boolean };
+> & {
+  org: { id: string; name: string };
+  unmatched?: boolean;
+  lockRefType?: string | null;
+};
 type CellState = TicketGridCell["state"];
 
 /** 張的狀態 → 本的詳情頁格子的狀態(規格 7.5「本的詳情頁:未售 / 已售 / 跳號 / 報廢 / 待查·遺失 / 已選」)。 */
@@ -25,7 +30,15 @@ const STATE_OF: Record<string, CellState> = {
   [TICKET_STATUS.scrapped]: "scrapped",
   [TICKET_STATUS.investigating]: "lost",
   [TICKET_STATUS.lost]: "lost",
+  [TICKET_STATUS.wholesaled]: "wholesaled",
 };
+
+/** 被批售單鎖住的未售(批售中;規格 21.5)。 */
+export const isWholesaling = (
+  ticket: Pick<Ticket, "status" | "lockRefType">,
+): boolean =>
+  ticket.status === TICKET_STATUS.unsold &&
+  ticket.lockRefType === WHOLESALE_REF_TYPE;
 
 /** 這本的張分在不止一家店(格子的提示寫每張在哪家店)。 */
 const spansStores = (tickets: readonly Ticket[]): boolean =>
@@ -45,7 +58,7 @@ const unmatchedStateOf = (ticket: Ticket): CellState | null => {
  * 本的詳情頁的格子:別店的張(`operable = false`,所在分店不在可見範圍內)用「其他分店」、不能選;
  * 系統預設帶入的張(未對號)畫虛線、不能選(只有張號確定的可以點選;張數店規格 13.2,Figma CS-20);
  * 跳號一律畫成跳號(跳號不算任何店的庫存;對調跳號時記在哪家店都能選,規格 7.3 做法 D);
- * 被調貨單鎖住的未售用「調貨中」、不能選(使用者 10/27 定案)。張分在不止一家店時,每格的提示寫所在分店。
+ * 被單據鎖住的未售用「調貨中」/「批售中」、不能選(使用者 10/27 定案、規格 21.5)。張分在不止一家店時,每格的提示寫所在分店。
  */
 export const bookCellsOf = (tickets: readonly Ticket[]): TicketGridCell[] => {
   const showStore = spansStores(tickets);
@@ -56,7 +69,7 @@ export const bookCellsOf = (tickets: readonly Ticket[]): TicketGridCell[] => {
     } else if (!ticket.operable) {
       state = "otherStore";
     } else if (ticket.locked && ticket.status === TICKET_STATUS.unsold) {
-      state = "transferring";
+      state = isWholesaling(ticket) ? "wholesaling" : "transferring";
     } else {
       const fallback: CellState = STATE_OF[ticket.status] ?? "sold";
       state = unmatchedStateOf(ticket) ?? fallback;
@@ -80,7 +93,22 @@ const withOtherStore = (
 
 /** 有被調貨單鎖住的未售(自己範圍內)才放「調貨中」。 */
 const isTransferring = (ticket: Ticket): boolean =>
-  ticket.operable && ticket.locked && ticket.status === TICKET_STATUS.unsold;
+  ticket.operable &&
+  ticket.locked &&
+  ticket.status === TICKET_STATUS.unsold &&
+  !isWholesaling(ticket);
+
+/** 整本(跳號以外)都是批售中或已批售:圖例只放那一種(Figma IN-03-4a / 4b)。 */
+const wholesaleLegendOf = (
+  tickets: readonly Ticket[],
+): readonly CellState[] | null => {
+  const states = new Set(bookCellsOf(tickets).map((cell) => cell.state));
+  const skipped = states.delete("skipped");
+  const [only] = states;
+  return states.size === 1 && (only === "wholesaling" || only === "wholesaled")
+    ? [only, ...(skipped ? (["skipped"] as const) : [])]
+    : null;
+};
 
 /**
  * 本的詳情頁能選:未售(報廢)、待查·遺失(尋回)、報廢(撤銷報廢,張數店規格 7.8)。
@@ -100,18 +128,28 @@ export const hasUnmatched = (tickets: readonly Ticket[]): boolean =>
   tickets.some((ticket) => ticket.operable && ticket.unmatched === true);
 
 /**
- * 本的詳情頁的圖例(未售 / 已售 /(調貨中)/ 跳號 / 報廢 / 待查·遺失 /(已售·未對號 / 待查·遺失·未對號)/
+ * 本的詳情頁的圖例(未售 / 已售 /(調貨中 / 批售中 / 已批售)/ 跳號 / 報廢 / 待查·遺失 /(已售·未對號 / 待查·遺失·未對號)/
  * (其他分店)/ 已選);有未對號時圖例下方另寫「虛線 = 系統預設帶入的張號」(`legendNote`,Figma CS-20)。
  */
 export const bookLegendOf = (
   tickets: readonly Ticket[],
 ): TicketGridProps["legendItems"] =>
+  wholesaleLegendOf(tickets) ??
   withOtherStore(
     [
       "unsold",
       "sold",
       ...(tickets.some((ticket) => isTransferring(ticket))
         ? (["transferring"] as const)
+        : []),
+      ...(tickets.some((ticket) => ticket.operable && isWholesaling(ticket))
+        ? (["wholesaling"] as const)
+        : []),
+      ...(tickets.some(
+        (ticket) =>
+          ticket.operable && ticket.status === TICKET_STATUS.wholesaled,
+      )
+        ? (["wholesaled"] as const)
         : []),
       "skipped",
       "scrapped",

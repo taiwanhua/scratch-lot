@@ -485,7 +485,9 @@
         "otherStore": "其他分店",
         "transferring": "調貨中",
         "unmatchedSold": "已售·未對號",
-        "unmatchedLost": "待查·遺失·未對號"
+        "unmatchedLost": "待查·遺失·未對號",
+        "wholesaling": "批售中",
+        "wholesaled": "已批售"
       },
       "quickSelect": {
         "label": "連號快選",
@@ -542,7 +544,8 @@
       "skipped": "跳號",
       "scrapped": "報廢",
       "investigating": "待查",
-      "lost": "遺失"
+      "lost": "遺失",
+      "wholesaled": "已批售"
     },
     "bookStates": {
       "revoked": "已撤銷",
@@ -553,6 +556,8 @@
       "investigating": "待查",
       "lost": "遺失",
       "scrapped": "已報廢",
+      "wholesaling": "批售中",
+      "wholesaled": "已批售",
       "sold_out": "售完",
       "pending_skip": "有待標註"
     },
@@ -576,6 +581,8 @@
       "transfer_out": "調出",
       "in_transit": "在途",
       "transfer_in": "調入",
+      "wholesale": "批售",
+      "wholesale_void": "取消批售",
       "investigate": "待查",
       "lose": "遺失",
       "recover": "尋回",
@@ -587,7 +594,8 @@
     },
     "sources": {
       "purchase": "進貨單",
-      "transfer_in": "調貨單"
+      "transfer_in": "調貨單",
+      "wholesale": "批售單"
     },
     "stock": {
       "columns": {
@@ -617,6 +625,7 @@
       "pickOrg": "請先選分店",
       "empty": "沒有符合條件的本",
       "total": "共 {count} 本",
+      "wholesaledHolding": "{customer}(已批售)",
       "remainingEstimated": "約 {remaining} / {total}"
     },
     "lookup": {
@@ -692,11 +701,17 @@
       "scrapBlocks": {
         "bookUnopened": "這本還沒拆,請先拆本",
         "notInStock": "只能選在庫存的張;檯面上的張請先收回",
-        "locked": "被調貨單鎖住的張不能報廢",
+        "locked": "被調貨單或批售單鎖住的張不能報廢",
         "notUnsold": "只能報廢未售的張"
       },
       "remainingEstimated": " · 剩 {remaining} 張(估算,含未對號 {unmatched} 張)",
-      "dashedNote": "虛線 = 系統預設帶入的張號"
+      "dashedNote": "虛線 = 系統預設帶入的張號",
+      "wholesaleReviewing": "{serial}(審核中)",
+      "wholesaleVoided": "{serial}(已作廢)",
+      "wholesaleShipped": "{serial}({date} 出貨)",
+      "wholesaleShippedTo": "{serial}({date} 出貨 · {customer})",
+      "wholesaledLocation": "{customer}(已批售)",
+      "remainingWholesaling": " · 剩 {remaining} 張(批售中,不能賣)"
     },
     "timeline": {
       "columns": {
@@ -711,7 +726,11 @@
       "empty": "還沒有事件",
       "correctionOf": "(前期更正,屬於 {shift})",
       "matchPair": "#{ticketNo} ↔ #{partner}",
-      "matchPairOtherBook": "#{ticketNo} ↔ 本號 {bookNo} #{partner}"
+      "matchPairOtherBook": "#{ticketNo} ↔ 本號 {bookNo} #{partner}",
+      "wholeBookRange": "整本 {ranges}",
+      "wholesaleSerial": "批售單 {serial}",
+      "wholesaleVoidSerial": "批售單 {serial} 作廢({reason})",
+      "wholesaleVoidNoReason": "批售單 {serial} 作廢"
     },
     "scrap": {
       "title": "報廢 {count} 張",
@@ -2953,9 +2972,11 @@
           "soldAt": "#{ticketNo} 已售({time} 賣出):沒真的賣出請當下撤銷或送撤銷售出申請",
           "counter": "#{ticketNo} 在檯面上({cashPoint}),請先收回到庫存",
           "locked": "#{ticketNo} 調貨中({serialNo}),不能調",
+          "lockedWholesale": "#{ticketNo} 批售中({serialNo}),不能調",
           "investigating": "#{ticketNo} 待查中,請先尋回",
           "lost": "#{ticketNo} 已遺失,請先尋回",
           "scrapped": "#{ticketNo} 已報廢,不能調",
+          "wholesaled": "#{ticketNo} 已批售,不能調",
           "inTransit": "#{ticketNo} 在調貨途中,不能調",
           "skipped": "#{ticketNo} 記為跳號,不能調",
           "elsewhere": "#{ticketNo} 在別家店,不能調"
@@ -2964,9 +2985,11 @@
           "counter": "在檯面上",
           "sold": "已售",
           "locked": "調貨中",
+          "lockedWholesale": "批售中",
           "investigating": "待查",
           "lost": "遺失",
           "scrapped": "報廢",
+          "wholesaled": "已批售",
           "inTransit": "在途",
           "skipped": "跳號",
           "elsewhere": "在別家店"
@@ -2975,9 +2998,11 @@
           "counter": "請先收回到庫存,",
           "sold": "沒真的賣出請當下撤銷或送撤銷售出申請,",
           "locked": "",
+          "lockedWholesale": "",
           "investigating": "請先尋回,",
           "lost": "請先尋回,",
           "scrapped": "",
+          "wholesaled": "",
           "inTransit": "",
           "skipped": "",
           "elsewhere": ""
@@ -3447,7 +3472,8 @@
         "skipped": "跳號",
         "scrapped": "報廢",
         "investigating": "待查",
-        "lost": "遺失"
+        "lost": "遺失",
+        "wholesaled": "已批售"
       },
       "pickTitle": "選遊戲",
       "pickHint": "本號 {bookNo} 在本店對到 {count} 款遊戲:",
@@ -3469,7 +3495,9 @@
         "sold": "這張刮刮樂已於 {time} 售出。",
         "skipped": "這張刮刮樂是「跳號」,不能賣。",
         "scrapped": "這張刮刮樂已報廢,不能賣。",
-        "locked": "這張刮刮樂被單據鎖定(調貨中或撤銷審核中),不能賣。",
+        "wholesaled": "這張刮刮樂已批售,不能賣。",
+        "locked": "這張刮刮樂被單據鎖定(調貨中、批售中或撤銷審核中),不能賣。",
+        "lockedWholesale": "這張刮刮樂在批售單 #{serialNo},不能賣。",
         "inTransit": "這張刮刮樂在調貨途中,不能賣。",
         "inStock": "這張刮刮樂在庫存,請先移到收銀點檯面再賣。",
         "moveForbidden": "這張在{cashPoint},你沒有移櫃權限,請由{cashPoint}售出。",
@@ -4689,7 +4717,8 @@
         "unmatchedNoPartner": "#{ticketNo} 系統記為已售(未對號),但{source}的這個遊戲已沒有未售的張可以對號。請送撤銷售出申請(原因:盤點錯誤)核准後再{action}",
         "skipped": "#{ticketNo} 記為跳號,請先到本的詳情更正跳號",
         "scrapped": "#{ticketNo} 記為報廢,請先到本的詳情撤銷報廢",
-        "locked": "#{ticketNo} 被調貨單或撤銷售出申請鎖住,不能{action}",
+        "wholesaled": "#{ticketNo} 已批售,不能{action}",
+        "locked": "#{ticketNo} 被調貨單、批售單或撤銷售出申請鎖住,不能{action}",
         "inTransit": "#{ticketNo} 在調貨途中,不能{action}",
         "inStock": "#{ticketNo} 已經在庫存",
         "missing": "#{ticketNo} 記為待查或遺失,請先尋回",

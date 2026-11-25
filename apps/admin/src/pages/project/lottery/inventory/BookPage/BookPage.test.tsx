@@ -56,6 +56,113 @@ describe("本的詳情", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("已批售(IN-03-4a):標籤、來源批售單、所在、時間軸寫買方", async () => {
+    const base = sampleBookDetail();
+    const [source] = base.sources;
+    const [event] = base.events;
+    renderInventory({
+      path: BOOK,
+      world: {
+        details: [
+          {
+            ...base,
+            book: {
+              ...base.book,
+              state: "wholesaled",
+              wholesaleCustomerName: "好運彩券行",
+            },
+            tickets: base.tickets.map((ticket) => ({
+              ...ticket,
+              status: "wholesaled",
+            })),
+            locations: [],
+            sources: [
+              source,
+              {
+                ...source,
+                type: "wholesale",
+                refId: "w-1",
+                refSerialNo: "W-0001",
+                at: "2026-11-19T02:45:00.000Z",
+                wholesaleState: "shipped",
+                customerName: "好運彩券行",
+              },
+            ],
+            events: [
+              {
+                ...event,
+                type: "wholesale_void",
+                correctionOfShift: null,
+                wholeBook: true,
+                ticketNos: base.tickets.map((ticket) => ticket.ticketNo),
+                to: { ...event.to, locationKind: "stock", cashPoint: null },
+                refSerialNo: "W-0001",
+                reasonKey: "input-error",
+                reasonNote: null,
+                voidReasonLabel: "登記錯誤",
+                customerName: "好運彩券行",
+              },
+            ],
+          },
+        ],
+      },
+    });
+    await screen.findByRole("heading", { name: "5164 發大財 · 本號 056527" });
+    // 標籤、圖例、格子都寫「已批售」
+    expect(screen.getAllByText("已批售").length).toBeGreaterThan(0);
+    expect(
+      screen.getByText("W-0001(11/19 出貨 · 好運彩券行)"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("好運彩券行(已批售)")).toBeInTheDocument();
+    expect(screen.getByText("取消批售")).toBeInTheDocument();
+    expect(
+      screen.getByText("批售單 W-0001 作廢(登記錯誤)"),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/^好運彩券行 → .+ 庫存$/)).toBeInTheDocument();
+    expect(
+      within(grid()).getByRole("button", { name: /^#001 已批售/ }),
+    ).toBeDisabled();
+  });
+
+  it("批售中(IN-03-4b / CS-20-2b):標籤、來源寫審核中、格子不能選;張數店寫剩 N 張不能賣", async () => {
+    const base = sampleBookDetail();
+    const [source] = base.sources;
+    renderInventory({
+      path: BOOK,
+      world: {
+        details: [
+          {
+            ...base,
+            countStore: true,
+            tickets: base.tickets.map((ticket) => ({
+              ...ticket,
+              status: "unsold",
+              locked: true,
+              lockRefType: "wholesale",
+            })),
+            sources: [
+              source,
+              {
+                ...source,
+                type: "wholesale",
+                refId: "w-1",
+                refSerialNo: "W-0001",
+                at: null,
+                wholesaleState: "reviewing",
+              },
+            ],
+          },
+        ],
+      },
+    });
+    await screen.findByRole("heading", { name: "5164 發大財 · 本號 056527" });
+    expect(screen.getByText("W-0001(審核中)")).toBeInTheDocument();
+    expect(screen.getByText(/張\(批售中,不能賣\)/)).toBeInTheDocument();
+    expect(
+      within(grid()).getByRole("button", { name: /^#001 批售中/ }),
+    ).toBeDisabled();
+  });
+
   it("選未售的張 → [報廢](原因必填)→ 送出", async () => {
     const { user, fake } = renderInventory({ path: BOOK });
     await screen.findByRole("heading", { name: "5164 發大財 · 本號 056527" });

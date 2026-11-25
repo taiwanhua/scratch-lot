@@ -485,7 +485,9 @@
         "otherStore": "Other branch",
         "transferring": "In transfer",
         "unmatchedSold": "Sold · unmatched",
-        "unmatchedLost": "Investigating / lost · unmatched"
+        "unmatchedLost": "Investigating / lost · unmatched",
+        "wholesaling": "In wholesale",
+        "wholesaled": "Wholesaled"
       },
       "quickSelect": {
         "label": "Select a run",
@@ -542,7 +544,8 @@
       "skipped": "Skipped",
       "scrapped": "Scrapped",
       "investigating": "Investigating",
-      "lost": "Lost"
+      "lost": "Lost",
+      "wholesaled": "Wholesaled"
     },
     "bookStates": {
       "revoked": "Revoked",
@@ -553,6 +556,8 @@
       "investigating": "Under investigation",
       "lost": "Lost",
       "scrapped": "Scrapped",
+      "wholesaling": "In wholesale",
+      "wholesaled": "Wholesaled",
       "sold_out": "Sold out",
       "pending_skip": "Skips to mark"
     },
@@ -576,6 +581,8 @@
       "transfer_out": "Transfer out",
       "in_transit": "In transit",
       "transfer_in": "Transfer in",
+      "wholesale": "Wholesale",
+      "wholesale_void": "Wholesale voided",
       "investigate": "Investigating",
       "lose": "Lost",
       "recover": "Recover",
@@ -587,7 +594,8 @@
     },
     "sources": {
       "purchase": "Purchase order",
-      "transfer_in": "Transfer order"
+      "transfer_in": "Transfer order",
+      "wholesale": "Wholesale order"
     },
     "stock": {
       "columns": {
@@ -614,6 +622,7 @@
         "bookNo": "Book no."
       },
       "listAria": "Stock (by book)",
+      "wholesaledHolding": "{customer} (wholesaled)",
       "pickOrg": "Pick a branch first",
       "empty": "No books match",
       "total": "{count} books",
@@ -692,11 +701,17 @@
       "scrapBlocks": {
         "bookUnopened": "This book has not been opened; open it first",
         "notInStock": "Only tickets in stock can be selected; recall counter tickets first",
-        "locked": "Tickets locked by a transfer cannot be scrapped",
+        "locked": "Tickets locked by a transfer or wholesale order cannot be scrapped",
         "notUnsold": "Only unsold tickets can be scrapped"
       },
       "remainingEstimated": " · {remaining} left (estimated, plus {unmatched} system-assigned)",
-      "dashedNote": "Dashed = ticket numbers assigned by the system"
+      "dashedNote": "Dashed = ticket numbers assigned by the system",
+      "wholesaleReviewing": "{serial} (under review)",
+      "wholesaleVoided": "{serial} (voided)",
+      "wholesaleShipped": "{serial} (shipped {date})",
+      "wholesaleShippedTo": "{serial} (shipped {date} · {customer})",
+      "wholesaledLocation": "{customer} (wholesaled)",
+      "remainingWholesaling": " · {remaining} left (in wholesale, not for sale)"
     },
     "timeline": {
       "columns": {
@@ -711,7 +726,11 @@
       "empty": "No events yet",
       "correctionOf": " (prior correction, belongs to {shift})",
       "matchPair": "#{ticketNo} ↔ #{partner}",
-      "matchPairOtherBook": "#{ticketNo} ↔ book {bookNo} #{partner}"
+      "matchPairOtherBook": "#{ticketNo} ↔ book {bookNo} #{partner}",
+      "wholeBookRange": "Whole book {ranges}",
+      "wholesaleSerial": "Wholesale order {serial}",
+      "wholesaleVoidSerial": "Wholesale order {serial} voided ({reason})",
+      "wholesaleVoidNoReason": "Wholesale order {serial} voided"
     },
     "scrap": {
       "title": "Scrap {count} tickets",
@@ -2953,9 +2972,11 @@
           "soldAt": "#{ticketNo} was sold ({time}): if it was not really sold, undo the sale or send a sale reversal",
           "counter": "#{ticketNo} is on a counter ({cashPoint}); recall it to stock first",
           "locked": "#{ticketNo} is on transfer {serialNo}; cannot transfer",
+          "lockedWholesale": "#{ticketNo} is in wholesale ({serialNo}); cannot transfer",
           "investigating": "#{ticketNo} is under investigation; recover it first",
           "lost": "#{ticketNo} is lost; recover it first",
           "scrapped": "#{ticketNo} is scrapped; cannot transfer",
+          "wholesaled": "#{ticketNo} has been wholesaled; cannot transfer",
           "inTransit": "#{ticketNo} is in transit; cannot transfer",
           "skipped": "#{ticketNo} is recorded as skipped; cannot transfer",
           "elsewhere": "#{ticketNo} is in another store; cannot transfer"
@@ -2964,9 +2985,11 @@
           "counter": "on a counter",
           "sold": "sold",
           "locked": "on another transfer",
+          "lockedWholesale": "In wholesale",
           "investigating": "under investigation",
           "lost": "lost",
           "scrapped": "scrapped",
+          "wholesaled": "Wholesaled",
           "inTransit": "in transit",
           "skipped": "skipped",
           "elsewhere": "in another store"
@@ -2975,9 +2998,11 @@
           "counter": "Recall them to stock, ",
           "sold": "If not really sold, undo the sale or send a sale reversal, ",
           "locked": "",
+          "lockedWholesale": "",
           "investigating": "Recover them first, ",
           "lost": "Recover them first, ",
           "scrapped": "",
+          "wholesaled": "",
           "inTransit": "",
           "skipped": "",
           "elsewhere": ""
@@ -3447,7 +3472,8 @@
         "skipped": "Skipped",
         "scrapped": "Scrapped",
         "investigating": "Under investigation",
-        "lost": "Lost"
+        "lost": "Lost",
+        "wholesaled": "Wholesaled"
       },
       "pickTitle": "Pick a game",
       "pickHint": "Book {bookNo} matches {count} games in this store:",
@@ -3469,7 +3495,9 @@
         "sold": "This ticket was sold at {time}.",
         "skipped": "This ticket is skipped and cannot be sold.",
         "scrapped": "This ticket is scrapped and cannot be sold.",
-        "locked": "This ticket is locked by a form (transfer or sale reversal) and cannot be sold.",
+        "wholesaled": "This ticket has been wholesaled and cannot be sold.",
+        "locked": "This ticket is locked by a form (transfer, wholesale or sale reversal) and cannot be sold.",
+        "lockedWholesale": "This ticket is on wholesale order #{serialNo} and cannot be sold.",
         "inTransit": "This ticket is in transit and cannot be sold.",
         "inStock": "This ticket is in stock. Move it to a counter first.",
         "moveForbidden": "This ticket is on {cashPoint} and you cannot move tickets. Sell it at {cashPoint}.",
@@ -4689,7 +4717,8 @@
         "unmatchedNoPartner": "#{ticketNo} is recorded as sold (unmatched) and {source} has no unsold ticket of this game to match. Send a sale reversal (stocktake error) and {action} after approval",
         "skipped": "#{ticketNo} is recorded as skipped; correct the skip in the book detail first",
         "scrapped": "#{ticketNo} is scrapped; undo the scrap in the book detail first",
-        "locked": "#{ticketNo} is locked by a transfer or sale reversal; cannot {action}",
+        "wholesaled": "#{ticketNo} has been wholesaled; cannot {action}",
+        "locked": "#{ticketNo} is locked by a transfer, wholesale order or sale reversal; cannot {action}",
         "inTransit": "#{ticketNo} is in transit; cannot {action}",
         "inStock": "#{ticketNo} is already in stock",
         "missing": "#{ticketNo} is under investigation or lost; recover it first",

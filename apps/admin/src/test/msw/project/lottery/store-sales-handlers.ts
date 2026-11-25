@@ -61,6 +61,8 @@ export interface StoreSalesWorldOptions {
   lostTicketIds?: readonly string[];
   /** 這幾張是已售·未對號(張數店;依張數賣時系統預設帶入的張號) */
   unmatchedSoldTicketIds?: readonly string[];
+  /** 這幾張被批售單 W-0001 鎖住(批售中) */
+  wholesalingTicketIds?: readonly string[];
 }
 
 const validation = (reason: string, extra: Record<string, unknown> = {}) =>
@@ -81,6 +83,7 @@ export const storeSalesWorld = ({
   alreadySoldAt,
   lostTicketIds = [],
   unmatchedSoldTicketIds = [],
+  wholesalingTicketIds = [],
 }: StoreSalesWorldOptions): StoreSalesWorld => {
   const books = booksOf(board);
   for (const ticket of books.flatMap((book) => book.tickets)) {
@@ -184,7 +187,7 @@ export const storeSalesWorld = ({
         locationKind: ticket.cashPointId === null ? "stock" : "counter",
         cashPointId: ticket.cashPointId,
         inThisStore: true,
-        locked: false,
+        locked: wholesalingTicketIds.includes(ticket.id),
         bookUnopened: unopened,
         counterShiftIsMine: counterShift?.isMine === true,
         unmatched: ticket.unmatched === true,
@@ -224,6 +227,8 @@ export const storeSalesWorld = ({
       responsibleOrg: null,
       outcome: decision.outcome,
       blockReason: decision.blockReason,
+      lockRefType: decision.blockReason === "locked" ? "wholesale" : null,
+      lockSerialNo: "W-0001",
       soldAt: ticket.soldAt,
       pendingSkipCount: unopened
         ? pendingSkipCountOf(book.lastTicketNo, book.standardTickets, 0)

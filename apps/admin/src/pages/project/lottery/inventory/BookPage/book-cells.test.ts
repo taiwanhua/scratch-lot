@@ -1,6 +1,11 @@
 import { describe, expect, it } from "@jest/globals";
 
-import { bookCellsOf, bookLegendOf, markSkipCellsOf } from "./book-cells";
+import {
+  BOOK_SELECTABLE,
+  bookCellsOf,
+  bookLegendOf,
+  markSkipCellsOf,
+} from "./book-cells";
 
 const ticket = (
   ticketNo: string,
@@ -8,6 +13,7 @@ const ticket = (
     status: string;
     locked: boolean;
     operable: boolean;
+    lockRefType: string | null;
   }> = {},
 ) => ({
   ticketNo,
@@ -41,6 +47,44 @@ describe("本的詳情頁格子(使用者 10/27 定案:調貨中格子)", () => 
       "otherStore",
     ]);
     expect(bookLegendOf(tickets)).not.toContain("transferring");
+  });
+});
+
+describe("批售的格子(規格 21.5、Figma IN-03-4a / 4b)", () => {
+  it("被批售單鎖住的未售 → 批售中、已批售 → 已批售;混在一起時圖例接在後面", () => {
+    const tickets = [
+      ticket("001"),
+      ticket("002", { locked: true, lockRefType: "transfer" }),
+      ticket("003", { locked: true, lockRefType: "wholesale" }),
+      ticket("004", { status: "wholesaled" }),
+    ];
+    expect(bookCellsOf(tickets).map((cell) => cell.state)).toEqual([
+      "unsold",
+      "transferring",
+      "wholesaling",
+      "wholesaled",
+    ]);
+    const legend = bookLegendOf(tickets);
+    expect(legend).toContain("transferring");
+    expect(legend).toContain("wholesaling");
+    expect(legend).toContain("wholesaled");
+    expect(BOOK_SELECTABLE).not.toContain("wholesaling");
+    expect(BOOK_SELECTABLE).not.toContain("wholesaled");
+  });
+
+  it("整本都是同一種 → 圖例只放那一種(有跳號加跳號)", () => {
+    expect(
+      bookLegendOf([
+        ticket("001", { locked: true, lockRefType: "wholesale" }),
+        ticket("002", { locked: true, lockRefType: "wholesale" }),
+      ]),
+    ).toEqual(["wholesaling"]);
+    expect(
+      bookLegendOf([
+        ticket("001", { status: "wholesaled" }),
+        ticket("002", { status: "skipped" }),
+      ]),
+    ).toEqual(["wholesaled", "skipped"]);
   });
 });
 

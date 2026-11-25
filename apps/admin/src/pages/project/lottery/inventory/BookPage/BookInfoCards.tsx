@@ -1,8 +1,13 @@
 import type { ReactNode } from "react";
+import { useNavigate } from "react-router";
 import { useTranslations } from "use-intl";
 
-import { formatTicketRanges } from "@repo/domain/project/lottery";
+import {
+  TICKET_STATUS,
+  formatTicketRanges,
+} from "@repo/domain/project/lottery";
 import type { LotteryInventoryBookDetailFieldsFragment } from "@repo/graphql";
+import { Button } from "@repo/ui/button";
 import { Card } from "@repo/ui/card";
 import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
@@ -10,6 +15,9 @@ import { Typography } from "@repo/ui/typography";
 import { useTemporalText } from "@/hooks/base/useTemporalText";
 
 import { moneyText, placeText } from "../inventory-config";
+import { useInventoryAccess } from "../useInventoryAccess";
+
+type Source = LotteryInventoryBookDetailFieldsFragment["sources"][number];
 
 /** 一張小卡:標題 + 「名稱 …… 值」的列。 */
 const InfoCard = ({
@@ -51,15 +59,56 @@ export const BookInfoCards = ({
 }) => {
   const t = useTranslations("admin.lotteryInventory");
   const temporal = useTemporalText();
+  const navigate = useNavigate();
+  const { wholesaleRoute } = useInventoryAccess();
   const { book } = detail;
+  const sourceText = (source: Source): string => {
+    const serial = source.refSerialNo ?? t("stock.none");
+    const date = source.at == null ? "" : temporal(source.at, "monthDay");
+    switch (source.wholesaleState) {
+      case "reviewing": {
+        return t("book.wholesaleReviewing", { serial });
+      }
+      case "voided": {
+        return t("book.wholesaleVoided", { serial });
+      }
+      case "shipped": {
+        return source.customerName == null
+          ? t("book.wholesaleShipped", { serial, date })
+          : t("book.wholesaleShippedTo", {
+              serial,
+              date,
+              customer: source.customerName,
+            });
+      }
+      default: {
+        return t("book.sourceValue", { serial, date });
+      }
+    }
+  };
+  // 批售單:綁了批售單檢視頁、而且看得到這張單(有單號)才是連結
+  const sourceValue = (source: Source): ReactNode =>
+    source.wholesaleState != null &&
+    source.refId != null &&
+    source.refSerialNo != null &&
+    wholesaleRoute !== null ? (
+      <Button
+        variant="text"
+        size="small"
+        onClick={() => {
+          void navigate(`${wholesaleRoute}/${source.refId ?? ""}`);
+        }}
+      >
+        {sourceText(source)}
+      </Button>
+    ) : (
+      sourceText(source)
+    );
   const sourceLines = [
     ...detail.sources.map((source, index) => ({
       key: `source-${String(index)}`,
       label: t(`sources.${source.type}`),
-      value: t("book.sourceValue", {
-        serial: source.refSerialNo ?? t("stock.none"),
-        date: temporal(source.at, "monthDay"),
-      }),
+      value: sourceValue(source),
     })),
     ...(book.purchaseDealer
       ? [
@@ -77,6 +126,19 @@ export const BookInfoCards = ({
     label: placeText(location.place, (kind) => t(`locations.${kind}`)),
     value: formatTicketRanges(location.ticketNos),
   }));
+  // 已批售的張不在任何一家店:寫買方(看不到批售單 → 出貨分店;Figma IN-03-4a)
+  const wholesaledNos = detail.tickets
+    .filter((ticket) => ticket.status === TICKET_STATUS.wholesaled)
+    .map((ticket) => ticket.ticketNo);
+  if (wholesaledNos.length > 0) {
+    locationLines.push({
+      key: "location-wholesaled",
+      label: t("book.wholesaledLocation", {
+        customer: book.wholesaleCustomerName ?? book.org.name,
+      }),
+      value: formatTicketRanges(wholesaledNos),
+    });
+  }
   return (
     <Stack direction={{ xs: "column", md: "row" }} sx={{ gap: 2 }}>
       <InfoCard title={t("book.sources")} lines={sourceLines} />
