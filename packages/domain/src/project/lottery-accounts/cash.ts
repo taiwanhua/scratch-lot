@@ -29,6 +29,10 @@ export const CASH_MOVEMENT_TYPE = {
   transferOut: "transfer_out",
   /** 調貨收入:外部 → 抽屜或小金庫 */
   transferIn: "transfer_in",
+  /** 批售支出:抽屜或小金庫 → 外部 */
+  wholesaleOut: "wholesale_out",
+  /** 批售收入:外部 → 抽屜或小金庫 */
+  wholesaleIn: "wholesale_in",
   /** 退貨退款:抽屜 → 外部 */
   refund: "refund",
   /** 現金更正(增加):外部 → 抽屜或小金庫 */
@@ -54,6 +58,8 @@ const ROUTES: Record<
   bank_withdraw: { from: ["bank"], to: ["vault"] },
   transfer_out: { from: ["drawer", "vault"], to: ["external"] },
   transfer_in: { from: ["external"], to: ["drawer", "vault"] },
+  wholesale_out: { from: ["drawer", "vault"], to: ["external"] },
+  wholesale_in: { from: ["external"], to: ["drawer", "vault"] },
   refund: { from: ["drawer"], to: ["external"] },
   correction_increase: { from: ["external"], to: ["drawer", "vault"] },
   correction_decrease: { from: ["drawer", "vault"], to: ["external"] },

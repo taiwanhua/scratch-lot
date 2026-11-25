@@ -38,6 +38,8 @@ export const BANK_TRANSACTION_TYPE = {
   purchaseIncome: "purchase_income",
   /** 調貨收入(收) */
   transferIncome: "transfer_income",
+  /** 批售收入(收):批售單收款 */
+  wholesaleIncome: "wholesale_income",
   /** 提領(支) */
   withdrawal: "withdrawal",
   /** 牌租(支) */
@@ -46,6 +48,8 @@ export const BANK_TRANSACTION_TYPE = {
   purchaseExpense: "purchase_expense",
   /** 調貨支出(支) */
   transferExpense: "transfer_expense",
+  /** 批售支出(支):批售單退款給客戶 */
+  wholesaleExpense: "wholesale_expense",
   /** 調整(使用者選方向,說明必填) */
   adjustment: "adjustment",
   /** 其他(使用者選方向,說明必填) */
@@ -64,10 +68,12 @@ const FIXED_DIRECTIONS: Partial<Record<BankTransactionType, Direction>> = {
   redemption_income: "in",
   purchase_income: "in",
   transfer_income: "in",
+  wholesale_income: "in",
   withdrawal: "out",
   license_rent: "out",
   purchase_expense: "out",
   transfer_expense: "out",
+  wholesale_expense: "out",
 };
 
 /** 這個類型的固定方向;null = 使用者選(調整、其他)。 */
@@ -80,26 +86,35 @@ export function requiresSummary(type: BankTransactionType): boolean {
   return fixedDirectionOf(type) === null;
 }
 
-/** 進貨與調貨:歸屬分店必填(規格 10.1)。 */
+/** 進貨、調貨與批售:歸屬分店必填(規格 10.1、21.6)。 */
 const BRANCH_REQUIRED: ReadonlySet<BankTransactionType> = new Set([
   "purchase_income",
   "purchase_expense",
   "transfer_income",
   "transfer_expense",
+  "wholesale_income",
+  "wholesale_expense",
 ]);
 
 export function requiresBranch(type: BankTransactionType): boolean {
   return BRANCH_REQUIRED.has(type);
 }
 
+/** 單據必填的類型(規格 9、21.6)。 */
+const DOCUMENT_REQUIRED: ReadonlySet<BankTransactionType> = new Set([
+  "purchase_income",
+  "transfer_income",
+  "wholesale_income",
+]);
+
 /**
- * 在銀行 [登記交易] 選了要指定單據的類型(規格 9):進貨收入 / 調貨收入 → 單據必填,
+ * 在銀行 [登記交易] 選了要指定單據的類型(規格 9、21.6):進貨收入 / 調貨收入 / 批售收入 → 單據必填,
  * 只列有待退或待收的單據;兌獎入帳 → 單據選填(不算進單據淨額)。
  */
 export function documentRequirementOf(
   type: BankTransactionType,
 ): "required" | "optional" | "none" {
-  if (type === "purchase_income" || type === "transfer_income") {
+  if (DOCUMENT_REQUIRED.has(type)) {
     return "required";
   }
   return type === "redemption_income" ? "optional" : "none";
