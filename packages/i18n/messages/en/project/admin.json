@@ -764,6 +764,112 @@
       "notThisBook": "This ticket is not from this book",
       "notSkipped": "#{ticketNo} is now {status}, not skipped; scan the ticket recorded as skipped that you have in hand",
       "guessedToSkipped": "{ticketNo} {status} (filled in by the system) → skipped; this status moves to an unsold ticket at the same place first"
+    },
+    "opening": {
+      "tabLabel": "Opening entry",
+      "back": "Back to inventory",
+      "org": "Store",
+      "pickOrg": "Pick a store first",
+      "hint": "For the same game, enter the book that sells first",
+      "closed": "Opening entry for this store has ended ({date} {by})",
+      "scan": "Scan to enter",
+      "fallbackGame": "Game for front barcode",
+      "fallbackGameNone": "Scan back number",
+      "scanErrors": {
+        "invalid": "Cannot read this code. Scan the book's back number or front barcode",
+        "no_game": "The front barcode has no game code. Pick the game for front barcode first",
+        "unknown_game": "Game not found",
+        "exists": "This book is already in the system",
+        "on_purchase": "This book is on purchase order #{serialNo}. Receive it on the purchase order"
+      },
+      "openBook": "Book details",
+      "discontinued": "This game is discontinued",
+      "card": {
+        "title": "{code} {name} · Book {bookNo}",
+        "meta": "{price} · standard {count} tickets",
+        "cancel": "Skip this book",
+        "stepsAria": "Entry steps",
+        "steps": {
+          "sold": "Mark sold before adoption",
+          "skip": "Mark skips",
+          "place": "Place"
+        },
+        "progress": "Step {current} / {total} · {label}",
+        "next": "Next",
+        "previous": "Back",
+        "last": "Last ticket",
+        "lastHelper": "{min}–999",
+        "soldHint": "Tap the tickets sold before adoption (Shift to select a range). Sealed books need none.",
+        "soldLegend": "Sold (before adoption)",
+        "skipHint": "Last ticket {last} is {count} over the standard count, so {count} numbers don't exist. An opened book must mark these {count}; a sealed book in stock may skip this.",
+        "place": {
+          "allTo": "All in one place",
+          "allToField": "Place",
+          "splitOption": "Split across places",
+          "splitHint": "Select tickets in the grid, then tap a place:",
+          "column": "Place",
+          "remaining": "{count} tickets not placed yet. Place all to enter.",
+          "stock": "Stock"
+        },
+        "rate": "Purchase rate",
+        "cost": "Cost {amount}",
+        "summary": "Last {last}: sold before adoption {sold} · skips {skipped} · in hand {inHand} ({places})",
+        "placeCounter": "Counter {name} {count}",
+        "placeStock": "Stock {count}",
+        "problems": {
+          "last_invalid": "Last ticket must be {min}–999",
+          "all_sold": "A fully sold book doesn't need entry",
+          "skip_count_mismatch": "{count} skips not marked yet",
+          "unplaced": "Some tickets are not placed",
+          "ticket_out_of_range": "A ticket is out of this book's range. Check again",
+          "ticket_repeated": "A ticket was marked twice. Check again"
+        },
+        "submit": "Enter"
+      },
+      "confirm": {
+        "title": "Enter {key}?",
+        "note": "Takes effect immediately.",
+        "checked": "I've checked the physical tickets",
+        "cancel": "Cancel",
+        "submit": "Enter"
+      },
+      "success": "Entered {key}",
+      "list": {
+        "title": "Books entered for this store",
+        "aria": "Books entered for this store",
+        "empty": "No books entered yet",
+        "columns": {
+          "bookNo": "Book",
+          "game": "Game",
+          "counts": "Sold before / in hand",
+          "places": "Place",
+          "openedBy": "Entered by",
+          "actions": "Actions"
+        },
+        "counts": "{sold} / {inHand}",
+        "openedBy": "{name} · {time}",
+        "detail": "Book details",
+        "void": "Void",
+        "voidBlocked": "This book has sales or other actions. Use an opening correction"
+      },
+      "void": {
+        "title": "Void {key}?",
+        "body": "The entry is removed and the book number can be entered again.",
+        "cancel": "Cancel",
+        "submit": "Void",
+        "success": "Voided {key}"
+      },
+      "errors": {
+        "FORBIDDEN": "You don't have permission for this",
+        "NOT_FOUND": "Store or book not found",
+        "VALIDATION_FAILED": "Some fields are invalid. Please check",
+        "CONFLICT": "This book is already in the system",
+        "STORE_OPENING_CLOSED": "Opening entry for this store has ended",
+        "BOOK_ON_PURCHASE": "This book is on purchase order #{serialNo}. Receive it on the purchase order",
+        "OPENING_PLAN_INVALID": "Ticket numbers don't add up. Check again",
+        "OPENING_NOT_VOIDABLE": "This book has sales or other actions. Use an opening correction",
+        "UNEXPECTED": "Something went wrong. Please try again later"
+      }
     }
   },
   "lotteryReports": {

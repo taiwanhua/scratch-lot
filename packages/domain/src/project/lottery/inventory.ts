@@ -37,6 +37,9 @@ export const INVENTORY_TABS = {
 export const INVENTORY_SKIP_CORRECTION_SCAN_PURPOSE =
   "inventory-skip-correction";
 
+/** 期初建檔頁刷條碼列的掃描用途(期初建檔規格 3.1)。 */
+export const INVENTORY_OPENING_SCAN_PURPOSE = "inventory-opening";
+
 /** 查刮刮樂的掃描用途(`useScanner` 宣告,規格 18.3)。 */
 export const INVENTORY_LOOKUP_SCAN_PURPOSE = "inventory-lookup";
 

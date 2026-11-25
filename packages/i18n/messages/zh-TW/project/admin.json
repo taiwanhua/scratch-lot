@@ -764,6 +764,112 @@
       "notThisBook": "這張不是這一本",
       "notSkipped": "#{ticketNo} 現在是{status},不是跳號;請刷記成跳號、但實體在手上的那張",
       "guessedToSkipped": "{ticketNo} {status}(系統預設帶入)→ 跳號;這個狀態先移給同位置一張未售"
+    },
+    "opening": {
+      "tabLabel": "期初建檔",
+      "back": "返回庫存",
+      "org": "分店",
+      "pickOrg": "請先選分店",
+      "hint": "同一款遊戲,請先登記先賣的那本",
+      "closed": "這家店的期初建檔已結束({date} {by})",
+      "scan": "刷條碼建檔",
+      "fallbackGame": "正面條碼的遊戲",
+      "fallbackGameNone": "刷背面編號",
+      "scanErrors": {
+        "invalid": "看不懂這個碼,請刷這本的背面編號或正面條碼",
+        "no_game": "正面條碼沒有遊戲代號,請先選「正面條碼的遊戲」",
+        "unknown_game": "找不到這款遊戲",
+        "exists": "這本已經在系統裡",
+        "on_purchase": "這本在進貨單 #{serialNo},請在進貨單點收"
+      },
+      "openBook": "本的詳情",
+      "discontinued": "這款遊戲已停售",
+      "card": {
+        "title": "{code} {name} · 本號 {bookNo}",
+        "meta": "{price} 元 · 標準 {count} 張",
+        "cancel": "不建這本",
+        "stepsAria": "建檔步驟",
+        "steps": {
+          "sold": "標導入前已賣出",
+          "skip": "標跳號",
+          "place": "分放"
+        },
+        "progress": "第 {current} / {total} 步 · {label}",
+        "next": "下一步",
+        "previous": "上一步",
+        "last": "迄號",
+        "lastHelper": "{min}–999",
+        "soldHint": "點出導入前已經賣出的張(Shift 可連選);原封的本不用標。",
+        "soldLegend": "已售(導入前已賣出)",
+        "skipHint": "迄號 {last} 比標準張數多 {count} 張,有 {count} 個號碼不存在。拆過的本要點出這 {count} 個號碼;整本原封在庫存可以不標。",
+        "place": {
+          "allTo": "全部放在同一個地方",
+          "allToField": "位置",
+          "splitOption": "分放到幾個地方",
+          "splitHint": "在格子選張,再點要放的地方:",
+          "column": "位置",
+          "remaining": "還有 {count} 張沒分配,全部分配完才能建檔。",
+          "stock": "庫存"
+        },
+        "rate": "批購金額率",
+        "cost": "成本 {amount} 元",
+        "summary": "迄號 {last}:導入前已賣出 {sold} · 跳號 {skipped} · 在手上 {inHand}({places})",
+        "placeCounter": "檯面 {name} {count}",
+        "placeStock": "庫存 {count}",
+        "problems": {
+          "last_invalid": "迄號要在 {min}–999 之間",
+          "all_sold": "整本都賣完的本不用建檔",
+          "skip_count_mismatch": "還有 {count} 張跳號沒標",
+          "unplaced": "還有張沒分配",
+          "ticket_out_of_range": "張號不在這本的範圍,請重新檢查",
+          "ticket_repeated": "同一張標了兩次,請重新檢查"
+        },
+        "submit": "建檔"
+      },
+      "confirm": {
+        "title": "建檔 {key}?",
+        "note": "建檔後當下生效。",
+        "checked": "我已對過實體",
+        "cancel": "取消",
+        "submit": "建檔"
+      },
+      "success": "已建檔 {key}",
+      "list": {
+        "title": "這家店已建檔的本",
+        "aria": "這家店已建檔的本",
+        "empty": "還沒有建檔的本",
+        "columns": {
+          "bookNo": "本編號",
+          "game": "遊戲",
+          "counts": "導入前已賣出 / 在手上",
+          "places": "位置",
+          "openedBy": "建檔人與時間",
+          "actions": "操作"
+        },
+        "counts": "{sold} / {inHand}",
+        "openedBy": "{name} · {time}",
+        "detail": "本的詳情",
+        "void": "作廢",
+        "voidBlocked": "這本已有銷售或其他動作,請用期初更正"
+      },
+      "void": {
+        "title": "作廢 {key}?",
+        "body": "作廢後這本的建檔資料移除,本號可以重新建檔。",
+        "cancel": "取消",
+        "submit": "作廢",
+        "success": "已作廢 {key}"
+      },
+      "errors": {
+        "FORBIDDEN": "你沒有這個操作的權限",
+        "NOT_FOUND": "找不到這家店或這本",
+        "VALIDATION_FAILED": "有欄位沒填好,請檢查",
+        "CONFLICT": "這本已經在系統裡",
+        "STORE_OPENING_CLOSED": "這家店的期初建檔已結束",
+        "BOOK_ON_PURCHASE": "這本在進貨單 #{serialNo},請在進貨單點收",
+        "OPENING_PLAN_INVALID": "張號不合,請重新檢查",
+        "OPENING_NOT_VOIDABLE": "這本已有銷售或其他動作,請用期初更正",
+        "UNEXPECTED": "發生錯誤,請稍後再試"
+      }
     }
   },
   "lotteryReports": {

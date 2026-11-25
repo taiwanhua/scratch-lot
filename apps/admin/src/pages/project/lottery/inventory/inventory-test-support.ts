@@ -19,6 +19,7 @@ import {
 } from "@/test/msw/project/lottery/master-data-handlers";
 import { openingPageModule } from "@/test/msw/project/lottery/opening-fixtures";
 import {
+  type OpeningScanResult,
   type OpeningState,
   openingWorld,
 } from "@/test/msw/project/lottery/opening-handlers";
@@ -35,6 +36,7 @@ export const renderInventory = ({
   bookPage = true,
   openingPage = false,
   openings = {},
+  scans = {},
   inventory = true,
   masterData = false,
   world = {},
@@ -47,6 +49,8 @@ export const renderInventory = ({
   openingPage?: boolean;
   /** 期初建檔狀態(分店 id → 狀態) */
   openings?: Record<string, OpeningState>;
+  /** 期初建檔頁刷到的碼 → 掃描結果 */
+  scans?: Record<string, OpeningScanResult>;
   /** 綁不綁庫存管理 */
   inventory?: boolean;
   /** 另外綁檔案管理(遊戲詳情的庫存分頁) */
@@ -59,6 +63,7 @@ export const renderInventory = ({
   const opening = openingWorld({
     permissions,
     openings,
+    scans,
     nameOf: (orgId) =>
       Object.values(masterDataOrgs).find((org) => org.id === orgId)?.name ??
       orgId,

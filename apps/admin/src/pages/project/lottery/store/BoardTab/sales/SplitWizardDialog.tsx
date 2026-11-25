@@ -16,18 +16,19 @@ import { Stack } from "@repo/ui/stack";
 import { Stepper } from "@repo/ui/stepper";
 import { Typography } from "@repo/ui/typography";
 
+import { SkipStep } from "@/components/project/lottery/SplitSteps/SkipStep";
+import { SplitPlaceStep } from "@/components/project/lottery/SplitSteps/SplitPlaceStep";
+import {
+  type SplitPlaceState,
+  splitAssignmentsOf,
+} from "@/components/project/lottery/SplitSteps/split-place";
 import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
 import { useSession } from "@/hooks/base/useSession";
 
 import { moneyText } from "../../store-text";
-import { SplitPlaceStep } from "./SplitPlaceStep";
-import { CountStep, SkipStep } from "./SplitSkipSteps";
+import { CountStep } from "./SplitSkipSteps";
 import { useRefreshSales } from "./sales-queries";
-import {
-  type SplitPlaceState,
-  splitAssignmentsOf,
-  splitSkipPlanOf,
-} from "./split-plan";
+import { splitSkipPlanOf } from "./split-plan";
 import { useSalesText } from "./useSalesText";
 
 export interface SplitWizardDialogProps {

@@ -2,6 +2,8 @@ import { HttpResponse } from "msw";
 
 import { LOTTERY_SETTINGS_PERMISSIONS } from "@repo/domain/project/lottery-settings";
 import type {
+  CreateLotteryOpeningBookMutationVariables,
+  LotteryOpeningScanQuery,
   LotteryStoreOpeningFieldsFragment,
   ReopenLotteryStoreOpeningMutationVariables,
 } from "@repo/graphql";
@@ -26,7 +28,30 @@ export interface OpeningWorldOptions {
   /** 分店 id → 狀態 */
   openings?: Record<string, OpeningState>;
   nameOf: (orgId: string) => string;
+  /** 刷到的碼 → 掃描結果(期初建檔頁);沒列的碼 = 看不懂 */
+  scans?: Record<string, OpeningScanResult>;
 }
+
+export type OpeningScanResult = LotteryOpeningScanQuery["lotteryOpeningScan"];
+type OpeningCandidate = OpeningScanResult["candidates"][number];
+
+/** 掃描候選(預設 556 好運 100 張、面額 10,000、92%、可以建)。 */
+export const openingCandidate = (
+  overrides: Partial<OpeningCandidate> = {},
+): OpeningCandidate => ({
+  __typename: "LotteryOpeningScanCandidate",
+  gameId: "g-556",
+  gameCode: "556",
+  gameName: "好運",
+  ticketsPerBook: 100,
+  bookPrice: 10_000,
+  defaultRate: 92,
+  discontinued: false,
+  block: null,
+  bookId: null,
+  serialNo: null,
+  ...overrides,
+});
 
 const forbidden = () =>
   graphqlError("FORBIDDEN", "missing permission", {
@@ -51,6 +76,8 @@ export const openingWorld = (options: OpeningWorldOptions) => {
   const inputs = {
     close: [] as string[],
     reopen: [] as ReopenLotteryStoreOpeningMutationVariables["input"][],
+    create: [] as CreateLotteryOpeningBookMutationVariables["input"][],
+    void: [] as string[],
   };
   const stateOf = (orgId: string): OpeningState =>
     openings.get(orgId) ?? { bookCount: 0 };
@@ -118,6 +145,89 @@ export const openingWorld = (options: OpeningWorldOptions) => {
       openings.set(orgId, { bookCount, ...(books ? { books } : {}) });
       return HttpResponse.json({
         data: { reopenLotteryStoreOpening: { item: openingOf(orgId) } },
+      });
+    }),
+    api.query("LotteryOpeningScan", ({ variables }) => {
+      const { input } = variables as { input: { code: string } };
+      const result = options.scans?.[input.code] ?? {
+        __typename: "LotteryOpeningScanPayload" as const,
+        bookNo: null,
+        topTicketNo: null,
+        hasGameCode: false,
+        candidates: [],
+      };
+      return HttpResponse.json({ data: { lotteryOpeningScan: result } });
+    }),
+    api.mutation<
+      Record<string, unknown>,
+      CreateLotteryOpeningBookMutationVariables
+    >("CreateLotteryOpeningBook", ({ variables }) => {
+      const { input } = variables;
+      inputs.create.push(input);
+      const state = stateOf(input.orgId);
+      if (state.closedAt !== undefined) {
+        return graphqlError("VALIDATION_FAILED", "closed", {
+          reason: "STORE_OPENING_CLOSED",
+        });
+      }
+      const bookId = `ob-${String(inputs.create.length)}`;
+      const inHand =
+        input.lastTicketNo -
+        input.soldTicketNos.length -
+        input.skippedTicketNos.length;
+      const book: LotteryStoreOpeningFieldsFragment["books"][number] = {
+        __typename: "LotteryOpeningBook",
+        bookId,
+        bookKey: `556-${input.bookNo}`,
+        gameCode: "556",
+        gameName: "好運",
+        bookNo: input.bookNo,
+        lastTicketNo: String(input.lastTicketNo),
+        openingSoldCount: input.soldTicketNos.length,
+        inHandCount: inHand,
+        places: input.placements.map((placement) => ({
+          __typename: "LotteryOpeningPlace" as const,
+          cashPoint:
+            placement.cashPointId == null
+              ? null
+              : ref(placement.cashPointId, "店內櫃台"),
+          count: placement.ticketNos.length,
+        })),
+        openedBy: ref("u-manager", "王店長"),
+        openingAt: "2026-11-25T01:12:00.000Z",
+        voidable: true,
+      };
+      openings.set(input.orgId, {
+        ...state,
+        bookCount: state.bookCount + 1,
+        books: [book, ...(state.books ?? [])],
+      });
+      return HttpResponse.json({
+        data: {
+          createLotteryOpeningBook: { bookId, count: input.lastTicketNo },
+        },
+      });
+    }),
+    api.mutation("VoidLotteryOpeningBook", ({ variables }) => {
+      const { bookId } = variables as { bookId: string };
+      inputs.void.push(bookId);
+      for (const [orgId, state] of openings) {
+        const book = state.books?.find((item) => item.bookId === bookId);
+        if (book !== undefined) {
+          if (!book.voidable) {
+            return graphqlError("VALIDATION_FAILED", "not voidable", {
+              reason: "OPENING_NOT_VOIDABLE",
+            });
+          }
+          openings.set(orgId, {
+            ...state,
+            bookCount: state.bookCount - 1,
+            books: (state.books ?? []).filter((item) => item !== book),
+          });
+        }
+      }
+      return HttpResponse.json({
+        data: { voidLotteryOpeningBook: { bookId, count: 100 } },
       });
     }),
   ];

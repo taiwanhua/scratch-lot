@@ -20,6 +20,8 @@ export interface TicketCellProps {
   flashKey?: number;
   /** 點格子;`shiftKey` = 按著 Shift(連選)。 */
   onClick?: (shiftKey: boolean) => void;
+  /** 已選(`aria-pressed`);不給 = 狀態是 `selected` 才算(已選畫成別的樣式時呼叫端給)。 */
+  pressed?: boolean;
 }
 
 /**
@@ -34,6 +36,7 @@ export const TicketCell = ({
   tooltip,
   flashKey,
   onClick,
+  pressed = state === "selected",
 }: TicketCellProps) => {
   // `Box` 的型別只認 div 的屬性;`<button>` 自己的 `type` / `disabled` 以展開傳入
   // (格子在表單裡不能是 submit 鈕)
@@ -46,7 +49,7 @@ export const TicketCell = ({
       data-flash={flashKey === undefined ? undefined : "true"}
       data-state={state}
       aria-label={`#${ticketNo} ${label}`}
-      aria-pressed={state === "selected"}
+      aria-pressed={pressed}
       onClick={(event) => {
         onClick?.(event.shiftKey);
       }}

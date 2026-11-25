@@ -49,6 +49,11 @@ export interface TicketGridProps {
    * 讓某一格閃一下(例:看板展開卡片時刷到這一張);`nonce` 每次刷到都換,同一張再刷也會再閃。
    */
   flash?: { ticketNo: string; nonce: number };
+  /**
+   * 已選的格子畫成這個狀態的樣式與文字(例:期初建檔 ① 標「導入前已賣出」的張用已售樣式);
+   * 不給 = 已選樣式。
+   */
+  selectedLook?: TicketCellState;
 }
 
 /**
@@ -68,6 +73,7 @@ export const TicketGrid = ({
   maxSelected,
   summary,
   flash,
+  selectedLook = "selected",
 }: TicketGridProps) => {
   const t = useTranslations("admin.lotteryInventory.ticketGrid");
   const labelOf = useTicketCellLabels(labels);
@@ -119,7 +125,7 @@ export const TicketGrid = ({
       >
         {cells.map((cell) => {
           const isSelected = selectedSet.has(cell.ticketNo);
-          const state = isSelected ? "selected" : cell.state;
+          const state = isSelected ? selectedLook : cell.state;
           return (
             <TicketCell
               key={cell.ticketNo}
@@ -127,6 +133,7 @@ export const TicketGrid = ({
               state={state}
               label={labelOf(state)}
               selectable={selection.selectable.has(cell.ticketNo)}
+              pressed={isSelected}
               tooltip={cell.tooltip}
               {...(flash?.ticketNo === cell.ticketNo && {
                 flashKey: flash.nonce,
