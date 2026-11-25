@@ -1,19 +1,16 @@
 import { Injectable } from "@nestjs/common";
 import { InjectModel } from "@nestjs/mongoose";
-import type { ClientSession, HydratedDocument, Types } from "mongoose";
+import type { HydratedDocument } from "mongoose";
 
 import {
   BaseRepository,
   type RepositoryModel,
 } from "../../../database/base.repository";
-import {
-  type OperatorContext,
-  scopeQuery,
-} from "../../../database/operator-context";
 import { LotteryDealerContact } from "./lottery-dealer-contact.schema";
 import { LotteryDealerSignin } from "./lottery-dealer-signin.schema";
 import { LotteryDealer } from "./lottery-dealer.schema";
 import { LotteryRelationship } from "./lottery-relationship.schema";
+import { LotteryWholesaleCustomerLock } from "./lottery-wholesale-customer-lock.schema";
 import { LotteryWholesaleCustomer } from "./lottery-wholesale-customer.schema";
 
 export type LotteryDealerDocument = HydratedDocument<LotteryDealer>;
@@ -21,6 +18,8 @@ export type LotteryDealerContactDocument =
   HydratedDocument<LotteryDealerContact>;
 export type LotteryDealerSigninDocument = HydratedDocument<LotteryDealerSignin>;
 export type LotteryRelationshipDocument = HydratedDocument<LotteryRelationship>;
+export type LotteryWholesaleCustomerLockDocument =
+  HydratedDocument<LotteryWholesaleCustomerLock>;
 export type LotteryWholesaleCustomerDocument =
   HydratedDocument<LotteryWholesaleCustomer>;
 
@@ -95,32 +94,21 @@ export class LotteryWholesaleCustomersRepository extends BaseRepository<
   ) {
     super(model);
   }
+}
 
-  /**
-   * 批售單送出時在同一個交易裡碰客戶(`referenceVersion` +1):和「刪除客戶」互相衝突(兩邊都寫同一筆)。
-   * 不是修改客戶資料:修改者照原值、修改時間不動。客戶讀不到(已刪除)→ 不做事(送出前檢查已擋)。
-   */
-  async touchReference(
-    operator: OperatorContext,
-    id: Types.ObjectId,
-    session: ClientSession,
-  ): Promise<void> {
-    const current = await this.findById(operator, id, {
-      select: "updatedBy",
-      session,
-    });
-    if (current === null) {
-      return;
-    }
-    await scopeQuery(
-      this.model.updateOne(
-        { _id: id },
-        { $inc: { referenceVersion: 1 } },
-        { timestamps: false },
-      ),
-      { operator: { ...operator, actorId: current.updatedBy ?? null } },
-    )
-      .session(session)
-      .exec();
+/** lottery_wholesale_customer_locks(批售客戶的守門文件)。 */
+@Injectable()
+export class LotteryWholesaleCustomerLocksRepository extends BaseRepository<
+  LotteryWholesaleCustomerLock,
+  LotteryWholesaleCustomerLockDocument
+> {
+  constructor(
+    @InjectModel(LotteryWholesaleCustomerLock.name)
+    model: RepositoryModel<
+      LotteryWholesaleCustomerLock,
+      LotteryWholesaleCustomerLockDocument
+    >,
+  ) {
+    super(model);
   }
 }

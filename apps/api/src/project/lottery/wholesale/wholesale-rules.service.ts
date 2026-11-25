@@ -42,6 +42,7 @@ import {
   LotteryTicketEventsRepository,
   LotteryTicketsRepository,
 } from "../../database/lottery-inventory/lottery-inventory.repository";
+import { WholesaleCustomerDocuments } from "../dealers/wholesale-customer-documents";
 import { SettlementLedger } from "../settlement/settlement-ledger";
 import { settlementDocumentOf } from "../settlement/settlement-registry";
 import { SettlementService } from "../settlement/settlement.service";
@@ -94,6 +95,7 @@ export class WholesaleRules {
     private readonly books: WholesaleBooks,
     private readonly ledger: TicketLedgerService,
     private readonly wholesale: WholesaleLedger,
+    private readonly customerDocuments: WholesaleCustomerDocuments,
     private readonly settlement: SettlementService,
     private readonly settlementLedger: SettlementLedger,
     private readonly realtime: RealtimePublisher,
@@ -266,7 +268,7 @@ export class WholesaleRules {
 
   /**
    * 送出後:這張單每一本的全部張(跳號以外)鎖定(批售中);重新送出時不再單上的解鎖。
-   * 批售客戶在同一個交易裡碰一下(`touchReference`):和「刪除客戶」互相衝突,重跑的一方看得到對方
+   * 批售客戶的守門文件在同一個交易裡碰一下(`serialize`):和「刪除客戶」互相衝突,重跑的一方看得到對方
    * (刪除看得到引用 / 送出看到客戶已刪除),不會留下指到已刪除客戶的單。
    */
   async onSubmitted(context: FormEffectContext): Promise<void> {
@@ -279,8 +281,15 @@ export class WholesaleRules {
     const customerId = toObjectId(
       wholesaleHeaderOf(submission.values).customerId,
     );
-    if (customerId !== null) {
-      await this.customers.touchReference(reader, customerId, context.session);
+    const customer =
+      customerId === null
+        ? null
+        : await this.customers.findById(reader, customerId, {
+            select: "orgId",
+            session: context.session,
+          });
+    if (customer !== null) {
+      await this.customerDocuments.serialize(reader, customer, context.session);
     }
     const lock = wholesaleLockOf(context.submissionId);
     const ticketsOf = await this.books.ticketsOf(

@@ -1,7 +1,8 @@
 import { Injectable } from "@nestjs/common";
-import type { Types } from "mongoose";
+import type { ClientSession, Types } from "mongoose";
 
 import type { OperatorContext } from "../../../database/operator-context";
+import { LotteryWholesaleCustomerLocksRepository } from "../../database/lottery-dealers/lottery-dealers.repository";
 
 /**
  * 批售客戶要從批售單知道的兩件事(專案規格 21.2)。由批售單的功能在 `onModuleInit` 呼叫
@@ -33,6 +34,10 @@ export interface WholesaleCustomerDocumentSource {
 export class WholesaleCustomerDocuments {
   private readonly sources: WholesaleCustomerDocumentSource[] = [];
 
+  constructor(
+    private readonly locks: LotteryWholesaleCustomerLocksRepository,
+  ) {}
+
   registerSource(source: WholesaleCustomerDocumentSource): void {
     this.sources.push(source);
   }
@@ -59,6 +64,40 @@ export class WholesaleCustomerDocuments {
       }
     }
     return latest;
+  }
+
+  /**
+   * 交易內碰這位客戶的守門文件:「送出批售單」(掛接點 `submitted`)與「刪除客戶」都呼叫,兩個交易在這一筆上衝突、
+   * 重跑的一方看得到對方,不會留下指到已刪除客戶的單。`operator` = 看得到整個租戶的上下文(呼叫端的租戶邊界);
+   * 守門文件在新增客戶時建(`createLock`),沒有的(例:直接寫進資料庫的)在同一個交易裡先建。
+   */
+  async serialize(
+    operator: OperatorContext,
+    customer: { _id: Types.ObjectId; orgId: Types.ObjectId },
+    session: ClientSession,
+  ): Promise<void> {
+    const touched = await this.locks.findOneAndUpdate(
+      operator,
+      { customerId: customer._id },
+      { $inc: { version: 1 } },
+      { session },
+    );
+    if (touched === null) {
+      await this.createLock(operator, customer, session);
+    }
+  }
+
+  /** 新增客戶時(同一個交易)建守門文件。 */
+  async createLock(
+    operator: OperatorContext,
+    customer: { _id: Types.ObjectId; orgId: Types.ObjectId },
+    session: ClientSession,
+  ): Promise<void> {
+    await this.locks.create(
+      operator,
+      { orgId: customer.orgId, customerId: customer._id, version: 0 },
+      { session },
+    );
   }
 
   async isReferenced(

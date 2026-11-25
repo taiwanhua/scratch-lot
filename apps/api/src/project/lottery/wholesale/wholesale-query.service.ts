@@ -234,7 +234,7 @@ export class WholesaleQueryService {
     );
     const filter: Record<string, unknown> = {
       ...this.readableFilterOf(operator),
-      ...(input.status ? { status: input.status as string } : {}),
+      ...(input.status ? { status: input.status } : {}),
       ...(input.fromOrgId
         ? { [`values.${K.fromBranch}.id`]: input.fromOrgId }
         : {}),

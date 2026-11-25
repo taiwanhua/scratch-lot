@@ -291,13 +291,14 @@ export class WholesaleCustomersService {
         `Missing permission ${DEALERS_PERMISSIONS.wholesaleCustomersEdit}`,
       );
     }
-    const created = await this.transactions.withTransaction(async () => {
+    const created = await this.transactions.withTransaction(async (session) => {
       await this.assertLicenseUnique(operator, grant, values.licenseNo);
       const record = await this.customers.create(operator, {
         ...values,
         label: wholesaleCustomerLabel(values),
         shareOrgs: normalizeShareOrgs(shareOrgs),
       });
+      await this.documents.createLock(operator, record, session);
       await this.audit.record(operator, {
         action: AUDIT_ACTIONS.wholesaleCustomerCreate,
         targetType: AUDIT_TARGETS.wholesaleCustomer,
@@ -379,7 +380,8 @@ export class WholesaleCustomersService {
 
   async delete(operator: OperatorContext, id: string): Promise<string> {
     const current = await this.mustFindOwn(operator, id);
-    await this.transactions.withTransaction(async () => {
+    await this.transactions.withTransaction(async (session) => {
+      await this.documents.serialize(operator, current, session);
       if (
         await this.documents.isReferenced(
           operator,
