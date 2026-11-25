@@ -44,12 +44,14 @@ const MOVEMENT_KIND: Readonly<Record<string, ExpectedCashItemKind>> = {
   [CASH_MOVEMENT_TYPE.withdraw]: "withdrawals",
   [CASH_MOVEMENT_TYPE.transferOut]: "transfer_out",
   [CASH_MOVEMENT_TYPE.transferIn]: "transfer_in",
+  [CASH_MOVEMENT_TYPE.wholesaleOut]: "wholesale_out",
+  [CASH_MOVEMENT_TYPE.wholesaleIn]: "wholesale_in",
   [CASH_MOVEMENT_TYPE.refund]: "refunds",
   [CASH_MOVEMENT_TYPE.correctionIncrease]: "corrections",
   [CASH_MOVEMENT_TYPE.correctionDecrease]: "corrections",
 };
 
-/** 公式的順序(規格 6.9):期初 + 銷售 − 兌獎 − 投庫 + 出庫 − 調貨支出 + 調貨收入 − 退貨退款 ± 現金更正。 */
+/** 公式的順序(規格 6.9):期初 + 銷售 − 兌獎 − 投庫 + 出庫 − 調貨支出 + 調貨收入 − 批售支出 + 批售收入 − 退貨退款 ± 現金更正。 */
 const ITEM_ORDER: readonly ExpectedCashItemKind[] = [
   "opening",
   "sales",
@@ -58,16 +60,19 @@ const ITEM_ORDER: readonly ExpectedCashItemKind[] = [
   "withdrawals",
   "transfer_out",
   "transfer_in",
+  "wholesale_out",
+  "wholesale_in",
   "refunds",
   "corrections",
 ];
 
-/** 流水指回的單據(撤銷售出申請、現金更正單、調貨單)用單號當顯示文字。 */
+/** 流水指回的單據(撤銷售出申請、現金更正單、調貨單、批售單)用單號當顯示文字。 */
 const SUBMISSION_REF_TYPES: ReadonlySet<string> = new Set([
   "store",
   SALE_REVERSAL_FORM_KEY,
   CASH_CORRECTION_FORM_KEY,
   "purchasing.transfer",
+  "purchasing.wholesale",
 ]);
 
 /**
@@ -181,7 +186,7 @@ export class ExpectedCashItems {
     });
   }
 
-  /** 現金流水:投庫 −、出庫 +(扣掉開班領零用金那一筆,已是期初)、調貨 ±、退貨退款 −、現金更正 ±。 */
+  /** 現金流水:投庫 −、出庫 +(扣掉開班領零用金那一筆,已是期初)、調貨 ±、批售 ±、退貨退款 −、現金更正 ±。 */
   private async pushMovements(
     reader: OperatorContext,
     shift: DrawerShift,

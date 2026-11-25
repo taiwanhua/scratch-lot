@@ -478,7 +478,12 @@ describe("日結與存銀行(GraphQL 端點 + 真 MongoDB)", () => {
   /** 一筆碰小金庫的流水(投庫:抽屜 → 小金庫;出庫:小金庫 → 抽屜)。 */
   async function vaultMovement(
     orgId: Types.ObjectId,
-    type: "deposit" | "withdraw" | "bank_withdraw",
+    type:
+      | "deposit"
+      | "withdraw"
+      | "bank_withdraw"
+      | "wholesale_in"
+      | "wholesale_out",
     amount: number,
     occurredAt: Date,
   ): Promise<void> {
@@ -486,8 +491,10 @@ describe("日結與存銀行(GraphQL 端點 + 真 MongoDB)", () => {
       deposit: { from: "drawer", to: "vault" },
       withdraw: { from: "vault", to: "drawer" },
       bank_withdraw: { from: "bank", to: "vault" },
+      wholesale_in: { from: "external", to: "vault" },
+      wholesale_out: { from: "vault", to: "external" },
     }[type];
-    const isDrawer = type !== "bank_withdraw";
+    const isDrawer = type === "deposit" || type === "withdraw";
     await connection.collection(LOTTERY_CASH_MOVEMENTS_COLLECTION).insertOne({
       orgId,
       tenantId: tenant,
@@ -1025,6 +1032,7 @@ describe("日結與存銀行(GraphQL 端點 + 真 MongoDB)", () => {
       ["deposits", 1, 12_000],
       ["withdrawals", 1, -3000],
       ["transfers", 0, 0],
+      ["wholesales", 0, 0],
       ["corrections", 0, 0],
       ["bank_deposits", 0, 0],
       ["bank_withdrawals", 0, 0],
@@ -1141,6 +1149,30 @@ describe("日結與存銀行(GraphQL 端點 + 真 MongoDB)", () => {
       ["deposits", 1, 1000],
       ["bank_withdrawals", 1, 2000],
     ]);
+  });
+
+  it("第 ③ 步小金庫應有算進「批售(現金)」:收入 +、支出 −,合併一項", async () => {
+    const store = await newStore("士林店");
+    await vaultMovement(
+      store.orgId,
+      "wholesale_in",
+      2000,
+      taipei("14", "10:00"),
+    );
+    await vaultMovement(
+      store.orgId,
+      "wholesale_out",
+      300,
+      taipei("14", "11:00"),
+    );
+    now("14", "22:00");
+    const view = await wizard(store.orgId);
+    expect(view.vaultExpected).toBe(1700);
+    expect(
+      view.vaultItems
+        .filter((item) => item.amount !== 0)
+        .map((item) => [item.kind, item.count, item.amount]),
+    ).toEqual([["wholesales", 2, 1700]]);
   });
 
   it("[存銀行]:金額 > 小金庫應有 → 擋下;成功寫流水 + 銀行存入(歸屬分店 = 這家店);這家店沒有可用帳戶 → ST-26b 錯誤;沒有權限 → 擋下", async () => {
