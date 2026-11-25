@@ -62,6 +62,13 @@ export class LotteryWholesaleCustomer {
   @Prop({ type: String, default: null })
   note!: string | null;
 
+  /**
+   * 批售單送出時 +1(`touchReference`):讓「送出批售單」和「刪除客戶」兩個交易在這一筆上衝突、重跑的一方看得到對方;
+   * 不顯示、不算修改(修改者、修改時間不動)。
+   */
+  @Prop({ type: Number, default: 0 })
+  referenceVersion!: number;
+
   /** 模組 key(plugin 宣告;本表固定 `dealers`)。 */
   moduleKey!: string;
 

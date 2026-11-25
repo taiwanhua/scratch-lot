@@ -27,6 +27,7 @@
  * - `daily-close.ts`:日結的結帳內容、精靈步驟、小金庫應有的各項、存入銀行的檢查、涵蓋計算期間沒有日結的日子
  * - `dealer-limits.ts`:經銷商與關係人文字欄位的長度上限(api 檢查與 admin 欄位下的格式要求共用)
  * - `wholesale-customer.ts`:批售客戶文字欄位的長度上限、下拉文字「店名 · 電話」
+ * - `wholesale.ts`:批售單的表單代號 / 欄位 key、權限、收款方式、明細列、批售金額、核准前「已收 = 批售金額」的檢查
  */
 export * from "./book-scan";
 export * from "./book-stats";
@@ -54,3 +55,4 @@ export * from "./ticket-code";
 export * from "./ticket-events";
 export * from "./transfer";
 export * from "./wholesale-customer";
+export * from "./wholesale";

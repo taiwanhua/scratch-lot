@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common";
 import { Types } from "mongoose";
 
 import { compareDisplayName } from "@repo/domain/collation";
+import { wholesaleHeaderOf } from "@repo/domain/project/lottery";
 
 import {
   FormSubmissionsRepository,
@@ -14,7 +15,10 @@ import {
 } from "../../../database/operator-context";
 import { tenantBoundaryContext } from "../../../database/tenant-boundary-context";
 import { LotteryCashPointsRepository } from "../../database/lottery-cash-points/lottery-cash-points.repository";
-import { LotteryDealersRepository } from "../../database/lottery-dealers/lottery-dealers.repository";
+import {
+  LotteryDealersRepository,
+  LotteryWholesaleCustomersRepository,
+} from "../../database/lottery-dealers/lottery-dealers.repository";
 import { LotteryStocktakesRepository } from "../../database/lottery-stocktakes/lottery-stocktakes.repository";
 import { tenantOfOperator } from "../master-data-tenant";
 import { type TenantOrg, isVisibleStore } from "./store-orgs";
@@ -54,6 +58,7 @@ export class InventoryNames {
     private readonly dealers: LotteryDealersRepository,
     private readonly submissions: FormSubmissionsRepository,
     private readonly stocktakes: LotteryStocktakesRepository,
+    private readonly wholesaleCustomers: LotteryWholesaleCustomersRepository,
   ) {}
 
   /** 操作者當前組織所在租戶的整棵組織樹(沒有租戶 → 空)。 */
@@ -176,8 +181,9 @@ export class InventoryNames {
   }
 
   /**
-   * 批售單 → 批售客戶的顯示名稱(單頭 `customer` 的引用快照)與作廢原因的選項文字(作廢時記在單據上);
-   * 照操作者自己的範圍讀,看不到的單不回。
+   * 批售單 → 批售客戶的店名與作廢原因的選項文字(作廢時記在單據上);單據照操作者自己的範圍讀,看不到的單不回。
+   * 單頭 `customer` 存的 label 是下拉文字「店名 · 電話」,庫存只寫店名:看得到單就看得到它的客戶店名(租戶內引用
+   * 名稱,`refFields`);讀不到客戶時退回存的 label。
    */
   async wholesaleDocuments(
     operator: OperatorContext,
@@ -192,19 +198,51 @@ export class InventoryNames {
       { _id: { $in: unique } },
       { select: "values.customer voidReasonLabel" },
     );
+    const storeNames = await this.wholesaleStoreNames(
+      operator,
+      found.map(
+        (submission) => wholesaleHeaderOf(submission.values).customerId,
+      ),
+    );
     return new Map(
       found.map((submission) => {
         const customer = submission.values.customer as
           { label?: unknown } | null | undefined;
+        const { customerId } = wholesaleHeaderOf(submission.values);
         return [
           String(submission._id),
           {
             customerName:
-              typeof customer?.label === "string" ? customer.label : null,
+              storeNames.get(customerId ?? "") ??
+              (typeof customer?.label === "string" ? customer.label : null),
             voidReasonLabel: submission.voidReasonLabel ?? null,
           },
         ];
       }),
+    );
+  }
+
+  /** 批售客戶 id → 店名(租戶內引用名稱出口)。 */
+  private async wholesaleStoreNames(
+    operator: OperatorContext,
+    ids: readonly (string | null)[],
+  ): Promise<Map<string, string>> {
+    const unique = uniqueIds(ids);
+    const tenantId = tenantOfOperator(operator)?.tenantId ?? null;
+    if (unique.length === 0 || tenantId === null) {
+      return new Map();
+    }
+    const refs = await this.wholesaleCustomers.findRefsInTenant(
+      operator,
+      tenantId,
+      unique,
+    );
+    return new Map(
+      refs.flatMap((ref) =>
+        typeof ref.storeName === "string"
+          ? [[String(ref._id), ref.storeName] as const]
+          : [],
+      ),
     );
   }
 
