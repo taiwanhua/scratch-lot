@@ -1,27 +1,15 @@
 import {
-  type BankDepositReceiptInput,
-  bankDepositReceiptOf,
-} from "./bank-deposit-receipt";
-import {
-  type DailyCloseReceiptInput,
-  dailyCloseReceiptOf,
-} from "./daily-close-receipt";
-import {
   PURCHASE_RECEIVING_COPIES,
   PURCHASING_RECEIPTS_I18N,
   type PurchaseReceivingReceiptInput,
   purchaseReceivingReceiptOf,
 } from "./purchase-receiving-receipt";
+import type { ReceiptKindDefinition } from "./receipt-kind-definition";
 import type { ReceiptLayout, ReceiptTranslator } from "./receipt-layout";
 import {
-  type SaleRefundReceiptInput,
-  saleRefundReceiptOf,
-} from "./sale-refund-receipt";
-import {
-  type ShiftCheckoutReceiptInput,
-  shiftCheckoutReceiptOf,
-} from "./shift-checkout-receipt";
-import { STORE_RECEIPTS_I18N } from "./store-receipts";
+  STORE_RECEIPT_KINDS,
+  type StoreReceiptPayloads,
+} from "./store-receipt-kinds";
 import {
   TRANSFER_PAYMENT_COPIES,
   type TransferPaymentReceiptInput,
@@ -38,14 +26,6 @@ import {
   transferShipmentReceiptOf,
 } from "./transfer-shipment-receipt";
 import {
-  type VaultDepositReceiptInput,
-  vaultDepositReceiptOf,
-} from "./vault-deposit-receipt";
-import {
-  type VaultWithdrawReceiptInput,
-  vaultWithdrawReceiptOf,
-} from "./vault-withdraw-receipt";
-import {
   WHOLESALE_PAYMENT_COPIES,
   type WholesalePaymentReceiptInput,
   wholesalePaymentReceiptOf,
@@ -58,9 +38,9 @@ import {
 
 /**
  * 58mm 單據的種類(`printReceiptAfterCommit(kind, payload)` 的 `kind`)與各自的資料形狀。
- * 新的單據:在這裡加一種 + 一支版面函式(每張一檔)。
+ * 新的單據:在這裡加一種 + 一支版面函式(每張一檔);店面管理的單據登記在 `store-receipt-kinds.ts`。
  */
-export interface ReceiptPayloads {
+export interface ReceiptPayloads extends StoreReceiptPayloads {
   /** 進貨點收單(進貨單 [完成這次點收]) */
   "purchase-receiving": PurchaseReceivingReceiptInput;
   /** 調貨出貨單(調貨單第一關通過,含跳過) */
@@ -73,53 +53,9 @@ export interface ReceiptPayloads {
   "wholesale-shipment": WholesaleShipmentReceiptInput;
   /** 批售收款收據(批售單出貨店 [收款] 收現金) */
   "wholesale-payment": WholesalePaymentReceiptInput;
-  /** 投庫單(看板 [投庫]) */
-  "store-vault-deposit": VaultDepositReceiptInput;
-  /** 出庫單(看板 [出庫]、開班從小金庫領零用金) */
-  "store-vault-withdraw": VaultWithdrawReceiptInput;
-  /** 存款單(看板 [存銀行]) */
-  "store-bank-deposit": BankDepositReceiptInput;
-  /** 交班結帳單(結帳確認申請,類型 = 交班) */
-  "store-shift-checkout": ShiftCheckoutReceiptInput;
-  /** 日結單(結帳確認申請,類型 = 日結) */
-  "store-daily-close": DailyCloseReceiptInput;
-  /** 退貨退款收據(撤銷售出申請,退款給客人 = 是) */
-  "store-sale-refund": SaleRefundReceiptInput;
 }
 
 export type ReceiptKind = keyof ReceiptPayloads;
-
-export interface ReceiptKindDefinition<Payload> {
-  /** 列印工作的 `documentType`(列印紀錄、失敗通知) */
-  documentType: string;
-  /**
-   * 列印工作的 `refType`:已印次數、補印次數以 `refType` + `refId` 計。
-   * 同一張提交可以有好幾種單據(調貨單有出貨單與付款收據),所以每種單據各用一個 `refType`
-   */
-  refType: string;
-  /** 文案的 namespace(版面函式的 `t`) */
-  i18n: string;
-  refIdOf: (payload: Payload) => string;
-  /** 單據所屬分店:印表機選單列這家店的印表機 */
-  orgIdOf: (payload: Payload) => string;
-  /** 使用處的預設印表機(收銀點的印表機);沒有 → 分店預設 */
-  defaultPrinterIdOf: (payload: Payload) => string | null;
-  /** 單據名稱(例「進貨點收單 P-0031」);列印紀錄、失敗通知上的名稱另依聯別加註(`receiptDocumentNameOf`) */
-  documentNameOf: (payload: Payload, t: ReceiptTranslator) => string;
-  /** 一聯的版面(各聯內容相同,聯別由 `receiptLayoutsOf` 填);`now` = 列印當下(ISO 時點) */
-  layoutOf: (
-    payload: Payload,
-    t: ReceiptTranslator,
-    now: string,
-  ) => ReceiptLayout;
-  /**
-   * 一次列印印哪幾聯(依序;名稱文案 `<i18n>.<copyI18n>.copies.<聯>`);一聯的單據 = 空陣列。
-   * 一次列印 = 各聯接成一張圖、聯與聯之間切紙 = 一個列印工作(已印 1 次);補印可選全部或其中一聯。
-   */
-  copies: readonly string[];
-  /** 聯別名稱文案在 `i18n` 底下的位置(例 `purchaseReceiving`);一聯的單據不用 */
-  copyI18n?: string;
-}
 
 export const RECEIPT_KINDS: {
   [Kind in ReceiptKind]: ReceiptKindDefinition<ReceiptPayloads[Kind]>;
@@ -223,97 +159,8 @@ export const RECEIPT_KINDS: {
     copies: WHOLESALE_PAYMENT_COPIES,
     copyI18n: "wholesalePayment",
   },
-  // 店面的單據(規格第 12 章):現金流水類(投庫、出庫、存款)沒有單號,一筆流水一張(`refId` = 流水 id)
-  "store-vault-deposit": {
-    documentType: "lottery-store-vault-deposit",
-    refType: "lottery-store-vault-deposit",
-    i18n: STORE_RECEIPTS_I18N,
-    refIdOf: (payload) => payload.movementId,
-    orgIdOf: (payload) => payload.branchId,
-    defaultPrinterIdOf: (payload) => payload.defaultPrinterId ?? null,
-    documentNameOf: (payload, t) =>
-      t("documentNameNoSerial", {
-        title: t("vaultDeposit.title"),
-        branch: payload.branchName,
-      }),
-    layoutOf: (payload, t, now) => vaultDepositReceiptOf(payload, t, now),
-    copies: [],
-  },
-  "store-vault-withdraw": {
-    documentType: "lottery-store-vault-withdraw",
-    refType: "lottery-store-vault-withdraw",
-    i18n: STORE_RECEIPTS_I18N,
-    refIdOf: (payload) => payload.movementId,
-    orgIdOf: (payload) => payload.branchId,
-    defaultPrinterIdOf: (payload) => payload.defaultPrinterId ?? null,
-    documentNameOf: (payload, t) =>
-      t("documentNameNoSerial", {
-        title: t("vaultWithdraw.title"),
-        branch: payload.branchName,
-      }),
-    layoutOf: (payload, t, now) => vaultWithdrawReceiptOf(payload, t, now),
-    copies: [],
-  },
-  "store-bank-deposit": {
-    documentType: "lottery-store-bank-deposit",
-    refType: "lottery-store-bank-deposit",
-    i18n: STORE_RECEIPTS_I18N,
-    refIdOf: (payload) => payload.movementId,
-    orgIdOf: (payload) => payload.branchId,
-    defaultPrinterIdOf: (payload) => payload.defaultPrinterId ?? null,
-    documentNameOf: (payload, t) =>
-      t("documentNameNoSerial", {
-        title: t("bankDeposit.title"),
-        branch: payload.branchName,
-      }),
-    layoutOf: (payload, t, now) => bankDepositReceiptOf(payload, t, now),
-    copies: [],
-  },
-  "store-shift-checkout": {
-    documentType: "lottery-store-shift-checkout",
-    refType: "lottery-store-shift-checkout",
-    i18n: STORE_RECEIPTS_I18N,
-    refIdOf: (payload) => payload.submissionId,
-    orgIdOf: (payload) => payload.branchId,
-    defaultPrinterIdOf: (payload) => payload.defaultPrinterId,
-    documentNameOf: (payload, t) =>
-      t("documentName", {
-        title: t("shiftCheckout.title"),
-        serialNo: payload.serialNo ?? "",
-      }),
-    layoutOf: (payload, t) => shiftCheckoutReceiptOf(payload, t),
-    copies: [],
-  },
-  "store-daily-close": {
-    documentType: "lottery-store-daily-close",
-    refType: "lottery-store-daily-close",
-    i18n: STORE_RECEIPTS_I18N,
-    refIdOf: (payload) => payload.submissionId,
-    orgIdOf: (payload) => payload.branchId,
-    defaultPrinterIdOf: () => null,
-    documentNameOf: (payload, t) =>
-      t("documentName", {
-        title: t("dailyClose.title"),
-        serialNo: payload.serialNo ?? "",
-      }),
-    layoutOf: (payload, t) => dailyCloseReceiptOf(payload, t),
-    copies: [],
-  },
-  "store-sale-refund": {
-    documentType: "lottery-store-sale-refund",
-    refType: "lottery-store-sale-refund",
-    i18n: STORE_RECEIPTS_I18N,
-    refIdOf: (payload) => payload.submissionId,
-    orgIdOf: (payload) => payload.branchId,
-    defaultPrinterIdOf: (payload) => payload.defaultPrinterId ?? null,
-    documentNameOf: (payload, t) =>
-      t("documentName", {
-        title: t("saleRefund.title"),
-        serialNo: payload.serialNo ?? "",
-      }),
-    layoutOf: (payload, t, now) => saleRefundReceiptOf(payload, t, now),
-    copies: [],
-  },
+  // 店面的單據(規格第 12 章;`store-receipt-kinds.ts`)
+  ...STORE_RECEIPT_KINDS,
 };
 
 /** 某一種單據的定義(型別跟著 `kind` 走)。 */
