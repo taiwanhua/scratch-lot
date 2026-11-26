@@ -12,7 +12,7 @@ describe("經銷商管理的模組宣告(專案規格 3.1、3.2)", () => {
     expect(projectSeedSource.moduleDeclarations).toContain(dealersModule);
   });
 
-  it("權限照 3.2:dealers 的 create / edit 與兩組欄位級權限、dealers.contacts 的 create / edit;沒有 view / delete", () => {
+  it("權限照 3.2:dealers 的 create / edit 與兩組欄位級權限、dealers.contacts 與 dealers.wholesale-customers 的 create / edit;沒有 view / delete", () => {
     expect(
       (dealersModule.permissions ?? []).map((permission) => permission.key),
     ).toEqual(Object.values(DEALERS_PERMISSIONS));
@@ -23,14 +23,18 @@ describe("經銷商管理的模組宣告(專案規格 3.1、3.2)", () => {
     ).toBe(false);
   });
 
-  it("隱藏頁的 key 以 -page 結尾;關係人是權限容器(沒有路由)", () => {
-    const contacts = dealersModule.nodes.find(
-      (node) => node.key === "dealers.contacts",
-    );
-    expect(contacts?.route).toBeUndefined();
+  it("隱藏頁的 key 以 -page 結尾;關係人、批售客戶是權限容器(沒有路由)", () => {
+    const containers = new Set([
+      "dealers.contacts",
+      "dealers.wholesale-customers",
+    ]);
+    for (const key of containers) {
+      const container = dealersModule.nodes.find((node) => node.key === key);
+      expect(container).toBeDefined();
+      expect(container?.route).toBeUndefined();
+    }
     for (const node of dealersModule.nodes.filter(
-      (item) =>
-        item.sidebarType === "hidden" && item.key !== "dealers.contacts",
+      (item) => item.sidebarType === "hidden" && !containers.has(item.key),
     )) {
       expect(node.key).toMatch(/-page$/);
     }
@@ -40,11 +44,27 @@ describe("經銷商管理的模組宣告(專案規格 3.1、3.2)", () => {
 describe("開通時建立的角色(規格 3.3):經銷商管理那一段", () => {
   it("總部管理全部;店長只看得到(不含主檔修改);店員不給", () => {
     expect(roleGrantOf("hq", ROLE_GRANT_SECTIONS).permissionKeys).toEqual(
-      expect.arrayContaining(["dealers.*", "dealers.contacts.*"]),
+      expect.arrayContaining([
+        "dealers.*",
+        "dealers.contacts.*",
+        "dealers.wholesale-customers.*",
+      ]),
     );
     const manager = roleGrantOf("store-manager", ROLE_GRANT_SECTIONS);
     expect(manager.moduleKeys).toEqual(
-      expect.arrayContaining(["dealers", "dealers.view-page"]),
+      expect.arrayContaining([
+        "dealers",
+        "dealers.view-page",
+        "dealers.wholesale-customers",
+        "dealers.wholesale-customers.view-page",
+      ]),
+    );
+    // 店長只看批售客戶:不綁新增 / 編輯頁(規格 21.2)
+    expect(manager.moduleKeys).not.toContain(
+      "dealers.wholesale-customers.create-page",
+    );
+    expect(manager.moduleKeys).not.toContain(
+      "dealers.wholesale-customers.edit-page",
     );
     expect(
       manager.permissionKeys.filter((key) => key.startsWith("dealers")),

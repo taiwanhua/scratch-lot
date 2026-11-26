@@ -14,6 +14,7 @@ import { Typography } from "@repo/ui/typography";
 import { useTemporalText } from "@/hooks/base/useTemporalText";
 
 import { moneyText } from "../inventory-config";
+import { isWholesaling } from "./book-cells";
 
 export interface BookHeaderProps {
   detail: LotteryInventoryBookDetailFieldsFragment;
@@ -25,6 +26,17 @@ export interface BookHeaderProps {
   onCorrectSkip: () => void;
   onRecoverAll: () => void;
 }
+
+/** 狀態標籤的顏色:已批售綠、批售中與待查 / 遺失橘、其他灰(Figma IN-03、IN-03-4a / 4b)。 */
+const stateToneOf = (
+  state: string,
+  investigating: boolean,
+): "grey" | "warning" | "success" => {
+  if (state === "wholesaled") {
+    return "success";
+  }
+  return investigating || state === "wholesaling" ? "warning" : "grey";
+};
 
 /**
  * 本的詳情頁首(Figma IN-03、IN-03-3 / 3b):遊戲 · 本號、面額 · 張號、顯示狀態(`bookStates.*`,含已撤銷)、
@@ -44,6 +56,9 @@ export const BookHeader = ({
   const isMobile = useBreakpointDown("sm");
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
   const { book, abilities, investigation } = detail;
+  // 批售中(有張被批售單鎖住)看張的鎖,不是本的顯示狀態(規格 21.5)
+  const wholesaling = detail.tickets.some((ticket) => isWholesaling(ticket));
+  const state = wholesaling ? "wholesaling" : book.state;
   const skipActions = [
     ...(abilities.canMarkSkips
       ? [{ key: "mark", label: t("book.markSkips"), onClick: onMarkSkips }]
@@ -127,12 +142,18 @@ export const BookHeader = ({
                   unmatched: book.unmatchedCount,
                 })
               : null}
+            {/* 張數店批售中(Figma CS-20-2b) */}
+            {wholesaling && detail.countStore
+              ? t("book.remainingWholesaling", {
+                  remaining: book.remainingCount,
+                })
+              : null}
           </Typography>
         </Stack>
         <Stack direction="row" sx={{ alignItems: "center", gap: 1 }}>
           <Tag
-            tone={investigation == null ? "grey" : "warning"}
-            label={t(`bookStates.${book.state}`)}
+            tone={stateToneOf(state, investigation != null)}
+            label={t(`bookStates.${state}`)}
           />
           {skipButtons}
         </Stack>

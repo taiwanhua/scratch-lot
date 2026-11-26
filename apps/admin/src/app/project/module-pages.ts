@@ -11,6 +11,8 @@ import { ContactViewPage } from "@/pages/project/lottery/dealers/ContactViewPage
 import { DealerFormPage } from "@/pages/project/lottery/dealers/DealerFormPage/DealerFormPage";
 import { DealerViewPage } from "@/pages/project/lottery/dealers/DealerViewPage/DealerViewPage";
 import { DealersPage } from "@/pages/project/lottery/dealers/DealersPage/DealersPage";
+import { WholesaleCustomerFormPage } from "@/pages/project/lottery/dealers/WholesaleCustomerFormPage/WholesaleCustomerFormPage";
+import { WholesaleCustomerViewPage } from "@/pages/project/lottery/dealers/WholesaleCustomerViewPage/WholesaleCustomerViewPage";
 import { DEALERS_MODULE_KEYS } from "@/pages/project/lottery/dealers/dealers-keys";
 import { BookPage } from "@/pages/project/lottery/inventory/BookPage/BookPage";
 import { InventoryPage } from "@/pages/project/lottery/inventory/InventoryPage/InventoryPage";
@@ -31,6 +33,10 @@ import { TransferCreatePage } from "@/pages/project/lottery/purchasing/transfer/
 import { TransferEditPage } from "@/pages/project/lottery/purchasing/transfer/TransferEditPage/TransferEditPage";
 import { TransferPage } from "@/pages/project/lottery/purchasing/transfer/TransferPage/TransferPage";
 import { TransferViewPage } from "@/pages/project/lottery/purchasing/transfer/TransferViewPage/TransferViewPage";
+import { WholesaleCreatePage } from "@/pages/project/lottery/purchasing/wholesale/WholesaleCreatePage/WholesaleCreatePage";
+import { WholesaleEditPage } from "@/pages/project/lottery/purchasing/wholesale/WholesaleEditPage/WholesaleEditPage";
+import { WholesalePage } from "@/pages/project/lottery/purchasing/wholesale/WholesalePage/WholesalePage";
+import { WholesaleViewPage } from "@/pages/project/lottery/purchasing/wholesale/WholesaleViewPage/WholesaleViewPage";
 import { LotterySettingsPage } from "@/pages/project/lottery/settings/LotterySettingsPage/LotterySettingsPage";
 import { LOTTERY_SETTINGS_KEY } from "@/pages/project/lottery/settings/lottery-settings-config";
 import { StorePage } from "@/pages/project/lottery/store/StorePage/StorePage";
@@ -78,6 +84,18 @@ const sources: ModulePageSource = {
     { key: DEALERS_MODULE_KEYS.contactViewPage, Page: ContactViewPage },
     { key: DEALERS_MODULE_KEYS.contactCreatePage, Page: ContactFormPage },
     { key: DEALERS_MODULE_KEYS.contactEditPage, Page: ContactFormPage },
+    {
+      key: DEALERS_MODULE_KEYS.wholesaleCustomerViewPage,
+      Page: WholesaleCustomerViewPage,
+    },
+    {
+      key: DEALERS_MODULE_KEYS.wholesaleCustomerCreatePage,
+      Page: WholesaleCustomerFormPage,
+    },
+    {
+      key: DEALERS_MODULE_KEYS.wholesaleCustomerEditPage,
+      Page: WholesaleCustomerFormPage,
+    },
     // 輸出報表(規格第 11 章、18.4)
     // 班表管理(規格 3.1):我的班表、排班設定是固定頁(頁內分頁)
     { key: "schedule.my", Page: ScheduleMyPage },
@@ -140,6 +158,17 @@ const sources: ModulePageSource = {
         createPage: { Page: TransferCreatePage },
         editPage: { Page: TransferEditPage },
         viewPage: { Page: TransferViewPage },
+      },
+    },
+    // 批售單(綁定 批售單;規格 21.3):列表加收款方式、本數、結算與四種篩選、新增 / 編輯頁(草稿、被退回)換成
+    // 刷條碼或從可批售的本加入、檢視頁換成本清單 + 結算 + 審核
+    {
+      moduleKey: "purchasing.wholesale",
+      pageOverrides: {
+        list: { Page: WholesalePage },
+        createPage: { Page: WholesaleCreatePage },
+        editPage: { Page: WholesaleEditPage },
+        viewPage: { Page: WholesaleViewPage },
       },
     },
     // 店面管理(表單模組、開啟 B9b;規格 6.1):列表頁換成分頁頁殼(看板 | … | 其他申請);

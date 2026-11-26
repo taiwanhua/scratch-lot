@@ -4,6 +4,7 @@
  */
 export const DEALERS_KEY = "dealers";
 export const DEALERS_CONTACTS_KEY = `${DEALERS_KEY}.contacts`;
+export const DEALERS_WHOLESALE_CUSTOMERS_KEY = `${DEALERS_KEY}.wholesale-customers`;
 
 export const DEALERS_PERMISSIONS = {
   create: `${DEALERS_KEY}.create`,
@@ -14,6 +15,8 @@ export const DEALERS_PERMISSIONS = {
   editLastSelfPurchaseBaseDate: `${DEALERS_KEY}.edit-last-self-purchase-base-date`,
   contactsCreate: `${DEALERS_CONTACTS_KEY}.create`,
   contactsEdit: `${DEALERS_CONTACTS_KEY}.edit`,
+  wholesaleCustomersCreate: `${DEALERS_WHOLESALE_CUSTOMERS_KEY}.create`,
+  wholesaleCustomersEdit: `${DEALERS_WHOLESALE_CUSTOMERS_KEY}.edit`,
 } as const;
 
 /** 稽核的 targetType 與動作名(模組文件「稽核」節)。 */
@@ -22,6 +25,7 @@ export const AUDIT_TARGETS = {
   contact: "lottery_dealer_contact",
   signin: "lottery_dealer_signin",
   relationship: "lottery_relationship",
+  wholesaleCustomer: "lottery_wholesale_customer",
 } as const;
 
 export const AUDIT_ACTIONS = {
@@ -33,6 +37,9 @@ export const AUDIT_ACTIONS = {
   signinEdit: "lottery-dealer-signin.edit",
   relationshipCreate: "lottery-relationship.create",
   relationshipDelete: "lottery-relationship.delete",
+  wholesaleCustomerCreate: "lottery-wholesale-customer.create",
+  wholesaleCustomerEdit: "lottery-wholesale-customer.edit",
+  wholesaleCustomerDelete: "lottery-wholesale-customer.delete",
 } as const;
 
 /** 稽核裡的欄位級權限欄位一律以此取代內容(module-scaffold「欄位級權限欄的四件事」第 3 件)。 */

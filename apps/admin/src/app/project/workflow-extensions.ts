@@ -6,6 +6,8 @@ import { PURCHASE_MODULE_KEY } from "@/pages/project/lottery/purchasing/purchase
 import { TransferApplyCenterSection } from "@/pages/project/lottery/purchasing/transfer/TransferApplyCenterSection";
 import { TransferShipmentEffect } from "@/pages/project/lottery/purchasing/transfer/TransferShipmentEffect";
 import { TRANSFER_MODULE_KEY } from "@/pages/project/lottery/purchasing/transfer/transfer-keys";
+import { WholesaleApplyCenterSection } from "@/pages/project/lottery/purchasing/wholesale/WholesaleApplyCenterSection";
+import { WHOLESALE_MODULE_KEY } from "@/pages/project/lottery/purchasing/wholesale/wholesale-keys";
 import { CheckoutReceiptEffect } from "@/pages/project/lottery/store/checkout/CheckoutReceiptEffect";
 import { MakeupPunchReview } from "@/pages/project/schedule/attendance/MakeupPunchReview";
 import { MAKEUP_PUNCH_MODULE_KEY } from "@/pages/project/schedule/attendance/attendance-keys";
@@ -23,6 +25,8 @@ export const projectWorkflowExtensions: readonly WorkflowExtensionRegistration[]
     // 進貨單、調貨單:店長從申請中心(通知連結)進來,在審核頁點收(規格 8.2、8.4;和檢視頁同一個點收區塊)
     { moduleKey: PURCHASE_MODULE_KEY, Section: PurchaseApplyCenterSection },
     { moduleKey: TRANSFER_MODULE_KEY, Section: TransferApplyCenterSection },
+    // 批售單:店長從申請中心進來,在審核頁看本清單、收款、核准(規格 21.3;和檢視頁同一個結算區塊)
+    { moduleKey: WHOLESALE_MODULE_KEY, Section: WholesaleApplyCenterSection },
     // 結帳確認申請送出 → 自動印交班結帳單 / 日結單(規格第 12 章)
     { moduleKey: STORE_KEY, Effect: CheckoutReceiptEffect },
     // 補打卡申請:選的排班已被刪除 → 警告、停用 [核准](規格 14.8;api 的 beforeApprove 同樣擋)

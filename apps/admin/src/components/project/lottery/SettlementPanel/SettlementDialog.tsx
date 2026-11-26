@@ -55,6 +55,16 @@ const FIELDS: readonly Field[] = [
   "handler",
 ];
 
+/** 單據金額的字 key:調貨金額 / 批售金額 / 應付。 */
+const payableKeyOf = (kind: string): string => {
+  if (kind === "transfer") {
+    return "settleForm.transferAmount";
+  }
+  return kind === "wholesale"
+    ? "settleForm.wholesaleAmount"
+    : "settleForm.payable";
+};
+
 /** 現金來源「小金庫」的選項值(其他選項是收銀點 id)。 */
 const VAULT = "vault";
 
@@ -195,13 +205,8 @@ export const SettlementDialog = ({
             })}
           </Typography>
           <Typography variant="body2">
-            {t(
-              settlement.kind === "transfer"
-                ? "settleForm.transferAmount"
-                : "settleForm.payable",
-            )}{" "}
-            {moneyText(settlement.payable)} · {t("settleForm.net")}{" "}
-            {moneyText(sideInfo?.net ?? 0)}
+            {t(payableKeyOf(settlement.kind))} {moneyText(settlement.payable)} ·{" "}
+            {t("settleForm.net")} {moneyText(sideInfo?.net ?? 0)}
           </Typography>
         </Stack>
         {methods.length > 1 && (

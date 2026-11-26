@@ -1,4 +1,7 @@
-import { formatTicketRanges } from "@repo/domain/project/lottery";
+import {
+  WHOLESALE_REF_TYPE,
+  formatTicketRanges,
+} from "@repo/domain/project/lottery";
 import type { LotteryTransferBookTicketsQuery } from "@repo/graphql";
 
 import type { TicketCellState } from "@/components/project/lottery/TicketGrid/ticket-cell-styles";
@@ -14,8 +17,16 @@ export type TransferCell =
 export const isPickableCell = (cell: TransferCell): boolean =>
   cell.state === "available" || (cell.unmatched && cell.matchable);
 
+/** 被批售單鎖住(批售中;規格 21.5)。 */
+const isWholesaleLock = (cell: TransferCell): boolean =>
+  cell.state === "locked" && cell.lockedRefType === WHOLESALE_REF_TYPE;
+
+/** 文字 key 用的狀態:批售中和調貨中分開寫。 */
+const textStateOf = (cell: TransferCell): string =>
+  isWholesaleLock(cell) ? "lockedWholesale" : cell.state;
+
 /**
- * api 的格子狀態 → 格子變體:可以調 = 未售;被其他調貨單鎖住的未售 = 調貨中;跳號;張數店系統預設帶入的張
+ * api 的格子狀態 → 格子變體:可以調 = 未售;被其他單鎖住的未售 = 調貨中 / 批售中;已批售;跳號;張數店系統預設帶入的張
  * 畫虛線(已售 / 待查·遺失·未對號);其他(已售、在檯面上、待查、報廢、在別家店…)= 不能選。
  */
 export const transferCellStateOf = (
@@ -29,7 +40,10 @@ export const transferCellStateOf = (
       return "unsold";
     }
     case "locked": {
-      return "transferring";
+      return isWholesaleLock(cell) ? "wholesaling" : "transferring";
+    }
+    case "wholesaled": {
+      return "wholesaled";
     }
     case "skipped": {
       return "skipped";
@@ -49,6 +63,8 @@ export interface CellProblem {
 const PROBLEM_KEYS: Partial<Record<string, string>> = {
   counter: "cellProblems.counter",
   locked: "cellProblems.locked",
+  lockedWholesale: "cellProblems.lockedWholesale",
+  wholesaled: "cellProblems.wholesaled",
   investigating: "cellProblems.investigating",
   lost: "cellProblems.lost",
   scrapped: "cellProblems.scrapped",
@@ -84,7 +100,7 @@ export const transferCellProblemOf = (
     };
   }
   return {
-    key: PROBLEM_KEYS[cell.state] ?? "cellProblems.elsewhere",
+    key: PROBLEM_KEYS[textStateOf(cell)] ?? "cellProblems.elsewhere",
     values: {
       ticketNo: cell.ticketNo,
       cashPoint: cell.cashPointName ?? "",
@@ -108,9 +124,9 @@ export const blockedGroupsOf = (
   const byState = new Map<string, string[]>();
   for (const cell of cells) {
     if (wanted.has(cell.ticketNo) && !isPickableCell(cell)) {
-      const list = byState.get(cell.state) ?? [];
+      const list = byState.get(textStateOf(cell)) ?? [];
       list.push(cell.ticketNo);
-      byState.set(cell.state, list);
+      byState.set(textStateOf(cell), list);
     }
   }
   return [...byState.entries()].map(([state, nos]) => ({

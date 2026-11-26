@@ -29,7 +29,7 @@ export class LotteryInventoryHoldingModel {
 
 /**
  * 庫存分頁的一本(以本為單位;規格 7.3)。剩餘 / 總張數讀本上的張數欄位,`holdings` 是各分店的未售張數。
- * `state` = 顯示狀態(`BOOK_DISPLAY_STATES`:已撤銷 / 未拆 / 檯面中 / 庫存中 / 在途 / 待查 / 遺失 / 已報廢 / 售完)。
+ * `state` = 顯示狀態(`BOOK_DISPLAY_STATES`:已撤銷 / 未拆 / 檯面中 / 庫存中 / 在途 / 待查 / 遺失 / 已報廢 / 已批售 / 售完)。
  */
 @ObjectType("LotteryInventoryBook")
 export class LotteryInventoryBookModel {
@@ -103,6 +103,10 @@ export class LotteryInventoryBookModel {
   @Field(() => String)
   state!: string;
 
+  /** 已批售的本賣給哪個批售客戶;沒批售或看不到批售單 = null */
+  @Field(() => String, { nullable: true })
+  wholesaleCustomerName!: string | null;
+
   /** `normal` / `revoked`(進貨單作廢)。 */
   @Field(() => String)
   status!: string;
@@ -156,7 +160,7 @@ export class LotteryInventoryTicketModel {
   @Field(() => String)
   ticketNo!: string;
 
-  /** `unsold` / `sold` / `skipped` / `scrapped` / `investigating` / `lost`。 */
+  /** `unsold` / `sold` / `skipped` / `scrapped` / `investigating` / `lost` / `wholesaled`。 */
   @Field(() => String)
   status!: string;
 
@@ -175,9 +179,13 @@ export class LotteryInventoryTicketModel {
   @Field(() => LotteryInventoryRefModel, { nullable: true })
   responsibleOrg!: LotteryInventoryRefModel | null;
 
-  /** 被單據鎖定(調貨中 / 撤銷審核中)。 */
+  /** 被單據鎖定(調貨中 / 批售中 / 撤銷審核中)。 */
   @Field(() => Boolean)
   locked!: boolean;
+
+  /** 鎖定來源(`TICKET_LOCK_REF_TYPES`);沒鎖 = null。 */
+  @Field(() => String, { nullable: true })
+  lockRefType!: string | null;
 
   /**
    * 操作者能不能操作這張(尋回、報廢、更正跳號):這張的所在分店在操作者的可見範圍內。
@@ -296,12 +304,20 @@ export class LotteryInventoryEventModel {
    */
   @Field(() => LotteryInventoryMatchPartnerModel, { nullable: true })
   matchPartner!: LotteryInventoryMatchPartnerModel | null;
+
+  /** 批售、取消批售的買方(批售客戶);看不到批售單或其他事件 = null */
+  @Field(() => String, { nullable: true })
+  customerName!: string | null;
+
+  /** 取消批售:作廢原因的選項文字(記在批售單上);沒設作廢原因類別、看不到批售單或其他事件 = null */
+  @Field(() => String, { nullable: true })
+  voidReasonLabel!: string | null;
 }
 
-/** 來源:進貨單 / 調貨單(調入)。 */
+/** 來源:進貨單 / 調貨單(調入)/ 批售單。 */
 @ObjectType("LotteryInventorySource")
 export class LotteryInventorySourceModel {
-  /** `purchase` 進貨 / `transfer_in` 調入(張數事件類型)。 */
+  /** `purchase` 進貨 / `transfer_in` 調入 / `wholesale` 批售(張數事件類型)。 */
   @Field(() => String)
   type!: string;
 
@@ -311,11 +327,20 @@ export class LotteryInventorySourceModel {
   @Field(() => String, { nullable: true })
   refSerialNo!: string | null;
 
-  @Field(() => GraphQLISODateTime)
-  at!: Date;
+  /** 單據的事件時間;批售中(還沒出貨)= null */
+  @Field(() => GraphQLISODateTime, { nullable: true })
+  at!: Date | null;
 
   @Field(() => [String])
   ticketNos!: string[];
+
+  /** 批售單:`reviewing` 審核中(鎖住)/ `shipped` 已出貨 / `voided` 已作廢;其他來源 = null */
+  @Field(() => String, { nullable: true })
+  wholesaleState!: string | null;
+
+  /** 批售單的買方(批售客戶);看不到批售單或其他來源 = null */
+  @Field(() => String, { nullable: true })
+  customerName!: string | null;
 }
 
 /** 成本(要 `inventory.show-cost`)。 */
@@ -387,6 +412,10 @@ export class LotteryInventoryBookAbilitiesModel {
 export class LotteryInventoryBookDetailModel {
   @Field(() => LotteryInventoryBookModel)
   book!: LotteryInventoryBookModel;
+
+  /** 這本所在分店的盤點制度是張數店或轉換中(頁首「剩 N 張(批售中,不能賣)」) */
+  @Field(() => Boolean)
+  countStore!: boolean;
 
   @Field(() => [LotteryInventoryTicketModel])
   tickets!: LotteryInventoryTicketModel[];

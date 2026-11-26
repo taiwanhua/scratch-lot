@@ -36,6 +36,8 @@ const VAULT_KIND: Readonly<Record<string, ExpectedCashItemKind>> = {
   [CASH_MOVEMENT_TYPE.withdraw]: "withdrawals",
   [CASH_MOVEMENT_TYPE.transferOut]: "transfers",
   [CASH_MOVEMENT_TYPE.transferIn]: "transfers",
+  [CASH_MOVEMENT_TYPE.wholesaleOut]: "wholesales",
+  [CASH_MOVEMENT_TYPE.wholesaleIn]: "wholesales",
   [CASH_MOVEMENT_TYPE.correctionIncrease]: "corrections",
   [CASH_MOVEMENT_TYPE.correctionDecrease]: "corrections",
   [CASH_MOVEMENT_TYPE.bankDeposit]: "bank_deposits",
@@ -311,7 +313,7 @@ export class DailyCloseLedger {
 
   /**
    * 小金庫應有的各項(規格 6.10 第 ③ 步):期初(起算點 = 最近一次已確認日結的清點金額)+ 投庫 − 出庫 ± 調貨
-   * ± 現金更正 − 存銀行 + 銀行提領;每筆流水可點回(即時現金帳 `?movementId=`)。合計 = `CashLedgerService.vaultExpected`。
+   * ± 批售 ± 現金更正 − 存銀行 + 銀行提領;每筆流水可點回(即時現金帳 `?movementId=`)。合計 = `CashLedgerService.vaultExpected`。
    */
   async vaultCashOf(
     reader: OperatorContext,

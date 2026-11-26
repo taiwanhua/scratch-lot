@@ -907,7 +907,7 @@ describe("交班結帳(GraphQL 端點 + 真 MongoDB)", () => {
     );
   });
 
-  it("應有現金公式(規格 6.9)每一項各一筆:期初 + 銷售 − 兌獎 − 投庫 + 出庫 − 調貨支出 + 調貨收入 − 退貨退款 ± 現金更正;只算已完成、不含事後更正;與看板的應有相等", async () => {
+  it("應有現金公式(規格 6.9)每一項各一筆:期初 + 銷售 − 兌獎 − 投庫 + 出庫 − 調貨支出 + 調貨收入 − 批售支出 + 批售收入 − 退貨退款 ± 現金更正;只算已完成、不含事後更正;與看板的應有相等", async () => {
     now("12:00");
     const shiftId = await openShift(counter, clerkA.userId, 3000);
     const { bookId } = await counterBook(counter);
@@ -922,6 +922,8 @@ describe("交班結帳(GraphQL 端點 + 真 MongoDB)", () => {
     await movement(shiftId, counter, "withdraw", "vault", "drawer", 300);
     await movement(shiftId, counter, "transfer_out", "drawer", "external", 100);
     await movement(shiftId, counter, "transfer_in", "external", "drawer", 150);
+    await movement(shiftId, counter, "wholesale_in", "external", "drawer", 70);
+    await movement(shiftId, counter, "wholesale_out", "drawer", "external", 70);
     await movement(shiftId, counter, "refund", "drawer", "external", 200);
     await movement(
       shiftId,
@@ -970,6 +972,8 @@ describe("交班結帳(GraphQL 端點 + 真 MongoDB)", () => {
     expect(byKind.withdrawals).toMatchObject({ count: 1, amount: 300 });
     expect(byKind.transfer_out).toMatchObject({ count: 1, amount: -100 });
     expect(byKind.transfer_in).toMatchObject({ count: 1, amount: 150 });
+    expect(byKind.wholesale_in).toMatchObject({ count: 1, amount: 70 });
+    expect(byKind.wholesale_out).toMatchObject({ count: 1, amount: -70 });
     expect(byKind.refunds).toMatchObject({ count: 1, amount: -200 });
     expect(byKind.corrections).toMatchObject({ count: 2, amount: 30 });
     expect(data.expected).toBe(2880);

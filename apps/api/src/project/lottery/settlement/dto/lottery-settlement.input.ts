@@ -58,7 +58,7 @@ export class ReverseLotterySettlementInput {
   reason!: string;
 }
 
-/** 銀行 [登記交易] 的單據候選:`type` = `purchase_income` / `transfer_income`。 */
+/** 銀行 [登記交易] 的單據候選:`type` = `purchase_income` / `transfer_income` / `wholesale_income`。 */
 @InputType()
 export class LotterySettlementCandidatesInput {
   @Field(() => String)

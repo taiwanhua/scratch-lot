@@ -74,8 +74,30 @@ export const BookTimeline = ({ events }: BookTimelineProps) => {
   };
   const placeLabel = (place: Place) =>
     place.cashPoint?.name ?? t(`locations.${place.locationKind}`);
+  const isWholesaleEvent = (event: Event): boolean =>
+    event.type === TICKET_EVENT_TYPE.wholesale ||
+    event.type === TICKET_EVENT_TYPE.wholesaleVoid;
+  /** 批售、取消批售(Figma IN-03-4a / 4c):單據欄寫批售單,作廢原因接在單號後面 */
+  const wholesaleDocumentText = (event: Event): string => {
+    const serial = event.refSerialNo ?? t("stock.none");
+    if (event.type === TICKET_EVENT_TYPE.wholesale) {
+      return t("timeline.wholesaleSerial", { serial });
+    }
+    const reason = event.voidReasonLabel ?? event.reasonKey;
+    const note = event.reasonNote ?? "";
+    const text = [reason, note].filter(Boolean).join(":");
+    return text === ""
+      ? t("timeline.wholesaleVoidNoReason", { serial })
+      : t("timeline.wholesaleVoidSerial", { serial, reason: text });
+  };
   const routeText = (event: Event): string => {
     const { from, to } = event;
+    if (event.customerName != null) {
+      const store = `${to.org.name} ${placeLabel(to)}`;
+      return event.type === TICKET_EVENT_TYPE.wholesale
+        ? `${store} → ${event.customerName}`
+        : `${event.customerName} → ${store}`;
+    }
     if (from == null) {
       return `${to.org.name} ${placeLabel(to)}`;
     }
@@ -102,7 +124,7 @@ export const BookTimeline = ({ events }: BookTimelineProps) => {
         const label = event.reopen
           ? t("eventTypes.reopen")
           : t(`eventTypes.${event.type}`);
-        const reason = reasonLabelOf(event);
+        const reason = isWholesaleEvent(event) ? null : reasonLabelOf(event);
         const note = event.reasonNote ? `:${event.reasonNote}` : "";
         // 跨班更正:標「前期更正,屬於 X 班」(撤銷看原售出那一班、事後更正看它指向的班)
         const correction =
@@ -132,6 +154,11 @@ export const BookTimeline = ({ events }: BookTimelineProps) => {
             },
           );
         }
+        if (event.wholeBook && isWholesaleEvent(event)) {
+          return t("timeline.wholeBookRange", {
+            ranges: formatTicketRanges(event.ticketNos),
+          });
+        }
         return event.wholeBook
           ? t("timeline.wholeBook")
           : formatTicketRanges(event.ticketNos);
@@ -145,7 +172,10 @@ export const BookTimeline = ({ events }: BookTimelineProps) => {
     {
       key: "by",
       header: t("timeline.columns.by"),
-      render: (event) => event.refSerialNo ?? event.by?.name ?? "",
+      render: (event) =>
+        isWholesaleEvent(event)
+          ? wholesaleDocumentText(event)
+          : (event.refSerialNo ?? event.by?.name ?? ""),
     },
   ];
   return (

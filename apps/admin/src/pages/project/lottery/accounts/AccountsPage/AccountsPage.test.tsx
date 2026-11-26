@@ -11,6 +11,7 @@ import {
   bankTransaction,
   movement,
   sampleMovements,
+  sampleOutstanding,
   sampleTransactions,
 } from "@/test/msw/project/lottery/accounts-fixtures";
 import { api, server } from "@/test/msw/server";
@@ -139,6 +140,67 @@ describe("帳戶管理:分頁與按鈕", () => {
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "收款" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "付款" })).toBeInTheDocument();
+  });
+
+  it("批售單:待結清「待收」「待退」的按鈕是 [收款] [退款],視窗寫批售金額;現金流水寫批售收入、經手人在外部那一端", async () => {
+    const [base] = sampleOutstanding();
+    const wholesale = {
+      ...base,
+      moduleKey: "purchasing.wholesale",
+      label: "批售單",
+      side: "shipper",
+      sideLabel: "出貨店",
+      counterparty: "好運彩券行",
+      payable: 37_200,
+    };
+    const { user } = renderAccounts({
+      world: {
+        outstanding: [
+          {
+            ...wholesale,
+            refId: "doc-w1",
+            docNo: "W-0001",
+            net: 37_500,
+            kind: "to_refund",
+            amount: 300,
+            button: "out",
+          },
+          {
+            ...wholesale,
+            refId: "doc-w4",
+            docNo: "W-0004",
+            net: 0,
+            kind: "to_receive",
+            amount: 37_200,
+            button: "in",
+          },
+        ],
+        movements: [
+          movement({
+            id: "cm-w",
+            type: "wholesale_in",
+            from: "external",
+            to: "vault",
+            payee: "王小明",
+            amount: 20_000,
+            occurredAt: "2026-10-16T06:05:00.000Z",
+          }),
+        ],
+      },
+    });
+    await user.click(await screen.findByRole("tab", { name: "即時現金帳" }));
+    expect(await screen.findByText("批售收入")).toBeInTheDocument();
+    expect(screen.getByText("外部(王小明) → 小金庫")).toBeInTheDocument();
+    await user.click(screen.getByRole("tab", { name: "待結清款項" }));
+    expect(await screen.findByText("待退 300")).toBeInTheDocument();
+    expect(screen.getByText("待收 37,200")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "退款" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "收款" }));
+    const dialog = await screen.findByRole("dialog", { name: "收款" });
+    expect(within(dialog).getByText(/批售金額 37,200/)).toBeInTheDocument();
+    expect(within(dialog).getByRole("textbox", { name: /金額/ })).toHaveValue(
+      "37200",
+    );
   });
 
   it("待結清款項 [付款] → 付款視窗先填差額,選帳戶後確認送出", async () => {

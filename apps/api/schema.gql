@@ -412,6 +412,17 @@ input CreateLotteryOpeningBookInput {
   soldTicketNos: [String!]!
 }
 
+input CreateLotteryWholesaleCustomerInput {
+  address: String
+  contactName: String
+  licenseNo: String
+  note: String
+  phone: String
+  shareOrgs: [ShareOrgInput!]
+  status: LotteryWholesaleCustomerStatus
+  storeName: String
+}
+
 input CreateMyDelegationInput {
   delegateUserId: ID!
   endAt: DateTime!
@@ -626,6 +637,15 @@ input DeleteLotteryGameInput {
 }
 
 type DeleteLotteryGamePayload {
+  deletedId: ID!
+  success: Boolean!
+}
+
+input DeleteLotteryWholesaleCustomerInput {
+  id: ID!
+}
+
+type DeleteLotteryWholesaleCustomerPayload {
   deletedId: ID!
   success: Boolean!
 }
@@ -2212,6 +2232,7 @@ type LotteryInventoryBook {
   totalCount: Int!
   unitPrice: Int!
   unmatchedCount: Int!
+  wholesaleCustomerName: String
 }
 
 type LotteryInventoryBookAbilities {
@@ -2228,6 +2249,7 @@ type LotteryInventoryBookDetail {
   abilities: LotteryInventoryBookAbilities!
   book: LotteryInventoryBook!
   cost: LotteryInventoryCost
+  countStore: Boolean!
   events: [LotteryInventoryEvent!]!
   investigation: LotteryInventoryInvestigation
   locations: [LotteryInventoryLocation!]!
@@ -2268,6 +2290,7 @@ type LotteryInventoryEvent {
   at: DateTime!
   by: LotteryInventoryRef
   correctionOfShift: String
+  customerName: String
   from: LotteryInventoryPlace
   matchPartner: LotteryInventoryMatchPartner
   reasonKey: String
@@ -2279,6 +2302,7 @@ type LotteryInventoryEvent {
   ticketNos: [String!]!
   to: LotteryInventoryPlace!
   type: String!
+  voidReasonLabel: String
   wholeBook: Boolean!
 }
 
@@ -2323,11 +2347,13 @@ type LotteryInventoryRef {
 }
 
 type LotteryInventorySource {
-  at: DateTime!
+  at: DateTime
+  customerName: String
   refId: ID
   refSerialNo: String
   ticketNos: [String!]!
   type: String!
+  wholesaleState: String
 }
 
 type LotteryInventoryStoresPayload {
@@ -2338,6 +2364,7 @@ type LotteryInventoryTicket {
   cashPoint: LotteryInventoryRef
   id: ID!
   locationKind: String!
+  lockRefType: String
   locked: Boolean!
   openingSold: Boolean!
   operable: Boolean!
@@ -3993,6 +4020,8 @@ type LotteryStoreScanItem {
   gameCode: String!
   gameName: String!
   locationKind: String!
+  lockRefType: String
+  lockSerialNo: String
   match: Boolean!
   openingSold: Boolean!
   outcome: String!
@@ -4190,6 +4219,7 @@ type LotteryTransferRow {
 
 type LotteryTransferTicketCell {
   cashPointName: String
+  lockedRefType: String
   lockedSerialNo: String
   matchable: Boolean!
   soldAt: DateTime
@@ -4203,6 +4233,171 @@ type LotteryVaultExpected {
   amount: Int!
   baselineAmount: Int!
   baselineAt: DateTime
+}
+
+type LotteryWholesale {
+  amount: Int!
+  blocked: Boolean!
+  books: Int!
+  canDelete: Boolean!
+  customerName: String!
+  fromBranchName: String!
+  id: ID!
+  inSettlement: Boolean!
+  paymentMode: String
+  received: Int!
+  serialNo: String
+  settlementAmount: Int!
+  settlementKind: String
+  status: FormSubmissionStatus!
+}
+
+type LotteryWholesaleBook {
+  bookId: ID!
+  bookNo: String!
+  bookPrice: Int!
+  cost: Int
+  defaultRate: Int!
+  gameCode: String!
+  gameId: ID!
+  gameName: String!
+  tickets: Int!
+  unitPrice: Int!
+}
+
+type LotteryWholesaleCustomer {
+  abilities: LotteryWholesaleCustomerAbilities!
+  address: String
+  contactName: String
+  createdAt: DateTime!
+  createdBy: LotteryDealerUserRef
+  id: ID!
+  isShared: Boolean!
+  lastWholesaleAt: DateTime
+  licenseNo: String
+  note: String
+  ownerOrgName: String
+  phone: String
+  shareOrgs: [ShareOrg!]!
+  status: LotteryWholesaleCustomerStatus!
+  storeName: String!
+  updatedAt: DateTime!
+  updatedBy: LotteryDealerUserRef
+}
+
+type LotteryWholesaleCustomerAbilities {
+  canEdit: Boolean!
+}
+
+type LotteryWholesaleCustomerPayload {
+  item: LotteryWholesaleCustomer!
+}
+
+type LotteryWholesaleCustomerSameName {
+  id: ID!
+  phone: String
+  storeName: String!
+}
+
+input LotteryWholesaleCustomerSameNamesInput {
+  excludeId: ID
+  storeName: String!
+}
+
+type LotteryWholesaleCustomerSameNamesPayload {
+  items: [LotteryWholesaleCustomerSameName!]!
+  totalCount: Int!
+}
+
+"""批售客戶狀態:往來中 / 停用"""
+enum LotteryWholesaleCustomerStatus {
+  ACTIVE
+  INACTIVE
+}
+
+input LotteryWholesaleCustomersInput {
+  keyword: String
+  page: Int = 1
+
+  """每頁筆數,上限 100"""
+  pageSize: Int = 20
+  status: LotteryWholesaleCustomerStatus
+}
+
+type LotteryWholesaleCustomersPayload {
+  items: [LotteryWholesaleCustomer!]!
+  page: Int!
+  pageSize: Int!
+  totalCount: Int!
+}
+
+type LotteryWholesaleDetail {
+  accountLabel: String
+  amount: Int!
+  customerName: String!
+  fromBranchName: String!
+  paymentMode: String
+  received: Int!
+  rows: [LotteryWholesaleRow!]!
+  shippedAt: DateTime
+  submissionId: ID!
+}
+
+type LotteryWholesaleFilterOptions {
+  branches: [LotteryWholesaleOption!]!
+  customers: [LotteryWholesaleOption!]!
+}
+
+type LotteryWholesaleOption {
+  id: ID!
+  label: String!
+}
+
+type LotteryWholesaleOptions {
+  accounts: [LotteryWholesaleOption!]!
+  books: [LotteryWholesaleBook!]!
+  customers: [LotteryWholesaleOption!]!
+}
+
+type LotteryWholesaleRow {
+  amount: Int!
+  bookId: ID!
+  bookNo: String!
+  bookPrice: Int!
+  defaultRate: Int!
+  gameCode: String!
+  gameId: ID!
+  gameName: String!
+  rate: Int!
+  rowId: String!
+  state: String
+  tickets: Int!
+  unitPrice: Int!
+}
+
+type LotteryWholesaleScanMatch {
+  bookId: ID!
+  bookNo: String!
+  gameCode: String!
+  gameId: ID!
+  lockedSerialNo: String
+  problem: String
+}
+
+input LotteryWholesalesInput {
+  customerId: ID
+  fromOrgId: ID
+  page: Int
+  pageSize: Int
+  paymentMode: String
+  status: FormSubmissionStatus
+}
+
+type LotteryWholesalesPayload {
+  items: [LotteryWholesale!]!
+  page: Int!
+  pageSize: Int!
+  totalCount: Int!
 }
 
 input MakeupPunchEntryOptionsInput {
@@ -4407,6 +4602,7 @@ type Mutation {
   createLotteryDealerContact(input: CreateLotteryDealerContactInput!): LotteryDealerContactPayload!
   createLotteryGame(input: CreateLotteryGameInput!): LotteryGamePayload!
   createLotteryOpeningBook(input: CreateLotteryOpeningBookInput!): LotteryOpeningBookPayload!
+  createLotteryWholesaleCustomer(input: CreateLotteryWholesaleCustomerInput!): LotteryWholesaleCustomerPayload!
   createMyDelegation(input: CreateMyDelegationInput!): MyDelegationPayload!
   createPrintAgent(input: CreatePrintAgentInput!): PrintAgentPairingPayload!
   createPrintJob(input: CreatePrintJobInput!): PrintJobPayload!
@@ -4426,6 +4622,7 @@ type Mutation {
   deleteFormVersionDraft(input: DeleteFormVersionDraftInput!): FormPayload!
   deleteLotteryBankAccount(id: ID!): DeleteLotteryBankAccountPayload!
   deleteLotteryGame(input: DeleteLotteryGameInput!): DeleteLotteryGamePayload!
+  deleteLotteryWholesaleCustomer(input: DeleteLotteryWholesaleCustomerInput!): DeleteLotteryWholesaleCustomerPayload!
   deleteMyDelegation(input: DeleteMyDelegationInput!): DeleteMyDelegationPayload!
   deleteMyScheduleDayOff(input: DeleteMyScheduleDayOffInput!): DeleteScheduleDayOffPayload!
   deleteOrg(input: DeleteOrgInput!): DeletePayload!
@@ -4558,6 +4755,7 @@ type Mutation {
   updateLotteryDealerContact(input: UpdateLotteryDealerContactInput!): LotteryDealerContactPayload!
   updateLotteryDealerSignin(input: UpdateLotteryDealerSigninInput!): LotteryDealerSigninPayload!
   updateLotteryGame(input: UpdateLotteryGameInput!): LotteryGamePayload!
+  updateLotteryWholesaleCustomer(input: UpdateLotteryWholesaleCustomerInput!): LotteryWholesaleCustomerPayload!
   updateMyPreferences(input: UpdateMyPreferencesInput!): UpdateMyPreferencesPayload!
   updateNotificationSetting(input: UpdateNotificationSettingInput!): NotificationSettingPayload!
   updateOrg(input: UpdateOrgInput!): OrgPayload!
@@ -5261,6 +5459,7 @@ type Query {
   lotteryCheckoutWizard(shiftId: ID!): LotteryCheckoutWizard!
   lotteryCheckouts(input: LotteryCheckoutsInput!): LotteryCheckoutsPayload!
   lotteryCountModeChangeCheck(input: LotteryCountModeChangeCheckInput!): LotteryCountModeChangeCheck!
+  lotteryCustomerWholesales(customerId: ID!): [LotteryWholesale!]!
   lotteryDailyCloseStatus(orgId: ID!): LotteryDailyCloseStatus!
   lotteryDailyCloseWizard(orgId: ID!, submissionId: ID): LotteryDailyCloseWizard!
   lotteryDealer(id: ID!): LotteryDealerPayload!
@@ -5333,6 +5532,14 @@ type Query {
   lotteryTransferOptions(fromOrgId: ID!, submissionId: ID, toOrgId: ID): LotteryTransferOptions!
   lotteryTransferProgress(transferIds: [ID!]!): [LotteryTransferProgress!]!
   lotteryTransferReceiving(submissionId: ID!): LotteryTransferReceiving!
+  lotteryWholesaleCustomer(id: ID!): LotteryWholesaleCustomerPayload!
+  lotteryWholesaleCustomerSameNames(input: LotteryWholesaleCustomerSameNamesInput!): LotteryWholesaleCustomerSameNamesPayload!
+  lotteryWholesaleCustomers(input: LotteryWholesaleCustomersInput!): LotteryWholesaleCustomersPayload!
+  lotteryWholesaleDetail(submissionId: ID!): LotteryWholesaleDetail!
+  lotteryWholesaleFilterOptions: LotteryWholesaleFilterOptions!
+  lotteryWholesaleOptions(fromOrgId: ID!): LotteryWholesaleOptions!
+  lotteryWholesaleScanMatches(bookNo: String!, fromOrgId: ID!, gameCode: String): [LotteryWholesaleScanMatch!]!
+  lotteryWholesales(input: LotteryWholesalesInput!): LotteryWholesalesPayload!
   makeupPunchEntryExists(submissionId: ID!): Boolean!
   makeupPunchEntryOptions(input: MakeupPunchEntryOptionsInput!): [ScheduleAttendanceEntryOption!]!
   me: Me!
@@ -7057,6 +7264,18 @@ input UpdateLotteryGameInput {
   status: String
   ticketsPerBook: Int
   unitPrice: Int
+}
+
+input UpdateLotteryWholesaleCustomerInput {
+  address: String
+  contactName: String
+  id: ID!
+  licenseNo: String
+  note: String
+  phone: String
+  shareOrgs: [ShareOrgInput!]
+  status: LotteryWholesaleCustomerStatus
+  storeName: String
 }
 
 input UpdateMyPreferencesInput {

@@ -32,6 +32,7 @@ fragment LotteryInventoryBookFields on LotteryInventoryBook {
   requiredSkipCount
   skippedTicketNos
   state
+  wholesaleCustomerName
   status
   purchasedAt
   purchaseDealer {
@@ -59,6 +60,7 @@ fragment LotteryInventoryTicketFields on LotteryInventoryTicket {
     ...LotteryInventoryRefFields
   }
   locked
+  lockRefType
   operable
   version
   unmatched
@@ -79,6 +81,7 @@ fragment LotteryInventoryBookDetailFields on LotteryInventoryBookDetail {
   book {
     ...LotteryInventoryBookFields
   }
+  countStore
   tickets {
     ...LotteryInventoryTicketFields
   }
@@ -113,6 +116,8 @@ fragment LotteryInventoryBookDetailFields on LotteryInventoryBookDetail {
       ticketNo
       bookNo
     }
+    customerName
+    voidReasonLabel
   }
   sources {
     type
@@ -120,6 +125,8 @@ fragment LotteryInventoryBookDetailFields on LotteryInventoryBookDetail {
     refSerialNo
     at
     ticketNos
+    wholesaleState
+    customerName
   }
   cost {
     rate

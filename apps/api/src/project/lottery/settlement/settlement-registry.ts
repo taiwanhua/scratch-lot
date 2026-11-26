@@ -40,8 +40,8 @@ import type {
  * ```
  */
 
-/** 單據種類:決定寫哪一組交易 / 流水類型(進貨支出 / 收入、調貨支出 / 收入)。 */
-export type SettlementKind = "purchase" | "transfer";
+/** 單據種類:決定寫哪一組交易 / 流水類型(進貨支出 / 收入、調貨支出 / 收入、批售支出 / 收入)。 */
+export type SettlementKind = "purchase" | "transfer" | "wholesale";
 
 /** 登記看得到的提交(`form_submissions` 的那一筆)。 */
 export interface SettlementSubmission {
@@ -59,7 +59,7 @@ export interface SettlementSubmission {
 
 /** 單據的收付資訊(由登記從提交算出)。 */
 export interface SettlementPayable {
-  /** 應付(進貨單)或調貨金額(調貨單);正數或 0。 */
+  /** 應付(進貨單)、調貨金額(調貨單)或批售金額(批售單,應收);正數或 0。 */
   amount: number;
   /** 單據的分店(待結清款項的「分店」欄、交易的歸屬分店預設值、選帳戶時的使用組織)。 */
   branchOrgId: Types.ObjectId;
@@ -106,6 +106,14 @@ export interface SettlementDocumentRegistration {
     asOf?: Date,
   ) => SettlementPayable | null | Promise<SettlementPayable | null>;
   /**
+   * 這張單據在哪些狀態參與收付(選填;**依單據區分**,批售單依收款方式:`auto_bank` 只有 `completed`、`collect_first` =
+   * 全部有效狀態;規格 21.6)。狀態不在裡面 = 這張不參與(等同 `payable` 回 null):不能按鈕、不列待結清、不能自動記帳。
+   * 沒給 = 全部交給 `payable` 判斷。算某個時點的待結清時,`submission` 的值與狀態是那個時點的樣子。
+   */
+  participatingStatuses?: (
+    submission: SettlementSubmission,
+  ) => readonly string[];
+  /**
    * 一批的應付(選填;順序同 `items`,同一張可以在不同時點各算一次):`payable` 要讀資料庫的登記給這一支,
    * 一批一次讀(待結清、列表、報表一次算很多張、很多個期末;TX-07)。沒給 = 逐張呼叫 `payable`(不讀資料庫的才可以不給)。
    */
@@ -113,8 +121,8 @@ export interface SettlementDocumentRegistration {
     items: readonly { submission: SettlementSubmission; asOf?: Date }[],
   ) => Promise<readonly (SettlementPayable | null)[]>;
   /**
-   * **兩邊店的單據**:單據存值裡各邊分店的組織欄位路徑(例 `values.to_branch.id`,存組織 id 字串;調貨單的出貨店、
-   * 收貨店)。有宣告 = 每一邊只能由「這一邊的分店在可見範圍內」的人操作;沒宣告 = 單據本身要在可見範圍內才能操作。
+   * **依分店操作的單據**:單據存值裡各邊分店的組織欄位路徑(例 `values.to_branch.id`,存組織 id 字串;調貨單的出貨店、
+   * 收貨店;只有一邊的批售單的出貨店)。有宣告 = 每一邊只能由「這一邊的分店在可見範圍內」的人操作;沒宣告 = 單據本身要在可見範圍內才能操作。
    * **讀取不靠它**:兩邊店看得到單據是受管表單的「依欄位共用」(`sharedByFieldKeys` → `sharedOrgIds`,ADR-0014),
    * 結算區塊與待結清款項都走一般讀取。
    */
@@ -151,6 +159,17 @@ export function settlementDocumentOf(
 
 export function settlementDocuments(): readonly SettlementDocumentRegistration[] {
   return [...registrations.values()];
+}
+
+/** 這張單據現在參不參與收付(`participatingStatuses`;沒宣告 = 由 `payable` 判斷)。 */
+export function isParticipating(
+  registration: SettlementDocumentRegistration,
+  submission: SettlementSubmission,
+): boolean {
+  return (
+    registration.participatingStatuses === undefined ||
+    registration.participatingStatuses(submission).includes(submission.status)
+  );
 }
 
 export function sideOf(

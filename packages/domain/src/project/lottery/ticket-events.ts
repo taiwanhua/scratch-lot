@@ -3,7 +3,10 @@
  * api 的 schema 與帳本服務、admin 的格子與文案都引用這裡,不另寫字面值。
  */
 
-/** 張的狀態:未售 / 已售 / 跳號 / 報廢 / 待查 / 遺失。跳號 = 實體不存在,不算庫存、成本與損失。 */
+/**
+ * 張的狀態:未售 / 已售 / 跳號 / 報廢 / 待查 / 遺失 / 已批售。跳號 = 實體不存在,不算庫存、成本與損失。
+ * 已批售 = 整本批售出去的張(規格 21.5):終點狀態,不算庫存、不能賣、不能調、不進盤點、不當配對張,只有作廢批售單能改回未售。
+ */
 export const TICKET_STATUSES = [
   "unsold",
   "sold",
@@ -11,6 +14,7 @@ export const TICKET_STATUSES = [
   "scrapped",
   "investigating",
   "lost",
+  "wholesaled",
 ] as const;
 export type TicketStatus = (typeof TICKET_STATUSES)[number];
 
@@ -21,6 +25,7 @@ export const TICKET_STATUS = {
   scrapped: "scrapped",
   investigating: "investigating",
   lost: "lost",
+  wholesaled: "wholesaled",
 } as const satisfies Record<string, TicketStatus>;
 
 /** 張的位置:庫存 / 檯面(在某個收銀點)/ 在途(調貨中)。 */
@@ -37,9 +42,28 @@ export const TICKET_LOCATION_KIND = {
   inTransit: "in_transit",
 } as const satisfies Record<string, TicketLocationKind>;
 
-/** 鎖定來源:調貨單(= 「調貨中」)或撤銷售出申請。鎖定時不能賣。 */
-export const TICKET_LOCK_REF_TYPES = ["transfer", "sale_reversal"] as const;
+/** 鎖定來源:調貨單(= 「調貨中」)、撤銷售出申請或批售單(= 「批售中」)。鎖定時不能賣。 */
+export const TICKET_LOCK_REF_TYPES = [
+  "transfer",
+  "sale_reversal",
+  "wholesale",
+] as const;
 export type TicketLockRefType = (typeof TICKET_LOCK_REF_TYPES)[number];
+
+/** 批售單的來源單據類型(鎖定與張數事件共用;`refId` = 批售單)。 */
+export const WHOLESALE_REF_TYPE =
+  "wholesale" as const satisfies TicketLockRefType;
+
+/** 鎖住「還沒賣的張」的單據:調貨單、批售單(撤銷售出申請鎖的是已售的張,不在內)。 */
+const DOCUMENT_LOCK_REF_TYPES = ["transfer", WHOLESALE_REF_TYPE] as const;
+
+/**
+ * 被單據鎖住(調貨中 / 批售中;規格 21.5 共用判斷):不能賣、不列在拆本清單、盤點不列、不能調、不能報廢、
+ * 不挑來當配對張。撤銷售出申請的鎖(撤銷審核中)與沒有鎖 → false。
+ */
+export function isDocumentLock(refType: string | null | undefined): boolean {
+  return isOneOf(DOCUMENT_LOCK_REF_TYPES, refType);
+}
 
 /**
  * 最近一次售出的來源:刷條碼 / 手動 / 盤點補登 / 依張數(張數店,張號由系統照挑張順序挑)/ 期初(期初建檔時標成
@@ -73,6 +97,8 @@ export const TICKET_EVENT_TYPES = [
   "transfer_out",
   "in_transit",
   "transfer_in",
+  "wholesale",
+  "wholesale_void",
   "investigate",
   "lose",
   "recover",
@@ -115,6 +141,10 @@ export const TICKET_EVENT_TYPE = {
   inTransit: "in_transit",
   /** 調入(調貨單) */
   transferIn: "transfer_in",
+  /** 批售:未售、庫存 → 已批售(批售單出貨確認核准;`amount` = 那一列批售金額 ÷ 張數,規格 21.5) */
+  wholesale: "wholesale",
+  /** 取消批售:已批售 → 未售、庫存(批售單作廢;`amount` 同原批售事件) */
+  wholesaleVoid: "wholesale_void",
   /** 待查(規格 7.4) */
   investigate: "investigate",
   /** 遺失(規格 7.4) */

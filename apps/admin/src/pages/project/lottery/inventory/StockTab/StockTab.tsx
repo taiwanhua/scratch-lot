@@ -128,8 +128,15 @@ export const StockTab = () => {
     {
       key: "holdings",
       header: t("columns.holdings"),
-      render: (row) =>
-        row.holdings.length === 0 ? row.org.name : holdingsText(row.holdings),
+      // 已批售的本寫買方(批售客戶;Figma IN-01-2)
+      render: (row) => {
+        if (row.holdings.length > 0) {
+          return holdingsText(row.holdings);
+        }
+        return row.wholesaleCustomerName == null
+          ? row.org.name
+          : t("wholesaledHolding", { customer: row.wholesaleCustomerName });
+      },
     },
     {
       key: "remaining",

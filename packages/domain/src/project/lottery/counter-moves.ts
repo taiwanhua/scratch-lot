@@ -24,7 +24,7 @@ export const STORE_COUNTER_SCAN_PURPOSE = "store-counter-move";
 
 /**
  * 刷到的張不能收回 / 移櫃的原因(當下顯示、不加進清單;張數店規格 13.1「不能移的當下顯示原因」):
- * 不是本店 / 已售 / 已售·未對號但來源台沒有可對號的張 / 跳號 / 報廢 / 被鎖定 / 在途 / 在庫存 /
+ * 不是本店 / 已售 / 已售·未對號但來源台沒有可對號的張 / 跳號 / 報廢 / 已批售 / 被鎖定 / 在途 / 在庫存 /
  * 待查或遺失(請先尋回)/ 已經在要移到的收銀點 / 不是這張卡片的收銀點(編號店只收回、移櫃這台的張)。
  */
 export const COUNTER_SCAN_PROBLEMS = [
@@ -33,6 +33,7 @@ export const COUNTER_SCAN_PROBLEMS = [
   "unmatched_no_partner",
   "skipped",
   "scrapped",
+  "wholesaled",
   "locked",
   "in_transit",
   "in_stock",
@@ -130,6 +131,9 @@ function plainProblemOf(
     case TICKET_STATUS.scrapped: {
       return "scrapped";
     }
+    case TICKET_STATUS.wholesaled: {
+      return "wholesaled";
+    }
     case TICKET_STATUS.investigating:
     case TICKET_STATUS.lost: {
       return "missing";
@@ -186,6 +190,9 @@ export function counterScanDecisionOf(
     ticket.status === TICKET_STATUS.scrapped
   ) {
     return decision(ticket.status);
+  }
+  if (ticket.status === TICKET_STATUS.wholesaled) {
+    return decision("wholesaled");
   }
   const places = counterScanMatchPlacesOf(ticket, context);
   if (places !== null && partnerFound) {

@@ -5,6 +5,7 @@ import {
   ACCOUNTS_PERMISSIONS as P,
   payeeDefaultAmount,
   payerDefaultAmount,
+  solePayeeDefaultAmount,
   totalsOf,
 } from "@repo/domain/project/lottery-accounts";
 
@@ -38,7 +39,10 @@ import {
   settlementClearedGuard,
   settlementMarkReopenGuard,
 } from "../settlement/settlement-guard";
-import { SettlementLedger } from "../settlement/settlement-ledger";
+import {
+  SETTLEMENT_LIVE_STATUSES,
+  SettlementLedger,
+} from "../settlement/settlement-ledger";
 import { SettlementMarks } from "../settlement/settlement-marks";
 import {
   type SettlementSubmission,
@@ -414,6 +418,7 @@ interface OutstandingData {
 
 const TEST_PURCHASE = "test.purchase";
 const TEST_TRANSFER = "test.transfer";
+const TEST_WHOLESALE = "test.wholesale";
 
 const ALL_ACCOUNTS = Object.values(P);
 
@@ -507,6 +512,67 @@ describe("帳戶管理(GraphQL 端點 + 真 MongoDB)", () => {
       .withTransaction((session) =>
         api.app.get(CashLedgerService).reverseCashMovement(session, id, by),
       );
+
+  /** 批售型的測試單據(只有出貨店收款方;`mode` = 收款方式)。 */
+  const insertWholesale = (
+    mode: "auto_bank" | "collect_first",
+    docNo: string,
+    options: {
+      status?: string;
+      payable?: number;
+      store?: Types.ObjectId;
+    } = {},
+  ) =>
+    insertTestSubmission(api.connection, {
+      orgId: storeA,
+      tenantId: tenantA,
+      moduleKey: TEST_WHOLESALE,
+      status: options.status ?? "reviewing",
+      values: {
+        payable: options.payable ?? 37_200,
+        store: String(options.store ?? storeA),
+        docNo,
+        mode,
+      },
+    });
+
+  const wholesaleInput = (
+    doc: Types.ObjectId,
+    button: "in" | "out",
+    amount: number,
+    source: Record<string, unknown>,
+  ) => ({
+    input: {
+      moduleKey: TEST_WHOLESALE,
+      refId: String(doc),
+      side: "shipper",
+      button,
+      amount,
+      ...source,
+    },
+  });
+  const outstandingOf = async (docNo: string) => {
+    const data = await ok<OutstandingData>(api, hq, OUTSTANDING);
+    return data.lotteryOutstandingSettlements.items.find(
+      (item) => item.docNo === docNo,
+    );
+  };
+
+  const submissionOf = async (id: Types.ObjectId) =>
+    (await api.connection
+      .collection("form_submissions")
+      .findOne({ _id: id })) as unknown as SettlementSubmission;
+
+  /** 單據完成:建結清標記(同掛接點 `completed`)。 */
+  const markWholesaleCompleted = (id: Types.ObjectId) =>
+    api.app.get(TransactionService).withTransaction((session) =>
+      api.app.get(SettlementMarks).completed(session, {
+        _id: id,
+        orgId: storeA,
+        tenantId: tenantA,
+        moduleKey: TEST_WHOLESALE,
+      }),
+    );
 
   beforeAll(async () => {
     api = await startAuthTestApp("scratch-lot-test-lottery-accounts");
@@ -2291,6 +2357,519 @@ describe("帳戶管理(GraphQL 端點 + 真 MongoDB)", () => {
       );
     });
   });
+
+  describe("收付機制:只有收款方的單據(批售型;規格 21.6)", () => {
+    let account: AccountRow;
+
+    const bank = () => ({ method: "bank", accountId: account.id });
+    const vaultCash = {
+      method: "cash",
+      cashSource: "vault",
+      handler: "王小明",
+    };
+
+    beforeAll(async () => {
+      account = await create({
+        accountNo: "0021-00001",
+        openingBalance: 0,
+        shareOrgs: [{ orgId: String(tenantA), includeDescendants: true }],
+      });
+      unregister.push(
+        registerSettlementDocument({
+          moduleKey: TEST_WHOLESALE,
+          label: "批售單",
+          kind: "wholesale",
+          participatingStatuses: (submission) =>
+            submission.values.mode === "auto_bank"
+              ? ["completed"]
+              : SETTLEMENT_LIVE_STATUSES,
+          payable: (submission) => ({
+            amount: Number(submission.values.payable),
+            branchOrgId: new Types.ObjectId(String(submission.values.store)),
+            docNo: String(submission.values.docNo),
+            counterparty: "好運彩券行",
+          }),
+          sideBranchPaths: ["values.store"],
+          sides: [
+            {
+              side: "shipper",
+              label: "出貨店",
+              role: "payee",
+              permission: TEST_SETTLE_PERMISSION,
+              methods: ["bank", "cash"],
+              defaultAmount: (button, state) =>
+                solePayeeDefaultAmount(
+                  button,
+                  state.payable,
+                  totalsOf(state, "shipper"),
+                ),
+            },
+          ],
+        }),
+      );
+    }, HOOK_TIMEOUT_MS);
+
+    it("收現金 20,000 → 待收 17,200;銀行 17,500 → 待退 300;退款 300 → 結清;類型、摘要、路線;淨額 ≠ 0 不能駁回 / 作廢", async () => {
+      const doc = await insertWholesale("collect_first", "W-0001");
+      expect(await outstandingOf("W-0001")).toMatchObject({
+        side: "shipper",
+        branch: { name: "中山店" },
+        payable: 37_200,
+        net: 0,
+        kind: "to_receive",
+        amount: 37_200,
+        button: "in",
+      });
+      // 現金要經手人;退款先填 0 不能按
+      expect(
+        await errorOf(
+          api,
+          hq,
+          RECORD_SETTLEMENT,
+          wholesaleInput(doc, "in", 1, { method: "cash", cashSource: "vault" }),
+        ),
+      ).toMatchObject({ fields: ["handler"] });
+      expect(
+        await errorOf(
+          api,
+          hq,
+          RECORD_SETTLEMENT,
+          wholesaleInput(doc, "out", 1, bank()),
+        ),
+      ).toMatchObject({ reason: "SETTLEMENT_NOTHING_DUE" });
+
+      const before = await vaultOf(storeA);
+      await ok(
+        api,
+        hq,
+        RECORD_SETTLEMENT,
+        wholesaleInput(doc, "in", 20_000, vaultCash),
+      );
+      expect(await vaultOf(storeA)).toBe(before + 20_000);
+      expect(
+        await api.connection
+          .collection("lottery_cash_movements")
+          .findOne({ refId: doc }),
+      ).toMatchObject({
+        type: "wholesale_in",
+        from: "external",
+        to: "vault",
+        payee: "王小明",
+        settlementSide: "shipper",
+      });
+      expect(await outstandingOf("W-0001")).toMatchObject({
+        kind: "to_receive",
+        net: 20_000,
+        amount: 17_200,
+      });
+
+      await ok(
+        api,
+        hq,
+        RECORD_SETTLEMENT,
+        wholesaleInput(doc, "in", 17_500, bank()),
+      );
+      expect(await outstandingOf("W-0001")).toMatchObject({
+        kind: "to_refund",
+        net: 37_500,
+        amount: 300,
+        button: "out",
+      });
+      const over = await settlement(TEST_WHOLESALE, doc);
+      expect(over.pendingPayee).toBe(0);
+      expect(over.sides).toMatchObject([
+        {
+          side: "shipper",
+          net: 37_500,
+          buttons: [
+            { button: "out", defaultAmount: 300, canUse: true },
+            { button: "in", defaultAmount: 0, canUse: false },
+          ],
+        },
+      ]);
+      await ok(
+        api,
+        hq,
+        RECORD_SETTLEMENT,
+        wholesaleInput(doc, "out", 300, bank()),
+      );
+      expect(await outstandingOf("W-0001")).toBeUndefined();
+      const rows = await api.connection
+        .collection("lottery_bank_transactions")
+        .find({ refId: doc })
+        .sort({ createdAt: 1, _id: 1 })
+        .toArray();
+      expect(rows).toMatchObject([
+        {
+          type: "wholesale_income",
+          direction: "in",
+          amount: 17_500,
+          branchOrgId: storeA,
+          summary: "批售單 W-0001 · 好運彩券行",
+        },
+        {
+          type: "wholesale_expense",
+          direction: "out",
+          amount: 300,
+          summary: "批售單 W-0001 · 好運彩券行 退款",
+        },
+      ]);
+
+      // 已結清(淨額 37,200)→ 駁回 / 作廢守門擋下;全部沖正後放行
+      const operator = await operatorOf(api, tenantA);
+      const guard = async () =>
+        settlementClearedGuard(
+          guardContext(api, operator, tenantA, doc, TEST_WHOLESALE),
+        );
+      expect(await guard()).toMatchObject({ code: "SETTLEMENT_NOT_CLEARED" });
+      await fillVault(storeA, 20_000);
+      const done = await settlement(TEST_WHOLESALE, doc);
+      for (const row of done.records.filter((item) => item.canReverse)) {
+        await ok(api, hq, REVERSE_SETTLEMENT, {
+          input: { method: row.method, id: row.id, reason: "取消批售" },
+        });
+      }
+      expect(await guard()).toBeNull();
+    });
+
+    it.each([
+      ["collect_first", "reviewing", true],
+      ["collect_first", "returned", true],
+      ["collect_first", "withdrawn", true],
+      ["collect_first", "completed", true],
+      ["collect_first", "draft", false],
+      ["collect_first", "rejected", false],
+      ["collect_first", "voided", false],
+      ["auto_bank", "reviewing", false],
+      ["auto_bank", "returned", false],
+      ["auto_bank", "withdrawn", false],
+      ["auto_bank", "completed", true],
+      ["auto_bank", "rejected", false],
+      ["auto_bank", "voided", false],
+    ] as const)(
+      "參與收付的狀態依單據:%s %s → %s",
+      async (mode, status, participates) => {
+        const docNo = `W-${mode}-${status}`;
+        const doc = await insertWholesale(mode, docNo, {
+          status,
+          payable: 100,
+        });
+        if (status === "completed") {
+          await markWholesaleCompleted(doc);
+        }
+        const row = await outstandingOf(docNo);
+        const input = wholesaleInput(doc, "in", 100, bank());
+        if (participates) {
+          expect(row).toMatchObject({ kind: "to_receive", amount: 100 });
+          await ok(api, hq, RECORD_SETTLEMENT, input);
+          expect(await outstandingOf(docNo)).toBeUndefined();
+        } else {
+          expect(row).toBeUndefined();
+          expect(
+            await errorOf(api, hq, RECORD_SETTLEMENT, input),
+          ).toMatchObject({ reason: "SETTLEMENT_UNKNOWN" });
+        }
+      },
+    );
+
+    it("銀行 [登記交易] 批售收入:單據必填、只列有待收的;不參與收付的單據擋下", async () => {
+      const open = await insertWholesale("collect_first", "W-0011", {
+        payable: 500,
+      });
+      const closed = await insertWholesale("auto_bank", "W-0012", {
+        payable: 500,
+      });
+      const list = await ok<{
+        lotterySettlementCandidates: { items: { refId: string }[] };
+      }>(api, hq, CANDIDATES, { input: { type: "wholesale_income" } });
+      const ids = list.lotterySettlementCandidates.items.map(
+        (item) => item.refId,
+      );
+      expect(ids).toContain(String(open));
+      expect(ids).not.toContain(String(closed));
+      const base = {
+        accountId: account.id,
+        type: "wholesale_income",
+        amount: 500,
+        occurredAt: "2026-10-10T00:00:00.000Z",
+      };
+      expect(
+        await errorOf(api, hq, RECORD, {
+          input: { ...base, branchOrgId: String(storeA) },
+        }),
+      ).toMatchObject({ code: "VALIDATION_FAILED", fields: ["refId"] });
+      expect(
+        await errorOf(api, hq, RECORD, {
+          input: { ...base, refType: TEST_WHOLESALE, refId: String(closed) },
+        }),
+      ).toMatchObject({ reason: "SETTLEMENT_UNKNOWN" });
+      const row = await record({
+        accountId: account.id,
+        type: "wholesale_income",
+        amount: 500,
+        refType: TEST_WHOLESALE,
+        refId: String(open),
+      });
+      expect(row).toMatchObject({ settlementSide: "shipper" });
+      expect(await outstandingOf("W-0011")).toBeUndefined();
+      // 批售支出:歸屬分店必填
+      expect(
+        await errorOf(api, hq, RECORD, {
+          input: {
+            accountId: account.id,
+            type: "wholesale_expense",
+            amount: 1,
+            occurredAt: "2026-10-10T00:00:00.000Z",
+          },
+        }),
+      ).toMatchObject({ fields: ["branchOrgId"] });
+    });
+
+    it("自動記帳:核准完成(completed)記一筆批售收入;核准前的單據不能自動記;沖正後列回待收", async () => {
+      const doc = await insertWholesale("auto_bank", "W-0021", {
+        payable: 19_000,
+      });
+      const service = api.app.get(SettlementService);
+      const operator = await operatorOf(api, tenantA);
+      const submission = await submissionOf(doc);
+      const auto = (status: string) =>
+        api.app.get(TransactionService).withTransaction((session) =>
+          service.recordAutomatic(session, {
+            operator,
+            moduleKey: TEST_WHOLESALE,
+            submission: { ...submission, status },
+            side: "shipper",
+            button: "in",
+            accountId: new Types.ObjectId(account.id),
+            amount: 19_000,
+          }),
+        );
+      await expect(auto("reviewing")).rejects.toMatchObject({
+        extensions: { reason: "SETTLEMENT_UNKNOWN" },
+      });
+      expect(await auto("completed")).not.toBeNull();
+      await api.connection
+        .collection("form_submissions")
+        .updateOne({ _id: doc }, { $set: { status: "completed" } });
+      await markWholesaleCompleted(doc);
+      expect(
+        await api.connection
+          .collection("lottery_bank_transactions")
+          .findOne({ refId: doc }),
+      ).toMatchObject({
+        type: "wholesale_income",
+        direction: "in",
+        amount: 19_000,
+        branchOrgId: storeA,
+        settlementSide: "shipper",
+        summary: "批售單 W-0021 · 好運彩券行",
+      });
+      expect(await outstandingOf("W-0021")).toBeUndefined();
+      const paid = await settlement(TEST_WHOLESALE, doc);
+      await ok(api, hq, REVERSE_SETTLEMENT, {
+        input: {
+          method: "bank",
+          id: paid.records[0]?.id ?? "",
+          reason: "沒收到",
+        },
+      });
+      expect(await outstandingOf("W-0021")).toMatchObject({
+        kind: "to_receive",
+        amount: 19_000,
+      });
+    });
+
+    it("某個時點的待結清照當時的狀態:之後才核准的 auto_bank 當時不列、collect_first 當時照列;指令數與張數無關", async () => {
+      const operator = await operatorOf(api, tenantA);
+      const ledger = api.app.get(SettlementLedger);
+      const submittedAt = new Date("2026-11-25T02:00:00.000Z");
+      const finishedAt = new Date("2026-12-03T02:00:00.000Z");
+      const insertPast = async (
+        mode: "auto_bank" | "collect_first",
+        docNo: string,
+        status: "completed" | "voided" | "rejected",
+      ) => {
+        const doc = await insertWholesale(mode, docNo, {
+          status,
+          payable: 700,
+        });
+        const { insertedId: instanceId } = await api.connection
+          .collection("workflow_instances")
+          .insertOne({
+            submissionId: doc,
+            orgId: storeA,
+            tenantId: tenantA,
+            moduleKey: TEST_WHOLESALE,
+            finishedAt,
+            deletedAt: null,
+          });
+        const { values } = await submissionOf(doc);
+        const voidedAt =
+          status === "voided" ? new Date("2026-12-20T00:00:00.000Z") : null;
+        await api.connection.collection("form_submissions").updateOne(
+          { _id: doc },
+          {
+            $set: {
+              submittedAt,
+              currentInstanceId: instanceId,
+              voidedAt,
+              revisions: [{ values, ctx: { at: submittedAt } }],
+            },
+          },
+        );
+        if (status !== "rejected") {
+          await markWholesaleCompleted(doc);
+        }
+      };
+      await insertPast("auto_bank", "W-0031", "completed");
+      await insertPast("collect_first", "W-0032", "completed");
+      await insertPast("auto_bank", "W-0033", "voided");
+      await insertPast("collect_first", "W-0034", "voided");
+      await insertPast("auto_bank", "W-0035", "rejected");
+      await insertPast("collect_first", "W-0036", "rejected");
+      const [early, november, december, january] =
+        await ledger.outstandingAtMany(operator, [
+          new Date("2026-11-20T00:00:00.000Z"),
+          new Date("2026-11-30T16:00:00.000Z"),
+          new Date("2026-12-10T00:00:00.000Z"),
+          new Date("2026-12-31T16:00:00.000Z"),
+        ]);
+      expect(pastWholesaleDocNos(early)).toEqual([]);
+      expect(pastWholesaleDocNos(november)).toEqual([
+        "W-0032",
+        "W-0034",
+        "W-0036",
+      ]);
+      expect(pastWholesaleDocNos(december)).toEqual([
+        "W-0031",
+        "W-0032",
+        "W-0033",
+        "W-0034",
+      ]);
+      expect(pastWholesaleDocNos(january)).toEqual(["W-0031", "W-0032"]);
+
+      const at = [new Date("2026-11-30T16:00:00.000Z")];
+      const few = await countDbCommands(() =>
+        ledger.outstandingAtMany(operator, at),
+      );
+      await insertPast("auto_bank", "W-0037", "completed");
+      await insertPast("collect_first", "W-0038", "completed");
+      const more = await countDbCommands(() =>
+        ledger.outstandingAtMany(operator, at),
+      );
+      expect(more.total).toBe(few.total);
+    });
+
+    it("[退款] 用現金、來源小金庫:超過小金庫應有擋下,剛好等於可以;[沖正] 進小金庫的收款一樣檢查", async () => {
+      const doc = await insertWholesale("collect_first", "W-0041", {
+        payable: 5000,
+      });
+      await ok(
+        api,
+        hq,
+        RECORD_SETTLEMENT,
+        wholesaleInput(doc, "in", 8000, vaultCash),
+      );
+      const refund = wholesaleInput(doc, "out", 3000, vaultCash);
+      await fillVault(storeA, 2999);
+      expect(await errorOf(api, hq, RECORD_SETTLEMENT, refund)).toMatchObject({
+        fields: ["amount"],
+        reason: "AMOUNT_EXCEEDS_VAULT",
+      });
+      await fillVault(storeA, 3000);
+      await ok(api, hq, RECORD_SETTLEMENT, refund);
+      expect(await vaultOf(storeA)).toBe(0);
+      expect(
+        await api.connection
+          .collection("lottery_cash_movements")
+          .findOne({ refId: doc, type: "wholesale_out" }),
+      ).toMatchObject({ from: "vault", to: "external", amount: 3000 });
+
+      const paid = await settlement(TEST_WHOLESALE, doc);
+      const received = paid.records.find((row) => row.direction === "in");
+      const reverse = {
+        input: { method: "cash", id: received?.id ?? "", reason: "記錯" },
+      };
+      await fillVault(storeA, 7999);
+      expect(await errorOf(api, hq, REVERSE_SETTLEMENT, reverse)).toMatchObject(
+        { reason: "AMOUNT_EXCEEDS_VAULT" },
+      );
+      await fillVault(storeA, 8000);
+      await ok(api, hq, REVERSE_SETTLEMENT, reverse);
+      expect(await vaultOf(storeA)).toBe(0);
+    });
+
+    it("權限:帳戶清單 [沖正] 要 reverse-bank-transaction + 收付權限 + 出貨分店在可見範圍;出貨分店不在可見範圍也不能收款", async () => {
+      const doc = await insertWholesale("collect_first", "W-0051", {
+        payable: 900,
+      });
+      await ok(
+        api,
+        hq,
+        RECORD_SETTLEMENT,
+        wholesaleInput(doc, "in", 900, bank()),
+      );
+      const row = await api.connection
+        .collection("lottery_bank_transactions")
+        .findOne({ refId: doc });
+      const reverse = { input: { id: String(row?._id), reason: "記錯" } };
+      const { token: reverserOnly } = await createAccountsOperator(
+        api,
+        api.connection,
+        {
+          orgId: tenantA,
+          permissionKeys: [P.viewBankAccounts, P.reverseBankTransaction],
+        },
+      );
+      expect(await errorOf(api, reverserOnly, REVERSE, reverse)).toMatchObject({
+        code: "FORBIDDEN",
+      });
+      // 有收付權限、沒有 reverse-bank-transaction
+      expect(await errorOf(api, managerA, REVERSE, reverse)).toMatchObject({
+        code: "FORBIDDEN",
+      });
+
+      // 單據看得到,但出貨分店(新竹店)不在中山店店長的可見範圍
+      const other = await insertWholesale("collect_first", "W-0052", {
+        payable: 900,
+        store: storeB,
+      });
+      const seen = await settlement(TEST_WHOLESALE, other, managerA);
+      expect(seen.sides[0]?.canSettle).toBe(false);
+      const receiveOther = wholesaleInput(other, "in", 900, bank());
+      expect(
+        await errorOf(api, managerA, RECORD_SETTLEMENT, receiveOther),
+      ).toMatchObject({ code: "FORBIDDEN" });
+      await ok(api, hq, RECORD_SETTLEMENT, receiveOther);
+      const otherRow = await api.connection
+        .collection("lottery_bank_transactions")
+        .findOne({ refId: other });
+      const { token: storeReverser } = await createAccountsOperator(
+        api,
+        api.connection,
+        {
+          orgId: storeA,
+          ownerOrgId: tenantA,
+          permissionKeys: [
+            P.viewBankAccounts,
+            P.reverseBankTransaction,
+            TEST_SETTLE_PERMISSION,
+          ],
+        },
+      );
+      expect(
+        await errorOf(api, storeReverser, REVERSE, {
+          input: { id: String(otherRow?._id), reason: "記錯" },
+        }),
+      ).toMatchObject({ code: "FORBIDDEN" });
+      // 出貨分店是自己的店:三樣都有就可以沖正
+      await ok(api, storeReverser, REVERSE, reverse);
+      expect(await outstandingOf("W-0051")).toMatchObject({
+        kind: "to_receive",
+        amount: 900,
+      });
+    });
+  });
 });
 
 /** 某個租戶的系統身分(直接呼叫服務用;可見範圍 = 那個租戶),帶一個登記人。 */
@@ -2306,6 +2885,15 @@ async function operatorOf(
   return { ...reader, actorId: new Types.ObjectId() };
 }
 
+/** 某個時點的待結清裡,「某個時點」測試的批售單單號(W-003x)。 */
+function pastWholesaleDocNos(
+  rows: Parameters<typeof docNosOf>[0] | undefined,
+): string[] {
+  return docNosOf(rows ?? [])
+    .filter((docNo) => docNo.startsWith("W-003"))
+    .toSorted((left, right) => left.localeCompare(right, "zh-Hant"));
+}
+
 /** 待結清列的單號。 */
 function docNosOf(
   rows: readonly { snapshot: { payable: { docNo: string } } }[],
@@ -2319,6 +2907,7 @@ function guardContext(
   operator: OperatorContext,
   tenantId: Types.ObjectId,
   submissionId: Types.ObjectId,
+  moduleKey = TEST_PURCHASE,
 ): FormGuardContext {
   return {
     guard: "beforeVoid",
@@ -2327,7 +2916,7 @@ function guardContext(
       _id: submissionId,
       tenantId,
       orgId: tenantId,
-      moduleKey: TEST_PURCHASE,
+      moduleKey,
       formKey: "test_doc",
       status: "reviewing",
       revision: 1,

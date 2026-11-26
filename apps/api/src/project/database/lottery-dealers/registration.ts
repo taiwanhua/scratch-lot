@@ -19,14 +19,26 @@ import {
   LotteryDealerSigninsRepository,
   LotteryDealersRepository,
   LotteryRelationshipsRepository,
+  LotteryWholesaleCustomerLocksRepository,
+  LotteryWholesaleCustomersRepository,
 } from "./lottery-dealers.repository";
 import {
   LOTTERY_RELATIONSHIPS_COLLECTION,
   LotteryRelationship,
   LotteryRelationshipSchema,
 } from "./lottery-relationship.schema";
+import {
+  LOTTERY_WHOLESALE_CUSTOMER_LOCKS_COLLECTION,
+  LotteryWholesaleCustomerLock,
+  LotteryWholesaleCustomerLockSchema,
+} from "./lottery-wholesale-customer-lock.schema";
+import {
+  LOTTERY_WHOLESALE_CUSTOMERS_COLLECTION,
+  LotteryWholesaleCustomer,
+  LotteryWholesaleCustomerSchema,
+} from "./lottery-wholesale-customer.schema";
 
-/** 經銷商管理的資料登記:四張租戶表、四個 BaseRepository、四項組織歸屬檢查。 */
+/** 經銷商管理的資料登記:六張租戶表、六個 BaseRepository、六項組織歸屬檢查。 */
 export const LOTTERY_DEALERS_REGISTRATION: DatabaseRegistration = {
   key: "lottery-dealers",
   models: [
@@ -50,6 +62,16 @@ export const LOTTERY_DEALERS_REGISTRATION: DatabaseRegistration = {
       collection: LOTTERY_RELATIONSHIPS_COLLECTION,
       schema: LotteryRelationshipSchema,
     },
+    {
+      name: LotteryWholesaleCustomer.name,
+      collection: LOTTERY_WHOLESALE_CUSTOMERS_COLLECTION,
+      schema: LotteryWholesaleCustomerSchema,
+    },
+    {
+      name: LotteryWholesaleCustomerLock.name,
+      collection: LOTTERY_WHOLESALE_CUSTOMER_LOCKS_COLLECTION,
+      schema: LotteryWholesaleCustomerLockSchema,
+    },
   ],
   repositories: [
     { modelName: LotteryDealer.name, provider: LotteryDealersRepository },
@@ -64,6 +86,14 @@ export const LOTTERY_DEALERS_REGISTRATION: DatabaseRegistration = {
     {
       modelName: LotteryRelationship.name,
       provider: LotteryRelationshipsRepository,
+    },
+    {
+      modelName: LotteryWholesaleCustomer.name,
+      provider: LotteryWholesaleCustomersRepository,
+    },
+    {
+      modelName: LotteryWholesaleCustomerLock.name,
+      provider: LotteryWholesaleCustomerLocksRepository,
     },
   ],
   orgDataChecks: [
@@ -89,6 +119,18 @@ export const LOTTERY_DEALERS_REGISTRATION: DatabaseRegistration = {
       key: "lottery-relationships",
       modelName: LotteryRelationship.name,
       repository: LotteryRelationshipsRepository,
+      ownerField: "orgId",
+    },
+    {
+      key: "lottery-wholesale-customers",
+      modelName: LotteryWholesaleCustomer.name,
+      repository: LotteryWholesaleCustomersRepository,
+      ownerField: "orgId",
+    },
+    {
+      key: "lottery-wholesale-customer-locks",
+      modelName: LotteryWholesaleCustomerLock.name,
+      repository: LotteryWholesaleCustomerLocksRepository,
       ownerField: "orgId",
     },
   ],

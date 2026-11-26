@@ -549,7 +549,7 @@ export class TicketLedgerService {
   }
 
   /**
-   * 鎖定(調貨單 / 撤銷售出申請):已是同一個鎖 → 不動;被別的鎖住或版本變了 → `CONFLICT`。
+   * 鎖定(調貨單 / 批售單 / 撤銷售出申請):已是同一個鎖 → 不動;被別的鎖住或版本變了 → `CONFLICT`。
    * 鎖定用掉一個版本(`version` +1)、不寫事件;回每張鎖定後的版本。只照操作者自己的範圍(不接受跨店)。
    */
   async lockTickets(

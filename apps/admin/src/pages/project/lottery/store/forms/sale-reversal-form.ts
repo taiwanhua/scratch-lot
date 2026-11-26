@@ -63,11 +63,12 @@ export interface ReversalScanItem {
   openingSold?: boolean;
 }
 
-/** 不論哪種店都不能進撤銷申請的處理方式(被鎖住、跳號、報廢、在途、不是本店)。 */
+/** 不論哪種店都不能進撤銷申請的處理方式(被鎖住、跳號、報廢、已批售、在途、不是本店)。 */
 const BLOCKED: ReadonlySet<string> = new Set([
   "not_this_store",
   "skipped",
   "scrapped",
+  "wholesaled",
   "locked",
   "in_transit",
 ]);

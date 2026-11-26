@@ -766,6 +766,14 @@ describe("關帳(GraphQL 端點 + 真 MongoDB)", () => {
       "C-003",
       taipei("2026-11-01", "00:00:00"),
     );
+    // 批售單審核中、10/31 送出 → 不擋(同進貨單、調貨單;規格 21.6)
+    await storeForm(
+      "wholesale",
+      "reviewing",
+      { payment_mode: "collect_first" },
+      "W-0001",
+      taipei("2026-10-31", "22:00:00"),
+    );
     // 結帳確認申請(日結)審核中:涵蓋 10/31 21:30 至 11/1 21:40 → 擋
     const { insertedId: dailyId } = await connection
       .collection(LOTTERY_CHECKOUTS_COLLECTION)

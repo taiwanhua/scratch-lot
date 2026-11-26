@@ -52,7 +52,7 @@ export const STORE_SCAN_OUTCOMES = [
 export type StoreScanOutcome = (typeof STORE_SCAN_OUTCOMES)[number];
 
 /**
- * 不能銷售的原因:不是本店的刮刮樂 / 已售 / 跳號 / 報廢 / 被單據鎖定 / 在途 /
+ * 不能銷售的原因:不是本店的刮刮樂 / 已售 / 跳號 / 報廢 / 已批售 / 被單據鎖定 / 在途 /
  * 在庫存但這本已經拆了(收回到庫存的張,要先移到收銀點檯面)/
  * 系統記已售·未對號但找不到配對張(張數店規格 6.4;請送撤銷售出申請)。
  */
@@ -61,6 +61,7 @@ export const STORE_SCAN_BLOCK_REASONS = [
   "sold",
   "skipped",
   "scrapped",
+  "wholesaled",
   "locked",
   "in_transit",
   "in_stock",
@@ -76,7 +77,7 @@ export interface StoreScanTicketFacts {
   cashPointId: string | null;
   /** 張目前在刷到的這家店。 */
   inThisStore: boolean;
-  /** 被調貨單或撤銷售出申請鎖定。 */
+  /** 被調貨單、批售單或撤銷售出申請鎖定。 */
   locked: boolean;
   /** 這本在這家店還沒拆(未售的張全在庫存)。 */
   bookUnopened: boolean;
@@ -201,6 +202,9 @@ function blockReasonOf(
     case TICKET_STATUS.scrapped: {
       return "scrapped";
     }
+    case TICKET_STATUS.wholesaled: {
+      return "wholesaled";
+    }
     default: {
       break;
     }
@@ -246,6 +250,9 @@ export function storeScanDecisionOf(
     ticket.status === TICKET_STATUS.scrapped
   ) {
     return decide("blocked", ticket.status);
+  }
+  if (ticket.status === TICKET_STATUS.wholesaled) {
+    return decide("blocked", "wholesaled");
   }
   const places = storeScanMatchPlacesOf(ticket, context);
   if (places === null) {

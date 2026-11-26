@@ -18,6 +18,7 @@ import { GAME_STATUS } from "../lottery-master-data/games";
  *   「本店的班」是連動條件,不可攜,由送出前檢查負責)
  * - `lottery_cash_point`:沒有固定條件(撤銷售出申請明細列的收銀點;張數店規格 5.7。「本店的收銀點」由替換新增頁的
  *   選項與送出前檢查負責)
+ * - `lottery_wholesale_customer`:只收「往來中」(批售單的批售客戶;規格 21.2)
  */
 export const LOTTERY_PORTABLE_LOOKUP_PROVIDERS = {
   lottery_game: { filters: { status: [GAME_STATUS.onSale] } },
@@ -30,4 +31,5 @@ export const LOTTERY_PORTABLE_LOOKUP_PROVIDERS = {
   lottery_redemption: { filters: { status: ["in_store"] } },
   lottery_shift: { filters: {} },
   lottery_cash_point: { filters: {} },
+  lottery_wholesale_customer: { filters: { status: ["active"] } },
 } as const satisfies Readonly<Record<string, PortableLookupProvider>>;

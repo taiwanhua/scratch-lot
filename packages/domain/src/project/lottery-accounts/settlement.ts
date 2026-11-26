@@ -4,7 +4,7 @@ import type { Direction } from "./bank";
  * 收付機制的計算(專案規格第 9 章;正本 `docs/modules/project/accounts.md`「收付機制」)。
  * api 算預設值與待結清、admin 的 `SettlementPanel` 顯示,都用這裡同一份。
  *
- * - 一張單據有一或多「邊」(進貨單:總部;調貨單:收貨店、出貨店)。每一邊的按鈕只有兩顆方向:
+ * - 一張單據有一或多「邊」(進貨單:總部;調貨單:收貨店、出貨店;批售單:出貨店)。每一邊的按鈕只有兩顆方向:
  *   `out`(支出:付款 / 退款)與 `in`(收入:收到退款 / 收款)
  * - 已付淨額 = 支出 − 收入;已收淨額 = 收入 − 支出
  * - 先填的數字 = 這一邊按下去剛好結清的金額;≤ 0 時那顆按鈕停用
@@ -98,6 +98,21 @@ export function payeeDefaultAmount(
     return 0;
   }
   return atLeastZero(paidNetOf(payerTotals) - received);
+}
+
+/**
+ * 只有收款方一邊的單據(批售單出貨店,付款的買方不在系統上;規格 21.6):
+ * [收款](`in`)= 單據金額 − 已收淨額;[退款](`out`)= 已收淨額 − 單據金額;最少 0。
+ */
+export function solePayeeDefaultAmount(
+  button: SettlementButton,
+  amount: number,
+  totals: SettlementSideTotals,
+): number {
+  const received = receivedNetOf(totals);
+  return button === "in"
+    ? atLeastZero(amount - received)
+    : atLeastZero(received - amount);
 }
 
 /** 待結清的種類:待付 / 待退 / 待收。 */

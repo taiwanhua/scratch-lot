@@ -12,6 +12,10 @@ export const PROJECT_TENANT_BOUNDARY_CALLERS: readonly string[] = [
   "project/lottery/dealers/dealer-links.service.ts",
   "project/lottery/dealers/dealer-view.service.ts",
   "project/lottery/dealers/dealers.service.ts",
+  // 批售客戶的證號租戶內唯一
+  "project/lottery/dealers/wholesale-customers.service.ts",
+  // 已批售的本的批售客戶店名(看得到批售單就看得到)
+  "project/lottery/inventory/inventory-names.ts",
   "project/lottery/games/games.service.ts",
   // 遊戲是否有本引用(整個租戶有沒有)、本編號租戶內唯一
   "project/lottery/tickets/book-game-usage.ts",
@@ -33,6 +37,15 @@ export const PROJECT_TENANT_BOUNDARY_CONTEXT_CALLERS: Readonly<
   "project/lottery/dealers/dealer-links.service.ts": ["反查", "例外寫入"],
   // 對應分店、所屬組織的名稱(可能不在讀者的可見範圍:分店、共用進來的)
   "project/lottery/dealers/dealer-view.service.ts": ["反查"],
+  // 批售單:本、張、事件(單據可能是總部建的)、單據與審核任務;列表 / 檢視頁的本與遊戲
+  "project/lottery/wholesale/wholesale-rules.service.ts": ["反查"],
+  "project/lottery/wholesale/wholesale-query.service.ts": ["反查"],
+  // 看得到批售單就看得到它的客戶店名(客戶不一定共用給讀者)
+  "project/lottery/wholesale/wholesale-customer-names.ts": ["反查"],
+  // 批售客戶的最近一次批售日、有沒有被引用:問的是整個租戶
+  "project/lottery/wholesale/wholesale-registrations.ts": ["系統重算"],
+  // 批售客戶的同名提醒(整個租戶的同名客戶,只回店名與電話)
+  "project/lottery/dealers/wholesale-customers.service.ts": ["反查"],
   // 證照到期 / 牌租提醒逐租戶跑
   "project/lottery/dealers/dealer-reminders.service.ts": ["排程"],
   // 批購日重算(進貨單 / 經銷商在交易內呼叫,沒有操作者;不是排程)

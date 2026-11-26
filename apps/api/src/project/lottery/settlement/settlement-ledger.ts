@@ -3,6 +3,7 @@ import { Types } from "mongoose";
 
 import {
   type BankTransactionType,
+  type CashMovementType,
   type OutstandingKind,
   type SettlementButton,
   type SettlementSideTotals,
@@ -31,9 +32,11 @@ import {
 import { SettlementMarks } from "./settlement-marks";
 import {
   type SettlementDocumentRegistration,
+  type SettlementKind,
   type SettlementPayable,
   type SettlementSideRegistration,
   type SettlementSubmission,
+  isParticipating,
   settlementDocumentOf,
   settlementDocuments,
 } from "./settlement-registry";
@@ -103,6 +106,13 @@ interface ItemTotals {
   latestAt: Date;
 }
 
+/** 查流程實例要的單據欄位。 */
+interface InstanceRow {
+  _id: Types.ObjectId;
+  tenantId: Types.ObjectId | null;
+  currentInstanceId: Types.ObjectId | null;
+}
+
 /** 讀出來的一筆收付(銀行交易或現金流水)。 */
 interface LedgerRow {
   refId: Types.ObjectId;
@@ -112,8 +122,23 @@ interface LedgerRow {
   occurredAt: Date;
 }
 
-/** 一批的應付(順序同 `items`):登記有 `payables` 就一批算,沒有就逐張(不讀資料庫的登記)。 */
+/** 一批的應付(順序同 `items`):不在參與狀態的(`participatingStatuses`)= null,不問登記。 */
 async function payablesOf(
+  registration: SettlementDocumentRegistration,
+  items: readonly EvaluationItem[],
+): Promise<readonly (SettlementPayable | null)[]> {
+  const taking = items.filter((item) =>
+    isParticipating(registration, item.submission),
+  );
+  const payables = await registeredPayablesOf(registration, taking);
+  const byItem = new Map(
+    taking.map((item, index) => [item, payables[index] ?? null] as const),
+  );
+  return items.map((item) => byItem.get(item) ?? null);
+}
+
+/** 登記有 `payables` 就一批算,沒有就逐張(不讀資料庫的登記);順序同 `items`。 */
+async function registeredPayablesOf(
   registration: SettlementDocumentRegistration,
   items: readonly EvaluationItem[],
 ): Promise<readonly (SettlementPayable | null)[]> {
@@ -180,15 +205,44 @@ function parseId(value: string): Types.ObjectId | null {
   return Types.ObjectId.isValid(value) ? new Types.ObjectId(value) : null;
 }
 
-/** 收付寫交易 / 流水的類型(依單據種類與方向)。 */
+/** 單據種類 → 銀行交易類型(`out` 支出 / `in` 收入)。 */
+const BANK_TYPES: Readonly<
+  Record<
+    SettlementKind,
+    Readonly<Record<SettlementButton, BankTransactionType>>
+  >
+> = {
+  purchase: { out: "purchase_expense", in: "purchase_income" },
+  transfer: { out: "transfer_expense", in: "transfer_income" },
+  wholesale: { out: "wholesale_expense", in: "wholesale_income" },
+};
+
+/** 單據種類 → 現金流水類型;null = 這種單據不收付現金(進貨單)。 */
+const CASH_TYPES: Readonly<
+  Record<
+    SettlementKind,
+    Readonly<Record<SettlementButton, CashMovementType>> | null
+  >
+> = {
+  purchase: null,
+  transfer: { out: "transfer_out", in: "transfer_in" },
+  wholesale: { out: "wholesale_out", in: "wholesale_in" },
+};
+
+/** 收付寫銀行交易的類型(依單據種類與方向)。 */
 export function bankTypeOf(
-  kind: SettlementDocumentRegistration["kind"],
+  kind: SettlementKind,
   button: SettlementButton,
 ): BankTransactionType {
-  if (kind === "purchase") {
-    return button === "out" ? "purchase_expense" : "purchase_income";
-  }
-  return button === "out" ? "transfer_expense" : "transfer_income";
+  return BANK_TYPES[kind][button];
+}
+
+/** 收付寫現金流水的類型;null = 這種單據不收付現金。 */
+export function cashTypeOf(
+  kind: SettlementKind,
+  button: SettlementButton,
+): CashMovementType | null {
+  return CASH_TYPES[kind]?.[button] ?? null;
 }
 
 /**
@@ -335,6 +389,7 @@ export class SettlementLedger {
    * - 已完成的:那個時點以前就已結清(結清標記的 `closedAsOf` 早於它)的不用算
    * - 收付:只算那個時點以前發生的銀行交易與現金流水(`occurredAt`;沖正照它自己的時間)
    * - 應付照那個時點的內容:取 `ctx.at` 早於那個時點的最後一筆修訂(完整值快照)來算;沒有更早的修訂 = 當時還沒送出,不算
+   * - 有 `participatingStatuses` 的單據(批售單)照那個時點的狀態判斷參不參與:之後才完成的,當時是審核中
    * - 調貨單的已點收金額只算那個時點以前的點收(`payables` 的 `asOf`)
    */
   async outstandingAt(
@@ -419,11 +474,14 @@ export class SettlementLedger {
       operator,
       filter,
       asOfs.length,
-      (row) =>
+      (row, finishedAt) =>
         asOfs.flatMap((asOf, key) => {
-          const then = countsAt(row, asOf) ? submissionAt(row, asOf) : null;
+          const then = countsAt(row, asOf)
+            ? submissionAt(row, asOf, finishedAt)
+            : null;
           return then === null ? [] : [{ key, submission: then, before: asOf }];
         }),
+      true,
     );
     return results.map((result) => result.rows);
   }
@@ -437,7 +495,7 @@ export class SettlementLedger {
     earliest: Date,
     latest: Date,
   ): Promise<Map<string, Date>> {
-    const rejected = await this.submissions.findMany(
+    const rejected = (await this.submissions.findMany(
       operator,
       {
         moduleKey: { $in: settlementModuleKeys() },
@@ -445,8 +503,17 @@ export class SettlementLedger {
         submittedAt: { $lt: latest },
       },
       { select: "_id tenantId currentInstanceId" },
-    );
-    const withInstance = rejected.filter(
+    )) as unknown as InstanceRow[];
+    return this.finishedAtOf(operator, rejected, { $gte: earliest });
+  }
+
+  /** 單據 → 目前流程實例結束的時間(還沒結束、沒有流程的不在裡面);實例以單據的租戶為邊界讀,一次讀完。 */
+  private async finishedAtOf(
+    operator: OperatorContext,
+    submissions: readonly InstanceRow[],
+    finishedAt: Record<string, unknown>,
+  ): Promise<Map<string, Date>> {
+    const withInstance = submissions.filter(
       (row) => row.currentInstanceId !== null,
     );
     const tenantId = withInstance[0]?.tenantId ?? null;
@@ -458,7 +525,7 @@ export class SettlementLedger {
       reader,
       {
         _id: { $in: withInstance.map((row) => row.currentInstanceId) },
-        finishedAt: { $gte: earliest },
+        finishedAt,
       },
       { select: "_id finishedAt" },
     );
@@ -467,9 +534,9 @@ export class SettlementLedger {
     );
     const result = new Map<string, Date>();
     for (const row of withInstance) {
-      const finishedAt = finishedOf.get(String(row.currentInstanceId));
-      if (finishedAt instanceof Date) {
-        result.set(String(row._id), finishedAt);
+      const at = finishedOf.get(String(row.currentInstanceId));
+      if (at instanceof Date) {
+        result.set(String(row._id), at);
       }
     }
     return result;
@@ -478,13 +545,18 @@ export class SettlementLedger {
   /**
    * 各登記的單據裡符合條件的待結清,分成 `groups` 組(`expand` 把一張單展開成要算的那幾組:組別、
    * 當時的樣子、收付只算哪個時點以前);每組的 `evaluated` = 算過的每一張(有沒有待結清、最後一筆收付的
-   * 發生時間;寫結清標記用)。
+   * 發生時間;寫結清標記用)。`isPast` = 算過去的時點:狀態影響參不參與的登記(`participatingStatuses`)另讀
+   * 單據完成的時間(流程實例結束的時間)給 `expand` 還原當時的狀態。
    */
   private async outstandingWhere(
     operator: OperatorContext,
     filter: Record<string, unknown>,
     groups: number,
-    expand: (row: SettlementSubmission) => EvaluationItem[],
+    expand: (
+      row: SettlementSubmission,
+      finishedAt: Date | null,
+    ) => EvaluationItem[],
+    isPast = false,
   ): Promise<{ rows: OutstandingRow[]; evaluated: EvaluatedDocument[] }[]> {
     const results = Array.from({ length: groups }, () => ({
       rows: [] as OutstandingRow[],
@@ -496,7 +568,17 @@ export class SettlementLedger {
         { moduleKey: registration.moduleKey, ...filter },
         { sort: { submittedAt: 1, _id: 1 } },
       )) as unknown as SettlementSubmission[];
-      const items = visible.flatMap((row) => expand(row));
+      const finished =
+        isPast && registration.participatingStatuses !== undefined
+          ? await this.finishedAtOf(
+              operator,
+              visible as unknown as InstanceRow[],
+              { $ne: null },
+            )
+          : new Map<string, Date>();
+      const items = visible.flatMap((row) =>
+        expand(row, finished.get(String(row._id)) ?? null),
+      );
       const evaluations = await this.evaluate(operator, registration, items);
       for (const [index, item] of items.entries()) {
         const result = results[item.key];
@@ -520,7 +602,7 @@ export class SettlementLedger {
   }
 
   /**
-   * 銀行 [登記交易] 選「進貨收入 / 調貨收入」:單據要有某一邊的 [收到退款] / [收款] 預設 > 0
+   * 銀行 [登記交易] 選「進貨收入 / 調貨收入 / 批售收入」:單據要有某一邊的 [收到退款] / [收款] 預設 > 0
    * (只列有待退或待收的單據);沒有 → `VALIDATION_FAILED`(`refId`,`SETTLEMENT_NOTHING_DUE`)。
    */
   async inboundEntryOf(
@@ -702,11 +784,12 @@ export class SettlementLedger {
 
 /**
  * 單據在某個時點的樣子:值取 `ctx.at` 早於那個時點的最後一筆修訂(修訂是完整值快照);狀態照 `THEN_STATUS`
- * 還原。沒有更早的修訂(當時還沒送出)→ null(不算)。
+ * 還原;`finishedAt`(流程結束的時間)不早於那個時點的,當時還在審核中。沒有更早的修訂(當時還沒送出)→ null(不算)。
  */
 function submissionAt(
   submission: SettlementSubmission,
   asOf: Date,
+  finishedAt: Date | null = null,
 ): SettlementSubmission | null {
   const revisions =
     (
@@ -727,7 +810,10 @@ function submissionAt(
     orgId: submission.orgId,
     tenantId: submission.tenantId,
     moduleKey: submission.moduleKey,
-    status: THEN_STATUS[submission.status] ?? submission.status,
+    status:
+      finishedAt !== null && finishedAt >= asOf
+        ? "reviewing"
+        : (THEN_STATUS[submission.status] ?? submission.status),
     revision: submission.revision,
     values: last.values,
     submittedAt: submission.submittedAt,

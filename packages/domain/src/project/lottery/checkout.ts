@@ -73,9 +73,9 @@ export const CHECKOUT_DENOMINATIONS: readonly number[] = [
 ];
 
 /**
- * 應有現金的各項(規格 6.9 公式的順序):期初 + 銷售 − 兌獎 − 投庫 + 出庫 − 調貨支出 + 調貨收入 − 退貨退款 ± 現金更正。
+ * 應有現金的各項(規格 6.9 公式的順序):期初 + 銷售 − 兌獎 − 投庫 + 出庫 − 調貨支出 + 調貨收入 − 批售支出 + 批售收入 − 退貨退款 ± 現金更正。
  * 金額一律帶正負號(流入抽屜 +、流出 −),只算已完成的單據;事後更正不算。
- * 日結的小金庫應有(規格 6.10 第 ③ 步)用同一組:期初(上次日結清點)+ 投庫 − 出庫 ± 調貨 ± 現金更正 − 存銀行 + 銀行提領
+ * 日結的小金庫應有(規格 6.10 第 ③ 步)用同一組:期初(上次日結清點)+ 投庫 − 出庫 ± 調貨 ± 批售 ± 現金更正 − 存銀行 + 銀行提領
  * (金額以流入小金庫 +、流出 −;`daily-close.ts` 的 `VAULT_CASH_ITEM_KINDS`)。
  */
 export const EXPECTED_CASH_ITEM_KINDS = [
@@ -86,10 +86,13 @@ export const EXPECTED_CASH_ITEM_KINDS = [
   "withdrawals",
   "transfer_out",
   "transfer_in",
+  "wholesale_out",
+  "wholesale_in",
   "refunds",
   "corrections",
-  // 小金庫(日結第 ③ 步):調貨(現金,支出 / 收入合計)、存銀行、銀行提領
+  // 小金庫(日結第 ③ 步):調貨、批售(現金,支出 / 收入合計)、存銀行、銀行提領
   "transfers",
+  "wholesales",
   "bank_deposits",
   "bank_withdrawals",
 ] as const;

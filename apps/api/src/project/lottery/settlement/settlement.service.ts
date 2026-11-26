@@ -5,6 +5,7 @@ import {
   ACCOUNTS_KEY,
   ACCOUNTS_PERMISSIONS,
   BANK_TRANSACTION_TYPE,
+  type CashMovementType,
   DIRECTIONS,
   type Direction,
   SETTLEMENT_METHODS,
@@ -68,9 +69,13 @@ import {
   SettlementLedger,
   type SettlementSnapshot,
   bankTypeOf,
+  cashTypeOf,
 } from "./settlement-ledger";
 import {
+  type SettlementDocumentRegistration,
+  type SettlementPayable,
   type SettlementSubmission,
+  isParticipating,
   settlementDocumentOf,
   sideOf,
 } from "./settlement-registry";
@@ -82,13 +87,26 @@ import {
 
 const DAY_MS = 86_400_000;
 
+/** 銀行交易的摘要:`<單據> <單號>`;批售單另寫客戶店名,退款再註明(規格 21.4;Figma AC-02-2)。 */
+function summaryOf(
+  registration: SettlementDocumentRegistration,
+  payable: SettlementPayable,
+  button: Direction,
+): string {
+  const document = `${registration.label} ${payable.docNo}`;
+  if (registration.kind !== "wholesale") {
+    return document;
+  }
+  return `${document} · ${payable.counterparty}${button === "out" ? " 退款" : ""}`;
+}
+
 /**
  * 收付機制(專案規格第 9 章;正本 `docs/modules/project/accounts.md`「收付機制」)。
  *
  * - `recordSettlement`:付款 / 收款視窗的 [確認],寫一筆銀行交易或現金流水(`refType / refId /
  *   refRevision` 指回單據、`settlementSide` 記哪一邊);帳一律以實際填的金額為準
  * - `reverseSettlement`:人工登記的帳人工沖正(方向相反的一筆,原交易不改)
- * - `outstandingSettlements`:待結清款項(進貨與調貨同一頁,依可見範圍;側欄數字同一份)
+ * - `outstandingSettlements`:待結清款項(進貨、調貨、批售同一頁,依可見範圍;側欄數字同一份)
  * - 作廢 / 駁回前的檢查見 `settlement-guard.ts`
  */
 @Injectable()
@@ -141,7 +159,7 @@ export class SettlementService {
   }
 
   /**
-   * 銀行 [登記交易] 選「進貨收入 / 調貨收入」的單據候選:只列有待退或待收的(`record-bank-transaction`)。
+   * 銀行 [登記交易] 選「進貨收入 / 調貨收入 / 批售收入」的單據候選:只列有待退或待收的(`record-bank-transaction`)。
    */
   async candidates(
     operator: OperatorContext,
@@ -329,7 +347,7 @@ export class SettlementService {
           occurredAt: new Date(),
           branchOrgId,
           ...ref,
-          summary: `${snapshot.registration.label} ${snapshot.payable.docNo}`,
+          summary: summaryOf(snapshot.registration, snapshot.payable, chosen),
           handler,
           note,
         });
@@ -343,7 +361,8 @@ export class SettlementService {
       });
       recordId = row._id;
     } else {
-      if (snapshot.registration.kind !== "transfer") {
+      const cashType = cashTypeOf(snapshot.registration.kind, chosen);
+      if (cashType === null) {
         throw validationError("cash is not allowed", ["method"]);
       }
       const source = await this.cashSourceOf(
@@ -353,6 +372,7 @@ export class SettlementService {
       );
       const row = await this.writeCash(operator, {
         source,
+        type: cashType,
         branchOrgId,
         tenantId: snapshot.submission.tenantId,
         direction: chosen,
@@ -379,6 +399,8 @@ export class SettlementService {
    * 沿用呼叫端的交易(不在交易內 → 拋錯)。**金額 0 照記**(進貨單應付 0 也要留一筆,規格 8.2 / 9 驗算 ⑤;
    * 人工登記仍要正數);負數或不是整數 → 不記(回 null)。
    * 帳戶要使用中、使用組織包含這一邊的分店;帳戶以單據的租戶為邊界讀(事後動作是系統身分,看不到共用進來的帳戶)。
+   * 登記有 `participatingStatuses` 的單據(批售單)`submission.status` 要在參與狀態裡(核准完成時給 `completed`),
+   * 不在 → `SETTLEMENT_UNKNOWN`。
    * 寫入者 = `operator`(事後動作給的系統身分,或按按鈕的人)。
    */
   async recordAutomatic(
@@ -411,7 +433,8 @@ export class SettlementService {
     const side =
       registration === undefined ? undefined : sideOf(registration, input.side);
     const payable =
-      registration === undefined
+      registration === undefined ||
+      !isParticipating(registration, input.submission)
         ? null
         : await registration.payable(input.submission);
     if (registration === undefined || side === undefined || payable === null) {
@@ -462,7 +485,7 @@ export class SettlementService {
         summary:
           input.redemptionIncome === true
             ? `兌獎入帳 ${payable.docNo}`
-            : `${registration.label} ${payable.docNo}`,
+            : summaryOf(registration, payable, input.button),
         handler: input.handler ?? null,
         note: input.note ?? null,
       },
@@ -612,13 +635,14 @@ export class SettlementService {
   // ---- 內部 ----
 
   /**
-   * 收付的現金流水(只有調貨):一個交易寫流水與稽核。從小金庫付現不能超過小金庫應有
+   * 收付的現金流水(調貨、批售):一個交易寫流水與稽核。從小金庫付現不能超過小金庫應有
    * (與出庫同一個判斷、同一個守門文件;規格 9),超過 `AMOUNT_EXCEEDS_VAULT`、一筆都不寫。
    */
   private async writeCash(
     operator: OperatorContext,
     input: {
       source: Awaited<ReturnType<SettlementService["cashSourceOf"]>>;
+      type: CashMovementType;
       branchOrgId: Types.ObjectId;
       tenantId: Types.ObjectId | null;
       direction: Direction;
@@ -652,7 +676,7 @@ export class SettlementService {
       const created = await this.cashLedger.recordCashMovement(session, {
         operator,
         orgId: branchOrgId,
-        type: direction === "out" ? "transfer_out" : "transfer_in",
+        type: input.type,
         from: direction === "out" ? source.place : "external",
         to: direction === "out" ? "external" : source.place,
         amount,

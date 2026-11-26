@@ -10,12 +10,18 @@ import { LotteryDealerContact } from "./lottery-dealer-contact.schema";
 import { LotteryDealerSignin } from "./lottery-dealer-signin.schema";
 import { LotteryDealer } from "./lottery-dealer.schema";
 import { LotteryRelationship } from "./lottery-relationship.schema";
+import { LotteryWholesaleCustomerLock } from "./lottery-wholesale-customer-lock.schema";
+import { LotteryWholesaleCustomer } from "./lottery-wholesale-customer.schema";
 
 export type LotteryDealerDocument = HydratedDocument<LotteryDealer>;
 export type LotteryDealerContactDocument =
   HydratedDocument<LotteryDealerContact>;
 export type LotteryDealerSigninDocument = HydratedDocument<LotteryDealerSignin>;
 export type LotteryRelationshipDocument = HydratedDocument<LotteryRelationship>;
+export type LotteryWholesaleCustomerLockDocument =
+  HydratedDocument<LotteryWholesaleCustomerLock>;
+export type LotteryWholesaleCustomerDocument =
+  HydratedDocument<LotteryWholesaleCustomer>;
 
 /** lottery_dealers(經銷商)。 */
 @Injectable()
@@ -68,6 +74,40 @@ export class LotteryRelationshipsRepository extends BaseRepository<
   constructor(
     @InjectModel(LotteryRelationship.name)
     model: RepositoryModel<LotteryRelationship, LotteryRelationshipDocument>,
+  ) {
+    super(model);
+  }
+}
+
+/** lottery_wholesale_customers(批售客戶)。 */
+@Injectable()
+export class LotteryWholesaleCustomersRepository extends BaseRepository<
+  LotteryWholesaleCustomer,
+  LotteryWholesaleCustomerDocument
+> {
+  constructor(
+    @InjectModel(LotteryWholesaleCustomer.name)
+    model: RepositoryModel<
+      LotteryWholesaleCustomer,
+      LotteryWholesaleCustomerDocument
+    >,
+  ) {
+    super(model);
+  }
+}
+
+/** lottery_wholesale_customer_locks(批售客戶的守門文件)。 */
+@Injectable()
+export class LotteryWholesaleCustomerLocksRepository extends BaseRepository<
+  LotteryWholesaleCustomerLock,
+  LotteryWholesaleCustomerLockDocument
+> {
+  constructor(
+    @InjectModel(LotteryWholesaleCustomerLock.name)
+    model: RepositoryModel<
+      LotteryWholesaleCustomerLock,
+      LotteryWholesaleCustomerLockDocument
+    >,
   ) {
     super(model);
   }

@@ -11,6 +11,9 @@ export {
   INVENTORY_TABS,
 } from "@repo/domain/project/lottery";
 
+/** 批售單檢視頁的模組 key(規格 21.3 的表單模組 `purchasing.wholesale`;角色沒綁 = 不做連結)。 */
+export const WHOLESALE_VIEW_PAGE_KEY = "purchasing.wholesale.view-page";
+
 /** 庫存列表的最小寬度(STYLE-11:八欄不折行)。 */
 export const BOOKS_TABLE_MIN_WIDTH = 960;
 

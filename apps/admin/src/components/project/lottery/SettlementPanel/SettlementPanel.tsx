@@ -34,6 +34,13 @@ export interface SettlementPanelProps {
   refId: string;
 }
 
+/** 金額列的一項。 */
+interface AmountItem {
+  label: string;
+  value: string;
+  tone?: "warning";
+}
+
 /** 歷程的一列:登記過的一筆,或「尚未登記」的那一邊。 */
 type HistoryRow =
   | { kind: "record"; record: SettlementRecord }
@@ -43,12 +50,30 @@ type HistoryRow =
       button: "out" | "in";
     };
 
-/** 金額列(調貨單:調貨金額、收貨店已付、出貨店已收、待收;進貨單:應付、已付、差額)。 */
+/** 只有收款方一邊的金額列(批售單):批售金額、已收、待收(多收時待退;規格 21.6,Figma WS-03a / WS-03b-2)。 */
+const wholesaleItems = (
+  payable: number,
+  received: number,
+  t: (key: string) => string,
+): AmountItem[] => {
+  const diff = payable - received;
+  return [
+    { label: t("wholesaleAmount"), value: moneyText(payable) },
+    { label: t("receivedAmount"), value: moneyText(received) },
+    {
+      label: diff < 0 ? t("toRefund") : t("toReceive"),
+      value: moneyText(Math.abs(diff)),
+      ...(diff === 0 ? {} : { tone: "warning" as const }),
+    },
+  ];
+};
+
+/** 金額列(調貨單:調貨金額、收貨店已付、出貨店已收、待收;進貨單:應付、已付、差額;批售單見 `wholesaleItems`)。 */
 const AmountRow = ({ settlement }: { settlement: Settlement }) => {
   const t = useTranslations("admin.lotteryAccounts.settlement");
   const payer = settlement.sides.find((side) => side.role === "payer");
   const payee = settlement.sides.find((side) => side.role === "payee");
-  const items: { label: string; value: string; tone?: "warning" }[] =
+  const payerItems: AmountItem[] =
     payee === undefined
       ? [
           { label: t("payable"), value: moneyText(settlement.payable) },
@@ -67,6 +92,10 @@ const AmountRow = ({ settlement }: { settlement: Settlement }) => {
           },
           diffItem(settlement.payable - payee.net, t),
         ];
+  const items =
+    settlement.kind === "wholesale"
+      ? wholesaleItems(settlement.payable, payee?.net ?? 0, t)
+      : payerItems;
   return (
     <Stack direction="row" sx={{ flexWrap: "wrap", gap: 3 }}>
       {items.map((item) => (
@@ -86,10 +115,7 @@ const AmountRow = ({ settlement }: { settlement: Settlement }) => {
   );
 };
 
-const diffItem = (
-  diff: number,
-  t: (key: string) => string,
-): { label: string; value: string; tone?: "warning" } =>
+const diffItem = (diff: number, t: (key: string) => string): AmountItem =>
   diff === 0
     ? { label: t("diff"), value: t("settled") }
     : { label: t("diff"), value: moneyText(diff), tone: "warning" };
@@ -105,7 +131,7 @@ const rowKeyOf = (row: HistoryRow): string =>
   row.kind === "record" ? row.record.id : `${row.side.side}-${row.button}`;
 
 /**
- * 收付面板(規格 9;Figma PU-07 叫貨與進貨 127:2714 / 127:26961 / 127:27369):進貨、調貨的檢視頁共用,
+ * 收付面板(規格 9;Figma PU-07 叫貨與進貨 127:2714 / 127:26961 / 127:27369):進貨、調貨、批售的檢視頁共用,
  * 待結清款項頁的按鈕開同一個付款視窗。
  *
  * - 上方:每一邊能按的按鈕(先填 > 0 且有那一邊的權限)、金額列;收貨店已付 > 出貨店已收時提示「N 待出貨店入帳」
