@@ -2386,6 +2386,7 @@ type LotteryInvestigationRow {
   at: DateTime
   bookId: ID!
   bookNo: String!
+  bookSource: String
   cost: Int
   days: Int
   gameCode: String!

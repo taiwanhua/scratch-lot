@@ -31,7 +31,10 @@ import {
 import { tenantBoundaryContext } from "../../../database/tenant-boundary-context";
 import { tenantTimezoneOf } from "../../../database/tenant-timezone";
 import { LotteryGamesRepository } from "../../database/lottery-games/lottery-games.repository";
-import { BOOK_SOURCES } from "../../database/lottery-inventory/lottery-book.schema";
+import {
+  BOOK_SOURCES,
+  type BookSource,
+} from "../../database/lottery-inventory/lottery-book.schema";
 import {
   type LotteryBookDocument,
   LotteryBooksRepository,
@@ -149,6 +152,16 @@ interface Names {
  * - 讀得到本,就以租戶邊界上下文讀這本全部的張與事件(格子、時間軸要看整本;反查)
  */
 /** 來源篩選(期初建檔規格 5.3);不給 = 全部。舊資料沒有來源欄位 = 進貨。 */
+/** 本的來源;舊資料沒有 source 欄位 = 批購(同 `sourceFilterOf` 的 `$ne: "opening"`)。沒有本 → null。 */
+function bookSourceOf(
+  book: { source?: string | null } | null | undefined,
+): BookSource | null {
+  if (book == null) {
+    return null;
+  }
+  return book.source === "opening" ? "opening" : "purchase";
+}
+
 function sourceFilterOf(
   source: string | null | undefined,
 ): Record<string, unknown> {
@@ -496,6 +509,7 @@ export class InventoryViewService {
           tickets: tickets.map((ticket) =>
             this.ticketModel(operator, ticket, names),
           ),
+          bookSource: bookSourceOf(book),
           unmatched: false,
           sourceStocktakeType: null,
           unmatchedBooks: [],
@@ -1216,6 +1230,7 @@ function unmatchedInvestigationRowsOf(
         tickets: list
           .toSorted((a, b) => byTicketNo(a.ticketNo, b.ticketNo))
           .map((ticket) => context.ticketModel(ticket)),
+        bookSource: null,
         unmatched: true,
         sourceStocktakeType:
           source?.refId == null

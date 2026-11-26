@@ -1,6 +1,7 @@
 import { describe, expect, it } from "@jest/globals";
 import { screen, within } from "@testing-library/react";
 
+import { sampleInvestigations } from "@/test/msw/project/lottery/inventory-stock-fixtures";
 import { restoreViewportAfterEach, setMobileViewport } from "@/test/viewport";
 
 import { renderInventory } from "../inventory-test-support";
@@ -18,6 +19,49 @@ const cardWith = async (title: string) => {
   }
   return card;
 };
+
+/** 第一列(056420)改成期初建檔的本;其餘照舊。 */
+const withOpeningBook = () =>
+  sampleInvestigations().map((row, index) =>
+    index === 0 ? { ...row, bookSource: "opening" } : row,
+  );
+
+/**
+ * 期初建檔的本在「本」那格(手機:卡片上)加「期初建檔」標籤;
+ * 「來源」「天數」仍是讓這幾張變待查 / 遺失的單據與天數。
+ */
+describe("待查·遺失:期初建檔標籤", () => {
+  restoreViewportAfterEach();
+
+  it("表格:期初建檔的本在本號旁有「期初建檔」標籤,來源單號照舊;批購的本沒有", async () => {
+    const { user } = renderInventory({
+      world: { investigations: withOpeningBook() },
+    });
+    await user.click(await screen.findByRole("tab", { name: "待查·遺失" }));
+
+    const bookCell = await screen.findByText("056420");
+    const openingRow = bookCell.closest("tr");
+    if (openingRow === null) {
+      throw new Error("no row: 056420");
+    }
+    expect(within(openingRow).getByText("期初建檔")).toBeInTheDocument();
+    expect(within(openingRow).getByText(/T-0007/)).toBeInTheDocument();
+    expect(screen.getAllByText("期初建檔")).toHaveLength(1);
+  });
+
+  it("手機寬:期初建檔的本卡片上有「期初建檔」標籤;其他卡片沒有", async () => {
+    setMobileViewport();
+    const { user } = renderInventory({
+      world: { investigations: withOpeningBook() },
+    });
+    await user.click(await screen.findByRole("tab", { name: "待查·遺失" }));
+
+    const card = await cardWith("056420 · 5164 發大財 · 10 張");
+    expect(within(card).getByText("期初建檔")).toBeInTheDocument();
+    expect(within(card).getByText(/^新竹店 · .*T-0007/)).toBeInTheDocument();
+    expect(screen.getAllByText("期初建檔")).toHaveLength(1);
+  });
+});
 
 /** 待查·遺失在手機寬一列一張卡片(規格 16.0;Figma CS-21 手機 862:22606)。 */
 describe("待查·遺失:手機卡片", () => {
