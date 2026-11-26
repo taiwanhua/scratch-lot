@@ -17,12 +17,14 @@ import {
   cashDifferenceSection,
   cashMovementSection,
 } from "./operations-rows-cash";
+import { inventoryInfoSection } from "./operations-rows-inventory-info";
 import {
   bankSection,
   gamesSection,
   notesSection,
   outstandingSection,
 } from "./operations-rows-more";
+import { wholesaleSections } from "./operations-rows-wholesale";
 
 export type { OperationsStore, SheetOptions, T } from "./operations-row-base";
 
@@ -266,6 +268,12 @@ const inventorySection = (store: OperationsStore, t: T): SheetSection => {
       tickets: negate(inv.salesTickets),
       cost: negate(inv.salesCost),
     }),
+    // 淨批售(批售 − 取消批售;專案規格 21.7)
+    line({
+      item: t("admin.lotteryReports.operations.items.wholesale"),
+      tickets: negate(inv.wholesaleTickets),
+      cost: negate(inv.wholesaleCost),
+    }),
     line({
       item: t("admin.lotteryReports.operations.items.scrap"),
       tickets: negate(inv.scrapTickets),
@@ -334,80 +342,7 @@ const inventorySection = (store: OperationsStore, t: T): SheetSection => {
   };
 };
 
-/** 4 庫存異動 · 不在加減裡、另外列的:期末在途、期末待查、確認遺失、跳號、調貨損益。 */
-const inventoryInfoSection = (store: OperationsStore, t: T): SheetSection => {
-  const inv = store.inventory;
-  const withCost = hasCost(store);
-  const rows: SheetRow[] = [
-    line({
-      item: t("admin.lotteryReports.operations.items.inTransit"),
-      tickets: inv.inTransitTickets,
-      amount: inv.inTransitAmount,
-      note: t("admin.lotteryReports.operations.items.inTransitNote"),
-    }),
-    line({
-      item: t("admin.lotteryReports.operations.items.investigating"),
-      tickets: inv.investigatingTickets,
-      amount: inv.investigatingCost,
-      // 系統預設帶入的(待查·未對號)不列張號區段(張數店規格 11.4)
-      note:
-        inv.investigatingUnmatchedTickets > 0
-          ? t("admin.lotteryReports.operations.items.investigatingUnmatched", {
-              count: inv.investigatingBooks,
-              unmatched: inv.investigatingUnmatchedTickets,
-            })
-          : t("admin.lotteryReports.operations.items.books", {
-              count: inv.investigatingBooks,
-            }),
-    }),
-    line({
-      item: t("admin.lotteryReports.operations.items.lost"),
-      tickets: inv.lostTickets,
-      amount: inv.lostCost,
-      note: t("admin.lotteryReports.operations.items.lostNote"),
-    }),
-    line({
-      item: t("admin.lotteryReports.operations.items.skipped"),
-      tickets: inv.skippedTickets,
-      note: t("admin.lotteryReports.operations.items.skippedNote"),
-    }),
-  ];
-  if (withCost) {
-    rows.push(
-      line({
-        item: t("admin.lotteryReports.operations.items.transferGain"),
-        amount: inv.transferGain,
-        note: t("admin.lotteryReports.operations.items.transferGainNote"),
-      }),
-    );
-  }
-  return {
-    title: t("admin.lotteryReports.operations.blocks.inventoryInfo"),
-    description: t(
-      "admin.lotteryReports.operations.descriptions.inventoryInfo",
-    ),
-    columns: [
-      textColumn("item", t("admin.lotteryReports.operations.columns.item")),
-      numberColumn(
-        "tickets",
-        t("admin.lotteryReports.operations.columns.tickets"),
-      ),
-      ...(withCost
-        ? [
-            numberColumn(
-              "amount",
-              t("admin.lotteryReports.operations.columns.amount"),
-              14,
-            ),
-          ]
-        : []),
-      textColumn("note", t("admin.lotteryReports.operations.columns.note")),
-    ],
-    rows,
-  };
-};
-
-/** 一家店(或合計)的全部區塊,依區塊順序(1 銷售 → 依遊戲 → 2 → … → 8);沒有成本權限時不放毛利。 */
+/** 一家店(或合計)的全部區塊,依區塊順序(1 銷售 → 依遊戲 → 2 → 2b → 3 → … → 8);沒有成本權限時不放毛利。 */
 export const operationsSectionsOf = (
   store: OperationsStore,
   t: T,
@@ -417,6 +352,7 @@ export const operationsSectionsOf = (
     salesSection(store, t),
     gamesSection(store, t),
     profitSection(store, t),
+    ...wholesaleSections(store, t, options),
     redemptionSection(store, t),
     inventorySection(store, t),
     inventoryInfoSection(store, t),

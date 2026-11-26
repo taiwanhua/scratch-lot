@@ -84,6 +84,8 @@ export const inventoryOf = (
     transferGain: money(n(19_000) - costs.transferOut),
     salesTickets: tickets.sales,
     salesCost: money(costs.sales),
+    wholesaleTickets: 0,
+    wholesaleCost: money(0),
     scrapTickets: tickets.scrap,
     scrapCost: money(costs.scrap),
     scrapUndoTickets: 0,
@@ -111,5 +113,75 @@ export const inventoryOf = (
     lostTickets: 0,
     lostCost: money(0),
     skippedTickets: 1,
+  };
+};
+
+const wholesaleDocuments = (
+  count: number,
+  books: number,
+  tickets: number,
+  amount: number,
+  serialNos: string[],
+) => ({
+  __typename: "LotteryOperationsWholesaleDocuments" as const,
+  count,
+  books,
+  tickets,
+  amount,
+  serialNos,
+});
+
+/**
+ * 2b 批售的示範數字(專案規格 21.9 驗算 #8 的數字):第一家店批售一張(2 本、37,200 / 原成本 36,400),
+ * 另一張收了 20,000 還沒出貨、一張審核中;其他店沒有批售。`withCost` false = 沒有成本權限(原成本 null)。
+ */
+export const wholesaleOf = (
+  index: number,
+  withCost: boolean,
+): OperationsStore["wholesale"] => {
+  const cost = (value: number) => (withCost ? value : null);
+  if (index !== 0) {
+    return {
+      __typename: "LotteryOperationsWholesale",
+      customers: [],
+      documents: [],
+      receivedUnshipped: wholesaleDocuments(0, 0, 0, 0, []),
+      pendingAtEnd: wholesaleDocuments(0, 0, 0, 0, []),
+    };
+  }
+  return {
+    __typename: "LotteryOperationsWholesale",
+    customers: [
+      {
+        __typename: "LotteryOperationsWholesaleCustomer",
+        customerId: "customer-1",
+        customerName: "好運彩券行",
+        documents: 1,
+        books: 2,
+        tickets: 200,
+        amount: 37_200,
+        cost: cost(36_400),
+      },
+    ],
+    documents: [
+      {
+        __typename: "LotteryOperationsWholesaleDocument",
+        submissionId: "wholesale-1",
+        serialNo: "W-0001",
+        voided: false,
+        at: "2026-10-16T02:45:00.000Z",
+        customerId: "customer-1",
+        customerName: "好運彩券行",
+        books: 2,
+        tickets: 200,
+        amount: 37_200,
+        cost: cost(36_400),
+        paymentMode: "collect_first",
+        receivedAtEnd: 37_200,
+        toReceiveAtEnd: 0,
+      },
+    ],
+    receivedUnshipped: wholesaleDocuments(1, 0, 0, 20_000, ["W-0002"]),
+    pendingAtEnd: wholesaleDocuments(1, 1, 100, 18_600, ["W-0003"]),
   };
 };

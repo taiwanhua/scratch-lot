@@ -22,7 +22,11 @@ import { countModeRows } from "./operations-rows-count";
 const MAX_LISTED = 5;
 
 /** 「T-0001、T-0002」;超過 5 張「… 等 N 張」。 */
-const listedText = (items: readonly string[], count: number, t: T): string => {
+export const listedText = (
+  items: readonly string[],
+  count: number,
+  t: T,
+): string => {
   const text = items.join("、");
   return count > MAX_LISTED
     ? t("admin.lotteryReports.operations.items.listedMore", {

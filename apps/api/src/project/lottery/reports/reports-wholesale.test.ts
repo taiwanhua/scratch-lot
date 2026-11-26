@@ -28,6 +28,7 @@ import { LOTTERY_BANK_ACCOUNTS_COLLECTION } from "../../database/lottery-account
 import { LOTTERY_BANK_TRANSACTIONS_COLLECTION } from "../../database/lottery-accounts/lottery-bank-transaction.schema";
 import { LOTTERY_CASH_MOVEMENTS_COLLECTION } from "../../database/lottery-accounts/lottery-cash-movement.schema";
 import { LOTTERY_SETTLEMENT_MARKS_COLLECTION } from "../../database/lottery-accounts/lottery-settlement-mark.schema";
+import { LOTTERY_BOOKS_COLLECTION } from "../../database/lottery-inventory/lottery-book.schema";
 import { LOTTERY_TICKETS_COLLECTION } from "../../database/lottery-inventory/lottery-ticket.schema";
 import { insertGame } from "../purchase/test-support/purchase-fixtures";
 import { LotteryBooksService } from "../tickets/books.service";
@@ -188,6 +189,18 @@ const dayOf = (date: string) => ({
   to: new Date(taipei(date).getTime() + 86_400_000).toISOString(),
 });
 
+/** 一列的批售金額(整本 20,000 × 批購金額率)。 */
+const lineAmount = (rate: number) => (20_000 * rate) / 100;
+
+const movementOf = (store: Store, type: string) =>
+  store.cash.movements.find((row) => row.type === type);
+const bankTypeOf = (store: Store, type: string) =>
+  store.bankAccounts
+    .flatMap((account) => account.types)
+    .find((row) => row.type === type);
+const outstandingOf = (store: Store, kind: string) =>
+  store.outstanding.items.find((item) => item.kind === kind);
+
 /** 一本書在批售單上的一列。 */
 interface Line {
   bookId: Types.ObjectId;
@@ -289,15 +302,13 @@ describe("營運報表:批售(驗算 #8、#17、#18、#24、#25)", () => {
     return book._id;
   }
 
-  const ticketIdsOf = async (bookIds: readonly Types.ObjectId[]) =>
-    (
-      await connection
-        .collection(LOTTERY_TICKETS_COLLECTION)
-        .find({ bookId: { $in: [...bookIds] } }, { projection: { _id: 1 } })
-        .toArray()
-    ).map((ticket) => ticket._id);
-
-  const lineAmount = (rate: number) => (20_000 * rate) / 100;
+  const ticketIdsOf = async (bookIds: readonly Types.ObjectId[]) => {
+    const tickets = await connection
+      .collection(LOTTERY_TICKETS_COLLECTION)
+      .find({ bookId: { $in: [...bookIds] } }, { projection: { _id: 1 } })
+      .toArray();
+    return tickets.map((ticket) => ticket._id);
+  };
 
   /** 批售單的值(形狀同受管表單 `wholesale.r1`)。 */
   const valuesOf = (
@@ -493,15 +504,6 @@ describe("營運報表:批售(驗算 #8、#17、#18、#24、#25)", () => {
       ...ref,
     });
   }
-
-  const movementOf = (store: Store, type: string) =>
-    store.cash.movements.find((row) => row.type === type);
-  const bankTypeOf = (store: Store, type: string) =>
-    store.bankAccounts
-      .flatMap((account) => account.types)
-      .find((row) => row.type === type);
-  const outstandingOf = (store: Store, kind: string) =>
-    store.outstanding.items.find((item) => item.kind === kind);
 
   beforeAll(async () => {
     api = await startAuthTestApp("scratch-lot-test-reports-wholesale");
@@ -724,12 +726,22 @@ describe("營運報表:批售(驗算 #8、#17、#18、#24、#25)", () => {
       .collection(LOTTERY_TICKETS_COLLECTION)
       .find({ bookId: { $in: [bookA, bookB] } })
       .toArray();
-    expect(new Set(tickets.map((ticket) => ticket.status))).toEqual(
+    expect(new Set(tickets.map((ticket) => String(ticket.status)))).toEqual(
       new Set(["unsold"]),
     );
     expect(
       tickets.reduce((sum, ticket) => sum + Number(ticket.unitCost), 0),
     ).toBe(36_400);
+    // 仍是未拆:本的第一次拆本時間仍是空
+    const books = await connection
+      .collection(LOTTERY_BOOKS_COLLECTION)
+      .find({ _id: { $in: [bookA, bookB] } })
+      .toArray();
+    expect(
+      books.map(
+        (book) => (book.firstOpenedAt as Date | null | undefined) ?? null,
+      ),
+    ).toEqual([null, null]);
 
     const december = await storeOf(zhongshan, monthOf("12"));
     expect(december.wholesale.documents).toEqual([

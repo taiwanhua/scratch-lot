@@ -18,14 +18,17 @@ interface CompareMetric {
   cost?: boolean;
 }
 
+const sumOf = <Row>(rows: readonly Row[], pick: (row: Row) => number) =>
+  rows.reduce((sum, row) => sum + pick(row), 0);
+
 const outstandingOf = (store: OperationsStore, kinds: readonly string[]) =>
   store.outstanding.items
     .filter((item) => kinds.includes(item.kind))
     .reduce((sum, item) => sum + item.amount, 0);
 
 /**
- * 分店比較(Excel 另一張工作表;使用者 10/26 定):列 = 重要數字(淨銷售、毛利、兌獎、期末庫存、結帳差額、
- * 待付與待收),欄 = 各分店 + 合計。`total` 是「全部分店合計」那一份(合計欄照它,銀行等去重複的規則一致)。
+ * 分店比較(Excel 另一張工作表;使用者 10/26 定):列 = 重要數字(淨銷售、毛利、批售金額、批售獲利、兌獎、期末庫存、
+ * 結帳差額、待付與待收),欄 = 各分店 + 合計。`total` 是「全部分店合計」那一份(合計欄照它,銀行等去重複的規則一致)。
  */
 export const compareSectionOf = (
   stores: readonly { name: string; store: OperationsStore }[],
@@ -44,6 +47,22 @@ export const compareSectionOf = (
         store.sales.cost == null
           ? null
           : store.sales.net.amount - store.sales.cost,
+      cost: true,
+    },
+    // 批售(專案規格 21.7;獲利要成本權限)
+    {
+      label: t("admin.lotteryReports.operations.compare.wholesaleAmount"),
+      value: (store) => sumOf(store.wholesale.customers, (row) => row.amount),
+    },
+    {
+      label: t("admin.lotteryReports.operations.compare.wholesaleProfit"),
+      value: (store) =>
+        hasCost(store)
+          ? sumOf(
+              store.wholesale.customers,
+              (row) => row.amount - (row.cost ?? 0),
+            )
+          : null,
       cost: true,
     },
     {

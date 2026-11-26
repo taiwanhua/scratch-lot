@@ -14,6 +14,7 @@ import {
   inventoryOf,
   movement,
   outstandingItem,
+  wholesaleOf,
 } from "./operations-report-fixtures";
 
 type OperationsStore =
@@ -116,6 +117,7 @@ export const operationsStore = (
           investigatingUnmatchedTickets: 1,
         }
       : inventoryOf(n, cost),
+    wholesale: wholesaleOf(index, options.withCost !== false),
     cash: {
       __typename: "LotteryOperationsCash",
       shiftCount: 2,
@@ -138,6 +140,13 @@ export const operationsStore = (
         movement("refund", 1, -200, 0),
         movement("transfer_out", 0, 0, 0),
         movement("transfer_in", 0, 0, 0),
+        movement(
+          "wholesale_in",
+          index === 0 ? 1 : 0,
+          0,
+          index === 0 ? 20_000 : 0,
+        ),
+        movement("wholesale_out", 0, 0, 0),
         movement("correction", 1, 100, 0),
       ],
     },
@@ -175,6 +184,8 @@ export const operationsStore = (
         outstandingItem("transferToPay", 0, 0, []),
         outstandingItem("transferPayerRefund", 0, 0, []),
         outstandingItem("transferPayeeRefund", 0, 0, []),
+        outstandingItem("wholesaleToReceive", 0, 0, []),
+        outstandingItem("wholesaleToRefund", 0, 0, []),
       ],
     },
     notes: {
