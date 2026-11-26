@@ -3399,7 +3399,6 @@
           "amount": "Wholesale amount"
         },
         "bookValue": "{gameCode} · {bookNos}",
-        "bookDetail": "{tickets} tickets per book · Wholesale rate {rate}%",
         "total": "Wholesale amount",
         "paymentMode": "Payment method",
         "paymentModes": {

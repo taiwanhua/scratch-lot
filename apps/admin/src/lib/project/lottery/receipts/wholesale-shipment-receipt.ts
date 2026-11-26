@@ -26,10 +26,6 @@ export interface WholesaleShipmentReceiptInput {
   rows: readonly {
     gameCode: string;
     bookNo: string;
-    /** 每本張數 */
-    tickets: number;
-    /** 批購金額率(整數 %) */
-    rate: number;
     /** 這一本的批售金額 */
     amount: number;
   }[];
@@ -44,11 +40,11 @@ export interface WholesaleShipmentReceiptInput {
 
 type Row = WholesaleShipmentReceiptInput["rows"][number];
 
-/** 同遊戲、同每本張數、同批購金額率的本併成一列(依明細順序第一次出現的位置排);`first` 帶遊戲、張數、批購金額率。 */
+/** 同遊戲的本併成一列(依明細順序第一次出現的位置排);`first` 帶遊戲。 */
 const groupsOf = (rows: readonly Row[]): { first: Row; rows: Row[] }[] => {
   const groups = new Map<string, { first: Row; rows: Row[] }>();
   for (const row of rows) {
-    const key = `${row.gameCode}|${String(row.tickets)}|${String(row.rate)}`;
+    const key = row.gameCode;
     const group = groups.get(key);
     if (group === undefined) {
       groups.set(key, { first: row, rows: [row] });
@@ -61,7 +57,7 @@ const groupsOf = (rows: readonly Row[]): { first: Row; rows: Row[] }[] => {
 
 /**
  * 批售出貨單(規格 21.8;Figma RC-11 `930:64797`):單號、出貨分店 → 批售客戶、出貨時間、
- * 本清單(遊戲 · 本號區段 / 本數 / 批售金額,下一行每本張數與批購金額率)、批售金額合計、收款方式與已收、QR;
+ * 本清單(遊戲 · 本號區段 / 本數 / 批售金額;使用者 11/26 定:不另印每本張數與批購金額率)、批售金額合計、收款方式與已收、QR;
  * 簽名欄 經手人、客戶簽收。**不印原成本與獲利**。兩聯(`WHOLESALE_SHIPMENT_COPIES`)的聯別由 `receipt-kinds` 填。
  */
 export const wholesaleShipmentReceiptOf = (
@@ -85,13 +81,6 @@ export const wholesaleShipmentReceiptOf = (
               receiptMoney(group.reduce((sum, row) => sum + row.amount, 0)),
             ] as const,
           ],
-        },
-        {
-          type: "text" as const,
-          text: t("wholesaleShipment.bookDetail", {
-            tickets: first.tickets,
-            rate: first.rate,
-          }),
         },
       ];
     },
@@ -164,8 +153,6 @@ export interface WholesaleShipmentDetail {
   rows: readonly {
     gameCode: string;
     bookNo: string;
-    tickets: number;
-    rate: number;
     amount: number;
   }[];
 }
@@ -187,8 +174,6 @@ export const wholesaleShipmentInputOf = (
   rows: detail.rows.map((row) => ({
     gameCode: row.gameCode,
     bookNo: row.bookNo,
-    tickets: row.tickets,
-    rate: row.rate,
     amount: row.amount,
   })),
   amount: detail.amount,

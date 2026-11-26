@@ -3399,7 +3399,6 @@
           "amount": "批售金額"
         },
         "bookValue": "{gameCode} · {bookNos}",
-        "bookDetail": "每本 {tickets} 張 · 批購金額率 {rate}%",
         "total": "批售金額",
         "paymentMode": "收款方式",
         "paymentModes": {

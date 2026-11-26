@@ -110,7 +110,7 @@ const wholesaleSettlement = (
 });
 
 describe("批售單的 58mm 單據(規格 21.8;Figma RC-11、RC-12)", () => {
-  it("批售出貨單(驗算 #7):兩聯(店鋪留存、客戶留存);出貨分店 → 批售客戶、遊戲 · 本號區段 / 本數 / 批售金額、每本張數與批購金額率、批售金額、收款方式與已收;時間 = 出貨時間;不印原成本與獲利", () => {
+  it("批售出貨單(驗算 #7):兩聯(店鋪留存、客戶留存);出貨分店 → 批售客戶、遊戲 · 本號區段 / 本數 / 批售金額(不另印每本張數與批購金額率)、批售金額、收款方式與已收;時間 = 出貨時間;不印原成本與獲利", () => {
     const input = wholesaleShipmentInputOf(wholesaleDetail, wholesaleDocument);
     const copies = receiptLayoutsOf("wholesale-shipment", input, t, NOW);
     const [layout] = copies;
@@ -131,7 +131,6 @@ describe("批售單的 58mm 單據(規格 21.8;Figma RC-11、RC-12)", () => {
       "----",
       "[表頭] 遊戲 / 本號 | 本數 | 批售金額",
       "5164 · 056611~056612 | 2 | 37,200",
-      "每本 100 張 · 批購金額率 93%",
       "[合計] 批售金額 | 37,200",
       "收款方式 | 收到錢再核准",
       "已收 | 37,200",
@@ -152,7 +151,7 @@ describe("批售單的 58mm 單據(規格 21.8;Figma RC-11、RC-12)", () => {
     });
   });
 
-  it("批售出貨單:不同批購金額率各一列、本號不連號以「、」分開;沒有出貨時間用列印當下;從帳戶入帳;沒有連結不印 QR", () => {
+  it("批售出貨單:同遊戲的本併成一列(不同批購金額率也併)、本號不連號以「、」分開;沒有出貨時間用列印當下;從帳戶入帳;沒有連結不印 QR", () => {
     const input = wholesaleShipmentInputOf(
       {
         ...wholesaleDetail,
@@ -171,11 +170,8 @@ describe("批售單的 58mm 單據(規格 21.8;Figma RC-11、RC-12)", () => {
     const lines = receiptLinesOf(layout, HEADER);
 
     expect(layout.time).toBe(NOW);
-    expect(lines.slice(7, 12)).toEqual([
-      "5164 · 056611~056612、056620 | 3 | 55,800",
-      "每本 100 張 · 批購金額率 93%",
-      "5164 · 056630 | 1 | 19,000",
-      "每本 100 張 · 批購金額率 95%",
+    expect(lines.slice(7, 9)).toEqual([
+      "5164 · 056611~056612、056620、056630 | 4 | 74,800",
       "[合計] 批售金額 | 74,800",
     ]);
     expect(lines).toContain("收款方式 | 從帳戶入帳");

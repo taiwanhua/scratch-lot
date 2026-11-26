@@ -185,7 +185,7 @@ describe("批售單:批售出貨單 / 批售收款收據", () => {
     expect(text).toContain("第 2 聯 · 客戶留存");
     expect(text).toContain("中山店 → 好運彩券行");
     expect(text).toContain("5164 · 056611~056612");
-    expect(text).toContain("每本 100 張 · 批購金額率 93%");
+    expect(text).not.toContain("批購金額率");
     expect(text).toContain("37,200");
     expect(text).toContain("收到錢再核准");
     expect(text).toContain("客戶簽收");
