@@ -317,7 +317,11 @@ export const wholesaleDetail = (
     accountLabel: values.account?.label ?? null,
     amount: values.lines.reduce((sum, one) => sum + one.amount, 0),
     received: listed?.received ?? 0,
-    shippedAt: null,
+    // 已完成(= 已出貨)的單有出貨時間(批售事件的時間)
+    shippedAt:
+      submission.status === FormSubmissionStatus.Completed
+        ? "2026-11-19T02:45:00.000Z"
+        : null,
     rows: values.lines
       .filter((one) => one.book.id !== "book-gone")
       .map((one) => ({

@@ -388,4 +388,8 @@ export class LotteryReceiptLinksModel {
   /** 調貨單檢視頁(調貨出貨單、調貨點收單、調貨付款收據接 `/<提交 id>`) */
   @Field(() => String, { nullable: true })
   transferView!: string | null;
+
+  /** 批售單檢視頁(批售出貨單、批售收款收據接 `/<提交 id>`) */
+  @Field(() => String, { nullable: true })
+  wholesaleView!: string | null;
 }

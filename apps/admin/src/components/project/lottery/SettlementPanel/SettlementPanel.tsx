@@ -137,7 +137,7 @@ const rowKeyOf = (row: HistoryRow): string =>
  * - 上方:每一邊能按的按鈕(先填 > 0 且有那一邊的權限)、金額列;收貨店已付 > 出貨店已收時提示「N 待出貨店入帳」
  * - 下方:收付歷程(哪一店記的、類型、方式、金額、經手 / 收款人、登記人);還沒登記的一邊顯示「尚未登記」與按鈕
  * - 不用「對方」這類看情境才懂的字:一律寫店名的角色(總部、收貨店、出貨店)
- * - 收貨店付現金之後自動印調貨付款收據(規格第 12 章;`useSettlementReceipt`)
+ * - 收貨店付現金之後自動印調貨付款收據、批售單出貨店收現金之後自動印批售收款收據(規格第 12 章、21.8;`useSettlementReceipt`)
  */
 export const SettlementPanel = ({ moduleKey, refId }: SettlementPanelProps) => {
   const t = useTranslations("admin.lotteryAccounts");

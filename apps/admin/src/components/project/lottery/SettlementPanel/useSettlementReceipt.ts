@@ -6,11 +6,14 @@ import { useReceiptLinks } from "@/components/project/lottery/ReceiptPrint/useRe
 import { useReceiptPrinter } from "@/components/project/lottery/ReceiptPrint/useReceiptPrinter";
 import { logPrintFailure } from "@/lib/base/print-log";
 import { transferPaymentInputOf } from "@/lib/project/lottery/receipts/transfer-payment-receipt";
+import { wholesalePaymentInputOf } from "@/lib/project/lottery/receipts/wholesale-payment-receipt";
 
 /**
- * 付款視窗寫入成功之後的列印(規格第 12 章「調貨付款收據:收貨店付現金時自動」):
- * 這筆是調貨單收貨店付的現金才印,其他(銀行、出貨店、收到退款、進貨單)不印。
- * 結算區塊與待結清款項分頁共用;`host` 要放進畫面(付款視窗關掉之後才轉圖)。
+ * 付款 / 收款視窗寫入成功之後的列印(規格第 12 章、21.8):
+ * - 調貨單收貨店付的現金 → 調貨付款收據
+ * - 批售單出貨店收的現金([收款] 選現金)→ 批售收款收據
+ *
+ * 其他(銀行、退款、出貨店收到調貨款、進貨單)不印。結算區塊與待結清款項分頁共用;`host` 要放進畫面(視窗關掉之後才轉圖)。
  */
 export const useSettlementReceipt = () => {
   const { printReceiptAfterCommit, host } = useReceiptPrinter();
@@ -18,22 +21,32 @@ export const useSettlementReceipt = () => {
   const { fetchLinks } = useReceiptLinks();
   const onRecorded = useCallback(
     (recordId: string, item: LotterySettlementFieldsFragment) => {
+      const kind =
+        item.kind === "wholesale" ? "wholesale-payment" : "transfer-payment";
       const print = async () => {
-        const { transferViewUrl } = await fetchLinks();
+        const links = await fetchLinks();
+        if (item.kind === "wholesale") {
+          const input = wholesalePaymentInputOf(
+            item,
+            recordId,
+            links.wholesaleViewUrl(item.refId),
+          );
+          if (input !== null) {
+            await printReceiptAfterCommit("wholesale-payment", input);
+          }
+          return;
+        }
         const input = transferPaymentInputOf(
           item,
           recordId,
-          transferViewUrl(item.refId),
+          links.transferViewUrl(item.refId),
         );
         if (input !== null) {
           await printReceiptAfterCommit("transfer-payment", input);
         }
       };
       print().catch((error: unknown) => {
-        logPrintFailure("print failed", {
-          kind: "transfer-payment",
-          error,
-        });
+        logPrintFailure("print failed", { kind, error });
       });
     },
     [fetchLinks, printReceiptAfterCommit],

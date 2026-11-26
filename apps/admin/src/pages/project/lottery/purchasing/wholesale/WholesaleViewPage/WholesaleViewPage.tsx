@@ -24,9 +24,10 @@ import type { ModulePageProps } from "@/lib/base/module-tree";
 import { SubmissionDeleteButton } from "../../shared/SubmissionDeleteButton";
 import { WHOLESALE_MODULE_KEY, formatMoney } from "../wholesale-keys";
 import { WholesaleBooksSection } from "./WholesaleBooksSection";
+import { WholesalePrintButtons } from "./WholesalePrintButtons";
 import { WholesaleSettlementSection } from "./WholesaleSettlementSection";
 
-/** 標頭第一列(返回、刪除、編輯):窄螢幕時換行。 */
+/** 標頭第一列(返回、列印、刪除、編輯):窄螢幕時換行。 */
 const HEADER_ROW_SX = { alignItems: "center", flexWrap: "wrap", rowGap: 1 };
 
 /**
@@ -35,6 +36,8 @@ const HEADER_ROW_SX = { alignItems: "center", flexWrap: "wrap", rowGap: 1 };
  * - 標頭:單號、狀態(審核中 = 出貨確認)、出貨分店 → 批售客戶、本數、收款方式(從帳戶入帳另寫帳戶)、批售金額、備註
  * - 本清單(審核中 = 批售中、已完成 = 已批售)
  * - 結算區塊(`WholesaleSettlementSection`)+ 審核區塊(核准 / 退回 / 駁回 / 作廢沿用引擎)
+ * - 列印(規格 21.8):標頭 [列印] / [補印](`WholesalePrintButtons`:批售出貨單、批售收款收據);
+ *   核准完成後的自動列印是批售單的審核擴充(`WholesaleShipmentEffect`),[收款] 收現金後的自動列印在結算區塊
  *
  * 兩個區塊申請中心詳情頁也用(`WholesaleApplyCenterSection`)。
  */
@@ -85,6 +88,12 @@ export const WholesaleViewPage = ({ routeParam }: ModulePageProps) => {
                 {tPages("backToList")}
               </Button>
               <Box sx={{ flex: 1 }} />
+              {submission !== null && detail !== null && (
+                <WholesalePrintButtons
+                  submission={submission}
+                  detail={detail}
+                />
+              )}
               {submission !== null && (
                 <SubmissionDeleteButton
                   moduleKey={WHOLESALE_MODULE_KEY}

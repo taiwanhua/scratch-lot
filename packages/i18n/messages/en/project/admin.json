@@ -3385,6 +3385,49 @@
         "payerSign": "Paid by (signature)",
         "courierSign": "Courier signature"
       },
+      "wholesaleShipment": {
+        "title": "Wholesale delivery note",
+        "copies": {
+          "store": "Store copy",
+          "customer": "Customer copy"
+        },
+        "route": "Shipping store → Wholesale customer",
+        "routeValue": "{from} → {to}",
+        "columns": {
+          "book": "Game / Book no.",
+          "books": "Books",
+          "amount": "Wholesale amount"
+        },
+        "bookValue": "{gameCode} · {bookNos}",
+        "bookDetail": "{tickets} tickets per book · Wholesale rate {rate}%",
+        "total": "Wholesale amount",
+        "paymentMode": "Payment method",
+        "paymentModes": {
+          "auto_bank": "Deposit to account",
+          "collect_first": "Approve after payment"
+        },
+        "received": "Received",
+        "handlerSign": "Handled by",
+        "customerSign": "Customer acknowledgement"
+      },
+      "wholesalePayment": {
+        "title": "Wholesale payment receipt",
+        "copies": {
+          "store": "Store copy",
+          "customer": "Customer copy"
+        },
+        "customer": "Wholesale customer",
+        "place": "Cash to",
+        "placeValue": "{branch} · {place}",
+        "places": {
+          "vault": "Vault",
+          "drawer": "Cash point drawer"
+        },
+        "handler": "Handled by",
+        "cash": "Cash",
+        "handlerSign": "Handled by",
+        "customerSign": "Customer signature"
+      },
       "reprint": {
         "heading": "[Reprint] #{printNo}",
         "reason": "Reason: {reason}",
@@ -3528,7 +3571,9 @@
           "unreceived": "{amount} still to collect",
           "overreceived": "{amount} over-collected; record a refund first"
         },
-        "autoBankHint": "{amount} is deposited to {account} (wholesale income) on approval; nothing can be collected before that"
+        "autoBankHint": "{amount} is deposited to {account} (wholesale income) on approval; nothing can be collected before that",
+        "printShipment": "Wholesale delivery note",
+        "printPayment": "Wholesale payment receipt"
       },
       "customerTab": {
         "aria": "Wholesale records",
