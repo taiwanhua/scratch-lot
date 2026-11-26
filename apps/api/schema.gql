@@ -2836,6 +2836,7 @@ type LotteryReceiptLinks {
   purchaseView: String
   storeView: String
   transferView: String
+  wholesaleView: String
 }
 
 type LotteryRedemption {
