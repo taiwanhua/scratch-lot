@@ -334,12 +334,19 @@ export const PROJECT_DYNAMIC_KEYS: readonly DynamicKey[] = [
       "transferShipment",
       "transferReceiving",
       "transferPayment",
+      "wholesaleShipment",
+      "wholesalePayment",
     ] as const
   ).map((kind) => ({
     key: `admin.lotteryPurchasing.receipts.${kind}.copies.`,
     reason:
       "兩聯單據的聯別名稱 `t(`${copyI18n}.copies.${copy}`)`,copy 取自 `lib/project/lottery/receipts/receipt-kinds.ts` 各單據宣告的 `copies`",
   })),
+  {
+    key: "admin.lotteryPurchasing.receipts.wholesaleShipment.paymentModes.",
+    reason:
+      "批售出貨單的收款方式 `t(`wholesaleShipment.paymentModes.${paymentMode}`)`,paymentMode 是批售單的收款方式(`lib/project/lottery/receipts/wholesale-shipment-receipt.ts`)",
+  },
   {
     key: "admin.lotteryStore.errors.",
     reason:
