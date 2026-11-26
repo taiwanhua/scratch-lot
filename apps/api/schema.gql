@@ -2585,6 +2585,8 @@ type LotteryOperationsInventory {
   transferOutAmount: Float
   transferOutCost: Float
   transferOutTickets: Int!
+  wholesaleCost: Float
+  wholesaleTickets: Int!
 }
 
 type LotteryOperationsNotes {
@@ -2664,6 +2666,48 @@ type LotteryOperationsStore {
   period: LotteryReportStorePeriod!
   redemption: LotteryOperationsRedemption!
   sales: LotteryOperationsSales!
+  wholesale: LotteryOperationsWholesale!
+}
+
+type LotteryOperationsWholesale {
+  customers: [LotteryOperationsWholesaleCustomer!]!
+  documents: [LotteryOperationsWholesaleDocument!]!
+  pendingAtEnd: LotteryOperationsWholesaleDocuments!
+  receivedUnshipped: LotteryOperationsWholesaleDocuments!
+}
+
+type LotteryOperationsWholesaleCustomer {
+  amount: Float!
+  books: Int!
+  cost: Float
+  customerId: ID
+  customerName: String!
+  documents: Int!
+  tickets: Int!
+}
+
+type LotteryOperationsWholesaleDocument {
+  amount: Float!
+  at: DateTime!
+  books: Int!
+  cost: Float
+  customerId: ID
+  customerName: String!
+  paymentMode: String
+  receivedAtEnd: Float!
+  serialNo: String
+  submissionId: ID!
+  tickets: Int!
+  toReceiveAtEnd: Float!
+  voided: Boolean!
+}
+
+type LotteryOperationsWholesaleDocuments {
+  amount: Float!
+  books: Int!
+  count: Int!
+  serialNos: [String!]!
+  tickets: Int!
 }
 
 type LotteryOutstandingSettlement {

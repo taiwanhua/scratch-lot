@@ -989,6 +989,9 @@
         "sales": "1 Sales",
         "games": "1 Sales · by game",
         "profit": "2 Gross profit",
+        "wholesale": "2b Wholesale",
+        "wholesaleDocuments": "2b Wholesale · by document",
+        "wholesaleInfo": "2b Wholesale · listed separately",
         "redemption": "3 Prize redemption",
         "inventory": "4 Inventory changes",
         "inventoryInfo": "4 Inventory changes · listed separately",
@@ -1001,9 +1004,12 @@
         "profitEstimated": "2 Gross profit (estimated)"
       },
       "descriptions": {
-        "sales": "What sold in this period. Undone sales are negative and may be from earlier sales.",
+        "sales": "What sold in this period. Undone sales are negative and may be from earlier sales. Wholesale is not included; see 2b.",
         "games": "Sold = scanned + manual + stocktake backfill; sorted by game code. Margin = gross profit ÷ net sales.",
-        "profit": "The price difference earned on the tickets sold, using each ticket's cost when it was sold.",
+        "profit": "The price difference earned on the tickets sold, using each ticket's cost when it was sold. Wholesale is not included; see 2b.",
+        "wholesale": "Unopened books sold to wholesale customers, counted by shipping time; a void is subtracted in the period it happens. Original cost is the per-ticket cost when shipped; profit rate = wholesale profit ÷ wholesale amount.",
+        "wholesaleDocuments": "For auditing: one row per document; a voided document is listed again as a negative row in the period it was voided. Received and to receive at the end count only payments up to the end.",
+        "wholesaleInfo": "Not part of the wholesale above; listed for reconciliation. Received but not shipped = money received before the end for wholesale orders not yet shipped at the end (already in wholesale income in 5b / 6).",
         "redemption": "Redemptions recorded in this period, by their status at the end of the period. Valid = held in store + sent for claim.",
         "inventory": "Add and subtract from top to bottom; the check row should be 0.",
         "inventoryInfo": "Not part of the calculation above; listed for reference.",
@@ -1046,7 +1052,18 @@
         "soldCost": "Cost of sold",
         "grossProfit": "Gross profit",
         "margin": "Margin",
-        "total": "Total"
+        "total": "Total",
+        "customer": "Wholesale customer",
+        "books": "Books",
+        "wholesaleAmount": "Wholesale amount",
+        "originalCost": "Original cost",
+        "wholesaleProfit": "Wholesale profit",
+        "profitRate": "Profit rate",
+        "serialNo": "No.",
+        "shippedAt": "Shipped at",
+        "paymentMode": "Payment collection",
+        "receivedAtEnd": "Received at end",
+        "toReceiveAtEnd": "To receive at end"
       },
       "postClose": {
         "redemption": "Redemption correction",
@@ -1063,6 +1080,8 @@
         "purchase_expense": "Purchase expense",
         "transfer_income": "Transfer income",
         "transfer_expense": "Transfer expense",
+        "wholesale_income": "Wholesale income",
+        "wholesale_expense": "Wholesale expense",
         "license_rent": "License rent",
         "adjustment": "Adjustment",
         "other": "Other"
@@ -1075,6 +1094,8 @@
         "refund": "Return refund (open shift)",
         "transfer_out": "Transfer expense (cash)",
         "transfer_in": "Transfer income (cash)",
+        "wholesale_in": "Wholesale income (cash)",
+        "wholesale_out": "Wholesale expense (cash)",
         "correction": "Cash correction"
       },
       "outstanding": {
@@ -1083,7 +1104,9 @@
         "transferToReceive": "Transfer payment to receive",
         "transferToPay": "Transfer payment due",
         "transferPayerRefund": "Transfer refund due to receiver (overpaid)",
-        "transferPayeeRefund": "Transfer refund owed by shipper (overcollected)"
+        "transferPayeeRefund": "Transfer refund owed by shipper (overcollected)",
+        "wholesaleToReceive": "Wholesale payment to receive",
+        "wholesaleToRefund": "Wholesale refund due"
       },
       "compare": {
         "netSales": "Net sales",
@@ -1094,6 +1117,8 @@
         "shiftDifference": "Shift checkout differences",
         "toPay": "Payable (purchases + transfers)",
         "toReceive": "Transfer payment to receive",
+        "wholesaleAmount": "Wholesale amount",
+        "wholesaleProfit": "Wholesale profit",
         "countName": "{name} (quantity)",
         "countEstimatedName": "{name} (quantity) · estimated",
         "estimatedName": "{name} · estimated"
@@ -1125,6 +1150,7 @@
         "transferOut": "− Transferred out",
         "transferAmount": "Transfer amount {amount}",
         "sales": "− Net sales",
+        "wholesale": "− Net wholesale",
         "scrap": "− Scrapped",
         "newInvestigating": "− New under investigation",
         "investigateRecovered": "+ Back from investigation",
@@ -1190,7 +1216,13 @@
         "monthEndRenumberOpen": "— (decided at period close)",
         "openingEntryPeriod": "Opening entry",
         "openingEntryOngoing": "This store started opening entry on {start}; still in progress",
-        "openingEntryClosed": "This store started opening entry on {start}; ended on {end}"
+        "openingEntryClosed": "This store started opening entry on {start}; ended on {end}",
+        "wholesaleNone": "No wholesale in this period",
+        "wholesaleVoided": "{serialNo} (voided)",
+        "receivedUnshipped": "Received but not shipped at end",
+        "pendingAtEnd": "Wholesale pending at end",
+        "pendingAtEndNote": "{books} books · {list}; locked by wholesale orders under review, still in ending stock",
+        "pendingAtEndNoteNoCost": "{books} books, wholesale amount {amount} · {list}; locked by wholesale orders under review, still in ending stock"
       },
       "closing": {
         "closed": "Closed",

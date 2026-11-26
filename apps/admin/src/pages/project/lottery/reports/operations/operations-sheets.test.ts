@@ -156,6 +156,9 @@ describe("營運報表的工作表(Excel 與預覽共用的分段表格)", () =>
         "sales",
         "games",
         "profit",
+        "wholesale",
+        "wholesaleDocuments",
+        "wholesaleInfo",
         "redemption",
         "inventory",
         "inventoryInfo",
@@ -181,6 +184,7 @@ describe("營運報表的工作表(Excel 與預覽共用的分段表格)", () =>
         "transferIn",
         "transferOut",
         "sales",
+        "wholesale",
         "scrap",
         "newInvestigating",
         "investigateRecovered",
@@ -277,10 +281,13 @@ describe("營運報表的工作表(Excel 與預覽共用的分段表格)", () =>
     expect(
       rowOf(movement, "lotteryReports.operations.movements.deposit"),
     ).toMatchObject({ count: 3, drawer: -12_000, vault: 12_000 });
+    expect(
+      rowOf(movement, "lotteryReports.operations.movements.wholesale_in"),
+    ).toMatchObject({ count: 1, drawer: 0, vault: 20_000 });
     expect(rowOf(movement, item("movementTotal"))).toMatchObject({
-      count: 7,
+      count: 8,
       drawer: -12_000 + 5000 - 200 + 100,
-      vault: 12_000 - 5000 - 20_000,
+      vault: 12_000 - 5000 - 20_000 + 20_000,
     });
     const bank = sectionOf(sheets.branches[1], "bank");
     expect(
@@ -298,7 +305,13 @@ describe("營運報表的工作表(Excel 與預覽共用的分段表格)", () =>
         "lotteryReports.operations.outstanding.transferToReceive",
       ),
     ).toMatchObject({ count: 1, amount: 19_504, note: "T-0003" });
-    expect(outstanding.rows).toHaveLength(6);
+    expect(outstanding.rows).toHaveLength(8);
+    expect(
+      rowOf(
+        outstanding,
+        "lotteryReports.operations.outstanding.wholesaleToReceive",
+      ),
+    ).toMatchObject({ count: 0, amount: 0, note: null });
   });
 
   it("對齊日結:有日結的店第二列寫實際期間;沒日結的店與合計標示「未日結,期間改用整天」", () => {

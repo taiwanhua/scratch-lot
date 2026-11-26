@@ -989,6 +989,9 @@
         "sales": "1 銷售",
         "games": "1 銷售 · 依遊戲",
         "profit": "2 毛利",
+        "wholesale": "2b 批售",
+        "wholesaleDocuments": "2b 批售 · 逐單",
+        "wholesaleInfo": "2b 批售 · 不在上面的、另外列的",
         "redemption": "3 兌獎",
         "inventory": "4 庫存異動",
         "inventoryInfo": "4 庫存異動 · 不在加減裡、另外列的",
@@ -1001,9 +1004,12 @@
         "profitEstimated": "2 毛利(估算)"
       },
       "descriptions": {
-        "sales": "這段期間賣了多少。撤銷是負數,可能是以前賣出的。",
+        "sales": "這段期間賣了多少。撤銷是負數,可能是以前賣出的。不含批售,見 2b。",
         "games": "售出 = 刷條碼 + 手動標記 + 補登售出;依遊戲代號排序。毛利率 = 毛利 ÷ 淨銷售金額。",
-        "profit": "賣出的這些張賺了多少價差。成本用賣出當下記下的單張成本,之後調走、成本變了也不影響。",
+        "profit": "賣出的這些張賺了多少價差。成本用賣出當下記下的單張成本,之後調走、成本變了也不影響。不含批售,見 2b。",
+        "wholesale": "把未拆的整本賣給批售客戶。依出貨時間歸期間;作廢在作廢那一期以負數扣回。原成本用出貨當下的單張成本;獲利率 = 批售獲利 ÷ 批售金額。",
+        "wholesaleDocuments": "查帳用:一張單一列;作廢的單在作廢那一期以負數列一列。期末已收、期末待收只算期末以前的收付。",
+        "wholesaleInfo": "不在上面的批售裡,列出來對帳。期末已收未出貨 = 期末那一刻還沒出貨的批售單、期末以前已收的錢(已在 5b / 6 的批售收入裡)。",
         "redemption": "這段期間登記的兌獎,狀態看期間結束那一刻;之後才撤銷的算在撤銷那天。有效 = 店內持有 + 已送兌。",
         "inventory": "由上往下加減,最後一列核對要是 0;不是 0 表示有資料需要查。",
         "inventoryInfo": "這些不在上面的加減裡,列出來對照。",
@@ -1046,7 +1052,18 @@
         "soldCost": "已售成本",
         "grossProfit": "毛利",
         "margin": "毛利率",
-        "total": "合計"
+        "total": "合計",
+        "customer": "批售客戶",
+        "books": "本數",
+        "wholesaleAmount": "批售金額",
+        "originalCost": "原成本",
+        "wholesaleProfit": "批售獲利",
+        "profitRate": "獲利率",
+        "serialNo": "單號",
+        "shippedAt": "出貨時間",
+        "paymentMode": "收款方式",
+        "receivedAtEnd": "期末已收",
+        "toReceiveAtEnd": "期末待收"
       },
       "postClose": {
         "redemption": "兌獎更正",
@@ -1063,6 +1080,8 @@
         "purchase_expense": "進貨支出",
         "transfer_income": "調貨收入",
         "transfer_expense": "調貨支出",
+        "wholesale_income": "批售收入",
+        "wholesale_expense": "批售支出",
         "license_rent": "牌租",
         "adjustment": "調整",
         "other": "其他"
@@ -1075,6 +1094,8 @@
         "refund": "退貨退款(班開著時)",
         "transfer_out": "調貨支出(現金)",
         "transfer_in": "調貨收入(現金)",
+        "wholesale_in": "批售收入(現金)",
+        "wholesale_out": "批售支出(現金)",
         "correction": "現金更正"
       },
       "outstanding": {
@@ -1083,7 +1104,9 @@
         "transferToReceive": "待收調貨款",
         "transferToPay": "待付調貨款",
         "transferPayerRefund": "調貨待退(收貨店多付)",
-        "transferPayeeRefund": "調貨該退(出貨店多收)"
+        "transferPayeeRefund": "調貨該退(出貨店多收)",
+        "wholesaleToReceive": "待收批售款",
+        "wholesaleToRefund": "批售待退"
       },
       "compare": {
         "netSales": "淨銷售金額",
@@ -1094,6 +1117,8 @@
         "shiftDifference": "各班結帳差額",
         "toPay": "待付(進貨款 + 調貨款)",
         "toReceive": "待收調貨款",
+        "wholesaleAmount": "批售金額",
+        "wholesaleProfit": "批售獲利",
         "countName": "{name}(張數)",
         "countEstimatedName": "{name}(張數)· 估算",
         "estimatedName": "{name} · 估算"
@@ -1125,6 +1150,7 @@
         "transferOut": "− 調出",
         "transferAmount": "調貨金額 {amount}",
         "sales": "− 淨銷售",
+        "wholesale": "− 淨批售",
         "scrap": "− 報廢",
         "newInvestigating": "− 新增待查",
         "investigateRecovered": "+ 待查轉回",
@@ -1190,7 +1216,13 @@
         "monthEndRenumberOpen": "—(關帳時判斷)",
         "openingEntryPeriod": "期初建檔",
         "openingEntryOngoing": "這家店 {start} 開始期初建檔;進行中",
-        "openingEntryClosed": "這家店 {start} 開始期初建檔;{end} 結束"
+        "openingEntryClosed": "這家店 {start} 開始期初建檔;{end} 結束",
+        "wholesaleNone": "本期沒有批售",
+        "wholesaleVoided": "{serialNo}(作廢)",
+        "receivedUnshipped": "期末已收未出貨",
+        "pendingAtEnd": "期末批售中",
+        "pendingAtEndNote": "{books} 本 · {list};被審核中的批售單鎖住,仍算在期末庫存",
+        "pendingAtEndNoteNoCost": "{books} 本、批售金額 {amount} · {list};被審核中的批售單鎖住,仍算在期末庫存"
       },
       "closing": {
         "closed": "已關帳",

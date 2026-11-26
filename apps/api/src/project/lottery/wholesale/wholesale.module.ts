@@ -38,5 +38,7 @@ import { WholesaleResolver } from "./wholesale.resolver";
     WholesaleQueryService,
     WholesaleResolver,
   ],
+  // 營運報表 2b 的客戶店名(同批售單列表的讀法)
+  exports: [WholesaleCustomerNames],
 })
 export class LotteryWholesaleModule {}
