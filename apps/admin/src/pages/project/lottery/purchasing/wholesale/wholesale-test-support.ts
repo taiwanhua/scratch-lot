@@ -3,9 +3,15 @@ import {
   type FormRuntimeWorldOptions,
   formRuntimeWorld,
 } from "@/test/msw/form-runtime-handlers";
+import {
+  type PrintButtonWorldOptions,
+  printButtonWorld,
+  printingModule,
+} from "@/test/msw/print-button-handlers";
 import { masterDataOrgs } from "@/test/msw/project/lottery/master-data-fixtures";
 import { masterDataSharedLookupHandlers } from "@/test/msw/project/lottery/master-data-handlers";
 import { purchasingModules } from "@/test/msw/project/lottery/purchasing-fixtures";
+import { receiptLinksHandlers } from "@/test/msw/project/lottery/receipt-links-handlers";
 import {
   wholesaleFormWorld,
   wholesaleModules,
@@ -34,6 +40,11 @@ export interface RenderWholesaleOptions {
   /** 另外給的模組(例:申請中心) */
   extraModules?: readonly TestModule[];
   wholesale?: WholesaleWorldOptions;
+  /**
+   * 列印(58mm 單據):給了才有 `api.printing`(`permissions` 預設列印 + 補印)與列印的假伺服器;
+   * 不給 = 沒有收據機的租戶,列印按鈕不出現、不自動列印
+   */
+  printing?: PrintButtonWorldOptions & { permissions?: string[] };
 }
 
 /** 批售單的測試場景:路由、殼、守門都是真的,只有 api 是假的(表單執行端的 world + `wholesaleWorld`)。 */
@@ -45,6 +56,7 @@ export const renderWholesalePage = ({
   workflow,
   extraModules = [],
   wholesale,
+  printing,
 }: RenderWholesaleOptions) => {
   const formsOptions = wholesaleFormWorld(forms);
   const wholesaleFake = wholesaleWorld({
@@ -57,7 +69,11 @@ export const renderWholesalePage = ({
   const workflowFake =
     workflow === undefined ? null : workflowRuntimeWorld(workflow);
   const org = masterDataOrgs[currentOrg];
+  const printingFake =
+    printing === undefined ? null : printButtonWorld(printing);
   server.use(
+    ...(printingFake?.handlers ?? []),
+    ...(printing === undefined ? [] : receiptLinksHandlers()),
     ...(workflowFake?.handlers ?? []),
     ...wholesaleFake.handlers,
     ...formsFake.handlers,
@@ -70,8 +86,24 @@ export const renderWholesalePage = ({
         ...purchasingModules(),
         ...wholesaleModules(omit),
         ...extraModules,
+        ...(printing === undefined
+          ? []
+          : [
+              printingModule(
+                printing.permissions ?? [
+                  "api.printing.print",
+                  "api.printing.reprint",
+                ],
+              ),
+            ]),
       ],
     }).handlers,
   );
-  return { ...renderApp({ path }), wholesaleFake, formsFake, workflowFake };
+  return {
+    ...renderApp({ path }),
+    wholesaleFake,
+    formsFake,
+    workflowFake,
+    printingFake,
+  };
 };
