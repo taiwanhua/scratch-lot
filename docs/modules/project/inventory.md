@@ -105,6 +105,7 @@
 
 - 列出操作者看得到的分店裡有待查或遺失的張的本,一本 × 一種狀態一列:本、遊戲、狀態、責任分店、張數、張號(區段)、來源(最近一筆待查 / 遺失事件的單號)、日期、天數(api `days`:租戶時區的日曆天差,沿用經銷商 `dealer-dates.ts` `daysSince`)、批購成本、[尋回]。張數 / 成本扣掉待標註(一本只扣一次,先扣待查那一列)。「確認遺失」在盤點確認申請(店面管理)。
 - 張數店系統預設帶入的待查 / 遺失(未對號;張數店規格 7.9、13.2,Figma CS-21):不照本分,依「遊戲 × 責任分店 × 來源盤點」一列(來源盤點 = 這張最近一筆「待查」事件的盤點單;同一列狀態一樣,確認遺失後保留記號、改列在遺失):本寫「—」、張號寫「系統預設帶入」、來源寫「10/16 交班盤點」(盤點的日期與類型,api `sourceStocktakeType`)、不給 [尋回];點一下展開「本號 056527 · #090(系統預設帶入)· 這是系統預設帶入的張號,找到實體請刷條碼尋回,或做全店重刷。」(api `unmatchedBooks`;再點收起,`Table` 的 `renderExpanded`)。從清單尋回會把帶入的張號記回庫存,找到的可能是別張,所以不給。
+- 期初建檔的本(期初建檔規格 5.3;api `bookSource` = `opening`,舊資料沒有 `source` 欄位回 `purchase`,未對號的列 null):表格「本」那格本號旁、手機卡片狀態標籤前加灰色「期初建檔」標籤;「來源」「天數」仍是讓這幾張變待查 / 遺失的單據(多半是盤點)與天數,不改寫(使用者 11/26 定:那兩欄的意思是「為什麼待查、待查多久」,寫「期初建檔 / —」會蓋掉真正的來源)。
 - 手機(< sm)一列一張卡片(`InvestigationCards`,Figma CS-21 手機 862:22606;編號店 IN-05 沒有手機稿,確定的列沿用同一張卡片):確定的列「本號 · 遊戲 · 張數」+ 狀態標籤、「分店 · 張號 · 來源 · 日期 · 天數」、批購成本、[尋回],點卡片進本的詳情;未對號的列「遊戲 · N 張 · 系統預設帶入」,下方直接寫本號與張號和「找到實體請刷條碼尋回,或做全店重刷」,不給 [尋回]、不能點。電腦 / 平板照舊是表格。
 - 來源單號:事件的 `refId` 是表單提交(進貨單、調貨單)時直接取單號;盤點寫的事件(待查、遺失、尋回)`refId` 是盤點單紀錄,單號取它帶的申請(盤點確認申請 / 結帳確認申請;`InventoryNames.serialNos`)。
 
@@ -308,7 +309,7 @@
 
 ### 測試
 
-`apps/api/src/project/lottery/tickets/tickets.test.ts`(帳本、本的建立、預計要給本數)、`apps/api/src/project/lottery/inventory/inventory.test.ts`(庫存管理的端點:張數店的本的未對號張數、時間軸對號的另一張、待查·遺失未對號依遊戲 × 責任分店 × 來源盤點一列;更正跳號(同店 / 跨店接手分店、位置、單張成本)、尋回、報廢(只限拆過的本在庫存)、讀取放行、預計要給本數三處、庫存概況)、`apps/api/src/project/lottery/inventory/book-state.test.ts`(本的各種情況 C01–C16 的顯示狀態:列表 / 篩選 / 詳情頁首一致、本上張數 = 重數張;拆過的本再上檯面、整本調貨資格、盤點拆過在庫存的張;賣多本的指令數上限)、`apps/db-migrator/seeds/project/inventory.test.ts`(模組宣告與角色配方)、`packages/domain/src/project/lottery/*.test.ts`、`apps/api/src/project/lottery/store/store-count-moves.test.ts`(報廢只限庫存、撤銷報廢、張數店的更正跳號;張數店規格 16.6 SC1、SC2、SK1)、`BookPage.test.tsx`、`BookPageCorrections.test.tsx`(報廢停用的原因、撤銷報廢、[更正跳號] 先刷實體再點缺的那張)、`CountStoreInventory.test.tsx`(張數店:頁首剩 N 張(估算)、虛線格子不能選與圖例說明、時間軸對號 / 撤銷報廢、庫存列表「約」、待查·遺失的未對號一列與展開)、`TicketGrid.test.tsx`、`useScanner.test.tsx`。
+`apps/api/src/project/lottery/tickets/tickets.test.ts`(帳本、本的建立、預計要給本數)、`apps/api/src/project/lottery/inventory/inventory.test.ts`(庫存管理的端點:張數店的本的未對號張數、時間軸對號的另一張、待查·遺失未對號依遊戲 × 責任分店 × 來源盤點一列、每列帶本的來源;更正跳號(同店 / 跨店接手分店、位置、單張成本)、尋回、報廢(只限拆過的本在庫存)、讀取放行、預計要給本數三處、庫存概況)、`apps/api/src/project/lottery/inventory/book-state.test.ts`(本的各種情況 C01–C16 的顯示狀態:列表 / 篩選 / 詳情頁首一致、本上張數 = 重數張;拆過的本再上檯面、整本調貨資格、盤點拆過在庫存的張;賣多本的指令數上限)、`apps/db-migrator/seeds/project/inventory.test.ts`(模組宣告與角色配方)、`packages/domain/src/project/lottery/*.test.ts`、`apps/api/src/project/lottery/store/store-count-moves.test.ts`(報廢只限庫存、撤銷報廢、張數店的更正跳號;張數店規格 16.6 SC1、SC2、SK1)、`BookPage.test.tsx`、`BookPageCorrections.test.tsx`(報廢停用的原因、撤銷報廢、[更正跳號] 先刷實體再點缺的那張)、`CountStoreInventory.test.tsx`(張數店:頁首剩 N 張(估算)、虛線格子不能選與圖例說明、時間軸對號 / 撤銷報廢、庫存列表「約」、待查·遺失的未對號一列與展開)、`InvestigationsTab.test.tsx`(待查·遺失手機卡片、期初建檔標籤)、`TicketGrid.test.tsx`、`useScanner.test.tsx`。
 
 ## 使用者說明(help.md)
 

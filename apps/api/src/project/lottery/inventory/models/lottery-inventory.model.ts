@@ -515,6 +515,13 @@ export class LotteryInvestigationRowModel {
    * 系統預設帶入的張號(待查·遺失·未對號;張數店規格 7.9、13.2):依「遊戲 × 責任分店 × 來源盤點」一列,
    * 不給 [尋回](找到實體請刷條碼尋回,或做全店重刷)。確定的待查 / 遺失 = false(一本 × 一種狀態一列)
    */
+  /**
+   * 本的來源(`purchase` / `opening`;期初建檔規格 5.3):期初建檔的本在「本」那格加「期初建檔」標籤,
+   * 「來源」「天數」仍是讓這幾張變待查 / 遺失的單據與天數。未對號的列不照本分 → null
+   */
+  @Field(() => String, { nullable: true })
+  bookSource!: string | null;
+
   @Field(() => Boolean)
   unmatched!: boolean;
 

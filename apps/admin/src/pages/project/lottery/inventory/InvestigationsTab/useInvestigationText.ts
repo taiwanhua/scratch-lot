@@ -10,6 +10,10 @@ import { useTemporalText } from "@/hooks/base/useTemporalText";
 
 type Row = LotteryInvestigationRowFieldsFragment;
 
+/** 期初建檔的本(未對號的列不照本分,沒有本的來源)。 */
+export const isOpeningRow = (row: Row): boolean =>
+  !row.unmatched && row.bookSource === "opening";
+
 /**
  * 待查·遺失一列的顯示文字(電腦 / 平板的表格與手機卡片同一份):本、張號、來源、日期、天數、
  * 未對號列的「本號 056527 · #090(系統預設帶入)」。

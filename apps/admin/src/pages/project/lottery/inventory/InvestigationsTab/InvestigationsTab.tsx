@@ -11,6 +11,7 @@ import { Alert } from "@repo/ui/alert";
 import { Box } from "@repo/ui/box";
 import { Button } from "@repo/ui/button";
 import { useBreakpointDown } from "@repo/ui/media-query";
+import { Stack } from "@repo/ui/stack";
 import { Table, type TableColumn } from "@repo/ui/table";
 import { Tag } from "@repo/ui/tag";
 
@@ -20,7 +21,7 @@ import { useSession } from "@/hooks/base/useSession";
 import { INVESTIGATIONS_TABLE_MIN_WIDTH, moneyText } from "../inventory-config";
 import { useInventoryAccess } from "../useInventoryAccess";
 import { InvestigationCards } from "./InvestigationCards";
-import { useInvestigationText } from "./useInvestigationText";
+import { isOpeningRow, useInvestigationText } from "./useInvestigationText";
 
 type Row = LotteryInvestigationRowFieldsFragment;
 
@@ -31,6 +32,8 @@ type Row = LotteryInvestigationRowFieldsFragment;
  *
  * 張數店系統預設帶入的待查 / 遺失(未對號)依「遊戲 × 責任分店 × 來源盤點」一列:本寫「—」、張號寫「系統預設帶入」、
  * 來源寫「11/01 交班盤點」;點一下展開看本與張號,不給 [尋回](從清單尋回會把帶入的張號記回庫存,找到的可能是別張)。
+ *
+ * 期初建檔的本在「本」那格加「期初建檔」標籤(期初建檔規格 5.3)。
  *
  * 手機(< sm)一列一張卡片(`InvestigationCards`;Figma CS-21 手機 862:22606),未對號的卡片直接寫本與張號。
  */
@@ -54,7 +57,20 @@ export const InvestigationsTab = () => {
       key: "bookNo",
       header: t("investigations.columns.book"),
       isEmphasized: true,
-      render: text.book,
+      // 期初建檔的本在本號旁加標籤;「來源」「天數」仍是讓這幾張變待查 / 遺失的單據(期初建檔規格 5.3)
+      render: (row) =>
+        isOpeningRow(row) ? (
+          <Stack
+            direction="row"
+            spacing={1}
+            sx={{ alignItems: "center", flexWrap: "wrap" }}
+          >
+            <span>{text.book(row)}</span>
+            <Tag tone="grey" label={t("stock.sourceOptions.opening")} />
+          </Stack>
+        ) : (
+          text.book(row)
+        ),
     },
     {
       key: "game",
