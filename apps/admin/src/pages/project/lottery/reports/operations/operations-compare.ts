@@ -85,11 +85,16 @@ export const compareSectionOf = (
     {
       label: t("admin.lotteryReports.operations.compare.toPay"),
       value: (store) =>
-        outstandingOf(store, ["purchaseToPay", "transferToPay"]),
+        outstandingOf(store, [
+          "purchaseToPay",
+          "transferToPay",
+          "wholesaleToRefund",
+        ]),
     },
     {
       label: t("admin.lotteryReports.operations.compare.toReceive"),
-      value: (store) => outstandingOf(store, ["transferToReceive"]),
+      value: (store) =>
+        outstandingOf(store, ["transferToReceive", "wholesaleToReceive"]),
     },
   ];
   return {

@@ -155,6 +155,44 @@ describe("營運報表的工作表:批售", () => {
     ).toMatchObject({ store0: 800, store1: 0, total: 800 });
   });
 
+  it("分店比較的待收 / 待付含待收批售款與批售待退", () => {
+    const withWholesale = (
+      store: ReturnType<typeof operationsStore>,
+      amounts: Partial<Record<string, number>>,
+    ) => ({
+      ...store,
+      outstanding: {
+        ...store.outstanding,
+        items: store.outstanding.items.map((entry) => {
+          const amount = amounts[entry.kind];
+          return amount === undefined ? entry : { ...entry, count: 1, amount };
+        }),
+      },
+    });
+    const zhongshan = operationsStore("org-zhongshan", 0, DAY);
+    const sheets = buildOperationsSheets(
+      dataOf([
+        withWholesale(zhongshan, {
+          wholesaleToReceive: 19_000,
+          wholesaleToRefund: 500,
+        }),
+        operationsStore("org-hsinchu", 1, DAY),
+      ]),
+      context(),
+    );
+    const compare = sectionOf(sheets.extras?.[0], "compare");
+    const transferToReceive =
+      zhongshan.outstanding.items.find(
+        (entry) => entry.kind === "transferToReceive",
+      )?.amount ?? 0;
+    expect(
+      rowOf(compare, "lotteryReports.operations.compare.toReceive"),
+    ).toMatchObject({ store0: transferToReceive + 19_000 });
+    expect(
+      rowOf(compare, "lotteryReports.operations.compare.toPay"),
+    ).toMatchObject({ store0: 500 });
+  });
+
   it("2b 沒有 show-cost:沒有原成本 / 獲利 / 獲利率欄,批售金額照常;期末批售中的批售金額寫在說明", () => {
     const store = operationsStore("org-zhongshan", 0, DAY, { withCost: false });
     const sheets = buildOperationsSheets(dataOf([store]), context());
