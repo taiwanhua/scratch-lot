@@ -29,6 +29,7 @@ import {
 import { DEMO_TENANT, demoPlan } from "../demo";
 import { DEMO_CASH_POINTS } from "../demo/cash-points";
 import { DEMO_GAMES } from "../demo/games";
+import { DEMO_WHOLESALE_CUSTOMERS } from "../demo/wholesale";
 import { runOnboardCommand } from "./command";
 import { SUPPORT_REQUEST_FORM_KEY } from "./form-workflows/support-request";
 import { OnboardingStoppedError, runOnboarding } from "./run-onboarding";
@@ -446,6 +447,38 @@ describe("開通腳本與 demo create(真 api + 真 MongoDB)", () => {
       expect(tasks.map((task) => String(task.assigneeId))).toEqual([
         String(manager._id),
       ]);
+    });
+
+    it("示範專用:批售客戶共用給兩家店;中山店還沒有可批售的本時略過批售單(不送單、不記帳)", async () => {
+      const [customer] = DEMO_WHOLESALE_CUSTOMERS;
+      const branches = await find("orgs", { parentId: tenantId });
+      const nameOf = new Map(
+        branches.map((org) => [String(org._id), org.name as string]),
+      );
+      const customers = await find("lottery_wholesale_customers", {
+        orgId: {
+          $in: [tenantId, ...branches.map((org) => org._id as ObjectId)],
+        },
+      });
+      expect(customers).toHaveLength(1);
+      expect(customers[0]).toMatchObject({
+        storeName: customer?.storeName,
+        licenseNo: customer?.licenseNo,
+        phone: customer?.phone,
+        status: "active",
+      });
+      expect(
+        (customers[0]?.shareOrgs as { orgId: ObjectId }[])
+          .map((share) => nameOf.get(String(share.orgId)) ?? "")
+          .toSorted(byText),
+      ).toEqual(["中山店", "信義店"].toSorted(byText));
+      // 示範機構沒有庫存:指定的那一本不在可批售的本裡,略過
+      expect(
+        await find("form_submissions", { tenantId, formKey: "wholesale" }),
+      ).toEqual([]);
+      expect(
+        await find("lottery_bank_transactions", { type: "wholesale_income" }),
+      ).toEqual([]);
     });
 
     it("三個角色在角色管理是一般角色,沒有「預設角色」標籤(規格 3.3)", async () => {

@@ -33,6 +33,7 @@ import {
   DEMO_SCHEDULE_WEEK_TEMPLATES,
 } from "./schedule";
 import { demoVaultCashStep } from "./vault-cash";
+import { demoWholesaleStep } from "./wholesale";
 
 /** 示範機構:名稱固定(重跑以它找回同一個機構),短碼全域唯一。 */
 export const DEMO_TENANT: DemoTenant = {
@@ -79,7 +80,8 @@ export function demoPlan(emailBase: string): OnboardingPlan {
 /**
  * 示範指令跑的步驟 = 開通清單的步驟(「角色」那一步多套示範的列印權限)+ 示範資料專用的步驟。
  * 開通清單標「人工」的項目(銀行帳戶、兩個批購基準日、列印權限)與不在清單裡的(遊戲、甲類與受託人、
- * 小金庫起始現金)只在這裡做,真實租戶的開通不做。小金庫起始現金是送一張現金更正單,要排在「流程」之後。
+ * 小金庫起始現金、批售客戶與批售單)只在這裡做,真實租戶的開通不做。小金庫起始現金、批售單都要走店長核准,
+ * 要排在「流程」之後;批售單還要排在「銀行帳戶」之後(從帳戶入帳)。
  */
 export const DEMO_STEPS: readonly OnboardingStep[] = [
   ...ONBOARDING_STEPS.map((step) =>
@@ -91,6 +93,7 @@ export const DEMO_STEPS: readonly OnboardingStep[] = [
   demoDealersStep,
   demoBankAccountsStep,
   demoVaultCashStep,
+  demoWholesaleStep,
 ];
 
 export const lotteryDemoSource: DemoSource = {

@@ -3,6 +3,10 @@ import path from "node:path";
 
 import { describe, expect, it } from "@jest/globals";
 
+import {
+  WHOLESALE_CUSTOMER_TEXT_LIMITS,
+  wholesaleAmountOf,
+} from "@repo/domain/project/lottery";
 import { SCHEDULE_FIELD_CATEGORY_KEYS } from "@repo/domain/project/schedule-fields";
 
 import { DEMO_STEPS, DEMO_TENANT, demoPlan } from ".";
@@ -19,6 +23,7 @@ import {
 import { DEMO_GAMES } from "./games";
 import { DEMO_BRANCHES } from "./organization";
 import { DEMO_VAULT_CASH } from "./vault-cash";
+import { DEMO_WHOLESALES, DEMO_WHOLESALE_CUSTOMERS } from "./wholesale";
 
 const DEMO_DIR = __dirname;
 const SOURCE_DIRS = [
@@ -139,6 +144,7 @@ describe("示範專用的步驟(開通腳本不做)", () => {
       "demo-dealers",
       "demo-bank-accounts",
       "demo-vault-cash",
+      "demo-wholesale",
     ]);
     // 開通腳本本身不含示範專用的步驟
     expect(ONBOARDING_STEPS.some((step) => step.key.startsWith("demo-"))).toBe(
@@ -149,6 +155,15 @@ describe("示範專用的步驟(開通腳本不做)", () => {
   it("小金庫起始現金排在「流程」之後(現金更正單要走店長核准,不是送出就完成)", () => {
     expect(keys.indexOf("demo-vault-cash")).toBeGreaterThan(
       keys.indexOf("form-workflows"),
+    );
+  });
+
+  it("批售單排在「流程」與「銀行帳戶」之後(要店長核准出貨、從帳戶入帳)", () => {
+    expect(keys.indexOf("demo-wholesale")).toBeGreaterThan(
+      keys.indexOf("form-workflows"),
+    );
+    expect(keys.indexOf("demo-wholesale")).toBeGreaterThan(
+      keys.indexOf("demo-bank-accounts"),
     );
   });
 
@@ -169,6 +184,78 @@ describe("示範專用的步驟(開通腳本不做)", () => {
       expect(dealer.trustees.every((name) => trustees.has(name))).toBe(true);
       expect(classB.has(dealer.licenseNo)).toBe(false);
     }
+  });
+});
+
+describe("示範資料:批售客戶與批售單", () => {
+  it("批售客戶:證號 8 碼且不重複、電話只有數字、文字不超過上限、共用給的分店都在示範資料裡", () => {
+    const branches = new Set(DEMO_BRANCHES.map((branch) => branch.name));
+    expect(DEMO_WHOLESALE_CUSTOMERS.length).toBeGreaterThan(0);
+    expect(
+      new Set(DEMO_WHOLESALE_CUSTOMERS.map((customer) => customer.licenseNo))
+        .size,
+    ).toBe(DEMO_WHOLESALE_CUSTOMERS.length);
+    for (const customer of DEMO_WHOLESALE_CUSTOMERS) {
+      expect(customer.licenseNo).toMatch(/^\d{8}$/);
+      expect(customer.phone).toMatch(/^\d{1,15}$/);
+      expect(customer.storeName.length).toBeLessThanOrEqual(
+        WHOLESALE_CUSTOMER_TEXT_LIMITS.storeName,
+      );
+      expect(customer.contactName.length).toBeLessThanOrEqual(
+        WHOLESALE_CUSTOMER_TEXT_LIMITS.contactName,
+      );
+      expect(customer.address.length).toBeLessThanOrEqual(
+        WHOLESALE_CUSTOMER_TEXT_LIMITS.address,
+      );
+      expect(customer.sharedWith.every((name) => branches.has(name))).toBe(
+        true,
+      );
+    }
+  });
+
+  it("批售單:分店、客戶、遊戲都在示範資料裡;入帳帳戶的使用組織含出貨分店(從帳戶入帳,核准時自動記批售收入)", () => {
+    const branches = new Set(DEMO_BRANCHES.map((branch) => branch.name));
+    const customers = new Set(
+      DEMO_WHOLESALE_CUSTOMERS.map((customer) => customer.licenseNo),
+    );
+    const games = new Map(DEMO_GAMES.map((game) => [game.gameCode, game]));
+    expect(DEMO_WHOLESALES.length).toBeGreaterThan(0);
+    for (const wholesale of DEMO_WHOLESALES) {
+      expect(branches.has(wholesale.branch)).toBe(true);
+      expect(customers.has(wholesale.customerLicenseNo)).toBe(true);
+      const account = DEMO_BANK_ACCOUNTS.find(
+        (item) =>
+          item.bankCode === wholesale.account.bankCode &&
+          item.accountNo === wholesale.account.accountNo,
+      );
+      expect(account?.usedBy).toContain(wholesale.branch);
+      expect(Number.isInteger(wholesale.rate)).toBe(true);
+      expect(wholesale.rate).toBeGreaterThanOrEqual(0);
+      expect(wholesale.rate).toBeLessThanOrEqual(100);
+      expect(wholesale.books.length).toBeGreaterThan(0);
+      expect(
+        new Set(
+          wholesale.books.map((book) => `${book.gameCode}-${book.bookNo}`),
+        ).size,
+      ).toBe(wholesale.books.length);
+      for (const book of wholesale.books) {
+        expect(games.has(book.gameCode)).toBe(true);
+        expect(book.bookNo).toMatch(/^\d{7}$/);
+      }
+    }
+  });
+
+  it("示範批售單的批售金額:5164 發大財一本(20,000)× 93% = 18,600", () => {
+    const [wholesale] = DEMO_WHOLESALES;
+    if (wholesale === undefined) {
+      throw new Error("沒有示範批售單");
+    }
+    const total = wholesale.books.reduce((sum, book) => {
+      const game = DEMO_GAMES.find((item) => item.gameCode === book.gameCode);
+      const bookPrice = (game?.unitPrice ?? 0) * (game?.ticketsPerBook ?? 0);
+      return sum + wholesaleAmountOf(bookPrice, wholesale.rate);
+    }, 0);
+    expect(total).toBe(18_600);
   });
 });
 

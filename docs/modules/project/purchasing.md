@@ -529,3 +529,5 @@
 `apps/admin/src/md/module-help/project/additions/purchasing.purchase.help.md`
 
 `apps/admin/src/md/module-help/project/additions/purchasing.transfer.help.md`
+
+`apps/admin/src/md/module-help/project/additions/purchasing.wholesale.help.md`
