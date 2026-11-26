@@ -181,6 +181,7 @@ export const sampleInvestigations =
       at,
       cost,
       ticketCount: count,
+      bookSource: "purchase",
       unmatched: false,
       sourceStocktakeType: null,
       unmatchedBooks: [],
@@ -237,6 +238,7 @@ export const sampleInvestigations =
           184,
           1,
         ),
+        bookSource: null,
         unmatched: true,
         sourceStocktakeType: "shift",
         unmatchedBooks: [

@@ -163,6 +163,7 @@ fragment LotteryInvestigationRowFields on LotteryInvestigationRow {
   cost
   # 張數:還有待標註就扣掉(實體不存在)
   ticketCount
+  bookSource
   unmatched
   sourceStocktakeType
   unmatchedBooks {
