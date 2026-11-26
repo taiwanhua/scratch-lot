@@ -1,12 +1,14 @@
 import { COLLATION_LOCALE } from "@repo/domain/collation";
 
 import type { OperationsStore } from "./operations-rows";
+import { totalWholesaleOf } from "./operations-rows-wholesale";
 
 /**
  * 營運報表「全部分店合計」:各店加總。例外:
  * - 銀行:同一個帳戶只列一次,各店歸屬的交易依類型加總;期末餘額取**各店期末裡最晚那一刻**那家店算的
  *   (對齊日結時各店的期末不同;使用者 10/26 定)
  * - 期末待查的本:依本去重複(一本拆在兩家店只算一本);張數、成本照加
+ * - 2b 批售:依批售客戶合併;逐單照出貨 / 作廢時間排(`totalWholesaleOf`)
  * - 成本是 null(沒有 show-cost)維持 null
  */
 
@@ -58,6 +60,7 @@ const totalInventoryOf = (list: readonly Inventory[]): Inventory => {
     "transferInTickets",
     "transferOutTickets",
     "salesTickets",
+    "wholesaleTickets",
     "scrapTickets",
     "scrapUndoTickets",
     "newInvestigatingTickets",
@@ -81,6 +84,7 @@ const totalInventoryOf = (list: readonly Inventory[]): Inventory => {
     "transferOutAmount",
     "transferGain",
     "salesCost",
+    "wholesaleCost",
     "scrapCost",
     "scrapUndoCost",
     "matchCostAdjustCost",
@@ -172,6 +176,8 @@ export const totalStoreOf = (
       revoked: sumQty(redemption.map((item) => item.revoked)),
     },
     inventory: totalInventoryOf(stores.map((store) => store.inventory)),
+    // 2b:各店相加、依客戶合併(專案規格 21.7)
+    wholesale: totalWholesaleOf(stores.map((store) => store.wholesale)),
     cash: {
       shiftCount: sumBy(cash, "shiftCount"),
       pendingShiftCount: sumBy(cash, "pendingShiftCount"),

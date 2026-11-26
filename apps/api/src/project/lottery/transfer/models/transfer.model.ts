@@ -116,7 +116,7 @@ export class LotteryTransferTicketCellModel {
 
   /**
    * `available` 可選(出貨店庫存的未售、沒被鎖)/ `counter` 在檯面上(先收回到庫存)/ `sold` 已售 /
-   * `locked` 被調貨單或撤銷售出申請鎖住 / `investigating` / `lost` 待查、遺失(請先尋回)/ `scrapped` 報廢 /
+   * `locked` 被調貨單、批售單或撤銷售出申請鎖住 / `investigating` / `lost` 待查、遺失(請先尋回)/ `scrapped` 報廢 / `wholesaled` 已批售 /
    * `in_transit` 在途 / `skipped` 跳號 / `elsewhere` 在別家店(張數店規格 7.4「刷到不能調的提示」)。
    */
   @Field(() => String)
@@ -141,7 +141,11 @@ export class LotteryTransferTicketCellModel {
   @Field(() => String, { nullable: true })
   cashPointName!: string | null;
 
-  /** 調貨中:鎖住它的那張調貨單單號 */
+  /** 被鎖住:鎖定來源(`TICKET_LOCK_REF_TYPES`;`transfer` 調貨中 / `wholesale` 批售中 / `sale_reversal`) */
+  @Field(() => String, { nullable: true })
+  lockedRefType!: string | null;
+
+  /** 調貨中 / 批售中:鎖住它的那張單的單號 */
   @Field(() => String, { nullable: true })
   lockedSerialNo!: string | null;
 }

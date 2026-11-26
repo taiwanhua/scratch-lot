@@ -1,3 +1,5 @@
+import type { LotteryWholesaleCustomerFieldsFragment } from "@repo/graphql";
+
 import { authWorld } from "@/test/msw/auth-handlers";
 import {
   DEALERS_ALL_PERMISSIONS,
@@ -9,6 +11,14 @@ import {
   type DealersWorldOptions,
   dealersWorld,
 } from "@/test/msw/project/dealers-handlers";
+import { purchasingModules } from "@/test/msw/project/lottery/purchasing-fixtures";
+import { wholesaleModules } from "@/test/msw/project/lottery/wholesale-fixtures";
+import { wholesaleWorld } from "@/test/msw/project/lottery/wholesale-handlers";
+import {
+  WHOLESALE_CUSTOMER_PERMISSIONS,
+  wholesaleCustomerModules,
+} from "@/test/msw/project/wholesale-customers-fixtures";
+import { wholesaleCustomersWorld } from "@/test/msw/project/wholesale-customers-handlers";
 import { server } from "@/test/msw/server";
 import { renderApp } from "@/test/render";
 
@@ -22,6 +32,11 @@ export interface RenderDealersOptions {
   contactPermissions?: readonly string[];
   withContacts?: boolean;
   world?: DealersWorldOptions;
+  wholesalePermissions?: readonly string[];
+  withWholesaleCustomers?: boolean;
+  wholesaleCustomers?: LotteryWholesaleCustomerFieldsFragment[];
+  /** 另有批售單模組(批售客戶詳情的「批售紀錄」);`omit` = 拿掉的權限 */
+  withWholesaleDocuments?: { omit?: readonly string[] };
 }
 
 export const renderDealers = ({
@@ -30,18 +45,36 @@ export const renderDealers = ({
   contactPermissions = DEALERS_CONTACT_PERMISSIONS,
   withContacts = true,
   world = {},
+  wholesalePermissions = WHOLESALE_CUSTOMER_PERMISSIONS,
+  withWholesaleCustomers = true,
+  wholesaleCustomers,
+  withWholesaleDocuments,
 }: RenderDealersOptions = {}) => {
   const fake = dealersWorld(world);
+  const wholesale = wholesaleCustomersWorld(wholesaleCustomers);
   server.use(
     ...fake.handlers,
+    ...wholesale.handlers,
+    ...(withWholesaleDocuments === undefined
+      ? []
+      : wholesaleWorld({ settlement: "none" }).handlers),
     ...authWorld({
       hasRefreshCookie: true,
-      modules: dealersModules(permissions, contactPermissions, {
-        withContacts,
-      }),
+      modules: [
+        ...dealersModules(permissions, contactPermissions, { withContacts }),
+        ...(withWholesaleCustomers
+          ? wholesaleCustomerModules(wholesalePermissions)
+          : []),
+        ...(withWholesaleDocuments === undefined
+          ? []
+          : [
+              ...purchasingModules(),
+              ...wholesaleModules(withWholesaleDocuments.omit),
+            ]),
+      ],
     }).handlers,
   );
-  return { ...renderApp({ path }), fake };
+  return { ...renderApp({ path }), fake, wholesale };
 };
 
 export { DEALERS_TEST_ROUTES } from "@/test/msw/project/dealers-fixtures";

@@ -86,6 +86,7 @@ query LotteryTransferBookTickets($fromOrgId: ID!, $bookId: ID!) {
     soldCashPointName
     soldAt
     cashPointName
+    lockedRefType
     lockedSerialNo
   }
 }

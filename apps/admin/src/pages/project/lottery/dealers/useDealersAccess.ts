@@ -28,6 +28,15 @@ export const useDealersAccess = () => {
     contactView: routeOf(DEALERS_MODULE_KEYS.contactViewPage),
     contactCreate: routeOf(DEALERS_MODULE_KEYS.contactCreatePage),
     contactEdit: routeOf(DEALERS_MODULE_KEYS.contactEditPage),
+    wholesaleCustomerView: routeOf(
+      DEALERS_MODULE_KEYS.wholesaleCustomerViewPage,
+    ),
+    wholesaleCustomerCreate: routeOf(
+      DEALERS_MODULE_KEYS.wholesaleCustomerCreatePage,
+    ),
+    wholesaleCustomerEdit: routeOf(
+      DEALERS_MODULE_KEYS.wholesaleCustomerEditPage,
+    ),
   };
 
   /** 到某一頁(帶 id = 詳情 / 編輯);沒綁那一頁的模組 → 不動。回列表帶回列表頁籤記下的條件。 */
@@ -46,11 +55,18 @@ export const useDealersAccess = () => {
     hasContacts: modules.some(
       (module) => module.key === DEALERS_MODULE_KEYS.contacts,
     ),
+    /** 批售客戶分頁:綁了 `dealers.wholesale-customers` 才看得到 */
+    hasWholesaleCustomers: modules.some(
+      (module) => module.key === DEALERS_MODULE_KEYS.wholesaleCustomers,
+    ),
     canCreateDealer:
       routes.create !== null && hasPermission(DEALERS_PERMISSIONS.create),
     canCreateContact:
       routes.contactCreate !== null &&
       hasPermission(DEALERS_PERMISSIONS.contactsCreate),
+    canCreateWholesaleCustomer:
+      routes.wholesaleCustomerCreate !== null &&
+      hasPermission(DEALERS_PERMISSIONS.wholesaleCustomersCreate),
     canEditContact: hasPermission(DEALERS_PERMISSIONS.contactsEdit),
   };
 };

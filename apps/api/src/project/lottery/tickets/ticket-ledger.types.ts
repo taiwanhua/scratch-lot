@@ -61,7 +61,7 @@ export interface TicketStatePatch {
   saleEventId?: string | null;
 }
 
-/** 鎖定的來源(調貨單 / 撤銷售出申請)。 */
+/** 鎖定的來源(調貨單 / 批售單 / 撤銷售出申請)。 */
 export interface TicketLockRef {
   refType: TicketLockRefType;
   refId: Types.ObjectId;

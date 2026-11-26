@@ -25,11 +25,15 @@ const NONE = "none";
 /** 選張能選的狀態(未售)。 */
 const SELECTABLE: readonly TicketCellState[] = ["unsold"];
 
-/** 圖例:未售 / 已售(不能選)/ 調貨中 / 已在明細 / 已選;有系統預設帶入的張(張數店)另放兩種虛線。 */
-const legendOf = (hasUnmatched: boolean): readonly TicketCellState[] => [
+/** 圖例:未售 / 已售(不能選)/ 調貨中 /(批售中 / 已批售)/ 已在明細 / 已選;有系統預設帶入的張(張數店)另放兩種虛線。 */
+const legendOf = (
+  hasUnmatched: boolean,
+  wholesale: readonly ("wholesaling" | "wholesaled")[],
+): readonly TicketCellState[] => [
   "unsold",
   "sold",
   "transferring",
+  ...wholesale,
   "assigned",
   ...(hasUnmatched ? (["unmatchedSold", "unmatchedLost"] as const) : []),
   "selected",
@@ -69,6 +73,9 @@ const PartialPicker = ({
           cells.some(
             (cell) =>
               cell.state === "unmatchedSold" || cell.state === "unmatchedLost",
+          ),
+          (["wholesaling", "wholesaled"] as const).filter((state) =>
+            cells.some((cell) => cell.state === state),
           ),
         )}
         labels={{ sold: t("cellUnavailable"), assigned: t("cellInLines") }}

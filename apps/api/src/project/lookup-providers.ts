@@ -6,6 +6,7 @@ import { LotteryCashPointsRepository } from "./database/lottery-cash-points/lott
 import {
   LotteryDealerContactsRepository,
   LotteryDealersRepository,
+  LotteryWholesaleCustomersRepository,
 } from "./database/lottery-dealers/lottery-dealers.repository";
 import { LotteryGamesRepository } from "./database/lottery-games/lottery-games.repository";
 import { LotteryBooksRepository } from "./database/lottery-inventory/lottery-inventory.repository";
@@ -211,5 +212,27 @@ export const PROJECT_LOOKUP_PROVIDERS: readonly LookupProviderRegistration[] = [
       portable: LOTTERY_PORTABLE_LOOKUP_PROVIDERS.lottery_cash_point,
     },
     repositoryToken: LotteryCashPointsRepository,
+  },
+  {
+    // 批售客戶(專案規格 21.2;`docs/modules/project/dealers.md`「lookup 來源」):批售單的批售客戶。
+    // 顯示欄 = 寫入時存的 `label`(「店名 · 電話」,沒填電話只有店名);固定條件 `status: "active"`(只列往來中)
+    // 由使用它的表單帶(同遊戲的販售中)。範圍照可見範圍 + 共用
+    declaration: {
+      key: "lottery_wholesale_customer",
+      name: "批售客戶",
+      permission: null,
+      fields: {
+        label: { type: "text", label: "批售客戶" },
+        storeName: { type: "text", label: "店名" },
+        phone: { type: "text", label: "電話" },
+        licenseNo: { type: "text", label: "證號" },
+        contactName: { type: "text", label: "聯絡人" },
+      },
+      filterFields: ["status"],
+      labelField: "label",
+      keywordFields: ["label", "licenseNo", "contactName"],
+      portable: LOTTERY_PORTABLE_LOOKUP_PROVIDERS.lottery_wholesale_customer,
+    },
+    repositoryToken: LotteryWholesaleCustomersRepository,
   },
 ];

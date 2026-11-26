@@ -21,17 +21,18 @@ import { useDealersAccess } from "../useDealersAccess";
 import { ClassADealersTab } from "./ClassADealersTab";
 import { ClassBDealersTab } from "./ClassBDealersTab";
 import { ContactsTab } from "./ContactsTab";
+import { WholesaleCustomersTab } from "./WholesaleCustomersTab";
 
 /** 與 `PageTabs` 同一個 `?tab=`(只讀,決定右上角是哪一顆新增按鈕);空字串 = 第一個分頁。 */
 const tabSchema = z.string().default("");
 
-/** 切分頁時把共用的 `?list=` 清回預設(寫回預設值 = 從網址拿掉;三個分頁的預設都是空物件)。 */
+/** 切分頁時把共用的 `?list=` 清回預設(寫回預設值 = 從網址拿掉;四個分頁的預設都是空物件)。 */
 const urlListDefault = urlStateDefault(classAListSchema);
 
 /**
- * 經銷商管理(`dealers`,正本 docs/modules/project/dealers.md「admin 頁面」;Figma DE-01 / DE-02 / DE-07):
- * 頁內分頁 甲類 | 乙類 | 關係人(關係人分頁要綁 `dealers.contacts`)+ 右上新增按鈕(跟著分頁換)。
- * 沒有 `dealers.create` / `dealers.contacts.create` 時按鈕不顯示(規格 5.2、5.3)。
+ * 經銷商管理(`dealers`,正本 docs/modules/project/dealers.md「admin 頁面」;Figma DE-01 / DE-02 / DE-07 / DE-09):
+ * 頁內分頁 甲類 | 乙類 | 關係人 | 批售客戶(後兩個要綁 `dealers.contacts` / `dealers.wholesale-customers`)
+ * + 右上新增按鈕(跟著分頁換;沒有那個分頁的 `create` 權限就不顯示,規格 5.2、5.3、21.2)。
  */
 export const DealersPage = ({ module }: ModulePageProps) => {
   const t = useTranslations("admin.lotteryDealers");
@@ -59,8 +60,19 @@ export const DealersPage = ({ module }: ModulePageProps) => {
           },
         ]
       : []),
+    ...(access.hasWholesaleCustomers
+      ? [
+          {
+            value: DEALERS_TABS.wholesaleCustomers,
+            label: t("tabs.wholesaleCustomers"),
+            content: <WholesaleCustomersTab access={access} />,
+          },
+        ]
+      : []),
   ];
   const isContacts = tab === DEALERS_TABS.contacts && access.hasContacts;
+  const isWholesaleCustomers =
+    tab === DEALERS_TABS.wholesaleCustomers && access.hasWholesaleCustomers;
 
   let action = null;
   if (isContacts && access.canCreateContact) {
@@ -73,7 +85,17 @@ export const DealersPage = ({ module }: ModulePageProps) => {
         {t("actions.newContact")}
       </Button>
     );
-  } else if (!isContacts && access.canCreateDealer) {
+  } else if (isWholesaleCustomers && access.canCreateWholesaleCustomer) {
+    action = (
+      <Button
+        onClick={() => {
+          access.goTo(access.routes.wholesaleCustomerCreate);
+        }}
+      >
+        {t("actions.newWholesaleCustomer")}
+      </Button>
+    );
+  } else if (!isContacts && !isWholesaleCustomers && access.canCreateDealer) {
     action = (
       <Button
         onClick={() => {

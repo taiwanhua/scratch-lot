@@ -44,7 +44,7 @@ export const DEALERS_CONTACT_PERMISSIONS = [
   "dealers.contacts.edit",
 ];
 
-const node = (
+export const node = (
   id: string,
   key: string,
   name: string,
@@ -164,7 +164,7 @@ export const dealersModules = (
 };
 
 const day = (date: string) => `${date}T00:00:00.000+08:00`;
-const iso = (date: string) => new Date(day(date)).toISOString();
+export const iso = (date: string) => new Date(day(date)).toISOString();
 
 const abilities = {
   canEdit: true,
@@ -186,7 +186,7 @@ const userRef = (id: string, name: string) => ({
 });
 
 /** 系統資訊(建立 / 最後修改 / 所屬組織;經銷商、關係人共用)。 */
-const systemInfo = {
+export const systemInfo = {
   createdBy: userRef("u-1", "王總"),
   createdAt: iso("2026-09-01"),
   updatedAt: iso("2026-09-01"),

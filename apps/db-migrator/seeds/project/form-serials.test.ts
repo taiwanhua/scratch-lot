@@ -27,6 +27,7 @@ describe("受管表單的單號前綴", () => {
       requisition: "R",
       purchase: "P",
       transfer: "T",
+      wholesale: "W",
       sale_reversal: "SR",
       cash_correction: "X",
       stocktake_confirm: "ST",

@@ -18,12 +18,16 @@ import {
 } from "./dealers.resolver";
 import { LotteryDealersService } from "./dealers.service";
 import { DealerPurchaseDates } from "./purchase-dates";
+import { WholesaleCustomerDocuments } from "./wholesale-customer-documents";
+import { LotteryWholesaleCustomersResolver } from "./wholesale-customers.resolver";
+import { WholesaleCustomersService } from "./wholesale-customers.service";
 
 /**
  * 經銷商管理(`dealers`,專案規格 5.2–5.4;正本 `docs/modules/project/dealers.md`):
- * 甲類、乙類、關係人、關聯、見簽、側欄計數、證照到期 / 牌租繳費提醒。
+ * 甲類、乙類、關係人、關聯、見簽、側欄計數、證照到期 / 牌租繳費提醒、批售客戶(規格 21.2)。
  * 稽核與權限解析由 @Global 的 AuditModule / PermissionModule 提供。
- * `DealerPurchaseDates` 匯出給進貨單(送出 / 駁回 / 作廢時重算批購日)。
+ * `DealerPurchaseDates` 匯出給進貨單(送出 / 駁回 / 作廢時重算批購日);
+ * `WholesaleCustomerDocuments` 匯出給批售單(登記最近一次批售日、有沒有被引用的來源)。
  */
 @Module({
   imports: [
@@ -43,9 +47,16 @@ import { DealerPurchaseDates } from "./purchase-dates";
     DealerContactsService,
     LotteryDealersResolver,
     LotteryDealerContactsResolver,
+    WholesaleCustomerDocuments,
+    WholesaleCustomersService,
+    LotteryWholesaleCustomersResolver,
     DealerBadge,
     DealerRemindersService,
   ],
-  exports: [LotteryDealersService, DealerPurchaseDates],
+  exports: [
+    LotteryDealersService,
+    DealerPurchaseDates,
+    WholesaleCustomerDocuments,
+  ],
 })
 export class LotteryDealersModule {}

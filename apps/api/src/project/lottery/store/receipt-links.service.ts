@@ -73,6 +73,7 @@ export class ReceiptLinksService {
       storeView: routeOf(RECEIPT_LINK_MODULE_KEYS.storeView),
       purchaseView: routeOf(RECEIPT_LINK_MODULE_KEYS.purchaseView),
       transferView: routeOf(RECEIPT_LINK_MODULE_KEYS.transferView),
+      wholesaleView: routeOf(RECEIPT_LINK_MODULE_KEYS.wholesaleView),
     };
   }
 }

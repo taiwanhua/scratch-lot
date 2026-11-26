@@ -6,6 +6,7 @@
  */
 export const DEALERS_KEY = "dealers";
 export const DEALERS_CONTACTS_KEY = `${DEALERS_KEY}.contacts`;
+export const DEALERS_WHOLESALE_CUSTOMERS_KEY = `${DEALERS_KEY}.wholesale-customers`;
 
 export const DEALERS_MODULE_KEYS = {
   list: DEALERS_KEY,
@@ -16,6 +17,10 @@ export const DEALERS_MODULE_KEYS = {
   contactViewPage: `${DEALERS_CONTACTS_KEY}.view-page`,
   contactCreatePage: `${DEALERS_CONTACTS_KEY}.create-page`,
   contactEditPage: `${DEALERS_CONTACTS_KEY}.edit-page`,
+  wholesaleCustomers: DEALERS_WHOLESALE_CUSTOMERS_KEY,
+  wholesaleCustomerViewPage: `${DEALERS_WHOLESALE_CUSTOMERS_KEY}.view-page`,
+  wholesaleCustomerCreatePage: `${DEALERS_WHOLESALE_CUSTOMERS_KEY}.create-page`,
+  wholesaleCustomerEditPage: `${DEALERS_WHOLESALE_CUSTOMERS_KEY}.edit-page`,
 } as const;
 
 export const DEALERS_PERMISSIONS = {
@@ -27,6 +32,8 @@ export const DEALERS_PERMISSIONS = {
   editLastSelfPurchaseBaseDate: `${DEALERS_KEY}.edit-last-self-purchase-base-date`,
   contactsCreate: `${DEALERS_CONTACTS_KEY}.create`,
   contactsEdit: `${DEALERS_CONTACTS_KEY}.edit`,
+  wholesaleCustomersCreate: `${DEALERS_WHOLESALE_CUSTOMERS_KEY}.create`,
+  wholesaleCustomersEdit: `${DEALERS_WHOLESALE_CUSTOMERS_KEY}.edit`,
 } as const;
 
 /** 列表分頁(`?tab=`)。 */
@@ -34,6 +41,7 @@ export const DEALERS_TABS = {
   classA: "class-a",
   classB: "class-b",
   contacts: "contacts",
+  wholesaleCustomers: "wholesale-customers",
 } as const;
 
 /** 列表每頁筆數(api 上限 100)。 */
@@ -54,4 +62,7 @@ export const SECTION_PAGE_IDS = {
   contactCreate: `${DEALERS_CONTACTS_KEY}.create`,
   contactEdit: `${DEALERS_CONTACTS_KEY}.edit`,
   contactDetail: `${DEALERS_CONTACTS_KEY}.detail`,
+  wholesaleCustomerCreate: `${DEALERS_WHOLESALE_CUSTOMERS_KEY}.create`,
+  wholesaleCustomerEdit: `${DEALERS_WHOLESALE_CUSTOMERS_KEY}.edit`,
+  wholesaleCustomerDetail: `${DEALERS_WHOLESALE_CUSTOMERS_KEY}.detail`,
 } as const;

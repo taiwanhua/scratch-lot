@@ -5,6 +5,8 @@ import { LotteryAllocationsService } from "./allocations.service";
 import { BookGameUsage } from "./book-game-usage";
 import { LotteryBooksService } from "./books.service";
 import { TicketLedgerService } from "./ticket-ledger.service";
+import { TicketLockDocuments } from "./ticket-lock-documents";
+import { WholesaleLedger } from "./wholesale-ledger.service";
 
 /**
  * 張數核心(專案規格 7.1、7.2、7.6;正本 `docs/modules/project/inventory.md`「資料與帳本」):
@@ -19,11 +21,17 @@ import { TicketLedgerService } from "./ticket-ledger.service";
     LotteryBooksService,
     LotteryAllocationsService,
     BookGameUsage,
+    TicketLockDocuments,
+    WholesaleLedger,
   ],
   exports: [
     TicketLedgerService,
     LotteryBooksService,
     LotteryAllocationsService,
+    // 鎖住張的單據的單號(店面刷到、調貨選張)
+    TicketLockDocuments,
+    // 批售的出貨與取消(批售單掛接點)
+    WholesaleLedger,
   ],
 })
 export class LotteryTicketsModule {}

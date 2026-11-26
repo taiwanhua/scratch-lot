@@ -93,6 +93,10 @@ export const BANK_TYPE_KEYS: Readonly<Record<string, string>> = {
   transfer_income: "admin.lotteryReports.operations.bankTypes.transfer_income",
   transfer_expense:
     "admin.lotteryReports.operations.bankTypes.transfer_expense",
+  wholesale_income:
+    "admin.lotteryReports.operations.bankTypes.wholesale_income",
+  wholesale_expense:
+    "admin.lotteryReports.operations.bankTypes.wholesale_expense",
   license_rent: "admin.lotteryReports.operations.bankTypes.license_rent",
   adjustment: "admin.lotteryReports.operations.bankTypes.adjustment",
   other: "admin.lotteryReports.operations.bankTypes.other",
@@ -106,6 +110,8 @@ export const MOVEMENT_KEYS: Readonly<Record<string, string>> = {
   refund: "admin.lotteryReports.operations.movements.refund",
   transfer_out: "admin.lotteryReports.operations.movements.transfer_out",
   transfer_in: "admin.lotteryReports.operations.movements.transfer_in",
+  wholesale_in: "admin.lotteryReports.operations.movements.wholesale_in",
+  wholesale_out: "admin.lotteryReports.operations.movements.wholesale_out",
   correction: "admin.lotteryReports.operations.movements.correction",
 };
 
@@ -120,6 +126,10 @@ export const OUTSTANDING_KEYS: Readonly<Record<string, string>> = {
     "admin.lotteryReports.operations.outstanding.transferPayerRefund",
   transferPayeeRefund:
     "admin.lotteryReports.operations.outstanding.transferPayeeRefund",
+  wholesaleToReceive:
+    "admin.lotteryReports.operations.outstanding.wholesaleToReceive",
+  wholesaleToRefund:
+    "admin.lotteryReports.operations.outstanding.wholesaleToRefund",
 };
 
 /** 對照表找訊息 key;不認得的值用 `fallback`(api 新增了類型、admin 還沒跟上時不至於整列壞掉)。 */

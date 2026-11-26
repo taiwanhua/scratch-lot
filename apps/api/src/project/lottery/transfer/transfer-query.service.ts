@@ -9,6 +9,7 @@ import {
   TRANSFER_MODE,
   TRANSFER_MODULE_KEY,
   type TicketStatus,
+  isDocumentLock,
   pendingSkipCountOf,
   transferLinesOf,
 } from "@repo/domain/project/lottery";
@@ -39,6 +40,7 @@ import {
 } from "../settlement/settlement-ledger";
 import { settlementDocumentOf } from "../settlement/settlement-registry";
 import { LotteryAllocationsService } from "../tickets/allocations.service";
+import { TicketLockDocuments } from "../tickets/ticket-lock-documents";
 import type {
   LotteryTransferAllocationModel,
   LotteryTransferBookModel,
@@ -87,7 +89,8 @@ function cellStateOf(ticket: TicketFact, fromId: Types.ObjectId): string {
     }
     case TICKET_STATUS.investigating:
     case TICKET_STATUS.lost:
-    case TICKET_STATUS.scrapped: {
+    case TICKET_STATUS.scrapped:
+    case TICKET_STATUS.wholesaled: {
       return ticket.status;
     }
     default: {
@@ -138,6 +141,7 @@ export class TransferQueryService {
     private readonly allocations: LotteryAllocationsService,
     private readonly cashPoints: LotteryCashPointsRepository,
     private readonly countModes: StoreCountModeService,
+    private readonly lockDocuments: TicketLockDocuments,
   ) {}
 
   async optionsOf(
@@ -299,34 +303,19 @@ export class TransferQueryService {
         ),
       ),
     ];
-    const lockIds = [
-      ...new Set(
-        tickets.flatMap((ticket) =>
-          ticket.lockedBy?.refType === "transfer"
-            ? [String(ticket.lockedBy.refId)]
-            : [],
-        ),
-      ),
-    ];
-    const [points, locks] = await Promise.all([
+    const [points, serialOf] = await Promise.all([
       pointIds.length === 0
         ? []
         : this.cashPoints.findMany(reader, {
             _id: { $in: pointIds.map((id) => toObjectId(id)) },
           }),
-      lockIds.length === 0
-        ? []
-        : this.submissions.findMany(
-            reader,
-            { _id: { $in: lockIds.map((id) => toObjectId(id)) } },
-            { select: "serialNo" },
-          ),
+      this.lockDocuments.serialsOf(
+        reader,
+        tickets.map((ticket) => ticket.lockedBy),
+      ),
     ]);
     const pointName = new Map(
       points.map((point) => [String(point._id), point.name]),
-    );
-    const serialOf = new Map(
-      locks.map((lock) => [String(lock._id), lock.serialNo ?? null]),
     );
     return tickets.map((ticket) => {
       const state = cellStateOf(ticket, fromId);
@@ -349,8 +338,12 @@ export class TransferQueryService {
           state === "counter" && pointId !== null
             ? (pointName.get(pointId) ?? null)
             : null,
+        lockedRefType:
+          state === "locked" ? (ticket.lockedBy?.refType ?? null) : null,
         lockedSerialNo:
-          state === "locked" && ticket.lockedBy?.refType === "transfer"
+          state === "locked" &&
+          ticket.lockedBy !== null &&
+          isDocumentLock(ticket.lockedBy.refType)
             ? (serialOf.get(String(ticket.lockedBy.refId)) ?? null)
             : null,
       };

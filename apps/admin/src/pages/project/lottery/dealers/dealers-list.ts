@@ -4,10 +4,11 @@ import {
   LotteryContactRole,
   LotteryContactStatus,
   LotteryLicenseState,
+  LotteryWholesaleCustomerStatus,
 } from "@repo/graphql";
 
 /**
- * 三個分頁的列表篩選存在網址的哪個 key(REACT-14)。同印表機管理:三個分頁共用這一個 key,
+ * 四個分頁的列表篩選存在網址的哪個 key(REACT-14)。同印表機管理:四個分頁共用這一個 key,
  * 同一時間只有一個分頁的列表在畫面上,切分頁時清回預設(`DealersPage`)。
  */
 export const DEALERS_LIST_KEY = "list";
@@ -69,3 +70,12 @@ export const contactsListSchema = z
     page: z.number().int().min(1).default(1),
   })
   .default({ role: null, status: null, keyword: "", page: 1 });
+
+/** 批售客戶:狀態、關鍵字(店名、證號、聯絡人、電話)、頁碼。 */
+export const wholesaleCustomersListSchema = z
+  .object({
+    status: z.enum(LotteryWholesaleCustomerStatus).nullable().default(null),
+    keyword: z.string().default(""),
+    page: z.number().int().min(1).default(1),
+  })
+  .default({ status: null, keyword: "", page: 1 });

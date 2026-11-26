@@ -6,8 +6,10 @@ import { LotteryAccountsModule } from "../accounts/accounts.module";
 import { LotteryFieldOptionsModule } from "../field-options/lottery-field-options.module";
 import { LotterySettingsModule } from "../settings/lottery-settings.module";
 import { LotteryStoreModule } from "../store/store.module";
+import { LotteryWholesaleModule } from "../wholesale/wholesale.module";
 import { OperationsInventory } from "./operations-inventory";
 import { OperationsReportService } from "./operations-report.service";
+import { OperationsWholesale } from "./operations-wholesale";
 import { PostCloseCorrections } from "./post-close-corrections";
 import { ReportPeriods } from "./report-periods";
 import { ReportScopes } from "./report-scope";
@@ -19,7 +21,8 @@ import { ShiftCheckoutsReportService } from "./shift-checkouts-report.service";
  * 輸出報表的刮刮樂報表(專案規格第 11 章;正本 `docs/modules/project/reports.md`):營運報表、班次結帳歷史報表。
  * 外框(期間、分店上限、Excel、預覽)是底座的(`docs/modules/reports.md`;範圍檢查 `src/reports/report-range.ts`);這裡只做查詢。
  * 讀關帳到哪(`PeriodLock`)、收付的待結清與銀行餘額經帳戶管理;班次的人名經店面;協同從排班
- * (`ScheduleEntryLookup`,依賴方向刮刮樂 → 排班);張數店的盤點制度與補點編號經 `StoreCountModeService`(刮刮樂設定)。
+ * (`ScheduleEntryLookup`,依賴方向刮刮樂 → 排班);張數店的盤點制度與補點編號經 `StoreCountModeService`(刮刮樂設定);
+ * 批售客戶店名經批售單(`WholesaleCustomerNames`)。
  */
 @Module({
   imports: [
@@ -29,6 +32,7 @@ import { ShiftCheckoutsReportService } from "./shift-checkouts-report.service";
     LotteryFieldOptionsModule,
     LotterySettingsModule,
     LotteryStoreModule,
+    LotteryWholesaleModule,
   ],
   providers: [
     ReportScopes,
@@ -36,6 +40,7 @@ import { ShiftCheckoutsReportService } from "./shift-checkouts-report.service";
     PostCloseCorrections,
     ReportStock,
     OperationsInventory,
+    OperationsWholesale,
     OperationsReportService,
     ShiftCheckoutsReportService,
     LotteryReportsResolver,

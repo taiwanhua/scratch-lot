@@ -2,6 +2,7 @@ import { ACCOUNTS_MODULE_KEYS } from "../lottery-accounts/keys";
 import { PURCHASE_MODULE_KEY } from "./purchase";
 import { STORE_MODULE_KEYS } from "./store";
 import { TRANSFER_MODULE_KEY } from "./transfer";
+import { WHOLESALE_MODULE_KEY } from "./wholesale";
 
 /**
  * 58mm 單據底部 QR code 連到的頁面(專案規格第 12 章):模組 key。
@@ -17,6 +18,8 @@ export const RECEIPT_LINK_MODULE_KEYS = {
   purchaseView: `${PURCHASE_MODULE_KEY}.view-page`,
   /** 調貨單的檢視頁:調貨出貨單、調貨點收單、調貨付款收據 */
   transferView: `${TRANSFER_MODULE_KEY}.view-page`,
+  /** 批售單的檢視頁:批售出貨單、批售收款收據 */
+  wholesaleView: `${WHOLESALE_MODULE_KEY}.view-page`,
 } as const;
 
 export type ReceiptLinkKind = keyof typeof RECEIPT_LINK_MODULE_KEYS;

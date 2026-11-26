@@ -45,6 +45,10 @@ export const DEALER_REASONS = {
   signinDuplicate: "SIGNIN_DUPLICATE",
   /** 見簽:季別還沒到 */
   signinQuarterNotStarted: "SIGNIN_QUARTER_NOT_STARTED",
+  /** 批售客戶的證號在租戶內重複(有填才比) */
+  wholesaleLicenseNoDuplicate: "WHOLESALE_LICENSE_NO_DUPLICATE",
+  /** 批售客戶被批售單引用(含草稿):不能刪除,只能停用 */
+  wholesaleCustomerInUse: "WHOLESALE_CUSTOMER_IN_USE",
 } as const;
 
 export type DealerReason = (typeof DEALER_REASONS)[keyof typeof DEALER_REASONS];

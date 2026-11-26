@@ -26,8 +26,9 @@ const range = (from: number, to: number): string[] =>
   );
 
 /**
- * 示範的期初建檔(期初建檔規格第 6 節):中山店建 2 本 —— 5164 發大財一本拆過(導入前已賣出 #001–#046、
- * 其餘 54 張在店內櫃台A),5201 金好運一本原封在庫存;建完結束期初建檔。信義店不建(看得到「進行中、已建 0 本」)。
+ * 示範的期初建檔(期初建檔規格第 6 節):中山店建 3 本 —— 5164 發大財一本拆過(導入前已賣出 #001–#046、
+ * 其餘 54 張在店內櫃台A),5164 發大財 0071202、5201 金好運 0072301 各一本原封在庫存(0071202 給示範批售單用,
+ * 見 `./wholesale`);建完結束期初建檔。信義店不建(看得到「進行中、已建 0 本」)。
  */
 export const DEMO_OPENINGS: readonly DemoOpening[] = [
   {
@@ -40,6 +41,14 @@ export const DEMO_OPENINGS: readonly DemoOpening[] = [
         rate: 92,
         soldTicketNos: range(1, 46),
         cashPoint: "店內櫃台A",
+      },
+      {
+        gameCode: "5164",
+        bookNo: "0071202",
+        lastTicketNo: 100,
+        rate: 92,
+        soldTicketNos: [],
+        cashPoint: null,
       },
       {
         gameCode: "5201",
