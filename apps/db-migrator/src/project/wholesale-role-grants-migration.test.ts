@@ -128,7 +128,7 @@ async function grantedOf(db: Db, roleId: ObjectId) {
 }
 
 describe("遷移:已開通的租戶補上批售單與批售客戶的權限(規格 21.2、21.8)", () => {
-  it("租戶管理員副本全部、總部管理全部、店長批售單全部 + 批售客戶只看;其他角色不動;接著的 seed 補齊模組;重跑不變", async () => {
+  it("總部管理全部、店長批售單全部 + 批售客戶只看;租戶管理員副本與其他角色不動;接著的 seed 補齊模組;重跑不變", async () => {
     const databaseUri = mongo.uri("grants");
     await update(databaseUri);
     const db = await openDatabase(databaseUri);
@@ -184,11 +184,6 @@ describe("遷移:已開通的租戶補上批售單與批售客戶的權限(規�
 
     await update(databaseUri);
 
-    expect(await grantedOf(db, admin)).toEqual({
-      modules: new Set(NEW_MODULES),
-      permissions: new Set(wildcards(NEW_MODULES)),
-      unique: true,
-    });
     expect(await grantedOf(db, hq)).toEqual({
       modules: new Set(NEW_MODULES),
       permissions: new Set([
@@ -207,7 +202,7 @@ describe("遷移:已開通的租戶補上批售單與批售客戶的權限(規�
       permissions: new Set(wildcards(WHOLESALE)),
       unique: true,
     });
-    for (const role of [clerk, unowned]) {
+    for (const role of [admin, clerk, unowned]) {
       expect(await grantedOf(db, role)).toEqual({
         modules: new Set(),
         permissions: new Set(),

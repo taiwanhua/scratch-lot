@@ -1,12 +1,12 @@
 /**
  * data:已開通的租戶補上批售單(`purchasing.wholesale`)與批售客戶(`dealers.wholesale-customers`)的權限(規格 21.2、21.8)。
  *
- * 開通腳本對已有權限的角色不覆蓋,重跑補不到;seed 新增的模組只進租戶管理員**模板**,既有租戶的副本不會自動拿到
- * (ADR-0009)。這裡對每個租戶補:
+ * 開通腳本對已有權限的角色不覆蓋,重跑補不到。這裡對每個租戶補:
  *
- * - 租戶管理員副本(`settings.templateKey = "tenant-admin"`,租戶的天花板):模組與各層 `*` 全部
  * - 開通時建立的「總部管理」:批售單全部、批售客戶全部
  * - 開通時建立的「店長」:批售單全部、批售客戶只看(分頁與詳情,沒有新增 / 編輯)
+ *
+ * 不動租戶管理員副本(租戶的天花板):既有租戶的新模組由根組織逐一開放(ADR-0009)。
  *
  * 只補已有同一塊功能的角色:批售單看有沒有綁 `purchasing.transfer`、批售客戶看有沒有綁 `dealers.contacts`
  * (租戶沒開放、或已自己拿掉的不補)。角色以名稱完全相同找(同開通腳本),而且要屬於某個組織(排除種子模板)。
@@ -99,10 +99,6 @@ const wildcard = (key) => `${key}.*`;
 
 /** 角色 → 一塊功能:看哪個模組決定要不要補、補哪些模組與 `*`。 */
 const GRANTS = {
-  tenantAdmin: [
-    { when: "purchasing.transfer", modules: WHOLESALE, wildcards: WHOLESALE },
-    { when: "dealers.contacts", modules: CUSTOMERS, wildcards: CUSTOMERS },
-  ],
   總部管理: [
     { when: "purchasing.transfer", modules: WHOLESALE, wildcards: WHOLESALE },
     {
@@ -192,19 +188,17 @@ async function ensureModules(db) {
   return { moduleIds, permissionIds };
 }
 
-/** 要補的角色:租戶管理員副本、屬於某個組織的「總部管理」「店長」(沒軟刪除)。 */
+/** 要補的角色:屬於某個組織的「總部管理」「店長」(沒軟刪除;租戶管理員副本不算)。 */
 async function rolesToGrant(db) {
   const found = await db
     .collection("roles")
     .find(
       {
         deletedAt: null,
-        $or: [
-          { "settings.templateKey": "tenant-admin" },
-          { name: { $in: ["總部管理", "店長"] } },
-        ],
+        name: { $in: ["總部管理", "店長"] },
+        "settings.templateKey": { $ne: "tenant-admin" },
       },
-      { projection: { name: 1, "settings.templateKey": 1 } },
+      { projection: { name: 1 } },
     )
     .toArray();
   const owned = new Set(
@@ -221,17 +215,11 @@ async function rolesToGrant(db) {
         .toArray()
     ).map((link) => String(link.secondId)),
   );
-  return found.flatMap((role) => {
-    const isAdminCopy = role.settings?.templateKey === "tenant-admin";
-    return owned.has(String(role._id))
-      ? [
-          {
-            _id: role._id,
-            grants: isAdminCopy ? GRANTS.tenantAdmin : GRANTS[role.name],
-          },
-        ]
-      : [];
-  });
+  return found.flatMap((role) =>
+    owned.has(String(role._id))
+      ? [{ _id: role._id, grants: GRANTS[role.name] }]
+      : [],
+  );
 }
 
 /**
