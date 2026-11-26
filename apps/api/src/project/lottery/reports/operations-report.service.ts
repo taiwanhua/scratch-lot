@@ -42,7 +42,11 @@ import { LotteryShiftsRepository } from "../../database/lottery-store/lottery-sh
 import { BankTransactionsService } from "../accounts/bank-transactions.service";
 import { LOTTERY_FIELD_CATEGORIES } from "../field-options/lottery-field-options";
 import { StoreCountModeService } from "../settings/store-count-mode.service";
-import { SettlementLedger } from "../settlement/settlement-ledger";
+import {
+  type OutstandingRow,
+  SettlementLedger,
+  type SettlementSnapshot,
+} from "../settlement/settlement-ledger";
 import type { LotteryOperationsReportInput } from "./dto/reports.input";
 import type {
   LotteryOperationsBankAccountModel,
@@ -59,10 +63,12 @@ import type {
   LotteryReportPeriodsModel,
   LotteryReportQtyModel,
 } from "./models/operations-report.model";
+import type { LotteryOperationsWholesaleDocumentsModel } from "./models/operations-wholesale.model";
 import {
   INVENTORY_EVENT_TYPES,
   OperationsInventory,
 } from "./operations-inventory";
+import { OperationsWholesale } from "./operations-wholesale";
 import {
   PostCloseCorrections,
   postCloseByCategory,
@@ -103,6 +109,9 @@ const MOVEMENT_ROWS: readonly { type: string; sources: readonly string[] }[] = [
   { type: "refund", sources: [CASH_MOVEMENT_TYPE.refund] },
   { type: "transfer_out", sources: [CASH_MOVEMENT_TYPE.transferOut] },
   { type: "transfer_in", sources: [CASH_MOVEMENT_TYPE.transferIn] },
+  // 批售收入 / 支出(現金;專案規格 21.7)
+  { type: "wholesale_in", sources: [CASH_MOVEMENT_TYPE.wholesaleIn] },
+  { type: "wholesale_out", sources: [CASH_MOVEMENT_TYPE.wholesaleOut] },
   {
     type: "correction",
     sources: [
@@ -129,6 +138,9 @@ const OUTSTANDING_KINDS: readonly { kind: string; key: string }[] = [
   { kind: "transferToPay", key: "transfer|to_pay|payer" },
   { kind: "transferPayerRefund", key: "transfer|to_refund|payer" },
   { kind: "transferPayeeRefund", key: "transfer|to_refund|payee" },
+  // 批售單只有出貨店一邊(收款方;專案規格 21.6、21.7)
+  { kind: "wholesaleToReceive", key: "wholesale|to_receive|payee" },
+  { kind: "wholesaleToRefund", key: "wholesale|to_refund|payee" },
 ];
 
 interface EventRow {
@@ -194,6 +206,7 @@ export class OperationsReportService {
     private readonly fieldOptions: FieldOptionsService,
     private readonly orgs: OrgsRepository,
     private readonly countModes: StoreCountModeService,
+    private readonly wholesale: OperationsWholesale,
   ) {}
 
   /** 條件畫面:各店實際期間(對齊日結)與已關帳到哪。 */
@@ -224,7 +237,12 @@ export class OperationsReportService {
         // 月底落在這段期間的已關帳月份的月底補點編號快照(第 10 節;一次讀)
         this.periods.renumberClosesOf(scope, scope.from, scope.to),
       ]);
-    const outstanding = await this.outstandingOf(operator, periods);
+    // 收付在各店期末那一刻的現況(區塊 7 與 2b 共用一次計算)、期末批售中(區塊 4)
+    const [settlementAt, wholesalePending] = await Promise.all([
+      this.settlementAtOf(operator, periods),
+      this.wholesale.pendingAtEndOf(scope.reader, periods),
+    ]);
+    const outstanding = outstandingOf(settlementAt);
     // 分店之間互不相依:一次最多 5 家平行算(分店上限 50 家,不一次打滿資料庫)
     const stores: LotteryOperationsStoreModel[] = [];
     for (let start = 0; start < periods.length; start += STORE_CONCURRENCY) {
@@ -235,6 +253,10 @@ export class OperationsReportService {
               closedAt,
               manualReasons,
               outstanding: outstanding(period),
+              wholesale: {
+                snapshots: settlementAt(period).snapshots,
+                pendingAtEnd: wholesalePending(period),
+              },
               operator,
               countMode: {
                 record: histories.get(String(period.orgId)) ?? null,
@@ -261,6 +283,10 @@ export class OperationsReportService {
       closedAt: ReadonlyMap<string, Date>;
       manualReasons: ReadonlyMap<string, string>;
       outstanding: LotteryOperationsOutstandingModel;
+      wholesale: {
+        snapshots: readonly SettlementSnapshot[];
+        pendingAtEnd: LotteryOperationsWholesaleDocumentsModel;
+      };
       operator: OperatorContext;
       countMode: StoreCountModeInput;
     },
@@ -297,19 +323,23 @@ export class OperationsReportService {
       shared.manualReasons,
       soldByGame,
     );
-    const [inventory, redemption, cashAndNotes, bankAccounts] =
-      await Promise.all([
-        this.inventory.inventoryOf(
-          reader,
-          period,
-          events,
-          { tickets: sales.net.count, cost: sales.cost ?? 0 },
-          { adjust: matchCost.adjust, lost: matchCost.lost },
-        ),
-        this.redemptionOf(reader, period),
-        this.cashAndNotesOf(scope, period, own, shared.closedAt),
-        this.bankOf(shared.operator, scope, period),
-      ]);
+    const [
+      { wholesaleFlows, ...inventory },
+      redemption,
+      cashAndNotes,
+      bankAccounts,
+    ] = await Promise.all([
+      this.inventory.inventoryOf(
+        reader,
+        period,
+        events,
+        { tickets: sales.net.count, cost: sales.cost ?? 0 },
+        { adjust: matchCost.adjust, lost: matchCost.lost },
+      ),
+      this.redemptionOf(reader, period),
+      this.cashAndNotesOf(scope, period, own, shared.closedAt),
+      this.bankOf(shared.operator, scope, period),
+    ]);
     return {
       orgId: String(orgId),
       period: periodModelOf(period),
@@ -324,6 +354,15 @@ export class OperationsReportService {
       sales,
       redemption,
       inventory,
+      wholesale: {
+        ...(await this.wholesale.storeOf(
+          reader,
+          period,
+          wholesaleFlows,
+          shared.wholesale.snapshots,
+        )),
+        pendingAtEnd: shared.wholesale.pendingAtEnd,
+      },
       cash: cashAndNotes.cash,
       bankAccounts,
       outstanding: shared.outstanding,
@@ -876,46 +915,27 @@ export class OperationsReportService {
   // ---- 區塊 7:未結清 ----
 
   /**
-   * 期末時的待付 / 待退進貨款、待收 / 待付調貨款、調貨待退 / 該退(`SettlementLedger.outstandingAt`:
-   * 單據當時還有效、收付只算期末以前的),依歸屬分店;說明列單號(最多 5 張)。
-   * 對齊日結時各店的「迄」不同:所有「迄」一次算(`outstandingAtMany`)。
+   * 各店期末那一刻的收付現況(`SettlementLedger.settlementAtMany`:單據當時還有效、收付只算期末以前的)。
+   * 對齊日結時各店的「迄」不同:所有「迄」一次算。
    */
-  private async outstandingOf(
+  private async settlementAtOf(
     operator: OperatorContext,
     periods: readonly StorePeriod[],
-  ): Promise<(period: StorePeriod) => LotteryOperationsOutstandingModel> {
+  ): Promise<(period: StorePeriod) => SettlementAt> {
     const ends = [...new Set(periods.map((period) => period.to.getTime()))];
     // 各店的「迄」一次算(單據、收付各讀一次,在記憶體依各時點挑;TX-07)
-    const rowsAt = await this.settlement.outstandingAtMany(
+    const results = await this.settlement.settlementAtMany(
       operator,
       ends.map((end) => new Date(end)),
     );
     const byEnd = new Map(
-      ends.map((end, index) => [end, rowsAt[index] ?? []] as const),
+      ends.map(
+        (end, index) =>
+          [end, results[index] ?? { rows: [], snapshots: [] }] as const,
+      ),
     );
-    return (period) => {
-      const items = OUTSTANDING_KINDS.map(({ kind }) => ({
-        kind,
-        count: 0,
-        amount: 0,
-        serialNos: [] as string[],
-      }));
-      for (const row of byEnd.get(period.to.getTime()) ?? []) {
-        const key = `${row.snapshot.registration.kind}|${row.kind}|${row.side.role}`;
-        const item =
-          items[OUTSTANDING_KINDS.findIndex((entry) => entry.key === key)];
-        if (item === undefined || !row.branchOrgId.equals(period.orgId)) {
-          continue;
-        }
-        item.count += 1;
-        item.amount += row.amount;
-        const serialNo = row.snapshot.submission.serialNo ?? null;
-        if (serialNo !== null && item.serialNos.length < MAX_LISTED) {
-          item.serialNos.push(serialNo);
-        }
-      }
-      return { items };
-    };
+    return (period) =>
+      byEnd.get(period.to.getTime()) ?? { rows: [], snapshots: [] };
   }
 
   // ---- 共用 ----
@@ -968,6 +988,44 @@ export class OperationsReportService {
     );
     return new Map(options.map((option) => [option.value, option.label]));
   }
+}
+
+/** 一家店期末那一刻的收付現況:待結清的列 + 參與收付的單據現況。 */
+interface SettlementAt {
+  rows: OutstandingRow[];
+  snapshots: SettlementSnapshot[];
+}
+
+/**
+ * 區塊 7:期末時的待付 / 待退進貨款、待收 / 待付調貨款、調貨待退 / 該退、待收批售款 / 批售待退(單據當時還有效、
+ * 收付只算期末以前的),依歸屬分店;說明列單號(最多 5 張)。
+ */
+function outstandingOf(
+  settlementAt: (period: StorePeriod) => SettlementAt,
+): (period: StorePeriod) => LotteryOperationsOutstandingModel {
+  return (period) => {
+    const items = OUTSTANDING_KINDS.map(({ kind }) => ({
+      kind,
+      count: 0,
+      amount: 0,
+      serialNos: [] as string[],
+    }));
+    for (const row of settlementAt(period).rows) {
+      const key = `${row.snapshot.registration.kind}|${row.kind}|${row.side.role}`;
+      const item =
+        items[OUTSTANDING_KINDS.findIndex((entry) => entry.key === key)];
+      if (item === undefined || !row.branchOrgId.equals(period.orgId)) {
+        continue;
+      }
+      item.count += 1;
+      item.amount += row.amount;
+      const serialNo = row.snapshot.submission.serialNo ?? null;
+      if (serialNo !== null && item.serialNos.length < MAX_LISTED) {
+        item.serialNos.push(serialNo);
+      }
+    }
+    return { items };
+  };
 }
 
 /**
@@ -1250,6 +1308,7 @@ function withoutCost(
     salesCost: null,
     scrapCost: null,
     scrapUndoCost: null,
+    wholesaleCost: null,
     matchCostAdjustCost: null,
     newInvestigatingCost: null,
     investigateRecoveredCost: null,
@@ -1261,5 +1320,12 @@ function withoutCost(
     investigatingCost: null,
     lostCost: null,
   });
+  // 2b 批售:原成本(獲利、獲利率跟著不顯示);批售金額照常
+  for (const row of [
+    ...store.wholesale.customers,
+    ...store.wholesale.documents,
+  ]) {
+    row.cost = null;
+  }
   return store;
 }

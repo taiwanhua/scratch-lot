@@ -84,9 +84,11 @@ export interface InboundEntry {
   branchOrgId: Types.ObjectId;
 }
 
-/** 算過的一張單據(寫結清標記用)。 */
+/** 算過的一張單據(寫結清標記用;某個時點的已收淨額也從這裡取)。 */
 interface EvaluatedDocument {
   submission: SettlementSubmission;
+  /** 當時的收付現況;不參與收付 = null */
+  snapshot: SettlementSnapshot | null;
   /** 有沒有待結清 */
   open: boolean;
   /** 最後一筆收付的發生時間;沒有收付 = 1970 */
@@ -408,6 +410,34 @@ export class SettlementLedger {
     operator: OperatorContext,
     asOfs: readonly Date[],
   ): Promise<OutstandingRow[][]> {
+    const results = await this.evaluatedAtMany(operator, asOfs);
+    return results.map((result) => result.rows);
+  }
+
+  /**
+   * 好幾個時點的待結清 + 那個時點參與收付的單據現況(順序同 `asOfs`;報表區塊 7 與 2b「期末已收」「期末已收未出貨」
+   * 一次算)。單據、狀態、應付、收付的還原規則同 `outstandingAt`:`snapshots` 的各邊合計只算那個時點以前的收付
+   * (已收淨額 = `receivedNetOf(snapshot.state.sides[邊])`)。那個時點以前就已結清的已完成單據(結清標記
+   * `closedAsOf` 早於它)不讀、不在 `snapshots` 裡 —— 當時已收 = 應收。
+   */
+  async settlementAtMany(
+    operator: OperatorContext,
+    asOfs: readonly Date[],
+  ): Promise<{ rows: OutstandingRow[]; snapshots: SettlementSnapshot[] }[]> {
+    const results = await this.evaluatedAtMany(operator, asOfs);
+    return results.map((result) => ({
+      rows: result.rows,
+      snapshots: result.evaluated.flatMap((item) =>
+        item.snapshot === null ? [] : [item.snapshot],
+      ),
+    }));
+  }
+
+  /** `outstandingAtMany` / `settlementAtMany` 共用:各時點挑出當時有效的單據,還原當時的樣子再算。 */
+  private async evaluatedAtMany(
+    operator: OperatorContext,
+    asOfs: readonly Date[],
+  ): Promise<{ rows: OutstandingRow[]; evaluated: EvaluatedDocument[] }[]> {
     if (asOfs.length === 0) {
       return [];
     }
@@ -470,7 +500,7 @@ export class SettlementLedger {
         }
       }
     };
-    const results = await this.outstandingWhere(
+    return this.outstandingWhere(
       operator,
       filter,
       asOfs.length,
@@ -483,7 +513,6 @@ export class SettlementLedger {
         }),
       true,
     );
-    return results.map((result) => result.rows);
   }
 
   /**
@@ -593,6 +622,7 @@ export class SettlementLedger {
         result.rows.push(...due);
         result.evaluated.push({
           submission: item.submission,
+          snapshot: evaluation.snapshot,
           open: due.length > 0,
           latestAt: evaluation.latestAt,
         });

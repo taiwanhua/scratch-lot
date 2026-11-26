@@ -7,6 +7,8 @@ import {
   ObjectType,
 } from "@nestjs/graphql";
 
+import { LotteryOperationsWholesaleModel } from "./operations-wholesale.model";
+
 /** 張數 + 金額。 */
 @ObjectType("LotteryReportQty")
 export class LotteryReportQtyModel {
@@ -278,6 +280,13 @@ export class LotteryOperationsInventoryModel {
   /** 跳號(拆本標註 − 取消;實際不存在的張號,不在加減裡、不計成本) */
   @Field(() => Int)
   skippedTickets!: number;
+
+  /** 淨批售(批售 − 取消批售;專案規格 21.7,放在淨銷售下面、進核對) */
+  @Field(() => Int)
+  wholesaleTickets!: number;
+
+  @Field(() => Float, { nullable: true })
+  wholesaleCost!: number | null;
 }
 
 /** 事後更正的一個原因類別(`redemption` 兌獎 / `stocktake` 盤點補登 / `refund` 退貨退款 / `cashCorrection` 現金更正)。 */
@@ -558,6 +567,10 @@ export class LotteryOperationsStoreModel {
 
   @Field(() => LotteryOperationsNotesModel)
   notes!: LotteryOperationsNotesModel;
+
+  /** 2b 批售(與區塊 4 的期末批售中;專案規格 21.7) */
+  @Field(() => LotteryOperationsWholesaleModel)
+  wholesale!: LotteryOperationsWholesaleModel;
 }
 
 /** 營運報表(規格 11.2;分店最多 50 家)。 */

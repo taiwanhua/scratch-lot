@@ -14,6 +14,11 @@ import {
   LotteryTicketsRepository,
 } from "../../database/lottery-inventory/lottery-inventory.repository";
 import type { LotteryOperationsInventoryModel } from "./models/operations-report.model";
+import {
+  type WholesaleFlow,
+  wholesaleFlowTotalOf,
+  wholesaleFlowsOf,
+} from "./operations-wholesale-flows";
 import { type BookPendings, loadBookPendings } from "./report-pending";
 import {
   type AttributedFlow,
@@ -45,6 +50,9 @@ export const INVENTORY_EVENT_TYPES: readonly TicketEventType[] = [
   // 張數店(規格 11.2):撤銷報廢回到庫存;對號換到在手上的成本
   TICKET_EVENT_TYPE.scrapUndo,
   TICKET_EVENT_TYPE.match,
+  // 批售(專案規格 21.7):出貨離開庫存、作廢回到庫存
+  TICKET_EVENT_TYPE.wholesale,
+  TICKET_EVENT_TYPE.wholesaleVoid,
 ];
 
 /** 對號的成本差這一期怎麼分(`matchCostSplitOf`;已售那部分由區塊 1 的已售成本帶進來)。 */
@@ -62,10 +70,17 @@ export interface InventoryEvent {
   type: string;
   at: Date;
   cost: number;
+  /** 事件的金額(批售 = 這張的批售金額) */
+  amount: number;
   refId: Types.ObjectId | null;
   from: StateSnapshot | null;
   to: StateSnapshot;
 }
+
+/** 區塊 4 + 給 2b 用的批售進出(`wholesaleFlows` 不進 GraphQL,由報表服務拿去組 2b)。 */
+export type OperationsInventoryResult = LotteryOperationsInventoryModel & {
+  wholesaleFlows: WholesaleFlow[];
+};
 
 /** 依「同一本 + 同一張來源單據 + 同一種事件」分組(整本的動作扣待標註)。 */
 function groupsOf(events: readonly InventoryEvent[]): TicketGroupInput[] {
@@ -169,7 +184,7 @@ const flowOf = (direction: 1 | -1, flow: PendingFlow): AttributedFlow => ({
  * 營運報表區塊 4 庫存異動(規格 11.2;正本 `docs/modules/project/reports.md`「營運報表」):由上往下加減,
  * 最後一列核對要是 0。
  *
- * `期初 + 進貨 + 調入 − 調出 − 淨銷售 − 報廢 + 撤銷報廢 − 新增待查 + 待查轉回 + 遺失尋回 ± 待標註調整 ± 對號成本調整 = 期末`
+ * `期初 + 進貨 + 調入 − 調出 − 淨銷售 − 淨批售 − 報廢 + 撤銷報廢 − 新增待查 + 待查轉回 + 遺失尋回 ± 待標註調整 ± 對號成本調整 = 期末`
  *
  * - 張數店(張數店規格 11.2):撤銷報廢 = 報廢 → 這家店的庫存(在撤銷的期間扣回報廢損失,已關帳月份不動);對號成本調整 =
  *   對號在手上成本的變動扣掉已經跟著已售成本換掉的部分(`matchCostSplitOf`;只有成本、張數 0)
@@ -195,7 +210,7 @@ export class OperationsInventory {
     events: readonly InventoryEvent[],
     sales: StockFigures,
     matchCost: InventoryMatchCost,
-  ): Promise<LotteryOperationsInventoryModel> {
+  ): Promise<OperationsInventoryResult> {
     const { orgId, from, to } = period;
     const [openingHeld, endingHeld, inbound, outbound] = await Promise.all([
       this.stock.heldAt(reader, orgId, from),
@@ -334,6 +349,16 @@ export class OperationsInventory {
     const lostRecovered = figures(
       recovered.filter((event) => event.from?.status === TICKET_STATUS.lost),
     );
+    // 批售:出貨離開庫存、作廢回到庫存(待標註照整本調貨的扣法;專案規格 21.5、21.7)
+    const wholesaleFlows = wholesaleFlowsOf(
+      events,
+      pendings,
+      pendingStores,
+      orgId,
+    );
+    const wholesaleShipped = wholesaleFlowTotalOf(wholesaleFlows, false);
+    const wholesaleVoided = wholesaleFlowTotalOf(wholesaleFlows, true);
+    const wholesale = minus(wholesaleShipped, wholesaleVoided);
     // 待標註調整:扣的位置換了(別家店點收 / 售出、標跳號、待查)或這家店標跳號,沒有對應的進出列
     const pendingAdjust = pendingAdjustmentOf({
       orgId,
@@ -355,6 +380,8 @@ export class OperationsInventory {
         flowOf(-1, lostInTransit),
         flowOf(1, investigateRecovered),
         flowOf(1, lostRecovered),
+        flowOf(-1, wholesaleShipped),
+        flowOf(1, wholesaleVoided),
       ],
       skips: events.filter(
         (event) =>
@@ -376,6 +403,7 @@ export class OperationsInventory {
         transferIn.tickets -
         outCost.tickets -
         sales.tickets -
+        wholesale.tickets -
         scrap.tickets +
         scrapUndo.tickets -
         newInvestigating.tickets +
@@ -388,6 +416,7 @@ export class OperationsInventory {
         transferIn.amount -
         outCost.cost -
         sales.cost -
+        wholesale.cost -
         scrap.cost +
         scrapUndo.cost -
         newInvestigating.cost +
@@ -448,6 +477,9 @@ export class OperationsInventory {
       skippedTickets:
         ofType(TICKET_EVENT_TYPE.skip, () => true).length -
         ofType(TICKET_EVENT_TYPE.unskip, () => true).length,
+      wholesaleTickets: wholesale.tickets,
+      wholesaleCost: wholesale.cost,
+      wholesaleFlows,
     };
   }
 }
