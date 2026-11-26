@@ -9,6 +9,8 @@ export interface InventoryAccess {
   bookRoute: string | null;
   /** 列表頁的路由 */
   listRoute: string | null;
+  /** 期初建檔頁的路由;沒綁 = null(頁首沒有 [期初建檔]) */
+  openingRoute: string | null;
 }
 
 /**
@@ -24,5 +26,6 @@ export const useInventoryAccess = (): InventoryAccess => {
     hasModule: modules.some((module) => module.key === KEYS.list),
     bookRoute: routeOf(KEYS.bookPage),
     listRoute: routeOf(KEYS.list),
+    openingRoute: routeOf(KEYS.openingPage),
   };
 };

@@ -8,7 +8,7 @@ import type { ModuleSeedDeclaration } from "../base/module-declaration";
 
 /**
  * 庫存管理(專案規格 3.1、3.2、第 7 章;正本 `docs/modules/project/inventory.md`):
- * 一頁三個分頁(庫存 | 待查·遺失 | 預計要給本數)+ 查刮刮樂,分頁不是模組節點;本的詳情是隱藏頁。
+ * 一頁三個分頁(庫存 | 待查·遺失 | 預計要給本數)+ 查刮刮樂,分頁不是模組節點;本的詳情、期初建檔是隱藏頁。
  * 一次宣告整個模組的全部權限,之後同模組的票不改這份宣告。本模組沒有 `view` 權限(規格 3.2):
  * 讀取看模組有沒有綁。不宣告資料範圍目標(本 / 張 / 事件 / 預計要給本數四張帳本表不能是目標,
  * `inventory-data-scope.test.ts` 鎖住)。
@@ -32,6 +32,14 @@ export const inventoryModule: ModuleSeedDeclaration = {
       parentKey: INVENTORY_KEY,
       order: 1,
       route: "book-page",
+    },
+    {
+      key: KEYS.openingPage,
+      name: "期初建檔",
+      sidebarType: "hidden",
+      parentKey: INVENTORY_KEY,
+      order: 2,
+      route: "opening-page",
     },
   ],
   permissions: [
@@ -66,6 +74,13 @@ export const inventoryModule: ModuleSeedDeclaration = {
       name: "修改預計要給本數",
       description:
         "預計要給本數點格子修改(庫存管理、遊戲詳情、乙類詳情);沒有時唯讀",
+    },
+    {
+      key: PERMISSIONS.opening,
+      moduleKey: INVENTORY_KEY,
+      name: "期初建檔",
+      description:
+        "導入時把店裡現有的本建進系統、作廢建錯的本、期初更正(庫存管理 [期初建檔]、本的詳情、盤點與全店重刷)",
     },
   ],
 };

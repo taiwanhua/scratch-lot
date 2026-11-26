@@ -17,6 +17,12 @@ import {
   masterDataSharedLookupHandlers,
   masterDataWorld,
 } from "@/test/msw/project/lottery/master-data-handlers";
+import { openingPageModule } from "@/test/msw/project/lottery/opening-fixtures";
+import {
+  type OpeningScanResult,
+  type OpeningState,
+  openingWorld,
+} from "@/test/msw/project/lottery/opening-handlers";
 import { server } from "@/test/msw/server";
 import { renderApp } from "@/test/render";
 
@@ -28,6 +34,9 @@ export const renderInventory = ({
   path = "/inventory",
   permissions = ALL_INVENTORY_PERMISSIONS,
   bookPage = true,
+  openingPage = false,
+  openings = {},
+  scans = {},
   inventory = true,
   masterData = false,
   world = {},
@@ -36,6 +45,12 @@ export const renderInventory = ({
   path?: string;
   permissions?: readonly string[];
   bookPage?: boolean;
+  /** 綁期初建檔頁 */
+  openingPage?: boolean;
+  /** 期初建檔狀態(分店 id → 狀態) */
+  openings?: Record<string, OpeningState>;
+  /** 期初建檔頁刷到的碼 → 掃描結果 */
+  scans?: Record<string, OpeningScanResult>;
   /** 綁不綁庫存管理 */
   inventory?: boolean;
   /** 另外綁檔案管理(遊戲詳情的庫存分頁) */
@@ -45,8 +60,17 @@ export const renderInventory = ({
   extra?: ReactNode;
 } = {}) => {
   const fake = inventoryWorld({ permissions, ...world });
+  const opening = openingWorld({
+    permissions,
+    openings,
+    scans,
+    nameOf: (orgId) =>
+      Object.values(masterDataOrgs).find((org) => org.id === orgId)?.name ??
+      orgId,
+  });
   server.use(
     ...fake.handlers,
+    ...opening.handlers,
     ...masterDataWorld().handlers,
     ...masterDataSharedLookupHandlers(),
     ...authWorld({
@@ -55,9 +79,10 @@ export const renderInventory = ({
       modules: [
         overviewModule,
         ...(inventory ? inventoryModules({ permissions, bookPage }) : []),
+        ...(inventory && openingPage ? [openingPageModule()] : []),
         ...(masterData ? masterDataModules() : []),
       ],
     }).handlers,
   );
-  return { ...renderApp({ path, extra }), fake };
+  return { ...renderApp({ path, extra }), fake, opening };
 };

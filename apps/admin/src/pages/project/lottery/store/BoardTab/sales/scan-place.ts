@@ -35,6 +35,10 @@ export const usePlaceText = () => {
 export const useBlockedText = (countBoard = false, localName = "") => {
   const { t, clock } = useSalesText();
   return (item: ScanItem): string => {
+    // 期初已售:不是「已於 hh:mm 售出」(期初建檔規格 D6)
+    if (item.openingSold) {
+      return t("scan.blocked.openingSold");
+    }
     if (item.outcome === "move_forbidden") {
       return t("scan.blocked.moveForbidden", {
         cashPoint: item.cashPoint?.name ?? "",

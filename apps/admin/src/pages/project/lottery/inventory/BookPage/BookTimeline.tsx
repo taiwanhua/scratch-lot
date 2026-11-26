@@ -46,6 +46,9 @@ export const BookTimeline = ({ events }: BookTimelineProps) => {
   const scrapReasons = useLotteryFieldOptions(
     LOTTERY_FIELD_CATEGORY_KEYS.scrapReason,
   );
+  const openingReasons = useLotteryFieldOptions(
+    LOTTERY_FIELD_CATEGORY_KEYS.openingCorrectionReason,
+  );
   const reasonLabelOf = (event: Event): string | null => {
     if (event.reasonKey == null) {
       return null;
@@ -60,6 +63,9 @@ export const BookTimeline = ({ events }: BookTimelineProps) => {
       }
       case TICKET_EVENT_TYPE.scrap: {
         return scrapReasons.labelOf(event.reasonKey);
+      }
+      case TICKET_EVENT_TYPE.openingFix: {
+        return openingReasons.labelOf(event.reasonKey);
       }
       default: {
         return event.reasonKey;

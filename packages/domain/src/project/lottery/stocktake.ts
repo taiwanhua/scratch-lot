@@ -58,13 +58,15 @@ export type StocktakeDiffKind = (typeof STOCKTAKE_DIFF_KINDS)[number];
 
 /**
  * 差異的處理:補登售出(立即生效)/ 待查 / 標記異常(只做記號)/ 標跳號(只有補點編號:已拆還有待標註的本,
- * 不在的張一併標跳號,張數店規格 9.3 第 3 點;核准時才寫)。
+ * 不在的張一併標跳號,張數店規格 9.3 第 3 點;核准時才寫)/ 期初更正(期初已售實際還在 → 改回未售、
+ * 放在這個收銀點;核准時才寫,期初建檔規格 4.2)。
  */
 export const STOCKTAKE_DIFF_ACTIONS = [
   "sale_backfill",
   "investigate",
   "flag",
   "skip",
+  "opening_fix",
 ] as const;
 export type StocktakeDiffAction = (typeof STOCKTAKE_DIFF_ACTIONS)[number];
 
@@ -73,6 +75,7 @@ export const STOCKTAKE_DIFF_ACTION = {
   investigate: "investigate",
   flag: "flag",
   skip: "skip",
+  openingFix: "opening_fix",
 } as const satisfies Record<string, StocktakeDiffAction>;
 
 /** 每種差異可用的處理(規格 6.8):未售不在 → [補登售出] / [待查];已售還在 → [標記異常]。 */
@@ -103,9 +106,13 @@ export const STOCKTAKE_STOCK_ACTIONS_OF: Record<
   extra: [],
 };
 
-/** 一行的差異可用的處理時的條件:這本還有待標註、而且是補點編號(9.3 第 3 點)→ 不在的張可以 [標跳號]。 */
+/**
+ * 一行的差異可用的處理時的條件:這本還有待標註、而且是補點編號(9.3 第 3 點)→ 不在的張可以 [標跳號];
+ * 這張是期初已售(導入前已賣出)→ 已售還在多一個 [期初更正](期初建檔規格 4.2)。
+ */
 export interface StocktakeActionOptions {
   pendingSkip?: boolean;
+  openingSold?: boolean;
 }
 
 /** 一行的差異可用的處理(檯面 / 庫存;補點編號且這本還有待標註時,不在的張多一個 [標跳號])。 */
@@ -117,9 +124,17 @@ export function stocktakeActionsOf(
   const base = isStocktakeStockLine(cashPointId)
     ? STOCKTAKE_STOCK_ACTIONS_OF[kind]
     : STOCKTAKE_ACTIONS_OF[kind];
-  return kind === "missing" && options.pendingSkip === true
-    ? [...base, STOCKTAKE_DIFF_ACTION.skip]
-    : base;
+  if (kind === "missing" && options.pendingSkip === true) {
+    return [...base, STOCKTAKE_DIFF_ACTION.skip];
+  }
+  if (
+    kind === "extra" &&
+    options.openingSold === true &&
+    !isStocktakeStockLine(cashPointId)
+  ) {
+    return [...base, STOCKTAKE_DIFF_ACTION.openingFix];
+  }
+  return base;
 }
 
 /** 待查清單的處理:找到了(要刷條碼)/ 確認遺失(`store.confirm-lost`,原因必填)/ 繼續待查。 */
@@ -580,6 +595,8 @@ export interface StocktakeDiff {
   ticketId: string;
   ticketNo: string;
   kind: StocktakeDiffKind;
+  /** 期初已售(導入前已賣出;呼叫端依目前的張標上,`extra` 才有意義)。 */
+  openingSold?: boolean;
   /** 這次盤點已補登售出(之後的異動全是自己補登的)。 */
   backfilled: boolean;
 }
@@ -632,12 +649,15 @@ export function stocktakeDiffsOf(
  * 收銀點(庫存那一行只能待查)。
  */
 export function isStocktakeActionValid(
-  diff: Pick<StocktakeDiff, "kind" | "backfilled">,
+  diff: Pick<StocktakeDiff, "kind" | "backfilled" | "openingSold">,
   action: StocktakeDiffAction,
   cashPointId: string | null = "",
   options: StocktakeActionOptions = {},
 ): boolean {
-  if (!stocktakeActionsOf(diff.kind, cashPointId, options).includes(action)) {
+  const withOpening = { ...options, openingSold: diff.openingSold === true };
+  if (
+    !stocktakeActionsOf(diff.kind, cashPointId, withOpening).includes(action)
+  ) {
     return false;
   }
   return (action === "sale_backfill") === diff.backfilled;

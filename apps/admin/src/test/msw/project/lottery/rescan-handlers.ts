@@ -49,6 +49,8 @@ export const rescanItem = (
   outcome,
   partnerTicketNo: null,
   cashPointId: "cp-outdoor",
+  version: 1,
+  openingSold: outcome === "opening_sold_here",
   ...extra,
 });
 

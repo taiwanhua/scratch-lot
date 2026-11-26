@@ -69,6 +69,10 @@ export const useSaleReversalScan = ({
           return;
         }
         const hit = reversalScanHitOf(items, wantedTicketId, matching);
+        if (hit?.item.openingSold === true) {
+          onNotice(t("scanOpeningSold"));
+          return;
+        }
         if (hit?.kind == null) {
           onNotice(
             matching ? t("scanNotReversibleCount") : t("scanNotReversible"),

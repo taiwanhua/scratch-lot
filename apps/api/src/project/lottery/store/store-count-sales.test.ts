@@ -57,6 +57,7 @@ const SCAN = /* GraphQL */ `
         blockReason
         unmatched
         match
+        openingSold
       }
     }
   }
@@ -1053,6 +1054,49 @@ describe("張數店:對號、依張數賣與撤銷(GraphQL 端點 + 真 MongoDB)
       expect(await unsoldAt(counterA)).toBe(unsoldA - 1);
       expect(await expectedOf(stallB)).toBe(cashB + 200);
       expect(await expectedOf(counterA)).toBe(cashA + 200);
+    });
+
+    it("OP12 依張數賣、對號都不挑期初已售(導入前已賣出;期初建檔規格 4.2)", async () => {
+      now("10:00");
+      const { bookId, bookNo } = await receiveBook();
+      await split(bookId, [{ cashPointId: stallB, ticketNos: ["041"] }]);
+      // A 台 #001–#003 是導入前已賣出
+      await connection.collection(LOTTERY_TICKETS_COLLECTION).updateMany(
+        { bookId, ticketNo: { $in: ["001", "002", "003"] } },
+        {
+          $set: {
+            status: "sold",
+            soldSource: "opening",
+            soldAt: new Date(),
+            unmatched: false,
+          },
+        },
+      );
+      await sellByCount(wang, 2);
+      for (const no of ["004", "005"]) {
+        expect(await ticketOf(bookId, no)).toMatchObject({
+          status: "sold",
+          soldSource: "count",
+        });
+      }
+      await sellByCount(lin, 1, stallB);
+      const countSale = await ticketOf(bookId, "041");
+      await sell(wang, countSale);
+      // 配對張是 A 台第一張未售 #006,不是期初已售
+      expect(await ticketOf(bookId, "006")).toMatchObject({
+        status: "sold",
+        unmatched: true,
+        soldSource: "count",
+      });
+      for (const no of ["001", "002", "003"]) {
+        expect(await ticketOf(bookId, no)).toMatchObject({
+          status: "sold",
+          soldSource: "opening",
+          unmatched: false,
+        });
+      }
+      const [opening] = await scan(wang, barcodeOf(bookNo, "001"));
+      expect(opening).toMatchObject({ openingSold: true, match: false });
     });
 
     it("M1 同位置只換狀態;M2 同位置照挑張順序(先拆的本、可跨本)", async () => {

@@ -138,6 +138,7 @@ query LotteryStocktakeReview($input: LotteryStocktakeReviewInput!) {
         version
         kind
         backfilled
+        openingSold
       }
       pendingReversalTicketNos
       staleTicketNos

@@ -25,6 +25,7 @@ export type SheetLostTicket = StocktakeSheet["lostTickets"][number];
 export type StocktakeReview =
   LotteryStocktakeReviewQuery["lotteryStocktakeReview"];
 export type ReviewLine = StocktakeReview["lines"][number];
+export type ReviewDiff = ReviewLine["diffs"][number];
 export type SheetCountGroup = StocktakeSheet["countGroups"][number];
 export type ReviewCountLine = StocktakeReview["countLines"][number];
 
@@ -349,6 +350,13 @@ export const figuresOf = (
   };
 };
 
+/** 這一行可用的處理(補點編號且這本還有待標註多 [標跳號],張數店規格 9.3;期初已售多 [期初更正],期初建檔規格 4.2)。 */
+export const reviewActionsOf = (line: ReviewLine, diff: ReviewDiff) =>
+  stocktakeActionsOf(diff.kind as StocktakeDiffKind, line.cashPointId, {
+    pendingSkip: line.pendingSkipCount > 0,
+    openingSold: diff.openingSold,
+  });
+
 /** 差異核對還沒處理的張數(目前的差異、沒有選處理或處理對不上)+ 還沒處理完的組(伺服器比對)。 */
 export const unhandledOf = (
   review: StocktakeReview,
@@ -365,13 +373,7 @@ export const unhandledOf = (
           ];
         return (
           choice === undefined ||
-          !stocktakeActionsOf(
-            diff.kind as StocktakeDiffKind,
-            line.cashPointId,
-            {
-              pendingSkip: line.pendingSkipCount > 0,
-            },
-          ).includes(choice.action) ||
+          !reviewActionsOf(line, diff).includes(choice.action) ||
           (choice.action === "sale_backfill") !== diff.backfilled
         );
       }).length,

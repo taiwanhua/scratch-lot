@@ -492,7 +492,8 @@
       "NO_PENDING_SKIPS": "This book has no skipped numbers left to mark",
       "SCRAP_NOT_ALLOWED": "Only unsold stock tickets of opened books can be scrapped; recall counter tickets first",
       "NO_MATCH_PARTNER": "No unsold ticket at the same place can take over the status filled in by the system; count or rescan first",
-      "COUNT_STORE_SCAN_ONLY": "Count stores must scan or type the ticket in hand"
+      "COUNT_STORE_SCAN_ONLY": "Count stores must scan or type the ticket in hand",
+      "STORE_OPENING_CLOSED": "Opening entry for this store has ended"
     },
     "ticketStatuses": {
       "unsold": "Unsold",
@@ -541,7 +542,10 @@
       "cost_adjust": "Cost adjusted",
       "match": "Matched",
       "renumber_confirm": "Ticket number confirmed",
-      "scrap_undo": "Scrap undone"
+      "scrap_undo": "Scrap undone",
+      "opening": "Opening entry",
+      "opening_fix": "Opening correction",
+      "opening_void": "Opening entry voided"
     },
     "sources": {
       "purchase": "Purchase order",
@@ -569,13 +573,20 @@
         "state": "Status",
         "purchasedFrom": "Purchased from",
         "purchasedTo": "Purchased to",
-        "bookNo": "Book no."
+        "bookNo": "Book no.",
+        "source": "Source"
       },
       "listAria": "Stock (by book)",
       "pickOrg": "Pick a branch first",
       "empty": "No books match",
       "total": "{count} books",
-      "remainingEstimated": "≈ {remaining} / {total}"
+      "remainingEstimated": "≈ {remaining} / {total}",
+      "sourceOptions": {
+        "purchase": "Purchase",
+        "opening": "Opening entry"
+      },
+      "preExisting": "Before adoption",
+      "openingEntry": "Opening entry"
     },
     "lookup": {
       "open": "Find ticket",
@@ -654,7 +665,14 @@
         "notUnsold": "Only unsold tickets can be scrapped"
       },
       "remainingEstimated": " · {remaining} left (estimated, plus {unmatched} system-assigned)",
-      "dashedNote": "Dashed = ticket numbers assigned by the system"
+      "dashedNote": "Dashed = ticket numbers assigned by the system",
+      "openingSource": "Opening entry",
+      "openingSourceValue": "{name} · {time}",
+      "rateValueOpening": "{rate}% (from opening entry)",
+      "openingSoldTooltip": "Sold before adoption",
+      "soldWithOpening": "Sold (incl. before adoption)",
+      "fixToUnsold": "Change back to unsold…",
+      "fixToOpeningSold": "Mark sold before adoption…"
     },
     "timeline": {
       "columns": {
@@ -757,6 +775,130 @@
       "notThisBook": "This ticket is not from this book",
       "notSkipped": "#{ticketNo} is now {status}, not skipped; scan the ticket recorded as skipped that you have in hand",
       "guessedToSkipped": "{ticketNo} {status} (filled in by the system) → skipped; this status moves to an unsold ticket at the same place first"
+    },
+    "opening": {
+      "tabLabel": "Opening entry",
+      "back": "Back to inventory",
+      "org": "Store",
+      "pickOrg": "Pick a store first",
+      "hint": "For the same game, enter the book that sells first",
+      "closed": "Opening entry for this store has ended ({date} {by})",
+      "scan": "Scan to enter",
+      "fallbackGame": "Game for front barcode",
+      "fallbackGameNone": "Scan back number",
+      "scanErrors": {
+        "invalid": "Cannot read this code. Scan the book's back number or front barcode",
+        "no_game": "The front barcode has no game code. Pick the game for front barcode first",
+        "unknown_game": "Game not found",
+        "exists": "This book is already in the system",
+        "on_purchase": "This book is on purchase order #{serialNo}. Receive it on the purchase order"
+      },
+      "openBook": "Book details",
+      "discontinued": "This game is discontinued",
+      "card": {
+        "title": "{code} {name} · Book {bookNo}",
+        "meta": "{price} · standard {count} tickets",
+        "cancel": "Skip this book",
+        "stepsAria": "Entry steps",
+        "steps": {
+          "sold": "Mark sold before adoption",
+          "skip": "Mark skips",
+          "place": "Place"
+        },
+        "progress": "Step {current} / {total} · {label}",
+        "next": "Next",
+        "previous": "Back",
+        "last": "Last ticket",
+        "lastHelper": "{min}–999",
+        "soldHint": "Tap the tickets sold before adoption (Shift to select a range). Sealed books need none.",
+        "soldLegend": "Sold (before adoption)",
+        "skipHint": "Last ticket {last} is {count} over the standard count, so {count} numbers don't exist. An opened book must mark these {count}; a sealed book in stock may skip this.",
+        "place": {
+          "allTo": "All in one place",
+          "allToField": "Place",
+          "splitOption": "Split across places",
+          "splitHint": "Select tickets in the grid, then tap a place:",
+          "column": "Place",
+          "remaining": "{count} tickets not placed yet. Place all to enter.",
+          "stock": "Stock"
+        },
+        "rate": "Purchase rate",
+        "cost": "Cost {amount}",
+        "summary": "Last {last}: sold before adoption {sold} · skips {skipped} · in hand {inHand} ({places})",
+        "placeCounter": "Counter {name} {count}",
+        "placeStock": "Stock {count}",
+        "problems": {
+          "last_invalid": "Last ticket must be {min}–999",
+          "all_sold": "A fully sold book doesn't need entry",
+          "skip_count_mismatch": "{count} skips not marked yet",
+          "unplaced": "Some tickets are not placed",
+          "ticket_out_of_range": "A ticket is out of this book's range. Check again",
+          "ticket_repeated": "A ticket was marked twice. Check again"
+        },
+        "submit": "Enter"
+      },
+      "confirm": {
+        "title": "Enter {key}?",
+        "note": "Takes effect immediately.",
+        "checked": "I've checked the physical tickets",
+        "cancel": "Cancel",
+        "submit": "Enter"
+      },
+      "success": "Entered {key}",
+      "list": {
+        "title": "Books entered for this store",
+        "aria": "Books entered for this store",
+        "empty": "No books entered yet",
+        "columns": {
+          "bookNo": "Book",
+          "game": "Game",
+          "counts": "Sold before / in hand",
+          "places": "Place",
+          "openedBy": "Entered by",
+          "actions": "Actions"
+        },
+        "counts": "{sold} / {inHand}",
+        "openedBy": "{name} · {time}",
+        "detail": "Book details",
+        "void": "Void",
+        "voidBlocked": "This book has sales or other actions. Use an opening correction"
+      },
+      "void": {
+        "title": "Void {key}?",
+        "body": "The entry is removed and the book number can be entered again.",
+        "cancel": "Cancel",
+        "submit": "Void",
+        "success": "Voided {key}"
+      },
+      "errors": {
+        "FORBIDDEN": "You don't have permission for this",
+        "NOT_FOUND": "Store or book not found",
+        "VALIDATION_FAILED": "Some fields are invalid. Please check",
+        "CONFLICT": "Someone just changed this. Refresh and try again",
+        "STORE_OPENING_CLOSED": "Opening entry for this store has ended",
+        "BOOK_ON_PURCHASE": "This book is on purchase order #{serialNo}. Receive it on the purchase order",
+        "OPENING_PLAN_INVALID": "Ticket numbers don't add up. Check again",
+        "OPENING_NOT_VOIDABLE": "This book has sales or other actions. Use an opening correction",
+        "BOOK_KEY_DUPLICATE": "This book is already in the system",
+        "UNEXPECTED": "Something went wrong. Please try again later"
+      }
+    },
+    "openingFix": {
+      "place": "Put in",
+      "counter": "Counter · {name}",
+      "reason": "Reason",
+      "toUnsold": {
+        "title": "Change {count} tickets back to unsold",
+        "hint": "These tickets are still in the store. They go back to unsold in the place you pick. No sales or cash are recorded.",
+        "submit": "Change to unsold",
+        "success": "Changed {count} tickets to unsold"
+      },
+      "toSold": {
+        "title": "Mark {count} tickets sold before adoption",
+        "hint": "These tickets were sold before adoption. No sales or cash are recorded.",
+        "submit": "Mark sold before adoption",
+        "success": "Marked {count} tickets sold before adoption"
+      }
     }
   },
   "lotteryReports": {
@@ -912,6 +1054,8 @@
         "redemptionSent": "of which sent for claim",
         "redemptionRevoked": "Revoked (listed separately)",
         "opening": "Opening stock",
+        "openingEntry": "+ Opening entry",
+        "openingEntryNote": "{books} books, {fix} tickets corrected, {voided} books voided",
         "purchase": "+ Purchased",
         "books": "{count} books",
         "booksWithVoid": "{count} books (incl. {voided} voided)",
@@ -981,7 +1125,10 @@
         "monthEndUnrenumbered": "Not renumbered at month end",
         "monthEndRenumberNone": "None",
         "monthEndRenumberMonthOnly": "— (monthly reports only)",
-        "monthEndRenumberOpen": "— (decided at period close)"
+        "monthEndRenumberOpen": "— (decided at period close)",
+        "openingEntryPeriod": "Opening entry",
+        "openingEntryOngoing": "This store started opening entry on {start}; still in progress",
+        "openingEntryClosed": "This store started opening entry on {start}; ended on {end}"
       },
       "closing": {
         "closed": "Closed",
@@ -3181,6 +3328,7 @@
     "STORE_FORM_BRANCH_NOT_VISIBLE": "The store is outside your scope",
     "STORE_FORM_SHIFT_NOT_IN_BRANCH": "The selected shift is not a shift of this store",
     "SALE_REVERSAL_TICKET_NOT_REVERSIBLE": "Some tickets are not sold in this store, or are on another open sale reversal request",
+    "OPENING_SALE_NOT_REVERSIBLE": "Some tickets were sold before the system was adopted and can't be reversed. Use an opening correction.",
     "SALE_REVERSAL_AMOUNT_MISMATCH": "The refund amount does not match the face value of these tickets; pick them again",
     "SALE_REVERSAL_COUNT_SALE_NOT_FOUND": "The scanned ticket is not recorded as sold and this cash point has no sale by count of this game to match it with; check the cash point or use \"by game + count\"",
     "SALE_REVERSAL_COUNT_EXCEEDS": "Not enough sold tickets of this game at this cash point (filled in by the system by default); check \"up to\" and lower the count",
@@ -3433,13 +3581,15 @@
         "moveForbidden": "This ticket is on {cashPoint} and you cannot move tickets. Sell it at {cashPoint}.",
         "unmatchedNoPartner": "This ticket is recorded as sold (unmatched), but {cashPoint} has no unsold ticket of this game to match. Send a sale reversal request (reason: stocktake error) and sell it after approval.",
         "skippedFix": "This ticket is recorded as \"skipped\" and cannot be sold. Correct the skipped ticket on the book detail first.",
-        "scrappedFix": "This ticket is recorded as scrapped and cannot be sold. Undo the scrap first."
+        "scrappedFix": "This ticket is recorded as scrapped and cannot be sold. Undo the scrap first.",
+        "openingSold": "This ticket was sold before the system was adopted. Use an opening correction."
       },
       "notFound": "Ticket not found, or it does not belong to this store.",
       "recoverNoPermission": "This ticket is under investigation. Someone with the recover permission has to handle it.",
       "gotIt": "OK",
       "infoTitle": "Ticket info",
-      "infoHint": "This device has no local cash point, the local cash point has no open shift, or you cannot sell: info only."
+      "infoHint": "This device has no local cash point, the local cash point has no open shift, or you cannot sell: info only.",
+      "openingFix": "Opening correction"
     },
     "quickSale": {
       "title": "Quick sale",
@@ -3522,7 +3672,8 @@
       "scanMove": "Scan to move",
       "moveByCount": "Move by count",
       "pausedRescan": "Moving is paused while game {game} is being rescanned",
-      "pausedRenumber": "Moving is paused during renumbering"
+      "pausedRenumber": "Moving is paused during renumbering",
+      "openingSold": "Sold before adoption"
     },
     "move": {
       "title": "Move",
@@ -3626,7 +3777,8 @@
       "MOVE_PAUSED": "{kind, select, renumber {Moving is paused during renumbering} other {Moving is paused while this game is being rescanned}}",
       "MOVE_BY_COUNT_INVALID": "{problem, select, exceeds {Only {available} of this game are left on the counter} same_cash_point {Move to another counter} not_count_store {Only count stores can move by count} other {Invalid count}}",
       "SPLIT_ACTUAL_COUNT_REQUIRED": "Enter the number of tickets on hand",
-      "SPLIT_ACTUAL_COUNT_MISMATCH": "{problem, select, over {{count} more than the system; count the stock first.} other {{count} fewer than the system; count the stock first or check for a wrongly reported ticket.}}"
+      "SPLIT_ACTUAL_COUNT_MISMATCH": "{problem, select, over {{count} more than the system; count the stock first.} other {{count} fewer than the system; count the stock first or check for a wrongly reported ticket.}}",
+      "OPENING_SOLD": "This ticket was sold before the system was adopted. Use an opening correction"
     },
     "redemption": {
       "redeemTitle": "Redeem · {name}",
@@ -3801,6 +3953,7 @@
       "submitted": "Sale reversal request submitted",
       "submitAndPrint": "Submit and print receipt",
       "scanNotReversibleCount": "This ticket cannot be reversed: it is locked by another form, recorded as skipped or scrapped, in transit, or not from this store",
+      "scanOpeningSold": "This ticket was sold before the system was adopted and can't be reversed. Use an opening correction.",
       "dashedNote": "Dashed = ticket number filled in by the system by default",
       "matchTicket": "{gameCode} · {bookNo} · #{ticketNo} (scanned)",
       "matched": "Matched",
@@ -3952,7 +4105,8 @@
           "sale_backfill": "Backfill sale",
           "investigate": "Investigate",
           "flag": "Flag",
-          "skip": "Mark skipped"
+          "skip": "Mark skipped",
+          "opening_fix": "Opening correction"
         },
         "clear": "Clear selection",
         "recount": "Recount this book",
@@ -4071,7 +4225,8 @@
         "actions": {
           "sale_backfill": "Backfill sale",
           "investigate": "Investigate",
-          "flag": "Flag"
+          "flag": "Flag",
+          "opening_fix": "Opening correction"
         },
         "postClose": " (post-close)",
         "noLines": "No counted books",
@@ -4725,7 +4880,8 @@
         "unopened": "Book not opened, not in the rescan",
         "other_game": "Not game {code}",
         "not_this_store": "Not this store's ticket",
-        "investigated": "Confirmed missing"
+        "investigated": "Confirmed missing",
+        "opening_sold_here": "Sold before adoption but still here"
       },
       "finish": {
         "title": "{count} scanned at {place}. Done?",
@@ -4749,6 +4905,7 @@
         "recovered": "Recovered",
         "soldHere": "Recorded sold but here",
         "soldHereValue": "{count} ({tickets}, please send a sale reversal request)",
+        "openingSoldHere": "Sold before adoption but still here",
         "investigated": "Confirmed missing",
         "toFix": "Correct first",
         "countValue": "{count} ({tickets})",
@@ -4775,6 +4932,10 @@
         "tag": "Rescanning",
         "blocked": "{code} is being rescanned here. Count it after the rescan.",
         "notice": "{place} · {game}: {code} is being rescanned here. Count it after the rescan."
+      },
+      "openingFix": {
+        "button": "Opening correction #{ticketNo}",
+        "noPermission": "Ask the store manager to make an opening correction"
       }
     }
   },
@@ -4935,7 +5096,9 @@
     "feedback": {
       "saveSuccess": "Setting customized",
       "restoreSuccess": "Restored to inherited",
-      "cancelConversionSuccess": "Conversion cancelled; back to quantity count"
+      "cancelConversionSuccess": "Conversion cancelled; back to quantity count",
+      "closeOpeningSuccess": "Opening entry closed",
+      "reopenOpeningSuccess": "Opening entry reopened"
     },
     "errors": {
       "FORBIDDEN": "You cannot change settings for this organization",
@@ -4945,7 +5108,29 @@
       "NOT_CONVERTING": "This store is not converting",
       "NOT_STORE": "Only stores have a counting method",
       "CONCURRENT_EDIT": "Someone changed this setting at the same time; refresh and try again",
+      "OPENING_STATE_MISMATCH": "Someone else changed the opening entry status. Refresh and try again.",
       "UNEXPECTED": "Something went wrong; please try again later"
+    },
+    "opening": {
+      "label": "Opening entry",
+      "open": "In progress ({count} books entered)",
+      "closed": "Closed ({at} {by})",
+      "close": "Close opening entry",
+      "reopen": "Reopen",
+      "closeDialog": {
+        "title": "Close opening entry for {org}?",
+        "body": "After closing, this store can no longer enter books here; stock that arrives later goes through purchase orders. {count} books entered.",
+        "back": "Cancel",
+        "confirm": "Close opening entry"
+      },
+      "reopenDialog": {
+        "title": "Reopen opening entry for {org}?",
+        "body": "After reopening, this store can enter books again. Close opening entry again when done.",
+        "reason": "Reason",
+        "reasonRequired": "Enter a reason",
+        "back": "Cancel",
+        "confirm": "Reopen"
+      }
     }
   }
 }

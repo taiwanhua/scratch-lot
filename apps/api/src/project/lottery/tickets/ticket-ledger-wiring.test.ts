@@ -105,7 +105,7 @@ describe("張的寫入只經帳本服務(靜態檢查)", () => {
     text: readFileSync(file, "utf8"),
   }));
 
-  it("張 repository 的寫入只出現在帳本服務與建本(建本同時寫進貨事件)", () => {
+  it("張 repository 的寫入只出現在帳本服務、建本(建本同時寫進貨事件)與期初建檔作廢", () => {
     const writers = Object.fromEntries(
       files.flatMap(({ file, text }) => {
         const calls = writeCallsOf(text, "LotteryTicketsRepository");
@@ -116,6 +116,8 @@ describe("張的寫入只經帳本服務(靜態檢查)", () => {
       // 狀態寫入(updateMany + 換店 reassignOrgMany)、售出帶著的售出事件(bulkUpdateByIds)與改鎖(updateMany)
       "project/lottery/tickets/ticket-ledger.service.ts": 4,
       "project/lottery/tickets/books.service.ts": 1,
+      // 期初建檔作廢:先經帳本服務寫 opening_void 事件,再把整本的張軟刪(本號可以重建)
+      "project/lottery/inventory/opening/opening.service.ts": 1,
     });
   });
 

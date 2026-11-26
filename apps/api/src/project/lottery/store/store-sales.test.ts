@@ -55,6 +55,7 @@ const SCAN = /* GraphQL */ `
         outcome
         blockReason
         soldAt
+        openingSold
         pendingSkipCount
         cashPoint {
           id
@@ -203,6 +204,7 @@ interface ScanRow {
   outcome: string;
   blockReason: string | null;
   soldAt: string | null;
+  openingSold: boolean;
   pendingSkipCount: number;
   cashPoint: { id: string; name: string } | null;
   counterShiftOwner: { id: string; name: string } | null;
@@ -1045,6 +1047,46 @@ describe("店面(二):銷售、當下撤銷、拆本、移櫃(GraphQL 端點 + �
         code: "FORBIDDEN",
       });
     });
+  });
+
+  it("OP7 期初建檔:刷到導入前已賣出的張 → 提示期初已售、售出擋下 OPENING_SOLD(兩種店同一條路)", async () => {
+    now("13:30");
+    bookSequence += 1;
+    const no = String(bookSequence).padStart(6, "0");
+    const nos = Array.from({ length: 100 }, (_, index) =>
+      String(index + 1).padStart(3, "0"),
+    );
+    const { book } = await api.app
+      .get(TransactionService)
+      .withTransaction((session) =>
+        api.app
+          .get(LotteryBooksService)
+          .createBook(session, storeOperator(xinyi), {
+            orgId: xinyi,
+            gameId,
+            bookNo: no,
+            lastTicketNo: 100,
+            rate: 92,
+            cost: 18_400,
+            opening: {
+              soldTicketNos: nos.slice(0, 10),
+              skippedTicketNos: [],
+              placements: [{ cashPointId: counter, ticketNos: nos.slice(10) }],
+            },
+          }),
+      );
+    const [row] = await scan(wang, `${no}005`);
+    expect(row).toMatchObject({ status: "sold", openingSold: true });
+    const ticket = await ticketOf(book._id, "005");
+    const before = await expectedOf(counter);
+    expect(await errorOf(wang, SELL, sellInput(ticket))).toMatchObject({
+      code: "VALIDATION_FAILED",
+      reason: "OPENING_SOLD",
+    });
+    const [unsold] = await scan(wang, `${no}011`);
+    expect(unsold?.openingSold).toBe(false);
+    await sell(wang, await ticketOf(book._id, "011"));
+    expect(await expectedOf(counter)).toBe(before + 200);
   });
 
   it("第 17 章第 3 題(看板一側):同一張同時兩次售出 → 只有一次成功,失敗方看到售出時間", async () => {

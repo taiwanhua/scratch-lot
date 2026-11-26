@@ -6,6 +6,7 @@ import { COLLATION_LOCALE } from "@repo/domain/collation";
 import type { StoredValues } from "@repo/domain/form";
 import {
   INVENTORY_PERMISSIONS,
+  STOCKTAKE_DIFF_ACTION,
   STOCKTAKE_REASONS,
   STOCKTAKE_STATUS,
   STORE_PERMISSIONS,
@@ -17,6 +18,7 @@ import {
   TICKET_STATUS,
   type TicketStatus,
   displayTicketKey,
+  isOpeningSold,
   isStocktakeStockLine,
   parseStocktakeDraft,
   pendingSkipCountOf,
@@ -236,6 +238,7 @@ export class StocktakeService {
               version: item.ticketById.get(diff.ticketId)?.version ?? 0,
               kind: diff.kind,
               backfilled: diff.backfilled,
+              openingSold: diff.openingSold === true,
             })),
             pendingReversalTicketNos: item.pendingReversalNos,
             staleTicketNos: item.stale,
@@ -780,6 +783,16 @@ export class StocktakeService {
         .map((diff) => ({ ticketId: diff.ticketId, after: line.countedAt })),
     );
     const investigate = investigateLines.map((entry) => entry.ticketId);
+    // 期初更正:期初已售實際還在 → 改回未售、放在盤到的收銀點(期初建檔規格 4.2)
+    const openingFixLines = record.lines.flatMap((line) =>
+      line.diffs
+        .filter((diff) => diff.action === STOCKTAKE_DIFF_ACTION.openingFix)
+        .map((diff) => ({
+          ticketId: diff.ticketId,
+          after: line.countedAt,
+          cashPointId: line.cashPointId,
+        })),
+    );
     const absentBooks = record.unopenedLines
       .filter((line) => !line.present)
       .map((line) => line.bookId);
@@ -804,6 +817,7 @@ export class StocktakeService {
     );
     const ids = [
       ...investigate,
+      ...openingFixLines.map((entry) => entry.ticketId),
       ...unopened.map((ticket) => ticket._id),
       ...lost.map((line) => line.ticketId),
       ...found.map((line) => line.ticketId),
@@ -819,6 +833,7 @@ export class StocktakeService {
       reader,
       [
         ...investigateLines,
+        ...openingFixLines.map(({ ticketId, after }) => ({ ticketId, after })),
         ...[
           ...unopened.map((ticket) => ticket._id),
           ...lost.map((line) => line.ticketId),
@@ -865,6 +880,27 @@ export class StocktakeService {
         patch: {
           status: TICKET_STATUS.investigating,
           responsibleOrgId: record.orgId,
+        },
+      });
+    }
+    for (const entry of openingFixLines) {
+      const ticket = byId.get(String(entry.ticketId));
+      if (
+        ticket === undefined ||
+        entry.cashPointId === null ||
+        !isOpeningSold(ticket)
+      ) {
+        continue;
+      }
+      push(entry.ticketId, [TICKET_STATUS.sold], {
+        type: TICKET_EVENT_TYPE.openingFix,
+        patch: {
+          status: TICKET_STATUS.unsold,
+          sold: null,
+          location: {
+            kind: TICKET_LOCATION_KIND.counter,
+            cashPointId: entry.cashPointId,
+          },
         },
       });
     }

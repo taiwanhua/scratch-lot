@@ -277,6 +277,10 @@ export class LotteryStocktakeDiffModel {
   /** 這次盤點已補登售出。 */
   @Field(() => Boolean)
   backfilled!: boolean;
+
+  /** 期初已售(導入前已賣出)實際還在:多一個 [期初更正](期初建檔規格 4.2)。 */
+  @Field(() => Boolean)
+  openingSold!: boolean;
 }
 
 @ObjectType("LotteryStocktakeReviewLine")

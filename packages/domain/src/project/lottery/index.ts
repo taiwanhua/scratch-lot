@@ -36,6 +36,7 @@ export * from "./counter-moves";
 export * from "./daily-close";
 export * from "./dealer-limits";
 export * from "./inventory";
+export * from "./opening";
 export * from "./portable-lookups";
 export * from "./purchase";
 export * from "./receipt-links";

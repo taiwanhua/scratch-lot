@@ -3,11 +3,9 @@ import { useTranslations } from "use-intl";
 
 import {
   type StocktakeDiffAction,
-  type StocktakeDiffKind,
   displayBookNo,
   formatTicketRanges,
   isStocktakeStockLine,
-  stocktakeActionsOf,
 } from "@repo/domain/project/lottery";
 import { Alert } from "@repo/ui/alert";
 import { Button } from "@repo/ui/button";
@@ -27,21 +25,15 @@ import {
 import { ReviewFooter } from "./StocktakeReviewFooter";
 import { reviewTotalsOf } from "./stocktake-count-model";
 import {
+  type ReviewDiff,
   type ReviewLine,
   type SheetCashPoint,
   type StocktakeReview,
   type StocktakeState,
   diffKeyOf,
   lineKeyOf,
+  reviewActionsOf,
 } from "./stocktake-model";
-
-type ReviewDiff = ReviewLine["diffs"][number];
-
-/** 這一行可用的處理(補點編號且這本還有待標註:不在的張多一個 [標跳號];張數店規格 9.3 第 3 點)。 */
-const actionsOf = (line: ReviewLine, kind: string) =>
-  stocktakeActionsOf(kind as StocktakeDiffKind, line.cashPointId, {
-    pendingSkip: line.pendingSkipCount > 0,
-  });
 
 interface Row {
   key: string;
@@ -122,7 +114,7 @@ export const StocktakeReviewStep = ({
     (action) =>
       chosen.length > 0 &&
       chosen.every((row) =>
-        actionsOf(row.line, row.diff.kind).includes(action),
+        reviewActionsOf(row.line, row.diff).includes(action),
       ) &&
       (action !== "sale_backfill" || canBackfill),
   );
@@ -241,7 +233,7 @@ export const StocktakeReviewStep = ({
           <Tag tone="success" label={t("backfilled")} />
         ) : (
           <Stack direction="row" spacing={1}>
-            {actionsOf(row.line, row.diff.kind)
+            {reviewActionsOf(row.line, row.diff)
               .filter((action) => action !== "sale_backfill" || canBackfill)
               .map((action) => actionButton(row, action))}
           </Stack>

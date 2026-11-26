@@ -210,6 +210,33 @@ describe("店面管理:盤點", () => {
     ).toBeInTheDocument();
   });
 
+  it("期初已售的張還在 → 多一個 [期初更正](期初建檔規格 4.2)", async () => {
+    const user = fastUser();
+    renderStore({
+      path: OUTDOOR_PATH,
+      stocktakeOptions: { openingSoldTicketIds: ["b-6-015"] },
+    });
+    await countZhaoCaiMao(user);
+    await user.click(screen.getByRole("button", { name: "差異核對 →" }));
+    await screen.findByText("#015", { selector: "td" });
+    expect(
+      within(rowOf("015")).getByRole("button", { name: "期初更正" }),
+    ).toBeInTheDocument();
+    expect(
+      within(rowOf("015")).getByRole("button", { name: "標記異常" }),
+    ).toBeInTheDocument();
+    await user.click(
+      within(rowOf("015")).getByRole("button", { name: "期初更正" }),
+    );
+    for (const no of ["024", "025"]) {
+      await user.click(within(rowOf(no)).getByRole("button", { name: "待查" }));
+    }
+    // 期初更正算處理過了(核准時才寫)
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "送出 →" })).toBeEnabled();
+    });
+  });
+
   it("沒有 store.sell → 差異核對沒有 [補登售出]", async () => {
     const user = fastUser();
     renderStore({

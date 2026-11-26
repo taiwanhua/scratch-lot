@@ -1,0 +1,117 @@
+# 期初建檔(期初建檔規格;api `apps/api/src/project/lottery/inventory/opening/`)
+
+fragment LotteryStoreOpeningFields on LotteryStoreOpening {
+  org {
+    ...LotteryInventoryRefFields
+  }
+  closed
+  closedAt
+  closedBy {
+    ...LotteryInventoryRefFields
+  }
+  startedAt
+  history {
+    action
+    at
+    by {
+      ...LotteryInventoryRefFields
+    }
+    reason
+  }
+  bookCount
+  books {
+    bookId
+    bookKey
+    gameCode
+    gameName
+    bookNo
+    lastTicketNo
+    openingSoldCount
+    inHandCount
+    places {
+      cashPoint {
+        ...LotteryInventoryRefFields
+      }
+      count
+    }
+    openedBy {
+      ...LotteryInventoryRefFields
+    }
+    openingAt
+    voidable
+  }
+  canOpen
+  canClose
+  canShowCost
+  cashPoints {
+    ...LotteryInventoryRefFields
+  }
+}
+
+query LotteryStoreOpening($orgId: ID!) {
+  lotteryStoreOpening(orgId: $orgId) {
+    item {
+      ...LotteryStoreOpeningFields
+    }
+  }
+}
+
+# LotteryOpeningScanInput: { orgId, code }
+query LotteryOpeningScan($input: LotteryOpeningScanInput!) {
+  lotteryOpeningScan(input: $input) {
+    bookNo
+    topTicketNo
+    hasGameCode
+    candidates {
+      gameId
+      gameCode
+      gameName
+      ticketsPerBook
+      bookPrice
+      defaultRate
+      discontinued
+      block
+      bookId
+      serialNo
+    }
+  }
+}
+
+# CreateLotteryOpeningBookInput: { orgId, gameId, bookNo, lastTicketNo, rate, soldTicketNos, skippedTicketNos, placements }
+mutation CreateLotteryOpeningBook($input: CreateLotteryOpeningBookInput!) {
+  createLotteryOpeningBook(input: $input) {
+    bookId
+    count
+  }
+}
+
+mutation VoidLotteryOpeningBook($bookId: ID!) {
+  voidLotteryOpeningBook(bookId: $bookId) {
+    bookId
+    count
+  }
+}
+
+# FixLotteryOpeningTicketsInput: { tickets: [{ ticketId, version }], to: unsold | opening_sold, cashPointId?, reasonKey, reasonNote? }
+mutation FixLotteryOpeningTickets($input: FixLotteryOpeningTicketsInput!) {
+  fixLotteryOpeningTickets(input: $input) {
+    count
+  }
+}
+
+mutation CloseLotteryStoreOpening($orgId: ID!) {
+  closeLotteryStoreOpening(orgId: $orgId) {
+    item {
+      ...LotteryStoreOpeningFields
+    }
+  }
+}
+
+# ReopenLotteryStoreOpeningInput: { orgId, reason }
+mutation ReopenLotteryStoreOpening($input: ReopenLotteryStoreOpeningInput!) {
+  reopenLotteryStoreOpening(input: $input) {
+    item {
+      ...LotteryStoreOpeningFields
+    }
+  }
+}

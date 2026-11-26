@@ -3,6 +3,7 @@ import { useTranslations } from "use-intl";
 
 import { Button } from "@repo/ui/button";
 import { Card } from "@repo/ui/card";
+import { Stack } from "@repo/ui/stack";
 
 import {
   type PageTabItem,
@@ -13,13 +14,14 @@ import { LIST_PAGE_SHELL_SX } from "@/lib/base/list-page-layout";
 
 import { InventoryLookupDialog } from "../InventoryLookupDialog/InventoryLookupDialog";
 import { InvestigationsTab } from "../InvestigationsTab/InvestigationsTab";
+import { OpeningEntryButton } from "../OpeningEntryButton/OpeningEntryButton";
 import { StockTab } from "../StockTab/StockTab";
 import { INVENTORY_TABS } from "../inventory-config";
 
 /**
  * 庫存管理(`inventory`,規格 3.1 / 7.3 / 7.4 / 7.6;Figma IN-01 91:17、IN-05 91:1109、IN-06 91:1375):
  * 分頁 庫存 | 待查·遺失 | 預計要給本數(綁了模組就都看得到;本模組沒有 `view`)。
- * 右上 [查刮刮樂](IN-02):刷條碼或輸入背面編號,跳到那一本並標亮那一張。
+ * 右上 [查刮刮樂](IN-02):刷條碼或輸入背面編號,跳到那一本並標亮那一張;選的分店期初建檔進行中時多 [期初建檔](IN-01-3)。
  */
 export const InventoryPage = () => {
   const t = useTranslations("admin.lotteryInventory");
@@ -60,14 +62,17 @@ export const InventoryPage = () => {
         aria-label={t("tabs.aria")}
         items={items}
         actions={
-          <Button
-            variant="outlined"
-            onClick={() => {
-              setLookingUp(true);
-            }}
-          >
-            {t("lookup.open")}
-          </Button>
+          <Stack direction="row" spacing={1}>
+            <OpeningEntryButton />
+            <Button
+              variant="outlined"
+              onClick={() => {
+                setLookingUp(true);
+              }}
+            >
+              {t("lookup.open")}
+            </Button>
+          </Stack>
         }
       />
       {isLookingUp ? (

@@ -36,6 +36,7 @@ export const RESCAN_IDLE_MS = STOCKTAKE_SESSION_IDLE_MS;
  * - `recovered` 已尋回(記待查 / 遺失、找不到配對 → 未售、留在刷到的位置,7.9)
  * - `moved` 位置已更正(系統記在別的位置的未售、這個位置已沒有可對號的張 → 記到這裡;規格沒寫到的情況,見模組文件)
  * - `sold_here` 記已售但還在(找不到配對;提供 [送撤銷售出申請],7.3 第 4 點)
+ * - `opening_sold_here` 導入前已賣出但還在(期初已售;不對號,提供 [期初更正],期初建檔規格 4.2)
  * - `skipped` / `scrapped` / `locked` 記跳號 / 記報廢 / 鎖定中(含調貨在途):不動,要先更正(8.4 第 5 點)
  * - `unopened` 這本還沒拆(重刷只涵蓋已拆的本)
  * - `other_game` 不是重刷的遊戲;`not_this_store` 不是本店的張(都不處理)
@@ -46,6 +47,7 @@ export const RESCAN_OUTCOMES = [
   "recovered",
   "moved",
   "sold_here",
+  "opening_sold_here",
   "skipped",
   "scrapped",
   "locked",
@@ -71,6 +73,8 @@ export interface RescanTicket {
   inThisStore: boolean;
   status: TicketStatus;
   unmatched: boolean;
+  /** 期初已售(導入前已賣出;期初建檔規格 4.2) */
+  openingSold?: boolean;
   locked: boolean;
   locationKind: TicketLocationKind;
   cashPointId: string | null;
@@ -185,6 +189,10 @@ export function rescanResultOf(input: RescanPlaceInput): RescanPlaceResult {
     const fixed = fixedOutcomeOf(ticket, gameId, place, opened(ticket.bookId));
     if (fixed !== null) {
       return result(fixed);
+    }
+    // 期初已售:沒算過銷售,不對號(不把「導入前已賣出」移給別張),改走期初更正
+    if (ticket.status === TICKET_STATUS.sold && ticket.openingSold === true) {
+      return result("opening_sold_here");
     }
     const needsMatch =
       ticket.status === TICKET_STATUS.unsold

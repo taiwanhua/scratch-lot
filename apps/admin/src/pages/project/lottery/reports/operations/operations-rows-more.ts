@@ -17,6 +17,7 @@ import {
   totalLine,
 } from "./operations-row-base";
 import { countModeRows } from "./operations-rows-count";
+import { openingEntryNoteRows } from "./operations-rows-opening";
 
 /** 說明欄列出的單號 / 班名最多幾個(api 也只送這麼多)。 */
 const MAX_LISTED = 5;
@@ -271,7 +272,7 @@ export const outstandingSection = (
   ),
 });
 
-/** 8 註記:跳過盤點、盤點未盤、沒有被日結涵蓋計算的班、前期更正、尚未關帳。 */
+/** 8 註記:跳過盤點、盤點未盤、沒有被日結涵蓋計算的班、前期更正、尚未關帳(張數店另有盤點制度;有期初建檔另有建檔期間)。 */
 export const notesSection = (
   store: OperationsStore,
   t: T,
@@ -352,6 +353,7 @@ export const notesSection = (
             : notes.openMonths.join("、"),
       }),
       ...countModeRows(store, t, options),
+      ...openingEntryNoteRows(store, t, options),
     ],
   };
 };

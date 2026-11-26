@@ -492,7 +492,8 @@
       "NO_PENDING_SKIPS": "這本沒有待標註的跳號",
       "SCRAP_NOT_ALLOWED": "只能報廢拆過的本在庫存的未售張;檯面上的張請先收回",
       "NO_MATCH_PARTNER": "同位置沒有未售的張可以接手系統預設帶入的狀態,請先盤點或全店重刷",
-      "COUNT_STORE_SCAN_ONLY": "張數盤點的店要刷條碼或手輸實體在手上的那張"
+      "COUNT_STORE_SCAN_ONLY": "張數盤點的店要刷條碼或手輸實體在手上的那張",
+      "STORE_OPENING_CLOSED": "這家店的期初建檔已結束"
     },
     "ticketStatuses": {
       "unsold": "未售",
@@ -541,7 +542,10 @@
       "cost_adjust": "成本調整",
       "match": "對號",
       "renumber_confirm": "張號確認",
-      "scrap_undo": "撤銷報廢"
+      "scrap_undo": "撤銷報廢",
+      "opening": "期初建檔",
+      "opening_fix": "期初更正",
+      "opening_void": "期初建檔作廢"
     },
     "sources": {
       "purchase": "進貨單",
@@ -569,13 +573,20 @@
         "state": "狀態",
         "purchasedFrom": "批購日起",
         "purchasedTo": "批購日迄",
-        "bookNo": "本號"
+        "bookNo": "本號",
+        "source": "來源"
       },
       "listAria": "庫存(以本為單位)",
       "pickOrg": "請先選分店",
       "empty": "沒有符合條件的本",
       "total": "共 {count} 本",
-      "remainingEstimated": "約 {remaining} / {total}"
+      "remainingEstimated": "約 {remaining} / {total}",
+      "sourceOptions": {
+        "purchase": "進貨",
+        "opening": "期初建檔"
+      },
+      "preExisting": "導入前既有",
+      "openingEntry": "期初建檔"
     },
     "lookup": {
       "open": "查刮刮樂",
@@ -654,7 +665,14 @@
         "notUnsold": "只能報廢未售的張"
       },
       "remainingEstimated": " · 剩 {remaining} 張(估算,含未對號 {unmatched} 張)",
-      "dashedNote": "虛線 = 系統預設帶入的張號"
+      "dashedNote": "虛線 = 系統預設帶入的張號",
+      "openingSource": "期初建檔",
+      "openingSourceValue": "{name} · {time}",
+      "rateValueOpening": "{rate}%(期初建檔帶入)",
+      "openingSoldTooltip": "導入前已賣出",
+      "soldWithOpening": "已售(含導入前已賣出)",
+      "fixToUnsold": "改回未售…",
+      "fixToOpeningSold": "改成導入前已賣出…"
     },
     "timeline": {
       "columns": {
@@ -757,6 +775,130 @@
       "notThisBook": "這張不是這一本",
       "notSkipped": "#{ticketNo} 現在是{status},不是跳號;請刷記成跳號、但實體在手上的那張",
       "guessedToSkipped": "{ticketNo} {status}(系統預設帶入)→ 跳號;這個狀態先移給同位置一張未售"
+    },
+    "opening": {
+      "tabLabel": "期初建檔",
+      "back": "返回庫存",
+      "org": "分店",
+      "pickOrg": "請先選分店",
+      "hint": "同一款遊戲,請先登記先賣的那本",
+      "closed": "這家店的期初建檔已結束({date} {by})",
+      "scan": "刷條碼建檔",
+      "fallbackGame": "正面條碼的遊戲",
+      "fallbackGameNone": "刷背面編號",
+      "scanErrors": {
+        "invalid": "看不懂這個碼,請刷這本的背面編號或正面條碼",
+        "no_game": "正面條碼沒有遊戲代號,請先選「正面條碼的遊戲」",
+        "unknown_game": "找不到這款遊戲",
+        "exists": "這本已經在系統裡",
+        "on_purchase": "這本在進貨單 #{serialNo},請在進貨單點收"
+      },
+      "openBook": "本的詳情",
+      "discontinued": "這款遊戲已停售",
+      "card": {
+        "title": "{code} {name} · 本號 {bookNo}",
+        "meta": "{price} 元 · 標準 {count} 張",
+        "cancel": "不建這本",
+        "stepsAria": "建檔步驟",
+        "steps": {
+          "sold": "標導入前已賣出",
+          "skip": "標跳號",
+          "place": "分放"
+        },
+        "progress": "第 {current} / {total} 步 · {label}",
+        "next": "下一步",
+        "previous": "上一步",
+        "last": "迄號",
+        "lastHelper": "{min}–999",
+        "soldHint": "點出導入前已經賣出的張(Shift 可連選);原封的本不用標。",
+        "soldLegend": "已售(導入前已賣出)",
+        "skipHint": "迄號 {last} 比標準張數多 {count} 張,有 {count} 個號碼不存在。拆過的本要點出這 {count} 個號碼;整本原封在庫存可以不標。",
+        "place": {
+          "allTo": "全部放在同一個地方",
+          "allToField": "位置",
+          "splitOption": "分放到幾個地方",
+          "splitHint": "在格子選張,再點要放的地方:",
+          "column": "位置",
+          "remaining": "還有 {count} 張沒分配,全部分配完才能建檔。",
+          "stock": "庫存"
+        },
+        "rate": "批購金額率",
+        "cost": "成本 {amount} 元",
+        "summary": "迄號 {last}:導入前已賣出 {sold} · 跳號 {skipped} · 在手上 {inHand}({places})",
+        "placeCounter": "檯面 {name} {count}",
+        "placeStock": "庫存 {count}",
+        "problems": {
+          "last_invalid": "迄號要在 {min}–999 之間",
+          "all_sold": "整本都賣完的本不用建檔",
+          "skip_count_mismatch": "還有 {count} 張跳號沒標",
+          "unplaced": "還有張沒分配",
+          "ticket_out_of_range": "張號不在這本的範圍,請重新檢查",
+          "ticket_repeated": "同一張標了兩次,請重新檢查"
+        },
+        "submit": "建檔"
+      },
+      "confirm": {
+        "title": "建檔 {key}?",
+        "note": "建檔後當下生效。",
+        "checked": "我已對過實體",
+        "cancel": "取消",
+        "submit": "建檔"
+      },
+      "success": "已建檔 {key}",
+      "list": {
+        "title": "這家店已建檔的本",
+        "aria": "這家店已建檔的本",
+        "empty": "還沒有建檔的本",
+        "columns": {
+          "bookNo": "本編號",
+          "game": "遊戲",
+          "counts": "導入前已賣出 / 在手上",
+          "places": "位置",
+          "openedBy": "建檔人與時間",
+          "actions": "操作"
+        },
+        "counts": "{sold} / {inHand}",
+        "openedBy": "{name} · {time}",
+        "detail": "本的詳情",
+        "void": "作廢",
+        "voidBlocked": "這本已有銷售或其他動作,請用期初更正"
+      },
+      "void": {
+        "title": "作廢 {key}?",
+        "body": "作廢後這本的建檔資料移除,本號可以重新建檔。",
+        "cancel": "取消",
+        "submit": "作廢",
+        "success": "已作廢 {key}"
+      },
+      "errors": {
+        "FORBIDDEN": "你沒有這個操作的權限",
+        "NOT_FOUND": "找不到這家店或這本",
+        "VALIDATION_FAILED": "有欄位沒填好,請檢查",
+        "CONFLICT": "剛被別人處理過,請重新整理後再試",
+        "STORE_OPENING_CLOSED": "這家店的期初建檔已結束",
+        "BOOK_ON_PURCHASE": "這本在進貨單 #{serialNo},請在進貨單點收",
+        "OPENING_PLAN_INVALID": "張號不合,請重新檢查",
+        "OPENING_NOT_VOIDABLE": "這本已有銷售或其他動作,請用期初更正",
+        "BOOK_KEY_DUPLICATE": "這本已經在系統裡",
+        "UNEXPECTED": "發生錯誤,請稍後再試"
+      }
+    },
+    "openingFix": {
+      "place": "放到",
+      "counter": "檯面 · {name}",
+      "reason": "原因",
+      "toUnsold": {
+        "title": "改回未售 {count} 張",
+        "hint": "這些張其實還在店裡:改回未售,放到選的位置。不算銷售、不碰現金。",
+        "submit": "改回未售",
+        "success": "已改回未售 {count} 張"
+      },
+      "toSold": {
+        "title": "改成導入前已賣出 {count} 張",
+        "hint": "這些張在導入前就已經賣出:改成導入前已賣出,不算銷售、不碰現金。",
+        "submit": "改成導入前已賣出",
+        "success": "已改成導入前已賣出 {count} 張"
+      }
     }
   },
   "lotteryReports": {
@@ -912,6 +1054,8 @@
         "redemptionSent": "其中 已送兌",
         "redemptionRevoked": "已撤銷(另列)",
         "opening": "期初庫存",
+        "openingEntry": "+ 期初建檔",
+        "openingEntryNote": "{books} 本、含更正 {fix} 張、作廢 {voided} 本",
         "purchase": "+ 進貨",
         "books": "{count} 本",
         "booksWithVoid": "{count} 本(含作廢 {voided} 本)",
@@ -981,7 +1125,10 @@
         "monthEndUnrenumbered": "月底未補點編號",
         "monthEndRenumberNone": "無",
         "monthEndRenumberMonthOnly": "—(月報才判斷)",
-        "monthEndRenumberOpen": "—(關帳時判斷)"
+        "monthEndRenumberOpen": "—(關帳時判斷)",
+        "openingEntryPeriod": "期初建檔",
+        "openingEntryOngoing": "這家店 {start} 開始期初建檔;進行中",
+        "openingEntryClosed": "這家店 {start} 開始期初建檔;{end} 結束"
       },
       "closing": {
         "closed": "已關帳",
@@ -3181,6 +3328,7 @@
     "STORE_FORM_BRANCH_NOT_VISIBLE": "分店不在你的範圍內",
     "STORE_FORM_SHIFT_NOT_IN_BRANCH": "選的班不是這家分店的班",
     "SALE_REVERSAL_TICKET_NOT_REVERSIBLE": "有張數不是本店已售,或已在其他還沒結束的撤銷售出申請上",
+    "OPENING_SALE_NOT_REVERSIBLE": "有張數是導入前已賣出,不能撤銷,請用期初更正",
     "SALE_REVERSAL_AMOUNT_MISMATCH": "退款金額和這些張數的面額合計不符,請重新選張數",
     "SALE_REVERSAL_COUNT_SALE_NOT_FOUND": "刷的票系統沒有記成已售,這台這個遊戲也沒有依張數售出可以對號;請確認收銀點或改用「依遊戲 + 張數」",
     "SALE_REVERSAL_COUNT_EXCEEDS": "這台這個遊戲系統預設帶入的已售張數不夠,請看「最多幾張」後改小",
@@ -3433,13 +3581,15 @@
         "moveForbidden": "這張在{cashPoint},你沒有移櫃權限,請由{cashPoint}售出。",
         "unmatchedNoPartner": "這張刮刮樂系統記為已售(未對號),但{cashPoint}的這個遊戲已沒有未售的張可以對號。請送撤銷售出申請(原因:盤點錯誤)核准後再賣。",
         "skippedFix": "這張刮刮樂系統記為「跳號」,不能賣。請先到本的詳情更正跳號。",
-        "scrappedFix": "這張刮刮樂系統記為報廢,不能賣。請先撤銷報廢。"
+        "scrappedFix": "這張刮刮樂系統記為報廢,不能賣。請先撤銷報廢。",
+        "openingSold": "這張刮刮樂導入前已賣出,請用期初更正。"
       },
       "notFound": "找不到這張刮刮樂,或不是本店的刮刮樂。",
       "recoverNoPermission": "這張刮刮樂待查中,尋回需要有權限的人處理。",
       "gotIt": "知道了",
       "infoTitle": "刮刮樂資訊",
-      "infoHint": "這台裝置沒有設定本機收銀點、本機收銀點沒有開班,或你沒有銷售權限:只顯示資訊,不能銷售。"
+      "infoHint": "這台裝置沒有設定本機收銀點、本機收銀點沒有開班,或你沒有銷售權限:只顯示資訊,不能銷售。",
+      "openingFix": "期初更正"
     },
     "quickSale": {
       "title": "快速銷售",
@@ -3522,7 +3672,8 @@
       "scanMove": "刷條碼移櫃",
       "moveByCount": "依張數移櫃",
       "pausedRescan": "遊戲 {game} 全店重刷中,暫停移櫃",
-      "pausedRenumber": "補點編號中,暫停移櫃"
+      "pausedRenumber": "補點編號中,暫停移櫃",
+      "openingSold": "導入前已賣出"
     },
     "move": {
       "title": "移櫃",
@@ -3626,7 +3777,8 @@
       "MOVE_PAUSED": "{kind, select, renumber {補點編號中,暫停移櫃} other {這個遊戲全店重刷中,暫停移櫃}}",
       "MOVE_BY_COUNT_INVALID": "{problem, select, exceeds {來源台這個遊戲只剩 {available} 張} same_cash_point {要移到另一個收銀點} not_count_store {只有張數盤點的店能依張數移櫃} other {張數不對}}",
       "SPLIT_ACTUAL_COUNT_REQUIRED": "請輸入手上這本實際有幾張",
-      "SPLIT_ACTUAL_COUNT_MISMATCH": "{problem, select, over {多了 {count} 張,請先盤點庫存。} other {少了 {count} 張,請先盤點庫存或檢查是不是報錯張。}}"
+      "SPLIT_ACTUAL_COUNT_MISMATCH": "{problem, select, over {多了 {count} 張,請先盤點庫存。} other {少了 {count} 張,請先盤點庫存或檢查是不是報錯張。}}",
+      "OPENING_SOLD": "這張刮刮樂導入前已賣出,請用期初更正"
     },
     "redemption": {
       "redeemTitle": "兌獎 · {name}",
@@ -3801,6 +3953,7 @@
       "submitted": "已送出撤銷售出申請",
       "submitAndPrint": "送出並列印收據",
       "scanNotReversibleCount": "這張不能撤銷:被其他單據鎖住、記跳號或報廢、調貨在途,或不是本店的刮刮樂",
+      "scanOpeningSold": "這張刮刮樂導入前已賣出,不能撤銷,請用期初更正",
       "dashedNote": "虛線 = 系統預設帶入的張號",
       "matchTicket": "{gameCode} · {bookNo} · #{ticketNo}(刷條碼加入)",
       "matched": "已對號",
@@ -3952,7 +4105,8 @@
           "sale_backfill": "補登售出",
           "investigate": "待查",
           "flag": "標記異常",
-          "skip": "標跳號"
+          "skip": "標跳號",
+          "opening_fix": "期初更正"
         },
         "clear": "取消選取",
         "recount": "重新盤點這本",
@@ -4071,7 +4225,8 @@
         "actions": {
           "sale_backfill": "補登售出",
           "investigate": "待查",
-          "flag": "標記異常"
+          "flag": "標記異常",
+          "opening_fix": "期初更正"
         },
         "postClose": "(事後更正)",
         "noLines": "沒有盤點明細",
@@ -4725,7 +4880,8 @@
         "unopened": "這本還沒拆,不在重刷範圍",
         "other_game": "不是遊戲 {code}",
         "not_this_store": "不是本店的張",
-        "investigated": "確定待查"
+        "investigated": "確定待查",
+        "opening_sold_here": "導入前已賣出但還在"
       },
       "finish": {
         "title": "{place}刷到 {count} 張,確定刷完了?",
@@ -4749,6 +4905,7 @@
         "recovered": "已尋回",
         "soldHere": "記已售但還在",
         "soldHereValue": "{count} 張({tickets},請送撤銷售出申請)",
+        "openingSoldHere": "導入前已賣出但還在",
         "investigated": "確定待查",
         "toFix": "要先更正",
         "countValue": "{count} 張({tickets})",
@@ -4775,6 +4932,10 @@
         "tag": "重刷中",
         "blocked": "這裡正在重刷 {code},刷完再數。",
         "notice": "{place} · {game}:這裡正在重刷 {code},刷完再數。"
+      },
+      "openingFix": {
+        "button": "期初更正 #{ticketNo}",
+        "noPermission": "請店長做期初更正"
       }
     }
   },
@@ -4935,7 +5096,9 @@
     "feedback": {
       "saveSuccess": "已自訂設定",
       "restoreSuccess": "已還原成沿用",
-      "cancelConversionSuccess": "已取消轉換,回到張數盤點"
+      "cancelConversionSuccess": "已取消轉換,回到張數盤點",
+      "closeOpeningSuccess": "已結束期初建檔",
+      "reopenOpeningSuccess": "已重新開放期初建檔"
     },
     "errors": {
       "FORBIDDEN": "沒有改這個組織設定的權限",
@@ -4945,7 +5108,29 @@
       "NOT_CONVERTING": "這家店不是轉換中,不能取消轉換",
       "NOT_STORE": "只有分店有盤點制度",
       "CONCURRENT_EDIT": "別人同時改了這條設定,請重新整理後再試",
+      "OPENING_STATE_MISMATCH": "期初建檔狀態已被別人改過,請重新整理",
       "UNEXPECTED": "發生錯誤,請稍後再試"
+    },
+    "opening": {
+      "label": "期初建檔",
+      "open": "進行中(已建 {count} 本)",
+      "closed": "已結束({at} {by})",
+      "close": "結束期初建檔",
+      "reopen": "重新開放",
+      "closeDialog": {
+        "title": "結束{org}的期初建檔?",
+        "body": "結束後這家店不能再建檔,之後進來的貨一律用進貨單。已建 {count} 本。",
+        "back": "取消",
+        "confirm": "結束期初建檔"
+      },
+      "reopenDialog": {
+        "title": "重新開放{org}的期初建檔?",
+        "body": "重新開放後這家店可以再建檔,建完請再按 [結束期初建檔]。",
+        "reason": "原因",
+        "reasonRequired": "請填原因",
+        "back": "取消",
+        "confirm": "重新開放"
+      }
     }
   }
 }

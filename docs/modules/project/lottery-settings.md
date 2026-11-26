@@ -19,11 +19,11 @@
 
 ## 權限表
 
-| 權限                            | 綁在                                     | 做什麼                                       |
-| ------------------------------- | ---------------------------------------- | -------------------------------------------- |
-| `lottery-settings.view`         | 頁面、查詢、盤點制度變更紀錄             | 看設定頁;寫入端點也守它(細分由 service 判斷) |
-| `lottery-settings.edit-default` | 最上層組織的 [自訂] / [還原]             | 改各分店沿用的預設                           |
-| `lottery-settings.edit-org`     | 區域、分店的 [自訂] / [還原]、[取消轉換] | 改最上層組織以外的組織                       |
+| 權限                            | 綁在                                                                         | 做什麼                                                                                                                                                                       |
+| ------------------------------- | ---------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `lottery-settings.view`         | 頁面、查詢、盤點制度變更紀錄                                                 | 看設定頁;寫入端點也守它(細分由 service 判斷)                                                                                                                                 |
+| `lottery-settings.edit-default` | 最上層組織的 [自訂] / [還原]                                                 | 改各分店沿用的預設                                                                                                                                                           |
+| `lottery-settings.edit-org`     | 區域、分店的 [自訂] / [還原]、[取消轉換]、分店的 [結束期初建檔] / [重新開放] | 改最上層組織以外的組織;期初建檔結束 / 重新開放(`closeLotteryStoreOpening` / `reopenLotteryStoreOpening`,期初建檔規格 2.4;見 `docs/modules/project/inventory.md`「期初建檔」) |
 
 - 分法同排班規則(`schedule.settings.edit-default-rules` / `edit-org-rules`):api 依組織是不是最上層組織決定要哪一條,算好 `canEdit` 給前端;沒有 → `FORBIDDEN` + reason `MISSING_PERMISSION`。
 - 開通配方(`seeds/project/onboarding/role-grants/lottery-settings.ts`):總部管理全部(`lottery-settings.*`)、店長只給 `view`、店員不給。

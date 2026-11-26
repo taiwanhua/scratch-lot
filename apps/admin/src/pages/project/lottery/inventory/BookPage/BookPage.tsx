@@ -14,6 +14,10 @@ import { CircularProgress } from "@repo/ui/circular-progress";
 import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
 
+import {
+  OpeningFixDialog,
+  type OpeningFixDialogProps,
+} from "@/components/project/lottery/OpeningFixDialog/OpeningFixDialog";
 import { RecoverTicketDialog } from "@/components/project/lottery/RecoverTicketDialog/RecoverTicketDialog";
 import { TicketGrid } from "@/components/project/lottery/TicketGrid/TicketGrid";
 import { useRouteTabItemLabel } from "@/hooks/base/useRouteTabItemLabel";
@@ -39,9 +43,24 @@ import {
   isSelectable,
   selectionActionsOf,
 } from "./book-cells";
+import { useBookOpening } from "./useBookOpening";
 
 type Detail = LotteryInventoryBookDetailFieldsFragment;
 type Ticket = Detail["tickets"][number];
+
+/** 期初更正的兩個對話框 → 更正方向。 */
+const FIX_TO: Partial<Record<string, "unsold" | "opening_sold">> = {
+  fixToUnsold: "unsold",
+  fixToOpeningSold: "opening_sold",
+};
+
+/** 開著期初更正時才畫對話框(`to` 沒給 = 不畫)。 */
+const OpeningFixSlot = ({
+  to,
+  ...props
+}: Omit<OpeningFixDialogProps, "to"> & {
+  to: OpeningFixDialogProps["to"] | undefined;
+}) => (to === undefined ? null : <OpeningFixDialog to={to} {...props} />);
 
 /** 查刮刮樂帶來的張號(`?ticket=071`):打開時標亮(選起來)那一張。 */
 const ticketSchema = z.string().default("");
@@ -69,6 +88,8 @@ export const BookPage = ({ routeParam }: ModulePageProps) => {
     | "undoScrap"
     | "recover"
     | "recoverAll"
+    | "fixToUnsold"
+    | "fixToOpeningSold"
     | null
   >(null);
   const query = useLotteryInventoryBookQuery(
@@ -77,6 +98,7 @@ export const BookPage = ({ routeParam }: ModulePageProps) => {
     { enabled: id !== "", retry: false },
   );
   const detail = query.data?.lotteryInventoryBook.item ?? null;
+  const opening = useBookOpening(detail);
   useRouteTabItemLabel(
     detail === null
       ? null
@@ -162,15 +184,23 @@ export const BookPage = ({ routeParam }: ModulePageProps) => {
           onRecover={() => {
             setDialog("recover");
           }}
+          {...opening.actionsOf(actions)}
+          onFixToUnsold={() => {
+            setDialog("fixToUnsold");
+          }}
+          onFixToOpeningSold={() => {
+            setDialog("fixToOpeningSold");
+          }}
           onClear={clearSelection}
         />
         <Box sx={{ mt: 1.5, maxWidth: 640 }}>
           <TicketGrid
-            cells={bookCellsOf(detail.tickets)}
+            cells={bookCellsOf(detail.tickets, opening.cells)}
             selectableStates={BOOK_SELECTABLE}
             selected={selectedNos}
             onSelectedChange={setSelected}
             legendItems={bookLegendOf(detail.tickets)}
+            {...opening.gridLabels}
             {...(hasUnmatched(detail.tickets) && {
               legendNote: t("book.dashedNote"),
             })}
@@ -202,6 +232,16 @@ export const BookPage = ({ routeParam }: ModulePageProps) => {
           }}
         />
       ) : null}
+      <OpeningFixSlot
+        orgId={book.org.id}
+        book={book}
+        tickets={selectedTickets}
+        to={FIX_TO[dialog ?? ""]}
+        onClose={() => {
+          setDialog(null);
+        }}
+        onFixed={clearSelection}
+      />
       {dialog === "undoScrap" ? (
         <UndoScrapDialog
           detail={detail}

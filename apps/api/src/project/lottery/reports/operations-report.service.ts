@@ -33,6 +33,8 @@ import {
 import { LotteryCheckoutsRepository } from "../../database/lottery-checkouts/lottery-checkouts.repository";
 import { LotteryGamesRepository } from "../../database/lottery-games/lottery-games.repository";
 import {
+  LotteryBooksRepository,
+  LotteryStoreOpeningsRepository,
   LotteryTicketEventsRepository,
   LotteryTicketsRepository,
 } from "../../database/lottery-inventory/lottery-inventory.repository";
@@ -51,6 +53,7 @@ import type {
   LotteryOperationsCountModeModel,
   LotteryOperationsGameSalesModel,
   LotteryOperationsNotesModel,
+  LotteryOperationsOpeningEntryModel,
   LotteryOperationsOutstandingModel,
   LotteryOperationsRedemptionModel,
   LotteryOperationsReportModel,
@@ -194,6 +197,8 @@ export class OperationsReportService {
     private readonly fieldOptions: FieldOptionsService,
     private readonly orgs: OrgsRepository,
     private readonly countModes: StoreCountModeService,
+    private readonly books: LotteryBooksRepository,
+    private readonly storeOpenings: LotteryStoreOpeningsRepository,
   ) {}
 
   /** 條件畫面:各店實際期間(對齊日結)與已關帳到哪。 */
@@ -297,7 +302,7 @@ export class OperationsReportService {
       shared.manualReasons,
       soldByGame,
     );
-    const [inventory, redemption, cashAndNotes, bankAccounts] =
+    const [inventory, redemption, cashAndNotes, bankAccounts, openingEntry] =
       await Promise.all([
         this.inventory.inventoryOf(
           reader,
@@ -309,6 +314,7 @@ export class OperationsReportService {
         this.redemptionOf(reader, period),
         this.cashAndNotesOf(scope, period, own, shared.closedAt),
         this.bankOf(shared.operator, scope, period),
+        this.openingEntryOf(reader, orgId, to),
       ]);
     return {
       orgId: String(orgId),
@@ -330,8 +336,39 @@ export class OperationsReportService {
       notes: {
         ...cashAndNotes.notes,
         countMode: countModeNotesOf(period, shared.countMode),
+        openingEntry,
       },
     };
+  }
+
+  /**
+   * 區塊 8 的期初建檔註記:第一本建檔的時間(含作廢的本)與結束的時間(到期末為止;重新開放後又結束取最後一次)。
+   * 到期末還沒建過 = null。一次彙總本、一次讀分店那一筆。
+   */
+  private async openingEntryOf(
+    reader: OperatorContext,
+    orgId: Types.ObjectId,
+    to: Date,
+  ): Promise<LotteryOperationsOpeningEntryModel | null> {
+    const [first] = (await this.books.aggregate(
+      reader,
+      [
+        { $match: { orgId, source: "opening", openingAt: { $lt: to } } },
+        { $group: { _id: null, at: { $min: "$openingAt" } } },
+      ],
+      { includeDeleted: true },
+    )) as { at: Date | null }[];
+    if (first?.at == null) {
+      return null;
+    }
+    const record = await this.storeOpenings.findOne(reader, { orgId });
+    let closedAt: Date | null = null;
+    for (const entry of record?.history ?? []) {
+      if (entry.at < to) {
+        closedAt = entry.action === "close" ? entry.at : null;
+      }
+    }
+    return { startedAt: first.at, closedAt };
   }
 
   /** 讀事件;沒有成本快照的舊資料補上張現況的單張成本(一次查)。 */
@@ -545,7 +582,7 @@ export class OperationsReportService {
     closedAt: ReadonlyMap<string, Date>,
   ): Promise<{
     cash: LotteryOperationsCashModel;
-    notes: Omit<LotteryOperationsNotesModel, "countMode">;
+    notes: Omit<LotteryOperationsNotesModel, "countMode" | "openingEntry">;
   }> {
     const { reader } = scope;
     const { orgId, from, to } = period;
@@ -1242,6 +1279,7 @@ function withoutCost(
   }
   Object.assign(store.inventory, {
     openingCost: null,
+    openingEntryCost: null,
     purchaseCost: null,
     transferInAmount: null,
     transferOutCost: null,

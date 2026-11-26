@@ -401,6 +401,17 @@ input CreateLotteryGameInput {
   unitPrice: Int!
 }
 
+input CreateLotteryOpeningBookInput {
+  bookNo: String!
+  gameId: ID!
+  lastTicketNo: Int!
+  orgId: ID!
+  placements: [LotteryOpeningPlacementInput!]!
+  rate: Int!
+  skippedTicketNos: [String!]!
+  soldTicketNos: [String!]!
+}
+
 input CreateMyDelegationInput {
   delegateUserId: ID!
   endAt: DateTime!
@@ -947,6 +958,14 @@ input FinishLotteryRescanPlaceInput {
   cashPointId: ID
   orgId: ID!
   rescanId: ID!
+}
+
+input FixLotteryOpeningTicketsInput {
+  cashPointId: ID
+  reasonKey: String!
+  reasonNote: String
+  tickets: [LotteryTicketVersionInput!]!
+  to: String!
 }
 
 input ForkFormInput {
@@ -2177,6 +2196,8 @@ type LotteryInventoryBook {
   holdings: [LotteryInventoryHolding!]!
   id: ID!
   lastTicketNo: String!
+  openedBy: LotteryInventoryRef
+  openingAt: DateTime
   org: LotteryInventoryRef!
   pendingSkipCount: Int!
   purchaseDealer: LotteryInventoryRef
@@ -2184,6 +2205,7 @@ type LotteryInventoryBook {
   remainingCount: Int!
   requiredSkipCount: Int!
   skippedTicketNos: [String!]!
+  source: String!
   standardTickets: Int!
   state: String!
   status: String!
@@ -2195,6 +2217,7 @@ type LotteryInventoryBook {
 type LotteryInventoryBookAbilities {
   bookOpened: Boolean!
   canCorrectSkips: Boolean!
+  canFixOpening: Boolean!
   canMarkSkips: Boolean!
   canRecover: Boolean!
   canScrap: Boolean!
@@ -2224,6 +2247,7 @@ input LotteryInventoryBooksInput {
   pageSize: Int = 50
   purchasedFrom: DateTime
   purchasedTo: DateTime
+  source: String
   state: String
 }
 
@@ -2315,6 +2339,7 @@ type LotteryInventoryTicket {
   id: ID!
   locationKind: String!
   locked: Boolean!
+  openingSold: Boolean!
   operable: Boolean!
   org: LotteryInventoryRef!
   responsibleOrg: LotteryInventoryRef
@@ -2370,6 +2395,61 @@ type LotteryOccupiedStoreModel {
 type LotteryOccupiedStoresPayload {
   items: [LotteryOccupiedStoreModel!]!
   totalCount: Int!
+}
+
+type LotteryOpeningBook {
+  bookId: ID!
+  bookKey: String!
+  bookNo: String!
+  gameCode: String!
+  gameName: String!
+  inHandCount: Int!
+  lastTicketNo: String!
+  openedBy: LotteryInventoryRef
+  openingAt: DateTime!
+  openingSoldCount: Int!
+  places: [LotteryOpeningPlace!]!
+  voidable: Boolean!
+}
+
+type LotteryOpeningBookPayload {
+  bookId: ID!
+  count: Int!
+}
+
+type LotteryOpeningPlace {
+  cashPoint: LotteryInventoryRef
+  count: Int!
+}
+
+input LotteryOpeningPlacementInput {
+  cashPointId: ID
+  ticketNos: [String!]!
+}
+
+type LotteryOpeningScanCandidate {
+  block: String
+  bookId: ID
+  bookPrice: Int!
+  defaultRate: Int!
+  discontinued: Boolean!
+  gameCode: String!
+  gameId: ID!
+  gameName: String!
+  serialNo: String
+  ticketsPerBook: Int!
+}
+
+input LotteryOpeningScanInput {
+  code: String!
+  orgId: ID!
+}
+
+type LotteryOpeningScanPayload {
+  bookNo: String
+  candidates: [LotteryOpeningScanCandidate!]!
+  hasGameCode: Boolean!
+  topTicketNo: String
 }
 
 type LotteryOperationsBankAccount {
@@ -2453,6 +2533,11 @@ type LotteryOperationsInventory {
   newInvestigatingCost: Float
   newInvestigatingTickets: Int!
   openingCost: Float
+  openingEntryBooks: Int!
+  openingEntryCost: Float
+  openingEntryFixTickets: Int!
+  openingEntryTickets: Int!
+  openingEntryVoidBooks: Int!
   openingTickets: Int!
   pendingAdjustCost: Float
   pendingAdjustTickets: Int!
@@ -2478,6 +2563,7 @@ type LotteryOperationsInventory {
 type LotteryOperationsNotes {
   countMode: LotteryOperationsCountMode
   openMonths: [String!]!
+  openingEntry: LotteryOperationsOpeningEntry
   priorPeriodAmount: Float!
   priorPeriodCount: Int!
   skippedStocktakes: [LotteryOperationsSkipReason!]!
@@ -2485,6 +2571,11 @@ type LotteryOperationsNotes {
   uncountedStocktakes: Int!
   uncoveredShiftLabels: [String!]!
   uncoveredShifts: Int!
+}
+
+type LotteryOperationsOpeningEntry {
+  closedAt: DateTime
+  startedAt: DateTime!
 }
 
 type LotteryOperationsOutstanding {
@@ -3015,10 +3106,12 @@ type LotteryRescanItem {
   bookNo: String!
   cashPointId: ID
   gameCode: String!
+  openingSold: Boolean!
   outcome: String!
   partnerTicketNo: String
   ticketId: ID!
   ticketNo: String!
+  version: Int!
 }
 
 type LotteryRescanPlace {
@@ -3383,6 +3476,7 @@ type LotteryStocktakeDetailUnopened {
 type LotteryStocktakeDiff {
   backfilled: Boolean!
   kind: String!
+  openingSold: Boolean!
   ticketId: ID!
   ticketNo: String!
   version: Int!
@@ -3790,6 +3884,32 @@ type LotteryStoreOpenShiftFormPayload {
   item: LotteryStoreOpenShiftForm!
 }
 
+type LotteryStoreOpening {
+  bookCount: Int!
+  books: [LotteryOpeningBook!]!
+  canClose: Boolean!
+  canOpen: Boolean!
+  canShowCost: Boolean!
+  cashPoints: [LotteryInventoryRef!]!
+  closed: Boolean!
+  closedAt: DateTime
+  closedBy: LotteryInventoryRef
+  history: [LotteryStoreOpeningHistory!]!
+  org: LotteryInventoryRef!
+  startedAt: DateTime
+}
+
+type LotteryStoreOpeningHistory {
+  action: String!
+  at: DateTime!
+  by: LotteryInventoryRef
+  reason: String
+}
+
+type LotteryStoreOpeningPayload {
+  item: LotteryStoreOpening!
+}
+
 type LotteryStorePunchPayload {
   at: DateTime!
   entryId: ID
@@ -3874,6 +3994,7 @@ type LotteryStoreScanItem {
   gameName: String!
   locationKind: String!
   match: Boolean!
+  openingSold: Boolean!
   outcome: String!
   pendingSkipCount: Int!
   responsibleOrg: LotteryAccountsRef
@@ -4266,6 +4387,7 @@ type Mutation {
   changePassword(input: ChangePasswordInput!): ChangePasswordPayload!
   clearScheduleAutoAssignments(input: ScheduleAutoRunRangeInput!): ClearScheduleAutoAssignmentsPayload!
   closeLotteryPeriod(input: CloseLotteryPeriodInput!): LotteryPeriodClose!
+  closeLotteryStoreOpening(orgId: ID!): LotteryStoreOpeningPayload!
   completeLotteryPurchaseReceiving(input: CompleteLotteryPurchaseReceivingInput!): CompleteLotteryPurchaseReceivingPayload!
   completeLotteryTransferReceiving(input: CompleteLotteryTransferReceivingInput!): CompleteLotteryTransferReceivingPayload!
   copySubmissionToDraft(input: CopySubmissionToDraftInput!): FormSubmissionPayload!
@@ -4284,6 +4406,7 @@ type Mutation {
   createLotteryDealer(input: CreateLotteryDealerInput!): LotteryDealerPayload!
   createLotteryDealerContact(input: CreateLotteryDealerContactInput!): LotteryDealerContactPayload!
   createLotteryGame(input: CreateLotteryGameInput!): LotteryGamePayload!
+  createLotteryOpeningBook(input: CreateLotteryOpeningBookInput!): LotteryOpeningBookPayload!
   createMyDelegation(input: CreateMyDelegationInput!): MyDelegationPayload!
   createPrintAgent(input: CreatePrintAgentInput!): PrintAgentPairingPayload!
   createPrintJob(input: CreatePrintJobInput!): PrintJobPayload!
@@ -4320,6 +4443,7 @@ type Mutation {
   disablePrintAgent(input: PrintAgentIdInput!): PrintAgentPayload!
   endLotteryStocktakeSession(input: EndLotteryStocktakeSessionInput!): Boolean!
   finishLotteryRescanPlace(input: FinishLotteryRescanPlaceInput!): LotteryRescan!
+  fixLotteryOpeningTickets(input: FixLotteryOpeningTicketsInput!): LotteryInventoryActionPayload!
   forkForm(input: ForkFormInput!): FormPayload!
   forkWorkflow(input: ForkWorkflowInput!): WorkflowPayload!
   grantRoleUsers(input: GrantRoleUsersInput!): RoleUsersPayload!
@@ -4357,6 +4481,7 @@ type Mutation {
   refresh: RefreshPayload!
   registerLotteryDealerSignin(input: RegisterLotteryDealerSigninInput!): LotteryDealerSigninPayload!
   removeScheduleDayEntries(input: RemoveScheduleDayEntriesInput!): RemoveScheduleDayEntriesPayload!
+  reopenLotteryStoreOpening(input: ReopenLotteryStoreOpeningInput!): LotteryStoreOpeningPayload!
   replaceLotteryRedemption(input: ReplaceLotteryRedemptionInput!): LotteryRedemptionReplacePayload!
   requestPasswordReset(input: RequestPasswordResetInput!): RequestPasswordResetPayload!
   resetNotificationSetting(input: ResetNotificationSettingInput!): NotificationSettingPayload!
@@ -4443,6 +4568,7 @@ type Mutation {
   updateUser(input: UpdateUserInput!): UserPayload!
   updateWorkflow(input: UpdateWorkflowInput!): WorkflowPayload!
   upgradeFormSubmissions(input: UpgradeFormSubmissionsInput!): FormUpgradePayload!
+  voidLotteryOpeningBook(bookId: ID!): LotteryOpeningBookPayload!
   voidSubmission(input: VoidSubmissionInput!): FormSubmissionPayload!
   withdrawLotteryShiftCash(input: WithdrawLotteryShiftCashInput!): LotteryStoreShiftPayload!
   withdrawSubmission(input: WithdrawSubmissionInput!): FormSubmissionPayload!
@@ -5152,6 +5278,7 @@ type Query {
   lotteryInventoryStores: LotteryInventoryStoresPayload!
   lotteryInvestigations: LotteryInvestigationsPayload!
   lotteryOccupiedStores: LotteryOccupiedStoresPayload!
+  lotteryOpeningScan(input: LotteryOpeningScanInput!): LotteryOpeningScanPayload!
   lotteryOperationsReport(input: LotteryOperationsReportInput!): LotteryOperationsReport!
   lotteryOperationsReportPeriods(input: LotteryOperationsReportInput!): LotteryReportPeriods!
   lotteryOutstandingSettlements: LotteryOutstandingSettlementsPayload!
@@ -5193,6 +5320,7 @@ type Query {
   lotteryStoreCountModeHistory(input: LotteryStoreCountModeHistoryInput!): LotteryStoreCountModeHistory!
   lotteryStoreCounterScan(input: LotteryStoreCounterScanInput!): LotteryStoreCounterScanPayload!
   lotteryStoreOpenShiftForm(cashPointId: ID!): LotteryStoreOpenShiftFormPayload!
+  lotteryStoreOpening(orgId: ID!): LotteryStoreOpeningPayload!
   lotteryStoreRecentSales(shiftId: ID!): LotteryStoreSalesPayload!
   lotteryStoreSale(ticketId: ID!): LotteryStoreSalePayload!
   lotteryStoreSaleReversalOptions(cashPointId: ID, orgId: ID!): LotteryStoreSaleReversalOptions!
@@ -5422,6 +5550,11 @@ input RemoveScheduleDayEntriesInput {
 type RemoveScheduleDayEntriesPayload {
   deletedIds: [ID!]!
   skippedIds: [ID!]!
+}
+
+input ReopenLotteryStoreOpeningInput {
+  orgId: ID!
+  reason: String!
 }
 
 input ReplaceLotteryRedemptionInput {

@@ -40,6 +40,19 @@ export const INVENTORY_REASONS = {
   noMatchPartner: "NO_MATCH_PARTNER",
   /** 更正跳號(張數店與轉換中):跳號那張要刷條碼或手輸張號(7.10) */
   countStoreScanOnly: "COUNT_STORE_SCAN_ONLY",
+  /** 期初建檔:這家店的期初建檔已結束(期初建檔規格 2.4、3.2) */
+  storeOpeningClosed: "STORE_OPENING_CLOSED",
+  /** 期初建檔:這本在有效的進貨單上、還沒點收(`extensions.serialNo` = 那張單的單號) */
+  bookOnPurchase: "BOOK_ON_PURCHASE",
+  /**
+   * 期初建檔:計畫不合(`extensions.openingProblem`:`OpeningPlanProblem`;
+   * `all_sold` = 整本都賣完的本不用建檔、`skip_count_mismatch` = 還有跳號沒標)
+   */
+  openingPlanInvalid: "OPENING_PLAN_INVALID",
+  /** 期初建檔作廢:這本不是期初建檔的本、已撤銷,或已有銷售或其他動作(請用期初更正) */
+  openingNotVoidable: "OPENING_NOT_VOIDABLE",
+  /** 期初建檔結束 / 重新開放:已經是那個狀態(別人剛按) */
+  storeOpeningStateMismatch: "STORE_OPENING_STATE_MISMATCH",
 } as const;
 
 export type InventoryReason =

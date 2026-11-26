@@ -1,3 +1,5 @@
+import { useTranslations } from "use-intl";
+
 import {
   type SplitAssignment,
   formatTicketRanges,
@@ -15,8 +17,7 @@ import {
   type TicketGridCell,
 } from "@/components/project/lottery/TicketGrid/TicketGrid";
 
-import { type SplitPlaceState, assignTo } from "./split-plan";
-import { useSalesText } from "./useSalesText";
+import { type SplitPlaceState, assignTo } from "./split-place";
 
 export interface SplitPlaceStepProps {
   ticketNos: readonly string[];
@@ -26,10 +27,25 @@ export interface SplitPlaceStepProps {
   state: SplitPlaceState;
   onChange: (state: SplitPlaceState) => void;
   assignments: readonly SplitAssignment[];
+  /**
+   * 換掉拆本的文字(期初建檔頁:位置含庫存,寫「位置」不寫「收銀點」);不給 = 拆本精靈的文字。
+   * `remaining` 收還沒分配的張數。
+   */
+  labels?: Partial<SplitPlaceLabels>;
+}
+
+/** `SplitPlaceStep` 可以換掉的文字。 */
+export interface SplitPlaceLabels {
+  allTo: string;
+  allToField: string;
+  splitOption: string;
+  splitHint: string;
+  column: string;
+  remaining: (count: number) => string;
 }
 
 /**
- * 拆本 ② 放到哪個收銀點(Figma ST-09b 全部放到本機收銀點、09c 分放到多個收銀點):分放時在格子選張
+ * 拆本 ② 放到哪個收銀點(店面拆本精靈、期初建檔頁 ③ 分放共用)(Figma ST-09b 全部放到本機收銀點、09c 分放到多個收銀點):分放時在格子選張
  * (跳號反灰不能選),再點收銀點分配;下方表格即時列出各收銀點的張號區段與張數。
  */
 export const SplitPlaceStep = ({
@@ -40,8 +56,18 @@ export const SplitPlaceStep = ({
   state,
   onChange,
   assignments,
+  labels = {},
 }: SplitPlaceStepProps) => {
-  const { t } = useSalesText();
+  const t = useTranslations("admin.lotteryStore");
+  const text: SplitPlaceLabels = {
+    allTo: t("split.allTo"),
+    allToField: t("split.allToField"),
+    splitOption: t("split.splitOption"),
+    splitHint: t("split.splitHint"),
+    column: t("split.columns.cashPoint"),
+    remaining: (count) => t("split.remaining", { count }),
+    ...labels,
+  };
   const skippedSet = new Set(skipped);
   const usable = ticketNos.filter((no) => !skippedSet.has(no));
   const unassigned = usable.filter((no) => state.assigned[no] === undefined);
@@ -83,15 +109,11 @@ export const SplitPlaceStep = ({
           });
         }}
       >
-        <FormControlLabel
-          value="all"
-          control={<Radio />}
-          label={t("split.allTo")}
-        />
+        <FormControlLabel value="all" control={<Radio />} label={text.allTo} />
         {state.mode === "all" ? (
           <Box sx={{ pl: 4, maxWidth: 280 }}>
             <SelectField
-              label={t("split.allToField")}
+              label={text.allToField}
               value={state.allTo}
               size="small"
               fullWidth
@@ -108,12 +130,12 @@ export const SplitPlaceStep = ({
         <FormControlLabel
           value="split"
           control={<Radio />}
-          label={t("split.splitOption")}
+          label={text.splitOption}
         />
       </RadioGroup>
       {state.mode === "split" ? (
         <>
-          <Typography variant="body2">{t("split.splitHint")}</Typography>
+          <Typography variant="body2">{text.splitHint}</Typography>
           <Stack direction="row" sx={{ flexWrap: "wrap", gap: 1 }}>
             {points.map((point) => (
               <Button
@@ -151,7 +173,7 @@ export const SplitPlaceStep = ({
         <thead>
           <tr>
             <Box component="th" sx={{ textAlign: "left", py: 0.5 }}>
-              {t("split.columns.cashPoint")}
+              {text.column}
             </Box>
             <Box component="th" sx={{ textAlign: "left", py: 0.5 }}>
               {t("split.columns.ticketNos")}
@@ -179,7 +201,7 @@ export const SplitPlaceStep = ({
       </Box>
       {state.mode === "split" && unassigned.length > 0 ? (
         <Typography variant="body2" color="warning">
-          {t("split.remaining", { count: unassigned.length })}
+          {text.remaining(unassigned.length)}
         </Typography>
       ) : null}
     </Stack>

@@ -133,6 +133,11 @@ const AUDIT_CONFIG = {
       ])
         out[`${code}|📷 掃描|D`] =
           "掃描按鈕只在有相機的手機 / 平板看板顯示,電腦不畫(ST-43)";
+      // ST-31a 列表只畫電腦(平板 / 手機照共用規則 RW-01 ~ RW-04);平板 / 手機只有新增頁 ST-31b-2,沒有列表的標題列按鈕
+      for (const b of ["盤點", "存銀行", "日結", "+ 新增"])
+        for (const x of ["T", "M"])
+          out[`ST-31|${b}|${x}`] =
+            "列表 ST-31a 只畫電腦(平板 / 手機照 RW-01 ~ RW-04);平板 / 手機只有新增頁 ST-31b-2";
       for (const b of [
         "+ 人力需求",
         "+ 新增排班",
@@ -226,7 +231,7 @@ const AUDIT_CONFIG = {
   audit: {
     // 畫面框內不能出現的開發用文字(devTextInScreens)
     devText: [
-      /\b(ST|IN|PU|AC|RE|DE|MD|SC|RC|RW|BS|CS)-\d{2}[a-e]?\b/, // 設計稿編號
+      /\b(ST|IN|PU|AC|RE|DE|MD|SC|RC|RW|BS|CS|WS)-\d{2}[a-e]?\b/, // 設計稿編號
       /第 ?\d+(\.\d+)* ?(節|章)|規格/, // 規格章節
       /RANGE_TOO_LARGE|show-cost|\b(store|inventory|purchasing|accounts|reports|dealers|games|schedule|system|master-data)\.[a-z][a-z-]+|swapComponent|Draft\/|PageTabs|SLOT/, // 錯誤碼、權限 key、實作詞
     ],

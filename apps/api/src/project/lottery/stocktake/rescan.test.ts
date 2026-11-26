@@ -100,6 +100,8 @@ const RESCAN_FIELDS = /* GraphQL */ `
     outcome
     partnerTicketNo
     cashPointId
+    version
+    openingSold
   }
 `;
 
@@ -215,6 +217,8 @@ interface RescanItem {
   outcome: string;
   partnerTicketNo: string | null;
   cashPointId?: string | null;
+  version?: number;
+  openingSold?: boolean;
 }
 
 interface RescanPlace {
@@ -275,9 +279,13 @@ interface EventRow {
   refId: Types.ObjectId | null;
 }
 
-/** 依張數賣挑到的是「依張數」、刷條碼賣的是「刷條碼」。 */
-const soldSourceOf = (spec: { unmatched?: boolean }): string =>
-  spec.unmatched === true ? "count" : "scan";
+/** 依張數賣挑到的是「依張數」、刷條碼賣的是「刷條碼」、期初已售是「期初建檔」。 */
+const soldSourceOf = (spec: { unmatched?: boolean; opening?: boolean }) => {
+  if (spec.opening === true) {
+    return "opening";
+  }
+  return spec.unmatched === true ? "count" : "scan";
+};
 
 const outcomesOf = (items: readonly { ticketNo: string; outcome: string }[]) =>
   Object.fromEntries(items.map((item) => [item.ticketNo, item.outcome]));
@@ -361,6 +369,8 @@ interface TicketSpec {
   no: string;
   status?: TicketStatus;
   unmatched?: boolean;
+  /** 期初已售(導入前已賣出;期初建檔規格 4.2) */
+  opening?: boolean;
   locked?: boolean;
   /** 系統記的位置(預設 = 本的位置) */
   at?: Types.ObjectId | null;
@@ -1045,6 +1055,33 @@ describe("全店重刷、提醒與移櫃暫停(GraphQL 端點 + 真 MongoDB)", (
       });
       // 完成 → 移櫃暫停解除
       expect(await pauses()).toEqual([]);
+    });
+
+    it("OP10 刷到期初已售 → 「導入前已賣出但還在」(不對號、不動),帶現在的版本給當下的期初更正", async () => {
+      const a = await book(gameX, counterA, [
+        { no: "001" },
+        { no: "002", status: "sold", opening: true },
+      ]);
+      const rescan = await startRescan(clerkA);
+      await scanAll(clerkA, rescan.id, counterA, [
+        a.code("001"),
+        a.code("002"),
+      ]);
+      const done = await finish(clerkA, rescan.id, counterA);
+      expect(
+        done.results.filter((item) => item.outcome === "opening_sold_here"),
+      ).toEqual([
+        expect.objectContaining({
+          ticketNo: "002",
+          cashPointId: String(counterA),
+          version: 1,
+          openingSold: true,
+        }),
+      ]);
+      expect(await ticket(a.bookId, "002")).toMatchObject({
+        status: "sold",
+        soldSource: "opening",
+      });
     });
 
     it("S7 刷到記跳號、記報廢、鎖定中的張 → 不動、要先更正;不是這個遊戲 → 不處理", async () => {

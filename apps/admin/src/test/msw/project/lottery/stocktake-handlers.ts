@@ -59,6 +59,8 @@ export interface StocktakeWorldOptions {
   remind?: boolean;
   /** 補登售出時這幾張已被處理(回 `STOCKTAKE_ALREADY_PROCESSED`) */
   processedTicketIds?: readonly string[];
+  /** 這幾張是期初已售(導入前已賣出;已售還在多一個 [期初更正]) */
+  openingSoldTicketIds?: readonly string[];
   /** 張數店(檯面是「收銀點 × 遊戲」的組;張數店規格 8.1) */
   countMode?: boolean;
   /** 這家店現有的盤點中登記(別人的會擋住重疊的位置;張數店規格 8.5a) */
@@ -203,6 +205,9 @@ export const stocktakeWorld = (
             version: diff.ticket.version,
             kind: diff.kind,
             backfilled: diff.backfilled,
+            openingSold: (options.openingSoldTicketIds ?? []).includes(
+              diff.ticket.ticketId,
+            ),
           })),
           pendingReversalTicketNos: [],
           staleTicketNos: staleNos,

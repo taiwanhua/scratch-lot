@@ -15,6 +15,7 @@ import {
   type StocktakeTicketSnapshot,
   TICKET_LOCATION_KIND,
   TICKET_STATUS,
+  isOpeningSold,
   isSealedInStore,
   isStocktakeStockLine,
   renumberMatchesOf,
@@ -342,7 +343,16 @@ export class StocktakeFacts {
         own,
       ),
     );
-    const diffs = stocktakeDiffsOf(facts, line.presentTicketNos);
+    const byId = new Map(tickets.map((ticket) => [String(ticket._id), ticket]));
+    // 期初已售實際還在:多一個 [期初更正](期初建檔規格 4.2;已售還在的差異 = 盤點之後沒動過,現況即那一刻)
+    const diffs = stocktakeDiffsOf(facts, line.presentTicketNos).map((diff) => {
+      const ticket = byId.get(diff.ticketId);
+      return diff.kind === "extra" &&
+        ticket !== undefined &&
+        isOpeningSold(ticket)
+        ? { ...diff, openingSold: true }
+        : diff;
+    });
     const problems = stocktakeActionProblemsOf(
       diffs,
       line.diffs,
@@ -362,9 +372,7 @@ export class StocktakeFacts {
         .toSorted((a, b) => a.localeCompare(b, COLLATION_LOCALE)),
       stale: problems.stale,
       unhandled: problems.unhandled,
-      ticketById: new Map(
-        tickets.map((ticket) => [String(ticket._id), ticket]),
-      ),
+      ticketById: byId,
     };
   }
 
