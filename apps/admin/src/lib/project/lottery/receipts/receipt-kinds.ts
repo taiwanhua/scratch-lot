@@ -45,6 +45,16 @@ import {
   type VaultWithdrawReceiptInput,
   vaultWithdrawReceiptOf,
 } from "./vault-withdraw-receipt";
+import {
+  WHOLESALE_PAYMENT_COPIES,
+  type WholesalePaymentReceiptInput,
+  wholesalePaymentReceiptOf,
+} from "./wholesale-payment-receipt";
+import {
+  WHOLESALE_SHIPMENT_COPIES,
+  type WholesaleShipmentReceiptInput,
+  wholesaleShipmentReceiptOf,
+} from "./wholesale-shipment-receipt";
 
 /**
  * 58mm 單據的種類(`printReceiptAfterCommit(kind, payload)` 的 `kind`)與各自的資料形狀。
@@ -59,6 +69,10 @@ export interface ReceiptPayloads {
   "transfer-receiving": TransferReceivingReceiptInput;
   /** 調貨付款收據(收貨店付現金) */
   "transfer-payment": TransferPaymentReceiptInput;
+  /** 批售出貨單(批售單核准完成 = 出貨) */
+  "wholesale-shipment": WholesaleShipmentReceiptInput;
+  /** 批售收款收據(批售單出貨店 [收款] 收現金) */
+  "wholesale-payment": WholesalePaymentReceiptInput;
   /** 投庫單(看板 [投庫]) */
   "store-vault-deposit": VaultDepositReceiptInput;
   /** 出庫單(看板 [出庫]、開班從小金庫領零用金) */
@@ -175,6 +189,39 @@ export const RECEIPT_KINDS: {
     layoutOf: (payload, t) => transferPaymentReceiptOf(payload, t),
     copies: TRANSFER_PAYMENT_COPIES,
     copyI18n: "transferPayment",
+  },
+  "wholesale-shipment": {
+    documentType: "lottery-wholesale-shipment",
+    refType: "lottery-wholesale-shipment",
+    i18n: PURCHASING_RECEIPTS_I18N,
+    refIdOf: (payload) => payload.submissionId,
+    orgIdOf: (payload) => payload.fromBranchId,
+    defaultPrinterIdOf: () => null,
+    documentNameOf: (payload, t) =>
+      t("documentName", {
+        title: t("wholesaleShipment.title"),
+        serialNo: payload.serialNo ?? "",
+      }),
+    layoutOf: (payload, t, now) => wholesaleShipmentReceiptOf(payload, t, now),
+    copies: WHOLESALE_SHIPMENT_COPIES,
+    copyI18n: "wholesaleShipment",
+  },
+  "wholesale-payment": {
+    documentType: "lottery-wholesale-payment",
+    refType: "lottery-wholesale-payment",
+    i18n: PURCHASING_RECEIPTS_I18N,
+    // 一筆收款一張收據(同調貨付款收據)
+    refIdOf: (payload) => payload.recordId,
+    orgIdOf: (payload) => payload.branchId,
+    defaultPrinterIdOf: (payload) => payload.defaultPrinterId ?? null,
+    documentNameOf: (payload, t) =>
+      t("documentName", {
+        title: t("wholesalePayment.title"),
+        serialNo: payload.serialNo ?? "",
+      }),
+    layoutOf: (payload, t) => wholesalePaymentReceiptOf(payload, t),
+    copies: WHOLESALE_PAYMENT_COPIES,
+    copyI18n: "wholesalePayment",
   },
   // 店面的單據(規格第 12 章):現金流水類(投庫、出庫、存款)沒有單號,一筆流水一張(`refId` = 流水 id)
   "store-vault-deposit": {

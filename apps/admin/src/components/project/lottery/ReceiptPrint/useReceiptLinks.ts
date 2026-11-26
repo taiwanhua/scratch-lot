@@ -25,6 +25,8 @@ export interface ReceiptLinks {
   purchaseViewUrl: (submissionId: string) => string | null;
   /** 調貨單 → 檢視頁 */
   transferViewUrl: (submissionId: string) => string | null;
+  /** 批售單 → 檢視頁 */
+  wholesaleViewUrl: (submissionId: string) => string | null;
 }
 
 /**
@@ -48,6 +50,8 @@ export const receiptLinksOf = (
       urlOf(routes.purchaseView, `/${submissionId}`),
     transferViewUrl: (submissionId) =>
       urlOf(routes.transferView, `/${submissionId}`),
+    wholesaleViewUrl: (submissionId) =>
+      urlOf(routes.wholesaleView, `/${submissionId}`),
   };
 };
 
@@ -56,6 +60,7 @@ const NO_ROUTES: LotteryReceiptLinksFieldsFragment = {
   storeView: null,
   purchaseView: null,
   transferView: null,
+  wholesaleView: null,
 };
 
 /**

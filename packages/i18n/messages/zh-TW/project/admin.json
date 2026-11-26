@@ -3206,6 +3206,49 @@
         "payerSign": "付款人簽名",
         "courierSign": "送貨人簽收"
       },
+      "wholesaleShipment": {
+        "title": "批售出貨單",
+        "copies": {
+          "store": "店鋪留存",
+          "customer": "客戶留存"
+        },
+        "route": "出貨分店 → 批售客戶",
+        "routeValue": "{from} → {to}",
+        "columns": {
+          "book": "遊戲 / 本號",
+          "books": "本數",
+          "amount": "批售金額"
+        },
+        "bookValue": "{gameCode} · {bookNos}",
+        "bookDetail": "每本 {tickets} 張 · 批購金額率 {rate}%",
+        "total": "批售金額",
+        "paymentMode": "收款方式",
+        "paymentModes": {
+          "auto_bank": "從帳戶入帳",
+          "collect_first": "收到錢再核准"
+        },
+        "received": "已收",
+        "handlerSign": "經手人",
+        "customerSign": "客戶簽收"
+      },
+      "wholesalePayment": {
+        "title": "批售收款收據",
+        "copies": {
+          "store": "店鋪留存",
+          "customer": "客戶留存"
+        },
+        "customer": "批售客戶",
+        "place": "現金進",
+        "placeValue": "{branch} · {place}",
+        "places": {
+          "vault": "小金庫",
+          "drawer": "收銀點抽屜"
+        },
+        "handler": "經手人",
+        "cash": "現金",
+        "handlerSign": "經手人",
+        "customerSign": "客戶簽名"
+      },
       "reprint": {
         "heading": "【補印】第 {printNo} 次",
         "reason": "原因:{reason}",
@@ -3349,7 +3392,9 @@
           "unreceived": "還差 {amount} 元沒收",
           "overreceived": "多收 {amount} 元,請先記退款"
         },
-        "autoBankHint": "核准時自動入帳 {amount} 到 {account}(批售收入);核准前不能收款"
+        "autoBankHint": "核准時自動入帳 {amount} 到 {account}(批售收入);核准前不能收款",
+        "printShipment": "批售出貨單",
+        "printPayment": "批售收款收據"
       },
       "customerTab": {
         "aria": "批售紀錄",

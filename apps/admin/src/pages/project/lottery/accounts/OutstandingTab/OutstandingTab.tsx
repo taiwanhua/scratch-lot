@@ -75,7 +75,7 @@ export const OutstandingTab = () => {
   const query = useLotteryOutstandingSettlementsQuery(session.client);
   const rows = query.data?.lotteryOutstandingSettlements.items ?? [];
   const [settling, setSettling] = useState<Row | null>(null);
-  // 收貨店付現金 → 調貨付款收據(付款視窗關掉之後才轉圖,所以掛在分頁上)
+  // 收貨店付現金 → 調貨付款收據;批售單收現金 → 批售收款收據(視窗關掉之後才轉圖,所以掛在分頁上)
   const receipt = useSettlementReceipt();
 
   const columns: TableColumn<Row>[] = [
