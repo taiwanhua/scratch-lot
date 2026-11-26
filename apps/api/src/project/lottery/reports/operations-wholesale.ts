@@ -391,11 +391,12 @@ function customersOf(
     document.amount = toYuan(document.amount);
     document.cost = document.cost === null ? null : toYuan(document.cost);
   }
-  return [...byCustomer.values()]
-    .map((customer) => ({
-      ...customer,
-      amount: toYuan(customer.amount),
-      cost: customer.cost === null ? null : toYuan(customer.cost),
-    }))
-    .toSorted((a, b) => compareDisplayName(a.customerName, b.customerName));
+  const customers = [...byCustomer.values()];
+  for (const customer of customers) {
+    customer.amount = toYuan(customer.amount);
+    customer.cost = customer.cost === null ? null : toYuan(customer.cost);
+  }
+  return customers.toSorted((a, b) =>
+    compareDisplayName(a.customerName, b.customerName),
+  );
 }
