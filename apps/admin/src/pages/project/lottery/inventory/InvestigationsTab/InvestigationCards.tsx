@@ -11,7 +11,7 @@ import { Tag } from "@repo/ui/tag";
 import { Typography } from "@repo/ui/typography";
 
 import { moneyText } from "../inventory-config";
-import { useInvestigationText } from "./useInvestigationText";
+import { isOpeningRow, useInvestigationText } from "./useInvestigationText";
 
 type Row = LotteryInvestigationRowFieldsFragment;
 
@@ -45,6 +45,7 @@ export const InvestigationCards = ({
 }: InvestigationCardsProps) => {
   const t = useTranslations("admin.lotteryInventory.investigations");
   const tStatus = useTranslations("admin.lotteryInventory.ticketStatuses");
+  const tStock = useTranslations("admin.lotteryInventory.stock");
   const text = useInvestigationText();
   if (isLoading) {
     return <CircularProgress aria-label={t("listAria")} />;
@@ -102,6 +103,9 @@ export const InvestigationCards = ({
                       ? join([text.game(row), tickets, t("systemDefault")])
                       : join([text.book(row), text.game(row), tickets])}
                   </Typography>
+                  {isOpeningRow(row) && (
+                    <Tag tone="grey" label={tStock("sourceOptions.opening")} />
+                  )}
                   <Tag
                     tone={
                       row.status === TICKET_STATUS.lost ? "error" : "warning"

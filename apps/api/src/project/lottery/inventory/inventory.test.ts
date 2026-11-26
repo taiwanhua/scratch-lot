@@ -183,6 +183,7 @@ const INVESTIGATIONS = /* GraphQL */ `
         status
         cost
         ticketCount
+        bookSource
         responsibleOrg {
           name
         }
@@ -1002,6 +1003,38 @@ describe("庫存管理(GraphQL 端點 + 真 MongoDB)", () => {
       });
       expect(row?.tickets).toHaveLength(100);
       expect(list.lotteryInvestigations.canRecover).toBe(true);
+    });
+
+    it("待查·遺失每列帶本的來源(期初建檔規格 5.3):期初建檔的本 → opening;批購的本(含舊資料沒有 source 欄位)→ purchase", async () => {
+      const openingBook = await receiveBook(storeA);
+      const legacyBook = await receiveBook(storeA);
+      await api.connection
+        .collection("lottery_books")
+        .updateOne({ _id: openingBook }, { $set: { source: "opening" } });
+      await api.connection
+        .collection("lottery_books")
+        .updateOne({ _id: legacyBook }, { $unset: { source: "" } });
+      for (const bookId of [openingBook, legacyBook]) {
+        const [first] = await ticketsOf(bookId);
+        await apply(storeA, bookId, [first?.ticketNo ?? "001"], {
+          type: TICKET_EVENT_TYPE.investigate,
+          patch: {
+            status: TICKET_STATUS.investigating,
+            responsibleOrgId: storeA,
+          },
+        });
+      }
+      const list = await ok<{
+        lotteryInvestigations: {
+          items: { bookId: string; bookSource: string | null }[];
+        };
+      }>(api, managerA, INVESTIGATIONS);
+      const sourceOf = (bookId: Types.ObjectId) =>
+        list.lotteryInvestigations.items.find(
+          (item) => item.bookId === String(bookId),
+        )?.bookSource;
+      expect(sourceOf(openingBook)).toBe("opening");
+      expect(sourceOf(legacyBook)).toBe("purchase");
     });
 
     it("待標註的跳號(使用者 10/27 定案甲):迄號 101 的未拆本 → 持有 / 總張數 100;整本待查 → 待查·遺失 100 張 · 18,400", async () => {
