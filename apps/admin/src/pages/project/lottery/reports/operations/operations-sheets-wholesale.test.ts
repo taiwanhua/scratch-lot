@@ -115,6 +115,13 @@ describe("營運報表的工作表:批售", () => {
       }),
     ]);
     const info = sectionOf(sheets.branches[0], "wholesaleInfo");
+    // Figma RE-04-2:項目 / 單數 / 金額 / 單號
+    expect(info.columns.map((column) => column.header)).toEqual([
+      "lotteryReports.operations.columns.item",
+      "lotteryReports.operations.columns.documents",
+      "lotteryReports.operations.columns.amount",
+      "lotteryReports.operations.columns.serialNo",
+    ]);
     expect(rowOf(info, item("receivedUnshipped"))).toMatchObject({
       count: 1,
       amount: 20_000,

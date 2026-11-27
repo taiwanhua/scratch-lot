@@ -245,7 +245,7 @@ const documentsSection = (
   };
 };
 
-/** 2b 另外列的:期末已收未出貨(單數、金額;說明列單號最多 5 張)。合計 0 照樣印。 */
+/** 2b · 期末已收未出貨(Figma RE-04-2:項目 / 單數 / 金額 / 單號,單號最多 5 張)。合計 0 照樣印。 */
 const infoSection = (store: OperationsStore, t: T): SheetSection => {
   const { receivedUnshipped } = store.wholesale;
   return {
@@ -265,7 +265,11 @@ const infoSection = (store: OperationsStore, t: T): SheetSection => {
         t("admin.lotteryReports.operations.columns.amount"),
         14,
       ),
-      textColumn("note", t("admin.lotteryReports.operations.columns.note"), 30),
+      textColumn(
+        "note",
+        t("admin.lotteryReports.operations.columns.serialNo"),
+        30,
+      ),
     ],
     rows: [
       line({
@@ -285,7 +289,7 @@ const infoSection = (store: OperationsStore, t: T): SheetSection => {
   };
 };
 
-/** 2b 批售的小表(放在 2 毛利之後):依批售客戶、逐單、另外列的。 */
+/** 2b 批售的小表(放在 2 毛利之後):依批售客戶、逐單、期末已收未出貨。 */
 export const wholesaleSections = (
   store: OperationsStore,
   t: T,
