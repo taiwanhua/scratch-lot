@@ -127,13 +127,15 @@ jobs:
           echo "::notice::部署判斷:api=$api admin=$admin update=$update realtime=$REALTIME(force=$FORCE)"
 
       # image tag = 完整 Git SHA-環境-run ID-attempt;admin 的 VITE_* build 時烘入 → 每環境各一顆
+      # --provenance=false:不附 attestation,推上去的是單一 image manifest。附了會變成 manifest list,
+      # tag 指向 list、Cloud Run 跑底下的 manifest digest,發布前核對(preflight)就對不回 commit
       - name: build + push api
         if: steps.affected.outputs.api == 'true'
         env:
           REGISTRY: ${{ steps.cfg.outputs.registry }}
           IMAGE_TAG: ${{ steps.cfg.outputs.image_tag }}
         run: |
-          docker build -f apps/api/Dockerfile -t "$REGISTRY/api:$IMAGE_TAG" .
+          docker build --provenance=false -f apps/api/Dockerfile -t "$REGISTRY/api:$IMAGE_TAG" .
           docker push "$REGISTRY/api:$IMAGE_TAG"
 
       # admin 打的 API 端點由設定的 apiUrl 組出(不另存第二份 endpoint)
@@ -144,7 +146,7 @@ jobs:
           IMAGE_TAG: ${{ steps.cfg.outputs.image_tag }}
           API_URL: ${{ steps.cfg.outputs.api_url }}
         run: |
-          docker build -f apps/admin/Dockerfile \
+          docker build --provenance=false -f apps/admin/Dockerfile \
             -t "$REGISTRY/admin:$IMAGE_TAG" \
             --build-arg "VITE_GRAPHQL_ENDPOINT=$API_URL/graphql" \
             --build-arg "APP_VERSION=$GITHUB_SHA" .

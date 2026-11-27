@@ -78,7 +78,7 @@ describe("部署設定的防回歸", () => {
     const command = workflow
       .replaceAll(/\\\r?\n\s*/g, " ")
       .split(/\r?\n/)
-      .find((line) => line.includes("docker build -f apps/admin/Dockerfile"));
+      .find((line) => /docker build .*-f apps\/admin\/Dockerfile/.test(line));
     expect(command).toBeDefined();
     const tokens = command.trim().split(/\s+/);
     // 續行寫壞(字面 `\n`)時會留下含反斜線的 token,兩個參數擠在同一個 shell 字
