@@ -131,7 +131,19 @@ export const OpeningPage = () => {
   const canOpen = opening?.canOpen === true;
 
   return (
-    <Stack spacing={2} sx={{ flex: 1, minHeight: 0, overflow: "auto", pb: 2 }}>
+    <Stack
+      spacing={2}
+      sx={{
+        flex: 1,
+        minHeight: 0,
+        overflow: "auto",
+        // 頂部留白:分店下拉的浮動標籤不被捲動容器切掉
+        pt: 1,
+        pb: 2,
+        // 區塊不被捲動容器壓扁(內容自己撐高,容器捲動;比照 BookPage)
+        "& > *": { flexShrink: 0 },
+      }}
+    >
       <OpeningPageHeader
         orgId={orgId}
         onOrgChange={(next) => {

@@ -12,12 +12,24 @@ import {
 } from "@/test/msw/project/lottery/checkout-form-fixtures";
 import { checkoutWorld } from "@/test/msw/project/lottery/checkout-handlers";
 import { dailyCloseWorld } from "@/test/msw/project/lottery/daily-close-handlers";
-import { inventoryModules } from "@/test/msw/project/lottery/inventory-fixtures";
+import {
+  ALL_INVENTORY_PERMISSIONS,
+  inventoryModules,
+} from "@/test/msw/project/lottery/inventory-fixtures";
 import { inventoryWorld } from "@/test/msw/project/lottery/inventory-handlers";
 import { lotterySettingsModules } from "@/test/msw/project/lottery/lottery-settings-fixtures";
 import { lotterySettingsWorld } from "@/test/msw/project/lottery/lottery-settings-handlers";
-import { masterDataModules } from "@/test/msw/project/lottery/master-data-fixtures";
+import {
+  masterDataModules,
+  masterDataOrgs,
+} from "@/test/msw/project/lottery/master-data-fixtures";
 import { masterDataWorld } from "@/test/msw/project/lottery/master-data-handlers";
+import { openingPageModule } from "@/test/msw/project/lottery/opening-fixtures";
+import {
+  type OpeningScanResult,
+  openingCandidate,
+  openingWorld,
+} from "@/test/msw/project/lottery/opening-handlers";
 import {
   purchaseFormWorld,
   purchaseModules,
@@ -124,6 +136,39 @@ const myOptions = (): ScheduleMyWorldOptions => {
  * - `modules`:該視角側欄要多出的模組(與 seed 宣告一致,權限給滿才點得到每一頁)
  * - `handlers`:專案頁的假 api,夾具取自 `src/test/msw/project/`(與元件測試共用)
  */
+/** 期初建檔頁刷到的本(556 好運 100 張)。 */
+const scanOf = (bookNo: string, topTicketNo: string): OpeningScanResult => ({
+  __typename: "LotteryOpeningScanPayload",
+  bookNo,
+  topTicketNo,
+  hasGameCode: true,
+  candidates: [openingCandidate()],
+});
+
+/**
+ * 期初建檔頁(Figma OP-01–05):刷這幾個碼看本卡的三種情況 ——
+ * `556-056601-047` 拆過的本(001–046 預先標導入前已賣出)、`556-056602-001` 原封的本、
+ * `556-056603-047` 迄號填 101 時多出 ② 標跳號。分放有兩個收銀點可以選。
+ */
+const openingHandlers = () =>
+  openingWorld({
+    permissions: ALL_INVENTORY_PERMISSIONS,
+    nameOf: (orgId) =>
+      [
+        ...Object.values(masterDataOrgs),
+        { id: "org-store", name: "A-2 台北分店" },
+      ].find((org) => org.id === orgId)?.name ?? orgId,
+    scans: {
+      "556-056601-047": scanOf("0056601", "047"),
+      "556-056602-001": scanOf("0056602", "001"),
+      "556-056603-047": scanOf("0056603", "047"),
+    },
+    cashPoints: [
+      { id: "cp-counter", name: "店內櫃台" },
+      { id: "cp-outside", name: "店外攤位" },
+    ],
+  }).handlers;
+
 /** 店面管理的看板 + 銷售(同一份看板狀態)。 */
 const storeAndSalesHandlers = () => {
   const store = storeWorld();
@@ -149,6 +194,8 @@ export const projectMockWorld: ProjectMockWorld = {
     ...transferModules(),
     ...wholesaleModules(),
     ...inventoryModules(),
+    // 期初建檔頁(隱藏頁,庫存 [期初建檔] 進去)
+    openingPageModule(),
     // 店面管理(表單模組,權限給滿)
     ...storeModules(),
     // 58mm 單據的 [列印] / [補印](`api.printing`;底座 mock 沒有給)
@@ -184,6 +231,7 @@ export const projectMockWorld: ProjectMockWorld = {
       }),
     }).handlers,
     ...inventoryWorld().handlers,
+    ...openingHandlers(),
     ...purchaseWorld().handlers,
     // 店面管理的看板:中山店三個收銀點(Figma ST-01;不管看哪家店都回這份);
     // 銷售、展開卡片、拆本、移櫃共用同一份看板狀態(售出後本班已售跟著變)
