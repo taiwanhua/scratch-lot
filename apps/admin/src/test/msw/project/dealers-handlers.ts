@@ -25,7 +25,7 @@ import {
 } from "./dealers-fixtures";
 
 /** GQL-04 形式的業務錯誤(HTTP 200 + `errors[].extensions`)。 */
-const businessError = (extensions: Record<string, unknown>) =>
+export const businessError = (extensions: Record<string, unknown>) =>
   HttpResponse.json<GraphQLResponseBody<Record<string, never>>>({
     data: null,
     errors: [{ message: String(extensions.code), extensions }],

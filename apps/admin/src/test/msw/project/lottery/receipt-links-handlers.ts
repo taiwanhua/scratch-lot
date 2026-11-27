@@ -8,6 +8,7 @@ export const RECEIPT_LINK_ROUTES = {
   storeView: "/store/view-page",
   purchaseView: "/purchasing/purchase/view-page",
   transferView: "/purchasing/transfer/view-page",
+  wholesaleView: "/purchasing/wholesale/view-page",
 } as const;
 
 /** 路由都是 null:模組停用 / 沒有 route(單據照印、不印 QR)。 */
@@ -16,6 +17,7 @@ export const NO_RECEIPT_LINK_ROUTES = {
   storeView: null,
   purchaseView: null,
   transferView: null,
+  wholesaleView: null,
 } as const;
 
 /** 寫入 mutation 一起帶回的 `receiptLinks`(預設同 `lotteryReceiptLinks`)。 */

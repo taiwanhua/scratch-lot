@@ -13,7 +13,9 @@ import {
   startAuthTestApp,
 } from "../../../auth/test-support/auth-app";
 import { createOrg, newObjectId } from "../../../auth/test-support/fixtures";
+import { OrgsRepository } from "../../../database/database.module";
 import type { OperatorContext } from "../../../database/operator-context";
+import { tenantBoundaryContext } from "../../../database/tenant-boundary-context";
 import { HOOK_TIMEOUT_MS } from "../../../database/test-support/mongo-connection";
 import { TransactionService } from "../../../database/transaction";
 import { LotteryAllocation } from "../../database/lottery-inventory/lottery-allocation.schema";
@@ -26,10 +28,12 @@ import {
 import { LotteryTicketEvent } from "../../database/lottery-inventory/lottery-ticket-event.schema";
 import { LotteryTicket } from "../../database/lottery-inventory/lottery-ticket.schema";
 import { isGameInUse } from "../games/game-usage";
+import { StocktakeFacts } from "../stocktake/stocktake-facts";
 import { LotteryAllocationsService } from "./allocations.service";
 import { LotteryBooksService } from "./books.service";
 import { TicketLedgerService } from "./ticket-ledger.service";
 import type { LedgerContext, TicketEventInput } from "./ticket-ledger.types";
+import { WholesaleLedger, wholesaleLockOf } from "./wholesale-ledger.service";
 
 interface TicketRow {
   _id: Types.ObjectId;
@@ -43,6 +47,15 @@ interface TicketRow {
 
 function byText(left: string, right: string): number {
   return left.localeCompare(right, "zh-Hant");
+}
+
+/** 第一張。 */
+function firstOf(tickets: readonly TicketRow[]): TicketRow {
+  const [first] = tickets;
+  if (!first) {
+    throw new Error("沒有張");
+  }
+  return first;
 }
 
 function own(operator: OperatorContext): LedgerContext {
@@ -654,6 +667,268 @@ describe("張數核心(帳本 + 本 + 預計要給本數)", () => {
         .collection<{ lockedTicketCount: number }>("lottery_books")
         .findOne({ _id: bookId });
       expect(afterUnlock?.lockedTicketCount).toBe(0);
+    });
+  });
+
+  /** 租戶甲的租戶邊界上下文。 */
+  function reader(): Promise<OperatorContext> {
+    return tenantBoundaryContext(api.app.get(OrgsRepository), null, tenant);
+  }
+
+  function wholesale(): WholesaleLedger {
+    return api.app.get(WholesaleLedger);
+  }
+
+  /** 甲一店看到的本的狀態。 */
+  async function stateOf(bookId: Types.ObjectId): Promise<string> {
+    const stats = await booksService.statsOf(storeOperator(storeA), bookId);
+    return stats.state;
+  }
+
+  describe("批售(規格 21.5、21.9 帳本與鎖定的部分)", () => {
+    interface WholesaleEvent {
+      type: string;
+      at: Date;
+      by: Types.ObjectId | null;
+      amount: number;
+      cost: number;
+      refType: string | null;
+      refId: Types.ObjectId | null;
+      reasonKey: string | null;
+      from: { status: string };
+      to: { status: string; orgId: Types.ObjectId; locationKind: string };
+    }
+    const bookOf = (bookId: Types.ObjectId) =>
+      api.connection
+        .collection<{
+          ticketCounts: Record<string, number>;
+          lockedTicketCount: number;
+          firstOpenedAt: Date | null;
+          holderOrgIds: Types.ObjectId[];
+        }>("lottery_books")
+        .findOne({ _id: bookId });
+    const eventsOf = (bookId: Types.ObjectId, type: string) =>
+      api.connection
+        .collection<WholesaleEvent>("lottery_ticket_events")
+        .find({ bookId, type })
+        .toArray();
+
+    async function lockBook(
+      bookId: Types.ObjectId,
+      submissionId: Types.ObjectId,
+    ): Promise<void> {
+      const tickets = await ticketsOf(bookId);
+      await transactions.withTransaction((session) =>
+        ledger.lockTicketsInTenant(
+          session,
+          tenant,
+          tickets.map((ticket) => ticket._id),
+          wholesaleLockOf(submissionId),
+        ),
+      );
+    }
+
+    async function ship(
+      submissionId: Types.ObjectId,
+      bookIds: readonly Types.ObjectId[],
+      actorId: Types.ObjectId | null = null,
+    ): Promise<void> {
+      const context = await reader();
+      await transactions.withTransaction((session) =>
+        wholesale().ship(
+          {
+            session,
+            reader: context,
+            tenantId: tenant,
+            submissionId,
+            actorId,
+          },
+          bookIds.map((bookId) => ({ bookId, amount: 18_600, tickets: 100 })),
+        ),
+      );
+    }
+
+    it("#3 / #16:批售中的張不能賣;已被調貨單鎖住的張不能再被批售單鎖", async () => {
+      const bookId = await receiveBook();
+      const submissionId = newObjectId();
+      await lockBook(bookId, submissionId);
+      expect(await bookOf(bookId)).toMatchObject({ lockedTicketCount: 100 });
+      const ticket = firstOf(await ticketsOf(bookId));
+      await expect(
+        transactions.withTransaction((session) =>
+          ledger.applyTicketEvents(session, own(storeOperator(storeA)), [
+            saleOf(ticket),
+          ]),
+        ),
+      ).rejects.toMatchObject({ extensions: { code: "CONFLICT" } });
+
+      const other = await receiveBook();
+      const onTransfer = await ticketsOf(other);
+      await transactions.withTransaction((session) =>
+        ledger.lockTicketsInTenant(
+          session,
+          tenant,
+          onTransfer.map((ticket) => ticket._id),
+          { refType: "transfer", refId: newObjectId() },
+        ),
+      );
+      await expect(lockBook(other, submissionId)).rejects.toMatchObject({
+        extensions: { code: "CONFLICT" },
+      });
+    });
+
+    it("出貨 → 已批售、解鎖、所在分店不變;取消 → 未售、庫存、仍未拆、成本不變", async () => {
+      const first = await receiveBook();
+      const second = await receiveBook();
+      const submissionId = newObjectId();
+      const actorId = newObjectId();
+      await lockBook(first, submissionId);
+      await lockBook(second, submissionId);
+      await ship(submissionId, [first, second], actorId);
+      for (const bookId of [first, second]) {
+        const book = await bookOf(bookId);
+        expect(book?.ticketCounts).toMatchObject({
+          wholesaled: 100,
+          stock: 0,
+          sold: 0,
+        });
+        expect(book?.lockedTicketCount).toBe(0);
+        expect(book?.holderOrgIds.map(String)).toEqual([String(storeA)]);
+        const events = await eventsOf(bookId, "wholesale");
+        expect(events).toHaveLength(100);
+        expect(events[0]).toMatchObject({
+          amount: 186,
+          cost: 184,
+          refType: "wholesale",
+          refId: submissionId,
+          by: actorId,
+          from: { status: "unsold" },
+          to: { status: "wholesaled", orgId: storeA, locationKind: "stock" },
+        });
+      }
+      expect(await stateOf(first)).toBe("wholesaled");
+      const [shipped] = await ticketsOf(first);
+      expect(shipped).toMatchObject({ status: "wholesaled", lockedBy: null });
+
+      const context = await reader();
+      await transactions.withTransaction((session) =>
+        wholesale().cancel(
+          {
+            session,
+            reader: context,
+            tenantId: tenant,
+            submissionId,
+            actorId,
+          },
+          { reasonKey: "input-error", reasonNote: null },
+        ),
+      );
+      const tickets = await ticketsOf(first);
+      expect(
+        tickets.every(
+          (ticket) =>
+            ticket.status === "unsold" &&
+            ticket.unitCost === 184 &&
+            ticket.orgId.equals(storeA),
+        ),
+      ).toBe(true);
+      const book = await bookOf(first);
+      expect(book).toMatchObject({ firstOpenedAt: null });
+      expect(book?.ticketCounts).toMatchObject({ wholesaled: 0, stock: 100 });
+      expect(await stateOf(first)).toBe("unopened");
+      const voided = await eventsOf(first, "wholesale_void");
+      expect(voided).toHaveLength(100);
+      expect(voided[0]).toMatchObject({
+        amount: 186,
+        by: actorId,
+        reasonKey: "input-error",
+        from: { status: "wholesaled" },
+        to: { status: "unsold", locationKind: "stock" },
+      });
+      // 已取消的不能再取消
+      await expect(
+        transactions.withTransaction((session) =>
+          wholesale().cancel(
+            {
+              session,
+              reader: context,
+              tenantId: tenant,
+              submissionId,
+              actorId,
+            },
+            { reasonKey: null, reasonNote: null },
+          ),
+        ),
+      ).rejects.toMatchObject({ extensions: { code: "CONFLICT" } });
+    });
+
+    it("明細的本和鎖住的本對不上 → CONFLICT,什麼都不寫", async () => {
+      const bookId = await receiveBook();
+      const submissionId = newObjectId();
+      await lockBook(bookId, submissionId);
+      await expect(
+        ship(submissionId, [bookId, await receiveBook()]),
+      ).rejects.toMatchObject({ extensions: { code: "CONFLICT" } });
+      expect(await eventsOf(bookId, "wholesale")).toHaveLength(0);
+    });
+
+    it("#15:拆過又收回的本不是未拆(批售單的「未拆」判斷)", async () => {
+      const bookId = await receiveBook();
+      const ticket = firstOf(await ticketsOf(bookId));
+      await transactions.withTransaction((session) =>
+        ledger.applyTicketEvents(session, own(storeOperator(storeA)), [
+          {
+            ticketId: ticket._id,
+            expectedVersion: 1,
+            type: TICKET_EVENT_TYPE.open,
+            patch: {
+              location: { kind: "counter", cashPointId: newObjectId() },
+            },
+          },
+          {
+            ticketId: ticket._id,
+            expectedVersion: 2,
+            type: TICKET_EVENT_TYPE.recall,
+            patch: { location: { kind: "stock", cashPointId: null } },
+          },
+        ]),
+      );
+      expect(await stateOf(bookId)).toBe("in_stock");
+    });
+
+    it("#17:迄號 101(待標註 1)→ 101 張都改已批售,總張數 100、這家店持有 0", async () => {
+      const bookId = await receiveBook({ lastTicketNo: 101 });
+      const submissionId = newObjectId();
+      await lockBook(bookId, submissionId);
+      await ship(submissionId, [bookId]);
+      expect(await bookOf(bookId)).toMatchObject({
+        ticketCounts: { wholesaled: 101 },
+      });
+      expect(
+        await booksService.statsOf(storeOperator(storeA), bookId),
+      ).toMatchObject({
+        state: "wholesaled",
+        totalCount: 100,
+        remainingCount: 0,
+        holdings: [],
+      });
+    });
+
+    it("#21:批售中與已批售的本不列進盤點", async () => {
+      const locked = await receiveBook();
+      const shipped = await receiveBook();
+      const free = await receiveBook();
+      await lockBook(locked, newObjectId());
+      const submissionId = newObjectId();
+      await lockBook(shipped, submissionId);
+      await ship(submissionId, [shipped]);
+      const { unopened, stock } = await api.app
+        .get(StocktakeFacts, { strict: false })
+        .stockBooksOf(storeOperator(storeA), storeA);
+      const listed = new Set([...unopened.keys(), ...stock.keys()]);
+      expect(listed.has(String(free))).toBe(true);
+      expect(listed.has(String(locked))).toBe(false);
+      expect(listed.has(String(shipped))).toBe(false);
     });
   });
 

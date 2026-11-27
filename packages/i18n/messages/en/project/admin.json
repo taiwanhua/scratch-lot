@@ -155,7 +155,8 @@
       "label": "Dealer tabs",
       "classA": "Class A",
       "classB": "Class B",
-      "contacts": "Contacts"
+      "contacts": "Contacts",
+      "wholesaleCustomers": "Wholesale customers"
     },
     "actions": {
       "newDealer": "+ New dealer",
@@ -168,7 +169,8 @@
       "registerSignin": "Register sign-in",
       "register": "Register",
       "releaseAndRemove": "Release and remove",
-      "releaseAndSave": "Release and save"
+      "releaseAndSave": "Release and save",
+      "newWholesaleCustomer": "+ New wholesale customer"
     },
     "types": {
       "a": "Class A",
@@ -411,7 +413,9 @@
         "SIGNIN_DUPLICATE": "This quarter is already registered",
         "SIGNIN_QUARTER_NOT_STARTED": "This quarter hasn't started yet",
         "AGENTS_REQUIRE_CO_SALES": "Agents remain; the co-sales store can't be removed",
-        "ROLE_IN_USE": "The roles being removed are still linked"
+        "ROLE_IN_USE": "The roles being removed are still linked",
+        "WHOLESALE_LICENSE_NO_DUPLICATE": "This license number is already used by a wholesale customer",
+        "WHOLESALE_CUSTOMER_IN_USE": "{name} has wholesale documents and can't be deleted; set the status to inactive instead"
       }
     },
     "allocations": {
@@ -422,6 +426,45 @@
     },
     "purchases": {
       "tab": "Purchase records"
+    },
+    "wholesale": {
+      "statuses": {
+        "active": "Active",
+        "inactive": "Inactive"
+      },
+      "keyword": "Keyword (store, license no., contact, phone)",
+      "listAria": "Wholesale customers",
+      "tabsLabel": "Wholesale customer tabs",
+      "fields": {
+        "storeName": "Store",
+        "licenseNo": "License no.",
+        "contactName": "Contact",
+        "phone": "Phone",
+        "address": "Address",
+        "status": "Status",
+        "lastWholesaleAt": "Last wholesale"
+      },
+      "sections": {
+        "basic": "Basic information",
+        "documents": "Wholesale records"
+      },
+      "summary": {
+        "title": "{name} · License {licenseNo}",
+        "contact": "Contact {name}",
+        "lastWholesale": "Last wholesale {date}",
+        "system": "{org} · created {date}"
+      },
+      "sameName": "A wholesale customer with the same name exists: {names}",
+      "sameNameItem": "{name} ({phone})",
+      "delete": {
+        "action": "Delete",
+        "title": "Delete wholesale customer",
+        "body": "Delete \"{name}\"?"
+      },
+      "feedback": {
+        "createSuccess": "Wholesale customer created",
+        "deleteSuccess": "Wholesale customer deleted"
+      }
     }
   },
   "lotteryInventory": {
@@ -443,7 +486,9 @@
         "otherStore": "Other branch",
         "transferring": "In transfer",
         "unmatchedSold": "Sold · unmatched",
-        "unmatchedLost": "Investigating / lost · unmatched"
+        "unmatchedLost": "Investigating / lost · unmatched",
+        "wholesaling": "In wholesale",
+        "wholesaled": "Wholesaled"
       },
       "quickSelect": {
         "label": "Select a run",
@@ -501,7 +546,8 @@
       "skipped": "Skipped",
       "scrapped": "Scrapped",
       "investigating": "Investigating",
-      "lost": "Lost"
+      "lost": "Lost",
+      "wholesaled": "Wholesaled"
     },
     "bookStates": {
       "revoked": "Revoked",
@@ -512,6 +558,8 @@
       "investigating": "Under investigation",
       "lost": "Lost",
       "scrapped": "Scrapped",
+      "wholesaling": "In wholesale",
+      "wholesaled": "Wholesaled",
       "sold_out": "Sold out",
       "pending_skip": "Skips to mark"
     },
@@ -535,6 +583,8 @@
       "transfer_out": "Transfer out",
       "in_transit": "In transit",
       "transfer_in": "Transfer in",
+      "wholesale": "Wholesale",
+      "wholesale_void": "Wholesale voided",
       "investigate": "Investigating",
       "lose": "Lost",
       "recover": "Recover",
@@ -549,7 +599,8 @@
     },
     "sources": {
       "purchase": "Purchase order",
-      "transfer_in": "Transfer order"
+      "transfer_in": "Transfer order",
+      "wholesale": "Wholesale order"
     },
     "stock": {
       "columns": {
@@ -577,6 +628,7 @@
         "source": "Source"
       },
       "listAria": "Stock (by book)",
+      "wholesaledHolding": "{customer} (wholesaled)",
       "pickOrg": "Pick a branch first",
       "empty": "No books match",
       "total": "{count} books",
@@ -661,7 +713,7 @@
       "scrapBlocks": {
         "bookUnopened": "This book has not been opened; open it first",
         "notInStock": "Only tickets in stock can be selected; recall counter tickets first",
-        "locked": "Tickets locked by a transfer cannot be scrapped",
+        "locked": "Tickets locked by a transfer or wholesale order cannot be scrapped",
         "notUnsold": "Only unsold tickets can be scrapped"
       },
       "remainingEstimated": " · {remaining} left (estimated, plus {unmatched} system-assigned)",
@@ -672,7 +724,13 @@
       "openingSoldTooltip": "Sold before adoption",
       "soldWithOpening": "Sold (incl. before adoption)",
       "fixToUnsold": "Change back to unsold…",
-      "fixToOpeningSold": "Mark sold before adoption…"
+      "fixToOpeningSold": "Mark sold before adoption…",
+      "wholesaleReviewing": "{serial} (under review)",
+      "wholesaleVoided": "{serial} (voided)",
+      "wholesaleShipped": "{serial} (shipped {date})",
+      "wholesaleShippedTo": "{serial} (shipped {date} · {customer})",
+      "wholesaledLocation": "{customer} (wholesaled)",
+      "remainingWholesaling": " · {remaining} left (in wholesale, not for sale)"
     },
     "timeline": {
       "columns": {
@@ -687,7 +745,11 @@
       "empty": "No events yet",
       "correctionOf": " (prior correction, belongs to {shift})",
       "matchPair": "#{ticketNo} ↔ #{partner}",
-      "matchPairOtherBook": "#{ticketNo} ↔ book {bookNo} #{partner}"
+      "matchPairOtherBook": "#{ticketNo} ↔ book {bookNo} #{partner}",
+      "wholeBookRange": "Whole book {ranges}",
+      "wholesaleSerial": "Wholesale order {serial}",
+      "wholesaleVoidSerial": "Wholesale order {serial} voided ({reason})",
+      "wholesaleVoidNoReason": "Wholesale order {serial} voided"
     },
     "scrap": {
       "title": "Scrap {count} tickets",
@@ -927,6 +989,9 @@
         "sales": "1 Sales",
         "games": "1 Sales · by game",
         "profit": "2 Gross profit",
+        "wholesale": "2b Wholesale",
+        "wholesaleDocuments": "2b Wholesale · by document",
+        "wholesaleInfo": "2b Wholesale · received but not shipped",
         "redemption": "3 Prize redemption",
         "inventory": "4 Inventory changes",
         "inventoryInfo": "4 Inventory changes · listed separately",
@@ -939,9 +1004,12 @@
         "profitEstimated": "2 Gross profit (estimated)"
       },
       "descriptions": {
-        "sales": "What sold in this period. Undone sales are negative and may be from earlier sales.",
+        "sales": "What sold in this period. Undone sales are negative and may be from earlier sales. Wholesale is not included; see 2b.",
         "games": "Sold = scanned + manual + stocktake backfill; sorted by game code. Margin = gross profit ÷ net sales.",
-        "profit": "The price difference earned on the tickets sold, using each ticket's cost when it was sold.",
+        "profit": "The price difference earned on the tickets sold, using each ticket's cost when it was sold. Wholesale is not included; see 2b.",
+        "wholesale": "Unopened books sold to wholesale customers, counted by shipping time; a void is subtracted in the period it happens. Original cost is the per-ticket cost when shipped; profit rate = wholesale profit ÷ wholesale amount.",
+        "wholesaleDocuments": "For auditing: one row per document; a voided document is listed again as a negative row in the period it was voided. Received and to receive at the end count only payments up to the end.",
+        "wholesaleInfo": "Money received before the end for wholesale orders not yet shipped at the end: already in wholesale income in 5b / 6 but not in the tables above; listed for reconciliation.",
         "redemption": "Redemptions recorded in this period, by their status at the end of the period. Valid = held in store + sent for claim.",
         "inventory": "Add and subtract from top to bottom; the check row should be 0.",
         "inventoryInfo": "Not part of the calculation above; listed for reference.",
@@ -984,7 +1052,18 @@
         "soldCost": "Cost of sold",
         "grossProfit": "Gross profit",
         "margin": "Margin",
-        "total": "Total"
+        "total": "Total",
+        "customer": "Wholesale customer",
+        "books": "Books",
+        "wholesaleAmount": "Wholesale amount",
+        "originalCost": "Original cost",
+        "wholesaleProfit": "Wholesale profit",
+        "profitRate": "Profit rate",
+        "serialNo": "No.",
+        "shippedAt": "Shipped at",
+        "paymentMode": "Payment collection",
+        "receivedAtEnd": "Received at end",
+        "toReceiveAtEnd": "To receive at end"
       },
       "postClose": {
         "redemption": "Redemption correction",
@@ -1001,6 +1080,8 @@
         "purchase_expense": "Purchase expense",
         "transfer_income": "Transfer income",
         "transfer_expense": "Transfer expense",
+        "wholesale_income": "Wholesale income",
+        "wholesale_expense": "Wholesale expense",
         "license_rent": "License rent",
         "adjustment": "Adjustment",
         "other": "Other"
@@ -1013,6 +1094,8 @@
         "refund": "Return refund (open shift)",
         "transfer_out": "Transfer expense (cash)",
         "transfer_in": "Transfer income (cash)",
+        "wholesale_in": "Wholesale income (cash)",
+        "wholesale_out": "Wholesale expense (cash)",
         "correction": "Cash correction"
       },
       "outstanding": {
@@ -1021,7 +1104,9 @@
         "transferToReceive": "Transfer payment to receive",
         "transferToPay": "Transfer payment due",
         "transferPayerRefund": "Transfer refund due to receiver (overpaid)",
-        "transferPayeeRefund": "Transfer refund owed by shipper (overcollected)"
+        "transferPayeeRefund": "Transfer refund owed by shipper (overcollected)",
+        "wholesaleToReceive": "Wholesale payment to receive",
+        "wholesaleToRefund": "Wholesale refund due"
       },
       "compare": {
         "netSales": "Net sales",
@@ -1032,6 +1117,8 @@
         "shiftDifference": "Shift checkout differences",
         "toPay": "Payable (purchases + transfers)",
         "toReceive": "Transfer payment to receive",
+        "wholesaleAmount": "Wholesale amount",
+        "wholesaleProfit": "Wholesale profit",
         "countName": "{name} (quantity)",
         "countEstimatedName": "{name} (quantity) · estimated",
         "estimatedName": "{name} · estimated"
@@ -1063,6 +1150,7 @@
         "transferOut": "− Transferred out",
         "transferAmount": "Transfer amount {amount}",
         "sales": "− Net sales",
+        "wholesale": "− Net wholesale",
         "scrap": "− Scrapped",
         "newInvestigating": "− New under investigation",
         "investigateRecovered": "+ Back from investigation",
@@ -1128,7 +1216,13 @@
         "monthEndRenumberOpen": "— (decided at period close)",
         "openingEntryPeriod": "Opening entry",
         "openingEntryOngoing": "This store started opening entry on {start}; still in progress",
-        "openingEntryClosed": "This store started opening entry on {start}; ended on {end}"
+        "openingEntryClosed": "This store started opening entry on {start}; ended on {end}",
+        "wholesaleNone": "No wholesale in this period",
+        "wholesaleVoided": "{serialNo} (voided)",
+        "receivedUnshipped": "Received but not shipped at end",
+        "pendingAtEnd": "Wholesale pending at end",
+        "pendingAtEndNote": "{books} books · {list}; locked by wholesale orders under review, still in ending stock",
+        "pendingAtEndNoteNoCost": "{books} books, wholesale amount {amount} · {list}; locked by wholesale orders under review, still in ending stock"
       },
       "closing": {
         "closed": "Closed",
@@ -2348,10 +2442,12 @@
       "redemption_income": "Prize income",
       "purchase_income": "Purchase income",
       "transfer_income": "Transfer income",
+      "wholesale_income": "Wholesale income",
       "withdrawal": "Withdrawal",
       "license_rent": "License rent",
       "purchase_expense": "Purchase expense",
       "transfer_expense": "Transfer expense",
+      "wholesale_expense": "Wholesale expense",
       "adjustment": "Adjustment",
       "other": "Other"
     },
@@ -2362,6 +2458,8 @@
       "bank_withdraw": "Bank withdrawal",
       "transfer_out": "Transfer expense",
       "transfer_in": "Transfer income",
+      "wholesale_out": "Wholesale expense",
+      "wholesale_in": "Wholesale income",
       "refund": "Refund",
       "correction_increase": "Cash correction (+)",
       "correction_decrease": "Cash correction (−)"
@@ -2510,6 +2608,7 @@
       },
       "route": "{from} → {to}",
       "routeWithPayee": "{from} → {to} ({payee})",
+      "routeFromPayee": "{from} ({payee}) → {to}",
       "reversal": " (reversal)",
       "empty": "No cash movements on this day",
       "listAria": "Cash movements",
@@ -2543,8 +2642,12 @@
       "title": "Settlement",
       "payable": "Payable",
       "transferAmount": "Transfer amount",
+      "wholesaleAmount": "Wholesale amount",
       "paid": "Paid (net)",
       "received": "Received (net)",
+      "receivedAmount": "Received",
+      "toReceive": "To receive",
+      "toRefund": "To refund",
       "diff": "Difference",
       "settled": "Settled",
       "pendingPayee": "{amount} waiting for the shipping store",
@@ -2581,6 +2684,7 @@
       "documentValue": "{docNo} {label}",
       "payable": "Payable",
       "transferAmount": "Transfer amount",
+      "wholesaleAmount": "Wholesale amount",
       "net": "Paid / received (net)",
       "fields": {
         "method": "Method",
@@ -3058,9 +3162,11 @@
           "soldAt": "#{ticketNo} was sold ({time}): if it was not really sold, undo the sale or send a sale reversal",
           "counter": "#{ticketNo} is on a counter ({cashPoint}); recall it to stock first",
           "locked": "#{ticketNo} is on transfer {serialNo}; cannot transfer",
+          "lockedWholesale": "#{ticketNo} is in wholesale ({serialNo}); cannot transfer",
           "investigating": "#{ticketNo} is under investigation; recover it first",
           "lost": "#{ticketNo} is lost; recover it first",
           "scrapped": "#{ticketNo} is scrapped; cannot transfer",
+          "wholesaled": "#{ticketNo} has been wholesaled; cannot transfer",
           "inTransit": "#{ticketNo} is in transit; cannot transfer",
           "skipped": "#{ticketNo} is recorded as skipped; cannot transfer",
           "elsewhere": "#{ticketNo} is in another store; cannot transfer"
@@ -3069,9 +3175,11 @@
           "counter": "on a counter",
           "sold": "sold",
           "locked": "on another transfer",
+          "lockedWholesale": "In wholesale",
           "investigating": "under investigation",
           "lost": "lost",
           "scrapped": "scrapped",
+          "wholesaled": "Wholesaled",
           "inTransit": "in transit",
           "skipped": "skipped",
           "elsewhere": "in another store"
@@ -3080,9 +3188,11 @@
           "counter": "Recall them to stock, ",
           "sold": "If not really sold, undo the sale or send a sale reversal, ",
           "locked": "",
+          "lockedWholesale": "",
           "investigating": "Recover them first, ",
           "lost": "Recover them first, ",
           "scrapped": "",
+          "wholesaled": "",
           "inTransit": "",
           "skipped": "",
           "elsewhere": ""
@@ -3275,6 +3385,48 @@
         "payerSign": "Paid by (signature)",
         "courierSign": "Courier signature"
       },
+      "wholesaleShipment": {
+        "title": "Wholesale delivery note",
+        "copies": {
+          "store": "Store copy",
+          "customer": "Customer copy"
+        },
+        "route": "Shipping store → Wholesale customer",
+        "routeValue": "{from} → {to}",
+        "columns": {
+          "book": "Game / Book no.",
+          "books": "Books",
+          "amount": "Wholesale amount"
+        },
+        "bookValue": "{gameCode} · {bookNos}",
+        "total": "Wholesale amount",
+        "paymentMode": "Payment method",
+        "paymentModes": {
+          "auto_bank": "Deposit to account",
+          "collect_first": "Approve after payment"
+        },
+        "received": "Received",
+        "handlerSign": "Handled by",
+        "customerSign": "Customer acknowledgement"
+      },
+      "wholesalePayment": {
+        "title": "Wholesale payment receipt",
+        "copies": {
+          "store": "Store copy",
+          "customer": "Customer copy"
+        },
+        "customer": "Wholesale customer",
+        "place": "Cash to",
+        "placeValue": "{branch} · {place}",
+        "places": {
+          "vault": "Vault",
+          "drawer": "Cash point drawer"
+        },
+        "handler": "Handled by",
+        "cash": "Cash",
+        "handlerSign": "Handled by",
+        "customerSign": "Customer signature"
+      },
       "reprint": {
         "heading": "[Reprint] #{printNo}",
         "reason": "Reason: {reason}",
@@ -3286,6 +3438,147 @@
       "titleWithNo": "Edit requisition {serialNo}",
       "notOnSale": "These games are no longer on sale; they are not listed and are kept as they are: {games}",
       "loadFailed": "Could not load the games of this branch; reload the page"
+    },
+    "wholesale": {
+      "badgeDescription": "Wholesale documents whose shipment confirmation is waiting for you",
+      "paymentModes": {
+        "auto_bank": "Deposit to account",
+        "collect_first": "Collect before approval"
+      },
+      "states": {
+        "wholesaling": "Wholesaling",
+        "wholesaled": "Wholesaled"
+      },
+      "list": {
+        "title": "Wholesale",
+        "create": "+ New wholesale",
+        "listAria": "Wholesale list",
+        "empty": "No matching wholesale documents",
+        "total": "{total} in total",
+        "books": "{count} books",
+        "cleared": "Settled",
+        "kinds": {
+          "to_receive": "To receive {amount}",
+          "to_refund": "To refund {amount}"
+        },
+        "columns": {
+          "serialNo": "No.",
+          "fromBranch": "Shipping store",
+          "customer": "Wholesale customer",
+          "paymentMode": "Payment",
+          "books": "Books",
+          "amount": "Wholesale amount",
+          "settlement": "Settlement",
+          "status": "Status"
+        },
+        "filters": {
+          "status": "Status (incl. drafts)",
+          "all": "All"
+        }
+      },
+      "create": {
+        "tabLabel": "Wholesale · New",
+        "title": "New wholesale",
+        "loading": "Loading",
+        "unavailable": "Wholesale documents cannot be created now (the form is not available or you cannot create)",
+        "fields": {
+          "fromBranch": "Shipping store",
+          "customer": "Wholesale customer",
+          "paymentMode": "Payment",
+          "account": "Deposit account",
+          "note": "Note",
+          "pick": "Select"
+        },
+        "lines": "Lines",
+        "pickBranch": "Pick the shipping store first",
+        "empty": "No books yet: scan any ticket of a book, or add from the available books",
+        "scan": "Scan to add",
+        "scanInvalid": "Unknown code; scan the back number, front number or front barcode",
+        "scanNotFound": "Book not found",
+        "scanAmbiguousGame": "Several games share this book number; scan the back number or pick the game first",
+        "scanStale": "This book has just become available; refresh and add it again",
+        "duplicate": "{bookNo} is already on this document",
+        "problems": {
+          "revoked": "{bookNo} is revoked and cannot be wholesaled",
+          "wholesaled": "{bookNo} is already wholesaled",
+          "opened": "{bookNo}: opened books cannot be wholesaled",
+          "elsewhere": "{bookNo} is in another store and cannot be wholesaled",
+          "transferring": "{bookNo} is being transferred ({serialNo}) and cannot be wholesaled",
+          "wholesaling": "{bookNo} is being wholesaled ({serialNo})",
+          "locked": "{bookNo} is locked by another document",
+          "not_in_stock": "{bookNo} is not whole and unsold in stock"
+        },
+        "columns": {
+          "book": "Game / book",
+          "tickets": "Tickets",
+          "bookPrice": "Book price",
+          "rate": "Purchase rate",
+          "amount": "Wholesale amount",
+          "status": "Status"
+        },
+        "rateOf": "Purchase rate of book {bookNo}",
+        "groupTitle": "{code} {name} · {price} ({books} books) subtotal {subtotal}",
+        "groupRate": "Rate for all",
+        "groupRateOf": "Purchase rate for all {code}",
+        "cardFacts": "{tickets} tickets · book {price} · {rate}% · {amount}",
+        "remove": "Remove",
+        "tooMany": "At most {count} books per document",
+        "picker": {
+          "open": "Add from available books",
+          "title": "Add from available books",
+          "hint": "Unopened whole books in the shipping store's stock; opened, transferring and wholesaling books are not listed",
+          "empty": "No books available",
+          "group": "{code} {name} · {price} ({books} books)",
+          "defaultRate": "Default rate",
+          "facts": "{tickets} tickets · {price} · {rate}%",
+          "added": "Added",
+          "pick": "Pick book {bookNo}",
+          "picked": "{count} selected",
+          "add": "Add {count}"
+        },
+        "totals": {
+          "books": "Books",
+          "bookCount": "{count} books",
+          "amount": "Wholesale amount",
+          "cost": "Original cost",
+          "profit": "Estimated profit",
+          "noProfit": "There is no profit at this rate"
+        },
+        "stickyTotal": "Wholesale {amount}",
+        "cancel": "Cancel",
+        "saveDraft": "Save draft",
+        "submit": "Submit",
+        "draftSaved": "Draft saved",
+        "submitted": "Wholesale submitted"
+      },
+      "edit": {
+        "title": "Edit wholesale",
+        "titleWithNo": "Edit wholesale {serialNo}",
+        "loadFailed": "This wholesale document could not be loaded; please refresh",
+        "keptLines": "{count} lines could not be read and are kept as they are"
+      },
+      "view": {
+        "title": "Wholesale",
+        "titleWithNo": "Wholesale {serialNo}",
+        "stageShip": "Shipment confirmation",
+        "books": "{count} books",
+        "paymentMode": "Payment: {mode}",
+        "paymentModeWithAccount": "Payment: {mode} ({account})",
+        "amount": "Wholesale amount {amount}",
+        "note": "Note: {note}",
+        "problems": {
+          "unreceived": "{amount} still to collect",
+          "overreceived": "{amount} over-collected; record a refund first"
+        },
+        "autoBankHint": "{amount} is deposited to {account} (wholesale income) on approval; nothing can be collected before that",
+        "printShipment": "Wholesale delivery note",
+        "printPayment": "Wholesale payment receipt"
+      },
+      "customerTab": {
+        "aria": "Wholesale records",
+        "received": "Received",
+        "empty": "No wholesale records yet"
+      }
     }
   },
   "lifecycle": {
@@ -3361,7 +3654,18 @@
     "TRANSFER_NOT_DRAFT": "Only drafts can be deleted; void or reject a submitted transfer",
     "STOCKTAKE_RENUMBER_INCOMPLETE": "Renumber needs every book counted; some books are not counted yet",
     "STOCKTAKE_RENUMBER_NOT_ALLOWED": "Only count stores and converting stores can renumber, and it must cover the whole store",
-    "STOCKTAKE_RENUMBER_BLOCKED": "A game is being rescanned store-wide; renumber after it finishes or is cancelled"
+    "STOCKTAKE_RENUMBER_BLOCKED": "A game is being rescanned store-wide; renumber after it finishes or is cancelled",
+    "WHOLESALE_BRANCH_INVALID": "Pick a shipping store within your scope",
+    "WHOLESALE_CUSTOMER_INVALID": "The wholesale customer must be active and visible to you",
+    "WHOLESALE_NO_LINES": "At least one book is required",
+    "WHOLESALE_LINE_INVALID": "A book, ticket count, amount or rate does not match (the same book cannot repeat); please check",
+    "WHOLESALE_BOOK_UNAVAILABLE": "Some books cannot be wholesaled (opened, locked or not in the shipping store's stock); see the reasons under the lines",
+    "WHOLESALE_ACCOUNT_INVALID": "The deposit account must be active and used by the shipping store; return it to change the account or the payment",
+    "WHOLESALE_MODE_HAS_RECEIPTS": "Receipts are already recorded; keep \"Collect before approval\" or reverse them first",
+    "WHOLESALE_UNRECEIVED": "The wholesale amount is not fully collected (see the settlement)",
+    "WHOLESALE_OVERRECEIVED": "Over-collected; record a refund first (see the settlement)",
+    "WHOLESALE_NOT_DRAFT": "Only drafts can be deleted; reject or void a submitted wholesale",
+    "WHOLESALE_BOOKS_IN_USE": "The wholesaled tickets have changed and the document cannot be voided"
   },
   "lotteryStore": {
     "fieldErrors": {
@@ -3553,7 +3857,8 @@
         "skipped": "Skipped",
         "scrapped": "Scrapped",
         "investigating": "Under investigation",
-        "lost": "Lost"
+        "lost": "Lost",
+        "wholesaled": "Wholesaled"
       },
       "pickTitle": "Pick a game",
       "pickHint": "Book {bookNo} matches {count} games in this store:",
@@ -3575,7 +3880,9 @@
         "sold": "This ticket was sold at {time}.",
         "skipped": "This ticket is skipped and cannot be sold.",
         "scrapped": "This ticket is scrapped and cannot be sold.",
-        "locked": "This ticket is locked by a form (transfer or sale reversal) and cannot be sold.",
+        "wholesaled": "This ticket has been wholesaled and cannot be sold.",
+        "locked": "This ticket is locked by a form (transfer, wholesale or sale reversal) and cannot be sold.",
+        "lockedWholesale": "This ticket is on wholesale order #{serialNo} and cannot be sold.",
         "inTransit": "This ticket is in transit and cannot be sold.",
         "inStock": "This ticket is in stock. Move it to a counter first.",
         "moveForbidden": "This ticket is on {cashPoint} and you cannot move tickets. Sell it at {cashPoint}.",
@@ -4441,9 +4748,12 @@
         "withdrawals": "Withdrawals",
         "transfer_out": "Transfer out (cash)",
         "transfer_in": "Transfer in (cash)",
+        "wholesale_out": "Wholesale expense (cash)",
+        "wholesale_in": "Wholesale income (cash)",
         "refunds": "Refunds",
         "corrections": "Cash corrections",
         "transfers": "Transfers (cash)",
+        "wholesales": "Wholesale (cash)",
         "bank_deposits": "Bank deposits",
         "bank_withdrawals": "Bank withdrawals"
       },
@@ -4621,6 +4931,7 @@
           "deposits": "Deposits",
           "withdrawals": "Withdrawals",
           "transfers": "Transfers (cash)",
+          "wholesales": "Wholesale (cash)",
           "corrections": "Cash corrections",
           "bank_deposits": "Bank deposits",
           "bank_withdrawals": "Bank withdrawals"
@@ -4802,7 +5113,8 @@
         "unmatchedNoPartner": "#{ticketNo} is recorded as sold (unmatched) and {source} has no unsold ticket of this game to match. Send a sale reversal (stocktake error) and {action} after approval",
         "skipped": "#{ticketNo} is recorded as skipped; correct the skip in the book detail first",
         "scrapped": "#{ticketNo} is scrapped; undo the scrap in the book detail first",
-        "locked": "#{ticketNo} is locked by a transfer or sale reversal; cannot {action}",
+        "wholesaled": "#{ticketNo} has been wholesaled; cannot {action}",
+        "locked": "#{ticketNo} is locked by a transfer, wholesale order or sale reversal; cannot {action}",
         "inTransit": "#{ticketNo} is in transit; cannot {action}",
         "inStock": "#{ticketNo} is already in stock",
         "missing": "#{ticketNo} is under investigation or lost; recover it first",

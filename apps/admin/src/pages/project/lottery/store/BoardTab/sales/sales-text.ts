@@ -16,6 +16,7 @@ export const BLOCK_REASON_KEYS: Record<StoreScanBlockReason, string> = {
   sold: "scan.blocked.sold",
   skipped: "scan.blocked.skipped",
   scrapped: "scan.blocked.scrapped",
+  wholesaled: "scan.blocked.wholesaled",
   locked: "scan.blocked.locked",
   in_transit: "scan.blocked.inTransit",
   in_stock: "scan.blocked.inStock",
@@ -29,6 +30,7 @@ export const COUNTER_PROBLEM_KEYS: Record<CounterScanProblem, string> = {
   unmatched_no_partner: "counterScan.problems.unmatchedNoPartner",
   skipped: "counterScan.problems.skipped",
   scrapped: "counterScan.problems.scrapped",
+  wholesaled: "counterScan.problems.wholesaled",
   locked: "counterScan.problems.locked",
   in_transit: "counterScan.problems.inTransit",
   in_stock: "counterScan.problems.inStock",
@@ -80,4 +82,5 @@ export const TICKET_STATUS_KEYS: Partial<Record<string, string>> = {
   scrapped: "scan.statuses.scrapped",
   investigating: "scan.statuses.investigating",
   lost: "scan.statuses.lost",
+  wholesaled: "scan.statuses.wholesaled",
 };

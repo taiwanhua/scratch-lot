@@ -50,6 +50,7 @@ import { LOTTERY_FIELD_CATEGORIES } from "../field-options/lottery-field-options
 import { countsOfBook } from "../tickets/books.service";
 import { TicketLedgerService } from "../tickets/ticket-ledger.service";
 import type { TicketEventInput } from "../tickets/ticket-ledger.types";
+import { TicketLockDocuments } from "../tickets/ticket-lock-documents";
 import type {
   LotteryStoreScanInput,
   LotteryStoreTicketRefInput,
@@ -224,6 +225,8 @@ interface ScanScope {
   countMode: CountMode;
   /** 依 6.3 找到的配對張(依刷到的張 id) */
   partners: Map<string, TicketRecord>;
+  /** 鎖住刷到的張的單據單號(依單據 id) */
+  lockSerials: Map<string, string>;
 }
 
 /** 一次售出的條件。 */
@@ -343,6 +346,7 @@ export class StoreSalesService {
     private readonly access: StoreAccess,
     private readonly clock: StoreClock,
     private readonly matching: StoreMatching,
+    private readonly lockDocuments: TicketLockDocuments,
   ) {}
 
   // ---- 刷到時 ----
@@ -424,6 +428,10 @@ export class StoreSalesService {
       canMove: context.canMove,
       countMode,
       partners,
+      lockSerials: await this.lockDocuments.serialsOf(
+        reader,
+        picked.map((ticket) => ticket.lockedBy),
+      ),
       points,
       openShifts,
       owners: await this.views.userNames(
@@ -517,6 +525,14 @@ export class StoreSalesService {
           : ref(responsible, scope.orgNames.get(String(responsible)) ?? ""),
       outcome: decision.outcome,
       blockReason: decision.blockReason,
+      lockRefType:
+        decision.blockReason === "locked"
+          ? (ticket.lockedBy?.refType ?? null)
+          : null,
+      lockSerialNo:
+        decision.blockReason === "locked"
+          ? (scope.lockSerials.get(String(ticket.lockedBy?.refId)) ?? null)
+          : null,
       soldAt:
         ticket.status === TICKET_STATUS.sold ? (ticket.soldAt ?? null) : null,
       openingSold: isOpeningSold(ticket),
@@ -983,6 +999,9 @@ export class StoreSalesService {
       scanned.status === TICKET_STATUS.scrapped
     ) {
       throw notSellableError(id, scanned.status);
+    }
+    if (scanned.status === TICKET_STATUS.wholesaled) {
+      throw notSellableError(id, "wholesaled");
     }
     if (scanned.location.kind === TICKET_LOCATION_KIND.inTransit) {
       throw notSellableError(id, "in_transit");

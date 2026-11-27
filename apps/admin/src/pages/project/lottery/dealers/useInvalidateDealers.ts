@@ -9,6 +9,9 @@ import {
   useLotteryDealerSigninsQuery,
   useLotteryDealersQuery,
   useLotteryOccupiedStoresQuery,
+  useLotteryWholesaleCustomerQuery,
+  useLotteryWholesaleCustomerSameNamesQuery,
+  useLotteryWholesaleCustomersQuery,
 } from "@repo/graphql";
 
 import { useInvalidateSidebarBadges } from "@/hooks/base/useSidebarBadges";
@@ -29,6 +32,11 @@ export const useInvalidateDealers = () => {
       useLotteryDealerSigninsQuery.getKey({ dealerId: "", year: 0 }),
       useLotteryDealerCoSellersQuery.getKey({ dealerId: "" }),
       useLotteryOccupiedStoresQuery.getKey(),
+      useLotteryWholesaleCustomersQuery.getKey({ input: {} }),
+      useLotteryWholesaleCustomerQuery.getKey({ id: "" }),
+      useLotteryWholesaleCustomerSameNamesQuery.getKey({
+        input: { storeName: "" },
+      }),
     ];
     await Promise.all(
       keys.map((key) =>

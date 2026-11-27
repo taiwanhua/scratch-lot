@@ -64,7 +64,7 @@ const RowSettleDialog = ({
 };
 
 /**
- * 待結清款項分頁(Figma AC-05 93:1143;規格 9、10.3):進貨與調貨同一頁,一張單據的一邊一列 ——
+ * 待結清款項分頁(Figma AC-05 93:1143;規格 9、10.3):進貨、調貨、批售同一頁,一張單據的一邊一列 ——
  * 單據、分店、對象、應付、已付、差額(待付 / 待退 / 待收)、已過天數;每列可直接操作
  * (按鈕權限沿用單據的 settle / pay / receive,api 的 `canSettle`)。
  */
@@ -75,7 +75,7 @@ export const OutstandingTab = () => {
   const query = useLotteryOutstandingSettlementsQuery(session.client);
   const rows = query.data?.lotteryOutstandingSettlements.items ?? [];
   const [settling, setSettling] = useState<Row | null>(null);
-  // 收貨店付現金 → 調貨付款收據(付款視窗關掉之後才轉圖,所以掛在分頁上)
+  // 收貨店付現金 → 調貨付款收據;批售單收現金 → 批售收款收據(視窗關掉之後才轉圖,所以掛在分頁上)
   const receipt = useSettlementReceipt();
 
   const columns: TableColumn<Row>[] = [

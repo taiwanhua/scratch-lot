@@ -6,7 +6,7 @@ import type { ModuleSeedDeclaration } from "../base/module-declaration";
 /**
  * 叫貨與進貨(群組)與叫貨、採購單(規格 3.1、3.2、8.1;正本 `docs/modules/project/purchasing.md`)。
  * 群組與 `purchasing.requisition` 由本檔一次宣告全部權限;進貨單 `purchasing.purchase`、調貨單
- * `purchasing.transfer` 由各自的票另檔宣告,掛在本群組底下。
+ * `purchasing.transfer`、批售單 `purchasing.wholesale` 由各自的票另檔宣告,掛在本群組底下。
  *
  * - `purchasing.requisition`:表單模組(綁定 叫貨單 `requisition`),頁內分頁 叫貨單 | 採購清單;
  *   表單四條 + `purchase-list`(採購清單分頁)
@@ -23,7 +23,7 @@ export const purchasingGroupModule: ModuleSeedDeclaration = {
       order: 30,
       route: "purchasing",
       icon: "receipt",
-      description: "叫貨、採購單、進貨單、調貨單",
+      description: "叫貨、採購單、進貨單、調貨單、批售單",
     },
   ],
 };

@@ -195,6 +195,7 @@ fragment LotteryReceiptLinksFields on LotteryReceiptLinks {
   storeView
   purchaseView
   transferView
+  wholesaleView
 }
 
 query LotteryReceiptLinks {

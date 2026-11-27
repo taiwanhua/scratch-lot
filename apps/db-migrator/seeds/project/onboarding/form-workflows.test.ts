@@ -25,6 +25,7 @@ const EXPECTED: Record<string, Record<string, string>> = {
   requisition: { hq: "review" },
   purchase: { receive: "review" },
   transfer: { ship: "review", receive: "review" },
+  wholesale: { ship: "review" },
   makeup_punch: { store_manager: "review" },
   sale_reversal: { store_manager: "auto" },
   cash_correction: { store_manager: "auto" },

@@ -24,7 +24,7 @@ export interface TicketLocation {
   cashPointId: Types.ObjectId | null;
 }
 
-/** 鎖定:調貨單(「調貨中」)或撤銷售出申請;鎖定時不能賣。 */
+/** 鎖定:調貨單(「調貨中」)、批售單(「批售中」)或撤銷售出申請;鎖定時不能賣。 */
 export interface TicketLock {
   refType: TicketLockRefType;
   refId: Types.ObjectId;
@@ -61,7 +61,7 @@ export class LotteryTicket {
   @Prop({ type: String, required: true })
   ticketKey!: string;
 
-  /** 狀態:未售 / 已售 / 跳號 / 報廢 / 待查 / 遺失。 */
+  /** 狀態:未售 / 已售 / 跳號 / 報廢 / 待查 / 遺失 / 已批售。 */
   @Prop({ type: String, enum: TICKET_STATUSES, required: true })
   status!: TicketStatus;
 
@@ -76,7 +76,7 @@ export class LotteryTicket {
   })
   location!: TicketLocation;
 
-  /** 鎖定:調貨單或撤銷售出申請;null = 沒有鎖定。 */
+  /** 鎖定:調貨單、批售單或撤銷售出申請;null = 沒有鎖定。 */
   @Prop({
     type: {
       _id: false,

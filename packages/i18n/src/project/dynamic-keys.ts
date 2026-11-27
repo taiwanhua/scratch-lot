@@ -256,7 +256,7 @@ export const PROJECT_DYNAMIC_KEYS: readonly DynamicKey[] = [
   {
     key: "admin.lifecycle.",
     reason:
-      "專案掛接點擋下的錯誤碼(叫貨單、進貨單、調貨單、收付):底座 `lib/base/errors.ts` 的 `adminErrorText` 以 `admin.lifecycle.<reason>` 取用(api `requisition-error.ts` 的 `REQUISITION_REASONS`、`purchase-error.ts` 的 `PURCHASE_REASONS`、`transfer-error.ts` 的 `TRANSFER_REASONS`、`accounts-error.ts` 的 `SETTLEMENT_NOT_CLEARED`)",
+      "專案掛接點擋下的錯誤碼(叫貨單、進貨單、調貨單、批售單、收付):底座 `lib/base/errors.ts` 的 `adminErrorText` 以 `admin.lifecycle.<reason>` 取用(api `requisition-error.ts` 的 `REQUISITION_REASONS`、`purchase-error.ts` 的 `PURCHASE_REASONS`、`transfer-error.ts` 的 `TRANSFER_REASONS`、`wholesale-error.ts` 的 `WHOLESALE_REASONS`、`accounts-error.ts` 的 `SETTLEMENT_NOT_CLEARED`)",
   },
   {
     key: "admin.lotteryPurchasing.purchase.badgeDescription",
@@ -277,6 +277,31 @@ export const PROJECT_DYNAMIC_KEYS: readonly DynamicKey[] = [
     key: "admin.lotteryPurchasing.transfer.badgeDescription",
     reason:
       "調貨單側欄計數的「數什麼」:由 api 側欄計數登記的 `descriptionKey` 給(`transfer-registrations.ts`)",
+  },
+  {
+    key: "admin.lotteryPurchasing.wholesale.badgeDescription",
+    reason:
+      "批售單側欄計數的「數什麼」:由 api 側欄計數登記的 `descriptionKey` 給(`wholesale-registrations.ts`)",
+  },
+  {
+    key: "admin.lotteryPurchasing.wholesale.list.kinds.",
+    reason:
+      "批售單列表的結算欄 `t(`kinds.${kind}`)`,kind 取自 api `lotteryWholesales` 的 `settlementKind`(`to_receive` / `to_refund`)",
+  },
+  {
+    key: "admin.lotteryPurchasing.wholesale.create.problems.",
+    reason:
+      "批售單新增頁刷到不能批售的本、送出被擋的列 `t(`problems.${problem}`)`,problem 取自 api `lotteryWholesaleScanMatches`(`wholesale-books.service.ts` 的 `WholesaleBookProblem`)",
+  },
+  {
+    key: "admin.lotteryPurchasing.wholesale.view.problems.",
+    reason:
+      "批售單檢視頁核准前的提示 `t(`problems.${kind}`)`,kind 取自 `@repo/domain/project/lottery` 的 `wholesaleReceivedProblemOf`",
+  },
+  {
+    key: "admin.lotteryPurchasing.wholesale.paymentModes.",
+    reason:
+      "批售單的收款方式 `t(`paymentModes.${mode}`)`,mode 取自 `@repo/domain/project/lottery` 的 `WHOLESALE_PAYMENT_MODE`",
   },
   {
     key: "admin.lotteryPurchasing.transfer.list.kinds.",
@@ -309,12 +334,19 @@ export const PROJECT_DYNAMIC_KEYS: readonly DynamicKey[] = [
       "transferShipment",
       "transferReceiving",
       "transferPayment",
+      "wholesaleShipment",
+      "wholesalePayment",
     ] as const
   ).map((kind) => ({
     key: `admin.lotteryPurchasing.receipts.${kind}.copies.`,
     reason:
       "兩聯單據的聯別名稱 `t(`${copyI18n}.copies.${copy}`)`,copy 取自 `lib/project/lottery/receipts/receipt-kinds.ts` 各單據宣告的 `copies`",
   })),
+  {
+    key: "admin.lotteryPurchasing.receipts.wholesaleShipment.paymentModes.",
+    reason:
+      "批售出貨單的收款方式 `t(`wholesaleShipment.paymentModes.${paymentMode}`)`,paymentMode 是批售單的收款方式(`lib/project/lottery/receipts/wholesale-shipment-receipt.ts`)",
+  },
   {
     key: "admin.lotteryStore.errors.",
     reason:

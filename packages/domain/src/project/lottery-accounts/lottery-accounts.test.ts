@@ -15,6 +15,7 @@ import {
   pendingPayeeAmount,
   requiresBranch,
   requiresSummary,
+  solePayeeDefaultAmount,
 } from ".";
 
 describe("銀行交易類型(規格 10.1)", () => {
@@ -38,6 +39,16 @@ describe("銀行交易類型(規格 10.1)", () => {
     expect(documentRequirementOf("withdrawal")).toBe("none");
   });
 
+  it("批售收入 = 收、批售支出 = 支;兩種歸屬分店必填;批售收入單據必填(規格 21.6)", () => {
+    expect(fixedDirectionOf("wholesale_income")).toBe("in");
+    expect(fixedDirectionOf("wholesale_expense")).toBe("out");
+    expect(requiresSummary("wholesale_income")).toBe(false);
+    expect(requiresBranch("wholesale_income")).toBe(true);
+    expect(requiresBranch("wholesale_expense")).toBe(true);
+    expect(documentRequirementOf("wholesale_income")).toBe("required");
+    expect(documentRequirementOf("wholesale_expense")).toBe("none");
+  });
+
   it("lookup 顯示戶名 + 帳號末 5 碼", () => {
     expect(accountNoTail("0123-456-12345")).toBe("12345");
     expect(
@@ -59,6 +70,19 @@ describe("現金流水(規格 10.2)", () => {
     expect(isCashRouteAllowed("bank_deposit", "vault", "bank")).toBe(true);
     expect(isCashRouteAllowed("bank_withdraw", "bank", "vault")).toBe(true);
     expect(isCashRouteAllowed("bank_withdraw", "vault", "bank")).toBe(false);
+  });
+
+  it.each([
+    ["wholesale_in", "external", "vault", true],
+    ["wholesale_in", "external", "drawer", true],
+    ["wholesale_in", "vault", "external", false],
+    ["wholesale_in", "bank", "vault", false],
+    ["wholesale_out", "vault", "external", true],
+    ["wholesale_out", "drawer", "external", true],
+    ["wholesale_out", "external", "vault", false],
+    ["wholesale_out", "vault", "bank", false],
+  ] as const)("批售 %s:%s → %s = %s", (type, from, to, allowed) => {
+    expect(isCashRouteAllowed(type, from, to)).toBe(allowed);
   });
 
   it("對某個地方的影響:流入 +、流出 −", () => {
@@ -136,6 +160,26 @@ describe("收付機制(規格第 9 章的驗算表)", () => {
       ),
     ).toBe(2000);
   });
+
+  // 只有收款方的單據(批售金額 37,200;規格 21.9 #2、#5、#6、#7)
+  it.each([
+    // [情境, 收入, 支出, 收款預設, 退款預設, 待結清]
+    ["還沒收", 0, 0, 37_200, 0, "to_receive"],
+    ["收 20,000", 20_000, 0, 17_200, 0, "to_receive"],
+    ["多收 300", 37_500, 0, 0, 300, "to_refund"],
+    ["退 300", 37_500, 300, 0, 0, undefined],
+  ])(
+    "批售單出貨店:%s",
+    (_name, received, refunded, inDefault, outDefault, kind) => {
+      const totals = { in: received, out: refunded };
+      const defaults = {
+        in: solePayeeDefaultAmount("in", 37_200, totals),
+        out: solePayeeDefaultAmount("out", 37_200, totals),
+      };
+      expect(defaults).toEqual({ in: inDefault, out: outDefault });
+      expect(outstandingKindOf("payee", defaults)?.kind).toBe(kind);
+    },
+  );
 
   it("待結清種類:付款方待付 / 待退、收款方待收 / 待退;都 0 = 已結清", () => {
     expect(outstandingKindOf("payer", { out: 9200, in: 0 })).toEqual({

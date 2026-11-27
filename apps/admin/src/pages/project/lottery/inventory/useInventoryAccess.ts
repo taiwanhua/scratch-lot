@@ -1,6 +1,9 @@
 import { useMe } from "@/hooks/base/useMe";
 
-import { INVENTORY_MODULE_KEYS as KEYS } from "./inventory-config";
+import {
+  INVENTORY_MODULE_KEYS as KEYS,
+  WHOLESALE_VIEW_PAGE_KEY,
+} from "./inventory-config";
 
 export interface InventoryAccess {
   /** 綁了庫存管理(本模組沒有 `view`:讀取看模組有沒有綁) */
@@ -11,6 +14,8 @@ export interface InventoryAccess {
   listRoute: string | null;
   /** 期初建檔頁的路由;沒綁 = null(頁首沒有 [期初建檔]) */
   openingRoute: string | null;
+  /** 批售單檢視頁的路由;沒綁(或沒有批售單模組)= null(單號不是連結) */
+  wholesaleRoute: string | null;
 }
 
 /**
@@ -27,5 +32,6 @@ export const useInventoryAccess = (): InventoryAccess => {
     bookRoute: routeOf(KEYS.bookPage),
     listRoute: routeOf(KEYS.list),
     openingRoute: routeOf(KEYS.openingPage),
+    wholesaleRoute: routeOf(WHOLESALE_VIEW_PAGE_KEY),
   };
 };

@@ -248,6 +248,7 @@ export const sampleBookDetail =
       book:
         sampleInventoryBooks()[0] ??
         inventoryBook({ id: "b", bookNo: "0000001" }),
+      countStore: false,
       tickets,
       locations: [
         {

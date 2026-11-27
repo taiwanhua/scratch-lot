@@ -12,6 +12,14 @@ fragment LotteryReportStorePeriodFields on LotteryReportStorePeriod {
   alignment
 }
 
+fragment LotteryOperationsWholesaleDocumentsFields on LotteryOperationsWholesaleDocuments {
+  count
+  books
+  tickets
+  amount
+  serialNos
+}
+
 # LotteryOperationsReportInput: { periodKind, from, to, orgIds, alignDailyClose? }
 query LotteryOperationsReport($input: LotteryOperationsReportInput!) {
   lotteryOperationsReport(input: $input) {
@@ -91,6 +99,8 @@ query LotteryOperationsReport($input: LotteryOperationsReportInput!) {
         transferGain
         salesTickets
         salesCost
+        wholesaleTickets
+        wholesaleCost
         scrapTickets
         scrapCost
         scrapUndoTickets
@@ -155,6 +165,38 @@ query LotteryOperationsReport($input: LotteryOperationsReportInput!) {
           count
           amount
           serialNos
+        }
+      }
+      wholesale {
+        customers {
+          customerId
+          customerName
+          documents
+          books
+          tickets
+          amount
+          cost
+        }
+        documents {
+          submissionId
+          serialNo
+          voided
+          at
+          customerId
+          customerName
+          books
+          tickets
+          amount
+          cost
+          paymentMode
+          receivedAtEnd
+          toReceiveAtEnd
+        }
+        receivedUnshipped {
+          ...LotteryOperationsWholesaleDocumentsFields
+        }
+        pendingAtEnd {
+          ...LotteryOperationsWholesaleDocumentsFields
         }
       }
       notes {

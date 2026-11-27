@@ -22,7 +22,15 @@ const NO_UNSOLD = none("stock", "counter", "inTransit");
 const SEALED: Record<string, unknown>[] = [
   { firstOpenedAt: null },
   has("stock"),
-  ...none("counter", "inTransit", "sold", "scrapped", "investigating", "lost"),
+  ...none(
+    "counter",
+    "inTransit",
+    "sold",
+    "scrapped",
+    "investigating",
+    "lost",
+    "wholesaled",
+  ),
 ];
 
 /** 待標註張數 > 0:迄號 − 標準張數 − 已標跳號。 */
@@ -48,9 +56,10 @@ const PENDING_SKIP: Record<string, unknown> = {
 /**
  * 庫存分頁的狀態篩選 → 本的資料庫條件(以本上的張數欄位與第一次拆本時間篩,和 `bookDisplayStateOf` 的判斷
  * 順序一一對應;`inventory.test.ts` 以每種狀態的本核對兩邊一致)。回傳要 `$and` 的條件。
+ * 「批售中」看張的鎖(本上沒有這一格),由 `InventoryViewService` 另外篩。
  */
 export function bookStateConditionsOf(
-  state: InventoryBookFilterState,
+  state: Exclude<InventoryBookFilterState, "wholesaling">,
 ): Record<string, unknown>[] {
   switch (state) {
     case "unopened": {
@@ -71,6 +80,7 @@ export function bookStateConditionsOf(
             has("scrapped"),
             has("investigating"),
             has("lost"),
+            has("wholesaled"),
           ],
         },
       ];
@@ -91,10 +101,18 @@ export function bookStateConditionsOf(
         has("scrapped"),
       ];
     }
-    case "sold_out": {
+    case "wholesaled": {
       return [
         ...NO_UNSOLD,
         ...none("investigating", "lost"),
+        has("wholesaled"),
+        { $or: [has("sold"), ...none("scrapped")] },
+      ];
+    }
+    case "sold_out": {
+      return [
+        ...NO_UNSOLD,
+        ...none("investigating", "lost", "wholesaled"),
         { $or: [has("sold"), ...none("scrapped")] },
       ];
     }

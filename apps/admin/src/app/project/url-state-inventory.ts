@@ -11,7 +11,7 @@ export const projectUrlStateInventory: UrlStateInventory = {
   "master-data.games.view-page": ["tab"],
   "master-data.games.create-page": [],
   "master-data.games.edit-page": [],
-  // 經銷商管理:列表的分頁與篩選(三個分頁共用 `list`)、詳情頁的分頁;新增 / 編輯頁沒有
+  // 經銷商管理:列表的分頁與篩選(四個分頁共用 `list`)、詳情頁的分頁;新增 / 編輯頁沒有
   dealers: ["tab", "list"],
   "dealers.view-page": ["tab"],
   "dealers.create-page": [],
@@ -19,6 +19,9 @@ export const projectUrlStateInventory: UrlStateInventory = {
   "dealers.contacts.view-page": [],
   "dealers.contacts.create-page": [],
   "dealers.contacts.edit-page": [],
+  "dealers.wholesale-customers.view-page": ["tab"],
+  "dealers.wholesale-customers.create-page": [],
+  "dealers.wholesale-customers.edit-page": [],
   // 輸出報表:選的報表、條件(期間、分店、其他條件)、預覽(開著沒、第幾個工作表)
   // 班表管理:頁內分頁 `tab`;排班人員篩選 `joined`;規則 / 行事曆 / 畫休總覽的分店 `org`;
   // 行事曆 / 畫休總覽的月份 `month`;我的班表(班表 / 我的畫休分頁)的月份 `month` 與 `[月曆 | 條列]` `view`;畫休總覽的篩選 `dayOffFilter`;
@@ -58,6 +61,11 @@ export const projectUrlStateInventory: UrlStateInventory = {
   "purchasing.transfer": ["transfers"],
   "purchasing.transfer.create-page": ["requisition", "to"],
   "purchasing.transfer.view-page": [],
+  // 批售單:列表的篩選 `wholesales`(狀態、出貨分店、批售客戶、收款方式、頁碼);新增 / 編輯 / 檢視頁沒有網址狀態
+  "purchasing.wholesale": ["wholesales"],
+  "purchasing.wholesale.create-page": [],
+  "purchasing.wholesale.edit-page": [],
+  "purchasing.wholesale.view-page": [],
   // 庫存管理:頁內分頁 `tab`、庫存分頁的篩選 `stock`(分店、遊戲、狀態、批購日、本號);
   // 本的詳情:查刮刮樂帶來的張號 `ticket`(打開時標亮)
   inventory: ["tab", "stock"],

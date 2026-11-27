@@ -41,6 +41,7 @@ export const VAULT_CASH_ITEM_KINDS = [
   "deposits",
   "withdrawals",
   "transfers",
+  "wholesales",
   "corrections",
   "bank_deposits",
   "bank_withdrawals",

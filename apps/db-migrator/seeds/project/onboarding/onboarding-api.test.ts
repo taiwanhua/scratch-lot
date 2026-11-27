@@ -29,6 +29,7 @@ import {
 import { DEMO_TENANT, demoPlan } from "../demo";
 import { DEMO_CASH_POINTS } from "../demo/cash-points";
 import { DEMO_GAMES } from "../demo/games";
+import { DEMO_WHOLESALE_CUSTOMERS } from "../demo/wholesale";
 import { runOnboardCommand } from "./command";
 import { SUPPORT_REQUEST_FORM_KEY } from "./form-workflows/support-request";
 import { OnboardingStoppedError, runOnboarding } from "./run-onboarding";
@@ -288,7 +289,7 @@ describe("開通腳本與 demo create(真 api + 真 MongoDB)", () => {
       });
     });
 
-    it("期初建檔:中山店建 2 本(拆過的導入前已賣出 46 張、原封在庫存)並結束;信義店沒建", async () => {
+    it("期初建檔:中山店建 3 本(拆過的導入前已賣出 46 張、兩本原封在庫存)並結束;信義店沒建", async () => {
       const branches = await find("orgs", { parentId: tenantId });
       const idOf = (name: string) =>
         branches.find((branch) => branch.name === name)?._id as ObjectId;
@@ -300,8 +301,14 @@ describe("開通腳本與 demo create(真 api + 真 MongoDB)", () => {
         books.map(
           (book) => `${book.gameCode as string}-${book.bookNo as string}`,
         ),
-      ).toEqual(expect.arrayContaining(["5164-0071201", "5201-0072301"]));
-      expect(books).toHaveLength(2);
+      ).toEqual(
+        expect.arrayContaining([
+          "5164-0071201",
+          "5164-0071202",
+          "5201-0072301",
+        ]),
+      );
+      expect(books).toHaveLength(3);
       expect(
         books.every((book) => String(book.orgId) === String(idOf("中山店"))),
       ).toBe(true);
@@ -482,6 +489,50 @@ describe("開通腳本與 demo create(真 api + 真 MongoDB)", () => {
       ]);
     });
 
+    it("示範專用:批售客戶共用給兩家店;中山店期初建檔的原封本 0071202 = 一張待店長核准的批售單(核准前不記帳)", async () => {
+      const [customer] = DEMO_WHOLESALE_CUSTOMERS;
+      const branches = await find("orgs", { parentId: tenantId });
+      const nameOf = new Map(
+        branches.map((org) => [String(org._id), org.name as string]),
+      );
+      const customers = await find("lottery_wholesale_customers", {
+        orgId: {
+          $in: [tenantId, ...branches.map((org) => org._id as ObjectId)],
+        },
+      });
+      expect(customers).toHaveLength(1);
+      expect(customers[0]).toMatchObject({
+        storeName: customer?.storeName,
+        licenseNo: customer?.licenseNo,
+        phone: customer?.phone,
+        status: "active",
+      });
+      expect(
+        (customers[0]?.shareOrgs as { orgId: ObjectId }[])
+          .map((share) => nameOf.get(String(share.orgId)) ?? "")
+          .toSorted(byText),
+      ).toEqual(["中山店", "信義店"].toSorted(byText));
+      // 期初建檔的原封本 5164-0071202 送一張批售單,等中山店店長在申請中心核准(核准才出貨、記批售收入)
+      const orders = await find("form_submissions", {
+        tenantId,
+        formKey: "wholesale",
+      });
+      expect(orders).toHaveLength(1);
+      expect(orders[0]).toMatchObject({ status: "reviewing" });
+      expect(
+        await find("lottery_bank_transactions", { type: "wholesale_income" }),
+      ).toEqual([]);
+      const manager = await findOne("users", {
+        account: `owner+demo-manager-a@example.test`,
+      });
+      const tasks = await find("workflow_tasks", {
+        submissionId: orders[0]?._id as ObjectId,
+      });
+      expect(tasks.map((task) => String(task.assigneeId))).toEqual([
+        String(manager._id),
+      ]);
+    });
+
     it("三個角色在角色管理是一般角色,沒有「預設角色」標籤(規格 3.3)", async () => {
       const { roles } = await adminClient.request<{
         roles: { items: RoleItem[] };
@@ -538,7 +589,8 @@ describe("開通腳本與 demo create(真 api + 真 MongoDB)", () => {
       expect(byRoot.map((log) => log.action as string)).toEqual([
         "org.provision",
         // 受管表單分派給示範機構(分派只有站在根組織做得到):支援需求單、補打卡申請、叫貨單、進貨單、調貨單、
-        // 撤銷售出申請、現金更正單、盤點確認申請、結帳確認申請各一筆
+        // 撤銷售出申請、現金更正單、盤點確認申請、結帳確認申請、批售單各一筆
+        "form.assign",
         "form.assign",
         "form.assign",
         "form.assign",

@@ -118,7 +118,7 @@ describe("本上的張數與顯示狀態(使用者 10/27 定案 B)", () => {
     expect(totalOfCounts(counts({ stock: 90, sold: 10 }), 0)).toBe(100);
   });
 
-  it("九種顯示狀態依序判斷(實測表 C01–C16)", () => {
+  it("十種顯示狀態依序判斷(實測表 C01–C16)", () => {
     const state = (
       partial: Partial<BookTicketCounts>,
       firstOpenedAt: Date | null = null,
@@ -142,6 +142,15 @@ describe("本上的張數與顯示狀態(使用者 10/27 定案 B)", () => {
     expect(state({ scrapped: 100 })).toBe("scrapped");
     expect(state({ sold: 10, scrapped: 90 }, opened)).toBe("sold_out");
     expect(state({ sold: 100 }, opened)).toBe("sold_out");
+    // 已批售(規格 21.5):在已報廢之後、售完之前;有未售、待查 / 遺失時照原判斷;取消批售後仍是未拆
+    expect(state({ wholesaled: 100 })).toBe("wholesaled");
+    expect(state({ wholesaled: 99, lost: 1 })).toBe("lost");
+    expect(state({ wholesaled: 99, stock: 1 })).toBe("in_stock");
+    expect(state({ wholesaled: 99, scrapped: 1 })).toBe("scrapped");
+    expect(state({ wholesaled: 99, sold: 1 })).toBe("wholesaled");
+    // 迄號 101、待標註 1:總張數 100、剩餘 0(#17)
+    expect(totalOfCounts(counts({ wholesaled: 101 }), 1)).toBe(100);
+    expect(remainingOfCounts(counts({ wholesaled: 101 }), 1)).toBe(0);
   });
 
   it("一家店的未拆:從沒拆過、這家店的張全是未售在庫存", () => {

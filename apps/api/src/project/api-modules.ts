@@ -15,6 +15,7 @@ import { LotteryStocktakeModule } from "./lottery/stocktake/stocktake.module";
 import { LotteryStoreModule } from "./lottery/store/store.module";
 import { LotteryTicketsModule } from "./lottery/tickets/tickets.module";
 import { LotteryTransferModule } from "./lottery/transfer/transfer.module";
+import { LotteryWholesaleModule } from "./lottery/wholesale/wholesale.module";
 import { ScheduleModule } from "./schedule/schedule.module";
 
 /**
@@ -32,6 +33,7 @@ export const PROJECT_API_MODULES: readonly ApiFeatureRegistration[] = [
   { key: "lottery-inventory", module: LotteryInventoryModule },
   { key: "lottery-purchase", module: LotteryPurchaseModule },
   { key: "lottery-transfer", module: LotteryTransferModule },
+  { key: "lottery-wholesale", module: LotteryWholesaleModule },
   { key: "lottery-store", module: LotteryStoreModule },
   { key: "lottery-redemption", module: LotteryRedemptionModule },
   { key: "lottery-stocktake", module: LotteryStocktakeModule },

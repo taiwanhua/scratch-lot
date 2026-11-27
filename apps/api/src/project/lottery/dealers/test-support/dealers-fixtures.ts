@@ -5,7 +5,11 @@ import type { AuthTestApp } from "../../../../auth/test-support/auth-app";
 import { createUser } from "../../../../auth/test-support/fixtures";
 import { login } from "../../../../demo-items-two/test-support/fixtures";
 import { createRole } from "../../../../permission/test-support/fixtures";
-import { DEALERS_CONTACTS_KEY, DEALERS_KEY } from "../dealer-keys";
+import {
+  DEALERS_CONTACTS_KEY,
+  DEALERS_KEY,
+  DEALERS_WHOLESALE_CUSTOMERS_KEY,
+} from "../dealer-keys";
 
 /**
  * 經銷商管理測試的共用夾具。api 測試的資料庫只種底座(`BASE_ONLY_REGISTRY`),專案的模組樹與權限
@@ -20,6 +24,7 @@ export const KEYS = {
   createPage: `${DEALERS_KEY}.create-page`,
   editPage: `${DEALERS_KEY}.edit-page`,
   contacts: DEALERS_CONTACTS_KEY,
+  wholesaleCustomers: DEALERS_WHOLESALE_CUSTOMERS_KEY,
 } as const;
 
 /** 個別權限 + 兩個節點的 wildcard(seed 由 `composeModuleSeeds` 自動產生)。 */
@@ -34,6 +39,9 @@ export const P = {
   editSelfBase: `${DEALERS_KEY}.edit-last-self-purchase-base-date`,
   contactsCreate: `${DEALERS_CONTACTS_KEY}.create`,
   contactsEdit: `${DEALERS_CONTACTS_KEY}.edit`,
+  wholesaleAll: `${DEALERS_WHOLESALE_CUSTOMERS_KEY}.*`,
+  wholesaleCreate: `${DEALERS_WHOLESALE_CUSTOMERS_KEY}.create`,
+  wholesaleEdit: `${DEALERS_WHOLESALE_CUSTOMERS_KEY}.edit`,
 } as const;
 
 function baseFields(now: Date): Record<string, unknown> {
@@ -61,6 +69,12 @@ const NODES: readonly {
   },
   {
     key: KEYS.contacts,
+    parentKey: KEYS.list,
+    route: null,
+    sidebarType: "hidden",
+  },
+  {
+    key: KEYS.wholesaleCustomers,
     parentKey: KEYS.list,
     route: null,
     sidebarType: "hidden",

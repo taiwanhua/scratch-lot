@@ -25,6 +25,8 @@ const STATE_KEYS: Partial<Record<string, string>> = {
   counter: "counter",
   sold: "sold",
   locked: "locked",
+  lockedWholesale: "lockedWholesale",
+  wholesaled: "wholesaled",
   investigating: "investigating",
   lost: "lost",
   scrapped: "scrapped",

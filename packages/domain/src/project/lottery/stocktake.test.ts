@@ -310,6 +310,7 @@ describe("拆過、在庫存的張那一區(使用者 10/27 要求)", () => {
     expect(factsOf(stock("investigating"))).toBe("absent");
     expect(factsOf(counter("unsold"))).toBe("absent");
     expect(factsOf(stock("unsold"), "transfer")).toBe("absent");
+    expect(factsOf(stock("unsold"), "wholesale")).toBe("absent");
   });
 
   it("庫存的張不在只能待查(沒有補登售出)", () => {

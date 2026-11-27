@@ -12,24 +12,17 @@ import type {
   LotteryStoreSaleQueryVariables,
   LotteryStoreScanItemFieldsFragment,
   LotteryStoreScanQueryVariables,
-  MoveLotteryTicketsByCountMutationVariables,
-  MoveLotteryTicketsMutationVariables,
-  RecallLotteryTicketsMutationVariables,
-  SellLotteryTicketsByCountMutationVariables,
   SellLotteryTicketsMutationVariables,
-  SplitLotteryBookMutationVariables,
-  UndoLotteryCountSaleMutationVariables,
   UndoLotteryTicketSaleMutationVariables,
 } from "@repo/graphql";
 
 import { graphqlError } from "../../auth-handlers";
-import { api, type server } from "../../server";
+import { api } from "../../server";
 import {
   countStoreMatching,
   storeCountSalesHandlers,
 } from "./store-count-sales-handlers";
 import { storeCounterHandlers } from "./store-counter-handlers";
-import type { StoreBoard } from "./store-fixtures";
 import {
   type BoardShift,
   type SaleRecord,
@@ -38,33 +31,15 @@ import {
   booksOf,
   markOpeningSold,
 } from "./store-sales-fixtures";
+import type {
+  StoreSalesWorld,
+  StoreSalesWorldOptions,
+} from "./store-sales-world";
 
-export interface StoreSalesWorld {
-  handlers: Parameters<typeof server.use>;
-  inputs: {
-    sell: SellLotteryTicketsMutationVariables["input"][];
-    undo: UndoLotteryTicketSaleMutationVariables["input"][];
-    split: SplitLotteryBookMutationVariables["input"][];
-    move: MoveLotteryTicketsMutationVariables["input"][];
-    recall: RecallLotteryTicketsMutationVariables["input"][];
-    moveByCount: MoveLotteryTicketsByCountMutationVariables["input"][];
-    countSale: SellLotteryTicketsByCountMutationVariables["input"][];
-    undoCount: UndoLotteryCountSaleMutationVariables["input"][];
-  };
-}
-
-export interface StoreSalesWorldOptions {
-  /** 看板的狀態(`storeWorld(...).state`;售出 / 撤銷時跟著改) */
-  board: StoreBoard;
-  /** 下一次售出直接回「已於 hh:mm 售出」(同時兩人賣同一張的失敗方) */
-  alreadySoldAt?: string;
-  /** 這幾張是遺失(展開卡片選它 → [尋回]) */
-  lostTicketIds?: readonly string[];
-  /** 這幾張是已售·未對號(張數店;依張數賣時系統預設帶入的張號) */
-  unmatchedSoldTicketIds?: readonly string[];
-  /** 這幾張是期初已售(導入前已賣出;刷到擋下、提示用期初更正) */
-  openingSoldTicketIds?: readonly string[];
-}
+export type {
+  StoreSalesWorld,
+  StoreSalesWorldOptions,
+} from "./store-sales-world";
 
 const validation = (reason: string, extra: Record<string, unknown> = {}) =>
   graphqlError("VALIDATION_FAILED", reason, { reason, ...extra });
@@ -85,6 +60,7 @@ export const storeSalesWorld = ({
   lostTicketIds = [],
   unmatchedSoldTicketIds = [],
   openingSoldTicketIds = [],
+  wholesalingTicketIds = [],
 }: StoreSalesWorldOptions): StoreSalesWorld => {
   const books = booksOf(board);
   for (const ticket of books.flatMap((book) => book.tickets)) {
@@ -189,7 +165,7 @@ export const storeSalesWorld = ({
         locationKind: ticket.cashPointId === null ? "stock" : "counter",
         cashPointId: ticket.cashPointId,
         inThisStore: true,
-        locked: false,
+        locked: wholesalingTicketIds.includes(ticket.id),
         bookUnopened: unopened,
         counterShiftIsMine: counterShift?.isMine === true,
         unmatched: ticket.unmatched === true,
@@ -229,6 +205,8 @@ export const storeSalesWorld = ({
       responsibleOrg: null,
       outcome: decision.outcome,
       blockReason: decision.blockReason,
+      lockRefType: decision.blockReason === "locked" ? "wholesale" : null,
+      lockSerialNo: "W-0001",
       soldAt: ticket.soldAt,
       pendingSkipCount: unopened
         ? pendingSkipCountOf(book.lastTicketNo, book.standardTickets, 0)

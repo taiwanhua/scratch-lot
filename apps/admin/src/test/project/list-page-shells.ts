@@ -15,6 +15,7 @@ export const projectListPageShells: ListPageShellDecisions = {
     "/purchasing/requisition",
     "/purchasing/purchase",
     "/purchasing/transfer",
+    "/purchasing/wholesale",
   ],
   // 分頁混著列表與內容的頁,標成列表分頁(`isList`)的那幾頁:`<路徑>#<分頁名>`
   tabs: [

@@ -10,6 +10,7 @@ import type {
 } from "../../../workflows/workflow-engine/lifecycle/form-lifecycle-registration";
 import { purchaseLifecycle } from "../purchase/purchase-lifecycle";
 import { transferLifecycle } from "../transfer/transfer-lifecycle";
+import { wholesaleLifecycle } from "../wholesale/wholesale-lifecycle";
 import { settlementMarkReopenGuard } from "./settlement-guard";
 import { SettlementMarks } from "./settlement-marks";
 
@@ -39,7 +40,7 @@ const count = (text: string, pattern: RegExp): number =>
 describe("結清標記的掛接(靜態檢查)", () => {
   const files = sourceFiles(SRC_ROOT);
 
-  it("登記收付的單據只有進貨單、調貨單;兩個的掛接點都建標記(completed)、修改已完成單據時改回待確認(beforeEditCompleted)", async () => {
+  it("登記收付的單據只有進貨單、調貨單、批售單;三個的掛接點都建標記(completed)、修改已完成單據時改回待確認(beforeEditCompleted)", async () => {
     const registering = files
       .filter((file) =>
         readFileSync(file, "utf8").includes("registerSettlementDocument({"),
@@ -51,8 +52,13 @@ describe("結清標記的掛接(靜態檢查)", () => {
     expect(registering).toEqual([
       "project/lottery/purchase/purchase-registrations.ts",
       "project/lottery/transfer/transfer-registrations.ts",
+      "project/lottery/wholesale/wholesale-registrations.ts",
     ]);
-    for (const lifecycle of [purchaseLifecycle, transferLifecycle] as const) {
+    for (const lifecycle of [
+      purchaseLifecycle,
+      transferLifecycle,
+      wholesaleLifecycle,
+    ] as const) {
       await expectMarksWired(lifecycle);
     }
   });
@@ -108,9 +114,11 @@ async function expectMarksWired(
     tenantId: new Types.ObjectId(),
     moduleKey: lifecycle.moduleKey,
     session: {},
-    // 規則的事後動作(側欄信號)換成空函式
+    // 規則的事後動作(側欄信號、批售單的出貨)換成空函式
     get: (token: unknown) =>
-      token === SettlementMarks ? { completed } : { onTaskEnded: () => null },
+      token === SettlementMarks
+        ? { completed }
+        : { onTaskEnded: () => null, onCompleted: () => null },
   } as unknown as FormEffectContext;
   await lifecycle.effects?.completed?.(context);
   expect(completed).toHaveBeenCalledWith(

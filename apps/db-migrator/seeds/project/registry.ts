@@ -13,6 +13,7 @@ import { masterDataModule } from "./master-data";
 import { purchasingModuleDeclarations } from "./purchasing";
 import { purchasingPurchaseModule } from "./purchasing.purchase";
 import { purchasingTransferModule } from "./purchasing.transfer";
+import { purchasingWholesaleModule } from "./purchasing.wholesale";
 import { reportsModule } from "./reports";
 import { seed as cashCorrectionForm } from "./revisions/cash_correction.r3.seed";
 import { seed as checkoutConfirmForm } from "./revisions/checkout_confirm.r2.seed";
@@ -23,6 +24,7 @@ import { seed as saleReversalForm } from "./revisions/sale_reversal.r4.seed";
 import { seed as stocktakeConfirmForm } from "./revisions/stocktake_confirm.r3.seed";
 import { seed as supportRequestForm } from "./revisions/support_request.r4.seed";
 import { seed as transferForm } from "./revisions/transfer.r3.seed";
+import { seed as wholesaleForm } from "./revisions/wholesale.r1.seed";
 import { scheduleModuleDeclarations } from "./schedule";
 import { storeModule } from "./store";
 
@@ -57,13 +59,15 @@ export const projectSeedSource: SeedSource = {
     purchasingPurchaseModule,
     // 叫貨與進貨 → 調貨單(規格 3.1、3.2、8.4)
     purchasingTransferModule,
+    // 叫貨與進貨 → 批售單(規格 21.8)
+    purchasingWholesaleModule,
     // 庫存管理(專案規格第 7 章)
     inventoryModule,
     // 店面管理(規格 3.1、3.2、第 6 章;表單模組、開啟 B9b)
     storeModule,
   ],
   // 受管表單引用的專案 lookup 來源(與 api 的 lookup 登記讀同一份;叫貨單、進貨單的明細引用遊戲,
-  // 進貨單的單頭引用甲類、受託人、銀行帳戶、兌獎區引用兌獎紀錄;調貨單的明細引用本;
+  // 進貨單的單頭引用甲類、受託人、銀行帳戶、兌獎區引用兌獎紀錄;調貨單、批售單的明細引用本,批售單的單頭引用批售客戶、銀行帳戶;
   // 撤銷售出申請 / 現金更正單引用本與收銀班次)
   portableLookupProviders: LOTTERY_PORTABLE_LOOKUP_PROVIDERS,
   seeds: [
@@ -83,6 +87,8 @@ export const projectSeedSource: SeedSource = {
     purchaseForm as SeedSet,
     // 叫貨與進貨 → 調貨單的受管表單(規格 8.4;流程不 seed,由開通腳本依租戶角色建)
     transferForm,
+    // 叫貨與進貨 → 批售單的受管表單(規格 21.3;流程不 seed,由開通腳本依租戶角色建)
+    wholesaleForm,
     // 店面管理的受管表單:撤銷售出申請、現金更正單(規格 8.5、8.8;流程不 seed,由開通腳本依租戶角色建)
     saleReversalForm,
     cashCorrectionForm,

@@ -2,9 +2,9 @@
 
 ## 用途
 
-分店向總部叫貨、總部彙總後採購,進貨與調貨把刮刮樂送到分店(專案規格第 8 章共通、8.1–8.4)。一個群組三個表單模組:**叫貨、採購單**(叫貨單 + 採購清單)、**進貨單**、**調貨單**。三張單據都是底座表單 + 流程,掛接點依底座 B1(`docs/concepts/workflow-engine.md`「掛接點」)。
+分店向總部叫貨、總部彙總後採購,進貨與調貨把刮刮樂送到分店(專案規格第 8 章共通、8.1–8.4);分店把未拆的整本批售給其他彩券行(規格第 21 章)。一個群組四個表單模組:**叫貨、採購單**(叫貨單 + 採購清單)、**進貨單**、**調貨單**、**批售單**。三張單據都是底座表單 + 流程,掛接點依底座 B1(`docs/concepts/workflow-engine.md`「掛接點」)。
 
-本檔分小節:群組與叫貨、採購單由第一張票寫;進貨單、調貨單各自追加自己的小節與 api / 頁面。
+本檔分小節:群組與叫貨、採購單由第一張票寫;進貨單、調貨單、批售單各自追加自己的小節與 api / 頁面。
 
 正本:`apps/db-migrator/seeds/project/purchasing.ts`、`packages/domain/src/project/lottery/requisition.ts`
 
@@ -25,33 +25,42 @@
 | `purchasing.transfer.view-page`      | 詳情         | hidden       | `/purchasing/transfer/view-page/<id>`             | **替換**:出貨確認清單 / 點收區塊 + 結算 + 審核(PU-10a 92:2768 / 573:111230 / 573:111385、PU-10b 127:26050 / 127:27289 / 127:27667)                                    |
 | `purchasing.transfer.create-page`    | 新增         | hidden       | `/purchasing/transfer/create-page/transfer`       | **替換**:選本 + 張數格子 + 刷條碼加入選取(PU-09 69:1099 / 127:27025 / 127:27418)                                                                                      |
 | `purchasing.transfer.edit-page`      | 編輯         | hidden       | `/purchasing/transfer/edit-page/<id>`             | **替換**:和新增頁同一個畫面、帶入原內容;已出貨 / 已點收的列鎖住(草稿、被退回 / 撤回的單;`TransferEditPage`)                                                           |
+| `purchasing.wholesale`               | 批售單       | link(列表頁) | `/purchasing/wholesale`                           | 表單模組(綁定 批售單 `wholesale`);**替換**列表(四種篩選;Figma WS-01 914:8490 / 960:12386 / 960:12560);側欄計數「出貨確認」                                            |
+| `purchasing.wholesale.view-page`     | 詳情         | hidden       | `/purchasing/wholesale/view-page/<id>`            | **替換**:本清單 + 結算 + 審核(WS-03a 917:9440 / 922:11590 / 922:12578、WS-03c、WS-03d)                                                                                |
+| `purchasing.wholesale.create-page`   | 新增         | hidden       | `/purchasing/wholesale/create-page/wholesale`     | **替換**:刷條碼或從可批售的本加入(WS-02a–e)                                                                                                                           |
+| `purchasing.wholesale.edit-page`     | 編輯         | hidden       | `/purchasing/wholesale/edit-page/<id>`            | **替換**:和新增頁同一個畫面、帶入原內容(草稿、被退回 / 撤回的單)                                                                                                      |
 
 - 頁內分頁用底座 `PageTabs`(`?tab=requisitions | purchase-list`;沒有 `purchase-list` 看不到採購清單分頁,只剩一個分頁時不顯示分頁籤)。右上按鈕跟著分頁換:[+ 新增叫貨單] / [匯出 Excel]。
-- 進貨單 `purchasing.purchase`、調貨單 `purchasing.transfer` 由各自的票宣告,掛在本群組底下。
+- 進貨單 `purchasing.purchase`、調貨單 `purchasing.transfer`、批售單 `purchasing.wholesale` 由各自的票宣告,掛在本群組底下。
 
 正本:`apps/admin/src/app/project/module-pages.ts`、`apps/admin/src/pages/project/lottery/purchasing/`
 
 ## 權限表
 
-| 權限 key                               | 它是哪一頁的什麼                                                                                                             |
-| -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| `purchasing.requisition.view`          | 看叫貨單列表、詳情;列表的衍生狀態(`lotteryRequisitionStates`)                                                                |
-| `purchasing.requisition.create`        | [+ 新增叫貨單]、新增頁的遊戲清單(`lotteryRequisitionCandidates`)                                                             |
-| `purchasing.requisition.edit`          | 改草稿 / 被退回的單;作廢(申請人本人或有 `edit`)                                                                              |
-| `purchasing.requisition.delete`        | 刪草稿                                                                                                                       |
-| `purchasing.requisition.purchase-list` | 「採購清單」分頁、[匯出 Excel](`lotteryPurchaseList`)                                                                        |
-| `purchasing.purchase.view`             | 看進貨單列表、詳情;列表的點收進度 / 結算(`lotteryPurchaseProgress`)、甲類詳情的批購紀錄(`lotteryDealerPurchases`)            |
-| `purchasing.purchase.create`           | [+ 新增進貨單]、新增頁的選項(`lotteryPurchaseOptions`)、採購清單的 [建立進貨單]                                              |
-| `purchasing.purchase.edit`             | 改草稿 / 被退回的單;作廢(申請人本人或有 `edit`)                                                                              |
-| `purchasing.purchase.delete`           | 刪除                                                                                                                         |
-| `purchasing.purchase.settle`           | 結算區塊的 [付款] [收到退款] [沖正](收付機制登記的「總部」那一邊)                                                            |
-| `purchasing.transfer.view`             | 看調貨單列表、詳情;列表的本數 / 張數、點收進度、在途、結算(`lotteryTransferProgress`)                                        |
-| `purchasing.transfer.create`           | [+ 新增調貨單]、新增頁的選本與張數格子(`lotteryTransferOptions` / `lotteryTransferBookTickets`)、採購清單的 [從其他分店調貨] |
-| `purchasing.transfer.edit`             | 改草稿 / 被退回的單;作廢(申請人本人或有 `edit`)                                                                              |
-| `purchasing.transfer.delete`           | 刪除                                                                                                                         |
-| `purchasing.transfer.partial-tickets`  | 選張(零碎張數);沒有時新增頁不出現張數格子,送出也擋(`TRANSFER_PARTIAL_FORBIDDEN`)                                             |
-| `purchasing.transfer.pay`              | 結算區塊收貨店的 [付款] [收到退款] [沖正](還要收貨分店在自己的可見範圍內)                                                    |
-| `purchasing.transfer.receive`          | 結算區塊出貨店的 [收款] [退款] [沖正](還要出貨分店在自己的可見範圍內)                                                        |
+| 權限 key                               | 它是哪一頁的什麼                                                                                                                       |
+| -------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `purchasing.requisition.view`          | 看叫貨單列表、詳情;列表的衍生狀態(`lotteryRequisitionStates`)                                                                          |
+| `purchasing.requisition.create`        | [+ 新增叫貨單]、新增頁的遊戲清單(`lotteryRequisitionCandidates`)                                                                       |
+| `purchasing.requisition.edit`          | 改草稿 / 被退回的單;作廢(申請人本人或有 `edit`)                                                                                        |
+| `purchasing.requisition.delete`        | 刪草稿                                                                                                                                 |
+| `purchasing.requisition.purchase-list` | 「採購清單」分頁、[匯出 Excel](`lotteryPurchaseList`)                                                                                  |
+| `purchasing.purchase.view`             | 看進貨單列表、詳情;列表的點收進度 / 結算(`lotteryPurchaseProgress`)、甲類詳情的批購紀錄(`lotteryDealerPurchases`)                      |
+| `purchasing.purchase.create`           | [+ 新增進貨單]、新增頁的選項(`lotteryPurchaseOptions`)、採購清單的 [建立進貨單]                                                        |
+| `purchasing.purchase.edit`             | 改草稿 / 被退回的單;作廢(申請人本人或有 `edit`)                                                                                        |
+| `purchasing.purchase.delete`           | 刪除                                                                                                                                   |
+| `purchasing.purchase.settle`           | 結算區塊的 [付款] [收到退款] [沖正](收付機制登記的「總部」那一邊)                                                                      |
+| `purchasing.transfer.view`             | 看調貨單列表、詳情;列表的本數 / 張數、點收進度、在途、結算(`lotteryTransferProgress`)                                                  |
+| `purchasing.transfer.create`           | [+ 新增調貨單]、新增頁的選本與張數格子(`lotteryTransferOptions` / `lotteryTransferBookTickets`)、採購清單的 [從其他分店調貨]           |
+| `purchasing.transfer.edit`             | 改草稿 / 被退回的單;作廢(申請人本人或有 `edit`)                                                                                        |
+| `purchasing.transfer.delete`           | 刪除                                                                                                                                   |
+| `purchasing.transfer.partial-tickets`  | 選張(零碎張數);沒有時新增頁不出現張數格子,送出也擋(`TRANSFER_PARTIAL_FORBIDDEN`)                                                       |
+| `purchasing.transfer.pay`              | 結算區塊收貨店的 [付款] [收到退款] [沖正](還要收貨分店在自己的可見範圍內)                                                              |
+| `purchasing.transfer.receive`          | 結算區塊出貨店的 [收款] [退款] [沖正](還要出貨分店在自己的可見範圍內)                                                                  |
+| `purchasing.wholesale.view`            | 看批售單列表(`lotteryWholesales`、`lotteryWholesaleFilterOptions`)、詳情、結算;批售客戶詳情的「批售紀錄」(`lotteryCustomerWholesales`) |
+| `purchasing.wholesale.create`          | [+ 新增批售單]、新增頁的選本與刷條碼(`lotteryWholesaleOptions`、`lotteryWholesaleScanMatches`)                                         |
+| `purchasing.wholesale.edit`            | 改草稿 / 被退回的單;作廢(申請人本人或有 `edit`)                                                                                        |
+| `purchasing.wholesale.delete`          | 刪草稿                                                                                                                                 |
+| `purchasing.wholesale.receive`         | 結算區塊的 [收款] [退款] [沖正](還要出貨分店在自己的可見範圍內)                                                                        |
 
 點收不另要權限:點收關卡的任務在自己手上(店長從申請中心進來)才能刷(`lotteryPurchaseReceiving` / `receiveLotteryPurchaseBook` 只看讀不讀得到單據與任務)。
 
@@ -59,7 +68,7 @@
 
 調貨單的點收同樣不另要權限:點收關卡(流程實例的最後一關)的任務在自己手上才能刷(`lotteryTransferReceiving` / `receiveLotteryTransferBook`;讀得到 = 一般讀取(可見範圍,或依欄位共用:出貨 / 收貨分店在自己的可見範圍內)、建立者、任務持有者)。
 
-**總部替分店建的單,分店看得到、但不能改 —— 依欄位共用**(底座 `docs/modules/forms.md`「依欄位共用」):三張受管表單都設 `sharedByFieldKeys` —— 叫貨單、進貨單 `branch`,調貨單 `from_branch` / `to_branch`。總部建的單,看得到單上分店的人(分店的人、可見範圍含那家店的上層主管)在列表、單筆(含申請中心的詳情頁)、結算區塊與待結清款項都看得到(只能看:不能改 / 刪 / 作廢、結算按鈕不能按);別的分店照舊看不到;草稿不共用。
+**總部替分店建的單,分店看得到、但不能改 —— 依欄位共用**(底座 `docs/modules/forms.md`「依欄位共用」):四張受管表單都設 `sharedByFieldKeys` —— 叫貨單、進貨單 `branch`,調貨單 `from_branch` / `to_branch`,批售單 `from_branch`。總部建的單,看得到單上分店的人(分店的人、可見範圍含那家店的上層主管)在列表、單筆(含申請中心的詳情頁)、結算區塊與待結清款項都看得到(只能看:不能改 / 刪 / 作廢、結算按鈕不能按);別的分店照舊看不到;草稿不共用。
 
 ### 開通時建立的角色
 
@@ -81,7 +90,13 @@
 | 店長     | 全部(店長在出貨店收款、在收貨店付款,兩邊都要;零碎張數也給) |
 | 店員     | 不給                                                       |
 
-正本:`apps/db-migrator/seeds/project/onboarding/role-grants/purchasing.ts`、`purchasing.purchase.ts`、`purchasing.transfer.ts`
+| 角色     | 批售單                                               |
+| -------- | ---------------------------------------------------- |
+| 總部管理 | 全部(`purchasing.wholesale.*`)                       |
+| 店長     | 全部(店長要開單、收錢、核准)                         |
+| 店員     | 不給(批售客戶分頁也不給,見 [dealers.md](dealers.md)) |
+
+正本:`apps/db-migrator/seeds/project/onboarding/role-grants/purchasing.ts`、`purchasing.purchase.ts`、`purchasing.transfer.ts`、`purchasing.wholesale.ts`
 
 ### 表單
 
@@ -90,6 +105,7 @@
 | 叫貨單 | `requisition` | `purchasing.requisition` | `seeds/project/revisions/requisition.r3.seed.ts`(r1 = 初版、r2 = 作廢原因類別,保留不改)                       |
 | 進貨單 | `purchase`    | `purchasing.purchase`    | `seeds/project/revisions/purchase.r4.seed.ts`(r1–r3 保留不改;r3 = 兌獎、r4 = 批購受託人在本人批購 = 否時必填) |
 | 調貨單 | `transfer`    | `purchasing.transfer`    | `seeds/project/revisions/transfer.r2.seed.ts`(r1 保留不改)                                                    |
+| 批售單 | `wholesale`   | `purchasing.wholesale`   | `seeds/project/revisions/wholesale.r1.seed.ts`                                                                |
 
 ## 資料
 
@@ -330,31 +346,77 @@
 
 - **選張只能從庫存**(兩種店一樣):`beforeSubmit` 的 `lineProblemOf` 要選張的張在出貨店庫存(自己這張單鎖住的除外);檯面上的張 → `TRANSFER_TICKETS_UNAVAILABLE`。`lotteryTransferOptions.availableCount` 只算庫存的張(檯面上有張的本照列,刷到時提示先收回)。
 - **能不能點格子**:`lotteryTransferOptions` 多回 `gridPick`(張數店與轉換中一律 false;編號店看刮刮樂設定 `transfer_grid_pick`)與 `countMode`。false 時新增頁上方提示「這家店是張數盤點,請刷條碼或手輸張號選張」/「這家店設定為只能刷條碼或手輸張號選張」,格子只能看、沒有連號快選(`TransferBookPanel` 傳空的 `selectableStates`、`quickSelect: false`)。
-- **刷到不能調的張**:刷條碼或手輸張號時,新增頁重新拿這本的格子資料判斷(`transferCellProblemOf`),不能調的在輸入框下方當下寫原因與處理方式(已售:哪一台幾點賣的、沒真的賣出請當下撤銷或送撤銷售出申請;在檯面上:請先收回到庫存;調貨中:哪一張調貨單;待查 / 遺失:請先尋回;報廢、在別家店:不能調),不加進已選。
+- **刷到不能調的張**:刷條碼或手輸張號時,新增頁重新拿這本的格子資料判斷(`transferCellProblemOf`),不能調的在輸入框下方當下寫原因與處理方式(已售:哪一台幾點賣的、沒真的賣出請當下撤銷或送撤銷售出申請;在檯面上:請先收回到庫存;調貨中:哪一張調貨單;批售中:哪一張批售單;已批售:不能調;待查 / 遺失:請先尋回;報廢、在別家店:不能調),不加進已選。
 - **送出被擋**(`TRANSFER_TICKETS_UNAVAILABLE`):新增頁重新拿每一列選張的本的格子資料,逐列寫出哪幾張、現在是什麼狀態與處理方式(`useTransferTicketChecks`,明細區的錯誤);移除後可以直接再送。後端送出時一定重新檢查。
 - **張數店的對號**:出貨店是張數店或轉換中時,系統預設帶入狀態的張(已售 / 待查 / 遺失·未對號)出貨店庫存有配對張就放行(`matchable`);`onSubmitted` 鎖定前同一個交易先在庫存挑配對張對號(`match` 兩筆,配對不挑這張單要調的張與鎖住的張),這張變成庫存的未售再鎖定;送出前檢查之後配對張被用掉 → `CONFLICT`,整個送出回復。
 
+### 批售單(規格第 21 章)
+
+分店把未拆的整本賣給批售客戶(其他彩券行)。受管表單 `wholesale` r1:允許存草稿、單號 `W-0001`(不分期間)、作廢原因 = 欄位管理「作廢原因」、依欄位共用 `from_branch`。欄位 key 正本 `packages/domain/src/project/lottery/wholesale.ts` 的 `WHOLESALE_FIELD_KEYS`(單頭:出貨分店、批售客戶、收款方式、入帳帳戶、批售金額、備註;明細一列 = 一整本:遊戲、本、張數、整本金額、批購金額率、批售金額)。
+
+- **收款方式** `payment_mode`:`collect_first` 收到錢再核准(預設)、`auto_bank` 從帳戶入帳。入帳帳戶 `account` 只在 `auto_bank` 顯示且必填。
+- **單頭 `customer` 的 label 是「店名 · 電話」**(下拉文字);列表、檢視頁、結算的對象、銀行摘要、庫存只寫**店名**:由 id 讀客戶(`WholesaleCustomerNames`、庫存的 `InventoryNames.wholesaleDocuments`),讀不到才退回 label。
+- **可批售的本**(`wholesaleBookProblemOf`,條件同調貨單「整本」的 `lineProblemOf`):本正常、從沒拆過、整本未售在出貨分店庫存、沒被任何來源鎖住。新增頁選項、刷條碼、送出前、核准前共用。
+- 明細的張數 = 遊戲的標準張數(待標註的跳號不算);整本的張都鎖、都改已批售,張數合計照共用函式扣(同整本調貨)。
+
+#### 建議流程設定
+
+開通腳本建一關「出貨確認」(`ship`):店長限定「出貨分店」、**不跳過**、可退回、申請人也是審核者時照常審核。**租戶改流程時,出貨確認一定要留在最後一關**:核准前檢查只認流程的最後一關,出貨認「流程結束」,在前面加關卡不影響。表單要綁流程才能用(「收到錢再核准」靠這一關等錢)。
+
+#### 掛接點
+
+`wholesale-lifecycle.ts`,規則在 `WholesaleRules`:
+
+| 時機                                  | 做什麼                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `beforeSubmit`                        | 依序:出貨分店在送出的人的可見範圍(`WHOLESALE_BRANCH_INVALID`)、批售客戶往來中且讀得到(`WHOLESALE_CUSTOMER_INVALID`)、有明細(`WHOLESALE_NO_LINES`)、每列和本 / 遊戲相符且同一本不重複(`WHOLESALE_LINE_INVALID`)、每本可批售(`WHOLESALE_BOOK_UNAVAILABLE`,直接拋錯,`extensions.books` = 哪一本與原因)、`auto_bank` 的帳戶(`WHOLESALE_ACCOUNT_INVALID`)與已收淨額 = 0(`WHOLESALE_MODE_HAS_RECEIPTS`)。停用的客戶、停用的帳戶多半在表單引擎的引用檢查就先擋下 |
+| `submitted`                           | 每一本的張(跳號以外)鎖定 = 批售中;重新送出時不再單上的解鎖;批售客戶的守門文件在同一個交易裡碰一下(`WholesaleCustomerDocuments.serialize`,和刪除客戶互相衝突)                                                                                                                                                                                                                                                                                              |
+| `beforeApprove`                       | 只有最後一關:張仍未售、在出貨分店庫存、鎖在這張單(`WHOLESALE_BOOK_UNAVAILABLE`);`auto_bank` = 帳戶仍可用;`collect_first` = 已收淨額等於批售金額(`WHOLESALE_UNRECEIVED` / `WHOLESALE_OVERRECEIVED`)                                                                                                                                                                                                                                                        |
+| `completed`                           | 建結清標記 → 出貨(`WholesaleLedger.ship`,事件的「誰」= `decidedBy`)→ `auto_bank` 用 `recordAutomatic` 記「批售收入」= 批售金額(同一個交易)                                                                                                                                                                                                                                                                                                                |
+| `returned` / `withdrawn` / `rejected` | 解鎖;結算紀錄保留                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| `beforeReject`                        | 淨額 ≠ 0 → `SETTLEMENT_NOT_CLEARED`                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| `beforeDelete`                        | 只限草稿(`WHOLESALE_NOT_DRAFT`)                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| `beforeVoid`                          | 批售出去的張都還是已批售、最後一筆事件是這張單的「批售」(`WHOLESALE_BOOKS_IN_USE`);淨額 ≠ 0 → `SETTLEMENT_NOT_CLEARED`                                                                                                                                                                                                                                                                                                                                    |
+| `voided`                              | `WholesaleLedger.cancel`:回到出貨分店庫存的未售,帶作廢原因                                                                                                                                                                                                                                                                                                                                                                                                |
+
+每次狀態改變,交易後對審核者送 `badge:purchasing.wholesale`。
+
+#### 收付與其他登記
+
+- `registerSettlementDocument`(`wholesale-registrations.ts`):`kind: "wholesale"`,只有出貨店一邊(`shipper`、收款方、銀行或現金、`purchasing.wholesale.receive`),先填 `solePayeeDefaultAmount`,`sideBranchPaths: ["values.from_branch.id"]`;應收 = 明細批售金額合計,對象 = 客戶店名(`payables` 一批一次讀)。
+- **參與收付的狀態照「有效的收款方式」**(`effectivePaymentModeOf`):被退回 / 撤回的單可以先存草稿改收款方式,**重新送出才算數**;還沒重送之前照上一次送出的那一版。所以已收過錢的「收到錢再核准」被存成「從帳戶入帳」時,結算區還在、收款能退款或沖正;重新送出則由 `WHOLESALE_MODE_HAS_RECEIPTS` 擋下。
+- 批售客戶的來源:最近一次批售日 = 已完成批售單的「批售」事件時間(整個租戶、作廢的不算)、引用 = 任何狀態的批售單含草稿(整個租戶)。
+- 側欄計數 = 批售單在我手上、還沒決定的審核任務數。
+
+#### 列表為什麼不走表單列表
+
+列表要依出貨分店、批售客戶、收款方式篩選,底座的表單列表(`formSubmissions`)沒有表單欄位條件,所以列由 `lotteryWholesales` 給(讀取規則同表單列表:可見範圍 + 依欄位共用,草稿只給建立者本人)。欄位固定,不讀「列表欄位」配置。
+
+正本:`apps/api/src/project/lottery/wholesale/`、`apps/admin/src/pages/project/lottery/purchasing/wholesale/`、`packages/domain/src/project/lottery/wholesale.ts`
+
 ### 列印(58mm 單據,規格第 12 章)
 
-四張單據都用底座 B8 的列印流程(`docs/modules/printers.md`):瀏覽器把單據排版、轉成 384 點黑白 PNG,送 `createPrintJob`,由分店的列印代理程式印出。沒有 `api.printing.print` 的租戶(沒有收據機)不印、不出現 [列印];分店沒有可用的印表機時 [列印] 變灰並說明原因,自動列印不送。
+六張單據(進貨點收單、調貨的三張、批售的兩張)都用底座 B8 的列印流程(`docs/modules/printers.md`):瀏覽器把單據排版、轉成 384 點黑白 PNG,送 `createPrintJob`,由分店的列印代理程式印出。沒有 `api.printing.print` 的租戶(沒有收據機)不印、不出現 [列印];分店沒有可用的印表機時 [列印] 變灰並說明原因,自動列印不送。
 
-| 單據(Figma)                     | 什麼時候印                                                                                                                                   | 聯                                         | 內容                                                                                                                                                                                                                                                 | 簽名欄             | 印表機的分店 |
-| ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ | ------------ |
-| 進貨點收單(RC-08 `102:23526`)   | [完成這次點收] 寫入成功後自動印;檢視頁標頭 [列印] / [補印] 印一次點收(點收過兩次以上時先選「點收批次」,預設最近一次)                         | 第 1 聯 · 店鋪留存、第 2 聯 · 送貨人留存   | 單號、進貨分店、甲類、第 N 次點收的本(遊戲、本數、點收進度、本號區段)、尚未到的本;補印和原單一致(照那一次的本重排版)。沒有點收批次的舊資料:[列印] 印到目前為止已點收的全部本                                                                         | 點收人、送貨人     | 進貨分店     |
-| 調貨出貨單(RC-06 `102:23446`)   | 第一關通過後(含跳過)自動印:不論在調貨單檢視頁、申請中心詳情頁或批次核准通過第一關,或送出時(新增頁、引擎編輯頁)第一關被跳過;檢視頁標頭 [列印] | 第 1 聯 · 出貨店留存、第 2 聯 · 送貨人留存 | 單號、出貨店 → 收貨店、每一列(遊戲 / 本、張數、金額、號碼區段與張數)、調貨金額;自動印只列這次才出貨的列(出貨時間在這個審核實例開始之後;退回後重送時先前已在途的列不再印,沒有新出貨的列不印;使用者 10/21 定案)                                        | 出貨人、送貨人     | 出貨分店     |
-| 調貨點收單(RC-10 待畫)          | 收貨店 [完成這次點收] 寫入成功後自動印;檢視頁標頭 [列印] / [補印] 印一次點收(同進貨點收單)                                                   | 第 1 聯 · 收貨店留存、第 2 聯 · 送貨人留存 | 單號、出貨店 → 收貨店、第 N 次點收的列(遊戲、本數、點收進度;號碼照點收紀錄實際搬進來的張(`receivedTicketNos`):整本到齊寫本號區段、選張寫「本號 #張號區段(N 張)」)、尚未到的本;補印和原單一致。沒有點收批次的舊資料:[列印] 印到目前為止已點收的全部列 | 點收人、送貨人     | 收貨分店     |
-| 調貨付款收據(RC-07 `102:23493`) | 收貨店 [付款] 選現金、寫入成功後自動印(檢視頁的結算區塊與待結清款項分頁都會);檢視頁標頭 [列印] 印最近一筆                                    | 第 1 聯 · 收貨店留存、第 2 聯 · 送貨人留存 | 單號、付款店(分店 · 小金庫,或從抽屜付時的收銀點名稱)、收款人(付款視窗的經手 / 收款人)、現金金額;時間 = 付款時間                                                                                                                                      | 付款人、送貨人簽收 | 收貨分店     |
+| 單據(Figma)                     | 什麼時候印                                                                                                                                                               | 聯                                         | 內容                                                                                                                                                                                                                                                 | 簽名欄             | 印表機的分店 |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ | ------------ |
+| 進貨點收單(RC-08 `102:23526`)   | [完成這次點收] 寫入成功後自動印;檢視頁標頭 [列印] / [補印] 印一次點收(點收過兩次以上時先選「點收批次」,預設最近一次)                                                     | 第 1 聯 · 店鋪留存、第 2 聯 · 送貨人留存   | 單號、進貨分店、甲類、第 N 次點收的本(遊戲、本數、點收進度、本號區段)、尚未到的本;補印和原單一致(照那一次的本重排版)。沒有點收批次的舊資料:[列印] 印到目前為止已點收的全部本                                                                         | 點收人、送貨人     | 進貨分店     |
+| 調貨出貨單(RC-06 `102:23446`)   | 第一關通過後(含跳過)自動印:不論在調貨單檢視頁、申請中心詳情頁或批次核准通過第一關,或送出時(新增頁、引擎編輯頁)第一關被跳過;檢視頁標頭 [列印]                             | 第 1 聯 · 出貨店留存、第 2 聯 · 送貨人留存 | 單號、出貨店 → 收貨店、每一列(遊戲 / 本、張數、金額、號碼區段與張數)、調貨金額;自動印只列這次才出貨的列(出貨時間在這個審核實例開始之後;退回後重送時先前已在途的列不再印,沒有新出貨的列不印;使用者 10/21 定案)                                        | 出貨人、送貨人     | 出貨分店     |
+| 調貨點收單(RC-10 待畫)          | 收貨店 [完成這次點收] 寫入成功後自動印;檢視頁標頭 [列印] / [補印] 印一次點收(同進貨點收單)                                                                               | 第 1 聯 · 收貨店留存、第 2 聯 · 送貨人留存 | 單號、出貨店 → 收貨店、第 N 次點收的列(遊戲、本數、點收進度;號碼照點收紀錄實際搬進來的張(`receivedTicketNos`):整本到齊寫本號區段、選張寫「本號 #張號區段(N 張)」)、尚未到的本;補印和原單一致。沒有點收批次的舊資料:[列印] 印到目前為止已點收的全部列 | 點收人、送貨人     | 收貨分店     |
+| 調貨付款收據(RC-07 `102:23493`) | 收貨店 [付款] 選現金、寫入成功後自動印(檢視頁的結算區塊與待結清款項分頁都會);檢視頁標頭 [列印] 印最近一筆                                                                | 第 1 聯 · 收貨店留存、第 2 聯 · 送貨人留存 | 單號、付款店(分店 · 小金庫,或從抽屜付時的收銀點名稱)、收款人(付款視窗的經手 / 收款人)、現金金額;時間 = 付款時間                                                                                                                                      | 付款人、送貨人簽收 | 收貨分店     |
+| 批售出貨單(RC-11 `930:64797`)   | 批售單核准完成(流程結束 = 出貨)後自動印:不論在批售單檢視頁、申請中心詳情頁或批次核准;多人核准還沒到齊不印。檢視頁標頭 [列印] / [補印](已出貨才有)                        | 第 1 聯 · 店鋪留存、第 2 聯 · 客戶留存     | 單號、出貨分店 → 批售客戶(店名)、本清單(遊戲 · 本號區段 / 本數 / 批售金額;同遊戲的本併成一列;使用者 11/26 定:不另印每本張數與批購金額率)、批售金額合計、收款方式、已收;時間 = 出貨時間(還沒出貨時用列印當下)。**不印原成本與獲利**                   | 經手人、客戶簽收   | 出貨分店     |
+| 批售收款收據(RC-12 `930:64906`) | 出貨店 [收款] 選現金、寫入成功後自動印(檢視頁 / 申請中心的結算區塊與待結清款項分頁都會);銀行、退款、沖正不印。檢視頁標頭 [列印] 印最近一筆出貨店收的現金(同調貨付款收據) | 第 1 聯 · 店鋪留存、第 2 聯 · 客戶留存     | 單號、批售客戶、現金進(分店 · 小金庫,或收進抽屜時的收銀點名稱)、經手人、現金金額;時間 = 收款時間                                                                                                                                                     | 經手人、客戶簽名   | 出貨分店     |
 
-- **版面**:單欄、「標籤:值」、表格最多三欄、號碼以區段表示(連號 `~`)、底部 QR code(這張單據在後台的詳情頁連結;進貨點收單、調貨出貨單、調貨點收單、調貨付款收據的路由都由 api `lotteryReceiptLinks` 依模組樹組出(`purchaseView` / `transferView`),不依印單的人的權限 —— 只從申請中心進來、沒有進貨單 / 調貨單模組的店長印的單據 QR 一樣完整;[完成這次點收] 的回傳一起帶 `receiptLinks`(同一次請求依模組樹組好,自動列印不另查);路由是 null(模組停用、沒有 route)→ 照印、不印 QR;標頭 [列印] / [補印] 用 `useReceiptLinks`,讀到之前也能按(不印 QR),見 `docs/modules/project/store.md`「列印」)、上方印最上層組織名稱(`me.currentOrg.tenantName`);時間依租戶時區。系統不記錄送貨人是誰、不標貨運單號。
-- **聯**(單據的份叫「聯」;使用者 10/26 定案):四張都印兩聯,**一次列印 = 一個列印工作**:兩聯的版面接成一張圖(`PendingReceipt`),聯與聯之間放切紙位置(`Receipt58Cut`),代理程式在那裡切紙(底座「列印工作」的中段切紙,`docs/modules/printers.md`),所以一次 [完成這次點收] 算「已印 1 次」。每聯在單據名稱下方印聯別(「第 1 聯 · 店鋪留存」;`receipt-kinds.ts` 的 `copies`)。
-- **已印次數與補印**:列印工作的 `refType` 每種單據各一個(`lottery-purchase-receiving`,`refId` = 點收批次,沒有批次的舊資料 = 進貨單 id;`lottery-transfer-shipment`,`refId` = 調貨單 id;`lottery-transfer-receiving`,`refId` = 點收批次,舊資料 = 調貨單 id;`lottery-transfer-payment`,`refId` = 那一筆現金流水 id),所以一次點收、一筆付款各是一張單據,各算各的次數(以「次」計:原單第 1 次,第一次補印第 2 次)。補印走底座的補印對話框:先選「補印哪一聯」(兩聯都補(預設)/ 第 1 聯 / 第 2 聯,底座 `reprintVariants`)再選原因;補印的每一聯上方印「【補印】第 N 次 · 時間 · 原因 · 補印人」(原因選「其他」時印說明)與聯別。
+- **版面**:單欄、「標籤:值」、表格最多三欄、號碼以區段表示(連號 `~`)、底部 QR code(這張單據在後台的詳情頁連結;進貨點收單、調貨的三張、批售的兩張的路由都由 api `lotteryReceiptLinks` 依模組樹組出(`purchaseView` / `transferView` / `wholesaleView`),不依印單的人的權限 —— 只從申請中心進來、沒有進貨單 / 調貨單 / 批售單模組的店長印的單據 QR 一樣完整;[完成這次點收] 的回傳一起帶 `receiptLinks`(同一次請求依模組樹組好,自動列印不另查);路由是 null(模組停用、沒有 route)→ 照印、不印 QR;標頭 [列印] / [補印] 用 `useReceiptLinks`,讀到之前也能按(不印 QR),見 `docs/modules/project/store.md`「列印」)、上方印最上層組織名稱(`me.currentOrg.tenantName`);時間依租戶時區。系統不記錄送貨人是誰、不標貨運單號。
+- **聯**(單據的份叫「聯」;使用者 10/26 定案):六張都印兩聯,**一次列印 = 一個列印工作**:兩聯的版面接成一張圖(`PendingReceipt`),聯與聯之間放切紙位置(`Receipt58Cut`),代理程式在那裡切紙(底座「列印工作」的中段切紙,`docs/modules/printers.md`),所以一次 [完成這次點收] 算「已印 1 次」。每聯在單據名稱下方印聯別(「第 1 聯 · 店鋪留存」;`receipt-kinds.ts` 的 `copies`)。
+- **已印次數與補印**:列印工作的 `refType` 每種單據各一個(`lottery-purchase-receiving`,`refId` = 點收批次,沒有批次的舊資料 = 進貨單 id;`lottery-transfer-shipment`,`refId` = 調貨單 id;`lottery-transfer-receiving`,`refId` = 點收批次,舊資料 = 調貨單 id;`lottery-transfer-payment`,`refId` = 那一筆現金流水 id;`lottery-wholesale-shipment`,`refId` = 批售單 id;`lottery-wholesale-payment`,`refId` = 那一筆收款的現金流水 id),所以一次點收、一筆付款 / 收款各是一張單據,各算各的次數(以「次」計:原單第 1 次,第一次補印第 2 次)。補印走底座的補印對話框:先選「補印哪一聯」(兩聯都補(預設)/ 第 1 聯 / 第 2 聯,底座 `reprintVariants`)再選原因;補印的每一聯上方印「【補印】第 N 次 · 時間 · 原因 · 補印人」(原因選「其他」時印說明)與聯別。
 - **第一次列印也能選聯**(使用者 10/26 定案):還沒印過時按 [列印],先選「列印哪一聯」(兩聯都印(預設)/ 第 1 聯 / 第 2 聯;底座 `printVariants`);一聯的單據 [列印] 直接送。照「一次 = 一個工作」:只印第 1 聯也是第 1 次(不是補印),之後再印第 2 聯是補印(「【補印】第 2 次」)。
 - **列印紀錄的單據名稱**(`documentName`,列印紀錄分頁與列印失敗通知):寫印了哪幾聯,補印另標「補印」—— 「進貨點收單 P-0001(兩聯)」「進貨點收單 P-0001(送貨人留存)補印」(`receiptDocumentNameOf`);只有一聯的單據維持原本的名稱(補印看「次數」欄)。不另加欄位。
 - **單據太長**:多聯接成一張後超過高度 / 大小上限(`PRINT_IMAGE_MAX_HEIGHT_DOTS` / `PRINT_IMAGE_MAX_BYTES`,`isPrintImageTooLarge`)時,自動列印不送,跳一則提示「單據太長,這次沒有印出,請按 [列印] 分聯印」(那張單據已印過時寫 [補印])。
 - **已印次數印完才更新**:交易後自動列印送出時工作還在等待中,那張單據的已印次數是 0;`useReceiptPrinter` 經底座的自動列印(`useAutoPrint`,見底座 printers.md「自動列印」)等這張工作的結果,有結果就重查已印次數,標頭的 [列印] 跟著變 [補印]「已印 1 次」;做完就卸載的地方(調貨出貨單的審核擴充)靠底座列印按鈕收到那張工作的 `print-result`(同一張單據)就重查。
-- **印表機**:單據所屬分店的預設印表機(`printablePrinters` 的 `defaultPrinterId`)→ 第一台可用的;單據可以給自己的預設,排在分店預設前面:調貨付款收據從收銀點抽屜付時用那個收銀點的印表機(店面的單據同理)。
+- **印表機**:單據所屬分店的預設印表機(`printablePrinters` 的 `defaultPrinterId`)→ 第一台可用的;單據可以給自己的預設,排在分店預設前面:調貨付款收據從收銀點抽屜付時、批售收款收據收進收銀點抽屜時,用那個收銀點的印表機(店面的單據同理)。
 - **自動列印只在寫入成功之後**:寫入失敗(送出、審核決定、付款被擋)不印;列印本身失敗(查印表機、轉圖、建立工作)只記 log,不打斷操作 —— 工作建立後的失敗(缺紙、代理程式離線)由底座的「列印失敗」通知告訴要求人。
-- **在哪裡觸發**:進貨點收單、調貨點收單、調貨付款收據在做動作的畫面上([完成這次點收]、付款視窗寫入成功後);調貨出貨單登記成調貨單的審核擴充(`app/project/workflow-extensions.ts` 的 `Effect`,`docs/modules/workflows.md`「依模組登記的審核擴充」):審核決定 = 在第一關核准、送出 = 第一關被跳過,再讀點收區塊,只印出貨時間(`shippedAt`)在這個審核實例開始之後的在途列。
+- **在哪裡觸發**:進貨點收單、調貨點收單、調貨付款收據在做動作的畫面上([完成這次點收]、付款視窗寫入成功後);調貨出貨單登記成調貨單的審核擴充(`app/project/workflow-extensions.ts` 的 `Effect`,`docs/modules/workflows.md`「依模組登記的審核擴充」):審核決定 = 在第一關核准、送出 = 第一關被跳過,再讀點收區塊,只印出貨時間(`shippedAt`)在這個審核實例開始之後的在途列。批售收款收據在收款視窗寫入成功後(`SettlementPanel` / 待結清款項分頁共用的 `useSettlementReceipt`,依結算的 `kind` 分調貨付款收據與批售收款收據)。批售出貨單登記成批售單的審核擴充 `Effect`(`wholesale/WholesaleShipmentEffect.tsx`):審核決定 = 核准,且審核實例已是「已核准」(認流程結束、不認關卡 key,租戶在出貨確認前面加關卡也只在最後印)、批售單已有出貨時間,才讀檢視內容(`lotteryWholesaleDetail`)印整張單。
 
 正本:`apps/admin/src/lib/project/lottery/receipts/`(每張單據一支版面函式 + `receipt-kinds.ts` 的單據種類)、`apps/admin/src/components/project/lottery/ReceiptPrint/`(`useReceiptPrinter` 的 `printReceiptAfterCommit(kind, payload)`、`ReceiptPrintButton`、點收單的批次選單 `ReceivingBatchPrint`、`ReceiptDocument`;送出、等結果與失敗處理在底座 `components/base/AutoPrint/`)
 
@@ -383,8 +445,14 @@
 | `receiveLotteryTransferTickets(input: { submissionId, rowId, ticketNos })` | 同上 + 點收關卡的任務在自己手上                      | 選張的列在格子上點收(點選格子 / 其餘全部到齊);回同上                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | `completeLotteryTransferReceiving(input: { submissionId, rowIds })`        | 同上 + 點收關卡的任務在自己手上                      | [完成這次點收]:這一次的列標上點收批次;回 `batch`(沒有可收的列 = null)、新的點收區塊與單據 QR 的路由 `receiptLinks`(依模組樹,同 `lotteryReceiptLinks`)                                                                                                                                                                                                                                                                                                                          |
 | `notifyLotteryTransferWrongStore(input: { submissionId, code })`           | 同上(讀得到這張調貨單)                               | 送錯分店的 [通知總部更正]                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| `lotteryWholesaleOptions(fromOrgId)`                                       | `purchasing.wholesale.create`                        | 新增頁:可批售的本(`cost` = 現在的單張成本合計,沒有 `inventory.show-cost` = null)、往來中的批售客戶、可用的入帳帳戶                                                                                                                                                                                                                                                                                                                                                             |
+| `lotteryWholesaleScanMatches(fromOrgId, bookNo, gameCode?)`                | `purchasing.wholesale.create`                        | 刷到的本號對到的本與為什麼不能批售(`problem`、`lockedSerialNo`);送出被擋時也用它逐列寫原因                                                                                                                                                                                                                                                                                                                                                                                     |
+| `lotteryWholesales(input)`                                                 | `purchasing.wholesale.view`                          | 列表:篩選 `status` / `fromOrgId` / `customerId` / `paymentMode` + 分頁                                                                                                                                                                                                                                                                                                                                                                                                         |
+| `lotteryWholesaleFilterOptions`                                            | `purchasing.wholesale.view`                          | 列表的篩選選項:讀得到的單上的出貨分店、讀得到的批售客戶                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `lotteryCustomerWholesales(customerId)`                                    | `purchasing.wholesale.view`                          | 批售客戶詳情「批售紀錄」:這位客戶的批售單(讀得到的;草稿只有自己的)                                                                                                                                                                                                                                                                                                                                                                                                             |
+| `lotteryWholesaleDetail(submissionId)`                                     | 讀得到單據(一般讀取含依欄位共用、建立者、任務持有者) | 檢視頁 / 申請中心 / 編輯頁的內容:店名、收款方式、入帳帳戶、批售金額、已收、出貨時間、明細                                                                                                                                                                                                                                                                                                                                                                                      |
 
-叫貨單本身的新增 / 存草稿 / 送出 / 審核 / 作廢走表單引擎與審核流程的端點。GraphQL 文件:`packages/graphql/src/documents/project/lottery/requisition.graphql`、`purchase.graphql`、`transfer.graphql`。
+叫貨單本身的新增 / 存草稿 / 送出 / 審核 / 作廢走表單引擎與審核流程的端點。GraphQL 文件:`packages/graphql/src/documents/project/lottery/requisition.graphql`、`purchase.graphql`、`transfer.graphql`、`wholesale.graphql`。
 
 ### 給其他功能的介面
 
@@ -399,21 +467,22 @@
 
 ### 錯誤碼
 
-| code / reason                                                                                                                                                                                                                                                  | 什麼時候                                                    |
-| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
-| `FORBIDDEN` + `REQUISITION_NO_LINES`                                                                                                                                                                                                                           | 送出時明細沒有本數 > 0 的列                                 |
-| `FORBIDDEN` + `REQUISITION_GAME_DISCONTINUED`                                                                                                                                                                                                                  | 送出時明細有停售 / 不存在的遊戲                             |
-| `FORBIDDEN` + `REQUISITION_REFERENCED`                                                                                                                                                                                                                         | 作廢已被引用的叫貨單                                        |
-| `CONFLICT` + `REQUISITION_REFERENCED`                                                                                                                                                                                                                          | 引用介面:已被別張進貨單 / 調貨單引用                        |
-| `VALIDATION_FAILED` + `REQUISITION_NOT_PENDING`                                                                                                                                                                                                                | 引用介面:不是待購買                                         |
-| `FORBIDDEN` + `PURCHASE_*`(見「進貨單」掛接點表)                                                                                                                                                                                                               | 進貨單送出 / 核准 / 駁回 / 刪除 / 作廢被擋                  |
-| `FORBIDDEN` + `SETTLEMENT_NOT_CLEARED`                                                                                                                                                                                                                         | 進貨單駁回 / 作廢前淨額 ≠ 0                                 |
-| `FORBIDDEN` + `PURCHASE_REDEMPTION_INVALID`                                                                                                                                                                                                                    | 進貨單送出:勾選的兌獎紀錄不是進貨分店店內持有的、或金額不同 |
-| `FORBIDDEN` + `PURCHASE_NOT_RECEIVABLE`                                                                                                                                                                                                                        | 點收:不在審核中或任務不在自己手上                           |
-| `VALIDATION_FAILED` + `PURCHASE_SCAN_INVALID` / `PURCHASE_SCAN_AMBIGUOUS_GAME` / `PURCHASE_ALREADY_RECEIVED` / `PURCHASE_LAST_TICKET_MISMATCH` / `PURCHASE_WRONG_STORE` / `PURCHASE_BOOK_NOT_ON_PURCHASE`                                                      | 點收刷條碼                                                  |
-| `FORBIDDEN` + `TRANSFER_*`(見「調貨單」掛接點表)                                                                                                                                                                                                               | 調貨單送出 / 核准 / 駁回 / 刪除 / 作廢被擋                  |
-| `FORBIDDEN` + `TRANSFER_NOT_RECEIVABLE`                                                                                                                                                                                                                        | 調貨點收:不在審核中或點收關卡的任務不在自己手上             |
-| `VALIDATION_FAILED` + `TRANSFER_SCAN_INVALID` / `TRANSFER_SCAN_AMBIGUOUS_GAME` / `TRANSFER_ALREADY_RECEIVED` / `TRANSFER_NOT_SHIPPED` / `TRANSFER_WRONG_STORE` / `TRANSFER_BOOK_NOT_ON_TRANSFER` / `TRANSFER_WHOLE_ROW_TICKETS` / `TRANSFER_WHOLE_ROW_TICKETS` | 調貨點收刷條碼                                              |
+| code / reason                                                                                                                                                                                                                                                  | 什麼時候                                                                                                                               |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `FORBIDDEN` + `REQUISITION_NO_LINES`                                                                                                                                                                                                                           | 送出時明細沒有本數 > 0 的列                                                                                                            |
+| `FORBIDDEN` + `REQUISITION_GAME_DISCONTINUED`                                                                                                                                                                                                                  | 送出時明細有停售 / 不存在的遊戲                                                                                                        |
+| `FORBIDDEN` + `REQUISITION_REFERENCED`                                                                                                                                                                                                                         | 作廢已被引用的叫貨單                                                                                                                   |
+| `CONFLICT` + `REQUISITION_REFERENCED`                                                                                                                                                                                                                          | 引用介面:已被別張進貨單 / 調貨單引用                                                                                                   |
+| `VALIDATION_FAILED` + `REQUISITION_NOT_PENDING`                                                                                                                                                                                                                | 引用介面:不是待購買                                                                                                                    |
+| `FORBIDDEN` + `PURCHASE_*`(見「進貨單」掛接點表)                                                                                                                                                                                                               | 進貨單送出 / 核准 / 駁回 / 刪除 / 作廢被擋                                                                                             |
+| `FORBIDDEN` + `SETTLEMENT_NOT_CLEARED`                                                                                                                                                                                                                         | 進貨單駁回 / 作廢前淨額 ≠ 0                                                                                                            |
+| `FORBIDDEN` + `PURCHASE_REDEMPTION_INVALID`                                                                                                                                                                                                                    | 進貨單送出:勾選的兌獎紀錄不是進貨分店店內持有的、或金額不同                                                                            |
+| `FORBIDDEN` + `PURCHASE_NOT_RECEIVABLE`                                                                                                                                                                                                                        | 點收:不在審核中或任務不在自己手上                                                                                                      |
+| `VALIDATION_FAILED` + `PURCHASE_SCAN_INVALID` / `PURCHASE_SCAN_AMBIGUOUS_GAME` / `PURCHASE_ALREADY_RECEIVED` / `PURCHASE_LAST_TICKET_MISMATCH` / `PURCHASE_WRONG_STORE` / `PURCHASE_BOOK_NOT_ON_PURCHASE`                                                      | 點收刷條碼                                                                                                                             |
+| `FORBIDDEN` + `TRANSFER_*`(見「調貨單」掛接點表)                                                                                                                                                                                                               | 調貨單送出 / 核准 / 駁回 / 刪除 / 作廢被擋                                                                                             |
+| `FORBIDDEN` + `WHOLESALE_*`(見「批售單」掛接點表)                                                                                                                                                                                                              | 批售單的守門擋下;`WHOLESALE_BOOK_UNAVAILABLE` 送出時另帶 `books`(`rowId`、`bookId`、`gameCode`、`bookNo`、`problem`、`lockedSerialNo`) |
+| `FORBIDDEN` + `TRANSFER_NOT_RECEIVABLE`                                                                                                                                                                                                                        | 調貨點收:不在審核中或點收關卡的任務不在自己手上                                                                                        |
+| `VALIDATION_FAILED` + `TRANSFER_SCAN_INVALID` / `TRANSFER_SCAN_AMBIGUOUS_GAME` / `TRANSFER_ALREADY_RECEIVED` / `TRANSFER_NOT_SHIPPED` / `TRANSFER_WRONG_STORE` / `TRANSFER_BOOK_NOT_ON_TRANSFER` / `TRANSFER_WHOLE_ROW_TICKETS` / `TRANSFER_WHOLE_ROW_TICKETS` | 調貨點收刷條碼                                                                                                                         |
 
 前端文案:掛接點擋下的在 `admin.lifecycle.<reason>`(專案字典)。
 
@@ -436,6 +505,10 @@
 - 調貨單列表 `TransferPage`:欄位讀列表欄位配置 + 本數 / 張數、點收進度、結算(`lotteryTransferProgress`);審核中且有列在途的狀態顯示「在途」;狀態篩選(網址 `?transfers=`);手機改卡片。
 - 調貨單新增頁 `TransferCreatePage` / 編輯頁 `TransferEditPage` 共用畫面 `TransferForm`:單頭(出貨 / 收貨分店 `OrgTreeSelect scope="visible"`、收貨店待購買的叫貨單、備註)、左邊明細(`BookGroupList` 依遊戲分組,一列一本或一本的選張,方式寫在本號下面;批購金額率逐本改;`useTransferLineList`)與刷條碼列 `BookScanBar`(一直顯示「正面條碼的遊戲」;正面的碼對到出貨店好幾款遊戲同本號、沒選遊戲 → 提示)、右邊 `TransferBookPanel`(選本;原封不動的本 [整本加入],拆過的本用 `TicketGrid` 選張後 [加入選取],沒有 `partial-tickets` 不出現格子);刷條碼:原封不動的本直接整本加入、拆過的本選起刷到的那張;純函式在 `transfer-form.ts`(`transferFormStateOf` = 存值 → 畫面)。選本 + 張數格子(`TransferBookPanel`)的形狀和本清單不同,保留自己的元件。編輯頁(草稿、被退回 / 撤回)帶入原內容(rowId、方式、張號、批購金額率照舊;本的事實取 `lotteryTransferReceiving`):已點收、已出貨(在途)的列鎖住並標示(不能改批購金額率、不能再併選張;api 的 `isSameShipment` 也比對金額 / 批購金額率 / 批購金額,改了 → `TRANSFER_LINE_INVALID`),組標題進度照 `BookGroupList` 的規則,出貨 / 收貨分店也鎖住;已點收(含部分點收)的列不能刪,在途的列可以刪(`isRemovable`;路上遺失 → 送出後變待查);已出貨、還沒到齊的選張列可以展開格子取消勾選沒到的張(`useShippedLines`;已點收的張鎖住,列顯示「部分點收 9 / 12」),送出前確認會變成待查的張;沒出貨的列同新增頁。讀不到本 / 遊戲的列提示並原樣存回。採購清單的 [從其他分店調貨](`CreateTransferAction`,追加到 `PENDING_REQUISITION_ACTIONS`)帶 `?requisition=<單號>&to=<收貨分店>`。
 - 調貨單檢視頁 `TransferViewPage`:標頭(關卡標籤、出貨店 → 收貨店、叫貨單、調貨金額、建立者)+ 還沒出貨時的出貨確認清單(`BookGroupList` 檢視模式)/ 出貨後的點收區塊(共用 `ReceiveBooksPanel`;都依遊戲分組)+ `SettlementPanel` + 核准前三個數字不相等的提示 + `ApprovalSection`。點收(`useTransferReceiving`):選張的列展開格子(`BookGroupList` 每列的 `panel`;`TransferRowTickets`),刷到那一列的張時自動展開、捲到並閃一下;列狀態「未點收 0 / 10」「部分點收 9 / 12」「已點收」(`BookRowStatus` `partial` + 使用處給的文字);點收過一部分還有張沒到時提示哪幾張(`transfer-unreceived.ts`);送錯分店彈窗 `TransferWrongStoreDialog`(只有 [知道了])。標頭的 [列印] 三顆(調貨出貨單、調貨點收單、調貨付款收據,`TransferPrintButtons`,資料在 `useTransferReceipts`;調貨點收單點過兩次以上時多一個「點收批次」選單)。[完成這次點收] 寫入成功後自動印調貨點收單。第一關通過後的自動列印是 `transfer/TransferShipmentEffect.tsx`(登記在 `app/project/workflow-extensions.ts`)。
+- 批售單列表 `WholesalePage`:資料 `lotteryWholesales`;篩選放網址 `?wholesales=`;平板以上表格、手機卡片(`AccountsList`)。
+- 批售單新增頁 `WholesaleCreatePage` / 編輯頁 `WholesaleEditPage` 共用畫面 `WholesaleForm`:單頭 `WholesaleHeaderFields`、明細 `BookGroupList`(沒有張號欄:`labels.columns.ticket` 不給)+ `BookScanBar` + [從可批售的本加入](`WholesaleBookDialog`,手機全螢幕)、合計 `WholesaleTotals`(有成本權限才有原成本與預估獲利);純函式在 `wholesale-form.ts`;刷到不能批售與送出被擋的原因在 `useWholesaleChecks`。
+- 批售單檢視頁 `WholesaleViewPage`:標頭 + 本清單 `WholesaleBooksSection` + 結算 `WholesaleSettlementSection`(`SettlementPanel`;核准前的從帳戶入帳改畫批售金額 / 已收與「核准時自動入帳」)+ `ApprovalSection`。申請中心詳情頁登記審核擴充 `Section`(`WholesaleApplyCenterSection`),畫同一份本清單與結算。標頭的 [列印] 兩顆(批售出貨單:已出貨才有;批售收款收據:有出貨店收的現金才有;`WholesalePrintButtons`,草稿不出現);核准完成後的自動列印是 `wholesale/WholesaleShipmentEffect.tsx`(登記在 `app/project/workflow-extensions.ts`)。
+- 批售客戶詳情「批售紀錄」分頁 `CustomerWholesalesTab`(追加到 `wholesale-customer-detail-tabs.ts`)。
 
 ## 測試
 
@@ -448,7 +521,8 @@
 - 進貨單 seed:`seeds/project/purchasing.purchase.test.ts`;domain:`packages/domain/src/project/lottery/purchase.test.ts`
 - 調貨單 api:`apps/api/src/project/lottery/transfer/transfer.test.ts`(掛接點表每一列、送出前的本 / 張檢查、鎖定不能賣、第一關跳過也調出與通知、點收與單張成本、選張的列逐張點收(刷一張 / 選格子 / 其餘全部到齊)、少張處理(調 12 張只到 9 張 → 退回 → 出貨店移除 3 張 → 重送 → 核准;兩店庫存、結算、報表調入 / 調出)、送錯分店、調貨後對調跳號(做法 D)、選張只能從庫存、格子的不能調原因、張數店不能點格子、張數店送出時先對號再鎖定(配對不挑鎖住的張)、規格第 9 章 5 步驟例與分次付款例、核准前三個數字、兩邊權限、駁回 / 作廢回到出貨店、側欄計數四種情況、列表進度)
 - 調貨單 seed:`seeds/project/purchasing.transfer.test.ts`;domain:`packages/domain/src/project/lottery/transfer.test.ts`;admin:`pages/project/lottery/purchasing/transfer/**/*.test.ts(x)`
-- 列印(58mm 單據):版面 `lib/project/lottery/receipts/receipts.test.ts`(各單據的聯別與簽名欄快照、補印選聯、列印紀錄名稱、付款收據只印收貨店的現金、`refType` / `refId`)、`transfer-receiving-receipt.test.ts`(調貨點收單);admin `PurchaseViewPagePrint.test.tsx`(一次 = 一個工作含兩聯與切紙位置、印好後按鈕變 [補印]、沒有列印權限、分店沒有印表機時停用並說明、點收兩次 → 補印第一次只補第 2 聯「【補印】第 2 次」、沒有批次的舊資料兩聯都補)、`TransferViewPagePrint.test.tsx`(核准第一關 → 一個工作兩聯、[完成這次點收] 印調貨點收單、付現自動印付款收據 / 轉帳不印、[列印] 付款收據)、`TransferCreatePagePrint.test.tsx`(新增頁 / 引擎編輯頁送出時第一關被跳過 → 印、沒跳過不印);已印次數不寫死(假伺服器 `printButtonWorld` 照送出、印出的工作計);api `purchase.test.ts` / `transfer.test.ts`([完成這次點收] 的點收批次)、`transfer.test.ts`(收付紀錄帶 `cashPlace`)
+- 批售單 api:`apps/api/src/project/lottery/wholesale/wholesale.test.ts`(規格 21.9 驗算與 21.4 掛接點表的每一列);seed:`seeds/project/purchasing.wholesale.test.ts`;已開通租戶的權限:`apps/db-migrator/src/project/wholesale-role-grants-migration.test.ts`;domain:`packages/domain/src/project/lottery/wholesale.test.ts`;admin:`pages/project/lottery/purchasing/wholesale/**/*.test.tsx`
+- 列印(58mm 單據):版面 `lib/project/lottery/receipts/receipts.test.ts`(各單據的聯別與簽名欄快照、補印選聯、列印紀錄名稱、付款收據只印收貨店的現金、`refType` / `refId`)、`transfer-receiving-receipt.test.ts`(調貨點收單);admin `PurchaseViewPagePrint.test.tsx`(一次 = 一個工作含兩聯與切紙位置、印好後按鈕變 [補印]、沒有列印權限、分店沒有印表機時停用並說明、點收兩次 → 補印第一次只補第 2 聯「【補印】第 2 次」、沒有批次的舊資料兩聯都補)、`TransferViewPagePrint.test.tsx`(核准第一關 → 一個工作兩聯、[完成這次點收] 印調貨點收單、付現自動印付款收據 / 轉帳不印、[列印] 付款收據)、`TransferCreatePagePrint.test.tsx`(新增頁 / 引擎編輯頁送出時第一關被跳過 → 印、沒跳過不印);已印次數不寫死(假伺服器 `printButtonWorld` 照送出、印出的工作計);api `purchase.test.ts` / `transfer.test.ts`([完成這次點收] 的點收批次)、`transfer.test.ts`(收付紀錄帶 `cashPlace`)。批售:版面 `wholesale-receipts.test.ts`(兩張的聯別、內容與簽名欄快照、不印原成本與獲利、不同批購金額率分列、收款收據只印出貨店收的現金、`refType` / `refId`);admin `WholesaleViewPagePrint.test.tsx`(核准完成 → 一個工作兩聯、多人核准沒到齊不印、沒有收據機核准照常不印、從申請中心核准也印、已完成的單 [列印] 選聯、草稿沒有 [列印])、`WholesaleViewPagePaymentPrint.test.tsx`([收款] 現金自動印 / 銀行不印、審核中只有收款收據的 [列印]);api `receipt-links.service.test.ts`(`wholesaleView`)
 
 ## 使用者說明(help.md)
 
@@ -457,3 +531,5 @@
 `apps/admin/src/md/module-help/project/additions/purchasing.purchase.help.md`
 
 `apps/admin/src/md/module-help/project/additions/purchasing.transfer.help.md`
+
+`apps/admin/src/md/module-help/project/additions/purchasing.wholesale.help.md`

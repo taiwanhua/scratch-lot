@@ -1702,6 +1702,8 @@ describe("輸出報表:營運報表、班次結帳歷史報表(GraphQL 端點 + 
           { type: "refund", count: 1, drawer: -200, vault: 0 },
           { type: "transfer_out", count: 1, drawer: 0, vault: -300 },
           { type: "transfer_in", count: 1, drawer: 0, vault: 120 },
+          { type: "wholesale_in", count: 0, drawer: 0, vault: 0 },
+          { type: "wholesale_out", count: 0, drawer: 0, vault: 0 },
           { type: "correction", count: 0, drawer: 0, vault: 0 },
         ],
       });
@@ -1746,6 +1748,8 @@ describe("輸出報表:營運報表、班次結帳歷史報表(GraphQL 端點 + 
             "transferToPay",
             "transferPayerRefund",
             "transferPayeeRefund",
+            "wholesaleToReceive",
+            "wholesaleToRefund",
           ].map((kind) => ({ kind, count: 0, amount: 0, serialNos: [] })),
         ],
       });
