@@ -163,7 +163,7 @@ node scripts/project-settings/preflight.mjs --environment <dev|staging|productio
 
 preflight 要求工作目錄乾淨且 HEAD 等於 `--target`。若日常 checkout 有未追蹤工具檔,另用短路徑的 detached worktree 檢查完整 commit,不清掉原目錄的檔案。資料狀態讀取器會從同一 checkout 的 `apps/db-migrator` 解析 `tsx`,所以檢查工作樹須 `pnpm install --frozen-lockfile`；不需執行整個 repo build。Windows 建立工作樹前可在本 repo 設 `git config core.longpaths true`,工作樹路徑也要短,避免 `node_modules` 長路徑;移除時若檔案仍被程序使用,先關閉持有檔案的程序再處理,不要強制清掉原工作樹。跨工具本機狀態 `.codex/` 已排除追蹤,外部 skill 的 Claude 連結由還原指令建立;仍須檢查 `git status --short` 的實際結果。
 
-讀取器沿既有 `deploy/project` 設定、gcloud 登入與 DB 存取,分別讀 API/admin 真正承接流量的 revisions。Cloud Run 的 digest 由 Artifact Registry 相同 image/digest 的 tag 對回 Git。新 tag 含完整 commit、環境與執行識別;舊版短 SHA 仍須在此 repo 唯一解析。混合流量保留每個基準,無法解析或多個不同 commit 明列未核對。
+讀取器沿既有 `deploy/project` 設定、gcloud 登入與 DB 存取,分別讀 API/admin 真正承接流量的 revisions。Cloud Run 的 digest 由 Artifact Registry 相同 image/digest 的 tag 對回 Git。因此 Deploy 的 `docker build` 帶 `--provenance=false`:附 attestation 時推上去的是 manifest list,tag 指向 list、Cloud Run 跑底下的 image manifest,digest 對不到 tag,會報 `REVISION_UNRESOLVED`(2026-11-27 以前用舊設定部署的 revision 都是這樣,下次部署後消失)。新 tag 含完整 commit、環境與執行識別;舊版短 SHA 仍須在此 repo 唯一解析。混合流量保留每個基準,無法解析或多個不同 commit 明列未核對。
 
 報告包含各基準到目標的全部累積差異,以及同 checkout 的 migrator JSON 狀態。API image 版本不是 DB 設定版本;資料更新可能在沒有部署 API 時執行,也可能部分失敗。agent 必須連同最後成功更新、後續嘗試、changelog、pending/open migration、未完成定義安裝與鎖閱讀,再列資料修改/刪除範圍、恢復限制與待人員判斷事項,不能只看本次 PR。
 
@@ -355,7 +355,7 @@ docker compose --profile full up -d   # 部署前驗證:mongo + api + admin 整�
 ENVIRONMENT=<dev|staging|production> # 換成此次手動部署的環境
 IMAGE_TAG="$(git rev-parse HEAD)-$ENVIRONMENT-$(date +%s)-1"
 REG="<讀取器輸出的registry>"
-docker build -f apps/api/Dockerfile -t "$REG/api:$IMAGE_TAG" . && docker push "$REG/api:$IMAGE_TAG"
+docker build --provenance=false -f apps/api/Dockerfile -t "$REG/api:$IMAGE_TAG" . && docker push "$REG/api:$IMAGE_TAG"
 # 接著複製 deploy.yml「deploy api」步驟裡的 gcloud run deploy 指令,把 $VAR 換成讀取器輸出的該環境值
 ```
 
