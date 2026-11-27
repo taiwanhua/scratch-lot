@@ -42,6 +42,15 @@ const scan = async (
   await user.type(field, `${code}{Enter}`);
 };
 
+/** 元素所在卡片的 flex-shrink(卡片會裁切,不能被捲動容器壓扁)。 */
+const shrinkOf = (element: HTMLElement): string => {
+  const card = element.closest(".MuiCard-root");
+  if (card === null) {
+    throw new Error("not inside a Card");
+  }
+  return getComputedStyle(card).flexShrink;
+};
+
 /** 期初建檔頁(Figma OP-01–05;期初建檔規格 3)。走正式的頁面登記、路由與殼,只有 api 是假的。 */
 describe("期初建檔頁", () => {
   it("刷到手上最上面那張 047:001–046 預先標好 → 分放預設本機收銀點 → 確認框勾「我已對過實體」才能建檔", async () => {
@@ -100,6 +109,19 @@ describe("期初建檔頁", () => {
     const list = await screen.findByRole("table", { name: "這家店已建檔的本" });
     expect(await within(list).findByText("46 / 54")).toBeInTheDocument();
     expect(within(list).getByText("檯面 店內櫃台 54")).toBeInTheDocument();
+  });
+
+  it("捲動容器裡的區塊不被壓扁:本卡與已建檔清單 flex-shrink: 0(STYLE-08;卡片會裁切,壓扁時格子與按鈕整段消失)", async () => {
+    const { user } = renderOpening({
+      scans: { "556-056602-001": { ...scanOf("001"), bookNo: "0056602" } },
+    });
+    await scan(user, "556-056602-001");
+    expect(shrinkOf(await screen.findByText("556 好運 · 本號 056602"))).toBe(
+      "0",
+    );
+    expect(
+      shrinkOf(await screen.findByRole("table", { name: "這家店已建檔的本" })),
+    ).toBe("0");
   });
 
   it("原封的本(刷 001):① 0 張 → ③ 預設庫存", async () => {
